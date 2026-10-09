@@ -190,12 +190,12 @@ VIVOS_NO_NATIVO: frozenset[tuple[str, str]] = frozenset({
 #: Salvar e o Importar mandam o perfil ao controle e recusam no Nativo, nas cinco
 #: abas por controle; o Exportar só grava um arquivo e segue vivo.
 RODAPE_VIVO_NO_NATIVO = frozenset({"exportar"})
-FRASE_NO_NATIVO = "Em Modo Nativo o jogo lê este controle direto, e o Hefesto não grava aqui."
+FRASE_NO_NATIVO = "Em modo nativo o jogo lê este controle direto, e o Hefesto não grava aqui."
 MIRA_CINZA_NO_NATIVO = (
-    "Em Modo Nativo o jogo lê este controle direto, e o Analógico Virtual não grava."
+    "Em modo nativo o jogo lê este controle direto, e o analógico virtual não grava."
 )
 TOQUE_CINZA_NO_NATIVO = (
-    "Em Modo Nativo o jogo lê este controle direto, e o Cursor e os Botões do "
+    "Em modo nativo o jogo lê este controle direto, e o Cursor e os Botões do "
     "touchpad não gravam."
 )
 
@@ -213,7 +213,7 @@ FRASES_NO_NATIVO: dict[tuple[str, str], str] = {
 
 
 def no_nativo(state: Any) -> bool:
-    """O Modo Nativo está de pé? É o `native_mode` do daemon, pelo leitor único dos modos.
+    """O modo nativo está de pé? É o `native_mode` do daemon, pelo leitor único dos modos.
 
     Daemon calado (`state` vazio ou ausente) NÃO é Nativo: a recusa é de quem sabe, e o gesto
     sem daemon já falha pelo próprio caminho.

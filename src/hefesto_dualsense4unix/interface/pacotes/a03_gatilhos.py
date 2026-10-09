@@ -331,7 +331,7 @@ def descricao_do_modo(chave: str) -> str:
 #: NOME da constante ficou, porque os testes e o desenho a leem por ele.
 ROTULO_DO_JOGO_DECIDE = "Sem efeito"
 
-#: O gesto do par «Modo Automático | Modo Personalizado» (o mesmo `GESTO_DO_MODO` do desenho).
+#: O gesto do par «Modo automático | Modo personalizado» (o mesmo `GESTO_DO_MODO` do desenho).
 GESTO_DO_MODO = "modo-dos-gatilhos"
 
 
@@ -565,14 +565,14 @@ def modo_dos_gatilhos_do_perfil(p: dict[str, Any] | None) -> str:
 
 
 def _o_modo_escrito_e_automatico(p: dict[str, Any] | None) -> bool:
-    """O perfil traz o Modo Automático ESCRITO em `triggers.modo` (e não deduzido)?"""
+    """O perfil traz o modo automático ESCRITO em `triggers.modo` (e não deduzido)?"""
     globais = p.get("triggers") if isinstance(p, dict) else None
     return isinstance(globais, dict) and globais.get("modo") == MODO_AUTOMATICO
 
 
 RECADO_DO_AUTOMATICO_PARADO = (
-    "Os gatilhos estão no Modo Automático: sem efeito, e o jogo comanda quando quiser. "
-    "Passe para o Modo Personalizado para escolher.")
+    "Os gatilhos estão no modo automático: sem efeito, e o jogo comanda quando quiser. "
+    "Passe para o modo personalizado para escolher.")
 
 
 def _nao_no_automatico(ctx: Contexto) -> None:
@@ -591,7 +591,7 @@ def _o_que_o_controle_recebe(p: dict[str, Any] | None, uniq: str,
                              disco: str) -> dict[str, Any]:
     """O gatilho que aquele controle RECEBE daquele lado — `{"mode", "params"}`.
 
-    No Modo Automático ESCRITO a tela mostra «Sem efeito» nos dois lados de cada controle,
+    No modo automático ESCRITO a tela mostra «Sem efeito» nos dois lados de cada controle,
     antes de olhar o rascunho: o aparelho recebe `Off` (a vista do `ProfileManager`), e as
     escolhas guardadas ficam no disco para o Personalizado devolver.
     """
@@ -1770,7 +1770,7 @@ def _aplicar(p: Any, lado: str, modo_: str, params: list[int],
     **O QUE FALTAVA, MEDIDO:** `controllers[uniq].triggers` não persistia por
     clique nenhum. O `_RASCUNHO` guardava o gatilho aplicado NESTA SESSÃO e o
     rodapé não o alcançava — `pacotes/rodape.py` não importa este módulo. Clicar
-    `Rígido` no L2 e depois "Salvar Perfil" gravava o gatilho DE ONTEM, porque o
+    `Rígido` no L2 e depois "Salvar perfil" gravava o gatilho DE ONTEM, porque o
     rodapé monta o rascunho a partir do PERFIL NO DISCO. É o mesmo defeito que
     o reenvio nomeava pela outra ponta, antes de o botão sair da tela.
 
@@ -1921,7 +1921,7 @@ def _como_a_janela_pergunta(ctx: Contexto | None, uniq: str) -> Any:
     """O `host` que `frase_do_desfecho` interroga, com o que ESTA aba sabe.
 
     A GTK lê três coisas do objeto da janela para explicar um "guardado": o
-    alvo de edição, o mapa de conectados e o Modo Nativo. Esta aba SABE as três,
+    alvo de edição, o mapa de conectados e o modo nativo. Esta aba SABE as três,
     e melhor do que a GTK — ela não tem alvo de edição, tem uma COLUNA POR
     CONTROLE, e a coluna clicada é o alvo sem ambiguidade nenhuma.
 
@@ -2582,7 +2582,7 @@ def _gravar_so_o_gatilho(novo: Any, p: Any) -> None:
 
 @gesto("03-gatilhos.html", GESTO_DO_MODO, grava="_gravar_so_o_gatilho")
 def modo_dos_gatilhos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """O par «Modo Automático | Modo Personalizado» — e ele MUDA o perfil.
+    """O par «Modo automático | Modo personalizado» — e ele MUDA o perfil.
 
     **O Automático** deixa os gatilhos «Sem efeito» (a chave `Off`) em todos os controles: é o
     `triggers.modo` escrito como Automático, que o `ProfileManager` lê para mandar `Off` ao
@@ -2613,9 +2613,9 @@ def modo_dos_gatilhos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
         "triggers": prof.triggers.model_copy(update={"modo": pedido})})
     _gravar_so_o_gatilho(novo, p)
     perfil.reaplicar(nome, ctx, p)
-    return {"recado": ("Gatilhos no Modo Automático: sem efeito, o jogo comanda."
+    return {"recado": ("Gatilhos no modo automático: sem efeito, o jogo comanda."
                        if pedido == MODO_AUTOMATICO
-                       else "Gatilhos no Modo Personalizado: valem as suas escolhas.")}
+                       else "Gatilhos no modo personalizado: valem as suas escolhas.")}
 
 
 

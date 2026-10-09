@@ -542,8 +542,8 @@ CSS = CSS_GLIFO + """
   /* A COLUNA DO RÓTULO É JUSTA — remedida no Chrome em 31/08/2026, DEPOIS que o usuário
      pediu os dois pontos e a maiúscula — com a preposição minúscula, que foi a
      segunda palavra de produto: `Nome:` 36px · `Prioridade:` 63 · `Funciona em:` 77 ·
-     `Estilo de Jogo:` 85 · `Nome do Jogo:` **86** — que trocou de dono, era o
-     `Estilo de Jogo` com 82 antes dos dois pontos.
+     `Estilo de jogo:` 85 · `Nome do jogo:` **86** — que trocou de dono, era o
+     `Estilo de jogo` com 82 antes dos dois pontos.
      Os 104 antigos deixavam 17px de vão morto à direita de todo rótulo — e é
      esse vão que os campos ganharam.
      NÃO dá para usar `max-content`: cada `.campo` é um grid PRÓPRIO, então a
@@ -1377,7 +1377,7 @@ MIOLO = f'''
              quilométrico. ao invés de estar tudo em Perfis deveria estar em cada
              seção"*. Ela estava certa por dois motivos: o bloco tinha quatro
              parágrafos e cobria meia tela ao abrir, e cada assunto dele JÁ tinha
-             dono na tela — Prioridade, Estilo de Jogo e a tabela por controle têm
+             dono na tela — Prioridade, estilo de jogo e a tabela por controle têm
              `title` próprio, a poucos pixels de onde a pessoa está olhando.
              Aqui fica só o que nenhum campo diz: o que É um perfil. -->
         <span class="ajuda">?<span class="dica">
@@ -1523,7 +1523,7 @@ MIOLO = f'''
                    (`simple_match.exigencia_invisivel`) e nunca tinha chegado a
                    esta tela. -->
               <div class="campo">
-                <span>Nome do Jogo:</span>
+                <span>Nome do jogo:</span>
                 <span class="val">
                   <!-- A LISTA DOS JOGOS DESTA MÁQUINA — PERFIL-MODO-01, Passo 3
                        (06/09/2026). A janela GTK tem `Gtk.EntryCompletion` sobre
@@ -1557,7 +1557,7 @@ MIOLO = f'''
                 </span>
               </div>
               <div class="campo">
-                <span title="Pré-aplica de uma vez o gatilho, a vibração e a cor da luz. Os {QUANTOS_ESTILOS_DE_FABRICA} de fábrica não se editam; o Personalizado usa o que você ajustou nas abas.">Estilo de Jogo:</span>
+                <span title="Pré-aplica de uma vez o gatilho, a vibração e a cor da luz. Os {QUANTOS_ESTILOS_DE_FABRICA} de fábrica não se editam; o Personalizado usa o que você ajustou nas abas.">Estilo de jogo:</span>
                 <span class="val"><select class="destaque" data-hef="editor.estilo" data-hef-gesto="editor.estilo" data-hef-alvo="valor">
 {opts(ESTILOS, "", vazio=True)}
                 </select></span>
@@ -1686,7 +1686,7 @@ LEGENDA = f'''<div class="nota">
       <b>Jogar</b>; se vem também para cá, é decisão sua, e a tela não decide por você.
       <span class="marca">O "Modo que liga" saiu desta lista</span> — você já decidiu, e
       ele está no bloco de cima.</li>
-    <li><b>O conteúdo dos Estilos de Jogo</b> continua em aberto: a lista está aqui, o que
+    <li><b>O conteúdo dos estilos de jogo</b> continua em aberto: a lista está aqui, o que
       cada um liga não.</li>
     <li><b>A tabela é leitura</b>, como a fita esmaecida diz. Se você quiser mudar o ajuste de
       um controle a partir daqui — em vez de ir à aba da peça com aquele controle escolhido
@@ -1738,7 +1738,7 @@ def _conferir(html: str) -> None:
         exigir(f'class="sec-rot">{titulo}<' in html,
                f"o título de bloco '{titulo}' não está na tela")
 
-    for rot in ("Nome:", "Preferência:", "Funciona em:", "Nome do Jogo:", "Estilo de Jogo:"):
+    for rot in ("Nome:", "Preferência:", "Funciona em:", "Nome do jogo:", "Estilo de jogo:"):
         exigir(f">{rot}</span>" in html, f"o rótulo '{rot}' não está na tela")
     th_pri = re.search(r'<th class="pri"[^>]*>([^<]*)', html)
     exigir(th_pri is not None, "o cabeçalho da Preferência sumiu da tabela")
@@ -2024,10 +2024,10 @@ def _conferir(html: str) -> None:
                f"o estilo '{e.rotulo}' está no motor e não está no `<select>` "
                f"— o gesto saberia aplicá-lo e ela não teria como pedir")
     exigir('<option value="" selected>—</option>' in html,
-           "a opção vazia do Estilo de Jogo saiu — o campo voltaria a abrir "
+           "a opção vazia do estilo de jogo saiu — o campo voltaria a abrir "
            "afirmando um estilo que perfil nenhum guarda")
     exigir(f"Os {QUANTOS_ESTILOS_DE_FABRICA} de fábrica não se editam" in html,
-           f"a dica do Estilo de Jogo não diz os {QUANTOS_ESTILOS_DE_FABRICA} "
+           f"a dica do estilo de jogo não diz os {QUANTOS_ESTILOS_DE_FABRICA} "
            f"de fábrica que o motor tem — a conta voltou a ser digitada")
 
     exigir(f'<option value="{TRAVESSAO}" disabled>{TRAVESSAO}</option>' in html,

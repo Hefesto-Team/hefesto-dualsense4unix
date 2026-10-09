@@ -1588,7 +1588,7 @@
   .acoes.tres{grid-template-columns:1fr 1fr 1fr}
   /* quatro botões na fileira de 1086px dão 261,8px cada, e o rótulo mais longo
      cabe numa linha. O comentário daqui afirmava, desde 28/08, que "Configurar
-     o estilo Point-and-click" JÁ tinha virado "Estilo Point-and-click" — e o
+     o estilo Point-and-click" JÁ tinha virado "Estilo point-and-click" — e o
      gerador continuava escrevendo o rótulo longo: era comentário descrevendo
      cura que não existia. A troca aconteceu de fato em 11/09/2026, aprovada
      pelo usuário, e por outra razão: o botão e a tela que ele abre tinham nomes
@@ -1768,7 +1768,7 @@
   .tog.ligado .pino{background:var(--green);box-shadow:0 0 7px var(--green)}
   /* A CHAVE «TAMBÉM NO JOGO» (O-GATILHO-VIRA-CLIQUE-SEM-LIGAR-O-CURSOR-01, opção
      b): no topo das Definições, entre o `?` do título e o `×`. Ligada acende em
-     verde como o `.tog`; no Modo Nativo fica cinza e recusa (cor explícita, sem
+     verde como o `.tog`; no modo nativo fica cinza e recusa (cor explícita, sem
      `opacity`), com o porquê no `?` dela. */
   .chave-jogo{margin-left:auto;display:inline-flex;align-items:center;gap:8px;padding:2px 4px}
   .chave-jogo + .tn-x{margin-left:10px}
@@ -2409,11 +2409,11 @@
       <span class="pa-rot">Perfil ativo</span>
       <span class="pa-nome" data-campo="perfil">—</span>
       <!-- `tabindex` de 07/09/2026: este `?` está no CABEÇALHO, logo nas dez
-           abas, e explica onde o "Salvar Perfil" grava. Sem ele o `<span>` não
+           abas, e explica onde o "Salvar perfil" grava. Sem ele o `<span>` não
            recebe foco e o `el.click()` do controle não o abria em aba nenhuma. -->
       <span class="ajuda" tabindex="0">?<span class="dica" style="left:auto;right:22px">
         Tudo o que você mudar em qualquer aba cai <b>neste</b> perfil quando clicar em
-        <b>Salvar Perfil</b>.<br><br>
+        <b>Salvar perfil</b>.<br><br>
         Cada controle guarda a <b>sua</b> configuração aqui dentro, pelo ID da peça — amanhã,
         em outra porta ou no rádio, ele traz de volta o que você deixou hoje.
       </span></span>
@@ -3717,7 +3717,7 @@
   <line x1="7" y1="10" x2="25" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="7" y1="16" x2="25" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="7" y1="22" x2="25" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg><span class="nm">Options</span></span></td><td><select class="campo-linha" data-gesto="acao-do-gesto" data-linha="ps_options" data-campo="faz-ps_options" data-hef-alvo="valor"><optgroup label="Perfil"><option>Próximo perfil</option><option>Perfil anterior</option></optgroup><optgroup label="Mouse e teclado"><option selected>Suspender mouse e teclado</option><option>Sair do modo jogo</option></optgroup><optgroup label="Modo"><option>Próximo Modo</option></optgroup><optgroup label="Máscara"><option>Próxima Máscara</option></optgroup><optgroup label="Modo Steam"><option>Abrir a Steam</option></optgroup><optgroup label="Hefesto"><option>Abrir o Hefesto</option><option>Reiniciar o serviço</option><option>Parar o serviço</option></optgroup><optgroup label="Executar Comando"><option data-campo="script-ps_options">Escolher um script…</option></optgroup><option>— Nada —</option></select></td></tr>
+</svg><span class="nm">Options</span></span></td><td><select class="campo-linha" data-gesto="acao-do-gesto" data-linha="ps_options" data-campo="faz-ps_options" data-hef-alvo="valor"><optgroup label="Perfil"><option>Próximo perfil</option><option>Perfil anterior</option></optgroup><optgroup label="Mouse e teclado"><option selected>Suspender mouse e teclado</option><option>Sair do modo jogo</option></optgroup><optgroup label="Modo"><option>Próximo modo</option></optgroup><optgroup label="Máscara"><option>Próxima máscara</option></optgroup><optgroup label="Modo Steam"><option>Abrir a Steam</option></optgroup><optgroup label="Hefesto"><option>Abrir o Hefesto</option><option>Reiniciar o serviço</option><option>Parar o serviço</option></optgroup><optgroup label="Executar Comando"><option data-campo="script-ps_options">Escolher um script…</option></optgroup><option>— Nada —</option></select></td></tr>
                 <tr class="g g2"><td class="b"><span class="gls"><span class="mk-n">2</span><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>PS</title>
 
   <g transform="translate(16 16) scale(0.99425) translate(-16.0925 -16.0)">
@@ -3726,7 +3726,7 @@
 </svg> <span class="mais">+</span> <svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad Cima</title>
 
   <polygon points="16,5 24,16 19,16 19,27 13,27 13,16 8,16" fill="currentColor"/>
-</svg></span></td><td><select class="campo-linha" data-gesto="acao-do-gesto" data-linha="ps_cima" data-campo="faz-ps_cima" data-hef-alvo="valor"><optgroup label="Perfil"><option selected>Próximo perfil</option><option>Perfil anterior</option></optgroup><optgroup label="Mouse e teclado"><option>Suspender mouse e teclado</option><option>Sair do modo jogo</option></optgroup><optgroup label="Modo"><option>Próximo Modo</option></optgroup><optgroup label="Máscara"><option>Próxima Máscara</option></optgroup><optgroup label="Modo Steam"><option>Abrir a Steam</option></optgroup><optgroup label="Hefesto"><option>Abrir o Hefesto</option><option>Reiniciar o serviço</option><option>Parar o serviço</option></optgroup><optgroup label="Executar Comando"><option data-campo="script-ps_cima">Escolher um script…</option></optgroup><option>— Nada —</option></select></td></tr>
+</svg></span></td><td><select class="campo-linha" data-gesto="acao-do-gesto" data-linha="ps_cima" data-campo="faz-ps_cima" data-hef-alvo="valor"><optgroup label="Perfil"><option selected>Próximo perfil</option><option>Perfil anterior</option></optgroup><optgroup label="Mouse e teclado"><option>Suspender mouse e teclado</option><option>Sair do modo jogo</option></optgroup><optgroup label="Modo"><option>Próximo modo</option></optgroup><optgroup label="Máscara"><option>Próxima máscara</option></optgroup><optgroup label="Modo Steam"><option>Abrir a Steam</option></optgroup><optgroup label="Hefesto"><option>Abrir o Hefesto</option><option>Reiniciar o serviço</option><option>Parar o serviço</option></optgroup><optgroup label="Executar Comando"><option data-campo="script-ps_cima">Escolher um script…</option></optgroup><option>— Nada —</option></select></td></tr>
                 <tr class="g g3"><td class="b"><span class="gls"><span class="mk-n">3</span><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>PS</title>
 
   <g transform="translate(16 16) scale(0.99425) translate(-16.0925 -16.0)">
@@ -3735,7 +3735,7 @@
 </svg> <span class="mais">+</span> <svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad Baixo</title>
 
   <polygon points="16,27 8,16 13,16 13,5 19,5 19,16 24,16" fill="currentColor"/>
-</svg></span></td><td><select class="campo-linha" data-gesto="acao-do-gesto" data-linha="ps_baixo" data-campo="faz-ps_baixo" data-hef-alvo="valor"><optgroup label="Perfil"><option>Próximo perfil</option><option selected>Perfil anterior</option></optgroup><optgroup label="Mouse e teclado"><option>Suspender mouse e teclado</option><option>Sair do modo jogo</option></optgroup><optgroup label="Modo"><option>Próximo Modo</option></optgroup><optgroup label="Máscara"><option>Próxima Máscara</option></optgroup><optgroup label="Modo Steam"><option>Abrir a Steam</option></optgroup><optgroup label="Hefesto"><option>Abrir o Hefesto</option><option>Reiniciar o serviço</option><option>Parar o serviço</option></optgroup><optgroup label="Executar Comando"><option data-campo="script-ps_baixo">Escolher um script…</option></optgroup><option>— Nada —</option></select></td></tr>
+</svg></span></td><td><select class="campo-linha" data-gesto="acao-do-gesto" data-linha="ps_baixo" data-campo="faz-ps_baixo" data-hef-alvo="valor"><optgroup label="Perfil"><option>Próximo perfil</option><option selected>Perfil anterior</option></optgroup><optgroup label="Mouse e teclado"><option>Suspender mouse e teclado</option><option>Sair do modo jogo</option></optgroup><optgroup label="Modo"><option>Próximo modo</option></optgroup><optgroup label="Máscara"><option>Próxima máscara</option></optgroup><optgroup label="Modo Steam"><option>Abrir a Steam</option></optgroup><optgroup label="Hefesto"><option>Abrir o Hefesto</option><option>Reiniciar o serviço</option><option>Parar o serviço</option></optgroup><optgroup label="Executar Comando"><option data-campo="script-ps_baixo">Escolher um script…</option></optgroup><option>— Nada —</option></select></td></tr>
                 <tr class="g g4"><td class="b"><span class="gls"><span class="mk-n">4</span><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>PS</title>
 
   <g transform="translate(16 16) scale(0.99425) translate(-16.0925 -16.0)">
@@ -3746,7 +3746,7 @@
   <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
   <text x="13" y="19" font-family="monospace" font-size="7" font-weight="bold" fill="currentColor">R</text>
-</svg><span class="nm">R3</span></span></td><td><select class="campo-linha" data-gesto="acao-do-gesto" data-linha="ps_r3" data-campo="faz-ps_r3" data-hef-alvo="valor"><optgroup label="Perfil"><option>Próximo perfil</option><option>Perfil anterior</option></optgroup><optgroup label="Mouse e teclado"><option>Suspender mouse e teclado</option><option>Sair do modo jogo</option></optgroup><optgroup label="Modo"><option selected>Próximo Modo</option></optgroup><optgroup label="Máscara"><option>Próxima Máscara</option></optgroup><optgroup label="Modo Steam"><option>Abrir a Steam</option></optgroup><optgroup label="Hefesto"><option>Abrir o Hefesto</option><option>Reiniciar o serviço</option><option>Parar o serviço</option></optgroup><optgroup label="Executar Comando"><option data-campo="script-ps_r3">Escolher um script…</option></optgroup><option>— Nada —</option></select></td></tr>
+</svg><span class="nm">R3</span></span></td><td><select class="campo-linha" data-gesto="acao-do-gesto" data-linha="ps_r3" data-campo="faz-ps_r3" data-hef-alvo="valor"><optgroup label="Perfil"><option>Próximo perfil</option><option>Perfil anterior</option></optgroup><optgroup label="Mouse e teclado"><option>Suspender mouse e teclado</option><option>Sair do modo jogo</option></optgroup><optgroup label="Modo"><option selected>Próximo modo</option></optgroup><optgroup label="Máscara"><option>Próxima máscara</option></optgroup><optgroup label="Modo Steam"><option>Abrir a Steam</option></optgroup><optgroup label="Hefesto"><option>Abrir o Hefesto</option><option>Reiniciar o serviço</option><option>Parar o serviço</option></optgroup><optgroup label="Executar Comando"><option data-campo="script-ps_r3">Escolher um script…</option></optgroup><option>— Nada —</option></select></td></tr>
                 <tr class="g g5"><td class="b"><span class="gls"><span class="mk-n">5</span><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>PS</title>
 
   <g transform="translate(16 16) scale(0.99425) translate(-16.0925 -16.0)">
@@ -3757,13 +3757,13 @@
   <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
   <text x="13" y="19" font-family="monospace" font-size="7" font-weight="bold" fill="currentColor">L</text>
-</svg><span class="nm">L3</span></span></td><td><select class="campo-linha" data-gesto="acao-do-gesto" data-linha="ps_l3" data-campo="faz-ps_l3" data-hef-alvo="valor"><optgroup label="Perfil"><option>Próximo perfil</option><option>Perfil anterior</option></optgroup><optgroup label="Mouse e teclado"><option>Suspender mouse e teclado</option><option>Sair do modo jogo</option></optgroup><optgroup label="Modo"><option>Próximo Modo</option></optgroup><optgroup label="Máscara"><option selected>Próxima Máscara</option></optgroup><optgroup label="Modo Steam"><option>Abrir a Steam</option></optgroup><optgroup label="Hefesto"><option>Abrir o Hefesto</option><option>Reiniciar o serviço</option><option>Parar o serviço</option></optgroup><optgroup label="Executar Comando"><option data-campo="script-ps_l3">Escolher um script…</option></optgroup><option>— Nada —</option></select></td></tr>
+</svg><span class="nm">L3</span></span></td><td><select class="campo-linha" data-gesto="acao-do-gesto" data-linha="ps_l3" data-campo="faz-ps_l3" data-hef-alvo="valor"><optgroup label="Perfil"><option>Próximo perfil</option><option>Perfil anterior</option></optgroup><optgroup label="Mouse e teclado"><option>Suspender mouse e teclado</option><option>Sair do modo jogo</option></optgroup><optgroup label="Modo"><option>Próximo modo</option></optgroup><optgroup label="Máscara"><option selected>Próxima máscara</option></optgroup><optgroup label="Modo Steam"><option>Abrir a Steam</option></optgroup><optgroup label="Hefesto"><option>Abrir o Hefesto</option><option>Reiniciar o serviço</option><option>Parar o serviço</option></optgroup><optgroup label="Executar Comando"><option data-campo="script-ps_l3">Escolher um script…</option></optgroup><option>— Nada —</option></select></td></tr>
                 <tr class="g g6"><td class="b"><span class="gls"><span class="mk-n">6</span><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>PS</title>
 
   <g transform="translate(16 16) scale(0.99425) translate(-16.0925 -16.0)">
     <path fill="currentColor" d="M 1.348 21.736 C 0.195 22.543 0.408 23.935 3.04 24.805 C 5.671 25.675 8.73 25.855 11.422 25.371 C 11.345 25.371 11.575 25.371 11.422 25.371 L 11.422 22.624 L 8.807 23.513 C 7.807 23.835 6.807 23.916 5.808 23.675 C 5.039 23.432 5.192 22.947 6.115 22.543 L 11.422 20.604 L 11.422 17.616 L 4.039 20.282 C 3.117 20.604 2.193 21.09 1.348 21.736 Z M 19.188 9.619 L 19.188 17.455 C 22.34 19.07 24.801 17.455 24.801 13.254 C 24.801 8.973 23.34 7.034 19.111 5.5 C 16.881 4.692 14.574 3.965 12.267 3.48 L 12.267 26.825 L 17.65 28.521 L 17.65 8.892 C 17.65 8.004 17.65 7.358 18.266 7.599 C 19.111 7.842 19.188 8.731 19.188 9.619 Z M 29.184 19.878 C 26.955 19.07 24.571 18.746 22.263 18.989 C 20.982 19.073 19.78 19.455 18.573 19.878 L 18.573 23.028 L 23.571 21.09 C 24.571 20.766 25.571 20.685 26.57 20.928 C 27.339 21.171 27.185 21.655 26.262 22.059 L 18.573 25.047 L 18.573 28.116 L 29.184 23.997 C 29.954 23.675 30.645 23.27 31.261 22.624 C 31.799 21.817 31.568 20.685 29.184 19.878 Z"/>
   </g>
-</svg></span></td><td><select class="campo-linha" data-gesto="acao-do-gesto" data-linha="ps" data-campo="faz-ps" data-hef-alvo="valor"><optgroup label="Perfil"><option>Próximo perfil</option><option>Perfil anterior</option></optgroup><optgroup label="Mouse e teclado"><option>Suspender mouse e teclado</option><option>Sair do modo jogo</option></optgroup><optgroup label="Modo"><option>Próximo Modo</option></optgroup><optgroup label="Máscara"><option>Próxima Máscara</option></optgroup><optgroup label="Modo Steam"><option selected>Abrir a Steam</option></optgroup><optgroup label="Hefesto"><option>Abrir o Hefesto</option><option>Reiniciar o serviço</option><option>Parar o serviço</option></optgroup><optgroup label="Executar Comando"><option data-campo="script-ps">Escolher um script…</option></optgroup><option>— Nada —</option></select></td></tr>
+</svg></span></td><td><select class="campo-linha" data-gesto="acao-do-gesto" data-linha="ps" data-campo="faz-ps" data-hef-alvo="valor"><optgroup label="Perfil"><option>Próximo perfil</option><option>Perfil anterior</option></optgroup><optgroup label="Mouse e teclado"><option>Suspender mouse e teclado</option><option>Sair do modo jogo</option></optgroup><optgroup label="Modo"><option>Próximo modo</option></optgroup><optgroup label="Máscara"><option>Próxima máscara</option></optgroup><optgroup label="Modo Steam"><option selected>Abrir a Steam</option></optgroup><optgroup label="Hefesto"><option>Abrir o Hefesto</option><option>Reiniciar o serviço</option><option>Parar o serviço</option></optgroup><optgroup label="Executar Comando"><option data-campo="script-ps">Escolher um script…</option></optgroup><option>— Nada —</option></select></td></tr>
             </table>
           </div>
         </div>
@@ -3791,7 +3791,7 @@
         <div class="moldura">
           <div class="ativacao">
             <div class="at-col">
-              <div class="at-linha"><span class="at-rot">Status da navegação<span class="ajuda tem-viva" tabindex="0">?<span class="dica">Liga e desliga o <b>tipo de navegação</b> escolhido logo abaixo, em <b>todos os perfis</b>. A <b>Interna</b> liga em qualquer aba e em qualquer Modo, e só age com o Hefesto na frente; <b>O computador</b> liga no Modo Navegação. <b>Desligado</b>, o controle é só gamepad.<span class="viva" data-campo="modo-portao" data-hef-alvo="html"><i class="nada"></i></span></span></span></span><label class="tog" data-gesto="modo" data-campo="rato-ligado" data-hef-alvo="classe" data-hef-classe="ligado" data-hef-quando="Ligado"><span class="pino"></span><span class="txt" data-campo="rato-ligado">—</span></label></div>
+              <div class="at-linha"><span class="at-rot">Status da navegação<span class="ajuda tem-viva" tabindex="0">?<span class="dica">Liga e desliga o <b>tipo de navegação</b> escolhido logo abaixo, em <b>todos os perfis</b>. A <b>Interna</b> liga em qualquer aba e em qualquer modo, e só age com o Hefesto na frente; <b>O computador</b> liga no modo Navegação. <b>Desligado</b>, o controle é só gamepad.<span class="viva" data-campo="modo-portao" data-hef-alvo="html"><i class="nada"></i></span></span></span></span><label class="tog" data-gesto="modo" data-campo="rato-ligado" data-hef-alvo="classe" data-hef-classe="ligado" data-hef-quando="Ligado"><span class="pino"></span><span class="txt" data-campo="rato-ligado">—</span></label></div>
               <div class="at-linha"><span class="at-rot">Função do teclado<span class="ajuda tem-viva" tabindex="0">?<span class="dica">Liga o que o controle <b>digita</b>: os atalhos das telas de botões, o teclado na tela e as três regiões do touchpad. Vale para este perfil.<br><br><b>Só dentro do jogo</b>: digita só com um jogo aberto. <b>Só fora do jogo</b>: digita só sem jogo aberto.<span class="viva" data-campo="teclado-osk" data-hef-alvo="html"><i class="nada"></i></span><span class="viva" data-campo="ativacao-ressalva" data-hef-alvo="html"><i class="nada"></i></span></span></span></span><select class="escolha-at" data-gesto="teclado" data-campo="teclado-estado" data-hef-alvo="valor"><option>Só dentro do jogo</option><option selected>Só fora do jogo</option><option>Desativado</option></select></div>
               <div class="at-linha"><span class="at-rot">Tipo de navegação<span class="ajuda" tabindex="0">?<span class="dica"><b>Interna</b>: cada controle ajusta o próprio controle nas abas Jogar, Controles, Gatilhos, Iluminação e Vibração, ao mesmo tempo. <b>R1</b> e <b>L1</b> trocam de aba, o direcional escolhe, <b>X</b> aciona e <b>Start</b> guarda os de todos no perfil. Com o Hefesto na frente, esses botões não chegam ao jogo.<br><br><b>O computador</b>: o controle vira mouse e teclado.</span></span></span><select class="escolha-at" data-gesto="navegacao-tipo" data-campo="navegacao-tipo" data-hef-alvo="valor"><option selected>Interna — cada controle ajusta o seu</option><option>O computador — mouse e teclado</option></select></div>
             </div>
@@ -3843,9 +3843,9 @@
         <div class="moldura moldura-acoes">
 
             <div class="acoes quatro grupo-padrao">
-              <a class="btn roxo" href="#definicoes-mouse">Definições Controle e Mouse</a>
+              <a class="btn roxo" href="#definicoes-mouse">Definições controle e mouse</a>
               <a class="btn roxo" href="#remapeamento">Trocar os botões</a>
-              <a class="btn roxo" href="#point-and-click">Estilo Point-and-click</a>
+              <a class="btn roxo" href="#point-and-click">Estilo point-and-click</a>
               <!-- O RÁDIO VEM ANTES de tudo o que reage a ele: o `~` do CSS só
                    enxerga irmão POSTERIOR. É a mesma armadilha que o interruptor
                    da aba Jogar documenta, e a mesma cura. -->
@@ -3853,7 +3853,7 @@
               <label for="conf-padrao" class="btn btn-padrao">Voltar ao padrão</label>
               <label for="conf-padrao" class="veu" title="Fecha sem mudar nada."></label>
               <div class="confirma">
-                <span>Voltar ao padrão o mouse, as Definições e as teclas? No jogo
+                <span>Voltar ao padrão o mouse, as definições e as teclas? No jogo
                   que os escolheu, volta o do computador; sem jogo, o computador
                   volta ao de fábrica, e os gestos também. A troca de botões fica.</span>
                 <!-- O ENDEREÇO VAI NO "Confirmar", nunca no "Voltar ao padrão":
@@ -3895,7 +3895,7 @@
   <!-- ================= RODAPÉ ================= -->
   <div class="rodape">
     <!-- O RECIBO SAIU DA BARRA E VIROU DICA DOS BOTÕES — 30/08/2026, pedido:
-         *"'Aplicar vale agora • Salvar Perfil grava no Mortal Kombat' isso deveria
+         *"'Aplicar vale agora • Salvar perfil grava no Mortal Kombat' isso deveria
          em formato de tooltip ao deixar o mouse sobre os botões aplicar, salvar
          perfil, importar e exportar. em todas as abas."*
 
@@ -3926,7 +3926,7 @@
 
          O NOME DO PERFIL É DADO, E ERA LITERAL — corrigido em 03/09/2026, achado
          pela régua do mockup e nomeado pelo juiz da leva. O pedido trazia um
-         EXEMPLO — *"Salvar Perfil grava no Mortal Kombat"* — e este arquivo
+         EXEMPLO — *"Salvar perfil grava no Mortal Kombat"* — e este arquivo
          congelou o exemplo em vez do nome. Resultado medido: as DEZ abas diziam
          "Grava no perfil Mortal Kombat" com `meu_perfil` ativo. O comentário aqui
          em cima já dizia o que importava — *o NOME do perfil, "a informação que
@@ -3942,7 +3942,7 @@
             title="Vale agora: envia a configuração aos controles na hora. Não grava — ao trocar de perfil ou reiniciar, volta ao que está salvo.">Aplicar</button>
     <button class="r-salvar" data-campo="rodape.salvar"
             data-hef-alvo="atributo" data-hef-atributo="title"
-            title="Grava no perfil ativo. É onde a mudança vai cair.">Salvar Perfil</button>
+            title="Grava no perfil ativo. É onde a mudança vai cair.">Salvar perfil</button>
     <button class="r-importar" title="Carrega um perfil de arquivo .json.">Importar</button>
     <button class="r-exportar" data-campo="rodape.exportar"
             data-hef-alvo="atributo" data-hef-atributo="title"
@@ -3954,9 +3954,9 @@
 <div class="tela-nova" id="definicoes-mouse">
   <div class="tn-cx">
     <div class="tn-topo">
-      <span class="tn-tit">Definições Controle e Mouse</span>
+      <span class="tn-tit">Definições controle e mouse</span>
       <span class="ajuda" tabindex="0">?<span class="dica">As <b>22 linhas</b> de cada botão: <b>o que ele faz</b> — mouse, tecla ou programa, na mesma lista.<br><br>O <b>PS</b> continua sendo a saída de emergência — os 6 gestos desta aba saem dele. O que o toque nele faz no computador é o <b>⑥</b> dos gestos; aqui ele só ganha uma tecla, que acontece <b>junto</b>, no toque curto e fora do jogo.<br><br>Enquanto o touchpad for o ponteiro do computador, o clique dele não vira tecla — as três regiões ficam marcadas e a escolha fica guardada.<br><br>Valem para o controle que navega o PC: o <b data-campo="quem-navega">P1 Cosmic Red USB</b>.</span></span>
-      <span class="chave-jogo" data-campo="tabela-no-jogo-fora" data-hef-alvo="classe" data-hef-classe="apagada" data-hef-quando="NATIVO" title="Com um jogo aberto, a tabela inteira age junto com o jogo."><span class="nj-tog" data-gesto="tabela-no-jogo" data-campo="tabela-no-jogo" data-hef-alvo="classe" data-hef-classe="ligado" data-hef-quando="Sim"><span class="pino"></span><span class="txt" data-campo="tabela-no-jogo">Não</span></span><span class="chave-rot">Também no jogo</span><span class="ajuda" tabindex="0">?<span class="dica">Com um <b>jogo aberto</b>, toda linha que não for <b>— Nada —</b> age <b>junto</b> com o jogo. Vale para este perfil, em qualquer Modo, pelo cabo e pelo BT, para os quatro jogadores; o cursor e a rolagem só andam pelo <b>P1</b>.<br><br>No <b>Modo Nativo</b> o jogo lê o controle direto, e a chave fica apagada.</span></span></span>
+      <span class="chave-jogo" data-campo="tabela-no-jogo-fora" data-hef-alvo="classe" data-hef-classe="apagada" data-hef-quando="NATIVO" title="Com um jogo aberto, a tabela inteira age junto com o jogo."><span class="nj-tog" data-gesto="tabela-no-jogo" data-campo="tabela-no-jogo" data-hef-alvo="classe" data-hef-classe="ligado" data-hef-quando="Sim"><span class="pino"></span><span class="txt" data-campo="tabela-no-jogo">Não</span></span><span class="chave-rot">Também no jogo</span><span class="ajuda" tabindex="0">?<span class="dica">Com um <b>jogo aberto</b>, toda linha que não for <b>— Nada —</b> age <b>junto</b> com o jogo. Vale para este perfil, em qualquer modo, pelo cabo e pelo BT, para os quatro jogadores; o cursor e a rolagem só andam pelo <b>P1</b>.<br><br>No <b>modo nativo</b> o jogo lê o controle direto, e a chave fica apagada.</span></span></span>
       <a class="tn-x" href="#" title="Fechar" data-gesto="fechar-definicoes">×</a>
     </div>
     <div class="tn-corpo">
@@ -4172,7 +4172,7 @@
       <a class="btn" href="#" data-gesto="fechar-teclas">Cancelar</a>
       <!-- O CAMINHO DE VOLTA À OUTRA TELA MORA NO `?`, e não num terceiro
            botão: medido no WebKit em 06/09/2026, com os três no rodapé o rótulo
-           "Definições Controle e Mouse" QUEBRA EM DUAS LINHAS dentro de uma
+           "Definições controle e mouse" QUEBRA EM DUAS LINHAS dentro de uma
            caixa de altura fixa — o mesmo defeito que encurtou o terceiro botão
            da fileira da aba em 28/08. Cancelar fecha, e a fileira da aba está a
            um clique. -->
@@ -4185,7 +4185,7 @@
   <div class="tn-cx">
     <div class="tn-topo">
       <span class="tn-tit">Trocar os botões</span>
-      <span class="ajuda" tabindex="0">?<span class="dica">As mesmas <b>22 linhas</b>, na mesma ordem, dizendo outra coisa: <b>para qual outro botão</b> cada um passa a valer. O que cada botão <b>faz</b> se escolhe na tela <b>Definições Controle e Mouse</b>.</span></span>
+      <span class="ajuda" tabindex="0">?<span class="dica">As mesmas <b>22 linhas</b>, na mesma ordem, dizendo outra coisa: <b>para qual outro botão</b> cada um passa a valer. O que cada botão <b>faz</b> se escolhe na tela <b>Definições controle e mouse</b>.</span></span>
 
       <a class="tn-x" href="#" title="Fechar" data-gesto="fechar-troca">×</a>
     </div>
@@ -4328,7 +4328,7 @@
       <a class="btn btn-padrao btn-padrao-tela" href="#">Voltar ao padrão</a>
       <a class="btn roxo" href="#" data-gesto="guardar-remapeamento" data-hef-forma="remapeamento">Guardar</a>
       <div class="confirma">
-        <span>Devolver as 22 linhas ao <b>— Sem troca —</b>? As <b>Definições Controle e Mouse</b> não são tocadas.</span>
+        <span>Devolver as 22 linhas ao <b>— Sem troca —</b>? As <b>Definições controle e mouse</b> não são tocadas.</span>
         <button class="btn-conf vermelho" data-gesto="padrao-remapeamento">Confirmar</button>
         <button class="btn-conf">Cancelar</button>
       </div>
@@ -4338,7 +4338,7 @@
 <div class="tela-nova" id="point-and-click">
   <div class="tn-cx">
     <div class="tn-topo">
-      <span class="tn-tit">Estilo Point-and-click</span>
+      <span class="tn-tit">Estilo point-and-click</span>
       <span class="ajuda" tabindex="0">?<span class="dica">Serve para jogo de <b>apontar e clicar</b>, que espera mouse e não entende controle: <b>o touchpad vira o ponteiro</b>, e o toque vira o clique.</span></span>
       <a class="tn-x" href="#" title="Fechar" data-gesto="fechar-ponto">×</a>
     </div>

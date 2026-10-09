@@ -132,7 +132,7 @@ DONOS_DOS_GESTOS = {
     "rodape": "Aplicar/Salvar/Importar têm dono (app/actions/footer_actions.py: "
     "on_save_profile, on_import_profile). EXPORTAR NÃO TEM — "
     "não existe handler no src/ nem botão no main.glade. Nesta leva nenhum é "
-    "chamado: 'Salvar Perfil' GRAVA NO DISCO DELA, e esta leva não escreve.",
+    "chamado: 'Salvar perfil' GRAVA NO DISCO DELA, e esta leva não escreve.",
 }
 
 SEM_DONO = ("SEM LINHA na tabela de donos — este gesto chegou de um endereço "
@@ -228,7 +228,7 @@ window.HEF = (function(){
   // A CURA NÃO É TIRAR O `preventDefault`, e nesta aba menos ainda: ela não
   // aplica NADA (o cabeçalho o diz — o único método pronunciado é
   // `daemon.state_full`). Se o clique abrisse a seção sozinho, a tela mostraria
-  // "Modo Nativo" com o daemon em `gamepad` — o F7 desta casa. Quem move o
+  // "Modo nativo" com o daemon em `gamepad` — o F7 desta casa. Quem move o
   // rádio é a pintura, e a pintura fala pelo daemon.
   //
   // O ID DO RÁDIO NÃO É DIGITADO AQUI: sai do `for` do próprio rótulo
@@ -283,7 +283,7 @@ window.HEF = (function(){
       txt(q('.bolinha', conta), p.bolinha); n+=3;
     }
     n += txt(q('.pa-nome'), p.perfil);
-    // O RODAPÉ DIZ O MESMO PERFIL ("Salvar Perfil grava no …"), e ele é literal
+    // O RODAPÉ DIZ O MESMO PERFIL ("Salvar perfil grava no …"), e ele é literal
     // no esqueleto (`_ferramentas/fim.html`, que não é o gerador desta aba).
     // Sem isto a tela mostrava dois perfis ao mesmo tempo — o vivo em cima e
     // "Mortal Kombat" embaixo. É a MESMA cura que o piloto da Controles fez.

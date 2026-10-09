@@ -111,7 +111,7 @@ FACE_QUE_E_PERTO = FACE_FRENTE
 
 FACE_QUE_E_ALTO = FACE_HUB
 
-TITULO_DA_JANELA = "Mapear Entrada a Entrada"
+TITULO_DA_JANELA = "Mapear entrada a entrada"
 PERGUNTA_SENTADA = "Onde fica esta entrada?"
 SEM_SAIR_DA_CADEIRA = "sem sair da cadeira"
 

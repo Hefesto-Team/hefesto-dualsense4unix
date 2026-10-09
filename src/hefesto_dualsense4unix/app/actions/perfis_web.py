@@ -117,7 +117,7 @@ AMBIENTE_QUE_A_TELA_NAO_MOSTRA = (
 #: sozinho.
 LISTA_VAZIA = (
     "Nenhum perfil no disco ainda. Ajuste o que quiser nas outras abas e clique "
-    "em “Salvar Perfil” no rodapé — o primeiro perfil nasce daí."
+    "em “Salvar perfil” no rodapé — o primeiro perfil nasce daí."
 )
 
 GUARDA_SEM_MESA = (

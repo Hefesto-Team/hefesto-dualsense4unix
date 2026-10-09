@@ -603,7 +603,7 @@ def test_o_que_ela_escolhe_chega_ao_disco(perfis: Path, tmp_path: Path) -> None:
     assert corpo["status"] == "ok" and corpo["gravado"] is True and corpo["ligada"]
     dele = load_profile("Bancada").controllers["aabbcc000003"].movimento
     assert dele is not None and dele.destino == "analogico_direito"
-    # O Analógico Virtual é o giro e a inclinação no MESMO lado, guardado com eles
+    # O analógico virtual é o giro e a inclinação no MESMO lado, guardado com eles
     # (O-ANALOGICO-VIRTUAL-E-UM-SO-COM-O-LADO-ESCOLHIDO-01, 08/10/2026).
     assert dele.acelerometro == "analogico_direito" and dele.lado == "analogico_direito"
     assert dele.model_fields_set == {"destino", "acelerometro", "lado"}, (
@@ -712,7 +712,7 @@ sys.path.insert(0, str(_RAIZ / "src" / "hefesto_dualsense4unix" / "interface"))
 #: 06/10/2026, leva 1.7 (desenho-navegacao, item 12): a frase de 23/09
 #: (`D-2309-A-MIRA-VIRTUAL`)
 #: perdeu o «como mira (analógico R)», porque o lado agora se escolhe embaixo de
-#: cada analógico, e o chip passou a se chamar «Analógico Virtual».
+#: cada analógico, e o chip passou a se chamar «Analógico virtual».
 _DICA_DELA = ("Usar os movimentos do controle como um analógico, para "
               "pessoas com deficiência motora. O lado se escolhe embaixo "
               "de cada analógico.")
@@ -735,14 +735,14 @@ def test_o_chip_da_mira_esta_em_cada_controle_com_a_dica_dela() -> None:
                            r'<span class="p"></span>([^<]*)</button></span>', miolo)
         assert len(chips) == 1, f"{abertura}: {len(chips)} chip(s) da mira"
         classe, involucro, atributos, rotulo = chips[0]
-        assert rotulo == "Analógico Virtual", rotulo
+        assert rotulo == "Analógico virtual", rotulo
         assert f'title="{_DICA_DELA}"' in atributos, atributos
         assert 'data-campo="mira-ligada"' in involucro
         assert 'data-hef-quando="DESLIGADO"' in involucro
         assert 'data-campo="mira-fora"' in atributos
         assert 'data-hef-atributo="aria-disabled"' in atributos
         # 08/10/2026 (O-ANALOGICO-VIRTUAL-E-UM-SO): o exemplo do anel do jogo (o P1, com a
-        # inclinação no esquerdo) é o Analógico Virtual aceso; o resto nasce desligado.
+        # inclinação no esquerdo) é o analógico virtual aceso; o resto nasce desligado.
         exemplo = 'class="chip-virtual on"' in miolo
         if 'data-conectado="nao"' not in abertura:
             assert ("off" in classe.split()) != exemplo, (

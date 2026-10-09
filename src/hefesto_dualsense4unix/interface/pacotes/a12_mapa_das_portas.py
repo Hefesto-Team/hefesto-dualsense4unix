@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""O editor da entrada grava — `mapa-das-portas.html`, o «Mapa das Conexões».
+"""O editor da entrada grava — `mapa-das-portas.html`, o «Mapa das conexões».
 
 O-MAPA-DAS-CONEXOES-NO-PRODUTO-01, 26/09/2026. Até aqui um clique nesta página
 chegava ao piloto como `[gesto sem dono] mapa-das-portas.html · clique · …`: a

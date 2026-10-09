@@ -15,7 +15,7 @@ lado a lado, ou que ajustam o computador inteiro, a fita fica esmaecida.
 | botão | o que faz | fica salvo? |
 |---|---|---|
 | **Aplicar** | manda o que está na tela ao controle **agora** | **não**: nada é escrito em disco |
-| **Salvar Perfil** | grava no perfil ativo tudo o que você mudou em qualquer aba | **sim** |
+| **Salvar perfil** | grava no perfil ativo tudo o que você mudou em qualquer aba | **sim** |
 | **Importar** | lê um perfil de fora e o copia para a sua pasta | **sim** |
 | **Exportar** | escreve o perfil aberto num arquivo, para levar a outro computador | **sim** |
 
@@ -30,7 +30,7 @@ aparelho, e a traz de volta em outra porta ou pelo Bluetooth.
   gatilho e do número do jogador; desligado, o jogo fala direto com o controle,
   e o serviço continua rodando.
 - **Modo**: como o controle chega ao jogo, entre **Sony DualSense · Xbox ·
-  Steam Input · Navegação · Modo Nativo**. O Hefesto tenta na ordem da lista e
+  Steam Input · Navegação · Modo nativo**. O Hefesto tenta na ordem da lista e
   para no primeiro que der certo; PS + R3 pula para o próximo. O **Modo
   Freestyle** faz o perfil ativo valer em qualquer jogo ([modos.md](modos.md)).
 - **Um cartão por controle**, com o número, a cor do plástico, a conexão e a
@@ -45,7 +45,7 @@ aparelho, e a traz de volta em outra porta ou pelo Bluetooth.
 
 **Dispositivos conectados**: uma linha por controle, com a borda na cor do
 plástico. Clicar numa linha abre a leitura ao vivo: giroscópio e acelerômetro
-(com um interruptor cada e o **Analógico Virtual**), bateria, touchpad, barra de
+(com um interruptor cada e o **Analógico virtual**), bateria, touchpad, barra de
 luz, analógicos, gatilhos de 0 a 255 e os botões que você aperta.
 
 - **Microfone**: a barra mostra o som entrando agora, o botão ao lado liga o
@@ -140,7 +140,7 @@ nome do processo e pela janela, então o jogo pode vir de qualquer um deles.
 
 ![Aba Conexões](assets/aba-08-conexoes.png)
 
-**Gestão de Controles**: os seus controles e as entradas USB deles.
+**Gestão de controles**: os seus controles e as entradas USB deles.
 
 - **O exame**: uma linha por achado, com o que foi visto e por que importa:
   energia das entradas, o controle no cabo sozinho no controlador USB, rádios
@@ -149,12 +149,12 @@ nome do processo e pela janela, então o jogo pode vir de qualquer um deles.
 - **Sugestão de Conexão**: o que mover para onde. Nada muda sozinho.
   **Mapear Entradas** e **Examinar Entradas** refazem o mapa e o exame.
 - **Um cartão por controle**: bateria, microfone, som, o modo de conexão, como o
-  jogo o vê, e o perfil de desempenho dele (**Perfil Máximo**, **Perfil
+  jogo o vê, e o perfil de desempenho dele (**Perfil máximo**, **Perfil
   Econômico** ou **Personalizado**), que vale por cima do global da aba
   Sistema. **A luz não acende** derruba o controle do Bluetooth para ele voltar
   a obedecer.
 
-**Rádio e Adaptadores**: cada adaptador Bluetooth, o que está nele e o quanto
+**Rádio e adaptadores**: cada adaptador Bluetooth, o que está nele e o quanto
 do rádio está em uso. **Conectar** pareia um controle no adaptador escolhido
 («Não Conectou» oferece tentar de novo), **Mover** o leva a outro, e
 **Esquecer** tira só aquele pareamento ([bluetooth.md](bluetooth.md),
@@ -171,10 +171,10 @@ Esta aba é do computador, não de um controle, e a fita fica esmaecida.
   distingue verde de laranja.
 - **Serviço**: parar, atualizar, corrigir e reiniciar. Parar não é o mesmo que
   desligar na aba Jogar, onde o serviço continua rodando fora do jogo.
-- **Perfil Global de Bateria**: **Perfil Máximo**, **Perfil Econômico** ou
+- **Perfil global de bateria**: **Perfil máximo**, **Perfil econômico** ou
   **Personalizado**, para todos os controles. Cada um pode ter o seu na aba
   Conexões.
-- **Saúde do App** repete os consertos que o exame faz sozinho, e
+- **Saúde do app** repete os consertos que o exame faz sozinho, e
   **Automático** liga o início com o sistema, a fixação do Proton e a correção
   do Vulkan.
 - **Detalhes técnicos**: o registro do serviço, para copiar ao relatar um

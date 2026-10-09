@@ -3777,7 +3777,7 @@ def _marcas_de_onde(lug: dict[str, Any], cena: dict[str, Any]) -> str:
         partes.append(f'<span>{_x(lug.get("entrada") or DENTRO_DA_MAQUINA)}</span>')
     elif not lug.get("face"):
         partes.append(f'<a class="ensina" href="#mapear-entrada-a-entrada" '
-                      f'data-alvo="{_x(lug.get("lugar") or "")}" title="Mapear Entrada a Entrada">'
+                      f'data-alvo="{_x(lug.get("lugar") or "")}" title="Mapear entrada a entrada">'
                       f'{_ic("uma-a-uma")}{ONDE_FICA}</a>')
     return '<span class="onde">' + "".join(partes) + "</span>"
 
@@ -5794,7 +5794,7 @@ def _laco() -> Any:
 
 
 def _campos_da_cerimonia() -> dict[str, Any]:
-    """As três telas do «Mapear Entrada a Entrada», pelo laço (ENTRADA-A-ENTRADA-02)."""
+    """As três telas do «Mapear entrada a entrada», pelo laço (ENTRADA-A-ENTRADA-02)."""
     perfil._com_o_src()
     from hefesto_dualsense4unix.integrations import entrada_a_entrada as ee
     from hefesto_dualsense4unix.interface import calibracao_das_entradas as calib
@@ -5818,7 +5818,7 @@ def _campos_da_cerimonia() -> dict[str, Any]:
 
 
 def campos_do_radio(ctx: Contexto) -> dict[str, Any]:
-    """Os campos da seção Rádio e Adaptadores, pela cena da máquina do usuário."""
+    """Os campos da seção rádio e adaptadores, pela cena da máquina do usuário."""
     global _CENA_NA_TELA
     cena = cena_do_radio(ctx)
     _CENA_NA_TELA = cena
@@ -6513,17 +6513,17 @@ def estado_do_controle(c: dict[str, Any], eu: dict[str, Any], st: dict[str, Any]
     visto = selo_do_estado("Visto como", str(eu.get("mascara") or TRAVESSAO_DA_LINHA), "")
 
     # (:func:`nome_com_a_bateria`); a queda do rádio aparece no exame e em
-    # Rádio e Adaptadores. (noqa-acento: citação literal)
+    # Rádio e adaptadores. (noqa-acento: citação literal)
     return {"est-mic": mic, "est-som": som, "est-modo": modo_da_linha, "est-visto": visto,
             "est-mira": selo_da_mira(c, st)}
 
 
 def selo_da_mira(c: dict[str, Any], st: dict[str, Any]) -> str:
-    """O selo «Analógico Virtual» da linha: ✓ aceso, «Apagado», «Nativo» (chip cinza) ou «—».
+    """O selo «Analógico virtual» da linha: ✓ aceso, «Apagado», «Nativo» (chip cinza) ou «—».
 
     A-MIRA-DA-CALIBRAR-E-A-MESMA-DAS-OUTRAS-ABAS-01. O aceso é o do chip da aba Controles
     (`a02_controles._analogico_virtual`) e o `title` é o resumo dos ajustes da Calibrar
-    (`a11.resumo_da_mira`), pelo mesmo bloco `mira` do daemon. No Modo Nativo o chip fica cinza e a
+    (`a11.resumo_da_mira`), pelo mesmo bloco `mira` do daemon. No modo nativo o chip fica cinza e a
     Mira não grava (`a02_controles.MIRA_CINZA_NO_NATIVO`): o selo diz isso, e não o «✓».
     """
     import calibrar
@@ -6564,7 +6564,7 @@ def economia_do_controle(declaracao: Any, uniq: str) -> tuple[bool | None, str |
 
 
 def perfil_na_linha(declaracao: Any, uniq: str) -> dict[str, str]:
-    """O botão aceso do Perfil de Desempenho do cartão (endereço `perfil`)."""
+    """O botão aceso do perfil de desempenho do cartão (endereço `perfil`)."""
     from hefesto_dualsense4unix.app.actions.config import secao_orcamento
 
     escolha, teto = economia_do_controle(declaracao, uniq)
@@ -6577,7 +6577,7 @@ def _recusa_da_mesa() -> str:
 
     longa = orc.ROTULOS_DOS_PERFIS[orc.PERFIL_BATERIA_LONGA]
     return (f"A «{longa}» da aba Sistema vale para todos os controles; para mudar "
-            "um só, escolha outro Perfil Global de Bateria lá.")
+            "um só, escolha outro perfil global de bateria lá.")
 
 
 # `dono_na_linha` (importada no topo) é a regra «o nome, ou o Pn», que mora em `monta` desde
@@ -6608,7 +6608,7 @@ def dono_renomear(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 @gesto("08-conexoes.html", "perfil-do-controle", grava="machine_declare")
 def perfil_do_controle_gesto(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """Os três botões do Perfil de Desempenho de UM controle."""
+    """Os três botões do perfil de desempenho de UM controle."""
     from hefesto_dualsense4unix.app.actions.config import secao_orcamento as orc
     from hefesto_dualsense4unix.profiles import schema
 
@@ -6642,7 +6642,7 @@ MAPEAR_DIZ = {
 #: O resto do que a tela dizia na linha de cima: é explicação, e mora no «?» da tela.
 MAPEAR_DICA_DA_PORTA = (
     "Nomeie a entrada (ou deixe vazia para ela ser enumerada). Ao final, valide e, "
-    "caso necessário, faça os ajustes na entrada no botão Mapa das Conexões.")
+    "caso necessário, faça os ajustes na entrada no botão Mapa das conexões.")
 
 
 def _o_mapa() -> Any:

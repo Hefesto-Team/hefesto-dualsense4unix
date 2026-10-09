@@ -355,6 +355,7 @@ rapido|janela-nao-confessa|py|scripts/check_a_janela_nao_confessa.py
 # reprova é a caixa alta NOVA.
 rapido|maiuscula-decorativa|py|scripts/check_a_maiuscula_decorativa.py
 rapido|maiuscula-decorativa-morde|pytest|tests/unit/test_portao_a_maiuscula_decorativa_morde.py
+rapido|so-a-primeira-letra|py|scripts/check_so_a_primeira_letra.py
 # A GRAFIA DO NOME — 11/09/2026, `F6-O-NOME-TEM-UM-DONO`. O produto se chama
 # `DualSense4Unix`, com o `S` do DualSense, e `utils/identidade.py` escrevia o
 # `S` em minúscula — 427 linhas de 174 arquivos. A grafia errada TRAVAVA uma

@@ -88,7 +88,7 @@ def test_as_dicas_do_giroscopio_citadas_sao_as_do_pacote() -> None:
 
     donos = {
         "Ligado: o jogo recebe o giro": {a02.DICA_DO_GIRO},
-        "Com o Analógico Virtual aceso": {a02.DICA_DO_GIRO_COM_A_MIRA,
+        "Com o analógico virtual aceso": {a02.DICA_DO_GIRO_COM_A_MIRA,
                                           a02.DICA_DO_GIRO_NO_ESQUERDO,
                                           a02.DICA_DO_GIRO_NO_CURSOR},
     }
@@ -102,16 +102,16 @@ def test_as_dicas_do_giroscopio_citadas_sao_as_do_pacote() -> None:
                     if citado not in dono:
                         erradas.append((titulo.split(" — ")[0], citado))
     assert not erradas, f"dicas citadas que não são as do pacote: {erradas}"
-    assert vistas["Com o Analógico Virtual aceso"] >= 2, (
+    assert vistas["Com o analógico virtual aceso"] >= 2, (
         "nenhuma célula confere a dica que muda com a Mira acesa — no cabo e no "
         f"rádio, ela tem de aparecer pelo menos duas vezes: {vistas}")
 
 
 def test_os_ajustes_da_mira_citados_existem_na_calibrar() -> None:
-    """O que a bancada diz morar nos ajustes do «Analógico Virtual» mora na Calibrar publicada.
+    """O que a bancada diz morar nos ajustes do «Analógico virtual» mora na Calibrar publicada.
 
     O bloco «Mira Virtual» embaixo dos cartões virou, em 08/10/2026, os ajustes do
-    «Analógico Virtual» dentro do cartão de cada controle
+    «Analógico virtual» dentro do cartão de cada controle
     (O-ANALOGICO-VIRTUAL-E-UM-SO-COM-O-LADO-ESCOLHIDO-01).
     """
     tela = _texto_visivel("calibrar-sensores.html")
@@ -119,21 +119,21 @@ def test_os_ajustes_da_mira_citados_existem_na_calibrar() -> None:
     ausentes = []
     for titulo, corpo in _secoes().items():
         for frase in _frases(corpo):
-            if "ajustes do «Analógico Virtual»" not in frase:
+            if "ajustes do «Analógico virtual»" not in frase:
                 continue
             frases_do_bloco += 1
             for citado in _citados(frase):
                 if citado not in tela:
                     ausentes.append((titulo.split(" — ")[0], citado))
     assert frases_do_bloco >= 2, (
-        "nenhuma célula fala dos ajustes do Analógico Virtual na Calibrar — régua cega")
+        "nenhuma célula fala dos ajustes do analógico virtual na Calibrar — régua cega")
     assert not ausentes, f"rótulos que a Calibrar publicada não tem: {ausentes}"
 
 
 def test_o_desligado_nao_tira_mais_o_hefesto_das_lampadas() -> None:
     """O teste que promete o Linux sozinho para o serviço, e não usa o Nativo."""
     assert "player_leds" in bp._CAMPOS_QUE_O_NATIVO_ESCREVE, (
-        "o Modo Nativo deixou de escrever o número do jogador — a premissa desta "
+        "o modo nativo deixou de escrever o número do jogador — a premissa desta "
         "régua caiu, e os gestos do padrão do driver podem voltar ao «Desligado»")
 
     fora_do_meio = 0

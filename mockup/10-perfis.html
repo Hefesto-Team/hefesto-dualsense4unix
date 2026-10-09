@@ -1433,8 +1433,8 @@
   /* A COLUNA DO RÓTULO É JUSTA — remedida no Chrome em 31/08/2026, DEPOIS que o usuário
      pediu os dois pontos e a maiúscula — com a preposição minúscula, que foi a
      segunda palavra de produto: `Nome:` 36px · `Prioridade:` 63 · `Funciona em:` 77 ·
-     `Estilo de Jogo:` 85 · `Nome do Jogo:` **86** — que trocou de dono, era o
-     `Estilo de Jogo` com 82 antes dos dois pontos.
+     `Estilo de jogo:` 85 · `Nome do jogo:` **86** — que trocou de dono, era o
+     `Estilo de jogo` com 82 antes dos dois pontos.
      Os 104 antigos deixavam 17px de vão morto à direita de todo rótulo — e é
      esse vão que os campos ganharam.
      NÃO dá para usar `max-content`: cada `.campo` é um grid PRÓPRIO, então a
@@ -1994,11 +1994,11 @@
       <span class="pa-rot">Perfil ativo</span>
       <span class="pa-nome" data-campo="perfil">—</span>
       <!-- `tabindex` de 07/09/2026: este `?` está no CABEÇALHO, logo nas dez
-           abas, e explica onde o "Salvar Perfil" grava. Sem ele o `<span>` não
+           abas, e explica onde o "Salvar perfil" grava. Sem ele o `<span>` não
            recebe foco e o `el.click()` do controle não o abria em aba nenhuma. -->
       <span class="ajuda" tabindex="0">?<span class="dica" style="left:auto;right:22px">
         Tudo o que você mudar em qualquer aba cai <b>neste</b> perfil quando clicar em
-        <b>Salvar Perfil</b>.<br><br>
+        <b>Salvar perfil</b>.<br><br>
         Cada controle guarda a <b>sua</b> configuração aqui dentro, pelo ID da peça — amanhã,
         em outra porta ou no rádio, ele traz de volta o que você deixou hoje.
       </span></span>
@@ -2029,7 +2029,7 @@
              quilométrico. ao invés de estar tudo em Perfis deveria estar em cada
              seção"*. Ela estava certa por dois motivos: o bloco tinha quatro
              parágrafos e cobria meia tela ao abrir, e cada assunto dele JÁ tinha
-             dono na tela — Prioridade, Estilo de Jogo e a tabela por controle têm
+             dono na tela — Prioridade, estilo de jogo e a tabela por controle têm
              `title` próprio, a poucos pixels de onde a pessoa está olhando.
              Aqui fica só o que nenhum campo diz: o que É um perfil. -->
         <span class="ajuda">?<span class="dica">
@@ -2189,7 +2189,7 @@
                    (`simple_match.exigencia_invisivel`) e nunca tinha chegado a
                    esta tela. -->
               <div class="campo">
-                <span>Nome do Jogo:</span>
+                <span>Nome do jogo:</span>
                 <span class="val">
                   <!-- A LISTA DOS JOGOS DESTA MÁQUINA — PERFIL-MODO-01, Passo 3
                        (06/09/2026). A janela GTK tem `Gtk.EntryCompletion` sobre
@@ -2222,7 +2222,7 @@
                 </span>
               </div>
               <div class="campo">
-                <span title="Pré-aplica de uma vez o gatilho, a vibração e a cor da luz. Os catorze de fábrica não se editam; o Personalizado usa o que você ajustou nas abas.">Estilo de Jogo:</span>
+                <span title="Pré-aplica de uma vez o gatilho, a vibração e a cor da luz. Os catorze de fábrica não se editam; o Personalizado usa o que você ajustou nas abas.">Estilo de jogo:</span>
                 <span class="val"><select class="destaque" data-hef="editor.estilo" data-hef-gesto="editor.estilo" data-hef-alvo="valor">
                 <option value="" selected>—</option>
                 <option>FPS</option>
@@ -2764,7 +2764,7 @@
   <!-- ================= RODAPÉ ================= -->
   <div class="rodape">
     <!-- O RECIBO SAIU DA BARRA E VIROU DICA DOS BOTÕES — 30/08/2026, pedido:
-         *"'Aplicar vale agora • Salvar Perfil grava no Mortal Kombat' isso deveria
+         *"'Aplicar vale agora • Salvar perfil grava no Mortal Kombat' isso deveria
          em formato de tooltip ao deixar o mouse sobre os botões aplicar, salvar
          perfil, importar e exportar. em todas as abas."*
 
@@ -2795,7 +2795,7 @@
 
          O NOME DO PERFIL É DADO, E ERA LITERAL — corrigido em 03/09/2026, achado
          pela régua do mockup e nomeado pelo juiz da leva. O pedido trazia um
-         EXEMPLO — *"Salvar Perfil grava no Mortal Kombat"* — e este arquivo
+         EXEMPLO — *"Salvar perfil grava no Mortal Kombat"* — e este arquivo
          congelou o exemplo em vez do nome. Resultado medido: as DEZ abas diziam
          "Grava no perfil Mortal Kombat" com `meu_perfil` ativo. O comentário aqui
          em cima já dizia o que importava — *o NOME do perfil, "a informação que
@@ -2811,7 +2811,7 @@
             title="Vale agora: envia a configuração aos controles na hora. Não grava — ao trocar de perfil ou reiniciar, volta ao que está salvo.">Aplicar</button>
     <button class="r-salvar" data-campo="rodape.salvar"
             data-hef-alvo="atributo" data-hef-atributo="title"
-            title="Grava no perfil ativo. É onde a mudança vai cair.">Salvar Perfil</button>
+            title="Grava no perfil ativo. É onde a mudança vai cair.">Salvar perfil</button>
     <button class="r-importar" title="Carrega um perfil de arquivo .json.">Importar</button>
     <button class="r-exportar" data-campo="rodape.exportar"
             data-hef-alvo="atributo" data-hef-atributo="title"

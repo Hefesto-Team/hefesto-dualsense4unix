@@ -1,9 +1,9 @@
 """O PERFIL DE DESEMPENHO É DE CADA CONTROLE — A-GESTAO-DOS-CONTROLES-NO-PRODUTO-01.
 
-Decisões de 26/09/2026: o Perfil de Desempenho mora em cada cartão da aba
+Decisões de 26/09/2026: o perfil de desempenho mora em cada cartão da aba
 Conexões (`D-2609-O-PERFIL-DE-DESEMPENHO-E-POR-CONTROLE`), «Eu escolho» virou
 «Personalizado» (`D-2609-EU-ESCOLHO-VIRA-PERSONALIZADO`), os outros dois viraram
-«Perfil Máximo» e «Perfil Econômico» (pedido na mesma noite) e o cartão e a aba
+«Perfil máximo» e «Perfil econômico» (pedido na mesma noite) e o cartão e a aba
 Sistema falam o MESMO perfil, por um dono e pelo mesmo gesto do daemon
 (`D-2609-A-CONEXOES-E-A-SISTEMA-FALAM-O-MESMO-PERFIL`).
 
@@ -65,7 +65,7 @@ def _a08() -> Any:
 def test_os_rotulos_sao_os_do_desenho_e_personalizado_e_o_terceiro() -> None:
     orc = _orc()
     assert [orc.ROTULOS_DOS_PERFIS[p] for p in orc.PERFIS] == [
-        "Perfil Máximo", "Perfil Econômico", "Personalizado"]
+        "Perfil máximo", "Perfil econômico", "Personalizado"]
     assert orc.DICAS_DO_CARTAO[orc.PERFIL_EU_ESCOLHO].endswith("neste controle.")
     assert orc.DICAS_DO_CARTAO[orc.PERFIL_BATERIA_LONGA] == orc.DICAS[orc.PERFIL_BATERIA_LONGA]
 
@@ -175,7 +175,7 @@ def test_a_bateria_longa_da_sistema_acende_os_quatro_cartoes(disco: _PonteDoDisc
     assert _acesos() == dict.fromkeys((1, 2, 3, 4), orc.PERFIL_BATERIA_LONGA)
     antes = len(disco.corpos)
     for k in (1, 2, 3, 4):
-        with pytest.raises(RuntimeError, match="Perfil Global de Bateria"):
+        with pytest.raises(RuntimeError, match="perfil global de bateria"):
             _clicar(disco, k, orc.PERFIL_TUDO_LIGADO)
     _clicar(disco, 2, orc.PERFIL_BATERIA_LONGA)
     assert len(disco.corpos) == antes

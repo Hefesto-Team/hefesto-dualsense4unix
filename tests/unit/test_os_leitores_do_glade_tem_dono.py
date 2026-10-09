@@ -16,7 +16,7 @@ INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
 NO_GLADE = {
     "DICA_DO_TETO_DA_MESA":
         r'id="rumble_policy_economia".*?tooltip-text[^>]*>[^<]*?'
-        r'(O Perfil de Bateria pode impor um teto[^<]*?)</property>',
+        r'(O perfil de bateria pode impor um teto[^<]*?)</property>',
     "DICA_DOS_VALORES_QUE_PASSAM":
         r'id="rumble_info".*?<property name="label"[^>]*>&lt;i&gt;'
         r'(.*?)&lt;/i&gt;</property>',

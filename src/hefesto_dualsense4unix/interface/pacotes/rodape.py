@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""O RODAPÉ, e ele é das DEZ abas: Aplicar · Salvar Perfil · Importar · Exportar.
+"""O RODAPÉ, e ele é das DEZ abas: Aplicar · Salvar perfil · Importar · Exportar.
 
 Ele mora no `topo.html`, que é o esqueleto compartilhado — logo não pertence a
 nenhum pacote de aba. Os gestos são registrados em `("*", nome)`, que o

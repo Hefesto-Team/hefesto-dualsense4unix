@@ -217,7 +217,7 @@ CSS = """
   /* O DESENHO NOVO DO USUÁRIO — 02/10/2026 (A-ABA-VIBRACAO-TEM-O-SENSOR-HAPTICO-E-
      DOIS-TESTES-01, a resposta [26] de 29/09). O trilho do Personalizado sobe
      para dentro da Força (`--r-forca` 69 = 36 dos degraus, numa linha só, + 7 de vão + 26 do
-     trilho, `--r-barra`), e a faixa que era dele vira a «Sensor Háptico», a
+     trilho, `--r-barra`), e a faixa que era dele vira a «Sensor háptico», a
      linha da háptica por áudio (36, com o interruptor). A linha de baixo dos
      motores, que a háptica ocupava desde 29/09 com o desenho pagando 46 px,
      sai. E o «Testar agora» vira UMA linha («Vibração», «Háptica» e «Parar»,
@@ -242,7 +242,7 @@ CSS = """
       transparent calc(50% + 1px)),var(--border-forte)}
   /* O PADRÃO TRAVA AS BARRAS — 04/10/2026, ela: «se balanceado é o original.
      então não tem pq ter original». Com o degrau Padrão (`.forca.padrao`), o
-     Sensor Háptico e os dois motores ficam inteiros verdes e travados, com a
+     sensor háptico e os dois motores ficam inteiros verdes e travados, com a
      palavra no lugar do número: o sinal chega como o jogo mandou e o que ela
      guardou fica esperando a Economia ou o Máximo. Travar é TROCAR DE ELEMENTO
      (o `<input>` some, a barra verde aparece): seta e foco não alcançam quem
@@ -993,11 +993,11 @@ def _barra_de_motor(valor, sigla, m, ligado, botao, vazio=False):
 
 
 def _linha_da_haptica(valor, ligado, vazio=False):
-    """A linha «Sensor Háptico»: interruptor · trilho de 0 a 200 · número · `%` e a luz.
+    """A linha «Sensor háptico»: interruptor · trilho de 0 a 200 · número · `%` e a luz.
 
     Desde 02/10/2026 ela mora na faixa que era do Personalizado, logo abaixo da
     Força (A-ABA-VIBRACAO-TEM-O-SENSOR-HAPTICO-E-DOIS-TESTES-01); o nome é o
-    dela, «Sensor Háptico». A luz «no ar» é a bolinha depois do `%`, acesa pelo
+    dela, «Sensor háptico». A luz «no ar» é a bolinha depois do `%`, acesa pelo
     `haptica_no_ar` do `state_full`.
 
     O mesmo desenho das linhas dos motores, com gesto próprio (`haptica`,
@@ -1346,7 +1346,7 @@ MIOLO = f'''
                 Com a <b>força geral</b> em Auto, a escolha de cada coluna fica
                 guardada e não chega ao motor.
               </span></span></span></div>
-            <div><span class="sec-rot">Sensor Háptico
+            <div><span class="sec-rot">Sensor háptico
               <span class="ajuda">?<span class="dica">
                 <b>A vibração fina</b> que o jogo manda como som, no cabo e no BT.<br><br>
                 O risco no meio é 100%: o jogo como ele mandou. Acima disso ela
@@ -1397,7 +1397,7 @@ MIOLO = f'''
                      daemon de mentira: nenhum `rumble.stop` sai sem o Parar. -->
                 <b>Vibração</b> treme os motores deste controle até o <b>Parar</b>,
                 seguindo ao vivo as barras da coluna. <b>Háptica</b> toca a vibração
-                fina pelo som, com a força do <b>Sensor Háptico</b>. No mesmo controle
+                fina pelo som, com a força do <b>Sensor háptico</b>. No mesmo controle
                 ligar um desliga o outro, e cada controle tem o seu teste. <b>Parar</b>
                 corta os dois deste controle e devolve a vibração dele ao jogo.<br><br>
                 <!-- A NOTA DOS VALORES QUE PASSAM VOLTOU PARA CÁ — 05-Q2 dela,
@@ -1460,7 +1460,7 @@ MIOLO = f'''
 LEGENDA = f'''<div class="nota">
   <h2>O que você pediu, e está aqui</h2>
   <ul>
-    <li><b>O trilho do Personalizado mora dentro da Força</b> (02/10), logo abaixo dos três degraus: o valor que vale é o do trilho, e acende o maior degrau que ele alcança (de 150% para cima, o Máximo). A faixa que era dele virou a <b>Sensor Háptico</b>, com a bolinha verde acesa quando a háptica está chegando ao controle; o <b>Testar agora</b> tem <b>Vibração</b>, <b>Háptica</b> e <b>Parar</b> numa linha só; e o desenho do controle voltou aos 124 px. A faixa entre os degraus (o Balanceado de 100 a 149, o Economia de 30 a 99) foi escolhida por delegação, e é sua para validar.</li>
+    <li><b>O trilho do Personalizado mora dentro da Força</b> (02/10), logo abaixo dos três degraus: o valor que vale é o do trilho, e acende o maior degrau que ele alcança (de 150% para cima, o Máximo). A faixa que era dele virou a <b>Sensor háptico</b>, com a bolinha verde acesa quando a háptica está chegando ao controle; o <b>Testar agora</b> tem <b>Vibração</b>, <b>Háptica</b> e <b>Parar</b> numa linha só; e o desenho do controle voltou aos 124 px. A faixa entre os degraus (o Balanceado de 100 a 149, o Economia de 30 a 99) foi escolhida por delegação, e é sua para validar.</li>
     <li><b>Os quatro controles, um por coluna, sempre à vista</b> — na mesma ordem da fita do topo, cada um com a sua cor de plástico na borda do desenho.</li>
     <li><b>A força tem endereço, e o endereço é a coluna</b> — cada uma tem os seus quatro degraus e a sua barra. Como os quatro estão à vista, <b>a fita do topo não escolhe nada aqui</b> e nasce esmaecida (28/08). Também saiu o destaque que a coluna do P1 tinha: com a fita inerte, ele afirmaria na tela uma coisa que a fita já não faz.</li>
     <li><b>As cinco lâmpadas do jogador saíram do desenho</b> (28/08). Medidas neste navegador, nesta aba: <b>2,79 × 0,93 px</b> cada uma. Não é pouco contraste, é pouco pixel — menos de um pixel de altura não diz nada, aceso ou apagado. Quem diz o jogador aqui é o rótulo embaixo da coluna, que se lê. Elas continuam desenhadas na <b>Iluminação</b>, onde o controle é grande.</li>
@@ -1617,13 +1617,13 @@ def _conferir(doc):
     for frase, nome in ((DICA_DO_TETO_DA_MESA, "o teto da mesa"),
                         (DICA_DOS_VALORES_QUE_PASSAM, "os valores que passam pela intensidade")):
         exigir(frase in corpo, f"a dica perdeu a frase da janela estável: {nome}")
-    # A-TELA-PERGUNTA-AO-DONO-01 (opção a, 08/10/2026): o «?» da Sensor Háptico também diz o teto,
+    # A-TELA-PERGUNTA-AO-DONO-01 (opção a, 08/10/2026): o «?» da sensor háptico também diz o teto,
     # logo depois do 100% e antes do «Cinza quando». A Força já dizia; a háptica, desde 02/10, também corta.
-    _haptica = corpo.split("Sensor Háptico\n", 1)[1].split("</span></span></span>", 1)[0]
+    _haptica = corpo.split("Sensor háptico\n", 1)[1].split("</span></span></span>", 1)[0]
     exigir(DICA_DO_TETO_DA_MESA in _haptica
            and _haptica.index("O risco no meio é 100%")
            < _haptica.index(DICA_DO_TETO_DA_MESA) < _haptica.index("Cinza quando"),
-           "o «?» da Sensor Háptico perdeu a frase do teto do Perfil de Bateria (logo depois do 100%)")
+           "o «?» da sensor háptico perdeu a frase do teto do perfil de bateria (logo depois do 100%)")
     sobrando = papeis - set(PAPEIS_QUE_SAO_GESTO)
     exigir(not sobrando,
            f"`data-papel` sem gesto que atenda: {sorted(sobrando)} — o ouvinte "

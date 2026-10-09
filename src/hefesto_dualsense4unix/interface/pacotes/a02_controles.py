@@ -1738,7 +1738,7 @@ def _mira_ligada(dele: dict[str, Any]) -> bool | None:
 
 
 def _analogico_virtual(dele: dict[str, Any]) -> bool | None:
-    """`True`/`False` do chip «Analógico Virtual» deste controle; `None` = ninguém leu.
+    """`True`/`False` do chip «Analógico virtual» deste controle; `None` = ninguém leu.
 
     É o `virtual` do bloco `mira` (`ipc_handlers._merge_mira`): o giro ou a inclinação
     move um analógico. O giro no cursor não acende o chip.
@@ -1751,7 +1751,7 @@ def _analogico_virtual(dele: dict[str, Any]) -> bool | None:
 
 
 def lado_aceso(dele: dict[str, Any]) -> str:
-    """O lado que acende embaixo do analógico: o do daemon com o Analógico Virtual aceso.
+    """O lado que acende embaixo do analógico: o do daemon com o analógico virtual aceso.
 
     Apagado, nenhum dos dois acende (`nenhum`); sem leitura, o travessão. A 02 e a
     Calibrar pintam o `mira-lado` por esta função.
@@ -1793,16 +1793,16 @@ def _chip_da_mira(dele: dict[str, Any], chave: str) -> str:
 
 DICA_DO_GIRO = "Ligado: o jogo recebe o giro deste controle."
 
-DICA_DO_GIRO_COM_A_MIRA = ("Com o Analógico Virtual aceso, o giro deste controle vai "
+DICA_DO_GIRO_COM_A_MIRA = ("Com o analógico virtual aceso, o giro deste controle vai "
                            "ao jogo pelo analógico direito.")
 #: o lado vem do «Usar como analógico virtual» de cada analógico; o cursor só do perfil
-DICA_DO_GIRO_NO_ESQUERDO = ("Com o Analógico Virtual aceso, o giro deste controle vai "
+DICA_DO_GIRO_NO_ESQUERDO = ("Com o analógico virtual aceso, o giro deste controle vai "
                             "ao jogo pelo analógico esquerdo.")
-DICA_DO_GIRO_NO_CURSOR = "Com o Analógico Virtual aceso, o giro deste controle move o cursor."
+DICA_DO_GIRO_NO_CURSOR = "Com o analógico virtual aceso, o giro deste controle move o cursor."
 
 
 def _nativo(ctx: Contexto) -> bool:
-    """O Modo Nativo está ligado? É GLOBAL no daemon (`state_full.native_mode`).
+    """O modo nativo está ligado? É GLOBAL no daemon (`state_full.native_mode`).
 
     O `getattr` é o mesmo do `rotulo_lightbar` do `pacote`: há régua que monta
     um `Contexto` parcial, sem `state`, e para ela a resposta é "não".
@@ -2295,7 +2295,7 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     O TÍTULO DE 04/09 DIZIA *"«Sons do jogo» tem dono; «Só no controle» não"*,
     e os dois nomes caducaram: hoje os botões dizem «Efeitos do Jogo no
     Controle, Áudio do PC no PC» (`jogo`), «Efeitos do Jogo e Áudio do PC no
-    Controle» (`junto`), «Tudo no PC e Nada no Controle» (`nada`) e «Tudo no
+    Controle» (`junto`), «Tudo no PC e nada no controle» (`nada`) e «Tudo no
     Controle e Nada no PC» (`pc`, de volta em 24/09). Os quatro têm dono, e é
     este gesto. O resto desta docstring é o registro de 04/09, com os nomes
     daquele dia.
@@ -2472,7 +2472,7 @@ def sensor(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
        de religar o Acelerômetro pelas costas dela;
     3. **DIZ QUAL METADE PEGOU.** `frase_do_interruptor_de_sensor` devolve
        `None` quando o interruptor pegou inteiro e a ressalva do daemon quando
-       não: em Modo Nativo o jogo lê o movimento pelo `hidraw` do controle
+       não: em modo nativo o jogo lê o movimento pelo `hidraw` do controle
        FÍSICO, onde o daemon não escreve byte nenhum, e responder "aplicado"
        ali seria o verde falso que a ONDA1-D3 existe para não cometer. A frase
        vai ao cartão daquele controle por 30 s, pelo canal que o usuário aprovou em
@@ -2518,7 +2518,7 @@ MIRA_CINZA_NO_NATIVO = _camada.MIRA_CINZA_NO_NATIVO  # a frase mora na camada, q
 
 @gesto("02-controles.html", "mira", grava="mira_set_detalhado")
 def mira(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """O chip «Analógico Virtual» — o movimento DESTE controle vira um analógico dele.
+    """O chip «Analógico virtual» — o movimento DESTE controle vira um analógico dele.
 
     Palavra, 23/09/2026: *"Cria um botão virtual ao lado de giroscopio e
     acelerometro chamado Mira Virtual"*.  <!-- noqa-acento: citação literal -->
@@ -2596,7 +2596,7 @@ def _alternar_o_chip(ctx: Contexto, p: Any, uniq: str, chave: str,
     """O corpo do chip do toque: o clique no apagado acende, no aceso apaga.
 
     `chave` é a do bloco `mira` do `state_full` e o nome do campo do `mira.set`
-    (o `toque`; o lado do Analógico Virtual é o `escolher_o_lado`). O grupo é um só por
+    (o `toque`; o lado do analógico virtual é o `escolher_o_lado`). O grupo é um só por
     controle: acender o Cursor com os Botões acesos troca, não soma. Devolve o `status` do daemon
     quando ele é `ok` ou `nativo` (a recusa do Nativo tem a frase de cada chip,
     e quem a levanta é o gesto); o resto levanta aqui.
@@ -2619,11 +2619,11 @@ def _alternar_o_chip(ctx: Contexto, p: Any, uniq: str, chave: str,
 
 
 def escolher_o_lado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """O lado do Analógico Virtual: o giro e a inclinação passam a mover este analógico.
+    """O lado do analógico virtual: o giro e a inclinação passam a mover este analógico.
 
     O corpo do «Usar como analógico virtual» da 02 e do «Esquerdo | Direito» da Calibrar
     (O-ANALOGICO-VIRTUAL-E-UM-SO-COM-O-LADO-ESCOLHIDO-01). O `lado` sozinho liga: com o
-    Analógico Virtual apagado, clicar num lado acende nele. No Nativo recusa antes da
+    analógico virtual apagado, clicar num lado acende nele. No Nativo recusa antes da
     ponte, e o daemon tem a mesma guarda.
     """
     from hefesto_dualsense4unix.core import roteador_de_movimento as rot

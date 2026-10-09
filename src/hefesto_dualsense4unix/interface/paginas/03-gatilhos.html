@@ -1712,11 +1712,11 @@
       <span class="pa-rot">Perfil ativo</span>
       <span class="pa-nome" data-campo="perfil">—</span>
       <!-- `tabindex` de 07/09/2026: este `?` está no CABEÇALHO, logo nas dez
-           abas, e explica onde o "Salvar Perfil" grava. Sem ele o `<span>` não
+           abas, e explica onde o "Salvar perfil" grava. Sem ele o `<span>` não
            recebe foco e o `el.click()` do controle não o abria em aba nenhuma. -->
       <span class="ajuda" tabindex="0">?<span class="dica" style="left:auto;right:22px">
         Tudo o que você mudar em qualquer aba cai <b>neste</b> perfil quando clicar em
-        <b>Salvar Perfil</b>.<br><br>
+        <b>Salvar perfil</b>.<br><br>
         Cada controle guarda a <b>sua</b> configuração aqui dentro, pelo ID da peça — amanhã,
         em outra porta ou no rádio, ele traz de volta o que você deixou hoje.
       </span></span>
@@ -1753,11 +1753,11 @@
           confirmação.
         </span></span>
         <span class="trava-nativo" title="Com o Hefesto desligado, o jogo manda nos gatilhos. O que está aqui volta a valer quando ligar, na aba Jogar."><svg class="cad" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M3.6 5.2V3.9a2.4 2.4 0 0 1 4.8 0v1.3" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="2.3" y="5.2" width="7.4" height="5.4" rx="1.1" fill="currentColor"/></svg>O jogo manda</span>
-        <span class="par-modo" role="group" aria-label="Modo da aba"><button data-gesto="modo-dos-gatilhos" data-modo="automatico" data-campo="modo-dos-gatilhos-automatico" data-hef-alvo="classe" data-hef-atributo="aria-pressed" aria-pressed="false">Modo Automático</button><button class="on" data-gesto="modo-dos-gatilhos" data-modo="personalizado" data-campo="modo-dos-gatilhos-personalizado" data-hef-alvo="classe" data-hef-atributo="aria-pressed" aria-pressed="true">Modo Personalizado</button></span>
+        <span class="par-modo" role="group" aria-label="Modo da aba"><button data-gesto="modo-dos-gatilhos" data-modo="automatico" data-campo="modo-dos-gatilhos-automatico" data-hef-alvo="classe" data-hef-atributo="aria-pressed" aria-pressed="false">Modo automático</button><button class="on" data-gesto="modo-dos-gatilhos" data-modo="personalizado" data-campo="modo-dos-gatilhos-personalizado" data-hef-alvo="classe" data-hef-atributo="aria-pressed" aria-pressed="true">Modo personalizado</button></span>
         <span class="ajuda esq">?<span class="dica">
-          <b>Modo Automático:</b> o jogo decide os dois gatilhos de todos os controles, e
+          <b>Modo automático:</b> o jogo decide os dois gatilhos de todos os controles, e
           os botões desta aba ficam parados.<br><br>
-          <b>Modo Personalizado:</b> você escolhe o modo de cada gatilho. Quando o jogo
+          <b>Modo personalizado:</b> você escolhe o modo de cada gatilho. Quando o jogo
           manda o efeito dele, o do jogo vence.
         </span></span>
       </div>
@@ -2369,7 +2369,7 @@
   <!-- ================= RODAPÉ ================= -->
   <div class="rodape">
     <!-- O RECIBO SAIU DA BARRA E VIROU DICA DOS BOTÕES — 30/08/2026, pedido:
-         *"'Aplicar vale agora • Salvar Perfil grava no Mortal Kombat' isso deveria
+         *"'Aplicar vale agora • Salvar perfil grava no Mortal Kombat' isso deveria
          em formato de tooltip ao deixar o mouse sobre os botões aplicar, salvar
          perfil, importar e exportar. em todas as abas."*
 
@@ -2400,7 +2400,7 @@
 
          O NOME DO PERFIL É DADO, E ERA LITERAL — corrigido em 03/09/2026, achado
          pela régua do mockup e nomeado pelo juiz da leva. O pedido trazia um
-         EXEMPLO — *"Salvar Perfil grava no Mortal Kombat"* — e este arquivo
+         EXEMPLO — *"Salvar perfil grava no Mortal Kombat"* — e este arquivo
          congelou o exemplo em vez do nome. Resultado medido: as DEZ abas diziam
          "Grava no perfil Mortal Kombat" com `meu_perfil` ativo. O comentário aqui
          em cima já dizia o que importava — *o NOME do perfil, "a informação que
@@ -2416,7 +2416,7 @@
             title="Vale agora: envia a configuração aos controles na hora. Não grava — ao trocar de perfil ou reiniciar, volta ao que está salvo.">Aplicar</button>
     <button class="r-salvar" data-campo="rodape.salvar"
             data-hef-alvo="atributo" data-hef-atributo="title"
-            title="Grava no perfil ativo. É onde a mudança vai cair.">Salvar Perfil</button>
+            title="Grava no perfil ativo. É onde a mudança vai cair.">Salvar perfil</button>
     <button class="r-importar" title="Carrega um perfil de arquivo .json.">Importar</button>
     <button class="r-exportar" data-campo="rodape.exportar"
             data-hef-alvo="atributo" data-hef-atributo="title"

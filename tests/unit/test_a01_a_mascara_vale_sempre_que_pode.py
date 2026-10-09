@@ -225,7 +225,7 @@ def test_a_mascara_que_o_produto_monta_e_gravada_fora_do_nativo() -> None:
     with pytest.raises(RuntimeError) as erro:
         aba.mascara_do_controle(
             _ctx(VIVO_NATIVO), {"uniq": "aa:bb:cc:00:00:01", "mascara": "Xbox 360"}, p)
-    assert "Modo Nativo" in str(erro.value)
+    assert "modo nativo" in str(erro.value)
     assert p.chamadas == [], "no Nativo a máscara chegou ao daemon"
 
 

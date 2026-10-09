@@ -359,11 +359,11 @@ def test_as_linhas_do_status_nao_tem_o_ajuda_e_a_frase_vai_no_title(a09) -> None
 
 
 def test_configuracoes_avancadas_tem_a_letra_do_titulo_sistema() -> None:
-    """*«Configurações Avançadas — Escreve com a mesma cor e tamanho de Sistema»*."""
+    """*«Configurações avançadas — Escreve com a mesma cor e tamanho de Sistema»*."""
     pagina = PUBLICADA.read_text(encoding="utf-8")
     assert '<span class="quadro-titulo">Sistema</span>' in pagina
     assert ('<div class="sec-grupo"><span class="quadro-titulo">'
-            "Configurações Avançadas</span></div>") in pagina
+            "Configurações avançadas</span></div>") in pagina
 
 
 def test_o_registro_de_exemplo_cita_so_os_controles_da_cena() -> None:

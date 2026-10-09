@@ -271,7 +271,7 @@ def test_guardado_vira_frase_no_cartao_dela(a04, ctx, monkeypatch):
     ESTE É O DEFEITO MAIS CARO DESTA CASA, e ele estava vivo aqui: o daemon
     responde `guardado_em: [uniq]` e o `bool` do `led_set` volta `True`. O gesto
     calava, o piloto anotava "aplicou", e o segundo clique parecia o primeiro.
-    (Até 23/09/2026 o caso medido era o Modo Nativo; a luz passou a sair nele —
+    (Até 23/09/2026 o caso medido era o modo nativo; a luz passou a sair nele —
     `D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO` —, e o guardado que
     sobra é o do controle fora da mesa.)
 
@@ -308,7 +308,7 @@ def test_no_nativo_a_camada_recusa_a_luz_antes_do_daemon(a04, ctx, monkeypatch):
     fn = pacotes.gesto_da_pagina("04-iluminacao.html", "cor")
     with pytest.raises(RuntimeError) as erro:
         fn(ctx, {"controle": "p1", "uniq": UNIQ, "hex": "#0000FF"}, p)
-    assert "Modo Nativo" in str(erro.value)
+    assert "modo nativo" in str(erro.value)
     assert not p.chamadas, "no Nativo a luz chegou ao daemon"
 
 

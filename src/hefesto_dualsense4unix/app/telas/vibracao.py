@@ -101,7 +101,7 @@ def degraus_da_forca() -> tuple[str, ...]:
 
 #: quando o teto já cortou, e por isso nunca ensinou que o teto existe.
 DICA_DO_TETO_DA_MESA = (
-    "O Perfil de Bateria pode impor um teto: a escolha continua valendo, "
+    "O perfil de bateria pode impor um teto: a escolha continua valendo, "
     "só não passa dele."
 )
 

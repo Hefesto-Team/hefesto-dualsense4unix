@@ -89,7 +89,7 @@ SEM_CONTROLE = ("Nenhum controle conectado. Ligue um pelo cabo ou pelo rádio "
 #: Virtual. E selecionar ele permite escolher entre (...) analógico esquerdo e
 #: Direito»*. O cabeçalho de cada cartão liga e escolhe o lado, como o chip do
 #: cabeçalho e os chips embaixo dos analógicos da aba Controles.
-ROTULO_DA_MIRA = "Analógico Virtual"
+ROTULO_DA_MIRA = "Analógico virtual"
 LADOS = (("analogico_esquerdo", "Esquerdo"), ("analogico_direito", "Direito"))
 ROTULO_SENSIBILIDADE = "O quanto um gesto anda"
 ROTULO_TREMOR = "Ignorar tremor até"
@@ -435,7 +435,7 @@ CSS = """
   /* O LIGA E O LADO DO ANALÓGICO VIRTUAL — 06/10/2026. A pastilha é a mesma
      dos dois «Inverter» logo abaixo; com o liga apagado o lado fica no cinza
      da casa (`.btn.apagado`), sem `opacity`, e segue clicável: o clique num
-     lado acende o Analógico Virtual nele. */
+     lado acende o analógico virtual nele. */
   .av{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
   .av .sw{height:20px;border-radius:6px;font-size:11px;font-family:inherit;cursor:pointer;
     border:1px solid var(--border-forte);background:var(--app-bg);color:var(--texto-mudo);
@@ -641,7 +641,7 @@ def _inverter():
 
 
 def _analogico_virtual():
-    """O liga do Analógico Virtual e os dois lados, nascendo apagados.
+    """O liga do analógico virtual e os dois lados, nascendo apagados.
 
     Os endereços (`mira-ligada`, `mira-lado`) são os que o pacote pinta do bloco
     `mira` do `daemon.state_full`, pelos mesmos leitores da 02; os gestos

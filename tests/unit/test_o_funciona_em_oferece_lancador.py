@@ -399,7 +399,7 @@ def test_o_jargao_saiu_das_duas_telas(caminho: str) -> None:
         assert f">{sm.PROCEDENCIA_DE_QUALQUER_JOGO}<" not in campo
 
     assert 'data-hef="editor.estilo"' in html
-    assert ">Estilo de Jogo:</span>" in html
+    assert ">Estilo de jogo:</span>" in html
 
 
 def test_a_coluna_fala_a_lingua_do_campo(maquina_dela: pathlib.Path) -> None:

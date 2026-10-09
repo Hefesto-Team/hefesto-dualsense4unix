@@ -149,7 +149,7 @@ def _campos_da_mira(entrada: dict[str, Any]) -> dict[str, Any]:
         valor = b.get(chave)
         campos[f"mira-inverter-{qual}"] = _selo_do_sensor(
             valor if isinstance(valor, bool) else None)
-    # O liga e o lado do Analógico Virtual, pelos mesmos leitores da aba Controles.
+    # O liga e o lado do analógico virtual, pelos mesmos leitores da aba Controles.
     campos["mira-ligada"] = _selo_do_sensor(_analogico_virtual(entrada))
     campos["mira-lado"] = lado_aceso(entrada)
     return campos
@@ -346,7 +346,7 @@ def _numero_do_deslizante(o: dict[str, Any], nome: str, faixa: tuple[int, int, i
 
 @gesto(PAGINA, "analogico-virtual", grava="mira_set_detalhado")
 def analogico_virtual(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """O liga do Analógico Virtual no topo da coluna: o mesmo gesto do chip da aba Controles."""
+    """O liga do analógico virtual no topo da coluna: o mesmo gesto do chip da aba Controles."""
     mira_da_02(ctx, o, p)
 
 

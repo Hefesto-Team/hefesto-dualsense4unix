@@ -1528,7 +1528,7 @@ def testar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     um controle só cala o teste da háptica DELE (os dois se excluem no mesmo
     controle, D-0210).
 
-    A CHECADA, e não a crua: a recusa do Modo Nativo vem no CORPO da resposta, e
+    A CHECADA, e não a crua: a recusa do modo nativo vem no CORPO da resposta, e
     foi por não a ler que a aba anunciou "vibração travada" com o motor parado
     (NATIVO-RUMBLE-01). **O par sai reduzido pela barra de cada motor** (ver
     :func:`_par_das_barras`, para a inversão `weak`/`strong`).
@@ -1563,7 +1563,7 @@ def parar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     O SEGUNDO PASSO NÃO É ENFEITE: esta aba não tem o botão de devolver, e sem
     ele o "Parar" deixaria o controle num estado MORTO — mudo para o jogo, sem
-    caminho de volta na tela. A CHECADA, e não a crua: dentro do Modo Nativo o
+    caminho de volta na tela. A CHECADA, e não a crua: dentro do modo nativo o
     `rumble.stop` não trava silêncio, ele SOLTA o par e diz que não alcança o
     motor que o jogo toca pelo hidraw — NATIVO-RUMBLE-01, segunda metade.
     """

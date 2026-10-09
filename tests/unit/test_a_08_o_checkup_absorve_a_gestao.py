@@ -204,9 +204,9 @@ def test_salvar_a_porta_chama_o_dono_com_a_face() -> None:
 
 @pytest.mark.parametrize("arquivo", [BANCADA, PUBLICADA])
 def test_a_gestao_mora_dentro_do_check_up(arquivo: pathlib.Path) -> None:
-    """MORDIDA: devolva o quadro «Gestão de Controles» ao `MIOLO` → reprova."""
+    """MORDIDA: devolva o quadro «Gestão de controles» ao `MIOLO` → reprova."""
     html = arquivo.read_text(encoding="utf-8")
-    titulos = re.findall(r'<label class="quadro-titulo" for="([\w-]+)">Gestão de Controles<', html)
+    titulos = re.findall(r'<label class="quadro-titulo" for="([\w-]+)">Gestão de controles<', html)
     assert titulos == ["cx8-2"], titulos
     assert ">Check-up<" not in html, "o nome velho da seção voltou"
     checkup = html[html.index('id="cx8-2"'):html.index('id="rd-secao"')]

@@ -127,7 +127,7 @@ def test_o_gatilho_e_o_inverter_chegam_ao_disco_e_ao_vivo(
     corpo = _mira_set(servidor, uniq=_P4, inverter_horizontal=True)
     assert corpo["inverter_horizontal"] is True and corpo["inverter_vertical"] is False
     dele = load_profile("Bancada").controllers["aabbcc000004"].movimento
-    # O Analógico Virtual liga o giro e a inclinação no lado (O-ANALOGICO-VIRTUAL-E-UM-SO).
+    # O analógico virtual liga o giro e a inclinação no lado (O-ANALOGICO-VIRTUAL-E-UM-SO).
     assert dele.model_fields_set == {"destino", "acelerometro", "lado", "gatilho",
                                      "inverter_horizontal"}
     vivo = rot.da_peca(servidor.store, _P4, rot.ativo(servidor.store))
@@ -189,7 +189,7 @@ def test_a_leitura_de_volta_traz_os_tres(perfis: Path, tmp_path: Path) -> None:
 
 
 _DICA_DE_HOJE = "Ligado: o jogo recebe o giro deste controle."
-_DICA_COM_A_MIRA = ("Com o Analógico Virtual aceso, o giro deste controle vai ao jogo "
+_DICA_COM_A_MIRA = ("Com o analógico virtual aceso, o giro deste controle vai ao jogo "
                     "pelo analógico direito.")
 
 
@@ -551,7 +551,7 @@ def test_inverter_sem_leitura_recusa_sem_chutar() -> None:
 def test_no_nativo_a_calibrar_grava_calada() -> None:
     """O ajuste no Nativo grava (`alcance: nao_se_aplica`) e não vira recusa:"""
     p = _PonteDaMira({"status": "ok", "alcance": {"tique": "nao_se_aplica"},
-                      "ressalva": "Modo Nativo"})
+                      "ressalva": "Modo nativo"})
     _o_gesto("calibrar-sensores.html", "mira-tremor")(
         _ctx_calibrar(), {"uniq": "aa:bb:cc:00:00:01", "valor": "20"}, p)
     assert p.chamadas == [{"uniq": "aa:bb:cc:00:00:01", "zona_morta_graus_s": 20.0}]

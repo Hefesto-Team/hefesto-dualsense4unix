@@ -593,7 +593,7 @@ if _SEM_DICA or _DICA_ORFA:
 ROT = {p.name: p.label for p in PRESETS}
 
 #: O «Desligado» do produto é, nesta tela, «Sem efeito» (ver `ROTULO_DO_JOGO_DECIDE`).
-#: 06/10/2026: com o Modo Automático da aba, o rótulo desta chave muda — e muda no DONO
+#: 06/10/2026: com o modo automático da aba, o rótulo desta chave muda — e muda no DONO
 #: (o pacote), na sprint O-MODO-AUTOMATICO-E-O-PERSONALIZADO-01; o desenho só o lê.
 _ROTULO_DA_TELA = {p.name: ROTULO_DO_JOGO_DECIDE if p.name == "Off" else p.label
                    for p in PRESETS}
@@ -926,9 +926,9 @@ MIOLO = f'''
         {trava_do_nativo("nos gatilhos")}
         {monta_.par_de_modos(GESTO_DO_MODO, monta_.MODO_PERSONALIZADO)}
         <span class="ajuda esq">?<span class="dica">
-          <b>Modo Automático:</b> o jogo decide os dois gatilhos de todos os controles, e
+          <b>Modo automático:</b> o jogo decide os dois gatilhos de todos os controles, e
           os botões desta aba ficam parados.<br><br>
-          <b>Modo Personalizado:</b> você escolhe o modo de cada gatilho. Quando o jogo
+          <b>Modo personalizado:</b> você escolhe o modo de cada gatilho. Quando o jogo
           manda o efeito dele, o do jogo vence.
         </span></span>
       </div>

@@ -76,7 +76,7 @@ CONFISSAO: dict[str, str] = {
     ),
     mapa_das_portas.LACUNA_VELOCIDADE: (
         "quais entradas são azuis. Enquanto você não passar por "
-        "\"Mapear Entrada a Entrada\", eu trato todas como pretas."
+        "\"Mapear entrada a entrada\", eu trato todas como pretas."
     ),
     mapa_das_portas.LACUNA_REGIAO: (
         "se alguma face é do gabinete ou de um hub — nenhuma entrada dela tem "

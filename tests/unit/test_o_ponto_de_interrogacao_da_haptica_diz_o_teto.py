@@ -1,4 +1,4 @@
-"""O «?» da Sensor Háptico avisa o teto do Perfil de Bateria (A-TELA-PERGUNTA-AO-DONO-01, opção a).
+"""O «?» da sensor háptico avisa o teto do perfil de bateria (A-TELA-PERGUNTA-AO-DONO-01, opção a).
 
 Desde 02/10/2026 a Economia corta a háptica como corta a Força, e só o «?» da Força dizia a
 frase do dono. Ela escolheu (08/10/2026) a opção a: a frase vem logo depois do 100%, antes do
@@ -7,7 +7,7 @@ frase do dono. Ela escolheu (08/10/2026) a opção a: a frase vem logo depois do
 A régua lê a FONTE (o gerador) e o ``mockup/05-vibracao.html``, que ele reescreve; não depende
 do ``--publicar``, que é da costura.
 
-Mordidas (09/10/2026, md5 antes e depois): tirar a frase da dica da Sensor Háptico no
+Mordidas (09/10/2026, md5 antes e depois): tirar a frase da dica da sensor háptico no
 ``mockup/05-vibracao.html`` reprova a primeira; pô-la depois do «Cinza quando» reprova a ordem;
 digitar a frase no ``aba05.py`` reprova a terceira. E a régua do próprio gerador (régua 10 do
 ``aba05.py``) recusa regerar a 05 sem a frase, de modo que o desenho nem chega a mudar.
@@ -34,7 +34,7 @@ def _dica(rotulo: str) -> str:
 
 
 def test_o_ponto_da_haptica_diz_o_teto_logo_depois_do_100() -> None:
-    texto = _dica("Sensor Háptico")
+    texto = _dica("Sensor háptico")
     assert DICA_DO_TETO_DA_MESA in texto
     assert (texto.index("O risco no meio é 100%")
             < texto.index(DICA_DO_TETO_DA_MESA) < texto.index("Cinza quando")), texto

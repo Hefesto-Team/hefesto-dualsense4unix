@@ -3,7 +3,7 @@
 
 O QUE TEM DONO: o serviço está de pé (o daemon respondeu — se ele calasse, não
 haveria pacote), o perfil ativo, a política de bateria (`rumble_policy`, que é o
-mesmo dado do Perfil de Bateria desta aba) e quantos controles ela alcança.
+mesmo dado do perfil de bateria desta aba) e quantos controles ela alcança.
 
 O ALCANCE É A LINHA QUE MAIS ERRA, e errou hoje: ela dizia *"Os 4 controles"*
 com dois na mesa. Aqui ele sai de `conectados`, e a régua da aba o cobra.
@@ -721,7 +721,7 @@ def _lista_em_portugues(nomes: list[str]) -> str:
 
 
 def _perfil_da_bateria() -> str | None:
-    """A chave do Perfil de Bateria GRAVADA no `maquina.json`, ou `None`."""
+    """A chave do perfil de bateria GRAVADA no `maquina.json`, ou `None`."""
     try:
         return _orcamento.perfil_na_tela()
     except Exception:
@@ -1551,7 +1551,7 @@ def _ok_e_motivo(resposta: Any) -> tuple[bool, str | None]:
 
 @gesto("09-sistema.html", "perfil-da-mesa")
 def perfil_da_mesa(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """Os três botões do Perfil de Bateria. `machine.declare`, e vale AGORA.
+    """Os três botões do perfil de bateria. `machine.declare`, e vale AGORA.
 
     POR QUE `machine.declare` E NÃO `rumble.policy_set`, que seria o palpite: o
     teto da MESA e a política de vibração são dois donos diferentes. O
@@ -1594,7 +1594,7 @@ def perfil_da_mesa(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             f"estão em `secao_orcamento.PERFIS`.") from None
     ok, motivo = _ok_e_motivo(p.machine_declare({"orcamento": {"teto": teto}}))
     if not ok:
-        raise RuntimeError(motivo or "não consegui gravar o Perfil de Bateria")
+        raise RuntimeError(motivo or "não consegui gravar o perfil de bateria")
 
 
 def _systemctl(verbo: str) -> None:

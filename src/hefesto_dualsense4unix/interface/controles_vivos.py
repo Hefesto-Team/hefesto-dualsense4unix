@@ -388,7 +388,7 @@ window.HEF = (function(){
       txt(q('.bolinha', conta), p.bolinha); n+=3;
     }
     txt(q('.pa-nome'), p.perfil); n++;
-    // O rodapé diz o MESMO perfil ("Salvar Perfil grava no …") e é literal no
+    // O rodapé diz o MESMO perfil ("Salvar perfil grava no …") e é literal no
     // esqueleto (`_ferramentas/fim.html`, que não é o gerador desta aba). Sem
     // isto a tela mostrava dois perfis diferentes ao mesmo tempo — o vivo em
     // cima e "Mortal Kombat" embaixo.
@@ -532,7 +532,7 @@ window.HEFSW = (function(){
   // mudar, e a seção não abriria nem fecharia.
   //
   // A CURA NÃO É TIRAR O `preventDefault`. Se o clique movesse o rádio sozinho,
-  // a tela abriria a seção do Modo Nativo enquanto o daemon continuasse em
+  // a tela abriria a seção do modo nativo enquanto o daemon continuasse em
   // `gamepad` — o F7 desta casa, estado velho como padrão, na pergunta em que
   // ele mais dói. A seção segue o DAEMON: quem move o rádio é a pintura.
   //

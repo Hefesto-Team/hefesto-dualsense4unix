@@ -753,10 +753,10 @@ class TestAProsaQueVaiPararNaTela:
         ler = texto_visivel if pasta is BANCADA else texto_visivel_no_produto
         texto = ler((pasta / "04-iluminacao.html").read_text(encoding="utf-8"))
 
-        # O PAR «Modo Automático | Modo Personalizado» é palavra de produto desde 08/10/2026
+        # O PAR «Modo automático | Modo personalizado» é palavra de produto desde 08/10/2026
         # (ordem de 06/10): só ele tira o «Automático» da conta. Qualquer outro canto que
         # fale do automático — o botão por controle, o interruptor — continua banido.
-        achados = _BOTAO_MORTO.findall(texto.replace("Modo Automático", ""))
+        achados = _BOTAO_MORTO.findall(texto.replace("Modo automático", ""))
 
         assert achados == [], (
             f"{pasta.name}/04-iluminacao.html ainda fala do botão que saiu, "
@@ -792,7 +792,7 @@ class TestAProsaQueVaiPararNaTela:
 
 
 class TestORecadoQueMentia:
-    """A frase do Modo Automático (nascida no interruptor), e o comentário que a gerou."""
+    """A frase do modo automático (nascida no interruptor), e o comentário que a gerou."""
 
     def test_a_frase_nao_promete_o_que_o_produto_nao_faz(self) -> None:
         """*"Cada controle volta a acender a cor do número dele"* era FALSA."""
@@ -803,5 +803,5 @@ class TestORecadoQueMentia:
         assert "plástico" in frase and "ou a do número" in frase, (
             "a frase voltou a prometer a cor do número para TODO controle")
         assert "duas nunca ficam iguais" in frase
-        assert "volta no Modo Personalizado" in frase, (
+        assert "volta no modo personalizado" in frase, (
             "a frase calou o que acontece com a cor que ela escolheu")

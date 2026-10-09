@@ -568,7 +568,7 @@ def _relatar_a_volta(passo: str, motivo: object) -> None:
 
 
 def a_volta_do_perfil(ctx: Any, p: Any) -> None:
-    """O fim do «Aplicar», do «Salvar Perfil» e do «Importar» do rodapé.
+    """O fim do «Aplicar», do «Salvar perfil» e do «Importar» do rodapé.
 
     O-APLICAR-E-O-SALVAR-JA-ATUALIZAM-01: os três botões que gravam ou mandam
     perfil terminam com a parte do «Atualizar» (aba Sistema) e do «Reconectar

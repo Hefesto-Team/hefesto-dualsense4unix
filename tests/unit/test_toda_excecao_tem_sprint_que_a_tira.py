@@ -203,6 +203,7 @@ DIVIDAS: dict[str, int] = {
     "scripts/check_a_tela_nao_confessa.py::A_DIVIDA": 2,
     "scripts/check_cabo_bt_perfil_controle.py::A_DIVIDA_CONHECIDA": 1,
     "scripts/check_identidade_vem_de_cima.py::ISENCOES": 0,
+    "scripts/check_so_a_primeira_letra.py::DIVIDA": 7,
     "scripts/validar-citacoes-de-linha.py::CSV_FORA_DO_PORTAO": 0,
     "scripts/validar-palavra-de-tela.py::DIVIDA_DA_PALAVRA_01": 0,
     "scripts/validar-palavra-de-tela.py::DIVIDA_DA_PALAVRA_01_PY": 0,

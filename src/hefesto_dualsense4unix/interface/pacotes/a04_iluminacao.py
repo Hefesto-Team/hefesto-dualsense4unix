@@ -319,8 +319,8 @@ def brilho_aceso(c: dict[str, Any] | None, p: dict[str, Any] | None,
 
 
 #: O GESTO DO PAR DOS MODOS (A-O-MODO-AUTOMATICO-E-O-PERSONALIZADO-01, 08/10/2026). Ele tomou o
-#: lugar do interruptor «Cores automáticas por controle» (`auto-cores`, D-13): o Modo Automático
-#: é o interruptor ligado, e o Modo Personalizado é ele desligado com a cor de cada controle
+#: lugar do interruptor «Cores automáticas por controle» (`auto-cores`, D-13): o modo automático
+#: é o interruptor ligado, e o modo personalizado é ele desligado com a cor de cada controle
 #: guardada. O mesmo nome é o endereço do quadro, que carrega o modo no `data-modo-da-aba`.
 GESTO_DO_MODO = "modo-da-luz"
 
@@ -375,14 +375,14 @@ def modo_da_luz_do_perfil(p: dict[str, Any] | None) -> str:
 
 
 def _o_modo_escrito_e_automatico(p: dict[str, Any] | None) -> bool:
-    """O perfil traz o Modo Automático ESCRITO em `leds.modo` (e não deduzido)?"""
+    """O perfil traz o modo automático ESCRITO em `leds.modo` (e não deduzido)?"""
     leds = p.get("leds") if isinstance(p, dict) else None
     return isinstance(leds, dict) and leds.get("modo") == MODO_AUTOMATICO
 
 
 RECADO_DO_AUTOMATICO_PARADO = (
-    "A iluminação está no Modo Automático: cada controle acende a cor do plástico dele. "
-    "Passe para o Modo Personalizado para escolher.")
+    "A iluminação está no modo automático: cada controle acende a cor do plástico dele. "
+    "Passe para o modo personalizado para escolher.")
 
 
 def _nao_no_automatico(ctx: Contexto) -> None:
@@ -405,7 +405,7 @@ def _recusar_no_automatico(cru: dict[str, Any] | None) -> None:
 ROTULO_DO_BRILHO = "Brilho da barra de luz deste controle"
 
 DICA_DO_BRILHO = ("Brilho da barra deste controle. Grava no perfil ao "
-                  "soltar — não espera o Salvar Perfil.")
+                  "soltar — não espera o Salvar perfil.")
 
 
 def _com_o_brilho(rgb: tuple[int, int, int], brilho: float) -> tuple[int, int, int]:
@@ -1927,7 +1927,7 @@ def _escrever_a_cor(ctx: Contexto, p: Any, uniq: str,
     um `True` dele significa só *"o daemon respondeu"*. O corpo do `led.set`
     publica `aplicado_em`/`guardado_em` desde a APLICAR-VERDADE-01, e
     `led_set_detalhado` já os entregava — sem um chamador em `interface/` até
-    hoje. Sem eles, um clique com o Modo Nativo ligado (o backend muta toda
+    hoje. Sem eles, um clique com o modo nativo ligado (o backend muta toda
     escrita de output) ou com o controle recém-saído da mesa saía **calado**: o
     piloto anotava "aplicou", a barra não mudava, e o segundo clique parecia o
     primeiro. É o defeito que esta casa nomeia como o mais caro.
@@ -2035,7 +2035,7 @@ def _guardar_o_apagado_no_perfil(ctx: Contexto, uniq: str) -> None:
     a ordem de produto: *"vamos banir esse preto de aparecer"*): o perfil
     reaplicado lia «não opinou» e acendia a barra de novo. Medido na mesa de
     quatro real: o P2 apagado voltava vermelho na troca manual, no boot e no
-    «Salvar Perfil» — e o preto tinha apagado do disco o laranja que ela
+    «Salvar perfil» — e o preto tinha apagado do disco o laranja que ela
     escolhera. O caminho de apagar que a própria decisão de 22/09 deixou é o
     brilho, *"um campo que só a mão do usuário move"*.
 
@@ -2226,7 +2226,7 @@ def cor(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     "Aplicar".
 
     A cor chega pelo `led.set` direto, "a cor já acende ao soltar o seletor", e
-    o "Salvar Perfil" continua sendo o que grava.
+    o "Salvar perfil" continua sendo o que grava.
 
     A CONVERSÃO NÃO MORA AQUI, e morava até 02/09/2026. A linha era::
 
@@ -2349,7 +2349,7 @@ def apagar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     O APAGADO É O BRILHO, E NÃO A COR — 25/09/2026, decisão por delegação
     (`D-2509-O-DESLIGAR-E-O-BRILHO-EM-ZERO`, A-04-PERGUNTA-AO-DAEMON-VIVO-01).
     O preto ia ao disco como a cor do controle, e desde 22/09 o preto é
-    «não opinou»: a troca manual, o boot e o «Salvar Perfil» acendiam a barra
+    «não opinou»: a troca manual, o boot e o «Salvar perfil» acendiam a barra
     de novo, e o laranja que ela tinha escolhido estava perdido. O brilho em
     0% é o apagar que a decisão de 22/09 deixou, e sobrevive a reaplicar o
     perfil (`_guardar_o_apagado_no_perfil`). Para acender: o trilho, ou um tom
@@ -2461,7 +2461,7 @@ def _fracao_do_disco(pct: int) -> float:
     """Os 0-100 da TELA na escala em que o PERFIL guarda o brilho (0.0-1.0).
 
     A CONTA TEM DONO, e ela é `app/draft_config._leds_draft_to_config` — o
-    `leds.lightbar_brightness / 100.0` que o "Salvar Perfil" da janela estável
+    `leds.lightbar_brightness / 100.0` que o "Salvar perfil" da janela estável
     já faz com o mesmo número. As duas escalas convivem de propósito e estão
     declaradas nos dois esquemas: `LedsDraft` é `int 0-100` (é o que a tela
     mostra) e `LedsConfig` é `float 0.0-1.0` (é o que o disco guarda). Digitar
@@ -2534,7 +2534,7 @@ def brilho(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """Ela arrastou o trilho. O brilho vai AO APARELHO e AO DISCO, na hora.
 
     DECISÃO, 03/09/2026. Perguntada se mexer no brilho grava o perfil na
-    hora ou espera o "Salvar Perfil": **"Grava na hora"**.
+    hora ou espera o "Salvar perfil": **"Grava na hora"**.
 
     O QUE ISSO DESFAZ, e estava na tela: o trilho JÁ ERA DESENHADO como slider —
     a regra `.cheio::after` punha um knob de 12px na ponta da barra roxa — e não
@@ -2756,7 +2756,7 @@ def _a_cor_de_agora(ctx: Contexto, cru: dict[str, Any],
     if tom is not None:
         return tom
     if modo_da_luz_do_perfil(cru) == MODO_AUTOMATICO:
-        #: No Modo Automático a cor guardada fica no disco e NÃO vale: o hex e o X dizem a
+        #: No modo automático a cor guardada fica no disco e NÃO vale: o hex e o X dizem a
         #: cor do plástico, que é a que o controle acende.
         return cor_automatica(_numero(ctx, c), _tom_do_plastico(c))
     guardada = _a_cor_guardada_que_vale(ctx, cru, c)
@@ -2832,19 +2832,19 @@ def _com_a_cor_gravada(prof: Any, uniq: str, rgb: tuple[int, int, int],
 
 
 _RECADO_DO_AUTOMATICO = (
-    "Modo Automático: cada controle acende a cor do plástico dele, ou a do número, e duas "
+    "Modo automático: cada controle acende a cor do plástico dele, ou a do número, e duas "
     "nunca ficam iguais. A cor que você escolheu para cada um fica guardada e volta no "
-    "Modo Personalizado.")
+    "modo personalizado.")
 
 _RECADO_DO_PERSONALIZADO = (
-    "Modo Personalizado: valem a cor, o brilho e as luzes que você escolher. Guardei a "
+    "Modo personalizado: valem a cor, o brilho e as luzes que você escolher. Guardei a "
     "cor de cada controle que ainda não tinha uma, para nenhuma se perder e nenhuma "
     "se repetir.")
 
 
 @gesto("04-iluminacao.html", GESTO_DO_MODO, grava="gravar_pelo_gesto")
 def modo_da_luz(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """O par «Modo Automático | Modo Personalizado» — e ele MUDA o perfil.
+    """O par «Modo automático | Modo personalizado» — e ele MUDA o perfil.
 
     **ELE TOMOU O LUGAR DO INTERRUPTOR `auto-cores` (D-13, 04/09/2026), e levou o contrato:**
     o Automático é o interruptor ligado (`leds.auto_player_colors`), e o Personalizado é ele
@@ -3118,7 +3118,7 @@ def _cobrar_a_frase_do_desenho(ctx: Contexto, uniq: str,
     O CORPO SINTÉTICO NÃO É UM DUBLÊ DO DAEMON: ele nunca vai ao aparelho e
     nunca é lido como resposta. É a pergunta *"o que você diria no melhor
     caso, para este controle, com este desenho?"* — e as duas chamadas usam o
-    MESMO `_Janela`, então toda pendência do estado (Modo Nativo, alvo fora da
+    MESMO `_Janela`, então toda pendência do estado (Modo nativo, alvo fora da
     mesa) vale igual nas duas e não some na comparação.
 
     ESTE CAMINHO SÓ CORRE COM O CO-OP FORA. Com ele ligado, `_acender_o_numero`

@@ -190,7 +190,7 @@ TECLADO_SO_DENTRO = "Só dentro do jogo"
 
 #: A chave «Também no jogo» no topo das Definições (O-GATILHO-VIRA-CLIQUE-SEM-LIGAR-
 #: O-CURSOR-01, opção b). O endereço pinta o interruptor (`Sim`/`Não`); o segundo
-#: acende o cinza no Modo Nativo, em que o jogo lê o controle direto e a tabela
+#: acende o cinza no modo nativo, em que o jogo lê o controle direto e a tabela
 #: não toca em nada (o mesmo cinza da Mira, `a02_controles.MIRA_NO_NATIVO`).
 #: O endereço de CADA chip da fita, o mesmo do `monta.fita()` e da 09: sem ele, o
 #: `--plastico` do chip é cor cravada para `check_identidade_vem_de_cima.py`.
@@ -201,7 +201,7 @@ CHAVE_LIGADA = "Sim"
 CHAVE_DESLIGADA = "Não"
 CHAVE_NO_NATIVO = "NATIVO"
 CHAVE_CINZA_NO_NATIVO = (
-    "Em Modo Nativo o jogo lê este controle direto, e a tabela não age junto "
+    "Em modo nativo o jogo lê este controle direto, e a tabela não age junto "
     "com ele.")
 
 PALAVRAS_DO_TECLADO: dict[bool, tuple[str, ...]] = {
@@ -509,7 +509,7 @@ def _a_razao_do_portao(estado: dict[str, Any]) -> str:
     """Por que o «Status da navegação» vai recusar agora — ou nada a dizer.
 
     O portão só vale no tipo «O computador», que é o que derruba o pad virtual:
-    a Interna liga em qualquer Modo (A-NAVEGACAO-INTERNA-E-UM-MODO-QUE-SE-LIGA-EM-QUALQUER-ABA-01).
+    a Interna liga em qualquer modo (A-NAVEGACAO-INTERNA-E-UM-MODO-QUE-SE-LIGA-EM-QUALQUER-ABA-01).
     """
     if not estado or tipo_de_navegacao(estado) == TIPO_INTERNA:
         return NADA_A_DIZER
@@ -833,7 +833,7 @@ def a_mira_do_cartao(dele: dict[str, Any], ctx: Contexto) -> dict[str, str]:
     sincronizado com a aba Conexões, Navegação. e Perfis»*). Na Navegação o giro vira cursor pelos
     quatro ajustes da Calibrar, e o cartão passa a dizê-los quando a Mira dele está acesa — pelo
     MESMO leitor da Calibrar (`a11.resumo_da_mira`, sobre o bloco `mira` do daemon) e pelo mesmo
-    `ligada` do chip (`a02._mira_ligada`). Apagada, sem leitura ou no Modo Nativo (o chip fica
+    `ligada` do chip (`a02._mira_ligada`). Apagada, sem leitura ou no modo nativo (o chip fica
     cinza e a Mira não anda), a linha fica vazia: afirmação sem leitura é chute. O resumo vai
     pelo alvo `html` (escapado aqui) porque o `texto` vazio vira travessão no piloto, e a linha
     de uma Mira apagada diria «—», o sinal de leitura que falta.
@@ -1590,7 +1590,7 @@ def _rato(ctx: Contexto) -> dict[str, Any]:
 
 
 def _no_nativo(ctx: Contexto) -> bool:
-    """O Modo Nativo está ligado? É GLOBAL no daemon (`state_full.native_mode`).
+    """O modo nativo está ligado? É GLOBAL no daemon (`state_full.native_mode`).
 
     A mesma pergunta de `a02_controles._nativo`, escrita aqui porque um pacote
     de aba não importa o privado de outro; sem estado, a resposta é «não».
@@ -2011,7 +2011,7 @@ def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
 
 
 def _ligar_a_interna(ctx: Contexto, p: Any) -> dict[str, Any] | None:
-    """O «Status da navegação» no tipo Interna: liga ou desliga, em qualquer Modo.
+    """O «Status da navegação» no tipo Interna: liga ou desliga, em qualquer modo.
 
     A-NAVEGACAO-INTERNA-E-UM-MODO-QUE-SE-LIGA-EM-QUALQUER-ABA-01. Sem portão: a
     Interna não mexe no pad virtual nem no mouse (D-20), e quem decide o R1 é o
@@ -2323,7 +2323,7 @@ def fechar_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
 
 @gesto("06-navegacao.html", "fechar-ponto")
 def fechar_ponto(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """O fechar e o "Cancelar" do *Estilo Point-and-click*. Mesmo ato do irmão.
+    """O fechar e o "Cancelar" do *Estilo point-and-click*. Mesmo ato do irmão.
 
     ELE É UM SEGUNDO NOME E NÃO UM SEGUNDO COMPORTAMENTO, e a razão de existir
     é de ENDEREÇO: o piloto recusa gesto que não esteja registrado, e pendurar
@@ -2530,7 +2530,7 @@ def guardar_teclas(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] |
     if mascarados:
         raise RuntimeError(
             "guardei as teclas, e estas linhas continuam fazendo o que a lista "
-            "de <b>Definições Controle e Mouse</b> diz, que vence: "
+            "de <b>Definições controle e mouse</b> diz, que vence: "
             + ", ".join(f"{_nome_do_botao(b)} = "
                         f"{acoes.rotulo(str(escolhas[b]))}" for b in mascarados)
             + ". Para a tecla que você escreveu valer, ponha essas linhas de "
@@ -3021,7 +3021,7 @@ def padrao_da_aba(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 @gesto("06-navegacao.html", "guardar-ponto", grava="gravar_e_reaplicar")
 def guardar_ponto(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """"Guardar" do *Estilo Point-and-click*. Escreve `Profile.button_actions`.
+    """"Guardar" do *Estilo point-and-click*. Escreve `Profile.button_actions`.
 
     ELE PASSOU A TER DONO EM 11/09/2026, F2-POINT-AND-CLICK, e o que o segurava
     era um FATO que a medição derrubou. O `SEM_GESTO` dizia: *"'Estilo de Jogo'

@@ -156,6 +156,6 @@ _DICA_DA_VISADA = (
 )
 
 
-_BOTAO_CALIBRAR = "Mapear Entrada a Entrada"
+_BOTAO_CALIBRAR = "Mapear entrada a entrada"
 
 

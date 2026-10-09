@@ -670,7 +670,7 @@ CSS = CSS_GLIFO + """
   .acoes.tres{grid-template-columns:1fr 1fr 1fr}
   /* quatro botões na fileira de 1086px dão 261,8px cada, e o rótulo mais longo
      cabe numa linha. O comentário daqui afirmava, desde 28/08, que "Configurar
-     o estilo Point-and-click" JÁ tinha virado "Estilo Point-and-click" — e o
+     o estilo Point-and-click" JÁ tinha virado "Estilo point-and-click" — e o
      gerador continuava escrevendo o rótulo longo: era comentário descrevendo
      cura que não existia. A troca aconteceu de fato em 11/09/2026, aprovada
      pelo usuário, e por outra razão: o botão e a tela que ele abre tinham nomes
@@ -850,7 +850,7 @@ CSS = CSS_GLIFO + """
   .tog.ligado .pino{background:var(--green);box-shadow:0 0 7px var(--green)}
   /* A CHAVE «TAMBÉM NO JOGO» (O-GATILHO-VIRA-CLIQUE-SEM-LIGAR-O-CURSOR-01, opção
      b): no topo das Definições, entre o `?` do título e o `×`. Ligada acende em
-     verde como o `.tog`; no Modo Nativo fica cinza e recusa (cor explícita, sem
+     verde como o `.tog`; no modo nativo fica cinza e recusa (cor explícita, sem
      `opacity`), com o porquê no `?` dela. */
   .chave-jogo{margin-left:auto;display:inline-flex;align-items:center;gap:8px;padding:2px 4px}
   .chave-jogo + .tn-x{margin-left:10px}
@@ -1550,7 +1550,7 @@ if set(ROTULOS_DA_TROCA) != _ROTULOS_DO_DESENHO or _SEM_TROCA_DO_PACOTE != SEM_T
 D_QUANDO = ajuda(
     "Liga e desliga o <b>tipo de navegação</b> escolhido logo abaixo, em "
     "<b>todos os perfis</b>. A <b>Interna</b> liga em qualquer aba e em qualquer "
-    "Modo, e só age com o Hefesto na frente; <b>O computador</b> liga no Modo "
+    "modo, e só age com o Hefesto na frente; <b>O computador</b> liga no modo "
     "Navegação. <b>Desligado</b>, o controle é só gamepad.",
     vivas=("modo-portao",))
 D_TECLADO = ajuda(
@@ -1621,7 +1621,7 @@ D_DEFINICOES = ajuda(
 D_REMAPEAMENTO = ajuda(
     f"As mesmas <b>{len(BOTOES)} linhas</b>, na mesma ordem, dizendo outra coisa: "
     "<b>para qual outro botão</b> cada um passa a valer. O que cada botão "
-    "<b>faz</b> se escolhe na tela <b>Definições Controle e Mouse</b>.")
+    "<b>faz</b> se escolhe na tela <b>Definições controle e mouse</b>.")
 
 OPCOES_TECLADO = [
     "Só dentro do jogo",
@@ -1673,9 +1673,9 @@ ESTADOS = '''
 
 FILEIRA = '''
             <div class="acoes quatro grupo-padrao">
-              <a class="btn roxo" href="#definicoes-mouse">Definições Controle e Mouse</a>
+              <a class="btn roxo" href="#definicoes-mouse">Definições controle e mouse</a>
               <a class="btn roxo" href="#remapeamento">Trocar os botões</a>
-              <a class="btn roxo" href="#point-and-click">Estilo Point-and-click</a>
+              <a class="btn roxo" href="#point-and-click">Estilo point-and-click</a>
               <!-- O RÁDIO VEM ANTES de tudo o que reage a ele: o `~` do CSS só
                    enxerga irmão POSTERIOR. É a mesma armadilha que o interruptor
                    da aba Jogar documenta, e a mesma cura. -->
@@ -1683,7 +1683,7 @@ FILEIRA = '''
               <label for="conf-padrao" class="btn btn-padrao">Voltar ao padrão</label>
               <label for="conf-padrao" class="veu" title="Fecha sem mudar nada."></label>
               <div class="confirma">
-                <span>Voltar ao padrão o mouse, as Definições e as teclas? No jogo
+                <span>Voltar ao padrão o mouse, as definições e as teclas? No jogo
                   que os escolheu, volta o do computador; sem jogo, o computador
                   volta ao de fábrica, e os gestos também. A troca de botões fica.</span>
                 <!-- O ENDEREÇO VAI NO "Confirmar", nunca no "Voltar ao padrão":
@@ -1712,9 +1712,9 @@ PONTO_MAPA = [
 
 D_CHAVE = ajuda(
     "Com um <b>jogo aberto</b>, toda linha que não for <b>— Nada —</b> age "
-    "<b>junto</b> com o jogo. Vale para este perfil, em qualquer Modo, pelo cabo "
+    "<b>junto</b> com o jogo. Vale para este perfil, em qualquer modo, pelo cabo "
     "e pelo BT, para os quatro jogadores; o cursor e a rolagem só andam pelo "
-    "<b>P1</b>.<br><br>No <b>Modo Nativo</b> o jogo lê o controle direto, e a "
+    "<b>P1</b>.<br><br>No <b>modo nativo</b> o jogo lê o controle direto, e a "
     "chave fica apagada.")
 CHAVE_NO_JOGO = (
     f'<span class="chave-jogo" data-campo="{ENDERECO_DA_CHAVE_FORA}" '
@@ -1780,7 +1780,7 @@ AVISO_DA_TABELA = ('        <div class="aviso-tabela" data-campo="aviso-da-tabel
                    ' data-hef-alvo="html"></div>')
 
 TELA_DEFINICOES = tela_de_botoes(
-    "definicoes-mouse", "Definições Controle e Mouse", D_DEFINICOES,
+    "definicoes-mouse", "Definições controle e mouse", D_DEFINICOES,
     "O que ele faz",
     chr(10).join(
         f'          <tr><td class="b">{b}</td>'
@@ -1822,7 +1822,7 @@ TELA_REMAPEAMENTO = tela_de_botoes(
         f'<td>{_lista_da_troca(i)}</td></tr>'
         for b, i in BOTOES),
     f"Devolver as {len(BOTOES)} linhas ao <b>{SEM_TROCA}</b>? "
-    "As <b>Definições Controle e Mouse</b> não são tocadas.",
+    "As <b>Definições controle e mouse</b> não são tocadas.",
     guardar="guardar-remapeamento", padrao="padrao-remapeamento",
     fechar=FECHAR_TROCA)
 
@@ -1881,7 +1881,7 @@ TELA_TECLAS = f'''
       <a class="btn" href="#" data-gesto="fechar-teclas">Cancelar</a>
       <!-- O CAMINHO DE VOLTA À OUTRA TELA MORA NO `?`, e não num terceiro
            botão: medido no WebKit em 06/09/2026, com os três no rodapé o rótulo
-           "Definições Controle e Mouse" QUEBRA EM DUAS LINHAS dentro de uma
+           "Definições controle e mouse" QUEBRA EM DUAS LINHAS dentro de uma
            caixa de altura fixa — o mesmo defeito que encurtou o terceiro botão
            da fileira da aba em 28/08. Cancelar fecha, e a fileira da aba está a
            um clique. -->
@@ -1896,7 +1896,7 @@ TELA_PONTO = f'''
 <div class="tela-nova" id="point-and-click">
   <div class="tn-cx">
     <div class="tn-topo">
-      <span class="tn-tit">Estilo Point-and-click</span>
+      <span class="tn-tit">Estilo point-and-click</span>
       {ajuda(
         "Serve para jogo de <b>apontar e clicar</b>, que espera mouse e não entende "
         "controle: <b>o touchpad vira o ponteiro</b>, e o toque vira o clique.")}
@@ -2120,7 +2120,7 @@ LEGENDA = f'''<div class="nota">
   <h2>Um botão virou dois, e uma pop-up virou duas</h2>
   <ul>
     <li><b>O que ela pediu, e por quê.</b> <i>"aba navegação no botão Definições e
-    Remapeamento / Abrimos uma tela pra remapeamento e Definições Controle e Mouse,
+    Remapeamento / Abrimos uma tela pra remapeamento e Definições controle e mouse,
     vamos dividir isso em dois botões no mesmo lugar e dividir em dois pop up um pra
     cada. <b>Tem muita info ali</b>."</i> O "muita info" era medida: uma tela só, de
     <b>1120×682px</b>, com <b>42 listas</b> e <b>42 linhas</b> de tabela.</li>
@@ -2169,7 +2169,7 @@ LEGENDA = f'''<div class="nota">
     <br><br><b>CADUCOU EM 11/09/2026</b>, e não pela largura: a medida acima
     continua valendo — o rótulo longo cabia. O que a derrubou foi a língua. O
     botão dizia <i>"Configurar o estilo Point-and-click"</i> e a tela que ele
-    abre dizia <i>"Estilo Point-and-click"</i>: dois nomes para a mesma tela.
+    abre dizia <i>"Estilo point-and-click"</i>: dois nomes para a mesma tela.
     Ela aprovou o do destino para os dois.</li>
   </ul>
 
@@ -2451,7 +2451,7 @@ def _conferir(doc):
     _com_endereco = [i for _b, _f, i in PONTO_MAPA if i]
     for _ident, _quantas, _oque in (
             ("definicoes-mouse", len(BOTOES), "'o que cada botão faz'"),
-            ("point-and-click", len(_com_endereco), "do Estilo Point-and-click")):
+            ("point-and-click", len(_com_endereco), "do Estilo point-and-click")):
         exigir(_tela(_ident).count(f'data-gesto="{LINHA_DE_BOTAO}"') == _quantas,
                f"as {_quantas} linhas {_oque} perderam o "
                f"`data-gesto=\"{LINHA_DE_BOTAO}\"` — sem ele a pintura volta a "
@@ -2498,7 +2498,7 @@ def _conferir(doc):
            "as Definições perderam a marca «não dispara» de uma região do touchpad")
     exigir('data-gesto="guardar-ponto"\n         data-hef-forma="point-and-click"'
            in corpo,
-           "o Guardar do Estilo Point-and-click perdeu o "
+           "o Guardar do Estilo point-and-click perdeu o "
            "`data-hef-forma=\"point-and-click\"` — sem a forma ele não sabe o "
            "que está escolhido em cada linha e volta a só poder recusar")
 

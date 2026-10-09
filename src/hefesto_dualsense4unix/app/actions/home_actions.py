@@ -217,7 +217,7 @@ def texto_native_bt_fragil(numeros: Sequence[int]) -> str:
 # `interface/pacotes/perfil.com_a_carona`, que o rodapé das dez abas chama no
 WRAPPER_MISSING_TEXT = (
     "O jogo está rodando sem o atalho de inicialização — controles podem "
-    "duplicar. Reponho o atalho no próximo Aplicar ou Salvar Perfil, com a "
+    "duplicar. Reponho o atalho no próximo Aplicar ou Salvar perfil, com a "
     "Steam fechada."
 )
 

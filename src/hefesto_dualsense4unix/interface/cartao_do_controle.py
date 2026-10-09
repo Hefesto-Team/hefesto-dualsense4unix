@@ -87,7 +87,7 @@ Contratos honrados (sprint status-por-controle, itens 6-9 do desenho):
   fonte conhecida e apagada → "Lightbar: apagada"; ``"desconhecida"`` →
   "Lightbar: cor desconhecida" (NUNCA "apagada" — o 0,0,0 da classe LED sem
   escrita nossa pode ser o azul-kernel brilhando agora, refutação 1 do
-  sprint); o Modo Nativo segue as mesmas regras desde 24/09/2026 (a barra é
+  sprint); o modo nativo segue as mesmas regras desde 24/09/2026 (a barra é
   do Hefesto nele também). Sem cor conhecida, os traços usam o accent neutro
   (#6272a4) ajustado.
 * BT-03: ``vpad_backend == "uinput"`` com ``vpad_motivo`` preenchido acende
@@ -282,7 +282,7 @@ def rotulo_lightbar(
 
     Regras (STATUS-03 + refutação 1 do sprint — o dono da escrita decide):
 
-    * O Modo Nativo não tem ramo desde 24/09/2026 (`D-2409-NO-NATIVO-A-TELA-
+    * O modo nativo não tem ramo desde 24/09/2026 (`D-2409-NO-NATIVO-A-TELA-
       MOSTRA-A-COR`): a barra é do Hefesto no Nativo também, e «Em Nativo o
       jogo é dono do LED» virou fato errado; o Nativo cai nas regras abaixo.
     * ``lightbar_disputada`` (ESCRITOR-CRU-01) → "a Steam tem este controle
@@ -326,7 +326,7 @@ def texto_motion(entry: dict[str, Any], state_global: dict[str, Any]) -> str | N
 
     Só aparece quando o vpad DESTE controle está com o espelho de motion
     ATIVO (``motion_streaming`` no ``rumble_ff.per_vpad`` do state_full) —
-    a ausência da linha não é alarme: uinput/máscara xbox/Modo Nativo não
+    a ausência da linha não é alarme: uinput/máscara xbox/Modo nativo não
     têm espelho por design, e acusar "sem giroscópio" em todo card seria
     ruído crônico (quem diagnostica silêncio anômalo é o doctor).
 
@@ -351,7 +351,7 @@ def texto_motion(entry: dict[str, Any], state_global: dict[str, Any]) -> str | N
       dado não sai dali. **O sujeito é o jogo, e não o controle** (21/09/2026,
       ordem de produto): o aparelho segue publicando movimento, e a Navegação e os
       gestos seguem usando;
-    * **Modo Nativo** — não existe gamepad virtual, e perguntar se o dado
+    * **Modo nativo** — não existe gamepad virtual, e perguntar se o dado
       "chegou ao vpad" não faz sentido. O jogo abre o hidraw do controle
       físico e recebe tudo, inclusive o giroscópio.
 
@@ -415,7 +415,7 @@ _FRASE_MASCARA_XBOX: Final[dict[str, str]] = {
         "touchpad — no Hefesto ele segue ativo"),
 }
 
-#: E a do Modo Nativo, em que não há gamepad virtual nenhum: o jogo abre o
+#: E a do modo nativo, em que não há gamepad virtual nenhum: o jogo abre o
 #: hidraw do controle FÍSICO e fala com ele direto. Tudo chega — não porque
 #: nós entregamos, mas porque não há intermediário.
 _FRASE_NATIVO: Final[str] = "o jogo fala direto com o controle"

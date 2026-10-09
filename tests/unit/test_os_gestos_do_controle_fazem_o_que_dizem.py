@@ -525,7 +525,7 @@ def test_a_dica_diz_a_saida_que_ficou_sem_gesto() -> None:
     assert mq.gravar_maquina({"gestos": {"ps_r3": {"faz": "nada"},
                                          "ps_l3": {"faz": "parar_o_servico"}}})
     dica = _pintar()["gestos-dica"]
-    assert "Próximo Modo" in dica and "Suspender" not in dica
+    assert "Próximo modo" in dica and "Suspender" not in dica
     assert "Parar o serviço" in dica and "bandeja" in dica
     assert mq.gravar_maquina({"gestos": {"ps_r3": None, "ps_l3": None}})
     from pacotes.a06_navegacao import NADA_A_DIZER
@@ -603,7 +603,7 @@ def test_o_nada_cala_os_seis(atendentes: dict[str, list[Any]], gesto: str,
 
 def test_o_sexto_que_nao_e_a_steam_vai_ao_laco_com_quem_fez(
         atendentes: dict[str, list[Any]]) -> None:
-    """O ⑥ em «Próxima Máscara» anda o cartão de QUEM fez, pelo laço do daemon."""
+    """O ⑥ em «Próxima máscara» anda o cartão de QUEM fez, pelo laço do daemon."""
 
     async def _cena() -> None:
         d = _daemon({"ps": {"faz": "mascara_seguinte"}})

@@ -354,7 +354,7 @@ CSS = CSS_GLIFO + CSS_POPUP + """
           terceira ("o que só você sabe") saiu em 28/08: as duas perguntas de
           rádio passaram a morar no "Mapear Entradas", que é a janela onde
           ela já declara a sala.
-       2. "Gestão de Controles"   — os controles ligados, em acordeão: o da fita
+       2. "Gestão de controles"   — os controles ligados, em acordeão: o da fita
           aberto, os outros na linha fechada com o resumo.
        3. "Rádio e adaptadores"— o inventário físico da mesa, e o Desempenho
           embaixo, separado, porque os turnos são POR ADAPTADOR.
@@ -512,7 +512,7 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   /* o dropdown que ainda espera resposta chama o olho pela borda, não por faixa */
   select.pronto.pergunta{border-color:var(--cyan);color:var(--cyan)}
 
-  /* ================= os cartões da Gestão de Controles =================
+  /* ================= os cartões da gestão de controles =================
      A-08-O-CHECKUP-ABSORVE-A-GESTAO-01, 25/09/2026 — o desenho de quem
      coordena, depois de ela ver o acordeão com a Gestão dentro do Check-up:
      *«tá quebradíssima a 8»*. A linha que abria e fechava virou UM CARTÃO POR
@@ -592,7 +592,7 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .gc-est .est.warn > b{color:var(--orange)}
   .gc-corpo{display:flex;flex-direction:column;gap:5px;margin-top:auto;padding-top:10px}
   /* O PERFIL DE DESEMPENHO É DO CONTROLE — 26/09/2026, pedido: *«Modo
-     Economia de Bateria Deveria Ser o Perfil de Desempenho»* e *«perfil do
+     Economia de Bateria Deveria Ser o perfil de desempenho»* e *«perfil do
      desempenho deveria aparecer por controle»*. Os três botões do mapa das
      conexões desceram para cada cartão; o aceso é o deste controle. */
   .gc-perfil{display:flex;flex-direction:column;gap:5px}
@@ -603,7 +603,7 @@ CSS = CSS_GLIFO + CSS_POPUP + """
      desenho (1212 px) e viravam reticências. Com `flex:1 1 auto` a 11px os
      três cabem a partir de 1181 px, a menor janela com quatro cartões numa
      fileira (abaixo dela a grade vira duas e o cartão alarga). Os nomes dela
-     de 26/09 («Perfil Máximo», «Perfil Econômico») pedem 246 px numa linha de
+     de 26/09 («Perfil máximo», «Perfil econômico») pedem 246 px numa linha de
      245: o vão de 2 px, 1 px de respiro e a letra 0,2 px mais junta devolvem
      os 15 que faltavam. */
   .gc-perfil .seg{display:flex;flex-wrap:nowrap;gap:2px}
@@ -925,7 +925,7 @@ CSS = CSS_GLIFO + CSS_POPUP + """
      ocupa a linha para não dizer nada. */
   .mm-conf-linha.sumido{display:none}
 
-  /* ---- os gestos de baixo. `.apagado` deixou de ser só da Gestão de Controles:
+  /* ---- os gestos de baixo. `.apagado` deixou de ser só da gestão de controles:
      os dois botões de ação desta pop-up nascem apagados pela mesma regra de produto —
      botão que SOME ensina que a tela é instável. */
   /* OS DOIS GESTOS TÊM O MESMO TAMANHO — 31/08/2026, parte do *"ajusta os
@@ -1026,7 +1026,7 @@ ORDEM_IGNORADA_VOLTA = _pacote08.ORDEM_IGNORADA_VOLTA
 
 
 MAPEAR_ENTRADAS = "Mapear entradas"
-MAPEAR_UMA_A_UMA = "Mapear Entrada a Entrada"
+MAPEAR_UMA_A_UMA = "Mapear entrada a entrada"
 
 EXAMINAR_PORTAS = "Examinar entradas"
 
@@ -1262,7 +1262,7 @@ def linha_do_controle(c):
             </div>
             <div class="gc-corpo">
               <div class="gc-perfil">
-                <div class="seg" role="radiogroup" aria-label="Perfil de Desempenho">
+                <div class="seg" role="radiogroup" aria-label="Perfil de desempenho">
 {chr(10).join('                  ' + botao_do_perfil(pid, rotulo, dica, PERFIL_DA_CENA.get(c["pref"], "tudo_ligado") == pid) for pid, rotulo, dica in PERFIS_DO_CARTAO)}
                 </div>
               </div>
@@ -2872,7 +2872,7 @@ TELA_MAPEAR_PORTAS = f'''
       {ajuda("Use o mesmo DualSense em todas: ligue o cabo numa entrada, espere o Hefesto "
              "mostrar o que mediu dela e salve; o <b>nome</b> e o <b>lugar</b> são opcionais. "
              "Depois passe o cabo para a próxima. O nome e o lugar aparecem na "
-             "<b>Gestão de Controles</b> e em <b>Rádio e Adaptadores</b>.<br><br>"
+             "<b>Gestão de controles</b> e em <b>Rádio e adaptadores</b>.<br><br>"
              + _pacote08.MAPEAR_DICA_DA_PORTA)}
       <a class="tn-x" href="#" title="Fechar">×</a>
     </div>
@@ -2937,7 +2937,7 @@ PENEIRA = ""
 
 
 def cerimonia(ident, pergunta, contador, quem, botoes, dica, rodape):
-    """Uma das três telas do «Mapear Entrada a Entrada»."""
+    """Uma das três telas do «Mapear entrada a entrada»."""
     return f'''
 <div class="tela-nova" id="{ident}">
   <div class="tn-cx">
@@ -3066,10 +3066,10 @@ MIOLO = f'''
            que vale igual para caixa e para rádio. -->
       <input class="abre" type="radio" name="cx8-secao" id="cx8-2" checked>
       <div class="quadro-topo">
-        <label class="quadro-titulo" for="cx8-2">Gestão de Controles</label>
+        <label class="quadro-titulo" for="cx8-2">Gestão de controles</label>
         <span class="ajuda">?<span class="dica">
           Os seus controles e as entradas deles: as dicas em cima, cada uma com o seu botão,
-          e embaixo um cartão por controle com o estado dele agora e o Perfil de Desempenho
+          e embaixo um cartão por controle com o estado dele agora e o perfil de desempenho
           dele. Nada muda sozinho: a dica diz o que mover para onde, e o botão leva você até lá.
         </span></span>
       </div>
@@ -3141,7 +3141,7 @@ MIOLO = f'''
                  quanto tempo, e a saída manual. O defeito que ele cura (dois
                  DualSense ligados e a janela mostrando um, sem uma pista do
                  porquê) voltava inteiro no HTML;
-               · `home_actions.texto_native_bt_fragil` — o Modo Nativo com o
+               · `home_actions.texto_native_bt_fragil` — o modo nativo com o
                  controle no rádio, COM OS NÚMEROS de quem está frágil.
 
              ELES SÃO LINHA DE RESSALVA (a D-02 dela) e por isso entram os dois
@@ -3178,9 +3178,9 @@ MIOLO = f'''
           <button class="btn" data-gesto="examinar-portas" title="{EXAMINAR_PORTAS} — refaz o exame das entradas, da energia e do Bluetooth, e relê o estado de cada controle">
             <svg class="i" aria-hidden="true"><use href="#rd-reexaminar"/></svg> {EXAMINAR_PORTAS}</button>
           <a class="btn" href="mapa-do-controle.html" title="O mapa do controle — abre no navegador">
-            <svg class="i ds" aria-hidden="true"><use href="#rd-ds"/></svg> Mapa do Controle</a>
+            <svg class="i ds" aria-hidden="true"><use href="#rd-ds"/></svg> Mapa do controle</a>
           <a class="btn" href="mapa-das-portas.html" title="O mapa das conexões: cada entrada do computador, o que está nela e o que mudar">
-            <svg class="i" aria-hidden="true"><use href="#rd-hub"/></svg> Mapa das Conexões</a>
+            <svg class="i" aria-hidden="true"><use href="#rd-hub"/></svg> Mapa das conexões</a>
         </div>
       </div>
     </div>
@@ -3200,7 +3200,7 @@ MIOLO = f'''
     <div class="quadro radio" id="rd-secao">
       <input class="abre" type="radio" name="cx8-secao" id="cx8-3">
       <div class="quadro-topo cab">
-        <label class="quadro-titulo" for="cx8-3">Rádio e Adaptadores</label>
+        <label class="quadro-titulo" for="cx8-3">Rádio e adaptadores</label>
         <div class="direita">
           {INTERRUPTOR_PROCURAR}
           <button class="btn principal" id="rd-b-conectar" data-gesto="conectar-aparelho" title="Conectar um aparelho novo">
@@ -3274,14 +3274,14 @@ document.addEventListener("click", function (ev) {{
 '''
 
 LEGENDA = f'''<div class="nota">
-  <h2>A Gestão de Controles (25/09 e 26/09)</h2>
+  <h2>A gestão de controles (25/09 e 26/09)</h2>
   <ul>
     <li><b>Uma seção só</b>: as <b>dicas</b> (um cartão por ajuste, com o botão dele; as três que mais pesam, o resto em «mais N») em cima, quatro ferramentas com ícone no meio (o «Atualizar» entrou no «{EXAMINAR_PORTAS}»; o <b>{MAPEAR_ENTRADAS}</b> abre o fluxo porta a porta) e um cartão por controle embaixo.</li>
     <li><b>O cartão diz o estado de agora</b>, no molde da aba Sistema: Mic, Som, Modo de conexão, Visto como, Conexão e Bateria, com o ✓ de «tudo certo». Nada abre nem fecha.</li>
-    <li><b>O nome ao lado do «P N» é de quem joga</b>: escreva; apagado, o campo volta vazio. Embaixo, o <b>Perfil de Desempenho</b> daquele controle (Perfil Máximo, Perfil Econômico ou Personalizado), o mesmo dado da aba Sistema. O lugar sem controle fica, tracejado, só com o «P N».</li>
+    <li><b>O nome ao lado do «P N» é de quem joga</b>: escreva; apagado, o campo volta vazio. Embaixo, o <b>Perfil de desempenho</b> daquele controle (Perfil máximo, perfil econômico ou Personalizado), o mesmo dado da aba Sistema. O lugar sem controle fica, tracejado, só com o «P N».</li>
     <li><b>{MAPEAR_ENTRADAS}</b> abre uma tela com o que o Hefesto mediu da entrada da vez, o nome e o lugar que você dá, e a lista das que já têm nome.</li>
   </ul>
-  <h2>«Rádio e Adaptadores» é o desenho que você aprovou em 23/09 — e o que ficou diferente</h2>
+  <h2>«Rádio e adaptadores» é o desenho que você aprovou em 23/09 — e o que ficou diferente</h2>
   <ul>
     <li><b>A seção inteira é o <code>mapa-do-radio.html</code></b>: a folha, os ícones e esta cena de exemplo são lidos dele. No produto quem pinta é o Hefesto, com os Hz medidos, as pontes «N de {_pacote08.PONTES_POR_ADAPTADOR}» e o sino de cada adaptador.</li>
     <li><b>Os vizinhos viraram selos, e não faixas.</b> O produto não lê o canal de um teclado ou de um Wi-Fi; desenhar a faixa seria estimar (R10). O hachurado — os canais que cada adaptador evita — é medido e continua.</li>
@@ -3314,7 +3314,7 @@ LEGENDA = f'''<div class="nota">
   <h2>MODO não é MÁSCARA, e nada nesta tela diz que você perde o microfone</h2>
   <ul>
     <li><b>O microfone segue o TRANSPORTE, e a máscara não o toca.</b> Pelo cabo o DualSense expõe uma placa USB Audio própria e o PipeWire a publica sozinho (medido em 15/08/2026: duas placas ALSA, ~475.000 amostras não-zero cada). Pelo rádio não existe placa nenhuma — o aparelho não anuncia A2DP, HFP nem HSP —, e o áudio vem em Opus <i>dentro</i> do relatório HID 0x31: quem o traz é a ponte do Hefesto, que publica uma fonte de captura do PipeWire. <b>No rádio o microfone já é emulado hoje</b>, com outro nome.</li>
-    <li><b>Por isso a chavinha “pelo cabo / pelo rádio” SAIU.</b> Ela oferecia uma escolha que o transporte já tinha feito — e o próprio mockup se contradizia: o gerador já derivava o caminho do transporte e desenhava a chavinha ao lado. Ponto final dela, 28/08: <i>“se tiver em modo rádio, então o mic é modo rádio”</i>. O custo do microfone virou <b>consequência</b>, e a tela o mostra em Hz na linha de cada controle, em «Rádio e Adaptadores», em vez de perguntar por ele.</li>
+    <li><b>Por isso a chavinha “pelo cabo / pelo rádio” SAIU.</b> Ela oferecia uma escolha que o transporte já tinha feito — e o próprio mockup se contradizia: o gerador já derivava o caminho do transporte e desenhava a chavinha ao lado. Ponto final dela, 28/08: <i>“se tiver em modo rádio, então o mic é modo rádio”</i>. O custo do microfone virou <b>consequência</b>, e a tela o mostra em Hz na linha de cada controle, em «Rádio e adaptadores», em vez de perguntar por ele.</li>
     <li><b>Nenhum aviso de máscara, em máscara nenhuma</b> — e o motivo é mais forte do que “o Pro só não tem microfone”. A máscara limita o que o <b>jogo</b> recebe, não o que o <b>controle</b> faz: o Hefesto continua acendendo a barra de luz, aplicando o gatilho e lendo o giro do DualSense físico em qualquer máscara. E a lacuna mais visível — o mic — tem cura: o estado <b>Emulado</b> da <code>ONDA-CONEXOES-06</code> entrega o áudio por um dispositivo que qualquer jogo enxerga, independentemente da máscara.</li>
     <li><b>Nativo e Emulado desceram de escolha para LEITURA.</b> Com o transporte explícito e a máscara explícita por controle (aba Jogar), o resultado fica determinado: cabo → a placa do próprio aparelho; rádio → a ponte. Sobraram <b>dois estados</b> — Ligado e Desligado —, e a tela <b>diz</b> o caminho em vez de perguntá-lo. O “Automático” não entra: a heurística que o moveria (<code>integrations/api_de_entrada.py</code>) errou em <b>13 de 14</b> dos jogos dela.</li>
   </ul>
@@ -3345,14 +3345,14 @@ LEGENDA = f'''<div class="nota">
 
   <h2>O teto da vibração está nos dois, e a tela diz qual vale</h2>
   <ul>
-    <li><b>O global vale para todos os controles, e ele MUDOU DE ABA.</b> O dropdown dos três perfis saiu daqui e foi para a <b>{ABA_DO_TETO_GLOBAL}</b>, onde se chama <b>{CASA_DO_TETO_GLOBAL}</b> — palavra dela, 28/08: <i>“Teto da Vibração, que na verdade é Perfil de Bateria”</i>. O código já lhe dava razão antes do nome: <code>secao_orcamento.py:97</code> chama a chave de <code>PERFIL_BATERIA_LONGA</code>, e a <code>D-PERFIL-DE-DESEMPENHO</code> (24/08) diz que <i>“o perfil decide o que custa BATERIA”</i>. Esta aba continua <b>lendo</b> o global — hoje <b>{ORC["ROTULOS_DOS_PERFIS"][PERFIL_DA_MESA]}</b>, que é <b>{TETO_GLOBAL}</b> —, e o que fica dela é a régua de turnos, que mede o <b>rádio</b>, não a bateria.</li>
+    <li><b>O global vale para todos os controles, e ele MUDOU DE ABA.</b> O dropdown dos três perfis saiu daqui e foi para a <b>{ABA_DO_TETO_GLOBAL}</b>, onde se chama <b>{CASA_DO_TETO_GLOBAL}</b> — palavra dela, 28/08: <i>“Teto da Vibração, que na verdade é perfil de bateria”</i>. O código já lhe dava razão antes do nome: <code>secao_orcamento.py:97</code> chama a chave de <code>PERFIL_BATERIA_LONGA</code>, e a <code>D-PERFIL-DE-DESEMPENHO</code> (24/08) diz que <i>“o perfil decide o que custa BATERIA”</i>. Esta aba continua <b>lendo</b> o global — hoje <b>{ORC["ROTULOS_DOS_PERFIS"][PERFIL_DA_MESA]}</b>, que é <b>{TETO_GLOBAL}</b> —, e o que fica dela é a régua de turnos, que mede o <b>rádio</b>, não a bateria.</li>
     <li><b>O do controle sobrepõe</b>, e o campo de cada linha mostra qual é o caso: o P{POR_PREF["p3"]["jogador"]} está com a bateria em {DA_CONTROLES["p3"]["bat"]}% e sobrepõe com <b>{fala_do_teto(COM_TETO)}</b>; os outros dizem <b>{SEGUE_O_GLOBAL}</b>. A conta feita — <b>qual dos dois está valendo, de onde ele veio, e em que aba o global se muda</b> — está no <code>?</code> ao lado do campo, e não mais numa coluna de texto ao lado dele.</li>
     <li><b>Isso nasce como sprint sobre o que já existe.</b> A <code>POR-UNIDADE-01</code> (10/08) já grava política de vibração POR CONTROLE (<code>profiles/manager._controllers_to_rumble_scales</code>), relativa à global. <b>Falta uma frase sua:</b> quando o controle sobrepõe, ele vence sempre, ou o produto aplica o <code>min</code> como faz hoje entre o orçamento e a política? O <code>min</code> é o que impede um “teto” de <i>aumentar</i> a força.</li>
   </ul>
 
   <h2>Escolhas que precisam do seu aval</h2>
   <ul>
-    <li><b>A ordem dos quadros mudou, e é a mudança que devolveu o terceiro para a tela.</b> “Gestão de Controles” passou a vir <b>primeiro</b>, e “Está tudo certo?” desceu para junto de “Rádio e adaptadores”. Duas razões: a aritmética (só quem está acima decide quanto do de baixo aparece, e não havia arranjo com o exame na frente em que o terceiro coubesse), e a leitura — o exame fala da <b>Entrada 3</b>, e a tabela que diz o que está na Entrada 3 agora é a de baixo, não a de outro lugar.</li>
+    <li><b>A ordem dos quadros mudou, e é a mudança que devolveu o terceiro para a tela.</b> “Gestão de controles” passou a vir <b>primeiro</b>, e “Está tudo certo?” desceu para junto de “Rádio e adaptadores”. Duas razões: a aritmética (só quem está acima decide quanto do de baixo aparece, e não havia arranjo com o exame na frente em que o terceiro coubesse), e a leitura — o exame fala da <b>Entrada 3</b>, e a tabela que diz o que está na Entrada 3 agora é a de baixo, não a de outro lugar.</li>
     <li><b>“Vale Sem teto, do global, abaixo” SAIU — e o desempate que esta linha pedia deixou de existir.</b> Ela mandou tirar a leitura e deixar só o seletor (<code>D-O-SEM-TETO-SAI-DOS-DOIS-LUGARES</code>), e a frase saiu dos <b>dois</b> lugares em que estava: destas {len(MESA)} linhas de controle (o que ela via) e da capa do Desempenho (y=834, fora da dobra — o que casava letra por letra com o pedido, e que ela não podia ter visto). O <b>“abaixo”</b> caducou de qualquer jeito, por uma segunda razão independente: com o teto global mudando-se para a <b>{ABA_DO_TETO_GLOBAL}</b>, o endereço que a frase dava aponta para um lugar que não existe mais nesta aba. <b>A frase não se perdeu</b> — ela vive no <code>?</code> do campo, que a lê sob demanda em vez de gastar uma coluna nas {len(MESA)} linhas. E o desempate que este item pedia (“o teto global morar na mesma moldura dos {len(MESA)} tetos de controle”, por {H_ESCOLHA + 9}&nbsp;px) está <b>respondido</b>: o global saiu da aba inteira, e não custa px nenhum aqui.</li>
     <li><b>Os quatro botões viraram UMA fileira, e ela custou zero.</b> Você escreveu a ordem com todas as letras — <i>“Examinar de novo. / Já Movi - Reexaminar. / Ignorar / Ver Ordens ignoradas.”</i> — e com um par em cada coluna essa ordem não existe: a leitura de uma grade de duas colunas é esquerda→direita, e “Ignorar” (que estava à direita) teria de vir antes de “{VER_IGNORADAS}” (que estava à esquerda). <b>Medido:</b> o quadro tinha 204&nbsp;px e continua com {Q_EXAME}; a fileira nasce no mesmo y=575; os quatro botões passaram de 265,5 para <b>272&nbsp;px cada</b>, todos iguais, e a borda direita não andou um pixel.</li>
     <li><b>“Ver as ordens caladas” virou “{VER_IGNORADAS}”, e o motivo é o PAR.</b> O botão irmão chama-se <b>Ignorar</b>: quem o aperta procura depois as ordens <i>ignoradas</i>. “Caladas” era a única palavra da dupla sem par na tela. <b>Uma diferença para a sua frase:</b> você escreveu “Ver Ordens ignoradas” e a tela diz “Ver <u>as</u> ordens ignoradas” — o artigo é o que já estava lá, e só a última palavra mudou. Se você quiser a sua frase ao pé da letra, é <b>uma</b> palavra a menos.</li>

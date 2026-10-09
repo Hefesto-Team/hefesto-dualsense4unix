@@ -1301,7 +1301,7 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      fechados. O `margin-left:auto` é dele agora, e saiu do `.bat`: com os dois
      pedindo o vão, o flex partiria a sobra ao meio e o grupo flutuaria em
      quatro lugares diferentes. */
-  /* 06/10/2026 (leva 1.7, item 12): «Analógico Virtual» é mais longo que «Mira Virtual». O vão e
+  /* 06/10/2026 (leva 1.7, item 12): «Analógico virtual» é mais longo que «Mira Virtual». O vão e
      o enchimento encolheram para a frase do giroscópio no cartão aberto continuar inteira no
      tamanho do desenho (`test_no_tamanho_do_desenho_nada_e_cortado`).
      08/10/2026 (O-ANALOGICO-VIRTUAL-E-UM-SO): com o nome de quem joga no título (07/10), as três
@@ -1374,8 +1374,8 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   .pausa-da-inclinacao.parada .chip-virtual.on>.sw .p{box-shadow:none}
   /* «USAR COMO ANALÓGICO VIRTUAL» EM DUAS LINHAS — 06/10/2026, leva 1.7. A
      coluna de cada analógico tem ~100px, e a frase em uma linha passaria dela.
-     Com o Analógico Virtual apagado no cabeçalho, os dois chips ficam cinza e
-     seguem clicáveis: o clique num lado acende o Analógico Virtual nele. */
+     Com o analógico virtual apagado no cabeçalho, os dois chips ficam cinza e
+     seguem clicáveis: o clique num lado acende o analógico virtual nele. */
   .chip-virtual>.sw{white-space:normal;height:auto;min-height:17px;line-height:12px;
     padding:2px 6px;gap:4px;font-size:10px;text-align:center;width:100%;max-width:112px}
   .ctl:has(.chip-da-mira.off) .chip-virtual>.sw,
@@ -1491,11 +1491,11 @@ LUGAR_VAZIO_AQUI = "Lugar vazio: nenhum controle conectado aqui."
 
 
 #: O ANALÓGICO VIRTUAL — 06/10/2026, leva 1.7 (desenho-navegacao, item 12). A
-#: «Mira Virtual» virou «Analógico Virtual» e o chip «Inclinação» de cada
+#: «Mira Virtual» virou «Analógico virtual» e o chip «Inclinação» de cada
 #: analógico virou «Usar como analógico virtual»: o chip do cabeçalho liga, o
 #: chip embaixo do analógico escolhe qual dos dois os movimentos movem. Com o
 #: chip do cabeçalho apagado, os dois de baixo ficam cinza (`.ctl:has(...)`).
-ROTULO_DA_MIRA_VIRTUAL = "Analógico Virtual"
+ROTULO_DA_MIRA_VIRTUAL = "Analógico virtual"
 DICA_DA_MIRA_VIRTUAL = ("Usar os movimentos do controle como um analógico, para "
                         "pessoas com deficiência motora. O lado se escolhe embaixo "
                         "de cada analógico.")
@@ -1516,7 +1516,7 @@ DICA_DOS_BOTOES = ("Usar o touchpad como botões: os dois terços da esquerda s�
 def chip_da_inclinacao(destino, aceso=False):
     """O «Usar como analógico virtual» embaixo do nome de UM analógico — o lado.
 
-    O aceso é o `mira-lado` (o lado do Analógico Virtual, `a02_controles.lado_aceso`) e o
+    O aceso é o `mira-lado` (o lado do analógico virtual, `a02_controles.lado_aceso`) e o
     clique é o gesto `analogico-lado`, o mesmo da Calibrar. O invólucro
     `inclinacao-parada` é a pausa do controle parado (29/09/2026): o daemon diz
     `inclinacao_parada` no bloco `mira`, e o chip aceso fica meio apagado.
@@ -1547,10 +1547,10 @@ def modo_do_toque():
 
 
 def sensores_da_peca(c, virtual=False):
-    """OS DOIS INTERRUPTORES DE SENSOR, UM PAR POR CONTROLE, e o «Analógico Virtual».
+    """OS DOIS INTERRUPTORES DE SENSOR, UM PAR POR CONTROLE, e o «Analógico virtual».
 
     `virtual` acende o chip na cena do desenho: o exemplo do anel do P1 (a
-    inclinação no esquerdo) é o Analógico Virtual aceso naquele lado (08/10/2026,
+    inclinação no esquerdo) é o analógico virtual aceso naquele lado (08/10/2026,
     O-ANALOGICO-VIRTUAL-E-UM-SO): chip apagado com o lado aceso seria a tela
     velha, de dois interruptores. O produto repinta pelo `mira-ligada`.
     """
@@ -1671,7 +1671,7 @@ def identidade(c, *, bat, carga=None, meio="", virtual=False):
                interruptor, igual para todo controle e todo momento.
 
                A frase é de `controller_card.texto_motion`, inclusive as duas
-               exceções (Modo Nativo e máscara Xbox) — omiti-las seria a tela
+               exceções (Modo nativo e máscara Xbox) — omiti-las seria a tela
                parecer quebrada justamente quando ela está certa: em Nativo não
                há gamepad virtual a que perguntar, e a máscara Xbox não TEM
                giroscópio.
@@ -1831,11 +1831,11 @@ DICA_OUVIR_JUNTO = ("O som do PC sai no alto-falante deste controle e continua "
 
 #   <!-- noqa-acento: citação literal -->
 #: <!-- noqa-acento: citação literal -->
-ROTULO_SO_OS_EFEITOS = "Efeitos do Jogo no Controle, Áudio do PC no PC"
-ROTULO_EFEITOS_MAIS_O_PC = "Efeitos do Jogo e Áudio do PC no Controle"
+ROTULO_SO_OS_EFEITOS = "Efeitos do jogo no controle, áudio do PC no PC"
+ROTULO_EFEITOS_MAIS_O_PC = "Efeitos do jogo e áudio do PC no controle"
 
 #: (`audio_saida.mandar_o_som_do_pc`, byte `rota=3`) e calava a televisão.
-ROTULO_NADA_NO_CONTROLE = "Tudo no PC e Nada no Controle"
+ROTULO_NADA_NO_CONTROLE = "Tudo no PC e nada no controle"
 
 DICA_NADA_NO_CONTROLE = (
     "Todo o som, inclusive o deste controle, sai no PC, e o alto-falante deste "
@@ -1843,7 +1843,7 @@ DICA_NADA_NO_CONTROLE = (
 
 #:     <!-- noqa-acento: citação literal -->
 #: sistema mandada para este controle (`audio_saida.mandar_o_som_do_pc`). O
-ROTULO_TUDO_NO_CONTROLE = "Tudo no Controle e Nada no PC"
+ROTULO_TUDO_NO_CONTROLE = "Tudo no controle e nada no PC"
 
 DICA_TUDO_NO_CONTROLE = (
     "Todo o som do PC sai só no alto-falante deste controle, e o PC fica em "
@@ -2302,7 +2302,7 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
                  24/09/2026, decisão de 23/09: voltar o quarto, encaixado
                  pelo desenho, sem quebrar a altura do cartão. Os dois de baixo
                  são o espelho um do outro, e é por isso que dividem a linha:
-                 «Tudo no PC e Nada no Controle» à esquerda, «Tudo no Controle e
+                 «Tudo no PC e nada no controle» à esquerda, «Tudo no Controle e
                  Nada no PC» à direita. Na janela do produto (1180) cada um
                  quebra em duas linhas; da janela de 1440 para cima cabem numa
                  só. A gramática não muda: mesmo gesto, mesmo endereço, cada
@@ -2852,10 +2852,10 @@ LEGENDA = f'''<div class="nota">
   <ul>
     <li><b>Cada controle ganhou o botão «{ROTULO_DA_MIRA_VIRTUAL}»</b>, ao lado de <b>Giroscópio</b> e <b>Acelerômetro</b>, como você pediu: <i>"Cria um botão virtual ao lado de giroscopio e acelerometro chamado Mira Virtual"</i>. Aceso, virar aquele controle move o <b>analógico direito</b> dele — e só dele. Ele nasce <b>apagado</b>, a dica é a sua frase (<i>{DICA_DA_MIRA_VIRTUAL}</i>), e o <b>Giroscópio</b> não mudou. Uma coisa muda com a mira acesa no modo <b>Virtual</b>: o jogo deixa de receber o giro daquele controle como giroscópio e passa a recebê-lo só pelo analógico direito, para a câmera não andar em dobro. O quanto um gesto anda e o «Ignorar tremor até» ficam na tela <b>Calibrar sensores de movimento</b>.</li>
     <li><b>A dica do Giroscópio muda quando a {ROTULO_DA_MIRA_VIRTUAL} está acesa</b> naquele controle, como você escolheu: passa a dizer <i>«{DICA_DO_GIRO_COM_A_MIRA}»</i> Com ela apagada, continua a de sempre, e cada controle diz a sua.</li>
-    <li><b>No Modo Nativo o botão «{ROTULO_DA_MIRA_VIRTUAL}» fica cinza e não grava</b>, como você escreveu: <i>"A exceção do nativo todo o resto deve ter mira Virtual"</i>. Com o <b>Sony DualSense</b> e o <b>Xbox</b> ele funciona, no USB e no BT, nos quatro controles. O «Só enquanto eu segurar» e o «Inverter» entraram na tela <b>Calibrar sensores de movimento</b>.</li>
+    <li><b>No modo nativo o botão «{ROTULO_DA_MIRA_VIRTUAL}» fica cinza e não grava</b>, como você escreveu: <i>"A exceção do nativo todo o resto deve ter mira Virtual"</i>. Com o <b>Sony DualSense</b> e o <b>Xbox</b> ele funciona, no USB e no BT, nos quatro controles. O «Só enquanto eu segurar» e o «Inverter» entraram na tela <b>Calibrar sensores de movimento</b>.</li>
     <li><b>Na Navegação, a {ROTULO_DA_MIRA_VIRTUAL} acesa move o cursor.</b> Virar aquele controle anda o ponteiro, com a mesma sensibilidade, o mesmo «Ignorar tremor até», o «Só enquanto eu segurar» e o «Inverter». Vale nos quatro controles, no USB e no BT, e dois controles com a mira acesa somam o movimento. A dica do <b>Giroscópio</b> passa a dizer <i>«{DICA_DO_GIRO_NO_CURSOR}»</i></li>
-    <li><b>Com o Giroscópio desligado, o cartão não diz mais que o giro está indo para o jogo.</b> E no <b>Modo Nativo</b> a <b>Barra de luz</b> mostra a cor que está no controle, e não mais «Jogo»: quem pinta a barra continua sendo o Hefesto.</li>
-    <li><b>O botão cinza avisa o leitor de tela</b>: o «{ROTULO_DA_MIRA_VIRTUAL}» no Modo Nativo é anunciado como indisponível. Na tela, nada mudou de lugar.</li>
+    <li><b>Com o Giroscópio desligado, o cartão não diz mais que o giro está indo para o jogo.</b> E no <b>Modo nativo</b> a <b>Barra de luz</b> mostra a cor que está no controle, e não mais «Jogo»: quem pinta a barra continua sendo o Hefesto.</li>
+    <li><b>O botão cinza avisa o leitor de tela</b>: o «{ROTULO_DA_MIRA_VIRTUAL}» no modo nativo é anunciado como indisponível. Na tela, nada mudou de lugar.</li>
     <li><b>O quarto botão do alto-falante voltou</b> — <b>{ROTULO_TUDO_NO_CONTROLE}</b> —, como você pediu: <i>"Gostaria de voltar o botão o 4 mas acho que quebraria o layout vertical. Na real temos que encaixar ele. Mas fazer isso certo com mockup antes."</i> Ele manda todo o som do PC para o alto-falante daquele controle e deixa o PC em silêncio. Vale para um controle por vez: o último clique decide, e clicar no de outro controle passa o som para ele. Para caber sem o cartão crescer, os dois de baixo dividem a mesma linha — um é o espelho do outro — e o rótulo do <b>Alto-falante</b> ficou da altura do rótulo do <b>Microfone</b>.</li>
     <li><b>«TV» virou «PC» nos botões do alto-falante</b>, como você decidiu: quem usa fone ou monitor não tem televisão. Os três de antes passaram a dizer <b>{ROTULO_SO_OS_EFEITOS}</b>, <b>{ROTULO_EFEITOS_MAIS_O_PC}</b> e <b>{ROTULO_NADA_NO_CONTROLE}</b>, e o que cada um faz não mudou.</li>
     <li><b>O «?» do Microfone diz o que o 🎙 faz hoje</b>: ele liga o retorno, e você se ouve como o jogo te ouve. A frase de antes dizia que ele calava o microfone e apagava a luz vermelha, e isso deixou de ser verdade em 21/09 — quem cala é o botão do próprio controle.</li>
@@ -3180,10 +3180,10 @@ def _conferir(doc):
 
     #      o som do PC e Ouvir Juntos?"*  <!-- noqa-acento: citação literal -->
     #      *"o sfx + todo o som que sai no outofalante do hmdmi"*,  <!-- noqa-acento: citação literal -->
-    for rota, palavra_dela in (("jogo", "Efeitos do Jogo no Controle, Áudio do PC no PC"),
-                               ("junto", "Efeitos do Jogo e Áudio do PC no Controle"),
-                               ("nada", "Tudo no PC e Nada no Controle"),
-                               ("pc", "Tudo no Controle e Nada no PC")):
+    for rota, palavra_dela in (("jogo", "Efeitos do jogo no controle, áudio do PC no PC"),
+                               ("junto", "Efeitos do jogo e áudio do PC no controle"),
+                               ("nada", "Tudo no PC e nada no controle"),
+                               ("pc", "Tudo no controle e nada no PC")):
         vistos = re.findall(rf'data-rota="{rota}"[^>]*>([^<]*)</button>', corpo)
         exigir(vistos == [palavra_dela] * len(MESA),
                f"o botão `{rota}` da rota do som diz {sorted(set(vistos)) or '[]'} "

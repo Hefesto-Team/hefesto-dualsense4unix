@@ -113,7 +113,7 @@ roteiro.
 
 **Os passos.**
 
-1. Na aba Controles, confira que o «Analógico Virtual» dos quatro está apagado; se algum estiver aceso, anote qual e apague-o.
+1. Na aba Controles, confira que o «Analógico virtual» dos quatro está apagado; se algum estiver aceso, anote qual e apague-o.
 2. Abra o jogo em modo de quatro jogadores, com os quatro bonecos na tela.
 3. Anote qual boneco é de qual controle, antes de mexer em nada.
 4. Largue os quatro controles na mesa e pegue só o P1.
@@ -132,7 +132,7 @@ roteiro.
 17. Repare se algum boneco sai da partida, trava ou troca de dono no meio.
 18. Se algum boneco errado tiver se mexido, vá ao Hefesto, aba Controles, clique no chip "Todos" da fita e mexa de novo no controle suspeito.
 19. Veja em qual cartão o pontinho anda ou o botão acende — o cartão diz de qual aparelho veio o movimento.
-20. Acenda de novo o «Analógico Virtual» que você apagou no primeiro passo, se apagou algum.
+20. Acenda de novo o «Analógico virtual» que você apagou no primeiro passo, se apagou algum.
 
 **Passa quando.** O jogo vê os quatro: em cada uma das quatro voltas respondeu o boneco do controle que estava na sua mão, e só ele; nenhum boneco continuou andando depois que você soltou. E nos dois minutos com os quatro jogando juntos nenhum sumiu da partida nem trocou de boneco.
 
@@ -143,7 +143,7 @@ roteiro.
 * **P3** — Só o direcional, com os outros três largados na mesa. Só o boneco 3 pode responder — e ele está no rádio, que é onde este defeito costuma aparecer.
 * **P4** — Só os botões de face, com os outros três largados na mesa. Só o boneco 4 pode responder — este é o último a entrar e o mais propenso a nascer sem dono.
 
-**A armadilha.** Mexer em dois controles ao mesmo tempo esconde exatamente o defeito que este teste procura. Quando um aparelho está alimentando dois jogadores, os dois bonecos andam JUNTOS — e com as duas mãos ocupadas isso parece que cada dono mexeu no seu. Um de cada vez, com os outros três largados na mesa, é o que revela. E se você mexer no P1 e o boneco 3 responder, não conclua nada olhando só o jogo: o Hefesto entrega os quatro na ordem P1→P4, mas o jogo pode dar os bonecos por quem apertou primeiro. Quem separa os dois é o cartão da aba Controles, e é para isso que ele está nos passos. O analógico direito, em muito jogo, mexe a câmera e não o boneco — conta como resposta do boneco 2 se for a câmera DELE que girou. E os botões de face num menu fazem o menu andar (o ○ costuma voltar), o que parece defeito sem ser: aperte-os com a partida rodando. Por último, o «Analógico Virtual»: aceso num controle, girá-lo move o analógico do lado escolhido dele no jogo (o direito, se ninguém trocou), e a câmera anda sem polegar nenhum — parece o P2 respondendo pelo controle errado. É por isso que o primeiro passo confere que os quatro começam com ela apagada.
+**A armadilha.** Mexer em dois controles ao mesmo tempo esconde exatamente o defeito que este teste procura. Quando um aparelho está alimentando dois jogadores, os dois bonecos andam JUNTOS — e com as duas mãos ocupadas isso parece que cada dono mexeu no seu. Um de cada vez, com os outros três largados na mesa, é o que revela. E se você mexer no P1 e o boneco 3 responder, não conclua nada olhando só o jogo: o Hefesto entrega os quatro na ordem P1→P4, mas o jogo pode dar os bonecos por quem apertou primeiro. Quem separa os dois é o cartão da aba Controles, e é para isso que ele está nos passos. O analógico direito, em muito jogo, mexe a câmera e não o boneco — conta como resposta do boneco 2 se for a câmera DELE que girou. E os botões de face num menu fazem o menu andar (o ○ costuma voltar), o que parece defeito sem ser: aperte-os com a partida rodando. Por último, o «Analógico virtual»: aceso num controle, girá-lo move o analógico do lado escolhido dele no jogo (o direito, se ninguém trocou), e a câmera anda sem polegar nenhum — parece o P2 respondendo pelo controle errado. É por isso que o primeiro passo confere que os quatro começam com ela apagada.
 
 ---
 
@@ -443,14 +443,14 @@ roteiro.
 
 **O que isto prova.** O som já saiu pelo rádio com a orelha do usuário, em 10/09. O que esta linha prova agora é o resto: que o som mirado no P3 sai SÓ no P3 — não no P4, que está no mesmo rádio, nem na TV —, que mirado na TV ele sai da TV e o P3 cala, e que ela acerta de onde o som sai sem saber para onde ele foi mandado.
 
-**Onde olhar.** O instrumento é o ouvido dela, encostado no alto-falante do próprio controle: são nove furinhos em duas fileiras, no meio da frente do DualSense, logo abaixo e entre os dois analógicos. O volante do teste é a lista de saídas de som — a do tocador, ou a das configurações de Som do sistema —, onde cada controle tem o seu «Alto-falante do Controle N (DualSense Wireless Controller)», com o N igual ao número do jogador. No Hefesto, aba Controles, o cartão do P3: o bloco Alto-falante, com o selo ATIVO, o número do volume e quatro botões — «Efeitos do Jogo no Controle, Áudio do PC no PC» e «Efeitos do Jogo e Áudio do PC no Controle», um sobre o outro, e embaixo, lado a lado, «Tudo no PC e Nada no Controle» e «Tudo no Controle e Nada no PC». «PC», nos botões, é a saída do computador — na bancada, a TV.
+**Onde olhar.** O instrumento é o ouvido dela, encostado no alto-falante do próprio controle: são nove furinhos em duas fileiras, no meio da frente do DualSense, logo abaixo e entre os dois analógicos. O volante do teste é a lista de saídas de som — a do tocador, ou a das configurações de Som do sistema —, onde cada controle tem o seu «Alto-falante do Controle N (DualSense Wireless Controller)», com o N igual ao número do jogador. No Hefesto, aba Controles, o cartão do P3: o bloco Alto-falante, com o selo ATIVO, o número do volume e quatro botões — «Efeitos do jogo no controle, áudio do PC no PC» e «Efeitos do jogo e áudio do PC no controle», um sobre o outro, e embaixo, lado a lado, «Tudo no PC e nada no controle» e «Tudo no controle e nada no PC». «PC», nos botões, é a saída do computador — na bancada, a TV.
 
 **Os passos.**
 
 1. Abra a aba Controles.
 2. Confira que o P3 está só no rádio: nenhum cabo plugado nele, e o chip dele na fita termina em BT.
 3. Clique na linha do P3 para abrir o cartão dele.
-4. Confira no bloco Alto-falante do P3: o selo diz ATIVO, o volume não está em zero, e o botão aceso não é «Tudo no PC e Nada no Controle».
+4. Confira no bloco Alto-falante do P3: o selo diz ATIVO, o volume não está em zero, e o botão aceso não é «Tudo no PC e nada no controle».
 5. Pause o jogo, se houver um aberto.
 6. Toque uma música qualquer num tocador, num volume que dê para ouvir na TV.
 7. Escolha «Alto-falante do Controle 1 (DualSense Wireless Controller)» como a saída do tocador — ou, se ele não tiver essa escolha, como a saída do sistema.
@@ -476,7 +476,7 @@ roteiro.
 * **P3** — No rádio, e é ESTE que tem de receber o som. É nele que ela encosta o ouvido quando a saída é o «Alto-falante do Controle 3 (DualSense Wireless Controller)», e é ele que tem de calar quando a saída vai para a TV.
 * **P4** — No rádio, e não pode tocar — é o negativo. Ele está no mesmo tipo de conexão do P3: se a música sair nele com a saída no Controle 3, o som foi para o rádio inteiro e não para UM controle.
 
-**A armadilha.** Se o P1, que está no cabo, não tocar, o teste não mediu nada — pode ser o volume do sistema, o selo em DESLIGADO (o ♪ ao lado do volume é o mudo do alto-falante) ou o botão «Tudo no PC e Nada no Controle» aceso; conserte isso antes de olhar o P3. Pelo rádio o som pode levar uns segundos para começar depois de cada troca de saída: dê esse tempo antes de responder. Faça com o jogo pausado — pelo rádio, som e vibração dividem o mesmo fio, e um tremor no meio pode picotar o som. E a lista do sistema pode mostrar também a placa de som do próprio controle, com outro nome: a escolha deste teste é sempre o «Alto-falante do Controle N (DualSense Wireless Controller)». O «Tudo no Controle e Nada no PC» do cartão faz com um clique a mesma troca de saída, mas o volante aqui é a lista de propósito: é nela que se lê o «Alto-falante do Controle N (DualSense Wireless Controller)» que se está medindo, e é ela que quem está com você troca sem você ver. Encostar o ouvido é ato numerado, e vem ANTES da escuta de propósito: quem clica primeiro e encosta depois ouve quando o som já passou.
+**A armadilha.** Se o P1, que está no cabo, não tocar, o teste não mediu nada — pode ser o volume do sistema, o selo em DESLIGADO (o ♪ ao lado do volume é o mudo do alto-falante) ou o botão «Tudo no PC e nada no controle» aceso; conserte isso antes de olhar o P3. Pelo rádio o som pode levar uns segundos para começar depois de cada troca de saída: dê esse tempo antes de responder. Faça com o jogo pausado — pelo rádio, som e vibração dividem o mesmo fio, e um tremor no meio pode picotar o som. E a lista do sistema pode mostrar também a placa de som do próprio controle, com outro nome: a escolha deste teste é sempre o «Alto-falante do Controle N (DualSense Wireless Controller)». O «Tudo no controle e nada no PC» do cartão faz com um clique a mesma troca de saída, mas o volante aqui é a lista de propósito: é nela que se lê o «Alto-falante do Controle N (DualSense Wireless Controller)» que se está medindo, e é ela que quem está com você troca sem você ver. Encostar o ouvido é ato numerado, e vem ANTES da escuta de propósito: quem clica primeiro e encosta depois ouve quando o som já passou.
 
 ---
 
@@ -518,7 +518,7 @@ roteiro.
 
 ## Linha 13 — Perfil vivo por controle, sem clicar em Salvar
 
-**O que isto prova.** Prova que o que você muda num controle, em cada aba, vale nele na hora, não encosta nos outros, e continua lá depois de fechar e reabrir o Hefesto — sem você clicar uma única vez em Aplicar ou em Salvar Perfil.
+**O que isto prova.** Prova que o que você muda num controle, em cada aba, vale nele na hora, não encosta nos outros, e continua lá depois de fechar e reabrir o Hefesto — sem você clicar uma única vez em Aplicar ou em Salvar perfil.
 
 **Onde olhar.** Nos aparelhos: o punho esquerdo do P1 no «Testar», a resistência do L2 e do R2 do P2 no seu dedo, e a barra de luz do P4 (as duas tiras dos lados do touchpad). Na tela: a coluna de cada controle nas abas Vibração, Gatilhos e Iluminação — cada controle tem a sua coluna, com o nome no alto. E, no alto de qualquer aba, o nome em «Perfil ativo».
 
@@ -549,7 +549,7 @@ roteiro.
 23. Confira que o Modo do L2 e do R2 do P2 continua «Rígido» e que o seu dedo ainda sente a resistência, e que os do P1, do P3 e do P4 continuam leves.
 24. Devolva o Modo das oito seções ao que você anotou no papel.
 
-**Passa quando.** Cada aba mostra o que foi feito NAQUELE controle, e o aparelho responde no instante do clique: o punho esquerdo do P1 mudo no «Testar», o L2 e o R2 do P2 duros com os dos outros três leves, a barra do P4 no tom novo. O P3 termina exatamente como começou, e nenhum dos outros mudou junto. Depois de fechar e reabrir a janela, as três mudanças continuam lá, e os gatilhos dos outros três continuam leves — e em nenhum momento você clicou em Aplicar ou em Salvar Perfil.
+**Passa quando.** Cada aba mostra o que foi feito NAQUELE controle, e o aparelho responde no instante do clique: o punho esquerdo do P1 mudo no «Testar», o L2 e o R2 do P2 duros com os dos outros três leves, a barra do P4 no tom novo. O P3 termina exatamente como começou, e nenhum dos outros mudou junto. Depois de fechar e reabrir a janela, as três mudanças continuam lá, e os gatilhos dos outros três continuam leves — e em nenhum momento você clicou em Aplicar ou em Salvar perfil.
 
 **Por controle.**
 
@@ -558,7 +558,7 @@ roteiro.
 * **P3** — Ninguém toca, é a testemunha, fora o «Desligado» do começo e a devolução do fim. Está no rádio, e serve para provar que nenhuma das três mudanças vazou para ele: a barra de luz e os gatilhos dele têm de terminar como começaram.
 * **P4** — Muda a COR, na aba Iluminação: um tom novo na barra. Está no rádio: a cor tem de acender no clique e continuar depois de fechar e reabrir. Os gatilhos dele vão para «Desligado» no começo, como os dos outros, e têm de continuar leves.
 
-**A armadilha.** POR QUE ESTE TESTE É LONGO: ele é o mesmo teste feito DUAS vezes — três mudanças em três abas antes de fechar a janela, e as três conferidas de novo depois de reabrir. Cortar a segunda metade seria cortar exatamente o que ele prova, que é o perfil sobreviver ao fechar. NÃO TOQUE em «Aplicar» nem em «Salvar Perfil», no rodapé, do começo ao fim: são eles que o teste existe para dispensar, e um clique neles apaga a prova. Clique em «Parar» antes de fechar a janela — o «Testar» não para sozinho. Feche só a JANELA do Hefesto, pelo X — não pare o serviço pela aba Sistema: com o serviço parado a luz e o gatilho voltam ao que o aparelho faz sozinho, e o teste reprova sem haver defeito. A bancada roda com a Steam fechada; mesmo aberta, ela não apaga mais a barra: o controle de verdade nasce escondido dela, e o Hefesto devolve a cor e o número a quem pintar por cima em até um segundo. Um tom com X é a cor de outro controle e não se escolhe. E não confie só na tela dos gatilhos: ela mostra o que o Hefesto mandou, não o que o gatilho está fazendo — o controle não sabe responder isso, e a prova é o seu dedo. Os oito gatilhos começam em «Desligado», e não só os do P2, porque o Freestyle de fábrica nasce com os gatilhos em «Rígido»: num gatilho que já está duro, nem o «Rígido» do P2 se sente chegar, nem um que vazasse para os outros. E é por isso que, depois de reabrir, você aperta os quatro: se a escolha por controle se perdesse ao fechar, os quatro voltariam juntos ao gatilho do perfil inteiro — duros com o Freestyle de fábrica, leves com um perfil em «Desligado» —, e só o par «o P2 duro, os outros três leves» prova que cada um guardou o seu.
+**A armadilha.** POR QUE ESTE TESTE É LONGO: ele é o mesmo teste feito DUAS vezes — três mudanças em três abas antes de fechar a janela, e as três conferidas de novo depois de reabrir. Cortar a segunda metade seria cortar exatamente o que ele prova, que é o perfil sobreviver ao fechar. NÃO TOQUE em «Aplicar» nem em «Salvar perfil», no rodapé, do começo ao fim: são eles que o teste existe para dispensar, e um clique neles apaga a prova. Clique em «Parar» antes de fechar a janela — o «Testar» não para sozinho. Feche só a JANELA do Hefesto, pelo X — não pare o serviço pela aba Sistema: com o serviço parado a luz e o gatilho voltam ao que o aparelho faz sozinho, e o teste reprova sem haver defeito. A bancada roda com a Steam fechada; mesmo aberta, ela não apaga mais a barra: o controle de verdade nasce escondido dela, e o Hefesto devolve a cor e o número a quem pintar por cima em até um segundo. Um tom com X é a cor de outro controle e não se escolhe. E não confie só na tela dos gatilhos: ela mostra o que o Hefesto mandou, não o que o gatilho está fazendo — o controle não sabe responder isso, e a prova é o seu dedo. Os oito gatilhos começam em «Desligado», e não só os do P2, porque o Freestyle de fábrica nasce com os gatilhos em «Rígido»: num gatilho que já está duro, nem o «Rígido» do P2 se sente chegar, nem um que vazasse para os outros. E é por isso que, depois de reabrir, você aperta os quatro: se a escolha por controle se perdesse ao fechar, os quatro voltariam juntos ao gatilho do perfil inteiro — duros com o Freestyle de fábrica, leves com um perfil em «Desligado» —, e só o par «o P2 duro, os outros três leves» prova que cada um guardou o seu.
 
 ---
 
@@ -649,12 +649,12 @@ roteiro.
 
 **O que isto prova.** Prova que mandar um controle que já está pareado voltar pelo rádio, pela própria aba Conexões, mostra a espera pelo PS com a contagem, devolve ele ao mesmo lugar — sem abrir um segundo assento para o mesmo controle — e que o «Cancelar» obedece.
 
-**Onde olhar.** Na aba Conexões do Hefesto, na seção «Gestão de Controles», que abre com um clique no nome dela. Três coisas ali: a conta no canto da seção (por exemplo «4 controles • 2 USB • 2 BT»), a linha de cada controle («Sony • Player 4 • nome • BT» — o fim da linha diz USB para cabo e BT para rádio) e, dentro da linha aberta de um controle, o botão «A luz não acende». Durante a espera, o mesmo botão passa a dizer «Cancelar», e aparece no cartão dele a linha «▲ Aperte PS no controle · procurando…» com os segundos correndo para trás, a partir de 60.
+**Onde olhar.** Na aba Conexões do Hefesto, na seção «Gestão de controles», que abre com um clique no nome dela. Três coisas ali: a conta no canto da seção (por exemplo «4 controles • 2 USB • 2 BT»), a linha de cada controle («Sony • Player 4 • nome • BT» — o fim da linha diz USB para cabo e BT para rádio) e, dentro da linha aberta de um controle, o botão «A luz não acende». Durante a espera, o mesmo botão passa a dizer «Cancelar», e aparece no cartão dele a linha «▲ Aperte PS no controle · procurando…» com os segundos correndo para trás, a partir de 60.
 
 **Os passos.**
 
 1. Abra a aba Conexões.
-2. Clique em «Gestão de Controles» para abrir a seção.
+2. Clique em «Gestão de controles» para abrir a seção.
 3. Anote a conta no canto da seção: quantos controles, quantos no cabo, quantos no rádio.
 4. Anote a linha de cada um dos quatro controles: o número de Player e se ela termina em USB ou em BT.
 5. Confira que a linha do P4 termina em BT — este teste só vale com ele no rádio.
@@ -679,7 +679,7 @@ roteiro.
 * **P3** — Não se toca nele. Mesma testemunha: anote o número de Player e o fim da linha antes, e confira no fim.
 * **P4** — É este. Ele precisa estar no rádio (linha terminando em BT). Abra a linha dele, clique em «A luz não acende», veja o controle apagar, aperte PS nele e espere voltar; depois, a segunda volta com o «Cancelar». De quebra, olhe a barra de luz dele depois da volta: fazer a barra voltar a obedecer é o motivo de este botão existir.
 
-**A armadilha.** Falso vermelho: se o P4 estiver no cabo, o botão nasce cinza e a dica dele explica que só vale no BT — ali o teste não roda, e isso não é defeito. Falso verde: se o P4 não apagar e o botão não virar «Cancelar», nada foi derrubado e o teste não provou coisa nenhuma — refaça. O «Cancelar» não religa nada: é ele que deixa o controle fora do rádio até você apertar PS por conta própria. E o «Conectar», da seção «Rádio e Adaptadores», é para controle NOVO; este teste é sobre um controle que já está pareado.
+**A armadilha.** Falso vermelho: se o P4 estiver no cabo, o botão nasce cinza e a dica dele explica que só vale no BT — ali o teste não roda, e isso não é defeito. Falso verde: se o P4 não apagar e o botão não virar «Cancelar», nada foi derrubado e o teste não provou coisa nenhuma — refaça. O «Cancelar» não religa nada: é ele que deixa o controle fora do rádio até você apertar PS por conta própria. E o «Conectar», da seção «Rádio e adaptadores», é para controle NOVO; este teste é sobre um controle que já está pareado.
 
 ---
 
@@ -687,12 +687,12 @@ roteiro.
 
 **O que isto prova.** Prova que o lugar de um controle fica guardado enquanto ele está desligado: o P2 sai por 20 segundos, volta como P2, e os outros três não trocam de número — nem no fim, nem durante a ausência.
 
-**Onde olhar.** Em dois lugares ao mesmo tempo. Na tela do Hefesto: a fita do topo, a linha que começa com "Selecionar:", onde cada controle é um chip («P2 • Starlight Blue • BT»), e a seção «Gestão de Controles», na aba Conexões, onde cada linha traz «Player 1», «Player 2» e assim por diante. No aparelho: a fileira de lampadinhas brancas embaixo do touchpad, que é o que diz o número — Player 1 acende só a do meio; Player 2 acende a segunda e a quarta; Player 3 acende as duas pontas e a do meio; Player 4 acende quatro, com a do meio apagada.
+**Onde olhar.** Em dois lugares ao mesmo tempo. Na tela do Hefesto: a fita do topo, a linha que começa com "Selecionar:", onde cada controle é um chip («P2 • Starlight Blue • BT»), e a seção «Gestão de controles», na aba Conexões, onde cada linha traz «Player 1», «Player 2» e assim por diante. No aparelho: a fileira de lampadinhas brancas embaixo do touchpad, que é o que diz o número — Player 1 acende só a do meio; Player 2 acende a segunda e a quarta; Player 3 acende as duas pontas e a do meio; Player 4 acende quatro, com a do meio apagada.
 
 **Os passos.**
 
 1. Abra a aba Conexões, com os quatro controles ligados.
-2. Clique em «Gestão de Controles» para abrir a seção.
+2. Clique em «Gestão de controles» para abrir a seção.
 3. Anote o número de Player dos quatro, na lista.
 4. Olhe as lampadinhas embaixo do touchpad de cada controle e confira que a figura bate com o número que a tela mostra.
 5. Confira que a linha do P2 termina em BT — este teste é com ele no rádio.
@@ -717,11 +717,11 @@ roteiro.
 
 ---
 
-## Linha 18 — Modo Nativo com dois controles no jogo
+## Linha 18 — Modo nativo com dois controles no jogo
 
-**O que isto prova.** Prova que, com o Hefesto fora do meio, um jogo de co-op de sofá enxerga os dois controles como DualSense de verdade — dois jogadores, nenhum fantasma, e o movimento do controle respondendo. E que o Modo Nativo é a ÚNICA porta que devolve o aparelho inteiro ao jogo: fora dele, o botão, o toque e o movimento do DualSense ficam escondidos de todo programa menos o Hefesto.
+**O que isto prova.** Prova que, com o Hefesto fora do meio, um jogo de co-op de sofá enxerga os dois controles como DualSense de verdade — dois jogadores, nenhum fantasma, e o movimento do controle respondendo. E que o modo nativo é a ÚNICA porta que devolve o aparelho inteiro ao jogo: fora dele, o botão, o toque e o movimento do DualSense ficam escondidos de todo programa menos o Hefesto.
 
-**Onde olhar.** O resultado se lê na tela do JOGO, não na do Hefesto: quantos jogadores ele mostra, se ele pede "aperte um botão para entrar", e se girar o controle mexe alguma coisa. No Hefesto você confere só que o modo está de pé, na aba Jogar: a linha «Status» tem de estar em «Desligado», e o quadro «Modo» tem de mostrar «Modo Nativo · o controle sem o Hefesto no meio». E a conta no canto de cima à direita tem de dizer «2 USB» — com os dois do rádio desligados, o BT some da conta. Na aba Controles, o chip «Analógico Virtual» de cada cartão fica cinza neste modo: o movimento vai inteiro ao jogo, sem o Analógico Virtual no meio. A prova do movimento é no jogo, girando o controle na mão.
+**Onde olhar.** O resultado se lê na tela do JOGO, não na do Hefesto: quantos jogadores ele mostra, se ele pede "aperte um botão para entrar", e se girar o controle mexe alguma coisa. No Hefesto você confere só que o modo está de pé, na aba Jogar: a linha «Status» tem de estar em «Desligado», e o quadro «Modo» tem de mostrar «Modo nativo · o controle sem o Hefesto no meio». E a conta no canto de cima à direita tem de dizer «2 USB» — com os dois do rádio desligados, o BT some da conta. Na aba Controles, o chip «Analógico virtual» de cada cartão fica cinza neste modo: o movimento vai inteiro ao jogo, sem o analógico virtual no meio. A prova do movimento é no jogo, girando o controle na mão.
 
 **Os passos.**
 
@@ -729,7 +729,7 @@ roteiro.
 2. Feche o jogo, se ele já estiver aberto.
 3. Abra o Hefesto na aba Jogar.
 4. Clique em «Desligado», na linha «Status».
-5. Confira que o quadro «Modo» passou a mostrar «Modo Nativo».
+5. Confira que o quadro «Modo» passou a mostrar «Modo nativo».
 6. Leia a conta no canto de cima à direita e confira que ela diz «2 USB» — se disser mais, algum controle ainda está ligado.
 7. Abra o jogo de co-op de sofá agora, depois da troca de modo.
 8. Aperte um botão no P1 e confirme que o jogo responde.
@@ -741,7 +741,7 @@ roteiro.
 14. Abra o MESMO jogo de novo, com os mesmos dois controles.
 15. Repita o aperto de botão de cada um e o giro dos dois, e anote a diferença.
 
-**Passa quando.** No Modo Nativo o jogo mostra os dois jogadores — nem um a menos, nem um terceiro fantasma — e responde ao movimento dos dois. Um jogo que, no Nativo, responde aos botões e não ao movimento recebeu o aparelho pela metade: anote o nome dele. A contraprova é o que fecha o teste: se com o Hefesto Ligado o mesmo jogo mostrar dois jogadores e no Modo Nativo mostrar um só, o problema é do modo; se mostrar um nos dois casos, o jogo é que não tem co-op de sofá e o teste não vale.
+**Passa quando.** No modo nativo o jogo mostra os dois jogadores — nem um a menos, nem um terceiro fantasma — e responde ao movimento dos dois. Um jogo que, no Nativo, responde aos botões e não ao movimento recebeu o aparelho pela metade: anote o nome dele. A contraprova é o que fecha o teste: se com o Hefesto Ligado o mesmo jogo mostrar dois jogadores e no modo nativo mostrar um só, o problema é do modo; se mostrar um nos dois casos, o jogo é que não tem co-op de sofá e o teste não vale.
 
 **Por controle.**
 
@@ -750,15 +750,15 @@ roteiro.
 * **P3** — Fica fora. Desligue-o antes de começar, segurando o PS até apagar, e confira na conta do canto de cima à direita que o BT sumiu.
 * **P4** — Fica fora. Desligue-o antes de começar, do mesmo jeito, e não o religue no meio do teste — religar muda a conta que o jogo faz no meio da medição.
 
-**A armadilha.** Sem a contraprova este teste mente: um jogo que simplesmente não tem dois jogadores locais reprovaria o Modo Nativo sem culpa nenhuma. Segunda armadilha: a troca de modo só vale para o PRÓXIMO jogo que abrir — se o jogo já estava aberto quando você clicou, você vai medir o modo anterior; feche e abra de novo. Terceira: o Modo Nativo não é por controle, ele vale para a máquina inteira — por isso "ficar fora" aqui quer dizer desligado, e por isso a conta do canto de cima precisa dizer «2 USB» e nada de BT. E não julgue este teste pelas lampadinhas de número nem pela cor da barra: desde 24/09 as duas são do Hefesto também neste modo e mostram o número de jogador que o Hefesto deu a cada controle, mesmo com o jogo falando direto com o controle; se o jogo acender outra coisa, o Hefesto devolve a dele em até um segundo.
+**A armadilha.** Sem a contraprova este teste mente: um jogo que simplesmente não tem dois jogadores locais reprovaria o modo nativo sem culpa nenhuma. Segunda armadilha: a troca de modo só vale para o PRÓXIMO jogo que abrir — se o jogo já estava aberto quando você clicou, você vai medir o modo anterior; feche e abra de novo. Terceira: o modo nativo não é por controle, ele vale para a máquina inteira — por isso "ficar fora" aqui quer dizer desligado, e por isso a conta do canto de cima precisa dizer «2 USB» e nada de BT. E não julgue este teste pelas lampadinhas de número nem pela cor da barra: desde 24/09 as duas são do Hefesto também neste modo e mostram o número de jogador que o Hefesto deu a cada controle, mesmo com o jogo falando direto com o controle; se o jogo acender outra coisa, o Hefesto devolve a dele em até um segundo.
 
 ---
 
 ## Linha 19 — Som: escolhe o alto-falante do P2 como saída de um tocador
 
-**O que isto prova.** Prova que dá para escolher o alto-falante do controle 2 como a saída de um tocador, que o som sai só nesse controle, que a lista de som do sistema tem um alto-falante para cada controle, e que o «Tudo no Controle e Nada no PC» do cartão do P2 faz o mesmo com um clique.
+**O que isto prova.** Prova que dá para escolher o alto-falante do controle 2 como a saída de um tocador, que o som sai só nesse controle, que a lista de som do sistema tem um alto-falante para cada controle, e que o «Tudo no controle e nada no PC» do cartão do P2 faz o mesmo com um clique.
 
-**Onde olhar.** Fora do Hefesto: a lista de saídas de áudio — a do tocador, ou a das configurações de Som do sistema —, onde cada controle tem o seu «Alto-falante do Controle N (DualSense Wireless Controller)», com o N igual ao número do jogador. No Hefesto: aba Controles, cartão do P2, bloco Alto-falante — o selo ATIVO, o número do volume, o ♪ ao lado dele e os quatro botões: «Efeitos do Jogo no Controle, Áudio do PC no PC» e «Efeitos do Jogo e Áudio do PC no Controle», um sobre o outro, e embaixo, lado a lado, «Tudo no PC e Nada no Controle» e «Tudo no Controle e Nada no PC». «PC», nos botões, é a saída do computador — na bancada, a TV. No aparelho: a grade de furinhos do alto-falante, na frente do controle, entre o touchpad e o botão PS.
+**Onde olhar.** Fora do Hefesto: a lista de saídas de áudio — a do tocador, ou a das configurações de Som do sistema —, onde cada controle tem o seu «Alto-falante do Controle N (DualSense Wireless Controller)», com o N igual ao número do jogador. No Hefesto: aba Controles, cartão do P2, bloco Alto-falante — o selo ATIVO, o número do volume, o ♪ ao lado dele e os quatro botões: «Efeitos do jogo no controle, áudio do PC no PC» e «Efeitos do jogo e áudio do PC no controle», um sobre o outro, e embaixo, lado a lado, «Tudo no PC e nada no controle» e «Tudo no controle e nada no PC». «PC», nos botões, é a saída do computador — na bancada, a TV. No aparelho: a grade de furinhos do alto-falante, na frente do controle, entre o touchpad e o botão PS.
 
 **Os passos.**
 
@@ -766,7 +766,7 @@ roteiro.
 2. Confira na fita do topo que o P2 está por cabo — o chip dele termina em USB.
 3. Clique na linha do P2 para abrir o cartão dele.
 4. Confira no bloco Alto-falante do P2 que o selo diz ATIVO e que o número do volume não está em zero.
-5. Clique em «Efeitos do Jogo no Controle, Áudio do PC no PC», no bloco do P2, se ele não estiver aceso.
+5. Clique em «Efeitos do jogo no controle, áudio do PC no PC», no bloco do P2, se ele não estiver aceso.
 6. Abra o seu tocador de música ou de vídeo e ponha alguma coisa para tocar.
 7. Escolha «Alto-falante do Controle 2 (DualSense Wireless Controller)» como a saída de áudio do tocador — ou, se ele não tiver essa escolha, como a saída nas configurações de Som do sistema.
 8. Confira que a lista de saídas mostra um «Alto-falante do Controle N (DualSense Wireless Controller)» para cada um dos quatro controles.
@@ -776,21 +776,21 @@ roteiro.
 12. Confira que nenhum dos três toca, e que a TV também não toca a música.
 13. Devolva a saída do tocador — ou do sistema — para a que estava antes.
 14. Confira que a música voltou a sair onde saía.
-15. Agora o mesmo pelo Hefesto, com um clique: deixe a saída do tocador na do sistema e clique em «Tudo no Controle e Nada no PC», no bloco do P2.
+15. Agora o mesmo pelo Hefesto, com um clique: deixe a saída do tocador na do sistema e clique em «Tudo no controle e nada no PC», no bloco do P2.
 16. Encoste o ouvido na grade do alto-falante do P2 e confira que a música sai dali e que a TV calou.
-17. Clique em «Efeitos do Jogo no Controle, Áudio do PC no PC», no bloco do P2.
+17. Clique em «Efeitos do jogo no controle, áudio do PC no PC», no bloco do P2.
 18. Confira que a música voltou para a TV.
 
-**Passa quando.** A música do tocador sai pelo alto-falante do P2 e por nenhum dos outros três, nem pela TV, e devolver a saída faz o som voltar para onde estava. A segunda metade: a lista de saídas tem um «Alto-falante do Controle N (DualSense Wireless Controller)» para cada controle. E a terceira: com «Tudo no Controle e Nada no PC» no cartão do P2, a mesma música sai só no P2 com um clique, e o botão de cima a devolve à TV.
+**Passa quando.** A música do tocador sai pelo alto-falante do P2 e por nenhum dos outros três, nem pela TV, e devolver a saída faz o som voltar para onde estava. A segunda metade: a lista de saídas tem um «Alto-falante do Controle N (DualSense Wireless Controller)» para cada controle. E a terceira: com «Tudo no controle e nada no PC» no cartão do P2, a mesma música sai só no P2 com um clique, e o botão de cima a devolve à TV.
 
 **Por controle.**
 
 * **P1** — Cabo, ninguém toca nele. É o de comparação: encoste o ouvido na grade do alto-falante dele e não pode sair nada.
-* **P2** — Cabo, é ESTE. Abra o cartão dele, confira o selo e o volume, e escolha o «Alto-falante do Controle 2 (DualSense Wireless Controller)» como saída — depois, pelo «Tudo no Controle e Nada no PC» do cartão dele. É o único que pode tocar.
+* **P2** — Cabo, é ESTE. Abra o cartão dele, confira o selo e o volume, e escolha o «Alto-falante do Controle 2 (DualSense Wireless Controller)» como saída — depois, pelo «Tudo no controle e nada no PC» do cartão dele. É o único que pode tocar.
 * **P3** — Rádio, ninguém toca nele. Encoste o ouvido: silêncio.
 * **P4** — Rádio, ninguém toca nele. Encoste o ouvido: silêncio. Ele e o P3 juntos mostram que o som foi para UM controle, e não para todos os que estão no mesmo tipo de conexão.
 
-**A armadilha.** Quatro coisas dão falso vermelho. Primeira: o ♪ ao lado do número é o MUDO do alto-falante, não a rota — se clicar nele o selo vira DESLIGADO e o P2 fica calado. Segunda: com o volume do P2 em zero, ou com «Tudo no PC e Nada no Controle» aceso, não sai som nenhum, por mais certa que a saída esteja. Terceira: a lista pode mostrar também a placa de som do próprio controle, com outro nome — a escolha deste teste é o «Alto-falante do Controle 2 (DualSense Wireless Controller)». Quarta: o «Tudo no Controle e Nada no PC» move a saída do SISTEMA, e um tocador com a saída presa num aparelho não vai junto — é por isso que a do tocador volta à do sistema antes do clique. E, no USB, ele escolhe a placa de som do próprio P2, e não o «Alto-falante do Controle 2 (DualSense Wireless Controller)»: quem confere é o ouvido. E se a música sair num controle que não é o P2, com a saída no «Controle 2», anote: o número do nome não bateu com o do jogador, e esse é um achado deste teste.
+**A armadilha.** Quatro coisas dão falso vermelho. Primeira: o ♪ ao lado do número é o MUDO do alto-falante, não a rota — se clicar nele o selo vira DESLIGADO e o P2 fica calado. Segunda: com o volume do P2 em zero, ou com «Tudo no PC e nada no controle» aceso, não sai som nenhum, por mais certa que a saída esteja. Terceira: a lista pode mostrar também a placa de som do próprio controle, com outro nome — a escolha deste teste é o «Alto-falante do Controle 2 (DualSense Wireless Controller)». Quarta: o «Tudo no controle e nada no PC» move a saída do SISTEMA, e um tocador com a saída presa num aparelho não vai junto — é por isso que a do tocador volta à do sistema antes do clique. E, no USB, ele escolhe a placa de som do próprio P2, e não o «Alto-falante do Controle 2 (DualSense Wireless Controller)»: quem confere é o ouvido. E se a música sair num controle que não é o P2, com a saída no «Controle 2», anote: o número do nome não bateu com o do jogador, e esse é um achado deste teste.
 
 ---
 

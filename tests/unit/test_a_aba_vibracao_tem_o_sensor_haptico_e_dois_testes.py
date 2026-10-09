@@ -122,7 +122,7 @@ class TestOTrilhoMoraNaForca:
     def test_a_faixa_do_personalizado_virou_a_sensor_haptico(self) -> None:
         """A quarta célula é a linha da háptica, e o rótulo dela é o dela."""
         html = MOCKUP.read_text(encoding="utf-8")
-        assert '<span class="sec-rot">Sensor Háptico' in html
+        assert '<span class="sec-rot">Sensor háptico' in html
         assert '<span class="sec-rot">Personalizado' not in html
         assert '<span class="sec-rot">Háptica por áudio' not in html
         quarta = _celulas_da_coluna(aba05._coluna(aba05.MESA[0]))[3]
@@ -189,7 +189,7 @@ def test_a_sensor_haptico_grava_o_ganho_no_perfil(perfis: pathlib.Path) -> None:
 
 @pytest.mark.parametrize(("no_ar", "acesa"), [(True, "1"), (False, ""), (None, "")])
 def test_a_luz_no_ar_acende_pelo_state_full(no_ar: bool | None, acesa: str) -> None:
-    """A bolinha depois do `%` da «Sensor Háptico» é o ``haptica_no_ar`` do daemon."""
+    """A bolinha depois do `%` da «Sensor háptico» é o ``haptica_no_ar`` do daemon."""
     controle: dict[str, Any] = {"uniq": UNIQ, "connected": True, "player": 1,
                                 "transport": "usb", "index": 0}
     if no_ar is not None:

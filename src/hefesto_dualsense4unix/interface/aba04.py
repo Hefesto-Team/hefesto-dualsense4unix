@@ -779,7 +779,7 @@ CSS = """
   .num{flex:0 0 38px;text-align:right;font-family:'JetBrains Mono',monospace;
        font-size:11.5px;color:var(--fg)}
   /* O TRILHO PASSA A ACEITAR O ARRASTE — 03/09/2026, decisão de produto: perguntada
-     se mexer no brilho grava o perfil na hora ou espera o "Salvar Perfil", ela
+     se mexer no brilho grava o perfil na hora ou espera o "Salvar perfil", ela
      respondeu **"Grava na hora"**.
 
      O QUE HAVIA ATÉ HOJE: o desenho já era um slider — a regra `.cheio::after`
@@ -1278,15 +1278,15 @@ MIOLO = f'''
           O plástico pode se repetir; a <b>luz</b> nunca.
         </span></span>
         {trava_do_nativo("na luz")}
-        <!-- OS DOIS MODOS — pedido de 06/10/2026: o Modo Automático e o Modo
+        <!-- OS DOIS MODOS — pedido de 06/10/2026: o modo automático e o Modo
              Personalizado tomam o lugar do interruptor das cores automáticas e da
              frase da luz do jogo embaixo das colunas. -->
         {monta_.par_de_modos(GESTO_DO_MODO, monta_.MODO_PERSONALIZADO)}
         <span class="ajuda esq">?<span class="dica">
-          <b>Modo Automático:</b> cada controle acende a cor do seu <b>plástico</b>
+          <b>Modo automático:</b> cada controle acende a cor do seu <b>plástico</b>
           (sem cor de plástico, ou com dois iguais, a do <b>número</b>), e os botões
           desta aba ficam parados.<br><br>
-          <b>Modo Personalizado:</b> você escolhe a cor, o brilho e as luzes de cada
+          <b>Modo personalizado:</b> você escolhe a cor, o brilho e as luzes de cada
           controle. Ao passar para ele, a cor de agora fica <b>gravada no perfil</b>.<br><br>
           Nos dois, o jogo que pinta a barra vence enquanto pinta.
         </span></span>
@@ -1580,8 +1580,8 @@ def _conferir(doc):
 
     topo = corpo.split('<div class="quadro-topo">', 1)[-1].split("</div>", 1)[0]
     exigir(topo.count(f'data-gesto="{GESTO_DO_MODO}"') == 2,
-           "o par dos modos saiu da faixa do título — o Modo Automático e o "
-           "Modo Personalizado moram no topo da aba (pedido dela de 06/10/2026)")
+           "o par dos modos saiu da faixa do título — o modo automático e o "
+           "modo personalizado moram no topo da aba (pedido dela de 06/10/2026)")
     exigir('class="luz-do-jogo"' not in corpo,
            "a frase da luz do jogo voltou embaixo das colunas — o par dos modos "
            "a substituiu (pedido dela de 06/10/2026)")

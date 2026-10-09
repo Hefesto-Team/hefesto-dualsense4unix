@@ -11,10 +11,10 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 DELA: dict[str, str] = {
-    "jogo": "Efeitos do Jogo no Controle, Áudio do PC no PC",
-    "junto": "Efeitos do Jogo e Áudio do PC no Controle",
-    "nada": "Tudo no PC e Nada no Controle",
-    "pc": "Tudo no Controle e Nada no PC",
+    "jogo": "Efeitos do jogo no controle, áudio do PC no PC",
+    "junto": "Efeitos do jogo e áudio do PC no controle",
+    "nada": "Tudo no PC e nada no controle",
+    "pc": "Tudo no controle e nada no PC",
 }
 
 DE_ONTEM = ("Efeitos do Jogo no Controle, Áudio da TV na TV",

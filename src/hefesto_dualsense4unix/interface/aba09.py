@@ -153,7 +153,7 @@ def forca_do_perfil(perfil):
 
 _COM_TETO = [p for p in ORC["PERFIS"] if teto_do_perfil(p) is not None]
 if len(_COM_TETO) != 1:
-    raise SystemExit("ERRO: a frase do Perfil de Bateria afirma que UM perfil põe teto, "
+    raise SystemExit("ERRO: a frase do perfil de bateria afirma que UM perfil põe teto, "
                      f"e agora são {len(_COM_TETO)}: {_COM_TETO}. Reescreva a frase.")
 _SO_ESTE = _COM_TETO[0]
 
@@ -168,7 +168,7 @@ CSS = """
   /* ---------- Sistema, em três seções (A-09-SISTEMA-EM-TRES-SECOES-01, 25/09/2026) ----------
      Pedido: *«praticamente vamos só mudar de lugar as coisas dessa aba»*.
      1. Status (três colunas: o Status e o exame em duas);
-     2. Configurações Avançadas (quatro colunas de botões);
+     2. Configurações avançadas (quatro colunas de botões);
      3. os Detalhes técnicos, com a altura que sobra.
      O quadro é `estica`: a seção 3 é a única que sabe crescer, e cresce. */
 
@@ -199,7 +199,7 @@ CSS = """
   .quadro-corpo > *{flex-shrink:0}
   /* o título da seção 2 — o nome que ela deu, uma linha acima dos quatro rótulos.
      A LETRA É A DO «Sistema», e o pedido é de produto (25/09/2026, 22h13):
-     *«Configurações Avançadas — Escreve com a mesma cor e tamanho de Sistema»*.
+     *«Configurações avançadas — Escreve com a mesma cor e tamanho de Sistema»*.
      Quem pinta é o `.quadro-titulo` do topo, no `<span>` de dentro; aqui fica
      só o lugar: o vão e o risco de cima. */
   .sec-grupo{margin:14px 0 8px;padding-top:10px;border-top:1px solid var(--border-sutil)}
@@ -471,11 +471,11 @@ MIOLO = f'''
         </div>
 
         <!-- ---------- 2. CONFIGURAÇÕES AVANÇADAS ---------- -->
-        <div class="sec-grupo"><span class="quadro-titulo">Configurações Avançadas</span></div>
+        <div class="sec-grupo"><span class="quadro-titulo">Configurações avançadas</span></div>
         <div class="sec-rot sr-avancadas">
           <span>Serviço {D_SERVICO}</span><span></span>
-          <span>Perfil Global de Bateria {D_BATERIA}</span><span></span>
-          <span>Saúde do App {D_SAUDE}</span><span></span>
+          <span>Perfil global de bateria {D_BATERIA}</span><span></span>
+          <span>Saúde do app {D_SAUDE}</span><span></span>
           <span>Automático {D_AUTOMATICO}</span>
         </div>
         <div class="avancadas">
@@ -532,15 +532,15 @@ LEGENDA = '''<div class="nota">
       <code>title</code>. As linhas do Status não têm <code>?</code>: a frase de cada uma fica no
       <code>title</code>, e o exame não tem rótulo nem contagem — o lugar fica vazio (os ajustes
       dela das 22h13).</li>
-    <li><b>2. Configurações Avançadas</b> — quatro colunas: <b>Serviço</b> (Parar/Retomar num botão
-      só, Atualizar, Reiniciar), <b>Perfil Global de Bateria</b> (as três escolhas na vertical),
-      <b>Saúde do App</b> (Reaplicar correções automáticas, Aplicar soluções nos lançadores,
+    <li><b>2. Configurações avançadas</b> — quatro colunas: <b>Serviço</b> (Parar/Retomar num botão
+      só, Atualizar, Reiniciar), <b>Perfil global de bateria</b> (as três escolhas na vertical),
+      <b>Saúde do app</b> (Reaplicar correções automáticas, Aplicar soluções nos lançadores,
       Restaurar de fábrica) e <b>Automático</b> (Iniciar com o sistema, Fixar Proton, Corrigir
       Vulkan — a pílula do Modo Freestyle, verde quando ligada).</li>
     <li><b>3. Detalhes técnicos</b> — sempre à vista, com o registro do serviço, a altura que sobra
       e um <b>Copiar</b>. O <i>Ver detalhes</i> deixou de existir.</li>
     <li><b>Saíram</b>: a chave <i>Ligar junto com o computador</i> do topo (virou o ligável
-      <i>Iniciar com o sistema</i>) e as quatro linhas de baixo do Perfil de Bateria (Limite, Vale
+      <i>Iniciar com o sistema</i>) e as quatro linhas de baixo do perfil de bateria (Limite, Vale
       para, Com limite, Sem limite).</li>
   </ul>
 </div>
@@ -583,7 +583,7 @@ _ESCONDE_O_AVULSO = ".so-avulso:not(.mostra){display:none}" in CSS
 _COLUNAS = re.findall(r'<div class="coluna[^"]*">(.*?)\n          </div>\n',
                       _entre(MIOLO, '<div class="avancadas">', "3. DETALHES"), re.S)
 if len(_COLUNAS) != 4:
-    raise SystemExit(f"ERRO: a seção Configurações Avançadas tem {len(_COLUNAS)} "
+    raise SystemExit(f"ERRO: a seção configurações avançadas tem {len(_COLUNAS)} "
                      "colunas e ela pediu quatro — ou a régua deixou de achá-las.")
 _ITENS = []
 for _col in _COLUNAS:
@@ -594,7 +594,7 @@ for _col in _COLUNAS:
                          "ele passaria a ocupar linha na cena que ela aprovou.")
     _ITENS.append(_n - _fora)
 if len(set(_ITENS)) != 1:
-    raise SystemExit(f"ERRO: as quatro colunas das Configurações Avançadas têm "
+    raise SystemExit(f"ERRO: as quatro colunas das configurações avançadas têm "
                      f"{_ITENS} itens à vista — elas deixam de acabar no mesmo y. "
                      "Ela pediu três em cada, na vertical.")
 for _regra in (".seg.bat-perfis button", ".cadeado"):
@@ -659,14 +659,14 @@ for _rot, _g, _c, _lig, _d in LIGAVEIS:
 _BOTOES_BAT = re.findall(r'<button class="(on)?"[^>]*data-v="([^"]+)"[^>]*>([^<]+)</button>',
                          _entre(MIOLO, '<div class="seg bat-perfis"', "</div>"))
 if len(_BOTOES_BAT) != len(ORC["PERFIS"]):
-    raise SystemExit(f"ERRO: o Perfil de Bateria tem {len(_BOTOES_BAT)} botões e o produto "
+    raise SystemExit(f"ERRO: o perfil de bateria tem {len(_BOTOES_BAT)} botões e o produto "
                      f"declara {len(ORC['PERFIS'])} perfis — a tela deixou de mostrar todos.")
 for _on, _p, _rot in _BOTOES_BAT:
     if _rot != ROT_PERFIL[_p]:
         raise SystemExit(f"ERRO: o botão de {_p!r} diz {_rot!r} e o produto o chama de "
                          f"{ROT_PERFIL[_p]!r} — nome de perfil não se digita nesta tela.")
 if sum(1 for on, _, _ in _BOTOES_BAT if on) != 1:
-    raise SystemExit("ERRO: a escolha do Perfil de Bateria não é única — ela pediu "
+    raise SystemExit("ERRO: a escolha do perfil de bateria não é única — ela pediu "
                      '"três botões lado a lado com escolha única".')
 if '<span class="rot">O perfil da mesa' in MIOLO:
     raise SystemExit('ERRO: o rótulo "O perfil da mesa" voltou (ponto 7.1 dela).')

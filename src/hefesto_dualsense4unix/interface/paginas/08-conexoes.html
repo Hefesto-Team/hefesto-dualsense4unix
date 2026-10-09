@@ -1142,7 +1142,7 @@
           terceira ("o que só você sabe") saiu em 28/08: as duas perguntas de
           rádio passaram a morar no "Mapear Entradas", que é a janela onde
           ela já declara a sala.
-       2. "Gestão de Controles"   — os controles ligados, em acordeão: o da fita
+       2. "Gestão de controles"   — os controles ligados, em acordeão: o da fita
           aberto, os outros na linha fechada com o resumo.
        3. "Rádio e adaptadores"— o inventário físico da mesa, e o Desempenho
           embaixo, separado, porque os turnos são POR ADAPTADOR.
@@ -1300,7 +1300,7 @@
   /* o dropdown que ainda espera resposta chama o olho pela borda, não por faixa */
   select.pronto.pergunta{border-color:var(--cyan);color:var(--cyan)}
 
-  /* ================= os cartões da Gestão de Controles =================
+  /* ================= os cartões da gestão de controles =================
      A-08-O-CHECKUP-ABSORVE-A-GESTAO-01, 25/09/2026 — o desenho de quem
      coordena, depois de ela ver o acordeão com a Gestão dentro do Check-up:
      *«tá quebradíssima a 8»*. A linha que abria e fechava virou UM CARTÃO POR
@@ -1380,7 +1380,7 @@
   .gc-est .est.warn > b{color:var(--orange)}
   .gc-corpo{display:flex;flex-direction:column;gap:5px;margin-top:auto;padding-top:10px}
   /* O PERFIL DE DESEMPENHO É DO CONTROLE — 26/09/2026, pedido: *«Modo
-     Economia de Bateria Deveria Ser o Perfil de Desempenho»* e *«perfil do
+     Economia de Bateria Deveria Ser o perfil de desempenho»* e *«perfil do
      desempenho deveria aparecer por controle»*. Os três botões do mapa das
      conexões desceram para cada cartão; o aceso é o deste controle. */
   .gc-perfil{display:flex;flex-direction:column;gap:5px}
@@ -1391,7 +1391,7 @@
      desenho (1212 px) e viravam reticências. Com `flex:1 1 auto` a 11px os
      três cabem a partir de 1181 px, a menor janela com quatro cartões numa
      fileira (abaixo dela a grade vira duas e o cartão alarga). Os nomes dela
-     de 26/09 («Perfil Máximo», «Perfil Econômico») pedem 246 px numa linha de
+     de 26/09 («Perfil máximo», «Perfil econômico») pedem 246 px numa linha de
      245: o vão de 2 px, 1 px de respiro e a letra 0,2 px mais junta devolvem
      os 15 que faltavam. */
   .gc-perfil .seg{display:flex;flex-wrap:nowrap;gap:2px}
@@ -1713,7 +1713,7 @@
      ocupa a linha para não dizer nada. */
   .mm-conf-linha.sumido{display:none}
 
-  /* ---- os gestos de baixo. `.apagado` deixou de ser só da Gestão de Controles:
+  /* ---- os gestos de baixo. `.apagado` deixou de ser só da gestão de controles:
      os dois botões de ação desta pop-up nascem apagados pela mesma regra de produto —
      botão que SOME ensina que a tela é instável. */
   /* OS DOIS GESTOS TÊM O MESMO TAMANHO — 31/08/2026, parte do *"ajusta os
@@ -2417,11 +2417,11 @@
       <span class="pa-rot">Perfil ativo</span>
       <span class="pa-nome" data-campo="perfil">—</span>
       <!-- `tabindex` de 07/09/2026: este `?` está no CABEÇALHO, logo nas dez
-           abas, e explica onde o "Salvar Perfil" grava. Sem ele o `<span>` não
+           abas, e explica onde o "Salvar perfil" grava. Sem ele o `<span>` não
            recebe foco e o `el.click()` do controle não o abria em aba nenhuma. -->
       <span class="ajuda" tabindex="0">?<span class="dica" style="left:auto;right:22px">
         Tudo o que você mudar em qualquer aba cai <b>neste</b> perfil quando clicar em
-        <b>Salvar Perfil</b>.<br><br>
+        <b>Salvar perfil</b>.<br><br>
         Cada controle guarda a <b>sua</b> configuração aqui dentro, pelo ID da peça — amanhã,
         em outra porta ou no rádio, ele traz de volta o que você deixou hoje.
       </span></span>
@@ -2823,10 +2823,10 @@
            que vale igual para caixa e para rádio. -->
       <input class="abre" type="radio" name="cx8-secao" id="cx8-2" checked>
       <div class="quadro-topo">
-        <label class="quadro-titulo" for="cx8-2">Gestão de Controles</label>
+        <label class="quadro-titulo" for="cx8-2">Gestão de controles</label>
         <span class="ajuda">?<span class="dica">
           Os seus controles e as entradas deles: as dicas em cima, cada uma com o seu botão,
-          e embaixo um cartão por controle com o estado dele agora e o Perfil de Desempenho
+          e embaixo um cartão por controle com o estado dele agora e o perfil de desempenho
           dele. Nada muda sozinho: a dica diz o que mover para onde, e o botão leva você até lá.
         </span></span>
       </div>
@@ -2903,7 +2903,7 @@
                  quanto tempo, e a saída manual. O defeito que ele cura (dois
                  DualSense ligados e a janela mostrando um, sem uma pista do
                  porquê) voltava inteiro no HTML;
-               · `home_actions.texto_native_bt_fragil` — o Modo Nativo com o
+               · `home_actions.texto_native_bt_fragil` — o modo nativo com o
                  controle no rádio, COM OS NÚMEROS de quem está frágil.
 
              ELES SÃO LINHA DE RESSALVA (a D-02 dela) e por isso entram os dois
@@ -3218,13 +3218,13 @@
               <span class="gc-est" data-campo="est-som" data-hef-alvo="html"><span class="est ok">Som <i class="certo">✓</i></span></span>
               <span class="gc-est" data-campo="est-modo" data-hef-alvo="html"><span class="est">Modo de conexão <b>Sony DualSense</b></span></span>
               <span class="gc-est" data-campo="est-visto" data-hef-alvo="html"><span class="est">Visto como <b>DualSense</b></span></span>
-              <span class="gc-est" data-campo="est-mira" data-hef-alvo="html"><span class="est ok" title="O quanto um gesto anda: 6 • Ignorar tremor até: 3 graus/s • Só enquanto eu segurar: Sempre">Analógico Virtual <i class="certo">✓</i></span></span>
+              <span class="gc-est" data-campo="est-mira" data-hef-alvo="html"><span class="est ok" title="O quanto um gesto anda: 6 • Ignorar tremor até: 3 graus/s • Só enquanto eu segurar: Sempre">Analógico virtual <i class="certo">✓</i></span></span>
             </div>
             <div class="gc-corpo">
               <div class="gc-perfil">
-                <div class="seg" role="radiogroup" aria-label="Perfil de Desempenho">
-                  <button class="btn on" data-gesto="perfil-do-controle" value="tudo_ligado" role="radio" aria-checked="true" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="tudo_ligado" data-hef-atributo="aria-checked" title="Gatilho adaptativo, vibração no que o jogo pedir, barra de luz, giroscópio e touchpad.">Perfil Máximo</button>
-                  <button class="btn" data-gesto="perfil-do-controle" value="bateria_longa" role="radio" aria-checked="false" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="bateria_longa" data-hef-atributo="aria-checked" title="Vibração com 30% da força; gatilhos e barra de luz mais fracos, sem apagar. Microfone por BT e Giroscópio continuam como estão.">Perfil Econômico</button>
+                <div class="seg" role="radiogroup" aria-label="Perfil de desempenho">
+                  <button class="btn on" data-gesto="perfil-do-controle" value="tudo_ligado" role="radio" aria-checked="true" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="tudo_ligado" data-hef-atributo="aria-checked" title="Gatilho adaptativo, vibração no que o jogo pedir, barra de luz, giroscópio e touchpad.">Perfil máximo</button>
+                  <button class="btn" data-gesto="perfil-do-controle" value="bateria_longa" role="radio" aria-checked="false" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="bateria_longa" data-hef-atributo="aria-checked" title="Vibração com 30% da força; gatilhos e barra de luz mais fracos, sem apagar. Microfone por BT e giroscópio continuam como estão.">Perfil econômico</button>
                   <button class="btn" data-gesto="perfil-do-controle" value="eu_escolho" role="radio" aria-checked="false" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="eu_escolho" data-hef-atributo="aria-checked" title="Nenhum teto: os ajustes de cada aba mandam neste controle.">Personalizado</button>
                 </div>
               </div>
@@ -3537,13 +3537,13 @@
               <span class="gc-est" data-campo="est-som" data-hef-alvo="html"><span class="est ok">Som <i class="certo">✓</i></span></span>
               <span class="gc-est" data-campo="est-modo" data-hef-alvo="html"><span class="est">Modo de conexão <b>Sony DualSense</b></span></span>
               <span class="gc-est" data-campo="est-visto" data-hef-alvo="html"><span class="est">Visto como <b>Xbox 360</b></span></span>
-              <span class="gc-est" data-campo="est-mira" data-hef-alvo="html"><span class="est" title="O quanto um gesto anda: 6 • Ignorar tremor até: 3 graus/s • Só enquanto eu segurar: Sempre">Analógico Virtual <b>Apagado</b></span></span>
+              <span class="gc-est" data-campo="est-mira" data-hef-alvo="html"><span class="est" title="O quanto um gesto anda: 6 • Ignorar tremor até: 3 graus/s • Só enquanto eu segurar: Sempre">Analógico virtual <b>Apagado</b></span></span>
             </div>
             <div class="gc-corpo">
               <div class="gc-perfil">
-                <div class="seg" role="radiogroup" aria-label="Perfil de Desempenho">
-                  <button class="btn" data-gesto="perfil-do-controle" value="tudo_ligado" role="radio" aria-checked="false" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="tudo_ligado" data-hef-atributo="aria-checked" title="Gatilho adaptativo, vibração no que o jogo pedir, barra de luz, giroscópio e touchpad.">Perfil Máximo</button>
-                  <button class="btn on" data-gesto="perfil-do-controle" value="bateria_longa" role="radio" aria-checked="true" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="bateria_longa" data-hef-atributo="aria-checked" title="Vibração com 30% da força; gatilhos e barra de luz mais fracos, sem apagar. Microfone por BT e Giroscópio continuam como estão.">Perfil Econômico</button>
+                <div class="seg" role="radiogroup" aria-label="Perfil de desempenho">
+                  <button class="btn" data-gesto="perfil-do-controle" value="tudo_ligado" role="radio" aria-checked="false" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="tudo_ligado" data-hef-atributo="aria-checked" title="Gatilho adaptativo, vibração no que o jogo pedir, barra de luz, giroscópio e touchpad.">Perfil máximo</button>
+                  <button class="btn on" data-gesto="perfil-do-controle" value="bateria_longa" role="radio" aria-checked="true" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="bateria_longa" data-hef-atributo="aria-checked" title="Vibração com 30% da força; gatilhos e barra de luz mais fracos, sem apagar. Microfone por BT e giroscópio continuam como estão.">Perfil econômico</button>
                   <button class="btn" data-gesto="perfil-do-controle" value="eu_escolho" role="radio" aria-checked="false" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="eu_escolho" data-hef-atributo="aria-checked" title="Nenhum teto: os ajustes de cada aba mandam neste controle.">Personalizado</button>
                 </div>
               </div>
@@ -3860,9 +3860,9 @@
             </div>
             <div class="gc-corpo">
               <div class="gc-perfil">
-                <div class="seg" role="radiogroup" aria-label="Perfil de Desempenho">
-                  <button class="btn on" data-gesto="perfil-do-controle" value="tudo_ligado" role="radio" aria-checked="true" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="tudo_ligado" data-hef-atributo="aria-checked" title="Gatilho adaptativo, vibração no que o jogo pedir, barra de luz, giroscópio e touchpad.">Perfil Máximo</button>
-                  <button class="btn" data-gesto="perfil-do-controle" value="bateria_longa" role="radio" aria-checked="false" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="bateria_longa" data-hef-atributo="aria-checked" title="Vibração com 30% da força; gatilhos e barra de luz mais fracos, sem apagar. Microfone por BT e Giroscópio continuam como estão.">Perfil Econômico</button>
+                <div class="seg" role="radiogroup" aria-label="Perfil de desempenho">
+                  <button class="btn on" data-gesto="perfil-do-controle" value="tudo_ligado" role="radio" aria-checked="true" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="tudo_ligado" data-hef-atributo="aria-checked" title="Gatilho adaptativo, vibração no que o jogo pedir, barra de luz, giroscópio e touchpad.">Perfil máximo</button>
+                  <button class="btn" data-gesto="perfil-do-controle" value="bateria_longa" role="radio" aria-checked="false" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="bateria_longa" data-hef-atributo="aria-checked" title="Vibração com 30% da força; gatilhos e barra de luz mais fracos, sem apagar. Microfone por BT e giroscópio continuam como estão.">Perfil econômico</button>
                   <button class="btn" data-gesto="perfil-do-controle" value="eu_escolho" role="radio" aria-checked="false" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="eu_escolho" data-hef-atributo="aria-checked" title="Nenhum teto: os ajustes de cada aba mandam neste controle.">Personalizado</button>
                 </div>
               </div>
@@ -4179,9 +4179,9 @@
             </div>
             <div class="gc-corpo">
               <div class="gc-perfil">
-                <div class="seg" role="radiogroup" aria-label="Perfil de Desempenho">
-                  <button class="btn on" data-gesto="perfil-do-controle" value="tudo_ligado" role="radio" aria-checked="true" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="tudo_ligado" data-hef-atributo="aria-checked" title="Gatilho adaptativo, vibração no que o jogo pedir, barra de luz, giroscópio e touchpad.">Perfil Máximo</button>
-                  <button class="btn" data-gesto="perfil-do-controle" value="bateria_longa" role="radio" aria-checked="false" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="bateria_longa" data-hef-atributo="aria-checked" title="Vibração com 30% da força; gatilhos e barra de luz mais fracos, sem apagar. Microfone por BT e Giroscópio continuam como estão.">Perfil Econômico</button>
+                <div class="seg" role="radiogroup" aria-label="Perfil de desempenho">
+                  <button class="btn on" data-gesto="perfil-do-controle" value="tudo_ligado" role="radio" aria-checked="true" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="tudo_ligado" data-hef-atributo="aria-checked" title="Gatilho adaptativo, vibração no que o jogo pedir, barra de luz, giroscópio e touchpad.">Perfil máximo</button>
+                  <button class="btn" data-gesto="perfil-do-controle" value="bateria_longa" role="radio" aria-checked="false" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="bateria_longa" data-hef-atributo="aria-checked" title="Vibração com 30% da força; gatilhos e barra de luz mais fracos, sem apagar. Microfone por BT e giroscópio continuam como estão.">Perfil econômico</button>
                   <button class="btn" data-gesto="perfil-do-controle" value="eu_escolho" role="radio" aria-checked="false" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="eu_escolho" data-hef-atributo="aria-checked" title="Nenhum teto: os ajustes de cada aba mandam neste controle.">Personalizado</button>
                 </div>
               </div>
@@ -4215,9 +4215,9 @@
           <button class="btn" data-gesto="examinar-portas" title="Examinar entradas — refaz o exame das entradas, da energia e do Bluetooth, e relê o estado de cada controle">
             <svg class="i" aria-hidden="true"><use href="#rd-reexaminar"/></svg> Examinar entradas</button>
           <a class="btn" href="mapa-do-controle.html" title="O mapa do controle — abre no navegador">
-            <svg class="i ds" aria-hidden="true"><use href="#rd-ds"/></svg> Mapa do Controle</a>
+            <svg class="i ds" aria-hidden="true"><use href="#rd-ds"/></svg> Mapa do controle</a>
           <a class="btn" href="mapa-das-portas.html" title="O mapa das conexões: cada entrada do computador, o que está nela e o que mudar">
-            <svg class="i" aria-hidden="true"><use href="#rd-hub"/></svg> Mapa das Conexões</a>
+            <svg class="i" aria-hidden="true"><use href="#rd-hub"/></svg> Mapa das conexões</a>
         </div>
       </div>
     </div>
@@ -4237,7 +4237,7 @@
     <div class="quadro radio" id="rd-secao">
       <input class="abre" type="radio" name="cx8-secao" id="cx8-3">
       <div class="quadro-topo cab">
-        <label class="quadro-titulo" for="cx8-3">Rádio e Adaptadores</label>
+        <label class="quadro-titulo" for="cx8-3">Rádio e adaptadores</label>
         <div class="direita">
           <button class="cadeado" data-gesto="radio-procurar" data-campo="radio-procurando" data-hef-alvo="classe" data-hef-classe="ligada" data-hef-quando="LIGADO" title="Procura aparelhos no adaptador aberto. Desligue para parar."><span class="p"></span>Procurar</button>
           <button class="btn principal" id="rd-b-conectar" data-gesto="conectar-aparelho" title="Conectar um aparelho novo">
@@ -5068,7 +5068,7 @@ document.addEventListener("click", function (ev) {
   <!-- ================= RODAPÉ ================= -->
   <div class="rodape">
     <!-- O RECIBO SAIU DA BARRA E VIROU DICA DOS BOTÕES — 30/08/2026, pedido:
-         *"'Aplicar vale agora • Salvar Perfil grava no Mortal Kombat' isso deveria
+         *"'Aplicar vale agora • Salvar perfil grava no Mortal Kombat' isso deveria
          em formato de tooltip ao deixar o mouse sobre os botões aplicar, salvar
          perfil, importar e exportar. em todas as abas."*
 
@@ -5099,7 +5099,7 @@ document.addEventListener("click", function (ev) {
 
          O NOME DO PERFIL É DADO, E ERA LITERAL — corrigido em 03/09/2026, achado
          pela régua do mockup e nomeado pelo juiz da leva. O pedido trazia um
-         EXEMPLO — *"Salvar Perfil grava no Mortal Kombat"* — e este arquivo
+         EXEMPLO — *"Salvar perfil grava no Mortal Kombat"* — e este arquivo
          congelou o exemplo em vez do nome. Resultado medido: as DEZ abas diziam
          "Grava no perfil Mortal Kombat" com `meu_perfil` ativo. O comentário aqui
          em cima já dizia o que importava — *o NOME do perfil, "a informação que
@@ -5115,7 +5115,7 @@ document.addEventListener("click", function (ev) {
             title="Vale agora: envia a configuração aos controles na hora. Não grava — ao trocar de perfil ou reiniciar, volta ao que está salvo.">Aplicar</button>
     <button class="r-salvar" data-campo="rodape.salvar"
             data-hef-alvo="atributo" data-hef-atributo="title"
-            title="Grava no perfil ativo. É onde a mudança vai cair.">Salvar Perfil</button>
+            title="Grava no perfil ativo. É onde a mudança vai cair.">Salvar perfil</button>
     <button class="r-importar" title="Carrega um perfil de arquivo .json.">Importar</button>
     <button class="r-exportar" data-campo="rodape.exportar"
             data-hef-alvo="atributo" data-hef-atributo="title"
@@ -5128,7 +5128,7 @@ document.addEventListener("click", function (ev) {
   <div class="tn-cx">
     <div class="tn-topo">
       <span class="tn-tit">Mapear entradas</span>
-      <span class="ajuda">?<span class="dica">Clique no aparelho, depois na entrada em que ele está. O Hefesto passa a chamar cada aparelho pelo número que você escreveu no gabinete. Tudo aqui é gravado no clique.<br><br>O gesto tem <b>dois tempos</b>: clique no aparelho, depois na entrada em que ele está. Um aparelho fica em <b>um</b> lugar — pôr onde ele não estava o tira de onde estava, no mesmo gesto.<br><br>Enquanto há um aparelho escolhido, <b>todo quadrado publica o juízo</b> para <i>ele</i>: sem sujeito a pergunta “aqui serve?” não existe, e a tela cala.<br><br>As duas perguntas do fim <b>mudaram-se da aba para cá</b> em 28/08, e aqui elas preenchem um vazio real: esta janela não guardava um único fato que só você tem. <b>Sem resposta</b> não é o mesmo que <b>“Não sei”</b>.<br><br><b>O que eu não consegui conferir neste desenho:</b><br>· em que ponto da fileira cada entrada fica. Sem isso eu não conto a folga entre dois adaptadores de rádio, e duas entradas nas pontas opostas do hub recebem o mesmo juízo de duas coladas.<br>· quais entradas são azuis. Enquanto você não passar por &quot;Mapear Entrada a Entrada&quot;, eu trato todas como pretas.<br>· o que é algum dos aparelhos da lista: o sistema não diz o que ele é, e sobre ele eu não tenho juízo nenhum.</span></span>
+      <span class="ajuda">?<span class="dica">Clique no aparelho, depois na entrada em que ele está. O Hefesto passa a chamar cada aparelho pelo número que você escreveu no gabinete. Tudo aqui é gravado no clique.<br><br>O gesto tem <b>dois tempos</b>: clique no aparelho, depois na entrada em que ele está. Um aparelho fica em <b>um</b> lugar — pôr onde ele não estava o tira de onde estava, no mesmo gesto.<br><br>Enquanto há um aparelho escolhido, <b>todo quadrado publica o juízo</b> para <i>ele</i>: sem sujeito a pergunta “aqui serve?” não existe, e a tela cala.<br><br>As duas perguntas do fim <b>mudaram-se da aba para cá</b> em 28/08, e aqui elas preenchem um vazio real: esta janela não guardava um único fato que só você tem. <b>Sem resposta</b> não é o mesmo que <b>“Não sei”</b>.<br><br><b>O que eu não consegui conferir neste desenho:</b><br>· em que ponto da fileira cada entrada fica. Sem isso eu não conto a folga entre dois adaptadores de rádio, e duas entradas nas pontas opostas do hub recebem o mesmo juízo de duas coladas.<br>· quais entradas são azuis. Enquanto você não passar por &quot;Mapear entrada a entrada&quot;, eu trato todas como pretas.<br>· o que é algum dos aparelhos da lista: o sistema não diz o que ele é, e sobre ele eu não tenho juízo nenhum.</span></span>
       <a class="tn-x" href="#" title="Fechar">×</a>
     </div>
     <div class="tn-corpo">
@@ -5214,7 +5214,7 @@ document.addEventListener("click", function (ev) {
 <div class="tela-nova" id="mapear-entrada-a-entrada">
   <div class="tn-cx">
     <div class="tn-topo">
-      <span class="tn-tit">Mapear Entrada a Entrada</span>
+      <span class="tn-tit">Mapear entrada a entrada</span>
       <span class="ajuda">?<span class="dica">A pergunta é sobre a <b>entrada</b>, não sobre o aparelho: mesmo quando o kernel não diz o que é a coisa, você sabe em que buraco ela está.<br><br>O rótulo é <b>espécie · nome do kernel</b>. O caminho fica à vista porque é a única coisa que distingue dois aparelhos idênticos.<br><br>A entrada aparece para mim em ~3,4 s. O controle só consegue vibrar por volta de 10,3 a 15,6 s — e essa demora é uma correção que o próprio Hefesto instala para ele não falhar. Não é você, e não é o seu cabo.</span></span>
       <a class="tn-x" href="#" title="Fechar" data-gesto="entrada-parar">×</a>
     </div>
@@ -5238,7 +5238,7 @@ document.addEventListener("click", function (ev) {
 <div class="tela-nova" id="mapear-entrada-a-entrada-fim">
   <div class="tn-cx">
     <div class="tn-topo">
-      <span class="tn-tit">Mapear Entrada a Entrada</span>
+      <span class="tn-tit">Mapear entrada a entrada</span>
       <span class="ajuda">?<span class="dica">Falta o que está vazio, e essa parte eu não consigo adivinhar. O sistema me lista mais entradas do que existem no seu gabinete — as que sobram são conectores internos que ninguém alcança. Se você me mostrar quais existem de verdade, eu paro de contar as que não existem.<br><br>É um <b>fim de verdade</b>: sem aviso de incompletude, sem selo de pendência, sem cartaz. O contador some, porque não há mais o que contar nesta fase.<br><br>Quem já tem lugar para tudo <b>abre a janela direto aqui</b>.<br><br>A entrada aparece para mim em ~3,4 s. O controle só consegue vibrar por volta de 10,3 a 15,6 s — e essa demora é uma correção que o próprio Hefesto instala para ele não falhar. Não é você, e não é o seu cabo.</span></span>
       <a class="tn-x" href="#" title="Fechar" data-gesto="entrada-parar">×</a>
     </div>
@@ -5261,7 +5261,7 @@ document.addEventListener("click", function (ev) {
 <div class="tela-nova" id="mapear-entrada-a-entrada-em-pe">
   <div class="tn-cx">
     <div class="tn-topo">
-      <span class="tn-tit">Mapear Entrada a Entrada</span>
+      <span class="tn-tit">Mapear entrada a entrada</span>
       <span class="ajuda">?<span class="dica">Pegue o DualSense e o cabo e encaixe numa entrada vazia. Qualquer aparelho que o computador reconheça serve — o DualSense é o melhor porque ele avisa na sua mão. Eu aviso quando achar.<br><br>Aqui a face <b>não se pergunta</b>: toda entrada aprendida de pé é gravada em <b>Atrás do gabinete</b>. O total <b>encolhe</b> — ele é recalculado pela leitura de agora, e “Não alcanço” tira uma vaga da conta.<br><br>A entrada aparece para mim em ~3,4 s. O controle só consegue vibrar por volta de 10,3 a 15,6 s — e essa demora é uma correção que o próprio Hefesto instala para ele não falhar. Não é você, e não é o seu cabo.</span></span>
       <a class="tn-x" href="#" title="Fechar" data-gesto="entrada-parar">×</a>
     </div>
@@ -5285,7 +5285,7 @@ document.addEventListener("click", function (ev) {
   <div class="tn-cx mp-cx">
     <div class="tn-topo">
       <span class="tn-tit">Mapear entradas</span>
-      <span class="ajuda">?<span class="dica">Use o mesmo DualSense em todas: ligue o cabo numa entrada, espere o Hefesto mostrar o que mediu dela e salve; o <b>nome</b> e o <b>lugar</b> são opcionais. Depois passe o cabo para a próxima. O nome e o lugar aparecem na <b>Gestão de Controles</b> e em <b>Rádio e Adaptadores</b>.<br><br>Nomeie a entrada (ou deixe vazia para ela ser enumerada). Ao final, valide e, caso necessário, faça os ajustes na entrada no botão Mapa das Conexões.</span></span>
+      <span class="ajuda">?<span class="dica">Use o mesmo DualSense em todas: ligue o cabo numa entrada, espere o Hefesto mostrar o que mediu dela e salve; o <b>nome</b> e o <b>lugar</b> são opcionais. Depois passe o cabo para a próxima. O nome e o lugar aparecem na <b>Gestão de controles</b> e em <b>Rádio e adaptadores</b>.<br><br>Nomeie a entrada (ou deixe vazia para ela ser enumerada). Ao final, valide e, caso necessário, faça os ajustes na entrada no botão Mapa das conexões.</span></span>
       <a class="tn-x" href="#" title="Fechar">×</a>
     </div>
     <div class="tn-corpo mp" id="mp-forma">

@@ -25,8 +25,8 @@ PACOTE = pathlib.Path(
     "src/hefesto_dualsense4unix/interface/pacotes/a02_controles.py")
 
 MESA = 4
-NOME_DELA = "Tudo no PC e Nada no Controle"
-NOME_DO_QUARTO = "Tudo no Controle e Nada no PC"
+NOME_DELA = "Tudo no PC e nada no controle"
+NOME_DO_QUARTO = "Tudo no controle e nada no PC"
 NOME_DE_ONTEM = "Tudo na TV e Nada no Controle"
 
 def _a_02_esta_em_trabalho() -> bool:

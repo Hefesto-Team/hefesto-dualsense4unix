@@ -154,6 +154,10 @@ jobs:
       # na interface."* Duas peneiras, o texto e a FOLHA — o `CABO` não estava
       # escrito em lugar nenhum, quem gritava era uma linha de CSS.
       - run: python3 scripts/check_a_maiuscula_decorativa.py
+      # Só a primeira letra é maiúscula — 09/10/2026,
+      # SO-A-PRIMEIRA-LETRA-E-MAIUSCULA-EM-TODA-ABA-01. No meio da frase, só
+      # nome próprio e marca: «Salvar perfil», nunca «Salvar Perfil».
+      - run: python3 scripts/check_so_a_primeira_letra.py
       # A grafia do nome — 11/09/2026, `F6-O-NOME-TEM-UM-DONO`. O `S` é do
       # DualSense, e `utils/identidade.py` o escrevia em minúscula em 427
       # linhas de 186 arquivos. Duas peneiras: a grafia, e o DONO — a moldura

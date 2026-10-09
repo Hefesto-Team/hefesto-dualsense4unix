@@ -979,7 +979,7 @@
   /* ---------- Sistema, em três seções (A-09-SISTEMA-EM-TRES-SECOES-01, 25/09/2026) ----------
      Pedido: *«praticamente vamos só mudar de lugar as coisas dessa aba»*.
      1. Status (três colunas: o Status e o exame em duas);
-     2. Configurações Avançadas (quatro colunas de botões);
+     2. Configurações avançadas (quatro colunas de botões);
      3. os Detalhes técnicos, com a altura que sobra.
      O quadro é `estica`: a seção 3 é a única que sabe crescer, e cresce. */
 
@@ -1010,7 +1010,7 @@
   .quadro-corpo > *{flex-shrink:0}
   /* o título da seção 2 — o nome que ela deu, uma linha acima dos quatro rótulos.
      A LETRA É A DO «Sistema», e o pedido é de produto (25/09/2026, 22h13):
-     *«Configurações Avançadas — Escreve com a mesma cor e tamanho de Sistema»*.
+     *«Configurações avançadas — Escreve com a mesma cor e tamanho de Sistema»*.
      Quem pinta é o `.quadro-titulo` do topo, no `<span>` de dentro; aqui fica
      só o lugar: o vão e o risco de cima. */
   .sec-grupo{margin:14px 0 8px;padding-top:10px;border-top:1px solid var(--border-sutil)}
@@ -1263,11 +1263,11 @@
       <span class="pa-rot">Perfil ativo</span>
       <span class="pa-nome" data-campo="perfil">—</span>
       <!-- `tabindex` de 07/09/2026: este `?` está no CABEÇALHO, logo nas dez
-           abas, e explica onde o "Salvar Perfil" grava. Sem ele o `<span>` não
+           abas, e explica onde o "Salvar perfil" grava. Sem ele o `<span>` não
            recebe foco e o `el.click()` do controle não o abria em aba nenhuma. -->
       <span class="ajuda" tabindex="0">?<span class="dica" style="left:auto;right:22px">
         Tudo o que você mudar em qualquer aba cai <b>neste</b> perfil quando clicar em
-        <b>Salvar Perfil</b>.<br><br>
+        <b>Salvar perfil</b>.<br><br>
         Cada controle guarda a <b>sua</b> configuração aqui dentro, pelo ID da peça — amanhã,
         em outra porta ou no rádio, ele traz de volta o que você deixou hoje.
       </span></span>
@@ -1334,11 +1334,11 @@
         </div>
 
         <!-- ---------- 2. CONFIGURAÇÕES AVANÇADAS ---------- -->
-        <div class="sec-grupo"><span class="quadro-titulo">Configurações Avançadas</span></div>
+        <div class="sec-grupo"><span class="quadro-titulo">Configurações avançadas</span></div>
         <div class="sec-rot sr-avancadas">
           <span>Serviço <span class="ajuda">?<span class="dica">Parar aqui não é o mesmo que desligar o Hefesto na aba Jogar: lá ele só sai do meio do jogo.</span></span></span><span></span>
-          <span>Perfil Global de Bateria <span class="ajuda">?<span class="dica">Vale para todos os controles, e cada um pode ter o seu na aba Conexões.</span></span></span><span></span>
-          <span>Saúde do App <span class="ajuda">?<span class="dica">Consertos que o exame já faz sozinho, para repetir quando precisar.</span></span></span><span></span>
+          <span>Perfil global de bateria <span class="ajuda">?<span class="dica">Vale para todos os controles, e cada um pode ter o seu na aba Conexões.</span></span></span><span></span>
+          <span>Saúde do app <span class="ajuda">?<span class="dica">Consertos que o exame já faz sozinho, para repetir quando precisar.</span></span></span><span></span>
           <span>Automático <span class="ajuda">?<span class="dica">Verde é ligado. Clique para trocar.</span></span></span>
         </div>
         <div class="avancadas">
@@ -1350,7 +1350,7 @@
           </div>
           <div class="risco"></div>
           <div class="coluna">
-            <div class="seg bat-perfis" data-id="bateria-perfil"><button class="on" data-gesto="perfil-da-mesa" data-v="tudo_ligado" data-campo="bateria-perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="tudo_ligado" title="Perfil Máximo: nada é limitado. Vale para todos os controles — cada um pode ter o seu na aba Conexões.">Perfil Máximo</button><button class="" data-gesto="perfil-da-mesa" data-v="bateria_longa" data-campo="bateria-perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="bateria_longa" title="Perfil Econômico: vibração em 30% da força. Vale para todos os controles.">Perfil Econômico</button><button class="" data-gesto="perfil-da-mesa" data-v="eu_escolho" data-campo="bateria-perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="eu_escolho" title="Personalizado: nada é limitado. Vale para todos os controles — cada um pode ter o seu na aba Conexões.">Personalizado</button></div>
+            <div class="seg bat-perfis" data-id="bateria-perfil"><button class="on" data-gesto="perfil-da-mesa" data-v="tudo_ligado" data-campo="bateria-perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="tudo_ligado" title="Perfil máximo: nada é limitado. Vale para todos os controles — cada um pode ter o seu na aba Conexões.">Perfil máximo</button><button class="" data-gesto="perfil-da-mesa" data-v="bateria_longa" data-campo="bateria-perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="bateria_longa" title="Perfil econômico: vibração em 30% da força. Vale para todos os controles.">Perfil econômico</button><button class="" data-gesto="perfil-da-mesa" data-v="eu_escolho" data-campo="bateria-perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="eu_escolho" title="Personalizado: nada é limitado. Vale para todos os controles — cada um pode ter o seu na aba Conexões.">Personalizado</button></div>
           </div>
           <div class="risco"></div>
           <div class="coluna">
@@ -1388,7 +1388,7 @@
   <!-- ================= RODAPÉ ================= -->
   <div class="rodape">
     <!-- O RECIBO SAIU DA BARRA E VIROU DICA DOS BOTÕES — 30/08/2026, pedido:
-         *"'Aplicar vale agora • Salvar Perfil grava no Mortal Kombat' isso deveria
+         *"'Aplicar vale agora • Salvar perfil grava no Mortal Kombat' isso deveria
          em formato de tooltip ao deixar o mouse sobre os botões aplicar, salvar
          perfil, importar e exportar. em todas as abas."*
 
@@ -1419,7 +1419,7 @@
 
          O NOME DO PERFIL É DADO, E ERA LITERAL — corrigido em 03/09/2026, achado
          pela régua do mockup e nomeado pelo juiz da leva. O pedido trazia um
-         EXEMPLO — *"Salvar Perfil grava no Mortal Kombat"* — e este arquivo
+         EXEMPLO — *"Salvar perfil grava no Mortal Kombat"* — e este arquivo
          congelou o exemplo em vez do nome. Resultado medido: as DEZ abas diziam
          "Grava no perfil Mortal Kombat" com `meu_perfil` ativo. O comentário aqui
          em cima já dizia o que importava — *o NOME do perfil, "a informação que
@@ -1435,7 +1435,7 @@
             title="Vale agora: envia a configuração aos controles na hora. Não grava — ao trocar de perfil ou reiniciar, volta ao que está salvo.">Aplicar</button>
     <button class="r-salvar" data-campo="rodape.salvar"
             data-hef-alvo="atributo" data-hef-atributo="title"
-            title="Grava no perfil ativo. É onde a mudança vai cair.">Salvar Perfil</button>
+            title="Grava no perfil ativo. É onde a mudança vai cair.">Salvar perfil</button>
     <button class="r-importar" title="Carrega um perfil de arquivo .json.">Importar</button>
     <button class="r-exportar" data-campo="rodape.exportar"
             data-hef-alvo="atributo" data-hef-atributo="title"

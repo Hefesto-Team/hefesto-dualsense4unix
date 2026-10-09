@@ -378,15 +378,15 @@ def _endereco_do_chip(pref: str, inerte: bool) -> str:
 
 
 #: OS DOIS MODOS DE UMA ABA — pedido de 06/10/2026, nas abas Iluminação e
-#: Gatilhos, que falam igual: *«Modo Automático (Se selecionado) o player não
-#: consegue interagir com os botões da página. Modo Personalizado (Que permite
+#: Gatilhos, que falam igual: *«Modo automático (Se selecionado) o player não
+#: consegue interagir com os botões da página. Modo personalizado (Que permite
 #: alterar as cores)»*  (noqa-acento: citação literal). Um par de botões na faixa do
 #: título, com a mesma largura; o escolhido acende. No Automático, a folha da aba
 #: deixa as colunas paradas pelo `data-modo-da-aba` do quadro (o pacote o escreve).
 MODO_AUTOMATICO = "automatico"  # (noqa-acento: valor de atributo)
 MODO_PERSONALIZADO = "personalizado"
-ROTULO_DO_MODO = {MODO_AUTOMATICO: "Modo Automático",
-                  MODO_PERSONALIZADO: "Modo Personalizado"}
+ROTULO_DO_MODO = {MODO_AUTOMATICO: "Modo automático",
+                  MODO_PERSONALIZADO: "Modo personalizado"}
 
 CSS_DO_PAR_DE_MODOS = """
   .par-modo{margin-left:auto;display:inline-grid;grid-template-columns:1fr 1fr;gap:6px}

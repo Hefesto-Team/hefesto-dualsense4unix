@@ -1,6 +1,6 @@
 """As frases — e a PALAVRA — que o usuário mandou tirar da tela, num lugar só.
 
-A DECISÃO DE PRODUTO DE 31/08/2026, sobre o aviso do Modo Nativo. A regra que sobrou é curta e
+A DECISÃO DE PRODUTO DE 31/08/2026, sobre o aviso do modo nativo. A regra que sobrou é curta e
 vale para a interface inteira:
 
     **NENHUM ALARME SEM MEDIÇÃO.**
@@ -19,7 +19,7 @@ achado pela frente da aba 01 e da mesma família dos sete do `O-PO-DECIDE`:
 A proibição vivia **só** dentro de `aba01._conferir`, que lê o **HTML
 ESTÁTICO** da página gerada. A coluna Atenção, porém, é escrita em **tempo de
 execução** — o piloto manda o texto pelo `_json`. Logo quem cumprir a
-decisão [01] ao pé da letra (*"o aviso do Modo Nativo na coluna Atenção"*)
+decisão [01] ao pé da letra (*"o aviso do modo nativo na coluna Atenção"*)
 poria a frase banida na tela do usuário **com o gerador VERDE**.
 
 A régua olhava o lugar errado. Agora a lista é uma só, e há duas guardas
@@ -27,7 +27,7 @@ lendo-a: a estática (`aba01._conferir`) e a de execução (`hefesto_vivo._json`
 o funil por onde TODO valor passa a caminho do WebView).
 
 O QUE A DECISÃO [01] AINDA PODE TER, e é a leitura de PO de 04/09/2026: a
-coluna Atenção pode dizer **o estado medido** — *o Modo Nativo está ligado, a
+coluna Atenção pode dizer **o estado medido** — *o modo nativo está ligado, a
 Ponte com o jogo está desligada* — porque isso o produto mede e sabe. O que ela
 não pode é PROFETIZAR consequência que ninguém mediu. A decisão de 31/08
 vence a recomendação de 04/09, como venceu nas outras sete.

@@ -29,7 +29,7 @@ FRASE_DELA = "Conecte um DualSense em cada entrada USB do seu dispositivo."
 #: O resto da frase dela é explicação: desde 08/10/2026 mora no «?» da tela.
 RESTO_DA_FRASE_DELA = (
     "Nomeie a entrada (ou deixe vazia para ela ser enumerada). Ao final, valide e, "
-    "caso necessário, faça os ajustes na entrada no botão Mapa das Conexões."
+    "caso necessário, faça os ajustes na entrada no botão Mapa das conexões."
 )
 
 PCI = "0000:0a:00.0"
@@ -130,7 +130,7 @@ def test_a_dica_do_mapear_nao_desdiz_a_frase() -> None:
     topo = bancada[inicio:bancada.index('id="mp-forma"', inicio)]
     dica = topo[topo.index('class="dica">'):]
     assert "opcionais" in dica, f"a dica do Mapear ainda manda dar nome e lugar: {dica[:300]}"
-    assert "Check-up" not in dica and "Gestão de Controles" in dica, dica[:300]
+    assert "Check-up" not in dica and "Gestão de controles" in dica, dica[:300]
     botao = bancada[bancada.index('href="#mapear-portas"'):]
     botao = botao[:botao.index(">")]
     assert "dê nome e lugar" not in botao and "opcionais" in botao, botao

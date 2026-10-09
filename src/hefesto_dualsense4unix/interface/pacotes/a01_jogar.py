@@ -681,7 +681,7 @@ def _aviso_da_divergencia_de_mascara(state: dict[str, Any]) -> dict[str, str] | 
 def _aviso_da_cura_do_travamento() -> dict[str, str] | None:
     """A linha da **cura do travamento do USB**, e só quando ela pede ação.
 
-    **A PALAVRA, 05/09/2026**, sobre o aviso do Modo Nativo: *"Não me
+    **A PALAVRA, 05/09/2026**, sobre o aviso do modo nativo: *"Não me
     lembro disso acontecer. E não deveria. Mas caso ocorra na coluna atenção"* —
     e a medição diz que ela tem razão nas três. O Hefesto **conserta** a causa
     desde a SPRINT-GAME-RUMBLE-01 (o quirk `054c:0ce6:…ignore_ctl_error` do
@@ -902,7 +902,7 @@ def _ressalva_da_mascara(state: dict[str, Any]) -> str:
     """A linha da máscara fora do modo jogo — ``""`` em TODO estado desde 13/09/2026.
 
     NOTA DATADA — 13/09/2026, JOGAR-A-FAIXA-QUE-PULA-01 §3.1. Até hoje ela
-    devolvia `RESSALVA_DA_MASCARA` em Modo Nativo e na Navegação, e a frase era
+    devolvia `RESSALVA_DA_MASCARA` em modo nativo e na Navegação, e a frase era
     pintada a cada tique, até sem máscara nenhuma escolhida. A palavra de produto
     sobre as frases de status — *"em todas as abas da interface"* (TELA-CALADA-01)
     — a tirou da tela. O FATO que ela dizia continua verdadeiro e continua com

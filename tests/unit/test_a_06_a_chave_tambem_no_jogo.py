@@ -55,7 +55,7 @@ def test_a_chave_tem_os_tres_enderecos_e_nasce_desligada():
 
 def test_o_ponto_de_interrogacao_da_chave_diz_o_porque_do_nativo():
     topo = _topo_das_definicoes()
-    assert "Modo Nativo" in topo and "apagada" in topo
+    assert "modo nativo" in topo and "apagada" in topo
     assert "P1" in topo, "a dica tem de dizer que o cursor e a rolagem só andam pelo P1"
 
 

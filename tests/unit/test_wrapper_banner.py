@@ -81,7 +81,7 @@ class TestDecisaoPura:
         assert "Copie" not in WRAPPER_MISSING_TEXT
         assert "Reponho" in WRAPPER_MISSING_TEXT
         assert "Aplicar" in WRAPPER_MISSING_TEXT
-        assert "Salvar Perfil" in WRAPPER_MISSING_TEXT
+        assert "Salvar perfil" in WRAPPER_MISSING_TEXT
         for jargao in ("env", "vdf", "wrapper_used", "dedup", "hefesto-launch"):
             assert jargao not in WRAPPER_MISSING_TEXT
 
@@ -92,7 +92,7 @@ class TestDecisaoPura:
         )
         arquivos = sorted(paginas.glob("[0-9][0-9]-*.html"))
         assert len(arquivos) == 10, f"as dez abas viraram {len(arquivos)}"
-        for rotulo in ("Aplicar", "Salvar Perfil"):
+        for rotulo in ("Aplicar", "Salvar perfil"):
             assert rotulo in WRAPPER_MISSING_TEXT
             for html in arquivos:
                 assert f">{rotulo}</button>" in html.read_text(encoding="utf-8"), (
@@ -103,7 +103,7 @@ class TestDecisaoPura:
     def test_a_promessa_da_frase_tem_quem_a_cumpra(self, monkeypatch: Any) -> None:
         """Uma promessa sem dono é o defeito mais caro desta casa.
 
-        A frase promete repor o atalho *"no próximo Aplicar ou Salvar Perfil"*.
+        A frase promete repor o atalho *"no próximo Aplicar ou Salvar perfil"*.
         Quem cumpre é a carona (`carona_do_wrapper.passada`), e ela não tem
         relógio próprio — pega carona no gesto. Este caso EXECUTA o caminho da
         interface nova (o rodapé das dez abas passa por `perfil.com_a_carona`)

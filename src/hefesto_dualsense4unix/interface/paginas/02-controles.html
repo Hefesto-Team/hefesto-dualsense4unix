@@ -2262,7 +2262,7 @@
      fechados. O `margin-left:auto` é dele agora, e saiu do `.bat`: com os dois
      pedindo o vão, o flex partiria a sobra ao meio e o grupo flutuaria em
      quatro lugares diferentes. */
-  /* 06/10/2026 (leva 1.7, item 12): «Analógico Virtual» é mais longo que «Mira Virtual». O vão e
+  /* 06/10/2026 (leva 1.7, item 12): «Analógico virtual» é mais longo que «Mira Virtual». O vão e
      o enchimento encolheram para a frase do giroscópio no cartão aberto continuar inteira no
      tamanho do desenho (`test_no_tamanho_do_desenho_nada_e_cortado`).
      08/10/2026 (O-ANALOGICO-VIRTUAL-E-UM-SO): com o nome de quem joga no título (07/10), as três
@@ -2335,8 +2335,8 @@
   .pausa-da-inclinacao.parada .chip-virtual.on>.sw .p{box-shadow:none}
   /* «USAR COMO ANALÓGICO VIRTUAL» EM DUAS LINHAS — 06/10/2026, leva 1.7. A
      coluna de cada analógico tem ~100px, e a frase em uma linha passaria dela.
-     Com o Analógico Virtual apagado no cabeçalho, os dois chips ficam cinza e
-     seguem clicáveis: o clique num lado acende o Analógico Virtual nele. */
+     Com o analógico virtual apagado no cabeçalho, os dois chips ficam cinza e
+     seguem clicáveis: o clique num lado acende o analógico virtual nele. */
   .chip-virtual>.sw{white-space:normal;height:auto;min-height:17px;line-height:12px;
     padding:2px 6px;gap:4px;font-size:10px;text-align:center;width:100%;max-width:112px}
   .ctl:has(.chip-da-mira.off) .chip-virtual>.sw,
@@ -2747,11 +2747,11 @@
       <span class="pa-rot">Perfil ativo</span>
       <span class="pa-nome" data-campo="perfil">—</span>
       <!-- `tabindex` de 07/09/2026: este `?` está no CABEÇALHO, logo nas dez
-           abas, e explica onde o "Salvar Perfil" grava. Sem ele o `<span>` não
+           abas, e explica onde o "Salvar perfil" grava. Sem ele o `<span>` não
            recebe foco e o `el.click()` do controle não o abria em aba nenhuma. -->
       <span class="ajuda" tabindex="0">?<span class="dica" style="left:auto;right:22px">
         Tudo o que você mudar em qualquer aba cai <b>neste</b> perfil quando clicar em
-        <b>Salvar Perfil</b>.<br><br>
+        <b>Salvar perfil</b>.<br><br>
         Cada controle guarda a <b>sua</b> configuração aqui dentro, pelo ID da peça — amanhã,
         em outra porta ou no rádio, ele traz de volta o que você deixou hoje.
       </span></span>
@@ -2860,7 +2860,7 @@
                interruptor, igual para todo controle e todo momento.
 
                A frase é de `controller_card.texto_motion`, inclusive as duas
-               exceções (Modo Nativo e máscara Xbox) — omiti-las seria a tela
+               exceções (Modo nativo e máscara Xbox) — omiti-las seria a tela
                parecer quebrada justamente quando ela está certa: em Nativo não
                há gamepad virtual a que perguntar, e a máscara Xbox não TEM
                giroscópio.
@@ -2900,7 +2900,7 @@
           <span class="sensores-peca" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO">
             <span class="dica-do-giro" data-campo="giro-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="Ligado: o jogo recebe o giro deste controle."><button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><span class="p"></span>Giroscópio</button></span>
             <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
-            <span class="chip-da-mira" data-campo="mira-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="mira" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar os movimentos do controle como um analógico, para pessoas com deficiência motora. O lado se escolhe embaixo de cada analógico."><span class="p"></span>Analógico Virtual</button></span>
+            <span class="chip-da-mira" data-campo="mira-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="mira" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar os movimentos do controle como um analógico, para pessoas com deficiência motora. O lado se escolhe embaixo de cada analógico."><span class="p"></span>Analógico virtual</button></span>
           </span>
           <!-- A BATERIA GANHOU ENDEREÇO EM 01/09/2026, e até aqui ela era a
                PINTURA DO MOCKUP para sempre: o pacote da aba emite `bateria`
@@ -3210,10 +3210,10 @@
               <span data-campo="alto-canal-porque" data-hef-alvo="atributo" data-hef-atributo="title"><span class="selo-ativo no-rotulo on" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M17 8.5a5 5 0 0 1 0 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="alto-canal" data-hef-alvo="html">ATIVO</span></span></span>
               <span class="selo-som" data-campo="alto-selo" data-hef-alvo="html"><i class="nada"></i></span>
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
-                <b>Efeitos do Jogo no Controle, Áudio do PC no PC</b>: só o que o jogo mandar para este controle sai no alto-falante dele.
-                <b>Efeitos do Jogo e Áudio do PC no Controle</b>: tudo o que a máquina toca cai aqui também, e continua saindo no PC.
-                <b>Tudo no PC e Nada no Controle</b>: o alto-falante deste controle para de tocar, e todo o som, inclusive o dele, sai no PC.
-                <b>Tudo no Controle e Nada no PC</b>: todo o som do PC sai só no alto-falante deste controle, e o PC fica em silêncio.
+                <b>Efeitos do jogo no controle, áudio do PC no PC</b>: só o que o jogo mandar para este controle sai no alto-falante dele.
+                <b>Efeitos do jogo e áudio do PC no controle</b>: tudo o que a máquina toca cai aqui também, e continua saindo no PC.
+                <b>Tudo no PC e nada no controle</b>: o alto-falante deste controle para de tocar, e todo o som, inclusive o dele, sai no PC.
+                <b>Tudo no controle e nada no PC</b>: todo o som do PC sai só no alto-falante deste controle, e o PC fica em silêncio.
               </span></span>
             </div>
             <span class="onda" data-campo="alto-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="alto-onda-0" data-hef-alvo="altura" style="height:100%"></i><i data-campo="alto-onda-1" data-hef-alvo="altura" style="height:88%"></i><i data-campo="alto-onda-2" data-hef-alvo="altura" style="height:64%"></i><i data-campo="alto-onda-3" data-hef-alvo="altura" style="height:92%"></i><i data-campo="alto-onda-4" data-hef-alvo="altura" style="height:76%"></i><i data-campo="alto-onda-5" data-hef-alvo="altura" style="height:54%"></i><i data-campo="alto-onda-6" data-hef-alvo="altura" style="height:82%"></i><i data-campo="alto-onda-7" data-hef-alvo="altura" style="height:96%"></i><i data-campo="alto-onda-8" data-hef-alvo="altura" style="height:70%"></i><i data-campo="alto-onda-9" data-hef-alvo="altura" style="height:48%"></i><i data-campo="alto-onda-10" data-hef-alvo="altura" style="height:86%"></i><i data-campo="alto-onda-11" data-hef-alvo="altura" style="height:60%"></i><i data-campo="alto-onda-12" data-hef-alvo="altura" style="height:74%"></i><i data-campo="alto-onda-13" data-hef-alvo="altura" style="height:90%"></i></span>
@@ -3240,17 +3240,17 @@
                  24/09/2026, decisão de 23/09: voltar o quarto, encaixado
                  pelo desenho, sem quebrar a altura do cartão. Os dois de baixo
                  são o espelho um do outro, e é por isso que dividem a linha:
-                 «Tudo no PC e Nada no Controle» à esquerda, «Tudo no Controle e
+                 «Tudo no PC e nada no controle» à esquerda, «Tudo no Controle e
                  Nada no PC» à direita. Na janela do produto (1180) cada um
                  quebra em duas linhas; da janela de 1440 para cima cabem numa
                  só. A gramática não muda: mesmo gesto, mesmo endereço, cada
                  botão com o seu valor. -->
             <div class="rota quatro">
-              <button class="on" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">Efeitos do Jogo no Controle, Áudio do PC no PC</button>
-              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="O som do PC sai no alto-falante deste controle e continua saindo no PC. Serve para jogar acompanhado: cada um ouve no próprio controle.">Efeitos do Jogo e Áudio do PC no Controle</button>
+              <button class="on" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">Efeitos do jogo no controle, áudio do PC no PC</button>
+              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="O som do PC sai no alto-falante deste controle e continua saindo no PC. Serve para jogar acompanhado: cada um ouve no próprio controle.">Efeitos do jogo e áudio do PC no controle</button>
               <span class="par">
-                <button class="" data-gesto="rota" data-rota="nada" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="nada" title="Todo o som, inclusive o deste controle, sai no PC, e o alto-falante deste controle para de tocar. O microfone e a vibração não mudam.">Tudo no PC e Nada no Controle</button>
-                <button data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc" title="Todo o som do PC sai só no alto-falante deste controle, e o PC fica em silêncio. Vale para um controle por vez. O microfone e a vibração não mudam.">Tudo no Controle e Nada no PC</button>
+                <button class="" data-gesto="rota" data-rota="nada" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="nada" title="Todo o som, inclusive o deste controle, sai no PC, e o alto-falante deste controle para de tocar. O microfone e a vibração não mudam.">Tudo no PC e nada no controle</button>
+                <button data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc" title="Todo o som do PC sai só no alto-falante deste controle, e o PC fica em silêncio. Vale para um controle por vez. O microfone e a vibração não mudam.">Tudo no controle e nada no PC</button>
               </span>
             </div>
           </div>
@@ -3390,7 +3390,7 @@
                interruptor, igual para todo controle e todo momento.
 
                A frase é de `controller_card.texto_motion`, inclusive as duas
-               exceções (Modo Nativo e máscara Xbox) — omiti-las seria a tela
+               exceções (Modo nativo e máscara Xbox) — omiti-las seria a tela
                parecer quebrada justamente quando ela está certa: em Nativo não
                há gamepad virtual a que perguntar, e a máscara Xbox não TEM
                giroscópio.
@@ -3430,7 +3430,7 @@
           <span class="sensores-peca" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO">
             <span class="dica-do-giro" data-campo="giro-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="Ligado: o jogo recebe o giro deste controle."><button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><span class="p"></span>Giroscópio</button></span>
             <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
-            <span class="chip-da-mira off" data-campo="mira-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="mira" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar os movimentos do controle como um analógico, para pessoas com deficiência motora. O lado se escolhe embaixo de cada analógico."><span class="p"></span>Analógico Virtual</button></span>
+            <span class="chip-da-mira off" data-campo="mira-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="mira" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar os movimentos do controle como um analógico, para pessoas com deficiência motora. O lado se escolhe embaixo de cada analógico."><span class="p"></span>Analógico virtual</button></span>
           </span>
           <!-- A BATERIA GANHOU ENDEREÇO EM 01/09/2026, e até aqui ela era a
                PINTURA DO MOCKUP para sempre: o pacote da aba emite `bateria`
@@ -3740,10 +3740,10 @@
               <span data-campo="alto-canal-porque" data-hef-alvo="atributo" data-hef-atributo="title"><span class="selo-ativo no-rotulo on" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M17 8.5a5 5 0 0 1 0 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="alto-canal" data-hef-alvo="html">ATIVO</span></span></span>
               <span class="selo-som" data-campo="alto-selo" data-hef-alvo="html"><i class="nada"></i></span>
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
-                <b>Efeitos do Jogo no Controle, Áudio do PC no PC</b>: só o que o jogo mandar para este controle sai no alto-falante dele.
-                <b>Efeitos do Jogo e Áudio do PC no Controle</b>: tudo o que a máquina toca cai aqui também, e continua saindo no PC.
-                <b>Tudo no PC e Nada no Controle</b>: o alto-falante deste controle para de tocar, e todo o som, inclusive o dele, sai no PC.
-                <b>Tudo no Controle e Nada no PC</b>: todo o som do PC sai só no alto-falante deste controle, e o PC fica em silêncio.
+                <b>Efeitos do jogo no controle, áudio do PC no PC</b>: só o que o jogo mandar para este controle sai no alto-falante dele.
+                <b>Efeitos do jogo e áudio do PC no controle</b>: tudo o que a máquina toca cai aqui também, e continua saindo no PC.
+                <b>Tudo no PC e nada no controle</b>: o alto-falante deste controle para de tocar, e todo o som, inclusive o dele, sai no PC.
+                <b>Tudo no controle e nada no PC</b>: todo o som do PC sai só no alto-falante deste controle, e o PC fica em silêncio.
               </span></span>
             </div>
             <span class="onda" data-campo="alto-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="alto-onda-0" data-hef-alvo="altura" style="height:70%"></i><i data-campo="alto-onda-1" data-hef-alvo="altura" style="height:52%"></i><i data-campo="alto-onda-2" data-hef-alvo="altura" style="height:66%"></i><i data-campo="alto-onda-3" data-hef-alvo="altura" style="height:44%"></i><i data-campo="alto-onda-4" data-hef-alvo="altura" style="height:72%"></i><i data-campo="alto-onda-5" data-hef-alvo="altura" style="height:58%"></i><i data-campo="alto-onda-6" data-hef-alvo="altura" style="height:48%"></i><i data-campo="alto-onda-7" data-hef-alvo="altura" style="height:64%"></i><i data-campo="alto-onda-8" data-hef-alvo="altura" style="height:54%"></i><i data-campo="alto-onda-9" data-hef-alvo="altura" style="height:70%"></i><i data-campo="alto-onda-10" data-hef-alvo="altura" style="height:46%"></i><i data-campo="alto-onda-11" data-hef-alvo="altura" style="height:60%"></i><i data-campo="alto-onda-12" data-hef-alvo="altura" style="height:50%"></i><i data-campo="alto-onda-13" data-hef-alvo="altura" style="height:68%"></i></span>
@@ -3770,17 +3770,17 @@
                  24/09/2026, decisão de 23/09: voltar o quarto, encaixado
                  pelo desenho, sem quebrar a altura do cartão. Os dois de baixo
                  são o espelho um do outro, e é por isso que dividem a linha:
-                 «Tudo no PC e Nada no Controle» à esquerda, «Tudo no Controle e
+                 «Tudo no PC e nada no controle» à esquerda, «Tudo no Controle e
                  Nada no PC» à direita. Na janela do produto (1180) cada um
                  quebra em duas linhas; da janela de 1440 para cima cabem numa
                  só. A gramática não muda: mesmo gesto, mesmo endereço, cada
                  botão com o seu valor. -->
             <div class="rota quatro">
-              <button class="" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">Efeitos do Jogo no Controle, Áudio do PC no PC</button>
-              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="O som do PC sai no alto-falante deste controle e continua saindo no PC. Serve para jogar acompanhado: cada um ouve no próprio controle.">Efeitos do Jogo e Áudio do PC no Controle</button>
+              <button class="" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">Efeitos do jogo no controle, áudio do PC no PC</button>
+              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="O som do PC sai no alto-falante deste controle e continua saindo no PC. Serve para jogar acompanhado: cada um ouve no próprio controle.">Efeitos do jogo e áudio do PC no controle</button>
               <span class="par">
-                <button class="on" data-gesto="rota" data-rota="nada" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="nada" title="Todo o som, inclusive o deste controle, sai no PC, e o alto-falante deste controle para de tocar. O microfone e a vibração não mudam.">Tudo no PC e Nada no Controle</button>
-                <button data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc" title="Todo o som do PC sai só no alto-falante deste controle, e o PC fica em silêncio. Vale para um controle por vez. O microfone e a vibração não mudam.">Tudo no Controle e Nada no PC</button>
+                <button class="on" data-gesto="rota" data-rota="nada" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="nada" title="Todo o som, inclusive o deste controle, sai no PC, e o alto-falante deste controle para de tocar. O microfone e a vibração não mudam.">Tudo no PC e nada no controle</button>
+                <button data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc" title="Todo o som do PC sai só no alto-falante deste controle, e o PC fica em silêncio. Vale para um controle por vez. O microfone e a vibração não mudam.">Tudo no controle e nada no PC</button>
               </span>
             </div>
           </div>
@@ -3920,7 +3920,7 @@
                interruptor, igual para todo controle e todo momento.
 
                A frase é de `controller_card.texto_motion`, inclusive as duas
-               exceções (Modo Nativo e máscara Xbox) — omiti-las seria a tela
+               exceções (Modo nativo e máscara Xbox) — omiti-las seria a tela
                parecer quebrada justamente quando ela está certa: em Nativo não
                há gamepad virtual a que perguntar, e a máscara Xbox não TEM
                giroscópio.
@@ -3960,7 +3960,7 @@
           <span class="sensores-peca" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO">
             <span class="dica-do-giro" data-campo="giro-dica" data-hef-alvo="atributo" data-hef-atributo="title"><button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><span class="p"></span>Giroscópio</button></span>
             <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
-            <span class="chip-da-mira" data-campo="mira-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="mira" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar os movimentos do controle como um analógico, para pessoas com deficiência motora. O lado se escolhe embaixo de cada analógico."><span class="p"></span>Analógico Virtual</button></span>
+            <span class="chip-da-mira" data-campo="mira-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="mira" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar os movimentos do controle como um analógico, para pessoas com deficiência motora. O lado se escolhe embaixo de cada analógico."><span class="p"></span>Analógico virtual</button></span>
           </span>
           <!-- A BATERIA GANHOU ENDEREÇO EM 01/09/2026, e até aqui ela era a
                PINTURA DO MOCKUP para sempre: o pacote da aba emite `bateria`
@@ -4270,10 +4270,10 @@
               <span data-campo="alto-canal-porque" data-hef-alvo="atributo" data-hef-atributo="title"><span class="selo-ativo no-rotulo" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M17 8.5a5 5 0 0 1 0 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="alto-canal" data-hef-alvo="html"><i class="nada"></i></span></span></span>
               <span class="selo-som" data-campo="alto-selo" data-hef-alvo="html"><i class="nada"></i></span>
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
-                <b>Efeitos do Jogo no Controle, Áudio do PC no PC</b>: só o que o jogo mandar para este controle sai no alto-falante dele.
-                <b>Efeitos do Jogo e Áudio do PC no Controle</b>: tudo o que a máquina toca cai aqui também, e continua saindo no PC.
-                <b>Tudo no PC e Nada no Controle</b>: o alto-falante deste controle para de tocar, e todo o som, inclusive o dele, sai no PC.
-                <b>Tudo no Controle e Nada no PC</b>: todo o som do PC sai só no alto-falante deste controle, e o PC fica em silêncio.
+                <b>Efeitos do jogo no controle, áudio do PC no PC</b>: só o que o jogo mandar para este controle sai no alto-falante dele.
+                <b>Efeitos do jogo e áudio do PC no controle</b>: tudo o que a máquina toca cai aqui também, e continua saindo no PC.
+                <b>Tudo no PC e nada no controle</b>: o alto-falante deste controle para de tocar, e todo o som, inclusive o dele, sai no PC.
+                <b>Tudo no controle e nada no PC</b>: todo o som do PC sai só no alto-falante deste controle, e o PC fica em silêncio.
               </span></span>
             </div>
             <span class="onda" data-campo="alto-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="alto-onda-0" data-hef-alvo="altura" style="height:55%"></i><i data-campo="alto-onda-1" data-hef-alvo="altura" style="height:40%"></i><i data-campo="alto-onda-2" data-hef-alvo="altura" style="height:62%"></i><i data-campo="alto-onda-3" data-hef-alvo="altura" style="height:48%"></i><i data-campo="alto-onda-4" data-hef-alvo="altura" style="height:58%"></i><i data-campo="alto-onda-5" data-hef-alvo="altura" style="height:36%"></i><i data-campo="alto-onda-6" data-hef-alvo="altura" style="height:50%"></i><i data-campo="alto-onda-7" data-hef-alvo="altura" style="height:44%"></i><i data-campo="alto-onda-8" data-hef-alvo="altura" style="height:60%"></i><i data-campo="alto-onda-9" data-hef-alvo="altura" style="height:38%"></i><i data-campo="alto-onda-10" data-hef-alvo="altura" style="height:52%"></i><i data-campo="alto-onda-11" data-hef-alvo="altura" style="height:46%"></i><i data-campo="alto-onda-12" data-hef-alvo="altura" style="height:42%"></i><i data-campo="alto-onda-13" data-hef-alvo="altura" style="height:56%"></i></span>
@@ -4300,17 +4300,17 @@
                  24/09/2026, decisão de 23/09: voltar o quarto, encaixado
                  pelo desenho, sem quebrar a altura do cartão. Os dois de baixo
                  são o espelho um do outro, e é por isso que dividem a linha:
-                 «Tudo no PC e Nada no Controle» à esquerda, «Tudo no Controle e
+                 «Tudo no PC e nada no controle» à esquerda, «Tudo no Controle e
                  Nada no PC» à direita. Na janela do produto (1180) cada um
                  quebra em duas linhas; da janela de 1440 para cima cabem numa
                  só. A gramática não muda: mesmo gesto, mesmo endereço, cada
                  botão com o seu valor. -->
             <div class="rota quatro">
-              <button class="" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">Efeitos do Jogo no Controle, Áudio do PC no PC</button>
-              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="O som do PC sai no alto-falante deste controle e continua saindo no PC. Serve para jogar acompanhado: cada um ouve no próprio controle.">Efeitos do Jogo e Áudio do PC no Controle</button>
+              <button class="" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">Efeitos do jogo no controle, áudio do PC no PC</button>
+              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="O som do PC sai no alto-falante deste controle e continua saindo no PC. Serve para jogar acompanhado: cada um ouve no próprio controle.">Efeitos do jogo e áudio do PC no controle</button>
               <span class="par">
-                <button class="" data-gesto="rota" data-rota="nada" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="nada" title="Todo o som, inclusive o deste controle, sai no PC, e o alto-falante deste controle para de tocar. O microfone e a vibração não mudam.">Tudo no PC e Nada no Controle</button>
-                <button data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc" title="Todo o som do PC sai só no alto-falante deste controle, e o PC fica em silêncio. Vale para um controle por vez. O microfone e a vibração não mudam.">Tudo no Controle e Nada no PC</button>
+                <button class="" data-gesto="rota" data-rota="nada" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="nada" title="Todo o som, inclusive o deste controle, sai no PC, e o alto-falante deste controle para de tocar. O microfone e a vibração não mudam.">Tudo no PC e nada no controle</button>
+                <button data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc" title="Todo o som do PC sai só no alto-falante deste controle, e o PC fica em silêncio. Vale para um controle por vez. O microfone e a vibração não mudam.">Tudo no controle e nada no PC</button>
               </span>
             </div>
           </div>
@@ -4450,7 +4450,7 @@
                interruptor, igual para todo controle e todo momento.
 
                A frase é de `controller_card.texto_motion`, inclusive as duas
-               exceções (Modo Nativo e máscara Xbox) — omiti-las seria a tela
+               exceções (Modo nativo e máscara Xbox) — omiti-las seria a tela
                parecer quebrada justamente quando ela está certa: em Nativo não
                há gamepad virtual a que perguntar, e a máscara Xbox não TEM
                giroscópio.
@@ -4490,7 +4490,7 @@
           <span class="sensores-peca" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO">
             <span class="dica-do-giro" data-campo="giro-dica" data-hef-alvo="atributo" data-hef-atributo="title"><button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><span class="p"></span>Giroscópio</button></span>
             <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
-            <span class="chip-da-mira" data-campo="mira-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="mira" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar os movimentos do controle como um analógico, para pessoas com deficiência motora. O lado se escolhe embaixo de cada analógico."><span class="p"></span>Analógico Virtual</button></span>
+            <span class="chip-da-mira" data-campo="mira-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="mira" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar os movimentos do controle como um analógico, para pessoas com deficiência motora. O lado se escolhe embaixo de cada analógico."><span class="p"></span>Analógico virtual</button></span>
           </span>
           <!-- A BATERIA GANHOU ENDEREÇO EM 01/09/2026, e até aqui ela era a
                PINTURA DO MOCKUP para sempre: o pacote da aba emite `bateria`
@@ -4800,10 +4800,10 @@
               <span data-campo="alto-canal-porque" data-hef-alvo="atributo" data-hef-atributo="title"><span class="selo-ativo no-rotulo" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M17 8.5a5 5 0 0 1 0 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="alto-canal" data-hef-alvo="html"><i class="nada"></i></span></span></span>
               <span class="selo-som" data-campo="alto-selo" data-hef-alvo="html"><i class="nada"></i></span>
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
-                <b>Efeitos do Jogo no Controle, Áudio do PC no PC</b>: só o que o jogo mandar para este controle sai no alto-falante dele.
-                <b>Efeitos do Jogo e Áudio do PC no Controle</b>: tudo o que a máquina toca cai aqui também, e continua saindo no PC.
-                <b>Tudo no PC e Nada no Controle</b>: o alto-falante deste controle para de tocar, e todo o som, inclusive o dele, sai no PC.
-                <b>Tudo no Controle e Nada no PC</b>: todo o som do PC sai só no alto-falante deste controle, e o PC fica em silêncio.
+                <b>Efeitos do jogo no controle, áudio do PC no PC</b>: só o que o jogo mandar para este controle sai no alto-falante dele.
+                <b>Efeitos do jogo e áudio do PC no controle</b>: tudo o que a máquina toca cai aqui também, e continua saindo no PC.
+                <b>Tudo no PC e nada no controle</b>: o alto-falante deste controle para de tocar, e todo o som, inclusive o dele, sai no PC.
+                <b>Tudo no controle e nada no PC</b>: todo o som do PC sai só no alto-falante deste controle, e o PC fica em silêncio.
               </span></span>
             </div>
             <span class="onda" data-campo="alto-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="alto-onda-0" data-hef-alvo="altura" style="height:80%"></i><i data-campo="alto-onda-1" data-hef-alvo="altura" style="height:66%"></i><i data-campo="alto-onda-2" data-hef-alvo="altura" style="height:74%"></i><i data-campo="alto-onda-3" data-hef-alvo="altura" style="height:58%"></i><i data-campo="alto-onda-4" data-hef-alvo="altura" style="height:84%"></i><i data-campo="alto-onda-5" data-hef-alvo="altura" style="height:62%"></i><i data-campo="alto-onda-6" data-hef-alvo="altura" style="height:70%"></i><i data-campo="alto-onda-7" data-hef-alvo="altura" style="height:76%"></i><i data-campo="alto-onda-8" data-hef-alvo="altura" style="height:54%"></i><i data-campo="alto-onda-9" data-hef-alvo="altura" style="height:68%"></i><i data-campo="alto-onda-10" data-hef-alvo="altura" style="height:60%"></i><i data-campo="alto-onda-11" data-hef-alvo="altura" style="height:78%"></i><i data-campo="alto-onda-12" data-hef-alvo="altura" style="height:64%"></i><i data-campo="alto-onda-13" data-hef-alvo="altura" style="height:72%"></i></span>
@@ -4830,17 +4830,17 @@
                  24/09/2026, decisão de 23/09: voltar o quarto, encaixado
                  pelo desenho, sem quebrar a altura do cartão. Os dois de baixo
                  são o espelho um do outro, e é por isso que dividem a linha:
-                 «Tudo no PC e Nada no Controle» à esquerda, «Tudo no Controle e
+                 «Tudo no PC e nada no controle» à esquerda, «Tudo no Controle e
                  Nada no PC» à direita. Na janela do produto (1180) cada um
                  quebra em duas linhas; da janela de 1440 para cima cabem numa
                  só. A gramática não muda: mesmo gesto, mesmo endereço, cada
                  botão com o seu valor. -->
             <div class="rota quatro">
-              <button class="" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">Efeitos do Jogo no Controle, Áudio do PC no PC</button>
-              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="O som do PC sai no alto-falante deste controle e continua saindo no PC. Serve para jogar acompanhado: cada um ouve no próprio controle.">Efeitos do Jogo e Áudio do PC no Controle</button>
+              <button class="" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">Efeitos do jogo no controle, áudio do PC no PC</button>
+              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="O som do PC sai no alto-falante deste controle e continua saindo no PC. Serve para jogar acompanhado: cada um ouve no próprio controle.">Efeitos do jogo e áudio do PC no controle</button>
               <span class="par">
-                <button class="" data-gesto="rota" data-rota="nada" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="nada" title="Todo o som, inclusive o deste controle, sai no PC, e o alto-falante deste controle para de tocar. O microfone e a vibração não mudam.">Tudo no PC e Nada no Controle</button>
-                <button data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc" title="Todo o som do PC sai só no alto-falante deste controle, e o PC fica em silêncio. Vale para um controle por vez. O microfone e a vibração não mudam.">Tudo no Controle e Nada no PC</button>
+                <button class="" data-gesto="rota" data-rota="nada" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="nada" title="Todo o som, inclusive o deste controle, sai no PC, e o alto-falante deste controle para de tocar. O microfone e a vibração não mudam.">Tudo no PC e nada no controle</button>
+                <button data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc" title="Todo o som do PC sai só no alto-falante deste controle, e o PC fica em silêncio. Vale para um controle por vez. O microfone e a vibração não mudam.">Tudo no controle e nada no PC</button>
               </span>
             </div>
           </div>
@@ -4927,7 +4927,7 @@
   <!-- ================= RODAPÉ ================= -->
   <div class="rodape">
     <!-- O RECIBO SAIU DA BARRA E VIROU DICA DOS BOTÕES — 30/08/2026, pedido:
-         *"'Aplicar vale agora • Salvar Perfil grava no Mortal Kombat' isso deveria
+         *"'Aplicar vale agora • Salvar perfil grava no Mortal Kombat' isso deveria
          em formato de tooltip ao deixar o mouse sobre os botões aplicar, salvar
          perfil, importar e exportar. em todas as abas."*
 
@@ -4958,7 +4958,7 @@
 
          O NOME DO PERFIL É DADO, E ERA LITERAL — corrigido em 03/09/2026, achado
          pela régua do mockup e nomeado pelo juiz da leva. O pedido trazia um
-         EXEMPLO — *"Salvar Perfil grava no Mortal Kombat"* — e este arquivo
+         EXEMPLO — *"Salvar perfil grava no Mortal Kombat"* — e este arquivo
          congelou o exemplo em vez do nome. Resultado medido: as DEZ abas diziam
          "Grava no perfil Mortal Kombat" com `meu_perfil` ativo. O comentário aqui
          em cima já dizia o que importava — *o NOME do perfil, "a informação que
@@ -4974,7 +4974,7 @@
             title="Vale agora: envia a configuração aos controles na hora. Não grava — ao trocar de perfil ou reiniciar, volta ao que está salvo.">Aplicar</button>
     <button class="r-salvar" data-campo="rodape.salvar"
             data-hef-alvo="atributo" data-hef-atributo="title"
-            title="Grava no perfil ativo. É onde a mudança vai cair.">Salvar Perfil</button>
+            title="Grava no perfil ativo. É onde a mudança vai cair.">Salvar perfil</button>
     <button class="r-importar" title="Carrega um perfil de arquivo .json.">Importar</button>
     <button class="r-exportar" data-campo="rodape.exportar"
             data-hef-alvo="atributo" data-hef-atributo="title"

@@ -198,7 +198,7 @@ def opcoes_do_teto() -> tuple[str, str, str]:
     return (SEGUE_O_GLOBAL, fala_do_teto(""), fala_do_teto(_ORCAMENTO_COM_TETO))
 
 
-CASA_DO_TETO_GLOBAL = "Perfil de Bateria"
+CASA_DO_TETO_GLOBAL = "Perfil de bateria"
 ABA_DO_TETO_GLOBAL = "Sistema"
 
 

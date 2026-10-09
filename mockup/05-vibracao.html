@@ -1076,7 +1076,7 @@
   /* O DESENHO NOVO DO USUÁRIO — 02/10/2026 (A-ABA-VIBRACAO-TEM-O-SENSOR-HAPTICO-E-
      DOIS-TESTES-01, a resposta [26] de 29/09). O trilho do Personalizado sobe
      para dentro da Força (`--r-forca` 69 = 36 dos degraus, numa linha só, + 7 de vão + 26 do
-     trilho, `--r-barra`), e a faixa que era dele vira a «Sensor Háptico», a
+     trilho, `--r-barra`), e a faixa que era dele vira a «Sensor háptico», a
      linha da háptica por áudio (36, com o interruptor). A linha de baixo dos
      motores, que a háptica ocupava desde 29/09 com o desenho pagando 46 px,
      sai. E o «Testar agora» vira UMA linha («Vibração», «Háptica» e «Parar»,
@@ -1101,7 +1101,7 @@
       transparent calc(50% + 1px)),var(--border-forte)}
   /* O PADRÃO TRAVA AS BARRAS — 04/10/2026, ela: «se balanceado é o original.
      então não tem pq ter original». Com o degrau Padrão (`.forca.padrao`), o
-     Sensor Háptico e os dois motores ficam inteiros verdes e travados, com a
+     sensor háptico e os dois motores ficam inteiros verdes e travados, com a
      palavra no lugar do número: o sinal chega como o jogo mandou e o que ela
      guardou fica esperando a Economia ou o Máximo. Travar é TROCAR DE ELEMENTO
      (o `<input>` some, a barra verde aparece): seta e foco não alcançam quem
@@ -2122,11 +2122,11 @@
       <span class="pa-rot">Perfil ativo</span>
       <span class="pa-nome" data-campo="perfil">—</span>
       <!-- `tabindex` de 07/09/2026: este `?` está no CABEÇALHO, logo nas dez
-           abas, e explica onde o "Salvar Perfil" grava. Sem ele o `<span>` não
+           abas, e explica onde o "Salvar perfil" grava. Sem ele o `<span>` não
            recebe foco e o `el.click()` do controle não o abria em aba nenhuma. -->
       <span class="ajuda" tabindex="0">?<span class="dica" style="left:auto;right:22px">
         Tudo o que você mudar em qualquer aba cai <b>neste</b> perfil quando clicar em
-        <b>Salvar Perfil</b>.<br><br>
+        <b>Salvar perfil</b>.<br><br>
         Cada controle guarda a <b>sua</b> configuração aqui dentro, pelo ID da peça — amanhã,
         em outra porta ou no rádio, ele traz de volta o que você deixou hoje.
       </span></span>
@@ -2215,7 +2215,7 @@
                 com a Economia ou o Máximo.<br><br>
                 O trilho embaixo vai de 0 a 200%, e o valor que vale é o dele:
                 acende o maior degrau que ele alcança.<br><br>
-                O Perfil de Bateria pode impor um teto: a escolha continua valendo, só não passa dele.<br><br>
+                O perfil de bateria pode impor um teto: a escolha continua valendo, só não passa dele.<br><br>
                 <!-- O MECANISMO DO AUTO MUDOU DE CASA — 05-Q4 dela, 06/09/2026.
                      Ele era a segunda metade de `a05_vibracao.FRASE_DA_MESA_EM_AUTO`,
                      de 331 caracteres, escrita para o CARTÃO — uma caixa que
@@ -2231,13 +2231,13 @@
                 Com a <b>força geral</b> em Auto, a escolha de cada coluna fica
                 guardada e não chega ao motor.
               </span></span></span></div>
-            <div><span class="sec-rot">Sensor Háptico
+            <div><span class="sec-rot">Sensor háptico
               <span class="ajuda">?<span class="dica">
                 <b>A vibração fina</b> que o jogo manda como som, no cabo e no BT.<br><br>
                 O risco no meio é 100%: o jogo como ele mandou. Acima disso ela
                 fica mais forte; em 0, ela para. A bolinha verde acende quando
                 ela está chegando ao controle.<br><br>
-                O Perfil de Bateria pode impor um teto: a escolha continua valendo, só não passa dele.<br><br>
+                O perfil de bateria pode impor um teto: a escolha continua valendo, só não passa dele.<br><br>
                 Cinza quando o jogo fala direto com o controle, sem passar pelo
                 Hefesto.
               </span></span></span></div>
@@ -2282,7 +2282,7 @@
                      daemon de mentira: nenhum `rumble.stop` sai sem o Parar. -->
                 <b>Vibração</b> treme os motores deste controle até o <b>Parar</b>,
                 seguindo ao vivo as barras da coluna. <b>Háptica</b> toca a vibração
-                fina pelo som, com a força do <b>Sensor Háptico</b>. No mesmo controle
+                fina pelo som, com a força do <b>Sensor háptico</b>. No mesmo controle
                 ligar um desliga o outro, e cada controle tem o seu teste. <b>Parar</b>
                 corta os dois deste controle e devolve a vibração dele ao jogo.<br><br>
                 <!-- A NOTA DOS VALORES QUE PASSAM VOLTOU PARA CÁ — 05-Q2 dela,
@@ -3810,7 +3810,7 @@
   <!-- ================= RODAPÉ ================= -->
   <div class="rodape">
     <!-- O RECIBO SAIU DA BARRA E VIROU DICA DOS BOTÕES — 30/08/2026, pedido:
-         *"'Aplicar vale agora • Salvar Perfil grava no Mortal Kombat' isso deveria
+         *"'Aplicar vale agora • Salvar perfil grava no Mortal Kombat' isso deveria
          em formato de tooltip ao deixar o mouse sobre os botões aplicar, salvar
          perfil, importar e exportar. em todas as abas."*
 
@@ -3841,7 +3841,7 @@
 
          O NOME DO PERFIL É DADO, E ERA LITERAL — corrigido em 03/09/2026, achado
          pela régua do mockup e nomeado pelo juiz da leva. O pedido trazia um
-         EXEMPLO — *"Salvar Perfil grava no Mortal Kombat"* — e este arquivo
+         EXEMPLO — *"Salvar perfil grava no Mortal Kombat"* — e este arquivo
          congelou o exemplo em vez do nome. Resultado medido: as DEZ abas diziam
          "Grava no perfil Mortal Kombat" com `meu_perfil` ativo. O comentário aqui
          em cima já dizia o que importava — *o NOME do perfil, "a informação que
@@ -3857,7 +3857,7 @@
             title="Vale agora: envia a configuração aos controles na hora. Não grava — ao trocar de perfil ou reiniciar, volta ao que está salvo.">Aplicar</button>
     <button class="r-salvar" data-campo="rodape.salvar"
             data-hef-alvo="atributo" data-hef-atributo="title"
-            title="Grava no perfil ativo. É onde a mudança vai cair.">Salvar Perfil</button>
+            title="Grava no perfil ativo. É onde a mudança vai cair.">Salvar perfil</button>
     <button class="r-importar" title="Carrega um perfil de arquivo .json.">Importar</button>
     <button class="r-exportar" data-campo="rodape.exportar"
             data-hef-alvo="atributo" data-hef-atributo="title"

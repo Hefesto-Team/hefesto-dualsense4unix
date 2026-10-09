@@ -354,7 +354,7 @@ def rotulo_do_perfil(perfil: str | None) -> str | None:
 
 
 def frase_do_teto() -> str:
-    """A frase de duas linhas do Perfil de Bateria, derivada de ``LINHAS_DO_TETO``."""
+    """A frase de duas linhas do perfil de bateria, derivada de ``LINHAS_DO_TETO``."""
     from hefesto_dualsense4unix.app.actions.config.secao_orcamento import (
         LINHAS_DO_TETO,
         PERFIS,

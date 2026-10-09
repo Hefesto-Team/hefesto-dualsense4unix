@@ -182,7 +182,7 @@ def test_a_dica_da_tela_de_botoes_diz_por_que_o_ps_fica_fora():
         "ENTRA, com a mesma lista das outras 21.")
     doc = _bancada()
     dica = re.search(
-        r'<span class="tn-tit">Definições Controle e Mouse</span>\s*'
+        r'<span class="tn-tit">Definições controle e mouse</span>\s*'
         r'<span class="ajuda[^"]*"[^>]*>\?<span class="dica"[^>]*>(.*?)</span></span>',
         doc, re.S)
     assert dica is not None, "não achei a dica da tela de Definições na bancada"

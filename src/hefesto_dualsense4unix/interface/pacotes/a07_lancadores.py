@@ -538,7 +538,7 @@ def aviso_do_jogo_aberto(
     aplica ela"*. A frase passou a dizer o fato **mais** a promessa que o
     produto cumpre, sem nomear lugar nenhum:
     *"O jogo está rodando sem o atalho de inicialização — controles podem
-    duplicar. Reponho o atalho no próximo Aplicar ou Salvar Perfil, com a Steam
+    duplicar. Reponho o atalho no próximo Aplicar ou Salvar perfil, com a Steam
     fechada."*
 
     O DONO CONTINUA SENDO UM SÓ (`app/actions/home_actions.WRAPPER_MISSING_TEXT`)
@@ -574,7 +574,7 @@ def aviso_do_jogo_aberto(
     aqui esta função aplicava DUAS das quatro do lembrete da janela velha (o
     `wrapper_used is False`, que já traz a janela em foco e o jogo sem o
     atalho, e a dispensa) e **não aplicava a da EMULAÇÃO**. O buraco é medível:
-    no Modo Nativo não há gamepad virtual, logo não há o que duplicar — e a aba
+    no modo nativo não há gamepad virtual, logo não há o que duplicar — e a aba
     avisava assim mesmo, com um alarme que não podia acontecer. A janela velha
     nunca teve esse defeito, porque a decisão de produto é uma função PURA
     (`launch_wrapper_dialog.wrapper_dialog_decision`) e ela pergunta pelo modo.

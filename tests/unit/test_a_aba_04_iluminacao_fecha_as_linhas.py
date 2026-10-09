@@ -12,7 +12,7 @@ A fonte é o registro «O-PO-DECIDE-as-54-e-os-sete-conflitos» de 04/09/2026,
            `test_a_04_as_lampadas_espelham_o_numero`, que guarda a AUSÊNCIA.
            A razão do tracejado continua no `title` das duas tiras.
     [02] o automático do perfil  interruptor DE VERDADE na aba            (D-13)
-         ↑ O INTERRUPTOR VIROU UM PAR EM 08/10/2026 («Modo Automático | Modo
+         ↑ O INTERRUPTOR VIROU UM PAR EM 08/10/2026 («Modo automático | Modo
            Personalizado», gesto `modo-da-luz`, ordem de 06/10): a D-13 segue
            valendo, e onde este texto diz «interruptor» leia-se o par.
     [03] reenviar uma cor        a caixa do hexadecimal vira o botão
@@ -194,12 +194,12 @@ def test_o_par_tem_dono(pac, a04):
     assert {"modo-da-luz", "reenviar"} <= vivos, (
         "o par de modos ou o reenvio do hexadecimal saíram do pacote")
     assert "auto-cores" not in vivos, (
-        "o interruptor `auto-cores` voltou: o par «Modo Automático | Modo "
+        "o interruptor `auto-cores` voltou: o par «Modo automático | Modo "
         "Personalizado» tomou o lugar dele em 08/10/2026")
 
 
 def test_a_pagina_oferece_o_par_no_topo_da_aba():
-    """*"Modo Automático e Modo Personalizado"* no alto da aba — e o topo é a faixa do título."""
+    """*"Modo automático e modo personalizado"* no alto da aba — e o topo é a faixa do título."""
     from hefesto_dualsense4unix.interface import onde
     from pacotes import a04_iluminacao as a04
 
@@ -212,7 +212,7 @@ def test_a_pagina_oferece_o_par_no_topo_da_aba():
                          f'data-campo="{a04.GESTO_DO_MODO}-{modo}"',
                          'data-hef-alvo="classe"'):
             assert atributo in topo, f"o botão {modo} perdeu {atributo!r}"
-    assert "Modo Automático" in topo and "Modo Personalizado" in topo
+    assert "Modo automático" in topo and "Modo personalizado" in topo
 
 
 def test_o_pacote_diz_o_modo_da_aba(a04, pac):
@@ -370,7 +370,7 @@ def test_no_automatico_escrito_os_gestos_da_coluna_recusam(pac, a04, gesto):
     funcao = pac.gesto_da_pagina(PAGINA, gesto)
     assert funcao is not None
     antes = pathlib.Path(caminho).read_bytes()
-    with pytest.raises(RuntimeError, match="Modo Automático"):
+    with pytest.raises(RuntimeError, match="modo automático"):
         funcao(_ctx(pac), {"controle": "p1", "uniq": UM, "tipo": "input",
                            "evento": "change", "valor": "#112233", "texto": "#112233",
                            "numero": 2}, PonteDeMentira())

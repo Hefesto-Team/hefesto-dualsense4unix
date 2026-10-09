@@ -1662,7 +1662,7 @@
   .num{flex:0 0 38px;text-align:right;font-family:'JetBrains Mono',monospace;
        font-size:11.5px;color:var(--fg)}
   /* O TRILHO PASSA A ACEITAR O ARRASTE — 03/09/2026, decisão de produto: perguntada
-     se mexer no brilho grava o perfil na hora ou espera o "Salvar Perfil", ela
+     se mexer no brilho grava o perfil na hora ou espera o "Salvar perfil", ela
      respondeu **"Grava na hora"**.
 
      O QUE HAVIA ATÉ HOJE: o desenho já era um slider — a regra `.cheio::after`
@@ -2116,11 +2116,11 @@
       <span class="pa-rot">Perfil ativo</span>
       <span class="pa-nome" data-campo="perfil">—</span>
       <!-- `tabindex` de 07/09/2026: este `?` está no CABEÇALHO, logo nas dez
-           abas, e explica onde o "Salvar Perfil" grava. Sem ele o `<span>` não
+           abas, e explica onde o "Salvar perfil" grava. Sem ele o `<span>` não
            recebe foco e o `el.click()` do controle não o abria em aba nenhuma. -->
       <span class="ajuda" tabindex="0">?<span class="dica" style="left:auto;right:22px">
         Tudo o que você mudar em qualquer aba cai <b>neste</b> perfil quando clicar em
-        <b>Salvar Perfil</b>.<br><br>
+        <b>Salvar perfil</b>.<br><br>
         Cada controle guarda a <b>sua</b> configuração aqui dentro, pelo ID da peça — amanhã,
         em outra porta ou no rádio, ele traz de volta o que você deixou hoje.
       </span></span>
@@ -2493,15 +2493,15 @@
           O plástico pode se repetir; a <b>luz</b> nunca.
         </span></span>
         <span class="trava-nativo" title="Com o Hefesto desligado, o jogo manda na luz. O que está aqui volta a valer quando ligar, na aba Jogar."><svg class="cad" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M3.6 5.2V3.9a2.4 2.4 0 0 1 4.8 0v1.3" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="2.3" y="5.2" width="7.4" height="5.4" rx="1.1" fill="currentColor"/></svg>O jogo manda</span>
-        <!-- OS DOIS MODOS — pedido de 06/10/2026: o Modo Automático e o Modo
+        <!-- OS DOIS MODOS — pedido de 06/10/2026: o modo automático e o Modo
              Personalizado tomam o lugar do interruptor das cores automáticas e da
              frase da luz do jogo embaixo das colunas. -->
-        <span class="par-modo" role="group" aria-label="Modo da aba"><button data-gesto="modo-da-luz" data-modo="automatico" data-campo="modo-da-luz-automatico" data-hef-alvo="classe" data-hef-atributo="aria-pressed" aria-pressed="false">Modo Automático</button><button class="on" data-gesto="modo-da-luz" data-modo="personalizado" data-campo="modo-da-luz-personalizado" data-hef-alvo="classe" data-hef-atributo="aria-pressed" aria-pressed="true">Modo Personalizado</button></span>
+        <span class="par-modo" role="group" aria-label="Modo da aba"><button data-gesto="modo-da-luz" data-modo="automatico" data-campo="modo-da-luz-automatico" data-hef-alvo="classe" data-hef-atributo="aria-pressed" aria-pressed="false">Modo automático</button><button class="on" data-gesto="modo-da-luz" data-modo="personalizado" data-campo="modo-da-luz-personalizado" data-hef-alvo="classe" data-hef-atributo="aria-pressed" aria-pressed="true">Modo personalizado</button></span>
         <span class="ajuda esq">?<span class="dica">
-          <b>Modo Automático:</b> cada controle acende a cor do seu <b>plástico</b>
+          <b>Modo automático:</b> cada controle acende a cor do seu <b>plástico</b>
           (sem cor de plástico, ou com dois iguais, a do <b>número</b>), e os botões
           desta aba ficam parados.<br><br>
-          <b>Modo Personalizado:</b> você escolhe a cor, o brilho e as luzes de cada
+          <b>Modo personalizado:</b> você escolhe a cor, o brilho e as luzes de cada
           controle. Ao passar para ele, a cor de agora fica <b>gravada no perfil</b>.<br><br>
           Nos dois, o jogo que pinta a barra vence enquanto pinta.
         </span></span>
@@ -2923,7 +2923,7 @@
                   title="Manda esta cor ao controle de novo.">#0000FF</span>
           </div>
           <div class="cel-brilho">
-            <span class="trilho"><span class="cheio" data-campo="brilho-pct" data-hef-alvo="largura" style="width:82%"></span><input class="puxador" type="range" min="0" max="100" step="1" value="82" data-gesto="brilho" data-campo="brilho-pct" data-hef-alvo="valor" aria-label="Brilho da barra de luz deste controle" title="Brilho da barra deste controle. Grava no perfil ao soltar — não espera o Salvar Perfil."></span>
+            <span class="trilho"><span class="cheio" data-campo="brilho-pct" data-hef-alvo="largura" style="width:82%"></span><input class="puxador" type="range" min="0" max="100" step="1" value="82" data-gesto="brilho" data-campo="brilho-pct" data-hef-alvo="valor" aria-label="Brilho da barra de luz deste controle" title="Brilho da barra deste controle. Grava no perfil ao soltar — não espera o Salvar perfil."></span>
             <span class="num" data-campo="brilho">82%</span>
           </div>
           <div class="players" data-campo="players" data-hef-alvo="html">
@@ -3321,7 +3321,7 @@
                   title="Manda esta cor ao controle de novo.">#FF0000</span>
           </div>
           <div class="cel-brilho">
-            <span class="trilho"><span class="cheio" data-campo="brilho-pct" data-hef-alvo="largura" style="width:100%"></span><input class="puxador" type="range" min="0" max="100" step="1" value="100" data-gesto="brilho" data-campo="brilho-pct" data-hef-alvo="valor" aria-label="Brilho da barra de luz deste controle" title="Brilho da barra deste controle. Grava no perfil ao soltar — não espera o Salvar Perfil."></span>
+            <span class="trilho"><span class="cheio" data-campo="brilho-pct" data-hef-alvo="largura" style="width:100%"></span><input class="puxador" type="range" min="0" max="100" step="1" value="100" data-gesto="brilho" data-campo="brilho-pct" data-hef-alvo="valor" aria-label="Brilho da barra de luz deste controle" title="Brilho da barra deste controle. Grava no perfil ao soltar — não espera o Salvar perfil."></span>
             <span class="num" data-campo="brilho">100%</span>
           </div>
           <div class="players" data-campo="players" data-hef-alvo="html">
@@ -3703,7 +3703,7 @@
                   title="Manda esta cor ao controle de novo.">—</span>
           </div>
           <div class="cel-brilho">
-            <span class="trilho"><span class="cheio" data-campo="brilho-pct" data-hef-alvo="largura"></span><input class="puxador" type="range" min="0" max="100" step="1" value="0" data-gesto="brilho" data-campo="brilho-pct" data-hef-alvo="valor" aria-label="Brilho da barra de luz deste controle" title="Brilho da barra deste controle. Grava no perfil ao soltar — não espera o Salvar Perfil."></span>
+            <span class="trilho"><span class="cheio" data-campo="brilho-pct" data-hef-alvo="largura"></span><input class="puxador" type="range" min="0" max="100" step="1" value="0" data-gesto="brilho" data-campo="brilho-pct" data-hef-alvo="valor" aria-label="Brilho da barra de luz deste controle" title="Brilho da barra deste controle. Grava no perfil ao soltar — não espera o Salvar perfil."></span>
             <span class="num" data-campo="brilho">—</span>
           </div>
           <div class="players" data-campo="players" data-hef-alvo="html">
@@ -4078,7 +4078,7 @@
                   title="Manda esta cor ao controle de novo.">—</span>
           </div>
           <div class="cel-brilho">
-            <span class="trilho"><span class="cheio" data-campo="brilho-pct" data-hef-alvo="largura"></span><input class="puxador" type="range" min="0" max="100" step="1" value="0" data-gesto="brilho" data-campo="brilho-pct" data-hef-alvo="valor" aria-label="Brilho da barra de luz deste controle" title="Brilho da barra deste controle. Grava no perfil ao soltar — não espera o Salvar Perfil."></span>
+            <span class="trilho"><span class="cheio" data-campo="brilho-pct" data-hef-alvo="largura"></span><input class="puxador" type="range" min="0" max="100" step="1" value="0" data-gesto="brilho" data-campo="brilho-pct" data-hef-alvo="valor" aria-label="Brilho da barra de luz deste controle" title="Brilho da barra deste controle. Grava no perfil ao soltar — não espera o Salvar perfil."></span>
             <span class="num" data-campo="brilho">—</span>
           </div>
           <div class="players" data-campo="players" data-hef-alvo="html">
@@ -4178,7 +4178,7 @@
   <!-- ================= RODAPÉ ================= -->
   <div class="rodape">
     <!-- O RECIBO SAIU DA BARRA E VIROU DICA DOS BOTÕES — 30/08/2026, pedido:
-         *"'Aplicar vale agora • Salvar Perfil grava no Mortal Kombat' isso deveria
+         *"'Aplicar vale agora • Salvar perfil grava no Mortal Kombat' isso deveria
          em formato de tooltip ao deixar o mouse sobre os botões aplicar, salvar
          perfil, importar e exportar. em todas as abas."*
 
@@ -4209,7 +4209,7 @@
 
          O NOME DO PERFIL É DADO, E ERA LITERAL — corrigido em 03/09/2026, achado
          pela régua do mockup e nomeado pelo juiz da leva. O pedido trazia um
-         EXEMPLO — *"Salvar Perfil grava no Mortal Kombat"* — e este arquivo
+         EXEMPLO — *"Salvar perfil grava no Mortal Kombat"* — e este arquivo
          congelou o exemplo em vez do nome. Resultado medido: as DEZ abas diziam
          "Grava no perfil Mortal Kombat" com `meu_perfil` ativo. O comentário aqui
          em cima já dizia o que importava — *o NOME do perfil, "a informação que
@@ -4225,7 +4225,7 @@
             title="Vale agora: envia a configuração aos controles na hora. Não grava — ao trocar de perfil ou reiniciar, volta ao que está salvo.">Aplicar</button>
     <button class="r-salvar" data-campo="rodape.salvar"
             data-hef-alvo="atributo" data-hef-atributo="title"
-            title="Grava no perfil ativo. É onde a mudança vai cair.">Salvar Perfil</button>
+            title="Grava no perfil ativo. É onde a mudança vai cair.">Salvar perfil</button>
     <button class="r-importar" title="Carrega um perfil de arquivo .json.">Importar</button>
     <button class="r-exportar" data-campo="rodape.exportar"
             data-hef-alvo="atributo" data-hef-atributo="title"

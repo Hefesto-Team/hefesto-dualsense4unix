@@ -1,4 +1,4 @@
-"""O Modo Automático e o Modo Personalizado das abas Gatilhos e Iluminação — 08/10/2026.
+"""O modo automático e o modo personalizado das abas Gatilhos e Iluminação — 08/10/2026.
 
 A-O-MODO-AUTOMATICO-E-O-PERSONALIZADO-01 (pedido de 06/10). Um par de botões no alto
 de cada aba (``modo-dos-gatilhos`` e ``modo-da-luz``), um campo escrito no perfil
@@ -398,7 +398,7 @@ def test_no_automatico_escrito_os_gestos_de_efeito_recusam(
     antes = pathlib.Path(caminho).read_bytes()
     funcao = pac.gesto_da_pagina("03-gatilhos.html", gesto)
     assert funcao is not None
-    with pytest.raises(RuntimeError, match="Modo Automático"):
+    with pytest.raises(RuntimeError, match="modo automático"):
         funcao(_ctx(pac), {"uniq": UM, "lado": "d", "modo": "Rigid", "valor": "5"}, Ponte())
     assert pathlib.Path(caminho).read_bytes() == antes
 

@@ -94,8 +94,8 @@ PERFIS: tuple[str, ...] = (
 
 #: Global de Bateria da Sistema leem daqui.
 ROTULOS_DOS_PERFIS: dict[str, str] = {
-    PERFIL_TUDO_LIGADO: "Perfil Máximo",
-    PERFIL_BATERIA_LONGA: "Perfil Econômico",
+    PERFIL_TUDO_LIGADO: "Perfil máximo",
+    PERFIL_BATERIA_LONGA: "Perfil econômico",
     PERFIL_EU_ESCOLHO: "Personalizado",
 }
 
@@ -161,7 +161,10 @@ def _dica_da_bateria_longa() -> str:
     ]
     if mais_fracos:
         frase += f"; {_lista(mais_fracos)} mais fracos, sem apagar"
-    pendentes = [linha.nome for linha in LINHAS_DO_TETO if not linha.tem_ponto]
+    # Só a primeira letra da frase é maiúscula (09/10/2026): o nome que vem
+    # depois do primeiro perde a inicial, e a sigla dentro dele («BT») fica.
+    pendentes = [linha.nome if i == 0 else linha.nome[0].lower() + linha.nome[1:]
+                 for i, linha in enumerate(x for x in LINHAS_DO_TETO if not x.tem_ponto)]
     if not pendentes:
         return f"{frase}."
     return f"{frase}. {_lista(pendentes)} continuam como estão."

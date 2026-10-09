@@ -42,7 +42,7 @@ INTERRUPTOR = [
      "escolhe como o jogo vê o controle."),
     # a fecha é a bancada (dois DualSense num jogo de co-op local, no cabo
     ("desligado", "native", "Desligado",
-     "Modo Nativo: o jogo fala direto com o controle, e "
+     "Modo nativo: o jogo fala direto com o controle, e "
      + NATIVO_E_OS_JOGADORES),
 ]
 HEFESTO_LIGADO = True
@@ -84,7 +84,7 @@ DO_DESLIGADO = [
 ]
 NATIVO_ACESO = CHIP_DO_NATIVO
 
-#: com **Sony DualSense** marcado, e a faixa anunciava **Modo Nativo**, que é a
+#: com **Sony DualSense** marcado, e a faixa anunciava **Modo nativo**, que é a
 PENDENTE = next(m["rot"] for m in MODOS if m["chave"] == MODO_ACESO)
 
 
@@ -1827,11 +1827,11 @@ def _conferir(doc):
     for frase in FRASES_BANIDAS:
         exigir(frase not in corpo, f"um texto voltou a alarmar sem medição: {frase!r}")
 
-    #    Ligado + Sony DualSense e a faixa anunciando Modo Nativo.
+    #    Ligado + Sony DualSense e a faixa anunciando modo nativo.
     exigir(f"<b data-campo=\"pendente-alvo\">{PENDENTE}</b>" in corpo,
            "a faixa de pendência não diz o modo marcado")
-    exigir(PENDENTE != "Modo Nativo",
-           "a pendência voltou a ser Modo Nativo com o interruptor em Ligado")
+    exigir(PENDENTE != "Modo nativo",
+           "a pendência voltou a ser modo nativo com o interruptor em Ligado")
 
     _por_campo = collections.Counter(_campo_do_chip(m) for m in MODOS + DO_DESLIGADO)
     exigir("steam" not in {m["chave"] for m in MODOS},
