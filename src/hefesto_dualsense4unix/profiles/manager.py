@@ -1700,6 +1700,27 @@ def secao_do_modo_com_o_caminho(
     return ProfileModeConfig(**campos)  # type: ignore[arg-type]
 
 
+#: o modo que nenhum estilo de jogo deixa no perfil sem pedir (teclado e mouse)
+MODO_QUE_O_ESTILO_TIRA = "desktop"
+
+
+def secao_do_modo_do_estilo(
+    atual: ProfileModeConfig | None, modo_do_estilo: str | None
+) -> tuple[bool, ProfileModeConfig | None]:
+    """A seção `mode` que um estilo de jogo deixa no perfil: ``(mudou, seção)``.
+
+    O estilo com modo (a Navegação do Point-and-click) passa pelo escritor único,
+    :func:`secao_do_modo_com_o_caminho`. O estilo sem modo tira só o `desktop`
+    (estilo de jogo não deixa o controle como teclado e mouse) e deixa os outros
+    modos, a máscara e o caminho como estão. A janela pede; a seção nasce aqui.
+    """
+    if modo_do_estilo:
+        return True, secao_do_modo_com_o_caminho(atual, kind=modo_do_estilo)
+    if getattr(atual, "kind", None) == MODO_QUE_O_ESTILO_TIRA:
+        return True, None
+    return False, atual
+
+
 def nome_do_perfil_que_grava(do_daemon: object) -> str | None:
     """Em que perfil uma escolha do MOMENTO vai ser gravada — `None` quando nenhum."""
     if isinstance(do_daemon, str) and do_daemon:

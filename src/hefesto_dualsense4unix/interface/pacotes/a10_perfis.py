@@ -1951,9 +1951,8 @@ def _com_o_estilo(prof: Any, estilo: Any, mesa: list[dict[str, Any]]) -> tuple[A
     A RECEITA INVISÍVEL (08/10/2026, O-ESTILO-DO-JOGO-LIGA-A-IMERSAO-INTEIRA-EM-TODO-MODO-01)
     entra pelos motores que já existem: `ajustes_do_gatilho` nos parâmetros do
     modo, e o `modo` na seção `mode` do perfil (o Point-and-click liga a
-    Navegação). O estilo sem modo tira do perfil o modo `desktop`, venha ele de
-    onde vier (estilo de jogo não deixa o controle como teclado e mouse), deixa
-    os outros modos como estão e nunca escolhe máscara nem caminho. O resto da
+    Navegação), que nasce no dono, `manager.secao_do_modo_do_estilo`: a janela
+    não escreve a seção `mode`. O resto da
     receita (`estilos_de_jogo.SO_DADO`) não se escreve aqui: o perfil guarda a
     CHAVE do estilo (`Profile.estilo`, O-ESTILO-DO-PERFIL-LIGA-O-MOTOR-DO-TATO-01),
     e o motor do tato lê a receita por ela.
@@ -1966,10 +1965,10 @@ def _com_o_estilo(prof: Any, estilo: Any, mesa: list[dict[str, Any]]) -> tuple[A
     """
     from hefesto_dualsense4unix.app.actions import trigger_specs as specs
     from hefesto_dualsense4unix.profiles.estilos_de_jogo import cor_da_unidade
+    from hefesto_dualsense4unix.profiles.manager import secao_do_modo_do_estilo
     from hefesto_dualsense4unix.profiles.schema import (
         ControllerOverrides,
         LedsConfig,
-        ProfileModeConfig,
         RumbleConfig,
         TriggerConfig,
         TriggersConfig,
@@ -1994,10 +1993,9 @@ def _com_o_estilo(prof: Any, estilo: Any, mesa: list[dict[str, Any]]) -> tuple[A
         mudanca["rumble"] = RumbleConfig(
             passthrough=bool(getattr(prof.rumble, "passthrough", True)),
             policy=estilo.vibracao)
-    if invisivel and invisivel.modo:
-        mudanca["mode"] = ProfileModeConfig(kind=invisivel.modo)
-    elif getattr(prof.mode, "kind", None) == "desktop":
-        mudanca["mode"] = None
+    mudou, secao = secao_do_modo_do_estilo(prof.mode, invisivel.modo if invisivel else None)
+    if mudou:
+        mudanca["mode"] = secao
 
     atuais = dict(prof.controllers or {})
     lugares: dict[int, str] = {}
