@@ -18,6 +18,7 @@ função aqui levanta.
 from __future__ import annotations
 
 import ctypes
+import os
 import threading
 from typing import Any
 
@@ -56,6 +57,12 @@ def _biblioteca() -> Any:
 
 
 def _propriedade(abrir: str, argumento: tuple[Any, ...], nome: str) -> str | None:
+    """A pergunta, com os argumentos já conferidos na porta: nada aqui levanta.
+
+    A conversão do `ctypes` só falha com argumento de tipo errado, e o nome e o
+    nó chegam aqui conferidos (`_nome_valido`, o devnum inteiro, o caminho por
+    `os.fsencode`); a resposta se decodifica com `errors="replace"`.
+    """
     lib = _biblioteca()
     if lib is None:
         return None
@@ -71,19 +78,29 @@ def _propriedade(abrir: str, argumento: tuple[Any, ...], nome: str) -> str | Non
         finally:
             lib.udev_device_unref(dispositivo)
         return None if valor is None else valor.decode("utf-8", errors="replace")
-    except (ctypes.ArgumentError, UnicodeError, OSError):
-        return None
     finally:
         lib.udev_unref(contexto)
 
 
+def _nome_valido(nome: str) -> bool:
+    """O nome de propriedade do udev é ASCII e não vazio (``USEC_INITIALIZED``)."""
+    return isinstance(nome, str) and bool(nome) and nome.isascii() and "\0" not in nome
+
+
 def propriedade_do_devnum(tipo: str, devnum: int, nome: str) -> str | None:
     """A propriedade ``nome`` do nó de ``devnum`` (`st_rdev`); ``tipo`` é ``"c"`` ou ``"b"``."""
-    if tipo not in ("c", "b"):
+    if tipo not in ("c", "b") or not _nome_valido(nome):
+        return None
+    if isinstance(devnum, bool) or not isinstance(devnum, int) or devnum < 0:
         return None
     return _propriedade("udev_device_new_from_devnum", (tipo.encode("ascii"), devnum), nome)
 
 
-def propriedade_do_syspath(syspath: str, nome: str) -> str | None:
+def propriedade_do_syspath(syspath: str | os.PathLike[str], nome: str) -> str | None:
     """A propriedade ``nome`` do dispositivo em ``/sys/...`` (ex.: ``USEC_INITIALIZED``)."""
-    return _propriedade("udev_device_new_from_syspath", (str(syspath).encode("utf-8"),), nome)
+    if not _nome_valido(nome):
+        return None
+    caminho = os.fsencode(syspath)
+    if not caminho or b"\0" in caminho:
+        return None
+    return _propriedade("udev_device_new_from_syspath", (caminho,), nome)

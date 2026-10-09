@@ -115,6 +115,25 @@ def test_tipo_de_no_invalido_nao_chega_a_biblioteca(biblioteca) -> None:  # type
     assert falsa.abertos == []
 
 
+def test_argumento_torto_e_nao_sei_conferido_na_porta(biblioteca) -> None:  # type: ignore[no-untyped-def]
+    """O nome e o nó se conferem antes da biblioteca: nada aqui levanta, e não há
+    ``except`` que engula o erro de quem chamou (a catraca da origem).
+
+    MORDIDA: tirar a conferência do nome em ``propriedade_do_syspath`` faz o
+    ``encode("ascii")`` levantar aqui, e o teste reprova.
+    """
+    falsa = biblioteca({"X": b"1"})
+    assert banco_do_udev.propriedade_do_syspath("/sys/x", "PROPRIEDADE_Ç") is None
+    assert banco_do_udev.propriedade_do_devnum("c", 1, "PROPRIEDADE_Ç") is None
+    assert banco_do_udev.propriedade_do_devnum("c", -1, "X") is None
+    assert banco_do_udev.propriedade_do_devnum("c", 1.5, "X") is None  # type: ignore[arg-type]
+    assert banco_do_udev.propriedade_do_syspath("", "X") is None
+    assert banco_do_udev.propriedade_do_syspath("/sys/a\0b", "X") is None
+    assert falsa.abertos == []
+    assert banco_do_udev.propriedade_do_syspath(Path("/sys/x"), "X") == "1"
+    assert falsa.abertos == [("syspath", b"/sys/x")]
+
+
 def test_sem_a_biblioteca_a_resposta_e_nao_sei(monkeypatch: pytest.MonkeyPatch) -> None:
     # A decisão D-0810-O-UDEV-SE-PERGUNTA-A-LIBUDEV.
     def falta(*_a: Any, **_k: Any) -> Any:
