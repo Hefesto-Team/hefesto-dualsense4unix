@@ -110,6 +110,10 @@ ESTADO = {
     # passou a dar dono (A-ABA-NAVEGACAO-FAZ-O-QUE-DIZ-E-O-MODO-STEAM-NAVEGA-O-BIG-PICTURE-01).
     "navegacao": {"interna_ligada": True, "tipo": "computador", "foco": False,
                   "big_picture": {"ligado": True, "agindo": False, "quem_le": "hefesto"}},
+    # O Modo Freestyle LIGADO: o balão do Aplicar ganha a cauda «Vale em todo jogo…»,
+    # e o desenho crava o Aplicar sem ela. Sem isto o endereço `rodape.aplicar`
+    # (SO-O-FREESTYLE-VALE-EM-TODO-JOGO-01, 09/10/2026) concordaria com o desenho.
+    "freestyle_ligado": True,
 }
 
 
