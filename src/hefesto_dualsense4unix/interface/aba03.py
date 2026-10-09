@@ -5,7 +5,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import re  # noqa: E402
 import onde  # noqa: E402
 import monta as monta_  # noqa: E402  o MÓDULO, para ler CONECTADOS
-from monta import CSS_GLIFO, MESA, R, cor_da_zona, glifo, monta  # noqa: E402
+from monta import CSS_GLIFO, MESA, R, cor_da_zona, glifo, monta, trava_do_nativo  # noqa: E402
 
 sys.path.insert(0, str(R / "src"))
 from hefesto_dualsense4unix.app.actions.trigger_specs import PRESETS  # noqa: E402
@@ -923,6 +923,7 @@ MIOLO = f'''
           <b>O DualSense não devolve o modo em que está:</b> o que você sente na mão é a
           confirmação.
         </span></span>
+        {trava_do_nativo("nos gatilhos")}
         {monta_.par_de_modos(GESTO_DO_MODO, monta_.MODO_PERSONALIZADO)}
         <span class="ajuda esq">?<span class="dica">
           <b>Modo Automático:</b> o jogo decide os dois gatilhos de todos os controles, e

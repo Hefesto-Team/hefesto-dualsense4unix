@@ -11,7 +11,7 @@ from monta import CONECTADOS, DADOS_DO_REPO  # noqa: E402
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 from monta import (  # noqa: E402
-    MESA, cor_da_zona, glifo, monta, svg,
+    MESA, cor_da_zona, glifo, monta, svg, trava_do_nativo,
 )
 
 from hefesto_dualsense4unix.daemon.subsystems.rumble import (  # noqa: E402
@@ -1296,6 +1296,7 @@ MIOLO = f'''
           O jogo pede uma vibração, e esta aba decide quanto dela chega a cada controle.<br><br>
           <b>Ajuste na coluna do controle</b>: a fita do topo não escolhe nada aqui.
         </span></span>
+        {trava_do_nativo("na vibração")}
       </div>
       <div class="quadro-corpo">
         <div class="vib">

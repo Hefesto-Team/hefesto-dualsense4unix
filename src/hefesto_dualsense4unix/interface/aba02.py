@@ -1,7 +1,7 @@
 import re, sys, pathlib; sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import mesa_viva
 import onde
-from monta import (monta, glifo, rotulo, cabe_o_todos, CSS_GLIFO, CSS_LUZINHAS,
+from monta import (monta, trava_do_nativo, glifo, rotulo, cabe_o_todos, CSS_GLIFO, CSS_LUZINHAS,
                    MESA, CONECTADOS,
                    NADA_A_DIZER, SEPARADOR, cor_da_zona, luzinhas, numero_do_jogador,
                    player_slot_color,
@@ -2800,6 +2800,7 @@ MIOLO = f'''
           A <b>borda</b> tem a cor do controle, e o <b>fundo lilás</b> diz qual está
           escolhido. <b>Todos</b> abre os {QUANTOS_NA_MESA} de uma vez.
         </span></span>
+        {trava_do_nativo("nestes ajustes")}
         <!-- O CALIBRAR FICA NO CANTO SUPERIOR DIREITO, sozinho desde 29/09/2026.
              Em 31/08 eram dois botões aqui (*"A posição deles volta pro canto
              superior direito."*); o «Mapa do controle» ganhou a casa na aba
@@ -2807,7 +2808,7 @@ MIOLO = f'''
              controle deveria ter saído da guia de Controles e ter ficado só na
              guia conexões."* A classe `.sensores` continua a alinhá-lo à direita. -->
         <span class="sensores">
-          <a class="btn" href="calibrar-sensores.html"
+          <a class="btn nativo-nao" href="calibrar-sensores.html"
              title="Calibra o giroscópio e o acelerômetro de todos os controles conectados, com todos parados numa superfície plana.">Calibrar sensores de movimento</a>
         </span>
       </div>

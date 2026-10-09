@@ -346,6 +346,34 @@
      `.fita.inerte` é a única porta desta regra. */
   .fita.inerte .chip.on{border-color:var(--border-sutil);background:transparent;
                         color:var(--comment);font-weight:400}
+  /* ---------- O MODO NATIVO: A FITA FICA CINZA E MUDA — 09/10/2026 ----------
+     DESLIGAR-O-HEFESTO-DEVOLVE-O-CONTROLE-AO-LINUX-01, opção a. Com o Hefesto
+     desligado quem manda é o jogo, e a fita só mostra quem está conectado: a
+     camada `.so-no-nativo` cobre a fita inteira, não deixa o clique chegar nos
+     chips e carrega a dica. O PINTOR É O CORPO (`body.nativo`), pintado pelo
+     piloto a cada tique; o resto da trava (o que cada aba por controle grava)
+     mora em `monta.CSS_DO_NATIVO`, só nas cinco páginas que precisam. */
+  .fita{position:relative}
+  .so-no-nativo{display:none}
+  body.nativo .fita .so-no-nativo{display:block;position:absolute;inset:0;z-index:2;cursor:default}
+  body.nativo .fita{color:var(--comment)}
+  body.nativo .fita .chip,body.nativo .fita .chip.on,body.nativo .fita .chip.plastico{
+    border-color:var(--border-sutil);background:transparent;color:var(--comment);
+    font-weight:400;--borda-do-chip:1px}
+  /* a peça fixa do cartão e a trava do quadro nascem escondidas */
+  .visto-fixo,.visto-legenda,.trava-nativo{display:none}
+  body.nativo .visto-fixo{grid-column:1/-1;display:flex;align-items:center;justify-content:center;
+    gap:7px;height:28px;border:1px solid var(--border-sutil);border-radius:7px;
+    background:transparent;color:var(--texto-suave);font-size:12px;font-weight:600;cursor:default}
+  body.nativo .visto-fixo .cad{color:var(--comment)}
+  body.nativo .visto-legenda{grid-column:1/-1;height:28px;display:flex;align-items:center;
+    justify-content:center;color:var(--comment);font-size:11.5px}
+  body.nativo .cartao.off .visto-fixo,body.nativo .cartao.off .visto-legenda{display:none}
+  body.nativo .mascara .chip{display:none}
+  body.nativo .cartao.alvo{background:var(--app-bg)}
+  body.nativo .trava-nativo{display:inline-flex;align-items:center;gap:6px;margin-left:auto;
+    margin-right:10px;color:var(--comment);font-size:12px;cursor:default}
+  body.nativo .trava-nativo .cad{color:var(--comment)}
   /* AQUI MORAVA A CAIXA ALTA DA VIA, e ela SAIU — ESQUELETO-C2, 11/09/2026.
      Era a TELA-TRES-01 §3, pedido de 08/09: "cabo e rádio coloca
      maiúsculo." O que ela leu três dias depois, na MESMA tela:

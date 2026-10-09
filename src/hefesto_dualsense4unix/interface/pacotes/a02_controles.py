@@ -1697,6 +1697,7 @@ from hefesto_dualsense4unix.integrations import (  # noqa: E402
     teste_do_microfone,
 )
 
+from . import camada as _camada  # noqa: E402
 from . import gesto  # noqa: E402
 from . import perfil as _perfil  # noqa: E402
 from . import ponte as _ponte  # noqa: E402
@@ -2512,9 +2513,7 @@ MIRA_SEM_O_CONTROLE = (
 )
 
 #: (`hefesto_vivo.Piloto._recusou_dizendo`); na tela não entra recado nenhum.
-MIRA_CINZA_NO_NATIVO = (
-    "Em Modo Nativo o jogo lê este controle direto, e o Analógico Virtual não grava."
-)
+MIRA_CINZA_NO_NATIVO = _camada.MIRA_CINZA_NO_NATIVO  # a frase mora na camada, que é quem recusa
 
 
 @gesto("02-controles.html", "mira", grava="mira_set_detalhado")
@@ -2536,7 +2535,8 @@ def mira(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     3. **NO MODO NATIVO NÃO PEDE NADA** — A-MIRA-POR-MOVIMENTO-NA-TELA-02,
        palavra de 24/09/2026: *"fica cinza no Nativo, sem gravar"*. O
        chip está cinza (`mira-fora`), e o clique recusa ANTES da ponte com
-       :data:`MIRA_CINZA_NO_NATIVO`. O daemon tem a MESMA guarda
+       :data:`MIRA_CINZA_NO_NATIVO` — quem recusa é a camada (`pacotes/camada.py`,
+       aplicada pelo `@gesto`), não um `if` aqui. O daemon tem a MESMA guarda
        (`status: "nativo"`), porque o estado que esta tela leu é de um tique
        atrás: a recusa dele volta pela mesma frase.
 
@@ -2547,8 +2547,6 @@ def mira(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     uniq = _uniq(o)
     if not uniq:
         raise ValueError("mira: o clique não disse em qual controle")
-    if _nativo(ctx):
-        raise RuntimeError(MIRA_CINZA_NO_NATIVO)
     agora = _analogico_virtual(ctx.por_uniq(uniq))
     if agora is None:
         raise RuntimeError(SEM_LEITURA_DA_MIRA)
@@ -2563,10 +2561,7 @@ def mira(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise RuntimeError(MIRA_SEM_O_CONTROLE)
 
 
-TOQUE_CINZA_NO_NATIVO = (
-    "Em Modo Nativo o jogo lê este controle direto, e o Cursor e os Botões do "
-    "touchpad não gravam."
-)
+TOQUE_CINZA_NO_NATIVO = _camada.TOQUE_CINZA_NO_NATIVO
 
 SEM_LEITURA_DO_CHIP = (
     "a leitura ainda não chegou deste controle, e o botão não sabe se apaga "
@@ -2639,8 +2634,6 @@ def escolher_o_lado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     lado = str(o.get("lado") or "")
     if lado not in rot.LADOS_DO_VIRTUAL:
         raise ValueError(f"analogico-lado: não conheço o lado {lado!r}")
-    if _nativo(ctx):
-        raise RuntimeError(MIRA_CINZA_NO_NATIVO)
     corpo = _corpo(p.mira_set_detalhado(lado=lado, uniq=uniq))
     if corpo is None:
         raise RuntimeError(
@@ -2664,8 +2657,6 @@ def toque(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     pedido = str(o.get("toque") or "")
     uniq = _o_clique_do_chip(o, "toque", pedido, rot.TOQUES)
-    if _nativo(ctx):
-        raise RuntimeError(TOQUE_CINZA_NO_NATIVO)
     if _alternar_o_chip(ctx, p, uniq, "toque", pedido) == "nativo":
         raise RuntimeError(TOQUE_CINZA_NO_NATIVO)
 

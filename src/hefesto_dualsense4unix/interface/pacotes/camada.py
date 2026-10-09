@@ -1,5 +1,15 @@
-"""A camada de cada gesto: de quem é o valor que ele grava. Das dez abas."""
+"""A camada de cada gesto: de quem é o valor que ele grava. Das dez abas.
+
+**E O QUE ELA RECUSA NO NATIVO** (09/10/2026, DESLIGAR-O-HEFESTO-DEVOLVE-O-CONTROLE-AO-LINUX-01,
+itens 4 e 5): com o Hefesto desligado o jogo é o dono do controle, e nas cinco abas que falam de
+controle (Jogar, Controles, Gatilhos, Iluminação e Vibração) nenhum gesto chega ao daemon, a não ser
+os que a tabela `VIVOS_NO_NATIVO` nomeia (o caminho de volta e o que é do computador). A recusa é
+daqui, e o despachante a aplica no decorador `@gesto` — um gesto novo nasce recusado no Nativo sem
+que o autor escreva um `if` na tela.
+"""
 from __future__ import annotations
+
+from typing import Any
 
 COMPUTADOR, CONTROLE, JOGO, ATO, JANELA = (
     "computador", "controle", "jogo", "ato", "janela")
@@ -158,13 +168,88 @@ CAMADA: dict[tuple[str, str], str] = {
     ("10-perfis.html", "selecionar"): _W,
 }
 
+#: as abas que falam de controle: no Nativo elas mostram quem está conectado e não deixam mexer
+ABAS_POR_CONTROLE: frozenset[str] = frozenset({
+    "01-jogar.html", "02-controles.html", "03-gatilhos.html", "04-iluminacao.html",
+    "05-vibracao.html",
+})
+
+#: o que segue vivo no Nativo, dentro das cinco abas: o interruptor «Ligado | Desligado» (o caminho de
+#: volta), os dois botões do Desligado, o Modo Freestyle (é do computador) e o Reconectar controles
+#: (um ato sobre o aparelho, não uma escolha do Hefesto). O gesto da camada `janela` nem chega ao
+#: daemon e fica de fora da conta.
+VIVOS_NO_NATIVO: frozenset[tuple[str, str]] = frozenset({
+    ("01-jogar.html", "cadeado"),
+    ("01-jogar.html", "hefesto"),
+    ("01-jogar.html", "modo-nativo"),
+    ("01-jogar.html", "modo-steam"),
+    ("01-jogar.html", "reconectar"),
+})
+
+#: O rodapé é de TODA página (`("*", gesto)`), e na tabela não entra: o Aplicar, o
+#: Salvar e o Importar mandam o perfil ao controle e recusam no Nativo, nas cinco
+#: abas por controle; o Exportar só grava um arquivo e segue vivo.
+RODAPE_VIVO_NO_NATIVO = frozenset({"exportar"})
+FRASE_NO_NATIVO = "Em Modo Nativo o jogo lê este controle direto, e o Hefesto não grava aqui."
+MIRA_CINZA_NO_NATIVO = (
+    "Em Modo Nativo o jogo lê este controle direto, e o Analógico Virtual não grava."
+)
+TOQUE_CINZA_NO_NATIVO = (
+    "Em Modo Nativo o jogo lê este controle direto, e o Cursor e os Botões do "
+    "touchpad não gravam."
+)
+
+#: a frase própria de um gesto, quando ele nomeia o que o chip deixou de fazer
+FRASES_NO_NATIVO: dict[tuple[str, str], str] = {
+    ("02-controles.html", "mira"): MIRA_CINZA_NO_NATIVO,
+    ("02-controles.html", "analogico-lado"): MIRA_CINZA_NO_NATIVO,
+    ("02-controles.html", "toque"): TOQUE_CINZA_NO_NATIVO,
+}
+
+
+def no_nativo(state: Any) -> bool:
+    """O Modo Nativo está de pé? É o `native_mode` do daemon, pelo leitor único dos modos.
+
+    Daemon calado (`state` vazio ou ausente) NÃO é Nativo: a recusa é de quem sabe, e o gesto
+    sem daemon já falha pelo próprio caminho.
+    """
+    from hefesto_dualsense4unix.app.actions.mode_transition import (
+        MODE_NATIVE,
+        mode_of_state,
+    )
+
+    return bool(state) and mode_of_state(state) == MODE_NATIVE
+
+
+def recusa_no_nativo(pagina: str, gesto: str, state: Any) -> str | None:
+    """A frase da recusa, ou `None` quando o gesto passa.
+
+    Passa: fora do Nativo, fora das cinco abas, o que a tabela deixa vivo e o que é só da janela.
+    O resto recusa, **inclusive o gesto que ainda não está na tabela** (não se sabe de quem é).
+    """
+    if (pagina not in ABAS_POR_CONTROLE or (pagina, gesto) in VIVOS_NO_NATIVO
+            or gesto in RODAPE_VIVO_NO_NATIVO):
+        return None
+    if CAMADA.get((pagina, gesto)) == JANELA or not no_nativo(state):
+        return None
+    return FRASES_NO_NATIVO.get((pagina, gesto), FRASE_NO_NATIVO)
+
 
 __all__ = [
+    "ABAS_POR_CONTROLE",
     "ATO",
     "CAMADA",
     "CAMADAS",
     "COMPUTADOR",
     "CONTROLE",
+    "FRASES_NO_NATIVO",
+    "FRASE_NO_NATIVO",
     "JANELA",
     "JOGO",
+    "MIRA_CINZA_NO_NATIVO",
+    "RODAPE_VIVO_NO_NATIVO",
+    "TOQUE_CINZA_NO_NATIVO",
+    "VIVOS_NO_NATIVO",
+    "no_nativo",
+    "recusa_no_nativo",
 ]

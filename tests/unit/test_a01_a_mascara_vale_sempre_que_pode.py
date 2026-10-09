@@ -197,8 +197,13 @@ def test_o_chip_cinza_continua_clicavel_e_recusa_dizendo() -> None:
     assert q.chamadas == [], "a recusa gravou alguma coisa no daemon"
 
 
-def test_a_mascara_que_o_produto_monta_e_gravada_em_qualquer_modo() -> None:
-    """O outro lado da queixa 1: em Modo Nativo o clique GRAVA."""
+def test_a_mascara_que_o_produto_monta_e_gravada_fora_do_nativo() -> None:
+    """Fora do Nativo o clique GRAVA; no Nativo a camada recusa (03/10/2026).
+
+    A «máscara em qualquer modo» (D-2309) foi revogada em parte pela
+    DESLIGAR-O-HEFESTO-DEVOLVE-O-CONTROLE-AO-LINUX-01, item 5: com o Hefesto
+    desligado o jogo lê o controle direto, e a máscara não é do Hefesto.
+    """
     class _Ponte:
         def __init__(self) -> None:
             self.chamadas: list[tuple[str, Any]] = []
@@ -207,7 +212,7 @@ def test_a_mascara_que_o_produto_monta_e_gravada_em_qualquer_modo() -> None:
             self.chamadas.append((metodo, k))
             return True, None
 
-    for estado in (VIVO_NATIVO, VIVO_NAVEGACAO, VIVO_GAMEPAD):
+    for estado in (VIVO_NAVEGACAO, VIVO_GAMEPAD):
         p = _Ponte()
         aba.mascara_do_controle(
             _ctx(estado), {"uniq": "aa:bb:cc:00:00:01", "mascara": "Xbox 360"}, p)
@@ -215,6 +220,13 @@ def test_a_mascara_que_o_produto_monta_e_gravada_em_qualquer_modo() -> None:
             ("gamepad.mask.set",
              {"uniq": "aa:bb:cc:00:00:01", "flavor": "xbox"})], (
             f"a máscara não foi gravada neste modo: {p.chamadas!r}")
+
+    p = _Ponte()
+    with pytest.raises(RuntimeError) as erro:
+        aba.mascara_do_controle(
+            _ctx(VIVO_NATIVO), {"uniq": "aa:bb:cc:00:00:01", "mascara": "Xbox 360"}, p)
+    assert "Modo Nativo" in str(erro.value)
+    assert p.chamadas == [], "no Nativo a máscara chegou ao daemon"
 
 
 def test_a_mascara_nao_consta_mais_como_botao_sem_dono() -> None:

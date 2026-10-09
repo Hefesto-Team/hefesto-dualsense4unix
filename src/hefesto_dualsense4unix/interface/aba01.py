@@ -871,6 +871,21 @@ def _chips_de_mascara(escolhida):
     return "\n".join(fora)
 
 
+# O QUE O CARTÃO DIZ NO NATIVO (DESLIGAR-O-HEFESTO-01, opção a, 08/10/2026): com
+# o Hefesto desligado o jogo vê o controle como ele é, e a máscara escolhida não
+# vale. Os dois chips de baixo e a escolha somem (a tela não oferece máscara) e
+# entra uma peça FIXA com cadeado, sem gesto. Nasce escondida; quem mostra é
+# `body.nativo` (topo.html).
+VISTO_NO_NATIVO = (
+    '<span class="visto-fixo" title="Com o Hefesto desligado, o jogo vê o controle '
+    'como ele é. A máscara que você escolheu volta quando ligar.">'
+    '<svg class="cad" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true">'
+    '<path d="M3.6 5.2V3.9a2.4 2.4 0 0 1 4.8 0v1.3" fill="none" stroke="currentColor" '
+    'stroke-width="1.2"/><rect x="2.3" y="5.2" width="7.4" height="5.4" rx="1.1" '
+    'fill="currentColor"/></svg>DualSense</span>'
+    '<span class="visto-legenda">O jogo vê o próprio controle</span>')
+
+
 def cartao(c, bateria=None):
     """Um cartão da fileira: desenho na cor do plástico, rótulo e as máscaras.
 
@@ -992,6 +1007,7 @@ def cartao(c, bateria=None):
                 </div>
                 <div class="mascara">
 {_chips_de_mascara(c["mascara"] if conectado else None)}
+{VISTO_NO_NATIVO}
                 </div>
               </div>'''
 

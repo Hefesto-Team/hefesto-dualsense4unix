@@ -346,6 +346,34 @@
      `.fita.inerte` é a única porta desta regra. */
   .fita.inerte .chip.on{border-color:var(--border-sutil);background:transparent;
                         color:var(--comment);font-weight:400}
+  /* ---------- O MODO NATIVO: A FITA FICA CINZA E MUDA — 09/10/2026 ----------
+     DESLIGAR-O-HEFESTO-DEVOLVE-O-CONTROLE-AO-LINUX-01, opção a. Com o Hefesto
+     desligado quem manda é o jogo, e a fita só mostra quem está conectado: a
+     camada `.so-no-nativo` cobre a fita inteira, não deixa o clique chegar nos
+     chips e carrega a dica. O PINTOR É O CORPO (`body.nativo`), pintado pelo
+     piloto a cada tique; o resto da trava (o que cada aba por controle grava)
+     mora em `monta.CSS_DO_NATIVO`, só nas cinco páginas que precisam. */
+  .fita{position:relative}
+  .so-no-nativo{display:none}
+  body.nativo .fita .so-no-nativo{display:block;position:absolute;inset:0;z-index:2;cursor:default}
+  body.nativo .fita{color:var(--comment)}
+  body.nativo .fita .chip,body.nativo .fita .chip.on,body.nativo .fita .chip.plastico{
+    border-color:var(--border-sutil);background:transparent;color:var(--comment);
+    font-weight:400;--borda-do-chip:1px}
+  /* a peça fixa do cartão e a trava do quadro nascem escondidas */
+  .visto-fixo,.visto-legenda,.trava-nativo{display:none}
+  body.nativo .visto-fixo{grid-column:1/-1;display:flex;align-items:center;justify-content:center;
+    gap:7px;height:28px;border:1px solid var(--border-sutil);border-radius:7px;
+    background:transparent;color:var(--texto-suave);font-size:12px;font-weight:600;cursor:default}
+  body.nativo .visto-fixo .cad{color:var(--comment)}
+  body.nativo .visto-legenda{grid-column:1/-1;height:28px;display:flex;align-items:center;
+    justify-content:center;color:var(--comment);font-size:11.5px}
+  body.nativo .cartao.off .visto-fixo,body.nativo .cartao.off .visto-legenda{display:none}
+  body.nativo .mascara .chip{display:none}
+  body.nativo .cartao.alvo{background:var(--app-bg)}
+  body.nativo .trava-nativo{display:inline-flex;align-items:center;gap:6px;margin-left:auto;
+    margin-right:10px;color:var(--comment);font-size:12px;cursor:default}
+  body.nativo .trava-nativo .cad{color:var(--comment)}
   /* AQUI MORAVA A CAIXA ALTA DA VIA, e ela SAIU — ESQUELETO-C2, 11/09/2026.
      Era a TELA-TRES-01 §3, pedido de 08/09: "cabo e rádio coloca
      maiúsculo." O que ela leu três dias depois, na MESMA tela:
@@ -1575,9 +1603,22 @@
   .duas-colunas > div:nth-child(4){grid-column:4}
   .duas-colunas > div:nth-child(5){grid-column:5}
 
+
+  body.nativo.por-controle :is([data-gesto],[data-modo],[data-hef-gesto],[data-papel],[data-forca],[data-player],[data-sensor],[data-rota],[data-mudo],[data-mic-modo],[data-v]):not(:is([data-gesto=cadeado],[data-gesto=hefesto],[data-gesto=modo-nativo],[data-gesto=modo-steam],[data-gesto=reconectar])){
+    pointer-events:none;cursor:default;-webkit-appearance:none;appearance:none;
+    background:transparent!important;border-color:var(--border-sutil)!important;
+    color:var(--comment)!important;font-weight:400!important;box-shadow:none!important}
+  body.nativo.por-controle .nativo-nao{pointer-events:none;cursor:default;
+    background:transparent!important;border-color:var(--border-sutil)!important;
+    color:var(--comment)!important;font-weight:400!important;box-shadow:none!important}
+  body.nativo.por-controle :is([data-gesto=cadeado],[data-gesto=hefesto],[data-gesto=modo-nativo],[data-gesto=modo-steam],[data-gesto=reconectar]){pointer-events:auto}
+  body.nativo.por-controle .guardar,body.nativo.por-controle .par-modo,
+  body.nativo.por-controle .par-modo + .ajuda,
+  body.nativo.por-controle .r-aplicar,body.nativo.por-controle .r-salvar,
+  body.nativo.por-controle .r-importar{visibility:hidden}
 </style>
 </head>
-<body>
+<body class="por-controle" data-campo="nativo" data-hef-alvo="classe" data-hef-classe="nativo" data-hef-quando="sim">
 
 <div class="janela">
 
@@ -1719,6 +1760,7 @@
       <label class="chip on">Todos</label>
       <label class="chip plastico" data-campo="fita-chip" style="--plastico:#ae335a" title="Cosmic Red — a borda é a cor do plástico">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> <span class="via">USB</span></label>
       <label class="chip plastico" data-campo="fita-chip" style="--plastico:#7eb8d4" title="Starlight Blue — a borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> <span class="via">BT</span></label>
+      <span class="so-no-nativo" title="Com o Hefesto desligado, o jogo manda: aqui só se vê quem está conectado."></span>
     </div>
     <div class="conectado"><span class="bolinha">●</span> <b data-campo="conta-b">1 USB · 1 BT</b></div>
     <div class="perfil-ativo">
@@ -1765,6 +1807,7 @@
           <b>O DualSense não devolve o modo em que está:</b> o que você sente na mão é a
           confirmação.
         </span></span>
+        <span class="trava-nativo" title="Com o Hefesto desligado, o jogo manda nos gatilhos. O que está aqui volta a valer quando ligar, na aba Jogar."><svg class="cad" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M3.6 5.2V3.9a2.4 2.4 0 0 1 4.8 0v1.3" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="2.3" y="5.2" width="7.4" height="5.4" rx="1.1" fill="currentColor"/></svg>O jogo manda</span>
         <span class="par-modo" role="group" aria-label="Modo da aba"><button data-gesto="modo-dos-gatilhos" data-modo="automatico" data-campo="modo-dos-gatilhos-automatico" data-hef-alvo="classe" data-hef-atributo="aria-pressed" aria-pressed="false">Modo Automático</button><button class="on" data-gesto="modo-dos-gatilhos" data-modo="personalizado" data-campo="modo-dos-gatilhos-personalizado" data-hef-alvo="classe" data-hef-atributo="aria-pressed" aria-pressed="true">Modo Personalizado</button></span>
         <span class="ajuda esq">?<span class="dica">
           <b>Modo Automático:</b> o jogo decide os dois gatilhos de todos os controles, e

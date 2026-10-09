@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import ast
+import inspect
 import pathlib
 
 import pytest
@@ -201,7 +202,8 @@ def test_o_ato_nao_grava(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_o_sensor_grava_pelo_daemon() -> None:
     """As duas pontas do único que grava pelo daemon: o gesto chama, o daemon grava."""
-    gesto = pacotes.GESTOS[("02-controles.html", "sensor")]
+    # A camada embrulha o gesto (recusa no Nativo): o corpo que se lê é o de dentro.
+    gesto = inspect.unwrap(pacotes.GESTOS[("02-controles.html", "sensor")])
     fonte = pathlib.Path(gesto.__code__.co_filename).read_text(encoding="utf-8")
     corpo = next(no for no in ast.walk(ast.parse(fonte))
                  if isinstance(no, ast.FunctionDef) and no.name == gesto.__name__)

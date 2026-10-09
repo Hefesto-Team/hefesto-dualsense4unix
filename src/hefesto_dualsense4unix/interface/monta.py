@@ -414,6 +414,14 @@ def rotulo_do_chip(c: dict[str, Any]) -> str:
     return texto
 
 
+# NO MODO NATIVO A FITA FICA CINZA E MUDA (DESLIGAR-O-HEFESTO-01, opção a): quem
+# manda é o jogo, e a fita só mostra quem está conectado. Esta camada cobre a
+# fita inteira, não aceita clique e carrega a dica; fora do Nativo nasce escondida.
+DICA_DA_FITA_NO_NATIVO = (
+    '<span class="so-no-nativo" title="Com o Hefesto desligado, o jogo manda: '
+    'aqui só se vê quem está conectado."></span>')
+
+
 def fita(ativo: str = "todos", inerte: bool = False, titulo: str | None = None,
          mesa: list[dict[str, Any]] | None = None) -> str:
     """Os chips da fita, um por controle da mesa, gerados.
@@ -499,7 +507,7 @@ def fita(ativo: str = "todos", inerte: bool = False, titulo: str | None = None,
     rotulo = f"<span>{ROTULO_DA_FITA}</span>" if lista else ""
     return (f'<div class="fita{" inerte" if inerte else ""}" title="{t}">\n'
             f"      {rotulo}\n      " + "\n      ".join(chips)
-            + "\n    </div>")
+            + f'\n      {DICA_DA_FITA_NO_NATIVO}\n    </div>')
 
 
 def identidade_do_chip(c: dict[str, Any], mesa: list[dict[str, Any]]) -> str:
@@ -981,6 +989,55 @@ MARCA_DA_FITA = '    <div class="fita'
 RECUO_DA_FITA = "    "
 
 
+# O QUE UMA ABA POR CONTROLE FAZ NO NATIVO (DESLIGAR-O-HEFESTO-01, opção a, 09/10):
+# tudo o que a aba grava vira CINZA e não aceita clique (a recusa de verdade é da
+# camada, `pacotes.camada`; isto é só o rosto dela), e o que é ATO sem o que
+# fazer (Aplicar, Salvar e Importar do rodapé, o `.guardar` de cada coluna) fica invisível, e o Exportar, que só grava um arquivo, segue. Ficam vivos os cinco gestos de `VIVOS_NO_NATIVO`
+# (o cadeado, o liga/desliga, os dois modos e o reconectar). Os seletores usam o
+# atributo SEM ASPAS de propósito: réguas contam o endereço com aspas, e o
+# `topo.html` é compartilhado, então isto só entra nas cinco páginas.
+CSS_DO_NATIVO = """
+  body.nativo.por-controle :is([data-gesto],[data-modo],[data-hef-gesto],[data-papel],[data-forca],[data-player],[data-sensor],[data-rota],[data-mudo],[data-mic-modo],[data-v]):not(:is([data-gesto=cadeado],[data-gesto=hefesto],[data-gesto=modo-nativo],[data-gesto=modo-steam],[data-gesto=reconectar])){
+    pointer-events:none;cursor:default;-webkit-appearance:none;appearance:none;
+    background:transparent!important;border-color:var(--border-sutil)!important;
+    color:var(--comment)!important;font-weight:400!important;box-shadow:none!important}
+  body.nativo.por-controle .nativo-nao{pointer-events:none;cursor:default;
+    background:transparent!important;border-color:var(--border-sutil)!important;
+    color:var(--comment)!important;font-weight:400!important;box-shadow:none!important}
+  body.nativo.por-controle :is([data-gesto=cadeado],[data-gesto=hefesto],[data-gesto=modo-nativo],[data-gesto=modo-steam],[data-gesto=reconectar]){pointer-events:auto}
+  body.nativo.por-controle .guardar,body.nativo.por-controle .par-modo,
+  body.nativo.por-controle .par-modo + .ajuda,
+  body.nativo.por-controle .r-aplicar,body.nativo.por-controle .r-salvar,
+  body.nativo.por-controle .r-importar{visibility:hidden}
+"""
+
+
+def trava_do_nativo(o_que: str) -> str:
+    """A peça «O jogo manda» do cabeçalho de um quadro, com cadeado, nascida
+    escondida e mostrada por `body.nativo`. `o_que`: sobre o que o jogo manda
+    («nos gatilhos», «na luz»...)."""
+    return (
+        '<span class="trava-nativo" title="Com o Hefesto desligado, o jogo manda '
+        f'{o_que}. O que está aqui volta a valer quando ligar, na aba Jogar.">'
+        '<svg class="cad" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true">'
+        '<path d="M3.6 5.2V3.9a2.4 2.4 0 0 1 4.8 0v1.3" fill="none" stroke="currentColor" '
+        'stroke-width="1.2"/><rect x="2.3" y="5.2" width="7.4" height="5.4" rx="1.1" '
+        'fill="currentColor"/></svg>O jogo manda</span>')
+
+
+def corpo_da_pagina(arq: str) -> str:
+    """A abertura do `<body>`. O ENDEREÇO `nativo` mora nas dez (o cabeçalho
+    comum, `pacotes.topo`, o escreve), e a classe `por-controle` só nas cinco
+    abas de `camada.ABAS_POR_CONTROLE` (a mesma lista que a recusa usa): é ela
+    que o CSS do Nativo usa para travar o que a aba grava. Quem pinta `body.nativo` é o piloto, a cada tique."""
+    # Import LAZY: `pacotes` importa este módulo (ordem própria de import).
+    from hefesto_dualsense4unix.interface.pacotes.camada import ABAS_POR_CONTROLE
+    classe = "por-controle" if f"{arq}.html" in ABAS_POR_CONTROLE else ""
+    marca = f' class="{classe}"' if classe else ""
+    return (f'<body{marca} data-campo="nativo" data-hef-alvo="classe" '
+            'data-hef-classe="nativo" data-hef-quando="sim">')
+
+
 def monta(arq: str, titulo_aba: str, miolo: str, css_extra: str = "",
           legenda: str = "") -> int:
     """Grava a página. A `legenda` é só o que a página precisa trazer ao fim (o
@@ -993,6 +1050,8 @@ def monta(arq: str, titulo_aba: str, miolo: str, css_extra: str = "",
     t = troca(t, arq, "</style>", CSS_FOLHA + "\n</style>")
     if css_extra:
         t = t.replace("</style>", css_extra + "\n</style>", 1)
+    if '<body class="por-controle"' in corpo_da_pagina(arq):
+        t = t.replace("</style>", CSS_DO_NATIVO + "</style>", 1)
     for nome, colorway in PLASTICOS_DO_ESQUELETO.items():
         t = re.sub(rf"--{nome}:#[0-9a-fA-F]{{6}}",
                    f"--{nome}:{cor_da_zona(colorway)}", t, count=1)
@@ -1029,6 +1088,7 @@ def monta(arq: str, titulo_aba: str, miolo: str, css_extra: str = "",
     if legenda:
         k = fim.index("</body>")
         fim = fim[:k] + legenda + "\n\n" + fim[k:]
+    t = t.replace("<body>", corpo_da_pagina(arq), 1)
     doc = t + '  <div class="miolo">\n' + miolo + '\n  </div>\n\n' + fim
     abertas, fechadas = doc.count("<div"), doc.count("</div>")
     if abertas != fechadas:

@@ -288,7 +288,6 @@ def test_guardado_vira_frase_no_cartao_dela(a04, ctx, monkeypatch):
     )
 
     _com_o_perfil(monkeypatch, a04, {"leds": {"lightbar_brightness": 1.0}})
-    ctx.state["native_mode"] = True
     p = PonteDeMentira({"status": "ok", "aplicado_em": [], "guardado_em": [UNIQ]})
     fn = pacotes.gesto_da_pagina("04-iluminacao.html", "cor")
     with pytest.raises(RuntimeError) as erro:
@@ -297,6 +296,20 @@ def test_guardado_vira_frase_no_cartao_dela(a04, ctx, monkeypatch):
         f"a frase foi {str(erro.value)!r}, e ela tem de ser a do produto — a "
         f"mesma que a janela GTK diz neste mesmo evento.")
     assert _MOTIVO_NATIVO not in str(erro.value)
+
+
+def test_no_nativo_a_camada_recusa_a_luz_antes_do_daemon(a04, ctx, monkeypatch):
+    """Desde 03/10/2026 (DESLIGAR…-01, item 5) a luz não sai no Nativo: o jogo manda."""
+    import pacotes
+
+    _com_o_perfil(monkeypatch, a04, {"leds": {"lightbar_brightness": 1.0}})
+    ctx.state["native_mode"] = True
+    p = PonteDeMentira({"status": "ok", "aplicado_em": [UNIQ], "guardado_em": []})
+    fn = pacotes.gesto_da_pagina("04-iluminacao.html", "cor")
+    with pytest.raises(RuntimeError) as erro:
+        fn(ctx, {"controle": "p1", "uniq": UNIQ, "hex": "#0000FF"}, p)
+    assert "Modo Nativo" in str(erro.value)
+    assert not p.chamadas, "no Nativo a luz chegou ao daemon"
 
 
 def test_nada_aconteceu_tambem_fala(a04, ctx, monkeypatch):

@@ -35,6 +35,7 @@ e ele respondia a primeira linha da chave sem olhar o controle.
 """
 from __future__ import annotations
 
+import functools
 import html.parser
 import pathlib
 import re
@@ -42,6 +43,8 @@ import sys
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from typing import Any
+
+from .camada import ABAS_POR_CONTROLE, no_nativo, recusa_no_nativo
 
 Pintura = Callable[["Contexto"], "dict[str, Any]"]
 Gesto = Callable[["Contexto", "dict[str, Any]", Any], "dict[str, Any] | None"]
@@ -136,10 +139,21 @@ def gesto(pagina: str, nome: str, *,
                 f"ERRO: o gesto {nome!r} de {pagina} já tem dono "
                 f"({GESTOS[chave].__module__}). Dois donos para o mesmo botão é "
                 f"o defeito que este despachante existe para impedir.")
-        GESTOS[chave] = fn
+
+        @functools.wraps(fn)
+        def guardado(ctx: Contexto, o: dict[str, Any], ipc: Any) -> Any:
+            # A CAMADA RECUSA NO NATIVO (DESLIGAR-O-HEFESTO-DEVOLVE-O-CONTROLE-AO-LINUX-01,
+            # item 5): é daqui, e não de um `if` em cada tela, que o gesto das cinco abas por
+            # controle morre antes de chegar ao `ipc`. Todo chamador passa por este fio.
+            recusa = recusa_no_nativo(pagina, nome, getattr(ctx, "state", None))
+            if recusa:
+                raise RuntimeError(recusa)
+            return fn(ctx, o, ipc)
+
+        GESTOS[chave] = guardado
         if limpo:
             GESTOS_QUE_MEXEM[chave] = limpo
-        return fn
+        return guardado
     return dentro
 
 
@@ -236,7 +250,23 @@ def perigosos() -> set[tuple[str, str]]:
 
 def gesto_da_pagina(pagina: str, nome: str) -> Gesto | None:
     """Quem atende aquele botão, ou `None`."""
-    return GESTOS.get((pagina, nome)) or GESTOS.get(("*", nome))
+    proprio = GESTOS.get((pagina, nome))
+    if proprio is not None:
+        return proprio
+    coringa = GESTOS.get(("*", nome))
+    if coringa is None or pagina not in ABAS_POR_CONTROLE:
+        return coringa
+
+    @functools.wraps(coringa)
+    def na_pagina(ctx: Contexto, o: dict[str, Any], ipc: Any) -> Any:
+        # O gesto do rodapé é de toda página e não sabe em qual está: quem sabe
+        # é quem o despacha. No Nativo, as cinco abas por controle o recusam.
+        frase = recusa_no_nativo(pagina, nome, getattr(ctx, "state", None))
+        if frase:
+            raise RuntimeError(frase)
+        return coringa(ctx, o, ipc)
+
+    return na_pagina
 
 
 def pacote_da_pagina(pagina: str, ctx: Contexto) -> dict[str, Any] | None:
@@ -670,7 +700,7 @@ def molde_do_lugar(
 
 
 def topo(ctx: Contexto) -> dict[str, Any]:
-    """Os três valores do CABEÇALHO, que são iguais nas dez abas.
+    """Os valores do CABEÇALHO, que são iguais nas dez abas.
 
     A contagem de controles e o nome do perfil ativo vivem no `topo.html`, que é
     um só para as dez páginas — logo não pertencem a pacote nenhum. Medido em
@@ -692,6 +722,9 @@ def topo(ctx: Contexto) -> dict[str, Any]:
     ativo = _perfil.nome_do_ativo(ctx.state)
     do_rodape = ativo or _o_perfil_do_rodape()
     return {
+        # O NATIVO, para as cinco abas por controle (a camada recusa o gesto; a tela só se ACINZENTA).
+        # `sim` com o `native_mode` de pé; o resto, `nao`, inclusive o daemon calado.
+        "nativo": "sim" if no_nativo(ctx.state) else "nao",
         # *"Esse x controles cai fora  # (noqa-acento: citação literal)
         # pra ganharmos espaçço Lateral"*.  # (noqa-acento: citação literal)
         "conta-b": conta_b or SEM_CONTROLE_NA_MESA,

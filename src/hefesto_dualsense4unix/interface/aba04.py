@@ -2,7 +2,7 @@ import sys, pathlib, re; sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import onde
 import monta as monta_
 from itertools import cycle
-from monta import (monta, svg, CSS_GLIFO, CSS_LUZINHAS, MESA,
+from monta import (monta, trava_do_nativo, svg, CSS_GLIFO, CSS_LUZINHAS, MESA,
                    cor_da_zona, player_slot_color, tom_da_casa)
 from pacotes import a04_iluminacao as _pacote04
 
@@ -1277,6 +1277,7 @@ MIOLO = f'''
           você sabe de quem é cada controle.<br><br>
           O plástico pode se repetir; a <b>luz</b> nunca.
         </span></span>
+        {trava_do_nativo("na luz")}
         <!-- OS DOIS MODOS — pedido de 06/10/2026: o Modo Automático e o Modo
              Personalizado tomam o lugar do interruptor das cores automáticas e da
              frase da luz do jogo embaixo das colunas. -->
