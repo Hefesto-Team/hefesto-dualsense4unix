@@ -173,6 +173,21 @@ JACK_STATUS_OFFSET = 53
 #:
 BATTERY_STATUS_OFFSET = 52
 
+#: O ESTADO DO GATILHO (08/10/2026, O-GATILHO-DIZ-QUANDO-DISPAROU-01): o NIBBLE
+#: ALTO de `trigger_right_status` (payload 41) e de `trigger_left_status`
+#: (payload 42) diz o que o gatilho está sentindo. Com a arma oficial (`0x25`):
+#: 0 antes do início, 1 entre o início e o fim, 2 depois (disparou), até o dedo
+#: voltar para antes do início; com a vibração oficial: 0 antes, 1 dentro. Só os
+#: modos oficiais mexem no nibble (o arco `0x22` e o galope `0x23` não). O
+#: nibble baixo é outro campo (o ponto de parada). Os endereços vêm de fontes de
+#: terceiros que concordam; aqui só há relatórios sintéticos no teste, e a prova
+#: no aparelho é da bancada. Cabo: report[42] e [43]; rádio: report[43] e [44].
+TRIGGER_R2_STATUS_OFFSET = 41
+TRIGGER_L2_STATUS_OFFSET = 42
+TRIGGER_STATE_SHIFT = 4
+#: O estado «disparou» da arma oficial (`weaponFired`).
+TRIGGER_ESTADO_DISPAROU = 2
+
 _CARGA_DESCARREGANDO = 0x0
 _CARGA_CARREGANDO = 0x1
 _CARGA_CHEIO = 0x2
@@ -382,6 +397,30 @@ def _bateria_com_base(report: bytes, base: int) -> int | None:
     return int(report[idx])
 
 
+def _estado_do_gatilho_com_base(report: bytes, base: int) -> tuple[int, int] | None:
+    """`(L2, R2)`: o nibble alto do status de cada gatilho, base já resolvida."""
+    r2 = base + TRIGGER_R2_STATUS_OFFSET
+    l2 = base + TRIGGER_L2_STATUS_OFFSET
+    if len(report) <= max(r2, l2):
+        return None
+    return (
+        int(report[l2]) >> TRIGGER_STATE_SHIFT,
+        int(report[r2]) >> TRIGGER_STATE_SHIFT,
+    )
+
+
+def extract_estado_do_gatilho(report: bytes) -> tuple[int, int] | None:
+    """`(L2, R2)` do estado do gatilho de um report CRU do físico, ou None.
+
+    Passa pelo mesmo `_struct_base` dos outros bytes: o `0x31` com CRC inválido
+    ou com o bit de áudio ligado não é estado de input e dá None.
+    """
+    base = _struct_base(report)
+    if base is None:
+        return None
+    return _estado_do_gatilho_com_base(report, base)
+
+
 def extract_touchpad_click(report: bytes) -> bool | None:
     """Clique do touchpad de um report CRU do físico, ou None (TOUCH-CLICK-01)."""
     base = _struct_base(report)
@@ -502,6 +541,11 @@ class PhysicalReportReader:
         self._jack_forwards = 0
         self._battery_status: int | None = None
         self._battery_forwards = 0
+        self._gatilho: tuple[int, int] | None = None
+        self._gatilho_desde = float("-inf")
+        self._disparos: dict[str, int] = {"L2": 0, "R2": 0}
+        self._disparou_em: dict[str, float] = {}
+        self._gatilho_ouvinte: Callable[[str, int, int, float], None] | None = None
         self._reports_seen = 0
         self._windows_emitted = 0
         self._bt_drops = 0
@@ -560,6 +604,36 @@ class PhysicalReportReader:
         return round(self._emit_hz_ema, 1)
 
 
+    @property
+    def estado_do_gatilho(self) -> tuple[int, int] | None:
+        """`(L2, R2)` do último report, ou None sem controle aberto."""
+        return self._gatilho
+
+    @property
+    def gatilho_desde(self) -> float:
+        """O instante (relógio do leitor) em que o estado de agora mudou."""
+        return self._gatilho_desde
+
+    @property
+    def disparos_do_gatilho(self) -> dict[str, int]:
+        """Quantas vezes cada gatilho chegou a «disparou» (L2 e R2)."""
+        return dict(self._disparos)
+
+    @property
+    def disparou_em(self) -> dict[str, float]:
+        """O instante do último «disparou» de cada gatilho que já disparou."""
+        return dict(self._disparou_em)
+
+    def ouvir_gatilho(
+        self, ouvinte: Callable[[str, int, int, float], None] | None
+    ) -> None:
+        """Registra quem recebe cada mudança: `ouvinte(lado, antes, agora, instante)`.
+
+        Só leitura: nada daqui escreve no controle por causa do estado. O
+        ouvinte roda na thread do leitor e não pode demorar.
+        """
+        self._gatilho_ouvinte = ouvinte
+
     def start(self) -> bool:
         """Sobe a thread (idempotente). O device é aberto DENTRO do loop."""
         if self.is_running:
@@ -599,6 +673,7 @@ class PhysicalReportReader:
         self._reset_mic_button()
         self._reset_jack()
         self._reset_battery()
+        self._reset_gatilho()
         with contextlib.suppress(Exception):
             self._vpad.set_motion_streaming(False)
 
@@ -672,6 +747,7 @@ class PhysicalReportReader:
                 self._reset_mic_button()
                 self._reset_jack()
                 self._reset_battery()
+                self._reset_gatilho()
                 with contextlib.suppress(Exception):
                     self._vpad.set_motion_streaming(False)
             if not self._stop_flag.is_set():
@@ -732,6 +808,7 @@ class PhysicalReportReader:
             self._observe_mic_button(data, base)
             self._observe_jack(data, base)
             self._observe_battery(data, base)
+            self._observe_gatilho(data, base)
             window = _janela_com_base(data, base)
             if window is None:
                 continue
@@ -871,6 +948,47 @@ class PhysicalReportReader:
         self._battery_status = None
 
 
+    def _observe_gatilho(self, report: bytes, base: int | None = None) -> None:
+        """Registra a MUDANÇA do estado dos dois gatilhos deste report cru.
+
+        Só borda, como o clique: o report vem a 250 Hz no cabo. O contador de
+        «disparou» sobe quando o gatilho CHEGA ao estado 2 vindo de outro;
+        o estado 2 só quer dizer «a arma disparou» se o modo no gatilho é o da
+        arma oficial, e quem consome sabe o modo (o arco e o galope nem mexem
+        no nibble).
+        """
+        atual = (
+            _estado_do_gatilho_com_base(report, base)
+            if base is not None
+            else extract_estado_do_gatilho(report)
+        )
+        if atual is None or atual == self._gatilho:
+            return
+        antes = self._gatilho
+        agora = self._time_fn()
+        self._gatilho = atual
+        self._gatilho_desde = agora
+        if antes is None:
+            return
+        for lado, ant, novo in (("L2", antes[0], atual[0]), ("R2", antes[1], atual[1])):
+            if ant == novo:
+                continue
+            if novo == TRIGGER_ESTADO_DISPAROU:
+                self._disparos[lado] += 1
+                self._disparou_em[lado] = agora
+            ouvinte = self._gatilho_ouvinte
+            if ouvinte is None:
+                continue
+            try:
+                ouvinte(lado, ant, novo, agora)
+            except Exception as exc:
+                logger.warning("motion_reader_gatilho_failed", err=str(exc))
+
+    def _reset_gatilho(self) -> None:
+        """Esquece o estado ao perder o fd; a contagem de disparos fica."""
+        self._gatilho = None
+        self._gatilho_desde = float("-inf")
+
     def _maybe_emit(self, window: bytes, now: float | None = None) -> None:
         """Dedup por valor + cap de taxa com coalescência do último valor."""
         if window == self._last_window:
@@ -935,9 +1053,14 @@ __all__ = [
     "MOTION_WINDOW_LEN",
     "MOTION_WINDOW_OFFSET",
     "TOUCHPAD_CLICK_BIT",
+    "TRIGGER_ESTADO_DISPAROU",
+    "TRIGGER_L2_STATUS_OFFSET",
+    "TRIGGER_R2_STATUS_OFFSET",
+    "TRIGGER_STATE_SHIFT",
     "PhysicalReportReader",
     "decodificar_bateria",
     "extract_battery_status",
+    "extract_estado_do_gatilho",
     "extract_estado_do_mic",
     "extract_jack_status",
     "extract_touchpad_click",

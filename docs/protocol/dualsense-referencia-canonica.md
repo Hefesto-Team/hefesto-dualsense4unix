@@ -1363,12 +1363,23 @@ SÃO expressáveis.
 > da aba seguem com os bytes de 01/08 (`26 01 07 C0 E0` e `26 00 09 07 07 0A`) até a sessão às cegas; neste
 > layout a frequência do Galope cai nos bytes de amplitude e é inerte. **Grau: BAIXA para a sensação.**
 
-### Leitura de estado — recurso que ninguém usa aqui
+### Leitura de estado do gatilho
 
 O **nibble alto** do byte de status de cada gatilho, no report de entrada, diz
 o que o gatilho está sentindo. A Apple expõe os mesmos estados com nome:
 `feedbackNoLoad`, `feedbackLoadApplied`, `weaponReady`, `weaponFiring`,
 `weaponFired`, `vibrationIsVibrating`, mais a posição do braço.
+
+> **NOTA DATADA — 08/10/2026: o produto passou a ler o nibble.** O leitor físico
+> (`core/physical_report_reader.py`) lê o nibble alto de `trigger_right_status`
+> (byte 41 do struct) e de `trigger_left_status` (byte 42), pelo mesmo `_struct_base`
+> dos outros bytes: no cabo (`0x01`, base 1) são o report[42] e o [43]; no rádio
+> (`0x31`, base 2, com o CRC e sem o bit de áudio) são o [43] e o [44]. Conta a borda
+> do estado 2 da arma oficial («disparou»), com o instante, e avisa um ouvinte. É
+> só leitura. **Só os modos oficiais mexem no nibble:** a arma (`0x25`) vai de 0
+> (antes do início) a 1 (dentro) e 2 (depois), a vibração (`0x26`) de 0 a 1; o arco
+> (`0x22`) e o galope (`0x23`) não mudam nada, e o Arco e o Galope da aba não dizem
+> «disparou». **Grau: MÉDIA para o endereço, BAIXA para o valor.** O endereço vem de quatro implementações de terceiros que concordam (o mapa guarda as fontes); o que o teste prova é a leitura de relatórios sintéticos, nos dois transportes. **Falta medir no aparelho:** aplicar uma arma oficial num controle e imprimir o nibble a cada mudança, cabo e rádio.
 
 ---
 
@@ -1648,8 +1659,8 @@ ATENÇÃO: **O gamepad virtual deste projeto nunca escreve o byte 53** — ele s
 >
 > | etapa | onde | grau |
 > |---|---|---|
-> | lê o byte 53 do report cru do físico | `core/physical_report_reader.py:393` (`extract_jack_status`), offset (`JACK_STATUS_OFFSET`) em `:195` | **ALTA** — lido no código |
-> | entrega ao vpad na borda | `core/physical_report_reader.py:807-842` (`_observe_jack`) | **ALTA** |
+> | lê o byte 53 do report cru do físico | `core/physical_report_reader.py:432` (`extract_jack_status`), offset (`JACK_STATUS_OFFSET`) em `:171` | **ALTA** — lido no código |
+> | entrega ao vpad na borda | `core/physical_report_reader.py:884-919` (`_observe_jack`) | **ALTA** |
 > | o vpad espelha, mascarado nos três bits conhecidos | `integrations/uhid_gamepad.py:1235` (`forward_jack`), com `_STATUS1_BITS_CONHECIDOS = 0x07` em `:539` | **ALTA** |
 > | o byte sai no report do vpad | `integrations/uhid_gamepad.py:999`, offset `_STATUS1_OFFSET = 53` em `:526` | **ALTA** |
 >
@@ -1678,7 +1689,7 @@ ATENÇÃO: **O gamepad virtual deste projeto nunca escreve o byte 53** — ele s
 > `assets/dkms/hid-playstation/hid-playstation.c:175-176`,
 > `DS_STATUS0_BATTERY_CAPACITY` = `GENMASK(3, 0)` e `DS_STATUS0_CHARGING` =
 > `GENMASK(7, 4)` — e o código do Hefesto o decodifica em cinco casos
-> (`core/physical_report_reader.py:270-305`, `decodificar_bateria`):
+> (`core/physical_report_reader.py:466-501`, `decodificar_bateria`):
 >
 > | nibble alto | significa | o que esta árvore faz |
 > |---|---|---|
