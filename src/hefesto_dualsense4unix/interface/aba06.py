@@ -1503,7 +1503,7 @@ MARCA_DO_TOUCHPAD = (
     '<span class="marca-nao-dispara" title="O touchpad é o ponteiro do '
     "computador nesta máquina; enquanto for assim, o clique dele não vira "
     'tecla. A escolha fica guardada.">'
-    "não dispara</span>")
+    "Não dispara</span>")
 
 BOTOES = [
     (gl("cross"),                                "cross"),
@@ -1854,7 +1854,7 @@ def linha_de_tecla(rotulo, botao):
     return (f'          <tr><td class="b">{rotulo}</td>'
             f'<td><input type="text" class="tecla" data-campo="tecla-{botao}"'
             f' data-hef-alvo="valor" data-gesto="tecla-escrita"'
-            f' placeholder="não digita nada"'
+            f' placeholder="Não digita nada"'
             f' title="Escreva a tecla que este botão digita."></td>'
             f'<td class="re"><a href="#" class="re-tecla" data-gesto="padrao-da-tecla"'
             f' data-tecla="{botao}"'

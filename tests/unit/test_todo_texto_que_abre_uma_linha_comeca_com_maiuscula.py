@@ -201,6 +201,35 @@ def test_a_08_com_a_tela_aberta_por_ancora_abre_toda_linha_com_maiuscula(ancora:
     assert not achados, f"a tela #{ancora} abre linha em minúscula: {achados}"
 
 
+#: As telas por âncora das outras abas (a 06 e a 07), abertas uma a uma pelo mesmo caminho da 08:
+#: TODO-TEXTO-QUE-ABRE-UMA-LINHA-COMECA-COM-MAIUSCULA-01, ampliada em 08/10/2026 — «a régua abre
+#: as telas por âncora», em todas as abas.
+ANCORAS_DAS_OUTRAS = (
+    ("06-navegacao", "definicoes-mouse"), ("06-navegacao", "teclas-do-teclado"),
+    ("06-navegacao", "remapeamento"), ("06-navegacao", "point-and-click"),
+    ("07-lancadores", "novo-lancador"), ("07-lancadores", "escolher-jogo"))
+
+
+@pytest.mark.parametrize(("aba", "ancora"), ANCORAS_DAS_OUTRAS)
+def test_a_tela_por_ancora_das_outras_abas_abre_toda_linha_com_maiuscula(
+        aba: str, ancora: str) -> None:
+    achados = _achados(_no_webkit(onde.BANCADA / f"{aba}.html", TAMANHO,
+                                  [_abrir_a_ancora(ancora), LER]))
+    assert not achados, f"{aba}#{ancora} abre linha em minúscula: {achados}"
+
+
+#: As páginas soltas que não são uma das dez abas, e também levam texto à tela. O
+#: ``mapa-do-controle`` fica de fora de propósito: a lista dele são os identificadores do
+#: kernel (``dpad_up``, ``feat-bateria``), que não são frase, e o desenho dele não é desta régua.
+PAGINAS_SOLTAS = ("mapa-do-radio", "calibrar-sensores")
+
+
+@pytest.mark.parametrize("pagina", PAGINAS_SOLTAS)
+def test_a_pagina_solta_abre_toda_linha_com_maiuscula(pagina: str) -> None:
+    achados = _achados(_no_webkit(onde.BANCADA / f"{pagina}.html", TAMANHO, [LER]))
+    assert not achados, f"{pagina}: linha que abre em minúscula: {achados}"
+
+
 def test_o_receptor_que_nao_achou_a_faixa_nao_fala_em_primeira_pessoa(
         monkeypatch: pytest.MonkeyPatch) -> None:
     from hefesto_dualsense4unix.integrations import receptor_sem_fio

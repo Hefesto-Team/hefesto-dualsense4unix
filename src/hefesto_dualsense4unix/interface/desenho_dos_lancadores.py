@@ -608,7 +608,7 @@ def tela_do_registro_html(para_quem: str = NOVO_SEM_ALVO) -> str:
         <span>Onde ele está</span>
         <div class="lanc-novo-linha">
           <input type="text" data-linha="{NOVO_ALVO}"
-                 placeholder="ryujinx  ·  /opt/Ryujinx/Ryujinx  ·  org.ryujinx.Ryujinx">
+                 placeholder="Ryujinx  ·  /opt/Ryujinx/Ryujinx  ·  org.ryujinx.Ryujinx">
           <a class="btn" href="#{TELA_DO_NOVO}"
              data-gesto="{_a(PROCURAR_O_ARQUIVO)}"
              data-hef-forma="{_a(TELA_DO_NOVO)}"
