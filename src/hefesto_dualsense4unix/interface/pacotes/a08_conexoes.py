@@ -1287,6 +1287,32 @@ def declaracao_do_externo_para_editar(entrada: dict[str, Any]) -> str:
         + "</span>")
 
 
+#: O símbolo do sprite (`aba08.SPRITE_DOS_EXTERNOS`) de cada marca que tem desenho. A marca é a
+#: de `external_controllers.brand_of`, o dono único; marca sem desenho (HORI, PowerA, Valve, o
+#: genérico) fica sem quadrado, porque a tela não afirma um modelo que ninguém desenhou.
+SIMBOLO_DO_EXTERNO = {"Nintendo": "ext-nintendo", "Xbox": "ext-xbox", "8BitDo": "ext-8bitdo"}
+
+
+def desenho_do_externo(entrada: dict[str, Any]) -> str:
+    """O quadrado da linha do externo: o desenho do modelo, com o nome dele na dica.
+
+    A-08-MOSTRA-O-DESENHO-DO-CONTROLE-01 (08/10/2026). A marca vem de `brand_of` e o modelo de
+    `friendly_type`, os mesmos donos do título da linha; o texto do modelo não mora na linha, só
+    na dica do quadrado. Marca sem desenho devolve vazio.
+    """
+    from hefesto_dualsense4unix.app.actions.external_controllers import (
+        brand_of,
+        friendly_type,
+    )
+
+    simbolo = SIMBOLO_DO_EXTERNO.get(brand_of(entrada))
+    if not simbolo:
+        return ""
+    modelo = html.escape(friendly_type(entrada), quote=True)
+    return (f'<span class="ext-desenho" title="{modelo}" role="img" aria-label="{modelo}">'
+            f'<svg aria-hidden="true"><use href="#{simbolo}"/></svg></span>')
+
+
 def _html_dos_externos(ctx: Contexto) -> str:
     """Uma linha por controle que o Hefesto VÊ e NÃO adota — ``""`` sem nenhum.
 
@@ -1361,6 +1387,7 @@ def _html_dos_externos(ctx: Contexto) -> str:
         declara = declaracao_do_externo_para_editar(entrada)
         fora.append(
             f'<div class="ext-linha"{" data-larga" if aviso else ""}{da_borda}>'
+            f'{desenho_do_externo(entrada)}'
             f'<span class="ext-nome">{_e(_format_external_title(entrada))}</span>'
             f'<span class="ext-via">{_e(_format_external_subtitle(entrada))}</span>'
             f'{linha_do_aviso}{botoes}{declara}</div>')

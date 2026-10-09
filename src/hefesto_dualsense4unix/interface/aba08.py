@@ -477,6 +477,15 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .gc .ext-via{flex:1;font-size:11.5px;white-space:nowrap}
   .gc .ext-aviso{color:var(--orange);font-size:11.5px;text-align:right}
   .gc .ext-botoes{font-size:11px;letter-spacing:.06em;white-space:nowrap}
+  /* O QUADRADO DO MODELO (A-08-MOSTRA-O-DESENHO-DO-CONTROLE-01): o desenho do sprite
+     `ext-sprite`, na cor do texto mudo, sem número de modelo na linha (ele vai na dica). O traço
+     do desenho não escala com o quadrado (`non-scaling-stroke`): a 34 px, o traço de 4 unidades
+     de uma arte de 500 viraria um fio. */
+  .gc .ext-desenho{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;
+                   width:34px;height:22px;color:var(--texto-mudo)}
+  .gc .ext-desenho svg{width:34px;height:22px;display:block}
+  .ext-sprite #ext-xbox *, .ext-sprite #ext-8bitdo *{vector-effect:non-scaling-stroke;
+                                                      stroke-width:1.3px}
   /* as três listas do externo têm largura FIXA e moram no fim da linha: de um externo
      para o outro elas caem na mesma coluna, com ou sem o aviso do Nintendo pelo BT. 26 px de
      altura + a borda de 1 px da linha = 28, e 64 px abrigam o texto mais largo de «Chave» e de
@@ -2106,6 +2115,48 @@ INTERRUPTOR_PROCURAR = (
     '<span class="p"></span>Procurar</button>')
 SPRITE_DO_RADIO = _sprite_do_radio()
 
+
+#: Os desenhos do modelo de cada controle de fora: o arquivo de `assets/control-svg/` e o símbolo
+#: que a linha do externo usa (`pacotes.a08_conexoes.SIMBOLO_DO_EXTERNO`, que é o dono do mapa
+#: marca -> símbolo). O Xbox é desenho nosso (`xbox.svg`); o Pro Controller e o SN30 Pro são a
+#: arte que a casa já traz (a origem e a licença estão no relato da sprint).
+ARTE_DOS_EXTERNOS = {"ext-nintendo": "Nintendo-pro_controller.svg",
+                     "ext-xbox": "xbox.svg",
+                     "ext-8bitdo": "8bitdo-sn30pro.svg"}
+
+
+def _arredonda(m: re.Match) -> str:
+    """Um número do traçado com uma casa; o espaço na frente impede que `1.3` e `0` colem em `1.30`
+    (o traçado compacto escreve `1.277.711` para dois números)."""
+    texto = f"{round(float(m.group(0)), 1):.1f}".rstrip("0").rstrip(".")
+    return " " + ("0" if texto in ("-0", "") else texto)
+
+
+def _simbolo_do_externo(ident: str, arquivo: str) -> str:
+    """Um `<symbol>` em `currentColor`, enxuto: sem id, sem `data-name`, com uma casa decimal."""
+    cru = (R / "assets" / "control-svg" / arquivo).read_text(encoding="utf-8")
+    caixa = re.search(r'viewBox="([^"]+)"', cru).group(1)
+    dentro = re.search(r"<svg[^>]*>(.*)</svg>", cru, re.S).group(1)
+    dentro = re.sub(r"<!--.*?-->", "", dentro, flags=re.S)
+    dentro = re.sub(r'\s(?:id|data-name)="[^"]*"', "", dentro)
+    dentro = re.sub(r'(\s(?:d|transform)=")([^"]*)"',
+                    lambda m: m.group(1) + re.sub(r"-?(?:\d+\.?\d*|\.\d+)", _arredonda,
+                                                  m.group(2)).strip() + '"', dentro)
+    dentro = re.sub(r'(stroke|fill)="#(?:111|000)(?:000)?"', r'\1="currentColor"', dentro)
+    dentro = "".join(linha.strip() for linha in dentro.splitlines())
+    if arquivo == "xbox.svg":
+        dentro = ('<g fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round" '
+                  f'stroke-linecap="round">{dentro}</g>')
+    elif "stroke" not in dentro and "fill" not in dentro:
+        dentro = f'<g fill="currentColor">{dentro}</g>'      # arte só de preenchimento
+    return f'  <symbol id="{ident}" viewBox="{caixa}">{dentro}</symbol>'
+
+
+SPRITE_DOS_EXTERNOS = (
+    '<svg class="ext-sprite" width="0" height="0" style="position:absolute" aria-hidden="true">\n'
+    + "\n".join(_simbolo_do_externo(i, a) for i, a in ARTE_DOS_EXTERNOS.items())
+    + "\n</svg>")
+
 ENCAIXE_CURTO = "Encaixe o DualSense numa entrada vazia."
 
 AJUDA_DO_AR = ("Cada linha é um aparelho, nos mesmos 79 canais. Pintado é o canal bom; o vazio "
@@ -3212,6 +3263,7 @@ MIOLO = f'''
       </div>
     </div>
 {SPRITE_DO_RADIO}
+{SPRITE_DOS_EXTERNOS}
 {SCRIPT_DA_SECAO_DO_RADIO}
 {SCRIPT_DAS_FAIXAS}
 <script>
