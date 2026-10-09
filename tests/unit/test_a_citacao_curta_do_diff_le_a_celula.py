@@ -115,11 +115,15 @@ def test_a_linha_de_troca_diz_que_a_curta_e_curta_e_a_que_inteira_se_prende(repo
 
 
 def test_o_validador_le_a_curta_de_csv_presa_a_inteira_da_celula(repo: Path) -> None:
-    """A curta que aponta para a linha sem o símbolo prometido reprova; a certa e a solta, não."""
+    """A curta que aponta para a linha sem o símbolo prometido reprova; a certa e a solta, não.
+
+    A do ``r4`` é do `outro.py`, nomeado entre a inteira e ela: não se prende ao `alvo.py` (a
+    mordida é o ``ancora_da_curta`` sem o laço do nome do meio, e o `:98` vira queixa)."""
     corpo = (
         f"r1,{END}:3 (`VALOR`) e :6 (`segunda`),`:6` (`segunda`),z\n"
         f"r2,{END}:3 (`VALOR`) e :10 (`segunda`),y,z\n"
         f"r3,{END}:3; :99,y,z\n"
+        f"r4,{END}:3 (`VALOR`) e o laço em `outro.py`, :98,y,z\n"
     )
     _escrever_e_commitar(repo, PLANILHA, CABECALHO + corpo, "nasce")
 
@@ -132,3 +136,23 @@ def test_o_validador_le_a_curta_de_csv_presa_a_inteira_da_celula(repo: Path) -> 
         f"`{END}:6` (forma curta na célula) -- a faixa não contém `segunda`" in q for q in queixas
     ), queixas
     assert any(f"`{END}:99` (forma curta na célula) -- a linha não existe" in q for q in queixas)
+
+
+def test_o_reapontar_nao_prende_a_curta_atravessando_outro_arquivo(repo: Path) -> None:
+    """O ``_achar`` do reapontar pergunta ao mesmo ``ancora_da_curta`` que o validador.
+
+    Medido na conferência (09/10/2026): 20 das 978 curtas de `docs/data` se prendiam à inteira de
+    um arquivo com OUTRO arquivo nomeado entre as duas (`backend_pydualsense.py:1735` … em
+    `coop.py`, `:1511`), e o reapontar as levaria pelo arquivo errado. O mesmo nome no meio não
+    solta a curta. A mordida: o ``_achar`` volta a pegar a inteira anterior sem perguntar.
+    """
+    mod: ModuleType = _script()  # type: ignore[no-untyped-call]
+    val = mod._validador(repo)
+    resolve = mod._resolvedor(repo, val)
+
+    def curtas(celula: str) -> list[str]:
+        return [f"{e[2]}:{e[3]}" for e in mod._achar(celula, val, "csv", resolve) if e[6]]
+
+    assert curtas(f"{END}:3 e o laço em `outro.py`, :98") == []
+    assert curtas(f"{END}:3 (o laço de `alvo.py`), :5") == [f"{END}:5"]
+    assert curtas(f"{END}:3; :5") == [f"{END}:5"]

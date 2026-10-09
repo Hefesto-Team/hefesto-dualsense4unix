@@ -37,6 +37,33 @@ CURTA_CSV = re.compile(
 abre-parêntese): o arquivo é o da citação inteira mais próxima ANTES dela, na MESMA célula. A
 gramática é a do ``_CURTA_DE_CSV`` do `reapontar-citacoes.py`, que a leva junto quando o código anda."""
 
+NOME_DE_ARQUIVO = re.compile(
+    r"(?<![A-Za-z0-9_./-])[A-Za-z0-9_][A-Za-z0-9_./-]*\."
+    r"(?:py|pyi|c|h|cc|cpp|md|csv|html|js|mjs|sh|rules|conf|toml|json|txt|yml|yaml|service|desktop|ini|cfg)"
+    r"(?![A-Za-z0-9_])")
+"""Um arquivo NOMEADO na prosa, com ou sem número: entre a inteira e a curta, ele muda de quem é a
+curta (`backend.py:1735`, depois «em `coop.py`, `:1511`»: o `:1511` é do `coop.py`)."""
+
+
+def ancora_da_curta(celula: str, inteiras: list[re.Match[str]], vao: int) -> re.Match[str] | None:
+    """A inteira a que a curta escrita em ``vao`` se prende, ou ``None``.
+
+    É a inteira mais próxima ANTES dela na mesma célula, desde que nenhum OUTRO arquivo seja
+    nomeado entre as duas: «`a.py:10` (…) no laço de `b.py`, `:20`» cita o `b.py`, e prender o
+    `:20` ao `a.py` acusaria (e levaria) um endereço que nunca foi do `a.py`. O nome do mesmo
+    arquivo no meio não solta a curta. Quem lê e quem leva a curta perguntam aqui: o validador e o
+    ``_achar`` do `reapontar-citacoes.py`.
+    """
+    antes = [i for i in inteiras if i.end() <= vao]
+    if not antes:
+        return None
+    ancora = antes[-1]
+    proprio = ancora.group("arq").rsplit("/", 1)[-1]
+    for nome in NOME_DE_ARQUIVO.finditer(celula, ancora.end(), vao):
+        if nome.group(0).rsplit("/", 1)[-1] != proprio:
+            return None
+    return ancora
+
 NOME_ANTES = re.compile(r"`(?P<nome>[A-Za-z_][A-Za-z0-9_]{2,})`\s*(?:em|no|na)\s+$")
 
 NOME_DEPOIS = re.compile(
@@ -248,12 +275,12 @@ def varrer_planilha(
                     conferidos += conferido
                     de_fora += fora
                 for curta in CURTA_CSV.finditer(celula):
-                    antes = [i for i in inteiras if i.end() <= curta.start("vao")]
-                    if not antes or resolve(antes[-1].group("arq"), raiz) is None:
-                        continue  # sem inteira na célula, ou presa a arquivo de fora: não se lê
+                    ancora = ancora_da_curta(celula, inteiras, curta.start("vao"))
+                    if ancora is None or resolve(ancora.group("arq"), raiz) is None:
+                        continue  # sem inteira que a prenda, ou presa a arquivo de fora: não se lê
                     seus, conferido, fora = confere_endereco(
                         relativo, inicio, contexto, celula, curta,
-                        antes[-1].group("arq"), corpos, raiz, SEPARADORES_DE_BLOCO, curta=True)
+                        ancora.group("arq"), corpos, raiz, SEPARADORES_DE_BLOCO, curta=True)
                     achados.extend(seus)
                     conferidos += conferido
                     de_fora += fora

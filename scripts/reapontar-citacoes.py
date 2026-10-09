@@ -626,9 +626,10 @@ def _achar(
     ``md`` lê como o validador lê `docs/protocol`; ``csv``, como lê as planilhas; ``py``, os
     comentários e docstrings de `src/` (a citação inteira, com ou sem crase, e a curta).
 
-    Em ``csv`` a curta fica presa à inteira MAIS PRÓXIMA antes dela na mesma célula, e só é
-    devolvida se essa âncora resolve (``resolve``) num arquivo do repositório: a que não resolve
-    não é nossa, e nunca cai numa âncora mais antiga.
+    Em ``csv`` a curta fica presa à inteira MAIS PRÓXIMA antes dela na mesma célula
+    (``val.ancora_da_curta``: outro arquivo nomeado entre as duas a solta), e só é devolvida se
+    essa âncora resolve (``resolve``) num arquivo do repositório: a que não resolve não é nossa, e
+    nunca cai numa âncora mais antiga.
     """
     if ":" not in linha:
         return
@@ -649,8 +650,8 @@ def _achar(
             )
         for c in _CURTA_DE_CSV.finditer(linha):
             vao = c.span("vao")
-            anteriores = [i for i in inteiras if i.end() <= vao[0]]
-            if not anteriores or (resolve is not None and not resolve(anteriores[-1]["arq"])):
+            presa = val.ancora_da_curta(linha, inteiras, vao[0])
+            if presa is None or (resolve is not None and not resolve(presa["arq"])):
                 continue
             ini = vao[0] - 1 if linha[vao[0] - 1] == "`" else vao[0]
             fim = vao[1] + 1 if linha[vao[1] : vao[1] + 1] == "`" else vao[1]
@@ -658,7 +659,7 @@ def _achar(
             yield (
                 ini,
                 fim,
-                anteriores[-1]["arq"],
+                presa["arq"],
                 int(c["a"]),
                 int(b or c["a"]),
                 b is not None,
