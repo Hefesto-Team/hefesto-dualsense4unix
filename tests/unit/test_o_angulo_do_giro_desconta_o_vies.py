@@ -134,7 +134,7 @@ class _Bancada:
         return na_ida, self.mouses[uniq].x
 
 
-@pytest.mark.parametrize("navegacao", [False, True], ids=["primario", "modo-mouse"])
+@pytest.mark.parametrize("navegacao", [False, True], ids=["primário", "modo-mouse"])
 def test_ida_e_volta_com_o_zero_guardado_devolve_o_cursor_ao_lugar(
         monkeypatch: pytest.MonkeyPatch, navegacao: bool) -> None:
     """O defeito: a soma sobrava `2 x 1,5° x pixels_por_grau` para o lado do viés."""
@@ -145,7 +145,7 @@ def test_ida_e_volta_com_o_zero_guardado_devolve_o_cursor_ao_lugar(
         f"o cursor voltou deslocado {soma:.1f} px de {ida:.1f} px: o ângulo não desconta o zero")
 
 
-@pytest.mark.parametrize("navegacao", [False, True], ids=["primario", "modo-mouse"])
+@pytest.mark.parametrize("navegacao", [False, True], ids=["primário", "modo-mouse"])
 def test_sem_zero_guardado_os_pixels_sao_os_de_hoje(
         monkeypatch: pytest.MonkeyPatch, navegacao: bool) -> None:
     """A cura só age em quem calibrou: sem zero o viés continua entrando, como antes."""
@@ -156,7 +156,7 @@ def test_sem_zero_guardado_os_pixels_sao_os_de_hoje(
     assert abs(soma) > 0.02 * abs(ida), "sem zero o viés devia continuar na soma"
 
 
-@pytest.mark.parametrize("navegacao", [False, True], ids=["primario", "modo-mouse"])
+@pytest.mark.parametrize("navegacao", [False, True], ids=["primário", "modo-mouse"])
 def test_cada_controle_desconta_o_proprio_vies(
         monkeypatch: pytest.MonkeyPatch, navegacao: bool) -> None:
     """O zero é por controle (P1 a P4, cabo e rádio): o do P2 não conserta o P1."""
