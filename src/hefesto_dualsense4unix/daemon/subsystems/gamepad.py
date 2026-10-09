@@ -1237,6 +1237,9 @@ def anotar_rumble_no_vpad(vpad: Any, efetivo: tuple[int, int] | None) -> None:
 def make_primary_rumble_sink(daemon: DaemonProtocol) -> Callable[[int, int], None]:
     """Sink de FF do vpad do P1 → rumble físico do controle PRIMÁRIO."""
 
+    # O-P1-VIBRA-NO-APARELHO-DELE-COMO-OS-OUTROS-01: o dono se lê a cada pedido, como
+    # a entrada do pad 1 (o dono do posto), porque o pad 1 sobrevive à troca do
+    # primário; na vaga, o MAC do ausente não casa e o pedido cai com log.
     def _sink(weak: int, strong: int) -> None:
         uniq = getattr(daemon.controller, "primary_uniq", None)
         vpad = getattr(daemon, "_gamepad_device", None)
