@@ -1181,6 +1181,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
 
 _SEM_CAMINHO_HOJE: dict[str, str] = {
     # 09/10/2026, leva 1-11, costura do pads-1-14: as duas do multi-1-14, nascidas para a B9.
+    # sai com: O-DEGRAU-DO-MEIO-E-A-FRASE-DA-FAIXA-SE-LIGAM-DEPOIS-DA-B9-01
     "integrations/radio_da_mesa.py::ordem_de_ceder": (
         "09/10/2026 — o degrau do meio antes do corte inteiro "
         "(A-PONTE-SE-OTIMIZA-ATE-QUATRO-NO-ULTRA-NUM-ADAPTADOR-01). "
@@ -1189,6 +1190,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "bancada de quatro com ponte dela. Fecha quando a medida ligar o degrau e o "
         "governador chamar esta ordem."
     ),
+    # sai com: O-DEGRAU-DO-MEIO-E-A-FRASE-DA-FAIXA-SE-LIGAM-DEPOIS-DA-B9-01
     "integrations/receptor_sem_fio.py::frase_do_fim": (
         "09/10/2026 — a frase da causa medida quando a procura da faixa termina sem faixa "
         "(A-FAIXA-DO-TECLADO-SE-ACHA-01). Hoje só o ensaio "
