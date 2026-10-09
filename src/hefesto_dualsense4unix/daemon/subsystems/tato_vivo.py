@@ -140,6 +140,8 @@ class Evento:
     tipo: str
     lado: str = LADO_CENTRO
     energia: float = 1.0
+    #: o recorte do estalo (O-SOM-DO-TIRO-SAI-TAMBEM-NO-CONTROLE-01), que se completa depois.
+    recorte: Any = field(default=None, compare=False)
 
 
 def _limitar(valor: Any, baixo: float, alto: float, padrao: float) -> float:
@@ -612,6 +614,31 @@ class AtuadorDaHaptica:
         return None
 
 
+# O-SOM-DO-TIRO-SAI-TAMBEM-NO-CONTROLE-01: o estalo recortado vai ao alto-falante de quem atirou.
+class AtuadorDoSom:
+    """O estalo do tiro no alto-falante do controle do evento."""
+
+    canal = CANAL_SOM
+
+    def __init__(self, tocar: Callable[[str, Any], object]) -> None:
+        self._tocar = tocar
+
+    def responde_a(self, evento: Evento, receita: Receita) -> bool:
+        return (
+            evento.tipo == TIPO_SOM
+            and receita.som_no_controle
+            and evento.recorte is not None
+        )
+
+    def escrever(self, evento: Evento, receita: Receita, agora: float) -> float | None:
+        self._tocar(evento.uniq, evento.recorte)
+        # O recorte acaba em silêncio por construção: não há o que devolver.
+        return None
+
+    def devolver(self, uniq: str, agora: float) -> None:
+        return None
+
+
 # O-GATILHO-ACOMPANHA-O-RITMO-DO-TIRO-01: o ritmo do tiro troca o bloco do gatilho.
 # O jogo escreve o gatilho uma vez por arma e o firmware rearma sozinho; enquanto
 # `docs/protocol/o-que-o-jogo-manda-por-tiro.md` não mostrar um jogo que rearma
@@ -992,6 +1019,13 @@ def atuadores_de_producao(daemon: Any) -> list[Atuador]:
             return False
         return tocar_o_toque(uniq, energia, lado, duracao_ms)
 
+    def estalo(uniq: str, recorte: Any) -> object:
+        alto_falante = getattr(daemon, "_alto_falante_subsystem", None)
+        tocar_o_estalo = getattr(alto_falante, "tocar_o_estalo", None)
+        if not callable(tocar_o_estalo):
+            return False
+        return tocar_o_estalo(uniq, recorte)
+
     controller = getattr(daemon, "controller", None)
 
     def encerrar(uniq: str) -> object:
@@ -1027,6 +1061,7 @@ def atuadores_de_producao(daemon: Any) -> list[Atuador]:
 
     return [
         AtuadorDaHaptica(tocar, ouvindo),
+        AtuadorDoSom(estalo),
         AtuadorDoGatilho(
             gatilho,
             lambda uniq: sessao.soltar(uniq, CANAL_GATILHO),
@@ -1083,16 +1118,17 @@ class Passo:
         return self.motor.tique(agora, por_uniq.get, receita)
 
     def _ouvir_o_jogo(self, receita: Receita, controles: Sequence[Controle]) -> None:
-        """Sobe o ouvido quando a receita pede o lado, e leva cada estalo a quem atirou."""
+        """Sobe o ouvido quando a receita pede o som, e leva cada estalo a quem atirou."""
         ouvido = self.motor.ouvido
         if ouvido is None:
             return
-        if receita.lado_do_som:
+        if receita.lado_do_som or receita.som_no_controle:
             ouvido.comecar()
         for estalo in ouvido.tirar():
             for uniq in destinos_do_som(controles, self.dedo, estalo.instante):
                 self.motor.anotar(
-                    Evento(estalo.instante, uniq, TIPO_SOM, estalo.lado, estalo.energia)
+                    Evento(estalo.instante, uniq, TIPO_SOM, estalo.lado, estalo.energia,
+                           getattr(estalo, "recorte", None))
                 )
 
 
@@ -1102,7 +1138,12 @@ async def tato_vivo_loop(daemon: DaemonProtocol, motor: TatoVivo) -> None:
         from hefesto_dualsense4unix.integrations.transiente_do_jogo import OuvidoDoJogo
 
         motor.ouvido = OuvidoDoJogo(
-            lambda: motor.ligado and passo.receita.lado_do_som and passo.jogo
+            lambda: (
+                motor.ligado
+                and (passo.receita.lado_do_som or passo.receita.som_no_controle)
+                and passo.jogo
+            ),
+            recortar=lambda: passo.receita.som_no_controle,
         )
     try:
         while not daemon._is_stopping():
@@ -1134,6 +1175,7 @@ __all__ = [
     "AtuadorDaHaptica",
     "AtuadorDaLuz",
     "AtuadorDoGatilho",
+    "AtuadorDoSom",
     "BordaDoDedo",
     "BordaDoRumble",
     "Controle",

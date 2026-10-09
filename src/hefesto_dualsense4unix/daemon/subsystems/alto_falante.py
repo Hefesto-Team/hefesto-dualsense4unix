@@ -625,6 +625,10 @@ class AltoFalanteSubsystem:
     #: fluxo aberto e ainda não tem ponte: a ponte só sobe com o som do jogo.
     _ouvidos_do_radio: Mapping[str, Any] = MappingProxyType({})
     _tocadores: Mapping[str, Any] = MappingProxyType({})
+    #: ``{nó de som: TocadorDoEstalo}``, o estalo do tiro no alto-falante de cada controle.
+    _estalos: Mapping[str, Any] = MappingProxyType({})
+    #: ``{uniq: vaga}`` da ponte do rádio de pé: o estalo lê dela se o rádio está cedendo.
+    _vaga_da_ponte: Mapping[str, Any] = MappingProxyType({})
     _rumble_vivo: Mapping[str, tuple[Any, tuple[str | None, bool, bool]]] = MappingProxyType({})
     _clientes_do_rumble: frozenset[str] = frozenset()
     _aparelhos_com_jogo: frozenset[str] = frozenset()
@@ -1012,6 +1016,66 @@ class AltoFalanteSubsystem:
             sink=str(getattr(endpoint, "nome", "") or ""), dono=chave,
         )
         return True
+
+    def tocar_o_estalo(self, uniq: str, recorte: Any) -> bool:
+        """O estalo do tiro no alto-falante do controle de ``uniq``.
+
+        O-SOM-DO-TIRO-SAI-TAMBEM-NO-CONTROLE-01: no nó de som dele, com o volume
+        que ele já escolheu; no rádio, só com fatia livre (cede quando o
+        governador recusou a vaga ou a ponte está cedendo). O tocador cala
+        quando o jogo toca no nó.
+        """
+        from hefesto_dualsense4unix.integrations.alto_falante_bt import nome_do_sink
+
+        chave = next((u for u in self.uniqs_com_no() if _mesmo_controle(u, uniq)), None)
+        if chave is None or recorte is None:
+            return False
+        if self._o_radio_cede(chave):
+            logger.debug("tato_estalo_cede_ao_radio", uniq=chave)
+            return False
+        sink = nome_do_sink(chave)
+        if not sink:
+            return False
+        self._tocador_do_estalo(sink).tocar(recorte)
+        return True
+
+    def _o_radio_cede(self, uniq: str) -> bool:
+        """Este controle está no rádio sem fatia livre para mais som?"""
+        if any(_mesmo_controle(u, uniq) for u, _tipo in self._esperando_vaga):
+            return True
+        for dono, vaga in list(self._vaga_da_ponte.items()):
+            if _mesmo_controle(dono, uniq) and dono in self._pontes:
+                return bool(getattr(vaga, "cedendo", False))
+        return False
+
+    def _tocador_do_estalo(self, sink: str) -> Any:
+        tocador = self._estalos.get(sink)
+        if tocador is not None:
+            return tocador
+        from hefesto_dualsense4unix.integrations.transiente_do_jogo import TocadorDoEstalo
+
+        with self._trava_do_rumble:
+            tocador = self._estalos.get(sink)
+            if tocador is None:
+                tocador = TocadorDoEstalo(sink, ao_mudar=self._acordar_a_volta)
+                self._estalos = MappingProxyType({**self._estalos, sink: tocador})
+        return tocador
+
+    def _conferir_os_estalos(self) -> None:
+        """O tocador do estalo de um nó que saiu sai junto."""
+        if not self._estalos:
+            return
+        from hefesto_dualsense4unix.integrations.alto_falante_bt import nome_do_sink
+
+        de_pe = {nome_do_sink(u) for u in self.uniqs_com_no()}
+        for sink, tocador in list(self._estalos.items()):
+            if sink in de_pe:
+                continue
+            with self._trava_do_rumble:
+                self._estalos = MappingProxyType(
+                    {n: t for n, t in self._estalos.items() if n != sink}
+                )
+            tocador.parar()
 
     def testar_a_haptica(self, uniq: str, ligado: bool) -> dict[str, Any]:
         """O botão «Háptica» da aba Vibração: o par de teste no tocador DESTE controle."""
@@ -1853,6 +1917,7 @@ class AltoFalanteSubsystem:
             if ponte.subir():
                 self._pontes[uniq] = ponte
                 self._modo_da_ponte[uniq] = tipo
+                self._vaga_da_ponte = MappingProxyType({**self._vaga_da_ponte, uniq: vaga})
                 for no in [n for n, pedido in escutar.items() if pedido[0] == uniq]:
                     escutar.pop(no)
                 self._endpoint_da_ponte = MappingProxyType({
@@ -1866,6 +1931,10 @@ class AltoFalanteSubsystem:
         self._casar_os_ouvidos_do_radio(escutar)
         self._leva_da_ponte = MappingProxyType(leva_de)
         self._esperando_vaga = frozenset(esperando)
+        self._vaga_da_ponte = MappingProxyType(
+            {u: v for u, v in self._vaga_da_ponte.items() if u in self._pontes}
+        )
+        self._conferir_os_estalos()
         self._conferir_o_teste_da_haptica()
         self._conferir_o_rumble()
         self._dizer_a_haptica_aos_controles(controles)
@@ -2074,8 +2143,9 @@ class AltoFalanteSubsystem:
             )
         for uniq, _ponte in pontes:
             self._pontes.pop(uniq, None)
-        tocadores = list(self._tocadores.values())
+        tocadores = [*self._tocadores.values(), *self._estalos.values()]
         self._tocadores = MappingProxyType({})
+        self._estalos = MappingProxyType({})
         self._rumble_vivo = MappingProxyType({})
         if tocadores:
             await asyncio.gather(

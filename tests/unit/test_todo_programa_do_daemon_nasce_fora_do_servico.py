@@ -53,6 +53,12 @@ VEREDITOS: dict[str, tuple[str, int, str]] = {
         "endpoint de um lugar (D-2909-RUMBLE-VIRA-HAPTICA): alimentado pelo cano, "
         "sai depois da folga de silêncio e com o `parar`",
     ),
+    "integrations/transiente_do_jogo.py::TocadorDoEstalo.__init__": (
+        "ajudante", 1,
+        "o `pw-cat` (ou o `pacat`) que toca o estalo do tiro no nó de som de um "
+        "controle (O-SOM-DO-TIRO-SAI-TAMBEM-NO-CONTROLE-01): alimentado pelo cano, "
+        "sai depois da folga de silêncio e com o `parar`",
+    ),
     "integrations/laco_de_audio.py::Lacos.ligar": (
         "ajudante", 1,
         "o `pw-loopback` de um laço de som, com dono que o fecha",
