@@ -217,14 +217,13 @@ class TabelaNoJogo:
             teclado = UinputKeyboardDevice()
             # As linhas do teclado na tela (`__TOGGLE_OSK__` e as duas irmãs) têm o
             # mesmo atendente do teclado do desktop: sem ele, o L3 de fábrica ficaria
-            # mudo com o jogo aberto, e a tela diz que toda linha age.
-            from hefesto_dualsense4unix.daemon.subsystems.keyboard import _OSKController
+            # mudo com o jogo aberto, e a tela diz que toda linha age. O atendente é
+            # o do daemon NA HORA do toque: a Função do teclado desligada troca o dele.
+            from hefesto_dualsense4unix.daemon.subsystems.keyboard import (
+                atendente_do_teclado_na_tela,
+            )
 
-            osk = getattr(daemon, "_osk_controller", None)
-            if osk is None:
-                osk = _OSKController()
-                daemon._osk_controller = osk
-            teclado.virtual_token_callback = osk.dispatch_token
+            teclado.virtual_token_callback = atendente_do_teclado_na_tela(daemon)
             if not mouse.start() or not teclado.start():
                 with contextlib.suppress(Exception):
                     mouse.stop()

@@ -456,6 +456,42 @@ def test_o_l3_de_fabrica_abre_o_teclado_na_tela_tambem_no_jogo(
     assert ("__TOGGLE_OSK__", "press") in osk.toques, osk.toques
 
 
+def test_o_l3_no_jogo_segue_o_atendente_do_daemon_depois_da_funcao_do_teclado(
+    dois_devices: _UinputPorDevice, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Desligar a Função do teclado fecha e esquece o atendente do daemon; a tabela
+    aberta segue com o jogo, e o L3 dela vai ao atendente que a parada fecha.
+
+    MORDIDA: prender o callback ao `dispatch_token` do atendente da abertura (como
+    era) manda o L3 ao atendente fechado, que ninguém fecha mais, e esta régua reprova.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems import keyboard as sub_teclado
+
+    daemon = _daemon_de_mentira()
+    primeiro = _OskDeMentira()
+    daemon._osk_controller = primeiro
+    tabela = TabelaNoJogo(None, None, ligada=True)
+    tabela.tick(daemon, _estado(), frozenset({"l3"}))
+    tabela.tick(daemon, _estado(), frozenset())
+    assert ("__TOGGLE_OSK__", "press") in primeiro.toques
+
+    # A Função do teclado desligada: `stop_keyboard_emulation` fecha e esquece.
+    daemon._osk_controller = None
+    novos: list[_OskDeMentira] = []
+
+    def _novo() -> _OskDeMentira:
+        novos.append(_OskDeMentira())
+        return novos[-1]
+
+    monkeypatch.setattr(sub_teclado, "_OSKController", _novo)
+    antes = len(primeiro.toques)
+    tabela.tick(daemon, _estado(), frozenset({"l3"}))
+    assert len(primeiro.toques) == antes, "o L3 foi ao atendente que o daemon já fechou"
+    assert novos and daemon._osk_controller is novos[0], (
+        "o toque sem atendente não deu ao daemon o atendente que a parada fecha")
+    assert ("__TOGGLE_OSK__", "press") in novos[0].toques
+
+
 @pytest.mark.parametrize("de_quem", ["gesto", "perfil"])
 def test_suspender_mouse_e_teclado_cala_a_tabela_no_jogo(de_quem: str) -> None:
     """«Suspender mouse e teclado» (o PS + Options) vale com o jogo aberto.

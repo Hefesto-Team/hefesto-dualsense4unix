@@ -48,6 +48,8 @@ from hefesto_dualsense4unix.integrations import fora_do_servico
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from hefesto_dualsense4unix.daemon.protocols import DaemonProtocol
 
 logger = get_logger(__name__)
@@ -414,6 +416,26 @@ class _OSKController:
         return self._fio.esperar(teto)
 
 
+def atendente_do_teclado_na_tela(daemon: DaemonProtocol) -> Callable[[str, str], None]:
+    """O callback do L3/R3 que acha o atendente do daemon NA HORA do toque.
+
+    Para o device que vive mais que o atendente de agora (o teclado privado da
+    tabela «Também no jogo»): desligar a Função do teclado fecha e esquece o
+    `_osk_controller`, e um callback preso ao antigo abriria o teclado na tela
+    por um atendente que a parada do daemon não fecha mais. Sem atendente, o
+    toque cria o do daemon, como o `start_keyboard_emulation`.
+    """
+
+    def atender(token: str, phase: str) -> None:
+        osk = getattr(daemon, "_osk_controller", None)
+        if osk is None:
+            osk = _OSKController()
+            daemon._osk_controller = osk
+        osk.dispatch_token(token, phase)
+
+    return atender
+
+
 def start_keyboard_emulation(daemon: DaemonProtocol) -> bool:
     """Cria device virtual de teclado + touchpad reader. Idempotente.
 
@@ -559,6 +581,7 @@ def dispatch_keyboard(daemon: DaemonProtocol, buttons_pressed: frozenset[str]) -
 
 __all__ = [
     "_OSKController",
+    "atendente_do_teclado_na_tela",
     "dispatch_keyboard",
     "osk_disponivel_no_sistema",
     "prime_keyboard",
