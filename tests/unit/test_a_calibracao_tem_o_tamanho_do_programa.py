@@ -86,9 +86,9 @@ MEDIR = """() => {
           inverter: [...document.querySelectorAll('.inverter')].map(g => {
             const mira = g.closest('.mira'), m = mira.getBoundingClientRect();
             // A CAIXA DE DENTRO do cartão: a borda e o recuo saem, o resto é do botão.
-            const st = getComputedStyle(mira);
-            const dentro_esq = m.left + parseFloat(st.borderLeftWidth) + parseFloat(st.paddingLeft);
-            const dentro_dir = m.right - parseFloat(st.borderRightWidth) - parseFloat(st.paddingRight);
+            const st = getComputedStyle(mira), px = v => parseFloat(st[v]);
+            const dentro_esq = m.left + px('borderLeftWidth') + px('paddingLeft');
+            const dentro_dir = m.right - px('borderRightWidth') - px('paddingRight');
             const bs = [...g.querySelectorAll('.sw')].map(b => b.getBoundingClientRect());
             return {n: bs.length,
                     empilhado: bs.length === 2 && bs[1].top >= bs[0].bottom - 1
