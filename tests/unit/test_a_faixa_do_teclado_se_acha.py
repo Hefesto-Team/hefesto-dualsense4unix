@@ -15,6 +15,8 @@ MORDIDAS (arrancar, ver reprovar, devolver):
 4. O «com» sem a soma das leituras: o par ``salta`` com 120 s não junta os oito canais (test_6).
 5. A cura inteira arrancada (a ``Descoberta`` volta a fechar só pela ``banda_por_eliminacao``): o
    par ``salta`` fecha sem causa, e a frase é o «Não achei a faixa dele» de antes (test_1).
+6. A volta à medida «com ele» sem zerar o ``com``: a soma de antes do receptor sair vira um
+   salto falso (test_8b).
 """
 from __future__ import annotations
 
@@ -109,6 +111,23 @@ def test_8_o_gesto_que_recomeca_esquece_a_causa_velha() -> None:
     d.passo, d.causa, d.canais = rx.PASSO_NADA, rx.CAUSA_SALTA, (3, 11)
     d.iniciar("1234:5678", 1.0)
     assert d.causa == "" and not d.canais and rx.frase_do_fim(d) == ""
+
+
+def test_8b_o_receptor_que_sai_no_meio_zera_a_soma_do_com(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Tirado no meio da medida «com ele», as leituras de antes não entram na soma da volta."""
+    monkeypatch.setattr(rx, "ESPERA_ATE_O_MAPA_MUDAR_S", 120.0)
+    d = rx.Descoberta()
+    d.iniciar("1234:5678", 0.0)
+    d.andar(1.0, dict, presente=False)
+    d.andar(26.0, lambda: {"hci0": ()}, presente=False)
+    d.andar(27.0, dict, presente=True)
+    d.andar(52.0, lambda: {"hci0": (2, 10, 18, 26, 34)}, presente=True)
+    assert d.passo == rx.PASSO_MEDINDO_COM, "cinco canais espalhados ainda esperam"
+    d.andar(53.0, dict, presente=False)
+    d.andar(54.0, dict, presente=True)
+    d.andar(79.0, lambda: {"hci0": (50, 60)}, presente=True)
+    assert d.com == {"hci0": (50, 60)}
+    assert (d.passo, d.causa) == (rx.PASSO_MEDINDO_COM, ""), "a soma velha virou um salto falso"
 
 
 # --------------------------------------------------------------- o ensaio

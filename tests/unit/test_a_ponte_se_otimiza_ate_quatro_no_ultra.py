@@ -171,6 +171,49 @@ def test_4_o_governador_le_o_m_do_adaptador(monkeypatch: pytest.MonkeyPatch) -> 
     assert governador.publicar()[ADAPTADOR_A]["n_max"] == 1
 
 
+@dataclass
+class _ControlesPorAdaptador:
+    em_a: int
+    em_b: int
+
+    def amostrar(self) -> dict[str, ar.ArDoAdaptador]:
+        return {
+            e: ar.ArDoAdaptador(
+                hci=h, endereco=e, entrada_por_s=700.0, saida_por_s=90.0, janela_s=gov.PERIODO_S,
+                conexoes=tuple(
+                    ar.Enlace(handle=16 * h + i, endereco=f"02:fe:00:00:00:{16 * h + i:02x}",
+                              tipo=ar.TIPO_ACL, saida=False, estado=1, link_mode=0)
+                    for i in range(n)))
+            for h, (e, n) in enumerate(((ADAPTADOR_A, self.em_a), (ADAPTADOR_B, self.em_b)))
+        }
+
+
+@pytest.mark.parametrize(("em_b", "b_tem_vaga"), [(4, False), (1, True)])
+def test_4b_a_recusa_so_aponta_o_adaptador_onde_a_conta_deixa(
+    monkeypatch: pytest.MonkeyPatch, em_b: int, b_tem_vaga: bool
+) -> None:
+    """A vaga sugerida na recusa segue o M do OUTRO adaptador, não o teto fixo."""
+    monkeypatch.setattr(rm, "N_MAX_PELA_CAPACIDADE", True)
+    monkeypatch.setattr(rm, "AR_DO_ADAPTADOR_PORTA_DIRETA", rm.AR_DO_ADAPTADOR_ATRAS_DO_HUB)
+    em_b_uniq = "aa:bb:cc:00:00:11"
+    governador = gov.GovernadorDoRadio(
+        medidor=_ControlesPorAdaptador(em_a=4, em_b=em_b),
+        adaptador_de=lambda u: ADAPTADOR_B if u == em_b_uniq else ADAPTADOR_A,
+        registrar=lambda *_a, **_k: None, relogio=lambda: 1000.0,
+    )
+    governador.tique()
+    for uniq in (em_b_uniq, "aa:bb:cc:00:00:01"):
+        vaga = governador.pedir_vaga(uniq, "som")
+        assert isinstance(vaga, gov.Vaga)
+        vaga.subiu()
+    resposta = governador.pedir_vaga("aa:bb:cc:00:00:02", "som")
+    if b_tem_vaga:
+        assert isinstance(resposta, gov.Recusa) and ADAPTADOR_B in resposta.vagas, resposta
+    else:
+        # sem vaga em lugar nenhum, a ponte sobe além do limite (a R4: degrada e avisa)
+        assert isinstance(resposta, gov.Vaga) and resposta.alem_do_limite, resposta
+
+
 # --------------------------------------------------------------- o degrau do meio
 
 
