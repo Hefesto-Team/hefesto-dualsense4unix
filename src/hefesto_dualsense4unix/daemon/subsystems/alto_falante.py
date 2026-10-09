@@ -984,7 +984,11 @@ class AltoFalanteSubsystem:
             no_servidor if de_pe is not None else None,
             refazer=ordem == ORDEM_PELO_ASSENTO,
         )
-        if not refazer:
+        # O plano já refeito uma vez não se refaz: o nó do meio que não nasce
+        # (sem âncora, ou o servidor recusa) faria os de trás renascerem a cada volta.
+        plano = (tuple(na_ordem), tuple(refazer))
+        if not refazer or plano == getattr(self, "_ordem_ja_refeita", None):
+            self._ordem_ja_refeita = plano if refazer else None
             return na_ordem
         lido = {self._endpoint_da_ponte.get(u) for u in self._pontes}
         endpoints = [self._endpoints.get(m) for m in refazer]
@@ -1002,6 +1006,7 @@ class AltoFalanteSubsystem:
             self._endpoints.pop(marca, None)
             if endpoint is not None:
                 endpoint.parar()
+        self._ordem_ja_refeita = plano
         logger.info("haptica_nos_na_ordem_dos_assentos", renascem=len(refazer))
         return na_ordem
 

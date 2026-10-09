@@ -378,6 +378,33 @@ def test_o_assento_que_pisca_nao_reordena(mesa: _Mesa) -> None:
     assert mesa.ordem_no_servidor() == list(_U)
 
 
+@pytest.mark.parametrize("transporte", ["usb", "bluetooth"])
+def test_o_no_do_meio_que_nao_nasce_nao_faz_os_de_tras_renascerem_a_cada_volta(
+    mesa: _Mesa, monkeypatch: pytest.MonkeyPatch, transporte: str
+) -> None:
+    """O P2 sem nó (o servidor recusa): o P3 renasce uma vez, não a cada volta."""
+    uniqs = _U[:3]
+    mesa.assentos = {u: n for n, u in enumerate(uniqs, start=1)}
+    for u in uniqs:
+        mesa.gadget(u)
+    iniciar = eh.EndpointDeHaptica.iniciar
+
+    def _recusa_o_p2(endpoint: Any) -> bool:
+        return False if endpoint.uniq == _U[1] else iniciar(endpoint)
+
+    monkeypatch.setattr(eh.EndpointDeHaptica, "iniciar", _recusa_o_p2)
+    for _ in range(5):
+        mesa.volta(uniqs, transporte)
+    assert len(mesa.servidor.quedas) <= 1, (
+        f"os nós de trás renasceram a cada volta: {len(mesa.servidor.quedas)} quedas"
+    )
+    assert mesa.ordem_no_servidor() == [_U[0], _U[2]]
+    monkeypatch.setattr(eh.EndpointDeHaptica, "iniciar", iniciar)
+    mesa.volta(uniqs, transporte)
+    mesa.volta(uniqs, transporte)
+    assert mesa.ordem_no_servidor() == list(uniqs), "o P2 que nasceu depois ficou no fim"
+
+
 # O interruptor de bancada
 
 
