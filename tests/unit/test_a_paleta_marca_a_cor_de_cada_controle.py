@@ -115,6 +115,25 @@ def _a_cena_do_global(global_: tuple[int, int, int]
     return pecas, perfil
 
 
+def _a_cena_da_fala() -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """A mesa da fala das ~18h50 de 29/09: P1 White no BT, P2 Galactic Purple no cabo."""
+    pecas = [
+        _peca(1, (255, 255, 0), 1.0, nome="White", modelo="white"),
+        _peca(2, (0, 255, 128), 1.0, nome="Galactic Purple",
+              modelo="galactic-purple", via="usb"),
+    ]
+    perfil = {
+        "leds": {"auto_player_colors": True, "lightbar_brightness": 1.0},
+        "controllers": {
+            _chave(UNIQS[0]): {"leds": {"lightbar": [255, 255, 0],
+                                        "lightbar_para_o_numero": 1}},
+            _chave(UNIQS[1]): {"leds": {"lightbar": [0, 255, 128],
+                                        "lightbar_para_o_numero": 2}},
+        },
+    }
+    return pecas, perfil
+
+
 CENAS = {
     "a foto": _a_cena_da_foto,
     "o Todos": _a_cena_do_todos,
@@ -423,6 +442,7 @@ CENAS_DA_TELA = {
     "a foto": _a_cena_da_foto,
     "o Todos": _a_cena_do_todos,
     "o plástico que não chegou": _a_foto_sem_o_plastico_do_p2,
+    "a fala": _a_cena_da_fala,
 }
 
 MEDIDA_DA_LINHA = r"""
@@ -434,8 +454,14 @@ MEDIDA_DA_LINHA = r"""
   var colunas = {};
   document.querySelectorAll('[data-controle][data-conectado="sim"]').forEach(function(ctrl){
     var hex = ctrl.querySelector('.cel-cor .hex').getBoundingClientRect();
+    var cel = ctrl.querySelector('.cel-cor').getBoundingClientRect();
     colunas[ctrl.getAttribute('data-controle')] = {
       hex_topo: hex.top,
+      hex_baixo: hex.bottom,
+      faixa: [cel.top, cel.bottom],
+      ar: px(getComputedStyle(ctrl).getPropertyValue('--r-ar')),
+      nome_baixo: ctrl.querySelector('.ctrl-rot').getBoundingClientRect().bottom,
+      brilho_topo: ctrl.querySelector('.cel-brilho').getBoundingClientRect().top,
       casas: Array.prototype.map.call(ctrl.querySelectorAll('.guia .tom'), function(el){
         var r = el.getBoundingClientRect();
         var s = getComputedStyle(el);
@@ -646,10 +672,28 @@ def test_a_linha_tem_a_cor_do_plastico_do_dono(na_tela, vista: str) -> None:
 
 @pytest.mark.parametrize("vista", ["janela", "dela"])
 def test_a_linha_mora_no_vao_entre_a_casa_e_a_caixa(na_tela, vista: str) -> None:
-    """2 px abaixo da casa, 2 px de altura, a largura da casa, e sem cruzar a caixa."""
+    """2 px abaixo da casa, 6 px de altura, a largura da casa, e sem cruzar a caixa.
+
+    A linha a 6 px é a (b) das ESCOLHAS de 08/10/2026
+    (A-LINHA-DA-COR-ESCOLHIDA-TEM-A-COR-DO-CONTROLE-01): o vão da `.cel-cor` vai a
+    8 px e a linha Cor a 46. A casa e a caixa ficam dentro da faixa da linha Cor
+    mais o `--r-ar`, sem chegar ao nome acima nem ao brilho abaixo.
+    A MORDIDA: a linha a 6 px com o vão de volta a 4, e ela cruza a caixa.
+    """
     medido = na_tela[("a foto", vista)]
     erradas = []
     for pref, coluna in medido["colunas"].items():
+        topo_da_casa = min(c["casa"][1] for c in coluna["casas"])
+        de, ate = coluna["faixa"]
+        ar = coluna["ar"]
+        if ar <= 0:
+            erradas.append(f"{pref}: o `--r-ar` não chegou à coluna")
+        if topo_da_casa < de - ar - 0.25 or topo_da_casa < coluna["nome_baixo"]:
+            erradas.append(f"{pref}: a casa começa em {topo_da_casa:.2f}, a faixa em "
+                           f"{de:.2f} (ar {ar}) e o nome acaba em {coluna['nome_baixo']:.2f}")
+        if coluna["hex_baixo"] > ate + ar + 0.25 or coluna["hex_baixo"] > coluna["brilho_topo"]:
+            erradas.append(f"{pref}: a caixa acaba em {coluna['hex_baixo']:.2f}, a faixa em "
+                           f"{ate:.2f} (ar {ar}) e o brilho começa em {coluna['brilho_topo']:.2f}")
         for casa in coluna["casas"]:
             if "com-dono" not in casa["classes"]:
                 continue
@@ -657,13 +701,52 @@ def test_a_linha_mora_no_vao_entre_a_casa_e_a_caixa(na_tela, vista: str) -> None
             x, y, w, h = casa["linha"]
             if y - (cy + ch) < 2 - 0.25:
                 erradas.append(f"{pref}: a linha começa {y - (cy + ch):.2f} px abaixo da casa")
-            if h < 2:
+            if h < 6:
                 erradas.append(f"{pref}: a linha tem {h:.2f} px de altura")
             if abs(w - cw) > 1 or abs(x - cx) > 1:
                 erradas.append(f"{pref}: a linha {x:.2f}+{w:.2f} e a casa {cx:.2f}+{cw:.2f}")
             if y + h > coluna["hex_topo"] + 0.25:
                 erradas.append(f"{pref}: a linha acaba em {y + h:.2f} e a caixa começa "
                                f"em {coluna['hex_topo']:.2f}")
+    assert not erradas, "\n".join(erradas)
+
+
+def _fileiras_na_tinta(foto: Any, linha: list[float], tinta: str) -> int:
+    """Quantas fileiras de pixel, no meio da largura da linha, têm a tinta do dono."""
+    x, y, w, h = linha
+    meio = x + w / 2
+    return sum(1 for yi in range(int(y) - 2, int(y + h) + 3)
+               if _perto(_pixel(foto, meio, yi), _rgb(tinta)))
+
+
+@pytest.mark.parametrize("vista", ["janela", "dela"])
+def test_a_linha_do_p2_tem_area(na_tela, vista: str) -> None:
+    """A cena da fala: a linha roxa do P2 e a branca do P1 com seis fileiras na tinta.
+
+    A-LINHA-DA-COR-ESCOLHIDA-TEM-A-COR-DO-CONTROLE-01. A tinta já era a certa em
+    29/09; o roxo do Galactic Purple não se lia com 2 px. Seis fileiras cheias, ou
+    cinco quando o motor põe o topo da linha em fração de pixel.
+    A MORDIDA: devolva `height:2px` à folha e regere a 04 — duas fileiras.
+    """
+    from hefesto_dualsense4unix.interface.pacotes import a02_controles as a02
+    from hefesto_dualsense4unix.interface.pacotes import a04_iluminacao as a04
+
+    medido = na_tela[("a fala", vista)]
+    casas = _as_casas_na_tela(medido)
+    assert set(casas) == {1, 2}, f"colunas pintadas: {sorted(casas)}"
+    donos = {str(a04.a_chave_da_cor((255, 255, 0))).upper(): a02.cor_da_borda("white"),
+             str(a04.a_chave_da_cor((0, 255, 128))).upper(): a02.cor_da_borda("galactic-purple")}
+    erradas = []
+    for n, fileira in casas.items():
+        for tom, tinta in donos.items():
+            casa = fileira[tom]
+            if casa["cor"].replace(" ", "") != "rgb({},{},{})".format(*_rgb(tinta)):
+                erradas.append(f"P{n} {tom}: a linha é {casa['cor']}, a 02 é {tinta}")
+            piso = 6 if float(casa["linha"][1]).is_integer() else 5
+            cheias = _fileiras_na_tinta(medido["_foto"], casa["linha"], tinta)
+            if cheias < piso:
+                erradas.append(f"P{n} {tom}: {cheias} fileiras na tinta {tinta}, "
+                               f"o piso é {piso} (linha {casa['linha']})")
     assert not erradas, "\n".join(erradas)
 
 

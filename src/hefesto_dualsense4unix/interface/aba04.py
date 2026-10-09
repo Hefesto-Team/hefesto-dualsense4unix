@@ -106,8 +106,8 @@ CSS = """
      apontava. Com a fita esmaecida (decisão, 28/08) esse alvo deixou de
      existir, e as seções desceram para dentro das colunas.
 
-     AS ALTURAS SÃO TOKENS porque a soma é o orçamento: 146+16+44+26+52+64+64
-     = 412, mais seis passos de 10 = 472, contra o teto de 476 que a caixa do
+     AS ALTURAS SÃO TOKENS porque a soma é o orçamento: 146+16+46+26+52+64+64
+     = 414, mais seis passos de 10 = 474, contra o teto de 476 que a caixa do
      miolo oferece. Mexer numa linha sem tirar de outra faz a aba rolar por
      dentro — e quadro que rola por dentro é conteúdo que ninguém sabe que
      existe. O teto sai da MEDIÇÃO, não de uma conta: o `.miolo` dá 564px de
@@ -134,7 +134,7 @@ CSS = """
        deixa estranho essa área da primeira coluna."* */
     grid-template-columns:var(--larg-rot) repeat(4,1fr);
     gap:var(--gap-col);
-    --r-des:146px;--r-nome:16px;--r-cor:44px;--r-brilho:26px;
+    --r-des:146px;--r-nome:16px;--r-cor:46px;--r-brilho:26px;
     /* A LINHA DE RESSALVA CABE NA LINHA DOS LEDs — 04/09/2026, decisão de produto
        (D-02, e a pergunta [01] desta aba): *"Uma linha só quando há
        ressalva."* Ela nasce DEBAIXO da tira, e por isso não é uma oitava
@@ -172,8 +172,9 @@ CSS = """
        coluna foi de 448 para 460, contra o teto MEDIDO de 476.
        A parte que NÃO custa nada é a que arruma o feio: descer a linha meio
        passo só muda de que lado dela o vão está.
-       A FOLGA DE HOJE É 4px, e não os 16 de então: a linha de ressalva de
-       04/09 comeu doze — ver a nota do `--r-leds` acima. */
+       A FOLGA DE HOJE É 2px, e não os 16 de então: a linha de ressalva de
+       04/09 comeu doze — ver a nota do `--r-leds` acima —, e a linha da cor
+       do dono, a 6 px em 08/10/2026, comeu dois no `--r-cor`. */
     --r-ar:5px;--r-passo:calc(var(--r-ar) * 2);
   }
   .luz-grade > div{
@@ -626,14 +627,20 @@ CSS = """
      são o mesmo tom (o Starlight Blue na casa azul, o White na branca); a
      linha fica no painel escuro, onde o White aparece.
 
-     O LUGAR É O VÃO ENTRE A CASA E A CAIXA `#RRGGBB`: 2 px abaixo da casa e 2
-     px de altura, sem crescer a linha Cor. O vão de cima é o que separa a
-     linha da casa: colada, a do Starlight Blue embaixo da casa azul se leria
-     como a casa mais alta. O `-1px` dos lados alcança a borda da casa, porque
-     o `left` conta da caixa por dentro dela. */
+     O LUGAR É O VÃO ENTRE A CASA E A CAIXA `#RRGGBB`: 2 px abaixo da casa e 6
+     px de altura, com o vão da `.cel-cor` em 8 px e a linha Cor em 46 px
+     (`--r-cor`). Era 2 px, e o roxo do Galactic Purple (`#74588e`, 2,39:1
+     contra o painel) se lia como traço cinza: *«o do p2 não tem a cor dele
+     roxo.»* (29/09, ~18h50) <!-- noqa-acento: citação literal -->
+     O piso de 2,2:1 do `tom_para_a_borda` foi pensado para a borda de um
+     cartão, onde o comprimento carrega o tom; numa marca curta quem o carrega
+     é a área. A altura é a (b) das ESCOLHAS de 08/10/2026. O vão de cima é o
+     que separa a linha da casa: colada, a do Starlight Blue embaixo da casa
+     azul se leria como a casa mais alta. O `-1px` dos lados alcança a borda
+     da casa, porque o `left` conta da caixa por dentro dela. */
   .guia .tom.com-dono::before{
     content:"";position:absolute;left:-1px;right:-1px;
-    top:calc(100% + 3px);height:2px;border-radius:1px;background:var(--dono);
+    top:calc(100% + 3px);height:6px;border-radius:2px;background:var(--dono);
   }
   /* O X DA COR DO VIZINHO — COR-X-01, 09/09/2026, decisão de produto: "um X na cor
      selecionada por mim de forma que me impeça de setar alguma cor de um
@@ -724,7 +731,7 @@ CSS = """
   /* O HEXADECIMAL FICA NA TELA — decisão, 28/08, para as duas abas que o
      têm (Controles e Iluminação). Ele é o valor do campo Cor, e por isso mora
      debaixo da guia, na coluna do controle a que pertence. */
-  .cel-cor{display:flex;flex-direction:column;gap:4px;justify-content:center}
+  .cel-cor{display:flex;flex-direction:column;gap:8px;justify-content:center}
   .hex{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--fg);
        text-align:center;line-height:14px}
   /* A CAIXA DO HEXADECIMAL VIRA O BOTÃO — 04/09/2026, decisão de produto na pergunta
