@@ -159,6 +159,66 @@ A_PROVA_QUE_FALTA: dict[str, tuple[str, str, str]] = {
         "trilho (`audio.alto_falante.volume`, MONTOU nos dois transportes): falta a "
         "orelha dela na bancada da 1.5, de P1 a P4, no cabo e no rádio",
     ),
+    "mira-sensibilidade": (
+        "médio",
+        "2026-09-06-MESA-DE-QUATRO-01-quatro-dualsense-por-cabo-e-por-radio-com-ela.md",
+        "a Mira da Calibrar lê o mesmo giro da `mira`, e `movimento.giroscopio@dualsense` "
+        "está em MONTOU nos dois transportes; falta o jogo aberto virar a câmera com a "
+        "sensibilidade escolhida e o controle na mão dela. É da MESA-DE-QUATRO-01",
+    ),
+    "mira-tremor": (
+        "médio",
+        "2026-09-06-MESA-DE-QUATRO-01-quatro-dualsense-por-cabo-e-por-radio-com-ela.md",
+        "o filtro do tremor da Mira da Calibrar age sobre o giro "
+        "(`movimento.giroscopio@dualsense`, MONTOU nos dois transportes); falta o jogo "
+        "aberto com a mão dela dizer se a câmera parou de tremer. É da MESA-DE-QUATRO-01",
+    ),
+    "mira-segurar": (
+        "médio",
+        "2026-09-06-MESA-DE-QUATRO-01-quatro-dualsense-por-cabo-e-por-radio-com-ela.md",
+        "o «segurar para mirar» da Calibrar liga o giro (`movimento.giroscopio@dualsense`, "
+        "MONTOU nos dois transportes) só com o botão apertado; falta o jogo aberto com o "
+        "dedo dela no botão. É da MESA-DE-QUATRO-01",
+    ),
+    "mira-inverter": (
+        "médio",
+        "2026-09-06-MESA-DE-QUATRO-01-quatro-dualsense-por-cabo-e-por-radio-com-ela.md",
+        "o eixo invertido da Mira da Calibrar troca o sinal do giro "
+        "(`movimento.giroscopio@dualsense`, MONTOU nos dois transportes); falta o jogo "
+        "aberto virar a câmera para o lado que a mão dela espera. É da MESA-DE-QUATRO-01",
+    ),
+    "analogico-virtual": (
+        "médio",
+        "2026-09-06-MESA-DE-QUATRO-01-quatro-dualsense-por-cabo-e-por-radio-com-ela.md",
+        "o Analógico Virtual da Calibrar leva o giro ao analógico "
+        "(`movimento.giroscopio@dualsense`, MONTOU nos dois transportes); falta o jogo "
+        "aberto andar com o controle na mão dela. É da MESA-DE-QUATRO-01",
+    ),
+    "calibrar-comecar": (
+        "médio",
+        "2026-10-06-O-COMECAR-DA-CALIBRAR-GUARDA-O-ZERO-DE-CADA-CONTROLE-01.md",
+        "o «Começar» grava o zero do giro por controle (`utils/session.py`, "
+        "`gravar_os_zeros`), e `movimento.giroscopio@dualsense` está em MONTOU nos dois "
+        "transportes; falta o passo 5 da sprint, a Mira com a zona morta no mínimo sem "
+        "andar sozinha com o P1 no cabo e o P2 no rádio parados na mesa. É da "
+        "O-COMECAR-DA-CALIBRAR-GUARDA-O-ZERO-DE-CADA-CONTROLE-01",
+    ),
+    "mic-existe": (
+        "médio",
+        "2026-09-06-MESA-DE-QUATRO-01-quatro-dualsense-por-cabo-e-por-radio-com-ela.md",
+        "o «Microfone: Ligado / Desligado» da 08 sobe ou desce a ponte do microfone "
+        "daquele controle, e `audio.microfone@dualsense` está em SAIU NO FIO nos dois "
+        "transportes; falta a linha 9 do roteiro da mesa, o canal daquele controle "
+        "aparecendo no sistema com a voz dela. É da MESA-DE-QUATRO-01",
+    ),
+    "testar-haptica": (
+        "médio",
+        "2026-10-01-O-FORJA-E-O-BANCO-DE-PROVA-DO-HEFESTO-01.md",
+        "o teste da háptica da 05 toca pela linha `vibracao.haptics_vcm@dualsense` da "
+        "`haptica`, sem degrau registrado no mapa nos dois transportes; falta o banco de "
+        "prova, ou a mão dela nos Caminhos da Forja. É da "
+        "O-FORJA-E-O-BANCO-DE-PROVA-DO-HEFESTO-01",
+    ),
     "rota": (
         "grande",
         "2026-08-31-A-BANCADA-QUE-O-RADIO-PEDE-INDICE.md",
