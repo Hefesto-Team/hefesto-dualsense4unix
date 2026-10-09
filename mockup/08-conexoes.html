@@ -1290,7 +1290,10 @@
                  border-top:1px solid var(--border-sutil);
                  border-left:3px dashed var(--border-forte)}
   .gc .ext-nome{color:var(--fg);font-weight:600;white-space:nowrap;flex:0 0 auto}
-  .gc .ext-via{flex:1;font-size:11.5px;white-space:nowrap}
+  /* O quadrado do modelo tomou 42 px da linha: a 1272 px, com dois por fileira, a coluna das três
+     listas vazava 28 px. O «via» é o que cede (reticências, e a frase inteira na dica). */
+  .gc .ext-via{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:11.5px;
+               white-space:nowrap}
   .gc .ext-aviso{color:var(--orange);font-size:11.5px;text-align:right}
   .gc .ext-botoes{font-size:11px;letter-spacing:.06em;white-space:nowrap}
   /* O QUADRADO DO MODELO (A-08-MOSTRA-O-DESENHO-DO-CONTROLE-01): o desenho do sprite
@@ -1755,7 +1758,6 @@
             background:var(--app-bg);border:1px solid var(--border-forte);
             color:var(--fg);font:inherit;font-size:11.5px}
   .mm-campo::placeholder{color:var(--texto-mudo)}
-  .mm-aplicar{margin:11px 0 0}
   .tn-rod.mm-rod{justify-content:flex-end}
   .tn-rod.mm-rod .btn{flex:0 0 auto;padding:0 22px}
 
@@ -1789,7 +1791,6 @@
   /* o foco É o anúncio (R13): não há live region alcançável pelo PyGObject, então
      mover o foco é a única forma que a janela tem de dizer "o passo mudou". */
   .btn.foco{outline:2px solid var(--purple);outline-offset:2px}
-  .ce-relogios{font-size:10.5px;color:var(--texto-mudo);line-height:1.55;margin-top:13px}
 
   .gc-cabeca,
   .gc .ext-linha{--larg-nome:220px}
@@ -5151,11 +5152,10 @@ document.addEventListener("click", function (ev) {
   <div class="tn-cx">
     <div class="tn-topo">
       <span class="tn-tit">Mapear entradas</span>
-      <span class="ajuda">?<span class="dica">O gesto tem <b>dois tempos</b>: clique no aparelho, depois na entrada em que ele está. Um aparelho fica em <b>um</b> lugar — pôr onde ele não estava o tira de onde estava, no mesmo gesto.<br><br>Enquanto há um aparelho escolhido, <b>todo quadrado publica o juízo</b> para <i>ele</i>: sem sujeito a pergunta “aqui serve?” não existe, e a tela cala.<br><br>As duas perguntas do fim <b>mudaram-se da aba para cá</b> em 28/08, e aqui elas preenchem um vazio real: esta janela não guardava um único fato que só você tem. <b>Sem resposta</b> não é o mesmo que <b>“Não sei”</b>.<br><br><b>O que eu não consegui conferir neste desenho:</b><br>· em que ponto da fileira cada entrada fica. Sem isso eu não conto a folga entre dois adaptadores de rádio, e duas entradas nas pontas opostas do hub recebem o mesmo juízo de duas coladas.<br>· quais entradas são azuis. Enquanto você não passar por &quot;Mapear Entrada a Entrada&quot;, eu trato todas como pretas.<br>· o que é algum dos aparelhos da lista: o sistema não diz o que ele é, e sobre ele eu não tenho juízo nenhum.</span></span>
+      <span class="ajuda">?<span class="dica">Clique no aparelho, depois na entrada em que ele está. O Hefesto passa a chamar cada aparelho pelo número que você escreveu no gabinete. Tudo aqui é gravado no clique.<br><br>O gesto tem <b>dois tempos</b>: clique no aparelho, depois na entrada em que ele está. Um aparelho fica em <b>um</b> lugar — pôr onde ele não estava o tira de onde estava, no mesmo gesto.<br><br>Enquanto há um aparelho escolhido, <b>todo quadrado publica o juízo</b> para <i>ele</i>: sem sujeito a pergunta “aqui serve?” não existe, e a tela cala.<br><br>As duas perguntas do fim <b>mudaram-se da aba para cá</b> em 28/08, e aqui elas preenchem um vazio real: esta janela não guardava um único fato que só você tem. <b>Sem resposta</b> não é o mesmo que <b>“Não sei”</b>.<br><br><b>O que eu não consegui conferir neste desenho:</b><br>· em que ponto da fileira cada entrada fica. Sem isso eu não conto a folga entre dois adaptadores de rádio, e duas entradas nas pontas opostas do hub recebem o mesmo juízo de duas coladas.<br>· quais entradas são azuis. Enquanto você não passar por &quot;Mapear Entrada a Entrada&quot;, eu trato todas como pretas.<br>· o que é algum dos aparelhos da lista: o sistema não diz o que ele é, e sobre ele eu não tenho juízo nenhum.</span></span>
       <a class="tn-x" href="#" title="Fechar">×</a>
     </div>
     <div class="tn-corpo">
-      <div class="tn-frase">Clique no aparelho, depois na entrada em que ele está. O Hefesto passa a chamar cada aparelho pelo número que você escreveu no gabinete.</div>
       <div class="moldura">
         <div class="mm-rot-linha"><span class="mm-rot" title="Tudo o que está ligado ao computador. O que já tem lugar continua na lista: clique nele para mudar de entrada.">O que o Hefesto encontrou</span></div>
         <!-- O ENDEREÇO CHEGOU EM 03/09/2026 (`IDENTIDADE-VEM-DE-CIMA-01`). O
@@ -5186,12 +5186,12 @@ document.addEventListener("click", function (ev) {
             <div class="mm-face" data-face="0">
               <div class="mm-face-cab"><span class="mm-face-nome">Frente do gabinete</span>
                 <button class="btn mini" data-gesto="nova-entrada" data-face="0" title="Cria uma entrada nova nesta face, com o próximo número livre.">Acrescentar entrada</button></div>
-              <div class="mm-grade"><div class="mm-cel"><button class="mm-sq" data-v="cheia" data-gesto="escolher-entrada" data-entrada="1" title="O sistema enumera este aparelho como 1-2. Aparelho de entrada — clique para tirar"><span class="mm-n">1</span><span class="mm-c">Aparelho de entrada</span><span class="mm-v">ocupada</span></button></div><div class="mm-cel"><button class="mm-sq" data-v="cheia" data-gesto="escolher-entrada" data-entrada="2" title="O sistema enumera este aparelho como 1-5. Aparelho de entrada — clique para tirar"><span class="mm-n">2</span><span class="mm-c">Aparelho de entrada</span><span class="mm-v">ocupada</span></button></div></div>
+              <div class="mm-grade"><div class="mm-cel"><button class="mm-sq" data-v="cheia" data-gesto="escolher-entrada" data-entrada="1" title="O sistema enumera este aparelho como 1-2. Aparelho de entrada — clique para tirar"><span class="mm-n">1</span><span class="mm-c">Aparelho de entrada</span><span class="mm-v">Ocupada</span></button></div><div class="mm-cel"><button class="mm-sq" data-v="cheia" data-gesto="escolher-entrada" data-entrada="2" title="O sistema enumera este aparelho como 1-5. Aparelho de entrada — clique para tirar"><span class="mm-n">2</span><span class="mm-c">Aparelho de entrada</span><span class="mm-v">Ocupada</span></button></div></div>
             </div>
             <div class="mm-face" data-face="1">
               <div class="mm-face-cab"><span class="mm-face-nome">Traseira</span>
                 <button class="btn mini" data-gesto="nova-entrada" data-face="1" title="Cria uma entrada nova nesta face, com o próximo número livre.">Acrescentar entrada</button></div>
-              <div class="mm-grade"><div class="mm-cel"><button class="mm-sq" data-v="cheia" data-gesto="escolher-entrada" data-entrada="3" title="O sistema enumera este aparelho como 3-3. Bluetooth — clique para tirar"><span class="mm-n">3</span><span class="mm-c">Bluetooth</span><span class="mm-v">ocupada</span></button></div><div class="mm-cel"><button class="mm-sq" data-v="cheia" data-gesto="escolher-entrada" data-entrada="4" title="O sistema enumera este aparelho como 3-4. Teclado — clique para tirar"><span class="mm-n">4</span><span class="mm-c">Teclado</span><span class="mm-v">ocupada</span></button></div><div class="mm-cel"><button class="mm-sq" data-v="cheia" data-gesto="escolher-entrada" data-entrada="5" title="O sistema enumera este aparelho como 4-1. Não identificado — clique para tirar"><span class="mm-n">5</span><span class="mm-c">Não identificado</span><span class="mm-v">ocupada</span></button></div><div class="mm-cel"><button class="mm-sq" data-v="serve" data-gesto="escolher-entrada" data-entrada="6" title="entrada direta, mas na altura da escrivaninha"><span class="mm-n">6</span><span class="mm-c mm-vazia">vazia</span><span class="mm-v">serve</span></button></div><div class="mm-cel"><button class="mm-sq" data-v="cheia" data-gesto="escolher-entrada" data-entrada="7" title="O sistema enumera este aparelho como 1-3. Mouse — clique para tirar"><span class="mm-n">7</span><span class="mm-c">Mouse</span><span class="mm-v">ocupada</span></button></div><div class="mm-cel"><button class="mm-sq" data-v="evite" data-gesto="escolher-entrada" data-entrada="8" title="colada no Mouse, na entrada 7"><span class="mm-n">8</span><span class="mm-c mm-vazia">vazia</span><span class="mm-v">vale evitar</span></button></div><div class="mm-cel"><button class="mm-sq" data-v="serve" data-gesto="escolher-entrada" data-entrada="9" title="entrada direta, mas na altura da escrivaninha"><span class="mm-n">9</span><span class="mm-c mm-vazia">vazia</span><span class="mm-v">serve</span></button></div><div class="mm-cel"><button class="mm-sq" data-v="cheia" data-gesto="escolher-entrada" data-entrada="10" title="o extensor está nela"><span class="mm-n">10</span><span class="mm-c mm-vazia">vazia</span><span class="mm-v">indisponível</span></button></div></div>
+              <div class="mm-grade"><div class="mm-cel"><button class="mm-sq" data-v="cheia" data-gesto="escolher-entrada" data-entrada="3" title="O sistema enumera este aparelho como 3-3. Bluetooth — clique para tirar"><span class="mm-n">3</span><span class="mm-c">Bluetooth</span><span class="mm-v">Ocupada</span></button></div><div class="mm-cel"><button class="mm-sq" data-v="cheia" data-gesto="escolher-entrada" data-entrada="4" title="O sistema enumera este aparelho como 3-4. Teclado — clique para tirar"><span class="mm-n">4</span><span class="mm-c">Teclado</span><span class="mm-v">Ocupada</span></button></div><div class="mm-cel"><button class="mm-sq" data-v="cheia" data-gesto="escolher-entrada" data-entrada="5" title="O sistema enumera este aparelho como 4-1. Não identificado — clique para tirar"><span class="mm-n">5</span><span class="mm-c">Não identificado</span><span class="mm-v">Ocupada</span></button></div><div class="mm-cel"><button class="mm-sq" data-v="serve" data-gesto="escolher-entrada" data-entrada="6" title="Entrada direta, mas na altura da escrivaninha"><span class="mm-n">6</span><span class="mm-c mm-vazia">Vazia</span><span class="mm-v">Serve</span></button></div><div class="mm-cel"><button class="mm-sq" data-v="cheia" data-gesto="escolher-entrada" data-entrada="7" title="O sistema enumera este aparelho como 1-3. Mouse — clique para tirar"><span class="mm-n">7</span><span class="mm-c">Mouse</span><span class="mm-v">Ocupada</span></button></div><div class="mm-cel"><button class="mm-sq" data-v="evite" data-gesto="escolher-entrada" data-entrada="8" title="Colada no Mouse, na entrada 7"><span class="mm-n">8</span><span class="mm-c mm-vazia">Vazia</span><span class="mm-v">Vale evitar</span></button></div><div class="mm-cel"><button class="mm-sq" data-v="serve" data-gesto="escolher-entrada" data-entrada="9" title="Entrada direta, mas na altura da escrivaninha"><span class="mm-n">9</span><span class="mm-c mm-vazia">Vazia</span><span class="mm-v">Serve</span></button></div><div class="mm-cel"><button class="mm-sq" data-v="cheia" data-gesto="escolher-entrada" data-entrada="10" title="O extensor está nela"><span class="mm-n">10</span><span class="mm-c mm-vazia">Vazia</span><span class="mm-v">Indisponível</span></button></div></div>
             </div>
             <div class="mm-face" data-face="hubs">
               <div class="mm-face-cab"><span class="mm-face-nome" title="O sistema não enxerga hubs nem extensões — quem diz onde estão é você.">Hubs e extensões</span>
@@ -5200,11 +5200,12 @@ document.addEventListener("click", function (ev) {
                 <label class="hub-rot">Ligado na entrada
                   <select class="hub-sel" data-linha="hub-entrada"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option></select></label>
                 <input class="mm-campo hub-nome" type="text" data-linha="hub-nome"
-                  maxlength="24" placeholder="Nome do hub (opcional)">
+                  maxlength="24"
+                  placeholder="Nome do hub (opcional)">
                 <button class="btn" data-gesto="novo-hub-gravar" data-hef-forma="hub-pergunta">Acrescentar</button>
                 <button class="btn" data-gesto="novo-hub-cancelar">Cancelar</button>
               </div>
-              <div class="mm-grade mm-grade-hubs"><div class="mm-cel"><button class="mm-sq" data-v="melhor" data-gesto="escolher-entrada" data-entrada="10a" title="Foi você quem disse que há uma extensão aqui. Nenhuma leitura do sistema distingue isto de um aparelho na própria entrada do hub. na ponta do extensor: a antena mais longe das outras"><span class="mm-n">10a</span><span class="mm-c mm-vazia">vazia</span><span class="mm-ext">por extensão</span><span class="mm-v">melhor lugar</span></button><span class="mm-ligado">ligado na entrada <b>10</b> <span class="mudo">· Traseira</span></span></div></div>
+              <div class="mm-grade mm-grade-hubs"><div class="mm-cel"><button class="mm-sq" data-v="melhor" data-gesto="escolher-entrada" data-entrada="10a" title="Foi você quem disse que há uma extensão aqui. Nenhuma leitura do sistema distingue isto de um aparelho na própria entrada do hub. Na ponta do extensor: a antena mais longe das outras"><span class="mm-n">10a</span><span class="mm-c mm-vazia">Vazia</span><span class="mm-ext">Por extensão</span><span class="mm-v">Melhor lugar</span></button><span class="mm-ligado">Ligado na entrada <b>10</b> <span class="mudo">· Traseira</span></span></div></div>
             </div>
         </div>
 
@@ -5228,7 +5229,6 @@ document.addEventListener("click", function (ev) {
         <span class="mm-nova"><input class="mm-campo" placeholder="Nome da face" maxlength="16">
           <button class="btn" data-gesto="nova-face" title="Cria uma face com o nome que você escreveu, sem entrada nenhuma. Sem nome, não cria.">Acrescentar face</button></span>
       </div>
-      <div class="tn-frase mm-aplicar">Tudo aqui é gravado no clique.</div>
     </div>
     <div class="tn-rod mm-rod">
       <a class="btn" href="#">Fechar</a>
@@ -5239,7 +5239,7 @@ document.addEventListener("click", function (ev) {
   <div class="tn-cx">
     <div class="tn-topo">
       <span class="tn-tit">Mapear Entrada a Entrada</span>
-      <span class="ajuda">?<span class="dica">A pergunta é sobre a <b>entrada</b>, não sobre o aparelho: mesmo quando o kernel não diz o que é a coisa, você sabe em que buraco ela está.<br><br>O rótulo é <b>espécie · nome do kernel</b>. O caminho fica à vista porque é a única coisa que distingue dois aparelhos idênticos.</span></span>
+      <span class="ajuda">?<span class="dica">A pergunta é sobre a <b>entrada</b>, não sobre o aparelho: mesmo quando o kernel não diz o que é a coisa, você sabe em que buraco ela está.<br><br>O rótulo é <b>espécie · nome do kernel</b>. O caminho fica à vista porque é a única coisa que distingue dois aparelhos idênticos.<br><br>A entrada aparece para mim em ~3,4 s. O controle só consegue vibrar por volta de 10,3 a 15,6 s — e essa demora é uma correção que o próprio Hefesto instala para ele não falhar. Não é você, e não é o seu cabo.</span></span>
       <a class="tn-x" href="#" title="Fechar" data-gesto="entrada-parar">×</a>
     </div>
     <div class="tn-corpo">
@@ -5247,11 +5247,10 @@ document.addEventListener("click", function (ev) {
       <div class="moldura">
         <div class="ce-cartao">
           <span class="ce-perg">Onde fica esta entrada?</span>
-          <span class="ce-cont" data-campo="entrada-contador" data-hef-alvo="html">entrada 1 de 1 <span class="pt">·</span> sem sair da cadeira</span>
+          <span class="ce-cont" data-campo="entrada-contador" data-hef-alvo="html">Entrada 1 de 1 <span class="pt">·</span> sem sair da cadeira</span>
           <span class="ce-quem" data-campo="entrada-quem" data-hef-alvo="html">Câmera <span class="pt">·</span> <code>3-5</code></span>
         </div>
         <div class="ce-botoes"><button class="btn foco" data-gesto="entrada-face" value="Frente do gabinete" title="Cria uma entrada nesta face para este aparelho e para o que estiver pendurado nele. Gravado na hora.">Frente do gabinete</button><button class="btn" data-gesto="entrada-face" value="Atrás do gabinete" title="Cria uma entrada nesta face para este aparelho e para o que estiver pendurado nele. Gravado na hora.">Atrás do gabinete</button><button class="btn" data-gesto="entrada-face" value="Num hub ou extensão" title="Cria uma entrada nesta face para este aparelho e para o que estiver pendurado nele. Gravado na hora.">Num hub ou extensão</button><button class="btn" data-gesto="entrada-face" value="Na escrivaninha" title="Cria uma entrada nesta face para este aparelho e para o que estiver pendurado nele. Gravado na hora.">Na escrivaninha</button></div>
-        <p class="ce-relogios">A entrada aparece para mim em ~3,4 s. O controle só consegue vibrar por volta de 10,3 a 15,6 s — e essa demora é uma correção que o próprio Hefesto instala para ele não falhar. Não é você, e não é o seu cabo.</p>
       </div>
     </div>
     <div class="tn-rod">
@@ -5264,7 +5263,7 @@ document.addEventListener("click", function (ev) {
   <div class="tn-cx">
     <div class="tn-topo">
       <span class="tn-tit">Mapear Entrada a Entrada</span>
-      <span class="ajuda">?<span class="dica">É um <b>fim de verdade</b>: sem aviso de incompletude, sem selo de pendência, sem cartaz. O contador some, porque não há mais o que contar nesta fase.<br><br>Quem já tem lugar para tudo <b>abre a janela direto aqui</b>.</span></span>
+      <span class="ajuda">?<span class="dica">Falta o que está vazio, e essa parte eu não consigo adivinhar. O sistema me lista mais entradas do que existem no seu gabinete — as que sobram são conectores internos que ninguém alcança. Se você me mostrar quais existem de verdade, eu paro de contar as que não existem.<br><br>É um <b>fim de verdade</b>: sem aviso de incompletude, sem selo de pendência, sem cartaz. O contador some, porque não há mais o que contar nesta fase.<br><br>Quem já tem lugar para tudo <b>abre a janela direto aqui</b>.<br><br>A entrada aparece para mim em ~3,4 s. O controle só consegue vibrar por volta de 10,3 a 15,6 s — e essa demora é uma correção que o próprio Hefesto instala para ele não falhar. Não é você, e não é o seu cabo.</span></span>
       <a class="tn-x" href="#" title="Fechar" data-gesto="entrada-parar">×</a>
     </div>
     <div class="tn-corpo">
@@ -5273,10 +5272,9 @@ document.addEventListener("click", function (ev) {
         <div class="ce-cartao">
           <span class="ce-perg">Acabou a parte sem levantar.</span>
           <span class="ce-cont" data-campo="entrada-contador" data-hef-alvo="html"></span>
-          <span class="ce-quem" data-campo="entrada-quem" data-hef-alvo="html">Falta o que está vazio, e essa parte eu não consigo adivinhar. O sistema me lista mais entradas do que existem no seu gabinete — as que sobram são conectores internos que ninguém alcança. Se você me mostrar quais existem de verdade, eu paro de contar as que não existem.</span>
+          <span class="ce-quem" data-campo="entrada-quem" data-hef-alvo="html"></span>
         </div>
         <div class="ce-botoes"><button class="btn foco" data-gesto="entrada-levantar" title="Guarda a leitura de agora como referência e entra na fase em pé. É a única porta para ela.">Vou mostrar agora</button><a class="btn" href="#" data-gesto="entrada-parar" title="Fecha a janela. Mesmo destino do “Já chega por hoje”.">Deixar para quando eu precisar</a></div>
-        <p class="ce-relogios">A entrada aparece para mim em ~3,4 s. O controle só consegue vibrar por volta de 10,3 a 15,6 s — e essa demora é uma correção que o próprio Hefesto instala para ele não falhar. Não é você, e não é o seu cabo.</p>
       </div>
     </div>
     <div class="tn-rod">
@@ -5288,7 +5286,7 @@ document.addEventListener("click", function (ev) {
   <div class="tn-cx">
     <div class="tn-topo">
       <span class="tn-tit">Mapear Entrada a Entrada</span>
-      <span class="ajuda">?<span class="dica">Pegue o DualSense e o cabo e encaixe numa entrada vazia. Qualquer aparelho que o computador reconheça serve — o DualSense é o melhor porque ele avisa na sua mão. Eu aviso quando achar.<br><br>Aqui a face <b>não se pergunta</b>: toda entrada aprendida de pé é gravada em <b>Atrás do gabinete</b>. O total <b>encolhe</b> — ele é recalculado pela leitura de agora, e “Não alcanço” tira uma vaga da conta.</span></span>
+      <span class="ajuda">?<span class="dica">Pegue o DualSense e o cabo e encaixe numa entrada vazia. Qualquer aparelho que o computador reconheça serve — o DualSense é o melhor porque ele avisa na sua mão. Eu aviso quando achar.<br><br>Aqui a face <b>não se pergunta</b>: toda entrada aprendida de pé é gravada em <b>Atrás do gabinete</b>. O total <b>encolhe</b> — ele é recalculado pela leitura de agora, e “Não alcanço” tira uma vaga da conta.<br><br>A entrada aparece para mim em ~3,4 s. O controle só consegue vibrar por volta de 10,3 a 15,6 s — e essa demora é uma correção que o próprio Hefesto instala para ele não falhar. Não é você, e não é o seu cabo.</span></span>
       <a class="tn-x" href="#" title="Fechar" data-gesto="entrada-parar">×</a>
     </div>
     <div class="tn-corpo">
@@ -5296,11 +5294,10 @@ document.addEventListener("click", function (ev) {
       <div class="moldura">
         <div class="ce-cartao">
           <span class="ce-perg">Encaixe o DualSense numa entrada vazia.</span>
-          <span class="ce-cont" data-campo="entrada-contador" data-hef-alvo="html">entrada 1 de 7</span>
+          <span class="ce-cont" data-campo="entrada-contador" data-hef-alvo="html">Entrada 1 de 7</span>
           <span class="ce-quem" data-campo="entrada-quem" data-hef-alvo="html">Procurando</span>
         </div>
         <div class="ce-botoes"><button class="btn foco" data-gesto="entrada-nao-alcanco" title="Tira esta entrada da conta de vez: não vira dívida, não vira aviso, e o Hefesto não volta a perguntar. Ela diminui o TOTAL do contador, não o feito.">Não alcanço</button></div>
-        <p class="ce-relogios">A entrada aparece para mim em ~3,4 s. O controle só consegue vibrar por volta de 10,3 a 15,6 s — e essa demora é uma correção que o próprio Hefesto instala para ele não falhar. Não é você, e não é o seu cabo.</p>
       </div>
     </div>
     <div class="tn-rod">
@@ -5312,11 +5309,11 @@ document.addEventListener("click", function (ev) {
   <div class="tn-cx mp-cx">
     <div class="tn-topo">
       <span class="tn-tit">Mapear entradas</span>
-      <span class="ajuda">?<span class="dica">Use o mesmo DualSense em todas: ligue o cabo numa entrada, espere o Hefesto mostrar o que mediu dela e salve; o <b>nome</b> e o <b>lugar</b> são opcionais. Depois passe o cabo para a próxima. O nome e o lugar aparecem na <b>Gestão de Controles</b> e em <b>Rádio e Adaptadores</b>.</span></span>
+      <span class="ajuda">?<span class="dica">Use o mesmo DualSense em todas: ligue o cabo numa entrada, espere o Hefesto mostrar o que mediu dela e salve; o <b>nome</b> e o <b>lugar</b> são opcionais. Depois passe o cabo para a próxima. O nome e o lugar aparecem na <b>Gestão de Controles</b> e em <b>Rádio e Adaptadores</b>.<br><br>Nomeie a entrada (ou deixe vazia para ela ser enumerada). Ao final, valide e, caso necessário, faça os ajustes na entrada no botão Mapa das Conexões.</span></span>
       <a class="tn-x" href="#" title="Fechar">×</a>
     </div>
     <div class="tn-corpo mp" id="mp-forma">
-      <p class="mp-diz"><i class="mp-luz" data-campo="mapear-estado" data-hef-alvo="atributo" data-hef-atributo="data-estado" data-estado="porta"></i><span data-campo="mapear-diz">Conecte um DualSense em cada entrada USB do seu dispositivo. Nomeie a entrada (ou deixe vazia para ela ser enumerada). Ao final, valide e, caso necessário, faça os ajustes na entrada no botão Mapa das Conexões.</span></p>
+      <p class="mp-diz"><i class="mp-luz" data-campo="mapear-estado" data-hef-alvo="atributo" data-hef-atributo="data-estado" data-estado="porta"></i><span data-campo="mapear-diz">Conecte um DualSense em cada entrada USB do seu dispositivo.</span></p>
       <div class="mp-duas">
         <div class="mp-esq">
           <div class="mp-rot">O que o Hefesto mediu</div>

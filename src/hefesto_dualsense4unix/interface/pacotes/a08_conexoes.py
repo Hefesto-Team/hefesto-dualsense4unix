@@ -1393,7 +1393,8 @@ def _html_dos_externos(ctx: Contexto) -> str:
             f'<div class="ext-linha"{" data-larga" if aviso else ""}{da_borda}>'
             f'{desenho_do_externo(entrada)}'
             f'<span class="ext-nome">{_e(_format_external_title(entrada))}</span>'
-            f'<span class="ext-via">{_e(_format_external_subtitle(entrada))}</span>'
+            f'<span class="ext-via" title="{_e(_format_external_subtitle(entrada))}">'
+            f'{_e(_format_external_subtitle(entrada))}</span>'
             f'{linha_do_aviso}{botoes}{declara}</div>')
     return "".join(fora)
 
@@ -3096,7 +3097,7 @@ def novo_hub_cancelar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 @gesto("08-conexoes.html", "novo-hub-gravar", grava="machine_declare")
 def novo_hub_gravar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Liga o hub na entrada escolhida: nasce a filha dela, com o nome, e vai ao disco."""
-    from hefesto_dualsense4unix.interface import logica_do_mapa as mm
+    from hefesto_dualsense4unix.utils.rotulo_da_entrada import MAXIMO_DO_NOME_DA_ENTRADA
 
     forma_lida = o.get("forma")
     forma: dict[str, Any] = forma_lida if isinstance(forma_lida, dict) else {}
@@ -3104,8 +3105,9 @@ def novo_hub_gravar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     if not numero:
         raise ValueError("a pergunta não disse em qual entrada o hub está ligado.")
     nome = str(forma.get("hub-nome") or "")
-    if len(" ".join(nome.split())) > mm.MAXIMO_DO_NOME_DA_ENTRADA:
-        raise RuntimeError(mm.FRASE_DO_HUB_COMPRIDO)
+    if len(" ".join(nome.split())) > MAXIMO_DO_NOME_DA_ENTRADA:
+        raise RuntimeError(
+            f"O nome do hub tem até {MAXIMO_DO_NOME_DA_ENTRADA} letras.")
     if not _logica_do_mapa().acrescentar_hub(numero, nome):
         raise RuntimeError(
             f"não dá para ligar um hub {_a_entrada_na_frase(numero, em=True)}: ou ela não "
@@ -4499,8 +4501,14 @@ def _o_selo(selo: Any, titulo: str = "") -> str:
 #: o tooltip do ponto verde e do vazado (desenho aprovado de 05/10/2026: o verde já diz «bom»).
 TUDO_CERTO = "Tudo certo"
 FAIXA_NAO_DESCOBERTA = "Faixa ainda não descoberta · clique para descobrir"
-FAIXA_NAO_ENCONTRADA = "Faixa não encontrada"
-FAIXA_NAO_ACHADA = f"{FAIXA_NAO_ENCONTRADA} · clique para tentar de novo"
+#: A medida da faixa lê o mapa de canais que o adaptador evita, e esse mapa só existe com algum
+#: aparelho conectado pelo Bluetooth (não só o controle). Por isso a frase pede o aparelho
+#: (08/10/2026).
+FAIXA_NAO_ENCONTRADA = "Precisa de um aparelho no Bluetooth"
+FAIXA_NAO_ACHADA = (
+    f"{FAIXA_NAO_ENCONTRADA} · A faixa se mede pelo mapa de canais que o adaptador evita, e esse "
+    "mapa só existe com algum aparelho conectado pelo Bluetooth, não só o controle. Clique para "
+    "tentar de novo.")
 #: o rótulo do botão que a faixa vazia do receptor vira (desenho de 06/10/2026, item 1): o gesto
 #: mora à vista, no lugar dos canais que faltam, e não num ponto de 10 px explicado só no tooltip.
 DESCOBRIR_A_FAIXA = "Descobrir a faixa"
@@ -5784,16 +5792,15 @@ def _campos_da_cerimonia() -> dict[str, Any]:
     foto = _laco().foto_sem_esperar()
     contador, quem = "", ""
     if foto.get("estado") == ee.SENTADA:
-        contador = (f'entrada {foto.get("passo")} de {foto.get("total")} '
+        contador = (f'Entrada {foto.get("passo")} de {foto.get("total")} '
                     f'<span class="pt">·</span> {calib.SEM_SAIR_DA_CADEIRA}')
         pergunta = foto.get("pergunta") or {}
         quem = (f'{_x(pergunta.get("especie") or "")} <span class="pt">·</span> '
                 f'<code>{_x(pergunta.get("caminho") or "")}</code>') if pergunta else ""
     elif foto.get("estado") == ee.EM_PE:
-        contador = f'entrada {foto.get("passo")} de {foto.get("total")}'
+        contador = f'Entrada {foto.get("passo")} de {foto.get("total")}'
         quem = calib.PROCURANDO
-    elif foto.get("estado") == ee.FIM:
-        quem = _x(calib.CONVITE_EM_PE)
+    # No fim, o convite mora no «?» da tela: o corpo fica sem frase explicativa.
     nada = _monta().NADA_A_DIZER
     return {"entrada-tela": foto.get("tela") or "", "entrada-contador": contador or nada,
             "entrada-quem": quem or nada}
@@ -6617,11 +6624,14 @@ def perfil_do_controle_gesto(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 MAPEAR_DIZ = {
     "parado": "Conecte o DualSense por USB numa entrada do computador.",
     "esperando": "Conecte o DualSense por USB numa entrada do computador.",
-    "porta": ("Conecte um DualSense em cada entrada USB do seu dispositivo. Nomeie a "
-              "entrada (ou deixe vazia para ela ser enumerada). Ao final, valide e, "
-              "caso necessário, faça os ajustes na entrada no botão Mapa das Conexões."),
+    "porta": "Conecte um DualSense em cada entrada USB do seu dispositivo.",
     "procurando": "Procurando…",
 }
+
+#: O resto do que a tela dizia na linha de cima: é explicação, e mora no «?» da tela.
+MAPEAR_DICA_DA_PORTA = (
+    "Nomeie a entrada (ou deixe vazia para ela ser enumerada). Ao final, valide e, "
+    "caso necessário, faça os ajustes na entrada no botão Mapa das Conexões.")
 
 
 def _o_mapa() -> Any:

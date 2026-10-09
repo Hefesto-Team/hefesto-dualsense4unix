@@ -428,6 +428,11 @@ DICA_DOS_HUBS = (
 )
 
 
+def _primeira_maiuscula(frase: str) -> str:
+    """Só a primeira letra sobe: o resto da frase fica como o dono a escreveu."""
+    return frase[:1].upper() + frase[1:]
+
+
 def html_do_mapa(
     faces: Sequence[Mapping[str, Any]],
     *,
@@ -464,7 +469,8 @@ def html_do_mapa(
     def quadrado(numero: str, esticada: bool = False) -> str:
         classe, texto, porque = veredito_de(numero, esticada)
         dentro = quem_esta.get(numero)
-        corpo = dentro[0] if dentro else rotulos["vazia"]
+        corpo = _primeira_maiuscula(dentro[0] if dentro else rotulos["vazia"])
+        texto, porque = _primeira_maiuscula(texto), _primeira_maiuscula(porque)
         dizeres = []
         if esticada:
             dizeres.append(dicas["esticada"])
@@ -474,7 +480,8 @@ def html_do_mapa(
         linhas = [f'<span class="mm-n">{_e(numero)}</span>',
                   f'<span class="mm-c{"" if dentro else " mm-vazia"}">{_e(corpo)}</span>']
         if esticada:
-            linhas.append(f'<span class="mm-ext">{_e(rotulos["por_extensao"])}</span>')
+            por_extensao = _primeira_maiuscula(rotulos["por_extensao"])
+            linhas.append(f'<span class="mm-ext">{_e(por_extensao)}</span>')
         linhas.append(f'<span class="mm-v">{_e(texto)}</span>')
         return (f'<button class="mm-sq" data-v="{_e(classe)}" '
                 f'data-gesto="escolher-entrada" data-entrada="{_e(numero)}" '
@@ -484,9 +491,13 @@ def html_do_mapa(
 
     if not faces:
         # branco — e "não há nada aqui" é indistinguível de "isto quebrou".
-        from hefesto_dualsense4unix.interface.logica_do_mapa import ROTULO_SEM_FACE
+        from hefesto_dualsense4unix.interface.logica_do_mapa import (
+            DICA_SEM_FACE,
+            ROTULO_SEM_FACE,
+        )
 
-        return f'            <div class="tn-frase">{_e(ROTULO_SEM_FACE)}</div>'
+        return (f'            <div class="tn-frase" title="{_e(DICA_SEM_FACE)}">'
+                f'{_e(ROTULO_SEM_FACE)}</div>')
 
     blocos = []
     for indice, face in enumerate(faces):
@@ -501,17 +512,20 @@ def html_do_mapa(
             </div>''')
 
     from hefesto_dualsense4unix.interface import logica_do_mapa as _mm
+    from hefesto_dualsense4unix.utils.rotulo_da_entrada import MAXIMO_DO_NOME_DA_ENTRADA
 
     nomes = nomes or {}
     aberta = bool(pergunta and pergunta.get("aberta"))
     celulas = "".join(
         f'<div class="mm-cel">{quadrado(filha, esticada=True)}'
         + (f'<span class="mm-hub-nome">{_e(nomes[filha])}</span>' if nomes.get(filha) else "")
-        + f'<span class="mm-ligado">ligado na entrada <b>{_e(mae)}</b>'
+        + f'<span class="mm-ligado">{_e(_mm.ROTULO_LIGADO_NA_ENTRADA)} <b>{_e(mae)}</b>'
         f' <span class="mudo">· {_e(face_da_entrada.get(mae, ""))}</span></span></div>'
         for mae, filha in extensoes.items())
     pergunta_html = ""
     if aberta:
+        gravar = 'data-gesto="novo-hub-gravar" data-hef-forma="hub-pergunta"'
+        cancelar = 'data-gesto="novo-hub-cancelar"'
         opcoes = "".join(f'<option value="{_e(n)}">{_e(n)}</option>'
                          for n in (pergunta or {}).get("entradas", ()))
         pergunta_html = (
@@ -520,15 +534,17 @@ def html_do_mapa(
                 <label class="hub-rot">{_e(_mm.ROTULO_LIGADO_NA_ENTRADA)}
                   <select class="hub-sel" data-linha="hub-entrada">{opcoes}</select></label>
                 <input class="mm-campo hub-nome" type="text" data-linha="hub-nome"
-                  maxlength="{_mm.MAXIMO_DO_NOME_DA_ENTRADA}" placeholder="{_e(_mm.NOME_DO_HUB_EM_BRANCO)}">
-                <button class="btn" data-gesto="novo-hub-gravar" data-hef-forma="hub-pergunta">{_e(_mm.ROTULO_ACRESCENTAR)}</button>
-                <button class="btn" data-gesto="novo-hub-cancelar">{_e(_mm.ROTULO_CANCELAR)}</button>
+                  maxlength="{MAXIMO_DO_NOME_DA_ENTRADA}"
+                  placeholder="{_e(_mm.NOME_DO_HUB_EM_BRANCO)}">
+                <button class="btn" {gravar}>{_e(_mm.ROTULO_ACRESCENTAR)}</button>
+                <button class="btn" {cancelar}>{_e(_mm.ROTULO_CANCELAR)}</button>
               </div>''')
+    expandido = "true" if aberta else "false"
     blocos.append(
         f'''            <div class="mm-face" data-face="hubs">
               <div class="mm-face-cab"><span class="mm-face-nome" '''
         f'''title="{_e(DICA_DOS_HUBS)}">Hubs e extensões</span>
-                <button class="btn mini" data-gesto="novo-hub" aria-expanded="{"true" if aberta else "false"}" '''
+                <button class="btn mini" data-gesto="novo-hub" aria-expanded="{expandido}" '''
         f'''title="{_e(_mm.DICA_NOVO_HUB)}">{_e(_mm.ROTULO_NOVO_HUB)}</button></div>{pergunta_html}
               <div class="mm-grade mm-grade-hubs">{celulas}</div>
             </div>''')

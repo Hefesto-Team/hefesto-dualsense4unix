@@ -1,6 +1,7 @@
 """A-08-MOSTRA-O-DESENHO-DO-CONTROLE-E-O-HUB-PERGUNTA-A-ENTRADA-01, item 1: o desenho no quadrado.
 
-Ela, 08/10/2026: *«temos os svgs deles no repo já (…) colocamos eles nos quadrados de cada controle.»*
+Ela, 08/10/2026: *«temos os svgs deles no repo já (…) colocamos eles nos quadrados de cada
+controle.»*
 A linha do controle de fora ganha o desenho do modelo (o do repositório, ou o Xbox, que é desenho
 nosso) e o nome do modelo vai para a dica do quadrado, não para o corpo da linha.
 
@@ -9,11 +10,15 @@ O que se mede, com cabo e com rádio e com quatro externos na mesma lista:
 * cada marca que tem desenho (Nintendo, Xbox, 8BitDo) leva UM quadrado `<svg><use>` apontando para
   um símbolo que EXISTE no sprite da página, e o nome do modelo mora só no `title` do quadrado;
 * a marca sem desenho não ganha quadrado (a tela não afirma um modelo que ninguém desenhou);
-* o Xbox é desenho nosso: o arquivo existe, é só traçado e não referencia nada de fora.
+* o Xbox é desenho nosso: o arquivo existe, é só traçado e não cita nada de fora.
 
 Item 2, o «Acrescentar hub» com dono (a face B-hub): o botão abre a pergunta curta (em qual entrada,
 nome opcional, Acrescentar/Cancelar) e o ato real é da `LogicaDoMapa`, que grava pelo mesmo caminho
 dos outros gestos do mapa (`machine_declare`, o gabinete inteiro).
+
+Item 3, a maiúscula e o texto que vira dica (o laço da régua da primeira letra, com as telas abertas
+por âncora, é o `test_todo_texto_que_abre_uma_linha_comeca_com_maiuscula.py`); item 4, o mouse sem
+faixa pede o aparelho no Bluetooth.
 """
 from __future__ import annotations
 
@@ -90,7 +95,8 @@ def test_o_simbolo_de_cada_quadrado_existe_no_sprite_da_pagina() -> None:
     pagina = _a_pagina()
     assert pagina.count('<svg class="ext-sprite"') == 1
     for marca, simbolo in conexoes.SIMBOLO_DO_EXTERNO.items():
-        achados = re.findall(rf'<symbol id="{simbolo}" viewBox="[^"]+">(.+?)</symbol>', pagina, re.S)
+        achados = re.findall(
+            rf'<symbol id="{simbolo}" viewBox="[^"]+">(.+?)</symbol>', pagina, re.S)
         assert len(achados) == 1, f"{marca}: o símbolo {simbolo} não está no sprite da página"
         assert "<path" in achados[0] or "<circle" in achados[0], marca
         assert "currentColor" in achados[0], f"{marca}: o desenho não segue a cor do texto"
@@ -122,7 +128,7 @@ def test_o_xbox_e_desenho_nosso_sem_nada_de_fora() -> None:
         if fora == "http://":
             assert texto.count("http://") == texto.count("http://www.w3.org/2000/svg"), texto
         else:
-            assert fora not in texto, f"o desenho nosso referencia `{fora}`"
+            assert fora not in texto, f"o desenho nosso cita `{fora}`"
 
 
 # ---------------------------------------------------------------- item 2: o hub pergunta a entrada
@@ -223,7 +229,7 @@ def test_o_acrescentar_grava_o_gabinete_inteiro_com_o_hub_dentro(logica) -> None
     assert logica.perguntando_o_hub is False
     html = _o_mapa_vivo()
     assert "hub-pergunta" not in html and "Hub da mesa" in html
-    assert "ligado na entrada <b>2</b>" in html
+    assert "Ligado na entrada <b>2</b>" in html
 
 
 def test_o_acrescentar_recusa_dizendo_e_nao_grava(logica) -> None:
@@ -250,7 +256,8 @@ def test_sem_entrada_no_desenho_a_pergunta_recusa_dizendo(monkeypatch: pytest.Mo
 
 def test_o_desenho_da_pergunta_tem_os_quatro_elementos_e_o_limite_do_nome() -> None:
     pagina = _a_pagina()
-    corpo = re.search(r'<div class="hub-pergunta" id="hub-pergunta">(.*?)</div>\s*<div class="mm-grade',
+    corpo = re.search(r'<div class="hub-pergunta" id="hub-pergunta">(.*?)</div>\s*'
+                      r'<div class="mm-grade',
                       pagina, re.S)
     assert corpo, "a pergunta do hub saiu do mockup"
     texto = corpo.group(1)
@@ -258,3 +265,103 @@ def test_o_desenho_da_pergunta_tem_os_quatro_elementos_e_o_limite_do_nome() -> N
     assert 'maxlength="24"' in texto and "Nome do hub (opcional)" in texto
     assert 'data-gesto="novo-hub-gravar" data-hef-forma="hub-pergunta"' in texto
     assert 'data-gesto="novo-hub-cancelar"' in texto
+
+
+# ───────────────────── item 3: a maiúscula e o texto que vira dica ─────────────────────
+
+
+def test_o_quadrado_do_mapa_abre_cada_frase_com_maiuscula() -> None:
+    """O motor devolve «ocupada», «vale evitar»: quem desenha sobe só a primeira letra."""
+    from hefesto_dualsense4unix.interface.conexoes import html_do_mapa
+
+    html = html_do_mapa(
+        [{"nome": "Traseira", "portas": ["1", "2"]}],
+        quem_esta={"1": ("Mouse", "3-1")}, extensoes={"2": "2a"},
+        veredito_de=lambda n, e: ("evite", "vale evitar", "colada no Mouse, na entrada 1"),
+        rotulos={"vazia": "vazia", "por_extensao": "por extensão",
+                 "nova_entrada": "Acrescentar entrada"},
+        dicas={"esticada": "Foi você.", "enumera": "Enumera {c}.", "nova_entrada": "",
+               "novo_hub": ""},
+        nomes={}, pergunta=None)
+    assert ">Vale evitar<" in html and ">Vazia<" in html and ">Por extensão<" in html
+    assert "Colada no Mouse, na entrada 1" in html
+    assert "Ligado na entrada <b>2</b>" in html
+    for minuscula in (">vale evitar<", ">vazia<", ">por extensão<", ">ligado na entrada"):
+        assert minuscula not in html
+
+
+def test_o_mapa_sem_face_diz_uma_frase_curta_e_a_explicacao_vai_na_dica() -> None:
+    from hefesto_dualsense4unix.interface.conexoes import html_do_mapa
+    from hefesto_dualsense4unix.interface.logica_do_mapa import DICA_SEM_FACE, ROTULO_SEM_FACE
+
+    html = html_do_mapa([], quem_esta={}, extensoes={}, veredito_de=lambda n, e: ("", "", ""),
+                        rotulos={"vazia": "", "por_extensao": "", "nova_entrada": ""},
+                        dicas={"esticada": "", "enumera": "", "nova_entrada": "", "novo_hub": ""})
+    assert ROTULO_SEM_FACE in html and DICA_SEM_FACE not in html.split("title=")[0]
+    assert f'title="{DICA_SEM_FACE}"' in html
+    assert ROTULO_SEM_FACE.count(".") == 1, "a frase do corpo voltou a explicar"
+
+
+def test_o_contador_da_cerimonia_abre_com_maiuscula_no_desenho_e_no_pacote() -> None:
+    from hefesto_dualsense4unix.interface import aba08
+
+    assert aba08.PROGRESSO.startswith("Entrada ")
+    pagina = _a_pagina()
+    assert re.search(r'class="ce-cont"[^>]*>Entrada \d+ de \d+', pagina)
+    assert not re.search(r'class="ce-cont"[^>]*>entrada ', pagina)
+
+
+def test_o_texto_explicativo_das_telas_de_mapear_mora_no_ponto_de_interrogacao() -> None:
+    """Ordem dela (ESCOLHAS, 08/10): o explicativo de «Mapear entradas» e de «Entrada a Entrada»
+    sai do corpo e vai para o «?»."""
+    pagina = _a_pagina()
+    assert 'class="ce-relogios"' not in pagina, "o texto dos dois relógios voltou ao corpo da tela"
+    depois_do_fim = pagina.split('id="mapear-entrada-a-entrada-fim"')[1]
+    corpo_fim = depois_do_fim.split('id="mapear-entrada-a-entrada-em-pe"')[0]
+    assert re.search(r'<span class="ce-quem"[^>]*></span>', corpo_fim), "o convite voltou ao corpo"
+    assert "Falta o que está vazio" in corpo_fim and "A entrada aparece para mim" in corpo_fim
+    portas = pagina.split('id="mapear-portas"')[1].split("</script>")[0]
+    assert "Nomeie a entrada" in portas and portas.count("Nomeie a entrada") == 1
+    assert ('data-campo="mapear-diz">Conecte um DualSense em cada entrada USB do seu '
+            'dispositivo.</span>') in portas
+
+
+# ───────────────────── item 4: o mouse sem faixa pede o aparelho no Bluetooth ─────────────────────
+
+
+def test_o_mouse_que_nao_achou_a_faixa_pede_um_aparelho_no_bluetooth(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    import copy
+
+    from hefesto_dualsense4unix.integrations import receptor_sem_fio
+    from hefesto_dualsense4unix.interface import aba08
+
+    base = aba08.CENA_DO_RADIO
+    cena = copy.deepcopy(base)
+    lug = cena["lugares"][1]["id"]
+    cena["vizinhos"] = [*cena.get("vizinhos", []), {
+        "id": "aaaa:bbbb", "tipo": "mouse", "nome": "Mouse", "sugestao": "", "sugestao_tipo": "",
+        "no": "", "lido": "", "produto": "", "receptor": True, "banda": None, "saude": None}]
+    cena["canais_medidos"] = {**cena.get("canais_medidos", {}), lug: False}
+    monkeypatch.setattr(conexoes, "_passo_da_linha", lambda _c: receptor_sem_fio.PASSO_NADA)
+    html = conexoes.html_dos_canais(cena)
+    assert "<span>Precisa de um aparelho no Bluetooth · Tentar de novo</span>" in html
+    assert "Faixa não encontrada" not in html
+    assert conexoes.TENTAR_DE_NOVO == "Precisa de um aparelho no Bluetooth · Tentar de novo"
+    assert "Bluetooth" in conexoes.FAIXA_NAO_ACHADA
+    assert "não só o controle" in conexoes.FAIXA_NAO_ACHADA
+
+
+def test_o_via_da_linha_do_externo_cede_com_reticencias_e_leva_a_frase_inteira_na_dica() -> None:
+    """O quadrado do modelo tomou 42 px da linha, e a 1272 px as listas vazavam: quem cede é o
+    «via», que vira reticências e guarda a frase inteira no `title`."""
+    from hefesto_dualsense4unix.app.actions.home_actions import _format_external_subtitle
+
+    entrada = {"nome": "8BitDo Pro 2", "mac": "aa:bb:cc:00:00:41", "tipo": "bluetooth",
+               "bus": "bluetooth", "vendor": "2dc8", "product": "6003"}
+    ctx = Contexto(state={"connected": True}, mesa=[], conectados=[], externos=[entrada])
+    html = conexoes._html_dos_externos(ctx)
+    frase = _format_external_subtitle(entrada)
+    assert f'<span class="ext-via" title="{frase}">{frase}</span>' in html
+    css = (INTERFACE / "aba08.py").read_text(encoding="utf-8")
+    assert re.search(r"\.gc \.ext-via\{[^}]*min-width:0;[^}]*text-overflow:ellipsis", css)

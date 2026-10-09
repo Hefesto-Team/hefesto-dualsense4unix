@@ -177,6 +177,30 @@ def test_a_08_pintada_pelo_pacote_abre_toda_linha_com_maiuscula(qual: str) -> No
     assert not achados, f"a 08 pintada abre linha em minúscula: {achados}"
 
 
+#: As telas da 08 que nascem por âncora (`:target`) e ficam FORA da leitura de cima, que só vê o
+#: que está à mostra: o «Mapear entradas», o «Mapear Entrada a Entrada» (as três da cerimônia) e o
+#: das portas. A régua as ABRE uma a uma (A-08-MOSTRA-O-DESENHO…-01, 08/10/2026:
+#: «maiúscula em tudo»).
+ANCORAS_DA_08 = ("mapear-entradas", "mapear-entrada-a-entrada", "mapear-entrada-a-entrada-em-pe",
+                 "mapear-entrada-a-entrada-fim", "mapear-portas")
+
+
+def _abrir_a_ancora(ancora: str) -> str:
+    return f"(function(){{location.hash = '#{ancora}'; return 'aberta {ancora}';}})()"
+
+
+@pytest.mark.parametrize("ancora", ANCORAS_DA_08)
+def test_a_08_com_a_tela_aberta_por_ancora_abre_toda_linha_com_maiuscula(ancora: str) -> None:
+    """A tela aberta como o gerador a escreve (parada) e como o pacote a pinta, com o hub
+    perguntando."""
+    cena = _cenas()[0]
+    campos = a08.campos_da_secao(cena)
+    passos = [_abrir_a_ancora(ancora), LER, _clicar('[data-gesto="novo-hub"]'), LER,
+              _pintar(campos), _abrir_a_ancora(ancora), LER]
+    achados = _achados(_no_webkit(onde.BANCADA / "08-conexoes.html", TAMANHO, passos))
+    assert not achados, f"a tela #{ancora} abre linha em minúscula: {achados}"
+
+
 def test_o_receptor_que_nao_achou_a_faixa_nao_fala_em_primeira_pessoa(
         monkeypatch: pytest.MonkeyPatch) -> None:
     from hefesto_dualsense4unix.integrations import receptor_sem_fio

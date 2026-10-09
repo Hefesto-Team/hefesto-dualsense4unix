@@ -135,7 +135,8 @@ def test_os_tres_do_hub_tem_dono_na_camada_e_no_registro() -> None:
 
 
 def test_a_face_dos_hubs_tem_o_botao_de_acrescentar_com_ou_sem_extensao() -> None:
-    """MORDIDA: faça `html_do_mapa` só desenhar a face dos hubs `if extensoes:` (o defeito de antes)."""
+    """MORDIDA: faça `html_do_mapa` só desenhar a face dos hubs `if houver_extensao:` (o defeito
+    de antes)."""
     for extensoes in ({}, {"1": "1a"}):
         html = tela.html_do_mapa(
             [{"nome": "Traseira", "portas": [1, 2]}],

@@ -10,7 +10,6 @@ from hefesto_dualsense4unix.utils.i18n import _
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.maquina import MapaDaMesa
 from hefesto_dualsense4unix.utils.rotulo_da_entrada import (
-    FRASE_DO_NOME_COMPRIDO,
     MAXIMO_DO_NOME_DA_ENTRADA,
     nome_que_vale,
 )
@@ -24,17 +23,18 @@ EXPLICACAO = (
 )
 
 ROTULO_APARELHOS = "O que o Hefesto encontrou"
-ROTULO_SEM_FACE = (
-    "Você ainda não criou nenhuma face. Crie uma para cada conjunto de "
-    "entradas que você enxerga junto: a frente do gabinete, a traseira, o hub."
+ROTULO_SEM_FACE = "Você ainda não criou nenhuma face."
+DICA_SEM_FACE = (
+    "Crie uma para cada conjunto de entradas que você enxerga junto: a frente "
+    "do gabinete, a traseira, o hub."
 )
 ROTULO_TIRAR = "Tirar daqui"
 ROTULO_EXTENSAO = "Tem uma extensão aqui"
 ROTULO_NOVA_ENTRADA = "Acrescentar entrada"
 ROTULO_NOVA_FACE = "Acrescentar face"
 ROTULO_FECHAR = "Fechar"
-ROTULO_VAZIA = "vazia"
-ROTULO_POR_EXTENSAO = "por extensão"
+ROTULO_VAZIA = "Vazia"
+ROTULO_POR_EXTENSAO = "Por extensão"
 NOME_DA_FACE_EM_BRANCO = "Nome da face"
 ROTULO_NOVO_HUB = "Acrescentar hub"
 ROTULO_LIGADO_NA_ENTRADA = "Ligado na entrada"
@@ -42,7 +42,6 @@ NOME_DO_HUB_EM_BRANCO = "Nome do hub (opcional)"
 ROTULO_ACRESCENTAR = "Acrescentar"
 ROTULO_CANCELAR = "Cancelar"
 DICA_NOVO_HUB = "Pergunta em qual entrada o hub está ligado e acrescenta a face dele."
-FRASE_DO_HUB_COMPRIDO = FRASE_DO_NOME_COMPRIDO.replace("da entrada", "do hub")
 
 DICA_JA_COLOCADO = "Você já colocou este aparelho {onde}."
 DICA_ENUMERA = "O sistema enumera este aparelho como {c}."

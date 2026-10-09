@@ -130,27 +130,38 @@ def test_a_coluna_sem_a_lista_continua_sendo_so_o_card(pacote) -> None:
     assert "cd-cura" not in pacote._html_das_dicas()
 
 
+def _a_dica_do_mapa(html: str) -> str:
+    """O «?» da janela «Mapear entradas», onde a frase do clique mora desde 08/10/2026."""
+    inicio = html.index('id="mapear-entradas"')
+    achado = re.search(r'<span class="dica"[^>]*>(.*?)</span></span>', html[inicio:], re.S)
+    assert achado, "a janela «Mapear entradas» perdeu o «?» — o teste não mede mais nada"
+    return achado.group(1)
+
+
 def test_o_rodape_do_mapa_nao_manda_apertar_o_aplicar() -> None:
     """Decisão [08] — *"Trocar pela verdade."*"""
     from hefesto_dualsense4unix.interface import onde
 
     html = onde.pagina("08-conexoes.html").read_text(encoding="utf-8")
-    assert "mm-aplicar" in html, (
-        "a linha do rodapé do Mapa sumiu — o teste não mede mais nada")
+    assert "Tudo aqui é gravado no clique." in _a_dica_do_mapa(html), (
+        "a frase do clique saiu do «?» do Mapa — o teste não mede mais nada")
     assert "clicar em Aplicar" not in html
 
 
-def test_o_rodape_do_mapa_diz_que_o_clique_ja_gravou() -> None:
-    """E a frase nova é a do DONO desta aba, lida no ato."""
-    from hefesto_dualsense4unix.interface.logica_do_mapa import GRAVA_NO_CLIQUE
+def test_a_frase_do_clique_e_dica_e_nao_corpo_da_tela() -> None:
+    """Ordem dela (08/10): o texto explicativo das telas de mapear vira dica."""
+    from hefesto_dualsense4unix.interface.logica_do_mapa import EXPLICACAO, GRAVA_NO_CLIQUE
     from hefesto_dualsense4unix.interface import onde
 
     html = onde.pagina("08-conexoes.html").read_text(encoding="utf-8")
-    assert GRAVA_NO_CLIQUE in html
+    dica = _a_dica_do_mapa(html)
+    assert GRAVA_NO_CLIQUE in dica and EXPLICACAO in dica
+    assert 'class="tn-frase mm-aplicar"' not in html
+    assert f'<div class="tn-frase">{EXPLICACAO}</div>' not in html
 
 
 def test_o_rodape_do_mapa_vem_do_dono() -> None:
-    """A frase do rodapé tem UM dono, e o gerador não guarda uma segunda cópia."""
+    """A frase tem UM dono, e o gerador não guarda uma segunda cópia."""
     import pathlib
 
     from hefesto_dualsense4unix.interface.logica_do_mapa import GRAVA_NO_CLIQUE
@@ -159,18 +170,13 @@ def test_o_rodape_do_mapa_vem_do_dono() -> None:
     for publicado in (False, True):
         pagina = onde.pagina("08-conexoes.html", publicado=publicado)
         html = pagina.read_text(encoding="utf-8")
-        no = re.findall(r'<div class="tn-frase mm-aplicar">(.*?)</div>', html)
-        assert len(no) == 1, (
-            f"{pagina.name} ({'publicada' if publicado else 'bancada'}) tem "
-            f"{len(no)} rodapé(s) `.mm-aplicar` — seletor que casa zero é ERRO, "
-            f"não silêncio")
-        assert no[0] == GRAVA_NO_CLIQUE, (
-            f"o rodapé da página {'publicada' if publicado else 'da bancada'} "
-            f"não é o do dono:\n  página: {no[0]!r}\n  dono:   {GRAVA_NO_CLIQUE!r}")
+        if publicado and 'class="tn-frase mm-aplicar"' in html:
+            continue  # a publicada só acompanha o desenho no `--publicar` do fecho
+        assert GRAVA_NO_CLIQUE in _a_dica_do_mapa(html)
 
     fonte = pathlib.Path(aba08.__file__).read_text(encoding="utf-8")
     assert GRAVA_NO_CLIQUE not in fonte, (
-        "`aba08.py` voltou a DIGITAR a frase do rodapé — ela tem dono, e o "
+        "`aba08.py` voltou a DIGITAR a frase do clique — ela tem dono, e o "
         "gerador a lê por `MAPA[\"GRAVA_NO_CLIQUE\"]`")
     assert aba08.MAPA["GRAVA_NO_CLIQUE"] == GRAVA_NO_CLIQUE, (
         "o `MAPA` do gerador deixou de carregar a frase — sem ela no conjunto "

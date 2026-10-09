@@ -474,7 +474,10 @@ CSS = CSS_GLIFO + CSS_POPUP + """
                  border-top:1px solid var(--border-sutil);
                  border-left:3px dashed var(--border-forte)}
   .gc .ext-nome{color:var(--fg);font-weight:600;white-space:nowrap;flex:0 0 auto}
-  .gc .ext-via{flex:1;font-size:11.5px;white-space:nowrap}
+  /* O quadrado do modelo tomou 42 px da linha: a 1272 px, com dois por fileira, a coluna das três
+     listas vazava 28 px. O «via» é o que cede (reticências, e a frase inteira na dica). */
+  .gc .ext-via{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:11.5px;
+               white-space:nowrap}
   .gc .ext-aviso{color:var(--orange);font-size:11.5px;text-align:right}
   .gc .ext-botoes{font-size:11px;letter-spacing:.06em;white-space:nowrap}
   /* O QUADRADO DO MODELO (A-08-MOSTRA-O-DESENHO-DO-CONTROLE-01): o desenho do sprite
@@ -939,7 +942,6 @@ CSS = CSS_GLIFO + CSS_POPUP + """
             background:var(--app-bg);border:1px solid var(--border-forte);
             color:var(--fg);font:inherit;font-size:11.5px}
   .mm-campo::placeholder{color:var(--texto-mudo)}
-  .mm-aplicar{margin:11px 0 0}
   .tn-rod.mm-rod{justify-content:flex-end}
   .tn-rod.mm-rod .btn{flex:0 0 auto;padding:0 22px}
 
@@ -973,7 +975,6 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   /* o foco É o anúncio (R13): não há live region alcançável pelo PyGObject, então
      mover o foco é a única forma que a janela tem de dizer "o passo mudou". */
   .btn.foco{outline:2px solid var(--purple);outline-offset:2px}
-  .ce-relogios{font-size:10.5px;color:var(--texto-mudo);line-height:1.55;margin-top:13px}
 """
 
 
@@ -1532,10 +1533,9 @@ def pergunta_da_sala(texto, dica, respostas, marcada, gesto):
     dica dentro da `.moldura` é dica recortada.
 
     O QUE **NÃO** VEIO ANEXADO: o produto gruda a `moldura.QUANDO_VALE` no fim
-    desta dica, porque a seção dele não tem onde mais dizê-la. Aqui a frase já
-    está na tela, por extenso, no rodapé desta janelinha (`GRAVA_NO_CLIQUE`, e
-    é `.mm-aplicar` no desenho) — repeti-la no hover seria a mesma frase duas
-    vezes na mesma caixa. **NÃO É `ESPERA_O_APLICAR`**, que este docstring
+    desta dica, porque a seção dele não tem onde mais dizê-la. A frase
+    (`GRAVA_NO_CLIQUE`) abre o «?» da janelinha, junto da explicação: texto
+    explicativo é dica, e não corpo da tela. **NÃO É `ESPERA_O_APLICAR`**, que este docstring
     nomeava até 06/09/2026: aquela é a irmã dela, a da janela GTK que espera o
     "Aplicar", e esta tela grava no clique desde 01/09.
 
@@ -1570,6 +1570,7 @@ TELA_MAPEAR = f'''
     <div class="tn-topo">
       <span class="tn-tit">{MAPEAR_ENTRADAS}</span>
       {ajuda(
+        MAPA["EXPLICACAO"] + " " + MAPA["GRAVA_NO_CLIQUE"] + "<br><br>"
         "O gesto tem <b>dois tempos</b>: clique no aparelho, depois na entrada em que ele "
         "está. Um aparelho fica em <b>um</b> lugar — pôr onde ele não estava o tira de onde "
         "estava, no mesmo gesto.<br><br>"
@@ -1582,7 +1583,6 @@ TELA_MAPEAR = f'''
       <a class="tn-x" href="#" title="Fechar">×</a>
     </div>
     <div class="tn-corpo">
-      <div class="tn-frase">{MAPA["EXPLICACAO"]}</div>
       <div class="moldura">
         <div class="mm-rot-linha"><span class="mm-rot" title="Tudo o que está ligado ao computador. O que já tem lugar continua na lista: clique nele para mudar de entrada.">{MAPA["ROTULO_APARELHOS"]}</span></div>
         <!-- O ENDEREÇO CHEGOU EM 03/09/2026 (`IDENTIDADE-VEM-DE-CIMA-01`). O
@@ -1623,7 +1623,6 @@ TELA_MAPEAR = f'''
         <span class="mm-nova"><input class="mm-campo" placeholder="{MAPA["NOME_DA_FACE_EM_BRANCO"]}" maxlength="16">
           <button class="btn" data-gesto="nova-face" title="Cria uma face com o nome que você escreveu, sem entrada nenhuma. Sem nome, não cria.">{MAPA["ROTULO_NOVA_FACE"]}</button></span>
       </div>
-      <div class="tn-frase mm-aplicar">{MAPA["GRAVA_NO_CLIQUE"]}</div>
     </div>
     <div class="tn-rod mm-rod">
       <a class="btn" href="#">{MAPA["ROTULO_FECHAR"]}</a>
@@ -2879,7 +2878,8 @@ TELA_MAPEAR_PORTAS = f'''
       {ajuda("Use o mesmo DualSense em todas: ligue o cabo numa entrada, espere o Hefesto "
              "mostrar o que mediu dela e salve; o <b>nome</b> e o <b>lugar</b> são opcionais. "
              "Depois passe o cabo para a próxima. O nome e o lugar aparecem na "
-             "<b>Gestão de Controles</b> e em <b>Rádio e Adaptadores</b>.")}
+             "<b>Gestão de Controles</b> e em <b>Rádio e Adaptadores</b>.<br><br>"
+             + _pacote08.MAPEAR_DICA_DA_PORTA)}
       <a class="tn-x" href="#" title="Fechar">×</a>
     </div>
     <div class="tn-corpo mp" id="mp-forma">
@@ -2925,7 +2925,7 @@ TELA_MAPEAR_PORTAS = f'''
   }})();
 </script>
 '''
-PROGRESSO = "entrada {feitos} de {total}"
+PROGRESSO = "Entrada {feitos} de {total}"
 
 SEM_LUGAR = [(esp, no) for esp, no, em, _q in CENSO if not em]
 
@@ -2949,7 +2949,7 @@ def cerimonia(ident, pergunta, contador, quem, botoes, dica, rodape):
   <div class="tn-cx">
     <div class="tn-topo">
       <span class="tn-tit">{MAPEAR_UMA_A_UMA}</span>
-      {ajuda(dica)}
+      {ajuda(dica + "<br><br>" + OS_DOIS_RELOGIOS)}
       <a class="tn-x" href="#" title="Fechar" data-gesto="entrada-parar">×</a>
     </div>
     <div class="tn-corpo">
@@ -2961,7 +2961,6 @@ def cerimonia(ident, pergunta, contador, quem, botoes, dica, rodape):
           <span class="ce-quem" data-campo="entrada-quem" data-hef-alvo="html">{quem}</span>
         </div>
         <div class="ce-botoes">{botoes}</div>
-        <p class="ce-relogios">{OS_DOIS_RELOGIOS}</p>
       </div>
     </div>
     <div class="tn-rod">
@@ -2998,12 +2997,13 @@ TELA_FIM = cerimonia(
     "mapear-entrada-a-entrada-fim",
     CALIB["FIM_DA_FASE_SENTADA"],
     "",
-    CALIB["CONVITE_EM_PE"],
+    "",
     f'<button class="btn foco" data-gesto="entrada-levantar" title="Guarda a leitura '
     f'de agora como referência e entra na fase em pé. É a única porta para ela.">'
     f'{CALIB["ROTULO_VOU_MOSTRAR"]}</button>'
     f'<a class="btn" href="#" data-gesto="entrada-parar" title="Fecha a janela. Mesmo destino do “{CALIB["ROTULO_JA_CHEGA"]}”.">'
     f'{CALIB["ROTULO_DEIXAR_PARA_DEPOIS"]}</a>',
+    CALIB["CONVITE_EM_PE"] + "<br><br>"
     "É um <b>fim de verdade</b>: sem aviso de incompletude, sem selo de pendência, sem "
     "cartaz. O contador some, porque não há mais o que contar nesta fase.<br><br>"
     "Quem já tem lugar para tudo <b>abre a janela direto aqui</b>.",
