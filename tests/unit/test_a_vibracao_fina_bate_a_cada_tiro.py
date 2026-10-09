@@ -251,3 +251,43 @@ def test_o_pad_uhid_nao_leva_a_borda_ao_motor(com_toque: _Mundo) -> None:
     pad = UhidDualSense(player=1)
     m.rumble(_QUATRO[0], 0, 220, vpad=pad)
     assert m.daemon._tato_vivo.contadores["eventos"] == 0
+
+
+# --- A barra dela não apaga o tiro (o jogo manda, o ajuste só potencializa) ---
+
+
+@pytest.mark.parametrize(
+    ("mults", "par", "lado", "energia"),
+    [
+        # Barra do forte a 50 %: o tiro de 150 vira 75 no motor, abaixo do limiar 80.
+        ((1.0, 0.5), (0, 150), tv.LADO_ESQUERDO, 75),
+        # Barra do fraco a 0 %: o tiro dos dois motores não vira «esquerdo».
+        ((0.0, 1.0), (200, 200), tv.LADO_CENTRO, 200),
+    ],
+)
+@pytest.mark.parametrize("transporte", ["cabo", "radio"])
+@pytest.mark.parametrize("lugar", [1, 2, 3, 4])
+def test_a_borda_e_o_lado_vem_do_pedido_cru_e_a_energia_da_barra(
+    com_toque: _Mundo,
+    monkeypatch: pytest.MonkeyPatch,
+    transporte: str,
+    lugar: int,
+    mults: tuple[float, float],
+    par: tuple[int, int],
+    lado: str,
+    energia: int,
+) -> None:
+    from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp
+
+    m = com_toque
+    monkeypatch.setattr(gp, "_mults_por_motor", lambda *_a: mults)
+    controles = (
+        _no_cabo_os_quatro(m) if transporte == "cabo" else _no_radio_os_quatro(m)
+    )
+    m.mesa.volta(*controles)
+    uniq = _QUATRO[lugar - 1]
+    m.rumble(uniq, 0, 0)
+    m.rumble(uniq, *par)
+    eventos = list(m.daemon._tato_vivo._fila)
+    assert [(e.uniq, e.tipo, e.lado) for e in eventos] == [(uniq, tv.TIPO_RUMBLE, lado)]
+    assert eventos[0].energia == pytest.approx(energia / 255.0)

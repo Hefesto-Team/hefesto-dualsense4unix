@@ -547,7 +547,12 @@ RUMBLE_JUNTA_S = 0.03  # a rampa de um tiro só (0 → 100 → 200 em 8 ms)
 
 
 class BordaDoRumble:
-    """O par ``(fraco, forte)`` do jogo, controle a controle: um evento por subida."""
+    """O par ``(fraco, forte)`` do jogo, controle a controle: um evento por subida.
+
+    A borda e o lado vêm do pedido CRU do jogo; a barra de intensidade dela só
+    entra na energia (``efetivo``). O jogo manda, e o ajuste do Hefesto só
+    potencializa, nunca veta: com a barra a 50 % o tiro de 150 continua tiro.
+    """
 
     def __init__(
         self,
@@ -565,13 +570,21 @@ class BordaDoRumble:
         self._pico: dict[str, int] = {}
         self._disparo: dict[str, float] = {}
 
-    def ver(self, uniq: str, fraco: int, forte: int, agora: float) -> list[Evento]:
+    def ver(
+        self,
+        uniq: str,
+        fraco: int,
+        forte: int,
+        agora: float,
+        efetivo: tuple[int, int] | None = None,
+    ) -> list[Evento]:
+        """``fraco``/``forte`` são o pedido cru do jogo; ``efetivo``, o par depois da barra."""
         nivel = max(0, min(255, max(int(fraco), int(forte))))
         if not self._armado.get(uniq, True):
             pico = self._pico.get(uniq, nivel)
             # O tiro por cima de um nível já alto: subiu de novo, fora da rampa do anterior.
             if nivel - pico >= self.subida and agora - self._disparo[uniq] >= self.junta_s:
-                return self._disparar(uniq, fraco, forte, nivel, agora)
+                return self._disparar(uniq, fraco, forte, nivel, agora, efetivo)
             pico = max(pico, nivel)
             self._pico[uniq] = pico
             if nivel <= self.rearma or pico - nivel >= self.subida:
@@ -581,11 +594,17 @@ class BordaDoRumble:
         base = min(self._base.get(uniq, 0), nivel)
         self._base[uniq] = base
         if nivel >= self.dispara and nivel - base >= self.subida:
-            return self._disparar(uniq, fraco, forte, nivel, agora)
+            return self._disparar(uniq, fraco, forte, nivel, agora, efetivo)
         return []
 
     def _disparar(
-        self, uniq: str, fraco: int, forte: int, nivel: int, agora: float
+        self,
+        uniq: str,
+        fraco: int,
+        forte: int,
+        nivel: int,
+        agora: float,
+        efetivo: tuple[int, int] | None,
     ) -> list[Evento]:
         self._armado[uniq] = False
         self._pico[uniq] = nivel
@@ -596,19 +615,31 @@ class BordaDoRumble:
             lado = LADO_ESQUERDO
         else:
             lado = LADO_CENTRO
+        if efetivo is not None:
+            nivel = max(0, min(255, max(int(efetivo[0]), int(efetivo[1]))))
         return [Evento(agora, uniq, TIPO_RUMBLE, lado, nivel / 255.0)]
 
 
 def anotar_o_rumble(
-    daemon: Any, uniq: str, fraco: int, forte: int, agora: float | None = None
+    daemon: Any,
+    uniq: str,
+    fraco: int,
+    forte: int,
+    agora: float | None = None,
+    *,
+    efetivo: tuple[int, int] | None = None,
 ) -> None:
-    """Leva a borda do rumble ao motor ligado. Nunca levanta."""
+    """Leva a borda do rumble ao motor ligado. Nunca levanta.
+
+    ``fraco``/``forte`` são o pedido CRU do jogo (a borda e o lado); ``efetivo`` é o
+    par depois da barra de intensidade, e dá só a energia do toque.
+    """
     motor = motor_do(daemon)
     if motor is None or not motor.ligado:
         return
     try:
         instante = time.monotonic() if agora is None else agora
-        for evento in motor.borda_do_rumble.ver(uniq, fraco, forte, instante):
+        for evento in motor.borda_do_rumble.ver(uniq, fraco, forte, instante, efetivo):
             motor.anotar(evento)
     except Exception:
         logger.debug("tato_vivo_borda_do_rumble_falhou", exc_info=True)

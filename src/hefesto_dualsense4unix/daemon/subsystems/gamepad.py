@@ -676,6 +676,7 @@ def apply_game_rumble(
         reaplicar=lambda: apply_game_rumble(
             daemon, weak, strong, target_uniq=target_uniq, vpad=vpad
         ),
+        cru=(weak, strong),
     ):
         motores = (0, 0)
 
@@ -707,8 +708,13 @@ def _levar_a_haptica_fina(
     strong: int,
     *,
     reaplicar: Callable[[], object] | None = None,
+    cru: tuple[int, int] | None = None,
 ) -> bool:
     """O rumble do pad SEM háptica vai à háptica fina do lugar. True = ela leva.
+
+    ``weak``/``strong`` são o par já escalado pela barra dela; ``cru`` é o pedido
+    do jogo antes dela. A borda e o lado do tiro saem do cru, e a energia, do
+    escalado: a barra potencializa o toque, nunca apaga o tiro.
 
     NO-MODO-XBOX-TUDO-FUNCIONA-01, parte 4, 29/09/2026. Só o pad ``uinput``
     converte: ele é o pad de todo cartão no modo Xbox (o Xbox 360 vestido), e
@@ -739,7 +745,8 @@ def _levar_a_haptica_fina(
         return False
     if converte:  # A-VIBRACAO-FINA-BATE-A-CADA-TIRO-01: a borda do rumble vira tiro.
         from hefesto_dualsense4unix.daemon.subsystems.tato_vivo import anotar_o_rumble
-        anotar_o_rumble(daemon, target_uniq, weak, strong)
+        fraco_cru, forte_cru = cru if cru is not None else (weak, strong)
+        anotar_o_rumble(daemon, target_uniq, fraco_cru, forte_cru, efetivo=(weak, strong))
     return converte and leva is True
 
 
