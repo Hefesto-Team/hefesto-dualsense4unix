@@ -67,12 +67,17 @@ def test_a_dica_do_auto_saiu_de_vez() -> None:
 
 
 def test_a_dica_do_perfil_de_bateria_nao_promete_mais_que_a_tabela() -> None:
-    """A palavra de produto dizia "barra de luz apagada" — e não há por onde apagá-la."""
+    """A palavra de produto dizia "barra de luz apagada" — e não há por onde apagá-la.
+
+    O nome se procura sem a caixa da inicial: desde 09/10/2026 só a primeira
+    letra da frase é maiúscula, e o «Giroscópio» da tabela entra na dica como
+    «giroscópio». O que a régua cobra é a linha estar lá, não a caixa dela.
+    """
     dica = secao_orcamento.DICAS[secao_orcamento.PERFIL_BATERIA_LONGA]
     for linha in secao_orcamento.LINHAS_DO_TETO:
         if linha.tem_ponto:
             continue
-        assert linha.nome in dica, (
+        assert linha.nome.casefold() in dica.casefold(), (
             f"a linha {linha.nome!r} não tem ponto de aplicação e sumiu da "
             "dica — a dica passou a prometer mais do que a tabela mostra"
         )
