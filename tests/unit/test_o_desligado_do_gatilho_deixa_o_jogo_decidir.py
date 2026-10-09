@@ -17,15 +17,45 @@ AS MORDIDAS:
 * tire o `hidden` do `—` (`_op_vazio`) → `test_o_travessao_nao_e_uma_linha_da_lista`
   reprova, nos oito campos e na lista que o pacote monta;
 * troque o `Off` do gesto por `trigger_set` → a prova do gesto em `a03.PROVAS`
-  (`test_os_botoes_tem_dono`) reprova.
+  (`test_os_botoes_tem_dono`) reprova;
+* devolva o `return` puro da graça em `uhid_gamepad._replicate_from_output` →
+  `test_o_jogo_decide_o_efeito_da_graca_chega_e_o_perfil_nao_o_apaga` reprova.
 """
 from __future__ import annotations
 
 import pathlib
 import re
 import sys
+from typing import Any
 
 import pytest
+
+from hefesto_dualsense4unix.core import backend_pydualsense as bp
+from hefesto_dualsense4unix.core import trigger_effects
+from hefesto_dualsense4unix.integrations.uhid_gamepad import (
+    UHID_OPEN,
+    UHID_START,
+    UhidDualSense,
+)
+from tests.unit.test_o_jogo_manda_e_na_ausencia_o_perfil_ganha import (
+    BLOCO_DO_JOGO,
+    EFEITO_DO_PERFIL,
+    MAC_1,
+    SEM_EFEITO,
+    UNIQ_1,
+    _controle,
+)
+from tests.unit.test_uhid_replica import (
+    _blueprint,
+    _Clock,
+    _edge_report,
+    _evento,
+    _FakeFd,
+    _output_event,
+    fake_uhid,
+)
+
+__all__ = ["fake_uhid"]
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
@@ -84,3 +114,68 @@ def test_o_gesto_e_o_rotulo_falam_a_mesma_coisa() -> None:
     assert a03_gatilhos._rotulo_do_modo("Off") == a03_gatilhos.ROTULO_DO_JOGO_DECIDE
     assert "Desligado" not in a03_gatilhos.DICA_DO_MODO["Off"]
     assert a03_gatilhos._rotulo_do_modo("Rigid") == "Rígido"
+
+
+
+# O fim a fim (A-GRACA-DO-JOGO-NAO-JOGA-FORA-O-PRIMEIRO-EFEITO-01, 09/10/2026):
+# o jogo escreve no vpad, o físico tem o bloco; o jogo cala, o perfil não o apaga.
+
+
+def _vpad_ligado_ao_fisico(
+    fake: _FakeFd, campos_do_perfil: dict[str, Any]
+) -> tuple[bp.PyDualSenseController, Any, UhidDualSense, _Clock]:
+    ctl, _no, handle = _controle(campos_dela=campos_do_perfil)
+    clock = _Clock()
+
+    def _no_fisico(lado: str, bloco: bytes) -> None:
+        ctl.set_game_trigger_for(MAC_1, "left" if lado == "left" else "right", bloco)
+
+    pad = UhidDualSense(
+        player=1, blueprint=_blueprint(), time_fn=clock, sleep_fn=lambda _s: None,
+        trigger_sink=_no_fisico,
+    )
+    assert pad.start() is True
+    fake.reads.append(_evento(UHID_START))
+    fake.reads.append(_evento(UHID_OPEN))
+    pad.pump_ff()
+    return ctl, handle, pad, clock
+
+
+def _o_jogo_escreve(fake: _FakeFd, pad: UhidDualSense, bloco: bytes) -> None:
+    fake.reads.append(_output_event(_edge_report(flag0=0x04, trigger_r=bloco)))
+    pad.pump_ff()
+
+
+def test_o_jogo_decide_o_efeito_da_graca_chega_e_o_perfil_nao_o_apaga(
+    fake_uhid: _FakeFd,
+) -> None:
+    """MORDIDA: a graça que descarta e o físico nunca tem o bloco (o jogo calou)."""
+    ctl, handle, pad, clock = _vpad_ligado_ao_fisico(
+        fake_uhid, {"trigger_right": trigger_effects.off()})
+    clock.t = 0.2
+    _o_jogo_escreve(fake_uhid, pad, BLOCO_DO_JOGO)
+    assert handle._raw_trigger_right is None
+
+    clock.t = 0.6
+    pad.pump_ff()
+    assert handle._raw_trigger_right == BLOCO_DO_JOGO
+
+    with ctl._io_lock:
+        ctl._desired_by_uniq[UNIQ_1] = bp._DesiredOutput(trigger_right=trigger_effects.off())
+        ctl._stamp_owner_locked(UNIQ_1, ("trigger_right",), bp._LAYER_PROFILE)
+    clock.t = 5.0
+    pad.pump_ff()
+    assert handle._raw_trigger_right == BLOCO_DO_JOGO
+
+
+def test_o_sem_efeito_da_graca_e_ausencia_e_o_perfil_vale(fake_uhid: _FakeFd) -> None:
+    ctl, handle, pad, clock = _vpad_ligado_ao_fisico(
+        fake_uhid, {"trigger_right": EFEITO_DO_PERFIL})
+    clock.t = 0.2
+    _o_jogo_escreve(fake_uhid, pad, SEM_EFEITO)
+    clock.t = 0.6
+    pad.pump_ff()
+
+    assert handle._raw_trigger_right is None
+    with ctl._io_lock:
+        assert ctl._merged_desired_for_key(MAC_1).trigger_right == EFEITO_DO_PERFIL

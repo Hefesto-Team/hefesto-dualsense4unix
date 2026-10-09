@@ -174,6 +174,55 @@ _REPLICA_MIN_INTERVAL_S = 1.0 / 250.0
 
 _GAME_REPLICA_GRACE_S = 0.5
 
+# A graça filtra o que o kernel escreve na sonda (player-LED e luz), não o
+# gatilho do jogo: um efeito mandado uma vez nela é evento, e não pode cair.
+# As escolhas que a bancada decide (09/10/2026, a validar por ela), cada uma
+# com o seu interruptor no ambiente do daemon, sem editar código:
+#: «guarda»: o último gatilho da graça sai quando ela vence; «descarta» é o de antes.
+_GRACA_GUARDA = "guarda"
+_GRACA_DESCARTA = "descarta"
+_A_GRACA_DO_JOGO = _GRACA_GUARDA
+_INTERRUPTOR_DA_GRACA = "HEFESTO_DUALSENSE4UNIX_GRACA_DO_JOGO"
+_INTERRUPTOR_DO_PRAZO_DA_GRACA = "HEFESTO_DUALSENSE4UNIX_GRACA_DO_JOGO_S"
+_PRAZO_DA_GRACA_MAX_S = 5.0
+#: O que a graça guarda; a luz e o player-LED são o que o kernel escreve na sonda.
+_GUARDADAS_NA_GRACA = frozenset({"trigger_right", "trigger_left"})
+#: «sequencia»: X → Off → X chega inteiro, um por vez; «coalescido» (vale o último) é o de antes.
+_GATILHO_EM_SEQUENCIA = "sequencia"
+_GATILHO_COALESCIDO = "coalescido"
+_A_REPLICA_DO_GATILHO = _GATILHO_EM_SEQUENCIA
+_INTERRUPTOR_DA_REPLICA_DO_GATILHO = "HEFESTO_DUALSENSE4UNIX_REPLICA_DO_GATILHO"
+_REPLICADAS_EM_SEQUENCIA = frozenset({"trigger_right", "trigger_left"})
+#: Teto da fila por lado: o jogo que muda mais rápido que 250 Hz perde o mais velho.
+_SEQUENCIA_MAX = 8
+
+
+def _prazo_da_graca() -> float:
+    """O prazo da graça: o interruptor, se for um número de 0 a 5 s; senão a constante."""
+    valor = os.environ.get(_INTERRUPTOR_DO_PRAZO_DA_GRACA, "")
+    try:
+        prazo = float(valor.replace(",", "."))
+    except ValueError:
+        return _GAME_REPLICA_GRACE_S
+    if not 0.0 <= prazo <= _PRAZO_DA_GRACA_MAX_S:
+        return _GAME_REPLICA_GRACE_S
+    return prazo
+
+
+def _a_graca_guarda() -> bool:
+    valor = os.environ.get(_INTERRUPTOR_DA_GRACA, "")
+    escolha = valor if valor in (_GRACA_GUARDA, _GRACA_DESCARTA) else _A_GRACA_DO_JOGO
+    return escolha == _GRACA_GUARDA
+
+
+def _o_gatilho_em_sequencia() -> bool:
+    valor = os.environ.get(_INTERRUPTOR_DA_REPLICA_DO_GATILHO, "")
+    escolha = (
+        valor if valor in (_GATILHO_EM_SEQUENCIA, _GATILHO_COALESCIDO)
+        else _A_REPLICA_DO_GATILHO
+    )
+    return escolha == _GATILHO_EM_SEQUENCIA
+
 #: Report de input do DualSense em USB (sticks/gatilhos/botões → jogo).
 _INPUT_REPORT_USB = 0x01
 
@@ -559,6 +608,7 @@ class UhidDualSense:
     _replica_last: dict[str, Any] = field(default_factory=dict)
     _replica_pending: dict[str, Any] = field(default_factory=dict)
     _replica_ts: dict[str, float] = field(default_factory=dict)
+    _replica_fila: dict[str, collections.deque[Any]] = field(default_factory=dict)
     _trigger_replicas: int = 0
     _lightbar_replicas: int = 0
     _player_led_replicas: int = 0
@@ -1514,24 +1564,57 @@ class UhidDualSense:
         bound_at = self._bound_at
         if bound_at is None:
             return False
-        return (self.time_fn() - bound_at) >= _GAME_REPLICA_GRACE_S
+        return (self.time_fn() - bound_at) >= _prazo_da_graca()
+
+    def _na_graca(self) -> bool:
+        """True com a sessão aberta e a graça do bind ainda correndo."""
+        bound_at = self._bound_at
+        if not self._game_open or bound_at is None:
+            return False
+        return (self.time_fn() - bound_at) < _prazo_da_graca()
+
+    @staticmethod
+    def _gatilhos_do_report(body: bytes) -> list[tuple[str, bytes]]:
+        """Os blocos de gatilho que o report 0x02 traz (bits 0x04 e 0x08 do flag0)."""
+        flag0 = body[_VALID_FLAG0_OFFSET]
+        blocos: list[tuple[str, bytes]] = []
+        fim_r = _TRIGGER_R_BLOCK_OFFSET + _TRIGGER_BLOCK_LEN
+        if flag0 & _TRIGGER_R_EFFECT_ENABLE and len(body) >= fim_r:
+            blocos.append(("trigger_right", bytes(body[_TRIGGER_R_BLOCK_OFFSET:fim_r])))
+        fim_l = _TRIGGER_L_BLOCK_OFFSET + _TRIGGER_BLOCK_LEN
+        if flag0 & _TRIGGER_L_EFFECT_ENABLE and len(body) >= fim_l:
+            blocos.append(("trigger_left", bytes(body[_TRIGGER_L_BLOCK_OFFSET:fim_l])))
+        return blocos
+
+    def _guardar_na_graca(self, body: bytes) -> None:
+        """Na graça, o ÚLTIMO gatilho do jogo fica pendente até ela vencer.
+
+        A luz e o player-LED continuam descartados: são o que o kernel escreve na
+        sonda, o defeito que a graça cura (`f95107f9d`).
+        """
+        for categoria, bloco in self._gatilhos_do_report(body):
+            if categoria not in _GUARDADAS_NA_GRACA:
+                continue
+            self._as_filas().pop(categoria, None)
+            self._replica_pending[categoria] = bloco
+
+    def _as_filas(self) -> dict[str, collections.deque[Any]]:
+        """As filas de gatilho em sequência; o dublê por `__new__` não tem o campo."""
+        filas: dict[str, collections.deque[Any]] | None = self.__dict__.get("_replica_fila")
+        if filas is None:
+            filas = self.__dict__.setdefault("_replica_fila", {})
+        assert filas is not None
+        return filas
 
     def _replicate_from_output(self, body: bytes) -> None:
         """Enfileira as categorias presentes no report 0x02 (bits de valid_flag)."""
         if not self._replicating():
+            if self._na_graca() and _a_graca_guarda():
+                self._guardar_na_graca(body)
             return
-        flag0 = body[_VALID_FLAG0_OFFSET]
         flag1 = body[_VALID_FLAG1_OFFSET]
-        fim_r = _TRIGGER_R_BLOCK_OFFSET + _TRIGGER_BLOCK_LEN
-        if flag0 & _TRIGGER_R_EFFECT_ENABLE and len(body) >= fim_r:
-            self._queue_replica(
-                "trigger_right", bytes(body[_TRIGGER_R_BLOCK_OFFSET:fim_r])
-            )
-        fim_l = _TRIGGER_L_BLOCK_OFFSET + _TRIGGER_BLOCK_LEN
-        if flag0 & _TRIGGER_L_EFFECT_ENABLE and len(body) >= fim_l:
-            self._queue_replica(
-                "trigger_left", bytes(body[_TRIGGER_L_BLOCK_OFFSET:fim_l])
-            )
+        for categoria, bloco in self._gatilhos_do_report(body):
+            self._queue_replica(categoria, bloco)
         if flag1 & _PLAYER_INDICATOR_CONTROL_ENABLE and len(body) > _PLAYER_LEDS_OFFSET:
             mask = body[_PLAYER_LEDS_OFFSET] & _PLAYER_LEDS_MASK
             self._queue_replica(
@@ -1550,7 +1633,24 @@ class UhidDualSense:
             self._flush_replicas()
 
     def _queue_replica(self, categoria: str, valor: Any) -> None:
-        """Dedup por valor: igual ao último ENTREGUE (e sem pendência) = drop."""
+        """Dedup por valor: igual ao último ENTREGUE (e sem pendência) = drop.
+
+        O gatilho em sequência compara com o último DA FILA: `X → Off → X` dentro
+        do intervalo mínimo chega inteiro, porque rearmar a arma é um evento.
+        """
+        if categoria in _REPLICADAS_EM_SEQUENCIA and _o_gatilho_em_sequencia():
+            fila = self._as_filas().setdefault(
+                categoria, collections.deque(maxlen=_SEQUENCIA_MAX)
+            )
+            pendente = self._replica_pending.get(categoria)
+            anterior = (
+                fila[-1] if fila
+                else pendente if pendente is not None
+                else self._replica_last.get(categoria)
+            )
+            if valor != anterior:
+                fila.append(valor)
+            return
         if valor == self._replica_last.get(categoria) and (
             categoria not in self._replica_pending
         ):
@@ -1559,7 +1659,10 @@ class UhidDualSense:
 
     def _flush_replicas(self) -> None:
         """Entrega as pendências respeitando o rate-limit por categoria."""
-        if not self._replica_pending:
+        filas = self._as_filas()
+        if not self._replica_pending and not any(filas.values()):
+            return
+        if self._na_graca():
             return
         now = self.time_fn()
         for categoria in list(self._replica_pending):
@@ -1571,6 +1674,19 @@ class UhidDualSense:
             if ts is not None and (now - ts) < _REPLICA_MIN_INTERVAL_S:
                 continue
             del self._replica_pending[categoria]
+            primeira = categoria not in self._replica_ts
+            self._replica_ts[categoria] = now
+            self._replica_last[categoria] = valor
+            self._forward_replica(categoria, valor, primeira=primeira)
+        for categoria, fila in filas.items():
+            while fila and fila[0] == self._replica_last.get(categoria):
+                fila.popleft()
+            if not fila or categoria in self._replica_pending:
+                continue
+            ts = self._replica_ts.get(categoria)
+            if ts is not None and (now - ts) < _REPLICA_MIN_INTERVAL_S:
+                continue
+            valor = fila.popleft()
             primeira = categoria not in self._replica_ts
             self._replica_ts[categoria] = now
             self._replica_last[categoria] = valor
@@ -1624,6 +1740,7 @@ class UhidDualSense:
     def _end_game_session(self) -> None:
         """Fim da sessão (CLOSE/STOP/stop): devolve a posse do output ao perfil."""
         self._replica_pending.clear()
+        self._as_filas().clear()
         self._replica_last.clear()
         self._replica_ts.clear()
         self._soltar_a_luz_do_microfone()
