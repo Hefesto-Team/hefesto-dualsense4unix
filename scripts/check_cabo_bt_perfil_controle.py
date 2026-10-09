@@ -109,6 +109,8 @@ NAO_E_DO_APARELHO: dict[str, str] = {
                       "máquina, nunca do perfil",
     "vel-cursor": "a velocidade do cursor — é da emulação de mouse, global (decisão dela)",
     "vel-rolagem": "idem",
+    "tabela-no-jogo": "liga as linhas da 06 também dentro do jogo (`tabela_no_jogo`, camada do "
+                      "computador) — o ATO no aparelho é o de cada linha, que já responde as quatro",
     "modo-dos-gatilhos": "o par Automático | Personalizado dos gatilhos grava `triggers.modo` "
                          "no perfil — o ATO no aparelho é o do gesto `modo` da 03",
     "pronto": "aplica o efeito já escolhido — o ATO é o do gesto `modo` da 03",
