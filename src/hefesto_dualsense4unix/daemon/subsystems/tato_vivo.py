@@ -30,7 +30,7 @@ import contextlib
 import threading
 import time
 from collections import deque
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Protocol
 
@@ -317,6 +317,8 @@ class TatoVivo:
         self.ligado = False
         self.borda_do_rumble = BordaDoRumble()
         self.borda_do_dedo = BordaDoDedo()
+        #: o ouvido do som do jogo (O-TIRO-VEM-DO-LADO-CERTO-01); ``None`` até a receita pedir.
+        self.ouvido: Any = None
 
     def anotar(self, evento: Evento) -> None:
         """Põe um evento na fila. Chamável de qualquer thread."""
@@ -454,6 +456,7 @@ class BordaDoDedo:
         self.dispara = dispara
         self.solta = solta
         self._apertado: dict[tuple[str, str], bool] = {}
+        self._apertou_em: dict[str, float] = {}
 
     def ver(self, uniq: str, l2: int, r2: int, agora: float) -> list[Evento]:
         eventos: list[Evento] = []
@@ -462,6 +465,7 @@ class BordaDoDedo:
             apertado = self._apertado.get(chave, False)
             if not apertado and valor >= self.dispara:
                 self._apertado[chave] = True
+                self._apertou_em[uniq] = agora
                 eventos.append(
                     Evento(agora, uniq, TIPO_DEDO, lado, min(1.0, valor / 255.0))
                 )
@@ -471,6 +475,13 @@ class BordaDoDedo:
 
     def apertado(self, uniq: str, lado: str) -> bool:
         return self._apertado.get((uniq, lado), False)
+
+    def atirando(self, uniq: str, instante: float) -> bool:
+        """O dedo deste controle segura um gatilho, ou apertou há pouco."""
+        if any(self.apertado(uniq, lado) for lado in (LADO_ESQUERDO, LADO_DIREITO)):
+            return True
+        apertou = self._apertou_em.get(uniq)
+        return apertou is not None and -MESMO_TIRO_S <= instante - apertou <= JANELA_DO_DISPARO_S
 
 
 # A-VIBRACAO-FINA-BATE-A-CADA-TIRO-01: a borda do rumble que o jogo pede.
@@ -551,16 +562,41 @@ def anotar_o_rumble(
         logger.debug("tato_vivo_borda_do_rumble_falhou", exc_info=True)
 
 
+# O-TIRO-VEM-DO-LADO-CERTO-01: o estalo do som do jogo dá o lado do toque. O som é
+# um fluxo só para a mesa inteira: com um controle, o estalo é dele; com mais de
+# um, vai só a quem atirou naquela janela (o tiro do inimigo não tem dono).
+JANELA_DO_DISPARO_S = 0.3  # do aperto ao estalo: o quadro do jogo, o buffer e o gravador
+
+
+def destinos_do_som(
+    controles: Sequence[Controle], dedo: BordaDoDedo, instante: float
+) -> list[str]:
+    """Os controles a quem o estalo do som do jogo pertence."""
+    if len(controles) == 1:
+        return [controles[0].uniq]
+    return [c.uniq for c in controles if dedo.atirando(c.uniq, instante)]
+
+
 class AtuadorDaHaptica:
     """O toque curto do tiro, no tocador do rumble do controle do evento."""
 
     canal = CANAL_HAPTICA
 
-    def __init__(self, tocar: Callable[[str, float, str, int], object]) -> None:
+    def __init__(
+        self,
+        tocar: Callable[[str, float, str, int], object],
+        ouvindo: Callable[[], bool] | None = None,
+    ) -> None:
         self._tocar = tocar
+        self._ouvindo = ouvindo or (lambda: False)
 
     def responde_a(self, evento: Evento, receita: Receita) -> bool:
-        return receita.vibracao_por_tiro and evento.tipo == TIPO_RUMBLE
+        if evento.tipo == TIPO_SOM:
+            return receita.lado_do_som
+        if evento.tipo != TIPO_RUMBLE or not receita.vibracao_por_tiro:
+            return False
+        # Um tiro, um toque: com o ouvido no som do jogo, o toque (e o lado) vem do estalo.
+        return not (receita.lado_do_som and self._ouvindo())
 
     def escrever(self, evento: Evento, receita: Receita, agora: float) -> float | None:
         self._tocar(
@@ -945,6 +981,10 @@ def receita_ativa(daemon: Any) -> Receita:
 def atuadores_de_producao(daemon: Any) -> list[Atuador]:
     """Os canais que o motor sabe escrever hoje."""
 
+    def ouvindo() -> bool:
+        motor = motor_do(daemon)
+        return bool(motor is not None and getattr(motor.ouvido, "ouvindo", False))
+
     def tocar(uniq: str, energia: float, lado: str, duracao_ms: int) -> object:
         alto_falante = getattr(daemon, "_alto_falante_subsystem", None)
         tocar_o_toque = getattr(alto_falante, "tocar_o_toque", None)
@@ -986,7 +1026,7 @@ def atuadores_de_producao(daemon: Any) -> list[Atuador]:
         return (int(cor[0]), int(cor[1]), int(cor[2]))
 
     return [
-        AtuadorDaHaptica(tocar),
+        AtuadorDaHaptica(tocar, ouvindo),
         AtuadorDoGatilho(
             gatilho,
             lambda uniq: sessao.soltar(uniq, CANAL_GATILHO),
@@ -1015,6 +1055,7 @@ class Passo:
         self.motor = motor
         self.dedo = motor.borda_do_dedo
         self.receita: Receita = DESLIGADA
+        self.jogo = False
         self._lida_em = float("-inf")
 
     def receita_de_agora(self, agora: float) -> Receita:
@@ -1036,13 +1077,33 @@ class Passo:
         for controle in controles:
             for evento in self.dedo.ver(controle.uniq, controle.l2, controle.r2, agora):
                 self.motor.anotar(evento)
-        jogo = ha_jogo(self.daemon)
+        self._ouvir_o_jogo(receita, controles)
+        jogo = self.jogo = ha_jogo(self.daemon)
         por_uniq = {c.uniq: estado_do_controle(c, jogo) for c in controles}
         return self.motor.tique(agora, por_uniq.get, receita)
+
+    def _ouvir_o_jogo(self, receita: Receita, controles: Sequence[Controle]) -> None:
+        """Sobe o ouvido quando a receita pede o lado, e leva cada estalo a quem atirou."""
+        ouvido = self.motor.ouvido
+        if ouvido is None:
+            return
+        if receita.lado_do_som:
+            ouvido.comecar()
+        for estalo in ouvido.tirar():
+            for uniq in destinos_do_som(controles, self.dedo, estalo.instante):
+                self.motor.anotar(
+                    Evento(estalo.instante, uniq, TIPO_SOM, estalo.lado, estalo.energia)
+                )
 
 
 async def tato_vivo_loop(daemon: DaemonProtocol, motor: TatoVivo) -> None:
     passo = Passo(daemon, motor)
+    if motor.ouvido is None:
+        from hefesto_dualsense4unix.integrations.transiente_do_jogo import OuvidoDoJogo
+
+        motor.ouvido = OuvidoDoJogo(
+            lambda: motor.ligado and passo.receita.lado_do_som and passo.jogo
+        )
     try:
         while not daemon._is_stopping():
             await asyncio.sleep(INTERVALO_S)
@@ -1052,6 +1113,8 @@ async def tato_vivo_loop(daemon: DaemonProtocol, motor: TatoVivo) -> None:
                 logger.debug("tato_vivo_tique_falhou", exc_info=True)
     finally:
         motor.parar()
+        with contextlib.suppress(Exception):
+            await asyncio.to_thread(motor.ouvido.parar)
 
 
 def start_tato_vivo(daemon: DaemonProtocol) -> None:
@@ -1085,6 +1148,7 @@ __all__ = [
     "bloco_do_gatilho",
     "controles_do_daemon",
     "decidir",
+    "destinos_do_som",
     "modo_do_pad",
     "motor_do",
     "pico_do_pulso",
