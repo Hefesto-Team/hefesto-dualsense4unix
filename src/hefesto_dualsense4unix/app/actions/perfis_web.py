@@ -82,8 +82,8 @@ GESTOS_SEM_MOTOR: dict[str, str] = {}
 #: estilo**, e não porque a escolha se perdeu.
 ESTILO_APLICA_E_SAI = (
     "Escolher um estilo ajusta o gatilho, a vibração e a cor de cada controle "
-    "de uma vez. O perfil guarda os três — não o nome do estilo —, então o "
-    "campo volta ao travessão e você continua ajustando o que quiser nas abas."
+    "de uma vez. O perfil guarda os três e o estilo escolhido, e o campo volta "
+    "ao travessão para você continuar ajustando o que quiser nas abas."
 )
 
 #: produto sabe guardá-la (``simple_match.from_simple_choice("janela", …)``) e a

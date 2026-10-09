@@ -2082,12 +2082,12 @@ def editor_estilo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
         escolhido = ""
     if not escolhido:
         raise RuntimeError(
-            "escolha um Estilo de Jogo na lista — um Estilo de Jogo não foi "
+            "escolha um estilo de jogo na lista — um estilo de jogo não foi "
             "salvo, e o que vale continua sendo o que está nas abas.")
     estilo = receitas.POR_ROTULO.get(escolhido)
     if estilo is None:
         raise RuntimeError(
-            f"“{escolhido}” não é um dos Estilos de Jogo do produto. Nada foi "
+            f"“{escolhido}” não é um dos estilos de jogo do produto. Nada foi "
             f"salvo, e o que vale continua sendo o que está nas abas.")
     nome = _perfil_do_editor(ctx)
     if estilo.chave == "personalizado":

@@ -172,7 +172,7 @@ def test_o_gesto_recusa_o_estilo_que_saiu_sem_gravar() -> None:
 
     with pytest.raises(RuntimeError) as recusa:
         a10_perfis.editor_estilo(ctx, {"valor": RECEITA_QUE_SAIU.rotulo}, object())
-    assert "não é um dos Estilos de Jogo" in str(recusa.value)
+    assert "não é um dos estilos de jogo" in str(recusa.value)
     assert (pasta / "jogo_do_sofa.json").read_bytes() == antes
 
 

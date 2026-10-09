@@ -270,7 +270,7 @@ def test_personalizado_nao_mexe_em_nada(disco: dict[str, Any]) -> None:
 
 def test_um_estilo_que_o_produto_nao_conhece_recusa(disco: dict[str, Any]) -> None:
     """MORDIDA: tire o ``if estilo is None`` e isto vira ``AttributeError``."""
-    with pytest.raises(RuntimeError, match="não é um dos Estilos de Jogo"):
+    with pytest.raises(RuntimeError, match="não é um dos estilos de jogo"):
         a10_perfis.editor_estilo(_ctx(), {"valor": "Boliche"}, PonteDeMentira())
     assert not disco["salvos"]
 

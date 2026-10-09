@@ -63,7 +63,7 @@ DELA = ("já é o perfil que está valendo",
         "gravar este por cima apagaria o dele",
         "não é uma procedência",
         "MSG_ESCOLHA_O_JOGO",
-        "escolha um Estilo de Jogo na lista",
+        "escolha um estilo de jogo na lista",
         "está fora da faixa que o perfil aceita",
         "a preferência tem de ser um número")
 
@@ -123,7 +123,7 @@ def test_o_estilo_recusa_ate_sem_valor_no_clique(
 ) -> None:
     """Sem ``valor`` a recusa continua — e sem ``KeyError`` na cara dela."""
     _o_disco_tem(monkeypatch, "Pragmata")
-    with pytest.raises(RuntimeError, match="escolha um Estilo de Jogo na lista"):
+    with pytest.raises(RuntimeError, match="escolha um estilo de jogo na lista"):
         a10_perfis.editor_estilo(_ctx("Pragmata"), {}, PonteDeMentira())
 
 
@@ -133,7 +133,7 @@ def test_o_travessao_nao_e_uma_escolha(monkeypatch: pytest.MonkeyPatch) -> None:
     with pytest.raises(RuntimeError) as erro:
         a10_perfis.editor_estilo(_ctx("Pragmata"),
                                  {"valor": "", "rotulo": "—"}, PonteDeMentira())
-    assert "escolha um Estilo de Jogo na lista" in str(erro.value), str(erro.value)
+    assert "escolha um estilo de jogo na lista" in str(erro.value), str(erro.value)
     assert "“—”" not in str(erro.value), (
         f"o travessão do lugar vazio virou nome de estilo na tarja: {erro.value}")
 
