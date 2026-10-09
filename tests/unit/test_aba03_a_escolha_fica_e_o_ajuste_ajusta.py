@@ -440,3 +440,7 @@ def test_a_metralhadora_do_perfil_antigo_mostra_o_que_o_controle_recebe(a03):
     _nome, (_lado, modo_, params), _k = ponte.chamadas[-1]
     assert (modo_, list(params)) == ("Machine", [0, 9, 8, 50]), (
         f"mexer na Força mandou {modo_} {params!r}, e devia mandar [0, 9, 8, 50]")
+    depois = a03.pacote(ctx)["blocos"]['[data-controle="p1"] .ajustes.e']
+    for i, valor in enumerate((0, 9, 8, 50)):
+        assert f'data-campo="aj-val-e-{i}">{valor}<' in depois, (
+            f"depois de mexer na Força, a barra {i} não diz {valor}:\n{depois}")

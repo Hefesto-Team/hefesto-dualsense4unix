@@ -1021,7 +1021,7 @@ LEGENDA = f'''<div class="nota">
         calava sobre as outras sete, com os números no disco.</li>
     <li><b>A Metralhadora tem quatro ajustes, no P1 e nos outros</b> — Início do curso, Fim do
         curso, Força e Frequência. A divergência com o produto (seis ajustes, outros nomes) acabou
-        em 08/10/2026, pela escolha dela.</li>
+        em 08/10/2026, pela sua escolha.</li>
     <li><b>O trilho das barras mede 80px</b>, contra 109 na tela de dois. É o que sobra de 220px
         depois dos 92px do rótulo (o token <code>--rot</code>, igual em toda aba) e dos 32 do
         número.</li>
