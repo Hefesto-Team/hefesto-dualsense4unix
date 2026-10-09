@@ -218,6 +218,23 @@ def test_a_tela_por_ancora_das_outras_abas_abre_toda_linha_com_maiuscula(
     assert not achados, f"{aba}#{ancora} abre linha em minúscula: {achados}"
 
 
+def test_a_lista_das_telas_por_ancora_e_a_que_os_geradores_escrevem() -> None:
+    """A régua abre as telas por âncora de uma lista escrita à mão: uma tela nova num gerador
+    (``class="tela-nova" id=…``) ficaria fora dela, calada. A lista tem de ser EXATAMENTE a que as
+    páginas da bancada trazem, em todas as abas e páginas soltas."""
+    declaradas = {("08-conexoes", a) for a in ANCORAS_DA_08} | set(ANCORAS_DAS_OUTRAS)
+    nas_paginas = {
+        (pag.stem, ident)
+        for pag in onde.BANCADA.glob("*.html") if not pag.name.endswith(".dc.html")
+        for tag in re.findall(r'<[^<>]*\bclass="tela-nova"[^<>]*>', pag.read_text("utf-8"))
+        for ident in re.findall(r'\bid="([^"]+)"', tag)
+    }
+    assert nas_paginas, "nenhuma tela por âncora achada: a busca não casa com o gerador"
+    assert declaradas == nas_paginas, (
+        f"fora da régua: {sorted(nas_paginas - declaradas)}; "
+        f"declaradas sem tela: {sorted(declaradas - nas_paginas)}")
+
+
 #: As páginas soltas que não são uma das dez abas, e também levam texto à tela. O
 #: ``mapa-do-controle`` fica de fora de propósito: a lista dele são os identificadores do
 #: kernel (``dpad_up``, ``feat-bateria``), que não são frase, e o desenho dele não é desta régua.
