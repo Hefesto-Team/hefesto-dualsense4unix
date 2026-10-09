@@ -28,6 +28,16 @@
 #     bash scripts/rodar-a-suite.sh 07           # só a parte 07
 #     PARTES=12 bash scripts/rodar-a-suite.sh    # pedaços maiores (mais risco)
 #     A_SECO=1 bash scripts/rodar-a-suite.sh     # só diz as partes e o tempo previsto de cada uma
+#     bash scripts/rodar-a-suite.sh --lote <lista>   # só os arquivos da lista (ou LOTE=<lista>)
+#
+# O LOTE (09/10/2026): uma lista avulsa de arquivos de teste, um por linha, roda
+# com o MESMO isolamento da suíte — cada arquivo do WebKit num processo só dele, o
+# resto junto, todos com a pilha nativa — numa parte só, sem recibo. É o lote de
+# quem trabalha numa árvore de voo: `pytest $(cat lista)` sob `xvfb-run` punha
+# vários arquivos do WebKit no mesmo processo, e a queda intermitente que a suíte
+# já curou voltava ali. A lista que não existe, vazia, ou com um arquivo que não
+# está nesta árvore (ou que não é `test_*.py`) falha ALTO, antes de rodar
+# qualquer coisa: é a armadilha 3.
 #
 # AS PARTES SÃO DE MESMO TEMPO, NÃO DE MESMO NÚMERO DE ARQUIVOS (08/10/2026). O
 # `split -n l/24` repartia por linha, e as partes iam de 41 s a 241 s com o mesmo
@@ -71,7 +81,40 @@ mkdir -p "$SAIDA"
 # outros vizinhos no mesmo processo. Vermelho de ordem só se reproduz com as
 # mesmas partes.
 # `PARTIDO=1` é do filho da chave PARTES_EM_PARALELO: as partes já estão em $SAIDA.
-[ -n "${PARTIDO:-}" ] || ls tests/unit/test_*.py | LC_ALL=C sort > "$SAIDA/todos.txt"
+if [ "${1:-}" = "--lote" ]; then
+  [ -n "${2:-}" ] || { echo "ERRO: --lote pede a lista: bash scripts/rodar-a-suite.sh --lote <lista>"; exit 2; }
+  LOTE="$2"
+  shift 2
+fi
+LOTE="${LOTE:-}"
+if [ -n "$LOTE" ]; then
+  # O LOTE: a lista é a de quem chama, conferida AQUI, e vira a única parte.
+  [ -f "$LOTE" ] || { echo "ERRO: o lote «$LOTE» não existe."; exit 2; }
+  PARTES=1
+  PARTES_EM_PARALELO=0
+  ruins=()
+  : > "$SAIDA/todos.txt"
+  while IFS= read -r a || [ -n "$a" ]; do
+    a="${a#"${a%%[![:space:]]*}"}"
+    a="${a%"${a##*[![:space:]]}"}"
+    [ -n "$a" ] || continue
+    a="${a#"$RAIZ"/}"
+    case "${a##*/}" in
+      test_*.py) [ -f "$a" ] || { ruins+=("$a (não existe nesta árvore)"); continue; } ;;
+      *) ruins+=("$a (não é um arquivo test_*.py)"); continue ;;
+    esac
+    printf '%s\n' "$a" >> "$SAIDA/todos.txt"
+  done < "$LOTE"
+  if [ ${#ruins[@]} -gt 0 ]; then
+    echo "ERRO: o lote «$LOTE» tem ${#ruins[@]} entrada(s) que não rodam — nada rodou:"
+    printf '  %s\n' "${ruins[@]}"
+    exit 2
+  fi
+  LC_ALL=C sort -u -o "$SAIDA/todos.txt" "$SAIDA/todos.txt"
+  [ -s "$SAIDA/todos.txt" ] || { echo "ERRO: o lote «$LOTE» está vazio — pytest sem arquivo roda a suíte inteira."; exit 2; }
+else
+  [ -n "${PARTIDO:-}" ] || ls tests/unit/test_*.py | LC_ALL=C sort > "$SAIDA/todos.txt"
+fi
 total=$(wc -l < "$SAIDA/todos.txt")
 [ "$total" -gt 0 ] || { echo "ERRO: nenhum arquivo de teste em tests/unit/."; exit 2; }
 
@@ -176,7 +219,11 @@ if [ -n "${LISTAR_O_WEBKIT:-}" ]; then
   exit 0
 fi
 
-echo "suíte — $total arquivos em $PARTES partes"
+if [ -n "$LOTE" ]; then
+  echo "lote — $total arquivos de $LOTE (o WebKit em processo próprio, como na suíte)"
+else
+  echo "suíte — $total arquivos em $PARTES partes"
+fi
 echo "        python $PY"
 echo "        saída  $SAIDA"
 echo
@@ -228,13 +275,16 @@ fi
 # recibo da suíte da MESMA árvore (`<git comum>/hefesto-recibos/<árvore>.suite`),
 # e quem o escreve é `scripts/recibo_da_medida.py`: `abrir` antes da primeira
 # parte e `fechar` no fim, com o rc desta corrida. Só a corrida INTEIRA deixa
-# recibo: com uma parte só, ou com argumentos a mais (um `-k` ou um
+# recibo: com uma parte só, com um lote, ou com argumentos a mais (um `-k` ou um
 # `--deselect` encolhem a suíte sem mudar o nome dela), não há recibo.
 recibo_da_corrida=""
-if [ -z "$so_esta" ] && [ ${#extra[@]} -eq 0 ]; then
+if [ -z "$LOTE" ] && [ -z "$so_esta" ] && [ ${#extra[@]} -eq 0 ]; then
   recibo_da_corrida="$SAIDA/recibo-da-corrida.json"
   "$PY" "$RAIZ/scripts/recibo_da_medida.py" abrir suite \
     --raiz "$RAIZ" --corrida "$recibo_da_corrida" || true
+  echo
+elif [ -n "$LOTE" ]; then
+  echo "recibo: um lote não deixa recibo — ele não é a suíte"
   echo
 elif [ -z "$so_esta" ]; then
   echo "recibo: esta corrida não deixa recibo — ela leva argumentos a mais (SUITE_PYTEST_ARGS)"
