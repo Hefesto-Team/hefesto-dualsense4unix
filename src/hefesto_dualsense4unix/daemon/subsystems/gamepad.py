@@ -737,6 +737,9 @@ def _levar_a_haptica_fina(
     except Exception as exc:
         logger.debug("haptica_fina_do_rumble_falhou", err=str(exc))
         return False
+    if converte:  # A-VIBRACAO-FINA-BATE-A-CADA-TIRO-01: a borda do rumble vira tiro.
+        from hefesto_dualsense4unix.daemon.subsystems.tato_vivo import anotar_o_rumble
+        anotar_o_rumble(daemon, target_uniq, weak, strong)
     return converte and leva is True
 
 

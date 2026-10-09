@@ -994,6 +994,25 @@ class AltoFalanteSubsystem:
             self._rumble_vivo = MappingProxyType(vivos)
         return retrato[2]
 
+    def tocar_o_toque(self, uniq: str, energia: float, lado: str, duracao_ms: int) -> bool:
+        """Um toque curto do tiro no tocador do aparelho de ``uniq``.
+
+        A-VIBRACAO-FINA-BATE-A-CADA-TIRO-01: o mesmo tocador do rumble, cabo e
+        rádio pelo mesmo caminho, e só onde a háptica fina leva.
+        """
+        chave = self._chave_do_rumble(uniq)
+        if chave is None or not self._quer_a_haptica_fina(chave):
+            return False
+        marca = self._aparelho_de.get(chave)
+        if marca is None:
+            return False
+        endpoint = self._endpoints.get(marca)
+        self._tocador_do_aparelho(marca).tocar_o_toque(
+            energia, lado, duracao_ms,
+            sink=str(getattr(endpoint, "nome", "") or ""), dono=chave,
+        )
+        return True
+
     def testar_a_haptica(self, uniq: str, ligado: bool) -> dict[str, Any]:
         """O botão «Háptica» da aba Vibração: o par de teste no tocador DESTE controle."""
         chave = self._chave_do_rumble(uniq)

@@ -309,6 +309,7 @@ class TatoVivo:
             "recusas_do_teto": 0,
         }
         self.ligado = False
+        self.borda_do_rumble = BordaDoRumble()
 
     def anotar(self, evento: Evento) -> None:
         """Põe um evento na fila. Chamável de qualquer thread."""
@@ -444,6 +445,109 @@ class BordaDoDedo:
         return self._apertado.get((uniq, lado), False)
 
 
+# A-VIBRACAO-FINA-BATE-A-CADA-TIRO-01: a borda do rumble que o jogo pede.
+# Um tiro por BORDA, nunca por nível: o pedido repetido igual (o `cosmic-osk`
+# manda vibração nula a ~20 por segundo por pad) e o nível sustentado não são
+# borda. Os limiares são de partida, a validar na bancada.
+RUMBLE_DISPARA = 80
+RUMBLE_SUBIDA = 64
+RUMBLE_REARMA = 48
+RUMBLE_JUNTA_S = 0.03  # a rampa de um tiro só (0 → 100 → 200 em 8 ms)
+
+
+class BordaDoRumble:
+    """O par ``(fraco, forte)`` do jogo, controle a controle: um evento por subida."""
+
+    def __init__(
+        self,
+        dispara: int = RUMBLE_DISPARA,
+        subida: int = RUMBLE_SUBIDA,
+        rearma: int = RUMBLE_REARMA,
+        junta_s: float = RUMBLE_JUNTA_S,
+    ) -> None:
+        self.dispara = dispara
+        self.subida = subida
+        self.rearma = rearma
+        self.junta_s = junta_s
+        self._armado: dict[str, bool] = {}
+        self._base: dict[str, int] = {}
+        self._pico: dict[str, int] = {}
+        self._disparo: dict[str, float] = {}
+
+    def ver(self, uniq: str, fraco: int, forte: int, agora: float) -> list[Evento]:
+        nivel = max(0, min(255, max(int(fraco), int(forte))))
+        if not self._armado.get(uniq, True):
+            pico = self._pico.get(uniq, nivel)
+            # O tiro por cima de um nível já alto: subiu de novo, fora da rampa do anterior.
+            if nivel - pico >= self.subida and agora - self._disparo[uniq] >= self.junta_s:
+                return self._disparar(uniq, fraco, forte, nivel, agora)
+            pico = max(pico, nivel)
+            self._pico[uniq] = pico
+            if nivel <= self.rearma or pico - nivel >= self.subida:
+                self._armado[uniq] = True
+                self._base[uniq] = nivel
+            return []
+        base = min(self._base.get(uniq, 0), nivel)
+        self._base[uniq] = base
+        if nivel >= self.dispara and nivel - base >= self.subida:
+            return self._disparar(uniq, fraco, forte, nivel, agora)
+        return []
+
+    def _disparar(
+        self, uniq: str, fraco: int, forte: int, nivel: int, agora: float
+    ) -> list[Evento]:
+        self._armado[uniq] = False
+        self._pico[uniq] = nivel
+        self._disparo[uniq] = agora
+        if fraco and not forte:
+            lado = LADO_DIREITO
+        elif forte and not fraco:
+            lado = LADO_ESQUERDO
+        else:
+            lado = LADO_CENTRO
+        return [Evento(agora, uniq, TIPO_RUMBLE, lado, nivel / 255.0)]
+
+
+def anotar_o_rumble(
+    daemon: Any, uniq: str, fraco: int, forte: int, agora: float | None = None
+) -> None:
+    """Leva a borda do rumble ao motor ligado. Nunca levanta."""
+    motor = motor_do(daemon)
+    if motor is None or not motor.ligado:
+        return
+    try:
+        instante = time.monotonic() if agora is None else agora
+        for evento in motor.borda_do_rumble.ver(uniq, fraco, forte, instante):
+            motor.anotar(evento)
+    except Exception:
+        logger.debug("tato_vivo_borda_do_rumble_falhou", exc_info=True)
+
+
+class AtuadorDaHaptica:
+    """O toque curto do tiro, no tocador do rumble do controle do evento."""
+
+    canal = CANAL_HAPTICA
+
+    def __init__(self, tocar: Callable[[str, float, str, int], object]) -> None:
+        self._tocar = tocar
+
+    def responde_a(self, evento: Evento, receita: Receita) -> bool:
+        return receita.vibracao_por_tiro and evento.tipo == TIPO_RUMBLE
+
+    def escrever(self, evento: Evento, receita: Receita, agora: float) -> float | None:
+        self._tocar(
+            evento.uniq,
+            evento.energia * receita.forca_do_toque,
+            evento.lado,
+            receita.duracao_do_toque_ms,
+        )
+        # O toque acaba em silêncio por construção: não há o que devolver.
+        return None
+
+    def devolver(self, uniq: str, agora: float) -> None:
+        return None
+
+
 # --- A ligação com o daemon ----------------------------------------------
 
 
@@ -536,7 +640,15 @@ def receita_ativa(daemon: Any) -> Receita:
 
 def atuadores_de_producao(daemon: Any) -> list[Atuador]:
     """Os canais que o motor sabe escrever hoje."""
-    return []
+
+    def tocar(uniq: str, energia: float, lado: str, duracao_ms: int) -> object:
+        alto_falante = getattr(daemon, "_alto_falante_subsystem", None)
+        tocar_o_toque = getattr(alto_falante, "tocar_o_toque", None)
+        if not callable(tocar_o_toque):
+            return False
+        return tocar_o_toque(uniq, energia, lado, duracao_ms)
+
+    return [AtuadorDaHaptica(tocar)]
 
 
 def motor_do(daemon: Any) -> TatoVivo | None:
@@ -605,7 +717,9 @@ __all__ = [
     "CANAIS",
     "DESLIGADA",
     "Atuador",
+    "AtuadorDaHaptica",
     "BordaDoDedo",
+    "BordaDoRumble",
     "Controle",
     "EstadoDoCanal",
     "Evento",
@@ -613,6 +727,7 @@ __all__ = [
     "Receita",
     "TatoVivo",
     "Teto",
+    "anotar_o_rumble",
     "controles_do_daemon",
     "decidir",
     "modo_do_pad",

@@ -800,6 +800,53 @@ def bloco_da_haptica(
     return quadros.tobytes()
 
 
+# A-VIBRACAO-FINA-BATE-A-CADA-TIRO-01: o toque do tiro. O seno do rumble segue
+# o NÍVEL; o toque é a BORDA, com forma própria: ataque de 3 ms, queda curta e
+# fim em silêncio, na portadora do motor fino.
+FREQUENCIA_DO_TOQUE_HZ = 160
+ATAQUE_DO_TOQUE_MS = 3
+CANAIS_DO_LADO: dict[str, tuple[int, ...]] = {
+    "esquerdo": (2,),
+    "direito": (3,),
+    "centro": (2, 3),
+}
+
+
+def forma_do_toque(energia: float, duracao_ms: int) -> array[float]:
+    """As amostras de UM toque: sobe em 3 ms, cai até zero no fim da duração."""
+    n = max(2, round(_TAXA * max(1, int(duracao_ms)) / 1000))
+    ataque = max(1, min(n - 1, round(_TAXA * ATAQUE_DO_TOQUE_MS / 1000)))
+    forca = max(0.0, min(1.0, float(energia)))
+    passo = 2.0 * math.pi * FREQUENCIA_DO_TOQUE_HZ / _TAXA
+    amostras = array("f", bytes(4 * n))
+    for i in range(n):
+        if i < ataque:
+            envelope = i / ataque
+        else:
+            envelope = ((n - 1 - i) / (n - 1 - ataque)) ** 2 if n - 1 > ataque else 0.0
+        amostras[i] = forca * envelope * math.sin(passo * i)
+    return amostras
+
+
+def misturar_o_toque(
+    bloco: bytes, toque: array[float], inicio: int, canais: tuple[int, ...]
+) -> bytes:
+    """Soma o trecho ``inicio`` do toque aos ``canais`` do bloco, sem passar de 1."""
+    quadros = array("f")
+    quadros.frombytes(bloco)
+    if sys.byteorder != "little":  # pragma: no cover — o formato é little-endian
+        quadros.byteswap()
+    total = len(quadros) // CANAIS_DA_HAPTICA
+    for i in range(max(0, min(total, len(toque) - inicio))):
+        amostra = toque[inicio + i]
+        for canal in canais:
+            k = i * CANAIS_DA_HAPTICA + canal
+            quadros[k] = max(-1.0, min(1.0, quadros[k] + amostra))
+    if sys.byteorder != "little":  # pragma: no cover — o formato é little-endian
+        quadros.byteswap()
+    return quadros.tobytes()
+
+
 def argv_do_tocador(
     sink: str,
     rotulo: str,
@@ -956,6 +1003,8 @@ class TocadorDoRumble:
         self._fim = threading.Event()
         self._fio: threading.Thread | None = None
         self._memoria: dict[tuple[int, int, int], bytes] = {}
+        self._toque: tuple[array[float], tuple[int, ...]] | None = None
+        self._toque_pos = 0
 
 
     @property
@@ -1001,6 +1050,43 @@ class TocadorDoRumble:
             self._nivel = (0, 0)
         self._acordar.set()
 
+    def tocar_o_toque(
+        self, energia: float, lado: str, duracao_ms: int, *, sink: str, dono: str
+    ) -> None:
+        """Um toque curto por cima do nível de agora. Nunca espera, nunca levanta."""
+        forma = forma_do_toque(energia, duracao_ms)
+        canais = CANAIS_DO_LADO.get(lado, CANAIS_DO_LADO["centro"])
+        with self._trava:
+            self._toque = (forma, canais)
+            self._toque_pos = 0
+            self._sink = str(sink or "")
+            self._dono = str(dono or self._dono)
+            if not self._fim.is_set() and (self._fio is None or not self._fio.is_alive()):
+                self._fio = threading.Thread(
+                    target=self._correr, name=f"hefesto-{self.rotulo}", daemon=True
+                )
+                self._fio.start()
+        self._acordar.set()
+
+    @property
+    def tocando_o_toque(self) -> bool:
+        return self._toque is not None
+
+    def proximo_bloco(
+        self, nivel: tuple[int, int], antes: tuple[int, int], fase: int
+    ) -> bytes:
+        """O bloco do nível, com o trecho do toque somado quando há toque em curso."""
+        with self._trava:
+            toque, inicio = self._toque, self._toque_pos
+            if toque is not None:
+                self._toque_pos = inicio + QUADROS_POR_BLOCO
+                if self._toque_pos >= len(toque[0]):
+                    self._toque = None
+        bloco = self._bloco(nivel, antes, fase)
+        if toque is None:
+            return bloco
+        return misturar_o_toque(bloco, toque[0], inicio, toque[1])
+
     def parar(self) -> None:
         """Derruba o processo e o fio. Idempotente."""
         self._fim.set()
@@ -1009,7 +1095,6 @@ class TocadorDoRumble:
         fio = self._fio
         if fio is not None and fio is not threading.current_thread():
             fio.join(timeout=2.0)
-
 
     def _avisar(self) -> None:
         aviso = self._ao_mudar
@@ -1031,8 +1116,10 @@ class TocadorDoRumble:
             if self._fim.is_set():
                 return
             with self._trava:
-                nivel, sink = self._nivel, self._sink
-            if not any(nivel) or not sink or self._relogio() < self._recusado_ate:
+                nivel, sink, toque = self._nivel, self._sink, self._toque
+            if (not any(nivel) and toque is None) or not sink or (
+                self._relogio() < self._recusado_ate
+            ):
                 continue
             self._tocar(sink)
 
@@ -1084,13 +1171,13 @@ class TocadorDoRumble:
             if proc.poll() is not None:
                 return "morreu"
             agora = self._relogio()
-            if any(nivel):
+            if any(nivel) or self._toque is not None:
                 silencio_desde = None
             elif silencio_desde is None:
                 silencio_desde = agora
             elif agora - silencio_desde >= self._folga_s:
                 return "silencio"
-            if not self._escrever(fd, self._bloco(nivel, antes, fase)):
+            if not self._escrever(fd, self.proximo_bloco(nivel, antes, fase)):
                 return "parou_de_ler"
             if not self._vivo:
                 self._vivo = True
@@ -1178,6 +1265,7 @@ class TocadorDoRumble:
 
 __all__ = [
     "AGULHAS",
+    "CANAIS_DO_LADO",
     "FOLGA_DO_TOCADOR_S",
     "FREQUENCIA_DO_FORTE_HZ",
     "FREQUENCIA_DO_FRACO_HZ",
@@ -1201,7 +1289,9 @@ __all__ = [
     "distribuir_ancoras",
     "endpoints_de_pe",
     "fluxos_nos_endpoints",
+    "forma_do_toque",
     "marca_do_aparelho",
+    "misturar_o_toque",
     "nome_da_marca",
     "nome_do_endpoint",
     "propriedades_do_endpoint",
