@@ -2,9 +2,9 @@
 
 Fonte: a costura da citacoes-1-9 (08/10/2026). O ``_pares_do_diff`` lia a linha FÍSICA do diff, e a
 curta ``:N`` de uma célula sem inteira se prendia à inteira de OUTRA célula (148 curtas a mais em
-`docs/data` pela linha física que pela célula); a curta de célula com quebra de linha perdia a âncora;
-a linha de troca não separava a curta da inteira; e o `validar-citacoes-de-linha.py` não lia a
-curta de CSV. Os esperados são escritos à mão, a partir do fixture.
+`docs/data` pela linha física que pela célula); a curta de célula com quebra de linha perdia a
+âncora; a linha de troca não separava a curta da inteira; e o `validar-citacoes-de-linha.py` não
+lia a curta de CSV. Os esperados são escritos à mão, a partir do fixture.
 """
 
 from __future__ import annotations
