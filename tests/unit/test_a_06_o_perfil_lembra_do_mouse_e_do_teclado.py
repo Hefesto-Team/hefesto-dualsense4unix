@@ -51,6 +51,7 @@ from __future__ import annotations
 
 import json
 import pathlib
+import re
 import sys
 
 import pytest
@@ -276,7 +277,7 @@ def test_a_chave_no_nativo_recusa_dizendo_e_nao_grava(pac, a06):
 
     _semear("regua")
     ponte = PonteDeMentira()
-    with pytest.raises(RuntimeError, match="Nativo"):
+    with pytest.raises(RuntimeError, match=re.escape(a06.CHAVE_CINZA_NO_NATIVO)):
         a06.tabela_no_jogo(_ctx(pac, native_mode=True), {}, ponte)
     assert load_profile("regua").tabela_no_jogo is None
     assert not ponte.chamadas

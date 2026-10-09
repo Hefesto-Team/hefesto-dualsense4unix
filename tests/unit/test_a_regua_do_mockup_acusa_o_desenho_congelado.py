@@ -40,18 +40,22 @@ def test_as_dez_paginas_publicadas_tem_endereco_de_campo():
 def test_os_quatro_numeros_congelados_da_gatilhos_estao_no_arquivo():
     """Os valores do caso, lidos do HTML publicado — não digitados aqui."""
     campos = {c.endereco: c.valor for c in regua._campos_cravados(_texto(GATILHOS))}
-    assert campos["p1·aj-nome-e-0"] == "Força"
-    assert campos["p1·aj-val-e-0"] == "7"
-    assert campos["p1·aj-nome-e-1"] == "Frequência"
-    assert campos["p1·aj-val-e-1"] == "4"
-    assert campos["p1·aj-val-e-2"] == "25"
-    assert campos["p1·aj-val-e-3"] == "230"
+    # A-METRALHADORA-BATE-ENQUANTO-O-DEDO-APERTA-01 (08/10/2026): o desenho do P1 é a
+    # Metralhadora, com o curso antes da força e da frequência.
+    assert campos["p1·aj-nome-e-0"] == "Início do curso"
+    assert campos["p1·aj-val-e-0"] == "2"
+    assert campos["p1·aj-nome-e-1"] == "Fim do curso"
+    assert campos["p1·aj-val-e-1"] == "9"
+    assert campos["p1·aj-nome-e-2"] == "Força"
+    assert campos["p1·aj-val-e-2"] == "4"
+    assert campos["p1·aj-nome-e-3"] == "Frequência"
+    assert campos["p1·aj-val-e-3"] == "40"
 
 
 def test_o_mesmo_endereco_em_colunas_diferentes_nao_se_confunde():
-    """`aj-val-e-0` vale 7 na coluna do P1 e 3 na do P2 — são campos distintos."""
+    """`aj-val-e-0` vale 2 na coluna do P1 e 3 na do P2 — são campos distintos."""
     campos = {c.endereco: c.valor for c in regua._campos_cravados(_texto(GATILHOS))}
-    assert campos["p1·aj-val-e-0"] == "7"
+    assert campos["p1·aj-val-e-0"] == "2"
     assert campos["p2·aj-val-e-0"] == "3"
 
 
