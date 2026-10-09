@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import contextlib
+import os
 import threading
 import time
 from dataclasses import dataclass
@@ -24,6 +25,22 @@ logger = get_logger(__name__)
 _CALIB_PRAZO_S = 2.0
 
 ESPERA_PELA_ORDEM_S = 4.0
+
+# O jogador que cedeu o aparelho ao posto de P1 (09/10/2026, a validar por ela):
+# «calado»: o pad dele para de falar com o aparelho na cessão (o motor que ele
+# deixou ligado para ali, uma vez) e o recolhimento não manda parada nem zero;
+# «com-parada» é o de antes. O interruptor mora no ambiente do daemon.
+RECOLHER_CALADO = "calado"
+RECOLHER_COM_PARADA = "com-parada"
+RECOLHIMENTO_DO_CEDIDO = RECOLHER_CALADO
+INTERRUPTOR_DO_RECOLHIMENTO = "HEFESTO_DUALSENSE4UNIX_RECOLHER_O_CEDIDO"
+
+
+def recolher_calado() -> bool:
+    """O cedido se recolhe calado? O interruptor, se válido; senão a constante."""
+    valor = os.environ.get(INTERRUPTOR_DO_RECOLHIMENTO, "")
+    escolha = valor if valor in (RECOLHER_CALADO, RECOLHER_COM_PARADA) else RECOLHIMENTO_DO_CEDIDO
+    return escolha == RECOLHER_CALADO
 
 
 def _texto_ou_none(valor: Any) -> str | None:
@@ -354,6 +371,8 @@ class CoopManager:
         player.cedido_ao_primario = True
         with contextlib.suppress(Exception):
             player.reader.set_grab(False)
+        if recolher_calado():
+            self._calar_o_motor_que_o_pad_deixou(novo, player)
         self._retry_spawn = True
         logger.info(
             "coop_player_cedido_ao_primario",
@@ -361,6 +380,22 @@ class CoopManager:
             anterior=anterior,
             **self._numero_e_indice(player),
         )
+
+    def _calar_o_motor_que_o_pad_deixou(self, identity: str, player: Any) -> None:
+        """Na cessão, antes do retarget: o motor que o pad do cedido deixou ligado para.
+
+        Depois dela o pad dele não fala mais com o aparelho, e o zero do jogo
+        cairia no descarte; sem este, o motor ficaria preso até o pad 1 escrever.
+        """
+        if identity.startswith("path:"):
+            return
+        ultimo = getattr(player.vpad, "ff_last_sent", (0, 0))
+        if not isinstance(ultimo, tuple) or tuple(ultimo) == (0, 0):
+            return
+        from hefesto_dualsense4unix.daemon.subsystems.gamepad import apply_game_rumble
+
+        with contextlib.suppress(Exception):
+            apply_game_rumble(self._daemon, 0, 0, target_uniq=identity, vpad=player.vpad)
 
     def _recolher_os_cedidos(self) -> None:
         """Desmonta, no poll loop, os jogadores que cederam o controle ao P1."""
@@ -788,6 +823,14 @@ class CoopManager:
             )
 
             target = None if identity.startswith("path:") else identity
+            jogador = self._players.get(identity)
+            if getattr(jogador, "cedido_ao_primario", False) and recolher_calado():
+                # O aparelho dele dirige o pad 1 agora: o pad dele não tem dono.
+                logger.debug(
+                    "coop_rumble_do_cedido_descartado", identity=identity,
+                    weak=weak, strong=strong,
+                )
+                return
             # MOTOR-QUE-NAO-SE-VE-01: o vpad é procurado AQUI, na hora do rumble
             # (o sink nasce antes dele, e o `_players[identity]` é recriado a
             # cada respawn), e vai junto: o pad `uinput` deste jogador leva a
@@ -1134,8 +1177,16 @@ class CoopManager:
             with contextlib.suppress(Exception):
                 player.motion_reader.stop()
             player.motion_reader = None
-        self._zerar_rumble_do_jogador(identity)
+        calado = player.cedido_ao_primario and recolher_calado()
+        if calado:
+            # O aparelho segue na mesa como P1: nem a parada nem o zero do vpad.
+            logger.info("coop_cedido_recolhido_sem_parada", identity=identity)
+        else:
+            self._zerar_rumble_do_jogador(identity)
         if player.vpad is not None:
+            if calado:
+                with contextlib.suppress(Exception):
+                    player.vpad.rumble_sink = None  # type: ignore[attr-defined]
             with contextlib.suppress(Exception):
                 player.vpad.stop()
         self._levantar(identity)

@@ -7,10 +7,17 @@ tem de chegar a UM aparelho, o que dirige aquele pad, ou a nenhum quando
 ninguém o dirige (a vaga descarta com log, sem broadcast).
 
 O lado do P1 é coerente: entrada e vibração do pad 1 seguem o mesmo dono.
-O que diverge mora no co-op (fora desta posse): o jogador que cedeu o
-aparelho ao posto de P1 ainda fala com ele até ser recolhido. Os dois casos
-ficam em ``xfail(strict=True)`` até a cura, que é de
-`O-PAD-CEDIDO-AO-P1-NAO-FALA-COM-O-APARELHO-QUE-CEDEU-01`.
+O jogador que cedeu o aparelho ao posto de P1 não fala mais com ele
+(`O-PAD-CEDIDO-AO-P1-NAO-FALA-COM-O-APARELHO-QUE-CEDEU-01`, 09/10/2026): o pad
+dele descarta, o motor que ele deixou ligado para na cessão, e o recolhimento
+não manda parada nem zero. O interruptor `HEFESTO_DUALSENSE4UNIX_RECOLHER_O_CEDIDO`
+(`calado`, o padrão; `com-parada`, o de antes) troca sem editar código.
+
+AS MORDIDAS: tirar o descarte do sink do cedido reprova
+`test_o_pad_2_cedido_nao_vibra_o_aparelho_que_agora_e_o_p1`; devolver a parada
+(ou o zero do vpad) no recolhimento reprova
+`test_recolher_o_pad_2_cedido_nao_cala_o_motor_do_p1`; tirar o zero da cessão
+reprova `test_o_motor_que_o_pad_2_deixou_ligado_para_na_cessao`.
 
 O `FakeController` da casa não tem a API por endereço; o dublê aqui é a mesa
 de mentira com ``set_rumble_for`` por MAC, como a de `test_vpad_ff_passthrough.py`.
@@ -23,15 +30,12 @@ from typing import Any
 
 import pytest
 
+from hefesto_dualsense4unix.daemon.subsystems import coop as coop_mod
 from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp_mod
 from hefesto_dualsense4unix.daemon.subsystems.coop import CoopManager
 
 P1 = "aabbcc000041"
 P2 = "aabbcc000042"
-RAZAO = (
-    "o jogador que cedeu o aparelho ao posto de P1 ainda fala com ele até ser "
-    "recolhido; a cura é do co-op: O-PAD-CEDIDO-AO-P1-NAO-FALA-COM-O-APARELHO-QUE-CEDEU-01"
-)
 
 
 class Mesa:
@@ -74,8 +78,32 @@ class Mesa:
         self.primary_uniq = novo
 
 
+class _Vpad:
+    """O vpad do jogador, com o que os dois de verdade fazem no `stop`.
+
+    `UinputGamepad.stop` e `UhidDualSense._silence_rumble` mandam o zero ao
+    `rumble_sink` quando ele existe; aqui o zero sai sempre (mais estrito).
+    """
+
+    backend = "uhid"
+
+    def __init__(self, sink: Callable[[int, int], None]) -> None:
+        self.rumble_sink: Callable[[int, int], None] | None = sink
+        self.ff_last_sent = (0, 0)
+
+    def pede(self, weak: int, strong: int) -> None:
+        self.ff_last_sent = (weak, strong)
+        if self.rumble_sink is not None:
+            self.rumble_sink(weak, strong)
+
+    def stop(self) -> None:
+        if self.rumble_sink is not None:
+            self.rumble_sink(0, 0)
+
+
 class Jogo:
     def __init__(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv(coop_mod.INTERRUPTOR_DO_RECOLHIMENTO, raising=False)
         self.mesa = Mesa()
         self.daemon = SimpleNamespace(
             config=SimpleNamespace(
@@ -106,12 +134,12 @@ class Jogo:
 
     def senta(self, uniq: str, pad: int) -> None:
         """O co-op senta ``uniq`` num pad dele (o `_spawn_player`, sem nó de verdade)."""
-        sink = self.coop._make_player_rumble_sink(uniq)
-        self.pads[pad] = sink
+        vpad = _Vpad(self.coop._make_player_rumble_sink(uniq))
+        self.pads[pad] = vpad.pede
         self.coop._players[uniq] = SimpleNamespace(
             identity=uniq,
             player_index=pad - 1,
-            vpad=SimpleNamespace(backend="uhid", stop=lambda: sink(0, 0)),
+            vpad=vpad,
             reader=SimpleNamespace(set_grab=lambda _v: None, stop=lambda: None),
             motion_reader=None,
             cedido_ao_primario=False,
@@ -184,7 +212,6 @@ def test_o_p1_que_volta_depois_do_prazo_vibra_pelo_pad_dele(jogo: Jogo) -> None:
     assert jogo.pede(1) == [P2] and jogo.pede(3) == [P1]
 
 
-@pytest.mark.xfail(strict=True, reason=RAZAO)
 def test_o_pad_2_cedido_nao_vibra_o_aparelho_que_agora_e_o_p1(jogo: Jogo) -> None:
     jogo.mesa.sai(P1)
     jogo.mesa.passa_o_posto(P2)
@@ -193,7 +220,6 @@ def test_o_pad_2_cedido_nao_vibra_o_aparelho_que_agora_e_o_p1(jogo: Jogo) -> Non
     jogo.confere(2)
 
 
-@pytest.mark.xfail(strict=True, reason=RAZAO)
 def test_recolher_o_pad_2_cedido_nao_cala_o_motor_do_p1(jogo: Jogo) -> None:
     jogo.mesa.sai(P1)
     jogo.mesa.passa_o_posto(P2)
@@ -202,3 +228,45 @@ def test_recolher_o_pad_2_cedido_nao_cala_o_motor_do_p1(jogo: Jogo) -> None:
     jogo.coop._recolher_os_cedidos()
     assert jogo.mesa.paradas == [], "a parada do jogador que saiu caiu no aparelho do P1"
     assert jogo.mesa.escritas[antes:] == [], "o zero do pad 2 caiu no aparelho do P1"
+
+
+def test_o_motor_que_o_pad_2_deixou_ligado_para_na_cessao(jogo: Jogo) -> None:
+    """O zero do jogo ao pad 2 cairia no descarte: a cessão para o motor uma vez."""
+    assert jogo.pede(2) == [P2]
+    jogo.mesa.sai(P1)
+    antes = len(jogo.mesa.escritas)
+    jogo.mesa.passa_o_posto(P2)
+
+    assert jogo.mesa.escritas[antes:] == [(P2, 0, 0)]
+    assert jogo.pede(1) == [P2]
+    antes = len(jogo.mesa.escritas)
+    jogo.coop._recolher_os_cedidos()
+    assert jogo.mesa.escritas[antes:] == [] and jogo.mesa.paradas == []
+
+
+def test_a_cessao_sem_motor_ligado_nao_escreve_nada(jogo: Jogo) -> None:
+    jogo.mesa.sai(P1)
+    antes = len(jogo.mesa.escritas)
+    jogo.mesa.passa_o_posto(P2)
+    assert jogo.mesa.escritas[antes:] == []
+
+
+def test_o_interruptor_com_parada_volta_ao_de_antes(
+    jogo: Jogo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv(coop_mod.INTERRUPTOR_DO_RECOLHIMENTO, coop_mod.RECOLHER_COM_PARADA)
+    jogo.mesa.sai(P1)
+    jogo.mesa.passa_o_posto(P2)
+    assert jogo.pede(2) == [P2]
+    jogo.coop._recolher_os_cedidos()
+    assert jogo.mesa.paradas == [P2]
+
+
+@pytest.mark.parametrize("valor", ["", "outro", "CALADO"])
+def test_valor_desconhecido_fica_na_constante(
+    monkeypatch: pytest.MonkeyPatch, valor: str
+) -> None:
+    monkeypatch.setenv(coop_mod.INTERRUPTOR_DO_RECOLHIMENTO, valor)
+    assert coop_mod.recolher_calado() is (
+        coop_mod.RECOLHIMENTO_DO_CEDIDO == coop_mod.RECOLHER_CALADO
+    )
