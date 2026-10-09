@@ -224,10 +224,10 @@ def test_a_tela_por_ancora_das_outras_abas_abre_toda_linha_com_maiuscula(
 PAGINAS_SOLTAS = ("mapa-do-radio", "calibrar-sensores")
 
 
-@pytest.mark.parametrize("pagina", PAGINAS_SOLTAS)
-def test_a_pagina_solta_abre_toda_linha_com_maiuscula(pagina: str) -> None:
-    achados = _achados(_no_webkit(onde.BANCADA / f"{pagina}.html", TAMANHO, [LER]))
-    assert not achados, f"{pagina}: linha que abre em minúscula: {achados}"
+@pytest.mark.parametrize("solta", PAGINAS_SOLTAS)
+def test_a_pagina_solta_abre_toda_linha_com_maiuscula(solta: str) -> None:
+    achados = _achados(_no_webkit(onde.BANCADA / f"{solta}.html", TAMANHO, [LER]))
+    assert not achados, f"{solta}: linha que abre em minúscula: {achados}"
 
 
 def test_o_receptor_que_nao_achou_a_faixa_nao_fala_em_primeira_pessoa(

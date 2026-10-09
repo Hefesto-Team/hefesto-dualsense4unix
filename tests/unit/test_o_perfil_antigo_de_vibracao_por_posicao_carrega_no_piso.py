@@ -76,10 +76,10 @@ def test_frequencia_zero_com_todas_as_amplitudes_zero_fica_como_esta() -> None:
     build_from_name(tc.mode, tc.params)
 
 
-@pytest.mark.parametrize("frequencia", [1, 40, 120, 255])
-def test_frequencia_nao_zero_fica_como_esta(frequencia: int) -> None:
-    tc = TriggerConfig(mode=MODO, params=[frequencia, *AMPLITUDES])
-    assert tc.params == [frequencia, *AMPLITUDES]
+@pytest.mark.parametrize("freq", [1, 40, 120, 255])
+def test_frequencia_nao_zero_fica_como_esta(freq: int) -> None:
+    tc = TriggerConfig(mode=MODO, params=[freq, *AMPLITUDES])
+    assert tc.params == [freq, *AMPLITUDES]
 
 
 def test_o_formato_aninhado_nao_muda_e_ja_sai_com_quarenta() -> None:

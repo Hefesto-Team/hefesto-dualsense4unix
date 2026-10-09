@@ -432,6 +432,13 @@ SEM_LETRA: dict[str, str] = {
         "idem, pelo Guardar do Estilo Point-and-click — os dois costuram as "
         "mesmas três frases (o atalho que para de valer, a linha sem "
         "atendente, o desenho congelado), e cada uma tem o seu dono",
+    "__init__.py:guardado ← recusa":
+        "a recusa da camada (`pacotes/camada.py:recusa_no_nativo`), levantada inteira "
+        "antes de o gesto existir",
+    "__init__.py:gesto ← recusa": "idem, no despachante de cada gesto",
+    "__init__.py:dentro ← recusa": "idem, no gesto de dentro do cartão",
+    "__init__.py:na_pagina ← frase": "idem, no gesto do rodapé que toda página despacha",
+    "__init__.py:gesto_da_pagina ← frase": "idem, no coringa do rodapé",
     "a02_controles.py:mudo ← acao.dica":
         "a dica da ação de microfone, que mora no dono da ação",
 
