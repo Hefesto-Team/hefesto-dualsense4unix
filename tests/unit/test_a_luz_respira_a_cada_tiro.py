@@ -196,6 +196,24 @@ def test_o_jogo_que_escreveu_o_gatilho_segura_a_barra_pela_sessao() -> None:
     assert backend.pintadas == []
 
 
+def test_a_cor_trocada_enquanto_o_jogo_segurava_a_barra_e_a_que_pulsa() -> None:
+    """O tiro recusado (o jogo com a barra) não guarda a cor: o pulso seguinte lê a de agora."""
+    backend = Backend()
+    luz = tv.AtuadorDaLuz(backend.pintar, backend.cor_de, backend.devolver)
+
+    def pintando(_uniq: str) -> tv.EstadoDoCanal:
+        return tv.EstadoDoCanal(
+            modo=tv.MODO_DUALSENSE, visto_ha_s={"lightbar": 0.3},
+            sessao_aberta=True, ha_jogo=True,
+        )
+
+    _tiros(tv.TatoVivo([luz]), backend, [0.1], estado_de=pintando)
+    assert backend.pintadas == []
+    backend.cores[P1] = (160, 0, 0)  # o perfil trocou de cor
+    _tiros(tv.TatoVivo([luz]), backend, [0.1], fim=0.6)
+    assert [cor for _t, _u, cor in backend.pintadas] == [(255, 0, 0)]
+
+
 def test_no_modo_nativo_a_barra_e_do_aparelho() -> None:
     backend = Backend()
 

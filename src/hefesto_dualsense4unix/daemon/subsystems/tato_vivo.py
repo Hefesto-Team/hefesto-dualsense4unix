@@ -834,6 +834,7 @@ class AtuadorDoGatilho:
 REACAO_PULSA = "pulsa"
 REACAO_EVENTO = "evento"
 TETO_DA_LUZ_POR_S = 3
+JANELA_DA_LUZ_S = 1.0  # a janela do teto: três subidas por segundo
 SEGURA_DA_LUZ_S = 0.12  # o pico; a volta vem no máximo um tique depois
 GANHO_MINIMO_DO_PULSO = 1.3  # abaixo disso a cor já está no máximo e o pulso mergulha
 MERGULHO_DO_PULSO = 0.35
@@ -924,15 +925,18 @@ class AtuadorDaLuz:
         if not self._quer(evento, receita) or evento.uniq in self._no_pico:
             return False
         subidas = self._subidas.setdefault(evento.uniq, deque())
-        while subidas and evento.instante - subidas[0] >= 1.0:
+        while subidas and evento.instante - subidas[0] >= JANELA_DA_LUZ_S:
             subidas.popleft()
         if len(subidas) >= TETO_DA_LUZ_POR_S:
             return False
-        if evento.uniq not in self._base:
-            base = self._cor_de(evento.uniq)
-            if base is None or max(base) <= 0:
-                return False  # a barra apagada não tem o que respirar
-            self._base[evento.uniq] = base
+        # Fora do pico não há pulso no ar: a cor se lê de novo a cada tiro. O tiro
+        # que o jogo ou o teto recusam não pode deixar guardada a cor de antes
+        # da troca de perfil, que o pulso seguinte pintaria.
+        base = self._cor_de(evento.uniq)
+        if base is None or max(base) <= 0:
+            self._base.pop(evento.uniq, None)
+            return False  # a barra apagada não tem o que respirar
+        self._base[evento.uniq] = base
         return True
 
     def escrever(self, evento: Evento, receita: Receita, agora: float) -> float | None:
