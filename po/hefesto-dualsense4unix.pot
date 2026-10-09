@@ -1725,7 +1725,7 @@ msgid "Próximo:"
 msgstr ""
 
 #: src/hefesto_dualsense4unix/gui/main.glade:3296
-msgid "PS + D-pad Cima"
+msgid "PS + D-pad cima"
 msgstr ""
 
 #: src/hefesto_dualsense4unix/gui/main.glade:3302
@@ -1733,7 +1733,7 @@ msgid "Anterior:"
 msgstr ""
 
 #: src/hefesto_dualsense4unix/gui/main.glade:3309
-msgid "PS + D-pad Baixo"
+msgid "PS + D-pad baixo"
 msgstr ""
 
 #: src/hefesto_dualsense4unix/gui/main.glade:3315

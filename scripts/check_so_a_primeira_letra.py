@@ -234,18 +234,7 @@ def dividas_mortas(paginas: list[pathlib.Path]) -> list[str]:
 
 
 #: O que ainda sai com maiúscula no meio, e a origem não é desta régua.
-DIVIDA: dict[str, str] = {
-    #: sai com: SO-A-PRIMEIRA-LETRA-E-MAIUSCULA-EM-TODA-ABA-01
-    "D-pad Cima": "o nome da peça é do docs/data/pecas-do-dualsense.csv, que alimenta o "
-                  "SVG, o remapear e o po/; a troca é da fonte da verdade das peças",
-    "D-pad Direita": "idem: a coluna `nome` do pecas-do-dualsense.csv",
-    "D-pad Baixo": "idem: a coluna `nome` do pecas-do-dualsense.csv",
-    "D-pad Esquerda": "idem: a coluna `nome` do pecas-do-dualsense.csv",
-    "Analógico Esquerdo": "idem: a coluna `nome` do pecas-do-dualsense.csv",
-    "Analógico Direito": "idem: a coluna `nome` do pecas-do-dualsense.csv",
-    "Auto": "a 05 diz «força geral em Auto» e nenhum botão da 05 se chama Auto: o degrau "
-            "da mesa (`rumble_policy`) não tem rótulo na tela, e a frase cita um fantasma",
-}
+DIVIDA: dict[str, str] = {}
 
 
 def main(argv: list[str] | None = None) -> int:

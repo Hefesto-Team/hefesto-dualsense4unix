@@ -363,9 +363,9 @@ def test_antes_do_ok_dela_o_produto_nao_pinta_o_desenho_novo() -> None:
 _BOTOES_DA_LISTA = [
     ("cross", "Cruz"), ("circle", "Círculo"), ("square", "Quadrado"),
     ("triangle", "Triângulo"), ("l1", "L1"), ("r1", "R1"), ("l2", "L2"),
-    ("r2", "R2"), ("l3", "L3"), ("r3", "R3"), ("dpad_up", "D-pad Cima"),
-    ("dpad_down", "D-pad Baixo"), ("dpad_left", "D-pad Esquerda"),
-    ("dpad_right", "D-pad Direita"), ("options", "Options"), ("create", "Share"),
+    ("r2", "R2"), ("l3", "L3"), ("r3", "R3"), ("dpad_up", "D-pad cima"),
+    ("dpad_down", "D-pad baixo"), ("dpad_left", "D-pad esquerda"),
+    ("dpad_right", "D-pad direita"), ("options", "Options"), ("create", "Share"),
 ]
 
 

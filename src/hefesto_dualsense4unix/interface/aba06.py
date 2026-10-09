@@ -98,7 +98,7 @@ def nome_de(pid):
 
 
 def dir_de(pid):
-    """A direção do d-pad, do `nome` do mapa: "D-pad Cima" -> "cima"."""
+    """A direção do d-pad, do `nome` do mapa: "D-pad cima" -> "cima"."""
     return PECAS[pid]["nome"].split()[-1].lower()
 
 
@@ -2201,7 +2201,7 @@ LEGENDA = f'''<div class="nota">
     <i>D-pad ↑</i> com o caractere solto. As cinco famílias saem agora da coluna
     <code>regiao</code> de <code>docs/data/pecas-do-dualsense.csv</code>, com o
     nome de cada peça vindo do mapa: <b>Triângulo, Círculo, Quadrado, Cruz</b>,
-    <b>D-pad Cima/Direita/Baixo/Esquerda</b>, e o <b>L3</b> e o <b>R3</b> pelo
+    <b>D-pad cima/direita/baixo/esquerda</b>, e o <b>L3</b> e o <b>R3</b> pelo
     apelido. A coluna de nome ao lado de cada glifo era um dicionário escrito na
     aba; virou consulta ao mapa. As três regiões do touchpad saem da
     <code>nota</code> da peça, que é a única linha do projeto que as declara.</li>

@@ -1761,7 +1761,7 @@ msgid "Próximo:"
 msgstr "Next:"
 
 #: src/hefesto_dualsense4unix/gui/main.glade:3296
-msgid "PS + D-pad Cima"
+msgid "PS + D-pad cima"
 msgstr "PS + D-pad Up"
 
 #: src/hefesto_dualsense4unix/gui/main.glade:3302
@@ -1769,7 +1769,7 @@ msgid "Anterior:"
 msgstr "Previous:"
 
 #: src/hefesto_dualsense4unix/gui/main.glade:3309
-msgid "PS + D-pad Baixo"
+msgid "PS + D-pad baixo"
 msgstr "PS + D-pad Down"
 
 #: src/hefesto_dualsense4unix/gui/main.glade:3315
@@ -2337,14 +2337,14 @@ msgstr "Restores the 'My Profile' profile to its original state"
 #~ msgid "Sticks e botões"
 #~ msgstr "Sticks and buttons"
 
-#~ msgid "Analógico Esquerdo (L3)"
+#~ msgid "Analógico esquerdo (L3)"
 #~ msgstr "Left Stick (L3)"
 
 #~ msgid "<span font_family=\"monospace\" size=\"small\">X: 128  Y: 128</span>"
 #~ msgstr ""
 #~ "<span font_family=\"monospace\" size=\"small\">X: 128  Y: 128</span>"
 
-#~ msgid "Analógico Direito (R3)"
+#~ msgid "Analógico direito (R3)"
 #~ msgstr "Right Stick (R3)"
 
 #~ msgid "Preset:"

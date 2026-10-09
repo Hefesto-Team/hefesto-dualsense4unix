@@ -1343,8 +1343,8 @@ MIOLO = f'''
                      pelo usuário): ele JUSTIFICAVA a regra contra uma alternativa que
                      ninguém propôs. O fato — a escolha fica guardada e não
                      chega ao motor — é o que ela precisa, e é o que fica. -->
-                Com a <b>força geral</b> em Auto, a escolha de cada coluna fica
-                guardada e não chega ao motor.
+                Com a <b>força geral</b> no automático, que só um perfil antigo
+                traz, a escolha de cada coluna fica guardada e não chega ao motor.
               </span></span></span></div>
             <div><span class="sec-rot">Sensor háptico
               <span class="ajuda">?<span class="dica">

@@ -285,9 +285,9 @@ def _ressalva_da_mesa(perfil: dict[str, Any], mesa: list[dict[str, Any]]) -> str
     if not quantos:
         return ""
     # (:data:`FRASE_DA_MESA_EM_AUTO`), que mora numa caixa que CRESCE. Esta
-    return (f"a força geral está em Auto, e por isso a força própria de "
-            f"{quantos} controle(s) fica guardada sem chegar ao motor. Tire o "
-            f"Auto e as escolhas voltam a valer.")
+    return (f"a força geral está no automático, e por isso a força própria de "
+            f"{quantos} controle(s) fica guardada sem chegar ao motor. Escolha "
+            f"Economia, Padrão ou Máximo e elas voltam a valer.")
 
 
 def _quanto_multiplica(pct: dict[str, Any], barra: int | None) -> str:
@@ -963,8 +963,8 @@ TOM_DO_RECIBO = "recibo"
 FATO_DO_AJUSTE_GERAL = "voltou ao ajuste geral"
 
 FRASE_DA_MESA_EM_AUTO = (
-    "guardei esta força no perfil, mas ela não chega ao motor enquanto a força "
-    "geral estiver em Auto. Tire o Auto e ela volta a valer."
+    "guardei esta força, mas ela não chega ao motor enquanto a força geral "
+    "estiver no automático. Escolha Economia, Padrão ou Máximo e ela vale."
 )
 
 FRASE_DO_QUE_A_COLUNA_MOSTRA = (

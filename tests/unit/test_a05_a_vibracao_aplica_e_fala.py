@@ -444,7 +444,7 @@ def test_a_mesa_em_auto_confessa_no_clique(pac, disco) -> None:
     volta = _gesto(pac, "forca")(_ctx(pac, policy_da_mesa="economia"),
                                  {"uniq": UNIQ, "forca": "economia"},
                                  PonteDeMentira())
-    assert isinstance(volta, dict) and "Auto" in str(volta.get("recado") or ""), (
+    assert isinstance(volta, dict) and "automático" in str(volta.get("recado") or ""), (
         f"o clique voltou a ser silencioso sobre uma escolha que o motor nunca "
         f"vê: {volta!r}")
 
@@ -510,7 +510,7 @@ def test_a_linha_de_estado_confessa_a_mesa_em_auto(a05) -> None:
                 "controllers": {CHAVE: {"rumble": {"policy": "max"}}}}
 
     frase = a05._ressalva_da_mesa(com_peca, mesa)
-    assert "Auto" in frase and "1 controle" in frase, (
+    assert "automático" in frase and "1 controle" in frase, (
         f"a linha não conta o que está sendo engolido: {frase!r}")
 
     assert a05._ressalva_da_mesa(
@@ -538,5 +538,5 @@ def test_a_ressalva_entra_na_linha_do_produto_e_nao_num_bloco_novo(
         estados={}))
 
     estado = r["blocos"]["#vib-estado"]
-    assert "Auto" in estado and "sem chegar ao motor" in estado, (
+    assert "automático" in estado and "sem chegar ao motor" in estado, (
         f"a ressalva não chegou à linha de estado da aba:\n{estado}")

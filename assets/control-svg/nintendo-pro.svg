@@ -79,11 +79,11 @@
       <path stroke="#2f333c" stroke-width="0.78" stroke-linejoin="round" class="peca" fill="none" d="M 43.5 34.3 h -1.9 c -0.4 0 -0.8 0.4 -0.8 0.8 V 37 c 0 0.5 0.4 0.8 0.8 0.8 h 1.9 c 0.4 0 0.8 -0.4 0.8 -0.8 v -1.9 c 0 -0.4 -0.3 -0.8 -0.8 -0.8"/>
   </g>
   <g id="stick_r" data-entrada="stick_r" data-clique="r3" data-evdev="BTN_THUMBR">
-      <title>Analógico Direito (R3)</title>
+      <title>Analógico direito (R3)</title>
       <path stroke="#2f333c" stroke-width="0.78" stroke-linejoin="round" class="peca" fill="none" d="M 63.5 55.8 c -3 0 -5.5 -2.5 -5.5 -5.5 s 2.5 -5.5 5.5 -5.5 s 5.5 2.5 5.5 5.5 s -2.5 5.5 -5.5 5.5"/>
   </g>
   <g id="stick_l" data-entrada="stick_l" data-clique="l3" data-evdev="BTN_THUMBL">
-      <title>Analógico Esquerdo (L3)</title>
+      <title>Analógico esquerdo (L3)</title>
       <path stroke="#2f333c" stroke-width="0.78" stroke-linejoin="round" class="peca" fill="none" d="M 29.5 36 c 0 -4.5 -3.6 -8.1 -8.1 -8.1 c -3.6 0 -6.7 2.4 -7.8 5.7 c -0.2 0.8 -0.4 1.6 -0.4 2.4 c 0 4.5 3.7 8.1 8.1 8.1 c 2 0 3.7 -0.7 5.2 -1.9 c 1.8 -1.4 3 -3.6 3 -6.2"/>
   </g>
   <g id="dpad" data-entrada="dpad" data-evdev="ABS_HAT0X/ABS_HAT0Y">
@@ -111,16 +111,16 @@
 
   <!-- direções do direcional: regiões por cima da cruz, medidas do bbox dela -->
   <g id="dpad_up" data-entrada="dpad_up" data-evdev="ABS_HAT0Y-">
-      <title>D-pad Cima</title><rect class="regiao" x="31.36" y="42.49" width="5.18" height="5.18"/>
+      <title>D-pad cima</title><rect class="regiao" x="31.36" y="42.49" width="5.18" height="5.18"/>
   </g>
   <g id="dpad_down" data-entrada="dpad_down" data-evdev="ABS_HAT0Y+">
-      <title>D-pad Baixo</title><rect class="regiao" x="31.36" y="52.85" width="5.18" height="5.18"/>
+      <title>D-pad baixo</title><rect class="regiao" x="31.36" y="52.85" width="5.18" height="5.18"/>
   </g>
   <g id="dpad_left" data-entrada="dpad_left" data-evdev="ABS_HAT0X-">
-      <title>D-pad Esquerda</title><rect class="regiao" x="26.18" y="47.67" width="5.18" height="5.18"/>
+      <title>D-pad esquerda</title><rect class="regiao" x="26.18" y="47.67" width="5.18" height="5.18"/>
   </g>
   <g id="dpad_right" data-entrada="dpad_right" data-evdev="ABS_HAT0X+">
-      <title>D-pad Direita</title><rect class="regiao" x="36.54" y="47.67" width="5.18" height="5.18"/>
+      <title>D-pad direita</title><rect class="regiao" x="36.54" y="47.67" width="5.18" height="5.18"/>
   </g>
 
   <!-- POSIÇÃO LOCALIZADA em 11/08/2026, por FOTO DELA do próprio aparelho:

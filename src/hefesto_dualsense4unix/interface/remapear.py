@@ -80,7 +80,7 @@ def main():
                 r.group = lambda *_, m=m: m.group(0)
                 return r
         return None
-    s, ok = envolve(s, acha_stick_r, "stick_r", "Analógico Direito (R3)", ' data-clique="r3"')
+    s, ok = envolve(s, acha_stick_r, "stick_r", "Analógico direito (R3)", ' data-clique="r3"')
     if ok:
         feito.append("o <path> solto do lado direito -> stick_r")
 
@@ -116,7 +116,7 @@ def main():
             novo = bloco.replace(mr.group(0), "")
             s = s[:s.rindex("<g ", 0, i)] + novo + s[fim:]
             s = s.replace("</svg>",
-                          f'  <g id="glifo-stick_r"><title>Glifo — Analógico Direito</title>'
+                          f'  <g id="glifo-stick_r"><title>Glifo — Analógico direito</title>'
                           f'{mr.group(0)}</g>\n</svg>')
             feito.append("a letra R saiu do glifo do analógico esquerdo e virou glifo-stick_r")
 
