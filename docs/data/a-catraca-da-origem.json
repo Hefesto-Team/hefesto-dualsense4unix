@@ -202,17 +202,17 @@
       "universo": 368
     },
     "tamanho": {
-      "data": "2026-10-08",
+      "data": "2026-10-09",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 976496,
+      "piso": 1006875,
       "por_item": {
-        "docs": 59809,
-        "scripts": 105896,
-        "src": 287803,
-        "tests": 522988
+        "docs": 60124,
+        "scripts": 109318,
+        "src": 293892,
+        "tests": 543541
       },
-      "razao": "tamanho: +21605 linhas (954891 -> 976496), pagas por Origem: D-0310-A-BORDA-DO-CARTAO-E-O-PLASTICO, D-2909-O-CARTAO-DIZ-QUEM-JOGA, D-2909-OS-CHIPS-DO-TOQUE-E-DA-INCLINACAO-ALTERNAM-COMO-A-MIRA; registrado no fecho, topo 2d8dcfbcc10e",
+      "razao": "tamanho: +30379 linhas (976496 -> 1006875), pagas por Origem: D-0310-A-BORDA-DO-CARTAO-E-O-PLASTICO, D-2909-O-CARTAO-DIZ-QUEM-JOGA, D-2909-OS-CHIPS-DO-TOQUE-E-DA-INCLINACAO-ALTERNAM-COMO-A-MIRA; registrado no fecho, topo bdd548da0fd5",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -273,10 +273,16 @@
           "de": 954891,
           "para": 976496,
           "razao": "tamanho: +21605 linhas (954891 -> 976496), pagas por Origem: D-0310-A-BORDA-DO-CARTAO-E-O-PLASTICO, D-2909-O-CARTAO-DIZ-QUEM-JOGA, D-2909-OS-CHIPS-DO-TOQUE-E-DA-INCLINACAO-ALTERNAM-COMO-A-MIRA; registrado no fecho, topo 2d8dcfbcc10e"
+        },
+        {
+          "data": "2026-10-09",
+          "de": 976496,
+          "para": 1006875,
+          "razao": "tamanho: +30379 linhas (976496 -> 1006875), pagas por Origem: D-0310-A-BORDA-DO-CARTAO-E-O-PLASTICO, D-2909-O-CARTAO-DIZ-QUEM-JOGA, D-2909-OS-CHIPS-DO-TOQUE-E-DA-INCLINACAO-ALTERNAM-COMO-A-MIRA; registrado no fecho, topo bdd548da0fd5"
         }
       ],
       "unidade": "linhas",
-      "universo": 2535
+      "universo": 2615
     }
   }
 }
