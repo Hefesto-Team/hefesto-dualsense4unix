@@ -121,7 +121,8 @@ class Receita:
     toque_por_tiro: bool = True
     #: os motores esquerdo e direito seguem o lado do estouro no som do jogo
     lado_do_som: bool = True
-    #: o modo que o estilo liga (`ProfileModeConfig.kind`); `None` vale em todo modo
+    #: o modo que o estilo liga (`ProfileModeConfig.kind`); `None` tira só o `desktop`
+    #: do perfil e deixa os outros modos como estão
     modo: Literal["desktop"] | None = None
 
 

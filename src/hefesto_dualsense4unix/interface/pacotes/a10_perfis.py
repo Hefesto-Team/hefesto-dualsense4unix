@@ -1951,8 +1951,9 @@ def _com_o_estilo(prof: Any, estilo: Any, mesa: list[dict[str, Any]]) -> tuple[A
     A RECEITA INVISÍVEL (08/10/2026, O-ESTILO-DO-JOGO-LIGA-A-IMERSAO-INTEIRA-EM-TODO-MODO-01)
     entra pelos motores que já existem: `ajustes_do_gatilho` nos parâmetros do
     modo, e o `modo` na seção `mode` do perfil (o Point-and-click liga a
-    Navegação). O estilo sem modo só tira a Navegação que o Point-and-click
-    deixou, e nunca escolhe máscara nem caminho: vale em todo modo. O resto da
+    Navegação). O estilo sem modo tira do perfil o modo `desktop`, venha ele de
+    onde vier (estilo de jogo não deixa o controle como teclado e mouse), deixa
+    os outros modos como estão e nunca escolhe máscara nem caminho. O resto da
     receita (`estilos_de_jogo.SO_DADO`) não tem motor, e não se escreve aqui.
 
     `LedsConfig` COM DOIS CAMPOS SÓ, e isso é contrato: `_controllers_to_specs`
