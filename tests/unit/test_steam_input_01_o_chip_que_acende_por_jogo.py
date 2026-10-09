@@ -261,7 +261,7 @@ def test_o_clique_nao_arrasta_o_outro_jogo(lar) -> None:
 
 
 def test_sair_do_steam_input_desliga_o_jogo_e_so_ele(lar) -> None:
-    """Clique no «Steam Input», clique no «Sony DualSense»: o appid sai e o vdf volta a `"0"`.
+    """Clique no «Steam Input», clique no «Nativo»: o appid sai e o vdf volta a `"0"`.
 
     FATO SUBSTITUÍDO — O-MODO-QUE-NAO-SAI-DO-STEAM-INPUT-01, 23/09/2026, pela
     regra de produto (*"a idea é eu poder escolher qualquer que seja o modo
@@ -299,10 +299,10 @@ def test_sair_do_steam_input_desliga_o_jogo_e_so_ele(lar) -> None:
         "o segundo clique no «Steam Input» desligou — o chip voltou a ser "
         "interruptor, e clicar no aceso apagava o que ela escolheu")
 
-    aba.modo_dualsense(_ctx(), {"texto": "Sony DualSense"}, PonteDeMentira())
+    aba.modo_nativo(_ctx(), {"texto": "Nativo"}, PonteDeMentira())
 
     assert APPID not in _lista(), (
-        f"o «Sony DualSense» não tirou o jogo da lista: {_lista()}")
+        f"o «Nativo» não tirou o jogo da lista: {_lista()}")
     assert _valor(lar, APPID) == ponte.DESLIGADO, (
         f"sair do Steam Input não desfez a ponte: o vdf diz "
         f"{_valor(lar, APPID)!r}. Um chip que liga e não desliga é pior que um "
@@ -371,9 +371,11 @@ def test_desligar_com_a_steam_aberta_tira_da_lista_e_diz_quando(
         lar, monkeypatch) -> None:
     """O avesso, e ele tem frase própria porque o dono não tem uma.
 
-    A SAÍDA DO STEAM INPUT É CLICAR NUM DOS OUTROS TRÊS — O-MODO-QUE-NAO-SAI-
-    DO-STEAM-INPUT-01, 23/09/2026. E o recado VOLTA em vez de levantar: a lista
-    mudou, o caminho mudou, o chip clicado acende — o que falta é da Steam.
+    A SAÍDA DO STEAM INPUT É CLICAR NUM DOS OUTROS CHIPS — O-MODO-QUE-NAO-SAI-
+    DO-STEAM-INPUT-01, 23/09/2026; no Desligado, o vizinho é o «Nativo»
+    (NO-DESLIGADO-A-STEAM-NAO-SE-METE-E-O-JOGO-MANDA-01, 08/10/2026). E o recado VOLTA
+    em vez de levantar: a lista mudou, o caminho mudou, o chip clicado acende — o que
+    falta é da Steam.
 
     Ligar adiado usa `Estado.frase()`, que nomeia o jogo e termina em *"Ligo
     assim que a Steam fechar"*. `garantir_fora_da_lista_desligado` devolve só
@@ -394,7 +396,7 @@ def test_desligar_com_a_steam_aberta_tira_da_lista_e_diz_quando(
     monkeypatch.setattr(ponte, "steam_running", lambda: True)
     aba.VIGIA_DO_STEAM_INPUT.esquecer()
 
-    resposta = aba.modo_dualsense(_ctx(), {"texto": "Sony DualSense"}, PonteDeMentira())
+    resposta = aba.modo_nativo(_ctx(), {"texto": "Nativo"}, PonteDeMentira())
 
     assert APPID not in _lista(), f"a vontade não foi desfeita: {_lista()}"
     assert _valor(lar, APPID) == ponte.LIGADO, (
@@ -552,7 +554,7 @@ def test_com_a_ponte_de_pe_o_segundo_clique_nao_fecha_a_steam_por_nada(
 def test_outro_chip_desarma_o_steam_input(lar, monkeypatch) -> None:
     """Armado o «Steam Input», clicar em outro chip desarma — e o rótulo volta.
 
-    Sem isto o chip seguiria dizendo «Fechar a Steam?» com o «Sony DualSense»
+    Sem isto o chip seguiria dizendo «Fechar a Steam?» com o «Nativo»
     aceso, e o clique nele fecharia a Steam por um jogo que acabou de sair da
     lista.
 
@@ -563,10 +565,10 @@ def test_outro_chip_desarma_o_steam_input(lar, monkeypatch) -> None:
     aba.modo_steam(_ctx(), {"texto": "Steam Input"}, PonteDeMentira())
     assert confirmacao.armado_agora()
 
-    aba.modo_dualsense(_ctx(), {"texto": "Sony DualSense"}, PonteDeMentira())
+    aba.modo_nativo(_ctx(), {"texto": "Nativo"}, PonteDeMentira())
 
     assert confirmacao.armado_agora() == "", (
-        "o «Sony DualSense» não desarmou o «Fechar a Steam?» do chip vizinho")
+        "o «Nativo» não desarmou o «Fechar a Steam?» do chip vizinho")
 
 
 def test_o_consentimento_e_para_aquele_jogo(lar, monkeypatch) -> None:

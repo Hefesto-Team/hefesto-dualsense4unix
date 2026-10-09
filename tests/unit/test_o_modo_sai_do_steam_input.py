@@ -55,6 +55,7 @@ from tests.conftest import exigir_gi_real
 exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
 
 from hefesto_dualsense4unix.app.actions.jogar import painel
+from hefesto_dualsense4unix.app.actions.mode_transition import MODE_GAMEPAD
 from hefesto_dualsense4unix.daemon import ipc_server, launch_env
 from hefesto_dualsense4unix.daemon.ipc_handlers import origem_do_pedido
 from hefesto_dualsense4unix.daemon.subsystems.gamepad import ORIGENS_GESTO_DELA
@@ -64,6 +65,7 @@ from hefesto_dualsense4unix.integrations.virtual_pad import normalizar_caminho
 from hefesto_dualsense4unix.interface import pacotes
 from hefesto_dualsense4unix.interface.pacotes import Contexto
 from hefesto_dualsense4unix.interface.pacotes import a01_jogar as aba
+from hefesto_dualsense4unix.interface.pacotes import a09_sistema, camada
 from hefesto_dualsense4unix.interface.pacotes.a07_lancadores import METODO_DA_RECARGA
 from tests.unit.test_steam_input_01_o_chip_que_acende_por_jogo import (  # noqa: F401
     APPID,
@@ -125,6 +127,12 @@ class DaemonDeMentira:
         if enabled and caminho is not None:
             vpad["caminho"] = normalizar_caminho(caminho)
         return True
+
+
+@pytest.fixture(autouse=True)
+def _servico_de_mentira(monkeypatch):
+    """O «Ligado» do interruptor liga o serviço; aqui o serviço é de mentira e já está de pé."""
+    monkeypatch.setattr(a09_sistema, "ativar_o_servico", lambda: False)
 
 
 @pytest.fixture(autouse=True)
@@ -210,11 +218,20 @@ def _clicar(chave: str, ctx: Contexto, daemon: DaemonDeMentira) -> Any:
     `aba01._chip_do_modo` escreve `data-gesto="modo-<chave>"`, e o piloto acha
     o gesto por `pacotes.gesto_da_pagina`. O rótulo vai no `texto`, como o
     piloto manda, e sai do dono dele (`painel.CHIPS_DA_ESCADA`).
+
+    O CAMINHO É O DA TELA, e no Desligado os chips do Ligado nem aparecem (a seção
+    `so-ligado` some, e a camada recusa o clique no Nativo): quem está no Nativo e
+    quer um chip do Ligado passa primeiro pelo interruptor, o gesto `hefesto` na
+    posição «Ligado», como ela faria.
     """
     gesto = pacotes.gesto_da_pagina(aba.PAGINA, f"modo-{chave}")
     assert gesto is not None, f"o chip «{chave}» não tem gesto registrado"
     rotulo = aba._rotulo_do_chip(chave)
     try:
+        if camada.no_nativo(ctx.state) and TABELA_DA_SPRINT[chave][0] in painel.MODOS_LIGADOS:
+            interruptor = pacotes.gesto_da_pagina(aba.PAGINA, "hefesto")
+            assert interruptor is not None, "o interruptor não tem gesto registrado"
+            interruptor(ctx, {"modo": MODE_GAMEPAD, "texto": "Ligado"}, daemon)
         return gesto(ctx, {"texto": rotulo}, daemon)
     except RuntimeError as recusa:
         pytest.fail(f"o clique em «{rotulo}» RECUSOU: {recusa}")
@@ -523,14 +540,15 @@ def test_o_sony_dualsense_tira_o_jogo_do_steam_input(vdf) -> None:
     """Steam Input aceso, clique no «Sony DualSense»: o tique seguinte acende ele.
 
     É o caso da foto dela. O RAMO É O MESMO do «Steam Input»: a mesma recarga
-    (`METODO_DA_RECARGA`) e o mesmo veredito relido do vdf.
+    (`METODO_DA_RECARGA`) e o mesmo veredito relido do vdf. O Steam Input mora no
+    Desligado, então o caminho é o da tela: o interruptor em «Ligado» e o chip.
     """
     _ponte_de_pe()
     ctx = _ctx(aberto=True, modo="native")
     assert _tela(ctx) == {"modo": "", "steam": "steam"}
 
     daemon = DaemonDeMentira(ctx.state)
-    assert aba.modo_dualsense(ctx, {"texto": "Sony DualSense"}, daemon) is None
+    assert _clicar("dualsense", ctx, daemon) is None
 
     assert APPID not in ponte.ler_allowlist(), (
         "o «Sony DualSense» não tirou o jogo da lista do Steam Input")
@@ -604,7 +622,7 @@ def test_o_tique_logo_depois_do_clique_ja_pinta_a_lista_nova(vdf, monkeypatch) -
     antes = aba.pacote(ctx)
     assert (antes["modo-aceso"], antes["steam-input-aceso"]) == ("", "steam")
 
-    aba.modo_dualsense(ctx, {"texto": "Sony DualSense"}, DaemonDeMentira(ctx.state))
+    _clicar("dualsense", ctx, DaemonDeMentira(ctx.state))
 
     depois = aba.pacote(ctx)
     assert (depois["modo-aceso"], depois["steam-input-aceso"]) == ("dualsense", ""), (
