@@ -1459,6 +1459,17 @@ const PARTE_DA_VOZ = HZ.voz / (HZ.voz + HZ.movimento_mic);
    dois números. */
 const HZ_QUE_ENGASGA = 125;
 const HZ_DO_JOGO = 250;
+/* QUANTAS PONTES CABEM EM CADA ENTRADA (A-PONTE-SE-OTIMIZA-ATE-QUATRO-NO-ULTRA-NUM-ADAPTADOR-01):
+   as que ainda deixam todo controle dela em 125 Hz ou mais, nunca acima das duas que
+   sobreviveram: piso((C_eff − 2 × 125 × controles) / 187,5). O dono é
+   `radio_da_mesa.n_max_pela_capacidade`, e a paridade trava a fórmula. */
+const FATIAS_POR_RELATORIO_DE_ENTRADA = 2;
+function pontesQueCabem(lid) {
+  const lug = LUGARES.find(l => l.id === lid);
+  const controles = moradoresDe(lid).filter(a => a.tipo === 'controle').length;
+  const sobra = lug.teto - FATIAS_POR_RELATORIO_DE_ENTRADA * HZ_QUE_ENGASGA * controles;
+  return Math.max(0, Math.min(PONTES_POR_ADAPTADOR, Math.floor(sobra / MARGINAL_DA_PONTE)));
+}
 const nivelDoMovimento = hz => (typeof hz !== 'number' || Number.isNaN(hz)) ? ''
   : hz >= HZ_DO_JOGO ? 'liso' : hz >= HZ_QUE_ENGASGA ? 'medio' : 'engasga';
 const DICA_DO_MOVIMENTO = {
@@ -1827,14 +1838,16 @@ function pintar() {
     /* R10 — «PONTES N DE 2» no lugar do «232%». O número é CONTAGEM, não
        estimativa: quantos controles recebem som ou vibração por este rádio. */
     const n = pontes.length;
+    const cabem = pontesQueCabem(lug.id);
     const q = document.createElement('span');
     q.className = 'quanto canais-do-lugar ' +
-      (n > PONTES_POR_ADAPTADOR ? 'estourou' : (n === PONTES_POR_ADAPTADOR ? 'apertado' : ''));
+      (n > cabem ? 'estourou' : (n === cabem ? 'apertado' : ''));
     q.dataset.campo = 'lugar-pontes';
+    q.dataset.cabem = String(cabem);
     q.appendChild(icone('i-som'));
-    q.append(n + '/' + PONTES_POR_ADAPTADOR);
-    q.title = 'Controles com som ou vibração: ' + n + ' de ' + PONTES_POR_ADAPTADOR +
-      (n > PONTES_POR_ADAPTADOR ? ' — o som engasga' : '');
+    q.append(n + '/' + cabem);
+    q.title = 'Controles com som ou vibração: ' + n + ' de ' + cabem +
+      (n > cabem ? ' — o som engasga' : '');
     q.setAttribute('role', 'img');
     q.setAttribute('aria-label', q.title);
     conta.appendChild(q);
@@ -1852,7 +1865,7 @@ function pintar() {
     ch.setAttribute('aria-label', ch.title);
     conta.appendChild(ch);
 
-    const livres = PONTES_POR_ADAPTADOR - n;
+    const livres = cabem - n;
     const sobra = document.createElement('span');
     sobra.className = 'sobra' + (livres < 0 ? ' passou' : (livres === 0 ? ' nao-cabe' : ''));
     if (livres >= 1) {

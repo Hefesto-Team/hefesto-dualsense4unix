@@ -151,6 +151,7 @@ from hefesto_dualsense4unix.integrations.radio_da_mesa import (
     N_MAX_PONTES,
     LeitorDoSinal,
     PausaPeloSinal,
+    n_max_do_adaptador,
 )
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -644,9 +645,21 @@ class GovernadorDoRadio:
             for endereco in sorted(conhecidos)
             if endereco != exceto
             and self._parado_ate.get(endereco, 0.0) <= agora
-            and sum(1 for v in self._vagas if v.adaptador == endereco) < self.n_max
+            and sum(1 for v in self._vagas if v.adaptador == endereco) < self._n_max_de(endereco)
         ]
         return self._na_ordem_da_d8(livres, exceto)
+
+    def _n_max_de(self, adaptador: str) -> int:
+        """O limite de pontes DESTE adaptador. Chamado com a trava.
+
+        A-PONTE-SE-OTIMIZA-ATE-QUATRO-NO-ULTRA-NUM-ADAPTADOR-01: com
+        ``radio_da_mesa.N_MAX_PELA_CAPACIDADE`` ligado, sai da capacidade pelos enlaces ACL que o
+        medidor viu no adaptador, nunca acima de :attr:`n_max`; desligado, é o :attr:`n_max`.
+        """
+        ar = (self._amostra or {}).get(adaptador)
+        enlaces = getattr(ar, "conexoes", None) or ()  # (noqa-acento): nome do campo
+        controles = sum(1 for e in enlaces if getattr(e, "tipo", None) == TIPO_ACL)
+        return n_max_do_adaptador(controles, teto=self.n_max)
 
     def _nao_sei_se_ha_vaga(self, exceto: str) -> bool:
         """«Não sei» se há vaga em outro adaptador. Chamado com a trava."""
@@ -727,7 +740,8 @@ class GovernadorDoRadio:
             ocupadas = [
                 v for v in self._vagas if v.adaptador == adaptador and _chave(v.uniq) != chave
             ]
-            if len(ocupadas) < self.n_max:
+            limite = self._n_max_de(adaptador)
+            if len(ocupadas) < limite:
                 self._pedidos.pop(chave, None)
                 self._esperando_medida.pop(chave, None)
                 return self._conceder(uniq, adaptador, tipo, alem=False, agora=agora)
@@ -742,7 +756,7 @@ class GovernadorDoRadio:
                     self._esperando_medida[chave] = _EsperaDaMedida(uniq, adaptador, agora)
                     logger.debug("governador_espera_a_medida", adaptador=adaptador, uniq=uniq)
                     return Recusa(
-                        uniq, adaptador, tipo, MOTIVO_SEM_MEDIDA, n_max=self.n_max,
+                        uniq, adaptador, tipo, MOTIVO_SEM_MEDIDA, n_max=limite,
                         nomear=self._nomear,
                     )
                 sem_medida = True
@@ -757,7 +771,7 @@ class GovernadorDoRadio:
                 return vaga
             self._esperando_medida.pop(chave, None)
             recusa = Recusa(
-                uniq, adaptador, tipo, MOTIVO_CHEIO, vagas, n_max=self.n_max, nomear=self._nomear
+                uniq, adaptador, tipo, MOTIVO_CHEIO, vagas, n_max=limite, nomear=self._nomear
             )
             anterior = self._pedidos.get(chave)
             self._pedidos[chave] = _Pedido(uniq, tipo, adaptador, vagas, agora)
@@ -767,7 +781,7 @@ class GovernadorDoRadio:
             self._escrever(
                 ADAPTADOR_CHEIO,
                 f"a ponte número {ocupadas_n + 1} pediu vaga num adaptador "
-                f"que comporta {self.n_max}",
+                f"que comporta {limite}",
                 antes={"pontes": ocupadas_n},
                 depois={"vagas": list(vagas)},
                 adaptador=adaptador,
@@ -883,7 +897,9 @@ class GovernadorDoRadio:
         campos: dict[str, Any] = {}
         if vaga.alem_do_limite:
             campos["alem_do_limite"] = True
-            campos["frase"] = f"{no_adaptador} pontes num adaptador (limite {self.n_max})."
+            campos["frase"] = (
+                f"{no_adaptador} pontes num adaptador (limite {self._n_max_de(vaga.adaptador)})."
+            )
         if not vaga.alem_do_limite:
             por_que = "há som para mandar"
         elif vaga.por_escolha_dela:
@@ -927,7 +943,7 @@ class GovernadorDoRadio:
         if not adaptador:
             return
         no_adaptador = [v for v in self._vagas if v.adaptador == adaptador]
-        for vaga in no_adaptador[: self.n_max]:
+        for vaga in no_adaptador[: self._n_max_de(adaptador)]:
             if vaga.alem_do_limite:
                 vaga.alem_do_limite = False
                 logger.info("governador_voltou_a_caber", adaptador=adaptador, uniq=vaga.uniq)
@@ -1397,7 +1413,7 @@ class GovernadorDoRadio:
             for endereco in sorted(enderecos):
                 estado = self._estados.get(endereco)
                 saida[endereco] = {
-                    "n_max": self.n_max,
+                    "n_max": self._n_max_de(endereco),
                     "pontes": [
                         {
                             "uniq": v.uniq,

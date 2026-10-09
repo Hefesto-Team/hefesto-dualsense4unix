@@ -28,3 +28,9 @@ seção daqui**: a aba deixou de estar em trabalho.
   da caixa e do fone. A linha da caixa e do fone continua em 61 Hz, mas o ar que sobra no
   adaptador deles cai de 361 para 117 fatias (ele varre: o teto é 849): um controle arrastado
   para lá mostra 0 Hz em vez de 53 Hz. O «Equilibrar» da cena continua apontando a Entrada 4.
+- **09/10/2026** — o número de pontes de cada Entrada passa de «N/2» a «N/M», com M = quantas pontes ainda deixam todo
+  controle dela em 125 Hz ou mais: `piso((C_eff - 2 x 125 x controles) / 187,5)`, nunca acima de 2 (sprint
+  A-PONTE-SE-OTIMIZA-ATE-QUATRO-NO-ULTRA-NUM-ADAPTADOR-01). A sobra («Cabe mais N com som») segue o mesmo M. Na cena de
+  sempre as três Entradas continuam em 2; uma Entrada que varre (teto 849) com dois controles cai para 1. A página do
+  produto continua em «N/2» até publicar, e o limite do produto só segue a capacidade quando a bancada ligar o
+  `radio_da_mesa.N_MAX_PELA_CAPACIDADE`.

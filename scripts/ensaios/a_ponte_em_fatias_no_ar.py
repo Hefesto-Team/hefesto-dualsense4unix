@@ -58,7 +58,8 @@ OS INTERRUPTORES (trocar X por Y na bancada sem editar código)
 ``HEFESTO_PONTE_DESCARTE_S`` (5), ``--pontes`` / ``HEFESTO_PONTE_PONTES`` («0,1,2»),
 ``--sinal`` / ``HEFESTO_PONTE_SINAL_DBFS`` («auto», ou um nível como «-60»), e no
 resumo ``--k`` / ``HEFESTO_PONTE_K`` (o ``k`` que a previsão usa; o padrão é o
-``FATIAS_DA_PONTE`` do produto).
+``FATIAS_DA_PONTE`` do produto) e ``--controles`` / ``HEFESTO_PONTE_CONTROLES`` (4: com
+quantos controles no adaptador a última linha conta as pontes que cabem).
 
 As réguas: ``tests/unit/test_a_ponte_se_conta_em_fatias_no_ar.py``.
 """
@@ -310,6 +311,24 @@ def linhas_curtas(linhas: Sequence[LinhaDaTabela], k: float) -> list[str]:
             f"D = {_br(li.deslocamento)} fatias/s, k = {_br(li.k_liquido, 2)} (líquido) ou "
             f"{_br(li.k_bruto, 2)} (bruto), {_br(li.hz_por_controle)} Hz por controle "
             f"(k = {_br(k, 0)} previa {_br(prevista)})")
+    return saida
+
+
+def pontes_que_cabem(linhas: Sequence[LinhaDaTabela], controles: int) -> dict[str, int]:
+    """O ``M`` de cada adaptador medido: quantas pontes deixam ``controles`` em 125 Hz ou mais.
+
+    A-PONTE-SE-OTIMIZA-ATE-QUATRO-NO-ULTRA-NUM-ADAPTADOR-01: a mesma conta do produto
+    (``radio_da_mesa.n_max_pela_capacidade``), com o ``C_eff`` (a entrada saturada) e o custo
+    por ponte que ESTA tabela mediu em cada adaptador, nunca os do produto.
+    """
+    saida: dict[str, int] = {}
+    for adaptador in sorted({li.adaptador for li in linhas}):
+        dele = [li for li in linhas if li.adaptador == adaptador]
+        ar = _media(li.entrada_saturada for li in dele)
+        custo = _media(li.custo_por_ponte for li in dele if li.pontes)
+        if ar is None or custo is None:
+            continue
+        saida[adaptador] = rm.n_max_pela_capacidade(controles, ar=ar, custo=custo)
     return saida
 
 
@@ -677,6 +696,8 @@ def main(argv: Sequence[str] | None = None, portas: Portas | None = None) -> int
     r.add_argument("--md", action="store_true")
     r.add_argument("--k", type=float,
                    default=float(_do_ambiente("HEFESTO_PONTE_K", str(rm.FATIAS_DA_PONTE))))
+    r.add_argument("--controles", type=int,
+                   default=int(_do_ambiente("HEFESTO_PONTE_CONTROLES", "4")))
     g = sub.add_parser("gravar")
     g.add_argument("arquivo", type=Path)
     sub.add_parser("conferir")
@@ -688,6 +709,9 @@ def main(argv: Sequence[str] | None = None, portas: Portas | None = None) -> int
             print(tabela_em_markdown(linhas))
         for linha in linhas_curtas(linhas, args.k):
             print(linha)
+        for adaptador, cabem in pontes_que_cabem(linhas, args.controles).items():
+            print(f"adaptador {adaptador} · {args.controles} controle(s): cabem {cabem} ponte(s) "
+                  f"(teto {rm.N_MAX_PONTES})")
         return 0
     if args.comando == "gravar":
         print(f"gravada: {gravar(args.arquivo).relative_to(_RAIZ)}")

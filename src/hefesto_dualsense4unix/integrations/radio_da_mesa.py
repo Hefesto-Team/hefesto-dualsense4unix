@@ -634,6 +634,154 @@ def palavra_das_pontes(pontes: int, n_max: int = N_MAX_PONTES) -> str:
     return PALAVRA_CHEIA
 
 
+#: O ar que um adaptador entrega de fato, em fatias por segundo (o ``C_eff``): 94% das 1.600 no
+#: adaptador de porta direta e 82% no que fica atrás de hub de TT único (linha do teto do
+#: ``docs/data/orcamento-de-ar.csv``). O produto não sabe qual adaptador está atrás de hub, e conta
+#: com o de porta direta; o ensaio ``a_ponte_em_fatias_no_ar.py`` mede o de cada um.
+AR_DO_ADAPTADOR_PORTA_DIRETA = 1504.0
+AR_DO_ADAPTADOR_ATRAS_DO_HUB = 1312.0
+
+#: A-PONTE-SE-OTIMIZA-ATE-QUATRO-NO-ULTRA-NUM-ADAPTADOR-01: o limite de pontes de cada adaptador
+#: sai da capacidade (``n_max_pela_capacidade``), nunca acima de ``N_MAX_PONTES``. Desligado até a
+#: bancada medir o custo da ponte (A-PONTE-SE-CONTA-EM-FATIAS-NO-AR-01): ligado, o adaptador com
+#: mais controles do que a conta deixa passa a recusar a segunda ponte.
+N_MAX_PELA_CAPACIDADE = False
+
+#: O degrau do meio: ceder a TAXA da ponte de vibração (dois blocos de háptica por relatório, a
+#: metade dos relatórios) antes de cortá-la inteira. Desligado até a bancada sensorial
+#: (``scripts/ensaios/a_ponte_com_dois_quadros.py``) dizer que o firmware toca os dois blocos. O som
+#: não tem degrau: dois quadros de som por relatório é o arranjo que já falhou (08/09).
+DEGRAU_DO_MEIO_LIGADO = False
+HZ_DA_PONTE_NO_DEGRAU = HZ_DA_PONTE / 2
+#: o modo de ponte que tem degrau
+MODOS_COM_DEGRAU = frozenset({"haptica"})
+
+ACAO_CEDER_A_TAXA = "taxa"
+ACAO_CEDER_A_PONTE = "ponte"
+
+
+def custo_da_ponte(hz: float = HZ_DA_PONTE, fatias: float = FATIAS_DA_PONTE) -> float:
+    """Fatias por segundo que uma ponte tira da entrada, no modelo líquido: ``(k - 1) x Hz``."""
+    return (fatias - 1) * hz
+
+
+def n_max_pela_capacidade(
+    controles: int,
+    *,
+    ar: float | None = None,
+    custo: float | None = None,
+    piso_hz: float = HZ_QUE_ENGASGA,
+    teto: int = N_MAX_PONTES,
+) -> int:
+    """Quantas pontes ainda deixam todo controle do adaptador em ``piso_hz`` ou mais.
+
+    ``piso((C_eff - 2 x piso_hz x controles) / custo da ponte)``, nunca abaixo de zero e nunca
+    acima de ``teto`` (o que sobreviveu na bancada). ``ar`` e ``custo`` em ``None`` são lidos na
+    hora (``AR_DO_ADAPTADOR_PORTA_DIRETA`` e ``custo_da_ponte()``): trocar a constante vale já.
+    """
+    preco = custo_da_ponte() if custo is None else custo
+    c_eff = AR_DO_ADAPTADOR_PORTA_DIRETA if ar is None else ar
+    sobra = c_eff - FATIAS_POR_RELATORIO_DE_ENTRADA * piso_hz * max(0, int(controles))
+    if preco <= 0:
+        return max(0, int(teto))
+    return max(0, min(int(teto), int(sobra // preco)))
+
+
+def n_max_do_adaptador(controles: int, *, ligado: bool | None = None, **conta: Any) -> int:
+    """O ``n_max`` que o produto usa: a capacidade quando o interruptor manda, senão o teto."""
+    if not (N_MAX_PELA_CAPACIDADE if ligado is None else ligado):
+        return int(conta.get("teto", N_MAX_PONTES))
+    return n_max_pela_capacidade(controles, **conta)
+
+
+def hz_por_controle_na_conta(
+    ar: float, controles: int, *, cheias: int, no_degrau: int = 0,
+    custo: float | None = None, custo_no_degrau: float | None = None,
+) -> float:
+    """O Hz de movimento por controle que a conta líquida prevê com estas pontes."""
+    preco = custo_da_ponte() if custo is None else custo
+    meio = custo_da_ponte(HZ_DA_PONTE_NO_DEGRAU) if custo_no_degrau is None else custo_no_degrau
+    livre = max(0.0, ar - preco * cheias - meio * no_degrau)
+    return livre / FATIAS_POR_RELATORIO_DE_ENTRADA / max(1, int(controles))
+
+
+@dataclass(frozen=True)
+class PonteNaFila:
+    """Uma ponte de pé num adaptador, como o degrau a enxerga."""
+
+    uniq: str
+    modo: str
+    #: a posição da vaga no adaptador, contando da primeira (1)
+    vaga: int
+    #: há quantos segundos o controle não mexe; ``None`` = mexendo agora
+    parado_ha_s: float | None = None
+    no_degrau: bool = False
+
+
+@dataclass(frozen=True)
+class Degrau:
+    """Um passo de ceder: a taxa (``ACAO_CEDER_A_TAXA``) ou a ponte inteira."""
+
+    uniq: str
+    acao: str
+    hz_depois: float
+
+
+def _vez_de_ceder(ponte: PonteNaFila) -> tuple[float, int]:
+    # Quem está parado há mais tempo cede primeiro; empate, a vaga mais nova (a regra de
+    # sempre: as primeiras vagas ficam). Quem mexe agora fica por último.
+    parado = -1.0 if ponte.parado_ha_s is None else float(ponte.parado_ha_s)
+    return (-parado, -ponte.vaga)
+
+
+def ordem_de_ceder(
+    pontes: Iterable[PonteNaFila],
+    *,
+    controles: int,
+    ar: float | None = None,
+    piso_hz: float = HZ_QUE_ENGASGA,
+    degrau: bool | None = None,
+    custo: float | None = None,
+    custo_no_degrau: float | None = None,
+) -> list[Degrau]:
+    """Os passos que trazem todo controle de volta a ``piso_hz``, na ordem em que se cedem.
+
+    Com o degrau ligado, toda ponte de vibração cede a TAXA antes que qualquer ponte saia
+    inteira; só depois as pontes saem, na mesma vez. P1 a P4 são iguais: a vez é pelo tempo
+    parado e pela ordem da vaga, nunca pelo número do jogador. Lista vazia = a conta já fecha.
+    """
+    com_degrau = DEGRAU_DO_MEIO_LIGADO if degrau is None else degrau
+    c_eff = AR_DO_ADAPTADOR_PORTA_DIRETA if ar is None else ar
+    fila = sorted(pontes, key=_vez_de_ceder)
+    cheias = {p.uniq for p in fila if not p.no_degrau}
+    meias = {p.uniq for p in fila if p.no_degrau}
+
+    def hz() -> float:
+        return hz_por_controle_na_conta(
+            c_eff, controles, cheias=len(cheias), no_degrau=len(meias),
+            custo=custo, custo_no_degrau=custo_no_degrau)
+
+    passos: list[Degrau] = []
+    if hz() >= piso_hz:
+        return passos
+    if com_degrau:
+        for p in fila:
+            if p.uniq in cheias and p.modo in MODOS_COM_DEGRAU:
+                cheias.discard(p.uniq)
+                meias.add(p.uniq)
+                passos.append(Degrau(p.uniq, ACAO_CEDER_A_TAXA, hz()))
+                if hz() >= piso_hz:
+                    return passos
+    for p in fila:
+        if p.uniq in cheias or p.uniq in meias:
+            cheias.discard(p.uniq)
+            meias.discard(p.uniq)
+            passos.append(Degrau(p.uniq, ACAO_CEDER_A_PONTE, hz()))
+            if hz() >= piso_hz:
+                return passos
+    return passos
+
+
 @dataclass(frozen=True)
 class ControleNoAr:
     """Um controle no rádio, com os Hz MEDIDOS. ``None`` = não sei."""
@@ -764,7 +912,7 @@ def orcamento_por_adaptador(
         saida[endereco] = OrcamentoDoAdaptador(
             adaptador=endereco,
             controles=tuple(por_adaptador.get(endereco, ())),
-            n_max=n_max,
+            n_max=n_max_do_adaptador(len(por_adaptador.get(endereco, ())), teto=n_max),
             entrada_por_s=_numero_ou_none(getattr(leitura, "entrada_por_s", None)),
             saida_por_s=_numero_ou_none(getattr(leitura, "saida_por_s", None)),
             canais_evitados=evitados.get(endereco),
@@ -819,6 +967,10 @@ def _hex(valor: str) -> str:
 
 
 __all__ = [
+    "ACAO_CEDER_A_PONTE",
+    "ACAO_CEDER_A_TAXA",
+    "AR_DO_ADAPTADOR_ATRAS_DO_HUB",
+    "AR_DO_ADAPTADOR_PORTA_DIRETA",
     "CAUSA_ADAPTADOR_CHEIO",
     "CAUSA_INTERFERENCIA",
     "CAUSA_LONGE",
@@ -826,6 +978,7 @@ __all__ = [
     "CAUSA_SEM_SINAL",
     "CORTE_APERTADA",
     "CORTE_FOLGADA",
+    "DEGRAU_DO_MEIO_LIGADO",
     "FATIAS_DA_PONTE",
     "FATIAS_POR_RELATORIO_DE_ENTRADA",
     "FOLGA_DO_SINAL_DBM",
@@ -833,15 +986,18 @@ __all__ = [
     "FRACAO_QUE_ENGASGA",
     "HZ_AUDIO_COM_MIC",
     "HZ_DA_PONTE",
+    "HZ_DA_PONTE_NO_DEGRAU",
     "HZ_DO_JOGO",
     "HZ_INPUT_COM_MIC",
     "HZ_INPUT_SEM_MIC",
     "HZ_QUE_ENGASGA",
     "LEITURAS_PARA_O_SINAL_VOLTAR",
+    "MODOS_COM_DEGRAU",
     "MODOS_DA_PONTE",
     "NIVEL_ENGASGA",
     "NIVEL_LISO",
     "NIVEL_MEDIO",
+    "N_MAX_PELA_CAPACIDADE",
     "N_MAX_PONTES",
     "PALAVRAS_DE_CULPA",
     "PALAVRA_APERTADA",
@@ -856,16 +1012,23 @@ __all__ = [
     "SLOTS_POR_RELATORIO",
     "SLOTS_POR_SEGUNDO",
     "ControleNoAr",
+    "Degrau",
     "Diagnostico",
     "LeitorDoSinal",
     "Ocupacao",
     "OrcamentoDoAdaptador",
     "PausaPeloSinal",
+    "PonteNaFila",
     "adaptador_por_uniq",
     "atualizar_a_referencia",
+    "custo_da_ponte",
     "diagnosticar_o_movimento",
+    "hz_por_controle_na_conta",
+    "n_max_do_adaptador",
+    "n_max_pela_capacidade",
     "nivel_do_movimento",
     "orcamento_por_adaptador",
+    "ordem_de_ceder",
     "palavra_da_ocupacao",
     "palavra_das_pontes",
     "sinais_dos_enlaces",
