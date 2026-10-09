@@ -28,3 +28,9 @@ seção daqui**: a aba deixou de estar em trabalho.
   da caixa e do fone. A linha da caixa e do fone continua em 61 Hz, mas o ar que sobra no
   adaptador deles cai de 361 para 117 fatias (ele varre: o teto é 849): um controle arrastado
   para lá mostra 0 Hz em vez de 53 Hz. O «Equilibrar» da cena continua apontando a Entrada 4.
+
+## 01-jogar.html
+- **08/10/2026** — no Desligado, os botões passam a ser Nativo e Steam Input, no mesmo estilo dos do Ligado; o
+  Steam Input sai do Ligado, que fica com Sony DualSense, Xbox e Navegação (sprint
+  NO-DESLIGADO-A-STEAM-NAO-SE-METE-E-O-JOGO-MANDA-01, opção a mudada por ela). Até publicar, o produto continua com
+  o Steam Input no Ligado e a faixa fixa «Modo Nativo» no Desligado.

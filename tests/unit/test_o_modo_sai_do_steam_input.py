@@ -142,7 +142,7 @@ def _ctx(*, aberto: bool, caminho: str = "dualsense", modo: str = "gamepad",
     """O estado do daemon com o jogo ABERTO (em foco) ou FECHADO (só o marker)."""
     state: dict[str, Any] = {
         "connected": True,
-        "native_mode": False,
+        "native_mode": modo == "native",
         "gamepad_emulation": {"enabled": modo == "gamepad", "flavor": "dualsense",
                               "caminho": caminho},
     }
@@ -220,11 +220,14 @@ def _clicar(chave: str, ctx: Contexto, daemon: DaemonDeMentira) -> Any:
         pytest.fail(f"o clique em «{rotulo}» RECUSOU: {recusa}")
 
 
+# NO-DESLIGADO-A-STEAM-NAO-SE-METE-E-O-JOGO-MANDA-01, 08/10/2026: o Steam Input
+# saiu do Ligado e virou, com o Nativo, um dos dois botões do Desligado.
 TABELA_DA_SPRINT = {
     "dualsense": ("gamepad", "dualsense", False),
     "xbox": ("gamepad", "xbox", False),
-    "steam": ("gamepad", "dualsense", True),
     "navegacao": ("desktop", None, False),
+    "nativo": ("native", None, False),
+    "steam": ("native", None, True),
 }
 CHIPS = tuple(TABELA_DA_SPRINT)
 
@@ -235,7 +238,7 @@ def test_a_tabela_e_a_da_sprint() -> None:
     assert lida == TABELA_DA_SPRINT, (
         f"a tabela da fileira divergiu da sprint:\n  lida     {lida}\n"
         f"  esperada {TABELA_DA_SPRINT}")
-    assert {str(c.chave) for c in painel.CHIPS_DA_ESCADA} == set(CHIPS), (
+    assert {str(c.chave) for c in painel.CHIPS_DA_ESCADA} | {aba.CHIP_DO_NATIVO} == set(CHIPS), (
         "a fileira tem chips que a tabela da sprint não cobre")
 
 
@@ -446,7 +449,7 @@ def test_um_alvo_so_o_jogo_da_vez_aberto_ou_fechado(vdf, jogo_fechado, aberto) -
     caso `fechado` reprova com o «Sony DualSense» aceso.
     """
     _ponte_de_pe()
-    assert _tela(_ctx(aberto=aberto)) == {"modo": "", "steam": "steam"}
+    assert _tela(_ctx(aberto=aberto, modo="native")) == {"modo": "", "steam": "steam"}
 
 
 def test_a_escada_do_jogo_continua_devolvendo_o_fechado(jogo_fechado) -> None:
@@ -501,19 +504,19 @@ def test_sem_controle_na_mesa_o_clique_vale_e_nada_acende(
 
 
 def test_a_pendencia_do_steam_input_nomeia_o_chip_clicado() -> None:
-    """O «Steam Input» pede o caminho do «Sony DualSense» — e a faixa nomeia o clicado.
+    """O «Steam Input» pede o modo do Desligado — e a faixa nomeia o clicado.
 
-    O caminho anotado é `dualsense` (a linha dele na tabela), e a rede de
-    `_rotulo_de` traduz caminho em rótulo pelo `Chip.caminho` — que só o
-    «Sony DualSense» tem. Sem o rótulo do CHIP, um clique sem `texto` poria
-    «Vai mudar para: Sony DualSense» sob o botão que o usuário apertou.
+    Desde 08/10/2026 (NO-DESLIGADO-A-STEAM-NAO-SE-METE-E-O-JOGO-MANDA-01) o
+    «Steam Input» é botão do Desligado, e o eixo anotado é o `modo` `native`.
+    Sem o rótulo do CHIP, um clique sem `texto` poria «Vai mudar para: native»
+    sob o botão que o usuário apertou.
 
     A MORDIDA: tire o `or _rotulo_do_chip(chave)` de `_lembrar_do_chip` e a
-    asserção reprova com «Sony DualSense».
+    asserção reprova com «native».
     """
     aba._lembrar_do_chip(aba.CHIP_DO_STEAM_INPUT, {})
-    assert aba._ESCOLHA == {"caminho": "dualsense"}
-    assert aba._ROTULO == {"caminho": "Steam Input"}, aba._ROTULO
+    assert aba._ESCOLHA == {"modo": "native"}
+    assert aba._ROTULO == {"modo": "Steam Input"}, aba._ROTULO
 
 
 def test_o_sony_dualsense_tira_o_jogo_do_steam_input(vdf) -> None:
@@ -523,7 +526,7 @@ def test_o_sony_dualsense_tira_o_jogo_do_steam_input(vdf) -> None:
     (`METODO_DA_RECARGA`) e o mesmo veredito relido do vdf.
     """
     _ponte_de_pe()
-    ctx = _ctx(aberto=True)
+    ctx = _ctx(aberto=True, modo="native")
     assert _tela(ctx) == {"modo": "", "steam": "steam"}
 
     daemon = DaemonDeMentira(ctx.state)
@@ -596,7 +599,7 @@ def test_a_pendencia_do_prazo_estourado_some_quando_o_daemon_alcanca() -> None:
 def test_o_tique_logo_depois_do_clique_ja_pinta_a_lista_nova(vdf, monkeypatch) -> None:
     """O primeiro tique depois do clique pinta o disco NOVO, sem esperar a vigia."""
     _ponte_de_pe()
-    ctx = _ctx(aberto=True)
+    ctx = _ctx(aberto=True, modo="native")
     monkeypatch.setattr(aba.VIGIA_DO_STEAM_INPUT, "_disparar", lambda: None)
     antes = aba.pacote(ctx)
     assert (antes["modo-aceso"], antes["steam-input-aceso"]) == ("", "steam")

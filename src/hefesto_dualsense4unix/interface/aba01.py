@@ -17,11 +17,13 @@ from hefesto_dualsense4unix.interface.pacotes.a01_jogar import (  # noqa: E402
     CADEADO_CEGO,
     CADEADO_DICA,
     CADEADO_ROTULO,
+    CHIP_DO_NATIVO,
     ESPERA_DICA,
     MARCA_DO_PRIMARIO,
     MESA_VAZIA,
     PRIMARIO_DICA,
     RESSALVA_DA_MASCARA,
+    ROTULO_DO_NATIVO,
     mascaras_montaveis,
 )
 
@@ -59,15 +61,28 @@ MODOS = [
      "sem_dono": False,
      "dica": "O Hefesto entrega o controle ao jogo pelo canal comum, o mesmo "
              "do controle de Xbox."},
-    {"chave": "steam", "rot": "Steam Input", "modo": "",
-     "sem_dono": False,
-     "dica": "A Steam entrega os comandos ao jogo; a luz, os gatilhos e o "
-             "número do jogador ficam com o Hefesto."},
     {"chave": "navegacao", "rot": "Navegação", "modo": "desktop",
      "sem_dono": False,
      "dica": "O controle vira teclado e mouse do computador."},
 ]
 MODO_ACESO = "dualsense"
+
+#: OS BOTÕES DO DESLIGADO — NO-DESLIGADO-A-STEAM-NAO-SE-METE-E-O-JOGO-MANDA-01,
+#: 08/10/2026, a opção a mudada por ela: *«Desligar o hefesto = Nativo na
+#: origem. Steam Input sai de Ligado.»* O Steam Input deixou de ser um modo do
+#: Hefesto ligado e virou a outra escolha do Desligado, no mesmo estilo dos
+#: botões de cima. A escolha é POR JOGO (`UseSteamControllerConfig`), e o Nativo
+#: é o padrão: o guarda do vdf tira a Steam de todo jogo fora da lista a cada
+#: saída dela (`scripts/disable_steam_input.sh --apply-quiet`).
+DO_DESLIGADO = [
+    {"chave": CHIP_DO_NATIVO, "rot": ROTULO_DO_NATIVO, "modo": "",
+     "sem_dono": False,
+     "dica": "O jogo fala direto com o controle, e a Steam fica de fora."},
+    {"chave": "steam", "rot": "Steam Input", "modo": "",
+     "sem_dono": False,
+     "dica": "A Steam traduz o controle para este jogo."},
+]
+NATIVO_ACESO = CHIP_DO_NATIVO
 
 #: com **Sony DualSense** marcado, e a faixa anunciava **Modo Nativo**, que é a
 PENDENTE = next(m["rot"] for m in MODOS if m["chave"] == MODO_ACESO)
@@ -227,10 +242,6 @@ CSS = """
      um número ali diria que o PS+R3 para naquele modo. É a mesma disciplina do
      `painel.SEM_LEITOR`: um traço, e não um zero. */
   .degrau i.tr{color:var(--comment);border-style:dashed}
-  /* A FAIXA DO DESLIGADO não se clica: ela não é uma escolha, é o que o
-     interruptor JÁ escolheu. Sem `cursor:pointer` e sem `:hover`. */
-  .degrau.fixo{cursor:default;justify-content:flex-start;padding-left:14px}
-  .degrau.fixo .mud{color:var(--texto-mudo);font-weight:400}
 
   /* OS QUATRO NUMA FILEIRA SÓ, E TODOS DA MESMA LARGURA. Era `flex`, e os dois
      cartões mediam 228.8 e 225.2 px — a largura vinha do nome do plástico. */
@@ -1049,16 +1060,19 @@ def _campo_do_chip(m):
     return (CAMPO_DO_STEAM_INPUT if m["chave"] == "steam" else CAMPO_DO_MODO)
 
 
-def _chip_do_modo(m):
-    """Um dos cinco chips de dentro do Hefesto ligado."""
+def _chip_do_modo(m, aceso=MODO_ACESO):
+    """Um chip da fileira de modos: os três do Ligado ou os dois do Desligado."""
     classe = ("degrau"
-              + (" on" if m["chave"] == MODO_ACESO else "")
+              + (" on" if m["chave"] == aceso else "")
               + (" sem-dono" if m["sem_dono"] else ""))
     modo = f' data-modo="{m["modo"]}"' if m["modo"] else ""
     # gerador. `data-campo="modo-aceso"` com alvo `classe` e `data-hef-quando`
     # movia. Medido em 03/09 contra o daemon do usuário: `mode_of_state` = `desktop`,
     # logo o chip vivo é **Navegação**, e a tela mostrava **Sony DualSense**.
-    return (f'            <span class="{classe}" data-degrau="{m["chave"]}"'
+    # O Nativo não é degrau da escada (é o Hefesto FORA do meio), e o
+    # `data-degrau` é o endereço que só os chips de `painel.CHIPS_DA_ESCADA` têm.
+    degrau = "" if m["chave"] == CHIP_DO_NATIVO else f' data-degrau="{m["chave"]}"'
+    return (f'            <span class="{classe}"{degrau}'
             f' data-gesto="modo-{m["chave"]}"{modo}\n'
             f'                  data-campo="{_campo_do_chip(m)}"'
             f' data-hef-alvo="classe"'
@@ -1067,6 +1081,8 @@ def _chip_do_modo(m):
 
 
 _MODOS = "\n".join(_chip_do_modo(m) for m in MODOS)
+
+_MODOS_DO_DESLIGADO = "\n".join(_chip_do_modo(m, NATIVO_ACESO) for m in DO_DESLIGADO)
 
 
 MIOLO = f'''
@@ -1177,8 +1193,7 @@ MIOLO = f'''
              36px), para a tela não pular quando ela vai e volta. -->
         <div class="hef-modo so-desligado">
           <div class="escada">
-            <span class="degrau on fixo"
-                  title="O jogo fala direto com o controle. Vale no próximo jogo que abrir.">Modo Nativo <span class="sep">·</span> <span class="mud">o controle sem o Hefesto no meio</span></span>
+{_MODOS_DO_DESLIGADO}
           </div>
         </div>
 
@@ -1802,7 +1817,10 @@ def _conferir(doc):
     exigir(PENDENTE != "Modo Nativo",
            "a pendência voltou a ser Modo Nativo com o interruptor em Ligado")
 
-    _por_campo = collections.Counter(_campo_do_chip(m) for m in MODOS)
+    _por_campo = collections.Counter(_campo_do_chip(m) for m in MODOS + DO_DESLIGADO)
+    exigir("steam" not in {m["chave"] for m in MODOS},
+           "o Steam Input voltou a ser modo do Ligado — ela o tirou de lá em "
+           "08/10/2026 («Steam Input sai de Ligado»)")
     exigir(_por_campo[CAMPO_DO_STEAM_INPUT] == 1,
            f"o chip do Steam Input não tem campo próprio: esperava 1 chip em "
            f"`{CAMPO_DO_STEAM_INPUT}`, a tabela dá "

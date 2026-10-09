@@ -159,11 +159,15 @@ class PonteDeMentira:
 
 
 def _ctx(com_jogo: bool = True) -> Contexto:
-    """O contexto do clique — o jogo chega pela SEGUNDA evidência da escada."""
+    """O contexto do clique — o jogo chega pela SEGUNDA evidência da escada.
+
+    O HEFESTO DESLIGADO — NO-DESLIGADO-A-STEAM-NAO-SE-METE-E-O-JOGO-MANDA-01,
+    08/10/2026: o Steam Input é um dos dois botões do Desligado, e só acende ali.
+    """
     state: dict[str, Any] = {
         "connected": True,
-        "native_mode": False,
-        "gamepad_emulation": {"enabled": True, "flavor": "dualsense",
+        "native_mode": True,
+        "gamepad_emulation": {"enabled": False, "flavor": "dualsense",
                               "caminho": "dualsense"},
     }
     if com_jogo:
@@ -816,6 +820,7 @@ def test_a_tela_acende_pela_escolha_dela(lar) -> None:
 def _com_o_caminho(caminho: str | None, *, modo_desktop: bool = False) -> Contexto:
     """O `_ctx()` com outro caminho vivo — ou na Navegação."""
     ctx = _ctx()
+    ctx.state["native_mode"] = False
     ctx.state["gamepad_emulation"] = {"enabled": not modo_desktop,
                                       "flavor": caminho or "", "caminho": caminho}
     return ctx
@@ -833,12 +838,11 @@ def test_com_a_ponte_de_pe_so_o_steam_input_acende(lar) -> None:
 
     A régua daqui cobrava os DOIS acesos («Sony DualSense» + «Steam Input»), o
     padrão que a sprint propôs enquanto a D-2 esperava a palavra de produto. A
-    palavra veio com a aba aberta: *"dois botões ligados no modo"*. O Steam
-    Input é o DEGRAU 4 da escada (`ponte_escada.ESCADA[3]`, que senta sobre o
-    caminho DualSense), e o degrau em que se está é um.
+    palavra veio com a aba aberta: *"dois botões ligados no modo"*. Desde
+    08/10/2026 o Steam Input é um dos dois botões do Desligado, com o Nativo.
 
-    A MORDIDA: apague o `if steam: aceso = ""` de `a01_jogar._estado_da_tela`
-    e a primeira asserção reprova — os dois voltam a acender juntos.
+    A MORDIDA: em `a01_jogar._estado_da_tela`, acenda o Nativo sem olhar o
+    Steam Input e a primeira asserção reprova — os dois voltam a acender juntos.
     """
     _ponte_de_pe()
 
@@ -857,14 +861,13 @@ def test_com_a_ponte_de_pe_so_o_steam_input_acende(lar) -> None:
     ("dualsense", True, "navegacao"),
 ])
 def test_fora_do_degrau_4_acende_o_chip_de_verdade(lar, caminho, desktop, quem) -> None:
-    """Sobre o Xbox, ou na Navegação, o degrau 4 não está de pé.
+    """Com o Hefesto Ligado, sobre o Xbox ou na Navegação, o Steam Input não acende.
 
     A lista dela e o vdf dizem Steam Input para o jogo, e o chip dele NÃO
-    acende: a ponte da escada é gamepad + DualSense + Steam Input, e a tela
-    mostra o degrau em que se está. A MORDIDA: em `a01_jogar._estado_da_tela`,
-    pergunte `_steam_input_da_tela` sem a guarda do caminho (a comparação com
-    a linha do «Steam Input» em `o_que_o_chip_faz`) e o Steam Input volta a
-    acender aqui, apagando o chip que está de verdade no comando.
+    acende: desde 08/10/2026 ele é botão do Desligado. A MORDIDA: em
+    `a01_jogar._estado_da_tela`, pergunte `_steam_input_da_tela` sem a guarda
+    do interruptor e o Steam Input volta a acender aqui, apagando o chip que
+    está de verdade no comando.
     """
     _ponte_de_pe()
 
@@ -880,7 +883,7 @@ def test_o_chip_do_steam_input_tem_UM_endereco_proprio_e_cravado() -> None:  # n
     from hefesto_dualsense4unix.interface import aba01, onde
 
     por_campo = collections.Counter(
-        aba01._campo_do_chip(m) for m in aba01.MODOS)
+        aba01._campo_do_chip(m) for m in aba01.MODOS + aba01.DO_DESLIGADO)
     assert por_campo[aba01.CAMPO_DO_STEAM_INPUT] == 1, (
         f"esperava UM chip em `{aba01.CAMPO_DO_STEAM_INPUT}` e a tabela dá "
         f"{por_campo[aba01.CAMPO_DO_STEAM_INPUT]} (de {len(aba01.MODOS)} "

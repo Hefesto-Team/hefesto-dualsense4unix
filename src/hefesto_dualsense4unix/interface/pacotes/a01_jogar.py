@@ -951,6 +951,19 @@ TTL_DO_STEAM_INPUT_S = 20.0
 #: O VALOR QUE ACENDE O CHIP. É a `chave` do chip em `painel.CHIPS_DA_ESCADA`,
 CHIP_DO_STEAM_INPUT = "steam"
 
+#: O OUTRO BOTÃO DO DESLIGADO — NO-DESLIGADO-A-STEAM-NAO-SE-METE-E-O-JOGO-MANDA-01,
+#: 08/10/2026. Não é degrau da escada (o Nativo é o Hefesto FORA do meio), por
+#: isso a chave e o rótulo moram aqui, e o gerador (`aba01.DO_DESLIGADO`) os lê.
+CHIP_DO_NATIVO = "nativo"
+ROTULO_DO_NATIVO = "Nativo"
+
+#: OS DOIS BOTÕES DO DESLIGADO, e o que cada um faz com a lista do Steam Input.
+#: *«Desligar o hefesto = Nativo na origem. Steam Input sai de Ligado.»* — ela,
+#: 08/10/2026. Os dois são o modo `native`; o que os separa é o jogo da vez
+#: entrar (Steam Input) ou sair (Nativo) da lista. O Steam Input continua lendo
+#: o `steam_input` da ponte dele em `painel.CHIPS_DA_ESCADA`.
+CHIPS_DO_DESLIGADO: tuple[str, ...] = (CHIP_DO_NATIVO, CHIP_DO_STEAM_INPUT)
+
 
 class LinhaDaFileira(NamedTuple):
     """O que o clique num chip da fileira faz — uma linha de :func:`o_que_o_chip_faz`."""
@@ -972,8 +985,16 @@ def o_que_o_chip_faz(chave: str) -> LinhaDaFileira:
     | --- | --- | --- | --- |
     | Sony DualSense | gamepad | dualsense | tira |
     | Xbox | gamepad | xbox | tira |
-    | Steam Input | gamepad | dualsense | põe |
     | Navegação | desktop | — | tira |
+    | Nativo (Desligado) | native | — | tira |
+    | Steam Input (Desligado) | native | — | põe |
+
+    O STEAM INPUT SAIU DO LIGADO — NO-DESLIGADO-A-STEAM-NAO-SE-METE-E-O-JOGO-
+    MANDA-01, 08/10/2026: *«Desligar o hefesto = Nativo na origem. Steam Input
+    sai de Ligado.»* Ele e o Nativo são os dois botões do Desligado, e os dois
+    são o modo `native` (:data:`CHIPS_DO_DESLIGADO`). Até aqui o Steam Input
+    era o degrau 4 da escada (gamepad + DualSense + Steam Input), que continua
+    na `ponte_escada.ESCADA` para a escada automática, mas não é mais botão.
 
     O QUE CADA CLIQUE FAZ NÃO DEPENDE DO CHIP DE ANTES — é a regra inteira. A
     primeira cura desta sprint perguntava de onde ela vinha (o «Xbox» só
@@ -990,12 +1011,17 @@ def o_que_o_chip_faz(chave: str) -> LinhaDaFileira:
     regra, `virtual_pad.caminho_resolvido` (*"sem escolha, o que sai da
     máscara"*), e não uma coincidência de nomes.
     """
+    from hefesto_dualsense4unix.app.actions.mode_transition import MODE_NATIVE
     from hefesto_dualsense4unix.integrations.virtual_pad import caminho_resolvido
 
+    if chave == CHIP_DO_NATIVO:
+        return LinhaDaFileira(MODE_NATIVE, None, False)
     chip = next((c for c in _painel().CHIPS_DA_ESCADA if c.chave == chave), None)
     if chip is None or chip.ponte is None:
         raise ValueError(f"modo: {chave!r} não é chip da fileira desta aba")
     ponte = chip.ponte
+    if chave in CHIPS_DO_DESLIGADO:
+        return LinhaDaFileira(MODE_NATIVE, None, bool(ponte.steam_input))
     if chip.modo:
         return LinhaDaFileira(str(chip.modo), None, bool(ponte.steam_input))
     return LinhaDaFileira(str(ponte.kind),
@@ -1288,15 +1314,14 @@ def _estado_da_tela(state: dict[str, Any]) -> dict[str, str]:
     ligado = _painel().hefesto_ligado(state)
     aceso = _chip_do_caminho(state)
 
-    # da escada (`ponte_escada.ESCADA[3]`: gamepad + DualSense + Steam Input), e
-    # e o «Sony DualSense» apaga. Sobre o Xbox ou na Navegação o degrau 4 não
+    # NO DESLIGADO, O NATIVO OU O STEAM INPUT — NO-DESLIGADO-A-STEAM-NAO-SE-METE-
+    # E-O-JOGO-MANDA-01, 08/10/2026. Os dois são o modo `native`; acende o Steam
+    # Input quando o jogo da vez está na lista dela, e o Nativo nos outros casos.
+    # No Ligado o Steam Input não é mais botão, e a lista não acende nada.
     steam = ""
-    sob = o_que_o_chip_faz(CHIP_DO_STEAM_INPUT)
-    embaixo = o_que_o_chip_faz(aceso) if aceso else None
-    if embaixo is not None and (embaixo.modo, embaixo.caminho) == (sob.modo, sob.caminho):
+    if ligado is False:
         steam = _steam_input_da_tela(state)
-    if steam:
-        aceso = ""
+        aceso = "" if steam else CHIP_DO_NATIVO
     return {
         "hef-posicao": "" if ligado is None else ("ligado" if ligado else "desligado"),
         "modo-aceso": aceso,
@@ -1548,6 +1573,8 @@ def _faixa_do_pendente(state: dict[str, Any]) -> tuple[str, str]:
 
 def _rotulo_do_chip(chave: str) -> str:
     """A palavra aprovada pelo usuário para o chip, de `painel.CHIPS_DA_ESCADA`."""
+    if chave == CHIP_DO_NATIVO:
+        return ROTULO_DO_NATIVO
     return next((str(c.rotulo) for c in _painel().CHIPS_DA_ESCADA
                  if c.chave == chave), chave)
 
@@ -1830,6 +1857,22 @@ def modo_xbox(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None
     return _o_clique_da_fileira(ctx, o, p, "xbox")
 
 
+@gesto("01-jogar.html", "modo-nativo",
+       grava="o modo no perfil ativo, pelo native.mode.set (o daemon grava), e "
+             "remove_appid_from_steam_input_allowlist")
+def modo_nativo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """"Nativo": o Hefesto fora do meio, e a Steam fora do jogo da vez.
+
+    NO-DESLIGADO-A-STEAM-NAO-SE-METE-E-O-JOGO-MANDA-01, 08/10/2026: *«Desligado
+    seria garantir que a steam não se mete e o jogo manda.»* O clique é o mesmo
+    de toda a fileira (:func:`_o_clique_da_fileira`): o modo `native`, o jogo da
+    vez fora da lista do Steam Input e o `localconfig.vdf` relido. Com a Steam
+    aberta a escrita espera, e o guarda do vdf completa quando ela fechar; é ele
+    também que tira a Steam de todo jogo fora da lista a cada saída dela.
+    """
+    return _o_clique_da_fileira(ctx, o, p, CHIP_DO_NATIVO)
+
+
 #     steam_launch_options.add_appid_to_steam_input_allowlist  a vontade dela
 #     steam_launch_options.with_steam_closed                 fechar e reabrir
 NOTA_DA_ESCOLHA = "escolhido na aba Jogar: usar os controles da própria Steam"
@@ -1973,14 +2016,12 @@ def modo_steam(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | Non
     escrevesse para a MÁQUINA aplicaria silenciosamente ao jogo que por acaso
     estivesse aberto — que é a `CAMINHO-CONTAGIO-01` repetida com outro campo.
 
-    **O CAMINHO É O DA PONTE DELE** — O-MODO-QUE-NAO-SAI-DO-STEAM-INPUT-01,
-    23/09/2026. O degrau 4 da `ESCADA` é gamepad + DualSense + Steam Input, com
-    `recria_vpad=False`: o Steam Input senta EM CIMA do caminho DualSense. O
-    clique manda esse caminho (:func:`o_que_o_chip_faz`), e é o que faz o chip
-    acender vindo do «Xbox» ou da «Navegação». O `Chip.caminho` de `painel`
-    continua vazio, e não é gosto: o terceiro termo da `Ponte` já tem casa no
-    disco — o `steam_input_apps.txt` e o carimbo `PonteConfirmada.steam_input`
-    —, e escrevê-lo no `mode` criaria o segundo dono de um valor que já tem um.
+    **É UM BOTÃO DO DESLIGADO** — NO-DESLIGADO-A-STEAM-NAO-SE-METE-E-O-JOGO-
+    MANDA-01, 08/10/2026: *«Steam Input sai de Ligado.»* O clique manda o modo
+    `native` (:func:`o_que_o_chip_faz`) e põe o jogo da vez na lista; o Nativo,
+    o outro botão do Desligado, o tira. O terceiro termo da `Ponte` continua
+    com a casa dele no disco — o `steam_input_apps.txt` e o carimbo
+    `PonteConfirmada.steam_input` —, e não vai ao `mode`.
 
     **O CLIQUE PÕE, SEMPRE — não é mais interruptor.** FATO SUBSTITUÍDO: até
     22/09 o sentido saía da ponte do jogo da vez (de pé desligava, fora

@@ -124,7 +124,7 @@ def _mascaras_dos_cartoes(ctx: Contexto) -> list[str]:
     [
         (VIVO_NAVEGACAO, "ligado", "navegacao"),
         (VIVO_GAMEPAD_XBOX, "ligado", "xbox"),
-        (VIVO_NATIVO, "desligado", ""),
+        (VIVO_NATIVO, "desligado", "nativo"),
     ],
 )
 def test_o_interruptor_e_o_chip_saem_do_daemon(
@@ -245,12 +245,17 @@ def test_a_leitura_e_do_produto_e_nao_uma_copia(monkeypatch: Any) -> None:
     from hefesto_dualsense4unix.app.actions import home_actions
 
     monkeypatch.setattr(painel, "hefesto_ligado", lambda _s: False)
+    fora = aba.pacote(_com_mesa(VIVO_NAVEGACAO))
+    assert fora["hef-posicao"] == "desligado", (
+        "o pacote deixou de usar `painel.hefesto_ligado` — a posição virou cópia")
+
+    # NO DESLIGADO os botões são o Nativo e o Steam Input (08/10/2026); o chip de
+    # caminho se mede com o interruptor em Ligado.
+    monkeypatch.setattr(painel, "hefesto_ligado", lambda _s: True)
     monkeypatch.setattr(painel, "modo_vivo", lambda _s: "gamepad")
     monkeypatch.setattr(painel, "caminho_vivo", lambda _s: "xbox")
     monkeypatch.setattr(home_actions, "mascara_do_aparelho", lambda _s: "dualsense")
     fora = aba.pacote(_com_mesa(VIVO_NAVEGACAO))
-    assert fora["hef-posicao"] == "desligado", (
-        "o pacote deixou de usar `painel.hefesto_ligado` — a posição virou cópia")
     assert fora["modo-aceso"] == "xbox", (
         "o pacote deixou de usar `painel.modo_vivo` + `painel.caminho_vivo` — ou "
         "voltou a acender o chip de modo pela máscara")
@@ -534,7 +539,8 @@ def test_a_pagina_publica_os_enderecos_na_quantidade_certa(publicado: bool) -> N
                     "--publicar-enderecos 01")
     corpo = onde.pagina("01-jogar.html", publicado=publicado).read_text(encoding="utf-8")
     # exclusivo dos outros — «Sony DualSense» e «Steam Input» são verdade ao
-    por_campo = collections.Counter(aba01._campo_do_chip(m) for m in aba01.MODOS)
+    por_campo = collections.Counter(
+        aba01._campo_do_chip(m) for m in aba01.MODOS + aba01.DO_DESLIGADO)
     esperado = {
         "hef-posicao": len(aba01.INTERRUPTOR),
         "modo-aceso": por_campo["modo-aceso"],
