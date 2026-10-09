@@ -1089,15 +1089,15 @@ class Passo:
         self.daemon = daemon
         self.motor = motor
         self.dedo = motor.borda_do_dedo
-        self.receita: Receita = DESLIGADA
+        self.receita_vigente: Receita = DESLIGADA
         self.jogo = False
         self._lida_em = float("-inf")
 
     def receita_de_agora(self, agora: float) -> Receita:
         if agora - self._lida_em >= RELEITURA_DA_RECEITA_S:
             self._lida_em = agora
-            self.receita = receita_ativa(self.daemon)
-        return self.receita
+            self.receita_vigente = receita_ativa(self.daemon)
+        return self.receita_vigente
 
     def __call__(self, agora: float) -> int:
         receita = self.receita_de_agora(agora)
@@ -1140,10 +1140,10 @@ async def tato_vivo_loop(daemon: DaemonProtocol, motor: TatoVivo) -> None:
         motor.ouvido = OuvidoDoJogo(
             lambda: (
                 motor.ligado
-                and (passo.receita.lado_do_som or passo.receita.som_no_controle)
+                and (passo.receita_vigente.lado_do_som or passo.receita_vigente.som_no_controle)
                 and passo.jogo
             ),
-            recortar=lambda: passo.receita.som_no_controle,
+            recortar=lambda: passo.receita_vigente.som_no_controle,
         )
     try:
         while not daemon._is_stopping():

@@ -560,6 +560,7 @@ PORTAS: dict[tuple[str, str], str] = {
     ("integrations/quem_ouve_o_microfone.py", "_rodar"): "eleicao_de_microfone._rodar",
     ("integrations/teste_do_microfone.py", "fonte_do_controle"):
         "teste_do_microfone.fonte_do_controle",
+    ("integrations/transiente_do_jogo.py", "rodar_pactl"): "alto_falante_bt._rodar",
     ("interface/pacotes/a02_controles.py", "_ler_pelo_dono"): "audio_saida.rodar_leitura",
 }
 
