@@ -10,6 +10,10 @@ O que se mede, com cabo e com rádio e com quatro externos na mesma lista:
   um símbolo que EXISTE no sprite da página, e o nome do modelo mora só no `title` do quadrado;
 * a marca sem desenho não ganha quadrado (a tela não afirma um modelo que ninguém desenhou);
 * o Xbox é desenho nosso: o arquivo existe, é só traçado e não referencia nada de fora.
+
+Item 2, o «Acrescentar hub» com dono (a face B-hub): o botão abre a pergunta curta (em qual entrada,
+nome opcional, Acrescentar/Cancelar) e o ato real é da `LogicaDoMapa`, que grava pelo mesmo caminho
+dos outros gestos do mapa (`machine_declare`, o gabinete inteiro).
 """
 from __future__ import annotations
 
@@ -119,3 +123,138 @@ def test_o_xbox_e_desenho_nosso_sem_nada_de_fora() -> None:
             assert texto.count("http://") == texto.count("http://www.w3.org/2000/svg"), texto
         else:
             assert fora not in texto, f"o desenho nosso referencia `{fora}`"
+
+
+# ---------------------------------------------------------------- item 2: o hub pergunta a entrada
+
+GABINETE = {
+    "faces": [{"nome": "Traseira", "portas": ["1", "2"], "perto": False, "alto": False},
+              {"nome": "Frontal", "portas": ["3"], "perto": True, "alto": False}],
+    "portas": {"1": {"caminho": None}, "2": {"caminho": None}, "3": {"caminho": None}},
+}
+
+
+class _Ponte:
+    """Guarda o que foi pedido ao daemon. Responde a qualquer nome, de propósito."""
+
+    def __init__(self) -> None:
+        self.chamadas: list[tuple[str, tuple, dict]] = []
+
+    def __getattr__(self, nome: str):
+        def registrar(*args: Any, **kwargs: Any):
+            self.chamadas.append((nome, args, kwargs))
+            return True
+        return registrar
+
+
+@pytest.fixture
+def logica(monkeypatch: pytest.MonkeyPatch):
+    from hefesto_dualsense4unix.interface.logica_do_mapa import LogicaDoMapa
+    from hefesto_dualsense4unix.utils.maquina import MapaDaMesa
+
+    nova = LogicaDoMapa(MapaDaMesa.model_validate(GABINETE))
+    monkeypatch.setattr(conexoes, "_LOGICA", nova, raising=False)
+    return nova
+
+
+def _gesto(nome: str):
+    import pacotes
+
+    fn = pacotes.gesto_da_pagina("08-conexoes.html", nome)
+    assert fn is not None, f"08-conexoes.html:{nome} ficou sem dono"
+    return fn
+
+
+def _ctx() -> Contexto:
+    return Contexto(state={"active_profile": "regua"}, mesa=[], conectados=[], estados={})
+
+
+def _o_mapa_vivo() -> str:
+    return conexoes._html_do_mapa()
+
+
+def test_o_hub_acrescentado_nasce_filha_da_entrada_escolhida_com_o_nome(logica) -> None:
+    assert logica.acrescentar_hub("2", "Hub da mesa") == "2a"
+    assert logica.portas["2a"] == {"caminho": None, "filha_de": "2", "nome": "Hub da mesa"}
+    # sem nome é hub sem nome; o nome que é só o número da entrada não vale
+    assert logica.acrescentar_hub("3", "") == "3a" and "nome" not in logica.portas["3a"]
+    assert logica.acrescentar_hub("1", "Entrada 1") == "1a" and "nome" not in logica.portas["1a"]
+
+
+def test_nome_acima_do_limite_recusa_e_nao_acrescenta_nada(logica) -> None:
+    from hefesto_dualsense4unix.utils.rotulo_da_entrada import MAXIMO_DO_NOME_DA_ENTRADA
+
+    logica.perguntar_o_hub()
+    assert logica.acrescentar_hub("2", "x" * (MAXIMO_DO_NOME_DA_ENTRADA + 1)) == ""
+    assert "2a" not in logica.portas and logica.perguntando_o_hub is True
+
+
+def test_hub_so_nas_entradas_de_numero_sem_neta(logica) -> None:
+    assert logica.entradas_para_o_hub() == ["1", "2", "3"]
+    assert logica.acrescentar_hub("2a") == "" and logica.acrescentar_hub("9") == ""
+
+
+def test_o_gesto_abre_a_pergunta_sem_falar_com_o_daemon(logica) -> None:
+    p = _Ponte()
+    _gesto("novo-hub")(_ctx(), {}, p)
+    assert logica.perguntando_o_hub is True and p.chamadas == []
+    html = _o_mapa_vivo()
+    assert 'aria-expanded="true"' in html and 'id="hub-pergunta"' in html
+    assert re.findall(r'<option value="(\d+)">', html) == ["1", "2", "3"]
+
+
+def test_o_cancelar_fecha_a_pergunta_e_nao_grava(logica) -> None:
+    p = _Ponte()
+    _gesto("novo-hub")(_ctx(), {}, p)
+    _gesto("novo-hub-cancelar")(_ctx(), {}, p)
+    assert logica.perguntando_o_hub is False and p.chamadas == []
+    assert "hub-pergunta" not in _o_mapa_vivo() and not logica.filhas_de("2")
+
+
+def test_o_acrescentar_grava_o_gabinete_inteiro_com_o_hub_dentro(logica) -> None:
+    p = _Ponte()
+    _gesto("novo-hub")(_ctx(), {}, p)
+    _gesto("novo-hub-gravar")(
+        _ctx(), {"forma": {"hub-entrada": "2", "hub-nome": "Hub da mesa"}}, p)
+    assert [c[0] for c in p.chamadas] == ["machine_declare"]
+    mapa = p.chamadas[0][1][0]["mapa"]
+    assert mapa["faces"] and mapa["portas"]["2a"] == {
+        "caminho": None, "filha_de": "2", "nome": "Hub da mesa"}
+    assert logica.perguntando_o_hub is False
+    html = _o_mapa_vivo()
+    assert "hub-pergunta" not in html and "Hub da mesa" in html
+    assert "ligado na entrada <b>2</b>" in html
+
+
+def test_o_acrescentar_recusa_dizendo_e_nao_grava(logica) -> None:
+    from hefesto_dualsense4unix.utils.rotulo_da_entrada import MAXIMO_DO_NOME_DA_ENTRADA
+
+    p = _Ponte()
+    _gesto("novo-hub")(_ctx(), {}, p)
+    for forma in ({}, {"hub-entrada": "2", "hub-nome": "x" * (MAXIMO_DO_NOME_DA_ENTRADA + 1)},
+                  {"hub-entrada": "9", "hub-nome": ""}):
+        with pytest.raises((ValueError, RuntimeError)) as caiu:
+            _gesto("novo-hub-gravar")(_ctx(), {"forma": forma}, p)
+        assert len(str(caiu.value).strip()) >= 20, forma
+    assert p.chamadas == [] and logica.perguntando_o_hub is True
+
+
+def test_sem_entrada_no_desenho_a_pergunta_recusa_dizendo(monkeypatch: pytest.MonkeyPatch) -> None:
+    from hefesto_dualsense4unix.interface.logica_do_mapa import LogicaDoMapa
+    from hefesto_dualsense4unix.utils.maquina import MapaDaMesa
+
+    monkeypatch.setattr(conexoes, "_LOGICA", LogicaDoMapa(MapaDaMesa()), raising=False)
+    with pytest.raises(RuntimeError, match="entrada"):
+        _gesto("novo-hub")(_ctx(), {}, _Ponte())
+
+
+def test_o_desenho_da_pergunta_tem_os_quatro_elementos_e_o_limite_do_nome() -> None:
+    pagina = _a_pagina()
+    corpo = re.search(r'<div class="hub-pergunta" id="hub-pergunta">(.*?)</div>\s*<div class="mm-grade',
+                      pagina, re.S)
+    assert corpo, "a pergunta do hub saiu do mockup"
+    texto = corpo.group(1)
+    assert 'data-linha="hub-entrada"' in texto and 'data-linha="hub-nome"' in texto
+    assert 'maxlength="24"' in texto and "Nome do hub (opcional)" in texto
+    assert 'data-gesto="novo-hub-gravar" data-hef-forma="hub-pergunta"' in texto
+    assert 'data-gesto="novo-hub-cancelar"' in texto

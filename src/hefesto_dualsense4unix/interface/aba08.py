@@ -815,6 +815,16 @@ CSS = CSS_GLIFO + CSS_POPUP + """
             gap:5px;align-items:start;justify-content:start}
   /* o hub carrega uma legenda embaixo, então a célula dele é mais larga */
   .mm-grade-hubs{grid-template-columns:repeat(3,minmax(0,148px))}
+  .mm-hub-nome{font-size:11px;font-weight:600;color:var(--texto-suave);padding-left:2px;
+               overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* a pergunta curta do «Acrescentar hub» — uma linha, com a altura dos botões da face */
+  .hub-pergunta{display:flex;align-items:center;gap:8px;margin:0 0 8px;padding:5px 7px;
+                border:1px dashed var(--border-forte);border-radius:7px}
+  .hub-rot{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--texto-suave)}
+  .hub-sel{height:var(--h-acao);padding:0 7px;border-radius:7px;background:var(--app-bg);
+           border:1px solid var(--border-forte);color:var(--fg);font:inherit;font-size:11.5px}
+  .hub-nome{flex:1 1 auto;min-width:0;width:auto}
+  .hub-pergunta .btn{flex:0 0 auto}
   .mm-ligado{font-size:10px;color:var(--texto-mudo);line-height:1.4;padding-left:2px}
   .mm-ligado b{color:var(--texto-suave);font-weight:600}
   .mm-cel{display:flex;flex-direction:column;gap:4px}
@@ -1488,21 +1498,6 @@ def celula(n):
 FACE_DA_ENTRADA = {n: nome for nome, numeros in FACES for n in numeros}
 
 
-def face_dos_hubs():
-    """A terceira face: o que não é buraco do gabinete."""
-    if not EXTENSAO:
-        return ""
-    celulas = "".join(
-        f'<div class="mm-cel">{quadrado(filha, esticada=True)}'
-        f'<span class="mm-ligado">ligado na entrada <b>{mae}</b>'
-        f' <span class="mudo">· {FACE_DA_ENTRADA[mae]}</span></span></div>'
-        for mae, filha in EXTENSAO.items())
-    return f'''            <div class="mm-face">
-              <div class="mm-face-cab"><span class="mm-face-nome" title="{_aba_conexoes.DICA_DOS_HUBS}">Hubs e extensões</span></div>
-              <div class="mm-grade mm-grade-hubs">{celulas}</div>
-            </div>'''
-
-
 #: O DESENHO É DO PRODUTO desde 01/09/2026 — `interface/conexoes.html_do_mapa`.
 MAPA_DESENHADO = _aba_conexoes.html_do_mapa(
     [{"nome": nome, "portas": numeros} for nome, numeros in FACES],
@@ -1514,7 +1509,9 @@ MAPA_DESENHADO = _aba_conexoes.html_do_mapa(
              "nova_entrada": MAPA["ROTULO_NOVA_ENTRADA"]},
     dicas={"esticada": DICA_EXTENSAO,
            "enumera": DICA_ENUMERA,
-           "nova_entrada": _aba_conexoes.DICA_NOVA_ENTRADA})
+           "nova_entrada": _aba_conexoes.DICA_NOVA_ENTRADA},
+    #: A pergunta do «Acrescentar hub» nasce ABERTA no desenho: é a face que ela escolheu (B-hub).
+    pergunta={"aberta": True, "entradas": [n for _nome, ns in FACES for n in ns]})
 
 
 RESPOSTAS_DA_ALTURA = (("acima", "Sim"), ("abaixo", "Não"), ("", "Não sei"))

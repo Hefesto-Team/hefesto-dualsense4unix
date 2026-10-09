@@ -9,6 +9,11 @@ from hefesto_dualsense4unix.integrations.censo_do_barramento import Aparelho, Ce
 from hefesto_dualsense4unix.utils.i18n import _
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.maquina import MapaDaMesa
+from hefesto_dualsense4unix.utils.rotulo_da_entrada import (
+    FRASE_DO_NOME_COMPRIDO,
+    MAXIMO_DO_NOME_DA_ENTRADA,
+    nome_que_vale,
+)
 
 logger = get_logger(__name__)
 
@@ -31,6 +36,13 @@ ROTULO_FECHAR = "Fechar"
 ROTULO_VAZIA = "vazia"
 ROTULO_POR_EXTENSAO = "por extensão"
 NOME_DA_FACE_EM_BRANCO = "Nome da face"
+ROTULO_NOVO_HUB = "Acrescentar hub"
+ROTULO_LIGADO_NA_ENTRADA = "Ligado na entrada"
+NOME_DO_HUB_EM_BRANCO = "Nome do hub (opcional)"
+ROTULO_ACRESCENTAR = "Acrescentar"
+ROTULO_CANCELAR = "Cancelar"
+DICA_NOVO_HUB = "Pergunta em qual entrada o hub está ligado e acrescenta a face dele."
+FRASE_DO_HUB_COMPRIDO = FRASE_DO_NOME_COMPRIDO.replace("da entrada", "do hub")
 
 DICA_JA_COLOCADO = "Você já colocou este aparelho {onde}."
 DICA_ENUMERA = "O sistema enumera este aparelho como {c}."
@@ -96,6 +108,8 @@ class LogicaDoMapa:
             numero: dict(valor) for numero, valor in bruto.get("portas", {}).items()
         }
         self.escolhido: str = ""
+        #: A pergunta curta do «Acrescentar hub» está aberta? É estado de tela, não vai ao disco.
+        self.perguntando_o_hub: bool = False
 
 
     def como_documento(self) -> dict[str, Any]:
@@ -171,6 +185,37 @@ class LogicaDoMapa:
             self.portas[nova] = {"caminho": None, "filha_de": numero}
             return nova
         return ""
+
+    def entradas_para_o_hub(self) -> list[str]:
+        """As entradas onde um hub pode estar ligado: as de número, sem letra (não há neta)."""
+        return sorted((n for n in self._todas_as_entradas() if n.isdigit()), key=int)
+
+    def perguntar_o_hub(self) -> bool:
+        """Abre a pergunta do hub. Sem entrada no desenho não há onde ligar: recusa."""
+        self.perguntando_o_hub = bool(self.entradas_para_o_hub())
+        return self.perguntando_o_hub
+
+    def desistir_do_hub(self) -> None:
+        """Fecha a pergunta sem acrescentar nada."""
+        self.perguntando_o_hub = False
+
+    def acrescentar_hub(self, numero: str, nome: str = "") -> str:
+        """Liga um hub nesta entrada: a filha dela (`15` vira `15a`), com o nome, se houver.
+
+        Nome acima do limite recusa e a pergunta continua aberta. O nome que é só o
+        número da entrada não vale e não é gravado (`nome_que_vale`).
+        """
+        limpo = " ".join(str(nome or "").split())
+        if len(limpo) > MAXIMO_DO_NOME_DA_ENTRADA:
+            return ""
+        nova = self.acrescentar_extensao(numero)
+        if not nova:
+            return ""
+        valido = nome_que_vale(nova, limpo)
+        if valido:
+            self.portas[nova]["nome"] = valido
+        self.perguntando_o_hub = False
+        return nova
 
     def acrescentar_entrada(self, indice: int) -> str:
         """Acrescenta a próxima entrada livre a esta face."""

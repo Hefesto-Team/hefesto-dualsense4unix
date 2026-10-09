@@ -1110,7 +1110,11 @@ def _html_do_mapa() -> str:
                  "por_extensao": mm.ROTULO_POR_EXTENSAO,
                  "nova_entrada": mm.ROTULO_NOVA_ENTRADA},
         dicas={"esticada": mm.DICA_EXTENSAO, "enumera": mm.DICA_ENUMERA,
-               "nova_entrada": _tela.DICA_NOVA_ENTRADA})
+               "nova_entrada": _tela.DICA_NOVA_ENTRADA},
+        nomes={n: str(p["nome"]) for n, p in logica.portas.items()
+               if p.get("filha_de") and p.get("nome")},
+        pergunta={"aberta": logica.perguntando_o_hub,
+                  "entradas": logica.entradas_para_o_hub()})
 
 
 def _html_dos_aparelhos() -> str:
@@ -3068,6 +3072,44 @@ def nova_extensao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise RuntimeError(
             f"não dá para pendurar uma extensão na {numero}: ou ela não está no "
             f"desenho, ou já é filha de outra — não há neta.")
+    _gravar_o_mapa(p)
+
+
+@gesto("08-conexoes.html", "novo-hub")
+def novo_hub(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """Abre a pergunta curta do hub: em qual entrada ele está, e o nome, se ela quiser.
+
+    NÃO GRAVA: abrir é estado de tela. O que vai ao disco é o `novo-hub-gravar`.
+    """
+    if not _logica_do_mapa().perguntar_o_hub():
+        raise RuntimeError(
+            "não há entrada no desenho do gabinete onde ligar um hub — acrescente "
+            "uma entrada a uma face antes.")
+
+
+@gesto("08-conexoes.html", "novo-hub-cancelar")
+def novo_hub_cancelar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """Fecha a pergunta do hub sem acrescentar nada."""
+    _logica_do_mapa().desistir_do_hub()
+
+
+@gesto("08-conexoes.html", "novo-hub-gravar", grava="machine_declare")
+def novo_hub_gravar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """Liga o hub na entrada escolhida: nasce a filha dela, com o nome, e vai ao disco."""
+    from hefesto_dualsense4unix.interface import logica_do_mapa as mm
+
+    forma_lida = o.get("forma")
+    forma: dict[str, Any] = forma_lida if isinstance(forma_lida, dict) else {}
+    numero = str(forma.get("hub-entrada") or "").strip()
+    if not numero:
+        raise ValueError("a pergunta não disse em qual entrada o hub está ligado.")
+    nome = str(forma.get("hub-nome") or "")
+    if len(" ".join(nome.split())) > mm.MAXIMO_DO_NOME_DA_ENTRADA:
+        raise RuntimeError(mm.FRASE_DO_HUB_COMPRIDO)
+    if not _logica_do_mapa().acrescentar_hub(numero, nome):
+        raise RuntimeError(
+            f"não dá para ligar um hub {_a_entrada_na_frase(numero, em=True)}: ou ela não "
+            f"está no desenho, ou já é filha de outra — não há neta.")
     _gravar_o_mapa(p)
 
 
@@ -6343,6 +6385,9 @@ RAZAO_DO_SEM_ECO: dict[str, str] = {
     "nova-entrada": _O_MAPA,
     "nova-extensao": _O_MAPA,
     "nova-face": _O_MAPA,
+    "novo-hub": "só abre a pergunta do hub: é estado de tela e não chama a ponte",
+    "novo-hub-cancelar": "só fecha a pergunta do hub: é estado de tela e não chama a ponte",
+    "novo-hub-gravar": _O_MAPA,
     "adaptador-renomear": _NO_MAQUINA,
     "aparelho-renomear": _NO_BLUEZ,
     "entrada-face": _NO_MAQUINA,

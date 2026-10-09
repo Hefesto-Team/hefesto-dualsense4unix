@@ -421,8 +421,8 @@ RESPOSTAS_DO_VIZINHO = (
 
 
 DICA_NOVA_ENTRADA = "Cria uma entrada nova nesta face, com o próximo número livre."
-#: A face «Hubs e extensões» só MOSTRA o que foi declarado (`nova-extensao`): o botão
-#: «Acrescentar hub» saiu em 08/10/2026, porque a `LogicaDoMapa` não acrescenta hub.
+#: A face «Hubs e extensões» está SEMPRE no desenho, com o botão «Acrescentar hub»: ele abre a
+#: pergunta curta (em qual entrada, nome opcional) e o ato é `LogicaDoMapa.acrescentar_hub`.
 DICA_DOS_HUBS = (
     "O sistema não enxerga hubs nem extensões — quem diz onde estão é você."
 )
@@ -436,8 +436,13 @@ def html_do_mapa(
     veredito_de: Any,
     rotulos: Mapping[str, str],
     dicas: Mapping[str, str],
+    nomes: Mapping[str, str] | None = None,
+    pergunta: Mapping[str, Any] | None = None,
 ) -> str:
     """As faces do gabinete, com um quadrado por entrada.
+
+    `nomes` é `filha -> nome` do hub, quando ela deu um; `pergunta` é a pergunta do
+    «Acrescentar hub» (`{"aberta": bool, "entradas": [numero, …]}`), que é estado de tela.
 
     `faces` é `[{"nome": …, "portas": [numero, …]}, …]` — a forma do
     `MapaDaMesa`, para que o chamador não precise traduzir nada.
@@ -495,16 +500,36 @@ def html_do_mapa(
               <div class="mm-grade">{grade}</div>
             </div>''')
 
-    if extensoes:
-        celulas = "".join(
-            f'<div class="mm-cel">{quadrado(filha, esticada=True)}'
-            f'<span class="mm-ligado">ligado na entrada <b>{_e(mae)}</b>'
-            f' <span class="mudo">· {_e(face_da_entrada.get(mae, ""))}</span></span></div>'
-            for mae, filha in extensoes.items())
-        blocos.append(
-            f'''            <div class="mm-face" data-face="hubs">
+    from hefesto_dualsense4unix.interface import logica_do_mapa as _mm
+
+    nomes = nomes or {}
+    aberta = bool(pergunta and pergunta.get("aberta"))
+    celulas = "".join(
+        f'<div class="mm-cel">{quadrado(filha, esticada=True)}'
+        + (f'<span class="mm-hub-nome">{_e(nomes[filha])}</span>' if nomes.get(filha) else "")
+        + f'<span class="mm-ligado">ligado na entrada <b>{_e(mae)}</b>'
+        f' <span class="mudo">· {_e(face_da_entrada.get(mae, ""))}</span></span></div>'
+        for mae, filha in extensoes.items())
+    pergunta_html = ""
+    if aberta:
+        opcoes = "".join(f'<option value="{_e(n)}">{_e(n)}</option>'
+                         for n in (pergunta or {}).get("entradas", ()))
+        pergunta_html = (
+            f'''
+              <div class="hub-pergunta" id="hub-pergunta">
+                <label class="hub-rot">{_e(_mm.ROTULO_LIGADO_NA_ENTRADA)}
+                  <select class="hub-sel" data-linha="hub-entrada">{opcoes}</select></label>
+                <input class="mm-campo hub-nome" type="text" data-linha="hub-nome"
+                  maxlength="{_mm.MAXIMO_DO_NOME_DA_ENTRADA}" placeholder="{_e(_mm.NOME_DO_HUB_EM_BRANCO)}">
+                <button class="btn" data-gesto="novo-hub-gravar" data-hef-forma="hub-pergunta">{_e(_mm.ROTULO_ACRESCENTAR)}</button>
+                <button class="btn" data-gesto="novo-hub-cancelar">{_e(_mm.ROTULO_CANCELAR)}</button>
+              </div>''')
+    blocos.append(
+        f'''            <div class="mm-face" data-face="hubs">
               <div class="mm-face-cab"><span class="mm-face-nome" '''
-            f'''title="{_e(DICA_DOS_HUBS)}">Hubs e extensões</span></div>
+        f'''title="{_e(DICA_DOS_HUBS)}">Hubs e extensões</span>
+                <button class="btn mini" data-gesto="novo-hub" aria-expanded="{"true" if aberta else "false"}" '''
+        f'''title="{_e(_mm.DICA_NOVO_HUB)}">{_e(_mm.ROTULO_NOVO_HUB)}</button></div>{pergunta_html}
               <div class="mm-grade mm-grade-hubs">{celulas}</div>
             </div>''')
     return "\n".join(blocos)

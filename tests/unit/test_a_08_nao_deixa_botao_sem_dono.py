@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """A 08 não desenha botão que ninguém atende (AS-QUATRO-LINHAS-DA-08-SEM-DONO-01, 08/10/2026).
 
-Os quatro gestos que ficavam sem atendente (`custo-som`, `custo-vibracao`,
-`custo-luz`, `novo-hub`) SAÍRAM do desenho: o som, a vibração e a luz da linha
-viraram marcas que só mostram (`<span data-ligada>`), e a face «Hubs e
-extensões» não tem o botão «Acrescentar hub». Cada caso diz a mordida.
+Os três gestos que ficavam sem atendente (`custo-som`, `custo-vibracao`,
+`custo-luz`) SAÍRAM do desenho: o som, a vibração e a luz da linha viraram marcas que só
+mostram (`<span data-ligada>`). O quarto, `novo-hub`, VOLTOU em 08/10/2026 (A-08-MOSTRA-O-DESENHO…
+-01) com dono: abre a pergunta curta, e o ato é da `LogicaDoMapa`. Cada caso diz a mordida.
 """
 from __future__ import annotations
 
@@ -32,7 +32,8 @@ from tests.unit.test_a_secao_do_radio_transplantada import (  # noqa: F401
 RAIZ = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 
-SAIRAM = ("custo-som", "custo-vibracao", "custo-luz", "novo-hub")
+SAIRAM = ("custo-som", "custo-vibracao", "custo-luz")
+VOLTARAM = ("novo-hub", "novo-hub-gravar", "novo-hub-cancelar")
 
 
 def _gestos(html: str) -> set[str]:
@@ -45,7 +46,7 @@ def test_a_lista_dos_sem_gesto_ficou_vazia() -> None:
     assert a06_navegacao.SEM_GESTO == {}, sorted(a06_navegacao.SEM_GESTO)
 
 
-def test_os_quatro_nao_estao_na_camada_nem_no_registro() -> None:
+def test_os_tres_nao_estao_na_camada_nem_no_registro() -> None:
     """MORDIDA: devolva `("08-conexoes.html", "custo-som"): _T` à tabela da `camada`."""
     for g in SAIRAM:
         assert ("08-conexoes.html", g) not in camada.CAMADA, f"{g} voltou à tabela da camada"
@@ -126,26 +127,34 @@ def test_o_microfone_continua_botao_com_dono(request: pytest.FixtureRequest) -> 
     assert 'data-gesto="custo-mic"' in _campos(request.getfixturevalue("mesa"))["radio-sala"]
 
 
-def test_a_face_dos_hubs_so_mostra_e_nao_tem_o_botao_de_acrescentar() -> None:
-    """MORDIDA: devolva o `<button ... data-gesto="novo-hub">` a `conexoes.html_do_mapa`."""
-    html = tela.html_do_mapa(
-        [{"nome": "Traseira", "portas": [1, 2]}],
-        quem_esta={}, extensoes={"1": "2"}, veredito_de=lambda numero, esticada: ("", numero, ""),
-        rotulos={"vazia": "vazia", "por_extensao": "ext", "nova_entrada": "nova"},
-        dicas={"esticada": "", "enumera": "", "nova_entrada": ""})
-    assert "Hubs e extensões" in html, "a face dos hubs sumiu"
-    assert "Acrescentar hub" not in html and "novo-hub" not in html
-    assert "<button" not in html.split("Hubs e extensões")[1].split("mm-grade")[0]
+def test_os_tres_do_hub_tem_dono_na_camada_e_no_registro() -> None:
+    """MORDIDA: tire `novo-hub-gravar` do `camada.py` ou o `@gesto` dele do pacote."""
+    for g in VOLTARAM:
+        assert ("08-conexoes.html", g) in camada.CAMADA, f"{g} saiu da tabela da camada"
+        assert ("08-conexoes.html", g) in GESTOS, f"{g} ficou sem atendente"
 
 
-def test_a_pagina_da_bancada_nao_tem_os_quatro() -> None:
+def test_a_face_dos_hubs_tem_o_botao_de_acrescentar_com_ou_sem_extensao() -> None:
+    """MORDIDA: faça `html_do_mapa` só desenhar a face dos hubs `if extensoes:` (o defeito de antes)."""
+    for extensoes in ({}, {"1": "1a"}):
+        html = tela.html_do_mapa(
+            [{"nome": "Traseira", "portas": [1, 2]}],
+            quem_esta={}, extensoes=extensoes,
+            veredito_de=lambda numero, esticada: ("", numero, ""),
+            rotulos={"vazia": "vazia", "por_extensao": "ext", "nova_entrada": "nova"},
+            dicas={"esticada": "", "enumera": "", "nova_entrada": ""})
+        assert "Hubs e extensões" in html, "a face dos hubs sumiu"
+        cabecalho = html.split("Hubs e extensões")[1].split("mm-grade")[0]
+        assert 'data-gesto="novo-hub"' in cabecalho and "Acrescentar hub" in cabecalho
+        assert 'aria-expanded="false"' in cabecalho and "hub-pergunta" not in html
+
+
+def test_a_pagina_da_bancada_nao_tem_os_tres_que_sairam() -> None:
     """MORDIDA: rode o gerador com o botão devolvido (`aba08.py`) e regenere o mockup."""
-    from hefesto_dualsense4unix.interface import onde
-
-    pagina = onde.pagina("08-conexoes.html").read_text(encoding="utf-8")
+    pagina = (RAIZ / "mockup" / "08-conexoes.html").read_text(encoding="utf-8")
     achados = _gestos(pagina) & set(SAIRAM)
     assert not achados, f"a bancada voltou a desenhar {sorted(achados)}"
-    assert "Acrescentar hub" not in pagina
+    assert set(VOLTARAM) <= _gestos(pagina), "o desenho perdeu o botão do hub ou a pergunta"
 
 
 def test_a_marca_acesa_se_distingue_da_apagada_e_nao_parece_botao(
