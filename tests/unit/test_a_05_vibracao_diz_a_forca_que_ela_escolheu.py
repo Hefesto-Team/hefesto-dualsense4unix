@@ -58,8 +58,9 @@ AS MORDIDAS, todas com ``cp`` para devolver:
   ``test_o_pacote_emite_o_tremor_que_o_produto_calculou`` reprova;
 * tire ``{DICA_DO_TETO_DA_MESA}`` da dica e regere →
   ``test_as_frases_da_janela_estavel_estao_na_aba`` reprova nomeando qual;
-* tire a guarda ``if vez != _VEZ[0]`` do gesto ``testar`` →
-  ``test_um_segundo_testar_cancela_o_primeiro`` reprova.
+* a ordem do «Testar» e do «Parar» mora na fila de cada controle
+  (``pacotes.despachar``): devolva a ``Thread`` solta por clique →
+  ``test_os_gestos_chegam_na_ordem_do_clique`` reprova.
 
 ONDE ELA MEDE: na **BANCADA**, que é onde o gerador escreve e onde os endereços
 existem. A página publicada só os recebe no ``--publicar 05``, que é ato dela.
