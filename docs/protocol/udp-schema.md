@@ -87,12 +87,12 @@ aspiracional: é o que `daemon/udp_server.py` executa, com teste para cada uma.
 
 | type                  | layout DSX                     | layout Hefesto      | efeito real |
 |-----------------------|--------------------------------|---------------------|-------------|
-| `TriggerUpdate`       | `[idx, side, mode, p1..pN]`    | `[side, preset, …]` | `IController.set_trigger` via os presets de `core/trigger_effects.py`. Modos: ver abaixo. |
+| `TriggerUpdate`       | `[idx, side, mode, p1..pN]`    | `[side, preset, …]` | O preset de `core/trigger_effects.py` vira o bloco do gatilho e vai à **camada do jogo** do controle de destino (`set_game_trigger_for`), como o que o jogo manda pelo pad virtual: o perfil de cada controle fica intacto embaixo e o gesto da pessoa vence até o mod repintar. Modos: ver abaixo. |
 | `RGBUpdate`           | `[idx, r, g, b]`               | idem                | `set_led`, com clamp em 0-255. |
 | `PlayerLED`           | `[idx, b1..b5]` (5 booleanos)  | `[idx, bitmask]`    | `set_player_leds`. Desambiguado por aridade (6 params = DSX). |
 | `MicLED`              | `[idx, MicLEDMode]`            | `[state]`           | `set_mic_led`. `Pulse` (1) **degrada** para aceso, com `udp.mic_led.pulse_degradado`. |
 | `TriggerThreshold`    | `[idx, side, value]`           | `[side, value]`     | **Deadzone do gatilho no gamepad virtual** — ver abaixo. |
-| `ResetToUserSettings` | `[]`                           | `[]`                | **PARCIAL:** desliga os gatilhos e zera as deadzones. Não restaura cor/player-LED/mic. |
+| `ResetToUserSettings` | `[]`                           | `[]`                | **PARCIAL:** solta o gatilho que o DSX pintou (o do perfil volta) e zera as deadzones. Não restaura cor/player-LED/mic. |
 
 `side` aceita `"left"`/`"right"` ou o ordinal do enum `Trigger` (1=Left, 2=Right).
 
@@ -191,7 +191,7 @@ DSX. O que **ainda não** funciona sem adaptação, para não haver ilusão:
 | `controllerIndex != 0` | aplicado no controle primário, com `log.warn` |
 | `MicLED` modo `Pulse` | acende fixo em vez de pulsar |
 | `GetDSXStatus` / qualquer resposta no fio | não há canal de resposta; um mod que espere confirmação do DSX não a recebe |
-| `ResetToUserSettings` | restaura só gatilhos e deadzone |
+| `ResetToUserSettings` | devolve só o gatilho do perfil e a deadzone |
 
 Os modos "prontos" são a lacuna que mais pesa: são a maioria dos atalhos do
 SDK, e é por eles que um mod simples começa.

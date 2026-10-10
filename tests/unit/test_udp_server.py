@@ -15,6 +15,37 @@ from hefesto_dualsense4unix.daemon.udp_server import (
     parse_side,
 )
 from hefesto_dualsense4unix.testing import FakeController
+from hefesto_dualsense4unix.testing.fake_controller import FakeControllerCommand
+
+UNIQ_DO_DESTINO = "aabbcc000001"
+
+
+class _FakeComCamadaDoJogo(FakeController):
+    """O `FakeController` com a camada do jogo por MAC que o backend real tem."""
+
+    def uniqs_do_destino(self) -> list[str]:
+        return [UNIQ_DO_DESTINO]
+
+    def set_game_trigger_for(self, uniq: str, side: str, bloco: bytes) -> bool:
+        self.commands.append(
+            FakeControllerCommand("set_game_trigger_for", (uniq, side, bytes(bloco)))
+        )
+        return True
+
+    def soltar_o_gatilho_do_jogo_for(self, uniq: str, side: str, bloco: bytes) -> bool:
+        self.commands.append(
+            FakeControllerCommand("soltar_o_gatilho_do_jogo_for", (uniq, side, bytes(bloco)))
+        )
+        return True
+
+
+def _gatilhos(fc: FakeController) -> list[tuple[str, bytes]]:
+    """`(lado, bloco)` de cada gatilho que o DSX pintou na camada do jogo."""
+    return [
+        (c.payload[1], c.payload[2])
+        for c in fc.commands
+        if c.kind == "set_game_trigger_for"
+    ]
 
 
 def test_rate_limiter_aceita_ate_o_limite():
@@ -58,7 +89,7 @@ def test_rate_limiter_janela_desliza():
 
 
 def _mk_handler() -> tuple[UdpHandler, FakeController, StateStore]:
-    fc = FakeController(transport="usb")
+    fc = _FakeComCamadaDoJogo(transport="usb")
     fc.connect()
     store = StateStore()
     handler = UdpHandler(controller=fc, store=store)
@@ -78,9 +109,10 @@ def test_trigger_update_aplica_trigger():
         ],
     }
     handler.handle_datagram(_datagram(payload), ("127.0.0.1", 12345))
-    triggers = [c for c in fc.commands if c.kind == "set_trigger"]
+    triggers = _gatilhos(fc)
     assert len(triggers) == 1
-    assert triggers[0].payload[0] == "right"
+    assert triggers[0][0] == "right"
+    assert [c for c in fc.commands if c.kind == "set_trigger"] == []
 
 
 def test_rgb_update_aplica_led():
@@ -94,16 +126,23 @@ def test_rgb_update_aplica_led():
     assert leds[-1].payload == (255, 128, 0)
 
 
-def test_reset_aplica_off_em_ambos():
+def test_reset_solta_so_o_que_o_dsx_pintou_sem_mandar_off():
     handler, fc, _ = _mk_handler()
+    pintar = {
+        "version": 1,
+        "instructions": [
+            {"type": "TriggerUpdate", "parameters": ["right", "Rigid", 5, 200]}
+        ],
+    }
+    handler.handle_datagram(_datagram(pintar), ("127.0.0.1", 12345))
     payload = {
         "version": 1,
         "instructions": [{"type": "ResetToUserSettings", "parameters": []}],
     }
     handler.handle_datagram(_datagram(payload), ("127.0.0.1", 12345))
-    triggers = [c for c in fc.commands if c.kind == "set_trigger"]
-    sides = [c.payload[0] for c in triggers]
-    assert sorted(sides) == ["left", "right"]
+    soltos = [c.payload for c in fc.commands if c.kind == "soltar_o_gatilho_do_jogo_for"]
+    assert soltos == [(UNIQ_DO_DESTINO, "right", _gatilhos(fc)[0][1])]
+    assert [c for c in fc.commands if c.kind == "set_trigger"] == []
 
 
 def test_versao_invalida_dropa_com_contador():
@@ -111,8 +150,7 @@ def test_versao_invalida_dropa_com_contador():
     payload = {"version": 2, "instructions": []}
     handler.handle_datagram(_datagram(payload), ("127.0.0.1", 12345))
     assert store.counter("udp.unsupported_version") == 1
-    triggers = [c for c in fc.commands if c.kind == "set_trigger"]
-    assert triggers == []
+    assert _gatilhos(fc) == []
 
 
 def test_parse_error_incrementa_contador():
@@ -148,8 +186,7 @@ def test_instrucao_erro_captura_e_bump():
     }
     handler.handle_datagram(_datagram(payload), ("127.0.0.1", 12345))
     assert store.counter("udp.error.TriggerUpdate") == 1
-    triggers = [c for c in fc.commands if c.kind == "set_trigger"]
-    assert triggers == []
+    assert _gatilhos(fc) == []
 
 
 def test_rate_limit_drop_conta_em_store():
@@ -281,8 +318,8 @@ def test_envelope_dsx_autentico_sem_version_e_type_inteiro():
         assert store.counter(f"udp.applied.{nome}") == 1, nome
         assert store.counter(f"udp.error.{nome}") == 0, nome
 
-    gatilhos = [c for c in fc.commands if c.kind == "set_trigger"]
-    assert gatilhos[-1].payload[0] == "right"
+    gatilhos = _gatilhos(fc)
+    assert gatilhos[-1][0] == "right"
     assert [c for c in fc.commands if c.kind == "set_led"][-1].payload == (255, 80, 0)
     assert fc.last_player_leds == (True, False, True, False, True)
     assert fc.mic_led_history == [True]
@@ -291,7 +328,11 @@ def test_envelope_dsx_autentico_sem_version_e_type_inteiro():
 
 def test_trigger_update_dsx_traduz_modos_com_assinatura_identica():
     """Ordinais 13-18 do `TriggerMode` do DSX -> presets do Hefesto."""
-    from hefesto_dualsense4unix.core.trigger_effects import galloping, resistance
+    from hefesto_dualsense4unix.core.trigger_effects import (
+        bloco_do_efeito,
+        galloping,
+        resistance,
+    )
 
     handler, fc, store = _mk_handler()
     pkt = {
@@ -301,9 +342,9 @@ def test_trigger_update_dsx_traduz_modos_com_assinatura_identica():
         ]
     }
     handler.handle_datagram(_datagram(pkt), ("127.0.0.1", 12345))
-    gatilhos = [c for c in fc.commands if c.kind == "set_trigger"]
-    assert gatilhos[0].payload[1] == resistance(5, 6)
-    assert gatilhos[1].payload[1] == galloping(0, 9, 6, 7, 10)
+    gatilhos = _gatilhos(fc)
+    assert gatilhos[0] == ("left", bloco_do_efeito(resistance(5, 6)))
+    assert gatilhos[1] == ("right", bloco_do_efeito(galloping(0, 9, 6, 7, 10)))
     assert store.counter("udp.error.TriggerUpdate") == 0
 
 
@@ -312,9 +353,8 @@ def test_trigger_update_dsx_custom_value_vira_custom_do_hefesto():
     handler, fc, _ = _mk_handler()
     pkt = {"instructions": [{"type": 1, "parameters": [0, 1, 12, 3, 10, 200]}]}
     handler.handle_datagram(_datagram(pkt), ("127.0.0.1", 12345))
-    efeito = [c for c in fc.commands if c.kind == "set_trigger"][-1].payload[1]
-    assert efeito.mode == 0x05
-    assert efeito.forces == (10, 200, 0, 0, 0, 0, 0)
+    bloco = _gatilhos(fc)[-1][1]
+    assert bloco == bytes([0x05, 10, 200, 0, 0, 0, 0, 0, 0, 0, 0])
 
 
 def test_trigger_update_dsx_modo_pronto_falha_alto_sem_aproximar():
@@ -323,7 +363,7 @@ def test_trigger_update_dsx_modo_pronto_falha_alto_sem_aproximar():
     pkt = {"instructions": [{"type": 1, "parameters": [0, 1, 4]}]}
     handler.handle_datagram(_datagram(pkt), ("127.0.0.1", 12345))
     assert store.counter("udp.error.TriggerUpdate") == 1
-    assert [c for c in fc.commands if c.kind == "set_trigger"] == []
+    assert _gatilhos(fc) == []
 
 
 def test_ordinal_ambiguo_do_racingdsx_nao_age_errado():
@@ -368,7 +408,7 @@ def test_dialeto_do_hefesto_intacto_com_version_e_type_string():
     assert store.counter("udp.dsx_envelope") == 0
     assert fc.last_player_leds == (True, False, True, False, True)
     assert fc.mic_led_history == [True]
-    assert [c for c in fc.commands if c.kind == "set_trigger"][-1].payload[0] == "right"
+    assert _gatilhos(fc)[-1][0] == "right"
 
 
 def test_version_presente_e_diferente_de_1_continua_dropando():
@@ -453,7 +493,7 @@ def test_connection_made_nao_levanta_assertion_com_mock_transport():
 
 @pytest.mark.asyncio
 async def test_udp_server_recebe_datagrama_real(tmp_path):
-    fc = FakeController(transport="usb")
+    fc = _FakeComCamadaDoJogo(transport="usb")
     fc.connect()
     store = StateStore()
     UdpServer(controller=fc, store=store, host="127.0.0.1", port=0)
@@ -484,7 +524,23 @@ async def test_udp_server_recebe_datagrama_real(tmp_path):
         await asyncio.sleep(0.05)
         send_transport.close()
 
-        triggers = [c for c in fc.commands if c.kind == "set_trigger"]
-        assert len(triggers) >= 1
+        assert len(_gatilhos(fc)) >= 1
     finally:
         transport.close()
+
+
+def test_trigger_update_sem_camada_do_jogo_nao_vira_gesto():
+    """Controle sem a camada do jogo por MAC: o efeito do mod é descartado e contado."""
+    fc = FakeController(transport="usb")
+    fc.connect()
+    store = StateStore()
+    handler = UdpHandler(controller=fc, store=store)
+    payload = {
+        "version": 1,
+        "instructions": [
+            {"type": "TriggerUpdate", "parameters": ["right", "Rigid", 5, 200]}
+        ],
+    }
+    handler.handle_datagram(_datagram(payload), ("127.0.0.1", 12345))
+    assert store.counter("udp.error.TriggerUpdate") == 1
+    assert [c for c in fc.commands if c.kind == "set_trigger"] == []

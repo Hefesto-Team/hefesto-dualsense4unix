@@ -1,7 +1,7 @@
 """Factories dos 19 presets de trigger conforme DSX Paliverse."""
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from enum import IntEnum
 
 from hefesto_dualsense4unix.core.controller import TriggerEffect
@@ -54,6 +54,28 @@ class TriggerMode(IntEnum):
 
 
 ZERO7 = (0, 0, 0, 0, 0, 0, 0)
+
+#: O bloco de um gatilho no report de saída: o modo e os dez parâmetros.
+TAMANHO_DO_BLOCO_DO_GATILHO = 11
+
+
+def bloco_do_gatilho(modo: int, forcas: Sequence[int]) -> bytes:
+    """Os 11 bytes do gatilho no report: o modo, as forças 0 a 5 e a força 6 na nona casa.
+
+    Dono único do bloco: o `_build_common` o escreve no `common[10]` (R2) e no
+    `common[21]` (L2), e o servidor DSX o entrega à camada do jogo.
+    """
+    bloco = bytearray(TAMANHO_DO_BLOCO_DO_GATILHO)
+    bloco[0] = int(modo) & 0xFF
+    for indice in range(6):
+        bloco[1 + indice] = int(forcas[indice]) & 0xFF
+    bloco[9] = int(forcas[6]) & 0xFF
+    return bytes(bloco)
+
+
+def bloco_do_efeito(efeito: TriggerEffect) -> bytes:
+    """O bloco de 11 bytes que o `efeito` vira no report."""
+    return bloco_do_gatilho(int(efeito.mode), efeito.forces)
 
 _ZONAS_DO_GATILHO = 10
 
@@ -699,9 +721,12 @@ __all__ = [
     "FREQUENCIA_PADRAO_DA_VIBRACAO_POR_POSICAO",
     "MULTI_POSITION_MAX_STRENGTH",
     "PRESET_FACTORIES",
+    "TAMANHO_DO_BLOCO_DO_GATILHO",
     "TriggerMode",
     "ajustes_que_o_efeito_le",
     "auto_gun",
+    "bloco_do_efeito",
+    "bloco_do_gatilho",
     "bow",
     "build_from_name",
     "custom",

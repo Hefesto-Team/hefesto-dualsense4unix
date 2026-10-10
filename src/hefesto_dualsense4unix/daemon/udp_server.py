@@ -10,8 +10,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from hefesto_dualsense4unix.core.controller import IController
-from hefesto_dualsense4unix.core.trigger_effects import build_from_name
-from hefesto_dualsense4unix.core.trigger_effects import off as trigger_off
+from hefesto_dualsense4unix.core.trigger_effects import bloco_do_efeito, build_from_name
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -240,6 +239,7 @@ class UdpHandler:
     rate_limiter: RateLimiter = field(default_factory=RateLimiter)
     warn_limit_once_per_sec: float = 1.0
     _last_warn_at: float = 0.0
+    _gatilhos_pintados: dict[tuple[str, str], bytes] = field(default_factory=dict)
 
     def handle_datagram(self, data: bytes, addr: tuple[str, int]) -> None:
         ip = addr[0]
@@ -362,8 +362,24 @@ class UdpHandler:
                 raise ValueError(f"TriggerUpdate side invalido: {params[1]!r}")
             mode_name, rest = resolve_dsx_trigger_mode(params[2], params[3:])
         rest_ints = [int(v) for v in rest]
-        effect = build_from_name(mode_name, rest_ints)
-        self.controller.set_trigger(side, effect)  # type: ignore[arg-type]
+        bloco = bloco_do_efeito(build_from_name(mode_name, rest_ints))
+        self._pintar_como_jogo(side, bloco)
+
+    def _pintar_como_jogo(self, side: str, bloco: bytes) -> None:
+        """Grava o bloco na camada do JOGO de cada destino, nunca no desejo da pessoa.
+
+        Quem manda pelo DSX é o mod do jogo: o perfil de cada controle fica
+        intacto embaixo, o gesto da pessoa vence até o mod repintar, e o
+        `ResetToUserSettings` solta só o que foi pintado aqui.
+        """
+        escrever = getattr(self.controller, "set_game_trigger_for", None)
+        destinos_de = getattr(self.controller, "uniqs_do_destino", None)
+        destinos = list(destinos_de()) if callable(destinos_de) else []
+        if not callable(escrever) or not destinos:
+            raise ValueError("TriggerUpdate sem controle de destino")
+        for uniq in destinos:
+            if escrever(uniq, side, bloco):
+                self._gatilhos_pintados[(uniq, side)] = bloco
 
     def _do_rgb_update(self, params: list[Any]) -> None:
         if len(params) < 4:
@@ -437,15 +453,24 @@ class UdpHandler:
         logger.info("udp_trigger_threshold", side=side, value=value)
 
     def _do_reset(self) -> None:
-        """`ResetToUserSettings` do DSX — PARCIAL, e de propósito."""
-        self.controller.set_trigger("left", trigger_off())
-        self.controller.set_trigger("right", trigger_off())
+        """`ResetToUserSettings` do DSX: solta o gatilho que o DSX pintou, e o perfil volta.
+
+        Só a camada que o DSX pintou, em cada MAC: a luz e a sessão do pad
+        virtual do jogo não são tocadas. O limiar dos gatilhos também sai.
+        """
+        soltar = getattr(self.controller, "soltar_o_gatilho_do_jogo_for", None)
+        pintados = list(self._gatilhos_pintados.items())
+        self._gatilhos_pintados.clear()
+        if callable(soltar):
+            for (uniq, side), bloco in pintados:
+                soltar(uniq, side, bloco)
         self.store.clear_udp_trigger_thresholds()
         self.store.bump("udp.reset_parcial")
         logger.info(
             "udp_reset_to_user_settings_parcial",
             restaurado="gatilhos, deadzone",
             nao_restaurado="cor, player-LED, mic",
+            gatilhos_soltos=len(pintados),
         )
 
 

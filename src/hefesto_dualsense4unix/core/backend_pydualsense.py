@@ -65,6 +65,10 @@ from hefesto_dualsense4unix.core.led_control import (
     reescalar,
 )
 from hefesto_dualsense4unix.core.speaker_scale import volume_do_percentual
+from hefesto_dualsense4unix.core.trigger_effects import (
+    TAMANHO_DO_BLOCO_DO_GATILHO,
+    bloco_do_gatilho,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
@@ -87,7 +91,7 @@ AVISO_ACESO_S = 0.15
 AVISO_APAGADO_S = 0.12
 AVISO_APAGADO: tuple[int, int, int] = (0, 0, 0)
 
-GAME_TRIGGER_BLOCK_LEN = 11
+GAME_TRIGGER_BLOCK_LEN = TAMANHO_DO_BLOCO_DO_GATILHO
 
 #: não passa por este teto: já é rate-limitada pela histerese de 30s do sinal.
 DEFEND_DISPLAY_MIN_INTERVAL_S = 30.0
@@ -1606,18 +1610,16 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         if raw_r is not None and len(raw_r) == GAME_TRIGGER_BLOCK_LEN:
             common[10 : 10 + GAME_TRIGGER_BLOCK_LEN] = raw_r
         else:
-            common[10] = int(self.triggerR.mode.value) & 0xFF
-            for i in range(6):
-                common[11 + i] = int(self.triggerR.forces[i]) & 0xFF
-            common[19] = int(self.triggerR.forces[6]) & 0xFF
+            common[10 : 10 + GAME_TRIGGER_BLOCK_LEN] = bloco_do_gatilho(
+                int(self.triggerR.mode.value), self.triggerR.forces
+            )
         raw_l = getattr(self, "_raw_trigger_left", None)
         if raw_l is not None and len(raw_l) == GAME_TRIGGER_BLOCK_LEN:
             common[21 : 21 + GAME_TRIGGER_BLOCK_LEN] = raw_l
         else:
-            common[21] = int(self.triggerL.mode.value) & 0xFF
-            for i in range(6):
-                common[22 + i] = int(self.triggerL.forces[i]) & 0xFF
-            common[30] = int(self.triggerL.forces[6]) & 0xFF
+            common[21 : 21 + GAME_TRIGGER_BLOCK_LEN] = bloco_do_gatilho(
+                int(self.triggerL.mode.value), self.triggerL.forces
+            )
         common[rep.COMMON_VALID_FLAG2] = flag2
         if not suppress_leds:
             common[41] = int(self.light.pulseOptions.value) & 0xFF
@@ -5491,27 +5493,9 @@ class PyDualSenseController(IController):
         if handle is None or desired is None:
             return True
         if triggers:
-            with contextlib.suppress(Exception):
-                handle._raw_trigger_left = None
-                handle._raw_trigger_right = None
-            lados: tuple[tuple[Side, str], ...] = (
-                ("left", "trigger_left"),
-                ("right", "trigger_right"),
+            self._devolver_os_gatilhos(
+                handle, key, desired, triggers, what="end_game_session_trigger"
             )
-            for lado, campo in lados:
-                if lado not in triggers:
-                    continue
-                effect = getattr(desired, campo)
-                try:
-                    if effect is not None:
-                        self._apply_trigger(handle, lado, effect)
-                    else:
-                        self._reset_trigger(handle, lado)
-                except Exception as exc:
-                    logger.warning(
-                        "output_handle_failed", op="end_game_session_trigger",
-                        key=key, err=str(exc),
-                    )
         restore = _DesiredOutput()
         if game is not None and game.led is not None:
             if node is not None:
@@ -5524,6 +5508,83 @@ class PyDualSenseController(IController):
             handle, node, restore, what="game_session_close"
         )
         return True
+
+    def _devolver_os_gatilhos(
+        self,
+        handle: pydualsense,
+        key: str | None,
+        desired: _DesiredOutput,
+        lados: Iterable[str],
+        *,
+        what: str,
+    ) -> None:
+        """Tira o bloco do jogo dos `lados` do handle e devolve o efeito do perfil (ou Off)."""
+        campos: dict[str, tuple[Side, str, str]] = {
+            "left": ("left", "trigger_left", "_raw_trigger_left"),
+            "right": ("right", "trigger_right", "_raw_trigger_right"),
+        }
+        for lado in lados:
+            side, campo, atributo = campos[lado]
+            with contextlib.suppress(Exception):
+                setattr(handle, atributo, None)
+            effect = getattr(desired, campo)
+            try:
+                if effect is not None:
+                    self._apply_trigger(handle, side, effect)
+                else:
+                    self._reset_trigger(handle, side)
+            except Exception as exc:
+                logger.warning("output_handle_failed", op=what, key=key, err=str(exc))
+
+    def soltar_o_gatilho_do_jogo_for(self, uniq: str, side: Side, bloco: bytes) -> bool:
+        """Solta o lado `side` da camada do jogo de `uniq` se ele ainda é o `bloco` dado.
+
+        É a volta de quem pintou só o gatilho (o servidor DSX): a luz e o outro
+        lado ficam como estão. Se outro dono já repintou aquele lado, o bloco
+        difere e nada sai. Devolve se soltou.
+        """
+        alvo = self._key_to_uniq(uniq)
+        if alvo is None:
+            return False
+        lado = "left" if side == "left" else "right"
+        with self._io_lock:
+            do_jogo = self._game_triggers_by_uniq.get(alvo)
+            if do_jogo is None or do_jogo.get(lado) != bytes(bloco):
+                return False
+            del do_jogo[lado]
+            if not do_jogo:
+                self._game_triggers_by_uniq.pop(alvo, None)
+                self._jogo_provou_o_gatilho.discard(alvo)
+            key = self._key_for_uniq(alvo)
+            handle = self._handles.get(key) if key is not None else None
+            desired = self._merged_desired_for_key(key) if key is not None else None
+        logger.info("game_trigger_solto", uniq=alvo, lado=lado)
+        if handle is not None and desired is not None:
+            self._devolver_os_gatilhos(
+                handle, key, desired, (lado,), what="soltar_o_gatilho_do_jogo"
+            )
+        return True
+
+    def uniqs_do_destino(self) -> list[str]:
+        """Os MACs que uma escrita sem endereço alcança agora.
+
+        O do destino da aba Conexões, presente ou guardado; em «Todos», o de
+        cada controle aberto. Handle sem MAC estável não entra: a camada do
+        jogo é por MAC.
+        """
+        with self._io_lock:
+            _alvo, handles, ausente = _resolver_escopo(
+                self._handles, self._output_target_key, broadcast=False
+            )
+        if ausente is not None:
+            uniq = self._key_to_uniq(ausente)
+            return [uniq] if uniq is not None else []
+        destinos: list[str] = []
+        for key, _handle in handles:
+            uniq = self._key_to_uniq(key)
+            if uniq is not None and uniq not in destinos:
+                destinos.append(uniq)
+        return destinos
 
     @staticmethod
     def _reset_trigger(handle: pydualsense, side: Side) -> None:
