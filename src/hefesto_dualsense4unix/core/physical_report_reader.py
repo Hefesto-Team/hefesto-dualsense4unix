@@ -554,6 +554,7 @@ class PhysicalReportReader:
         self._reports_seen = 0
         self._windows_emitted = 0
         self._bt_drops = 0
+        self._reports_estragados = 0
         self._contador_anterior: int | None = None
         self._ilegiveis_no_meio = 0
         self._reports_perdidos = 0
@@ -579,8 +580,12 @@ class PhysicalReportReader:
 
     @property
     def reports_estragados(self) -> int:
-        """Reports do rádio que chegaram e não passaram no portão (o CRC)."""
-        return self._bt_drops
+        """Reports do rádio que chegaram e não passaram no portão (o CRC).
+
+        O `bt_drops` conta também o report de áudio, que é legítimo e não é
+        estado de entrada; este número fica só com o que chegou estragado.
+        """
+        return self._reports_estragados
 
     @property
     def reports_perdidos(self) -> int:
@@ -822,12 +827,13 @@ class PhysicalReportReader:
             base = _struct_base(data)
             if base is None:
                 if data[0] == INPUT_REPORT_BT:
+                    self._bt_drops += 1
                     self._ilegiveis_no_meio += 1
                     de_audio = len(data) == INPUT_REPORT_BT_SIZE and bool(
                         data[1] & INPUT_FLAG_AUDIO
                     )
                     if not de_audio:
-                        self._bt_drops += 1
+                        self._reports_estragados += 1
                 continue
             self._observe_contador(data, base)
             self._observe_touchpad_click(data, base)
@@ -847,8 +853,11 @@ class PhysicalReportReader:
         O primeiro report de cada fd só semeia. A volta do `uint32` é um passo
         como outro qualquer; um contador que ANDA PARA TRÁS é o aparelho
         recomeçando, e semeia de novo em vez de contar quatro bilhões. O report
-        do rádio que chegou e não se lê (CRC ruim, ou de áudio) ocupou um
-        número do contador sem ser perda, e sai da conta do buraco.
+        do rádio que chegou e não se lê (CRC ruim) ocupou um número do contador
+        sem ser perda, e sai da conta do buraco. O de áudio sai também, e é o
+        lado seguro de uma pergunta ainda não medida no aparelho (se ele ocupa
+        número): no pior caso esconde a perda que coincidir com ele, e nunca
+        inventa perda com o microfone ligado.
         """
         inicio = base + CONTADOR_DE_REPORT_OFFSET
         if len(report) < inicio + 4:
