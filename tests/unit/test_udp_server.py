@@ -450,7 +450,10 @@ def test_deadzone_corta_o_gatilho_no_gamepad_virtual():
     handler, _, store = _mk_handler()
     pad = _Pad()
     daemon = SimpleNamespace(
-        store=store, _gamepad_device=pad, _launch_reconcile_next_at=float("inf")
+        store=store,
+        controller=SimpleNamespace(primary_uniq=UNIQ_DO_DESTINO),
+        _gamepad_device=pad,
+        _launch_reconcile_next_at=float("inf"),
     )
     estado = SimpleNamespace(
         raw_lx=128, raw_ly=128, raw_rx=128, raw_ry=128, l2_raw=100, r2_raw=100
