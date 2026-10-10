@@ -287,17 +287,24 @@ def _call_checked(
 
 
 def _payload_trigger_set(
-    side: str, mode: str, params: list[int], uniq: str | None
+    side: str, mode: str, params: list[int], uniq: str | None, todos: bool = False
 ) -> dict[str, Any]:
     """Payload do ``trigger.set`` — um dono só, para as duas portas não divergirem."""
     payload: dict[str, Any] = {"side": side, "mode": mode, "params": params}
     if uniq:
         payload["uniq"] = uniq
+    if todos:
+        payload["todos"] = True
     return payload
 
 
 def trigger_set_detalhado(
-    side: str, mode: str, params: list[int], uniq: str | None = None
+    side: str,
+    mode: str,
+    params: list[int],
+    uniq: str | None = None,
+    *,
+    todos: bool = False,
 ) -> tuple[bool, str | None, dict[str, Any] | None]:
     """``trigger.set`` que entrega a RESPOSTA do daemon (ELO-MUDO-01, 23/08).
 
@@ -321,9 +328,13 @@ def trigger_set_detalhado(
 
     ``uniq`` (PERFIL-05): MAC do controle selecionado no seletor — o daemon
     aplica SÓ nele (override por-MAC); omitido = comportamento global clássico.
+
+    ``todos``: o «Em todos» da aba Gatilhos. O daemon escreve em CADA controle
+    da mesa, ignorando o destino da aba Conexões, grava o padrão que um
+    controle novo herda e solta o bloco do jogo, como o gesto por controle.
     """
     ok, motivo, corpo = _call_checked_detalhado(
-        "trigger.set", _payload_trigger_set(side, mode, params, uniq)
+        "trigger.set", _payload_trigger_set(side, mode, params, uniq, todos)
     )
     return ok, motivo or _recusa_no_corpo(corpo), corpo
 
@@ -349,18 +360,22 @@ def trigger_set(side: str, mode: str, params: list[int]) -> bool:
     return ok
 
 
-def _payload_trigger_reset(side: str | None, uniq: str | None) -> dict[str, Any]:
+def _payload_trigger_reset(
+    side: str | None, uniq: str | None, todos: bool = False
+) -> dict[str, Any]:
     """Payload do ``trigger.reset`` — um dono só, para as duas portas não divergirem."""
     payload: dict[str, Any] = {}
     if side:
         payload["side"] = side
     if uniq:
         payload["uniq"] = uniq
+    if todos:
+        payload["todos"] = True
     return payload
 
 
 def trigger_reset_detalhado(
-    side: str | None = None, uniq: str | None = None
+    side: str | None = None, uniq: str | None = None, *, todos: bool = False
 ) -> tuple[bool, str | None, dict[str, Any] | None]:
     """LIBERA a trava manual e devolve o gatilho ao perfil (`trigger.reset`).
 
@@ -388,9 +403,11 @@ def trigger_reset_detalhado(
     Estes três parágrafos moraram no invólucro `trigger_reset`, podado em
     26/08/2026 por não ter chamador nenhum: quem aperta "Desligar" é
     `app/actions/triggers_actions.py`, e chama esta.
+
+    ``todos``: o mesmo «Em todos» de :func:`trigger_set_detalhado`.
     """
     ok, motivo, corpo = _call_checked_detalhado(
-        "trigger.reset", _payload_trigger_reset(side, uniq)
+        "trigger.reset", _payload_trigger_reset(side, uniq, todos)
     )
     return ok, motivo or _recusa_no_corpo(corpo), corpo
 

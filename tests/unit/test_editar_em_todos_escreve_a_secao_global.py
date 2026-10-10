@@ -95,11 +95,12 @@ class PonteDeMentira:
         self.chamadas: list[str] = []
 
     def trigger_set_detalhado(self, lado: str, modo: str, params: list[int],
-                              uniq: str | None = None) -> Any:
+                              uniq: str | None = None, todos: bool = False) -> Any:
         self.enviados.append((lado, modo, list(params), uniq))
         return self.aceita if self.aceita else (False, "o daemon recusou", None)
 
-    def trigger_reset_detalhado(self, lado: str, uniq: str | None = None) -> Any:
+    def trigger_reset_detalhado(self, lado: str, uniq: str | None = None,
+                                todos: bool = False) -> Any:
         self.enviados.append((lado, "Off", [], uniq))
         return self.aceita if self.aceita else (False, "o daemon recusou", None)
 

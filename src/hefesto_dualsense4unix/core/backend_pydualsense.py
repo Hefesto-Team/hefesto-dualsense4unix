@@ -4038,6 +4038,54 @@ class PyDualSenseController(IController):
             record={campo: effect},
         )
 
+    def set_trigger_em_todos(
+        self, side: Side, effect: TriggerEffect
+    ) -> dict[str, ResultadoDeSaida]:
+        """O «Em todos» da aba Gatilhos: o efeito em CADA controle aberto.
+
+        O-EM-TODOS-DO-GATILHO-CHEGA-A-CADA-CONTROLE-DA-MESA-01 (09/10/2026).
+        Três coisas que o `set_trigger` sem endereço não faz juntas:
+
+        1. escreve em todos os handles, ignorando o destino da aba Conexões
+           (o `_resolver_escopo` em broadcast), no cabo e no rádio;
+        2. grava o padrão, que é o que um controle novo herda, e nivela os
+           overrides daquele lado (o mesmo `_record_desired_locked(None, …)`);
+        3. em cada controle, solta o que o jogo pintou naquele lado, pelo
+           mesmo dono do gesto por controle
+           (`_o_gesto_solta_o_que_o_jogo_pintou_locked`).
+
+        Devolve a palavra de cada controle pelo MAC, no vocabulário do
+        `apply_output_for`: ``"escreveu"``, ``"registrado"`` (Modo Nativo, o
+        fio está mudo) ou ``"falhou"``. Handle sem MAC estável escreve e não
+        entra no mapa.
+        """
+        campo = "trigger_left" if side == "left" else "trigger_right"
+        with self._io_lock:
+            _alvo, handles, _ausente = _resolver_escopo(
+                self._handles, self._output_target_key, broadcast=True
+            )
+            self._record_desired_locked(None, {campo: effect})
+            alvos: list[tuple[str, Any, str | None]] = []
+            for key, handle in handles:
+                uniq = self._key_to_uniq(key)
+                if uniq is not None:
+                    self._o_gesto_solta_o_que_o_jogo_pintou_locked(uniq, (campo,))
+                alvos.append((key, handle, uniq))
+            muted = self._output_mute
+        palavras: dict[str, ResultadoDeSaida] = {}
+        for key, handle, uniq in alvos:
+            palavra: ResultadoDeSaida = "registrado" if muted else "escreveu"
+            try:
+                self._apply_trigger(handle, side, effect)
+            except Exception as exc:
+                logger.warning(
+                    "output_handle_failed", op="set_trigger_em_todos", key=key, err=str(exc)
+                )
+                palavra = "falhou"
+            if uniq is not None:
+                palavras[uniq] = palavra
+        return palavras
+
     def set_led(self, color: tuple[int, int, int]) -> None:
         r, g, b = color
         self._for_each_led(

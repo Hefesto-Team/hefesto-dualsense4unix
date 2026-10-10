@@ -283,13 +283,14 @@ class _PonteDoBroadcast(_Ponte):
         self.saiu: dict[str, Any] = {}
 
     def trigger_set_detalhado(self, lado: str, modo: str, params: list[int],
-                              uniq: str | None = None) -> bool:
+                              uniq: str | None = None, todos: bool = False) -> bool:
         from hefesto_dualsense4unix.core.trigger_effects import build_from_name
 
         self.saiu[lado] = build_from_name(modo, params)
         return True
 
-    def trigger_reset_detalhado(self, lado: str, uniq: str | None = None) -> bool:
+    def trigger_reset_detalhado(self, lado: str, uniq: str | None = None,
+                                todos: bool = False) -> bool:
         from hefesto_dualsense4unix.core.trigger_effects import build_from_name
 
         self.saiu[lado] = build_from_name("Off", [])

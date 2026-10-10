@@ -1027,6 +1027,13 @@ class IpcHandlersMixin:
         if not isinstance(trigger_params, list):
             raise ValueError("trigger.set: params precisa ser lista")
         effect = build_from_name(mode, trigger_params)
+        if params.get("todos") is True:
+            aplicado_em, guardado_em = self._gatilho_em_todos({side: effect})
+            return {
+                "status": "ok",
+                "aplicado_em": aplicado_em,
+                "guardado_em": guardado_em,
+            }
         campos: dict[str, Any] = (
             {"trigger_left": effect} if side == "left" else {"trigger_right": effect}
         )
@@ -1074,6 +1081,15 @@ class IpcHandlersMixin:
             campos["trigger_left"] = trigger_off()
         if target in ("right", "both"):
             campos["trigger_right"] = trigger_off()
+        if params.get("todos") is True:
+            aplicado_em, guardado_em = self._gatilho_em_todos(
+                {campo.removeprefix("trigger_"): efeito for campo, efeito in campos.items()}
+            )
+            return {
+                "status": "ok",
+                "aplicado_em": aplicado_em,
+                "guardado_em": guardado_em,
+            }
         resultado = self._apply_por_uniq(params, **campos)
         if resultado is None:
             for lado in ("left", "right"):
@@ -1089,6 +1105,37 @@ class IpcHandlersMixin:
             "aplicado_em": aplicado_em,
             "guardado_em": guardado_em,
         }
+
+    def _gatilho_em_todos(self, efeitos: dict[str, Any]) -> tuple[list[str], list[str]]:
+        """``(aplicado_em, guardado_em)`` do «Em todos» da aba Gatilhos (``todos: true``).
+
+        O-EM-TODOS-DO-GATILHO-CHEGA-A-CADA-CONTROLE-DA-MESA-01 (09/10/2026). A
+        rota sem endereço segue o destino da aba Conexões e grava pela camada
+        que não solta o bloco do jogo; «Todos» na tela é cada controle da mesa
+        e o padrão que um controle novo herda. Quem escreve é o dono do
+        backend (`set_trigger_em_todos`), e as listas são a palavra dele por
+        controle, lida pelo mesmo `_destinos_por_uniq` do gesto por controle.
+
+        Backend sem o dono (dublê antigo): a rota clássica, com os destinos
+        que ela sabe dizer.
+        """
+        dono = getattr(self.controller, "set_trigger_em_todos", None)
+        if not callable(dono):
+            for lado, efeito in efeitos.items():
+                self.controller.set_trigger("left" if lado == "left" else "right", efeito)
+            return self._destinos_do_broadcast()
+        palavras: dict[str, str] = {}
+        for lado, efeito in efeitos.items():
+            for uniq, palavra in dict(dono(lado, efeito)).items():
+                if palavras.get(uniq) != "escreveu":
+                    palavras[uniq] = palavra
+        aplicado_em: list[str] = []
+        guardado_em: list[str] = []
+        for uniq, palavra in palavras.items():
+            aplicado, guardado = self._destinos_por_uniq(palavra, uniq)
+            aplicado_em.extend(aplicado)
+            guardado_em.extend(guardado)
+        return aplicado_em, guardado_em
 
 
     async def _handle_led_set(self, params: dict[str, Any]) -> dict[str, Any]:

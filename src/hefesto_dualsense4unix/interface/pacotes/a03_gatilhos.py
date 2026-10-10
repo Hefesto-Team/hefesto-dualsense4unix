@@ -1670,7 +1670,7 @@ _E_TAMBEM = " · "
 def _aplicar(p: Any, lado: str, modo_: str, params: list[int],
              uniq: str, ctx: Contexto | None = None,
              guardar: bool = True, *,
-             lembrar_em: list[str] | None = None) -> tuple[bool, str, str]:
+             recebeu_em_todos: list[str] | None = None) -> tuple[bool, str, str]:
     """Manda o efeito ao daemon pela porta CERTA, e a certa depende do modo.
 
     "DESLIGADO" É `trigger.reset`, E NÃO `trigger.set` COM `Off` — a R-19. O
@@ -1783,26 +1783,30 @@ def _aplicar(p: Any, lado: str, modo_: str, params: list[int],
     verdadeiro sem que o ESCRITOR se multiplique: a gravação segue morando só
     aqui.
 
-    ``lembrar_em`` É PARA QUEM MANDA EM BROADCAST — :func:`em_todos`, e é o
-    único chamador. Com `uniq=""` o pedido vai para os controles todos (é o que
-    a GTK faz com o alvo em "Todos": `triggers_actions._apply_trigger` passa
-    `uniq=None`), e aí o `uniq` do envio não é endereço de ninguém — guardar o
-    rascunho sob `""` criaria uma entrada que a poda de mesa
-    (`_o_rascunho_e_de_quem_esta_na_mesa`) apaga no tique seguinte, e as quatro
-    colunas voltariam ao valor do disco enquanto ele não chega. Passando os
-    `uniq` de quem está na mesa, cada coluna lembra o que acabou de receber.
-    **O padrão continua sendo `[uniq]`**, para que o choke point não se
-    multiplique: quem grava o rascunho continua sendo só esta função.
+    ``recebeu_em_todos`` É O «EM TODOS» — :func:`em_todos`, e é o único chamador. Com
+    uma lista, o pedido vai com `todos: true`, e o daemon escreve em cada
+    controle da mesa (ignorando o destino da aba Conexões) e responde em quem
+    pegou. O rascunho de cada coluna se grava pelo `aplicado_em` dessa
+    resposta, e não pela lista da mesa: a coluna de um controle que não
+    recebeu continua com o que ele tem. Quem recebeu volta na própria lista,
+    para o recado nomear. Resposta que não fala de destino (daemon antigo)
+    lembra em quem está na mesa, a mesma leitura de :func:`_chegou_ao_aparelho`.
     """
+    extra: dict[str, Any] = {"todos": True} if recebeu_em_todos is not None else {}
     if modo_ == "Off":
-        ok, motivo, corpo = _desfecho(p.trigger_reset_detalhado(lado, uniq=uniq))
+        ok, motivo, corpo = _desfecho(
+            p.trigger_reset_detalhado(lado, uniq=uniq, **extra))
         params = []
     else:
         ok, motivo, corpo = _desfecho(
-            p.trigger_set_detalhado(lado, modo_, params, uniq=uniq))
+            p.trigger_set_detalhado(lado, modo_, params, uniq=uniq, **extra))
     nao_guardou = ""
     if ok and _chegou_ao_aparelho(corpo):
-        for quem in (lembrar_em if lembrar_em is not None else [uniq]):
+        quem_lembra = [uniq]
+        if recebeu_em_todos is not None:
+            quem_lembra = _quem_recebeu(corpo, ctx)
+            recebeu_em_todos.extend(q for q in quem_lembra if q not in recebeu_em_todos)
+        for quem in quem_lembra:
             _lembrar_o_aplicado(
                 perfil.nome_do_ativo(ctx.state if ctx else None),
                 quem, lado, {"mode": modo_, "params": params})
@@ -1816,6 +1820,20 @@ def _aplicar(p: Any, lado: str, modo_: str, params: list[int],
     if nao_guardou:
         recibo = _E_TAMBEM.join((recibo, nao_guardou))
     return ok, motivo, recibo
+
+
+def _quem_recebeu(corpo: dict[str, Any] | None, ctx: Contexto | None) -> list[str]:
+    """Os `uniq` em que o «Em todos» pegou, pelo `aplicado_em` do daemon."""
+    if _fala_de_destino(corpo):
+        try:
+            perfil._com_o_src()
+            from hefesto_dualsense4unix.app.ipc_bridge import destinos_da_aplicacao
+        except Exception:
+            return []
+        aplicado, _ = destinos_da_aplicacao(corpo)
+        return aplicado
+    na_mesa = [str(c.get("uniq") or "") for c in ((ctx.conectados if ctx else None) or [])]
+    return [u for u in na_mesa if u]
 
 
 def _guardar_no_perfil(ctx: Contexto | None, p: Any, uniq: str, disco: str,
@@ -2295,6 +2313,22 @@ _RECADO_DE_TODOS = (
     "Este efeito passou a valer para todos os controles. Ele saiu do ajuste "
     "próprio de cada um e foi para o perfil — um controle que você ligar "
     "depois já nasce com ele.")
+_RECADO_DE_QUEM_RECEBEU = (
+    "Este efeito chegou {quem} e passou a valer para todos os controles. Ele "
+    "saiu do ajuste próprio de cada um e foi para o perfil — um controle que "
+    "você ligar depois já nasce com ele.")
+
+
+def _recado_de_todos(ctx: Contexto, recebeu: list[str]) -> str:
+    """O recado do «Em todos», com o nome de cada controle que recebeu o efeito."""
+    nomes: list[str] = []
+    for c in ctx.conectados or []:
+        if str(c.get("uniq") or "") in recebeu:
+            nomes.append(f"ao Controle {jogador_de(c) or '?'}")
+    if not nomes:
+        return _RECADO_DE_TODOS
+    quem = nomes[0] if len(nomes) == 1 else f"{', '.join(nomes[:-1])} e {nomes[-1]}"
+    return _RECADO_DE_QUEM_RECEBEU.format(quem=quem)
 
 
 @gesto("03-gatilhos.html", GESTO_DE_TODOS, grava="_gravar_so_o_gatilho")
@@ -2322,14 +2356,14 @@ def em_todos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
        lê `model_fields_set`), e os controles que já tinham opinião ficariam com
        a de ontem. Quem faz os dois aqui é :func:`_com_os_gatilhos_de_todos`.
 
-    **O ENVIO VAI EM BROADCAST, e isto é o oposto do ABAS-06.** O `_uniq` desta
-    aba avisa, com razão, que *"o `trigger.reset` sem `uniq` vai em BROADCAST e
-    zera o gatilho dos quatro"* — foi um defeito quando o alvo era UM controle e
-    o pedido saía sem endereço. Aqui o alvo É toda a mesa, por um botão cujo
-    texto diz isso, e mandar quatro pedidos endereçados em vez de um seria
-    reescrever o que a ponte já resolve: a GTK, no alvo `TODOS`, passa
-    `uniq=None` pela mesma porta (`_apply_trigger`). O corpo do daemon volta com
-    `aplicado_em` cheio, e é dele que sai a frase que conta em quantos entrou.
+    **O ENVIO VAI COM `todos: true`, e não pela rota sem endereço.** A rota sem
+    endereço segue o destino da aba Conexões (com o seletor num controle, ela
+    escreve só nele) e grava por uma camada que não solta o bloco do jogo. O
+    `todos` faz o daemon escrever em cada controle da mesa, gravar o padrão que
+    um controle novo herda e soltar, em cada um, o que o jogo pintou naquele
+    lado, como o gesto coluna por coluna (O-EM-TODOS-DO-GATILHO-CHEGA-A-CADA-
+    CONTROLE-DA-MESA-01, 09/10/2026). O rascunho de cada coluna e o recado saem
+    do `aplicado_em` da resposta: só lembra e só é nomeado quem recebeu.
 
     **ESCREVER GLOBAL AQUI NÃO É O `None` QUE O `alvo_de_edicao` PROÍBE.** Aquele
     módulo existe porque `None` carregava duas coisas — *"o usuário clicou em Todos"* e
@@ -2352,19 +2386,17 @@ def em_todos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     metade deixou o `reenviar` sem botão. Ver a lápide dele neste arquivo.
     """
     _nao_no_automatico(ctx)
-    uniq = _exigir_controle(o, "em todos")
+    _exigir_controle(o, "em todos")
     forma = o.get("forma")
     if not isinstance(forma, dict) or not forma:
         raise RuntimeError(
             "não consegui ler o efeito desta coluna. Nada foi mandado.")
     dos_lados = _o_par_da_coluna(forma)
 
-    na_mesa = [str(c.get("uniq") or "") for c in (ctx.conectados or [])]
-    na_mesa = [u for u in na_mesa if u] or [uniq]
-
+    recebeu: list[str] = []
     for disco, cfg in dos_lados.items():
         ok, motivo, _ = _aplicar(p, disco, str(cfg["mode"]), list(cfg["params"]),
-                                 "", ctx, guardar=False, lembrar_em=na_mesa)
+                                 "", ctx, guardar=False, recebeu_em_todos=recebeu)
         if not ok:
             raise RuntimeError(
                 f"{_assunto(disco, str(cfg['mode']))} — "
@@ -2385,7 +2417,7 @@ def em_todos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     novo = _com_os_gatilhos_de_todos(prof, dos_lados)
     if novo is not None:
         _gravar_so_o_gatilho(novo, p)
-    return {"recado": _RECADO_DE_TODOS}
+    return {"recado": _recado_de_todos(ctx, recebeu)}
 
 
 def _com_os_gatilhos_de_todos(prof: Any, dos_lados: dict[str, Any]) -> Any:
@@ -2736,7 +2768,7 @@ PROVAS = [
      "gesto": GESTO_DE_TODOS,
      "clique": {"forma": _forma_de_prova("e", "Pulse")},
      "chama": [("trigger_set_detalhado", ["left", "Pulse", _padroes("Pulse")],
-                {"uniq": ""}), _GUARDOU]},
+                {"uniq": "", "todos": True}), _GUARDOU]},
 ]
 
 #: OS GESTOS QUE O DAEMON ACEITA E NÃO PUBLICA. O `state_full` não traz
