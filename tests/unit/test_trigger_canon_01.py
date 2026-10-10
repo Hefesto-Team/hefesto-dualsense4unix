@@ -21,10 +21,10 @@ def _efeito_com_os_padroes(nome: str):
     return build_from_name(nome, [p.default for p in spec.params])
 
 
-#: A Metralhadora saiu desta tabela de 01/08 e entrou pela escolha dela de
+#: A Metralhadora saiu desta tabela de 01/08 e entrou pela escolha do usuário de
 #: 08/10/2026 na página dos desenhos (opção b, `ESCOLHAS.md`): a vibração da
 #: lista oficial, que bate enquanto o dedo aperta. Os bytes de 01/08 eram
-#: `26 00 09 03 03 32 08`, com a frequência em zero. A validar na mão dela.
+#: `26 00 09 03 03 32 08`, com a frequência em zero. A validar na mão do usuário.
 SENSACAO_APROVADA: dict[str, tuple[int, tuple[int, ...]]] = {
     "Bow": (0x26, (1, 7, 192, 224, 0, 0, 0)),
     "Galloping": (0x26, (0, 9, 7, 7, 10, 0, 0)),
@@ -55,7 +55,7 @@ def test_a_sensacao_que_ela_aprovou_nao_muda_um_byte(nome: str) -> None:
 #: O Disparo e os dois Pulsos não estavam na tabela de 01/08. Saem do layout
 #: antigo (o `0x06` da vibração simples e o `0x22` com parâmetros em ordem) para
 #: o modo que o controle lê, em 08/10/2026, com os padrões da tela. A validar na
-#: mão dela, cabo e rádio.
+#: mão do usuário, cabo e rádio.
 BLOCOS_DE_08_10: dict[str, tuple[int, tuple[int, ...]]] = {
     "Weapon": (0x25, (0x24, 0x00, 0x05, 0, 0, 0, 0)),
     "PulseB": (0x25, (0x84, 0x00, 0x05, 0, 0, 0, 0)),

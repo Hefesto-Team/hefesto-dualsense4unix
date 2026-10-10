@@ -324,7 +324,7 @@ def acesos_da_fita(ativo: str, mesa: list[dict[str, Any]] | None = None, *,
     """Os chips que acendem na fita: o `pref` de cada um, e `"todos"` quando o `Todos` acende.
 
     O chip aceso é quem está ESCOLHIDO (O-SELECIONAR-ACENDE-QUEM-ESTA-ESCOLHIDO-01,
-    pedido dela de 29/09/2026): um controle escolhido acende só ele; o `Todos` escolhe
+    pedido de 29/09/2026): um controle escolhido acende só ele; o `Todos` escolhe
     os quatro e acende os quatro com ele; numa aba que não escolhe (`escolhe=False`),
     o ajuste vale para todos, e todos nascem acesos, qualquer que seja o `ativo` que o
     piloto mande. Com um controle só não há `Todos`, e o único acende.

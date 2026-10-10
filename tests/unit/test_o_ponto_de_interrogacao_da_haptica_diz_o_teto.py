@@ -1,7 +1,7 @@
 """O «?» da sensor háptico avisa o teto do perfil de bateria (A-TELA-PERGUNTA-AO-DONO-01, opção a).
 
 Desde 02/10/2026 a Economia corta a háptica como corta a Força, e só o «?» da Força dizia a
-frase do dono. Ela escolheu (08/10/2026) a opção a: a frase vem logo depois do 100%, antes do
+frase do dono. O usuário escolheu (08/10/2026) a opção a: a frase vem logo depois do 100%, antes do
 «Cinza quando…». A frase NÃO é digitada aqui: vem de ``app.telas.vibracao.DICA_DO_TETO_DA_MESA``.
 
 A régua lê a FONTE (o gerador) e o ``mockup/05-vibracao.html``, que ele reescreve; não depende

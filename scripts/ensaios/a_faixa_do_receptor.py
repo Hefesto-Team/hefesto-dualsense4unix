@@ -6,7 +6,7 @@ A-FAIXA-DO-TECLADO-SE-ACHA-01 (09/10/2026).
 A PERGUNTA
 ----------
 O «Descobrir a faixa» da Conexões (``receptor_sem_fio.Descoberta``) compara os canais que os
-adaptadores Bluetooth evitam sem e com o receptor na porta. O teclado dela deu «não achei», e o
+adaptadores Bluetooth evitam sem e com o receptor na porta. O teclado do usuário deu «não achei», e o
 «não achei» juntava três medidas: sem enlace clássico não há mapa (1); o receptor salta de canal e
 deixa canais espalhados (2); o AFH leva mais que 25 s para marcar a faixa (3). A procura agora diz
 qual delas viu; este ensaio grava os mapas na bancada e reproduz a procura sobre eles, trocando os

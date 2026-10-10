@@ -467,7 +467,7 @@ def gravada(caminho: Path | None = None) -> list[Par] | None:
 def roteiro(a: str, b: str) -> list[str]:
     """O roteiro exato da bancada: as três fases, depois A e B trocados, depois com o P2."""
     script = "scripts/ensaios/o_sinal_em_dois_adaptadores.py"
-    saida = ["Quem coordena para o daemon antes e o religa no fim. Marcas no chão: "
+    saida = ["Pare o daemon antes e religue-o no fim. Marcas no chão: "
              + ", ".join(DISTANCIAS) + "."]
     passo = 0
     for rodada, (x, y, extra) in enumerate(((a, b, ""), (b, a, ""), (a, b, " (com o P2 conectado em A)")), 1):

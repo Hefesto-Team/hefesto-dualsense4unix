@@ -274,7 +274,7 @@ def resistance(start: int, force: int) -> TriggerEffect:
 def bow(start: int, end: int, force: int, snap: int) -> TriggerEffect:
     """Simula arco: tensão crescente entre `start` e `end`, `snap` ao soltar.
 
-    Os bytes de 01/08 (a mão dela aprovou), mantidos até a sessão às cegas de
+    Os bytes de 01/08 (a mão do usuário aprovou), mantidos até a sessão às cegas de
     `O-ARCO-E-O-GALOPE-MANDAM-O-MODO-QUE-O-CONTROLE-LE-01`; o bloco do modo
     próprio (`0x22`) é o do `pulse_a`.
     """
@@ -293,7 +293,7 @@ def galloping(
 ) -> TriggerEffect:
     """Cadência de galope (5 params canônicos; HID usa 7 forces).
 
-    Os bytes de 01/08 (a mão dela aprovou), mantidos até a sessão às cegas de
+    Os bytes de 01/08 (a mão do usuário aprovou), mantidos até a sessão às cegas de
     `O-ARCO-E-O-GALOPE-MANDAM-O-MODO-QUE-O-CONTROLE-LE-01`. Neste layout a
     frequência cai nos bytes de amplitude do `0x26`, e o byte de frequência
     do modo fica em zero: ela é inerte.
@@ -312,7 +312,7 @@ def galloping(
 
 
 def semi_auto_gun(start: int, end: int, force: int) -> TriggerEffect:
-    """Os bytes de 01/08 (a mão dela aprovou), mantidos até a sessão às cegas de
+    """Os bytes de 01/08 (a mão do usuário aprovou), mantidos até a sessão às cegas de
     `O-DISPARO-E-A-ARMA-SEMI-AUTOMATICA-MANDAM-O-MODO-DE-ARMA-01`; a arma
     oficial (`0x25`) é o bloco do `weapon`."""
     _byte(start, name="start", lo=2, hi=7)

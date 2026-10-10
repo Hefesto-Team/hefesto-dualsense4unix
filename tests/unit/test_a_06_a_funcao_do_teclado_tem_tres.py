@@ -88,7 +88,7 @@ def test_as_tres_palavras_dela_estao_no_desenho():
 
 
 def test_o_desenho_nasce_no_padrao_dela():
-    """`Só fora do jogo` marcada: o padrão dela, com as outras duas ao lado."""
+    """`Só fora do jogo` marcada: o padrão de produto, com as outras duas ao lado."""
     import onde
     from pacotes import a06_navegacao as mod
 

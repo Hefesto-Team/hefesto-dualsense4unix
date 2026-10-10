@@ -2,7 +2,7 @@
 
 O balão que aparece ao parar o mouse sobre uma peça é o ``<title>`` do SVG. Os
 rótulos de grupo («CHASSI», «OMBROS E GATILHOS»…) e a ênfase de «INTEIRO» eram
-caixa alta que a régua de maiúscula aceitava como dívida. A escolha dela
+caixa alta que a régua de maiúscula aceitava como dívida. A escolha
 (08/10/2026) foi a opção a: balão com a primeira letra maiúscula e o resto
 minúsculo.
 

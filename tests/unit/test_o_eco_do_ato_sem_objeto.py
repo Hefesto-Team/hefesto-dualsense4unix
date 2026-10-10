@@ -3,7 +3,7 @@
 O DEFEITO, medido nesta árvore com o handle de produção e o laço de produção
 -------------------------------------------------------------------------
 O 🎙 da tela cala o controle (o mudo vai ao firmware e demora a confirmar). O
-dedo dela aperta o botão do plástico ANTES de o bit confirmar. O aperto sempre
+dedo do usuário aperta o botão do plástico ANTES de o bit confirmar. O aperto sempre
 pediu «o contrário do bit lido», e o bit lido ainda era o velho: pedia o MESMO
 que o 🎙. Quem decidia o que o dedo pediu era um relógio — o `_ECO_DO_ATO`
 (2 s), que engolia o aperto calado, com log só em debug, e que perdeu o objeto

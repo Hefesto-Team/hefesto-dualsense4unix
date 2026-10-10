@@ -2,11 +2,11 @@
 """A RÉGUA DO CHIP: numa fita que não escolhe, todos os chips estão acesos e iguais.
 
 MEDIDA NOVA, 09/10/2026 (O-SELECIONAR-ACENDE-QUEM-ESTA-ESCOLHIDO-01). A régua de
-08/09 dizia o contrário: «o marcado é cinza como os demais», a pedido dela na aba
-Gatilhos (*"conseguimos deixar ele cinza como os demais?"*, citação dela, sem o
+08/09 dizia o contrário: «o marcado é cinza como os demais», a pedido na aba
+Gatilhos (*"conseguimos deixar ele cinza como os demais?"*, citação, sem o
 acento onde faltava). Em 29/09 ela revogou o cinza: *"a cor de todos os botões do
 Selecionar deveriam estar acesas e com as bordas corretas"* (noqa-acento: citação
-literal dela). Quem leu o pedido de 08/09 certo foi esta régua; o que mudou foi o
+literal). Quem leu o pedido de 08/09 certo foi esta régua; o que mudou foi o
 pedido. O que NÃO mudou: numa aba que não escolhe, ninguém se destaca sozinho, e o
 chip não leva a lugar nenhum (sem endereço de clique).
 

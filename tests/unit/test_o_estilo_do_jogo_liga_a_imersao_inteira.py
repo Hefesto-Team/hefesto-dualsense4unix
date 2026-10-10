@@ -165,7 +165,7 @@ def test_estilo_sem_modo_nao_mexe_no_modo_do_jogo(disco: dict[str, Any], modo: s
 
 @pytest.mark.parametrize("chave", ["maratona", "retro", "point_and_click"])
 def test_os_tres_tambem_tem_toque_por_tiro_e_lado_do_som(chave: str) -> None:
-    """A resposta dela: «Toque por tiro e lado do som, como nos outros».
+    """A resposta de produto: «Toque por tiro e lado do som, como nos outros».
 
     A MORDIDA: `toque_por_tiro=False` na Maratona e isto reprova.
     """

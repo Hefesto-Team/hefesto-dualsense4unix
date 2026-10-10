@@ -715,7 +715,7 @@ class BtMicSubsystem:
         return self._registro.no_ar().get(chave)
 
     def _dizer_o_mudo_aos_canais(self) -> None:
-        """O mudo da palavra dela chega ao nó de CADA canal de pé, no cabo e no rádio.
+        """O mudo da palavra de produto chega ao nó de CADA canal de pé, no cabo e no rádio.
 
         `False` cala o `hefesto_mic_*`; `True` e `None` o abrem. O canal só
         escreve quando o mudo difere do último escrito (`escrever_o_mudo`): a

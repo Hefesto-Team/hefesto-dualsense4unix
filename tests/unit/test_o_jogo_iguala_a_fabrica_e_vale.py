@@ -9,7 +9,7 @@ sempre «todos os campos». O valor de fábrica escrito ali é o vocabulário de
 «sem escolha» da casa (``voltar_ao_do_computador`` e ``ceder_ao_computador``
 escrevem o de fábrica para dizer isso), e é por isso que
 ``escolhas_globais_do_jogo`` descarta o igual à fábrica. Pelo formato do
-arquivo não há como separar «ela escolheu 6» de «a cópia do 6»: separar pede um
+arquivo não há como separar «o usuário escolheu 6» de «a cópia do 6»: separar pede um
 escritor esparso e uma marca de escolha no arquivo (``schema.py``), e a
 sprint manda isso VOLTAR COMO PERGUNTA. A régua do caso aberto é ``xfail``
 estrito: quando a pergunta for resolvida, ela vira verde e o ``strict`` obriga

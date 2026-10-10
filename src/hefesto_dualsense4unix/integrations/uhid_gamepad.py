@@ -176,7 +176,7 @@ _GAME_REPLICA_GRACE_S = 0.5
 
 # A graça filtra o que o kernel escreve na sonda (player-LED e luz), não o
 # gatilho do jogo: um efeito mandado uma vez nela é evento, e não pode cair.
-# As escolhas que a bancada decide (09/10/2026, a validar por ela), cada uma
+# As escolhas que a bancada decide (09/10/2026, a validar pelo usuário), cada uma
 # com o seu interruptor no ambiente do daemon, sem editar código:
 #: «guarda»: o último gatilho da graça sai quando ela vence; «descarta» é o de antes.
 _GRACA_GUARDA = "guarda"

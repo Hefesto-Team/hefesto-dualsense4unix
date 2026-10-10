@@ -1,6 +1,6 @@
 """O «Selecionar:» acende quem está escolhido (O-SELECIONAR-ACENDE-QUEM-ESTA-ESCOLHIDO-01).
 
-PEDIDO DELA, 29/09/2026, opção a de 08/10: o chip aceso (fonte clara, negrito) é quem está
+PEDIDO, 29/09/2026, opção a de 08/10: o chip aceso (fonte clara, negrito) é quem está
 escolhido; o «Todos» escolhe os quatro e acende os quatro com ele; nas abas que valem para
 todos, os quatro nascem acesos, cada um com a borda do plástico; o balão da fita sai das sete.
 

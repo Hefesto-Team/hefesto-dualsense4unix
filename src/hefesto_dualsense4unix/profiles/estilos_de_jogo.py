@@ -62,11 +62,11 @@ os três ajustes como valores. A régua que impede a volta é
 
 A RECEITA INVISÍVEL — 08/10/2026, O-ESTILO-DO-JOGO-LIGA-A-IMERSAO-INTEIRA-EM-TODO-MODO-01
 ------------------------------------------------------------------------------------------
-A escolha dela (ESCOLHAS de 08/10): nenhum cartão novo, o «Estilo de Jogo» é o
+A escolha do usuário (ESCOLHAS de 08/10): nenhum cartão novo, o «Estilo de Jogo» é o
 veículo, e cada estilo leva as variáveis que a tela não mostra. Exemplo dela:
 *«É terror. (...) A cor do lightbar fica piscando a vibrção fina funciona se
 apertar o botão da arma de fogo (...) o dualsense vibra mais alto por default e
-por tempo x.»* <!-- noqa-acento: citação literal dela -->
+por tempo x.»* <!-- noqa-acento: citação literal -->
 Duas variáveis o gesto aplica no perfil (:data:`APLICADAS`): o ritmo e a
 frequência do gatilho (os parâmetros de `trigger_specs.PRESETS`) e o modo (o
 Point-and-click liga a Navegação, pela seção `mode` do perfil). As outras
@@ -74,8 +74,8 @@ Point-and-click liga a Navegação, pela seção `mode` do perfil). As outras
 (O-ESTILO-DO-PERFIL-LIGA-O-MOTOR-DO-TATO-01) o perfil guarda a CHAVE do estilo
 (`Profile.estilo`), e o motor do tato vivo lê o toque, o lado e a luz daqui,
 pela tradução `daemon/subsystems/tato_vivo.receita_do_estilo`. Todo número vem
-de fonte pública, citada na linha; o que é escolha nossa diz «escolha», a validar
-por ela na bancada.
+de fonte pública, citada na linha; o que é escolha nossa diz «escolha», a
+validar pelo usuário na bancada.
 """
 
 from __future__ import annotations
@@ -178,7 +178,7 @@ ESTILOS: tuple[Estilo, ...] = (
            Receita()),
     Estilo("point_and_click", "Point-and-click", "Off", "economia", (0, 200, 210), 1.0,
            "o gatilho não é usado; vibração baixa não distrai a leitura",
-           # a Navegação é escolha dela (ESCOLHAS de 08/10); o toque e o lado também
+           # a Navegação é escolha do usuário (ESCOLHAS de 08/10); o toque e o lado também
            Receita(modo="desktop")),
     Estilo("terror", "Terror", "PulseB", "max", (215, 30, 55), 0.7,
            "o pulso irregular é o susto no dedo; a luz baixa não denuncia",

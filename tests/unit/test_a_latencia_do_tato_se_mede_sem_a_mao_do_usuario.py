@@ -1,4 +1,4 @@
-"""A latência do tato se mede sem a mão dela (08/10/2026).
+"""A latência do tato se mede sem a mão do usuário (08/10/2026).
 
 O ensaio ``scripts/ensaios/latencia_do_tato.py`` lê o giro do controle pousado e mede o
 intervalo entre a escrita do relatório e o primeiro desvio acima do ruído. Aqui o giro é
@@ -7,7 +7,7 @@ Cada régua tem a sua mordida: a que mede do relatório errado, a que aceita o r
 toque, a que aceita o giro em movimento, a que devolve zero no lugar de «nenhum toque lido»
 e a que deixa o desvio de um toque valer para o anterior.
 
-Nada aqui toca o aparelho, o daemon dela ou o ``~/.config``: o ``rodar_no_aparelho`` é da
+Nada aqui toca o aparelho, o daemon do usuário ou o ``~/.config``: o ``rodar_no_aparelho`` é da
 bancada, e o ``ha_daemon`` real é trocado por um dublê nos testes da linha de comando.
 """
 
@@ -99,7 +99,7 @@ def test_cada_toque_e_medido_da_sua_escrita_e_nao_da_anterior() -> None:
 
 
 def test_o_desvio_de_um_toque_nao_vale_para_o_toque_anterior() -> None:
-    """A segunda escrita vem 100 ms depois; o degrau é DELA, e a primeira não leu nada."""
+    """A segunda escrita vem 100 ms depois; o degrau é DO USUÁRIO, e a primeira não leu nada."""
     quadros = giro(400, [(157, 180)])
     segunda = _t(150)
     medidas = ens.medir_toques(quadros, [ESCRITA, segunda])

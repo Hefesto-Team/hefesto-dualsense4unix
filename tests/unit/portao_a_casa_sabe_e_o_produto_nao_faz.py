@@ -407,7 +407,7 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
         "assento, assento-sem-refazer ou endereco (integrations/endpoint_de_haptica.py, "
         "`INTERRUPTOR_DA_ORDEM_DOS_NOS`). Interruptor da bancada dela: o padrão é a "
         "constante com nome, nenhuma unit, install ou empacotamento escreve a chave, e "
-        "quem coordena troca X por Y com `systemctl --user set-environment`. Nenhum "
+        "a casa troca X por Y com `systemctl --user set-environment`. Nenhum "
         "fluxo dela passa por aqui; a decisão está «a validar por ela»."
     ),
     "HEFESTO_DUALSENSE4UNIX_GRACA_DO_JOGO": (
@@ -415,7 +415,7 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
         "manda na graça: guarda ou descarta (integrations/uhid_gamepad.py, "
         "`_INTERRUPTOR_DA_GRACA`). Interruptor da bancada dela: o padrão é a "
         "constante com nome, nenhuma unit, install ou empacotamento escreve a chave, e "
-        "quem coordena troca X por Y com `systemctl --user set-environment`. Nenhum "
+        "a casa troca X por Y com `systemctl --user set-environment`. Nenhum "
         "fluxo dela passa por aqui; a decisão está «a validar por ela»."
     ),
     "HEFESTO_DUALSENSE4UNIX_GRACA_DO_JOGO_S": (
@@ -423,7 +423,7 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
         " 5 s (integrations/uhid_gamepad.py, `_INTERRUPTOR_DO_PRAZO_DA_GRACA`). Interruptor da "
         "bancada dela: o padrão é a "
         "constante com nome, nenhuma unit, install ou empacotamento escreve a chave, e "
-        "quem coordena troca X por Y com `systemctl --user set-environment`. Nenhum "
+        "a casa troca X por Y com `systemctl --user set-environment`. Nenhum "
         "fluxo dela passa por aqui; a decisão está «a validar por ela»."
     ),
     "HEFESTO_DUALSENSE4UNIX_REPLICA_DO_GATILHO": (
@@ -431,7 +431,7 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
         "sequencia ou coalescido (integrations/uhid_gamepad.py, "
         "`_INTERRUPTOR_DA_REPLICA_DO_GATILHO`). Interruptor da bancada dela: o padrão é a "
         "constante com nome, nenhuma unit, install ou empacotamento escreve a chave, e "
-        "quem coordena troca X por Y com `systemctl --user set-environment`. Nenhum "
+        "a casa troca X por Y com `systemctl --user set-environment`. Nenhum "
         "fluxo dela passa por aqui; a decisão está «a validar por ela»."
     ),
     "HEFESTO_DUALSENSE4UNIX_RECOLHER_O_CEDIDO": (
@@ -439,7 +439,7 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
         "pad cedido: calado ou com-parada (daemon/subsystems/coop.py, "
         "`INTERRUPTOR_DO_RECOLHIMENTO`). Interruptor da bancada dela: o padrão é a "
         "constante com nome, nenhuma unit, install ou empacotamento escreve a chave, e "
-        "quem coordena troca X por Y com `systemctl --user set-environment`. Nenhum "
+        "a casa troca X por Y com `systemctl --user set-environment`. Nenhum "
         "fluxo dela passa por aqui; a decisão está «a validar por ela»."
     ),
 }

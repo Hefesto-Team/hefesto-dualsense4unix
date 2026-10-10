@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """A-LINHA-DA-COR-ESCOLHIDA-TEM-A-COR-DO-CONTROLE-01 — a linha e a 02 têm um dono só.
 
-A fala dela, 29/09 (~18h50): *«essa linha abaixo da cor selecionada tem que ter a
+A fala do usuário, 29/09 (~18h50): *«essa linha abaixo da cor selecionada tem que ter a
 cor de cada controle no caso ali tá certo no p1, por ser branca, mas o do p2 não
-tem a cor dele roxo.»* <!-- noqa-acento: citação literal dela -->
+tem a cor dele roxo.»* <!-- noqa-acento: citação literal -->
 O pixel da foto dela era o roxo certo: o defeito era de tamanho, e a cura (a (b)
 das ESCOLHAS de 08/10/2026, a linha a 6 px) mora na folha do `aba04.py`, medida
 no WebKit pela `test_a_paleta_marca_a_cor_de_cada_controle.py`. Aqui, sem

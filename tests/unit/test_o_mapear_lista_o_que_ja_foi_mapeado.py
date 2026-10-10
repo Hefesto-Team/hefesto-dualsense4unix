@@ -26,7 +26,7 @@ from tests.unit.test_entrada_a_entrada_02_as_telas_aprovadas import (
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 
 FRASE_DELA = "Conecte um DualSense em cada entrada USB do seu dispositivo."
-#: O resto da frase dela é explicação: desde 08/10/2026 mora no «?» da tela.
+#: O resto da frase de produto é explicação: desde 08/10/2026 mora no «?» da tela.
 RESTO_DA_FRASE_DELA = (
     "Nomeie a entrada (ou deixe vazia para ela ser enumerada). Ao final, valide e, "
     "caso necessário, faça os ajustes na entrada no botão Mapa das conexões."

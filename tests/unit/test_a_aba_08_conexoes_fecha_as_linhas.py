@@ -149,7 +149,7 @@ def test_o_rodape_do_mapa_nao_manda_apertar_o_aplicar() -> None:
 
 
 def test_a_frase_do_clique_e_dica_e_nao_corpo_da_tela() -> None:
-    """Ordem dela (08/10): o texto explicativo das telas de mapear vira dica."""
+    """Ordem (08/10): o texto explicativo das telas de mapear vira dica."""
     from hefesto_dualsense4unix.interface.logica_do_mapa import EXPLICACAO, GRAVA_NO_CLIQUE
     from hefesto_dualsense4unix.interface import onde
 

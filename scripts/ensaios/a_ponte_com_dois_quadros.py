@@ -9,7 +9,7 @@ A PERGUNTA
 O degrau do meio cede a TAXA da ponte de vibração em vez de cortá-la: metade dos relatórios
 (46,875 por segundo em vez de 93,75), cada um com DOIS blocos ``0x12`` de 64 B, a mesma onda
 sem buraco. Nenhum projeto público mostra o firmware tocando dois blocos de háptica num
-relatório: é suposição inteira. Este ensaio responde duas coisas, com a mão dela: o firmware
+relatório: é suposição inteira. Este ensaio responde duas coisas, com a mão do usuário: o firmware
 toca? E a diferença (a latência sobe 10,7 ms) se sente?
 
 O QUE ELE FAZ
@@ -216,7 +216,7 @@ def descrever(relatorio: bytes) -> list[str]:
 
 @dataclass
 class Contagem:
-    """O que o laço contou. Não é a medição: o veredito é dela."""
+    """O que o laço contou. Não é a medição: o veredito é do usuário."""
 
     entregues: int = 0
     recusados_pelo_kernel: int = 0
@@ -274,7 +274,7 @@ def rodar(
     relogio: Callable[[], float] = time.monotonic,
     dormir: Callable[[float], None] = time.sleep,
 ) -> list[Rodada]:
-    """As rodadas cegas: a tela diz só o número; a resposta dela vai crua ao arquivo."""
+    """As rodadas cegas: a tela diz só o número; a resposta de produto vai crua ao arquivo."""
     saida: list[Rodada] = []
     for numero, arranjo in enumerate(ordem, start=1):
         blocos, por_segundo = ritmo_do_arranjo(arranjo)
@@ -290,7 +290,7 @@ def rodar(
 
 
 def linhas_curtas(rodadas: Sequence[Rodada]) -> list[str]:
-    """Uma linha por rodada, a chave aberta: o arranjo, o ritmo entregue e o que ela disse."""
+    """Uma linha por rodada, a chave aberta: o arranjo, o ritmo entregue e o que o usuário disse."""
     return [f"rodada {r.numero}: {r.arranjo} bloco(s) por relatório, {r.por_segundo:g}/s "
             f"entregues, ela: {r.resposta or '(nada)'}" for r in rodadas]
 

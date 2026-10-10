@@ -1,7 +1,7 @@
 """A fita de leitura não tem balão: nem a da 06 nem as outras seis.
 
 O `title` PRÓPRIO da 06 («Não se aplica: mouse, teclado e gestos…») existia desde
-a cura de 03/09. Em 09/10/2026 ela escolheu, na sessão dos desenhos, que o balão da
+a cura de 03/09. Em 09/10/2026 o usuário escolheu, na sessão dos desenhos, que o balão da
 fita sai das sete abas (O-SELECIONAR-ACENDE-QUEM-ESTA-ESCOLHIDO-01, opção a): com
 os quatro acesos, a frase ficaria de pé ao lado de uma fita que diz «todos». O
 arquivo mantém o nome e passa a guardar o inverso: o balão não volta no tique.

@@ -1,7 +1,7 @@
 """A régua dos efeitos do gatilho: o bloco lido como o CONTROLE o lê.
 
 Os outros testes do gatilho travam o que o código MONTA (o modo, os bytes que
-ela aprovou em 01/08). Nenhum pergunta o que o aparelho FAZ com o bloco, e os
+o usuário aprovou em 01/08). Nenhum pergunta o que o aparelho FAZ com o bloco, e os
 nomes herdados de 2020 (`PULSE_A = 0x22`, `PULSE_B = 0x06`, `PULSE_AB = 0x26`)
 escondem que o mesmo byte de modo é, no firmware, o arco, a vibração simples e
 a vibração oficial: um efeito montado no layout errado passa em todo teste.
@@ -271,7 +271,7 @@ ISENCOES: dict[str, tuple[str, frozenset[str]]] = {
     })),
     # O Disparo, o Pulso (curva B) e o Pulso (curva A) saíram desta tabela em
     # 08/10/2026 (arma `0x25` e arco `0x22` no layout do modo). Os três de baixo
-    # têm a sensação que a mão dela aprovou em 01/08 e ficam como estão até a
+    # têm a sensação que a mão do usuário aprovou em 01/08 e ficam como estão até a
     # sessão às cegas: os bytes só mudam se ela escolher o modo próprio.
     # sai com: O-DISPARO-E-A-ARMA-SEMI-AUTOMATICA-MANDAM-O-MODO-DE-ARMA-01
     "SemiAutoGun": (_DISPARO, frozenset({BIT_FORA_DO_CURSO, FORCA_EM_ZONA_INATIVA})),

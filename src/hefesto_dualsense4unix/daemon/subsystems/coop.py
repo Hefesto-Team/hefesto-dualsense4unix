@@ -26,7 +26,7 @@ _CALIB_PRAZO_S = 2.0
 
 ESPERA_PELA_ORDEM_S = 4.0
 
-# O jogador que cedeu o aparelho ao posto de P1 (09/10/2026, a validar por ela):
+# O jogador que cedeu o aparelho ao posto de P1 (09/10/2026, a validar pelo usuário):
 # «calado»: o pad dele para de falar com o aparelho na cessão (o motor que ele
 # deixou ligado para ali, uma vez) e o recolhimento não manda parada nem zero;
 # «com-parada» é o de antes. O interruptor mora no ambiente do daemon.

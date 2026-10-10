@@ -1514,7 +1514,7 @@ MAPA_DESENHADO = _aba_conexoes.html_do_mapa(
     dicas={"esticada": DICA_EXTENSAO,
            "enumera": DICA_ENUMERA,
            "nova_entrada": _aba_conexoes.DICA_NOVA_ENTRADA},
-    #: A pergunta do «Acrescentar hub» nasce ABERTA no desenho: é a face que ela escolheu (B-hub).
+    #: A pergunta do «Acrescentar hub» nasce ABERTA no desenho: é a face que o usuário escolheu (B-hub).
     pergunta={"aberta": True, "entradas": [n for _nome, ns in FACES for n in ns]})
 
 

@@ -27,7 +27,7 @@ sem a árvore o PNG não existe, e o ícone vem do tema que o pacote instala.
 
 OS BOTÕES DA JANELA SAEM À ESQUERDA, E A CULPA NÃO É DO CÓDIGO (02/09/2026)
 ---------------------------------------------------------------------------
-O `gtk-decoration-layout` da sessão dela é `close,maximize,minimize:` (em
+O `gtk-decoration-layout` da sessão do usuário é `close,maximize,minimize:` (em
 `~/.config/gtk-3.0/settings.ini` e no gsettings), e vale para todo aplicativo GTK. **NÃO SE CONSERTA
 AQUI**: um aplicativo que chamasse `set_decoration_layout` ignoraria a escolha global dela. O
 conserto é de UMA LINHA na máquina do usuário.

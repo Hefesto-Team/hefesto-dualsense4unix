@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """check_so_a_primeira_letra.py — só a primeira letra da frase é maiúscula.
 
-A REGRA É DELA (09/10/2026, escolha no chat: «Só a 1ª maiúscula»), e repete a de
+A REGRA É DE PRODUTO (09/10/2026, escolha no chat: «Só a 1ª maiúscula»), e repete a de
 08/10 no ESCOLHAS.md: *toda frase começa com maiúscula e o resto em minúscula*.
 Rótulo de botão, título e cartão saíam em Title Case, à inglesa — «Salvar
 Perfil», «Gestão de Controles», «Modo Automático», «Perfil de Bateria», «Modo
@@ -94,7 +94,7 @@ UNIDADES = frozenset({"MHz", "GHz", "Hz", "kHz", "dB", "dBm", "mA", "ms"})
 #: O dado de exemplo dos geradores: os donos dos controles da mesa do desenho
 #: (`monta.MESA`, `aba08`), os jogos da lista de perfis (`aba10.PERFIS`), os
 #: aparelhos do rádio (o `Alias` do BlueZ, que nasce da classe: «Caixa de som»)
-#: e as entradas que ela nomeou na mesa de exemplo (Esquerda, Meio, Direita). O
+#: e as entradas que o usuário nomeou na mesa de exemplo (Esquerda, Meio, Direita). O
 #: produto troca cada um pelo nome que a pessoa deu ou que o jogo tem; nome de
 #: gente, de jogo, de aparelho e de entrada é próprio.
 NOMES_DO_DESENHO = (

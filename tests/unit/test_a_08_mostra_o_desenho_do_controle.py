@@ -329,7 +329,7 @@ def test_o_contador_da_cerimonia_abre_com_maiuscula_no_desenho_e_no_pacote() -> 
 
 
 def test_o_texto_explicativo_das_telas_de_mapear_mora_no_ponto_de_interrogacao() -> None:
-    """Ordem dela (ESCOLHAS, 08/10): o explicativo de «Mapear entradas» e de «Entrada a Entrada»
+    """Ordem de produto (ESCOLHAS, 08/10): o explicativo de «Mapear entradas» e de «Entrada a Entrada»
     sai do corpo e vai para o «?»."""
     pagina = _a_pagina()
     assert 'class="ce-relogios"' not in pagina, "o texto dos dois relógios voltou ao corpo da tela"

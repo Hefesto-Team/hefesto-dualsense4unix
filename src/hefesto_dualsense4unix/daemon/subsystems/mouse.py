@@ -232,7 +232,7 @@ class TabelaNoJogo:
                 logger.warning("tabela_no_jogo_sem_uinput")
                 return False
             # O teclado é dono do que sai por tecla (o d-pad, o Círculo, o Quadrado
-            # e o que ela escolheu): o mouse os cala, para a tecla não sair duas vezes.
+            # e o que o usuário escolheu): o mouse os cala, para a tecla não sair duas vezes.
             mouse.set_button_actions(
                 self._do_mouse, self._calados | frozenset(self._do_teclado))
             teclado.set_bindings(resolve_key_bindings(
@@ -312,7 +312,7 @@ def trocar_a_tabela_no_jogo(daemon: Any, profile: Any) -> None:
 
 
 def _suspenso_por_ela(daemon: Any) -> bool:
-    """A emulação está suspensa por gesto dela (e não pelo perfil do jogo)?"""
+    """A emulação está suspensa por gesto do usuário (e não pelo perfil do jogo)?"""
     return bool(getattr(daemon, "_emulation_suppressed", False)) and not bool(
         getattr(daemon, "_suppress_from_profile", False))
 

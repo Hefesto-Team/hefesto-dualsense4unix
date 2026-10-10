@@ -4,7 +4,7 @@
 A-LATENCIA-DO-TATO-SE-MEDE-SEM-A-MAO-DELA-01 (08/10/2026). Todas as sprints do
 tato dependem de um número que ninguém tinha: o intervalo entre a escrita do
 relatório e o motor do controle mexer. Sem ele, «sente atrasado» é opinião, e a
-única régua era a mão dela. O giroscópio do PRÓPRIO controle, pousado e parado,
+única régua era a mão do usuário. O giroscópio do PRÓPRIO controle, pousado e parado,
 lê a vibração do atuador: o instante em que o giro sai do ruído é o instante em
 que o motor mexeu.
 
@@ -20,7 +20,7 @@ desvio, o resultado é «nenhum toque lido» (``None``), nunca zero.
 O QUE ELE RECUSA (o instrumento que briga com o produto recusa, não anuncia)
 ----------------------------------------------------------------------------
 1. fora do lar de mentira (``HOME`` é o lar real: nada deste instrumento
-   precisa do ``~/.config`` dela, e quem roda no lar real migra o perfil dela);
+   precisa do ``~/.config`` dela, e quem roda no lar real migra o perfil do usuário);
 2. o daemon no ar, em QUALQUER socket conhecido — o do ambiente e o do
    ``/run/user/<uid>``, porque num lar de mentira o primeiro engana: ele escreve
    no mesmo hidraw e o relatório dele no meio do ensaio mediria outra coisa;
