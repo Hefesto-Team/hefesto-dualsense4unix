@@ -206,6 +206,11 @@ ENV_HABILITA = "HEFESTO_DUALSENSE4UNIX_BT_MIC"
 
 RECONCILIA_S = 5.0
 
+#: Quanto o stop espera a volta terminar. Passado o prazo, a volta segue
+#: sozinha, e a porta do gerenciador e o `_parar` do canal do cabo garantem
+#: que nada do que ela erguer depois fique no ar.
+ESPERA_DA_VOLTA_S = 2.0
+
 _VALORES_LIGADOS = ("1", "true", "yes", "on")
 
 _UNIQ_HEX = 12
@@ -959,7 +964,7 @@ class BtMicSubsystem:
         self._thread = None
         if thread is not None:
             with contextlib.suppress(Exception):
-                await asyncio.to_thread(thread.join, 2.0)
+                await asyncio.to_thread(thread.join, ESPERA_DA_VOLTA_S)
         self._gerenciador = None
         self._backend = None
         self._laco = None
@@ -1058,7 +1063,14 @@ class BtMicSubsystem:
             self._abrir_os_canais_do_cabo(faltam)
 
     def _abrir_os_canais_do_cabo(self, uniqs: list[str]) -> None:
-        """Ergue o canal de cada `uniq` da lista, alimentado pelo nó ALSA dele."""
+        """Ergue o canal de cada `uniq` da lista, alimentado pelo nó ALSA dele.
+
+        Com o stop posto, nenhum canal nasce; o que termina de nascer depois
+        dele fecha no mesmo passo, porque o stop já fechou a lista daquele
+        instante e não volta a olhar.
+        """
+        if self._parar.is_set():
+            return
         from hefesto_dualsense4unix.integrations import canal_do_microfone
         from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
             descricao_do_microfone,
@@ -1084,6 +1096,8 @@ class BtMicSubsystem:
         usb = casamento_usb_agora(na_mesa)
         ja_no_ar = set(canal_do_microfone.de_pe().values())
         for uniq in uniqs:
+            if self._parar.is_set():
+                return
             if canal_do_microfone.nome_do_canal(uniq) in ja_no_ar:
                 logger.debug("bt_mic_canal_do_cabo_ja_tem_dono", uniq=uniq)
                 continue
@@ -1097,6 +1111,9 @@ class BtMicSubsystem:
                 logger.warning("bt_mic_canal_do_cabo_nao_subiu", uniq=uniq)
                 continue
             self._canais_do_cabo[uniq] = canal.nome
+            if self._parar.is_set():
+                self._fechar_o_canal_do_cabo(uniq)
+                return
             logger.info("bt_mic_canal_do_cabo_no_ar", uniq=uniq, source=canal.nome)
 
     def _fechar_o_canal_do_cabo(self, uniq: str) -> None:

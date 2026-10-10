@@ -1397,46 +1397,73 @@ class GerenciadorMicBluetooth:
     tempos em tempos para pegar hotplug — mas ele NÃO tem thread própria: quem
     o usa decide a cadência, e o `dormir()` bloqueia num Event, nunca num
     sleep de laço apertado.
+
+    **A PORTA.** Quem cria (`reconciliar`, na volta de quem o usa) e quem
+    derruba (`parar`, no stop) correm em fios diferentes. Depois do `parar()`,
+    `reconciliar()` não sobe ponte nenhuma, e a ponte cujo `iniciar` termina
+    com a porta já fechada desce na hora (sai o 0x32 de desligar) e não entra
+    no dicionário. A trava cobre só o teste da porta e o dicionário, nunca o
+    `iniciar`, que fala com o rádio e pode demorar. É reentrante porque o
+    CLI chama `parar()` de dentro do tratador de sinal, no mesmo fio que
+    pode estar no meio de `reconciliar()`.
     """
 
     def __init__(self, *, fabrica: Callable[[NoDualSenseBT], Any] | None = None) -> None:
         self._fabrica = fabrica or PonteMicBluetooth
         self._pontes: dict[str, Any] = {}
         self._acordar = threading.Event()
+        self._trava = threading.RLock()
 
     @property
     def pontes(self) -> dict[str, Any]:
-        return dict(self._pontes)
+        with self._trava:
+            return dict(self._pontes)
 
     def reconciliar(self, nos: list[NoDualSenseBT] | None = None) -> None:
         """Casa as pontes vivas com os controles BT presentes agora."""
+        if self._acordar.is_set():
+            return
         atuais = nos if nos is not None else nos_dualsense_bluetooth()
         presentes = {no.caminho: no for no in atuais}
-        for caminho in [c for c in self._pontes if c not in presentes]:
-            ponte = self._pontes.pop(caminho)
+        with self._trava:
+            saem = [self._pontes.pop(c) for c in list(self._pontes) if c not in presentes]
+        for ponte in saem:
             with contextlib.suppress(Exception):
                 ponte.parar()
         for caminho, no in presentes.items():
-            if caminho in self._pontes:
-                continue
+            with self._trava:
+                if self._acordar.is_set():
+                    return
+                if caminho in self._pontes:
+                    continue
             try:
                 ponte = self._fabrica(no)
                 ok = ponte.iniciar()
             except Exception as exc:
                 logger.warning("bt_mic_ponte_falhou", no=caminho, err=str(exc))
                 continue
-            if ok:
-                self._pontes[caminho] = ponte
+            if not ok:
+                continue
+            with self._trava:
+                tardia = self._acordar.is_set()
+                if not tardia:
+                    self._pontes[caminho] = ponte
+            if tardia:
+                with contextlib.suppress(Exception):
+                    ponte.parar()
+                return
 
     def dormir(self, segundos: float) -> bool:
         """Espera bloqueando (nunca em laço apertado). True se pediram parada."""
         return self._acordar.wait(segundos)
 
     def parar(self) -> None:
-        """Derruba todas as pontes. Idempotente."""
-        self._acordar.set()
-        for caminho in list(self._pontes):
-            ponte = self._pontes.pop(caminho)
+        """Fecha a porta e derruba todas as pontes. Idempotente."""
+        with self._trava:
+            self._acordar.set()
+            saem = list(self._pontes.values())
+            self._pontes.clear()
+        for ponte in saem:
             with contextlib.suppress(Exception):
                 ponte.parar()
 
