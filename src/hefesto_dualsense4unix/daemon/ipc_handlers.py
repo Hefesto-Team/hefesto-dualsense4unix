@@ -5937,7 +5937,7 @@ class IpcHandlersMixin:
             config=getattr(self.daemon, "config", None),
             executor=getattr(self.daemon, "_executor", None),
         )
-        total = ps.reload(ctx)
+        total = await ps.reload(ctx)
         return {"status": "ok", "total": total}
 
     # AR-MEDIDO-01 (23/09/2026), R10 e R11 dela — o ar no `state_full`

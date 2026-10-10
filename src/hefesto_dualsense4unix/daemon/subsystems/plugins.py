@@ -189,10 +189,13 @@ class PluginsSubsystem:
             for e in self._entries
         ]
 
-    def reload(self, ctx: DaemonContext | None = None) -> int:
-        """Descarrega todos os plugins e recarrega do disco."""
-        import asyncio
+    async def reload(self, ctx: DaemonContext | None = None) -> int:
+        """Descarrega todos os plugins e recarrega do disco.
 
+        Corrotina, porque o único chamador (o ``plugin.reload`` do IPC) já roda
+        dentro do laço do daemon: um laço novo ali levanta ``RuntimeError`` e
+        deixava o daemon sem plugins.
+        """
         ctx_real = ctx or self._ctx
         if ctx_real is None:
             logger.warning("plugins_reload_sem_ctx")
@@ -202,12 +205,7 @@ class PluginsSubsystem:
             entry.call_on_unload()
         self._entries.clear()
 
-        loop = asyncio.new_event_loop()
-        try:
-            loop.run_until_complete(self.start(ctx_real))
-        finally:
-            loop.close()
-
+        await self.start(ctx_real)
         return len(self._entries)
 
 
