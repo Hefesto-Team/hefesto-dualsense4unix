@@ -24,7 +24,8 @@ FOLGA = 2
 
 PISO = (1212, 809)
 
-#: A largura da FOTO DO USUÁRIO de 04/09/2026 (`test_a_janela_estreita_nao_engole_o_desenho`): 272 px a
+#: A largura da FOTO DO USUÁRIO de 04/09/2026
+#: (`test_a_janela_estreita_nao_engole_o_desenho`): 272 px a
 #: menos que o piso. A queixa de 08/10: o segundo «Inverter» saía 32 px do cartão aqui.
 ESTREITA = (940, PISO[1])
 

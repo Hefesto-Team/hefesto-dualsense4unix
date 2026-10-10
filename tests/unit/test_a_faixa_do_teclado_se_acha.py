@@ -5,7 +5,8 @@ salta de canal, o par sem mapa AFH e o par em que nada mudou davam TODOS o mesmo
 «Não achei a faixa dele» (na tela, a «Faixa não encontrada · Tentar de novo» que ela viu). Agora a
 procura (``receptor_sem_fio.classificar`` e ``Descoberta``) responde a faixa, o salto, a falta de
 mapa ou o mapa parado, sobre os pares guardados em ``tests/fixtures/a_faixa_do_receptor/``
-(sintéticos até a bancada gravar os do teclado do usuário com ``scripts/ensaios/a_faixa_do_receptor.py``).
+(sintéticos até a bancada gravar os do teclado do usuário com
+``scripts/ensaios/a_faixa_do_receptor.py``).
 
 MORDIDAS (arrancar, ver reprovar, devolver):
 

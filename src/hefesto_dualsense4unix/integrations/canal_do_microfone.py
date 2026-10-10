@@ -252,14 +252,18 @@ def _passar_a_escolha_dela(uniq: str, nome: str) -> None:
 
 
 def _a_palavra_dela(uniq: str) -> bool | None:
-    """O que o usuário disse sobre este microfone (`False` = calado). `None` = nada, ou ninguém atende."""
+    """O que o usuário disse sobre este microfone (`False` = calado).
+
+    `None` = nada, ou ninguém atende.
+    """
     from hefesto_dualsense4unix.integrations.eleicao_de_microfone import palavra_no_ar
 
     return palavra_no_ar(uniq)
 
 
 def escrever_o_mudo(uniq: str, mudo: bool, *, rodar: Any = None) -> bool:
-    """O mudo da palavra de produto chega ao nó deste controle, e SÓ quando difere do último escrito.
+    """O mudo da palavra de produto chega ao nó deste controle, e SÓ quando difere do
+    último escrito.
 
     `True` = escreveu. Escrever a cada volta desfaria um mudo posto de fora
     (a tecla de mudo do sistema, o `pavucontrol`); a memória por canal é o que
