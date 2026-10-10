@@ -212,6 +212,9 @@ def sobe_a_letra(svg_txt):
 def controle(pecas, trocam=()):
     """O desenho — que É o arquivo dela — com os alvos do ponteiro por cima."""
     x = sobe_a_letra(SVG.read_text())
+    # O grupo do chassi chega vazio do desenho (o `corpo` é SEM_BOTAO); sobraria
+    # só o título dele no mapa, que é o que o leitor de tela anuncia.
+    x = re.sub(r'\s*<g id="grupo-chassi">\s*<title>[^<]*</title>\s*</g>', "", x)
     for i in sorted(set(re.findall(r'id="([^"]+)"', x)), key=len, reverse=True):
         x = (x.replace(f'id="{i}"', f'id="mp-{i}"')
               .replace(f"url(#{i})", f"url(#mp-{i})").replace(f"#{i} ", f"#mp-{i} ")

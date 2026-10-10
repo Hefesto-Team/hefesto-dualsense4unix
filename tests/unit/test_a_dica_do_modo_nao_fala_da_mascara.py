@@ -25,7 +25,7 @@ DA_MASCARA = (
 
 O_CARTAO_GUARDA = ("botões", "Xbox 360", "Nintendo", "△ ○ ✕ ▢", "Y B A X")
 
-CHIPS_DE_MODO = {"modo-dualsense", "modo-xbox", "modo-steam", "modo-navegacao"}
+CHIPS_DE_MODO = {"modo-dualsense", "modo-xbox", "modo-steam", "modo-navegacao", "modo-nativo"}
 
 
 def _pagina() -> str:
