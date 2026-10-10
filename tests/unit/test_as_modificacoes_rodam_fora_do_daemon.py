@@ -57,10 +57,15 @@ OUTRO = "aa:bb:cc:00:00:02"
 # -- o lar de mentira ---------------------------------------------------------
 
 
+#: Fora do ``/tmp``: a caixa monta um ``/tmp`` vazio, e uma casa de mentira
+#: dentro dele sumiria da caixa por isso, com ou sem a cura que se quer provar.
+_FORA_DO_TMP = "/var/tmp" if os.access("/var/tmp", os.W_OK) else None
+
+
 @pytest.fixture
 def curto() -> Iterator[Path]:
     """Uma pasta de caminho curto: o socket Unix aceita até 107 bytes."""
-    pasta = Path(tempfile.mkdtemp(prefix="hm"))
+    pasta = Path(tempfile.mkdtemp(prefix="hm", dir=_FORA_DO_TMP))
     try:
         yield pasta
     finally:
@@ -522,6 +527,7 @@ def test_o_filho_fala_pela_porta_com_a_ficha_e_sem_caixa_o_estado_diz(
 def test_com_bwrap_a_caixa_esconde_a_casa_a_rede_e_o_socket_principal(
     lar: Lugares, curto: Path
 ) -> None:
+    assert not curto.is_relative_to("/tmp"), "no /tmp a caixa esconde tudo sozinha"
     from hefesto_dualsense4unix.utils.xdg_paths import ipc_socket_path
 
     principal = ipc_socket_path()
@@ -684,6 +690,7 @@ def test_sem_xdg_runtime_dir_a_caixa_esconde_a_execucao_da_sessao(
     """Sem ``XDG_RUNTIME_DIR``, o socket principal não vai para a ``HOME``: o
     ``platformdirs`` resolve ``/run/user/<uid>``. A caixa esconde o avô da porta.
     Mordida: esconder só o ``XDG_RUNTIME_DIR`` do ambiente e ver o principal à mostra."""
+    assert not curto.is_relative_to("/tmp"), "no /tmp a caixa esconde tudo sozinha"
     execucao = curto / "execucao-da-casa" / "hefesto-dualsense4unix"
     execucao.mkdir(parents=True)
     principal = execucao / "hefesto-dualsense4unix.sock"
