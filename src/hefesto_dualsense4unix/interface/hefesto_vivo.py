@@ -4280,14 +4280,24 @@ _TEXTOS_LIDOS_PELO_FUNIL: dict[str, tuple[str, ...]] = {}
 
 @contextlib.contextmanager
 def _o_processo_da_janela() -> Iterator[None]:
-    """O que o processo da janela liga ao subir e desliga ao sair."""
+    """O que o processo da janela liga ao subir e desliga ao sair.
+
+    A LARGADA MORA AQUI porque todo fim da janela passa por este `finally`: o X
+    (`destroy` → `Gtk.main_quit`), o `agendar_saida` e o `_morrer`. O teste da
+    vibração e o da háptica de cada controle voltam ao jogo na saída, e o teto
+    do serviço fica como rede só para a janela que morre sem `finally`.
+    """
     from hefesto_dualsense4unix.profiles import loader
 
     loader.ligar_a_leitura_pela_assinatura()
     try:
         yield
     finally:
-        loader.desligar_a_leitura_pela_assinatura()
+        try:
+            if _AS_ABAS_CHEGARAM:
+                pacotes.largar_o_que_as_abas_seguram(ponte)
+        finally:
+            loader.desligar_a_leitura_pela_assinatura()
 
 
 def main() -> None:
