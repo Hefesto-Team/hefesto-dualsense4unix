@@ -8,9 +8,11 @@ repositórios são ``git init`` locais, abertos por ``file://``.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import os
 import shutil
+import signal
 import socket
 import subprocess
 import sys
@@ -116,6 +118,9 @@ _O_FILHO = textwrap.dedent('''
         relatar(pid=os.getpid())
         while True:
             time.sleep(1)
+    if modo == "neto":
+        import subprocess
+        subprocess.Popen([sys.executable, "-c", "import time; time.sleep(600)", sys.argv[1]])
     s = socket.socket(socket.AF_UNIX)
     s.connect(os.environ["HEFESTO_MOD_SOCKET"])
     s.sendall((json.dumps({"jsonrpc": "2.0", "id": 1, "method": "mod.ola",
@@ -618,6 +623,146 @@ def test_parar_o_grupo_manda_o_sigkill_no_fim_do_prazo() -> None:
         return codigo
 
     assert asyncio.run(corrida()) == -9
+
+
+def _com_a_marca(marca: str) -> list[int]:
+    """Os PIDs (vistos daqui) cuja linha de comando leva ``marca``."""
+    achados: list[int] = []
+    for pasta in Path("/proc").iterdir():
+        if not pasta.name.isdigit():
+            continue
+        try:
+            linha = (pasta / "cmdline").read_bytes()
+        except OSError:
+            continue
+        if marca.encode() in linha.split(b"\0"):
+            achados.append(int(pasta.name))
+    return achados
+
+
+@pytest.mark.skipif(shutil.which("bwrap") is None, reason="sem bwrap nesta máquina")
+def test_na_caixa_o_que_a_modificacao_abriu_morre_com_ela(
+    lar: Lugares, curto: Path
+) -> None:
+    """O ``--new-session`` do ``bwrap`` põe o filho fora do grupo do PID criado: sem
+    o espaço de PID próprio, o neto que a modificação deixa de fundo sobrevive ao
+    «parar». Mordida: tirar o ``--unshare-pid`` e ver o neto vivo."""
+    marca = f"neto-da-modificacao-{os.getpid()}-{time.monotonic_ns()}"
+    pasta = _pasta_do_mod(curto / "fontes", "neto")
+    manifesto = _manifesto()
+    manifesto["processo"]["executar"] = ["python3", "mod.py", marca]
+    (pasta / "hefesto-mod.json").write_text(json.dumps(manifesto), encoding="utf-8")
+    instalar(str(pasta), lugares=lar)
+    ligar("exemplo", lugares=lar)
+
+    async def corrida() -> tuple[list[int], list[int]]:
+        supervisor = _supervisor(lar)
+        assert supervisor.bwrap
+        await supervisor.iniciar()
+        try:
+            await _ate(lambda: _relato(lar) is not None and bool(_com_a_marca(marca)))
+            antes = _com_a_marca(marca)
+        finally:
+            await supervisor.parar()
+        await asyncio.sleep(0.3)
+        return antes, _com_a_marca(marca)
+
+    try:
+        antes, depois = asyncio.run(corrida())
+    finally:
+        for pid in _com_a_marca(marca):
+            with contextlib.suppress(ProcessLookupError):
+                os.kill(pid, signal.SIGKILL)
+    assert antes, "o neto nunca nasceu: a prova não prova nada"
+    assert depois == [], f"o neto {depois} sobreviveu ao «parar»"
+
+
+@pytest.mark.skipif(shutil.which("bwrap") is None, reason="sem bwrap nesta máquina")
+def test_sem_xdg_runtime_dir_a_caixa_esconde_a_execucao_da_sessao(
+    lar: Lugares, curto: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Sem ``XDG_RUNTIME_DIR``, o socket principal não vai para a ``HOME``: o
+    ``platformdirs`` resolve ``/run/user/<uid>``. A caixa esconde o avô da porta.
+    Mordida: esconder só o ``XDG_RUNTIME_DIR`` do ambiente e ver o principal à mostra."""
+    execucao = curto / "execucao-da-casa" / "hefesto-dualsense4unix"
+    execucao.mkdir(parents=True)
+    principal = execucao / "hefesto-dualsense4unix.sock"
+    principal.write_text("socket principal de mentira", encoding="utf-8")
+    pasta = _pasta_do_mod(curto / "fontes", "caixa")
+    manifesto = _manifesto()
+    manifesto["processo"]["executar"] = ["python3", "mod.py", str(principal)]
+    (pasta / "hefesto-mod.json").write_text(json.dumps(manifesto), encoding="utf-8")
+    instalar(str(pasta), lugares=lar)
+    ligar("exemplo", lugares=lar)
+    monkeypatch.delenv("XDG_RUNTIME_DIR")
+
+    async def corrida() -> dict[str, Any]:
+        supervisor = _supervisor(lar, porta=execucao / "mods.sock")
+        assert supervisor.bwrap
+        await supervisor.iniciar()
+        try:
+            await _ate(lambda: _relato(lar) is not None)
+            relato = _relato(lar)
+            assert relato is not None
+            return relato
+        finally:
+            await supervisor.parar()
+
+    relato = asyncio.run(corrida())
+    assert relato["ola"]["result"]["id"] == "exemplo", relato
+    assert relato["caixa"]["principal_visivel"] is False
+
+
+def test_a_que_parou_fica_parada_ate_ligar_de_novo(lar: Lugares, curto: Path) -> None:
+    """Outra linha do registro que muda não reabre a que parou na quarta queda.
+    Mordida: reabrir toda vigia terminada e ver o diário passar de quatro quedas."""
+    _instalar_e_ligar(lar, curto, "cai")
+    diario = lar.dados / "exemplo" / "diario.log"
+
+    def quedas_no_diario() -> int:
+        return diario.read_text(encoding="utf-8").count("falhei agora")
+
+    async def corrida() -> None:
+        supervisor = _supervisor(lar, procurar_bwrap=False, esperas=(0.05, 0.1, 0.2))
+        await supervisor.iniciar()
+        try:
+            await _ate(lambda: getattr(supervisor.estado_de("exemplo"), "estado", "")
+                       == "parou")
+            instalar(str(_pasta_do_mod(curto / "fontes", mod_id="outra")), lugares=lar)
+            await supervisor.reconciliar()
+            await asyncio.sleep(0.5)
+            estado = supervisor.estado_de("exemplo")
+            assert estado is not None and estado.estado == "parou"
+            assert quedas_no_diario() == 4
+            ligar("exemplo", lugares=lar)
+            await supervisor.reconciliar()
+            await _ate(lambda: quedas_no_diario() == 8
+                       and getattr(supervisor.estado_de("exemplo"), "estado", "") == "parou")
+        finally:
+            await supervisor.parar()
+
+    asyncio.run(corrida())
+
+
+def test_a_instancia_isolada_nao_abre_as_modificacoes(
+    lar: Lugares, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O ``--fake`` divide a casa com o serviço de verdade: abrir as modificações
+    dali trocaria a porta dele e abriria cada uma duas vezes."""
+    from types import SimpleNamespace
+
+    from hefesto_dualsense4unix.mods.supervisor import supervisor_do_servico
+    from hefesto_dualsense4unix.utils.xdg_paths import FAKE_ENV_VAR, IPC_SOCKET_ENV_VAR
+
+    servico = SimpleNamespace(bus=EventBus(), controller=None)
+    monkeypatch.delenv(IPC_SOCKET_ENV_VAR, raising=False)
+    monkeypatch.delenv(FAKE_ENV_VAR, raising=False)
+    assert isinstance(supervisor_do_servico(servico), Supervisor)
+    monkeypatch.setenv(FAKE_ENV_VAR, "1")
+    assert supervisor_do_servico(servico) is None
+    monkeypatch.delenv(FAKE_ENV_VAR)
+    monkeypatch.setenv(IPC_SOCKET_ENV_VAR, "outra-instancia.sock")
+    assert supervisor_do_servico(servico) is None
 
 
 # -- o instalador: os três lugares e a origem ------------------------------------

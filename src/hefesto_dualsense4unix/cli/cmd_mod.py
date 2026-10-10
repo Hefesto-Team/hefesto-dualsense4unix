@@ -5,6 +5,8 @@ Nenhum comando daqui fala com o serviço pelo IPC: todos escrevem o registro
 """
 from __future__ import annotations
 
+import shutil
+
 import typer
 from rich.console import Console
 from rich.table import Table
@@ -142,6 +144,8 @@ def cmd_ligar(
         raise _recusar(exc) from exc
     console.print(f"«{manifesto.nome}» pede:")
     _mostrar_permissoes(manifesto.permissoes)
+    if manifesto.processo is not None and shutil.which("bwrap") is None:
+        console.print("Sem o bwrap, ela roda sem caixa e pode mais do que estas permissões.")
     if not sim and not typer.confirm("Ligar com estas permissões?", default=False):
         console.print("Não liguei.")
         raise typer.Exit(code=1)

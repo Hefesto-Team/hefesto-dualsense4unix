@@ -3449,6 +3449,8 @@ class Daemon:
             importlib.import_module, "hefesto_dualsense4unix.mods.supervisor"
         )
         supervisor = modulo.supervisor_do_servico(self)
+        if supervisor is None:
+            return
         await supervisor.iniciar()
         self._mods_supervisor = supervisor
 

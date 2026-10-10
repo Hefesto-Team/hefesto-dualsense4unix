@@ -6,9 +6,11 @@ modificação ligada do tipo ``processo`` vira um processo filho do serviço:
 * num grupo próprio (``setsid``), com ``PR_SET_PDEATHSIG``: se o serviço
   morre, o filho morre junto;
 * com caixa quando o ``bwrap`` existe: raiz só de leitura, ``HOME`` vazia,
-  código só de leitura, dados graváveis, o socket principal escondido (só a
-  porta das modificações aparece) e ``--unshare-net`` quando a rede é
-  ``nenhuma``. Sem ``bwrap``, roda sem caixa, e o estado diz isso numa linha;
+  código só de leitura, dados graváveis, o diretório de execução da sessão
+  escondido (só a porta das modificações aparece), os processos num espaço de
+  PID próprio (o que a modificação abrir morre com ela) e ``--unshare-net``
+  quando a rede é ``nenhuma``. Sem ``bwrap``, roda sem caixa, e o estado diz
+  isso numa linha;
 * reaberto com espera crescente (:data:`ESPERAS_PARA_VOLTAR`) nas três
   primeiras quedas; na quarta, fica «parou», com a última linha do diário;
 * parado com ``SIGTERM`` ao grupo e ``SIGKILL`` no fim do prazo, sempre pelo
@@ -54,7 +56,11 @@ from hefesto_dualsense4unix.mods.porta import (
     UniqDoPosto,
 )
 from hefesto_dualsense4unix.utils.logging_config import get_logger
-from hefesto_dualsense4unix.utils.xdg_paths import mods_socket_path
+from hefesto_dualsense4unix.utils.xdg_paths import (
+    IPC_SOCKET_DEFAULT_NAME,
+    ipc_socket_name,
+    mods_socket_path,
+)
 
 logger = get_logger(__name__)
 
@@ -127,6 +133,8 @@ class _Vigiada:
     tarefa: asyncio.Task[None] | None = None
     processo: asyncio.subprocess.Process | None = None
     ficha: str = ""
+    #: O que esta vigia abriu: o commit, a hora da instalação e a do «ligar».
+    instalacao: tuple[str, str, str] = ("", "", "")
     quer_parar: asyncio.Event = field(default_factory=asyncio.Event)
 
 
@@ -168,23 +176,29 @@ def comando_na_caixa(
     porta: Path,
     manifesto: Manifesto,
     casa: Path,
-    execucao: Path | None,
+    execucao: tuple[Path, ...],
 ) -> list[str]:
     """A linha do ``bwrap`` para ``comando``.
 
-    Os ``tmpfs`` vêm antes das pastas montadas por cima deles: a ``HOME`` e o
-    diretório de execução nascem vazios, e só o código (leitura), os dados
+    Os ``tmpfs`` vêm antes das pastas montadas por cima deles: a ``HOME`` e os
+    diretórios de execução nascem vazios, e só o código (leitura), os dados
     (escrita) e a porta das modificações aparecem dentro deles.
+
+    O ``--unshare-pid`` dá à caixa um espaço de PID próprio: quando o ``bwrap``
+    sai, o kernel leva junto TUDO o que a modificação abriu. Sem ele, o
+    ``--new-session`` põe o filho fora do grupo do PID criado, e o neto que a
+    modificação deixasse de fundo sobrevivia ao «parar» (medido em 10/10/2026).
     """
     argv = [
         bwrap,
         "--ro-bind", "/", "/",
+        "--unshare-pid",
         "--proc", "/proc",
         "--tmpfs", "/tmp",
         "--tmpfs", str(casa),
     ]
-    if execucao is not None:
-        argv += ["--tmpfs", str(execucao)]
+    for pasta in execucao:
+        argv += ["--tmpfs", str(pasta)]
     if "aparelhos" in manifesto.permissoes:
         argv += ["--dev-bind", "/dev", "/dev"]
     else:
@@ -203,6 +217,22 @@ def comando_na_caixa(
     return argv
 
 
+def _execucao_da_sessao(xdg: str | None, porta: Path) -> tuple[Path, ...]:
+    """Os diretórios de execução que a caixa esconde.
+
+    A porta mora em ``<execução da sessão>/<produto>/mods.sock``, ao lado do
+    socket principal. Sem ``XDG_RUNTIME_DIR`` no ambiente, o ``platformdirs``
+    ainda resolve ``/run/user/<uid>``, e não a ``HOME``: o avô da porta é o
+    diretório que guarda o socket principal e os da sessão (barramento,
+    servidor de som, Wayland), e ele se esconde junto com o ``XDG_RUNTIME_DIR``.
+    """
+    pastas: list[Path] = []
+    for pasta in (Path(xdg) if xdg else None, porta.parent.parent):
+        if pasta is not None and pasta != Path(pasta.anchor) and pasta not in pastas:
+            pastas.append(pasta)
+    return tuple(pastas)
+
+
 def _resolver_o_comando(codigo: Path, executar: list[str]) -> list[str] | None:
     primeiro = codigo / executar[0]
     if primeiro.is_file():
@@ -212,6 +242,10 @@ def _resolver_o_comando(codigo: Path, executar: list[str]) -> list[str] | None:
         if achado:
             return [achado, *executar[1:]]
     return None
+
+
+def _instalacao(entrada: Entrada) -> tuple[str, str, str]:
+    return (entrada.commit, entrada.instalada_em, entrada.ligada_em)
 
 
 class Supervisor:
@@ -342,7 +376,10 @@ class Supervisor:
                 self._estados[mod_id] = EstadoDaModificacao("desligada")
         for mod_id, entrada in ligadas.items():
             vigiada = self._vigiadas.get(mod_id)
-            if vigiada is None or vigiada.tarefa is None or vigiada.tarefa.done():
+            # A que «parou» na quarta queda fica parada: outra linha do registro
+            # que muda não a reabre. Volta quando a pessoa a liga de novo (o
+            # «ligar» carimba a hora) ou a atualiza (outra instalação).
+            if vigiada is None or vigiada.instalacao != _instalacao(entrada):
                 await self._comecar(entrada)
         # Sem modificação instalada, o supervisor não deixa arquivo nenhum.
         if self._estados or self._gravou_o_estado:
@@ -364,6 +401,8 @@ class Supervisor:
         return "", manifesto
 
     async def _comecar(self, entrada: Entrada) -> None:
+        if entrada.id in self._vigiadas:
+            await self._parar_uma(entrada.id)
         motivo, manifesto = self._o_que_impede(entrada)
         if manifesto is None:
             self._estados[entrada.id] = EstadoDaModificacao("recusada", motivo=motivo)
@@ -373,7 +412,7 @@ class Supervisor:
             return
         if not self.porta.aberta:
             await self.porta.iniciar()
-        vigiada = _Vigiada(entrada.id)
+        vigiada = _Vigiada(entrada.id, instalacao=_instalacao(entrada))
         self._vigiadas[entrada.id] = vigiada
         vigiada.tarefa = asyncio.create_task(
             self._cuidar(vigiada, manifesto), name=f"mods-{entrada.id}"
@@ -451,9 +490,6 @@ class Supervisor:
         if execucao_bruta:
             ambiente["XDG_RUNTIME_DIR"] = execucao_bruta
         if self.bwrap:
-            # Sem XDG_RUNTIME_DIR, o socket principal mora no cache, dentro da
-            # HOME, e o tmpfs dela já o esconde.
-            execucao = Path(execucao_bruta) if execucao_bruta else None
             argv = comando_na_caixa(
                 bwrap=self.bwrap,
                 comando=comando,
@@ -462,7 +498,7 @@ class Supervisor:
                 porta=self.porta.caminho,
                 manifesto=manifesto,
                 casa=casa,
-                execucao=execucao,
+                execucao=_execucao_da_sessao(execucao_bruta, self.porta.caminho),
             )
         else:
             argv = comando
@@ -514,8 +550,17 @@ async def parar_o_grupo(processo: asyncio.subprocess.Process, prazo: float) -> i
     return espera.result()
 
 
-def supervisor_do_servico(daemon: Any) -> Supervisor:
-    """O supervisor ligado ao serviço vivo (barramento, IPC e estado do jogo)."""
+def supervisor_do_servico(daemon: Any) -> Supervisor | None:
+    """O supervisor ligado ao serviço vivo (barramento, IPC e estado do jogo).
+
+    ``None`` na instância isolada (o ``--fake`` e todo socket de nome próprio):
+    ela divide a casa com o serviço de verdade, e abrir as modificações dali
+    trocaria a porta dele pela sua e abriria cada modificação duas vezes. É a
+    mesma regra que já isola o socket e a trava de instância do ``--fake``.
+    """
+    if ipc_socket_name() != IPC_SOCKET_DEFAULT_NAME:
+        logger.info("mods_fora_da_instancia_isolada", socket=ipc_socket_name())
+        return None
     from hefesto_dualsense4unix.mods.porta import (
         escritor_do_servico,
         o_jogo_escreve_no_servico,

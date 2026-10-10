@@ -111,6 +111,8 @@ class Entrada(BaseModel):
     permissoes_aceitas: list[str] = []
     ligada: bool = False
     instalada_em: str = ""
+    #: A hora do último «ligar»: ligar de novo a que parou reabre o processo.
+    ligada_em: str = ""
 
 
 @dataclass(frozen=True)
@@ -330,7 +332,7 @@ def instalar(
             commit=commit,
             permissoes_aceitas=list(aceitas),
             ligada=seguia_ligada and not novas,
-            instalada_em=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            instalada_em=datetime.now(timezone.utc).isoformat(timespec="microseconds"),
         )
         registro = ler_registro(lg.registro)
         registro[manifesto.id] = entrada
@@ -399,6 +401,7 @@ def ligar(mod_id: str, *, lugares: Lugares | None = None) -> Entrada:
         raise InstalacaoRecusadaError(exc.frase) from exc
     entrada.permissoes_aceitas = list(manifesto.permissoes)
     entrada.ligada = True
+    entrada.ligada_em = datetime.now(timezone.utc).isoformat(timespec="microseconds")
     gravar_registro(lg.registro, registro)
     return entrada
 
