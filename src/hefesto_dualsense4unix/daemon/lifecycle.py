@@ -688,6 +688,7 @@ class Daemon:
     _audio: Any = None
     _plugins_subsystem: Any = None
     _metrics_subsystem: Any = None
+    _mods_supervisor: Any = None
     _bt_mic_subsystem: Any = None
     _alto_falante_subsystem: Any = None
     _conexoes_subsystem: Any = None
@@ -914,6 +915,9 @@ class Daemon:
             await self._safe_start("conexoes", self._start_conexoes)  # (noqa-acento): nome ASCII
             await self._safe_start("central_do_radio", self._start_central_do_radio)
             await self._safe_start("plugins", self._start_plugins)
+            # ADR-021: as modificações rodam FORA do serviço, como processos
+            # filhos; o supervisor só abre a porta própria quando alguma está ligada.
+            await self._safe_start("mods", self._start_mods)
             # FEAT-METRICS-01: sobe o servidor de métricas Prometheus (gate
             # interno respeita metrics_enabled). Antes nunca era iniciado —
             # metrics_enabled/metrics_port eram config morta.
@@ -989,6 +993,9 @@ class Daemon:
             if big_picture is not None:
                 with contextlib.suppress(Exception):
                     big_picture.parar()
+            # As modificações param antes do resto: o processo filho de cada
+            # uma recebe o SIGTERM pelo PID criado, e a porta própria fecha.
+            await self._stop_mods()
             try:
                 await shutdown(self)
             finally:
@@ -3429,6 +3436,20 @@ class Daemon:
         if self._plugins_subsystem is not None:
             await self._plugins_subsystem.stop()
             self._plugins_subsystem = None
+
+    async def _start_mods(self) -> None:
+        """O supervisor das modificações (ADR-021): obedece ao ``mods.json``."""
+        from hefesto_dualsense4unix.mods.supervisor import supervisor_do_servico
+
+        supervisor = supervisor_do_servico(self)
+        await supervisor.iniciar()
+        self._mods_supervisor = supervisor
+
+    async def _stop_mods(self) -> None:
+        supervisor, self._mods_supervisor = self._mods_supervisor, None
+        if supervisor is not None:
+            with contextlib.suppress(Exception):
+                await supervisor.parar()
 
     async def _start_metrics(self) -> None:
         """Inicializa o MetricsSubsystem se metrics_enabled (FEAT-METRICS-01)."""
