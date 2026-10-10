@@ -14,8 +14,8 @@ import pytest
 RAIZ = Path(__file__).resolve().parents[2]
 PORTOES = RAIZ / "scripts" / "portoes.sh"
 
-#: os dez `rapido` mais caros medidos em 09/10/2026 que leem uma parte da árvore (os que leem a árvore inteira ou
-#: a história do git ficam sem a coluna ou com `@sempre`)
+#: os dez `rapido` mais caros medidos em 09/10/2026 que leem uma parte da árvore (os que
+#: leem a árvore inteira ou a história do git ficam sem a coluna ou com `@sempre`)
 DEZ = (
     "paridade-gtk-html", "portoes-lentos-rapidos", "pecas-do-dualsense", "so-a-primeira-letra",
     "paridade-transporte", "tela-nao-confessa", "cores-do-dualsense", "quatro-respostas-morde",
@@ -52,7 +52,7 @@ def _linhas_da_tabela() -> dict[str, list[str]]:
 TABELA = _linhas_da_tabela()
 
 
-# --- a quinta coluna dos dez -------------------------------------------------------------------------------------
+# --- a quinta coluna dos dez ----------------------------------------------------------------------
 
 
 @pytest.mark.parametrize("ficha", DEZ)
@@ -60,7 +60,8 @@ def test_os_dez_mais_caros_declaram_o_que_leem(ficha: str) -> None:
     campos = TABELA[ficha]
     assert campos[0] == "rapido", f"{ficha} saiu da camada rápida"
     assert len(campos) == 5 and campos[4].strip(), (
-        f"{ficha} perdeu a quinta coluna: a chave volta a ser a árvore inteira e qualquer byte o faz rodar")
+        f"{ficha} perdeu a quinta coluna: a chave volta a ser a árvore inteira "
+        "e qualquer byte o faz rodar")
     globs = [e for e in campos[4].split() if not e.startswith("@")]
     assert globs, f"{ficha} só declara sinal, nenhum glob"
     assert "@sempre" not in campos[4], f"{ficha} nunca seria lembrado"
@@ -113,7 +114,8 @@ def test_tocar_uma_entrada_faz_o_portao_rodar(tmp_path: Path, ficha: str) -> Non
     raiz, entradas, dentro = _arvore_do_portao(tmp_path, ficha)
     for rel in dentro:
         antes = _chave(raiz, ficha, entradas)
-        (raiz / rel).write_text((raiz / rel).read_text(encoding="utf-8") + "mudou\n", encoding="utf-8")
+        alvo = raiz / rel
+        alvo.write_text(alvo.read_text(encoding="utf-8") + "mudou\n", encoding="utf-8")
         assert _chave(raiz, ficha, entradas) != antes, (
             f"{ficha}: {rel} mudou e o portão seria lembrado sobre bytes que ele lê")
 
@@ -124,7 +126,7 @@ def test_morde_o_glob_que_nao_casa_nada_faz_o_portao_rodar_sempre(tmp_path: Path
     assert _chave(raiz, "tela-nao-confessa", ["pasta-que-nao-existe/**"]) is None
 
 
-# --- a paridade pergunta pelo literal antes da regex ------------------------------------------------------------
+# --- a paridade pergunta pelo literal antes da regex ----------------------------------------------
 
 
 _TEXTOS = (
@@ -139,9 +141,11 @@ _TEXTOS = (
 
 
 @pytest.mark.parametrize("texto", _TEXTOS)
-@pytest.mark.parametrize("simbolo", ("player_slot", "VIA_DO_TRANSPORTE", "data-volume=\"microfone\""))
+@pytest.mark.parametrize(
+    "simbolo", ("player_slot", "VIA_DO_TRANSPORTE", "data-volume=\"microfone\""))
 def test_o_literal_primeiro_nao_muda_o_veredito_da_agulha(texto: str, simbolo: str) -> None:
-    assert PROSA.ocorre_no_texto(texto, simbolo) == (PROSA.agulha(simbolo).search(texto) is not None)
+    pela_agulha = PROSA.agulha(simbolo).search(texto) is not None
+    assert PROSA.ocorre_no_texto(texto, simbolo) == pela_agulha
 
 
 def test_morde_o_simbolo_dentro_de_outro_maior_continua_sem_casar(tmp_path: Path) -> None:
@@ -155,7 +159,7 @@ def test_morde_o_simbolo_dentro_de_outro_maior_continua_sem_casar(tmp_path: Path
     assert PROSA.usa(arquivo, "player_slot") is False
 
 
-# --- o endereço filtra por arquivo antes de descer às linhas ----------------------------------------------------
+# --- o endereço filtra por arquivo antes de descer às linhas --------------------------------------
 
 _OCTETOS = ("06", "de", "ad", "4c", "5d", "6e")
 
