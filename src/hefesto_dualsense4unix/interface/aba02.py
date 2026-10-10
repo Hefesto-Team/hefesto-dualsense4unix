@@ -1469,10 +1469,11 @@ def luz_do_jogador(c):
 
 DICA_TOQUE = "O ponto marca onde o dedo está. Sem toque, não há ponto."
 
-_CENA_DO_GIRO = {"player": 1, "is_primary": True, "transport": "usb"}
+_CENA_DO_GIRO = {"player": 1, "is_primary": True, "transport": "usb",
+                 "uniq": "aabbcc000001"}
 _CENA_GLOBAL_DO_GIRO = {
-    "rumble_ff": {"per_vpad": [{"player": 1, "motion_streaming": True,
-                                "motion_hz": 250.0}]},
+    "rumble_ff": {"per_vpad": [{"player": 1, "uniq": "aabbcc000001",
+                                "motion_streaming": True, "motion_hz": 250.0}]},
 }
 GIRO_NO_JOGO_DO_DESENHO = texto_motion(_CENA_DO_GIRO, _CENA_GLOBAL_DO_GIRO) or ""
 

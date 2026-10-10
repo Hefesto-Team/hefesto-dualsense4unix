@@ -330,14 +330,8 @@ def texto_motion(entry: dict[str, Any], state_global: dict[str, Any]) -> str | N
     têm espelho por design, e acusar "sem giroscópio" em todo card seria
     ruído crônico (quem diagnostica silêncio anômalo é o doctor).
 
-    Mapeamento controle→vpad: entrada com ``player`` numerado (co-op, D7)
-    casa com o vpad daquele jogador; sem número, o PRIMÁRIO casa com o vpad
-    do P1 (fora do co-op o espelho só existe nele). Demais controles → None.
-
-    GYRO-03-FIX: jogador 1 SEM ``is_primary`` nunca mostra a linha — fora do
-    co-op ``resolve_player_numbers`` numera TODOS os conectados como jogador
-    1 (é o que o jogo vê), mas o espelho do vpad P1 lê só o hidraw do
-    PRIMÁRIO; exibir a linha num secundário seria telemetria mentindo.
+    Qual vpad é o deste controle quem responde é o :func:`_item_do_vpad`,
+    pelo endereço: o controle sem vpad próprio não mostra a linha.
 
     PAINEL-DA-VERDADE-01 acrescentou DOIS casos em que o silêncio deixa de
     ser a resposta certa, e só dois. A decisão medida acima continua inteira
@@ -378,28 +372,13 @@ def texto_motion(entry: dict[str, Any], state_global: dict[str, Any]) -> str | N
     mira = entry.get("mira")
     if isinstance(mira, dict) and mira.get("ligada") is True:
         return None
-    rumble_ff = state_global.get("rumble_ff")
-    per_vpad = rumble_ff.get("per_vpad") if isinstance(rumble_ff, dict) else None
-    if not isinstance(per_vpad, list):
+    item = _item_do_vpad(entry, state_global)
+    if item is None or item.get("motion_streaming") is not True:
         return None
-    player = _int_ou_none(entry.get("player"))
-    if player == 1 and not bool(entry.get("is_primary")):
-        # Co-op OFF com 2+ DualSense: todos vêm com player=1, mas só o
-        return None
-    if player is None:
-        if not bool(entry.get("is_primary")):
-            return None
-        player = 1
-    for item in per_vpad:
-        if not isinstance(item, dict) or _int_ou_none(item.get("player")) != player:
-            continue
-        if item.get("motion_streaming") is not True:
-            return None
-        hz = item.get("motion_hz")
-        if isinstance(hz, (int, float)) and not isinstance(hz, bool) and hz > 0:
-            return f"Giroscópio: fluindo para o jogo (~{hz:.0f} Hz)"
-        return "Giroscópio: fluindo para o jogo"
-    return None
+    hz = item.get("motion_hz")
+    if isinstance(hz, (int, float)) and not isinstance(hz, bool) and hz > 0:
+        return f"Giroscópio: fluindo para o jogo (~{hz:.0f} Hz)"
+    return "Giroscópio: fluindo para o jogo"
 
 
 ATIVIDADE_FRESCA_S: Final[float] = 3.0
@@ -426,28 +405,19 @@ def _item_do_vpad(
 ) -> dict[str, Any] | None:
     """O bloco `rumble_ff.per_vpad` do vpad DESTE controle; ``None`` = não há.
 
-    O casamento controle→vpad é o MESMO do `texto_motion`, e as regras dele
-    estão documentadas lá — inclusive o guarda do GYRO-03-FIX (jogador 1 sem
-    `is_primary` nunca casa: fora do co-op todos os conectados vêm como
-    jogador 1, mas só o primário tem reader).
-
-    Este é o dono único do casamento. Dois jeitos de responder "qual vpad é o
-    deste controle" divergiriam na primeira mudança do co-op, e esta casa tem
-    defeito registrado com essa forma exata.
+    O dono único do casamento controle→vpad, e o casamento é pelo endereço:
+    o serviço publica em cada item o `uniq` do controle físico que aquele vpad
+    serve. O número do jogador não serve, porque fora do co-op todos os
+    conectados vêm como jogador 1 e só o primário alimenta o vpad do P1.
+    Controle sem endereço, ou sem vpad próprio, não casa com nenhum.
     """
+    uniq = uniq_do_entry(entry)
     rumble_ff = state_global.get("rumble_ff")
     per_vpad = rumble_ff.get("per_vpad") if isinstance(rumble_ff, dict) else None
-    if not isinstance(per_vpad, list):
+    if uniq is None or not isinstance(per_vpad, list):
         return None
-    player = _int_ou_none(entry.get("player"))
-    if player == 1 and not bool(entry.get("is_primary")):
-        return None
-    if player is None:
-        if not bool(entry.get("is_primary")):
-            return None
-        player = 1
     for item in per_vpad:
-        if isinstance(item, dict) and _int_ou_none(item.get("player")) == player:
+        if isinstance(item, dict) and item.get("uniq") == uniq:
             return item
     return None
 

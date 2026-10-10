@@ -2522,7 +2522,7 @@ class IpcHandlersMixin:
                 }
 
             # enxerga o vpad (ex.: máscara DualSense atraindo o hidraw do
-            vpads: list[tuple[int, Any, Any]] = []
+            vpads: list[tuple[int, Any, Any, str | None]] = []
             coop_mgr = getattr(self.daemon, "_coop_manager", None)
             # chegada, ler `player_index` aqui cruzaria os fios — o card de um
             # controle mostraria a telemetria do vpad de OUTRO. As condições
@@ -2543,6 +2543,7 @@ class IpcHandlersMixin:
                         int(numeros_por_mac.get(primario or "", 1) or 1),
                         gp_device,
                         getattr(self.daemon, "_motion_reader", None),
+                        primario,
                     )
                 )
             if coop_mgr is not None:
@@ -2558,6 +2559,7 @@ class IpcHandlersMixin:
                             ),
                             p.vpad,
                             getattr(p, "motion_reader", None),
+                            _as_str_or_none(mac),
                         )
                         for mac, p in players.items()
                         if getattr(p, "vpad", None) is not None
@@ -2574,7 +2576,7 @@ class IpcHandlersMixin:
                 identidade_do_vpad,
             )
 
-            for player_num, vp, motion_reader in vpads:
+            for player_num, vp, motion_reader, uniq_do_fisico in vpads:
                 with contextlib.suppress(Exception):
                     ff_plays += int(getattr(vp, "ff_play_count", 0) or 0)
                     ff_nao_nulos += int(getattr(vp, "ff_nao_nulo_count", 0) or 0)
@@ -2600,6 +2602,10 @@ class IpcHandlersMixin:
                     per_vpad.append(
                         {
                             "player": player_num,
+                            # O endereço do controle FÍSICO que este vpad serve:
+                            # a interface casa controle e vpad por ele, nunca
+                            # pelo número, que fora do co-op é 1 para todos.
+                            "uniq": uniq_do_fisico,
                             "vpad_uniq": identidade["vpad_uniq"],
                             "vpad_nome": identidade["vpad_nome"],
                             "vpad_indice": identidade["vpad_indice"],

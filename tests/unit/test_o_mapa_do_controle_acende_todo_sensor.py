@@ -48,8 +48,10 @@ def _acesos(ctx: pacotes.Contexto) -> set[str]:
 
 
 def _vpad(jogador: int, par: list[int], idade: float = 0.1) -> dict[str, Any]:
+    """O vpad do jogador `jogador`, servindo o controle da mesma posição."""
     return {"rumble_ff": {"per_vpad": [
-        {"player": jogador, "rumble_no_fisico": par, "rumble_no_fisico_ha_s": idade}]}}
+        {"player": jogador, "uniq": (P1, P2)[jogador - 1], "rumble_no_fisico": par,
+         "rumble_no_fisico_ha_s": idade}]}}
 
 
 @pytest.fixture(autouse=True)
@@ -116,14 +118,17 @@ def test_cada_motor_acende_pelo_que_o_jogo_manda() -> None:
 
 
 def test_o_controle_que_o_jogo_nao_ve_nao_acende_com_a_vibracao_de_outro() -> None:
-    """O `per_vpad[].player` é o número que o jogo vê, e casa com o `player` do
-    controle: o que o co-op ainda não promoveu (`player` None, `player_slot` 1)
-    não acende o motor com a vibração do jogador 1 do jogo."""
-    ctx = _contexto(**_vpad(1, [90, 200]))
+    """Fora do co-op os dois controles vêm como jogador 1, e o vpad do P1 serve
+    só o primário: o segundo não acende o motor com a vibração do primeiro. O
+    casamento é pelo endereço (`per_vpad[].uniq`), nunca pelo número."""
+    ctx = _contexto("p2", **_vpad(1, [90, 200]))
     for c in ctx.state["controllers"]:
-        if c["uniq"] == P1:
-            c["player"] = None
+        c["player"] = 1
     assert not _acesos(ctx) & {"feat-rumble-esquerdo", "feat-rumble-direito"}
+    ctx = _contexto("p1", **_vpad(1, [90, 200]))
+    for c in ctx.state["controllers"]:
+        c["player"] = 1
+    assert {"feat-rumble-esquerdo", "feat-rumble-direito"} <= _acesos(ctx)
 
 
 def test_o_teste_da_aba_vibracao_acende_os_dois_motores_daquele_controle() -> None:

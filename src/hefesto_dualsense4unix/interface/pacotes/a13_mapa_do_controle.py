@@ -60,6 +60,7 @@ from hefesto_dualsense4unix.core import remapeamento_de_botao as remap
 from hefesto_dualsense4unix.core.led_control import player_slot_color
 from hefesto_dualsense4unix.interface.cartao_do_controle import (
     ALL_BUTTONS,
+    _item_do_vpad,
     accel_do_inputs,
     dedos_do_inputs,
     gyro_do_inputs,
@@ -190,26 +191,20 @@ def _som_no_mic(entrada: dict[str, Any]) -> bool:
 def _motores(state: dict[str, Any], entrada: dict[str, Any]) -> tuple[bool, bool]:
     """`(esquerdo, direito)` com o jogo mandando vibração a este controle agora.
 
-    O `per_vpad[].player` é o número que o JOGO vê; casa com o `player` do
-    controle, no mesmo espaço, e não com o número da tela (`jogador_de`, que lê o
-    `player_slot` antes e diverge dele no controle que o co-op ainda não
-    promoveu). Quem não é jogador do jogo (`None`) não tem vibração de jogo.
+    O vpad deste controle vem do dono único do casamento
+    (`cartao_do_controle._item_do_vpad`, pelo endereço): o controle que não
+    alimenta vpad nenhum não tem vibração de jogo.
     """
-    ff = state.get("rumble_ff")
-    do_jogo = entrada.get("player")
-    if do_jogo is None:
+    vp = _item_do_vpad(entrada, state)
+    if vp is None:
         return False, False
-    for vp in (ff.get("per_vpad") or ()) if isinstance(ff, dict) else ():
-        if not isinstance(vp, dict) or vp.get("player") != do_jogo:
-            continue
-        par = vp.get("rumble_no_fisico")
-        idade = vp.get("rumble_no_fisico_ha_s")
-        if not (isinstance(par, (list, tuple)) and len(par) == 2):
-            return False, False
-        if isinstance(idade, (int, float)) and idade > 2.0:
-            return False, False
-        return bool(par[FORTE]), bool(par[LEVE])
-    return False, False
+    par = vp.get("rumble_no_fisico")
+    idade = vp.get("rumble_no_fisico_ha_s")
+    if not (isinstance(par, (list, tuple)) and len(par) == 2):
+        return False, False
+    if isinstance(idade, (int, float)) and idade > 2.0:
+        return False, False
+    return bool(par[FORTE]), bool(par[LEVE])
 
 
 def _sensores(ctx: Contexto, itens: list[dict[str, Any]]) -> dict[str, bool]:

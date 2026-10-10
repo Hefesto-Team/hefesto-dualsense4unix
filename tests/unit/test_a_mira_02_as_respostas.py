@@ -289,8 +289,8 @@ def test_o_nativo_que_o_daemon_recusa_volta_pela_mesma_frase() -> None:
 
 
 @pytest.mark.parametrize(("entrada", "jogador"), [
-    ({"is_primary": True}, 1),
-    ({"player": 3}, 3),
+    ({"is_primary": True, "uniq": "aa:bb:cc:00:00:01"}, 1),
+    ({"player": 3, "uniq": "aa:bb:cc:00:00:01"}, 3),
 ])
 def test_com_a_mira_acesa_o_cartao_nao_diz_que_o_giroscopio_flui(
     entrada: dict[str, Any], jogador: int,
@@ -312,7 +312,8 @@ def test_com_a_mira_acesa_o_cartao_nao_diz_que_o_giroscopio_flui(
     from hefesto_dualsense4unix.interface.cartao_do_controle import texto_motion
 
     estado: dict[str, Any] = {"rumble_ff": {"per_vpad": [
-        {"player": jogador, "motion_streaming": True, "motion_hz": 250.0}]}}
+        {"player": jogador, "uniq": "aa:bb:cc:00:00:01", "motion_streaming": True,
+         "motion_hz": 250.0}]}}
     apagada = {**entrada, "mira": {"ligada": False, "virtual": False}}
     acesa = {**entrada, "mira": {"ligada": True, "virtual": True}}
     assert texto_motion(apagada, estado) == "Giroscópio: fluindo para o jogo (~250 Hz)"

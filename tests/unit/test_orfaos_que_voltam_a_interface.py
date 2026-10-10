@@ -577,11 +577,11 @@ async def test_state_full_nao_inventa_numero_quando_o_vpad_e_mock(
 
 
 def _entry() -> dict[str, Any]:
-    return {"player": 1, "is_primary": True}
+    return {"player": 1, "is_primary": True, "uniq": "aa:bb:cc:00:00:01"}
 
 
 def _estado(**vpad: Any) -> dict[str, Any]:
-    item: dict[str, Any] = {"player": 1, "visto_ha_s": {}}
+    item: dict[str, Any] = {"player": 1, "uniq": "aa:bb:cc:00:00:01", "visto_ha_s": {}}
     item.update(vpad)
     return {"rumble_ff": {"per_vpad": [item]}}
 

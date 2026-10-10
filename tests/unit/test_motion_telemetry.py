@@ -278,91 +278,94 @@ def _state(per_vpad: list[dict[str, Any]]) -> dict[str, Any]:
     return {"rumble_ff": {"per_vpad": per_vpad}}
 
 
+#: O endereço do controle físico, que o serviço publica em cada item do
+#: `per_vpad`: o casamento controle→vpad é por ele, nunca pelo número.
+_U1 = "aabbcc000001"
+_U2 = "aabbcc000002"
+
+
 class TestTextoMotion:
     def test_primario_com_espelho_ativo_mostra_taxa(self) -> None:
         texto = texto_motion(
-            {"is_primary": True},
-            _state([{"player": 1, "motion_streaming": True, "motion_hz": 248.3}]),
+            {"is_primary": True, "uniq": _U1},
+            _state([{"player": 1, "uniq": _U1, "motion_streaming": True,
+                     "motion_hz": 248.3}]),
         )
         assert texto == "Giroscópio: fluindo para o jogo (~248 Hz)"
 
-    def test_jogador_do_coop_casa_pelo_numero_do_player(self) -> None:
+    def test_jogador_do_coop_casa_pelo_endereco(self) -> None:
         estado = _state(
             [
-                {"player": 1, "motion_streaming": True, "motion_hz": 250.0},
-                {"player": 2, "motion_streaming": True, "motion_hz": 120.0},
+                {"player": 1, "uniq": _U1, "motion_streaming": True,
+                 "motion_hz": 250.0},
+                {"player": 2, "uniq": _U2, "motion_streaming": True,
+                 "motion_hz": 120.0},
             ]
         )
-        assert texto_motion({"player": 2}, estado) == (
+        assert texto_motion({"player": 2, "uniq": _U2}, estado) == (
             "Giroscópio: fluindo para o jogo (~120 Hz)"
         )
 
     def test_streaming_ativo_sem_taxa_ainda_mostra_sem_hz(self) -> None:
         """Logo após abrir o device a EMA ainda é 0 — a linha aparece sem"""
         texto = texto_motion(
-            {"is_primary": True},
-            _state([{"player": 1, "motion_streaming": True, "motion_hz": 0.0}]),
+            {"is_primary": True, "uniq": _U1},
+            _state([{"player": 1, "uniq": _U1, "motion_streaming": True,
+                     "motion_hz": 0.0}]),
         )
         assert texto == "Giroscópio: fluindo para o jogo"
 
     def test_sem_streaming_a_linha_some(self) -> None:
         """Ausência NUNCA vira alarme no card (uinput/xbox/Nativo não têm"""
         texto = texto_motion(
-            {"is_primary": True},
-            _state([{"player": 1, "motion_streaming": False, "motion_hz": 0.0}]),
+            {"is_primary": True, "uniq": _U1},
+            _state([{"player": 1, "uniq": _U1, "motion_streaming": False,
+                     "motion_hz": 0.0}]),
         )
         assert texto is None
 
     def test_controle_sem_vpad_proprio_nao_mostra_nada(self) -> None:
-        """Não-primário sem número de jogador não tem vpad para falar."""
-        estado = _state([{"player": 1, "motion_streaming": True, "motion_hz": 250.0}])
-        assert texto_motion({"is_primary": False}, estado) is None
+        """Controle sem endereço, ou cujo endereço nenhum vpad serve, não fala."""
+        estado = _state([{"player": 1, "uniq": _U1, "motion_streaming": True,
+                          "motion_hz": 250.0}])
+        assert texto_motion({"is_primary": True}, estado) is None
+        assert texto_motion({"uniq": _U2}, estado) is None
         assert texto_motion({}, estado) is None
 
     def test_secundario_com_player_1_de_coop_off_nao_mostra(self) -> None:
-        """GYRO-03-FIX: co-op OFF numera TODOS os conectados como jogador 1
-        (payload REAL tem player=1 + is_primary=False no secundário), mas o
-        espelho do vpad P1 lê só o hidraw do PRIMÁRIO — a linha num
-        secundário seria telemetria mentindo."""
-        estado = _state([{"player": 1, "motion_streaming": True, "motion_hz": 250.0}])
-        assert texto_motion({"is_primary": False, "player": 1}, estado) is None
-
-    def test_primario_com_player_1_de_coop_off_mostra(self) -> None:
-        """O payload real do primário (player=1 + is_primary=True) mantém a
-        linha — o guarda do secundário não pode calar quem TEM o espelho."""
-        estado = _state([{"player": 1, "motion_streaming": True, "motion_hz": 250.0}])
-        assert texto_motion({"is_primary": True, "player": 1}, estado) == (
-            "Giroscópio: fluindo para o jogo (~250 Hz)"
-        )
+        """Co-op OFF numera TODOS os conectados como jogador 1, mas o vpad do
+        P1 serve só o PRIMÁRIO: o item traz o endereço dele, e o secundário,
+        com o mesmo número, não casa."""
+        estado = _state([{"player": 1, "uniq": _U1, "motion_streaming": True,
+                          "motion_hz": 250.0}])
+        assert texto_motion(
+            {"is_primary": False, "player": 1, "uniq": _U2}, estado
+        ) is None
 
     def test_dois_dualsense_coop_off_so_o_primario_mostra(self) -> None:
         """Cenário do achado: 2 DualSense, co-op off, espelho do P1 vivo —
         exatamente UM card (o do primário) mostra a linha de giroscópio."""
-        estado = _state([{"player": 1, "motion_streaming": True, "motion_hz": 248.0}])
+        estado = _state([{"player": 1, "uniq": _U1, "motion_streaming": True,
+                          "motion_hz": 248.0}])
         entries = [
-            {"is_primary": True, "player": 1, "uniq": "aa:bb:cc:dd:ee:01"},
-            {"is_primary": False, "player": 1, "uniq": "aa:bb:cc:dd:ee:02"},
+            {"is_primary": True, "player": 1, "uniq": _U1},
+            {"is_primary": False, "player": 1, "uniq": _U2},
         ]
         textos = [texto_motion(e, estado) for e in entries]
         assert textos[0] == "Giroscópio: fluindo para o jogo (~248 Hz)"
         assert textos[1] is None
 
     def test_payload_malformado_nao_explode(self) -> None:
-        assert texto_motion({"is_primary": True}, {}) is None
-        assert texto_motion({"is_primary": True}, {"rumble_ff": None}) is None
-        assert (
-            texto_motion(
-                {"is_primary": True}, {"rumble_ff": {"per_vpad": "lixo"}}
-            )
-            is None
-        )
-        assert (
-            texto_motion({"is_primary": True}, _state(["lixo", None])) is None
-        )
+        dono = {"is_primary": True, "uniq": _U1}
+        assert texto_motion(dono, {}) is None
+        assert texto_motion(dono, {"rumble_ff": None}) is None
+        assert texto_motion(dono, {"rumble_ff": {"per_vpad": "lixo"}}) is None
+        assert texto_motion(dono, _state(["lixo", None])) is None
 
     def test_hz_malformado_cai_na_linha_sem_numero(self) -> None:
         texto = texto_motion(
-            {"is_primary": True},
-            _state([{"player": 1, "motion_streaming": True, "motion_hz": "x"}]),
+            {"is_primary": True, "uniq": _U1},
+            _state([{"player": 1, "uniq": _U1, "motion_streaming": True,
+                     "motion_hz": "x"}]),
         )
         assert texto == "Giroscópio: fluindo para o jogo"

@@ -64,8 +64,8 @@ FF_DO_DAEMON: dict[str, Any] = {
     "last_weak": 90,
     "last_strong": 40,
     "per_vpad": [
-        {"player": 1, "rumble_no_fisico": [90, 40], "ff_play_count": 12},
-        {"player": 2, "rumble_no_fisico": [30, 10], "ff_play_count": 4},
+        {"player": 1, "uniq": P1, "rumble_no_fisico": [90, 40], "ff_play_count": 12},
+        {"player": 2, "uniq": P2, "rumble_no_fisico": [30, 10], "ff_play_count": 4},
     ],
 }
 

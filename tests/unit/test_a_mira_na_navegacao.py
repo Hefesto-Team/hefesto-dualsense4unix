@@ -450,12 +450,13 @@ def test_sem_o_mouse_emulado_o_tique_da_navegacao_nao_drena(
 
 def _com_espelho(jogador: int) -> dict[str, Any]:
     return {"rumble_ff": {"per_vpad": [
-        {"player": jogador, "motion_streaming": True, "motion_hz": 250.0}]}}
+        {"player": jogador, "uniq": "aa:bb:cc:00:00:01", "motion_streaming": True,
+         "motion_hz": 250.0}]}}
 
 
 @pytest.mark.parametrize(("entrada", "jogador"), [
-    ({"is_primary": True}, 1),
-    ({"player": 3}, 3),
+    ({"is_primary": True, "uniq": "aa:bb:cc:00:00:01"}, 1),
+    ({"player": 3, "uniq": "aa:bb:cc:00:00:01"}, 3),
 ])
 def test_o_giroscopio_desligado_nao_diz_que_flui(entrada: dict[str, Any], jogador: int) -> None:
     """Com o chip Giroscópio desligado, o filtro tira o giro da janela do
@@ -485,7 +486,7 @@ def test_na_mascara_xbox_o_giroscopio_desligado_nao_diz_que_segue_ativo() -> Non
 
     xbox = {**_com_espelho(1), "gamepad_emulation": {"enabled": True, "flavor": "xbox"}}
     frase = f"Giroscópio: {_FRASE_MASCARA_XBOX['giroscopio']}"
-    base = {"is_primary": True}
+    base = {"is_primary": True, "uniq": "aa:bb:cc:00:00:01"}
     assert texto_motion({**base, "sensores": {"giroscopio_ligado": True}}, xbox) == frase
     assert texto_motion({**base, "mira": {"ligada": True}}, xbox) == frase
     assert texto_motion({**base, "sensores": {"giroscopio_ligado": False}}, xbox) is None

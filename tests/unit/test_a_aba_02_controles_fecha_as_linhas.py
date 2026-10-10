@@ -785,7 +785,7 @@ from hefesto_dualsense4unix.interface.cartao_do_controle import texto_motion
 
 
 def _com_vpad(hz: float | None = 250.0, **extra: Any) -> dict[str, Any]:
-    item: dict[str, Any] = {"player": 1, "motion_streaming": True}
+    item: dict[str, Any] = {"player": 1, "uniq": UNIQ, "motion_streaming": True}
     if hz is not None:
         item["motion_hz"] = hz
     return {"rumble_ff": {"per_vpad": [item]}, **extra}
