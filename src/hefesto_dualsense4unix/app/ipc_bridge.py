@@ -62,7 +62,7 @@ TETOS: dict[str, float] = {
     # O `machine.declare` grava em disco; o gesto é raro e já congela a janela.
     "machine.declare": 1.0,
     # O reset da barra reenvia o 0x08 a cada controle aberto, e o comutador do
-    # LED de jogador repinta todos: os dois prazos que a linha de comando media.
+    # LED de jogador repinta todos: os dois prazos que a linha de comando já usava.
     "lightbar.reset": 2.0,
     "debug.player_leds": 3.0,
 }

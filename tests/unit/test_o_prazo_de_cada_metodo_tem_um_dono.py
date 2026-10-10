@@ -63,8 +63,8 @@ def _prazos_literais(caminho: Path) -> list[str]:
 def test_nenhum_prazo_numerico_digitado_numa_chamada_do_ipc() -> None:
     achados = [a for caminho in FONTES for a in _prazos_literais(caminho)]
     assert achados == [], (
-        "o prazo tem um dono, `ipc_bridge.TETOS`: use `teto(metodo)` ou "
-        f"`teto_da_linha_de_comando(metodo)` em {achados}"
+        "o prazo tem um dono, `ipc_bridge.TETOS`: passe o nome do método a "
+        f"`teto` ou a `teto_da_linha_de_comando` em {achados}"
     )
 
 
