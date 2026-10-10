@@ -109,8 +109,6 @@ rapido|citacoes-novas|py|scripts/validar-citacoes-de-linha.py --novas|@sempre
 # lado. *"Se dois portões da suíte medem coisa que a lista não roda, o piso tem
 # furo"*, e tinha. Ele entra na camada COMPLETA porque custa ~60 s: ele abre
 # cada arquivo citado e confere a âncora, não só o número de linhas.
-# E o `src/` (06/09/2026): a citação escrita em comentário de código ficava sem portão, e sete endereços
-# mortos atravessaram uma leva inteira com o CI verde ao lado.
 completo|citacoes-no-codigo|pytest|tests/unit/test_portao_o_par_com_metade_ligada.py
 # NADA-MOCKADO-01, 09/09/2026 — a pergunta de produto virou portão: *"não tem nada
 # rodando em sandbox ou mockada, certo?"*. Uma linha do mapa que diz `aciona=sim`
