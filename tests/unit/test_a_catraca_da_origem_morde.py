@@ -179,6 +179,39 @@ def test_o_remendo_novo_nao_se_esconde_atras_de_um_velho_que_saiu(arvore):
     assert rodar() == 1
 
 
+@pytest.mark.parametrize("fonte", [
+    "import contextlib\n\n\ndef f():\n    with contextlib.suppress(Exception):\n        g()\n",
+    "from contextlib import suppress\n\n\ndef f():\n    with suppress(BaseException):\n"
+    "        g()\n",
+    "import contextlib\n\n\nasync def f():\n    async with contextlib.suppress(Exception):\n"
+    "        await g()\n",
+])
+def test_o_suppress_que_engole_tudo_conta_um(fonte):
+    """``with suppress(Exception)`` é o ``except Exception: pass`` escrito como ``with``."""
+    assert _modulo().remendos(fonte) == [(5, "except-que-so-engole")]
+
+
+def test_o_suppress_de_excecao_nomeada_nao_conta():
+    fonte = "import contextlib\n\n\ndef f():\n    with contextlib.suppress(OSError):\n        g()\n"
+    assert _modulo().remendos(fonte) == []
+
+
+def test_trocar_o_except_pelo_suppress_nao_baixa_a_conta(arvore):
+    """A porta que a forma equivalente abria: zerar o remendo sem mudar o comportamento."""
+    raiz, _mod, rodar = arvore
+    _escreve(raiz, FORA, "def f():\n    try:\n        g()\n    except Exception:\n        pass\n")
+    assert rodar("--forcar-piso", "remendos-de-sintoma", "um remendo de partida") == 0
+    _escreve(raiz, FORA, (
+        "import contextlib\n\n\ndef f():\n    with contextlib.suppress(Exception):\n"
+        "        g()\n"))
+    assert rodar() == 0
+    assert _teto(raiz, "remendos-de-sintoma")["por_item"] == {"aba.py": 1}
+    _escreve(raiz, FORA, (
+        "import contextlib\n\n\ndef f():\n    with contextlib.suppress(Exception):\n"
+        "        g()\n    with contextlib.suppress(Exception):\n        h()\n"))
+    assert rodar() == 1
+
+
 # 3. O tamanho exige a origem
 
 

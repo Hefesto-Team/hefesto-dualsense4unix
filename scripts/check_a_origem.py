@@ -10,7 +10,8 @@ de sintoma, um projeto que só cresce.
    ``match``) que decide por um eixo e mora FORA dos donos declarados em
    ``docs/data/donos-de-comportamento.csv`` (linhas de veredito ``EIXO``).
 2. ``remendos-de-sintoma``: ``sleep`` com constante, laço de nova tentativa,
-   prazo (``timeout=``) por constante e ``except`` que só engole. O teto é POR
+   prazo (``timeout=``) por constante e ``except`` que só engole (e o seu gêmeo,
+   ``with suppress(Exception)``). O teto é POR
    ARQUIVO: um remendo novo não se esconde atrás de um velho que saiu noutro.
 3. ``tamanho``: as linhas de ``src/``, ``tests/``, ``scripts/`` e ``docs/``
    versionados. Crescer só passa se algum commit da faixa trouxer
@@ -232,6 +233,25 @@ def _so_engole(corpo: list[ast.stmt]) -> bool:
     return True
 
 
+_ENGOLE_TUDO = frozenset({"Exception", "BaseException"})
+
+
+def _suppress_que_so_engole(item: ast.withitem) -> bool:
+    """``suppress(Exception)``: o ``except Exception: pass`` escrito como ``with``.
+
+    Vale ``contextlib.suppress`` e o ``suppress`` importado; uma exceção nomeada
+    (``suppress(OSError)``) não conta, pela mesma régua do ``except`` nomeado.
+    """
+    chamada = item.context_expr
+    if not isinstance(chamada, ast.Call):
+        return False
+    f = chamada.func
+    if (f.attr if isinstance(f, ast.Attribute) else getattr(f, "id", "")) != "suppress":
+        return False
+    return any((a.attr if isinstance(a, ast.Attribute) else getattr(a, "id", "")) in _ENGOLE_TUDO
+               for a in chamada.args)
+
+
 def remendos(fonte: str) -> list[tuple[int, str]]:
     """Cada remendo: ``(linha, categoria)``, por AST."""
     try:
@@ -248,6 +268,9 @@ def remendos(fonte: str) -> list[tuple[int, str]]:
                     achados.append((no.lineno, "prazo-por-constante"))
         elif isinstance(no, ast.ExceptHandler) and _so_engole(no.body):
             achados.append((no.lineno, "except-que-so-engole"))
+        elif isinstance(no, (ast.With, ast.AsyncWith)):
+            achados.extend((item.context_expr.lineno, "except-que-so-engole")
+                           for item in no.items if _suppress_que_so_engole(item))
         elif isinstance(no, (ast.For, ast.While)):
             corpo = ast.Module(body=no.body, type_ignores=[])
             tem_try = any(isinstance(x, ast.Try) for x in ast.walk(corpo))
