@@ -767,6 +767,18 @@ class SemCenso:
     #: ensinou, tirar desfaz o ensino e devolve a busca de fábrica — as duas
     #: coisas são o mesmo ato, e por isso é o mesmo botão.
     declarado: bool = False
+    #: As classes de janela MEDIDAS do lançador (o ``app_id`` que ele anuncia),
+    #: para a linha «todos os jogos» de quem tem um processo só para todos.
+    janelas: tuple[str, ...] = ()
+    #: A forma do pedaço do título que é de um jogo só (``\bPPSA\d{5}\b``),
+    #: quando o lançador vem de uma modificação que a declara.
+    titulo_do_jogo: str = ""
+    #: O leitor da biblioteca que uma modificação declara (o censo o chama).
+    leitor: _censo.LeitorPorProcesso | None = None
+    #: O ``id`` da modificação que trouxe este lançador; vazio no de fábrica e
+    #: no que ela declarou. Ele não ganha marca no cartão (escolha dela de
+    #: 09/10/2026, ~16h15): sair é desligar a modificação, e não o «Tirar daqui».
+    modificacao: str = ""
 
 
 #: OS LANÇADORES CUJO INTERIOR O PRODUTO NÃO LÊ. A lista é dado, e não `if`: no
@@ -816,7 +828,8 @@ SEM_FONTE: tuple[SemCenso, ...] = (
     SemCenso("lutris", "Lutris", ("net.lutris.Lutris", "lutris"), ("lutris",)),
     SemCenso("flatpak", "Flatpak", (), ("flatpak",)),
     SemCenso("retroarch", "RetroArch",
-             ("org.libretro.RetroArch", "retroarch"), ("retroarch",)),
+             ("org.libretro.RetroArch", "retroarch"), ("retroarch",),
+             janelas=("com.libretro.RetroArch",)),
     SemCenso("emuladores", "Dolphin · mGBA",
              ("org.DolphinEmu.dolphin-emu", "dolphin-emu", "io.mgba.mGBA",
               "mgba-qt", "mgba"),
@@ -889,7 +902,16 @@ def procurados(declarados: tuple[SemCenso, ...] = ()) -> tuple[SemCenso, ...]:
     A ORDEM É ESTÁVEL: os de fábrica na ordem do desenho, os novos no fim, na
     ordem em que o disco os devolveu. Um cartão que troca de lugar entre dois
     tiques é a grade inteira piscando.
+
+    A TERCEIRA FONTE são as modificações ligadas (``modificacao`` preenchido),
+    e elas vêm por último: a de chave nova vira cartão no fim; a de chave que
+    já tem cartão o ensina (soma onde procurar e as janelas, e traz o leitor e
+    a forma do título que ele não tinha) sem lhe dar o «Tirar daqui», porque
+    desfazer o que veio da modificação é desligá-la. Sem modificação, a lista
+    é a de antes.
     """
+    das_modificacoes = tuple(x for x in declarados if x.modificacao)
+    declarados = tuple(x for x in declarados if not x.modificacao)
     novos = {x.chave: x for x in declarados}
     fora: list[SemCenso] = []
     for item in EMBUTIDOS:
@@ -904,6 +926,19 @@ def procurados(declarados: tuple[SemCenso, ...] = ()) -> tuple[SemCenso, ...]:
             comandos=tuple(dict.fromkeys(item.comandos + ensino.comandos)),
             declarado=True))
     fora.extend(novos.values())
+    for mod in das_modificacoes:
+        onde = next((i for i, x in enumerate(fora) if x.chave == mod.chave), None)
+        if onde is None:
+            fora.append(mod)
+            continue
+        ja = fora[onde]
+        fora[onde] = dataclasses.replace(
+            ja,
+            atalhos=tuple(dict.fromkeys(ja.atalhos + mod.atalhos)),
+            comandos=tuple(dict.fromkeys(ja.comandos + mod.comandos)),
+            janelas=tuple(dict.fromkeys(ja.janelas + mod.janelas)),
+            titulo_do_jogo=ja.titulo_do_jogo or mod.titulo_do_jogo,
+            leitor=ja.leitor or mod.leitor)
     return tuple(fora)
 
 #: A frase de quem AINDA NÃO PROCUROU — a primeira meia volta, antes de a
@@ -1357,7 +1392,7 @@ def medir_no_disco(onde_estao: tuple[tuple[str, str], ...],
         #: resumo também: montar a frase aqui seria a segunda verdade sobre a
         #: mesma contagem, e "37 jogos" contra "37 na biblioteca" na mesma tela
         #: é a cara de uma janela montada em dois lugares que não se falam.
-        biblioteca = _censo.biblioteca_do_cartao(item.chave, lar)
+        biblioteca = _censo.biblioteca_do_cartao(item.chave, lar, leitor=item.leitor)
         linha = biblioteca.resumo
         #: **A LINHA DO «FLATPAK» É OUTRA PERGUNTA — §5.4, 09/09/2026.** Ele
         #: não tem biblioteca (o censo diz `SEM_BIBLIOTECA`, e o resumo sai

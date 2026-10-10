@@ -5,7 +5,13 @@ import configparser
 import contextlib
 import json
 import os
+import re
+import selectors
+import shutil
+import signal
 import sqlite3
+import subprocess
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import cast
@@ -39,6 +45,11 @@ class JogoDoLancador:
     dlc: bool = False
     configuracao: Path | None = None
     pelo_proton: bool = False
+    #: O pedaço do título da janela que é só deste jogo (o ID que o emulador
+    #: escreve ali, como ``PPSA21567``), devolvido pelo leitor de uma
+    #: modificação. É por ele que o perfil casa quando a janela é a do emulador
+    #: para todos os jogos e o resto do título muda a cada segundo.
+    titulo_do_jogo: str = ""
 
     @property
     def classe_de_janela(self) -> str:
@@ -821,11 +832,18 @@ _DO_CARTAO: dict[str, tuple[str, ...]] = {
 }
 
 
-def biblioteca_do_cartao(chave: str, lar: Path | None = None
+def biblioteca_do_cartao(chave: str, lar: Path | None = None, *,
+                         leitor: LeitorPorProcesso | None = None,
                          ) -> BibliotecaDoLancador:
-    """A biblioteca que UM CARTÃO da aba 07 representa."""
+    """A biblioteca que UM CARTÃO da aba 07 representa.
+
+    O cartão de fábrica é lido pelo leitor de fábrica, sempre; o ``leitor`` de
+    uma modificação só responde pelo cartão que não tem um.
+    """
     nomes = _DO_CARTAO.get(chave)
     if nomes is None:
+        if leitor is not None:
+            return ler_por_processo(leitor)
         return BibliotecaDoLancador(chave, SEM_BIBLIOTECA, None, [], [])
     if not nomes:
         return BibliotecaDoLancador(chave, SEM_BIBLIOTECA, None, [], [])
@@ -839,6 +857,294 @@ def biblioteca_do_cartao(chave: str, lar: Path | None = None
         onde=lidas[0].onde,
         jogos=[j for b in lidas for j in b.jogos],
         erros=[e for b in partes for e in b.erros])
+
+
+# -- o lançador que vem de uma modificação --------------------------------------
+#
+# O bloco ``lancador`` do ``hefesto-mod.json`` (``mods/manifesto.py`` só confere a
+# forma de dicionário; o conteúdo é daqui). Ele é lido sem pydantic, como o resto
+# deste módulo, porque o gerador da aba 07 o importa rodando solto.
+
+#: As chaves que o bloco aceita. Outra qualquer recusa o bloco inteiro, como o
+#: ``extra="forbid"`` do manifesto: um erro de digitação nunca vira campo calado.
+CAMPOS_DO_LANCADOR = frozenset(
+    {"rotulo", "atalhos", "comandos", "janelas", "titulo_do_jogo", "leitor"})
+
+#: O prazo do leitor quando o bloco não diz, e o teto do que ele pode pedir. O
+#: leitor roda na vigia da aba e no clique da escolha: passar disso é a escolha
+#: do jogo esperando a modificação.
+PRAZO_DO_LEITOR_S = 5.0
+PRAZO_MAXIMO_DO_LEITOR_S = 10.0
+
+#: O teto da saída do leitor e da lista que ela traz. Passou, o leitor é parado
+#: e a biblioteca fica «não pôde ser lida»: a memória da janela não é da modificação.
+SAIDA_MAXIMA_DO_LEITOR = 1 << 20
+JOGOS_MAXIMOS_DO_LEITOR = 5000
+
+_MAXIMO_DE_AGULHAS = 16
+_CHAVE_DO_JOGO = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
+
+
+@dataclass(frozen=True)
+class LeitorPorProcesso:
+    """O comando que devolve a biblioteca de um lançador de modificação, em JSON.
+
+    A saída é uma lista de objetos com ``chave``, ``nome``, ``caminho`` e
+    ``titulo_do_jogo``. O comando é relativo à pasta da modificação (ou um nome
+    do ``PATH``, como ``python3``), e roda nela.
+    """
+
+    modificacao: str
+    rotulo: str
+    comando: tuple[str, ...]
+    pasta: Path
+    prazo_s: float = PRAZO_DO_LEITOR_S
+    #: A forma que o ``titulo_do_jogo`` de cada jogo tem de ter (``re.search``).
+    #: Vazia, qualquer texto curto serve.
+    molde_do_titulo: str = ""
+
+
+@dataclass(frozen=True)
+class LancadorDaModificacao:
+    """O bloco ``lancador`` de uma modificação, já conferido."""
+
+    chave: str
+    rotulo: str
+    atalhos: tuple[str, ...] = ()
+    comandos: tuple[str, ...] = ()
+    #: As classes de janela (``app_id``) que o emulador anuncia, para o perfil
+    #: «todos os jogos» e para a lista de exclusão.
+    janelas: tuple[str, ...] = ()
+    titulo_do_jogo: str = ""
+    leitor: LeitorPorProcesso | None = None
+
+
+def _agulhas(bloco: dict[str, object], campo: str) -> tuple[str, ...]:
+    bruto = bloco.get(campo, [])
+    if not isinstance(bruto, list) or not all(isinstance(x, str) for x in bruto):
+        raise ValueError(f"«{campo}» precisa ser uma lista de textos")
+    limpas = tuple(dict.fromkeys(x.strip() for x in bruto if x.strip()))
+    if len(limpas) > _MAXIMO_DE_AGULHAS:
+        raise ValueError(f"«{campo}» passa de {_MAXIMO_DE_AGULHAS} itens")
+    return limpas
+
+
+def _leitor_do_bloco(mod_id: str, rotulo: str, bruto: object, pasta: Path,
+                     molde: str) -> LeitorPorProcesso:
+    if not isinstance(bruto, dict) or set(bruto) - {"executar", "prazo_s"}:
+        raise ValueError("«leitor» aceita só «executar» e «prazo_s»")
+    executar = bruto.get("executar")
+    if (not isinstance(executar, list) or not executar
+            or not all(isinstance(x, str) for x in executar) or not executar[0].strip()):
+        raise ValueError("«leitor.executar» precisa ser uma lista de textos")
+    primeiro = executar[0]
+    if primeiro.startswith("/") or ".." in Path(primeiro).parts:
+        raise ValueError("«leitor.executar» aponta para fora da pasta da modificação")
+    prazo = bruto.get("prazo_s", PRAZO_DO_LEITOR_S)
+    if (isinstance(prazo, bool) or not isinstance(prazo, (int, float))
+            or not 0 < prazo <= PRAZO_MAXIMO_DO_LEITOR_S):
+        raise ValueError(
+            f"«leitor.prazo_s» precisa estar entre 0 e {PRAZO_MAXIMO_DO_LEITOR_S:g} s")
+    return LeitorPorProcesso(mod_id, rotulo, tuple(executar), pasta, float(prazo), molde)
+
+
+def lancador_da_modificacao(mod_id: str, bloco: object, pasta: Path
+                            ) -> LancadorDaModificacao:
+    """Confere o bloco ``lancador`` de uma modificação; recusa com ``ValueError``.
+
+    A chave do cartão é o ``id`` da modificação (o manifesto já o conferiu na
+    forma de chave). Uma modificação cujo ``id`` é o de um cartão de fábrica
+    (``retroarch``) ensina aquele cartão, como o lançador que a pessoa declara.
+    """
+    if not isinstance(bloco, dict):
+        raise ValueError("«lancador» precisa ser um objeto")
+    estranhos = sorted(set(bloco) - CAMPOS_DO_LANCADOR)
+    if estranhos:
+        raise ValueError(f"«lancador» tem o campo «{estranhos[0]}», que não existe")
+    rotulo = bloco.get("rotulo")
+    if not isinstance(rotulo, str) or not rotulo.strip() or len(rotulo.strip()) > 60:
+        raise ValueError("«lancador.rotulo» precisa ter de 1 a 60 caracteres")
+    rotulo = rotulo.strip()
+    atalhos, comandos = _agulhas(bloco, "atalhos"), _agulhas(bloco, "comandos")
+    if not atalhos and not comandos:
+        raise ValueError("«lancador» não diz onde procurar: sem «atalhos» nem «comandos»")
+    molde = bloco.get("titulo_do_jogo", "")
+    if not isinstance(molde, str) or len(molde) > 200:
+        raise ValueError("«lancador.titulo_do_jogo» precisa ser um texto curto")
+    if molde:
+        try:
+            re.compile(molde)
+        except re.error as erro:
+            raise ValueError(f"«lancador.titulo_do_jogo» não é expressão válida: {erro}") from erro
+    leitor = (None if "leitor" not in bloco
+              else _leitor_do_bloco(mod_id, rotulo, bloco["leitor"], pasta, molde))
+    return LancadorDaModificacao(
+        chave=mod_id, rotulo=rotulo, atalhos=atalhos, comandos=comandos,
+        janelas=_agulhas(bloco, "janelas"), titulo_do_jogo=molde, leitor=leitor)
+
+
+def _execucao_escondida() -> tuple[str, ...]:
+    """O que a caixa do leitor cobre: o barramento do sistema e a execução da sessão."""
+    pastas = ["/run/dbus", os.environ.get("XDG_RUNTIME_DIR", ""), f"/run/user/{os.getuid()}"]
+    return tuple(dict.fromkeys(p for p in pastas if p and os.path.isdir(p)))
+
+
+def linha_do_leitor(leitor: LeitorPorProcesso, comando: list[str],
+                    bwrap: str | None) -> list[str]:
+    """A linha que abre o leitor: dentro da caixa quando o ``bwrap`` existe.
+
+    A caixa do leitor NÃO é a do processo da modificação
+    (``mods/supervisor.comando_na_caixa``), e a diferença é o trabalho dele: a
+    do processo esconde a ``HOME``, e o leitor existe para ler a configuração
+    do emulador que mora nela (``~/.config/Kyty/Kyty.ini``). Esta deixa a raiz
+    inteira visível e SÓ DE LEITURA, sem rede, sem o barramento do sistema,
+    sem a execução da sessão (o socket do serviço, o do som, o do Wayland) e
+    num espaço de PID próprio, que morre com quem o abriu. Sem ``bwrap``, roda
+    sem caixa, como o supervisor faz com o processo.
+    """
+    if not bwrap:
+        return comando
+    argv = [bwrap, "--ro-bind", "/", "/", "--unshare-all", "--die-with-parent",
+            "--new-session", "--proc", "/proc", "--dev", "/dev", "--tmpfs", "/tmp"]
+    for pasta in _execucao_escondida():
+        argv += ["--tmpfs", pasta]
+    argv += ["--ro-bind", str(leitor.pasta), str(leitor.pasta),
+             "--chdir", str(leitor.pasta), "--", *comando]
+    return argv
+
+
+def _comando_do_leitor(leitor: LeitorPorProcesso) -> list[str] | None:
+    primeiro = leitor.pasta / leitor.comando[0]
+    if primeiro.is_file():
+        return [str(primeiro), *leitor.comando[1:]]
+    if "/" not in leitor.comando[0]:
+        achado = shutil.which(leitor.comando[0])
+        if achado:
+            return [achado, *leitor.comando[1:]]
+    return None
+
+
+def _ambiente_do_leitor(leitor: LeitorPorProcesso) -> dict[str, str]:
+    ambiente = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+                "LANG": os.environ.get("LANG", "C.UTF-8"),
+                "HOME": os.environ.get("HOME", str(Path.home())),
+                "PYTHONDONTWRITEBYTECODE": "1",
+                "HEFESTO_MOD_ID": leitor.modificacao}
+    for nome in ("XDG_CONFIG_HOME", "XDG_DATA_HOME"):
+        if os.environ.get(nome):
+            ambiente[nome] = os.environ[nome]
+    return ambiente
+
+
+def _parar(processo: subprocess.Popen[bytes]) -> None:
+    """Para o leitor e o que ele abriu: o grupo é dele (``start_new_session``)."""
+    with contextlib.suppress(ProcessLookupError, PermissionError):
+        os.killpg(processo.pid, signal.SIGKILL)
+    with contextlib.suppress(subprocess.TimeoutExpired):
+        processo.wait(timeout=1.0)
+
+
+def _saida_do_leitor(processo: subprocess.Popen[bytes], prazo_s: float
+                     ) -> tuple[bytes | None, str]:
+    """``(saída, "")`` ou ``(None, motivo)``. Lê com teto e com prazo, nunca mais."""
+    assert processo.stdout is not None
+    fim = time.monotonic() + prazo_s
+    lido = bytearray()
+    with selectors.DefaultSelector() as seletor:
+        seletor.register(processo.stdout, selectors.EVENT_READ)
+        while True:
+            resta = fim - time.monotonic()
+            if resta <= 0:
+                return None, f"o leitor passou de {prazo_s:g} s"
+            if not seletor.select(resta):
+                continue
+            bloco = os.read(processo.stdout.fileno(), 65536)
+            if not bloco:
+                break
+            lido += bloco
+            if len(lido) > SAIDA_MAXIMA_DO_LEITOR:
+                return None, "o leitor devolveu mais do que cabe"
+    try:
+        processo.wait(timeout=max(0.05, fim - time.monotonic()))
+    except subprocess.TimeoutExpired:
+        return None, f"o leitor passou de {prazo_s:g} s"
+    if processo.returncode != 0:
+        return None, f"o leitor saiu com o código {processo.returncode}"
+    return bytes(lido), ""
+
+
+def _jogo_do_leitor(linha: object, molde: str) -> JogoDoLancador | None:
+    """Uma linha da saída do leitor, conferida; ``None`` quando ela não serve."""
+    if not isinstance(linha, dict):
+        return None
+    chave, nome = linha.get("chave"), linha.get("nome")
+    caminho, titulo = linha.get("caminho", ""), linha.get("titulo_do_jogo", "")
+    if not isinstance(chave, str) or not _CHAVE_DO_JOGO.match(chave):
+        return None
+    if not isinstance(nome, str) or not nome.strip() or len(nome) > 200:
+        return None
+    if not isinstance(caminho, str) or not isinstance(titulo, str):
+        return None
+    titulo = titulo.strip()
+    if (len(titulo) > 64 or not titulo.isprintable()
+            or (titulo and molde and not re.search(molde, titulo))):
+        titulo = ""
+    return JogoDoLancador(chave=chave, nome=nome.strip(), instalado=True,
+                          caminho=Path(caminho) if caminho else None,
+                          titulo_do_jogo=titulo)
+
+
+def ler_por_processo(leitor: LeitorPorProcesso, *,
+                     bwrap: str | None | bool = True) -> BibliotecaDoLancador:
+    """A biblioteca que o leitor da modificação devolve — e nunca levanta.
+
+    Prazo estourado, saída grande demais, código de saída diferente de zero ou
+    JSON torto: a biblioteca fica «não pôde ser lida», com o motivo numa linha,
+    e o resto do censo segue. Uma linha torta dentro de uma lista boa sai
+    sozinha, e as outras ficam.
+
+    :param bwrap: ``True`` procura o ``bwrap`` no ``PATH``; um caminho usa
+        aquele; ``False`` ou ``None`` roda sem caixa.
+    """
+    nome = leitor.rotulo
+    comando = _comando_do_leitor(leitor)
+    if comando is None:
+        return BibliotecaDoLancador(nome, ILEGIVEL, leitor.pasta, [],
+                                    ["o leitor da modificação não está na pasta dela"])
+    caixa = shutil.which("bwrap") if bwrap is True else (bwrap or None)
+    try:
+        processo = subprocess.Popen(
+            linha_do_leitor(leitor, comando, caixa), cwd=str(leitor.pasta),
+            env=_ambiente_do_leitor(leitor), stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+            start_new_session=True)
+    except OSError as erro:
+        return BibliotecaDoLancador(nome, ILEGIVEL, leitor.pasta, [], [str(erro)])
+    try:
+        saida, motivo = _saida_do_leitor(processo, leitor.prazo_s)
+    finally:
+        _parar(processo)
+        if processo.stdout is not None:
+            processo.stdout.close()
+    if saida is None:
+        return BibliotecaDoLancador(nome, ILEGIVEL, leitor.pasta, [], [motivo])
+    try:
+        bruto = json.loads(saida.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return BibliotecaDoLancador(nome, ILEGIVEL, leitor.pasta, [],
+                                    ["o leitor não devolveu JSON válido"])
+    if not isinstance(bruto, list) or len(bruto) > JOGOS_MAXIMOS_DO_LEITOR:
+        return BibliotecaDoLancador(nome, ILEGIVEL, leitor.pasta, [],
+                                    ["o leitor não devolveu uma lista de jogos"])
+    jogos: dict[str, JogoDoLancador] = {}
+    for linha in bruto:
+        jogo = _jogo_do_leitor(linha, leitor.molde_do_titulo)
+        if jogo is not None and jogo.chave not in jogos:
+            jogos[jogo.chave] = jogo
+    fora = sorted(jogos.values(), key=lambda j: (j.nome.casefold(), j.chave))
+    ignoradas = len(bruto) - len(fora)
+    erros = [f"{ignoradas} linhas do leitor não serviam"] if ignoradas else []
+    return BibliotecaDoLancador(nome, LIDO, leitor.pasta, fora, erros)
 
 
 def jogos_com_chave_de_janela(

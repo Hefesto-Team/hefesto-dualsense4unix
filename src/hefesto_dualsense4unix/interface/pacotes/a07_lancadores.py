@@ -271,7 +271,51 @@ def _declarados() -> tuple[desenho.SemCenso, ...]:
                          comandos=tuple(item.comandos),
                          declarado=True)
         for chave, item in sorted(declaracao.lancadores.items())
-    ) + _achados_por_conteudo()
+    ) + _achados_por_conteudo() + _das_modificacoes()
+
+
+def _das_modificacoes(lugares: Any = None) -> tuple[desenho.SemCenso, ...]:
+    """Os lançadores que as modificações LIGADAS trazem, no molde do procurador.
+
+    Entra a modificação ligada cujo manifesto, conferido de novo aqui, tem o
+    tipo ``lancador``, o bloco ``lancador`` e a permissão ``lancador`` que a
+    pessoa aceitou. Desligou, o cartão sai na volta seguinte da vigia. Nunca
+    levanta: um registro ilegível ou um bloco torto deixa só aquela de fora.
+    """
+    from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
+    from hefesto_dualsense4unix.mods.instalador import (
+        InstalacaoRecusadaError,
+        Lugares,
+        ler_registro,
+    )
+    from hefesto_dualsense4unix.mods.manifesto import ManifestoRecusadoError, ler_manifesto
+
+    try:
+        lg = lugares or Lugares.do_xdg()
+        registro = ler_registro(lg.registro)
+    except (InstalacaoRecusadaError, OSError):
+        _LOG.debug("registro_das_modificacoes_ilegivel", exc_info=True)
+        return ()
+    fora: list[desenho.SemCenso] = []
+    for mod_id, entrada in sorted(registro.items()):
+        if not entrada.ligada or "lancador" not in entrada.permissoes_aceitas:
+            continue
+        pasta = lg.codigo / mod_id
+        try:
+            manifesto = ler_manifesto(pasta)
+            if ("lancador" not in manifesto.tipos or manifesto.lancador is None
+                    or "lancador" not in manifesto.permissoes or manifesto.id != mod_id):
+                continue
+            bloco = censo.lancador_da_modificacao(mod_id, manifesto.lancador, pasta)
+        except (ManifestoRecusadoError, ValueError):
+            _LOG.debug("lancador_da_modificacao_recusado", exc_info=True)
+            continue
+        fora.append(desenho.SemCenso(
+            chave=bloco.chave, nome=bloco.rotulo, atalhos=bloco.atalhos,
+            comandos=bloco.comandos, janelas=bloco.janelas,
+            titulo_do_jogo=bloco.titulo_do_jogo, leitor=bloco.leitor,
+            modificacao=mod_id))
+    return tuple(fora)
 
 
 def _achados_por_conteudo() -> tuple[desenho.SemCenso, ...]:
@@ -682,18 +726,18 @@ class _Escolha:
     miolo: str = ""
     jogos: tuple[desenho.JogoParaEscolher, ...] = ()
     janelas: dict[str, tuple[str, ...]] = dataclasses.field(default_factory=dict)
+    #: O título que casa cada jogo, por chave: o jogo de um lançador de
+    #: modificação, cuja janela é a do emulador para todos os jogos.
+    titulos: dict[str, str] = dataclasses.field(default_factory=dict)
 
     def limpar(self) -> None:
         self.modo = self.lancador = self.miolo = ""
         self.jogos = ()
         self.janelas = {}
+        self.titulos = {}
 
 
 _ESCOLHA = _Escolha()
-
-_JANELAS_MEDIDAS: dict[str, tuple[str, ...]] = {
-    "retroarch": ("com.libretro.RetroArch",),
-}
 
 _COM_BIBLIOTECA = ("heroic", "lutris")
 _SEM_JOGOS = ("flatpak",)
@@ -703,8 +747,31 @@ def _chave_do_emulador(lancador: str) -> str:
     return f"emulador:{lancador}"
 
 
+def _titulo_que_casa(titulo: str) -> str:
+    """``PPSA21567`` → a expressão que acha o ID no título, e nada colado nele."""
+    return rf"(?<!\w){re.escape(titulo)}(?!\w)"
+
+
+def _jogos_pelo_titulo(
+    item: desenho.SemCenso, ja: set[str],
+) -> tuple[list[desenho.JogoParaEscolher], dict[str, str]]:
+    """Os jogos do leitor da modificação que têm o ID no título, e o título de cada um."""
+    from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
+
+    jogos: list[desenho.JogoParaEscolher] = []
+    titulos: dict[str, str] = {}
+    biblioteca = censo.biblioteca_do_cartao(item.chave, leitor=item.leitor)
+    for jogo in biblioteca.jogos:
+        if jogo.titulo_do_jogo and jogo.chave not in ja and jogo.chave not in titulos:
+            jogos.append(desenho.JogoParaEscolher(
+                chave=jogo.chave, nome=jogo.nome, instalado=jogo.instalado))
+            titulos[jogo.chave] = _titulo_que_casa(jogo.titulo_do_jogo)
+    jogos.sort(key=lambda j: j.nome.casefold())
+    return jogos, titulos
+
+
 def _jogos_para_escolher(
-    lancador: str, nome: str, state: dict[str, Any] | None,
+    lancador: str, nome: str, state: dict[str, Any] | None, modo: str = "",
 ) -> tuple[list[desenho.JogoParaEscolher], dict[str, tuple[str, ...]], bool]:
     """``(jogos, janelas por chave, é emulador)`` — a lista DAQUELE lançador.
 
@@ -712,7 +779,14 @@ def _jogos_para_escolher(
     nenhuma é pior que nenhuma (a regra da LANCADOR-AGNOSTICO-01). O jogo da
     escada (o aberto, ou o último) nasce marcado (D-2109-O-JOGO-SE-ESCOLHE-NA-
     LISTA). Nunca levanta: é chamado de dentro de um clique.
+
+    O LANÇADOR DE MODIFICAÇÃO COM LEITOR, no modo do perfil, lista os jogos que
+    o leitor devolve com o ID do título: a janela é a do emulador para todos,
+    e o perfil de UM jogo casa pelo título (os títulos ficam em
+    ``_ESCOLHA.titulos``). A lista de exclusão casa por janela, e lá ele fica
+    na linha «todos os jogos», como os emuladores.
     """
+    _ESCOLHA.titulos = {}
     appid, _quando = a_escada_do_jogo(state)
     marcado = f"steam_app_{appid}" if appid is not None else ""
     ja = {e.chave for e in lista_de_exclusao.ler()}
@@ -740,9 +814,14 @@ def _jogos_para_escolher(
             chave = _chave_do_emulador(lancador)
             item = next((x for x in desenho.procurados(_declarados())
                          if x.chave == lancador), None)
+            if item is not None and item.leitor is not None and modo == desenho.CRIAR_PERFIL:
+                pelo_titulo, titulos = _jogos_pelo_titulo(item, ja)
+                if pelo_titulo:
+                    _ESCOLHA.titulos = titulos
+                    return pelo_titulo, {}, False
             janelas = tuple(dict.fromkeys(
                 (*(item.atalhos if item else ()), *(item.comandos if item else ()),
-                 *_JANELAS_MEDIDAS.get(lancador, ()))))
+                 *(item.janelas if item else ()))))
             linha = desenho.JogoParaEscolher(
                 chave=chave, nome=f"{nome} — todos os jogos", marcado=True)
             return ([] if chave in ja else [linha]), {chave: janelas}, True
@@ -758,7 +837,7 @@ def _abrir_a_escolha(modo: str, lancador: str, state: dict[str, Any] | None) -> 
     lida = VIGIA.agora()
     nomes = {x.chave: x.nome for x in desenho.cartoes(lida)}
     nome = nomes.get(lancador, lancador)
-    jogos, janelas, emulador = _jogos_para_escolher(lancador, nome, state)
+    jogos, janelas, emulador = _jogos_para_escolher(lancador, nome, state, modo)
     _ESCOLHA.modo, _ESCOLHA.lancador = modo, lancador
     _ESCOLHA.jogos, _ESCOLHA.janelas = tuple(jogos), janelas
     _ESCOLHA.miolo = desenho.miolo_da_escolha_html(
@@ -1107,7 +1186,7 @@ def abrir_lancador(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise ValueError(
             "O clique não disse de qual lançador se trata. Nada foi alterado.")
     if qual != desenho.STEAM:
-        nomes = {x.chave: x.nome for x in desenho.SEM_FONTE}
+        nomes = {x.chave: x.nome for x in desenho.procurados(_declarados())}
         raise RuntimeError(
             f"Abra o {nomes.get(qual, qual)} como você já abre — o perfil "
             "entra do mesmo jeito, pelo nome do processo e pela janela.")
@@ -1202,6 +1281,21 @@ def confirmar_o_perfil(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, An
     from . import a10_perfis
 
     jogo = _o_escolhido(o)
+    titulo = _ESCOLHA.titulos.get(jogo.chave, "")
+    if titulo:
+        # O JOGO DE UM EMULADOR QUE ABRE TODOS NA MESMA JANELA casa pelo ID
+        # no título, e só por ele: a classe e o processo do KytyPS5 ainda não
+        # foram medidos, e uma condição a mais que não casa calaria o perfil.
+        from hefesto_dualsense4unix.profiles.schema import MatchCriteria
+
+        regra = MatchCriteria(window_title_regex=titulo)
+        try:
+            frase = a10_perfis._nascer(ctx, p, regra, jogo.nome.strip() or "Novo perfil")
+        except ValueError:
+            frase = a10_perfis._nascer(ctx, p, regra, "Novo perfil")
+        _relatar(desenho.CONFIRMAR_PERFIL, frase)
+        _ESCOLHA.limpar()
+        return _resposta(VIGIA.agora(), ctx.state)
     janelas = _ESCOLHA.janelas.get(jogo.chave, ())
     classes = janelas if janelas else (jogo.chave,)
     frase = a10_perfis.criar_para_o_jogo(
