@@ -78,33 +78,22 @@ hardware; e ``core.evdev_reader.discover_dualsense_evdevs`` — a função que o
 co-op usa para achar cada jogador — já devolve exatamente esse MAC normalizado.
 Nada precisou mudar no armazenamento: o que mudou foi **quem pergunta**.
 
-O QUE AINDA NÃO CHEGA AQUI (MEDIDO em 15/08/2026)
---------------------------------------------------
+QUEM PERGUNTA, E UMA VEZ SÓ
+---------------------------
 
-:func:`mascara_efetiva` é consultada na criação de todo gamepad virtual, uma
-vez, por ``virtual_pad.make_virtual_pad`` (os construtores recebem a chave já
-resolvida desde 10/10/2026), mas ela só tem o que responder
-quando recebe uma ``identity``. **Hoje ninguém a passa**: os três degraus que
-faltam moram fora deste módulo —
-``integrations/virtual_pad.make_virtual_pad`` (repassar o parâmetro),
-``daemon/subsystems/coop.py`` (o MAC do jogador na criação e o
-:func:`vpad_ficou_para_tras` no laço de recriação) e
-``daemon/subsystems/gamepad.py`` (o MAC do primário). Enquanto isso não chega,
-o comportamento é **idêntico ao de antes** — máscara única, a do jogo —, o que é
-de propósito: meia cura que muda comportamento é pior que nenhuma.
+:func:`mascara_efetiva` é consultada uma vez na criação de todo gamepad
+virtual, por ``virtual_pad.make_virtual_pad``, e no laço de recriação do co-op
+(:func:`vpad_ficou_para_tras`). Os construtores (``UinputGamepad.for_flavor`` e
+``UhidDualSense.for_flavor``) vestem a chave que recebem e não releem o registro
+(A-MASCARA-DO-PAD-SE-DECIDE-SO-NA-FABRICA-01, 10/10/2026). A ``identity`` que ela
+precisa chega do ``gamepad.py`` (o primário) e do ``coop.py`` (cada jogador), e a
+escolha do usuário é gravada pela rota ``gamepad.mask.set``.
 
-**A armadilha do primeiro degrau, para quem for escrevê-lo:**
-``make_virtual_pad`` tem de resolver a máscara efetiva **ANTES** de escolher o
-backend, e passar o resultado ao ``_try_uhid``. O gate de lá usa a máscara que recebe: se ele
-continuar recebendo a do
-JOGO, um jogador que escolheu ``dualsense`` numa sessão ``xbox`` tem o uhid
-vetado e cai no ``uinput`` com máscara DualSense — que é o par degradado onde a
-vibração do jogo morre (VPAD-05/SPRINT-GAME-RUMBLE-01). A resolução é
-idempotente (``mascara_efetiva`` de uma máscara já efetiva devolve ela mesma),
-então resolver na factory e repassar a ``identity`` aos dois backends é seguro.
-
-Falta também o **lado da escrita**: quem grava a escolha do usuário é a rota IPC
-(``daemon/ipc_handlers.py``), que ainda só conhece a máscara da sessão.
+**Por que a fábrica resolve ANTES de escolher o backend:** o gate do
+``_try_uhid`` usa a máscara que recebe. Se ele recebesse a do JOGO, um jogador
+que escolheu ``dualsense`` numa sessão ``xbox`` teria o uhid vetado e cairia no
+``uinput`` com máscara DualSense — que é o par degradado onde a vibração do jogo
+morre (VPAD-05/SPRINT-GAME-RUMBLE-01).
 
 RISCO NÃO MEDIDO — CONTROLES HETEROGÊNEOS NA MESMA SESSÃO
 ----------------------------------------------------------
