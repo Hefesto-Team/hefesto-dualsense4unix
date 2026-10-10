@@ -22,9 +22,37 @@ from hefesto_dualsense4unix.interface.folha_da_casa import (  # noqa: E402
     CLASSE_DA_ESPERA,
     FOLHA_DA_CASA,
 )
+from hefesto_dualsense4unix.mods import tema as _tema_das_mods  # noqa: E402
 from hefesto_dualsense4unix.utils import identidade as _identidade  # noqa: E402
 
 _CASA = _identidade.atual()
+
+
+class _TemaLigado(str):
+    """O padrão de quem não diz o tema: o da modificação ligada, lido do registro."""
+
+
+#: ``tema_de_cores=TEMA_LIGADO`` (o padrão) pede o tema da modificação ligada; ``None`` ou ``""``
+#: abre sem tema; outra folha é usada como veio (quem a passa já a conferiu por
+#: ``mods.tema.validar``).
+TEMA_LIGADO = _TemaLigado("")
+
+
+def folha_do_tema() -> str:
+    """A folha do tema ligado, ou vazio. O tema reprovado não liga, e a frase vai para o
+    diário: a interface não tem tela de modificações, e o tema que não ligou não muda a cor."""
+    casa = _tema_das_mods.tema_da_casa()
+    for frase in (casa.recusa, *casa.avisos):
+        if frase:
+            print(f"[tema] {frase}", file=sys.stderr)
+    return casa.folha
+
+
+def _a_folha_do_tema(pedido: str | None) -> str:
+    if pedido is None:
+        return ""
+    return folha_do_tema() if isinstance(pedido, _TemaLigado) else pedido
+
 
 AS_QUATRO_ARMADILHAS: tuple[str, ...] = (
     "FINISHED dispara DEPOIS de um load-failed, com o URI ORIGINAL: arquivo "
@@ -229,6 +257,7 @@ class PonteDaTela:
         ao_recusar: Callable[[str, str], None] | None = None,
         folha: str | None = FOLHA_DA_CASA,
         esperar_a_pintura: bool = False,
+        tema_de_cores: str | None = TEMA_LIGADO,
     ) -> None:
         self.canal = canal
         self._ao_receber = ao_receber
@@ -239,10 +268,16 @@ class PonteDaTela:
         ucm = WebKit2.UserContentManager()
         ucm.register_script_message_handler(canal)
         ucm.connect(f"script-message-received::{canal}", self._da_tela)
-        if folha:
+        # O tema de cores (O-TEMA-DE-CORES-ENTRA-PELA-FOLHA-DE-USUARIO-01) é a SEGUNDA folha de
+        # usuário, depois da da casa: só redefine tokens do `:root`, com `!important`, que no nível
+        # USER vence o `:root` da página sem mudar um byte dela.
+        self.tema_de_cores = _a_folha_do_tema(tema_de_cores)
+        for estilo in (folha, self.tema_de_cores):
+            if not estilo:
+                continue
             ucm.add_style_sheet(
                 WebKit2.UserStyleSheet(
-                    folha,
+                    estilo,
                     WebKit2.UserContentInjectedFrames.TOP_FRAME,
                     WebKit2.UserStyleLevel.USER,
                     None,
@@ -342,6 +377,7 @@ class JanelaDaAba:
         folha: str | None = FOLHA_DA_CASA,
         tamanho: tuple[int, int] | None = None,
         esperar_a_pintura: bool = False,
+        tema_de_cores: str | None = TEMA_LIGADO,
     ) -> None:
         self.arquivo = arquivo
         self.titulo_esperado = titulo_esperado
@@ -359,7 +395,7 @@ class JanelaDaAba:
 
         self.ponte = PonteDaTela(
             canal=canal, ao_receber=ao_receber, ao_recusar=ao_recusar, folha=folha,
-            esperar_a_pintura=esperar_a_pintura,
+            esperar_a_pintura=esperar_a_pintura, tema_de_cores=tema_de_cores,
         )
         self.view = self.ponte.view
         self.view.connect("load-changed", self._carregou)

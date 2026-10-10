@@ -9,6 +9,7 @@ import sys
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import onde  # noqa: E402
 from monta import acesos_da_fita as _acesos_da_fita  # noqa: E402
+from monta import TOPO  # noqa: E402
 from monta import (DS, MESA, CONECTADOS, CSS_GLIFO, CSS_POPUP, TRAVESSAO,  # noqa: E402
                    cor_da_zona, monta, player_slot_color,
                    ressalva as monta_ressalva, svg)
@@ -22,6 +23,7 @@ from hefesto_dualsense4unix.integrations import entrada_a_entrada as _entrada_a_
 from hefesto_dualsense4unix.integrations import dicas_da_conexao as _dicas  # noqa: E402
 from hefesto_dualsense4unix.integrations import ordens_da_mesa as _ordens  # noqa: E402
 from pacotes import a08_conexoes as _pacote08  # noqa: E402
+from hefesto_dualsense4unix.mods import tema as _tema  # noqa: E402
 from pacotes.a11_calibrar_sensores import bloco_de_nascenca as _mira_de_nascenca  # noqa: E402
 
 def _valor(no, ja):
@@ -1659,6 +1661,24 @@ def _escopo(seletores: str) -> str:
     return ", ".join(fora)
 
 
+def _sem_os_tokens_da_casa(miolo: str) -> str:
+    """A raiz do desenho do rádio sem as cores que ele copiou da casa.
+
+    Copiado para `.radio{…}`, um token da casa vira valor PRÓPRIO da seção e esconde o da raiz:
+    um tema de cores (O-TEMA-DE-CORES-ENTRA-PELA-FOLHA-DE-USUARIO-01) trocaria o painel da página
+    inteira menos o do rádio. O mesmo valor sai daqui e a seção herda; um valor diferente fica,
+    porque é do desenho e não uma cópia."""
+    casa = {nome: "".join(valor.split()) for nome, valor in _tema.tokens_do_root(TOPO).items()}
+    fica = []
+    for declaracao in miolo.split(";"):
+        nome, _, valor = declaracao.partition(":")
+        nome, valor = nome.strip(), " ".join(valor.split())
+        if not nome or casa.get(nome) == "".join(valor.split()).lower():
+            continue
+        fica.append(f"{nome}:{valor}")
+    return ";".join(fica)
+
+
 def _css_do_radio() -> str:
     """A folha do desenho aprovado, com escopo `.radio` e sem o que é da página."""
     corpo = re.search(r"<style>(.*?)</style>", _DESENHO_DO_RADIO_TXT, re.S).group(1)
@@ -1696,9 +1716,32 @@ def _css_do_radio() -> str:
             continue
         elif cabeca == ".quadro":
             saida.append(".quadro.radio{position:relative;z-index:0}")
+        elif cabeca == ":root":
+            saida.append(f"{_escopo(cabeca)}{{{_sem_os_tokens_da_casa(miolo)}}}")
         else:
             saida.append(f"{_escopo(cabeca)}{{{' '.join(miolo.split())}}}")
     return "\n  ".join(saida)
+
+
+#: A COR DE CADA TIPO É UM TOKEN DA RAIZ (O-TEMA-DE-CORES-ENTRA-PELA-FOLHA-DE-USUARIO-01): o Python
+#: escreve `var(--c-<tipo>)` na régua e `var(--sala-<tipo>)` na sala, e o valor mora só aqui. Na
+#: raiz, e não no escopo da seção: um valor posto em `.radio .espectro{…}` venceria o que um tema
+#: põe no `:root`, e o tema não chegaria à régua. O controle leva o plástico dele, lido do aparelho;
+#: o `--c-controle` é só a cor do desenho de exemplo.
+CORES_NA_REGUA = {
+    "controle": "#7eb8d4", "wifi": "#c3e88d", "teclado": "#ffb86c", "mouse": "#f1fa8c",
+    "celular": "#f78c6c", "relogio": "#82aaff", "ruido": "#8a8fa8", "fone": "#8be9fd",
+    "caixa": "#bd93f9", "outro": "#9a9eb8", _pacote08.TIPO_ACESSORIO: "#ff79c6",
+}
+#: A cor calma de cada tipo na sala (o ícone e a vaga da ponte), a de antes em `COR_DO_TIPO`.
+CORES_NA_SALA = {
+    "teclado": "#8b8fa8", "mouse": "#6d7186", "webcam": "#a8a08c", "caixa": "#8c8299",
+    "fone": "#7e9aa8", "outro": "#606062", "celular": "#a89a96", "relogio": "#8a9aa8",
+    _pacote08.TIPO_ACESSORIO: "#a8919f",
+}
+_RAIZ_DAS_CORES_DOS_TIPOS = ";".join(
+    [f"--c-{tipo}:{cor}" for tipo, cor in CORES_NA_REGUA.items()]
+    + [f"--sala-{tipo}:{cor}" for tipo, cor in CORES_NA_SALA.items()])
 
 
 CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
@@ -1788,9 +1831,7 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
      os mesmos 79 canais em toda linha. Pintado é o canal bom, na cor do aparelho; o buraco é
      o canal perdido, e nele a marca (embaixo) é a cor de quem briga ali, dos dois lados.
      A cor é a IDENTIDADE; a palavra do selo é o que diz se está bom (cor nunca sozinha). */
-  .radio .espectro{--c-controle:#7eb8d4;--c-wifi:#c3e88d;--c-teclado:#ffb86c;--c-mouse:#f1fa8c;
-                 --c-celular:#f78c6c;--c-relogio:#82aaff;--c-ruido:#8a8fa8;--c-fone:#8be9fd;
-                 --c-caixa:#bd93f9;--c-outro:#9a9eb8;--vazio:#1b1c24}
+  .radio .espectro{--vazio:#1b1c24}
   .radio .ar{display:flex;flex-direction:column;gap:7px}
   .radio .ar-grupo{display:flex;align-items:center;gap:8px;font-size:12px;
                    color:var(--texto-mudo);margin-top:6px;padding-top:6px;
@@ -1931,10 +1972,7 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio .cadeado.ligada{border-color:var(--green);background:rgba(80,250,123,.09);
                   color:var(--green)}
   .radio .cadeado.ligada .p{background:var(--green);box-shadow:0 0 6px var(--green)}
-""" + (
-    # a cor do acessório na régua vem da tabela da categoria, o dono dela
-    f"  .radio .espectro{{--c-{_pacote08.TIPO_ACESSORIO}:"
-    f"{_pacote08.CATEGORIA_ACESSORIO['cor_na_regua']}}}\n")
+""" + f"  :root{{{_RAIZ_DAS_CORES_DOS_TIPOS}}}\n"
 
 
 #: Os tipos que a régua ganhou e o desenho do rádio não tinha: o celular, o relógio e o

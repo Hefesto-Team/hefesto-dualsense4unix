@@ -3308,10 +3308,13 @@ VOLTAS_DO_VIGIA_NA_TELA = 3
 #: (O-ACESSORIO-SEM-TIPO-GANHA-CATEGORIA-E-SINAL-NA-CONEXOES-01): o nome «Acessório» é do
 #: usuário (09/10/2026, 16h). O glifo, a palavra, a cor e a legenda dela moram nesta tabela só,
 #: e as tabelas por tipo abaixo a leem. Quem dá a categoria é a cena, onde o tipo e o enlace se
-#: encontram (:func:`_com_a_categoria_do_enlace`), nunca o nome ou a marca do aparelho.
+#: encontram (:func:`_com_a_categoria_do_enlace`), nunca o nome ou a marca do aparelho. As cores
+#: são os tokens da raiz da aba (O-TEMA-DE-CORES-ENTRA-PELA-FOLHA-DE-USUARIO-01): o valor mora em
+#: `aba08.CORES_NA_SALA` e `aba08.CORES_NA_REGUA`, onde um tema também os alcança.
 TIPO_ACESSORIO = "acessorio"
 CATEGORIA_ACESSORIO = {"glifo": "acessorio", "palavra": "acessório", "legenda": "Acessório",
-                       "cor": "#a8919f", "cor_na_regua": "#ff79c6"}
+                       "cor": f"var(--sala-{TIPO_ACESSORIO})",
+                       "cor_na_regua": f"var(--c-{TIPO_ACESSORIO})"}
 
 #: O glifo de cada tipo, numa tabela só: a antena (`radio`) é do adaptador e de
 #: mais ninguém, e o tipo sem desenho (`outro`, `nao_sei`, o que ninguém nomeou) é o «?».
@@ -3340,11 +3343,13 @@ BOTOES_DE_PAREAR = {"0ce6": "PS + Create", "0df2": "PS + Create",
                     "05c4": "PS + Share", "09cc": "PS + Share"}
 ICONE_DO_CUSTO = {"mic": "mic", "som": "som", "haptica": "vibra"}
 NOME_DO_CUSTO = {"mic": "microfone", "som": "som", "haptica": "vibração"}
+#: A cor de cada tipo na sala é o NOME do token (``--sala-<tipo>``), nunca o hex: o valor mora na
+#: raiz da folha da aba (`aba08.CORES_NA_SALA`), e é ali que um tema de cores o troca.
 COR_DO_TIPO = {
-    "teclado": "#8b8fa8", "mouse": "#6d7186", "webcam": "#a8a08c",
-    "caixa": "#8c8299", "fone": "#7e9aa8", "outro": "#606062",
-    "celular": "#a89a96", "relogio": "#8a9aa8", TIPO_ACESSORIO: CATEGORIA_ACESSORIO["cor"],
+    tipo: f"var(--sala-{tipo})"
+    for tipo in ("teclado", "mouse", "webcam", "caixa", "fone", "outro", "celular", "relogio")
 }
+COR_DO_TIPO[TIPO_ACESSORIO] = CATEGORIA_ACESSORIO["cor"]
 ARTIGO_DO_TIPO = {"caixa": "a", "webcam": "a"}
 PASSAGEIROS = (("giro", "Giroscópio e acelerômetro"), ("touch", "Touchpad"),
                ("botoes", "Botões, sticks e gatilhos"))
@@ -3406,6 +3411,10 @@ def _cor_de(ap: dict[str, Any]) -> str:
 
 
 def _veu(cor: str, alfa: float) -> str:
+    """A cor com transparência: o hex do plástico vira `rgba`, e o token da sala se mistura
+    com o transparente no próprio motor, sem que o Python saiba o valor que o tema pôs."""
+    if (cor or "").startswith("var("):
+        return f"color-mix(in srgb, {cor} {round(alfa * 100)}%, transparent)"
     m = re.fullmatch(r"#?([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})", cor or "")
     if not m:
         return cor
@@ -4706,12 +4715,14 @@ def html_dos_canais(cena: dict[str, Any]) -> str:
 
 
 
-#: A cor de cada tipo na mini-faixa do painel do aparelho (a página do mapa tem a paleta dela).
+#: A cor de cada tipo na mini-faixa do painel do aparelho, na página do mapa das portas, que tem
+#: a paleta dela e nenhum token ``--c-<tipo>`` na raiz: aqui o valor continua em hex, porque um
+#: `var()` sem token definido apaga a cor em vez de cair no padrão. Fica para quando a página do
+#: mapa (`interface/pagina_do_mapa.py`) definir os tokens dela.
 COR_DA_FAIXA_NO_MAPA = {
     "controle": "#f8f8f2", "celular": "#ff9a8b", "relogio": "#8fa8ff", "fone": "#8be9fd",
     "caixa": "#bd93f9", "teclado": "#ffb86c", "mouse": "#f1fa8c", "wifi": "#c3e88d",
-    "ruido": "#8a8fa3", "outro": "#9a9eb8", "adaptador": "#6272a4",
-    TIPO_ACESSORIO: CATEGORIA_ACESSORIO["cor_na_regua"],
+    "ruido": "#8a8fa3", "outro": "#9a9eb8", "adaptador": "#6272a4", TIPO_ACESSORIO: "#ff79c6",
 }
 
 

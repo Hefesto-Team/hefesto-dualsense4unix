@@ -1,4 +1,6 @@
-"""O acessório sem tipo ganha categoria e sinal — O-ACESSORIO-SEM-TIPO-GANHA-CATEGORIA-E-SINAL-NA-CONEXOES-01.
+"""O acessório sem tipo ganha categoria e sinal.
+
+A sprint: O-ACESSORIO-SEM-TIPO-GANHA-CATEGORIA-E-SINAL-NA-CONEXOES-01.
 
 A queixa de 09/10/2026: três aparelhos de baixa energia no mesmo adaptador saíam com o «?», a
 faixa vazia e o ponto vazado. As escolhas do usuário (09/10/2026, 16h): a categoria se chama
@@ -181,13 +183,18 @@ def test_a_categoria_mora_numa_tabela_so() -> None:
     cat = a08.CATEGORIA_ACESSORIO
     assert a08.glifo_do_tipo(a08.TIPO_ACESSORIO) == cat["glifo"] != "ajuda"
     assert a08.PALAVRA_DO_TIPO[a08.TIPO_ACESSORIO] == cat["palavra"]
-    assert a08.COR_DO_TIPO[a08.TIPO_ACESSORIO] == cat["cor"]
-    assert a08.COR_DA_FAIXA_NO_MAPA[a08.TIPO_ACESSORIO] == cat["cor_na_regua"]
+    # as cores são os tokens da raiz da aba (O-TEMA-DE-CORES-ENTRA-PELA-FOLHA-DE-USUARIO-01)
+    assert a08.COR_DO_TIPO[a08.TIPO_ACESSORIO] == cat["cor"] == "var(--sala-acessorio)"
+    assert cat["cor_na_regua"] == "var(--c-acessorio)"
+    assert a08._cor_na_regua(a08.TIPO_ACESSORIO) == cat["cor_na_regua"]
+    assert a08.COR_DA_FAIXA_NO_MAPA[a08.TIPO_ACESSORIO] == "#ff79c6"
     assert (a08.TIPO_ACESSORIO, cat["legenda"]) in a08.LEGENDA_DAS_FAIXAS
     assert a08.TIPO_ACESSORIO in a08.TIPOS_COM_COR_NA_REGUA
     pagina = MOCKUP.read_text(encoding="utf-8")
     assert f'<symbol id="rd-{cat["glifo"]}"' in pagina
-    assert f'--c-{a08.TIPO_ACESSORIO}:{cat["cor_na_regua"]}' in pagina
+    raiz = re.search(r":root\{(--c-[^{}]*)\}", pagina)
+    assert raiz and "--c-acessorio:#ff79c6" in raiz.group(1) and (
+        "--sala-acessorio:#a8919f" in raiz.group(1))
 
 
 def _linha(html: str, ident: str) -> str:

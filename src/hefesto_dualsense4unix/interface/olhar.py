@@ -97,7 +97,7 @@ def _navegador(pw):
 
 def _retratar(navegador, alvo: pathlib.Path, saida: pathlib.Path,
               so_a_janela: bool = False,
-              vista: tuple[int, int] | None = None) -> dict:
+              vista: tuple[int, int] | None = None, tema: str = "") -> dict:
     """Uma página, já assentada, medida e fotografada."""
     larg, alt = vista or (LARG, ALT)
     pg = navegador.new_page(viewport={"width": larg, "height": alt}, device_scale_factor=1)
@@ -109,6 +109,8 @@ def _retratar(navegador, alvo: pathlib.Path, saida: pathlib.Path,
         pg.add_style_tag(
             content="".join(f"{s}{{display:none}}" for s in seletores_escondidos())
         )
+        if tema:
+            pg.add_style_tag(content=tema)
         pg.wait_for_timeout(400)
         cx = pg.evaluate(MEDIDA_NA_VISTA)
         if cx.get("erro"):
@@ -127,15 +129,17 @@ def _retratar(navegador, alvo: pathlib.Path, saida: pathlib.Path,
         pg.close()
 
 
-def _uma(arq: str, publicado: bool, vista: tuple[int, int] | None = None) -> int:
+def _uma(arq: str, publicado: bool, vista: tuple[int, int] | None = None,
+         tema: str = "") -> int:
     alvo = onde.pagina(arq, publicado=publicado)
-    saida = pathlib.Path(f"/tmp/olhar-{arq[:2]}{'-publicado' if publicado else ''}.png")
+    saida = pathlib.Path(f"/tmp/olhar-{arq[:2]}{'-publicado' if publicado else ''}"
+                         f"{'-com-tema' if tema else ''}.png")
     from playwright.sync_api import sync_playwright
 
     with sync_playwright() as pw:
         nav = _navegador(pw)
         try:
-            r = _retratar(nav, alvo, saida, vista=vista)
+            r = _retratar(nav, alvo, saida, vista=vista, tema=tema)
         finally:
             nav.close()
     if "erro" in r:
@@ -152,7 +156,7 @@ def destino_das_fotos(para_a_doc: bool, vista: tuple[int, int] | None) -> pathli
 
 
 def _todas(publicado: bool, para_a_doc: bool,
-           vista: tuple[int, int] | None = None) -> int:
+           vista: tuple[int, int] | None = None, tema: str = "") -> int:
     paginas = [p for p in onde.paginas(publicado=publicado) if E_ABA.match(p.name)]
     if len(paginas) < 10:
         sys.exit(f"achei {len(paginas)} abas em {'publicado' if publicado else 'bancada'} — o caminho mudou?")
@@ -165,9 +169,10 @@ def _todas(publicado: bool, para_a_doc: bool,
         nav = _navegador(pw)
         try:
             for p in paginas:
-                nome = f"{PREFIXO_NOVO}{p.stem}.png" if para_a_doc else f"olhar-{p.stem}.png"
+                nome = (f"{PREFIXO_NOVO}{p.stem}.png" if para_a_doc
+                        else f"olhar-{p.stem}{'-com-tema' if tema else ''}.png")
                 r = _retratar(nav, p, destino / nome, so_a_janela=para_a_doc,
-                              vista=vista)
+                              vista=vista, tema=tema)
                 if "erro" in r:
                     sys.exit(f"ERRO ao medir {p.name}: {r['erro']}")
                 saiu.append({"aba": p.name, **r})
@@ -268,6 +273,19 @@ def _vista_pedida(texto: str) -> tuple[int, int]:
     return int(m.group(1)), int(m.group(2))
 
 
+def _tema_pedido(caminho: str) -> str:
+    """A folha do ``--tema``, conferida pela MESMA régua que liga o tema de uma modificação
+    (`mods.tema.validar`): o retratista não fotografa um tema que o produto recusaria."""
+    from hefesto_dualsense4unix.mods import tema as _tema
+
+    try:
+        return _tema.validar(pathlib.Path(caminho).read_text(encoding="utf-8")).folha
+    except OSError as exc:
+        sys.exit(f"o tema {caminho!r} não abriu: {exc.strerror}")
+    except _tema.TemaRecusadoError as exc:
+        sys.exit(f"o tema {caminho!r} foi recusado. {exc.frase}")
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description="fotografa a interface nova")
     p.add_argument("pagina", nargs="?",  # (noqa-acento)  (nome do argumento)
@@ -281,16 +299,22 @@ def main(argv: list[str] | None = None) -> int:
                    help="a vista em que fotografar — 'dela' é a janela dela "
                         "maximizada. Com ela a foto é a VISTA INTEIRA, não o "
                         "recorte da .janela")
+    p.add_argument("--tema", metavar="ARQUIVO",
+                   help="fotografa com este tema de cores (um :root{…}), conferido pela "
+                        "régua do tema das modificações; as fotos não vão para a doc")
     a = p.parse_args(argv)
+    if a.tema and a.doc:
+        p.error("--tema não grava em docs/usage/assets/: a documentação mostra a casa")
+    tema = _tema_pedido(a.tema) if a.tema else ""
     if a.palavra:
         return _palavra(a.palavra, a.publicado)
     if a.todas:
-        return _todas(a.publicado, a.doc, a.vista)
+        return _todas(a.publicado, a.doc, a.vista, tema)
     if not a.pagina:  # (noqa-acento)  (nome do argumento)
         p.error("diga a página, ou peça --todas")
     if a.doc:
         p.error("--doc é do modo --todas")
-    return _uma(a.pagina, a.publicado, a.vista)  # (noqa-acento)  (nome do argumento)
+    return _uma(a.pagina, a.publicado, a.vista, tema)  # (noqa-acento)  (nome do argumento)
 
 
 if __name__ == "__main__":
