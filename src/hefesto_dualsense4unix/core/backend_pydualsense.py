@@ -2970,19 +2970,24 @@ class PyDualSenseController(IController):
         ]
         if new_keys:
             with self._io_lock:
+                pode_player = self._pode_escrever_player_leds()
                 reasserts = [
                     (key, mapping[key], self._merged_desired_for_key(key))
                     for key in new_keys
                 ]
             for key, node, desired in reasserts:
+                if desired.led is None:
+                    desired = replace(desired, led=KERNEL_DEFAULT_BLUE)
                 with contextlib.suppress(Exception):
-                    cor = desired.led if desired.led is not None else KERNEL_DEFAULT_BLUE
-                    if node.set_rgb(*cor):
-                        self.record_sysfs_write(key, cor)
-                    if desired.player_leds is not None and (
-                        self._pode_escrever_player_leds()
-                    ):
-                        node.set_players(desired.player_leds)
+                    self._repintar_a_luz_de_um(
+                        key,
+                        handles[key],
+                        node,
+                        desired,
+                        pode_player=pode_player,
+                        what="sysfs_no_novo",
+                        forcar=True,
+                    )
 
         with self._io_lock:
             self._sysfs = mapping
@@ -3452,6 +3457,10 @@ class PyDualSenseController(IController):
 
         Não loga a escrita bem-sucedida: quem chama decide a cadência (o
         gatilho diz cada uma; a vigia, que pode escrever a cada segundo, não).
+
+        O quadro que saiu inteiro fica no handle (`_quadro_da_luz`): é a
+        memória com que o `_repintar_a_luz_de_um` deixa de repetir no rádio o
+        quadro que nada mudou. Handle novo nasce sem ela.
         """
         from hefesto_dualsense4unix.core.lightbar_gatilho import (
             build_bt_lightbar_report,
@@ -3473,6 +3482,8 @@ class PyDualSenseController(IController):
                 device = getattr(handle, "device", handle)
                 escrito = device.write(report)
             ok = _escrita_completa(escrito, len(report))
+            with contextlib.suppress(Exception):
+                handle._quadro_da_luz = (cor, players, brilho) if ok else None
             if not ok:
                 logger.warning(
                     f"{nome}_escrita_curta",
@@ -3485,7 +3496,13 @@ class PyDualSenseController(IController):
         return ok, cor, players
 
     def reafirmar_barra_e_numero(self, uniqs: Iterable[str]) -> dict[str, bool]:
-        """Reescreve a BARRA e o NÚMERO destes controles, e só isso."""
+        """Reescreve a BARRA e o NÚMERO destes controles, e só isso.
+
+        É o vigia do sequestro: ele escreve SEMPRE (`forcar`), porque existe
+        justamente para o caso em que outro escritor repintou por fora. No
+        rádio ele não passa o nó: com a Steam no hidraw, a classe LED não muda
+        a barra, e cada escrita nela custaria mais um report a cada 0,9 s.
+        """
         alvos_uniq = {u for u in (self._key_to_uniq(x) for x in uniqs) if u}
         with self._io_lock:
             pode_player = self._pode_escrever_player_leds()
@@ -3493,32 +3510,27 @@ class PyDualSenseController(IController):
             for key, handle in self._handles.items():
                 if self._key_to_uniq(key) not in alvos_uniq:
                     continue
-                no = self._sysfs.get(key) if isinstance(self._sysfs, dict) else None
+                radio = self._detect_transport(handle) == "bt"
+                no = (
+                    self._sysfs.get(key)
+                    if isinstance(self._sysfs, dict) and not radio
+                    else None
+                )
                 alvos.append(
-                    (
-                        key,
-                        handle,
-                        no,
-                        self._detect_transport(handle) == "bt",
-                        self._merged_desired_for_key(key),
-                    )
+                    (key, handle, no, radio, self._merged_desired_for_key(key))
                 )
         resultado: dict[str, bool] = {}
         for key, handle, no, radio, desired in alvos:
-            cor: tuple[int, int, int] | None
-            if radio:
-                ok, cor, players = self._escrever_barra_e_numero_bt(
-                    key, handle, desired, pode_player=pode_player,
-                    nome="vigia_do_sequestro",
-                )
-            else:
-                ok, cor, players = self._repintar_um_no_do_cabo(
-                    key, no, desired, pode_player=pode_player
-                )
-                self._levar_o_brilho_das_luzes(
-                    key, handle, desired.player_led_brightness,
-                    what="vigia_do_sequestro",
-                )
+            ok, cor, players = self._repintar_a_luz_de_um(
+                key,
+                handle,
+                no,
+                desired,
+                pode_player=pode_player,
+                what="vigia_do_sequestro",
+                forcar=True,
+                apesar_do_mudo=True,
+            )
             resultado[key] = ok
             logger.debug(
                 "vigia_do_sequestro_reafirmou",
@@ -3530,33 +3542,136 @@ class PyDualSenseController(IController):
             )
         return resultado
 
-    def _repintar_um_no_do_cabo(
+    def _repintar_a_luz_de_um(
         self,
         key: str,
+        handle: Any,
         no: Any,
         desired: _DesiredOutput,
         *,
         pode_player: bool,
+        what: str,
+        verify: bool = False,
+        forcar: bool = False,
+        apesar_do_mudo: bool = False,
     ) -> tuple[bool, tuple[int, int, int] | None, tuple[bool, ...] | None]:
-        """Cor e número de UM controle do cabo pela classe LED, sem cache."""
-        if no is None:
-            return False, desired.led, desired.player_leds
-        cor = desired.led
+        """A cor e o número RESOLVIDOS de UM controle, pela rota que o alcança.
+
+        A-COR-E-O-NUMERO-DO-PERFIL-CHEGAM-POR-TODA-ROTA-01 (09/10/2026). É o
+        dono único do «repintar a luz resolvida de um controle»: o vigia, o
+        `reassert_resolved_outputs`, o `set_output_mute(False)` e a repintura
+        de nó novo passam por aqui. Antes, só o vigia sabia as rotas; os
+        outros três escreviam só na classe LED, e por isso a cor automática e
+        o número do perfil novo não chegavam ao rádio com a Steam no hidraw,
+        nem a controle nenhum sem a regra do udev (sem nó gravável).
+
+        - **Cabo:** o nó (com `verify` quando pedido), ou o fluxo do
+          pydualsense quando não há nó; e o brilho das luzes de número.
+        - **Rádio:** o nó, se houver, e o `0x31` estreito do
+          `_escrever_barra_e_numero_bt`, que leva o brilho no mesmo quadro.
+          Cada report no rádio custa duas fatias e o reassert roda a cada
+          tique do `connect()`: o quadro igual ao último que saiu inteiro
+          neste handle não sai de novo. `forcar` ignora essa memória (o
+          vigia, a repintura de nó novo) e invalida o cache do nó. No Modo
+          Nativo o `0x31` não sai, salvo `apesar_do_mudo` (o vigia, que já
+          escrevia ali antes deste dono).
+        """
+        if forcar and no is not None:
+            with contextlib.suppress(Exception):
+                no.invalidate_cache()
         players = desired.player_leds if pode_player else None
+        if self._detect_transport(handle) == "bt":
+            cor_do_radio = desired.led if desired.led is not None else KERNEL_DEFAULT_BLUE
+            brilho = desired.player_led_brightness if pode_player else None
+            if not forcar and getattr(handle, "_quadro_da_luz", None) == (
+                cor_do_radio,
+                players,
+                brilho,
+            ):
+                return True, cor_do_radio, players
+            if no is not None:
+                ok_no = self._escrever_a_luz_no_no(
+                    key, no, desired.led, players, verify=verify, what=what
+                )
+            else:
+                ok_no = False
+            mudo = self._output_mute or getattr(handle, "_output_muted", False)
+            if mudo and not apesar_do_mudo:
+                # Modo nativo: o hidraw é do jogo, e nenhum report cru sai por
+                # baixo dele (FEAT-NATIVE-OUTPUT-MUTE-01). O nó, se houver, basta.
+                return ok_no, cor_do_radio, players
+            return self._escrever_barra_e_numero_bt(
+                key, handle, desired, pode_player=pode_player, nome=what
+            )
+        if no is not None:
+            ok = self._escrever_a_luz_no_no(
+                key, no, desired.led, players, verify=verify, what=what
+            )
+        else:
+            ok = self._escrever_a_luz_no_fluxo(key, handle, desired.led, players, what=what)
+        self._levar_o_brilho_das_luzes(
+            key, handle, desired.player_led_brightness, what=what
+        )
+        return ok, desired.led, players
+
+    def _escrever_a_luz_no_no(
+        self,
+        key: str,
+        no: Any,
+        cor: tuple[int, int, int] | None,
+        players: tuple[bool, ...] | None,
+        *,
+        verify: bool,
+        what: str,
+    ) -> bool:
+        """Cor e número pela classe LED do kernel; `verify` relê antes de pular."""
         ok = True
-        with contextlib.suppress(Exception):
-            no.invalidate_cache()
         try:
             if cor is not None:
-                ok = bool(no.set_rgb(*cor)) and ok
-                if ok:
+                escreveu = no.set_rgb(*cor, verify=True) if verify else no.set_rgb(*cor)
+                if escreveu:
                     self.record_sysfs_write(key, cor)
+                ok = bool(escreveu) and ok
             if players is not None:
-                ok = bool(no.set_players(players)) and ok
+                verificado = getattr(no, "set_players_verified", None) if verify else None
+                escreveu = (
+                    verificado(players) if callable(verificado) else no.set_players(players)
+                )
+                ok = bool(escreveu) and ok
         except Exception as exc:
-            logger.warning("vigia_do_sequestro_falhou", key=key, err=str(exc))
+            logger.warning(f"{what}_no_falhou", key=key, err=str(exc))
             ok = False
-        return ok, cor, players
+        return ok
+
+    @staticmethod
+    def _escrever_a_luz_no_fluxo(
+        key: str,
+        handle: Any,
+        cor: tuple[int, int, int] | None,
+        players: tuple[bool, ...] | None,
+        *,
+        what: str,
+    ) -> bool:
+        """Cor e número no estado do pydualsense: a rota do cabo sem nó gravável.
+
+        O estado do handle é o que o fluxo manda: o que ele já tem não se
+        escreve de novo (o reassert roda a cada tique, e o `led.set` reafirma
+        logo depois de escrever).
+        """
+        from pydualsense.enums import PlayerID
+
+        try:
+            luz = handle.light
+            if cor is not None and getattr(luz, "TouchpadColor", None) != tuple(cor):
+                luz.setColorI(*cor)
+            if players is not None:
+                numero = PlayerID(sum(1 << i for i, b in enumerate(players) if b))
+                if getattr(luz, "playerNumber", None) != numero:
+                    luz.playerNumber = numero
+        except Exception as exc:
+            logger.warning(f"{what}_fluxo_falhou", key=key, err=str(exc))
+            return False
+        return True
 
 
     def pintar_lightbar_sem_lembrar(self, rgb: tuple[int, int, int]) -> int:
@@ -3807,6 +3922,14 @@ class PyDualSenseController(IController):
         except Exception as exc:
             logger.debug("lightbar_hidraw_bt_falhou", op=what, key=key, err=str(exc))
             return False
+        # A memória do `_repintar_a_luz_de_um` é o último quadro INTEIRO que
+        # saiu: com a cor e o número, este é ele; sem um dos dois, o quadro é
+        # parcial e a memória deixa de valer (o próximo reassert repinta).
+        quadro = None
+        if rgb is not None and players is not None:
+            quadro = (tuple(rgb), tuple(players), brilho_das_luzes)
+        with contextlib.suppress(Exception):
+            handle._quadro_da_luz = quadro
         with self._io_lock:
             self._pinturas_de_lightbar += 1
         logger.debug(
@@ -4738,6 +4861,7 @@ class PyDualSenseController(IController):
                 pydual_op=lambda h: h.light.setColorI(r, g, b),
                 what="apply_output_defaults",
                 broadcast=True,
+                rgb=(r, g, b),
             )
         if spec.player_leds is not None and self._pode_escrever_player_leds():
             from pydualsense.enums import PlayerID
@@ -4749,6 +4873,7 @@ class PyDualSenseController(IController):
                 pydual_op=lambda h: setattr(h.light, "playerNumber", PlayerID(bitmask)),
                 what="apply_output_defaults",
                 broadcast=True,
+                players=bits,
             )
         if spec.player_led_brightness is not None and self._pode_escrever_player_leds():
             degrau_global = spec.player_led_brightness
@@ -5546,54 +5671,45 @@ class PyDualSenseController(IController):
         }
 
     def reassert_resolved_outputs(self, *, verify: bool = False) -> None:
-        """Re-aplica o desired RESOLVIDO por-controle (3 camadas) via sysfs."""
+        """Re-aplica o desired RESOLVIDO de cada controle, pela rota que o alcança.
+
+        Percorre os HANDLES, não os nós: sem a regra do udev nenhum nó é
+        gravável, e o controle continua precisando da sua cor automática e do
+        seu número. O que cada um recebe é do `_repintar_a_luz_de_um`.
+        """
         with self._io_lock:
             check = verify and not self._game_wins()
             posse = set(self._sysfs_written) if check else set()
-            reasserts = [
-                (key, node, self._merged_desired_for_key(key))
-                for key, node in self._sysfs.items()
+            pode_player = self._pode_escrever_player_leds()
+            nos = self._sysfs if isinstance(self._sysfs, dict) else {}
+            alvos = [
+                (key, handle, nos.get(key), self._merged_desired_for_key(key))
+                for key, handle in self._handles.items()
             ]
-            do_cabo = [
-                (key, self._handles.get(key), desired.player_led_brightness)
-                for key, _no, desired in reasserts
-                if self._handles.get(key) is not None
-                and self._detect_transport(self._handles.get(key)) != "bt"
-            ]
-        for key, handle, degrau in do_cabo:
-            self._levar_o_brilho_das_luzes(
-                key, handle, degrau, what="reassert_resolved_outputs"
-            )
-        for key, node, desired in reasserts:
+        for key, handle, no, desired in alvos:
             with contextlib.suppress(Exception):
-                verificar = check and key in posse
-                if desired.led is not None:
-                    ok = (
-                        node.set_rgb(*desired.led, verify=True)
-                        if verificar
-                        else node.set_rgb(*desired.led)
-                    )
-                    if ok:
-                        self.record_sysfs_write(key, desired.led)
-                if desired.player_leds is not None:
-                    escrever_verificado = (
-                        getattr(node, "set_players_verified", None)
-                        if verificar
-                        else None
-                    )
-                    if callable(escrever_verificado):
-                        escrever_verificado(desired.player_leds)
-                    else:
-                        node.set_players(desired.player_leds)
+                self._repintar_a_luz_de_um(
+                    key,
+                    handle,
+                    no,
+                    desired,
+                    pode_player=pode_player,
+                    what="reassert_resolved_outputs",
+                    verify=check and key in posse,
+                )
 
     def defend_display(self) -> None:
         """Defesa de exibição: invalida os caches sysfs + reassert verificado."""
         with self._io_lock:
             self._defend_last_at = time.monotonic()
             nodes = list(self._sysfs.values())
+            handles = list(self._handles.values())
         for node in nodes:
             with contextlib.suppress(Exception):
                 node.invalidate_cache()
+        for handle in handles:
+            with contextlib.suppress(Exception):
+                handle._quadro_da_luz = None
         self.reassert_resolved_outputs(verify=True)
 
     def set_output_mute(self, muted: bool) -> None:
@@ -5605,20 +5721,27 @@ class PyDualSenseController(IController):
                     handle._output_muted = self._output_mute
                     if not self._output_mute:
                         handle._last_out_report = None
+                        handle._quadro_da_luz = None
+            pode_player = self._pode_escrever_player_leds()
+            nos = self._sysfs if isinstance(self._sysfs, dict) else {}
             reasserts = (
                 [
-                    (key, node, self._merged_desired_for_key(key))
-                    for key, node in self._sysfs.items()
+                    (key, handle, nos.get(key), self._merged_desired_for_key(key))
+                    for key, handle in self._handles.items()
                 ]
                 if not muted
                 else []
             )
-        for key, node, desired in reasserts:
+        for key, handle, no, desired in reasserts:
             with contextlib.suppress(Exception):
-                if desired.led is not None and node.set_rgb(*desired.led):
-                    self.record_sysfs_write(key, desired.led)
-                if desired.player_leds is not None:
-                    node.set_players(desired.player_leds)
+                self._repintar_a_luz_de_um(
+                    key,
+                    handle,
+                    no,
+                    desired,
+                    pode_player=pode_player,
+                    what="set_output_mute",
+                )
         logger.info("backend_output_mute", muted=bool(muted))
 
     def set_output_target(self, index: int | None) -> int | None:

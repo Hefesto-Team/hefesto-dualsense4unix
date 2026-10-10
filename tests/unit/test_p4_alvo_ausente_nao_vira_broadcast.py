@@ -83,6 +83,7 @@ class _FakeLight:
 
     def setColorI(self, r: int, g: int, b: int) -> None:  # noqa: N802 — API pydualsense
         self.colors.append((r, g, b))
+        self.TouchpadColor = (r, g, b)  # o estado que o `DSLight` guarda
 
 
 class _FakeTrigger:

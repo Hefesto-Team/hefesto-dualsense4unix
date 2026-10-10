@@ -8,6 +8,7 @@ from hefesto_dualsense4unix.core.backend_pydualsense import (
     PyDualSenseController,
     _DesiredOutput,
 )
+from hefesto_dualsense4unix.core.controller import OutputSpec
 
 POS_FLAG0 = 3 + 0
 POS_FLAG1 = 3 + 1
@@ -70,10 +71,16 @@ class _BackendMinimo:
         self._output_target_key: str | None = None
         self._suprimir_player_leds = False
         self._desired = _DesiredOutput()
+        self._desired_default = _DesiredOutput()
+        self._sysfs_written: dict[str, Any] = {}
+        self._game_authority_provider = None
         self._pinturas_de_lightbar = 0
 
     def _record_desired_locked(self, _alvo: str | None, _campos: dict) -> None:
         return None
+
+    def _merged_desired_for_key(self, _key: str) -> _DesiredOutput:
+        return self._desired
 
 
 _METODOS = (
@@ -86,14 +93,25 @@ _METODOS = (
     "set_led",
     "set_player_leds",
     "_detect_transport",
+    "apply_output_defaults",
+    "reassert_resolved_outputs",
+    "set_output_mute",
+    "_for_each",
+    "_game_wins",
+    "record_sysfs_write",
+    "_repintar_a_luz_de_um",
+    "_escrever_a_luz_no_no",
+    "_escrever_a_luz_no_fluxo",
+    "_escrever_barra_e_numero_bt",
 )
+_ESTATICOS = ("_detect_transport", "_apply_trigger", "_escrever_a_luz_no_fluxo")
 
 
 def _backend(handles: dict[str, Any], **kw: Any) -> Any:
     alvo = _BackendMinimo(handles, **kw)
     for nome in _METODOS:
         metodo = getattr(PyDualSenseController, nome)
-        if nome in ("_detect_transport", "_apply_trigger"):
+        if nome in _ESTATICOS:
             setattr(alvo, nome, metodo)
         else:
             setattr(alvo, nome, metodo.__get__(alvo))
@@ -185,3 +203,54 @@ def test_o_report_nao_carrega_o_0x08_nem_o_setup_da_lightbar() -> None:
     assert report[POS_FLAG1] & FLAG1_RELEASE_LEDS == 0, "mandou o 0x08"
     assert report[POS_FLAG2] == 0, "reengatou o SETUP/BRILHO da lightbar"
     assert report[POS_FLAG0] == 0, "pediu vibração, gatilho ou áudio num report de LED"
+
+
+def test_o_global_do_perfil_sai_pelo_radio_mesmo_com_o_sysfs_aceitando() -> None:
+    """`apply_output_defaults` é o primeiro passo da ativação de um perfil."""
+    handle = _Handle("bt")
+    no = _NoSysfs()
+    backend = _backend({"aa:bb": handle}, sysfs={"aa:bb": no})
+
+    backend.apply_output_defaults(
+        OutputSpec(led=(255, 0, 255), player_leds=(False, False, True, False, False))
+    )
+
+    assert no.escritas == 2, "a classe LED continua sendo tentada"
+    cores = [
+        (r[POS_R], r[POS_G], r[POS_B])
+        for r in handle.reports
+        if r[POS_FLAG1] & FLAG1_LIGHTBAR
+    ]
+    numeros = [r[POS_PLAYERS] for r in handle.reports if r[POS_FLAG1] & FLAG1_PLAYER]
+    assert cores == [(255, 0, 255)]
+    assert numeros == [0b00100]
+
+
+def test_o_reassert_sai_pelo_radio_mesmo_com_o_sysfs_aceitando() -> None:
+    """O reassert é quem pinta a cor automática e o número de cada controle."""
+    handle = _Handle("bt")
+    no = _NoSysfs()
+    backend = _backend({"aa:bb": handle}, sysfs={"aa:bb": no})
+    backend._desired = _DesiredOutput(
+        led=(0, 255, 0), player_leds=(True, False, False, False, True)
+    )
+
+    backend.reassert_resolved_outputs()
+
+    assert no.escritas == 2
+    assert len(handle.reports) == 1
+    report = handle.reports[0]
+    assert (report[POS_R], report[POS_G], report[POS_B]) == (0, 255, 0)
+    assert report[POS_PLAYERS] == 0b10001
+    assert report[POS_FLAG1] & FLAG1_RELEASE_LEDS == 0, "mandou o 0x08"
+    assert report[POS_FLAG2] == 0, "reengatou o SETUP/BRILHO da lightbar"
+
+
+def test_desligar_o_mudo_repinta_pelo_radio() -> None:
+    handle = _Handle("bt")
+    backend = _backend({"aa:bb": handle}, mute=True)
+    backend._desired = _DesiredOutput(led=(1, 2, 3))
+
+    backend.set_output_mute(False)
+
+    assert [(r[POS_R], r[POS_G], r[POS_B]) for r in handle.reports] == [(1, 2, 3)]
