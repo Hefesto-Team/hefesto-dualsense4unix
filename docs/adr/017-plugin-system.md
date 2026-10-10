@@ -178,6 +178,17 @@ achado da ADR-016 sobre métricas.
 
 ---
 
+## Nota de 2026-10-09: o que vem de fora roda por processo
+
+O [ADR-021](021-modificacoes-por-processo.md) supera esta ADR para tudo o que se instala de fora. Uma
+modificação tem manifesto, versão de API, permissões e origem, e roda num processo filho, com caixa
+quando o `bwrap` existe.
+
+O motivo foi medido: um `on_tick` que dorme 200 ms leva cada tique do laço a 200 ms, e um `while True`
+num gancho nunca devolve, então o vigia de três tiques lentos nem chega a rodar. Esta ADR segue valendo
+para a receita local de quem escreve o próprio plugin e o liga com `hefesto plugin ligar`, sabendo que
+ele roda dentro do serviço.
+
 ## Rodape
 
 Decisão tomada com base em: seguranca prática (usuário responsavel), simplicidade de
