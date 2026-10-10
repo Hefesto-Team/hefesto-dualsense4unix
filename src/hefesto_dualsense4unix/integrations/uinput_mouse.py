@@ -25,7 +25,7 @@ Política:
     O período do tick vem de `poll_hz` (passado pelo daemon na criação — não
     é hardcodado aqui).
   - Botões têm edge-trigger (press/release só no delta). Estado anterior
-    guardado na instância via `_last_buttons_emulated`.
+    guardado na instância POR CÓDIGO (`_codigos_apertados`, `_setas_apertadas`).
   - Movimento (FEAT-MOUSE-CURSOR-FEEL-01): pipeline float com normalização
     radial, deadzone radial REESCALADA (dz=20/128, resposta contínua a partir
     de zero na borda), curva expo (`m ** MOUSE_EXPO`) e velocidade-alvo em
@@ -192,11 +192,13 @@ class UinputMouseDevice:
 
     _device: Any = None
     _uinput_mod: Any = None
-    _last_buttons_emulated: frozenset[str] = field(default_factory=frozenset)
     # Os códigos `BTN_*` que ESTE device mantém apertados. A borda é por código, e
     # não por botão: dois botões (a Cruz e o L2) podem dar o mesmo clique, e o
     # clique só solta quando o último deles solta.
     _codigos_apertados: frozenset[str] = field(default_factory=frozenset)
+    # As setas `KEY_*` que ESTE device mantém apertadas, pela mesma razão: a troca
+    # de tabela as solta, e a borda seguinte pergunta pelo código, não pelo mapa.
+    _setas_apertadas: frozenset[str] = field(default_factory=frozenset)
     # O cursor e a rolagem só andam se a linha do analógico escolher o próprio token.
     _cursor_ligado: bool = True
     _rolagem_ligada: bool = True
@@ -237,8 +239,8 @@ class UinputMouseDevice:
             self._device.destroy()
         self._device = None
         self._uinput_mod = None
-        self._last_buttons_emulated = frozenset()
         self._codigos_apertados = frozenset()
+        self._setas_apertadas = frozenset()
         self._last_scroll_at = -math.inf
         self._prev_edge_keys = frozenset()
         self._tp_carry_x = 0.0
@@ -324,16 +326,17 @@ class UinputMouseDevice:
                           if b not in do_mouse and b not in mudos}
 
     def _soltar_o_que_segura(self) -> None:
-        """Solta os cliques que a tabela ANTERIOR mantinha: ela deixou de ser a vigente."""
-        if self._device is None or self._uinput_mod is None or not self._codigos_apertados:
-            self._codigos_apertados = frozenset()
+        """Solta os cliques e as setas que a tabela ANTERIOR mantinha: ela deixou de ser a vigente."""
+        segurados = self._codigos_apertados | self._setas_apertadas
+        self._codigos_apertados = frozenset()
+        self._setas_apertadas = frozenset()
+        if self._device is None or self._uinput_mod is None or not segurados:
             return
-        for codigo in sorted(self._codigos_apertados):
+        for codigo in sorted(segurados):
             ev = getattr(self._uinput_mod, codigo, None)
             if ev is not None:
                 self._device.emit(ev, 0, syn=False)
         self._device.syn()
-        self._codigos_apertados = frozenset()
 
     def dispatch(
         self,
@@ -372,7 +375,6 @@ class UinputMouseDevice:
             self._emit_move(lx, ly)
         if self._rolagem_ligada:
             self._emit_scroll(rx, ry, now)
-        self._last_buttons_emulated = emulated
         self._prev_edge_keys = frozenset(b for b in buttons if b in self._mapa_tap)
 
     def _resolve_emulated_set(
@@ -414,23 +416,24 @@ class UinputMouseDevice:
             self._device.syn()
 
     def _emit_dpad(self, buttons: frozenset[str]) -> None:
-        """Edge-triggered D-pad → KEY_UP/DOWN/LEFT/RIGHT."""
+        """Edge-triggered D-pad → KEY_UP/DOWN/LEFT/RIGHT, POR CÓDIGO `KEY_*`."""
         u = self._uinput_mod
-        dpad_now = {b for b in buttons if b in self._mapa_dpad}
-        dpad_last = {b for b in self._last_buttons_emulated if b in self._mapa_dpad}
+        agora = frozenset(self._mapa_dpad[b] for b in buttons if b in self._mapa_dpad)
+        antes = self._setas_apertadas
 
-        newly_pressed = dpad_now - dpad_last
-        newly_released = dpad_last - dpad_now
+        newly_pressed = agora - antes
+        newly_released = antes - agora
 
-        for name in newly_pressed:
-            ev = getattr(u, self._mapa_dpad[name], None)
+        for codigo in sorted(newly_pressed):
+            ev = getattr(u, codigo, None)
             if ev is not None:
                 self._device.emit(ev, 1, syn=False)
-        for name in newly_released:
-            ev = getattr(u, self._mapa_dpad[name], None)
+        for codigo in sorted(newly_released):
+            ev = getattr(u, codigo, None)
             if ev is not None:
                 self._device.emit(ev, 0, syn=False)
 
+        self._setas_apertadas = agora
         if newly_pressed or newly_released:
             self._device.syn()
 
