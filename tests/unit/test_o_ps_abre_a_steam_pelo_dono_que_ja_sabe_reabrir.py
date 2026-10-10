@@ -7,7 +7,8 @@ reabrir (o ``steam`` ou o ``xdg-open steam://open/main`` da Flatpak e da Snap) �
 pergunta «a Steam está de pé?». Nenhum processo nasce.
 
 MORDIDAS: devolver ao ``open_or_focus_steam`` o ``which("steam") is None → False`` reprova
-o 1 e o 4; devolver a ele um ``pgrep`` próprio reprova o 2.
+o 1 e o 4; devolver a ele um ``pgrep`` próprio reprova o 2; dizer «de pé» sem a conferência
+do ``reopen_steam`` reprova o 5.
 """
 from __future__ import annotations
 
@@ -116,3 +117,16 @@ def test_o_reiniciar_repoe_a_steam_da_flatpak(monkeypatch: pytest.MonkeyPatch) -
     assert recibo.repostos == (steam.nome,)
     assert recibo.nao_reabriram == ()
     assert maquina.pedidos == [["xdg-open", "steam://open/main"]]
+
+
+def test_a_steam_que_nao_sobe_por_porta_nenhuma_nao_vira_de_pe(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """5. As duas portas no PATH e a Steam nunca sobe: o PS tenta as duas e diz ``False``."""
+    maquina = _a_maquina(monkeypatch, {"steam", "xdg-open"})
+    monkeypatch.setattr(slo, "steam_running", lambda: False)
+    dormidas: list[float] = []
+    monkeypatch.setattr(slo.time, "sleep", dormidas.append)
+    assert steam_launcher.open_or_focus_steam() is False
+    assert maquina.pedidos == [["steam"], ["xdg-open", "steam://open/main"]]
+    assert dormidas, "a conferência não esperou a Steam subir"
