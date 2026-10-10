@@ -70,7 +70,7 @@ class TestBackendNamePorCenarioDeEnv:
 
 
 class TestCascataBackendNameDinamico:
-    """A cascata migra cosmic -> portal -> wlrctl -> null conforme desistem."""
+    """A cascata migra cosmic -> wlrctl -> null conforme desistem."""
 
     def _make_cascade(self, monkeypatch: pytest.MonkeyPatch) -> Any:
         monkeypatch.delenv("DISPLAY", raising=False)
@@ -89,7 +89,7 @@ class TestCascataBackendNameDinamico:
     def test_leitura_util_do_cosmic_muda_o_nome(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A cascata pergunta ao cosmic ANTES do portal."""
+        """A cascata pergunta ao cosmic ANTES do wlrctl."""
         from unittest.mock import MagicMock
 
         cascade = self._make_cascade(monkeypatch)
@@ -97,21 +97,22 @@ class TestCascataBackendNameDinamico:
         cascade._cosmic.get_active_window_info = MagicMock(
             return_value=WindowInfo(wm_class="spotify", app_id="spotify")
         )
-        cascade._portal.get_active_window_info = MagicMock(
+        cascade._wlrctl.get_active_window_info = MagicMock(
             return_value=WindowInfo(wm_class="nao-devia-ser-perguntado")
         )
         info = cascade.get_active_window_info()
         assert info is not None
         assert info.wm_class == "spotify"
         assert cascade.backend_name == "cosmic"
-        cascade._portal.get_active_window_info.assert_not_called()
+        cascade._wlrctl.get_active_window_info.assert_not_called()
 
-    def test_cosmic_desiste_e_o_portal_assume(
+    def test_cosmic_desiste_e_o_wlrctl_assume(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Num compositor que não é COSMIC, a fila anda sozinha."""
+        """Num compositor wlroots, a fila anda sozinha."""
         cascade = self._make_cascade(monkeypatch)
-        assert cascade.backend_name == "portal"
+        cascade._wlrctl._available = True
+        assert cascade.backend_name == "wlrctl"
 
     def test_leitura_util_do_wlrctl_muda_o_nome(
         self, monkeypatch: pytest.MonkeyPatch
@@ -119,34 +120,20 @@ class TestCascataBackendNameDinamico:
         from unittest.mock import MagicMock
 
         cascade = self._make_cascade(monkeypatch)
-        cascade._portal.get_active_window_info = MagicMock(return_value=None)
+        cascade._cosmic.get_active_window_info = MagicMock(return_value=None)
         cascade._wlrctl.get_active_window_info = MagicMock(
             return_value=WindowInfo(wm_class="steam", app_id="steam")
         )
         cascade._wlrctl._available = True
 
-        assert cascade.backend_name == "portal"
         info = cascade.get_active_window_info()
         assert info is not None
-        assert cascade.backend_name == "wlrctl"
-
-    def test_portal_desiste_e_wlrctl_disponivel_reporta_wlrctl(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        cascade = self._make_cascade(monkeypatch)
-        cascade._portal._consecutive_failures = (
-            cascade._portal._UNSUPPORTED_THRESHOLD
-        )
-        cascade._wlrctl._available = True
         assert cascade.backend_name == "wlrctl"
 
     def test_todos_indisponiveis_reporta_null(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         cascade = self._make_cascade(monkeypatch)
-        cascade._portal._consecutive_failures = (
-            cascade._portal._UNSUPPORTED_THRESHOLD
-        )
         cascade._wlrctl._available = False
         assert cascade.backend_name == "null"
 
@@ -156,9 +143,6 @@ class TestCascataBackendNameDinamico:
         """Última fonte útil era wlrctl, mas ele ficou indisponível -> null."""
         cascade = self._make_cascade(monkeypatch)
         cascade._last_source = "wlrctl"
-        cascade._portal._consecutive_failures = (
-            cascade._portal._UNSUPPORTED_THRESHOLD
-        )
         cascade._wlrctl._available = False
         assert cascade.backend_name == "null"
 
@@ -240,16 +224,16 @@ class TestStoreWindowDetect:
 
     def test_wm_class_vazia_ou_none_nao_conta(self) -> None:
         store = StateStore()
-        store.set_window_detect_backend("portal", healthy=False)
-        store.record_window_detect_read("portal", "")
-        store.record_window_detect_read("portal", None)
+        store.set_window_detect_backend("cosmic", healthy=False)
+        store.record_window_detect_read("cosmic", "")
+        store.record_window_detect_read("cosmic", None)
         assert store.window_detect_healthy is False
         assert store.window_detect_last_class is None
 
     def test_backend_e_regravado_a_cada_leitura(self) -> None:
         """A cascata pode migrar em runtime — o store acompanha."""
         store = StateStore()
-        store.set_window_detect_backend("portal", healthy=False)
+        store.set_window_detect_backend("cosmic", healthy=False)
         store.record_window_detect_read("wlrctl", "unknown")
         assert store.window_detect_backend == "wlrctl"
 
@@ -409,7 +393,7 @@ class TestSubsystemDiagReader:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         store = StateStore()
-        fake = self._FakeDiagReader("portal", [{"wm_class": "unknown"}])
+        fake = self._FakeDiagReader("cosmic", [{"wm_class": "unknown"}])
         self._patch_builder(monkeypatch, fake)
 
         reader = _build_diag_window_reader(store)

@@ -57,7 +57,6 @@ _install_gi_stubs()
 
 from hefesto_dualsense4unix.app.actions import profiles_actions as pa
 from hefesto_dualsense4unix.integrations.window_backends import (
-    wayland_portal,
     cosmic_toplevel,
     wlr_toplevel,
     xlib,
@@ -72,18 +71,6 @@ from hefesto_dualsense4unix.profiles.schema import MatchCriteria
 
 class TestATabelaBateComOsBackends:
     """A tabela não é crença: é conferida contra o que cada arquivo devolve."""
-
-    def test_o_portal_devolve_exe_vazio_mesmo_tendo_o_pid(self) -> None:
-        """O portal RECEBE o pid e ainda assim não resolve o executável."""
-        info = wayland_portal._parse_portal_result(
-            {"app-id": "steam_app_3357650", "title": "PRAGMATA", "pid": os.getpid()}
-        )
-        assert info is not None
-        assert info.pid == os.getpid()
-        assert info.exe_basename == ""
-        assert info.as_dict()["exe_basename"] == ""
-        nome = wayland_portal.WaylandPortalBackend.backend_name
-        assert backend_ve_nome_do_processo(nome) is False
 
     def test_o_wlrctl_devolve_exe_vazio(self, monkeypatch: Any) -> None:
         """Mesmo com o `wlrctl` respondendo um toplevel inteiro, o campo é vazio."""

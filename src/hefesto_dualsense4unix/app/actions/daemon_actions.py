@@ -64,7 +64,7 @@ MOTIVO_DA_CEGUEIRA_EM_PORTUGUES: dict[str, str] = {
 
 _BACKEND_EM_PORTUGUES: dict[str, str] = {
     "xlib": "pelo XWayland",
-    "portal": "pelo portal do sistema",
+    "cosmic": "pelo COSMIC",
     "wlrctl": "pelo wlrctl",
     "null": "por nenhum caminho",
 }

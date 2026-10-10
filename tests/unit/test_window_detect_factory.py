@@ -36,12 +36,13 @@ class TestDetectWindowBackendWayland:
         backend = detect_window_backend()
         assert type(backend).__name__ == "_WaylandCascadeBackend"
 
-    def test_cascade_compoe_portal_e_wlrctl(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_cascade_compoe_cosmic_e_wlrctl(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv("DISPLAY", raising=False)
         monkeypatch.setenv("WAYLAND_DISPLAY", "wayland-0")
         backend = detect_window_backend()
-        assert type(backend._portal).__name__ == "WaylandPortalBackend"  # type: ignore[attr-defined]
+        assert type(backend._cosmic).__name__ == "CosmicToplevelBackend"  # type: ignore[attr-defined]
         assert type(backend._wlrctl).__name__ == "WlrctlBackend"  # type: ignore[attr-defined]
+        assert not hasattr(backend, "_portal")
 
     def test_nao_e_xlib(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv("DISPLAY", raising=False)
@@ -55,8 +56,8 @@ class TestDetectWindowBackendWayland:
         backend = detect_window_backend()
         assert not isinstance(backend, NullBackend)
 
-    def test_cascade_usa_portal_se_respondeu(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Portal retorna WindowInfo → cascade devolve sem consultar wlrctl."""
+    def test_cascade_usa_cosmic_se_respondeu(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """O cosmic retorna WindowInfo → cascade devolve sem consultar wlrctl."""
         from unittest.mock import MagicMock
 
         from hefesto_dualsense4unix.integrations.window_backends.base import WindowInfo
@@ -65,19 +66,19 @@ class TestDetectWindowBackendWayland:
         monkeypatch.setenv("WAYLAND_DISPLAY", "wayland-0")
         backend = detect_window_backend()
 
-        portal_info = WindowInfo(wm_class="from_portal", app_id="from_portal")
-        backend._portal.get_active_window_info = MagicMock(return_value=portal_info)  # type: ignore[attr-defined]
+        cosmic_info = WindowInfo(wm_class="from_cosmic", app_id="from_cosmic")
+        backend._cosmic.get_active_window_info = MagicMock(return_value=cosmic_info)  # type: ignore[attr-defined]
         wlrctl_spy = MagicMock()
         backend._wlrctl.get_active_window_info = wlrctl_spy  # type: ignore[attr-defined]
 
         info = backend.get_active_window_info()
-        assert info is portal_info
+        assert info is cosmic_info
         wlrctl_spy.assert_not_called()
 
-    def test_cascade_cai_para_wlrctl_se_portal_falha(
+    def test_cascade_cai_para_wlrctl_se_cosmic_falha(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Portal retorna None → cascade tenta wlrctl."""
+        """O cosmic retorna None → cascade tenta wlrctl."""
         from unittest.mock import MagicMock
 
         from hefesto_dualsense4unix.integrations.window_backends.base import WindowInfo
@@ -87,7 +88,7 @@ class TestDetectWindowBackendWayland:
         backend = detect_window_backend()
 
         wlr_info = WindowInfo(wm_class="from_wlrctl", app_id="from_wlrctl")
-        backend._portal.get_active_window_info = MagicMock(return_value=None)  # type: ignore[attr-defined]
+        backend._cosmic.get_active_window_info = MagicMock(return_value=None)  # type: ignore[attr-defined]
         backend._wlrctl.get_active_window_info = MagicMock(return_value=wlr_info)  # type: ignore[attr-defined]
 
         info = backend.get_active_window_info()
@@ -96,14 +97,14 @@ class TestDetectWindowBackendWayland:
     def test_cascade_retorna_none_se_ambos_falham(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Ambos portal e wlrctl retornam None → cascade retorna None."""
+        """Ambos cosmic e wlrctl retornam None → cascade retorna None."""
         from unittest.mock import MagicMock
 
         monkeypatch.delenv("DISPLAY", raising=False)
         monkeypatch.setenv("WAYLAND_DISPLAY", "wayland-0")
         backend = detect_window_backend()
 
-        backend._portal.get_active_window_info = MagicMock(return_value=None)  # type: ignore[attr-defined]
+        backend._cosmic.get_active_window_info = MagicMock(return_value=None)  # type: ignore[attr-defined]
         backend._wlrctl.get_active_window_info = MagicMock(return_value=None)  # type: ignore[attr-defined]
 
         info = backend.get_active_window_info()
@@ -128,11 +129,11 @@ class TestDetectWindowBackendXWayland:
         assert isinstance(backend.xlib, XlibBackend)  # type: ignore[union-attr]
         assert backend.backend_name == "xlib"  # type: ignore[union-attr]
 
-    def test_nao_usa_wayland_portal_em_xwayland(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_nao_usa_a_cascata_sozinha_em_xwayland(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("DISPLAY", ":1")
         monkeypatch.setenv("WAYLAND_DISPLAY", "wayland-0")
         backend = detect_window_backend()
-        assert type(backend).__name__ != "WaylandPortalBackend"
+        assert type(backend).__name__ != "_WaylandCascadeBackend"
 
 
 class TestDetectWindowBackendNenhum:

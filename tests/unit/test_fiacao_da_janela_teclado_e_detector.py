@@ -235,13 +235,13 @@ class TestAFraseDoDetectorDeJanela:
     def test_motivo_desconhecido_aparece_cru_em_vez_de_inventado(self) -> None:
         texto = descrever_deteccao_de_janela(
             {
-                "window_detect_backend": "portal",
+                "window_detect_backend": "cosmic",
                 "window_detect_seeing": False,
                 "window_detect_reason": "motivo_novo_do_futuro",
             }
         )
         assert "motivo_novo_do_futuro" in texto
-        assert "portal" in texto
+        assert "COSMIC" in texto
 
     def test_nome_de_janela_com_e_comercial_nao_apaga_a_frase(self) -> None:
         """Pango: um `&` cru fecha o parser e o rótulo fica EM BRANCO."""

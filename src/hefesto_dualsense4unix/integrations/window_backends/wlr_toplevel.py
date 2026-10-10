@@ -11,9 +11,7 @@ interface not found"*. Quem cobre o COSMIC é o `cosmic_toplevel.py`, falando
 `zcosmic_toplevel_info_v1` (esse sim publicado, na versão 3).
 
 O protocolo `wlr-foreign-toplevel-management-unstable-v1` é suportado pelos
-compositors wlroots mesmo quando
-`org.freedesktop.portal.Window::GetActiveWindow` não está implementado.
-`wlrctl` é um CLI pequeno que conversa com o compositor via esse protocolo e
+compositors wlroots. `wlrctl` é um CLI pequeno que conversa com o compositor via esse protocolo e
 emite JSON — mais simples que embutir `pywayland` e resolve o problema hoje.
 
 Disponibilidade do `wlrctl`:

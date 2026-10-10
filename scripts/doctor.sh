@@ -3549,8 +3549,9 @@ PY
 # cego e o perfil-por-jogo vira letra morta — esta seção torna o estado visível.
 # Cobre: DISPLAY/WAYLAND_DISPLAY do shell atual E do systemd --user (o daemon
 # importa de lá quando sobe sem display — _ensure_display_env), o backend xlib
-# (X11/XWayland: inclui jogos Proton/Steam), o portal XDG (GetActiveWindow), o
-# wlrctl e o zcosmic_toplevel_info_v1. Veredito: OK / DEGRADADO / CEGO.
+# (X11/XWayland: inclui jogos Proton/Steam), o zcosmic_toplevel_info_v1 e o
+# wlrctl. Veredito: OK / DEGRADADO / CEGO. O xdg-desktop-portal não tem pergunta
+# de janela ativa, e esta seção não o sonda (10/10/2026).
 #
 # A FRASE QUE CAIU — 02/09/2026. Esta seção dizia, no veredito DEGRADADO, que
 # apps Wayland nativos aparecerem como 'unknown' era "limitação do compositor
@@ -3599,20 +3600,6 @@ check_window_detect() {
         fi
     else
         info "sem DISPLAY — backend xlib indisponível (jogos XWayland/Proton NÃO detectáveis)"
-    fi
-
-    # Portal XDG: interface Window com o método GetActiveWindow de verdade
-    # (busctl com filtro de interface SEMPRE sai 0 — o grep é o teste real).
-    local portal_ok=0
-    if command -v busctl >/dev/null 2>&1; then
-        if busctl --user --timeout=3 introspect org.freedesktop.portal.Desktop \
-             /org/freedesktop/portal/desktop org.freedesktop.portal.Window 2>/dev/null \
-             | grep -q 'GetActiveWindow'; then
-            portal_ok=1
-            pass "portal XDG expõe org.freedesktop.portal.Window::GetActiveWindow"
-        else
-            info "portal XDG sem GetActiveWindow (esperado no COSMIC atual) — backend portal fora"
-        fi
     fi
 
     # zcosmic_toplevel_info_v1 — o caminho do COSMIC. Perguntado ao PRÓPRIO
@@ -3667,9 +3654,9 @@ check_window_detect() {
         fi
     fi
 
-    # Veredito. O backend Wayland é qualquer um dos três: cosmic, portal ou wlrctl.
+    # Veredito. O backend Wayland é qualquer um dos dois: cosmic ou wlrctl.
     local wayland_ok=0
-    if [[ "${cosmic_ok}" -eq 1 || "${portal_ok}" -eq 1 || "${wlrctl_ok}" -eq 1 ]]; then
+    if [[ "${cosmic_ok}" -eq 1 || "${wlrctl_ok}" -eq 1 ]]; then
         wayland_ok=1
     fi
     if [[ "${xlib_ok}" -eq 1 && -z "${eff_wayland}" ]]; then
@@ -3677,13 +3664,13 @@ check_window_detect() {
     elif [[ "${xlib_ok}" -eq 1 && "${wayland_ok}" -eq 1 ]]; then
         pass "veredito: OK via xlib + backend Wayland (cobertura total: jogos XWayland/Proton pelo xlib, apps Wayland nativos pelo compositor)"
     elif [[ "${xlib_ok}" -eq 1 ]]; then
-        warn "veredito: DEGRADADO — só XWayland: jogos Proton/Steam e apps X11 são detectados (xlib), mas apps Wayland nativos aparecem como 'unknown'. Este compositor não publica nenhum dos três caminhos Wayland (zcosmic_toplevel_info_v1, portal XDG, wlr-foreign-toplevel-management)."
+        warn "veredito: DEGRADADO — só XWayland: jogos Proton/Steam e apps X11 são detectados (xlib), mas apps Wayland nativos aparecem como 'unknown'. Este compositor não publica nenhum dos dois caminhos Wayland (zcosmic_toplevel_info_v1, wlr-foreign-toplevel-management)."
     elif [[ "${wayland_ok}" -eq 1 ]]; then
         pass "veredito: OK via backend Wayland (sessão Wayland pura — sem o nome do processo, que só o xlib resolve)"
     elif [[ -z "${eff_display}" && -z "${eff_wayland}" ]]; then
         fail "veredito: CEGO — sem DISPLAY e sem WAYLAND_DISPLAY (nem no systemd --user). Se o daemon subiu antes do login gráfico, reinicie: systemctl --user restart ${APP_ID}.service"
     else
-        fail "veredito: CEGO — há display no ambiente mas nenhum backend funciona (X inacessível, compositor sem zcosmic_toplevel_info_v1, portal sem GetActiveWindow, wlrctl sem protocolo); o autoswitch ficará no fallback e perfil-por-jogo não muda sozinho"
+        fail "veredito: CEGO — há display no ambiente mas nenhum backend funciona (X inacessível, compositor sem zcosmic_toplevel_info_v1, wlrctl sem protocolo); o autoswitch ficará no fallback e perfil-por-jogo não muda sozinho"
     fi
 }
 

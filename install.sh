@@ -224,11 +224,9 @@
 #                         snap), evitando que a Steam intercepte o DualSense e
 #                         entre em conflito com o daemon. Reverte com:
 #                         scripts/disable_steam_input.sh --restore.
-#   --force-xwayland      grava GDK_BACKEND=x11 no .desktop (recomendado
-#                         para COSMIC enquanto xdg-desktop-portal-cosmic
-#                         não implementa GetActiveWindow). Ativada
-#                         automaticamente se XDG_CURRENT_DESKTOP casa
-#                         COSMIC e o usuário confirma via prompt.
+#   --force-xwayland      grava GDK_BACKEND=x11 no .desktop. Escape
+#                         declarado (sessão sem Wayland, compositor que não
+#                         desenhe bem o WebKit); o default é Wayland nativo.
 #
 # Default (sem flag nenhuma): a unit do daemon é COPIADA, HABILITADA no boot e
 # SOBE na hora. Quem manda é a sua resposta ao passo 6 ("habilitar auto-start do
@@ -403,16 +401,18 @@ case "${FORMAT}" in
     *) printf 'ERRO: formato inválido: %s (use native|flatpak|appimage|deb)\n' "${FORMAT}" >&2; exit 2 ;;
 esac
 
-# Detecta COSMIC: XDG_CURRENT_DESKTOP contém "COSMIC" (case-insensitive).
-# Se detectado e usuário não passou --force-xwayland explícito, pergunta
-# interativamente se quer ativar (opt-in). O fallback XWayland faz a GUI
-# rodar sob XlibBackend em vez de depender do portal Wayland — até o
-# xdg-desktop-portal-cosmic implementar
-# org.freedesktop.portal.Window::GetActiveWindow.
+# Detecta o compositor pela sessão (case-insensitive): o COSMIC tem backend
+# nativo de janela (zcosmic_toplevel_info_v1); o bloco wlroots (Sway, Hyprland,
+# niri, river) é o único que responde ao protocolo do `wlrctl`.
 DESKTOP_IS_COSMIC=0
 if [[ "${XDG_CURRENT_DESKTOP:-}${XDG_SESSION_DESKTOP:-}" == *[Cc][Oo][Ss][Mm][Ii][Cc]* ]]; then
     DESKTOP_IS_COSMIC=1
 fi
+DESKTOP_IS_WLROOTS=0
+case "${XDG_CURRENT_DESKTOP:-}:${XDG_SESSION_DESKTOP:-}" in
+    *[Ss][Ww][Aa][Yy]*|*[Hh][Yy][Pp][Rr][Ll][Aa][Nn][Dd]*|*[Nn][Ii][Rr][Ii]*|*[Rr][Ii][Vv][Ee][Rr]*)
+        DESKTOP_IS_WLROOTS=1 ;;
+esac
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -2137,11 +2137,8 @@ if [[ "${DRY_RUN:-0}" -eq 0 ]]; then
     --quiet --disable-pip-version-check --upgrade pip packaging 2>/dev/null
 fi
 
-# Extras instalados sempre: emulation (uinput) + cosmic (jeepney para portal Wayland).
-# `jeepney` é puro Python, sem deps nativas; vale habilitar mesmo em DE não-Wayland
-# porque o WaylandPortalBackend faz `try: import jeepney` e ignora se ausente — mas
-# se está instalado o cascade portal→wlrctl funciona em qualquer compositor que
-# implemente o portal.
+# Extras instalados sempre: emulation (uinput) + cosmic (jeepney, o D-Bus das
+# notificações do desktop). `jeepney` é puro Python, sem deps nativas.
 # BUG-INSTALL-VENV-NO-DEV-01: o extra [dev] (ruff/mypy/pytest) entra POR PADRÃO
 # — assim o venv recém-criado já roda o gate pré-release local (antes o install
 # recriava o venv sem dev tools e o `ruff`/`mypy` sumiam). --no-dev pula
@@ -3203,35 +3200,26 @@ else
         "assets/simbolico/hefesto-dualsense4unix-symbolic.svg"
 fi
 
-# Detecção COSMIC → dois caminhos complementares para autoswitch funcionar:
+# A JANELA EM FOCO NO WAYLAND, por compositor (10/10/2026,
+# A-CASCATA-DO-WAYLAND-SO-PERGUNTA-A-QUEM-RESPONDE-01):
 #
-#   1. wlrctl (recomendado): cobre TODOS os apps via protocolo
-#      wlr-foreign-toplevel-management. WlrctlBackend detecta automaticamente
-#      se o binário está no PATH (window_backends/wlr_toplevel.py).
+#   COSMIC: o backend nativo (window_backends/cosmic_toplevel.py) lê a janela
+#   por zcosmic_toplevel_info_v1, sem binário de terceiro. O cosmic-comp não
+#   publica zwlr_foreign_toplevel_manager_v1, e o `wlrctl` nele sempre falha:
+#   ele não se oferece aqui.
 #
-#   2. XWayland (fallback): força GTK a rodar sob XWayland via GDK_BACKEND=x11.
-#      XlibBackend passa a ver janelas XWayland (Steam, Proton).
-#      Limitação: apps Wayland nativos ficam invisíveis.
+#   wlroots (Sway, Hyprland, niri, river): o `wlrctl` fala o protocolo
+#   wlr-foreign-toplevel-management, e é oferecido no bloco seguinte.
 #
-# Os dois são compatíveis — o cascade Wayland em window_detect.py tenta
-# portal → wlrctl → None, e XWayland roda paralelo via XlibBackend.
-#
-# Auto-aplicação: sob --yes/-y, instala wlrctl (se disponível no apt) + ativa
-# XWayland (apenas se --force-xwayland também foi passado, ou se aceitar prompt).
-if [[ "${DESKTOP_IS_COSMIC}" -eq 1 ]]; then
-    printf '\n'
-    printf '      COSMIC detectado (XDG_CURRENT_DESKTOP=%s).\n' \
-        "${XDG_CURRENT_DESKTOP:-$XDG_SESSION_DESKTOP}"
-    printf '      Enquanto o xdg-desktop-portal-cosmic não implementa o\n'
-    printf '      método org.freedesktop.portal.Window::GetActiveWindow,\n'
-    printf '      o autoswitch de perfil precisa de uma das opções abaixo:\n\n'
-
-    # Caminho 1: wlrctl pelo gerenciador desta máquina (se não estiver no PATH).
-    # DEPS-UNIVERSAIS-01: antes este bloco IMPRIMIA as linhas de Arch e Fedora
-    # mas só INSTALAVA por apt — dizia o certo e fazia o do Debian.
+# A cascata em window_detect.py é cosmic → wlrctl → None, e o XWayland roda
+# em paralelo pelo XlibBackend.
+if [[ "${DESKTOP_IS_WLROOTS}" -eq 1 ]]; then
+    # DEPS-UNIVERSAIS-01: pelo gerenciador desta máquina, e não só por apt.
     if ! command -v wlrctl >/dev/null 2>&1; then
-        printf '      Caminho recomendado: instalar wlrctl - cobre qualquer\n'
-        printf '      app Wayland (não so XWayland). Pacote no Ubuntu 24.04+.\n\n'
+        printf '\n      Compositor wlroots detectado (XDG_CURRENT_DESKTOP=%s).\n' \
+            "${XDG_CURRENT_DESKTOP:-$XDG_SESSION_DESKTOP}"
+        printf '      O wlrctl conta ao Hefesto a janela em foco dos apps Wayland\n'
+        printf '      nativos (wlr-foreign-toplevel-management).\n\n'
         ask_yn "instalar wlrctl agora?" "${AUTO_YES}" "y"
         if [[ "${REPLY,,}" =~ ^y ]]; then
             if command -v sudo >/dev/null 2>&1; then
@@ -3251,8 +3239,16 @@ if [[ "${DESKTOP_IS_COSMIC}" -eq 1 ]]; then
         printf '      wlrctl ja instalado (%s) - WlrctlBackend vai detectar.\n' \
             "$(command -v wlrctl)"
     fi
+fi
 
-    # Caminho 2: XWayland. **DEIXOU DE SER O DEFAULT EM 19/09/2026**, por
+if [[ "${DESKTOP_IS_COSMIC}" -eq 1 ]]; then
+    printf '\n'
+    printf '      COSMIC detectado (XDG_CURRENT_DESKTOP=%s).\n' \
+        "${XDG_CURRENT_DESKTOP:-$XDG_SESSION_DESKTOP}"
+    printf '      A troca de perfil pela janela em foco usa o protocolo do\n'
+    printf '      próprio COSMIC (zcosmic_toplevel_info_v1): nada a instalar.\n'
+
+    # O XWayland **DEIXOU DE SER O DEFAULT EM 19/09/2026**, por
     # ordem dela, e a razão de ele ter existido morreu antes disso.
     #
     # ELE NASCEU PARA A JANELA GTK: `run.sh:80-86` forçava `GDK_BACKEND=x11`

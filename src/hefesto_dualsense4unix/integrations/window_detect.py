@@ -4,7 +4,7 @@
 de ambiente do compositor:
 
   WAYLAND_DISPLAY + DISPLAY  → _XlibComCosmicBackend (XWayland + Wayland nativo)
-  WAYLAND_DISPLAY sem DISPLAY → _WaylandCascadeBackend (cosmic → portal → wlrctl)
+  WAYLAND_DISPLAY sem DISPLAY → _WaylandCascadeBackend (cosmic → wlrctl)
   DISPLAY sem WAYLAND_DISPLAY → XlibBackend
   Nenhum                      → NullBackend    (loga autoswitch_compositor_unsupported)
 
@@ -12,11 +12,10 @@ Função `get_active_window_info()` mantém compatibilidade com a API legada de
 `xlib_window.py`: retorna `dict[str, Any]` com chaves `wm_class`, `wm_name`,
 `pid`, `exe_basename`.
 
-BUG-COSMIC-WLR-BACKEND-REGRESSION-01 (v3.1.0): re-introduz o cascade
-portal → wlrctl perdido no rebrand Hefesto → Hefesto - DualSense4Unix.
-O portal XDG é canônico onde existe (GNOME 46+); o `WlrctlBackend` cobre o
-bloco wlroots (Sway, Hyprland, niri, river) via
-`wlr-foreign-toplevel-management-unstable-v1`.
+O `CosmicToplevelBackend` cobre o COSMIC por `zcosmic_toplevel_info_v1`; o
+`WlrctlBackend` cobre o bloco wlroots (Sway, Hyprland, niri, river) via
+`wlr-foreign-toplevel-management-unstable-v1`. O xdg-desktop-portal não tem
+pergunta de janela ativa, e a cascata não pergunta a ele.
 
 FATO SUBSTITUÍDO — 02/09/2026, e ele estava escrito aqui e no `wlr_toplevel.py`:
 este cabeçalho dizia que o `wlrctl` *"funciona em COSMIC"*, e mais abaixo que a
@@ -53,7 +52,7 @@ MOTIVO_JANELA_SEM_CLASSE = "janela_sem_classe"
 MOTIVO_BACKEND_SEM_MOTIVO = "backend_sem_motivo"
 
 BACKENDS_QUE_VEEM_O_PROCESSO = frozenset({"xlib"})
-BACKENDS_CEGOS_AO_PROCESSO = frozenset({"portal", "wlrctl", "cosmic", "null"})
+BACKENDS_CEGOS_AO_PROCESSO = frozenset({"wlrctl", "cosmic", "null"})
 
 
 def backend_ve_nome_do_processo(backend: str | None) -> bool | None:
@@ -68,21 +67,17 @@ def backend_ve_nome_do_processo(backend: str | None) -> bool | None:
 
 
 class _WaylandCascadeBackend:
-    """Cascade: cosmic → portal XDG → wlrctl → None."""
+    """Cascade: cosmic → wlrctl → None."""
 
     def __init__(self) -> None:
         from hefesto_dualsense4unix.integrations.window_backends.cosmic_toplevel import (
             CosmicToplevelBackend,
-        )
-        from hefesto_dualsense4unix.integrations.window_backends.wayland_portal import (
-            WaylandPortalBackend,
         )
         from hefesto_dualsense4unix.integrations.window_backends.wlr_toplevel import (
             WlrctlBackend,
         )
 
         self._cosmic = CosmicToplevelBackend()
-        self._portal = WaylandPortalBackend()
         self._wlrctl = WlrctlBackend()
         self._fallback_announced: bool = False
         self.last_failure_reason: str | None = None
@@ -90,17 +85,13 @@ class _WaylandCascadeBackend:
 
     @property
     def backend_name(self) -> str:
-        """Backend ativo na cascata: "cosmic" | "portal" | "wlrctl" | "null"."""
+        """Backend ativo na cascata: "cosmic" | "wlrctl" | "null"."""
         if self._last_source == "cosmic" and self._cosmic.available:
             return "cosmic"
-        if self._last_source == "portal" and not self._portal.unsupported:
-            return "portal"
         if self._last_source == "wlrctl" and self._wlrctl.available:
             return "wlrctl"
         if self._cosmic.available:
             return "cosmic"
-        if not self._portal.unsupported:
-            return "portal"
         if self._wlrctl.available:
             return "wlrctl"
         return "null"
@@ -112,12 +103,6 @@ class _WaylandCascadeBackend:
             self.last_failure_reason = None
             return info
 
-        info = self._portal.get_active_window_info()
-        if info is not None:
-            self._last_source = "portal"
-            self.last_failure_reason = None
-            return info
-
         info = self._wlrctl.get_active_window_info()
         if info is not None:
             self._last_source = "wlrctl"
@@ -126,8 +111,8 @@ class _WaylandCascadeBackend:
                 logger.info(
                     "wayland_backend_fallback_wlrctl",
                     hint=(
-                        "portal XDG não respondeu; wlrctl ativo "
-                        "(wlr-foreign-toplevel-management)."
+                        "o compositor não publica zcosmic_toplevel_info_v1; "
+                        "wlrctl ativo (wlr-foreign-toplevel-management)."
                     ),
                 )
                 self._fallback_announced = True
@@ -348,7 +333,7 @@ class WindowReaderDiag:
                 hint=(
                     "o servidor X recusou conexão e a sessão é Wayland; "
                     "a detecção de janela passa a cair para a cascata "
-                    "cosmic/portal/wlrctl a cada leitura que o X perder. O "
+                    "cosmic/wlrctl a cada leitura que o X perder. O "
                     "nome do processo não vem por esse caminho (perfis que "
                     "casam por process_name não entram enquanto durar); "
                     "wm_class e título continuam, e o xlib volta a ser o "

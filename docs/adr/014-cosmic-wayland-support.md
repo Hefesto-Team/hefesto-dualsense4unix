@@ -17,9 +17,10 @@ o autoswitch de perfis:
   `DISPLAY`. Em Wayland puro (sem XWayland), não há servidor X; o módulo retornava
   `{"wm_class": "unknown"}` silenciosamente e o autoswitch ficava preso em
   `fallback.json`.
-- Compositors como COSMIC 1.0+ e GNOME 46+ expõem o portal XDG D-Bus
-  `org.freedesktop.portal.Window.GetActiveWindow`, que permite obter informações
-  da janela ativa sem depender de X11.
+- Sem X11, a janela ativa só vem do compositor: o COSMIC publica
+  `zcosmic_toplevel_info_v1`, e o bloco wlroots (Sway, Hyprland, niri, river),
+  `wlr-foreign-toplevel-management-unstable-v1`. O xdg-desktop-portal não tem
+  pergunta de janela ativa (a nota de 10/10/2026, no fim).
 
 ## Decisão
 
@@ -31,7 +32,8 @@ implementada em camadas:
 1. Pacote `src/hefesto_dualsense4unix/integrations/window_backends/`:
    - `base.py` — `WindowInfo` (dataclass) e `WindowBackend` (Protocol).
    - `xlib.py` — `XlibBackend`: lógica X11 via `python-xlib`.
-   - `wayland_portal.py` — `WaylandPortalBackend`: cliente D-Bus do portal XDG.
+   - `WaylandPortalBackend`: cliente D-Bus do portal XDG (saiu em 10/10/2026:
+     a interface que ele chamava não existe; a nota no fim).
    - `null.py` — `NullBackend`: retorna sempre `None` (modo silencioso).
 
 2. `src/hefesto_dualsense4unix/integrations/window_detect.py` — factory `detect_window_backend()`:
@@ -46,7 +48,7 @@ implementada em camadas:
 
    > **O shim não existe mais** — ver a nota de verificação no fim desta ADR.
 
-### Camada 2 — Portal XDG (implementado nesta sprint)
+### Camada 2 — Portal XDG (implementado nesta sprint; saiu em 10/10/2026)
 
 `WaylandPortalBackend` tenta (em ordem):
 1. `jeepney` (puro Python, sem dep nativa compilada).
@@ -64,20 +66,19 @@ Crate Rust `cosmic-applet-hefesto-dualsense4unix` para integração nativa com o
 > `packaging/cosmic-applet/` e só se compila com `./install.sh
 > --enable-cosmic-applet`; o padrão é não instalar.
 
-### Camada 2.1 — Cascade portal → wlrctl (v3.1.0)
+### Camada 2.1 — Cascade cosmic → wlrctl (v3.1.0; o degrau do portal saiu em 10/10/2026)
 
 Re-introduzida em `v3.1.0` (sprint `BUG-COSMIC-WLR-BACKEND-REGRESSION-01`):
 
 - `WlrctlBackend` (`src/hefesto_dualsense4unix/integrations/window_backends/wlr_toplevel.py`):
   cliente do `wlrctl` CLI usando o protocolo `wlr-foreign-toplevel-management-unstable-v1`.
-- `_WaylandCascadeBackend` (em `window_detect.py`): tenta portal primeiro, cai para
-  wlrctl se portal retorna None ou está no estado "unsupported" (threshold de 3
-  falhas consecutivas no `WaylandPortalBackend`).
+- `_WaylandCascadeBackend` (em `window_detect.py`): tenta o `cosmic`
+  (`zcosmic_toplevel_info_v1`) e cai para o wlrctl quando ele não lê.
 
 Validação empírica em Pop!_OS 24.04 + COSMIC 1.0.0 (2026-05-16):
 
-- `xdg-desktop-portal-cosmic` em uso ainda **não implementa**
-  `org.freedesktop.portal.Window::GetActiveWindow`. Portal sempre retorna None.
+- O portal nunca leu uma janela: a pergunta que o backend fazia não existe no
+  xdg-desktop-portal (a nota de 10/10/2026).
 - `cosmic-comp 1.0.0` em uso **não expõe** `wlr-foreign-toplevel-management-unstable-v1`.
   `wlrctl toplevel list` retorna exit code 1 com `"Foreign Toplevel Management interface not found!"`.
 - Resultado prático: autoswitch em Wayland puro recai em fallback. **Solução**:
@@ -119,22 +120,17 @@ retorna `true` e o tray do Hefesto passa a renderizar normalmente.
 
 **Positivo:**
 - Autoswitch de perfil funciona em XWayland (caso mais comum de COSMIC hoje).
-- Cascade portal → wlrctl cobre 4 compositors wlroots-like (COSMIC futuro,
-  Sway, Hyprland, niri, river) quando o portal não estiver disponível.
-- Degradação silenciosa e documentada em Wayland puro sem portal disponível.
+- A cascata cosmic → wlrctl cobre o COSMIC e os compositors wlroots (Sway,
+  Hyprland, niri, river).
+- Degradação silenciosa e documentada em Wayland puro sem nenhum dos dois.
 - API legada (`get_active_window_info` dict) preservada — zero breaking changes.
 - Backends são isolados e testáveis via monkeypatch de `os.environ`.
 - Em sessão COSMIC, tray usa defer + probe + notification orientadora — sem
   ícone "fantasma" silenciosamente faltando.
 
 **Negativo:**
-- `WaylandPortalBackend` depende de `jeepney` (extra opcional `[cosmic]` em
-  pyproject.toml; `install.sh` instala por default desde v3.1.0).
 - `WlrctlBackend` depende do binário `wlrctl` (Recommends do `.deb` desde
-  v2.4.1; `install.sh` em sessão COSMIC oferece instalação automática via apt).
-- Portal `GetActiveWindow` não existe em compositors Wayland antigos
-  (GNOME < 46, Sway, Hyprland, e — confirmado empiricamente — COSMIC 1.0.0).
-  Nesses ambientes o cascade tenta wlrctl em seguida.
+  v2.4.1; o `install.sh` o oferece só em compositor wlroots).
 - COSMIC 1.0.0 também não expõe `wlr-foreign-toplevel-management` ainda —
   ver o registro «cosmic-1.0-validation» de 15/05/2026. Workaround
   efetivo é manter XWayland ativo.
@@ -200,7 +196,7 @@ chaves. Só que `exe_basename` chega **sempre vazio** fora do `xlib`:
 | Backend | `exe_basename` | Onde, no fonte |
 |---|---|---|
 | `xlib` | resolvido | `window_backends/xlib.py`, `_exe_basename_from_pid` → `os.readlink("/proc/<pid>/exe")` |
-| `portal` | `""` literal | `window_backends/wayland_portal.py`, `_parse_portal_result` — **mesmo tendo o `pid`** do portal em mãos |
+| `portal` (saiu em 10/10/2026) | `""` literal | o `_parse_portal_result` do backend do portal — **mesmo tendo o `pid`** do portal em mãos |
 | `wlrctl` | `""` literal | `window_backends/wlr_toplevel.py`, fim de `get_active_window_info` (o `wlrctl` não devolve pid) |
 | `null` | não devolve janela | `window_backends/null.py` |
 
@@ -220,3 +216,25 @@ que cada backend REALMENTE devolve, para ela não envelhecer em silêncio.
 Nada mais desta ADR foi contrariado pelo código nesta passagem: a factory de
 `window_detect.py` decide pelos quatro ramos de ambiente descritos, e a cascata
 `portal → wlrctl → null` está onde a Camada 2.1 diz.
+
+---
+
+## Nota de 10/10/2026 (A-CASCATA-DO-WAYLAND-SO-PERGUNTA-A-QUEM-RESPONDE-01)
+
+**O degrau do portal saiu, e a premissa dele era falsa.** O backend chamava
+`org.freedesktop.portal.Window.GetActiveWindow`, e essa interface não existe: a
+referência pública do xdg-desktop-portal (flatpak.github.io/xdg-desktop-portal,
+«API Reference») lista Account, Background, Camera, Clipboard, Documents, Dynamic
+Launcher, Email, File Chooser, File Transfer, Game Mode, Global Shortcuts, Inhibit,
+Input Capture, Location, Memory Monitor, Network Monitor, Notification, OpenURI,
+Power Profile Monitor, Print, Proxy Resolver, Realtime, Remote Desktop, Request,
+ScreenCast, Screenshot, Secret, Session, Settings, Trash, USB e Wallpaper, sem
+`Window` e sem `GetActiveWindow`. O que esta ADR registrava como «o COSMIC ainda
+não implementa» era uma pergunta que nenhum compositor responde.
+
+Medido no código antes da cura, com o `cosmic` e o `wlrctl` dublados sem resposta e
+um `jeepney` de mentira: a cascata abria **três conexões D-Bus** e publicava
+`portal` nas três primeiras leituras, um caminho que nunca leu janela. Depois: zero
+conexões e `null` desde a primeira. A cascata é `cosmic → wlrctl → null`; o
+`jeepney` fica, pelas notificações do desktop. A régua é
+`tests/unit/test_a_cascata_do_wayland_so_pergunta_a_quem_responde.py`.
