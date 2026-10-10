@@ -14,7 +14,7 @@ dos `EV_KEY` que o jogo leria.
 from __future__ import annotations
 
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from evdev import ecodes
@@ -113,7 +113,7 @@ class _Mesa:
         self.coop._players[P2] = _SecondaryPlayer(
             identity=P2,
             evdev_path="/dev/input/event9",
-            reader=self.leitor_p2,  # type: ignore[arg-type]
+            reader=cast(Any, self.leitor_p2),
             player_index=2,
             vpad=self.pad_p2,
         )

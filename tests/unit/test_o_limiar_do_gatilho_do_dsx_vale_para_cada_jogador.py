@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import json
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from evdev import ecodes
@@ -128,7 +128,7 @@ class _Mesa:
             self.coop._players[uniq] = _SecondaryPlayer(
                 identity=uniq,
                 evdev_path=f"/dev/input/event{n + 10}",
-                reader=leitor,  # type: ignore[arg-type]
+                reader=cast(Any, leitor),
                 player_index=n,
                 vpad=self.pads[n - 1],
             )
