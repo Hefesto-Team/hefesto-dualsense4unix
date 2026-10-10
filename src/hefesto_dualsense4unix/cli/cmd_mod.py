@@ -119,7 +119,7 @@ def cmd_listar() -> None:
     console.print(tabela)
 
 
-@app.command("permissoes")
+@app.command("permissoes")  # noqa-acento: palavra do contrato, ASCII
 def cmd_permissoes(mod_id: str = typer.Argument(..., help="O id da modificação.")) -> None:
     """O que a modificação instalada pede, uma linha por permissão."""
     try:

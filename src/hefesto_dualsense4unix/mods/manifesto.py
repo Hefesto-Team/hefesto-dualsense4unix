@@ -32,7 +32,10 @@ TOPICOS_DE_LEITURA: dict[str, tuple[str, ...]] = {
     "estado": (EventTopic.STATE_UPDATE,),
     "botoes": (EventTopic.BUTTON_DOWN, EventTopic.BUTTON_UP),
     "bateria": (EventTopic.BATTERY_CHANGE,),
-    "conexao": (EventTopic.CONTROLLER_CONNECTED, EventTopic.CONTROLLER_DISCONNECTED),
+    "conexao": (  # noqa-acento: palavra do contrato, ASCII
+        EventTopic.CONTROLLER_CONNECTED,
+        EventTopic.CONTROLLER_DISCONNECTED,
+    ),
 }
 
 #: ``escrever:<canal>``: os canais do controle que uma modificação pode pedir.
@@ -48,7 +51,7 @@ _O_QUE_DEIXA: dict[str, str] = {
     "ler:estado": "Ler os botões, os eixos, os gatilhos e a bateria a cada tique.",
     "ler:botoes": "Saber quando um botão é apertado e solto.",
     "ler:bateria": "Saber a carga da bateria.",
-    "ler:conexao": "Saber quando um controle entra ou sai.",
+    "ler:conexao": "Saber quando um controle entra ou sai.",  # noqa-acento: contrato ASCII
     "escrever:luz": "Mudar a cor da luz de um controle.",
     "escrever:vibracao": "Fazer um controle vibrar.",
     "escrever:gatilho": "Mudar a resistência dos gatilhos de um controle.",
@@ -85,7 +88,7 @@ def _clausulas(faixa: str) -> list[tuple[str, int]]:
 
 
 def aceita_a_api(faixa: str, versao: int = API_DAS_MODIFICACOES) -> bool:
-    """A faixa declarada aceita ``versao``?"""
+    """A faixa declarada aceita esta versão da porta?"""
     contas = {
         ">=": versao.__ge__, "<=": versao.__le__, "==": versao.__eq__,
         ">": versao.__gt__, "<": versao.__lt__,
@@ -193,7 +196,7 @@ class Manifesto(BaseModel):
             raise ValueError("licenca precisa ser um identificador SPDX (ex.: MIT)")
         return valor
 
-    @field_validator("permissoes")
+    @field_validator("permissoes")  # noqa-acento: palavra do contrato, ASCII
     @classmethod
     def _permissoes_conhecidas(cls, valor: list[str]) -> list[str]:
         estranhas = [p for p in valor if not permissao_valida(p)]
@@ -277,7 +280,7 @@ __all__ = [
     "TOPICOS_DE_LEITURA",
     "Manifesto",
     "ManifestoRecusadoError",
-    "Opcao",
+    "Opcao",  # noqa-acento: palavra do contrato, ASCII
     "Processo",
     "aceita_a_api",
     "frase_da_api",

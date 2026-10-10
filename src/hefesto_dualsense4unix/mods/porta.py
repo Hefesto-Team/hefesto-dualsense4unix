@@ -347,7 +347,7 @@ class Porta:
                 return _resposta(req_id, {
                     "id": con.sessao.mod_id,
                     "api": API_DAS_MODIFICACOES,
-                    "permissoes": sorted(con.sessao.permissoes),
+                    "permissoes": sorted(con.sessao.permissoes),  # noqa-acento: contrato ASCII
                 })
             if metodo == "eventos.assinar":
                 return _resposta(req_id, self._assinar(con, writer, params))
