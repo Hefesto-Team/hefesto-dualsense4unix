@@ -168,3 +168,17 @@ def test_o_botao_semeado_pelo_prime_solta_o_que_segura(fabrica: _Fabrica) -> Non
     assert 0 not in _de(g, "KEY_LEFTALT")
     dev.dispatch(frozenset())
     assert _de(g, "KEY_LEFTALT") == [0]
+
+
+def test_set_bindings_solta_o_que_a_tabela_trocada_por_fora_ainda_segura(
+    fabrica: _Fabrica,
+) -> None:
+    """A tabela trocada por atribuição direta (como o `_digitar_o_ps` faz) não prende tecla."""
+    dev, g = fabrica()
+    dev.dispatch(frozenset({"r1"}))
+    dev.bindings = {**dev.bindings, "r1": ("KEY_ENTER",)}
+    dev.set_bindings(dict(DEFAULT_BUTTON_BINDINGS))
+    for tecla in ("KEY_LEFTALT", "KEY_TAB"):
+        assert _de(g, tecla) == [1, 0], tecla
+    assert _de(g, "KEY_ENTER") == []
+    assert dev._quem_segura == {}

@@ -178,6 +178,29 @@ async def test_cycle_arma_lock_e_flasha(monkeypatch: pytest.MonkeyPatch) -> None
     assert not d.controller.gravadas, "o pisca gravou a cor no estado desejado"
 
 
+class _SoGrava:
+    """Backend sem a rota do aviso: só o `set_led`, que grava no desejado."""
+
+    def __init__(self) -> None:
+        self.gravadas: list[tuple[int, int, int]] = []
+
+    def set_led(self, color: tuple[int, int, int]) -> None:
+        self.gravadas.append(color)
+
+
+@pytest.mark.asyncio
+async def test_cycle_sem_a_rota_do_aviso_troca_sem_piscar_pelo_set_led(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Sem `pintar_lightbar_sem_lembrar`, a troca acontece e o branco não sai pelo `set_led`."""
+    _patch_manager(monkeypatch)
+    d = _FakeDaemon(active="a")
+    d.controller = _SoGrava()  # type: ignore[assignment]
+    await build_profile_cycle_callback(d, +1)()
+    assert d.store.active_profile == "b"
+    assert not d.controller.gravadas, "o pisca voltou a gravar pelo set_led"
+
+
 @pytest.mark.asyncio
 async def test_cycle_skip_com_menos_de_dois_perfis(
     monkeypatch: pytest.MonkeyPatch,
