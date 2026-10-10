@@ -268,6 +268,53 @@ _PERNAS: dict[str, dict[str, Resposta]] = {
         RESISTE: NaoSeAplica("o fio não está ligado."),
         INDEPENDE: NaoSeAplica("o fio não está ligado."),
     },
+    "teclado_so_no_jogo": {
+        VOLTA: NaoSeAplica(
+            "estado do daemon, travado a cada ativação; nada vai ao controle."
+        ),
+        RESISTE: NaoSeAplica("não é byte do aparelho."),
+        INDEPENDE: Cumprida(
+            "daemon/subsystems/mouse.py::trocar_a_tabela_no_jogo",
+            "travado por `apply_profile_suppression`; nenhum lançador no caminho",
+        ),
+    },
+    "tabela_no_jogo": {
+        VOLTA: NaoSeAplica(
+            "idem `teclado_so_no_jogo`: a tabela vive nos devices virtuais "
+            "privados, não no controle."
+        ),
+        RESISTE: NaoSeAplica("não é byte do aparelho."),
+        INDEPENDE: Cumprida(
+            "daemon/subsystems/mouse.py::trocar_a_tabela_no_jogo",
+            "nenhum lançador no caminho",
+        ),
+    },
+    "estilo": {
+        VOLTA: Cumprida(
+            "daemon/subsystems/tato_vivo.py::receita_ativa",
+            "relida do perfil ativo a cada segundo; o controle que volta "
+            "recebe o próximo evento pela mesma receita",
+        ),
+        RESISTE: NaoSeAplica(
+            "o motor do tato escreve por evento, não guarda estado no "
+            "aparelho: não há escolha a sobrescrever."
+        ),
+        INDEPENDE: Cumprida(
+            "daemon/subsystems/tato_vivo.py::receita_ativa",
+            "lida do perfil pelo daemon; nenhum lançador no caminho",
+        ),
+    },
+    "receita_do_tato": {
+        VOLTA: Cumprida(
+            "daemon/subsystems/tato_vivo.py::receita_do_perfil",
+            "mesma rota do `estilo`: relida a cada segundo pelo motor",
+        ),
+        RESISTE: NaoSeAplica("idem `estilo`: o motor escreve por evento."),
+        INDEPENDE: Cumprida(
+            "daemon/subsystems/tato_vivo.py::receita_do_perfil",
+            "nenhum lançador no caminho",
+        ),
+    },
     "name": {p: NaoSeAplica(_NAO_CHEGA) for p in PERNAS},
     "version": {p: NaoSeAplica(_NAO_CHEGA) for p in PERNAS},
     "priority": {p: NaoSeAplica(_NAO_CHEGA) for p in PERNAS},
