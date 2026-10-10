@@ -118,7 +118,10 @@ def _esperar_linhas(quantas: int, prazo: float = 15.0) -> list[str]:
 
 
 class _TempoSemEspera:
-    """O `time` do `steam_launch_options` sem o `sleep`: 38 s viram nada."""
+    """O `time` do `steam_launch_options` em que o `sleep` acorda quando o livro cresce.
+
+    Os 38 s do fechar viram a espera da primeira linha; cada passo do reabrir, a da próxima.
+    """
 
     def __init__(self) -> None:
         self._primeiro = True
@@ -127,15 +130,22 @@ class _TempoSemEspera:
         if self._primeiro:
             self._primeiro = False
             _esperar_linhas(1, prazo=10.0)
+            return
+        _esperar_linhas(len(_esperar_linhas(0)) + 1, prazo=_segundos)
 
     def __getattr__(self, nome: str) -> Any:
         return getattr(time, nome)
 
 
 def _steam_aberta_ate_o_shutdown() -> bool:
-    """`steam_running` de uma Steam que atende o `-shutdown`: de pé até o"""
+    """`steam_running` de uma Steam que atende o `-shutdown` e o reabrir.
+
+    De pé até o `steam -shutdown` chegar ao livro, e de novo quando o `steam` do reabrir chega:
+    o `reopen_steam` confere que ela subiu antes de dar a porta por boa.
+    """
     linhas, _ = conftest._ler_o_livro(conftest._LIVRO_LIDO[0])
-    return not any(linha.startswith("steam -shutdown") for _, linha in linhas)
+    da_steam = [linha for _, linha in linhas if linha.split()[:1] == ["steam"]]
+    return not da_steam or not da_steam[-1].startswith("steam -shutdown")
 
 
 ATOS_DO_REINICIAR = (
@@ -174,6 +184,9 @@ def test_o_reiniciar_chega_aos_dois_atos_so_pelo_duble(
     monkeypatch.setattr(rl, "abertos", lambda: [rl.LANCADORES[0]])
     monkeypatch.setattr(slo, "time", _TempoSemEspera())
     monkeypatch.setattr(slo, "steam_running", _steam_aberta_ate_o_shutdown)
+    # O «de outro lar?» do PS lê o /proc: sem o dublê, a Steam real da máquina (de outro
+    # HOME, visto daqui) recusa o reabrir, e o teste mede a máquina, não o caminho.
+    monkeypatch.setattr(slo, "processos_da_steam", lambda *_a, **_k: [])
     olho = espiao()
 
     estado: dict[str, Any] = ESTADO
