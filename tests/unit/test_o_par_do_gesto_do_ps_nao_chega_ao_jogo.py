@@ -35,15 +35,27 @@ GESTOS = (
 )
 
 
+#: O direcional chega ao jogo como chapéu (`ABS_HAT0*`), não como tecla.
+DIRECIONAL = {
+    "dpad_up": (ecodes.ABS_HAT0Y, -1),
+    "dpad_down": (ecodes.ABS_HAT0Y, 1),
+    "dpad_left": (ecodes.ABS_HAT0X, -1),
+    "dpad_right": (ecodes.ABS_HAT0X, 1),
+}
+
+
 class _No:
-    """O nó do uinput de mentira: guarda os `EV_KEY` que o jogo leria."""
+    """O nó do uinput de mentira: guarda as teclas e o chapéu que o jogo leria."""
 
     def __init__(self) -> None:
         self.teclas: list[tuple[int, int]] = []
+        self.chapeu: list[tuple[int, int]] = []
 
     def write(self, tipo: int, codigo: int, valor: int) -> None:
         if tipo == ecodes.EV_KEY:
             self.teclas.append((codigo, valor))
+        elif tipo == ecodes.EV_ABS and codigo in (ecodes.ABS_HAT0X, ecodes.ABS_HAT0Y):
+            self.chapeu.append((codigo, valor))
 
     def syn(self) -> None:
         pass
@@ -58,6 +70,8 @@ def _pad(mascara: str) -> tuple[UinputGamepad, _No]:
 
 
 def _apertou(pad: UinputGamepad, no: _No, botao: str) -> bool:
+    if botao in DIRECIONAL:
+        return DIRECIONAL[botao] in no.chapeu
     codigo = pad._resolve_evdev(botao, ecodes)
     assert codigo is not None, f"{botao} não existe na máscara {pad.mascara_no_jogo}"
     return (codigo, 1) in no.teclas
