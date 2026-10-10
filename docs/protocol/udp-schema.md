@@ -163,7 +163,8 @@ valor_entregue = valor_bruto >= limiar ? valor_bruto : 0
 Corte seco, sem reescala. O DualSense não tem campo de limiar no report de
 saída — não existe forma de o hardware honrar isso —, então o Hefesto aplica
 no mesmo ponto que o DSX: a fronteira entre o controle físico e o pad virtual
-(`daemon/subsystems/gamepad.py`, `dispatch_gamepad`).
+(`daemon/subsystems/gamepad.py`, `cortar_pelo_limiar`, chamado pelo
+`dispatch_gamepad` do P1 e pelo `forward_all` do co-op).
 
 Consequências que o autor do mod precisa saber:
 
@@ -171,11 +172,14 @@ Consequências que o autor do mod precisa saber:
   controle físico direto) não existe pad virtual onde cortar: o limiar fica
   guardado e não faz nada. O daemon loga `udp_trigger_threshold` em `info`
   toda vez que o valor muda — é por aí que se audita.
-- **Vale para o jogador 1.** O `controllerIndex` do DSX é descartado (ver
-  seção própria); os secundários do co-op local não são afetados.
+- **Vale para cada jogador, por MAC.** O `controllerIndex` do DSX é
+  descartado (ver seção própria): o limiar é guardado para o destino da aba
+  Conexões, ou para cada controle aberto em «Todos», e o pad virtual de cada
+  jogador (o do P1 e os do co-op) corta o seu.
 - **É pegajoso.** Um limiar alto sobrevive à saída do mod. `ResetToUserSettings`
   (ou reiniciar o daemon) volta ao padrão `0`.
-- Estado corrente exposto em `StateStore.udp_trigger_thresholds`; contador
+- Estado corrente exposto em `StateStore.udp_trigger_threshold_de(mac)` e
+  `udp_trigger_thresholds_por_controle`; contador
   `udp.trigger_threshold.<side>.<value>`.
 
 ## Fidelidade ao DSX original — o que falta

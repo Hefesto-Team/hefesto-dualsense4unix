@@ -86,7 +86,7 @@ class _Mesa:
         self.pad_p1, self.no_p1 = _pad(mascara)
         self.pad_p2, self.no_p2 = _pad(mascara)
         self.daemon = SimpleNamespace(
-            store=SimpleNamespace(udp_trigger_thresholds=(0, 0)),
+            store=SimpleNamespace(),
             controller=SimpleNamespace(primary_uniq=P1),
             config=SimpleNamespace(coop_enabled=True, gamepad_flavor=mascara),
             identity_registry=None,

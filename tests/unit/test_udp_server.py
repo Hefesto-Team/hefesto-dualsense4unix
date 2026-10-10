@@ -253,7 +253,7 @@ def test_trigger_threshold_grava_limiar_no_store():
         "instructions": [{"type": "TriggerThreshold", "parameters": ["right", 128]}],
     }
     handler.handle_datagram(_datagram(payload), ("127.0.0.1", 12345))
-    assert store.udp_trigger_thresholds == (0, 128)
+    assert store.udp_trigger_threshold_de(UNIQ_DO_DESTINO) == (0, 128)
     assert store.counter("udp.applied.TriggerThreshold") == 1
 
 
@@ -265,7 +265,7 @@ def test_trigger_threshold_aceita_layout_canonico_do_dsx():
         "instructions": [{"type": "TriggerThreshold", "parameters": [0, 1, 200]}],
     }
     handler.handle_datagram(_datagram(payload), ("127.0.0.1", 12345))
-    assert store.udp_trigger_thresholds == (200, 0)
+    assert store.udp_trigger_threshold_de(UNIQ_DO_DESTINO) == (200, 0)
     assert store.counter("udp.error.TriggerThreshold") == 0
 
 
@@ -279,7 +279,7 @@ def test_trigger_threshold_clampa_e_rejeita_lado_invalido():
         ],
     }
     handler.handle_datagram(_datagram(payload), ("127.0.0.1", 12345))
-    assert store.udp_trigger_thresholds == (255, 0)
+    assert store.udp_trigger_threshold_de(UNIQ_DO_DESTINO) == (255, 0)
     assert store.counter("udp.error.TriggerThreshold") == 1
 
 
@@ -295,7 +295,7 @@ def test_reset_to_user_settings_zera_a_deadzone():
         ],
     }
     handler.handle_datagram(_datagram(payload), ("127.0.0.1", 12345))
-    assert store.udp_trigger_thresholds == (0, 0)
+    assert store.udp_trigger_threshold_de(UNIQ_DO_DESTINO) == (0, 0)
 
 
 def test_envelope_dsx_autentico_sem_version_e_type_inteiro():
@@ -323,7 +323,7 @@ def test_envelope_dsx_autentico_sem_version_e_type_inteiro():
     assert [c for c in fc.commands if c.kind == "set_led"][-1].payload == (255, 80, 0)
     assert fc.last_player_leds == (True, False, True, False, True)
     assert fc.mic_led_history == [True]
-    assert store.udp_trigger_thresholds == (128, 0)
+    assert store.udp_trigger_threshold_de(UNIQ_DO_DESTINO) == (128, 0)
 
 
 def test_trigger_update_dsx_traduz_modos_com_assinatura_identica():
@@ -372,7 +372,7 @@ def test_ordinal_ambiguo_do_racingdsx_nao_age_errado():
     pkt = {"instructions": [{"type": 6, "parameters": [0, 1, 128]}]}
     handler.handle_datagram(_datagram(pkt), ("127.0.0.1", 12345))
     assert store.counter("udp.unknown_instruction") == 1
-    assert store.udp_trigger_thresholds == (0, 0)
+    assert store.udp_trigger_threshold_de(UNIQ_DO_DESTINO) == (0, 0)
     assert [c for c in fc.commands if c.kind != "connect"] == []
 
 

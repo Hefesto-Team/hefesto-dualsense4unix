@@ -6,6 +6,7 @@ import time
 from dataclasses import dataclass
 
 from hefesto_dualsense4unix.core.controller import ControllerState
+from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 from hefesto_dualsense4unix.daemon.launch_env import steam_appid_from_wm_class
 
 # escolha manual via IPC `profile.switch`. Quando o usuário ativa um perfil
@@ -50,7 +51,7 @@ class StateStore:
         self._window_detect_current_exe: str | None = None
         self._window_detect_last_useful_monotonic: float | None = None
         self._window_detect_reason: str | None = None
-        self._udp_trigger_thresholds: dict[str, int] = {"left": 0, "right": 0}
+        self._udp_trigger_thresholds: dict[str, dict[str, int]] = {}
         self._steam_jogo_appid: int | None = None
         self._steam_jogo_lido: bool = False
 
@@ -115,24 +116,37 @@ class StateStore:
             self._counters.clear()
 
 
-    def set_udp_trigger_threshold(self, side: str, value: int) -> None:
-        """Grava o limiar do lado `side` ("left"|"right"), clampado em 0-255."""
+    def set_udp_trigger_threshold(self, uniq: str, side: str, value: int) -> None:
+        """Grava o limiar do lado `side` ("left"|"right") do controle `uniq`, em 0-255."""
         if side not in ("left", "right"):
             raise ValueError(f"lado de gatilho desconhecido: {side!r}")
+        chave = norm_mac(uniq)
+        if chave is None:
+            raise ValueError(f"limiar sem controle: {uniq!r}")
         with self._lock:
-            self._udp_trigger_thresholds[side] = max(0, min(255, int(value)))
+            limiar = self._udp_trigger_thresholds.setdefault(chave, {"left": 0, "right": 0})
+            limiar[side] = max(0, min(255, int(value)))
 
     def clear_udp_trigger_thresholds(self) -> None:
-        """Volta os dois lados ao padrão "sem deadzone"."""
+        """Volta todo controle ao padrão "sem deadzone"."""
         with self._lock:
-            self._udp_trigger_thresholds = {"left": 0, "right": 0}
+            self._udp_trigger_thresholds = {}
+
+    def udp_trigger_threshold_de(self, uniq: str | None) -> tuple[int, int]:
+        """Par `(esquerdo, direito)` do limiar do controle `uniq`. Lido a cada tique."""
+        chave = norm_mac(uniq)
+        with self._lock:
+            limiar = self._udp_trigger_thresholds.get(chave) if chave else None
+            return (0, 0) if limiar is None else (limiar["left"], limiar["right"])
 
     @property
-    def udp_trigger_thresholds(self) -> tuple[int, int]:
-        """Par `(esquerdo, direito)` dos limiares vigentes. Lido a cada tick."""
+    def udp_trigger_thresholds_por_controle(self) -> dict[str, tuple[int, int]]:
+        """`{MAC: (esquerdo, direito)}` de quem tem limiar: o que o diário e a régua leem."""
         with self._lock:
-            atual = self._udp_trigger_thresholds
-            return (atual["left"], atual["right"])
+            return {
+                mac: (limiar["left"], limiar["right"])
+                for mac, limiar in self._udp_trigger_thresholds.items()
+            }
 
     # *"isso nao faz sentido mais."*  # (noqa-acento): citação literal
 

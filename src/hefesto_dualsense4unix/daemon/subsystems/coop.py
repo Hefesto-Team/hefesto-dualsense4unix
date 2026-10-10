@@ -1723,8 +1723,9 @@ class CoopManager:
                 self._corrigir_a_ordem()
         self._recolher_os_cedidos()
         self._promote_pending()
-        troca = remapeamento_ativo(getattr(self._daemon, "store", None))
-        arranjo_de_movimento = roteador_ativo(getattr(self._daemon, "store", None))
+        store = getattr(self._daemon, "store", None)
+        troca = remapeamento_ativo(store)
+        arranjo_de_movimento = roteador_ativo(store)
         marcas = marcas_da_partida(self._daemon)
         for player in list(self._players.values()):
             if player.vpad is None:
@@ -1734,7 +1735,9 @@ class CoopManager:
                 continue
             try:
                 snap = player.reader.snapshot()
-                botoes, l2, r2 = snap.buttons_pressed, snap.l2_raw, snap.r2_raw
+                botoes = snap.buttons_pressed
+                # O `TriggerThreshold` do DSX deste jogador, pelo mesmo dono do P1.
+                l2, r2 = cortar_pelo_limiar(store, player.identity, snap.l2_raw, snap.r2_raw)
                 lx, ly, rx, ry = snap.lx, snap.ly, snap.rx, snap.ry
                 soltos = self._apertos_vistos_de(player.identity).soltos(
                     leitor=player.reader,
@@ -2286,6 +2289,7 @@ from hefesto_dualsense4unix.daemon.subsystems.gamepad import (  # noqa: E402
     ApertosVistos,
     aplicar_o_movimento,
     aplicar_o_toque,
+    cortar_pelo_limiar,
     ralos_do_mic,
     sem_o_gesto_do_ps,
 )

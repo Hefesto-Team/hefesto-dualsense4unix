@@ -1917,6 +1917,19 @@ def aplicar_o_movimento(
         return lx, ly, rx, ry
 
 
+def cortar_pelo_limiar(store: Any, uniq: str | None, l2: int, r2: int) -> tuple[int, int]:
+    """O `TriggerThreshold` do DSX no gatilho de `uniq`: abaixo do limiar dele, zero.
+
+    Um dono só do corte, para o pad do P1 e o de cada jogador do co-op. Sem
+    limiar guardado (ou store sem ele), o valor passa cru.
+    """
+    limiar_de = getattr(store, "udp_trigger_threshold_de", None)
+    if not callable(limiar_de) or uniq is None:
+        return l2, r2
+    limiar_l, limiar_r = limiar_de(uniq)
+    return (l2 if l2 >= limiar_l else 0, r2 if r2 >= limiar_r else 0)
+
+
 def sem_o_gesto_do_ps(
     daemon: Any, de: str | None, botoes: frozenset[str]
 ) -> frozenset[str]:
@@ -1958,10 +1971,8 @@ def dispatch_gamepad(
     # O Modo Big Picture com a Steam na frente: o que navega vira tecla e não vai ao pad.
     buttons_pressed, soltos = levar_o_big_picture(daemon, None, buttons_pressed, soltos)
     store = getattr(daemon, "store", None)
-    limiar_l, limiar_r = getattr(store, "udp_trigger_thresholds", (0, 0))
     try:
-        l2 = state.l2_raw if state.l2_raw >= limiar_l else 0
-        r2 = state.r2_raw if state.r2_raw >= limiar_r else 0
+        l2, r2 = cortar_pelo_limiar(store, primary_identity(daemon), state.l2_raw, state.r2_raw)
         botoes = buttons_pressed
         arranjo = roteador_ativo(store)
         uniq = primary_identity(daemon) if arranjo is not None else None
@@ -2408,6 +2419,7 @@ __all__ = [
     "apply_game_player_leds",
     "apply_game_rumble",
     "apply_game_trigger",
+    "cortar_pelo_limiar",
     "dedup_status",
     "dispatch_gamepad",
     "end_game_output_session",

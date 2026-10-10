@@ -373,13 +373,20 @@ class UdpHandler:
         `ResetToUserSettings` solta só o que foi pintado aqui.
         """
         escrever = getattr(self.controller, "set_game_trigger_for", None)
-        destinos_de = getattr(self.controller, "uniqs_do_destino", None)
-        destinos = list(destinos_de()) if callable(destinos_de) else []
+        destinos = self._destinos()
         if not callable(escrever) or not destinos:
             raise ValueError("TriggerUpdate sem controle de destino")
         for uniq in destinos:
             if escrever(uniq, side, bloco):
                 self._gatilhos_pintados[(uniq, side)] = bloco
+
+    def _destinos(self) -> list[str]:
+        """Os MACs que uma instrução do DSX alcança: o destino do seletor de saída.
+
+        Ponto único: é aqui que o índice do mod passa a escolher o jogador.
+        """
+        destinos_de = getattr(self.controller, "uniqs_do_destino", None)
+        return list(destinos_de()) if callable(destinos_de) else []
 
     def _do_rgb_update(self, params: list[Any]) -> None:
         if len(params) < 4:
@@ -441,6 +448,9 @@ class UdpHandler:
         onde honrá-la —, então o único ponto fiel é a fronteira
         controle-físico → pad virtual, exatamente onde o DSX a aplica.
 
+        O limiar é guardado por MAC, em cada destino, e o pad de cada jogador
+        (o do P1 e os do co-op) corta o seu, por `gamepad.cortar_pelo_limiar`.
+
         Consequência que o autor do mod precisa saber: com a emulação de
         gamepad DESLIGADA (Modo Nativo, jogo lendo o controle direto) não há
         pad virtual e o limiar fica guardado sem efeito. O log `info` abaixo é
@@ -448,9 +458,13 @@ class UdpHandler:
         """
         side, value, indice = parse_side_and_value(params, kind="TriggerThreshold")
         self._nota_indice(indice, kind="TriggerThreshold")
-        self.store.set_udp_trigger_threshold(side, value)
+        destinos = self._destinos()
+        if not destinos:
+            raise ValueError("TriggerThreshold sem controle de destino")
+        for uniq in destinos:
+            self.store.set_udp_trigger_threshold(uniq, side, value)
         self.store.bump(f"udp.trigger_threshold.{side}.{value}")
-        logger.info("udp_trigger_threshold", side=side, value=value)
+        logger.info("udp_trigger_threshold", side=side, value=value, controles=len(destinos))
 
     def _do_reset(self) -> None:
         """`ResetToUserSettings` do DSX: solta o gatilho que o DSX pintou, e o perfil volta.
