@@ -40,8 +40,8 @@ TOKENS_DA_CASA = frozenset({
     "--pink", "--purple", "--red", "--yellow", "--sel-bg", "--rot-campo", "--linha",
     "--rot-linha",
 })
-#: As categorias da aba Conexões: a cor de cada tipo na régua e na sala.
-_TOKEN_DE_CATEGORIA = re.compile(r"--(?:c|sala)-[a-z][a-z_]{0,23}")
+#: As categorias da aba Conexões: a cor de cada tipo na régua, na sala e na faixa do mapa.
+_TOKEN_DE_CATEGORIA = re.compile(r"--(?:c|sala|mapa)-[a-z][a-z_]{0,23}")
 #: Os plásticos: a cor de cada controle é a do aparelho, e tema nenhum a troca.
 PLASTICOS = frozenset({"--cosmic-red", "--nova-pink", "--starlight-blue", "--galactic-purple",
                        "--midnight-black"})

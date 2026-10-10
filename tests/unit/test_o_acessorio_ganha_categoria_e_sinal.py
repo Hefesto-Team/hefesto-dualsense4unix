@@ -187,7 +187,7 @@ def test_a_categoria_mora_numa_tabela_so() -> None:
     assert a08.COR_DO_TIPO[a08.TIPO_ACESSORIO] == cat["cor"] == "var(--sala-acessorio)"
     assert cat["cor_na_regua"] == "var(--c-acessorio)"
     assert a08._cor_na_regua(a08.TIPO_ACESSORIO) == cat["cor_na_regua"]
-    assert a08.COR_DA_FAIXA_NO_MAPA[a08.TIPO_ACESSORIO] == "#ff79c6"
+    assert a08.COR_DA_FAIXA_NO_MAPA[a08.TIPO_ACESSORIO] == "var(--mapa-acessorio,#ff79c6)"
     assert (a08.TIPO_ACESSORIO, cat["legenda"]) in a08.LEGENDA_DAS_FAIXAS
     assert a08.TIPO_ACESSORIO in a08.TIPOS_COM_COR_NA_REGUA
     pagina = MOCKUP.read_text(encoding="utf-8")

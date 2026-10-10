@@ -4715,15 +4715,16 @@ def html_dos_canais(cena: dict[str, Any]) -> str:
 
 
 
-#: A cor de cada tipo na mini-faixa do painel do aparelho, na página do mapa das portas, que tem
-#: a paleta dela e nenhum token ``--c-<tipo>`` na raiz: aqui o valor continua em hex, porque um
-#: `var()` sem token definido apaga a cor em vez de cair no padrão. Fica para quando a página do
-#: mapa (`interface/pagina_do_mapa.py`) definir os tokens dela.
-COR_DA_FAIXA_NO_MAPA = {
+#: O padrão de cada tipo na mini-faixa do painel do aparelho, que aparece na aba 08 e na página do
+#: mapa das portas. Essa página não define token de tipo na raiz, então o padrão vai DENTRO do
+#: ``var()``: sem tema, vale o hex; com um tema que defina ``--mapa-<tipo>``, vale o do tema.
+PADRAO_DA_FAIXA_NO_MAPA = {
     "controle": "#f8f8f2", "celular": "#ff9a8b", "relogio": "#8fa8ff", "fone": "#8be9fd",
     "caixa": "#bd93f9", "teclado": "#ffb86c", "mouse": "#f1fa8c", "wifi": "#c3e88d",
     "ruido": "#8a8fa3", "outro": "#9a9eb8", "adaptador": "#6272a4", TIPO_ACESSORIO: "#ff79c6",
 }
+COR_DA_FAIXA_NO_MAPA = {tipo: f"var(--mapa-{tipo},{cor})"
+                        for tipo, cor in PADRAO_DA_FAIXA_NO_MAPA.items()}
 
 
 def _a_faixa_do_painel(linha: Any, cor_do: dict[str, str], nomes: dict[str, str]) -> dict[str, Any]:

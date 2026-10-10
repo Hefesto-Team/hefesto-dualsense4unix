@@ -178,6 +178,10 @@ def test_a_cor_de_cada_tipo_e_um_token_que_a_folha_da_aba_define_na_raiz() -> No
         assert f"--c-{tipo}" in raiz and tm.token_permitido(f"--c-{tipo}"), tipo
         assert tm.cor(raiz[f"--c-{tipo}"]) is not None, tipo
     assert not any(_HEXA.search(str(v)) for v in a08.CATEGORIA_ACESSORIO.values())
+    for tipo, valor in a08.COR_DA_FAIXA_NO_MAPA.items():
+        padrao = a08.PADRAO_DA_FAIXA_NO_MAPA[tipo]
+        assert valor == f"var(--mapa-{tipo},{padrao})", f"COR_DA_FAIXA_NO_MAPA[{tipo!r}]"
+        assert tm.token_permitido(f"--mapa-{tipo}") and tm.cor(padrao) is not None, tipo
 
 
 def test_a_secao_do_radio_herda_os_tokens_da_casa_e_a_regua_nao_os_redefine() -> None:
@@ -210,6 +214,13 @@ SONDA = r"""
     teclado: cor('.radio .ar-linha[data-tipo="teclado"] .ar-faixa i.b', 'backgroundColor'),
     fone: cor('.radio svg.ico[style*="--sala-fone"]', 'color'),
     painel: getComputedStyle(document.querySelector('.radio')).getPropertyValue('--panel').trim(),
+    faixa_do_mapa: (() => {
+      const fx = document.createElement('i');
+      fx.setAttribute('style', '--cor-faixa:' + FAIXA_DO_MAPA
+        + ';display:block;width:4px;height:4px;background:var(--cor-faixa, #000)');
+      document.body.appendChild(fx);
+      return getComputedStyle(fx).backgroundColor;
+    })(),
     esconde_a_nota: [...document.querySelectorAll('.nota')].every(
       n => getComputedStyle(n).display === 'none'),
   });
@@ -245,7 +256,8 @@ def _no_webkit(tema: str | None) -> dict[str, Any]:
     def carregou(v: Any, evento: Any) -> None:
         if evento == WebKit2.LoadEvent.FINISHED:
             GLib.timeout_add(300, lambda: (v.evaluate_javascript(
-                SONDA, -1, None, None, None, guardou), False)[1])
+                SONDA.replace("FAIXA_DO_MAPA", json.dumps(a08.COR_DA_FAIXA_NO_MAPA["teclado"])),
+                -1, None, None, None, guardou), False)[1])
 
     ponte.view.connect("load-changed", carregou)
     ponte.view.load_uri(MOCKUP.as_uri())
@@ -261,11 +273,14 @@ def _no_webkit(tema: str | None) -> dict[str, Any]:
 
 def test_no_webkit_o_tema_troca_a_regua_a_sala_e_o_painel_e_a_folha_da_casa_continua() -> None:
     sem = _no_webkit(None)
-    com = _no_webkit(tm.validar(TEMA_VALIDO).folha)
+    com = _no_webkit(tm.validar(TEMA_VALIDO.replace(" }", "; --mapa-teclado:#ff00aa }")).folha)
     assert sem["teclado"] == "rgb(255, 184, 108)", sem
     assert com["teclado"] == "rgb(0, 229, 255)", com
     assert sem["fone"] == "rgb(126, 154, 168)" and com["fone"] == "rgb(0, 200, 83)", (sem, com)
     assert sem["painel"] == "#282a36" and com["painel"] == "#1e1f29", (sem, com)
+    # A mini-faixa do painel leva o padrão dentro do var(): sem tema ela continua com o hex.
+    assert sem["faixa_do_mapa"] == "rgb(255, 184, 108)", sem
+    assert com["faixa_do_mapa"] == "rgb(255, 0, 170)", com
     assert sem["esconde_a_nota"] is True and com["esconde_a_nota"] is True
 
 
