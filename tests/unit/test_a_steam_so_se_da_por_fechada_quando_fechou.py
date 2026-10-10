@@ -174,34 +174,29 @@ def test_o_lar_e_o_usuario_se_conferem(mesa: Mesa, tmp_path: Path) -> None:
     assert not slo.e_deste_lar(999, mesa.raiz, mesa.lar)
 
 
-def _sem_wmctrl(monkeypatch: pytest.MonkeyPatch, abertos: list[list[str]]) -> None:
-    monkeypatch.setattr(steam_launcher.shutil, "which",
-                        lambda n: None if n == "wmctrl" else f"/usr/bin/{n}")
-    monkeypatch.setattr(steam_launcher, "_default_pgrep",
-                        lambda cmd: __import__("subprocess").CompletedProcess(cmd, 0, "100\n", ""))
-    monkeypatch.setattr(steam_launcher, "_spawn_steam",
-                        lambda **_k: abertos.append(["steam"]) or True)
+def _o_dono_reabre(monkeypatch: pytest.MonkeyPatch, abertos: list[list[str]]) -> None:
+    monkeypatch.setattr(slo, "ha_porta_de_reabrir", lambda: True)
+    monkeypatch.setattr(slo, "reopen_steam", lambda **_k: abertos.append(["steam"]) or True)
 
 
-def test_sem_wmctrl_a_steam_de_outro_lar_nao_ganha_outra(
+def test_a_steam_de_outro_lar_nao_ganha_outra(
         monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """Sem `wmctrl` e com a Steam de pé num `HOME` que não é o de quem pede, o"""
+    """Com a Steam de pé num `HOME` que não é o de quem pede, o PS não abre outra."""
     abertos: list[list[str]] = []
-    _sem_wmctrl(monkeypatch, abertos)
+    _o_dono_reabre(monkeypatch, abertos)
     monkeypatch.setattr(slo, "processos_da_steam", lambda *a, **k: [
         slo.ProcessoDaSteam(CLIENTE, "cliente", str(tmp_path / "home-dela"), "1")])
-    assert steam_launcher.open_or_focus_steam(
-        which=lambda n: f"/usr/bin/{n}") is False
+    assert steam_launcher.open_or_focus_steam() is False
     assert abertos == []
 
 
 def test_a_steam_deste_lar_na_bandeja_ainda_se_mostra(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A Steam deste lar sem janela (na bandeja) ou sem `wmctrl`: o `steam`"""
+    """A Steam deste lar sem janela (na bandeja): o pedido vai ao dono, que a mostra."""
     abertos: list[list[str]] = []
-    _sem_wmctrl(monkeypatch, abertos)
+    _o_dono_reabre(monkeypatch, abertos)
     monkeypatch.setattr(slo, "processos_da_steam", lambda *a, **k: [
         slo.ProcessoDaSteam(CLIENTE, "cliente", str(Path.home()), "1")])
-    assert steam_launcher.open_or_focus_steam(which=lambda n: f"/usr/bin/{n}") is True
+    assert steam_launcher.open_or_focus_steam() is True
     assert abertos == [["steam"]]
 
 
@@ -256,8 +251,8 @@ def test_a_steam_de_lar_que_nao_se_le_nao_e_fechada_nem_leva_sinal(mesa: Mesa) -
 def test_o_ps_nao_recusa_a_steam_de_lar_que_nao_se_le(monkeypatch: pytest.MonkeyPatch) -> None:
     """Um lar que não se lê não é «de outro lar»: o PS da bandeja continua"""
     abertos: list[list[str]] = []
-    _sem_wmctrl(monkeypatch, abertos)
+    _o_dono_reabre(monkeypatch, abertos)
     monkeypatch.setattr(slo, "processos_da_steam", lambda *a, **k: [
         slo.ProcessoDaSteam(CLIENTE, "cliente", "", "1")])
-    assert steam_launcher.open_or_focus_steam(which=lambda n: f"/usr/bin/{n}") is True
+    assert steam_launcher.open_or_focus_steam() is True
     assert abertos == [["steam"]]

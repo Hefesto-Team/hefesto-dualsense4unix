@@ -534,7 +534,6 @@ _COMANDO_SH = re.compile(
 def _nomes_dos_donos() -> dict[str, str]:
     """Todo nome de lançador que as tabelas dos donos declaram, com a origem."""
     from hefesto_dualsense4unix.integrations import reposicao_dos_lancadores as rl
-    from hefesto_dualsense4unix.integrations import steam_launcher as sl
     from hefesto_dualsense4unix.interface import desenho_dos_lancadores as dl
 
     nomes: dict[str, str] = {}
@@ -544,8 +543,6 @@ def _nomes_dos_donos() -> dict[str, str]:
                 nomes[nome] = f"reposicao_dos_lancadores.LANCADORES ({lancador.chave})"
     for nome in (*dl.A_STEAM.atalhos, *dl.A_STEAM.comandos):
         nomes[nome] = "desenho_dos_lancadores.A_STEAM"
-    nomes[sl.STEAM_BINARY] = "steam_launcher.STEAM_BINARY"
-    nomes[sl.WMCTRL_BINARY] = "steam_launcher.WMCTRL_BINARY"
     return nomes
 
 
@@ -582,8 +579,7 @@ def _fora_da_tabela() -> list[str]:
     sem_raiz = [
         f"{nome} (de {origem}): o `pgrep`/`pkill` de mentira não o reconhece"
         for nome, origem in _nomes_dos_donos().items()
-        if origem != "steam_launcher.WMCTRL_BINARY"
-        and not any(r in nome.lower() for r in raizes)
+        if not any(r in nome.lower() for r in raizes)
     ]
     return sorted(faltam) + sorted(sem_raiz)
 
@@ -600,7 +596,7 @@ def test_todo_lancador_do_produto_e_dos_scripts_tem_duble() -> None:
 def test_o_censo_acha_os_lancadores_que_ja_se_sabe_que_existem() -> None:
     """A régua do censo não pode virar um SIM para tudo: `src/` chama `steam`,"""
     no_codigo = _nomes_no_codigo()
-    assert {"steam", "xdg-open", "pkill", "pgrep", "flatpak", "wmctrl"} <= set(no_codigo)
+    assert {"steam", "xdg-open", "pkill", "pgrep", "flatpak"} <= set(no_codigo)
     assert {"steamwebhelper", "com.heroicgameslauncher.hgl", "net.lutris.Lutris",
             "com.valvesoftware.Steam", "steam-native"} <= set(_nomes_dos_donos())
 

@@ -13,6 +13,7 @@ import pytest
 from hefesto_dualsense4unix.daemon.subsystems import hotkey
 from hefesto_dualsense4unix.integrations import ambiente_do_jogo as adj
 from hefesto_dualsense4unix.integrations import fora_do_servico as fds
+from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 from hefesto_dualsense4unix.integrations import steam_launcher
 
 _RAIZ = Path(__file__).resolve().parents[2]
@@ -54,12 +55,16 @@ def _popen_proibido(*_a: Any, **_k: Any) -> object:
     raise AssertionError("a Steam nasceu por Popen de dentro do serviço")
 
 
-def _pgrep(rc: int, saida: str = "") -> Any:
-    return lambda _cmd: subprocess.CompletedProcess(["pgrep"], rc, stdout=saida, stderr="")
-
-
-def _wmctrl_sem_janela(cmd: list[str]) -> subprocess.CompletedProcess[str]:
-    return subprocess.CompletedProcess(cmd, 0, stdout="0x01 0 Firefox.firefox h t\n", stderr="")
+def _a_steam_pelo_gerenciador(
+    monkeypatch: pytest.MonkeyPatch, executar: _Executar, *, de_pe_antes: bool = False
+) -> None:
+    """O PS de dentro do serviço: o dono reabre, e a Steam fica de pé quando o pedido sai."""
+    monkeypatch.setattr(slo.shutil, "which", lambda n: f"/usr/bin/{n}")
+    monkeypatch.setattr(slo, "processos_da_steam", lambda *a, **k: [])
+    monkeypatch.setattr(slo, "steam_running", lambda: de_pe_antes or bool(executar.chamadas))
+    monkeypatch.setattr(slo.subprocess, "Popen", _popen_proibido)
+    monkeypatch.setattr(fds, "contexto_atual", lambda **_k: _DENTRO_DO_SERVICO)
+    monkeypatch.setattr(fds, "_executar_de_verdade", executar)
 
 
 def _depois_do_traco(cmd: list[str]) -> list[str]:
@@ -67,26 +72,15 @@ def _depois_do_traco(cmd: list[str]) -> list[str]:
 
 
 class TestADoDaemonNasceFora:
-    """MORDE: troque o ``fora_do_servico.abrir`` de ``_spawn_steam`` pelo"""
+    """MORDE: troque o ``fora_do_servico.abrir`` do ``reopen_steam`` pelo ``Popen``."""
 
-    @pytest.mark.parametrize(
-        ("pgrep", "desfecho"),
-        [(_pgrep(1), "spawned"), (_pgrep(0, "4242\n"), "refocus_fallback_spawn")],
-        ids=["spawned", "refocus_fallback_spawn"],
-    )
+    @pytest.mark.parametrize("de_pe_antes", [False, True], ids=["fechada", "de_pe"])
     def test_a_steam_do_botao_ps_nasce_numa_unidade(
-        self, pgrep: Any, desfecho: str, monkeypatch: pytest.MonkeyPatch
+        self, de_pe_antes: bool, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setattr(steam_launcher.shutil, "which", lambda n: f"/usr/bin/{n}")
         executar = _Executar(0)
-        assert steam_launcher.open_or_focus_steam(
-            which=lambda n: f"/usr/bin/{n}",
-            pgrep_runner=pgrep,
-            wmctrl_runner=_wmctrl_sem_janela,
-            popen_runner=_popen_proibido,
-            contexto=_DENTRO_DO_SERVICO,
-            executar=executar,
-        ) is True, desfecho
+        _a_steam_pelo_gerenciador(monkeypatch, executar, de_pe_antes=de_pe_antes)
+        assert steam_launcher.open_or_focus_steam() is True
         assert len(executar.chamadas) == 1
         cmd = executar.chamadas[0]
         assert cmd[:2] == ["systemd-run", "--user"]
@@ -215,12 +209,11 @@ class TestOAmbienteChegaAoFilho:
         return sujo
 
     def test_o_filho_recebe_o_ambiente_limpo_e_nada_da_unidade_do_daemon(
-        self, daemon_sujo: dict[str, str]
+        self, daemon_sujo: dict[str, str], monkeypatch: pytest.MonkeyPatch
     ) -> None:
         executar = _Executar(0)
-        assert steam_launcher._spawn_steam(
-            popen_runner=_popen_proibido, contexto=_DENTRO_DO_SERVICO, executar=executar
-        ) is True
+        _a_steam_pelo_gerenciador(monkeypatch, executar)
+        assert steam_launcher.open_or_focus_steam() is True
         cmd = executar.chamadas[0]
         do_gerenciador = {"VIRTUAL_ENV": "/venv/do/gerenciador", "LANG": "C.UTF-8"}
         filho = _ambiente_do_filho(cmd, do_gerenciador)
@@ -317,22 +310,17 @@ class TestOPopenDeSempre:
         assert ab.caminho == "unidade"
         assert ab.unidade is not None
 
-    def test_a_espera_do_systemd_run_cabe_no_teto_do_mesmo_toque(
+    def test_o_systemd_run_de_verdade_espera_o_teto_do_dono(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O botão PS chama o ``abrir`` no fio do gesto (``hotkey.py``, desde a"""
+        """O botão PS chama o ``abrir`` no fio do gesto: a espera é a do dono, com teto."""
         esperas: dict[str, float] = {}
 
         def _run(cmd: Sequence[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
             esperas[cmd[0]] = kwargs["timeout"]
             return subprocess.CompletedProcess(list(cmd), 0, stdout="", stderr="")
 
-        monkeypatch.setattr(steam_launcher.subprocess, "run", _run)
-        steam_launcher._default_pgrep(["pgrep", "-x", "steam"])
-        steam_launcher._default_wmctrl(["wmctrl", "-lx"])
-        teto = min(esperas["pgrep"], esperas["wmctrl"])
-        assert teto >= fds.ESPERA_DO_SYSTEMD_RUN_S
-
+        monkeypatch.setattr(fds.subprocess, "run", _run)
         monkeypatch.setattr(fds, "_a_suite_esta_rodando", lambda: False)
         fds._executar_de_verdade(["systemd-run", "--user", "--", "steam"], {})
         assert esperas["systemd-run"] == fds.ESPERA_DO_SYSTEMD_RUN_S
@@ -373,12 +361,14 @@ class TestASuiteNaoAbreUnidade:
         assert "a suíte está no ar" in ab.tentativas[0]
 
 
+#: Os ``Popen`` de cada módulo; o ``steam_launcher`` não abre nada, pede ao ``reopen_steam``.
 _DONOS = {
-    _INTEGRACOES / "steam_launcher.py": 1,
+    _INTEGRACOES / "steam_launcher.py": 0,
     _INTEGRACOES / "steam_launch_options.py": 1,
     _INTEGRACOES / "reposicao_dos_lancadores.py": 0,
     _RAIZ / "src" / "hefesto_dualsense4unix" / "daemon" / "subsystems" / "hotkey.py": 0,
 }
+_PEDEM_AO_DONO = frozenset({_INTEGRACOES / "steam_launcher.py"})
 
 
 @pytest.mark.parametrize("arquivo", list(_DONOS), ids=lambda p: p.name)
@@ -402,4 +392,7 @@ def test_nenhum_aplicativo_nasce_por_popen_fora_do_dono(arquivo: Path) -> None:
         and isinstance(no.func.value, ast.Name)
         and no.func.value.id == "fora_do_servico"
     ]
-    assert abrires, f"{arquivo.name} não abre nada pelo dono"
+    if arquivo in _PEDEM_AO_DONO:
+        assert not abrires, f"{arquivo.name} voltou a abrir a Steam por conta própria"
+    else:
+        assert abrires, f"{arquivo.name} não abre nada pelo dono"

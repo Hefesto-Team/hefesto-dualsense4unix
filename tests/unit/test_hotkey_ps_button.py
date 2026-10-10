@@ -1,12 +1,12 @@
 """Testes do PS solo (FEAT-HOTKEY-STEAM-01)."""
 from __future__ import annotations
 
-import subprocess
 from typing import Any
 
 import pytest
 
-from hefesto_dualsense4unix.integrations import fora_do_servico, steam_launcher
+from hefesto_dualsense4unix.integrations import steam_launch_options as slo
+from hefesto_dualsense4unix.integrations import steam_launcher
 from hefesto_dualsense4unix.integrations.hotkey_daemon import HotkeyConfig, HotkeyManager
 
 
@@ -156,10 +156,6 @@ def test_long_press_threshold_configuravel():
     assert fired == ["long"]
 
 
-def _make_completed(rc: int, stdout: str = "") -> subprocess.CompletedProcess[str]:
-    return subprocess.CompletedProcess(args=["fake"], returncode=rc, stdout=stdout, stderr="")
-
-
 @pytest.fixture(autouse=True)
 def _reset_missing_warning():
     steam_launcher._reset_missing_warning_for_tests()
@@ -167,136 +163,30 @@ def _reset_missing_warning():
     steam_launcher._reset_missing_warning_for_tests()
 
 
-_DA_PESSOA = fora_do_servico.Contexto(gerenciador=True, herdaria=None, oom_do_gerenciador=100)
-
-
-def test_open_or_focus_steam_spawn_quando_nao_roda():
-    popen_calls: list[tuple[list[str], dict[str, Any]]] = []
-
-    def fake_popen(cmd: list[str], **kwargs: Any) -> object:
-        popen_calls.append((cmd, kwargs))
-        return object()
-
-    def fake_pgrep(_cmd: list[str]) -> subprocess.CompletedProcess[str]:
-        return _make_completed(rc=1, stdout="")
-
-    ok = steam_launcher.open_or_focus_steam(
-        which=lambda _name: "/usr/bin/steam",
-        pgrep_runner=fake_pgrep,
-        popen_runner=fake_popen,
-        contexto=_DA_PESSOA,
-    )
-    assert ok is True
-    assert len(popen_calls) == 1
-    cmd, kwargs = popen_calls[0]
-    assert cmd == ["steam"]
-    assert kwargs["stdin"] is subprocess.DEVNULL
-    assert kwargs["stdout"] is subprocess.DEVNULL
-    assert kwargs["stderr"] is subprocess.DEVNULL
-    assert kwargs["start_new_session"] is True
-    assert "shell" not in kwargs or kwargs["shell"] is False
-
-
-def test_open_or_focus_steam_usa_wmctrl_quando_processo_existe(monkeypatch):
-    wmctrl_calls: list[list[str]] = []
-    popen_called = False
-
-    def fake_pgrep(_cmd: list[str]) -> subprocess.CompletedProcess[str]:
-        return _make_completed(rc=0, stdout="12345\n")
-
-    def fake_wmctrl(cmd: list[str]) -> subprocess.CompletedProcess[str]:
-        wmctrl_calls.append(cmd)
-        if cmd[:2] == ["wmctrl", "-lx"]:
-            listing = (
-                "0x01400007  0 steam.Steam  host-hefesto  Steam\n"
-                "0x01400009  0 Firefox.firefox  host-hefesto  Mozilla\n"
-            )
-            return _make_completed(rc=0, stdout=listing)
-        if cmd[:2] == ["wmctrl", "-ia"]:
-            return _make_completed(rc=0)
-        return _make_completed(rc=1)
-
-    def fake_popen(*_args: Any, **_kwargs: Any) -> object:
-        nonlocal popen_called
-        popen_called = True
-        return object()
-
-    monkeypatch.setattr(steam_launcher.shutil, "which", lambda name: f"/usr/bin/{name}")
-
-    ok = steam_launcher.open_or_focus_steam(
-        which=lambda name: f"/usr/bin/{name}",
-        pgrep_runner=fake_pgrep,
-        wmctrl_runner=fake_wmctrl,
-        popen_runner=fake_popen,
-    )
-    assert ok is True
-    assert popen_called is False
-    assert wmctrl_calls[0] == ["wmctrl", "-lx"]
-    assert wmctrl_calls[1] == ["wmctrl", "-ia", "0x01400007"]
-
-
-def test_open_or_focus_steam_fallback_spawn_quando_janela_nao_existe(monkeypatch):
-    popen_calls: list[list[str]] = []
-
-    def fake_pgrep(_cmd: list[str]) -> subprocess.CompletedProcess[str]:
-        return _make_completed(rc=0, stdout="99999\n")
-
-    def fake_wmctrl(cmd: list[str]) -> subprocess.CompletedProcess[str]:
-        if cmd[:2] == ["wmctrl", "-lx"]:
-            return _make_completed(rc=0, stdout="0x01400009  0 Firefox.firefox  host foo\n")
-        return _make_completed(rc=0)
-
-    def fake_popen(cmd: list[str], **_kwargs: Any) -> object:
-        popen_calls.append(cmd)
-        return object()
-
-    monkeypatch.setattr(steam_launcher.shutil, "which", lambda name: f"/usr/bin/{name}")
-    ok = steam_launcher.open_or_focus_steam(
-        which=lambda name: f"/usr/bin/{name}",
-        pgrep_runner=fake_pgrep,
-        wmctrl_runner=fake_wmctrl,
-        popen_runner=fake_popen,
-    )
-    assert ok is True
-    assert popen_calls == [["steam"]]
-
-
-def test_open_or_focus_steam_binario_ausente_loga_uma_vez(caplog):
+def test_open_or_focus_steam_sem_porta_nenhuma_avisa_uma_vez(monkeypatch, caplog):
+    """Nem ``steam`` nem ``xdg-open``: a porta recusa sem abrir, e o aviso sai uma vez."""
     caplog.set_level("WARNING")
-    fake_popen_called = False
+    monkeypatch.setattr(slo, "processos_da_steam", lambda *a, **k: [])
+    monkeypatch.setattr(slo, "ha_porta_de_reabrir", lambda: False)
 
-    def fake_popen(*_a: Any, **_k: Any) -> object:
-        nonlocal fake_popen_called
-        fake_popen_called = True
-        return object()
+    def _reabrir_proibido(**_k: Any) -> bool:
+        raise AssertionError("sem porta nenhuma, nada se reabre")
 
-    ok1 = steam_launcher.open_or_focus_steam(
-        which=lambda _name: None,
-        popen_runner=fake_popen,
-    )
-    ok2 = steam_launcher.open_or_focus_steam(
-        which=lambda _name: None,
-        popen_runner=fake_popen,
-    )
-    assert ok1 is False
-    assert ok2 is False
-    assert fake_popen_called is False
+    monkeypatch.setattr(slo, "reopen_steam", _reabrir_proibido)
+    assert steam_launcher.open_or_focus_steam() is False
+    assert steam_launcher.open_or_focus_steam() is False
 
 
-def test_open_or_focus_steam_nunca_levanta():
-    """Mesmo se pgrep explode, a função retorna False e não propaga."""
-    def bomba_pgrep(_cmd: list[str]) -> subprocess.CompletedProcess[str]:
-        raise RuntimeError("pgrep morreu")
+def test_open_or_focus_steam_nunca_levanta(monkeypatch):
+    """Se o dono explode, a porta devolve False e não propaga ao fio do gesto."""
+    monkeypatch.setattr(slo, "processos_da_steam", lambda *a, **k: [])
+    monkeypatch.setattr(slo, "ha_porta_de_reabrir", lambda: True)
 
-    def fake_popen(_cmd: list[str], **_kwargs: Any) -> object:
-        return object()
+    def _bomba(**_k: Any) -> bool:
+        raise RuntimeError("o dono morreu")
 
-    ok = steam_launcher.open_or_focus_steam(
-        which=lambda name: f"/usr/bin/{name}",
-        pgrep_runner=bomba_pgrep,
-        popen_runner=fake_popen,
-    )
-    assert ok is True
+    monkeypatch.setattr(slo, "reopen_steam", _bomba)
+    assert steam_launcher.open_or_focus_steam() is False
 
 
 def test_daemon_config_ps_button_defaults():

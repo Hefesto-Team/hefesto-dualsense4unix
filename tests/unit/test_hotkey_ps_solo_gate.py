@@ -36,6 +36,7 @@ from typing import Any
 import structlog
 
 from hefesto_dualsense4unix.daemon.subsystems import hotkey
+from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 from hefesto_dualsense4unix.integrations import steam_launcher
 from hefesto_dualsense4unix.integrations.hotkey_daemon import (
     DEFAULT_PS_TOQUE_CURTO_TETO_MS,
@@ -62,7 +63,8 @@ def _patch_steam(monkeypatch) -> list[Any]:
     def _boom(*_a, **_kw):  # pragma: no cover
         raise AssertionError("gate do PS-solo não pode rodar subprocess/pgrep")
 
-    monkeypatch.setattr(steam_launcher, "_default_pgrep", _boom)
+    monkeypatch.setattr(slo, "processos_da_steam", _boom)
+    monkeypatch.setattr(slo, "steam_running", _boom)
     return opened
 
 

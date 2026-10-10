@@ -23,7 +23,7 @@ from hefesto_dualsense4unix.core.keyboard_mappings import TOKEN_TOGGLE_OSK
 from hefesto_dualsense4unix.daemon.subsystems import hotkey
 from hefesto_dualsense4unix.daemon.subsystems import keyboard as teclado
 from hefesto_dualsense4unix.integrations import fora_do_servico as fds
-from hefesto_dualsense4unix.integrations import steam_launcher
+from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 from hefesto_dualsense4unix.integrations.hotkey_daemon import HotkeyConfig, HotkeyManager
 
 _PACOTE = Path(__file__).resolve().parents[2] / "src" / "hefesto_dualsense4unix"
@@ -81,10 +81,6 @@ VEREDITOS: dict[str, tuple[str, int, str]] = {
         "o dono", 1,
         "o `Popen` de reserva do script de um gesto: espera o fim, com teto",
     ),
-    "integrations/steam_launcher.py::_default_popen": (
-        "reserva do dono", 1,
-        "o `popen=` que `_spawn_steam` entrega a `fora_do_servico.abrir`",
-    ),
 }
 
 VEREDITOS_VALIDOS = frozenset({"ajudante", "o dono", "reserva do dono", "outro processo"})
@@ -95,7 +91,6 @@ PROGRAMAS_DELA: dict[str, str] = {
     "daemon/subsystems/hotkey.py::_abrir_o_ato_da_bandeja": (
         "os três atos da bandeja que um gesto alcança (OS-GESTOS, 01/10/2026)"
     ),
-    "integrations/steam_launcher.py::_spawn_steam": "a Steam do PS",
     "integrations/steam_launch_options.py::reopen_steam": "a Steam reaberta",
     "integrations/reposicao_dos_lancadores.py::abrir": (
         "o lançador reposto no «Reiniciar o serviço»"
@@ -548,14 +543,9 @@ def steam_lenta(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> _Gerenciador
     """A Steam fechada, e o gerenciador lento. Nada nasce."""
     ger = _GerenciadorDeMentira(tmp_path / "cgroup", nascer=False)
     ger.demora_s = _DEMORA_DO_GERENCIADOR_S
-    monkeypatch.setattr(
-        "hefesto_dualsense4unix.integrations.steam_launcher.shutil.which",
-        lambda n: f"/usr/bin/{n}",
-    )
-    monkeypatch.setattr(
-        steam_launcher, "_default_pgrep",
-        lambda cmd: subprocess.CompletedProcess(cmd, 1, stdout="", stderr=""),
-    )
+    monkeypatch.setattr(slo.shutil, "which", lambda n: f"/usr/bin/{n}")
+    monkeypatch.setattr(slo, "processos_da_steam", lambda *a, **k: [])
+    monkeypatch.setattr(slo, "steam_running", lambda: bool(ger.chamadas))
     monkeypatch.setattr(fds, "contexto_atual", lambda **_k: _DENTRO_DO_SERVICO)
     monkeypatch.setattr(fds, "_executar_de_verdade", ger)
     return ger

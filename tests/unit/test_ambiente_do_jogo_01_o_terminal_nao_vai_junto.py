@@ -22,7 +22,6 @@ _RAIZ = Path(__file__).resolve().parents[2]
 _WRAPPER = _RAIZ / "assets" / "hefesto-launch.sh"
 _DISABLE = _RAIZ / "scripts" / "disable_steam_input.sh"
 _SLO = Path(slo.__file__).resolve()
-_LAUNCHER = Path(steam_launcher.__file__).resolve()
 _PACOTE = _RAIZ / "src" / "hefesto_dualsense4unix"
 _REPOSICAO = _PACOTE / "integrations" / "reposicao_dos_lancadores.py"
 _HOTKEY = _PACOTE / "daemon" / "subsystems" / "hotkey.py"
@@ -214,20 +213,21 @@ class TestAPontaPython:
         _confere_limpo(popen_de_mentira[0]["env"], terminal_sujo, sessao)
 
     def test_o_botao_ps_do_daemon(
-        self, terminal_sujo: dict[str, str], sessao: dict[str, str]
+        self,
+        terminal_sujo: dict[str, str],
+        sessao: dict[str, str],
+        popen_de_mentira: list[dict[str, Any]],
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        chamadas: list[dict[str, Any]] = []
-
-        def _popen(cmd: list[str], **kwargs: Any) -> object:
-            chamadas.append({"cmd": list(cmd), **kwargs})
-            return object()
-
-        assert steam_launcher._spawn_steam(popen_runner=_popen) is True
-        assert chamadas[0]["cmd"] == ["steam"]
-        _confere_limpo(chamadas[0]["env"], terminal_sujo, sessao)
+        """O PS pede ao ``reopen_steam``: o ambiente limpo é o do dono, sem cópia."""
+        monkeypatch.setattr(slo, "processos_da_steam", lambda *a, **k: [])
+        monkeypatch.setattr(slo, "steam_running", lambda: True)
+        assert steam_launcher.open_or_focus_steam() is True
+        assert popen_de_mentira[0]["cmd"] == ["steam"]
+        _confere_limpo(popen_de_mentira[0]["env"], terminal_sujo, sessao)
 
     @pytest.mark.parametrize(
-        "arquivo", [_SLO, _LAUNCHER, _REPOSICAO, _HOTKEY], ids=lambda p: p.name
+        "arquivo", [_SLO, _REPOSICAO, _HOTKEY], ids=lambda p: p.name
     )
     def test_toda_steam_que_nasce_do_modulo_passa_pelo_dono(self, arquivo: Path) -> None:
         """Um `Popen` novo, ou uma chamada nova com a Steam no argv, sem"""
