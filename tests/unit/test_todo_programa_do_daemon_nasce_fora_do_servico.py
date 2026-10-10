@@ -85,11 +85,6 @@ VEREDITOS: dict[str, tuple[str, int, str]] = {
         "reserva do dono", 1,
         "o `popen=` que `_spawn_steam` entrega a `fora_do_servico.abrir`",
     ),
-    "integrations/tray.py::TrayController._on_open_tui": (
-        "outro processo", 1,
-        "roda no processo da bandeja (`app-hefesto…tray@autostart.service`), "
-        "não no daemon; a classe tem lápide desde 19/09 e nada a instancia",
-    ),
 }
 
 VEREDITOS_VALIDOS = frozenset({"ajudante", "o dono", "reserva do dono", "outro processo"})

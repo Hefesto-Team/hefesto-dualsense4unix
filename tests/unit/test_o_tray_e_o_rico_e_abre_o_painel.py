@@ -1,6 +1,7 @@
 """O `tray` sobe o `AppTray`, e ele abre o PAINEL — não a TUI."""
 from __future__ import annotations
 
+import ast
 import inspect
 import pathlib
 
@@ -19,6 +20,25 @@ def test_o_subcomando_sobe_o_apptray_e_nao_o_pobre() -> None:
         "o `TrayController` voltou a ser instanciado aqui. Ele é o tray pobre: "
         "sem «Abrir painel», sem marca do perfil ativo, e com uma thread "
         "própria de refresh que o `AppTray` não precisa.")
+
+
+def test_a_bandeja_tem_um_dono_so() -> None:
+    """Uma classe de bandeja no pacote, a do `app/tray.py`, e o módulo velho fora.
+
+    O `TrayController` de `integrations/tray.py` ficou morto de 19/09 a 10/10 com
+    teste, isenção, contrato e remendo próprios, porque o arquivo guardava uma
+    função viva. A função mora agora no dono vivo.
+    """
+    pacote = RAIZ / "src" / "hefesto_dualsense4unix"
+    assert not (pacote / "integrations" / "tray.py").exists(), (
+        "o `integrations/tray.py` voltou: a bandeja tem um dono só, o `app/tray.py`")
+    bandejas = sorted(
+        f"{arquivo.relative_to(pacote).as_posix()}::{no.name}"
+        for arquivo in pacote.rglob("*.py")
+        for no in ast.walk(ast.parse(arquivo.read_text(encoding="utf-8")))
+        if isinstance(no, ast.ClassDef) and "Tray" in no.name)
+    assert bandejas == ["app/tray.py::AppTray"], (
+        f"classe de bandeja fora do dono: {bandejas}")
 
 
 def test_os_quatro_callbacks_estao_ligados() -> None:

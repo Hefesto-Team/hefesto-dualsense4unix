@@ -98,8 +98,7 @@ def _reconectar_os_controles() -> bool:
 
 def tray_cmd() -> None:
     """Sobe o ícone de bandeja e fica em primeiro plano até `Sair`."""
-    from hefesto_dualsense4unix.app.tray import AppTray
-    from hefesto_dualsense4unix.integrations.tray import probe_gi_availability
+    from hefesto_dualsense4unix.app.tray import AppTray, probe_gi_availability
 
     ok, motivo = probe_gi_availability()
     if not ok:

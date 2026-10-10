@@ -18,7 +18,6 @@ from hefesto_dualsense4unix.integrations.desktop_notifications import (
     notify,
     statusnotifierwatcher_available,
 )
-from hefesto_dualsense4unix.integrations.tray import probe_gi_availability
 from hefesto_dualsense4unix.utils import identidade
 from hefesto_dualsense4unix.utils.i18n import _
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -558,4 +557,32 @@ class AppTray:
         raise RuntimeError("AppIndicator indisponivel")
 
 
-__all__ = ["AppTray"]
+def probe_gi_availability() -> tuple[bool, str]:
+    """Verifica se GTK3 + AppIndicator estão importáveis."""
+    try:
+        import gi
+    except ImportError:
+        return False, (
+            "PyGObject não instalado. Rode: ./scripts/dev_bootstrap.sh --with-tray"
+        )
+    try:
+        gi.require_version("Gtk", "3.0")
+        from gi.repository import Gtk  # noqa: F401
+    except Exception as exc:
+        return False, f"Gtk 3.0 indisponivel: {exc}"
+
+    for version_name in ("AyatanaAppIndicator3", "AppIndicator3"):
+        try:
+            gi.require_version(version_name, "0.1")
+            from gi import repository  # noqa: F401
+
+            return True, f"ok via {version_name}"
+        except Exception:
+            continue
+    return False, (
+        "AppIndicator/Ayatana indisponivel. Rode: sudo apt install "
+        "gir1.2-ayatanaappindicator3-0.1  # Ubuntu/Pop/Debian"
+    )
+
+
+__all__ = ["AppTray", "probe_gi_availability"]

@@ -832,19 +832,6 @@ _NAO_E_PROMESSA: dict[str, str] = {
     ),
 
     # 56 citações em `interface/`, `rumble_actions` 28, `input_actions` 21,
-    "integrations/tray.py::TrayController": (
-        "19/09/2026 — LÁPIDE, e ela é o efeito direto da `TRAY-ORFAO-01`. Este "
-        "era o tray POBRE: clicar no ícone abria a TUI no terminal, a lista de "
-        "perfis não marcava o ativo, e a linha de estado era remontada aqui em "
-        "vez de vir do dono. O `cli/cmd_tray.py` passou a subir o "
-        "`app.tray.AppTray`, que tem «Abrir painel», o submenu com o ativo "
-        "marcado e `N controles` de `daemon.state_full` — medido na máquina "
-        "dela no mesmo dia, com o daemon vivo. Decisão dela: *\"o tray faz o "
-        "mesmo mas melhor\"*. "
-        "`probe_gi_availability`, do MESMO arquivo, continua vivo e é chamado "
-        "pelo `app/tray.py:21` — por isso a classe ganha lápide em vez de o "
-        "arquivo ir para o código aposentado."
-    ),
     "utils/memoria_dos_controles.py::conferir_a_casa": (
         "25/09/2026, ESQUECER-OS-CONTROLES-01 — é o «a máquina está limpa?» da "
         "rotina de controle de qualidade, e quem o chama é "
