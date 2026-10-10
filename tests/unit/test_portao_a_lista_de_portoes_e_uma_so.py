@@ -511,3 +511,13 @@ def test_o_so_com_id_fora_da_tabela_sai_rc_2_nomeando(portoes_de_mentira: Path) 
 
 def test_o_so_sem_id_sai_rc_2(portoes_de_mentira: Path) -> None:
     assert _rodar(portoes_de_mentira, "--so").returncode == 2
+
+
+def test_o_so_nunca_abre_o_recibo_da_camada_completa(portoes_de_mentira: Path) -> None:
+    """O recibo certifica a camada completa INTEIRA; um `--so` roda uma parte dela."""
+    import shutil
+
+    shutil.copy2(RAIZ / "scripts" / "recibo_da_medida.py", portoes_de_mentira / "scripts")
+    saida = _rodar(portoes_de_mentira, "--so", "dois")
+    assert saida.returncode == 0, saida.stdout + saida.stderr
+    assert "portoes-completo" not in saida.stdout + saida.stderr, "o --so abriu o recibo"

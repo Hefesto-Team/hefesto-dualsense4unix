@@ -934,6 +934,7 @@ _DECLARADOS = {
     "fala-de-tela": ("@dia", "date.today(): prazo que vence"),
     "comentario-cortado": ("@sempre", "merge-base com o dev: o piso por arquivo anda com a base"),
     "o-ignorado-fica-fora-do-indice": ("@head", "git ls-files --cached --ignored: o índice"),
+    "citacoes-novas": ("@sempre", "merge-base com o dev: a linha acrescentada desde o pé"),
 }
 
 

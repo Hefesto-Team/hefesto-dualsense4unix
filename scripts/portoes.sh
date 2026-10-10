@@ -707,14 +707,15 @@ _AMBIENTE_DE_MENTIRA=(
 # `completo` roda: o `--rapido` NUNCA deixa recibo. O recibo não muda o rc.
 RECIBO_DA_CORRIDA=""
 # o `--so` roda uma parte da tabela, e o recibo é da camada completa INTEIRA: ele nunca o abre
-case " $CAMADAS $([ ${#SO_IDS[@]} -gt 0 ] && echo so) " in
-  *" so "*) ;;
+case " $CAMADAS " in
   *" completo "*)
-    RECIBO_DA_CORRIDA="$(mktemp "${TMPDIR:-/tmp}/portoes-recibo-XXXXXX")"
-    trap 'rm -rf "$LAR_DE_MENTIRA" "$RECIBO_DA_CORRIDA"' EXIT
-    "$PY" "$RAIZ/scripts/recibo_da_medida.py" abrir portoes-completo \
-      --raiz "$RAIZ" --corrida "$RECIBO_DA_CORRIDA" || true
-    echo ;;
+    if [ ${#SO_IDS[@]} -eq 0 ]; then
+      RECIBO_DA_CORRIDA="$(mktemp "${TMPDIR:-/tmp}/portoes-recibo-XXXXXX")"
+      trap 'rm -rf "$LAR_DE_MENTIRA" "$RECIBO_DA_CORRIDA"' EXIT
+      "$PY" "$RAIZ/scripts/recibo_da_medida.py" abrir portoes-completo \
+        --raiz "$RAIZ" --corrida "$RECIBO_DA_CORRIDA" || true
+      echo
+    fi ;;
 esac
 
 # O fim de toda corrida que chega ao veredito: fecha o recibo e sai com o rc.
