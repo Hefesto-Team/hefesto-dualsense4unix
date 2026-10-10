@@ -997,6 +997,10 @@ class UhidDualSense:
             if fd is None:
                 return
             self._fd = None
+            # O pad some: não há tique seguinte para o último par, então o pico do
+            # intervalo não o segura, e o controle termina no que o jogo pediu por último.
+            self._rumble_pico_a_entregar = None
+            self._rumble_toque_restante = 0
             self._entregar_o_pendente()
             self._silence_rumble()
             self._end_game_session()

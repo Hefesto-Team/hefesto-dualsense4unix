@@ -89,6 +89,22 @@ def test_uhid_o_jogo_liga_e_desliga_entre_dois_tiques_e_o_pulso_chega(
         pad.stop()
 
 
+def test_uhid_o_pad_que_some_logo_depois_do_pulso_deixa_o_controle_parado(
+    kernel_do_uhid: KernelDoUhid,
+) -> None:
+    """Sem tique seguinte, o pico não pode segurar o zero: o controle fica vibrando."""
+    fisico = Fisico()
+    pad = _virtual(Relogio(), fisico)
+    _o_jogo_escreve(kernel_do_uhid, pad, (200, 200), (0, 0))
+
+    pad.stop()
+
+    assert fisico.vibracao, "o pad sumiu sem entregar o que o jogo pediu por último"
+    assert fisico.vibracao[-1] == (0, 0), (
+        f"o pad sumiu e o controle ficou em {fisico.vibracao[-1]}: {fisico.vibracao}"
+    )
+
+
 def test_uhid_o_mesmo_par_pedido_duas_vezes_no_intervalo_sai_uma_vez(
     kernel_do_uhid: KernelDoUhid,
 ) -> None:
