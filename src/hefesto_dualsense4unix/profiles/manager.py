@@ -320,8 +320,12 @@ class ProfileManager:
             raise OFreestyleDesligadoError(
                 f"o Modo Freestyle está desligado: {name!r} não entra por {origin!r}"
             )
-        profile = o_que_vale(load_profile(name))
-        self.apply(profile, origin=origin, relatorio=relatorio)
+        carregado = load_profile(name)
+        profile = o_que_vale(carregado)
+        self.apply(
+            profile, origin=origin, relatorio=relatorio,
+            recusados=_gatilhos_recusados(carregado),
+        )
         self.apply_keyboard(profile, relatorio=relatorio)
         self.apply_button_actions(profile, relatorio=relatorio)
         self.apply_remapeamento(profile, relatorio=relatorio)
@@ -360,8 +364,15 @@ class ProfileManager:
         *,
         origin: str = "auto",
         relatorio: dict[str, str] | None = None,
+        recusados: list[str] | None = None,
     ) -> None:
         """Aplica triggers e LEDs do perfil em TODOS os controles (sem marcar ativo).
+
+        `recusados` são os gatilhos que a carga desligou porque o controle não os aceita
+        (:attr:`TriggerConfig.motivo_da_recusa`); com eles, a seção `trigger` do relatório diz
+        «recusado» e os nomeia, e o resto do perfil aplica. `None` lê os do próprio `profile`:
+        quem passa a vista do computador (:func:`o_que_vale`) passa os do perfil carregado,
+        porque a vista revalidada já não guarda o motivo.
 
         PERFIL-01 (4P-01): a seção global vai por `apply_output_defaults` —
         broadcast REAL que IGNORA o seletor de alvo da GUI. Os setters
@@ -412,6 +423,12 @@ class ProfileManager:
         (AUDIT-FINDING-PROFILE-MIC-LED-RESET-01): jamais colateral de
         profile switch.
         """
+        if recusados is None:
+            recusados = _gatilhos_recusados(profile)
+        if recusados:
+            logger.warning(
+                "perfil_com_gatilho_recusado", name=profile.name, gatilhos=recusados
+            )
         # sair. ABAS-05 (25/07): o `trigger.reset` (botão "Desligar" da aba
         if origin == "manual":
             soltar = getattr(self.controller, "clear_user_output_overrides", None)
@@ -483,6 +500,8 @@ class ProfileManager:
                 resultado_da_saida if isinstance(resultado_da_saida, str) else "",
                 "aplicado",
             )
+            if recusados:
+                relatorio["trigger"] = "recusado: " + "; ".join(recusados)
             for categoria in sorted(_SECOES_DA_SAIDA):
                 relatorio.setdefault(categoria, palavra)
 
@@ -2026,6 +2045,28 @@ def resolve_key_bindings(
 def _to_key_bindings(profile: Profile) -> dict[str, KeyBinding]:
     """Resolve `Profile.key_bindings` em mapping pronto para o device."""
     return resolve_key_bindings(profile.key_bindings)
+
+
+_LADOS_DO_GATILHO = (("left", "esquerdo"), ("right", "direito"))
+
+
+def _gatilhos_recusados(profile: Profile) -> list[str]:
+    """Os gatilhos que a carga desligou, com o motivo: o global e o escrito de cada controle."""
+    recusados: list[str] = []
+    for lado, nome in _LADOS_DO_GATILHO:
+        motivo = getattr(profile.triggers, lado).motivo_da_recusa
+        if motivo:
+            recusados.append(f"{nome} ({motivo})")
+    for uniq, cfg in sorted((profile.controllers or {}).items()):
+        if cfg.triggers is None:
+            continue
+        for lado, nome in _LADOS_DO_GATILHO:
+            if lado not in cfg.triggers.model_fields_set:
+                continue
+            motivo = getattr(cfg.triggers, lado).motivo_da_recusa
+            if motivo:
+                recusados.append(f"{uniq} {nome} ({motivo})")
+    return recusados
 
 
 def _controllers_to_specs(

@@ -9,6 +9,7 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    PrivateAttr,
     SerializerFunctionWrapHandler,
     field_validator,
     model_serializer,
@@ -99,6 +100,7 @@ class TriggerConfig(BaseModel):
 
     mode: str
     params: list[int] | list[list[int]] = Field(default_factory=list)
+    _motivo_da_recusa: str | None = PrivateAttr(default=None)
 
     @field_validator("mode", mode="after")
     @classmethod
@@ -175,6 +177,31 @@ class TriggerConfig(BaseModel):
 
             self.params = [FREQUENCIA_PADRAO_DA_VIBRACAO_POR_POSICAO, *simples[1:]]
         return self
+
+    @model_validator(mode="after")
+    def _o_que_o_controle_nao_aceita_carrega_desligado(self) -> TriggerConfig:
+        """O lado que o `build_from_name` não monta carrega como `Off`, com o motivo guardado.
+
+        A aridade e a faixa de cada modo só o `build_from_name` e as fábricas conhecem. Aqui,
+        onde o perfil nasce, o efeito é montado por ele: o gatilho escrito à mão, de outra
+        versão ou importado que o controle não aceita vira `Off`, e o resto do perfil carrega e
+        ativa. O motivo fica em :attr:`motivo_da_recusa` (não vai ao disco), e a ativação o leva
+        ao relatório. Roda depois da regra da frequência 0, que traduz em vez de desligar.
+        """
+        from hefesto_dualsense4unix.core.trigger_effects import build_from_name
+
+        try:
+            build_from_name(self.mode, self.params)
+        except Exception as exc:
+            self._motivo_da_recusa = f"{self.mode} {list(self.params)}: {exc}"
+            self.mode = MODO_SEM_EFEITO_DO_GATILHO
+            self.params = []
+        return self
+
+    @property
+    def motivo_da_recusa(self) -> str | None:
+        """Por que o gatilho escrito virou `Off` na carga; `None` quando ele montou."""
+        return self._motivo_da_recusa
 
     @property
     def is_nested(self) -> bool:
