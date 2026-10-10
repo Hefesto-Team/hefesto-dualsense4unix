@@ -2660,6 +2660,19 @@ class IpcHandlersMixin:
                                 and not isinstance(hz_raw, bool)
                                 else 0.0
                             ),
+                            # A perda do mesmo leitor: o report que não chegou
+                            # (o salto do contador do report) e o que chegou
+                            # estragado (CRC ruim, só no rádio). `None` sem leitor.
+                            "reports_perdidos": (
+                                _contador_do_vpad(motion_reader, "reports_perdidos")
+                                if motion_reader is not None
+                                else None
+                            ),
+                            "reports_estragados": (
+                                _contador_do_vpad(motion_reader, "reports_estragados")
+                                if motion_reader is not None
+                                else None
+                            ),
                             "touchpad_clicks": int(
                                 getattr(vp, "touchpad_click_count", 0) or 0
                             ),

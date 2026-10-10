@@ -158,6 +158,11 @@ INPUT_FLAG_AUDIO = 0x02
 #: 31, touch points 32-39. Mesmos números do `_MOTION_WINDOW` do vpad
 #: (`integrations/uhid_gamepad.py`) — travados um no outro por teste.
 MOTION_WINDOW_OFFSET = 15
+#: O contador de reports do aparelho: um `__le32` no `reserved[4]` do corpo
+#: (11 a 14), que o driver não lê e que anda de 1 em 1 por report, no cabo e
+#: no rádio (medido em 15/08/2026). O `seq_number` do corpo 6 não serve: fica
+#: parado em 1 no rádio.
+CONTADOR_DE_REPORT_OFFSET = 11
 MOTION_WINDOW_LEN = 25
 
 #: TOUCH-CLICK-01 — o CLIQUE do touchpad dentro do payload: `buttons[2]` do
@@ -549,6 +554,9 @@ class PhysicalReportReader:
         self._reports_seen = 0
         self._windows_emitted = 0
         self._bt_drops = 0
+        self._contador_anterior: int | None = None
+        self._ilegiveis_no_meio = 0
+        self._reports_perdidos = 0
         self._emit_hz_ema = 0.0
 
 
@@ -568,6 +576,16 @@ class PhysicalReportReader:
     @property
     def bt_drops(self) -> int:
         return self._bt_drops
+
+    @property
+    def reports_estragados(self) -> int:
+        """Reports do rádio que chegaram e não passaram no portão (o CRC)."""
+        return self._bt_drops
+
+    @property
+    def reports_perdidos(self) -> int:
+        """Reports que o aparelho mandou e não chegaram, pelo contador dele."""
+        return self._reports_perdidos
 
     @property
     def touchpad_clicks(self) -> int:
@@ -766,6 +784,8 @@ class PhysicalReportReader:
     ) -> None:
         """Lê reports até o fd morrer (ENODEV), silêncio longo ou sinal de fora."""
         silencio = 0.0
+        self._contador_anterior = None
+        self._ilegiveis_no_meio = 0
         while not self._stop_flag.is_set():
             if self._reopen_flag.is_set():
                 self._reopen_flag.clear()
@@ -802,8 +822,14 @@ class PhysicalReportReader:
             base = _struct_base(data)
             if base is None:
                 if data[0] == INPUT_REPORT_BT:
-                    self._bt_drops += 1
+                    self._ilegiveis_no_meio += 1
+                    de_audio = len(data) == INPUT_REPORT_BT_SIZE and bool(
+                        data[1] & INPUT_FLAG_AUDIO
+                    )
+                    if not de_audio:
+                        self._bt_drops += 1
                 continue
+            self._observe_contador(data, base)
             self._observe_touchpad_click(data, base)
             self._observe_mic_button(data, base)
             self._observe_jack(data, base)
@@ -814,6 +840,28 @@ class PhysicalReportReader:
                 continue
             self._maybe_emit(window)
 
+
+    def _observe_contador(self, report: bytes, base: int) -> None:
+        """Soma os reports que o contador do aparelho pulou desde o anterior.
+
+        O primeiro report de cada fd só semeia. A volta do `uint32` é um passo
+        como outro qualquer; um contador que ANDA PARA TRÁS é o aparelho
+        recomeçando, e semeia de novo em vez de contar quatro bilhões. O report
+        do rádio que chegou e não se lê (CRC ruim, ou de áudio) ocupou um
+        número do contador sem ser perda, e sai da conta do buraco.
+        """
+        inicio = base + CONTADOR_DE_REPORT_OFFSET
+        if len(report) < inicio + 4:
+            return
+        valor = int.from_bytes(report[inicio : inicio + 4], "little")
+        anterior, self._contador_anterior = self._contador_anterior, valor
+        ilegiveis, self._ilegiveis_no_meio = self._ilegiveis_no_meio, 0
+        if anterior is None:
+            return
+        passo = (valor - anterior) & 0xFFFFFFFF
+        if passo >= 0x80000000:
+            return
+        self._reports_perdidos += max(0, passo - 1 - ilegiveis)
 
     def _observe_touchpad_click(self, report: bytes, base: int | None = None) -> None:
         """Entrega ao vpad a BORDA do clique do touchpad deste report cru.
