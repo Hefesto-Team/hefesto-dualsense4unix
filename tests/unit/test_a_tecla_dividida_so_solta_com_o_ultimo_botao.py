@@ -1,4 +1,6 @@
-"""A tecla dividida só solta com o último botão (O-MODIFICADOR-SEGURADO-POR-OUTRO-BOTAO-NAO-SE-SOLTA-01).
+"""A tecla dividida só solta com o último botão.
+
+O-MODIFICADOR-SEGURADO-POR-OUTRO-BOTAO-NAO-SE-SOLTA-01.
 
 Os padrões de fábrica dividem teclas (`l1 = Alt+Shift+Tab`, `r1 = Alt+Tab`). O
 teclado virtual conta quantos botões seguram cada tecla: o key down sai na
@@ -11,6 +13,7 @@ jogo); a régua prova que duas instâncias não se misturam.
 from __future__ import annotations
 
 import sys
+from itertools import pairwise
 from types import SimpleNamespace
 
 import pytest
@@ -70,7 +73,7 @@ def _de(g: _Gravador, tecla: str) -> list[int]:
 def _balanceado(g: _Gravador) -> None:
     for tecla in {t for t, _ in g.eventos}:
         valores = _de(g, tecla)
-        for antes, depois in zip(valores, valores[1:], strict=False):
+        for antes, depois in pairwise(valores):
             assert antes != depois, f"{tecla}: {valores}"
         assert valores.count(1) == valores.count(0), f"{tecla}: {valores}"
 

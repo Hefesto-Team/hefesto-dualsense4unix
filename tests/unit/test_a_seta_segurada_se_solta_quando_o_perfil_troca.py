@@ -1,4 +1,6 @@
-"""A seta segurada se solta quando o perfil troca (A-SETA-SEGURADA-SE-SOLTA-QUANDO-O-PERFIL-TROCA-01).
+"""A seta segurada se solta quando o perfil troca.
+
+A-SETA-SEGURADA-SE-SOLTA-QUANDO-O-PERFIL-TROCA-01.
 
 O mouse virtual emite o d-pad como `KEY_UP/DOWN/LEFT/RIGHT`. A troca da tabela
 (`set_button_actions`, que chega a cada perfil aplicado, inclusive pela troca
@@ -13,6 +15,7 @@ device anota `(código, valor)` na ordem em que o produto emite.
 from __future__ import annotations
 
 import sys
+from itertools import pairwise
 from types import SimpleNamespace
 
 import pytest
@@ -69,7 +72,7 @@ def _balanceado(gravador: _Gravador) -> None:
     """Cada `KEY_* 1` tem o seu `KEY_* 0`, e nenhum código aperta duas vezes seguidas."""
     for seta in _SETAS:
         valores = _de(gravador, seta)
-        for antes, depois in zip(valores, valores[1:], strict=False):
+        for antes, depois in pairwise(valores):
             assert antes != depois, f"{seta}: {valores}"
         assert valores.count(1) == valores.count(0), f"{seta}: {valores}"
 
@@ -135,7 +138,7 @@ def test_em_toda_sequencia_cada_seta_apertada_se_solta(mouse):
 
 
 def test_parar_o_no_esquece_as_setas(mouse):
-    dev, gravador = mouse
+    dev, _gravador = mouse
     _tique(dev, "dpad_right")
     dev.stop()
     assert dev._setas_apertadas == frozenset()

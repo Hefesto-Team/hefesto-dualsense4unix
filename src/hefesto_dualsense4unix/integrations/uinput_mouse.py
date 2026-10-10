@@ -326,7 +326,7 @@ class UinputMouseDevice:
                           if b not in do_mouse and b not in mudos}
 
     def _soltar_o_que_segura(self) -> None:
-        """Solta os cliques e as setas que a tabela ANTERIOR mantinha: ela deixou de ser a vigente."""
+        """Solta os cliques e as setas que a tabela ANTERIOR mantinha: ela deixou de valer."""
         segurados = self._codigos_apertados | self._setas_apertadas
         self._codigos_apertados = frozenset()
         self._setas_apertadas = frozenset()
