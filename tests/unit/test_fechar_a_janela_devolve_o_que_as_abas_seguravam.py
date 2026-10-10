@@ -19,6 +19,8 @@ from __future__ import annotations
 
 import pathlib
 import sys
+import threading
+import time
 from typing import Any
 
 import pytest
@@ -31,6 +33,7 @@ from tests.conftest import exigir_gi_real
 exigir_gi_real("importa `interface.hefesto_vivo`, que carrega o GTK")
 
 from hefesto_dualsense4unix.interface import hefesto_vivo as hv
+from hefesto_dualsense4unix.interface import pacotes
 from hefesto_dualsense4unix.interface.pacotes import a05_vibracao as a05
 
 P1 = "aa:bb:cc:00:00:01"
@@ -115,3 +118,96 @@ def test_sair_sem_teste_ligado_nao_fala_com_o_servico(
     with hv._o_processo_da_janela():
         pass
     assert ponte.chamadas == []
+
+
+# A LARGADA ANDA NA FILA DE CADA CONTROLE (10/10/2026, conferência do conjunto):
+# ela é o «Parar» de todos, e o que ainda está no ar naquele controle termina
+# antes dela. Medido antes desta cura, com o `rumble.set` da ponte levando 0,3 s:
+# o «Testar» deixado na troca de página marcava o controle em teste DEPOIS da
+# largada (o coração o rebatia na aba seguinte, até ela voltar e clicar), e o
+# batimento já conferido mandava o par depois do `rumble.stop` da largada.
+
+DEMORA_DO_SET_S = 0.3
+
+
+class PonteLenta(PonteQueAnota):
+    """A mesma ponte, com o `rumble.set` gastando o prazo como o serviço ocupado."""
+
+    def rumble_set_checked(self, weak: int, strong: int, uniq: str | None = None
+                           ) -> tuple[bool, str | None]:
+        time.sleep(DEMORA_DO_SET_S)
+        self.chamadas.append(("rumble_set", (uniq,)))
+        return True, None
+
+    def rumble_stop_checked(self, uniq: str | None = None) -> tuple[bool, str | None]:
+        self.chamadas.append(("rumble_stop", (uniq,)))
+        return True, None
+
+
+def _ctx() -> pacotes.Contexto:
+    mesa = [{"uniq": P1, "pref": "p1", "jogador": 1, "nome": "Prova", "cor": "",
+             "transporte": "bt", "via": "bt", "alvo": True, "mascara": "dualsense"}]
+    conectados = [{"uniq": P1, "connected": True, "player": 1, "transport": "bt",
+                   "index": 0}]
+    return pacotes.Contexto(
+        state={"controllers": conectados, "rumble_motor_pct_padrao": 100},
+        mesa=mesa, conectados=conectados, estados={}, externos=[])
+
+
+def _testar_pela_porta_do_clique(p: Any) -> threading.Thread:
+    """O «Testar» do P1 pela porta do `Piloto._gesto`: o despachante."""
+    acao = pacotes.gesto_da_pagina("05-vibracao.html", "testar")
+    assert acao is not None
+    ctx = _ctx()
+    return pacotes.despachar("05-vibracao.html", "testar", {"uniq": P1},
+                             lambda: acao(ctx, {"uniq": P1}, p))
+
+
+def _esperar(*fios: threading.Thread | None) -> None:
+    for fio in fios:
+        if fio is not None:
+            fio.join(5)
+            assert not fio.is_alive(), "a fila não andou em 5 s"
+
+
+def test_a_troca_de_pagina_larga_o_testar_que_ainda_estava_no_ar() -> None:
+    """«Testar» lento e a troca de página logo atrás: o controle termina fora do teste."""
+    ponte = PonteLenta()
+    testar = _testar_pela_porta_do_clique(ponte)
+    time.sleep(0.05)
+    largada = pacotes.largar_o_que_as_abas_seguram(ponte)
+    _esperar(testar, largada)
+    assert a05.em_teste() == frozenset(), (
+        "a largada da troca de página passou à frente do «Testar» no ar, e o "
+        f"controle ficou em teste: {sorted(a05.em_teste())} — o coração o rebate "
+        "na aba seguinte")
+    assert ("rumble_passthrough", (True, P1)) in ponte.chamadas, ponte.chamadas
+
+
+def test_a_saida_da_janela_espera_o_testar_que_ainda_estava_no_ar(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Fechar a janela com um «Testar» no ar: ele termina, e a largada o devolve."""
+    ponte = PonteLenta()
+    monkeypatch.setattr(hv, "ponte", ponte)
+    with hv._o_processo_da_janela():
+        testar = _testar_pela_porta_do_clique(ponte)
+        time.sleep(0.05)
+    _esperar(testar)
+    assert a05.em_teste() == frozenset(), sorted(a05.em_teste())
+    nomes = [n for n, _ in ponte.chamadas]
+    assert nomes[-2:] == ["rumble_stop", "rumble_passthrough"], (
+        f"a saída da janela não devolveu o controle depois do «Testar»: {nomes}")
+
+
+def test_a_largada_nao_passa_a_frente_do_batimento_no_ar() -> None:
+    """O batimento conferido sai antes da largada, e o `rumble.stop` é o último."""
+    ponte = PonteLenta()
+    a05._EM_TESTE.add(P1)
+    pacotes.bater_os_coracoes(_ctx(), ponte)
+    largada = pacotes.largar_o_que_as_abas_seguram(ponte)
+    _esperar(largada)
+    nomes = [n for n, _ in ponte.chamadas]
+    assert nomes == ["rumble_set", "rumble_stop", "rumble_passthrough"], (
+        f"a largada cruzou o batimento no ar: {nomes} — o par chega ao serviço "
+        "depois do `rumble.stop` e o motor fica ligado até o teto")

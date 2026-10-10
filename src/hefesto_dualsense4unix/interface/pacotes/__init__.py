@@ -298,13 +298,37 @@ def bater_os_coracoes(ctx: Contexto, p: Any) -> None:
             _entregar_o_batimento(bate.__name__, uniq, batida)
 
 
-def largar_o_que_as_abas_seguram(p: Any) -> None:
-    """Devolve ao jogo/à máquina tudo o que as abas seguravam. **Nunca levanta.**"""
+def _largar_agora(p: Any) -> None:
+    """Roda cada largada registrada. **Nunca levanta.**"""
     for larga in LARGADAS:
         try:
             larga(p)
         except Exception as erro:
             print(f"[largada] {larga.__name__}: {erro}", file=sys.stderr)
+
+
+def largar_o_que_as_abas_seguram(p: Any, *, esperar_s: float = 0.0
+                                 ) -> threading.Thread | None:
+    """Devolve ao jogo/à máquina tudo o que as abas seguravam. **Nunca levanta.**
+
+    A LARGADA É UM «PARAR» DE TODOS, e anda na fila de cada controle: com um
+    gesto ou um batimento ainda no ar, ela entra atrás deles e só larga quando
+    eles terminam. Sem isso, um «Testar» lento deixado na troca de página
+    marcava o controle em teste DEPOIS da largada, e o coração o rebatia na aba
+    seguinte; e um batimento já conferido mandava o par depois do `rumble.stop`.
+    Com as filas vazias ela roda na hora, no fio de quem chamou. `esperar_s` é
+    o quanto quem chama espera a largada na fila (o fim da janela espera; a
+    troca de página, não).
+    """
+    with _TRAVA_DAS_FILAS:
+        filas = tuple(f for f in _O_ULTIMO_DA_FILA if f.startswith(_PREFIXO_DO_CONTROLE))
+    if not filas:
+        _largar_agora(p)
+        return None
+    fio = na_fila(filas, lambda: _largar_agora(p), nome="largada")
+    if esperar_s > 0:
+        fio.join(esperar_s)
+    return fio
 
 
 #: A fila de quem grava algo do usuário: dois gestos com `grava=` nunca se cruzam.
@@ -317,9 +341,12 @@ _TRAVA_DAS_FILAS = threading.Lock()
 _O_ULTIMO_DA_FILA: dict[str, threading.Event] = {}
 
 
+_PREFIXO_DO_CONTROLE = "controle:"
+
+
 def fila_do_controle(uniq: str) -> str:
     """A fila de um controle: a chave é o endereço, igual por cabo e por rádio."""
-    return f"controle:{_so_hex(str(uniq or '').strip())}"
+    return f"{_PREFIXO_DO_CONTROLE}{_so_hex(str(uniq or '').strip())}"
 
 
 def na_fila(filas: Iterable[str], trabalho: Callable[[], Any], *,

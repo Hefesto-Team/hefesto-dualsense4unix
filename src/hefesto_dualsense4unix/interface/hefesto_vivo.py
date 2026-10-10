@@ -4278,6 +4278,11 @@ TEXTOS_QUE_O_FUNIL_LEMBRA = 4096
 _TEXTOS_LIDOS_PELO_FUNIL: dict[str, tuple[str, ...]] = {}
 
 
+#: Quanto a saída da janela espera a largada atrás do que ainda está no ar na
+#: fila de cada controle (um gesto da aba 05 faz até três chamadas de 0,25 s).
+SEGUNDOS_DA_LARGADA_NA_SAIDA = 2.0
+
+
 @contextlib.contextmanager
 def _o_processo_da_janela() -> Iterator[None]:
     """O que o processo da janela liga ao subir e desliga ao sair.
@@ -4286,6 +4291,10 @@ def _o_processo_da_janela() -> Iterator[None]:
     (`destroy` → `Gtk.main_quit`), o `agendar_saida` e o `_morrer`. O teste da
     vibração e o da háptica de cada controle voltam ao jogo na saída, e o teto
     do serviço fica como rede só para a janela que morre sem `finally`.
+
+    A saída ESPERA a largada na fila dos controles: um «Testar» ou um «Parar»
+    ainda no ar termina antes dela, e as filas são de fios que morrem com o
+    processo. O prazo fica abaixo do teto do serviço, que é a rede de depois.
     """
     from hefesto_dualsense4unix.profiles import loader
 
@@ -4295,7 +4304,8 @@ def _o_processo_da_janela() -> Iterator[None]:
     finally:
         try:
             if _AS_ABAS_CHEGARAM:
-                pacotes.largar_o_que_as_abas_seguram(ponte)
+                pacotes.largar_o_que_as_abas_seguram(
+                    ponte, esperar_s=SEGUNDOS_DA_LARGADA_NA_SAIDA)
         finally:
             loader.desligar_a_leitura_pela_assinatura()
 
