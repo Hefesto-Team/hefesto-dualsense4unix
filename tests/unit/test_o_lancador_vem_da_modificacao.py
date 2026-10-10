@@ -17,6 +17,7 @@ import shutil
 import sys
 import time
 from pathlib import Path
+from types import ModuleType
 
 import pytest
 
@@ -37,14 +38,14 @@ _LEITOR_BOM = (
 
 
 @pytest.fixture(scope="module")
-def a07():
+def a07() -> ModuleType:
     from hefesto_dualsense4unix.interface.pacotes import a07_lancadores
 
     return a07_lancadores
 
 
 @pytest.fixture(autouse=True)
-def _a_vigia_so_le_quando_a_regua_pede(a07, monkeypatch):
+def _a_vigia_so_le_quando_a_regua_pede(a07: ModuleType, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(a07.VIGIA, "_disparar", lambda: None)
 
 
@@ -64,15 +65,16 @@ def _plantar(tmp_path: Path, *, mod_id: str = "kytyps5", ligada: bool = True,
              aceitas: tuple[str, ...] = ("lancador",), bloco: object = None,
              leitor: str = _LEITOR_BOM) -> Lugares:
     """Uma modificação instalada no lar de mentira, e o registro dela."""
-    lg = Lugares(codigo=tmp_path / "codigo", dados=tmp_path / "dados",
+    lg = Lugares(codigo=tmp_path / "codigo", dados=tmp_path / "dados",  # noqa-acento: campo do Lugares
                  registro=tmp_path / "config" / "mods.json",
                  estado=tmp_path / "run" / "mods-estado.json")
     pasta = lg.codigo / mod_id
     pasta.mkdir(parents=True, exist_ok=True)
     (pasta / "ler.py").write_text(leitor, encoding="utf-8")
     manifesto = {
-        "id": mod_id, "nome": "KytyPS5", "versao": "0.1", "api": ">=1,<2",
-        "licenca": "GPL-2.0-only", "tipos": ["lancador"], "permissoes": ["lancador"],
+        "id": mod_id, "nome": "KytyPS5", "versao": "0.1", "api": ">=1,<2",  # noqa-acento: chave do manifesto
+        "licenca": "GPL-2.0-only", "tipos": ["lancador"],
+        "permissoes": ["lancador"],  # noqa-acento: chave do manifesto
         "lancador": _bloco() if bloco is None else bloco,
     }
     (pasta / "hefesto-mod.json").write_text(json.dumps(manifesto), encoding="utf-8")
@@ -82,7 +84,7 @@ def _plantar(tmp_path: Path, *, mod_id: str = "kytyps5", ligada: bool = True,
     return lg
 
 
-def _emulador_no_path(monkeypatch, tmp_path: Path) -> Path:
+def _emulador_no_path(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
     from hefesto_dualsense4unix.integrations import jogos_locais as jl
 
     binarios = tmp_path / "bin"
@@ -95,11 +97,11 @@ def _emulador_no_path(monkeypatch, tmp_path: Path) -> Path:
     return emulador
 
 
-def _no_xdg(monkeypatch, lg: Lugares) -> None:
+def _no_xdg(monkeypatch: pytest.MonkeyPatch, lg: Lugares) -> None:
     monkeypatch.setattr(Lugares, "do_xdg", classmethod(lambda cls: lg))
 
 
-def _so_as_modificacoes(a07, monkeypatch) -> None:
+def _so_as_modificacoes(a07: ModuleType, monkeypatch: pytest.MonkeyPatch) -> None:
     """O ``maquina.json`` e os atalhos por conteúdo de fora: só a terceira fonte."""
     from hefesto_dualsense4unix.utils import maquina
 
@@ -107,7 +109,9 @@ def _so_as_modificacoes(a07, monkeypatch) -> None:
     monkeypatch.setattr(a07, "_achados_por_conteudo", lambda: ())
 
 
-def test_a_modificacao_ligada_vira_cartao_pelo_mesmo_procurador(a07, monkeypatch, tmp_path):
+def test_a_modificacao_ligada_vira_cartao_pelo_mesmo_procurador(
+    a07: ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
     """ARRANQUE o ``+ _das_modificacoes()`` de ``_declarados`` e isto reprova."""
     lg = _plantar(tmp_path)
     _no_xdg(monkeypatch, lg)
@@ -134,7 +138,9 @@ def test_a_modificacao_ligada_vira_cartao_pelo_mesmo_procurador(a07, monkeypatch
         "o cartão leva marca de modificação, e a escolha dela de 09/10 diz que não")
 
 
-def test_desligada_ou_sem_a_permissao_o_cartao_some(a07, monkeypatch, tmp_path):
+def test_desligada_ou_sem_a_permissao_o_cartao_some(
+    a07: ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
     _so_as_modificacoes(a07, monkeypatch)
     for caso, kwargs in (("desligada", {"ligada": False}),
                          ("sem a permissão aceita", {"aceitas": ()})):
@@ -144,7 +150,9 @@ def test_desligada_ou_sem_a_permissao_o_cartao_some(a07, monkeypatch, tmp_path):
         assert "kytyps5" not in [x.chave for x in desenho.procurados(a07._declarados())]
 
 
-def test_bloco_torto_deixa_so_aquela_de_fora(a07, monkeypatch, tmp_path):
+def test_bloco_torto_deixa_so_aquela_de_fora(
+    a07: ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
     _so_as_modificacoes(a07, monkeypatch)
     for bloco in (_bloco(cor="azul"), _bloco(comandos=[], atalhos=[]),
                   _bloco(titulo_do_jogo="(PPSA"),
@@ -157,7 +165,7 @@ def test_bloco_torto_deixa_so_aquela_de_fora(a07, monkeypatch, tmp_path):
         x.chave for x in desenho.EMBUTIDOS], "sem modificação, a lista mudou"
 
 
-def test_a_modificacao_com_a_chave_de_fabrica_ensina_sem_dar_o_tirar():
+def test_a_modificacao_com_a_chave_de_fabrica_ensina_sem_dar_o_tirar() -> None:
     leitor = censo.LeitorPorProcesso("retroarch", "RetroArch", ("ler.py",), Path("/x"))
     ensino = desenho.SemCenso("retroarch", "Outro nome", ("meu-retro",), (),
                               janelas=("outra.janela",), leitor=leitor,
@@ -170,7 +178,9 @@ def test_a_modificacao_com_a_chave_de_fabrica_ensina_sem_dar_o_tirar():
     assert ra.janelas == ("com.libretro.RetroArch", "outra.janela")
 
 
-def test_as_janelas_medidas_sao_a_fabrica_mais_as_da_modificacao(a07, monkeypatch, tmp_path):
+def test_as_janelas_medidas_sao_a_fabrica_mais_as_da_modificacao(
+    a07: ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
     """O RetroArch segue com a janela de fábrica; o KytyPS5 traz a dele."""
     lg = _plantar(tmp_path)
     _no_xdg(monkeypatch, lg)
@@ -186,7 +196,9 @@ def test_as_janelas_medidas_sao_a_fabrica_mais_as_da_modificacao(a07, monkeypatc
     assert not hasattr(a07, "_JANELAS_MEDIDAS"), "o dicionário cravado voltou"
 
 
-def _leitor(tmp_path: Path, corpo: str, prazo: float = 5.0, molde: str = "") -> censo.LeitorPorProcesso:
+def _leitor(
+    tmp_path: Path, corpo: str, prazo: float = 5.0, molde: str = "",
+) -> censo.LeitorPorProcesso:
     pasta = tmp_path / "leitor"
     pasta.mkdir(parents=True, exist_ok=True)
     (pasta / "ler.py").write_text(corpo, encoding="utf-8")
@@ -201,7 +213,7 @@ def _leitor(tmp_path: Path, corpo: str, prazo: float = 5.0, molde: str = "") -> 
     ("import sys\nsys.exit(3)\n", "código 3"),
     ("import sys\nsys.stdout.write('[' + ' ' * (2 << 20) + ']')\n", "cabe"),
 ])
-def test_o_leitor_torto_nao_derruba_o_censo(tmp_path, corpo, motivo):
+def test_o_leitor_torto_nao_derruba_o_censo(tmp_path: Path, corpo: str, motivo: str) -> None:
     leitor = _leitor(tmp_path, corpo, prazo=0.8)
     antes = time.monotonic()
     biblioteca = censo.ler_por_processo(leitor, bwrap=False)
@@ -211,7 +223,9 @@ def test_o_leitor_torto_nao_derruba_o_censo(tmp_path, corpo, motivo):
     assert biblioteca.resumo.startswith("A biblioteca está aqui e não pôde ser lida")
 
 
-def test_o_leitor_que_passa_do_prazo_nao_derruba_o_cartao(a07, monkeypatch, tmp_path):
+def test_o_leitor_que_passa_do_prazo_nao_derruba_o_cartao(
+    a07: ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
     """A pintura segue com os outros cartões, e o do KytyPS5 diz o motivo."""
     lg = _plantar(tmp_path, bloco=_bloco(leitor={"executar": ["python3", "ler.py"],
                                                   "prazo_s": 0.5}),
@@ -225,7 +239,7 @@ def test_o_leitor_que_passa_do_prazo_nao_derruba_o_cartao(a07, monkeypatch, tmp_
     assert "passou de 0.5 s" in do_disco.resumo("kytyps5"), do_disco.resumos
 
 
-def test_a_linha_torta_sai_sozinha_e_o_titulo_fora_da_forma_tambem(tmp_path):
+def test_a_linha_torta_sai_sozinha_e_o_titulo_fora_da_forma_tambem(tmp_path: Path) -> None:
     corpo = (
         "import json\nprint(json.dumps([\n"
         " {'chave': 'PPSA21567', 'nome': 'Astro Bot', 'titulo_do_jogo': 'PPSA21567'},\n"
@@ -240,31 +254,35 @@ def test_a_linha_torta_sai_sozinha_e_o_titulo_fora_da_forma_tambem(tmp_path):
         ("PPSA21567", "PPSA21567"), ("CUSA00001", "")]
 
 
-def test_na_caixa_o_leitor_le_a_casa_e_nao_escreve_nem_ve_a_sessao(tmp_path, monkeypatch):
+def test_na_caixa_o_leitor_le_a_casa_e_nao_escreve_nem_ve_a_sessao(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
     bwrap = shutil.which("bwrap")
     if bwrap is None:
         pytest.skip("sem bwrap nesta máquina: a caixa não existe para provar")
-    sessao = tmp_path / "sessao"
-    sessao.mkdir()
-    (sessao / "bus").write_text("", encoding="utf-8")
-    monkeypatch.setenv("XDG_RUNTIME_DIR", str(sessao))
+    xdg_run = tmp_path / "xdg_run"
+    xdg_run.mkdir()
+    (xdg_run / "bus").write_text("", encoding="utf-8")
+    monkeypatch.setenv("XDG_RUNTIME_DIR", str(xdg_run))
     corpo = (
         "import json, os\n"
         "try:\n"
         "    open('escrito', 'w').close(); escreveu = 'sim'\n"
         "except OSError:\n"
-        "    escreveu = 'nao'\n"
-        f"ve = 'sim' if os.listdir({str(sessao)!r}) else 'nao'\n"
+        "    escreveu = 'não'\n"
+        f"ve = 'sim' if os.listdir({str(xdg_run)!r}) else 'não'\n"
         "print(json.dumps([{'chave': 'A', 'nome': 'escreveu-' + escreveu},\n"
         "                  {'chave': 'B', 'nome': 've-a-sessao-' + ve}]))\n")
     leitor = _leitor(tmp_path, corpo)
     biblioteca = censo.ler_por_processo(leitor, bwrap=bwrap)
     assert biblioteca.estado == censo.LIDO, biblioteca.erros
-    assert [j.nome for j in biblioteca.jogos] == ["escreveu-nao", "ve-a-sessao-nao"]
+    assert [j.nome for j in biblioteca.jogos] == ["escreveu-não", "ve-a-sessao-não"]
     assert not (leitor.pasta / "escrito").exists()
 
 
-def test_o_perfil_do_jogo_casa_pelo_id_no_titulo(a07, monkeypatch, tmp_path):
+def test_o_perfil_do_jogo_casa_pelo_id_no_titulo(
+    a07: ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
     """ARRANQUE o ramo do título em ``confirmar_o_perfil`` e isto reprova."""
     from hefesto_dualsense4unix.profiles.schema import MatchCriteria
 
@@ -273,8 +291,12 @@ def test_o_perfil_do_jogo_casa_pelo_id_no_titulo(a07, monkeypatch, tmp_path):
     _so_as_modificacoes(a07, monkeypatch)
     a10 = importlib.import_module(f"{a07.__package__}.a10_perfis")
     nascidos: list[tuple[MatchCriteria, str]] = []
-    monkeypatch.setattr(a10, "_nascer",
-                        lambda ctx, p, regra, base: nascidos.append((regra, base)) or "ok")
+
+    def _nascer(ctx: object, p: object, regra: MatchCriteria, base: str) -> str:
+        nascidos.append((regra, base))
+        return "ok"
+
+    monkeypatch.setattr(a10, "_nascer", _nascer)
     monkeypatch.setattr(a10, "criar_para_o_jogo",
                         lambda *a, **k: pytest.fail("o jogo do KytyPS5 nasceu por classe"))
 
@@ -282,7 +304,7 @@ def test_o_perfil_do_jogo_casa_pelo_id_no_titulo(a07, monkeypatch, tmp_path):
     assert [j.chave for j in a07._ESCOLHA.jogos] == ["PPSA21567", "PPSA01325"]
 
     class _Ctx:
-        state: dict | None = None
+        state: dict[str, object] | None = None
 
     a07.confirmar_o_perfil(_Ctx(), {"forma": {desenho.ESCOLHA: "PPSA21567"}}, None)
     [(regra, base)] = nascidos
