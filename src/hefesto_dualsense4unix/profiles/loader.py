@@ -458,16 +458,19 @@ def o_perfil_de_fora_do_jogo() -> str | None:
 _FREESTYLE_DE_FABRICA_NASCE_LIGADO_MARKER = ".freestyle_de_fabrica_nasce_ligado"
 
 
+def _impressao_dos_dados(dados: object) -> str:
+    """A impressão de um JSON já lido: o canônico, com as chaves em ordem."""
+    canonico = json.dumps(dados, sort_keys=True, ensure_ascii=False)
+    return hashlib.sha256(canonico.encode("utf-8")).hexdigest()
+
+
 def _impressao_do_asset(asset: Path) -> str | None:
     """A impressão do asset lido como JSON — um empacotador que reformate não a muda."""
-    import hashlib
-
     try:
         dados = json.loads(asset.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return None
-    canonico = json.dumps(dados, sort_keys=True, ensure_ascii=False)
-    return hashlib.sha256(canonico.encode("utf-8")).hexdigest()
+    return _impressao_dos_dados(dados)
 
 
 def _a_marca_ja_levou(marker: Path, impressao: str | None) -> bool:
@@ -478,10 +481,23 @@ def _a_marca_ja_levou(marker: Path, impressao: str | None) -> bool:
         return False
 
 
+def _a_fabrica_que_a_marca_guarda(marker: Path) -> str | None:
+    """A impressão da fábrica entregue antes nesta máquina; `None` sem marca ou com `done`."""
+    try:
+        guardada = marker.read_text(encoding="utf-8").strip()
+    except OSError:
+        return None
+    return guardada if re.fullmatch(r"[0-9a-f]{64}", guardada) else None
+
+
 def _levar_a_fabrica_nova(
-    alvo: Path, asset: Path, directory: Path
+    alvo: Path, asset: Path, directory: Path, fabrica_anterior: str | None = None
 ) -> tuple[str, Path | None]:
-    """O miolo, com os dois locks tomados. Devolve `(desfecho, cópia)`."""
+    """O miolo, com os dois locks tomados. Devolve `(desfecho, cópia)`.
+
+    É de fábrica o `freestyle.json` com a impressão da fábrica que a marca guardou (a entregue
+    antes aqui) ou igual a uma da tupla, que só serve às marcas de antes da impressão.
+    """
     bruto = _bytes_se_existe(alvo)
     if bruto is None:
         return "sem_freestyle", None
@@ -489,7 +505,8 @@ def _levar_a_fabrica_nova(
         dados = json.loads(bruto.decode("utf-8"))
     except (UnicodeDecodeError, ValueError):
         return "ilegivel", None
-    if dados not in _FABRICAS_ANTERIORES_DO_FREESTYLE:
+    da_marca = fabrica_anterior is not None and _impressao_dos_dados(dados) == fabrica_anterior
+    if not da_marca and dados not in _FABRICAS_ANTERIORES_DO_FREESTYLE:
         return "nao_e_a_fabrica_antiga", None
     copia = _arquivar_versao(SLUG_DO_PADRAO, bruto, raiz=directory)
     if copia is None:
@@ -514,9 +531,10 @@ def o_freestyle_de_fabrica_nasce_ligado(dest_dir: Path | None = None) -> Path | 
     with FileLock(str(_lock_path(marker))):
         if _a_marca_ja_levou(marker, impressao):
             return None
+        anterior = _a_fabrica_que_a_marca_guarda(marker)
         if alvo.is_file():
             with FileLock(str(_lock_path(alvo))):
-                desfecho, copia = _levar_a_fabrica_nova(alvo, asset, directory)
+                desfecho, copia = _levar_a_fabrica_nova(alvo, asset, directory, anterior)
         if desfecho != "sem_copia":
             with contextlib.suppress(Exception):
                 marker.write_text(f"{impressao}\n", encoding="utf-8")
