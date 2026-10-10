@@ -36,6 +36,7 @@ class _Controle:
     def __init__(self, mudo: dict[str, bool | None]) -> None:
         self.mudo = dict(mudo)
         self.escritas: list[tuple[str | None, int | None]] = []
+        self.em_voo: list[tuple[str | None, int | None]] = []
         self.voltas = 0
 
     def set_microphone_led(self, aceso: Any, *, uniq: str | None = None) -> bool:
@@ -65,8 +66,9 @@ class _Controle:
             for i, u in enumerate(OS_QUATRO)
         ]
 
-    def ultima(self, uniq: str) -> int | None | str:
-        do_uniq = [v for u, v in self.escritas if u == uniq]
+    def ultima(self, uniq: str, *, agora: bool = False) -> int | None | str:
+        """A última escrita deste controle EM VOO (ou a de `agora`, no meio da corrida)."""
+        do_uniq = [v for u, v in (self.escritas if agora else self.em_voo) if u == uniq]
         return do_uniq[-1] if do_uniq else "nenhuma"
 
 
@@ -122,6 +124,11 @@ def _pecas(monkeypatch: pytest.MonkeyPatch, ouvintes: Any, captando: dict[str, b
 
 
 async def _rodar(daemon: _Daemon, *, voltas: int, entre: Any = None) -> None:
+    """Roda o laço e guarda em `em_voo` o que ele escreveu ANTES do cancelamento.
+
+    O desligamento devolve a posse ao kernel de propósito (repinta e solta), e
+    isso não é o laço soltando a luz no meio da sessão.
+    """
     tarefa = asyncio.create_task(mod.luz_do_mic_loop(daemon))
     controle = daemon.controller
     try:
@@ -129,6 +136,7 @@ async def _rodar(daemon: _Daemon, *, voltas: int, entre: Any = None) -> None:
             await asyncio.sleep(0.002)
             if entre is not None:
                 entre(controle.voltas)
+        controle.em_voo = list(controle.escritas)
     finally:
         tarefa.cancel()
         with contextlib.suppress(asyncio.CancelledError):
@@ -137,7 +145,7 @@ async def _rodar(daemon: _Daemon, *, voltas: int, entre: Any = None) -> None:
 
 def _soltas(controle: _Controle, uniq: str) -> int:
     """Quantas vezes o laço devolveu a posse deste controle ao kernel em voo."""
-    return sum(1 for u, v in controle.escritas if u == uniq and v is None)
+    return sum(1 for u, v in controle.em_voo if u == uniq and v is None)
 
 
 @pytest.mark.asyncio
@@ -193,8 +201,8 @@ async def test_o_radio_sem_canal_acende_igual_ao_cabo(
     vistas: dict[str, Any] = {}
 
     def ouvinte_no_p1(voltas: int) -> None:
-        if voltas == 100:
-            vistas.update({u: controle.ultima(u) for u in OS_QUATRO})
+        if voltas >= 100 and not vistas:
+            vistas.update({u: controle.ultima(u, agora=True) for u in OS_QUATRO})
         if voltas > 120:
             quem[P1] = ["chrome"]
 

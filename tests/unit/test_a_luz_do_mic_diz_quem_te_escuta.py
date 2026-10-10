@@ -455,13 +455,13 @@ async def test_quando_para_de_saber_a_luz_volta_ao_botao(
         if voltas > 60:
             estado["viva"] = False
 
-    await _rodar(daemon, voltas=400, entre=derrubar_a_peca_a)
+    em_voo = await _rodar(daemon, voltas=400, entre=derrubar_a_peca_a)
 
-    assert controle.escritas[0] == (UM, mod.PISCANDO)
-    assert controle.escritas[-1] == (UM, mod.ACESA), (
-        f"a luz ficou em {controle.escritas[-1]!r} com o microfone ligado"
+    assert em_voo[0] == (UM, mod.PISCANDO)
+    assert em_voo[-1] == (UM, mod.ACESA), (
+        f"a luz ficou em {em_voo[-1]!r} com o microfone ligado"
     )
-    assert (UM, None) not in controle.escritas, "a posse voltou ao kernel"
+    assert (UM, None) not in em_voo, "a posse voltou ao kernel no meio da sessão"
 
 
 @pytest.mark.asyncio
