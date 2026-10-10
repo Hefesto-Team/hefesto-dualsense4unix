@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import importlib
 import inspect
 import os
 import signal
@@ -915,9 +916,6 @@ class Daemon:
             await self._safe_start("conexoes", self._start_conexoes)  # (noqa-acento): nome ASCII
             await self._safe_start("central_do_radio", self._start_central_do_radio)
             await self._safe_start("plugins", self._start_plugins)
-            # ADR-021: as modificações rodam FORA do serviço, como processos
-            # filhos; o supervisor só abre a porta própria quando alguma está ligada.
-            await self._safe_start("mods", self._start_mods)
             # FEAT-METRICS-01: sobe o servidor de métricas Prometheus (gate
             # interno respeita metrics_enabled). Antes nunca era iniciado —
             # metrics_enabled/metrics_port eram config morta.
@@ -974,6 +972,10 @@ class Daemon:
                 )
 
                 materialize_launch_env(self)
+            # ADR-021: as modificações rodam FORA do serviço, como processos
+            # filhos, e sobem DEPOIS do controle: o supervisor nunca atrasa a
+            # primeira conexão. Ele só abre a porta própria quando alguma está ligada.
+            await self._safe_start("mods", self._start_mods)
             self._reconnect_task = asyncio.create_task(
                 reconnect_loop(self), name="reconnect_loop"
             )
@@ -3438,10 +3440,15 @@ class Daemon:
             self._plugins_subsystem = None
 
     async def _start_mods(self) -> None:
-        """O supervisor das modificações (ADR-021): obedece ao ``mods.json``."""
-        from hefesto_dualsense4unix.mods.supervisor import supervisor_do_servico
+        """O supervisor das modificações (ADR-021): obedece ao ``mods.json``.
 
-        supervisor = supervisor_do_servico(self)
+        O módulo se importa numa thread: o pydantic dos manifestos custa dezenas
+        de milissegundos no disco frio, e o laço de 60 Hz já está girando.
+        """
+        modulo = await asyncio.to_thread(
+            importlib.import_module, "hefesto_dualsense4unix.mods.supervisor"
+        )
+        supervisor = modulo.supervisor_do_servico(self)
         await supervisor.iniciar()
         self._mods_supervisor = supervisor
 
