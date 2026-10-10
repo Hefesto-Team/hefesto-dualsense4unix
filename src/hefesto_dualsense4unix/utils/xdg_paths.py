@@ -118,6 +118,31 @@ def ipc_socket_path() -> Path:
     return runtime_dir(ensure=True) / ipc_socket_name()
 
 
+def mods_codigo_dir() -> Path:
+    """O código de cada modificação instalada: ``<dados>/mods/<id>/``."""
+    return data_dir() / "mods"
+
+
+def mods_dados_dir() -> Path:
+    """Os dados graváveis de cada modificação: ``<estado>/mods/<id>/``."""
+    return state_dir() / "mods"
+
+
+def mods_registro_path() -> Path:
+    """O registro das modificações instaladas (origem, commit, permissões, ligada)."""
+    return config_dir() / "mods.json"
+
+
+def mods_socket_path() -> Path:
+    """A porta das modificações, separada do socket principal."""
+    return runtime_dir() / "mods.sock"
+
+
+def mods_estado_path() -> Path:
+    """O estado vivo das modificações, escrito pelo supervisor do serviço."""
+    return runtime_dir() / "mods-estado.json"
+
+
 __all__ = [
     "FAKE_ENV_VAR",
     "IPC_SOCKET_DEFAULT_NAME",
@@ -130,6 +155,11 @@ __all__ = [
     "ipc_socket_name",
     "ipc_socket_path",
     "launch_env_dir",
+    "mods_codigo_dir",
+    "mods_dados_dir",
+    "mods_estado_path",
+    "mods_registro_path",
+    "mods_socket_path",
     "profiles_dir",
     "runtime_dir",
     "state_dir",
