@@ -1342,18 +1342,18 @@ SÃO expressáveis.
 
 > **NOTA DATADA — 08/10/2026: a Metralhadora saiu da tabela de 01/08.** Os bytes
 > aprovados (`26 00 09 03 03 32 08`) tinham a frequência em zero, e o `0x26` lê o
-> bloco com máscara de zonas, força em 3 bits e frequência no byte 9: o que ela
-> sentia era o toque de entrada na zona, não a batida. Por escolha dela na página
+> bloco com máscara de zonas, força em 3 bits e frequência no byte 9: o que se
+> sentia era o toque de entrada na zona, não a batida. Por escolha na revisão
 > dos desenhos (opção b), a Metralhadora passou a mandar a vibração oficial com
 > quatro ajustes: `26 FC 03 C0 B6 6D 1B 00 00 28 00` nos padrões (zonas 2 a 9, força
-> 4, 40 por segundo). A Arma automática e a Vibração não mudaram. Falta a mão dela
-> no gatilho.
+> 4, 40 por segundo). A Arma automática e a Vibração não mudaram. Falta a prova com a
+> mão no gatilho.
 
 > **NOTA DATADA — 08/10/2026: `weapon()` saiu do `0x06`.** O `weapon()` (e o `pulse_b()`, que
 > mandava o mesmo bloco) agora manda a arma oficial `0x25`: `25 24 00 05` nos padrões, com os
 > bits do início e do fim na máscara e a força menos um em 3 bits. O `0x06` é a vibração simples
 > (frequência, amplitude, posição), não a arma. O `vibration()` ficou como estava. **Grau: ALTA
-> para o byte** (Nielk1 e Microsoft concordam), **BAIXA para a sensação**: falta a mão dela no
+> para o byte** (Nielk1 e Microsoft concordam), **BAIXA para a sensação**: falta a prova com a mão no
 > gatilho, às cegas, cabo e rádio.
 
 > **NOTA DATADA — 08/10/2026: o arco e o galope.** O `pulse_a()` manda o arco do firmware (`0x22`):
