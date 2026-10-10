@@ -248,7 +248,7 @@ def test_profile_rule_matches_game_ignora_matchany_catchall(
     from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
 
     fallback = Profile(name="fallback", match=MatchAny())
-    monkeypatch.setattr(manager_module, "load_all_profiles", lambda: [fallback])
+    monkeypatch.setattr(manager_module, "perfis_para_consulta", lambda: [fallback])
 
     daemon = _daemon(FakeController(transport="usb"))
     assert daemon._profile_rule_matches_game("qualquer_coisa") is False
@@ -269,7 +269,7 @@ def test_profile_rule_matches_game_true_com_regra_especifica_gamepad(
         match=MatchCriteria(window_class=["heroic-game"]),
         mode=ProfileModeConfig(kind="gamepad"),
     )
-    monkeypatch.setattr(manager_module, "load_all_profiles", lambda: [jogo])
+    monkeypatch.setattr(manager_module, "perfis_para_consulta", lambda: [jogo])
 
     daemon = _daemon(FakeController(transport="usb"))
     assert daemon._profile_rule_matches_game("heroic-game") is True
@@ -291,7 +291,7 @@ def test_profile_rule_matches_game_false_para_kind_nativo_ou_desktop(
         match=MatchCriteria(window_class=["algum-jogo"]),
         mode=ProfileModeConfig(kind="native"),
     )
-    monkeypatch.setattr(manager_module, "load_all_profiles", lambda: [nativo])
+    monkeypatch.setattr(manager_module, "perfis_para_consulta", lambda: [nativo])
 
     daemon = _daemon(FakeController(transport="usb"))
     assert daemon._profile_rule_matches_game("algum-jogo") is False

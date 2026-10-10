@@ -22,6 +22,7 @@ from hefesto_dualsense4unix.profiles.loader import (
     delete_profile,
     load_all_profiles,
     load_profile,
+    perfis_para_consulta,
     save_profile,
 )
 from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_que_vale
@@ -1374,8 +1375,12 @@ class ProfileManager:
     def select_for_window_ex(
         self, window_info: dict[str, object]
     ) -> tuple[Profile | None, str]:
-        """Como `select_for_window`, mas devolve `(perfil, motivo)`."""
-        casaram = [p for p in load_all_profiles() if p.matches(dict(window_info))]
+        """Como `select_for_window`, mas devolve `(perfil, motivo)`.
+
+        A escolha lê os perfis guardados sem cópia (só olha `match` e `priority`) e copia só o
+        escolhido: quem o recebe pode editá-lo sem mexer no guardado.
+        """
+        casaram = [p for p in perfis_para_consulta() if p.matches(dict(window_info))]
         candidates = [p for p in casaram if not p.e_catch_all]
         wm_class = str(window_info.get("wm_class") or "")
         e_janela_de_jogo = e_endereco_de_jogo(wm_class)
@@ -1392,7 +1397,8 @@ class ProfileManager:
                 )
             return None, MOTIVO_JOGO_SEM_PERFIL_PROPRIO
         self._ultimo_veto_catch_all = None
-        return self._melhor_candidato(candidates, wm_class), MOTIVO_SELECIONADO
+        escolhido = self._melhor_candidato(candidates, wm_class)
+        return escolhido.model_copy(deep=True), MOTIVO_SELECIONADO
 
     @staticmethod
     def _chave_de_selecao(profile: Profile) -> tuple[bool, int]:

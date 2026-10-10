@@ -81,7 +81,7 @@ class TestAColunaEspelhaOManager:
         perfis: list[Profile], incumbente: str | None, monkeypatch: Any
     ) -> str | None:
         monkeypatch.setattr(
-            "hefesto_dualsense4unix.profiles.manager.load_all_profiles",
+            "hefesto_dualsense4unix.profiles.manager.perfis_para_consulta",
             lambda: list(perfis),
         )
 
@@ -122,7 +122,7 @@ class TestOTooltip:
         """Dentro de um jogo sem regra própria, nenhum «Sempre» entra."""
         perfis = _mesa_dela()
         monkeypatch.setattr(
-            "hefesto_dualsense4unix.profiles.manager.load_all_profiles",
+            "hefesto_dualsense4unix.profiles.manager.perfis_para_consulta",
             lambda: list(perfis),
         )
 

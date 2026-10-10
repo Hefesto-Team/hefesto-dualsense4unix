@@ -162,7 +162,7 @@ class TestSentinelManual:
         from hefesto_dualsense4unix.profiles import manager as manager_mod
 
         manual = Profile(name="coop", match=MatchManual(), priority=99)
-        monkeypatch.setattr(manager_mod, "load_all_profiles", lambda: [manual])
+        monkeypatch.setattr(manager_mod, "perfis_para_consulta", lambda: [manual])
         selecionado = manager_mod.ProfileManager(controller=None).select_for_window(
             {"wm_class": "steam_app_1599660", "wm_name": "Sackboy"}
         )

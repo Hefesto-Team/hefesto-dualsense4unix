@@ -8,6 +8,7 @@ import os
 import re
 import time
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -182,20 +183,38 @@ class AutoSwitcher:
 
         self._stop_event = asyncio.Event()
         loop = asyncio.get_running_loop()
+        # Uma vaga: duas leituras nunca se sobrepõem, e o Xlib fica numa thread só. O laço é o
+        # que leva o pad virtual de P1 a P4; o `wlrctl` e a semeadura não podem rodar nele.
+        executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="hefesto-autoswitch")
+        try:
+            while not self._stop_event.is_set():
+                try:
+                    info = await loop.run_in_executor(executor, self._ler_fora_do_laco)
+                except Exception as exc:
+                    logger.warning("autoswitch_window_read_failed", err=str(exc))
+                    info = {}
 
-        while not self._stop_event.is_set():
-            try:
-                info = self.window_reader()
-            except Exception as exc:
-                logger.warning("autoswitch_window_read_failed", err=str(exc))
-                info = {}
+                self._tick(info, loop.time())
 
-            self._tick(info, loop.time())
+                with contextlib.suppress(asyncio.TimeoutError):
+                    await asyncio.wait_for(
+                        self._stop_event.wait(), timeout=self.poll_interval_sec
+                    )
+        finally:
+            executor.shutdown(wait=False, cancel_futures=True)
 
-            with contextlib.suppress(asyncio.TimeoutError):
-                await asyncio.wait_for(
-                    self._stop_event.wait(), timeout=self.poll_interval_sec
-                )
+    def _ler_fora_do_laco(self) -> dict[str, Any]:
+        """O passo do tique que bloqueia: os perfis do disco e a janela.
+
+        Roda no executor do `run()`. A leitura dos perfis daqui é a que semeia os jogos quando é a
+        vez (no serviço, a leitura feita no laço não semeia) e a que decodifica o arquivo mudado;
+        o `_tick` que vem depois, no laço, acha a leitura pela assinatura em dia e só confere o
+        `stat` de cada arquivo.
+        """
+        from hefesto_dualsense4unix.profiles.loader import perfis_para_consulta
+
+        perfis_para_consulta()
+        return self.window_reader()
 
     def freestyle_ligado(self) -> bool:
         """True quando o Modo Freestyle está ligado: o tique não casa a janela."""

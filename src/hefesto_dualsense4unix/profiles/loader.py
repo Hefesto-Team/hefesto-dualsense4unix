@@ -15,6 +15,7 @@ acentuado; o arquivo é o que `arquivo_do_perfil` acha, em quatro pernas.
 """
 from __future__ import annotations
 
+import asyncio
 import calendar
 import contextlib
 import hashlib
@@ -1671,8 +1672,39 @@ def desligar_a_leitura_pela_assinatura() -> None:
 
 def load_all_profiles() -> list[Profile]:
     """Lê todos os perfis JSON do diretório, pulando os inválidos com warning."""
+    return _ler_todos_os_perfis(copiar=True)
+
+
+def perfis_para_consulta() -> list[Profile]:
+    """Os perfis para quem só os CONSULTA (a escolha pela janela), sem cópia profunda.
+
+    Pela assinatura, cada perfil devolvido é o próprio guardado da leitura: quem o recebe não o
+    edita, e copia o que for usar (a escolha copia só o perfil escolhido). Fora da leitura pela
+    assinatura, cada chamada lê do disco, como o :func:`load_all_profiles`.
+    """
+    return _ler_todos_os_perfis(copiar=False)
+
+
+def _no_laco_do_servico() -> bool:
+    """Esta leitura corre no laço asyncio do serviço (o do pad virtual de P1 a P4)?"""
+    if not _ode.armado():
+        return False
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return False
+    return True
+
+
+def _ler_todos_os_perfis(*, copiar: bool) -> list[Profile]:
+    """O miolo das duas leituras. No laço do serviço a semeadura dos jogos não roda.
+
+    Quem a anda no serviço é o passo fora do laço da troca automática
+    (`AutoSwitcher._ler_fora_do_laco`), com o mesmo intervalo do :func:`_talvez_semear_jogos`.
+    """
     _maybe_seed_presets()
-    _talvez_semear_jogos()
+    if not _no_laco_do_servico():
+        _talvez_semear_jogos()
     directory = profiles_dir(ensure=True)
     profiles: list[Profile] = []
     pela_assinatura = _ode.armado() or _LEITURA_LIGADA_PELO_PROCESSO
@@ -1681,9 +1713,8 @@ def load_all_profiles() -> list[Profile]:
         try:
             if pela_assinatura:
                 vistos.append(str(path))
-                profiles.append(
-                    _PERFIS_PELA_ASSINATURA.ler(path, trava=partial(_trava_do_perfil, path))
-                )
+                profiles.append(_PERFIS_PELA_ASSINATURA.ler(
+                    path, trava=partial(_trava_do_perfil, path), copiar=copiar))
                 continue
             with FileLock(str(_lock_path(path))):
                 raw = json.loads(path.read_text(encoding="utf-8"))
@@ -2297,6 +2328,7 @@ __all__ = [
     "o_perfil_de_fora_do_jogo",
     "o_personalizado_vira_freestyle",
     "perfis_de_jogo_semeados",
+    "perfis_para_consulta",
     "perfis_que_casam_com_o_cliente_steam",
     "reapontar_perfis_com_chave_de_executavel",
     "restaurar_do_historico",

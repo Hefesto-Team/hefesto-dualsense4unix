@@ -36,7 +36,7 @@ def _sem_marcador(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
 def _perfis(monkeypatch: pytest.MonkeyPatch, perfis: list[Any]) -> None:
     from hefesto_dualsense4unix.profiles import manager as manager_module
 
-    monkeypatch.setattr(manager_module, "load_all_profiles", lambda: list(perfis))
+    monkeypatch.setattr(manager_module, "perfis_para_consulta", lambda: list(perfis))
 
 
 def _perfil_coop_local() -> Any:

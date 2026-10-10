@@ -62,14 +62,20 @@ class LeituraPelaAssinatura(Generic[T]):
         caminho: str | os.PathLike[str],
         *,
         trava: Callable[[], AbstractContextManager[object]] | None = None,
+        copiar: bool = True,
     ) -> T:
-        """O valor do arquivo: o guardado se a assinatura é a mesma, senão lê."""
+        """O valor do arquivo: o guardado se a assinatura é a mesma, senão lê.
+
+        ``copiar=False`` devolve o próprio guardado, para quem só consulta e nunca o edita:
+        a cópia protege o guardado de quem muda o valor, e quem só lê não precisa pagar por ela.
+        """
+        entregar = self._copiar if copiar else (lambda v: v)
         chave = os.fspath(caminho)
         agora = assinatura(chave)
         with self._trava:
             guardado = self._guardados.get(chave)
         if guardado is not None and guardado.confiavel and guardado.assinatura == agora:
-            return self._copiar(guardado.valor)
+            return entregar(guardado.valor)
         with (trava or _sem_trava)():
             valor = self._decodificar(Path(chave))
             depois = assinatura(chave)
@@ -79,7 +85,7 @@ class LeituraPelaAssinatura(Generic[T]):
         )
         with self._trava:
             self._guardados[chave] = _Guardado(depois, valor, confiavel)
-        return self._copiar(valor)
+        return entregar(valor)
 
     def manter_so(self, caminhos: Iterable[str | os.PathLike[str]]) -> None:
         """Esquece os arquivos que não estão em ``caminhos`` (a pasta perdeu um)."""
