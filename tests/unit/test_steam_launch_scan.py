@@ -7,7 +7,7 @@ import pytest
 from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
 REAPER = (
-    "/home/vitoriamaria/.steam/debian-installation/ubuntu12_32/reaper "
+    "/home/usuario/.steam/debian-installation/ubuntu12_32/reaper "
     "SteamLaunch AppId=1599660 -- /.../proton waitforexitandrun /.../Launcher.exe"
 )
 ISCA_PGREP = "pgrep -f reaper SteamLaunch AppId= "

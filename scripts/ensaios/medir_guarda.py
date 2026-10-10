@@ -1,6 +1,5 @@
 """Lê do DOM VIVO o estado das células 'Ajuste próprio' das quatro linhas."""
 import pathlib, sys
-sys.path.insert(0, "/mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/src/hefesto_dualsense4unix/interface")
 import sys
 _RAIZ_TELA = str(pathlib.Path(__file__).resolve().parents[2] / 'src')
 if _RAIZ_TELA not in sys.path:

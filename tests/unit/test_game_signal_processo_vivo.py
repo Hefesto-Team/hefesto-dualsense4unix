@@ -20,14 +20,14 @@ from hefesto_dualsense4unix.testing import FakeController
 
 APPID = 1599660
 REAPER_COM_JOGO = (
-    "/home/vitoriamaria/.steam/debian-installation/ubuntu12_32/reaper "
+    "/home/usuario/.steam/debian-installation/ubuntu12_32/reaper "
     f"SteamLaunch AppId={APPID} -- /.../proton waitforexitandrun /.../Launcher.exe"
 )
 
 PROC_STEAM_SEM_JOGO = {
     "1000": "/usr/bin/steam",
-    "1001": "/home/vitoriamaria/.steam/.../steamwebhelper --type=utility",
-    "1002": "/home/vitoriamaria/.steam/.../reaper",
+    "1001": "/home/usuario/.steam/.../steamwebhelper --type=utility",
+    "1002": "/home/usuario/.steam/.../reaper",
 }
 
 

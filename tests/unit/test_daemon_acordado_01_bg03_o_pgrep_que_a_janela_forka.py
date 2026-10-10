@@ -64,11 +64,11 @@ _PROC_COM_A_STEAM: dict[str, tuple[str, str]] = {
     "100": ("cosmic-comp", "/usr/bin/cosmic-comp"),
     "4242": (
         "steam",
-        "/home/vitoriamaria/.local/share/Steam/ubuntu12_32/steam",
+        "/home/usuario/.local/share/Steam/ubuntu12_32/steam",
     ),
     "4243": (
         "srt-bwrap",
-        "/home/vitoriamaria/.steam/root/ubuntu12_64/steamrt64/steam-runtime "
+        "/home/usuario/.steam/root/ubuntu12_64/steamrt64/steam-runtime "
         "-- /usr/bin/steam",
     ),
     "9000": ("pipewire", "/usr/bin/pipewire"),
@@ -290,7 +290,7 @@ def test_o_proc_ilegivel_do_escritor_cru_nao_vira_negativo_carimbado(
 
 
 REAPER = (
-    "/home/vitoriamaria/.steam/debian-installation/ubuntu12_32/reaper "
+    "/home/usuario/.steam/debian-installation/ubuntu12_32/reaper "
     "SteamLaunch AppId=1599660 -- /.../proton waitforexitandrun /.../Launcher.exe"
 )
 

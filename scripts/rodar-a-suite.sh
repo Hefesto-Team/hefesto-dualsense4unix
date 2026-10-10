@@ -64,9 +64,16 @@ cd "$RAIZ" || exit 2
 
 PARTES="${PARTES:-24}"
 SAIDA="${SAIDA:-/tmp/suite-$(date +%H%M%S)}"
-PY="${PY:-$RAIZ/.venv/bin/python}"
-[ -x "$PY" ] || PY="/mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/python"
-[ -x "$PY" ] || { echo "ERRO: não achei um python. Passe PY=<caminho>."; exit 2; }
+# O python: o `PY` de quem chama, o `HEFESTO_PY` da casa (o mesmo que o `portoes.sh` lê; é o que a árvore
+# sem `.venv` recebe numa leva), a `.venv` desta árvore e o `python3` do sistema, nesta ordem. Nenhum
+# caminho de máquina: em outro PC a suíte acha o python3 dele (10/10/2026).
+PY="${PY:-}"
+for _py in "${HEFESTO_PY:-}" "$RAIZ/.venv/bin/python" "$(command -v python3 || true)"; do
+  [ -n "$PY" ] && [ -x "$PY" ] && break
+  PY="$_py"
+done
+unset _py
+[ -n "$PY" ] && [ -x "$PY" ] || { echo "ERRO: não achei um python. Passe PY=<caminho>."; exit 2; }
 
 mkdir -p "$SAIDA"
 # A LISTA NASCE DESTA ÁRVORE. Ver a armadilha 3 no cabeçalho.

@@ -68,8 +68,9 @@ done
 # ---------------------------------------------------------------------------
 escolher_python() {
   local candidatos=(
+    "${PY:-}"
+    "${HEFESTO_PY:-}"
     "$RAIZ/.venv/bin/python"
-    "/mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/python"
     "$(command -v python3 || true)"
   )
   local py
@@ -85,7 +86,7 @@ escolher_python() {
 
 PY="$(escolher_python)" || {
   echo "mesa-de-medicao.sh: nenhum python desta máquina importa o pacote desta árvore." >&2
-  echo "  tentei: $RAIZ/.venv/bin/python, a venv da árvore dela, e o python3 do PATH." >&2
+  echo "  tentei: o PY, o HEFESTO_PY, $RAIZ/.venv/bin/python e o python3 do PATH." >&2
   exit 1
 }
 export PYTHONPATH="$RAIZ/src${PYTHONPATH:+:$PYTHONPATH}"

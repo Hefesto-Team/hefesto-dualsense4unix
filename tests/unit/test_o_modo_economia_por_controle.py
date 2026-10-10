@@ -466,13 +466,18 @@ def test_o_escritor_liga_desliga_e_nao_apaga_o_resto_do_controle() -> None:
 
 def test_a_economia_atravessa_o_disco() -> None:
     """``gravar_maquina_com_descartes`` grava a chave e ``carregar_maquina`` a lê."""
+    import os
+    import pwd
     from pathlib import Path
 
     from hefesto_dualsense4unix.utils import maquina as maquina_mod
 
-    assert not str(maquina_mod.caminho_da_maquina()).startswith(
-        str(Path("/home/vitoriamaria/.config"))
-    ), "a suíte ia escrever no maquina.json dela"
+    # O `HOME` REAL de quem roda, pela tabela de usuários: o desvio de `HOME` da suíte não o
+    # alcança, e ele vale em qualquer máquina (um nome literal só guardava a casa de uma).
+    config_real = Path(pwd.getpwuid(os.getuid()).pw_dir) / ".config"
+    assert not maquina_mod.caminho_da_maquina().is_relative_to(config_real), (
+        "a suíte ia escrever no maquina.json do usuário que roda"
+    )
     resultado = maquina_mod.gravar_maquina_com_descartes(
         declaracao_da_economia(UNIQS[3], True)
     )
