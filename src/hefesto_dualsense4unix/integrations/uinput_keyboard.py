@@ -94,6 +94,11 @@ class UinputKeyboardDevice:
     _uinput_mod: Any = None
     # Botões canônicos (do DualSense) atualmente pressionados e já emitidos.
     _pressed_buttons: frozenset[str] = field(default_factory=frozenset)
+    # Quantos botões seguram cada tecla. A tecla é compartilhada entre botões
+    # (`l1 = Alt+Shift+Tab`, `r1 = Alt+Tab`): o key down sai na passagem de 0
+    # para 1 e o key up na de 1 para 0, para que soltar um botão não derrube a
+    # tecla que outro ainda segura. Os tokens virtuais não entram na conta.
+    _quem_segura: dict[str, int] = field(default_factory=dict)
     _virtual_token_warned: bool = False
 
     def start(self) -> bool:
@@ -126,6 +131,7 @@ class UinputKeyboardDevice:
         self._device = None
         self._uinput_mod = None
         self._pressed_buttons = frozenset()
+        self._quem_segura = {}
 
     def is_active(self) -> bool:
         return self._device is not None
@@ -156,12 +162,24 @@ class UinputKeyboardDevice:
         self._pressed_buttons = now_mapped
 
     def prime(self, buttons_pressed: frozenset[str]) -> None:
-        """Semeia o edge-tracker com `buttons_pressed` SEM emitir nada."""
+        """Semeia o edge-tracker com `buttons_pressed` SEM emitir nada.
+
+        As teclas dos botões semeados entram na conta de quem segura: o soltar
+        deles emite o key up, e o de outro botão não derruba a tecla que eles seguram.
+        """
         if self._device is None or self._uinput_mod is None:
             return
         self._pressed_buttons = frozenset(
             b for b in buttons_pressed if b in self.bindings
         )
+        self._quem_segura = {}
+        for button in self._pressed_buttons:
+            seq = self.bindings.get(button) or ()
+            if any(is_virtual_token(tok) for tok in seq):
+                continue
+            for key_name in seq:
+                if getattr(self._uinput_mod, key_name, None) is not None:
+                    self._quem_segura[key_name] = self._quem_segura.get(key_name, 0) + 1
 
 
     def _emit_sequence_press(self, button: str) -> None:
@@ -178,6 +196,10 @@ class UinputKeyboardDevice:
                 logger.warning(
                     "keyboard_key_unknown", button=button, key=key_name
                 )
+                continue
+            seguram = self._quem_segura.get(key_name, 0)
+            self._quem_segura[key_name] = seguram + 1
+            if seguram:
                 continue
             self._device.emit(ev, 1, syn=False)
             any_emitted = True
@@ -200,8 +222,13 @@ class UinputKeyboardDevice:
         any_emitted = False
         for key_name in reversed(seq):
             ev = getattr(u, key_name, None)
-            if ev is None:
+            seguram = self._quem_segura.get(key_name, 0)
+            if ev is None or seguram == 0:
                 continue
+            if seguram > 1:
+                self._quem_segura[key_name] = seguram - 1
+                continue
+            del self._quem_segura[key_name]
             self._device.emit(ev, 0, syn=False)
             any_emitted = True
         if any_emitted:
@@ -257,12 +284,21 @@ class UinputKeyboardDevice:
         return True
 
     def _release_all(self) -> None:
-        """Libera todas as teclas ainda pressionadas sob os bindings atuais."""
+        """Libera todas as teclas ainda pressionadas, uma vez cada, e zera a conta."""
         if self._device is None or self._uinput_mod is None:
+            self._quem_segura = {}
             return
         for button in sorted(self._pressed_buttons):
             self._emit_sequence_release(button)
+        sobra = sorted(self._quem_segura)
+        for key_name in sobra:
+            ev = getattr(self._uinput_mod, key_name, None)
+            if ev is not None:
+                self._device.emit(ev, 0, syn=False)
+        if sobra:
+            self._device.syn()
         self._pressed_buttons = frozenset()
+        self._quem_segura = {}
 
 
 __all__ = [
