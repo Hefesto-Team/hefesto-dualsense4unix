@@ -201,7 +201,7 @@ def test_a_precedencia_e_a_da_sprint(
     [
         (None, ["chrome"]),
         (None, []),
-        (False, None),
+        (None, None),
     ],
 )
 def test_nao_sei_nao_e_zero(mudo: bool | None, ouvintes: list[str] | None) -> None:
@@ -212,12 +212,16 @@ def test_nao_sei_nao_e_zero(mudo: bool | None, ouvintes: list[str] | None) -> No
     )
 
 
-def test_a_lista_vazia_e_uma_resposta_e_a_ausencia_nao_e() -> None:
-    """`[]` (medi, ninguém ouve) e `None` (não medi) NÃO podem coincidir."""
+def test_a_lista_vazia_e_a_ausente_acendem_igual() -> None:
+    """`[]` (medi, ninguém ouve) e `None` (não medi) acendem o `1`: o botão manda.
+
+    A distinção entre as duas vive na tela (`quem_ouve_este_mic`), não na luz
+    (A-LUZ-DO-MIC-SEGUE-O-BOTAO-QUANDO-NAO-SABE-QUEM-OUVE-01).
+    """
     vazia = mod.decidir(mudo=False, ouvintes=[], captando=None, bateria_pct=None)
     ausente = mod.decidir(mudo=False, ouvintes=None, captando=None, bateria_pct=None)
     assert vazia == mod.ACESA
-    assert ausente is None
+    assert ausente == mod.ACESA
 
 
 def test_o_produto_nao_inventa_um_quinto_estado() -> None:
@@ -430,10 +434,14 @@ async def test_o_desligamento_devolve_a_posse_de_todos_os_controles(
 
 
 @pytest.mark.asyncio
-async def test_quando_para_de_saber_o_laco_devolve_a_luz_repintada(
+async def test_quando_para_de_saber_a_luz_volta_ao_botao(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A PEÇA A cai no meio da sessão: a luz não pode ficar travada num `2`."""
+    """A PEÇA A cai no meio da sessão: a luz sai do `2` e volta ao `1` do botão.
+
+    Nem fica travada no piscar, nem devolve a posse ao kernel, que pintaria a
+    luz apagada sobre o microfone ligado.
+    """
     controle = _Controle(uniqs=[UM], mudo={UM: False}, bateria={UM: 90})
     estado = {"viva": True}
 
@@ -450,19 +458,17 @@ async def test_quando_para_de_saber_o_laco_devolve_a_luz_repintada(
     await _rodar(daemon, voltas=400, entre=derrubar_a_peca_a)
 
     assert controle.escritas[0] == (UM, mod.PISCANDO)
-    solturas = [i for i, (_u, v) in enumerate(controle.escritas) if v is None]
-    assert solturas, "o laço segurou a posse para sempre com a PEÇA A caída"
-    primeira = solturas[0]
-    assert controle.escritas[primeira - 1] == (UM, mod.APAGADA), (
-        "soltou sem repintar: a luz fica presa no último valor que escrevemos"
+    assert controle.escritas[-1] == (UM, mod.ACESA), (
+        f"a luz ficou em {controle.escritas[-1]!r} com o microfone ligado"
     )
+    assert (UM, None) not in controle.escritas, "a posse voltou ao kernel"
 
 
 @pytest.mark.asyncio
-async def test_sem_as_pecas_irmas_a_luz_ainda_apaga_quando_ela_fica_muda(
+async def test_sem_as_pecas_irmas_a_luz_segue_o_botao(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Nem PEÇA A nem PEÇA B no ar: o laço entrega o que SABE, e nada mais."""
+    """Nem PEÇA A nem PEÇA B no ar: o botão manda, acesa e depois apagada."""
     controle = _Controle(uniqs=[UM], mudo={UM: False}, bateria={UM: 90})
     _pecas(monkeypatch)
     daemon = _Daemon(controle)
@@ -474,9 +480,12 @@ async def test_sem_as_pecas_irmas_a_luz_ainda_apaga_quando_ela_fica_muda(
     em_voo = await _rodar(daemon, voltas=200, entre=emudecer)
 
     escritas_do_laco = [e for e in em_voo if e[1] is not None]
-    assert (UM, mod.APAGADA) in escritas_do_laco
-    assert mod.ACESA not in [v for _u, v in escritas_do_laco], (
-        "sem a PEÇA A o laço não pode AFIRMAR que alguém está ouvindo"
+    assert escritas_do_laco[0] == (UM, mod.ACESA), (
+        "sem a PEÇA A o microfone ligado ainda acende"
+    )
+    assert escritas_do_laco[-1] == (UM, mod.APAGADA)
+    assert {v for _u, v in escritas_do_laco} <= {mod.ACESA, mod.APAGADA}, (
+        "sem as peças irmãs o laço não pode AFIRMAR que alguém está ouvindo"
     )
 
 

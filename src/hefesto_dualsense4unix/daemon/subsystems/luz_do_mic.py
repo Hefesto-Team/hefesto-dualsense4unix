@@ -102,10 +102,9 @@ por `import` tolerante e, sem elas, entrega o que SABE decidir:
 ===========================  ===========================================
 o que está no ar             o que a luz faz
 ===========================  ===========================================
-nem A nem B                  apaga quando ela está MUDA; no resto,
-                             devolve a posse ao kernel (não inventa)
-A sem B                      0 / 1 completos — acende com o microfone
-                             ligado, sem distinguir o `2`
+nem A nem B                  0 / 1 completos: o botão manda, e a luz
+                             não pisca
+A sem B                      0 / 1 completos, sem distinguir o `2`
 A e B                        os quatro estados
 ===========================  ===========================================
 
@@ -187,8 +186,9 @@ def quem_ouve_este_mic(uniq: str) -> list[str] | None:
     """Os apps de FORA que têm o microfone deste controle aberto.
 
     `None` = ninguém perguntou ainda (ou a PEÇA A não respondeu); `[]` =
-    perguntamos e não há ninguém. A distinção é a mesma de `decidir`, e ela é
-    o que separa *"ninguém está te ouvindo"* de *"não sei dizer"* na tela.
+    perguntamos e não há ninguém. A distinção vale na TELA, onde separa
+    *"ninguém está te ouvindo"* de *"não sei dizer"*; na luz as duas acendem
+    o `1` (ver `decidir`).
 
     **APPS DE FORA, e o "de fora" é o contrato.** A lista é a que
     `quem_ouve_agora` devolve, já sem os gravadores do próprio Hefesto
@@ -271,22 +271,19 @@ def decidir(
     medindo"* em vez de *"alguém te ouve"*. A causa do defeito não era o
     filtro: era o `0` querer dizer duas coisas.
 
-    **O `None` é um valor de primeira classe, e não um buraco.** Ele sai em
-    duas situações, e as duas são honestas:
+    **O `None` é um valor de primeira classe, e não um buraco.** Ele sai só
+    com `mudo is None`: o controle ainda não reportou o byte de estado de
+    áudio. Chutar `False` acenderia a luz de quem acabou de chegar; chutar
+    `True` apagaria a de quem está falando. A resposta certa é não escrever.
 
-    * `mudo is None` — o controle ainda não reportou o byte de estado de áudio.
-      Chutar `False` acenderia a luz de quem acabou de chegar; chutar `True`
-      apagaria a de quem está falando. A resposta certa é não escrever;
-    * `ouvintes is None` — a PEÇA A não existe, não achou o `pactl`, ou não
-      conseguiu ler o grafo. *"Não perguntei a ninguém"* não é *"ninguém
-      ouve"*: a lista VAZIA (`[]`) é que significa ninguém, e ela acende o
-      `1` com todas as letras. **Os dois continuam separados**, e a mudança de
-      19/09 não os junta: o que mudou foi o VALOR da lista vazia, de `0` para
-      `1`; `None` continua sendo *"não escreva"*.
+    **A LISTA SÓ ESCOLHE ENTRE O `1` E O PISCAR.** O `0`/`1` é do botão: com
+    o microfone ligado, a lista vazia (`[]`, ninguém ouve) e a desconhecida
+    (`None`: a PEÇA A não existe, o `pactl` caiu, ou o controle ainda não tem
+    canal no servidor) acendem igual. *"Não sei quem ouve"* continua separado
+    de *"ninguém ouve"* na tela (`quem_ouve_este_mic`), não na luz: devolver a
+    posse ao kernel ali o faria pintar a luz apagada sobre o microfone ligado.
 
-    **`mudo` vence tudo**, inclusive a ausência da PEÇA A — é por isso que a
-    degradação sem A e sem B ainda entrega alguma coisa: a luz apaga quando ela
-    aperta o botão, que é a metade do contrato que não depende de ninguém.
+    **`mudo` vence tudo**, inclusive a ausência das peças irmãs.
 
     **A bateria só modula um aviso que já existe.** `bateria_pct is None` é o
     firmware que ainda não reportou a carga, e ausência não vira `3`: o estado
@@ -296,8 +293,6 @@ def decidir(
     if mudo is True:
         return APAGADA
     if mudo is None:
-        return None
-    if ouvintes is None:
         return None
     if not ouvintes:
         return ACESA
