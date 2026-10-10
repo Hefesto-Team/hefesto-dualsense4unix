@@ -161,11 +161,17 @@ def test_a_aba_registrou_o_coracao() -> None:
     assert a05._bater_o_coracao_do_teste in pacotes.CORACOES
 
 
+def _bater(ctx: Any, p: Any) -> None:
+    """Um tique do coração, com os batimentos que ele devolve já saídos da fila."""
+    for batida in a05._bater_o_coracao_do_teste(ctx, p).values():
+        batida()
+
+
 def test_sem_teste_ligado_o_coracao_nao_bate() -> None:
     """Dez batimentos por segundo sobre nada seriam dez IPCs por segundo."""
     p = PonteQueAnota()
     for _ in range(5):
-        a05._bater_o_coracao_do_teste(_ctx(), p)
+        _bater(_ctx(), p)
     assert p.nomes == [], f"o coração bateu sem teste ligado: {p.nomes}"
 
 
@@ -174,7 +180,7 @@ def test_o_coracao_bate_uma_vez_por_segundo_e_nao_por_tique() -> None:
     p = PonteQueAnota()
     a05._EM_TESTE.add(UNIQ)
     for _ in range(10):
-        a05._bater_o_coracao_do_teste(_ctx(), p)
+        _bater(_ctx(), p)
     assert p.nomes == ["rumble_set_checked"], (
         f"dez tiques deram {len(p.nomes)} batimentos: {p.nomes}. O espaçamento "
         f"de {a05.SEGUNDOS_ENTRE_BATIMENTOS}s morreu")
@@ -198,7 +204,7 @@ def test_o_controle_que_sai_da_mesa_desliga_o_teste() -> None:
     """Rebater com o dono ausente mandaria o par para o alvo de output DE AGORA."""
     p = PonteQueAnota()
     a05._EM_TESTE.add(UNIQ)
-    a05._bater_o_coracao_do_teste(_ctx(com_o_controle=False), p)
+    _bater(_ctx(com_o_controle=False), p)
     assert p.nomes == [], f"bateu com o controle fora da mesa: {p.nomes}"
     assert a05.em_teste() == frozenset(), "o teste continuou ligado com o dono ausente"
 

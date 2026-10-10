@@ -161,13 +161,21 @@ def gesto(pagina: str, nome: str, *,
 #: teste naquele momento isso nao interfere in game (noqa-acento: citação literal). (…)
 #: `rumble_passthrough=False` para sempre, e o jogo ficava mudo sem que nada na
 #: o dono das DEZ abas e não conhece o assunto de nenhuma. Uma segunda aba que
-CORACOES: list[Callable[[Contexto, Any], None]] = []
+#: Um batimento: a chamada ao serviço de UM controle. Devolve a recusa dele, ou
+#: `""` quando ele aceitou.
+Batimento = Callable[[], str]
+
+#: Um coração: a cada tique, diz quem bate e o quê (`uniq` → batimento). Ele não
+#: fala com o serviço: quem bate é a fila do controle, fora do fio do GTK.
+Coracao = Callable[["Contexto", Any], "dict[str, Batimento] | None"]
+
+CORACOES: list[Coracao] = []
 
 LARGADAS: list[Callable[[Any], None]] = []
 
 
-def coracao(fn: Callable[[Contexto, Any], None]) -> Callable[[Contexto, Any], None]:
-    """Registra um batimento por tique. A aba decide se há o que bater."""
+def coracao(fn: Coracao) -> Coracao:
+    """Registra um coração. A aba decide quem bate; o despachante entrega."""
     CORACOES.append(fn)
     return fn
 
@@ -225,14 +233,69 @@ def podar_o_que_saiu(ctx: Contexto) -> frozenset[str]:
     return saiu
 
 
+_TRAVA_DOS_BATIMENTOS = threading.Lock()
+
+#: `(coração, fila)` com um batimento entregue e ainda não saído.
+_BATIMENTO_NA_FILA: set[tuple[str, str]] = set()
+
+#: `(coração, fila)` cuja recusa já foi ao diário neste episódio.
+_RECUSA_NO_DIARIO: set[tuple[str, str]] = set()
+
+
+def _anotar_a_recusa(chave: tuple[str, str], uniq: str, recusa: str) -> None:
+    """Uma linha no diário por episódio: a recusa abre, o primeiro aceite fecha."""
+    with _TRAVA_DOS_BATIMENTOS:
+        if not recusa:
+            _RECUSA_NO_DIARIO.discard(chave)
+            return
+        if chave in _RECUSA_NO_DIARIO:
+            return
+        _RECUSA_NO_DIARIO.add(chave)
+    print(f"[coração] {chave[0]} · {uniq}: o serviço recusou o batimento: {recusa}",
+          file=sys.stderr)
+
+
+def _entregar_o_batimento(nome: str, uniq: str, batida: Batimento) -> None:
+    """O batimento vai à fila do controle; o pendente não se empilha."""
+    fila = fila_do_controle(uniq)
+    chave = (nome, fila)
+    with _TRAVA_DOS_BATIMENTOS:
+        if chave in _BATIMENTO_NA_FILA:
+            return
+        _BATIMENTO_NA_FILA.add(chave)
+
+    def bater() -> None:
+        recusa = ""
+        try:
+            recusa = str(batida() or "")
+        except Exception as erro:
+            recusa = f"{type(erro).__name__}: {erro}"
+        finally:
+            with _TRAVA_DOS_BATIMENTOS:
+                _BATIMENTO_NA_FILA.discard(chave)
+        _anotar_a_recusa(chave, uniq, recusa)
+
+    na_fila([fila], bater, nome=f"coração {nome}")
+
+
 def bater_os_coracoes(ctx: Contexto, p: Any) -> None:
-    """O que o despachante faz a cada tique: PODAR o que saiu e BATER os corações."""
+    """O que o despachante faz a cada tique: PODAR o que saiu e BATER os corações.
+
+    OS-CORACOES-DA-VIBRACAO-NAO-SEGURAM-A-JANELA-01 (10/10/2026): o batimento
+    fazia o IPC aqui, no fio do GTK, e quatro controles em teste com o serviço
+    lento prendiam a janela um segundo a cada segundo. Agora o coração só diz
+    quem bate, e cada batimento vai à fila do controle dele, a mesma dos gestos:
+    ele nunca passa à frente de um «Parar» daquele controle.
+    """
     podar_o_que_saiu(ctx)
     for bate in CORACOES:
         try:
-            bate(ctx, p)
+            batidas = bate(ctx, p) or {}
         except Exception as erro:
             print(f"[coração] {bate.__name__}: {erro}", file=sys.stderr)
+            continue
+        for uniq, batida in batidas.items():
+            _entregar_o_batimento(bate.__name__, uniq, batida)
 
 
 def largar_o_que_as_abas_seguram(p: Any) -> None:

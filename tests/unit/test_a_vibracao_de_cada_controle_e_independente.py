@@ -275,7 +275,8 @@ def test_o_coracao_rebate_cada_teste_com_o_endereco_dele(aba: Any) -> None:
     _clicar(aba, "testar", P1, ponte)
     _clicar(aba, "testar", P2, ponte)
     ponte.chamadas.clear()
-    a05._bater_o_coracao_do_teste(_ctx(pacotes), ponte)
+    for batida in a05._bater_o_coracao_do_teste(_ctx(pacotes), ponte).values():
+        batida()
     enderecos = sorted(k.get("uniq") for n, _a, k in ponte.chamadas
                        if n == "rumble_set_checked")
     assert enderecos == [P1, P2], "um dos testes deixou de ser rebatido"

@@ -24,6 +24,7 @@ existência dele, e a tela a carrega no `title`.
 from __future__ import annotations
 
 import contextlib
+import functools
 from time import monotonic as _monotonic
 from typing import Any
 
@@ -653,7 +654,7 @@ def _sem_marcacao(texto: str) -> str:
 
 
 # disso — `app/actions/rumble_actions.py` escreve *"não há IPC de política
-from . import coracao, gesto, largada  # noqa: E402
+from . import Batimento, coracao, gesto, largada  # noqa: E402
 
 #: estável (`app/actions/rumble_actions.py`, `weak = 160` / `strong =
 PAR_DE_TESTE = (160, 220)
@@ -716,7 +717,7 @@ _BATEU_EM: dict[str, float] = {}
 
 
 @coracao
-def _bater_o_coracao_do_teste(ctx: Contexto, p: Any) -> None:
+def _bater_o_coracao_do_teste(ctx: Contexto, p: Any) -> dict[str, Batimento]:
     """Diz ao daemon, a cada segundo, que a janela ainda segura os motores DE CADA teste.
 
     NASCEU DA ORDEM, 15/09/2026: *"o testar e parar é sobre o teste naquele
@@ -728,7 +729,12 @@ def _bater_o_coracao_do_teste(ctx: Contexto, p: Any) -> None:
 
     ELE NÃO MANDA VIBRAÇÃO NOVA. O par vem de :func:`_par_das_barras`, o mesmo
     que o arraste reenvia, e cada controle em teste bate com o endereço dele.
+
+    ELE NÃO FALA COM O SERVIÇO (10/10/2026, OS-CORACOES-DA-VIBRACAO-NAO-SEGURAM-
+    A-JANELA-01): devolve um batimento por controle, e o despachante o roda na
+    fila daquele controle, fora do fio do GTK.
     """
+    batidas: dict[str, Batimento] = {}
     agora = _monotonic()
     for uniq in sorted(_EM_TESTE):
         if agora - _BATEU_EM.get(uniq, 0.0) < SEGUNDOS_ENTRE_BATIMENTOS:
@@ -738,16 +744,28 @@ def _bater_o_coracao_do_teste(ctx: Contexto, p: Any) -> None:
             parar_o_teste(uniq)
             continue
         weak, strong = _par_das_barras(ctx, uniq)
-        with contextlib.suppress(Exception):
-            p.rumble_set_checked(weak, strong, uniq=uniq)
+        batidas[uniq] = functools.partial(_rebater_o_teste, p, uniq, weak, strong)
+    return batidas
+
+
+def _rebater_o_teste(p: Any, uniq: str, weak: int, strong: int) -> str:
+    """O batimento da vibração, já na fila do controle. Devolve a recusa, ou `""`.
+
+    O «Parar» que entrou na fila antes dele já tirou a marca: aí ele não manda nada.
+    """
+    if uniq not in _EM_TESTE:
+        return ""
+    ok, motivo = _resposta(p.rumble_set_checked(weak, strong, uniq=uniq))
+    return "" if ok else (motivo or "o serviço não respondeu ao rumble.set")
 
 
 _BATEU_A_HAPTICA_EM: dict[str, float] = {}
 
 
 @coracao
-def _bater_o_coracao_da_haptica(ctx: Contexto, p: Any) -> None:
-    """Rebate o teste da háptica de cada controle a cada segundo."""
+def _bater_o_coracao_da_haptica(ctx: Contexto, p: Any) -> dict[str, Batimento]:
+    """Rebate o teste da háptica de cada controle a cada segundo, pela fila dele."""
+    batidas: dict[str, Batimento] = {}
     agora = _monotonic()
     for uniq in sorted(_EM_TESTE_DA_HAPTICA):
         if agora - _BATEU_A_HAPTICA_EM.get(uniq, 0.0) < SEGUNDOS_ENTRE_BATIMENTOS:
@@ -756,8 +774,21 @@ def _bater_o_coracao_da_haptica(ctx: Contexto, p: Any) -> None:
         if not any(str(c.get("uniq") or "") == uniq for c in ctx.mesa):
             parar_o_teste_da_haptica(uniq)
             continue
-        with contextlib.suppress(Exception):
-            p.haptica_testar(uniq, True)
+        batidas[uniq] = functools.partial(_rebater_a_haptica, p, uniq)
+    return batidas
+
+
+def _rebater_a_haptica(p: Any, uniq: str) -> str:
+    """O batimento da háptica, já na fila do controle. Devolve a recusa, ou `""`."""
+    if uniq not in _EM_TESTE_DA_HAPTICA:
+        return ""
+    ok, corpo = p.haptica_testar(uniq, True)
+    if not ok:
+        return "o serviço não respondeu ao haptica.testar"
+    resposta = corpo if isinstance(corpo, dict) else {}
+    if str(resposta.get("status") or "") != "ok":
+        return str(resposta.get("motivo") or resposta.get("status") or "recusado")
+    return ""
 
 
 @largada
