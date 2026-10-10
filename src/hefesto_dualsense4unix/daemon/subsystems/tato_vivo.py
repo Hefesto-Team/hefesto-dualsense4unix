@@ -1078,24 +1078,43 @@ def estado_do_controle(
     )
 
 
+#: O nome que não achou arquivo com o slug dele e a receita que o `load_profile`
+#: trouxe: o laço só volta a varrer quando o `active_profile` muda.
+_PELO_CARREGADOR: tuple[str, Receita] | None = None
+
+
 def receita_ativa(daemon: Any) -> Receita:
     """A receita do perfil ativo, lida da vista (o computador por baixo do jogo).
 
-    Sem perfil, ou sem receita, desligada.
+    Sem perfil, ou sem receita, desligada. Lê pelo `perfil_em_disco`, que só lê o
+    arquivo (sem semear, sem varrer), como o ganho da háptica: este é o laço de
+    60 Hz do daemon, e o `load_profile` semeia e reaponta perfis de jogo. Quando o
+    nome não tem arquivo com o slug dele, cai no `load_profile` UMA vez por nome
+    (A-RECEITA-DO-TATO-SE-LE-SEM-SEMEAR-NEM-VARRER-01).
     """
+    global _PELO_CARREGADOR
     nome = getattr(getattr(daemon, "store", None), "active_profile", None)
     if not isinstance(nome, str) or not nome:
         return DESLIGADA
     try:
-        from hefesto_dualsense4unix.profiles.o_padrao_do_computador import (
-            carregar_o_que_vale,
-        )
+        from hefesto_dualsense4unix.profiles.loader import perfil_em_disco
+        from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_que_vale
 
-        perfil = carregar_o_que_vale(nome)
+        perfil = perfil_em_disco(nome)
+        if perfil is not None:
+            _PELO_CARREGADOR = None
+            return receita_do_perfil(o_que_vale(perfil))
+        if _PELO_CARREGADOR is not None and _PELO_CARREGADOR[0] == nome:
+            return _PELO_CARREGADOR[1]
+        _PELO_CARREGADOR = (nome, DESLIGADA)
+        from hefesto_dualsense4unix.profiles.loader import load_profile
+
+        receita = receita_do_perfil(o_que_vale(load_profile(nome)))
+        _PELO_CARREGADOR = (nome, receita)
+        return receita
     except Exception:
         logger.debug("tato_vivo_perfil_ilegivel", exc_info=True)
         return DESLIGADA
-    return receita_do_perfil(perfil)
 
 
 def atuadores_de_producao(daemon: Any) -> list[Atuador]:
