@@ -66,9 +66,14 @@ def _resolver(alvo: str, entradas: list[tuple[str, str | None]]) -> str | None:
 def _avisar_daemon() -> None:
     """Faz a mudança valer agora, sem reiniciar nada (best-effort)."""
     with contextlib.suppress(Exception):
-        from hefesto_dualsense4unix.app.ipc_bridge import _run_call
+        from hefesto_dualsense4unix.app.ipc_bridge import (
+            _run_call,
+            teto_da_linha_de_comando,
+        )
 
-        _run_call("launch_env.refresh", {}, timeout=1.0)
+        _run_call(
+            "launch_env.refresh", {}, timeout=teto_da_linha_de_comando("launch_env.refresh")
+        )
 
 
 @app.command("list")

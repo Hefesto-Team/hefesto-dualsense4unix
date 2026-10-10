@@ -150,14 +150,14 @@ def _apply_via_ipc(rgb: tuple[int, int, int], brightness: int | None) -> bool:
     (O docstring antigo dizia que o daemon "ignora" o parâmetro; ele valida e
     aplica desde a FEAT-LED-BRIGHTNESS-01.)
     """
-    from hefesto_dualsense4unix.app.ipc_bridge import _run_call
+    from hefesto_dualsense4unix.app.ipc_bridge import _run_call, teto_da_linha_de_comando
     from hefesto_dualsense4unix.cli.ipc_client import IpcError
 
     params: dict[str, object] = {"rgb": list(rgb)}
     if brightness is not None:
         params["brightness"] = max(0, min(100, int(brightness))) / 100.0
     try:
-        _run_call("led.set", params, timeout=0.5)
+        _run_call("led.set", params, timeout=teto_da_linha_de_comando("led.set"))
     except (IpcError, FileNotFoundError, ConnectionError, OSError):
         return False
     return True

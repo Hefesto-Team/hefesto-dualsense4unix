@@ -404,13 +404,25 @@ def _activate_via_ipc_or_fallback(name: str) -> None:
     Mantido em função isolada para reuso em `apply`. Mensagens claras
     (sem traceback) para todos os modos de falha.
     """
-    from hefesto_dualsense4unix.app.ipc_bridge import _run_call
+    from hefesto_dualsense4unix.app.ipc_bridge import (
+        FRASE_DO_PRAZO_VENCIDO,
+        _run_call,
+        prazo_vencido,
+        teto_da_linha_de_comando,
+    )
 
     try:
-        _run_call("profile.switch", {"name": name}, timeout=1.0)
+        _run_call(
+            "profile.switch", {"name": name},
+            timeout=teto_da_linha_de_comando("profile.switch"),
+        )
         console.print(f"[green]perfil ativado via daemon:[/green] {name}")
         return
     except IpcError as exc:
+        if prazo_vencido(exc):
+            # O serviço pode ativar logo depois: dizer «nada foi ativado» mentiria.
+            console.print(f"[yellow]{FRASE_DO_PRAZO_VENCIDO}[/yellow]")
+            return
         console.print(f"[yellow]daemon recusou profile.switch:[/yellow] {exc.message}")
         console.print(
             "[dim]nada foi ativado — a escolha gravada ficou como estava.[/dim]"

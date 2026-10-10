@@ -8,6 +8,9 @@ from typing import Any
 
 from hefesto_dualsense4unix.cli.ipc_client import IpcClient, IpcError
 from hefesto_dualsense4unix.daemon.protocolo_do_ipc import CODE_INVALID_PARAMS
+from hefesto_dualsense4unix.integrations.central_do_radio import (
+    PRAZO_DA_TRAVA_DO_GESTO_S,
+)
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -26,6 +29,77 @@ _IPC_TRANSPORT_ERRORS: tuple[type[BaseException], ...] = (
 #: esperando um daemon morto. Só que `profile.switch` não é leitura: o handler
 PROFILE_SWITCH_TIMEOUT_S: float = 3.0
 
+#: Quanto esperar por cada método: um dono só, para a janela e para a linha de
+#: comando. Leitura espera o padrão de 0,25 s, curto para a janela não pendurar
+#: num serviço morto; o método que muda estado espera o que o serviço leva para
+#: aplicar, porque o prazo vencido com o modo JÁ aplicado vira «falhou» na tela
+#: e «nada foi ativado» no terminal. A ponte da janela reexporta esta tabela.
+TETOS: dict[str, float] = {
+    "gamepad.emulation.set": 2.0, "native.mode.set": 2.0,
+    "mouse.emulation.set": 2.0, "keyboard.emulation.set": 2.0,
+    "desktop.status.set": 2.0,
+    # A Navegação Interna: o interruptor e a lista gravam uma flag; o foco é o
+    # pulso de cada tique da janela, e um teto curto não segura a linha de fundo.
+    "navegacao.interna.set": 2.0, "navegacao.foco": 0.5,
+    "mouse.emulation.restore": 2.0, "daemon.emulation.suppress": 2.0,
+    # O arranjo da área de trabalho regrava os atalhos do perfil e pode criar o
+    # teclado virtual: a família do `profile.switch`.
+    "desktop.arranjo.apply": 3.0,
+    "profile.switch": PROFILE_SWITCH_TIMEOUT_S,
+    # O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01 (01/10/2026): o «Aplicar» roda a
+    # cadeia da ativação, e por isso o teto é o do `profile.switch`.
+    "profile.reaplicar": PROFILE_SWITCH_TIMEOUT_S,
+    "coop.set": 2.0, "coop.sync": 2.0, "identity.renumber": 2.0,
+    "gamepad.mask.set": 2.0,
+    "identity.number.set": 2.0,
+    # O pedido do «Procurar» espera a busca SUBIR no serviço (o BlueZ abre a janela:
+    # 107 a 366 ms medidos no diário dela em 03/10), e o serviço espera, no pior caso,
+    # o prazo da trava mais 1 s. O prazo de tela de 0,25 s dava «não respondeu» sobre
+    # uma busca que subia.
+    "radio.busca.set": PRAZO_DA_TRAVA_DO_GESTO_S + 2.0,
+    # Medido no daemon do usuário em 01/09: `daemon.reload` leva 9,5 SEGUNDOS.
+    "daemon.reload": 15.0,
+    # O `machine.declare` grava em disco; o gesto é raro e já congela a janela.
+    "machine.declare": 1.0,
+    # O reset da barra reenvia o 0x08 a cada controle aberto, e o comutador do
+    # LED de jogador repinta todos: os dois prazos que a linha de comando media.
+    "lightbar.reset": 2.0,
+    "debug.player_leds": 3.0,
+}
+
+#: O padrão de um método fora da tabela: o de uma leitura.
+TETO_PADRAO_S: float = 0.25
+
+#: A linha de comando espera ao menos isto por qualquer método. Quem digitou
+#: espera a resposta, e não há janela para pendurar.
+PISO_DA_LINHA_DE_COMANDO_S: float = 1.0
+
+#: O que o terminal diz quando o prazo de um método que muda estado vence: o
+#: serviço pode ter aplicado logo depois, e dizer «nada foi ativado» mentiria.
+FRASE_DO_PRAZO_VENCIDO = (
+    "sem resposta a tempo; confira com `hefesto-dualsense4unix status`"
+)
+
+
+def teto(metodo: str) -> float:
+    """Quanto tempo esperar por aquele método."""
+    return TETOS.get(metodo, TETO_PADRAO_S)
+
+
+def teto_da_linha_de_comando(metodo: str) -> float:
+    """O teto do método, nunca abaixo do piso da linha de comando."""
+    return max(teto(metodo), PISO_DA_LINHA_DE_COMANDO_S)
+
+
+def _prazo(metodo: str, timeout: float | None) -> float:
+    """O prazo pedido, ou o teto do método quando ninguém pediu."""
+    return teto(metodo) if timeout is None else timeout
+
+
+def prazo_vencido(exc: BaseException) -> bool:
+    """``True`` quando o erro é o prazo vencido, e não a recusa do serviço."""
+    return isinstance(exc, IpcError) and isinstance(exc.__cause__, TimeoutError)
+
 
 def _get_executor() -> concurrent.futures.ThreadPoolExecutor:
     """Retorna (criando se necessário) o executor IPC compartilhado."""
@@ -41,12 +115,14 @@ def _get_executor() -> concurrent.futures.ThreadPoolExecutor:
 def _run_call(
     method: str,
     params: dict[str, Any] | None = None,
-    timeout: float | None = 0.25,
+    timeout: float | None = None,
 ) -> Any:
-    """Executa RPC de forma síncrona com timeout."""
+    """Executa RPC de forma síncrona; sem ``timeout``, espera o ``teto(method)``."""
+    prazo = _prazo(method, timeout)
+
     async def _do() -> Any:
-        async with IpcClient.connect(timeout=timeout) as client:
-            return await client.call(method, params or {}, timeout=timeout)
+        async with IpcClient.connect(timeout=prazo) as client:
+            return await client.call(method, params or {}, timeout=prazo)
 
     return asyncio.run(_do())
 
@@ -54,7 +130,7 @@ def _run_call(
 def _safe_call(
     method: str,
     params: dict[str, Any] | None = None,
-    timeout: float | None = 0.25,
+    timeout: float | None = None,
 ) -> tuple[bool, Any]:
     """Executa RPC capturando apenas erros de transporte/disponibilidade.
 
@@ -70,7 +146,7 @@ def _safe_call(
     AUDIT-FINDING-IPC-BRIDGE-BARE-EXCEPT-01.
     """
     try:
-        result = _run_call(method, params, timeout=timeout)
+        result = _run_call(method, params, timeout=_prazo(method, timeout))
     except _IPC_TRANSPORT_ERRORS as exc:
         logger.debug(
             "ipc_bridge falha esperada de transporte",
@@ -87,14 +163,14 @@ def call_async(
     params: dict[str, Any] | None,
     on_success: Callable[[Any], bool],
     on_failure: Callable[[Exception], bool] | None = None,
-    timeout_s: float = 0.25,
+    timeout_s: float | None = None,
 ) -> None:
     """Despacha RPC para thread worker; callbacks re-postados via GLib.idle_add."""
     from gi.repository import GLib
 
     def _worker() -> None:
         try:
-            result = _run_call(method, params, timeout=timeout_s)
+            result = _run_call(method, params, timeout=_prazo(method, timeout_s))
         except Exception as exc:
             if on_failure is not None:
                 GLib.idle_add(on_failure, exc)
@@ -195,9 +271,7 @@ def profile_list() -> list[dict[str, Any]]:
 
 def profile_switch(name: str) -> bool:
     """Ativa um perfil no daemon; ``False`` quando ele não confirmou."""
-    ok, _ = _safe_call(
-        "profile.switch", {"name": name}, timeout=PROFILE_SWITCH_TIMEOUT_S
-    )
+    ok, _ = _safe_call("profile.switch", {"name": name})
     return ok
 
 
@@ -223,7 +297,7 @@ def _corpo_do_daemon(
 def _call_checked_detalhado(
     method: str,
     params: dict[str, Any],
-    timeout: float | None = 0.25,
+    timeout: float | None = None,
 ) -> tuple[bool, str | None, dict[str, Any] | None]:
     """``_call_checked`` que NÃO joga fora o corpo da resposta (ELO-MUDO-01).
 
@@ -253,7 +327,7 @@ def _call_checked_detalhado(
     ``IpcError`` é capturado ANTES de ``_IPC_TRANSPORT_ERRORS``, que o contém.
     """
     try:
-        resultado = _run_call(method, params, timeout=timeout)
+        resultado = _run_call(method, params, timeout=_prazo(method, timeout))
     except IpcError as exc:
         if exc.code == CODE_INVALID_PARAMS:
             return False, exc.message, None
@@ -279,7 +353,7 @@ def _call_checked_detalhado(
 def _call_checked(
     method: str,
     params: dict[str, Any],
-    timeout: float | None = 0.25,
+    timeout: float | None = None,
 ) -> tuple[bool, str | None]:
     """RPC que distingue "o daemon RECUSOU" de "o daemon não respondeu"."""
     ok, motivo, _corpo = _call_checked_detalhado(method, params, timeout=timeout)
@@ -599,7 +673,7 @@ def rumble_motores_set(
 
 
 def rumble_policy_set_checked(
-    policy: str, *, timeout: float | None = 0.25
+    policy: str, *, timeout: float | None = None
 ) -> tuple[bool, str | None]:
     """Altera a intensidade devolvendo o MOTIVO quando o daemon RECUSA."""
     return _call_checked("rumble.policy_set", {"policy": policy}, timeout=timeout)
@@ -749,7 +823,7 @@ def machine_declare_detalhado(
     ``_handle_machine_declare``. E 1,0 s de teto em vez dos 250 ms de leitura
     porque este pedido escreve em disco; o gesto é raro e já congela a janela.
     """
-    ok, result = _safe_call("machine.declare", {"maquina": maquina}, timeout=1.0)
+    ok, result = _safe_call("machine.declare", {"maquina": maquina})
     if not ok or not isinstance(result, dict):
         return False, None, ()
     if result.get("ok"):

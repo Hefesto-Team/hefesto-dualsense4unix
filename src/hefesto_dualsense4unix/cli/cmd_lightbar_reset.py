@@ -74,13 +74,16 @@ console = Console()
 
 def cmd_lightbar_reset(uniq: str | None = None) -> None:
     """Manda o Reset LED state e conta o que aconteceu, sem enfeitar."""
-    from hefesto_dualsense4unix.app.ipc_bridge import _run_call
+    from hefesto_dualsense4unix.app.ipc_bridge import _run_call, teto_da_linha_de_comando
 
     params: dict[str, Any] = {}
     if uniq:
         params["uniq"] = uniq
     try:
-        resultado = _run_call("lightbar.reset", params or None, timeout=2.0)
+        resultado = _run_call(
+            "lightbar.reset", params or None,
+            timeout=teto_da_linha_de_comando("lightbar.reset"),
+        )
     except IpcError as exc:
         console.print(f"[red]daemon recusou:[/red] {exc.message}")
         raise typer.Exit(code=2) from None
@@ -125,7 +128,7 @@ def cmd_lightbar_reset(uniq: str | None = None) -> None:
 
 def cmd_player_leds(acao: str) -> None:
     """Comuta a supressão do LED de jogador e diz o que fazer em seguida."""
-    from hefesto_dualsense4unix.app.ipc_bridge import _run_call
+    from hefesto_dualsense4unix.app.ipc_bridge import _run_call, teto_da_linha_de_comando
 
     normalizada = acao.strip().lower()
     if normalizada not in {"on", "off"}:
@@ -133,7 +136,10 @@ def cmd_player_leds(acao: str) -> None:
         raise typer.Exit(code=2)
     suprimir = normalizada == "off"
     try:
-        _run_call("debug.player_leds", {"suprimir": suprimir}, timeout=3.0)
+        _run_call(
+            "debug.player_leds", {"suprimir": suprimir},
+            timeout=teto_da_linha_de_comando("debug.player_leds"),
+        )
     except IpcError as exc:
         console.print(f"[red]daemon recusou:[/red] {exc.message}")
         raise typer.Exit(code=2) from None

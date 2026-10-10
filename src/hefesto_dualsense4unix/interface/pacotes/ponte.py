@@ -52,9 +52,6 @@ if str(RAIZ / "src") not in sys.path:
     sys.path.insert(0, str(RAIZ / "src"))
 
 from hefesto_dualsense4unix.app import ipc_bridge as _b  # noqa: E402
-from hefesto_dualsense4unix.integrations.central_do_radio import (  # noqa: E402
-    PRAZO_DA_TRAVA_DO_GESTO_S,
-)
 
 # de propósito: quem procurar `led_set` acha os dois e vê que são o mesmo.
 led_set = _b.led_set
@@ -103,40 +100,10 @@ daemon_state_full = _b.daemon_state_full
 daemon_status_basic = _b.daemon_status_basic
 
 
-#:     toast dizia 'Falha' com o modo JÁ aplicado"*. O `profile.switch` teve a
-#: Sem isto, um `chamar("gamepad.emulation.set", …)` volta `False` com o modo
-TETOS = {
-    "gamepad.emulation.set": 2.0, "native.mode.set": 2.0,
-    "mouse.emulation.set": 2.0, "keyboard.emulation.set": 2.0,
-    "desktop.status.set": 2.0,
-    # A Navegação Interna: o interruptor e a lista gravam uma flag; o foco é o
-    # pulso de cada tique da janela, e um teto curto não segura a linha de fundo.
-    "navegacao.interna.set": 2.0, "navegacao.foco": 0.5,
-    "mouse.emulation.restore": 2.0, "daemon.emulation.suppress": 2.0,
-    # Navegação. **3,0 s — a família do `profile.switch`, e não a do
-    # `mouse.emulation.restore` de 2,0 s logo acima.** A razão é o que ele faz
-    # `key_bindings`/`button_actions` e pode CRIAR o device de teclado além do
-    "desktop.arranjo.apply": 3.0,
-    "profile.switch": 3.0,
-    # O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01 (01/10/2026): o «Aplicar» roda a
-    # cadeia da ativação, e por isso o teto é o do `profile.switch`.
-    "profile.reaplicar": 3.0,
-    "coop.set": 2.0, "coop.sync": 2.0, "identity.renumber": 2.0,
-    "gamepad.mask.set": 2.0,
-    "identity.number.set": 2.0,
-    # O pedido do «Procurar» espera a busca SUBIR no serviço (o BlueZ abre a janela:
-    # 107 a 366 ms medidos no diário dela em 03/10), e o serviço espera, no pior caso,
-    # o prazo da trava mais 1 s. O prazo de tela de 0,25 s dava «não respondeu» sobre
-    # uma busca que subia.
-    "radio.busca.set": PRAZO_DA_TRAVA_DO_GESTO_S + 2.0,
-    # Medido no daemon do usuário em 01/09: `daemon.reload` leva 9,5 SEGUNDOS.
-    "daemon.reload": 15.0,
-}
-
-
-def teto(metodo: str) -> float:
-    """Quanto tempo esperar por aquele método. O padrão é o do bridge."""
-    return TETOS.get(metodo, 0.25)
+#: Os prazos têm um dono só, o cliente do IPC, que a linha de comando também
+#: usa: a janela os reexporta, sem cópia.
+TETOS = _b.TETOS
+teto = _b.teto
 
 
 def chamar(metodo: str, timeout: float | None = None, **params: Any) -> bool:
