@@ -167,6 +167,26 @@ async def test_sem_endereco_cada_um_recebe_a_sua_forca(tmp_path: Path) -> None:
     assert [h.par() for h in mesa.handles] == [_esperado(f) for f in FORCAS_DO_AUTO]
 
 
+@pytest.mark.asyncio
+async def test_sem_endereco_o_conectado_sem_mac_nao_fica_calado(tmp_path: Path) -> None:
+    """Um conectado guardado pelo caminho (sem MAC) recebe o «mesa inteira».
+
+    Controle a controle só vale quando todos têm MAC: com um sem, a escrita
+    volta ao ``set_rumble`` de sempre, que alcança os cinco com a força do P1.
+    """
+    mesa = _Mesa(tmp_path)
+    sem_mac = _Handle(90, "USB")
+    mesa.backend._handles["/dev/hidraw-de-teste-9"] = sem_mac
+
+    assert (await mesa.server._handle_rumble_set(
+        {"weak": PEDIDO, "strong": PEDIDO}))["status"] == "ok"
+
+    assert sem_mac.par() == _esperado(FORCAS_DO_AUTO[0]), (
+        "o controle sem MAC ficou calado no «mesa inteira»"
+    )
+    assert [h.par() for h in mesa.handles] == [_esperado(FORCAS_DO_AUTO[0])] * 4
+
+
 def test_o_debounce_e_de_cada_um(tmp_path: Path) -> None:
     """A bateria do P3 caindo não arrasta a âncora do P1, nem o contrário."""
     mesa = _Mesa(tmp_path)

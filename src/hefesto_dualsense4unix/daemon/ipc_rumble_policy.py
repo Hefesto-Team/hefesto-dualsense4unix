@@ -159,8 +159,9 @@ def quem_recebe_sem_dono(controller: Any) -> list[str]:
 
     É o alvo de output quando há um (a rota sem endereço segue o seletor), e
     senão cada controle conectado. Vazio quando o backend não escreve por
-    controle (``set_rumble_for``) ou não diz quem está conectado: quem chama
-    volta ao ``set_rumble`` de sempre.
+    controle (``set_rumble_for``), não diz quem está conectado, ou tem um
+    conectado sem MAC (o handle guardado pelo caminho): quem chama volta ao
+    ``set_rumble`` de sempre, que alcança todos, em vez de calar esse.
     """
     describe = getattr(controller, "describe_controllers", None)
     if not callable(describe) or not callable(getattr(controller, "set_rumble_for", None)):
@@ -178,7 +179,9 @@ def quem_recebe_sem_dono(controller: Any) -> list[str]:
         if not isinstance(entrada, dict) or not entrada.get("connected"):
             continue
         uniq = entrada.get("uniq")
-        if isinstance(uniq, str) and uniq and uniq not in uniqs:
+        if not isinstance(uniq, str) or not uniq:
+            return []
+        if uniq not in uniqs:
             uniqs.append(uniq)
     return uniqs
 
