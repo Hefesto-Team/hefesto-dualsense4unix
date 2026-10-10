@@ -137,6 +137,11 @@ def _mesmo_controle(a: object, b: object) -> bool:
 
 RECONCILIA_S = 5.0
 
+#: quanto o ``stop`` espera a volta e o ouvinte juntarem. Passado o prazo ele
+#: segue, e a porta (``_parar`` sob ``_porta``, e a do gerenciador) é o que
+#: impede a volta atrasada de deixar nó, ponte, tocador ou ouvido de pé.
+ESPERA_DA_VOLTA_S = 2.0
+
 _O_QUE_A_VOLTA_OUVE: tuple[str, ...] = ("sinks", "sink-inputs")
 
 RECUSA_DA_PONTE_S = 60.0
@@ -167,7 +172,15 @@ class ControleNaLista:
 
 
 class GerenciadorDeNosDeSom:
-    """Sobe/derruba um :class:`SinkVirtualPipeWire` por controle na lista."""
+    """Sobe/derruba um :class:`SinkVirtualPipeWire` por controle na lista.
+
+    **A PORTA** (O-NO-E-A-PONTE-DO-SOM-NAO-NASCEM-DEPOIS-DO-STOP-01, 10/10/2026):
+    quem cria (a volta) e quem derruba (o stop) partilham o ``_acordar``, sob
+    a ``_trava``. Fechada (:meth:`fechar`, que o :meth:`parar` também chama),
+    nenhum nó nasce, e o nó cujo ``iniciar`` termina depois dela fechar desce
+    na hora, fora de ``_nos``. Sem ela, o nó erguido pela volta que passou do
+    ``join`` ficava no servidor sem ninguém atrás. :meth:`abrir` é do ``start``.
+    """
 
     def __init__(
         self,
@@ -183,10 +196,33 @@ class GerenciadorDeNosDeSom:
         self._ponte_do_radio_por_controle = ponte_do_radio_por_controle
         self._nos: dict[str, Any] = {}
         self._acordar = threading.Event()
+        self._trava = threading.RLock()
 
     @property
     def nos(self) -> dict[str, Any]:
-        return dict(self._nos)
+        with self._trava:
+            return dict(self._nos)
+
+    def fechar(self) -> None:
+        """Fecha a porta: daqui em diante nenhum nó nasce. Barato, sem ``pactl``."""
+        with self._trava:
+            self._acordar.set()
+
+    def abrir(self) -> None:
+        """Reabre a porta para um ``start`` novo com este mesmo gerenciador."""
+        with self._trava:
+            self._acordar.clear()
+
+    def _guardar(self, uniq: str, no: Any) -> bool:
+        """O nó que subiu entra em ``_nos``; com a porta fechada, desce. True = guardou."""
+        with self._trava:
+            if not self._acordar.is_set():
+                self._nos[uniq] = no
+                return True
+        with contextlib.suppress(Exception):
+            no.parar()
+        logger.info("som_no_tardio_derrubado", uniq=uniq)
+        return False
 
     def _construir(
         self,
@@ -363,20 +399,26 @@ class GerenciadorDeNosDeSom:
             vistos[uniq] = transporte
         alvos = list(vistos)
         mesa = tuple(alvos)
+        if self._acordar.is_set():
+            return
         for uniq in list(self._nos):
             if uniq not in alvos:
                 self._derrubar(uniq)
         self._conferir_com_o_servidor()
         for uniq in alvos:
+            if self._acordar.is_set():
+                return
             transporte = vistos[uniq] or TRANSPORTE_CABO
-            if uniq in self._nos and self._o_rotulo_envelheceu(uniq, self._nos[uniq]):
+            vivo = self._nos.get(uniq)
+            if vivo is not None and self._o_rotulo_envelheceu(uniq, vivo):
                 self._republicar(uniq, transporte, mesa)
-            if uniq in self._nos:
-                self._reafinar(uniq, self._nos[uniq], transporte, mesa)
+            vivo = self._nos.get(uniq)
+            if vivo is not None:
+                self._reafinar(uniq, vivo, transporte, mesa)
                 continue
             no = self._erguer(uniq, transporte, mesa)
             if no is not None:
-                self._nos[uniq] = no
+                self._guardar(uniq, no)
 
     def _erguer(
         self,
@@ -386,7 +428,9 @@ class GerenciadorDeNosDeSom:
         *,
         descricao: str | None = None,
     ) -> Any:
-        """Constrói e SOBE o nó daquele controle. `None` = não subiu."""
+        """Constrói e SOBE o nó daquele controle. `None` = não subiu, ou a porta fechou."""
+        if self._acordar.is_set():
+            return None
         no = self._construir(uniq, transporte, mesa, descricao=descricao)
         # aqui poria uma entrada MUDA por DualSense na lista de som do usuário;
         rota = getattr(no, "rota", None)
@@ -433,15 +477,14 @@ class GerenciadorDeNosDeSom:
             logger.debug("som_no_falhou", uniq=uniq, err=str(exc))
             subiu = False
         if subiu:
-            self._nos[uniq] = novo
-            return True
+            return self._guardar(uniq, novo)
         logger.warning("som_rotulo_velho_nao_renasceu", uniq=uniq, no_ar=str(no_ar or ""))
         de_volta = self._erguer(
             uniq, transporte, mesa, descricao=str(no_ar) if no_ar else None
         )
         if de_volta is not None:
-            self._nos[uniq] = de_volta
-            logger.info("som_no_voltou_com_o_rotulo_velho", uniq=uniq)
+            if self._guardar(uniq, de_volta):
+                logger.info("som_no_voltou_com_o_rotulo_velho", uniq=uniq)
         else:
             logger.warning("som_no_sumiu_ao_republicar", uniq=uniq)
         return False
@@ -494,7 +537,8 @@ class GerenciadorDeNosDeSom:
             varrer_nos_orfaos(vivos, runner, modulos=modulos)
 
     def _derrubar(self, uniq: str) -> None:
-        no = self._nos.pop(uniq, None)
+        with self._trava:
+            no = self._nos.pop(uniq, None)
         if no is None:
             return
         with contextlib.suppress(Exception):
@@ -506,8 +550,11 @@ class GerenciadorDeNosDeSom:
         return self._acordar.wait(segundos)
 
     def parar(self) -> None:
-        """Derruba todos os nós e CONFERE no servidor que nenhum ficou. Idempotente."""
-        for uniq in list(self._nos):
+        """Fecha a porta, derruba os nós e CONFERE no servidor que nenhum ficou. Idempotente."""
+        self.fechar()
+        with self._trava:
+            saem = list(self._nos)
+        for uniq in saem:
             self._derrubar(uniq)
         runner = self._pergunta_ao_servidor()
         if runner is not None:
@@ -517,7 +564,6 @@ class GerenciadorDeNosDeSom:
                 restou = varrer_nos_orfaos((), runner)
                 if restou:
                     logger.warning("som_nos_ficaram_no_stop", quantos=len(restou))
-        self._acordar.set()
 
 
 def _uniq_de_perfil(uniq: str) -> str:
@@ -679,6 +725,8 @@ class AltoFalanteSubsystem:
         self._fonte = fonte_de_controles or controles_na_lista
         self._thread: threading.Thread | None = None
         self._parar = threading.Event()
+        #: quem guarda o que a volta subiu e quem põe o ``_parar`` passam por ela.
+        self._porta = threading.Lock()
         self._backend: Any = None
         self._numerador_anterior: Any = Ellipsis
         self._dizedor_anterior: Any = None
@@ -1071,9 +1119,10 @@ class AltoFalanteSubsystem:
             self._esquecer_o_rumble(uniq)
             return False
         endpoint = self._endpoints.get(marca)
-        self._tocador_do_aparelho(marca).levar(
-            fraco, forte, sink=str(getattr(endpoint, "nome", "") or ""), dono=chave
-        )
+        tocador = self._tocador_do_aparelho(marca)
+        if tocador is None:
+            return False
+        tocador.levar(fraco, forte, sink=str(getattr(endpoint, "nome", "") or ""), dono=chave)
         retrato = self._retrato_do_rumble(chave)
         with self._trava_do_rumble:
             vivos = {u: v for u, v in self._rumble_vivo.items() if u != chave}
@@ -1095,7 +1144,10 @@ class AltoFalanteSubsystem:
         if marca is None:
             return False
         endpoint = self._endpoints.get(marca)
-        self._tocador_do_aparelho(marca).tocar_o_toque(
+        tocador = self._tocador_do_aparelho(marca)
+        if tocador is None:
+            return False
+        tocador.tocar_o_toque(
             energia, lado, duracao_ms,
             sink=str(getattr(endpoint, "nome", "") or ""), dono=chave,
         )
@@ -1120,7 +1172,10 @@ class AltoFalanteSubsystem:
         sink = nome_do_sink(chave)
         if not sink:
             return False
-        self._tocador_do_estalo(sink).tocar(recorte)
+        tocador = self._tocador_do_estalo(sink)
+        if tocador is None:
+            return False
+        tocador.tocar(recorte)
         return True
 
     def _o_radio_cede(self, uniq: str) -> bool:
@@ -1138,7 +1193,9 @@ class AltoFalanteSubsystem:
             return tocador
         from hefesto_dualsense4unix.integrations.transiente_do_jogo import TocadorDoEstalo
 
-        with self._trava_do_rumble:
+        with self._trava_do_rumble, self._porta:
+            if self._parar.is_set():
+                return None
             tocador = self._estalos.get(sink)
             if tocador is None:
                 tocador = TocadorDoEstalo(sink, ao_mudar=self._acordar_a_volta)
@@ -1231,13 +1288,15 @@ class AltoFalanteSubsystem:
         return None
 
     def _tocador_do_aparelho(self, marca: str) -> Any:
-        """O tocador do aparelho, criado no primeiro rumble que o pede."""
+        """O tocador do aparelho, criado no primeiro rumble que o pede; ``None`` depois do stop."""
         tocador = self._tocadores.get(marca)
         if tocador is not None:
             return tocador
         from hefesto_dualsense4unix.integrations import endpoint_de_haptica
 
-        with self._trava_do_rumble:
+        with self._trava_do_rumble, self._porta:
+            if self._parar.is_set():
+                return None
             tocador = self._tocadores.get(marca)
             if tocador is None:
                 tocador = endpoint_de_haptica.TocadorDoRumble(
@@ -1480,7 +1539,11 @@ class AltoFalanteSubsystem:
                 vivos[uniq] = ouvido
             else:
                 logger.debug("haptica_ouvido_da_placa_sem_fonte", motivo=ouvido.motivo)
-        self._ouvidos_das_placas = MappingProxyType(vivos)
+        if not self._guardar_se_no_ar(
+            functools.partial(setattr, self, "_ouvidos_das_placas", MappingProxyType(vivos))
+        ):
+            for ouvido in vivos.values():
+                ouvido.descer()
 
     def _casar_os_ouvidos_do_radio(self, escutar: Mapping[str, tuple[str, int, str]]) -> None:
         """Um ouvido por nó aberto de quem, no Nativo, espera o som do jogo; o resto desce.
@@ -1513,7 +1576,24 @@ class AltoFalanteSubsystem:
             else:
                 recuo[no] = (uniq, agora)
                 logger.debug("som_ouvido_do_radio_sem_fonte", no=no, motivo=ouvido.motivo)
-        self._ouvidos_do_radio = MappingProxyType(vivos)
+        if not self._guardar_se_no_ar(
+            functools.partial(setattr, self, "_ouvidos_do_radio", MappingProxyType(vivos))
+        ):
+            for ouvido in vivos.values():
+                ouvido.descer()
+
+    def _guardar_se_no_ar(self, guardar: Callable[[], object]) -> bool:
+        """Guarda o que a volta subiu, se o stop não passou. False = quem chama desce.
+
+        O ``stop`` põe o ``_parar`` sob a mesma ``_porta``, e só depois tira a
+        cópia do que desce: o que a volta guarda antes dele, ele vê; o que ela
+        subiu depois, não entra nos dicionários.
+        """
+        with self._porta:
+            if self._parar.is_set():
+                return False
+            guardar()
+            return True
 
     def haptica_no_ar(self, uniq: str) -> bool:
         """Há háptica chegando a ESTE controle agora? LEITURA pura, nunca levanta."""
@@ -2021,7 +2101,12 @@ class AltoFalanteSubsystem:
                 ganho_da_haptica=functools.partial(GANHO.fator, uniq),
             )
             if ponte.subir():
-                self._pontes[uniq] = ponte
+                if not self._guardar_se_no_ar(
+                    functools.partial(self._pontes.__setitem__, uniq, ponte)
+                ):
+                    ponte.descer()
+                    logger.info("som_ponte_tardia_derrubada", uniq=uniq)
+                    continue
                 self._modo_da_ponte[uniq] = tipo
                 self._vaga_da_ponte = MappingProxyType({**self._vaga_da_ponte, uniq: vaga})
                 for no in [n for n, pedido in escutar.items() if pedido[0] == uniq]:
@@ -2180,6 +2265,9 @@ class AltoFalanteSubsystem:
             ponte_do_radio_por_controle=self._ponte_do_radio_de,
             fonte_por_controle=self._fonte_do_controle,
         )
+        abrir = getattr(self._gerenciador, "abrir", None)
+        if callable(abrir):
+            abrir()
         self._dizedor_anterior = registrar_dizedor_da_fonte(self._fonte_do_controle)
         if self.governador is None:
             try:
@@ -2228,8 +2316,18 @@ class AltoFalanteSubsystem:
             marcas.ao_marcar = aviso
 
     async def stop(self) -> None:
-        """Derruba as pontes, e SÓ ENTÃO os nós. Idempotente."""
-        self._parar.set()
+        """Fecha a porta, derruba as pontes, e SÓ ENTÃO os nós. Idempotente.
+
+        A porta fecha ANTES do ``join``: a volta que passar do prazo não guarda
+        mais nada, e o gerenciador não ergue nó (O-NO-E-A-PONTE-DO-SOM-NAO-
+        NASCEM-DEPOIS-DO-STOP-01). O prazo do ``join`` deixa de decidir se algo vaza.
+        """
+        with self._porta:
+            self._parar.set()
+        fechar = getattr(self._gerenciador, "fechar", None)
+        if callable(fechar):
+            with contextlib.suppress(Exception):
+                fechar()
         self._ouvir_quem_entra_na_partida(None)
         from hefesto_dualsense4unix.integrations.retrato_do_som import RETRATO
 
@@ -2240,7 +2338,7 @@ class AltoFalanteSubsystem:
         for fio in (thread, ouvinte):
             if fio is not None:
                 with contextlib.suppress(Exception):
-                    await asyncio.to_thread(fio.join, 2.0)
+                    await asyncio.to_thread(fio.join, ESPERA_DA_VOLTA_S)
         pontes = list(self._pontes.items())
         if pontes:
             await asyncio.gather(
