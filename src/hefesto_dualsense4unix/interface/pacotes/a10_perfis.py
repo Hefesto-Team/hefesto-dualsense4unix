@@ -2130,11 +2130,13 @@ def editor_estilo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
     também a CHAVE do estilo (`Profile.estilo`): é por ela que o motor do tato
     acha a receita invisível, que nenhuma aba mostra.
 
-    "PERSONALIZADO" NÃO MEXE EM NADA, e é o único que responde sem gravar. Ele é
-    o estilo que diz *"eu ajusto na mão"* — `as_quatro()` levanta de propósito se
-    alguém lhe pedir a cor. A resposta é um DESFECHO (a tira do rodapé), não uma
-    tarja de recusa: escolher "Personalizado" é uma escolha legítima, e recusar
-    dizendo faria a tela tratar de erro o que é o comportamento pedido.
+    "PERSONALIZADO" NÃO MEXE NAS ABAS E DESLIGA A RECEITA. Ele é o estilo que diz
+    *"eu ajusto na mão"* — `as_quatro()` levanta de propósito se alguém lhe pedir
+    a cor. Grava só `estilo = "personalizado"`, que não tem receita invisível, e
+    o motor do tato para de tocar a do estilo anterior; o gatilho, a vibração e a
+    luz das abas ficam, e o desvio `receita_do_tato` também (é o «canal a canal»).
+    Até 09/10/2026 ele respondia sem gravar, e o `estilo` antigo seguia no disco
+    (O-PERSONALIZADO-DESLIGA-A-RECEITA-DO-ESTILO-ANTERIOR-01).
 
     `RuntimeError` NAS RECUSAS — ver `RECUSA-CHEGA-NA-TELA-01`, no alto do
     arquivo: é a única classe que `_recusou_dizendo` leva ao DOM.
@@ -2160,11 +2162,16 @@ def editor_estilo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
             f"“{escolhido}” não é um dos estilos de jogo do produto. Nada foi "
             f"salvo, e o que vale continua sendo o que está nas abas.")
     nome = _perfil_do_editor(ctx)
-    if estilo.chave == "personalizado":
-        return _dizer(
-            f"“{estilo.rotulo}” não mexe em nada: é o estilo que diz “eu ajusto "
-            f"na mão”. O que vale em “{nome}” continua sendo o que está nas abas.")
     prof = _o_perfil_no_disco(nome)
+    if estilo.chave == "personalizado":
+        era = receitas.POR_CHAVE.get(str(getattr(prof, "estilo", "") or ""))
+        if era is not estilo:
+            _gravar(prof.model_copy(update={"estilo": estilo.chave}), ctx, p)
+        desligou = (f"a receita de “{era.rotulo}” foi desligada, e "
+                    if era is not None and era is not estilo else "")
+        return _dizer(
+            f"“{estilo.rotulo}” em “{prof.name}”: {desligou}o que vale é o que "
+            f"está nas abas.")
     _, largaram = _sem_o_ajuste_do_estilo(
         prof.controllers, gatilho=bool(estilo.gatilho), vibracao=bool(estilo.vibracao))
     novo, pintados = _com_o_estilo(prof, estilo, ctx.mesa)

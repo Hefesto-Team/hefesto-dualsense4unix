@@ -257,15 +257,25 @@ def test_o_gatilho_gravado_e_construivel(disco: dict[str, Any]) -> None:
         assert efeito is not None, f"{estilo.rotulo}: o gatilho não monta"
 
 
-def test_personalizado_nao_mexe_em_nada(disco: dict[str, Any]) -> None:
-    """"Personalizado" é o estilo que diz *"eu ajusto na mão"*."""
-    era = disco["perfil"]
+def test_personalizado_nao_mexe_nas_abas_e_desliga_a_receita(
+        disco: dict[str, Any]) -> None:
+    """"Personalizado" é o estilo que diz *"eu ajusto na mão"*: grava só a chave dele.
+
+    Até 09/10/2026 ele não gravava nada, e o ``estilo`` anterior seguia no disco com a
+    receita invisível tocando (O-PERSONALIZADO-DESLIGA-A-RECEITA-DO-ESTILO-ANTERIOR-01).
+    """
+    era = disco["perfil"].model_copy(update={"estilo": "fps"})
+    disco["perfil"] = era
     resposta = a10_perfis.editor_estilo(
         _ctx(), {"valor": "Personalizado"}, PonteDeMentira())
-    assert not disco["salvos"], "o `Personalizado` gravou alguma coisa"
-    assert disco["perfil"] is era
+    assert len(disco["salvos"]) == 1, "o `Personalizado` não gravou a chave dele"
+    novo = disco["perfil"]
+    assert novo.estilo == "personalizado"
+    for campo in ("triggers", "rumble", "leds", "controllers"):
+        assert getattr(novo, campo) == getattr(era, campo), (
+            f"o `Personalizado` mexeu em `{campo}`, que é das abas")
     assert resposta is not None
-    assert "não mexe em nada" in resposta["relato"]
+    assert "desligada" in resposta["relato"]
 
 
 def test_um_estilo_que_o_produto_nao_conhece_recusa(disco: dict[str, Any]) -> None:

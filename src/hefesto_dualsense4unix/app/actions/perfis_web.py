@@ -61,13 +61,12 @@ DONOS_DOS_GESTOS: dict[str, str] = {
     "profiles/loader.restaurar_do_historico:3090 e listar_historico:2809, com "
     "HISTORICO_MAX_VERSOES = 10 (loader.py:2776). Os únicos chamadores estão na "
     "CLI (cli/cmd_profile.py). Quem lhe dá tela é a ONDA-PERFIS-05.",
-    # não ganhou campo de estilo, e não vai ganhar — ele é um verbo.
     "editor.estilo": "SÓ NO HTML: `profiles/estilos_de_jogo.py` traz as "
     "receitas que ela aprovou (gatilho + vibração + luz por unidade), e "
-    "`a10_perfis.editor_estilo` as aplica no perfil. A GTK não tem widget "
-    "equivalente. NÃO há campo em profiles/schema.Profile nem preset em "
-    "profiles/simple_match.SIMPLE_MATCH_PRESETS, e não é falta: o estilo "
-    "RESOLVE os três ajustes e sai de cena — não é um valor a guardar.",
+    "`a10_perfis.editor_estilo` as aplica no perfil e guarda a chave em "
+    "profiles/schema.Profile.estilo, que o motor do tato lê. O «Personalizado» "
+    "guarda a chave dele e desliga a receita do estilo anterior. A GTK não tem "
+    "widget equivalente.",
 }
 
 SEM_DONO = (
