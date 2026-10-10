@@ -512,11 +512,9 @@ def o_jogo_escreve_no_servico(daemon: Any) -> OJogoEscreve:
 
 
 def _vpads_por_controle(daemon: Any, controle: Any) -> list[tuple[str | None, Any]]:
-    pares: list[tuple[str | None, Any]] = []
-    primario = getattr(controle, "primary_uniq", None)
-    with contextlib.suppress(Exception):
-        pares.append((primario() if callable(primario) else None,
-                      getattr(daemon, "_gamepad_device", None)))
+    pares: list[tuple[str | None, Any]] = [
+        (_primario(controle), getattr(daemon, "_gamepad_device", None))
+    ]
     jogadores = getattr(getattr(daemon, "_coop_manager", None), "_players", None)
     if isinstance(jogadores, dict):
         for identidade, jogador in list(jogadores.items()):
@@ -533,14 +531,20 @@ def uniq_do_posto_no_servico(daemon: Any) -> UniqDoPosto:
     """O ``uniq`` do controle do posto: o dono do estado que o tique publica."""
 
     def uniq_do_posto() -> str | None:
-        primario = getattr(getattr(daemon, "controller", None), "primary_uniq", None)
-        try:
-            valor = primario() if callable(primario) else None
-        except Exception:
-            return None
-        return valor if isinstance(valor, str) and valor else None
+        return _primario(getattr(daemon, "controller", None))
 
     return uniq_do_posto
+
+
+def _primario(controle: Any) -> str | None:
+    """O ``primary_uniq`` do backend (uma propriedade; num dublê, pode ser método)."""
+    try:
+        valor = getattr(controle, "primary_uniq", None)
+        if callable(valor):
+            valor = valor()
+    except Exception:
+        return None
+    return valor if isinstance(valor, str) and valor else None
 
 
 __all__ = [

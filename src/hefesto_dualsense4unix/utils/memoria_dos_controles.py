@@ -335,6 +335,19 @@ INVENTARIO: tuple[Lugar, ...] = (
         "a configuração de quem instalou pelo Flatpak",
     ),
     Lugar(
+        "codigo-das-modificacoes", "dados", f"{_C}/mods",
+        "utils/xdg_paths.py:mods_codigo_dir",
+        USUARIO, CASA, COPIAR,
+        "o código de cada modificação instalada (ADR-021); a linha dela no "
+        "registro mora no mods.json, dentro da configuração",
+    ),
+    Lugar(
+        "dados-das-modificacoes", "estado", f"{_C}/mods",
+        "utils/xdg_paths.py:mods_dados_dir",
+        USUARIO, CASA, COPIAR,
+        "os dados que cada modificação grava e o diário dela",
+    ),
+    Lugar(
         "camadas-vulkan", "estado", f"{_C}/camadas-vulkan.json",
         "integrations/camadas_vulkan.py:ESTADO_BASENAME",
         USUARIO, CASA, COPIAR,
@@ -469,6 +482,13 @@ CLASSIFICACAO: dict[str, tuple[str, str]] = {
     "51-hefesto-dualsense-no-default-source.conf": ("install", "drop-in do WirePlumber"),
     "54-hefesto-dualsense-alto-falante-nunca-dorme.conf": ("install", "drop-in do WirePlumber"),
     ".hefesto-proton-pin.json": ("install", "o manifesto do Proton que o install extrai"),
+    "mods": (CASA, "o código e os dados das modificações (codigo-das-modificacoes e "
+             "dados-das-modificacoes); não identificam controle"),
+    "mods.json": (CASA, "o registro das modificações instaladas e ligadas"),
+    "diario.log": (CASA, "o diário de cada modificação, na pasta de dados dela"),
+    "mods.sock": ("install", "a porta das modificações (pasta de execução)"),
+    "mods-estado.json": ("install", "o estado vivo das modificações (pasta de execução)"),
+    "hefesto-mod.json": ("fora", "o manifesto que vem dentro de cada modificação"),
     "winevulkan.json": ("fora", "o driver Vulkan do Wine, lido no prefixo"),
     "PROVA-DA-FOTO.txt": ("fora", "saída da bancada de fotos (olhar.py)"),
 }
