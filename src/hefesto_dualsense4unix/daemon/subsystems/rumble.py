@@ -77,6 +77,54 @@ def escrever_rumble_no_dono(
     controller.set_rumble(weak=weak, strong=strong)
 
 
+def escrever_com_a_forca(
+    daemon: Any,
+    dono: str | None,
+    weak: int,
+    strong: int,
+    agora: float | None = None,
+) -> bool:
+    """Escreve o pedido CRU com a força de cada controle que o recebe.
+
+    A-FORCA-DA-VIBRACAO-DE-CADA-CONTROLE-SAI-DE-UM-FUNIL-SO-COM-A-BATERIA-DELE-
+    E-O-TETO-01 (09/10/2026). Com ``dono``, o par vai a ele com a força dele.
+    Sem dono («a mesa inteira»), vai a quem o ``set_rumble`` alcançaria (o
+    alvo de output, ou cada conectado), controle a controle, cada um com a
+    sua bateria, a sua peça e o teto da mesa (`ipc_rumble_policy.forca_para`).
+    Backend que não diz quem está na mesa (``FakeController``) recebe o par
+    pela rota de sempre, com a força do primário. Devolve ``True`` quando
+    algum motor recebeu par diferente de zero.
+    """
+    from hefesto_dualsense4unix.daemon.ipc_rumble_policy import (
+        forca_para,
+        quem_recebe_sem_dono,
+    )
+
+    def _par(uniq: str | None) -> tuple[int, int]:
+        mult = forca_para(daemon, uniq, agora)
+        return (
+            max(0, min(255, round(weak * mult))),
+            max(0, min(255, round(strong * mult))),
+        )
+
+    controller = daemon.controller
+    if isinstance(dono, str) and dono:
+        par = _par(dono)
+        escrever_rumble_no_dono(controller, dono, *par)
+        return any(par)
+    mesa = quem_recebe_sem_dono(controller)
+    if not mesa:
+        par = _par(None)
+        controller.set_rumble(weak=par[0], strong=par[1])
+        return any(par)
+    vibrou = False
+    for uniq in mesa:
+        par = _par(uniq)
+        escrever_rumble_no_dono(controller, uniq, *par)
+        vibrou = vibrou or any(par)
+    return vibrou
+
+
 def pares_fixados(cfg: Any) -> dict[str | None, tuple[int, int, float | None]]:
     """O par FIXADO de cada controle: ``{dono: (weak, strong, carimbo)}``.
 
@@ -290,9 +338,7 @@ def silenciar_dono_abandonado(
 
 
 def reassert_rumble(daemon: DaemonProtocol, now: float) -> None:
-    """Re-aplica cada par fixado no controle dele a cada ~200ms, com a política."""
-    from hefesto_dualsense4unix.core.rumble import _effective_mult
-
+    """Re-aplica cada par fixado no controle dele a cada ~200ms, com a força dele."""
     cfg = daemon.config
     pares = _pares_de_pe(cfg)
     if not pares:
@@ -320,39 +366,22 @@ def reassert_rumble(daemon: DaemonProtocol, now: float) -> None:
         _lembrar_dono_vibrando(cfg, None)
         return
 
-    battery_pct = 50
-    try:
-        snap = daemon.store.snapshot()
-        ctrl = snap.controller
-        if ctrl is not None and ctrl.battery_pct is not None:
-            battery_pct = int(ctrl.battery_pct)
-    except Exception:
-        logger.debug("rumble_state_read_fallback", exc_info=True)
-
-    mult, daemon._last_auto_mult, daemon._last_auto_change_at = _effective_mult(
-        config=cfg,
-        battery_pct=battery_pct,
-        now=now,
-        last_auto_mult=daemon._last_auto_mult,
-        last_auto_change_at=daemon._last_auto_change_at,
-        auto_debounce_sec=AUTO_DEBOUNCE_SEC,
-    )
     # O dono «mesa inteira» escreve primeiro: o par de um controle, que vem
-    # depois, vale sobre o dele.
+    # depois, vale sobre o dele. A força é a de cada controle que recebe
+    # (`escrever_com_a_forca`): a bateria dele, a peça dele e o teto da mesa.
     vivos.sort(key=lambda item: item[0] is not None)
     vibrando: str | None = None
     for dono, (weak_raw, strong_raw) in vivos:
-        weak = max(0, min(255, round(weak_raw * mult)))
-        strong = max(0, min(255, round(strong_raw * mult)))
+        vibrou = False
         try:
             if len(vivos) == 1:
                 silenciar_dono_abandonado(
                     daemon.controller, getattr(cfg, "rumble_dono_vibrando", None), dono
                 )
-            escrever_rumble_no_dono(daemon.controller, dono, weak, strong)
+            vibrou = escrever_com_a_forca(daemon, dono, weak_raw, strong_raw, now)
         except Exception as exc:
             logger.warning("rumble_reassert_failed", err=str(exc), exc_info=True)
-        if weak or strong:
+        if vibrou:
             vibrando = dono
     _lembrar_dono_vibrando(cfg, vibrando)
 
@@ -481,6 +510,7 @@ __all__ = [
     "RUMBLE_RECUSADO_MODO_NATIVO",
     "RUMBLE_SOLTO_NO_MODO_NATIVO",
     "RumbleSubsystem",
+    "escrever_com_a_forca",
     "escrever_rumble_no_dono",
     "fixar_par",
     "modo_nativo_manda_nos_motores",

@@ -22,7 +22,7 @@ O QUE ELA COBRA, e cada item é um jeito diferente de o campo mentir:
 2. O rótulo é REPRODUZIDO de `RUMBLE_POLICY_MULT["economia"]`, nunca digitado.
 3. "Segue o global" APAGA o override, e o segundo clique igual não regrava.
 4. "Sem teto" recusa dizendo, e não toca no arquivo.
-5. O fator que chega ao motor é 0,3 — a conta inteira, do disco ao `_escalar_rumble`.
+5. O fator que chega ao motor é 0,3 — a conta inteira, do disco ao `forca_do_controle`.
 6. A borda recusa o clique sem dono (sem controle, MAC forjado, rótulo de fora).
 7. A pintura mostra o que está no DISCO, e não o padrão do desenho.
 8. Uma política que o campo não sabe mostrar é DECLARADA, não pintada errada.
@@ -32,7 +32,7 @@ E A SEÇÃO 8, DE 01/09/2026, mede a palavra "GLOBAL" — que tinha DOIS donos, 
 tela reportava o errado. Cada item ali é um jeito diferente de a frase mentir:
 
 10. A dica diz o que chega AO MOTOR, e não o degrau nominal do rótulo — a cadeia
-    inteira, do disco ao `_escalar_rumble`, para os três globais vivos.
+    inteira, do disco ao `forca_do_controle`, para os três globais vivos.
 11. O global do PERFIL é DENOMINADOR; quem multiplica é o do DAEMON.
 12. O orçamento entra por CIMA da política viva, com `min`.
 13. O que não se sabe não vira a afirmação "Sem teto" — nos três casos.
@@ -307,12 +307,11 @@ def test_o_fator_que_chega_ao_hardware_e_zero_ponto_tres(
     import threading
 
     motor._io_lock = threading.RLock()
-    motor._key_to_uniq = lambda k: k  # type: ignore[method-assign]
     motor.set_rumble_scales(escalas)
-    assert motor._escalar_rumble(CHAVE, 200, 200) == (60, 60), (
-        f"o motor receberia {motor._escalar_rumble(CHAVE, 200, 200)} em vez de "
-        f"(60, 60) — o rótulo promete 30% de 200.")
-    assert motor._escalar_rumble("aabbcc000002", 200, 200) == (200, 200)
+    assert _no_motor(motor, CHAVE) == 60, (
+        f"o motor receberia {_no_motor(motor, CHAVE)} em vez de 60 — o rótulo "
+        f"promete 30% de 200.")
+    assert _no_motor(motor, "aabbcc000002") == 200
 
 
 def test_a_ativacao_do_perfil_publica_as_escalas_no_backend(
@@ -653,12 +652,21 @@ def test_o_json_do_perfil_sobrevive_ao_disco(tmp_path, pac, tela, gesto,
         f"o gesto fez {p.chamadas} e não pediu o `profile.reaplicar`")
 
 
-def _fator_no_motor(fator: dict[str, float], mult: float, pedido: int = 200) -> int:
-    """O que o `_escalar_rumble` do backend entrega, com o funil já aplicado.
-
-    É a PONTA da cadeia, e não um dublê dela: o mesmo método que as duas rotas
-    de escrita do DualSense chamam antes de tocar o motor.
+def _no_motor(motor: Any, uniq: str, viva: str = "balanceado", pedido: int = 200) -> int:
+    """O que chega ao motor de ``uniq``: o funil `forca_do_controle`, com a peça
+    lida do backend por `escala_de`, como os três caminhos de vibração a leem.
     """
+    from hefesto_dualsense4unix.core.rumble import forca_do_controle
+    from hefesto_dualsense4unix.daemon.lifecycle import DaemonConfig
+
+    cfg = DaemonConfig()
+    cfg.rumble_policy = viva
+    forca = forca_do_controle(cfg, uniq, 100, {}, 0.0, escala=motor.escala_de(uniq))
+    return max(0, min(255, round(pedido * forca)))
+
+
+def _fator_no_motor(fator: dict[str, float], viva: str, pedido: int = 200) -> int:
+    """O que o funil entrega ao motor, com o mapa por peça publicado no backend."""
     import threading
 
     from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
@@ -667,23 +675,18 @@ def _fator_no_motor(fator: dict[str, float], mult: float, pedido: int = 200) -> 
     m._rumble_scale_by_uniq = {}
     m._io_lock = threading.RLock()
     m.set_rumble_scales(fator)
-    return int(m._escalar_rumble(UNIQ, int(pedido * mult), int(pedido * mult))[0])
+    return _no_motor(m, UNIQ, viva, pedido)
 
 
 @pytest.mark.parametrize("viva", ["balanceado", "economia", "max"])
 def test_a_dica_diz_o_que_chega_ao_motor_e_nao_o_degrau_do_rotulo(tela, a08, viva) -> None:
-    """A CADEIA INTEIRA, medida: a frase do `?` == o que sai no `_escalar_rumble`."""
-    from hefesto_dualsense4unix.core.rumble import _effective_mult
-    from hefesto_dualsense4unix.daemon.lifecycle import DaemonConfig
+    """A CADEIA INTEIRA, medida: a frase do `?` == o que sai do `forca_do_controle`."""
     from hefesto_dualsense4unix.profiles.manager import _controllers_to_rumble_scales
 
     prof = _perfil()
     fator = _controllers_to_rumble_scales(
         a08._com_o_teto(prof, CHAVE, "economia").controllers, prof.rumble)
-    cfg = DaemonConfig()
-    cfg.rumble_policy = viva
-    mult, _, _ = _effective_mult(cfg, 100, 0.0, 1.0, 0.0)
-    saiu = _fator_no_motor(fator, mult)
+    saiu = _fator_no_motor(fator, viva)
 
     v = tela.Vibracao(do_controle="economia", do_perfil=prof.rumble.policy, a_viva=viva)
     campo, frase = tela.teto_que_vale(v)

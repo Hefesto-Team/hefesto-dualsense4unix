@@ -60,12 +60,34 @@ def _backend() -> tuple[Any, _FakeHandle, _FakeHandle]:
     return inst, h1, h2
 
 
-def test_a_peca_com_intensidade_propria_vibra_diferente_da_outra() -> None:
-    """Um ``set_rumble`` broadcast, dois motores com força DIFERENTE."""
-    backend, branco, preto = _backend()
+def _daemon_do_funil(backend: Any) -> Any:
+    """O daemon mínimo que o funil lê: a política, o backend e a memória do ``auto``."""
+    from types import SimpleNamespace
 
+    from hefesto_dualsense4unix.daemon.lifecycle import DaemonConfig
+
+    return SimpleNamespace(
+        config=DaemonConfig(rumble_policy="balanceado"),
+        controller=backend,
+        store=None,
+        _last_auto_mult=1.0,
+        _last_auto_change_at=0.0,
+    )
+
+
+def test_a_peca_com_intensidade_propria_vibra_diferente_da_outra() -> None:
+    """O pedido sem dono, dois motores com força DIFERENTE.
+
+    Desde 09/10/2026 o fator da peça entra no funil (`forca_para`), antes do
+    teto, e o backend escreve o par que recebe: quem escreve a mesa inteira é
+    o `escrever_com_a_forca`, controle a controle.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems.rumble import escrever_com_a_forca
+
+    backend, branco, preto = _backend()
     backend.set_rumble_scales({BRANCO: 0.5})
-    backend.set_rumble(weak=100, strong=200)
+
+    escrever_com_a_forca(_daemon_do_funil(backend), None, 100, 200)
 
     assert branco.left_motor == [100], "a peça com fator próprio não foi escalada"
     assert branco.right_motor == [50]
@@ -86,14 +108,17 @@ def test_peca_sem_opiniao_recebe_o_par_intacto() -> None:
 
 
 def test_o_coop_tambem_respeita_a_intensidade_da_peca() -> None:
-    """``set_rumble_for`` (a rota do co-op) escala pela MESMA regra."""
-    backend, branco, _preto = _backend()
+    """O par de UM controle (a rota do co-op) passa pelo MESMO funil."""
+    from hefesto_dualsense4unix.daemon.subsystems.rumble import escrever_com_a_forca
 
+    backend, branco, preto = _backend()
     backend.set_rumble_scales({BRANCO: 0.25})
-    assert backend.set_rumble_for(BRANCO, weak=200, strong=100) is True
+
+    assert escrever_com_a_forca(_daemon_do_funil(backend), BRANCO, 200, 100) is True
 
     assert branco.right_motor == [50]
     assert branco.left_motor == [25]
+    assert preto.right_motor == [] and preto.left_motor == []
 
 
 def test_a_escala_e_relativa_a_politica_global_do_perfil() -> None:

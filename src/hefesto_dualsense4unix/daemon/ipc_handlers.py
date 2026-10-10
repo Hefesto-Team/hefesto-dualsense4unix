@@ -4044,6 +4044,7 @@ class IpcHandlersMixin:
             RUMBLE_APLICADO,
             RUMBLE_RECUSADO_ALVO_AUSENTE,
             RUMBLE_RECUSADO_MODO_NATIVO,
+            escrever_com_a_forca,
             escrever_rumble_no_dono,
             fixar_par,
             modo_nativo_manda_nos_motores,
@@ -4076,7 +4077,7 @@ class IpcHandlersMixin:
         if uniq is not None:
             # O gesto de UM controle (a aba Vibração): o pedido leva o endereço,
             # o seletor global não é tocado e os pares dos outros seguem de pé.
-            eff_weak, eff_strong = apply_rumble_policy(self.daemon, weak, strong)
+            eff_weak, eff_strong = apply_rumble_policy(self.daemon, weak, strong, uniq)
             mirar = getattr(self.controller, "set_rumble_for", None)
             if not callable(mirar) or not mirar(uniq, eff_weak, eff_strong):
                 logger.warning(
@@ -4127,8 +4128,8 @@ class IpcHandlersMixin:
                 daemon_cfg, dono, weak, strong, time.monotonic(), so_este=False
             ):
                 escrever_rumble_no_dono(self.controller, largado, 0, 0)
-        eff_weak, eff_strong = apply_rumble_policy(self.daemon, weak, strong)
-        self.controller.set_rumble(weak=eff_weak, strong=eff_strong)
+        # Cada controle que o pedido alcança, com a força dele (o funil único).
+        escrever_com_a_forca(self.daemon, None, weak, strong)
         return {
             "status": "ok",
             "desfecho": RUMBLE_APLICADO,

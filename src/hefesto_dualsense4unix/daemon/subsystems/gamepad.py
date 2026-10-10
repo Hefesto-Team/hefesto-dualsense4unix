@@ -408,27 +408,17 @@ def rehide_physical_hidraw(daemon: DaemonProtocol) -> None:
         client.hide(n)
 
 
-def _game_rumble_mult(daemon: DaemonProtocol, now: float) -> float:
-    """Multiplicador da política global de rumble para o rumble do JOGO."""
-    from hefesto_dualsense4unix.core.rumble import _effective_mult
-    from hefesto_dualsense4unix.daemon.subsystems.rumble import AUTO_DEBOUNCE_SEC
+def _game_rumble_mult(
+    daemon: DaemonProtocol, now: float, uniq: str | None = None
+) -> float:
+    """A força do controle ``uniq`` (``None``: o primário) para o rumble do JOGO.
 
-    battery_pct = 50
-    try:
-        ctrl = daemon.store.snapshot().controller
-        if ctrl is not None and ctrl.battery_pct is not None:
-            battery_pct = int(ctrl.battery_pct)
-    except Exception:
-        logger.debug("game_rumble_state_read_fallback", exc_info=True)
-    mult, daemon._last_auto_mult, daemon._last_auto_change_at = _effective_mult(
-        config=daemon.config,
-        battery_pct=battery_pct,
-        now=now,
-        last_auto_mult=daemon._last_auto_mult,
-        last_auto_change_at=daemon._last_auto_change_at,
-        auto_debounce_sec=AUTO_DEBOUNCE_SEC,
-    )
-    return mult
+    Sai do funil único (`ipc_rumble_policy.forca_para`): a política com a
+    bateria DELE, o fator da peça dele e o teto do orçamento por último.
+    """
+    from hefesto_dualsense4unix.daemon.ipc_rumble_policy import forca_para
+
+    return forca_para(daemon, uniq, now)
 
 
 def _chave_da_peca(uniq: str | None) -> str | None:
@@ -584,13 +574,11 @@ def _mults_por_motor(
     dois, um dos dois envelheceria sozinho — e a barra é justamente o tipo de
     ajuste que só se percebe errado com a mão no plástico.
 
-    E ELA COMPÕE COM O TETO POR CONTROLE em vez de apagá-lo: o teto do card do
-    cabo (`08-conexoes`) vira fator por uniq em
-    `profiles/manager._controllers_to_rumble_scales` e é aplicado um andar
-    ABAIXO, dentro do backend (`_escalar_rumble`, sobre o par já escrito). Os
-    dois se multiplicam na ordem degrau → barra → teto, e nenhum come o outro.
+    O DEGRAU é a força DAQUELE controle (:func:`_game_rumble_mult`, o funil
+    único): a bateria dele, o fator da peça dele e o teto do orçamento já
+    estão nele. A barra, que não passa de 100 %, só o reparte entre os motores.
     """
-    degrau = _game_rumble_mult(daemon, now)
+    degrau = _game_rumble_mult(daemon, now, target_uniq)
     forte_pct, fraco_pct = _pcts_dos_motores(daemon, target_uniq)
     return (degrau * fraco_pct / 100.0, degrau * forte_pct / 100.0)
 
@@ -656,6 +644,11 @@ def apply_game_rumble(
         o bit que pede rumble ao firmware cala a háptica por áudio — e o par
         devolvido é o que chegou pela háptica. Sem ``vpad`` (os chamadores de
         antes) nada muda.
+      - A-FORCA-DA-VIBRACAO-DE-CADA-CONTROLE-SAI-DE-UM-FUNIL-SO-COM-A-BATERIA-
+        DELE-E-O-TETO-01 (09/10/2026): a força é a do controle que recebe
+        (:func:`_mults_por_motor`). Sem ``target_uniq`` e sem ``vpad``, numa
+        mesa que se escreve por controle, o pedido vai a cada um que o
+        ``set_rumble`` alcançaria, com a força dele.
     """
     from hefesto_dualsense4unix.daemon.subsystems.rumble import par_fixado_vale_para
 
@@ -663,6 +656,21 @@ def apply_game_rumble(
         _levar_a_haptica_fina(daemon, vpad, target_uniq, 0, 0)
         return None
     controller = daemon.controller
+    if target_uniq is None and vpad is None:
+        from hefesto_dualsense4unix.daemon.ipc_rumble_policy import (
+            quem_recebe_sem_dono,
+        )
+
+        destinos = quem_recebe_sem_dono(controller)
+        if destinos:
+            # Sem endereço, numa mesa que se escreve por controle: cada um
+            # recebe o pedido com a força DELE (a bateria, a peça e o teto), e
+            # não a do primário em todos. Devolve o par do primeiro.
+            pares = [
+                apply_game_rumble(daemon, weak, strong, target_uniq=uniq)
+                for uniq in destinos
+            ]
+            return pares[0]
     mult_fraco, mult_forte = _mults_por_motor(daemon, time.monotonic(), target_uniq)
     weak_eff = max(0, min(255, round(weak * mult_fraco)))
     strong_eff = max(0, min(255, round(strong * mult_forte)))

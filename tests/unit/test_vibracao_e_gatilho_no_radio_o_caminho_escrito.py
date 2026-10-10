@@ -93,7 +93,7 @@ _FUNCOES_SEM_TRANSPORTE = (
     "set_rumble_for",
     "set_trigger",
     "force_rumble_stop",
-    "_escalar_rumble",
+    "escala_de",
 )
 
 

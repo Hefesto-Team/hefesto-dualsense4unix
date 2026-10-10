@@ -349,16 +349,21 @@ class TestCompoeComOTeto:
             "o teto por controle sumiu do mapa — a barra APAGOU o teto, que é "
             "exatamente o que a sprint proíbe"
         )
+        # Desde 09/10/2026 o teto da peça entra no funil (`forca_para`), e o
+        # backend escreve o par que recebe: a mesma chamada, agora no backend
+        # real, com o mapa de escalas que a ativação registra.
         real = PyDualSenseController(evdev_reader=_null_evdev())
         h1, h2 = _FakeHandle(), _FakeHandle()
         real._handles = {KEY_1: h1, KEY_2: h2}
         real._primary_key = KEY_1
         real.set_rumble_scales(escalas)
-        real.set_rumble_for(BRANCO, weak=weak_pos_barra, strong=strong_pos_barra)
+        gp_mod.apply_game_rumble(
+            _daemon(perfil_ativo="Bancada", controller=real), 200, 200, target_uniq=BRANCO
+        )
 
         fator = escalas[BRANCO]
-        assert h1.right_motor == [int(200 * fator)], "o teto não pegou o motor fraco"
-        assert h1.left_motor == [int(100 * fator)], (
+        assert h1.right_motor == [round(200 * fator)], "o teto não pegou o motor fraco"
+        assert h1.left_motor == [round(100 * fator)], (
             "o motor forte tinha de chegar com a barra JÁ aplicada e o teto por "
             "cima — os dois fatores, na ordem degrau → barra → teto"
         )

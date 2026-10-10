@@ -4097,24 +4097,41 @@ class PyDualSenseController(IController):
         )
 
     def set_rumble(self, weak: int, strong: int) -> None:
-        # perfil. `_escalar_rumble` devolve o par intacto quando a unidade não
-        def _do(handle: pydualsense, key: str) -> None:
-            eff_weak, eff_strong = self._escalar_rumble(key, weak, strong)
-            handle.setLeftMotor(eff_strong)
-            handle.setRightMotor(eff_weak)
+        """O par, como veio, no alvo de output (ou em todos).
+
+        O fator da peça não entra aqui (09/10/2026): ele já chegou ao par pelo
+        funil `core.rumble.forca_do_controle`, que o lê por :meth:`escala_de`
+        e põe o teto do orçamento depois dele.
+        """
+        def _do(handle: pydualsense, _key: str) -> None:
+            handle.setLeftMotor(strong)
+            handle.setRightMotor(weak)
 
         self._for_each_com_key(_do, what="set_rumble")
 
-    def _escalar_rumble(self, key: str, weak: int, strong: int) -> tuple[int, int]:
-        """Aplica a escala de vibração por-uniq da `key` (POR-UNIDADE-01)."""
-        uniq = self._key_to_uniq(key)
-        fator = self._rumble_scale_by_uniq.get(uniq) if uniq is not None else None
-        if fator is None:
-            return weak, strong
-        return (
-            max(0, min(255, int(weak * fator))),
-            max(0, min(255, int(strong * fator))),
-        )
+    def escala_de(self, uniq: str) -> float | None:
+        """O fator de vibração da peça ``uniq`` (POR-UNIDADE-01), ou ``None``.
+
+        É a leitura que o funil `core.rumble.forca_do_controle` faz do mapa que
+        :meth:`set_rumble_scales` guarda.
+        """
+        alvo = self._key_to_uniq(uniq)
+        return self._rumble_scale_by_uniq.get(alvo) if alvo is not None else None
+
+    def bateria_de(self, uniq: str) -> int | None:
+        """A bateria 0-100 do controle ``uniq``, da memória do handle, sem I/O.
+
+        É a mesma leitura do `describe_controllers` (:meth:`_read_battery_opt`),
+        e ``None`` quando o MAC não casa com handle nenhum ou ele ainda não
+        reportou.
+        """
+        alvo = self._key_to_uniq(uniq)
+        if alvo is None:
+            return None
+        with self._io_lock:
+            key = self._key_for_uniq(alvo)
+            handle = self._handles.get(key) if key is not None else None
+        return self._read_battery_opt(handle) if handle is not None else None
 
     def set_rumble_scales(self, scales: Mapping[str, float] | None = None) -> None:
         """SUBSTITUI o mapa de escala de VIBRAÇÃO por-uniq (POR-UNIDADE-01)."""
@@ -5231,13 +5248,9 @@ class PyDualSenseController(IController):
             handle = self._handles.get(key) if key is not None else None
         if handle is None:
             return False
-        # POR-UNIDADE-01: o co-op mira UMA peça, e a peça pode ter escala
-        # própria do perfil. Escalar aqui também é o que impede a incoerência
-        # de o mesmo controle vibrar diferente conforme a rota (co-op x jogo).
-        eff_weak, eff_strong = self._escalar_rumble(str(key), weak, strong)
         try:
-            handle.setLeftMotor(eff_strong)
-            handle.setRightMotor(eff_weak)
+            handle.setLeftMotor(strong)
+            handle.setRightMotor(weak)
         except Exception as exc:
             logger.warning("output_handle_failed", op="set_rumble_for", key=key, err=str(exc))
         return True

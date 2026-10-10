@@ -134,10 +134,7 @@ def _effective_mult(
     promete, e ainda por cima sozinho, sem ela ter pedido. Os três degraus
     acima não são os de `RUMBLE_POLICY_MULT`: desde que "Máximo" subiu acima do
     "Balanceado", o degrau de cima do auto empatou com o balanceado, e é isso
-    mesmo. Quem mexer nesta escada mexe no texto que a promete na tela: o
-    `rumble_policy_auto_label` do `gui/main.glade`, que é o dono único da frase
-    desde 11/08/2026 (havia uma cópia morta em `app.actions.rumble_actions`,
-    nunca usada por ninguém e já desatualizada).
+    mesmo. Quem mexer nesta escada mexe no texto que a promete na tela.
 
     **O TETO DO ORÇAMENTO DA MESA ENTRA AQUI, E SÓ AQUI** (CONFIG-05,
     22/08/2026). Este é o funil dos TRÊS caminhos de vibração do produto —
@@ -148,31 +145,46 @@ def _effective_mult(
     saídas o respeitam, o fallback de política desconhecida inclusive: deixar
     uma de fora abriria um caminho em que o orçamento simplesmente não vale.
 
-    **O QUE ESTE FUNIL NÃO ALCANÇA, e a linha que dizia o contrário caiu em
-    01/09/2026.** Ela afirmava que *"não há como um caminho escapar do teto"*.
-    Há: a escala POR PEÇA (`POR-UNIDADE-01`) é aplicada um andar ABAIXO e
-    DEPOIS deste ``min``, em ``core/backend_pydualsense._escalar_rumble``
-    (`:3797-3818`), sobre o valor que já saiu daqui. Com o orçamento em
-    ``economia`` (teto 0,3), o perfil global em ``economia`` e uma peça em
-    ``max``, ``_controllers_to_rumble_scales`` publica ``1,5/0,3 = 5,0`` e o
-    motor daquela peça recebe cinco vezes o que o teto prometeu.
-
-    ESTÁ INERTE NA BANCADA, medido em 01/09/2026: ``orcamento_em_vigor()``
-    devolve ``None`` (o ``maquina.json`` não existe), e os 33 perfis não têm
-    um único ``controllers[*].rumble``. **A aritmética não se toca aqui**:
-    corrigi-la exige escolher entre saturar o produto no teto e fazer o fator
-    ser ``min`` também, e as duas mudam o que o motor faz — é decisão de produto, e é
-    sprint própria.
+    **A FORÇA DE UM CONTROLE NÃO SAI DAQUI, sai de :func:`forca_do_controle`**
+    (09/10/2026), que compõe esta política com a bateria DAQUELE controle e o
+    fator da peça dele, e põe o teto do orçamento por último, como ``min``: o
+    teto vence a peça (decisão por delegação, a validar pela dona do produto).
+    Esta função segue como a conta da política global, para quem pergunta sem
+    controle (a tela, o resumo).
 
     **Teto, não troca**: o ``config.rumble_policy`` dela não é reescrito em
     lugar nenhum. Voltar o orçamento para Balanceado devolve o mult inteiro sem
     ela reclicar coisa alguma — é essa a invariante, e ela tem teste
     (``tests/unit/test_orcamento_e_teto_nao_troca.py``).
     """
+    return _degrau_da_politica(
+        config,
+        _orcamento_declarado(config),
+        battery_pct,
+        now,
+        last_auto_mult,
+        last_auto_change_at,
+        auto_debounce_sec,
+    )
+
+
+def _degrau_da_politica(
+    config: DaemonConfig,
+    orcamento: str | None,
+    battery_pct: int,
+    now: float,
+    last_auto_mult: float,
+    last_auto_change_at: float,
+    auto_debounce_sec: float,
+) -> tuple[float, float, float]:
+    """O corpo de :func:`_effective_mult`, com o orçamento passado por quem chama.
+
+    :func:`forca_do_controle` passa ``None`` para pôr o teto só no fim, depois
+    do fator da peça.
+    """
     from hefesto_dualsense4unix.daemon.lifecycle import RUMBLE_POLICY_MULT
 
     policy = config.rumble_policy
-    orcamento = _orcamento_declarado(config)
     teto = teto_do_orcamento(orcamento)
 
     if policy == "custom" or policy in RUMBLE_POLICY_MULT:
@@ -209,6 +221,54 @@ def _effective_mult(
     return fallback, fallback, last_auto_change_at
 
 
+#: A bateria de quem o backend ainda não leu: o degrau do meio do `auto`.
+BATERIA_SEM_LEITURA = 50
+
+
+def forca_do_controle(
+    config: DaemonConfig,
+    uniq: str | None,
+    bateria: int | None,
+    memoria: dict[str, tuple[float, float]],
+    agora: float,
+    *,
+    escala: float | None = None,
+    auto_debounce_sec: float = 5.0,
+) -> float:
+    """A fração do pedido que chega aos motores do controle ``uniq``.
+
+    A-FORCA-DA-VIBRACAO-DE-CADA-CONTROLE-SAI-DE-UM-FUNIL-SO-COM-A-BATERIA-DELE-
+    E-O-TETO-01 (09/10/2026). É o dono único da força de um controle, e os
+    três caminhos de vibração (o gesto da tela, o par fixado do reassert e o
+    rumble do jogo) chamam só ele. A conta, nesta ordem:
+
+    1. a política viva, com a bateria DE ``uniq`` no ``auto`` (``None`` vale
+       :data:`BATERIA_SEM_LEITURA`) e o debounce dele em ``memoria[uniq]``;
+    2. vezes o fator da peça (``escala``), o que a peça escolheu sobre o global;
+    3. o teto do orçamento da mesa por último, como ``min``: o Perfil
+       Econômico poupa a bateria, e a peça em Máximo não o fura (decisão por
+       delegação, a validar pela dona do produto).
+
+    ``memoria`` é mutada: guarda ``(âncora, instante)`` do ``auto`` por
+    controle, e ``uniq`` ``None`` usa a chave vazia.
+    """
+    chave = uniq or ""
+    ancora, quando = memoria.get(chave, (0.7, 0.0))
+    mult, nova_ancora, novo_quando = _degrau_da_politica(
+        config,
+        None,
+        BATERIA_SEM_LEITURA if bateria is None else int(bateria),
+        agora,
+        ancora,
+        quando,
+        auto_debounce_sec,
+    )
+    memoria[chave] = (nova_ancora, novo_quando)
+    if escala is not None:
+        mult *= float(escala)
+    return _sob_o_teto(mult, teto_do_orcamento(_orcamento_declarado(config)))
+
+
 def pedido_mais_forte(
     atual: tuple[int, int], novo: tuple[int, int]
 ) -> tuple[int, int]:
@@ -219,7 +279,9 @@ def pedido_mais_forte(
 
 
 __all__ = [
+    "BATERIA_SEM_LEITURA",
     "_effective_mult",
+    "forca_do_controle",
     "pedido_mais_forte",
     "teto_do_orcamento",
 ]
