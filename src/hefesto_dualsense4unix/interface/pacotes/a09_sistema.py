@@ -848,8 +848,14 @@ def _faixa_lenta(state: dict[str, Any] | None,
 
 @poda
 def _esquecer_a_mesa_de_antes(na_mesa: frozenset[str]) -> None:
-    """Um controle saiu: a faixa lenta inteira é de antes dele sair."""
-    _LENTO.clear()
+    """Um controle saiu: a faixa lenta vence, e a releitura vai à thread.
+
+    Esvaziar `_LENTO` é o sinal da primeira pintura, que é síncrona: a saída
+    de um controle punha as cinco leituras de volta no fio da janela. O selo
+    descarta a releitura que estava em voo com a mesa de antes.
+    """
+    if "valor" in _LENTO:
+        _LENTO["quando"] = 0.0
     _LENTO_SELO[0] += 1
 
 

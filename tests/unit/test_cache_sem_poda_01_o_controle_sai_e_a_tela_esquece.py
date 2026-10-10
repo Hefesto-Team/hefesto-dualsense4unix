@@ -273,6 +273,12 @@ def test_o_painel_tecnico_para_de_nomear_quem_saiu(
     pacotes._NA_MESA_ANTES[0] = frozenset({P1, P2})
     so_um = _ctx(_controle(P1, 1, "um"))
     pacotes.bater_os_coracoes(so_um, None)
+    # A poda vence a faixa sem esvaziá-la: a releitura vai à thread, fora do
+    # fio da janela (A-SAIDA-DE-UM-CONTROLE-NAO-TRAVA-A-ABA-SISTEMA-01).
+    a09._faixa_lenta(so_um.state, so_um.mesa)
+    fim = time.time() + TETO_S
+    while a09._LENTO_EM_VOO[0] and time.time() < fim:
+        time.sleep(0.005)
     *_, agora = a09._faixa_lenta(so_um.state, so_um.mesa)
     assert CANARIO not in agora, (
         f"o painel técnico ainda nomeia {CANARIO!r} depois de ele sair da "
