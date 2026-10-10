@@ -96,6 +96,11 @@ rapido|contrato-ipc|py|scripts/gerar-contrato-ipc.py --check
 # que apodrece sozinha. Medido no dia: dois endereços da canônica não abriam no que prometiam, e um sustentava
 # um grau «ALTA, lido no código».
 rapido|citacoes-de-linha|py|scripts/validar-citacoes-de-linha.py --all
+# A-CITACAO-NOVA-DE-LINHA-PROMETE-O-NOME-01 (10/10/2026): a citação de linha ACRESCENTADA desde o pé comum com o
+# `dev` (no CI, o `origin/dev`) promete o nome, ou o `reapontar` não a leva quando o código anda. A crua antiga
+# não reprova por existir, e a que só mudou de número é paga pela removida. Sem base, rc 2: nunca passa calado.
+# Medido no dia: 0,3 s; lê a história, por isso `@sempre`.
+rapido|citacoes-novas|py|scripts/validar-citacoes-de-linha.py --novas|@sempre
 # E O `src/` NÃO ESTAVA COBERTO — 06/09/2026, achado da A-PALAVRA-MESA-SAI-01.
 # O portão acima varre `docs/` e as planilhas: 2.977 citações em 21 documentos e
 # 9 planilhas, verde. As citações escritas em COMENTÁRIO DE CÓDIGO ficavam de

@@ -7,7 +7,9 @@ import ast
 import csv
 import functools
 import re
+import subprocess
 import sys
+from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -287,6 +289,204 @@ def varrer_planilha(
     return achados, conferidos, de_fora
 
 
+# --- a citação NOVA promete o nome (A-CITACAO-NOVA-DE-LINHA-PROMETE-O-NOME-01, 10/10/2026) ------
+#
+# A crua (`x.py:3` sem nome) só o histórico leva quando o código anda, e cada uma vira trabalho à
+# mão do fecho. A antiga é das sprints das cruas; aqui se fecha a porta da NOVA: endereço que
+# aparece em linha acrescentada desde o pé comum com o `dev`. A crua que só mudou de número ou de
+# prosa em volta não é nova: cada crua removida do MESMO documento, para o mesmo arquivo citado,
+# paga uma acrescentada (é o que o `reapontar --escrever` faz: o número muda, o nome não).
+
+BASES_DAS_NOVAS = ("dev", "origin/dev")
+"""Onde se procura o pé comum, nesta ordem: na árvore da casa o `dev`; no CI, o `origin/dev`."""
+
+CELULAS_DE_ENDERECO_PURO: dict[str, tuple[tuple[str, ...], str]] = {
+    "paridade-gtk-html.csv": (
+        ("gtk_onde", "html_onde"),
+        "10/10/2026: o `check_paridade_gtk_html.py` lê a célula como `caminho:N · caminho:N` e "
+        "confere que cada um abre e é do lado certo; a forma nomeada não cabe nela"),
+}
+"""As colunas de planilha que são lista de endereço por formato, com o motivo. O ``--novas`` não
+as lê: o nome prometido ali quebraria o leitor dono da coluna."""
+
+
+def _git(raiz: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["git", "-C", str(raiz), "-c", "core.quotePath=false", *args],
+        capture_output=True, text=True, encoding="utf-8", errors="replace", check=False)
+
+
+def pe_comum(raiz: Path, base: str | None) -> str | None:
+    """O ``merge-base`` do HEAD com a base pedida (ou a primeira de BASES_DAS_NOVAS que responde)."""
+    for ref in (base,) if base else BASES_DAS_NOVAS:
+        saida = _git(raiz, "merge-base", "HEAD", ref)
+        if saida.returncode == 0 and saida.stdout.strip():
+            return saida.stdout.strip()
+    return None
+
+
+def vigiado(relativo: str) -> bool:
+    """O mesmo alcance do ``--all``: `.md` sob `docs/protocol`, `.csv` direto em `docs/data`."""
+    caminho = Path(relativo)
+    if caminho.suffix == ".md":
+        return caminho.is_relative_to(PASTA)
+    return (caminho.suffix == ".csv" and caminho.parent == PASTA_CSV
+            and caminho.name not in CSV_FORA_DO_PORTAO)
+
+
+def linhas_mudadas(raiz: Path, pe: str) -> dict[str, tuple[list[tuple[int, str]], list[str]]]:
+    """``{documento: (linhas acrescentadas com o número, linhas removidas)}`` desde ``pe``.
+
+    Compara com a árvore de trabalho, para o que ainda não foi commitado contar; o documento novo
+    que o git ainda não acompanha entra inteiro.
+    """
+    mudadas: dict[str, tuple[list[tuple[int, str]], list[str]]] = {}
+    diff = _git(raiz, "diff", "-U0", "-M", "--no-color", "--no-ext-diff",
+                "--src-prefix=a/", "--dst-prefix=b/", pe, "--", PASTA.as_posix(),
+                PASTA_CSV.as_posix())
+    atual: str | None = None
+    numero = 0
+    for linha in diff.stdout.splitlines():
+        if linha.startswith("+++ "):
+            destino = linha[4:]
+            atual = destino[2:] if destino.startswith("b/") and vigiado(destino[2:]) else None
+            if atual is not None:
+                mudadas.setdefault(atual, ([], []))
+        elif linha.startswith(("--- ", "diff ", "index ", "rename ", "similarity ", "new file",
+                               "deleted file", "old mode", "new mode", "\\")):
+            continue
+        elif linha.startswith("@@"):
+            cabeca = re.match(r"@@ -\d+(?:,\d+)? \+(\d+)", linha)
+            numero = int(cabeca.group(1)) if cabeca else 0
+        elif atual is None:
+            continue
+        elif linha.startswith("+"):
+            mudadas[atual][0].append((numero, linha[1:]))
+            numero += 1
+        elif linha.startswith("-"):
+            mudadas[atual][1].append(linha[1:])
+    novos = _git(raiz, "ls-files", "--others", "--exclude-standard", "--",
+                 PASTA.as_posix(), PASTA_CSV.as_posix())
+    for relativo in novos.stdout.splitlines():
+        if vigiado(relativo) and (raiz / relativo).is_file():
+            texto = (raiz / relativo).read_text(encoding="utf-8", errors="replace")
+            mudadas[relativo] = (list(enumerate(texto.splitlines(), 1)), [])
+    return mudadas
+
+
+def cruas_da_linha(
+    linha: str, planilha: bool, raiz: Path,
+) -> list[tuple[str, re.Match[str], bool]]:
+    """As citações sem nome prometido de UMA linha: ``(arquivo, achado, curta)``.
+
+    Só as de arquivo DESTA árvore: a fonte de fora (kernel, SDL) não anda com o nosso código, e o
+    ``reapontar`` não a leva.
+    """
+    cruas: list[tuple[str, re.Match[str], bool]] = []
+    if planilha:
+        inteiras = list(ENDERECO_CSV.finditer(linha))
+        candidatas = [(a.group("arq"), a, False) for a in inteiras]
+        for curta in CURTA_CSV.finditer(linha):
+            ancora = ancora_da_curta(linha, inteiras, curta.start("vao"))
+            if ancora is not None:
+                candidatas.append((ancora.group("arq"), curta, True))
+        separadores: tuple[str, ...] = SEPARADORES_DE_BLOCO
+    else:
+        candidatas = []
+        ancora_md: str | None = None
+        for achado in ENDERECO.finditer(linha):
+            ancora_md = achado.group("arq") or ancora_md
+            if ancora_md is not None:
+                candidatas.append((ancora_md, achado, False))
+        separadores = ()
+    for arquivo, achado, curta in candidatas:
+        de, ate = achado.span("vao") if curta else achado.span()
+        if resolve(arquivo, raiz) is None:
+            continue
+        if not nomes_prometidos(linha, de, ate, separadores):
+            cruas.append((arquivo, achado, curta))
+    return cruas
+
+
+def nome_na_linha(alvo: Path, numero: int) -> str | None:
+    """A ``def``/``class`` mais de dentro que contém a linha, lida pelo ``ast``; ``None`` fora disso."""
+    if alvo.suffix != ".py":
+        return None
+    try:
+        arvore = ast.parse(alvo.read_text(encoding="utf-8", errors="replace"))
+    except (SyntaxError, ValueError):
+        return None
+    melhor: tuple[int, str] | None = None
+    for no in ast.walk(arvore):
+        if isinstance(no, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef):
+            fim = no.end_lineno or no.lineno
+            if no.lineno <= numero <= fim and (melhor is None or no.lineno > melhor[0]):
+                melhor = (no.lineno, no.name)
+    return melhor[1] if melhor else None
+
+
+def trechos(linha: str, documento: str, raiz: Path) -> list[str]:
+    """O que se lê de UMA linha: a linha do `.md`; as células da linha de planilha.
+
+    A linha de planilha que é um registro inteiro se lê célula a célula, sem as colunas de
+    CELULAS_DE_ENDERECO_PURO; a que é pedaço de uma célula de várias linhas se lê inteira.
+    """
+    if not documento.endswith(".csv"):
+        return [linha]
+    puras, _ = CELULAS_DE_ENDERECO_PURO.get(Path(documento).name, ((), ""))
+    cabecalho = _cabecalho(raiz / documento)
+    try:
+        celulas = next(csv.reader([linha]))
+    except (csv.Error, StopIteration):
+        return [linha]
+    if len(celulas) != len(cabecalho):
+        return [linha]
+    return [c for nome, c in zip(cabecalho, celulas, strict=True) if nome not in puras]
+
+
+@functools.lru_cache(maxsize=32)
+def _cabecalho(planilha: Path) -> tuple[str, ...]:
+    try:
+        with planilha.open(encoding="utf-8", newline="") as fluxo:
+            return tuple(next(csv.reader(fluxo), []))
+    except OSError:
+        return ()
+
+
+def varrer_novas(raiz: Path, pe: str) -> tuple[list[Achado], int]:
+    """As cruas NOVAS desde ``pe``, e quantas antigas só mudaram de número ou de prosa."""
+    achados: list[Achado] = []
+    reescritas = 0
+    for documento, (acrescentadas, removidas) in sorted(linhas_mudadas(raiz, pe).items()):
+        planilha = documento.endswith(".csv")
+        pagas: Counter[str] = Counter(
+            Path(arquivo).as_posix()
+            for linha in removidas for trecho in trechos(linha, documento, raiz)
+            for arquivo, _, _ in cruas_da_linha(trecho, planilha, raiz))
+        for numero, linha in acrescentadas:
+            cruas = [c for trecho in trechos(linha, documento, raiz)
+                     for c in cruas_da_linha(trecho, planilha, raiz)]
+            for arquivo, achado, _curta in cruas:
+                chave = Path(arquivo).as_posix()
+                if pagas[chave] > 0:
+                    pagas[chave] -= 1
+                    reescritas += 1
+                    continue
+                primeira = int(achado.group("a"))
+                faixa = f"{arquivo}:{primeira}" + (f"-{achado.group('b')}" if achado.group("b") else "")
+                alvo = resolve(arquivo, raiz)
+                nome = nome_na_linha(alvo, primeira) if alvo else None
+                if nome is not None and not NOME_ANTES.search(f"`{nome}` em "):
+                    nome = None  # curto demais para a gramática do nome prometido
+                certa = f"`{nome or '<nome>'}` em `{faixa}`"
+                achados.append(Achado(
+                    documento, numero, f"`{faixa}`",
+                    f"citação de linha NOVA sem nome prometido: escreva {certa}"
+                    + ("" if nome else " com o nome que está na linha citada")
+                    + ", e o `reapontar-citacoes.py` a leva quando o código andar"))
+    return achados, reescritas
+
+
 def documentos_de(raiz: Path) -> list[Path]:
     """Todo `.md` sob a pasta vigiada, em QUALQUER profundidade."""
     pasta = raiz / PASTA
@@ -302,6 +502,26 @@ def planilhas_de(raiz: Path) -> list[Path]:
                   if p.name not in CSV_FORA_DO_PORTAO)
 
 
+def conferir_novas(raiz: Path, base: str | None) -> int:
+    """O modo ``--novas``: 0 sem crua nova, 1 com, 2 sem base (nunca passa calado)."""
+    pe = pe_comum(raiz, base)
+    if pe is None:
+        pedidas = base or " nem ".join(BASES_DAS_NOVAS)
+        print(f"ERRO: sem base: {pedidas} não tem pé comum com o HEAD, e sem ele não há como "
+              "saber qual citação é nova. No CI, o checkout precisa do `origin/dev` "
+              "(`fetch-depth: 0`).", file=sys.stderr)
+        return 2
+    achados, reescritas = varrer_novas(raiz, pe)
+    if achados:
+        print(f"{len(achados)} citação(ões) de linha NOVA(S) sem nome prometido desde {pe[:12]}:")
+        for achado in achados:
+            print(str(achado))
+        return 1
+    print(f"OK: nenhuma citação de linha nova sem nome desde {pe[:12]} "
+          f"({reescritas} crua(s) antiga(s) só reescrita(s), que são das sprints das cruas).")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Reprova citação de linha que não abre ou não contém o que promete.")
@@ -309,6 +529,11 @@ def main(argv: list[str] | None = None) -> int:
                         help="documentos ou planilhas a varrer")
     parser.add_argument("--all", action="store_true",
                         help=f"varre {PASTA.as_posix()}/ e {PASTA_CSV.as_posix()}/*.csv")
+    parser.add_argument("--novas", action="store_true",
+                        help="reprova a citação de linha ACRESCENTADA desde o pé comum com o "
+                             "`dev` que não promete o nome; sem base, falha")
+    parser.add_argument("--base", default=None,
+                        help="a ref do pé comum do --novas (padrão: dev, depois origin/dev)")
     parser.add_argument("--root", type=Path,
                         default=Path(__file__).resolve().parent.parent,
                         help="raiz do repositório (padrão: a deste script)")
@@ -318,6 +543,12 @@ def main(argv: list[str] | None = None) -> int:
     if not raiz.is_dir():
         print(f"ERRO: raiz inexistente: {raiz}", file=sys.stderr)
         return 2
+
+    rc_novas = 0
+    if args.novas:
+        rc_novas = conferir_novas(raiz, args.base)
+        if not args.all and not args.arquivos:
+            return rc_novas
 
     if args.all:
         alvos = documentos_de(raiz)
@@ -338,7 +569,7 @@ def main(argv: list[str] | None = None) -> int:
         ]
     if not alvos and not planilhas:
         print("Nenhum documento para varrer.")
-        return 0
+        return rc_novas
 
     achados: list[Achado] = []
     conferidos = de_fora = 0
@@ -371,7 +602,7 @@ def main(argv: list[str] | None = None) -> int:
         print("símbolo prometido está hoje, e só escreve o que confere. A")
         print("citação crua (sem símbolo) o reapontar leva pelo histórico do")
         print("documento; sem `--escrever` ele só lista, e diz por que deixa à mão.")
-        return 1
+        return max(1, rc_novas)
 
     print(f"OK: {conferidos} citação(ões) de linha conferida(s) em {onde}; "
           f"{de_fora} de fontes fora desta árvore (kernel, SDL, wine) "
@@ -379,7 +610,7 @@ def main(argv: list[str] | None = None) -> int:
     print("Limite: a crua que aponta uma linha que existe mas é a errada passa "
           "aqui; só o histórico a pega (`python3 scripts/reapontar-citacoes.py`, "
           "sem `--escrever`).")
-    return 0
+    return rc_novas
 
 
 if __name__ == "__main__":

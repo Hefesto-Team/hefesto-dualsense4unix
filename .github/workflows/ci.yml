@@ -174,7 +174,10 @@ jobs:
     # trabalho dela. O `README.md` passou a ser varrido: ficava de fora só por
     # morar na raiz, sendo a página que mais gente copia e cola.
     steps:
+      # o `citacoes-novas` pergunta pelo pé comum com o `origin/dev`, que o checkout raso não traz
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -186,7 +189,7 @@ jobs:
       - name: Instalar o pytest
         run: python -m pip install pytest
       - name: Os portões do job, pelo nome na tabela
-        run: bash scripts/portoes.sh --so referencias-docs texto-publico o-ignorado-fica-fora-do-indice citacoes-de-linha citacoes-no-codigo contrato-ipc
+        run: bash scripts/portoes.sh --so referencias-docs texto-publico o-ignorado-fica-fora-do-indice citacoes-de-linha citacoes-novas citacoes-no-codigo contrato-ipc
 
   mapa-de-canais:
     name: Mapa de canais (o publicado bate com as fontes + o censo)
