@@ -193,11 +193,13 @@ def test_a_saida_da_janela_espera_o_testar_que_ainda_estava_no_ar(
     with hv._o_processo_da_janela():
         testar = _testar_pela_porta_do_clique(ponte)
         time.sleep(0.05)
-    _esperar(testar)
-    assert a05.em_teste() == frozenset(), sorted(a05.em_teste())
+    # Lido na SAÍDA, antes de esperar qualquer fio: depois do `finally` o
+    # processo acaba, e um fio de largada que ainda não rodou morre com ele.
     nomes = [n for n, _ in ponte.chamadas]
     assert nomes[-2:] == ["rumble_stop", "rumble_passthrough"], (
-        f"a saída da janela não devolveu o controle depois do «Testar»: {nomes}")
+        f"a saída da janela não esperou a largada atrás do «Testar»: {nomes}")
+    _esperar(testar)
+    assert a05.em_teste() == frozenset(), sorted(a05.em_teste())
 
 
 def test_a_largada_nao_passa_a_frente_do_batimento_no_ar() -> None:
