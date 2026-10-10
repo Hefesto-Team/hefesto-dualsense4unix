@@ -194,6 +194,13 @@ FALHA (as duas mais novas)
                           AVISO. No mesmo dia, ler uma coluna de causa como veto
                           levou a PARAR um passo que
                           funciona.
+ 21. `transporte-contra-aciona` — `transporte = só cabo` com `radio_aciona`
+                          `sim` ou `parcial`, ou o espelho (`só rádio` com
+                          `cabo_aciona` `sim` ou `parcial`). Nasceu em
+                          10/10/2026: a `vibracao.rumble.passthrough@dualsense`
+                          dizia «só cabo», herança do v1, e acionava nos dois
+                          lados. Até então a coluna só era contada, e a regra
+                          7 compara um lado com o outro, nunca com ela.
 
 A pergunta que passou a ter DONO — a procedência (06/09/2026)
 --------------------------------------------------------------
@@ -1552,6 +1559,7 @@ def censo(
 
         achados.extend(_regra_da_validade(linha, numero, ident, hoje))
         achados.extend(_regra_da_assimetria(linha, numero, ident, resumo))
+        achados.extend(_regra_do_transporte(linha, numero, ident))
 
         if escada_de_vibracao_canonica is not None:
             achados.extend(
@@ -1734,6 +1742,35 @@ def _regra_da_assimetria(
         )
     nivel = FALHA if ASSIMETRIA_REPROVA else AVISO
     return [Achado(nivel, "assimetria-nao-declarada", numero, ident, "", texto)]
+
+
+TRANSPORTE_DE_UM_LADO = {"só cabo": "radio", "só rádio": "cabo"}
+
+ACIONA_QUE_CONTRADIZ = frozenset({ACIONA_FORTE, "parcial"})
+
+
+def _regra_do_transporte(
+    linha: dict[str, str], numero: int, ident: str
+) -> list[Achado]:
+    """Regra 21 — o `transporte` de um lado só não pode ter o outro lado acionando."""
+    transporte = (linha.get("transporte") or "").strip()
+    outro = TRANSPORTE_DE_UM_LADO.get(transporte)
+    if outro is None:
+        return []
+    aciona = (linha.get(f"{outro}_aciona") or "").strip()
+    if aciona not in ACIONA_QUE_CONTRADIZ:
+        return []
+    return [
+        Achado(
+            FALHA,
+            "transporte-contra-aciona",
+            numero,
+            ident,
+            outro,
+            f"`transporte` diz `{transporte}` e `{outro}_aciona` diz `{aciona}`: "
+            "uma das duas está errada",
+        )
+    ]
 
 
 def veredicto_da_feature(ensaio: dict) -> str:
