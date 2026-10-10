@@ -411,6 +411,12 @@ class UinputGamepad:
     _ff_supported: bool = False
     _ff_effects: dict[int, tuple[int, int, int]] = field(default_factory=dict)
     _ff_playing: dict[int, float] = field(default_factory=dict)
+    #: O instante em que cada efeito tocado começa: agora + o `replay.delay` dele.
+    _ff_inicio: dict[int, float] = field(default_factory=dict)
+    #: O `replay.delay` de cada efeito enviado, em segundos.
+    _ff_atrasos: dict[int, float] = field(default_factory=dict)
+    #: Os efeitos tocados que nenhum tique somou ainda: contam pelo menos um tique.
+    _ff_devidos: set[int] = field(default_factory=set)
     _ff_gain: float = 1.0
     _ff_last_sent: tuple[int, int] = (0, 0)
     #: state_full para a GUI/doctor confirmarem se o jogo enxerga o vpad.
@@ -586,6 +592,9 @@ class UinputGamepad:
         self._ff_supported = False
         self._ff_effects.clear()
         self._ff_playing.clear()
+        self._ff_inicio.clear()
+        self._ff_atrasos.clear()
+        self._ff_devidos.clear()
         self._ff_gain = 1.0
         self._ff_last_sent = (0, 0)
         self._ff_play_count = 0
@@ -762,13 +771,16 @@ class UinputGamepad:
             upload = self._device.begin_upload(value)
             effect = upload.effect
             self._ff_effects[int(effect.id)] = self._parse_ff_effect(effect)
+            self._ff_atrasos[int(effect.id)] = self._atraso_do_efeito(effect)
             upload.retval = 0
             self._device.end_upload(upload)
         elif etype == ec.EV_UINPUT and code == ec.UI_FF_ERASE:
             erase = self._device.begin_erase(value)
             effect_id = int(erase.effect_id)
             self._ff_effects.pop(effect_id, None)
-            self._ff_playing.pop(effect_id, None)
+            self._ff_atrasos.pop(effect_id, None)
+            self._parar_o_efeito(effect_id)
+            self._ff_devidos.discard(effect_id)
             erase.retval = 0
             self._device.end_erase(erase)
         elif etype == ec.EV_FF and code == ec.FF_GAIN:
@@ -777,7 +789,7 @@ class UinputGamepad:
             if value > 0:
                 self._start_ff_effect(code, repeats=value)
             else:
-                self._ff_playing.pop(code, None)
+                self._parar_o_efeito(code)
 
     def _parse_ff_effect(self, effect: Any) -> tuple[int, int, int]:
         """Extrai (weak16, strong16, duração_ms) de um efeito FF do kernel."""
@@ -794,29 +806,60 @@ class UinputGamepad:
             return (magnitude, magnitude, duration_ms)
         return (0, 0, duration_ms)
 
+    @staticmethod
+    def _atraso_do_efeito(effect: Any) -> float:
+        """O `replay.delay` do efeito, em segundos (o `ff-memless` do kernel o honra)."""
+        try:
+            atraso_ms = int(getattr(effect.ff_replay, "delay", 0) or 0)
+        except (TypeError, ValueError):
+            return 0.0
+        return max(0, atraso_ms) / 1000.0
+
     def _start_ff_effect(self, effect_id: int, *, repeats: int) -> None:
-        """Marca o efeito como tocando, com deadline = duração x repetições."""
+        """Marca o efeito como tocando: começa em agora + atraso, dura duração x repetições.
+
+        O efeito tocado fica DEVIDO até um tique somá-lo: o toque mais curto que o
+        intervalo entre dois tiques chega ao controle, em vez de vencer antes da soma.
+        """
         params = self._ff_effects.get(effect_id)
         if params is None:
             self._ff_descartado_count += 1
             return
+        inicio = self.time_fn() + self._ff_atrasos.get(effect_id, 0.0)
         duration_ms = params[2]
         if duration_ms <= 0:
-            deadline = self.time_fn() + FF_TETO_SEM_DURACAO_S
+            deadline = inicio + FF_TETO_SEM_DURACAO_S
         else:
-            deadline = self.time_fn() + (duration_ms * max(1, repeats)) / 1000.0
+            deadline = inicio + (duration_ms * max(1, repeats)) / 1000.0
         self._ff_playing[effect_id] = deadline
+        self._ff_inicio[effect_id] = inicio
+        self._ff_devidos.add(effect_id)
         # o jogo NÃO enxerga o vpad (ex.: máscara DualSense atraindo o hidraw
         self._ff_play_count += 1
 
+    def _parar_o_efeito(self, effect_id: int) -> None:
+        """O jogo parou o efeito: o que já começou ainda conta o tique devido."""
+        inicio = self._ff_inicio.pop(effect_id, None)
+        self._ff_playing.pop(effect_id, None)
+        if inicio is not None and self.time_fn() < inicio:
+            self._ff_devidos.discard(effect_id)
+
     def _refresh_ff(self) -> None:
-        """Expira efeitos vencidos e entrega o rumble alvo ao sink (se mudou)."""
+        """Soma os efeitos que tocam e os devidos, expira os vencidos e entrega ao sink."""
         now = self.time_fn()
+        contam = {
+            i
+            for i, deadline in self._ff_playing.items()
+            if self._ff_inicio.get(i, now) <= now < deadline
+        }
+        contam |= {i for i in self._ff_devidos if self._ff_inicio.get(i, now) <= now}
+        self._ff_devidos -= contam
         for effect_id in [i for i, deadline in self._ff_playing.items() if now >= deadline]:
             del self._ff_playing[effect_id]
+            self._ff_inicio.pop(effect_id, None)
         weak_total = 0
         strong_total = 0
-        for effect_id in self._ff_playing:
+        for effect_id in contam:
             params = self._ff_effects.get(effect_id)
             if params is None:
                 continue

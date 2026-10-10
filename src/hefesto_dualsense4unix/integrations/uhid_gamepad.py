@@ -122,6 +122,10 @@ _VIBRATION_FLAGS = 0x03
 #: tremendo sem parar, em todo jogo, em qualquer DualSense".
 _RUMBLE_STALE_SEC = 3.0
 
+#: Quantos tiques o pico do intervalo segura antes do último par sair: o piso
+#: do toque curto que o jogo pede entre dois tiques (~16,7 ms cada).
+_TOQUE_MINIMO_TIQUES = 1
+
 _TRIGGER_FLAGS = 0x0C
 
 _LUZ_FLAGS = 0x14
@@ -648,6 +652,8 @@ class UhidDualSense:
     _despertador: tuple[int, int] | None = None
     _trava_da_saida: threading.RLock = field(default_factory=threading.RLock)
     _rumble_a_entregar: tuple[int, int] | None = None
+    _rumble_pico_a_entregar: tuple[int, int] | None = None
+    _rumble_toque_restante: int = 0
     _fim_de_sessao_a_entregar: bool = False
     _gadget: _GadgetDoPad | None = None
     _gadget_prazo: float | None = None
@@ -1047,6 +1053,7 @@ class UhidDualSense:
             return
         if self._no_fio_do_uhid():
             self._rumble_a_entregar = (0, 0)
+            self._rumble_pico_a_entregar = None
         else:
             with contextlib.suppress(Exception):
                 self.rumble_sink(0, 0)
@@ -1538,6 +1545,9 @@ class UhidDualSense:
     def _emit_rumble(self, weak: int, strong: int) -> None:
         if self._no_fio_do_uhid():
             self._rumble_a_entregar = (weak, strong)
+            self._rumble_pico_a_entregar = pedido_mais_forte(
+                self._rumble_pico_a_entregar or (0, 0), (weak, strong)
+            )
             return
         if self.rumble_sink is None:
             return
@@ -1943,10 +1953,30 @@ class UhidDualSense:
         if self._mic_solta_a_entregar:
             self._mic_solta_a_entregar = False
             self._dizer_que_o_jogo_soltou_a_luz()
+        self._entregar_a_vibracao()
+
+    def _entregar_a_vibracao(self) -> None:
+        """A vibração do intervalo: o pico, se ele foi mais forte, e depois o último par.
+
+        O fio guarda o último par e o mais forte desde a última entrega. O toque que
+        liga e desliga entre dois tiques sai como o pico e, `_TOQUE_MINIMO_TIQUES`
+        tiques depois, o último par.
+        """
+        pico = self._rumble_pico_a_entregar
+        self._rumble_pico_a_entregar = None
         par = self._rumble_a_entregar
-        if par is not None:
-            self._rumble_a_entregar = None
-            self._emit_rumble(*par)
+        if par is None:
+            return
+        if pico is not None and pedido_mais_forte(par, pico) != par:
+            self._rumble_toque_restante = _TOQUE_MINIMO_TIQUES
+            self._emit_rumble(*pico)
+            return
+        if self._rumble_toque_restante > 0:
+            self._rumble_toque_restante -= 1
+            if self._rumble_toque_restante > 0:
+                return
+        self._rumble_a_entregar = None
+        self._emit_rumble(*par)
 
     # `hid-playstation` que o adotou faz o que faria num DualSense: na borda de
 
