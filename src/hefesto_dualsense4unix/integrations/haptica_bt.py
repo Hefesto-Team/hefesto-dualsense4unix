@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import sys
+from array import array
 from dataclasses import dataclass, field
 
 TAXA_DO_BLOCO = 3000
@@ -47,19 +49,25 @@ class ConversorDeHaptica:
         return blocos
 
     def _dizimar(self, dados: bytes, quadros: int) -> bytes:
-        """Média móvel de 16 e uma amostra a cada 16, nos dois motores."""
-        largura = 2 * self.canais
+        """Média de cada janela de 16 quadros, nos dois motores.
+
+        O PCM se lê uma vez como ``array("h")`` e cada motor sai por um
+        fatiamento com passo: é o caminho quente da ponte, 93 blocos por
+        segundo por controle no rádio, com jogo tocando ou não.
+        """
+        amostras = array("h")
+        amostras.frombytes(dados[: quadros * 2 * self.canais])
+        if sys.byteorder == "big":
+            amostras.byteswap()
         esq, dir_ = self.motores
+        canal_esq = amostras[esq :: self.canais]
+        canal_dir = amostras[dir_ :: self.canais]
+        para_int8 = self._para_int8
         saida = bytearray()
         for inicio in range(0, quadros, FATOR):
-            somas = [0, 0]
-            for q in range(inicio, inicio + FATOR):
-                base = q * largura
-                for lado, canal in enumerate((esq, dir_)):
-                    off = base + 2 * canal
-                    somas[lado] += int.from_bytes(dados[off : off + 2], "little", signed=True)
-            for soma in somas:
-                saida.append(self._para_int8(soma / FATOR))
+            fim = inicio + FATOR
+            saida.append(para_int8(sum(canal_esq[inicio:fim]) / FATOR))
+            saida.append(para_int8(sum(canal_dir[inicio:fim]) / FATOR))
         return bytes(saida)
 
     def _para_int8(self, valor: float) -> int:
