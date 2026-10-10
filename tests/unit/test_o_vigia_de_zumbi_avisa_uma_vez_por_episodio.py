@@ -15,9 +15,9 @@ endereços são da faixa sintética da casa.
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from collections.abc import Mapping, Sequence
-from typing import Any
+from pathlib import Path
+from typing import Any, cast
 
 import pytest
 import structlog
@@ -83,7 +83,8 @@ def diario(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 def _subsystem(ponte: PonteQueConta, mesa: Mesa, **kwargs: Any) -> ConexoesSubsystem:
-    vigia = VigiaDeZumbis(ponte=ponte, segundos_para_zumbi=0.0, **kwargs)
+    vigia = VigiaDeZumbis(ponte=cast(PontePrivilegiada, ponte), segundos_para_zumbi=0.0,
+                          **kwargs)
     return ConexoesSubsystem(vigia=vigia, olhador=mesa)
 
 
