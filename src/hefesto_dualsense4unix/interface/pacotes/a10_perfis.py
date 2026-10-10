@@ -1220,14 +1220,13 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     perfil._com_o_src()
     from hefesto_dualsense4unix.profiles.loader import load_all_profiles
     from hefesto_dualsense4unix.profiles.manager import os_perfis_de_escolher
-    from hefesto_dualsense4unix.profiles.slug import find_by_slug
 
     try:
         todos = os_perfis_de_escolher(load_all_profiles())
         foto = _foto_do_catalogo()
         ativo = _valendo(ctx, todos)
-        escolhido = _escolhido([{"nome": x.name} for x in todos], ativo)
-        alvo = find_by_slug(escolhido, todos)
+        alvo = _alvo_do_editor(ctx, todos)
+        escolhido = str(getattr(alvo, "name", "") or "")
         bruto = _tela.pacote_da_aba(todos, ativo=ativo or None,
                                     mesa=_mesa_com_rotulo(ctx.mesa, getattr(ctx, "conectados", ())),
                                     editado=alvo)
@@ -1491,9 +1490,7 @@ def voltar_a_de_ontem(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
     from hefesto_dualsense4unix.profiles.loader import restaurar_do_historico
     from hefesto_dualsense4unix.profiles.slug import mesmo_slug
 
-    nome = _ESCOLHIDO or _valendo(ctx)
-    if not nome:
-        raise RuntimeError("voltar à de ontem: escolha um perfil na lista primeiro")
+    nome = _perfil_do_editor(ctx)
     _, versao = restaurar_do_historico(nome)
     ativo = _valendo(ctx)
     if ativo and mesmo_slug(ativo, nome):
@@ -1507,9 +1504,34 @@ def voltar_a_de_ontem(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
 #     3. avisa a antecipação    `launch_env.refresh` — a regra pode ter mudado,
 
 
+def _alvo_do_editor(ctx: Contexto, todos: list[Any] | None = None) -> Any:
+    """O perfil aberto no editor: o DONO ÚNICO de quem pinta e de quem grava.
+
+    Lê a lista de ESCOLHER, a mesma que a tela mostra: a linha clicada
+    (`_escolhido`), e sem ela o primeiro da lista. O Freestyle nunca é o alvo,
+    porque não está nela (a tela dele é o botão, decisão de 02/10/2026). Até
+    09/10/2026 quem gravava lia a lista inteira, e com o Modo Freestyle ligado o
+    editor mostrava «Corrida» e o renomear apagava o `freestyle.json`.
+    `todos` é para o `pacote()`, que já leu o disco neste tique. `None` quando a
+    lista de escolher está vazia.
+    """
+    from hefesto_dualsense4unix.profiles.slug import find_by_slug
+
+    if todos is None:
+        from hefesto_dualsense4unix.profiles.loader import load_all_profiles
+        from hefesto_dualsense4unix.profiles.manager import os_perfis_de_escolher
+
+        todos = os_perfis_de_escolher(load_all_profiles())
+    escolhido = _escolhido([{"nome": x.name} for x in todos], _valendo(ctx, todos))
+    alvo = find_by_slug(escolhido, todos) if escolhido else None
+    if alvo is None and todos:
+        alvo = todos[0]
+    return alvo
+
+
 def _perfil_do_editor(ctx: Contexto) -> str:
-    """O perfil em que o editor está aberto. Vazio é RECUSA, nunca "o primeiro"."""
-    nome = _ESCOLHIDO or _valendo(ctx)
+    """O nome do perfil que o editor mostra (`_alvo_do_editor`). Vazio é RECUSA."""
+    nome = str(getattr(_alvo_do_editor(ctx), "name", "") or "")
     if not nome:
         raise RuntimeError("escolha um perfil na lista primeiro — a coluna da "
                            "esquerda; o editor abre na linha que você clicar.")
