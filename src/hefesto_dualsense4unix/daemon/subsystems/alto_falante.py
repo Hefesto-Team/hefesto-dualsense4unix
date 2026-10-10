@@ -284,7 +284,7 @@ class GerenciadorDeNosDeSom:
     ) -> None:
         """A rota do nó VIVO passa a ser a de agora — e o nó não sai do lugar.
 
-        ``modulos`` é a leitura do servidor desta volta: o ``religar`` compara a
+        O último parâmetro é a leitura do servidor desta volta: o ``religar`` compara a
         fiação pedida com a que está de pé, e sobe a que falta.
 
         **O QUE ISTO CUSTA, medido e escrito para ninguém se assustar depois:**

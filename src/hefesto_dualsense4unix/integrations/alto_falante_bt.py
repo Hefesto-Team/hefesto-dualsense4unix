@@ -1134,7 +1134,7 @@ class SinkVirtualPipeWire:
         """Deixa de pé a fiação que ``rota`` pede **sem tirar o nó do lugar**. ``True`` = mexeu.
 
         Compara os ``module-loopback`` que :func:`argv_das_rotas` pede com os
-        que estão DE PÉ (``modulos`` é a leitura do servidor que a volta já fez;
+        que estão DE PÉ (o segundo parâmetro é a leitura do servidor que a volta já fez;
         sem ela, a memória do que este processo subiu): desce o que sobra, sobe o
         que falta, e o ``module-null-sink`` fica com o mesmo id. Loopback recusado,
         cortado pelo recuo ou descarregado por fora sobe na volta seguinte; o mix
