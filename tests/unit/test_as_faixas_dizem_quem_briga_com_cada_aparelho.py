@@ -6,7 +6,8 @@ Wi-Fi pela conta do padrão, os canais perdidos de cada enlace).
 MORDIDAS, uma por vez (cada uma reprova pelo menos um teste daqui; a do roteiro é o último
 teste): a marca do dono sem o `<u>` do canal perdido; a marca da vítima sem o `<u>` do canal
 ocupado; o `Appearance` sem o tipo relógio; o mapa do enlace trocado pelo do adaptador; o
-roteiro das faixas desligado (a mesma página com o `return` no topo).
+enlace LE com o mapa do adaptador no lugar dos 40 canais «não medido»; o roteiro das faixas
+desligado (a mesma página com o `return` no topo).
 """
 
 from __future__ import annotations
@@ -72,11 +73,18 @@ def test_o_canal_sem_dono_e_ruido_e_o_wifi_em_5ghz_nao_atrapalha() -> None:
     assert not wifi.celulas and "wifi" not in p1.briga
 
 
-def test_enlace_le_nao_tem_faixa_propria_e_sem_mapa_nao_se_mede() -> None:
+def test_enlace_le_tem_os_40_canais_nao_medidos_e_sem_mapa_nao_se_mede() -> None:
+    regua = _regua(_aparelho("relogio", "relogio", le=True), _aparelho("celular", "celular"),
+                   evitados={3, 4})
+    (relogio, _celular), = [linhas for _a, linhas in regua.grupos]
+    assert relogio.sem_faixa == fx.DIVIDE_O_RADIO and relogio.dica == fx.DIVIDE_O_RADIO
+    assert len(relogio.celulas) == 79 and relogio.bons is None
+    assert {c.estado for c in relogio.celulas} == {fx.NAO_MEDIDO, fx.ANUNCIO}, (
+        "o mapa do adaptador virou o do enlace LE")
     regua = _regua(_aparelho("relogio", "relogio", le=True), _aparelho("celular", "celular"),
                    evitados=None)
     (relogio, celular), = [linhas for _a, linhas in regua.grupos]
-    assert relogio.sem_faixa == fx.DIVIDE_O_RADIO and not relogio.celulas
+    assert len(relogio.celulas) == 79
     assert celular.sem_faixa == fx.NAO_SE_MEDE and celular.selo is None
 
 
@@ -256,8 +264,11 @@ def test_o_celular_conectado_aparece_com_o_mapa_dele_e_o_relogio_le_divide_o_rad
     assert re.findall(r'title="Canal (\d+) [^"]*perdido', celular) == ["7", "8"]
     assert "sinal -55 dBm" in celular and "qualidade do enlace 200/255" in celular
     relogio = re.search(r'data-id="AABBCC000002".*?</div></div>', html, re.S).group(0)
-    assert fx.DIVIDE_O_RADIO in relogio and "<i " not in relogio.split("ar-estado")[0].split(
-        'class="ar-faixa')[1]
+    faixa_do_relogio = relogio.split("ar-estado")[0].split('class="ar-faixa')[1]
+    assert fx.DIVIDE_O_RADIO in relogio and faixa_do_relogio.startswith(" le")
+    assert re.findall(r'<i class="([^"]*)"', faixa_do_relogio) == [
+        "n a" if c in (0, 1, 24, 25, 78) else "n" for c in range(79)]
+    assert "perdido" not in faixa_do_relogio and "bom" not in faixa_do_relogio
 
 
 def test_todo_aparelho_conectado_no_bluez_vira_linha_com_o_tipo_pelo_icon_class_ou_appearance(
@@ -271,9 +282,9 @@ def test_todo_aparelho_conectado_no_bluez_vira_linha_com_o_tipo_pelo_icon_class_
     assert a08._tipo_do_aparelho("input-keyboard", None, 0x00C0) == "teclado"
 
 
-def test_a_legenda_tem_os_sete_tipos_e_a_faixa_nao_tem_as_portas() -> None:
+def test_a_legenda_tem_os_oito_tipos_e_a_faixa_nao_tem_as_portas() -> None:
     assert [t for t, _r in a08.LEGENDA_DAS_FAIXAS] == [
-        "controle", "celular", "relogio", "wifi", "teclado", "mouse", "ruido"]
+        "controle", "celular", "relogio", "acessorio", "wifi", "teclado", "mouse", "ruido"]
     assert "vizinhanca-das-portas" not in a08.campos_da_secao(_cena(aparelhos=[]))
     assert not hasattr(a08, "html_das_portas")
 
