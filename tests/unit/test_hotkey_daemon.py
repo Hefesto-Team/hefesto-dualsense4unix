@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 import asyncio
+from types import SimpleNamespace
 
+from hefesto_dualsense4unix.daemon.subsystems.gamepad import sem_o_gesto_do_ps
 from hefesto_dualsense4unix.integrations.hotkey_daemon import (
     DEFAULT_BUFFER_MS,
     HotkeyConfig,
@@ -75,26 +77,28 @@ def test_botao_solo_nao_dispara():
     assert fired == []
 
 
-def test_passthrough_repassa_fora_de_emulation():
-    mgr = HotkeyManager()
-    assert mgr.should_passthrough(["ps", "dpad_up"], emulation_active=False) is True
+def _ao_jogo(mgr: HotkeyManager | None, botoes: frozenset[str]) -> frozenset[str]:
+    """O que o pad virtual recebe: o filtro que o `dispatch_gamepad` e o co-op chamam."""
+    return sem_o_gesto_do_ps(SimpleNamespace(_hotkey_manager=mgr), UM, botoes)
 
 
-def test_passthrough_bloqueia_combo_em_emulation():
-    mgr = HotkeyManager()
-    assert mgr.should_passthrough(["ps", "dpad_up"], emulation_active=True) is False
+def test_sem_gerente_de_atalhos_o_jogo_recebe_tudo():
+    botoes = frozenset({"ps", "dpad_up"})
+    assert _ao_jogo(None, botoes) is botoes
 
 
-def test_passthrough_permite_botao_solo_em_emulation():
-    mgr = HotkeyManager()
-    assert mgr.should_passthrough(["cross"], emulation_active=True) is True
+def test_o_combo_cala_o_direcional_e_deixa_o_ps():
+    assert _ao_jogo(HotkeyManager(), frozenset({"ps", "dpad_up"})) == {"ps"}
 
 
-def test_passthrough_respeita_config_override():
-    mgr = HotkeyManager(
-        config=HotkeyConfig(passthrough_in_emulation=True)
-    )
-    assert mgr.should_passthrough(["ps", "dpad_up"], emulation_active=True) is True
+def test_botao_solo_chega_ao_jogo_intacto():
+    botoes = frozenset({"cross"})
+    assert _ao_jogo(HotkeyManager(), botoes) is botoes
+
+
+def test_passthrough_in_emulation_entrega_o_combo_ao_jogo():
+    mgr = HotkeyManager(config=HotkeyConfig(passthrough_in_emulation=True))
+    assert _ao_jogo(mgr, frozenset({"ps", "dpad_up"})) == {"ps", "dpad_up"}
 
 
 def test_config_customizado():

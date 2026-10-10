@@ -314,7 +314,10 @@ def test_ps_l3_dispara_a_mascara_e_nao_vaza_o_l3() -> None:
     mgr.observe(["ps", "l3"], now=0.0)
     assert mgr.observe(["ps", "l3"], now=0.2) == "mascara"
     assert eventos == ["mascara"]
-    assert not mgr.should_passthrough(["ps", "l3"], emulation_active=True)
+    pad = gp.sem_o_gesto_do_ps(
+        SimpleNamespace(_hotkey_manager=mgr), None, frozenset({"ps", "l3"})
+    )
+    assert pad == {"ps"}, "o l3 do gesto chegou ao jogo"
 
 
 def test_o_daemon_liga_o_gesto_da_mascara() -> None:

@@ -22,6 +22,7 @@ from typing import Any
 
 import pytest
 
+from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp
 from hefesto_dualsense4unix.daemon.subsystems import hotkey as hotkey_sub
 from hefesto_dualsense4unix.daemon.subsystems.hotkey import (
     CICLO_DE_PONTES,
@@ -85,8 +86,11 @@ def test_default_do_combo_da_ponte() -> None:
 def test_ponte_nao_vaza_para_o_desktop() -> None:
     """FEAT-HOTKEY-COMBO-NO-LEAK: sem isto o 'r3' do gesto vira clique do meio"""
     mgr = HotkeyManager()
-    assert mgr.should_passthrough(["ps", "r3"], emulation_active=True) is False
     assert "r3" in mgr.combo_buttons_active(["ps", "r3"])
+    pad = gp.sem_o_gesto_do_ps(
+        SimpleNamespace(_hotkey_manager=mgr), None, frozenset({"ps", "r3"})
+    )
+    assert pad == {"ps"}, "o r3 do gesto chegou ao jogo"
 
 
 def test_tupla_vazia_desliga_o_gesto_da_ponte() -> None:

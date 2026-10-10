@@ -1840,6 +1840,7 @@ from hefesto_dualsense4unix.daemon.subsystems.big_picture import (  # noqa: E402
 from hefesto_dualsense4unix.daemon.subsystems.navegacao_interna import (  # noqa: E402
     roubar_o_que_navega,
 )
+from hefesto_dualsense4unix.integrations.hotkey_daemon import PS_BUTTON  # noqa: E402
 
 
 def aplicar_o_movimento(
@@ -1916,6 +1917,30 @@ def aplicar_o_movimento(
         return lx, ly, rx, ry
 
 
+def sem_o_gesto_do_ps(
+    daemon: Any, de: str | None, botoes: frozenset[str]
+) -> frozenset[str]:
+    """Os botões de `de` sem os membros do gesto do PS que ele segura. Nunca levanta.
+
+    O latch é o do `HotkeyManager` (`combo_buttons_active`), por controle: o
+    mesmo que o desktop lê. O PS sozinho segue ao jogo; calam-se os OUTROS
+    membros do combo (o R3 do PS + R3, o L3 do PS + L3, o direcional, o
+    Options). Sem gerente de atalhos, ou com nada a calar, devolve o mesmo objeto.
+    """
+    gerente = getattr(daemon, "_hotkey_manager", None)
+    calar = getattr(gerente, "combo_buttons_active", None)
+    if not callable(calar):
+        return botoes
+    if getattr(getattr(gerente, "config", None), "passthrough_in_emulation", False):
+        return botoes
+    try:
+        calados = frozenset(calar(botoes, de=de)) - {PS_BUTTON}
+    except Exception as exc:
+        logger.debug("gesto_do_ps_sem_latch", err=str(exc))
+        return botoes
+    return botoes - calados if calados else botoes
+
+
 def dispatch_gamepad(
     daemon: DaemonProtocol, state: Any, buttons_pressed: frozenset[str]
 ) -> None:
@@ -1926,6 +1951,8 @@ def dispatch_gamepad(
     if device is None:
         return
     buttons_pressed, soltos = _apertos_do_primario(daemon, device, buttons_pressed)
+    # O gesto do PS fica com o Hefesto: o R3 do PS + R3 não chega ao jogo.
+    buttons_pressed = sem_o_gesto_do_ps(daemon, primary_identity(daemon), buttons_pressed)
     # A Navegação Interna com a janela na frente: o que navega não vai ao jogo (D-22).
     buttons_pressed, soltos = roubar_o_que_navega(daemon, buttons_pressed, soltos)
     # O Modo Big Picture com a Steam na frente: o que navega vira tecla e não vai ao pad.
@@ -2392,6 +2419,7 @@ __all__ = [
     "ralos_do_mic",
     "read_primary_calibration",
     "rehide_physical_hidraw",
+    "sem_o_gesto_do_ps",
     "soltar_o_cursor_do_toque",
     "start_gamepad_emulation",
     "start_gamepad_emulation_desfecho",

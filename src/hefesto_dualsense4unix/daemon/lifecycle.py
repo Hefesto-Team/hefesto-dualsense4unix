@@ -35,6 +35,7 @@ from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
     EMU_BLOQUEADO_POR_JOGO,
     OrigemEmulacao,
     ancorar_o_p1_no_aparelho,
+    primary_identity,
     reconciliar_as_mascaras,
 )
 from hefesto_dualsense4unix.daemon.subsystems.poll import (
@@ -4450,7 +4451,9 @@ class Daemon:
 
             emu_buttons = buttons_pressed
             if self._hotkey_manager is not None:
-                blocked = self._hotkey_manager.combo_buttons_active(buttons_pressed)
+                blocked = self._hotkey_manager.combo_buttons_active(
+                    buttons_pressed, de=primary_identity(self)
+                )
                 if blocked:
                     emu_buttons = buttons_pressed - blocked
             # A Navegação Interna com a janela do Hefesto na frente: o R1 e o L1

@@ -13,8 +13,10 @@ Política (V2-4 + V3-2 + FEAT-HOTKEY-STEAM-01):
   - Modo jogo: segurar o botão PS (ps_long_press) suspende a emulação.
   - Buffer de 150ms (V3-2): pressionar PS solo atrasa repasse ao uinput
     pra aguardar possível segundo botão; se passou o buffer, libera.
-  - Em modo emulação (uinput gamepad virtual ativo), combo sagrado não
-    repassa ao gamepad virtual — evita o combo vazar pro jogo.
+  - Em modo emulação (uinput gamepad virtual ativo), os outros membros do
+    combo sagrado não chegam ao gamepad virtual daquele controle enquanto o
+    PS está apertado: `combo_buttons_active(..., de=<MAC>)`, chamado pelo
+    `dispatch_gamepad` (P1) e pelo `forward_all` do co-op (P2 a P4).
   - PS solo (FEAT-HOTKEY-STEAM-01): se PS é pressionado e solto sem
     combo em `buffer_ms`, dispara `on_ps_solo` (default: abrir/focar
     Steam). Detecção: após o release do PS sem combo ter disparado.
@@ -116,6 +118,8 @@ class _Aperto:
     ps_pressed_at: float | None = None
     ps_combo_fired: bool = False
     ps_long_press_fired: bool = False
+    #: Os membros do combo do PS que este controle segura: calados até soltar.
+    latch: set[str] = field(default_factory=set)
 
 
 @dataclass
@@ -146,17 +150,16 @@ class HotkeyManager:
     config: HotkeyConfig = field(default_factory=HotkeyConfig)
 
     _apertos: dict[str | None, _Aperto] = field(default_factory=dict)
-    _combo_latch: set[str] = field(default_factory=set)
 
     def _combos_configurados(self) -> dict[str, frozenset[str]]:
         """Mapa nome→botões dos combos LIGADOS. Tupla vazia = combo desligado.
 
-        FONTE ÚNICA dos combos: `observe`, `should_passthrough` e
-        `combo_buttons_active` leem daqui. Antes cada um repetia a lista de
-        tuplas na mão, e um combo novo entrava num e faltava nos outros — o
-        gesto disparava e ainda deixava vazar o membro (dpad→seta, options→Meta)
-        para o desktop, que é exatamente o defeito que o FEAT-HOTKEY-COMBO-NO-
-        LEAK-01/02 curou para os combos que existiam na época.
+        FONTE ÚNICA dos combos: `observe` e `combo_buttons_active` leem daqui.
+        Antes cada um repetia a lista de tuplas na mão, e um combo novo entrava
+        num e faltava nos outros — o gesto disparava e ainda deixava vazar o
+        membro (dpad→seta, options→Meta) para o desktop, que é exatamente o
+        defeito que o FEAT-HOTKEY-COMBO-NO-LEAK-01/02 curou para os combos que
+        existiam na época.
 
         O filtro por tupla não-vazia vale para TODOS: `frozenset()` vazio é
         subconjunto de qualquer coisa e dispararia a cada tick (antes só o
@@ -188,14 +191,18 @@ class HotkeyManager:
     ) -> str | None:
         """Processa snapshot de botões. Retorna nome do evento disparado."""
         t = now if now is not None else time.monotonic()
-        aperto = self._apertos.get(de)
-        if aperto is None:
-            aperto = self._apertos[de] = _Aperto()
+        aperto = self._aperto_de(de)
         marca = _QUEM_FAZ_O_GESTO.set(de)
         try:
             return self._observe_o_aperto(aperto, pressed, t=t, de=de)
         finally:
             _QUEM_FAZ_O_GESTO.reset(marca)
+
+    def _aperto_de(self, de: str | None) -> _Aperto:
+        aperto = self._apertos.get(de)
+        if aperto is None:
+            aperto = self._apertos[de] = _Aperto()
+        return aperto
 
     def soltar_quem_saiu(self, ficam: Iterable[str | None]) -> None:
         """Esquece o aperto de quem não foi lido neste tique."""
@@ -311,28 +318,24 @@ class HotkeyManager:
         self._fire_ps_solo()
         return "ps_solo"
 
-    def should_passthrough(
-        self, pressed: Iterable[str], *, emulation_active: bool
-    ) -> bool:
-        """Retorna True se os botões devem ser repassados ao uinput."""
-        if not emulation_active or self.config.passthrough_in_emulation:
-            return True
-        buttons = frozenset(str(b).lower() for b in pressed)
-        return all(
-            not combo.issubset(buttons)
-            for combo in self._combos_configurados().values()
-        )
+    def combo_buttons_active(
+        self, pressed: Iterable[str], *, de: str | None = None
+    ) -> frozenset[str]:
+        """Os membros do combo PS+X que o controle `de` segura: não vão à emulação.
 
-    def combo_buttons_active(self, pressed: Iterable[str]) -> frozenset[str]:
-        """Botões a NÃO despachar à emulação por pertencerem a um combo PS+X."""
+        O latch é do aperto DAQUELE controle (D-2809-OS-ATALHOS-TEM-UM-APERTO-POR-
+        CONTROLE): o PS + R3 do P2 não cala o R3 do P1. Entra quem aperta junto
+        com o PS e sai quando o próprio botão solta, mesmo que o PS solte antes.
+        """
         buttons = frozenset(str(b).lower() for b in pressed)
+        latch = self._aperto_de(de).latch
         if PS_BUTTON in buttons:
             for combo in self._combos_configurados().values():
                 if PS_BUTTON not in combo:
                     continue
-                self._combo_latch |= {b for b in combo if b in buttons}
-        self._combo_latch &= buttons
-        return frozenset(self._combo_latch)
+                latch |= {b for b in combo if b in buttons}
+        latch &= buttons
+        return frozenset(latch)
 
     def _callback_do_combo(self, name: str) -> tuple[bool, Any | None]:
         """Resolve o callback de um combo. Devolve (conhecido, callback).
