@@ -64,6 +64,10 @@ RAIZ="$(git rev-parse --show-toplevel 2>/dev/null || dirname "$(dirname "$(readl
 #   @sempre       o portão lê a máquina ou a história do git, e nunca é lembrado
 #   @dia          o portão compara com a data de hoje (prazo que vence): a data entra na chave
 #   @head         o portão lê a história a partir do HEAD: o HEAD entra na chave
+# Os dez `rapido` mais caros declaram o que abrem (10/10/2026, O-RAPIDO-SO-REPETE-O-QUE-MUDOU-01): medido
+# com um gancho de auditoria do Python (`open`, `os.listdir`, `subprocess.Popen`) e lido no script, por pasta
+# e não por arquivo, para que o arquivo novo de uma pasta lida também conte. Sem a coluna, 58 de 72 portões
+# tinham a árvore inteira como chave, e a média era de 3,3 lembrados por corrida.
 #
 # Tempos medidos nesta árvore em 25/08/2026, `dev` em f475b2a, e é por eles que
 # a camada rápida existe: `validar-acentuacao.py --all` sozinho custa 38 s e o
@@ -106,7 +110,7 @@ rapido|nada-mockado|pytest|tests/unit/test_portao_nada_e_afirmado_sem_prova.py
 # dos `data-gesto` das dez páginas — nunca digitada. Camada RÁPIDA: lê dez HTML,
 # um CSV e o fonte do `schema.py`, custa milissegundos.
 rapido|quatro-respostas|py|scripts/check_cabo_bt_perfil_controle.py
-rapido|quatro-respostas-morde|pytest|tests/unit/test_portao_a_regua_das_quatro_respostas.py
+rapido|quatro-respostas-morde|pytest|tests/unit/test_portao_a_regua_das_quatro_respostas.py|src/** docs/data/** tests/** scripts/check_cabo_bt_perfil_controle.py pyproject.toml
 # A QUINTA PERGUNTA — TUDO-FUNCIONA-01, 09/09/2026. A cobrança dela: "pq o
 # programa de dias a fio é de brinquedo? uma prova de conceito?". As quatro
 # acima leem `*_aciona` ("o Hefesto MEXE nisso?"); esta lê `*_ate_onde_foi`
@@ -128,15 +132,16 @@ rapido|texto-publico|py|scripts/check_texto_publico.py
 rapido|palavra-de-tela|py|scripts/validar-palavra-de-tela.py --all
 rapido|version-consistency|py|scripts/check_version_consistency.py
 rapido|curvas|py|scripts/gerar-tabela-de-curvas.py --check
-rapido|paridade-transporte|py|scripts/check_paridade_transporte.py|@dia
+rapido|paridade-transporte|py|scripts/check_paridade_transporte.py|@dia tests/** src/** docs/data/** docs/specs.html scripts/eliminacao.py
 # 03/09/2026: O TERCEIRO NÚMERO. Os dois outros medem a interface nova contra
 # ela mesma (campos escritos; publicado × mockup) e nenhum responde "o que a GTK
 # faz e o HTML não faz" -- que é de onde sai a fila. Este confere as 396
 # features de `docs/data/paridade-gtk-html.csv` contra o CÓDIGO, e a metade que
 # importa é a regra `divida-fechada`: quando alguém FECHAR uma dívida, ele
 # reprova para o dado ser atualizado. Sem isso o número vira propaganda no dia
-# seguinte à primeira cura. Camada rápida porque custa 0,4 s.
-rapido|paridade-gtk-html|py|scripts/check_paridade_gtk_html.py
+# seguinte à primeira cura. Camada rápida: 1,3 s medidos em 10/10/2026 (eram 9,2 s
+# antes de o `prosa_do_codigo` perguntar pelo literal antes da regex).
+rapido|paridade-gtk-html|py|scripts/check_paridade_gtk_html.py|src/** mockup/** docs/data/** docs/method/** assets/** tests/** install.sh scripts/prosa_do_codigo.py
 # 07/10/2026 — OS CONTRATOS DE FORA: cada ponto de contato com o BlueZ, o PipeWire, o systemd, a Steam, o
 # Proton, o kernel e o COSMIC tem linha em `docs/data/contratos-de-fora.csv`, e a catraca das linhas frágeis só desce.
 rapido|contratos-de-fora|py|scripts/check_os_contratos_de_fora.py
@@ -276,7 +281,7 @@ rapido|os-quatro-lugares|py|scripts/check_os_quatro_lugares.py
 # A auto-checagem da própria `aba01.py` NÃO substitui esta: ela só roda com
 # `python aba01.py`, e uma régua que espera alguém a chamar não protege
 # ninguém — foi o que a conferência de 07/09 derrubou na aba 04.
-rapido|gesto-em-lugar-vazio|pytest|tests/unit/test_a_01_jogar_nao_oferece_gesto_em_lugar_vazio.py
+rapido|gesto-em-lugar-vazio|pytest|tests/unit/test_a_01_jogar_nao_oferece_gesto_em_lugar_vazio.py|src/** scripts/** tests/** mockup/** docs/data/** pyproject.toml
 # O IRMÃO DA 04, e ele nasceu do MESMO conferente, no mesmo dia — 07/09/2026.
 # Se o de cima pegou o gesto que SOBRAVA num lugar vazio, este pega o que
 # FALTA num lugar cheio: a conferência escondeu `Automático` e `Desligar` das
@@ -288,7 +293,7 @@ rapido|gesto-em-lugar-vazio|pytest|tests/unit/test_a_01_jogar_nao_oferece_gesto_
 # viram a marca sem recarregar. Custa 2,1 s.
 # A §4 DA `aba04._conferir` NÃO SUBSTITUI ESTE: ela só roda com
 # `python aba04.py`, e foi exatamente essa a folga que a conferência mostrou.
-rapido|gesto-onde-deve-04|pytest|tests/unit/test_a_04_iluminacao_o_gesto_esta_onde_deve.py
+rapido|gesto-onde-deve-04|pytest|tests/unit/test_a_04_iluminacao_o_gesto_esta_onde_deve.py|src/** scripts/** tests/** mockup/** docs/data/** pyproject.toml
 rapido|identidade-de-cima|py|scripts/check_identidade_vem_de_cima.py
 # 03/09/2026, a lei de produto: *"cada pessoa tem um dualsense diferente (…) nada
 # hardcoded, trazer tudo que eu já mapeei"*. O irmão acima acha cor congelada
@@ -317,12 +322,12 @@ rapido|cor-vem-do-aparelho|py|scripts/check_a_cor_vem_do_aparelho.py
 rapido|icones|bash|scripts/gerar_icones.sh --check
 rapido|packaging-parity|bash|scripts/check_packaging_parity.sh
 rapido|glifos|py|scripts/validar-glifos.py --all
-rapido|pecas-do-dualsense|py|scripts/check_pecas_do_dualsense.py
+rapido|pecas-do-dualsense|py|scripts/check_pecas_do_dualsense.py|src/** docs/data/**
 # 27/08/2026: o irmão acima confere que o NOME da peça bate com o LUGAR dela;
 # este confere que a COR bate com o dado. Antes dele, nenhuma régua sabia dizer
 # se o hex do desenho estava certo, porque não havia com o que comparar — o
 # Cosmic Red era #b11f54 e a amostragem devolveu #A51C48. 3,5 s.
-rapido|cores-do-dualsense|py|scripts/check_cores_do_dualsense.py
+rapido|cores-do-dualsense|py|scripts/check_cores_do_dualsense.py|src/** docs/data/** assets/control-svg/** scripts/gerar_cores_do_dualsense.py
 # 20/09/2026: o terceiro que abre o Chrome, e a pergunta dele é a CAIXA. Os dois
 # de cima medem o desenho do controle; este mede se o cartão da aba 02 ainda
 # cabe no orçamento que `aba02.PARA_O_CARD` declara, e se algum rótulo dele sai
@@ -336,7 +341,7 @@ rapido|regua-de-tela|py|scripts/check_regua_de_tela.py|@sempre
 # sujeito, e desde quando. Ele não decide sozinho de propósito — nenhuma
 # expressão regular separa *"o jogo ainda não recebeu"* de *"o Hefesto ainda não
 # faz"*, e as duas estavam na tela no dia em que ele nasceu.
-rapido|tela-nao-confessa|py|scripts/check_a_tela_nao_confessa.py
+rapido|tela-nao-confessa|py|scripts/check_a_tela_nao_confessa.py|src/** mockup/**
 # A MOLDURA — 08/09/2026, e ele nasceu de um buraco entre as duas réguas acima.
 # Elas medem o CORPO das dez páginas; a barra de título é GTK, o `.desktop` é
 # INI e a unit é systemd. *A régua parava na borda da `<body>`, e a tela do usuário
@@ -356,7 +361,7 @@ rapido|janela-nao-confessa|py|scripts/check_a_janela_nao_confessa.py
 # reprova é a caixa alta NOVA.
 rapido|maiuscula-decorativa|py|scripts/check_a_maiuscula_decorativa.py
 rapido|maiuscula-decorativa-morde|pytest|tests/unit/test_portao_a_maiuscula_decorativa_morde.py
-rapido|so-a-primeira-letra|py|scripts/check_so_a_primeira_letra.py
+rapido|so-a-primeira-letra|py|scripts/check_so_a_primeira_letra.py|src/** docs/data/** scripts/check_a_maiuscula_decorativa.py
 # A GRAFIA DO NOME — 11/09/2026, `F6-O-NOME-TEM-UM-DONO`. O produto se chama
 # `DualSense4Unix`, com o `S` do DualSense, e `utils/identidade.py` escrevia o
 # `S` em minúscula — 427 linhas de 174 arquivos. A grafia errada TRAVAVA uma
@@ -390,7 +395,7 @@ rapido|projeto-traduzivel-morde|pytest|tests/unit/test_o_projeto_e_traduzivel_mo
 # (OS-PORTOES-LENTOS-FICAM-RAPIDOS-POR-DENTRO-01): a régua que prova que os portões que abrem uma página
 # a abrem pelo `scripts/chrome_sem_rede.py`, sem esperar fonte nem script de fora. A irmã a deixou fora
 # desta lista porque o `portoes.sh` não era posse dela. Camada RÁPIDA: ~20 s, e é ela que segura a cura.
-rapido|portoes-lentos-rapidos|pytest|tests/unit/test_os_portoes_lentos_ficam_rapidos.py
+rapido|portoes-lentos-rapidos|pytest|tests/unit/test_os_portoes_lentos_ficam_rapidos.py|src/** scripts/** tests/** mockup/** docs/data/** install.sh uninstall.sh pyproject.toml
 # NADA QUE O `.gitignore` EXCLUI ENTRA NO REPOSITÓRIO (09/10/2026,
 # NADA-QUE-O-GITIGNORE-EXCLUI-ENTRA-NO-REPOSITORIO-01): o `git add -f` passa por cima do `.gitignore`, e
 # um estudo de `docs/process/` entrou assim numa branch de leva sem portão nenhum perguntar. A pergunta é

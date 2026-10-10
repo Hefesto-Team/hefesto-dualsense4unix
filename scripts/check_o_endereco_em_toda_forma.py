@@ -218,6 +218,38 @@ def _nome(p: Path) -> str:
         return str(p)
 
 
+# Uma corrida de seis ou mais dígitos hexadecimais, com no máximo um separador entre dois deles. Todo pedaço que
+# as três agulhas procuram (a janela com separador, a colada e os bytes do virtual) é hexadecimal com separador
+# simples, então cabe inteiro numa corrida dessas, e as bordas das agulhas (nenhum hexadecimal colado) leem o mesmo
+# vizinho dentro da corrida e no texto.
+_CORRIDA_DE_HEX = re.compile(r"(?i)[0-9a-f](?:[:\-_. ]?[0-9a-f]){5,}")
+
+
+def _tem_candidato(
+    texto: str,
+    padroes: dict[str, re.Pattern[str]],
+    coladas: dict[str, str],
+    virtuais: dict[str, str],
+) -> bool:
+    """O arquivo tem ao menos um pedaço que as agulhas acusam, perguntado uma vez sobre o texto inteiro.
+
+    As agulhas rodam sobre o esqueleto do arquivo (as corridas hexadecimais, uma por linha), não sobre cada linha:
+    medido em 09/10/2026, o `varrer` gastava 10,3 de 13,1 s em 252 mil `findall` e 1,15 milhão de `search` sobre as
+    36 mil linhas que passam pelo `_PODE_TER_PEDACO`. Só o arquivo com candidato desce às linhas, e é lá que a
+    isenção e a contagem decidem, como sempre decidiram.
+    """
+    if not _PODE_TER_PEDACO.search(texto):
+        return False
+    esqueleto = "\n".join(_CORRIDA_DE_HEX.findall(texto))
+    if not esqueleto:
+        return False
+    return (
+        any(padrao.search(esqueleto) for padrao in padroes.values())
+        or bool(achados_colados(esqueleto, coladas))
+        or bool(achados_dos_virtuais(esqueleto, virtuais))
+    )
+
+
 def varrer(
     arquivos: list[Path],
     padroes: dict[str, re.Pattern[str]],
@@ -229,6 +261,8 @@ def varrer(
         try:
             texto = p.read_text(encoding="utf-8", errors="strict")
         except (UnicodeDecodeError, OSError):
+            continue
+        if not _tem_candidato(texto, padroes, coladas or {}, virtuais or {}):
             continue
         for n, linha in enumerate(texto.splitlines(), 1):
             if not _PODE_TER_PEDACO.search(linha) or ISENCAO.search(linha):

@@ -40,9 +40,7 @@ ABAS = (
 )
 
 SO_GTK = (
-    "src/hefesto_dualsense4unix/gui/",
     "src/hefesto_dualsense4unix/app/actions/",
-    "src/hefesto_dualsense4unix/app/widgets/",
 )
 SO_HTML = (
     "src/hefesto_dualsense4unix/interface/",
@@ -243,7 +241,7 @@ class Arvore:
         dentro de ``player_slot_color``. Aquela linha nunca mordeu.
         """
         for p in arquivos:
-            if prosa_do_codigo.agulha(alvo).search(self.texto(p)):
+            if prosa_do_codigo.ocorre_no_texto(self.texto(p), alvo):
                 return p
         return None
 

@@ -153,15 +153,24 @@ def agulha(simbolo: str) -> re.Pattern[str]:
     return re.compile(rf"(?<!\w){re.escape(simbolo)}(?![\w])")
 
 
+def ocorre_no_texto(texto: str, simbolo: str) -> bool:
+    """O símbolo aparece no texto com borda de palavra.
+
+    O literal ausente responde «não» sem regex: a agulha com olhar-para-trás varre o texto inteiro, e a
+    paridade a chamava 3.605 vezes, quase sempre por um símbolo que nem estava no arquivo (12,8 de 15,3 s
+    da corrida, medido em 09/10/2026). Presente, a borda decide como sempre decidiu.
+    """
+    return simbolo in texto and agulha(simbolo).search(texto) is not None
+
+
 def usa(caminho: Path, simbolo: str) -> bool:
     """O arquivo USA o símbolo — citá-lo num comentário não conta."""
-    return agulha(simbolo).search(codigo_de(caminho)) is not None
+    return ocorre_no_texto(codigo_de(caminho), simbolo)
 
 
 def cita(caminho: Path, simbolo: str) -> bool:
     """O símbolo APARECE no arquivo, prosa incluída."""
     try:
-        return agulha(simbolo).search(
-            caminho.read_text(encoding="utf-8", errors="replace")) is not None
+        return ocorre_no_texto(caminho.read_text(encoding="utf-8", errors="replace"), simbolo)
     except OSError:
         return False
