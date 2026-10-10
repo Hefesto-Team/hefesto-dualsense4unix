@@ -771,7 +771,7 @@ def _jogos_pelo_titulo(
 
 
 def _jogos_para_escolher(
-    lancador: str, nome: str, state: dict[str, Any] | None, modo: str = "",
+    lancador: str, nome: str, state: dict[str, Any] | None,
 ) -> tuple[list[desenho.JogoParaEscolher], dict[str, tuple[str, ...]], bool]:
     """``(jogos, janelas por chave, é emulador)`` — a lista DAQUELE lançador.
 
@@ -780,8 +780,8 @@ def _jogos_para_escolher(
     escada (o aberto, ou o último) nasce marcado (D-2109-O-JOGO-SE-ESCOLHE-NA-
     LISTA). Nunca levanta: é chamado de dentro de um clique.
 
-    O LANÇADOR DE MODIFICAÇÃO COM LEITOR, no modo do perfil, lista os jogos que
-    o leitor devolve com o ID do título: a janela é a do emulador para todos,
+    O LANÇADOR DE MODIFICAÇÃO COM LEITOR, no modo do perfil (``_ESCOLHA.modo``,
+    posto antes da chamada), lista os jogos que o leitor devolve com o ID do título: a janela é a do emulador para todos,
     e o perfil de UM jogo casa pelo título (os títulos ficam em
     ``_ESCOLHA.titulos``). A lista de exclusão casa por janela, e lá ele fica
     na linha «todos os jogos», como os emuladores.
@@ -814,7 +814,8 @@ def _jogos_para_escolher(
             chave = _chave_do_emulador(lancador)
             item = next((x for x in desenho.procurados(_declarados())
                          if x.chave == lancador), None)
-            if item is not None and item.leitor is not None and modo == desenho.CRIAR_PERFIL:
+            if (item is not None and item.leitor is not None
+                    and _ESCOLHA.modo == desenho.CRIAR_PERFIL):
                 pelo_titulo, titulos = _jogos_pelo_titulo(item, ja)
                 if pelo_titulo:
                     _ESCOLHA.titulos = titulos
@@ -837,8 +838,10 @@ def _abrir_a_escolha(modo: str, lancador: str, state: dict[str, Any] | None) -> 
     lida = VIGIA.agora()
     nomes = {x.chave: x.nome for x in desenho.cartoes(lida)}
     nome = nomes.get(lancador, lancador)
-    jogos, janelas, emulador = _jogos_para_escolher(lancador, nome, state, modo)
-    _ESCOLHA.modo, _ESCOLHA.lancador = modo, lancador
+    _ESCOLHA.limpar()
+    _ESCOLHA.modo = modo
+    jogos, janelas, emulador = _jogos_para_escolher(lancador, nome, state)
+    _ESCOLHA.lancador = lancador
     _ESCOLHA.jogos, _ESCOLHA.janelas = tuple(jogos), janelas
     _ESCOLHA.miolo = desenho.miolo_da_escolha_html(
         modo, nome, jogos, emulador=emulador)
