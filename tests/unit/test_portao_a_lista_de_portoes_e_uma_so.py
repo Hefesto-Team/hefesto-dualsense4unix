@@ -366,9 +366,9 @@ def test_a_regua_sabe_passar_quando_o_ci_chama_pelo_nome() -> None:
 
 def test_a_linha_nova_da_tabela_sem_so_nem_declaracao_reprova() -> None:
     """O primeiro caso da sprint: a tabela ganhou um portão e nenhum job o pede."""
-    sh, ci = _duble([*_DUAS, "rapido|tres|py|scripts/check_tres.py"], [], [_PELO_NOME])
+    sh, ci = _duble([*_DUAS, "rapido|terceiro|py|scripts/check_terceiro.py"], [], [_PELO_NOME])
     queixas = confere(sh, ci)
-    assert len(queixas) == 1 and queixas[0].startswith("tres:"), queixas
+    assert len(queixas) == 1 and queixas[0].startswith("terceiro:"), queixas
 
 
 def test_o_run_que_relista_um_portao_da_tabela_reprova() -> None:
@@ -473,13 +473,13 @@ def portoes_de_mentira(tmp_path: Path) -> Path:
     fim = texto.index("\nTABELA\n", inicio)
     linhas = "\n".join(
         f"{camada}|{id_}|bash|scripts/{id_}.sh"
-        for camada, id_ in (("rapido", "um"), ("completo", "dois"), ("rapido", "tres"))
+        for camada, id_ in (("rapido", "um"), ("completo", "dois"), ("rapido", "terceiro"))
     )
     (tmp_path / "scripts").mkdir()
     (tmp_path / "scripts" / "portoes.sh").write_text(
         texto[:inicio] + "_LISTA() {\n  cat <<'TABELA'\n" + linhas + texto[fim:], encoding="utf-8"
     )
-    for id_ in ("um", "dois", "tres"):
+    for id_ in ("um", "dois", "terceiro"):
         (tmp_path / "scripts" / f"{id_}.sh").write_text(f"echo rodou-{id_} >> \"$0.marca\"\n")
     subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
     return tmp_path
