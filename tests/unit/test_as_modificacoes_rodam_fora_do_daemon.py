@@ -89,12 +89,12 @@ def _manifesto(mod_id: str = "exemplo", **mais: Any) -> dict[str, Any]:
     corpo: dict[str, Any] = {
         "id": mod_id,
         "nome": "Exemplo",
-        "versao": "0.1.0",  # noqa-acento: palavra do contrato, ASCII
+        "versao": "0.1.0",  # (noqa-acento): contrato ASCII
         "api": ">=1,<2",
         "licenca": "MIT",
         "tipos": ["processo"],
         "processo": {"executar": ["python3", "mod.py"]},
-        "permissoes": ["ler:estado", "escrever:luz"],  # noqa-acento: palavra do contrato, ASCII
+        "permissoes": ["ler:estado", "escrever:luz"],  # (noqa-acento): contrato ASCII
     }
     corpo.update(mais)
     return corpo

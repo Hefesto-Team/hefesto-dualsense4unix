@@ -53,6 +53,17 @@ CHAVES_OFICIAIS: tuple[str, ...] = ()
 #: mandar o sinal ao PID conferido.
 PRAZO_PARA_PARAR_S = 5.0
 
+#: A linha de comando não fala com o serviço: ela relê o estado que o supervisor
+#: grava, nesta cadência, até o processo sair.
+CADENCIA_DA_ESPERA_S = 0.05
+
+#: Quando o serviço não para a tempo: o ``SIGTERM`` e, depois, o ``SIGKILL``, cada
+#: um com a sua espera.
+SINAIS_DO_FIM: tuple[tuple[signal.Signals, float], ...] = (
+    (signal.SIGTERM, 2.0),
+    (signal.SIGKILL, 1.0),
+)
+
 _PRAZO_DO_GIT_S = 300.0
 
 _ESTADOS_VIVOS = frozenset({"ligando", "rodando", "voltando"})
@@ -445,17 +456,17 @@ def esperar_parar(
             return True
         if time.monotonic() >= limite:
             break
-        time.sleep(0.1)
+        time.sleep(CADENCIA_DA_ESPERA_S)
     if not _e_da_modificacao(pid, mod_id):
         return not _pid_vivo(pid)
-    for sinal, espera in ((signal.SIGTERM, 2.0), (signal.SIGKILL, 1.0)):
+    for sinal, espera in SINAIS_DO_FIM:
         with contextlib.suppress(ProcessLookupError, PermissionError):
             os.killpg(pid, sinal)
         fim = time.monotonic() + espera
         while time.monotonic() < fim:
             if not _pid_vivo(pid):
                 return True
-            time.sleep(0.05)
+            time.sleep(CADENCIA_DA_ESPERA_S)
     return not _pid_vivo(pid)
 
 

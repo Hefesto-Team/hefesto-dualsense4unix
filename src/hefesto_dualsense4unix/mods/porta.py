@@ -56,6 +56,9 @@ CODE_NAO_ESCREVEU = -32013
 #: canal: dentro dele, a modificação não escreve vibração naquele controle.
 JANELA_DA_VIBRACAO_DO_JOGO_S = 2.0
 
+#: Ao parar, quanto a porta espera as conexões abertas fecharem.
+PRAZO_PARA_FECHAR_S = 2.0
+
 Escritor = Callable[[str, dict[str, Any]], Awaitable[Any]]
 OJogoEscreve = Callable[[str, str], bool]
 UniqDoPosto = Callable[[], str | None]
@@ -91,26 +94,23 @@ def credencial_do_par(sock: socket.socket | None) -> tuple[int, int, int] | None
     """``(pid, uid, gid)`` do outro lado do socket Unix, pelo ``SO_PEERCRED``."""
     if sock is None:
         return None
-    try:
-        cru = sock.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, struct.calcsize("3i"))
-    except OSError:
-        return None
+    cru = sock.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, struct.calcsize("3i"))
     pid, uid, gid = struct.unpack("3i", cru)
     return pid, uid, gid
 
 
 def _pai_de(pid: int) -> int | None:
-    try:
-        stat = Path(f"/proc/{pid}/stat").read_text(encoding="ascii", errors="replace")
-    except OSError:
+    """O pai de ``pid`` pelo ``/proc``; ``None`` quando o processo já não existe.
+
+    Um processo que some entre a pergunta e a leitura levanta, e a conexão
+    dele fecha: na dúvida, a porta não abre.
+    """
+    stat = Path(f"/proc/{pid}/stat")
+    if not stat.is_file():
         return None
     # O nome do processo vem entre parênteses e pode ter espaço: o campo do pai
     # é o segundo depois do ÚLTIMO «)».
-    resto = stat.rsplit(")", 1)[-1].split()
-    try:
-        return int(resto[1])
-    except (IndexError, ValueError):
-        return None
+    return int(stat.read_text(encoding="ascii", errors="replace").rsplit(")", 1)[-1].split()[1])
 
 
 def descende_de(pid: int, criado: int, *, limite: int = 64) -> bool:
@@ -273,7 +273,7 @@ class Porta:
                 tarefa.cancel()
         if server is not None:
             with contextlib.suppress(Exception):
-                await asyncio.wait_for(server.wait_closed(), timeout=2.0)
+                await asyncio.wait_for(server.wait_closed(), timeout=PRAZO_PARA_FECHAR_S)
         if self._inode is not None:
             with contextlib.suppress(FileNotFoundError):
                 if self.caminho.stat().st_ino == self._inode:
@@ -285,8 +285,8 @@ class Porta:
     async def _atender(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
         con = _Conexao()
         self._conexoes.add(con)
-        par = credencial_do_par(writer.get_extra_info("socket"))
         try:
+            par = credencial_do_par(writer.get_extra_info("socket"))
             while True:
                 try:
                     cru = await reader.readline()
@@ -302,8 +302,9 @@ class Porta:
                     await self._enviar(con, writer, resposta)
                 if con.sessao is None:
                     break
-        except (ConnectionError, asyncio.IncompleteReadError):
-            pass
+        except (ConnectionError, asyncio.IncompleteReadError) as exc:
+            logger.debug("mods_porta_caiu", mod=con.sessao.mod_id if con.sessao else None,
+                         err=type(exc).__name__)
         except Exception as exc:
             logger.warning("mods_porta_erro", err=str(exc), exc_info=True)
         finally:
@@ -347,7 +348,7 @@ class Porta:
                 return _resposta(req_id, {
                     "id": con.sessao.mod_id,
                     "api": API_DAS_MODIFICACOES,
-                    "permissoes": sorted(con.sessao.permissoes),  # noqa-acento: contrato ASCII
+                    "permissoes": sorted(con.sessao.permissoes),  # (noqa-acento): contrato ASCII
                 })
             if metodo == "eventos.assinar":
                 return _resposta(req_id, self._assinar(con, writer, params))
@@ -538,12 +539,9 @@ def uniq_do_posto_no_servico(daemon: Any) -> UniqDoPosto:
 
 def _primario(controle: Any) -> str | None:
     """O ``primary_uniq`` do backend (uma propriedade; num dublê, pode ser método)."""
-    try:
-        valor = getattr(controle, "primary_uniq", None)
-        if callable(valor):
-            valor = valor()
-    except Exception:
-        return None
+    valor = getattr(controle, "primary_uniq", None)
+    if callable(valor):
+        valor = valor()
     return valor if isinstance(valor, str) and valor else None
 
 

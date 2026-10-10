@@ -22,7 +22,6 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import ctypes
-import ctypes.util
 import json
 import os
 import secrets
@@ -77,17 +76,23 @@ PRAZO_PARA_PARAR_S = 3.0
 #: De quanto em quanto tempo o supervisor relê o registro.
 INTERVALO_DO_REGISTRO_S = 1.0
 
+#: Depois do ``SIGKILL``, quanto se espera o kernel recolher o grupo.
+ESPERA_DEPOIS_DO_SIGKILL_S = 2.0
+
+#: Depois de parar o processo, quanto se espera a tarefa que o vigiava terminar.
+ESPERA_DA_VIGIA_S = 1.0
+
+#: Sem a permissão da chave, a caixa cobre estes caminhos com um ``tmpfs`` vazio.
+ESCONDIDO_SEM_A_PERMISSAO: dict[str, tuple[str, ...]] = {
+    "bluetooth": ("/run/dbus",),
+}
+
 _PR_SET_PDEATHSIG = 1
 
 
 def _prctl() -> Callable[..., int] | None:
-    nome = ctypes.util.find_library("c")
-    if not nome:
-        return None
-    try:
-        funcao: Callable[..., int] = ctypes.CDLL(nome, use_errno=True).prctl
-    except (OSError, AttributeError):
-        return None
+    """O ``prctl`` da libc já carregada no processo (a do próprio Python)."""
+    funcao: Callable[..., int] | None = getattr(ctypes.CDLL(None, use_errno=True), "prctl", None)
     return funcao
 
 
@@ -142,17 +147,16 @@ def ultima_linha_do_diario(caminho: Path, *, teto: int = 200) -> str:
 
 
 def _aparar_o_diario(caminho: Path) -> None:
-    try:
-        tamanho = caminho.stat().st_size
-    except OSError:
+    """Passou do teto: fica só a metade nova (o diário é do supervisor, ninguém mais o abre)."""
+    if not caminho.is_file():
         return
+    tamanho = caminho.stat().st_size
     if tamanho <= TETO_DO_DIARIO_BYTES:
         return
-    with contextlib.suppress(OSError):
-        with caminho.open("rb") as arquivo:
-            arquivo.seek(tamanho - TETO_DO_DIARIO_BYTES // 2)
-            resto = arquivo.read()
-        caminho.write_bytes(resto)
+    with caminho.open("rb") as arquivo:
+        arquivo.seek(tamanho - TETO_DO_DIARIO_BYTES // 2)
+        resto = arquivo.read()
+    caminho.write_bytes(resto)
 
 
 def comando_na_caixa(
@@ -185,8 +189,9 @@ def comando_na_caixa(
         argv += ["--dev-bind", "/dev", "/dev"]
     else:
         argv += ["--dev", "/dev"]
-    if "bluetooth" not in manifesto.permissoes and Path("/run/dbus").is_dir():
-        argv += ["--tmpfs", "/run/dbus"]
+    for permissao, caminhos in ESCONDIDO_SEM_A_PERMISSAO.items():
+        if permissao not in manifesto.permissoes:
+            argv += [arg for c in caminhos if Path(c).is_dir() for arg in ("--tmpfs", c)]
     argv += [
         "--ro-bind", str(codigo), str(codigo),
         "--bind", str(dados), str(dados),
@@ -303,20 +308,20 @@ class Supervisor:
     async def _vigiar_o_registro(self) -> None:
         while True:
             await asyncio.sleep(self.intervalo_s)
-            try:
-                marca = self._marca()
-                if marca != self._marca_do_registro:
-                    await self.reconciliar()
-            except asyncio.CancelledError:
-                raise
-            except Exception as exc:
-                logger.warning("mods_registro_falhou", err=str(exc), exc_info=True)
+            await self._conferir_o_registro()
+
+    async def _conferir_o_registro(self) -> None:
+        """Uma volta da vigia: o registro mudou (outro mtime ou outro inode)?"""
+        try:
+            if self._marca() != self._marca_do_registro:
+                await self.reconciliar()
+        except Exception as exc:
+            logger.warning("mods_registro_falhou", err=str(exc), exc_info=True)
 
     def _marca(self) -> tuple[int, int] | None:
-        try:
-            st = self.lugares.registro.stat()
-        except OSError:
+        if not self.lugares.registro.is_file():
             return None
+        st = self.lugares.registro.stat()
         return (st.st_mtime_ns, st.st_ino)
 
     async def reconciliar(self) -> None:
@@ -487,8 +492,7 @@ class Supervisor:
         if processo is not None and processo.returncode is None:
             await parar_o_grupo(processo, self.prazo_para_parar_s)
         if vigiada.tarefa is not None:
-            with contextlib.suppress(asyncio.CancelledError, Exception):
-                await asyncio.wait_for(vigiada.tarefa, timeout=1.0)
+            await asyncio.wait({vigiada.tarefa}, timeout=ESPERA_DA_VIGIA_S)
         self.porta.esquecer(vigiada.ficha)
         self._marcar(mod_id, EstadoDaModificacao("desligada"))
 
@@ -498,15 +502,16 @@ async def parar_o_grupo(processo: asyncio.subprocess.Process, prazo: float) -> i
     pid = processo.pid
     with contextlib.suppress(ProcessLookupError, PermissionError):
         os.killpg(pid, signal.SIGTERM)
-    try:
-        return await asyncio.wait_for(processo.wait(), timeout=prazo)
-    except asyncio.TimeoutError:
-        pass
-    with contextlib.suppress(ProcessLookupError, PermissionError):
-        os.killpg(pid, signal.SIGKILL)
-    with contextlib.suppress(asyncio.TimeoutError):
-        return await asyncio.wait_for(processo.wait(), timeout=2.0)
-    return None
+    espera = asyncio.ensure_future(processo.wait())
+    await asyncio.wait({espera}, timeout=prazo)
+    if not espera.done():
+        with contextlib.suppress(ProcessLookupError, PermissionError):
+            os.killpg(pid, signal.SIGKILL)
+        await asyncio.wait({espera}, timeout=ESPERA_DEPOIS_DO_SIGKILL_S)
+    if not espera.done():
+        espera.cancel()
+        return None
+    return espera.result()
 
 
 def supervisor_do_servico(daemon: Any) -> Supervisor:
@@ -527,7 +532,10 @@ def supervisor_do_servico(daemon: Any) -> Supervisor:
 
 __all__ = [
     "DIARIO_DA_MODIFICACAO",
+    "ESCONDIDO_SEM_A_PERMISSAO",
     "ESPERAS_PARA_VOLTAR",
+    "ESPERA_DA_VIGIA_S",
+    "ESPERA_DEPOIS_DO_SIGKILL_S",
     "ESTAVEL_DEPOIS_DE_S",
     "PRAZO_PARA_PARAR_S",
     "EstadoDaModificacao",
