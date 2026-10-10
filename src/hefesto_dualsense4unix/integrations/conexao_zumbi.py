@@ -367,6 +367,18 @@ class PontePrivilegiada:
         """Por que esta porta não pode ser usada agora. Vazio = pode."""
         return self.impedimentos_do_pedido(pedido_a_ponte("desconectar", caminho=self.caminho))
 
+    def firma(self) -> tuple[int, int] | None:
+        """``(st_ino, st_ctime_ns)`` da ponte instalada, ou ``None`` sem ela.
+
+        O instalador regrava a ponte no mesmo passo em que grava a regra do
+        sudoers; a firma nova é o sinal de que vale perguntar de novo.
+        """
+        try:
+            estado = os.stat(self.caminho)
+        except OSError:
+            return None
+        return estado.st_ino, estado.st_ctime_ns
+
     def impedimentos_do_pedido(self, *pedidos: PedidoAPonte) -> list[str]:
         """Os impedimentos, com a sonda de CADA pedido perguntada à regra."""
         if self.executor is not None:
@@ -437,6 +449,20 @@ class VigiaDeZumbis:
     janela_do_teto_s: float = JANELA_DO_TETO_S
     _desde: dict[tuple[str, str], float] = field(default_factory=dict, init=False)
     _ultima_derrubada: dict[str, float] = field(default_factory=dict, init=False)
+    _maduros_perguntados: set[tuple[str, str]] = field(default_factory=set, init=False)
+    _firma_perguntada: object = field(default=None, init=False)
+    _impedimentos_da_ponte: list[str] = field(default_factory=list, init=False)
+
+    def _impedimentos_lidos(self, maduros: Sequence[LinkDeRadio]) -> list[str]:
+        """A resposta da ponte, perguntada só no episódio novo ou na firma nova."""
+        chaves = {(link.hci, link.controle) for link in maduros}
+        ler_firma = getattr(self.ponte, "firma", None)
+        firma = ler_firma() if callable(ler_firma) else None
+        if not chaves <= self._maduros_perguntados or firma != self._firma_perguntada:
+            self._impedimentos_da_ponte = list(self.ponte.impedimentos())
+            self._firma_perguntada = firma
+        self._maduros_perguntados = chaves
+        return list(self._impedimentos_da_ponte)
 
     def observar(
         self,
@@ -463,7 +489,9 @@ class VigiaDeZumbis:
         linhas: list[str] = []
         todos_impedimentos = list(impedimentos)
         if maduros:
-            todos_impedimentos.extend(self.ponte.impedimentos())
+            todos_impedimentos.extend(self._impedimentos_lidos(maduros))
+        else:
+            self._maduros_perguntados = set()
         if maduros and todos_impedimentos:
             for link in maduros:
                 linhas.append(
@@ -495,6 +523,7 @@ class VigiaDeZumbis:
             if agiu:
                 self._ultima_derrubada[link.controle] = agora
                 self._desde.pop((link.hci, link.controle), None)
+                self._maduros_perguntados.discard((link.hci, link.controle))
                 derrubados.append(link)
                 linhas.append(
                     f"o controle {link.controle} conectou em {link.hci} e não virou "

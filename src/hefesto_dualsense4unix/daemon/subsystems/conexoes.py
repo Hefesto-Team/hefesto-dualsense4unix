@@ -49,6 +49,10 @@ class PonteComTrava(PontePrivilegiada):
         """Os da ponte de verdade: a trava não impede, só põe em fila."""
         return self.interna.impedimentos()
 
+    def firma(self) -> tuple[int, int] | None:
+        """A firma da ponte de verdade, que é a que o instalador regrava."""
+        return self.interna.firma()
+
     def desconectar(self, link: LinkDeRadio) -> tuple[bool, str]:
         """Derruba o link com a trava na mão, e registra o que aconteceu."""
         with contextlib.ExitStack() as pilha:
@@ -137,6 +141,7 @@ class ConexoesSubsystem:
         self._thread: threading.Thread | None = None
         self._parar = threading.Event()
         self.ultimo_veredito: Veredito | None = None
+        self._avisadas: frozenset[str] = frozenset()
 
 
     def is_enabled(self, config: DaemonConfig) -> bool:
@@ -186,7 +191,9 @@ class ConexoesSubsystem:
         )
         self.ultimo_veredito = veredito
         for linha in veredito.diario:
-            logger.warning("conexao_zumbi", recado=linha)
+            if linha not in self._avisadas:
+                logger.warning("conexao_zumbi", recado=linha)
+        self._avisadas = frozenset(veredito.diario)
         _gravar_o_diario(veredito, agora)
         return veredito
 
