@@ -6,6 +6,7 @@ import importlib.util
 import subprocess
 import sys
 from pathlib import Path
+from types import ModuleType
 
 import pytest
 
@@ -13,7 +14,7 @@ RAIZ = Path(__file__).resolve().parents[2]
 SCRIPT = RAIZ / "scripts" / "check_o_ignorado_fica_fora_do_indice.py"
 
 
-def _carrega():
+def _carrega() -> ModuleType:
     spec = importlib.util.spec_from_file_location("check_o_ignorado_fica_fora_do_indice", SCRIPT)
     assert spec and spec.loader
     modulo = importlib.util.module_from_spec(spec)

@@ -95,7 +95,8 @@ def _arvore_do_portao(tmp_path: Path, ficha: str) -> tuple[Path, list[str], list
 def _chave(raiz: Path, ficha: str, entradas: list[str]) -> str | None:
     campos = TABELA[ficha]
     ent = RECIBO.Entradas(raiz)
-    return RECIBO.chave_do_portao(ent, "amb", ficha, campos[2], campos[3], entradas)
+    chave: str | None = RECIBO.chave_do_portao(ent, "amb", ficha, campos[2], campos[3], entradas)
+    return chave
 
 
 @pytest.mark.parametrize("ficha", DEZ)
@@ -178,10 +179,10 @@ def _varrer_linha_a_linha(arquivos: list[Path], padroes, coladas, virtuais) -> l
     """O `varrer` sem o filtro por arquivo: a referência que a cura tem de reproduzir."""
     original = DONO._tem_candidato
     try:
-        DONO._tem_candidato = lambda *_a, **_k: True
+        vars(DONO)["_tem_candidato"] = lambda *_a, **_k: True
         return list(DONO.varrer(arquivos, padroes, coladas, virtuais))
     finally:
-        DONO._tem_candidato = original
+        vars(DONO)["_tem_candidato"] = original
 
 
 @pytest.mark.parametrize("forma", ("separada", "colada", "derivada"))

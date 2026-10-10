@@ -385,11 +385,12 @@ def cruas_da_linha(
     cruas: list[tuple[str, re.Match[str], bool]] = []
     if planilha:
         inteiras = list(ENDERECO_CSV.finditer(linha))
-        candidatas = [(a.group("arq"), a, False) for a in inteiras]
-        for curta in CURTA_CSV.finditer(linha):
-            ancora = ancora_da_curta(linha, inteiras, curta.start("vao"))
+        candidatas: list[tuple[str, re.Match[str], bool]] = [
+            (a.group("arq"), a, False) for a in inteiras]
+        for pedaco in CURTA_CSV.finditer(linha):
+            ancora = ancora_da_curta(linha, inteiras, pedaco.start("vao"))
             if ancora is not None:
-                candidatas.append((ancora.group("arq"), curta, True))
+                candidatas.append((ancora.group("arq"), pedaco, True))
         separadores: tuple[str, ...] = SEPARADORES_DE_BLOCO
     else:
         candidatas = []
