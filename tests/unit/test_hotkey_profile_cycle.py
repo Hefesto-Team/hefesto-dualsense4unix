@@ -44,11 +44,23 @@ class _FakeStore:
 
 
 class _FakeController:
+    """A rota do aviso: pinta sem lembrar e devolve a cor resolvida."""
+
     def __init__(self) -> None:
         self.leds: list[tuple[int, int, int]] = []
+        self.devolvidas = 0
+        self.gravadas: list[tuple[int, int, int]] = []
+
+    def pintar_lightbar_sem_lembrar(self, color: tuple[int, int, int]) -> int:
+        self.leds.append(color)
+        return 1
+
+    def restaurar_lightbar_do_perfil(self) -> int:
+        self.devolvidas += 1
+        return 1
 
     def set_led(self, color: tuple[int, int, int]) -> None:
-        self.leds.append(color)
+        self.gravadas.append(color)
 
 
 class _FakeManager:
@@ -156,12 +168,14 @@ async def test_cycle_prev_retrocede(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.mark.asyncio
 async def test_cycle_arma_lock_e_flasha(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Gesto explícito: arma o lock manual + flasha o lightbar (senão o"""
+    """Gesto explícito: arma o lock manual + pisca a barra sem gravar e a devolve."""
     _patch_manager(monkeypatch)
     d = _FakeDaemon(active="a")
     await build_profile_cycle_callback(d, +1)()
     assert d.store.locked is not None
-    assert d.controller.leds, "lightbar não flashou (sem feedback visível)"
+    assert d.controller.leds == [(255, 255, 255)], "lightbar não piscou (sem retorno visível)"
+    assert d.controller.devolvidas == 1, "a cor do perfil não foi devolvida"
+    assert not d.controller.gravadas, "o pisca gravou a cor no estado desejado"
 
 
 @pytest.mark.asyncio

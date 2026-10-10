@@ -663,9 +663,12 @@ def build_profile_cycle_callback(daemon: DaemonProtocol, direction: int) -> Any:
     com cb=None (no-op) mas ainda suprimia o D-pad e o PS-solo — gesto morto que
     comia o D-pad. Agora o cb troca de perfil de verdade.
 
-    Feedback in-hand (você está com o controle na mão): flasha o lightbar em
-    branco antes do activate() repintar a cor do perfil novo, então há sinal
-    visível mesmo que dois perfis tenham a mesma cor. O sleep roda em task
+    Feedback in-hand (você está com o controle na mão): pisca o branco na barra
+    dos quatro controles antes do activate(), então há sinal visível mesmo que
+    dois perfis tenham a mesma cor. O pisca é aviso, não escolha: sai pelo
+    `pintar_lightbar_sem_lembrar`, que não toca no estado desejado, e a cor
+    resolvida volta SEMPRE pelo `restaurar_lightbar_do_perfil`, inclusive quando
+    a ativação levanta. Backend sem a rota: sem pisca. O sleep roda em task
     própria (não bloqueia o poll loop).
     """
 
@@ -692,22 +695,30 @@ def build_profile_cycle_callback(daemon: DaemonProtocol, direction: int) -> Any:
         idx = names.index(active) if active in names else 0
         target = names[(idx + direction) % len(names)]
 
-        with contextlib.suppress(Exception):
-            await daemon._run_blocking(daemon.controller.set_led, (255, 255, 255))
-            await asyncio.sleep(0.12)
-
-        lock_antes = getattr(daemon.store, "_manual_profile_lock_until", 0.0)
-        daemon.store.mark_manual_profile_lock(
-            _time.monotonic() + MANUAL_PROFILE_LOCK_SEC
-        )
-        # persiste a intenção em session.json (paridade com o profile.switch).
+        pintar = getattr(daemon.controller, "pintar_lightbar_sem_lembrar", None)
+        devolver = getattr(daemon.controller, "restaurar_lightbar_do_perfil", None)
+        if pintar is not None:
+            with contextlib.suppress(Exception):
+                await daemon._run_blocking(pintar, (255, 255, 255))
         try:
-            profile = await daemon._run_blocking(
-                functools.partial(manager.activate, target, origin="manual")
+            if pintar is not None:
+                await asyncio.sleep(0.12)
+            lock_antes = getattr(daemon.store, "_manual_profile_lock_until", 0.0)
+            daemon.store.mark_manual_profile_lock(
+                _time.monotonic() + MANUAL_PROFILE_LOCK_SEC
             )
-        except Exception:
-            daemon.store.mark_manual_profile_lock(lock_antes)
-            raise
+            # persiste a intenção em session.json (paridade com o profile.switch).
+            try:
+                profile = await daemon._run_blocking(
+                    functools.partial(manager.activate, target, origin="manual")
+                )
+            except Exception:
+                daemon.store.mark_manual_profile_lock(lock_antes)
+                raise
+        finally:
+            if pintar is not None and devolver is not None:
+                with contextlib.suppress(Exception):
+                    await daemon._run_blocking(devolver)
         logger.info("profile_cycled", direction=direction, to=profile.name)
 
     return _cycle
