@@ -51,14 +51,19 @@ permissões que a pessoa aceitou.
    - **Com `bwrap`**, o filho roda numa caixa:
      - a raiz é só de leitura e a `HOME` nasce vazia;
      - o código é só de leitura e os dados são graváveis;
-     - do diretório de execução aparece só a porta;
+     - do diretório de execução da sessão aparece só a porta, com ou sem `XDG_RUNTIME_DIR` no ambiente;
+     - os processos ficam num espaço de PID próprio: o que a modificação abrir morre com ela;
      - `--unshare-net` entra quando a rede é `nenhuma`;
      - o barramento do sistema fica escondido sem `bluetooth`, e o `/dev` real fica escondido sem
        `aparelhos`.
    - **Sem `bwrap`**, o filho roda sem caixa, e o estado diz isso numa linha.
    - Um filho que cai volta três vezes, esperando 1, 2 e 4 s. Na quarta queda ele fica «parou», com a
-     última linha do diário.
-   - Parar é mandar `SIGTERM` ao grupo do PID criado e, no fim do prazo, `SIGKILL`. Nunca por nome.
+     última linha do diário, e só volta quando a pessoa o liga de novo ou o atualiza.
+   - Parar é mandar `SIGTERM` ao grupo do PID criado e, no fim do prazo, `SIGKILL`. Nunca por nome. Na
+     caixa, o `bwrap` não repassa o sinal: o `SIGTERM` o encerra, e o kernel encerra junto tudo o que
+     estava dentro.
+   - A instância isolada (`--fake`, ou qualquer socket de nome próprio) não abre as modificações: ela
+     divide a casa com o serviço de verdade.
 5. **A linha de comando** é `hefesto-dualsense4unix mod instalar|atualizar|listar|permissoes|ligar|desligar|remover`.
    - **De git**, a modificação vem por `git clone --depth 1`, com `GIT_TERMINAL_PROMPT=0` e as
      credenciais que a máquina já tem. O Hefesto nunca guarda senha.
@@ -75,14 +80,17 @@ permissões que a pessoa aceitou.
 
    `mod remover` para o processo, apaga e confere: só fecha verde quando os três lugares estão vazios.
 
-A porta não sabe de transporte: vale para P1 a P4, por cabo e por rádio, e cada evento e cada escrita
-levam o `uniq`.
+A porta não sabe de transporte: vale por cabo e por rádio, e cada evento e cada escrita levam o
+`uniq`. A escrita chega a qualquer controle, de P1 a P4. A leitura da versão 1 é a do controle do posto,
+porque é só ele que o barramento publica.
 
 ## Consequências
 
 - Um `while True` numa modificação gasta o processo dela, não o tique do serviço.
 - As escritas passam pelos mesmos handlers do IPC (`led.set`, `rumble.set`, `trigger.set`). A política
   de cada canal (Modo Nativo, alvo fora da mesa, teto da vibração) continua com um dono só.
-- O que a caixa garante depende do `bwrap` da máquina. Sem ele, a permissão de rede ainda aparece antes
-  do «sim», mas não é imposta.
+- O que a caixa garante depende do `bwrap` da máquina. Sem ele, só a porta confere as permissões: o
+  processo roda com tudo o que a pessoa pode, inclusive o socket principal, e o `mod ligar` diz isso
+  antes do «sim».
+- Na caixa, `rede:local` e `rede:internet` abrem a mesma rede: só `rede:nenhuma` é imposta.
 - O `uninstall.sh` ainda não conhece os lugares novos.

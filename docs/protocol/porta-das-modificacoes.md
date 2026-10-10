@@ -34,12 +34,14 @@ desconhecida ou um processo que não foi o supervisor que abriu fecham a conexã
 | `vibracao.set` | `{uniq, fraco, forte}` (0 a 255) | `escrever:vibracao` | o resultado do `rumble.set` |
 | `gatilho.set` | `{uniq, lado: esquerdo\|direito, modo, params}` | `escrever:gatilho` | o resultado do `trigger.set` |
 
-Os tópicos de leitura são estes:
+Os tópicos de leitura são estes, todos do controle do posto (o barramento da versão 1 só publica ele):
 
 - `estado`: o estado do controle a cada tique;
 - `botoes`: um botão apertado ou solto;
 - `bateria`: a carga;
-- `conexao`: um controle que entra ou sai.
+- `conexao`: o controle que entra ou sai.
+
+As escritas valem para qualquer controle, de P1 a P4, pelo `uniq` dele.
 
 Cada evento chega como notificação, sem `id`:
 
