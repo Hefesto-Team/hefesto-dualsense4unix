@@ -903,7 +903,7 @@ def procurados(declarados: tuple[SemCenso, ...] = ()) -> tuple[SemCenso, ...]:
     ordem em que o disco os devolveu. Um cartão que troca de lugar entre dois
     tiques é a grade inteira piscando.
 
-    A TERCEIRA FONTE são as modificações ligadas (``modificacao`` preenchido),
+    A TERCEIRA FONTE são as modificações ligadas (o campo da modificação cheio),
     e elas vêm por último: a de chave nova vira cartão no fim; a de chave que
     já tem cartão o ensina (soma onde procurar e as janelas, e traz o leitor e
     a forma do título que ele não tinha) sem lhe dar o «Tirar daqui», porque

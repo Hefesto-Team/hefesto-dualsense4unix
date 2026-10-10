@@ -781,10 +781,10 @@ def _jogos_para_escolher(
     LISTA). Nunca levanta: é chamado de dentro de um clique.
 
     O LANÇADOR DE MODIFICAÇÃO COM LEITOR, no modo do perfil (``_ESCOLHA.modo``,
-    posto antes da chamada), lista os jogos que o leitor devolve com o ID do título: a janela é a do emulador para todos,
-    e o perfil de UM jogo casa pelo título (os títulos ficam em
-    ``_ESCOLHA.titulos``). A lista de exclusão casa por janela, e lá ele fica
-    na linha «todos os jogos», como os emuladores.
+    posto antes da chamada), lista os jogos que o leitor devolve com o ID do
+    título: a janela é a do emulador para todos, e o perfil de UM jogo casa pelo
+    título (os títulos ficam em ``_ESCOLHA.titulos``). A lista de exclusão casa
+    por janela, e lá ele fica na linha «todos os jogos», como os emuladores.
     """
     _ESCOLHA.titulos = {}
     appid, _quando = a_escada_do_jogo(state)
