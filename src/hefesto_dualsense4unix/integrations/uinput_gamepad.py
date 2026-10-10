@@ -429,14 +429,14 @@ class UinputGamepad:
         flavor: str | None = DEFAULT_FLAVOR,
         *,
         rumble_sink: Callable[[int, int], None] | None = None,
-        identity: str | None = None,
     ) -> UinputGamepad:
-        """Constrói o gamepad com a máscara (VID/PID/nome) do flavor dado."""
-        from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
-            mascara_efetiva,
-        )
+        """Constrói o gamepad com a máscara (VID/PID/nome) do flavor dado.
 
-        key = mascara_efetiva(identity, flavor)
+        A chave já chega resolvida: quem decide a máscara de cada jogador é a
+        fábrica (`virtual_pad.make_virtual_pad`), e este construtor não relê o
+        registro de máscaras.
+        """
+        key = normalize_flavor(flavor)
         spec = FLAVORS[key]
         return cls(
             name=spec["name"],

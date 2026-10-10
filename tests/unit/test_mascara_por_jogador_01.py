@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 import ast
+import struct
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -13,6 +15,7 @@ from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
     registro_de_mascaras,
     vpad_ficou_para_tras,
 )
+from hefesto_dualsense4unix.integrations import uhid_gamepad
 from hefesto_dualsense4unix.integrations.uhid_gamepad import UhidDualSense
 from hefesto_dualsense4unix.integrations.uinput_gamepad import (
     DUALSENSE_EDGE_PRODUCT,
@@ -21,6 +24,7 @@ from hefesto_dualsense4unix.integrations.uinput_gamepad import (
     XBOX360_VENDOR,
     UinputGamepad,
 )
+from hefesto_dualsense4unix.integrations.virtual_pad import make_virtual_pad
 
 MAC_P1 = "aa:bb:cc:00:00:01"
 MAC_P2 = "aa:bb:cc:00:00:02"
@@ -136,55 +140,126 @@ def test_duas_instancias_do_registro_divergem_e_por_isso_existe_o_singleton() ->
     assert mascara_efetiva(MAC_P3, "xbox") == "dualsense"
 
 
-def test_o_vpad_uinput_nasce_com_a_mascara_do_jogador() -> None:
-    """Não basta a função responder certo: o device tem de nascer com o VID/PID."""
+# A-MASCARA-DO-PAD-SE-DECIDE-SO-NA-FABRICA-01 (10/10/2026): a máscara de cada pad
+# se decide uma vez, em `make_virtual_pad`. Os construtores recebem a chave já
+# resolvida; as réguas abaixo passam pela fábrica e conferem o VID e o PID que o
+# jogo vê, sem `/dev/uinput` nem `/dev/uhid`.
+
+_INTEGRACOES = _SRC / "integrations"
+_LEITURAS_DO_REGISTRO = frozenset({"mascara_efetiva", "registro_de_mascaras"})
+
+
+def _quem_le_o_registro(pasta: Path) -> set[str]:
+    """Os módulos de `pasta` que chamam ou importam a decisão da máscara."""
+    leitores: set[str] = set()
+    for modulo in sorted(pasta.glob("*.py")):
+        arvore = ast.parse(modulo.read_text(encoding="utf-8"))
+        for no in ast.walk(arvore):
+            if isinstance(no, ast.ImportFrom):
+                nomes = {alias.name for alias in no.names}
+            elif isinstance(no, ast.Call):
+                alvo = no.func
+                nomes = {alvo.attr if isinstance(alvo, ast.Attribute) else getattr(alvo, "id", "")}
+            else:
+                continue
+            if nomes & _LEITURAS_DO_REGISTRO:
+                leitores.add(modulo.name)
+    return leitores
+
+
+def test_so_a_fabrica_decide_a_mascara_dentro_das_integracoes() -> None:
+    """Dono único: um construtor que relê o registro é uma segunda decisão."""
+    assert _quem_le_o_registro(_INTEGRACOES) == {"virtual_pad.py"}
+
+
+def _vid_pid_no_kernel(pad: Any) -> tuple[int, int]:
+    """O VID e o PID com que o nó nasce: o do `uinput` e o do `UHID_CREATE2`."""
+    if isinstance(pad, UhidDualSense):
+        evento = pad._create2_event(b"")
+        inicio = 4 + 128 + 64 + 64 + 4
+        vendor, product = struct.unpack("<II", evento[inicio : inicio + 8])
+        return vendor, product
+    return pad.vendor, pad.product
+
+
+@pytest.fixture
+def _sem_no_de_kernel(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A fábrica de verdade, com os dois nós de kernel de mentira."""
+    monkeypatch.setattr(UinputGamepad, "start", lambda self: True)
+    monkeypatch.setattr(uhid_gamepad, "uhid_available", lambda: True)
+    monkeypatch.setattr(UhidDualSense, "start", lambda self: True)
+    monkeypatch.setattr(UhidDualSense, "wait_for_bind", lambda self, timeout_s=2.0: True)
+
+
+@pytest.mark.usefixtures("_sem_no_de_kernel")
+def test_o_p2_que_escolheu_dualsense_numa_sessao_xbox_nasce_dualsense_edge() -> None:
     registro_de_mascaras().set_mask(MAC_P2, "dualsense")
 
-    pad = UinputGamepad.for_flavor("xbox", identity=MAC_P2)
+    pad = make_virtual_pad("xbox", identity=MAC_P2, player=2)
 
+    assert isinstance(pad, UhidDualSense)
+    assert _vid_pid_no_kernel(pad) == (DUALSENSE_VENDOR, DUALSENSE_EDGE_PRODUCT)
+
+
+@pytest.mark.usefixtures("_sem_no_de_kernel")
+def test_o_p2_que_escolheu_dualsense_sem_uhid_nasce_dualsense_edge_no_uinput() -> None:
+    """O mesmo jogador com o uhid vetado: o `uinput` veste a mesma máscara."""
+    registro_de_mascaras().set_mask(MAC_P2, "dualsense")
+
+    pad = make_virtual_pad("xbox", identity=MAC_P2, player=2, allow_uhid=False)
+
+    assert isinstance(pad, UinputGamepad)
     assert pad.flavor == "dualsense"
-    assert (pad.vendor, pad.product) == (DUALSENSE_VENDOR, DUALSENSE_EDGE_PRODUCT)
+    assert _vid_pid_no_kernel(pad) == (DUALSENSE_VENDOR, DUALSENSE_EDGE_PRODUCT)
 
 
-def test_o_vpad_uinput_do_jogador_sem_escolha_segue_o_jogo() -> None:
-    """O vizinho de mesa do teste acima não muda de máscara junto com ele."""
+@pytest.mark.usefixtures("_sem_no_de_kernel")
+def test_o_p1_sem_escolha_numa_sessao_xbox_nasce_xbox_360() -> None:
+    """O vizinho de mesa do P2 não muda de máscara junto com ele."""
     registro_de_mascaras().set_mask(MAC_P2, "dualsense")
 
-    pad = UinputGamepad.for_flavor("xbox", identity=MAC_P1)
+    pad = make_virtual_pad("xbox", identity=MAC_P1, player=1)
 
+    assert isinstance(pad, UinputGamepad)
     assert pad.flavor == "xbox"
-    assert (pad.vendor, pad.product) == (XBOX360_VENDOR, XBOX360_PRODUCT)
+    assert _vid_pid_no_kernel(pad) == (XBOX360_VENDOR, XBOX360_PRODUCT)
 
 
-def test_o_uhid_recusa_o_jogador_que_escolheu_xbox() -> None:
-    """`xbox` no uhid é `None` = "use o UinputGamepad" — agora POR JOGADOR.
-
-    Sem isto, um jogador marcado como Xbox numa sessão DualSense ganharia um
-    DualSense Edge HID de verdade no kernel: a máscara OPOSTA à pedida.
-    """
+@pytest.mark.usefixtures("_sem_no_de_kernel")
+def test_o_p2_que_escolheu_xbox_numa_sessao_dualsense_nasce_no_uinput_como_xbox() -> None:
+    """Sem isto, o jogador marcado Xbox ganharia um DualSense Edge HID no kernel."""
     registro_de_mascaras().set_mask(MAC_P2, "xbox")
 
-    assert UhidDualSense.for_flavor("dualsense", player=2, identity=MAC_P2) is None
+    pad = make_virtual_pad("dualsense", identity=MAC_P2, player=2)
+
+    assert isinstance(pad, UinputGamepad)
+    assert pad.flavor == "xbox"
+    assert _vid_pid_no_kernel(pad) == (XBOX360_VENDOR, XBOX360_PRODUCT)
 
 
-def test_o_uhid_aceita_o_jogador_que_escolheu_dualsense_numa_sessao_xbox() -> None:
-    """O outro lado da mesma moeda — e é o que dá hidraw (logo, rumble) a ele."""
-    registro_de_mascaras().set_mask(MAC_P2, "dualsense")
-
-    pad = UhidDualSense.for_flavor("xbox", player=2, identity=MAC_P2)
-
-    assert pad is not None
-    assert pad.flavor == "dualsense"
-
-
-def test_sem_identidade_o_vpad_se_comporta_exatamente_como_antes() -> None:
-    """`identity=None` = "não sei de quem é este vpad" = a máscara do JOGO."""
+@pytest.mark.usefixtures("_sem_no_de_kernel")
+def test_sem_identidade_o_pad_nasce_na_mascara_do_jogo() -> None:
+    """`identity=None` = "não sei de quem é este pad" = a máscara do JOGO."""
     registro_de_mascaras().set_mask(MAC_P1, "dualsense")
-    registro_de_mascaras().set_mask(MAC_P2, "dualsense")
+    registro_de_mascaras().set_mask(MAC_P2, "xbox")
+
+    xbox = make_virtual_pad("xbox", player=1)
+    dualsense = make_virtual_pad("dualsense", player=2)
+
+    assert _vid_pid_no_kernel(xbox) == (XBOX360_VENDOR, XBOX360_PRODUCT)
+    assert isinstance(dualsense, UhidDualSense)
+    assert _vid_pid_no_kernel(dualsense) == (DUALSENSE_VENDOR, DUALSENSE_EDGE_PRODUCT)
+
+
+def test_os_construtores_vestem_a_chave_que_recebem() -> None:
+    """A escolha registrada não muda o que o construtor faz com a chave dada."""
+    registro_de_mascaras().set_mask(MAC_P1, "dualsense")
+    registro_de_mascaras().set_mask(MAC_P2, "xbox")
 
     assert UinputGamepad.for_flavor("xbox").flavor == "xbox"
     assert UinputGamepad.for_flavor("dualsense").flavor == "dualsense"
     assert UhidDualSense.for_flavor("xbox", player=1) is None
+    assert UhidDualSense.for_flavor("dualsense", player=2, identity=MAC_P2) is not None
     assert UhidDualSense.for_flavor(None, player=1) is not None
 
 

@@ -128,7 +128,7 @@ def fabrica(monkeypatch: pytest.MonkeyPatch) -> Iterator[dict[str, bool]]:
 
 def _pad(jogador: Jogador, uniq: str, numero: int, caminho: str | None) -> Any:
     if jogador.nasce == "antigo":
-        pad = UinputGamepad.for_flavor("dualsense", identity=uniq)
+        pad = UinputGamepad.for_flavor("dualsense")
         assert pad.start()
         return pad
     nasce_com = {"pelo_modo": caminho, "sem_caminho": None, "no_xbox": "xbox"}[jogador.nasce]
