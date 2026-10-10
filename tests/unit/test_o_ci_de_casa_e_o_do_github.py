@@ -516,7 +516,8 @@ def test_o_rapido_tira_a_suite_da_copia_e_o_completo_a_deixa(mundo: Mundo) -> No
     mundo.rodar("--rapido")
     passos = _passos_do_yaml_do_log(mundo.log("lint-test"))
     assert "Pytest unit" not in passos and "Pytest core" not in passos
-    assert "Ruff" in passos, "o --rapido tirou mais do que a tabela mandou"
+    assert "Os portões do job, pelo nome na tabela" in passos, (
+        "o --rapido tirou mais do que a tabela mandou")
     assert "A suíte inteira sob Xvfb, com o GTK real" not in _passos_do_yaml_do_log(
         mundo.log("gtk-real")
     )

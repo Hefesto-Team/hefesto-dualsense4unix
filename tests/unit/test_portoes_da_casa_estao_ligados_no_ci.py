@@ -51,9 +51,14 @@ def bloco_de_portoes() -> str:
 
 
 def portoes_da_casa() -> list[str]:
-    """Os scripts de `scripts/` citados no bloco, na ordem em que aparecem."""
+    """Os scripts de `scripts/` que a tabela manda rodar, na ordem em que aparecem.
+
+    Só o comando (a quarta coluna) conta: a quinta diz o que o portão LÊ, e um script lido ali
+    (o `scripts/eliminacao.py` do `paridade-transporte`) não é portão.
+    """
     vistos: list[str] = []
-    linhas = [linha for linha in bloco_de_portoes().splitlines()
+    linhas = [(linha.split("|")[3] if linha.count("|") >= 3 else linha)
+              for linha in bloco_de_portoes().splitlines()
               if not linha.lstrip().startswith("#")]
     for achado in re.findall(r"scripts/[\w./-]+\.(?:sh|py)", "\n".join(linhas)):
         if achado not in vistos:
