@@ -25,7 +25,7 @@
 #
 # Uso:
 #   scripts/portoes.sh              a leva inteira (rápidos + completos)
-#   scripts/portoes.sh --rapido     só a camada rápida (51 portões: 69 a 82 s em série, 19 a 29 s em paralelo)
+#   scripts/portoes.sh --rapido     só a camada rápida (quantos: o comando no fim do cabeçalho da TABELA)
 #   scripts/portoes.sh --suite      acrescenta a suíte de testes
 #   scripts/portoes.sh --listar     a tabela crua, que é o que o portão do portão lê
 #   scripts/portoes.sh --interpretador  só o cabeçalho: qual python, e o que falta nele
@@ -71,9 +71,8 @@ RAIZ="$(git rev-parse --show-toplevel 2>/dev/null || dirname "$(dirname "$(readl
 # oito vezes a camada rápida inteira, que fechava em 5,3 s com QUINZE portões.
 # O tempo é de 25/08 e fica com a data dele; a CONTAGEM envelhece sozinha e por
 # isso já virou número errado duas vezes — dizia 21 `rapido` e 7 `completo`
-# enquanto a tabela tinha o dobro. Medida em 09/10/2026: **53 `rapido` e 20
-# `completo`** (73 no `portoes.sh` sem argumento), mais 1 `suite`. Quem mexer
-# aqui conta de novo, e o comando é o dono da resposta:
+# enquanto a tabela tinha o dobro. Por isso este cabeçalho não guarda contagem: o
+# comando é o dono da resposta:
 #   grep -cE '^rapido\|' scripts/portoes.sh ; grep -cE '^completo\|' scripts/portoes.sh
 # ---------------------------------------------------------------------------
 _LISTA() {
@@ -392,6 +391,11 @@ rapido|projeto-traduzivel-morde|pytest|tests/unit/test_o_projeto_e_traduzivel_mo
 # a abrem pelo `scripts/chrome_sem_rede.py`, sem esperar fonte nem script de fora. A irmã a deixou fora
 # desta lista porque o `portoes.sh` não era posse dela. Camada RÁPIDA: ~20 s, e é ela que segura a cura.
 rapido|portoes-lentos-rapidos|pytest|tests/unit/test_os_portoes_lentos_ficam_rapidos.py
+# NADA QUE O `.gitignore` EXCLUI ENTRA NO REPOSITÓRIO (09/10/2026,
+# NADA-QUE-O-GITIGNORE-EXCLUI-ENTRA-NO-REPOSITORIO-01): o `git add -f` passa por cima do `.gitignore`, e
+# um estudo de `docs/process/` entrou assim numa branch de leva sem portão nenhum perguntar. A pergunta é
+# ao ÍNDICE (`git ls-files -ci --exclude-standard`), e por isso roda igual no clone do CI.
+rapido|o-ignorado-fica-fora-do-indice|py|scripts/check_o_ignorado_fica_fora_do_indice.py|@head
 rapido|ruff|bin|ruff check src/ tests/|src/** tests/** pyproject.toml .gitignore
 completo|shellcheck|bin|shellcheck -S error scripts/*.sh scripts/ci/*.sh scripts/banco_de_prova/*.sh install.sh uninstall.sh|scripts/*.sh scripts/ci/*.sh scripts/banco_de_prova/*.sh install.sh uninstall.sh
 completo|referencias-docs|py|scripts/validar-referencias-docs.py --all

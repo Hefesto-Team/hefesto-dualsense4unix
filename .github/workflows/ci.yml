@@ -283,6 +283,11 @@ jobs:
       # scripts/portoes.sh.
       - name: O texto público fala com quem usa
         run: python3 scripts/check_texto_publico.py
+      # NADA QUE O .gitignore EXCLUI ENTRA NO REPOSITÓRIO (09/10/2026): o
+      # `git add -f` passa por cima do .gitignore; a pergunta é ao índice, e o
+      # clone responde igual à árvore de casa. A mesma linha do scripts/portoes.sh.
+      - name: O ignorado fica fora do índice
+        run: python3 scripts/check_o_ignorado_fica_fora_do_indice.py
       # CITACOES-DERIVADAS-01 (13/08). O passo acima confere o ARQUIVO; este
       # confere a LINHA, que é a metade que apodrece sozinha — nenhuma
       # refatoração renomeia `core/backend_pydualsense.py`, e toda refatoração
