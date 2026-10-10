@@ -917,6 +917,12 @@ def _nome_do_sink_do_som_no(modulo: str, argumentos: str) -> str:
     return ""
 
 
+def _as_pontas(argumentos: str) -> tuple[str, str]:
+    """``(source, sink)`` dos argumentos de um ``module-loopback``."""
+    pontas = dict(p.partition("=")[::2] for p in argumentos.split() if "=" in p)
+    return pontas.get("source", ""), pontas.get("sink", "")
+
+
 def modulos_do_no(modulos: Iterable[ModuloDeSom], nome: str) -> list[ModuloDeSom]:
     """Os módulos do nó ``nome`` (ele e as rotas), as rotas primeiro — a ordem de derrubar."""
     seus = [m for m in modulos if nome and _nome_do_sink_do_som_no(m[1], m[2]) == nome]
@@ -982,6 +988,7 @@ class SinkVirtualPipeWire:
         self.rota = rota
         self._module_id: str | None = None
         self._rotas: list[str] = []
+        self._fios: dict[str, tuple[str, str]] = {}
 
 
     @property
@@ -1057,6 +1064,7 @@ class SinkVirtualPipeWire:
         for module_id in reversed(self._rotas):
             self.runner(["pactl", "unload-module", module_id])
         self._rotas.clear()
+        self._fios.clear()
         self._module_id = None
 
     def _derrubar_o_que_sobrou(self) -> None:
@@ -1083,35 +1091,106 @@ class SinkVirtualPipeWire:
         if rota is None or not rota.tem_rota:
             return
         for argv in _enquanto_o_servidor_atende(argv_das_rotas(self.nome, rota)):
-            saida = self.runner(list(argv))
-            linhas = [ln.strip() for ln in (saida or "").splitlines() if ln.strip()]
-            if not linhas or not linhas[-1].isdigit():
-                logger.info("som_rota_nao_subiu", sink=self.nome, argv=" ".join(argv))
-                continue
-            self._rotas.append(linhas[-1])
-            logger.info("som_rota_ligada", sink=self.nome, module_id=linhas[-1])
+            self._subir_o_fio(argv)
 
-    def religar(self, rota: RotaDoNo | None) -> bool:
-        """Troca a ROTA deste nó **sem tirar o nó do lugar**. ``True`` = mexeu."""
-        if rota is None or assinatura_da_rota(rota) == assinatura_da_rota(self.rota):
+    def _subir_o_fio(self, argv: Sequence[str]) -> bool:
+        """Um ``module-loopback`` da rota. ``True`` = o servidor deu o id."""
+        saida = self.runner(list(argv))
+        linhas = [ln.strip() for ln in (saida or "").splitlines() if ln.strip()]
+        if not linhas or not linhas[-1].isdigit():
+            logger.info("som_rota_nao_subiu", sink=self.nome, argv=" ".join(argv))
+            return False
+        self._rotas.append(linhas[-1])
+        self._fios[linhas[-1]] = _as_pontas(" ".join(argv[3:]))
+        logger.info("som_rota_ligada", sink=self.nome, module_id=linhas[-1])
+        return True
+
+    def _fios_de_pe(
+        self, modulos: Sequence[ModuloDeSom] | None
+    ) -> dict[str, tuple[str, str]]:
+        """``{module_id: (source, sink)}`` dos loopbacks DESTE nó que estão de pé.
+
+        Do nó são o fio de saída (``<nó>.monitor`` → uma placa) e o do mix
+        (qualquer fonte → ``<nó>``); ``<nó>.monitor`` → outro nó é o mix daquele.
+        Sem a leitura do servidor, vale a memória do que este processo subiu.
+        """
+        if modulos is None:
+            return {i: self._fios[i] for i in self._rotas if i in self._fios}
+        meus: dict[str, tuple[str, str]] = {}
+        for module_id, modulo, argumentos in modulos:
+            if modulo != _MODULO_LOOPBACK:
+                continue
+            source, sink = _as_pontas(argumentos)
+            saida = source == f"{self.nome}.monitor" and not sink.startswith(
+                PREFIXO_SINK_DO_SOM
+            )
+            if sink == self.nome or saida:
+                meus[module_id] = (source, sink)
+        return meus
+
+    def religar(
+        self, rota: RotaDoNo | None, modulos: Sequence[ModuloDeSom] | None = None
+    ) -> bool:
+        """Deixa de pé a fiação que ``rota`` pede **sem tirar o nó do lugar**. ``True`` = mexeu.
+
+        Compara os ``module-loopback`` que :func:`argv_das_rotas` pede com os
+        que estão DE PÉ (``modulos`` é a leitura do servidor que a volta já fez;
+        sem ela, a memória do que este processo subiu): desce o que sobra, sobe o
+        que falta, e o ``module-null-sink`` fica com o mesmo id. Loopback recusado,
+        cortado pelo recuo ou descarregado por fora sobe na volta seguinte; o mix
+        segue a saída padrão de agora. Com ``monitor_do_mix=None`` (a saída padrão
+        não se soube) o mix de pé fica como está; com o recuo mudo, nada se escreve.
+        """
+        if rota is None:
             return False
         if self._module_id is None:
             self.rota = rota
             return False
-        anterior = self.rota
-        for module_id in reversed(self._rotas):
+        if _o_recuo().mudo():
+            logger.debug("som_pactl_mudo_nao_religo", sink=self.nome)
+            return False
+        de_pe = self._fios_de_pe(modulos)
+        pedidos = {
+            _as_pontas(" ".join(argv[3:])): argv for argv in argv_das_rotas(self.nome, rota)
+        }
+        mix_sem_saber = (
+            rota.tem_rota and rota.fonte == FONTE_MIX and rota.monitor_do_mix is None
+        )
+        sobram: list[str] = []
+        vistos: set[tuple[str, str]] = set()
+        for module_id, pontas in de_pe.items():
+            fica = pontas in pedidos or (mix_sem_saber and pontas[1] == self.nome)
+            if not fica or pontas in vistos:
+                sobram.append(module_id)
+            vistos.add(pontas)
+        faltam = [argv for pontas, argv in pedidos.items() if pontas not in vistos]
+        anterior, self.rota = self.rota, rota
+        vivos = set(de_pe) if modulos is not None else set(self._rotas)
+        self._rotas = [i for i in self._rotas if i in vivos]
+        if not sobram and not faltam:
+            return False
+        for module_id in sobram:
+            if _o_recuo().mudo():
+                return True
             self.runner(["pactl", "unload-module", module_id])
-        self._rotas.clear()
-        self.rota = rota
+            self._esquecer_o_fio(module_id)
+        for argv in _enquanto_o_servidor_atende(faltam):
+            self._subir_o_fio(argv)
         logger.info(
             "som_rota_religada",
             sink=self.nome,
             de=(anterior.fonte if anterior is not None else "?"),
             para=rota.fonte,
             por_onde=rota.por_onde,
+            desceram=len(sobram),
+            subiram=len(faltam),
         )
-        self._ligar_a_rota()
         return True
+
+    def _esquecer_o_fio(self, module_id: str) -> None:
+        with contextlib.suppress(ValueError):
+            self._rotas.remove(module_id)
+        self._fios.pop(module_id, None)
 
     def parar(self) -> None:
         """Descarrega a rota e o módulo, nessa ordem. Idempotente.
@@ -1120,6 +1199,7 @@ class SinkVirtualPipeWire:
         memória zera e o que ficou no servidor é da varredura do próximo início.
         """
         rotas, self._rotas = list(self._rotas), []
+        self._fios.clear()
         module_id, self._module_id = self._module_id, None
         for rota_id in reversed(rotas):
             if _fica_para_a_varredura(self.nome, rota_id):
@@ -2663,19 +2743,9 @@ class RotaDoNo:
     por_onde: str = ""
     motivo: str = ""
     fonte: str = FONTE_PADRAO
-    monitor_do_mix: str = ""
-
-
-def assinatura_da_rota(rota: RotaDoNo | None) -> tuple[bool, str, str, str]:
-    """A identidade ESTÁVEL de uma rota: mudou isto, a fiação é outra."""
-    if rota is None:
-        return (False, "", "", "")
-    return (
-        bool(rota.tem_rota),
-        str(rota.por_onde or ""),
-        str(rota.sink or ""),
-        str(rota.fonte or ""),
-    )
+    #: ``""`` = sem mix (``sfx``, ou laço recusado); ``None`` = a saída padrão
+    #: não se soube agora, e o mix que está de pé fica como está.
+    monitor_do_mix: str | None = ""
 
 
 def _sink_proprio_vivo(uniq: str, saida_curta: str) -> str:
@@ -2732,18 +2802,22 @@ def sink_do_controle(
 
 def monitor_da_saida_padrao(
     *, runner: Callable[[list[str]], str | None] | None = None
-) -> str:
-    """O monitor da saída padrão do sistema — a fonte do «HDMI completo»."""
+) -> str | None:
+    """O monitor da saída padrão do sistema — a fonte do «HDMI completo».
+
+    ``None`` = não sei (servidor em recuo, resposta vazia ou um ``@`` sem nome):
+    quem recebe não derruba o mix que está de pé por causa disso.
+    """
     if _o_recuo().mudo():
-        return ""
+        return None
     ler = runner if runner is not None else _rodar
     padrao = (ler(["pactl", "get-default-sink"]) or "").strip()
     if not padrao or padrao.startswith("@"):
-        return ""
+        return None
     return f"{padrao}.monitor"
 
 
-def o_mix_fecha_laco(id_do_no: str, sink: str, monitor: str) -> bool:
+def o_mix_fecha_laco(id_do_no: str, sink: str, monitor: str | None) -> bool:
     """Ligar o mix deste monitor ao nó realimentaria o próprio som? PURA.
 
     O «No controle e na TV» é um ``module-loopback`` do monitor da SAÍDA PADRÃO
@@ -2775,10 +2849,10 @@ def o_mix_fecha_laco(id_do_no: str, sink: str, monitor: str) -> bool:
 _LACO_AVISADO: dict[str, str] = {}
 
 
-def _mix_sem_laco(uniq: str, sink: str, monitor: str) -> str:
-    """O monitor do mix, ou ``""`` quando ele fecharia laço com este nó."""
+def _mix_sem_laco(uniq: str, sink: str, monitor: str | None) -> str | None:
+    """O monitor do mix, ``""`` quando ele fecharia laço com este nó, ``None`` = não sei."""
     chave = so_hex(str(uniq)) or str(uniq)
-    if not o_mix_fecha_laco(nome_do_sink(uniq), sink, monitor):
+    if monitor is None or not o_mix_fecha_laco(nome_do_sink(uniq), sink, monitor):
         _LACO_AVISADO.pop(chave, None)
         return monitor
     if _LACO_AVISADO.get(chave) != monitor:
@@ -2800,7 +2874,7 @@ def rota_do_no(
 ) -> RotaDoNo:
     """Onde este nó entrega o áudio — ou a frase de por que ele não entrega."""
     fonte = fonte if fonte in (FONTE_MIX, FONTE_SFX) else FONTE_PADRAO
-    monitor = (
+    monitor: str | None = (
         monitor_da_saida_padrao(runner=runner) if fonte == FONTE_MIX else ""
     )
     if not uniq:
@@ -3076,7 +3150,6 @@ __all__ = [
     "argv_do_gravador",
     "argv_para_ligar_o_mix",
     "argv_para_ligar_o_no",
-    "assinatura_da_rota",
     "common_de_audio",
     "conferir_o_alvo_do_gravador",
     "controle_de_audio_035",

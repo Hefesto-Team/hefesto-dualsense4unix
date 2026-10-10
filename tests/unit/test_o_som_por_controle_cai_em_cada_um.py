@@ -243,8 +243,8 @@ def test_sem_saida_padrao_legivel_o_mix_nao_se_inventa() -> None:
     def mudo(argv: list[str]) -> str | None:
         return None
 
-    assert som.monitor_da_saida_padrao(runner=mudo) == ""
-    rota = som.RotaDoNo(True, sink=_SINK_P1, fonte=som.FONTE_MIX, monitor_do_mix="")
+    assert som.monitor_da_saida_padrao(runner=mudo) is None
+    rota = som.RotaDoNo(True, sink=_SINK_P1, fonte=som.FONTE_MIX, monitor_do_mix=None)
     assert len(som.argv_das_rotas(som.nome_do_sink(_UNIQ_P1), rota)) == 1
 
 

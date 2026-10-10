@@ -160,7 +160,7 @@ def test_as_leituras_da_rota_esperam_o_servidor(recuo: _Relogio) -> None:
     pactl = _Pactl()
     bt.PACTL.estourou()
     assert af.sink_do_controle(DELE, [DELE], runner=pactl) == ""
-    assert af.monitor_da_saida_padrao(runner=pactl) == ""
+    assert af.monitor_da_saida_padrao(runner=pactl) is None, "recuo é «não sei», não «sem mix»"
     rota = af.rota_do_no(DELE, af.TRANSPORTE_CABO, (DELE,), fonte=af.FONTE_MIX, runner=pactl)
     assert rota.tem_rota is False
     assert pactl.chamadas == [], "a rota perguntou ao servidor em recuo"

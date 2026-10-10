@@ -275,9 +275,17 @@ class GerenciadorDeNosDeSom:
     # som via canal de audio externo do controle"*.  # (noqa-acento): a digitação é do usuário
 
     def _reafinar(
-        self, uniq: str, no: Any, transporte: str, mesa: tuple[str, ...]
+        self,
+        uniq: str,
+        no: Any,
+        transporte: str,
+        mesa: tuple[str, ...],
+        modulos: Any = None,
     ) -> None:
         """A rota do nó VIVO passa a ser a de agora — e o nó não sai do lugar.
+
+        ``modulos`` é a leitura do servidor desta volta: o ``religar`` compara a
+        fiação pedida com a que está de pé, e sobe a que falta.
 
         **O QUE ISTO CUSTA, medido e escrito para ninguém se assustar depois:**
         um :func:`rota_do_no` por nó de pé, por varredura. No cabo isso é um
@@ -302,7 +310,7 @@ class GerenciadorDeNosDeSom:
         if not self._vale_religar(uniq, rota):
             return
         try:
-            religar(rota)
+            religar(rota, modulos)
         except Exception:
             logger.debug("som_religacao_falhou", uniq=uniq, exc_info=True)
 
@@ -404,7 +412,7 @@ class GerenciadorDeNosDeSom:
         for uniq in list(self._nos):
             if uniq not in alvos:
                 self._derrubar(uniq)
-        self._conferir_com_o_servidor()
+        modulos = self._conferir_com_o_servidor()
         for uniq in alvos:
             if self._acordar.is_set():
                 return
@@ -414,7 +422,7 @@ class GerenciadorDeNosDeSom:
                 self._republicar(uniq, transporte, mesa)
             vivo = self._nos.get(uniq)
             if vivo is not None:
-                self._reafinar(uniq, vivo, transporte, mesa)
+                self._reafinar(uniq, vivo, transporte, mesa, modulos)
                 continue
             no = self._erguer(uniq, transporte, mesa)
             if no is not None:
@@ -503,8 +511,8 @@ class GerenciadorDeNosDeSom:
 
         return rodar_pactl
 
-    def _conferir_com_o_servidor(self) -> None:
-        """**O servidor de som é a verdade, a memória é cache.**
+    def _conferir_com_o_servidor(self) -> Any:
+        """**O servidor de som é a verdade, a memória é cache.** Devolve a leitura, ou ``None``.
 
         Uma pergunta por volta (``pactl list short modules``, que o retrato do
         som responde sem processo quando está vivo): o nó cujo módulo o servidor
@@ -514,7 +522,7 @@ class GerenciadorDeNosDeSom:
         """
         runner = self._pergunta_ao_servidor()
         if runner is None:
-            return
+            return None
         from hefesto_dualsense4unix.integrations.alto_falante_bt import (
             modulos_do_servidor,
             varrer_nos_orfaos,
@@ -524,17 +532,19 @@ class GerenciadorDeNosDeSom:
             modulos = modulos_do_servidor(runner)
         except Exception:
             logger.debug("som_modulos_ilegiveis", exc_info=True)
-            return
+            return None
         if modulos is None:
-            return
+            return None
         for uniq, no in list(self._nos.items()):
             no_ar = getattr(no, "no_ar", None)
             if callable(no_ar) and no_ar(modulos) is False:
                 logger.warning("som_no_sumiu_por_fora", uniq=uniq)
                 self._derrubar(uniq)
         vivos = [str(getattr(no, "nome", "") or "") for no in self._nos.values()]
+        caidos: list[str] = []
         with contextlib.suppress(Exception):
-            varrer_nos_orfaos(vivos, runner, modulos=modulos)
+            caidos = varrer_nos_orfaos(vivos, runner, modulos=modulos)
+        return [m for m in modulos if m[0] not in caidos]
 
     def _derrubar(self, uniq: str) -> None:
         with self._trava:

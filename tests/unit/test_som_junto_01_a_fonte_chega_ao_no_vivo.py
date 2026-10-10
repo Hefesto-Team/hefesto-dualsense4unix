@@ -144,26 +144,38 @@ def test_sem_divergencia_a_varredura_nao_mexe_em_nada(
     assert ger.nos[P1] is no
 
 
-def test_ela_trocar_a_saida_do_sistema_sozinha_nao_religa_o_no(
+def test_ela_trocar_a_saida_do_sistema_religa_so_o_mix(
     bancada: Pactl, placa_do_p1: dict[str, str]
 ) -> None:
-    """A comparação tem de ser ESTÁVEL, e o monitor da saída padrão não é."""
+    """O mix segue a saída padrão de agora; o nó e a saída para o alto-falante não piscam.
+
+    E a volta em que o servidor não diz a saída padrão («não sei») não mexe em nada.
+    """
     nome = escrever_perfil({P1: af.FONTE_MIX})
     _sub, ger = subsystem_e_gerenciador(nome)
 
     ger.reconciliar([cabo(P1)])
-    carregados = dict(bancada.carregados)
+    no = ger.nos[P1]
+    fixos = {i for i, argv in bancada.carregados.items() if f"source={HDMI}.monitor" not in argv}
 
     bancada.padrao = FONE
     ger.reconciliar([cabo(P1)])
+    assert sorted(bancada.loopbacks) == sorted(
+        [(f"{no.nome}.monitor", SINK_P1), (f"{FONE}.monitor", no.nome)]
+    )
+
+    descidos = list(bancada.descarregados)
+    bancada.padrao = ""
+    ger.reconciliar([cabo(P1)])
+    assert bancada.descarregados == descidos, "um «não sei» derrubou o mix"
+
     bancada.padrao = HDMI
     ger.reconciliar([cabo(P1)])
-
-    assert bancada.descarregados == [], (
-        "trocar a saída do sistema religou o nó — com ela mexendo no som, "
-        "isso vira o nó piscando debaixo do jogo"
+    assert sorted(bancada.loopbacks) == sorted(
+        [(f"{no.nome}.monitor", SINK_P1), (f"{HDMI}.monitor", no.nome)]
     )
-    assert bancada.carregados == carregados
+    assert fixos <= set(bancada.carregados), "o nó ou a saída para o alto-falante piscou"
+    assert not fixos & set(bancada.descarregados)
 
 
 def test_perder_a_rota_nao_desliga_o_que_esta_ligado(bancada: Pactl) -> None:
@@ -209,8 +221,8 @@ def test_o_no_nunca_vira_alvo_de_si_mesmo(
     assert bancada.descarregados == []
 
 
-def test_a_assinatura_ignora_o_monitor_e_a_frase_e_ve_a_fonte() -> None:
-    """Quatro campos entram; o monitor e o motivo ficam de fora."""
+def test_o_monitor_muda_a_fiacao_e_o_none_nao(bancada: Pactl) -> None:
+    """Outro monitor é outra fiação; ``None`` («não sei») deixa o mix de pé; a frase não conta."""
     base = af.RotaDoNo(
         True, sink=SINK_P1, por_onde=af.POR_CABO, fonte=af.FONTE_MIX,
         monitor_do_mix=f"{HDMI}.monitor",
@@ -219,13 +231,20 @@ def test_a_assinatura_ignora_o_monitor_e_a_frase_e_ve_a_fonte() -> None:
         True, sink=SINK_P1, por_onde=af.POR_CABO, fonte=af.FONTE_MIX,
         monitor_do_mix=f"{FONE}.monitor", motivo="outra frase",
     )
-    outra_fonte = af.RotaDoNo(
-        True, sink=SINK_P1, por_onde=af.POR_CABO, fonte=af.FONTE_SFX
+    sem_saber = af.RotaDoNo(
+        True, sink=SINK_P1, por_onde=af.POR_CABO, fonte=af.FONTE_MIX, monitor_do_mix=None,
     )
+    no = af.SinkVirtualPipeWire(uniq=P1, runner=bancada, rota=base)
+    assert no.iniciar() is True
+    fio = (f"{no.nome}.monitor", SINK_P1)
 
-    assert af.assinatura_da_rota(base) == af.assinatura_da_rota(outro_monitor)
-    assert af.assinatura_da_rota(base) != af.assinatura_da_rota(outra_fonte)
-    assert af.assinatura_da_rota(None) == (False, "", "", "")
+    assert no.religar(af.RotaDoNo(**{**base.__dict__, "motivo": "outra frase"})) is False
+    assert no.religar(outro_monitor) is True
+    assert sorted(bancada.loopbacks) == sorted([fio, (f"{FONE}.monitor", no.nome)])
+    descidos = list(bancada.descarregados)
+    assert no.religar(sem_saber) is False
+    assert bancada.descarregados == descidos
+    assert sorted(bancada.loopbacks) == sorted([fio, (f"{FONE}.monitor", no.nome)])
 
 
 def test_o_no_no_chao_so_guarda_a_rota(bancada: Pactl) -> None:
