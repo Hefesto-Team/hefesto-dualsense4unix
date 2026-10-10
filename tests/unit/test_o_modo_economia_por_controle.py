@@ -232,8 +232,15 @@ def _perfil(controllers: dict[str, ControllerOverrides] | None = None) -> Profil
 def _o_que_cada_um_recebe(
     inst: Any, handles: list[_FakeHandle], perfil: Profile
 ) -> list[tuple[Any, ...]]:
+    from types import SimpleNamespace
+
+    from hefesto_dualsense4unix.daemon.lifecycle import DaemonConfig
+    from hefesto_dualsense4unix.daemon.subsystems.rumble import escrever_com_a_forca
+
     ProfileManager(controller=inst).apply(perfil)
-    inst.set_rumble(weak=200, strong=200)
+    # O fator da peça chega ao motor pelo funil do daemon, não pelo backend.
+    daemon = SimpleNamespace(controller=inst, config=DaemonConfig(), store=None)
+    escrever_com_a_forca(daemon, None, 200, 200, agora=0.0)
     return [
         (h.light.colors[-1], h.triggerL.mode, list(h.triggerL.forces),
          list(h.triggerR.forces), h.left_motor[-1], h.right_motor[-1])
