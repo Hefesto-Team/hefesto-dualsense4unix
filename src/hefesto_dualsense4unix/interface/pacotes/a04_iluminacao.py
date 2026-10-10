@@ -2429,11 +2429,6 @@ def reenviar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     return {"recado": recado} if recado else None
 
 
-# da barra ao jogo (`lightbar.reset` — o `ipc_handlers` diz com todas as letras
-# `profile.switch` chama `clear_manual_trigger_active()` SEM argumento
-# desta aba passa por ele em todo clique (`perfil.gravar_e_reaplicar`). O que se
-
-
 def _pct_pedido(o: dict[str, Any]) -> int:
     """Os 0-100 que o trilho mandou, validados PELO ESQUEMA e não por uma conta local.
 

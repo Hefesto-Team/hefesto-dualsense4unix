@@ -1052,7 +1052,11 @@ class IpcHandlersMixin:
         }
 
     async def _handle_trigger_reset(self, params: dict[str, Any]) -> dict[str, Any]:
-        """Devolve o gatilho ao perfil e LIBERA a trava manual dele (R-19).
+        """Grava ``Off`` no gatilho: sem efeito do Hefesto, e o jogo decide (R-19).
+
+        O ``Off`` sai pela mesma rota do ``trigger.set``, carimbado com a camada
+        ``usuaria`` do controle (por MAC): o gesto solta o que o jogo tinha
+        pintado naquele gatilho, e o jogo que mandar efeito depois vence.
 
         ABAS-06 (25/07): ``uniq`` presente = reset por-MAC, pela mesma rota do
         ``trigger.set`` (``apply_output_for``). Era o ÚNICO comando de saída da
@@ -1060,18 +1064,6 @@ class IpcHandlersMixin:
         "Desligar" zerava o gatilho dos QUATRO enquanto o "Aplicar" logo ao lado
         mandava para um só. O mesmo defeito já tinha sido corrigido no "Apagar"
         da aba Lightbar (R-17) e não fora replicado aqui.
-
-        ABAS-05 (25/07): a trava manual é limpa SÓ na categoria ``trigger``. O
-        clear sem categoria apagava ``led`` e ``rumble`` junto — desligar UM
-        gatilho reabria a troca automática de perfil para reescrever a cor que a
-        aba Lightbar tinha acabado de aplicar. É a queixa histórica de que a
-        configuração do usuário não fica, e a granularidade por categoria (ONDA-U/F1)
-        existe exatamente para isso não acontecer: o próprio ``state_store``
-        documenta que o fim do "Testar motores" não pode apagar o LED de outra
-        aba — não havia razão para o botão "Desligar" dos gatilhos poder.
-
-        Quem quer soltar TUDO de uma vez continua tendo o caminho explícito e
-        rotulado: ativar um perfil (``profile.switch``), que limpa as três.
         """
         target = params.get("side", "both")
         if target not in ("left", "right", "both"):
@@ -1300,39 +1292,13 @@ class IpcHandlersMixin:
     async def _handle_led_auto_release(
         self, params: dict[str, Any]
     ) -> dict[str, Any]:
-        """Devolve a luz ao automático: solta a trava manual de `"led"` — e SÓ ela.
+        """Só registra no diário: a luz não tem trava a soltar.
 
-        A-TRAVA-DO-LED-NÃO-SOLTA-01 (06/09/2026). O PAR QUE FALTAVA. Até aqui
-        `led.set` e `led.player_set` ARMAVAM a trava (`:1468` e `:1524`) e
-        nenhuma linha de `src/` a soltava: a única saída era ela trocar de
-        perfil na mão — um gesto que a pessoa não tem como saber que precisa
-        fazer. `trigger` tinha o `trigger.reset` e `rumble` tinha o
-        `rumble.passthrough`; a luz não tinha nada.
-
-        SÓ `"led"`, e o `clear` sem argumento seria a regressão do ABAS-05:
-        soltar as quatro apagaria um gatilho ou uma vibração deliberada de
-        outra aba. É a razão escrita da assinatura por categoria em
-        `state_store.clear_manual_trigger_active`, e ela vale aqui em dobro —
-        este método é chamado por UM botão de UMA aba.
-
-        POR QUE UMA ROTA PRÓPRIA, e não um parâmetro no `led.set`: é ORDEM. O
-        gesto "Automático" da aba Iluminação (`interface/pacotes/a04_iluminacao`)
-        faz duas coisas, nesta ordem medida em 02/09 — larga o claim da barra
-        (`lightbar.reset`) e SÓ ENTÃO pinta a cor do slot, para a barra não
-        ficar preta. Essa segunda escrita é um `led.set`, que ARMA. Pendurar o
-        clear em qualquer das duas o deixaria antes da escrita que o desfaz;
-        pendurado aqui, ele é o ÚLTIMO ato do gesto e nada o re-arma.
-
-        ELE NÃO ESCREVE BYTE NENHUM no controle, e é por isso que não tem
-        `uniq`: a trava é do `StateStore` e não tem dono por controle
-        (`_manual_override_categories` é um dicionário categoria → carimbo,
-        um por daemon). Aceitar um `uniq` e ignorá-lo seria o "sucesso
-        mentiroso" que a APLICAR-VERDADE-01 nomeia. `escopo` diz isso na
-        resposta, em vez de deixar quem chama supor.
-
-        Soltar a trava não pinta nada: só devolve ao `AutoSwitcher` o direito
-        de decidir no próximo tique de troca de janela — que é exatamente o que
-        "voltar ao automático" promete por escrito na tela.
+        O método fica no contrato do IPC para quem ainda o chama, e não escreve
+        byte nenhum. A cor que o gesto escreve é carimbada com a camada
+        ``usuaria`` daquele controle (por MAC) e soltada pelo seu dono, e a
+        ativação de um perfil aplica a luz dele em qualquer origem. `escopo`
+        diz na resposta que nada aqui é por controle.
         """
         logger.info("led_auto_release", categoria="led")
         return {"status": "ok", "categoria": "led", "escopo": "o daemon inteiro"}
@@ -4220,19 +4186,9 @@ class IpcHandlersMixin:
             enabled: bool — True = habilitar passthrough (zerar rumble_active).
                             False = sem efeito; para fixar valores use rumble.set.
 
-        ONDA-U (Causa A, fix HIGH 2026-07-20 — "trava sem fim"): `rumble.set`/
-        `rumble.stop` armam `mark_manual_trigger_active()` (silêncio ou valor
-        fixo são overrides DELIBERADOS, que devem sobreviver a uma troca de
-        foco — mesma semântica de `trigger.set`). Mas este handler é o gesto
-        SIMÉTRICO de liberação ("Devolver ao jogo" da aba Rumble e o fim do
-        "Testar motores" em `_rumble_test_stop`, que sempre termina chamando
-        `rumble_passthrough(True)`) — o único par de `clear_manual_trigger_
-        active()` do repo vivia em `profile.switch`/`trigger.reset`; sem este
-        `elif`, armar aqui TAMBÉM deixava a trava permanentemente ligada (sem
-        timeout, sem indicador na GUI) até a usuária ir na aba Perfis clicar
-        "Ativar" — silenciando o autoswitch por engano numa ação pensada para
-        NÃO deixar rastro. `enabled=False` é documentado como sem efeito (nem
-        rumble_active é tocado) — não mexe na trava por coerência.
+        Com ``uniq``, solta só o par fixado daquele controle; sem, solta todos.
+        É o gesto que devolve a vibração ao jogo na aba Vibração, inclusive no
+        fim do teste dos motores.
         """
         from hefesto_dualsense4unix.daemon.subsystems.rumble import (
             soltar_par,

@@ -1673,17 +1673,12 @@ def _aplicar(p: Any, lado: str, modo_: str, params: list[int],
              recebeu_em_todos: list[str] | None = None) -> tuple[bool, str, str]:
     """Manda o efeito ao daemon pela porta CERTA, e a certa depende do modo.
 
-    "DESLIGADO" É `trigger.reset`, E NÃO `trigger.set` COM `Off` — a R-19. O
-    `_handle_trigger_set` do daemon termina em `mark_manual_trigger_active`:
-    mandar `Off` por ali ARMA a trava que pausa a troca automática de perfil,
-    e o `trigger.reset` faz o oposto. Está escrito com todas as letras em
-    `triggers_actions._reset_trigger`: *"o botão que a usuária usa para 'voltar
-    ao normal' era mais um jeito de PAUSAR a troca automática de perfil, sem
-    nada na tela dizendo isso"*.
+    "DESLIGADO" É `trigger.reset` (a R-19): ele grava `Off`, carimbado com a
+    camada `usuaria` daquele controle, e o jogo que mandar efeito depois vence.
 
     A FUNÇÃO EXISTE PORQUE HÁ TRÊS CHAMADORES — o `modo`, o `pronto` quando
     aplica um efeito dela, e a régua. Escrito três vezes, o `if chave == "Off"`
-    some num deles no dia em que alguém mexer, e a trava volta calada.
+    some num deles no dia em que alguém mexer.
 
     E ELA É O CHOKE POINT DO RASCUNHO — 03/09/2026. Toda escrita no gatilho
     passa por aqui, então é aqui que a tela aprende o que foi aplicado. É o
@@ -2098,14 +2093,8 @@ def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     300 ms, que chama `_apply_trigger` com esses mesmos padrões. Aqui não há
     debounce a fazer: o clique é um, não um arrastar de slider.
 
-    "DESLIGADO" É `trigger.reset`, E NÃO `trigger.set` COM `Off` — e esta é a
-    parte que não se adivinha pelo nome. O `_handle_trigger_set` do daemon
-    termina em `mark_manual_trigger_active("trigger")`: mandar `Off` por ali
-    ARMA a trava que pausa a troca automática de perfil. O `_handle_trigger_reset`
-    faz o oposto, `clear_manual_trigger_active("trigger")`. É a R-19, escrita com
-    todas as letras em `triggers_actions._reset_trigger`: *"o botão que a usuária
-    usa para 'voltar ao normal' era mais um jeito de PAUSAR a troca automática de
-    perfil, sem nada na tela dizendo isso"*.
+    "DESLIGADO" É `trigger.reset`, pelo `_aplicar`: o `Off` sem efeito do
+    Hefesto, e o jogo que mandar efeito depois vence.
 
     A PORTA É A `_detalhado`, e não a `_checked`, pela mesma razão que a GUI
     estável migrou (ELO-MUDO-01/T3): só ela junta as DUAS formas de o daemon

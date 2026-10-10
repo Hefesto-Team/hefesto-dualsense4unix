@@ -142,6 +142,29 @@ def test_nenhuma_linha_de_producao_arma_a_trava() -> None:
     )
 
 
+def test_nenhum_texto_de_producao_explica_pela_trava_morta() -> None:
+    """O comentário e a docstring também: o narrador da API morta engana quem lê.
+
+    O-TEXTO-DO-GATILHO-DIZ-O-QUE-O-CODIGO-FAZ-HOJE-01 (09/10/2026). A régua de
+    cima olha só código, e o texto em volta do gatilho e da luz seguia contando
+    o mecanismo velho. A isenção é só a nota datada que diz «morreu em».
+    """
+    achados: list[str] = []
+    for caminho, texto in _codigo_de_producao():
+        for numero, linha in enumerate(texto.splitlines(), 1):
+            if "morreu em" in linha:
+                continue
+            if any(morto in linha for morto in MORTOS):
+                rel = caminho.relative_to(RAIZ).as_posix()
+                achados.append(f"  {rel}:{numero}  {linha.strip()[:90]}")
+    assert not achados, (
+        "o texto de produção ainda explica pela trava manual, que saiu em "
+        "14/09/2026; descreva o mecanismo de hoje (o carimbo `usuaria` por "
+        "controle, o gesto que solta a camada do jogo, o `Off` que deixa o jogo "
+        "decidir):\n" + "\n".join(achados)
+    )
+
+
 def test_as_constantes_da_trava_nao_voltaram() -> None:
     """As duas constantes que descreviam o mecanismo, e o teto que o prorrogava."""
     texto = (SRC / "daemon" / "state_store.py").read_text(encoding="utf-8")

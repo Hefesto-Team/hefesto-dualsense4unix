@@ -451,32 +451,20 @@ def _payload_trigger_reset(
 def trigger_reset_detalhado(
     side: str | None = None, uniq: str | None = None, *, todos: bool = False
 ) -> tuple[bool, str | None, dict[str, Any] | None]:
-    """LIBERA a trava manual e devolve o gatilho ao perfil (`trigger.reset`).
+    """Grava ``Off`` no gatilho (`trigger.reset`): sem efeito, e o jogo decide.
 
     Mesmo contrato de :func:`trigger_set_detalhado` — e o mesmo corpo
     (``status``/``aplicado_em``/``guardado_em``), porque os dois handlers foram
     escritos como espelho um do outro (ELO-MUDO-01, 23/08).
 
-    R-19 (auditoria 23/07): o RPC já existia e já estava roteado
-    (`ipc_server.py:160`), mas a GUI não o expunha — então o botão "Desligar" da
-    aba Gatilhos mandava outro `trigger.set` com modo "Off". A diferença é
-    decisiva: `trigger.set` **ARMA** `mark_manual_trigger_active`, então o botão
-    que a usuária usa para "voltar ao normal" era mais um jeito de PAUSAR a
-    troca automática de perfil. É a queixa "estado armado que nunca é liberado".
+    O ``Off`` é carimbado com a camada ``usuaria`` daquele controle: o gesto
+    solta o que o jogo tinha pintado no gatilho, e o jogo que mandar efeito
+    depois vence.
 
     ABAS-06 (25/07): `uniq` — MAC do controle escolhido no seletor. Este era o
     ÚNICO comando de saída da janela sem alvo: com "Controle 2" selecionado,
     "Desligar" zerava o gatilho dos QUATRO, enquanto o "Aplicar" ao lado
     mandava para um só. Omitido = comportamento global clássico.
-
-    ABAS-05 (25/07): o clear das TRÊS categorias (documentado como "contrato
-    deliberado" até 24/07) foi estreitado para a categoria `trigger` —
-    desligar um gatilho apagava a trava de LED e de vibração de outras abas e
-    reabria a troca automática para reescrever a cor recém-aplicada.
-
-    Estes três parágrafos moraram no invólucro `trigger_reset`, podado em
-    26/08/2026 por não ter chamador nenhum: quem aperta "Desligar" é
-    `app/actions/triggers_actions.py`, e chama esta.
 
     ``todos``: o mesmo «Em todos» de :func:`trigger_set_detalhado`.
     """
