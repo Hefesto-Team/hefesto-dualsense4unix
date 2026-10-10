@@ -108,6 +108,16 @@ def test_a_crua_antiga_nao_paga_duas_novas(tmp_path: Path) -> None:
     assert "`guarda` em `x.py:8`" in feito.stdout
 
 
+def test_a_crua_antiga_intocada_na_pagina_que_mudou_passa(tmp_path: Path) -> None:
+    """Só a linha ACRESCENTADA se lê: a crua de antes, numa linha que ninguém tocou, não reprova."""
+    raiz = _repo(tmp_path, "# P\nO laço mora em `x.py:3`.\n")
+    _escreve(raiz, "docs/protocol/p.md",
+             "# P\nO laço mora em `x.py:3`.\nUma frase nova, sem endereço.\n")
+    _commita(raiz)
+    feito = _roda(raiz)
+    assert feito.returncode == 0, feito.stdout + feito.stderr
+
+
 def test_sem_dev_o_modo_falha_dizendo_sem_base(tmp_path: Path) -> None:
     raiz = _repo(tmp_path, "# P\n", base="principal")
     feito = _roda(raiz)
