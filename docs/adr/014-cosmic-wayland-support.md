@@ -38,7 +38,8 @@ implementada em camadas:
 
 2. `src/hefesto_dualsense4unix/integrations/window_detect.py` — factory `detect_window_backend()`:
    - `WAYLAND_DISPLAY` + `DISPLAY` → `XlibBackend` (XWayland, preferido).
-   - `WAYLAND_DISPLAY` sem `DISPLAY` → `WaylandPortalBackend`.
+   - `WAYLAND_DISPLAY` sem `DISPLAY` → a cascata `cosmic` → `wlrctl` → `NullBackend`
+     (até 10/10/2026 era o `WaylandPortalBackend`; a nota no fim).
    - `DISPLAY` sem `WAYLAND_DISPLAY` → `XlibBackend`.
    - Nenhum → `NullBackend` (loga `autoswitch_compositor_unsupported`).
 

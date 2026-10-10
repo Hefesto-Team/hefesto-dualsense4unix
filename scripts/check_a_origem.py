@@ -239,8 +239,9 @@ _ENGOLE_TUDO = frozenset({"Exception", "BaseException"})
 def _suppress_que_so_engole(item: ast.withitem) -> bool:
     """``suppress(Exception)``: o ``except Exception: pass`` escrito como ``with``.
 
-    Vale ``contextlib.suppress`` e o ``suppress`` importado; uma exceção nomeada
-    (``suppress(OSError)``) não conta, pela mesma régua do ``except`` nomeado.
+    Vale ``contextlib.suppress`` e o ``suppress`` importado. Uma exceção nomeada
+    (``suppress(OSError)``) não conta, embora o ``except OSError: pass`` conte:
+    trocar um pelo outro ainda baixa a conta.
     """
     chamada = item.context_expr
     if not isinstance(chamada, ast.Call):
