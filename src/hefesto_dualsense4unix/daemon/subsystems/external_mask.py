@@ -81,9 +81,9 @@ Nada precisou mudar no armazenamento: o que mudou foi **quem pergunta**.
 O QUE AINDA NÃO CHEGA AQUI (MEDIDO em 15/08/2026)
 --------------------------------------------------
 
-:func:`mascara_efetiva` é consultada na criação de todo gamepad virtual
-(``uinput_gamepad.UinputGamepad.for_flavor`` e
-``uhid_gamepad.UhidDualSense.for_flavor``), mas ela só tem o que responder
+:func:`mascara_efetiva` é consultada na criação de todo gamepad virtual, uma
+vez, por ``virtual_pad.make_virtual_pad`` (os construtores recebem a chave já
+resolvida desde 10/10/2026), mas ela só tem o que responder
 quando recebe uma ``identity``. **Hoje ninguém a passa**: os três degraus que
 faltam moram fora deste módulo —
 ``integrations/virtual_pad.make_virtual_pad`` (repassar o parâmetro),
@@ -196,6 +196,7 @@ import json
 import os
 import tempfile
 import threading
+import time
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
@@ -222,6 +223,18 @@ IDENTITY_FIELD = "identity"
 FLAVOR_FIELD = "flavor"
 
 MASKS_FILE_LOCK = threading.Lock()
+
+#: O sufixo da cópia do arquivo ilegível, guardada ao lado antes da primeira escrita.
+SUFIXO_DO_ILEGIVEL = ".ilegivel-"
+
+
+class _ArquivoIlegivelError(ValueError):
+    """O arquivo de máscaras existe e não se lê como um objeto JSON."""
+
+    def __init__(self, caminho: Path, motivo: str) -> None:
+        super().__init__(f"{caminho}: {motivo}")
+        self.caminho = caminho
+        self.motivo = motivo
 
 
 def mascaras_validas() -> frozenset[str]:
@@ -379,24 +392,57 @@ class ExternalMaskRegistry:
 
     @classmethod
     def _ler_documento(cls) -> dict[str, Any] | None:
-        """O JSON do disco quando ele é um objeto; ``None`` em qualquer outro caso."""
+        """O JSON do disco quando ele é um objeto; ``None`` sem arquivo legível.
+
+        O arquivo que existe e não se lê (JSON quebrado, bytes que não são texto,
+        documento que não é objeto) levanta :class:`_ArquivoIlegivelError`: ele não vale
+        como ausente, porque a escrita seguinte o apagaria.
+        """
+        caminho = cls._path()
         try:
-            with cls._path().open(encoding="utf-8") as fh:
+            with caminho.open(encoding="utf-8") as fh:
                 bruto = json.load(fh)
-        except (FileNotFoundError, json.JSONDecodeError, OSError):
+        except (FileNotFoundError, OSError):
             return None
+        except ValueError as exc:
+            raise _ArquivoIlegivelError(caminho, type(exc).__name__) from exc
         except Exception as exc:
             logger.debug("external_mascaras_load_falhou", err=str(exc))
             return None
-        return bruto if isinstance(bruto, dict) else None
+        if not isinstance(bruto, dict):
+            raise _ArquivoIlegivelError(caminho, f"documento {type(bruto).__name__}")
+        return bruto
+
+    @staticmethod
+    def _guardar_o_ilegivel(caminho: Path) -> Path:
+        """Move o arquivo ilegível para o lado (``<nome>.ilegivel-<data>``)."""
+        base = f"{caminho.name}{SUFIXO_DO_ILEGIVEL}{time.strftime('%Y%m%d-%H%M%S')}"
+        destino = caminho.with_name(base)
+        n = 2
+        while destino.exists():
+            destino = caminho.with_name(f"{base}-{n}")
+            n += 1
+        os.replace(caminho, destino)
+        logger.warning(
+            "external_mascaras_ilegivel_guardado",
+            caminho=str(caminho),
+            guardado_em=str(destino),
+        )
+        return destino
 
     def _load_locked(self) -> None:
         """Restaura as máscaras do disco, uma vez por instância (sob ``_lock``)."""
         if self._loaded:
             return
         self._loaded = True
-        with MASKS_FILE_LOCK:
-            data = self._ler_documento()
+        try:
+            with MASKS_FILE_LOCK:
+                data = self._ler_documento()
+        except _ArquivoIlegivelError as exc:
+            logger.warning(
+                "external_mascaras_ilegivel", caminho=str(exc.caminho), motivo=exc.motivo
+            )
+            return
         if data is None:
             return
         versao = data.get(VERSION_FIELD)
@@ -444,7 +490,19 @@ class ExternalMaskRegistry:
             return
         try:
             with MASKS_FILE_LOCK:
-                data = self._ler_documento()
+                try:
+                    data = self._ler_documento()
+                except _ArquivoIlegivelError as exc:
+                    try:
+                        self._guardar_o_ilegivel(exc.caminho)
+                    except OSError as erro:
+                        logger.warning(
+                            "external_mascaras_ilegivel_nao_guardado",
+                            caminho=str(exc.caminho),
+                            err=str(erro),
+                        )
+                        return
+                    data = None
                 extras_por_entrada: dict[str, dict[str, Any]] = {}
                 documento: dict[str, Any] = {}
                 if data is not None:
