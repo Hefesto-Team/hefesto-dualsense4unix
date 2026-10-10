@@ -73,13 +73,17 @@ def _memoria_limpa(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def _o_disco(*, so_o_freestyle: bool = False) -> Path:
-    """O Freestyle e a Corrida, cada um gravado duas vezes (há «ontem» para os dois)."""
-    for _ in range(2):
-        loader.save_profile(Profile(name=FREESTYLE, match=MatchAny()), origem="régua")
-        if not so_o_freestyle:
+    """O Freestyle e a Corrida; a Corrida gravada duas vezes, diferente, e há «ontem».
+
+    A gravação byte a byte igual não arquiva a anterior (`save_profile`), então a
+    primeira da Corrida tem outra prioridade.
+    """
+    loader.save_profile(Profile(name=FREESTYLE, match=MatchAny()), origem="régua")
+    if not so_o_freestyle:
+        for prioridade in (59, 60):
             loader.save_profile(
                 Profile(name=CORRIDA, match=MatchCriteria(window_class=["corrida"]),
-                        priority=60), origem="régua")
+                        priority=prioridade), origem="régua")
     session.save_freestyle_ligado(True)
     return loader.profiles_dir() / f"{loader.SLUG_DO_PADRAO}.json"
 
