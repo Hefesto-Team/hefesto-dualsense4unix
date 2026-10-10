@@ -93,7 +93,7 @@ def _manifesto(mod_id: str = "exemplo", **mais: Any) -> dict[str, Any]:
         "api": ">=1,<2",
         "licenca": "MIT",
         "tipos": ["processo"],
-        "processo": {"executar": [sys.executable, "mod.py"]},
+        "processo": {"executar": ["python3", "mod.py"]},
         "permissoes": ["ler:estado", "escrever:luz"],
     }
     corpo.update(mais)
@@ -124,7 +124,10 @@ _O_FILHO = textwrap.dedent('''
     caixa = {}
     if modo == "caixa":
         casa = os.environ["HOME"]
-        caixa["casa_vazia"] = os.listdir(casa) == []
+        # Na HOME vazia só aparece o caminho até o código e os dados da modificação.
+        caixa["casa"] = sorted(os.listdir(casa))
+        caixa["segredo_visivel"] = os.path.exists(os.path.join(casa, "segredo.txt"))
+        caixa["config_visivel"] = os.path.exists(os.path.join(casa, ".config"))
         try:
             open("escrito-no-codigo", "w").write("x")
             caixa["codigo_gravavel"] = True
@@ -463,7 +466,9 @@ def test_o_assinante_que_nao_le_nao_atrasa_o_tique(curto: Path) -> None:
     assert cheia > tiques // 2, f"a fila nunca encheu ({cheia})"
     assert tamanho <= 16
     # ...e o tique nunca esperou por ela.
-    assert pior < tique_s, f"o tique esperou {pior * 1000:.1f} ms pela modificação"
+    # Publicar custa microssegundos; 10 ms é folga para a máquina carregada, e
+    # ainda menos que um tique de 60 Hz (16,7 ms).
+    assert pior < 0.010, f"o tique esperou {pior * 1000:.1f} ms pela modificação"
 
 
 # -- o supervisor --------------------------------------------------------------
@@ -520,7 +525,7 @@ def test_com_bwrap_a_caixa_esconde_a_casa_a_rede_e_o_socket_principal(
     (Path(os.environ["HOME"]) / "segredo.txt").write_text("x", encoding="utf-8")
     pasta = _pasta_do_mod(curto / "fontes", "caixa")
     manifesto = _manifesto()
-    manifesto["processo"]["executar"] = [sys.executable, "mod.py", str(principal)]
+    manifesto["processo"]["executar"] = ["python3", "mod.py", str(principal)]
     (pasta / "hefesto-mod.json").write_text(json.dumps(manifesto), encoding="utf-8")
     instalar(str(pasta), lugares=lar)
     ligar("exemplo", lugares=lar)
@@ -541,7 +546,9 @@ def test_com_bwrap_a_caixa_esconde_a_casa_a_rede_e_o_socket_principal(
     relato = asyncio.run(corrida())
     assert relato["ola"]["result"]["id"] == "exemplo", relato
     assert relato["caixa"] == {
-        "casa_vazia": True,
+        "casa": [".local"],
+        "segredo_visivel": False,
+        "config_visivel": False,
         "codigo_gravavel": False,
         "redes": ["lo"],
         "principal_visivel": False,
