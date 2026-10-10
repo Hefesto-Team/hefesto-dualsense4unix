@@ -86,8 +86,10 @@ def test_a_casa_de_hoje_passa_na_propria_regua_e_o_tema_valido_sai_importante() 
 
 
 def _lugares(tmp_path: Path) -> instalador.Lugares:
-    return instalador.Lugares(codigo=tmp_path / "codigo", dados=tmp_path / "dados",
-                              registro=tmp_path / "mods.json", estado=tmp_path / "estado.json")
+    return instalador.Lugares(
+        codigo=tmp_path / "codigo",  # (noqa-acento): campo ASCII do contrato
+        dados=tmp_path / "dados",
+        registro=tmp_path / "mods.json", estado=tmp_path / "estado.json")
 
 
 def _instalada(lg: instalador.Lugares, mod_id: str, tema: dict[str, Any], *,
@@ -96,8 +98,10 @@ def _instalada(lg: instalador.Lugares, mod_id: str, tema: dict[str, Any], *,
     pasta = lg.codigo / mod_id
     pasta.mkdir(parents=True)
     (pasta / "hefesto-mod.json").write_text(json.dumps({
-        "id": mod_id, "nome": f"Tema {mod_id}", "versao": "1.0", "api": ">=1,<2",
-        "licenca": "MIT", "tipos": ["tema"], "permissoes": ["tema"], "tema": tema}),
+        "id": mod_id, "nome": f"Tema {mod_id}", "versao": "1.0",  # (noqa-acento): chave ASCII
+        "api": ">=1,<2",
+        "licenca": "MIT", "tipos": ["tema"],
+        "permissoes": ["tema"], "tema": tema}),  # (noqa-acento): chave ASCII
         encoding="utf-8")
     registro = instalador.ler_registro(lg.registro)
     registro[mod_id] = instalador.Entrada(

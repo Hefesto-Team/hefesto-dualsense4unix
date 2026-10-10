@@ -23,7 +23,8 @@ from pathlib import Path
 from typing import Any
 
 #: A página publicada de onde saem os valores da casa (todas as dez têm o mesmo ``:root``).
-PAGINA_DOS_TOKENS = (Path(__file__).resolve().parent.parent / "interface" / "paginas"
+PAGINA_DOS_TOKENS = (Path(__file__).resolve().parent.parent / "interface"
+                     / "paginas"  # (noqa-acento): nome da pasta
                      / "01-jogar.html")
 
 LIMIAR_DO_CONTRASTE = 4.5
