@@ -50,6 +50,7 @@ FORA: dict[str, str] = {
     "teclado_emulado": "é lido na entrada da Navegação, pelo arranjo do desktop",
     "estilo": "é lido pelo motor do tato vivo a cada segundo, não pelo aplicar",
     "receita_do_tato": "é o desvio da bancada, lido pelo motor do tato vivo",
+    "marcas": "são etiquetas da pessoa, lidas pela tela e pelas modificações",
 }
 FORA_POR_CONTROLE: dict[str, str] = {}
 

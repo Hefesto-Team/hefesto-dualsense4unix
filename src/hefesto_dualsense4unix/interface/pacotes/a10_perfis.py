@@ -362,8 +362,8 @@ SEM_ENDERECO = {
     "editor.estilo.travado": "o campo GRAVA desde 03/09 (`estilo_travado` é "
                              "sempre `False`) — uma marca de travado aqui "
                              "nunca acenderia",
-    "editor.estilo.recado": "a frase que explica por que o campo volta ao "
-                            "travessão (`perfis_web.ESTILO_APLICA_E_SAI`) diz "
+    "editor.estilo.recado": "a frase sobre o que o perfil guarda do estilo "
+                            "(`perfis_web.ESTILO_APLICA_E_SAI`) diz "
                             "o mesmo que o `title` do rótulo, no mesmo hover — "
                             "um segundo canal para o mesmo fato",
     "quantos": "a contagem que a tela mostra é `perfis.conta`, e essa tem endereço",
@@ -2128,7 +2128,9 @@ def editor_estilo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
     `NAO_PINTAVEIS` e o `<select>` continua abrindo no travessão. Desde
     09/10/2026 (O-ESTILO-DO-PERFIL-LIGA-O-MOTOR-DO-TATO-01) o perfil guarda
     também a CHAVE do estilo (`Profile.estilo`): é por ela que o motor do tato
-    acha a receita invisível, que nenhuma aba mostra.
+    acha a receita invisível, que nenhuma aba mostra. O pacote de `perfis_web`
+    já traz o rótulo dele e as marcas; pintá-los no `<select>` é da tela
+    (O-POINT-AND-CLICK-E-A-ACESSIBILIDADE-SE-DEFINEM-NA-NAVEGACAO-01).
 
     "PERSONALIZADO" NÃO MEXE NAS ABAS E DESLIGA A RECEITA. Ele é o estilo que diz
     *"eu ajusto na mão"* — `as_quatro()` levanta de propósito se alguém lhe pedir

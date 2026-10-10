@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import Any
 
 from hefesto_dualsense4unix.core import formas_do_endereco as _formas
+from hefesto_dualsense4unix.profiles import estilos_de_jogo, marcas_do_jogo
 from hefesto_dualsense4unix.profiles.schema import (
     PRIORIDADE_MAXIMA,
     ControllerOverrides,
@@ -81,8 +82,8 @@ GESTOS_SEM_MOTOR: dict[str, str] = {}
 #: estilo**, e não porque a escolha se perdeu.
 ESTILO_APLICA_E_SAI = (
     "Escolher um estilo ajusta o gatilho, a vibração e a cor de cada controle "
-    "de uma vez. O perfil guarda os três e o estilo escolhido, e o campo volta "
-    "ao travessão para você continuar ajustando o que quiser nas abas."
+    "de uma vez. O perfil guarda os três e o estilo escolhido, e mexer numa aba "
+    "depois não apaga o estilo."
 )
 
 #: produto sabe guardá-la (``simple_match.from_simple_choice("janela", …)``) e a
@@ -204,6 +205,12 @@ def _como_e_a_regra(match: Any, preset: str | None) -> str:
     return f"regra do tipo “{tipo}”"
 
 
+def _rotulo_do_estilo(chave: object) -> str | None:
+    """O rótulo do estilo guardado no perfil, ou ``None`` sem estilo conhecido."""
+    estilo = estilos_de_jogo.POR_CHAVE.get(str(chave or ""))
+    return estilo.rotulo if estilo is not None else None
+
+
 def _pacote_do_editor(profile: Any) -> dict[str, Any]:
     """Os cinco campos do editor, do ``Profile`` — e nenhum deles inventado."""
     ambiente, recado = _ambiente_do_perfil(profile)
@@ -225,7 +232,8 @@ def _pacote_do_editor(profile: Any) -> dict[str, Any]:
         "ambiente_travado": ambiente is None,
         "ambiente_recado": recado,
         "jogo": simple_extra(match) if match is not None else "",
-        "estilo": None,
+        "estilo": _rotulo_do_estilo(getattr(profile, "estilo", None)),
+        "marcas": marcas_do_jogo.rotulos(getattr(profile, "marcas", None)),
         "estilo_travado": False,
         "estilo_recado": ESTILO_APLICA_E_SAI,
         # SEM SEÇÃO É "none", E ISSO NÃO É UM DEFAULT: um perfil sem `mode` NÃO

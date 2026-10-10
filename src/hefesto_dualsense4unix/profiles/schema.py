@@ -1328,6 +1328,12 @@ class Profile(BaseModel):
     # sobrepõem, um a um, a receita do estilo. None = a receita do estilo inteira.
     # O motor ignora o campo que não conhece e limita cada valor (`Receita.de`).
     receita_do_tato: dict[str, Any] | None = None
+    # As marcas do jogo, por cima do estilo: chaves de
+    # `profiles/marcas_do_jogo.POR_CHAVE` («Visual novel», «Adulto»). Sem recusa de
+    # chave desconhecida, como o `estilo`. None = nenhuma marca; não é `[]` porque
+    # um campo que nasce denso vai a todo save, e um hefesto anterior a ele recusaria
+    # os perfis inteiros (QUEM-E-QUEM-02).
+    marcas: list[str] | None = None
 
     @model_serializer(mode="wrap")
     def _sem_ponte_a_chave_nem_aparece(
@@ -1338,6 +1344,7 @@ class Profile(BaseModel):
         if isinstance(dados, dict):
             for opcional in (
                 "ponte", "remapeamento", "movimento", "estilo", "receita_do_tato",
+                "marcas",
             ):
                 if dados.get(opcional) is None:
                     dados.pop(opcional, None)
@@ -2370,6 +2377,13 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         E_CONTRATO,
         "`None` = a receita do estilo inteira. É o desvio campo a campo da "
         "bancada sobre a receita do estilo, e não há desvio a semear.",
+    ),
+    "Profile.marcas": Nascimento(
+        E_CONTRATO,
+        "`None` = nenhuma marca. A marca é só da pessoa, posta à mão "
+        "(AS-MARCAS-VISUAL-NOVEL-E-ADULTO-SE-SOMAM-AO-ESTILO-01, escolha dela de "
+        "09/10/2026): semear «Adulto» ou «Visual novel» seria afirmar do jogo o "
+        "que ela não disse.",
     ),
     "Profile.movimento": Nascimento(
         E_CONTRATO,

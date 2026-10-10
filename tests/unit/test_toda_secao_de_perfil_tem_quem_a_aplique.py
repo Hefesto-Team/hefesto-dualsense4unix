@@ -249,6 +249,13 @@ _CLASSIFICACAO: dict[str, SecaoPorApplier | SecaoDireta] = {
             "`estilo`, lido pelo motor do tato vivo, não pela ativação."
         )
     ),
+    "marcas": SecaoDireta(
+        razao=(
+            "AS-MARCAS-VISUAL-NOVEL-E-ADULTO-SE-SOMAM-AO-ESTILO-01 (09/10/2026). "
+            "Etiquetas da pessoa (`profiles/marcas_do_jogo.py`), lidas pela tela "
+            "e pelas modificações. Nada é escrito no controle."
+        )
+    ),
     "match": SecaoDireta(
         razao="Critério de SELEÇÃO do perfil, não estado do controle."
     ),
