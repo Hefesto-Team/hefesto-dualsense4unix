@@ -20,6 +20,7 @@ from hefesto_dualsense4unix.daemon.subsystems import tato_vivo as tv
 from hefesto_dualsense4unix.profiles import loader
 from hefesto_dualsense4unix.profiles.estilos_de_jogo import POR_CHAVE
 from hefesto_dualsense4unix.profiles.schema import MatchCriteria, Profile
+from hefesto_dualsense4unix.profiles.slug import slugify
 
 TIQUES = 120  # dois segundos de laço
 
@@ -81,7 +82,7 @@ def test_o_orfao_varre_uma_vez_por_nome(contas: dict[str, int]) -> None:
     """Nome sem arquivo com o slug: uma varredura, e outra só quando o nome muda."""
     _tiro("Tiro Antigo")
     pasta = loader.profiles_dir()
-    (pasta / "tiro-antigo.json").rename(pasta / "renomeado-por-fora.json")
+    (pasta / f"{slugify('Tiro Antigo')}.json").rename(pasta / "renomeado-por-fora.json")
     daemon = _daemon("Tiro Antigo")
     passo = tv.Passo(daemon, tv.TatoVivo([]))
 

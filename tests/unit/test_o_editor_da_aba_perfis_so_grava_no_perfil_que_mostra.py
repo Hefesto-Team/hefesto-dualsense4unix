@@ -67,6 +67,9 @@ def _memoria_limpa(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(a10_perfis, "_ESCOLHIDO", "", raising=False)
     monkeypatch.setattr(a10_perfis, "_ARMADO", None, raising=False)
     monkeypatch.setattr(a10_perfis, "_PROCURA", "", raising=False)
+    # o «pinta uma vez» (`_uma_vez_so`) omite o `editor.nome` do mesmo alvo por 2 s
+    monkeypatch.setattr(a10_perfis, "_PINTADO_PARA", "", raising=False)
+    monkeypatch.setattr(a10_perfis, "_ULTIMO_TIQUE", 0.0, raising=False)
 
 
 def _o_disco(*, so_o_freestyle: bool = False) -> Path:

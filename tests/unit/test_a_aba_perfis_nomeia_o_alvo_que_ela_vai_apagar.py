@@ -198,10 +198,13 @@ def test_o_marcador_orfao_nao_vira_alvo_de_gesto(
     _o_disco_tem(monkeypatch, "Pragmata", "Sackboy")
     _o_marcador_diz(monkeypatch, "Perfil Que Ela Apagou")
     ctx = _ctx()
-    with pytest.raises(RuntimeError, match="escolha um perfil na lista primeiro"):
-        a10_perfis._perfil_do_editor(ctx)
-    with pytest.raises(RuntimeError, match="escolha um perfil na lista primeiro"):
-        a10_perfis.voltar_a_de_ontem(ctx, {}, PonteDeMentira())
+    # Desde O-EDITOR-DA-ABA-PERFIS-SO-GRAVA-NO-PERFIL-QUE-MOSTRA-01 (09/10/2026) o
+    # alvo do gesto é o perfil que o editor PINTA (sem escolha, o primeiro da lista),
+    # e não mais uma recusa: o órfão segue fora, e o gesto mira o que está na tela.
+    alvo = a10_perfis._perfil_do_editor(ctx)
+    assert alvo != "Perfil Que Ela Apagou", "o marcador órfão virou alvo de gesto"
+    assert alvo == a10_perfis.pacote(ctx)["editor.nome"], (
+        f"o gesto mira {alvo!r} e o editor mostra outro perfil")
 
 
 def test_o_marcador_que_existe_continua_valendo(
@@ -261,7 +264,12 @@ def test_lista_vazia_nao_desarma_a_guarda_do_perfil_que_vale(
     some dizendo outra coisa, que é a pior forma de sumir.
 
     MORDIDA: tire o ``if not todos: return nome`` de ``_valendo`` e este teste
-    reprova — a mensagem deixa de ser a do §P7.
+    reprova no ``_valendo``.
+
+    NOTA DE 09/10/2026 (O-EDITOR-DA-ABA-PERFIS-SO-GRAVA-NO-PERFIL-QUE-MOSTRA-01): o
+    alvo do editor passou a ser uma linha da lista de escolher. Com a lista vazia
+    não há linha, e o Remover recusa por falta de alvo sem apagar nada; o §P7
+    segue guardando o perfil que vale quando ele está na lista.
     """
     monkeypatch.setattr(loader, "load_all_profiles", lambda *a, **k: [])
     _o_marcador_diz(monkeypatch, "meu_perfil")
@@ -269,8 +277,10 @@ def test_lista_vazia_nao_desarma_a_guarda_do_perfil_que_vale(
     assert a10_perfis._valendo(ctx) == "meu_perfil", (
         "lista vazia rebaixou o nome que vale — ausência de prova virou prova "
         "de órfão, e as três guardas do §P1 se desligam juntas")
-    with pytest.raises(RuntimeError, match="está valendo agora"):
-        a10_perfis.remover(ctx, {}, PonteDeMentira())
+    ponte = PonteDeMentira()
+    with pytest.raises(RuntimeError, match="escolha um perfil na lista primeiro"):
+        a10_perfis.remover(ctx, {}, ponte)
+    assert ponte.chamadas == []
 
 
 # procura a SUBSTRING `ctx.state.get("active_profile")` no fonte. Ela mede

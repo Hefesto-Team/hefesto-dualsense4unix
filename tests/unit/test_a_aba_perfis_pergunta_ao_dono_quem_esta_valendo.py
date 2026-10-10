@@ -118,6 +118,14 @@ def test_o_daemon_vence_o_disco_quando_os_dois_falam(
 
 
 def _remover(nome: str, state: dict[str, Any]) -> tuple[PonteDeMentira, Exception | None]:
+    # O perfil existe no disco: desde O-EDITOR-DA-ABA-PERFIS-SO-GRAVA-NO-PERFIL-QUE-MOSTRA-01
+    # o alvo do editor é uma linha da lista de escolher, e um nome sem arquivo não é.
+    from hefesto_dualsense4unix.profiles import loader
+    from hefesto_dualsense4unix.profiles.schema import MatchCriteria, Profile
+
+    if loader.perfil_em_disco(nome) is None:
+        loader.save_profile(Profile(name=nome, match=MatchCriteria(window_class=["regua"])),
+                            origem="régua")
     a10_perfis._ESCOLHIDO = nome
     ponte = PonteDeMentira()
     try:
