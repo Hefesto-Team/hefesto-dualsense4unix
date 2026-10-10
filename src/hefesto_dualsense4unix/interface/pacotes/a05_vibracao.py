@@ -660,10 +660,6 @@ PAR_DE_TESTE = (160, 220)
 
 _O_PULSO_SAIU = "07/09/2026 — o Testar virou estado; ver `_EM_TESTE`"
 
-#:
-#: (`app/actions/rumble_actions.py`) remove a fonte GLib pendente e é
-_VEZ = [0]
-
 #: Os controles com o «Testar» da vibração LIGADO agora. UM POR CONTROLE: o
 #: teste de um não toca no do outro (03/10/2026, ela: *«vibração e háptico é
 #: por cada controle e precisam funcionar em independente»*). Era um `uniq` só,
@@ -889,12 +885,6 @@ def _refrescar_o_teste(
     weak, strong = _par_das_barras(ctx, uniq, acabou_de_gravar=acabou_de_gravar)
     with contextlib.suppress(Exception):
         p.rumble_set_checked(weak, strong, uniq=uniq)
-
-
-def _minha_vez() -> int:
-    """Toma a vez do teste e devolve o número dela. Quem chega depois vence."""
-    _VEZ[0] += 1
-    return _VEZ[0]
 
 
 #: caminho DO USUÁRIO, pelo piloto) e :func:`_indice` (a guarda contra o broadcast,
@@ -1535,7 +1525,6 @@ def testar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     **A mão só volta ao jogo quando ela clicar em Parar**, que é o que o usuário pediu.
     """
-    _minha_vez()
     uniq = _uniq(o)
     if not uniq:
         raise RuntimeError(
@@ -1567,7 +1556,6 @@ def parar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     `rumble.stop` não trava silêncio, ele SOLTA o par e diz que não alcança o
     motor que o jogo toca pelo hidraw — NATIVO-RUMBLE-01, segunda metade.
     """
-    _minha_vez()
     uniq = _uniq(o)
     if not uniq:
         raise RuntimeError(
@@ -1590,7 +1578,6 @@ FRASE_SEM_HAPTICA_NESTE_CONTROLE = (
 @gesto("05-vibracao.html", "testar-haptica")
 def testar_haptica(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """«Háptica»: o tocador DAQUELE controle toca o par de teste até o «Parar»."""
-    _minha_vez()
     uniq = _uniq(o)
     if not uniq:
         raise RuntimeError(

@@ -40,6 +40,7 @@ import html.parser
 import pathlib
 import re
 import sys
+import threading
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from typing import Any
@@ -241,6 +242,80 @@ def largar_o_que_as_abas_seguram(p: Any) -> None:
             larga(p)
         except Exception as erro:
             print(f"[largada] {larga.__name__}: {erro}", file=sys.stderr)
+
+
+#: A fila de quem grava algo do usuário: dois gestos com `grava=` nunca se cruzam.
+FILA_DE_QUEM_GRAVA = "grava"
+
+_TRAVA_DAS_FILAS = threading.Lock()
+
+#: O último trabalho entregue a cada fila, ainda por terminar. Quem chega depois
+#: espera o sinal dele; quem termina sai daqui se ninguém entrou atrás.
+_O_ULTIMO_DA_FILA: dict[str, threading.Event] = {}
+
+
+def fila_do_controle(uniq: str) -> str:
+    """A fila de um controle: a chave é o endereço, igual por cabo e por rádio."""
+    return f"controle:{_so_hex(str(uniq or '').strip())}"
+
+
+def na_fila(filas: Iterable[str], trabalho: Callable[[], Any], *,
+            nome: str = "") -> threading.Thread:
+    """Roda `trabalho` fora do fio do GTK, depois de tudo o que entrou antes nas `filas`.
+
+    A ORDEM É A DA ENTREGA, e a entrega acontece no fio do GTK, na ordem do
+    clique. Cada trabalho guarda o sinal do último de cada fila dele e espera
+    esses sinais; filas diferentes não se esperam. Sem fila, ele sai na hora.
+    Um trabalho que levanta solta a fila do mesmo jeito.
+    """
+    minhas = tuple(dict.fromkeys(f for f in filas if f))
+    meu = threading.Event()
+    with _TRAVA_DAS_FILAS:
+        antes = [ev for f in minhas if (ev := _O_ULTIMO_DA_FILA.get(f)) is not None]
+        for f in minhas:
+            _O_ULTIMO_DA_FILA[f] = meu
+
+    def correr() -> None:
+        try:
+            for ev in antes:
+                ev.wait()
+            trabalho()
+        finally:
+            meu.set()
+            with _TRAVA_DAS_FILAS:
+                for f in minhas:
+                    if _O_ULTIMO_DA_FILA.get(f) is meu:
+                        del _O_ULTIMO_DA_FILA[f]
+
+    fio = threading.Thread(target=correr, name=nome or "na-fila", daemon=True)
+    fio.start()
+    return fio
+
+
+def filas_do_gesto(pagina: str, nome: str, o: dict[str, Any]) -> tuple[str, ...]:
+    """As filas de um clique: a do controle onde ele caiu e, se grava, a de quem grava."""
+    filas: list[str] = []
+    uniq = str(o.get("uniq") or "").strip()
+    if uniq:
+        filas.append(fila_do_controle(uniq))
+    if GESTOS_QUE_MEXEM.get((pagina, nome)) or GESTOS_QUE_MEXEM.get(("*", nome)):
+        filas.append(FILA_DE_QUEM_GRAVA)
+    return tuple(filas)
+
+
+def despachar(pagina: str, nome: str, o: dict[str, Any],
+              trabalho: Callable[[], Any]) -> threading.Thread:
+    """Roda o gesto fora do fio do GTK, NA ORDEM DO CLIQUE.
+
+    O-PARAR-CALA-O-TESTE-QUE-AINDA-ESTAVA-NO-AR-01 (10/10/2026): uma thread solta
+    por clique deixava a ordem ser a do IPC. Um «Testar» lento e o «Parar» do
+    mesmo controle terminavam ao contrário, e o teste ficava no ar até a janela
+    fechar; dois gestos que gravam o mesmo perfil escreviam um por cima do
+    outro. Dois gestos do mesmo `uniq` nunca se cruzam, dois que declaram
+    `grava=` nunca se cruzam, e controles diferentes seguem juntos.
+    """
+    return na_fila(filas_do_gesto(pagina, nome, o), trabalho,
+                   nome=f"gesto {pagina}:{nome}")
 
 
 def perigosos() -> set[tuple[str, str]]:

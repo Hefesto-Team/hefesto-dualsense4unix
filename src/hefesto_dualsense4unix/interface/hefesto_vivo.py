@@ -2987,7 +2987,7 @@ class Piloto:
                                       else desta_vez[0] == "aplicou")
                 GLib.idle_add(lambda v=voo, c=certo: self._pousou(v, c))
 
-        threading.Thread(target=trabalhar, daemon=True).start()
+        pacotes.despachar(pagina, nome, o, trabalhar)
 
     def _a_janela_mudou(self, escondida: bool) -> None:
         """A página disse se alguém pode vê-la. Escondida, a janela não trabalha."""
