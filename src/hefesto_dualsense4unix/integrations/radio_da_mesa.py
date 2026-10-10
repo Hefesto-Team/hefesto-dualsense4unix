@@ -482,18 +482,26 @@ def diagnosticar_o_movimento(
 def sinais_dos_enlaces(
     ar: Mapping[str, Any], *, ler: Callable[[int, int], int | None] | None = None
 ) -> dict[str, int | None]:
-    """`{uniq (12 hex): RSSI | None}` de cada enlace ACL de cada adaptador, lido SEM root.
+    """`{uniq (12 hex): RSSI | None}` de cada enlace de cada adaptador, lido SEM root.
 
     ``ar`` é o que o medidor de ar entrega (:class:`ArDoAdaptador`, com as conexões e o
     handle de cada uma). Quem pergunta ao rádio é o dono do HCI cru (``ler_rssi``).
+
+    O enlace de baixa energia (LE) também se pergunta: o ``HCI_Read_RSSI`` vale para todo
+    handle de conexão, e é o mesmo comando de leitura que o filtro do kernel deixa passar sem
+    root. Aparelho com os dois enlaces (um celular) fica com o do clássico, perguntado uma vez.
     """
     from hefesto_dualsense4unix.integrations import ar_do_adaptador as _ar
 
     leitor = ler if ler is not None else _ar.ler_rssi
     saida: dict[str, int | None] = {}
     for leitura in ar.values():
-        for conexao in leitura.conexoes or ():
+        conexoes = tuple(leitura.conexoes or ())
+        for conexao in conexoes:
             if conexao.tipo == _ar.TIPO_ACL:
+                saida[_hex(conexao.endereco)] = leitor(leitura.hci, conexao.handle)
+        for conexao in conexoes:
+            if conexao.tipo == _ar.TIPO_LE and _hex(conexao.endereco) not in saida:
                 saida[_hex(conexao.endereco)] = leitor(leitura.hci, conexao.handle)
     return saida
 

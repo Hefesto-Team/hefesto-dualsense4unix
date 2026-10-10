@@ -12,6 +12,12 @@ A régua de cima vale para todas as linhas: os mesmos 79 canais, do mesmo tamanh
 * **Ausência é resposta**: aparelho sem mapa lido diz «não se mede agora», e enlace de baixa
   energia (LE) diz «divide o rádio do adaptador dele» — o comando que lê o mapa LE exige
   ``CAP_NET_RAW`` (a tabela do ``hci_sec_filter`` acaba no OGF 5), e este produto não pede root.
+* **O enlace LE mostra os 40 canais dele, «não medidos»** (O-ACESSORIO-SEM-TIPO-GANHA-CATEGORIA-
+  E-SINAL-NA-CONEXOES-01, a opção 1, escolhida pelo usuário em 09/10/2026): o canal LE ``k`` mora
+  em 2402 + 2k MHz, duas células da régua de 79, e os três de anúncio ficam marcados. Nenhum
+  canal é pintado como bom ou perdido: o mapa do adaptador nunca passa por mapa do aparelho. O
+  sinal medido do enlace vira o selo :data:`SINAL`, que diz o número e não julga (os limiares
+  do DualSense não valem para outro aparelho).
 
 Este módulo é puro: entra o que a cena sabe, sai a linha de cada aparelho com as 79 células.
 Quem desenha é a aba 08 (``a08_conexoes.html_dos_canais``).
@@ -38,6 +44,16 @@ BOM = "bom"
 PERDIDO = "perdido"
 OCUPADO = "ocupado"
 LIVRE = "livre"
+#: As duas células de um canal LE que ninguém mede sem root, e as do canal de anúncio.
+NAO_MEDIDO = "nao_medido"
+ANUNCIO = "anuncio"
+
+#: Os canais LE (por frequência: o ``k`` de 2402 + 2k MHz) e os três de anúncio, em 2402, 2426
+#: e 2480 MHz (os índices 37, 38 e 39 da especificação).
+CANAIS_LE = 40
+CANAIS_DE_ANUNCIO_LE = frozenset({0, 12, 39})
+#: O nível do selo que só diz o sinal medido: nem bom nem ruim, o número.
+SINAL = "sinal"
 
 #: O selo em palavra, pelo MESMO piso do «N/79» do adaptador (``nivel_dos_canais``).
 PALAVRA_DO_NIVEL = {NIVEL_LISO: "boa", NIVEL_ENGASGA: "sofrendo"}
@@ -147,6 +163,24 @@ def banda_do_intervalo(ini: int, fim: int) -> frozenset[int]:
     return frozenset(range(max(0, int(ini)), min(CANAIS_DO_BT, int(fim))))
 
 
+def canal_le_da_celula(celula: int) -> int:
+    """O canal LE (por frequência) que cobre a célula ``celula`` da régua de 79."""
+    return celula // 2
+
+
+def _celulas_do_le() -> tuple[Celula, ...]:
+    return tuple(
+        Celula(c, ANUNCIO if canal_le_da_celula(c) in CANAIS_DE_ANUNCIO_LE else NAO_MEDIDO)
+        for c in range(CANAIS_DO_BT))
+
+
+def selo_do_sinal(rssi: int | None) -> Selo | None:
+    """O sinal do enlace em número (``sinal -61 dBm``); ``None`` quando o rádio não disse."""
+    if isinstance(rssi, bool) or not isinstance(rssi, int):
+        return None
+    return Selo(SINAL, f"sinal {rssi} dBm")
+
+
 def _selo_do_adaptador(bons: int) -> Selo:
     palavra = PALAVRA_DO_NIVEL.get(nivel_dos_canais(bons), PALAVRA_DO_MEIO)
     return Selo(NIVEL_DA_PALAVRA[palavra], f"{palavra} {bons}/{CANAIS_DO_BT}")
@@ -181,7 +215,8 @@ def _linha_do_aparelho(
                     qualidade_do_enlace=ap.qualidade_do_enlace, rssi=ap.rssi)
     outros = tuple(i.id for i in irmaos if i.id != ap.id)
     if ap.le:
-        return linha(sem_faixa=DIVIDE_O_RADIO, briga=outros)
+        return linha(celulas=_celulas_do_le(), sem_faixa=DIVIDE_O_RADIO,
+                     selo=selo_do_sinal(ap.rssi), briga=outros, dica=DIVIDE_O_RADIO)
     perdidos = ap.evitados if ap.evitados is not None else adaptador.evitados
     if perdidos is None:
         return linha(sem_faixa=NAO_SE_MEDE, briga=outros)
@@ -274,17 +309,22 @@ def montar(adaptadores: Iterable[Adaptador], ocupantes: Iterable[Ocupante]) -> R
 
 
 __all__ = [
+    "ANUNCIO",
     "BOM",
+    "CANAIS_DE_ANUNCIO_LE",
+    "CANAIS_LE",
     "DIVIDE_O_RADIO",
     "FORA_DA_FAIXA",
     "LIVRE",
     "NAO_DESCOBERTA",
+    "NAO_MEDIDO",
     "NAO_SE_MEDE",
     "NOME_DO_RUIDO",
     "OCUPADO",
     "PERDIDO",
     "RUIDO",
     "SEM_REDE",
+    "SINAL",
     "Adaptador",
     "AparelhoNoAdaptador",
     "Celula",
@@ -293,6 +333,8 @@ __all__ = [
     "Regua",
     "Selo",
     "banda_do_intervalo",
+    "canal_le_da_celula",
     "linha_do_adaptador",
     "montar",
+    "selo_do_sinal",
 ]

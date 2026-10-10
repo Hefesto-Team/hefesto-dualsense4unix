@@ -1824,6 +1824,12 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio .ar-faixa i.b{background:var(--cor)}
   .radio .ar-faixa u{position:absolute;left:0;right:0;bottom:0;height:4px;
                      background:var(--m);text-decoration:none}
+  /* O enlace de baixa energia (a opção 1 do usuário, 09/10/2026): os 40 canais LE, duas
+     células cada, com a textura de «não medido» na cor do aparelho; o canal de anúncio leva a
+     barra de cima. Nada pintado como bom ou perdido: o mapa do adaptador não é o dele. */
+  .radio .ar-faixa i.n{background:repeating-linear-gradient(135deg,var(--cor) 0 1px,
+                       var(--vazio) 1px 4px)}
+  .radio .ar-faixa i.n.a{box-shadow:inset 0 3px 0 var(--cor)}
   /* a faixa sem leitura é o trilho vazio, igual ao dos outros; só o passo do «Descobrir» fala */
   .radio .ar-faixa.sem{display:flex;align-items:center;font-size:11px;color:var(--texto-mudo);
                        background:repeating-linear-gradient(90deg,var(--vazio) 0 9px,transparent 9px 11px)}
@@ -1851,6 +1857,8 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio .ar-selo.sofrendo{background:var(--red);box-shadow:0 0 0 3px rgba(255,85,85,.2)}
   .radio .ar-selo.boa{background:var(--green);box-shadow:none}
   .radio .ar-selo.sem{background:transparent;box-shadow:none;border:2px solid var(--comment)}
+  /* o sinal medido de quem não se julga pelo controle: o ponto cheio, na cor do aparelho */
+  .radio .ar-selo.sinal{background:var(--cor,var(--texto-suave));box-shadow:none}
   /* o controle conhecido que pede para parear: o ponto verde que pulsa (05/10/2026) */
   .cd-pulso,.radio .ar-pulso{display:inline-block;width:10px;height:10px;border-radius:50%;
              background:var(--green);box-shadow:0 0 0 0 rgba(80,250,123,.55);
@@ -1923,15 +1931,22 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio .cadeado.ligada{border-color:var(--green);background:rgba(80,250,123,.09);
                   color:var(--green)}
   .radio .cadeado.ligada .p{background:var(--green);box-shadow:0 0 6px var(--green)}
-"""
+""" + (
+    # a cor do acessório na régua vem da tabela da categoria, o dono dela
+    f"  .radio .espectro{{--c-{_pacote08.TIPO_ACESSORIO}:"
+    f"{_pacote08.CATEGORIA_ACESSORIO['cor_na_regua']}}}\n")
 
 
-#: Os dois tipos que a régua ganhou e o desenho do rádio não tinha: o celular e o relógio.
+#: Os tipos que a régua ganhou e o desenho do rádio não tinha: o celular, o relógio e o
+#: acessório (o aparelho de baixa energia que não diz o tipo).
 SIMBOLOS_DAS_FAIXAS = (
     '  <symbol id="rd-celular" viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" '
     'rx="2"/><path d="M11 18h2"/></symbol>\n'
     '  <symbol id="rd-relogio" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" '
-    'rx="3"/><path d="M9 7l1-5h4l1 5M9 17l1 5h4l1-5"/></symbol>')
+    'rx="3"/><path d="M9 7l1-5h4l1 5M9 17l1 5h4l1-5"/></symbol>\n'
+    f'  <symbol id="rd-{_pacote08.CATEGORIA_ACESSORIO["glifo"]}" viewBox="0 0 24 24">'
+    '<rect x="3" y="8" width="11" height="8" rx="4"/>'
+    '<path d="M17.5 9.5a3.5 3.5 0 0 1 0 5M20 7a7 7 0 0 1 0 10"/></symbol>')
 
 
 def _sprite_do_radio() -> str:
@@ -2078,6 +2093,16 @@ def _cena_do_desenho() -> dict:
          "nome": "Celular", "rotulo": "Celular", "esperando": False, "fixo": False},
         {"id": f"relogio-{cheio['id']}", "tipo": "relogio", "lugar": cheio["id"],
          "nome": "Relógio", "rotulo": "Relógio", "esperando": False, "fixo": False}]
+    # O aparelho de baixa energia que não diz o tipo (O-ACESSORIO-SEM-TIPO-GANHA-CATEGORIA-E-
+    # SINAL-NA-CONEXOES-01): chega «outro», como o BlueZ o dá, e a regra da cena o faz
+    # «Acessório» pelo enlace LE; a faixa são os 40 canais «não medido», e o ponto, o sinal.
+    acessorio = "aa:bb:cc:00:00:e1"
+    aparelhos.append({"id": acessorio, "tipo": "outro", "lugar": cheio["id"],
+                      "nome": "Acessório", "rotulo": "Acessório", "pareado": True,
+                      "esperando": False, "fixo": False})
+    enlaces = {cheio["id"]: {_pacote08._so_hex(acessorio): {
+        "le": True, "canais_evitados": None, "qualidade_do_enlace": None, "rssi": -61}}}
+    _pacote08._com_a_categoria_do_enlace(aparelhos, enlaces)
     for _viz in vizinhos:
         if _viz["tipo"] in ("teclado", "mouse"):
             _viz["receptor"] = True
@@ -2088,7 +2113,7 @@ def _cena_do_desenho() -> dict:
             _viz["saude"] = {"teclas_presas": 0, "buracos": 0, "janela_s": 3600, "lendo": True}
     cena = {
         "lugares": lugares, "aparelhos": aparelhos, "evitados": evitados,
-        "canais_medidos": {lg["id"]: True for lg in lugares},
+        "canais_medidos": {lg["id"]: True for lg in lugares}, "enlaces": enlaces,
         "vizinhos": vizinhos, "wifi": wifi, "portas": portas, "pedido": None,
         "proposta": {"controle": quem_sai["id"], "destino": vazio["id"]},
         "ocupado": False, "aberto": None, "perto": perto,

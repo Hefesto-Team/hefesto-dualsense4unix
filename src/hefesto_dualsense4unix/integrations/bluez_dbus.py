@@ -480,10 +480,29 @@ class AparelhoDoBluez:
     #: ``Appearance`` (GAP, 16 bits) do aparelho LE: é por ela que um relógio ou uma
     #: pulseira sem ``Icon`` e sem ``Class`` ganha o tipo dele.
     aparencia: int | None = None
+    #: ``UUIDs`` (os serviços que o aparelho declara, em minúsculas): a mesma leitura de
+    #: propriedade, nenhum comando ao rádio. É por ela que uma modificação reconhece, pelo
+    #: serviço, um aparelho que não diz o tipo.
+    uuids: tuple[str, ...] = ()
 
 
 def _inteiro(valor: object) -> int | None:
     return valor if isinstance(valor, int) and not isinstance(valor, bool) else None
+
+
+_FORMA_DO_UUID = re.compile(
+    r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
+
+
+def _uuids(valor: object) -> tuple[str, ...]:
+    """Os ``UUIDs`` do aparelho, venha a lista do D-Bus ou o texto do ``busctl`` (``as 2 "…"``)."""
+    if isinstance(valor, (list, tuple)):
+        achados = [str(v) for v in valor if isinstance(v, str)]
+    elif isinstance(valor, str):
+        achados = _FORMA_DO_UUID.findall(valor)
+    else:
+        return ()
+    return tuple(dict.fromkeys(u.lower() for u in achados if _FORMA_DO_UUID.fullmatch(u)))
 
 
 class LeitorDoBluez:
@@ -679,6 +698,7 @@ class LeitorDoBluez:
                     modalias=str(self.propriedade(caminho, APARELHO, "Modalias") or ""),
                     icone=str(self.propriedade(caminho, APARELHO, "Icon") or ""),
                     aparencia=_inteiro(self.propriedade(caminho, APARELHO, "Appearance")),
+                    uuids=_uuids(self.propriedade(caminho, APARELHO, "UUIDs")),
                 )
             )
         return tuple(achados)

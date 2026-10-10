@@ -3304,12 +3304,21 @@ ESPERA_NA_TELA_S = _central_do_radio.PRAZO_DO_PENDENTE_S
 LEMBRA_O_NAO_CONECTOU_S = _central_do_radio.LEMBRA_O_NAO_CONECTOU_S
 VOLTAS_DO_VIGIA_NA_TELA = 3
 
+#: A CATEGORIA DO APARELHO DE BAIXA ENERGIA QUE NÃO DIZ O TIPO
+#: (O-ACESSORIO-SEM-TIPO-GANHA-CATEGORIA-E-SINAL-NA-CONEXOES-01): o nome «Acessório» é do
+#: usuário (09/10/2026, 16h). O glifo, a palavra, a cor e a legenda dela moram nesta tabela só,
+#: e as tabelas por tipo abaixo a leem. Quem dá a categoria é a cena, onde o tipo e o enlace se
+#: encontram (:func:`_com_a_categoria_do_enlace`), nunca o nome ou a marca do aparelho.
+TIPO_ACESSORIO = "acessorio"
+CATEGORIA_ACESSORIO = {"glifo": "acessorio", "palavra": "acessório", "legenda": "Acessório",
+                       "cor": "#a8919f", "cor_na_regua": "#ff79c6"}
+
 #: O glifo de cada tipo, numa tabela só: a antena (`radio`) é do adaptador e de
 #: mais ninguém, e o tipo sem desenho (`outro`, `nao_sei`, o que ninguém nomeou) é o «?».
 GLIFO_DO_TIPO = {
     "teclado": "teclado", "mouse": "mouse", "caixa": "caixa", "caixa_de_som": "caixa",
     "fone": "fone", "webcam": "webcam", "wifi": "wifi", "celular": "celular",
-    "relogio": "relogio",
+    "relogio": "relogio", TIPO_ACESSORIO: CATEGORIA_ACESSORIO["glifo"],
 }
 
 
@@ -3324,7 +3333,8 @@ TIPO_PELO_ICONE = {
 }
 PALAVRA_DO_TIPO = {"teclado": "teclado", "mouse": "mouse", "fone": "fone",
                    "caixa": "caixa de som", "webcam": "webcam", "outro": "aparelho",
-                   "celular": "celular", "relogio": "relógio"}
+                   "celular": "celular", "relogio": "relógio",
+                   TIPO_ACESSORIO: CATEGORIA_ACESSORIO["palavra"]}
 #: ``054C``): o DualSense e o Edge seguram PS + Create; o DualShock 4, PS +
 BOTOES_DE_PAREAR = {"0ce6": "PS + Create", "0df2": "PS + Create",
                     "05c4": "PS + Share", "09cc": "PS + Share"}
@@ -3333,7 +3343,7 @@ NOME_DO_CUSTO = {"mic": "microfone", "som": "som", "haptica": "vibração"}
 COR_DO_TIPO = {
     "teclado": "#8b8fa8", "mouse": "#6d7186", "webcam": "#a8a08c",
     "caixa": "#8c8299", "fone": "#7e9aa8", "outro": "#606062",
-    "celular": "#a89a96", "relogio": "#8a9aa8",
+    "celular": "#a89a96", "relogio": "#8a9aa8", TIPO_ACESSORIO: CATEGORIA_ACESSORIO["cor"],
 }
 ARTIGO_DO_TIPO = {"caixa": "a", "webcam": "a"}
 PASSAGEIROS = (("giro", "Giroscópio e acelerômetro"), ("touch", "Touchpad"),
@@ -4212,10 +4222,11 @@ def _canais_do_lugar_html(lug: dict[str, Any], cena: dict[str, Any]) -> str:
 #: O tipo que tem cor própria na régua (a folha da seção define ``--c-<tipo>``); o resto cai
 #: em ``outro``. O controle leva o plástico dele, lido do aparelho.
 TIPOS_COM_COR_NA_REGUA = frozenset({
-    "celular", "relogio", "fone", "caixa", "teclado", "mouse", "wifi", "ruido"})
+    "celular", "relogio", TIPO_ACESSORIO, "fone", "caixa", "teclado", "mouse", "wifi", "ruido"})
 #: A legenda do título: quem é o tipo e como ele se chama na tela.
 LEGENDA_DAS_FAIXAS = (
     ("controle", "Controles"), ("celular", "Celular"), ("relogio", "Relógio"),
+    (TIPO_ACESSORIO, CATEGORIA_ACESSORIO["legenda"]),
     ("wifi", "Wi-Fi"), ("teclado", "Teclado"), ("mouse", "Mouse"), ("ruido", "Ruído"))
 
 
@@ -4484,7 +4495,18 @@ def _cor_na_regua(tipo: str, cor: str = "") -> str:
     return f"var(--c-{tipo if tipo in TIPOS_COM_COR_NA_REGUA else 'outro'})"
 
 
+def _o_canal_le(c: Any) -> str:
+    """A célula de um canal de baixa energia: o canal LE e a frequência dele, «não medido»."""
+    k = faixas_do_ar.canal_le_da_celula(c.canal)
+    anuncio = c.estado == faixas_do_ar.ANUNCIO
+    classe = "n a" if anuncio else "n"
+    sobre = "anúncio, não medido" if anuncio else "não medido"
+    return f'<i class="{classe}" title="Canal LE {k} · {2402 + 2 * k} MHz · {sobre}"></i>'
+
+
 def _o_canal(c: Any, cores: dict[str, str], nomes: dict[str, str]) -> str:
+    if c.estado in (faixas_do_ar.NAO_MEDIDO, faixas_do_ar.ANUNCIO):
+        return _o_canal_le(c)
     mhz = 2402 + c.canal
     onde = f"Canal {c.canal} · {mhz} MHz"
     if c.estado == faixas_do_ar.BOM:
@@ -4524,6 +4546,9 @@ FAIXA_NAO_ACHADA = (
 #: o rótulo do botão que a faixa vazia do receptor vira (desenho de 06/10/2026, item 1): o gesto
 #: mora à vista, no lugar dos canais que faltam, e não num ponto de 10 px explicado só no tooltip.
 DESCOBRIR_A_FAIXA = "Descobrir a faixa"
+#: O que a faixa de um enlace de baixa energia diz ao leitor de tela (a opção 1 do usuário, de
+#: 09/10/2026: os 40 canais LE, «não medido», e os três de anúncio marcados).
+LE_NAO_MEDIDO = f"{faixas_do_ar.CANAIS_LE} canais de baixa energia, não medidos"
 TENTAR_DE_NOVO = f"{FAIXA_NAO_ENCONTRADA} · Tentar de novo"
 
 
@@ -4543,8 +4568,9 @@ def _o_ponto(linha: Any) -> str:
             else _maiuscula(linha.sem_faixa))
     # o que se leu do enlace continua no tooltip, depois do estado
     ja_dito = selo is not None and "tira canais" in selo.texto
+    so_o_sinal = selo is not None and selo.nivel == faixas_do_ar.SINAL
     extras = [t for t in (
-        f"sinal {linha.rssi} dBm" if isinstance(linha.rssi, int) else "",
+        f"sinal {linha.rssi} dBm" if isinstance(linha.rssi, int) and not so_o_sinal else "",
         (f"qualidade do enlace {linha.qualidade_do_enlace}/255"
          if isinstance(linha.qualidade_do_enlace, int) else ""),
         f"tira canais de {linha.tira_de}" if linha.tira_de and not ja_dito else "",
@@ -4577,9 +4603,13 @@ def _a_linha_do_ar(linha: Any, rot: str, cores: dict[str, str], nomes: dict[str,
     cor = cores[linha.id]
     nada = _passo_da_linha(linha.id) == receptor_sem_fio.PASSO_NADA
     if linha.celulas:
+        le = linha.sem_faixa == faixas_do_ar.DIVIDE_O_RADIO
         resumo = (f"{nomes[linha.id]}: {linha.bons} dos {CANAIS_DO_BT} canais bons"
-                  if linha.bons is not None else f"{nomes[linha.id]}: faixa ocupada")
-        faixa = (f'<div class="ar-faixa" role="img" aria-label="{_x(resumo)}">'
+                  if linha.bons is not None
+                  else f"{nomes[linha.id]}: {LE_NAO_MEDIDO}" if le
+                  else f"{nomes[linha.id]}: faixa ocupada")
+        classe = "ar-faixa le" if le else "ar-faixa"
+        faixa = (f'<div class="{classe}" role="img" aria-label="{_x(resumo)}">'
                  + "".join(_o_canal(c, cores, nomes) for c in linha.celulas) + "</div>")
     elif linha.sem_faixa == faixas_do_ar.FORA_DA_FAIXA:
         # o Wi-Fi em 5 GHz: a linha fica, e o trilho diz onde ele está (desenho de 06/10/2026)
@@ -4681,6 +4711,7 @@ COR_DA_FAIXA_NO_MAPA = {
     "controle": "#f8f8f2", "celular": "#ff9a8b", "relogio": "#8fa8ff", "fone": "#8be9fd",
     "caixa": "#bd93f9", "teclado": "#ffb86c", "mouse": "#f1fa8c", "wifi": "#c3e88d",
     "ruido": "#8a8fa3", "outro": "#9a9eb8", "adaptador": "#6272a4",
+    TIPO_ACESSORIO: CATEGORIA_ACESSORIO["cor_na_regua"],
 }
 
 
@@ -5021,6 +5052,23 @@ def _tipo_do_aparelho(icone: str, classe: int | None, aparencia: int | None = No
     return pela_classe if pela_classe != "outro" else _tipo_pela_aparencia(aparencia)
 
 
+def _com_a_categoria_do_enlace(aparelhos: list[dict[str, Any]],
+                               enlaces: dict[str, dict[str, Any]]) -> None:
+    """O aparelho conectado que não é controle, com enlace de baixa energia e sem tipo nos três
+    leitores (``Icon``, ``Class``, ``Appearance``) é «Acessório».
+
+    A regra é por fato, nunca por nome ou marca: o enlace LE vem do rádio (``radio_ar``, a chave
+    ``enlaces``), e o tipo, do BlueZ. Ela mora aqui porque é o único lugar em que os dois se
+    encontram (:func:`_tipo_do_aparelho` não vê o enlace).
+    """
+    for ap in aparelhos:
+        if ap.get("tipo") != "outro":
+            continue
+        do_lugar = _dicionario(enlaces.get(str(ap.get("lugar") or "")))
+        if _dicionario(do_lugar.get(_so_hex(str(ap.get("id") or "")))).get("le") is True:
+            ap["tipo"] = TIPO_ACESSORIO
+
+
 def _quem_pede_para_parear(central: dict[str, Any], lugares: list[dict[str, Any]],
                            aparelhos_bz: tuple[Any, ...]) -> list[dict[str, str]]:
     """Os controles conhecidos que pedem para parear (``radio_central.pedindo``), na tela.
@@ -5158,6 +5206,7 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
                            for a in adaptadores_bz}
     aparelhos = _aparelhos_da_cena(ctx, st, governador, esperando, aparelhos_bz,
                                    endereco_do_caminho, enderecos)
+    _com_a_categoria_do_enlace(aparelhos, enlaces)
     no_ar = (frozenset(_so_hex(a.endereco) for a in aparelhos_bz if a.conectado is True)
              | frozenset(_so_hex(str(c.get("uniq") or "")) for c in ctx.conectados))
     pareados = frozenset(
