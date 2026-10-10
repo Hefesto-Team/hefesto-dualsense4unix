@@ -1,4 +1,6 @@
-"""Fechar a janela devolve o que as abas seguravam — FECHAR-A-JANELA-DEVOLVE-O-QUE-AS-ABAS-SEGURAVAM-01.
+"""Fechar a janela devolve o que as abas seguravam.
+
+A sprint: FECHAR-A-JANELA-DEVOLVE-O-QUE-AS-ABAS-SEGURAVAM-01.
 
 MEDIDO EM 10/10/2026, antes da cura: `pacotes.largar_o_que_as_abas_seguram`
 tinha três chamadores no piloto (a troca de página no `_carregou`, o `_ir` e o
