@@ -325,7 +325,7 @@ def test_a_ativacao_do_perfil_publica_as_escalas_no_backend(
 
     MEDIDO em 01/09/2026: nenhum teste desta casa cobria a chamada — o
     `test_por_unidade_01_todas_as_abas.py` mede as pontas
-    (`_controllers_to_rumble_scales` e `_escalar_rumble`) e não o meio.
+    (`_controllers_to_rumble_scales` e o fator no motor) e não o meio.
 
     MORDIDA: arranque o `escalar_rumble(escalas_rumble or None)` de
     `ProfileManager.apply` — este caso reprova dizendo que nada foi publicado.
@@ -352,7 +352,7 @@ def test_a_ativacao_do_perfil_publica_as_escalas_no_backend(
 
     assert fc.publicadas == [{CHAVE: pytest.approx(0.3)}], (
         f"a ativação publicou {fc.publicadas!r} no backend. Sem o mapa, o "
-        f"`_escalar_rumble` não tem fator e o motor recebe a força inteira — o "
+        f"`escala_de` do funil não tem fator e o motor recebe a força inteira — o "
         f"perfil dela mudaria no disco e o aparelho não.")
 
 
