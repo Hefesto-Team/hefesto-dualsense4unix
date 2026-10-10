@@ -47,8 +47,11 @@ class _Gravador:
         pass
 
 
+_Mouse = tuple[UinputMouseDevice, _Gravador]
+
+
 @pytest.fixture
-def mouse(monkeypatch: pytest.MonkeyPatch) -> tuple[UinputMouseDevice, _Gravador]:
+def mouse(monkeypatch: pytest.MonkeyPatch) -> _Mouse:
     gravador = _Gravador()
     mod = SimpleNamespace(Device=lambda *_a, **_k: gravador)
     for i, nome in enumerate(_CODIGOS):
@@ -77,7 +80,7 @@ def _balanceado(gravador: _Gravador) -> None:
         assert valores.count(1) == valores.count(0), f"{seta}: {valores}"
 
 
-def test_a_seta_solta_quando_o_perfil_da_o_dpad_a_um_clique(mouse):
+def test_a_seta_solta_quando_o_perfil_da_o_dpad_a_um_clique(mouse: _Mouse) -> None:
     dev, gravador = mouse
     _tique(dev, "dpad_up")
     assert _de(gravador, "KEY_UP") == [1]
@@ -92,7 +95,7 @@ def test_a_seta_solta_quando_o_perfil_da_o_dpad_a_um_clique(mouse):
     _balanceado(gravador)
 
 
-def test_de_fabrica_para_de_fabrica_a_seta_solta_e_volta(mouse):
+def test_de_fabrica_para_de_fabrica_a_seta_solta_e_volta(mouse: _Mouse) -> None:
     dev, gravador = mouse
     _tique(dev, "dpad_left")
     dev.set_button_actions(None)
@@ -105,7 +108,7 @@ def test_de_fabrica_para_de_fabrica_a_seta_solta_e_volta(mouse):
     _balanceado(gravador)
 
 
-def test_a_seta_calada_pelo_perfil_solta_e_nao_volta(mouse):
+def test_a_seta_calada_pelo_perfil_solta_e_nao_volta(mouse: _Mouse) -> None:
     dev, gravador = mouse
     _tique(dev, "dpad_down")
     dev.set_button_actions({}, calados=frozenset({"dpad_down"}))
@@ -115,9 +118,9 @@ def test_a_seta_calada_pelo_perfil_solta_e_nao_volta(mouse):
     _balanceado(gravador)
 
 
-def test_em_toda_sequencia_cada_seta_apertada_se_solta(mouse):
+def test_em_toda_sequencia_cada_seta_apertada_se_solta(mouse: _Mouse) -> None:
     dev, gravador = mouse
-    tabelas = (
+    tabelas: tuple[dict[str, str] | None, ...] = (
         None,
         {"dpad_up": "BTN_LEFT"},
         {"dpad_right": "BTN_RIGHT", "dpad_left": "BTN_MIDDLE"},
@@ -137,7 +140,7 @@ def test_em_toda_sequencia_cada_seta_apertada_se_solta(mouse):
     _balanceado(gravador)
 
 
-def test_parar_o_no_esquece_as_setas(mouse):
+def test_parar_o_no_esquece_as_setas(mouse: _Mouse) -> None:
     dev, _gravador = mouse
     _tique(dev, "dpad_right")
     dev.stop()

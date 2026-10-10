@@ -13,6 +13,7 @@ jogo); a régua prova que duas instâncias não se misturam.
 from __future__ import annotations
 
 import sys
+from collections.abc import Callable
 from itertools import pairwise
 from types import SimpleNamespace
 
@@ -44,7 +45,9 @@ class _Gravador:
 
 
 @pytest.fixture
-def fabrica(monkeypatch: pytest.MonkeyPatch):
+def fabrica(
+    monkeypatch: pytest.MonkeyPatch,
+) -> Callable[[], tuple[UinputKeyboardDevice, _Gravador]]:
     """Monta teclados com o `uinput` de mentira; cada um ganha o seu gravador."""
     gravadores: list[_Gravador] = []
 
@@ -66,6 +69,9 @@ def fabrica(monkeypatch: pytest.MonkeyPatch):
     return _novo
 
 
+_Fabrica = Callable[[], tuple[UinputKeyboardDevice, _Gravador]]
+
+
 def _de(g: _Gravador, tecla: str) -> list[int]:
     return [v for t, v in g.eventos if t == tecla]
 
@@ -78,12 +84,12 @@ def _balanceado(g: _Gravador) -> None:
         assert valores.count(1) == valores.count(0), f"{tecla}: {valores}"
 
 
-def test_os_padroes_de_fabrica_dividem_o_alt():
+def test_os_padroes_de_fabrica_dividem_o_alt() -> None:
     assert "KEY_LEFTALT" in DEFAULT_BUTTON_BINDINGS["l1"]
     assert "KEY_LEFTALT" in DEFAULT_BUTTON_BINDINGS["r1"]
 
 
-def test_o_l1_tocado_com_o_r1_de_pe_nao_derruba_o_alt(fabrica):
+def test_o_l1_tocado_com_o_r1_de_pe_nao_derruba_o_alt(fabrica: _Fabrica) -> None:
     dev, g = fabrica()
     dev.dispatch(frozenset({"r1"}))
     dev.dispatch(frozenset({"r1", "l1"}))
@@ -98,7 +104,7 @@ def test_o_l1_tocado_com_o_r1_de_pe_nao_derruba_o_alt(fabrica):
     _balanceado(g)
 
 
-def test_o_r1_solta_primeiro_e_o_l1_segue_segurando(fabrica):
+def test_o_r1_solta_primeiro_e_o_l1_segue_segurando(fabrica: _Fabrica) -> None:
     dev, g = fabrica()
     dev.dispatch(frozenset({"r1"}))
     dev.dispatch(frozenset({"r1", "l1"}))
@@ -109,7 +115,7 @@ def test_o_r1_solta_primeiro_e_o_l1_segue_segurando(fabrica):
     _balanceado(g)
 
 
-def test_set_bindings_com_os_dois_apertados_solta_cada_tecla_uma_vez(fabrica):
+def test_set_bindings_com_os_dois_apertados_solta_cada_tecla_uma_vez(fabrica: _Fabrica) -> None:
     dev, g = fabrica()
     dev.dispatch(frozenset({"r1", "l1"}))
     dev.set_bindings(dict(DEFAULT_BUTTON_BINDINGS))
@@ -120,7 +126,7 @@ def test_set_bindings_com_os_dois_apertados_solta_cada_tecla_uma_vez(fabrica):
     _balanceado(g)
 
 
-def test_parar_solta_cada_tecla_uma_vez(fabrica):
+def test_parar_solta_cada_tecla_uma_vez(fabrica: _Fabrica) -> None:
     dev, g = fabrica()
     dev.dispatch(frozenset({"r1", "l1"}))
     dev.stop()
@@ -128,7 +134,7 @@ def test_parar_solta_cada_tecla_uma_vez(fabrica):
         assert _de(g, tecla) == [1, 0], tecla
 
 
-def test_o_teclado_da_tabela_do_jogo_nao_interfere_no_do_desktop(fabrica):
+def test_o_teclado_da_tabela_do_jogo_nao_interfere_no_do_desktop(fabrica: _Fabrica) -> None:
     desktop, g1 = fabrica()
     jogo, g2 = fabrica()
     desktop.dispatch(frozenset({"r1"}))
@@ -141,7 +147,7 @@ def test_o_teclado_da_tabela_do_jogo_nao_interfere_no_do_desktop(fabrica):
     _balanceado(g2)
 
 
-def test_o_token_virtual_fica_fora_da_conta(fabrica):
+def test_o_token_virtual_fica_fora_da_conta(fabrica: _Fabrica) -> None:
     dev, g = fabrica()
     fases: list[tuple[str, str]] = []
     dev.virtual_token_callback = lambda tok, fase: fases.append((tok, fase))
@@ -153,7 +159,7 @@ def test_o_token_virtual_fica_fora_da_conta(fabrica):
     _balanceado(g)
 
 
-def test_o_botao_semeado_pelo_prime_solta_o_que_segura(fabrica):
+def test_o_botao_semeado_pelo_prime_solta_o_que_segura(fabrica: _Fabrica) -> None:
     dev, g = fabrica()
     dev.prime(frozenset({"r1"}))
     assert g.eventos == []

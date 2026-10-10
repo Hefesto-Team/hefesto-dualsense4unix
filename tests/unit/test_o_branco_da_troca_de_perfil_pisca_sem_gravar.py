@@ -80,7 +80,12 @@ def _handle(transporte: str) -> SimpleNamespace:
         transporte=transporte,
         escritos=escritos,
     )
-    handle.writeReport = lambda r: escritos.append(list(r)) or len(r)
+
+    def _escreve(r: list[int]) -> int:
+        escritos.append(list(r))
+        return len(r)
+
+    handle.writeReport = _escreve
     return handle
 
 
@@ -96,7 +101,7 @@ class _Mesa:
         self.nos = [_NoDeLed(), _NoDeLed()]
         self.ctl._handles = dict(zip(MACS, self.handles, strict=True))
         self.ctl._sysfs = {MACS[0]: self.nos[0], MACS[1]: self.nos[1]}
-        self.ctl._detect_transport = lambda h: h.transporte  # type: ignore[method-assign]
+        self.ctl._detect_transport = lambda h: h.transporte
 
     def pinturas(self, i: int) -> list[tuple[int, ...]]:
         """Toda cor que o controle `i` (0 a 3) recebeu, na ordem."""
@@ -105,7 +110,7 @@ class _Mesa:
         return [_cor_do_report(r) for r in self.handles[i].escritos]
 
     def resolvida(self, i: int) -> tuple[int, int, int]:
-        cor = self.ctl._merged_desired_for_key(MACS[i]).led
+        cor: tuple[int, int, int] | None = self.ctl._merged_desired_for_key(MACS[i]).led
         return cor if cor is not None else bp.KERNEL_DEFAULT_BLUE
 
     def desejado(self) -> tuple[Any, Any]:
