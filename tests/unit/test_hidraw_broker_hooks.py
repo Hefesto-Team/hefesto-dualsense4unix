@@ -405,6 +405,48 @@ class TestCoopHooks:
         manager._teardown_player(player.identity)
         assert ("restore", "/dev/hidraw7") in wired.broker.calls
 
+    @pytest.mark.parametrize("regra", ["calado", "com-parada"])
+    @pytest.mark.parametrize("indice", [2, 3, 4], ids=["P2", "P3", "P4"])
+    def test_o_cedido_ao_p1_nao_devolve_o_no_que_virou_do_p1(
+        self,
+        wired: _FakeDaemon,
+        monkeypatch: pytest.MonkeyPatch,
+        indice: int,
+        regra: str,
+    ) -> None:
+        """O-APARELHO-QUE-VIRA-P1-SEGUE-ESCONDIDO-DO-JOGO-01: o nó do cedido é do P1."""
+        from hefesto_dualsense4unix.daemon.subsystems import coop
+
+        monkeypatch.setenv(coop.INTERRUPTOR_DO_RECOLHIMENTO, regra)
+        assert coop.recolher_calado() is (regra == coop.RECOLHER_CALADO)
+        mac = f"aabbccddee0{indice}"
+        wired.controller.nodes[mac] = "/dev/hidraw7"
+        manager = self._manager(wired)
+        player = self._player(mac, vpad=_FakeVpad())
+        player.player_index = indice
+        manager._players[mac] = player
+
+        manager.ceder_ao_primario(None, mac)
+        manager._recolher_os_cedidos()
+
+        assert mac not in manager._players
+        assert ("restore", "/dev/hidraw7") not in wired.broker.calls
+
+    def test_o_disable_nao_devolve_o_no_do_cedido_e_devolve_o_do_jogador(
+        self, wired: _FakeDaemon
+    ) -> None:
+        wired.controller.nodes["aabbccddee02"] = "/dev/hidraw7"
+        wired.controller.nodes["aabbccddee03"] = "/dev/hidraw8"
+        manager = self._manager(wired)
+        for mac in ("aabbccddee02", "aabbccddee03"):
+            manager._players[mac] = self._player(mac, vpad=_FakeVpad())
+        manager.ceder_ao_primario(None, "aabbccddee02")
+
+        manager.disable()
+
+        assert ("restore", "/dev/hidraw7") not in wired.broker.calls
+        assert ("restore", "/dev/hidraw8") in wired.broker.calls
+
     def test_teardown_de_externo_nao_fala_com_broker(self, wired: _FakeDaemon) -> None:
         manager = self._manager(wired)
         player = self._player("path:/dev/input/event9", vpad=_FakeVpad())

@@ -1327,7 +1327,9 @@ class CoopManager:
         self._calib_prazo.pop(identity, None)
         self._calib_sem_leitura.discard(identity)
         self._pronto_desde.pop(identity, None)
-        self._broker_restore_player(identity)
+        if not player.cedido_ao_primario:
+            # O nó do cedido é do P1 agora: quem o devolve é o caminho do P1.
+            self._broker_restore_player(identity)
         with contextlib.suppress(Exception):
             player.reader.set_grab(False)
         with contextlib.suppress(Exception):
