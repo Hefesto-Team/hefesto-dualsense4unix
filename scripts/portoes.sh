@@ -13,11 +13,12 @@
 # com qualquer árvore de trabalho. O contrato da casa NÃO é versionado, então
 # ele não pode ser a fonte: uma árvore nova nasce sem ele.
 #
-# E A LISTA TEM PORTÃO PRÓPRIO: `tests/unit/test_portao_a_lista_de_portoes_e_uma_so.py`
-# compara esta tabela com o que o `ci.yml` roda e REPROVA na divergência. Quem
-# acrescentar um job ao CI sem acrescentar a linha aqui é barrado nomeando o
-# script que ficou de fora — que é exatamente o caso do `validar-caducos.py`,
-# agora impossível de repetir.
+# E O COMANDO TAMBÉM MORA SÓ AQUI (10/10/2026): o `ci.yml` chama cada portão
+# pelo id, com `bash scripts/portoes.sh --so <ids>`, e não relista comando.
+# O portão próprio, `tests/unit/test_portao_a_lista_de_portoes_e_uma_so.py`,
+# reprova o id da tabela que nenhum `--so` pede sem declaração, o `--so` que
+# pede id que não existe, o `run:` que chama direto um comando daqui e o
+# script que só o CI roda (o caso do `validar-caducos.py`).
 #
 # PORTÃO DECLARADO E AUSENTE DA ÁRVORE SAI rc=1 NOMEANDO, nunca em silêncio.
 # É a cicatriz do `validar-acentuacao.py --check-file`, que devolvia rc=0 contra
@@ -31,6 +32,8 @@
 #   scripts/portoes.sh --interpretador  só o cabeçalho: qual python, e o que falta nele
 #   scripts/portoes.sh --em-serie   um portão de cada vez, na ordem da lista (a mesma corrida, sem a pressa)
 #   scripts/portoes.sh --sem-memoria  roda todos, sem pular o que já passou sobre os mesmos bytes
+#   scripts/portoes.sh --so ID…     só os portões nomeados, de qualquer camada, com o mesmo motor (id fora da
+#                                   tabela: rc 2, nomeando-o); é assim que o `ci.yml` chama cada portão
 #
 # EM PARALELO E COM MEMÓRIA (06/10/2026, OS-PORTOES-RODAM-EM-PARALELO-E-LEMBRAM-O-VERDE-01). Medido na
 # `integra/1-6`: 66 portões, 664 s somados, um por um, e a mesma árvore verde há cinco minutos rodava os 66
@@ -81,12 +84,17 @@ RAIZ="$(git rev-parse --show-toplevel 2>/dev/null || dirname "$(dirname "$(readl
 # ---------------------------------------------------------------------------
 _LISTA() {
   cat <<'TABELA'
+# IPC-DOC-GERADO-01 (13/08/2026): a lista de métodos IPC sai do dispatcher, não da mão; sem o `--check` um
+# método nascia sem contrato, e o documento chegou a ter dez linhas para 37 métodos.
 rapido|contrato-ipc|py|scripts/gerar-contrato-ipc.py --check
 # 31/08/2026, decisão de produto: este portão passou a cobrir também as planilhas de
 # `docs/data/` — o mapa carregava 762 citações `arquivo:linha` e NENHUMA tinha
 # portão. Nasce em zero (nenhuma aponta além do fim hoje), e continua na camada
 # rápida porque o preço foi medido: 33 ms só `docs/protocol/`, 101 ms com o
 # mapa, o caderno e as decisões de produto juntos -- 903 citações conferidas.
+# CITACOES-DERIVADAS-01 (13/08/2026): o `referencias-docs` confere o ARQUIVO, este confere a LINHA, a metade
+# que apodrece sozinha. Medido no dia: dois endereços da canônica não abriam no que prometiam, e um sustentava
+# um grau «ALTA, lido no código».
 rapido|citacoes-de-linha|py|scripts/validar-citacoes-de-linha.py --all
 # E O `src/` NÃO ESTAVA COBERTO — 06/09/2026, achado da A-PALAVRA-MESA-SAI-01.
 # O portão acima varre `docs/` e as planilhas: 2.977 citações em 21 documentos e
@@ -96,6 +104,8 @@ rapido|citacoes-de-linha|py|scripts/validar-citacoes-de-linha.py --all
 # lado. *"Se dois portões da suíte medem coisa que a lista não roda, o piso tem
 # furo"*, e tinha. Ele entra na camada COMPLETA porque custa ~60 s: ele abre
 # cada arquivo citado e confere a âncora, não só o número de linhas.
+# E o `src/` (06/09/2026): a citação escrita em comentário de código ficava sem portão, e sete endereços
+# mortos atravessaram uma leva inteira com o CI verde ao lado.
 completo|citacoes-no-codigo|pytest|tests/unit/test_portao_o_par_com_metade_ligada.py
 # NADA-MOCKADO-01, 09/09/2026 — a pergunta de produto virou portão: *"não tem nada
 # rodando em sandbox ou mockada, certo?"*. Uma linha do mapa que diz `aciona=sim`
@@ -122,8 +132,11 @@ rapido|quatro-respostas-morde|pytest|tests/unit/test_portao_a_regua_das_quatro_r
 rapido|ate-onde-a-prova-chegou|py|scripts/check_ate_onde_a_prova_chegou.py
 rapido|ate-onde-a-prova-chegou-morde|pytest|tests/unit/test_portao_a_quinta_pergunta_morde.py
 rapido|mapa-de-canais|py|scripts/gerar-mapa.py --check
+# Z6-02 (24/08/2026): o desenho do `gerar-mapa.py --check`, para o módulo Python que o CSV vira no build.
 rapido|fatos-de-tela|py|scripts/gerar-fatos-de-tela.py --check
+# Z6-04 (24/08/2026): a Fala de tela promete só o que o mapa mede.
 rapido|fala-de-tela|py|scripts/validar-fala-de-tela.py --all|@dia
+# Z6-09 (24/08/2026): fato declarado caduco não continua publicado.
 rapido|caducos|py|scripts/validar-caducos.py --all
 # O TEXTO PÚBLICO FALA COM QUEM USA — 28/09/2026: README, docs/usage, .github
 # (menos workflows), NOTICE, CHANGELOG e o metainfo, sem ID, sem «dela» e sem o
@@ -131,7 +144,15 @@ rapido|caducos|py|scripts/validar-caducos.py --all
 rapido|texto-publico|py|scripts/check_texto_publico.py
 rapido|palavra-de-tela|py|scripts/validar-palavra-de-tela.py --all
 rapido|version-consistency|py|scripts/check_version_consistency.py
+# CURVA-TABELA-01 (13/08/2026): o gerador chama `gerar_tabela_markdown`, que vive num módulo pydantic; no
+# Python pelado o import tropeçava e virava «zero curvas» calado. Por isso, no CI, ele roda no job que instala
+# o produto (`lint-test`), e não no dos documentos.
 rapido|curvas|py|scripts/gerar-tabela-de-curvas.py --check
+# A DÍVIDA FOI PAGA EM 15/08/2026, e por isso o censo REPROVA. Ele nasceu `continue-on-error` contra a coluna
+# `teste_que_morde` vazia; das 17 células sem rede, 15 ganharam mordida e 2 tiveram o `de_onde_sei` rebaixado
+# ao que a evidência sustentava, com nota datada. Reprova afirmação forte sem teste que morda, mordida que
+# aponta nó que o pytest não coleta, prova vencida, CSV quebrado e linha que o `specs.html` não publicou.
+# Vermelho se cura escrevendo a mordida ou baixando o `de_onde_sei`, NUNCA devolvendo o `continue-on-error`.
 rapido|paridade-transporte|py|scripts/check_paridade_transporte.py|@dia tests/** src/** docs/data/** docs/specs.html scripts/eliminacao.py
 # 03/09/2026: O TERCEIRO NÚMERO. Os dois outros medem a interface nova contra
 # ela mesma (campos escritos; publicado × mockup) e nenhum responde "o que a GTK
@@ -187,7 +208,12 @@ rapido|broadcast-proibido|py|scripts/check_broadcast_proibido.py|src/**
 # sem argumento — que é o que esta casa manda rodar antes de fechar leva — o
 # alcança; o `--rapido`, que roda a cada salvamento, não paga por ele.
 completo|nada-aponta-para-a-janela|py|scripts/check_nada_aponta_para_a_janela.py
+# BUG-GATE-TEST-DATA-NAO-RODAVA-01 (25/07/2026): reprovava e nenhum workflow o rodava, porque contradizia o
+# anonimato (pedia MAC neutro onde a casa manda OUI:00:00:NN). Curada a contradição, ele vale ao lado do irmão.
 rapido|test-data|bash|scripts/check_test_data.sh
+# PORTAO-DE-ENDERECO-01 (25/08/2026): o `check_anonymity.sh` procura fornecedor e frase de autoria, nunca
+# endereço. Medido no dia: um MAC real, e o mesmo endereço como serial USB de doze hexadecimais, passavam
+# verdes pelo fecho inteiro; duas sprints já tinham copiado o endereço da mantenedora.
 rapido|endereco-de-radio|py|scripts/check_endereco_de_radio.py
 rapido|endereco-dela-em-toda-forma|py|scripts/check_o_endereco_em_toda_forma.py|@sempre
 # O IRMÃO DO DE CIMA, PARA O SERIAL — 03/09/2026, e o pedido é de produto: *"sim, faz
@@ -205,6 +231,10 @@ rapido|endereco-dela-em-toda-forma|py|scripts/check_o_endereco_em_toda_forma.py|
 # A camada é a lição de HOJE: o `mac-por-oui` acusava os 37 endereços crus da
 # manhã, mas era teste da SUÍTE, e a suíte roda no FIM.
 rapido|serial-de-aparelho|py|scripts/check_numero_de_serie.py
+# LUZ-CEGA-01/E8 (25/08/2026): nasceu sem chamador nenhum, e quatro endereços de fixture ficaram três dias no
+# `controllers.json` de produção sem ninguém saber. Roda o modo `--arvore` (o padrão, determinístico); o `--casa`
+# NUNCA vai ao CI, onde o `~/.config` vazio daria verde por vacuidade: o `config_dir()` real é vigiado pela
+# FAIXA-NO-BERCO-01 do `tests/conftest.py`.
 rapido|faixa-sintetica|py|scripts/check_faixa_sintetica.py
 # O comentário cortado compara cada arquivo com o `merge-base` do `dev` (09/10/2026): lê a história
 # e a ref `dev`, que andam sem a árvore mudar, e por isso nunca é lembrado.
@@ -402,6 +432,8 @@ rapido|portoes-lentos-rapidos|pytest|tests/unit/test_os_portoes_lentos_ficam_rap
 # ao ÍNDICE (`git ls-files -ci --exclude-standard`), e por isso roda igual no clone do CI.
 rapido|o-ignorado-fica-fora-do-indice|py|scripts/check_o_ignorado_fica_fora_do_indice.py|@head
 rapido|ruff|bin|ruff check src/ tests/|src/** tests/** pyproject.toml .gitignore
+# O `scripts/ci/*.sh` entrou em 19/08/2026 com o primeiro script da pasta: diretório de scripts que nenhum
+# linter enxerga é portão cego.
 completo|shellcheck|bin|shellcheck -S error scripts/*.sh scripts/ci/*.sh scripts/banco_de_prova/*.sh install.sh uninstall.sh|scripts/*.sh scripts/ci/*.sh scripts/banco_de_prova/*.sh install.sh uninstall.sh
 completo|referencias-docs|py|scripts/validar-referencias-docs.py --all
 completo|anonimato|bash|scripts/check_anonymity.sh
@@ -427,6 +459,10 @@ TABELA
 # AS DIVERGÊNCIAS DECLARADAS. O portão do portão exige que toda diferença entre
 # esta tabela e o `ci.yml` esteja escrita aqui, com o motivo. Diferença
 # declarada é decisão; diferença calada é a M9 de novo.
+#   FORA-DO-CI|script|motivo           está na tabela e não roda no CI
+#   FORA-DO-LOCAL|script|motivo        roda no CI e não está na tabela
+#   ARGUMENTO-DO-EVENTO|script|motivo  o CI o chama DIRETO, com um argumento que só o evento sabe (10/10/2026);
+#                                      com o argumento da tabela, ele é chamado pelo nome, no `--so`
 # ---------------------------------------------------------------------------
 _DIVERGENCIAS() {
   cat <<'DIV'
@@ -435,6 +471,10 @@ FORA-DO-LOCAL|scripts/banco_de_prova/sonda.sh|06/10/2026, O-FORJA-E-O-BANCO-DE-P
 FORA-DO-LOCAL|scripts/i18n_compile.sh|regenera os .mo, que são artefato compartilhado, e não tem forma --check. Portão que reescreve artefato não roda na árvore de agente.
 FORA-DO-CI|scripts/check_o_endereco_em_toda_forma.py|27/09/2026, O-SUFIXO-DO-NO-NAO-ENTREGA-O-ENDERECO-01: pergunta à máquina dela os endereços reais (maquina.json do HOME de verdade, bluetoothctl e sysfs) e procura os octetos 4 e 5 em toda forma; no runner não há endereço nenhum a perguntar, e o portão só diria NÃO MEDIDO (O-SUFIXO-DO-NO-NAO-ENTREGA-O-ENDERECO-01, 27/09).
 FORA-DO-LOCAL|pre-commit|DECISÃO EM ABERTO, e não é minha: ou o framework entra no install.sh sem flag, ou os dez portões do .pre-commit-config.yaml migram para o gancho e o .yaml some (INFRA-DE-EXECUCAO-01, I14 e §9.4). Enquanto não decidido, o CI é o único que o roda -- e esta linha declara isso em vez de fingir que não existe. Medido: `which pre-commit` -> not found nesta máquina.
+ARGUMENTO-DO-EVENTO|scripts/check_paridade_transporte.py|10/10/2026: além do censo pelo nome, o `mapa-de-canais` o chama com `--exigir-id-estavel --contra <ref>`, e o ref é o do evento (o `before` do push, a base do PR), que só o passo anterior do job calcula.
+ARGUMENTO-DO-EVENTO|scripts/check_a_origem.py|10/10/2026: no CI ele recebe `--base` com a faixa do evento (o `BASE_DA_FAIXA` do passo), e em casa mede contra o `dev`.
+ARGUMENTO-DO-EVENTO|scripts/check_autoria.py|10/10/2026: o `autoria.yml` o chama com as refs do evento (`historia origin/dev origin/main <tags>`, `arvore "$REV"`, o texto do PR), que só o runner tem.
+ARGUMENTO-DO-EVENTO|scripts/check_a_coleta_sem_gtk.py|10/10/2026: no CI ele julga (`--julgar`) a coleta que o próprio passo acabou de gravar sem o `gi`; em casa ele coleta sozinho, com o `gi` e o `cairo` bloqueados.
 FORA-DO-LOCAL|scripts/rodar-a-suite.sh|27/09/2026: é a suíte inteira, e em casa ela roda no fecho, com a máquina livre, depois dos portões (a lista «Antes de fechar qualquer leva»): toca nós uinput de verdade e leva quarenta minutos. No CI é o job gtk-real, com o GTK real.
 DIV
 }
@@ -445,8 +485,21 @@ CAMADAS="rapido completo"
 MODO=""
 EM_SERIE=0
 SEM_MEMORIA=0
+# O CI CHAMA OS PORTÕES PELO NOME (10/10/2026, O-CI-CHAMA-OS-PORTOES-PELO-NOME-01). O `ci.yml` relistava, com
+# prosa própria, 67 dos comandos desta tabela, e os argumentos já divergiram calados (o `validar-caducos.py`, o
+# `portao_a_casa_sabe_e_o_produto_nao_faz`). Com `--so` o job diz só QUAIS portões roda: o comando, o
+# interpretador e o lar de mentira do `pytest` são os desta tabela, e a variável `CI` desliga a memória.
+SO_IDS=()
+_LENDO_IDS=0
 for _opcao in "$@"; do
+  if [ "$_LENDO_IDS" -eq 1 ]; then
+    case "$_opcao" in
+      -*) _LENDO_IDS=0 ;;
+      *) SO_IDS+=("$_opcao"); continue ;;
+    esac
+  fi
   case "$_opcao" in
+    --so) _LENDO_IDS=1 ;;
     --listar)
       _LISTA | sed 's/^/PORTAO|/'
       _DIVERGENCIAS
@@ -461,6 +514,27 @@ for _opcao in "$@"; do
     *) echo "ERRO: opção desconhecida '${_opcao}'. Veja $0 --help" >&2; exit 2 ;;
   esac
 done
+# `--so` vale sobre qualquer camada, e o id que a tabela não tem sai rc 2 ANTES de rodar qualquer coisa: um
+# job que pede um portão que saiu da tabela não pode passar verde rodando os outros.
+declare -A SO_DE=()
+if [ "$_LENDO_IDS" -eq 1 ] || [ ${#SO_IDS[@]} -gt 0 ]; then
+  [ ${#SO_IDS[@]} -gt 0 ] || { echo "ERRO: --so sem nenhum id. Veja $0 --listar" >&2; exit 2; }
+  declare -A _NA_TABELA=()
+  while IFS='|' read -r _camada _id _resto; do
+    case "${_camada:-}" in ""|"#"*) continue ;; esac
+    _NA_TABELA["$_id"]=1
+  done < <(_LISTA)
+  _desconhecidos=()
+  for _id in "${SO_IDS[@]}"; do
+    [ -n "${_NA_TABELA[$_id]:-}" ] || _desconhecidos+=("$_id")
+    SO_DE["$_id"]=1
+  done
+  if [ ${#_desconhecidos[@]} -gt 0 ]; then
+    echo "ERRO: portão fora da tabela: ${_desconhecidos[*]}. Veja $0 --listar" >&2
+    exit 2
+  fi
+  CAMADAS="rapido completo suite"
+fi
 
 # --- o interpretador, resolvido e DECLARADO -------------------------------
 #
@@ -545,7 +619,7 @@ _bin() {  # resolve um binário: venv primeiro, PATH depois
 
 echo "portões — árvore ${RAIZ}"
 echo "         python  ${PY}"
-echo "         camadas ${CAMADAS}"
+if [ ${#SO_IDS[@]} -gt 0 ]; then echo "         só      ${SO_IDS[*]}"; else echo "         camadas ${CAMADAS}"; fi
 # O `src/` DESTA árvore vai na frente do PYTHONPATH, sempre.
 #
 # Aqui havia só um AVISO ("PYTHONPATH (vazio) -- armadilha"), e aviso não é
@@ -627,7 +701,9 @@ _AMBIENTE_DE_MENTIRA=(
 # `fechar` em `_sair`, com o rc que este script decide. Só quando a camada
 # `completo` roda: o `--rapido` NUNCA deixa recibo. O recibo não muda o rc.
 RECIBO_DA_CORRIDA=""
-case " $CAMADAS " in
+# o `--so` roda uma parte da tabela, e o recibo é da camada completa INTEIRA: ele nunca o abre
+case " $CAMADAS $([ ${#SO_IDS[@]} -gt 0 ] && echo so) " in
+  *" so "*) ;;
   *" completo "*)
     RECIBO_DA_CORRIDA="$(mktemp "${TMPDIR:-/tmp}/portoes-recibo-XXXXXX")"
     trap 'rm -rf "$LAR_DE_MENTIRA" "$RECIBO_DA_CORRIDA"' EXIT
@@ -682,6 +758,7 @@ while IFS='|' read -r camada id runner argv entradas; do
   [ -z "${camada:-}" ] && continue
   case "$camada" in "#"*) continue ;; esac
   case " $CAMADAS " in *" $camada "*) ;; *) continue ;; esac
+  [ ${#SO_IDS[@]} -gt 0 ] && [ -z "${SO_DE[$id]:-}" ] && continue
   estado="rodar"
 
   # PORTÃO DECLARADO E AUSENTE SAI VERMELHO NOMEANDO. Um script que sumiu da

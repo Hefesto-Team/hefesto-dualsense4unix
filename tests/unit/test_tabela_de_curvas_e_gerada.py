@@ -44,6 +44,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.unit.test_portao_a_lista_de_portoes_e_uma_so import o_passo_chama
+
 RAIZ_REAL = Path(__file__).resolve().parents[2]
 GERADOR = RAIZ_REAL / "scripts" / "gerar-tabela-de-curvas.py"
 DOC_REAL = RAIZ_REAL / "docs" / "protocol" / "curvas-proprias.md"
@@ -184,7 +186,8 @@ def test_a_arvore_de_verdade_esta_atualizada_e_o_portao_esta_no_ci() -> None:
         for nome, job in (dados.get("jobs") or {}).items()
         for passo in job.get("steps") or []
     ]
-    rodam = [p for p in passos if COMANDO in " ".join(str(p.get("run", "")).split())]
+    # direto, ou pelo nome: `bash scripts/portoes.sh --so <id>` (O-CI-CHAMA-OS-PORTOES-PELO-NOME-01)
+    rodam = [p for p in passos if o_passo_chama(COMANDO, p.get("run", ""))]
     assert rodam, f"o CI não chama `{COMANDO}`"
     for passo in rodam:
         assert not passo.get("continue-on-error"), (

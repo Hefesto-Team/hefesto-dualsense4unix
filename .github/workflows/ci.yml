@@ -30,6 +30,11 @@ on:
 permissions:
   contents: read
 
+# O CI CHAMA OS PORTÕES PELO NOME (10/10/2026, O-CI-CHAMA-OS-PORTOES-PELO-NOME-01). O comando, o motivo e o
+# interpretador de cada portão moram na tabela do `scripts/portoes.sh`; um job diz só QUAIS roda, com
+# `bash scripts/portoes.sh --so <ids>`. Aqui fica o que prepara a máquina (dependências, Xvfb, a suíte, o
+# pacote) e o portão que recebe argumento do evento, declarado `ARGUMENTO-DO-EVENTO` na tabela. Quem confere
+# é o `tests/unit/test_portao_a_lista_de_portoes_e_uma_so.py`.
 jobs:
   anonymity:
     runs-on: ubuntu-latest
@@ -39,7 +44,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - run: bash scripts/check_anonymity.sh
       # O QUE OS PORTÕES DESTE JOB IMPORTAM — 25/09/2026
       # (O-CI-DA-DEV-VOLTA-A-VERDE-01). Este job rodava no `python3` pelado do
       # runner, e a corrida 36119169814 reprovou no segundo passo com
@@ -75,103 +79,9 @@ jobs:
           "$RUNNER_TEMP/venv/bin/pip" install --upgrade pip
           "$RUNNER_TEMP/venv/bin/pip" install -e ".[dev]"
           echo "$RUNNER_TEMP/venv/bin" >> "$GITHUB_PATH"
-      - run: python3 scripts/check_pecas_do_dualsense.py
-      # O irmão do de cima, para a COR: os 28 modelos do
-      # docs/data/cores-do-dualsense.csv contra o que o navegador pinta, zona a
-      # zona. Duas réguas independentes — a leitura dos CSV e a pintura no
-      # Chrome —, porque a primeira é cega para style inline, que vence folha.
-      - run: python3 scripts/check_cores_do_dualsense.py
-      # O TERCEIRO DA FAMÍLIA DO CHROME — 20/09/2026. Os dois de cima perguntam
-      # ao navegador sobre o DESENHO do controle; este pergunta sobre a CAIXA: o
-      # cartão da aba 02 cabe no orçamento que `aba02.PARA_O_CARD` declara, e
-      # nenhum rótulo dele sai cortado. Ele nasceu porque a fileira da saída de
-      # som empilhou para caber nos nomes que ela escreveu, e o preço daquele
-      # empilhamento tinha de virar trava em vez de aparecer na tela dela.
-      - run: python3 scripts/check_a_altura_do_cartao.py
-      - run: python3 scripts/check_regua_de_tela.py
-      # PORTAO-DE-ENDERECO-01 (25/08/2026): o irmão acima procura nomes de
-      # fornecedor e frases de autoria; ele NUNCA olhou um endereço de rádio,
-      # embora as instruções da casa prometessem um portão para isso. Medido
-      # no dia: um arquivo com um MAC real E com o mesmo endereço na forma de
-      # serial USB de doze hexadecimais passava verde por todo o bloco de fim
-      # de leva. Duas sprints já tinham copiado o endereço
-      # da mantenedora quando este portão nasceu.
-      - run: python3 scripts/check_endereco_de_radio.py
-      # O IRMÃO DELE PARA O SERIAL (03/09/2026, a pedido dela): o endereço de
-      # rádio e o número de série identificam a mesma unidade. Este mede pela
-      # FORMA — 15 a 20 maiúsculas e dígitos, com pelo menos 2 letras e 6
-      # dígitos —, porque listar os seriais reais aqui seria o vazamento que
-      # ele existe para impedir.
-      - run: python3 scripts/check_numero_de_serie.py
-      - run: python3 -m pytest tests/unit/test_docs_mac_anonimato.py -q
-      - run: python3 -m pytest tests/unit/test_anonimato_de_fixtures.py -q
-      # BUG-GATE-TEST-DATA-NAO-RODAVA-01 (25/07): o check_test_data.sh existia,
-      # reprovava, e NÃO era executado por workflow nenhum — o único jeito de
-      # descobrir era rodá-lo à mão. Ele reprovava porque contradizia o gate de
-      # anonimato (exigia MAC neutro onde a convenção da casa manda OUI:00:00:NN);
-      # corrigida a contradição, ele volta a valer aqui, ao lado do irmão.
-      - run: bash scripts/check_test_data.sh
-      # LUZ-CEGA-01/E8 (25/08/2026): o `check_faixa_sintetica.py` nasceu em
-      # 24/08 e ficou sem chamador NENHUM — nem aqui, nem em gancho, nem na
-      # lista local de portões. Portão que ninguém chama é o defeito
-      # `A-CASA-SABE-E-O-PRODUTO-NÃO-FAZ`, e foi assim que quatro endereços de
-      # fixture ficaram três dias no `controllers.json` de produção dela sem
-      # ninguém saber. Aqui roda o modo `--arvore` (o default), que varre a
-      # ÁRVORE VERSIONADA atrás de artefato de tempo de execução commitado: é
-      # determinístico e não depende de `$HOME`. O modo `--casa`, que olha o
-      # `config_dir()` real, NÃO roda no CI de propósito — lá o `~/.config`
-      # está vazio e a resposta seria verde por vacuidade. Quem vigia o
-      # `config_dir()` real é a FAIXA-NO-BERCO-01 do `tests/conftest.py`.
-      - run: python3 scripts/check_faixa_sintetica.py
-      # 08/10/2026: o comentário cortado e o `#:` solto não sobem em arquivo nenhum contra o `dev` (piso por arquivo).
-      - run: python3 scripts/check_comentario_cortado.py
 
-      # INFRA-DE-EXECUCAO-01/I15 (25/08/2026): a posse de arquivo de cada
-      # sprint tem UM formato, e uma máquina o lê. O defeito que ele fecha foi
-      # medido sobre as vinte e três sprints de 24/08 — o mesmo campo aparecia
-      # com DEZ rótulos diferentes, e nenhuma máquina os lia. Custou quatro
-      # colisões de posse não declaradas em 23/08, e duas frentes
-      # reivindicando os MESMOS quatro arquivos sem que ninguém visse.
-      #
-      # Ele nasce reprovando ZERO de propósito: sprint sem frontmatter entra
-      # numa lista de DÍVIDA, não numa reprovação — um portão que reprova
-      # vinte e três de uma vez é um portão que alguém desliga na segunda.
-      # A pressão fica no DESPACHO, e funciona: em 25/08 ele recusou quatro
-      # despachos de uma leva, que teve de declarar a posse.
-      #
-      # Roda no `python3` pelado, sem PyYAML: analisador próprio, estrito, que
-      # RECUSA o que não entende dizendo a linha.
-      - run: python3 scripts/check_o_desenho_aprovado.py
-      - run: python3 scripts/check_os_quatro_lugares.py
-      - run: python3 scripts/check_identidade_vem_de_cima.py
-      - run: python3 scripts/check_a_cor_vem_do_aparelho.py
-      - run: python3 scripts/check_a_tela_nao_confessa.py
-      # A moldura: a barra de título, o `.desktop` e a unit — o que ela lê
-      # ANTES de qualquer página, e o que as duas réguas de corpo não alcançam.
-      - run: python3 scripts/check_a_janela_nao_confessa.py
-      # A caixa alta que não significa nada — 11/09/2026. Ela leu `CABO` na fita
-      # e `cabo` no cartão logo abaixo: *"Esse tipo de coisa não pode se repetir
-      # na interface."* Duas peneiras, o texto e a FOLHA — o `CABO` não estava
-      # escrito em lugar nenhum, quem gritava era uma linha de CSS.
-      - run: python3 scripts/check_a_maiuscula_decorativa.py
-      # Só a primeira letra é maiúscula — 09/10/2026,
-      # SO-A-PRIMEIRA-LETRA-E-MAIUSCULA-EM-TODA-ABA-01. No meio da frase, só
-      # nome próprio e marca: «Salvar perfil», nunca «Salvar Perfil».
-      - run: python3 scripts/check_so_a_primeira_letra.py
-      # A grafia do nome — 11/09/2026, `F6-O-NOME-TEM-UM-DONO`. O `S` é do
-      # DualSense, e `utils/identidade.py` o escrevia em minúscula em 427
-      # linhas de 186 arquivos. Duas peneiras: a grafia, e o DONO — a moldura
-      # que DIGITA o nome reprova mesmo com a grafia certa, porque o nome
-      # digitado em dois lugares é a próxima divergência esperando acontecer.
-      - run: python3 scripts/check_a_grafia_do_nome.py
-      - run: python3 -m pytest tests/unit/test_portao_a_grafia_do_nome_morde.py -q
-      # A catraca da tradução — TRADUZIR-O-PROJETO-01, 20/09/2026. Três números
-      # que não sobem: arquivo fora das zonas de língua, unidade de tela sem
-      # endereço de tradução (hoje PENDENTE, e pendente NÃO é verde) e bytes de
-      # comentário dentro das dez páginas publicadas. Ele não traduz nada e não
-      # pede mutirão: cobra de quem escreve a linha nova.
-      - run: python3 scripts/check_o_projeto_e_traduzivel.py
-      - run: python3 -m pytest tests/unit/test_o_projeto_e_traduzivel_morde.py -q
+      - name: Os portões do job, pelo nome na tabela
+        run: bash scripts/portoes.sh --so anonimato pecas-do-dualsense cores-do-dualsense altura-do-cartao regua-de-tela endereco-de-radio serial-de-aparelho mac-por-oui mac-de-fixture test-data faixa-sintetica comentario-cortado desenho-aprovado os-quatro-lugares identidade-de-cima cor-vem-do-aparelho tela-nao-confessa janela-nao-confessa maiuscula-decorativa maiuscula-decorativa-morde so-a-primeira-letra grafia-do-nome grafia-do-nome-morde projeto-traduzivel projeto-traduzivel-morde
 
   acentuacao:
     name: Acentuação PT-BR estrita (py${{ matrix.python }})
@@ -195,8 +105,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
-      - name: Varredura estrita
-        run: python3 scripts/validar-acentuacao.py --all
+      - name: Os portões do job, pelo nome na tabela
+        run: bash scripts/portoes.sh --so acentuacao
 
   glifos:
     name: Glifos (emoji proibido, forma geométrica preservada)
@@ -212,8 +122,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Varredura de glifos
-        run: python3 scripts/validar-glifos.py --all
+      - name: Os portões do job, pelo nome na tabela
+        run: bash scripts/portoes.sh --so glifos
 
   palavra-de-tela:
     name: Palavra de tela (maiúscula no rótulo, jargão aposentado fora)
@@ -235,8 +145,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Varredura da palavra de tela
-        run: python3 scripts/validar-palavra-de-tela.py --all
+      - name: Os portões do job, pelo nome na tabela
+        run: bash scripts/portoes.sh --so palavra-de-tela
 
   referencias-docs:
     name: Documento que cita arquivo, env ou método de IPC inexistente
@@ -275,37 +185,8 @@ jobs:
       # `tests/conftest.py` cede a vez quando as dependências dele não estão).
       - name: Instalar o pytest
         run: python -m pip install pytest
-      - name: Varredura de referências
-        run: python3 scripts/validar-referencias-docs.py --all
-      # O TEXTO PÚBLICO FALA COM QUEM USA (28/09/2026): o README, as páginas de
-      # uso, os modelos do .github, o NOTICE, o CHANGELOG e o metainfo, sem ID,
-      # sem «dela» e sem o vocabulário de quem constrói. A mesma linha do
-      # scripts/portoes.sh.
-      - name: O texto público fala com quem usa
-        run: python3 scripts/check_texto_publico.py
-      # NADA QUE O .gitignore EXCLUI ENTRA NO REPOSITÓRIO (09/10/2026): o
-      # `git add -f` passa por cima do .gitignore; a pergunta é ao índice, e o
-      # clone responde igual à árvore de casa. A mesma linha do scripts/portoes.sh.
-      - name: O ignorado fica fora do índice
-        run: python3 scripts/check_o_ignorado_fica_fora_do_indice.py
-      # CITACOES-DERIVADAS-01 (13/08). O passo acima confere o ARQUIVO; este
-      # confere a LINHA, que é a metade que apodrece sozinha — nenhuma
-      # refatoração renomeia `core/backend_pydualsense.py`, e toda refatoração
-      # move o que estava na linha 789 dele. MEDIDO em 13/08 na árvore: dois
-      # endereços da canônica não abriam no que prometiam, e um deles sustentava
-      # um grau **ALTA — lido no código**.
-      - name: Citação de linha que não abre no que promete
-        run: python3 scripts/validar-citacoes-de-linha.py --all
-      # E O `src/` — 06/09/2026. O passo acima varre `docs/` e as planilhas; a
-      # citação escrita em COMENTÁRIO DE CÓDIGO ficava sem portão, e sete
-      # endereços mortos atravessaram uma leva inteira com o CI verde ao lado.
-      - name: Citação de linha em comentário de código
-        run: python3 -m pytest tests/unit/test_portao_o_par_com_metade_ligada.py -q
-      # IPC-DOC-GERADO-01 (13/08): a lista de métodos IPC sai do dispatcher, não
-      # da mão. Sem este passo um método nasce sem contrato e ninguém percebe —
-      # que é como o documento chegou a ter dez linhas para 37 métodos.
-      - name: O contrato IPC publicado reflete o dispatcher
-        run: python3 scripts/gerar-contrato-ipc.py --check
+      - name: Os portões do job, pelo nome na tabela
+        run: bash scripts/portoes.sh --so referencias-docs texto-publico o-ignorado-fica-fora-do-indice citacoes-de-linha citacoes-no-codigo contrato-ipc
 
   mapa-de-canais:
     name: Mapa de canais (o publicado bate com as fontes + o censo)
@@ -362,83 +243,10 @@ jobs:
           else
             echo "ref=HEAD~1" >> "$GITHUB_OUTPUT"
           fi
-      # NADA-MOCKADO-01 (09/09/2026): a pergunta dela — "não tem nada rodando
-      # em sandbox ou mockada, certo?" — virou portão. Uma linha do mapa que
-      # diz `aciona=sim` afirma que o APARELHO faz aquilo, e tem de trazer
-      # `provado_por` ou uma ressalva declarada. Trava a dívida onde ela está.
-      - name: Nada é afirmado no mapa sem prova nem ressalva
-        run: python3 -m pytest tests/unit/test_portao_nada_e_afirmado_sem_prova.py -q
-      # CABO-BT-PERFIL-CONTROLE-01 (09/09/2026): a régua de pronto dela — toda
-      # feature da TELA responde cabo? rádio? no perfil? por controle? A lista
-      # de features é lida dos `data-gesto` das dez páginas publicadas.
-      - name: Toda feature da tela responde as quatro perguntas
-        run: python3 scripts/check_cabo_bt_perfil_controle.py
-      - name: A régua das quatro respostas morde
-        run: python3 -m pytest tests/unit/test_portao_a_regua_das_quatro_respostas.py -q
-      # TUDO-FUNCIONA-01 (09/09/2026): a QUINTA pergunta — até onde a PROVA de
-      # cada feature da tela chegou. As quatro acima leem `*_aciona`; esta lê a
-      # escada `*_ate_onde_foi`, e cobra CUSTO e DONA de cada falta.
-      - name: Até onde a prova de cada feature da tela chegou
-        run: python3 scripts/check_ate_onde_a_prova_chegou.py
-      - name: A régua da quinta pergunta morde
-        run: python3 -m pytest tests/unit/test_portao_a_quinta_pergunta_morde.py -q
-      - name: O specs.html publicado reflete o CSV e os desenhos
-        run: python3 scripts/gerar-mapa.py --check
-      # Z6-02 (24/08/2026): o mesmo desenho do `gerar-mapa.py --check` acima,
-      # para o módulo Python que o CSV vira em build time.
-      - name: Os fatos de tela refletem o CSV
-        run: python3 scripts/gerar-fatos-de-tela.py --check
-      # Z6-04 (24/08/2026): a Fala de tela promete só o que o mapa mede.
-      - name: A fala da tela bate com o mapa
-        run: python3 scripts/validar-fala-de-tela.py --all
-      # Z6-09 (24/08/2026): fato declarado caduco não pode continuar publicado.
-      - name: Nenhum fato caduco publicado nas superfícies vivas
-        run: python3 scripts/validar-caducos.py --all
-      # A DÍVIDA FOI PAGA EM 15/08/2026, e por isso este passo REPROVA.
-      #
-      # Ele nasceu informativo (`continue-on-error: true`) contra o CSV de
-      # 11/08, quando a coluna `teste_que_morde` estava INTEIRA VAZIA e toda
-      # célula que afirmava `aciona = sim` com `de_onde_sei = medido` reprovava.
-      # (A coluna se chamava `confianca` até a D-13 de 15/08/2026, que a
-      # renomeou sem mudar o domínio.)
-      # O comentário de então prometia, literalmente, que *"o
-      # `continue-on-error` sai no dia em que ela é paga"* — e o dia chegou:
-      # das 17 células sem rede que sobravam, 15 ganharam teste que morde e 2
-      # tiveram o `de_onde_sei` rebaixado para o que a evidência de fato
-      # sustentava (`luz.led_microfone@dualsense` no cabo, que era leitura de
-      # fonte e não medição; e `plataforma.vigia_zumbi@sn30` no rádio, onde o
-      # medido é o BURACO — a vigia pula todo aparelho com `[ServiceRecords]`
-      # no cache).
-      #
-      # Rebaixar não é derrota: é o portão fazendo o trabalho dele. As duas
-      # levaram nota datada, e nada foi apagado.
-      #
-      # O que este passo reprova, a partir de agora: afirmação forte sem teste
-      # que morda, mordida que aponta um nó que o pytest não coleta, prova
-      # vencida, integridade do CSV e linha do CSV que ninguém publicou no
-      # `specs.html`. Se ele voltar a ficar vermelho, o conserto é escrever a
-      # mordida ou baixar o `de_onde_sei` — NÃO devolver o `continue-on-error`.
-      - name: Censo do mapa (afirmação forte sem teste que morda)
-        run: python3 scripts/check_paridade_transporte.py
       # Z6-07: a regra 17. Referência que não resolve REPROVA alto (nunca sai
       # 0 calada) — é o `contra-nao-resolve` do próprio script.
       - name: O id do mapa não sumiu em silêncio
         run: python3 scripts/check_paridade_transporte.py --exigir-id-estavel --contra "${{ steps.contra.outputs.ref }}"
-      # O TERCEIRO NÚMERO (03/09/2026): a paridade da interface em HTML com a
-      # janela GTK, 396 features com endereço dos dois lados. Ele não confere o
-      # CSV contra o CSV — cada linha carrega um SINAL que a régua procura no
-      # FONTE, e uma dívida FECHADA reprova para o dado ser reescrito.
-      - name: O terceiro número (paridade GTK × HTML)
-        run: python3 scripts/check_paridade_gtk_html.py
-      # OS CONTRATOS DE FORA (07/10/2026): ponto de contato novo com o mundo do outro se declara
-      # no censo, com a porta oficial e a pergunta por capacidade; a catraca só desce.
-      - name: Os contratos de fora (censo e catraca)
-        run: python3 scripts/check_os_contratos_de_fora.py
-      # O DONO DE CADA COMPORTAMENTO (05/09/2026): o mapa dos 50 comportamentos
-      # que decidem a migração, com o endereço do dono dos dois lados. Reprova
-      # endereço morto, cura descosturada, SO-GTK já migrado, e dívida que cresce.
-      - name: Cada comportamento tem um dono só
-        run: python3 scripts/check_donos_de_comportamento.py
       # A CATRACA DA ORIGEM (03/10/2026): caso especial fora do dono do eixo e
       # remendo de sintoma só descem, e o projeto que cresce diz `Origem: <id>` na
       # faixa de commits (o `before` do push, ou a base do pull request).
@@ -446,24 +254,8 @@ jobs:
         env:
           BASE_DA_FAIXA: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: python3 scripts/check_a_origem.py ${BASE_DA_FAIXA:+--base "$BASE_DA_FAIXA"}
-      # A DECISÃO TEM PROVA (06/10/2026, DECISAO-SEM-DONO-01): decisão dela decidida e sem
-      # função de teste que a cite (ou sem a marca `processo`) reprova nomeada; o piso desce pelo
-      # `--aceitar` e só sobe à mão.
-      - name: Cada decisão decidida tem prova
-        run: python3 scripts/check_a_decisao_tem_prova.py
-      # BROADCAST PROIBIDO (06/10/2026, OS-PORTOES-QUE-NINGUEM-CHAMA-01): rota de saída que
-      # escreve em todo controle conectado sem perguntar o seletor reprova nomeada.
-      - name: Nenhuma rota de saída escreve em todos sem escopo
-        run: python3 scripts/check_broadcast_proibido.py
-      # NADA NOVO APONTA PARA A JANELA (06/09/2026, sprint GTK-1). Decisão dela
-      # (D-0609-GTK-LEVA-INTEIRA): *"a ideia sempre foi reaproveitar o que fiz no
-      # gtk e não apontar nada mais pra lá mas pro html"*. A janela GTK sai em
-      # três sprints; enquanto ela sai, a lista de quem ainda aponta para lá
-      # (`docs/data/o-que-ainda-aponta-para-a-janela.csv`, 255 pares · 522
-      # citações) SÓ DIMINUI. Citação nova reprova nomeando arquivo e linha;
-      # linha nova no CSV sem veredito reprova.
-      - name: Nada novo aponta para a janela GTK
-        run: python3 scripts/check_nada_aponta_para_a_janela.py
+      - name: Os portões do job, pelo nome na tabela
+        run: bash scripts/portoes.sh --so nada-mockado quatro-respostas quatro-respostas-morde ate-onde-a-prova-chegou ate-onde-a-prova-chegou-morde mapa-de-canais fatos-de-tela fala-de-tela caducos paridade-transporte paridade-gtk-html contratos-de-fora donos-de-comportamento decisao-tem-prova broadcast-proibido nada-aponta-para-a-janela
 
   shellcheck:
     name: Shellcheck (severidade error)
@@ -485,11 +277,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Versão do shellcheck (vem no runner)
         run: shellcheck --version
-      # `scripts/ci/*.sh` entrou em 19/08/2026 com o primeiro script daquela
-      # pasta: um diretório de scripts que nenhum linter enxerga é exatamente o
-      # padrão de portão cego que o `install-multi-distro` nasceu para fechar.
-      - name: Varredura em severidade error
-        run: shellcheck -S error scripts/*.sh scripts/ci/*.sh scripts/banco_de_prova/*.sh install.sh uninstall.sh
+      - name: Os portões do job, pelo nome na tabela
+        run: bash scripts/portoes.sh --so shellcheck
 
   banco-de-prova-sonda:
     name: Sonda do banco de prova (só à mão)
@@ -539,8 +328,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y librsvg2-bin
-      - name: Conferir que os PNGs refletem o SVG
-        run: bash scripts/gerar_icones.sh --check
+      - name: Os portões do job, pelo nome na tabela
+        run: bash scripts/portoes.sh --so icones
 
   packaging-parity:
     name: Paridade de empacotamento
@@ -552,7 +341,8 @@ jobs:
     # que alguém acrescentar uma regra nova, descobrir a divergência custa caro.
     steps:
       - uses: actions/checkout@v4
-      - run: bash scripts/check_packaging_parity.sh
+      - name: Os portões do job, pelo nome na tabela
+        run: bash scripts/portoes.sh --so packaging-parity
 
   promessa-sem-caminho:
     name: A casa sabe e o produto não faz
@@ -573,7 +363,8 @@ jobs:
         with:
           python-version: "3.10"
       - run: python -m pip install --upgrade pip && pip install pytest
-      - run: python -m pytest tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py -q
+      - name: Os portões do job, pelo nome na tabela
+        run: bash scripts/portoes.sh --so casa-sabe
       # OS SEIS PORTÕES DA TELA E DO INTERPRETADOR MORAVAM AQUI, e saíram para
       # o job `gtk-real` em 25/09/2026 (O-CI-DA-DEV-VOLTA-A-VERDE-01). Eles
       # entraram neste job em 04/09 porque o portão do portão só pede que o
@@ -592,7 +383,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: python scripts/check_version_consistency.py
+      - name: Os portões do job, pelo nome na tabela
+        run: bash scripts/portoes.sh --so version-consistency
 
   version-sync:
     name: Sync fallback __init__.py vs pyproject.toml (CHORE-VERSION-SYNC-GATE-01)
@@ -695,15 +487,9 @@ jobs:
             echo "$OVERSIZE"
             exit 1
           fi
-      - name: Ruff
-        run: ruff check src/ tests/
-      # CURVA-TABELA-01 (13/08). Ele mora AQUI, e não no job dos documentos, por
-      # uma razão de dependência: o gerador chama `gerar_tabela_markdown`, que
-      # vive num módulo pydantic — e os jobs de documento rodam com o Python pelado
-      # do runner. Portão que tropeça no import vira "zero curvas" em silêncio, e
-      # gate silencioso é o defeito de que a PORTÃO-VIVO-01 nasceu.
-      - name: A tabela de curvas próprias reflete o catálogo
-        run: python3 scripts/gerar-tabela-de-curvas.py --check
+      # o `curvas` mora no job que instala o produto: o gerador importa pydantic (CURVA-TABELA-01, na tabela)
+      - name: Os portões do job, pelo nome na tabela
+        run: bash scripts/portoes.sh --so ruff curvas
       # O CENSO DE COLETA (O-CENSO-DE-COLETA-SEGUE-A-ARVORE-01, 06/10/2026). Um módulo que some da coleta
       # some CALADO (GUARDA-GI-REAL-01). O passo comparava a coleta com um número escrito num dia (o `PISO`,
       # 8100 em 15/08); a árvore foi de 472 a 1.668 módulos e o número ficou 65% abaixo dela, sem guardar
@@ -860,25 +646,23 @@ jobs:
           assert Gtk.Box is not object, 'o venv ignora o PyGObject do sistema'
           print('o venv enxerga o gi real:', gi.__file__)
           "
-      # OS SEIS PORTÕES DA TELA E DO INTERPRETADOR, vindos do job «A casa sabe
+      # OS PORTÕES DA TELA E DO INTERPRETADOR, vindos do job «A casa sabe
       # e o produto não faz» em 25/09/2026 (O-CI-DA-DEV-VOLTA-A-VERDE-01; a
       # razão está escrita lá). Aqui eles têm o que pedem: o interpretador
       # completo na `.venv` desta árvore, o GTK real e a tela de mentira. Vêm
-      # ANTES do passo grande de propósito: um vermelho lá não os cala.
+      # ANTES do passo grande de propósito: um vermelho lá não os cala. Desde
+      # 10/10/2026 vêm junto os quatro portões de pytest da tabela que só a
+      # suíte alcançava, agora chamados pelo nome.
       - name: Portões da tela e do interpretador (TELA-DELA)
         env:
           HEFESTO_EXIGE_GTK_REAL: "1"
           GDK_BACKEND: x11
           NO_AT_BRIDGE: "1"
-        run: |
-          xvfb-run -a --server-args="-screen 0 1280x1024x24" \
-            .venv/bin/python -m pytest -q \
-              tests/unit/test_o_portao_declara_o_interpretador.py \
-              tests/unit/test_a_tela_nao_recebe_janela_de_teste.py \
-              tests/unit/test_o_instrumento_nao_abre_na_tela_do_usuario.py \
-              tests/unit/test_a_frase_que_ela_baniu_nao_chega_a_tela.py \
-              tests/unit/test_o_piloto_aponta_para_a_propria_arvore.py \
-              tests/unit/test_a_suite_mede_esta_arvore.py
+        # o `portoes.sh` acha a `.venv` desta árvore e põe o Xvfb (`xvfb-run -a`, 1280x1024x24) na frente do pytest
+        run: >-
+          bash scripts/portoes.sh --so interpretador-do-portao a-tela-dela o-instrumento-e-a-tela a-frase-banida
+          o-piloto-e-a-arvore src-desta-arvore portao-tem-chamador gesto-em-lugar-vazio gesto-onde-deve-04
+          portoes-lentos-rapidos
       # HEFESTO_EXIGE_GTK_REAL=1 vira a chave da guarda: aqui, "pulei porque
       # não tenho GTK" não é sucesso, é REPROVAÇÃO. Se o ambiente degradar, o
       # job fala; não fica verde por omissão.
@@ -988,11 +772,8 @@ jobs:
           sudo apt-get install -y libhidapi-dev libhidapi-hidraw0 libudev-dev libxi-dev
       - name: Instalar Hefesto - DualSense4Unix em modo dev
         run: pip install -c constraints.txt -e ".[dev]"
-      - name: Mypy
-        run: mypy src/hefesto_dualsense4unix
-      # 09/10/2026: os arquivos de teste que já passam no mypy (`tests/mypy-limpos.txt`, só cresce).
-      - name: Mypy dos testes limpos
-        run: mypy --follow-imports=silent @tests/mypy-limpos.txt
+      - name: Os portões do job, pelo nome na tabela
+        run: bash scripts/portoes.sh --so mypy mypy-testes
 
   runtime-smoke:
     runs-on: ubuntu-latest

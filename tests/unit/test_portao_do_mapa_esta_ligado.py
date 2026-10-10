@@ -5,6 +5,8 @@ from pathlib import Path
 
 import yaml
 
+from tests.unit.test_portao_a_lista_de_portoes_e_uma_so import o_passo_chama
+
 RAIZ = Path(__file__).resolve().parents[2]
 CI = RAIZ / ".github" / "workflows" / "ci.yml"
 PRE_COMMIT = RAIZ / ".pre-commit-config.yaml"
@@ -24,12 +26,8 @@ def passos_do_ci() -> list[dict]:
 
 
 def passos_que_rodam(agulha: str) -> list[dict]:
-    """Os passos cujo `run` contém o comando. Comentário do YAML não conta."""
-    return [
-        passo
-        for passo in passos_do_ci()
-        if agulha in " ".join(str(passo.get("run", "")).split())
-    ]
+    """Os passos que rodam o comando, direto ou pelo nome no `--so`. Comentário não conta."""
+    return [passo for passo in passos_do_ci() if o_passo_chama(agulha, passo.get("run", ""))]
 
 
 def test_o_ci_chama_o_check_do_mapa() -> None:

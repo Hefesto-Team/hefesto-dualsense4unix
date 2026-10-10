@@ -10,6 +10,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.unit.test_portao_a_lista_de_portoes_e_uma_so import o_ci_chama
+
 RAIZ = Path(__file__).resolve().parents[2]
 _SCRIPT = RAIZ / "scripts" / "check_os_contratos_de_fora.py"
 _spec = importlib.util.spec_from_file_location("check_os_contratos_de_fora", _SCRIPT)
@@ -206,7 +208,8 @@ def test_universo_vazio_nao_e_verde(tmp_path):
 def test_o_portao_esta_na_lista():
     texto = (RAIZ / "scripts/portoes.sh").read_text(encoding="utf-8")
     assert "rapido|contratos-de-fora|py|scripts/check_os_contratos_de_fora.py" in texto
-    assert "check_os_contratos_de_fora.py" in (RAIZ / ".github/workflows/ci.yml").read_text(
-        encoding="utf-8"
+    assert o_ci_chama(
+        "scripts/check_os_contratos_de_fora.py",
+        (RAIZ / ".github/workflows/ci.yml").read_text(encoding="utf-8"),
     )
     assert shutil.which("python3")

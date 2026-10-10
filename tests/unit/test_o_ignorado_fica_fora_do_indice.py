@@ -1,4 +1,4 @@
-"""Nada que o `.gitignore` exclui entra no repositório: o portão pergunta ao índice, não ao disco."""
+"""Nada que o `.gitignore` exclui entra no repositório: o portão pergunta ao índice."""
 
 from __future__ import annotations
 
@@ -95,7 +95,7 @@ def test_a_isencao_nasce_vazia() -> None:
 
 
 def test_sem_git_nao_sai_verde(tmp_path: Path) -> None:
-    """Sem índice não há medida: a primeira linha diz NÃO MEDIDO, que o `portoes.sh` não conta como verde."""
+    """Sem índice não há medida: a primeira linha diz NÃO MEDIDO, que não conta como verde."""
     nada = tmp_path / "sem-git"
     nada.mkdir()
     feito = subprocess.run(
@@ -107,7 +107,12 @@ def test_sem_git_nao_sai_verde(tmp_path: Path) -> None:
 
 
 def test_o_portao_esta_na_lista_e_no_ci() -> None:
-    linha = "rapido|o-ignorado-fica-fora-do-indice|py|scripts/check_o_ignorado_fica_fora_do_indice.py|@head"
+    linha = ("rapido|o-ignorado-fica-fora-do-indice|py|"
+             "scripts/check_o_ignorado_fica_fora_do_indice.py|@head")
     assert linha in (RAIZ / "scripts" / "portoes.sh").read_text(encoding="utf-8")
-    assert "scripts/check_o_ignorado_fica_fora_do_indice.py" in (
-        RAIZ / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    from tests.unit.test_portao_a_lista_de_portoes_e_uma_so import o_ci_chama
+
+    assert o_ci_chama(
+        "scripts/check_o_ignorado_fica_fora_do_indice.py",
+        (RAIZ / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8"),
+    )

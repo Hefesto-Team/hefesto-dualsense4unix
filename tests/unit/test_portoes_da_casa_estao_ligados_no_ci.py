@@ -7,6 +7,8 @@ from pathlib import Path
 import pytest
 import yaml
 
+from tests.unit.test_portao_a_lista_de_portoes_e_uma_so import ids_do_so, tabela
+
 RAIZ = Path(__file__).resolve().parents[2]
 CI = RAIZ / ".github" / "workflows" / "ci.yml"
 # O `autoria.yml` também roda portão da lista: a régua única de autoria.
@@ -117,12 +119,23 @@ def em_posicao_de_comando(comando: str, portao: str) -> bool:
     return all(t in INTERPRETADORES or _ATRIBUICAO.fullmatch(t) for t in antes)
 
 
+def pelo_nome(comando: str, portao: str) -> bool:
+    """O comando é um `portoes.sh --so` que nomeia um id deste script?
+
+    O-CI-CHAMA-OS-PORTOES-PELO-NOME-01 (10/10/2026): o CI chama os portões pelo nome.
+    """
+    ids = {id_ for id_, (_, _, argv) in tabela(PORTOES_SH.read_text(encoding="utf-8")).items()
+           if argv.split()[0] == portao}
+    return bool(ids & set(ids_do_so(comando)))
+
+
 def linhas_que_rodam(passo: dict, portao: str) -> list[str]:
-    """As linhas do passo em que o portão é de fato executado."""
+    """As linhas do passo em que o portão é de fato executado: direto, ou pelo nome no `--so`."""
     return [
         linha
         for linha in linhas_de_comando(passo.get("run", ""))
-        if any(em_posicao_de_comando(comando, portao) for comando in comandos(linha))
+        if any(em_posicao_de_comando(comando, portao) or pelo_nome(comando, portao)
+               for comando in comandos(linha))
     ]
 
 

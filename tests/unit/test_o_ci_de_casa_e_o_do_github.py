@@ -664,3 +664,19 @@ def test_job_que_fica_fora_de_casa_nao_roda_calado(mundo: Mundo) -> None:
 def test_o_modo_e_pedido(mundo: Mundo) -> None:
     r = mundo.rodar()
     assert r.returncode == 2 and "--rapido" in r.stderr
+
+
+def test_o_ci_de_casa_nao_tem_lista_propria_de_portoes() -> None:
+    """O `ci-local.sh` roda o YAML pelo `act`; o comando de cada portão mora só na tabela.
+
+    O-CI-CHAMA-OS-PORTOES-PELO-NOME-01 (10/10/2026): uma terceira cópia dos comandos aqui
+    seria a mesma divergência calada que o `--so` tirou do `ci.yml`.
+    """
+    from tests.unit.test_portao_a_lista_de_portoes_e_uma_so import PORTOES_SH, tabela
+
+    texto = SCRIPT.read_text(encoding="utf-8")
+    citados = sorted(
+        id_ for id_, (_, runner, argv) in tabela(PORTOES_SH.read_text(encoding="utf-8")).items()
+        if runner != "bin" and argv.split()[0] in texto
+    )
+    assert not citados, f"o ci-local.sh cita o comando de portão da tabela: {citados}"
