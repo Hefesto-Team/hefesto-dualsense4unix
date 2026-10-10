@@ -1938,6 +1938,55 @@ def editor_ambiente(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] 
     return _dizer(f"“{prof.name}” agora vale em: {rotulo}")
 
 
+def _sem_o_ajuste_do_estilo(controllers: Any, *, gatilho: bool,
+                            vibracao: bool) -> tuple[dict[str, Any], int]:
+    """O mapa `controllers` sem o gatilho e o degrau da vibração por controle.
+
+    O estilo é a escolha mais nova para o perfil INTEIRO (O-ESTILO-CHEGA-AO-GATILHO-
+    E-A-VIBRACAO-DE-CADA-CONTROLE-01, a validar por ela): no aparelho o ajuste do
+    controle vence o global, e o «Guardar» da aba Gatilhos grava sempre no do
+    controle; sem esta limpeza, o controle cujo gatilho ela guardou ignorava todo
+    estilo dali em diante. Sai `triggers` e, de `rumble`, só `policy` e
+    `custom_mult`, de TODA entrada (o controle desligado também herda quando
+    voltar). Sair é deixar o `model_fields_set`, que é o que o disco grava
+    (`exclude_unset`), e não gravar `None` por cima. Luz, som, microfone,
+    sensores, máscara e o equilíbrio dos motores e da háptica ficam.
+
+    Devolve o mapa novo e QUANTOS controles deixaram o ajuste próprio.
+    """
+    from hefesto_dualsense4unix.profiles.schema import (
+        ControllerOverrides,
+        ControllerRumbleOverride,
+    )
+
+    saida: dict[str, Any] = {}
+    largaram = 0
+    for uniq, cfg in dict(controllers or {}).items():
+        campos = {k: getattr(cfg, k) for k in cfg.model_fields_set}
+        mudou = tinha = False
+        if gatilho and "triggers" in campos:
+            mudou = True
+            tinha = campos.pop("triggers") is not None
+        rumble = campos.get("rumble")
+        degrau = (rumble.model_fields_set & {"policy", "custom_mult"}
+                  if vibracao and rumble is not None else set())
+        if degrau and rumble is not None:
+            mudou = True
+            tinha = tinha or any(getattr(rumble, k) is not None for k in degrau)
+            resto = rumble.model_fields_set - degrau
+            if resto:
+                campos["rumble"] = ControllerRumbleOverride(
+                    **{k: getattr(rumble, k) for k in resto})
+            else:
+                campos.pop("rumble")
+        if not mudou:
+            saida[uniq] = cfg
+        elif campos:
+            saida[uniq] = ControllerOverrides(**campos)
+        largaram += int(tinha)
+    return saida, largaram
+
+
 def _com_o_estilo(prof: Any, estilo: Any, mesa: list[dict[str, Any]]) -> tuple[Any, int]:
     """O perfil com a receita do estilo dentro, e QUANTOS controles ganharam cor.
 
@@ -2019,7 +2068,8 @@ def _com_o_estilo(prof: Any, estilo: Any, mesa: list[dict[str, Any]]) -> tuple[A
     if mudou:
         mudanca["mode"] = secao
 
-    atuais = dict(prof.controllers or {})
+    atuais, largaram = _sem_o_ajuste_do_estilo(
+        prof.controllers, gatilho=bool(estilo.gatilho), vibracao=bool(estilo.vibracao))
     lugares: dict[int, str] = {}
     pintados = 0
     for controle in mesa:
@@ -2044,7 +2094,7 @@ def _com_o_estilo(prof: Any, estilo: Any, mesa: list[dict[str, Any]]) -> tuple[A
         atuais[uniq] = dele.model_copy(
             update={"leds": com_o_brilho_das_luzes_de(dele.leds, novos)})
         pintados += 1
-    if pintados:
+    if pintados or largaram:
         mudanca["controllers"] = atuais
     return prof.model_copy(update=mudanca), pintados
 
@@ -2115,14 +2165,19 @@ def editor_estilo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
             f"“{estilo.rotulo}” não mexe em nada: é o estilo que diz “eu ajusto "
             f"na mão”. O que vale em “{nome}” continua sendo o que está nas abas.")
     prof = _o_perfil_no_disco(nome)
+    _, largaram = _sem_o_ajuste_do_estilo(
+        prof.controllers, gatilho=bool(estilo.gatilho), vibracao=bool(estilo.vibracao))
     novo, pintados = _com_o_estilo(prof, estilo, ctx.mesa)
     _gravar(novo, ctx, p)
     luz = (f"e a luz de {pintados} controle{'s' if pintados != 1 else ''}"
            if pintados else "e nenhum controle ligado para acender")
     invisivel = estilo.receita_invisivel
     modo = ", e o modo Navegação" if invisivel and invisivel.modo else ""
+    proprio = (f" {largaram} controle{'s deixaram' if largaram != 1 else ' deixou'} "
+               f"o ajuste próprio de gatilho e vibração." if largaram else "")
     return _dizer(
-        f"“{estilo.rotulo}” aplicado em “{prof.name}”: gatilho, vibração {luz}{modo}.")
+        f"“{estilo.rotulo}” aplicado em “{prof.name}”: gatilho, vibração {luz}{modo}."
+        f"{proprio}")
 
 
 @gesto("10-perfis.html", "editor.jogo", grava="_gravar")
