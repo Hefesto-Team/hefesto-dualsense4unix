@@ -1,0 +1,93 @@
+{
+  "aba": "calibrar-sensores",
+  "nome": "Calibrar sensores de movimento",
+  "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/_integra-1-11/src/hefesto_dualsense4unix/interface/paginas/calibrar-sensores.html",
+  "depois": "~/.local/state/hefesto-casa/leva-volta/todo/calibrar-sensores.html",
+  "mudancas": [
+    {
+      "n": 1,
+      "sprint": "CADA-FEATURE-TEM-UM-DONO-SO-NA-INTERFACE-01",
+      "o_que_muda": "O liga e os botões Esquerdo/Direito do analógico virtual saem do cartão; fica o selo de leitura «Analógico virtual: desligado», com a dica «Liga e escolhe o lado na aba Controles.».",
+      "origem": "recomendada-a-escolher",
+      "ancora": ".mira-topo.leitura; .selo-av",
+      "conflito": "Opção recomendada do BRIEF-T7 (a 02 é a dona); a outra segue com ela."
+    },
+    {
+      "n": 2,
+      "sprint": "O-BOTAO-DIREITO-ABRE-O-MENU-DO-HEFESTO-EM-TODA-ABA-01",
+      "o_que_muda": "Menu do botão direito (Copiar apagado, Atualizar, Desligar ou Ligar, Reiniciar, Fechar), no trecho comum das abas; no todo aparece aberto sobre a coluna vazia do P3, só para se ver. Ordem dela de 12/10: o «Desligar/Ligar» faz o mesmo que o Desligado/Ligado da bandeja (o mesmo plano de IPC da aba Jogar: o Hefesto sai da frente e o jogo lê o controle direto, em modo nativo; o serviço segue de pé; o Ligar sobe o serviço se estiver parado), e a dica do item diz isso.",
+      "origem": "recomendada-a-escolher",
+      "ancora": "#todo-menu-direito",
+      "conflito": "BRIEF-T6: menu do sistema (A, aplicado) ou desenhado (B); o Desligar é o interruptor da aba Jogar (aplicado) ou o Parar do serviço da 09."
+    },
+    {
+      "n": 3,
+      "sprint": "OS-ALVOS-E-A-LETRA-CRESCEM-E-A-INTERFACE-GANHA-TAMANHO-01",
+      "o_que_muda": "Os três «?» e todo [data-gesto] passam a ter no mínimo 24 px (o trecho comum #todo-alvos).",
+      "origem": "recomendada-a-escolher",
+      "ancora": "#todo-alvos; .ajuda[data-todo]",
+      "conflito": "Opção 1 da sprint (24 px); as outras opções seguem com ela."
+    }
+  ],
+  "por_baixo": [
+    {
+      "sprint": "O-CURSOR-DA-MIRA-ANDA-DEVAGAR-LOGO-ACIMA-DA-ZONA-MORTA-01",
+      "o_que_muda": "O «Ignorar tremor até 3 graus/s» passa a valer de verdade; o controle é o mesmo."
+    },
+    {
+      "sprint": "A-INTERFACE-INTEIRA-SE-ALCANCA-PELO-CONTROLE-E-PELO-TECLADO-01",
+      "o_que_muda": "A caixa ganha role=dialog, aria-modal e aria-label."
+    },
+    {
+      "sprint": "O-TEMA-DE-CORES-ENTRA-PELA-FOLHA-DE-USUARIO-01",
+      "o_que_muda": "Só tokens do :root."
+    }
+  ],
+  "fora": [
+    {
+      "sprint": "NO-MODO-XBOX-TUDO-FUNCIONA-01",
+      "motivo": "Espera ela; nada nestas páginas."
+    },
+    {
+      "sprint": "A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01",
+      "motivo": "Espera ela; nada nestas páginas."
+    },
+    {
+      "sprint": "A-MIRA-PELO-GIRO-VALE-EM-JOGO-QUE-SO-FALA-XBOX-01",
+      "motivo": "Caducou."
+    },
+    {
+      "sprint": "I18N-DA-TELA-NOVA-01",
+      "motivo": "Fora da leva; nada de texto novo depende dela."
+    },
+    {
+      "sprint": "TRADUZIR-O-PROJETO-01",
+      "motivo": "Fora da leva; nada de texto novo depende dela."
+    },
+    {
+      "sprint": "A-MIRA-DA-CALIBRAR-E-A-MESMA-DAS-OUTRAS-ABAS-01",
+      "motivo": "Já costurada na 1-11: está no antes."
+    },
+    {
+      "sprint": "O-NEUTRO-DA-INCLINACAO-RECENTRA-COM-O-CONTROLE-PARADO-01",
+      "motivo": "Já costurada na 1-11: está no antes."
+    },
+    {
+      "sprint": "O-ANALOGICO-VIRTUAL-E-UM-SO-COM-O-LADO-ESCOLHIDO-01",
+      "motivo": "Já costurada na 1-11: está no antes."
+    },
+    {
+      "sprint": "O-COMECAR-DA-CALIBRAR-GUARDA-O-ZERO-DE-CADA-CONTROLE-01",
+      "motivo": "Já costurada na 1-11: está no antes."
+    },
+    {
+      "sprint": "A-CALIBRAR-GRAVA-O-ZERO-DESCONTA-EM-TODO-CAMINHO-E-CABE-A-940-PX-01",
+      "motivo": "Já costurada na 1-11: está no antes."
+    }
+  ],
+  "altura_px": 809,
+  "rola": false,
+  "notas": [
+    "Os dois botões do Inverter empilhados já estão no antes; mantidos."
+  ]
+}

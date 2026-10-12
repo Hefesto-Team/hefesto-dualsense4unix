@@ -1,0 +1,190 @@
+{
+ "aba": "04",
+ "nome": "Iluminação",
+ "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/_integra-1-11/src/hefesto_dualsense4unix/interface/paginas/04-iluminacao.html",
+ "depois": "~/.local/state/hefesto-casa/leva-volta/todo/04-iluminacao.html",
+ "mudancas": [
+  {
+   "n": 1,
+   "sprint": "O-BOTAO-DIREITO-ABRE-O-MENU-DO-HEFESTO-EM-TODA-ABA-01",
+   "o_que_muda": "O botão direito abre o menu do Hefesto (Copiar, Atualizar, Desligar, Reiniciar, Fechar) no lugar do menu do WebKit; o mockup o mostra aberto num vazio da cena, e o Copiar fica cinza sem seleção. Ordem dela de 12/10: o «Desligar/Ligar» faz o mesmo que o Desligado/Ligado da bandeja (o mesmo plano de IPC da aba Jogar: o Hefesto sai da frente e o jogo lê o controle direto, em modo nativo; o serviço segue de pé; o Ligar sobe o serviço se estiver parado), e a dica do item diz isso.",
+   "origem": "recomendada-a-escolher",
+   "ancora": "#todo-menu-direito",
+   "conflito": "Duas perguntas do BRIEF-T6 abertas: menu do sistema (A, aplicado) ou desenhado (B); e o Desligar é o interruptor da aba Jogar (aplicado) ou o Parar do serviço da aba Sistema."
+  },
+  {
+   "n": 2,
+   "sprint": "OS-ALVOS-E-A-LETRA-CRESCEM-E-A-INTERFACE-GANHA-TAMANHO-01",
+   "o_que_muda": "Todo alvo pequeno chega a 24 px (WCAG 2.5.8), com a mesma letra: o ? passa de 17 a 24 px; as onze casas de cor passam de 16x26 a 24x24 e quebram em duas fileiras (6 + 5), com a linha do dono embaixo de cada uma, e a linha Cor cresce de 46 para 89 px; o trilho do brilho ganha 24 px de área de toque com o desenho igual. Todo [data-gesto] tem no mínimo 24 px, como nas outras abas, e o código da cor que reenvia também.",
+   "origem": "recomendada-a-escolher",
+   "ancora": "#todo-alvos; .ajuda; .par-modo; .guia; .puxador",
+   "conflito": "A sprint espera o desenho e não tem recomendação: apliquei a opção 1 (alvos de 24 px, mesma letra). A letra mínima de 12 px e o Tamanho da interface do Sistema ficam para a escolha dela."
+  },
+  {
+   "n": 3,
+   "sprint": "ordem dela de 12/10, 14h40 (sprint a escrever: O-MODO-AUTOMATICO-E-UM-BOTAO-SO-01)",
+   "o_que_muda": "O par «Modo automático | Modo personalizado» e o ? dele dão lugar a um botão só, «Modo automático». Ligado: o jogo pinta a barra e, sem cor do jogo, cada controle acende a cor do plástico; as colunas ficam apagadas. A explicação vai para a dica do botão. Volta 2: o botão tem cor própria nos dois estados — desligado, contorno e anel em ciano com a letra clara (não some no fundo); ligado, o fundo enche de ciano e a bolinha acende.",
+   "origem": "ordem-dela-12-10",
+   "ancora": ".modo-auto[data-gesto=modo-da-luz]",
+   "conflito": null
+  }
+ ],
+ "por_baixo": [
+  {
+   "sprint": "A-INTERFACE-INTEIRA-SE-ALCANCA-PELO-CONTROLE-E-PELO-TECLADO-01",
+   "o_que_muda": "Foco, Tab, Esc e o X do controle alcançam toda ação e o ?; só atributos, a foto não muda."
+  },
+  {
+   "sprint": "O-NUMERO-DA-BARRA-NAO-CONGELA-NO-VALOR-VELHO-01",
+   "o_que_muda": "O número da barra sai da alavanca quando o voo termina; o gesto lê a alavanca, nunca o texto."
+  },
+  {
+   "sprint": "A-ALTURA-E-A-LARGURA-DA-JANELA-NAO-PULSAM-01",
+   "o_que_muda": "A janela para de crescer e encolher sozinha (medir o 100dvh, o repinte e a folga do mudo)."
+  },
+  {
+   "sprint": "A-JANELA-REGISTRA-O-PROPRIO-TAMANHO-E-O-MOTIVO-DE-FECHAR-01",
+   "o_que_muda": "O registro guarda o tamanho da janela e o motivo de fechar."
+  },
+  {
+   "sprint": "O-TEMA-DE-CORES-ENTRA-PELA-FOLHA-DE-USUARIO-01",
+   "o_que_muda": "O tema entra pela folha de usuário; no tema padrão nada muda, e as peças novas usam só os tokens do :root."
+  }
+ ],
+ "fora": [
+  {
+   "sprint": "O-DESLIGADO-DEIXA-O-JOGO-DECIDIR-01",
+   "motivo": "Código feito na 1.5; falta a bancada dela. O desenho de 04/10 («O jogo decide» no gatilho, a frase «O jogo pinta por cima» na 04) foi trocado em 06/10 pelo par Modo automático | Modo personalizado (O-MODO-AUTOMATICO-E-O-PERSONALIZADO-01, já no publicado): vale o mais novo, e a tela não muda."
+  },
+  {
+   "sprint": "A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01",
+   "motivo": "Respostas dela de 29/09 (cor do plástico, piso com escala) já no código e no publicado; falta a prova dela com a luz na mão."
+  },
+  {
+   "sprint": "A-PALETA-MARCA-A-COR-DE-CADA-CONTROLE-01",
+   "motivo": "A linha do dono (D-2909-A-LINHA-DA-COR-DO-DONO) já no publicado; falta o olho dela na aba 04."
+  },
+  {
+   "sprint": "A-MIRA-NA-NAVEGACAO-01",
+   "motivo": "A dica do número (item 7) e a cor no Nativo (item 6) já no publicado; o resto é motor da Navegação."
+  },
+  {
+   "sprint": "O-FISICO-NASCE-ESCONDIDO-EM-QUALQUER-MAQUINA-01",
+   "motivo": "Regra de udev e política do repositório; a tela não muda."
+  },
+  {
+   "sprint": "A-AUTORIA-SE-MEDE-PELA-LISTA-DE-QUEM-PODE-01",
+   "motivo": "Regra de udev e política do repositório; a tela não muda."
+  },
+  {
+   "sprint": "O-JOGO-DOS-ACESSORIOS-CHEGA-A-ABA-VIBRACAO-E-AS-JANELAS-01",
+   "motivo": "Na 04 só empresta o seletor de cor à janela Acessórios; a aba não muda."
+  },
+  {
+   "sprint": "A-ILUMINACAO-GANHA-A-REACAO-AO-TIRO-NO-DESENHO-01",
+   "motivo": "Absorvida pela O-ESTILO-DO-JOGO-LIGA-A-IMERSAO-INTEIRA (escolha dela de 08/10): a reação ao tiro é receita invisível do estilo."
+  },
+  {
+   "sprint": "O-TEXTO-DO-GATILHO-DIZ-O-QUE-O-CODIGO-FAZ-HOJE-01",
+   "motivo": "Só comentário do código."
+  },
+  {
+   "sprint": "O-COMENTARIO-COM-DOIS-PONTOS-SO-VALE-EM-CIMA-DE-ATRIBUICAO-01",
+   "motivo": "Só comentário do código."
+  },
+  {
+   "sprint": "A-COR-ESCOLHIDA-ACOMPANHA-O-CONTROLE-01",
+   "motivo": "Já no publicado da 1-11."
+  },
+  {
+   "sprint": "A-LINHA-DA-COR-ESCOLHIDA-TEM-A-COR-DO-CONTROLE-01",
+   "motivo": "Já no publicado da 1-11."
+  },
+  {
+   "sprint": "O-BRILHO-BAIXO-QUE-ELA-NAO-ESCOLHEU-01",
+   "motivo": "Já no publicado da 1-11."
+  },
+  {
+   "sprint": "O-CARTAO-ABERTO-DIZ-O-NUMERO-DO-JOGADOR-01",
+   "motivo": "Já no publicado da 1-11."
+  },
+  {
+   "sprint": "A-LINHA-MODELO-DIZ-O-NOME-DO-JOGADOR-01",
+   "motivo": "Já no publicado da 1-11."
+  },
+  {
+   "sprint": "O-ESCOPO-SAI-DAS-ABAS-01",
+   "motivo": "Já no publicado da 1-11."
+  },
+  {
+   "sprint": "O-MODO-AUTOMATICO-E-O-PERSONALIZADO-01",
+   "motivo": "Já no publicado da 1-11."
+  },
+  {
+   "sprint": "O-X-VOLTA-COM-A-COR-DO-PLASTICO-01",
+   "motivo": "Já no publicado da 1-11."
+  },
+  {
+   "sprint": "A-LINHA-DO-SALVAR-DIZ-O-GESTO-E-O-QUE-MUDOU-01",
+   "motivo": "Já no publicado da 1-11."
+  },
+  {
+   "sprint": "A-LUZ-RESPIRA-A-CADA-TIRO-01",
+   "motivo": "Já no publicado da 1-11."
+  },
+  {
+   "sprint": "AS-QUATRO-LINHAS-DA-08-SEM-DONO-GANHAM-DONO-OU-SAEM-DO-DESENHO-01",
+   "motivo": "Já no publicado da 1-11."
+  },
+  {
+   "sprint": "O-ESTILO-DO-JOGO-LIGA-A-IMERSAO-INTEIRA-EM-TODO-MODO-01",
+   "motivo": "Já no publicado da 1-11."
+  },
+  {
+   "sprint": "O-NOME-DO-JOGADOR-TEM-UM-DONO-SO-01",
+   "motivo": "Já no publicado da 1-11."
+  },
+  {
+   "sprint": "CADA-FEATURE-TEM-UM-DONO-SO-NA-INTERFACE-01",
+   "motivo": "Nenhum dos casos dela cai nesta aba (são das 01, 02, 06, 07, 09, 10 e da Calibrar)."
+  },
+  {
+   "sprint": "SO-A-PRIMEIRA-LETRA-E-MAIUSCULA-EM-TODA-ABA-01",
+   "motivo": "Já no publicado da 1-11 (b3222fa9f); os rótulos novos nascem assim."
+  },
+  {
+   "sprint": "A-TELA-PERGUNTA-AO-DONO-01",
+   "motivo": "Já no publicado da 1-11."
+  },
+  {
+   "sprint": "O-SELECIONAR-ACENDE-QUEM-ESTA-ESCOLHIDO-01",
+   "motivo": "Já no publicado da 1-11."
+  },
+  {
+   "sprint": "A-NAVEGACAO-INTERNA-E-UM-MODO-QUE-SE-LIGA-EM-QUALQUER-ABA-01",
+   "motivo": "Já no publicado da 1-11."
+  },
+  {
+   "sprint": "DESLIGAR-O-HEFESTO-DEVOLVE-O-CONTROLE-AO-LINUX-01",
+   "motivo": "Já no publicado da 1-11."
+  },
+  {
+   "sprint": "O-SALVAR-E-O-APLICAR-LEEM-O-PERFIL-01",
+   "motivo": "Código na base desde a5da60f3d; falta só a prova no aparelho, que é dela. A tela não muda."
+  },
+  {
+   "sprint": "I18N-DA-TELA-NOVA-01",
+   "motivo": "Por ordem dela, a tradução é a última coisa, depois do release 1."
+  },
+  {
+   "sprint": "TRADUZIR-O-PROJETO-01",
+   "motivo": "Por ordem dela, a tradução é a última coisa, depois do release 1."
+  },
+  {
+   "sprint": "MESA-DE-QUATRO-01",
+   "motivo": "Bancada com os quatro controles; não muda a tela."
+  }
+ ],
+ "altura_px": 809,
+ "rola": false
+}

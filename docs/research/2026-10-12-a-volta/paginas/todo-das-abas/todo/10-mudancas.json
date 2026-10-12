@@ -1,0 +1,181 @@
+{
+  "aba": "10",
+  "nome": "Perfis",
+  "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/_integra-1-11/src/hefesto_dualsense4unix/interface/paginas/10-perfis.html",
+  "depois": "~/.local/state/hefesto-casa/leva-volta/todo/10-perfis.html",
+  "mudancas": [
+    {
+      "n": 1,
+      "sprint": "O-PERFIL-SE-ACHA-PELO-NOME-DO-JOGO-E-SE-APLICA-EM-QUATRO-ALVOS-01",
+      "o_que_muda": "A frase «14 perfis · 3 de 4…» do topo sai.",
+      "origem": "recomendada-a-escolher",
+      "ancora": ".quadro-topo",
+      "conflito": ""
+    },
+    {
+      "n": 2,
+      "sprint": "O-PERFIL-GUARDA-A-DATA-EM-QUE-NASCEU-E-A-DA-ULTIMA-MUDANCA-01",
+      "o_que_muda": "A lista ganha as colunas «Criado em» e «Modificado em» (data ou «—» no perfil antigo); a dica do cabeçalho diz «Quando o perfil nasceu.».",
+      "origem": "desenho-nosso-a-validar",
+      "ancora": "th[data-coluna=criado]; td.data",
+      "conflito": "A ordem e a largura das colunas são nossas, e os nomes também: ela pediu «Data de Criação» e «Data de Modificação» (12/10); o todo usa «Criado em» e «Modificado em», mais curtos. As duas colunas entram no lugar de «Preferência» e «Funciona em», como ela pediu; com isso sai o rótulo «Só quando eu escolher» da coluna «Funciona em» (ESCOLHAS de 08/10, SO-O-FREESTYLE-VALE-EM-TODO-JOGO-01): o pedido de 12/10 é o mais novo e vence."
+    },
+    {
+      "n": 3,
+      "sprint": "O-PERFIL-SE-ACHA-PELO-NOME-DO-JOGO-E-SE-APLICA-EM-QUATRO-ALVOS-01",
+      "o_que_muda": "O editor abre com «Nome do jogo» (com sugestões dos jogos instalados); saem Detectar, o rótulo ao lado, o campo Nome e a Preferência.",
+      "origem": "recomendada-a-escolher",
+      "ancora": ".campo[data-todo='3']",
+      "conflito": "BRIEF-T4 opção A aplicada. O nome «Freestyle» é recusado por baixo."
+    },
+    {
+      "n": 4,
+      "sprint": "O-PERFIL-SE-ACHA-PELO-NOME-DO-JOGO-E-SE-APLICA-EM-QUATRO-ALVOS-01",
+      "o_que_muda": "«Aplicar em»: Jogos (escolhido), Navegação, Programas e Eventos, todos habilitados; a dica do Eventos é a do BRIEF-T4 («Momentos do jogo (cena, menu, pausa), gatilhos do sistema (controle conectado, programa aberto, hora) e avisos para extensões.»).",
+      "origem": "recomendada-a-escolher",
+      "ancora": ".seg.alvos",
+      "conflito": "Resolvido na conferência: o todo é o depois de todas as sprints, e a P10 (O-GATILHO-E-A-HAPTICA-DO-JOGO-VIRAM-EVENTOS-PARA-AS-EXTENSOES-01) dá o motor do Eventos; o chip fica habilitado e sai o «Chega com as extensões.», que confessava dívida. A pergunta 2 do BRIEF-T4 (apagado agora ou só quando funcionar) segue com ela para o produto de antes da P10.",
+      "tambem": [
+        "O-GATILHO-E-A-HAPTICA-DO-JOGO-VIRAM-EVENTOS-PARA-AS-EXTENSOES-01"
+      ]
+    },
+    {
+      "n": 5,
+      "sprint": "O-PERFIL-SE-ACHA-PELO-NOME-DO-JOGO-E-SE-APLICA-EM-QUATRO-ALVOS-01",
+      "o_que_muda": "«Qual vale primeiro»: lista arrastável dos perfis do mesmo jogo (Mortal Kombat, Mortal Kombat online). O perfil «Mortal Kombat online» entrou na lista só para a demonstração.",
+      "origem": "recomendada-a-escolher",
+      "ancora": ".ordem-vale; tr[data-hef-perfil='Mortal Kombat online']",
+      "conflito": ""
+    },
+    {
+      "n": 6,
+      "sprint": "O-PERFIL-SE-ACHA-PELO-NOME-DO-JOGO-E-SE-APLICA-EM-QUATRO-ALVOS-01",
+      "o_que_muda": "Botões «Perfis de point and click» e «Criar perfil de point and click» sob a lista.",
+      "origem": "recomendada-a-escolher",
+      "ancora": ".botoes.pac",
+      "conflito": ""
+    },
+    {
+      "n": 7,
+      "sprint": "AS-MARCAS-VISUAL-NOVEL-E-ADULTO-SE-SOMAM-AO-ESTILO-01",
+      "o_que_muda": "O select do estilo mostra o estilo guardado no perfil («Luta»).",
+      "origem": "implementada-na-fds",
+      "ancora": "select do estilo de jogo",
+      "conflito": "Na fds, commit 5fa799d63."
+    },
+    {
+      "n": 8,
+      "sprint": "O-ESTILO-NATIVO-DEIXA-O-JOGO-DECIDIR-01",
+      "o_que_muda": "Opção «Nativo» no topo do select do estilo, com a dica «O jogo decide.».",
+      "origem": "desenho-nosso-a-validar",
+      "ancora": "option[data-todo='8']",
+      "conflito": "O lugar no select é dela."
+    },
+    {
+      "n": 9,
+      "sprint": "AS-MARCAS-VISUAL-NOVEL-E-ADULTO-SE-SOMAM-AO-ESTILO-01",
+      "o_que_muda": "Chips de marca «Visual novel», «Adulto» e «+» ao lado do estilo, apagados quando fora.",
+      "origem": "desenho-escolhido",
+      "ancora": ".marcas",
+      "conflito": "A opção A «escolhida em 09/10» só aparece no BRIEF-T3 e no BRIEF-T7; não achei a frase dela em outro lugar."
+    },
+    {
+      "n": 10,
+      "sprint": "O-BOTAO-DIREITO-ABRE-O-MENU-DO-HEFESTO-EM-TODA-ABA-01",
+      "o_que_muda": "Menu do botão direito (Copiar apagado, Atualizar, Desligar ou Ligar, Reiniciar, Fechar), no trecho comum das abas; no todo aparece aberto sobre a coluna de datas da lista (a 10 não tem vazio; cobre só linhas de exemplo), só para se ver. Ordem dela de 12/10: o «Desligar/Ligar» faz o mesmo que o Desligado/Ligado da bandeja (o mesmo plano de IPC da aba Jogar: o Hefesto sai da frente e o jogo lê o controle direto, em modo nativo; o serviço segue de pé; o Ligar sobe o serviço se estiver parado), e a dica do item diz isso.",
+      "origem": "recomendada-a-escolher",
+      "ancora": "#todo-menu-direito",
+      "conflito": "BRIEF-T6: menu do sistema (A, aplicado) ou desenhado (B); o Desligar é o interruptor da aba Jogar (aplicado) ou o Parar do serviço da 09."
+    },
+    {
+      "n": 11,
+      "sprint": "OS-ALVOS-E-A-LETRA-CRESCEM-E-A-INTERFACE-GANHA-TAMANHO-01",
+      "o_que_muda": "Os quatro «?» e todo [data-gesto] passam a ter no mínimo 24 px (o trecho comum #todo-alvos).",
+      "origem": "recomendada-a-escolher",
+      "ancora": "#todo-alvos; .ajuda[data-todo]",
+      "conflito": "Opção 1 da sprint (24 px); as outras opções seguem com ela."
+    },
+    {
+      "n": 12,
+      "sprint": "SO-A-PRIMEIRA-LETRA-E-MAIUSCULA-EM-TODA-ABA-01",
+      "o_que_muda": "A opção do estilo passa a «Point and click».",
+      "origem": "desenho-escolhido",
+      "ancora": "option[data-todo='12']",
+      "conflito": "Regra dela de 05/10 (primeira maiúscula em toda tela), como no mapa-das-portas, mudança 7."
+    }
+  ],
+  "por_baixo": [
+    {
+      "sprint": "O-EDITOR-DA-ABA-PERFIS-SO-GRAVA-NO-PERFIL-QUE-MOSTRA-01",
+      "o_que_muda": "Nada na tela."
+    },
+    {
+      "sprint": "O-ATIVAR-DA-ABA-PERFIS-AGE-SOBRE-O-PERFIL-QUE-O-EDITOR-MOSTRA-01",
+      "o_que_muda": "O botão Ativar é o mesmo."
+    },
+    {
+      "sprint": "A-GUARDA-DO-EDITOR-ACHA-O-AJUSTE-DE-CADA-CONTROLE-01",
+      "o_que_muda": "Nada na tela."
+    },
+    {
+      "sprint": "O-SALVAR-E-O-APLICAR-LEEM-O-PERFIL-01",
+      "o_que_muda": "Nada na tela."
+    },
+    {
+      "sprint": "O-ESTILO-CHEGA-AO-GATILHO-E-A-VIBRACAO-DE-CADA-CONTROLE-01",
+      "o_que_muda": "Nada na tela."
+    },
+    {
+      "sprint": "O-PERSONALIZADO-DESLIGA-A-RECEITA-DO-ESTILO-ANTERIOR-01",
+      "o_que_muda": "Nada na tela."
+    },
+    {
+      "sprint": "A-RECEITA-DO-TATO-SE-LE-SEM-SEMEAR-NEM-VARRER-01",
+      "o_que_muda": "Nada na tela."
+    },
+    {
+      "sprint": "O-POINT-AND-CLICK-SERVE-A-VISUAL-NOVEL-01",
+      "o_que_muda": "A marca Visual novel liga o point and click por baixo."
+    },
+    {
+      "sprint": "CADA-FEATURE-TEM-UM-DONO-SO-NA-INTERFACE-01",
+      "o_que_muda": "A 10 não edita botão; a régua só confirma."
+    },
+    {
+      "sprint": "A-INTERFACE-INTEIRA-SE-ALCANCA-PELO-CONTROLE-E-PELO-TECLADO-01",
+      "o_que_muda": "As 15 linhas da lista ganham tabindex=0."
+    },
+    {
+      "sprint": "O-TEMA-DE-CORES-ENTRA-PELA-FOLHA-DE-USUARIO-01",
+      "o_que_muda": "Só tokens do :root."
+    }
+  ],
+  "fora": [
+    {
+      "sprint": "NO-MODO-XBOX-TUDO-FUNCIONA-01",
+      "motivo": "Espera ela; nada nestas páginas."
+    },
+    {
+      "sprint": "A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01",
+      "motivo": "Espera ela; nada nestas páginas."
+    },
+    {
+      "sprint": "A-MIRA-PELO-GIRO-VALE-EM-JOGO-QUE-SO-FALA-XBOX-01",
+      "motivo": "Caducou."
+    },
+    {
+      "sprint": "I18N-DA-TELA-NOVA-01",
+      "motivo": "Fora da leva; nada de texto novo depende dela."
+    },
+    {
+      "sprint": "TRADUZIR-O-PROJETO-01",
+      "motivo": "Fora da leva; nada de texto novo depende dela."
+    },
+    {
+      "sprint": "O-ESTILO-DO-PERFIL-LIGA-O-MOTOR-DO-TATO-01",
+      "motivo": "Já costurada na 1-11: está no antes."
+    }
+  ],
+  "altura_px": 809,
+  "rola": false
+}

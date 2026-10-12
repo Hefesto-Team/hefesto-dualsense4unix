@@ -1,0 +1,62 @@
+{
+ "aba": "mapa-do-radio",
+ "nome": "Mapa do rádio",
+ "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/_integra-1-11/src/hefesto_dualsense4unix/interface/paginas/mapa-do-radio.html",
+ "depois": "~/.local/state/hefesto-casa/leva-volta/todo/mapa-do-radio.html",
+ "mudancas": [
+  {
+   "n": 1,
+   "sprint": "A-PONTE-SE-OTIMIZA-ATE-QUATRO-NO-ULTRA-NUM-ADAPTADOR-01",
+   "o_que_muda": "O contador de pontes de cada entrada passa a «n/cabem», com o cabem calculado por entrada (pontesQueCabem) no lugar do 2 fixo; na cena de exemplo o número segue 0/2 e 4/2.",
+   "origem": "implementada-na-fds",
+   "ancora": "[data-campo=lugar-pontes]",
+   "conflito": "Costurada na integra/1-11 (o mockup já tem), falta o --publicar do fecho."
+  },
+  {
+   "n": 2,
+   "sprint": "O-232-SAI-E-A-CONTA-DA-PONTE-ENTRA-01",
+   "o_que_muda": "Caixa de som e fone custam 366 fatias (2-DH5 = 5 fatias mais a resposta) em vez de 244; o hertz mostrado sai da divisão por 6 e fica em 61 Hz. Na cena eles moram na Entrada 4.4, fechada.",
+   "origem": "implementada-na-fds",
+   "ancora": ".vaga.entrada.fixa (caixa e fone)",
+   "conflito": "Costurada na integra/1-11 (41320a2d6, com a A-PONTE-SE-CONTA-EM-FATIAS-NO-AR-01), falta o --publicar do fecho."
+  },
+  {
+   "n": 3,
+   "sprint": "OS-ALVOS-E-A-LETRA-CRESCEM-E-A-INTERFACE-GANHA-TAMANHO-01 (ordem 6 de 12/10: alvos de 24 px com a letra igual)",
+   "o_que_muda": "O ? do espectro passa de 20 a 24 px, como nas outras páginas; a letra fica.",
+   "origem": "recomendada-a-escolher",
+   "ancora": ".espectro-cab .ajuda",
+   "conflito": null
+  }
+ ],
+ "por_baixo": [
+  {
+   "sprint": "A-PONTE-SE-CONTA-EM-FATIAS-NO-AR-01",
+   "o_que_muda": "Costurada na 1-11: a ponte se conta em fatias no ar; o texto dos comentários do desenho muda, a tela não."
+  },
+  {
+   "sprint": "O-TEMA-DE-CORES-ENTRA-PELA-FOLHA-DE-USUARIO-01",
+   "o_que_muda": "Nada muda sem tema ligado."
+  }
+ ],
+ "fora": [
+  {
+   "sprint": "O-ACESSORIO-SEM-TIPO-GANHA-CATEGORIA-E-SINAL-NA-CONEXOES-01",
+   "motivo": "A sprint muda a seção do rádio dentro da aba 08 (é lá que o produto desenha); este desenho de origem não muda por ela."
+  },
+  {
+   "sprint": "O-BOTAO-DIREITO-ABRE-O-MENU-DO-HEFESTO-EM-TODA-ABA-01",
+   "motivo": "Este arquivo é o desenho que a aba 08 lê, não uma página da janela; o menu vale na 08."
+  },
+  {
+   "sprint": "OS-ALVOS-E-A-LETRA-CRESCEM-E-A-INTERFACE-GANHA-TAMANHO-01",
+   "motivo": "Idem: os alvos de 24 px valem pela folha da aba 08, que desenha esta seção."
+  },
+  {
+   "sprint": "A-PAGINA-DAS-PORTAS-CONTA-A-PONTE-DO-SOM-E-DA-VIBRACAO-01",
+   "motivo": "Não toca este desenho (nao_toca: mockup/mapa-do-radio.html)."
+  }
+ ],
+ "altura_px": 809,
+ "rola": false
+}

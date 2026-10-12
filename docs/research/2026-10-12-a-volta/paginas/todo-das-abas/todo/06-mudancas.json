@@ -1,0 +1,250 @@
+{
+ "aba": "06",
+ "nome": "Navegação",
+ "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/_integra-1-11/src/hefesto_dualsense4unix/interface/paginas/06-navegacao.html",
+ "depois": "~/.local/state/hefesto-casa/leva-volta/todo/06-navegacao.html",
+ "mudancas": [
+  {
+   "n": 1,
+   "sprint": "O-POINT-AND-CLICK-E-A-ACESSIBILIDADE-SE-DEFINEM-NA-NAVEGACAO-01",
+   "o_que_muda": "A fila de botões vira «Definições controle e mouse | Trocar os botões | Point and click | Acessibilidade | Voltar ao padrão».",
+   "origem": "desenho-escolhido",
+   "ancora": "[data-todo=\"1\"]",
+   "conflito": "O nome sem hífen é o da volta de 12/10 (BRIEF-T2 e T3), igual nas abas 01, 10 e no mapa do controle."
+  },
+  {
+   "n": 2,
+   "sprint": "O-POINT-AND-CLICK-E-A-ACESSIBILIDADE-SE-DEFINEM-NA-NAVEGACAO-01",
+   "o_que_muda": "A janela «Estilo point and click» do desenho A: molde (Visual novel, Só mouse, Teclado e mouse), o perfil do jogo, o cursor (Mover com, Devagar enquanto segura, Velocidade devagar, Aceleração), a tabela «Os botões no jogo» e Cancelar, Voltar ao molde, Guardar; ganha role=dialog.",
+   "origem": "desenho-escolhido",
+   "ancora": "[data-todo=\"2\"]",
+   "conflito": "O nome sem hífen é o da volta de 12/10 (BRIEF-T2 e T3), igual nas abas 01, 10 e no mapa do controle."
+  },
+  {
+   "n": 3,
+   "sprint": "A-ABA-NAVEGACAO-TEM-OS-DOIS-POINT-AND-CLICK-E-A-VELOCIDADE-QUE-FUNCIONA-01",
+   "o_que_muda": "A Velocidade e a Rolagem (−/+) saem da janela do estilo; um dono só, na aba, e a dica fica na linha «Mover com».",
+   "origem": "recomendada-a-escolher",
+   "ancora": "[data-todo=\"3\"]",
+   "conflito": "O desenho A escolhido tinha o −/+ na janela; vence a volta de 12/10 (T3 e T7, um dono por feature)."
+  },
+  {
+   "n": 4,
+   "sprint": "O-CURSOR-GANHA-PRECISAO-PERMANENCIA-E-CLIQUE-TRAVADO-01",
+   "o_que_muda": "«Parar para clicar» (permanência) e «Prender o clique» (clique travado) entram na janela do estilo.",
+   "origem": "desenho-nosso-a-validar",
+   "ancora": "[data-todo=\"4\"]",
+   "conflito": ""
+  },
+  {
+   "n": 5,
+   "sprint": "O-BOTAO-ALTERNA-REPETE-E-ENTENDE-TOQUE-LONGO-E-DUPLO-01",
+   "o_que_muda": "A janela «Acessibilidade motora» do desenho A (Para P1, Sim em todo perfil; Uma mão, Alternar em vez de segurar, Toque longo, Repetição), agora em 3 linhas de 2 cartões, com 980 px.",
+   "origem": "desenho-escolhido",
+   "ancora": "[data-todo=\"5\"]",
+   "conflito": ""
+  },
+  {
+   "n": 6,
+   "sprint": "O-TREMOR-E-O-APERTO-JUNTO-NAO-DECIDEM-O-BOTAO-01",
+   "o_que_muda": "Cartão «Tremor e aperto junto»: Ignorar repetição abaixo de 120 ms (saiu do Toque longo), Aperto mínimo 50 ms, Botão que trava (L1, R1, L2, R2) e Gestos sem apertar junto.",
+   "origem": "desenho-nosso-a-validar",
+   "ancora": "[data-todo=\"6\"]",
+   "conflito": ""
+  },
+  {
+   "n": 7,
+   "sprint": "OS-ANALOGICOS-DO-JOGO-GANHAM-ZONA-MORTA-CURVA-E-UMA-MAO-01",
+   "o_que_muda": "Cartão «Analógicos do jogo»: Zona morta, Curva (Linear, Precisa, Estável, Digital), Sensibilidade, e Inverter Y, Inverter X, Trocar os lados.",
+   "origem": "desenho-nosso-a-validar",
+   "ancora": "[data-todo=\"7\"]",
+   "conflito": ""
+  },
+  {
+   "n": 8,
+   "sprint": "O-BOTAO-ALTERNA-REPETE-E-ENTENDE-TOQUE-LONGO-E-DUPLO-01",
+   "o_que_muda": "«Toque duplo em até 0,3 s» no cartão Toque longo.",
+   "origem": "desenho-nosso-a-validar",
+   "ancora": "[data-todo=\"8\"]",
+   "conflito": ""
+  },
+  {
+   "n": 9,
+   "sprint": "A-ABA-NAVEGACAO-TEM-OS-DOIS-POINT-AND-CLICK-E-A-VELOCIDADE-QUE-FUNCIONA-01",
+   "o_que_muda": "«Status da navegação» vira «Perfil de point and click»: Mouse | Teclado, com a frase de cada um no title, e o botão «Configurar», que leva à captura no mapa do controle.",
+   "origem": "recomendada-a-escolher",
+   "ancora": "[data-todo=\"9\"]",
+   "conflito": "BRIEF-T3, opção A aplicada. O liga/desliga sai desta aba: quem ativa é a aba 01 (T7). Os moldes da janela (item 2) e o par Mouse | Teclado precisam de um nome só na escolha dela."
+  },
+  {
+   "n": 10,
+   "sprint": "A-ABA-NAVEGACAO-TEM-OS-DOIS-POINT-AND-CLICK-E-A-VELOCIDADE-QUE-FUNCIONA-01",
+   "o_que_muda": "«Velocidade do cursor» é um controle só, no perfil; a dica diz que vale para o analógico esquerdo, o touchpad e o point and click.",
+   "origem": "recomendada-a-escolher",
+   "ancora": "[data-todo=\"10\"]",
+   "conflito": "O teto do trilho é o valor que a sprint mede no aparelho; o desenho usa a escala de hoje, e a tela não fala da medida."
+  },
+  {
+   "n": 11,
+   "sprint": "A-ABA-NAVEGACAO-TEM-OS-DOIS-POINT-AND-CLICK-E-A-VELOCIDADE-QUE-FUNCIONA-01",
+   "o_que_muda": "Os avisos fixos do teclado (bloqueio e custo) saem do corpo da aba.",
+   "origem": "recomendada-a-escolher",
+   "ancora": "[data-todo=\"11\"]",
+   "conflito": ""
+  },
+  {
+   "n": 12,
+   "sprint": "A-ABA-NAVEGACAO-TEM-OS-DOIS-POINT-AND-CLICK-E-A-VELOCIDADE-QUE-FUNCIONA-01",
+   "o_que_muda": "A tabela das Definições: o R3 diz «Botão do meio (mouse) · Fechar o teclado na tela (teclado)», o texto longo vai para o title do cabeçalho, e o aviso da tabela sai, com o «sem efeito hoje» do L2/R2.",
+   "origem": "recomendada-a-escolher",
+   "ancora": "[data-todo=\"12\"]",
+   "conflito": ""
+  },
+  {
+   "n": 13,
+   "sprint": "A-ABA-NAVEGACAO-TEM-OS-DOIS-POINT-AND-CLICK-E-A-VELOCIDADE-QUE-FUNCIONA-01",
+   "o_que_muda": "O «Não dispara» do touchpad sai do corpo e vira title da região, nas seis linhas (Definições e Atalhos).",
+   "origem": "recomendada-a-escolher",
+   "ancora": "[data-todo=\"13\"]",
+   "conflito": ""
+  },
+  {
+   "n": 14,
+   "sprint": "A-ABA-NAVEGACAO-TEM-OS-DOIS-POINT-AND-CLICK-E-A-VELOCIDADE-QUE-FUNCIONA-01",
+   "o_que_muda": "A janela «Teclas do teclado» vira «Atalhos», com as colunas «Botão do controle | O que ele faz»; o botão do rodapé também vira «Atalhos».",
+   "origem": "recomendada-a-escolher",
+   "ancora": "[data-todo=\"14\"]",
+   "conflito": "A exportação leva só os atalhos ou o perfil inteiro: a escolher."
+  },
+  {
+   "n": 15,
+   "sprint": "A-FUNCAO-DO-TECLADO-GANHA-O-SEMPRE-01",
+   "o_que_muda": "A opção «Sempre» entra na Função do teclado.",
+   "origem": "recomendada-a-escolher",
+   "ancora": "[data-todo=\"15\"]",
+   "conflito": "Ela decide se tem e qual o nome."
+  },
+  {
+   "n": 16,
+   "sprint": "O-BOTAO-DIREITO-ABRE-O-MENU-DO-HEFESTO-EM-TODA-ABA-01",
+   "o_que_muda": "O botão direito abre o menu do Hefesto (Copiar, Atualizar, Desligar, Reiniciar, Fechar) no lugar do menu do WebKit; o mockup o mostra aberto num vazio da aba, com o Copiar cinza sem seleção, e o esconde quando uma janela está aberta. Ordem dela de 12/10: o «Desligar/Ligar» faz o mesmo que o Desligado/Ligado da bandeja (o mesmo plano de IPC da aba Jogar: o Hefesto sai da frente e o jogo lê o controle direto, em modo nativo; o serviço segue de pé; o Ligar sobe o serviço se estiver parado), e a dica do item diz isso.",
+   "origem": "recomendada-a-escolher",
+   "ancora": "[data-todo=\"16\"]",
+   "conflito": "BRIEF-T6 aberto: menu do sistema (A, aplicado; aqui desenhado em HTML só para se ver) ou desenhado (B); o Desligar é o interruptor da aba Jogar (aplicado) ou o Parar do serviço da aba Sistema."
+  },
+  {
+   "n": 17,
+   "sprint": "OS-ALVOS-E-A-LETRA-CRESCEM-E-A-INTERFACE-GANHA-TAMANHO-01",
+   "o_que_muda": "Todo ? chega a 24x24 px e todo [data-gesto] a 24 px de altura (WCAG 2.5.8), com a mesma letra; o trilho das duas velocidades ganha 24 px de alvo sem mudar o desenho.",
+   "origem": "recomendada-a-escolher",
+   "ancora": "[data-todo=\"17\"]",
+   "conflito": "A sprint espera o desenho e não tem recomendação: aplicada a opção 1 (alvos de 24 px, mesma letra), igual às outras abas. A letra mínima e o Tamanho da interface ficam para a escolha dela."
+  },
+  {
+   "n": 18,
+   "sprint": "resposta dela ao 06-1, 12/10 ~15h30: «os botões da tabela inferior tão super espremidos, precisa de um suspiro ali»",
+   "o_que_muda": "A fila de baixo (Definições controle e mouse, Trocar os botões, Point and click, Acessibilidade, Voltar ao padrão) respira: a moldura passa de 5 a 12 px em cima e embaixo, os botões de 34 a 38 px de altura, com 14 px entre eles e o texto numa linha só.",
+   "origem": "ordem-dela-12-10",
+   "ancora": ".moldura-acoes",
+   "conflito": null
+  }
+ ],
+ "por_baixo": [
+  {
+   "sprint": "A-CAPTURA-DE-TECLA-SE-FAZ-SOBRE-O-MAPA-DO-CONTROLE-01",
+   "o_que_muda": "A captura de tecla mora na página do mapa do controle; aqui só o «Configurar» leva até lá."
+  },
+  {
+   "sprint": "A-INTERFACE-INTEIRA-SE-ALCANCA-PELO-CONTROLE-E-PELO-TECLADO-01",
+   "o_que_muda": "Foco, Tab, Esc e o X do controle nas janelas novas (role=dialog); só atributos, a foto não muda."
+  },
+  {
+   "sprint": "O-POINT-AND-CLICK-SERVE-A-VISUAL-NOVEL-01",
+   "o_que_muda": "O molde Visual novel já está na janela do item 2; o resto é o comportamento no daemon."
+  },
+  {
+   "sprint": "A-MIRA-NA-NAVEGACAO-01",
+   "o_que_muda": "O cursor do giroscópio e o devagar enquanto segura: comportamento, a tela é a do item 2."
+  },
+  {
+   "sprint": "O-CURSOR-DA-MIRA-ANDA-DEVAGAR-LOGO-ACIMA-DA-ZONA-MORTA-01",
+   "o_que_muda": "O cursor do giroscópio e o devagar enquanto segura: comportamento, a tela é a do item 2."
+  },
+  {
+   "sprint": "O-TEMA-DE-CORES-ENTRA-PELA-FOLHA-DE-USUARIO-01",
+   "o_que_muda": "Código e comportamento; nada novo na foto."
+  },
+  {
+   "sprint": "O-COMENTARIO-COM-DOIS-PONTOS-SO-VALE-EM-CIMA-DE-ATRIBUICAO-01",
+   "o_que_muda": "Código e comportamento; nada novo na foto."
+  },
+  {
+   "sprint": "O-PARAR-CALA-O-TESTE-QUE-AINDA-ESTAVA-NO-AR-01",
+   "o_que_muda": "Código e comportamento; nada novo na foto."
+  },
+  {
+   "sprint": "FECHAR-A-JANELA-DEVOLVE-O-QUE-AS-ABAS-SEGURAVAM-01",
+   "o_que_muda": "Código e comportamento; nada novo na foto."
+  },
+  {
+   "sprint": "OS-CORACOES-DA-VIBRACAO-NAO-SEGURAM-A-JANELA-01",
+   "o_que_muda": "Código e comportamento; nada novo na foto."
+  },
+  {
+   "sprint": "A-ALTURA-E-A-LARGURA-DA-JANELA-NAO-PULSAM-01",
+   "o_que_muda": "Código e comportamento; nada novo na foto."
+  },
+  {
+   "sprint": "A-JANELA-REGISTRA-O-PROPRIO-TAMANHO-E-O-MOTIVO-DE-FECHAR-01",
+   "o_que_muda": "Código e comportamento; nada novo na foto."
+  },
+  {
+   "sprint": "O-NUMERO-DA-BARRA-NAO-CONGELA-NO-VALOR-VELHO-01",
+   "o_que_muda": "Código e comportamento; nada novo na foto."
+  },
+  {
+   "sprint": "NO-MODO-XBOX-TUDO-FUNCIONA-01",
+   "o_que_muda": "Prova no aparelho, cabo e BT, P1 a P4; a tela não muda."
+  },
+  {
+   "sprint": "O-SALVAR-E-O-APLICAR-LEEM-O-PERFIL-01",
+   "o_que_muda": "Prova no aparelho, cabo e BT, P1 a P4; a tela não muda."
+  }
+ ],
+ "fora": [
+  {
+   "sprint": "I18N-DA-TELA-NOVA-01",
+   "motivo": "A tradução não muda a tela em português."
+  },
+  {
+   "sprint": "TRADUZIR-O-PROJETO-01",
+   "motivo": "A tradução não muda a tela em português."
+  },
+  {
+   "sprint": "A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01",
+   "motivo": "São da aba 04 Iluminação."
+  },
+  {
+   "sprint": "A-PALETA-MARCA-A-COR-DE-CADA-CONTROLE-01",
+   "motivo": "São da aba 04 Iluminação."
+  },
+  {
+   "sprint": "A-ABA-NAVEGACAO-FAZ-O-QUE-DIZ-E-O-MODO-STEAM-NAVEGA-O-BIG-PICTURE-01",
+   "motivo": "Já costurada na 1-11: está no antes."
+  },
+  {
+   "sprint": "O-GATILHO-VIRA-CLIQUE-SEM-LIGAR-O-CURSOR-01",
+   "motivo": "Já costurada na 1-11: está no antes."
+  },
+  {
+   "sprint": "O-START-DE-QUEM-NAVEGA-A-INTERNA-SO-GUARDA-01",
+   "motivo": "Já costurada na 1-11: está no antes."
+  },
+  {
+   "sprint": "O-TECLADO-SO-DENTRO-DO-JOGO-TEM-DONO-01",
+   "motivo": "Já costurada na 1-11: está no antes."
+  }
+ ],
+ "altura_px": 809,
+ "rola": false
+}

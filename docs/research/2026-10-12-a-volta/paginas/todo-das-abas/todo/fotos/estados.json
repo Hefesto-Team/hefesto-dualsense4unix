@@ -1,0 +1,138 @@
+{
+ "01": {
+  "2": {
+   "arquivo": "01-m2.png",
+   "estado": "Com o Status em Desligado."
+  },
+  "3": {
+   "arquivo": "01-m3.png",
+   "estado": "Com o Status em Desligado e a Navegação acesa."
+  },
+  "6": {
+   "arquivo": "01-m6.png",
+   "estado": "Com o ponteiro sobre o Desligar do menu: a dica diz o que ele faz."
+  },
+  "7": {
+   "arquivo": "01-m7.png",
+   "estado": "Com o Modo automático ligado: a lista de modos fica apagada."
+  }
+ },
+ "02": {
+  "3": {
+   "arquivo": "02-m3.png",
+   "estado": "Com o cartão do P2 aberto."
+  },
+  "7": {
+   "arquivo": "02-m7.png",
+   "estado": "Com o Modo automático ligado: os ajustes dos cartões ficam apagados."
+  }
+ },
+ "03": {
+  "3": {
+   "arquivo": "03-m3.png",
+   "estado": "Com o Modo automático ligado: as colunas ficam apagadas."
+  }
+ },
+ "04": {
+  "3": {
+   "arquivo": "04-m3.png",
+   "estado": "Com o Modo automático ligado: as colunas ficam apagadas."
+  }
+ },
+ "05": {
+  "4": {
+   "arquivo": "05-m4.png",
+   "estado": "Com o Modo automático ligado: a força, o sensor háptico e os motores ficam apagados; o Testar agora segue à mão."
+  },
+  "5": {
+   "arquivo": "05-m5.png",
+   "estado": "Na janela de 1680x840 (o tamanho da foto dela de 14h49): o quadro preenche a altura."
+  }
+ },
+ "06": {
+  "2": {
+   "arquivo": "06-m2.png",
+   "estado": "Com a janela «Estilo point and click» aberta."
+  },
+  "3": {
+   "arquivo": "06-m3.png",
+   "estado": "Com a janela «Estilo point and click» aberta."
+  },
+  "4": {
+   "arquivo": "06-m4.png",
+   "estado": "Com a janela «Estilo point and click» aberta."
+  },
+  "5": {
+   "arquivo": "06-m5.png",
+   "estado": "Com a janela «Acessibilidade motora» aberta."
+  },
+  "6": {
+   "arquivo": "06-m6.png",
+   "estado": "Com a janela «Acessibilidade motora» aberta."
+  },
+  "7": {
+   "arquivo": "06-m7.png",
+   "estado": "Com a janela «Acessibilidade motora» aberta."
+  },
+  "8": {
+   "arquivo": "06-m8.png",
+   "estado": "Com a janela «Acessibilidade motora» aberta."
+  },
+  "12": {
+   "arquivo": "06-m12.png",
+   "estado": "Com a janela «Definições controle e mouse» aberta."
+  },
+  "13": {
+   "arquivo": "06-m13.png",
+   "estado": "Com a janela «Definições controle e mouse» aberta, rolada até o touchpad."
+  },
+  "14": {
+   "arquivo": "06-m14.png",
+   "estado": "Com a janela «Atalhos» aberta."
+  }
+ },
+ "07": {
+  "10": {
+   "arquivo": "07-m10.png",
+   "estado": "Com a janela Acessórios aberta, na aba «Meus toques»."
+  }
+ },
+ "08": {
+  "1": {
+   "arquivo": "08-m1.png",
+   "estado": "Com a seção «Rádio e adaptadores» aberta e a Entrada do acessório expandida."
+  }
+ },
+ "10": {
+  "8": {
+   "arquivo": "10-m8.png",
+   "estado": "Com a lista do estilo de jogo aberta."
+  },
+  "12": {
+   "arquivo": "10-m12.png",
+   "estado": "Com a lista do estilo de jogo aberta."
+  }
+ },
+ "mapa-das-portas": {
+  "9": {
+   "arquivo": "mapa-das-portas-m9.png",
+   "estado": "Os nomes das entradas e os plugues, com 24 px de altura."
+  }
+ },
+ "mapa-do-controle": {
+  "5": {
+   "arquivo": "mapa-do-controle-m5.png",
+   "estado": "Os alvos com data-gesto, com 24 px de altura."
+  },
+  "6": {
+   "arquivo": "mapa-do-controle-m6.png",
+   "estado": "Na janela de 1680x840: o desenho cede altura e a caixa «Grava em» cabe inteira, sem rolar."
+  }
+ },
+ "mapa-do-radio": {
+  "2": {
+   "arquivo": "mapa-do-radio-m2.png",
+   "estado": "Com a Entrada 4.4 aberta: a caixa de som e o fone."
+  }
+ }
+}

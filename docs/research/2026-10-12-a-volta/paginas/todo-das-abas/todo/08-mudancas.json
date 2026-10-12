@@ -1,0 +1,178 @@
+{
+  "aba": "08",
+  "nome": "Conexões",
+  "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/_integra-1-11/src/hefesto_dualsense4unix/interface/paginas/08-conexoes.html",
+  "depois": "~/.local/state/hefesto-casa/leva-volta/todo/08-conexoes.html",
+  "mudancas": [
+    {
+      "n": 1,
+      "sprint": "O-ACESSORIO-SEM-TIPO-GANHA-CATEGORIA-E-SINAL-NA-CONEXOES-01",
+      "o_que_muda": "O aparelho BLE sem tipo vira «Acessório»: botão novo na legenda, uma linha no ar com os 40 canais LE «não medidos» (textura) e o selo «Sinal -61 dBm», e a linha dele na sala da Entrada 4.1.4 com mover e esquecer. Fica na seção Rádio e adaptadores, fechada na vista padrão.",
+      "origem": "implementada-na-fds",
+      "ancora": "[data-tipo-da-legenda=acessorio]; .ar-linha[data-tipo=acessorio]; .sala .linha[data-id='aa:bb:cc:00:00:e1']",
+      "conflito": "Na voo/lancadores-fds (717bd1627, 85f39681b, cecdace53), ainda não costurada; a opção 1 da faixa é a escolha dela de 09/10."
+    },
+    {
+      "n": 2,
+      "sprint": "O-BOTAO-DIREITO-ABRE-O-MENU-DO-HEFESTO-EM-TODA-ABA-01",
+      "o_que_muda": "O botão direito abre o menu do Hefesto (Copiar, Atualizar, Desligar, Reiniciar, Fechar); o mockup o mostra aberto sobre o vazio do P4, e o Copiar fica cinza sem seleção. Ordem dela de 12/10: o «Desligar/Ligar» faz o mesmo que o Desligado/Ligado da bandeja (o mesmo plano de IPC da aba Jogar: o Hefesto sai da frente e o jogo lê o controle direto, em modo nativo; o serviço segue de pé; o Ligar sobe o serviço se estiver parado), e a dica do item diz isso.",
+      "origem": "recomendada-a-escolher",
+      "ancora": "#todo-menu-direito",
+      "conflito": "Duas perguntas do BRIEF-T6 abertas: menu do sistema (A, aplicado) ou desenhado (B); e o Desligar é o interruptor da aba Jogar (aplicado) ou o Parar do serviço da aba Sistema."
+    },
+    {
+      "n": 3,
+      "sprint": "OS-ALVOS-E-A-LETRA-CRESCEM-E-A-INTERFACE-GANHA-TAMANHO-01",
+      "o_que_muda": "O «?» passa de 20 a 24 px e todo alvo com data-gesto ganha altura mínima de 24 px, com a mesma letra; a aba segue sem rolagem. Os botões de informação dos cartões de dica passam de 18 a 24 px.",
+      "origem": "recomendada-a-escolher",
+      "ancora": "#todo-alvos; .ajuda",
+      "conflito": "A sprint espera o desenho e não tem recomendação: apliquei a opção 1 (alvos de 24 px, mesma letra), como nas outras abas. A letra mínima de 12 px e o Tamanho da interface do Sistema ficam para a escolha dela."
+    }
+  ],
+  "por_baixo": [
+    {
+      "sprint": "O-TEMA-DE-CORES-ENTRA-PELA-FOLHA-DE-USUARIO-01",
+      "o_que_muda": "Implementada na fds (voo/lancadores-fds): os --c-<tipo> e --sala-<tipo> sobem ao :root e a cor da faixa vira token; sem tema de modificação ligado, nada muda na tela."
+    },
+    {
+      "sprint": "CADA-FEATURE-TEM-UM-DONO-SO-NA-INTERFACE-01",
+      "o_que_muda": "A 08 não está na tabela do BRIEF-T7: a linha «Analógico virtual» dos cartões só lê o estado, e o dono é a aba Controles."
+    },
+    {
+      "sprint": "SO-A-PRIMEIRA-LETRA-E-MAIUSCULA-EM-TODA-ABA-01",
+      "o_que_muda": "Já costurada na 1-11; o que sobra com maiúscula no meio são nomes (Entrada 4, os adaptadores Meio e Direita, as cores da Sony) e nomes de botão citados."
+    },
+    {
+      "sprint": "A-CADEIA-USB-SE-RECONHECE-EM-QUALQUER-PC-E-CADA-MUDANCA-VAI-AO-REGISTRO-01",
+      "o_que_muda": "O censo da cadeia USB e o diário usb-diario.jsonl que alimentam o Mapa das conexões; a 08 só abre o mapa pelo botão de sempre."
+    },
+    {
+      "sprint": "A-ABA-LANCADORES-GANHA-AS-MODIFICACOES-01",
+      "o_que_muda": "O acordeão «Modificações» da 08 passa a ser peça comum com a aba Lançadores; a 08 não muda."
+    },
+    {
+      "sprint": "O-VIGIA-DE-ZUMBI-PERGUNTA-E-AVISA-UMA-VEZ-POR-EPISODIO-01",
+      "o_que_muda": "O aviso do controle zumbi vai ao diário uma vez por episódio; nada na tela."
+    },
+    {
+      "sprint": "A-INTERFACE-INTEIRA-SE-ALCANCA-PELO-CONTROLE-E-PELO-TECLADO-01",
+      "o_que_muda": "Foco e atributos de teclado e controle nos alvos; a aparência não muda."
+    },
+    {
+      "sprint": "A-ALTURA-E-A-LARGURA-DA-JANELA-NAO-PULSAM-01",
+      "o_que_muda": "A janela não pulsa de tamanho; o desenho não muda."
+    },
+    {
+      "sprint": "A-JANELA-REGISTRA-O-PROPRIO-TAMANHO-E-O-MOTIVO-DE-FECHAR-01",
+      "o_que_muda": "O tamanho e o motivo de fechar vão ao diário; nada na tela."
+    },
+    {
+      "sprint": "FECHAR-A-JANELA-DEVOLVE-O-QUE-AS-ABAS-SEGURAVAM-01",
+      "o_que_muda": "Fechar a janela solta o que a aba segurava; nada na tela."
+    },
+    {
+      "sprint": "O-ASSENTO-GUARDADO-NAO-ANDA-01",
+      "o_que_muda": "O lugar guardado não anda na tela nem na lâmpada; o desenho é o mesmo."
+    },
+    {
+      "sprint": "O-ASSENTO-GUARDADO-NAO-ANDA-02",
+      "o_que_muda": "O lugar guardado não anda na tela nem na lâmpada; o desenho é o mesmo."
+    },
+    {
+      "sprint": "O-ASSENTO-GUARDADO-NAO-ANDA-03",
+      "o_que_muda": "O lugar guardado não anda na tela nem na lâmpada; o desenho é o mesmo."
+    }
+  ],
+  "fora": [
+    {
+      "sprint": "O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01",
+      "motivo": "Já no antes (integra/0410, na 1-11); espera só a bancada."
+    },
+    {
+      "sprint": "AS-DICAS-SAO-CARTOES-COM-UM-GESTO-01",
+      "motivo": "Já no antes (os quatro cartões de dica); espera só a bancada."
+    },
+    {
+      "sprint": "AS-FAIXAS-DIZEM-QUEM-BRIGA-COM-CADA-APARELHO-01",
+      "motivo": "Já no antes; espera só a bancada."
+    },
+    {
+      "sprint": "O-RECEPTOR-2-4G-SE-RECONHECE-E-DIZ-QUANDO-SOFRE-01",
+      "motivo": "Já no antes; espera só a bancada."
+    },
+    {
+      "sprint": "O-CONTROLE-JA-PAREADO-SE-PAREIA-DE-NOVO-NUM-CLIQUE-01",
+      "motivo": "Já no antes; espera só a bancada."
+    },
+    {
+      "sprint": "O-CONTROLE-QUE-PEDE-PARA-PAREAR-APARECE-MESMO-JA-CONHECIDO-01",
+      "motivo": "Já no antes (o cartão «Roxo quer conectar»); espera só a bancada."
+    },
+    {
+      "sprint": "O-WIFI-SE-LE-NAS-DUAS-BANDAS-E-TROCA-O-USB-PELA-BANDA-01",
+      "motivo": "Já no antes (o selo de quedas e a nota USB 3.0 + 2.4 GHz); espera só a bancada."
+    },
+    {
+      "sprint": "O-DESLIGADO-DEIXA-O-JOGO-DECIDIR-01",
+      "motivo": "Código costurado na integra/0410, já no antes; espera só a bancada."
+    },
+    {
+      "sprint": "A-HAPTICA-MORA-EM-VIBRACAO-E-O-ICONE-DO-APP-VOLTA-01",
+      "motivo": "Código costurado na integra/0410, já no antes; espera só a bancada."
+    },
+    {
+      "sprint": "O-DEGRAU-DO-MEIO-E-A-FRASE-DA-FAIXA-SE-LIGAM-DEPOIS-DA-B9-01",
+      "motivo": "Depende da bancada B9; a frase só aparece quando a procura da faixa termina sem faixa, estado que a cena não mostra."
+    },
+    {
+      "sprint": "MESA-DE-QUATRO-01",
+      "motivo": "Roteiro de bancada com quatro controles; não muda a tela."
+    },
+    {
+      "sprint": "I18N-DA-TELA-NOVA-01",
+      "motivo": "Tradução; não muda a tela em português."
+    },
+    {
+      "sprint": "TRADUZIR-O-PROJETO-01",
+      "motivo": "Tradução; não muda a tela em português."
+    },
+    {
+      "sprint": "A-ENTRADA-DE-CADA-JOGADOR-CHEGA-INTEIRA-01",
+      "motivo": "Já costurada na 1-11: está no antes."
+    },
+    {
+      "sprint": "O-SINAL-DE-CADA-CONTROLE-DIZ-SE-ELE-ESTA-LONGE-01",
+      "motivo": "Já costurada na 1-11: está no antes."
+    },
+    {
+      "sprint": "TODO-TEXTO-QUE-ABRE-UMA-LINHA-COMECA-COM-MAIUSCULA-01",
+      "motivo": "Já costurada na 1-11: está no antes."
+    },
+    {
+      "sprint": "A-FAIXA-DO-TECLADO-SE-ACHA-01",
+      "motivo": "Já costurada na 1-11: está no antes."
+    },
+    {
+      "sprint": "A-08-MOSTRA-O-DESENHO-DO-CONTROLE-E-O-HUB-PERGUNTA-A-ENTRADA-01",
+      "motivo": "Já costurada na 1-11: está no antes."
+    },
+    {
+      "sprint": "A-BANCADA-DE-MENTIRA-TEM-EXTERNO-E-A-SONDA-LE-A-DICA-01",
+      "motivo": "Já costurada na 1-11: está no antes."
+    },
+    {
+      "sprint": "A-LINHA-DO-EXTERNO-VOLTA-AOS-30-PX-E-A-COR-FORA-DA-LISTA-SE-ESCOLHE-01",
+      "motivo": "Já costurada na 1-11: está no antes."
+    },
+    {
+      "sprint": "A-PONTE-PAUSADA-DIZ-A-VERDADE-NA-CONEXOES-01",
+      "motivo": "Já costurada na 1-11: está no antes."
+    },
+    {
+      "sprint": "O-CONTROLLERS-JSON-ILEGIVEL-NAO-SE-SOBRESCREVE-CALADO-01",
+      "motivo": "Só a leitura do arquivo; nenhuma página muda."
+    }
+  ],
+  "altura_px": 809,
+  "rola": false
+}

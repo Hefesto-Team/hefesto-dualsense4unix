@@ -1,0 +1,198 @@
+{
+ "aba": "05",
+ "nome": "Vibração",
+ "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/_integra-1-11/src/hefesto_dualsense4unix/interface/paginas/05-vibracao.html",
+ "depois": "~/.local/state/hefesto-casa/leva-volta/todo/05-vibracao.html",
+ "mudancas": [
+  {
+   "n": 1,
+   "sprint": "O-BOTAO-DIREITO-ABRE-O-MENU-DO-HEFESTO-EM-TODA-ABA-01",
+   "o_que_muda": "O botão direito abre o menu do Hefesto (Copiar, Atualizar, Desligar, Reiniciar, Fechar) no lugar do menu do WebKit; o mockup o mostra aberto num vazio da cena, e o Copiar fica cinza sem seleção. Ordem dela de 12/10: o «Desligar/Ligar» faz o mesmo que o Desligado/Ligado da bandeja (o mesmo plano de IPC da aba Jogar: o Hefesto sai da frente e o jogo lê o controle direto, em modo nativo; o serviço segue de pé; o Ligar sobe o serviço se estiver parado), e a dica do item diz isso.",
+   "origem": "recomendada-a-escolher",
+   "ancora": "#todo-menu-direito",
+   "conflito": "Duas perguntas do BRIEF-T6 abertas: menu do sistema (A, aplicado) ou desenhado (B); e o Desligar é o interruptor da aba Jogar (aplicado) ou o Parar do serviço da aba Sistema."
+  },
+  {
+   "n": 2,
+   "sprint": "OS-ALVOS-E-A-LETRA-CRESCEM-E-A-INTERFACE-GANHA-TAMANHO-01",
+   "o_que_muda": "Todo alvo pequeno chega a 24 px (WCAG 2.5.8), com a mesma letra: o ? passa de 17 a 24 px; os trilhos do sensor e dos motores ganham 24 px de área de toque com o desenho igual. Todo [data-gesto] tem no mínimo 24 px, como nas outras abas.",
+   "origem": "recomendada-a-escolher",
+   "ancora": "#todo-alvos; .ajuda; .trilho.arrasta",
+   "conflito": "A sprint espera o desenho e não tem recomendação: apliquei a opção 1 (alvos de 24 px, mesma letra). A letra mínima de 12 px e o Tamanho da interface do Sistema ficam para a escolha dela."
+  },
+  {
+   "n": 3,
+   "sprint": "O-JOGO-DOS-ACESSORIOS-CHEGA-A-ABA-VIBRACAO-E-AS-JANELAS-01",
+   "o_que_muda": "Seção nova «Meus toques», do perfil do jogo e para todos os controles, abaixo do quadro: O que vibra (Só o jogo · Jogo e meus toques · Só meus toques), Mistura (O maior dos dois · Somar), Força dos meus toques (− 30 + % do controle), Analógicos (Não · Movimento · Posição), Botões, Gatilhos e Chacoalhar (chaves Ligado/Desligado) e Touchpad (Não · Pelos lados · Mistura). As frases das opções foram para a dica. A cena mostra o estado da foto aprovada (Jogo e meus toques).",
+   "origem": "desenho-escolhido",
+   "ancora": ".quadro.toques[data-campo=meus-toques]",
+   "conflito": "O desenho aprovado em 09/10 põe os mesmos ajustes também na janela Acessórios (abas Meus toques e Touchpad). A T7 (12/10, mais nova) pede um dono só: a aba 05 é a dona e grava, e a janela só lê. Os ajustes finos do touchpad do desenho (a altura do dedo, o dedo parado, o deslize, o clique) não couberam na linha: ficam no padrão do desenho e na dica.",
+   "tambem": [
+    "OS-MEUS-TOQUES-VIBRAM-O-CONTROLE-A-CADA-ENTRADA-01",
+    "O-TOUCHPAD-VIRA-FONTE-DE-VIBRACAO-01"
+   ]
+  },
+  {
+   "n": 4,
+   "sprint": "ordem dela de 12/10, 14h40 (sprint a escrever: O-MODO-AUTOMATICO-E-UM-BOTAO-SO-01)",
+   "o_que_muda": "A Vibração ganha o mesmo botão único «Modo automático» das abas 01 a 04 (era a única das cinco sem ele). Ligado: o jogo decide a força da vibração e da háptica, e a força, o sensor háptico e os motores de cada coluna ficam apagados; o Testar agora segue à mão. Volta 2: o botão tem cor própria nos dois estados — desligado, contorno e anel em ciano com a letra clara (não some no fundo); ligado, o fundo enche de ciano e a bolinha acende.",
+   "origem": "ordem-dela-12-10",
+   "ancora": ".modo-auto[data-gesto=modo-da-vibracao]",
+   "conflito": null
+  },
+  {
+   "n": 5,
+   "sprint": "ordem dela de 12/10, 14h52 (foto da aba 05; sprint a escrever: A-VIBRACAO-PREENCHE-O-QUADRO-01)",
+   "o_que_muda": "As linhas da Vibração se distribuem na vertical: o quadro cresce até a seção Meus toques, e a Força, os três motores e o «Testar agora» dividem a sobra (a Força com o dobro), em vez de o Testar agora ficar colado no Motor direito com um vão vazio embaixo.",
+   "origem": "ordem-dela-12-10",
+   "ancora": ".quadro.vib-quadro",
+   "conflito": null
+  }
+ ],
+ "por_baixo": [
+  {
+   "sprint": "O-PARAR-CALA-O-TESTE-QUE-AINDA-ESTAVA-NO-AR-01",
+   "o_que_muda": "O «Parar» cala o teste que ainda estava no ar, e os gestos rodam na ordem do clique."
+  },
+  {
+   "sprint": "OS-CORACOES-DA-VIBRACAO-NAO-SEGURAM-A-JANELA-01",
+   "o_que_muda": "O teste rebate na fila de cada controle, fora do fio da janela."
+  },
+  {
+   "sprint": "FECHAR-A-JANELA-DEVOLVE-O-QUE-AS-ABAS-SEGURAVAM-01",
+   "o_que_muda": "Fechar a janela cala o teste que a aba segurava."
+  },
+  {
+   "sprint": "A-FORCA-DA-VIBRACAO-DE-CADA-CONTROLE-SAI-DE-UM-FUNIL-SO-COM-A-BATERIA-DELE-E-O-TETO-01",
+   "o_que_muda": "Implementada na fds-1: a força de cada controle sai de um funil só, com a bateria dele e o teto (decisão por delegação, a validar por ela)."
+  },
+  {
+   "sprint": "O-ESTILO-CHEGA-AO-GATILHO-E-A-VIBRACAO-DE-CADA-CONTROLE-01",
+   "o_que_muda": "Implementada na fds-1: o estilo do jogo chega à vibração de cada controle."
+  },
+  {
+   "sprint": "O-CONTROLE-VIBRA-NO-MODO-DO-FIRMWARE-DELE-01",
+   "o_que_muda": "A vibração v2 segue o firmware de cada controle; a sprint diz que a tela não muda."
+  },
+  {
+   "sprint": "A-VIBRACAO-DO-JOGO-NAO-ESPERA-O-SONO-DA-VOLTA-01",
+   "o_que_muda": "A vibração do jogo não espera a volta do repouso."
+  },
+  {
+   "sprint": "A-INTERFACE-INTEIRA-SE-ALCANCA-PELO-CONTROLE-E-PELO-TECLADO-01",
+   "o_que_muda": "Foco, Tab, Esc e o X do controle alcançam toda ação e o ?; só atributos, a foto não muda."
+  },
+  {
+   "sprint": "O-NUMERO-DA-BARRA-NAO-CONGELA-NO-VALOR-VELHO-01",
+   "o_que_muda": "O número da barra sai da alavanca quando o voo termina; o gesto lê a alavanca, nunca o texto."
+  },
+  {
+   "sprint": "A-ALTURA-E-A-LARGURA-DA-JANELA-NAO-PULSAM-01",
+   "o_que_muda": "A janela para de crescer e encolher sozinha (medir o 100dvh, o repinte e a folga do mudo)."
+  },
+  {
+   "sprint": "A-JANELA-REGISTRA-O-PROPRIO-TAMANHO-E-O-MOTIVO-DE-FECHAR-01",
+   "o_que_muda": "O registro guarda o tamanho da janela e o motivo de fechar."
+  },
+  {
+   "sprint": "O-TEMA-DE-CORES-ENTRA-PELA-FOLHA-DE-USUARIO-01",
+   "o_que_muda": "O tema entra pela folha de usuário; no tema padrão nada muda, e as peças novas usam só os tokens do :root."
+  }
+ ],
+ "fora": [
+  {
+   "sprint": "O-DESLIGADO-DEIXA-O-JOGO-DECIDIR-01",
+   "motivo": "Código feito na 1.5; falta a bancada dela. O desenho de 04/10 («O jogo decide» no gatilho, a frase «O jogo pinta por cima» na 04) foi trocado em 06/10 pelo par Modo automático | Modo personalizado (O-MODO-AUTOMATICO-E-O-PERSONALIZADO-01, já no publicado): vale o mais novo, e a tela não muda."
+  },
+  {
+   "sprint": "A-HAPTICA-MORA-EM-VIBRACAO-E-O-ICONE-DO-APP-VOLTA-01",
+   "motivo": "O código já está no publicado (o sensor háptico na 05); falta o olho dela."
+  },
+  {
+   "sprint": "O-ESTILO-NATIVO-DEIXA-O-JOGO-DECIDIR-01",
+   "motivo": "Mora na aba 10."
+  },
+  {
+   "sprint": "OS-TRES-CONTROLES-DE-FREQUENCIA-DA-ABA-GATILHOS-NO-DESENHO-01",
+   "motivo": "Absorvida pela O-ESTILO-DO-JOGO-LIGA-A-IMERSAO-INTEIRA (escolha dela de 08/10)."
+  },
+  {
+   "sprint": "O-SHADPS4-QUE-JA-MORA-AQUI-01",
+   "motivo": "Lançador; a aba não muda."
+  },
+  {
+   "sprint": "A-VIBRACAO-TEM-OS-TRES-LADO-A-LADO-01",
+   "motivo": "Já no publicado da 1-11."
+  },
+  {
+   "sprint": "A-LINHA-MODELO-DIZ-O-NOME-DO-JOGADOR-01",
+   "motivo": "Já no publicado da 1-11."
+  },
+  {
+   "sprint": "O-ESCOPO-SAI-DAS-ABAS-01",
+   "motivo": "Já no publicado da 1-11."
+  },
+  {
+   "sprint": "A-METRALHADORA-BATE-ENQUANTO-O-DEDO-APERTA-01",
+   "motivo": "Já no publicado da 1-11."
+  },
+  {
+   "sprint": "A-RAMPA-DE-FORCA-CHEGA-AO-FUNDO-E-A-VIBRACAO-SALVA-NAO-PERDE-A-FREQUENCIA-01",
+   "motivo": "Já no publicado da 1-11."
+  },
+  {
+   "sprint": "A-REGUA-DOS-EFEITOS-DO-GATILHO-LE-O-BLOCO-COMO-O-CONTROLE-LE-01",
+   "motivo": "Já no publicado da 1-11."
+  },
+  {
+   "sprint": "A-TELA-SEM-O-QUE-A-REGUA-ACEITA-01",
+   "motivo": "Já no publicado da 1-11."
+  },
+  {
+   "sprint": "O-NOME-DO-JOGADOR-TEM-UM-DONO-SO-01",
+   "motivo": "Já no publicado da 1-11."
+  },
+  {
+   "sprint": "CADA-FEATURE-TEM-UM-DONO-SO-NA-INTERFACE-01",
+   "motivo": "Nenhum dos casos dela cai nesta aba (são das 01, 02, 06, 07, 09, 10 e da Calibrar)."
+  },
+  {
+   "sprint": "SO-A-PRIMEIRA-LETRA-E-MAIUSCULA-EM-TODA-ABA-01",
+   "motivo": "Já no publicado da 1-11 (b3222fa9f); os rótulos novos nascem assim."
+  },
+  {
+   "sprint": "A-TELA-PERGUNTA-AO-DONO-01",
+   "motivo": "Já no publicado da 1-11."
+  },
+  {
+   "sprint": "O-SELECIONAR-ACENDE-QUEM-ESTA-ESCOLHIDO-01",
+   "motivo": "Já no publicado da 1-11."
+  },
+  {
+   "sprint": "A-NAVEGACAO-INTERNA-E-UM-MODO-QUE-SE-LIGA-EM-QUALQUER-ABA-01",
+   "motivo": "Já no publicado da 1-11."
+  },
+  {
+   "sprint": "DESLIGAR-O-HEFESTO-DEVOLVE-O-CONTROLE-AO-LINUX-01",
+   "motivo": "Já no publicado da 1-11."
+  },
+  {
+   "sprint": "O-SALVAR-E-O-APLICAR-LEEM-O-PERFIL-01",
+   "motivo": "Código na base desde a5da60f3d; falta só a prova no aparelho, que é dela. A tela não muda."
+  },
+  {
+   "sprint": "I18N-DA-TELA-NOVA-01",
+   "motivo": "Por ordem dela, a tradução é a última coisa, depois do release 1."
+  },
+  {
+   "sprint": "TRADUZIR-O-PROJETO-01",
+   "motivo": "Por ordem dela, a tradução é a última coisa, depois do release 1."
+  },
+  {
+   "sprint": "MESA-DE-QUATRO-01",
+   "motivo": "Bancada com os quatro controles; não muda a tela."
+  }
+ ],
+ "altura_px": 809,
+ "rola": false
+}

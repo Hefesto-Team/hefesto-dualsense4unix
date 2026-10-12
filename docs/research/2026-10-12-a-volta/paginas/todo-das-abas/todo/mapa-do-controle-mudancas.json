@@ -1,0 +1,98 @@
+{
+ "aba": "mapa-do-controle",
+ "nome": "O mapa do controle",
+ "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/_integra-1-11/src/hefesto_dualsense4unix/interface/paginas/mapa-do-controle.html",
+ "depois": "~/.local/state/hefesto-casa/leva-volta/todo/mapa-do-controle.html",
+ "mudancas": [
+  {
+   "n": 1,
+   "sprint": "A-CAPTURA-DE-TECLA-SE-FAZ-SOBRE-O-MAPA-DO-CONTROLE-01",
+   "o_que_muda": "A coluna da esquerda vira a captura: o desenho em cima e, embaixo, a caixa «Grava em: Point and click (mouse)», a peça «Cruz» e «Aperte uma tecla, um botão do mouse ou um botão do controle.». A Cruz acende na lista e no desenho.",
+   "origem": "recomendada-a-escolher",
+   "ancora": ".lado-ds.captura; .caixa-cap; .item-cross.on",
+   "conflito": "BRIEF-T3 opção A aplicada. O Mouse/Teclado é escolhido na aba Navegação (um dono só); aqui ele só se lê."
+  },
+  {
+   "n": 2,
+   "sprint": "A-CAPTURA-DE-TECLA-SE-FAZ-SOBRE-O-MAPA-DO-CONTROLE-01",
+   "o_que_muda": "A tecla capturada («Clique esquerdo») e o botão Salvar, verde.",
+   "origem": "recomendada-a-escolher",
+   "ancora": ".tecla[data-campo=captura-tecla]; [data-gesto=captura-salvar]",
+   "conflito": ""
+  },
+  {
+   "n": 3,
+   "sprint": "A-CAPTURA-DE-TECLA-SE-FAZ-SOBRE-O-MAPA-DO-CONTROLE-01",
+   "o_que_muda": "Exportar e Importar o mapa do point and click.",
+   "origem": "recomendada-a-escolher",
+   "ancora": ".caixa-cap .linha[data-todo='3']",
+   "conflito": "O formato da exportação é pergunta dela."
+  },
+  {
+   "n": 4,
+   "sprint": "O-BOTAO-DIREITO-ABRE-O-MENU-DO-HEFESTO-EM-TODA-ABA-01",
+   "o_que_muda": "Menu do botão direito (Copiar apagado, Atualizar, Desligar ou Ligar, Reiniciar, Fechar), no trecho comum das abas; no todo aparece aberto sobre o vazio acima do desenho, só para se ver. Ordem dela de 12/10: o «Desligar/Ligar» faz o mesmo que o Desligado/Ligado da bandeja (o mesmo plano de IPC da aba Jogar: o Hefesto sai da frente e o jogo lê o controle direto, em modo nativo; o serviço segue de pé; o Ligar sobe o serviço se estiver parado), e a dica do item diz isso.",
+   "origem": "recomendada-a-escolher",
+   "ancora": "#todo-menu-direito",
+   "conflito": "BRIEF-T6: menu do sistema (A, aplicado) ou desenhado (B); o Desligar é o interruptor da aba Jogar (aplicado) ou o Parar do serviço da 09."
+  },
+  {
+   "n": 5,
+   "sprint": "OS-ALVOS-E-A-LETRA-CRESCEM-E-A-INTERFACE-GANHA-TAMANHO-01",
+   "o_que_muda": "Todo [data-gesto] passa a ter no mínimo 24 px de altura (o trecho comum #todo-alvos); a página não tem «?».",
+   "origem": "recomendada-a-escolher",
+   "ancora": "#todo-alvos",
+   "conflito": "Opção 1 da sprint (24 px); as outras opções seguem com ela."
+  },
+  {
+   "n": 6,
+   "sprint": "regra dela de 05/10 (toda tela sem rolagem vertical), achado da conferência de 12/10",
+   "o_que_muda": "Na janela larga (1680x840) o desenho do controle cede altura e a caixa «Grava em» cabe inteira, com o Exportar e o Importar; antes o corpo rolava 42 px.",
+   "origem": "desenho-nosso-a-validar",
+   "ancora": ".lado-ds.captura > svg.ds",
+   "conflito": null
+  }
+ ],
+ "por_baixo": [
+  {
+   "sprint": "A-CAPTURA-DE-TECLA-SE-FAZ-SOBRE-O-MAPA-DO-CONTROLE-01",
+   "o_que_muda": "O back-end da captura: keydown e mousedown, o aceso-<peça>, Profile.key_bindings e button_actions, p.salvar_arquivo."
+  },
+  {
+   "sprint": "A-INTERFACE-INTEIRA-SE-ALCANCA-PELO-CONTROLE-E-PELO-TECLADO-01",
+   "o_que_muda": "A página ganha role=dialog."
+  },
+  {
+   "sprint": "O-TEMA-DE-CORES-ENTRA-PELA-FOLHA-DE-USUARIO-01",
+   "o_que_muda": "A página tem paleta própria (--comment, --texto-mudo); o menu usa fallback de --sel-bg, sem cor nova."
+  }
+ ],
+ "fora": [
+  {
+   "sprint": "NO-MODO-XBOX-TUDO-FUNCIONA-01",
+   "motivo": "Espera ela; nada nestas páginas."
+  },
+  {
+   "sprint": "A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01",
+   "motivo": "Espera ela; nada nestas páginas."
+  },
+  {
+   "sprint": "A-MIRA-PELO-GIRO-VALE-EM-JOGO-QUE-SO-FALA-XBOX-01",
+   "motivo": "Caducou."
+  },
+  {
+   "sprint": "I18N-DA-TELA-NOVA-01",
+   "motivo": "Fora da leva; nada de texto novo depende dela."
+  },
+  {
+   "sprint": "TRADUZIR-O-PROJETO-01",
+   "motivo": "Fora da leva; nada de texto novo depende dela."
+  },
+  {
+   "sprint": "A-ABA-NAVEGACAO-TEM-OS-DOIS-POINT-AND-CLICK-E-A-VELOCIDADE-QUE-FUNCIONA-01",
+   "motivo": "A parte da 06 é de outro montador."
+  }
+ ],
+ "altura_px": 809,
+ "rola": false
+}

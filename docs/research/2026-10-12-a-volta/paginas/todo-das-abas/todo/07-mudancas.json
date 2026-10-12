@@ -1,0 +1,162 @@
+{
+  "aba": "07",
+  "nome": "Lançadores",
+  "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/_integra-1-11/src/hefesto_dualsense4unix/interface/paginas/07-lancadores.html",
+  "depois": "~/.local/state/hefesto-casa/leva-volta/todo/07-lancadores.html",
+  "mudancas": [
+    {
+      "n": 1,
+      "sprint": "A-ABA-LANCADORES-GANHA-AS-MODIFICACOES-01",
+      "o_que_muda": "Os lançadores em linhas compactas, em duas colunas, com o título «Lançadores», selos «Não sei» e «Localizado», e o «Abrir» com dica.",
+      "origem": "desenho-escolhido",
+      "ancora": "[data-todo=\"1\"]",
+      "conflito": ""
+    },
+    {
+      "n": 2,
+      "sprint": "O-LANCADOR-DO-KYTYPS5-VEM-DA-MODIFICACAO-01",
+      "o_que_muda": "A linha do Kyty entre os lançadores, sem marca de modificação: «2 jogos», Criar perfil, Abrir.",
+      "origem": "implementada-na-fds",
+      "ancora": "[data-todo=\"2\"]",
+      "conflito": ""
+    },
+    {
+      "n": 3,
+      "sprint": "A-ABA-LANCADORES-GANHA-AS-MODIFICACOES-01",
+      "o_que_muda": "O quadro «Modificações»: Kyty e Acessórios pelo Intiface, selo Oficial, versão, chave Ligada, ⋮, e «Instalar de um endereço».",
+      "origem": "desenho-escolhido",
+      "ancora": "[data-todo=\"3\"]",
+      "conflito": ""
+    },
+    {
+      "n": 4,
+      "sprint": "O-JOGO-DOS-ACESSORIOS-CHEGA-A-ABA-VIBRACAO-E-AS-JANELAS-01",
+      "o_que_muda": "A engrenagem abre na própria página a janela do Kyty e a dos Acessórios; o link da vibração aponta para a aba 05.",
+      "origem": "desenho-escolhido",
+      "ancora": "[data-todo=\"4\"]",
+      "conflito": ""
+    },
+    {
+      "n": 5,
+      "sprint": "O-JOGO-DOS-ACESSORIOS-CHEGA-A-ABA-VIBRACAO-E-AS-JANELAS-01",
+      "o_que_muda": "O «Quando» na linha do Intiface: Jogo marcado Adulto, Qualquer jogo com acessório ligado, Só quando eu ligar.",
+      "origem": "desenho-escolhido",
+      "ancora": "[data-todo=\"5\"]",
+      "conflito": ""
+    },
+    {
+      "n": 6,
+      "sprint": "A-ABA-LANCADORES-GANHA-AS-MODIFICACOES-01",
+      "o_que_muda": "O chip laranja «2 com impedimento» na Steam abre a janela «Impedimentos», com cada jogo, a causa (Steam Input ligado, fora do Proton fixado) e «Abrir na Steam».",
+      "origem": "desenho-nosso-a-validar",
+      "ancora": "[data-todo=\"6\"]",
+      "conflito": "Os dados da Steam são de demonstração (48 jogos, Sackboy e Resident Evil Village)."
+    },
+    {
+      "n": 7,
+      "sprint": "A-ABA-LANCADORES-GANHA-AS-MODIFICACOES-01",
+      "o_que_muda": "A linha de modificação fica mais baixa: a frase cabe numa linha e o texto inteiro vai para o title; a lista rola por dentro (até 186 px), e seis modificações cabem sem a janela rolar.",
+      "origem": "desenho-nosso-a-validar",
+      "ancora": "[data-todo=\"7\"]",
+      "conflito": "Muda a altura da linha do desenho B aprovado."
+    },
+    {
+      "n": 8,
+      "sprint": "O-BOTAO-DIREITO-ABRE-O-MENU-DO-HEFESTO-EM-TODA-ABA-01",
+      "o_que_muda": "O botão direito abre o menu do Hefesto (Copiar, Atualizar, Desligar, Reiniciar, Fechar) no lugar do menu do WebKit; o mockup o mostra aberto num vazio da aba, com o Copiar cinza sem seleção, e o esconde quando uma janela está aberta. Ordem dela de 12/10: o «Desligar/Ligar» faz o mesmo que o Desligado/Ligado da bandeja (o mesmo plano de IPC da aba Jogar: o Hefesto sai da frente e o jogo lê o controle direto, em modo nativo; o serviço segue de pé; o Ligar sobe o serviço se estiver parado), e a dica do item diz isso.",
+      "origem": "recomendada-a-escolher",
+      "ancora": "[data-todo=\"8\"]",
+      "conflito": "BRIEF-T6 aberto: menu do sistema (A, aplicado; aqui desenhado em HTML só para se ver) ou desenhado (B); o Desligar é o interruptor da aba Jogar (aplicado) ou o Parar do serviço da aba Sistema."
+    },
+    {
+      "n": 9,
+      "sprint": "OS-ALVOS-E-A-LETRA-CRESCEM-E-A-INTERFACE-GANHA-TAMANHO-01",
+      "o_que_muda": "Todo ? chega a 24x24 px e todo [data-gesto] a 24 px de altura (WCAG 2.5.8), com a mesma letra.",
+      "origem": "recomendada-a-escolher",
+      "ancora": "[data-todo=\"9\"]",
+      "conflito": "A sprint espera o desenho e não tem recomendação: aplicada a opção 1 (alvos de 24 px, mesma letra), igual às outras abas. A letra mínima e o Tamanho da interface ficam para a escolha dela."
+    },
+    {
+      "n": 10,
+      "sprint": "2026-10-12-CADA-FEATURE-TEM-UM-DONO-SO-NA-INTERFACE-01",
+      "o_que_muda": "A aba «Meus toques» da janela Acessórios só lê: mostra o que vibra, a mistura, a força e cada entrada como valor, e o botão «Mudar na aba Vibração» leva à seção «Meus toques» da 05, que é a dona e grava no perfil.",
+      "origem": "recomendada-a-escolher",
+      "ancora": "#acessorios .ja-tela.t3[data-todo=\"10\"]",
+      "conflito": "A sprint O-JOGO-DOS-ACESSORIOS… desenhou os mesmos controles nos dois lugares (05 e janela); a T7 de 12/10 (um dono só, «Temos que evitar features se repetindo») é mais nova e vence: a 05 grava, a janela só lê."
+    }
+  ],
+  "por_baixo": [
+    {
+      "sprint": "O-SHADPS4-QUE-JA-MORA-AQUI-01",
+      "o_que_muda": "O cartão do lançador nasce do .desktop; a linha é a mesma do item 1."
+    },
+    {
+      "sprint": "O-VITA3K-RECEBE-O-DUALSENSE-INTEIRO-01",
+      "o_que_muda": "O cartão do lançador nasce do .desktop; a linha é a mesma do item 1."
+    },
+    {
+      "sprint": "STEAM-INPUT-01",
+      "o_que_muda": "A frase da Steam deixa de apontar o «Consertar»; a causa vai à janela de impedimentos."
+    },
+    {
+      "sprint": "O-MODO-QUE-NAO-SAI-DO-STEAM-INPUT-01",
+      "o_que_muda": "A frase da Steam deixa de apontar o «Consertar»; a causa vai à janela de impedimentos."
+    },
+    {
+      "sprint": "O-TEMA-DE-CORES-ENTRA-PELA-FOLHA-DE-USUARIO-01",
+      "o_que_muda": "Só tokens; a foto não muda."
+    },
+    {
+      "sprint": "O-LANCADOR-DO-KYTYPS5-VEM-DA-MODIFICACAO-01",
+      "o_que_muda": "O perfil do Kyty casa pelo PPSA\\d{5}."
+    },
+    {
+      "sprint": "A-ABA-NAVEGACAO-TEM-OS-DOIS-POINT-AND-CLICK-E-A-VELOCIDADE-QUE-FUNCIONA-01",
+      "o_que_muda": "Já curado na 1-11."
+    },
+    {
+      "sprint": "O-JOGO-SE-DECLARA-NO-PRONTUARIO-PELO-QUE-A-STEAM-E-O-BINARIO-DIZEM-01",
+      "o_que_muda": "A ficha do jogo vem do prontuário; a causa aparece na janela Impedimentos (mudança 6), cujo desenho não muda."
+    },
+    {
+      "sprint": "AS-MODIFICACOES-MARCAM-O-GESTO-ESPERAM-PARAR-E-SAEM-NO-UNINSTALL-01",
+      "o_que_muda": "A chave Ligada e o ⋮ das modificações são os mesmos; o gesto, o parar e o uninstall são por baixo."
+    },
+    {
+      "sprint": "A-VIBRACAO-DO-CONTROLE-CHEGA-AOS-ACESSORIOS-PELO-BUTTPLUG-01",
+      "o_que_muda": "O motor da janela Acessórios (mudanças 4 e 5); o desenho da janela não muda."
+    },
+    {
+      "sprint": "OS-GESTOS-DO-PS-COMANDAM-OS-ACESSORIOS-01",
+      "o_que_muda": "O motor da janela Acessórios (mudanças 4 e 5); o desenho da janela não muda."
+    },
+    {
+      "sprint": "A-VOLTA-DOS-ACESSORIOS-SE-SENTE-NO-CONTROLE-E-NA-LUZ-01",
+      "o_que_muda": "O motor da janela Acessórios (mudanças 4 e 5); o desenho da janela não muda."
+    }
+  ],
+  "fora": [
+    {
+      "sprint": "I18N-DA-TELA-NOVA-01",
+      "motivo": "A tradução não muda a tela em português."
+    },
+    {
+      "sprint": "A-JANELA-ESPERA-A-TRAVA-E-DIZ-A-CAUSA-01",
+      "motivo": "Já costurada na 1-11: está no antes."
+    },
+    {
+      "sprint": "O-REAPLICAR-NUNCA-APAGA-O-QUE-O-USUARIO-POS-NA-LAUNCH-OPTION-01",
+      "motivo": "Só a Launch Option da Steam; nenhuma página muda."
+    },
+    {
+      "sprint": "O-JOGO-QUE-PEDE-RECEITA-DE-AMBIENTE-A-RECEBE-PELO-WRAPPER-01",
+      "motivo": "Só o wrapper do lançamento; nenhuma página muda."
+    },
+    {
+      "sprint": "O-SERVIDOR-DSU-LEVA-O-TOQUE-E-O-MOVIMENTO-AO-EMULADOR-01",
+      "motivo": "A sprint diz «Sem tela nesta sprint»: a chave vai à sessão dos desenhos com nome próprio."
+    }
+  ],
+  "altura_px": 809,
+  "rola": false
+}
