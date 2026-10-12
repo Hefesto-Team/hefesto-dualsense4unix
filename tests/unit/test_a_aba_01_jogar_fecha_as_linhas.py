@@ -825,9 +825,14 @@ def no_webkit() -> dict:
     def clicar(rotulo: str) -> None:
         fora[rotulo] = perguntar(_CLICAR_NO_CADEADO, rotulo)
 
-    GLib.timeout_add(400, lambda: piloto._ir(args.abre))
+    # O piloto nasce na PRIMEIRA, que é a página desta régua: não há o que abrir. O `_ir` que
+    # morava aqui, num relógio de 400 ms, RECARREGAVA a mesma página quando a importação das
+    # abas passava do relógio (CI frio, 4,2 s): a primeira carga ficava pronta, o vigia entrava,
+    # e a recarga o apagava depois do clique («o vigia da caixa não está na página»).
+    assert args.abre == hv.PRIMEIRA, f"o piloto nasce em {hv.PRIMEIRA}, não em {args.abre}"
     try:
-        exigir(lambda: piloto.pronto, "a página 01-jogar.html abrir no WebKit (piloto.pronto)")
+        exigir(lambda: piloto.pronto and piloto.pagina == args.abre,
+               "a página 01-jogar.html abrir no WebKit (piloto.pronto)")
         exigir(
             lambda: json.loads(perguntar(_VIGIAR_O_CADEADO, "vigiar a caixa"))["achou"],
             "a caixa do cadeado aparecer na página que o piloto abriu",
