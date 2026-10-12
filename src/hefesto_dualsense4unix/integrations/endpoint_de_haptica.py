@@ -283,7 +283,7 @@ def distribuir_ancoras(
     emprestada fica só para o aparelho sem gadget.
 
     O aparelho sem gadget (sem os módulos, ou além das oito portas) mantém o
-    endpoint emprestado (12/10/2026, a validar por ela). A RE Engine acha a
+    endpoint emprestado (12/10/2026, a validar pelo usuário). A RE Engine acha a
     háptica pelo contêiner do PRÓPRIO endpoint e não olha o HID; a biblioteca da
     Sony casa o HID com o áudio pelo contêiner. O pad uhid não tem contêiner USB
     e nunca casa, com endpoint ou sem: é o HID sem par que faz o jogo varrer o

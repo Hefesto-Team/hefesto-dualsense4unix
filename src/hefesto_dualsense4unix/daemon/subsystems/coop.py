@@ -535,7 +535,7 @@ class CoopManager:
         quando o jogo larga o endpoint (o rótulo nunca renasce com jogo tocando).
 
         Só com o jogo na autoridade, só no fio do laço, e só entre jogadores do
-        co-op: o posto do P1 (o primário) não troca por aqui (a validar por ela).
+        co-op: o posto do P1 (o primário) não troca por aqui (a validar pelo usuário).
         """
         if not self._no_fio_do_laco() or not self._jogo_com_a_autoridade():
             return
