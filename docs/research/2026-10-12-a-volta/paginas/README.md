@@ -1,8 +1,10 @@
 # As páginas da volta (12/10/2026)
 
-As páginas que serviram à leva da volta, guardadas em versão estática (sem o servidor de respostas de
-`127.0.0.1:8766`; o «gravar» e os anexos não funcionam aqui, o resto sim). Abra o `index.html` de cada pasta
-direto no navegador.
+As páginas que serviram à leva da volta, guardadas em versão estática. Abra o `index.html` de cada pasta direto no
+navegador. A página do todo salva sozinha a cada marcação (voto, escolha ou letra de comentário) no servidor de
+`127.0.0.1:8766` (`~/.local/state/hefesto-casa/leva-volta/pagina/servir.py`), que grava o `respostas.json` de lá e a
+marcação embutida neste `index.html`; com o servidor fora do ar, ela guarda no navegador e manda quando ele voltar. O
+botão «Só o que falta» esconde o que já tem voto ou escolha.
 
 | página | o que mostra | fonte viva |
 | --- | --- | --- |
