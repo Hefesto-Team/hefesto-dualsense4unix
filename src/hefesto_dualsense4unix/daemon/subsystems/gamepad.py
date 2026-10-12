@@ -1167,6 +1167,23 @@ def primary_identity(daemon: DaemonProtocol) -> str | None:
     return uniq if isinstance(uniq, str) and uniq else None
 
 
+def ancorar_o_p1_no_aparelho(daemon: DaemonProtocol) -> bool:
+    """O pad do P1 segue o dono do posto de agora: a âncora do gadget vai junto.
+
+    O-PAR-DO-PAD (12/10/2026): o pad do P1 nasce com a identidade que houver
+    na hora, e no boot o ``primary_uniq`` ainda é vazio; o posto também passa
+    a outro controle sem recriar o pad. Pergunta no relógio da identidade do
+    laço do daemon. Sem dono resolvido, nada muda («não sei» não é «mudou»).
+    """
+    identity = primary_identity(daemon)
+    if identity is None:
+        return False
+    ancorar = getattr(getattr(daemon, "_gamepad_device", None), "ancorar_no_aparelho", None)
+    if not callable(ancorar):
+        return False
+    return bool(ancorar(identity))
+
+
 def read_primary_calibration(daemon: DaemonProtocol) -> bytes | None:
     """Feature 0x05 do controle PRIMÁRIO para o vpad do P1 (GYRO-01)."""
     fn: Any = getattr(daemon.controller, "read_calibration", None)

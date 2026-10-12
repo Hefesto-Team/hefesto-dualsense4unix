@@ -22,8 +22,9 @@ Seis lugares perguntavam «é o nosso vpad?» olhando só o ``misc/uhid``, e o
 gadget passaria por FÍSICO em todos: o daemon o adotaria como um quinto
 controle (medido na rodada 20: o co-op criou o P5) e o broker o esconderia do
 jogo. Este módulo é a resposta única; quem pergunta é o ``evdev_reader``, o
-``backend_pydualsense``, o ``usb_pai``, a ``sinal_da_barra`` e o
-``quem_o_jogo_le``. O broker é autocontido (roda no ``python3`` do sistema, sem
+``backend_pydualsense``, o ``usb_pai``, a ``sinal_da_barra``, o
+``quem_o_jogo_le`` e o ``alto_falante`` (a lista de aparelhos que ganham som).
+O broker é autocontido (roda no ``python3`` do sistema, sem
 o pacote) e traz um ESPELHO desta função; a régua
 ``tests/unit/test_o_pad_nasce_no_mesmo_usb_do_som.py`` passa a mesma tabela de
 casos pelos dois e reprova a primeira divergência.
@@ -54,6 +55,7 @@ import re
 import string
 import struct
 import threading
+import time
 from collections.abc import Callable, Iterable
 
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -346,6 +348,10 @@ def bus_do_hid_id(hid_id: str) -> int | None:
 _TRAVA = threading.Lock()
 _INTERFACE_DO_APARELHO: dict[str, str] = {}
 _CONTRATO_QUE_FALTOU: list[str] = []
+#: ``{serial do gadget: (12 hex do aparelho ou "", prazo monotônico)}``: o gadget
+#: montado que ainda não deu a âncora. "" é o pad que montou antes de saber de
+#: quem é (o P1 do boot, com o ``primary_uniq`` ainda vazio).
+_A_CAMINHO: dict[str, tuple[str, float]] = {}
 
 
 def registrar_gadget(identidade: str, interface: str) -> None:
@@ -361,10 +367,56 @@ def registrar_gadget(identidade: str, interface: str) -> None:
         _INTERFACE_DO_APARELHO[chave] = interface
 
 
-def esquecer_gadget(identidade: str) -> None:
-    """O gadget do aparelho desceu: o som dele volta à âncora emprestada."""
+def esquecer_gadget(identidade: str, interface: str | None = None) -> None:
+    """O gadget do aparelho desceu: o som dele volta à âncora emprestada.
+
+    Com ``interface``, só esquece se o registro ainda for o DESTE gadget: o
+    aparelho que trocou de pad (o P1 que passou a outro controle, o cedido ao
+    primário) já pode estar registrado no gadget novo, e o velho que desce não
+    o apaga.
+    """
+    chave = _so_hex(identidade)
     with _TRAVA:
-        _INTERFACE_DO_APARELHO.pop(_so_hex(identidade), None)
+        if interface is None or _INTERFACE_DO_APARELHO.get(chave) == interface:
+            _INTERFACE_DO_APARELHO.pop(chave, None)
+
+
+def anotar_gadget_a_caminho(serial: str, identidade: str, prazo_s: float) -> None:
+    """O gadget de ``serial`` montou e a âncora dele chega em até ``prazo_s``.
+
+    É a ordem que faz o endpoint de háptica NASCER casado: enquanto o gadget do
+    aparelho está a caminho, o som não cria o endpoint dele numa âncora
+    emprestada (:func:`gadget_a_caminho`). ``identidade`` vazia = o pad ainda
+    não sabe de quem é, e espera por todos até saber ou vencer o prazo. A
+    identidade que chega depois troca o dono e mantém o prazo da montagem.
+    """
+    if not serial:
+        return
+    with _TRAVA:
+        ja = _A_CAMINHO.get(serial)
+        prazo = ja[1] if ja is not None else time.monotonic() + max(0.0, prazo_s)
+        _A_CAMINHO[serial] = (_so_hex(identidade), prazo)
+
+
+def gadget_chegou(serial: str) -> None:
+    """O gadget de ``serial`` deu a âncora, ou desceu: não está mais a caminho."""
+    with _TRAVA:
+        _A_CAMINHO.pop(serial, None)
+
+
+def gadget_a_caminho(identidade: str, *, agora: float | None = None) -> bool:
+    """Há gadget montado, ainda sem âncora, que pode ser o do aparelho ``identidade``?
+
+    True para o gadget do próprio aparelho e para o que ainda não sabe de quem
+    é; o que venceu o prazo não conta (o pad que não enumera volta ao uhid, e o
+    aparelho fica com a âncora emprestada de sempre).
+    """
+    chave = _so_hex(identidade or "")
+    momento = time.monotonic() if agora is None else agora
+    with _TRAVA:
+        for vencido in [s for s, (_i, prazo) in _A_CAMINHO.items() if momento >= prazo]:
+            del _A_CAMINHO[vencido]
+        return any(dono in ("", chave) for dono, _prazo in _A_CAMINHO.values())
 
 
 def interface_do_aparelho(identidade: str) -> str | None:
@@ -454,6 +506,7 @@ __all__ = [
     "VPAD_HID_PHYS",
     "VPAD_UNIQ_PREFIXO",
     "anotar_contrato_que_faltou",
+    "anotar_gadget_a_caminho",
     "aparelho_presente",
     "bus_do_hid_id",
     "campos_do_uevent",
@@ -463,6 +516,8 @@ __all__ = [
     "e_pad_nosso",
     "escrever_get_report",
     "esquecer_gadget",
+    "gadget_a_caminho",
+    "gadget_chegou",
     "hidraw_do_gadget",
     "interface_do_aparelho",
     "interface_do_gadget",

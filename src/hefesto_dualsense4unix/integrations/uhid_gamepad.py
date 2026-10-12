@@ -1811,6 +1811,31 @@ class UhidDualSense:
         self._destruir_o_device()
         _MACS_DOS_VPADS_VIVOS.despir(self)
 
+    def ancorar_no_aparelho(self, identidade: str | None) -> bool:
+        """O pad é do aparelho ``identidade`` (o MAC do físico). True = mudou.
+
+        O-PAR-DO-PAD (12/10/2026): o P1 nasce com o ``primary_uniq`` que houver
+        na hora, e no boot ele ainda é vazio; o gadget montava sem dono, a
+        âncora nunca se registrava, e o endpoint de háptica do primeiro
+        controle ficava numa âncora emprestada para sempre. Quem sabe o dono
+        avisa aqui quando ele chega ou muda, e o gadget e o estacionamento (que
+        pergunta pela identidade) passam a valer para ele. ``None`` ou uma
+        identidade sem os 12 hex é «não sei», e não apaga o dono que havia.
+        """
+        if len(pad_usb._so_hex(identidade or "")) != 12:
+            return False
+        assert identidade is not None
+        with self._lock:
+            mudou = pad_usb._so_hex(self.identity or "") != pad_usb._so_hex(identidade)
+            if mudou:
+                self.identity = identidade
+            gadget = self._gadget
+        if gadget is not None and _ancorar_o_gadget(gadget, identidade):
+            logger.info("pad_usb_ancorado_no_aparelho", gadget=gadget.gadget,
+                        enumerado=gadget.interface is not None, player=self.player)
+            return True
+        return mudou
+
 
     def _a_trava_da_saida(self) -> threading.RLock:
         """A trava da saída, garantida pelo dono: nasce no `__init__` e, se não nasceu, aqui."""
@@ -2225,6 +2250,12 @@ _GADGET_VIGIA_S = 0.25
 _GADGET_VEZ_DA_ESCRITA_MS = 8
 _GADGET_LEITURA = 512
 _GADGET_PERGUNTA_A_CADA = 8
+#: quanto o som espera a âncora do gadget montado antes de emprestar uma: a
+#: enumeração e duas voltas do relógio da identidade (o P1 que monta sem dono).
+_GADGET_A_CAMINHO_S = _GADGET_ENUMERA_S + 4.0
+#: a identidade do gadget e o registro da âncora mudam juntos: o fio da
+#: enumeração e o relógio da identidade nunca se cruzam com metade feita.
+_TRAVA_DA_ANCORA = threading.Lock()
 _FEATURES_DO_PROBE = (0x05, 0x09, 0x20)
 #: o contrato que só se mede montando: o gadget não enumerou pelo `vhci_hcd`.
 CONTRATO_DA_ENUMERACAO = "enumeração pelo vhci_hcd"
@@ -2251,8 +2282,9 @@ class _GadgetDoPad:
             self.cliente.desmontar_pad_usb(self.gadget)
         with contextlib.suppress(Exception):
             self.cliente.close()
-        if self.identidade:
-            pad_usb.esquecer_gadget(self.identidade)
+        pad_usb.gadget_chegou(self.serial)
+        if self.identidade and self.interface:
+            pad_usb.esquecer_gadget(self.identidade, self.interface)
         logger.info("pad_usb_desmontado", gadget=self.gadget)
 
 
@@ -2448,6 +2480,8 @@ def _o_pad_em_usb(pad: UhidDualSense, features: dict[int, bytes]) -> bool:
         pad._fd = gadget.fd
         pad._gadget = gadget
         pad._gadget_prazo = pad.time_fn() + _GADGET_ENUMERA_S
+    if gadget.interface is None:
+        pad_usb.anotar_gadget_a_caminho(gadget.serial, gadget.identidade, _GADGET_A_CAMINHO_S)
     pad._iniciar_o_fio_do_uhid(gadget.fd)
     logger.info("pad_usb_montado", gadget=gadget.gadget, mac=pad.mac, player=pad.player)
     _vigiar_a_enumeracao(pad)
@@ -2467,14 +2501,43 @@ def _vigiar_a_enumeracao(pad: UhidDualSense) -> None:
         if prazo is not None and pad.time_fn() >= prazo:
             pad._gadget_falhou = True
         return
-    gadget.hidraw, gadget.interface = achado
-    if gadget.identidade:
-        pad_usb.registrar_gadget(gadget.identidade, gadget.interface)
+    with _TRAVA_DA_ANCORA:
+        gadget.hidraw, gadget.interface = achado
+        _registrar_a_ancora(gadget)
     with pad._a_trava_da_saida():
         pad._handle_event(struct.pack("<I", UHID_START))
         pad._handle_event(struct.pack("<I", UHID_OPEN))
     logger.info("pad_usb_enumerou", gadget=gadget.gadget, hidraw=gadget.hidraw,
                 player=pad.player)
+
+
+def _registrar_a_ancora(gadget: _GadgetDoPad) -> None:
+    """Gadget enumerado e com dono: o som do aparelho se ancora nele. Sob a trava."""
+    if gadget.interface and gadget.identidade:
+        pad_usb.registrar_gadget(gadget.identidade, gadget.interface)
+        pad_usb.gadget_chegou(gadget.serial)
+
+
+def _ancorar_o_gadget(gadget: _GadgetDoPad, identidade: str) -> bool:
+    """O gadget passa a ser do aparelho ``identidade``. True = o dono mudou.
+
+    A identidade que chega depois da montagem (o P1 que subiu com o
+    ``primary_uniq`` vazio) ou que muda (o posto de P1 passou a outro controle)
+    leva a âncora junto: o registro velho sai só se ainda for deste gadget, e o
+    novo entra já, ou na enumeração, se ela ainda não veio.
+    """
+    with _TRAVA_DA_ANCORA:
+        antiga = gadget.identidade
+        if pad_usb._so_hex(antiga) == pad_usb._so_hex(identidade):
+            return False
+        if antiga and gadget.interface:
+            pad_usb.esquecer_gadget(antiga, gadget.interface)
+        gadget.identidade = identidade
+        if gadget.interface:
+            _registrar_a_ancora(gadget)
+        else:
+            pad_usb.anotar_gadget_a_caminho(gadget.serial, identidade, _GADGET_A_CAMINHO_S)
+    return True
 
 
 def _drenar_o_gadget(pad: UhidDualSense, fd: int, eventos: int) -> None:

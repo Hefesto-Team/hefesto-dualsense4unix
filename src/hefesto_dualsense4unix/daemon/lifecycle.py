@@ -33,6 +33,7 @@ from hefesto_dualsense4unix.daemon.subsystems.big_picture import (
 from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
     EMU_BLOQUEADO_POR_JOGO,
     OrigemEmulacao,
+    ancorar_o_p1_no_aparelho,
     reconciliar_as_mascaras,
 )
 from hefesto_dualsense4unix.daemon.subsystems.poll import (
@@ -4259,6 +4260,10 @@ class Daemon:
                 identity_sync_next_at = tick_started + 2.0
                 self._sync_identity_registry()
                 self._seguir_a_carta()
+                try:
+                    ancorar_o_p1_no_aparelho(self)
+                except Exception as exc:
+                    logger.warning("pad_do_p1_ancorar_falhou", err=str(exc))
                 # sem ela o co-op não existe e os quatro DualSense viram um
                 with contextlib.suppress(Exception):
                     self.aplicar_gamepad_para_multiplos_controles()
