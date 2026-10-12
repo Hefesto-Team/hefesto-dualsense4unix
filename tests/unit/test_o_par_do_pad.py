@@ -34,6 +34,9 @@ from typing import Any
 
 import pytest
 
+# O ``external_mask`` sobe antes do leitor falso da bancada do co-op, que não
+# tem o ``BUTTON_MAP`` que o módulo lê ao carregar.
+from hefesto_dualsense4unix.daemon.subsystems import external_mask  # noqa: F401
 from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
 from hefesto_dualsense4unix.integrations import pad_usb
 from tests.unit import test_a_haptica_chega_a_quem_entra_depois as h
@@ -43,6 +46,7 @@ from tests.unit.test_o_pad_nasce_no_mesmo_usb_do_som import (
     BancadaDoGadget,
     _usb_da_mesa,
 )
+from tests.unit.test_steam_no_fisico_01_o_jogo_ve_p1_a_p4 import nascimentos  # noqa: F401
 
 # Faixas forjadas da casa (``aa:bb:cc`` e ``02:fe``); nunca um endereço real.
 OUTRA = "aa:bb:cc:00:00:12"
@@ -136,6 +140,21 @@ class TestAIdentidadeQueChegaDepois:
         pad.stop()
         assert pad_usb.gadget_a_caminho(OUTRA) is False
 
+    def test_o_dono_que_chega_depois_nao_renova_o_prazo_da_montagem(self) -> None:
+        """O prazo é o da montagem: a identidade que chega troca o dono, não o relógio.
+
+        Um dono que chegasse perto do fim e renovasse o prazo seguraria o som
+        do aparelho além do que o gadget leva para enumerar. MORDIDA: em
+        ``anotar_gadget_a_caminho``, calcule o prazo de novo a cada chamada.
+        """
+        import time
+
+        pad_usb.anotar_gadget_a_caminho("hefesto-pad-01-02fe00000001", "", 1.0)
+        pad_usb.anotar_gadget_a_caminho("hefesto-pad-01-02fe00000001", IDENTIDADE, 60.0)
+        depois = time.monotonic() + 2.0
+        assert pad_usb.gadget_a_caminho(IDENTIDADE) is True
+        assert pad_usb.gadget_a_caminho(IDENTIDADE, agora=depois) is False
+
 
 # --- 2. A identidade que muda --------------------------------------------------
 
@@ -172,6 +191,21 @@ class TestAIdentidadeQueMuda:
         assert pad_usb.interface_do_aparelho(IDENTIDADE) == INTERFACE_DA_OUTRA
         pad.stop()
         assert pad_usb.interface_do_aparelho(OUTRA) is None
+        assert pad_usb.interface_do_aparelho(IDENTIDADE) == INTERFACE_DA_OUTRA
+
+    def test_o_gadget_que_desce_nao_apaga_o_pad_novo_do_mesmo_aparelho(
+        self, bancada: BancadaDoGadget
+    ) -> None:
+        """O aparelho já ganhou outro pad (o cedido ao primário): o velho que desce não o apaga.
+
+        MORDIDA: em ``_GadgetDoPad.desmontar``, esqueça o aparelho sem a ``interface``.
+        """
+        bancada.enumerado = ENUMERADO
+        pad = bancada.pad()
+        assert pad.start()
+        assert bancada.esperar(lambda: pad.is_bound)
+        pad_usb.registrar_gadget(IDENTIDADE, INTERFACE_DA_OUTRA)
+        pad.stop()
         assert pad_usb.interface_do_aparelho(IDENTIDADE) == INTERFACE_DA_OUTRA
 
     def test_o_registro_novo_nao_cruza_a_desmontagem(
@@ -496,15 +530,41 @@ def test_o_co_op_e_o_dono_unico_de_este_aparelho_vai_ganhar_pad() -> None:
     assert pad_usb.gadget_a_caminho("aa:bb:cc:00:00:13") is False, "co-op fora: nada espera"
 
 
-def test_o_co_op_anota_ao_assentar_e_limpa_quando_o_pad_nasce() -> None:
-    """Os três pontos do co-op que falam com o dono único. MORDIDA: tire um e reprova."""
-    from hefesto_dualsense4unix.daemon.subsystems import coop
+def test_o_co_op_diz_ao_som_quem_vai_ganhar_pad_e_quando_o_pad_nasceu(
+    nascimentos: list[str], monkeypatch: pytest.MonkeyPatch  # noqa: F811
+) -> None:
+    """O co-op real, na bancada da STEAM-NO-FISICO-01: o som espera só o que vai nascer.
 
-    fonte = inspect.getsource(coop.CoopManager._spawn_player)
-    assert "anotar_pad_a_caminho" in fonte
-    assert "pad_decidido" in inspect.getsource(coop.CoopManager._promote_player)
-    assert "pad_decidido" in inspect.getsource(coop.CoopManager._teardown_player)
-    assert "_publicar_a_mesa" in inspect.getsource(coop.CoopManager.sync)
+    O jogador assentado e ainda sem pad (o grab pendente) segura o endpoint; o
+    pad que nasce o solta, mas só DEPOIS de nascer (o gadget que montou dentro
+    de ``make_virtual_pad`` já está anotado pelo serial); o que sai da mesa
+    também solta; e o aparelho que o co-op ainda não viu espera a volta dele.
+    MORDIDA: tire o ``anotar_pad_a_caminho`` do ``_spawn_player``, um dos dois
+    ``pad_decidido``, ou o ``_publicar_a_mesa`` do ``sync``, e reprova.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems.coop import CoopManager
+    from hefesto_dualsense4unix.integrations import virtual_pad
+    from tests.unit import test_steam_no_fisico_01_o_jogo_ve_p1_a_p4 as steam
+
+    nasce = virtual_pad.make_virtual_pad
+    durante: dict[str, bool] = {}
+
+    def nasce_vendo_o_som(flavor: Any, *, identity: str | None = None, **kw: Any) -> Any:
+        durante[str(identity)] = pad_usb.gadget_a_caminho(str(identity))
+        return nasce(flavor, identity=identity, **kw)
+
+    monkeypatch.setattr(virtual_pad, "make_virtual_pad", nasce_vendo_o_som)
+    steam._Leitor.pendentes = {steam.P3}
+    mgr = CoopManager(steam._daemon())
+    mgr.sync()
+
+    assert nascimentos[:1] == [steam.P2]
+    assert durante[steam.P2] is True, "enquanto o pad nasce, o som ainda espera"
+    assert pad_usb.gadget_a_caminho(steam.P2) is False, "nasceu: o som cria o endpoint"
+    assert pad_usb.gadget_a_caminho(steam.P3) is True, "assentado e sem pad: espera"
+    assert pad_usb.gadget_a_caminho("02:fe:00:00:00:77") is True, "o co-op ainda não o viu"
+    mgr._teardown_player(steam.P3)
+    assert pad_usb.gadget_a_caminho(steam.P3) is False, "saiu da mesa: não espera mais"
 
 
 def test_o_serial_leva_o_numero_e_o_jogo_os_ve_na_ordem() -> None:
