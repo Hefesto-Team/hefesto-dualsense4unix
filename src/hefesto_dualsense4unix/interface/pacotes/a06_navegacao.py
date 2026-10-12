@@ -1940,7 +1940,7 @@ def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
 
     O MOUSE VAI PRIMEIRO de propósito. É ele que tem exclusão mútua com o
     gamepad virtual: ligá-lo PARA o vpad (`set_mouse_emulation`,
-    `daemon/lifecycle.py:1254`). Se o mouse falhar, o teclado não é tocado e
+    `daemon/lifecycle.py:1255`). Se o mouse falhar, o teclado não é tocado e
     não fica ligado sozinho num modo que não é dele. A ordem mora no daemon
     desde 29/09/2026 (`Daemon.definir_o_status_da_navegacao`).
 
@@ -2120,11 +2120,11 @@ def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
 
     SEM PORTÃO DE MODO, ao contrário do gesto `modo` logo acima, e é medido: o
     portão de lá existe porque ligar o MOUSE derruba o gamepad virtual — o
-    `set_mouse_emulation` (`daemon/lifecycle.py:1254`).
+    `set_mouse_emulation` (`daemon/lifecycle.py:1255`).
 
     Do outro lado, o teclado não mexe no gamepad virtual em momento nenhum.
     Quem o liga e desliga é o
-    `set_keyboard_emulation` (`daemon/lifecycle.py:1664`): ele cria ou destrói o
+    `set_keyboard_emulation` (`daemon/lifecycle.py:1665`): ele cria ou destrói o
     teclado virtual e nada mais.
 
     E COM O GAMEPAD DESPACHANDO, o teclado nem chega a ser consultado — a
