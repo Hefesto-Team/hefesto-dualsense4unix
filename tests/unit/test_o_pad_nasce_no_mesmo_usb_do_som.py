@@ -508,6 +508,30 @@ class TestOBrokerMontaOGadgetSoHid:
         assert resposta["error"] == "pad_usb_falhou" and resposta["errno"] == errno.EBUSY
         assert os.listdir(kernel.raizes.configfs) == []
 
+    @pytest.mark.parametrize(("serial", "ocupadas", "porta"), [
+        ("hefesto-pad-03-02fe008a0001", 0, 2),
+        ("hefesto-pad-01-02fe008a0002", 0, 0),
+        ("hefesto-pad-02-02fe008a0003", 2, 2),
+        ("hefesto-pad-09-02fe008a0004", 0, 0),
+        ("hefesto-pad-02fe008a0005", 1, 1),
+    ])
+    def test_o_pad_entra_na_porta_do_numero_dele(
+        self, tmp_path: Path, serial: str, ocupadas: int, porta: int
+    ) -> None:
+        """O número do serial escolhe a porta: o P3 na 5-3 mesmo chegando primeiro.
+
+        Quem ordena os pads pela porta vê a mesma ordem de quem os ordena pelo
+        serial; ocupada, ou sem número, a primeira livre de sempre. Mordida:
+        ``ligar`` sem a ``porta_do_serial``.
+        """
+        kernel = KernelDeMentira(tmp_path, hs_ocupadas=ocupadas)
+        resposta, fd = kernel.estado().handle_line(7, 1000, _pedido(serial))
+        assert fd is not None, resposta
+        os.close(fd)
+        assert resposta["porta"] == porta
+        assert kernel.lido(Path(kernel.raizes.plataforma) / "vhci_hcd.0/attach").split()[0] == (
+            str(porta))
+
     def test_com_o_vudc_preso_o_pad_fica_sem_vaga_e_nao_sem_contrato(
         self, tmp_path: Path
     ) -> None:

@@ -911,6 +911,19 @@ PAD_USB_VESTIDOS: dict[tuple[int, int], str] = {
 #: ``hefesto-pad-<12 hex>`` ou, com o número do jogador à frente para o jogo os
 #: ver na ordem, ``hefesto-pad-<NN>-<12 hex>`` (``pad_usb.serial_do_pad``).
 _SERIAL_DO_PAD_RE = re.compile(r"^hefesto-pad-(?:[0-9]{2}-)?[0-9a-f]{12}$")
+
+
+def porta_do_serial(serial: str) -> int | None:
+    """A porta de alta velocidade do ``vhci_hcd.0`` que o número do serial pede.
+
+    ``hefesto-pad-NN-<12 hex>`` pede a porta ``NN - 1`` (o P1 na 0, que o kernel
+    mostra como ``5-1``); o serial sem número, ou além das portas, não pede.
+    """
+    prefixo = "hefesto-pad-"
+    cabeca = serial[len(prefixo):].split("-", 1)[0] if serial.startswith(prefixo) else ""
+    if len(cabeca) != 2 or not cabeca.isdigit() or not 1 <= int(cabeca) <= PAD_USB_MAX:
+        return None
+    return int(cabeca) - 1
 _VUDC_RE = re.compile(r"^usbip-vudc\.[0-9]+$")
 _VHCI_LIVRE = 4  # VDEV_ST_NULL
 _VELOCIDADES = {"low-speed": 1, "full-speed": 2, "high-speed": 3, "super-speed": 5}
@@ -1033,14 +1046,20 @@ class PadUsbOps:
         presos = {_ler_attr(f"{self.raizes.configfs}/{g}/UDC") for g in gadgets}
         return [u for u in udcs if u not in presos]
 
-    def porta_livre(self) -> int:
-        """A primeira porta de alta velocidade livre do ``vhci_hcd.0``."""
+    def porta_livre(self, preferida: int | None = None) -> int:
+        """A porta ``preferida`` do ``vhci_hcd.0``, se livre; senão a primeira livre.
+
+        A preferida é a do número do jogador no serial (:func:`porta_do_serial`):
+        o pad do P1 na 5-1, o do P2 na 5-2. Quem ordena os pads pela porta vê a
+        mesma ordem de quem os ordena pelo serial (O-PAR-DO-PAD, 12/10/2026).
+        """
         status = f"{self.raizes.plataforma}/vhci_hcd.0/status"
         try:
             with open(status, encoding="ascii", errors="replace") as fh:
                 linhas = fh.read().splitlines()
         except OSError as exc:
             raise PadUsbSemContratoError("vhci_hcd", "sem o status do vhci_hcd.0") from exc
+        livres: list[int] = []
         for linha in linhas[1:]:
             campos = linha.split()
             if len(campos) < 3 or campos[0] != "hs":
@@ -1048,8 +1067,10 @@ class PadUsbOps:
             if not (campos[1].isdigit() and campos[2].isdigit()):
                 continue
             if int(campos[2]) == _VHCI_LIVRE:
-                return int(campos[1])
-        raise OSError(errno.EBUSY, "nenhuma porta livre no vhci_hcd.0")
+                livres.append(int(campos[1]))
+        if not livres:
+            raise OSError(errno.EBUSY, "nenhuma porta livre no vhci_hcd.0")
+        return preferida if preferida in livres else livres[0]
 
     # -- montar, ligar, desmontar -----------------------------------------
 
@@ -1104,7 +1125,7 @@ class PadUsbOps:
         os.mkdir(caminho)
         self._povoar(caminho)
 
-    def ligar(self, udc: str) -> int:
+    def ligar(self, udc: str, preferida: int | None = None) -> int:
         """Liga o ``udc`` ao ``vhci_hcd`` por um par de sockets; devolve a porta."""
         vudc = f"{self.raizes.plataforma}/{udc}/usbip_sockfd"
         attach = f"{self.raizes.plataforma}/vhci_hcd.0/attach"
@@ -1112,7 +1133,7 @@ class PadUsbOps:
             raise PadUsbSemContratoError("vhci_hcd", "sem o attach do vhci_hcd.0")
         if not os.path.exists(vudc):
             raise PadUsbSemContratoError("usbip_vudc", f"sem o usbip_sockfd de {udc}")
-        porta = self.porta_livre()
+        porta = self.porta_livre(preferida)
         velocidade = _VELOCIDADES.get(
             _ler_attr(f"{self.raizes.classe_udc}/{udc}/maximum_speed"), _VELOCIDADE_PADRAO
         )
@@ -1788,7 +1809,7 @@ class BrokerState:
         porta: int | None = None
         try:
             self._pad_ops.montar(nome, serial, descritor, udcs[0], (vendor, product))
-            porta = self._pad_ops.ligar(udcs[0])
+            porta = self._pad_ops.ligar(udcs[0], porta_do_serial(serial))
             fd = self._pad_ops.ceder_hidg(nome, self.allowed_uid)
         except OSError as exc:
             with contextlib.suppress(OSError):
