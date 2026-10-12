@@ -420,7 +420,7 @@ não podem voar juntos, então pedem cinco ondas, uma para cada. Os outros se en
 
 | onda | conjuntos (agentes) | por que aqui | portão de saída | agentes |
 | --- | --- | --- | --- | --- |
-| **0** a base nova | sem conjunto. Quem coordena: CI do `0044399e9` e `--so publicar`; nascer a `integra/fds-2` do `dev` (`git worktree add -b integra/fds-2 /mnt/Apate/Desenvolvimento/hefesto-voo/_integra-fds-2 dev`); **`echo 2 > ~/.local/state/hefesto-casa/leva-fds/ONDA`** (o `leva.env` da fds tira INT e BRANCH desse número, que hoje diz 1); copiar o `docs/process`, os ignorados (`copiar-ignorados.sh`) e as instruções da casa; `cherry-pick` dos 39 em ordem (conflito só em gerado: regera, nunca escolhe lado); acertar o `regerar-conjuntos.py` (Sonnet e `high`) e regerar os args dos 12 cortados contra a fds-2; carimbo das 28 costuradas e a A-SUITE à mão; as 5 da casa voltam a `espera-ela`; as 10 absorvidas saem da fila do `SPRINT_ORDER` (o `sprint.py validar --todas` as acusa); criar `leva-volta/leva.env` e `leva-volta/conjuntos/` (seção 6). **Agentes:** escrever as sprints novas (escritor + crítico, Opus) e, se a fds-2 ficar vermelha, 1 Opus que cura a base | — | `rapido-na-integracao.sh` verde na fds-2; colisão `rc=0` com as novas | 2 (+1) |
+| **0** a base nova | sem conjunto. Sem agente: CI do `0044399e9` e `--so publicar`; nascer a `integra/fds-2` do `dev` (`git worktree add -b integra/fds-2 /mnt/Apate/Desenvolvimento/hefesto-voo/_integra-fds-2 dev`); **`echo 2 > ~/.local/state/hefesto-casa/leva-fds/ONDA`** (o `leva.env` da fds tira INT e BRANCH desse número, que hoje diz 1); copiar o `docs/process`, os ignorados (`copiar-ignorados.sh`) e as instruções da casa; `cherry-pick` dos 39 em ordem (conflito só em gerado: regera, nunca escolhe lado); acertar o `regerar-conjuntos.py` (Sonnet e `high`) e regerar os args dos 12 cortados contra a fds-2; carimbo das 28 costuradas e a A-SUITE à mão; as 5 da casa voltam a `espera-ela`; as 10 absorvidas saem da fila do `SPRINT_ORDER` (o `sprint.py validar --todas` as acusa); criar `leva-volta/leva.env` e `leva-volta/conjuntos/` (seção 6). **Agentes:** escrever as sprints novas (escritor + crítico, Opus) e, se a fds-2 ficar vermelha, 1 Opus que cura a base | — | `rapido-na-integracao.sh` verde na fds-2; colisão `rc=0` com as novas | 2 (+1) |
 | **1** o que a rodada do Sackboy espera, e as ferramentas | pad (1), som (2, fecha o implementa), portoes (2, com final), ipc (2, com final) | pad e som tocam os arquivos do Sackboy (`uhid_gamepad.py`, `alto_falante.py`, `alto_falante_bt.py`) e têm de costurar antes dele; portoes traz o `--rapido` novo | cada costura com `--rapido` verde; portões completos no fim da onda | 7 |
 | **2** o Sackboy | **sackboy (2, Opus; sprint da onda 0)**, parar (1), solta (1), fora (1, refaz o `wip`), radio (2) | nenhum colide com o sackboy; o sackboy sai assim que pad e som costurarem | idem; o sackboy só fecha com a rodada D1 medida | 7 |
 | **3** o resto da fds | carga (2), lancadores (2), kyty (2), dsx (2) | nenhum par colide; os `depois_de` para a frente se invertem (seção 3) | idem | 8 |
@@ -439,7 +439,7 @@ não podem voar juntos, então pedem cinco ondas, uma para cada. Os outros se en
 | **13** | narrador (3, com final: O-CODIGO-SEM-NARRADOR-02), sozinho | toca quase todo arquivo | idem | 3 |
 | **14** | F2-jogo-dos-acessorios (3, com final) | F2-acessibilidade e narrador | idem | 3 |
 | **FECHO D** | `integra/volta-3` → `dev` | ondas 12–14 | idem | — |
-| **15** a janela do GitHub | github (2, Opus: A-HISTORIA-REESCRITA, O-GITHUB-SEM-RASTRO, AS-CITACOES-DE-COMMIT, RELEASE-NO-CLONE-LIMPO, A-FORJA-SEM-RASTRO, O-REPOSITORIO-NASCE-VIVO, O-VIGIA-DO-RADIO). A reescrita da história é por quem coordena, por último | `integra/volta-4`; tudo antes | release no clone limpo, CI verde | 2 |
+| **15** a janela do GitHub | github (2, Opus: A-HISTORIA-REESCRITA, O-GITHUB-SEM-RASTRO, AS-CITACOES-DE-COMMIT, RELEASE-NO-CLONE-LIMPO, A-FORJA-SEM-RASTRO, O-REPOSITORIO-NASCE-VIVO, O-VIGIA-DO-RADIO). A reescrita da história é a última | `integra/volta-4`; tudo antes | release no clone limpo, CI verde | 2 |
 | **FECHO E** | o último | — | **zero sprint aberta** | — |
 
 **Total:** 16 ondas (0 a 15), 39 conjuntos (o subsystem saiu da F2-acessibilidade), **81 agentes** (82 se a base da
@@ -480,7 +480,7 @@ corridos**.
 
 - **A3 (as 7 curas na fds-1):** caducou. As 7 já estão no `dev`, e a fds-1 não fecha mais. Vira a onda 0: a
   fds-2 nasce do `dev` e recebe os 39 da fds.
-- **A folha da bancada D2 a D8:** quem coordena monta, sem agente, a partir da tabela de `SPRINTS-DA-VOLTA.md`
+- **A folha da bancada D2 a D8:** a folha se monta, sem agente, a partir da tabela de `SPRINTS-DA-VOLTA.md`
   (D2–D8 mais D-toque, D-jogo-novo, D-login, D-envelope, D-touch-tela, D-registro, D-captura, D-usb). Vai na aba
   Bancada da página em 127.0.0.1:8766. As respostas dela gravam em `bancada/respostas.json`. Cada resposta fecha
   uma ficha ou vira correção na onda seguinte. A fila antiga da fds (`leva-fds/BANCADA-PLANO.md`) segue valendo
