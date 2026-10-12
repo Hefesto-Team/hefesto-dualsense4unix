@@ -1821,6 +1821,10 @@ class UhidDualSense:
         avisa aqui quando ele chega ou muda, e o gadget e o estacionamento (que
         pergunta pela identidade) passam a valer para ele. ``None`` ou uma
         identidade sem os 12 hex é «não sei», e não apaga o dono que havia.
+
+        O registro acontece sob a trava do pad, a mesma em que o
+        ``_destruir_o_device`` solta o gadget: fora dela, o gadget lido aqui
+        podia descer no meio, e a âncora ficava registrada numa interface morta.
         """
         if len(pad_usb._so_hex(identidade or "")) != 12:
             return False
@@ -1830,7 +1834,8 @@ class UhidDualSense:
             if mudou:
                 self.identity = identidade
             gadget = self._gadget
-        if gadget is not None and _ancorar_o_gadget(gadget, identidade):
+            ancorou = gadget is not None and _ancorar_o_gadget(gadget, identidade)
+        if gadget is not None and ancorou:
             logger.info("pad_usb_ancorado_no_aparelho", gadget=gadget.gadget,
                         enumerado=gadget.interface is not None, player=self.player)
             return True

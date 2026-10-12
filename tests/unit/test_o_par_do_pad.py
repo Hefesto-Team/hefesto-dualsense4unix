@@ -171,6 +171,43 @@ class TestAIdentidadeQueMuda:
         assert pad_usb.interface_do_aparelho(OUTRA) is None
         assert pad_usb.interface_do_aparelho(IDENTIDADE) == INTERFACE_DA_OUTRA
 
+    def test_o_registro_novo_nao_cruza_a_desmontagem(
+        self, bancada: BancadaDoGadget, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A âncora nova entra sob a trava em que o ``_destruir_o_device`` solta o gadget.
+
+        Fora dela, o gadget lido podia descer entre a leitura e o registro, e a
+        âncora ficava numa interface morta. MORDIDA: em ``ancorar_no_aparelho``,
+        chame o ``_ancorar_o_gadget`` fora do ``with self._lock``.
+        """
+        import threading
+
+        bancada.enumerado = ENUMERADO
+        pad = bancada.pad()
+        assert pad.start()
+        assert bancada.esperar(lambda: pad.is_bound)
+        registrar = pad_usb.registrar_gadget
+        livre: list[bool] = []
+
+        def registrar_vendo_a_trava(identidade: str, interface: str) -> None:
+            def outro_fio() -> None:
+                pegou = pad._lock.acquire(blocking=False)
+                if pegou:
+                    pad._lock.release()
+                livre.append(pegou)
+
+            fio = threading.Thread(target=outro_fio)
+            fio.start()
+            fio.join()
+            registrar(identidade, interface)
+
+        monkeypatch.setattr(pad_usb, "registrar_gadget", registrar_vendo_a_trava)
+        try:
+            assert pad.ancorar_no_aparelho(OUTRA) is True
+        finally:
+            pad.stop()
+        assert livre == [False]
+
 
 # --- 3. Quem avisa o pad --------------------------------------------------------
 
