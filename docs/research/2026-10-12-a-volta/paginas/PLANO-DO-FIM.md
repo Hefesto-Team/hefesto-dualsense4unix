@@ -13,7 +13,7 @@ Das 223 que faltam:
 | costuradas na fds-1, fora do `dev` | 16 | entrar na fds-2 e no fecho A |
 | cortadas na metade (12 conjuntos) | 43 | retomar pelo diff, conferir, costurar |
 | por fazer, em conjunto (args prontos ou a montar) | 86 | ondas 4 a 15 |
-| esperam ela (palavra, bancada, gesto) | 49 | a bancada e as perguntas dela (39), as 5 da casa (gesto), a aprovação do `CLAUDE.md` (1) e 4 de bancada sem agente |
+| esperam ela (palavra, bancada, gesto) | 49 | a bancada e as perguntas dela (39), as 5 da casa (gesto), a aprovação das instruções da casa (1) e 4 de bancada sem agente |
 | novas, ainda sem ficha | ~10 | a onda 0 escreve (a cura do Sackboy primeiro) |
 
 **O que muda no caminho:** a `integra/fds-1` não entra mais no `dev` por avanço simples. O push de 12/10 reescreveu
@@ -388,7 +388,7 @@ parênteses, o destino: o conjunto (ver a seção 5) ou o que espera.
 
 ### A casa (o assistente) (6)
 
-- `O-CLAUDE-CHEGA-COM-O-CONTEXTO…` — O Claude chega com o contexto certo, parte 2: a lei estável no `CLAUDE.md` e a memória auditada. *(espera a aprovação dela)*
+- `O-CONTEXTO-CHEGA-CERTO-A-QUEM-ABRE…` — O contexto chega certo a quem abre a sessão, parte 2: a lei estável nas instruções da casa e a memória auditada. *(espera a aprovação dela)*
 - `A-ARVORE-TEM-UMA-SESSAO-SO` — A árvore tem uma sessão só, e o /tmp também. *(falso em voo: gesto dela)*
 - `A-GUARDA-FECHA-A-PORTA` — A guarda fecha a porta: o assistente não desliga a trava que o segura. *(falso em voo: gesto dela)*
 - `A-SENHA-SO-PASSA-PELO-ASKPASS` — A senha só passa pelo askpass, e nunca pela conversa. *(falso em voo: gesto dela)*
@@ -420,7 +420,7 @@ não podem voar juntos, então pedem cinco ondas, uma para cada. Os outros se en
 
 | onda | conjuntos (agentes) | por que aqui | portão de saída | agentes |
 | --- | --- | --- | --- | --- |
-| **0** a base nova | sem conjunto. Quem coordena: CI do `0044399e9` e `--so publicar`; nascer a `integra/fds-2` do `dev` (`git worktree add -b integra/fds-2 /mnt/Apate/Desenvolvimento/hefesto-voo/_integra-fds-2 dev`); **`echo 2 > ~/.local/state/hefesto-casa/leva-fds/ONDA`** (o `leva.env` da fds tira INT e BRANCH desse número, que hoje diz 1); copiar o `docs/process`, os ignorados (`copiar-ignorados.sh`) e o `CLAUDE.md`; `cherry-pick` dos 39 em ordem (conflito só em gerado: regera, nunca escolhe lado); acertar o `regerar-conjuntos.py` (Sonnet e `high`) e regerar os args dos 12 cortados contra a fds-2; carimbo das 28 costuradas e a A-SUITE à mão; as 5 da casa voltam a `espera-ela`; as 10 absorvidas saem da fila do `SPRINT_ORDER` (o `sprint.py validar --todas` as acusa); criar `leva-volta/leva.env` e `leva-volta/conjuntos/` (seção 6). **Agentes:** escrever as sprints novas (escritor + crítico, Opus) e, se a fds-2 ficar vermelha, 1 Opus que cura a base | — | `rapido-na-integracao.sh` verde na fds-2; colisão `rc=0` com as novas | 2 (+1) |
+| **0** a base nova | sem conjunto. Quem coordena: CI do `0044399e9` e `--so publicar`; nascer a `integra/fds-2` do `dev` (`git worktree add -b integra/fds-2 /mnt/Apate/Desenvolvimento/hefesto-voo/_integra-fds-2 dev`); **`echo 2 > ~/.local/state/hefesto-casa/leva-fds/ONDA`** (o `leva.env` da fds tira INT e BRANCH desse número, que hoje diz 1); copiar o `docs/process`, os ignorados (`copiar-ignorados.sh`) e as instruções da casa; `cherry-pick` dos 39 em ordem (conflito só em gerado: regera, nunca escolhe lado); acertar o `regerar-conjuntos.py` (Sonnet e `high`) e regerar os args dos 12 cortados contra a fds-2; carimbo das 28 costuradas e a A-SUITE à mão; as 5 da casa voltam a `espera-ela`; as 10 absorvidas saem da fila do `SPRINT_ORDER` (o `sprint.py validar --todas` as acusa); criar `leva-volta/leva.env` e `leva-volta/conjuntos/` (seção 6). **Agentes:** escrever as sprints novas (escritor + crítico, Opus) e, se a fds-2 ficar vermelha, 1 Opus que cura a base | — | `rapido-na-integracao.sh` verde na fds-2; colisão `rc=0` com as novas | 2 (+1) |
 | **1** o que a rodada do Sackboy espera, e as ferramentas | pad (1), som (2, fecha o implementa), portoes (2, com final), ipc (2, com final) | pad e som tocam os arquivos do Sackboy (`uhid_gamepad.py`, `alto_falante.py`, `alto_falante_bt.py`) e têm de costurar antes dele; portoes traz o `--rapido` novo | cada costura com `--rapido` verde; portões completos no fim da onda | 7 |
 | **2** o Sackboy | **sackboy (2, Opus; sprint da onda 0)**, parar (1), solta (1), fora (1, refaz o `wip`), radio (2) | nenhum colide com o sackboy; o sackboy sai assim que pad e som costurarem | idem; o sackboy só fecha com a rodada D1 medida | 7 |
 | **3** o resto da fds | carga (2), lancadores (2), kyty (2), dsx (2) | nenhum par colide; os `depois_de` para a frente se invertem (seção 3) | idem | 8 |
