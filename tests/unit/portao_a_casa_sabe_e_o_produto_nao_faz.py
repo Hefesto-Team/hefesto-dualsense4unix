@@ -769,6 +769,15 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "GET_REPORT num controle ocioso estoura o timeout de 5 s do hidp com "
         "EIO. Religá-la seria a regressão, não a cura."
     ),
+    "core/system_check.py::vagas_do_pad_em_usb": (
+        "12/10/2026, a TAREFA-2 do par do pad (235e398c7) — FERRAMENTA DE "
+        "DIAGNÓSTICO. Quem chama é o `check_o_pad_em_usb` de `scripts/doctor.sh`, "
+        "num heredoc Python, para avisar quando o `usbip_vudc` carregou com menos "
+        "vagas que o teto: o `modprobe num=8` do broker não troca o `num` de um "
+        "módulo já carregado, e a docstring da função diz o mesmo. O produto não "
+        "precisa perguntar: o broker já cai na primeira porta livre e o pad que "
+        "sobra nasce uhid."
+    ),
     "broker/hidraw_broker.py::physical_nodes_exposure": (
         "13/09/2026, RESTOS-DA-ONDA-DOIS-01 — FERRAMENTA DE DIAGNÓSTICO desde "
         "hoje. O chamador em produção era "
