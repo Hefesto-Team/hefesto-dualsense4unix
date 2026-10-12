@@ -1761,6 +1761,7 @@ class AltoFalanteSubsystem:
             endpoints_de_pe_ou_nada,
             varrer_endpoints_orfaos,
         )
+        from hefesto_dualsense4unix.integrations.pad_usb import gadget_a_caminho
 
         vivos: dict[str, str] = {}
         for c in controles:
@@ -1803,15 +1804,16 @@ class AltoFalanteSubsystem:
                 varrer_endpoints_orfaos(de_pe_agora, de_pe=de_pe)
 
         na_ordem = self._nos_na_ordem(de_pe_agora, de_pe)
+        proprias = {
+            marca: propria
+            for marca, uniq in de_pe_agora.items()
+            if (propria := ancora_do_gadget(uniq)) is not None
+        }
         postas = distribuir_ancoras(
             de_pe_agora, ancoras(), de_pe,
             ja_postas={m: e.ancora for m, e in self._endpoints.items()},
             ocupados=set(aparelho_de.values()),
-            proprias={
-                marca: propria
-                for marca, uniq in de_pe_agora.items()
-                if (propria := ancora_do_gadget(uniq)) is not None
-            },
+            proprias=proprias,
         )
         for marca in na_ordem:
             uniq = de_pe_agora[marca]
@@ -1832,6 +1834,15 @@ class AltoFalanteSubsystem:
                 atual.parar()
                 logger.info("haptica_endpoint_reancorado", controle=marca, ancora=posta.syspath)
             if posta is None or not uniq:
+                continue
+            if atual is None and marca not in proprias and gadget_a_caminho(uniq):
+                # O-PAR-DO-PAD: o endpoint NASCE casado. O gadget do pad deste
+                # aparelho (ou o do pad que ainda não sabe de quem é) montou e a
+                # âncora dele está a caminho; nascer agora seria nascer numa
+                # emprestada, e com o jogo tocando nele não se reancora mais. O
+                # prazo da montagem limita a espera: o pad que não enumera volta
+                # ao uhid e o aparelho empresta, como sempre.
+                logger.debug("haptica_endpoint_espera_o_gadget", controle=marca)
                 continue
             endpoint = EndpointDeHaptica(uniq=uniq, ancora=posta)
             if endpoint.iniciar():

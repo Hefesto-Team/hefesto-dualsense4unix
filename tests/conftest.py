@@ -1646,6 +1646,24 @@ def _nenhum_sensor_desligado_atravessa() -> Iterator[None]:
     REGISTRO.limpar()
 
 
+@pytest.fixture(autouse=True)
+def _nenhum_gadget_a_caminho_atravessa() -> Iterator[None]:
+    """O gadget que um caso montou e não enumerou não segura o som do caso seguinte.
+
+    O-PAR-DO-PAD (12/10/2026): o som não cria o endpoint de háptica enquanto
+    houver gadget a caminho (``pad_usb.gadget_a_caminho``), e o pad sem dono
+    vale para todo aparelho até o prazo dele vencer.
+    """
+    try:
+        from hefesto_dualsense4unix.integrations import pad_usb
+    except ModuleNotFoundError:
+        yield
+        return
+    pad_usb._A_CAMINHO.clear()
+    yield
+    pad_usb._A_CAMINHO.clear()
+
+
 def _leitores_fisicos_vivos() -> dict[int, Any]:
     """``{ident da thread: leitor}`` de todo ``PhysicalReportReader`` rodando."""
     vivos: dict[int, Any] = {}
