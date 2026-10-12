@@ -34,7 +34,6 @@ import shutil
 import subprocess
 import sys
 import tempfile
-import tomllib
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
@@ -115,6 +114,10 @@ def _chave(arquivo: Path, nome: str) -> str:
 
 
 def _alvo_do_console_script() -> str:
+    try:
+        import tomllib
+    except ImportError:  # pragma: no cover — 3.10 (o pytest traz o tomli)
+        import tomli as tomllib  # type: ignore[no-redef]
     dados = tomllib.loads((RAIZ / "pyproject.toml").read_text(encoding="utf-8"))
     return str(dados["project"]["scripts"][CONSOLE_SCRIPT])
 
