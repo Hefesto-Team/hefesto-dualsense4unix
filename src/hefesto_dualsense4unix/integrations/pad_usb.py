@@ -73,9 +73,17 @@ VPAD_UNIQ_PREFIXO = "02fe"
 #: O começo do serial USB do gadget. O resto são os 12 hex do MAC do pad.
 SERIAL_PREFIXO = "hefesto-pad-"
 
-#: O Sackboy só inicializa os quatro primeiros pads (as features 0x20 e 0x05).
-#: O quinto controle fica no uhid, como hoje.
-MAX_PADS_USB = 4
+#: Quantos pads ganham porta USB própria: as oito portas de alta velocidade do
+#: ``vhci_hcd.0`` (``CONFIG_USBIP_VHCI_HC_PORTS``, 8 no kernel das distros) e os
+#: oito ``vudc`` que o broker carrega (``usbip-vudc num=8``). O teto de quatro
+#: era do produto, não do kernel: o Sackboy só inicializa quatro pads, mas o
+#: quinto sem porta fica uhid, sem par, e é o HID sem par que faz o jogo varrer
+#: o áudio. O dono do teto no broker é ``hidraw_broker.PAD_USB_MAX``.
+MAX_PADS_USB = 8
+
+#: Quantas vagas o ``usbip_vudc`` carregado oferece, ou None sem o módulo. O
+#: ``modprobe num=8`` não troca o que já está no kernel.
+_VAGAS_DO_VUDC = "/sys/module/usbip_vudc/parameters/num"
 
 #: Os módulos do kernel sem os quais o pad continua uhid (a cura 6).
 MODULOS_DO_GADGET = ("libcomposite", "usb_f_hid", "usbip_vudc", "vhci_hcd")
@@ -466,6 +474,12 @@ def _modulo_disponivel(
     return False
 
 
+def vagas_do_vudc(caminho: str = _VAGAS_DO_VUDC) -> int | None:
+    """As vagas do ``usbip_vudc`` carregado; None = o módulo não está no ar."""
+    texto = _ler_atributo(caminho)
+    return int(texto) if texto.isdigit() else None
+
+
 def contrato_que_falta(
     *,
     raiz_modulos: str = "/sys/module",
@@ -527,4 +541,5 @@ __all__ = [
     "serial_do_pad",
     "sob_o_vhci",
     "usb_device_do_caminho",
+    "vagas_do_vudc",
 ]

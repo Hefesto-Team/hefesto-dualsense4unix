@@ -204,4 +204,27 @@ def contrato_do_pad_em_usb(
         return ["?"]
 
 
-__all__ = ["contrato_do_pad_em_usb", "fonte_configurada_do_wireplumber", "system_warnings"]
+def vagas_do_pad_em_usb(*, raiz_modulos: str = "/sys/module") -> tuple[int | None, int]:
+    """``(vagas do usbip_vudc no ar, o teto do produto)``; None = o módulo fora do ar.
+
+    O ``modprobe num=8`` do broker não troca o ``num`` de um módulo já
+    carregado: com menos vagas que o teto, o pad que sobra nasce uhid, sem par.
+    Nunca levanta.
+    """
+    try:
+        import os
+
+        from hefesto_dualsense4unix.integrations import pad_usb
+
+        caminho = os.path.join(raiz_modulos, "usbip_vudc", "parameters", "num")
+        return pad_usb.vagas_do_vudc(caminho), pad_usb.MAX_PADS_USB
+    except Exception:
+        return None, 0
+
+
+__all__ = [
+    "contrato_do_pad_em_usb",
+    "fonte_configurada_do_wireplumber",
+    "system_warnings",
+    "vagas_do_pad_em_usb",
+]

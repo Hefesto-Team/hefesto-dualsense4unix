@@ -53,9 +53,14 @@ ExecStartPre=/usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker --fecha
 # nasce DualSense USB (um gadget só HID no `usbip-vudc`, ligado pelo `vhci_hcd`).
 # O `+` roda SÓ esta linha fora do sandbox (o `ProtectKernelModules` do broker
 # fica intacto); o `-` faz o kernel sem os módulos cair no pad uhid, sem
-# derrubar o broker. `num=4`: um `vudc` por pad, e o jogo inicializa quatro.
+# derrubar o broker. `num=8`: um `vudc` por pad, até as oito portas de alta
+# velocidade do `vhci_hcd.0` (o pad sem porta fica uhid, sem par, e faz o jogo
+# da Sony varrer o áudio). O `modprobe` não troca o `num` de um módulo já
+# carregado: com menos de oito e nenhum gadget preso a um `vudc` (o
+# `--fechar-tudo-e-sair` acima já desmontou os órfãos), o módulo sai e volta.
 ExecStartPre=-+/sbin/modprobe -qa libcomposite usb_f_hid vhci-hcd
-ExecStartPre=-+/sbin/modprobe -q usbip-vudc num=4
+ExecStartPre=-+/bin/sh -c 'n=$$(cat /sys/module/usbip_vudc/parameters/num 2>/dev/null) && [ "$$n" -lt 8 ] && ! grep -qs . /sys/kernel/config/usb_gadget/*/UDC && /sbin/modprobe -qr usbip-vudc; exit 0'
+ExecStartPre=-+/sbin/modprobe -q usbip-vudc num=8
 # Se o broker cai/é parado, RESTAURA todo físico escondido (belt final). Este
 # ABRE mesmo com a cura, e é de propósito: broker fora do ar é broker que
 # deixou de ser a porta, e um nó 0600 sem porta só volta com sudo. Num app de

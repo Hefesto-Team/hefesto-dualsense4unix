@@ -261,7 +261,8 @@ class KernelDeMentira:
     como o ``rmdir`` do configfs. ``sem`` tira do kernel um pedaço do contrato.
     """
 
-    def __init__(self, raiz: Path, *, udcs: int = 4, sem: frozenset[str] = frozenset()) -> None:
+    def __init__(self, raiz: Path, *, udcs: int = 4, sem: frozenset[str] = frozenset(),
+                 hs_ocupadas: int = 0) -> None:
         self.raiz = raiz
         self.sem = sem
         self.raizes = broker.RaizesDoPad(
@@ -281,8 +282,13 @@ class KernelDeMentira:
         if "vhci_hcd" not in sem:
             vhci = Path(self.raizes.plataforma) / "vhci_hcd.0"
             linhas = ["hub port sta spd dev      sockfd local_busid"]
-            linhas += [f"hs  {p:04d} 004 000 00000000 000000 0-0" for p in range(4)]
-            linhas += [f"ss  {p:04d} 004 000 00000000 000000 0-0" for p in range(4, 8)]
+            # As oito de alta velocidade e as oito super do `vhci_hcd.0` do kernel
+            # medido (`nports=16`, `CONFIG_USBIP_VHCI_HC_PORTS=8`); 006 = em uso.
+            linhas += [
+                f"hs  {p:04d} {'006' if p < hs_ocupadas else '004'} 000 00000000 000000 0-0"
+                for p in range(8)
+            ]
+            linhas += [f"ss  {p:04d} 004 000 00000000 000000 0-0" for p in range(8, 16)]
             _escrever(vhci / "status", "\n".join(linhas) + "\n")
             _escrever(vhci / "attach", "")
             _escrever(vhci / "detach", "")
@@ -470,27 +476,43 @@ class TestOBrokerMontaOGadgetSoHid:
         assert dono["ok"] is True
         assert os.listdir(kernel.raizes.configfs) == []
 
-    def test_com_mais_de_quatro_controles_nascem_quatro_pads(
+    def test_o_quinto_controle_ganha_porta_e_o_nono_fica_sem(
         self, tmp_path: Path
     ) -> None:
-        kernel = KernelDeMentira(tmp_path, udcs=6)
+        """O teto são as oito portas de alta velocidade do ``vhci_hcd.0``, não quatro.
+
+        O quinto pad sem porta ficava uhid, sem par, e é o HID sem par que faz o
+        jogo da Sony varrer o áudio (12/10/2026). Mordida: ``PAD_USB_MAX = 4``.
+        """
+        kernel = KernelDeMentira(tmp_path, udcs=10)
         estado = kernel.estado()
         montados = []
-        for n in range(5):
+        for n in range(9):
             resposta, fd = estado.handle_line(7, 1000, _pedido(_serial(n)))
             if fd is not None:
                 os.close(fd)
                 montados.append(resposta["gadget"])
             else:
-                assert resposta["error"] == "reject_quinto_pad"
-        assert len(montados) == 4
-        assert len(os.listdir(kernel.raizes.configfs)) == 4
+                assert n == 8 and resposta["error"] == "reject_alem_das_portas", resposta
+        assert len(montados) == 8 == broker.PAD_USB_MAX == pad_usb.MAX_PADS_USB
+        assert len(os.listdir(kernel.raizes.configfs)) == 8
+
+    def test_sem_porta_livre_no_vhci_o_pad_fica_uhid_sem_gadget_pendurado(
+        self, tmp_path: Path
+    ) -> None:
+        """As oito portas tomadas por outro usbip: o pad cai no uhid, e nada fica no configfs."""
+        kernel = KernelDeMentira(tmp_path, udcs=8, hs_ocupadas=8)
+        estado = kernel.estado()
+        resposta, fd = estado.handle_line(7, 1000, _pedido(_serial(0)))
+        assert fd is None
+        assert resposta["error"] == "pad_usb_falhou" and resposta["errno"] == errno.EBUSY
+        assert os.listdir(kernel.raizes.configfs) == []
 
     def test_com_o_vudc_preso_o_pad_fica_sem_vaga_e_nao_sem_contrato(
         self, tmp_path: Path
     ) -> None:
         # O `usbip-vudc` carregado antes do broker com uma instância só: o
-        # `modprobe num=4` dele não troca o que já está no kernel. O segundo
+        # `modprobe num=8` dele não troca o que já está no kernel. O segundo
         # pad fica sem vaga, e isso não pode virar «falta o usbip_vudc», que o
         # daemon guarda e com que manda todo pad seguinte ao uhid.
         kernel = KernelDeMentira(tmp_path, udcs=1)
@@ -1304,6 +1326,20 @@ class TestSemOKernelODoctorDizOContrato:
 
     def test_com_o_contrato_o_doctor_diz_que_o_pad_nasce_em_usb(self, tmp_path: Path) -> None:
         raiz, lib = _modulos(tmp_path, pad_usb.MODULOS_DO_GADGET)
+        saida = _doctor_do_pad(tmp_path, raiz, lib)
+        assert "[ OK ]" in saida and "[WARN]" not in saida, saida
+
+    def test_o_vudc_carregado_com_quatro_vagas_e_avisado(self, tmp_path: Path) -> None:
+        """O ``modprobe num=8`` não troca o ``num`` de um módulo já no ar: o doctor diz.
+
+        Mordida: o ramo ``vagas:`` arrancado do ``doctor.sh`` volta ao ``[ OK ]``.
+        """
+        raiz, lib = _modulos(tmp_path, pad_usb.MODULOS_DO_GADGET)
+        (raiz / "usbip_vudc" / "parameters").mkdir()
+        (raiz / "usbip_vudc" / "parameters" / "num").write_text("4\n")
+        saida = _doctor_do_pad(tmp_path, raiz, lib)
+        assert "[WARN]" in saida and "4 vagas" in saida and "do pad 5 em diante" in saida, saida
+        (raiz / "usbip_vudc" / "parameters" / "num").write_text("8\n")
         saida = _doctor_do_pad(tmp_path, raiz, lib)
         assert "[ OK ]" in saida and "[WARN]" not in saida, saida
 

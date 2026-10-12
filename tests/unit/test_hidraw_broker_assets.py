@@ -130,7 +130,12 @@ class TestServiceHardening:
             # O pad em USB (O-PAD-VIRTUAL-E-O-SOM-DELE-NASCEM-NO-MESMO-USB-01):
             # só o modprobe sai do sandbox (`+`), e a falta dele não derruba (`-`).
             "-+/sbin/modprobe -qa libcomposite usb_f_hid vhci-hcd",
-            "-+/sbin/modprobe -q usbip-vudc num=4",
+            # O `num` antigo (o módulo carregado com menos de oito vagas) só
+            # sai sem gadget preso, e o `exit 0` nunca derruba o broker.
+            "-+/bin/sh -c 'n=$$(cat /sys/module/usbip_vudc/parameters/num 2>/dev/null)"
+            " && [ \"$$n\" -lt 8 ] && ! grep -qs . /sys/kernel/config/usb_gadget/*/UDC"
+            " && /sbin/modprobe -qr usbip-vudc; exit 0'",
+            "-+/sbin/modprobe -q usbip-vudc num=8",
         ]
         assert d["ExecStopPost"] == [
             "/usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker --restore-all-and-exit"

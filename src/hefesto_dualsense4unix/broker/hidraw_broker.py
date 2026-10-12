@@ -880,14 +880,17 @@ def reinicio_sem_abrir_pedido(
 #   - SEM endpoint OUT (`no_out_endpoint=1`): com OUT, o `f_hid` estala o
 #     SET_REPORT e o jogo recusa o pad;
 #   - SEM a função `uac2`: o isócrono pelo `vhci` congela o jogo;
-#   - no máximo quatro pads (`PAD_USB_MAX`): o Sackboy só inicializa quatro.
+#   - no máximo oito pads (`PAD_USB_MAX`), as oito portas de alta velocidade do
+#     `vhci_hcd.0`: o pad sem porta fica uhid, sem par, e o HID sem par faz o
+#     jogo da Sony varrer o áudio (12/10/2026). O teto antigo, quatro, era do
+#     produto (o Sackboy só inicializa quatro pads), não do kernel.
 # O `attach` vai pelo sysfs com um par de sockets AF_UNIX (o `usbip_sockfd` do
 # `vudc` e o `attach` do `vhci`), sem o `usbipd` por TCP da prova.
 
 CONFIGFS_GADGETS = "/sys/kernel/config/usb_gadget"
 SYS_PLATFORM = "/sys/devices/platform"
 SYS_CLASS_UDC = "/sys/class/udc"
-PAD_USB_MAX = 4
+PAD_USB_MAX = 8
 PAD_USB_NOME = "hefesto-pad-"
 PAD_USB_FUNCAO = "hid.usb0"
 PAD_USB_CONFIG = "c.1"
@@ -1765,12 +1768,12 @@ class BrokerState:
         livres = [f"{PAD_USB_NOME}{i}" for i in range(PAD_USB_MAX)]
         livres = [n for n in livres if n not in existentes]
         if not livres:
-            return ({"ok": False, "cmd": cmd, "error": "reject_quinto_pad"}, None)
+            return ({"ok": False, "cmd": cmd, "error": "reject_alem_das_portas"}, None)
         nome = livres[0]
         udcs = self._pad_ops.udcs_livres()
         if not udcs:
             # Sem vudc nenhum, falta o contrato; com todos presos (o módulo
-            # carregou antes com menos de `num=4`), falta só a vaga, e o pad
+            # carregou antes com menos de `num=8`), falta só a vaga, e o pad
             # deste controle fica no uhid sem condenar os outros ao uhid.
             if self._pad_ops.vudcs():
                 self._log("pad_usb_sem_udc_livre", gadget=nome)

@@ -281,6 +281,14 @@ def distribuir_ancoras(
 
     ``proprias`` (marca → a âncora do gadget dele) vence tudo: a âncora
     emprestada fica só para o aparelho sem gadget.
+
+    O aparelho sem gadget (sem os módulos, ou além das oito portas) mantém o
+    endpoint emprestado (12/10/2026, a validar por ela). A RE Engine acha a
+    háptica pelo contêiner do PRÓPRIO endpoint e não olha o HID; a biblioteca da
+    Sony casa o HID com o áudio pelo contêiner. O pad uhid não tem contêiner USB
+    e nunca casa, com endpoint ou sem: é o HID sem par que faz o jogo varrer o
+    áudio, e áudio sem HID não a dispara (rodada B de 12/10). Tirar o endpoint
+    perderia a háptica da RE Engine sem curar a varredura; a cura é a porta.
     """
     lista = list(disponiveis)
     por_aparelho = {a.syspath: a for a in lista}

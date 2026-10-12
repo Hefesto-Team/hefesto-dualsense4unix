@@ -3510,20 +3510,31 @@ src = os.environ.get("HEFESTO_SRC", "")
 if src and os.path.isdir(src):
     sys.path.insert(0, src)
 try:
-    from hefesto_dualsense4unix.core.system_check import contrato_do_pad_em_usb
+    from hefesto_dualsense4unix.core.system_check import (
+        contrato_do_pad_em_usb,
+        vagas_do_pad_em_usb,
+    )
 except Exception:  # noqa: BLE001 - qualquer falha de import é "não sei"
     print("sem-produto")
     raise SystemExit(0)
+raiz = os.environ.get("HEFESTO_RAIZ_MODULOS") or "/sys/module"
 faltam = contrato_do_pad_em_usb(
-    raiz_modulos=os.environ.get("HEFESTO_RAIZ_MODULOS") or "/sys/module",
+    raiz_modulos=raiz,
     lib_modules=os.environ.get("HEFESTO_LIB_MODULES") or None,
 )
-print("faltam:" + ",".join(faltam))
+vagas, teto = vagas_do_pad_em_usb(raiz_modulos=raiz)
+if not faltam and vagas is not None and vagas < teto:
+    print(f"vagas:{vagas}:{teto}")
+else:
+    print("faltam:" + ",".join(faltam))
 PY
 )" || saida=""
     case "${saida}" in
         "faltam:")
             pass "o pad virtual pode nascer em USB (libcomposite, usb_f_hid, usbip_vudc e vhci_hcd ao alcance)" ;;
+        vagas:*)
+            local vagas="${saida#vagas:}"
+            warn "o usbip_vudc está no ar com ${vagas%%:*} vagas e o Hefesto usa ${vagas#*:}: do pad $(( ${vagas%%:*} + 1 )) em diante o controle nasce uhid, sem par USB, e o jogo com a biblioteca da Sony varre o áudio; reinicie o hefesto-hidraw-broker sem jogo aberto (ele recarrega o módulo com ${vagas#*:} vagas)" ;;
         "faltam:?")
             info "o contrato do pad em USB não se deixou ler" ;;
         faltam:*)
