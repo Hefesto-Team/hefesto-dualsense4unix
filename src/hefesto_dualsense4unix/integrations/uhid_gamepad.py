@@ -2245,7 +2245,8 @@ def _e_eco_puro(body: bytes) -> bool:
 #     abre o aparelho no probe).
 # A enumeração leva segundos (~9 s na prova): o `wait_for_bind` aceita o gadget
 # montado, e o fio vigia a enumeração; se ela não vier em
-# `_GADGET_ENUMERA_S`, o pad volta ao uhid e o contrato que faltou vai ao doctor.
+# `_GADGET_ENUMERA_S` por gadget da fila (o dele e os montados à frente, que o
+# hub enumera um por vez), o pad volta ao uhid e o contrato que faltou vai ao doctor.
 
 _GADGET_ENUMERA_S = 15.0
 _GADGET_VARRE_S = 5.0
@@ -2258,6 +2259,15 @@ _GADGET_PERGUNTA_A_CADA = 8
 #: quanto o som espera a âncora do gadget montado antes de emprestar uma: a
 #: enumeração e duas voltas do relógio da identidade (o P1 que monta sem dono).
 _GADGET_A_CAMINHO_S = _GADGET_ENUMERA_S + 4.0
+#: o gadget que enumerou sem dono (o P1 do boot) só espera o relógio da
+#: identidade, uma volta e folga, e não a montagem inteira.
+_GADGET_SEM_DONO_S = 3.0
+#: os seriais dos gadgets montados que o hub do `vhci_hcd` ainda não enumerou.
+#: Ele enumera uma porta por vez, ~5,6 s cada (medido em 12/10/2026, quatro pads
+#: montados no mesmo ms: o terceiro achado aos 14,85 s e morto aos 15,0 s pelo
+#: prazo, o quarto nunca começou), e o prazo de cada gadget conta a fila.
+_FILA_DA_ENUMERACAO: set[str] = set()
+_TRAVA_DA_FILA = threading.Lock()
 #: a identidade do gadget e o registro da âncora mudam juntos: o fio da
 #: enumeração e o relógio da identidade nunca se cruzam com metade feita.
 _TRAVA_DA_ANCORA = threading.Lock()
@@ -2279,8 +2289,11 @@ class _GadgetDoPad:
     interface: str | None = None
     escrita_falhou: int = 0
     falhas_seguidas: int = 0
+    #: quanto o som espera a âncora deste gadget (a fila da enumeração conta).
+    a_caminho_s: float = _GADGET_A_CAMINHO_S
 
     def desmontar(self) -> None:
+        _sair_da_fila(self.serial)
         with contextlib.suppress(OSError):
             os.close(self.fd)
         with contextlib.suppress(Exception):
@@ -2291,6 +2304,19 @@ class _GadgetDoPad:
         if self.identidade and self.interface:
             pad_usb.esquecer_gadget(self.identidade, self.interface)
         logger.info("pad_usb_desmontado", gadget=self.gadget)
+
+
+def _entrar_na_fila(serial: str) -> int:
+    """O gadget entra na fila da enumeração; devolve quantos estão à frente dele."""
+    with _TRAVA_DA_FILA:
+        frente = len(_FILA_DA_ENUMERACAO - {serial})
+        _FILA_DA_ENUMERACAO.add(serial)
+    return frente
+
+
+def _sair_da_fila(serial: str) -> None:
+    with _TRAVA_DA_FILA:
+        _FILA_DA_ENUMERACAO.discard(serial)
 
 
 def _pedir_ao_broker(
@@ -2480,13 +2506,17 @@ def _o_pad_em_usb(pad: UhidDualSense, features: dict[int, bytes]) -> bool:
                        player=pad.player)
         gadget.desmontar()
         return False
+    prazo_s = _GADGET_ENUMERA_S
+    if gadget.interface is None:
+        prazo_s *= 1 + _entrar_na_fila(gadget.serial)
+    gadget.a_caminho_s = prazo_s + (_GADGET_A_CAMINHO_S - _GADGET_ENUMERA_S)
     with pad._lock:
         pad._features = features
         pad._fd = gadget.fd
         pad._gadget = gadget
-        pad._gadget_prazo = pad.time_fn() + _GADGET_ENUMERA_S
+        pad._gadget_prazo = pad.time_fn() + prazo_s
     if gadget.interface is None:
-        pad_usb.anotar_gadget_a_caminho(gadget.serial, gadget.identidade, _GADGET_A_CAMINHO_S)
+        pad_usb.anotar_gadget_a_caminho(gadget.serial, gadget.identidade, gadget.a_caminho_s)
     pad._iniciar_o_fio_do_uhid(gadget.fd)
     logger.info("pad_usb_montado", gadget=gadget.gadget, mac=pad.mac, player=pad.player)
     _vigiar_a_enumeracao(pad)
@@ -2504,11 +2534,15 @@ def _vigiar_a_enumeracao(pad: UhidDualSense) -> None:
     if not achado:
         prazo = pad._gadget_prazo
         if prazo is not None and pad.time_fn() >= prazo:
+            _sair_da_fila(gadget.serial)
             pad._gadget_falhou = True
         return
+    _sair_da_fila(gadget.serial)
     with _TRAVA_DA_ANCORA:
         gadget.hidraw, gadget.interface = achado
         _registrar_a_ancora(gadget)
+        if not gadget.identidade:
+            pad_usb.encurtar_a_caminho(gadget.serial, _GADGET_SEM_DONO_S)
     with pad._a_trava_da_saida():
         pad._handle_event(struct.pack("<I", UHID_START))
         pad._handle_event(struct.pack("<I", UHID_OPEN))
@@ -2541,7 +2575,7 @@ def _ancorar_o_gadget(gadget: _GadgetDoPad, identidade: str) -> bool:
         if gadget.interface:
             _registrar_a_ancora(gadget)
         else:
-            pad_usb.anotar_gadget_a_caminho(gadget.serial, identidade, _GADGET_A_CAMINHO_S)
+            pad_usb.anotar_gadget_a_caminho(gadget.serial, identidade, gadget.a_caminho_s)
     return True
 
 

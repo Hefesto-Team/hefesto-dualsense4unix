@@ -25,6 +25,11 @@ logger = get_logger(__name__)
 _CALIB_PRAZO_S = 2.0
 
 ESPERA_PELA_ORDEM_S = 4.0
+#: quanto o som espera o pad do jogador que o co-op acabou de assentar: a
+#: calibração, a ordem e folga para o grab (``pad_usb.anotar_pad_a_caminho``).
+_PAD_A_CAMINHO_S = _CALIB_PRAZO_S + ESPERA_PELA_ORDEM_S + 4.0
+#: quanto vale o retrato da mesa que o ``sync`` publica (duas voltas e folga).
+_A_MESA_VALE_S = 5.0
 
 # O jogador que cedeu o aparelho ao posto de P1 (09/10/2026, a validar pelo usuário):
 # «calado»: o pad dele para de falar com o aparelho na cessão (o motor que ele
@@ -411,6 +416,7 @@ class CoopManager:
         self._o_prazo_do_lugar_guardado_espera_o_jogo()
         if not self.should_be_active():
             self._was_active = False
+            self._publicar_a_mesa(None, ativa=False)
             if self._players or self._leds_overridden:
                 self.disable()
             return
@@ -439,6 +445,7 @@ class CoopManager:
             or retry_needed
             or force
         ):
+            self._publicar_a_mesa(None)
             self._repintar_se_o_numero_mudou()
             return
         from hefesto_dualsense4unix.core.evdev_reader import discover_dualsense_evdevs
@@ -505,12 +512,29 @@ class CoopManager:
         for mac in self._na_ordem_da_carta(want):
             if mac not in self._players:
                 self._spawn_player(mac, want[mac])
+        self._publicar_a_mesa({*want, primary})
 
         # todo ciclo cheio — cobre ativação, spawn, node novo e o replug (o
         # backend re-afirma o padrão broadcast do perfil no nó que reaparece;
         # como o replug também dispara o watch, este reassert devolve o padrão
         # do jogador logo em seguida).
         self._apply_coop_player_leds()
+
+    @staticmethod
+    def _publicar_a_mesa(vistos: Iterable[str] | None, *, ativa: bool = True) -> None:
+        """O retrato da mesa para o som: quem o co-op já viu (``None`` = o mesmo de antes).
+
+        O controle que entra com o jogo aberto aparece no sysfs antes do
+        ``sync`` (até 2 s); o som não cria o endpoint dele numa âncora
+        emprestada enquanto o co-op, no ar, ainda não o viu
+        (``pad_usb.gadget_a_caminho``).
+        """
+        from hefesto_dualsense4unix.integrations import pad_usb
+
+        if ativa:
+            pad_usb.a_mesa_viu(vistos, _A_MESA_VALE_S)
+        else:
+            pad_usb.a_mesa_saiu()
 
     def _a_mascara_espera_o_jogo(self, mac: str, origem: str | None) -> bool:
         """O pad deste secundário, que ficou para trás da máscara, espera o jogo?
@@ -761,6 +785,12 @@ class CoopManager:
             player_index=self._next_player_index(),
         )
         self._players[identity] = player
+        if not identity.startswith("path:"):
+            from hefesto_dualsense4unix.integrations import pad_usb
+
+            # O dono único de «este aparelho vai ganhar pad»: o som espera o pad
+            # dele nascer antes de criar o endpoint (a Parte 3 do par do pad).
+            pad_usb.anotar_pad_a_caminho(identity, _PAD_A_CAMINHO_S)
         # R-22: esquenta o cache do 0x05 assim que o jogador é registrado —
         # normalmente o grab só confirma um tick depois, então a leitura (que
         # roda fora do loop) já terminou quando a promoção precisar dela e o
@@ -939,6 +969,10 @@ class CoopManager:
             caminho=self._caminho(),
             **self._make_player_replica_sinks(player.identity),
         )
+        from hefesto_dualsense4unix.integrations import pad_usb
+
+        # Decidido: o gadget que montou já está anotado pelo serial dele.
+        pad_usb.pad_decidido(player.identity)
         if vpad is None:
             logger.warning(
                 "coop_player_vpad_failed",
@@ -1190,6 +1224,9 @@ class CoopManager:
         player = self._players.pop(identity, None)
         if player is None:
             return
+        from hefesto_dualsense4unix.integrations import pad_usb
+
+        pad_usb.pad_decidido(identity)
         self._calib_prazo.pop(identity, None)
         self._calib_sem_leitura.discard(identity)
         self._pronto_desde.pop(identity, None)
@@ -2289,6 +2326,7 @@ def numero_do_nome_do_primario(daemon: Any, fallback: int = 1) -> int:
 
 
 _CHAVE_DO_P1 = "<p1>"
+
 
 
 def _rotulo(chave: str) -> str:

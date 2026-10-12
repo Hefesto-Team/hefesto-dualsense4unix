@@ -1660,8 +1660,10 @@ def _nenhum_gadget_a_caminho_atravessa() -> Iterator[None]:
         yield
         return
     pad_usb._A_CAMINHO.clear()
+    pad_usb.a_mesa_saiu()
     yield
     pad_usb._A_CAMINHO.clear()
+    pad_usb.a_mesa_saiu()
 
 
 def _leitores_fisicos_vivos() -> dict[int, Any]:

@@ -360,6 +360,20 @@ _CONTRATO_QUE_FALTOU: list[str] = []
 #: montado que ainda não deu a âncora. "" é o pad que montou antes de saber de
 #: quem é (o P1 do boot, com o ``primary_uniq`` ainda vazio).
 _A_CAMINHO: dict[str, tuple[str, float]] = {}
+#: a chave de :data:`_A_CAMINHO` do aparelho que o co-op já pôs na mesa e cujo
+#: pad ainda não nasceu (o grab, a calibração e a ordem levam segundos).
+_CHAVE_DO_APARELHO = "aparelho:"
+#: ``(12 hex de cada aparelho que o co-op viu, prazo monotônico)``: o co-op
+#: renova a cada ``sync``; vencido (ou None) = o co-op fora do ar, e nenhum
+#: aparelho espera por ele.
+_A_MESA_VIU: tuple[frozenset[str], float] | None = None
+#: quando o som perguntou pela primeira vez por um aparelho que o co-op ainda
+#: não viu: a espera por ele dura no máximo :data:`_POR_DECIDIR_S`.
+_PRIMEIRA_PERGUNTA: dict[str, float] = {}
+#: uma volta do ``coop.sync`` (2 s) e folga: depois disso, o aparelho que o
+#: co-op não viu não é dele (o primário sem MAC, um aparelho que o evdev não
+#: lista) e o som cria o endpoint como sempre.
+_POR_DECIDIR_S = 5.0
 
 
 def registrar_gadget(identidade: str, interface: str) -> None:
@@ -412,19 +426,94 @@ def gadget_chegou(serial: str) -> None:
         _A_CAMINHO.pop(serial, None)
 
 
+def encurtar_a_caminho(serial: str, prazo_s: float) -> None:
+    """O gadget de ``serial`` enumerou sem dono: a espera por ele cai para ``prazo_s``.
+
+    O P1 que monta antes de saber de quem é segura o endpoint de TODO aparelho
+    até a âncora dele chegar. Enumerado, ele só espera o relógio da identidade
+    (uma volta, ~2 s); o que nunca ganha dono não segura o som pela montagem
+    inteira.
+    """
+    with _TRAVA:
+        ja = _A_CAMINHO.get(serial)
+        if ja is not None:
+            _A_CAMINHO[serial] = (ja[0], min(ja[1], time.monotonic() + max(0.0, prazo_s)))
+
+
+def anotar_pad_a_caminho(identidade: str, prazo_s: float) -> None:
+    """O co-op pôs o aparelho ``identidade`` na mesa, e o pad dele vai nascer.
+
+    É o dono único de «este aparelho vai ganhar pad»: o co-op anota ao assentar
+    o jogador e :func:`pad_decidido` limpa quando o pad nasce (o gadget, se
+    montou, já está anotado pelo serial) ou o jogador sai. Até lá o som espera,
+    como espera o gadget a caminho.
+    """
+    chave = _so_hex(identidade)
+    if not chave:
+        return
+    with _TRAVA:
+        _A_CAMINHO[_CHAVE_DO_APARELHO + chave] = (chave, time.monotonic() + max(0.0, prazo_s))
+
+
+def pad_decidido(identidade: str) -> None:
+    """O pad do aparelho nasceu (em USB ou não), ou o jogador saiu da mesa."""
+    with _TRAVA:
+        _A_CAMINHO.pop(_CHAVE_DO_APARELHO + _so_hex(identidade), None)
+
+
+def a_mesa_viu(identidades: Iterable[str] | None, validade_s: float) -> None:
+    """O co-op leu a mesa: estes aparelhos ele já viu. ``None`` só renova o prazo."""
+    global _A_MESA_VIU
+    prazo = time.monotonic() + max(0.0, validade_s)
+    with _TRAVA:
+        if identidades is None:
+            if _A_MESA_VIU is None:
+                return  # renovar o que nunca foi lido faria todo aparelho esperar
+            vistos = _A_MESA_VIU[0]
+        else:
+            vistos = frozenset(h for h in (_so_hex(i) for i in identidades) if h)
+            for chave in vistos:
+                _PRIMEIRA_PERGUNTA.pop(chave, None)
+        _A_MESA_VIU = (vistos, prazo)
+
+
+def a_mesa_saiu() -> None:
+    """O co-op saiu do ar: nenhum aparelho espera por ele."""
+    global _A_MESA_VIU
+    with _TRAVA:
+        _A_MESA_VIU = None
+        _PRIMEIRA_PERGUNTA.clear()
+
+
+def _por_decidir_locked(chave: str, momento: float) -> bool:
+    """O co-op está no ar e ainda não viu este aparelho (por no máximo ``_POR_DECIDIR_S``)."""
+    if not chave or _A_MESA_VIU is None:
+        return False
+    vistos, prazo = _A_MESA_VIU
+    if momento >= prazo or chave in vistos:
+        return False
+    primeira = _PRIMEIRA_PERGUNTA.setdefault(chave, momento)
+    return momento - primeira < _POR_DECIDIR_S
+
+
 def gadget_a_caminho(identidade: str, *, agora: float | None = None) -> bool:
     """Há gadget montado, ainda sem âncora, que pode ser o do aparelho ``identidade``?
 
     True para o gadget do próprio aparelho e para o que ainda não sabe de quem
     é; o que venceu o prazo não conta (o pad que não enumera volta ao uhid, e o
-    aparelho fica com a âncora emprestada de sempre).
+    aparelho fica com a âncora emprestada de sempre). True também enquanto o
+    co-op não decidiu o pad deste aparelho: ele o pôs na mesa e o pad não
+    nasceu (:func:`anotar_pad_a_caminho`), ou está no ar e ainda não o viu (o
+    controle que entra com o jogo aberto, entre o sysfs e o ``sync``).
     """
     chave = _so_hex(identidade or "")
     momento = time.monotonic() if agora is None else agora
     with _TRAVA:
         for vencido in [s for s, (_i, prazo) in _A_CAMINHO.items() if momento >= prazo]:
             del _A_CAMINHO[vencido]
-        return any(dono in ("", chave) for dono, _prazo in _A_CAMINHO.values())
+        if any(dono in ("", chave) for dono, _prazo in _A_CAMINHO.values()):
+            return True
+        return _por_decidir_locked(chave, momento)
 
 
 def interface_do_aparelho(identidade: str) -> str | None:
@@ -519,8 +608,11 @@ __all__ = [
     "SERIAL_PREFIXO",
     "VPAD_HID_PHYS",
     "VPAD_UNIQ_PREFIXO",
+    "a_mesa_saiu",
+    "a_mesa_viu",
     "anotar_contrato_que_faltou",
     "anotar_gadget_a_caminho",
+    "anotar_pad_a_caminho",
     "aparelho_presente",
     "bus_do_hid_id",
     "campos_do_uevent",
@@ -528,6 +620,7 @@ __all__ = [
     "contrato_que_faltou_ao_montar",
     "e_hidraw_de_pad_nosso",
     "e_pad_nosso",
+    "encurtar_a_caminho",
     "escrever_get_report",
     "esquecer_gadget",
     "gadget_a_caminho",
@@ -537,6 +630,7 @@ __all__ = [
     "interface_do_gadget",
     "ler_o_id_do_get_report",
     "pacote_do_get_report",
+    "pad_decidido",
     "registrar_gadget",
     "serial_do_pad",
     "sob_o_vhci",

@@ -19,6 +19,9 @@ prova, nesta ordem:
    sem gadget (o 5º pad, a máquina sem os módulos) segue com a emprestada.
 5. **O pad nosso não é aparelho** — o ``hidraw`` do gadget sai da lista do som
    pelo dono único, e não ganha endpoint órfão.
+6. **A fila, o dono único e o número** (a Tarefa 2) — os gadgets montados juntos
+   esperam a fila da enumeração; o P1 que enumera sem dono larga o som em 3 s; o
+   co-op é o dono único de «este aparelho vai ganhar pad».
 """
 
 from __future__ import annotations
@@ -407,3 +410,99 @@ def test_o_hidraw_do_gadget_nao_e_aparelho(tmp_path: Path, uniq_do_gadget: str) 
             "HID_UNIQ=02:fe:00:80:00:05\n")
     achados = {c.uniq: c.transporte for c in controles_na_lista(str(classe))}
     assert achados == {h._P1: "rádio", h._P2: "cabo"}
+
+
+# --- 6. A fila, o dono único e o número -----------------------------------------
+
+
+def test_o_terceiro_gadget_da_fila_espera_a_vez_dele(bancada: BancadaDoGadget) -> None:
+    """Medido em 12/10/2026: o hub enumera um gadget por vez, ~5,6 s cada.
+
+    Os quatro montavam no mesmo ms com 15 s cada; o terceiro foi achado aos
+    14,85 s e morto aos 15,0 s, e o quarto nunca começou. Com dois à frente, o
+    prazo é de três enumerações. MORDIDA: tire a fila de ``_o_pad_em_usb`` e o
+    pad falha aos 16 s.
+    """
+    relogio = [100.0]
+    bancada.ug._FILA_DA_ENUMERACAO.update({"hefesto-pad-01-x", "hefesto-pad-02-y"})
+    pad = bancada.pad(time_fn=lambda: relogio[0], player=3)
+    try:
+        assert pad.start()
+        assert pad._gadget_prazo == pytest.approx(145.0)
+        relogio[0] += 16.0
+        assert not bancada.esperar(lambda: pad._gadget_falhou, segundos=0.4)
+        bancada.enumerado = ENUMERADO
+        assert bancada.esperar(lambda: pad.is_bound)
+        assert pad._gadget_falhou is False
+        assert pad.mac and not any(
+            s.endswith(pad_usb._so_hex(pad.mac)) for s in bancada.ug._FILA_DA_ENUMERACAO
+        ), "enumerado, sai da fila"
+    finally:
+        pad.stop()
+
+
+def test_o_p1_que_enumera_sem_dono_larga_o_som_em_tres_segundos(
+    bancada: BancadaDoGadget,
+) -> None:
+    """O P1 do boot sem dono segurava o endpoint de TODO aparelho por 19 s.
+
+    MORDIDA: tire o ``encurtar_a_caminho`` de ``_vigiar_a_enumeracao`` e o prazo
+    volta aos 19 s.
+    """
+    import time
+
+    pad = bancada.pad(identity=None)
+    try:
+        assert pad.start()
+        serial = bancada.pedidos[0][0]
+        assert pad_usb._A_CAMINHO[serial][1] - time.monotonic() > 10.0
+        bancada.enumerado = ENUMERADO
+        assert bancada.esperar(lambda: pad.is_bound)
+        assert pad_usb.gadget_a_caminho(OUTRA) is True, "o relógio da identidade tem a vez"
+        assert pad_usb._A_CAMINHO[serial][1] - time.monotonic() <= 3.0
+        assert pad_usb.gadget_a_caminho(OUTRA, agora=time.monotonic() + 3.1) is False
+    finally:
+        pad.stop()
+
+
+def test_o_co_op_e_o_dono_unico_de_este_aparelho_vai_ganhar_pad() -> None:
+    """O controle que entra com o jogo aberto: o som espera o co-op decidir.
+
+    MORDIDA: devolva só o laço do ``_A_CAMINHO`` em ``gadget_a_caminho`` (sem o
+    ``_por_decidir_locked``) e o aparelho não visto não espera.
+    """
+    import time
+
+    agora = time.monotonic()
+    assert pad_usb.gadget_a_caminho(OUTRA) is False, "sem co-op no ar, ninguém espera"
+    pad_usb.a_mesa_viu(None, 5.0)
+    assert pad_usb.gadget_a_caminho(OUTRA) is False, "renovar o que nunca foi lido não vale"
+
+    pad_usb.a_mesa_viu([IDENTIDADE], 5.0)
+    assert pad_usb.gadget_a_caminho(IDENTIDADE) is False, "visto e sem pad a caminho"
+    assert pad_usb.gadget_a_caminho(OUTRA, agora=agora) is True, "o co-op ainda não o viu"
+    assert pad_usb.gadget_a_caminho(OUTRA, agora=agora + 4.9) is True
+    assert pad_usb.gadget_a_caminho(OUTRA, agora=agora + 5.1) is False, "espera no máximo 5 s"
+
+    pad_usb.anotar_pad_a_caminho(OUTRA, 10.0)
+    assert pad_usb.gadget_a_caminho(OUTRA) is True, "na mesa, com o pad por nascer"
+    assert pad_usb.gadget_a_caminho(IDENTIDADE) is False, "a espera é só dele"
+    pad_usb.pad_decidido(OUTRA)
+    pad_usb.a_mesa_viu([IDENTIDADE, OUTRA], 5.0)
+    assert pad_usb.gadget_a_caminho(OUTRA) is False
+
+    pad_usb.a_mesa_saiu()
+    pad_usb.a_mesa_viu(None, 5.0)
+    assert pad_usb.gadget_a_caminho("aa:bb:cc:00:00:13") is False, "co-op fora: nada espera"
+
+
+def test_o_co_op_anota_ao_assentar_e_limpa_quando_o_pad_nasce() -> None:
+    """Os três pontos do co-op que falam com o dono único. MORDIDA: tire um e reprova."""
+    from hefesto_dualsense4unix.daemon.subsystems import coop
+
+    fonte = inspect.getsource(coop.CoopManager._spawn_player)
+    assert "anotar_pad_a_caminho" in fonte
+    assert "pad_decidido" in inspect.getsource(coop.CoopManager._promote_player)
+    assert "pad_decidido" in inspect.getsource(coop.CoopManager._teardown_player)
+    assert "_publicar_a_mesa" in inspect.getsource(coop.CoopManager.sync)
+

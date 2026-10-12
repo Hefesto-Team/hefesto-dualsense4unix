@@ -695,6 +695,7 @@ class BancadaDoGadget:
         monkeypatch.setattr(pad_usb, "escrever_get_report", escrever)
         monkeypatch.setattr(pad_usb, "_INTERFACE_DO_APARELHO", {})
         monkeypatch.setattr(pad_usb, "_CONTRATO_QUE_FALTOU", [])
+        monkeypatch.setattr(uhid_gamepad, "_FILA_DA_ENUMERACAO", set())
         monkeypatch.setattr(
             uhid_gamepad, "_GADGETS_ESTACIONADOS", uhid_gamepad._GadgetsEstacionados()
         )
@@ -706,7 +707,8 @@ class BancadaDoGadget:
         from hefesto_dualsense4unix.integrations.uhid_blueprint import canonical_blueprint
 
         kw.setdefault("identity", IDENTIDADE)
-        return self.ug.UhidDualSense(player=1, blueprint=canonical_blueprint(), **kw)
+        kw.setdefault("player", 1)
+        return self.ug.UhidDualSense(blueprint=canonical_blueprint(), **kw)
 
     def esperar(self, condicao: Callable[[], bool], segundos: float = 3.0) -> bool:
         import time
