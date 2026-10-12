@@ -821,6 +821,22 @@ def _jsons(conta: list[tuple[str, str]], pasta: Path) -> list[str]:
     return [c for c in _sob(conta, pasta, "open") if c.endswith(".json")]
 
 
+def _aberturas_por_trava(pasta: Path) -> int:
+    """Quantos ``open`` UM ``FileLock`` faz num ``.lock`` que já existe, como o dos perfis.
+
+    O filelock 4.1 tenta o ``O_EXCL`` antes e abre de novo quando o arquivo existe (dois
+    ``open``); o 4.0 abre uma vez. A régua conta leituras, não a receita da biblioteca.
+    """
+    from filelock import FileLock
+
+    trava = pasta / "regua.lock"
+    trava.touch()
+    with contando() as conta, FileLock(str(trava)):
+        pass
+    trava.unlink(missing_ok=True)
+    return len(_sob(conta, trava, "open"))
+
+
 class TestOsArquivosDaCasa:
     def test_dez_cargas_sem_mudanca_leem_os_perfis_uma_vez(self, perfis: Path) -> None:
         from hefesto_dualsense4unix.profiles.loader import load_all_profiles
@@ -829,7 +845,9 @@ class TestOsArquivosDaCasa:
             cargas = [load_all_profiles() for _ in range(10)]
         assert len(_jsons(conta, perfis)) == 12, "os perfis foram relidos sem mudar"
         travas = [c for c in _sob(conta, perfis, "open") if c.endswith(".lock")]
-        assert len(travas) == 12, "o FileLock abriu sem haver leitura"
+        por_trava = _aberturas_por_trava(perfis.parent)
+        assert por_trava >= 1, "a régua não viu o FileLock abrir o .lock"
+        assert len(travas) == 12 * por_trava, "o FileLock abriu sem haver leitura"
         assert len(_sob(conta, perfis, "os.scandir", "os.listdir")) == 10
         assert all([p.name for p in c] == [p.name for p in cargas[0]] for c in cargas)
 
