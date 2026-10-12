@@ -138,12 +138,24 @@ def interface_do_gadget(usb_device: str) -> str:
     return f"{usb_device}/{os.path.basename(usb_device)}:1.0"
 
 
-def serial_do_pad(mac: str) -> str:
-    """O serial USB do gadget: ``hefesto-pad-`` e os 12 hex do MAC do pad."""
+def serial_do_pad(mac: str, numero: int | None = None) -> str:
+    """O serial USB do gadget: ``hefesto-pad-``, o número do jogador e os 12 hex do MAC.
+
+    O jogo da Sony numera os pads na ordem do serial: o Wine guarda cada um como
+    ``256&HEFESTO-PAD-<serial>&0&<n>&0`` sob o ``Enum\\HID`` do ``system.reg``,
+    e nas três rodadas de 12/10/2026 o número do jogo seguiu a ordem alfabética
+    deles, 4 de 4 em cada (a causa é suposta, não lida: o registro do Wine
+    ordena as subchaves e o SetupDi as entrega nessa ordem).
+    Com o número em dois dígitos à frente do MAC (``hefesto-pad-01-…``), o P1
+    do Hefesto é o primeiro que o jogo vê. O MAC fica inteiro e segue o
+    controle, não o número. Sem número, a forma antiga (``hefesto-pad-<12 hex>``).
+    """
     digitos = _so_hex(mac)
     if len(digitos) != 12:
         raise ValueError(f"MAC do pad sem 12 dígitos: {mac!r}")
-    return SERIAL_PREFIXO + digitos
+    if numero is None or not 1 <= numero <= 99:
+        return SERIAL_PREFIXO + digitos
+    return f"{SERIAL_PREFIXO}{numero:02d}-{digitos}"
 
 
 def e_pad_nosso(

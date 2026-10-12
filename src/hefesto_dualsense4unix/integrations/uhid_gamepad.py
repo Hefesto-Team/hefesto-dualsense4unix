@@ -2488,7 +2488,7 @@ def _o_pad_em_usb(pad: UhidDualSense, features: dict[int, bytes]) -> bool:
             _avisar_o_contrato_que_falta(faltam)
             return False
         try:
-            serial = pad_usb.serial_do_pad(pad.mac)
+            serial = pad_usb.serial_do_pad(pad.mac, pad.player)
         except ValueError:
             return False
         gadget = PEDIR_O_PAD_USB(serial, bytes(pad.blueprint["descriptor"]), pad.identity or "",

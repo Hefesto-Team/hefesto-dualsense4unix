@@ -752,7 +752,7 @@ class TestOVpadNasceNoGadget:
             assert pad.start() is True
             assert pad._gadget is not None
             serial, descritor, identidade = bancada.pedidos[0]
-            assert serial == pad_usb.serial_do_pad(pad.mac)
+            assert serial == pad_usb.serial_do_pad(pad.mac, pad.player)
             assert descritor == _descritor()
             assert identidade == IDENTIDADE
             assert sorted(bancada.guardadas) == [0x05, 0x09, 0x20]

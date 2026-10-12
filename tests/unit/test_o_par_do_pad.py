@@ -21,7 +21,7 @@ prova, nesta ordem:
    pelo dono único, e não ganha endpoint órfão.
 6. **A fila, o dono único e o número** (a Tarefa 2) — os gadgets montados juntos
    esperam a fila da enumeração; o P1 que enumera sem dono larga o som em 3 s; o
-   co-op é o dono único de «este aparelho vai ganhar pad».
+   co-op é o dono único de «este aparelho vai ganhar pad»; o serial leva o número.
 """
 
 from __future__ import annotations
@@ -385,8 +385,8 @@ def _hidraw(classe: Path, nome: str, hid: Path, uevent: str) -> None:
 
 @pytest.mark.parametrize(
     "uniq_do_gadget",
-    ["02:fe:00:80:00:01", "hefesto-pad-02fe00800001", ""],
-    ids=["mac-forjado", "serial-antes-do-probe", "so-o-serial"],
+    ["02:fe:00:80:00:01", "hefesto-pad-02fe00800001", "hefesto-pad-01-02fe00800001", ""],
+    ids=["mac-forjado", "serial-antes-do-probe", "serial-com-o-numero", "so-o-serial"],
 )
 def test_o_hidraw_do_gadget_nao_e_aparelho(tmp_path: Path, uniq_do_gadget: str) -> None:
     """MORDIDA: volte ao filtro por ``HID_PHYS == hefesto-vpad`` e o gadget entra."""
@@ -506,3 +506,22 @@ def test_o_co_op_anota_ao_assentar_e_limpa_quando_o_pad_nasce() -> None:
     assert "pad_decidido" in inspect.getsource(coop.CoopManager._teardown_player)
     assert "_publicar_a_mesa" in inspect.getsource(coop.CoopManager.sync)
 
+
+def test_o_serial_leva_o_numero_e_o_jogo_os_ve_na_ordem() -> None:
+    """O jogo numerou pela ordem alfabética do serial, 4 de 4 nas três rodadas de 12/10.
+
+    MORDIDA: ``serial_do_pad`` ignorando o número e a ordem volta a ser a do MAC.
+    """
+    from hefesto_dualsense4unix.broker import hidraw_broker as broker
+
+    macs = {1: "02:fe:00:80:00:09", 2: "02:fe:00:80:00:01", 3: "02:fe:00:80:00:05",
+            4: "02:fe:00:80:00:03"}
+    seriais = {n: pad_usb.serial_do_pad(mac, n) for n, mac in macs.items()}
+    assert seriais[1] == "hefesto-pad-01-02fe00800009"
+    assert [n for n, _s in sorted(seriais.items(), key=lambda par: par[1].upper())] == [1, 2, 3, 4]
+    assert pad_usb.serial_do_pad(macs[1]) == "hefesto-pad-02fe00800009"
+    for serial in (*seriais.values(), pad_usb.serial_do_pad(macs[1])):
+        assert broker._SERIAL_DO_PAD_RE.match(serial), serial
+        assert pad_usb.e_pad_nosso("/sys/nada", uniq=serial, ler=lambda _c: "")
+    for torto in ("hefesto-pad-1-02fe00800009", "hefesto-pad-001-02fe00800009"):
+        assert broker._SERIAL_DO_PAD_RE.match(torto) is None

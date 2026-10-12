@@ -908,7 +908,9 @@ PAD_USB_DESCRITORES_SHA256 = frozenset(
 PAD_USB_VESTIDOS: dict[tuple[int, int], str] = {
     (PHYS_VENDOR, VPAD_PRODUCT): "DualSense Edge Wireless Controller",
 }
-_SERIAL_DO_PAD_RE = re.compile(r"^hefesto-pad-[0-9a-f]{12}$")
+#: ``hefesto-pad-<12 hex>`` ou, com o número do jogador à frente para o jogo os
+#: ver na ordem, ``hefesto-pad-<NN>-<12 hex>`` (``pad_usb.serial_do_pad``).
+_SERIAL_DO_PAD_RE = re.compile(r"^hefesto-pad-(?:[0-9]{2}-)?[0-9a-f]{12}$")
 _VUDC_RE = re.compile(r"^usbip-vudc\.[0-9]+$")
 _VHCI_LIVRE = 4  # VDEV_ST_NULL
 _VELOCIDADES = {"low-speed": 1, "full-speed": 2, "high-speed": 3, "super-speed": 5}
