@@ -35,6 +35,7 @@ from typing import Any
 import pytest
 
 import hefesto_dualsense4unix
+from tests.conftest import GI_REAL_DISPONIVEL
 
 RAIZ = Path(__file__).resolve().parents[2]
 INTERFACE = Path(hefesto_dualsense4unix.__file__).parent / "interface"
@@ -256,6 +257,9 @@ def paginas(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Path]:
     """As cinco páginas montadas pelo gerador de verdade, numa bancada de mentira."""
     if not CHROME.exists():
         pytest.skip("sem o Chrome do sistema — a régua não tem motor")
+    if not GI_REAL_DISPONIVEL:
+        # os geradores importam o pacote das abas, que carrega o GTK (`pacotes/a09_sistema`)
+        pytest.skip("sem o PyGObject real — os geradores das abas são do lado GTK")
     destino = tmp_path_factory.mktemp("nativo")
     for arq in (RAIZ / "mockup").glob("*.html"):
         (destino / arq.name).write_text(arq.read_text(encoding="utf-8"), encoding="utf-8")
