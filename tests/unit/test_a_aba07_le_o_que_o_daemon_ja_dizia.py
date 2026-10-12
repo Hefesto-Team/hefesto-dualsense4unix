@@ -61,6 +61,12 @@ def a07():
     """O módulo que os GESTOS REGISTRADOS habitam — e não outro com o mesmo nome."""
     import pacotes
 
+    # Os leitores que o «Detectar» importa com `from steam_launch_options import rotulo_do_jogo`
+    # sobem ANTES dos dublês: importados pela primeira vez com o `rotulo_do_jogo` dublado,
+    # guardariam a lambda para o resto da sessão do pytest, e o vizinho da mesma parte quebra.
+    import hefesto_dualsense4unix.integrations.sentinela_do_wrapper
+    import hefesto_dualsense4unix.integrations.steam_input_ponte  # noqa: F401
+
     fn = pacotes.gesto_da_pagina(PAGINA, "procurar")
     assert fn is not None, f"{PAGINA}:procurar não tem dono — a régua ficaria cega"
     return sys.modules[fn.__module__]
