@@ -69,7 +69,7 @@ Anotado para o próximo bloco, fora destas ordens:
 
 **As dúvidas que são dela**
 
-1. **«não pra continuar».** Esta volta seguiu a leitura de quem coordena («não, é para continuar»).
+1. **«não pra continuar».** Esta volta seguiu a leitura «não, é para continuar».
    - A) Era para continuar: fica tudo como está.
    - B) Era para parar: volto a página e os mockups para `todo-antes-da-volta2/`, ou para antes das ordens de 14h40.
 2. **«Vibração tá faltando guia controles».**
