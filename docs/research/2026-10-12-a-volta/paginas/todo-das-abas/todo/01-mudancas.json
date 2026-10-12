@@ -55,7 +55,7 @@
   {
    "n": 7,
    "sprint": "ordem dela de 12/10, 14h40 (sprint a escrever: O-MODO-AUTOMATICO-E-UM-BOTAO-SO-01)",
-   "o_que_muda": "No lugar do botão Modo Freestyle, o botão único «Modo automático», do mesmo tipo (pílula com a bolinha). Ligado: o jogo escolhe o modo pelo perfil dele, e a lista de modos fica apagada. Desligado: vale o modo marcado. Volta 2: o botão tem cor própria nos dois estados — desligado, contorno e anel em ciano com a letra clara (não some no fundo); ligado, o fundo enche de ciano e a bolinha acende.",
+   "o_que_muda": "No lugar do botão Modo Freestyle, o botão único «Modo automático», do mesmo tipo (pílula com a bolinha). Ligado: o jogo escolhe o modo pelo perfil dele, e a lista de modos fica apagada. Desligado: vale o modo marcado. O botão é ciano escuro com a letra branca nos dois estados (resposta sua de 12/10); ligado, o fundo clareia, o contorno acende e a bolinha enche.",
    "origem": "ordem-dela-12-10",
    "ancora": ".modo-auto[data-gesto=modo-automatico]",
    "conflito": null

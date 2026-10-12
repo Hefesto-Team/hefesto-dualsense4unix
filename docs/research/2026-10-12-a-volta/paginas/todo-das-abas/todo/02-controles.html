@@ -951,34 +951,23 @@
 </style>
 <style data-todo-css="modo-automatico">
   .sensores .modo-auto{height:auto;align-self:stretch}
-  /* Volta 2 (12/10): o botão tem cor própria nos dois estados. Desligado: contorno e anel em ciano, letra clara
-     (não some no fundo, a queixa dela de 14h40: «feios e invisíveis»). Ligado: o fundo enche de ciano, a bolinha
-     acende e a letra vira ciano; a diferença é de preenchimento, não de um tom de cinza. Mesmo tipo do Freestyle. */
+  /* Ajuste de 12/10, ~17h30 (resposta dela: «Tenta um tom de ciano escuro. Com fonte branca»): o botão é um
+     ciano escuro cheio com a letra branca nos dois estados. Desligado: fundo ciano escuro e bolinha vazada.
+     Ligado: o fundo clareia, o contorno acende e a bolinha enche. Mesmo tipo do Freestyle. */
   .modo-auto{display:inline-flex;align-items:center;justify-content:center;gap:8px;margin-left:auto;
     height:30px;min-height:30px;flex:0 0 auto;white-space:nowrap;border-radius:15px;padding:0 15px 0 11px;
     font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer;
-    border:1px solid rgba(139,233,253,.5);background:rgba(139,233,253,.05);color:var(--fg);
+    border:1px solid #1f8a9c;background:#0e5a68;color:#fff;
     transition:border-color .15s,background-color .15s,color .15s,box-shadow .15s}
   .modo-auto .p{width:10px;height:10px;border-radius:50%;flex:0 0 auto;box-sizing:border-box;
-    border:2px solid var(--cyan);background:transparent;transition:background-color .15s,box-shadow .15s}
-  .modo-auto:hover{border-color:var(--cyan);background:rgba(139,233,253,.11)}
+    border:2px solid #fff;background:transparent;transition:background-color .15s,box-shadow .15s}
+  .modo-auto:hover{border-color:#5fd3e6;background:#106b7b}
   .modo-auto:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
-  .modo-auto[aria-pressed="true"]{border-color:var(--cyan);background:rgba(139,233,253,.24);color:var(--cyan);
-    box-shadow:0 0 0 1px rgba(139,233,253,.35),0 0 16px rgba(139,233,253,.28)}
-  .modo-auto[aria-pressed="true"] .p{background:var(--cyan);box-shadow:0 0 8px var(--cyan)}
+  .modo-auto[aria-pressed="true"]{border-color:var(--cyan);background:#12808f;color:#fff;
+    box-shadow:0 0 0 1px rgba(139,233,253,.35),0 0 14px rgba(139,233,253,.25)}
+  .modo-auto[aria-pressed="true"] .p{background:#fff;box-shadow:0 0 7px #fff}
   body.nativo.por-controle .modo-auto{visibility:hidden}
   .quadro[data-modo-da-aba="automatico"] .quadro-corpo [data-gesto]{opacity:.45;pointer-events:none;transition:opacity .15s}
-</style>
-<style data-todo-css="vibracao-no-controle">
-  /* Volta 2 (12/10): «Vibração tá faltando guia controles». O cartão de cada controle mostra ao vivo o que cada
-     aba ajusta (touchpad, barra de luz, LED, gatilhos, microfone, alto-falante) e não mostrava a vibração.
-     O número fica ao lado da barra (não em cima), para o quadro caber sem empurrar o cartão. */
-  .card-corpo > div:last-child > .moldura.gatilhos.vibra{flex:0 0 auto;min-height:0;padding:6px 9px 7px}
-  .moldura.vibra .gat{gap:7px;margin-top:4px}
-  .moldura.vibra .gat-linha{grid-template-columns:24px 1fr 26px;margin-bottom:0}
-  .moldura.vibra .gat-linha .trilho{position:static}
-  .moldura.vibra .gat-linha .cheio{position:relative;display:block;height:100%;background:var(--orange)}
-  .moldura.vibra .gat-linha .n{position:static;transform:none;text-align:right}
 </style>
 </head>
 <body class="por-controle" data-campo="nativo" data-hef-alvo="classe" data-hef-classe="nativo" data-hef-quando="sim">
@@ -1441,19 +1430,6 @@
                   <span class="n" data-campo="r2-num">40 / 255</span></span></div>
             </div>
           </div>
-          <div class="moldura gatilhos vibra" style="margin-top:9px" data-bloco="vibracao" data-todo="8">
-            <div class="rot" title="O que o jogo manda agora aos dois motores deste controle. Para ajustar a força, vá à aba Vibração.">Vibração</div>
-            <div class="gat">
-              <div class="gat-linha" data-motor="esquerdo" title="Motor esquerdo (o forte)"><span>Esq</span>
-                <span class="trilho"><span class="cheio" data-campo="motor-esq-barra"
-                  data-hef-alvo="largura" style="width:51%"></span></span>
-                  <span class="n" data-campo="motor-esq-num">130</span></div>
-              <div class="gat-linha" data-motor="direito" title="Motor direito (o leve)"><span>Dir</span>
-                <span class="trilho"><span class="cheio" data-campo="motor-dir-barra"
-                  data-hef-alvo="largura" style="width:13%"></span></span>
-                  <span class="n" data-campo="motor-dir-num">32</span></div>
-            </div>
-          </div>
         </div>
 
       </div>
@@ -1755,19 +1731,6 @@
                 <span class="trilho"><span class="cheio" data-campo="r2-barra"
                   data-hef-alvo="largura" style="width:0%"></span>
                   <span class="n" data-campo="r2-num">0 / 255</span></span></div>
-            </div>
-          </div>
-          <div class="moldura gatilhos vibra" style="margin-top:9px" data-bloco="vibracao" data-todo="8">
-            <div class="rot" title="O que o jogo manda agora aos dois motores deste controle. Para ajustar a força, vá à aba Vibração.">Vibração</div>
-            <div class="gat">
-              <div class="gat-linha" data-motor="esquerdo" title="Motor esquerdo (o forte)"><span>Esq</span>
-                <span class="trilho"><span class="cheio" data-campo="motor-esq-barra"
-                  data-hef-alvo="largura" style="width:0%"></span></span>
-                  <span class="n" data-campo="motor-esq-num">0</span></div>
-              <div class="gat-linha" data-motor="direito" title="Motor direito (o leve)"><span>Dir</span>
-                <span class="trilho"><span class="cheio" data-campo="motor-dir-barra"
-                  data-hef-alvo="largura" style="width:0%"></span></span>
-                  <span class="n" data-campo="motor-dir-num">0</span></div>
             </div>
           </div>
         </div>
@@ -2073,19 +2036,6 @@
                   <span class="n" data-campo="r2-num">—</span></span></div>
             </div>
           </div>
-          <div class="moldura gatilhos vibra" style="margin-top:9px" data-bloco="vibracao" data-todo="8">
-            <div class="rot" title="O que o jogo manda agora aos dois motores deste controle. Para ajustar a força, vá à aba Vibração.">Vibração</div>
-            <div class="gat">
-              <div class="gat-linha" data-motor="esquerdo" title="Motor esquerdo (o forte)"><span>Esq</span>
-                <span class="trilho"><span class="cheio" data-campo="motor-esq-barra"
-                  data-hef-alvo="largura" style="width:0%"></span></span>
-                  <span class="n" data-campo="motor-esq-num">—</span></div>
-              <div class="gat-linha" data-motor="direito" title="Motor direito (o leve)"><span>Dir</span>
-                <span class="trilho"><span class="cheio" data-campo="motor-dir-barra"
-                  data-hef-alvo="largura" style="width:0%"></span></span>
-                  <span class="n" data-campo="motor-dir-num">—</span></div>
-            </div>
-          </div>
         </div>
 
       </div>
@@ -2387,19 +2337,6 @@
                 <span class="trilho"><span class="cheio" data-campo="r2-barra"
                   data-hef-alvo="largura" style="width:100%"></span>
                   <span class="n" data-campo="r2-num">—</span></span></div>
-            </div>
-          </div>
-          <div class="moldura gatilhos vibra" style="margin-top:9px" data-bloco="vibracao" data-todo="8">
-            <div class="rot" title="O que o jogo manda agora aos dois motores deste controle. Para ajustar a força, vá à aba Vibração.">Vibração</div>
-            <div class="gat">
-              <div class="gat-linha" data-motor="esquerdo" title="Motor esquerdo (o forte)"><span>Esq</span>
-                <span class="trilho"><span class="cheio" data-campo="motor-esq-barra"
-                  data-hef-alvo="largura" style="width:0%"></span></span>
-                  <span class="n" data-campo="motor-esq-num">—</span></div>
-              <div class="gat-linha" data-motor="direito" title="Motor direito (o leve)"><span>Dir</span>
-                <span class="trilho"><span class="cheio" data-campo="motor-dir-barra"
-                  data-hef-alvo="largura" style="width:0%"></span></span>
-                  <span class="n" data-campo="motor-dir-num">—</span></div>
             </div>
           </div>
         </div>

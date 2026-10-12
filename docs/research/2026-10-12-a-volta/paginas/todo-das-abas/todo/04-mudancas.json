@@ -23,7 +23,7 @@
   {
    "n": 3,
    "sprint": "ordem dela de 12/10, 14h40 (sprint a escrever: O-MODO-AUTOMATICO-E-UM-BOTAO-SO-01)",
-   "o_que_muda": "O par «Modo automático | Modo personalizado» e o ? dele dão lugar a um botão só, «Modo automático». Ligado: o jogo pinta a barra e, sem cor do jogo, cada controle acende a cor do plástico; as colunas ficam apagadas. A explicação vai para a dica do botão. Volta 2: o botão tem cor própria nos dois estados — desligado, contorno e anel em ciano com a letra clara (não some no fundo); ligado, o fundo enche de ciano e a bolinha acende.",
+   "o_que_muda": "O par «Modo automático | Modo personalizado» e o ? dele dão lugar a um botão só, «Modo automático». Ligado: o jogo pinta a barra e, sem cor do jogo, cada controle acende a cor do plástico; as colunas ficam apagadas. A explicação vai para a dica do botão. O botão é ciano escuro com a letra branca nos dois estados (resposta sua de 12/10); ligado, o fundo clareia, o contorno acende e a bolinha enche.",
    "origem": "ordem-dela-12-10",
    "ancora": ".modo-auto[data-gesto=modo-da-luz]",
    "conflito": null

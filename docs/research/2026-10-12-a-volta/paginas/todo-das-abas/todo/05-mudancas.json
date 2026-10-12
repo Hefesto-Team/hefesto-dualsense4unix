@@ -35,7 +35,7 @@
   {
    "n": 4,
    "sprint": "ordem dela de 12/10, 14h40 (sprint a escrever: O-MODO-AUTOMATICO-E-UM-BOTAO-SO-01)",
-   "o_que_muda": "A Vibração ganha o mesmo botão único «Modo automático» das abas 01 a 04 (era a única das cinco sem ele). Ligado: o jogo decide a força da vibração e da háptica, e a força, o sensor háptico e os motores de cada coluna ficam apagados; o Testar agora segue à mão. Volta 2: o botão tem cor própria nos dois estados — desligado, contorno e anel em ciano com a letra clara (não some no fundo); ligado, o fundo enche de ciano e a bolinha acende.",
+   "o_que_muda": "A Vibração ganha o mesmo botão único «Modo automático» das abas 01 a 04 (era a única das cinco sem ele). Ligado: o jogo decide a força da vibração e da háptica, e a força, o sensor háptico e os motores de cada coluna ficam apagados; o Testar agora segue à mão. O botão é ciano escuro com a letra branca nos dois estados (resposta sua de 12/10); ligado, o fundo clareia, o contorno acende e a bolinha enche.",
    "origem": "ordem-dela-12-10",
    "ancora": ".modo-auto[data-gesto=modo-da-vibracao]",
    "conflito": null

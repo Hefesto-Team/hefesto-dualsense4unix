@@ -55,18 +55,10 @@
   {
    "n": 7,
    "sprint": "ordem dela de 12/10, 14h40 (sprint a escrever: O-MODO-AUTOMATICO-E-UM-BOTAO-SO-01)",
-   "o_que_muda": "O botão único «Modo automático», ao lado do Calibrar sensores de movimento. Ligado: o jogo decide o que a aba ajusta (touchpad, microfone e som), e os ajustes dos cartões ficam apagados. Volta 2: o botão tem cor própria nos dois estados — desligado, contorno e anel em ciano com a letra clara (não some no fundo); ligado, o fundo enche de ciano e a bolinha acende.",
+   "o_que_muda": "O botão único «Modo automático», ao lado do Calibrar sensores de movimento. Ligado: o jogo decide o que a aba ajusta (touchpad, microfone e som), e os ajustes dos cartões ficam apagados. O botão é ciano escuro com a letra branca nos dois estados (resposta sua de 12/10); ligado, o fundo clareia, o contorno acende e a bolinha enche.",
    "origem": "ordem-dela-12-10",
    "ancora": ".sensores .modo-auto",
    "conflito": null
-  },
-  {
-   "n": 8,
-   "sprint": "ordem dela de 12/10, 14h40, «Vibração tá faltando guia controles» (sprint a escrever: O-CARTAO-DO-CONTROLE-MOSTRA-A-VIBRACAO-01)",
-   "o_que_muda": "O cartão de cada controle ganha o quadro «Vibração», abaixo do Gatilhos: o que o jogo manda agora ao motor esquerdo (o forte) e ao direito (o leve), de 0 a 255, em laranja como os motores da aba 05. Só leitura; a força se ajusta na aba Vibração.",
-   "origem": "ordem-dela-12-10",
-   "ancora": ".moldura.vibra[data-bloco=vibracao]",
-   "conflito": "Leitura nossa de «guia controles» = a aba Controles: o cartão mostrava ao vivo tudo o que as outras abas ajustam, menos a vibração. A outra leitura (a 05 era a única sem o controle de modo) já está no 05-4."
   }
  ],
  "por_baixo": [
