@@ -40,11 +40,13 @@ COMMIT_DO_CORTE = "8002c142c"
 PASTAS = ("src", "tests", "scripts")
 
 # as palavras com que uma frase NÃO acaba: artigos, preposições, conjunções e pronomes relativos
-CONECTIVOS = frozenset(
-    "a o as os um uma uns umas de da do das dos em no na nos nas ao aos à às por pelo pela "
-    "pelos pelas para pra com sem sob sobre entre até que e ou mas se como quando onde porque "
-    "pois nem seu sua seus suas este esta esse essa isto isso cujo cuja ser é foi são".split()
-)
+CONECTIVOS = frozenset({
+    "a", "o", "as", "os", "um", "uma", "uns", "umas", "de", "da", "do", "das", "dos", "em", "no",
+    "na", "nos", "nas", "ao", "aos", "à", "às", "por", "pelo", "pela", "pelos", "pelas", "para",
+    "pra", "com", "sem", "sob", "sobre", "entre", "até", "que", "e", "ou", "mas", "se", "como",
+    "quando", "onde", "porque", "pois", "nem", "seu", "sua", "seus", "suas", "este", "esta",
+    "esse", "essa", "isto", "isso", "cujo", "cuja", "ser", "é", "foi", "são",
+})
 
 _CITACAO_NO_FIM = re.compile(r"`[\w./-]+\.(?:py|sh|md|csv|html|js|json|yml):\d+`$")
 _ULTIMA_PALAVRA = re.compile(r"([^\W\d_]+)$")
