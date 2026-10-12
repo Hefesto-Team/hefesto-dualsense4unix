@@ -574,12 +574,20 @@ def controles_na_lista(raiz: str | None = None) -> list[ControleNaLista]:
     os dois produtos e o parser aqui, que é a duplicação que a regra proíbe.
     Import tardio para que importar o subsystem não arraste a libopus nem o
     ``pactl`` — mesma razão do import tardio da metade de entrada.
+
+    O pad NOSSO não é aparelho, e quem responde é o dono único
+    (``pad_usb.e_hidraw_de_pad_nosso``), não o ``HID_PHYS``: o gadget em USB
+    herda o ``phys`` do ``vhci_hcd`` (``usb-vhci_hcd.0-N/input0``) e passava
+    por controle, com um endpoint de háptica órfão e um nó de som sem rota
+    (O-PAR-DO-PAD, 12/10/2026).
     """
     from hefesto_dualsense4unix.integrations import dualsense_bt_audio as entrada
+    from hefesto_dualsense4unix.integrations.pad_usb import e_hidraw_de_pad_nosso
 
     achados: list[ControleNaLista] = []
+    raiz_da_classe = raiz or entrada._SYSFS_HIDRAW
     try:
-        entradas = sorted(Path(raiz or entrada._SYSFS_HIDRAW).iterdir())
+        entradas = sorted(Path(raiz_da_classe).iterdir())
     except OSError:
         return achados
     for item in entradas:
@@ -593,7 +601,7 @@ def controles_na_lista(raiz: str | None = None) -> list[ControleNaLista]:
             continue
         if vendor != entrada._VENDOR_SONY or produto not in entrada._PRODUTOS_DUALSENSE:
             continue
-        if info.get("HID_PHYS", "") == entrada._PHYS_VPAD:
+        if e_hidraw_de_pad_nosso(item.name, raiz_class_hidraw=str(raiz_da_classe)):
             continue
         achados.append(
             ControleNaLista(
