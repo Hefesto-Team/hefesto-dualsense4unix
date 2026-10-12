@@ -427,6 +427,7 @@ class CoopManager:
         self._was_active = True
         self._recolher_os_cedidos()
         self._promote_pending()
+        self._adotar_o_numero_do_jogo()
         self._corrigir_a_ordem()
         retry_needed = self._retry_spawn
         self._retry_spawn = False
@@ -519,6 +520,102 @@ class CoopManager:
         # como o replug também dispara o watch, este reassert devolve o padrão
         # do jogador logo em seguida).
         self._apply_coop_player_leds()
+
+    def _adotar_o_numero_do_jogo(self) -> None:
+        """O número que o jogo escreveu nas lâmpadas de um pad passa a ser o do Hefesto.
+
+        «O jogo manda, o controle obedece.» O pad nasce com o número do Hefesto
+        no serial (``pad_usb.serial_do_pad``) e o jogo o vê na mesma ordem; se o
+        jogo numera de outro jeito mesmo assim (medido em 12/10/2026: 3→2, 4→3,
+        2→4), o Hefesto troca o número do aparelho com quem tinha o do jogo, como
+        a troca à mão da aba Controles (``_set_number_locked``), e o lugar dele
+        na mesa do jogo troca junto. A carta passa a bater com a mesa, e
+        ``_ordenar`` não recria pad nenhum: o jogo segue com os pads de pé. A
+        tela e as lâmpadas seguem o registro; o «Háptica do Controle N» segue
+        quando o jogo larga o endpoint (o rótulo nunca renasce com jogo tocando).
+
+        Só com o jogo na autoridade, só no fio do laço, e só entre jogadores do
+        co-op: o posto do P1 (o primário) não troca por aqui (a validar por ela).
+        """
+        if not self._no_fio_do_laco() or not self._jogo_com_a_autoridade():
+            return
+        marcas = getattr(self._daemon, "_numero_que_o_jogo_escreveu", None)
+        registro = getattr(self._daemon, "identity_registry", None)
+        numero_de = getattr(registro, "slot_for", None)
+        if not isinstance(marcas, dict) or not callable(numero_de):
+            return
+        por_chave = {_so_hex(c): c for c in self._players if not c.startswith("path:")}
+        trocou = False
+        for alvo_bruto, marca in sorted(dict(marcas).items()):
+            jogo = marca[0] if isinstance(marca, tuple) and marca else None
+            alvo = por_chave.get(_so_hex(str(alvo_bruto)))
+            if alvo is None or not isinstance(jogo, int) or isinstance(jogo, bool) or jogo < 1:
+                continue
+            if self._trocar_pelo_numero_do_jogo(alvo, jogo, numero_de):
+                trocou = True
+        if not trocou:
+            return
+        # As lâmpadas congeladas seguem o registro JÁ: a carta de ``_ordenar`` sai
+        # de ``numero_da_lampada``, e uma lâmpada velha com a mesa nova recriaria o
+        # pad que esta troca existe para não recriar. O jogo já acende esse número.
+        soltar = getattr(registro, "liberar_as_lampadas", None)
+        if callable(soltar):
+            with contextlib.suppress(Exception):
+                soltar()
+        with contextlib.suppress(Exception):
+            from hefesto_dualsense4unix.daemon.connection import (
+                armar_gatilho_da_cor_por_evento,
+            )
+
+            armar_gatilho_da_cor_por_evento(self._daemon, "o_numero_do_jogo_adotado")
+        self._apply_coop_player_leds()
+
+    def _trocar_pelo_numero_do_jogo(
+        self, alvo: str, jogo: int, numero_de: Callable[..., Any]
+    ) -> bool:
+        """Uma troca de :meth:`_adotar_o_numero_do_jogo`. True = o registro mudou."""
+        def numero(chave: str) -> int | None:
+            with contextlib.suppress(Exception):
+                bruto = numero_de(chave, assign=False)
+                if isinstance(bruto, int) and not isinstance(bruto, bool) and bruto >= 1:
+                    return bruto
+            return None
+
+        atual = numero(alvo)
+        if atual is None or atual == jogo:
+            return False
+        dono = next((c for c in self._players if c != alvo and numero(c) == jogo), None)
+        ocupante = self._mesa_do_jogo.get(jogo - 1)
+        if dono is None or ocupante == _CHAVE_DO_P1 or self._players[alvo].vpad is None:
+            logger.info(
+                "o_numero_do_jogo_nao_trocou",
+                alvo=_rotulo(alvo), jogo=jogo, hefesto=atual,
+                motivo="o_p1" if ocupante == _CHAVE_DO_P1 else "sem_par_no_coop",
+            )
+            return False
+        from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin, _norm_uniq
+
+        try:
+            IpcHandlersMixin._set_number_locked(
+                getattr(self._daemon, "identity_registry", None),
+                getattr(self._daemon, "external_registry", None),
+                _norm_uniq(alvo) or alvo,
+                jogo,
+            )
+        except Exception as exc:
+            logger.warning("o_numero_do_jogo_nao_trocou", alvo=_rotulo(alvo), jogo=jogo,
+                           err=type(exc).__name__)
+            return False
+        lugar_do_alvo = next((lg for lg, c in self._mesa_do_jogo.items() if c == alvo), None)
+        self._mesa_do_jogo[jogo - 1] = alvo
+        if lugar_do_alvo is not None and lugar_do_alvo != jogo - 1:
+            if ocupante is not None:
+                self._mesa_do_jogo[lugar_do_alvo] = ocupante
+            else:
+                del self._mesa_do_jogo[lugar_do_alvo]
+        logger.info("o_numero_do_jogo_adotado", alvo=_rotulo(alvo), jogo=jogo, hefesto=atual,
+                    trocou_com=_rotulo(dono))
+        return True
 
     @staticmethod
     def _publicar_a_mesa(vistos: Iterable[str] | None, *, ativa: bool = True) -> None:
@@ -2327,6 +2424,10 @@ def numero_do_nome_do_primario(daemon: Any, fallback: int = 1) -> int:
 
 _CHAVE_DO_P1 = "<p1>"
 
+
+def _so_hex(valor: str) -> str:
+    """A chave de comparação de um endereço: só os dígitos hex, em minúsculas."""
+    return "".join(ch for ch in valor.lower() if ch in "0123456789abcdef")
 
 
 def _rotulo(chave: str) -> str:
