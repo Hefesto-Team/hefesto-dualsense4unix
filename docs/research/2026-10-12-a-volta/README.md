@@ -178,13 +178,12 @@ daemon reiniciado às 21h03, push.
 
 - **O único vermelho que ficou já existia no `dev`:**
   `test_toda_excecao_tem_sprint_que_a_tira`. A fila marca como feitas quatro
-  sprints cujo código mora em três ramos ainda não integrados; ele sai quando esse
-  código entrar.
+  sprints cujo código mora em três ramos ainda não integrados; ele sai quando esse código entrar.
 - **Curados no fecho:** o dublê do `rotulo_do_jogo` vazava para a sentinela da aba
   07 (o commit `d25958549` faz os leitores da Steam subirem antes dos dublês, e o
   teste da aba 07 morde com a cura arrancada); a prova das fotos ficou atrás das
   citações reapontadas (`249370851`); e o mapa do rádio desenhado ainda dizia o
-  «232%» que o produto já não diz (`1ee976592`).
+  número velho da ponte que o produto já não diz (`1ee976592`).
 - **A limpeza de texto** (`8b02cb8bd`, `0e6e5e9fc`, `cb26dfc5f`, `581ed3051`):
   comentários e páginas sem vocabulário de processo.
 
