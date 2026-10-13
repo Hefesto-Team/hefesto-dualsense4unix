@@ -41,7 +41,7 @@ jobs:
     steps:
       # `fetch-depth: 0` veio com o portão da história, que agora roda no workflow
       # `autoria`; reduzir a profundidade deste job é medida à parte.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       # O QUE OS PORTÕES DESTE JOB IMPORTAM — 25/09/2026
@@ -101,8 +101,8 @@ jobs:
       matrix:
         python: ["3.10", "3.11", "3.12"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python }}
       - name: Os portões do job, pelo nome na tabela
@@ -118,8 +118,8 @@ jobs:
     # deixando a suíte verde com a função quebrada. O que apaga não reprova; o
     # que reprova é este job.
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - name: Os portões do job, pelo nome na tabela
@@ -141,8 +141,8 @@ jobs:
     # literalmente o que a E5 pede: "reintroduzir `daemon offline` num rótulo
     # tem de reprovar de novo".
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - name: Os portões do job, pelo nome na tabela
@@ -175,10 +175,10 @@ jobs:
     # morar na raiz, sendo a página que mais gente copia e cola.
     steps:
       # o `citacoes-novas` pergunta pelo pé comum com o `origin/dev`, que o checkout raso não traz
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       # O-CI-DA-DEV-VOLTA-A-VERDE-01 (25/09/2026): o passo da citação em
@@ -215,10 +215,10 @@ jobs:
       # no runner, e a regra 17 (`id-sumiu-sem-nota`, abaixo) nasceria verde
       # sem medir nada. O mesmo defeito já pago pelo workflow `autoria`,
       # agora no job do mapa.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       # O-CI-DA-DEV-VOLTA-A-VERDE-01 (25/09/2026): três passos deste job são
@@ -277,7 +277,7 @@ jobs:
     # antes e depois. A varredura sai com código 0 e o `continue-on-error` saiu
     # junto: a partir daqui o job PROTEGE, não relata.
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Versão do shellcheck (vem no runner)
         run: shellcheck --version
       - name: Os portões do job, pelo nome na tabela
@@ -301,12 +301,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: A sonda
         run: bash scripts/banco_de_prova/sonda.sh
       - name: Sobe o que a sonda mediu
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: banco-de-prova-sonda
           path: sonda-saida/
@@ -326,7 +326,7 @@ jobs:
     # `librsvg2-bin` é a única dependência — o mesmo `rsvg-convert` que o
     # `gtk-real` já instala por outro motivo.
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Instalar rsvg-convert
         run: |
           sudo apt-get update
@@ -343,7 +343,7 @@ jobs:
     # regras udev, 4 arquivos de modprobe, 2 módulos DKMS e o broker); depois
     # que alguém acrescentar uma regra nova, descobrir a divergência custa caro.
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Os portões do job, pelo nome na tabela
         run: bash scripts/portoes.sh --so packaging-parity
 
@@ -361,8 +361,8 @@ jobs:
     # arquivo também não se chama `test_*` — o pytest só o coleta quando
     # apontado pelo caminho, que é o que esta linha faz.
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.10"
       - run: python -m pip install --upgrade pip && pip install pytest
@@ -382,8 +382,8 @@ jobs:
   version-check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - name: Os portões do job, pelo nome na tabela
@@ -393,8 +393,8 @@ jobs:
     name: Sync fallback __init__.py vs pyproject.toml (CHORE-VERSION-SYNC-GATE-01)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - name: Verificar sync fallback vs pyproject
@@ -432,10 +432,10 @@ jobs:
       # Z6-07 (24/08/2026, P-11): histórico completo — este é o outro job que
       # a PAREAMENTO-01 nomeia como precisando dele (portões futuros que
       # comparam com o passado, como o P-09 desta família, nascem aqui).
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python }}
           # CI-CACHE-PIP-01 (v3.4.0): cacheia ~/.cache/pip chaveado por hash
@@ -547,7 +547,7 @@ jobs:
     # falha deste job não pode cancelar nem mascarar o `lint-test`, o `mypy` ou
     # o `runtime-smoke`, que respondem perguntas diferentes.
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # SEM `actions/setup-python`: o Python que ele instala é isolado e NÃO
       # enxerga /usr/lib/python3/dist-packages, onde o `python3-gi` do sistema
       # mora. Instalar PyGObject pelo pip ao lado das typelibs do sistema já
@@ -715,7 +715,7 @@ jobs:
           done
       - name: Os logs da suíte
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: suite-gtk-real
           path: /tmp/suite-ci/*.log
@@ -734,8 +734,8 @@ jobs:
     # Quatro portões declarados, zero portões vivos. A partir daqui eles rodam
     # aqui — que é onde o `hooksPath` de ninguém alcança.
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: 'pip'
@@ -763,8 +763,8 @@ jobs:
     name: Mypy (gate rígido)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: 'pip'
@@ -796,8 +796,8 @@ jobs:
       TRANSPORT: ${{ matrix.transport }}
       DESKTOP_ENV: ${{ matrix.desktop_env }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: 'pip'
@@ -875,7 +875,7 @@ jobs:
           echo "smoke limpo: sem AssertionError ou Traceback em $LOG"
       - name: Upload smoke log
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: hefesto-dualsense4unix-smoke-${{ matrix.transport }}-${{ matrix.desktop_env }}.log
           path: /tmp/hefesto_dualsense4unix_smoke_${{ matrix.transport }}.log
@@ -889,8 +889,8 @@ jobs:
     name: Build wheel (para smoke multi-distro)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: 'pip'
@@ -904,7 +904,7 @@ jobs:
         run: bash scripts/i18n_compile.sh
       - name: Build wheel
         run: python -m build --wheel
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: hefesto-dualsense4unix-wheel
           path: dist/*.whl
@@ -951,13 +951,13 @@ jobs:
     container:
       image: ${{ matrix.image }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Fontes da distro (${{ matrix.distro }})
         if: matrix.fontes
         run: bash scripts/ci/instalar_como_usuaria.sh --fontes ${{ matrix.fontes }} --so-fontes
       - name: Instalar deps do sistema (${{ matrix.distro }})
         run: ${{ matrix.install_cmd }}
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: hefesto-dualsense4unix-wheel
           path: dist
@@ -1077,7 +1077,7 @@ jobs:
     container:
       image: ${{ matrix.image }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Fontes da distro (${{ matrix.distro }})
         if: matrix.fontes
         run: bash scripts/ci/instalar_como_usuaria.sh --fontes ${{ matrix.fontes }} --so-fontes
@@ -1099,7 +1099,7 @@ jobs:
         run: bash scripts/ci/instalar_como_usuaria.sh --so-dkms
       - name: Upload do log do install
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: install-como-usuaria-${{ matrix.distro }}.log
           path: /tmp/install-como-usuaria.log

@@ -29,7 +29,7 @@ jobs:
     outputs:
       version: ${{ steps.info.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # Quando disparado via workflow_dispatch, faz checkout da tag
           # indicada no input em vez de main HEAD.
@@ -37,7 +37,7 @@ jobs:
           # A história inteira, como o lint-test do ci.yml: há réguas que a leem
           # (RELEASE-NO-CLONE-LIMPO-01).
           fetch-depth: 0
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           # CI-CACHE-PIP-01 (v3.4.0): pip cache para release pipeline.
@@ -108,7 +108,7 @@ jobs:
           REF_NAME: ${{ github.event.inputs.tag || github.ref_name }}
         run: echo "version=${REF_NAME#v}" >> "$GITHUB_OUTPUT"
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: dist-${{ steps.info.outputs.version }}
           path: dist/
@@ -117,10 +117,10 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.inputs.tag || github.ref }}
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: 'pip'
@@ -130,7 +130,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libfuse2 librsvg2-bin \
             libhidapi-dev libhidapi-hidraw0 libudev-dev libxi-dev
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: dist-${{ needs.build.outputs.version }}
           path: dist/
@@ -143,7 +143,7 @@ jobs:
       - name: Smoke AppImage
         run: ./dist/appimage/Hefesto-Dualsense4Unix-*-x86_64.AppImage version
       - name: Upload AppImage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: appimage-${{ needs.build.outputs.version }}
           path: dist/appimage/*.AppImage
@@ -160,12 +160,12 @@ jobs:
     runs-on: ${{ matrix.os }}
     needs: build
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.inputs.tag || github.ref }}
       # setup-python 3.12 fica no PATH só para o build_deb.sh ler a versão via
       # tomllib (3.11+); o venv bundlado usa /usr/bin/python3 (default da distro).
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: 'pip'
@@ -175,7 +175,7 @@ jobs:
       - name: Build .deb
         run: bash scripts/build_deb.sh
       - name: Upload pacote .deb
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: deb-${{ needs.build.outputs.version }}-${{ matrix.os }}
           path: dist/*.deb
@@ -199,7 +199,7 @@ jobs:
       VERSION: ${{ needs.build.outputs.version }}
     steps:
       - name: Baixar artifact do .deb
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: deb-${{ needs.build.outputs.version }}-${{ matrix.os }}
           path: ./dist
@@ -229,7 +229,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.inputs.tag || github.ref }}
       - name: Instalar dependências do sistema
@@ -289,7 +289,7 @@ jobs:
             io.github.hefesto_team.hefesto_dualsense4unix \
             stable
       - name: Upload bundle
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: flatpak-${{ needs.build.outputs.version }}
           path: Hefesto-Dualsense4Unix-${{ needs.build.outputs.version }}-x86_64.flatpak
@@ -321,7 +321,7 @@ jobs:
       contents: read
       actions: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.inputs.tag || github.ref }}
       - name: Exigir conclusão "success" do ci.yml na mesma SHA
@@ -395,10 +395,10 @@ jobs:
       id-token: write
       attestations: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.inputs.tag || github.ref }}
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           pattern: "*-${{ needs.build.outputs.version }}*"
           path: dist/tudo/
@@ -415,7 +415,7 @@ jobs:
         with:
           subject-checksums: dist/tudo/SHA256SUMS
       - name: Guardar o SHA256SUMS
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sums-${{ needs.build.outputs.version }}
           path: dist/tudo/SHA256SUMS
@@ -431,12 +431,12 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.inputs.tag || github.ref }}
       # Tudo o que a release publica numa pasta só: o wheel, o sdist, o AppImage, os dois .deb, o bundle
       # Flatpak e o `SHA256SUMS` que o job `integridade` guardou.
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           pattern: "*-${{ needs.build.outputs.version }}*"
           path: dist/tudo/
@@ -471,7 +471,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build, github-release]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.inputs.tag || github.ref }}
       - name: Baixar o tarball da tag
@@ -483,7 +483,7 @@ jobs:
           VERSION: ${{ needs.build.outputs.version }}
         run: python3 scripts/release/pacotes.py preparar --numero "${VERSION}" --tarball fonte.tar.gz --saida dist/pacotes
       - name: Guardar os arquivos de pacote
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: pacotes-${{ needs.build.outputs.version }}
           path: dist/pacotes/
@@ -509,7 +509,7 @@ jobs:
       id-token: write
     if: ${{ vars.PYPI_PUBLISH == 'true' }}
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: dist-${{ needs.build.outputs.version }}
           path: dist/

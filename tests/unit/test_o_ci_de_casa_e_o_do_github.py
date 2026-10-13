@@ -15,6 +15,7 @@ O script em si é medido numa árvore de mentira (um repositório git de verdade
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -610,11 +611,13 @@ def test_cada_chamada_trabalha_numa_copia_do_cache_das_actions(mundo: Mundo) -> 
 def test_com_as_actions_em_cache_o_act_nao_baixa_de_novo(mundo: Mundo) -> None:
     mundo.rodar("--job", "glifos")
     assert "--action-offline-mode" not in mundo.log("glifos"), "sem a cópia local ele tem de baixar"
-    for pasta in (
-        "actions-setup-python@v5",
-        "actions-upload-artifact@v4",
-        "actions-download-artifact@v4",
-    ):
+    # As pastas saem do próprio `ci.yml`: versão nova de action não deixa este teste na velha.
+    texto = (WORKFLOWS / "ci.yml").read_text(encoding="utf-8")
+    usos = re.findall(r"uses:\s*(actions/[A-Za-z0-9_.-]+)@(\S+)", texto)
+    pastas = {f"{a.replace('/', '-')}@{ref}" for a, ref in usos if a != "actions/checkout"}
+    esperadas = {"actions-setup-python", "actions-upload-artifact", "actions-download-artifact"}
+    assert {p.split("@")[0] for p in pastas} >= esperadas
+    for pasta in sorted(pastas):
         (mundo.base / ".cache" / "act" / pasta).mkdir(parents=True, exist_ok=True)
     mundo.rodar("--job", "glifos")
     assert "--action-offline-mode" in mundo.log("glifos")
