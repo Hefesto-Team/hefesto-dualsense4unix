@@ -18,9 +18,18 @@ if TYPE_CHECKING:
 logger = get_logger(__name__)
 
 
+#: As variáveis do ambiente gráfico que o serviço precisa ter para o Xlib e o Wayland falarem:
+#: o X recusa o cliente sem o arquivo de autorização (GNOME e KDE), e a cascata Wayland não vê nada.
+_VARIAVEIS_DO_DISPLAY: tuple[str, ...] = ("WAYLAND_DISPLAY", "DISPLAY", "XAUTHORITY")
+
+
 def _ensure_display_env() -> None:
-    """Importa WAYLAND_DISPLAY/DISPLAY de `systemctl --user show-environment`."""
-    if os.environ.get("WAYLAND_DISPLAY") or os.environ.get("DISPLAY"):
+    """Completa o que faltar de DISPLAY/WAYLAND_DISPLAY/XAUTHORITY pelo `systemctl --user`.
+
+    Só pergunta ao `systemctl` quando alguma das três falta, e importa só a que falta: o resgate
+    de 15 s traz a autorização que chegou depois do display.
+    """
+    if all(os.environ.get(chave) for chave in _VARIAVEIS_DO_DISPLAY):
         return
     import shutil
     import subprocess
@@ -40,11 +49,22 @@ def _ensure_display_env() -> None:
         logger.debug("autoswitch_display_env_probe_failed", err=str(exc))
         return
     for line in result.stdout.splitlines():
-        if line.startswith(("WAYLAND_DISPLAY=", "DISPLAY=")):
-            key, _, value = line.partition("=")
-            if value and not os.environ.get(key):
-                os.environ[key] = value
-                logger.info("autoswitch_display_env_imported", var=key)
+        key, _, value = line.partition("=")
+        if key in _VARIAVEIS_DO_DISPLAY and value and not os.environ.get(key):
+            os.environ[key] = value
+            logger.info("autoswitch_display_env_imported", var=key)
+
+
+def _o_jogo_em_cena_do_servico(daemon: object) -> Callable[[], int | None]:
+    """O leitor do jogo em cena: o `appid_em_cena` do serviço, lido a cada tique (memória)."""
+
+    def _ler() -> int | None:
+        appid = getattr(daemon, "appid_em_cena", None)
+        if isinstance(appid, int) and not isinstance(appid, bool) and appid > 0:
+            return appid
+        return None
+
+    return _ler
 
 
 def _build_diag_window_reader(store: StateStore) -> Callable[[], dict[str, Any]]:
@@ -135,6 +155,7 @@ class AutoswitchSubsystem:
             exclusao_applier=getattr(daemon, "aplicar_a_exclusao", None),
             exclusao_reverter=getattr(daemon, "reverter_a_exclusao", None),
             exclusao_reader=lista_de_exclusao.contem,
+            jogo_em_cena_reader=_o_jogo_em_cena_do_servico(daemon),
         )
         if not self._autoswitch.disabled():
             self._autoswitch.start()
@@ -171,6 +192,7 @@ async def start_autoswitch(daemon: DaemonProtocol) -> None:
         exclusao_applier=getattr(daemon, "aplicar_a_exclusao", None),
         exclusao_reverter=getattr(daemon, "reverter_a_exclusao", None),
         exclusao_reader=lista_de_exclusao.contem,
+        jogo_em_cena_reader=_o_jogo_em_cena_do_servico(daemon),
     )
     if not daemon._autoswitch.disabled():
         daemon._autoswitch.start()

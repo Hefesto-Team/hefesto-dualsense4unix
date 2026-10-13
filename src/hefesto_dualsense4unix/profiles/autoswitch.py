@@ -20,7 +20,9 @@ from hefesto_dualsense4unix.profiles.manager import (
     MOTIVO_SEM_CANDIDATO,
     ProfileManager,
     _estado_da_secao,
+    e_o_freestyle,
     o_freestyle_manda,
+    perfil_do_appid,
     soltar_a_trava_da_mao,
 )
 from hefesto_dualsense4unix.profiles.schema import (
@@ -144,6 +146,8 @@ class AutoSwitcher:
     modo_jogo_padrao_applier: Callable[..., object] | None = None
     modo_jogo_padrao_reverter: Callable[..., object] | None = None
     jogo_vivo_reader: Callable[[], int | None] | None = None
+    #: O jogo em cena segundo o serviço (`Daemon.appid_em_cena`): a prova que não passa pela janela.
+    jogo_em_cena_reader: Callable[[], int | None] | None = None
     exclusao_applier: Callable[..., object] | None = None
     exclusao_reverter: Callable[..., object] | None = None
     exclusao_reader: Callable[[str], bool] | None = None
@@ -172,6 +176,7 @@ class AutoSwitcher:
     _ativo_da_trava: str | None = None
     _jogo_da_trava_visto_vivo: bool = False
     _ultima_janela: str = ""
+    _entrou_pelo_jogo: str | None = None
 
     def disabled(self) -> bool:
         return os.environ.get("HEFESTO_DUALSENSE4UNIX_NO_WINDOW_DETECT") == "1"
@@ -284,6 +289,8 @@ class AutoSwitcher:
             self._antes_da_mao = anterior
             self._current_profile = ativo
             self._current_especifico = True
+            if ativo != self._entrou_pelo_jogo:
+                self._entrou_pelo_jogo = None
             logger.info(
                 "autoswitch_crenca_sincronizada",
                 de=anterior or "",
@@ -315,7 +322,17 @@ class AutoSwitcher:
         self._acompanhar_a_trava_da_mao()
         self._outra_janela_invalida_o_negativo(info)
         eh_propria = self._janela_propria(info)
-        if eh_propria or self._tick_sem_informacao(info):
+        sem_informacao = self._tick_sem_informacao(info)
+        do_jogo: Profile | None = None
+        saindo_do_jogo = False
+        if sem_informacao and not eh_propria:
+            do_jogo = self._perfil_do_jogo_em_cena()
+            saindo_do_jogo = (
+                do_jogo is None
+                and self._current_profile is not None
+                and self._current_profile == self._entrou_pelo_jogo
+            )
+        if eh_propria or (sem_informacao and do_jogo is None and not saindo_do_jogo):
             if not self._info_gap_active:
                 self._info_gap_active = True
                 logger.info(
@@ -348,7 +365,20 @@ class AutoSwitcher:
             return
         self._freestyle_log_key = None
 
-        profile, motivo = self._selecionar_com_motivo(info)
+        veio_do_jogo = False
+        if sem_informacao:
+            # Sem leitura de janela: só a prova do jogo em cena (ou a saída dela) decide.
+            profile, motivo = do_jogo, MOTIVO_SEM_CANDIDATO
+            veio_do_jogo = do_jogo is not None
+        else:
+            profile, motivo = self._selecionar_com_motivo(info)
+            if motivo != MOTIVO_JOGO_SEM_PERFIL_PROPRIO and not (
+                perfil_e_regra_de_jogo(profile, info)
+                or perfil_declara_modo_de_jogo(profile)
+            ):
+                do_jogo = self._perfil_do_jogo_em_cena()
+                if do_jogo is not None:
+                    profile, motivo, veio_do_jogo = do_jogo, MOTIVO_SEM_CANDIDATO, True
         veio_da_escolha = False
         if profile is None and motivo == MOTIVO_SEM_CANDIDATO:
             profile = self._perfil_da_escolha()
@@ -381,7 +411,41 @@ class AutoSwitcher:
         if not self._suppression_active():
             self._suppress_log_key = None
         if stable and candidate and candidate != self._current_profile:
-            self._activate(candidate, info, profile, veio_da_escolha=veio_da_escolha)
+            self._activate(
+                candidate,
+                info,
+                profile,
+                veio_da_escolha=veio_da_escolha,
+                veio_do_jogo=veio_do_jogo,
+            )
+
+    def _perfil_do_jogo_em_cena(self) -> Profile | None:
+        """O perfil PRÓPRIO do jogo que o serviço diz estar em cena, ou ``None``.
+
+        É a contraparte da recusa: a prova que segura o perfil do jogo quando o foco sai dele
+        também o faz entrar quando a janela não o aponta (leitura vazia, janela sem regra de jogo).
+        Nunca levanta, e não toca o disco fora do cache de consulta.
+        """
+        leitor = self.jogo_em_cena_reader
+        if leitor is None:
+            return None
+        try:
+            appid = leitor()
+        except Exception as exc:
+            logger.debug("jogo_em_cena_indisponivel", err=str(exc))
+            return None
+        if not isinstance(appid, int) or isinstance(appid, bool) or appid <= 0:
+            return None
+        try:
+            from hefesto_dualsense4unix.profiles.loader import perfis_para_consulta
+
+            perfil = perfil_do_appid(appid, profiles=perfis_para_consulta())
+        except Exception as exc:
+            logger.debug("perfil_do_jogo_em_cena_ilegivel", appid=appid, err=str(exc))
+            return None
+        if perfil is None or e_o_freestyle(perfil.name):
+            return None
+        return perfil
 
     def _selecionar_com_motivo(
         self, info: dict[str, Any]
@@ -665,6 +729,7 @@ class AutoSwitcher:
         profile: Profile | None,
         info: dict[str, Any],
         veio_da_escolha: bool,
+        veio_do_jogo: bool = False,
     ) -> bool:
         """A trava da troca à mão segura ESTA troca? Solta-a no evento, com a linha."""
         store = self.store
@@ -679,8 +744,11 @@ class AutoSwitcher:
                     store, "o_jogo_em_cena_fechou", jogo=jogo or "", candidato=name
                 )
                 return False
+        # O jogo que só está em cena (sem a janela dele em foco) não passa por cima do que ela
+        # escolheu à mão: a prova de jogo vivo entra por si, mas não solta a trava.
         e_outro_jogo = (
             not veio_da_escolha
+            and not veio_do_jogo
             and profile is not None
             and name != jogo
             and (perfil_e_regra_de_jogo(profile, info) or perfil_declara_modo_de_jogo(profile))
@@ -706,6 +774,7 @@ class AutoSwitcher:
         profile: Profile | None = None,
         *,
         veio_da_escolha: bool = False,
+        veio_do_jogo: bool = False,
     ) -> None:
         self._perfil_corrente()
         if (
@@ -716,7 +785,7 @@ class AutoSwitcher:
             return
         # por trigger.reset ou profile.switch explícito. Sem isso, ao ligar a
         # *"isso nao faz sentido mais."*  # (noqa-acento): citação literal
-        if self._a_trava_da_mao_segura(name, profile, info, veio_da_escolha):
+        if self._a_trava_da_mao_segura(name, profile, info, veio_da_escolha, veio_do_jogo):
             self._log_suppressed_once(
                 "autoswitch_suppressed_by_manual_profile_lock", name, info
             )
@@ -730,6 +799,7 @@ class AutoSwitcher:
             logger.warning("autoswitch_activate_failed", name=name, err=str(exc))
             return
         self._current_profile = name
+        self._entrou_pelo_jogo = name if veio_do_jogo else None
         if profile is not None:
             self._appids_do_perfil_nome = name
             self._appids_do_perfil_valor = _appids_de_jogo_do_perfil(profile)
@@ -744,6 +814,7 @@ class AutoSwitcher:
             "profile_autoswitch",
             from_=from_profile,
             to=name,
+            pelo_jogo_em_cena=veio_do_jogo,
             wm_class=info.get("wm_class", ""),
             wm_name=info.get("wm_name", ""),
             adiado=sorted(

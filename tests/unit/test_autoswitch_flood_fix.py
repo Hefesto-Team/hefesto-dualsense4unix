@@ -87,15 +87,16 @@ def test_once_guard_warning_so_uma_vez(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_ensure_display_env_importa_do_systemd(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """_ensure_display_env injeta WAYLAND_DISPLAY/DISPLAY do show-environment."""
+    """_ensure_display_env injeta DISPLAY/WAYLAND_DISPLAY/XAUTHORITY do show-environment."""
     from hefesto_dualsense4unix.daemon.subsystems import autoswitch
 
     monkeypatch.delenv("WAYLAND_DISPLAY", raising=False)
     monkeypatch.delenv("DISPLAY", raising=False)
+    monkeypatch.delenv("XAUTHORITY", raising=False)
     monkeypatch.setattr("shutil.which", lambda _name: "/usr/bin/systemctl")
 
     def _fake_run(*_args: Any, **_kwargs: Any) -> Any:
-        out = "WAYLAND_DISPLAY=wayland-9\nDISPLAY=:7\nLANG=pt_BR.UTF-8\n"
+        out = "WAYLAND_DISPLAY=wayland-9\nDISPLAY=:7\nXAUTHORITY=/run/x\nLANG=pt_BR.UTF-8\n"
         return MagicMock(stdout=out)
 
     monkeypatch.setattr("subprocess.run", _fake_run)
@@ -104,15 +105,18 @@ def test_ensure_display_env_importa_do_systemd(
 
     assert os.environ.get("WAYLAND_DISPLAY") == "wayland-9"
     assert os.environ.get("DISPLAY") == ":7"
+    assert os.environ.get("XAUTHORITY") == "/run/x"
 
 
 def test_ensure_display_env_noop_quando_ja_presente(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Se já há display no env, não chama systemctl (sem subprocess)."""
+    """Com as TRÊS variáveis no env, não chama systemctl (sem subprocess)."""
     from hefesto_dualsense4unix.daemon.subsystems import autoswitch
 
     monkeypatch.setenv("WAYLAND_DISPLAY", "wayland-0")
+    monkeypatch.setenv("DISPLAY", ":0")
+    monkeypatch.setenv("XAUTHORITY", "/run/x")
     called = MagicMock()
     monkeypatch.setattr("subprocess.run", called)
     autoswitch._ensure_display_env()
@@ -166,6 +170,9 @@ def test_diag_reader_recupera_no_poll(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.delenv("DISPLAY", raising=False)
     monkeypatch.delenv("WAYLAND_DISPLAY", raising=False)
+    # O resgate completa o ambiente pelo `systemctl`: sem ele aqui, o teste não pergunta
+    # à sessão real de quem o roda (que traria o Wayland dela e mudaria o backend).
+    monkeypatch.setattr("shutil.which", lambda _nome: None)
     store = _FakeStore()
     read = _build_diag_window_reader(store)  # type: ignore[arg-type]
     assert store.seeds == [("null", False)]
