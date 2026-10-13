@@ -133,7 +133,7 @@ def test_o_tipo_que_ela_diz_so_pesa_no_motor_quando_a_maquina_nao_leu_a_classe(
 
 
 def test_a_velocidade_dita_so_vale_na_entrada_vazia(disco: Path) -> None:
-    """Com aparelho na entrada a máquina mede, e a medida vence o que ela declarou."""
+    """Com aparelho na entrada a máquina mede, e a medida vence o que o usuário declarou."""
     mapa = MapaDaMesa(
         faces=[FaceDeclarada(nome="Frente", portas=["1", "2"])],
         portas={"1": PortaDeclarada(caminho="9-1", usb=3), "2": PortaDeclarada(usb=3)},

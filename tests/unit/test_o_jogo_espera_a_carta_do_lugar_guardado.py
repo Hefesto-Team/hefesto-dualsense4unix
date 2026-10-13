@@ -24,7 +24,7 @@ node que ele lê.
 3. depois do prazo: a NUM-01 — o P2 no vpad 1 com o número 1, ninguém que
    ficou perde o controle, e quem ficou atrás renasce no boneco do número
    novo (O-ASSENTO-GUARDADO-NAO-ANDA-03). Desde a
-   D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (dela, 02/10/2026), com o jogo
+   D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (02/10/2026), com o jogo
    aberto o prazo para e o posto espera; a NUM-01 vale quando o jogo solta;
 4. o prazo atravessando uma suspensão simulada pelo relógio do kernel: o
    ``CLOCK_BOOTTIME`` anda, o ``CLOCK_MONOTONIC`` não.
@@ -514,7 +514,7 @@ class TestOP1ForaPorVinteSegundos:
     ) -> None:
         """O prazo passa com o jogo aberto e o posto espera; a NUM-01 vale quando o jogo solta.
 
-        D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (dela, 02/10/2026): com o jogo
+        D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (02/10/2026): com o jogo
         na autoridade, o prazo do lugar guardado para, e a reserva do posto
         espera com ele. Antes, passado o prazo, o P2 assumia o vpad do P1 no
         meio da partida.
@@ -602,7 +602,7 @@ class TestQuandoOPostoNaoEspera:
     def test_gente_nova_com_o_jogo_senta_depois_do_ultimo_e_o_posto_espera(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (dela, 02/10/2026).
+        """D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (02/10/2026).
 
         Com o jogo na autoridade, quem chega não solta o lugar de ninguém: senta
         depois do último, e o posto do P1 segue à espera dele. Antes, a gente
@@ -684,7 +684,7 @@ class TestOPrazoAtravessaASuspensao:
         bancada.tique()
         assert bancada.dono_do_vpad_do_p1() is None
 
-        # D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (dela, 02/10/2026): com o jogo na autoridade
+        # D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (02/10/2026): com o jogo na autoridade
         # o prazo para, a suspensão inclusive; ele volta a correr quando o jogo solta.
         kernel.dormir(3600.0)
         bancada.tique(0.0)
@@ -713,7 +713,7 @@ class TestOPrazoAtravessaASuspensao:
         bancada.tique()
         assert bancada.a_tela() == {}
 
-        # D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (dela, 02/10/2026): o jogo fechou antes
+        # D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (02/10/2026): o jogo fechou antes
         # de a máquina dormir; com ele aberto, o P3 retomaria o 3.
         bancada.daemon.display_authority = "daemon"
         bancada.tique(0.0)

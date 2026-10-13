@@ -128,7 +128,7 @@ def test_cada_degrau_diz_quem_ele_e(bancada) -> None:
         r'data-campo="degrau" data-hef-alvo="classe" data-hef-quando="([^"]+)"',
         bancada)
     lugares = bancada.count('data-controle="p')
-    # dela. Com quatro DualSense ligados o pacote manda quatro colunas e duas
+    # Com quatro DualSense ligados o pacote manda quatro colunas e duas
     assert 'class="vib-mesa"' not in bancada, (
         "a linha de mesa voltou ao desenho da aba 05")
     assert lugares == len(_aba05.MESA), (

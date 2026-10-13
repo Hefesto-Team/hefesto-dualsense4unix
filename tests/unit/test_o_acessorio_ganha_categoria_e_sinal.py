@@ -261,7 +261,7 @@ def test_a_cena_inteira_do_bluez_ate_a_linha(monkeypatch: pytest.MonkeyPatch) ->
         assert dito and dito.group(1) == fx.DIVIDE_O_RADIO, (campo, ponto_sem)
 
 
-# --- a tela no WebKit: a textura e o ponto, no motor dela ---------------------------------
+# --- a tela no WebKit: a textura e o ponto, no motor do usuário -----------------------------------
 
 SONDA = r"""
 (function(){

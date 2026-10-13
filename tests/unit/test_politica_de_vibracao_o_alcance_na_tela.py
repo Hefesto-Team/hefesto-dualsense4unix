@@ -92,7 +92,7 @@ def test_vpad_que_nao_subiu_a_tela_diz_que_a_intensidade_nao_alcanca() -> None:
         "silêncio: a tela seguia oferecendo os quatro botões"
     )
     assert "não está chegando" in texto
-    # de *"a régua media o mundo de ontem"*.  # (noqa-acento: verbo medir, imperfeito)
+    # a régua media o mundo de ontem.  # (noqa-acento: verbo medir, imperfeito)
     assert "gamepad virtual" in texto, "a frase tem de dizer o que falta"
     # e com ele falso `mode_of_state` só devolve `gamepad` ou `desktop` — os
     assert "aqui embaixo" in texto.lower(), (

@@ -147,7 +147,7 @@ def test_o_tema_reprovado_nao_liga_e_diz_o_par(tmp_path: Path) -> None:
 
 
 def test_o_manifesto_que_nao_abre_vai_aos_avisos_e_o_outro_tema_liga(tmp_path: Path) -> None:
-    """A modificação ligada cujo manifesto não abre não liga tema, e a frase dela não some."""
+    """A modificação ligada cujo manifesto não abre não liga tema, e a frase de produto não some."""
     lg = _lugares(tmp_path)
     _instalada(lg, "quebrada", {"folha": TEMA_VALIDO}, ligada_em="2026-10-11T10:00:00")
     (lg.codigo / "quebrada" / "hefesto-mod.json").write_text("{", encoding="utf-8")

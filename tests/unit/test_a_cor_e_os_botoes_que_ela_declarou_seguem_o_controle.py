@@ -6,7 +6,7 @@ existiam no `maquina.json` e nenhuma tela os lia: só a seção da janela GTK, q
 
 O fio é UM, na mesa que as dez abas leem (`mesa_viva.mesa_do_estado`):
 
-* a cor que ela declarou entra quando o aparelho não deu a dele (a lida vence sempre);
+* a cor que o usuário declarou entra quando o aparelho não deu a dele (a lida vence sempre);
 * a família dos botões (`xbox`, `nintendo` ou vazia) sai no item da mesa e chega ao desenho da
   02 pelo alvo `atributo`, que escreve o `data-botoes` na grade dos glifos.
 """

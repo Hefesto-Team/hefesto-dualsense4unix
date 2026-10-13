@@ -902,7 +902,7 @@ def test_o_verde_do_cadeado_no_webkit_e_do_servico(no_webkit: dict) -> None:
     assert not no_webkit["depois-da-piscada"]["verde"], (
         f"a piscada não apagou sozinha: {no_webkit['sem_prazo']}")
     # ela vive o tempo que o produto diz (`MS_DA_PISCADA`), não menos: o timer da página nunca
-    # dispara antes do prazo, e uma piscada de 100 ms seria uma piscada que ela não vê
+    # dispara antes do prazo, e uma piscada de 100 ms seria uma piscada que o usuário não vê
     assert no_webkit["depois-da-piscada"]["duracao_ms"] >= 0.9 * no_webkit["piscada_ms"], (
         f"a piscada durou {no_webkit['depois-da-piscada']['duracao_ms']} ms, menos que os "
         f"{no_webkit['piscada_ms']} ms do produto")

@@ -272,7 +272,7 @@ ISENCOES: dict[str, tuple[str, frozenset[str]]] = {
     # O Disparo, o Pulso (curva B) e o Pulso (curva A) saíram desta tabela em
     # 08/10/2026 (arma `0x25` e arco `0x22` no layout do modo). Os três de baixo
     # têm a sensação que a mão do usuário aprovou em 01/08 e ficam como estão até a
-    # sessão às cegas: os bytes só mudam se ela escolher o modo próprio.
+    # sessão às cegas: os bytes só mudam se o usuário escolher o modo próprio.
     # sai com: A-SESSAO-AS-CEGAS-DO-GATILHO-ESCOLHE-OS-BYTES-DE-01-08-01
     "SemiAutoGun": (_DISPARO, frozenset({BIT_FORA_DO_CURSO, FORCA_EM_ZONA_INATIVA})),
     # sai com: A-SESSAO-AS-CEGAS-DO-GATILHO-ESCOLHE-OS-BYTES-DE-01-08-01
@@ -494,13 +494,13 @@ def test_a_regua_le_o_bloco_que_o_relatorio_manda(caso: str) -> None:
     assert bloco_de(efeito) == _bloco_do_relatorio(efeito)
 
 
-# --- os blocos da sessão às cegas: o que ela digita no Montar do zero ---------
+# --- os blocos da sessão às cegas: o que o usuário digita no Montar do zero ---------
 
 #: O modo próprio de cada efeito de 01/08 que a sessão às cegas compara com o
 #: bloco de hoje (`docs/process/sprints/*-O-DISPARO-E-A-ARMA-*` e
 #: `*-O-ARCO-E-O-GALOPE-*`), com os padrões da tela: modo e as sete forças como
 #: o Montar do zero as recebe. A régua os lê como o controle lê; o byte errado
-#: no roteiro, digitado por ela, não vai ao gatilho.
+#: no roteiro, digitado pelo usuário, não vai ao gatilho.
 BLOCOS_DA_SESSAO_AS_CEGAS: dict[str, tuple[int, tuple[int, ...]]] = {
     "SemiAutoGun (arma 0x25)": (0x25, (0x48, 0x00, 0x04, 0, 0, 0, 0)),
     "Bow (arco 0x22)": (0x22, (0x82, 0x00, 0x35, 0, 0, 0, 0)),

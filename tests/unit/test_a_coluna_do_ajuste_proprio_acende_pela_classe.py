@@ -217,7 +217,7 @@ def test_cada_secao_guardada_acende_a_sua_celula_e_so_a_dela(
     comparam duas listas de nomes, aqui se compara o VALOR com a POSIÇÃO.
     """
     monkeypatch.setattr(a10_perfis, "_SECAO_POR_CLASSE", True, raising=False)
-    # é *"campo `None` = sem opinião"*, e `_secoes_do_controle` pergunta
+    # é «campo `None` = sem opinião», e `_secoes_do_controle` pergunta
     menor_corpo: dict[str, Any] = {
         "leds": {}, "triggers": {}, "rumble": {}, "speaker": {"volume": 40},
         # Para a coluna a diferença não existe: `_secoes_do_controle` pergunta

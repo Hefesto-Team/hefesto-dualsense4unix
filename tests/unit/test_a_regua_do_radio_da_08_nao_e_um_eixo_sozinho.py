@@ -20,7 +20,7 @@ arquivo sobreviveram inteiras, só mudou onde a resposta mora —
 2. **O BlueZ que respondeu zero diz que não há** — com a frase da tabela que a
    sala substituiu.
 3. **Três adaptadores e ninguém no rádio são três cartões**, cada um com o nome
-   que ela deu ao lugar; e o controle que ESTÁ no rádio aparece no cartão dele.
+   que o usuário deu ao lugar; e o controle que ESTÁ no rádio aparece no cartão dele.
 
 A MESA É DECLARADA, nunca a da máquina de quem roda: o BlueZ, o `maquina.json`
 e o `/sys` entram por dublê (a lição de 04/09 — *um teste de tela que depende

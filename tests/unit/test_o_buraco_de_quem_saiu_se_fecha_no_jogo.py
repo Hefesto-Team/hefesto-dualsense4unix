@@ -1,6 +1,6 @@
 """O-ASSENTO-GUARDADO-NAO-ANDA-03 — passado o prazo, o jogo fecha o buraco junto com a tela.
 
-Desde a D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (dela, 02/10/2026), com o jogo
+Desde a D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (02/10/2026), com o jogo
 na autoridade o prazo para, e o buraco fecha no «Renumerar agora» dela.
 """
 from __future__ import annotations
@@ -68,7 +68,7 @@ def _ticks_ate_o_fim_do_prazo(ja_passou: float) -> int:
 def _o_prazo_passa_e_ela_renumera(bancada: MesaDoJogo, ja_passou: float) -> None:
     """O prazo passa com o jogo aberto, e quem fecha o buraco é o gesto do usuário.
 
-    D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (dela, 02/10/2026): com o jogo na
+    D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (02/10/2026): com o jogo na
     autoridade o prazo não vence; o «Renumerar agora»
     (``soltar_os_lugares_guardados``) solta o lugar no meio da partida, e o
     co-op fecha o buraco no tique seguinte, como fechava no vencimento.
@@ -226,7 +226,7 @@ def trocar_a_mascara_do_p1(bancada: MesaHonesta) -> None:
 class TestPassadoOPrazoOJogoFechaOBuraco:
     """O boneco de cada jogador antes do prazo, no gesto do usuário, e depois, parado.
 
-    D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (dela, 02/10/2026): com o jogo
+    D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (02/10/2026): com o jogo
     aberto o buraco não fecha no fim do prazo; fecha no «Renumerar agora».
     """
 
@@ -342,7 +342,7 @@ class TestORenumerarAgoraFechaNaHora:
 class TestAVoltaTardiaDoP1:
     """O P1 que volta depois do prazo: o número na tela, o boneco que o jogo deu.
 
-    D-3009 (dela, 02/10/2026): com o jogo aberto, «depois do prazo» é depois do
+    D-3009 (02/10/2026): com o jogo aberto, «depois do prazo» é depois do
     «Renumerar agora» dela — o prazo sozinho não solta o lugar.
     """
 
@@ -484,7 +484,7 @@ DOIS_FORA = [
 class TestOPrazoDeOutroVenceComOPostoVago:
     """Dois fora com o jogo aberto: nenhum prazo vence, e o posto do P1 espera por ele.
 
-    D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (dela, 02/10/2026). Antes, o prazo
+    D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (02/10/2026). Antes, o prazo
     do outro vencia com o posto vago e quem ficou atrás descia no meio da
     partida; agora a mesa fica como estava até o jogo soltar.
     """

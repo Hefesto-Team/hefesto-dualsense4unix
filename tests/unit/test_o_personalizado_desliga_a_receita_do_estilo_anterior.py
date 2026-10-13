@@ -2,7 +2,7 @@
 
 O perfil guarda a chave do estilo (`Profile.estilo`), e o motor do tato toca a receita
 invisível por ela. Escolher «Personalizado» respondia sem gravar: o `estilo: "fps"`
-seguia no disco, e o motor seguia tocando o FPS depois que ela disse «eu ajusto na
+seguia no disco, e o motor seguia tocando o FPS depois que o usuário disse «eu ajusto na
 mão». Agora o gesto grava `estilo = "personalizado"` (sem receita) e deixa as abas e o
 desvio `receita_do_tato` como estão.
 

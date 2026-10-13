@@ -232,7 +232,7 @@ def casa(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Any:
             return mic if isinstance(mic, dict) else None
 
         def calar_no_dono(self, *uniqs: str) -> None:
-            """O calado que ela deu antes da cena, no dono (o `maquina.json`)."""
+            """O calado que o usuário deu antes da cena, no dono (o `maquina.json`)."""
             for uniq in uniqs:
                 assert maquina.gravar_o_mudo_do_microfone(uniq, True)
 

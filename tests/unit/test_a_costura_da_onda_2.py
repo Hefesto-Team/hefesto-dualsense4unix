@@ -300,7 +300,7 @@ def relogio() -> rm.Relogio:
 def test_o_governador_pergunta_o_nome_ao_dono_da_entrada(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A frase da recusa diz o nome que o DONO diz — o que ela deu à porta."""
+    """A frase da recusa diz o nome que o DONO diz — o que o usuário deu à porta."""
     from hefesto_dualsense4unix.daemon.subsystems import governador_do_radio as gov
     from hefesto_dualsense4unix.integrations import ar_do_adaptador as ar
     from hefesto_dualsense4unix.integrations import entrada_a_entrada as ee

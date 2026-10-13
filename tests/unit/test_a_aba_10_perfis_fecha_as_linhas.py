@@ -61,7 +61,7 @@ MESA = [
      "mascara": "DualSense"},
 ]
 
-#: *"campo `None` = sem opinião"*, e ``_secoes_do_controle`` pergunta exatamente
+#: «campo `None` = sem opinião», e ``_secoes_do_controle`` pergunta exatamente
 MENOR_CORPO: dict[str, dict[str, Any]] = {
     "leds": {}, "triggers": {}, "rumble": {}, "speaker": {"volume": 40},
     "mic": {},

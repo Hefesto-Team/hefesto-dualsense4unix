@@ -573,7 +573,7 @@ class TestForaDaEsperaNadaMuda:
     def test_com_o_jogo_o_posto_espera_e_os_atalhos_seguem_com_o_p2(
         self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation,
     ) -> None:
-        """D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (dela, 02/10/2026): o posto espera o jogo."""
+        """D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (02/10/2026): o posto espera o jogo."""
         bancada = montar_atalhos(monkeypatch, kernel, 3)
         _fora_dentro_do_prazo(bancada, P1)
         for _ in range(_TIQUES_DE_TREZENTOS_SEGUNDOS):

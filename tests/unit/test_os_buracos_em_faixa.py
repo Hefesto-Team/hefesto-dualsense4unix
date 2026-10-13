@@ -1,6 +1,6 @@
 """O-ASSENTO-GUARDADO-NAO-ANDA-04 — os 60 arranjos raros também fecham o buraco no jogo.
 
-Desde a D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (dela, 02/10/2026), com o jogo
+Desde a D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (02/10/2026), com o jogo
 na autoridade nenhum prazo vence: as bancadas vivas provam que ninguém renasce
 por quem saiu, e a matriz de quatro solta os lugares pelo «Renumerar agora».
 """
@@ -337,7 +337,7 @@ def mesa_de_seis(monkeypatch: pytest.MonkeyPatch) -> None:
 class TestUmDosSessentaComSeisControles:
     """A forma ``1F@1 2@3 3@4 5@5`` com a classe real e seis controles — e o jogo aberto.
 
-    D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (dela, 02/10/2026): com o jogo na
+    D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (02/10/2026): com o jogo na
     autoridade o prazo para, e a mesa da forma (o P2 vencido com o g ainda
     guardado) não chega a existir ao vivo: os dois lugares esperam, e o gesto
     do usuário solta os dois juntos. A faixa segue provada pela :class:`TestOs60` e
@@ -407,7 +407,7 @@ class TestUmDosSessentaComSeisControles:
 class TestQuemEsperaOLugarGuardado:
     """Cinco controles, e quem espera o lugar guardado não renasce à toa.
 
-    D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (dela, 02/10/2026): com o jogo aberto, nenhum dos dois
+    D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (02/10/2026): com o jogo aberto, nenhum dos dois
     prazos vence, e o novo fica no boneco dele.
     """
 
@@ -504,7 +504,7 @@ class TestAMatrizDeQuatro:
         bancada.mesa.levantar(UNIQS[segundo])
         for _ in range(_ticks(PRAZO - DEPOIS) + 1):
             tique()
-        # D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (dela, 02/10/2026): com o jogo
+        # D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (02/10/2026): com o jogo
         # aberto os dois lugares esperam, e é o gesto do usuário que os solta.
         assert len(bancada.reg.guardados()) == 2
         bancada.reg.soltar_os_lugares_guardados(motivo="renumerar")

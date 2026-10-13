@@ -53,7 +53,7 @@ PONTE_BOA: dict[str, Any] = {
     "controllers": [{"uniq": "aa:bb:cc:00:00:01", "connected": True,
                      "player_slot": 1}],
 }
-#: O MODO NATIVO — também BOM (*"direto (Sony)"*): o jogo fala com o DualSense.
+#: O MODO NATIVO — também BOM («direto (Sony)»): o jogo fala com o DualSense.
 NATIVO: dict[str, Any] = {
     "connected": True,
     "native_mode": True,

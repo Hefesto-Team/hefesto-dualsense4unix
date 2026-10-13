@@ -212,7 +212,7 @@ class TestAContaDaMesaContaQuemEstaNaMesa:
         )
 
 
-#: *"Melhor que cabo e bt"*. <!-- noqa-acento: citação literal -->
+#: A língua do mapa é «cabo» e «rádio», e não «bt».
 _LINGUA_DO_MAPA = ("cabo", "rádio")
 
 

@@ -60,7 +60,7 @@ _IGNORE = "SDL_GAMECONTROLLER_IGNORE_DEVICES"
 _DISABLE = "PROTON_DISABLE_HIDRAW"
 
 _ESPELHO = "0x28de/0x11ff"
-#: O DualSense físico dela.
+#: O DualSense físico do usuário.
 _FISICO = "0x054c/0x0ce6"
 _NOSSO_VPAD = "0x054c/0x0df2"
 

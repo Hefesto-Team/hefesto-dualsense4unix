@@ -32,8 +32,9 @@ ESTREITA = (940, PISO[1])
 VISTAS = {"piso": PISO, "estreita": ESTREITA, "dela": olhar.VISTA_DELA,
           "ladrilhada": (PISO[0], 700), "baixa": (PISO[0], 480)}
 
-#: As vistas em que a janela tem a altura do desenho: ali o miolo NÃO rola na vertical (ela,
-#: 05/10: «toda interface deve funcionar sem ativar a barra de rolagem vertical»).
+#: As vistas em que a janela tem a altura do desenho: ali o miolo NÃO rola na
+#: vertical (regra de produto de 05/10: toda interface funciona sem a barra de
+#: rolagem vertical).
 SEM_ROLAGEM_VERTICAL = ("piso", "estreita", "dela")
 
 

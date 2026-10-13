@@ -309,7 +309,7 @@ def test_a_saida_gravada_passa_e_a_escolha_que_nao_e_de_controle_fica(wireplumbe
     assert wireplumber.pedidos == [["pactl", "set-default-sink", af.nome_do_sink(p3)]]
 
 
-#: O estado do WirePlumber de um lar de mentira: as linhas nossas e as dela.
+#: O estado do WirePlumber de um lar de mentira: as linhas nossas e as do usuário.
 _DEFAULT_NODES = (
     "[default-nodes]\n"
     "default.configured.audio.sink=alsa_output.pci-0000_00_1f.3.hdmi-stereo\n"

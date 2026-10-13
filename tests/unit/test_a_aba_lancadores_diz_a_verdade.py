@@ -398,7 +398,7 @@ def test_o_cartao_achado_e_o_nao_achado_dizem_coisas_diferentes(desenho):
     assert len({nao_procurei.diz, nao_achei.diz, achei.diz}) == 3, (
         "dois dos três estados dizem a MESMA frase — a tela voltou a não "
         "separar 'procurei e não achei' de 'ainda não procurei'")
-    # *"remove as frases do achei esse lançador aqui"*.  (noqa-acento) citação
+    # O cartão do lançador ACHADO só traz o contador: a frase «achei esse lançador aqui» saiu.
     assert achei.diz == desenho.contador_html(0), (
         f"o cartão do lançador ACHADO diz outra coisa além do contador: "
         f"{achei.diz!r}. Ela o calou em 11/09 e deu a ele o contador em 21/09")
@@ -511,7 +511,7 @@ def test_os_dois_botoes_do_registro_dizem_coisas_diferentes(desenho):
         f"os dois botões voltaram a dizer a mesma coisa ({do_cartao!r}): um é "
         f"«ele está aqui, te mostro onde» e o outro é «tem um que você não "
         f"conhece». Ela pediu um sinônimo justamente para separá-los.")
-    # aprovou: *"ok aprovadíssimo todas. Manda ver."*  # noqa-acento: citação
+    # O rótulo aprovado do botão do cartão.
     assert do_cartao == "Localizar este lançador", (
         f"o rótulo do botão do cartão é {do_cartao!r}, e a decisão dela é "
         f"'Localizar este lançador' — a palavra do SELO daquele cartão")

@@ -1,7 +1,7 @@
 """O servidor DSU responde ao emulador do jeito que o Azahar espera (E4).
 
 Socket UDP de verdade na porta 0 (efêmera): NUNCA a 26760, que é do daemon
-dela. O hub e a tabela de slots são dublês, e os dublês RECUSAM: o servidor só
+do usuário. O hub e a tabela de slots são dublês, e os dublês RECUSAM: o servidor só
 pode chamar ``amostra_do_dsu`` e ``segurar_o_dedo``. Os pedidos são montados
 aqui com ``struct`` e ``zlib``, sem o codec do produto: duas pontas
 independentes.
@@ -389,7 +389,7 @@ def test_6_primeiro_e_terceiro_dao_os_slots_zero_e_dois_e_o_um_responde_desconec
     assert {_dados(p).slot for p in _juntar(sock, 0.4)} == {0, 2}
 
 
-# -- 7 · o interruptor dela vale -----------------------------------------------------------
+# -- 7 · o interruptor do usuário vale -----------------------------------------------------------
 
 
 def test_7_giroscopio_desligado_zera_o_giro_e_o_toque_segue(

@@ -149,7 +149,7 @@ def test_a_pilula_e_o_lancador_leem_o_mesmo_arquivo_do_mesmo_jeito(
 
 def test_o_jogo_da_lista_de_exclusao_abre_sem_nada(
         lar: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """O jogo que ela tirou do Hefesto abre como se ele não estivesse instalado."""
+    """O jogo que o usuário tirou do Hefesto abre como se ele não estivesse instalado."""
     from hefesto_dualsense4unix.integrations import lista_de_exclusao as lx
 
     monkeypatch.setenv("XDG_CONFIG_HOME", str(_config(lar)))

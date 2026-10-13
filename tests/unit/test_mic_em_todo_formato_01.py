@@ -26,7 +26,7 @@ def _linha_do_exit_da_bifurcacao() -> int:
     raise AssertionError("não achei o `exit 0` da bifurcação de formato")
 
 
-#: dela. A lista é a do `case` de `scripts/fix_wireplumber_default_source.sh`.
+#: A lista é a do `case` de `scripts/fix_wireplumber_default_source.sh`.
 _MODOS_DO_MIC = (
     "--install",
     "--disable-source",

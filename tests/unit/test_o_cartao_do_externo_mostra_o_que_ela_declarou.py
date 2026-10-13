@@ -1,18 +1,18 @@
-"""O-CARTAO-DO-EXTERNO-MOSTRA-O-QUE-ELA-DECLAROU-01: o cartão do externo lê a declaração dela.
+"""O-CARTAO-DO-EXTERNO-MOSTRA-O-QUE-ELA-DECLAROU-01: o cartão do externo lê a declaração do usuário.
 
 As respostas de 06/10/2026: os glifos das outras abas seguem o `controles.modo` e o
 `controles.botoes` do controle externo, e a `controles.cor` dele aparece em tudo. O fio
 estava ligado só na mesa que as dez abas leem, e os itens dessa mesa são todos DualSense:
 o cartão dos externos (Jogar e Conexões) não lia nada.
 
-O que se mede aqui, nos DOIS cartões, com o `maquina.json` dela dublado pelo mesmo ponto em
+O que se mede aqui, nos DOIS cartões, com o `maquina.json` do usuário dublado pelo mesmo ponto em
 que a mesa o lê (`mesa_viva._declaracao_do_disco`):
 
 * a cor declarada vira a borda do cartão, e a família dos botões vira as quatro letras da
   face, as duas pela MESMA fonte da mesa (`mesa_viva.cor_declarada` e `familia_dos_botoes`);
-* o que ela não declarou não desenha nada (campo sem informação não mostra nada);
+* o que o usuário não declarou não desenha nada (campo sem informação não mostra nada);
 * a decisão do item 3: a família declarada vale também para o DualSense, e o PS continua no
-  logo (a régua dela é a `test_a_cor_e_os_botoes_que_ela_declarou_seguem_o_controle`).
+  logo (a régua é a `test_a_cor_e_os_botoes_que_ela_declarou_seguem_o_controle`).
 """
 from __future__ import annotations
 
@@ -57,7 +57,7 @@ def _ctx(*externos: dict[str, Any]) -> Contexto:
 
 
 def _ela(monkeypatch: pytest.MonkeyPatch, **campos: Any) -> None:
-    """O `maquina.json` dela, lido pelo ponto em que a mesa o lê."""
+    """O `maquina.json` do usuário, lido pelo ponto em que a mesa o lê."""
     declaracao = MaquinaConfig.model_validate({"controles": {CHAVE: campos}})
     from hefesto_dualsense4unix.interface import mesa_viva
 
@@ -172,7 +172,7 @@ def test_o_cartao_e_a_mesa_leem_a_mesma_fonte(monkeypatch: pytest.MonkeyPatch) -
 
 
 # O ITEM 3, DECIDIDO PELO PADRÃO DE PRODUTO (08/10/2026): a família declarada vale também para o
-# DualSense. Razão: a interface é soberana (o que ela declara é o que a tela mostra),
+# DualSense. Razão: a interface é soberana (o que o usuário declara é o que a tela mostra),
 # `controles.botoes` é «só o desenho da tela», o PS continua no logo, e é o mais reversível.
 
 

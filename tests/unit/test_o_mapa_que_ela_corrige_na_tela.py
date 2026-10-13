@@ -275,7 +275,7 @@ _O_EDITOR = r"""
 
 #: O PAINEL ÚNICO (desenho aprovado de 05/10/2026): a entrada com um aparelho abre o painel com
 #: a coluna «Aparelho» (o nome dele) e a coluna «Entrada» (o nome dela), e o cabeçalho diz
-#: «Entrada N · Lugar» — com o nome que ela deu à entrada no lugar de «Entrada N».
+#: «Entrada N · Lugar» — com o nome que o usuário deu à entrada no lugar de «Entrada N».
 _O_PAINEL = r"""
 (function(){
   const ed = document.getElementById('edita');

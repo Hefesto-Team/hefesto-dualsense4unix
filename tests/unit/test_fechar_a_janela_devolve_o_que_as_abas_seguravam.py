@@ -124,7 +124,7 @@ def test_sair_sem_teste_ligado_nao_fala_com_o_servico(
 # ela é o «Parar» de todos, e o que ainda está no ar naquele controle termina
 # antes dela. Medido antes desta cura, com o `rumble.set` da ponte levando 0,3 s:
 # o «Testar» deixado na troca de página marcava o controle em teste DEPOIS da
-# largada (o coração o rebatia na aba seguinte, até ela voltar e clicar), e o
+# largada (o coração o rebatia na aba seguinte, até o usuário voltar e clicar), e o
 # batimento já conferido mandava o par depois do `rumble.stop` da largada.
 
 DEMORA_DO_SET_S = 0.3

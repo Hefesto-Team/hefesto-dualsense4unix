@@ -881,7 +881,7 @@ def _varrer_berco(session: Any, exitstatus: int) -> None:
         ])
 
 
-# postos 2 a 5 e empurrando os DualSense REAIS dela para 6, 7 e 8 — e
+# postos 2 a 5 e empurrando os DualSense REAIS da bancada para 6, 7 e 8 — e
 
 _LAR_DESLIGADO_ENV = "HEFESTO_SEM_LAR_DE_SESSAO"
 
@@ -2514,7 +2514,7 @@ def _instalar_popen_sem_som() -> None:
 
 
 # "Alto-falante do controle", ao lado das duas placas de DualSense de verdade.
-# usando. Lá era a tela; aqui é o som — e ela está com quatro DualSense na mesa.
+# usando. Lá era a tela; aqui é o som — e a bancada tem quatro DualSense na mesa.
 _VERBOS_QUE_ESCREVEM_NO_SOM = ("load-module", "unload-module")
 
 

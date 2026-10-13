@@ -266,7 +266,7 @@ def test_o_que_fazer_da_dica_chama_a_ferramenta_pelo_nome_do_botao_e_sem_primeir
     assert not re.search(r"\b(eu|me|meu|minha)\b", ordens.NAO_DECLARADO, re.I), ordens.NAO_DECLARADO
 
 
-# ───────────────────────── o nome que ela dá ─────────────────────────
+# ───────────────────────── o nome que o usuário dá ─────────────────────────
 
 
 @pytest.mark.parametrize(("digitado", "gravado"), [

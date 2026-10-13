@@ -10,7 +10,7 @@ respondendo ``active_profile: null`` com um perfil valendo no disco — os quatr
 erravam:
 
 ===  ======================================  =====================================
- #   onde                                    o que custava a ela
+ #   onde                                    o que custava a quem usa
 ===  ======================================  =====================================
  1   ``rodape.aplicar``                      ``ValueError`` barulhento sobre um
  2   ``rodape.salvar``                       perfil que ESTAVA escolhido — ela vê

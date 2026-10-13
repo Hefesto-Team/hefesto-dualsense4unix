@@ -14,7 +14,7 @@ from hefesto_dualsense4unix.daemon.launch_env import (
 _IGNORE = "SDL_GAMECONTROLLER_IGNORE_DEVICES"
 _DISABLE = "PROTON_DISABLE_HIDRAW"
 
-#: (TRES-CONTROLES-01): o DualSense FÍSICO dela, e o espelho VIRTUAL que o Steam
+#: (TRES-CONTROLES-01): o DualSense FÍSICO do usuário, e o espelho VIRTUAL que o Steam
 _IGNORE_ESPERADO = {"0x054c/0x0ce6", "0x28de/0x11ff"}
 
 

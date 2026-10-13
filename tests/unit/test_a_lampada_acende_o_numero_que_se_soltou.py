@@ -223,7 +223,7 @@ def _sai_e_o_prazo_passa(bancada: MesaDaLuz, sai: str) -> dict[str, int]:
     for _ in range(math.ceil(PRAZO / TIQUE) + 1):
         bancada.tique()
     if bancada.daemon.display_authority == "game":
-        # D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (dela, 02/10/2026): com o jogo
+        # D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (02/10/2026): com o jogo
         # na autoridade o prazo para, e a fatia arma quando o jogo solta e o
         # prazo que sobrou passa.
         assert bancada.reg.numeros_da_mesa() == {
@@ -334,7 +334,7 @@ class TestORenumerarEAVoltaTardia:
     ) -> None:
         """O lugar do P1 se solta pelo «Renumerar agora», e ele volta com o jogo aberto.
 
-        D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (dela, 02/10/2026): com o jogo
+        D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (02/10/2026): com o jogo
         na autoridade o prazo não vence; o que solta o lugar de quem saiu, no
         meio da partida, é o gesto do usuário.
         """

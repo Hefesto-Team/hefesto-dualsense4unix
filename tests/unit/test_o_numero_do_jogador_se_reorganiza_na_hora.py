@@ -644,7 +644,7 @@ def _tique_lento(bancada: Any) -> None:
     bancada.conferir_invariantes()
 
 
-#: D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (dela, 02/10/2026): com o jogo na
+#: D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (02/10/2026): com o jogo na
 #: autoridade o prazo de quem saiu não vence, e o que solta o lugar no meio da
 #: partida é o «Renumerar agora». O gesto cai três fatias depois do prazo.
 GESTO_EM = PRAZO + 3 * FATIA
@@ -667,7 +667,7 @@ class TestComOJogoNaAutoridade:
     ) -> None:
         """A fala do usuário: o P2 e o P3 desligam, o roxo (P4) vira P2 no jogo.
 
-        D-3009 (dela, 02/10/2026): com o jogo aberto, só pelo «Renumerar agora».
+        D-3009 (02/10/2026): com o jogo aberto, só pelo «Renumerar agora».
         """
         bancada, escritores = jogo_aberto((P2, P3))
         vpad_do_p1 = bancada.vpad_do_p1
@@ -703,7 +703,7 @@ class TestComOJogoNaAutoridade:
     ) -> None:
         """O P1 sai, o prazo passa e o posto espera; o gesto do usuário desce os outros.
 
-        D-3009 (dela, 02/10/2026): o vpad do P1 não renasce em nenhum dos dois.
+        D-3009 (02/10/2026): o vpad do P1 não renasce em nenhum dos dois.
         """
         bancada, escritores = jogo_aberto((P1,))
         vpad_do_p1 = bancada.vpad_do_p1
@@ -742,7 +742,7 @@ class TestComOJogoNaAutoridade:
     ) -> None:
         """O P2 sai, o P1 sai dez segundos depois, e com o jogo nenhum dos dois vence.
 
-        D-3009 (dela, 02/10/2026). Antes, o prazo do P2 vencia primeiro e o P3 e o
+        D-3009 (02/10/2026). Antes, o prazo do P2 vencia primeiro e o P3 e o
         P4 desciam no meio da partida.
         """
         bancada, escritores = jogo_aberto((P2,))
@@ -776,7 +776,7 @@ class TestComOJogoNaAutoridade:
     ) -> None:
         """Onde a R-04 segura de verdade quando a fatia renumera.
 
-        D-3009 (dela, 02/10/2026): com o jogo aberto, o lugar de quem saiu só se
+        D-3009 (02/10/2026): com o jogo aberto, o lugar de quem saiu só se
         solta pelo «Renumerar agora» — o do P1 aqui, e o do P3 na espera.
         """
         bancada, escritores = jogo_aberto(())

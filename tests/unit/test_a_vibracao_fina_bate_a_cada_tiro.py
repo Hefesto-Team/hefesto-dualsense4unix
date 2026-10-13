@@ -253,7 +253,7 @@ def test_o_pad_uhid_nao_leva_a_borda_ao_motor(com_toque: _Mundo) -> None:
     assert m.daemon._tato_vivo.contadores["eventos"] == 0
 
 
-# --- A barra dela não apaga o tiro (o jogo manda, o ajuste só potencializa) ---
+# --- A barra do usuário não apaga o tiro (o jogo manda, o ajuste só potencializa) ---
 
 
 @pytest.mark.parametrize(

@@ -1,4 +1,4 @@
-"""CONFIG-03 — o que ela DECLAROU sobre a mesa sobrevive a fechar a janela."""
+"""CONFIG-03 — o que o usuário DECLAROU sobre a mesa sobrevive a fechar a janela."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
@@ -109,7 +109,7 @@ def test_json_truncado_e_nao_objeto_caem_no_default(arquivo: Path) -> None:
 
 
 def test_ida_e_volta(arquivo: Path) -> None:
-    """O que foi declarado volta igual — e o arquivo só tem o que ela declarou."""
+    """O que foi declarado volta igual — e o arquivo só tem o que o usuário declarou."""
     assert gravar_maquina(
         {
             "mesa": {"altura_da_antena": "acima", "linha_de_visada": "livre"},

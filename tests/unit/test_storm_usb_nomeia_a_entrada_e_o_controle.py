@@ -102,7 +102,7 @@ def _raiz_com_controlador(tmp_path: Path) -> Path:
 
 
 def test_o_nome_da_entrada_vem_do_dono(tmp_path: Path) -> None:
-    """O nome que ela deu à entrada chega à frase, com o caminho do kernel junto."""
+    """O nome que o usuário deu à entrada chega à frase, com o caminho do kernel junto."""
     raiz = _raiz_com_controlador(tmp_path)
     _dualsense(raiz, "3-4.1.3", hid="com-driver")
     lugar = f"pci-{PCI}-usb-0:4.1.3"

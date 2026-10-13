@@ -109,3 +109,26 @@ def test_o_substantivo_que_nao_e_da_lista_nao_protege() -> None:
     assert modulo.reescrever_prosa("# nasceu da sprint X (ela disse que não)") == (
         "# nasceu da sprint X (o usuário disse que não)"
     )
+
+
+def test_o_que_ela_declarou_vira_o_que_o_usuario_declarou() -> None:
+    """A forma «que ela VERBO» (declarou, deu, ensinou, tirou, dispensou) é a pessoa."""
+    modulo = _modulo()
+    assert modulo.reescrever_prosa("# o nome que ela deu ao controle") == (
+        "# o nome que o usuário deu ao controle"
+    )
+    assert modulo.reescrever_prosa("# o que ela declarou da entrada") == (
+        "# o que o usuário declarou da entrada"
+    )
+    # a carona da mesma frase é o antecedente do «ela»: fica
+    da_carona = "# a carona devolve o que ela declarou da entrada"
+    assert modulo.reescrever_prosa(da_carona) == da_carona
+
+
+def test_a_data_do_dela_entre_parenteses_perde_so_a_pessoa() -> None:
+    """O pronome entre parênteses antes da data sai, e a data fica."""
+    modulo = _modulo()
+    assert modulo.reescrever_prosa("# a ordem (dela, 02/10/2026) vale") == (
+        "# a ordem (02/10/2026) vale"
+    )
+    assert modulo.reescrever_prosa("# a ordem (dela, 02/10) vale") == "# a ordem (02/10) vale"

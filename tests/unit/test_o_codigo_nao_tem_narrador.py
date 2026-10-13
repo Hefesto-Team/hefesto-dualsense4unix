@@ -2,11 +2,13 @@
 
 Comentário, docstring e documento falam do que o código faz e do porquê técnico. Não
 dizem quem conduziu o trabalho, não chamam o usuário de «ela» e não contam a conversa em
-que a decisão nasceu. Três réguas, e todas mordem:
+que a decisão nasceu. Quatro réguas, e todas mordem:
 
 1. nenhum nome de arquivo versionado leva a palavra «dela»;
 2. nenhuma colocação de narrador ou de processo volta a texto versionado;
-3. as regras do ``scripts/neutralizar-o-texto.py`` já não acham nada para trocar.
+3. as regras do ``scripts/neutralizar-o-texto.py`` já não acham nada para trocar;
+4. nenhum comentário ``#`` de ``src/``, ``tests/`` ou ``scripts/`` traz fala citada entre
+   asteriscos e aspas: o comentário diz a regra, e a citação literal mora no CSV de decisões.
 """
 
 from __future__ import annotations
@@ -59,6 +61,23 @@ FORA = (
     "scripts/check_texto_publico.py",
 )
 
+#: A fala citada em comentário: aspas dentro de asteriscos, na forma que a conversa deixava.
+#: Montada por partes, e só vale em linha ``#`` (docstring e texto de tela ficam de fora).
+_ASTERISCO = "\\" + "*"
+FALA_CITADA = re.compile(
+    rf"(?<!{_ASTERISCO}){_ASTERISCO}[«\"][^»\"]{{3,}}[»\"]{_ASTERISCO}(?!{_ASTERISCO})"
+)
+
+#: Onde a fala citada não se mede, e o motivo de cada um.
+FORA_DA_FALA = (
+    "src/hefesto_dualsense4unix/interface/paginas/",  # o publicado: só o ``--publicar`` o escreve
+    "scripts/neutralizar-o-texto.py",  # mostra a forma para trocá-la
+    "scripts/neutralizar-os-nomes.py",
+    "tests/unit/test_o_codigo_nao_tem_narrador.py",  # este arquivo
+)
+_RAIZES_DA_FALA = ("src/", "tests/", "scripts/")
+
+
 def _versionados() -> list[str]:
     saida = subprocess.run(
         ["git", "ls-files"], cwd=RAIZ, capture_output=True, text=True, check=False
@@ -89,6 +108,32 @@ def achados_de_narrador(textos: dict[str, str]) -> list[tuple[str, str]]:
     return achados
 
 
+def falas_em_comentario(textos: dict[str, str]) -> list[tuple[str, int]]:
+    """Cada ``(arquivo, linha)`` de um comentário ``#`` com fala citada, fora das isenções.
+
+    O bloco de linhas ``#`` seguidas é lido inteiro: a fala quebrada em duas linhas conta.
+    """
+    achados = []
+    for caminho, texto in textos.items():
+        if not caminho.endswith(".py") or not caminho.startswith(_RAIZES_DA_FALA):
+            continue
+        if caminho.startswith(FORA_DA_FALA):
+            continue
+        linhas = texto.split("\n")
+        bloco: list[str] = []
+        inicio = 0
+        for numero, linha in enumerate([*linhas, ""]):
+            if linha.lstrip().startswith("#"):
+                if not bloco:
+                    inicio = numero
+                bloco.append(re.sub(r"^\s*#:?\s?", "", linha))
+                continue
+            if bloco and FALA_CITADA.search("\n".join(bloco)):
+                achados.append((caminho, inicio + 1))
+            bloco = []
+    return achados
+
+
 def test_nenhum_nome_versionado_leva_a_palavra_dela() -> None:
     assert nomes_com_dela(_versionados()) == []
 
@@ -104,6 +149,22 @@ def test_o_vocabulario_de_narrador_nao_volta_ao_texto_versionado() -> None:
     assert achados == [], (
         "narrador ou vocabulário de processo em texto versionado (diga o porquê técnico, "
         f"não quem conduziu): {achados[:8]}"
+    )
+
+
+def test_nenhum_comentario_do_codigo_traz_fala_citada() -> None:
+    textos: dict[str, str] = {}
+    for caminho in _versionados():
+        if not caminho.startswith(_RAIZES_DA_FALA) or not caminho.endswith(".py"):
+            continue
+        try:
+            textos[caminho] = (RAIZ / caminho).read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError):
+            continue
+    achados = falas_em_comentario(textos)
+    assert achados == [], (
+        "fala citada em comentário de código (escreva a regra que ela contém; a citação "
+        f"literal só mora no CSV de decisões): {achados[:8]}"
     )
 
 
@@ -148,6 +209,29 @@ class TestMorde:
     def test_o_agente_do_bluez_nao_e_narrador(self) -> None:
         texto = {"src/a.py": "# o agente de pareamento do BlueZ responde ao RequestConfirmation\n"}
         assert achados_de_narrador(texto) == []
+
+    def test_a_fala_devolvida_a_um_comentario_e_achada(self) -> None:
+        fala = "*" + "«" + "isso não faz sentido mais" + "»" + "*"
+        limpo = {"src/x.py": "# a regra: o rádio reinicia por conta própria\n"}
+        assert falas_em_comentario(limpo) == []
+        dita = {"src/x.py": f"x = 1\n# a regra\n# {fala}\n"}
+        assert falas_em_comentario(dita) == [("src/x.py", 2)]
+        aspas = "*" + '"' + "isso não faz sentido mais" + '"' + "*"
+        assert falas_em_comentario({"tests/y.py": f"    # {aspas}\n"}) == [("tests/y.py", 1)]
+
+    def test_a_fala_quebrada_em_duas_linhas_de_comentario_tambem_e_achada(self) -> None:
+        abre, fecha = "*" + "«", "»" + "*"
+        quebrada = f"# a regra {abre}isso não faz\n# sentido mais{fecha} segue\n"
+        assert falas_em_comentario({"scripts/z.py": quebrada}) == [("scripts/z.py", 1)]
+
+    def test_a_fala_fora_de_comentario_ou_de_codigo_nao_entra(self) -> None:
+        fala = "*" + "«" + "isso não faz sentido mais" + "»" + "*"
+        assert falas_em_comentario({"src/x.py": f'TEXTO = "{fala}"\n'}) == []
+        assert falas_em_comentario({"docs/x.md": f"# {fala}\n"}) == []
+        publicado = "src/hefesto_dualsense4unix/interface/paginas/a.html"
+        assert falas_em_comentario({publicado: fala}) == []
+        negrito = "**" + "«" + "isso não faz sentido mais" + "»" + "**"
+        assert falas_em_comentario({"src/x.py": f"# {negrito}\n"}) == []
 
     def test_o_nome_com_dela_e_achado(self) -> None:
         assert nomes_com_dela(["tests/unit/test_a_regra_dela.py"]) == [

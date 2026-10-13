@@ -2,8 +2,8 @@
 
 A modificação ligada que declara o bloco ``lancador`` no ``hefesto-mod.json``
 vira cartão pelo MESMO procurador dos de fábrica e do que a pessoa declara; o
-leitor da biblioteca dela roda como processo, com prazo, e nunca derruba o
-censo; e o perfil de um jogo dela casa pelo ID no título.
+leitor da biblioteca do usuário roda como processo, com prazo, e nunca derruba o
+censo; e o perfil de um jogo do usuário casa pelo ID no título.
 
 Tudo em ``tmp_path``: o registro, o manifesto e o leitor são de mentira, e o
 emulador é um script vazio no ``PATH`` desviado.

@@ -326,7 +326,7 @@ def test_o_sugestoes_fala_menos_e_o_mapa_comeca_na_vista(vista: str) -> None:
     assert not sug["nao_presumo"], f"({QUAL}) o parágrafo «Eu não presumo» voltou"
     assert sug["palavras"] <= PALAVRAS_DO_SUGESTOES, (
         f"({QUAL}) o Sugestões tem {sug['palavras']} palavras: {sug['texto']}")
-    # O desenho aprovado de 05/10 tirou a linha solta do Sugestões («muito texto», ela): o
+    # O desenho aprovado de 05/10 tirou a linha solta do Sugestões (texto demais): o
     # ganho não medido continua dito no «?» da troca (D-0110-AS-RAZOES-NO-INTERROGACAO).
     assert "não foi medido nesta máquina" not in sug["texto"].lower(), (
         f"({QUAL}) a linha solta do ganho não medido voltou ao Sugestões")

@@ -66,7 +66,7 @@ def mesa(monkeypatch: pytest.MonkeyPatch):
 
 
 def _dono(uniq: str, mudo: bool) -> None:
-    """O mudo que ela deu ao controle, no dono (o `maquina.json` do lar da suíte)."""
+    """O mudo que o usuário deu ao controle, no dono (o `maquina.json` do lar da suíte)."""
     assert maquina.gravar_o_mudo_do_microfone(uniq, mudo)
 
 
