@@ -25,6 +25,7 @@ import re
 import shutil
 import sys
 import tempfile
+import threading
 import time
 from collections.abc import Sequence
 from contextvars import ContextVar
@@ -1576,6 +1577,35 @@ def _profile_path(identifier: str | Profile) -> Path:
     return profiles_dir(ensure=True) / f"{identifier}.json"
 
 
+#: ``caminho -> (mtime, tamanho)`` do perfil inválido que já foi avisado. O gerente
+#: relê a pasta no laço; sem esta memória cada arquivo ruim gerava um aviso a cada
+#: leitura (~43 mil linhas por dia). O arquivo não é renomeado nem isolado: pode
+#: estar no meio de uma edição à mão. Quem pergunta (`audit_profiles`, o `doctor`)
+#: continua vendo a lista inteira.
+_INVALIDOS_JA_AVISADOS: dict[str, tuple[int, int]] = {}
+_INVALIDOS_TRAVA = threading.Lock()
+
+
+def _avisa_perfil_invalido(path: Path, exc: BaseException) -> None:
+    """O `profile_invalid` no diário: uma vez por arquivo, e de novo quando ele muda."""
+    try:
+        estado = path.stat()
+        assinatura = (estado.st_mtime_ns, estado.st_size)
+    except OSError:
+        assinatura = (-1, -1)
+    chave = str(path)
+    with _INVALIDOS_TRAVA:
+        if _INVALIDOS_JA_AVISADOS.get(chave) == assinatura:
+            return
+        _INVALIDOS_JA_AVISADOS[chave] = assinatura
+    logger.warning(
+        "profile_invalid",
+        path=chave,
+        err=str(exc),
+        err_type=type(exc).__name__,
+    )
+
+
 def _read_profile(path: Path) -> Profile:
     with FileLock(str(_lock_path(path))):
         raw = json.loads(path.read_text(encoding="utf-8"))
@@ -1605,12 +1635,7 @@ def arquivo_do_perfil(identifier: str, directory: Path | None = None) -> Path | 
         try:
             profile = _read_profile(path)
         except _PROFILE_DECODE_ERRORS as exc:
-            logger.warning(
-                "profile_invalid",
-                path=str(path),
-                err=str(exc),
-                err_type=type(exc).__name__,
-            )
+            _avisa_perfil_invalido(path, exc)
             continue
         try:
             if slugify(profile.name) == slug:
@@ -1646,12 +1671,7 @@ def perfil_em_disco(identifier: str) -> Profile | None:
     try:
         return _read_profile(alvo)
     except _PROFILE_DECODE_ERRORS as exc:
-        logger.warning(
-            "profile_invalid",
-            path=str(alvo),
-            err=str(exc),
-            err_type=type(exc).__name__,
-        )
+        _avisa_perfil_invalido(alvo, exc)
         return None
 
 
@@ -1733,12 +1753,7 @@ def _ler_todos_os_perfis(*, copiar: bool) -> list[Profile]:
                 raw = json.loads(path.read_text(encoding="utf-8"))
             profiles.append(Profile.model_validate(raw))
         except _PROFILE_DECODE_ERRORS as exc:
-            logger.warning(
-                "profile_invalid",
-                path=str(path),
-                err=str(exc),
-                err_type=type(exc).__name__,
-            )
+            _avisa_perfil_invalido(path, exc)
             continue
     if pela_assinatura:
         _PERFIS_PELA_ASSINATURA.manter_so(vistos)
@@ -2257,12 +2272,7 @@ def delete_profile(identifier: str) -> None:
                 try:
                     other = _read_profile(path)
                 except _PROFILE_DECODE_ERRORS as exc:
-                    logger.warning(
-                        "profile_invalid",
-                        path=str(path),
-                        err=str(exc),
-                        err_type=type(exc).__name__,
-                    )
+                    _avisa_perfil_invalido(path, exc)
                     continue
                 if other.name == profile.name:
                     candidate = path

@@ -320,7 +320,7 @@ def test_sem_pactl_o_ouvinte_espera_calado_e_volta_quando_ele_aparece(
         assert nome == "pactl"
         return next(presente, "/usr/bin/pactl")
 
-    async def _uma_volta(_daemon: Any) -> None:
+    async def _uma_volta(_daemon: Any, **_k: Any) -> None:
         tentativas.append(("subscribe",))
         raise asyncio.CancelledError
 

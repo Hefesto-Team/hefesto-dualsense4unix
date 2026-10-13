@@ -7,6 +7,7 @@ import os
 import re
 import tempfile
 import threading
+import time
 from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from typing import Any, Final, Literal, NamedTuple
@@ -57,11 +58,17 @@ _MAQUINA_FILE = "maquina.json"
 
 _MAQUINA_INVALIDO_SUFIXO = ".invalido"
 
+#: A cópia do arquivo ilegível, guardada ao lado antes da primeira escrita
+#: (``maquina.json.ilegivel-<data>``), como a do registro de máscaras.
+_SUFIXO_DO_ILEGIVEL = ".ilegivel-"
+
 MAQUINA_SCHEMA_VERSION = 1
 
 VERSION_FIELD = "version"
 
 MAQUINA_FILE_LOCK = threading.Lock()
+
+MAQUINA_AVISO_LOCK = threading.Lock()
 
 _CHAVE_DE_CONTROLE = re.compile(r"^[0-9a-f]{12}$")
 
@@ -1281,7 +1288,18 @@ def gravar_maquina_com_descartes(
     """Funde a declaração PARCIAL no documento do disco."""
     MaquinaConfig.model_validate(dict(declaracao))
     with MAQUINA_FILE_LOCK:
-        bruto = _ler_documento() or {}
+        try:
+            bruto = _ler_o_documento_ou_levantar() or {}
+        except _DocumentoIlegivelError as exc:
+            _guardar_o_ilegivel(exc.caminho)
+            bruto = {}
+        except OSError as exc:
+            logger.warning(
+                "maquina_save_recusado_arquivo_nao_lido",
+                caminho=str(caminho_da_maquina()),
+                err=str(exc)[:200],
+            )
+            return ResultadoDaGravacao(False, ())
         if bruto and bruto.get(VERSION_FIELD) != MAQUINA_SCHEMA_VERSION:
             logger.warning(
                 "maquina_save_recusado_schema_desconhecido",
@@ -1626,14 +1644,79 @@ def _podar(no: Any) -> Any:
     return podado
 
 
-def _ler_documento() -> dict[str, Any] | None:
-    """O JSON do disco quando ele é um objeto; ``None`` em qualquer outro caso."""
+class _DocumentoIlegivelError(ValueError):
+    """O ``maquina.json`` existe e não se lê como um objeto JSON."""
+
+    def __init__(self, caminho: Path, motivo: str) -> None:
+        super().__init__(f"{caminho}: {motivo}")
+        self.caminho = caminho
+        self.motivo = motivo
+
+
+_ILEGIVEIS_AVISADOS: dict[str, tuple[int, int]] = {}
+
+
+def _ler_o_documento_ou_levantar() -> dict[str, Any] | None:
+    """O objeto JSON do disco; ``None`` só quando o arquivo NÃO EXISTE.
+
+    Levanta :class:`_DocumentoIlegivelError` quando o conteúdo não se lê como objeto
+    e deixa passar o ``OSError`` (permissão, disco): quem escreve precisa saber
+    a diferença entre «ausente», «ilegível» e «não consegui olhar».
+    """
+    caminho = caminho_da_maquina()
     try:
-        with caminho_da_maquina().open(encoding="utf-8") as fh:
+        with caminho.open(encoding="utf-8") as fh:
             bruto = json.load(fh)
-    except (FileNotFoundError, json.JSONDecodeError, OSError):
+    except FileNotFoundError:
         return None
-    return bruto if isinstance(bruto, dict) else None
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise _DocumentoIlegivelError(caminho, type(exc).__name__) from exc
+    if not isinstance(bruto, dict):
+        raise _DocumentoIlegivelError(caminho, f"documento {type(bruto).__name__}")
+    return bruto
+
+
+def _ler_documento() -> dict[str, Any] | None:
+    """O JSON do disco quando ele é um objeto; ``None`` em qualquer outro caso.
+
+    O ilegível sai no diário uma vez por processo e por mudança do arquivo
+    (``maquina_ilegivel``, com o caminho): a leitura segue em «não sei», e a
+    gravação é quem guarda o arquivo antes de escrever por cima.
+    """
+    try:
+        return _ler_o_documento_ou_levantar()
+    except _DocumentoIlegivelError as exc:
+        try:
+            estado = exc.caminho.stat()
+            assinatura = (estado.st_mtime_ns, estado.st_size)
+        except OSError:
+            assinatura = (-1, -1)
+        with MAQUINA_AVISO_LOCK:
+            novo = _ILEGIVEIS_AVISADOS.get(str(exc.caminho)) != assinatura
+            _ILEGIVEIS_AVISADOS[str(exc.caminho)] = assinatura
+        if novo:
+            logger.warning(
+                "maquina_ilegivel", caminho=str(exc.caminho), motivo=exc.motivo
+            )
+        return None
+    except OSError as exc:
+        logger.debug("maquina_nao_lida", err=str(exc))
+        return None
+
+
+def _guardar_o_ilegivel(caminho: Path) -> Path:
+    """Move o arquivo ilegível para o lado (``<nome>.ilegivel-<data>``)."""
+    base = f"{caminho.name}{_SUFIXO_DO_ILEGIVEL}{time.strftime('%Y%m%d-%H%M%S')}"
+    destino = caminho.with_name(base)
+    n = 2
+    while destino.exists():
+        destino = caminho.with_name(f"{base}-{n}")
+        n += 1
+    os.replace(caminho, destino)
+    logger.warning(
+        "maquina_ilegivel_guardado", caminho=str(caminho), guardado_em=str(destino)
+    )
+    return destino
 
 
 def _escrever(documento: dict[str, Any]) -> None:

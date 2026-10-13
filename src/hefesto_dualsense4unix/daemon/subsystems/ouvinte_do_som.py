@@ -17,6 +17,12 @@ logger = get_logger(__name__)
 
 ESPERA_PARA_RELIGAR_S: float = 3.0
 
+#: O teto do recuo quando o `subscribe` morre na hora, volta após volta.
+TETO_DA_ESPERA_S: float = 60.0
+
+#: Quantas voltas seguidas sem vida bastam para dizer «sem servidor».
+VOLTAS_MORTAS_PARA_AVISAR: int = 2
+
 RAJADA_S: float = 0.05
 
 EVENTOS_QUE_IMPORTAM = ("server", "sink", "source")
@@ -96,6 +102,8 @@ async def ouvinte_do_som_loop(daemon: Any) -> None:
     foto que ninguém mantém responderia sobre o passado.
     """
     sem_pactl = False
+    mortas = 0
+    sem_servidor = False
     try:
         while True:
             if shutil.which("pactl") is None:
@@ -109,12 +117,23 @@ async def ouvinte_do_som_loop(daemon: Any) -> None:
                 sem_pactl = False
                 logger.info("ouvinte_do_som_achou_o_pactl")
             try:
-                await _uma_volta(daemon)
+                viva = await _uma_volta(daemon, voltando=sem_servidor)
             except asyncio.CancelledError:
                 raise
             except Exception:
                 logger.warning("ouvinte_do_som_caiu", exc_info=True)
-            await asyncio.sleep(ESPERA_PARA_RELIGAR_S)
+                viva = False
+            if viva is False:
+                mortas += 1
+                if mortas >= VOLTAS_MORTAS_PARA_AVISAR and not sem_servidor:
+                    sem_servidor = True
+                    logger.warning("ouvinte_do_som_sem_servidor")
+            else:
+                mortas = 0
+                sem_servidor = False
+            await asyncio.sleep(min(
+                TETO_DA_ESPERA_S,
+                ESPERA_PARA_RELIGAR_S * 2 ** max(0, mortas - 1)))
     finally:
         retrato_do_som.RETRATO.soltar()
 
@@ -128,8 +147,13 @@ async def _carregar_o_retrato(retrato: retrato_do_som.RetratoDoSom) -> bool:
     return False
 
 
-async def _uma_volta(daemon: Any) -> None:
-    """Uma sessão de `subscribe`, do início até o `pactl` morrer."""
+async def _uma_volta(daemon: Any, *, voltando: bool = False) -> bool:
+    """Uma sessão de `subscribe`, do início até o `pactl` morrer.
+
+    Devolve se o ouvinte chegou a viver: o «ligado» só sai depois do primeiro
+    evento ou de um retrato com algo dentro. `voltando` diz que a volta anterior
+    estava sem servidor, e então o aviso é o `ouvinte_do_som_voltou`.
+    """
     retrato = retrato_do_som.RETRATO
     proc = await asyncio.create_subprocess_exec(
         "pactl", "subscribe",
@@ -138,13 +162,24 @@ async def _uma_volta(daemon: Any) -> None:
         env=_ambiente())
     pendentes: set[str] = set()
     tarefas: list[asyncio.Task[None]] = []
+    viva = False
+
+    def anunciar(anterior: SomDoSistema) -> None:
+        nonlocal viva
+        if viva:
+            return
+        viva = True
+        logger.info("ouvinte_do_som_voltou" if voltando else "ouvinte_do_som_ligado",
+                    saida=anterior.saida, entrada=anterior.entrada,
+                    retrato=retrato.vivo)
+
     try:
         await _carregar_o_retrato(retrato)
         anterior = await ler_o_padrao()
         _guardar(daemon, anterior)
         await _publicar(daemon, anterior)
-        logger.info("ouvinte_do_som_ligado", saida=anterior.saida,
-                    entrada=anterior.entrada, retrato=retrato.vivo)
+        if retrato.vivo or anterior.saida or anterior.entrada:
+            anunciar(anterior)
 
         async def aplicar() -> None:
             nonlocal anterior
@@ -181,6 +216,7 @@ async def _uma_volta(daemon: Any) -> None:
         vez: asyncio.Task[None] | None = None
         assert proc.stdout is not None
         async for bruto in proc.stdout:
+            anunciar(anterior)
             tipo = tipo_do_evento(bruto.decode("utf-8", "replace").strip())
             if tipo is None:
                 continue
@@ -195,6 +231,7 @@ async def _uma_volta(daemon: Any) -> None:
         tarefas.clear()
         if pendentes:
             await aplicar()
+        return viva
     finally:
         for tarefa in tarefas:
             tarefa.cancel()
@@ -246,6 +283,8 @@ __all__ = [
     "ESPERA_PARA_RELIGAR_S",
     "EVENTOS_QUE_IMPORTAM",
     "RAJADA_S",
+    "TETO_DA_ESPERA_S",
+    "VOLTAS_MORTAS_PARA_AVISAR",
     "SomDoSistema",
     "ler_o_padrao",
     "ouvinte_do_som_loop",
