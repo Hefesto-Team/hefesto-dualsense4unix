@@ -1590,6 +1590,12 @@ def _hefesto_fake_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv("HOME", str(home_dir))
     monkeypatch.setenv("HEFESTO_DUALSENSE4UNIX_SKIP_PRESET_SEED", "1")
     monkeypatch.setenv("HEFESTO_BROKER_SOCKET", str(xdg_root / "no-broker.sock"))
+    # A forma do WirePlumber (SPA-JSON ou Lua) sai da configuração de sistema da
+    # máquina que roda o teste: num Ubuntu 24.04 ou num Mint 22 (o 0.4, com
+    # `main.lua.d`) os drop-ins `.conf` que os testes plantam deixavam de ser os
+    # que o produto procura, e nove testes reprovavam só ali. Uma pasta vazia
+    # responde a forma de hoje (SPA-JSON); quem testa a forma desvia por cima.
+    monkeypatch.setenv("HEFESTO_WIREPLUMBER_SISTEMA", str(xdg_root / "wireplumber-de-sistema"))
     # todo teste. A vista dos externos pula pelo sysfs o nó de DualSense antes
     # dela, e só com os controles ligados. Vazio é «não achei DualSense nenhum», a resposta de
     try:
