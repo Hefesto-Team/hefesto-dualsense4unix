@@ -77,8 +77,10 @@ class AnunciadorDoJogo:
     sabe a cada leitura da janela, que é o tique do autoswitch: o perfil ativo do store, que
     toda ativação publica, de qualquer origem (a janela, o jogo em cena, a tela, o terminal), e
     o `appid_em_cena` do serviço. A primeira leitura diz o perfil de agora (a carga inicial), e
-    o barramento o guarda para quem assina depois. `jogo.fechou` esquece também a batida da
-    vibração, para o evento que ficou pendente não sair com o jogo já fechado.
+    o barramento o guarda para quem assina depois. A marca que muda no arquivo do perfil que
+    já está ativo (a pessoa marca o jogo aberto) também é troca: o estado guardado não pode
+    ficar velho. Quando o jogo fecha, quem vibrava recebe primeiro o zero que faltava e só
+    depois sai `jogo.fechou`, e a batida para.
     """
 
     _NUNCA: object = object()
@@ -88,6 +90,7 @@ class AnunciadorDoJogo:
         self._store = store
         self._daemon = daemon
         self._perfil: object = self._NUNCA
+        self._arquivo: object = self._NUNCA
         self._appid: int | None = None
 
     def ver(self) -> None:
@@ -101,12 +104,17 @@ class AnunciadorDoJogo:
     def _ver_o_perfil(self) -> None:
         nome = getattr(self._store, "active_profile", None)
         nome = nome if isinstance(nome, str) and nome else None
-        if nome == self._perfil:
+        arquivo = (nome, _carimbo_do_perfil(nome))
+        if arquivo == self._arquivo:
             return
-        self._perfil = nome
+        self._arquivo = arquivo
+        dito = (nome, _marcas_do_perfil(nome))
+        if dito == self._perfil:
+            return
+        self._perfil = dito
         self._bus.publish(
             EventTopic.PERFIL_TROCOU,
-            {"perfil": nome, "marcas": _marcas_do_perfil(nome), "t": time.monotonic()},
+            {"perfil": dito[0], "marcas": dito[1], "t": time.monotonic()},
         )
 
     def _ver_o_jogo(self) -> None:
@@ -119,10 +127,23 @@ class AnunciadorDoJogo:
             esquecer_a_vibracao,
         )
 
+        esquecer_a_vibracao(self._daemon)
         self._bus.publish(
             EventTopic.JOGO_FECHOU, {"appid": anterior, "t": time.monotonic()}
         )
-        esquecer_a_vibracao(self._daemon)
+
+
+def _carimbo_do_perfil(nome: str | None) -> int | None:
+    """O `st_mtime_ns` do arquivo do perfil: um `stat` por leitura, sem decodificar o JSON."""
+    if nome is None:
+        return None
+    from hefesto_dualsense4unix.profiles.slug import slugify
+    from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
+
+    try:
+        return (profiles_dir() / f"{slugify(nome)}.json").stat().st_mtime_ns
+    except (OSError, ValueError):
+        return None
 
 
 def _marcas_do_perfil(nome: str | None) -> list[str]:

@@ -25,6 +25,17 @@ AS MORDIDAS (executadas na implementação, uma a uma, com o md5 conferido na vo
   `test_as_duas_rotas_de_subida_ligam_o_anunciador` reprova nas duas rotas;
 * o barramento sem guardar o estado → ``test_a_conexao_tardia_recebe_o_perfil_de_agora``
   reprova.
+
+As da conferência (13/10/2026), na mesma forma:
+
+* o fim da sessão que só zera a linha com o ``efetivo`` diferente de zero (o zero que o teto
+  atrasou se perde) → ``test_o_zero_que_o_teto_atrasou_chega_no_fim_da_sessao`` reprova;
+* ``jogo.fechou`` publicado antes do zero de quem vibrava →
+  ``test_quem_vibrava_recebe_o_zero_antes_do_jogo_fechou`` reprova;
+* o anunciador que só compara o nome do perfil →
+  ``test_a_marca_nova_no_perfil_ativo_vira_troca`` reprova;
+* a tabela criada sem a trava da criação →
+  ``test_dois_controles_que_comecam_juntos_ficam_os_dois_na_tabela`` reprova.
 """
 from __future__ import annotations
 
@@ -33,6 +44,8 @@ import json
 import os
 import socket
 import tempfile
+import threading
+import time
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -255,6 +268,26 @@ def test_o_fim_da_sessao_do_pad_zera_quem_ainda_vibrava(mesa: _Mesa, relogio: _R
     assert escuta.tudo() == []
 
 
+def test_o_zero_que_o_teto_atrasou_chega_no_fim_da_sessao(
+    mesa: _Mesa, relogio: _Relogio
+) -> None:
+    """O jogo para o motor logo depois de ligá-lo e fecha o pad antes do tique seguinte."""
+    escuta = _vibracao(mesa)
+    gp.apply_game_rumble(mesa.daemon, PEDIDO, PEDIDO, target_uniq=UNIQS[2])
+    relogio.avancar(0.002)
+    gp.apply_game_rumble(mesa.daemon, 0, 0, target_uniq=UNIQS[2])  # o teto segura
+    dito = escuta.tudo()
+    assert len(dito) == 1 and dito[0]["efetivo"] != [0, 0], "o teto não segurou o zero"
+
+    gp.end_game_output_session(mesa.daemon, target_uniq=UNIQS[2])
+
+    eventos = escuta.tudo()
+    assert eventos and eventos[-1]["efetivo"] == [0, 0], (
+        "o zero que o teto atrasou se perdeu com o fim da sessão"
+    )
+    assert eventos[-1]["uniq"] == UNIQS[2]
+
+
 # 5. O jogo que fecha, o perfil que muda.
 
 def test_o_jogo_que_fecha_vira_evento_e_cala_a_batida(
@@ -290,6 +323,90 @@ def test_o_jogo_que_fecha_vira_evento_e_cala_a_batida(
     assert vibracao.tudo() == [], "a batida seguiu com o jogo fechado"
     anunciador.ver()
     assert fechou.tudo() == [], "o mesmo jogo fechou duas vezes"
+
+
+def test_quem_vibrava_recebe_o_zero_antes_do_jogo_fechou(
+    mesa: _Mesa, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    bus = mesa.daemon.bus
+    appid: list[int | None] = [730]
+
+    class _Daemon(SimpleNamespace):
+        @property
+        def appid_em_cena(self) -> int | None:
+            return appid[0]
+
+    daemon = _Daemon(bus=bus, controller=mesa.backend, config=mesa.config,
+                     identity_registry=mesa.daemon.identity_registry)
+    anunciador = AnunciadorDoJogo(bus, mesa.store, daemon)
+    gp.apply_game_rumble(daemon, PEDIDO, PEDIDO, target_uniq=UNIQS[1])
+    anunciador.ver()
+    ordem: list[str] = []
+    publicar = bus.publish
+
+    def _anotando(topico: str, carga: Any) -> None:
+        ordem.append(topico)
+        publicar(topico, carga)
+
+    monkeypatch.setattr(bus, "publish", _anotando)
+    appid[0] = None
+    anunciador.ver()
+
+    assert EventTopic.JOGO_FECHOU in ordem
+    assert ordem.index(EventTopic.JOGO_VIBRACAO) < ordem.index(EventTopic.JOGO_FECHOU), (
+        f"o jogo fechou antes do zero de quem vibrava: {ordem}"
+    )
+
+
+def test_a_marca_nova_no_perfil_ativo_vira_troca(mesa: _Mesa) -> None:
+    """A pessoa marca «Adulto» no jogo que já está aberto: o estado guardado não fica velho."""
+    from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
+
+    save_profile(Profile(name="noite", match=MatchAny(), priority=5))
+    mesa.store.set_active_profile("noite")
+    escuta = _Escuta(mesa.daemon.bus, EventTopic.PERFIL_TROCOU)
+    anunciador = AnunciadorDoJogo(mesa.daemon.bus, mesa.store, SimpleNamespace())
+    anunciador.ver()
+
+    arquivo = profiles_dir() / "noite.json"
+    antes = arquivo.stat().st_mtime_ns
+    save_profile(Profile(name="noite", match=MatchAny(), priority=5, marcas=["adulto"]))
+    os.utime(arquivo, ns=(antes + 10**9, antes + 10**9))  # o relógio do disco andou
+    anunciador.ver()
+    anunciador.ver()
+
+    assert [(e["perfil"], e["marcas"]) for e in escuta.tudo()] == [
+        ("noite", []),
+        ("noite", ["adulto"]),
+    ], "a marca nova no perfil ativo não chegou a quem acompanha"
+
+
+def test_dois_controles_que_comecam_juntos_ficam_os_dois_na_tabela(mesa: _Mesa) -> None:
+    """Cada pad virtual escreve na thread dele: a primeira vibração de dois ao mesmo tempo."""
+    largada = threading.Barrier(len(UNIQS))
+
+    class _Daemon(SimpleNamespace):
+        def __setattr__(self, nome: str, valor: Any) -> None:
+            if nome == "_vibracao_do_jogo_vista":
+                time.sleep(0.02)  # alarga a janela entre olhar e gravar a tabela
+            super().__setattr__(nome, valor)
+
+    daemon = _Daemon(bus=mesa.daemon.bus, controller=mesa.backend, config=mesa.config,
+                     identity_registry=mesa.daemon.identity_registry)
+
+    def _vibrar(uniq: str) -> None:
+        largada.wait()
+        vj.dizer_a_vibracao(daemon, uniq, (PEDIDO, PEDIDO), (PEDIDO, PEDIDO))
+
+    fios = [threading.Thread(target=_vibrar, args=(u,)) for u in UNIQS]
+    for fio in fios:
+        fio.start()
+    for fio in fios:
+        fio.join(5)
+
+    vista = vj._vista_do(daemon, criar=False)
+    assert vista is not None
+    assert sorted(vista.linhas) == sorted(UNIQS), "um controle perdeu a batida na largada"
 
 
 def test_o_perfil_adulto_publica_as_marcas(mesa: _Mesa) -> None:

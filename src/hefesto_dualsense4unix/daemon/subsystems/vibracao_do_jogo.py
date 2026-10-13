@@ -39,6 +39,9 @@ PERIODO_DA_BATIDA_S = 0.25
 INTERVALO_MINIMO_S = 1.0 / 60.0
 
 _ATRIBUTO = "_vibracao_do_jogo_vista"
+#: A trava de quem cria a tabela: dois controles que vibram pela primeira vez no mesmo
+#: instante (cada pad virtual escreve na thread dele) não criam duas, e nenhum se perde.
+_TRAVA_DA_CRIACAO = threading.Lock()
 
 Par = tuple[int, int]
 
@@ -68,12 +71,16 @@ def _vista_do(daemon: Any, *, criar: bool) -> _Vista | None:
         return vista
     if not criar:
         return None
-    vista = _Vista()
-    try:
-        setattr(daemon, _ATRIBUTO, vista)
-    except AttributeError as exc:  # um dublê sem lugar para a tabela: sem batida, sem erro
-        logger.debug("jogo_vibracao_sem_tabela", err=str(exc))
-        return None
+    with _TRAVA_DA_CRIACAO:
+        vista = getattr(daemon, _ATRIBUTO, None)
+        if isinstance(vista, _Vista):
+            return vista
+        vista = _Vista()
+        try:
+            setattr(daemon, _ATRIBUTO, vista)
+        except AttributeError as exc:  # um dublê sem lugar para a tabela: sem batida, sem erro
+            logger.debug("jogo_vibracao_sem_tabela", err=str(exc))
+            return None
     return vista
 
 
@@ -212,7 +219,9 @@ def esquecer_a_vibracao(
 ) -> None:
     """O fim da sessão do pad (um controle) ou do jogo (todos): a batida para.
 
-    O controle que ainda vibrava, para quem acompanha, recebe o zero que faltou.
+    O controle que ainda vibrava, para quem acompanha, recebe o zero que faltou. Toda linha
+    da tabela é um controle cujo último evento DITO não foi zero (o zero dito apaga a linha),
+    inclusive a que guarda um zero que o teto atrasou: todas recebem o zero.
     """
     vista = _vista_do(daemon, criar=False)
     if vista is None or not vista.linhas:
@@ -226,7 +235,7 @@ def esquecer_a_vibracao(
     with vista.trava:
         for chave in chaves:
             linha = vista.linhas.pop(chave, None)
-            if linha is not None and linha.efetivo != (0, 0):
+            if linha is not None:
                 zeros.append((chave, _Linha(linha.jogador, (0, 0), (0, 0), agora, False)))
     for chave, linha in zeros:
         _publicar(daemon, chave or None, linha, agora)
