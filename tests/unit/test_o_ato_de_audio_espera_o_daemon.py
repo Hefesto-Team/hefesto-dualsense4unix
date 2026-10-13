@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import inspect
 from typing import Any
 
 import pytest
@@ -51,10 +50,26 @@ def test_o_ato_de_audio_pede_o_teto_largo(nome: str, args: tuple[Any, ...],
         f"três causas — nenhuma delas a verdadeira.")
 
 
-def test_o_teto_padrao_nao_mudou_para_os_outros() -> None:
-    """A folga é dos TRÊS atos de áudio, e de mais ninguém."""
-    padrao = inspect.signature(ipc_bridge._safe_call).parameters["timeout"].default
-    assert padrao == 0.25, (
-        f"o teto PADRÃO do transporte virou {padrao!r}. A cura de 08/09 é dos "
-        f"três atos de áudio, que varrem o PulseAudio; alargar o padrão prende "
-        f"a janela no tique quando o daemon trava.")
+def test_o_teto_padrao_nao_mudou_para_os_outros(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A folga é dos TRÊS atos de áudio, e de mais ninguém.
+
+    Sem ``timeout``, o transporte espera o ``teto(method)``; um método fora da
+    tabela de tetos espera o padrão de uma leitura. Mede-se o prazo que chega
+    ao ``_run_call``, e não o valor default da assinatura, que é ``None``.
+    """
+    fora_da_tabela = "daemon.state_full"
+    assert fora_da_tabela not in ipc_bridge.TETOS
+    visto: dict[str, Any] = {}
+
+    def espiao(method: str, params: Any = None, timeout: Any = None) -> Any:
+        visto["timeout"] = timeout
+        return {}
+
+    monkeypatch.setattr(ipc_bridge, "_run_call", espiao)
+    ipc_bridge._safe_call(fora_da_tabela)
+    assert visto.get("timeout") == 0.25, (
+        f"o teto PADRÃO do transporte virou {visto.get('timeout')!r}. A cura de "
+        f"08/09 é dos três atos de áudio, que varrem o PulseAudio; alargar o "
+        f"padrão prende a janela no tique quando o daemon trava.")
