@@ -127,6 +127,56 @@ def test_morde_o_glob_que_nao_casa_nada_faz_o_portao_rodar_sempre(tmp_path: Path
     assert _chave(raiz, "tela-nao-confessa", ["pasta-que-nao-existe/**"]) is None
 
 
+# --- o que o portão lê sem dizer ------------------------------------------------------------------
+#
+# Medido em 13/10/2026 com um gancho de auditoria do Python (`open`, contando o `.pyc` como o `.py`
+# dele) sobre os dez: o `tests/conftest.py` importa `scripts/check_faixa_sintetica.py` em todo
+# `pytest`, e o gerador das páginas lê os glifos de `assets/glyphs/` quando o teste monta a aba.
+# Fora da quinta coluna, mudar um deles deixava o portão lembrado sobre bytes que ele lê.
+
+#: o que cada portão abre fora do `src/`, do `tests/` e do `mockup/`, medido no dia
+LIDO_DE_FORA = {
+    "gesto-em-lugar-vazio": ("assets/glyphs/bateria.svg",),
+    "portoes-lentos-rapidos": ("assets/glyphs/bateria.svg", "assets/glyphs/cross.svg"),
+}
+
+
+def _scripts_do_conftest() -> list[str]:
+    texto = (RAIZ / "tests" / "conftest.py").read_text(encoding="utf-8")
+    nomes = set(re.findall(r"^\s*import (\w+)\s*$", texto, re.M))
+    nomes |= set(re.findall(r"^\s*from (\w+) import", texto, re.M))
+    return sorted(f"scripts/{n}.py" for n in nomes if (RAIZ / "scripts" / f"{n}.py").is_file())
+
+
+def _casados(ficha: str) -> set[str]:
+    ent = RECIBO.Entradas(RAIZ)
+    casados: set[str] = set()
+    for padrao in TABELA[ficha][4].split():
+        if not padrao.startswith("@"):
+            casados |= ent.glob(padrao)
+    return casados
+
+
+def test_o_conftest_importa_um_script_e_a_lista_o_ve() -> None:
+    assert "scripts/check_faixa_sintetica.py" in _scripts_do_conftest(), (
+        "a leitura dos imports do conftest não acha mais o script que ele importa: a régua abaixo "
+        "passaria sem medir nada")
+
+
+@pytest.mark.parametrize("ficha", [f for f in DEZ if TABELA[f][2] == "pytest"])
+def test_o_portao_pytest_leva_na_chave_o_que_o_conftest_importa(ficha: str) -> None:
+    faltam = [s for s in _scripts_do_conftest() if s not in _casados(ficha)]
+    assert not faltam, (
+        f"{ficha}: o `tests/conftest.py` importa {faltam} em todo pytest, e a quinta coluna não o "
+        "lê; mudá-lo deixaria o portão lembrado")
+
+
+@pytest.mark.parametrize("ficha", sorted(LIDO_DE_FORA))
+def test_o_que_o_gerador_le_fora_do_src_entra_na_chave(ficha: str) -> None:
+    faltam = [rel for rel in LIDO_DE_FORA[ficha] if rel not in _casados(ficha)]
+    assert not faltam, f"{ficha}: abre {faltam} e a quinta coluna não o lê"
+
+
 # --- a paridade pergunta pelo literal antes da regex ----------------------------------------------
 
 

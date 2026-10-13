@@ -70,7 +70,9 @@ RAIZ="$(git rev-parse --show-toplevel 2>/dev/null || dirname "$(dirname "$(readl
 # Os dez `rapido` mais caros declaram o que abrem (10/10/2026, O-RAPIDO-SO-REPETE-O-QUE-MUDOU-01): medido
 # com um gancho de auditoria do Python (`open`, `os.listdir`, `subprocess.Popen`) e lido no script, por pasta
 # e não por arquivo, para que o arquivo novo de uma pasta lida também conte. Sem a coluna, 58 de 72 portões
-# tinham a árvore inteira como chave, e a média era de 3,3 lembrados por corrida.
+# tinham a árvore inteira como chave, e a média era de 3,3 lembrados por corrida. Medido de novo em 13/10/2026,
+# contando o `.pyc` aberto como o `.py` dele: o `tests/conftest.py` importa `scripts/check_faixa_sintetica.py`
+# em todo `pytest`, e o gerador das páginas lê `assets/glyphs/`; a régua é a do `test_o_rapido_so_repete_o_que_mudou`.
 #
 # Tempos medidos nesta árvore em 25/08/2026, `dev` em f475b2a, e é por eles que
 # a camada rápida existe: `validar-acentuacao.py --all` sozinho custa 38 s e o
@@ -123,7 +125,7 @@ rapido|nada-mockado|pytest|tests/unit/test_portao_nada_e_afirmado_sem_prova.py
 # dos `data-gesto` das dez páginas — nunca digitada. Camada RÁPIDA: lê dez HTML,
 # um CSV e o fonte do `schema.py`, custa milissegundos.
 rapido|quatro-respostas|py|scripts/check_cabo_bt_perfil_controle.py
-rapido|quatro-respostas-morde|pytest|tests/unit/test_portao_a_regua_das_quatro_respostas.py|src/** docs/data/** tests/** scripts/check_cabo_bt_perfil_controle.py pyproject.toml
+rapido|quatro-respostas-morde|pytest|tests/unit/test_portao_a_regua_das_quatro_respostas.py|src/** docs/data/** tests/** scripts/check_cabo_bt_perfil_controle.py scripts/check_faixa_sintetica.py pyproject.toml
 # A QUINTA PERGUNTA — TUDO-FUNCIONA-01, 09/09/2026. A cobrança dela: "pq o
 # programa de dias a fio é de brinquedo? uma prova de conceito?". As quatro
 # acima leem `*_aciona` ("o Hefesto MEXE nisso?"); esta lê `*_ate_onde_foi`
@@ -314,7 +316,7 @@ rapido|os-quatro-lugares|py|scripts/check_os_quatro_lugares.py
 # A auto-checagem da própria `aba01.py` NÃO substitui esta: ela só roda com
 # `python aba01.py`, e uma régua que espera alguém a chamar não protege
 # ninguém — foi o que a conferência de 07/09 derrubou na aba 04.
-rapido|gesto-em-lugar-vazio|pytest|tests/unit/test_a_01_jogar_nao_oferece_gesto_em_lugar_vazio.py|src/** scripts/** tests/** mockup/** docs/data/** pyproject.toml
+rapido|gesto-em-lugar-vazio|pytest|tests/unit/test_a_01_jogar_nao_oferece_gesto_em_lugar_vazio.py|src/** scripts/** tests/** mockup/** docs/data/** assets/glyphs/** pyproject.toml
 # O IRMÃO DA 04, e ele nasceu do MESMO conferente, no mesmo dia — 07/09/2026.
 # Se o de cima pegou o gesto que SOBRAVA num lugar vazio, este pega o que
 # FALTA num lugar cheio: a conferência escondeu `Automático` e `Desligar` das
@@ -428,7 +430,7 @@ rapido|projeto-traduzivel-morde|pytest|tests/unit/test_o_projeto_e_traduzivel_mo
 # (OS-PORTOES-LENTOS-FICAM-RAPIDOS-POR-DENTRO-01): a régua que prova que os portões que abrem uma página
 # a abrem pelo `scripts/chrome_sem_rede.py`, sem esperar fonte nem script de fora. A irmã a deixou fora
 # desta lista porque o `portoes.sh` não era posse dela. Camada RÁPIDA: ~20 s, e é ela que segura a cura.
-rapido|portoes-lentos-rapidos|pytest|tests/unit/test_os_portoes_lentos_ficam_rapidos.py|src/** scripts/** tests/** mockup/** docs/data/** install.sh uninstall.sh pyproject.toml
+rapido|portoes-lentos-rapidos|pytest|tests/unit/test_os_portoes_lentos_ficam_rapidos.py|src/** scripts/** tests/** mockup/** docs/data/** assets/glyphs/** install.sh uninstall.sh pyproject.toml
 # NADA QUE O `.gitignore` EXCLUI ENTRA NO REPOSITÓRIO (09/10/2026,
 # NADA-QUE-O-GITIGNORE-EXCLUI-ENTRA-NO-REPOSITORIO-01): o `git add -f` passa por cima do `.gitignore`, e
 # um estudo de `docs/process/` entrou assim numa branch de leva sem portão nenhum perguntar. A pergunta é
