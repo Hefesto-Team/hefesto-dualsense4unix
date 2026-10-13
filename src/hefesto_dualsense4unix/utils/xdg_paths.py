@@ -110,12 +110,21 @@ def wireplumber_forma() -> str:
     ``main.lua.d``. A configuração de sistema que o próprio WirePlumber traz diz
     qual: a pasta ``main.lua.d`` é a pilha Lua, e só o 0.4 a entrega. Sem
     WirePlumber à vista a resposta é ``"conf"``, a de hoje.
+
+    A PRIMEIRA raiz que traz configuração decide, e as outras não votam: um 0.5
+    com ``main.lua.d`` esquecido em ``/etc/wireplumber`` (o Arch que subiu do 0.4)
+    é ``"conf"``, porque o ``/usr/share`` dele traz o ``wireplumber.conf`` sem a
+    pilha Lua. Uma raiz sem ``main.lua.d``, sem ``wireplumber.conf`` e sem
+    ``wireplumber.conf.d`` não traz configuração nenhuma e passa a vez.
     """
     bruto = os.environ.get(WIREPLUMBER_SISTEMA_ENV_VAR, "").strip()
     raizes = [r for r in bruto.split(":") if r] if bruto else list(_WIREPLUMBER_SISTEMA)
     for raiz in raizes:
-        if (Path(raiz) / "main.lua.d").is_dir():
+        base = Path(raiz)
+        if (base / "main.lua.d").is_dir():
             return FORMA_LUA
+        if (base / "wireplumber.conf").is_file() or (base / "wireplumber.conf.d").is_dir():
+            return FORMA_CONF
     return FORMA_CONF
 
 

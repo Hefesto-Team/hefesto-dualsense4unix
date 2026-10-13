@@ -102,8 +102,14 @@ readonly ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 _wp_forma() {
     local raiz sistema="${HEFESTO_WIREPLUMBER_SISTEMA:-/usr/share/wireplumber:/etc/wireplumber}"
     local IFS=:
+    # A primeira raiz que traz configuração decide (a razão está em
+    # `xdg_paths.wireplumber_forma`): um `main.lua.d` esquecido em /etc não
+    # vence o `wireplumber.conf` do 0.5 em /usr/share.
     for raiz in ${sistema}; do
-        [[ -n "${raiz}" && -d "${raiz}/main.lua.d" ]] && { printf 'lua'; return 0; }
+        [[ -n "${raiz}" ]] || continue
+        [[ -d "${raiz}/main.lua.d" ]] && { printf 'lua'; return 0; }
+        [[ -f "${raiz}/wireplumber.conf" || -d "${raiz}/wireplumber.conf.d" ]] \
+            && { printf 'conf'; return 0; }
     done
     printf 'conf'
 }

@@ -304,15 +304,18 @@ def test_a_forma_do_script_e_a_do_dono_e_a_do_doctor(
         assert script == esperado == doctor, (itens, script, esperado, doctor)
 
 
-def test_duas_pastas_de_sistema_separadas_por_dois_pontos(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """``/usr/share`` sem Lua e ``/etc`` com: vale a que tem."""
-    a = _sistema(tmp_path, SISTEMA_05, "usr")
-    b = _sistema(tmp_path, ("main.lua.d",), "etc")
-    monkeypatch.setenv(WIREPLUMBER_SISTEMA_ENV_VAR, f"{a}:{b}")
-    assert wireplumber_forma() == "lua"
-    env = {"PATH": "/usr/bin:/bin", "HOME": str(tmp_path), WIREPLUMBER_SISTEMA_ENV_VAR: f"{a}:{b}"}
+def _as_tres_formas(env_sistema: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> set[str]:
+    """A resposta do dono (Python), do script do som e do doctor para o mesmo sistema."""
+    monkeypatch.setenv(WIREPLUMBER_SISTEMA_ENV_VAR, env_sistema)
+    env = {"PATH": "/usr/bin:/bin", "HOME": str(tmp_path), WIREPLUMBER_SISTEMA_ENV_VAR: env_sistema}
+    script = subprocess.run(
+        [BASH, "-c", f'set --; source "{WP_FIX}"; printf %s "$WP_FORMA"'],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+        env=env,
+    ).stdout.strip()
     doctor = subprocess.run(
         [BASH, "-c", f'source "{DOCTOR}"; _wp_forma'],
         capture_output=True,
@@ -321,7 +324,35 @@ def test_duas_pastas_de_sistema_separadas_por_dois_pontos(
         check=False,
         env=env,
     ).stdout.strip()
-    assert doctor == "lua"
+    return {wireplumber_forma(), script, doctor}
+
+
+@pytest.mark.parametrize(
+    ("usr", "etc", "forma"),
+    [
+        # O 0.5 com um `main.lua.d` esquecido em /etc (o Arch que subiu do 0.4):
+        # a pilha Lua não roda, e as regras em Lua seriam ignoradas sem erro.
+        (SISTEMA_05, ("main.lua.d",), "conf"),
+        # O 0.4 com um `wireplumber.conf.d` criado à mão em /etc: segue Lua.
+        (SISTEMA_04, ("wireplumber.conf.d",), "lua"),
+        # Sem /usr/share/wireplumber (a configuração mora só em /etc): vale /etc.
+        (None, SISTEMA_04, "lua"),
+        (None, SISTEMA_05, "conf"),
+        # Uma raiz vazia não traz configuração e passa a vez.
+        (SISTEMA_VAZIO, SISTEMA_SO_LUA, "lua"),
+    ],
+)
+def test_a_primeira_pasta_de_sistema_com_configuracao_decide(
+    usr: tuple[str, ...] | None,
+    etc: tuple[str, ...],
+    forma: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``/usr/share`` vem antes de ``/etc``, e a primeira que traz configuração decide."""
+    a = _sistema(tmp_path, usr, "usr") if usr is not None else tmp_path / "usr-ausente"
+    b = _sistema(tmp_path, etc, "etc")
+    assert _as_tres_formas(f"{a}:{b}", tmp_path, monkeypatch) == {forma}
 
 
 # ------------------------------------------------------------ o doctor: «leu a regra»
