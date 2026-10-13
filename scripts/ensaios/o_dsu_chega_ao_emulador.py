@@ -121,10 +121,10 @@ def ensaiar(args: argparse.Namespace) -> dict[str, Any]:
             raise Falha("sem resposta de versão em 2 s")
         if not _crc_confere(resposta) or len(resposta) < 22:
             raise Falha("a resposta de versão veio com CRC ou tamanho errado")
-        versao = struct.unpack_from("<H", resposta, 20)[0]
-        relato["versao"] = versao
-        if versao != VERSAO:
-            raise Falha(f"a versão é {versao}, o emulador espera {VERSAO}")
+        lida = struct.unpack_from("<H", resposta, 20)[0]
+        relato["versao_do_protocolo"] = lida
+        if lida != VERSAO:
+            raise Falha(f"a versão é {lida}, o emulador espera {VERSAO}")
 
         # 2 · as portas
         sock.sendto(_pedido(0x100001, struct.pack("<i", 4) + bytes([0, 1, 2, 3])), host)
@@ -222,7 +222,7 @@ def main(argv: list[str] | None = None) -> int:
     else:
         print(
             f"OK: slot {args.slot}, {relato['por_segundo']} pacotes/s, "
-            f"{relato['aceleracao_media_g']} g, versão {relato['versao']}"
+            f"{relato['aceleracao_media_g']} g, versão {relato['versao_do_protocolo']}"
         )
     return 0
 

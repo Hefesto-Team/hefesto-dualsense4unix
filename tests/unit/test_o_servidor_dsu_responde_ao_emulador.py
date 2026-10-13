@@ -636,7 +636,7 @@ def test_13_o_ensaio_aprova_o_servidor_do_e4_com_um_g_parado(
     feito = _ensaio(mundo.servidor.porta, "--sem-dono")
     assert feito.returncode == 0, feito.stdout + feito.stderr
     relato = json.loads(feito.stdout)
-    assert relato["ok"] is True and relato["versao"] == 1001
+    assert relato["ok"] is True and relato["versao_do_protocolo"] == 1001
     assert relato["por_segundo"] >= 8 and relato["crc_ruim"] == 0
 
 
