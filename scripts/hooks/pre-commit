@@ -21,6 +21,8 @@
 #          citações `arquivo:linha` de docs/protocol/ (~110 ms os dois juntos).
 #   FAZ  — cobra a FOTO quando o commit mexe no código da tela (~40 ms; não
 #          monta GTK, só lê o índice). É o item 3 do checklist de fim de leva.
+#   FAZ  — roda o `.pre-commit-config.yaml`, o mesmo arquivo do job «pre-commit»
+#          do CI, quando o framework está na máquina (item 6).
 #   NÃO FAZ — rodar a suíte, o mypy ou os portões pesados. Gancho que demora
 #             sete minutos é gancho que a pessoa desliga, e um gancho desligado
 #             protege menos que nenhum. Esses moram no `--completo` e no CI.
@@ -209,6 +211,23 @@ if [ -f scripts/check_regua_de_tela.py ]; then
     falhou=1
   fi
   unset _rc_regua
+fi
+
+# 6. A MESMA DEFINIÇÃO DO CI. O job «pre-commit» do GitHub roda o
+#    `.pre-commit-config.yaml` inteiro; aqui roda o mesmo arquivo, pelo mesmo
+#    framework, nos arquivos em stage. Um dono só para as duas casas: um gancho
+#    novo entra no YAML e vale aqui e lá. Medido em 13/10/2026: ~8 s com o
+#    framework 4.7.0. Sem o framework na máquina, avisa e deixa passar; o CI cobra.
+PRE_COMMIT="${HEFESTO_PRE_COMMIT:-$(command -v pre-commit || true)}"
+if [ -z "$PRE_COMMIT" ] && [ -x "$RAIZ/.venv/bin/pre-commit" ]; then
+  PRE_COMMIT="$RAIZ/.venv/bin/pre-commit"
+fi
+if [ -f .pre-commit-config.yaml ]; then
+  if [ -n "$PRE_COMMIT" ]; then
+    "$PRE_COMMIT" run --hook-stage pre-commit || falhou=1
+  else
+    echo "pre-commit: AVISO — sem o framework pre-commit, o .pre-commit-config.yaml só roda no CI (pipx install pre-commit)." >&2
+  fi
 fi
 
 exit "$falhou"
