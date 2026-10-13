@@ -213,7 +213,8 @@ else:
                  "medido a VOLTA (aparelho -> vpad -> JOGO): sem esta palavra o "
                  "ensaio não sustenta `O JOGO RECEBEU` nem `O JOGO REAGIU`.",
         )
-        # ela chegou — máscara DualSense, máscara Xbox, nativo, ou Steam Input.
+        # A ponte é o modo por onde o jogo recebeu: máscara DualSense, máscara Xbox, nativo
+        # ou Steam Input.
         ponte_medida = st.selectbox(
             "Por qual ponte este ensaio mediu?",
             PONTES,

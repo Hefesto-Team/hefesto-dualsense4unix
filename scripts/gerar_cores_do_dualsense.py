@@ -113,7 +113,7 @@ FECHA = "</defs>"
 #: Glifo do PS pra ser o Botão"), e os quatro glifos da face, que são traço puro.
 PINTAVEL = ':is(path,rect,circle,ellipse,polygon):not([fill="none"])'
 
-#: `!important` NÃO É PREGUIÇA, e há medição: três peças do desenho dela trazem a
+#: `!important` NÃO É PREGUIÇA, e há medição: três peças do desenho do DualSense trazem a
 #: cor dentro do `style` inline — `share`, `options` e `mic` (este último em
 #: `rgb(216,216,216)`). Style inline vence qualquer folha; sem `!important` essas
 #: três ficariam CARMIM em todo colorway, inclusive no White. É a mesma cicatriz

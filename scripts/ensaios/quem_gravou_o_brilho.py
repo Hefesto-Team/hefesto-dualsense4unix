@@ -3,8 +3,8 @@
 
 Só LÊ. Não fala com o daemon, não escreve em pasta nenhuma e imprime no
 terminal; quem quiser guardar redireciona. Nasceu da sprint
-O-BRILHO-BAIXO-QUE-ELA-NAO-ESCOLHEU-01 (o usuário disse «Não fui eu» sobre o 8% do
-controle branco no Freestyle).
+O-BRILHO-BAIXO-QUE-ELA-NAO-ESCOLHEU-01 (o 8% do controle branco no Freestyle não foi
+escolha do usuário).
 
 O que faz, por ordem:
 

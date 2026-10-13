@@ -478,9 +478,6 @@ def censo_da_mesa(aparelhos: list[Aparelho]) -> str:
     return f"mesa com {len(reais)} controle(s): {desenho} — os dois transportes presentes."
 
 
-# *"fora que nao deu pra ler nada nos botoes"*.  # noqa-acento: citação literal
-
-
 def o_tema_e_escuro() -> bool:
     """Escuro pelo que o tema PINTA, e não pelo sinalizador que ninguém liga."""
     import gi

@@ -2914,7 +2914,7 @@ print("erros=" + str(len(d.get("erros") or [])))
 }
 
 # A-OPCAO-QUE-A-STEAM-DESFAZ-APARECE-NO-DOCTOR-01 (08/10/2026) — o censo acima olha o
-# WRAPPER; este olha as OPÇÕES POR JOGO que ela declarou (`opcoes_por_jogo.txt`). O
+# WRAPPER; este olha as OPÇÕES POR JOGO que o usuário declarou (`opcoes_por_jogo.txt`). O
 # `aplicar` já disse «aplicado» sobre uma linha que a Steam não leu (06/10), e a Steam
 # desfaz a escrita sem aviso: sem este check, a opção some e o doctor dá [ OK ].
 # A pergunta é do `conferir` do dono da tabela (só lê; roda com a Steam aberta); o texto
@@ -8533,7 +8533,7 @@ check_wifi_usb() {
     #
     # O «parei» vale pelo que veio DEPOIS dele: o vigia o repete a cada tique
     # enquanto o rádio segue mudo, e para quando o roteador volta («o roteador
-    # voltou a responder», «curado depois de…» — o dongle que ela tirou e pôs de
+    # voltou a responder», «curado depois de…» — o dongle que o usuário tirou e pôs de
     # volta). Um «parei» de manhã seguido de uma cura à tarde não é defeito de
     # agora; quem decide é a ÚLTIMA dessas linhas, não a existência de uma.
     if command -v journalctl >/dev/null 2>&1; then

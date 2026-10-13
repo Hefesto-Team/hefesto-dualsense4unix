@@ -447,8 +447,7 @@ class Folha:
         GLib.timeout_add(int(1000 / HZ_DO_MARTELO), self._tique)
 
     def _fundo_opaco(self) -> None:
-        """Um fundo SÓLIDO — razão dela, na folha irmã: *"o fundo tá muito transparente"*."""
-        # do próprio botão. *"nao deu pra ler nada nos botoes"*.  # (noqa-acento: citação literal)
+        """Um fundo SÓLIDO: o fundo translúcido deixava o texto dos botões ilegível."""
         pintar_fundo_solido(self.janela)
 
     def _topo(self) -> Gtk.Widget:

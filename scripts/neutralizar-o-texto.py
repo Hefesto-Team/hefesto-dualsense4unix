@@ -81,6 +81,10 @@ def _c(padrao: str, flags: int = 0) -> re.Pattern[str]:
 #: «ela» é o pronome dele («a carona devolve os lançadores em que ela escreveu»). A lista é curta
 #: de propósito e medida no corpus (`alvos()`): a regra acha 3 trechos, e só a carona é pronome.
 _ELA_VERBO = _c(_E + r"ela (pediu|mandou|aprovou|decidiu|ordenou|definiu|determinou|autorizou|liberou|aceitou|validou|confirmou|corrigiu|escreveu|disse|nomeou|perguntou|queixou-se|reclamou|falou|contou|apertou|apontou|digitou|clicou|olhou|viu|mexeu|escolheu|colou)" + _D, re.I)
+#: «o nome QUE ELA deu», «o que ela declarou»: na oração relativa o sujeito é quem dá, declara,
+#: ensina ou tira, e uma tabela ou uma régua não faz nenhum dos quatro (medido: 100 trechos em
+#: `src/`, `tests/` e `scripts/`). Fica com a mesma guarda do substantivo técnico antes dela.
+_QUE_ELA_VERBO = _c(_E + r"que ela (declarou|deu|ensinou|tirou|dispensou)" + _D, re.I)
 _SUBSTANTIVO_TECNICO = re.compile(r"(?<![\w-])(?:carona|cura)(?![\w-])", re.I)
 #: o fim da frase: ponto, exclamação ou interrogação seguidos de espaço, ou a linha em branco
 #: (os dois-pontos e o ponto e vírgula NÃO fecham a frase: «a carona devolve: os lançadores em que ela...»)
@@ -100,6 +104,8 @@ def _pronome_de_substantivo_tecnico(m: re.Match[str], contexto: str = "") -> boo
 
 
 REGRAS: list[tuple[re.Pattern[str], str]] = [
+    # «(dela, 02/10/2026)»: a data já diz de quando, e o «dela» não diz nada a mais
+    (re.compile(r"\(dela, (\d{1,2}/\d{1,2}(?:/\d{4})?)\)", re.I), r"(\1)"),
     # a data já diz de quando: «ordem dela de 19/09» -> «ordem de 19/09»
     (_c(_E + r"(" + _NOMES_DE_DECISAO + r") dela" + _DATA, re.I), r"\1"),
     # a bancada é a bancada
@@ -132,6 +138,7 @@ REGRAS: list[tuple[re.Pattern[str], str]] = [
     (_c(_E + r"(a validar|validad[oa]s?|aprovad[oa]s?|decidid[oa]s?|escolhid[oa]s?|pedid[oa]s?|confirmad[oa]s?|ditad[oa]s?|corrigid[oa]s?|delegad[oa]s?) por ela" + _D, re.I), r"\1 pelo usuário"),
     # só os verbos que uma função, uma tela ou um arquivo não têm como fazer
     (_ELA_VERBO, r"o usuário \1"),
+    (_QUE_ELA_VERBO, r"que o usuário \1"),
     # ênfase em maiúsculas: no corpus, «DELA» sozinho é sempre a pessoa
     (_c(r"(?<![\w-])ELA É DELA(?![\w-])"), "É DO USUÁRIO"),
     (_c(r"(?<![\w-])DELA(?![\w-])"), "DO USUÁRIO"),
@@ -161,7 +168,7 @@ def reescrever_prosa(texto: str, contexto: str = "") -> str:
         return texto
     for padrao, troca in REGRAS:
         def _sub(m: re.Match[str], troca: str = troca, padrao: re.Pattern[str] = padrao) -> str:
-            if padrao is _ELA_VERBO and _pronome_de_substantivo_tecnico(m, contexto):
+            if padrao in (_ELA_VERBO, _QUE_ELA_VERBO) and _pronome_de_substantivo_tecnico(m, contexto):
                 return m.group(0)
             novo = _adaptar(m.group(0), m.expand(troca))
             q = _QUEBRA.search(m.group(0))

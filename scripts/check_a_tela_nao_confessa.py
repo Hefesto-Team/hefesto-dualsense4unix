@@ -164,7 +164,7 @@ def _falas() -> list[tuple[str, str]]:
     return fora
 
 
-# A TELA"* — `hefesto_vivo._recusou_dizendo` faz `str(erro)` e deposita o texto
+# `hefesto_vivo._recusou_dizendo` faz `str(erro)` e deposita o texto
 def _arvore(p: pathlib.Path) -> ast.Module | None:
     if p not in _ARVORES:
         try:
