@@ -442,15 +442,6 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
         "a casa troca X por Y com `systemctl --user set-environment`. Nenhum "
         "fluxo dela passa por aqui; a decisão está «a validar por ela»."
     ),
-    "HEFESTO_BROKER_LOGINCTL": (
-        "13/10/2026, O-BROKER-SERVE-QUEM-ESTA-NA-FRENTE-01 — o caminho do `loginctl` que o "
-        "broker pergunta (broker/hidraw_broker.py:103, `_loginctl`). Sem a chave o broker "
-        "procura `/usr/bin/loginctl` e `/bin/loginctl`, que é o caminho de produção em toda "
-        "distro que o install cobre. Os testes a apontam para um caminho que não existe e "
-        "simulam o logind ausente; o pacote Nix a escreve porque o NixOS não tem `/usr/bin` "
-        "(packaging/nix/package.nix:262). Ligá-la não abre feature nenhuma: só diz onde mora "
-        "um binário do sistema."
-    ),
     "HEFESTO_WIREPLUMBER_SISTEMA": (
         "13/10/2026, as regras do som no WirePlumber da distro — desvia as pastas de sistema "
         "que decidem a forma do drop-in (utils/xdg_paths.py:97, `wireplumber_forma`; as "
@@ -523,6 +514,16 @@ _PROMESSA_DE_AMBIENTE: dict[str, str] = {
         "a unit deixou de gravar uid, e o broker atende quem está na frente do seat, "
         "perguntado ao logind a cada pedido. A promessa de servir a sessão dela continua; "
         "a mão dela deixou de ser a env. Ver `_MAO_FORA_DO_AMBIENTE`."
+    ),
+    "HEFESTO_BROKER_LOGINCTL": (
+        "13/10/2026, O-BROKER-SERVE-QUEM-ESTA-NA-FRENTE-01 — o caminho do `loginctl` que o "
+        "broker pergunta (broker/hidraw_broker.py:103, `_loginctl`). É promessa de sistema, "
+        "e não instrumento: o broker atende quem o logind diz que está na frente, e sem "
+        "`loginctl` ele não atende ninguém. Nas distros do install os caminhos fixos "
+        "`/usr/bin` e `/bin` bastam; o NixOS não tem nenhum dos dois, e quem LIGA a chave é o "
+        "pacote Nix, que acrescenta o `Environment=` à unit com o `sed` do "
+        "packaging/nix/package.nix:262. Os testes também a escrevem, para simular o logind "
+        "ausente, mas não são eles que a sustentam."
     ),
     "HEFESTO_BROKER_NO_NASCE_FECHADO": (
         "Se o nó hidraw do DualSense físico NASCE FECHADO — `0600 root`, pela "
@@ -2088,6 +2089,9 @@ _ENV = re.compile(r"""["'](HEFESTO_[A-Z0-9_]+)["']""")
 _ESCRITA_DE_AMBIENTE = (
     r"(?:^|[;&|(]|\bexport\s+|\benv\s+)\s*{nome}=",
     r"^\s*Environment=\"?{nome}=",
+    # o comando `a` do sed acrescenta a linha à unit (packaging/nix/package.nix:262);
+    # o `grep "^Environment=…"` que confere a linha depois é citação e não casa aqui
+    r"""/a\\?\s*Environment=\"?{nome}=""",
     r"""\[\s*["']{nome}["']\s*\]\s*=[^=]""",
     r"""(?:setdefault|putenv)\(\s*["']{nome}["']""",
 )
@@ -3055,6 +3059,30 @@ class TestOPortaoMorde:
         assert portas_que_ligam(env, tmp_path) == ["empacotamento"], (
             "a poda cegou o detector para uma porta de VERDADE em "
             "`packaging/` — a exclusão levou junto o que ela devia preservar"
+        )
+
+    def test_o_environment_que_o_sed_acrescenta_a_unit_e_porta(self, tmp_path: Path) -> None:
+        """O `sed …/a Environment=` do empacotamento liga a chave; o `grep` que confere, não."""
+        env = "HEFESTO_DUALSENSE4UNIX_CHAVE_QUE_NAO_EXISTE"
+        nix = tmp_path / "packaging" / "nix"
+        nix.mkdir(parents=True)
+        # dois arquivos, e não um reescrito: o texto de cada porta é lido UMA vez por caminho
+        (nix / "confere.nix").write_text(
+            f'grep -q "^Environment={env}=" $out/unit.service\n', encoding="utf-8"
+        )
+        assert not portas_que_ligam(env, tmp_path), (
+            "o detector aceitou o `grep` que CONFERE a linha como escrita"
+        )
+        (nix / "package.nix").write_text(
+            f'sed -i "/^ExecStart=/a Environment={env}=/nix/store/x" $out/unit.service\n',
+            encoding="utf-8",
+        )
+        assert portas_que_ligam(env, tmp_path) == ["empacotamento"], (
+            "o detector não vê o `Environment=` que o `sed` acrescenta à unit do pacote"
+        )
+        assert portas_que_ligam("HEFESTO_BROKER_LOGINCTL") == ["empacotamento"], (
+            "o detector não vê a linha que o packaging/nix/package.nix:262 acrescenta à "
+            "unit do broker"
         )
 
     def test_a_unica_porta_real_da_arvore_sobrevive_a_poda(self) -> None:
