@@ -96,17 +96,17 @@ python3Packages.buildPythonApplication rec {
   # primeira `version = "...";` do arquivo, e ela tem de ser a do próprio pacote.
   dependencies =
     let
-    # O módulo `hidapi` do PyPI `hidapi-usb` 0.3.2 (CFFI sobre a libhidapi), que o
+    # O módulo `hidapi` do PyPI `hidapi-usb` 0.3.3 (CFFI sobre a libhidapi), que o
     # nixpkgs não empacota. O sdist é imutável pelo endereço por conteúdo do
-    # próprio PyPI; o sha256 em hexa (a31a7eda…c8164d) é o que o PyPI publica para
-    # o arquivo, e foi conferido contra o download em 07/10/2026.
+    # próprio PyPI; o sha256 em hexa (17b5d883…05b80a72) é o que o PyPI publica para
+    # o arquivo, e foi conferido contra o download em 13/10/2026.
     hidapiUsb = python3Packages.buildPythonPackage {
       pname = "hidapi-usb";
-      version = "0.3.2";
+      version = "0.3.3";
       pyproject = true;
       src = fetchurl {
-        url = "https://files.pythonhosted.org/packages/55/80/960ae94b615e26a7d1aeebe8e9fefda2f25608bf1016f9aec268b328c35e/hidapi_usb-0.3.2.tar.gz";
-        hash = "sha256-oxp+2i+qqYd1uwiS2Dh8/PzO62iYQQXpR936MnDIFk0=";
+        url = "https://files.pythonhosted.org/packages/46/42/1843cd065cf021727f3815030584dc78323119571d4947d6884d3d6e7a46/hidapi_usb-0.3.3.tar.gz";
+        hash = "sha256-F7XYg8KRyrKsXMLdDnA6n853QGjaV1iEI3uWXgW4CnI=";
       };
       build-system = with python3Packages; [ setuptools wheel ];
       dependencies = with python3Packages; [ cffi ];
