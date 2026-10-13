@@ -8,12 +8,14 @@
 # divergir daqui.
 #
 # O PORQUÊ DO `evdev`: a cura da queda da sessão sobrescreve o
-# `UInput._find_device` (`integrations/uinput_gamepad.py`), e ela vale no 2.0.0
-# por COINCIDÊNCIA, e não por contrato. O pip de uma máquina nova entregava o
-# 2.0.0 (de 23/08/2026), que nenhum aparelho desta casa rodou; o daqui é o
-# 1.7.0, o do apt, que o `python3-inputremapper` trouxe. Trocar uma linha
-# destas é trocar de versão DE PROPÓSITO, com a medida no aparelho junto.
-evdev==1.7.0
+# `UInput._find_device` (`integrations/uinput_gamepad.py`) e depende de o
+# construtor do python-evdev chamar `self._find_device(self.fd)`. A régua
+# `tests/unit/test_o_evdev_travado_cabe_na_cura_do_pad.py` roda o `UInput`
+# REAL da versão instalada e reprova se o gancho mudar. O daqui é o 1.9.3, o
+# último 1.x; o 2.0.0 (de 23/08/2026) nenhum aparelho desta casa rodou. Trocar
+# uma linha destas é trocar de versão DE PROPÓSITO, com a medida no aparelho
+# junto.
+evdev==1.9.3
 hidapi-usb==0.3.3
 pydantic==2.13.5
 pydualsense==0.7.5
