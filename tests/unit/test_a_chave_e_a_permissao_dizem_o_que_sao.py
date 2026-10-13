@@ -76,7 +76,7 @@ def test_a_pasta_ilegivel_nao_vira_desligado_de_proposito(pasta_sem_leitura: Pat
     assert str(pasta_sem_leitura) in str(achado.value)
 
 
-def _roda_o_main(monkeypatch: pytest.MonkeyPatch, daemon: Any = None) -> int:
+def _roda_o_main(monkeypatch: pytest.MonkeyPatch) -> int:
     from hefesto_dualsense4unix.daemon.subsystems import vigia_do_laco
     from hefesto_dualsense4unix.utils import migrate_legacy_paths, single_instance
 
@@ -84,9 +84,12 @@ def _roda_o_main(monkeypatch: pytest.MonkeyPatch, daemon: Any = None) -> int:
     monkeypatch.setattr(migrate_legacy_paths, "migrate_legacy_paths", lambda: None)
     monkeypatch.setattr(single_instance, "acquire_or_takeover", lambda nome: None)
     monkeypatch.setattr(daemon_main, "build_controller", lambda: FakeController())
-    monkeypatch.setattr(vigia_do_laco, "vigiado", lambda coro: coro)
-    if daemon is not None:
-        monkeypatch.setattr(daemon_main, "Daemon", daemon)
+
+    async def com_prazo(coro: Any) -> None:
+        # Um daemon que ficasse no ar sem o IPC prenderia a régua para sempre.
+        await asyncio.wait_for(coro, timeout=5.0)
+
+    monkeypatch.setattr(vigia_do_laco, "vigiado", com_prazo)
     return daemon_main.run_daemon()
 
 
