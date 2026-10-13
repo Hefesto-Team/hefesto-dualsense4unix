@@ -17,7 +17,7 @@ import pytest
 from hefesto_dualsense4unix.core import protocolo_dsu as p
 
 CLIENTE = 24872
-MAC_FORJADO = "02:fe:07:19:00:03"
+MAC_FORJADO = "02:fe:00:7a:19:c3"
 
 
 def _pedido(tipo: int, corpo: bytes, *, client_id: int = CLIENTE) -> bytes:
@@ -148,7 +148,7 @@ def test_o_conteudo_dos_dados_esta_nos_offsets_do_protocolo() -> None:
         giro=(4.0, 5.0, 6.0),
     )
     assert d[20:24] == bytes([2, 2, 2, 1])
-    assert d[24:30] == bytes.fromhex("02fe07190003")
+    assert d[24:30] == bytes.fromhex("02fe007a19c3")
     assert d[31] == 1
     assert struct.unpack_from("<I", d, 32)[0] == 0xAABBCCDD
     assert d[40:44] == bytes([128] * 4)
@@ -220,11 +220,11 @@ def test_valor_fora_do_campo_e_recusado_sem_struct_error() -> None:
 
 
 def test_o_mac_de_fixture_e_da_faixa_forjada_e_sem_sequencia_simples() -> None:
-    assert MAC_FORJADO.startswith("02:fe:")
+    assert MAC_FORJADO.startswith("02:fe:00:")  # a faixa do test_anonimato_de_fixtures
     octetos = MAC_FORJADO.split(":")
     assert len(set(octetos)) == 6
     assert re.fullmatch(r"([0-9a-f]{2}:){5}[0-9a-f]{2}", MAC_FORJADO)
-    assert p.mac_em_bytes(MAC_FORJADO) == bytes.fromhex("02fe07190003")
+    assert p.mac_em_bytes(MAC_FORJADO) == bytes.fromhex("02fe007a19c3")
 
 
 def test_o_modulo_do_codec_nao_faz_io() -> None:
