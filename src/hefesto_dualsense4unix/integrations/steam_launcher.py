@@ -35,7 +35,7 @@ def _warn_steam_missing_once() -> None:
 
 
 def _steam_de_outro_lar() -> bool:
-    """A Steam de pé é toda de outro `HOME`? Quem responde é o dono da pergunta"""
+    """A Steam de pé é toda de outro `HOME`? Quem responde é o dono da pergunta."""
     from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
     todas = slo.processos_da_steam()
