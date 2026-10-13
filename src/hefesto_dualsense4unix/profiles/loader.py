@@ -484,10 +484,8 @@ def _a_marca_ja_levou(marker: Path, impressao: str | None) -> bool:
 
 def _a_fabrica_que_a_marca_guarda(marker: Path) -> str | None:
     """A impressão da fábrica entregue antes nesta máquina; `None` sem marca ou com `done`."""
-    try:
-        guardada = marker.read_text(encoding="utf-8").strip()
-    except OSError:
-        return None
+    bruto = _bytes_se_existe(marker)
+    guardada = bruto.decode("utf-8", "replace").strip() if bruto is not None else ""
     return guardada if re.fullmatch(r"[0-9a-f]{64}", guardada) else None
 
 
