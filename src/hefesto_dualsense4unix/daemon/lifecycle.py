@@ -4260,6 +4260,8 @@ class Daemon:
 
 
     _steam_jogo_task: asyncio.Task[Any] | None = None
+    #: A tarefa do tique do sinal de jogo (`_agendar_o_sinal_de_jogo`), irmã da sonda da Steam.
+    _game_signal_task: asyncio.Task[Any] | None = None
 
     def _schedule_steam_jogo_tick(self) -> None:
         """Tique lento (~2 s) da pergunta *"há jogo da Steam aberto?"*.
@@ -4608,7 +4610,7 @@ class Daemon:
         steam_task = self._steam_jogo_task
         if steam_task is not None and not steam_task.done():
             steam_task.cancel()
-        sinal_task = getattr(self, "_game_signal_task", None)
+        sinal_task = self._game_signal_task
         if sinal_task is not None and not sinal_task.done():
             sinal_task.cancel()
 

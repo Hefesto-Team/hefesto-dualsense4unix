@@ -98,6 +98,7 @@ class _LacoForaDaMesa:
         self._input_ready_at = 0.0
         self._external_tick_task: Any = None
         self._steam_jogo_task: Any = None
+        self._game_signal_task: Any = None
         self._coop_manager = gerente
         gerente._daemon = self
         self._poll_loop = Daemon._poll_loop.__get__(self)

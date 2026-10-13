@@ -140,6 +140,7 @@ class _DaemonDeLaco(_DaemonDeSonda):
         self._input_ready_at = float("inf")
         self._external_tick_task: Any = None
         self._steam_jogo_task: Any = None
+        self._game_signal_task: Any = None
         self._restantes = ticks
         self._poll_loop = Daemon._poll_loop.__get__(self)
         self._schedule_steam_jogo_tick = Daemon._schedule_steam_jogo_tick.__get__(

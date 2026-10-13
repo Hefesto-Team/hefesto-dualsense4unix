@@ -69,6 +69,7 @@ class _DaemonDeLaco:
         self._input_ready_at = 0.0
         self._external_tick_task: Any = None
         self._steam_jogo_task: Any = None
+        self._game_signal_task: Any = None
         self._game_signal: Any = GameSignal()
         self._appid_da_evidencia: Any = None
         self._last_state: Any = None
