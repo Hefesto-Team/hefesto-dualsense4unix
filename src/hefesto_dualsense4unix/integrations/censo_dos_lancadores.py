@@ -1036,12 +1036,18 @@ def _ambiente_do_leitor(leitor: LeitorPorProcesso) -> dict[str, str]:
     return ambiente
 
 
-def _parar(processo: subprocess.Popen[bytes]) -> None:
-    """Para o leitor e o que ele abriu: o grupo é dele (``start_new_session``)."""
+def _parar(processo: subprocess.Popen[bytes], prazo_s: float) -> None:
+    """Para o leitor e o que ele abriu: o grupo é dele (``start_new_session``).
+
+    O ``SIGKILL`` não se recusa, e a espera que recolhe o processo volta logo.
+    Ela tem teto só pelo leitor preso no disco (uma pasta de rede morta), e o
+    teto é o prazo que a modificação declarou: quem chama nunca espera mais
+    que duas vezes o que aceitou esperar.
+    """
     with contextlib.suppress(ProcessLookupError, PermissionError):
         os.killpg(processo.pid, signal.SIGKILL)
     with contextlib.suppress(subprocess.TimeoutExpired):
-        processo.wait(timeout=1.0)
+        processo.wait(timeout=prazo_s)
 
 
 def _saida_do_leitor(processo: subprocess.Popen[bytes], prazo_s: float
@@ -1123,7 +1129,7 @@ def ler_por_processo(leitor: LeitorPorProcesso, *,
     try:
         saida, motivo = _saida_do_leitor(processo, leitor.prazo_s)
     finally:
-        _parar(processo)
+        _parar(processo, leitor.prazo_s)
         if processo.stdout is not None:
             processo.stdout.close()
     if saida is None:
