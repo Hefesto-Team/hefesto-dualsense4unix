@@ -315,6 +315,15 @@ _PERNAS: dict[str, dict[str, Resposta]] = {
             "nenhum lançador no caminho",
         ),
     },
+    "marcas": {
+        p: NaoSeAplica(
+            "não chega ao controle hoje: a «Adulto» não muda nada no aparelho, e o molde "
+            "de botões da «Visual novel» (`profiles/marcas_do_jogo.py::molde_dos_botoes`) "
+            "ainda não tem caminho até a tabela; ganha pernas com a "
+            "O-POINT-AND-CLICK-SERVE-A-VISUAL-NOVEL-01."
+        )
+        for p in PERNAS
+    },
     "name": {p: NaoSeAplica(_NAO_CHEGA) for p in PERNAS},
     "version": {p: NaoSeAplica(_NAO_CHEGA) for p in PERNAS},
     "priority": {p: NaoSeAplica(_NAO_CHEGA) for p in PERNAS},
