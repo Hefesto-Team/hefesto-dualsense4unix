@@ -143,7 +143,9 @@ ou medir os bytes do DSX em execução. Até lá, o pedido falha com
 **É o jogador:** índice `0` é o jogador 1, `1` o jogador 2, até o `3`, o jogador
 4, pelo mesmo número do cartão «Controle N» (`CoopManager.numeros_de_jogador`).
 No layout canônico do DSX, cada instrução com índice escreve **só no controle
-dele**, cabo ou rádio, mesmo com o seletor da aba Conexões em «Todos».
+dele**, cabo ou rádio, mesmo com o seletor da aba Conexões em «Todos». Com um
+controle só e sem MAC resolvido (o DualSense por cabo sem serial, que fica fora
+da fila do co-op), o índice `0` é ele, pela rota sem endereço.
 
 Índice **sem controle na mesa** (o `7`, ou o `3` com dois controles) é
 descartado e contado em `udp.indice_sem_jogador`, com um `log.warn` por tipo e

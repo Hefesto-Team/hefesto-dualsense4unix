@@ -125,6 +125,36 @@ def test_o_indice_sem_jogador_nao_muda_ninguem_e_conta() -> None:
     assert store.udp_trigger_thresholds_por_controle == {}
 
 
+def test_o_controle_sem_mac_ainda_e_o_jogador_1_do_indice_0() -> None:
+    """Um DualSense só, por cabo sem serial (ou antes de o MAC resolver): a fila vem vazia.
+
+    O co-op deixa fora quem não tem MAC (`_alvos_de_numeracao`), então
+    `numeros_de_jogador` é `{}` com o controle na mesa. O índice 0, que quase
+    todo mod manda, é ele, pela rota sem endereço; o índice 1 não tem jogador.
+    """
+    fc = _QuatroControles()
+    fc.connect()
+    store = StateStore()
+    handler = UdpHandler(controller=fc, store=store, jogadores=dict)
+
+    _mandar(handler, _cor(0), _cor(1))
+
+    assert [c.kind for c in fc.commands if c.kind == "set_led"] == ["set_led"]
+    assert fc.por_mac == []
+    assert store.counter("udp.applied.RGBUpdate") == 1
+    assert store.counter("udp.indice_sem_jogador") == 1
+
+
+def test_a_mesa_vazia_descarta_o_indice_0() -> None:
+    """Sem controle nenhum, o índice 0 não tem jogador: nada se grava para depois."""
+    handler = UdpHandler(controller=_QuatroControles(), store=StateStore(), jogadores=dict)
+
+    _mandar(handler, _cor(0))
+
+    assert handler.controller.commands == []  # type: ignore[attr-defined]
+    assert handler.store.counter("udp.indice_sem_jogador") == 1
+
+
 def test_o_dialeto_do_hefesto_sem_indice_segue_o_seletor() -> None:
     handler, fc, store = _mesa()
 

@@ -413,20 +413,26 @@ class UdpHandler:
     def _uniq_do_indice(self, indice: int | None) -> str | None:
         """O MAC do jogador `indice + 1` (índice 0 é o jogador 1, até o 3, o jogador 4).
 
-        `None` só para o backend sem endereço por MAC, que tem um controle só:
-        o índice 0 é ele. Índice sem jogador na mesa levanta `_IndiceSemJogadorError`.
+        `None` quando a mesa não tem endereço por MAC e tem um controle só: o
+        backend sem MAC, ou o DualSense cujo MAC não resolveu (por cabo sem
+        serial), que o co-op deixa fora da fila. O índice 0 é ele, pela rota sem
+        endereço. Índice sem jogador na mesa levanta `_IndiceSemJogadorError`.
         """
         if indice is None:
             raise ValueError("controllerIndex não é um inteiro")
         numeros = self._numeros()
-        if numeros is None:
-            if indice == 0:
+        if not numeros:
+            if indice == 0 and (numeros is None or self._controle_na_mesa()):
                 return None
             raise _IndiceSemJogadorError(indice)
         for uniq, numero in numeros.items():
             if numero == indice + 1:
                 return uniq
         raise _IndiceSemJogadorError(indice)
+
+    def _controle_na_mesa(self) -> bool:
+        conectado = getattr(self.controller, "is_connected", None)
+        return bool(conectado()) if callable(conectado) else False
 
     def _escrever_saida(
         self,
