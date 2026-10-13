@@ -174,3 +174,16 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+      # O-TEXTO-ENXUTO-SE-CORRIGE-NO-ATO-01 (13/10/2026): UM gancho, a mesma
+      # definição em casa e no GitHub. `--aplicar` corrige o que é mecânico (o
+      # «dela» de pessoa) e `--restagear` devolve ao índice o que ele mexeu;
+      # o resto (fala citada, docstring longa, comentário cortado, citação de
+      # linha nova) reprova com arquivo, linha e conserto. No CI, onde nada está
+      # no índice, um arquivo que ele corrigiria reprova: é o comportamento
+      # padrão do pre-commit para gancho que modifica. A lógica mora nas réguas
+      # dos donos; o script as importa (scripts/o-texto-enxuto.py).
+      - id: texto-enxuto
+        name: o texto enxuto (o «dela» de pessoa se corrige; fala, docstring e corte reprovam)
+        entry: python3 scripts/o-texto-enxuto.py --aplicar --restagear
+        language: system
+        files: '\.(py|md|csv)$'
