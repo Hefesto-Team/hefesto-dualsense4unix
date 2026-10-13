@@ -123,8 +123,7 @@ def _acordar_a_volta_de(handle: Any) -> None:
     """
     acordar = getattr(handle, "acordar_a_volta", None)
     if callable(acordar):
-        with contextlib.suppress(Exception):
-            acordar()
+        acordar()
 
 
 def versao_do_firmware(feature: bytes | None) -> int | None:
@@ -3026,8 +3025,7 @@ class PyDualSenseController(IController):
         for key, handle in new_handles:
             with contextlib.suppress(Exception):
                 self.assumir_volume_padrao_na_adocao(key, handle)
-            with contextlib.suppress(Exception):
-                self._conhecer_o_firmware(key, handle)
+            self._conhecer_o_firmware(key, handle)
             self._reapply_desired(key, handle)
         # acabaram de surgir. Sintoma provado ao vivo: boot com os DualSense
         self.reassert_resolved_outputs()
@@ -3077,8 +3075,7 @@ class PyDualSenseController(IController):
                 )
             else:
                 piso = PISO_DE_ESCRITA_DO_CABO_SEC
-            with contextlib.suppress(Exception):
-                handle._piso_de_escrita_sec = piso
+            handle._piso_de_escrita_sec = piso
 
     def _close_handles(self, keep: set[str]) -> None:
         """Fecha (e remove) os handles cujas chaves não estão em `keep`."""

@@ -352,13 +352,22 @@ def test_o_gatilho_aplicado_acorda_a_volta() -> None:
 
 
 def test_handle_sem_a_api_de_acordar_nao_quebra() -> None:
-    """Um dublê sem `acordar_a_volta` fica como estava: a volta acorda no prazo dela."""
+    """Um dublê sem `acordar_a_volta` fica como estava: a volta acorda no prazo dela.
+
+    E o handle de verdade não tem o que engolir: sem o evento (nascido por
+    `__new__`) o acordar não faz nada, e com a volta já fechada o `Event.set`
+    só arma um evento que ninguém espera. Por isso o acordar não vai num
+    `suppress` (a catraca da origem conta o remendo).
+    """
     bp._acordar_a_volta_de(types.SimpleNamespace())
 
-    def explode() -> None:
-        raise RuntimeError("a volta já fechou")
-
-    bp._acordar_a_volta_de(types.SimpleNamespace(acordar_a_volta=explode))
+    handle = bp._PinnedPyDualSense.__new__(bp._PinnedPyDualSense)
+    object.__setattr__(handle, "_acordar", None)
+    bp._acordar_a_volta_de(handle)
+    evento = threading.Event()
+    object.__setattr__(handle, "_acordar", evento)
+    bp._acordar_a_volta_de(handle)
+    assert evento.is_set()
 
 
 # --------------------------------------------------------------------------
