@@ -300,7 +300,10 @@ class ServidorDsu:
         for cliente_id, cliente in list(self._clientes.items()):
             parando = cliente.enviando - desejados[cliente_id]
             for numero in sorted(parando):
-                self._pacote_final(sock, cliente, numero, tabela, agora)
+                outro_segue = any(
+                    numero in slots for outro, slots in desejados.items() if outro != cliente_id
+                )
+                self._pacote_final(sock, cliente, numero, tabela, agora, outro_segue=outro_segue)
             cliente.enviando &= desejados[cliente_id]
 
         em_uso = set().union(*desejados.values()) if desejados else set()
@@ -459,17 +462,28 @@ class ServidorDsu:
         numero: int,
         tabela: Mapping[int, SlotDsu],
         agora: float,
+        *,
+        outro_segue: bool = False,
     ) -> None:
-        """O último pacote de um slot que para: neutro, com o contador seguinte."""
+        """O último pacote de um slot que para: neutro, com o contador seguinte.
+
+        O estado do slot (a ordem dos dedos, o carimbo) é de todos os clientes
+        dele: só se zera quando nenhum outro segue inscrito. Senão, o cliente que
+        fica veria os dois toques trocarem de lugar e o carimbo saltar.
+        """
         est = self._slots.setdefault(numero, _EstadoDoSlot())
         publicado = tabela.get(numero)
-        est.ordem.clear()
-        mono_us = int(agora * 1_000_000)
-        est.carimbo_us = max(est.carimbo_us + 1, mono_us)
-        est.mono_us = mono_us
-        est.chave = None
-        est.epoca = None
-        est.carimbo_do_hub = None
+        if outro_segue:
+            carimbo = est.carimbo_us + 1
+        else:
+            est.ordem.clear()
+            mono_us = int(agora * 1_000_000)
+            est.carimbo_us = max(est.carimbo_us + 1, mono_us)
+            est.mono_us = mono_us
+            est.chave = None
+            est.epoca = None
+            est.carimbo_do_hub = None
+            carimbo = est.carimbo_us
         mac = publicado.mac if publicado is not None else est.mac
         if not mac:
             return
@@ -481,7 +495,7 @@ class ServidorDsu:
                 slot=numero,
                 mac=mac,
                 contador=self._contador(cliente, agora),
-                timestamp_us=est.carimbo_us,
+                timestamp_us=carimbo,
                 conectado=publicado is not None,
                 estado=dsu.ESTADO_CONECTADO if publicado is not None else dsu.ESTADO_DESCONECTADO,
             ),

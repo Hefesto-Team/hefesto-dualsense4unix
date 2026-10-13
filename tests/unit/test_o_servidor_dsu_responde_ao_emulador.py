@@ -466,6 +466,39 @@ def test_8_quando_o_primeiro_dedo_sai_o_toque_um_passa_a_ser_o_segundo(
     assert um.toque1[:2] == (1, 6) and um.toque1[2:] == (200, 200)
 
 
+def test_8b_o_cliente_que_sai_nao_troca_os_toques_de_quem_fica(
+    montar: Callable[..., SimpleNamespace],
+) -> None:
+    """Dois clientes no mesmo slot (o emulador e o ensaio): a saída de um não reordena o outro."""
+    relogio = _Relogio()
+    dois_dedos = (_dedo(0, 6, 200, 200), _dedo(1, 5, 100, 100))
+    amostras: dict[str, tuple[PontoDeToque, ...]] = {"toques": (_dedo(1, 5, 100, 100),)}
+
+    def fonte() -> AmostraDoDsu:
+        return _andando(toques=amostras["toques"])()
+
+    mundo = montar(fontes={UNIQ_1: fonte}, relogio=relogio)
+    sai, fica = mundo.cliente(), mundo.cliente()
+    mundo.envia(sai, _pede_dados(slot=0))
+    mundo.envia(fica, _pede_dados(slot=0))
+    _ate(fica, lambda p: p.toque1[:2] == (1, 5))
+    amostras["toques"] = dois_dedos
+    _ate(fica, lambda p: p.toque2[:2] == (1, 6))
+
+    relogio.deslocamento += 3.0
+    mundo.envia(fica, _pede_dados(slot=0))
+    time.sleep(0.1)
+    relogio.deslocamento += 3.0
+    despedida = [_dados(b) for b in _juntar(sai, 0.6)]
+    assert despedida and despedida[-1].toque1[0] == 0, "quem saiu não recebeu o neutro"
+
+    _juntar(fica, 0.1)
+    depois = _ate(fica, lambda p: p.toque2[0] == 1)
+    assert depois.toque1[:2] == (1, 5) and depois.toque2[:2] == (1, 6), (
+        "a saída do outro cliente zerou a ordem dos dedos de quem ficou"
+    )
+
+
 # -- 9 · o contador ---------------------------------------------------------------------------
 
 
