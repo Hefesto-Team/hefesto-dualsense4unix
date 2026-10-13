@@ -190,5 +190,5 @@ zerados; é o que o teste `test_o_protocolo_dsu_fala_o_que_o_emulador_aceita` af
 - **Medido contra os vetores** de cima e contra os testes do codec: tamanhos,
   offsets, CRC, comprimentos.
 - **Lido no fonte, não rodado:** o comportamento de cada emulador (prazo do
-  Dolphin, exigência do Azahar, descarte do Cemu). O ensaio no Azahar real é o
-  degrau E8 da sprint e fica para a bancada.
+  Dolphin, exigência do Azahar, descarte do Cemu). O ensaio no Azahar real, com
+  o aparelho, ainda não foi feito.

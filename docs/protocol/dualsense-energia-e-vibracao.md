@@ -137,7 +137,7 @@ e o Edge não passa por esse teste em nenhuma das fontes (é sempre v2). **É
 ensaio de um comando:** ler o report de firmware dos dois controles do usuário e ver
 de que lado dos dois limiares eles caem.
 
-**O que o Hefesto faz (13/10/2026, O-CONTROLE-VIBRA-NO-MODO-DO-FIRMWARE-DELE-01).**
+**O que o Hefesto faz (desde 13/10/2026).**
 Na conexão de cada controle o backend lê a feature `0x20` do físico (pelo mesmo
 caminho da calibração, com o CRC conferido no rádio) e guarda o `update_version` por
 `uniq`. Com `≥ 0x0224` (o limiar do SDL), ou no Edge, o `_build_common` liga
@@ -145,7 +145,7 @@ caminho da calibração, com o CRC conferido no rádio) e guarda o `update_versi
 cheio; abaixo do limiar, ou sem leitura (falha ou CRC errado), fica a v1 de antes.
 O `HAPTICS_SELECT` segue a regra da háptica por áudio. Antes disto o montador só
 ligava a v1: medido com os quatro `ledOption`, `flag0 = 0x0f` e `flag2` sem o `0x04`.
-**A versão dos controles da bancada ainda não foi lida** (a leitura é do aparelho,
+**A versão dos controles usados nos ensaios do Hefesto ainda não foi lida** (a leitura é do aparelho,
 com o serviço parado): fica a anotar aqui, com a data, de que lado dos limiares cada
 um cai.
 
