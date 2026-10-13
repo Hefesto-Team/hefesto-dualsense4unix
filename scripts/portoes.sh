@@ -441,6 +441,10 @@ rapido|o-ignorado-fica-fora-do-indice|py|scripts/check_o_ignorado_fica_fora_do_i
 # linhas com o literal fora de `core/numeros_da_sony.py` (o piso só desce) e a régua prova que ela morde.
 rapido|numeros-da-sony|py|scripts/check_numeros_da_sony.py|src/** scripts/check_numeros_da_sony.py
 rapido|numeros-da-sony-morde|pytest|tests/unit/test_os_numeros_da_sony_tem_um_dono.py|src/** scripts/** tests/unit/test_os_numeros_da_sony_tem_um_dono.py
+# A DOCSTRING DIZ O CONTRATO (13/10/2026, A-DOCSTRING-DIZ-O-CONTRATO-E-A-HISTORIA-MORA-NO-DOCUMENTO-01): as linhas
+# de docstring acima de 10 só descem; a história mora em docs/research/o-porque-dos-modulos.md.
+rapido|docstring-longa|py|scripts/check_docstring_longa.py|src/** scripts/check_docstring_longa.py docs/data/a-catraca-da-docstring-longa.json
+rapido|docstring-longa-morde|pytest|tests/unit/test_a_docstring_longa_so_desce.py|src/** scripts/** docs/data/a-catraca-da-docstring-longa.json tests/unit/test_a_docstring_longa_so_desce.py
 rapido|ruff|bin|ruff check src/ tests/|src/** tests/** pyproject.toml .gitignore
 # O `scripts/ci/*.sh` entrou em 19/08/2026 com o primeiro script da pasta: diretório de scripts que nenhum
 # linter enxerga é portão cego.
