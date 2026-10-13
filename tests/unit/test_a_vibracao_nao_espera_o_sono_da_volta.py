@@ -127,7 +127,7 @@ class _Bancada:
         inst._rumble_stop_pending = False
         inst.leftMotor = 0
         inst.rightMotor = 0
-        inst._acordar = _Evento(self.relogio)  # type: ignore[assignment]
+        inst._acordar = _Evento(self.relogio)
         inst._throttle_sec = throttle
         inst._piso_de_escrita_sec = piso
         inst._last_out_report = None
@@ -189,7 +189,7 @@ def test_a_volta_nao_dorme_o_sono_inteiro_quando_a_saida_muda(
 
     banca.rodar_ate(1.2)
 
-    esperas = banca.inst._acordar.esperas  # type: ignore[union-attr]
+    esperas = banca.inst._acordar.esperas
     assert esperas, "a volta não esperou pelo evento"
     assert set(esperas) == {0.032}, "o teto da espera é o prazo da volta, nada além"
 
@@ -316,11 +316,11 @@ def test_mudar_um_campo_da_saida_arma_o_evento(
     mexer: Callable[[bp._PinnedPyDualSense], None],
 ) -> None:
     inst = _handle_sem_laco()
-    assert not inst._acordar.is_set()  # type: ignore[union-attr]
+    assert not inst._acordar.is_set()
 
     mexer(inst)
 
-    assert inst._acordar.is_set()  # type: ignore[union-attr]
+    assert inst._acordar.is_set()
 
 
 def test_campo_que_nao_e_da_saida_nao_arma_o_evento() -> None:
@@ -330,7 +330,7 @@ def test_campo_que_nao_e_da_saida_nao_arma_o_evento() -> None:
     inst._last_write_at = 5.0
     inst._last_out_report = [0] * 64
 
-    assert not inst._acordar.is_set()  # type: ignore[union-attr]
+    assert not inst._acordar.is_set()
 
 
 def test_o_gatilho_aplicado_acorda_a_volta() -> None:
@@ -344,11 +344,11 @@ def test_o_gatilho_aplicado_acorda_a_volta() -> None:
     efeito = TriggerEffect(mode=0, forces=(0, 0, 0, 0, 0, 0, 0))
 
     bp.PyDualSenseController._apply_trigger(inst, "right", efeito)
-    assert inst._acordar.is_set()  # type: ignore[union-attr]
+    assert inst._acordar.is_set()
 
-    inst._acordar.clear()  # type: ignore[union-attr]
+    inst._acordar.clear()
     bp.PyDualSenseController._reset_trigger(inst, "left")
-    assert inst._acordar.is_set()  # type: ignore[union-attr]
+    assert inst._acordar.is_set()
 
 
 def test_handle_sem_a_api_de_acordar_nao_quebra() -> None:
