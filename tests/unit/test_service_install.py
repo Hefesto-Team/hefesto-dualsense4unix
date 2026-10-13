@@ -19,6 +19,10 @@ def isolated_systemd_user(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Pa
     xdg_config = tmp_path / "config"
     xdg_config.mkdir()
     monkeypatch.setenv("XDG_CONFIG_HOME", str(xdg_config))
+    # A unit é vestida com o executável em uso; o dublê não depende de haver um instalado.
+    monkeypatch.setattr(
+        si, "executavel_do_produto", lambda: Path("/opt/hefesto/bin/hefesto-dualsense4unix")
+    )
     return xdg_config / "systemd" / "user"
 
 
@@ -55,6 +59,9 @@ def test_install_copia_unit_sem_enable_por_default(
     assert dst.name == SERVICE_NORMAL
     assert dst.parent == isolated_systemd_user
     assert dst.exists()
+    assert "ExecStart=/opt/hefesto/bin/hefesto-dualsense4unix daemon start" in dst.read_text(
+        encoding="utf-8"
+    )
 
     cmds = [" ".join(c) for c in dummy_systemctl]
     assert any("daemon-reload" in c for c in cmds)

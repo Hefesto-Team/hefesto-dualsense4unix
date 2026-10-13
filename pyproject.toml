@@ -87,10 +87,21 @@ include = [
     "src/hefesto_dualsense4unix/locale/*/LC_MESSAGES/*.mo",
 ]
 
+# O perfil de fábrica e os estilos de jogo moram FORA do pacote Python (`assets/`); sem isto o wheel
+# (pip, pipx, uv) os deixava para trás e o Freestyle nunca era semeado. Vão para o `share/` do
+# prefixo, onde `profiles/loader.py` os procura (`bases_de_instalacao`).
+[tool.hatch.build.targets.wheel.shared-data]
+"assets/profiles_default" = "share/hefesto-dualsense4unix/assets/profiles_default"
+"assets/estilos_de_jogo" = "share/hefesto-dualsense4unix/assets/estilos_de_jogo"
+# Os modelos das units de usuário: o `daemon install-service` os procura aí e os veste com o executável em uso.
+"assets/hefesto-dualsense4unix.service" = "share/hefesto-dualsense4unix/assets/hefesto-dualsense4unix.service"
+"assets/hefesto-dualsense4unix-gui-hotplug.service" = "share/hefesto-dualsense4unix/assets/hefesto-dualsense4unix-gui-hotplug.service"
+"assets/hefesto-dualsense4unix-presenca.service" = "share/hefesto-dualsense4unix/assets/hefesto-dualsense4unix-presenca.service"
+
 # O sdist leva só o que está listado: sem a lista ele levaria arquivo local que só o
 # `.git/info/exclude` ou o ignore global escondem.
 [tool.hatch.build.targets.sdist]
-only-include = ["src", "tests", "pyproject.toml", "README.md", "LICENSE", "LICENSES", "NOTICE", "CHANGELOG.md"]
+only-include = ["src", "assets/profiles_default", "assets/estilos_de_jogo", "assets/hefesto-dualsense4unix.service", "assets/hefesto-dualsense4unix-gui-hotplug.service", "assets/hefesto-dualsense4unix-presenca.service", "tests", "pyproject.toml", "README.md", "LICENSE", "LICENSES", "NOTICE", "CHANGELOG.md"]
 
 [tool.ruff]
 line-length = 100

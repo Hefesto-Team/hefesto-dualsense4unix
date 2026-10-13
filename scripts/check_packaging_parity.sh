@@ -2081,6 +2081,74 @@ else
     fi
 fi
 
+# ---------------------------------------------------------------------------
+# 6) AS UNITS DE USUÁRIO CHEGAM VESTIDAS EM TODO FORMATO.
+#
+# O `ExecStart` do modelo aponta para `%h/.local/bin/` (o que o install.sh nativo
+# cria) e a presença pede `__PYTHON__`. O Fedora e o Nix copiavam `assets/*.service`
+# às cegas, e o Arch deixava a presença de fora (a unit do daemon a chama no
+# `OnFailure`): a unit chegava apontando para um caminho que não existe. Hoje os
+# quatro formatos chamam o renderizador único (`utils/units_de_usuario.py`), e este
+# bloco o RODA para cada forma e reprova unit com marcador ou caminho do nativo
+# sobrando, ou com `OnFailure=`/`Requires=` para unit que o pacote não leva.
+# ---------------------------------------------------------------------------
+_RENDERIZADOR="src/hefesto_dualsense4unix/utils/units_de_usuario.py"
+if [[ -f "${_RENDERIZADOR}" ]] && command -v python3 >/dev/null 2>&1; then
+    missing=()
+    _un_tmp="$(mktemp -d)"
+    # `forma|binários|python` — o que cada empacotador passa ao renderizador.
+    for _un_forma in "deb|/usr/bin|/opt/hefesto-dualsense4unix/venv/bin/python" \
+                     "arch|/usr/bin|/usr/bin/python3" \
+                     "fedora|/usr/bin|/usr/bin/python3" \
+                     "nix|/nix/store/aaaa-hefesto/bin|/nix/store/bbbb-python3/bin/python3"; do
+        IFS='|' read -r _un_nome _un_bin _un_py <<<"${_un_forma}"
+        if ! _un_saida="$(python3 "${_RENDERIZADOR}" --assets assets --out "${_un_tmp}/${_un_nome}" \
+                --bin-dir "${_un_bin}" --python "${_un_py}" 2>&1)"; then
+            missing+=("${_un_nome}: o renderizador recusou as units — ${_un_saida}")
+            continue
+        fi
+        for _un_arq in "${_un_tmp}/${_un_nome}"/*.service; do
+            [[ -f "${_un_arq}" ]] || continue
+            # Sem comentário: os comentários da unit CITAM o marcador.
+            _un_corpo="$(grep -v '^[[:space:]]*#' "${_un_arq}")"
+            if [[ "${_un_corpo}" =~ __[A-Z][A-Z_]*__ ]] || [[ "${_un_corpo}" == *"%h/.local/"* ]]; then
+                missing+=("${_un_nome}: $(basename "${_un_arq}") sai com marcador ou caminho do install nativo")
+            fi
+            # O que a unit chama (OnFailure/Requires/Wants) tem de estar no pacote.
+            while IFS= read -r _un_alvo; do
+                [[ -n "${_un_alvo}" ]] || continue
+                [[ -f "${_un_tmp}/${_un_nome}/${_un_alvo}" ]] \
+                    || missing+=("${_un_nome}: $(basename "${_un_arq}") chama ${_un_alvo}, que o pacote não leva")
+            done < <(sed -n -E 's/^(OnFailure|Requires|Wants)=([^[:space:]]+\.service).*/\2/p' <<<"${_un_corpo}")
+        done
+    done
+    rm -rf "${_un_tmp}"
+
+    # Os quatro empacotadores têm de PASSAR pelo renderizador, e nenhum copia às cegas.
+    for _un_pac in scripts/build_deb.sh packaging/arch/PKGBUILD \
+                   packaging/fedora/hefesto-dualsense4unix.spec packaging/nix/package.nix; do
+        [[ -f "${_un_pac}" ]] || continue
+        _un_texto="$(<"${_un_pac}")"
+        [[ "${_un_texto}" == *"utils/units_de_usuario.py"* ]] \
+            || missing+=("${_un_pac}: não chama o renderizador das units de usuário")
+        if [[ "${_un_texto}" == *'for unit in assets/*.service'* ]] || [[ "${_un_texto}" == *'cp "$service_file"'* ]]; then
+            missing+=("${_un_pac}: copia as units de assets/ às cegas (chegam com %h/.local/bin e __PYTHON__)")
+        fi
+    done
+
+    if [[ "${#missing[@]}" -eq 0 ]]; then
+        echo "[ OK ] units de usuário: renderizadas para .deb, Arch, Fedora e Nix sem marcador sobrando, e os quatro empacotadores passam pelo renderizador"
+    else
+        for _un_m in "${missing[@]}"; do
+            echo "[FAIL] units de usuário: ${_un_m}"
+        done
+        echo "       A unit que chega com %h/.local/bin/ ou __PYTHON__ aponta para um"
+        echo "       caminho que só o install.sh nativo cria: o daemon não sobe e o"
+        echo "       systemd só diz 203/EXEC. O dono é utils/units_de_usuario.py."
+        rc=1
+    fi
+fi
+
 echo "─────────────────────────────────────────"
 if [[ "${rc}" -eq 0 ]]; then
     echo "paridade de empacotamento OK"

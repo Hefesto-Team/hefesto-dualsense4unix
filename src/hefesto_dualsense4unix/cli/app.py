@@ -364,10 +364,17 @@ def daemon_install_service(
     ),
 ) -> None:
     """Copia a unit systemd --user `hefesto-dualsense4unix.service`."""
-    from hefesto_dualsense4unix.daemon.service_install import ServiceInstaller
+    from hefesto_dualsense4unix.daemon.service_install import (
+        ServiceInstaller,
+        UnitNaoInstalavelError,
+    )
 
     installer = ServiceInstaller()
-    dst = installer.install(enable=enable)
+    try:
+        dst = installer.install(enable=enable)
+    except UnitNaoInstalavelError as exc:
+        typer.echo(f"unit não instalada: {exc}", err=True)
+        raise typer.Exit(1) from exc
     typer.echo(f"unit instalada: {dst}")
     if enable:
         typer.echo("auto-start habilitado (systemctl --user enable hefesto-dualsense4unix.service)")

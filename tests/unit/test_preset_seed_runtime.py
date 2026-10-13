@@ -91,16 +91,26 @@ def test_reexecucao_e_idempotente(tmp_path: Path) -> None:
     assert loader.seed_default_presets(dest_dir=dest, source_dirs=[src]) == []
 
 
-def test_sem_fonte_existente_e_noop(tmp_path: Path) -> None:
-    dest = tmp_path / "perfis"
+def test_sem_fonte_existente_e_noop(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Sem fonte, nada é criado E a falta não é muda: um aviso, uma vez por processo."""
+    from structlog.testing import capture_logs
 
-    copied = loader.seed_default_presets(
-        dest_dir=dest,
-        source_dirs=[tmp_path / "nao-existe-a", tmp_path / "nao-existe-b"],
-    )
+    monkeypatch.setattr(loader, "_sem_fonte_avisada", False)
+    dest = tmp_path / "perfis"
+    fontes = [tmp_path / "nao-existe-a", tmp_path / "nao-existe-b"]
+
+    with capture_logs() as eventos:
+        copied = loader.seed_default_presets(dest_dir=dest, source_dirs=fontes)
+        loader.seed_default_presets(dest_dir=dest, source_dirs=fontes)
 
     assert copied == []
     assert not dest.exists(), "sem fonte, o destino não deve nem ser criado"
+    avisos = [e for e in eventos if e["event"] == "perfis_de_fabrica_sem_fonte"]
+    assert len(avisos) == 1, "o aviso sai UMA vez por processo, não a cada tentativa"
+    assert avisos[0]["log_level"] == "warning"
+    assert avisos[0]["bases"] == [str(f) for f in fontes]
 
 
 def test_fallback_de_fontes_usa_a_primeira_existente(tmp_path: Path) -> None:

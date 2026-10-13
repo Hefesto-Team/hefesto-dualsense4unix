@@ -296,12 +296,13 @@ def test_o_uninstall_e_o_purge_levam_a_presenca(caminho: str) -> None:
 
 
 def test_o_deb_leva_a_presenca_com_o_python_dele() -> None:
-    """MORDIDA: tirar a presença do ``for base in`` do ``build_deb.sh``."""
+    """MORDIDA: tirar a presença de ``UNITS_DE_PACOTE`` do renderizador único."""
+    from hefesto_dualsense4unix.utils import units_de_usuario
+
     texto = _texto("scripts/build_deb.sh")
-    (laco,) = [linha for linha in texto.splitlines()
-               if linha.startswith("for base in ") and "hefesto-dualsense4unix.service" in linha]
-    assert PRESENCA in laco.replace(";", " ").split()
-    assert "s|__PYTHON__|${FINAL_VENV}/bin/python|g" in texto
+    assert PRESENCA in units_de_usuario.UNITS_DE_PACOTE
+    assert "utils/units_de_usuario.py" in texto
+    assert '--python "${FINAL_VENV}/bin/python"' in texto
 
 
 def test_a_chave_nao_desliga_a_presenca() -> None:

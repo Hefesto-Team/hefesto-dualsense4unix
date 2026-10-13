@@ -270,11 +270,18 @@ python3Packages.buildPythonApplication rec {
         --prefix PATH : ${lib.makeBinPath [ coreutils findutils gawk util-linux ]}
 
     # Systemd user units (NixOS users carregam manualmente; non-NixOS
-    # users wireiam via home-manager).
-    for unit in assets/*.service; do
-        [ -f "$unit" ] || continue
-        install -Dm644 "$unit" $out/lib/systemd/user/$(basename "$unit")
-    done
+    # users wireiam via home-manager). O renderizador unico
+    # (utils/units_de_usuario.py) veste so as que funcionam num pacote (daemon,
+    # janela no hotplug e presenca) com os binarios do $out; as demais de assets/
+    # dependem de scripts e marcadores que so o install.sh nativo resolve.
+    python3 src/hefesto_dualsense4unix/utils/units_de_usuario.py \
+        --assets assets --out $out/lib/systemd/user \
+        --bin-dir $out/bin --python ${python3Packages.python.interpreter} > /dev/null
+    # A presenca chama o cliente do broker por `python -m`: o python do store nao
+    # enxerga o pacote sozinho, entao a unit leva o PYTHONPATH do proprio $out.
+    sed -i "/^\[Service\]/a Environment=PYTHONPATH=$out/${python3Packages.python.sitePackages}:${python3Packages.makePythonPath dependencies}" \
+        $out/lib/systemd/user/hefesto-dualsense4unix-presenca.service
+    grep -q "^Environment=PYTHONPATH=" $out/lib/systemd/user/hefesto-dualsense4unix-presenca.service
 
     # Desktop entry + icone.
     install -Dm644 packaging/hefesto-dualsense4unix.desktop \

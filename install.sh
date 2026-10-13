@@ -908,8 +908,14 @@ _DEPS_DE_SISTEMA=(
 # gerenciador de pacotes à toa é barulho, e barulho é defeito. Cada checagem
 # pergunta pelo EFEITO (a biblioteca abre? o gdk-pixbuf lê SVG?), nunca pelo
 # nome do pacote — é o que faz a mesma régua valer nas quatro famílias.
+# O Python que enxerga o `gi` (svg, appindicator, webkit abaixo e o GTK3 do passo 2)
+# é o do venv; no ensaio (--dry-run) o venv ainda não existe (num clone sem `.venv`,
+# nunca existiu), e perguntar a um `${VENV_DIR}/bin/python` ausente respondia
+# «não tem» para o que a máquina tem. O venv nasce com --system-site-packages do
+# `_VENV_PYTHON`, então ele vê exatamente o que o `_VENV_PYTHON` vê.
 _dep_presente() {
-    local _checagem="$1" _bin _inc _saida
+    local _checagem="$1" _bin _inc _saida _py_gi="${VENV_DIR}/bin/python"
+    [[ -x "${_py_gi}" ]] || _py_gi="${_VENV_PYTHON:-python3}"
     case "${_checagem}" in
         lib:*)
             # A pergunta é "a biblioteca ABRE?", não "o `ldconfig` a lista?" —
@@ -980,13 +986,13 @@ _dep_presente() {
         svg)
             # A pergunta certa não é "o pacote está instalado?", e sim "o
             # gdk-pixbuf sabe ler SVG?" — que é o que a interface faz.
-            "${VENV_DIR}/bin/python" -c "import gi;gi.require_version('GdkPixbuf','2.0');from gi.repository import GdkPixbuf;import sys;sys.exit(0 if any(f.get_name()=='svg' for f in GdkPixbuf.Pixbuf.get_formats()) else 1)" >/dev/null 2>&1
+            "${_py_gi}" -c "import gi;gi.require_version('GdkPixbuf','2.0');from gi.repository import GdkPixbuf;import sys;sys.exit(0 if any(f.get_name()=='svg' for f in GdkPixbuf.Pixbuf.get_formats()) else 1)" >/dev/null 2>&1
             ;;
         appindicator)
             # A bandeja tenta Ayatana e cai no AppIndicator3 (app/tray.py) —
             # a checagem aceita os dois, como o produto.
-            "${VENV_DIR}/bin/python" -c "import gi;gi.require_version('AyatanaAppIndicator3','0.1')" >/dev/null 2>&1 ||
-            "${VENV_DIR}/bin/python" -c "import gi;gi.require_version('AppIndicator3','0.1')" >/dev/null 2>&1
+            "${_py_gi}" -c "import gi;gi.require_version('AyatanaAppIndicator3','0.1')" >/dev/null 2>&1 ||
+            "${_py_gi}" -c "import gi;gi.require_version('AppIndicator3','0.1')" >/dev/null 2>&1
             ;;
         webkit)
             # TOCA UM SÍMBOLO, e é por isso que a linha termina numa chamada.
@@ -1015,7 +1021,7 @@ _dep_presente() {
             #
             # A série é 4.1 porque é a de GTK 3. A 6.0 é GTK 4 e não entra no
             # processo do produto.
-            "${VENV_DIR}/bin/python" -c "import gi;gi.require_version('WebKit2','4.1');from gi.repository import WebKit2;WebKit2.get_major_version()" >/dev/null 2>&1
+            "${_py_gi}" -c "import gi;gi.require_version('WebKit2','4.1');from gi.repository import WebKit2;WebKit2.get_major_version()" >/dev/null 2>&1
             ;;
         toolchain)
             command -v cc >/dev/null 2>&1 || return 1
@@ -2118,7 +2124,12 @@ elif [[ ! -d "${VENV_DIR}" ]]; then
     fi
 fi
 
-if ! "${VENV_DIR}/bin/python" -c \
+# O Python do venv, ou, no ensaio sem venv, o que o criaria (a razão está acima de
+# `_dep_presente`): senão o ensaio dizia «Bindings GTK3 não encontrados» numa
+# máquina que os tem.
+_PY_DO_GTK="${VENV_DIR}/bin/python"
+[[ -x "${_PY_DO_GTK}" ]] || _PY_DO_GTK="${_VENV_PYTHON}"
+if ! "${_PY_DO_GTK}" -c \
         "import gi; gi.require_version('Gtk','3.0')" >/dev/null 2>&1; then
 
     printf '\n      Bindings GTK3 não encontrados — obrigatórios para a GUI.\n'

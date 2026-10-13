@@ -219,18 +219,14 @@ package() {
     cp -a LICENSES/. \
         "$pkgdir/usr/share/hefesto-dualsense4unix/dkms/LICENSES/"
 
-    # Systemd user units (M14): SÓ as que funcionam no contexto de pacote
-    # (binário em /usr/bin, resolvido pelo sed). As demais de assets/ dependem de
-    # scripts que o pacote não instala ou de placeholders (__SCRIPT__) — copiá-las
-    # deixaria units quebradas (203/EXEC no `systemctl --user enable`). Espelha
-    # a allowlist+sed do build_deb.sh.
-    for base in hefesto-dualsense4unix.service hefesto-dualsense4unix-gui-hotplug.service; do
-        unit="assets/${base}"
-        [ -f "$unit" ] || continue
-        install -Dm644 "$unit" "$pkgdir/usr/lib/systemd/user/${base}"
-        sed -i 's|%h/\.local/bin/hefesto-dualsense4unix|/usr/bin/hefesto-dualsense4unix|g' \
-            "$pkgdir/usr/lib/systemd/user/${base}"
-    done
+    # Systemd user units: o renderizador único (utils/units_de_usuario.py) veste as
+    # que FUNCIONAM no contexto de pacote (daemon, janela no hotplug e a presença,
+    # que a unit do daemon chama no OnFailure) com o binário em /usr/bin e o Python
+    # do sistema. As demais de assets/ dependem de scripts que o pacote não instala
+    # ou de marcadores (__SCRIPT__) — copiá-las deixaria units quebradas.
+    python3 src/hefesto_dualsense4unix/utils/units_de_usuario.py \
+        --assets assets --out "$pkgdir/usr/lib/systemd/user" \
+        --bin-dir /usr/bin --python /usr/bin/python3 > /dev/null
 
     # BROKER-01 (Onda S — fd-injection): o broker root hide-hidraw como unit
     # de SISTEMA do pacote (O-BROKER-SERVE-QUEM-ESTA-NA-FRENTE-01). Ele atende

@@ -47,6 +47,7 @@ from hefesto_dualsense4unix.profiles.steam_app import (
 )
 from hefesto_dualsense4unix.utils.leitura_pela_assinatura import LeituraPelaAssinatura
 from hefesto_dualsense4unix.utils.logging_config import get_logger
+from hefesto_dualsense4unix.utils.repo_files import bases_de_instalacao
 from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
 
 if TYPE_CHECKING:  # pragma: no cover - só para o verificador de tipos
@@ -102,19 +103,20 @@ _RENAME_PADRAO_MARKER = ".perfil_padrao_renomeado"
 
 SEED_SKIP_ENV_VAR = "HEFESTO_DUALSENSE4UNIX_SKIP_PRESET_SEED"
 
-_DEFAULT_SEED_SOURCE_DIRS: tuple[Path, ...] = (
-    Path(__file__).resolve().parents[3] / "assets" / "profiles_default",
-    Path(sys.prefix) / "share" / "hefesto-dualsense4unix" / "assets"
-    / "profiles_default",
-    Path("/usr/share/hefesto-dualsense4unix/assets/profiles_default"),
-)
+def _fontes_de_fabrica(subpasta: str) -> tuple[Path, ...]:
+    """Onde mora `assets/<subpasta>` nesta instalação: as bases de `repo_files`.
 
-_ESTILO_DE_JOGO_SOURCE_DIRS: tuple[Path, ...] = (
-    Path(__file__).resolve().parents[3] / "assets" / "estilos_de_jogo",
-    Path(sys.prefix) / "share" / "hefesto-dualsense4unix" / "assets"
-    / "estilos_de_jogo",
-    Path("/usr/share/hefesto-dualsense4unix/assets/estilos_de_jogo"),
-)
+    A pergunta «o que esta instalação tem ao lado do código?» tem UM dono
+    (`bases_de_instalacao`): o checkout, o `share/` do venv ou do pipx, o
+    `/app/share` do Flatpak, o `share/` do usuário e o `/usr/share` dos pacotes.
+    Uma lista própria aqui deixava de fora o que o dono já sabia.
+    """
+    return tuple(base / "assets" / subpasta for base in bases_de_instalacao())
+
+
+_DEFAULT_SEED_SOURCE_DIRS: tuple[Path, ...] = _fontes_de_fabrica("profiles_default")
+
+_ESTILO_DE_JOGO_SOURCE_DIRS: tuple[Path, ...] = _fontes_de_fabrica("estilos_de_jogo")
 
 ARQUIVOS_DOS_ESTILOS_DE_JOGO: tuple[str, ...] = (
     "acao.json",
@@ -132,6 +134,9 @@ ESTILOS_DE_JOGO_DIR_NAME = "estilos-de-jogo"
 _ESTILOS_MIGRATION_MARKER = ".generos_viraram_estilo_de_jogo"
 
 _seed_attempted: bool = False
+
+# Uma vez por processo: a falta da fábrica não pode ser muda, nem inundar o diário.
+_sem_fonte_avisada: bool = False
 
 
 def _seed_source_file(
@@ -155,10 +160,18 @@ def seed_default_presets(
     source_dirs: Sequence[Path] | None = None,
 ) -> list[str]:
     """Copia presets default AUSENTES para o diretório de perfis do usuário."""
+    global _sem_fonte_avisada
     directory = dest_dir if dest_dir is not None else profiles_dir(ensure=True)
     candidates = _DEFAULT_SEED_SOURCE_DIRS if source_dirs is None else tuple(source_dirs)
     source = next((c for c in candidates if c.is_dir()), None)
     if source is None:
+        if not _sem_fonte_avisada:
+            _sem_fonte_avisada = True
+            logger.warning(
+                "perfis_de_fabrica_sem_fonte",
+                bases=[str(c) for c in candidates],
+                efeito="o Freestyle e os estilos de jogo de fábrica não foram semeados",
+            )
         return []
 
     directory.mkdir(parents=True, exist_ok=True)

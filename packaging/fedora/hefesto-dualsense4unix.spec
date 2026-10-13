@@ -231,12 +231,14 @@ cp -a LICENSES/. \
 install -Dm644 assets/hefesto-dualsense4unix.conf \
     %{buildroot}%{_modulesloaddir}/hefesto-dualsense4unix.conf
 
-# Systemd user units.
-mkdir -p %{buildroot}%{_userunitdir}
-for unit in assets/*.service; do
-    [ -f "$unit" ] || continue
-    install -Dm644 "$unit" "%{buildroot}%{_userunitdir}/$(basename "$unit")"
-done
+# Systemd user units: o renderizador unico (utils/units_de_usuario.py) veste so as
+# que funcionam num pacote (daemon, janela no hotplug e presenca), com o binario em
+# /usr/bin e o Python do sistema. As demais de assets/ (storm-watch,
+# steam-input-guard) dependem de scripts e marcadores que so o install.sh nativo
+# resolve.
+%{__python3} src/hefesto_dualsense4unix/utils/units_de_usuario.py \
+    --assets assets --out "%{buildroot}%{_userunitdir}" \
+    --bin-dir %{_bindir} --python %{__python3} > /dev/null
 
 # Catalogos i18n compilados.
 if [ -d locale ]; then

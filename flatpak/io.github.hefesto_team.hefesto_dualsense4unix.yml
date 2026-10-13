@@ -311,14 +311,15 @@ modules:
           assets/glyphs/*.svg
 
       # FIX-FLATPAK-PRESET-SEED-01 (30/07): presets default para a semeadura em
-      # tempo de execução. O profiles/loader.py procura em três lugares — o
-      # assets/ do repositório (dev), `sys.prefix/share/.../assets/
-      # profiles_default` (bundle) e /usr/share (.deb) — e o Flatpak não
-      # instalava em NENHUM deles: quem instalava pelo Flatpak nunca recebia
-      # coop_local, sackboy_nativo, fps, fallback e os outros, e abria a janela
-      # com a lista de perfis vazia. Dentro do sandbox sys.prefix é /app (o
-      # wheel é instalado com --prefix=/app), então este destino é exatamente o
-      # segundo candidato do loader.
+      # tempo de execução. O Flatpak não instalava em lugar nenhum que o loader
+      # olhasse: quem instalava por ele nunca recebia coop_local, sackboy_nativo,
+      # fps, fallback e os outros, e abria a janela com a lista de perfis vazia.
+      # O loader pergunta onde mora o `assets/` ao dono único
+      # (`utils/repo_files.bases_de_instalacao`), que inclui `/app/share/
+      # hefesto-dualsense4unix`: é este destino. (O comentário antigo dizia que
+      # `sys.prefix` é /app dentro do sandbox, e não é: o Python é o do runtime,
+      # com prefixo /usr; o `--prefix=/app` do pip só põe o wheel lá. O loader
+      # olhava `sys.prefix`, não achava a pasta, e semeava nada.)
       # Espelha o FIX-APPIMAGE-PRESET-SEED-01 do scripts/build_appimage_gui.sh:
       # o defeito foi diagnosticado e curado para o AppImage GUI em 25/07 e
       # nunca havia sido portado para cá. Mesmo par que os glyphs acima.
