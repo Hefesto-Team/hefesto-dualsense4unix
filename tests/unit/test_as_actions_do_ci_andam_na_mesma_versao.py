@@ -87,6 +87,36 @@ def test_cada_action_roda_numa_versao_so_em_todos_os_fluxos() -> None:
     )
 
 
+def test_o_mesmo_comentario_de_versao_aponta_o_mesmo_sha() -> None:
+    """Um SHA trocado só no comentário (`@<sha da v4> # v7.0.1`) passaria pela leitura do `# vN`.
+
+    Sem rede não se confere o SHA contra a tag, mas entre os fluxos se confere: a mesma action com
+    o mesmo comentário tem de apontar o MESMO commit, e o mesmo commit não leva dois comentários.
+    O fluxo esquecido na subida destoa dos outros, que é o caso que esta régua existe para pegar.
+    """
+    shas_por_nota: dict[tuple[str, str], dict[str, list[str]]] = defaultdict(
+        lambda: defaultdict(list)
+    )
+    notas_por_sha: dict[str, set[str]] = defaultdict(set)
+    for arquivo, linha, acao, ref, nota in _usos():
+        if not _SHA.fullmatch(ref):
+            continue
+        versao = nota.split()[0] if nota.split() else ""
+        shas_por_nota[(acao, versao)][ref].append(f"{arquivo}:{linha}")
+        notas_por_sha[ref].add(versao)
+    divergentes = {
+        f"{acao} {versao}": {sha[:12]: onde for sha, onde in shas.items()}
+        for (acao, versao), shas in shas_por_nota.items()
+        if len(shas) > 1
+    }
+    assert divergentes == {}, (
+        "o mesmo comentário de versão sobre SHAs diferentes (um fluxo ficou para trás): "
+        f"{divergentes}"
+    )
+    ambiguos = {sha[:12]: sorted(notas) for sha, notas in notas_por_sha.items() if len(notas) > 1}
+    assert ambiguos == {}, f"o mesmo SHA com comentários de versão diferentes: {ambiguos}"
+
+
 def test_o_download_nunca_e_mais_velho_que_o_upload() -> None:
     quadro = _por_acao()
     (subida,) = quadro["upload-artifact"]
