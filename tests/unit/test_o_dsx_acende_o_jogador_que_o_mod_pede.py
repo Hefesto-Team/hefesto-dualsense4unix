@@ -151,7 +151,7 @@ def test_a_mesa_vazia_descarta_o_indice_0() -> None:
 
     _mandar(handler, _cor(0))
 
-    assert handler.controller.commands == []  # type: ignore[attr-defined]
+    assert handler.controller.commands == []
     assert handler.store.counter("udp.indice_sem_jogador") == 1
 
 
