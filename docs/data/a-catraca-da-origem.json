@@ -243,14 +243,14 @@
       "data": "2026-10-13",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1088583,
+      "piso": 1084523,
       "por_item": {
-        "docs": 108776,
-        "scripts": 111619,
-        "src": 301631,
-        "tests": 566557
+        "docs": 109017,
+        "scripts": 112110,
+        "src": 296177,
+        "tests": 567219
       },
-      "razao": "tamanho: +33969 linhas (1054614 -> 1088583), pagas por Origem: D-1310-A-DOCSTRING-ACIMA-DE-DEZ-LINHAS-SO-DESCE; registrado no fecho, topo a9c0e2405b7d",
+      "razao": "o teto desceu sozinho com o número",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -338,7 +338,7 @@
         }
       ],
       "unidade": "linhas",
-      "universo": 2769
+      "universo": 2772
     }
   }
 }
