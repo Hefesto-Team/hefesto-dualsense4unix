@@ -571,6 +571,19 @@ def test_11_o_carimbo_nao_recua_quando_o_no_reabre_com_carimbo_menor(
     assert all(b > a for a, b in itertools.pairwise(carimbos)), carimbos
 
 
+def test_11b_na_mesma_epoca_o_carimbo_parado_ou_para_tras_nao_se_repete(
+    montar: Callable[..., SimpleNamespace],
+) -> None:
+    """O aparelho que repete (ou recua) o carimbo na mesma época: o relógio assume."""
+    for passo in (0, -4000):
+        mundo = montar(fontes={UNIQ_1: _andando(epoca=1, base_us=9_000_000, passo_us=passo)})
+        sock = mundo.cliente()
+        mundo.envia(sock, _pede_dados(slot=0))
+        carimbos = [_dados(p).timestamp for p in _juntar(sock, 0.5)]
+        assert len(carimbos) >= 3, passo
+        assert all(b > a for a, b in itertools.pairwise(carimbos)), (passo, carimbos)
+
+
 # -- 12 · o hub que não responde ---------------------------------------------------------------
 
 
