@@ -240,17 +240,17 @@
       "universo": 385
     },
     "tamanho": {
-      "data": "2026-10-12",
+      "data": "2026-10-13",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1054614,
+      "piso": 1088583,
       "por_item": {
-        "docs": 106431,
-        "scripts": 109331,
-        "src": 294410,
-        "tests": 544442
+        "docs": 108776,
+        "scripts": 111619,
+        "src": 301631,
+        "tests": 566557
       },
-      "razao": "tamanho: +47698 linhas (1006916 -> 1054614), pagas por Origem: vibracao.haptics_vcm; registrado no fecho, topo 1cd8dacff888",
+      "razao": "tamanho: +33969 linhas (1054614 -> 1088583), pagas por Origem: D-1310-A-DOCSTRING-ACIMA-DE-DEZ-LINHAS-SO-DESCE; registrado no fecho, topo a9c0e2405b7d",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -329,10 +329,16 @@
           "de": 1006916,
           "para": 1054614,
           "razao": "tamanho: +47698 linhas (1006916 -> 1054614), pagas por Origem: vibracao.haptics_vcm; registrado no fecho, topo 1cd8dacff888"
+        },
+        {
+          "data": "2026-10-13",
+          "de": 1054614,
+          "para": 1088583,
+          "razao": "tamanho: +33969 linhas (1054614 -> 1088583), pagas por Origem: D-1310-A-DOCSTRING-ACIMA-DE-DEZ-LINHAS-SO-DESCE; registrado no fecho, topo a9c0e2405b7d"
         }
       ],
       "unidade": "linhas",
-      "universo": 2658
+      "universo": 2769
     }
   }
 }
