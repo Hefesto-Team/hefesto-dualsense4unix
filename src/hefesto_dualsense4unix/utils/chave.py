@@ -44,9 +44,9 @@ def motivo_do_desligamento(config_dir: Path | None = None) -> str | None:
     alvo = caminho_da_chave(config_dir)
     try:
         alvo.stat()
-    except FileNotFoundError:
-        return None
     except OSError as exc:
+        if isinstance(exc, FileNotFoundError):
+            return None
         raise PastaIlegivel(alvo.parent, exc) from exc
     try:
         texto = alvo.read_text(encoding="utf-8", errors="replace").strip()
