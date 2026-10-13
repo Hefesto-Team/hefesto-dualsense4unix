@@ -19,6 +19,7 @@ from typing import Any, ClassVar
 import pytest
 
 from hefesto_dualsense4unix.daemon.subsystems import alto_falante as mod
+from hefesto_dualsense4unix.daemon.subsystems.governador_do_radio import Vaga
 from hefesto_dualsense4unix.integrations import alto_falante_bt as af
 from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
 
@@ -68,6 +69,7 @@ class _PonteDeMentira:
 
     def __init__(self, **kw: Any) -> None:
         self.uniq = str(kw["uniq"])
+        self.vaga = kw.get("vaga")
         self.no_ar = False
         self.descidas = 0
         self.motivo = ""
@@ -103,10 +105,15 @@ class _Ouvido:
 
 
 class _Governador:
+    """O governador com a forma real: toda ponte do rádio pede a vaga dela."""
+
     ao_autorizar: Any = None
 
     def iniciar(self) -> None:
         return None
+
+    def pedir_vaga(self, uniq: str, tipo: str) -> Vaga:
+        return Vaga(uniq=uniq, adaptador="hci-de-mentira", tipo=tipo)
 
     def parar(self, *_a: Any, **_k: Any) -> None:
         return None
@@ -205,6 +212,8 @@ def test_a_volta_que_passa_do_join_nao_ergue_no_nem_ponte(
     thread.join(ESPERA)
     assert not thread.is_alive(), "a volta não terminou"
 
+    sem_vaga = [p.uniq for p in _PonteDeMentira.criadas if not isinstance(p.vaga, Vaga)]
+    assert sem_vaga == [], f"a ponte subiu sem pedir a vaga ao governador: {sem_vaga!r}"
     pontes_no_ar = [p.uniq for p in _PonteDeMentira.criadas if p.no_ar]
     assert pontes_no_ar == [], f"ponte do rádio no ar depois do stop: {pontes_no_ar!r}"
     assert sub._pontes == {}, f"pontes guardadas depois do stop: {sorted(sub._pontes)!r}"
