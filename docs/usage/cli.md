@@ -18,6 +18,9 @@ instala o completar pelo Tab no bash e no zsh.
 | `profile historico/restore` | as versões guardadas de um perfil, e a volta |
 | `daemon start/stop/restart/status/pause/resume/enable/disable/install-service/uninstall-service` | o serviço |
 | `gamepad on/off/status` | o controle virtual |
+| `gamepad mask <sabor> --uniq …` | a máscara de um controle |
+| `freestyle on/off/status` | o Modo Freestyle |
+| `rumble policy/passthrough` | a intensidade da vibração e o repasse do jogo |
 | `gamepad steam-input list/remove` | os jogos com o Steam Input ligado |
 | `native on/off/status` | o Modo Nativo |
 | `coop on/status` | os jogadores |
@@ -109,6 +112,16 @@ hefesto-dualsense4unix gamepad on --flavor xbox   # ou dualsense, ou nintendo
 hefesto-dualsense4unix gamepad off
 ```
 
+### `gamepad mask`
+
+```bash
+hefesto-dualsense4unix gamepad mask xbox --uniq <endereço>      # ou dualsense, ou nintendo
+hefesto-dualsense4unix gamepad mask --limpar --uniq <endereço>  # volta a herdar a do perfil
+```
+
+A máscara é de um controle só, então o `--uniq` é obrigatório. Sai com `1` quando
+o controle não vestiu a máscara pedida.
+
 ### `gamepad steam-input`
 
 Os jogos em que o Steam Input fica ligado. Marcar é na janela (o chip «Steam
@@ -134,6 +147,29 @@ entram na conta dos ligados, e não na dos jogadores.
 incluir os de outras marcas), e `controller target <n|all>` escolhe a quem os
 comandos de saída (luz, vibração, gatilhos) se aplicam.
 
+## `freestyle`
+
+```bash
+hefesto-dualsense4unix freestyle on       # o perfil do Freestyle vale para todo jogo
+hefesto-dualsense4unix freestyle off      # devolve a escolha de antes
+hefesto-dualsense4unix freestyle status   # --json para scripts
+```
+
+É o botão «Modo Freestyle» da aba Jogar. Sai com `1` quando o serviço não deixou
+o modo como foi pedido.
+
+## `rumble`
+
+```bash
+hefesto-dualsense4unix rumble policy balanceado    # economia | balanceado | max | auto
+hefesto-dualsense4unix rumble policy custom 0.7    # multiplicador de 0 a 2
+hefesto-dualsense4unix rumble passthrough on       # devolve a vibração ao jogo
+```
+
+A política vale para todos os controles. `passthrough on` solta a vibração que
+foi fixada à mão (`--uniq` solta só a de um controle); o `off` não muda nada no
+serviço e diz isso.
+
 ## `mic`
 
 | Ações | O que fazem |
@@ -142,10 +178,17 @@ comandos de saída (luz, vibração, gatilhos) se aplicam.
 | `promote`, `demote` | torna o microfone do controle a entrada padrão, ou devolve a escolha ao sistema |
 | `mute`, `unmute`, `release` | o mudo do próprio controle, o mesmo do botão. `release` devolve o botão ao controle |
 | `led-on`, `led-off`, `led-release` | a luz do botão do microfone: acesa diz que o microfone está vivo. `led-release` devolve a luz ao driver |
+| `canal on`, `canal off` | o ato inteiro do microfone do controle: o canal no sistema e o mudo do próprio controle, como o botão da tela |
+| `volume <0-100>` | o volume da captura do microfone |
 | `bt`, `bt-status` | a ponte do microfone pelo Bluetooth, e o seu diagnóstico ([bluetooth.md](bluetooth.md)) |
 
-Com vários controles, `--uniq <endereço>` escolhe o controle das ações de mudo
-e de luz.
+```bash
+hefesto-dualsense4unix mic canal on --uniq <endereço>
+hefesto-dualsense4unix mic volume 60
+```
+
+Com vários controles, `--uniq <endereço>` escolhe o controle das ações de mudo,
+de luz, de `canal` e de `volume`.
 
 ## `speaker`
 

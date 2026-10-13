@@ -53,6 +53,7 @@ app.add_typer(daemon_app, name="daemon")
 
 from hefesto_dualsense4unix.cli.cmd_controller import app as controller_app  # noqa: E402
 from hefesto_dualsense4unix.cli.cmd_coop import app as coop_app  # noqa: E402
+from hefesto_dualsense4unix.cli.cmd_freestyle import app as freestyle_app  # noqa: E402
 from hefesto_dualsense4unix.cli.cmd_gamepad import app as gamepad_app  # noqa: E402
 from hefesto_dualsense4unix.cli.cmd_metrics import app as metrics_app  # noqa: E402
 from hefesto_dualsense4unix.cli.cmd_mod import app as mod_app  # noqa: E402
@@ -60,6 +61,7 @@ from hefesto_dualsense4unix.cli.cmd_mouse import app as mouse_app  # noqa: E402
 from hefesto_dualsense4unix.cli.cmd_native import app as native_app  # noqa: E402
 from hefesto_dualsense4unix.cli.cmd_plugin import app as plugin_app  # noqa: E402
 from hefesto_dualsense4unix.cli.cmd_profile import app as profile_app  # noqa: E402
+from hefesto_dualsense4unix.cli.cmd_rumble import app as rumble_app  # noqa: E402
 from hefesto_dualsense4unix.cli.cmd_test import app as test_app  # noqa: E402
 
 app.add_typer(profile_app, name="profile")
@@ -72,6 +74,8 @@ app.add_typer(controller_app, name="controller")
 app.add_typer(plugin_app, name="plugin")
 app.add_typer(mod_app, name="mod")
 app.add_typer(metrics_app, name="metrics")
+app.add_typer(freestyle_app, name="freestyle")
+app.add_typer(rumble_app, name="rumble")
 
 
 @app.command()
@@ -193,13 +197,16 @@ def mic(
         "status",
         help=(
             "on | off | status | promote | demote | mute | unmute | release | "
-            "bt | bt-status — mic embutido do DualSense."
+            "bt | bt-status | canal on|off | volume <0-100> — mic embutido do DualSense."
         ),
+    ),
+    valor: str | None = typer.Argument(
+        None, help="`on`/`off` para `canal`; a porcentagem 0-100 para `volume`."
     ),
     uniq: str = typer.Option(
         "",
         "--uniq",
-        help="MAC normalizado do controle nas ações mute/unmute/release.",
+        help="MAC normalizado do controle nas ações mute/unmute/release/canal/volume.",
     ),
 ) -> None:
     """Liga/desliga o microfone embutido do DualSense.
@@ -221,10 +228,14 @@ def mic(
     Opus dentro dos reports HID e precisa de uma ponte. `mic bt` sobe essa ponte
     e publica o microfone no PipeWire (Ctrl-C encerra e desliga o mic no
     controle); `mic bt-status` só diagnostica as pré-condições.
+
+    `mic canal on|off` é o ato inteiro do microfone do controle (o canal no
+    sistema e o mudo do firmware, como o botão da tela) e `mic volume <0-100>`
+    é o volume da captura; os dois falam com o serviço e aceitam `--uniq`.
     """
     from hefesto_dualsense4unix.cli.cmd_mic import mic_cmd
 
-    mic_cmd(action, uniq=uniq or None)
+    mic_cmd(action, uniq=uniq or None, valor=valor)
 
 
 @app.command()

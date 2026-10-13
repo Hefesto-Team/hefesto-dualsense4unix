@@ -78,6 +78,10 @@ _ACOES_LED: dict[str, bool | None] = {
     "led-release": None,
 }
 
+#: As que levam um segundo argumento e falam com o serviço: o ato inteiro do
+#: microfone (`mic.canal.set`) e o volume da captura (`mic.volume.set`).
+_ACOES_DE_VALOR = ("canal", "volume")
+
 #: Ações que NÃO passam pelo script do WirePlumber (são a ponte por BT).
 _ACOES_BT = ("bt", "bt-status")
 
@@ -89,7 +93,9 @@ def _find_script() -> Path | None:
     return encontrar_arquivo_do_repo(f"scripts/{_SCRIPT_NAME}")
 
 
-def mic_cmd(action: str = "status", uniq: str | None = None) -> None:
+def mic_cmd(
+    action: str = "status", uniq: str | None = None, valor: str | None = None
+) -> None:
     """Liga (on) / desliga (off) / consulta (status) o mic do DualSense.
 
     `bt` sobe a ponte do microfone por Bluetooth; `bt-status` diagnostica.
@@ -97,9 +103,19 @@ def mic_cmd(action: str = "status", uniq: str | None = None) -> None:
     (MIC-USB-01, camada 3); `led-on`/`led-off`/`led-release` mexem no LED do
     botão de mudo, que é OUTRO byte e não muta nada (MIC-DA-MESA-ELEICAO-01);
     `promote`/`demote` na política de microfone padrão.
-    `uniq` (MAC normalizado) escolhe o controle nas ações de firmware.
+    `canal on|off` e `volume <0-100>` são o ato inteiro do microfone e o volume
+    da captura (`valor` é o segundo argumento). `uniq` (MAC normalizado)
+    escolhe o controle nas ações de firmware e nas duas de valor.
     """
     action = action.lower()
+    if action in _ACOES_DE_VALOR:
+        raise typer.Exit(code=_mic_canal_ou_volume(action, valor, uniq))
+    if valor is not None:
+        console.print(
+            f"[red]`mic {action}` não leva valor[/red] — só `mic canal on|off` "
+            "e `mic volume <0-100>`."
+        )
+        raise typer.Exit(code=2)
     if action in _ACOES_BT:
         raise typer.Exit(code=_mic_bt(status_apenas=action == "bt-status"))
     if action in _ACOES_FIRMWARE:
@@ -129,6 +145,54 @@ def mic_cmd(action: str = "status", uniq: str | None = None) -> None:
     if action == "off" and rc == 2:
         rc = 0
     raise typer.Exit(code=rc)
+
+
+def _mic_canal_ou_volume(action: str, valor: str | None, uniq: str | None) -> int:
+    """`mic canal on|off` e `mic volume <0-100>`: cascas sobre o serviço."""
+    from hefesto_dualsense4unix.cli.chamada_ao_servico import chamar
+
+    params: dict[str, object]
+    if action == "canal":
+        if valor not in ("on", "off"):
+            console.print("[red]use `mic canal on` ou `mic canal off`[/red]")
+            return 2
+        params = {"ligado": valor == "on"}
+        metodo = "mic.canal.set"
+    else:
+        try:
+            volume = int(valor) if valor is not None else -1
+        except ValueError:
+            volume = -1
+        if not 0 <= volume <= 100:
+            console.print("[red]use `mic volume <0-100>`[/red] (porcentagem)")
+            return 2
+        params = {"volume": volume}
+        metodo = "mic.volume.set"
+    if uniq:
+        params["uniq"] = uniq
+    corpo = chamar(metodo, params)
+    corpo = corpo if isinstance(corpo, dict) else {}
+    if corpo.get("status") != "ok":
+        motivo = corpo.get("motivo")
+        console.print(
+            "[yellow]o microfone não ficou como pedido[/yellow]"
+            + (f" — {motivo}" if isinstance(motivo, str) and motivo else "")
+        )
+        if corpo.get("status") == "sem_fonte":
+            console.print(
+                "  [dim]não há fonte de captura deste controle no sistema "
+                "(no rádio, ela só existe com a ponte `mic bt` de pé).[/dim]"
+            )
+        return 1
+    if action == "canal":
+        console.print(
+            "microfone: [green]ligado[/green]"
+            if params["ligado"]
+            else "microfone: [dim]desligado[/dim]"
+        )
+    else:
+        console.print(f"volume do microfone: [green]{params['volume']} %[/green]")
+    return 0
 
 
 def _mic_led(aceso: bool | None, *, uniq: str | None = None) -> int:

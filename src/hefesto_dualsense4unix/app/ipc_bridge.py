@@ -29,6 +29,9 @@ _IPC_TRANSPORT_ERRORS: tuple[type[BaseException], ...] = (
 #: esperando um daemon morto. Só que `profile.switch` não é leitura: o handler
 PROFILE_SWITCH_TIMEOUT_S: float = 3.0
 
+#: O ato de áudio leva o que o serviço leva para achar a fonte e escrever nela.
+_TETO_DO_ATO_DE_AUDIO = 6.0
+
 #: Quanto esperar por cada método: um dono só, para a janela e para a linha de
 #: comando. Leitura espera o padrão de 0,25 s, curto para a janela não pendurar
 #: num serviço morto; o método que muda estado espera o que o serviço leva para
@@ -46,6 +49,9 @@ TETOS: dict[str, float] = {
     # teclado virtual: a família do `profile.switch`.
     "desktop.arranjo.apply": 3.0,
     "profile.switch": PROFILE_SWITCH_TIMEOUT_S,
+    # Ligar o Freestyle roda o `profile.switch` do perfil dele; desligar devolve
+    # o jogo ou a escolha pelo mesmo caminho.
+    "freestyle.set": PROFILE_SWITCH_TIMEOUT_S,
     # O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01 (01/10/2026): o «Aplicar» roda a
     # cadeia da ativação, e por isso o teto é o do `profile.switch`.
     "profile.reaplicar": PROFILE_SWITCH_TIMEOUT_S,
@@ -65,6 +71,9 @@ TETOS: dict[str, float] = {
     # LED de jogador repinta todos: os dois prazos que a linha de comando já usava.
     "lightbar.reset": 2.0,
     "debug.player_leds": 3.0,
+    # O ato do microfone e o volume da captura: o prazo que a janela já usa, que
+    # o terminal herda em vez de dizer «sem resposta» sobre um ato em andamento.
+    "mic.canal.set": _TETO_DO_ATO_DE_AUDIO, "mic.volume.set": _TETO_DO_ATO_DE_AUDIO,
 }
 
 #: O padrão de um método fora da tabela: o de uma leitura.
@@ -273,9 +282,6 @@ def profile_switch(name: str) -> bool:
     """Ativa um perfil no daemon; ``False`` quando ele não confirmou."""
     ok, _ = _safe_call("profile.switch", {"name": name})
     return ok
-
-
-_TETO_DO_ATO_DE_AUDIO = 6.0
 
 
 def _corpo_do_daemon(
