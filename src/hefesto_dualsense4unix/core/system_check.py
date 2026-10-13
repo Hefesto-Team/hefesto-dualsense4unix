@@ -85,8 +85,17 @@ def _wireplumber_hijacks_mic() -> bool:
 
 
 def _dir_dos_dropins() -> Path:
-    """Onde o `fix_wireplumber_default_source.sh` põe os drop-ins 51/52/53/54."""
-    return Path.home() / ".config/wireplumber/wireplumber.conf.d"
+    """Onde o `fix_wireplumber_default_source.sh` põe os drop-ins 51/52/53/54.
+
+    O script grava em `$HOME/.config`, então esta pergunta também parte dali. Quem
+    decide a pasta e a forma (SPA-JSON ou Lua) é `xdg_paths`.
+    """
+    from hefesto_dualsense4unix.utils.xdg_paths import (
+        wireplumber_forma,
+        wireplumber_pasta_da_forma,
+    )
+
+    return wireplumber_pasta_da_forma(wireplumber_forma(), Path.home() / ".config")
 
 
 def _marca_do_gesto_do_mic() -> Path:
@@ -122,14 +131,16 @@ def _dualsense_mic_intended() -> bool:
     ordem e pela mesma razão — a ordem é a hierarquia de quem manda, e o último
     degrau é o que diz que **"não sei" nunca é "o usuário pediu"**.
     """
+    from hefesto_dualsense4unix.utils.xdg_paths import wireplumber_nome_do_dropin
+
     conf = _dir_dos_dropins()
-    if (conf / "52-hefesto-dualsense-disable-source.conf").exists():
+    if (conf / wireplumber_nome_do_dropin("52-hefesto-dualsense-disable-source.conf")).exists():
         return False
     if os.environ.get(
         "HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED", ""
     ).strip().lower() in ("1", "true", "yes"):
         return True
-    if (conf / "51-hefesto-dualsense-no-default-source.conf").exists():
+    if (conf / wireplumber_nome_do_dropin("51-hefesto-dualsense-no-default-source.conf")).exists():
         return False
     return _marca_do_gesto_do_mic().exists()
 

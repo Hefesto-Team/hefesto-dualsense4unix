@@ -836,10 +836,14 @@ NOME_REGRA_NUNCA_DORME: Final[str] = "54-hefesto-dualsense-alto-falante-nunca-do
 
 def caminho_regra_nunca_dorme(home: str | None = None) -> str:
     """Onde o drop-in 54 mora depois de instalado (não garante que exista)."""
-    base = home if home is not None else os.path.expanduser("~")
-    return os.path.join(
-        base, ".config", "wireplumber", "wireplumber.conf.d", NOME_REGRA_NUNCA_DORME
-    )
+    from pathlib import Path
+
+    from hefesto_dualsense4unix.utils.xdg_paths import wireplumber_dropin
+
+    # O dono único diz a pasta e a forma (SPA-JSON ou Lua) que o WirePlumber
+    # instalado lê; `home` só desvia a raiz, para o teste e para a bancada.
+    raiz = Path(home) / ".config" if home is not None else None
+    return str(wireplumber_dropin(NOME_REGRA_NUNCA_DORME, raiz))
 
 
 def regra_nunca_dorme_instalada(home: str | None = None) -> bool:

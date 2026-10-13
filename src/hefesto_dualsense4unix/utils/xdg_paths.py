@@ -91,9 +91,86 @@ def profiles_dir(ensure: bool = False) -> Path:
     return p
 
 
+#: A variável que desvia as pastas de sistema do WirePlumber (lista separada por
+#: ``:``). Existe para o teste e para a bancada: o lar de mentira declara um
+#: ``/usr/share/wireplumber`` falso em vez de ler o da máquina.
+WIREPLUMBER_SISTEMA_ENV_VAR = "HEFESTO_WIREPLUMBER_SISTEMA"
+_WIREPLUMBER_SISTEMA = ("/usr/share/wireplumber", "/etc/wireplumber")
+
+FORMA_CONF = "conf"
+FORMA_LUA = "lua"
+
+
+def wireplumber_forma() -> str:
+    """A forma que o WirePlumber INSTALADO lê: ``"lua"`` ou ``"conf"``.
+
+    Pergunta pela capacidade, não pela versão: o 0.4 (Ubuntu 24.04, Linux Mint 22,
+    Debian 12) lê Lua em ``main.lua.d/`` e ignora ``wireplumber.conf.d/`` sem
+    erro; o 0.5 em diante lê SPA-JSON em ``wireplumber.conf.d/`` e não traz o
+    ``main.lua.d``. A configuração de sistema que o próprio WirePlumber traz diz
+    qual: a pasta ``main.lua.d`` é a pilha Lua, e só o 0.4 a entrega. Sem
+    WirePlumber à vista a resposta é ``"conf"``, a de hoje.
+    """
+    bruto = os.environ.get(WIREPLUMBER_SISTEMA_ENV_VAR, "").strip()
+    raizes = [r for r in bruto.split(":") if r] if bruto else list(_WIREPLUMBER_SISTEMA)
+    for raiz in raizes:
+        if (Path(raiz) / "main.lua.d").is_dir():
+            return FORMA_LUA
+    return FORMA_CONF
+
+
+def _raiz_da_config(config_home: Path | None) -> Path:
+    if config_home is not None:
+        return config_home
+    base = os.environ.get("XDG_CONFIG_HOME", "").strip()
+    return Path(base) if base else Path.home() / ".config"
+
+
+def wireplumber_pasta_da_forma(forma: str, config_home: Path | None = None) -> Path:
+    """A pasta de drop-ins do usuário para ``forma`` (sem criar)."""
+    sub = "main.lua.d" if forma == FORMA_LUA else "wireplumber.conf.d"
+    return _raiz_da_config(config_home) / "wireplumber" / sub
+
+
+def wireplumber_nome_do_dropin(nome_conf: str, forma: str | None = None) -> str:
+    """O nome do drop-in na forma pedida (a de agora, se omitida).
+
+    O nome canônico é o do asset SPA-JSON (``51-….conf``); na forma Lua o mesmo
+    nome troca a extensão para ``.lua``. Aceita o nome em qualquer das duas.
+    """
+    forma = forma or wireplumber_forma()
+    base, _, ext = nome_conf.rpartition(".")
+    if ext not in ("conf", "lua"):
+        base = nome_conf
+    return f"{base}.lua" if forma == FORMA_LUA else f"{base}.conf"
+
+
+def wireplumber_dropin(nome_conf: str, config_home: Path | None = None) -> Path:
+    """Onde o drop-in ``nome_conf`` mora, na pasta e na forma que o WirePlumber lê."""
+    forma = wireplumber_forma()
+    return wireplumber_pasta_da_forma(forma, config_home) / wireplumber_nome_do_dropin(
+        nome_conf, forma
+    )
+
+
+def wireplumber_dropins_em_toda_forma(
+    nome_conf: str, config_home: Path | None = None
+) -> list[Path]:
+    """O mesmo drop-in nas DUAS formas: quem remove tira as duas.
+
+    Uma troca de WirePlumber (0.4 para 0.5, ou o contrário) deixa a forma velha
+    no disco, calada.
+    """
+    return [
+        wireplumber_pasta_da_forma(forma, config_home)
+        / wireplumber_nome_do_dropin(nome_conf, forma)
+        for forma in (FORMA_CONF, FORMA_LUA)
+    ]
+
+
 def wireplumber_config_dir(ensure: bool = False) -> Path:
     """Diretório dos drop-ins do WirePlumber — honra `XDG_CONFIG_HOME` (T-05,
-    ONDA0-Z7, 24/08/2026).
+    ONDA0-Z7, 24/08/2026), na forma que o WirePlumber instalado lê.
 
     O WirePlumber em si HONRA `XDG_CONFIG_HOME`; dois pontos do Hefesto
     escreviam/liam nele calados, incondicionalmente em `Path.home() /
@@ -104,10 +181,12 @@ def wireplumber_config_dir(ensure: bool = False) -> Path:
     Um dono só, chamado pelos dois — mesmo padrão de `${XDG_CONFIG_HOME:-
     $HOME/.config}` que os shells desta casa já resolvem
     (`scripts/disable_steam_input.sh:257`, `scripts/doctor.sh`).
+
+    A pasta é ``wireplumber.conf.d`` (0.5 em diante) ou ``main.lua.d`` (0.4):
+    ver :func:`wireplumber_forma`. O nome do arquivo nela é o de
+    :func:`wireplumber_nome_do_dropin`.
     """
-    base = os.environ.get("XDG_CONFIG_HOME", "").strip()
-    raiz = Path(base) if base else Path.home() / ".config"
-    p = raiz / "wireplumber" / "wireplumber.conf.d"
+    p = wireplumber_pasta_da_forma(wireplumber_forma())
     if ensure:
         p.mkdir(parents=True, exist_ok=True)
     return p
@@ -145,9 +224,12 @@ def mods_estado_path() -> Path:
 
 __all__ = [
     "FAKE_ENV_VAR",
+    "FORMA_CONF",
+    "FORMA_LUA",
     "IPC_SOCKET_DEFAULT_NAME",
     "IPC_SOCKET_ENV_VAR",
     "IPC_SOCKET_FAKE_NAME",
+    "WIREPLUMBER_SISTEMA_ENV_VAR",
     "cache_dir",
     "config_dir",
     "data_dir",
@@ -164,4 +246,9 @@ __all__ = [
     "runtime_dir",
     "state_dir",
     "wireplumber_config_dir",
+    "wireplumber_dropin",
+    "wireplumber_dropins_em_toda_forma",
+    "wireplumber_forma",
+    "wireplumber_nome_do_dropin",
+    "wireplumber_pasta_da_forma",
 ]

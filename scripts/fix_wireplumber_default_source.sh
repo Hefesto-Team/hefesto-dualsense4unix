@@ -90,16 +90,50 @@
 set -euo pipefail
 
 readonly ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-readonly DROPIN_NAME="51-hefesto-dualsense-no-default-source.conf"
+# AS REGRAS DO SOM VALEM NO WIREPLUMBER DA DISTRO (13/10/2026). O WirePlumber 0.5
+# lê SPA-JSON em `wireplumber.conf.d/`; o 0.4 (Ubuntu 24.04, Linux Mint 22,
+# Debian 12) lê Lua em `main.lua.d/` e IGNORA a pasta do 0.5 sem erro. A forma sai
+# da pergunta pela capacidade (a pasta `main.lua.d` na configuração de sistema do
+# WirePlumber instalado), não pela versão. É a MESMA pergunta de
+# `utils/xdg_paths.wireplumber_forma` — duplicação declarada (este script é shell
+# e roda sem o Python do produto), e `tests/unit/test_as_regras_do_som_valem_no_
+# wireplumber_da_distro.py` compara as duas. `HEFESTO_WIREPLUMBER_SISTEMA` (lista
+# separada por `:`) desvia as pastas de sistema, para o teste e para a bancada.
+_wp_forma() {
+    local raiz sistema="${HEFESTO_WIREPLUMBER_SISTEMA:-/usr/share/wireplumber:/etc/wireplumber}"
+    local IFS=:
+    for raiz in ${sistema}; do
+        [[ -n "${raiz}" && -d "${raiz}/main.lua.d" ]] && { printf 'lua'; return 0; }
+    done
+    printf 'conf'
+}
+readonly WP_FORMA="$(_wp_forma)"
+# Os nomes ficam por extenso nas duas formas (e não montados com `${WP_EXT}`): é o
+# que deixa o portão de artefatos de sistema e quem faz `grep` do nome enxergarem
+# o asset instalado.
+if [[ "${WP_FORMA}" == "lua" ]]; then
+    readonly WP_EXT="lua"
+    readonly WP_SUBPASTA="main.lua.d"
+    readonly DROPIN_NAME="51-hefesto-dualsense-no-default-source.lua"
+    readonly DROPIN_DISABLE_NAME="52-hefesto-dualsense-disable-source.lua"
+    readonly DROPIN_OUTPUT_NAME="53-hefesto-dualsense-disable-output.lua"
+    readonly DROPIN_ACORDADO_NAME="54-hefesto-dualsense-alto-falante-nunca-dorme.lua"
+else
+    readonly WP_EXT="conf"
+    readonly WP_SUBPASTA="wireplumber.conf.d"
+    readonly DROPIN_NAME="51-hefesto-dualsense-no-default-source.conf"
+    readonly DROPIN_DISABLE_NAME="52-hefesto-dualsense-disable-source.conf"
+    readonly DROPIN_OUTPUT_NAME="53-hefesto-dualsense-disable-output.conf"
+    readonly DROPIN_ACORDADO_NAME="54-hefesto-dualsense-alto-falante-nunca-dorme.conf"
+fi
+readonly WP_RAIZ_DE_USUARIO="${HOME}/.config/wireplumber"
 readonly DROPIN_SRC="${ROOT_DIR}/assets/wireplumber/${DROPIN_NAME}"
-readonly DROPIN_DIR="${HOME}/.config/wireplumber/wireplumber.conf.d"
+readonly DROPIN_DIR="${WP_RAIZ_DE_USUARIO}/${WP_SUBPASTA}"
 readonly DROPIN_DST="${DROPIN_DIR}/${DROPIN_NAME}"
-readonly DROPIN_DISABLE_NAME="52-hefesto-dualsense-disable-source.conf"
 readonly DROPIN_DISABLE_SRC="${ROOT_DIR}/assets/wireplumber/${DROPIN_DISABLE_NAME}"
 readonly DROPIN_DISABLE_DST="${DROPIN_DIR}/${DROPIN_DISABLE_NAME}"
 # FEAT-WIREPLUMBER-DISABLE-SOURCE-MODE-01 (reforço): 53 desabilita a SAÍDA do
 # DualSense, para o '.monitor' do sink não reaparecer como default-source.
-readonly DROPIN_OUTPUT_NAME="53-hefesto-dualsense-disable-output.conf"
 readonly DROPIN_OUTPUT_SRC="${ROOT_DIR}/assets/wireplumber/${DROPIN_OUTPUT_NAME}"
 readonly DROPIN_OUTPUT_DST="${DROPIN_DIR}/${DROPIN_OUTPUT_NAME}"
 # SOM-QUE-NAO-DORME-01 (16/08/2026): o 54 impede o WirePlumber de SUSPENDER o
@@ -107,7 +141,6 @@ readonly DROPIN_OUTPUT_DST="${DROPIN_DIR}/${DROPIN_OUTPUT_NAME}"
 # MICROFONE, este decide o SONO DO ALTO-FALANTE. Por isso ele entra em TODO
 # modo que escreve, inclusive quando a usuária pediu para não mexerem no mic
 # dela: sono de saída e eleição de entrada são perguntas diferentes.
-readonly DROPIN_ACORDADO_NAME="54-hefesto-dualsense-alto-falante-nunca-dorme.conf"
 readonly DROPIN_ACORDADO_SRC="${ROOT_DIR}/assets/wireplumber/${DROPIN_ACORDADO_NAME}"
 readonly DROPIN_ACORDADO_DST="${DROPIN_DIR}/${DROPIN_ACORDADO_NAME}"
 readonly STATE_FILE="${HOME}/.local/state/wireplumber/default-nodes"
@@ -175,6 +208,20 @@ for arg in "$@"; do
 done
 
 log() { printf '[wp-fix] %s\n' "$*"; }
+
+# Tira a OUTRA forma do drop-in `$1` (o caminho na forma de agora): uma troca de
+# WirePlumber (0.4 para 0.5, ou o contrário) deixa a forma velha no disco, calada,
+# e ela precisa sair junto com a nova. A forma de agora é de quem chama.
+_tira_a_outra_forma() {
+    local dst="$1" nome base
+    nome="$(basename "${dst}")"
+    base="${nome%.*}"
+    if [[ "${WP_EXT}" == "lua" ]]; then
+        rm -f "${WP_RAIZ_DE_USUARIO}/wireplumber.conf.d/${base}.conf"
+    else
+        rm -f "${WP_RAIZ_DE_USUARIO}/main.lua.d/${base}.lua"
+    fi
+}
 
 # FEAT-DUALSENSE-MIC-INTENDED-01: se a usuária declarou que QUER o mic do DualSense
 # (env HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED=1), suprimir o mic é o oposto do
@@ -396,6 +443,7 @@ install_dropin() {
     fi
     mkdir -p "${DROPIN_DIR}"
     cp -f "${DROPIN_SRC}" "${DROPIN_DST}"
+    _tira_a_outra_forma "${DROPIN_DST}"
     log "drop-in instalado: ${DROPIN_DST}"
 }
 
@@ -426,11 +474,13 @@ install_dropin_acordado() {
     fi
     if [[ -f "${DROPIN_ACORDADO_DST}" ]] \
         && cmp -s "${DROPIN_ACORDADO_SRC}" "${DROPIN_ACORDADO_DST}"; then
+        _tira_a_outra_forma "${DROPIN_ACORDADO_DST}"
         log "o alto-falante já está marcado para nunca dormir: ${DROPIN_ACORDADO_DST}"
         return 3
     fi
     mkdir -p "${DROPIN_DIR}"
     cp -f "${DROPIN_ACORDADO_SRC}" "${DROPIN_ACORDADO_DST}"
+    _tira_a_outra_forma "${DROPIN_ACORDADO_DST}"
     log "drop-in NUNCA-DORME instalado: ${DROPIN_ACORDADO_DST}"
     log "  o sink do controle para de ser suspenso; o primeiro som depois do"
     log "  silêncio sai inteiro (SOM-QUE-NAO-DORME-01)"
@@ -444,12 +494,14 @@ install_disable_dropin() {
     fi
     mkdir -p "${DROPIN_DIR}"
     cp -f "${DROPIN_DISABLE_SRC}" "${DROPIN_DISABLE_DST}"
+    _tira_a_outra_forma "${DROPIN_DISABLE_DST}"
     log "drop-in DISABLE instalado: ${DROPIN_DISABLE_DST}"
     # Reforço: desabilita também a SAÍDA do DualSense (53) — sem ela, o
     # '.monitor' do sink surround reaparece como default-source pós-reboot
     # (o "mic que voltou"). Best-effort.
     if [[ -f "${DROPIN_OUTPUT_SRC}" ]]; then
         cp -f "${DROPIN_OUTPUT_SRC}" "${DROPIN_OUTPUT_DST}"
+        _tira_a_outra_forma "${DROPIN_OUTPUT_DST}"
         log "drop-in DISABLE-OUTPUT instalado: ${DROPIN_OUTPUT_DST}"
         log "AVISO: o 53 desabilita também o SINK (saida) do DualSense — o"
         log "       alto-falante e o fone no jack do controle ficam MUDOS, e o"
@@ -823,12 +875,14 @@ _arma_dropins_do_mic() {
     # sempre: são eles que impedem o nó de existir. Idempotente.
     local f removed=0
     for f in "${DROPIN_DISABLE_DST}" "${DROPIN_OUTPUT_DST}"; do
+        _tira_a_outra_forma "$f"   # a forma que uma troca de WirePlumber deixou
         if [[ -f "$f" ]]; then
             rm -f "$f" && { log "removido drop-in de supressão: $f"; removed=1; }
         fi
     done
     [[ "$removed" -eq 0 ]] && log "nenhum drop-in de supressão presente (mic já livre)"
     if [[ "${modo}" == "sem-promotor" ]]; then
+        _tira_a_outra_forma "${DROPIN_DST}"
         if [[ -f "${DROPIN_DST}" ]]; then
             rm -f "${DROPIN_DST}" \
                 && log "removido o drop-in 51 (promoção explícita: a ausência dele é o sinal que o doctor lê)"

@@ -452,9 +452,11 @@ def check_wireplumber(dropin_dir: Path | None = None) -> tuple[str, str]:
         from hefesto_dualsense4unix.utils.xdg_paths import wireplumber_config_dir
 
         dropin_dir = wireplumber_config_dir()
+    from hefesto_dualsense4unix.utils.xdg_paths import wireplumber_nome_do_dropin
+
     names = [
-        "51-hefesto-dualsense-no-default-source.conf",
-        "52-hefesto-dualsense-disable-source.conf",
+        wireplumber_nome_do_dropin("51-hefesto-dualsense-no-default-source.conf"),
+        wireplumber_nome_do_dropin("52-hefesto-dualsense-disable-source.conf"),
     ]
     present = [n for n in names if (dropin_dir / n).is_file()]
     if present:

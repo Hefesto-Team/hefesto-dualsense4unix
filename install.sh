@@ -1500,14 +1500,14 @@ _ensaio_snd_quirk() {
 _ensaio_wireplumber() {
     case "$1" in
         nunca-dorme)
-            _faria "instalar o drop-in 54-hefesto-dualsense-alto-falante-nunca-dorme.conf em ${HOME}/.config/wireplumber/wireplumber.conf.d/"
+            _faria "instalar o drop-in 54-hefesto-dualsense-alto-falante-nunca-dorme em ${HOME}/.config/wireplumber/ (wireplumber.conf.d/ no WirePlumber 0.5, main.lua.d/ no 0.4)"
             ;;
         install)
-            _faria "instalar o drop-in 51-hefesto-dualsense-no-default-source.conf em ${HOME}/.config/wireplumber/wireplumber.conf.d/ (rebaixa o microfone do controle)"
+            _faria "instalar o drop-in 51-hefesto-dualsense-no-default-source em ${HOME}/.config/wireplumber/ (wireplumber.conf.d/ no WirePlumber 0.5, main.lua.d/ no 0.4; rebaixa o microfone do controle)"
             _faria "eleger outra fonte de captura como padrão do sistema, se houver uma de verdade"
             ;;
         disable-source)
-            _faria "instalar os drop-ins 52- e 53- em ${HOME}/.config/wireplumber/wireplumber.conf.d/ (desabilitam a entrada e a saída do controle — ele vira só-HID)"
+            _faria "instalar os drop-ins 52- e 53- em ${HOME}/.config/wireplumber/ (wireplumber.conf.d/ no WirePlumber 0.5, main.lua.d/ no 0.4; desabilitam a entrada e a saída do controle — ele vira só-HID)"
             ;;
         marcar-gesto)
             _faria "gravar a marca do gesto em ${HOME}/.local/state/hefesto-dualsense4unix/mic-do-dualsense-pedido.conf"

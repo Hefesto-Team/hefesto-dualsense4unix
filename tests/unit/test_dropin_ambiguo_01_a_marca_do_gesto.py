@@ -96,8 +96,14 @@ class Maquina:
         return self
 
     def _env(self, extra: dict[str, str] | None = None) -> dict[str, str]:
+        # `wpctl` mudo na frente: o doctor pergunta ao WirePlumber se ele LEU a
+        # regra, e esta régua não pode ler o servidor de som de quem a roda.
+        mudo = self.home.parent / "wpctl-mudo"
+        mudo.mkdir(exist_ok=True)
+        (mudo / "wpctl").write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+        (mudo / "wpctl").chmod(0o755)
         env = {
-            "PATH": "/usr/bin:/bin",
+            "PATH": f"{mudo}:/usr/bin:/bin",
             "HOME": str(self.home),
             "XDG_STATE_HOME": str(self.state),
             "DOCTOR_SH": str(DOCTOR),

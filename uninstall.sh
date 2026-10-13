@@ -773,6 +773,29 @@ if [[ "${_wp_do_xdg}" != "${HOME}/.config/wireplumber/wireplumber.conf.d" ]]; th
     done
 fi
 
+# AS REGRAS DO SOM VALEM NO WIREPLUMBER DA DISTRO (13/10/2026): no WirePlumber 0.4
+# (Ubuntu 24.04, Mint 22, Debian 12) os mesmos quatro drop-ins moram em
+# `main.lua.d/`, em Lua. Saem do lar e do XDG_CONFIG_HOME, com a mesma exceção do
+# 51 marcado como «recriado manualmente». Uma troca de WirePlumber entre o
+# install e o uninstall deixa a outra forma no disco; as duas saem.
+for _wp_raiz in "${HOME}/.config" "${XDG_CONFIG_HOME:-${HOME}/.config}"; do
+    for _wp in 51-hefesto-dualsense-no-default-source.lua \
+               52-hefesto-dualsense-disable-source.lua \
+               53-hefesto-dualsense-disable-output.lua \
+               54-hefesto-dualsense-alto-falante-nunca-dorme.lua; do
+        [[ -f "${_wp_raiz}/wireplumber/main.lua.d/${_wp}" ]] || continue
+        _cabecalho="$(head -5 "${_wp_raiz}/wireplumber/main.lua.d/${_wp}" 2>/dev/null || true)"
+        if [[ "${_wp}" == 51-* ]] \
+                && grep -qiE 'recriado manualmente|workaround|standalone' <<<"${_cabecalho}"; then
+            log "preservando drop-in WirePlumber (marker 'recriado manualmente' no header): ${_wp_raiz}/wireplumber/main.lua.d/${_wp}"
+            continue
+        fi
+        log "removendo drop-in WirePlumber (Lua): ${_wp_raiz}/wireplumber/main.lua.d/${_wp}"
+        rm -f "${_wp_raiz}/wireplumber/main.lua.d/${_wp}"
+        systemctl --user restart wireplumber >/dev/null 2>&1 || true
+    done
+done
+
 # OS-NOS-DE-SOM-SEM-O-ENDERECO-NO-NOME-01: o WirePlumber lembra pelo NOME a
 # escolha de fonte e de saída (`default-nodes`) e o volume de cada fluxo
 # (`stream-properties`), e nunca esquece uma chave. Saem só as linhas com nome

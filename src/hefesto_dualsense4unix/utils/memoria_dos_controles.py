@@ -1684,8 +1684,12 @@ def _rastros_do_lar(raizes: Raizes) -> list[Rastro]:
                     rastros.append(Rastro(str(achado), "a casa do Flatpak do Hefesto"))
                 continue
             rastros.append(Rastro(str(achado), o_que))
-    wp = raizes.config / "wireplumber/wireplumber.conf.d"
-    if wp.is_dir():
+    # As duas formas: SPA-JSON (WirePlumber 0.5 em diante) e Lua (0.4). Uma troca
+    # de versão do WirePlumber deixa a forma velha no disco, e o rastro da forma velha também conta.
+    for sub_wp in ("wireplumber.conf.d", "main.lua.d"):
+        wp = raizes.config / "wireplumber" / sub_wp
+        if not wp.is_dir():
+            continue
         for achado in sorted(wp.glob("*hefesto*")):
             try:
                 marcado = "recriado manualmente" in achado.read_text(

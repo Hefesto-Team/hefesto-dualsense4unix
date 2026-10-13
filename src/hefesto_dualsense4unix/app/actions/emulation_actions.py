@@ -199,10 +199,15 @@ class EmulationActionsMixin(WidgetAccessMixin):
 
     def _mic_state(self) -> str:
         """O que os drop-ins do WirePlumber dizem sobre o mic, em quatro estados."""
+        from hefesto_dualsense4unix.utils.xdg_paths import wireplumber_nome_do_dropin
+
         dropins = self._wp_dropin_dir()
-        if any((dropins / name).exists() for name in self._WP_DISABLE_DROPINS):
+        if any(
+            (dropins / wireplumber_nome_do_dropin(name)).exists()
+            for name in self._WP_DISABLE_DROPINS
+        ):
             return self.MIC_SUPRIMIDO
-        if not (dropins / self._WP_PROMOTER_DROPIN).exists():
+        if not (dropins / wireplumber_nome_do_dropin(self._WP_PROMOTER_DROPIN)).exists():
             return self.MIC_SEM_PROMOTOR
         if self._placas_de_microfone() == 0:
             return self.MIC_SEM_ALVO

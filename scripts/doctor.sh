@@ -1506,7 +1506,7 @@ check_wireplumber_source() {
     # Continua ALARMANDO no caso que o check foi criado para pegar: promotor
     # ausente e o DualSense virando padrão sozinho, que é o mic dela sequestrado
     # sem ninguém pedir.
-    if [[ -f "${HOME}/.config/wireplumber/wireplumber.conf.d/51-hefesto-dualsense-no-default-source.conf" ]]; then
+    if [[ -f "$(_wp_dropin 51-hefesto-dualsense-no-default-source.conf)" ]]; then
         pass "microfone ativo é o DualSense (o promotor está instalado — foi pedido)"
         return
     fi
@@ -1589,12 +1589,11 @@ _marca_do_gesto_do_mic() {
 # controle fica mexendo no microfone") e faria `check_wireplumber_source`
 # REPROVAR a máquina que acabamos de curar.
 _prefere_mic_do_dualsense() {
-    local conf="${HOME}/.config/wireplumber/wireplumber.conf.d"
     # 1. Quem DESLIGOU de propósito vem antes de tudo: o drop-in 52
     #    (`--disable-source` / `install --with-wireplumber-disable-mic`) é a
     #    escolha explícita de "o controle é só-HID". Mesmo precedente do
     #    `check_dualsense_sink_disabled` e do passo 10 do install.
-    [[ -f "${conf}/52-hefesto-dualsense-disable-source.conf" ]] && return 1
+    [[ -f "$(_wp_dropin 52-hefesto-dualsense-disable-source.conf)" ]] && return 1
     # 2. Opt-in explícito da usuária — a MESMA variável que
     #    check_wireplumber_source, check_usb_audio_off e system_check.py
     #    (_dualsense_mic_intended) já honram.
@@ -1603,7 +1602,7 @@ _prefere_mic_do_dualsense() {
     esac
     # 3. O drop-in 51 é a política DEFAULT do install: rebaixar. Enquanto ele
     #    estiver no lugar, o controle é a ÚLTIMA opção — não a primeira.
-    [[ -f "${conf}/51-hefesto-dualsense-no-default-source.conf" ]] && return 1
+    [[ -f "$(_wp_dropin 51-hefesto-dualsense-no-default-source.conf)" ]] && return 1
     # 4. A MARCA DO GESTO (DROPIN-AMBIGUO-01, curado em 26/08/2026). Sem o 51,
     #    é ELA quem diz que a promoção foi pedida — e ela existe porque quem
     #    pediu deixou o gesto gravado, não porque um arquivo faltou.
@@ -1714,8 +1713,61 @@ _pactl_json() {
     LC_ALL=C pactl --format=json list "$1" 2>/dev/null || true
 }
 
+# AS REGRAS DO SOM VALEM NO WIREPLUMBER DA DISTRO (13/10/2026). O WirePlumber 0.5
+# lê SPA-JSON em `wireplumber.conf.d/`; o 0.4 (Ubuntu 24.04, Mint 22, Debian 12)
+# lê Lua em `main.lua.d/` e ignora a pasta do 0.5 sem erro. A forma sai da
+# pergunta pela capacidade (a pasta `main.lua.d` na configuração de sistema do
+# WirePlumber instalado), a MESMA de `utils/xdg_paths.wireplumber_forma` e de
+# `scripts/fix_wireplumber_default_source.sh:_wp_forma`; o teste compara as três.
+# `HEFESTO_WIREPLUMBER_SISTEMA` (lista separada por `:`) desvia as pastas de
+# sistema, para o teste e para a bancada.
+_wp_forma() {
+    local raiz sistema="${HEFESTO_WIREPLUMBER_SISTEMA:-/usr/share/wireplumber:/etc/wireplumber}"
+    local IFS=:
+    for raiz in ${sistema}; do
+        [[ -n "${raiz}" && -d "${raiz}/main.lua.d" ]] && { printf 'lua'; return 0; }
+    done
+    printf 'conf'
+}
+# A pasta dos drop-ins do usuário na forma que o WirePlumber de agora lê.
+_wp_dropin_dir() {
+    if [[ "$(_wp_forma)" == "lua" ]]; then
+        printf '%s' "${HOME}/.config/wireplumber/main.lua.d"
+    else
+        printf '%s' "${HOME}/.config/wireplumber/wireplumber.conf.d"
+    fi
+}
+# O caminho do drop-in `$1` (o nome canônico, o do asset SPA-JSON: `51-….conf`) na
+# forma de agora: no 0.4 o mesmo nome troca a extensão para `.lua`.
+_wp_dropin() {
+    local nome="${1%.conf}" ext=conf
+    [[ "$(_wp_forma)" == "lua" ]] && ext=lua
+    printf '%s/%s.%s' "$(_wp_dropin_dir)" "${nome}" "${ext}"
+}
+# Perguntar ao WirePlumber se ele LEU a regra: o nó do controle no
+# `wpctl inspect` mostra a propriedade que a regra põe. Arquivo no lugar certo
+# não prova isso (o 0.4 ignora a pasta errada sem erro, e o doctor dava verde).
+#   $1 = a propriedade; $2 = o valor; $3 = o prefixo do node.name (alsa_input|alsa_output)
+# rc 0 = o nó tem a propriedade; 1 = o nó existe e NÃO a tem; 2 = sem como medir
+# (sem `wpctl`, ou sem o controle no cabo: não há nó para perguntar).
+_wireplumber_leu_a_regra() {
+    local prop="$1" valor="$2" prefixo="$3" id texto achou_no=0
+    command -v wpctl >/dev/null 2>&1 || return 2
+    local ids
+    ids="$(timeout 5 wpctl status 2>/dev/null | grep -i dualsense | grep -oE '[0-9]+\.' | tr -d '.' | sort -un)" || ids=""
+    [[ -n "${ids}" ]] || return 2
+    for id in ${ids}; do
+        texto="$(timeout 5 wpctl inspect "${id}" 2>/dev/null)" || continue
+        grep -qiE "node\.name = \"${prefixo}[^\"]*dualsense" <<<"${texto}" || continue
+        achou_no=1
+        grep -qE "${prop//./\\.}[[:space:]]*=[[:space:]]*\"?${valor}\"?[[:space:]]*$" <<<"${texto}" && return 0
+    done
+    [[ "${achou_no}" -eq 1 ]] && return 1
+    return 2
+}
+
 # MIC-PADRAO-NO-CABO-01 §D.7 (decisão de produto): 0 = o alvo `$1` é o DualSense só por falta de outra entrada (`$2` = prefere 0) com o 51 no lugar; o WirePlumber o elege sozinho acima de qualquer monitor, e gravado ele venceria a webcam plugada depois (reproduzido com dublês, não medido no aparelho).
-_dualsense_por_falta_com_o_51() { [[ "${2:-0}" -eq 0 && "${1,,}" == *dualsense* && -f "${HOME}/.config/wireplumber/wireplumber.conf.d/51-hefesto-dualsense-no-default-source.conf" ]]; }
+_dualsense_por_falta_com_o_51() { [[ "${2:-0}" -eq 0 && "${1,,}" == *dualsense* && -f "$(_wp_dropin 51-hefesto-dualsense-no-default-source.conf)" ]]; }
 
 check_default_source_monitor() {
     command -v pactl >/dev/null 2>&1 || { info "pactl ausente — não checo a fonte de captura padrão"; return; }
@@ -1873,13 +1925,19 @@ fix_default_source_monitor() {
 # PROVISÓRIO — decisão de produto: as três frases desta função são texto novo de
 # tela (LEVA-1-D, 26/08/2026).
 check_dropin_do_mic_armado() {
-    local conf="${HOME}/.config/wireplumber/wireplumber.conf.d"
     local marca; marca="$(_marca_do_gesto_do_mic)"
-    if [[ -f "${conf}/52-hefesto-dualsense-disable-source.conf" ]]; then
+    if [[ -f "$(_wp_dropin 52-hefesto-dualsense-disable-source.conf)" ]]; then
         info "microfone do DualSense desligado de propósito (drop-in 52) — não há política de eleição a armar"
         return
     fi
-    if [[ -f "${conf}/51-hefesto-dualsense-no-default-source.conf" ]]; then
+    if [[ -f "$(_wp_dropin 51-hefesto-dualsense-no-default-source.conf)" ]]; then
+        # O arquivo no lugar não prova que o WirePlumber o leu: com o controle
+        # no cabo, o nó de captura dele mostra o `priority.session` que o 51 põe.
+        local leu=0; _wireplumber_leu_a_regra priority.session 1500 alsa_input || leu=$?
+        if [[ "${leu}" -eq 1 ]]; then
+            warn "o drop-in 51 está em $(_wp_dropin_dir), mas o WirePlumber não leu a regra (o nó de captura do controle está sem priority.session = 1500) — o controle pode virar o microfone padrão sozinho: $(conselho_de_instalacao)$(so_no_checkout "(só ele: bash scripts/fix_wireplumber_default_source.sh --install)")"
+            return
+        fi
         pass "a política de microfone do install está armada (drop-in 51 no lugar)"
         return
     fi
@@ -1909,8 +1967,8 @@ check_dropin_do_mic_armado() {
 # disco, então vale sem controle na mesa. Só o CABO depende dele: pelo rádio
 # não há placa ALSA, e o som vai pela ponte do Hefesto.
 check_dropin_do_alto_falante_acordado() {
-    local nome=54-hefesto-dualsense-alto-falante-nunca-dorme.conf
-    local posto="${HOME}/.config/wireplumber/wireplumber.conf.d/${nome}"
+    local posto; posto="$(_wp_dropin 54-hefesto-dualsense-alto-falante-nunca-dorme.conf)"
+    local nome; nome="$(basename "${posto}")"
     local fonte="${ROOT_DIR}/assets/wireplumber/${nome}"
     if [[ ! -f "${posto}" ]]; then
         warn "o alto-falante do controle pode dormir no cabo (falta ${posto}) — o começo de cada som depois de um silêncio se perde: $(conselho_de_instalacao)$(so_no_checkout "(só ele: bash scripts/fix_wireplumber_default_source.sh --nunca-dorme)")"
@@ -1920,11 +1978,16 @@ check_dropin_do_alto_falante_acordado() {
         warn "o drop-in ${nome} é de outra versão — $(conselho_de_instalacao)$(so_no_checkout "(só ele: bash scripts/fix_wireplumber_default_source.sh --nunca-dorme)")"
         return
     fi
+    local leu=0; _wireplumber_leu_a_regra session.suspend-timeout-seconds 0 alsa_output || leu=$?
+    if [[ "${leu}" -eq 1 ]]; then
+        warn "o drop-in 54 está em $(_wp_dropin_dir), mas o WirePlumber não leu a regra (o nó de saída do controle está sem session.suspend-timeout-seconds = 0) — o alto-falante pode dormir e o começo de cada som se perde: $(conselho_de_instalacao)$(so_no_checkout "(só ele: bash scripts/fix_wireplumber_default_source.sh --nunca-dorme)")"
+        return
+    fi
     pass "o alto-falante do controle não dorme no cabo (drop-in 54 no lugar)"
 }
 
 check_dualsense_sink_disabled() {
-    local d="${HOME}/.config/wireplumber/wireplumber.conf.d/53-hefesto-dualsense-disable-output.conf"
+    local d; d="$(_wp_dropin 53-hefesto-dualsense-disable-output.conf)"
     if [[ -f "${d}" ]]; then
         warn "saída de áudio do DualSense DESLIGADA (drop-in 53) — alto-falante/fone do controle mudos e canal de haptic-de-áudio off. Se não foi intencional: fix_wireplumber_default_source.sh --enable-mic + systemctl --user restart wireplumber"
     else

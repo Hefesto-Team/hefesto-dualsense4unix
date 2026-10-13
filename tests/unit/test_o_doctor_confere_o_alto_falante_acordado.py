@@ -14,9 +14,15 @@ ASSET = RAIZ / "assets" / "wireplumber" / NOME
 
 
 def _doctor(casa: Path) -> str:
+    # `wpctl` mudo na frente: o doctor pergunta ao WirePlumber se ele LEU a regra,
+    # e esta régua não pode ler o servidor de som de quem a roda.
+    mudo = casa.parent / f"{casa.name}-wpctl-mudo"
+    mudo.mkdir(exist_ok=True)
+    (mudo / "wpctl").write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    (mudo / "wpctl").chmod(0o755)
     r = subprocess.run(
         [BASH, "-c", f'source "{DOCTOR}"; check_dropin_do_alto_falante_acordado'],
-        env={"PATH": "/usr/bin:/bin", "HOME": str(casa)},
+        env={"PATH": f"{mudo}:/usr/bin:/bin", "HOME": str(casa)},
         capture_output=True,
         text=True,
         timeout=30,
@@ -51,7 +57,7 @@ def test_com_o_de_outra_versao_avisa(tmp_path: Path) -> None:
 def test_o_nome_e_o_do_asset_e_o_main_pergunta() -> None:
     texto = DOCTOR.read_text(encoding="utf-8")
     assert ASSET.is_file(), "o asset do drop-in 54 mudou de nome — o doctor procuraria outro"
-    assert f"local nome={NOME}" in texto
+    assert f"_wp_dropin {NOME})" in texto
     assert "\n    check_dropin_do_alto_falante_acordado\n" in texto, (
         "o main do doctor não chama a conferência do drop-in 54"
     )
