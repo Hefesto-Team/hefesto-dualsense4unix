@@ -108,6 +108,10 @@ RAIZ_HIDRAW = "/sys/class/hidraw"
 
 PONTE_INSTALADA = "/usr/local/lib/hefesto-dualsense4unix/bt_ponte_privilegiada.sh"
 
+#: onde o instalador grava a regra da ponte (``49-hefesto-bt-ponte``). O
+#: arquivo é 0440 de root, então a firma lê a pasta, que muda quando ele entra.
+PASTA_DA_REGRA = "/etc/sudoers.d"
+
 _FORMA_MAC = re.compile(r"^[0-9a-f]{2}(:[0-9a-f]{2}){5}$")
 
 _FORMA_HCI = re.compile(r"^hci[0-9]+$")
@@ -362,22 +366,20 @@ class PontePrivilegiada:
 
     caminho: str = PONTE_INSTALADA
     executor: object = None
+    pasta_da_regra: str = PASTA_DA_REGRA
 
     def impedimentos(self) -> list[str]:
         """Por que esta porta não pode ser usada agora. Vazio = pode."""
         return self.impedimentos_do_pedido(pedido_a_ponte("desconectar", caminho=self.caminho))
 
-    def firma(self) -> tuple[int, int] | None:
-        """``(st_ino, st_ctime_ns)`` da ponte instalada, ou ``None`` sem ela.
+    def firma(self) -> tuple[int, int, int, int]:
+        """A firma da ponte instalada e a da pasta da regra do sudoers.
 
-        O instalador regrava a ponte no mesmo passo em que grava a regra do
-        sudoers; a firma nova é o sinal de que vale perguntar de novo.
+        O instalador grava a ponte e, depois do ``visudo -c``, a regra: são dois
+        passos. Com a firma só da ponte, a volta que caísse entre eles guardava
+        «sem a regra» com a firma nova e não perguntava mais no episódio.
         """
-        try:
-            estado = os.stat(self.caminho)
-        except OSError:
-            return None
-        return estado.st_ino, estado.st_ctime_ns
+        return _firma_do_caminho(self.caminho) + _firma_do_caminho(self.pasta_da_regra)
 
     def impedimentos_do_pedido(self, *pedidos: PedidoAPonte) -> list[str]:
         """Os impedimentos, com a sonda de CADA pedido perguntada à regra."""
@@ -438,6 +440,15 @@ class PontePrivilegiada:
         if resultado.returncode == 0:
             return True, ""
         return False, (resultado.stderr or "").strip() or f"a ponte saiu com {resultado.returncode}"
+
+
+def _firma_do_caminho(caminho: str) -> tuple[int, int]:
+    """``(st_ino, st_ctime_ns)``; sem o arquivo, ``(0, errno)``: a ausência também é firma."""
+    try:
+        estado = os.stat(caminho)
+    except OSError as erro:
+        return 0, erro.errno or 0
+    return estado.st_ino, estado.st_ctime_ns
 
 
 @dataclass

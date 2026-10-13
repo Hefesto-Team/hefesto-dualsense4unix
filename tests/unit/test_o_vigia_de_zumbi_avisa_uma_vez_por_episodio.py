@@ -188,17 +188,62 @@ def test_a_ponte_que_falha_tenta_toda_volta_e_avisa_por_motivo(diario: Path) -> 
 
 
 def test_a_firma_da_ponte_e_o_inode_e_o_ctime(tmp_path: Path) -> None:
-    """A firma muda quando o instalador regrava a ponte, e some com ela."""
+    """A firma muda quando o instalador grava ou regrava a ponte."""
     alvo = tmp_path / "bt_ponte_privilegiada.sh"
-    ponte = PontePrivilegiada(caminho=str(alvo))
-    assert ponte.firma() is None
+    pasta = tmp_path / "sudoers.d"
+    pasta.mkdir()
+    ponte = PontePrivilegiada(caminho=str(alvo), pasta_da_regra=str(pasta))
+    ausente = ponte.firma()
     alvo.write_text("#!/bin/bash\n", encoding="utf-8")
     primeira = ponte.firma()
-    assert primeira is not None
+    assert primeira != ausente
     novo = tmp_path / "novo.sh"
     novo.write_text("#!/bin/bash\n# regravada\n", encoding="utf-8")
     novo.replace(alvo)
-    assert ponte.firma() not in (None, primeira)
+    assert ponte.firma() not in (ausente, primeira)
+
+
+class PonteDaMaquina(PontePrivilegiada):
+    """Responde como a de verdade: sem a regra na pasta, o ``sudo -n`` pede senha."""
+
+    perguntas = 0
+
+    def impedimentos(self) -> list[str]:
+        self.perguntas += 1
+        motivos: list[str] = []
+        if not Path(self.caminho).exists():
+            motivos.append("a ponte privilegiada não está instalada")
+        if not (Path(self.pasta_da_regra) / "49-hefesto-bt-ponte").exists():
+            motivos.append("o sudo sem senha para a ponte não está no lugar")
+        return motivos
+
+    def desconectar(self, link: LinkDeRadio) -> tuple[bool, str]:
+        return True, ""
+
+
+def test_o_install_em_dois_passos_nao_prende_a_resposta_velha(
+    tmp_path: Path, diario: Path
+) -> None:
+    """A volta que cai entre a ponte e a regra não prende o «sem a regra» no episódio.
+
+    O instalador grava a ponte e só depois do ``visudo -c`` grava a regra
+    (``install_bt_ponte_privilegiada_host``). A firma lê as duas pontas.
+    """
+    pasta = tmp_path / "sudoers.d"
+    pasta.mkdir()
+    alvo = tmp_path / "bt_ponte_privilegiada.sh"
+    ponte = PonteDaMaquina(caminho=str(alvo), pasta_da_regra=str(pasta))
+    vigia = VigiaDeZumbis(ponte=ponte, segundos_para_zumbi=0.0)
+    subsystem = ConexoesSubsystem(vigia=vigia, olhador=Mesa())
+    assert subsystem.uma_volta(100.0).impedimentos
+    alvo.write_text("#!/bin/bash\n", encoding="utf-8")
+    assert subsystem.uma_volta(105.0).impedimentos
+    (pasta / "49-hefesto-bt-ponte").write_text("regra\n", encoding="utf-8")
+    veredito = subsystem.uma_volta(110.0)
+    assert veredito.derrubados == (LINK_ZUMBI,), (
+        f"a regra entrou e o vigia seguiu com a resposta velha: {veredito.impedimentos}"
+    )
+    assert ponte.perguntas == 3
 
 
 def test_a_ponte_com_trava_repassa_a_firma_da_interna(tmp_path: Path) -> None:

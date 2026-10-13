@@ -49,8 +49,8 @@ class PonteComTrava(PontePrivilegiada):
         """Os da ponte de verdade: a trava não impede, só põe em fila."""
         return self.interna.impedimentos()
 
-    def firma(self) -> tuple[int, int] | None:
-        """A firma da ponte de verdade, que é a que o instalador regrava."""
+    def firma(self) -> tuple[int, int, int, int]:
+        """A firma da ponte de verdade e da pasta da regra, que o instalador regrava."""
         return self.interna.firma()
 
     def desconectar(self, link: LinkDeRadio) -> tuple[bool, str]:
