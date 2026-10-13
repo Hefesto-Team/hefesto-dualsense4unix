@@ -154,7 +154,11 @@ def test_o_episodio_novo_pergunta_de_novo_uma_vez(diario: Path) -> None:
 
 
 def test_o_segurado_pelo_teto_avisa_uma_vez(diario: Path) -> None:
-    """Item 4: doze voltas seguradas pelo teto, um aviso."""
+    """Item 4: doze voltas seguradas pelo teto, um aviso.
+
+    A derrubada fecha o episódio: o link que volta abre outro, e a ponte é
+    perguntada uma vez a mais, não uma por volta.
+    """
     ponte = PonteQueConta()
     subsystem = _subsystem(ponte, Mesa(), janela_do_teto_s=600.0)
     primeiro = subsystem.uma_volta(100.0)
@@ -164,6 +168,7 @@ def test_o_segurado_pelo_teto_avisa_uma_vez(diario: Path) -> None:
             veredito = subsystem.uma_volta(100.0 + volta * INTERVALO)
             assert veredito.segurados_pelo_teto == (LINK_ZUMBI,)
     assert len(ponte.pedidos) == 1
+    assert ponte.perguntas == 2, f"o sudo foi perguntado {ponte.perguntas} vezes"
     assert len(_avisos(registros)) == 1, _avisos(registros)
 
 
