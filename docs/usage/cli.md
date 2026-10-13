@@ -61,7 +61,7 @@ parado.
 ```bash
 hefesto-dualsense4unix profile list
 hefesto-dualsense4unix profile show <nome>
-hefesto-dualsense4unix profile create <nome> [--match-class X] [--match-exe X] [--match-regex …] [--priority N] [--fallback]
+hefesto-dualsense4unix profile create <nome> [--match-class X] [--match-exe X] [--match-regex …] [--priority N] [--fallback]   # perfil enxuto: gatilho, luz e vibração herdam o computador
 hefesto-dualsense4unix profile create <nome> --manual      # só entra pela janela ou pelo activate
 hefesto-dualsense4unix profile delete <nome> --yes
 hefesto-dualsense4unix profile activate <nome>

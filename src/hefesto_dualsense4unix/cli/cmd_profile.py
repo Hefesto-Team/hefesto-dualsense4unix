@@ -31,14 +31,11 @@ from hefesto_dualsense4unix.profiles.loader import (
     save_profile,
 )
 from hefesto_dualsense4unix.profiles.schema import (
-    LedsConfig,
     Match,
     MatchAny,
     MatchCriteria,
     MatchManual,
     Profile,
-    TriggerConfig,
-    TriggersConfig,
 )
 from hefesto_dualsense4unix.profiles.slug import find_by_slug, slugify
 from hefesto_dualsense4unix.utils import identidade
@@ -166,7 +163,7 @@ def cmd_create(
         False, "--force", help="Sobrescreve o perfil que já ocupa o mesmo arquivo."
     ),
 ) -> None:
-    """Cria um perfil mínimo (triggers Off, leds apagados). Edite o JSON depois."""
+    """Cria um perfil enxuto: só nome, alvo e prioridade; o resto herda o computador."""
     _guarda_slug(name, force=force)
     match: Match
     if fallback:
@@ -181,17 +178,8 @@ def cmd_create(
             process_name=match_exe or [],
         )
 
-    profile = Profile(
-        name=name,
-        match=match,
-        priority=priority,
-        triggers=TriggersConfig(
-            left=TriggerConfig(mode="Off"),
-            right=TriggerConfig(mode="Off"),
-        ),
-        leds=LedsConfig(lightbar=(0, 0, 0)),
-    )
-    path = save_profile(profile)
+    profile = Profile(name=name, match=match, priority=priority)
+    path = save_profile(profile, enxuto=True)
     console.print(f"[green]perfil criado: {path}[/green]")
     if isinstance(match, MatchCriteria) and profile.e_catch_all:
         console.print(

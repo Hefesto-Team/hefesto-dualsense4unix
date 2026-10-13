@@ -2105,14 +2105,21 @@ def _bytes_do_payload(payload: object) -> bytes:
     return (json.dumps(payload, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
 
 
-def save_profile(profile: Profile, *, origem: str | None = None) -> Path:
+def save_profile(
+    profile: Profile, *, origem: str | None = None, enxuto: bool = False
+) -> Path:
     """Grava perfil em `<slugify(profile.name)>.json` de forma atômica.
 
     Não arquiva a versão de antes quando ela é BYTE A BYTE a que vai para o
     disco: a gravação que não mudou nada não gasta as vagas do histórico.
+
+    ``enxuto=True`` grava só nome, alvo e prioridade (a forma do perfil de jogo
+    semeado): o que o perfil não diz, herda do padrão do computador.
     """
     path = _profile_path(profile)
-    payload = _payload_do_perfil(profile)
+    payload = (
+        _payload_do_perfil_de_jogo(profile) if enxuto else _payload_do_perfil(profile)
+    )
     novos = _bytes_do_payload(payload)
     with FileLock(str(_lock_path(path))):
         anterior = _bytes_se_existe(path)

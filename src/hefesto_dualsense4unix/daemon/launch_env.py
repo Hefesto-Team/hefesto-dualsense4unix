@@ -1158,7 +1158,9 @@ def _snapshot(daemon: DaemonProtocol) -> tuple[bool, bool, str, list[str], int]:
     return native, enabled, flavor, backends, _fisicos_na_mesa(daemon)
 
 
-AssinaturaDaMesa = tuple[bool, bool, str, tuple[str, ...], int, bool]
+SeloDosPerfis = tuple[tuple[str, int, int], ...]
+
+AssinaturaDaMesa = tuple[bool, bool, str, tuple[str, ...], int, bool, SeloDosPerfis]
 
 
 def _o_freestyle_na_assinatura(daemon: Any) -> bool:
@@ -1168,13 +1170,48 @@ def _o_freestyle_na_assinatura(daemon: Any) -> bool:
     return o_freestyle_manda(getattr(daemon, "store", None))
 
 
+def selo_dos_perfis() -> SeloDosPerfis:
+    """``(nome, mtime_ns, tamanho)`` de cada ``*.json`` da pasta de perfis, em ordem.
+
+    A env de lançamento depende da LISTA de perfis (`_steam_profiles`,
+    `_nativos_fora_da_antecipacao`); quem grava, apaga ou semeia um perfil fora da
+    janela (linha de comando, JSON à mão, a semeadura do serviço) muda este selo, e
+    o vigia da mesa enxerga. Pasta ilegível = selo vazio, nunca erro.
+    """
+    from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
+
+    selo: list[tuple[str, int, int]] = []
+    try:
+        for entrada in sorted(profiles_dir().glob("*.json")):
+            try:
+                st = entrada.stat()
+            except OSError:
+                continue
+            selo.append((entrada.name, st.st_mtime_ns, st.st_size))
+    except OSError:
+        return ()
+    return tuple(selo)
+
+
+def a_assinatura(
+    daemon: Any,
+    native: bool,
+    enabled: bool,
+    flavor: str,
+    backends: Sequence[str],
+    fisicos: int,
+) -> AssinaturaDaMesa:
+    """A forma única da assinatura: o vigia e o recibo da foto leem a MESMA conta."""
+    return (
+        native, enabled, flavor, tuple(backends), fisicos,
+        _o_freestyle_na_assinatura(daemon), selo_dos_perfis(),
+    )
+
+
 def _assinatura_da_mesa(daemon: DaemonProtocol) -> AssinaturaDaMesa:
     """O estado que decide a env, em forma comparável (hashable)."""
     native, enabled, flavor, backends, fisicos = _snapshot(daemon)
-    return (
-        native, enabled, flavor, tuple(backends), fisicos,
-        _o_freestyle_na_assinatura(daemon),
-    )
+    return a_assinatura(daemon, native, enabled, flavor, backends, fisicos)
 
 
 def armar_rematerializacao(
@@ -1888,10 +1925,7 @@ def _foto_do_lancamento(daemon: DaemonProtocol, *, no_fio: bool) -> _FotoDoLanca
     from hefesto_dualsense4unix.profiles.manager import o_freestyle_manda
 
     freestyle_ligado = o_freestyle_manda(getattr(daemon, "store", None))
-    recibo = (
-        native, enabled, flavor, tuple(backends), fisicos,
-        _o_freestyle_na_assinatura(daemon),
-    )
+    recibo = a_assinatura(daemon, native, enabled, flavor, backends, fisicos)
 
     ordem = next(_ORDEM_DAS_FOTOS)
 
