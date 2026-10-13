@@ -4013,7 +4013,7 @@ class IpcHandlersMixin:
 
         BROADCAST-PROIBIDO-01 (24/08/2026): o alvo escolhido no seletor e FORA
         da mesa também RECUSA, pela mesma ordem e o mesmo molde da recusa de
-        Modo Nativo três linhas acima — `app/ipc_bridge.py:459`
+        Modo Nativo três linhas acima — `app/ipc_bridge.py:541`
         (`rumble_set_checked`) já lê esse molde, então nenhuma ponte precisa
         nascer. É o chamador de produção que faltava a
         `PyDualSenseController.alvo_de_output_ausente` (zero antes desta
