@@ -1176,7 +1176,9 @@ def selo_dos_perfis() -> SeloDosPerfis:
     A env de lançamento depende da LISTA de perfis (`_steam_profiles`,
     `_nativos_fora_da_antecipacao`); quem grava, apaga ou semeia um perfil fora da
     janela (linha de comando, JSON à mão, a semeadura do serviço) muda este selo, e
-    o vigia da mesa enxerga. Pasta ilegível = selo vazio, nunca erro.
+    o vigia da mesa enxerga. Pasta ilegível = selo vazio, nunca erro. Um arquivo
+    que some entre a listagem e o ``stat`` entra como ``(nome, -1, -1)``: a pasta
+    mudou, e o tique seguinte o vê fora.
     """
     from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
 
@@ -1186,6 +1188,7 @@ def selo_dos_perfis() -> SeloDosPerfis:
             try:
                 st = entrada.stat()
             except OSError:
+                selo.append((entrada.name, -1, -1))
                 continue
             selo.append((entrada.name, st.st_mtime_ns, st.st_size))
     except OSError:
