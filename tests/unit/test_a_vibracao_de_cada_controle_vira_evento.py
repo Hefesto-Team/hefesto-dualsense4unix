@@ -21,6 +21,8 @@ AS MORDIDAS (executadas na implementação, uma a uma, com o md5 conferido na vo
   reprova;
 * a batida que não para no zero → ``test_a_batida_para_quando_o_valor_volta_a_zero`` reprova;
 * o ``perfil.trocou`` sem ``marcas`` → ``test_o_perfil_adulto_publica_as_marcas`` reprova;
+* o leitor da janela sem o anunciador (`_anunciando` devolve o leitor puro) →
+  `test_as_duas_rotas_de_subida_ligam_o_anunciador` reprova nas duas rotas;
 * o barramento sem guardar o estado → ``test_a_conexao_tardia_recebe_o_perfil_de_agora``
   reprova.
 """
@@ -332,6 +334,46 @@ def test_so_o_estado_e_guardado_o_evento_nao_se_repete(mesa: _Mesa) -> None:
 
     assert _vibracao(mesa).tudo() == []
     assert _Escuta(bus, EventTopic.JOGO_FECHOU).tudo() == []
+
+
+@pytest.mark.parametrize("rota", ["subsistema", "utilitaria"])
+def test_as_duas_rotas_de_subida_ligam_o_anunciador(
+    rota: str, mesa: _Mesa, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O leitor que o AutoSwitcher recebe, em qualquer rota, deixa o anunciador olhar o serviço."""
+    from hefesto_dualsense4unix.daemon.subsystems import autoswitch as sub
+    from hefesto_dualsense4unix.profiles import autoswitch as perfis
+    from hefesto_dualsense4unix.profiles import manager as gerente
+
+    capturado: dict[str, Any] = {}
+
+    class _Captura:
+        def __init__(self, **kwargs: Any) -> None:
+            capturado.update(kwargs)
+
+        def disabled(self) -> bool:
+            return True
+
+    monkeypatch.setattr(sub, "_ensure_display_env", lambda: None)
+    monkeypatch.setattr(sub, "_build_diag_window_reader", lambda store: lambda: {"wm_class": "x"})
+    monkeypatch.setattr(perfis, "AutoSwitcher", _Captura)
+    monkeypatch.setattr(gerente, "gerente_do_daemon", lambda *a, **k: object())
+    mesa.store.set_active_profile("noite")
+    daemon = mesa.daemon
+    daemon.aplicar_a_exclusao = lambda **_: "aplicado"
+    daemon.reverter_a_exclusao = lambda: "aplicado"
+    escuta = _Escuta(daemon.bus, EventTopic.PERFIL_TROCOU)
+    if rota == "subsistema":
+        ctx = SimpleNamespace(daemon=daemon, controller=None, store=daemon.store, bus=daemon.bus)
+        asyncio.run(sub.AutoswitchSubsystem().start(ctx))  # type: ignore[arg-type]
+    else:
+        asyncio.run(sub.start_autoswitch(daemon))  # type: ignore[arg-type]
+
+    assert capturado["window_reader"]() == {"wm_class": "x"}
+
+    assert [e["perfil"] for e in escuta.tudo()] == ["noite"], (
+        "o leitor do autoswitch não deixou o anunciador olhar o serviço"
+    )
 
 
 # 6. A porta: a permissão e a entrega.

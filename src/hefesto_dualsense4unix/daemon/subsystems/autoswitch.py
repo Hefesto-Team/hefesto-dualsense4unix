@@ -142,9 +142,22 @@ def _anunciador_do(bus: object, store: Any, daemon: object) -> AnunciadorDoJogo 
     return AnunciadorDoJogo(bus, store, daemon) if callable(publicar) else None  # type: ignore[arg-type]
 
 
-def _build_diag_window_reader(
-    store: StateStore, anunciador: AnunciadorDoJogo | None = None
+def _anunciando(
+    leitor: Callable[[], dict[str, Any]], anunciador: AnunciadorDoJogo | None
 ) -> Callable[[], dict[str, Any]]:
+    """O leitor de janela do autoswitch, que a cada leitura deixa o anunciador olhar o serviço."""
+    if anunciador is None:
+        return leitor
+
+    def _le() -> dict[str, Any]:
+        info = leitor()
+        anunciador.ver()
+        return info
+
+    return _le
+
+
+def _build_diag_window_reader(store: StateStore) -> Callable[[], dict[str, Any]]:
     """Constrói o window reader e o instrumenta com diagnóstico no store."""
     from hefesto_dualsense4unix.integrations.window_detect import build_window_reader
 
@@ -199,8 +212,6 @@ def _build_diag_window_reader(
             wm_class if isinstance(wm_class, str) else None,
             reason=getattr(reader, "last_reason", None),
         )
-        if anunciador is not None:
-            anunciador.ver()
         return info
 
     return _read
@@ -223,8 +234,9 @@ class AutoswitchSubsystem:
         manager = gerente_do_daemon(daemon, controller=ctx.controller, store=ctx.store)
         self._autoswitch = AutoSwitcher(
             manager=manager,
-            window_reader=_build_diag_window_reader(
-                ctx.store, _anunciador_do(getattr(ctx, "bus", None), ctx.store, daemon)
+            window_reader=_anunciando(
+                _build_diag_window_reader(ctx.store),
+                _anunciador_do(getattr(ctx, "bus", None), ctx.store, daemon),
             ),
             store=ctx.store,
             modo_jogo_padrao_applier=getattr(
@@ -266,8 +278,8 @@ async def start_autoswitch(daemon: DaemonProtocol) -> None:
     manager = gerente_do_daemon(daemon, store=daemon.store)
     daemon._autoswitch = AutoSwitcher(
         manager=manager,
-        window_reader=_build_diag_window_reader(
-            daemon.store,
+        window_reader=_anunciando(
+            _build_diag_window_reader(daemon.store),
             _anunciador_do(getattr(daemon, "bus", None), daemon.store, daemon),
         ),
         store=daemon.store,
