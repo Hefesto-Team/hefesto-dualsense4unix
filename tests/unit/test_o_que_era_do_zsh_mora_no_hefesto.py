@@ -655,7 +655,8 @@ def test_o_install_poe_os_quatro_destinos_e_liga_o_timer(tmp_path: Path) -> None
     assert "vigia do Wi-Fi USB ativo" in saida
 
 
-def test_sem_dongle_o_install_instala_e_diz_que_fica_armado(tmp_path: Path) -> None:
+def test_sem_dongle_o_install_pula_e_diz_o_porque(tmp_path: Path) -> None:
+    """O-QUE-E-DA-BANCADA-FICA-NA-BANCADA-01: o vigia só entra onde há Wi-Fi USB."""
     amb = _mesa(tmp_path, com_dongle=False)
     nm = tmp_path / "NetworkManager"
     nm.mkdir()
@@ -664,13 +665,13 @@ def test_sem_dongle_o_install_instala_e_diz_que_fica_armado(tmp_path: Path) -> N
         "install_wifi_usb_host",
         {"HEFESTO_WIFI_SYSFS": amb["HEFESTO_WIFI_SYSFS"], "HEFESTO_NM_ETC": str(nm)},
     )
-    assert "nenhum Wi-Fi USB agora — o vigia fica armado e não faz nada" in saida
-    assert "enable --now hefesto-wifi-usb-vigia.timer" in sudo
-    assert "--ensure" not in sudo
+    assert "nenhuma interface Wi-Fi sob o barramento USB" in saida
+    assert "rode ./install.sh de novo" in saida
+    assert sudo == "", f"sem dongle o install ainda chamou o sudo: {sudo!r}"
 
 
 def test_sem_networkmanager_o_dispatcher_nao_vai(tmp_path: Path) -> None:
-    amb = _mesa(tmp_path, com_dongle=False)
+    amb = _mesa(tmp_path)
     saida, sudo, _ = _roda_a_cura(
         tmp_path,
         "install_wifi_usb_host",

@@ -1220,11 +1220,60 @@ flush_initramfs_host() {
 # agressiva do patch (usb_queue_reset_device) É o próprio module param
 # `hang_reset`, com default Y JÁ embutido no .ko (assets/dkms/rtw88-usb/
 # usb.c) — não há arquivo externo a instalar/remover para ativá-lo.
+#
+# SÓ ONDE HÁ O ADAPTADOR (O-QUE-E-DA-BANCADA-FICA-NA-BANCADA-01): a cura foi
+# medida com um adaptador Realtek USB numa mesa. Sem um aparelho que o
+# `rtw88_usb` atenda, o DKMS é compilação e aviso à toa; a função pula com uma
+# linha que diz o porquê. Quem plugar um depois roda o `./install.sh` de novo.
+#
+# QUEM DIZ QUAL ADAPTADOR O DRIVER ATENDE É O KERNEL, e não uma lista copiada
+# aqui: `modprobe -R <modalias>` (só leitura) resolve o alias da interface USB
+# pelo `modules.alias` do kernel em uso e devolve o módulo que a atende. Os
+# módulos do rtw88 que falam USB são os `rtw88_<chip>u` (rtw88_8822bu, ...).
+# `HEFESTO_USB_SYS` é o gancho de teste da raiz do sysfs.
+#
+# Devolve 0 e imprime `vvvv:pppp` por adaptador (um por linha), 1 sem nenhum,
+# 2 quando não dá para perguntar (sem `modprobe`).
+_rtw88_adaptadores_presentes() {
+    local raiz="${HEFESTO_USB_SYS:-/sys}/bus/usb/devices" ifc dev alias mods mp achou=1
+    # `HEFESTO_MODPROBE` é o gancho de teste (um caminho que não existe = sem a
+    # ferramenta). O `modprobe` mora em /usr/sbin, que o PATH de uma pessoa
+    # comum nem sempre tem.
+    mp="${HEFESTO_MODPROBE:-$(command -v modprobe 2>/dev/null || true)}"
+    if [[ -z "${mp}" && -z "${HEFESTO_MODPROBE:-}" ]]; then
+        for dev in /usr/sbin/modprobe /sbin/modprobe; do
+            if [[ -x "${dev}" ]]; then mp="${dev}"; break; fi
+        done
+    fi
+    [[ -n "${mp}" && -x "${mp}" ]] || return 2
+    for ifc in "${raiz}"/*:*; do
+        [[ -r "${ifc}/modalias" ]] || continue
+        # O Wi-Fi Realtek fala a classe específica do fabricante (ff).
+        [[ "$(cat "${ifc}/bInterfaceClass" 2>/dev/null)" == "ff" ]] || continue
+        alias="$(cat "${ifc}/modalias" 2>/dev/null)"
+        mods="$("${mp}" -R "${alias}" 2>/dev/null)" || continue
+        grep -Eq '^rtw(88)?_[0-9a-z]+u$' <<<"${mods}" || continue
+        dev="${ifc%:*}"
+        printf '%s:%s\n' "$(cat "${dev}/idVendor" 2>/dev/null)" "$(cat "${dev}/idProduct" 2>/dev/null)"
+        achou=0
+    done
+    return "${achou}"
+}
+
 install_dkms_rtw88_usb_host() {
     if [[ "${NO_DKMS}" -eq 1 ]]; then
         printf '      pulado (--no-dkms)\n'
         return 0
     fi
+    local _rtw_achados _rtw_rc=0
+    _rtw_achados="$(_rtw88_adaptadores_presentes)" || _rtw_rc=$?
+    case "${_rtw_rc}" in
+        0) printf '      adaptador Wi-Fi USB Realtek (rtw88) presente: %s\n' "$(tr '\n' ' ' <<<"${_rtw_achados}" | sed 's/ $//')" ;;
+        1) printf '      pulado — nenhum adaptador Wi-Fi USB que o rtw88_usb atenda nesta máquina (o patch cura o fantasma USB desse dongle); se plugar um, rode ./install.sh de novo\n'
+           return 0 ;;
+        *) printf '      pulado — não consegui perguntar ao kernel quais adaptadores o rtw88_usb atende (a ferramenta de módulos não respondeu); rode ./install.sh de novo num ambiente que a tenha\n'
+           return 0 ;;
+    esac
     if ! command -v sudo >/dev/null 2>&1; then
         warn "sudo ausente — patch DKMS do rtw88_usb NÃO instalado (driver in-tree continua, fail-safe)"
         return 0
@@ -1289,9 +1338,11 @@ install_dkms_rtw88_usb_host() {
 # não vê a queda e o `hang_reset` do DKMS não tem o que fazer. O porquê inteiro
 # está no cabeçalho de `scripts/wifi_usb.sh`.
 #
-# Vale para a CLASSE — qualquer Wi-Fi USB — e instala mesmo sem dongle
-# plugado: dongle é hotplug, e o vigia sem Wi-Fi USB não faz nada. O modo USB2
-# NÃO entra (recusado por ela em 23/09: rede de 5 GHz, plano de 1 Gb).
+# Vale para a CLASSE — qualquer Wi-Fi USB — e SÓ entra quando há uma interface
+# Wi-Fi sob o barramento USB agora (O-QUE-E-DA-BANCADA-FICA-NA-BANCADA-01): sem
+# dongle, o vigia e o gancho do NetworkManager não têm o que vigiar, e a linha
+# de pulo diz que, plugando um, o `./install.sh` roda de novo (o doctor avisa
+# quando há Wi-Fi USB e o vigia não). O modo USB2 NÃO entra (recusado por ela em 23/09: rede de 5 GHz, plano de 1 Gb).
 #
 # Três destinos e UM fonte: o mesmo `wifi_usb.sh` vai para a casa dos scripts
 # de sistema (o CLI e o ExecStart do vigia) e, como CÓPIA REAL de root 755,
@@ -1302,6 +1353,11 @@ install_dkms_rtw88_usb_host() {
 # Opt-out: `--no-wifi-usb` (como todo passo default da camada de máquina) e o
 # `--no-udev`, que pula tudo o que escreve em /etc. Chamada dos DOIS lados da
 # cerca do `install.sh` — `tests/unit/test_install_serve_os_dois_lados_da_cerca.py`.
+# As interfaces Wi-Fi sob o barramento USB agora, uma por linha (vazio = nenhuma).
+_wifi_usb_agora() {
+    bash "${ROOT_DIR}/scripts/wifi_usb.sh" --lista 2>/dev/null || true
+}
+
 install_wifi_usb_host() {
     if [[ "${NO_WIFI_USB}" -eq 1 ]]; then
         printf '      pulado (--no-wifi-usb)\n'
@@ -1309,6 +1365,14 @@ install_wifi_usb_host() {
     fi
     if [[ "${SKIP_UDEV}" -eq 1 ]]; then
         printf '      pulado (--no-udev) — o dongle Wi-Fi USB fica com o scan de fundo do NetworkManager e sem vigia\n'
+        return 0
+    fi
+    # SÓ ONDE HÁ WI-FI USB (O-QUE-E-DA-BANCADA-FICA-NA-BANCADA-01): o vigia e o
+    # gancho do NetworkManager tiram o scan de fundo de um Wi-Fi que o defeito
+    # nem atinge. Quem responde «há Wi-Fi USB?» é o próprio `wifi_usb.sh --lista`
+    # (o dono único da pergunta, o mesmo que o doctor lê).
+    if [[ -z "$(_wifi_usb_agora)" ]]; then
+        printf '      pulado — nenhuma interface Wi-Fi sob o barramento USB nesta máquina (o vigia só faz falta a quem tem dongle); se plugar um, rode ./install.sh de novo\n'
         return 0
     fi
     if ! command -v sudo >/dev/null 2>&1; then
@@ -1319,7 +1383,7 @@ install_wifi_usb_host() {
         warn "sudo recusado — o vigia do Wi-Fi USB pulado (re-execute ./install.sh)"
         return 0
     fi
-    local _wifi_ok=1 _wifi_u _wifi_ifcs
+    local _wifi_ok=1 _wifi_u
     sudo install -Dm755 "${ROOT_DIR}/scripts/wifi_usb.sh" \
         /usr/local/lib/hefesto-dualsense4unix/wifi_usb.sh 2>/dev/null || _wifi_ok=0
     # `HEFESTO_NM_ETC` é gancho de teste: a régua não pode depender de a
@@ -1343,14 +1407,10 @@ install_wifi_usb_host() {
     fi
     # Quem tem dongle AGORA ganha o reforço na hora: a associação que já estava
     # de pé antes de o dispatcher existir ficaria com o scan de fundo até o
-    # primeiro tique do vigia (2 min depois do boot, ou 1 min daqui).
-    _wifi_ifcs="$(bash "${ROOT_DIR}/scripts/wifi_usb.sh" --lista 2>/dev/null || true)"
-    if [[ -z "${_wifi_ifcs}" ]]; then
-        printf '      nenhum Wi-Fi USB agora — o vigia fica armado e não faz nada\n'
-    else
-        { sudo /usr/local/lib/hefesto-dualsense4unix/wifi_usb.sh --ensure 2>&1 || true; } \
-            | sed 's/^/      /' || true
-    fi
+    # primeiro tique do vigia (2 min depois do boot, ou 1 min daqui). Chegar
+    # aqui já quer dizer que há Wi-Fi USB (a pergunta do topo da função).
+    { sudo /usr/local/lib/hefesto-dualsense4unix/wifi_usb.sh --ensure 2>&1 || true; } \
+        | sed 's/^/      /' || true
     [[ "${_wifi_ok}" -eq 1 ]] || warn "vigia do Wi-Fi USB instalado PARCIALMENTE — confira as mensagens acima"
     return 0
 }

@@ -5,6 +5,10 @@
 # quando os filhos dormem; num wake mal suportado (AMD 400-series: provado em maio
 # de 2026 nesta classe de máquina) o barramento INTEIRO cai — teclado, mouse e
 # controle juntos. Host em "on" custa ~nada em desktop e elimina a classe do bug.
+# SÓ SEM BATERIA: num notebook o host ligado custa bateria de quem joga fora da
+# tomada, e a causa medida é de desktop. As duas guardas TEST! (BAT0 e BAT1, o
+# nome que o ACPI dá à bateria do computador; a bateria de um controle chama-se
+# ps-controller-battery-* e não conta) pulam a linha em máquina com bateria.
 # Classe PCI 0x0c03xx = USB host (xHCI 0x0c0330, EHCI 0x0c0320, OHCI/UHCI 0x0c0310/00).
 # Match por CLASSE (não por driver): pega o host mesmo antes/sem bind do xhci_hcd.
 #
@@ -18,4 +22,4 @@
 # (DRIVER=="xhci_hcd"); esta regra existe para a máquina virgem e escreve o
 # MESMO valor (inócua por cima). Instalada/removida pelo install/uninstall do
 # hefesto (default, sem flag).
-ACTION=="add|change", SUBSYSTEM=="pci", ATTR{class}=="0x0c03*", TEST=="power/control", ATTR{power/control}="on"
+ACTION=="add|change", SUBSYSTEM=="pci", ATTR{class}=="0x0c03*", TEST!="/sys/class/power_supply/BAT0", TEST!="/sys/class/power_supply/BAT1", TEST=="power/control", ATTR{power/control}="on"

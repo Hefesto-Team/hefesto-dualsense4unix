@@ -179,9 +179,12 @@
 #                         cargo+just — se ausentes, o install NÃO falha.)
 #   --no-cosmic-applet    aceita e não faz nada: o default já é não instalar.
 #                         Fica para não quebrar quem a tenha num script.
-#   --no-dev              cria o venv SEM o extra [dev] (ruff/mypy/pytest). Por
-#                         DEFAULT o venv já vem com os dev tools (gate local).
-#                         Use em CI/máquina enxuta que só precisa rodar o app.
+#   --dev                 cria o venv COM o extra [dev] (ruff/mypy/pytest), para
+#                         quem vai mexer no código. Por DEFAULT o venv vem só
+#                         com o que o produto usa: a primeira instalação de
+#                         quem só usa não baixa ferramenta de desenvolvimento.
+#   --no-dev              aceita e não faz nada: o default já é sem [dev]. Fica
+#                         para não quebrar quem a tenha num script.
 #   --no-fonts            pula as fontes da identidade visual (Space Grotesk +
 #                         JetBrains Mono, que a interface pede). Por DEFAULT
 #                         elas são instaladas em best-effort pelo
@@ -257,7 +260,7 @@ ENABLE_AUTOSTART=0
 ENABLE_HOTPLUG_GUI=0
 ENABLE_COSMIC_APPLET=0
 DISABLE_COSMIC_APPLET=0
-NO_DEV=0
+WITH_DEV=0
 # FONTE-PADRAO-01, item 3: DEFAULT ON. Medido em 29/07/2026 — `grep -c fonts
 # install.sh` dava 0: o scripts/install_fonts.sh existia e NINGUÉM o chamava.
 # Nesta máquina as duas famílias já estão instaladas, então o defeito é invisível
@@ -342,7 +345,8 @@ for arg in "$@"; do
         --enable-hotplug-gui) ENABLE_HOTPLUG_GUI=1 ;;
         --enable-cosmic-applet) ENABLE_COSMIC_APPLET=1; DISABLE_COSMIC_APPLET=0 ;;
         --no-cosmic-applet|--disable-cosmic-applet) DISABLE_COSMIC_APPLET=1 ;;
-        --no-dev)             NO_DEV=1 ;;
+        --dev)                WITH_DEV=1 ;;
+        --no-dev)             WITH_DEV=0 ;;
         --no-fonts)           NO_FONTS=1 ;;
         --no-osk)             NO_OSK=1 ;;
         --with-wireplumber-fix) WITH_WIREPLUMBER_FIX=1 ;;  # já é default; mantida p/ compat
@@ -1362,6 +1366,10 @@ _ensaio_camada() {
                 _nao_faria "módulo DKMS hefesto-rtw88-usb (--no-dkms)"
                 return 0
             fi
+            if ! _rtw88_adaptadores_presentes >/dev/null; then
+                _nao_faria "módulo DKMS hefesto-rtw88-usb (nenhum adaptador Wi-Fi USB que o rtw88_usb atenda nesta máquina, ou o modprobe não responde)"
+                return 0
+            fi
             _faria_root "compilar e instalar o módulo DKMS hefesto-rtw88-usb (cura do fantasma USB do dongle WiFi; sem conf em /etc/modprobe.d)"
             ;;
         wifi-usb)
@@ -1371,6 +1379,10 @@ _ensaio_camada() {
             fi
             if [[ "${SKIP_UDEV}" -eq 1 ]]; then
                 _nao_faria "vigia do Wi-Fi USB (--no-udev)"
+                return 0
+            fi
+            if [[ -z "$(_wifi_usb_agora)" ]]; then
+                _nao_faria "vigia do Wi-Fi USB (nenhuma interface Wi-Fi sob o barramento USB nesta máquina)"
                 return 0
             fi
             _faria_root "instalar /usr/local/lib/hefesto-dualsense4unix/wifi_usb.sh e a cópia dele em /etc/NetworkManager/dispatcher.d/90-hefesto-wifi-usb (root, 755) — o scan de fundo do Wi-Fi USB sai a cada associação"
@@ -2137,13 +2149,15 @@ fi
 
 # Extras instalados sempre: emulation (uinput) + cosmic (jeepney, o D-Bus das
 # notificações do desktop). `jeepney` é puro Python, sem deps nativas.
-# BUG-INSTALL-VENV-NO-DEV-01: o extra [dev] (ruff/mypy/pytest) entra POR PADRÃO
-# — assim o venv recém-criado já roda o gate pré-release local (antes o install
-# recriava o venv sem dev tools e o `ruff`/`mypy` sumiam). --no-dev pula
-# (CI/máquina enxuta). Se a instalação COM dev falhar (ex.: offline), cai para
-# só o essencial e avisa, em vez de abortar o install inteiro.
+# O extra [dev] (ruff/mypy/pytest) só entra com `--dev` (O-QUE-E-DA-BANCADA-
+# FICA-NA-BANCADA-01): era o padrão desde o BUG-INSTALL-VENV-NO-DEV-01, para o
+# gate pré-release local não perder as ferramentas quando o install recriava o
+# venv, mas a primeira instalação de quem só usa o produto não precisa delas.
+# Quem desenvolve passa `--dev` (o fecho de leva que reinstala a mesa também).
+# Se a instalação COM dev falhar (ex.: offline), cai para só o essencial e
+# avisa, em vez de abortar o install inteiro.
 _extras="emulation,cosmic"
-[[ "${NO_DEV}" -eq 0 ]] && _extras="${_extras},dev"
+if [[ "${WITH_DEV}" -eq 1 ]]; then _extras="${_extras},dev"; fi
 # AS VERSÕES QUE A CASA MEDIU (O-PRODUTO-EM-QUALQUER-MAQUINA-01, B3,
 # 28/09/2026): o `constraints.txt` trava o `evdev`, o `hidapi-usb`, o `pydantic`
 # e o `pydualsense` nas versões que rodaram com os controles na mesa. Sem ele o
@@ -2156,7 +2170,7 @@ if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
     _faria "instalar o pacote em modo editável no venv: pip install ${_travas[*]} -e '${ROOT_DIR}[${_extras}]'"
 elif ! "${VENV_DIR}/bin/pip" install \
         --quiet --disable-pip-version-check "${_travas[@]}" -e "${ROOT_DIR}[${_extras}]" 2>/dev/null; then
-    if [[ "${NO_DEV}" -eq 0 ]]; then
+    if [[ "${WITH_DEV}" -eq 1 ]]; then
         warn "pip install com [dev] falhou — tentando só o essencial (ruff/mypy/pytest ficam de fora)"
         "${VENV_DIR}/bin/pip" install \
             --quiet --disable-pip-version-check "${_travas[@]}" -e "${ROOT_DIR}[emulation,cosmic]" 2>/dev/null \
@@ -2509,13 +2523,20 @@ fi
 # testável); aqui só traduzimos o plano em kernelstub --delete/--add-options.
 if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v python3 >/dev/null 2>&1; then
     step "3e" "cmdline do kernel (usbcore.autosuspend + usbcore.quirks com merge)"
-    _cmdline_plan="$(python3 - "${ROOT_DIR}" <<'PYEOF'
+    # O-QUE-E-DA-BANCADA-FICA-NA-BANCADA-01: o `usbcore.autosuspend=-1` vale para
+    # TODO aparelho USB, e a razão medida é de desktop. Com bateria ACPI o plano
+    # não o traz (o `usbcore.quirks` do DualSense fica). `if`, e não `&&`: sob
+    # `set -e` a lista falsa mataria o install aqui.
+    _cmdline_bateria=0
+    if _desempenho_tem_bateria; then _cmdline_bateria=1; fi
+    _cmdline_plan="$(python3 - "${ROOT_DIR}" "${_cmdline_bateria}" <<'PYEOF'
 import json
 import os
 import shutil
 import sys
 
 root = sys.argv[1]
+com_bateria = sys.argv[2] == "1"
 sys.path.insert(0, os.path.join(root, "src"))
 from hefesto_dualsense4unix.integrations import kernel_cmdline as kc
 
@@ -2546,7 +2567,7 @@ if tokens is None and os.path.isfile(grub):
 if tokens is None:
     print("backend=none")
     raise SystemExit(0)
-actions = kc.plan_tokens(tokens)
+actions = kc.plan_tokens(tokens, com_bateria=com_bateria)
 violations = kc.forbidden_reintroductions(actions)
 if violations:
     print("backend=guard-violation")
@@ -2555,7 +2576,9 @@ if violations:
     raise SystemExit(0)
 print("backend=" + backend)
 for a in actions:
-    print("\t".join(["plan", a.param, a.op, a.token, a.owner, " ".join(a.remove_tokens)]))
+    # Campo vazio no meio some no `read` do shell (o TAB é espaço branco do
+    # IFS): o dono de uma ação pulada vai como «-».
+    print("\t".join(["plan", a.param, a.op, a.token, a.owner or "-", " ".join(a.remove_tokens)]))
 PYEOF
 )" || _cmdline_plan=""
     _cmdline_backend="$(sed -n 's/^backend=//p' <<<"${_cmdline_plan}" | head -1)"
@@ -2569,6 +2592,10 @@ PYEOF
         while IFS=$'\t' read -r _tagp _param _op _token _owner _removes; do
             [[ "${_tagp}" == "plan" ]] || continue
             case "${_op}" in
+                skip)
+                    printf '      %s: pulado — este computador tem bateria (USB sem economia custaria a carga de quem joga fora da tomada); o usbcore.quirks do DualSense segue\n' \
+                        "${_param}"
+                    ;;
                 none)
                     _register_cmdline_owner "cmdline.${_param}" "${_owner}"
                     # O `sed` LÊ o arquivo que a linha de cima acabou de

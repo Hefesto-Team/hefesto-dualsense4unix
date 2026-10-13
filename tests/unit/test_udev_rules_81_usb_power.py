@@ -11,6 +11,14 @@ HOSTS_RULE = REPO_ROOT / "assets" / "81-hefesto-usb-host-power.rules"
 
 VENDORS = ("054c", "057e", "2dc8", "045e")
 
+# A bateria do COMPUTADOR chama-se BAT0 ou BAT1 no ACPI; as linhas largas (todo
+# host USB, todo Bluetooth USB) só valem sem ela (O-QUE-E-DA-BANCADA-FICA-NA-
+# BANCADA-01). A bateria de um controle (ps-controller-battery-*) não conta.
+GUARDAS_DE_BATERIA = (
+    'TEST!="/sys/class/power_supply/BAT0"',
+    'TEST!="/sys/class/power_supply/BAT1"',
+)
+
 
 def _rule_lines(path: Path) -> list[str]:
     text = path.read_text(encoding="utf-8")
@@ -56,6 +64,24 @@ class TestRegraDevices:
             "adaptadores BT (classe e0, ex.: TP-Link 2357:0604) não cobertos"
         )
 
+    def test_a_linha_larga_do_bluetooth_so_vale_sem_bateria(
+        self, devices_lines: list[str]
+    ) -> None:
+        larga = [ln for ln in devices_lines if 'ATTR{bDeviceClass}=="e0"' in ln]
+        assert len(larga) == 1
+        for guarda in GUARDAS_DE_BATERIA:
+            assert guarda in larga[0], f"a linha da classe e0 perdeu {guarda}"
+
+    def test_as_linhas_por_fabricante_de_controle_nao_tem_guarda_de_bateria(
+        self, devices_lines: list[str]
+    ) -> None:
+        por_fabricante = [ln for ln in devices_lines if "ATTR{idVendor}" in ln]
+        assert len(por_fabricante) == len(VENDORS)
+        for ln in por_fabricante:
+            assert "power_supply" not in ln, (
+                "o controle é nosso e vale em qualquer máquina, com ou sem bateria"
+            )
+
     def test_toda_linha_e_add_change_usb_device_com_guarda(
         self, devices_lines: list[str]
     ) -> None:
@@ -84,6 +110,11 @@ class TestRegraHosts:
             assert 'ACTION=="add|change"' in ln, f"sem add|change: {ln}"
             assert 'TEST=="power/control"' in ln, f"sem guarda TEST: {ln}"
             assert 'ATTR{power/control}="on"' in ln, f"sem power/control=on: {ln}"
+
+    def test_o_host_so_vale_sem_bateria(self, hosts_lines: list[str]) -> None:
+        for ln in hosts_lines:
+            for guarda in GUARDAS_DE_BATERIA:
+                assert guarda in ln, f"a linha do host perdeu {guarda}: {ln}"
 
     def test_nao_usa_driver_xhci_hcd(self, hosts_lines: list[str]) -> None:
         blob = "\n".join(hosts_lines)

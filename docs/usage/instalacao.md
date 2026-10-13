@@ -51,7 +51,7 @@ passaria a ser o do root.
 | `--keep-steam-input` | mantém o Steam Input ligado (o padrão é desligá-lo) |
 | `--no-kernel-watch` | não instala a vigia do diário do kernel |
 | `--force-xwayland` | abre a janela pelo XWayland |
-| `--no-dev` | cria o ambiente sem as ferramentas de desenvolvimento |
+| `--dev` | traz também as ferramentas de desenvolvimento (ruff, mypy, pytest); sem a flag, o ambiente vem só com o que o produto usa |
 
 `./install.sh --help` mostra a lista completa.
 
@@ -64,7 +64,7 @@ inscrever a chave do DKMS e reiniciar. O instalador diz qual chave inscrever:
 
 | Caminho | O que é |
 |---|---|
-| `/etc/udev/rules.d/` | as regras dos controles, do touchpad, do giroscópio, da energia do USB e da cópia dos pareamentos |
+| `/etc/udev/rules.d/` | as regras dos controles, do touchpad, do giroscópio, da energia do USB (as duas regras largas, a dos hosts e a dos adaptadores Bluetooth, só valem em computador sem bateria) e da cópia dos pareamentos |
 | `/etc/modules-load.d/hefesto-dualsense4unix.conf` | carrega `uinput` e `uhid` no boot |
 | `/etc/modprobe.d/` | a correção do áudio USB do controle, o adaptador Bluetooth sem suspensão e os parâmetros dos módulos (`hefesto-hid-nintendo.conf`, `hefesto-hid-playstation.conf`) |
 | `/etc/bluetooth/main.conf.d/` | conexão rápida e novo pareamento no BlueZ |
@@ -72,13 +72,13 @@ inscrever a chave do DKMS e reiniciar. O instalador diz qual chave inscrever:
 | `~/.config/systemd/user/` | as suas unidades, que ficam rodando: o serviço (`hefesto-dualsense4unix.service`), a vigia do USB (`hefesto-dualsense4unix-storm-watch.service`) e o vigia do Steam Input (`hefesto-steam-input-guard.path`, `hefesto-steam-input-guard.timer` e `hefesto-steam-input-guard.service`). A que abre a janela no início da sessão (`hefesto-dualsense4unix-gui-hotplug.service`) só entra se você aceitar |
 | `/usr/local/lib/hefesto-dualsense4unix/` | o programa desse serviço e os scripts de manutenção do Bluetooth |
 | `/var/lib/hefesto-dualsense4unix/bt-bonds/` | cópias de segurança dos pareamentos Bluetooth |
-| cmdline do kernel | `usbcore.autosuspend=-1` e `usbcore.quirks=054c:0ce6:gn,054c:0df2:gn`, pelo kernelstub ou pelo grub. Um valor que já existia é preservado, e o desinstalador tira só o que o Hefesto pôs |
+| cmdline do kernel | `usbcore.autosuspend=-1` (só em computador sem bateria) e `usbcore.quirks=054c:0ce6:gn,054c:0df2:gn`, pelo kernelstub ou pelo grub. Um valor que já existia é preservado, e o desinstalador tira só o que o Hefesto pôs |
 | módulos de kernel (DKMS) | `hefesto-hid-playstation`, `hefesto-hid-nintendo` e `hefesto-rtw88-usb`. Eles não apagam os módulos de fábrica e valem a partir do próximo boot |
 | teclado na tela | `wvkbd` ou `onboard`, pelo gerenciador de pacotes |
 | a Steam | desliga o Steam Input, põe o Hefesto nas Opções de Inicialização dos jogos e fixa o Proton, sempre com cópia de segurança |
 
 O `hefesto-rtw88-usb` corrige um adaptador Wi-Fi USB (RTL8822BU) que derrubava
-o Bluetooth do controle. Sem esse aparelho, ele não faz nada.
+o Bluetooth do controle. Sem um adaptador desses ligado na máquina, o instalador pula o módulo e o vigia do Wi-Fi USB, e diz por quê; ao plugar um, rode `./install.sh` de novo.
 
 ### O vigia do Steam Input
 

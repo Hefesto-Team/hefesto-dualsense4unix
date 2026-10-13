@@ -16,6 +16,7 @@ OWNER_COMPARTILHADO = "compartilhado"
 OP_NONE = "none"
 OP_ADD = "add"
 OP_REPLACE = "replace"
+OP_PULA = "skip"
 
 NEVER_REINTRODUCE: tuple[str, ...] = (
     "054c:0ce6:k",
@@ -104,8 +105,23 @@ def strip_quirks_token(
     return f"{QUIRKS_PARAM}=" + ",".join(remaining), changed
 
 
-def _plan_autosuspend(tokens: Sequence[str]) -> CmdlineAction:
+def _plan_autosuspend(tokens: Sequence[str], com_bateria: bool = False) -> CmdlineAction:
     present = tokens_for_param(tokens, AUTOSUSPEND_PARAM)
+    if com_bateria and AUTOSUSPEND_TOKEN not in present:
+        # O autosuspend=-1 vale para TODO aparelho USB da máquina, e a razão
+        # medida é de desktop (AMD 400): num computador com bateria ele custa
+        # a carga de quem joga fora da tomada. O que já estiver lá (de outra
+        # ferramenta ou da pessoa) não é desfeito: a decisão é só não pôr o nosso.
+        return CmdlineAction(
+            param=AUTOSUSPEND_PARAM,
+            op=OP_PULA,
+            token=AUTOSUSPEND_TOKEN,
+            owner="",
+            reason=(
+                "este computador tem bateria — USB sem economia custaria a carga; "
+                "o usbcore.quirks do DualSense segue"
+            ),
+        )
     if AUTOSUSPEND_TOKEN in present:
         return CmdlineAction(
             param=AUTOSUSPEND_PARAM,
@@ -169,24 +185,33 @@ def _plan_quirks(
 def plan_tokens(
     tokens: Sequence[str],
     desired_quirk_ids: Sequence[str] = HEFESTO_QUIRK_IDS,
+    com_bateria: bool = False,
 ) -> list[CmdlineAction]:
-    """O plano completo (autosuspend + quirks) a partir dos tokens atuais."""
-    return [_plan_autosuspend(tokens), _plan_quirks(tokens, desired_quirk_ids)]
+    """O plano completo (autosuspend + quirks) a partir dos tokens atuais.
+
+    ``com_bateria``: o computador tem bateria ACPI. O autosuspend do USB não
+    entra (op ``skip``); o ``usbcore.quirks`` do DualSense entra igual.
+    """
+    return [
+        _plan_autosuspend(tokens, com_bateria),
+        _plan_quirks(tokens, desired_quirk_ids),
+    ]
 
 
 def plan_cmdline(
     cmdline: str,
     desired_quirk_ids: Sequence[str] = HEFESTO_QUIRK_IDS,
+    com_bateria: bool = False,
 ) -> list[CmdlineAction]:
     """Como :func:`plan_tokens`, recebendo a string crua (/proc/cmdline)."""
-    return plan_tokens(parse_cmdline(cmdline), desired_quirk_ids)
+    return plan_tokens(parse_cmdline(cmdline), desired_quirk_ids, com_bateria)
 
 
 def apply_plan(tokens: Sequence[str], actions: Iterable[CmdlineAction]) -> list[str]:
     """SIMULA o plano sobre os tokens (para testes e para o doctor comparar)."""
     result = list(tokens)
     for action in actions:
-        if action.op == OP_NONE:
+        if action.op in (OP_NONE, OP_PULA):
             continue
         result = [t for t in result if t not in action.remove_tokens]
         result.append(action.token)
@@ -197,7 +222,7 @@ def forbidden_reintroductions(actions: Iterable[CmdlineAction]) -> list[str]:
     """Violações da regra "nunca reintroduzir" nos tokens que o plano ADICIONA."""
     violations: list[str] = []
     for action in actions:
-        if action.op == OP_NONE:
+        if action.op in (OP_NONE, OP_PULA):
             continue
         for banned in NEVER_REINTRODUCE:
             if banned in action.token:
