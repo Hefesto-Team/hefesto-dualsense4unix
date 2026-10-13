@@ -478,3 +478,101 @@ class TestExtraDev:
         doc = (RAIZ / "docs" / "usage" / "instalacao.md").read_text(encoding="utf-8")
         assert "| `--dev` |" in doc
         assert "| `--no-dev` |" not in doc
+
+
+# ---------------------------------------------------------------------------
+# O doctor não cobra o que o install decidiu não fazer.
+# ---------------------------------------------------------------------------
+DOCTOR = RAIZ / "scripts" / "doctor.sh"
+
+
+def _sys_do_doctor(tmp_path: Path, *, bateria: bool) -> Path:
+    """Um /sys com um host xHCI em economia, um teclado e um Bluetooth em 'auto' e um DualSense em 'on'."""
+    sysfs = tmp_path / "sys-doctor"
+    host = sysfs / "bus" / "pci" / "devices" / "0000:00:14.0"
+    (host / "power").mkdir(parents=True)
+    (host / "class").write_text("0x0c0330\n", encoding="utf-8")
+    (host / "power" / "control").write_text("auto\n", encoding="utf-8")
+    for nome, vid, ctl in (("1-1", "046d", "auto"), ("1-2", "8087", "auto"), ("1-3", "054c", "on")):
+        dev = sysfs / "bus" / "usb" / "devices" / nome
+        (dev / "power").mkdir(parents=True)
+        (dev / "idVendor").write_text(f"{vid}\n", encoding="utf-8")
+        (dev / "power" / "control").write_text(f"{ctl}\n", encoding="utf-8")
+    fonte = sysfs / "class" / "power_supply" / ("BAT0" if bateria else "ps-controller-battery-aa")
+    fonte.mkdir(parents=True)
+    return sysfs
+
+
+def _doctor_roda(tmp_path: Path, funcao: str, *, bateria: bool) -> str:
+    sysfs = _sys_do_doctor(tmp_path, bateria=bateria)
+    vazio = tmp_path / "vazio"
+    vazio.write_text("", encoding="utf-8")
+    env = {
+        "PATH": "/usr/bin:/bin",
+        "HOME": str(tmp_path),
+        "HEFESTO_DOCTOR_SYS": str(sysfs),
+        "HEFESTO_DOCTOR_CMDLINE": str(vazio),
+        "HEFESTO_DOCTOR_KERNELSTUB": str(vazio),
+        "HEFESTO_DOCTOR_GRUB": str(vazio),
+    }
+    r = subprocess.run(
+        [BASH, "-c", f'source "{DOCTOR}"; QUIET=0; {funcao}'],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+        env=env,
+    )
+    return r.stdout
+
+
+class TestODoctorSabeDaBateria:
+    def test_com_bateria_o_host_em_economia_nao_e_aviso(self, tmp_path: Path) -> None:
+        saida = _doctor_roda(tmp_path, "check_usb_power_hosts", bateria=True)
+        assert "[WARN]" not in saida, saida
+        assert "tem bateria" in saida
+
+    def test_sem_bateria_o_host_em_economia_segue_aviso(self, tmp_path: Path) -> None:
+        saida = _doctor_roda(tmp_path, "check_usb_power_hosts", bateria=False)
+        assert "[WARN] host(s) USB em economia" in saida, saida
+
+    def test_com_bateria_so_o_controle_e_cobrado(self, tmp_path: Path) -> None:
+        saida = _doctor_roda(tmp_path, "check_usb_power_devices", bateria=True)
+        assert "[WARN]" not in saida, saida
+        assert "2 outro(s) device(s) em 'auto'" in saida
+
+    def test_com_bateria_o_controle_em_economia_segue_aviso(self, tmp_path: Path) -> None:
+        sysfs = _sys_do_doctor(tmp_path, bateria=True)
+        (sysfs / "bus" / "usb" / "devices" / "1-3" / "power" / "control").write_text("auto\n")
+        r = subprocess.run(
+            [BASH, "-c", f'source "{DOCTOR}"; QUIET=0; check_usb_power_devices'],
+            capture_output=True,
+            text=True,
+            timeout=60,
+            check=False,
+            env={"PATH": "/usr/bin:/bin", "HOME": str(tmp_path), "HEFESTO_DOCTOR_SYS": str(sysfs)},
+        )
+        assert "[WARN] economia de energia ATIVA em 1 device(s) USB: 1-3 (054c" in r.stdout, r.stdout
+
+    def test_sem_bateria_todo_device_em_economia_e_aviso(self, tmp_path: Path) -> None:
+        saida = _doctor_roda(tmp_path, "check_usb_power_devices", bateria=False)
+        assert "[WARN] economia de energia ATIVA em 2 device(s)" in saida, saida
+
+    def test_com_bateria_o_autosuspend_ausente_nao_e_aviso_e_os_quirks_seguem(
+        self, tmp_path: Path
+    ) -> None:
+        saida = _doctor_roda(tmp_path, "check_cmdline_platform", bateria=True)
+        assert "[WARN] cmdline: usbcore.autosuspend=-1" not in saida, saida
+        assert "usbcore.autosuspend=-1 fica de fora, de propósito" in saida
+        assert "[WARN] cmdline: 054c:0ce6:gn ausente" in saida
+
+    def test_sem_bateria_o_autosuspend_ausente_segue_aviso(self, tmp_path: Path) -> None:
+        saida = _doctor_roda(tmp_path, "check_cmdline_platform", bateria=False)
+        assert "[WARN] cmdline: usbcore.autosuspend=-1 ausente" in saida, saida
+
+    def test_a_pergunta_do_doctor_e_a_do_install(self) -> None:
+        """O mesmo glob nos dois: um BAT2 contaria num e não no outro."""
+        doctor = DOCTOR.read_text(encoding="utf-8")
+        lib = LIB.read_text(encoding="utf-8")
+        assert "/class/power_supply/BAT*" in doctor
+        assert "/class/power_supply/BAT*" in lib

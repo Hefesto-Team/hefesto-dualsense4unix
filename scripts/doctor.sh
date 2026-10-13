@@ -3872,23 +3872,45 @@ check_perfis_inalcancaveis() {
 # Estudos: 2026-07-18-estudo-kernel-hardening.md + 2026-07-18-estudo-bt-maximo.md.
 # ============================================================================
 
+# O computador tem bateria ACPI? A MESMA pergunta do install
+# (`_desempenho_tem_bateria`, em scripts/lib/camada_de_maquina.sh): com bateria o
+# install pula de propósito o host USB ligado, o adaptador Bluetooth por classe e
+# o `usbcore.autosuspend=-1` (O-QUE-E-DA-BANCADA-FICA-NA-BANCADA-01), e o doctor
+# não pode cobrar o que o install decidiu não fazer. A bateria de um controle
+# (`ps-controller-battery-*`) não conta. `HEFESTO_DOCTOR_SYS` é o gancho de teste.
+_doctor_tem_bateria() {
+    compgen -G "${HEFESTO_DOCTOR_SYS:-/sys}/class/power_supply/BAT*" >/dev/null 2>&1
+}
+
+# Os fabricantes de controle que a regra 81 mantém 'on' em QUALQUER máquina
+# (as linhas sem guarda de bateria de assets/81-hefesto-usb-power.rules).
+_USB_VENDORES_DE_CONTROLE=" 054c 057e 2dc8 045e "
+
 # PLAT-03 item 1: nenhum device USB pode estar em economia de energia — um
 # controle/adaptador dormindo é queda na certa (a regra 81 mantém tudo 'on').
+# Com bateria, só o controle é cobrado: o resto segue o que o kernel decidir.
 check_usb_power_devices() {
-    local dev ctl vid nome bad=0 total=0 exemplos=""
-    for dev in /sys/bus/usb/devices/*; do
+    local dev ctl vid nome bad=0 total=0 exemplos="" bateria=0 poupados=0
+    _doctor_tem_bateria && bateria=1
+    for dev in "${HEFESTO_DOCTOR_SYS:-/sys}"/bus/usb/devices/*; do
         [[ -r "${dev}/power/control" && -r "${dev}/idVendor" ]] || continue
         total=$((total + 1))
         ctl="$(cat "${dev}/power/control" 2>/dev/null)"
         if [[ "${ctl}" == "auto" ]]; then
-            bad=$((bad + 1))
             vid="$(cat "${dev}/idVendor" 2>/dev/null)"
+            if [[ "${bateria}" -eq 1 && "${_USB_VENDORES_DE_CONTROLE}" != *" ${vid} "* ]]; then
+                poupados=$((poupados + 1))
+                continue
+            fi
+            bad=$((bad + 1))
             nome="$(cat "${dev}/product" 2>/dev/null || true)"
             exemplos+=" $(basename "${dev}") (${vid} ${nome:-?})"
         fi
     done
     if [[ "${total}" -eq 0 ]]; then
         info "sem devices USB legíveis no sysfs — pulo o check de energia dos devices"
+    elif [[ "${bad}" -eq 0 && "${poupados}" -gt 0 ]]; then
+        pass "nenhum controle USB em economia de energia; ${poupados} outro(s) device(s) em 'auto', de propósito: o computador tem bateria, e o install só mantém acordado o controle"
     elif [[ "${bad}" -eq 0 ]]; then
         pass "nenhum device USB em economia de energia (power/control=on em ${total}/${total})"
     else
@@ -3901,7 +3923,11 @@ check_usb_power_devices() {
 # visto em maio/2026). A regra 81-host mantém os hosts em 'on'.
 check_usb_power_hosts() {
     local pci cls ctl found=0 bad=""
-    for pci in /sys/bus/pci/devices/*; do
+    if _doctor_tem_bateria; then
+        info "hosts USB (xHCI) seguem a economia do kernel, de propósito: o computador tem bateria, e a regra 81-host só liga o host em máquina sem bateria"
+        return
+    fi
+    for pci in "${HEFESTO_DOCTOR_SYS:-/sys}"/bus/pci/devices/*; do
         cls="$(cat "${pci}/class" 2>/dev/null)" || continue
         [[ "${cls}" == 0x0c03* ]] || continue
         found=1
@@ -4976,14 +5002,23 @@ PY
 # vs "pendente de reboot". A policy sysfs NUNCA entra aqui (ela mente).
 check_cmdline_platform() {
     local owners="${HOME}/.local/state/hefesto-dualsense4unix/cmdline-owners.conf"
-    local tok ativo agendado
+    local tok ativo agendado bateria=0
+    local cmdline="${HEFESTO_DOCTOR_CMDLINE:-/proc/cmdline}"
+    local kstub="${HEFESTO_DOCTOR_KERNELSTUB:-/etc/kernelstub/configuration}"
+    local grub="${HEFESTO_DOCTOR_GRUB:-/etc/default/grub}"
+    _doctor_tem_bateria && bateria=1
     for tok in "usbcore.autosuspend=-1" "054c:0ce6:gn" "054c:0df2:gn"; do
         ativo=0; agendado=0
-        grep -qF "${tok}" /proc/cmdline 2>/dev/null && ativo=1
-        { [[ -r /etc/kernelstub/configuration ]] && grep -qF "${tok}" /etc/kernelstub/configuration 2>/dev/null; } && agendado=1
-        { [[ -r /etc/default/grub ]] && grep -qF "${tok}" /etc/default/grub 2>/dev/null; } && agendado=1
+        grep -qF "${tok}" "${cmdline}" 2>/dev/null && ativo=1
+        { [[ -r "${kstub}" ]] && grep -qF "${tok}" "${kstub}" 2>/dev/null; } && agendado=1
+        { [[ -r "${grub}" ]] && grep -qF "${tok}" "${grub}" 2>/dev/null; } && agendado=1
         if [[ "${ativo}" -eq 1 ]]; then
             pass "cmdline: ${tok} APLICADO neste boot"
+        elif [[ "${tok}" == "usbcore.autosuspend=-1" && "${bateria}" -eq 1 ]]; then
+            # O plano do passo 3e não traz este token com bateria
+            # (`kernel_cmdline.plan_tokens(com_bateria=True)`): ele vale para
+            # TODO aparelho USB, e a razão medida é de desktop.
+            info "cmdline: ${tok} fica de fora, de propósito: o computador tem bateria, e ele desligaria a economia de todo aparelho USB"
         elif [[ "${agendado}" -eq 1 ]]; then
             warn "cmdline: ${tok} agendado mas NÃO ativo — pendente de reboot"
         else
@@ -4992,7 +5027,7 @@ check_cmdline_platform() {
     done
     # O kernel respeita SÓ UM token usbcore.quirks= — mais de um é bug de merge.
     local n_tokens
-    n_tokens="$(grep -o 'usbcore\.quirks=' /proc/cmdline 2>/dev/null | wc -l || true)"
+    n_tokens="$(grep -o 'usbcore\.quirks=' "${cmdline}" 2>/dev/null | wc -l || true)"
     if [[ "${n_tokens:-0}" -gt 1 ]]; then
         warn "MAIS DE UM token usbcore.quirks= no cmdline (${n_tokens}) — o kernel respeita só um; $(conselho_de_instalacao)$(so_no_checkout "(o passo 3e funde num token único)")"
     fi
