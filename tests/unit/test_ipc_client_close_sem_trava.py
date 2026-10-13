@@ -125,5 +125,5 @@ async def test_call_com_drain_preso_vira_ipc_error():
         await asyncio.wait_for(_chamar(), timeout=PRAZO_DO_TESTE_S)
 
     assert exc_info.value.code == -1
-    assert "timeout" in exc_info.value.message.lower()
+    assert "não respondeu em" in exc_info.value.message
 

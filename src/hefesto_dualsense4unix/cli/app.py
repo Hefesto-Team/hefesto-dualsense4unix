@@ -13,8 +13,48 @@ Demais subcomandos (profile, test, led, battery, status) chegam em W5.3.
 from __future__ import annotations
 
 import os
+import sys
+from collections.abc import Sequence
 
 import typer
+
+#: Onde o terminal sobe o nível do diário: quem digitou lê a resposta, não o
+#: diário do processo (`i18n_initialized`, as migrações de cada abertura).
+_NIVEL_DO_TERMINAL = "WARNING"
+_VARIAVEL_DO_NIVEL = "HEFESTO_DUALSENSE4UNIX_LOG_LEVEL"
+
+
+def _nivel_do_diario_do_terminal(argv: Sequence[str]) -> str | None:
+    """O nível em que a linha de comando nasce, ou ``None`` quando não se mexe.
+
+    O `daemon start` não entra: é o serviço, e o `configure_logging` é idempotente,
+    então prender o processo dele em WARNING apagaria o diário que o diagnostica.
+    A variável de ambiente do nível, quando posta, vale para todos.
+    """
+    palavras = [a for a in argv[1:] if not a.startswith("-")]
+    if palavras[:2] == ["daemon", "start"]:
+        return None
+    return os.getenv(_VARIAVEL_DO_NIVEL) or _NIVEL_DO_TERMINAL
+
+
+def _e_a_entrada_do_terminal(argv: Sequence[str]) -> bool:
+    """Este processo é o terminal (o script instalado ou ``-m``), não um import qualquer."""
+    return __name__ == "__main__" or os.path.basename(argv[0] if argv else "") in (
+        "hefesto-dualsense4unix",
+    )
+
+
+def _configurar_o_diario_do_terminal(argv: Sequence[str]) -> None:
+    """Antes de qualquer import do produto: o primeiro ``get_logger`` fixa o nível."""
+    nivel = _nivel_do_diario_do_terminal(argv)
+    if nivel is None or not _e_a_entrada_do_terminal(argv):
+        return
+    from hefesto_dualsense4unix.utils.logging_config import configure_logging
+
+    configure_logging(level=nivel)
+
+
+_configurar_o_diario_do_terminal(sys.argv)
 
 app = typer.Typer(
     name="hefesto-dualsense4unix",

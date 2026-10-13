@@ -117,7 +117,7 @@ def cmd_led(
     ),
 ) -> None:
     """Aplica cor (e luminosidade opcional) na lightbar."""
-    rgb = hex_to_rgb(color) if color.startswith("#") or len(color) == 6 else _parse_rgb_csv(color)
+    rgb = _parse_cor(color)
 
     if _apply_via_ipc(rgb, brightness):
         extra = f" brightness={brightness}%" if brightness is not None else ""
@@ -188,8 +188,24 @@ def cmd_rumble(
     console.print(f"[green]rumble: weak={weak} strong={strong}[/green]")
 
 
+_FORMATO_DA_COR = "cor: #RRGGBB ou R,G,B"
+
+
+def _parse_cor(value: str) -> tuple[int, int, int]:
+    """``#RRGGBB``/``RRGGBB`` ou ``R,G,B``; o que não for isso é erro de uso (rc 2)."""
+    if value.startswith("#") or len(value) == 6:
+        try:
+            return hex_to_rgb(value)
+        except ValueError as exc:
+            raise typer.BadParameter(_FORMATO_DA_COR) from exc
+    return _parse_rgb_csv(value)
+
+
 def _parse_rgb_csv(value: str) -> tuple[int, int, int]:
-    parts = [int(p.strip()) for p in value.split(",")]
+    try:
+        parts = [int(p.strip()) for p in value.split(",")]
+    except ValueError as exc:
+        raise typer.BadParameter(_FORMATO_DA_COR) from exc
     if len(parts) != 3:
         raise typer.BadParameter("formato: R,G,B (3 valores 0-255)")
     for idx, b in enumerate(parts):
@@ -204,6 +220,11 @@ def _apply_on_hardware(action: Callable[[IController], Any]) -> None:
     controller = PyDualSenseController()
     try:
         controller.connect()
+        if not controller.is_connected():
+            # Sem controle aberto o backend aceita o comando e descarta: o verde que
+            # viria depois seria mentira.
+            console.print("[red]nenhum controle ao alcance[/red]")
+            raise typer.Exit(code=1)
         action(controller)
     finally:
         with contextlib.suppress(Exception):

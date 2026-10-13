@@ -75,7 +75,7 @@ def init_locale() -> str | None:
 
 
     active = locale.getlocale(locale.LC_MESSAGES)[0]
-    logger.info(
+    logger.debug(
         "i18n_initialized",
         locale=active or "C",
         locale_dir=str(locale_dir),

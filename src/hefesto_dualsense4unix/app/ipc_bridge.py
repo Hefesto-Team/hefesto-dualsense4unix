@@ -74,6 +74,9 @@ TETOS: dict[str, float] = {
     # O ato do microfone e o volume da captura: o prazo que a janela já usa, que
     # o terminal herda em vez de dizer «sem resposta» sobre um ato em andamento.
     "mic.canal.set": _TETO_DO_ATO_DE_AUDIO, "mic.volume.set": _TETO_DO_ATO_DE_AUDIO,
+    # O volume e o mudo do alto-falante: o prazo que a janela já passa à mão e que o
+    # terminal, sem prazo nenhum até aqui, herda da tabela.
+    "speaker.set": _TETO_DO_ATO_DE_AUDIO,
 }
 
 #: O padrão de um método fora da tabela: o de uma leitura.

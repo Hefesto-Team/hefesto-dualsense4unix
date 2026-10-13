@@ -26,7 +26,7 @@ async def test_connect_timeout_levanta_ipc_error():
 
     err = exc_info.value
     assert err.code == -1
-    assert "timeout" in err.message.lower()
+    assert "não aceitou a conexão" in err.message
 
 
 @pytest.mark.asyncio
@@ -81,7 +81,7 @@ async def test_call_timeout_levanta_ipc_error():
 
     err = exc_info.value
     assert err.code == -1
-    assert "timeout" in err.message.lower()
+    assert "não respondeu em" in err.message
 
 
 @pytest.mark.asyncio

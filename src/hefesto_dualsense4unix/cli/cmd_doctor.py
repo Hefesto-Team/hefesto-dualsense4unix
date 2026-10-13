@@ -17,6 +17,22 @@ from hefesto_dualsense4unix.utils.repo_files import (
 
 console = Console()
 
+#: O rc do `doctor` é o pior veredito: 0 tudo OK, 1 algum aviso, 2 alguma falha.
+_GRAVIDADE_WARN = 1
+_GRAVIDADE_FAIL = 2
+
+
+def _gravidade_das_linhas(linhas: list[tuple[str, str]]) -> int:
+    """A pior gravidade entre as linhas ``(tag, mensagem)`` de um bloco."""
+    pior = 0
+    for tag, _mensagem in linhas:
+        marca = tag.strip().strip("[]").strip().upper()
+        if marca == "FAIL":
+            pior = max(pior, _GRAVIDADE_FAIL)
+        elif marca == "WARN":
+            pior = max(pior, _GRAVIDADE_WARN)
+    return pior
+
 
 def _find_doctor_sh() -> Path | None:
     """Localiza `scripts/doctor.sh` na instalação que está rodando.
@@ -56,7 +72,15 @@ async def _daemon_checks() -> list[tuple[str, str]]:
                 rows.append(("[ OK ]", f"perfis listáveis via IPC ({len(lista)})"))
             else:
                 rows.append(("[WARN]", "o daemon não respondeu a lista de perfis"))
-    except (FileNotFoundError, ConnectionError, IpcError):
+    except IpcError as exc:
+        from hefesto_dualsense4unix.app.ipc_bridge import prazo_vencido
+
+        if prazo_vencido(exc):
+            # Atende a conexão e não responde: parado ou travado. Não é «offline».
+            rows.append(("[FAIL]", f"{exc.message} — o serviço está parado ou travado"))
+        else:
+            rows.append(("[WARN]", "daemon offline — checks de runtime pulados"))
+    except (FileNotFoundError, ConnectionError):
         rows.append(("[WARN]", "daemon offline — checks de runtime pulados"))
     return rows
 
@@ -83,15 +107,17 @@ async def _state_full_ou_none() -> dict[str, Any] | None:
         return None
 
 
-def _print_storm_block() -> None:
-    """Diagnóstico storm (FEAT-DSX-UNIFY-01) — read-only, sem sudo."""
+def _print_storm_block() -> int:
+    """Diagnóstico storm (FEAT-DSX-UNIFY-01) — read-only, sem sudo. Devolve a gravidade."""
     from hefesto_dualsense4unix.integrations import storm_doctor
 
     # MESA-CHEIA-11/E3: o check de áudio conta as placas DualSense contra os
     no_cabo = storm_doctor.controles_no_cabo(asyncio.run(_state_full_ou_none()))
     console.print("\n== anti-storm / sistema ==")
-    for tag, message in storm_doctor.storm_report(controles_no_cabo=no_cabo):
+    linhas = storm_doctor.storm_report(controles_no_cabo=no_cabo)
+    for tag, message in linhas:
         console.print(f"{tag} {message}")
+    return _gravidade_das_linhas(linhas)
 
 
 def _linhas_perfis() -> tuple[list[tuple[str, str]], bool]:
@@ -118,13 +144,18 @@ def _print_bloco_perfis() -> bool:
     return houve_erro
 
 
-def _print_bloco_contratos() -> None:
-    """Os contratos de fora (BlueZ, PipeWire, systemd, kernel, Steam, Proton, COSMIC)."""
+def _print_bloco_contratos() -> int:
+    """Os contratos de fora (BlueZ, PipeWire, systemd, kernel, Steam, Proton, COSMIC).
+
+    Devolve a gravidade do bloco.
+    """
     from hefesto_dualsense4unix.integrations import contratos_de_fora
 
     console.print("\n== contratos de fora (o que o Hefesto assume dos outros) ==")
-    for tag, mensagem in contratos_de_fora.linhas_do_doctor():
+    linhas = contratos_de_fora.linhas_do_doctor()
+    for tag, mensagem in linhas:
         console.print(f"{tag} {mensagem}", soft_wrap=True, highlight=False)
+    return _gravidade_das_linhas(linhas)
 
 
 def doctor_cmd(
@@ -145,20 +176,24 @@ def doctor_cmd(
             args.append("--fix")
         if quiet:
             args.append("--quiet")
-        rc = subprocess.run(args, check=False).returncode
+        # O doctor.sh sai com rc != 0 só quando reprova (FAIL); aviso não o muda.
+        rc = _GRAVIDADE_FAIL if subprocess.run(args, check=False).returncode else 0
     else:
         _avisar_ausente("scripts/doctor.sh", "só os checks do daemon")
 
-    _print_storm_block()
+    rc = max(rc, _print_storm_block())
 
     # PERFIL-NASCE-CERTO-01/E4: o detector também roda no doctor COMPLETO — a
-    _print_bloco_perfis()
+    if _print_bloco_perfis():
+        rc = _GRAVIDADE_FAIL
 
-    _print_bloco_contratos()
+    rc = max(rc, _print_bloco_contratos())
 
     console.print("\n== daemon (via IPC) ==")
-    for tag, message in asyncio.run(_daemon_checks()):
+    linhas_do_daemon = asyncio.run(_daemon_checks())
+    for tag, message in linhas_do_daemon:
         console.print(f"{tag} {message}")
+    rc = max(rc, _gravidade_das_linhas(linhas_do_daemon))
 
     if fix_safe:
         console.print("\n== fix-safe (sem sudo) ==")
@@ -166,7 +201,7 @@ def doctor_cmd(
         # --install: DualSense não-default, microfone preservado.
         _run_script("scripts/fix_wireplumber_default_source.sh", "--install")
         _run_script("scripts/install_snd_quirk.sh", "--runtime")
-        _print_storm_block()
+        rc = max(rc, _print_storm_block())
 
     raise typer.Exit(code=rc)
 

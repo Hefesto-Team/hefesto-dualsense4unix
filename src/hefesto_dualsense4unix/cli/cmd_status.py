@@ -19,20 +19,45 @@ _ROTULOS_DE_CAMPO: dict[str, str] = {
 }
 
 
+class DaemonNaoRespondeuError(RuntimeError):
+    """O serviço aceitou a conexão e não respondeu no prazo (parado ou travado)."""
+
+
 async def _daemon_status_via_ipc() -> dict[str, Any] | None:
+    """O ``daemon.status``; ``None`` com o serviço fora do ar.
+
+    Serviço que ATENDE a conexão e não responde não é «fora do ar»: levanta
+    :class:`DaemonNaoRespondeuError`, e quem chama diz isso (e não abre o aparelho,
+    que o serviço travado ainda segura).
+    """
+    from hefesto_dualsense4unix.app.ipc_bridge import prazo_vencido
+
     try:
         async with IpcClient.connect() as client:
             result = await client.call("daemon.status")
             if isinstance(result, dict):
                 return result
             return None
-    except (FileNotFoundError, ConnectionError, IpcError):
+    except IpcError as exc:
+        if prazo_vencido(exc):
+            raise DaemonNaoRespondeuError(exc.message) from exc
         return None
+    except (FileNotFoundError, ConnectionError):
+        return None
+
+
+def _status_ou_sair() -> dict[str, Any] | None:
+    """O status do serviço, ou ``None`` fora do ar; serviço mudo sai com rc 1."""
+    try:
+        return asyncio.run(_daemon_status_via_ipc())
+    except DaemonNaoRespondeuError as exc:
+        console.print(f"[red]{exc}[/red] — confira o serviço: `hefesto-dualsense4unix doctor`")
+        raise typer.Exit(code=1) from exc
 
 
 def status_cmd() -> None:
     """Tabela com bateria + perfil + conexão + transporte."""
-    data = asyncio.run(_daemon_status_via_ipc())
+    data = _status_ou_sair()
     if data is None:
         console.print("[yellow]daemon offline — mostrando leitura direta do hardware[/yellow]")
         data = _fallback_hardware_read()
@@ -49,9 +74,12 @@ def status_cmd() -> None:
 
 def battery_cmd() -> None:
     """Mostra só o percentual de bateria."""
-    data = asyncio.run(_daemon_status_via_ipc())
+    data = _status_ou_sair()
     if data is None:
         data = _fallback_hardware_read()
+    if data.get("connected") is False:
+        console.print("[red]nenhum controle ao alcance[/red]")
+        raise typer.Exit(code=1)
     battery = data.get("battery_pct")
     if battery is None:
         console.print("[red]bateria desconhecida[/red]")
@@ -61,12 +89,20 @@ def battery_cmd() -> None:
 
 
 def _fallback_hardware_read() -> dict[str, Any]:
+    """A leitura direta do aparelho. Sem controle aberto, devolve ``None`` em tudo o que
+    o aparelho diria: o backend de um posto vago responde bateria 0 e transporte USB,
+    e repassar isso seria inventar um controle."""
+    sem_controle: dict[str, Any] = {
+        "connected": False, "transport": None, "active_profile": None, "battery_pct": None,
+    }
     try:
         from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
 
         controller = PyDualSenseController()
         controller.connect()
         try:
+            if not controller.is_connected():
+                return sem_controle
             state = controller.read_state()
             return {
                 "connected": state.connected,
@@ -79,7 +115,7 @@ def _fallback_hardware_read() -> dict[str, Any]:
                 controller.disconnect()
     except Exception as exc:
         console.print(f"[red]sem controle disponivel: {exc}[/red]")
-        return {"connected": False, "transport": None, "active_profile": None, "battery_pct": None}
+        return sem_controle
 
 
-__all__ = ["battery_cmd", "status_cmd"]
+__all__ = ["DaemonNaoRespondeuError", "battery_cmd", "status_cmd"]

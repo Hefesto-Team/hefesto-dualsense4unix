@@ -17,6 +17,21 @@ _LOG = logging.getLogger(__name__)
 
 _CLOSE_TIMEOUT_S = 2.0
 
+#: Quanto o `connect` espera o socket aceitar. Quem digitou não espera para
+#: sempre: um serviço parado (SIGSTOP, travado) aceita a conexão pelo kernel e
+#: nunca responde, e o diagnóstico é justamente o comando que não pode travar.
+_CONNECT_TIMEOUT_S = 1.0
+
+
+def _prazo_do_metodo(method: str) -> float:
+    """O prazo do método: o dono é a tabela da ponte (`app/ipc_bridge.TETOS`).
+
+    O import é tardio porque a ponte importa este módulo.
+    """
+    from hefesto_dualsense4unix.app.ipc_bridge import teto_da_linha_de_comando
+
+    return teto_da_linha_de_comando(method)
+
 
 class IpcError(RuntimeError):
     def __init__(self, code: int, message: str) -> None:
@@ -38,18 +53,19 @@ class IpcClient:
         socket_path: Path | None = None,
         timeout: float | None = None,
     ) -> AsyncIterator[IpcClient]:
-        """Conecta ao socket Unix do daemon."""
+        """Conecta ao socket Unix do daemon.
+
+        ``timeout=None`` vale o padrão (1 s): esperar para sempre não existe.
+        """
         path = socket_path or ipc_socket_path()
+        prazo = _CONNECT_TIMEOUT_S if timeout is None else timeout
         try:
-            if timeout is not None:
-                reader, writer = await asyncio.wait_for(
-                    asyncio.open_unix_connection(str(path)),
-                    timeout=timeout,
-                )
-            else:
-                reader, writer = await asyncio.open_unix_connection(str(path))
+            reader, writer = await asyncio.wait_for(
+                asyncio.open_unix_connection(str(path)),
+                timeout=prazo,
+            )
         except (TimeoutError, asyncio.TimeoutError) as exc:
-            raise IpcError(-1, "conexão timeout") from exc
+            raise IpcError(-1, f"o daemon não aceitou a conexão em {prazo:g} s") from exc
         client = cls(reader=reader, writer=writer)
         try:
             yield client
@@ -77,7 +93,11 @@ class IpcClient:
         params: dict[str, Any] | None = None,
         timeout: float | None = None,
     ) -> Any:
-        """Envia RPC e aguarda resposta."""
+        """Envia RPC e aguarda a resposta.
+
+        ``timeout=None`` vale o prazo do método (a tabela da ponte; padrão curto
+        para o que não está nela): esperar para sempre não existe.
+        """
         self._next_id += 1
         request = {
             "jsonrpc": PROTOCOL_VERSION,
@@ -87,16 +107,16 @@ class IpcClient:
         }
         payload = json.dumps(request, ensure_ascii=False).encode("utf-8") + b"\n"
         self.writer.write(payload)
+        prazo = _prazo_do_metodo(method) if timeout is None else timeout
+
+        async def _enviar_e_ler() -> bytes:
+            await self.writer.drain()
+            return await self.reader.readline()
 
         try:
-            if timeout is not None:
-                await asyncio.wait_for(self.writer.drain(), timeout=timeout)
-                raw = await asyncio.wait_for(self.reader.readline(), timeout=timeout)
-            else:
-                await self.writer.drain()
-                raw = await self.reader.readline()
+            raw = await asyncio.wait_for(_enviar_e_ler(), timeout=prazo)
         except (TimeoutError, asyncio.TimeoutError) as exc:
-            raise IpcError(-1, "conexão timeout") from exc
+            raise IpcError(-1, f"o daemon não respondeu em {prazo:g} s") from exc
 
         if not raw:
             raise IpcError(-1, "conexão fechada pelo servidor antes da resposta")
