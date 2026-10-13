@@ -135,11 +135,18 @@ class TestOCriterioEDoArranjo:
         assert escritas == []
 
     def test_a_voz_do_jogo_nao_liga_os_motores(self) -> None:
-        """Na háptica, sinal só nos canais 1-2 do endpoint é a voz: o motor não vai."""
+        """Na háptica, sinal só nos canais 1-2 do endpoint é a voz: o motor não vai.
+
+        Desde O-SOM-QUE-O-JOGO-MANDA-AO-CONTROLE-TOCA-TAMBEM-PELO-RADIO-01 a
+        voz vai ao alto-falante (o relatório sai com o som), e o bloco da
+        háptica continua de fora.
+        """
         voz = _bloco_de_pcm(canais_com_sinal=(1, 2))
         bomba, escritas = _bomba_da_haptica([voz] * 4)
         bomba.rodar(segundos=10)
-        assert escritas == []
+        assert bomba.contagem.hapticos_no_fio == 0, "a voz da frente virou vibração"
+        assert bomba.contagem.quadros_com_frente == 4
+        assert len(escritas) == 4 and bomba.contagem.quadros_opus == 4
 
 
 def _ler_tudo(fd: int) -> bytes:

@@ -271,7 +271,11 @@ def test_o_canto_que_comeca_com_a_haptica_tocando_vai_junto_com_ela(sala: Mesa) 
 
 
 def test_a_voz_nos_canais_da_frente_do_endpoint_nao_e_haptica(sala: Mesa) -> None:
-    """Som na frente do endpoint de quatro canais não vibra nada: o ouvido lê os traseiros."""
+    """Som na frente do endpoint não vibra nada: o ouvido dos motores lê os traseiros.
+
+    Desde O-SOM-QUE-O-JOGO-MANDA-AO-CONTROLE-TOCA-TAMBEM-PELO-RADIO-01 a frente
+    é SOM e vai ao alto-falante pelo rádio; o que ela nunca vira é vibração.
+    """
     endpoint = no_do(P3)
     sala.fonte(endpoint).quadro = FRENTE
     sala.abrir_a_sala(P3)
@@ -280,7 +284,7 @@ def test_a_voz_nos_canais_da_frente_do_endpoint_nao_e_haptica(sala: Mesa) -> Non
     sala.mexer(P3)
     sala.volta()
     assert sala.leva(P3) is True
-    sala.esperar_o_fio(P3, som=False, haptica=False, prazo_s=0.3)
+    sala.esperar_o_fio(P3, som=True, haptica=False)
 
 
 def test_a_haptica_com_sinal_e_o_alto_falante_mudo_vai_so_a_haptica(sala: Mesa) -> None:

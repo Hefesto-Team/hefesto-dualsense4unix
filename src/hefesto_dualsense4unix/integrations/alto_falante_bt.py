@@ -130,6 +130,11 @@ from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
     OpusIndisponivelError,
 )
 from hefesto_dualsense4unix.integrations.fontes_de_captura import so_hex
+from hefesto_dualsense4unix.integrations.haptica_bt import (
+    SeparadorDaFrente,
+    somar_com_saturacao,
+    tem_sinal_na_frente,
+)
 from hefesto_dualsense4unix.integrations.storm_doctor import gesto_de_instalar
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -1420,6 +1425,9 @@ class ContagemDaBomba:
     pico_haptico: int = 0
     hapticos_no_fio: int = 0
     reports_calados: int = 0
+    #: Quadros em que a frente do endpoint (o som que o jogo manda ao controle) tinha
+    #: sinal e foi somada ao som do alto-falante.
+    quadros_com_frente: int = 0
 
     @property
     def reports_por_segundo(self) -> float:
@@ -1444,6 +1452,7 @@ class ContagemDaBomba:
             f"  reports montados ........... {self.reports_montados}"
             f"  ({self.reports_por_segundo:.1f}/s)",
             f"  calados por silêncio ....... {self.reports_calados}",
+            f"  quadros com a frente do endpoint somada {self.quadros_com_frente}",
             f"  escritas ACEITAS PELO KERNEL {self.escritas_aceitas_pelo_kernel}",
             f"  escritas recusadas ......... {self.escritas_recusadas}",
             f"  bytes no fio ............... {self.bytes_escritos} B"
@@ -1506,6 +1515,9 @@ class BombaDeSomPeloRadio:
         self._conversor = conversor
         self.ganho_da_haptica = ganho_da_haptica
         self._blocos: list[bytes] = []
+        self._frente_do_quadro = b""
+        self._frentes: list[bytes] = []
+        self._separador = SeparadorDaFrente()
         self.so_com_sinal = bool(so_com_sinal)
         self._som_com_sinal = False
         self._haptica_com_sinal = False
@@ -1581,6 +1593,7 @@ class BombaDeSomPeloRadio:
         if len(pcm) < pedido:
             self.contagem.pcm_curto += 1
             pcm = pcm + b"\x00" * (pedido - len(pcm))
+        pcm = self._com_a_frente(pcm)
         som_vai = self._o_som_vai(pcm)
         bloco = self._o_bloco_da_haptica(haptico)
         if not som_vai and bloco is None:
@@ -1606,6 +1619,25 @@ class BombaDeSomPeloRadio:
         )
         self.contagem.reports_montados += 1
         return report
+
+    def _com_a_frente(self, pcm: bytes) -> bytes:
+        """Soma ao PCM do alto-falante a frente do endpoint deste quadro, saturando.
+
+        O-SOM-QUE-O-JOGO-MANDA-AO-CONTROLE-TOCA-TAMBEM-PELO-RADIO-01: o jogo
+        manda o som do controle pelos canais 1-2 do endpoint de quatro canais
+        (o Wine abre o sink do Hefesto e toca ali), e antes só os 3-4, os
+        motores, chegavam ao rádio. A frente é som, não vibração: **não passa
+        pelo ganho nem pelo portão da vibração** (com a vibração em 0 ela
+        toca), e o volume e o mudo dela são os do próprio alto-falante, que
+        valem no aparelho.
+        """
+        frente, self._frente_do_quadro = self._frente_do_quadro, b""
+        if not frente:
+            return pcm
+        somado = somar_com_saturacao(pcm, frente)
+        if somado is not pcm:
+            self.contagem.quadros_com_frente += 1
+        return somado
 
     def _o_som_vai(self, pcm: bytes) -> bool:
         """O quadro de som vai neste relatório? Sinal, ou o silêncio que fecha o último.
@@ -1673,7 +1705,9 @@ class BombaDeSomPeloRadio:
             with contextlib.suppress(Exception):
                 self._conversor.ganho = float(ganho() if callable(ganho) else ganho)
             self._blocos.extend(self._conversor.alimentar(pcm))
+            self._frentes.extend(self._separador.alimentar(pcm))
         bloco = self._blocos.pop(0)
+        self._frente_do_quadro = self._frentes.pop(0) if self._frentes else b""
         self.contagem.blocos_hapticos += 1
         pico = max((b - 256 if b > 127 else b) for b in bloco) if bloco else 0
         pico = max(pico, -min((b - 256 if b > 127 else b) for b in bloco)) if bloco else 0
@@ -2071,6 +2105,16 @@ class OuvidoDosNos:
 OUVIDO = OuvidoDosNos()
 
 
+def no_da_frente(no: str) -> str:
+    """A chave do :data:`OUVIDO` para a FRENTE (canais 1-2) do endpoint de ``no``.
+
+    O endpoint de quatro canais carrega duas coisas: os traseiros são os
+    motores (a chave é o próprio nome do nó) e a frente é o som que o jogo
+    manda ao controle (esta chave). Perguntas diferentes, sinais diferentes.
+    """
+    return f"{no}#frente" if no else ""
+
+
 def fonte_que_ouve(
     fonte: Callable[[int], bytes], no: str, *, canais: int = CANAIS_DO_ENCODER
 ) -> Callable[[int], bytes]:
@@ -2082,6 +2126,8 @@ def fonte_que_ouve(
         pcm = fonte(quantos)
         if pcm:
             OUVIDO.ouvir(no, tem_sinal_no_pcm(pcm, canais=canais))
+            if canais == CANAIS_DA_HAPTICA:
+                OUVIDO.ouvir(no_da_frente(no), tem_sinal_na_frente(pcm, canais))
         return pcm
 
     return _ler
@@ -3166,6 +3212,7 @@ __all__ = [
     "monitor_da_saida_padrao",
     "montar_com_o_common_preservado",
     "montar_relatorio_combinado",
+    "no_da_frente",
     "no_orcamento_do_stop",
     "nome_do_sink",
     "o_mix_fecha_laco",

@@ -17,8 +17,87 @@ CANAIS_DOS_MOTORES = (2, 3)
 
 FATOR = TAXA_DE_ENTRADA // TAXA_DO_BLOCO
 
+#: A FRENTE do endpoint (canais 1-2) é o som que o jogo manda ao controle. Um bloco
+#: háptico consome 512 quadros a 48 kHz; o bloco de som do ``0x36`` leva 480 quadros
+#: a 45 kHz (a taxa da fonte do som, ``alto_falante_bt.TAXA_DA_FONTE_DO_SOM``): a
+#: frente de UM bloco é reamostrada de 512 para 480 quadros.
+CANAIS_DA_FRENTE = (0, 1)
+QUADROS_POR_BLOCO = AMOSTRAS_POR_CANAL * FATOR
+QUADROS_DA_FRENTE_NO_SOM = 480
+
 _PICO_INT16 = 32768
 _PICO_INT8 = 127
+
+#: Para cada quadro de saída, o quadro de entrada à esquerda, o da direita (o
+#: último segura o valor) e o peso deste: a interpolação linear em tabela.
+_ESQUERDA_DA_FRENTE = [
+    (i * QUADROS_POR_BLOCO) // QUADROS_DA_FRENTE_NO_SOM for i in range(QUADROS_DA_FRENTE_NO_SOM)
+]
+_DIREITA_DA_FRENTE = [min(j + 1, QUADROS_POR_BLOCO - 1) for j in _ESQUERDA_DA_FRENTE]
+_PESO_DA_FRENTE = [
+    ((i * QUADROS_POR_BLOCO) % QUADROS_DA_FRENTE_NO_SOM) / QUADROS_DA_FRENTE_NO_SOM
+    for i in range(QUADROS_DA_FRENTE_NO_SOM)
+]
+
+
+def _reamostrar_um_canal(canal: array[int]) -> list[int]:
+    return [
+        int(canal[j] + (canal[k] - canal[j]) * w)
+        for j, k, w in zip(_ESQUERDA_DA_FRENTE, _DIREITA_DA_FRENTE, _PESO_DA_FRENTE, strict=True)
+    ]
+
+
+def frente_reamostrada(esquerdo: array[int], direito: array[int]) -> bytes:
+    """Os 512 quadros da frente a 48 kHz viram os 480 do som a 45 kHz (s16le, estéreo).
+
+    Interpolação linear; silêncio exato devolve ``b""``, que para quem chama
+    vale «nada a somar». O último quadro segura o valor, sem extrapolar além
+    do bloco.
+    """
+    if not any(esquerdo) and not any(direito):
+        return b""
+    saida = array("h", bytes(QUADROS_DA_FRENTE_NO_SOM * 4))
+    saida[0::2] = array("h", _reamostrar_um_canal(esquerdo))
+    saida[1::2] = array("h", _reamostrar_um_canal(direito))
+    if sys.byteorder == "big":
+        saida.byteswap()
+    return saida.tobytes()
+
+
+def somar_com_saturacao(base: bytes, outro: bytes) -> bytes:
+    """Soma dois PCM s16le do mesmo tamanho, amostra a amostra, saturando em int16.
+
+    ``outro`` vazio devolve ``base`` como veio: a frente muda não custa conta.
+    """
+    if not outro or len(outro) != len(base):
+        return base
+    a = array("h")
+    b = array("h")
+    a.frombytes(base)
+    b.frombytes(outro)
+    if sys.byteorder == "big":
+        a.byteswap()
+        b.byteswap()
+    for i, valor in enumerate(b):
+        if valor:
+            soma = a[i] + valor
+            a[i] = 32767 if soma > 32767 else (-32768 if soma < -32768 else soma)
+    if sys.byteorder == "big":
+        a.byteswap()
+    return a.tobytes()
+
+
+def tem_sinal_na_frente(
+    pcm: bytes | bytearray | memoryview, canais: int = CANAIS_DE_ENTRADA
+) -> bool:
+    """O PCM do endpoint tem sinal nos canais 1-2 (a frente)? Não olha os motores."""
+    quadro = 2 * canais
+    inteiro = len(pcm) - len(pcm) % quadro
+    if canais < 3 or inteiro <= 0:
+        return False
+    amostras = memoryview(pcm)[:inteiro].cast("h")
+    frente = amostras[0::canais].tobytes() + amostras[1::canais].tobytes()
+    return frente.count(0) < len(frente)
 
 
 @dataclass
@@ -84,6 +163,51 @@ class ConversorDeHaptica:
         self._pendentes.clear()
 
 
+@dataclass
+class SeparadorDaFrente:
+    """A frente (canais 1-2) do endpoint, em blocos alinhados aos da háptica.
+
+    Corre ao lado do :class:`ConversorDeHaptica` sem entrar nele: o conversor é
+    o caminho quente dos motores e tem o custo medido. ``alimentar`` recebe o
+    mesmo PCM e devolve, a cada 512 quadros fechados, a frente daquele bloco
+    pronta para somar ao som (480 quadros, s16le estéreo; ``b""`` = muda).
+    Sem ganho nenhum: o ganho da vibração é dos motores.
+    """
+
+    canais: int = CANAIS_DE_ENTRADA
+    _esq: array[int] = field(default_factory=lambda: array("h"), repr=False)
+    _dir: array[int] = field(default_factory=lambda: array("h"), repr=False)
+    _resto: bytearray = field(default_factory=bytearray, repr=False)
+
+    def alimentar(self, pcm: bytes | bytearray | memoryview) -> list[bytes]:
+        if self.canais < 3:
+            return []
+        dados = bytes(self._resto) + bytes(pcm)
+        largura = 2 * self.canais
+        inteiros = len(dados) // largura
+        self._resto = bytearray(dados[inteiros * largura :])
+        if inteiros:
+            amostras = array("h")
+            amostras.frombytes(dados[: inteiros * largura])
+            if sys.byteorder == "big":
+                amostras.byteswap()
+            self._esq.extend(amostras[CANAIS_DA_FRENTE[0] :: self.canais])
+            self._dir.extend(amostras[CANAIS_DA_FRENTE[1] :: self.canais])
+        frentes: list[bytes] = []
+        while len(self._esq) >= QUADROS_POR_BLOCO:
+            frentes.append(
+                frente_reamostrada(self._esq[:QUADROS_POR_BLOCO], self._dir[:QUADROS_POR_BLOCO])
+            )
+            del self._esq[:QUADROS_POR_BLOCO]
+            del self._dir[:QUADROS_POR_BLOCO]
+        return frentes
+
+    def limpar(self) -> None:
+        self._resto.clear()
+        del self._esq[:]
+        del self._dir[:]
+
+
 def bloco_de_silencio() -> bytes:
     """64 bytes zerados: o bloco que não mexe os motores."""
     return bytes(BYTES_DO_BLOCO)
@@ -92,9 +216,16 @@ def bloco_de_silencio() -> bytes:
 __all__ = [
     "AMOSTRAS_POR_CANAL",
     "BYTES_DO_BLOCO",
+    "CANAIS_DA_FRENTE",
     "CANAIS_DOS_MOTORES",
     "FATOR",
+    "QUADROS_DA_FRENTE_NO_SOM",
+    "QUADROS_POR_BLOCO",
     "TAXA_DO_BLOCO",
     "ConversorDeHaptica",
+    "SeparadorDaFrente",
     "bloco_de_silencio",
+    "frente_reamostrada",
+    "somar_com_saturacao",
+    "tem_sinal_na_frente",
 ]

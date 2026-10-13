@@ -2006,11 +2006,28 @@ class AltoFalanteSubsystem:
             som_toca = sink_esta_tocando(
                 nome_do_sink(uniq), na_duvida=uniq in self._pontes
             )
-            if not som_toca and not leva:
+            lendo = endpoint.nome if (endpoint_aberto and endpoint is not None) else ""
+            # O-SOM-QUE-O-JOGO-MANDA-AO-CONTROLE-TOCA-TAMBEM-PELO-RADIO-01: a
+            # FRENTE do endpoint (canais 1-2) com sinal é som do jogo, e conta
+            # como som mesmo com a vibração em 0 e o alto-falante calado.
+            frente_toca = self._a_frente_toca(lendo)
+            if (
+                lendo
+                and caminho
+                and not leva
+                and not som_toca
+                and not frente_toca
+                and uniq not in self._pontes
+                and (este_joga or pelo_rumble)
+            ):
+                # Quem joga, com o endpoint aberto e a vibração em 0 (é o que
+                # tira a `leva`): ninguém lê a frente, e o ouvido é quem avisa
+                # que o jogo mandou som ao controle.
+                escutar[lendo] = (uniq, CANAIS_DA_HAPTICA, "ouvido-haptica")
+            if not som_toca and not leva and not frente_toca:
                 self._descer_ponte_ociosa(uniq)
                 continue
-            tipo = "som" if som_toca else "haptica"
-            lendo = endpoint.nome if (endpoint_aberto and endpoint is not None) else ""
+            tipo = "som" if (som_toca or frente_toca) else "haptica"
             if o_jogo_manda and caminho and uniq not in self._pontes:
                 # DESLIGAR-O-HEFESTO-DEVOLVE-O-CONTROLE-AO-LINUX-01, item 3: no
                 # Nativo o jogo abre o alto-falante e a háptica de todos, toque ou
@@ -2023,10 +2040,12 @@ class AltoFalanteSubsystem:
                     **({nome_do_sink(uniq): (uniq, CANAIS_DO_ENCODER, "ouvido-som")}
                        if som_toca else {}),
                     **({lendo: (uniq, CANAIS_DA_HAPTICA, "ouvido-haptica")}
-                       if leva and lendo else {}),
+                       if lendo else {}),
                 }
                 escutar.update(abertos)
-                if not any(self._o_no_tem_sinal(no) is True for no in abertos):
+                if not frente_toca and not any(
+                    self._o_no_tem_sinal(no) is True for no in abertos
+                ):
                     continue
             if uniq in self._pontes:
                 # A ponte só sobe de novo quando o endpoint que ela LÊ muda: para
@@ -2235,6 +2254,14 @@ class AltoFalanteSubsystem:
         except Exception:
             logger.debug("som_ouvido_ilegivel", no=nome, exc_info=True)
             return None
+
+    def _a_frente_toca(self, endpoint: str) -> bool:
+        """A frente (canais 1-2) deste endpoint tem sinal agora? Vazio = sem endpoint."""
+        if not endpoint:
+            return False
+        from hefesto_dualsense4unix.integrations.alto_falante_bt import no_da_frente
+
+        return self._o_no_tem_sinal(no_da_frente(endpoint)) is True
 
     def _a_ponte_leva_a_haptica(self, uniq: str) -> bool:
         """O bloco da háptica vai ao fio na ponte de ``uniq``? Lido a cada quadro."""
