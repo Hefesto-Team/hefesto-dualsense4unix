@@ -93,7 +93,11 @@ class TestTriggerConfig:
 
         for mode in PRESET_FACTORIES:
             t = TriggerConfig(mode=mode)
-            assert t.mode == mode
+            if t.motivo_da_recusa is None:
+                assert t.mode == mode
+            else:  # o modo que pede parâmetros, sem eles, carrega desligado e diz por quê
+                assert t.mode == "Off"
+                assert t.motivo_da_recusa.startswith(f"{mode} ")
 
     def test_mode_invalido_rejeita(self):
         with pytest.raises(ValidationError):

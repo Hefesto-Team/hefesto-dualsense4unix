@@ -96,7 +96,9 @@ def _make_profile(
 
 
 def test_from_profile_modo_trigger() -> None:
-    profile = _make_profile(left_mode="Rigid", right_mode="Galloping")
+    profile = _make_profile(
+        left_mode="Rigid", right_mode="Galloping", right_params=[0, 9, 7, 7, 10]
+    )
     draft = DraftConfig.from_profile(profile)
     assert draft.triggers.left.mode == "Rigid"
     assert draft.triggers.right.mode == "Galloping"
