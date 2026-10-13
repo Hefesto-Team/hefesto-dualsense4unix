@@ -105,6 +105,11 @@ SEAT_PADRAO = "seat0"
 #: Quanto tempo a resposta do logind vale: o pedido do jogo não pode custar um
 #: processo cada, e a troca de usuário é gesto de segundos.
 VALIDADE_DA_SESSAO_S = 1.0
+#: Na varredura do físico já entregue (o Hefesto parado, o laço repetindo a cada
+#: segundo), a resposta vale mais: com o prazo de 1 s eram dois ``loginctl`` por
+#: segundo enquanto o Hefesto estivesse desligado. O pedido de quem conecta
+#: segue no prazo curto.
+VALIDADE_NA_VARREDURA_S = 10.0
 #: Quanto esperar o ``loginctl`` responder: parado, ele recusaria todo pedido.
 PRAZO_DO_LOGINCTL_S = 3.0
 #: controller.rules` instalado FECHA o nó do DualSense físico (`TAG-="uaccess"`, 0600
@@ -1412,16 +1417,17 @@ class BrokerState:
         self.entregue = False
 
 
-    def uid_autorizado(self) -> int | None:
+    def uid_autorizado(self, validade: float = VALIDADE_DA_SESSAO_S) -> int | None:
         """Quem o broker atende AGORA: o uid fixo, ou o da sessão ativa do seat.
 
         ``None`` = ninguém (logind ausente, seat vazio ou só root): o pedido é
-        recusado. Root nunca é atendido, nem como uid fixo.
+        recusado. Root nunca é atendido, nem como uid fixo. ``validade`` é por
+        quanto tempo a resposta guardada do logind ainda serve.
         """
         if self._quem_esta_na_frente is None:
             return self.allowed_uid if self.allowed_uid else None
         agora = self._relogio_da_sessao()
-        if self._sessao_lida_em is None or agora - self._sessao_lida_em >= VALIDADE_DA_SESSAO_S:
+        if self._sessao_lida_em is None or agora - self._sessao_lida_em >= validade:
             self._sessao_lida = self._quem_esta_na_frente()
             self._sessao_lida_em = agora
         uid = self._sessao_lida
@@ -2146,8 +2152,11 @@ class BrokerState:
         if not self.no_nasce_fechado or self._alguem_segura_um_no():
             return []
         # Sem cliente, o que ainda consta é lease órfã de restore que falhou:
-        # entregar é o restore que faltou.
-        uid = self.uid_autorizado()
+        # entregar é o restore que faltou. Já entregue, esta é a varredura que
+        # repete a cada segundo: a pergunta ao logind vale o prazo longo.
+        uid = self.uid_autorizado(
+            validade=VALIDADE_NA_VARREDURA_S if self.entregue else VALIDADE_DA_SESSAO_S
+        )
         if uid is None:
             # Ninguém na frente do seat: não há a quem entregar (o nó segue
             # fechado, e a varredura repete quando alguém entrar).

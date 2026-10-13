@@ -176,6 +176,45 @@ class TestUidAutorizado:
         assert estado.uid_autorizado() is None
         assert estado.uid_para_agir() == ELA
 
+    def test_a_varredura_do_fisico_entregue_nao_pergunta_a_cada_segundo(
+        self, tmp_path: Path
+    ) -> None:
+        """Com o Hefesto parado o laço varre a cada segundo; o logind, não."""
+        agora = [100.0]
+        perguntas: list[float] = []
+
+        def na_frente() -> int:
+            perguntas.append(agora[0])
+            return ELA
+
+        vazio = tmp_path / "hidraw"
+        vazio.mkdir()
+        estado = hb.BrokerState(
+            allowed_uid=None,
+            ops=object(),
+            no_nasce_fechado=True,
+            dev_root=str(vazio),
+            dev_input_root=str(vazio),
+            sys_class_input=str(vazio),
+            sys_class_hidraw=str(vazio),
+            sys_class_bluetooth=str(vazio),
+            quem_esta_na_frente=na_frente,
+            relogio=lambda: agora[0],
+            log=lambda *a, **k: None,
+        )
+        estado.entregar_ao_linux()
+        assert estado.entregue
+        for _ in range(30):
+            agora[0] += 1.0
+            estado.entregar_ao_linux()
+        # 31 varreduras em 30 s: a primeira e uma a cada VALIDADE_NA_VARREDURA_S.
+        assert len(perguntas) <= 1 + 30 / hb.VALIDADE_NA_VARREDURA_S, perguntas
+        # Quem conecta segue no prazo curto.
+        agora[0] += hb.VALIDADE_DA_SESSAO_S
+        antes = len(perguntas)
+        estado.uid_autorizado()
+        assert len(perguntas) == antes + 1
+
     def test_uid_fixo_zero_nunca_e_atendido(self) -> None:
         estado = hb.BrokerState(allowed_uid=0, ops=object(), log=lambda *a, **k: None)
         assert estado.uid_autorizado() is None
