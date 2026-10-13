@@ -131,7 +131,7 @@ def pontes_do_texto(texto: str) -> tuple[int, ...]:
     return tuple(sorted({int(p) for p in re.split(r"[,\s]+", texto.strip()) if p}))
 
 
-def sinal_do_texto(texto: str) -> float | None | str:
+def sinal_do_texto(texto: str) -> float | str | None:
     """«auto» → "auto"; «silencio» → None; «-60» → -60.0."""
     limpo = texto.strip().lower()
     if limpo in ("", "auto"):
@@ -550,7 +550,7 @@ def _de_pe(estado: Mapping[str, Any] | None, uniqs: Sequence[str]) -> int:
     )
 
 
-def achar_o_sinal(portas: Portas, uniq: str, pedido: float | None | str) -> float | None | str:
+def achar_o_sinal(portas: Portas, uniq: str, pedido: float | str | None) -> float | str | None:
     """O nível mais baixo com que a ponte sobe; ``"nenhum"`` se nenhum a levanta."""
     candidatos = SINAIS_TENTADOS if pedido == "auto" else (pedido,)
     for dbfs in candidatos:
@@ -565,7 +565,7 @@ def achar_o_sinal(portas: Portas, uniq: str, pedido: float | None | str) -> floa
     return "nenhum"
 
 
-def _nome_do_sinal(dbfs: float | None | str) -> str:
+def _nome_do_sinal(dbfs: float | str | None) -> str:
     if dbfs is None:
         return "silêncio digital"
     if isinstance(dbfs, str):
@@ -616,7 +616,7 @@ def medir_uma_janela(
 
 
 def medir(
-    portas: Portas, pedido: Pedido, *, rotulo: str, saida: Path, sinal: float | None | str,
+    portas: Portas, pedido: Pedido, *, rotulo: str, saida: Path, sinal: float | str | None,
     janela_s: float, descarte_s: float,
 ) -> int:
     estado = portas.estado()

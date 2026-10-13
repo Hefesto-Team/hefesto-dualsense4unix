@@ -137,7 +137,7 @@ def test_a_regua_ve_as_duas_formas_do_defeito_de_edc4dce(tmp_path: Path) -> None
         "    steps:\n"
         "      - name: Instalar rsvg-convert\n"
         "        run: sudo apt-get install -y librsvg2-bin\n"
-        '        run: pip install pre-commit "ruff==0.15.20"\n',
+        '        run: pip install pre-commit "ruff==0.16.10"\n',
         encoding="utf-8",
     )
     with pytest.raises(ChaveRepetidaError):

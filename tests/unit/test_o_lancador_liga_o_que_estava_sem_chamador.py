@@ -255,7 +255,7 @@ def _pedir_em_paralelo(si: ModuleType, nome: str) -> tuple[threading.Thread, lis
     return fio, atendido
 
 
-def _ler_quando_chegar(si: ModuleType, porta: object) -> str | None | bool:
+def _ler_quando_chegar(si: ModuleType, porta: object) -> str | bool | None:
     limite = time.monotonic() + 5.0
     while time.monotonic() < limite:
         pedido = si.ler_o_pedido(porta)

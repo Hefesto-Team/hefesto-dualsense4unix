@@ -352,7 +352,7 @@ def pedir_a_frente(name: str, pid: int) -> bool:
     return True
 
 
-def ler_o_pedido(porta: socket.socket) -> str | None | bool:
+def ler_o_pedido(porta: socket.socket) -> str | bool | None:
     """Atende UM pedido da fila da porta: o token, ``None`` sem token, ``False`` sem pedido."""
     try:
         conexao, _ = porta.accept()
