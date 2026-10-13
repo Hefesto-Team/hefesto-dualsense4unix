@@ -316,17 +316,25 @@ def _reescrever_arquivo(texto: str, tipo: str) -> str:
     return "\n".join(final)
 
 
+def tipo_do_alvo(rel: str) -> str | None:
+    """O tipo de prosa de um caminho versionado (``py``, ``sh``, ``prosa``…), ou ``None`` se está fora da posse."""
+    if not rel.startswith(PREFIXOS) or rel.startswith(FORA):
+        return None
+    ext = Path(rel).suffix
+    if ext in EXT_CODIGO:
+        return EXT_CODIGO[ext]
+    if ext in EXT_PROSA and rel.startswith(("docs/protocol/", "docs/method/", "docs/adr/", "scripts/")):
+        return "prosa"
+    return None
+
+
 def alvos() -> list[tuple[str, str]]:
     ls = subprocess.run(["git", "ls-files"], cwd=RAIZ, capture_output=True, text=True, check=True).stdout.split("\n")
     saida: list[tuple[str, str]] = []
     for rel in ls:
-        if not rel or not rel.startswith(PREFIXOS) or rel.startswith(FORA):
-            continue
-        ext = Path(rel).suffix
-        if ext in EXT_CODIGO:
-            saida.append((rel, EXT_CODIGO[ext]))
-        elif ext in EXT_PROSA and rel.startswith(("docs/protocol/", "docs/method/", "docs/adr/", "scripts/")):
-            saida.append((rel, "prosa"))
+        tipo = tipo_do_alvo(rel) if rel else None
+        if tipo is not None:
+            saida.append((rel, tipo))
     return saida
 
 

@@ -61,21 +61,19 @@ FORA = (
     "scripts/check_texto_publico.py",
 )
 
-#: A fala citada em comentário: aspas dentro de asteriscos, na forma que a conversa deixava.
-#: Montada por partes, e só vale em linha ``#`` (docstring e texto de tela ficam de fora).
-_ASTERISCO = "\\" + "*"
-FALA_CITADA = re.compile(
-    rf"(?<!{_ASTERISCO}){_ASTERISCO}[«\"][^»\"]{{3,}}[»\"]{_ASTERISCO}(?!{_ASTERISCO})"
+#: A fala citada em comentário mora no ``scripts/o-texto-enxuto.py``, que é o dono da pergunta
+#: (o mesmo gancho roda no commit, no CI e na escrita); este teste a importa, nunca a copia.
+_ESPEC = importlib.util.spec_from_file_location(
+    "o_texto_enxuto", RAIZ / "scripts" / "o-texto-enxuto.py"
 )
-
-#: Onde a fala citada não se mede, e o motivo de cada um.
-FORA_DA_FALA = (
-    "src/hefesto_dualsense4unix/interface/paginas/",  # o publicado: só o ``--publicar`` o escreve
-    "scripts/neutralizar-o-texto.py",  # mostra a forma para trocá-la
-    "scripts/neutralizar-os-nomes.py",
-    "tests/unit/test_o_codigo_nao_tem_narrador.py",  # este arquivo
-)
-_RAIZES_DA_FALA = ("src/", "tests/", "scripts/")
+assert _ESPEC is not None and _ESPEC.loader is not None
+_ENXUTO = importlib.util.module_from_spec(_ESPEC)
+sys.modules["o_texto_enxuto"] = _ENXUTO
+_ESPEC.loader.exec_module(_ENXUTO)
+FALA_CITADA = _ENXUTO.FALA_CITADA
+FORA_DA_FALA = _ENXUTO.FORA_DA_FALA
+_RAIZES_DA_FALA = _ENXUTO.RAIZES_DA_FALA
+falas_em_comentario = _ENXUTO.falas_em_comentario
 
 
 def _versionados() -> list[str]:
@@ -105,32 +103,6 @@ def achados_de_narrador(textos: dict[str, str]) -> list[tuple[str, str]]:
             continue
         for achado in NARRADOR.finditer(texto):
             achados.append((caminho, achado.group(0)))
-    return achados
-
-
-def falas_em_comentario(textos: dict[str, str]) -> list[tuple[str, int]]:
-    """Cada ``(arquivo, linha)`` de um comentário ``#`` com fala citada, fora das isenções.
-
-    O bloco de linhas ``#`` seguidas é lido inteiro: a fala quebrada em duas linhas conta.
-    """
-    achados = []
-    for caminho, texto in textos.items():
-        if not caminho.endswith(".py") or not caminho.startswith(_RAIZES_DA_FALA):
-            continue
-        if caminho.startswith(FORA_DA_FALA):
-            continue
-        linhas = texto.split("\n")
-        bloco: list[str] = []
-        inicio = 0
-        for numero, linha in enumerate([*linhas, ""]):
-            if linha.lstrip().startswith("#"):
-                if not bloco:
-                    inicio = numero
-                bloco.append(re.sub(r"^\s*#:?\s?", "", linha))
-                continue
-            if bloco and FALA_CITADA.search("\n".join(bloco)):
-                achados.append((caminho, inicio + 1))
-            bloco = []
     return achados
 
 
