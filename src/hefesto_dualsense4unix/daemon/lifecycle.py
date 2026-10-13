@@ -33,6 +33,7 @@ from hefesto_dualsense4unix.daemon.subsystems.big_picture import (
 )
 from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
     EMU_BLOQUEADO_POR_JOGO,
+    LAUNCH_RECONCILE_INTERVAL_SEC,
     OrigemEmulacao,
     ancorar_o_p1_no_aparelho,
     primary_identity,
@@ -4283,16 +4284,8 @@ class Daemon:
         next_rumble_assert_at: float = 0.0
         evdev_watchdog_next_at: float = 0.0
         grab_reconcile_next_at: float = 0.0
-        coop_sync_next_at: float = 0.0
-        identity_sync_next_at: float = 0.0
-        # merece número mesmo sem nenhum DualSense plugado. No-op sem fiação
-        external_led_next_at: float = 0.0
-        game_signal_next_at: float = 0.0
-        # estar aberto com o DualSense carregando na mesa, e a aba "No jogo" tem
-        steam_jogo_next_at: float = 0.0
-        battery_journal_next_at: float = 0.0
-        mode_pending_next_at: float = 0.0
-        exposicao_nativa_next_at: float = 0.0
+        relogios = _RelogiosLentos(loop.time())
+        medidor = _MedidorDoTique(self.store)
         from hefesto_dualsense4unix.daemon.subsystems.coop import get_coop_manager
         from hefesto_dualsense4unix.daemon.subsystems.quem_mexe import anotar_o_primario
         previous_buttons: frozenset[str] = frozenset()
@@ -4303,51 +4296,63 @@ class Daemon:
             self.store.clear_controller_state()
             self._last_state = None
 
-        while not self._is_stopping():
-            tick_started = loop.time()
-            if tick_started >= identity_sync_next_at:
-                identity_sync_next_at = tick_started + 2.0
-                self._sync_identity_registry()
-                self._seguir_a_carta()
-                try:
-                    ancorar_o_p1_no_aparelho(self)
-                except Exception as exc:
-                    logger.warning("pad_do_p1_ancorar_falhou", err=str(exc))
-                # sem ela o co-op não existe e os quatro DualSense viram um
-                with contextlib.suppress(Exception):
-                    self.aplicar_gamepad_para_multiplos_controles()
-            if tick_started >= battery_journal_next_at:
-                battery_journal_next_at = tick_started + INTERVALO_SONDA_S
-                self._amostrar_bateria(tick_started)
-            if tick_started >= external_led_next_at:
-                external_led_next_at = tick_started + 2.0
-                self._schedule_external_tick()
-            if tick_started >= game_signal_next_at:
-                game_signal_next_at = tick_started + 2.0
-                await self._sync_game_signal()
-            if tick_started >= steam_jogo_next_at:
-                steam_jogo_next_at = tick_started + 2.0
-                self._schedule_steam_jogo_tick()
-            if tick_started >= exposicao_nativa_next_at:
-                exposicao_nativa_next_at = tick_started + 2.0
-                self._reconciliar_exposicao_do_modo_nativo()
-            if tick_started >= mode_pending_next_at:
-                mode_pending_next_at = tick_started + 1.0
-                with contextlib.suppress(Exception):
-                    self._drenar_modo_pendente()
-            # o `continue` levava tudo junto. Com o DualSense do P1 fora da mesa
-            # DualSense plugado"* —, e vale ainda mais aqui: número é cosmética,
-            grace_passed = tick_started >= self._input_ready_at
-            if grace_passed:
-                coop = get_coop_manager(self)
-                if tick_started >= coop_sync_next_at:
-                    coop.sync()
+        def terminar_o_tique(tick_started: float) -> None:
+            """A manutenção do tique, DEPOIS da entrada, e a medida dele.
+
+            Cada relógio lento tem fase própria (`RELOGIOS_LENTOS`), então um
+            tique carrega poucos deles; a entrada (ler, `forward_all`,
+            `dispatch_gamepad`) já foi ao jogo quando este corpo roda. O que
+            demora de verdade (o sinal do jogo, a sonda da Steam, o LED
+            externo) sai do fio em tarefa.
+            """
+            assentado = tick_started >= self._input_ready_at
+            retidos = frozenset[str]() if assentado else _RETIDOS_NO_ASSENTAMENTO
+            vencidos = relogios.vencidos(tick_started, retidos=retidos)
+            for nome in vencidos:
+                if nome == "identidade":
+                    self._sync_identity_registry()
+                    self._seguir_a_carta()
+                    try:
+                        ancorar_o_p1_no_aparelho(self)
+                    except Exception as exc:
+                        logger.warning("pad_do_p1_ancorar_falhou", err=str(exc))
+                    # sem ela o co-op não existe e os quatro DualSense viram um
+                    with contextlib.suppress(Exception):
+                        self.aplicar_gamepad_para_multiplos_controles()
+                elif nome == "bateria":
+                    self._amostrar_bateria(tick_started)
+                elif nome == "led_externo":
+                    self._schedule_external_tick()
+                elif nome == "sinal_de_jogo":
+                    _agendar_o_sinal_de_jogo(self)
+                elif nome == "steam_jogo":
+                    self._schedule_steam_jogo_tick()
+                elif nome == "exposicao_nativa":
+                    self._reconciliar_exposicao_do_modo_nativo()
+                elif nome == "modo_pendente":
+                    with contextlib.suppress(Exception):
+                        self._drenar_modo_pendente()
+                elif nome == "launch":
+                    from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+                        _reconciliar_launch,
+                    )
+
+                    _reconciliar_launch(self)
+                elif nome == "coop":
+                    get_coop_manager(self).sync()
                     try:
                         reconciliar_as_mascaras(self)
                     except Exception as exc:
                         logger.warning("mascara_reconciliacao_falhou", err=str(exc))
-                    coop_sync_next_at = tick_started + 2.0
-                coop.forward_all()
+            medidor.registrar(loop.time() - tick_started, vencidos)
+
+        while not self._is_stopping():
+            tick_started = loop.time()
+            # A entrada vem primeiro: o que o co-op já tem pronto vai ao jogo antes
+            # de qualquer manutenção do tique.
+            grace_passed = tick_started >= self._input_ready_at
+            if grace_passed:
+                get_coop_manager(self).forward_all()
             if not self.controller.is_connected():
                 # que `daemon.state_full` prioriza, CLUSTER-IPC-STATE-PROFILE-01)
                 # três handlers de estado (`daemon.status`, `state_full`,
@@ -4357,6 +4362,7 @@ class Daemon:
                 previous_buttons = frozenset()
                 # Sem o controle, a tecla do Big Picture que ele segurava se solta.
                 levar_o_big_picture(self, None, frozenset())
+                terminar_o_tique(tick_started)
                 stop_event = self._stop_event
                 assert stop_event is not None
                 with contextlib.suppress(asyncio.TimeoutError):
@@ -4371,6 +4377,7 @@ class Daemon:
                 if was_connected:
                     esquecer_a_leitura_publicada()
                 self.bus.publish(EventTopic.CONTROLLER_DISCONNECTED, {"reason": str(exc)})
+                terminar_o_tique(tick_started)
                 if self.config.auto_reconnect:
                     from hefesto_dualsense4unix.daemon.connection import reconnect
 
@@ -4457,6 +4464,7 @@ class Daemon:
                     self.store.bump("battery.change.emitted")
                     if self._plugins_subsystem is not None:
                         self._plugins_subsystem.dispatch_battery_change(state.battery_pct)
+                terminar_o_tique(tick_started)
                 elapsed = loop.time() - tick_started
                 sleep_for = period - elapsed
                 if sleep_for > 0:
@@ -4542,6 +4550,7 @@ class Daemon:
                 if self._plugins_subsystem is not None:
                     self._plugins_subsystem.dispatch_battery_change(state.battery_pct)
 
+            terminar_o_tique(tick_started)
             elapsed = loop.time() - tick_started
             sleep_for = period - elapsed
             if sleep_for > 0:
@@ -4557,6 +4566,9 @@ class Daemon:
         steam_task = self._steam_jogo_task
         if steam_task is not None and not steam_task.done():
             steam_task.cancel()
+        sinal_task = getattr(self, "_game_signal_task", None)
+        if sinal_task is not None and not sinal_task.done():
+            sinal_task.cancel()
 
 
     def _install_signal_handlers(self, loop: asyncio.AbstractEventLoop) -> None:
@@ -4681,6 +4693,131 @@ HUB_AUSENTE = _HubAusente()
 
 
 INTERVALO_MINIMO_DA_VOLTA_S = 0.004
+
+
+#: O orçamento de um tique a 60 Hz (16,7 ms): acima disso o tique estourou.
+ORCAMENTO_DO_TIQUE_S: Final[float] = 0.0167
+
+#: Quantos tiques medidos formam a janela do p99 e do pior tique.
+JANELA_DO_MEDIDOR_DO_TIQUE: Final[int] = 512
+
+#: Os relógios lentos do tique: ``(nome, período em s, fase em s)``. A fase põe cada
+#: relógio num ponto próprio do período, e dois relógios do mesmo período não caem
+#: mais no mesmo tique: um tique carrega no máximo dois (a identidade e a sonda da
+#: Steam dividem a fase 0, a mais leve das duas é tarefa).
+RELOGIOS_LENTOS: Final[tuple[tuple[str, float, float], ...]] = (
+    ("identidade", 2.0, 0.00),
+    ("steam_jogo", 2.0, 0.00),
+    ("modo_pendente", 1.0, 0.05),
+    ("coop", 2.0, 0.20),
+    ("launch", LAUNCH_RECONCILE_INTERVAL_SEC, 0.30),
+    ("sinal_de_jogo", 2.0, 0.50),
+    ("led_externo", 2.0, 0.70),
+    ("exposicao_nativa", 2.0, 1.10),
+    ("bateria", INTERVALO_SONDA_S, 1.50),
+)
+
+#: O co-op só anda depois do assentamento (a entrada do co-op também só).
+_RETIDOS_NO_ASSENTAMENTO: Final[frozenset[str]] = frozenset({"coop"})
+
+
+class _RelogiosLentos:
+    """Os relógios lentos do tique, cada um na grade da sua fase."""
+
+    __slots__ = ("_periodo", "_proximo")
+
+    def __init__(self, desde: float) -> None:
+        self._periodo = {nome: periodo for nome, periodo, _fase in RELOGIOS_LENTOS}
+        self._proximo = {nome: desde + fase for nome, _periodo, fase in RELOGIOS_LENTOS}
+
+    def vencidos(self, agora: float, *, retidos: frozenset[str] = frozenset()) -> list[str]:
+        """Os relógios que vencem em ``agora``, rearmados na grade (a fase fica).
+
+        Um relógio ``retido`` segue vencido e não é rearmado: dispara no primeiro
+        tique em que sair da retenção.
+        """
+        vencidos: list[str] = []
+        for nome, proximo in self._proximo.items():
+            if agora < proximo or nome in retidos:
+                continue
+            vencidos.append(nome)
+            periodo = self._periodo[nome]
+            self._proximo[nome] = proximo + periodo * (int((agora - proximo) / periodo) + 1)
+        return vencidos
+
+
+def _gravar_medida(store: Any, nome: str, valor: int) -> None:
+    """Põe ``valor`` no contador ``nome`` (a medida, não a soma). Só o laço escreve."""
+    store.bump(nome, valor - store.counter(nome))
+
+
+class _MedidorDoTique:
+    """Mede a duração de cada tique do `_poll_loop` e a publica nos contadores.
+
+    ``poll.tique.medidos`` e ``poll.tique.estouros`` (acima de 16,7 ms) somam a
+    cada tique. A cada janela, ``poll.tique.p99_us`` e ``poll.tique.pior_us`` valem
+    a última janela, e ``poll.tique.relogio.<nome>`` guarda o pior tique (em µs)
+    em que aquele relógio lento disparou (``entrada`` quando nenhum disparou).
+    """
+
+    __slots__ = ("_duracoes", "_pior_por_relogio", "_store")
+
+    def __init__(self, store: Any) -> None:
+        self._store = store
+        self._duracoes: list[float] = []
+        self._pior_por_relogio: dict[str, float] = {}
+
+    def registrar(self, duracao_s: float, relogios: list[str]) -> None:
+        self._store.bump("poll.tique.medidos")
+        if duracao_s > ORCAMENTO_DO_TIQUE_S:
+            self._store.bump("poll.tique.estouros")
+        self._duracoes.append(duracao_s)
+        for nome in relogios or ["entrada"]:
+            if duracao_s > self._pior_por_relogio.get(nome, 0.0):
+                self._pior_por_relogio[nome] = duracao_s
+        if len(self._duracoes) >= JANELA_DO_MEDIDOR_DO_TIQUE:
+            self._fechar_a_janela()
+
+    def _fechar_a_janela(self) -> None:
+        ordenadas = sorted(self._duracoes)
+        p99 = ordenadas[min(len(ordenadas) - 1, int(len(ordenadas) * 0.99))]
+        _gravar_medida(self._store, "poll.tique.p99_us", round(p99 * 1e6))
+        _gravar_medida(self._store, "poll.tique.pior_us", round(ordenadas[-1] * 1e6))
+        for nome, _periodo, _fase in RELOGIOS_LENTOS:
+            _gravar_medida(
+                self._store,
+                f"poll.tique.relogio.{nome}",
+                round(self._pior_por_relogio.get(nome, 0.0) * 1e6),
+            )
+        _gravar_medida(
+            self._store,
+            "poll.tique.relogio.entrada",
+            round(self._pior_por_relogio.get("entrada", 0.0) * 1e6),
+        )
+        self._duracoes.clear()
+        self._pior_por_relogio.clear()
+
+
+def _agendar_o_sinal_de_jogo(daemon: Any) -> None:
+    """Agenda o tique do sinal de jogo como TAREFA, como a sonda da Steam.
+
+    O `_gather_game_signal_inputs` roda no executor (varre `/proc`, lê os
+    marcadores); o tique só agenda, e se o anterior não voltou este não nasce.
+    """
+    tarefa = getattr(daemon, "_game_signal_task", None)
+    if tarefa is not None and not tarefa.done():
+        return
+    daemon._game_signal_task = asyncio.create_task(
+        _corpo_do_sinal_de_jogo(daemon), name="game_signal_tick"
+    )
+
+
+async def _corpo_do_sinal_de_jogo(daemon: Any) -> None:
+    """O corpo da tarefa do sinal de jogo: a falha vai ao diário, não ao laço."""
+    try:
+        await daemon._sync_game_signal()
+    except Exception as exc:
+        logger.warning("game_signal_tique_falhou", err=str(exc))
 
 
 class _OAperto:

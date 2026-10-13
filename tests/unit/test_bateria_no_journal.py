@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import time
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -461,7 +462,10 @@ class TestFiacao:
             ),
         )
         run_task = asyncio.create_task(daemon.run())
-        await asyncio.sleep(0.15)
+        # O relógio da bateria tem fase própria no tique: espera-se a CONDIÇÃO.
+        limite = time.monotonic() + 5.0
+        while not chamadas and time.monotonic() < limite:
+            await asyncio.sleep(0.01)
         daemon.stop()
         await run_task
         assert chamadas, "o poll loop não sondou a bateria nenhuma vez"

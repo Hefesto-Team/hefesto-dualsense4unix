@@ -277,11 +277,19 @@ class TestAllowlistPulaSoAMascara:
 
 
 class TestFiacaoNoPollLoop:
-    def test_dispatch_gamepad_dispara_a_reconciliacao_de_launch(
+    def test_o_relogio_launch_do_poll_loop_dispara_a_reconciliacao(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Sem esta fiação o arming existiria e nunca rodaria — é o defeito"""
+        """Sem esta fiação o arming existiria e nunca rodaria — é o defeito.
+
+        A reconciliação saiu do `dispatch_gamepad` (O-TIQUE-TEM-ORCAMENTO-01) e mora
+        no relógio `launch` do `_poll_loop`, depois da entrada do tique.
+        """
+        import asyncio
+
         import hefesto_dualsense4unix.daemon.subsystems.gamepad as gp
+        from hefesto_dualsense4unix.daemon import lifecycle as lc
+        from tests.unit.test_o_tique_tem_orcamento import _DaemonDeLaco
 
         chamadas: list[str] = []
         monkeypatch.setattr(
@@ -290,14 +298,20 @@ class TestFiacaoNoPollLoop:
         monkeypatch.setattr(
             gp, "sync_steam_input_exception", lambda daemon, **k: chamadas.append("si")
         )
-        daemon = SimpleNamespace(_gamepad_device=None)
+        monkeypatch.setattr(le, "vigiar_a_mesa", lambda daemon, **k: None)
+        monkeypatch.setattr(le, "rematerializar_se_sossegou", lambda daemon, **k: False)
+        monkeypatch.setattr(lc, "RELOGIOS_LENTOS", (("launch", 0.05, 0.0),))
+        daemon = _DaemonDeLaco(tiques=20)
 
-        gp.dispatch_gamepad(daemon, SimpleNamespace(), frozenset())
+        asyncio.run(daemon.rodar())
 
-        assert chamadas == ["arm", "si"]
+        assert chamadas[:2] == ["arm", "si"]
+        assert len(chamadas) % 2 == 0 and len(chamadas) >= 4
 
-    def test_reconciliacao_e_throttada(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """O dispatch roda a cada tick do poll loop: ler o marker do disco em"""
+    def test_o_dispatch_nao_reconcilia_a_cada_tique(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """O dispatch roda a cada tick do poll loop e não varre mais o `/proc`."""
         import hefesto_dualsense4unix.daemon.subsystems.gamepad as gp
 
         chamadas: list[str] = []
@@ -310,4 +324,15 @@ class TestFiacaoNoPollLoop:
         for _ in range(50):
             gp.dispatch_gamepad(daemon, SimpleNamespace(), frozenset())
 
-        assert chamadas == ["arm"]
+        assert chamadas == []
+
+    def test_a_reconciliacao_anda_a_1_hz_no_relogio(self) -> None:
+        """O ritmo de 1 Hz é o do relógio `launch`: dez disparos em dez segundos."""
+        from hefesto_dualsense4unix.daemon import lifecycle as lc
+
+        relogios = lc._RelogiosLentos(0.0)
+        disparos = sum(
+            "launch" in relogios.vencidos(passo / 60.0) for passo in range(10 * 60)
+        )
+
+        assert 9 <= disparos <= 11

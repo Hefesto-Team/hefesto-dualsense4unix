@@ -286,8 +286,8 @@ class TestQuemAvisaOPad:
         from hefesto_dualsense4unix.daemon.lifecycle import Daemon
 
         fonte = inspect.getsource(Daemon._poll_loop)
-        relogio = fonte.split("identity_sync_next_at = tick_started + 2.0", 1)[1]
-        relogio = relogio.split("if tick_started >=", 1)[0]
+        relogio = fonte.split('if nome == "identidade":', 1)[1]
+        relogio = relogio.split("elif nome ==", 1)[0]
         assert "ancorar_o_p1_no_aparelho(self)" in relogio
 
 

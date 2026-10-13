@@ -1073,17 +1073,12 @@ def _primeira_vez_no_episodio(daemon: Any, chave: str) -> bool:
 
 
 def _reconciliar_launch(daemon: DaemonProtocol) -> None:
-    """Reconciliação de LAUNCH throttada a 1 Hz (R-04 arming + R-06 exceção)."""
-    try:
-        agora = time.monotonic()
-        if agora < getattr(daemon, "_launch_reconcile_next_at", 0.0):
-            return
-        daemon._launch_reconcile_next_at = (  # type: ignore[attr-defined]
-            agora + LAUNCH_RECONCILE_INTERVAL_SEC
-        )
-    except Exception:
-        logger.debug("launch_reconcile_throttle_indisponivel", exc_info=True)
-        return
+    """Reconciliação de LAUNCH (R-04 arming + R-06 exceção).
+
+    Quem a chama é o relógio ``launch`` do `_poll_loop` (1 Hz, com fase própria),
+    depois da entrada do tique: o `dispatch_gamepad` não a chama mais, porque ela
+    varre `/proc` e o encaminhamento do botão ao jogo não espera por isso.
+    """
     with contextlib.suppress(Exception):
         from hefesto_dualsense4unix.daemon.launch_env import arm_launch_profile
 
@@ -1981,7 +1976,6 @@ def dispatch_gamepad(
     daemon: DaemonProtocol, state: Any, buttons_pressed: frozenset[str]
 ) -> None:
     """Repassa o estado do controle ao gamepad virtual."""
-    _reconciliar_launch(daemon)
     _avisar_troca_de_modo(daemon)
     bater_a_vibracao(daemon)
     device = daemon._gamepad_device

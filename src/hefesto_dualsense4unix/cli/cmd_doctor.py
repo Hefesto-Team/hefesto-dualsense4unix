@@ -55,6 +55,47 @@ def _avisar_ausente(relpath: str, consequencia: str) -> None:
         console.print(f"[dim]         {base}[/dim]", soft_wrap=True, highlight=False)
 
 
+_PREFIXO_DO_RELOGIO = "poll.tique.relogio."
+
+
+def _linha_do_tique(counters: Any) -> tuple[str, str] | None:
+    """O tique do daemon em uma linha, dos contadores do ``state_full``.
+
+    O `_poll_loop` mede cada tique: quantos passaram do orçamento de 16,7 ms, o
+    p99 e o pior da última janela, e o relógio lento que estava no pior tique.
+    ``None`` quando o daemon ainda não mediu (ou não conhece a medida).
+    """
+    if not isinstance(counters, dict):
+        return None
+    medidos = counters.get("poll.tique.medidos")
+    if not isinstance(medidos, int) or isinstance(medidos, bool) or medidos <= 0:
+        return None
+
+    def ms(chave: str) -> str:
+        valor = counters.get(chave)
+        quanto = valor if isinstance(valor, int) and not isinstance(valor, bool) else 0
+        return f"{quanto / 1000:.1f}".replace(".", ",")
+
+    estouros = counters.get("poll.tique.estouros", 0)
+    relogios = {
+        chave[len(_PREFIXO_DO_RELOGIO):]: valor
+        for chave, valor in counters.items()
+        if chave.startswith(_PREFIXO_DO_RELOGIO)
+        and isinstance(valor, int)
+        and not isinstance(valor, bool)
+        and valor > 0
+    }
+    onde = ""
+    if relogios:
+        pior = max(relogios, key=lambda nome: relogios[nome])
+        onde = f", o pior com «{pior.replace('_', ' ')}»"
+    return (
+        "[ OK ]",
+        f"tique do laço: {estouros} de {medidos} acima de 16,7 ms; "
+        f"p99 {ms('poll.tique.p99_us')} ms, pior {ms('poll.tique.pior_us')} ms{onde}",
+    )
+
+
 async def _daemon_checks() -> list[tuple[str, str]]:
     """Checks que só o daemon conhece (via IPC). Retorna [(tag, mensagem)]."""
     rows: list[tuple[str, str]] = []
@@ -72,6 +113,15 @@ async def _daemon_checks() -> list[tuple[str, str]]:
                 rows.append(("[ OK ]", f"perfis listáveis via IPC ({len(lista)})"))
             else:
                 rows.append(("[WARN]", "o daemon não respondeu a lista de perfis"))
+            try:
+                estado = await client.call("daemon.state_full")
+            except IpcError:
+                estado = None
+            linha_do_tique = _linha_do_tique(
+                estado.get("counters") if isinstance(estado, dict) else None
+            )
+            if linha_do_tique is not None:
+                rows.append(linha_do_tique)
     except IpcError as exc:
         from hefesto_dualsense4unix.app.ipc_bridge import prazo_vencido
 
