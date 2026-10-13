@@ -353,7 +353,7 @@ def _reler_a_declaracao() -> Any:
     """O disco de novo, depois de um gesto que escreveu nele.
 
     O daemon grava sob lock e só então responde `{"ok": true}` (`_handle_machine_declare`); reler
-    aqui faz a tela mostrar no tique seguinte o que ela escolheu, não o padrão do desenho.
+    aqui faz a tela mostrar no tique seguinte o que o usuário escolheu, não o padrão do desenho.
     """
     return _declaracao(recarregar=True)
 
@@ -2330,7 +2330,7 @@ def teto_da_vibracao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     (`core/rumble.py:48`) compara a política GLOBAL com o teto do ORÇAMENTO, nenhum por controle; o
     caminho por controle passa abaixo, em `core/backend_pydualsense._escalar_rumble:3797-3818`. E o
     daemon vivo responde `active_profile = 'meu_perfil'`, não `None`: na bancada o gesto grava no
-    perfil dela e `gravar_e_reaplicar` dispara `profile.switch`.
+    perfil do usuário e `gravar_e_reaplicar` dispara `profile.switch`.
 
     "Sem teto" continua recusando, e a recusa é a entrega: é a única opção sem tradução honesta,
     `politica_do_rotulo` levanta com a razão medida e a frase que falta é do usuário. É do perfil,
