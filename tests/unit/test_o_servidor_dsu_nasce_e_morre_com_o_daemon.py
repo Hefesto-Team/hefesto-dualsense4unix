@@ -312,6 +312,33 @@ def test_a_tabela_do_coop_segue_os_numeros_do_jogo(monkeypatch: pytest.MonkeyPat
     assert all(s.mac.startswith("02:fe:") for s in tabela.values())
 
 
+def test_a_tabela_sem_vpad_numera_na_nativa_e_esvazia_no_controlar_o_pc(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Sem vpad, o número vem do registro de identidade só na Conexão Nativa."""
+    monkeypatch.undo()
+    numeros = {"aabbcc000001": 1, "aabbcc000002": 2}
+    pedidos: list[bool] = []
+
+    def slot_for(uniq: str, *, assign: bool) -> int | None:
+        pedidos.append(assign)
+        return numeros.get(uniq)
+
+    def daemon(nativa: bool) -> SimpleNamespace:
+        return SimpleNamespace(
+            _gamepad_device=None,
+            is_native_mode=lambda: nativa,
+            identity_registry=SimpleNamespace(slot_for=slot_for),
+        )
+
+    entradas = [_entrada("aabbcc000002"), _entrada("aabbcc000001", primario=True)]
+    tabela = montar_a_tabela(daemon(True), entradas)
+    assert {n: s.uniq for n, s in tabela.items()} == {0: "aabbcc000001", 1: "aabbcc000002"}
+    assert tabela[1].mac == vpad_mac("aabbcc000002", 2)
+    assert pedidos and not any(pedidos), "perguntar o número não pode dar lugar na fila"
+    assert montar_a_tabela(daemon(False), entradas) == {}
+
+
 def test_a_tabela_ignora_desconectado_sem_mac_e_numero_fora_de_faixa(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
