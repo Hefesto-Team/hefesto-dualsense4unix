@@ -1314,7 +1314,13 @@ def diagnosticar() -> Diagnostico:
     )
 
 
-#: frente dela eram «Jogador 1 — microfone» e «DualSense 1 · mic»; a razão da
+#: O rótulo que a pessoa lê na lista de ENTRADA do sistema, sem o número.
+#:
+#: **Decisão de produto, 09/09/2026**, `D-0909-OS-NOS-SE-CHAMAM-ALTO-FALANTE-E-
+#: MICROFONE-DO-CONTROLE-N`, opção «4a». As outras duas opções eram
+#: «Jogador 1 — microfone» e «DualSense 1 · mic»; a razão da escolha está escrita
+#: na decisão e manda no código daqui: **o número é o ASSENTO (P1..P4), como na
+#: tela** — um nome por APARELHO mudaria quando o controle trocasse de assento.
 NOME_DO_MICROFONE_DO_CONTROLE = "Microfone do Controle"
 
 _NUMERADOR_DE_ASSENTO: Callable[[str], int | None] | None = None

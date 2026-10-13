@@ -179,7 +179,7 @@ class Censo:
 
     com_wrapper: list[str] = field(default_factory=list)
     faltantes: list[JogoSemWrapper] = field(default_factory=list)
-    #: appids que ela recusou explicitamente (`jogos_sem_wrapper.txt`).
+    #: appids que o usuário recusou explicitamente (`jogos_sem_wrapper.txt`).
     recusados: list[str] = field(default_factory=list)
     recusados_com_wrapper: list[str] = field(default_factory=list)
     sandbox: list[str] = field(default_factory=list)

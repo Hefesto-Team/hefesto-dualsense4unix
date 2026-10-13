@@ -74,7 +74,11 @@ DUALSENSE_EDGE_NAME = (
 # quatro DualSense (decisão, 06/09/2026).
 NINTENDO_VENDOR = 0x057E
 NINTENDO_PROCON_PRODUCT = 0x2009
-#: os quatro vpads dela sem abrir nenhum. Os bytes 2-3 do GUID são o **CRC16
+#: MEDIDO com a libSDL2 da bancada, enumerando os quatro vpads sem abrir nenhum.
+#: Os bytes 2-3 do GUID são o **CRC16 do nome** (`SDL_crc16`, refletido, poly
+#: 0xA001), conferido nos quatro, 4 de 4:
+#:
+#:     nome ................................ crc16   bytes[2:4] do GUID
 #:     DualSense ... (Hefesto P1) .......... 0x8076  7680
 #:     DualSense ... (Hefesto P2) .......... 0x7076  7670
 #:     DualSense ... (Hefesto P3) .......... 0xe077  77e0

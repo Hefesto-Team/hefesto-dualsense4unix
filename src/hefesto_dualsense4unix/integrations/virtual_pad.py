@@ -51,7 +51,7 @@ logger = get_logger(__name__)
 UHID_BIND_TIMEOUT_S = 0.5
 
 # controle chega — o `uhid` (o relatório do DualSense, por onde voltam
-# O `uhid` só se constrói com máscara DualSense: *"o `hid_playstation` só faz
+# O `uhid` só se constrói com máscara DualSense.
 # PRAGMATA segurou só o mouse e o teclado com quatro Edge `uinput`, e o Future
 CAMINHO_DUALSENSE = "dualsense"
 CAMINHO_XBOX = "xbox"

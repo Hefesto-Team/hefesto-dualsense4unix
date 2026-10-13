@@ -364,7 +364,12 @@ def cor_do_serial(serial: str) -> CorDoPlastico | None:
     return cor_do_codigo(serial[FATIA_DA_COR])
 
 
-#: padrão de produto, sem a sessão com a luz na mão (ela dormia): a saturação de 15%
+#: Casca neutra (branco, preto, cinzas) não tem matiz: a clara acende branco, e a
+#: escura não tem tom e cai no número. Os dois limiares abaixo são decisão de
+#: produto, sem a sessão com a luz na mão: a saturação de 15% separa as cascas
+#: neutras do mapa (White 5%, Sterling Silver 3%, Midnight Black 7%) das coloridas
+#: (a menor é a do Starlight Blue, 41%), e o valor de 50% separa o preto (12%) dos
+#: cinzas claros (30th Anniversary, 69%).
 SATURACAO_NEUTRA = 0.15
 VALOR_CLARO = 0.5
 

@@ -132,7 +132,7 @@ class Dica:
     detalhe: str = ""
     ignorar: Acao | None = None
     calada: bool = False
-    #: vem antes de todos os que falam (o controle que pede para parear: ela está esperando)
+    #: vem antes de todos os que falam (o controle que pede para parear: alguém está esperando)
     primeiro: bool = False
 
     @property

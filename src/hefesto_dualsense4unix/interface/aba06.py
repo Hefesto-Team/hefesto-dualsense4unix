@@ -1223,7 +1223,7 @@ def ajuda(txt, largura="", vivas=()):
     return (f'<span class="{cls}" tabindex="0">?'
             f'<span class="dica"{st}>{corpo}</span></span>')
 
-# aba navegAção."* <!-- noqa-acento: citação literal --> O PS + L3 anda
+# <!-- noqa-acento: citação literal --> O PS + L3 anda
 #: O de fábrica de cada linha sai do produto (`acoes_do_gesto.PADRAO`), e as
 COMBOS = [(g.numero, g.pecas, _acoes_do_gesto.rotulo(_acoes_do_gesto.PADRAO[g.chave]))
           for g in _acoes_do_gesto.GESTOS.values()]
@@ -1578,7 +1578,7 @@ D_ROL_ESTILO = ajuda(D_ROL_TXT)
 #: O TIPO DE NAVEGAÇÃO — 06/10/2026, leva 1.7 (desenho-navegacao, item 10). A
 #: «Navegação Interna» de três opções sem dono virou a lista do tipo que o
 #: interruptor liga (`D-2909-O-INTERRUPTOR-LIGA-O-TIPO-ESCOLHIDO`), com o desenho
-#: dela de 03/10 ~00h: na Interna, cada controle ajusta o próprio controle nas
+#: de 03/10 ~00h: na Interna, cada controle ajusta o próprio controle nas
 #: abas Jogar, Controles, Gatilhos, Iluminação e Vibração, R1 e L1 trocam de aba
 #: e o Start guarda os de todos no perfil.
 D_INTERNA = ajuda(
@@ -1606,8 +1606,7 @@ VALEM_PARA = (
     + "</b>.")
 
 #:   · **o botão PS, e o parágrafo VIROU O CONTRÁRIO em 06/09/2026.** Ele dizia
-#:     (§2 `06[03]`), que **a palavra de produto reverteu** na 06-Q3: *"O PS ganha a
-#:     a digitar SEM parar de abrir a Steam."*
+#:     (§2 `06[03]`), que **a palavra de produto reverteu** na 06-Q3.
 D_DEFINICOES = ajuda(
     f"As <b>{len(BOTOES)} linhas</b> de cada botão: <b>o que ele faz</b> "
     "— mouse, tecla ou programa, na mesma lista.<br><br>"

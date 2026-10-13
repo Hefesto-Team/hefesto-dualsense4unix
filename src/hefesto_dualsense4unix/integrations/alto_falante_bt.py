@@ -1938,7 +1938,6 @@ def diagnosticar(uniqs: Sequence[str] | None = None) -> Diagnostico:
     )
 
 
-#: seja o canal do sfx caindo pra cada controle"*. <!-- noqa-acento: citação literal -->
 #: **POR QUE UM GANCHO E NÃO UMA LEITURA:** quem PERGUNTA é o `state_full`, que
 _DIZEDOR_DA_FONTE: Callable[[str], str] | None = None
 

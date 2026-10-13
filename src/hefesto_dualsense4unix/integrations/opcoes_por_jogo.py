@@ -33,7 +33,7 @@ o que a Steam apagar volta inteiro — não só o atalho.
     tabela:   3357650  VKD3D_CONFIG=no_upload_hvv %command%
     no disco: <atalho do hefesto-launch> VKD3D_CONFIG=no_upload_hvv %command%
 
-O JOGO QUE ELA TIROU DO ATALHO continua fora dele: o appid que está no
+O JOGO QUE O USUÁRIO TIROU DO ATALHO continua fora dele: o appid que está no
 ``jogos_sem_wrapper.txt`` recebe as opções dela SEM o atalho. O produto não
 briga com a dona da máquina — é a mesma regra do
 ``apply_wrapper_vdf_text(excluir=…)``.

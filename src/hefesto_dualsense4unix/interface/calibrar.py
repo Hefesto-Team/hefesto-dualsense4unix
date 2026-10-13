@@ -85,9 +85,8 @@ SEM_CONTROLE = ("Nenhum controle conectado. Ligue um pelo cabo ou pelo rádio "
                 "e ele aparece aqui.")
 
 #: «MIRA VIRTUAL» VIROU «ANALÓGICO VIRTUAL» — 06/10/2026, leva 1.7
-#: (desenho-navegacao, item 12), pedido: *«Vamos Mudar para Analógico
-#: Virtual. E selecionar ele permite escolher entre (...) analógico esquerdo e
-#: Direito»*. O cabeçalho de cada cartão liga e escolhe o lado, como o chip do
+#: (desenho-navegacao, item 12), pedido: chamar de «Analógico virtual» e
+#: permitir escolher entre o analógico esquerdo e o direito. O cabeçalho de cada cartão liga e escolhe o lado, como o chip do
 #: cabeçalho e os chips embaixo dos analógicos da aba Controles.
 ROTULO_DA_MIRA = "Analógico virtual"
 LADOS = (("analogico_esquerdo", "Esquerdo"), ("analogico_direito", "Direito"))
@@ -101,8 +100,8 @@ DE_ONDE_VEM_A_MIRA = ("Os movimentos deste controle movem o analógico escolhido
                       "quanto um gesto anda.")
 
 #: A CALIBRAR COM POUCO TEXTO — 06/10/2026, leva 1.7 (desenho-navegacao, item
-#: 11). Ela: *«Tem muito texto aqui. botões tão sem padrão. E ela precisa ficar
-#: bonita de verdade»*. O subtítulo, as três frases dos passos, a frase da mira
+#: 11). Pedido: menos texto, botões no mesmo padrão e a tela bonita de
+#: verdade. O subtítulo, as três frases dos passos, a frase da mira
 #: e o aviso do pé saíram da tela para o `?` do título e para o `title` de cada
 #: passo. E o passo 3 dizia que o zero «fica gravado no controle», o que é
 #: falso: o firmware não aceita escrita de calibração por nós (a família de
@@ -548,7 +547,7 @@ def _quem(c):
 def controle(c):
     """O cartão de UM controle — o desenho, a identidade e as seis linhas vazias.
 
-    A PRIMEIRA LINHA DIZ QUEM JOGA (07/10/2026, a [45] dela): o nome que ela deu ao controle e o
+    A PRIMEIRA LINHA DIZ QUEM JOGA (07/10/2026, a [45] dela): o nome que o usuário deu ao controle e o
     número, ou só o número sem nome. A Calibrar não tem lâmpadas, por isso leva os dois. «Player N»
     e o «Sony •» saíram para a gramática da casa (`P<n>`).
     """

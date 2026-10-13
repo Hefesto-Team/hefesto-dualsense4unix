@@ -43,7 +43,6 @@ OK = "[ OK ]"
 WARN = "[WARN]"
 INFO = "[INFO]"
 
-#: deles de porta."*).
 PREFIXO_DA_CURA = "O que fazer: "
 
 
@@ -438,7 +437,7 @@ def check_steam_input(home: Path | None = None) -> tuple[str, str]:
         v for v in vdfs if _STEAM_INPUT_RE.search(_safe_read(v))
     ]
     if excecoes:
-        # TELA, e dizia *"jogos cujo DualSense é entregue pela Steam"* — o
+        # TELA, e dizia «jogos cujo DualSense é entregue pela Steam» — o
         return OK, (
             "Steam Input desligado (com exceções por jogo, marcadas por "
             "você — nesses o controle físico fica escondido)"

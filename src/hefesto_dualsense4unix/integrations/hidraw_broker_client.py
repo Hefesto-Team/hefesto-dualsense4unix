@@ -526,8 +526,8 @@ def make_exposicao_factory(daemon: Any) -> Callable[[str], AbstractContextManage
 # já tinha construído a porta certa: o `cmd open` do broker, que devolve um fd
 # `O_RDWR` do nó ESCONDIDO por SCM_RIGHTS.
 #
-# A regra desta casa é *"todo instrumento tem de declarar qual biblioteca está
-# usando"*, porque medir contra a biblioteca errada produz alarme convincente e
+# A regra desta casa é «todo instrumento tem de declarar qual biblioteca está
+# usando», porque medir contra a biblioteca errada produz alarme convincente e
 # falso. **O mesmo vale para a porta:** medir no nó escondido produz zero
 # convincente e falso. Por isso `abrir_hidraw` nunca devolve só um fd — devolve
 # um `NoAberto`, que carrega por onde entrou e por quê.

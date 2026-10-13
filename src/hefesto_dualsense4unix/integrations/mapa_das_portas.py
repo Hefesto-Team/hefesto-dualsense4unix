@@ -185,7 +185,7 @@ def mesa_do_motor(
 ) -> Bancada:
     """O desenho dela mais a leitura de agora, na forma que o motor entende.
 
-    ``tipos`` é o que ela declarou de cada modelo (``vid:pid`` → tipo, o ``mesa.radios`` do
+    ``tipos`` é o que o usuário declarou de cada modelo (``vid:pid`` → tipo, o ``mesa.radios`` do
     ``maquina.json``): pesa quando a máquina não mede a classe do aparelho
     (O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01, passo 2 absorvido da O-WIFI-E-TODO-DISPOSITIVO).
     """
@@ -368,7 +368,7 @@ def leitura_da_maquina(mapa: MapaDaMesa, censo: Censo) -> list[str]:
 
 
 def tipos_declarados(maquina: object) -> dict[str, str]:
-    """``{vid:pid: tipo}`` do que ela declarou dos aparelhos (o ``mesa.radios`` do disco)."""
+    """``{vid:pid: tipo}`` do que o usuário declarou dos aparelhos (o ``mesa.radios`` do disco)."""
     radios = getattr(getattr(maquina, "mesa", None), "radios", None) or {}
     return {chave: radio.tipo for chave, radio in radios.items() if radio.tipo}
 
@@ -418,7 +418,7 @@ def _aparelho_do_motor(
 
 #: O que o kernel LIGOU na interface do aparelho (``censo.ligado_como``) na classe do motor.
 _CLASSE_DO_QUE_O_KERNEL_LIGOU = {"wifi": "wifi", "bluetooth": "bt", "camera": "webcam"}
-#: O tipo que ela declara, na classe do motor — os que o motor não julga ficam sem classe.
+#: O tipo declarado, na classe do motor — os que o motor não julga ficam sem classe.
 _CLASSE_DO_TIPO_DECLARADO = {
     "wifi": "wifi", "teclado": "teclado", "mouse": "mouse", "webcam": "webcam",
 }
@@ -471,7 +471,7 @@ def _entrada_do_motor(
         lacunas.add(LACUNA_PAR)
     declarada = mapa.portas.get(numero)
     # QUEM VENCE (04/10/2026): a máquina no que mede. Com aparelho na entrada, a velocidade é a
-    # medida (o aparelho, depois a placa); a que ela declarou só vale na entrada VAZIA, onde a
+    # medida (o aparelho, depois a placa); a declarada só vale na entrada VAZIA, onde a
     # máquina não tem como saber.
     dita = None if declarada is None or ocupada else declarada.usb
     rapido, origem = _velocidade_do_no(

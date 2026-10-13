@@ -1050,13 +1050,10 @@ DICA_DA_PRIORIDADE = f"{FRASE_DA_PRIORIDADE_DELA} {FRASE_DO_UNIVERSAL}"
 LANCADORES_DO_DESENHO = [PROCEDENCIA_DA_STEAM, "Heroic", "Lutris", "RetroArch",
                          LANCADOR_DIRETO]
 
-#: *"A gente adicionaria Navegação, remopve jogo da steam,  (noqa-acento) cita ela
-#: jogo, jogo pela janela, estilo de jogo, e colocariamos  (noqa-acento) cita ela
 AMBIENTES = oferta_do_funciona_em(LANCADORES_DO_DESENHO)
 
 ESTILOS = [e.rotulo for e in ESTILOS_DO_MOTOR]
-#: (foto 9): *"aqui por exemplo deveria aparecer o nome e o codigo  (noqa-acento) cita ela
-#: não só o codigo e não deveria aparecer o nome do programa"*.  (noqa-acento) cita ela
+#: (foto 9): aparece o nome e o código, não só o código, e não aparece o nome do programa.
 PERFIS = [("Mortal Kombat", 90, "Steam · Mortal Kombat 1 · 1971870", True),
           ("Elden Ring", 85, "Steam · Elden Ring · 1245620", False),
           ("Orpheus", 82, "RetroArch · Orpheus: To Hell and Back", False),

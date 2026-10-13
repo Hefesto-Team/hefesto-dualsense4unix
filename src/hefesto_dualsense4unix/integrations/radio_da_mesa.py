@@ -375,7 +375,6 @@ MODOS_DA_PONTE = frozenset({"som", "haptica"})
 
 
 # numeros com fontes mudando de cores do vermelho <!-- noqa-acento: citação literal -->
-# distancia tá daquele conector.»* <!-- noqa-acento: citação literal -->
 
 HZ_QUE_ENGASGA = 1000.0 / 8
 HZ_DO_JOGO = MOTION_EMIT_MAX_HZ

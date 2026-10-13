@@ -1404,7 +1404,8 @@ GL16 = [("cross","✕"),("circle","○"),("square","□"),("triangle","△"),
         ("l1","L1"),("r1","R1"),("l2","L2"),("r2","R2"),
         ("share","<"),("options","≡"),("ps","PS"),("touchpad","···")]
 
-# pintada para sempre — e o `--plastico` do Cosmic Red dela é rosa, a mesma cor
+# Nenhum dado desliga `plast`: a peça que nasceu com ela fica pintada para sempre
+# — e o `--plastico` do Cosmic Red é rosa, a mesma cor do `.gb.on`.
 
 
 _POR_EXTENSO = {1: "um", 2: "dois", 3: "três", 4: "quatro", 5: "cinco", 6: "seis"}
@@ -1618,9 +1619,9 @@ def identidade(c, *, bat, carga=None, meio="", virtual=False):
     # O NOME DO PLÁSTICO E O TRANSPORTE GANHARAM ENDEREÇO — 03/09/2026, e a lei é
     via_na_tela = palavra_do_transporte(c.get("transporte"))
     #
-    # QUEM JOGA — D-2909-O-CARTAO-DIZ-QUEM-JOGA (29/09/2026, ela no chat): o título do cartão
+    # QUEM JOGA — D-2909-O-CARTAO-DIZ-QUEM-JOGA (29/09/2026): o título do cartão
     # ABERTO diz o NOME de quem joga com o controle (o da aba Conexões), e o «Pn» só quando
-    # ele não tem nome. A tira FECHADA segue com o «Pn •» dela (não tem lâmpada). O número tem
+    # ele não tem nome. A tira FECHADA segue com o «Pn •» (não tem lâmpada). O número tem
     # endereço nos dois (`monta.numero_do_jogador`), e o nome é pintado pelo pacote da aba.
     n_com_endereco = numero_do_jogador(c["jogador"])
     com_endereco = {
@@ -1816,10 +1817,8 @@ def selo_do_microfone(mic_mudo, *, estilo=""):
             f'>{SELO_MUDO if mic_mudo else SELO_ATIVO}</span></span>')
 
 
-# decisão de produto (*"a versão antiga não segue disponivel"* — `pyproject.toml`).  # noqa-acento: citação literal
+# decisão de produto (a versão antiga não segue disponível — `pyproject.toml`).
 # digitar nada.
-# interface pq o botão do proprio controle já o faz e ele reflete isso"*.  # noqa-acento: citação literal
-# falado"*.  <!-- noqa-acento: citação literal -->
 DICA_MIC_TESTAR = ("Liga o retorno: você se ouve enquanto ele estiver aceso, "
                    "com o volume e o ganho desta coluna já aplicados — é assim "
                    "que o jogo te ouve. Clique de novo para desligar. Para "
@@ -1890,7 +1889,7 @@ def linha_de_volume(campo, razao=""):
             f' data-hef-atributo="data-porque"{porque}>')
 
 
-# sufixo nenhum — o DualSense não publica placa ALSA por rádio"*. A primeira
+# A primeira
 def sufixo_do_canal(c):
     """O CHIP do canal no rótulo da moldura, na cena aprovada."""
     na_mesa = bool(c.get("conectado", True))
@@ -2532,7 +2531,7 @@ ESTADO = {
     alto_v=[80, 66, 74, 58, 84, 62, 70, 76, 54, 68, 60, 78, 64, 72], rota_nada=False),
 }
 
-#     vc fez na aba jogar"* (31/08) → a classe `off` e o `data-conectado="nao"`,
+# (31/08) → a classe `off` e o `data-conectado="nao"`,
 #     `.ctl.off` / `.ctl[data-conectado="nao"]` da folha, intactas.
 # quatro DualSense na mesa e a tela mostrar dois.
 _VAZIO = "—"
@@ -2606,7 +2605,7 @@ CSS_DA_CARGA = "".join(
 )
 
 def _css_da_familia_dos_botoes() -> str:
-    """Os quatro botões da face trocam o rótulo pela família que ELA declarou.
+    """Os quatro botões da face trocam o rótulo pela família que o usuário declarou.
 
     O dono da tabela é `mesa_viva.LETRAS_DA_FACE`; a página só tem o endereço
     (`data-botoes` na grade, escrito pelo produto) e esta folha. Sem o atributo
@@ -2620,7 +2619,7 @@ def _css_da_familia_dos_botoes() -> str:
             regras.append(f'  {alvo} svg{{display:none}}\n'
                           f'  {alvo}::before{{content:"{letra}"}}\n')
     return (
-        "  /* A FAMÍLIA DOS BOTÕES DE FACE — o que ela declarou do controle\n"
+        "  /* A FAMÍLIA DOS BOTÕES DE FACE — o que o usuário declarou do controle\n"
         "     (`controles.botoes`, ou o modo da chave física) troca só o RÓTULO dos\n"
         "     quatro da face, pela posição. Sem `data-botoes` nada muda. */\n"
         '  .glifos[data-botoes] .gb[data-glifo]::before{font-weight:700;font-size:22px;\n'
@@ -2955,7 +2954,7 @@ LEGENDA = f'''<div class="nota">
   <h2>Ainda aberto</h2>
   <ul>
     <li><b>Os 16 quadradinhos viram o desenho do DualSense?</b> A pergunta é sua, do contrato da aba. A medição pende para os quadradinhos: a coluna deles tem 212 px e é a única das cinco que ainda estica sem estourar — o desenho inteiro do controle nessa largura empurraria o card muito além dos {ALTURA_DO_CARD} px, e o card tem exatamente <b>{PARA_O_CARD - ALTURA_DO_CARD} px</b> de folga.</li>
-    <li><b>O botão de mic do controle muda o mudo do PC inteiro?</b> O campo existe no perfil e o daemon já o aplica, sem nenhuma tela que o escreva (<code>profiles/schema.py:431</code>).</li>
+    <li><b>O botão de mic do controle muda o mudo do PC inteiro?</b> O campo existe no perfil e o daemon já o aplica, sem nenhuma tela que o escreva (<code>profiles/schema.py:430</code>).</li>
     <li><b>Histórico de bateria.</b> O diário grava por controle desde sempre e ninguém lê (<code>daemon/battery_journal.py:153</code>). Com {len(MESA)} ligados o P3 já aparece em 31%.</li>
     <li><b>Fechou:</b> o acelerômetro <b>é</b> pintado ao vivo. Os três eixos em <b>g</b> saem do mesmo caminho do giroscópio, escritos a cada tique pelo pacote desta aba. Esta linha dizia o contrário desde 30/08 — que a ponte procurava <code>acel-x</code> e a tela escrevia <code>accel-x</code> —, e a varredura de 10/09 mediu os três elos e desmentiu os três: o pacote escreve, a página tem os endereços, e o piloto que a frase citava já registrava, em comentário, que aquele nome não existia mais. <b>A tela estava confessando uma dívida que o produto não tinha</b> — o oposto exato do defeito que esta aba persegue, e igualmente caro.</li>
     <li><b>A régua não vê o "Todos".</b> Ela mede a página como ela abre, e a página abre com um card e {FECHADOS} linhas — nenhum quadro escondido, nenhuma rolagem. O estado que rola só existe depois de um clique, e a régua de arranjo não clica. Medi-o à mão, clicando, e os números estão acima; fica dito, porque a régua não é minha para mexer.<br><br><b>Fechou:</b> esta legenda avisava que o <code>olhar.py</code> escondia a barra de rolagem e que ela não sairia na foto. Não é mais verdade — a ferramenta foi curada em 30/08 e hoje fotografa a barra, os <b>10 px</b> que ela ocupa no "Todos" inclusive.</li>
@@ -3103,7 +3102,7 @@ def cor_do_plastico_por_regra(doc):
     return doc.replace("</head>", folha + "</head>", 1)
 
 
-# A QUEIXA, 04/09/2026, com dois DualSense na mesa: *"não funciona o touch,
+# A QUEIXA, 04/09/2026, com dois DualSense na mesa.
 
 
 _ABRE_O_CARTAO = re.compile(r'<div class="ctl card[^"]*"[^>]*data-controle="([^"]+)"')
@@ -3170,7 +3169,6 @@ def _conferir(doc):
     exigir('.ctl[data-conectado="nao"] .barra-luz' in folha,
            "a barra de luz do lugar vazio voltou a acender com a cor do mockup")
 
-    #    iniciar de forma capitular"*).  <!-- noqa-acento: citação literal -->
     exigir(">Dispositivos conectados</span>" in corpo, "o título novo sumiu")
     exigir(">Conectados</span>" not in corpo, "o título antigo voltou")
 
@@ -3179,8 +3177,6 @@ def _conferir(doc):
     exigir('data-mic-modo="' not in corpo and 'data-gesto="mic-modo"' not in corpo,
            "o par «Virtual | Nativo» do microfone voltou — saiu em 02/10/2026")
 
-    #      o som do PC e Ouvir Juntos?"*  <!-- noqa-acento: citação literal -->
-    #      *"o sfx + todo o som que sai no outofalante do hmdmi"*,  <!-- noqa-acento: citação literal -->
     for rota, palavra_dela in (("jogo", "Efeitos do jogo no controle, áudio do PC no PC"),
                                ("junto", "Efeitos do jogo e áudio do PC no controle"),
                                ("nada", "Tudo no PC e nada no controle"),

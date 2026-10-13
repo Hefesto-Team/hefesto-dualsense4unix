@@ -2385,7 +2385,7 @@ def _ha_jogo_aberto() -> bool:
 
 
 #: as portas do pad em USB, injetáveis pela régua (a suíte nunca fala com o
-#: broker dela: o `conftest` desvia o socket, e a régua troca estas).
+#: broker da máquina: o `conftest` desvia o socket, e a régua troca estas).
 PEDIR_O_PAD_USB: Callable[[str, bytes, str, tuple[int, int]], _GadgetDoPad | None] = (
     _pedir_ao_broker
 )

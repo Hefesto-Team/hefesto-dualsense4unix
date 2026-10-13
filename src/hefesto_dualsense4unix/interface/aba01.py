@@ -47,11 +47,9 @@ INTERRUPTOR = [
 ]
 HEFESTO_LIGADO = True
 #: `painel.CHIPS_DA_ESCADA` o declara com `ponte=None`, e `degrau_vivo` acende
-#: DualSense, Point And Click"*, mais a **Navegação**, que ela pôs aqui dentro
+#: mais a **Navegação**, posta aqui dentro
 #:     outros três também são o Hefesto. Vira **Sony DualSense**;
-#: esquecimento — ela é a gramática desta casa para *"botão que aparece e diz que
-#:   o DualSense dizia   "dez linhas do mapa-controles.csv só chegam ao jogo por aqui"
-#: do xbox tá errado aquilo é o texto da mascara do xbox"*. Como o jogo desenha  # (noqa-acento): citação literal
+#: esquecimento — ela é a gramática desta casa. Como o jogo desenha
 MODOS = [
     {"chave": "dualsense", "rot": "Sony DualSense", "modo": "",
      "sem_dono": False,
@@ -68,8 +66,8 @@ MODOS = [
 MODO_ACESO = "dualsense"
 
 #: OS BOTÕES DO DESLIGADO — NO-DESLIGADO-A-STEAM-NAO-SE-METE-E-O-JOGO-MANDA-01,
-#: 08/10/2026, a opção a mudada por ela: *«Desligar o hefesto = Nativo na
-#: origem. Steam Input sai de Ligado.»* O Steam Input deixou de ser um modo do
+#: 08/10/2026, a regra de produto: desligar o Hefesto é Nativo na
+#: origem, e o Steam Input sai de Ligado. O Steam Input deixou de ser um modo do
 #: Hefesto ligado e virou a outra escolha do Desligado, no mesmo estilo dos
 #: botões de cima. A escolha é POR JOGO (`UseSteamControllerConfig`), e o Nativo
 #: é o padrão: o guarda do vdf tira a Steam de todo jogo fora da lista a cada
@@ -639,7 +637,7 @@ CSS = """
      viajaria junto — marca de régua não é coisa que se publica.)
 
      POR QUE A REDE DA CASA NÃO OS PEGA, e isto não é falha dela: a S-04 mira
-     `button, input, select, textarea, [contenteditable]` (`monta.py:544`), e o
+     `button, input, select, textarea, [contenteditable]` (`monta.py:542`), e o
      chip desta aba é um `<span>` — nenhum dos cinco. O comentário da S-04 diz
      por que ela some com o WIDGET em vez de o apagar, e a razão vale letra por
      letra para o chip: *"um botão cinza num lugar vazio ainda promete que ali
@@ -1780,7 +1778,7 @@ def _conferir(doc):
 
     exigir(corpo.count('data-conectado="sim"') == 2, "não são 2 controles conectados")
     exigir(corpo.count('data-conectado="nao"') == 2, "não são 2 lugares vazios")
-    # saiu por pedido (*"cai fora pra ganharmos espaçço Lateral"*),  # (noqa-acento: citação literal)
+    # saiu do cabeçalho em 22/09/2026 (decisão de produto: ganhar espaço lateral),
     exigir(f"{len(monta.CONECTADOS)} controles:" not in doc,
            "o «N controles:» voltou ao cabeçalho — ela o tirou em 22/09")
     from hefesto_dualsense4unix.interface import mesa_viva as _mesa_viva_
@@ -1925,7 +1923,7 @@ def _conferir(doc):
            and 'checked data-campo="cadeado"' not in corpo,
            "o cadeado nasce marcado — o desenho afirmaria uma escolha dela")
     #    mudança porque a de antes media o mundo de ontem.  (noqa-acento: medir)
-    #    `so-desligado`, com dois `</div>` no meio"* — verdadeiro enquanto ele
+    # verdadeiro enquanto ele
     #    `so-desligado` trocam com o Hefesto, e a troca automática de PERFIL
     if 'class="cadeado"' in corpo:
         familia = _ancestrais(corpo, "cadeado")

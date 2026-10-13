@@ -38,7 +38,7 @@ PRAZO_DO_FOCO_S = 1.0
 
 #: Os botões que navegam, no nome do leitor evdev, e o nome do toque na
 #: resposta do ``navegacao.foco``. Os analógicos e os gatilhos nunca (D-22).
-#: O Start (``options``) entra pelo desenho dela de 03/10: com a Interna ele
+#: O Start (``options``) entra pelo desenho de 03/10: com a Interna ele
 #: guarda as escolhas de todos no perfil, e não pausa o jogo atrás.
 TOQUES: dict[str, str] = {
     "r1": "r1",

@@ -279,7 +279,6 @@ def radio_largo_no_mesmo_hub(leitura: Leitura) -> Ordem | None:
                    leitura.nomes_das_entradas),
         o_que_eu_vi=Linha(
             texto=(
-                # layout»*. (noqa-acento: citação literal)
                 f"{_com_maiuscula(nome)} ({_velocidade(alvo.velocidade_mbps)}) "
                 "divide o hub com "
                 + _plural(
@@ -716,7 +715,7 @@ SEM_NOME = "um aparelho sem nome"
 
 
 def _nome_do_aparelho(leitura: Leitura, aparelho: Aparelho) -> str:
-    """Como a ordem chama o aparelho — pelo que ELA declarou, ou pela ausência."""
+    """Como a ordem chama o aparelho — pelo que o usuário declarou, ou pela ausência."""
     nome = leitura.nomes_declarados.get(f"{aparelho.vid}:{aparelho.pid}", "").strip()
     return nome or SEM_NOME
 

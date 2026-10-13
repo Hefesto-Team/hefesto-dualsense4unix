@@ -1254,7 +1254,6 @@ def coluna(c):
           </div>
         </div>'''
 
-# dela: *"ainda temos 3 cantos falando sobre o automatico"*.  # noqa-acento: citação literal
 # `noqa-acento` num comentário HTML aninhado — e **comentário HTML NÃO
 # A REGRA QUE SOBRA: `# noqa-…` só comenta em Python. Prosa de projeto que
 # precise de um `noqa` sai do HTML e vem para cá.
@@ -1706,9 +1705,8 @@ def _conferir(doc):
                f"o lugar {pref} tem endereço que o lugar cheio não tem "
                f"({sobram}) — o conjunto tem de ser IGUAL, não maior")
 
-    # 15. A PODA DA FILEIRA — 11/09/2026, ordem de produto: *"remover esse botão que  <!-- noqa-acento: citação literal -->
-    #     o mouse tá (que abre outras cores.) remover um tom de azul. um tom de  <!-- noqa-acento: citação literal -->
-    #     rosa e o tom de preto de todas as cores pros 4 controles."*           <!-- noqa-acento: citação literal -->
+    # 15. A PODA DA FILEIRA — 11/09/2026, ordem de produto: sai o botão que abre outras cores, e saem
+    #     um tom de azul, um de rosa e o preto das cores dos 4 controles.
     os_tres_que_sairam = ("#0080FF", "#FF00FF", "#000000")
     exigir(tuple(_pacote04.FORA_DA_GUIA) == os_tres_que_sairam,
            f"a poda da guia mudou sem esta régua saber: o pacote tira "

@@ -1030,7 +1030,7 @@ def nome_do_lugar(
     maquina: MaquinaConfig | None = None,
     controladores: Mapping[int, str] | None = None,
 ) -> str | None:
-    """O nome desta porta: o que ela deu à entrada, ou «Entrada 3». ``None`` = não sei."""
+    """O nome desta porta: o que o usuário deu à entrada, ou «Entrada 3». ``None`` = não sei."""
     documento = maquina if maquina is not None else carregar_maquina()
     numero = entrada_do_lugar(documento, lugar)
     if numero is None:
@@ -1082,7 +1082,7 @@ def nome_da_porta(
 
 
 def nome_da_entrada(numero: str, *, maquina: MaquinaConfig) -> str | None:
-    """O nome que ela deu à entrada ``numero`` — ``None`` quando não deu."""
+    """O nome que o usuário deu à entrada ``numero`` — ``None`` quando não deu."""
     declarada = maquina.mapa.portas.get(numero)
     return nome_que_vale(numero, declarada.nome if declarada is not None else None)
 
@@ -1173,7 +1173,7 @@ def com_o_nome_dela(
     maquina: MaquinaConfig | None = None,
     controladores: Mapping[int, str] | None = None,
 ) -> dict[str, Any]:
-    """Uma linha do diário do rádio com o nome que ela deu à porta."""
+    """Uma linha do diário do rádio com o nome que o usuário deu à porta."""
     saida = dict(linha)
     porta = str(linha.get("porta") or "")
     nome = nome_da_porta(porta, maquina=maquina, controladores=controladores)
@@ -1561,7 +1561,7 @@ def de_quem_pende(mapa: MapaDaMesa) -> dict[str, Pendencia]:
     ``caminho`` e o de cada nó; os pontos de X são o ``caminho`` e o hub de
     cada nó (``3-1.1-port4`` → ``3-1.1``).
 
-    O QUE ELA DECLAROU vence, face a face:
+    O QUE O USUÁRIO DECLAROU vence, face a face:
 
     1. a face com o nome :data:`FACE_DO_HUB_DECLARADO` de D pende de D (e a
        ``lida`` é a do barramento, se diverge);
@@ -1698,7 +1698,7 @@ RAIZ_BT_PADRAO = "/sys/class/bluetooth"
 
 @dataclass(frozen=True)
 class PortaDoMapa:
-    """Uma porta do mapa: o que ela declarou e o que o ``/sys`` diz agora."""
+    """Uma porta do mapa: o que o usuário declarou e o que o ``/sys`` diz agora."""
 
     chave: str
     numero: str | None = None

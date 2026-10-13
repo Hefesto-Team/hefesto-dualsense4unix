@@ -358,7 +358,7 @@ def _o_botao_da_dica(acao: Any, classe: str) -> str:
 
 #: O «i» do «Por quê» é um ÍCONE, desenhado, e não uma letra: o botão diz o nome dele no
 #: ``aria-label`` («Por quê: …»), e a regra de produto da primeira letra maiúscula vale para palavra
-#: escrita num botão — um «i» minúsculo como texto era palavra para ela e para a régua.
+#: escrita num botão — um «i» minúsculo como texto era palavra para quem lê e para a régua.
 _O_I_DA_DICA = ('<svg class="cd-i" viewBox="0 0 24 24" aria-hidden="true">'
                 '<path d="M12 11v7"/><circle cx="12" cy="6.5" r="1.5"/></svg>')
 

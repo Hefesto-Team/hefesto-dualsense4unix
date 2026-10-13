@@ -1215,7 +1215,7 @@ def _coluna(c, e=None, conectado=None):
         linhas.append(_barra_de_motor(valor, sigla, m, ligado, botao,
                                       vazio=not conectado))
 
-    # a cor do card em volta tem que ser branco"*. Ela era `style="--plastico:…"`
+    # Ela era `style="--plastico:…"`
     # `var(--plastico)` nesta aba moram nela ou dentro dela — a borda da própria
     # O `style="--plastico:…"` SÓ VAI EM QUEM TEM APARELHO, e o par de
     # folha cai no `var(--plastico, …)` de sempre — e o alvo `plastico` do

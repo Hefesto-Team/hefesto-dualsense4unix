@@ -175,7 +175,6 @@ PASSO_FIM = "fim"
 PASSOS_EM_QUE_O_DESTINO_MUDA = frozenset({PASSO_PREPARANDO, PASSO_DESLIGANDO, PASSO_GESTO})
 
 
-#: dela: *«moveriamos por exemplo 1 controle por vez»*). <!-- noqa-acento: citação literal -->
 MOTIVO_OCUPADO = "ocupado"
 MOTIVO_SEM_BLUEZ = "sem_bluez"
 MOTIVO_FORA_DO_RADIO = "fora_do_radio"
@@ -240,7 +239,6 @@ ESPERA_DA_LAPIDE_DE_FORA_S = 60.0
 
 PARES_POR_LIMPEZA = 32
 
-#: *«limpar com frequencia a cada troca <!-- noqa-acento: citação literal -->
 DEPOIS_DE_UMA_TROCA = "depois de uma troca"
 QUANDO_O_CONTROLE_DESLIGOU = "quando o controle desligou"
 NA_VOLTA_DA_FAXINA = "na volta da faxina"
@@ -306,7 +304,7 @@ EsquecerNaPonte = Callable[[str, str], "tuple[bool, str]"]
 
 
 class GuardaDosNomes(Protocol):
-    """Onde mora o nome que ela deu a cada controle, pelo ENDEREÇO dele."""
+    """Onde mora o nome que o usuário deu a cada controle, pelo ENDEREÇO dele."""
 
     def ler(self) -> Mapping[str, str] | None:
         """``{endereço aa:bb:…: nome}``; ``None`` = não deu para ler (não é «não há»)."""
@@ -1455,7 +1453,7 @@ class CentralDoRadio:
 
     @staticmethod
     def _nome_dado(dono: bluez_dbus.LeitorDoBluez, objeto: bluez_dbus.AparelhoDoBluez) -> str:
-        """O ``Alias`` DESTE objeto quando é um nome que ela deu; ``""`` quando é"""
+        """O ``Alias`` DESTE objeto quando é um nome que o usuário deu; ``""`` quando é"""
         alias = str(objeto.nome or "").strip()
         if not alias:
             return ""
@@ -1465,7 +1463,7 @@ class CentralDoRadio:
         return alias
 
     def _nome_guardado(self, aparelho: str) -> str:
-        """O nome que ela deu a este aparelho, pelo endereço; ``""`` sem nome ou sem ler."""
+        """O nome que o usuário deu a este aparelho, pelo endereço; ``""`` sem nome ou sem ler."""
         try:
             return str((self._nomes.ler() or {}).get(aparelho) or "")
         except Exception:
@@ -2403,7 +2401,7 @@ class CentralDoRadio:
         if (vencido is not None and vencido.em_curso and vencido.passo == PASSO_CONFERINDO
                 and self._relogio() - vencido.prazo_desde >= self._prazo_do_pendente_s):
             # a tela já diz «Não conectou» (o mesmo prazo) e a vigia ainda não falou: o clique
-            # dela é o veredito, e o fecho é o da vigia (a meia chave sai antes)
+            # do usuário é o veredito, e o fecho é o da vigia (a meia chave sai antes)
             self._vigiar_um(vencido)
         with self._tranca:
             atual = self._movimentos.get(alvo)
@@ -2535,7 +2533,7 @@ class CentralDoRadio:
             self._geracao_dos_nomes += 1
 
     def cuidar_dos_nomes(self) -> tuple[tuple[str, str], ...] | None:
-        """UMA volta do NOME DO USUÁRIO: guarda o que ela deu, e o devolve a todo objeto."""
+        """UMA volta do NOME DO USUÁRIO: guarda o que o usuário deu, e o devolve a todo objeto."""
         if self._ocupada():
             return None
         try:

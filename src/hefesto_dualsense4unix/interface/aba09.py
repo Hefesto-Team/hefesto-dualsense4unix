@@ -197,7 +197,7 @@ CSS = """
      sem isto o navegador espreme os rótulos para dar altura ao registro. Quem
      cresce e encolhe é só o `.registro`. */
   .quadro-corpo > *{flex-shrink:0}
-  /* o título da seção 2 — o nome que ela deu, uma linha acima dos quatro rótulos.
+  /* o título da seção 2 — o nome que o usuário deu, uma linha acima dos quatro rótulos.
      A LETRA É A DO «Sistema», e o pedido é de produto (25/09/2026, 22h13):
      *«Configurações avançadas — Escreve com a mesma cor e tamanho de Sistema»*.
      Quem pinta é o `.quadro-titulo` do topo, no `<span>` de dentro; aqui fica

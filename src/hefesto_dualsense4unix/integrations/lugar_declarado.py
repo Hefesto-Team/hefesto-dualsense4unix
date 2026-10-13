@@ -1,4 +1,4 @@
-"""Grava o que ela declarou DIRETO NO DISCO — sem daemon, sem IPC."""
+"""Grava o que o usuário declarou DIRETO NO DISCO — sem daemon, sem IPC."""
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
