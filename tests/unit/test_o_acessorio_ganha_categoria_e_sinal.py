@@ -36,7 +36,8 @@ ADAPTADOR = "aa:bb:cc:00:00:aa"
 #: três acessórios de baixa energia, na faixa forjada
 ACESSORIOS = ("aa:bb:cc:00:00:e1", "aa:bb:cc:00:00:e2", "aa:bb:cc:00:00:e3")
 UUID_BATERIA = "0000180f-0000-1000-8000-00805f9b34fb"
-UUID_DO_FABRICANTE = "5a300001-0023-4bd4-bbd5-a6920e4c5653"
+#: um serviço de fabricante, com o último grupo na faixa forjada (12 hex lê-se como endereço)
+UUID_DO_FABRICANTE = "5a300001-0023-4bd4-bbd5-aabbcc0000f1"
 
 # --- o sinal: o enlace LE também se pergunta ---------------------------------------------
 
