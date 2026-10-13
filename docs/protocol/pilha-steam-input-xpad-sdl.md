@@ -375,7 +375,7 @@ Leia a ordem: **para o par `28de:11ff`, a função retorna antes de consultar
 
 - com `SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD` **ausente ou 0**, o SDL
   já ignora os espelhos sozinho — e o par `0x28de/0x11ff` que este projeto
-  acrescentou ao `_IGNORE_VALUE` (`daemon/launch_env.py:107`, emitido em `:171-173`) é
+  acrescentou ao `_IGNORE_VALUE` (`daemon/launch_env.py:107`, emitido em `:173-175`) é
   **redundante**, não errado;
 - com a variável **em 1**, o SDL usa os espelhos — e aquele par **não os
   esconde**, porque a lista de ignorados nunca é consultada para ele.
@@ -634,7 +634,7 @@ enquanto o DualSense comum tem cinco (`030000004c050000e60c...` para USB e
 banco**. Isso não é defeito enquanto o caminho for HIDAPI (o driver PS5
 sintetiza o mapeamento), mas passa a importar se algum dia o vpad DualSense for
 lido pelo caminho evdev — que é o que `SDL_JOYSTICK_HIDAPI=0` faz, e é o que
-este projeto já emite na máscara **Xbox** (`daemon/launch_env.py:1075`,
+este projeto já emite na máscara **Xbox** (`daemon/launch_env.py:1077`,
 declarado em `:1511`).
 **GRAU: MEDIDO AQUI** para o conteúdo do banco; **BAIXA** para a consequência,
 que não foi exercitada.
@@ -669,7 +669,7 @@ o degrau anterior deixou passar.
 **Quem ganha o ambiente.** O degrau 4 vem **depois** do 3: a Steam monta o
 ambiente do processo e o wrapper roda dentro dele, sobrescrevendo com `env(1)`
 as variáveis que exporta. Logo, para as **sete** variáveis da
-`ENV_ALLOWLIST` em `daemon/launch_env.py:83-91`, **o wrapper vence a Steam**. Para qualquer
+`ENV_ALLOWLIST` em `daemon/launch_env.py:84-92`, **o wrapper vence a Steam**. Para qualquer
 outra — e `SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD` é uma delas, porque
 **não está na allowlist** — vale o que a Steam pôs. **GRAU: ALTA** para o
 mecanismo (`env(1)` e a allowlist por NOME de variável em
@@ -683,7 +683,7 @@ por appid, `#` comenta. Três leitores, e cada um faz uma coisa diferente:
 | leitor | o que a marca faz ali |
 |---|---|
 | o guard do Steam Input | **não** reverte o `UseSteamControllerConfig` daquele appid no `localconfig.vdf` — ou seja, o degrau 3 fica ligado para aquele jogo |
-| `integrations/storm_doctor.py:46` e `:304` | o diagnóstico deixa de acusar aquele appid como conflito |
+| `integrations/storm_doctor.py:46` e `:303` | o diagnóstico deixa de acusar aquele appid como conflito |
 | `daemon/launch_env.py:299-330` | decide a **sessão da exceção** e **pula o arming** da máscara para aquele appid |
 
 **O que ela NÃO muda mais, e isto é decisão de produto, datada.** Até 09/08 a marca
@@ -1315,7 +1315,7 @@ que ele espera (`0x01`) nunca vem?*
     )
 ```
 
-`integrations/uhid_gamepad.py:527-556` (`_fala_de_vibracao`). O report do SDL
+`integrations/uhid_gamepad.py:531-560` (`_fala_de_vibracao`). O report do SDL
 Edge liga `0x02` no `valid_flag0` — passa pelo **primeiro** teste — e ainda
 ligaria `0x04` no `valid_flag2`, que é o segundo. **Passa duas vezes.**
 

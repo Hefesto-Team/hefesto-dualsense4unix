@@ -202,7 +202,7 @@ Ordenado por (impacto ÷ custo):
    > e a precisão importa para não fechá-la com a medição errada.** O `0x32`
    > que este projeto mediu ao vivo em 25/07 é o de **controle** (142 bytes, TLV
    > `0x11` AudioControl, o byte que destrava o microfone —
-   > `integrations/dualsense_bt_audio.py:279`). O report em disputa é o que
+   > `integrations/dualsense_bt_audio.py:62`). O report em disputa é o que
    > leva os **dados**: o módulo o dá como `0x39`, com os blocos `0x12`
    > (háptico) e `0x13`/`0x16` (alto-falante), em `:31` e `:213-219`; a
    > canônica o dá como `0x32` com tag `0x12`. **Continuam os dois de fonte

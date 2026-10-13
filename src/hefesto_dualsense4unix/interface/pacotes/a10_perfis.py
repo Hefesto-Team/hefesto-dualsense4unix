@@ -1129,7 +1129,7 @@ def _rotulo_do_remover(alvo: str) -> str:
     **FATO CADUCO, SUBSTITUÍDO — 02/09/2026.** Aqui estava escrito que *"a
     recusa do piloto não serve de pergunta: ela sai em `stderr`, no terminal,
     onde a dona não está olhando"*. **Não sai mais.** O piloto ganhou
-    `_recusou_dizendo` (`hefesto_vivo.py:2998`): todo `RuntimeError` de gesto
+    `_recusou_dizendo` (`hefesto_vivo.py:3055`): todo `RuntimeError` de gesto
     virava TARJA na tela — no cartão do controle quando a página tinha um, e no
     `document.body` quando não tinha, o caso desta aba —, até 13/09/2026, quando
     a recusa passou ao diário e à piscada do botão (FRASES-E-DICAS-01).
@@ -1402,7 +1402,7 @@ def ativar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
        botão age sobre o escolhido — o `_ESCOLHIDO` vem primeiro, e o `texto`
        fica como último recurso (é o que a prova declarada exercita).
     2. **A RECUSA DO DAEMON SUMIA.** `profile_switch` devolve `False` quando ele
-       não confirmou (`ipc_bridge.py:196`, ATIVAR-NAO-MENTE-01) e o retorno era
+       não confirmou (`ipc_bridge.py:284`, ATIVAR-NAO-MENTE-01) e o retorno era
        descartado: o piloto imprimia "→ aplicado" sobre uma troca que não
        aconteceu. Levantar aqui é o que faz o botão recusar dizendo.
     """

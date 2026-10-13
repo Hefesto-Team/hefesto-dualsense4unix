@@ -56,7 +56,7 @@ DONOS_DOS_GESTOS: dict[str, str] = {
     # `profiles_actions._aplicar_nascimento_com_jogo:3097` usa
     "detectar": "TEM DONO, e ele é a CLASSE da janela: o `state_full` publica "
     "`window_detect_last_class` e `window_detect_current_class` "
-    "(daemon/state_store.py:316). O TÍTULO é que não é publicado. Quem quiser o "
+    "(daemon/state_store.py:328). O TÍTULO é que não é publicado. Quem quiser o "
     "título espera a ONDA-PERFIS-03.",
     "voltar-a-de-ontem": "O MOTOR EXISTE E NUNCA TEVE TELA: "
     "profiles/loader.restaurar_do_historico:3090 e listar_historico:2809, com "
@@ -156,7 +156,7 @@ def _id_visivel(uniq: str) -> str:
 
     A chave do dado continua sendo o ``uniq`` cru — é ela que vai no
     ``data-hef-uniq``, porque é a chave de ``Profile.controllers``
-    (``profiles/schema.py:1270``, canonizada em ``:1448``). Endereço que não é a
+    (``profiles/schema.py:1270``, canonizada em ``:1303``). Endereço que não é a
     chave do dado obriga a inventar uma tradução, e a tradução é onde nasce a
     segunda verdade.
 
