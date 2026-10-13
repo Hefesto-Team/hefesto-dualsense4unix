@@ -41,6 +41,7 @@ seção daqui**: a aba deixou de estar em trabalho.
   marcados, e o ponto diz o sinal em dBm sem julgar (sprint O-ACESSORIO-SEM-TIPO-GANHA-CATEGORIA-E-SINAL-NA-CONEXOES-01,
   a opção 1 escolhida em 09/10/2026). Na cena do desenho o acessório ocupa a linha do relógio; o relógio continua na
   legenda. As cores de cada tipo passam a tokens da raiz (`--c-<tipo>`, `--sala-<tipo>`), que um tema de cores
-  alcança (sprint O-TEMA-DE-CORES-ENTRA-PELA-FOLHA-DE-USUARIO-01), com os mesmos valores de antes. O pacote da aba já
-  escreve os tokens e as células novas, e só a página publicada traz a folha que os define: a 08 se publica junto
-  com o código, no mesmo fecho.
+  alcança (sprint O-TEMA-DE-CORES-ENTRA-PELA-FOLHA-DE-USUARIO-01), com os mesmos valores de antes. Até publicar, o
+  produto roda o pacote novo sobre a página de antes, que não define `--sala-<tipo>` nem `--c-acessorio` nem a
+  textura do «não medido»: os ícones da sala ficam sem a cor do tipo, e a linha do acessório mostra o nome e o
+  sinal, sem o glifo e com a faixa sem cor. A 08 se publica no mesmo fecho que leva o código.
