@@ -157,6 +157,9 @@ def ensaiar(args: argparse.Namespace) -> dict[str, Any]:
         inicio = time.monotonic()
         contadores: list[int] = []
         modulos: list[float] = []
+        giros: list[tuple[float, float, float]] = []
+        xs: list[int] = []
+        ys: list[int] = []
         crc_ruim = 0
         tempo_do_ultimo_pedido = inicio
         while time.monotonic() - inicio < args.segundos:
@@ -174,6 +177,12 @@ def ensaiar(args: argparse.Namespace) -> dict[str, Any]:
             contadores.append(struct.unpack_from("<I", pacote, 32)[0])
             ax, ay, az = struct.unpack_from("<fff", pacote, 76)
             modulos.append((ax * ax + ay * ay + az * az) ** 0.5)
+            giros.append(struct.unpack_from("<fff", pacote, 88))
+            for base in (56, 62):  # os dois toques: ativo, id, x, y
+                if pacote[base]:
+                    x, y = struct.unpack_from("<HH", pacote, base + 2)
+                    xs.append(x)
+                    ys.append(y)
         duracao = max(time.monotonic() - inicio, 1e-6)
 
     taxa = len(contadores) / duracao
@@ -182,6 +191,12 @@ def ensaiar(args: argparse.Namespace) -> dict[str, Any]:
         por_segundo=round(taxa, 1),
         crc_ruim=crc_ruim,
         aceleracao_media_g=round(sum(modulos) / len(modulos), 3) if modulos else None,
+        giro_medio_graus_s=(
+            [round(sum(g[i] for g in giros) / len(giros), 2) for i in range(3)] if giros else None
+        ),
+        contador=[contadores[0], contadores[-1]] if contadores else None,
+        faixa_x=[min(xs), max(xs)] if xs else None,
+        faixa_y=[min(ys), max(ys)] if ys else None,
     )
     if not contadores:
         raise Falha("sem pacote de dados do slot no prazo")
@@ -220,11 +235,33 @@ def main(argv: list[str] | None = None) -> int:
     if args.json:
         print(json.dumps({"ok": True, **relato}, ensure_ascii=False))
     else:
+        _imprimir(relato)
         print(
             f"OK: slot {args.slot}, {relato['por_segundo']} pacotes/s, "
             f"{relato['aceleracao_media_g']} g, versão {relato['versao_do_protocolo']}"
         )
     return 0
+
+
+def _imprimir(relato: dict[str, Any]) -> None:
+    """O relato em texto: a tabela das portas e o que os pacotes de dados trouxeram."""
+    dono = relato.get("dono")
+    print(
+        f"porta {relato['porta']}: "
+        + (f"PID {dono['pid']}, {dono['cmdline']}" if dono else "sem dono lido")
+    )
+    for slot, porta in sorted(relato.get("portas", {}).items()):
+        print(f"  slot {slot}: estado {porta['estado']}, MAC {porta['mac']}")
+    sem_toque = "nenhum toque no período"
+    print(
+        f"pacotes {relato['pacotes']} ({relato['por_segundo']}/s), contador "
+        f"{relato['contador']}, CRC ruins {relato['crc_ruim']}"
+    )
+    print(f"toque: x {relato['faixa_x'] or sem_toque}, y {relato['faixa_y'] or sem_toque}")
+    print(
+        f"aceleração |a| média {relato['aceleracao_media_g']} g; "
+        f"giro médio {relato['giro_medio_graus_s']} °/s"
+    )
 
 
 if __name__ == "__main__":

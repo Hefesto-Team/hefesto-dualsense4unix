@@ -667,3 +667,37 @@ def test_13d_o_ensaio_reprova_a_aceleracao_fora_de_um_g(
     feito = _ensaio(mundo.servidor.porta, "--sem-dono")
     assert feito.returncode == 1
     assert "aceleração média" in json.loads(feito.stdout)["falha"]
+
+
+def test_13e_o_ensaio_imprime_a_faixa_do_toque_e_o_giro_medio(
+    montar: Callable[..., SimpleNamespace],
+) -> None:
+    """O E8 lê do ensaio a faixa de x e y e o giro médio (≈ 0 parado): têm de estar lá."""
+    toques = (_dedo(0, 7, x=700, y=500), _dedo(1, 8, x=1800, y=40))
+    mundo = montar(fontes={UNIQ_1: _andando(toques=toques, giro=(10.0, 20.0, 30.0))})
+    feito = _ensaio(mundo.servidor.porta, "--sem-dono")
+    assert feito.returncode == 0, feito.stdout + feito.stderr
+    relato = json.loads(feito.stdout)
+    assert relato["faixa_x"] == [700, 1800] and relato["faixa_y"] == [40, 500]
+    assert relato["giro_medio_graus_s"] == [10.0, -20.0, -30.0]
+    primeiro, ultimo = relato["contador"]
+    assert ultimo > primeiro
+
+    texto = subprocess.run(
+        [
+            sys.executable,
+            str(Path(__file__).resolve().parents[2] / "scripts/ensaios/o_dsu_chega_ao_emulador.py"),
+            "--porta",
+            str(mundo.servidor.porta),
+            "--segundos",
+            "1.0",
+            "--sem-dono",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    assert texto.returncode == 0, texto.stdout + texto.stderr
+    for pedaco in ("slot 0: estado 2, MAC 02:fe:", "toque: x [700, 1800]", "giro médio"):
+        assert pedaco in texto.stdout, texto.stdout
