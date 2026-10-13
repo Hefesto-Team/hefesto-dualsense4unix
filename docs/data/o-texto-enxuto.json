@@ -5,7 +5,7 @@
       "data": "2026-10-13",
       "nota": "5973 linhas de comentário e 45686 de docstring, em src/hefesto_dualsense4unix/",
       "o_que_conta": "linhas de comentário e de docstring em src/hefesto_dualsense4unix/",
-      "piso": 51659,
+      "piso": 51662,
       "por_item": {
         "app/actions/carona_do_wrapper.py": 174,
         "app/actions/config/secao_controles.py": 83,
@@ -233,7 +233,15 @@
         "utils/single_instance.py": 44,
         "utils/xdg_paths.py": 59
       },
-      "razao": "piso descido pelo censo do dia",
+      "razao": "texto-em-src: +3 linhas (51659 -> 51662), pagas por Origem: D-1310-A-DOCSTRING-ACIMA-DE-DEZ-LINHAS-SO-DESCE; registrado no fecho, topo 7afa84be37d2",
+      "subidas": [
+        {
+          "data": "2026-10-13",
+          "de": 51659,
+          "para": 51662,
+          "razao": "texto-em-src: +3 linhas (51659 -> 51662), pagas por Origem: D-1310-A-DOCSTRING-ACIMA-DE-DEZ-LINHAS-SO-DESCE; registrado no fecho, topo 7afa84be37d2"
+        }
+      ],
       "unidade": "linhas",
       "universo": 385
     }
