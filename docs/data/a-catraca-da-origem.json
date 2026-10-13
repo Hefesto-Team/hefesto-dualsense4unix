@@ -243,14 +243,14 @@
       "data": "2026-10-13",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1084523,
+      "piso": 1084596,
       "por_item": {
-        "docs": 109017,
+        "docs": 109080,
         "scripts": 112110,
-        "src": 296177,
-        "tests": 567219
+        "src": 296184,
+        "tests": 567222
       },
-      "razao": "o teto desceu sozinho com o número",
+      "razao": "tamanho: +73 linhas (1084523 -> 1084596), pagas por Origem: D-1310-A-DOCSTRING-ACIMA-DE-DEZ-LINHAS-SO-DESCE; registrado no fecho, topo 7eb3188fac45",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -335,6 +335,12 @@
           "de": 1054614,
           "para": 1088583,
           "razao": "tamanho: +33969 linhas (1054614 -> 1088583), pagas por Origem: D-1310-A-DOCSTRING-ACIMA-DE-DEZ-LINHAS-SO-DESCE; registrado no fecho, topo a9c0e2405b7d"
+        },
+        {
+          "data": "2026-10-13",
+          "de": 1084523,
+          "para": 1084596,
+          "razao": "tamanho: +73 linhas (1084523 -> 1084596), pagas por Origem: D-1310-A-DOCSTRING-ACIMA-DE-DEZ-LINHAS-SO-DESCE; registrado no fecho, topo 7eb3188fac45"
         }
       ],
       "unidade": "linhas",
