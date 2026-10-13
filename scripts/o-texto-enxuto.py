@@ -37,6 +37,8 @@ PACOTE = "src/hefesto_dualsense4unix/"
 CADERNO = Path("docs/data/o-texto-enxuto.json")
 NOME = "texto-em-src"
 TETO_DA_SAIDA = 12
+#: Só o arquivo com este tanto de texto vira item nomeado no caderno: o resto soma no total, e o caderno é versionado.
+PISO_DO_ITEM = 40
 
 #: A fala citada em comentário: aspas dentro de asteriscos. Montada por partes, e só vale em linha ``#``.
 _ASTERISCO = "\\" + "*"
@@ -357,7 +359,7 @@ def censo_do_volume(raiz: Path) -> Censo:
         except (OSError, UnicodeDecodeError):
             continue
         comentarios, docstrings = comentarios + c, docstrings + d
-        if c + d:
+        if c + d >= PISO_DO_ITEM:
             por_item[p.relative_to(base).as_posix()] = c + d
     return Censo(numero=comentarios + docstrings, universo=len(arquivos), por_item=por_item,
                  nota=f"{comentarios} linhas de comentário e {docstrings} de docstring, em {PACOTE}")
