@@ -793,12 +793,21 @@ async def test_o_ipc_ligar_aqui_responde_pelo_governador() -> None:
     )
 
 
-def test_o_start_liga_o_aviso_e_o_ligar_aqui_acaba_a_espera(som: Any) -> None:
-    """O ``start()`` entrega ao governador quem acordar quando ela responde."""
+def test_o_start_liga_o_aviso_e_o_ligar_aqui_acaba_a_espera(
+    som: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O ``start()`` entrega ao governador quem acordar quando ela responde.
+
+    O casamento corre com o subsistema no ar, como no daemon: depois do
+    ``stop`` nenhuma ponte se guarda (O-NO-E-A-PONTE-DO-SOM-NAO-NASCEM-DEPOIS-DO-STOP-01).
+    A volta própria fica de fora, para não casar a lista vazia da fixture junto
+    com o teste.
+    """
     sub, _ = som
     governador = sub.governador
     sub.governador = None
     sub._governador_injetado = governador
+    monkeypatch.setattr(mod.AltoFalanteSubsystem, "_loop", lambda self: None)
 
     class _Ctx:
         controller = None
@@ -807,17 +816,16 @@ def test_o_start_liga_o_aviso_e_o_ligar_aqui_acaba_a_espera(som: Any) -> None:
     try:
         asyncio.run(sub.start(_Ctx()))
         assert sub.governador is governador
+
+        sub._casar_as_pontes([_Controle(u) for u in (CONTROLE_1, CONTROLE_2, CONTROLE_3)])
+        assert sub._esperando_vaga == frozenset({(CONTROLE_3, "som")})
+        assert governador.ligar_aqui(CONTROLE_3.replace(":", "").upper()) is True
+        assert sub._esperando_vaga == frozenset(), "ela respondeu e o controle seguiu esperando"
+        sub._casar_as_pontes([_Controle(u) for u in (CONTROLE_1, CONTROLE_2, CONTROLE_3)])
+        assert sorted(sub._pontes) == [CONTROLE_1, CONTROLE_2, CONTROLE_3]
+        assert sub._pontes[CONTROLE_3].vaga.alem_do_limite is True
     finally:
         asyncio.run(sub.stop())
-
-    sub.governador = governador
-    sub._casar_as_pontes([_Controle(u) for u in (CONTROLE_1, CONTROLE_2, CONTROLE_3)])
-    assert sub._esperando_vaga == frozenset({(CONTROLE_3, "som")})
-    assert governador.ligar_aqui(CONTROLE_3.replace(":", "").upper()) is True
-    assert sub._esperando_vaga == frozenset(), "ela respondeu e o controle seguiu esperando"
-    sub._casar_as_pontes([_Controle(u) for u in (CONTROLE_1, CONTROLE_2, CONTROLE_3)])
-    assert sorted(sub._pontes) == [CONTROLE_1, CONTROLE_2, CONTROLE_3]
-    assert sub._pontes[CONTROLE_3].vaga.alem_do_limite is True
 
 
 def test_a_ponte_que_nao_subiu_devolve_a_vaga_ao_descer(monkeypatch: pytest.MonkeyPatch) -> None:
