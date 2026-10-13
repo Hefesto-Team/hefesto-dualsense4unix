@@ -134,16 +134,18 @@ class AnunciadorDoJogo:
 
 
 def _carimbo_do_perfil(nome: str | None) -> int | None:
-    """O `st_mtime_ns` do arquivo do perfil: um `stat` por leitura, sem decodificar o JSON."""
+    """O `st_mtime_ns` do arquivo do perfil: um `stat` por leitura, sem decodificar o JSON.
+
+    O arquivo que some entre o `exists` e o `stat` levanta, e o `ver` do anunciador o registra e
+    tenta de novo na leitura seguinte.
+    """
     if nome is None:
         return None
     from hefesto_dualsense4unix.profiles.slug import slugify
     from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
 
-    try:
-        return (profiles_dir() / f"{slugify(nome)}.json").stat().st_mtime_ns
-    except (OSError, ValueError):
-        return None
+    alvo = profiles_dir() / f"{slugify(nome)}.json"
+    return alvo.stat().st_mtime_ns if alvo.exists() else None
 
 
 def _marcas_do_perfil(nome: str | None) -> list[str]:
