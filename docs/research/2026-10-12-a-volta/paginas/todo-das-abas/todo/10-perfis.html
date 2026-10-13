@@ -1867,9 +1867,63 @@
   .ordem-vale li .pos{font-family:'JetBrains Mono',monospace;color:var(--comment);width:14px}
   .ordem-vale li.ativo{border-color:var(--purple);color:var(--fg)}
 </style>
-<style id="todo-alvos" data-todo="11">
-  .ajuda{width:24px;height:24px;flex:0 0 24px;line-height:22px}
-  [data-gesto]{min-height:24px}
+<style data-todo-css="rodada-2">
+  /* rodada 2 (12/10): uma barra só para os quatro botões, a lista inteira sem rolar, respiro */
+  .perfis > div{padding:12px 16px}
+  .barra-quatro{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:14px 0 2px}
+  .barra-quatro .btn{width:100%;height:36px;justify-content:center;font-size:12.5px}
+  .barra-quatro .btn.verde{background:var(--green);color:var(--app-bg);border-color:var(--green);font-weight:700}
+  .rolo{overflow:hidden}
+  .so-eventos[hidden]{display:none}
+  .rolo .tab tbody td{height:26px;padding-top:0;padding-bottom:0}
+  .campos{gap:4px}
+  .ev-val{display:flex;gap:10px;align-items:center;min-width:0}
+  .ev-val .ev-cmd{flex:1;min-width:0;height:30px;padding:0 10px;border-radius:6px;border:1px solid var(--border-forte);
+    background:var(--app-bg);color:var(--fg);font:12px 'JetBrains Mono',monospace}
+  .ev-val select{flex:0 0 150px;width:150px}
+  .guarda td.gd-id,.guarda th.gd-id{font-size:10px;letter-spacing:-.2px;padding-left:6px;padding-right:6px}
+  .guarda table{table-layout:fixed;width:100%;min-width:0 !important}
+  .guarda col[data-coluna="controle"]{width:136px}
+  .guarda col[data-coluna="id"]{width:122px}
+  .quadro-titulo[data-dica],.cab[data-dica]{cursor:help}
+</style>
+<style id="base-comum">
+/* ===== Base comum das abas (rodada 2, 12/10/2026) =====
+   Copiada IGUAL em todo mockup do todo. Três peças: a dica no hover (sem «?»), o Modo automático
+   e o menu do botão direito desenhado no visual das abas (BRIEF-T6, opção B). */
+
+/* 1. A dica: qualquer frase, botão ou área com data-dica mostra a dica ao passar o mouse ou focar.
+      Nenhum botão «?» existe mais. A dica tem no máximo ~12 palavras: show, don't tell. */
+[data-dica]{cursor:help}
+button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"][data-dica]{cursor:pointer}
+#hef-dica{position:fixed;z-index:2147483000;max-width:280px;padding:7px 11px;border-radius:8px;
+  background:#1b1c25;border:1px solid var(--border-forte,#44475a);color:var(--texto-suave,#c8ccda);
+  font:500 12.5px/1.45 'Space Grotesk',system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.45);pointer-events:none;
+  opacity:0;transform:translateY(3px);transition:opacity .12s,transform .12s}
+#hef-dica.visivel{opacity:1;transform:none}
+
+/* 2. O Modo automático: pílula com bolinha. Os dois estados têm de se distinguir num relance.
+      Desligado: contorno neutro, bolinha vazia, letra suave (vale o que está na aba).
+      Ligado: ciano cheio, bolinha branca acesa, letra branca; a área que ele governa esmaece. */
+.modo-auto{display:inline-flex;align-items:center;gap:9px;height:34px;padding:0 16px 0 12px;border-radius:999px;
+  border:1px solid var(--border-forte,#44475a);background:transparent;color:var(--texto-suave,#c8ccda);
+  font:600 13.5px/1 'Space Grotesk',system-ui,sans-serif;cursor:pointer;transition:background .15s,border-color .15s,color .15s,box-shadow .15s}
+.modo-auto .p{width:11px;height:11px;border-radius:50%;border:2px solid var(--texto-mudo,#9a9eb8);background:transparent;
+  transition:all .15s}
+.modo-auto:hover{border-color:#5fd3e6;color:#fff}
+.modo-auto[aria-pressed="true"]{background:#0e7c8c;border-color:#5fd3e6;color:#fff;box-shadow:0 0 0 3px rgba(95,211,230,.18)}
+.modo-auto[aria-pressed="true"] .p{border-color:#fff;background:#fff;box-shadow:0 0 8px #fff}
+.modo-auto:focus-visible{outline:2px solid var(--cyan,#8be9fd);outline-offset:2px}
+.governado-pelo-jogo{opacity:.42;pointer-events:none;filter:saturate(.6)}
+
+/* 3. O menu do botão direito, no visual das abas. */
+.menu-hefesto{position:fixed;z-index:2147482000;min-width:190px;padding:6px;border-radius:12px;
+  background:#252733;border:1px solid var(--border-forte,#44475a);box-shadow:0 14px 34px rgba(0,0,0,.5)}
+.menu-hefesto button{display:flex;width:100%;align-items:center;gap:10px;height:34px;padding:0 12px;border:0;
+  border-radius:8px;background:transparent;color:var(--fg,#f8f8f2);font:500 13.5px/1 'Space Grotesk',system-ui,sans-serif;text-align:left;cursor:pointer}
+.menu-hefesto button:hover{background:rgba(189,147,249,.14)}
+.menu-hefesto button[disabled]{color:var(--texto-mudo,#9a9eb8);opacity:.55;cursor:default;background:transparent}
+.menu-hefesto hr{border:0;border-top:1px solid var(--border-sutil,#343746);margin:5px 4px}
 </style>
 </head>
 <body data-campo="nativo" data-hef-alvo="classe" data-hef-classe="nativo" data-hef-quando="sim">
@@ -2009,26 +2063,20 @@
   </g>
 </svg></div>
     <div class="marca-nome"><span class="m-hef">Hefesto</span><br><span class="m-ds">DualSense<span class="m-4">4</span>Unix</span></div>
-    <div class="fita inerte">
+    <div class="fita inerte" data-dica="O perfil guarda os quatro controles">
       <span>Selecionar:</span>
       <label class="chip on">Todos</label>
-      <label class="chip plastico on" data-campo="fita-chip" style="--plastico:#ae335a" title="Cosmic Red — a borda é a cor do plástico">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> <span class="via">USB</span></label>
-      <label class="chip plastico on" data-campo="fita-chip" style="--plastico:#7eb8d4" title="Starlight Blue — a borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> <span class="via">BT</span></label>
-      <span class="so-no-nativo" title="Com o Hefesto desligado, o jogo manda: aqui só se vê quem está conectado."></span>
+      <label class="chip plastico on" data-campo="fita-chip" style="--plastico:#ae335a" data-dica="A borda é a cor do plástico">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> <span class="via">USB</span></label>
+      <label class="chip plastico on" data-campo="fita-chip" style="--plastico:#7eb8d4" data-dica="A borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> <span class="via">BT</span></label>
+      <span class="so-no-nativo" data-dica="Hefesto desligado: o jogo manda"></span>
     </div>
     <div class="conectado"><span class="bolinha">●</span> <b data-campo="conta-b">1 USB · 1 BT</b></div>
-    <div class="perfil-ativo">
+    <div class="perfil-ativo" data-dica="Onde cai o que você salvar">
       <span class="pa-rot">Perfil ativo</span>
       <span class="pa-nome" data-campo="perfil">—</span>
       <!-- `tabindex` de 07/09/2026: este `?` está no CABEÇALHO, logo nas dez
            abas, e explica onde o "Salvar perfil" grava. Sem ele o `<span>` não
            recebe foco e o `el.click()` do controle não o abria em aba nenhuma. -->
-      <span data-todo="11" class="ajuda" tabindex="0">?<span class="dica" style="left:auto;right:22px">
-        Tudo o que você mudar em qualquer aba cai <b>neste</b> perfil quando clicar em
-        <b>Salvar perfil</b>.<br><br>
-        Cada controle guarda a <b>sua</b> configuração aqui dentro, pelo ID da peça — amanhã,
-        em outra porta ou no rádio, ele traz de volta o que você deixou hoje.
-      </span></span>
     </div>
   </div>
 
@@ -2050,19 +2098,8 @@
   <div class="miolo">
 
     <div class="quadro estica">
-      <div class="quadro-topo" data-todo="1">
-        <span class="quadro-titulo">Perfis</span>
-        <!-- A DICA DO QUADRO ENCOLHEU — 30/08/2026, pedido: *"olha esse tooltip
-             quilométrico. ao invés de estar tudo em Perfis deveria estar em cada
-             seção"*. Ela estava certa por dois motivos: o bloco tinha quatro
-             parágrafos e cobria meia tela ao abrir, e cada assunto dele JÁ tinha
-             dono na tela — Prioridade, estilo de jogo e a tabela por controle têm
-             `title` próprio, a poucos pixels de onde a pessoa está olhando.
-             Aqui fica só o que nenhum campo diz: o que É um perfil. -->
-        <span data-todo="11" class="ajuda">?<span class="dica">
-          Um perfil guarda <b>tudo</b> o que você ajustou nas outras abas — gatilho, luz,
-          vibração, som, sensores e máscara — e o traz de volta quando aquele jogo abre.
-        </span></span>
+      <div class="quadro-topo">
+        <span class="quadro-titulo" data-todo="1" data-dica="Um perfil guarda tudo que você ajustou nas abas">Perfis</span>
 
       </div>
       <!-- O DESFECHO DO ÚLTIMO GESTO — ver `.desfecho` no CSS para a razão.
@@ -2083,42 +2120,33 @@
 
           <div>
             <div class="moldura">
-              <div class="sec-rot">Perfis salvos<button type="button" class="icone-rot lupa" title="Procura pelo nome ou pelo jogo." aria-label="Procurar um perfil"><svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><circle cx="5.2" cy="5.2" r="3.4" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M7.8 7.8 L10.6 10.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></button><input type="text" class="procura" data-hef="perfis.procura" data-hef-alvo="valor" data-hef-vivo="procurar" placeholder="procurar" aria-label="Procurar um perfil" value=""><button type="button" class="icone-rot" data-hef-gesto="recarregar" title="Relê a lista de perfis. Não mexe no editor ao lado." aria-label="Relê a lista de perfis. Não mexe no editor ao lado."><svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M9.8 6a3.8 3.8 0 1 1-1.2-2.8" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M9.4 1.3v2.6H6.8" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button><span class="fora-da-busca" data-hef="perfis.procura.conta" data-hef-alvo="classe"><span data-hef="perfis.procura.conta"></span></span></div>
-              <div class="lista">
+              <div class="sec-rot">Perfis salvos<button type="button" class="icone-rot lupa" data-dica="Procura pelo nome ou pelo jogo" aria-label="Procurar um perfil"><svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><circle cx="5.2" cy="5.2" r="3.4" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M7.8 7.8 L10.6 10.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></button><input type="text" class="procura" data-hef="perfis.procura" data-hef-alvo="valor" data-hef-vivo="procurar" placeholder="procurar" aria-label="Procurar um perfil" value=""><button type="button" class="icone-rot" data-hef-gesto="recarregar" data-dica="Relê a lista" aria-label="Relê a lista de perfis. Não mexe no editor ao lado."><svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M9.8 6a3.8 3.8 0 1 1-1.2-2.8" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M9.4 1.3v2.6H6.8" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button><span class="fora-da-busca" data-hef="perfis.procura.conta" data-hef-alvo="classe"><span data-hef="perfis.procura.conta"></span></span></div>
+              <div class="lista" data-todo="7">
               <div class="rolo">
               <table class="tab" data-hef="perfis.larguras" data-hef-alvo="atributo"
                      data-hef-atributo="data-larguras" data-tabela="10-perfis.lista"
                      data-larguras="">
                 <colgroup><col data-coluna="nome"><col data-coluna="criado"><col data-coluna="modificado"></colgroup>
-                <thead><tr><th data-coluna="nome" title="Duplo clique ordena por esta coluna; de novo, inverte.">Nome<span class="ordena" data-hef="perfis.ordem.nome" data-hef-alvo="atributo" data-hef-atributo="data-ordem" data-hef-gesto="ordenar" data-coluna="nome"></span><span class="puxador" data-hef-gesto="largura-da-coluna" data-tabela="10-perfis.lista" data-coluna="nome" data-px="0" role="separator" aria-label="Arraste para mudar a largura da coluna"></span></th><th class="data" data-todo="2" data-coluna="criado" title="Quando o perfil nasceu.">Criado em<span class="ordena" data-hef="perfis.ordem.criado" data-hef-alvo="atributo" data-hef-atributo="data-ordem" data-hef-gesto="ordenar" data-coluna="criado"></span><span class="puxador" data-hef-gesto="largura-da-coluna" data-tabela="10-perfis.lista" data-coluna="criado" data-px="0" role="separator" aria-label="Arraste para mudar a largura da coluna"></span></th><th class="data" data-todo="2" data-coluna="modificado" title="A última vez que você salvou este perfil.">Modificado em<span class="ordena" data-hef="perfis.ordem.modificado" data-hef-alvo="atributo" data-hef-atributo="data-ordem" data-hef-gesto="ordenar" data-coluna="modificado"></span></th></tr></thead>
-                <tbody data-hef="perfis.lista">
-                <tr tabindex="0" class="ativo" data-hef-perfil="Mortal Kombat" data-hef-gesto="selecionar" aria-selected="true" title=""><td data-hef="perfis.linha.nome">Mortal Kombat</td><td class="data" data-todo="2" data-hef="perfis.linha.criado">03/09/2026</td><td class="data" data-todo="2" data-hef="perfis.linha.modificado">11/10/2026</td></tr>
-                <tr tabindex="0" data-todo="5" class="" data-hef-perfil="Mortal Kombat online" data-hef-gesto="selecionar" aria-selected="false" title=""><td data-hef="perfis.linha.nome">Mortal Kombat online</td><td class="data" data-todo="2" data-hef="perfis.linha.criado">10/10/2026</td><td class="data" data-todo="2" data-hef="perfis.linha.modificado">10/10/2026</td></tr>
-                <tr tabindex="0" class="" data-hef-perfil="Elden Ring" data-hef-gesto="selecionar" aria-selected="false" title=""><td data-hef="perfis.linha.nome">Elden Ring</td><td class="data" data-todo="2" data-hef="perfis.linha.criado">21/08/2026</td><td class="data" data-todo="2" data-hef="perfis.linha.modificado">02/10/2026</td></tr>
-                <tr tabindex="0" class="" data-hef-perfil="Orpheus" data-hef-gesto="selecionar" aria-selected="false" title=""><td data-hef="perfis.linha.nome">Orpheus</td><td class="data" data-todo="2" data-hef="perfis.linha.criado">14/09/2026</td><td class="data" data-todo="2" data-hef="perfis.linha.modificado">14/09/2026</td></tr>
-                <tr tabindex="0" class="" data-hef-perfil="Pragmata" data-hef-gesto="selecionar" aria-selected="false" title=""><td data-hef="perfis.linha.nome">Pragmata</td><td class="data" data-todo="2" data-hef="perfis.linha.criado">18/09/2026</td><td class="data" data-todo="2" data-hef="perfis.linha.modificado">07/10/2026</td></tr>
-                <tr tabindex="0" class="" data-hef-perfil="Don't Scream" data-hef-gesto="selecionar" aria-selected="false" title=""><td data-hef="perfis.linha.nome">Don't Scream</td><td class="data" data-todo="2" data-hef="perfis.linha.criado">—</td><td class="data" data-todo="2" data-hef="perfis.linha.modificado">—</td></tr>
-                <tr tabindex="0" class="" data-hef-perfil="Reanimal" data-hef-gesto="selecionar" aria-selected="false" title=""><td data-hef="perfis.linha.nome">Reanimal</td><td class="data" data-todo="2" data-hef="perfis.linha.criado">—</td><td class="data" data-todo="2" data-hef="perfis.linha.modificado">—</td></tr>
-                <tr tabindex="0" class="" data-hef-perfil="Faith" data-hef-gesto="selecionar" aria-selected="false" title=""><td data-hef="perfis.linha.nome">Faith</td><td class="data" data-todo="2" data-hef="perfis.linha.criado">26/09/2026</td><td class="data" data-todo="2" data-hef="perfis.linha.modificado">01/10/2026</td></tr>
-                <tr tabindex="0" class="" data-hef-perfil="Wendigo Blue" data-hef-gesto="selecionar" aria-selected="false" title=""><td data-hef="perfis.linha.nome">Wendigo Blue</td><td class="data" data-todo="2" data-hef="perfis.linha.criado">—</td><td class="data" data-todo="2" data-hef="perfis.linha.modificado">—</td></tr>
-                <tr tabindex="0" class="" data-hef-perfil="Duskfade" data-hef-gesto="selecionar" aria-selected="false" title=""><td data-hef="perfis.linha.nome">Duskfade</td><td class="data" data-todo="2" data-hef="perfis.linha.criado">30/09/2026</td><td class="data" data-todo="2" data-hef="perfis.linha.modificado">30/09/2026</td></tr>
-                <tr tabindex="0" class="" data-hef-perfil="Mina the Hollower" data-hef-gesto="selecionar" aria-selected="false" title=""><td data-hef="perfis.linha.nome">Mina the Hollower</td><td class="data" data-todo="2" data-hef="perfis.linha.criado">02/10/2026</td><td class="data" data-todo="2" data-hef="perfis.linha.modificado">09/10/2026</td></tr>
-                <tr tabindex="0" class="" data-hef-perfil="Terror (os dez)" data-hef-gesto="selecionar" aria-selected="false" title=""><td data-hef="perfis.linha.nome">Terror (os dez)</td><td class="data" data-todo="2" data-hef="perfis.linha.criado">—</td><td class="data" data-todo="2" data-hef="perfis.linha.modificado">—</td></tr>
-                <tr tabindex="0" class="" data-hef-perfil="Luta" data-hef-gesto="selecionar" aria-selected="false" title=""><td data-hef="perfis.linha.nome">Luta</td><td class="data" data-todo="2" data-hef="perfis.linha.criado">—</td><td class="data" data-todo="2" data-hef="perfis.linha.modificado">—</td></tr>
-                <tr tabindex="0" class="" data-hef-perfil="Navegação" data-hef-gesto="selecionar" aria-selected="false" title=""><td data-hef="perfis.linha.nome">Navegação</td><td class="data" data-todo="2" data-hef="perfis.linha.criado">—</td><td class="data" data-todo="2" data-hef="perfis.linha.modificado">—</td></tr>
-                <tr tabindex="0" class="" data-hef-perfil="Universal" data-hef-gesto="selecionar" aria-selected="false" title=""><td data-hef="perfis.linha.nome">Universal</td><td class="data" data-todo="2" data-hef="perfis.linha.criado">—</td><td class="data" data-todo="2" data-hef="perfis.linha.modificado">—</td></tr>
+                <thead data-todo="6"><tr><th data-coluna="nome" data-dica="Duplo clique ordena">Nome<span class="ordena" data-hef="perfis.ordem.nome" data-hef-alvo="atributo" data-hef-atributo="data-ordem" data-hef-gesto="ordenar" data-coluna="nome"></span><span class="puxador" data-hef-gesto="largura-da-coluna" data-tabela="10-perfis.lista" data-coluna="nome" data-px="0" role="separator" aria-label="Arraste para mudar a largura da coluna"></span></th><th class="data" data-coluna="criado" data-dica="Quando o perfil nasceu">Criado em<span class="ordena" data-hef="perfis.ordem.criado" data-hef-alvo="atributo" data-hef-atributo="data-ordem" data-hef-gesto="ordenar" data-coluna="criado"></span><span class="puxador" data-hef-gesto="largura-da-coluna" data-tabela="10-perfis.lista" data-coluna="criado" data-px="0" role="separator" aria-label="Arraste para mudar a largura da coluna"></span></th><th class="data" data-coluna="modificado" data-dica="A última vez que você salvou">Modificado em<span class="ordena" data-hef="perfis.ordem.modificado" data-hef-alvo="atributo" data-hef-atributo="data-ordem" data-hef-gesto="ordenar" data-coluna="modificado"></span></th></tr></thead>
+                <tbody data-hef="perfis.lista" data-todo="5">
+                <tr tabindex="0" data-dica="Clique: ativa e abre no editor" class="ativo" data-hef-perfil="Mortal Kombat" data-hef-gesto="selecionar" aria-selected="true"><td data-hef="perfis.linha.nome">Mortal Kombat</td><td class="data" data-hef="perfis.linha.criado">03/09/2026</td><td class="data" data-hef="perfis.linha.modificado">11/10/2026</td></tr>
+                <tr tabindex="0" data-dica="Clique: ativa e abre no editor" class="" data-hef-perfil="Mortal Kombat online" data-hef-gesto="selecionar" aria-selected="false"><td data-hef="perfis.linha.nome">Mortal Kombat online</td><td class="data" data-hef="perfis.linha.criado">10/10/2026</td><td class="data" data-hef="perfis.linha.modificado">10/10/2026</td></tr>
+                <tr tabindex="0" data-dica="Clique: ativa e abre no editor" class="" data-hef-perfil="Elden Ring" data-hef-gesto="selecionar" aria-selected="false"><td data-hef="perfis.linha.nome">Elden Ring</td><td class="data" data-hef="perfis.linha.criado">21/08/2026</td><td class="data" data-hef="perfis.linha.modificado">02/10/2026</td></tr>
+                <tr tabindex="0" data-dica="Clique: ativa e abre no editor" class="" data-hef-perfil="Orpheus" data-hef-gesto="selecionar" aria-selected="false"><td data-hef="perfis.linha.nome">Orpheus</td><td class="data" data-hef="perfis.linha.criado">14/09/2026</td><td class="data" data-hef="perfis.linha.modificado">14/09/2026</td></tr>
+                <tr tabindex="0" data-dica="Clique: ativa e abre no editor" class="" data-hef-perfil="Pragmata" data-hef-gesto="selecionar" aria-selected="false"><td data-hef="perfis.linha.nome">Pragmata</td><td class="data" data-hef="perfis.linha.criado">18/09/2026</td><td class="data" data-hef="perfis.linha.modificado">07/10/2026</td></tr>
+                <tr tabindex="0" data-dica="Clique: ativa e abre no editor" class="" data-hef-perfil="Don't Scream" data-hef-gesto="selecionar" aria-selected="false"><td data-hef="perfis.linha.nome">Don't Scream</td><td class="data" data-todo="9" data-hef="perfis.linha.criado">—</td><td class="data" data-hef="perfis.linha.modificado">—</td></tr>
+                <tr tabindex="0" data-dica="Clique: ativa e abre no editor" class="" data-hef-perfil="Reanimal" data-hef-gesto="selecionar" aria-selected="false"><td data-hef="perfis.linha.nome">Reanimal</td><td class="data" data-todo="9" data-hef="perfis.linha.criado">—</td><td class="data" data-hef="perfis.linha.modificado">—</td></tr>
+                <tr tabindex="0" data-dica="Clique: ativa e abre no editor" class="" data-hef-perfil="Faith" data-hef-gesto="selecionar" aria-selected="false"><td data-hef="perfis.linha.nome">Faith</td><td class="data" data-hef="perfis.linha.criado">26/09/2026</td><td class="data" data-hef="perfis.linha.modificado">01/10/2026</td></tr>
+                <tr tabindex="0" data-dica="Clique: ativa e abre no editor" class="" data-hef-perfil="Wendigo Blue" data-hef-gesto="selecionar" aria-selected="false"><td data-hef="perfis.linha.nome">Wendigo Blue</td><td class="data" data-todo="9" data-hef="perfis.linha.criado">—</td><td class="data" data-hef="perfis.linha.modificado">—</td></tr>
+                <tr tabindex="0" data-dica="Clique: ativa e abre no editor" class="" data-hef-perfil="Duskfade" data-hef-gesto="selecionar" aria-selected="false"><td data-hef="perfis.linha.nome">Duskfade</td><td class="data" data-hef="perfis.linha.criado">30/09/2026</td><td class="data" data-hef="perfis.linha.modificado">30/09/2026</td></tr>
+                <tr tabindex="0" data-dica="Clique: ativa e abre no editor" class="" data-hef-perfil="Mina the Hollower" data-hef-gesto="selecionar" aria-selected="false"><td data-hef="perfis.linha.nome">Mina the Hollower</td><td class="data" data-hef="perfis.linha.criado">02/10/2026</td><td class="data" data-hef="perfis.linha.modificado">09/10/2026</td></tr>
+                <tr tabindex="0" data-dica="Clique: ativa e abre no editor" class="" data-hef-perfil="Terror (os dez)" data-hef-gesto="selecionar" aria-selected="false"><td data-hef="perfis.linha.nome">Terror (os dez)</td><td class="data" data-todo="9" data-hef="perfis.linha.criado">—</td><td class="data" data-hef="perfis.linha.modificado">—</td></tr>
+                <tr tabindex="0" data-dica="Clique: ativa e abre no editor" class="" data-hef-perfil="Luta" data-hef-gesto="selecionar" aria-selected="false"><td data-hef="perfis.linha.nome">Luta</td><td class="data" data-todo="9" data-hef="perfis.linha.criado">—</td><td class="data" data-hef="perfis.linha.modificado">—</td></tr>
+                <tr tabindex="0" data-dica="Clique: ativa e abre no editor" class="" data-hef-perfil="Navegação" data-hef-gesto="selecionar" aria-selected="false"><td data-hef="perfis.linha.nome">Navegação</td><td class="data" data-todo="9" data-hef="perfis.linha.criado">—</td><td class="data" data-hef="perfis.linha.modificado">—</td></tr>
+                <tr tabindex="0" data-dica="Clique: ativa e abre no editor" class="" data-hef-perfil="Universal" data-hef-gesto="selecionar" aria-selected="false"><td data-hef="perfis.linha.nome">Universal</td><td class="data" data-todo="9" data-hef="perfis.linha.criado">—</td><td class="data" data-hef="perfis.linha.modificado">—</td></tr>
                 </tbody>
               </table>
               </div>
-              </div>
-              <div class="botoes">
-                <button class="btn" data-hef-gesto="duplicar" title="Copia o perfil inteiro para o editor, com &quot;(cópia)&quot; no nome.">Duplicar</button>
-                <button class="btn" data-hef-gesto="novo" title="Perfil em branco. Com um jogo da Steam aberto, ele nasce valendo só para esse jogo; sem isso, vale para tudo.">Novo</button>
-                <button class="btn vermelho" data-hef-gesto="remover" data-hef="perfis.remover" title="Apaga o perfil. Pergunta antes.">Remover</button>
-              </div>
-              <div class="botoes pac" data-todo="6">
-                <button class="btn" data-hef-gesto="filtrar-point-and-click" title="Mostra só os perfis com o estilo Point and click.">Perfis de point and click</button>
-                <button class="btn" data-hef-gesto="novo-point-and-click" title="Perfil novo com o estilo Point and click, que se define na aba Navegação.">Criar perfil de point and click</button>
               </div>
             </div>
           </div>
@@ -2147,37 +2175,48 @@
               <div class="sec-rot">Editar</div>
               <div class="campos">
 
-              <div class="campo" data-todo="3">
+              <div class="campo">
                 <span>Nome do jogo:</span>
                 <span class="val">
                   <input type="text" data-hef="editor.jogo" data-hef-gesto="editor.jogo"
                          data-hef-alvo="valor" list="jogos-desta-maquina"
-                         title="Escolha um jogo desta máquina e a regra se monta sozinha. O nome do perfil é o nome do jogo."
+                         data-dica="Escolha um jogo desta máquina; o perfil leva o nome dele"
                          value="Mortal Kombat 1"><span class="exige" data-hef="editor.jogo.exige" data-hef-alvo="classe"><span class="dica" data-hef="editor.jogo.exigencia" data-hef-alvo="html"></span></span>
                   <datalist id="jogos-desta-maquina" data-hef="editor.jogo.lista"></datalist>
                 </span>
               </div>
-              <div class="campo" data-todo="4">
+              <div class="campo">
                 <span>Aplicar em:</span>
                 <span class="val"><span class="seg alvos" data-hef="editor.alvo">
-                  <button class="on" data-hef-gesto="editor.alvo" data-v="jogos" title="Vale quando o jogo abre.">Jogos</button>
-                  <button data-hef-gesto="editor.alvo" data-v="navegacao" title="Vale fora do jogo, no computador.">Navegação</button>
-                  <button data-hef-gesto="editor.alvo" data-v="programas" title="Vale quando o programa escolhido está na frente.">Programas</button>
-                  <button data-hef-gesto="editor.alvo" data-v="eventos" title="Momentos do jogo (cena, menu, pausa), gatilhos do sistema (controle conectado, programa aberto, hora) e avisos para extensões.">Eventos</button>
+                  <button class="on" data-hef-gesto="editor.alvo" data-v="jogos" data-dica="Vale quando o jogo abre">Jogos</button>
+                  <button data-hef-gesto="editor.alvo" data-v="navegacao" data-dica="Vale fora do jogo, no computador">Navegação</button>
+                  <button data-hef-gesto="editor.alvo" data-v="programas" data-dica="Vale com o programa na frente">Programas</button>
+                  <button data-hef-gesto="editor.alvo" data-v="eventos" data-dica="Um momento do jogo, do sistema ou o seu comando">Eventos</button>
                 </span></span>
               </div>
-              <div class="campo" data-todo="7">
-                <span title="Pré-aplica de uma vez o gatilho, a vibração e a cor da luz. Os catorze de fábrica não se editam; o Personalizado usa o que você ajustou nas abas.">Estilo de jogo:</span>
-                <span class="val"><select class="destaque estreito" data-hef="editor.estilo" data-hef-gesto="editor.estilo" data-hef-alvo="valor">
+              <div class="campo so-eventos" data-todo="8" hidden>
+                <span data-dica="Quando o perfil entra">Quando:</span>
+                <span class="val ev-val"><select class="estreito" aria-label="Quando o perfil entra">
+                  <optgroup label="No jogo"><option>Cena</option><option>Menu</option><option>Pausa</option></optgroup>
+                  <optgroup label="No sistema"><option>Controle conectado</option><option>Programa aberto</option><option>Hora marcada</option></optgroup>
+                  <optgroup label="Meu"><option selected>Meu comando</option></optgroup>
+                </select><input type="text" class="ev-cmd" aria-label="Comando ou arquivo .sh" placeholder="Comando ou arquivo .sh"
+                  data-dica="Um comando de terminal ou um arquivo .sh" value="~/scripts/luz-do-quarto.sh"></span>
+              </div>
+              <div class="campo">
+                <span data-dica="O estilo decide o automático: gatilho, vibração e luz">Estilo de jogo:</span>
+                <span class="val"><select class="destaque estreito" data-todo="3" data-hef="editor.estilo" data-hef-gesto="editor.estilo" data-hef-alvo="valor">
                 <option value="" disabled>—</option>
-                <option data-todo="8" title="O jogo decide.">Nativo</option>
+                <option data-dica="O jogo decide">Nativo</option>
                 <option>FPS</option>
                 <option>Corrida</option>
                 <option>Ação</option>
                 <option>Arco</option>
                 <option>Aventura</option>
                 <option>Esportes</option>
-                <option data-todo="12">Point and click</option>
+                <option>Point and click</option>
+                <option data-todo="3">Visual novel</option>
+                <option>Adulto</option>
                 <option>Terror</option>
                 <option selected>Luta</option>
                 <option>Maratona</option>
@@ -2186,37 +2225,33 @@
                 <option>Ritmo/Música</option>
                 <option>Simulação/Voo</option>
                 <option>Personalizado</option>
-                </select><span class="marcas" data-todo="9">
-                <span class="marca-jogo" data-hef-gesto="editor.marca" data-v="visual_novel" title="Soma ao estilo o molde Visual novel: avançar, voltar o texto, pular e esconder a caixa vêm nos botões.">Visual novel</span>
-                <span class="marca-jogo adulto" data-hef-gesto="editor.marca" data-v="adulto" title="Marca o jogo como adulto. A modificação de acessórios que estiver «Só em jogo Adulto» segue a vibração deste jogo; nada mais muda.">Adulto</span>
-                <span class="marca-jogo mais" data-hef-gesto="editor.marca" data-v="outra" title="Outra marca">+</span>
-                </span></span>
+                </select></span>
               </div>
-              <div class="ordem-vale" data-todo="5" data-hef="editor.ordem">
-                <div class="cab">Qual vale primeiro <span data-todo="11" class="ajuda" tabindex="0">?<span class="dica">Arraste para escolher qual perfil vale quando os dois servem.</span></span></div>
+              <div class="ordem-vale" data-hef="editor.ordem">
+                <div class="cab" data-dica="Arraste: o de cima vale quando os dois servem">Qual vale primeiro</div>
                 <ol>
                   <li class="ativo" draggable="true" tabindex="0" data-hef-gesto="editor.ordem" data-hef-perfil="Mortal Kombat"><span class="pos">1</span><span class="pega">⋮⋮</span>Mortal Kombat</li>
                   <li draggable="true" tabindex="0" data-hef-gesto="editor.ordem" data-hef-perfil="Mortal Kombat online"><span class="pos">2</span><span class="pega">⋮⋮</span>Mortal Kombat online</li>
                 </ol>
               </div>
-              <div class="guarda">
+              <div class="guarda" data-todo="10">
                 <table class="tab miuda" data-hef="guarda.larguras" data-hef-alvo="atributo"
                        data-hef-atributo="data-larguras" data-tabela="10-perfis.guarda"
                        data-larguras="">
                   <colgroup><col data-coluna="controle"><col data-coluna="status"><col data-coluna="id"></colgroup>
                   <thead><tr>
-                    <th title="O perfil guarda um ajuste por controle. Aqui você vê quais são só deste controle e quais vêm do perfil.">Controle<span class="puxador" data-hef-gesto="largura-da-coluna" data-tabela="10-perfis.guarda" data-coluna="controle" data-px="0" role="separator" aria-label="Arraste para mudar a largura da coluna"></span></th>
-                    <th class="gd-pecas" title="Aceso: ligado agora neste controle. O ponto embaixo: o perfil aberto guarda este ajuste só para ele. São oito: luz, gatilhos, vibração, alto-falante, microfone, sensores, máscara e comandos virtuais.">Status<span class="puxador" data-hef-gesto="largura-da-coluna" data-tabela="10-perfis.guarda" data-coluna="status" data-px="0" role="separator" aria-label="Arraste para mudar a largura da coluna"></span></th>
-                    <th class="gd-id" title="O endereço de rádio do controle: é por ele que o perfil o reconhece, no cabo e no rádio.">ID da peça</th>
+                    <th data-dica="Um ajuste por controle, guardado no perfil">Controle<span class="puxador" data-hef-gesto="largura-da-coluna" data-tabela="10-perfis.guarda" data-coluna="controle" data-px="0" role="separator" aria-label="Arraste para mudar a largura da coluna"></span></th>
+                    <th class="gd-pecas" data-dica="Aceso: ligado agora; o ponto: só deste controle">Status<span class="puxador" data-hef-gesto="largura-da-coluna" data-tabela="10-perfis.guarda" data-coluna="status" data-px="0" role="separator" aria-label="Arraste para mudar a largura da coluna"></span></th>
+                    <th class="gd-id" data-dica="Por este endereço o perfil reconhece o controle">ID da peça</th>
                   </tr></thead>
                   <tbody data-hef="guarda.linhas">
                   <tr data-hef-uniq="p1" data-hef="guarda.vazio" data-hef-alvo="classe" data-hef-classe="fora">
                     <td class="gd-nome">
                       <span class="pl" data-hef="guarda.plastico" data-hef-alvo="cor"
                             style="color:#ae335a"></span>
-                      <span data-hef="guarda.nome">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</span>
+                      <span data-hef="guarda.nome">Cosmic Red <span class="pt">•</span> USB</span>
                     </td>
-                    <td class="gd-pecas"><span class="gls"><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="title"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="leds"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Lightbar</title>
+                    <td class="gd-pecas"><span class="gls"><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="leds"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Lightbar</title>
 
   <rect x="6"  y="7" width="4" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
   <rect x="22" y="7" width="4" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
@@ -2229,7 +2264,7 @@
   <rect x="15" y="13" width="3" height="6" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
   <rect x="19" y="13" width="3" height="6" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
   <rect x="27" y="13" width="3" height="6" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
-</svg></span></span><span class="gp on" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="title" title="O controle não diz."><span class="gr" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="triggers"><span class="gq nd" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L2</title>
+</svg></span></span><span class="gp on" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="O controle não diz"><span class="gr" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="triggers"><span class="gq nd" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L2</title>
 
   <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
   <text x="10" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L2</text>
@@ -2241,7 +2276,7 @@
   <text x="9" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R2</text>
   <line x1="16" y1="24" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <polyline points="12,27 16,31 20,27" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-</svg></span></span><span class="gp on" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="title"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="rumble"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
+</svg></span></span><span class="gp on" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="rumble"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
 
   <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
         fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
@@ -2253,18 +2288,18 @@
         fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
   <path d="M7,10 q-3,6 0,12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M3,7 q-4,9 0,18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></span></span><span class="gp on" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="title"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="speaker"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Alto-falante</title>
+</svg></span></span><span class="gp on" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="speaker"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Alto-falante</title>
 
   <path d="M6,12 h5 l7,-6 v20 l-7,-6 H6 Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
   <path d="M22,11 Q26,16 22,21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M26,7 Q32,16 26,25" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="title"><span class="gr" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="mic"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Microfone</title>
+</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica"><span class="gr" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="mic"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Microfone</title>
 
   <rect x="11" y="4" width="10" height="15" rx="5" ry="5" fill="none" stroke="currentColor" stroke-width="2"/>
   <path d="M7,17 Q7,25 16,25 Q25,25 25,17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="16" y1="25" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="11" y1="30" x2="21" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></span></span><span class="gp on" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="title"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="sensores"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Giroscópio</title>
+</svg></span></span><span class="gp on" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="sensores"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Giroscópio</title>
 
   <circle cx="16" cy="16" r="4" fill="none" stroke="currentColor" stroke-width="2"/>
   <ellipse cx="16" cy="16" rx="12" ry="5" fill="none" stroke="currentColor" stroke-width="2"/>
@@ -2275,12 +2310,12 @@
   <line x1="3" y1="24" x2="29" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M20,16 h7 m-3,-3 l3,3 l-3,3" fill="none" stroke="currentColor" stroke-width="2"
         stroke-linecap="round" stroke-linejoin="round"/>
-</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="title"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="mascara"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>PS</title>
+</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="mascara"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>PS</title>
 
   <g transform="translate(16 16) scale(0.99425) translate(-16.0925 -16.0)">
     <path fill="currentColor" d="M 1.348 21.736 C 0.195 22.543 0.408 23.935 3.04 24.805 C 5.671 25.675 8.73 25.855 11.422 25.371 C 11.345 25.371 11.575 25.371 11.422 25.371 L 11.422 22.624 L 8.807 23.513 C 7.807 23.835 6.807 23.916 5.808 23.675 C 5.039 23.432 5.192 22.947 6.115 22.543 L 11.422 20.604 L 11.422 17.616 L 4.039 20.282 C 3.117 20.604 2.193 21.09 1.348 21.736 Z M 19.188 9.619 L 19.188 17.455 C 22.34 19.07 24.801 17.455 24.801 13.254 C 24.801 8.973 23.34 7.034 19.111 5.5 C 16.881 4.692 14.574 3.965 12.267 3.48 L 12.267 26.825 L 17.65 28.521 L 17.65 8.892 C 17.65 8.004 17.65 7.358 18.266 7.599 C 19.111 7.842 19.188 8.731 19.188 9.619 Z M 29.184 19.878 C 26.955 19.07 24.571 18.746 22.263 18.989 C 20.982 19.073 19.78 19.455 18.573 19.878 L 18.573 23.028 L 23.571 21.09 C 24.571 20.766 25.571 20.685 26.57 20.928 C 27.339 21.171 27.185 21.655 26.262 22.059 L 18.573 25.047 L 18.573 28.116 L 29.184 23.997 C 29.954 23.675 30.645 23.27 31.261 22.624 C 31.799 21.817 31.568 20.685 29.184 19.878 Z"/>
   </g>
-</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="title" title="O quanto um gesto anda: 6 • Ignorar tremor até: 3 graus/s • Só enquanto eu segurar: Sempre"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="movimento"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Analógico direito</title>
+</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="Gesto 6 · tremor até 3 graus/s · sempre"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="movimento"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Analógico direito</title>
 
   <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
@@ -2292,9 +2327,9 @@
                     <td class="gd-nome">
                       <span class="pl" data-hef="guarda.plastico" data-hef-alvo="cor"
                             style="color:#7eb8d4"></span>
-                      <span data-hef="guarda.nome">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</span>
+                      <span data-hef="guarda.nome">Starlight Blue <span class="pt">•</span> BT</span>
                     </td>
-                    <td class="gd-pecas"><span class="gls"><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="title"><span class="gr" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="leds"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Lightbar</title>
+                    <td class="gd-pecas"><span class="gls"><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica"><span class="gr" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="leds"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Lightbar</title>
 
   <rect x="6"  y="7" width="4" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
   <rect x="22" y="7" width="4" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
@@ -2307,7 +2342,7 @@
   <rect x="15" y="13" width="3" height="6" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
   <rect x="19" y="13" width="3" height="6" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
   <rect x="27" y="13" width="3" height="6" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
-</svg></span></span><span class="gp on" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="title" title="O controle não diz."><span class="gr" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="triggers"><span class="gq nd" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L2</title>
+</svg></span></span><span class="gp on" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="O controle não diz"><span class="gr" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="triggers"><span class="gq nd" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L2</title>
 
   <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
   <text x="10" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L2</text>
@@ -2319,7 +2354,7 @@
   <text x="9" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R2</text>
   <line x1="16" y1="24" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <polyline points="12,27 16,31 20,27" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="title"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="rumble"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
+</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="rumble"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
 
   <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
         fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
@@ -2331,18 +2366,18 @@
         fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
   <path d="M7,10 q-3,6 0,12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M3,7 q-4,9 0,18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></span></span><span class="gp on" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="title"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="speaker"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Alto-falante</title>
+</svg></span></span><span class="gp on" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="speaker"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Alto-falante</title>
 
   <path d="M6,12 h5 l7,-6 v20 l-7,-6 H6 Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
   <path d="M22,11 Q26,16 22,21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M26,7 Q32,16 26,25" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="title"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="mic"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Microfone</title>
+</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="mic"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Microfone</title>
 
   <rect x="11" y="4" width="10" height="15" rx="5" ry="5" fill="none" stroke="currentColor" stroke-width="2"/>
   <path d="M7,17 Q7,25 16,25 Q25,25 25,17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="16" y1="25" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="11" y1="30" x2="21" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="title"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="sensores"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Giroscópio</title>
+</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="sensores"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Giroscópio</title>
 
   <circle cx="16" cy="16" r="4" fill="none" stroke="currentColor" stroke-width="2"/>
   <ellipse cx="16" cy="16" rx="12" ry="5" fill="none" stroke="currentColor" stroke-width="2"/>
@@ -2353,12 +2388,12 @@
   <line x1="3" y1="24" x2="29" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M20,16 h7 m-3,-3 l3,3 l-3,3" fill="none" stroke="currentColor" stroke-width="2"
         stroke-linecap="round" stroke-linejoin="round"/>
-</svg></span></span><span class="gp on" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="title" title="Máscara: Xbox 360."><span class="gr" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="mascara"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>PS</title>
+</svg></span></span><span class="gp on" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="Máscara: Xbox 360"><span class="gr" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="mascara"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>PS</title>
 
   <g transform="translate(16 16) scale(0.99425) translate(-16.0925 -16.0)">
     <path fill="currentColor" d="M 1.348 21.736 C 0.195 22.543 0.408 23.935 3.04 24.805 C 5.671 25.675 8.73 25.855 11.422 25.371 C 11.345 25.371 11.575 25.371 11.422 25.371 L 11.422 22.624 L 8.807 23.513 C 7.807 23.835 6.807 23.916 5.808 23.675 C 5.039 23.432 5.192 22.947 6.115 22.543 L 11.422 20.604 L 11.422 17.616 L 4.039 20.282 C 3.117 20.604 2.193 21.09 1.348 21.736 Z M 19.188 9.619 L 19.188 17.455 C 22.34 19.07 24.801 17.455 24.801 13.254 C 24.801 8.973 23.34 7.034 19.111 5.5 C 16.881 4.692 14.574 3.965 12.267 3.48 L 12.267 26.825 L 17.65 28.521 L 17.65 8.892 C 17.65 8.004 17.65 7.358 18.266 7.599 C 19.111 7.842 19.188 8.731 19.188 9.619 Z M 29.184 19.878 C 26.955 19.07 24.571 18.746 22.263 18.989 C 20.982 19.073 19.78 19.455 18.573 19.878 L 18.573 23.028 L 23.571 21.09 C 24.571 20.766 25.571 20.685 26.57 20.928 C 27.339 21.171 27.185 21.655 26.262 22.059 L 18.573 25.047 L 18.573 28.116 L 29.184 23.997 C 29.954 23.675 30.645 23.27 31.261 22.624 C 31.799 21.817 31.568 20.685 29.184 19.878 Z"/>
   </g>
-</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="title" title="O quanto um gesto anda: 6 • Ignorar tremor até: 3 graus/s • Só enquanto eu segurar: Sempre"><span class="gr" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="movimento"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Analógico direito</title>
+</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="Gesto 6 · tremor até 3 graus/s · sempre"><span class="gr" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="movimento"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Analógico direito</title>
 
   <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
@@ -2367,13 +2402,13 @@
                     <td class="gd-id" data-hef="guarda.id">AA:BB:CC:00:00:02</td>
                   </tr>
                   <tr data-hef-uniq="p3" data-hef="guarda.vazio" data-hef-alvo="classe" data-hef-classe="fora" class="fora"
-                      title="Este lugar está vazio. O que você ajusta fica guardado com o controle: quando ele voltar, encontra o que você deixou.">
+                      data-dica="Quando ele voltar, encontra o que você deixou">
                     <td class="gd-nome">
                       <span class="pl" data-hef="guarda.plastico" data-hef-alvo="cor"
-                            style="color:transparent"></span>
-                      <span data-hef="guarda.nome">P3 <span class="pt">•</span> Desconectado</span>
+                            style="color:#8a6fc4"></span>
+                      <span data-hef="guarda.nome">Galactic Purple</span>
                     </td>
-                    <td class="gd-pecas"><span class="gls"><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="title"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="leds"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Lightbar</title>
+                    <td class="gd-pecas"><span class="gls"><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="leds"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Lightbar</title>
 
   <rect x="6"  y="7" width="4" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
   <rect x="22" y="7" width="4" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
@@ -2386,7 +2421,7 @@
   <rect x="15" y="13" width="3" height="6" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
   <rect x="19" y="13" width="3" height="6" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
   <rect x="27" y="13" width="3" height="6" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
-</svg></span></span><span class="gp on" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="title" title="O controle não diz."><span class="gr" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="triggers"><span class="gq nd" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L2</title>
+</svg></span></span><span class="gp on" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="O controle não diz"><span class="gr" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="triggers"><span class="gq nd" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L2</title>
 
   <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
   <text x="10" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L2</text>
@@ -2398,7 +2433,7 @@
   <text x="9" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R2</text>
   <line x1="16" y1="24" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <polyline points="12,27 16,31 20,27" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="title"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="rumble"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
+</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="rumble"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
 
   <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
         fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
@@ -2410,18 +2445,18 @@
         fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
   <path d="M7,10 q-3,6 0,12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M3,7 q-4,9 0,18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="title"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="speaker"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Alto-falante</title>
+</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="speaker"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Alto-falante</title>
 
   <path d="M6,12 h5 l7,-6 v20 l-7,-6 H6 Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
   <path d="M22,11 Q26,16 22,21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M26,7 Q32,16 26,25" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="title"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="mic"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Microfone</title>
+</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="mic"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Microfone</title>
 
   <rect x="11" y="4" width="10" height="15" rx="5" ry="5" fill="none" stroke="currentColor" stroke-width="2"/>
   <path d="M7,17 Q7,25 16,25 Q25,25 25,17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="16" y1="25" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="11" y1="30" x2="21" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="title"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="sensores"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Giroscópio</title>
+</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="sensores"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Giroscópio</title>
 
   <circle cx="16" cy="16" r="4" fill="none" stroke="currentColor" stroke-width="2"/>
   <ellipse cx="16" cy="16" rx="12" ry="5" fill="none" stroke="currentColor" stroke-width="2"/>
@@ -2432,12 +2467,12 @@
   <line x1="3" y1="24" x2="29" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M20,16 h7 m-3,-3 l3,3 l-3,3" fill="none" stroke="currentColor" stroke-width="2"
         stroke-linecap="round" stroke-linejoin="round"/>
-</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="title"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="mascara"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>PS</title>
+</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="mascara"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>PS</title>
 
   <g transform="translate(16 16) scale(0.99425) translate(-16.0925 -16.0)">
     <path fill="currentColor" d="M 1.348 21.736 C 0.195 22.543 0.408 23.935 3.04 24.805 C 5.671 25.675 8.73 25.855 11.422 25.371 C 11.345 25.371 11.575 25.371 11.422 25.371 L 11.422 22.624 L 8.807 23.513 C 7.807 23.835 6.807 23.916 5.808 23.675 C 5.039 23.432 5.192 22.947 6.115 22.543 L 11.422 20.604 L 11.422 17.616 L 4.039 20.282 C 3.117 20.604 2.193 21.09 1.348 21.736 Z M 19.188 9.619 L 19.188 17.455 C 22.34 19.07 24.801 17.455 24.801 13.254 C 24.801 8.973 23.34 7.034 19.111 5.5 C 16.881 4.692 14.574 3.965 12.267 3.48 L 12.267 26.825 L 17.65 28.521 L 17.65 8.892 C 17.65 8.004 17.65 7.358 18.266 7.599 C 19.111 7.842 19.188 8.731 19.188 9.619 Z M 29.184 19.878 C 26.955 19.07 24.571 18.746 22.263 18.989 C 20.982 19.073 19.78 19.455 18.573 19.878 L 18.573 23.028 L 23.571 21.09 C 24.571 20.766 25.571 20.685 26.57 20.928 C 27.339 21.171 27.185 21.655 26.262 22.059 L 18.573 25.047 L 18.573 28.116 L 29.184 23.997 C 29.954 23.675 30.645 23.27 31.261 22.624 C 31.799 21.817 31.568 20.685 29.184 19.878 Z"/>
   </g>
-</svg></span></span><span class="gp on" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="title"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="movimento"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Analógico direito</title>
+</svg></span></span><span class="gp on" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="movimento"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Analógico direito</title>
 
   <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
@@ -2446,13 +2481,13 @@
                     <td class="gd-id" data-hef="guarda.id">AA:BB:CC:00:00:03</td>
                   </tr>
                   <tr data-hef-uniq="p4" data-hef="guarda.vazio" data-hef-alvo="classe" data-hef-classe="fora" class="fora"
-                      title="Este lugar está vazio. O que você ajusta fica guardado com o controle: quando ele voltar, encontra o que você deixou.">
+                      data-dica="Quando ele voltar, encontra o que você deixou">
                     <td class="gd-nome">
                       <span class="pl" data-hef="guarda.plastico" data-hef-alvo="cor"
-                            style="color:transparent"></span>
-                      <span data-hef="guarda.nome">P4 <span class="pt">•</span> Desconectado</span>
+                            style="color:#e8e8ec"></span>
+                      <span data-hef="guarda.nome">White</span>
                     </td>
-                    <td class="gd-pecas"><span class="gls"><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="title"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="leds"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Lightbar</title>
+                    <td class="gd-pecas"><span class="gls"><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="leds"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Lightbar</title>
 
   <rect x="6"  y="7" width="4" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
   <rect x="22" y="7" width="4" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
@@ -2465,7 +2500,7 @@
   <rect x="15" y="13" width="3" height="6" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
   <rect x="19" y="13" width="3" height="6" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
   <rect x="27" y="13" width="3" height="6" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
-</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="title" title="O controle não diz."><span class="gr" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="triggers"><span class="gq nd" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L2</title>
+</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="O controle não diz"><span class="gr" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="triggers"><span class="gq nd" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L2</title>
 
   <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
   <text x="10" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L2</text>
@@ -2477,7 +2512,7 @@
   <text x="9" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R2</text>
   <line x1="16" y1="24" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <polyline points="12,27 16,31 20,27" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="title"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="rumble"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
+</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="rumble"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
 
   <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
         fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
@@ -2489,18 +2524,18 @@
         fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
   <path d="M7,10 q-3,6 0,12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M3,7 q-4,9 0,18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="title"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="speaker"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Alto-falante</title>
+</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="speaker"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Alto-falante</title>
 
   <path d="M6,12 h5 l7,-6 v20 l-7,-6 H6 Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
   <path d="M22,11 Q26,16 22,21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M26,7 Q32,16 26,25" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="title"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="mic"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Microfone</title>
+</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="mic"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Microfone</title>
 
   <rect x="11" y="4" width="10" height="15" rx="5" ry="5" fill="none" stroke="currentColor" stroke-width="2"/>
   <path d="M7,17 Q7,25 16,25 Q25,25 25,17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="16" y1="25" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="11" y1="30" x2="21" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="title"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="sensores"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Giroscópio</title>
+</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="sensores"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Giroscópio</title>
 
   <circle cx="16" cy="16" r="4" fill="none" stroke="currentColor" stroke-width="2"/>
   <ellipse cx="16" cy="16" rx="12" ry="5" fill="none" stroke="currentColor" stroke-width="2"/>
@@ -2511,12 +2546,12 @@
   <line x1="3" y1="24" x2="29" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M20,16 h7 m-3,-3 l3,3 l-3,3" fill="none" stroke="currentColor" stroke-width="2"
         stroke-linecap="round" stroke-linejoin="round"/>
-</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="title" title="Máscara: Nintendo Pro."><span class="gr" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="mascara"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>PS</title>
+</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="Máscara: Nintendo Pro"><span class="gr" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="mascara"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>PS</title>
 
   <g transform="translate(16 16) scale(0.99425) translate(-16.0925 -16.0)">
     <path fill="currentColor" d="M 1.348 21.736 C 0.195 22.543 0.408 23.935 3.04 24.805 C 5.671 25.675 8.73 25.855 11.422 25.371 C 11.345 25.371 11.575 25.371 11.422 25.371 L 11.422 22.624 L 8.807 23.513 C 7.807 23.835 6.807 23.916 5.808 23.675 C 5.039 23.432 5.192 22.947 6.115 22.543 L 11.422 20.604 L 11.422 17.616 L 4.039 20.282 C 3.117 20.604 2.193 21.09 1.348 21.736 Z M 19.188 9.619 L 19.188 17.455 C 22.34 19.07 24.801 17.455 24.801 13.254 C 24.801 8.973 23.34 7.034 19.111 5.5 C 16.881 4.692 14.574 3.965 12.267 3.48 L 12.267 26.825 L 17.65 28.521 L 17.65 8.892 C 17.65 8.004 17.65 7.358 18.266 7.599 C 19.111 7.842 19.188 8.731 19.188 9.619 Z M 29.184 19.878 C 26.955 19.07 24.571 18.746 22.263 18.989 C 20.982 19.073 19.78 19.455 18.573 19.878 L 18.573 23.028 L 23.571 21.09 C 24.571 20.766 25.571 20.685 26.57 20.928 C 27.339 21.171 27.185 21.655 26.262 22.059 L 18.573 25.047 L 18.573 28.116 L 29.184 23.997 C 29.954 23.675 30.645 23.27 31.261 22.624 C 31.799 21.817 31.568 20.685 29.184 19.878 Z"/>
   </g>
-</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="title"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="movimento"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Analógico direito</title>
+</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="movimento"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Analógico direito</title>
 
   <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
@@ -2550,13 +2585,16 @@
                    dois que mexem na LISTA da esquerda. O `Ativar` fica verde
                    (`btn verde`) — a mesma classe que ele já tinha à esquerda,
                    para a cor não mudar de significado ao mudar de lugar. -->
-              <div class="botoes um-so">
-                <button class="btn verde" data-hef-gesto="ativar" title="Passa a usar este perfil agora, em todas as abas.">Ativar</button>
-              </div>
             </div>
           </div>
 
         </div>
+        <div class="barra-quatro-onde" data-todo="2"><div class="barra-quatro" data-todo="4">
+          <button class="btn" data-hef-gesto="duplicar" data-dica="Copia o perfil, com «(cópia)» no nome">Duplicar</button>
+          <button class="btn" data-hef-gesto="novo" data-dica="Perfil em branco; com jogo aberto, nasce para ele">Novo</button>
+          <button class="btn vermelho" data-hef-gesto="remover" data-hef="perfis.remover" data-dica="Apaga o perfil; pergunta antes">Remover</button>
+          <button class="btn verde" data-hef-gesto="ativar" data-dica="Passa a usar este perfil agora">Ativar</button>
+        </div></div>
       </div>
     </div>
 
@@ -2745,7 +2783,7 @@
          Aplicar e de Importar é o do produto, lido do `.glade`, não redigido aqui.
 
          `title=` e não a `.dica` da casa: a `.dica` precisa do embrulho
-         `<span data-todo="11" class="ajuda">?…</span>`, que existe para o ícone de interrogação —
+         `<span class="ajuda">?…</span>`, que existe para o ícone de interrogação —
          num botão ela viraria um "?" ao lado do rótulo, que não é o que o usuário pediu.
          `title=` é o que o `.glade` faz, e é o que já se usa em botão nesta casa
          (`aba09.py`).
@@ -2764,62 +2802,88 @@
          As duas metades importam: sem a primeira, quem abre a página antes de o
          produto pintar lê uma mentira; sem a segunda, ninguém lê o nome. -->
     <button class="r-aplicar" data-campo="rodape.aplicar"
-            data-hef-alvo="atributo" data-hef-atributo="title"
-            title="Vale agora: envia a configuração aos controles na hora. Não grava — ao trocar de perfil ou reiniciar, volta ao que está salvo.">Aplicar</button>
+            data-hef-alvo="atributo" data-hef-atributo="data-dica"
+            data-dica="Vale agora, sem gravar">Aplicar</button>
     <button class="r-salvar" data-campo="rodape.salvar"
-            data-hef-alvo="atributo" data-hef-atributo="title"
-            title="Grava no perfil ativo. É onde a mudança vai cair.">Salvar perfil</button>
-    <button class="r-importar" title="Carrega um perfil de arquivo .json.">Importar</button>
+            data-hef-alvo="atributo" data-hef-atributo="data-dica"
+            data-dica="Grava no perfil ativo">Salvar perfil</button>
+    <button class="r-importar" data-dica="Carrega um perfil de arquivo .json">Importar</button>
     <button class="r-exportar" data-campo="rodape.exportar"
-            data-hef-alvo="atributo" data-hef-atributo="title"
-            title="Escreve o perfil ativo num arquivo .json, para guardar ou levar para outra máquina.">Exportar</button>
+            data-hef-alvo="atributo" data-hef-atributo="data-dica"
+            data-dica="Escreve o perfil ativo num arquivo .json">Exportar</button>
   </div>
 
 </div>
 
 <!-- ===== fim da aba ===== -->
 
-<style data-todo-css="menu-do-botao-direito">
-  .todo-menu{position:fixed;z-index:9999;display:none;min-width:168px;padding:4px;
-    border:1px solid var(--border-forte);border-radius:8px;background:var(--elevated);
-    box-shadow:0 6px 18px rgba(0,0,0,.45);font-family:'Space Grotesk',system-ui,sans-serif;font-size:13px}
-  .todo-menu.aberto{display:block}
-  .todo-menu button{display:block;width:100%;height:28px;padding:0 14px;border:0;border-radius:5px;
-    background:transparent;color:var(--fg);font:inherit;text-align:left;cursor:pointer}
-  .todo-menu button:hover{background:var(--sel-bg)}
-  .todo-menu button[aria-disabled="true"]{color:var(--texto-mudo);cursor:default;background:transparent}
-  .todo-menu hr{border:0;border-top:1px solid var(--border-sutil);margin:4px 2px}
-</style>
-<div class="todo-menu aberto" id="todo-menu-direito" data-todo="10" role="menu" aria-label="Menu do Hefesto"
-     style="left:448px;top:452px"
-     title="O menu de verdade é o do sistema, no tema do COSMIC; aqui ele aparece aberto só para se ver.">
-  <button role="menuitem" data-item="copiar" aria-disabled="true">Copiar</button>
-  <hr>
-  <button role="menuitem" data-item="atualizar">Atualizar</button>
-  <button role="menuitem" data-item="ligar-desligar" title="Faz o mesmo que o Desligado da bandeja e da aba Jogar: o Hefesto sai da frente do jogo, que passa a ler o controle direto (modo nativo). O serviço segue de pé.">Desligar</button>
-  <button role="menuitem" data-item="reiniciar">Reiniciar</button>
-  <hr>
-  <button role="menuitem" data-item="fechar">Fechar</button>
-</div>
-<script data-todo="10">
+<script>/* rodada 2: o clique na linha ativa o perfil e o abre no editor; o «Eventos» mostra o «Quando». */
 (() => {
-  const m = document.getElementById('todo-menu-direito');
-  const rotulo = () => {
-    const desligado = document.body.classList.contains('nativo') || !!document.querySelector('#hef-desligado:checked');
-    { const ld = m.querySelector('[data-item="ligar-desligar"]'); ld.textContent = desligado ? 'Ligar' : 'Desligar'; ld.title = desligado ? 'Faz o mesmo que o Ligado da bandeja e da aba Jogar: liga o serviço se estiver parado e volta a entregar o controle ao jogo pelo Hefesto.' : 'Faz o mesmo que o Desligado da bandeja e da aba Jogar: o Hefesto sai da frente do jogo, que passa a ler o controle direto (modo nativo). O serviço segue de pé.'; }
-  };
-  document.addEventListener('contextmenu', (e) => {
-    e.preventDefault();
-    m.querySelector('[data-item="copiar"]').setAttribute('aria-disabled', String(!String(getSelection()).trim()));
-    rotulo();
-    m.classList.add('aberto');
-    m.style.left = Math.min(e.clientX, innerWidth - m.offsetWidth - 8) + 'px';
-    m.style.top = Math.min(e.clientY, innerHeight - m.offsetHeight - 8) + 'px';
+  const corpo = document.querySelector('tbody[data-hef="perfis.lista"]');
+  const jogo = document.querySelector('input[data-hef="editor.jogo"]');
+  const ativo = document.querySelector('.perfil-ativo .pa-nome');
+  corpo.addEventListener('click', e => {
+    const tr = e.target.closest('tr'); if (!tr) return;
+    corpo.querySelectorAll('tr').forEach(x => { x.classList.toggle('ativo', x === tr); x.setAttribute('aria-selected', x === tr); });
+    const nome = tr.dataset.hefPerfil || tr.cells[0].textContent.trim();
+    if (jogo) jogo.value = nome; if (ativo) ativo.textContent = nome;
   });
-  document.addEventListener('click', (e) => { if (!m.contains(e.target)) m.classList.remove('aberto'); rotulo(); });
-  document.addEventListener('change', rotulo);
-  rotulo();
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') m.classList.remove('aberto'); });
+  const alvos = document.querySelector('.seg.alvos'), ev = document.querySelector('.so-eventos');
+  alvos.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    alvos.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+    ev.hidden = b.dataset.v !== 'eventos';
+  });
+  if (location.hash === '#eventos') alvos.querySelector('[data-v="eventos"]').click();
+  if (ativo) ativo.textContent = 'Mortal Kombat';
+})();
+</script>
+<div class="menu-hefesto" id="menu-desenhado" role="menu" aria-label="Menu do Hefesto" data-todo="11" hidden style="left:992px;top:8px">
+  <button role="menuitem" disabled>Copiar</button><hr>
+  <button role="menuitem">Atualizar</button>
+  <button role="menuitem" data-dica="O Hefesto sai da frente e o jogo lê o controle direto">Desligar</button>
+  <button role="menuitem">Reiniciar</button><hr><button role="menuitem">Fechar</button>
+</div>
+<script>/* O menu desenhado aberto só na foto do menu: abra a página com #menu. */
+if (location.hash === '#menu') document.getElementById('menu-desenhado').hidden = false;</script>
+<script id="base-comum">
+/* Base comum das abas (rodada 2): a dica no hover e o menu do botão direito. Copiada IGUAL em todo mockup. */
+(() => {
+  const dica = document.createElement('div'); dica.id = 'hef-dica'; dica.setAttribute('role', 'tooltip');
+  document.addEventListener('DOMContentLoaded', () => document.body.append(dica));
+  let alvo = null;
+  const mostrar = el => {
+    alvo = el; dica.textContent = el.dataset.dica;
+    if (!dica.isConnected) document.body.append(dica);
+    const r = el.getBoundingClientRect(), d = dica.getBoundingClientRect();
+    let x = r.left + r.width / 2 - d.width / 2, y = r.bottom + 8;
+    if (y + d.height > innerHeight - 6) y = r.top - d.height - 8;
+    dica.style.left = Math.max(6, Math.min(x, innerWidth - d.width - 6)) + 'px'; dica.style.top = y + 'px';
+    dica.classList.add('visivel');
+  };
+  const esconder = () => { alvo = null; dica.classList.remove('visivel'); };
+  for (const [ev, f] of [['mouseover', 'in'], ['focusin', 'in'], ['mouseout', 'out'], ['focusout', 'out']])
+    document.addEventListener(ev, e => {
+      const el = e.target.closest && e.target.closest('[data-dica]');
+      if (f === 'in' && el && el !== alvo) mostrar(el);
+      if (f === 'out' && el && !el.contains(e.relatedTarget)) esconder();
+    });
+  // O menu do botão direito: Copiar (cinza sem seleção), Atualizar, Desligar/Ligar, Reiniciar, Fechar.
+  document.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    document.querySelectorAll('.menu-hefesto.vivo').forEach(m => m.remove());
+    const m = document.createElement('div'); m.className = 'menu-hefesto vivo'; m.setAttribute('role', 'menu');
+    const sel = String(getSelection()).trim() !== '';
+    m.innerHTML = `<button role="menuitem" ${sel ? '' : 'disabled'}>Copiar</button><hr>
+      <button role="menuitem">Atualizar</button>
+      <button role="menuitem" data-dica="O Hefesto sai da frente e o jogo lê o controle direto">Desligar</button>
+      <button role="menuitem">Reiniciar</button><hr><button role="menuitem">Fechar</button>`;
+    document.body.append(m);
+    const r = m.getBoundingClientRect();
+    m.style.left = Math.min(e.clientX, innerWidth - r.width - 6) + 'px';
+    m.style.top = Math.min(e.clientY, innerHeight - r.height - 6) + 'px';
+  });
+  document.addEventListener('click', e => { if (!e.target.closest('.menu-hefesto')) document.querySelectorAll('.menu-hefesto.vivo').forEach(m => m.remove()); });
 })();
 </script>
 </body>

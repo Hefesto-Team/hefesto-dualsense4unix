@@ -1,88 +1,38 @@
 {
  "aba": "mapa-das-portas",
- "nome": "Mapa das conexões",
+ "nome": "Mapa das portas",
  "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/_integra-1-11/src/hefesto_dualsense4unix/interface/paginas/mapa-das-portas.html",
- "depois": "~/.local/state/hefesto-casa/leva-volta/todo/mapa-das-portas.html",
+ "depois": "/home/vitoriamaria/.local/state/hefesto-casa/leva-volta/todo/mapa-das-portas.html",
  "mudancas": [
   {
    "n": 1,
-   "sprint": "O-MAPA-DAS-CONEXOES-MOSTRA-A-CADEIA-USB-E-O-REGISTRO-DELA-01",
-   "o_que_muda": "Quarta aba no topo, «Registro»: uma linha por evento, a mais nova em cima (hora, Entrou, Saiu, Voltou, Ficou mais lento ou Não apareceu, tipo e nome, entrada), «Ouvindo desde 13:02» e o botão Copiar; a lista rola dentro do quadro.",
-   "origem": "recomendada-a-escolher",
-   "ancora": ".modo[data-modo=registro]; #registro",
-   "conflito": "BRIEF-ACESSORIOS-USB, opção A (aplicada) contra B (embaixo do painel, faz a página rolar em 1212x700) e C (no log da aba 09, que o BRIEF-T5 redesenha)."
+   "sprint": "A-ABA-MAPAS-DO-RADIO-E-DAS-PORTAS-DO-TODO-01",
+   "o_que_muda": "O «?» das sugestões vira dica no título",
+   "origem": "regra-global",
+   "resposta": "todo-portas",
+   "ancora": "todo-portas-1",
+   "seletor": "h4[data-todo=\"1\"]",
+   "conflito": ""
   },
   {
    "n": 2,
-   "sprint": "O-MAPA-DAS-CONEXOES-MOSTRA-A-CADEIA-USB-E-O-REGISTRO-DELA-01",
-   "o_que_muda": "O painel da direita «Conectado agora» vira «A cadeia»: o hub com os aparelhos dele recuados embaixo, depois os que estão direto no computador. Sem caminho de barramento.",
-   "origem": "recomendada-a-escolher",
-   "ancora": ".bandeja h3; .chip.recuado",
+   "sprint": "A-ABA-MAPAS-DO-RADIO-E-DAS-PORTAS-DO-TODO-01",
+   "o_que_muda": "O botão direito abre o menu das abas",
+   "origem": "regra-global",
+   "resposta": "todo-portas",
+   "ancora": "todo-portas-2",
+   "seletor": "#menu-desenhado",
    "conflito": ""
   },
   {
    "n": 3,
-   "sprint": "O-MAPA-DAS-CONEXOES-MOSTRA-A-CADEIA-USB-E-O-REGISTRO-DELA-01",
-   "o_que_muda": "O hub aparece como um só: «Hub USB 3 · 7 entradas», com o nome do aparelho embaixo.",
-   "origem": "recomendada-a-escolher",
-   "ancora": ".chip[data-ap=hub] b",
-   "conflito": "Pergunta do BRIEF: um só (aplicado) ou com os lados 2.0 e 3.0 à vista."
-  },
-  {
-   "n": 4,
-   "sprint": "O-MAPA-DAS-CONEXOES-MOSTRA-A-CADEIA-USB-E-O-REGISTRO-DELA-01",
-   "o_que_muda": "Cada aparelho mostra o nome que diz de si (ou o apelido, que vence), e a dica traz a origem: «Base do sistema: Genesys Logic · Hub. Driver: hub.»",
-   "origem": "recomendada-a-escolher",
-   "ancora": ".bandeja .chip[title]",
+   "sprint": "A-ABA-MAPAS-DO-RADIO-E-DAS-PORTAS-DO-TODO-01",
+   "o_que_muda": "Os botões trazem dica curta no hover",
+   "origem": "regra-global",
+   "resposta": "todo-portas",
+   "ancora": "todo-portas-3",
+   "seletor": "[data-dica]",
    "conflito": ""
-  },
-  {
-   "n": 5,
-   "sprint": "O-MAPA-DAS-CONEXOES-MOSTRA-A-CADEIA-USB-E-O-REGISTRO-DELA-01",
-   "o_que_muda": "O enlace abaixo do que o aparelho sabe ganha etiqueta: «480 Mb/s · Sabe 5 Gb/s», com a dica «Pode ser a entrada, o hub, o cabo, o extensor ou o próprio aparelho.» Na cena, o hub (só o lado 3-1 apareceu na leitura de agora).",
-   "origem": "recomendada-a-escolher",
-   "ancora": ".chip .enlace",
-   "conflito": ""
-  },
-  {
-   "n": 6,
-   "sprint": "O-MAPA-DAS-CONEXOES-MOSTRA-A-CADEIA-USB-E-O-REGISTRO-DELA-01",
-   "o_que_muda": "Quem este computador já teve e não apareceu ganha uma linha esmaecida: «Não apareceu neste início».",
-   "origem": "recomendada-a-escolher",
-   "ancora": ".chip.sumiu",
-   "conflito": ""
-  },
-  {
-   "n": 7,
-   "sprint": "SO-A-PRIMEIRA-LETRA-E-MAIUSCULA-EM-TODA-ABA-01",
-   "o_que_muda": "O título passa de «Mapa das Conexões» a «Mapa das conexões», igual ao botão da aba 08.",
-   "origem": "desenho-escolhido",
-   "ancora": "h1",
-   "conflito": "O BRIEF-ACESSORIOS-USB chama a página de «Mapa das Conexões»; vence a regra dela de 09/10 (só a primeira letra maiúscula)."
-  },
-  {
-   "n": 8,
-   "sprint": "O-BOTAO-DIREITO-ABRE-O-MENU-DO-HEFESTO-EM-TODA-ABA-01",
-   "o_que_muda": "O botão direito abre o menu do Hefesto; o mockup o mostra aberto sobre as entradas vazias do hub. Nesta página o trecho comum lê os tokens dela (--color-paper-3, --color-rule, --color-ink, --color-ink-faint). Ordem dela de 12/10: o «Desligar/Ligar» faz o mesmo que o Desligado/Ligado da bandeja (o mesmo plano de IPC da aba Jogar: o Hefesto sai da frente e o jogo lê o controle direto, em modo nativo; o serviço segue de pé; o Ligar sobe o serviço se estiver parado), e a dica do item diz isso.",
-   "origem": "recomendada-a-escolher",
-   "ancora": "#todo-menu-direito",
-   "conflito": "Duas perguntas do BRIEF-T6 abertas: menu do sistema (A, aplicado) ou desenhado (B); e o Desligar é o interruptor da aba Jogar (aplicado) ou o Parar do serviço da aba Sistema."
-  },
-  {
-   "n": 9,
-   "sprint": "OS-ALVOS-E-A-LETRA-CRESCEM-E-A-INTERFACE-GANHA-TAMANHO-01",
-   "o_que_muda": "O nome do aparelho na entrada (20 px) e o plugue (23 px) ganham altura mínima de 24 px. Aqui não há «?» nem data-gesto; a classe .ajuda desta página é um parágrafo, e o trecho comum não se aplica a ela.",
-   "origem": "recomendada-a-escolher",
-   "ancora": "#todo-alvos; .ap-btn; .plug",
-   "conflito": "A sprint espera o desenho e não tem recomendação: apliquei a opção 1 (alvos de 24 px, mesma letra), como nas outras abas. A letra mínima de 12 px e o Tamanho da interface do Sistema ficam para a escolha dela."
-  },
-  {
-   "n": 10,
-   "sprint": "regra dela de 05/10 (toda tela sem rolagem vertical), achado da conferência de 12/10",
-   "o_que_muda": "O corpo deixa de rolar em 1212x809 (rolava 5 px; no publicado, 8): o pé da página passa de 40 a 32 px.",
-   "origem": "desenho-nosso-a-validar",
-   "ancora": ".pagina > .corpo",
-   "conflito": null
   }
  ],
  "por_baixo": [

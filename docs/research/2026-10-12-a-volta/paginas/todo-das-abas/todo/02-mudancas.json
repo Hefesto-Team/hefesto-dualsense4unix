@@ -1,170 +1,237 @@
 {
- "aba": "02",
- "nome": "Controles",
- "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/_integra-1-11/src/hefesto_dualsense4unix/interface/paginas/02-controles.html",
- "depois": "~/.local/state/hefesto-casa/leva-volta/todo/02-controles.html",
- "mudancas": [
-  {
-   "n": 1,
-   "sprint": "O-TOUCHPAD-LIGA-E-DESLIGA-NA-ABA-CONTROLES-01",
-   "o_que_muda": "No rótulo do Touchpad de cada controle, o «1 toque» dá lugar ao interruptor Ligado/Desligado (dicas: Ligado vai ao jogo com toque próprio, senão move o cursor; Desligado não chega ao jogo). Saem os botões Cursor/Botões.",
-   "origem": "recomendada-a-escolher",
-   "ancora": ".moldura.touchp .todo-sw-toque",
-   "conflito": "Contra a O-TOUCHPAD-MOSTRA-AS-ZONAS-QUE-ELE-APERTA-01 (espera-ela; o commit do desenho e13defb77 não existe). Vence a T1 (12/10, decisão dela); a ZONAS-01 caduca nos botões Cursor/Botões."
+  "aba": "02",
+  "nome": "Controles",
+  "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/_integra-1-11/src/hefesto_dualsense4unix/interface/paginas/02-controles.html",
+  "depois": "/home/vitoriamaria/.local/state/hefesto-casa/leva-volta/todo/02-controles.html",
+  "rodada": 2,
+  "sprint_unificada": "A-ABA-CONTROLES-DO-TODO-01",
+  "mudancas": [
+    {
+      "n": 1,
+      "sprint": "A-BASE-COMUM-DAS-ABAS-01",
+      "o_que_muda": "Sem «?»: a dica aparece no mouse ou no foco",
+      "resposta": "todo-02-5",
+      "origem": "RODADA-2 §A1",
+      "ancora": "[data-dica]",
+      "conflito": ""
+    },
+    {
+      "n": 2,
+      "sprint": "A-BASE-COMUM-DAS-ABAS-01",
+      "o_que_muda": "Modo automático à direita, no padrão das abas",
+      "resposta": "todo-02-3",
+      "origem": "RODADA-2 §02",
+      "ancora": "[data-todo=\"2\"]",
+      "conflito": ""
+    },
+    {
+      "n": 3,
+      "sprint": "A-ABA-CONTROLES-DO-TODO-01",
+      "o_que_muda": "«Calibrar giroscópio» à esquerda, borda arredondada igual",
+      "resposta": "todo-02-3",
+      "origem": "RODADA-2 §02",
+      "ancora": "[data-todo=\"3\"]",
+      "conflito": ""
+    },
+    {
+      "n": 4,
+      "sprint": "A-ABA-CONTROLES-DO-TODO-01",
+      "o_que_muda": "Touchpad: só a terça tocada acende, sem nome",
+      "resposta": "todo-02-2",
+      "origem": "RODADA-2 §B T1",
+      "ancora": "[data-todo=\"4\"]",
+      "conflito": ""
+    },
+    {
+      "n": 5,
+      "sprint": "A-ABA-CONTROLES-DO-TODO-01",
+      "o_que_muda": "Interruptor Ligado/Desligado do touchpad em cada controle",
+      "resposta": "todo-02-1",
+      "origem": "RODADA-2 §B T1",
+      "ancora": "[data-todo=\"5\"]",
+      "conflito": ""
+    },
+    {
+      "n": 6,
+      "sprint": "A-ABA-CONTROLES-DO-TODO-01",
+      "o_que_muda": "Sai o selo «Analógico virtual»",
+      "resposta": "todo-02",
+      "origem": "RODADA-2 §02",
+      "ancora": "[data-todo=\"9\"]",
+      "conflito": ""
+    },
+    {
+      "n": 7,
+      "sprint": "A-ABA-CONTROLES-DO-TODO-01",
+      "o_que_muda": "Interruptor vira «Usar giroscópio como analógico»",
+      "resposta": "todo-02",
+      "origem": "RODADA-2 §02",
+      "ancora": "[data-todo=\"6\"]",
+      "conflito": ""
+    },
+    {
+      "n": 8,
+      "sprint": "A-ABA-CONTROLES-DO-TODO-01",
+      "o_que_muda": "Sai a linha Ganho do microfone",
+      "resposta": "todo-02",
+      "origem": "RODADA-2 §02",
+      "ancora": "[data-todo=\"7\"]",
+      "conflito": ""
+    },
+    {
+      "n": 9,
+      "sprint": "A-ABA-CONTROLES-DO-TODO-01",
+      "o_que_muda": "Alto-falante: três rotas, uma por linha, nomes novos",
+      "resposta": "todo-02",
+      "origem": "RODADA-2 §02",
+      "ancora": "[data-todo=\"8\"]",
+      "conflito": ""
+    },
+    {
+      "n": 10,
+      "sprint": "A-ABA-CONTROLES-DO-TODO-01",
+      "o_que_muda": "A frase do giroscópio mora na dica da máscara",
+      "resposta": "todo-02-4",
+      "origem": "RODADA-2 §02",
+      "ancora": "[data-todo=\"9\"]",
+      "conflito": ""
+    },
+    {
+      "n": 11,
+      "sprint": "A-ABA-CONTROLES-DO-TODO-01",
+      "o_que_muda": "Barra de luz respeita o padding de baixo",
+      "resposta": "todo-02",
+      "origem": "RODADA-2 §02",
+      "ancora": "[data-todo=\"10\"]",
+      "conflito": ""
+    },
+    {
+      "n": 12,
+      "sprint": "A-ABA-CONTROLES-DO-TODO-01",
+      "o_que_muda": "Área «Criar efeitos novos»: touchpad, som e giroscópio",
+      "resposta": "todo-02",
+      "origem": "RODADA-2 §I",
+      "ancora": "[data-todo=\"12\"]",
+      "conflito": ""
+    },
+    {
+      "n": 13,
+      "sprint": "A-BASE-COMUM-DAS-ABAS-01",
+      "o_que_muda": "Botão direito abre o menu do Hefesto",
+      "resposta": "todo-02-6",
+      "origem": "RODADA-2 §A3",
+      "ancora": ".menu-hefesto",
+      "conflito": ""
+    }
+  ],
+  "estados": {
+    "automatico": "document.querySelector('.modo-auto').click()",
+    "menu": "window.MX=492;window.MY=262;(() => { const x = window.MX || 960, y = window.MY || 560;\n  document.elementFromPoint(x, y).dispatchEvent(new MouseEvent('contextmenu', {bubbles: true, clientX: x, clientY: y}));\n  const d = [...document.querySelectorAll('.menu-hefesto button')].find(b => b.textContent.trim() === 'Desligar');\n  d.dispatchEvent(new MouseEvent('mouseover', {bubbles: true})); })()\n"
   },
-  {
-   "n": 2,
-   "sprint": "O-TOUCHPAD-LIGA-E-DESLIGA-NA-ABA-CONTROLES-01",
-   "o_que_muda": "O quadrado se divide em três terças (Esquerda, Meio, Direita); só a tocada acende com o nome. No P1, «Meio».",
-   "origem": "recomendada-a-escolher",
-   "ancora": ".touch .todo-terca",
-   "conflito": "Contra a O-TOUCHPAD-MOSTRA-AS-ZONAS-QUE-ELE-APERTA-01 (espera-ela; o commit do desenho e13defb77 não existe). Vence a T1 (12/10, decisão dela); a ZONAS-01 caduca nos botões Cursor/Botões."
-  },
-  {
-   "n": 3,
-   "sprint": "O-TOUCHPAD-LIGA-E-DESLIGA-NA-ABA-CONTROLES-01",
-   "o_que_muda": "No P2 (Xbox 360, BT) o touchpad está Desligado: quadrado esmaecido e «Mudo no jogo». Fora do jogo segue como cursor (opção 1).",
-   "origem": "recomendada-a-escolher",
-   "ancora": ".todo-mudo",
-   "conflito": null
-  },
-  {
-   "n": 4,
-   "sprint": "O-TOUCHPAD-LIGA-E-DESLIGA-NA-ABA-CONTROLES-01",
-   "o_que_muda": "A frase do giroscópio sai da faixa do cartão e entra na dica do selo da máscara.",
-   "origem": "recomendada-a-escolher",
-   "ancora": "span.leia[title]",
-   "conflito": null
-  },
-  {
-   "n": 5,
-   "sprint": "OS-ALVOS-E-A-LETRA-CRESCEM-E-A-INTERFACE-GANHA-TAMANHO-01",
-   "o_que_muda": "Os ? passam de 17 a 24 px e todo alvo com data-gesto ganha altura mínima de 24 px; a letra fica. Os quatro botões da rota do som também chegam a 24 px.",
-   "origem": "recomendada-a-escolher",
-   "ancora": "#todo-alvos e .ajuda",
-   "conflito": null
-  },
-  {
-   "n": 6,
-   "sprint": "O-BOTAO-DIREITO-ABRE-O-MENU-DO-HEFESTO-EM-TODA-ABA-01",
-   "o_que_muda": "Menu do botão direito, desenhado aberto sobre as linhas vazias do P3 e do P4, à direita. Ordem dela de 12/10: o «Desligar/Ligar» faz o mesmo que o Desligado/Ligado da bandeja (o mesmo plano de IPC da aba Jogar: o Hefesto sai da frente e o jogo lê o controle direto, em modo nativo; o serviço segue de pé; o Ligar sobe o serviço se estiver parado), e a dica do item diz isso.",
-   "origem": "recomendada-a-escolher",
-   "ancora": "#todo-menu-direito",
-   "conflito": null
-  },
-  {
-   "n": 7,
-   "sprint": "ordem dela de 12/10, 14h40 (sprint a escrever: O-MODO-AUTOMATICO-E-UM-BOTAO-SO-01)",
-   "o_que_muda": "O botão único «Modo automático», ao lado do Calibrar sensores de movimento. Ligado: o jogo decide o que a aba ajusta (touchpad, microfone e som), e os ajustes dos cartões ficam apagados. O botão é ciano escuro com a letra branca nos dois estados (resposta sua de 12/10); ligado, o fundo clareia, o contorno acende e a bolinha enche.",
-   "origem": "ordem-dela-12-10",
-   "ancora": ".sensores .modo-auto",
-   "conflito": null
-  }
- ],
- "por_baixo": [
-  {
-   "sprint": "O-TOQUE-LIGADO-OU-DESLIGADO-POR-CONTROLE-01",
-   "o_que_muda": "O campo touchpad por controle, o grab e o Ligado de padrão, no daemon."
-  },
-  {
-   "sprint": "O-CONTROLE-E-O-VPAD-DELE-SE-CASAM-PELO-ENDERECO-01",
-   "o_que_muda": "Implementada na fds (74e4a53da): texto_motion e o item do vpad casam pelo uniq; o texto visível não muda."
-  },
-  {
-   "sprint": "A-INTERFACE-INTEIRA-SE-ALCANCA-PELO-CONTROLE-E-PELO-TECLADO-01",
-   "o_que_muda": "Foco e atributos de navegação; o desenho não muda."
-  },
-  {
-   "sprint": "O-NUMERO-DA-BARRA-NAO-CONGELA-NO-VALOR-VELHO-01",
-   "o_que_muda": "O número ao lado da barra acompanha o valor vivo."
-  },
-  {
-   "sprint": "A-ALTURA-E-A-LARGURA-DA-JANELA-NAO-PULSAM-01",
-   "o_que_muda": "A janela não muda de tamanho sozinha."
-  },
-  {
-   "sprint": "A-JANELA-REGISTRA-O-PROPRIO-TAMANHO-E-O-MOTIVO-DE-FECHAR-01",
-   "o_que_muda": "Registro do tamanho e do motivo de fechar, no log."
-  },
-  {
-   "sprint": "FECHAR-A-JANELA-DEVOLVE-O-QUE-AS-ABAS-SEGURAVAM-01",
-   "o_que_muda": "Fechar a janela solta o que as abas seguravam (implementada na fds, voo/parar-fds)."
-  },
-  {
-   "sprint": "O-TEMA-DE-CORES-ENTRA-PELA-FOLHA-DE-USUARIO-01",
-   "o_que_muda": "Sem tema de modificação nada muda; as peças novas só usam tokens do :root (em voo na voo/lancadores-fds)."
-  },
-  {
-   "sprint": "CADA-FEATURE-TEM-UM-DONO-SO-NA-INTERFACE-01",
-   "o_que_muda": "Nada sai destas abas: a 01 só ativa o point and click, a 02 é dona do liga e do lado do analógico virtual."
-  }
- ],
- "fora": [
-  {
-   "sprint": "STEAM-INPUT-01",
-   "motivo": "Já no antes (código no dev); espera a bancada."
-  },
-  {
-   "sprint": "O-MODO-QUE-NAO-SAI-DO-STEAM-INPUT-01",
-   "motivo": "Já no antes (código no dev); espera a bancada."
-  },
-  {
-   "sprint": "A-MIRA-NA-NAVEGACAO-01",
-   "motivo": "Já no antes (código no dev); espera a bancada."
-  },
-  {
-   "sprint": "NO-MODO-XBOX-TUDO-FUNCIONA-01",
-   "motivo": "Já no antes (código no dev); espera a bancada."
-  },
-  {
-   "sprint": "A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01",
-   "motivo": "Já no antes (código no dev); espera a bancada."
-  },
-  {
-   "sprint": "O-DESLIGADO-DEIXA-O-JOGO-DECIDIR-01",
-   "motivo": "Já no antes (código no dev); espera a bancada."
-  },
-  {
-   "sprint": "SO-A-PRIMEIRA-LETRA-E-MAIUSCULA-EM-TODA-ABA-01",
-   "motivo": "Já no antes (b3222fa9f); o selo ATIVO/DESLIGADO fica em caixa alta por ordem dela de 21/09."
-  },
-  {
-   "sprint": "O-COMENTARIO-COM-DOIS-PONTOS-SO-VALE-EM-CIMA-DE-ATRIBUICAO-01",
-   "motivo": "Só código (em voo na regras-fora)."
-  },
-  {
-   "sprint": "A-PALETA-MARCA-A-COR-DE-CADA-CONTROLE-01",
-   "motivo": "É da aba 04."
-  },
-  {
-   "sprint": "O-PARAR-CALA-O-TESTE-QUE-AINDA-ESTAVA-NO-AR-01",
-   "motivo": "Mudam comportamento ou outras abas (voo/parar-fds)."
-  },
-  {
-   "sprint": "OS-CORACOES-DA-VIBRACAO-NAO-SEGURAM-A-JANELA-01",
-   "motivo": "Mudam comportamento ou outras abas (voo/parar-fds)."
-  },
-  {
-   "sprint": "O-TOUCHPAD-MOSTRA-AS-ZONAS-QUE-ELE-APERTA-01",
-   "motivo": "Caduca nos botões Cursor/Botões pela T1 (conflito registrado na mudança 1)."
-  },
-  {
-   "sprint": "O-CIRCULO-DO-ANALOGICO-MOSTRA-O-QUE-O-JOGO-VE-01",
-   "motivo": "Já costurada na 1-11: está no antes."
-  },
-  {
-   "sprint": "O-PADRAO-DO-ALTO-FALANTE-DESLIGA-SEM-PERFIL-ATIVO-01",
-   "motivo": "Já costurada na 1-11: está no antes."
-  },
-  {
-   "sprint": "O-MUDO-DO-HEFESTO-CHEGA-AO-SOURCE-E-CADA-MEDIDOR-LE-O-SEU-01",
-   "motivo": "Já costurada na 1-11: está no antes."
-  },
-  {
-   "sprint": "O-SOM-LE-O-PACTL-EM-JSON-E-ACHA-OS-MODULOS-PELA-PORTA-01",
-   "motivo": "Já costurada na 1-11: está no antes."
-  }
- ],
- "altura_px": 809,
- "rola": false
+  "por_baixo": [
+    {
+      "sprint": "O-TOQUE-LIGADO-OU-DESLIGADO-POR-CONTROLE-01",
+      "o_que_muda": "O campo touchpad por controle, o grab e o Ligado de padrão, no daemon."
+    },
+    {
+      "sprint": "O-CONTROLE-E-O-VPAD-DELE-SE-CASAM-PELO-ENDERECO-01",
+      "o_que_muda": "Implementada na fds (74e4a53da): texto_motion e o item do vpad casam pelo uniq; o texto visível não muda."
+    },
+    {
+      "sprint": "A-INTERFACE-INTEIRA-SE-ALCANCA-PELO-CONTROLE-E-PELO-TECLADO-01",
+      "o_que_muda": "Foco e atributos de navegação; o desenho não muda."
+    },
+    {
+      "sprint": "O-NUMERO-DA-BARRA-NAO-CONGELA-NO-VALOR-VELHO-01",
+      "o_que_muda": "O número ao lado da barra acompanha o valor vivo."
+    },
+    {
+      "sprint": "A-ALTURA-E-A-LARGURA-DA-JANELA-NAO-PULSAM-01",
+      "o_que_muda": "A janela não muda de tamanho sozinha."
+    },
+    {
+      "sprint": "A-JANELA-REGISTRA-O-PROPRIO-TAMANHO-E-O-MOTIVO-DE-FECHAR-01",
+      "o_que_muda": "Registro do tamanho e do motivo de fechar, no log."
+    },
+    {
+      "sprint": "FECHAR-A-JANELA-DEVOLVE-O-QUE-AS-ABAS-SEGURAVAM-01",
+      "o_que_muda": "Fechar a janela solta o que as abas seguravam (implementada na fds, voo/parar-fds)."
+    },
+    {
+      "sprint": "O-TEMA-DE-CORES-ENTRA-PELA-FOLHA-DE-USUARIO-01",
+      "o_que_muda": "Sem tema de modificação nada muda; as peças novas só usam tokens do :root (em voo na voo/lancadores-fds)."
+    },
+    {
+      "sprint": "CADA-FEATURE-TEM-UM-DONO-SO-NA-INTERFACE-01",
+      "o_que_muda": "Nada sai destas abas: a 01 só ativa o point and click, a 02 é dona do liga e do lado do analógico virtual."
+    }
+  ],
+  "fora": [
+    {
+      "sprint": "STEAM-INPUT-01",
+      "motivo": "Já no antes (código no dev); espera a bancada."
+    },
+    {
+      "sprint": "O-MODO-QUE-NAO-SAI-DO-STEAM-INPUT-01",
+      "motivo": "Já no antes (código no dev); espera a bancada."
+    },
+    {
+      "sprint": "A-MIRA-NA-NAVEGACAO-01",
+      "motivo": "Já no antes (código no dev); espera a bancada."
+    },
+    {
+      "sprint": "NO-MODO-XBOX-TUDO-FUNCIONA-01",
+      "motivo": "Já no antes (código no dev); espera a bancada."
+    },
+    {
+      "sprint": "A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01",
+      "motivo": "Já no antes (código no dev); espera a bancada."
+    },
+    {
+      "sprint": "O-DESLIGADO-DEIXA-O-JOGO-DECIDIR-01",
+      "motivo": "Já no antes (código no dev); espera a bancada."
+    },
+    {
+      "sprint": "SO-A-PRIMEIRA-LETRA-E-MAIUSCULA-EM-TODA-ABA-01",
+      "motivo": "Já no antes (b3222fa9f); o selo ATIVO/DESLIGADO fica em caixa alta por ordem dela de 21/09."
+    },
+    {
+      "sprint": "O-COMENTARIO-COM-DOIS-PONTOS-SO-VALE-EM-CIMA-DE-ATRIBUICAO-01",
+      "motivo": "Só código (em voo na regras-fora)."
+    },
+    {
+      "sprint": "A-PALETA-MARCA-A-COR-DE-CADA-CONTROLE-01",
+      "motivo": "É da aba 04."
+    },
+    {
+      "sprint": "O-PARAR-CALA-O-TESTE-QUE-AINDA-ESTAVA-NO-AR-01",
+      "motivo": "Mudam comportamento ou outras abas (voo/parar-fds)."
+    },
+    {
+      "sprint": "OS-CORACOES-DA-VIBRACAO-NAO-SEGURAM-A-JANELA-01",
+      "motivo": "Mudam comportamento ou outras abas (voo/parar-fds)."
+    },
+    {
+      "sprint": "O-TOUCHPAD-MOSTRA-AS-ZONAS-QUE-ELE-APERTA-01",
+      "motivo": "Caduca nos botões Cursor/Botões pela T1 (conflito registrado na mudança 1)."
+    },
+    {
+      "sprint": "O-CIRCULO-DO-ANALOGICO-MOSTRA-O-QUE-O-JOGO-VE-01",
+      "motivo": "Já costurada na 1-11: está no antes."
+    },
+    {
+      "sprint": "O-PADRAO-DO-ALTO-FALANTE-DESLIGA-SEM-PERFIL-ATIVO-01",
+      "motivo": "Já costurada na 1-11: está no antes."
+    },
+    {
+      "sprint": "O-MUDO-DO-HEFESTO-CHEGA-AO-SOURCE-E-CADA-MEDIDOR-LE-O-SEU-01",
+      "motivo": "Já costurada na 1-11: está no antes."
+    },
+    {
+      "sprint": "O-SOM-LE-O-PACTL-EM-JSON-E-ACHA-OS-MODULOS-PELA-PORTA-01",
+      "motivo": "Já costurada na 1-11: está no antes."
+    }
+  ],
+  "altura_px": 809,
+  "rola": false
 }

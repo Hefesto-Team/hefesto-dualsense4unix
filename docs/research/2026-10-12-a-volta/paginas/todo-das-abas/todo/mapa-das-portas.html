@@ -566,13 +566,51 @@
   .registro-linhas .quem .marca { flex: none; width: .5rem; height: .5rem; border-radius: 50%; }
   .registro-linhas .onde { color: var(--color-ink-faint); font-size: var(--text-xs); text-align: right; }
 </style>
-<style id="todo-alvos" data-todo="9">
+<style id="todo-alvos">
   .ap-btn{min-height:24px}
   .plug{min-height:24px}
 </style>
 <style data-todo-css="sem-rolagem">
   /* Volta 2 (12/10): o corpo rolava 5 px em 1212x809 (já rolava 8 no publicado): o pé de 40 px vira 32. */
   .pagina > .corpo{padding-bottom:32px}
+</style>
+<style id="base-comum">
+/* ===== Base comum das abas (rodada 2, 12/10/2026) =====
+   Copiada IGUAL em todo mockup do todo. Três peças: a dica no hover (sem «?»), o Modo automático
+   e o menu do botão direito desenhado no visual das abas (BRIEF-T6, opção B). */
+
+/* 1. A dica: qualquer frase, botão ou área com data-dica mostra a dica ao passar o mouse ou focar.
+      Nenhum botão «?» existe mais. A dica tem no máximo ~12 palavras: show, don't tell. */
+[data-dica]{cursor:help}
+button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"][data-dica]{cursor:pointer}
+#hef-dica{position:fixed;z-index:2147483000;max-width:280px;padding:7px 11px;border-radius:8px;
+  background:#1b1c25;border:1px solid var(--border-forte,#44475a);color:var(--texto-suave,#c8ccda);
+  font:500 12.5px/1.45 'Space Grotesk',system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.45);pointer-events:none;
+  opacity:0;transform:translateY(3px);transition:opacity .12s,transform .12s}
+#hef-dica.visivel{opacity:1;transform:none}
+
+/* 2. O Modo automático: pílula com bolinha. Os dois estados têm de se distinguir num relance.
+      Desligado: contorno neutro, bolinha vazia, letra suave (vale o que está na aba).
+      Ligado: ciano cheio, bolinha branca acesa, letra branca; a área que ele governa esmaece. */
+.modo-auto{display:inline-flex;align-items:center;gap:9px;height:34px;padding:0 16px 0 12px;border-radius:999px;
+  border:1px solid var(--border-forte,#44475a);background:transparent;color:var(--texto-suave,#c8ccda);
+  font:600 13.5px/1 'Space Grotesk',system-ui,sans-serif;cursor:pointer;transition:background .15s,border-color .15s,color .15s,box-shadow .15s}
+.modo-auto .p{width:11px;height:11px;border-radius:50%;border:2px solid var(--texto-mudo,#9a9eb8);background:transparent;
+  transition:all .15s}
+.modo-auto:hover{border-color:#5fd3e6;color:#fff}
+.modo-auto[aria-pressed="true"]{background:#0e7c8c;border-color:#5fd3e6;color:#fff;box-shadow:0 0 0 3px rgba(95,211,230,.18)}
+.modo-auto[aria-pressed="true"] .p{border-color:#fff;background:#fff;box-shadow:0 0 8px #fff}
+.modo-auto:focus-visible{outline:2px solid var(--cyan,#8be9fd);outline-offset:2px}
+.governado-pelo-jogo{opacity:.42;pointer-events:none;filter:saturate(.6)}
+
+/* 3. O menu do botão direito, no visual das abas. */
+.menu-hefesto{position:fixed;z-index:2147482000;min-width:190px;padding:6px;border-radius:12px;
+  background:#252733;border:1px solid var(--border-forte,#44475a);box-shadow:0 14px 34px rgba(0,0,0,.5)}
+.menu-hefesto button{display:flex;width:100%;align-items:center;gap:10px;height:34px;padding:0 12px;border:0;
+  border-radius:8px;background:transparent;color:var(--fg,#f8f8f2);font:500 13.5px/1 'Space Grotesk',system-ui,sans-serif;text-align:left;cursor:pointer}
+.menu-hefesto button:hover{background:rgba(189,147,249,.14)}
+.menu-hefesto button[disabled]{color:var(--texto-mudo,#9a9eb8);opacity:.55;cursor:default;background:transparent}
+.menu-hefesto hr{border:0;border-top:1px solid var(--border-sutil,#343746);margin:5px 4px}
 </style>
 </head>
 <body>
@@ -584,24 +622,24 @@
          página. O destino não é chute: `grep -l mapa-das-portas.html` devolve UMA
          aba, a Conexões — e ela existe ao lado desta cópia, não ao lado da
          origem congelada, que tem três arquivos e nenhuma aba. -->
-    <a href="08-conexoes.html" title="Volta para a aba Conexões, que é de onde este mapa se abre."
+    <a href="08-conexoes.html" data-dica="Volta para a aba Conexões"
        style="position:absolute;left:0;top:2px;display:inline-flex;align-items:center;gap:6px;
               padding:5px 11px;border-radius:7px;text-decoration:none;
               border:1px solid var(--border-forte);background:var(--panel);
               color:var(--texto-suave);font-size:12px">← Voltar</a>
-    <h1 data-todo="7">Mapa das <em>conexões</em></h1>
+    <h1>Mapa das <em>conexões</em></h1>
     <p class="quando" id="de-quando">Leitura de exemplo · 24/08/2026</p>
-    <button class="btn examinar" id="reexaminar" title="Lê o computador de novo e mostra o que mudou de lugar"><span aria-hidden="true">⟳</span> Examinar</button>
+    <button class="btn examinar" id="reexaminar" data-dica="Lê de novo e mostra o que mudou de lugar"><span aria-hidden="true">⟳</span> Examinar</button>
   </header>
 
-  <div class="corpo" data-todo="10">
+  <div class="corpo">
   <div class="modos" id="modos"></div>
   <section class="painel" id="painel"></section>
 
-  <section class="registro" id="registro" data-todo="1" hidden aria-label="Registro">
+  <section class="registro" id="registro" hidden aria-label="Registro">
     <div class="registro-cab">
-      <span class="ouvindo" title="O Hefesto anota o que entra e sai das entradas USB enquanto está ligado.">Ouvindo desde 13:02</span>
-      <button class="btn" id="registro-copiar" title="Copia o registro para colar numa conversa ou num relato">Copiar</button>
+      <span class="ouvindo" data-dica="O que entra e sai das entradas USB">Ouvindo desde 13:02</span>
+      <button class="btn" id="registro-copiar" data-dica="Copia o registro para um relato">Copiar</button>
     </div>
     <ol class="registro-linhas">
       <li><time>13:41</time><span class="ev lento">Ficou mais lento</span><span class="quem"><i class="marca" style="background:#f8f8f2"></i><b>Hub</b> TP-Link UH700</span><span class="onde">Entrada 4</span></li>
@@ -619,7 +657,7 @@
     <div class="edita painel-unico" id="edita" hidden></div>
     <div class="faces" id="faces"></div>
     <aside class="bandeja">
-      <h3 data-todo="2" title="Os hubs com os aparelhos que pendem deles, e embaixo quem está direto no computador.">A cadeia</h3>
+      <h3 data-dica="Os hubs e o que pende deles; embaixo, o direto">A cadeia</h3>
       <p class="ajuda" id="ajuda-bandeja"></p>
       <div class="lista" id="bandeja"></div>
     </aside>
@@ -1973,7 +2011,7 @@
         '<button class="modo" data-modo="mesa" aria-pressed="' + (modo === "mesa") + '">Atual</button>'
       + '<button class="modo destaque" data-modo="ideal" aria-pressed="' + (modo === "ideal") + '">Sugestões</button>'
       + '<button class="modo" data-modo="mao" aria-pressed="' + (modo === "mao") + '">Adicionar</button>'
-      + '<button class="modo" data-todo="1" data-modo="registro" aria-pressed="' + (modo === "registro") + '">Registro</button>';
+      + '<button class="modo" data-modo="registro" aria-pressed="' + (modo === "registro") + '">Registro</button>';
     var noRegistro = modo === "registro";
     document.getElementById("registro").hidden = !noRegistro;
     document.querySelector(".palco").hidden = noRegistro;
@@ -2008,9 +2046,7 @@
         html += '<p class="chamada"><span class="grande">' + reais.length + " troca" + (reais.length > 1 ? "s" : "") + "</span></p>"
              + '<ol class="receita">'
              + reais.map(function (m) {
-                 return "<li><div><h4>" + m.titulo + '<span class="ajuda" tabindex="0">?<span class="dica">'
-                   + m.linhas.map(function (l) { return '<span><span class="selo ' + l.s + '">' + (l.s === "espec" ? "especificação" : l.s) + "</span><span>" + l.t + "</span></span>"; }).join("")
-                   + "</span></span></h4></div></li>";
+                 return '<li><div><h4 data-todo="1" data-dica="' + emAtributo(String(m.linhas[0] ? m.linhas[0].t : "").replace(/<[^>]+>/g, "")) + '">' + m.titulo + "</h4></div></li>";
                }).join("")
              + "</ol>";
         html += '<div class="acoes"><button class="btn forte ja-movi"' + examinaNoProduto() + '>Já mudei</button>'
@@ -2124,12 +2160,12 @@
       var dica = org ? "Base do sistema: " + org[0] + ". Driver: " + org[1] + "." : a.nome;
       var titulo = a.nomeDeclarado || hub || rotuloDoAparelho(a);
       return '<button class="chip' + (recuado ? " recuado" : "") + '" data-ap="' + a.id + '"' + (p ? ' data-alocado="1"' : "")
-        + (org ? ' data-todo="4"' : "") + ' title="' + emAtributo(dica) + '"'
+        + (org ? '' : "") + ' title="' + emAtributo(dica) + '"'
         + (segurando === a.id ? ' data-segurando="1"' : "") + ">"
         + '<i class="marca" style="background:' + a.cor + '"></i>'
-        + '<span class="txt"><b' + (hub ? ' data-todo="3"' : "") + ">" + emAtributo(titulo) + "</b>"
+        + '<span class="txt"><b' + (hub ? '' : "") + ">" + emAtributo(titulo) + "</b>"
         + "<span>" + emAtributo(a.nome) + "</span>"
-        + (enl ? '<span class="enlace" data-todo="5" title="Pode ser a entrada, o hub, o cabo, o extensor ou o próprio aparelho.">' + enl + "</span>" : "")
+        + (enl ? '<span class="enlace" title="Pode ser a entrada, o hub, o cabo, o extensor ou o próprio aparelho.">' + enl + "</span>" : "")
         + "</span>"
         + (p ? '<span class="num">' + p + "</span>" : "") + "</button>";
     }
@@ -2146,7 +2182,7 @@
     htmlDaCadeia += APARELHOS.filter(function (a) { return !jaNaCadeia[a.id]; })
       .map(function (a) { return chipDaCadeia(a, false); }).join("");
     htmlDaCadeia += SUMIRAM.map(function (a) {
-      return '<div class="chip sumiu" data-todo="6" title="Este computador já teve este aparelho e ele não apareceu agora.">'
+      return '<div class="chip sumiu" title="Este computador já teve este aparelho e ele não apareceu agora.">'
         + '<i class="marca" style="background:' + a.cor + '"></i>'
         + '<span class="txt"><b>' + emAtributo(a.tipo) + "</b><span>" + emAtributo(a.nome) + " · Não apareceu neste início</span></span></div>";
     }).join("");
@@ -2425,48 +2461,53 @@
   pintar();
 })();
 </script>
-<style data-todo-css="menu-do-botao-direito">
-  .todo-menu{--elevated:var(--color-paper-3);--border-forte:var(--color-rule);--border-sutil:var(--color-rule);--fg:var(--color-ink);--texto-mudo:var(--color-ink-faint);--sel-bg:color-mix(in srgb,var(--color-accent) 16%,transparent)}
-  .todo-menu{position:fixed;z-index:9999;display:none;min-width:168px;padding:4px;
-    border:1px solid var(--border-forte);border-radius:8px;background:var(--elevated);
-    box-shadow:0 6px 18px rgba(0,0,0,.45);font-family:'Space Grotesk',system-ui,sans-serif;font-size:13px}
-  .todo-menu.aberto{display:block}
-  .todo-menu button{display:block;width:100%;height:28px;padding:0 14px;border:0;border-radius:5px;
-    background:transparent;color:var(--fg);font:inherit;text-align:left;cursor:pointer}
-  .todo-menu button:hover{background:var(--sel-bg)}
-  .todo-menu button[aria-disabled="true"]{color:var(--texto-mudo);cursor:default;background:transparent}
-  .todo-menu hr{border:0;border-top:1px solid var(--border-sutil);margin:4px 2px}
-</style>
-<div class="todo-menu aberto" id="todo-menu-direito" data-todo="8" role="menu" aria-label="Menu do Hefesto"
-     style="left:700px;top:586px"
-     title="O menu de verdade é o do sistema, no tema do COSMIC; aqui ele aparece aberto só para se ver.">
-  <button role="menuitem" data-item="copiar" aria-disabled="true">Copiar</button>
-  <hr>
-  <button role="menuitem" data-item="atualizar">Atualizar</button>
-  <button role="menuitem" data-item="ligar-desligar" title="Faz o mesmo que o Desligado da bandeja e da aba Jogar: o Hefesto sai da frente do jogo, que passa a ler o controle direto (modo nativo). O serviço segue de pé.">Desligar</button>
-  <button role="menuitem" data-item="reiniciar">Reiniciar</button>
-  <hr>
-  <button role="menuitem" data-item="fechar">Fechar</button>
+
+<div class="menu-hefesto" id="menu-desenhado" role="menu" aria-label="Menu do Hefesto" data-todo="2" hidden style="left:690px;top:540px">
+  <button role="menuitem" disabled>Copiar</button><hr>
+  <button role="menuitem">Atualizar</button>
+  <button role="menuitem" data-dica="O Hefesto sai da frente e o jogo lê o controle direto">Desligar</button>
+  <button role="menuitem">Reiniciar</button><hr><button role="menuitem">Fechar</button>
 </div>
-<script>
+<script>/* O menu desenhado aberto só na foto do menu: abra a página com #menu. */
+if (location.hash === '#menu') document.getElementById('menu-desenhado').hidden = false;</script>
+<script id="base-comum">
+/* Base comum das abas (rodada 2): a dica no hover e o menu do botão direito. Copiada IGUAL em todo mockup. */
 (() => {
-  const m = document.getElementById('todo-menu-direito');
-  const rotulo = () => {
-    const desligado = document.body.classList.contains('nativo') || !!document.querySelector('#hef-desligado:checked');
-    { const ld = m.querySelector('[data-item="ligar-desligar"]'); ld.textContent = desligado ? 'Ligar' : 'Desligar'; ld.title = desligado ? 'Faz o mesmo que o Ligado da bandeja e da aba Jogar: liga o serviço se estiver parado e volta a entregar o controle ao jogo pelo Hefesto.' : 'Faz o mesmo que o Desligado da bandeja e da aba Jogar: o Hefesto sai da frente do jogo, que passa a ler o controle direto (modo nativo). O serviço segue de pé.'; }
+  const dica = document.createElement('div'); dica.id = 'hef-dica'; dica.setAttribute('role', 'tooltip');
+  document.addEventListener('DOMContentLoaded', () => document.body.append(dica));
+  let alvo = null;
+  const mostrar = el => {
+    alvo = el; dica.textContent = el.dataset.dica;
+    if (!dica.isConnected) document.body.append(dica);
+    const r = el.getBoundingClientRect(), d = dica.getBoundingClientRect();
+    let x = r.left + r.width / 2 - d.width / 2, y = r.bottom + 8;
+    if (y + d.height > innerHeight - 6) y = r.top - d.height - 8;
+    dica.style.left = Math.max(6, Math.min(x, innerWidth - d.width - 6)) + 'px'; dica.style.top = y + 'px';
+    dica.classList.add('visivel');
   };
-  document.addEventListener('contextmenu', (e) => {
+  const esconder = () => { alvo = null; dica.classList.remove('visivel'); };
+  for (const [ev, f] of [['mouseover', 'in'], ['focusin', 'in'], ['mouseout', 'out'], ['focusout', 'out']])
+    document.addEventListener(ev, e => {
+      const el = e.target.closest && e.target.closest('[data-dica]');
+      if (f === 'in' && el && el !== alvo) mostrar(el);
+      if (f === 'out' && el && !el.contains(e.relatedTarget)) esconder();
+    });
+  // O menu do botão direito: Copiar (cinza sem seleção), Atualizar, Desligar/Ligar, Reiniciar, Fechar.
+  document.addEventListener('contextmenu', e => {
     e.preventDefault();
-    m.querySelector('[data-item="copiar"]').setAttribute('aria-disabled', String(!String(getSelection()).trim()));
-    rotulo();
-    m.classList.add('aberto');
-    m.style.left = Math.min(e.clientX, innerWidth - m.offsetWidth - 8) + 'px';
-    m.style.top = Math.min(e.clientY, innerHeight - m.offsetHeight - 8) + 'px';
+    document.querySelectorAll('.menu-hefesto.vivo').forEach(m => m.remove());
+    const m = document.createElement('div'); m.className = 'menu-hefesto vivo'; m.setAttribute('role', 'menu');
+    const sel = String(getSelection()).trim() !== '';
+    m.innerHTML = `<button role="menuitem" ${sel ? '' : 'disabled'}>Copiar</button><hr>
+      <button role="menuitem">Atualizar</button>
+      <button role="menuitem" data-dica="O Hefesto sai da frente e o jogo lê o controle direto">Desligar</button>
+      <button role="menuitem">Reiniciar</button><hr><button role="menuitem">Fechar</button>`;
+    document.body.append(m);
+    const r = m.getBoundingClientRect();
+    m.style.left = Math.min(e.clientX, innerWidth - r.width - 6) + 'px';
+    m.style.top = Math.min(e.clientY, innerHeight - r.height - 6) + 'px';
   });
-  document.addEventListener('click', (e) => { if (!m.contains(e.target)) m.classList.remove('aberto'); rotulo(); });
-  document.addEventListener('change', rotulo);
-  rotulo();
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') m.classList.remove('aberto'); });
+  document.addEventListener('click', e => { if (!e.target.closest('.menu-hefesto')) document.querySelectorAll('.menu-hefesto.vivo').forEach(m => m.remove()); });
 })();
 </script>
 </body>

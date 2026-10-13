@@ -1973,75 +1973,85 @@
   body.nativo.por-controle .r-importar{visibility:hidden}
 </style>
 
-<style id="todo-alvos" data-todo="2">
-  .ajuda{width:24px;height:24px;flex:0 0 24px;line-height:22px}
-  [data-gesto]{min-height:24px}
-  body .motor .trilho.arrasta,body .motor.haptica .trilho.arrasta{height:24px;padding:9.5px 0;box-sizing:border-box;
-    background-clip:content-box;background-origin:content-box}
-</style>
 
-<style data-todo-css="menu-do-botao-direito" data-todo="1">
-  .todo-menu{position:fixed;z-index:9999;display:none;min-width:168px;padding:4px;
-    border:1px solid var(--border-forte);border-radius:8px;background:var(--elevated);
-    box-shadow:0 6px 18px rgba(0,0,0,.45);font-family:'Space Grotesk',system-ui,sans-serif;font-size:13px}
-  .todo-menu.aberto{display:block}
-  .todo-menu button{display:block;width:100%;height:28px;padding:0 14px;border:0;border-radius:5px;
-    background:transparent;color:var(--fg);font:inherit;text-align:left;cursor:pointer}
-  .todo-menu button:hover{background:var(--sel-bg)}
-  .todo-menu button[aria-disabled="true"]{color:var(--texto-mudo);cursor:default;background:transparent}
-  .todo-menu hr{border:0;border-top:1px solid var(--border-sutil);margin:4px 2px}
-</style>
 
-<style id="todo-toques-css" data-todo="3">
-  .toques{flex:0 0 auto}
-  .toques .quadro-topo{flex-wrap:nowrap;gap:8px;padding:9px 14px 0}
-  .toques .linha{display:flex;align-items:center;gap:8px;white-space:nowrap}
-  .toques .grupo{display:flex;align-items:center;gap:6px}
-  .toques .grupo + .grupo{margin-left:14px}
-  .toques .rot{font-size:12px;font-weight:600;color:var(--rot-campo)}
-  .toques .opc{display:inline-flex;gap:4px}
-  .toques .opc button,.toques .chave,.toques .passo{height:28px;padding:0 10px;border-radius:6px;font-size:11.5px;
-    font-family:inherit;border:1px solid var(--linha);background:var(--app-bg);color:var(--texto-mudo);cursor:pointer;
-    display:inline-flex;align-items:center;gap:6px}
-  .toques .opc button.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600}
-  .toques .opc button:hover:not(.on),.toques .passo:hover{border-color:var(--comment);color:var(--texto-suave)}
-  .toques .chave .ponto{width:7px;height:7px;border-radius:50%;background:currentColor}
-  .toques .chave.on{border-color:var(--green);color:var(--green)}
-  .toques .passo{width:28px;padding:0;justify-content:center}
-  .toques .valor{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:var(--fg);
-    min-width:24px;text-align:center}
-  .toques .unid{font-size:11px;color:var(--texto-mudo)}
-  .toques .quadro-corpo{padding:8px 14px 10px}
-  .toques .quadro-titulo{margin-right:6px}
-</style>
-<style data-todo-css="vibracao-distribui">
+<style data-aba="rodada-2">
+  /* sem «Meus toques», as linhas se distribuem na altura toda, sem vão */
   .miolo > .quadro.vib-quadro{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
   .miolo > .quadro.vib-quadro > .quadro-corpo{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
-  .vib-quadro .vib{flex:1 1 auto;min-height:0}
+  .vib-quadro .vib{flex:1 1 auto;min-height:0;--r-nome:30px;--r-des:96px;grid-template-rows:minmax(0,1fr)}
   .vib-quadro .vib > div{
-    grid-template-rows:var(--r-des) var(--r-nome) minmax(var(--r-forca),2fr)
+    grid-template-rows:minmax(var(--r-des),3fr) var(--r-nome) minmax(var(--r-forca),2fr)
                        minmax(var(--r-motor),1fr) minmax(var(--r-motor),1fr) minmax(var(--r-motor),1fr)
                        minmax(var(--r-acoes),1fr)}
   .vib-quadro .vib .acoes-col,.vib-quadro .vib .seg{align-content:center}
+  .vib-quadro .vib .acoes-col{align-items:center}
+  .quadro-topo .modo-auto{margin-left:auto}
+  .g4-vel{display:inline-flex;align-items:center;gap:8px;flex:0 0 auto;font-size:12px;font-weight:600;color:var(--rot-campo)}
+  .g4-vel input{width:90px;accent-color:var(--purple);height:24px}
+  .vib .rot-ctrl{height:30px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;
+    border:1px solid var(--linha);border-radius:7px;font:600 12.5px 'Space Grotesk',system-ui,sans-serif;color:var(--fg);
+    white-space:nowrap;overflow:hidden;align-self:center;width:100%}
+  .vib .rot-ctrl .pt{margin:0 6px}
+  .vib [data-controle="p1"][data-conectado="sim"] .rot-ctrl{border-color:#ae335a}
+  .vib [data-controle="p2"][data-conectado="sim"] .rot-ctrl{border-color:#7eb8d4}
+  .vib [data-conectado="nao"] .rot-ctrl{color:var(--texto-mudo);border-color:var(--border-sutil)}
+  .criar{flex:0 0 auto}
+  .criar .criar-linha{display:flex;align-items:center;gap:12px;padding:12px 16px;flex-wrap:nowrap;min-width:0}
+  .criar .quadro-titulo{flex:0 0 auto;margin-right:4px}
+  .criar .seg-criar{display:inline-flex;gap:4px;flex:0 0 auto}
+  .criar .seg-criar button,.criar .meu{height:30px;padding:0 12px;border-radius:999px;font:500 12.5px/1 'Space Grotesk',system-ui,sans-serif;
+    border:1px solid var(--linha);background:var(--app-bg);color:var(--texto-mudo);cursor:pointer;white-space:nowrap;
+    display:inline-flex;align-items:center;gap:7px}
+  .criar .seg-criar button.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600}
+  .criar .seg-criar button:hover:not(.on),.criar .meu:hover{border-color:var(--comment);color:var(--texto-suave)}
+  .criar .nome-criar{height:30px;width:150px;flex:0 0 auto;padding:0 11px;border-radius:7px;border:1px solid var(--linha);
+    background:var(--app-bg);color:var(--fg);font:500 12.5px 'Space Grotesk',system-ui,sans-serif}
+  .criar .nome-criar::placeholder{color:var(--texto-mudo)}
+  .criar .btn-criar{height:30px;padding:0 14px;border-radius:7px;border:1px solid var(--purple);background:rgba(189,147,249,.12);
+    color:var(--purple);font:600 12.5px/1 'Space Grotesk',system-ui,sans-serif;cursor:pointer;flex:0 0 auto}
+  .criar .btn-criar:hover{background:rgba(189,147,249,.22)}
+  .criar .meus{display:flex;gap:6px;margin-left:auto;align-items:center;min-width:0;overflow:hidden}
+  .criar .meu{color:var(--texto-suave)}
+  .criar .meu i{width:7px;height:7px;border-radius:50%;background:var(--cor,var(--purple));flex:0 0 auto}
 </style>
-<style data-todo-css="modo-automatico">
-  /* Ajuste de 12/10, ~17h30 (resposta dela: «Tenta um tom de ciano escuro. Com fonte branca»): o botão é um
-     ciano escuro cheio com a letra branca nos dois estados. Desligado: fundo ciano escuro e bolinha vazada.
-     Ligado: o fundo clareia, o contorno acende e a bolinha enche. Mesmo tipo do Freestyle. */
-  .modo-auto{display:inline-flex;align-items:center;justify-content:center;gap:8px;margin-left:auto;
-    height:30px;min-height:30px;flex:0 0 auto;white-space:nowrap;border-radius:15px;padding:0 15px 0 11px;
-    font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer;
-    border:1px solid #1f8a9c;background:#0e5a68;color:#fff;
-    transition:border-color .15s,background-color .15s,color .15s,box-shadow .15s}
-  .modo-auto .p{width:10px;height:10px;border-radius:50%;flex:0 0 auto;box-sizing:border-box;
-    border:2px solid #fff;background:transparent;transition:background-color .15s,box-shadow .15s}
-  .modo-auto:hover{border-color:#5fd3e6;background:#106b7b}
-  .modo-auto:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
-  .modo-auto[aria-pressed="true"]{border-color:var(--cyan);background:#12808f;color:#fff;
-    box-shadow:0 0 0 1px rgba(139,233,253,.35),0 0 14px rgba(139,233,253,.25)}
-  .modo-auto[aria-pressed="true"] .p{background:#fff;box-shadow:0 0 7px #fff}
-  body.nativo.por-controle .modo-auto{visibility:hidden}
-  .quadro[data-modo-da-aba="automatico"] .vib .ctrl > :is(.forca,.motor){opacity:.45;pointer-events:none;transition:opacity .15s}
+<style id="base-comum">
+/* ===== Base comum das abas (rodada 2, 12/10/2026) =====
+   Copiada IGUAL em todo mockup do todo. Três peças: a dica no hover (sem «?»), o Modo automático
+   e o menu do botão direito desenhado no visual das abas (BRIEF-T6, opção B). */
+
+/* 1. A dica: qualquer frase, botão ou área com data-dica mostra a dica ao passar o mouse ou focar.
+      Nenhum botão «?» existe mais. A dica tem no máximo ~12 palavras: show, don't tell. */
+[data-dica]{cursor:help}
+button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"][data-dica]{cursor:pointer}
+#hef-dica{position:fixed;z-index:2147483000;max-width:280px;padding:7px 11px;border-radius:8px;
+  background:#1b1c25;border:1px solid var(--border-forte,#44475a);color:var(--texto-suave,#c8ccda);
+  font:500 12.5px/1.45 'Space Grotesk',system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.45);pointer-events:none;
+  opacity:0;transform:translateY(3px);transition:opacity .12s,transform .12s}
+#hef-dica.visivel{opacity:1;transform:none}
+
+/* 2. O Modo automático: pílula com bolinha. Os dois estados têm de se distinguir num relance.
+      Desligado: contorno neutro, bolinha vazia, letra suave (vale o que está na aba).
+      Ligado: ciano cheio, bolinha branca acesa, letra branca; a área que ele governa esmaece. */
+.modo-auto{display:inline-flex;align-items:center;gap:9px;height:34px;padding:0 16px 0 12px;border-radius:999px;
+  border:1px solid var(--border-forte,#44475a);background:transparent;color:var(--texto-suave,#c8ccda);
+  font:600 13.5px/1 'Space Grotesk',system-ui,sans-serif;cursor:pointer;transition:background .15s,border-color .15s,color .15s,box-shadow .15s}
+.modo-auto .p{width:11px;height:11px;border-radius:50%;border:2px solid var(--texto-mudo,#9a9eb8);background:transparent;
+  transition:all .15s}
+.modo-auto:hover{border-color:#5fd3e6;color:#fff}
+.modo-auto[aria-pressed="true"]{background:#0e7c8c;border-color:#5fd3e6;color:#fff;box-shadow:0 0 0 3px rgba(95,211,230,.18)}
+.modo-auto[aria-pressed="true"] .p{border-color:#fff;background:#fff;box-shadow:0 0 8px #fff}
+.modo-auto:focus-visible{outline:2px solid var(--cyan,#8be9fd);outline-offset:2px}
+.governado-pelo-jogo{opacity:.42;pointer-events:none;filter:saturate(.6)}
+
+/* 3. O menu do botão direito, no visual das abas. */
+.menu-hefesto{position:fixed;z-index:2147482000;min-width:190px;padding:6px;border-radius:12px;
+  background:#252733;border:1px solid var(--border-forte,#44475a);box-shadow:0 14px 34px rgba(0,0,0,.5)}
+.menu-hefesto button{display:flex;width:100%;align-items:center;gap:10px;height:34px;padding:0 12px;border:0;
+  border-radius:8px;background:transparent;color:var(--fg,#f8f8f2);font:500 13.5px/1 'Space Grotesk',system-ui,sans-serif;text-align:left;cursor:pointer}
+.menu-hefesto button:hover{background:rgba(189,147,249,.14)}
+.menu-hefesto button[disabled]{color:var(--texto-mudo,#9a9eb8);opacity:.55;cursor:default;background:transparent}
+.menu-hefesto hr{border:0;border-top:1px solid var(--border-sutil,#343746);margin:5px 4px}
 </style>
 </head>
 <body class="por-controle" data-campo="nativo" data-hef-alvo="classe" data-hef-classe="nativo" data-hef-quando="sim">
@@ -2184,23 +2194,17 @@
     <div class="fita inerte">
       <span>Selecionar:</span>
       <label class="chip on">Todos</label>
-      <label class="chip plastico on" data-campo="fita-chip" style="--plastico:#ae335a" title="Cosmic Red — a borda é a cor do plástico">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> <span class="via">USB</span></label>
-      <label class="chip plastico on" data-campo="fita-chip" style="--plastico:#7eb8d4" title="Starlight Blue — a borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> <span class="via">BT</span></label>
-      <span class="so-no-nativo" title="Com o Hefesto desligado, o jogo manda: aqui só se vê quem está conectado."></span>
+      <label class="chip plastico on" data-campo="fita-chip" style="--plastico:#ae335a" data-dica="A borda é a cor do plástico">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> <span class="via">USB</span></label>
+      <label class="chip plastico on" data-campo="fita-chip" style="--plastico:#7eb8d4" data-dica="A borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> <span class="via">BT</span></label>
+      <span class="so-no-nativo" data-dica="Hefesto desligado: o jogo manda"></span>
     </div>
     <div class="conectado"><span class="bolinha">●</span> <b data-campo="conta-b">1 USB · 1 BT</b></div>
-    <div class="perfil-ativo">
+    <div class="perfil-ativo" data-dica="Onde cai o que você salvar">
       <span class="pa-rot">Perfil ativo</span>
       <span class="pa-nome" data-campo="perfil">—</span>
       <!-- `tabindex` de 07/09/2026: este `?` está no CABEÇALHO, logo nas dez
            abas, e explica onde o "Salvar perfil" grava. Sem ele o `<span>` não
            recebe foco e o `el.click()` do controle não o abria em aba nenhuma. -->
-      <span class="ajuda" tabindex="0" data-todo="2">?<span class="dica" style="left:auto;right:22px">
-        Tudo o que você mudar em qualquer aba cai <b>neste</b> perfil quando clicar em
-        <b>Salvar perfil</b>.<br><br>
-        Cada controle guarda a <b>sua</b> configuração aqui dentro, pelo ID da peça — amanhã,
-        em outra porta ou no rádio, ele traz de volta o que você deixou hoje.
-      </span></span>
     </div>
   </div>
 
@@ -2212,7 +2216,7 @@
     <a class="aba" href="04-iluminacao.html">Iluminação</a>
     <a class="aba ativa" href="05-vibracao.html">Vibração</a>
     <a class="aba" href="06-navegacao.html">Navegação</a>
-    <a class="aba" href="07-lancadores.html">Lançadores</a>
+    <a class="aba" href="07-lancadores.html">Experimental</a>
     <a class="aba" href="08-conexoes.html">Conexões</a>
     <a class="aba" href="09-sistema.html">Sistema</a>
     <a class="aba" href="10-perfis.html">Perfis</a>
@@ -2238,9 +2242,9 @@
     </linearGradient>
   </defs></svg>
 
-    <div class="quadro vib-quadro" data-todo="5">
+    <div class="quadro vib-quadro">
       <div class="quadro-topo">
-        <span class="quadro-titulo">Vibração</span>
+        <span class="quadro-titulo" data-dica="Quanto do que o jogo pede chega a cada controle">Vibração</span>
         <!-- A DICA DO QUADRO ENCOLHEU DE 1000 PARA ~200 CARACTERES — 30/08/2026,
              regra de produto: *"ao invés de estar tudo em [um só] deveria estar em cada
              seção"*, e vale *"em todas as abas"*.
@@ -2248,15 +2252,11 @@
              na tela, a poucos pixels: a Força, os dois motores e o Testar. Cada um
              foi para o `?` do seu próprio rótulo. Aqui fica só o que nenhum campo
              diz — o que a aba É, e por que a fita do topo não vale nela. -->
-        <span class="ajuda" data-todo="2">?<span class="dica">
-          O jogo pede uma vibração, e esta aba decide quanto dela chega a cada controle.<br><br>
-          <b>Ajuste na coluna do controle</b>: a fita do topo não escolhe nada aqui.
-        </span></span>
-        <button class="modo-auto" type="button" data-gesto="modo-da-vibracao" data-todo="4" aria-pressed="false" title="Ligado: o jogo decide a força da vibração e da háptica de cada controle. Desligado: vale o que você escolher aqui."><span class="p"></span>Modo automático</button>
-        <span class="trava-nativo" title="Com o Hefesto desligado, o jogo manda na vibração. O que está aqui volta a valer quando ligar, na aba Jogar."><svg class="cad" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M3.6 5.2V3.9a2.4 2.4 0 0 1 4.8 0v1.3" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="2.3" y="5.2" width="7.4" height="5.4" rx="1.1" fill="currentColor"/></svg>O jogo manda</span>
+        <button class="modo-auto" type="button" data-gesto="modo-da-vibracao" data-todo="1" aria-pressed="false" data-governa=".vib .ctrl > :is(.forca,.motor)" data-dica="O jogo decide a força; o estilo do perfil ajusta"><span class="p"></span>Modo automático</button>
+        <span class="trava-nativo" data-dica="Hefesto desligado: o jogo manda. Volta ao ligar"><svg class="cad" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M3.6 5.2V3.9a2.4 2.4 0 0 1 4.8 0v1.3" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="2.3" y="5.2" width="7.4" height="5.4" rx="1.1" fill="currentColor"/></svg>O jogo manda</span>
       </div>
       <div class="quadro-corpo">
-        <div class="vib">
+        <div class="vib" data-todo="2">
 
           <div class="rotulos">
             <!-- A LEGENDA VIROU DICA — 30/08/2026, pedido: *"'O lado que treme
@@ -2266,10 +2266,7 @@
                  uma decisão medida (`D-O-SVG-VIBRA-POR-LADO`) e some seria perder. -->
             <div class="cel-des">
               <span class="sec-rot">Controle
-                <span class="ajuda" data-todo="2">?<span class="dica">
-                  O lado que treme acende em <b>laranja</b>; o contorno na cor do
-                  <b>plástico</b> diz de quem é o controle. Apagado é lado desligado.
-                </span></span></span>
+</span>
             </div>
             <!-- A LINHA DO MODELO GANHOU NOME — 30/08/2026, pedido:
                  *"a parte do Modelo tá faltando, tá o espaço vazio ali. a primeira
@@ -2278,58 +2275,13 @@
                  nomear linhas tinha uma linha sem nome. -->
             <div><span class="sec-rot">Modelo</span></div>
             <div><span class="sec-rot">Força da vibração
-              <span class="ajuda" style="display:inline-block;vertical-align:-3px" data-todo="2">?<span class="dica">
-                Quanto da vibração que o jogo pede chega ao controle.<br><br>
-                <b>Economia</b> 30% · <b>Padrão</b> 100%, o sinal como o jogo mandou ·
-                <b>Máximo</b> 150%, mais forte.<br><br>
-                No Padrão as barras do sensor e dos motores ficam verdes e
-                travadas: o sinal chega como veio, e o que você guardou volta
-                com a Economia ou o Máximo.<br><br>
-                O trilho embaixo vai de 0 a 200%, e o valor que vale é o dele:
-                acende o maior degrau que ele alcança.<br><br>
-                O perfil de bateria pode impor um teto: a escolha continua valendo, só não passa dele.<br><br>
-                <!-- O MECANISMO DO AUTO MUDOU DE CASA — 05-Q4 dela, 06/09/2026.
-                     Ele era a segunda metade de `a05_vibracao.FRASE_DA_MESA_EM_AUTO`,
-                     de 331 caracteres, escrita para o CARTÃO — uma caixa que
-                     CRESCE. A faixa embaixo da grade reserva UMA linha e corta o
-                     resto (medido: 189 caracteres é o último que cabe), então a
-                     frase ficou com o FATO e o CONSERTO e o porquê veio para cá,
-                     que é onde há espaço para ele.
-
-                     E O PORQUÊ SAIU DAQUI EM 11/09/2026 (A4-058, aprovado
-                     pelo usuário): ele JUSTIFICAVA a regra contra uma alternativa que
-                     ninguém propôs. O fato — a escolha fica guardada e não
-                     chega ao motor — é o que ela precisa, e é o que fica. -->
-                Com a <b>força geral</b> no automático, que só um perfil antigo
-                traz, a escolha de cada coluna fica guardada e não chega ao motor.
-              </span></span></span></div>
+</span></div>
             <div><span class="sec-rot">Sensor háptico
-              <span class="ajuda" data-todo="2">?<span class="dica">
-                <b>A vibração fina</b> que o jogo manda como som, no cabo e no BT.<br><br>
-                O risco no meio é 100%: o jogo como ele mandou. Acima disso ela
-                fica mais forte; em 0, ela para. A bolinha verde acende quando
-                ela está chegando ao controle.<br><br>
-                O perfil de bateria pode impor um teto: a escolha continua valendo, só não passa dele.<br><br>
-                Cinza quando o jogo fala direto com o controle, sem passar pelo
-                Hefesto.
-              </span></span></span></div>
+</span></div>
             <div><span class="sec-rot">Motor esquerdo
-              <span class="ajuda" data-todo="2">?<span class="dica">
-                <!-- O PUNHO NO LUGAR DO NOME DA PEÇA — 11/09/2026, aprovado pelo usuário.
-                      O `nome`/`apelido`/`nota` do CSV continuam donos do `title`
-                      do interruptor (`_coluna`) e do `mapa-do-controle`; aqui a
-                      frase é a que ela leu e aprovou, e ela fala do PUNHO, que é
-                      o que a mão procura. O registro do "não existe leve e forte
-                      para cada" mora na `.nota` desta página, que é onde ele
-                      deve morar. -->
-                <b>Motor do punho esquerdo</b>: contrapeso maior, som grosso.<br><br>
-                Desligue um lado e aquele punho para de tremer; o outro continua.<br><br>
-                A barra ao lado é a força desse motor no teste <b>Vibração</b>.
-              </span></span></span></div>
+</span></div>
             <div><span class="sec-rot">Motor direito
-              <span class="ajuda" data-todo="2">?<span class="dica">
-                <b>Motor do punho direito</b>: contrapeso menor, som fino.
-              </span></span></span></div>
+</span></div>
             <!-- A DICA DESTE `?` ABRE PARA A DIREITA, e o número é medido — 06/09/2026.
                  Ela carregava `style="left:auto;right:22px"`, que é o arranjo das
                  dicas que moram do lado DIREITO da página (`.at-col:last-child` na
@@ -2344,32 +2296,7 @@
                  O padrão da casa (`.dica`, com `left:22px` no `topo.html`) abre para a
                  direita e cabe: x=505, fim em 835, dentro de 370..1550. -->
             <div><span class="sec-rot">Testar agora
-              <span class="ajuda" style="display:inline-block;vertical-align:-3px" data-todo="2">?<span class="dica">
-                <!-- O MEIO SEGUNDO SAIU DA DICA EM 24/09/2026
-                     (AS-FRASES-QUE-A-BANCADA-ACHOU-01). Ela prometia um pulso,
-                     e o gesto deixou de ser pulso em 07/09, a pedido: o
-                     `a05_vibracao.testar` fica ligado até o Parar, segue as
-                     barras ao vivo, e o teste de cada controle é dele
-                     (`_EM_TESTE`, um por controle desde 03/10). Medido no
-                     daemon de mentira: nenhum `rumble.stop` sai sem o Parar. -->
-                <b>Vibração</b> treme os motores deste controle até o <b>Parar</b>,
-                seguindo ao vivo as barras da coluna. <b>Háptica</b> toca a vibração
-                fina pelo som, com a força do <b>Sensor háptico</b>. No mesmo controle
-                ligar um desliga o outro, e cada controle tem o seu teste. <b>Parar</b>
-                corta os dois deste controle e devolve a vibração dele ao jogo.<br><br>
-                <!-- A NOTA DOS VALORES QUE PASSAM VOLTOU PARA CÁ — 05-Q2 dela,
-                     05/09/2026: *"As duas na dica."* Ela é a única frase desta
-                     aba que explica um resultado que a PRÓPRIA TELA produz (por
-                     que um "Testar" com 220 sai fraco quando o degrau está em
-                     Economia), e por isso mora no `?` do "Testar agora", ao
-                     lado das duas orações do par.
-
-                     E ELA CONTINUA LIDA DO `gui/main.glade`, nunca redigitada
-                     (`DICA_DOS_VALORES_QUE_PASSAM`) — essa metade da razão de
-                     04/09 não caducou. Uma vez só na página: a régua 16 do
-                     gerador conta. -->
-                Esses valores ainda passam pelo degrau da coluna.
-              </span></span></span></div>
+</span></div>
             <!-- O RÓTULO "Estado" SAIU EM 05/09/2026, com a faixa inteira —
                  ver `SEM_A_FAIXA_DE_ESTADO`. O `?` dele terminava confessando
                  *"Esta aba não trava — quem trava é a janela do Hefesto ou a
@@ -2681,33 +2608,33 @@
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg></div>
-            <div class="rot-ctrl" data-hef="identidade">P1 <span class="pt">•</span> Vitória <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</div>
+            <div class="rot-ctrl" data-hef="identidade" data-todo="4">P1 <span class="pt">•</span> Vitória <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</div>
             <div class="forca" data-campo="padrao" data-hef-alvo="classe"
                  data-hef-classe="padrao">
               <div class="seg" data-campo="degrau-herdado" data-hef-alvo="classe"
                    data-hef-classe="herdado"><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="economia" data-papel="forca" data-forca="economia">Economia</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="balanceado" data-papel="forca" data-forca="balanceado">Padrão</button><button class="on" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="max" data-papel="forca" data-forca="max">Máximo</button></div>
-              <div class="motor mult"><span></span><input class="trilho arrasta" type="range" min="0" max="200" step="10" value="150" data-papel="intensidade" data-campo="mult-pos" data-hef-alvo="valor" title="Quanto da vibração chega a este controle — 0 a 200%. Grava na hora, só para ele." data-todo="2"><span class="num" data-campo="mult">150%</span><span class="teto mx" data-campo="mult-teto" data-hef-alvo="classe">Máx</span></div>
+              <div class="motor mult"><span></span><input class="trilho arrasta" type="range" min="0" max="200" step="10" value="150" data-papel="intensidade" data-campo="mult-pos" data-hef-alvo="valor" data-dica="Quanto da vibração chega a este controle"><span class="num" data-campo="mult">150%</span><span class="teto mx" data-campo="mult-teto" data-hef-alvo="classe">Máx</span></div>
             </div>
-            <div class="motor mult haptica" data-campo="haptica-fora" data-hef-alvo="classe" data-hef-classe="fora"><button class="haptica-lado lado on" data-gesto="haptica" data-campo="lado-h" data-hef-alvo="classe" data-hef-quando="1" title="Háptica por áudio — a vibração fina que o jogo manda como som."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Háptica</title>
+            <div class="motor mult haptica" data-campo="haptica-fora" data-hef-alvo="classe" data-hef-classe="fora"><button class="haptica-lado lado on" data-gesto="haptica" data-campo="lado-h" data-hef-alvo="classe" data-hef-quando="1" data-dica="A vibração fina que o jogo manda como som"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Háptica</title>
 
   <rect x="3" y="13" width="26" height="14" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
   <path d="M8 9 q2 -3 4 0 t4 0 t4 0 t4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M11 4 q1.5 -2.5 3 0 t3 0 t3 0 t3 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></button><input class="trilho arrasta" type="range" min="0" max="200" step="1" value="150" data-papel="haptica" data-campo="barra-h" data-hef-alvo="valor" title="A força da háptica por áudio neste controle — 0 a 200%. 100% é o jogo como ele mandou. Grava na hora, só para ele." data-todo="2"><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-h-pct">150</span><span class="teto no-ar" data-campo="haptica-no-ar" data-hef-alvo="classe" title="Aceso: há háptica chegando a este controle agora.">%</span></div>
-            <div class="motor mult" data-campo="motor-e-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado on" data-gesto="lado" data-lado="e" data-campo="lado-e" data-hef-alvo="classe" data-hef-quando="1" title="Motor de vibração esquerdo — Contrapeso maior — soa grosso."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
+</svg></button><input class="trilho arrasta" type="range" min="0" max="200" step="1" value="150" data-papel="haptica" data-campo="barra-h" data-hef-alvo="valor" data-dica="Força da háptica; 100% é o jogo como mandou"><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-h-pct">150</span><span class="teto no-ar" data-campo="haptica-no-ar" data-hef-alvo="classe" data-dica="Aceso: há háptica chegando a este controle agora.">%</span></div>
+            <div class="motor mult" data-campo="motor-e-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado on" data-gesto="lado" data-lado="e" data-campo="lado-e" data-hef-alvo="classe" data-hef-quando="1" data-dica="Motor de vibração esquerdo — Contrapeso maior — soa grosso."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
 
   <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
         fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
   <path d="M25,9 q4,7 0,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M29,5 q6,11 0,22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="50" data-papel="motor" data-campo="barra-e" data-hef-alvo="valor" data-lado="e" title="Quanto da vibração chega a este punho — 0 a 100% do degrau da coluna. Em 0, este motor fica mudo. Grava na hora, só para este controle." data-todo="2"><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-e-pct">50</span><span class="teto">%</span></div>
-            <div class="motor mult" data-campo="motor-d-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado on" data-gesto="lado" data-lado="d" data-campo="lado-d" data-hef-alvo="classe" data-hef-quando="1" title="Motor de vibração direito — Contrapeso menor — soa fino."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração direito</title>
+</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="50" data-papel="motor" data-campo="barra-e" data-hef-alvo="valor" data-lado="e" data-dica="Quanto chega a este punho; em 0, mudo"><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-e-pct">50</span><span class="teto">%</span></div>
+            <div class="motor mult" data-campo="motor-d-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado on" data-gesto="lado" data-lado="d" data-campo="lado-d" data-hef-alvo="classe" data-hef-quando="1" data-dica="Motor de vibração direito — Contrapeso menor — soa fino."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração direito</title>
 
   <path d="M12,4 h6 q3,0 4,3 l3,10 q2,7 -2,11 q-4,4 -8,1 q-3,-2 -3,-7 z"
         fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
   <path d="M7,10 q-3,6 0,12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M3,7 q-4,9 0,18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="100" data-papel="motor" data-campo="barra-d" data-hef-alvo="valor" data-lado="d" title="Quanto da vibração chega a este punho — 0 a 100% do degrau da coluna. Em 0, este motor fica mudo. Grava na hora, só para este controle." data-todo="2"><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-d-pct">100</span><span class="teto">%</span></div>
+</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="100" data-papel="motor" data-campo="barra-d" data-hef-alvo="valor" data-lado="d" data-dica="Quanto chega a este punho; em 0, mudo"><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-d-pct">100</span><span class="teto">%</span></div>
             <div class="acoes-col">
               <!-- "Testar", não "Testar por 500 ms" — decisão, 30/08:
                    *"ali vai ser só Testar; se o user quiser parar vai clicar em Parar"*.
@@ -3047,33 +2974,33 @@
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg></div>
-            <div class="rot-ctrl" data-hef="identidade">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</div>
+            <div class="rot-ctrl" data-hef="identidade" data-todo="4">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</div>
             <div class="forca" data-campo="padrao" data-hef-alvo="classe"
                  data-hef-classe="padrao">
               <div class="seg" data-campo="degrau-herdado" data-hef-alvo="classe"
                    data-hef-classe="herdado"><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="economia" data-papel="forca" data-forca="economia">Economia</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="balanceado" data-papel="forca" data-forca="balanceado">Padrão</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="max" data-papel="forca" data-forca="max">Máximo</button></div>
-              <div class="motor mult"><span></span><input class="trilho arrasta" type="range" min="0" max="200" step="10" value="100" data-papel="intensidade" data-campo="mult-pos" data-hef-alvo="valor" title="Quanto da vibração chega a este controle — 0 a 200%. Grava na hora, só para ele." data-todo="2"><span class="num" data-campo="mult">100%</span><span class="teto mx" data-campo="mult-teto" data-hef-alvo="classe">Máx</span></div>
+              <div class="motor mult"><span></span><input class="trilho arrasta" type="range" min="0" max="200" step="10" value="100" data-papel="intensidade" data-campo="mult-pos" data-hef-alvo="valor" data-dica="Quanto da vibração chega a este controle"><span class="num" data-campo="mult">100%</span><span class="teto mx" data-campo="mult-teto" data-hef-alvo="classe">Máx</span></div>
             </div>
-            <div class="motor mult haptica" data-campo="haptica-fora" data-hef-alvo="classe" data-hef-classe="fora"><button class="haptica-lado lado on" data-gesto="haptica" data-campo="lado-h" data-hef-alvo="classe" data-hef-quando="1" title="Háptica por áudio — a vibração fina que o jogo manda como som."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Háptica</title>
+            <div class="motor mult haptica" data-campo="haptica-fora" data-hef-alvo="classe" data-hef-classe="fora"><button class="haptica-lado lado on" data-gesto="haptica" data-campo="lado-h" data-hef-alvo="classe" data-hef-quando="1" data-dica="A vibração fina que o jogo manda como som"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Háptica</title>
 
   <rect x="3" y="13" width="26" height="14" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
   <path d="M8 9 q2 -3 4 0 t4 0 t4 0 t4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M11 4 q1.5 -2.5 3 0 t3 0 t3 0 t3 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></button><input class="trilho arrasta" type="range" min="0" max="200" step="1" value="180" data-papel="haptica" data-campo="barra-h" data-hef-alvo="valor" title="A força da háptica por áudio neste controle — 0 a 200%. 100% é o jogo como ele mandou. Grava na hora, só para ele." data-todo="2"><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-h-pct">180</span><span class="teto no-ar" data-campo="haptica-no-ar" data-hef-alvo="classe" title="Aceso: há háptica chegando a este controle agora.">%</span></div>
-            <div class="motor mult off" data-campo="motor-e-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado" data-gesto="lado" data-lado="e" data-campo="lado-e" data-hef-alvo="classe" data-hef-quando="1" title="Motor de vibração esquerdo — Contrapeso maior — soa grosso."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
+</svg></button><input class="trilho arrasta" type="range" min="0" max="200" step="1" value="180" data-papel="haptica" data-campo="barra-h" data-hef-alvo="valor" data-dica="Força da háptica; 100% é o jogo como mandou"><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-h-pct">180</span><span class="teto no-ar" data-campo="haptica-no-ar" data-hef-alvo="classe" data-dica="Aceso: há háptica chegando a este controle agora.">%</span></div>
+            <div class="motor mult off" data-campo="motor-e-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado" data-gesto="lado" data-lado="e" data-campo="lado-e" data-hef-alvo="classe" data-hef-quando="1" data-dica="Motor de vibração esquerdo — Contrapeso maior — soa grosso."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
 
   <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
         fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
   <path d="M25,9 q4,7 0,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M29,5 q6,11 0,22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="0" data-papel="motor" data-campo="barra-e" data-hef-alvo="valor" data-lado="e" title="Quanto da vibração chega a este punho — 0 a 100% do degrau da coluna. Em 0, este motor fica mudo. Grava na hora, só para este controle." data-todo="2"><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-e-pct">0</span><span class="teto">%</span></div>
-            <div class="motor mult" data-campo="motor-d-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado on" data-gesto="lado" data-lado="d" data-campo="lado-d" data-hef-alvo="classe" data-hef-quando="1" title="Motor de vibração direito — Contrapeso menor — soa fino."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração direito</title>
+</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="0" data-papel="motor" data-campo="barra-e" data-hef-alvo="valor" data-lado="e" data-dica="Quanto chega a este punho; em 0, mudo"><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-e-pct">0</span><span class="teto">%</span></div>
+            <div class="motor mult" data-campo="motor-d-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado on" data-gesto="lado" data-lado="d" data-campo="lado-d" data-hef-alvo="classe" data-hef-quando="1" data-dica="Motor de vibração direito — Contrapeso menor — soa fino."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração direito</title>
 
   <path d="M12,4 h6 q3,0 4,3 l3,10 q2,7 -2,11 q-4,4 -8,1 q-3,-2 -3,-7 z"
         fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
   <path d="M7,10 q-3,6 0,12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M3,7 q-4,9 0,18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="100" data-papel="motor" data-campo="barra-d" data-hef-alvo="valor" data-lado="d" title="Quanto da vibração chega a este punho — 0 a 100% do degrau da coluna. Em 0, este motor fica mudo. Grava na hora, só para este controle." data-todo="2"><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-d-pct">100</span><span class="teto">%</span></div>
+</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="100" data-papel="motor" data-campo="barra-d" data-hef-alvo="valor" data-lado="d" data-dica="Quanto chega a este punho; em 0, mudo"><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-d-pct">100</span><span class="teto">%</span></div>
             <div class="acoes-col">
               <!-- "Testar", não "Testar por 500 ms" — decisão, 30/08:
                    *"ali vai ser só Testar; se o user quiser parar vai clicar em Parar"*.
@@ -3108,7 +3035,7 @@
                       data-hef-rotulo="o texto do botão">Parar</button>
             </div>
           </div>
-          <div class="ctrl off" data-controle="p3" data-uniq="" data-conectado="nao" title="Nenhum controle neste lugar.">
+          <div class="ctrl off" data-controle="p3" data-uniq="" data-conectado="nao" data-dica="Nenhum controle aqui">
             <div class="moldura" data-hef="desenho" data-campo="plastico"
                  data-hef-alvo="plastico"><?xml version="1.0" encoding="utf-8"?>
 <svg data-campo="colorway" data-hef-alvo="atributo" data-hef-atributo="data-colorway" class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
@@ -3413,33 +3340,33 @@
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg></div>
-            <div class="rot-ctrl" data-hef="identidade">P3 <span class="pt">•</span> Desconectado</div>
+            <div class="rot-ctrl" data-hef="identidade" data-todo="4">P3 <span class="pt">•</span> Desconectado</div>
             <div class="forca" data-campo="padrao" data-hef-alvo="classe"
                  data-hef-classe="padrao">
               <div class="seg" data-campo="degrau-herdado" data-hef-alvo="classe"
                    data-hef-classe="herdado"><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="economia" data-papel="forca" data-forca="economia">Economia</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="balanceado" data-papel="forca" data-forca="balanceado">Padrão</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="max" data-papel="forca" data-forca="max">Máximo</button></div>
-              <div class="motor mult"><span></span><input class="trilho arrasta" type="range" min="0" max="200" step="10" value="0" data-papel="intensidade" data-campo="mult-pos" data-hef-alvo="valor" title="Quanto da vibração chega a este controle — 0 a 200%. Grava na hora, só para ele." data-todo="2"><span class="num" data-campo="mult">—</span><span class="teto mx" data-campo="mult-teto" data-hef-alvo="classe">Máx</span></div>
+              <div class="motor mult"><span></span><input class="trilho arrasta" type="range" min="0" max="200" step="10" value="0" data-papel="intensidade" data-campo="mult-pos" data-hef-alvo="valor" data-dica="Quanto da vibração chega a este controle"><span class="num" data-campo="mult">—</span><span class="teto mx" data-campo="mult-teto" data-hef-alvo="classe">Máx</span></div>
             </div>
-            <div class="motor mult haptica" data-campo="haptica-fora" data-hef-alvo="classe" data-hef-classe="fora"><button class="haptica-lado lado" data-gesto="haptica" data-campo="lado-h" data-hef-alvo="classe" data-hef-quando="1" title="Háptica por áudio — a vibração fina que o jogo manda como som."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Háptica</title>
+            <div class="motor mult haptica" data-campo="haptica-fora" data-hef-alvo="classe" data-hef-classe="fora"><button class="haptica-lado lado" data-gesto="haptica" data-campo="lado-h" data-hef-alvo="classe" data-hef-quando="1" data-dica="A vibração fina que o jogo manda como som"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Háptica</title>
 
   <rect x="3" y="13" width="26" height="14" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
   <path d="M8 9 q2 -3 4 0 t4 0 t4 0 t4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M11 4 q1.5 -2.5 3 0 t3 0 t3 0 t3 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></button><input class="trilho arrasta" type="range" min="0" max="200" step="1" value="0" data-papel="haptica" data-campo="barra-h" data-hef-alvo="valor" title="A força da háptica por áudio neste controle — 0 a 200%. 100% é o jogo como ele mandou. Grava na hora, só para ele." data-todo="2"><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-h-pct">—</span><span class="teto no-ar" data-campo="haptica-no-ar" data-hef-alvo="classe" title="Aceso: há háptica chegando a este controle agora.">%</span></div>
-            <div class="motor mult off" data-campo="motor-e-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado" data-gesto="lado" data-lado="e" data-campo="lado-e" data-hef-alvo="classe" data-hef-quando="1" title="Motor de vibração esquerdo — Contrapeso maior — soa grosso."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
+</svg></button><input class="trilho arrasta" type="range" min="0" max="200" step="1" value="0" data-papel="haptica" data-campo="barra-h" data-hef-alvo="valor" data-dica="Força da háptica; 100% é o jogo como mandou"><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-h-pct">—</span><span class="teto no-ar" data-campo="haptica-no-ar" data-hef-alvo="classe" data-dica="Aceso: há háptica chegando a este controle agora.">%</span></div>
+            <div class="motor mult off" data-campo="motor-e-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado" data-gesto="lado" data-lado="e" data-campo="lado-e" data-hef-alvo="classe" data-hef-quando="1" data-dica="Motor de vibração esquerdo — Contrapeso maior — soa grosso."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
 
   <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
         fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
   <path d="M25,9 q4,7 0,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M29,5 q6,11 0,22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="0" data-papel="motor" data-campo="barra-e" data-hef-alvo="valor" data-lado="e" title="Quanto da vibração chega a este punho — 0 a 100% do degrau da coluna. Em 0, este motor fica mudo. Grava na hora, só para este controle." data-todo="2"><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-e-pct">—</span><span class="teto">%</span></div>
-            <div class="motor mult off" data-campo="motor-d-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado" data-gesto="lado" data-lado="d" data-campo="lado-d" data-hef-alvo="classe" data-hef-quando="1" title="Motor de vibração direito — Contrapeso menor — soa fino."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração direito</title>
+</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="0" data-papel="motor" data-campo="barra-e" data-hef-alvo="valor" data-lado="e" data-dica="Quanto chega a este punho; em 0, mudo"><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-e-pct">—</span><span class="teto">%</span></div>
+            <div class="motor mult off" data-campo="motor-d-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado" data-gesto="lado" data-lado="d" data-campo="lado-d" data-hef-alvo="classe" data-hef-quando="1" data-dica="Motor de vibração direito — Contrapeso menor — soa fino."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração direito</title>
 
   <path d="M12,4 h6 q3,0 4,3 l3,10 q2,7 -2,11 q-4,4 -8,1 q-3,-2 -3,-7 z"
         fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
   <path d="M7,10 q-3,6 0,12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M3,7 q-4,9 0,18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="0" data-papel="motor" data-campo="barra-d" data-hef-alvo="valor" data-lado="d" title="Quanto da vibração chega a este punho — 0 a 100% do degrau da coluna. Em 0, este motor fica mudo. Grava na hora, só para este controle." data-todo="2"><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-d-pct">—</span><span class="teto">%</span></div>
+</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="0" data-papel="motor" data-campo="barra-d" data-hef-alvo="valor" data-lado="d" data-dica="Quanto chega a este punho; em 0, mudo"><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-d-pct">—</span><span class="teto">%</span></div>
             <div class="acoes-col">
               <!-- "Testar", não "Testar por 500 ms" — decisão, 30/08:
                    *"ali vai ser só Testar; se o user quiser parar vai clicar em Parar"*.
@@ -3474,7 +3401,7 @@
                       data-hef-rotulo="o texto do botão">Parar</button>
             </div>
           </div>
-          <div class="ctrl off" data-controle="p4" data-uniq="" data-conectado="nao" title="Nenhum controle neste lugar.">
+          <div class="ctrl off" data-controle="p4" data-uniq="" data-conectado="nao" data-dica="Nenhum controle aqui">
             <div class="moldura" data-hef="desenho" data-campo="plastico"
                  data-hef-alvo="plastico"><?xml version="1.0" encoding="utf-8"?>
 <svg data-campo="colorway" data-hef-alvo="atributo" data-hef-atributo="data-colorway" class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
@@ -3779,33 +3706,33 @@
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg></div>
-            <div class="rot-ctrl" data-hef="identidade">P4 <span class="pt">•</span> Desconectado</div>
+            <div class="rot-ctrl" data-hef="identidade" data-todo="4">P4 <span class="pt">•</span> Desconectado</div>
             <div class="forca" data-campo="padrao" data-hef-alvo="classe"
                  data-hef-classe="padrao">
               <div class="seg" data-campo="degrau-herdado" data-hef-alvo="classe"
                    data-hef-classe="herdado"><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="economia" data-papel="forca" data-forca="economia">Economia</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="balanceado" data-papel="forca" data-forca="balanceado">Padrão</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="max" data-papel="forca" data-forca="max">Máximo</button></div>
-              <div class="motor mult"><span></span><input class="trilho arrasta" type="range" min="0" max="200" step="10" value="0" data-papel="intensidade" data-campo="mult-pos" data-hef-alvo="valor" title="Quanto da vibração chega a este controle — 0 a 200%. Grava na hora, só para ele." data-todo="2"><span class="num" data-campo="mult">—</span><span class="teto mx" data-campo="mult-teto" data-hef-alvo="classe">Máx</span></div>
+              <div class="motor mult"><span></span><input class="trilho arrasta" type="range" min="0" max="200" step="10" value="0" data-papel="intensidade" data-campo="mult-pos" data-hef-alvo="valor" data-dica="Quanto da vibração chega a este controle"><span class="num" data-campo="mult">—</span><span class="teto mx" data-campo="mult-teto" data-hef-alvo="classe">Máx</span></div>
             </div>
-            <div class="motor mult haptica" data-campo="haptica-fora" data-hef-alvo="classe" data-hef-classe="fora"><button class="haptica-lado lado" data-gesto="haptica" data-campo="lado-h" data-hef-alvo="classe" data-hef-quando="1" title="Háptica por áudio — a vibração fina que o jogo manda como som."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Háptica</title>
+            <div class="motor mult haptica" data-campo="haptica-fora" data-hef-alvo="classe" data-hef-classe="fora"><button class="haptica-lado lado" data-gesto="haptica" data-campo="lado-h" data-hef-alvo="classe" data-hef-quando="1" data-dica="A vibração fina que o jogo manda como som"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Háptica</title>
 
   <rect x="3" y="13" width="26" height="14" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
   <path d="M8 9 q2 -3 4 0 t4 0 t4 0 t4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M11 4 q1.5 -2.5 3 0 t3 0 t3 0 t3 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></button><input class="trilho arrasta" type="range" min="0" max="200" step="1" value="0" data-papel="haptica" data-campo="barra-h" data-hef-alvo="valor" title="A força da háptica por áudio neste controle — 0 a 200%. 100% é o jogo como ele mandou. Grava na hora, só para ele." data-todo="2"><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-h-pct">—</span><span class="teto no-ar" data-campo="haptica-no-ar" data-hef-alvo="classe" title="Aceso: há háptica chegando a este controle agora.">%</span></div>
-            <div class="motor mult off" data-campo="motor-e-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado" data-gesto="lado" data-lado="e" data-campo="lado-e" data-hef-alvo="classe" data-hef-quando="1" title="Motor de vibração esquerdo — Contrapeso maior — soa grosso."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
+</svg></button><input class="trilho arrasta" type="range" min="0" max="200" step="1" value="0" data-papel="haptica" data-campo="barra-h" data-hef-alvo="valor" data-dica="Força da háptica; 100% é o jogo como mandou"><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-h-pct">—</span><span class="teto no-ar" data-campo="haptica-no-ar" data-hef-alvo="classe" data-dica="Aceso: há háptica chegando a este controle agora.">%</span></div>
+            <div class="motor mult off" data-campo="motor-e-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado" data-gesto="lado" data-lado="e" data-campo="lado-e" data-hef-alvo="classe" data-hef-quando="1" data-dica="Motor de vibração esquerdo — Contrapeso maior — soa grosso."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
 
   <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
         fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
   <path d="M25,9 q4,7 0,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M29,5 q6,11 0,22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="0" data-papel="motor" data-campo="barra-e" data-hef-alvo="valor" data-lado="e" title="Quanto da vibração chega a este punho — 0 a 100% do degrau da coluna. Em 0, este motor fica mudo. Grava na hora, só para este controle." data-todo="2"><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-e-pct">—</span><span class="teto">%</span></div>
-            <div class="motor mult off" data-campo="motor-d-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado" data-gesto="lado" data-lado="d" data-campo="lado-d" data-hef-alvo="classe" data-hef-quando="1" title="Motor de vibração direito — Contrapeso menor — soa fino."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração direito</title>
+</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="0" data-papel="motor" data-campo="barra-e" data-hef-alvo="valor" data-lado="e" data-dica="Quanto chega a este punho; em 0, mudo"><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-e-pct">—</span><span class="teto">%</span></div>
+            <div class="motor mult off" data-campo="motor-d-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado" data-gesto="lado" data-lado="d" data-campo="lado-d" data-hef-alvo="classe" data-hef-quando="1" data-dica="Motor de vibração direito — Contrapeso menor — soa fino."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração direito</title>
 
   <path d="M12,4 h6 q3,0 4,3 l3,10 q2,7 -2,11 q-4,4 -8,1 q-3,-2 -3,-7 z"
         fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
   <path d="M7,10 q-3,6 0,12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M3,7 q-4,9 0,18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="0" data-papel="motor" data-campo="barra-d" data-hef-alvo="valor" data-lado="d" title="Quanto da vibração chega a este punho — 0 a 100% do degrau da coluna. Em 0, este motor fica mudo. Grava na hora, só para este controle." data-todo="2"><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-d-pct">—</span><span class="teto">%</span></div>
+</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="0" data-papel="motor" data-campo="barra-d" data-hef-alvo="valor" data-lado="d" data-dica="Quanto chega a este punho; em 0, mudo"><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-d-pct">—</span><span class="teto">%</span></div>
             <div class="acoes-col">
               <!-- "Testar", não "Testar por 500 ms" — decisão, 30/08:
                    *"ali vai ser só Testar; se o user quiser parar vai clicar em Parar"*.
@@ -3876,56 +3803,22 @@
         <div class="vib-estado" id="vib-estado"></div>
       </div>
     </div>
-
-
-    <div class="quadro toques" data-todo="3" data-campo="meus-toques">
-      <div class="quadro-topo linha">
-        <span class="quadro-titulo">Meus toques</span>
-        <span class="ajuda" data-todo="2">?<span class="dica">
-          O controle vibra também com o que você faz, e não só quando o jogo manda.<br><br>
-          Vale para o perfil do jogo, em todos os controles, no cabo e no Bluetooth, e não precisa de acessório.
-          É a vibração fina: uma textura, não um tremor. No modo nativo, os seus toques calam.
-        </span></span>
-        <span class="grupo"><span class="rot">O que vibra</span>
-          <span class="opc" role="group" aria-label="O que vibra">
-            <button data-gesto="meus-toques-modo" data-modo="so-o-jogo" title="Como hoje.">Só o jogo</button><button class="on" data-gesto="meus-toques-modo" data-modo="jogo-e-toques" title="O jogo continua inteiro, e o que eu faço vibra por cima.">Jogo e meus toques</button><button data-gesto="meus-toques-modo" data-modo="so-toques" title="Tira a vibração do jogo só do controle, por escolha minha.">Só meus toques</button>
-          </span></span>
-        <span class="grupo"><span class="rot">Mistura</span>
-          <span class="opc" role="group" aria-label="Mistura">
-            <button class="on" data-gesto="meus-toques-mistura" data-mistura="maior" title="A cada instante, o maior dos dois: nunca menos que o jogo pediu.">O maior dos dois</button><button data-gesto="meus-toques-mistura" data-mistura="somar" title="O jogo mais os seus toques, até o teto do controle.">Somar</button>
-          </span></span>
-        <span class="grupo"><span class="rot">Força dos meus toques</span>
-          <button class="passo" data-gesto="meus-toques-forca" data-passo="-5" aria-label="Menos">−</button><span class="valor" data-campo="meus-toques-forca">30</span><button class="passo" data-gesto="meus-toques-forca" data-passo="5" aria-label="Mais">+</button><span class="unid">% do controle</span>
+    <div class="quadro criar" data-todo="3">
+      <div class="criar-linha">
+        <span class="quadro-titulo" data-dica="O automático pode usar o que você criar">Criar efeitos novos</span>
+        <span class="seg-criar" role="group" aria-label="Jeito"><button class="on" type="button" data-dica="Batidas no ritmo">Batida</button><button type="button" data-dica="Sobe e desce devagar">Onda</button><button type="button" data-dica="Um tranco curto">Tranco</button></span>
+        <span class="seg-criar" role="group" aria-label="Motor"><button type="button" data-dica="Punho esquerdo, som grosso">Esquerdo</button><button type="button" data-dica="Punho direito, som fino">Direito</button><button class="on" type="button">Os dois</button></span>
+        <input class="nome-criar" type="text" placeholder="Nome do efeito" aria-label="Nome do efeito" value="Coração">
+        <button class="btn-criar" type="button" data-dica="Guarda o efeito">Criar</button>
+        <span class="meus" aria-label="Seus efeitos">
+          <button class="meu" type="button" style="--cor:var(--pink)" data-dica="Toca no controle"><i></i>Coração</button>
+          <button class="meu" type="button" style="--cor:var(--orange)" data-dica="Toca no controle"><i></i>Motor ligando</button>
         </span>
       </div>
-      <div class="quadro-corpo">
-        <div class="linha">
-          <span class="grupo"><span class="rot">Analógicos</span>
-            <span class="ajuda" data-todo="2">?<span class="dica">
-              <b>Movimento</b>: vibra quando o analógico se move, e parado silencia.<br>
-              <b>Posição</b>: vibra enquanto estiver inclinado.
-            </span></span>
-            <span class="opc" role="group" aria-label="Analógicos">
-              <button data-gesto="meus-toques-analogicos" data-valor="nao">Não</button><button class="on" data-gesto="meus-toques-analogicos" data-valor="movimento">Movimento</button><button data-gesto="meus-toques-analogicos" data-valor="posicao">Posição</button>
-            </span></span>
-          <span class="grupo"><span class="rot">Botões</span>
-            <button class="chave on" data-gesto="meus-toques-botoes" aria-pressed="true" title="Um toque curto a cada aperto. Martelar vira um murmúrio: no máximo 12 toques por segundo."><span class="ponto"></span>Ligado</button></span>
-          <span class="grupo"><span class="rot">Gatilhos</span>
-            <button class="chave on" data-gesto="meus-toques-gatilhos" aria-pressed="true" title="Vibra conforme a pressão, do lado do gatilho. Onde o jogo pôs efeito no gatilho, o jogo manda."><span class="ponto"></span>Ligado</button></span>
-          <span class="grupo"><span class="rot">Chacoalhar</span>
-            <button class="chave" data-gesto="meus-toques-chacoalhar" aria-pressed="false" title="Chacoalhar o controle dá um surto curto nos dois lados."><span class="ponto"></span>Desligado</button></span>
-          <span class="grupo"><span class="rot">Touchpad</span>
-            <span class="ajuda" data-todo="2">?<span class="dica">
-              <b>Pelos lados</b>: a metade esquerda vibra o motor esquerdo, a direita o direito.<br>
-              <b>Mistura</b>: o dedo atravessa a vibração de um lado ao outro.<br><br>
-              A altura do dedo é a força. O touchpad continua fazendo o que fazia.
-            </span></span>
-            <span class="opc" role="group" aria-label="Touchpad">
-              <button class="on" data-gesto="meus-toques-touchpad" data-valor="nao">Não</button><button data-gesto="meus-toques-touchpad" data-valor="lados">Pelos lados</button><button data-gesto="meus-toques-touchpad" data-valor="mistura">Mistura</button>
-            </span></span>
-        </div>
-      </div>
     </div>
+
+
+
 </div>
 
   <!-- ================= RODAPÉ ================= -->
@@ -3955,7 +3848,7 @@
          Aplicar e de Importar é o do produto, lido do `.glade`, não redigido aqui.
 
          `title=` e não a `.dica` da casa: a `.dica` precisa do embrulho
-         `<span class="ajuda" data-todo="2">?…</span>`, que existe para o ícone de interrogação —
+         `<span class="ajuda">?…</span>`, que existe para o ícone de interrogação —
          num botão ela viraria um "?" ao lado do rótulo, que não é o que o usuário pediu.
          `title=` é o que o `.glade` faz, e é o que já se usa em botão nesta casa
          (`aba09.py`).
@@ -3975,14 +3868,14 @@
          produto pintar lê uma mentira; sem a segunda, ninguém lê o nome. -->
     <button class="r-aplicar" data-campo="rodape.aplicar"
             data-hef-alvo="atributo" data-hef-atributo="title"
-            title="Vale agora: envia a configuração aos controles na hora. Não grava — ao trocar de perfil ou reiniciar, volta ao que está salvo.">Aplicar</button>
+            data-dica="Vale agora, sem gravar no perfil">Aplicar</button>
     <button class="r-salvar" data-campo="rodape.salvar"
             data-hef-alvo="atributo" data-hef-atributo="title"
-            title="Grava no perfil ativo. É onde a mudança vai cair.">Salvar perfil</button>
-    <button class="r-importar" title="Carrega um perfil de arquivo .json.">Importar</button>
+            data-dica="Grava no perfil ativo">Salvar perfil</button>
+    <button class="r-importar" data-dica="Abre um perfil .json">Importar</button>
     <button class="r-exportar" data-campo="rodape.exportar"
             data-hef-alvo="atributo" data-hef-atributo="title"
-            title="Escreve o perfil ativo num arquivo .json, para guardar ou levar para outra máquina.">Exportar</button>
+            data-dica="Salva o perfil ativo num .json">Exportar</button>
   </div>
 
 </div>
@@ -3990,46 +3883,59 @@
 <!-- ===== fim da aba ===== -->
 
 
-<div class="todo-menu aberto" id="todo-menu-direito" data-todo="1" role="menu" aria-label="Menu do Hefesto"
-     style="left:968px;top:348px"
-     title="O menu de verdade é o do sistema, no tema do COSMIC; aqui ele aparece aberto só para se ver.">
-  <button role="menuitem" data-item="copiar" aria-disabled="true">Copiar</button>
-  <hr>
-  <button role="menuitem" data-item="atualizar">Atualizar</button>
-  <button role="menuitem" data-item="ligar-desligar" title="Faz o mesmo que o Desligado da bandeja e da aba Jogar: o Hefesto sai da frente do jogo, que passa a ler o controle direto (modo nativo). O serviço segue de pé.">Desligar</button>
-  <button role="menuitem" data-item="reiniciar">Reiniciar</button>
-  <hr>
-  <button role="menuitem" data-item="fechar">Fechar</button>
-</div>
-<script data-todo="1">
-(() => {
-  const m = document.getElementById('todo-menu-direito');
-  const rotulo = () => {
-    const desligado = document.body.classList.contains('nativo') || !!document.querySelector('#hef-desligado:checked');
-    { const ld = m.querySelector('[data-item="ligar-desligar"]'); ld.textContent = desligado ? 'Ligar' : 'Desligar'; ld.title = desligado ? 'Faz o mesmo que o Ligado da bandeja e da aba Jogar: liga o serviço se estiver parado e volta a entregar o controle ao jogo pelo Hefesto.' : 'Faz o mesmo que o Desligado da bandeja e da aba Jogar: o Hefesto sai da frente do jogo, que passa a ler o controle direto (modo nativo). O serviço segue de pé.'; }
-  };
-  document.addEventListener('contextmenu', (e) => {
-    e.preventDefault();
-    m.querySelector('[data-item="copiar"]').setAttribute('aria-disabled', String(!String(getSelection()).trim()));
-    rotulo();
-    m.classList.add('aberto');
-    m.style.left = Math.min(e.clientX, innerWidth - m.offsetWidth - 8) + 'px';
-    m.style.top = Math.min(e.clientY, innerHeight - m.offsetHeight - 8) + 'px';
-  });
-  document.addEventListener('click', (e) => { if (!m.contains(e.target)) m.classList.remove('aberto'); rotulo(); });
-  document.addEventListener('change', rotulo);
-  rotulo();
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') m.classList.remove('aberto'); });
-})();
-</script>
-<script data-todo-js="modo-automatico">
-document.querySelectorAll('.modo-auto').forEach((b) => b.addEventListener('click', (e) => {
-  e.stopPropagation();
+
+
+<script data-aba="modo-automatico">
+/* O Modo automático da aba: liga e desliga, e a área que ele governa esmaece (data-governa). */
+document.querySelectorAll('.modo-auto').forEach(b => b.addEventListener('click', () => {
   const on = b.getAttribute('aria-pressed') !== 'true';
   b.setAttribute('aria-pressed', String(on));
-  const q = b.closest('.quadro');
-  if (q) q.setAttribute('data-modo-da-aba', on ? 'automatico' : 'personalizado');
+  document.querySelectorAll(b.dataset.governa).forEach(el => el.classList.toggle('governado-pelo-jogo', on));
 }));
+</script>
+<script data-aba="criar">
+document.querySelectorAll('.seg-criar').forEach(s => s.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (b) s.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); }));
+</script>
+<script id="base-comum">
+/* Base comum das abas (rodada 2): a dica no hover e o menu do botão direito. Copiada IGUAL em todo mockup. */
+(() => {
+  const dica = document.createElement('div'); dica.id = 'hef-dica'; dica.setAttribute('role', 'tooltip');
+  document.addEventListener('DOMContentLoaded', () => document.body.append(dica));
+  let alvo = null;
+  const mostrar = el => {
+    alvo = el; dica.textContent = el.dataset.dica;
+    if (!dica.isConnected) document.body.append(dica);
+    const r = el.getBoundingClientRect(), d = dica.getBoundingClientRect();
+    let x = r.left + r.width / 2 - d.width / 2, y = r.bottom + 8;
+    if (y + d.height > innerHeight - 6) y = r.top - d.height - 8;
+    dica.style.left = Math.max(6, Math.min(x, innerWidth - d.width - 6)) + 'px'; dica.style.top = y + 'px';
+    dica.classList.add('visivel');
+  };
+  const esconder = () => { alvo = null; dica.classList.remove('visivel'); };
+  for (const [ev, f] of [['mouseover', 'in'], ['focusin', 'in'], ['mouseout', 'out'], ['focusout', 'out']])
+    document.addEventListener(ev, e => {
+      const el = e.target.closest && e.target.closest('[data-dica]');
+      if (f === 'in' && el && el !== alvo) mostrar(el);
+      if (f === 'out' && el && !el.contains(e.relatedTarget)) esconder();
+    });
+  // O menu do botão direito: Copiar (cinza sem seleção), Atualizar, Desligar/Ligar, Reiniciar, Fechar.
+  document.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    document.querySelectorAll('.menu-hefesto.vivo').forEach(m => m.remove());
+    const m = document.createElement('div'); m.className = 'menu-hefesto vivo'; m.setAttribute('role', 'menu');
+    const sel = String(getSelection()).trim() !== '';
+    m.innerHTML = `<button role="menuitem" ${sel ? '' : 'disabled'}>Copiar</button><hr>
+      <button role="menuitem">Atualizar</button>
+      <button role="menuitem" data-dica="O Hefesto sai da frente e o jogo lê o controle direto">Desligar</button>
+      <button role="menuitem">Reiniciar</button><hr><button role="menuitem">Fechar</button>`;
+    document.body.append(m);
+    const r = m.getBoundingClientRect();
+    m.style.left = Math.min(e.clientX, innerWidth - r.width - 6) + 'px';
+    m.style.top = Math.min(e.clientY, innerHeight - r.height - 6) + 'px';
+  });
+  document.addEventListener('click', e => { if (!e.target.closest('.menu-hefesto')) document.querySelectorAll('.menu-hefesto.vivo').forEach(m => m.remove()); });
+})();
 </script>
 </body>
 </html>

@@ -847,9 +847,43 @@
   }
   .caixa-pergunta .outro[hidden] { display: none; }
 </style>
-<style data-todo-css="alvos-de-24">
-  /* Volta 2 (12/10): o ? do espectro era o único alvo da casa abaixo de 24 px (20x20); a letra fica. */
-  .espectro-cab .ajuda{width:24px;height:24px;flex:0 0 24px}
+<style id="base-comum">
+/* ===== Base comum das abas (rodada 2, 12/10/2026) =====
+   Copiada IGUAL em todo mockup do todo. Três peças: a dica no hover (sem «?»), o Modo automático
+   e o menu do botão direito desenhado no visual das abas (BRIEF-T6, opção B). */
+
+/* 1. A dica: qualquer frase, botão ou área com data-dica mostra a dica ao passar o mouse ou focar.
+      Nenhum botão «?» existe mais. A dica tem no máximo ~12 palavras: show, don't tell. */
+[data-dica]{cursor:help}
+button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"][data-dica]{cursor:pointer}
+#hef-dica{position:fixed;z-index:2147483000;max-width:280px;padding:7px 11px;border-radius:8px;
+  background:#1b1c25;border:1px solid var(--border-forte,#44475a);color:var(--texto-suave,#c8ccda);
+  font:500 12.5px/1.45 'Space Grotesk',system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.45);pointer-events:none;
+  opacity:0;transform:translateY(3px);transition:opacity .12s,transform .12s}
+#hef-dica.visivel{opacity:1;transform:none}
+
+/* 2. O Modo automático: pílula com bolinha. Os dois estados têm de se distinguir num relance.
+      Desligado: contorno neutro, bolinha vazia, letra suave (vale o que está na aba).
+      Ligado: ciano cheio, bolinha branca acesa, letra branca; a área que ele governa esmaece. */
+.modo-auto{display:inline-flex;align-items:center;gap:9px;height:34px;padding:0 16px 0 12px;border-radius:999px;
+  border:1px solid var(--border-forte,#44475a);background:transparent;color:var(--texto-suave,#c8ccda);
+  font:600 13.5px/1 'Space Grotesk',system-ui,sans-serif;cursor:pointer;transition:background .15s,border-color .15s,color .15s,box-shadow .15s}
+.modo-auto .p{width:11px;height:11px;border-radius:50%;border:2px solid var(--texto-mudo,#9a9eb8);background:transparent;
+  transition:all .15s}
+.modo-auto:hover{border-color:#5fd3e6;color:#fff}
+.modo-auto[aria-pressed="true"]{background:#0e7c8c;border-color:#5fd3e6;color:#fff;box-shadow:0 0 0 3px rgba(95,211,230,.18)}
+.modo-auto[aria-pressed="true"] .p{border-color:#fff;background:#fff;box-shadow:0 0 8px #fff}
+.modo-auto:focus-visible{outline:2px solid var(--cyan,#8be9fd);outline-offset:2px}
+.governado-pelo-jogo{opacity:.42;pointer-events:none;filter:saturate(.6)}
+
+/* 3. O menu do botão direito, no visual das abas. */
+.menu-hefesto{position:fixed;z-index:2147482000;min-width:190px;padding:6px;border-radius:12px;
+  background:#252733;border:1px solid var(--border-forte,#44475a);box-shadow:0 14px 34px rgba(0,0,0,.5)}
+.menu-hefesto button{display:flex;width:100%;align-items:center;gap:10px;height:34px;padding:0 12px;border:0;
+  border-radius:8px;background:transparent;color:var(--fg,#f8f8f2);font:500 13.5px/1 'Space Grotesk',system-ui,sans-serif;text-align:left;cursor:pointer}
+.menu-hefesto button:hover{background:rgba(189,147,249,.14)}
+.menu-hefesto button[disabled]{color:var(--texto-mudo,#9a9eb8);opacity:.55;cursor:default;background:transparent}
+.menu-hefesto hr{border:0;border-top:1px solid var(--border-sutil,#343746);margin:5px 4px}
 </style>
 </head>
 <body>
@@ -863,7 +897,7 @@
       <button class="btn principal" id="b-conectar" data-gesto="conectar-aparelho">
         <svg class="i"><use href="#i-mais"/></svg> Conectar</button>
       <button class="btn" id="b-equilibrar" data-gesto="equilibrar-radio"
-              title="Move um controle por vez">
+              data-dica="Move um controle por vez">
         <svg class="i"><use href="#i-equilibrar"/></svg> Equilibrar</button>
     </div>
   </div>
@@ -887,11 +921,7 @@
        dois lados, e é palavra de todo mundo. -->
   <div class="espectro" data-campo="quem-esta-no-ar">
     <div class="espectro-cab">
-      Quem está no ar
-      <span class="ajuda" data-todo="3" role="img"
-            aria-label="Wi-Fi, teclado e mouse sem fio dividem os 2,4 GHz com o Bluetooth. O hachurado são os canais que os adaptadores evitam; as faixas com nome são o vizinho provável."
-            title="Wi-Fi, teclado e mouse sem fio dividem os 2,4 GHz com o Bluetooth. O hachurado são os canais que os adaptadores evitam; as faixas com nome são o vizinho provável.">
-        <svg class="i"><use href="#i-ajuda"/></svg></span>
+      <span data-todo="1" data-dica="Wi-Fi e mouse sem fio dividem os 2,4 GHz com o Bluetooth">Quem está no ar</span>
       <span class="fora-da-faixa" id="fora-da-faixa"
             data-campo="espectro-fora-da-faixa" data-hef-alvo="html"></span>
       <span class="no-ar" id="meus-no-ar" role="img"></span>
@@ -924,13 +954,13 @@
          acham nada, e é de propósito: o mockup mostra a FORMA do contrato,
          não reimplementa as telas. -->
     <a class="btn" id="b-mapear" href="#mapear-entradas"
-       title="Mapear entradas — desenhar o meu computador: as entradas numeradas por face, com ocupada, vazia, serve e vale evitar">
+       data-dica="Desenha as entradas do seu computador, face por face">
       <svg class="i"><use href="#i-mapa"/></svg> Mapear entradas</a>
     <a class="btn" id="b-uma-a-uma" href="#mapear-entrada-a-entrada"
-       title="Mapear entrada a entrada — um toque por aparelho: você pluga, ele aprende">
+       data-dica="Você pluga um aparelho e ele aprende a entrada">
       <svg class="i"><use href="#i-uma-a-uma"/></svg> Mapear entrada a entrada</a>
     <button class="btn" id="b-examinar" data-gesto="examinar-portas"
-            title="Examinar entradas — refaz o exame das entradas, energia e rádio, e repinta o check-up">
+            data-dica="Refaz o exame das entradas, da energia e do rádio">
       <svg class="i"><use href="#i-reexaminar"/></svg> Examinar entradas</button>
     <!-- R8, 23/09: SEM RECADO. A TELA-CALADA-01 vale aqui também: a
          confirmação de um ato é o destino que pisca, e a recusa é o botão que
@@ -940,7 +970,7 @@
          navegador"*. Um rótulo de três palavras prometia uma gaveta desta
          mesma tela; o ícone sozinho promete um lugar, e a dica diz qual. -->
     <a class="mapa so-icone" href="mapa-das-portas.html"
-       title="O mapa das entradas — abre no navegador"
+       data-dica="Abre o mapa das entradas"
        aria-label="O mapa das entradas — abre no navegador">
       <svg class="i"><use href="#i-mapa"/></svg></a>
   </div>
@@ -2999,6 +3029,54 @@ for (const [bid, titulo, texto] of [
 }
 
 pintar();
+</script>
+<div class="menu-hefesto" id="menu-desenhado" role="menu" aria-label="Menu do Hefesto" data-todo="2" hidden style="left:880px;top:602px">
+  <button role="menuitem" disabled>Copiar</button><hr>
+  <button role="menuitem">Atualizar</button>
+  <button role="menuitem" data-dica="O Hefesto sai da frente e o jogo lê o controle direto">Desligar</button>
+  <button role="menuitem">Reiniciar</button><hr><button role="menuitem">Fechar</button>
+</div>
+<script>/* O menu desenhado aberto só na foto do menu: abra a página com #menu. */
+if (location.hash === '#menu') document.getElementById('menu-desenhado').hidden = false;</script>
+<script id="base-comum">
+/* Base comum das abas (rodada 2): a dica no hover e o menu do botão direito. Copiada IGUAL em todo mockup. */
+(() => {
+  const dica = document.createElement('div'); dica.id = 'hef-dica'; dica.setAttribute('role', 'tooltip');
+  document.addEventListener('DOMContentLoaded', () => document.body.append(dica));
+  let alvo = null;
+  const mostrar = el => {
+    alvo = el; dica.textContent = el.dataset.dica;
+    if (!dica.isConnected) document.body.append(dica);
+    const r = el.getBoundingClientRect(), d = dica.getBoundingClientRect();
+    let x = r.left + r.width / 2 - d.width / 2, y = r.bottom + 8;
+    if (y + d.height > innerHeight - 6) y = r.top - d.height - 8;
+    dica.style.left = Math.max(6, Math.min(x, innerWidth - d.width - 6)) + 'px'; dica.style.top = y + 'px';
+    dica.classList.add('visivel');
+  };
+  const esconder = () => { alvo = null; dica.classList.remove('visivel'); };
+  for (const [ev, f] of [['mouseover', 'in'], ['focusin', 'in'], ['mouseout', 'out'], ['focusout', 'out']])
+    document.addEventListener(ev, e => {
+      const el = e.target.closest && e.target.closest('[data-dica]');
+      if (f === 'in' && el && el !== alvo) mostrar(el);
+      if (f === 'out' && el && !el.contains(e.relatedTarget)) esconder();
+    });
+  // O menu do botão direito: Copiar (cinza sem seleção), Atualizar, Desligar/Ligar, Reiniciar, Fechar.
+  document.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    document.querySelectorAll('.menu-hefesto.vivo').forEach(m => m.remove());
+    const m = document.createElement('div'); m.className = 'menu-hefesto vivo'; m.setAttribute('role', 'menu');
+    const sel = String(getSelection()).trim() !== '';
+    m.innerHTML = `<button role="menuitem" ${sel ? '' : 'disabled'}>Copiar</button><hr>
+      <button role="menuitem">Atualizar</button>
+      <button role="menuitem" data-dica="O Hefesto sai da frente e o jogo lê o controle direto">Desligar</button>
+      <button role="menuitem">Reiniciar</button><hr><button role="menuitem">Fechar</button>`;
+    document.body.append(m);
+    const r = m.getBoundingClientRect();
+    m.style.left = Math.min(e.clientX, innerWidth - r.width - 6) + 'px';
+    m.style.top = Math.min(e.clientY, innerHeight - r.height - 6) + 'px';
+  });
+  document.addEventListener('click', e => { if (!e.target.closest('.menu-hefesto')) document.querySelectorAll('.menu-hefesto.vivo').forEach(m => m.remove()); });
+})();
 </script>
 </body>
 </html>

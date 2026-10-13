@@ -1,178 +1,188 @@
 {
-  "aba": "09",
-  "nome": "Sistema",
-  "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/_integra-1-11/src/hefesto_dualsense4unix/interface/paginas/09-sistema.html",
-  "depois": "~/.local/state/hefesto-casa/leva-volta/todo/09-sistema.html",
-  "mudancas": [
-    {
-      "n": 1,
-      "sprint": "A-ABA-SISTEMA-FICA-COM-SEIS-LINHAS-E-O-REGISTRO-CABE-NA-JANELA-01",
-      "o_que_muda": "Status com seis linhas em três colunas de duas: Serviço e Troca de perfil ao abrir o jogo; Bluetooth (leva à 08) e Steam Input desligado; Áudio roteado e Um gamepad virtual por jogador. A linha que falha ganha o selo .falha em --red; o texto vai para o «?» do Status.",
-      "origem": "recomendada-a-escolher",
-      "ancora": ".status3.seis; .sr-status3.seis",
-      "conflito": "Opção A do BRIEF-T5 aplicada; B e C seguem com ela."
-    },
-    {
-      "n": 2,
-      "sprint": "A-ABA-SISTEMA-FICA-COM-SEIS-LINHAS-E-O-REGISTRO-CABE-NA-JANELA-01",
-      "o_que_muda": "«Saúde do app» vira um grupo só, em grade 2x3; o grupo «Automático» sai.",
-      "origem": "recomendada-a-escolher",
-      "ancora": ".saude-app",
-      "conflito": ""
-    },
-    {
-      "n": 3,
-      "sprint": "A-ABA-SISTEMA-FICA-COM-SEIS-LINHAS-E-O-REGISTRO-CABE-NA-JANELA-01",
-      "o_que_muda": "Interruptor «Permitir correção pelo Doctor», ligado.",
-      "origem": "recomendada-a-escolher",
-      "ancora": "[data-gesto=correcao-pelo-doctor]",
-      "conflito": "O padrão ligado é nosso, a validar."
-    },
-    {
-      "n": 4,
-      "sprint": "A-ABA-SISTEMA-FICA-COM-SEIS-LINHAS-E-O-REGISTRO-CABE-NA-JANELA-01",
-      "o_que_muda": "Interruptor «Aplicar nos lançadores a cada jogo novo», ligado.",
-      "origem": "recomendada-a-escolher",
-      "ancora": "[data-gesto=lancadores-no-jogo-novo]",
-      "conflito": "O padrão ligado vem da AS-CONFIGURACOES-CHEGAM-AO-JOGO-NOVO-QUANDO-A-STEAM-FECHA-01 (P4); a validar."
-    },
-    {
-      "n": 5,
-      "sprint": "A-ABA-SISTEMA-FICA-COM-SEIS-LINHAS-E-O-REGISTRO-CABE-NA-JANELA-01",
-      "o_que_muda": "«Restaurar de fábrica», em vermelho, fecha a grade no lugar que era do Corrigir Vulkan (que sobe uma casa).",
-      "origem": "recomendada-a-escolher",
-      "ancora": "[data-gesto=restaurar-de-fabrica]",
-      "conflito": ""
-    },
-    {
-      "n": 6,
-      "sprint": "A-ABA-SISTEMA-FICA-COM-SEIS-LINHAS-E-O-REGISTRO-CABE-NA-JANELA-01",
-      "o_que_muda": "Botão «Salvar» do registro, ao lado do Copiar.",
-      "origem": "recomendada-a-escolher",
-      "ancora": "[data-gesto=salvar-registro]",
-      "conflito": ""
-    },
-    {
-      "n": 7,
-      "sprint": "A-ABA-SISTEMA-FICA-COM-SEIS-LINHAS-E-O-REGISTRO-CABE-NA-JANELA-01",
-      "o_que_muda": "O registro ocupa a sobra da altura (flex:1 1 0; min-height:0) e rola por dentro; a aba cabe também em 1212x700.",
-      "origem": "recomendada-a-escolher",
-      "ancora": ".registro",
-      "conflito": ""
-    },
-    {
-      "n": 8,
-      "sprint": "O-BOTAO-DIREITO-ABRE-O-MENU-DO-HEFESTO-EM-TODA-ABA-01",
-      "o_que_muda": "Menu do botão direito (Copiar apagado, Atualizar, Desligar ou Ligar, Reiniciar, Fechar), no trecho comum das abas; no todo aparece aberto sobre o vazio do registro, só para se ver. Ordem dela de 12/10: o «Desligar/Ligar» faz o mesmo que o Desligado/Ligado da bandeja (o mesmo plano de IPC da aba Jogar: o Hefesto sai da frente e o jogo lê o controle direto, em modo nativo; o serviço segue de pé; o Ligar sobe o serviço se estiver parado), e a dica do item diz isso.",
-      "origem": "recomendada-a-escolher",
-      "ancora": "#todo-menu-direito",
-      "conflito": "BRIEF-T6: menu do sistema (A, aplicado) ou desenhado (B); o Desligar é o interruptor da aba Jogar (aplicado) ou o Parar do serviço da 09."
-    },
-    {
-      "n": 9,
-      "sprint": "OS-ALVOS-E-A-LETRA-CRESCEM-E-A-INTERFACE-GANHA-TAMANHO-01",
-      "o_que_muda": "«Tamanho da interface» 100 / 125 / 150 % na linha do título «Configurações avançadas».",
-      "origem": "desenho-nosso-a-validar",
-      "ancora": ".tamanho",
-      "conflito": "O lugar é desenho nosso; os outros montadores deixaram o controle para a 09."
-    },
-    {
-      "n": 10,
-      "sprint": "OS-ALVOS-E-A-LETRA-CRESCEM-E-A-INTERFACE-GANHA-TAMANHO-01",
-      "o_que_muda": "Os nove «?» e todo [data-gesto] passam a ter no mínimo 24 px (o trecho comum #todo-alvos).",
-      "origem": "recomendada-a-escolher",
-      "ancora": "#todo-alvos; .ajuda[data-todo]",
-      "conflito": "Opção 1 da sprint (24 px); as outras opções seguem com ela."
-    }
-  ],
-  "por_baixo": [
-    {
-      "sprint": "A-SAIDA-DE-UM-CONTROLE-NAO-TRAVA-A-ABA-SISTEMA-01",
-      "o_que_muda": "O status lento sai do fio da janela (o _LENTO); nada na tela."
-    },
-    {
-      "sprint": "O-PARAR-CALA-O-TESTE-QUE-AINDA-ESTAVA-NO-AR-01",
-      "o_que_muda": "O Parar do serviço cala o teste; o botão é o mesmo."
-    },
-    {
-      "sprint": "FECHAR-A-JANELA-DEVOLVE-O-QUE-AS-ABAS-SEGURAVAM-01",
-      "o_que_muda": "Nada na tela."
-    },
-    {
-      "sprint": "A-ALTURA-E-A-LARGURA-DA-JANELA-NAO-PULSAM-01",
-      "o_que_muda": "Nada na tela; o registro com flex ajuda a altura a não pulsar."
-    },
-    {
-      "sprint": "A-JANELA-REGISTRA-O-PROPRIO-TAMANHO-E-O-MOTIVO-DE-FECHAR-01",
-      "o_que_muda": "Linhas novas no registro; o desenho é o mesmo."
-    },
-    {
-      "sprint": "AS-CONFIGURACOES-CHEGAM-AO-JOGO-NOVO-QUANDO-A-STEAM-FECHA-01",
-      "o_que_muda": "O back-end do interruptor 4."
-    },
-    {
-      "sprint": "STEAM-INPUT-01",
-      "o_que_muda": "O chip mora na 01; aqui só a linha «Steam Input desligado» do status."
-    },
-    {
-      "sprint": "O-TEMA-DE-CORES-ENTRA-PELA-FOLHA-DE-USUARIO-01",
-      "o_que_muda": "Só tokens do :root; sem tema ligado, nada muda."
-    },
-    {
-      "sprint": "A-INTERFACE-INTEIRA-SE-ALCANCA-PELO-CONTROLE-E-PELO-TECLADO-01",
-      "o_que_muda": "O «?» e os botões entram na ordem do foco; nada visível a mais."
-    },
-    {
-      "sprint": "A-JANELA-DO-INICIO-DA-SESSAO-NAO-MORRE-COM-O-SERVICO-QUE-A-ABRIU-01",
-      "o_que_muda": "A janela segue aberta quando o serviço reinicia; o desenho não muda."
-    }
-  ],
-  "fora": [
-    {
-      "sprint": "NO-MODO-XBOX-TUDO-FUNCIONA-01",
-      "motivo": "Espera ela; nada nestas páginas."
-    },
-    {
-      "sprint": "A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01",
-      "motivo": "Espera ela; nada nestas páginas."
-    },
-    {
-      "sprint": "A-MIRA-PELO-GIRO-VALE-EM-JOGO-QUE-SO-FALA-XBOX-01",
-      "motivo": "Caducou."
-    },
-    {
-      "sprint": "I18N-DA-TELA-NOVA-01",
-      "motivo": "Fora da leva; nada de texto novo depende dela."
-    },
-    {
-      "sprint": "TRADUZIR-O-PROJETO-01",
-      "motivo": "Fora da leva; nada de texto novo depende dela."
-    },
-    {
-      "sprint": "O-FIXAR-PROTON-DESINSTALA-AS-VERSOES-QUE-SOBRAM-01",
-      "motivo": "Espera ela; o botão segue «Fixar Proton»."
-    },
-    {
-      "sprint": "A-CADEIA-USB-SE-RECONHECE-EM-QUALQUER-PC-E-CADA-MUDANCA-VAI-AO-REGISTRO-01",
-      "motivo": "O registro USB no log da 09 não é a recomendada; a A mora no Mapa das conexões."
-    },
-    {
-      "sprint": "O-ECO-DO-ATO-SEM-OBJETO-01",
-      "motivo": "Já costurada na 1-11: está no antes."
-    },
-    {
-      "sprint": "O-REGISTRO-COPIADO-NAO-ENTREGA-O-ENDERECO-02",
-      "motivo": "Já costurada na 1-11: está no antes."
-    },
-    {
-      "sprint": "O-ICONE-DO-DOCK-E-O-DO-HEFESTO-01",
-      "motivo": "Já costurada na 1-11: está no antes."
-    },
-    {
-      "sprint": "O-CODIGO-SEM-NARRADOR-02",
-      "motivo": "Texto de código e de comentário; nada visível muda."
-    }
-  ],
-  "altura_px": 809,
-  "rola": false
+ "aba": "09",
+ "nome": "Sistema",
+ "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/_integra-1-11/src/hefesto_dualsense4unix/interface/paginas/09-sistema.html",
+ "depois": "/home/vitoriamaria/.local/state/hefesto-casa/leva-volta/todo/09-sistema.html",
+ "mudancas": [
+  {
+   "n": 1,
+   "sprint": "A-ABA-SISTEMA-DO-TODO-01",
+   "o_que_muda": "O Status sem «?»; a dica aparece no hover",
+   "origem": "pedido-dela",
+   "resposta": "todo-09-1",
+   "ancora": "todo-09-1",
+   "seletor": "[data-todo=\"1\"]",
+   "conflito": ""
+  },
+  {
+   "n": 2,
+   "sprint": "A-ABA-SISTEMA-DO-TODO-01",
+   "o_que_muda": "«Serviço» passa a se chamar «Funcionamento do app»",
+   "origem": "pedido-dela",
+   "resposta": "todo-09",
+   "ancora": "todo-09-2",
+   "seletor": ".avancadas.quatro",
+   "conflito": ""
+  },
+  {
+   "n": 3,
+   "sprint": "A-ABA-SISTEMA-DO-TODO-01",
+   "o_que_muda": "Coluna nova Interface: Padrão, Confortável, Espaçoso",
+   "origem": "pedido-dela",
+   "resposta": "todo-09",
+   "ancora": "todo-09-3",
+   "seletor": "[data-gesto=tamanho-da-interface]",
+   "conflito": ""
+  },
+  {
+   "n": 4,
+   "sprint": "A-ABA-SISTEMA-DO-TODO-01",
+   "o_que_muda": "Colunas: Funcionamento, Interface, Bateria, Saúde do app",
+   "origem": "pedido-dela",
+   "resposta": "todo-09",
+   "ancora": "todo-09-4",
+   "seletor": ".avancadas.quatro",
+   "conflito": ""
+  },
+  {
+   "n": 5,
+   "sprint": "A-ABA-SISTEMA-DO-TODO-01",
+   "o_que_muda": "Um botão só: «Permitir correções automáticas»",
+   "origem": "pedido-dela",
+   "resposta": "todo-09",
+   "ancora": "todo-09-5",
+   "seletor": "[data-gesto=correcoes-automaticas]",
+   "conflito": ""
+  },
+  {
+   "n": 6,
+   "sprint": "A-ABA-SISTEMA-DO-TODO-01",
+   "o_que_muda": "«Iniciar com o sistema» fica embaixo das correções",
+   "origem": "pedido-dela",
+   "resposta": "todo-09",
+   "ancora": "todo-09-6",
+   "seletor": ".saude-app",
+   "conflito": ""
+  },
+  {
+   "n": 7,
+   "sprint": "A-ABA-SISTEMA-DO-TODO-01",
+   "o_que_muda": "«Restaurar de fábrica» com borda vermelha",
+   "origem": "pedido-dela",
+   "resposta": "todo-09",
+   "ancora": "todo-09-7",
+   "seletor": ".borda-vermelha",
+   "conflito": ""
+  },
+  {
+   "n": 8,
+   "sprint": "A-ABA-SISTEMA-DO-TODO-01",
+   "o_que_muda": "Doctor, Fixar Proton e Corrigir Vulkan saem como botões",
+   "origem": "pedido-dela",
+   "resposta": "todo-09",
+   "ancora": "todo-09-8",
+   "seletor": ".saude-app",
+   "conflito": ""
+  },
+  {
+   "n": 9,
+   "sprint": "A-ABA-SISTEMA-DO-TODO-01",
+   "o_que_muda": "O botão direito abre o menu das abas",
+   "origem": "regra-global",
+   "resposta": "todo-09",
+   "ancora": "todo-09-9",
+   "seletor": "#menu-desenhado",
+   "conflito": ""
+  }
+ ],
+ "por_baixo": [
+  {
+   "sprint": "A-SAIDA-DE-UM-CONTROLE-NAO-TRAVA-A-ABA-SISTEMA-01",
+   "o_que_muda": "O status lento sai do fio da janela (o _LENTO); nada na tela."
+  },
+  {
+   "sprint": "O-PARAR-CALA-O-TESTE-QUE-AINDA-ESTAVA-NO-AR-01",
+   "o_que_muda": "O Parar do serviço cala o teste; o botão é o mesmo."
+  },
+  {
+   "sprint": "FECHAR-A-JANELA-DEVOLVE-O-QUE-AS-ABAS-SEGURAVAM-01",
+   "o_que_muda": "Nada na tela."
+  },
+  {
+   "sprint": "A-ALTURA-E-A-LARGURA-DA-JANELA-NAO-PULSAM-01",
+   "o_que_muda": "Nada na tela; o registro com flex ajuda a altura a não pulsar."
+  },
+  {
+   "sprint": "A-JANELA-REGISTRA-O-PROPRIO-TAMANHO-E-O-MOTIVO-DE-FECHAR-01",
+   "o_que_muda": "Linhas novas no registro; o desenho é o mesmo."
+  },
+  {
+   "sprint": "AS-CONFIGURACOES-CHEGAM-AO-JOGO-NOVO-QUANDO-A-STEAM-FECHA-01",
+   "o_que_muda": "O back-end do interruptor 4."
+  },
+  {
+   "sprint": "STEAM-INPUT-01",
+   "o_que_muda": "O chip mora na 01; aqui só a linha «Steam Input desligado» do status."
+  },
+  {
+   "sprint": "O-TEMA-DE-CORES-ENTRA-PELA-FOLHA-DE-USUARIO-01",
+   "o_que_muda": "Só tokens do :root; sem tema ligado, nada muda."
+  },
+  {
+   "sprint": "A-INTERFACE-INTEIRA-SE-ALCANCA-PELO-CONTROLE-E-PELO-TECLADO-01",
+   "o_que_muda": "O «?» e os botões entram na ordem do foco; nada visível a mais."
+  },
+  {
+   "sprint": "A-JANELA-DO-INICIO-DA-SESSAO-NAO-MORRE-COM-O-SERVICO-QUE-A-ABRIU-01",
+   "o_que_muda": "A janela segue aberta quando o serviço reinicia; o desenho não muda."
+  }
+ ],
+ "fora": [
+  {
+   "sprint": "NO-MODO-XBOX-TUDO-FUNCIONA-01",
+   "motivo": "Espera ela; nada nestas páginas."
+  },
+  {
+   "sprint": "A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01",
+   "motivo": "Espera ela; nada nestas páginas."
+  },
+  {
+   "sprint": "A-MIRA-PELO-GIRO-VALE-EM-JOGO-QUE-SO-FALA-XBOX-01",
+   "motivo": "Caducou."
+  },
+  {
+   "sprint": "I18N-DA-TELA-NOVA-01",
+   "motivo": "Fora da leva; nada de texto novo depende dela."
+  },
+  {
+   "sprint": "TRADUZIR-O-PROJETO-01",
+   "motivo": "Fora da leva; nada de texto novo depende dela."
+  },
+  {
+   "sprint": "O-FIXAR-PROTON-DESINSTALA-AS-VERSOES-QUE-SOBRAM-01",
+   "motivo": "Espera ela; o botão segue «Fixar Proton»."
+  },
+  {
+   "sprint": "A-CADEIA-USB-SE-RECONHECE-EM-QUALQUER-PC-E-CADA-MUDANCA-VAI-AO-REGISTRO-01",
+   "motivo": "O registro USB no log da 09 não é a recomendada; a A mora no Mapa das conexões."
+  },
+  {
+   "sprint": "O-ECO-DO-ATO-SEM-OBJETO-01",
+   "motivo": "Já costurada na 1-11: está no antes."
+  },
+  {
+   "sprint": "O-REGISTRO-COPIADO-NAO-ENTREGA-O-ENDERECO-02",
+   "motivo": "Já costurada na 1-11: está no antes."
+  },
+  {
+   "sprint": "O-ICONE-DO-DOCK-E-O-DO-HEFESTO-01",
+   "motivo": "Já costurada na 1-11: está no antes."
+  },
+  {
+   "sprint": "O-CODIGO-SEM-NARRADOR-02",
+   "motivo": "Texto de código e de comentário; nada visível muda."
+  }
+ ],
+ "altura_px": 809,
+ "rola": false
 }

@@ -1126,9 +1126,54 @@
   .gls .mais{color:var(--comment);font-size:11px;margin:0 1px}
 
 </style>
-<style id="todo-alvos" data-todo="10">
-  .ajuda{width:24px;height:24px;flex:0 0 24px;line-height:22px}
-  [data-gesto]{min-height:24px}
+<style id="alvos-de-24">[data-gesto]{min-height:24px}</style>
+<style id="rodada-2-grupo-3">
+  /* As quatro colunas, na ordem dela: Funcionamento do app, Interface, Perfil global de bateria, Saúde do app. */
+  .avancadas.quatro,.sr-avancadas.quatro{grid-template-columns:minmax(0,1fr) 1px minmax(0,1fr) 1px minmax(0,1fr) 1px minmax(0,1fr)}
+  .saude-app{grid-template-columns:minmax(0,1fr);grid-auto-flow:row}
+  .btn.borda-vermelha{border-color:var(--red);color:var(--red)}
+  .btn.borda-vermelha:hover{background:rgba(255,85,85,.08)}
+  .sec-grupo.com-tamanho{min-height:24px}
+  .sec-rot{margin-bottom:8px}
+  .avancadas{gap:0 22px}
+</style>
+<style id="base-comum">
+/* ===== Base comum das abas (rodada 2, 12/10/2026) =====
+   Copiada IGUAL em todo mockup do todo. Três peças: a dica no hover (sem «?»), o Modo automático
+   e o menu do botão direito desenhado no visual das abas (BRIEF-T6, opção B). */
+
+/* 1. A dica: qualquer frase, botão ou área com data-dica mostra a dica ao passar o mouse ou focar.
+      Nenhum botão «?» existe mais. A dica tem no máximo ~12 palavras: show, don't tell. */
+[data-dica]{cursor:help}
+button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"][data-dica]{cursor:pointer}
+#hef-dica{position:fixed;z-index:2147483000;max-width:280px;padding:7px 11px;border-radius:8px;
+  background:#1b1c25;border:1px solid var(--border-forte,#44475a);color:var(--texto-suave,#c8ccda);
+  font:500 12.5px/1.45 'Space Grotesk',system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.45);pointer-events:none;
+  opacity:0;transform:translateY(3px);transition:opacity .12s,transform .12s}
+#hef-dica.visivel{opacity:1;transform:none}
+
+/* 2. O Modo automático: pílula com bolinha. Os dois estados têm de se distinguir num relance.
+      Desligado: contorno neutro, bolinha vazia, letra suave (vale o que está na aba).
+      Ligado: ciano cheio, bolinha branca acesa, letra branca; a área que ele governa esmaece. */
+.modo-auto{display:inline-flex;align-items:center;gap:9px;height:34px;padding:0 16px 0 12px;border-radius:999px;
+  border:1px solid var(--border-forte,#44475a);background:transparent;color:var(--texto-suave,#c8ccda);
+  font:600 13.5px/1 'Space Grotesk',system-ui,sans-serif;cursor:pointer;transition:background .15s,border-color .15s,color .15s,box-shadow .15s}
+.modo-auto .p{width:11px;height:11px;border-radius:50%;border:2px solid var(--texto-mudo,#9a9eb8);background:transparent;
+  transition:all .15s}
+.modo-auto:hover{border-color:#5fd3e6;color:#fff}
+.modo-auto[aria-pressed="true"]{background:#0e7c8c;border-color:#5fd3e6;color:#fff;box-shadow:0 0 0 3px rgba(95,211,230,.18)}
+.modo-auto[aria-pressed="true"] .p{border-color:#fff;background:#fff;box-shadow:0 0 8px #fff}
+.modo-auto:focus-visible{outline:2px solid var(--cyan,#8be9fd);outline-offset:2px}
+.governado-pelo-jogo{opacity:.42;pointer-events:none;filter:saturate(.6)}
+
+/* 3. O menu do botão direito, no visual das abas. */
+.menu-hefesto{position:fixed;z-index:2147482000;min-width:190px;padding:6px;border-radius:12px;
+  background:#252733;border:1px solid var(--border-forte,#44475a);box-shadow:0 14px 34px rgba(0,0,0,.5)}
+.menu-hefesto button{display:flex;width:100%;align-items:center;gap:10px;height:34px;padding:0 12px;border:0;
+  border-radius:8px;background:transparent;color:var(--fg,#f8f8f2);font:500 13.5px/1 'Space Grotesk',system-ui,sans-serif;text-align:left;cursor:pointer}
+.menu-hefesto button:hover{background:rgba(189,147,249,.14)}
+.menu-hefesto button[disabled]{color:var(--texto-mudo,#9a9eb8);opacity:.55;cursor:default;background:transparent}
+.menu-hefesto hr{border:0;border-top:1px solid var(--border-sutil,#343746);margin:5px 4px}
 </style>
 </head>
 <body data-campo="nativo" data-hef-alvo="classe" data-hef-classe="nativo" data-hef-quando="sim">
@@ -1276,18 +1321,13 @@
       <span class="so-no-nativo" title="Com o Hefesto desligado, o jogo manda: aqui só se vê quem está conectado."></span>
     </div>
     <div class="conectado"><span class="bolinha">●</span> <b data-campo="conta-b">1 USB · 1 BT</b></div>
-    <div class="perfil-ativo">
+    <div class="perfil-ativo" data-dica="Tudo o que você mudar cai neste perfil ao salvar">
       <span class="pa-rot">Perfil ativo</span>
       <span class="pa-nome" data-campo="perfil">—</span>
       <!-- `tabindex` de 07/09/2026: este `?` está no CABEÇALHO, logo nas dez
            abas, e explica onde o "Salvar perfil" grava. Sem ele o `<span>` não
            recebe foco e o `el.click()` do controle não o abria em aba nenhuma. -->
-      <span data-todo="10" class="ajuda" tabindex="0">?<span class="dica" style="left:auto;right:22px">
-        Tudo o que você mudar em qualquer aba cai <b>neste</b> perfil quando clicar em
-        <b>Salvar perfil</b>.<br><br>
-        Cada controle guarda a <b>sua</b> configuração aqui dentro, pelo ID da peça — amanhã,
-        em outra porta ou no rádio, ele traz de volta o que você deixou hoje.
-      </span></span>
+
     </div>
   </div>
 
@@ -1299,7 +1339,7 @@
     <a class="aba" href="04-iluminacao.html">Iluminação</a>
     <a class="aba" href="05-vibracao.html">Vibração</a>
     <a class="aba" href="06-navegacao.html">Navegação</a>
-    <a class="aba" href="07-lancadores.html">Lançadores</a>
+    <a class="aba" href="07-lancadores.html">Experimental</a>
     <a class="aba" href="08-conexoes.html">Conexões</a>
     <a class="aba ativa" href="09-sistema.html">Sistema</a>
     <a class="aba" href="10-perfis.html">Perfis</a>
@@ -1310,11 +1350,8 @@
 
     <div class="quadro estica">
       <div class="quadro-topo">
-        <span class="quadro-titulo">Sistema</span>
-        <span data-todo="10" class="ajuda">?<span class="dica">
-          Esta aba é sobre o computador, não sobre um controle. Por isso a fita de controles
-          está apagada aqui.
-        </span></span>
+        <span class="quadro-titulo" data-dica="Esta aba é do computador, não de um controle">Sistema</span>
+
       </div>
       <div class="quadro-corpo">
 
@@ -1322,10 +1359,10 @@
         <!-- O RÓTULO DO EXAME E A CONTAGEM SAÍRAM, E O LUGAR FICA VAZIO — pedido, 25/09/2026, 22h13: «remove o exame de hoje e tooltip dele» e
              «Remove esse 8 linhas deixa o espaço vazio». O `<span>` vazio segura
              a terceira faixa: nada sobe, e o exame continua onde estava. -->
-        <div class="sec-rot sr-status3 seis" data-todo="1">
-          <span>Status <span data-todo="10" class="ajuda">?<span class="dica">Como o Hefesto está agora neste computador. Uma linha que falha fica em vermelho até se curar.</span></span></span>
+        <div class="sec-rot sr-status3 seis">
+          <span data-todo="1" data-dica="Linha que falha fica vermelha até se curar">Status</span>
         </div>
-        <div class="status3 seis" data-todo="1">
+        <div class="status3 seis">
           <div class="col-lista" data-id="status-lista" data-campo="status-lista" data-hef-alvo="html">
             <div class="saude" data-id="hefesto-estado"><span class="selo ok"><span class="sg">✓</span>LIGADO</span><span class="txt" title="Roda por trás e volta sozinho se travar."><span>Serviço</span></span></div>
             <div class="saude" data-id="hefesto-troca-de-perfil"><span class="selo ok"><span class="sg">✓</span>LIGADO</span><span class="txt" title="O perfil do jogo entra sozinho quando ele abre."><span>Troca de perfil ao abrir o jogo</span></span></div>
@@ -1343,40 +1380,42 @@
         </div>
 
         <!-- ---------- 2. CONFIGURAÇÕES AVANÇADAS ---------- -->
-        <div class="sec-grupo com-tamanho"><span class="quadro-titulo">Configurações avançadas</span><span class="tamanho" data-todo="9">Tamanho da interface <span class="seg" data-id="tamanho-da-interface"><button class="on" data-gesto="tamanho-da-interface" data-v="100" title="O tamanho de hoje.">100 %</button><button data-gesto="tamanho-da-interface" data-v="125" title="Letras e botões maiores, em toda aba.">125 %</button><button data-gesto="tamanho-da-interface" data-v="150" title="Letras e botões maiores ainda, em toda aba.">150 %</button></span></span></div>
-        <div class="sec-rot sr-avancadas tres">
-          <span>Serviço <span data-todo="10" class="ajuda">?<span class="dica">Parar aqui não é o mesmo que desligar o Hefesto na aba Jogar: lá ele só sai do meio do jogo.</span></span></span><span></span>
-          <span>Perfil global de bateria <span data-todo="10" class="ajuda">?<span class="dica">Vale para todos os controles, e cada um pode ter o seu na aba Conexões.</span></span></span><span></span>
-          <span data-todo="2">Saúde do app <span data-todo="10" class="ajuda">?<span class="dica">Verde é ligado. Clique para trocar; clique duas vezes num ligado para aplicar agora.</span></span></span>
+        <div class="sec-grupo com-tamanho"><span class="quadro-titulo">Configurações avançadas</span></div>
+        <div class="sec-rot sr-avancadas quatro" data-todo="4">
+          <span data-todo="2" data-dica="Parar desliga o serviço inteiro, não só o jogo">Funcionamento do app</span><span></span>
+          <span data-todo="3" data-dica="O tamanho das letras e dos botões, em toda aba">Interface</span><span></span>
+          <span data-dica="Vale para todos; cada controle pode ter o seu em Conexões">Perfil global de bateria</span><span></span>
+          <span data-dica="Verde é ligado. Clique para trocar">Saúde do app</span>
         </div>
-        <div class="avancadas tres">
+        <div class="avancadas quatro">
           <div class="coluna col-servico">
-            <button class="btn vermelho" title="O Hefesto deixa de rodar e os controles viram gamepads comuns. Pergunta antes." data-gesto="parar-ou-retomar" data-campo="parar-ou-retomar-verde" data-hef-alvo="classe" data-hef-classe="verde">Parar o serviço</button>
-            <button class="btn" title="Manda o serviço reler os atalhos do controle e os arquivos que a Steam usa para abrir os jogos. Leva alguns segundos." data-gesto="atualizar" data-hef-em-voo="Atualizando…">Atualizar</button>
-            <button class="btn so-avulso" title="O serviço está rodando por fora do sistema, e ali reiniciar não funciona. Este botão o faz subir do jeito certo." data-gesto="corrigir-modo" data-campo="corrigir-modo-quando" data-hef-alvo="classe" data-hef-classe="mostra">Corrigir o serviço</button>
-            <div class="acao"><button class="btn" data-campo="reiniciar-razao" data-hef-alvo="classe" data-hef-classe="apagado" data-hef-atributo="aria-disabled" data-gesto="reiniciar" title="Para e liga de novo o serviço. Resolve a maioria dos travamentos, e nenhum ajuste seu se perde.">Reiniciar</button><span data-todo="10" class="ajuda porque" tabindex="0">?<span class="dica" data-campo="reiniciar-razao" data-hef-alvo="html"><i class="nada"></i></span></span></div>
+            <button class="btn vermelho" data-dica="Os controles viram gamepads comuns. Pergunta antes" data-gesto="parar-ou-retomar" data-campo="parar-ou-retomar-verde" data-hef-alvo="classe" data-hef-classe="verde">Parar o serviço</button>
+            <button class="btn" data-dica="Relê os atalhos e os arquivos da Steam" data-gesto="atualizar" data-hef-em-voo="Atualizando…">Atualizar</button>
+            <button class="btn so-avulso" data-dica="Faz o serviço subir do jeito certo" data-gesto="corrigir-modo" data-campo="corrigir-modo-quando" data-hef-alvo="classe" data-hef-classe="mostra">Corrigir o serviço</button>
+            <div class="acao"><button class="btn" data-campo="reiniciar-razao" data-hef-alvo="classe" data-hef-classe="apagado" data-hef-atributo="aria-disabled" data-gesto="reiniciar" data-dica="Para e liga de novo; nenhum ajuste se perde">Reiniciar</button></div>
+          </div>
+          <div class="risco"></div>
+          <div class="coluna" data-todo="3">
+            <div class="seg bat-perfis" data-id="tamanho-da-interface"><button class="on" data-gesto="tamanho-da-interface" data-v="100" data-dica="O tamanho de hoje">Padrão</button><button data-gesto="tamanho-da-interface" data-v="125" data-dica="Letras e botões maiores">Confortável</button><button data-gesto="tamanho-da-interface" data-v="150" data-dica="Letras e botões maiores ainda">Espaçoso</button></div>
           </div>
           <div class="risco"></div>
           <div class="coluna">
-            <div class="seg bat-perfis" data-id="bateria-perfil"><button class="on" data-gesto="perfil-da-mesa" data-v="tudo_ligado" data-campo="bateria-perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="tudo_ligado" title="Perfil máximo: nada é limitado. Vale para todos os controles — cada um pode ter o seu na aba Conexões.">Perfil máximo</button><button class="" data-gesto="perfil-da-mesa" data-v="bateria_longa" data-campo="bateria-perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="bateria_longa" title="Perfil econômico: vibração em 30% da força. Vale para todos os controles.">Perfil econômico</button><button class="" data-gesto="perfil-da-mesa" data-v="eu_escolho" data-campo="bateria-perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="eu_escolho" title="Personalizado: nada é limitado. Vale para todos os controles — cada um pode ter o seu na aba Conexões.">Personalizado</button></div>
+            <div class="seg bat-perfis" data-id="bateria-perfil"><button class="on" data-gesto="perfil-da-mesa" data-v="tudo_ligado" data-campo="bateria-perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="tudo_ligado" data-dica="Nada é limitado">Perfil máximo</button><button class="" data-gesto="perfil-da-mesa" data-v="bateria_longa" data-campo="bateria-perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="bateria_longa" data-dica="Vibração em 30% da força">Perfil econômico</button><button class="" data-gesto="perfil-da-mesa" data-v="eu_escolho" data-campo="bateria-perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="eu_escolho" data-dica="Você escolhe em cada aba">Personalizado</button></div>
           </div>
           <div class="risco"></div>
-          <div class="saude-app" data-todo="2">
-            <button class="cadeado ligada" data-todo="3" title="Conserta sozinho o que o Doctor acha. Clique duas vezes para consertar agora." data-gesto="correcao-pelo-doctor" data-campo="correcao-pelo-doctor" data-hef-alvo="classe" data-hef-classe="ligada"><span class="p"></span>Permitir correção pelo Doctor</button>
-            <button class="cadeado ligada" data-todo="4" title="Cada jogo novo instalado recebe o lançador do Hefesto. O que você escreveu na opção de lançamento fica." data-gesto="lancadores-no-jogo-novo" data-campo="lancadores-no-jogo-novo" data-hef-alvo="classe" data-hef-classe="ligada"><span class="p"></span>Aplicar nos lançadores a cada jogo novo</button>
-            <button class="cadeado ligada" title="Liga o serviço junto com o computador. Clique para trocar." data-gesto="autostart" data-campo="hefesto-autostart" data-hef-alvo="classe" data-hef-classe="ligada"><span class="p"></span>Iniciar com o sistema</button>
-            <button class="cadeado ligada" title="Mantém os jogos na versão do Proton que faz o controle vibrar e tocar som, e leva à lixeira as versões que nenhum jogo usa. Clique para trocar, com a Steam fechada." data-gesto="fixar-proton" data-campo="proton-fixado" data-hef-alvo="classe" data-hef-classe="ligada"><span class="p"></span>Fixar Proton</button>
-            <button class="cadeado" title="Tira dos jogos a sobreposição e o gravador de shaders da Steam. Sem eles, o Shift+Tab da Steam some e ela não guarda os shaders do jogo. Vale no próximo jogo que abrir." data-gesto="corrigir-vulkan" data-campo="vulkan-corrigido" data-hef-alvo="classe" data-hef-classe="ligada"><span class="p"></span>Corrigir Vulkan</button>
-            <button class="btn vermelho" data-todo="5" title="Devolve o perfil de fábrica e o padrão do computador. Pergunta antes, e os seus perfis salvos ficam." data-gesto="restaurar-de-fabrica">Restaurar de fábrica</button>
+          <div class="saude-app">
+            <button class="cadeado ligada" data-todo="5" data-dica="Fixa o Proton, corrige o Vulkan e prepara cada jogo novo" data-gesto="correcoes-automaticas" data-campo="correcoes-automaticas" data-hef-alvo="classe" data-hef-classe="ligada"><span class="p"></span>Permitir correções automáticas</button>
+            <button class="cadeado ligada" data-todo="6" data-dica="Liga o serviço junto com o computador" data-gesto="autostart" data-campo="hefesto-autostart" data-hef-alvo="classe" data-hef-classe="ligada"><span class="p"></span>Iniciar com o sistema</button>
+            <button class="btn vermelho borda-vermelha" data-todo="7" data-dica="Volta ao padrão; seus perfis salvos ficam. Pergunta antes" data-gesto="restaurar-de-fabrica">Restaurar de fábrica</button>
           </div>
         </div>
 
         <!-- ---------- 3. DETALHES TÉCNICOS ---------- -->
         <div class="sec-rot sr-log sec-alta">
-          <span>Detalhes técnicos <span data-todo="10" class="ajuda">?<span class="dica">O registro do serviço, sempre à vista. Copie para relatar um problema.</span></span></span>
-          <span><button class="btn copiar" title="Copia o registro inteiro para colar num relato." data-gesto="copiar-registro">Copiar</button><button class="btn copiar" data-todo="6" title="Guarda o registro num arquivo." data-gesto="salvar-registro">Salvar</button></span>
+          <span data-dica="O registro do serviço; copie para relatar um problema">Detalhes técnicos</span>
+          <span><button class="btn copiar" data-dica="Copia o registro inteiro" data-gesto="copiar-registro">Copiar</button><button class="btn copiar" data-dica="Guarda o registro num arquivo" data-gesto="salvar-registro">Salvar</button></span>
         </div>
-        <div class="registro" data-todo="7">
+        <div class="registro">
           <div class="log" data-id="registro-texto" data-campo="registro-texto" data-hef-rolar="fim">[23:41:02] daemon pronto · 2 controles · 2 gamepads virtuais · controle virtual ok
 [23:41:02] p1 usb · p2 bt · fw 0x0356 nos 2 · cor de fábrica lida (p1, p2)
 [23:41:07] exame: steam input desligado em 2 jogos · proton 9.0-4 fixado em 3
@@ -1417,7 +1456,7 @@
          Aplicar e de Importar é o do produto, lido do `.glade`, não redigido aqui.
 
          `title=` e não a `.dica` da casa: a `.dica` precisa do embrulho
-         `<span data-todo="10" class="ajuda">?…</span>`, que existe para o ícone de interrogação —
+         `<span class="ajuda">?…</span>`, que existe para o ícone de interrogação —
          num botão ela viraria um "?" ao lado do rótulo, que não é o que o usuário pediu.
          `title=` é o que o `.glade` faz, e é o que já se usa em botão nesta casa
          (`aba09.py`).
@@ -1451,47 +1490,53 @@
 
 <!-- ===== fim da aba ===== -->
 
-<style data-todo-css="menu-do-botao-direito">
-  .todo-menu{position:fixed;z-index:9999;display:none;min-width:168px;padding:4px;
-    border:1px solid var(--border-forte);border-radius:8px;background:var(--elevated);
-    box-shadow:0 6px 18px rgba(0,0,0,.45);font-family:'Space Grotesk',system-ui,sans-serif;font-size:13px}
-  .todo-menu.aberto{display:block}
-  .todo-menu button{display:block;width:100%;height:28px;padding:0 14px;border:0;border-radius:5px;
-    background:transparent;color:var(--fg);font:inherit;text-align:left;cursor:pointer}
-  .todo-menu button:hover{background:var(--sel-bg)}
-  .todo-menu button[aria-disabled="true"]{color:var(--texto-mudo);cursor:default;background:transparent}
-  .todo-menu hr{border:0;border-top:1px solid var(--border-sutil);margin:4px 2px}
-</style>
-<div class="todo-menu aberto" id="todo-menu-direito" data-todo="8" role="menu" aria-label="Menu do Hefesto"
-     style="left:760px;top:560px"
-     title="O menu de verdade é o do sistema, no tema do COSMIC; aqui ele aparece aberto só para se ver.">
-  <button role="menuitem" data-item="copiar" aria-disabled="true">Copiar</button>
-  <hr>
-  <button role="menuitem" data-item="atualizar">Atualizar</button>
-  <button role="menuitem" data-item="ligar-desligar" title="Faz o mesmo que o Desligado da bandeja e da aba Jogar: o Hefesto sai da frente do jogo, que passa a ler o controle direto (modo nativo). O serviço segue de pé.">Desligar</button>
-  <button role="menuitem" data-item="reiniciar">Reiniciar</button>
-  <hr>
-  <button role="menuitem" data-item="fechar">Fechar</button>
+
+<div class="menu-hefesto" id="menu-desenhado" role="menu" aria-label="Menu do Hefesto" data-todo="9" hidden style="left:820px;top:500px">
+  <button role="menuitem" disabled>Copiar</button><hr>
+  <button role="menuitem">Atualizar</button>
+  <button role="menuitem" data-dica="O Hefesto sai da frente e o jogo lê o controle direto">Desligar</button>
+  <button role="menuitem">Reiniciar</button><hr><button role="menuitem">Fechar</button>
 </div>
-<script data-todo="8">
+<script>/* O menu desenhado aberto só na foto do menu: abra a página com #menu. */
+if (location.hash === '#menu') document.getElementById('menu-desenhado').hidden = false;</script>
+<script id="base-comum">
+/* Base comum das abas (rodada 2): a dica no hover e o menu do botão direito. Copiada IGUAL em todo mockup. */
 (() => {
-  const m = document.getElementById('todo-menu-direito');
-  const rotulo = () => {
-    const desligado = document.body.classList.contains('nativo') || !!document.querySelector('#hef-desligado:checked');
-    { const ld = m.querySelector('[data-item="ligar-desligar"]'); ld.textContent = desligado ? 'Ligar' : 'Desligar'; ld.title = desligado ? 'Faz o mesmo que o Ligado da bandeja e da aba Jogar: liga o serviço se estiver parado e volta a entregar o controle ao jogo pelo Hefesto.' : 'Faz o mesmo que o Desligado da bandeja e da aba Jogar: o Hefesto sai da frente do jogo, que passa a ler o controle direto (modo nativo). O serviço segue de pé.'; }
+  const dica = document.createElement('div'); dica.id = 'hef-dica'; dica.setAttribute('role', 'tooltip');
+  document.addEventListener('DOMContentLoaded', () => document.body.append(dica));
+  let alvo = null;
+  const mostrar = el => {
+    alvo = el; dica.textContent = el.dataset.dica;
+    if (!dica.isConnected) document.body.append(dica);
+    const r = el.getBoundingClientRect(), d = dica.getBoundingClientRect();
+    let x = r.left + r.width / 2 - d.width / 2, y = r.bottom + 8;
+    if (y + d.height > innerHeight - 6) y = r.top - d.height - 8;
+    dica.style.left = Math.max(6, Math.min(x, innerWidth - d.width - 6)) + 'px'; dica.style.top = y + 'px';
+    dica.classList.add('visivel');
   };
-  document.addEventListener('contextmenu', (e) => {
+  const esconder = () => { alvo = null; dica.classList.remove('visivel'); };
+  for (const [ev, f] of [['mouseover', 'in'], ['focusin', 'in'], ['mouseout', 'out'], ['focusout', 'out']])
+    document.addEventListener(ev, e => {
+      const el = e.target.closest && e.target.closest('[data-dica]');
+      if (f === 'in' && el && el !== alvo) mostrar(el);
+      if (f === 'out' && el && !el.contains(e.relatedTarget)) esconder();
+    });
+  // O menu do botão direito: Copiar (cinza sem seleção), Atualizar, Desligar/Ligar, Reiniciar, Fechar.
+  document.addEventListener('contextmenu', e => {
     e.preventDefault();
-    m.querySelector('[data-item="copiar"]').setAttribute('aria-disabled', String(!String(getSelection()).trim()));
-    rotulo();
-    m.classList.add('aberto');
-    m.style.left = Math.min(e.clientX, innerWidth - m.offsetWidth - 8) + 'px';
-    m.style.top = Math.min(e.clientY, innerHeight - m.offsetHeight - 8) + 'px';
+    document.querySelectorAll('.menu-hefesto.vivo').forEach(m => m.remove());
+    const m = document.createElement('div'); m.className = 'menu-hefesto vivo'; m.setAttribute('role', 'menu');
+    const sel = String(getSelection()).trim() !== '';
+    m.innerHTML = `<button role="menuitem" ${sel ? '' : 'disabled'}>Copiar</button><hr>
+      <button role="menuitem">Atualizar</button>
+      <button role="menuitem" data-dica="O Hefesto sai da frente e o jogo lê o controle direto">Desligar</button>
+      <button role="menuitem">Reiniciar</button><hr><button role="menuitem">Fechar</button>`;
+    document.body.append(m);
+    const r = m.getBoundingClientRect();
+    m.style.left = Math.min(e.clientX, innerWidth - r.width - 6) + 'px';
+    m.style.top = Math.min(e.clientY, innerHeight - r.height - 6) + 'px';
   });
-  document.addEventListener('click', (e) => { if (!m.contains(e.target)) m.classList.remove('aberto'); rotulo(); });
-  document.addEventListener('change', rotulo);
-  rotulo();
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') m.classList.remove('aberto'); });
+  document.addEventListener('click', e => { if (!e.target.closest('.menu-hefesto')) document.querySelectorAll('.menu-hefesto.vivo').forEach(m => m.remove()); });
 })();
 </script>
 </body>

@@ -1,162 +1,197 @@
 {
- "aba": "01",
- "nome": "Jogar",
- "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/_integra-1-11/src/hefesto_dualsense4unix/interface/paginas/01-jogar.html",
- "depois": "~/.local/state/hefesto-casa/leva-volta/todo/01-jogar.html",
- "mudancas": [
-  {
-   "n": 1,
-   "sprint": "O-POINT-AND-CLICK-FICA-NO-LIGADO-E-A-NAVEGACAO-NO-DESLIGADO-01",
-   "o_que_muda": "No Ligado, o terceiro modo «Navegação» vira «Point and click», com a dica do perfil de point and click da aba Navegação.",
-   "origem": "recomendada-a-escolher",
-   "ancora": ".hef-modo.so-ligado [data-degrau=pointclick]",
-   "conflito": null
+  "aba": "01",
+  "nome": "Jogar",
+  "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/_integra-1-11/src/hefesto_dualsense4unix/interface/paginas/01-jogar.html",
+  "depois": "/home/vitoriamaria/.local/state/hefesto-casa/leva-volta/todo/01-jogar.html",
+  "rodada": 2,
+  "sprint_unificada": "A-ABA-JOGAR-DO-TODO-01",
+  "mudancas": [
+    {
+      "n": 1,
+      "sprint": "A-BASE-COMUM-DAS-ABAS-01",
+      "o_que_muda": "Sem «?»: a dica aparece no mouse ou no foco",
+      "resposta": "todo-01-5",
+      "origem": "RODADA-2 §A1",
+      "ancora": "[data-dica]",
+      "conflito": ""
+    },
+    {
+      "n": 2,
+      "sprint": "A-ABA-JOGAR-DO-TODO-01",
+      "o_que_muda": "Ligado: o terceiro modo vira «Point and click»",
+      "resposta": "todo-01-1",
+      "origem": "RODADA-2 §01",
+      "ancora": "[data-todo=\"2\"]",
+      "conflito": ""
+    },
+    {
+      "n": 3,
+      "sprint": "A-ABA-JOGAR-DO-TODO-01",
+      "o_que_muda": "Desligado: «Navegação» é o terceiro chip",
+      "resposta": "todo-01-2",
+      "origem": "RODADA-2 §B T2",
+      "ancora": "[data-todo=\"3\"]",
+      "conflito": "",
+      "estado": "desligado"
+    },
+    {
+      "n": 4,
+      "sprint": "A-ABA-JOGAR-DO-TODO-01",
+      "o_que_muda": "Uma dica curta em cada chip do Desligado",
+      "resposta": "todo-01-4",
+      "origem": "RODADA-2 §01",
+      "ancora": ".so-desligado .degrau",
+      "conflito": "",
+      "estado": "desligado"
+    },
+    {
+      "n": 5,
+      "sprint": "A-ABA-JOGAR-DO-TODO-01",
+      "o_que_muda": "A linha da Navegação sai; vira só dica",
+      "resposta": "todo-01-3",
+      "origem": "RODADA-2 §01",
+      "ancora": "[data-todo=\"3\"]",
+      "conflito": "",
+      "estado": "desligado"
+    },
+    {
+      "n": 6,
+      "sprint": "A-ABA-JOGAR-DO-TODO-01",
+      "o_que_muda": "Todo alvo clicável tem no mínimo 24 px",
+      "resposta": "todo-01-5",
+      "origem": "RODADA-2 §01",
+      "ancora": "[data-gesto]",
+      "conflito": ""
+    },
+    {
+      "n": 7,
+      "sprint": "A-ABA-JOGAR-DO-TODO-01",
+      "o_que_muda": "Modo Freestyle volta; Modo automático sai desta aba",
+      "resposta": "todo-01-7",
+      "origem": "RODADA-2 §A5",
+      "ancora": "[data-todo=\"6\"]",
+      "conflito": ""
+    },
+    {
+      "n": 8,
+      "sprint": "A-ABA-JOGAR-DO-TODO-01",
+      "o_que_muda": "Nativo branco, Steam ciano: a cor em que a luz pisca",
+      "resposta": "todo-01-2",
+      "origem": "RODADA-2 §B T2",
+      "ancora": "[data-todo=\"7\"]",
+      "conflito": "",
+      "estado": "desligado"
+    },
+    {
+      "n": 9,
+      "sprint": "A-BASE-COMUM-DAS-ABAS-01",
+      "o_que_muda": "Botão direito abre o menu do Hefesto",
+      "resposta": "todo-01-6",
+      "origem": "RODADA-2 §A3",
+      "ancora": ".menu-hefesto",
+      "conflito": ""
+    }
+  ],
+  "estados": {
+    "desligado": "document.querySelector('#hef-desligado').click()",
+    "menu": "window.MX=880;window.MY=540;(() => { const x = window.MX || 960, y = window.MY || 560;\n  document.elementFromPoint(x, y).dispatchEvent(new MouseEvent('contextmenu', {bubbles: true, clientX: x, clientY: y}));\n  const d = [...document.querySelectorAll('.menu-hefesto button')].find(b => b.textContent.trim() === 'Desligar');\n  d.dispatchEvent(new MouseEvent('mouseover', {bubbles: true})); })()\n"
   },
-  {
-   "n": 2,
-   "sprint": "O-POINT-AND-CLICK-FICA-NO-LIGADO-E-A-NAVEGACAO-NO-DESLIGADO-01",
-   "o_que_muda": "No Desligado entra o terceiro modo «Navegação» (o controle vira mouse e teclado, nenhum jogo recebe controle). Com o Desligado escolhido, a cena o mostra aceso.",
-   "origem": "recomendada-a-escolher",
-   "ancora": ".hef-modo.so-desligado [data-degrau=navegacao]",
-   "conflito": null
-  },
-  {
-   "n": 3,
-   "sprint": "O-POINT-AND-CLICK-FICA-NO-LIGADO-E-A-NAVEGACAO-NO-DESLIGADO-01",
-   "o_que_muda": "Com a Navegação do Desligado acesa aparece a linha «O Hefesto segue lendo o controle para mover o mouse».",
-   "origem": "recomendada-a-escolher",
-   "ancora": ".todo-linha-da-navegacao",
-   "conflito": null
-  },
-  {
-   "n": 4,
-   "sprint": "O-POINT-AND-CLICK-FICA-NO-LIGADO-E-A-NAVEGACAO-NO-DESLIGADO-01",
-   "o_que_muda": "A dica do Status e o title do Desligado passam a contar os três caminhos: Nativo, Steam Input e Navegação.",
-   "origem": "desenho-nosso-a-validar",
-   "ancora": "label[for=hef-desligado] e o ? do Status",
-   "conflito": null
-  },
-  {
-   "n": 5,
-   "sprint": "OS-ALVOS-E-A-LETRA-CRESCEM-E-A-INTERFACE-GANHA-TAMANHO-01",
-   "o_que_muda": "Os ? passam de 17 a 24 px e todo alvo com data-gesto ganha altura mínima de 24 px; a letra fica.",
-   "origem": "recomendada-a-escolher",
-   "ancora": "#todo-alvos e .ajuda",
-   "conflito": null
-  },
-  {
-   "n": 6,
-   "sprint": "O-BOTAO-DIREITO-ABRE-O-MENU-DO-HEFESTO-EM-TODA-ABA-01",
-   "o_que_muda": "Menu do botão direito (Copiar, Atualizar, Desligar/Ligar, Reiniciar, Fechar), desenhado aberto embaixo do quadro, à direita. Ordem dela de 12/10: o «Desligar/Ligar» faz o mesmo que o Desligado/Ligado da bandeja (o mesmo plano de IPC da aba Jogar: o Hefesto sai da frente e o jogo lê o controle direto, em modo nativo; o serviço segue de pé; o Ligar sobe o serviço se estiver parado), e a dica do item diz isso.",
-   "origem": "recomendada-a-escolher",
-   "ancora": "#todo-menu-direito",
-   "conflito": null
-  },
-  {
-   "n": 7,
-   "sprint": "ordem dela de 12/10, 14h40 (sprint a escrever: O-MODO-AUTOMATICO-E-UM-BOTAO-SO-01)",
-   "o_que_muda": "No lugar do botão Modo Freestyle, o botão único «Modo automático», do mesmo tipo (pílula com a bolinha). Ligado: o jogo escolhe o modo pelo perfil dele, e a lista de modos fica apagada. Desligado: vale o modo marcado. O botão é ciano escuro com a letra branca nos dois estados (resposta sua de 12/10); ligado, o fundo clareia, o contorno acende e a bolinha enche.",
-   "origem": "ordem-dela-12-10",
-   "ancora": ".modo-auto[data-gesto=modo-automatico]",
-   "conflito": null
-  }
- ],
- "por_baixo": [
-  {
-   "sprint": "O-CONTROLE-E-O-VPAD-DELE-SE-CASAM-PELO-ENDERECO-01",
-   "o_que_muda": "Implementada na fds (74e4a53da): o cartão casa controle e vpad pelo endereço; o texto não muda."
-  },
-  {
-   "sprint": "A-INTERFACE-INTEIRA-SE-ALCANCA-PELO-CONTROLE-E-PELO-TECLADO-01",
-   "o_que_muda": "Foco e atributos de navegação; o desenho não muda."
-  },
-  {
-   "sprint": "O-NUMERO-DA-BARRA-NAO-CONGELA-NO-VALOR-VELHO-01",
-   "o_que_muda": "O número ao lado da barra acompanha o valor vivo."
-  },
-  {
-   "sprint": "A-ALTURA-E-A-LARGURA-DA-JANELA-NAO-PULSAM-01",
-   "o_que_muda": "A janela não muda de tamanho sozinha."
-  },
-  {
-   "sprint": "A-JANELA-REGISTRA-O-PROPRIO-TAMANHO-E-O-MOTIVO-DE-FECHAR-01",
-   "o_que_muda": "Registro do tamanho e do motivo de fechar, no log."
-  },
-  {
-   "sprint": "FECHAR-A-JANELA-DEVOLVE-O-QUE-AS-ABAS-SEGURAVAM-01",
-   "o_que_muda": "Fechar a janela solta o que as abas seguravam (implementada na fds, voo/parar-fds)."
-  },
-  {
-   "sprint": "O-TEMA-DE-CORES-ENTRA-PELA-FOLHA-DE-USUARIO-01",
-   "o_que_muda": "Sem tema de modificação nada muda; as peças novas só usam tokens do :root (em voo na voo/lancadores-fds)."
-  },
-  {
-   "sprint": "CADA-FEATURE-TEM-UM-DONO-SO-NA-INTERFACE-01",
-   "o_que_muda": "Nada sai destas abas: a 01 só ativa o point and click, a 02 é dona do liga e do lado do analógico virtual."
-  }
- ],
- "fora": [
-  {
-   "sprint": "STEAM-INPUT-01",
-   "motivo": "Já no antes (código no dev); espera a bancada."
-  },
-  {
-   "sprint": "O-MODO-QUE-NAO-SAI-DO-STEAM-INPUT-01",
-   "motivo": "Já no antes (código no dev); espera a bancada."
-  },
-  {
-   "sprint": "A-MIRA-NA-NAVEGACAO-01",
-   "motivo": "Já no antes (código no dev); espera a bancada."
-  },
-  {
-   "sprint": "NO-MODO-XBOX-TUDO-FUNCIONA-01",
-   "motivo": "Já no antes (código no dev); espera a bancada."
-  },
-  {
-   "sprint": "A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01",
-   "motivo": "Já no antes (código no dev); espera a bancada."
-  },
-  {
-   "sprint": "O-DESLIGADO-DEIXA-O-JOGO-DECIDIR-01",
-   "motivo": "Já no antes (código no dev); espera a bancada."
-  },
-  {
-   "sprint": "SO-A-PRIMEIRA-LETRA-E-MAIUSCULA-EM-TODA-ABA-01",
-   "motivo": "Já no antes (b3222fa9f); o selo ATIVO/DESLIGADO fica em caixa alta por ordem dela de 21/09."
-  },
-  {
-   "sprint": "O-COMENTARIO-COM-DOIS-PONTOS-SO-VALE-EM-CIMA-DE-ATRIBUICAO-01",
-   "motivo": "Só código (em voo na regras-fora)."
-  },
-  {
-   "sprint": "A-PALETA-MARCA-A-COR-DE-CADA-CONTROLE-01",
-   "motivo": "É da aba 04."
-  },
-  {
-   "sprint": "O-PARAR-CALA-O-TESTE-QUE-AINDA-ESTAVA-NO-AR-01",
-   "motivo": "Mudam comportamento ou outras abas (voo/parar-fds)."
-  },
-  {
-   "sprint": "OS-CORACOES-DA-VIBRACAO-NAO-SEGURAM-A-JANELA-01",
-   "motivo": "Mudam comportamento ou outras abas (voo/parar-fds)."
-  },
-  {
-   "sprint": "O-MODO-XBOX-NAO-E-QUEDA-02",
-   "motivo": "Já costurada na 1-11: está no antes."
-  },
-  {
-   "sprint": "SO-O-FREESTYLE-VALE-EM-TODO-JOGO-01",
-   "motivo": "Já costurada na 1-11: está no antes."
-  },
-  {
-   "sprint": "O-CARTAO-DO-EXTERNO-MOSTRA-O-QUE-ELA-DECLAROU-01",
-   "motivo": "Já costurada na 1-11: está no antes."
-  },
-  {
-   "sprint": "NO-DESLIGADO-A-STEAM-NAO-SE-METE-E-O-JOGO-MANDA-01",
-   "motivo": "Já costurada na 1-11: está no antes."
-  }
- ],
- "altura_px": 809,
- "rola": false
+  "por_baixo": [
+    {
+      "sprint": "O-CONTROLE-E-O-VPAD-DELE-SE-CASAM-PELO-ENDERECO-01",
+      "o_que_muda": "Implementada na fds (74e4a53da): o cartão casa controle e vpad pelo endereço; o texto não muda."
+    },
+    {
+      "sprint": "A-INTERFACE-INTEIRA-SE-ALCANCA-PELO-CONTROLE-E-PELO-TECLADO-01",
+      "o_que_muda": "Foco e atributos de navegação; o desenho não muda."
+    },
+    {
+      "sprint": "O-NUMERO-DA-BARRA-NAO-CONGELA-NO-VALOR-VELHO-01",
+      "o_que_muda": "O número ao lado da barra acompanha o valor vivo."
+    },
+    {
+      "sprint": "A-ALTURA-E-A-LARGURA-DA-JANELA-NAO-PULSAM-01",
+      "o_que_muda": "A janela não muda de tamanho sozinha."
+    },
+    {
+      "sprint": "A-JANELA-REGISTRA-O-PROPRIO-TAMANHO-E-O-MOTIVO-DE-FECHAR-01",
+      "o_que_muda": "Registro do tamanho e do motivo de fechar, no log."
+    },
+    {
+      "sprint": "FECHAR-A-JANELA-DEVOLVE-O-QUE-AS-ABAS-SEGURAVAM-01",
+      "o_que_muda": "Fechar a janela solta o que as abas seguravam (implementada na fds, voo/parar-fds)."
+    },
+    {
+      "sprint": "O-TEMA-DE-CORES-ENTRA-PELA-FOLHA-DE-USUARIO-01",
+      "o_que_muda": "Sem tema de modificação nada muda; as peças novas só usam tokens do :root (em voo na voo/lancadores-fds)."
+    },
+    {
+      "sprint": "CADA-FEATURE-TEM-UM-DONO-SO-NA-INTERFACE-01",
+      "o_que_muda": "Nada sai destas abas: a 01 só ativa o point and click, a 02 é dona do liga e do lado do analógico virtual."
+    }
+  ],
+  "fora": [
+    {
+      "sprint": "STEAM-INPUT-01",
+      "motivo": "Já no antes (código no dev); espera a bancada."
+    },
+    {
+      "sprint": "O-MODO-QUE-NAO-SAI-DO-STEAM-INPUT-01",
+      "motivo": "Já no antes (código no dev); espera a bancada."
+    },
+    {
+      "sprint": "A-MIRA-NA-NAVEGACAO-01",
+      "motivo": "Já no antes (código no dev); espera a bancada."
+    },
+    {
+      "sprint": "NO-MODO-XBOX-TUDO-FUNCIONA-01",
+      "motivo": "Já no antes (código no dev); espera a bancada."
+    },
+    {
+      "sprint": "A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01",
+      "motivo": "Já no antes (código no dev); espera a bancada."
+    },
+    {
+      "sprint": "O-DESLIGADO-DEIXA-O-JOGO-DECIDIR-01",
+      "motivo": "Já no antes (código no dev); espera a bancada."
+    },
+    {
+      "sprint": "SO-A-PRIMEIRA-LETRA-E-MAIUSCULA-EM-TODA-ABA-01",
+      "motivo": "Já no antes (b3222fa9f); o selo ATIVO/DESLIGADO fica em caixa alta por ordem dela de 21/09."
+    },
+    {
+      "sprint": "O-COMENTARIO-COM-DOIS-PONTOS-SO-VALE-EM-CIMA-DE-ATRIBUICAO-01",
+      "motivo": "Só código (em voo na regras-fora)."
+    },
+    {
+      "sprint": "A-PALETA-MARCA-A-COR-DE-CADA-CONTROLE-01",
+      "motivo": "É da aba 04."
+    },
+    {
+      "sprint": "O-PARAR-CALA-O-TESTE-QUE-AINDA-ESTAVA-NO-AR-01",
+      "motivo": "Mudam comportamento ou outras abas (voo/parar-fds)."
+    },
+    {
+      "sprint": "OS-CORACOES-DA-VIBRACAO-NAO-SEGURAM-A-JANELA-01",
+      "motivo": "Mudam comportamento ou outras abas (voo/parar-fds)."
+    },
+    {
+      "sprint": "O-MODO-XBOX-NAO-E-QUEDA-02",
+      "motivo": "Já costurada na 1-11: está no antes."
+    },
+    {
+      "sprint": "SO-O-FREESTYLE-VALE-EM-TODO-JOGO-01",
+      "motivo": "Já costurada na 1-11: está no antes."
+    },
+    {
+      "sprint": "O-CARTAO-DO-EXTERNO-MOSTRA-O-QUE-ELA-DECLAROU-01",
+      "motivo": "Já costurada na 1-11: está no antes."
+    },
+    {
+      "sprint": "NO-DESLIGADO-A-STEAM-NAO-SE-METE-E-O-JOGO-MANDA-01",
+      "motivo": "Já costurada na 1-11: está no antes."
+    }
+  ],
+  "altura_px": 809,
+  "rola": false
 }

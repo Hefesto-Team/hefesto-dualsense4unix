@@ -1,182 +1,272 @@
 {
- "aba": "03",
- "nome": "Gatilhos",
- "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/_integra-1-11/src/hefesto_dualsense4unix/interface/paginas/03-gatilhos.html",
- "depois": "~/.local/state/hefesto-casa/leva-volta/todo/03-gatilhos.html",
- "mudancas": [
-  {
-   "n": 1,
-   "sprint": "O-BOTAO-DIREITO-ABRE-O-MENU-DO-HEFESTO-EM-TODA-ABA-01",
-   "o_que_muda": "O botão direito abre o menu do Hefesto (Copiar, Atualizar, Desligar, Reiniciar, Fechar) no lugar do menu do WebKit; o mockup o mostra aberto num vazio da cena, e o Copiar fica cinza sem seleção. Ordem dela de 12/10: o «Desligar/Ligar» faz o mesmo que o Desligado/Ligado da bandeja (o mesmo plano de IPC da aba Jogar: o Hefesto sai da frente e o jogo lê o controle direto, em modo nativo; o serviço segue de pé; o Ligar sobe o serviço se estiver parado), e a dica do item diz isso.",
-   "origem": "recomendada-a-escolher",
-   "ancora": "#todo-menu-direito",
-   "conflito": "Duas perguntas do BRIEF-T6 abertas: menu do sistema (A, aplicado) ou desenhado (B); e o Desligar é o interruptor da aba Jogar (aplicado) ou o Parar do serviço da aba Sistema."
+  "aba": "03",
+  "nome": "Gatilhos",
+  "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/_integra-1-11/src/hefesto_dualsense4unix/interface/paginas/03-gatilhos.html",
+  "depois": "/home/vitoriamaria/.local/state/hefesto-casa/leva-volta/todo/03-gatilhos.html",
+  "rodada": 2,
+  "sprint_unificada": "A-ABA-GATILHOS-DO-TODO-01",
+  "mudancas": [
+    {
+      "n": 1,
+      "sprint": "A-BASE-COMUM-DAS-ABAS-01",
+      "o_que_muda": "Sem «?»: a dica aparece no mouse ou no foco",
+      "resposta": "todo-03-2",
+      "origem": "RODADA-2 §A1",
+      "ancora": "[data-dica]",
+      "conflito": ""
+    },
+    {
+      "n": 2,
+      "sprint": "A-BASE-COMUM-DAS-ABAS-01",
+      "o_que_muda": "Só o botão Modo automático, à direita",
+      "resposta": "todo-03-1",
+      "origem": "RODADA-2 §03",
+      "ancora": "[data-todo=\"1\"]",
+      "conflito": ""
+    },
+    {
+      "n": 3,
+      "sprint": "A-ABA-GATILHOS-DO-TODO-01",
+      "o_que_muda": "«Modo» vira «Efeito de acionamento»",
+      "resposta": "todo-05-1",
+      "origem": "RODADA-2 §G3",
+      "ancora": "[data-todo=\"2\"]",
+      "conflito": ""
+    },
+    {
+      "n": 4,
+      "sprint": "A-ABA-GATILHOS-DO-TODO-01",
+      "o_que_muda": "«Efeito pronto» vira «Efeito de imersão», com realismo por acionamento",
+      "resposta": "todo-05-1",
+      "origem": "RODADA-2 §G3",
+      "ancora": "[data-todo=\"3\"]",
+      "conflito": ""
+    },
+    {
+      "n": 5,
+      "sprint": "A-ABA-GATILHOS-DO-TODO-01",
+      "o_que_muda": "Os efeitos criados entram nas duas listas, em «Seus efeitos»",
+      "resposta": "todo-05-1",
+      "origem": "RODADA-2 §I",
+      "ancora": ".g2-cel select",
+      "conflito": ""
+    },
+    {
+      "n": 6,
+      "sprint": "A-ABA-GATILHOS-DO-TODO-01",
+      "o_que_muda": "Saem Nome, Guardar e Em todos da coluna",
+      "resposta": "todo-03",
+      "origem": "RODADA-2 §03",
+      "ancora": ".g2-grade",
+      "conflito": ""
+    },
+    {
+      "n": 7,
+      "sprint": "A-ABA-GATILHOS-DO-TODO-01",
+      "o_que_muda": "Saem as barras de ajuste de cada coluna",
+      "resposta": "todo-05-1",
+      "origem": "RODADA-2 §03",
+      "ancora": ".g2-grade",
+      "conflito": ""
+    },
+    {
+      "n": 8,
+      "sprint": "A-ABA-GATILHOS-DO-TODO-01",
+      "o_que_muda": "Área «Criar efeitos novos» embaixo do quadro",
+      "resposta": "todo-03",
+      "origem": "RODADA-2 §I",
+      "ancora": "[data-todo=\"4\"]",
+      "conflito": ""
+    },
+    {
+      "n": 9,
+      "sprint": "A-ABA-GATILHOS-DO-TODO-01",
+      "o_que_muda": "As barras moram embaixo, sempre ativas",
+      "resposta": "todo-05-1",
+      "origem": "RODADA-2 §03",
+      "ancora": "[data-todo=\"5\"]",
+      "conflito": ""
+    },
+    {
+      "n": 10,
+      "sprint": "A-ABA-GATILHOS-DO-TODO-01",
+      "o_que_muda": "Chip do controle com largura e altura dos campos",
+      "resposta": "todo-03",
+      "origem": "RODADA-2 §J",
+      "ancora": "[data-todo=\"6\"]",
+      "conflito": ""
+    },
+    {
+      "n": 11,
+      "sprint": "A-ABA-GATILHOS-DO-TODO-01",
+      "o_que_muda": "Tudo alinhado na horizontal, centrado em cada coluna",
+      "resposta": "todo-03",
+      "origem": "RODADA-2 §J",
+      "ancora": ".g2-grade",
+      "conflito": ""
+    },
+    {
+      "n": 12,
+      "sprint": "A-BASE-COMUM-DAS-ABAS-01",
+      "o_que_muda": "Botão direito abre o menu do Hefesto",
+      "resposta": "todo-03-1",
+      "origem": "RODADA-2 §A3",
+      "ancora": ".menu-hefesto",
+      "conflito": ""
+    }
+  ],
+  "estados": {
+    "automatico": "document.querySelector('.modo-auto').click()",
+    "menu": "window.MX=900;window.MY=262;(() => { const x = window.MX || 960, y = window.MY || 560;\n  document.elementFromPoint(x, y).dispatchEvent(new MouseEvent('contextmenu', {bubbles: true, clientX: x, clientY: y}));\n  const d = [...document.querySelectorAll('.menu-hefesto button')].find(b => b.textContent.trim() === 'Desligar');\n  d.dispatchEvent(new MouseEvent('mouseover', {bubbles: true})); })()\n"
   },
-  {
-   "n": 2,
-   "sprint": "OS-ALVOS-E-A-LETRA-CRESCEM-E-A-INTERFACE-GANHA-TAMANHO-01",
-   "o_que_muda": "Todo alvo pequeno chega a 24 px (WCAG 2.5.8), com a mesma letra: o ? passa de 17 a 24 px. Todo [data-gesto] tem no mínimo 24 px, como nas outras abas.",
-   "origem": "recomendada-a-escolher",
-   "ancora": "#todo-alvos; .ajuda; .par-modo",
-   "conflito": "A sprint espera o desenho e não tem recomendação: apliquei a opção 1 (alvos de 24 px, mesma letra). A letra mínima de 12 px e o Tamanho da interface do Sistema ficam para a escolha dela."
-  },
-  {
-   "n": 3,
-   "sprint": "ordem dela de 12/10, 14h40 (sprint a escrever: O-MODO-AUTOMATICO-E-UM-BOTAO-SO-01)",
-   "o_que_muda": "O par «Modo automático | Modo personalizado» e o ? dele dão lugar a um botão só, «Modo automático», do mesmo tipo do botão da aba Jogar. Ligado: o jogo controla os gatilhos e manda os efeitos dele, e as colunas ficam apagadas; desligado: vale o que está nas colunas. A explicação vai para a dica do botão. O botão é ciano escuro com a letra branca nos dois estados (resposta sua de 12/10); ligado, o fundo clareia, o contorno acende e a bolinha enche.",
-   "origem": "ordem-dela-12-10",
-   "ancora": ".modo-auto[data-gesto=modo-dos-gatilhos]",
-   "conflito": null
-  }
- ],
- "por_baixo": [
-  {
-   "sprint": "O-EM-TODOS-DO-GATILHO-CHEGA-A-CADA-CONTROLE-DA-MESA-01",
-   "o_que_muda": "Implementada na fds-1: o «Em todos» manda o efeito a cada controle da mesa, e o recado nomeia quem recebeu («Este efeito chegou ao Controle 1 e ao Controle 2…»). O botão não muda."
-  },
-  {
-   "sprint": "O-ESTILO-CHEGA-AO-GATILHO-E-A-VIBRACAO-DE-CADA-CONTROLE-01",
-   "o_que_muda": "Implementada na fds-1: o estilo do jogo chega ao gatilho de cada controle, P1 a P4."
-  },
-  {
-   "sprint": "O-PARAR-CALA-O-TESTE-QUE-AINDA-ESTAVA-NO-AR-01",
-   "o_que_muda": "Os gestos rodam na ordem do clique, na fila de cada controle."
-  },
-  {
-   "sprint": "OS-ANALOGICOS-DO-JOGO-GANHAM-ZONA-MORTA-CURVA-E-UMA-MAO-01",
-   "o_que_muda": "Os gatilhos ganham zona morta de início e de fim pelo módulo da curva; a tela da curva espera o desenho da O-POINT-AND-CLICK-E-A-ACESSIBILIDADE-SE-DEFINEM-NA-NAVEGACAO-01."
-  },
-  {
-   "sprint": "A-INTERFACE-INTEIRA-SE-ALCANCA-PELO-CONTROLE-E-PELO-TECLADO-01",
-   "o_que_muda": "Foco, Tab, Esc e o X do controle alcançam toda ação e o ?; só atributos, a foto não muda."
-  },
-  {
-   "sprint": "O-NUMERO-DA-BARRA-NAO-CONGELA-NO-VALOR-VELHO-01",
-   "o_que_muda": "O número da barra sai da alavanca quando o voo termina; o gesto lê a alavanca, nunca o texto."
-  },
-  {
-   "sprint": "A-ALTURA-E-A-LARGURA-DA-JANELA-NAO-PULSAM-01",
-   "o_que_muda": "A janela para de crescer e encolher sozinha (medir o 100dvh, o repinte e a folga do mudo)."
-  },
-  {
-   "sprint": "A-JANELA-REGISTRA-O-PROPRIO-TAMANHO-E-O-MOTIVO-DE-FECHAR-01",
-   "o_que_muda": "O registro guarda o tamanho da janela e o motivo de fechar."
-  },
-  {
-   "sprint": "O-TEMA-DE-CORES-ENTRA-PELA-FOLHA-DE-USUARIO-01",
-   "o_que_muda": "O tema entra pela folha de usuário; no tema padrão nada muda, e as peças novas usam só os tokens do :root."
-  }
- ],
- "fora": [
-  {
-   "sprint": "O-DESLIGADO-DEIXA-O-JOGO-DECIDIR-01",
-   "motivo": "Código feito na 1.5; falta a bancada dela. O desenho de 04/10 («O jogo decide» no gatilho, a frase «O jogo pinta por cima» na 04) foi trocado em 06/10 pelo par Modo automático | Modo personalizado (O-MODO-AUTOMATICO-E-O-PERSONALIZADO-01, já no publicado): vale o mais novo, e a tela não muda."
-  },
-  {
-   "sprint": "OS-TRES-CONTROLES-DE-FREQUENCIA-DA-ABA-GATILHOS-NO-DESENHO-01",
-   "motivo": "Absorvidas pela O-ESTILO-DO-JOGO-LIGA-A-IMERSAO-INTEIRA (escolha dela de 08/10): as barras viram receita invisível do estilo e não entram na tela."
-  },
-  {
-   "sprint": "A-ILUMINACAO-GANHA-A-REACAO-AO-TIRO-NO-DESENHO-01",
-   "motivo": "Absorvidas pela O-ESTILO-DO-JOGO-LIGA-A-IMERSAO-INTEIRA (escolha dela de 08/10): as barras viram receita invisível do estilo e não entram na tela."
-  },
-  {
-   "sprint": "O-TEXTO-DO-GATILHO-DIZ-O-QUE-O-CODIGO-FAZ-HOJE-01",
-   "motivo": "Só comentário e docstring do código."
-  },
-  {
-   "sprint": "O-COMENTARIO-COM-DOIS-PONTOS-SO-VALE-EM-CIMA-DE-ATRIBUICAO-01",
-   "motivo": "Só comentário e docstring do código."
-  },
-  {
-   "sprint": "A-TELA-SEM-O-QUE-A-REGUA-ACEITA-01",
-   "motivo": "Já no publicado da 1-11."
-  },
-  {
-   "sprint": "A-CRUA-SO-ANDA-COM-PROVA-DE-VERDADE-E-O-RC-DIZ-O-QUE-FALTA-01",
-   "motivo": "Já no publicado da 1-11."
-  },
-  {
-   "sprint": "A-GRACA-DO-JOGO-NAO-JOGA-FORA-O-PRIMEIRO-EFEITO-01",
-   "motivo": "Já no publicado da 1-11."
-  },
-  {
-   "sprint": "A-LINHA-DO-SALVAR-DIZ-O-GESTO-E-O-QUE-MUDOU-01",
-   "motivo": "Já no publicado da 1-11."
-  },
-  {
-   "sprint": "A-METRALHADORA-BATE-ENQUANTO-O-DEDO-APERTA-01",
-   "motivo": "Já no publicado da 1-11."
-  },
-  {
-   "sprint": "A-REGUA-DOS-EFEITOS-DO-GATILHO-LE-O-BLOCO-COMO-O-CONTROLE-LE-01",
-   "motivo": "Já no publicado da 1-11."
-  },
-  {
-   "sprint": "AS-CITACOES-CRUAS-E-O-TEXTO-ESPELHADO-ANDAM-COM-O-CODIGO-01",
-   "motivo": "Já no publicado da 1-11."
-  },
-  {
-   "sprint": "O-ARCO-E-O-GALOPE-MANDAM-O-MODO-QUE-O-CONTROLE-LE-01",
-   "motivo": "Já no publicado da 1-11."
-  },
-  {
-   "sprint": "O-DISPARO-E-A-ARMA-SEMI-AUTOMATICA-MANDAM-O-MODO-DE-ARMA-01",
-   "motivo": "Já no publicado da 1-11."
-  },
-  {
-   "sprint": "O-REGISTRO-DO-YML-ANDA-ANTES-DA-CARONA-01",
-   "motivo": "Já no publicado da 1-11."
-  },
-  {
-   "sprint": "O-CARTAO-ABERTO-DIZ-O-NUMERO-DO-JOGADOR-01",
-   "motivo": "Já no publicado da 1-11."
-  },
-  {
-   "sprint": "O-MODO-AUTOMATICO-E-O-PERSONALIZADO-01",
-   "motivo": "Já no publicado da 1-11."
-  },
-  {
-   "sprint": "CADA-FEATURE-TEM-UM-DONO-SO-NA-INTERFACE-01",
-   "motivo": "Nenhum dos casos dela cai nesta aba (são das 01, 02, 06, 07, 09, 10 e da Calibrar)."
-  },
-  {
-   "sprint": "SO-A-PRIMEIRA-LETRA-E-MAIUSCULA-EM-TODA-ABA-01",
-   "motivo": "Já no publicado da 1-11 (b3222fa9f); os rótulos novos nascem assim."
-  },
-  {
-   "sprint": "A-TELA-PERGUNTA-AO-DONO-01",
-   "motivo": "Já no publicado da 1-11."
-  },
-  {
-   "sprint": "O-SELECIONAR-ACENDE-QUEM-ESTA-ESCOLHIDO-01",
-   "motivo": "Já no publicado da 1-11."
-  },
-  {
-   "sprint": "A-NAVEGACAO-INTERNA-E-UM-MODO-QUE-SE-LIGA-EM-QUALQUER-ABA-01",
-   "motivo": "Já no publicado da 1-11."
-  },
-  {
-   "sprint": "DESLIGAR-O-HEFESTO-DEVOLVE-O-CONTROLE-AO-LINUX-01",
-   "motivo": "Já no publicado da 1-11."
-  },
-  {
-   "sprint": "O-SALVAR-E-O-APLICAR-LEEM-O-PERFIL-01",
-   "motivo": "Código na base desde a5da60f3d; falta só a prova no aparelho, que é dela. A tela não muda."
-  },
-  {
-   "sprint": "I18N-DA-TELA-NOVA-01",
-   "motivo": "Por ordem dela, a tradução é a última coisa, depois do release 1."
-  },
-  {
-   "sprint": "TRADUZIR-O-PROJETO-01",
-   "motivo": "Por ordem dela, a tradução é a última coisa, depois do release 1."
-  },
-  {
-   "sprint": "MESA-DE-QUATRO-01",
-   "motivo": "Bancada com os quatro controles; não muda a tela."
-  }
- ],
- "altura_px": 809,
- "rola": false
+  "por_baixo": [
+    {
+      "sprint": "O-ESTILO-CHEGA-AO-GATILHO-E-A-VIBRACAO-DE-CADA-CONTROLE-01",
+      "o_que_muda": "Implementada na fds-1: o estilo do jogo chega ao gatilho de cada controle, P1 a P4."
+    },
+    {
+      "sprint": "O-PARAR-CALA-O-TESTE-QUE-AINDA-ESTAVA-NO-AR-01",
+      "o_que_muda": "Os gestos rodam na ordem do clique, na fila de cada controle."
+    },
+    {
+      "sprint": "OS-ANALOGICOS-DO-JOGO-GANHAM-ZONA-MORTA-CURVA-E-UMA-MAO-01",
+      "o_que_muda": "Os gatilhos ganham zona morta de início e de fim pelo módulo da curva; a tela da curva espera o desenho da O-POINT-AND-CLICK-E-A-ACESSIBILIDADE-SE-DEFINEM-NA-NAVEGACAO-01."
+    },
+    {
+      "sprint": "A-INTERFACE-INTEIRA-SE-ALCANCA-PELO-CONTROLE-E-PELO-TECLADO-01",
+      "o_que_muda": "Foco, Tab, Esc e o X do controle alcançam toda ação; só atributos, a foto não muda."
+    },
+    {
+      "sprint": "O-NUMERO-DA-BARRA-NAO-CONGELA-NO-VALOR-VELHO-01",
+      "o_que_muda": "O número da barra sai da alavanca quando o voo termina; o gesto lê a alavanca, nunca o texto."
+    },
+    {
+      "sprint": "A-ALTURA-E-A-LARGURA-DA-JANELA-NAO-PULSAM-01",
+      "o_que_muda": "A janela para de crescer e encolher sozinha (medir o 100dvh, o repinte e a folga do mudo)."
+    },
+    {
+      "sprint": "A-JANELA-REGISTRA-O-PROPRIO-TAMANHO-E-O-MOTIVO-DE-FECHAR-01",
+      "o_que_muda": "O registro guarda o tamanho da janela e o motivo de fechar."
+    },
+    {
+      "sprint": "O-TEMA-DE-CORES-ENTRA-PELA-FOLHA-DE-USUARIO-01",
+      "o_que_muda": "O tema entra pela folha de usuário; no tema padrão nada muda, e as peças novas usam só os tokens do :root."
+    }
+  ],
+  "fora": [
+    {
+      "sprint": "O-EM-TODOS-DO-GATILHO-CHEGA-A-CADA-CONTROLE-DA-MESA-01",
+      "motivo": "O «Em todos» sai da coluna (RODADA-2 §D e §J); o código da fds-1 fica, sem botão na tela até a sprint unificada decidir."
+    },
+    {
+      "sprint": "O-DESLIGADO-DEIXA-O-JOGO-DECIDIR-01",
+      "motivo": "Código feito na 1.5; falta a bancada dela. O desenho de 04/10 («O jogo decide» no gatilho, a frase «O jogo pinta por cima» na 04) foi trocado em 06/10 pelo par Modo automático | Modo personalizado (O-MODO-AUTOMATICO-E-O-PERSONALIZADO-01, já no publicado): vale o mais novo, e a tela não muda."
+    },
+    {
+      "sprint": "OS-TRES-CONTROLES-DE-FREQUENCIA-DA-ABA-GATILHOS-NO-DESENHO-01",
+      "motivo": "Absorvidas pela O-ESTILO-DO-JOGO-LIGA-A-IMERSAO-INTEIRA (escolha dela de 08/10): as barras viram receita invisível do estilo e não entram na tela."
+    },
+    {
+      "sprint": "A-ILUMINACAO-GANHA-A-REACAO-AO-TIRO-NO-DESENHO-01",
+      "motivo": "Absorvidas pela O-ESTILO-DO-JOGO-LIGA-A-IMERSAO-INTEIRA (escolha dela de 08/10): as barras viram receita invisível do estilo e não entram na tela."
+    },
+    {
+      "sprint": "O-TEXTO-DO-GATILHO-DIZ-O-QUE-O-CODIGO-FAZ-HOJE-01",
+      "motivo": "Só comentário e docstring do código."
+    },
+    {
+      "sprint": "O-COMENTARIO-COM-DOIS-PONTOS-SO-VALE-EM-CIMA-DE-ATRIBUICAO-01",
+      "motivo": "Só comentário e docstring do código."
+    },
+    {
+      "sprint": "A-TELA-SEM-O-QUE-A-REGUA-ACEITA-01",
+      "motivo": "Já no publicado da 1-11."
+    },
+    {
+      "sprint": "A-CRUA-SO-ANDA-COM-PROVA-DE-VERDADE-E-O-RC-DIZ-O-QUE-FALTA-01",
+      "motivo": "Já no publicado da 1-11."
+    },
+    {
+      "sprint": "A-GRACA-DO-JOGO-NAO-JOGA-FORA-O-PRIMEIRO-EFEITO-01",
+      "motivo": "Já no publicado da 1-11."
+    },
+    {
+      "sprint": "A-LINHA-DO-SALVAR-DIZ-O-GESTO-E-O-QUE-MUDOU-01",
+      "motivo": "Já no publicado da 1-11."
+    },
+    {
+      "sprint": "A-METRALHADORA-BATE-ENQUANTO-O-DEDO-APERTA-01",
+      "motivo": "Já no publicado da 1-11."
+    },
+    {
+      "sprint": "A-REGUA-DOS-EFEITOS-DO-GATILHO-LE-O-BLOCO-COMO-O-CONTROLE-LE-01",
+      "motivo": "Já no publicado da 1-11."
+    },
+    {
+      "sprint": "AS-CITACOES-CRUAS-E-O-TEXTO-ESPELHADO-ANDAM-COM-O-CODIGO-01",
+      "motivo": "Já no publicado da 1-11."
+    },
+    {
+      "sprint": "O-ARCO-E-O-GALOPE-MANDAM-O-MODO-QUE-O-CONTROLE-LE-01",
+      "motivo": "Já no publicado da 1-11."
+    },
+    {
+      "sprint": "O-DISPARO-E-A-ARMA-SEMI-AUTOMATICA-MANDAM-O-MODO-DE-ARMA-01",
+      "motivo": "Já no publicado da 1-11."
+    },
+    {
+      "sprint": "O-REGISTRO-DO-YML-ANDA-ANTES-DA-CARONA-01",
+      "motivo": "Já no publicado da 1-11."
+    },
+    {
+      "sprint": "O-CARTAO-ABERTO-DIZ-O-NUMERO-DO-JOGADOR-01",
+      "motivo": "Já no publicado da 1-11."
+    },
+    {
+      "sprint": "O-MODO-AUTOMATICO-E-O-PERSONALIZADO-01",
+      "motivo": "Já no publicado da 1-11."
+    },
+    {
+      "sprint": "CADA-FEATURE-TEM-UM-DONO-SO-NA-INTERFACE-01",
+      "motivo": "Nenhum dos casos dela cai nesta aba (são das 01, 02, 06, 07, 09, 10 e da Calibrar)."
+    },
+    {
+      "sprint": "SO-A-PRIMEIRA-LETRA-E-MAIUSCULA-EM-TODA-ABA-01",
+      "motivo": "Já no publicado da 1-11 (b3222fa9f); os rótulos novos nascem assim."
+    },
+    {
+      "sprint": "A-TELA-PERGUNTA-AO-DONO-01",
+      "motivo": "Já no publicado da 1-11."
+    },
+    {
+      "sprint": "O-SELECIONAR-ACENDE-QUEM-ESTA-ESCOLHIDO-01",
+      "motivo": "Já no publicado da 1-11."
+    },
+    {
+      "sprint": "A-NAVEGACAO-INTERNA-E-UM-MODO-QUE-SE-LIGA-EM-QUALQUER-ABA-01",
+      "motivo": "Já no publicado da 1-11."
+    },
+    {
+      "sprint": "DESLIGAR-O-HEFESTO-DEVOLVE-O-CONTROLE-AO-LINUX-01",
+      "motivo": "Já no publicado da 1-11."
+    },
+    {
+      "sprint": "O-SALVAR-E-O-APLICAR-LEEM-O-PERFIL-01",
+      "motivo": "Código na base desde a5da60f3d; falta só a prova no aparelho, que é dela. A tela não muda."
+    },
+    {
+      "sprint": "I18N-DA-TELA-NOVA-01",
+      "motivo": "Por ordem dela, a tradução é a última coisa, depois do release 1."
+    },
+    {
+      "sprint": "TRADUZIR-O-PROJETO-01",
+      "motivo": "Por ordem dela, a tradução é a última coisa, depois do release 1."
+    },
+    {
+      "sprint": "MESA-DE-QUATRO-01",
+      "motivo": "Bancada com os quatro controles; não muda a tela."
+    }
+  ],
+  "altura_px": 809,
+  "rola": false
 }

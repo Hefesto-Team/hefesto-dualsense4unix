@@ -2,31 +2,37 @@
  "aba": "mapa-do-radio",
  "nome": "Mapa do rádio",
  "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/_integra-1-11/src/hefesto_dualsense4unix/interface/paginas/mapa-do-radio.html",
- "depois": "~/.local/state/hefesto-casa/leva-volta/todo/mapa-do-radio.html",
+ "depois": "/home/vitoriamaria/.local/state/hefesto-casa/leva-volta/todo/mapa-do-radio.html",
  "mudancas": [
   {
    "n": 1,
-   "sprint": "A-PONTE-SE-OTIMIZA-ATE-QUATRO-NO-ULTRA-NUM-ADAPTADOR-01",
-   "o_que_muda": "O contador de pontes de cada entrada passa a «n/cabem», com o cabem calculado por entrada (pontesQueCabem) no lugar do 2 fixo; na cena de exemplo o número segue 0/2 e 4/2.",
-   "origem": "implementada-na-fds",
-   "ancora": "[data-campo=lugar-pontes]",
-   "conflito": "Costurada na integra/1-11 (o mockup já tem), falta o --publicar do fecho."
+   "sprint": "A-ABA-MAPAS-DO-RADIO-E-DAS-PORTAS-DO-TODO-01",
+   "o_que_muda": "O «?» do espectro sai; a dica fica no título",
+   "origem": "pedido-dela",
+   "resposta": "todo-radio-3",
+   "ancora": "todo-radio-1",
+   "seletor": "#meus-no-ar",
+   "conflito": ""
   },
   {
    "n": 2,
-   "sprint": "O-232-SAI-E-A-CONTA-DA-PONTE-ENTRA-01",
-   "o_que_muda": "Caixa de som e fone custam 366 fatias (2-DH5 = 5 fatias mais a resposta) em vez de 244; o hertz mostrado sai da divisão por 6 e fica em 61 Hz. Na cena eles moram na Entrada 4.4, fechada.",
-   "origem": "implementada-na-fds",
-   "ancora": ".vaga.entrada.fixa (caixa e fone)",
-   "conflito": "Costurada na integra/1-11 (41320a2d6, com a A-PONTE-SE-CONTA-EM-FATIAS-NO-AR-01), falta o --publicar do fecho."
+   "sprint": "A-ABA-MAPAS-DO-RADIO-E-DAS-PORTAS-DO-TODO-01",
+   "o_que_muda": "O botão direito abre o menu das abas",
+   "origem": "regra-global",
+   "resposta": "todo-radio",
+   "ancora": "todo-radio-2",
+   "seletor": "#menu-desenhado",
+   "conflito": ""
   },
   {
    "n": 3,
-   "sprint": "OS-ALVOS-E-A-LETRA-CRESCEM-E-A-INTERFACE-GANHA-TAMANHO-01 (ordem 6 de 12/10: alvos de 24 px com a letra igual)",
-   "o_que_muda": "O ? do espectro passa de 20 a 24 px, como nas outras páginas; a letra fica.",
-   "origem": "recomendada-a-escolher",
-   "ancora": ".espectro-cab .ajuda",
-   "conflito": null
+   "sprint": "A-ABA-MAPAS-DO-RADIO-E-DAS-PORTAS-DO-TODO-01",
+   "o_que_muda": "Os botões trazem dica curta no hover",
+   "origem": "regra-global",
+   "resposta": "todo-radio",
+   "ancora": "todo-radio-3",
+   "seletor": "[data-dica]",
+   "conflito": ""
   }
  ],
  "por_baixo": [

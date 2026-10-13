@@ -536,55 +536,242 @@
   .caixa-cap .bt.salvar{border-color:var(--green);color:var(--green)}
   .caixa-cap .bt.salvar:hover{background:rgba(80,250,123,.09)}
 </style>
-<style id="todo-alvos" data-todo="5">
-  .ajuda{width:24px;height:24px;flex:0 0 24px;line-height:22px}
-  [data-gesto]{min-height:24px}
+<style data-todo-css="rodada-2">
+  /* rodada 2 (12/10): o perfil em cima, o desenho no meio, os botões dos dois lados, um seletor por botão */
+  .mc{--tipo:var(--purple)}
+  .mc[data-tipo="pac"]{--tipo:var(--cyan)}
+  .mc[data-tipo="troca"]{--tipo:var(--orange)}
+  .mc-topo{display:flex;align-items:center;gap:16px;padding:12px 20px;border-bottom:1px solid var(--border-sutil);flex:none}
+  .mc-topo h1{font-size:17px;font-weight:700;color:var(--pink)}
+  .voltar2{display:inline-flex;align-items:center;height:30px;padding:0 12px;border-radius:7px;text-decoration:none;
+    border:1px solid var(--border-forte);background:var(--panel);color:var(--texto-suave);font-size:12px}
+  .voltar2:hover{border-color:var(--purple);color:var(--fg)}
+  .mc-chips{margin-left:auto;display:flex;gap:8px}
+  .chip{height:30px;padding:0 12px;border-radius:7px;border:2px solid var(--plastico,var(--border-forte));
+    background:var(--app-bg);color:var(--texto-suave);font:12px var(--f);cursor:pointer;white-space:nowrap}
+  .chip.on{background:rgba(189,147,249,.16);color:var(--fg);font-weight:600}
+  .chip .pt{color:var(--comment);margin:0 2px}
+  .mc-perfil{display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--border-sutil);flex:none}
+  .mc-rot{font-size:12px;color:var(--texto-suave);white-space:nowrap}
+  .mc-rot[data-dica]{cursor:help}
+  .campo2{height:32px;border-radius:7px;border:1px solid var(--border-forte);background:var(--app-bg);color:var(--fg);
+    font:12.5px var(--f);padding:0 10px}
+  #perfil{width:230px}
+  .nome2{width:210px}
+  .etiqueta{height:24px;display:inline-flex;align-items:center;padding:0 10px;border-radius:12px;font-size:11.5px;
+    font-weight:600;color:var(--app-bg);background:var(--tipo)}
+  .usar-em{display:flex;gap:6px;align-items:center}
+  .usar-em .jogo{height:26px;display:inline-flex;align-items:center;padding:0 10px;border-radius:13px;font-size:11.5px;
+    border:1px solid var(--tipo);color:var(--fg)}
+  .usar-em .mais{border-style:dashed;color:var(--texto-mudo);border-color:var(--border-forte);cursor:pointer}
+  .mapa.mc-mapa{flex:1;min-height:0;display:grid;grid-template-columns:292px minmax(0,1fr) 292px;gap:20px;
+    padding:14px 20px;align-items:start}
+  .mc-lado{display:flex;flex-direction:column;gap:7px}
+  .b2{display:grid;grid-template-columns:24px 74px minmax(0,1fr);align-items:center;gap:8px;height:37px;padding:0 10px;
+    border-radius:8px;border:1px solid var(--border-sutil);background:var(--panel);color:var(--fg);font:12px var(--f);
+    cursor:pointer;text-align:left}
+  .b2:hover{border-color:var(--comment)}
+  .b2-gl{display:flex;align-items:center;justify-content:center;color:var(--texto-suave)}
+  .b2-gl svg{width:18px;height:18px}
+  .b2-nm{font-size:11.5px;color:var(--texto-suave);white-space:nowrap}
+  .b2-val{height:25px;display:flex;align-items:center;padding:0 9px;border-radius:6px;background:var(--app-bg);
+    color:var(--texto-mudo);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11.5px}
+  .b2.muda{border-left:3px solid var(--tipo)}
+  .b2.muda .b2-val{color:var(--fg);box-shadow:inset 0 0 0 1px var(--tipo)}
+  .b2.on{border-color:var(--pink);background:rgba(255,121,198,.10)}
+  .b2.on .b2-gl{color:var(--pink)}
+  .mc-centro{position:relative;display:flex;flex-direction:column;gap:12px;min-width:0;height:100%;justify-content:flex-start}
+  .mc-desenho{display:flex;justify-content:center;min-height:0}
+  .mc-desenho .ds{width:100%;height:auto;max-height:380px}
+  .mc-baixo{display:grid;grid-template-columns:1fr 1fr;gap:7px 12px}
+  .mc-baixo .b2{grid-template-columns:20px 48px minmax(0,1fr);gap:6px}
+  .mc-baixo .b2:last-child{grid-column:1 / -1;justify-self:center;width:calc(50% - 6px)}
+  .sel2{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);z-index:5;background:var(--panel);border:1px solid var(--pink);border-radius:11px;
+    box-shadow:0 18px 50px rgba(0,0,0,.55);display:flex;flex-direction:column;padding:14px 16px;gap:12px}
+  .sel2[hidden]{display:none}
+  .sel2-topo{display:flex;align-items:center;gap:14px}
+  .sel2-tit{font-size:13.5px;font-weight:600;color:var(--fg)}
+  .sel2-b{color:var(--pink)}
+  .seg2{display:flex;gap:6px;margin-left:auto}
+  .seg2 button{height:30px;padding:0 14px;border-radius:7px;border:1px solid var(--border-forte);background:var(--app-bg);
+    color:var(--texto-suave);font:12px var(--f);cursor:pointer}
+  .seg2 button.on{border-color:var(--purple);background:rgba(189,147,249,.16);color:var(--fg);font-weight:600}
+  .sel2-x{width:30px;height:30px;border-radius:7px;border:1px solid var(--border-forte);background:transparent;
+    color:var(--texto-mudo);font-size:15px;cursor:pointer}
+  .sel2-grade{flex:none;display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:42px;gap:9px;align-content:start}
+  .sel2-grade[hidden]{display:none}
+  .op3{display:flex;align-items:center;gap:9px;padding:0 12px;border-radius:8px;border:1px solid var(--border-sutil);
+    background:var(--app-bg);color:var(--fg);font:12px var(--f);cursor:pointer;text-align:left;min-width:0}
+  .op3:hover{border-color:var(--purple)}
+  .op3 svg{width:18px;height:18px;flex:none;color:var(--texto-suave)}
+  .op3.on{border-color:var(--tipo);box-shadow:inset 0 0 0 1px var(--tipo);background:rgba(255,184,108,.08)}
+  .op3.gravar{grid-column:1 / -1;justify-content:center;border-color:var(--red);color:var(--red);font-weight:600}
+  .op3.gravar .ponto{width:9px;height:9px;border-radius:50%;background:var(--red)}
+  .sel2-rod{display:flex;justify-content:flex-end}
+  .sel2-rod .op3{height:32px}
+  .mc-cursor{display:flex;align-items:center;gap:12px;padding:10px 20px;border-top:1px solid var(--border-sutil);flex:none}
+  .mc-cursor .campo2{height:30px}
+  .mc-cursor .mc-rot + .campo2,.mc-cursor .mc-rot + .tog2{margin-right:14px}
+  .mc:not([data-tipo="pac"]) .mc-cursor{display:none}
+  .tog2{height:28px;display:inline-flex;align-items:center;gap:7px;padding:0 11px;border-radius:7px;font-size:11.5px;
+    border:1px solid var(--border-forte);color:var(--texto-mudo);cursor:pointer}
+  .tog2::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--border-forte)}
+  .tog2.on{border-color:var(--green);color:var(--green);background:rgba(80,250,123,.08)}
+  .tog2.on::before{background:var(--green)}
+  .mc-rod{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding:12px 20px;border-top:1px solid var(--border-sutil);flex:none}
+  .btn2{height:36px;display:flex;align-items:center;justify-content:center;border-radius:7px;border:1px solid var(--border-forte);
+    background:transparent;color:var(--texto-suave);font:12.5px var(--f);cursor:pointer;text-decoration:none}
+  .btn2.amarelo{border-color:#f1fa8c;color:#f1fa8c}
+  .btn2.roxo{border-color:var(--purple);color:var(--purple)}
+  .mc .mapa:has(.item-circle.muda) #mp-circle :is(.peca, rect, circle, path, ellipse){fill:var(--tipo) !important;stroke:var(--tipo) !important}
+  .mc .mapa:has(.item-circle.on) #mp-circle :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-cross.muda) #mp-cross :is(.peca, rect, circle, path, ellipse){fill:var(--tipo) !important;stroke:var(--tipo) !important}
+  .mc .mapa:has(.item-cross.on) #mp-cross :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-dpad_down.muda) #mp-dpad_down :is(.peca, rect, circle, path, ellipse){fill:var(--tipo) !important;stroke:var(--tipo) !important}
+  .mc .mapa:has(.item-dpad_down.on) #mp-dpad_down :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-dpad_left.muda) #mp-dpad_left :is(.peca, rect, circle, path, ellipse){fill:var(--tipo) !important;stroke:var(--tipo) !important}
+  .mc .mapa:has(.item-dpad_left.on) #mp-dpad_left :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-dpad_right.muda) #mp-dpad_right :is(.peca, rect, circle, path, ellipse){fill:var(--tipo) !important;stroke:var(--tipo) !important}
+  .mc .mapa:has(.item-dpad_right.on) #mp-dpad_right :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-dpad_up.muda) #mp-dpad_up :is(.peca, rect, circle, path, ellipse){fill:var(--tipo) !important;stroke:var(--tipo) !important}
+  .mc .mapa:has(.item-dpad_up.on) #mp-dpad_up :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-l1.muda) #mp-l1 :is(.peca, rect, circle, path, ellipse){fill:var(--tipo) !important;stroke:var(--tipo) !important}
+  .mc .mapa:has(.item-l1.on) #mp-l1 :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-l2.muda) #mp-l2 :is(.peca, rect, circle, path, ellipse){fill:var(--tipo) !important;stroke:var(--tipo) !important}
+  .mc .mapa:has(.item-l2.on) #mp-l2 :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-options.muda) #mp-options :is(.peca, rect, circle, path, ellipse){fill:var(--tipo) !important;stroke:var(--tipo) !important}
+  .mc .mapa:has(.item-options.on) #mp-options :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-ps.muda) #mp-ps :is(.peca, rect, circle, path, ellipse){fill:var(--tipo) !important;stroke:var(--tipo) !important}
+  .mc .mapa:has(.item-ps.on) #mp-ps :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-r1.muda) #mp-r1 :is(.peca, rect, circle, path, ellipse){fill:var(--tipo) !important;stroke:var(--tipo) !important}
+  .mc .mapa:has(.item-r1.on) #mp-r1 :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-r2.muda) #mp-r2 :is(.peca, rect, circle, path, ellipse){fill:var(--tipo) !important;stroke:var(--tipo) !important}
+  .mc .mapa:has(.item-r2.on) #mp-r2 :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-share.muda) #mp-share :is(.peca, rect, circle, path, ellipse){fill:var(--tipo) !important;stroke:var(--tipo) !important}
+  .mc .mapa:has(.item-share.on) #mp-share :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-square.muda) #mp-square :is(.peca, rect, circle, path, ellipse){fill:var(--tipo) !important;stroke:var(--tipo) !important}
+  .mc .mapa:has(.item-square.on) #mp-square :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-stick_l.muda) #mp-stick_l :is(.peca, rect, circle, path, ellipse){fill:var(--tipo) !important;stroke:var(--tipo) !important}
+  .mc .mapa:has(.item-stick_l.on) #mp-stick_l :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-stick_r.muda) #mp-stick_r :is(.peca, rect, circle, path, ellipse){fill:var(--tipo) !important;stroke:var(--tipo) !important}
+  .mc .mapa:has(.item-stick_r.on) #mp-stick_r :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-touchpad.muda) #mp-touchpad :is(.peca, rect, circle, path, ellipse){fill:var(--tipo) !important;stroke:var(--tipo) !important}
+  .mc .mapa:has(.item-touchpad.on) #mp-touchpad :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-triangle.muda) #mp-triangle :is(.peca, rect, circle, path, ellipse){fill:var(--tipo) !important;stroke:var(--tipo) !important}
+  .mc .mapa:has(.item-triangle.on) #mp-triangle :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
 </style>
-<style data-todo-css="o-desenho-cabe-na-altura">
-  /* Volta 2 (12/10): em 1680x840 o desenho crescia com a largura e empurrava a caixa «Grava em» para fora
-     (o corpo rolava 42 px). O desenho passa a ceder altura; a caixa fica inteira. */
-  .lado-ds.captura{min-height:0}
-  .lado-ds.captura > svg.ds{flex:1 1 0;min-height:0;width:100%;height:auto}
-  .cx > .corpo > .mapa{flex:1 1 auto;min-height:0}
+<style id="base-comum">
+/* ===== Base comum das abas (rodada 2, 12/10/2026) =====
+   Copiada IGUAL em todo mockup do todo. Três peças: a dica no hover (sem «?»), o Modo automático
+   e o menu do botão direito desenhado no visual das abas (BRIEF-T6, opção B). */
+
+/* 1. A dica: qualquer frase, botão ou área com data-dica mostra a dica ao passar o mouse ou focar.
+      Nenhum botão «?» existe mais. A dica tem no máximo ~12 palavras: show, don't tell. */
+[data-dica]{cursor:help}
+button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"][data-dica]{cursor:pointer}
+#hef-dica{position:fixed;z-index:2147483000;max-width:280px;padding:7px 11px;border-radius:8px;
+  background:#1b1c25;border:1px solid var(--border-forte,#44475a);color:var(--texto-suave,#c8ccda);
+  font:500 12.5px/1.45 'Space Grotesk',system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.45);pointer-events:none;
+  opacity:0;transform:translateY(3px);transition:opacity .12s,transform .12s}
+#hef-dica.visivel{opacity:1;transform:none}
+
+/* 2. O Modo automático: pílula com bolinha. Os dois estados têm de se distinguir num relance.
+      Desligado: contorno neutro, bolinha vazia, letra suave (vale o que está na aba).
+      Ligado: ciano cheio, bolinha branca acesa, letra branca; a área que ele governa esmaece. */
+.modo-auto{display:inline-flex;align-items:center;gap:9px;height:34px;padding:0 16px 0 12px;border-radius:999px;
+  border:1px solid var(--border-forte,#44475a);background:transparent;color:var(--texto-suave,#c8ccda);
+  font:600 13.5px/1 'Space Grotesk',system-ui,sans-serif;cursor:pointer;transition:background .15s,border-color .15s,color .15s,box-shadow .15s}
+.modo-auto .p{width:11px;height:11px;border-radius:50%;border:2px solid var(--texto-mudo,#9a9eb8);background:transparent;
+  transition:all .15s}
+.modo-auto:hover{border-color:#5fd3e6;color:#fff}
+.modo-auto[aria-pressed="true"]{background:#0e7c8c;border-color:#5fd3e6;color:#fff;box-shadow:0 0 0 3px rgba(95,211,230,.18)}
+.modo-auto[aria-pressed="true"] .p{border-color:#fff;background:#fff;box-shadow:0 0 8px #fff}
+.modo-auto:focus-visible{outline:2px solid var(--cyan,#8be9fd);outline-offset:2px}
+.governado-pelo-jogo{opacity:.42;pointer-events:none;filter:saturate(.6)}
+
+/* 3. O menu do botão direito, no visual das abas. */
+.menu-hefesto{position:fixed;z-index:2147482000;min-width:190px;padding:6px;border-radius:12px;
+  background:#252733;border:1px solid var(--border-forte,#44475a);box-shadow:0 14px 34px rgba(0,0,0,.5)}
+.menu-hefesto button{display:flex;width:100%;align-items:center;gap:10px;height:34px;padding:0 12px;border:0;
+  border-radius:8px;background:transparent;color:var(--fg,#f8f8f2);font:500 13.5px/1 'Space Grotesk',system-ui,sans-serif;text-align:left;cursor:pointer}
+.menu-hefesto button:hover{background:rgba(189,147,249,.14)}
+.menu-hefesto button[disabled]{color:var(--texto-mudo,#9a9eb8);opacity:.55;cursor:default;background:transparent}
+.menu-hefesto hr{border:0;border-top:1px solid var(--border-sutil,#343746);margin:5px 4px}
 </style>
 </head>
 <body>
-
-<div class="cx" role="dialog" aria-modal="true" aria-label="O mapa do controle">
-  <div class="topo">
-    <!-- O VOLTAR VOLTA PARA DE ONDE VEIO. Desde 29/09/2026 só a Conexões abre
-         este mapa (a Controles e a Navegação o perderam, por ordem de produto), e por
-         isso ela é a reserva de quem abre o arquivo direto. O dono é o
-         `caixa_da_janela.voltar`, que pergunta à lista de volta do WebView. -->
-    <a class="voltar" href="08-conexoes.html" onclick="if (history.length > 1) { history.back(); return false }" title="Volta para a aba anterior.">← Voltar</a>
-    <h1><span class="p">O mapa do controle</span></h1>
-    <!-- A LINHA DE INSTRUÇÃO SAIU — decisão, 31/08/2026: *"passe o mouse
-         num glifo e a peça acende no desenho · passe na peça e o glifo acende
-         só remove isso."* O comportamento FICA: o que sai é a legenda que o
-         narrava. Quem passa o mouse descobre em meio segundo; quem não passa
-         não precisava da frase. -->
+<div class="cx mc" role="dialog" aria-modal="true" aria-label="Mapa do controle">
+  <div class="mc-topo">
+    <a class="voltar2" href="06-navegacao.html" onclick="if (history.length > 1) { history.back(); return false }" data-dica="Volta para a Navegação">← Voltar</a>
+    <h1>Mapa do controle</h1>
+    <div class="mc-chips" data-todo="1"><button class="chip plastico on" style="--plastico:#ae335a" data-colorway="cosmic-red" data-jogador="1" data-luz="#0000ff">Cosmic Red <span class="pt">•</span> USB</button><button class="chip plastico" style="--plastico:#7eb8d4" data-colorway="starlight-blue" data-jogador="2" data-luz="#ff0000">Starlight Blue <span class="pt">•</span> BT</button><button class="chip plastico" style="--plastico:#8a6fc4" data-colorway="galactic-purple" data-jogador="3" data-luz="#00ff00">Galactic Purple <span class="pt">•</span> BT</button><button class="chip plastico" style="--plastico:#e8e8ec" data-colorway="white" data-jogador="4" data-luz="#ff0080">White <span class="pt">•</span> USB</button></div>
   </div>
-
-  <div class="corpo">
-  <div class="provas">
-    <div class="prova">
-      <div class="prova-rot">Cor do plástico</div>
-      <select id="cw" class="ct">
-        <optgroup label="De fábrica"><option value="white">White · 00</option><option value="midnight-black">Midnight Black · 01</option><option value="cosmic-red" selected>Cosmic Red · 02</option><option value="nova-pink">Nova Pink · 03</option><option value="galactic-purple">Galactic Purple · 04</option><option value="starlight-blue">Starlight Blue · 05</option><option value="grey-camouflage" data-parcial="1">Grey Camouflage · 06 · camuflado em 4</option><option value="volcanic-red">Volcanic Red · 07</option><option value="sterling-silver">Sterling Silver · 08</option><option value="cobalt-blue">Cobalt Blue · 09</option><option value="chroma-teal" data-parcial="1">Chroma Teal · 10 · iridescente em 6</option><option value="chroma-indigo" data-parcial="1">Chroma Indigo · 11 · iridescente em 6</option><option value="chroma-pearl" data-parcial="1">Chroma Pearl · 12 · iridescente em 6</option><option value="hyperpop-techno-red">HyperPop Techno Red · 13</option><option value="hyperpop-remix-green">HyperPop Remix Green · 14</option><option value="hyperpop-rhythm-blue">HyperPop Rhythm Blue · 15</option><option value="30th-anniversary" data-parcial="1">30th Anniversary · 30 · fosco em 2</option></optgroup>
-        <optgroup label="Edições especiais"><option value="god-of-war-ragnarok">God of War Ragnarök · Z1</option><option value="spider-man-2">Marvel's Spider-Man 2 · Z2</option><option value="astro-bot" data-parcial="1">Astro Bot · Z3 · arte em 1</option><option value="fortnite" data-parcial="1">Fortnite · Z4 · arte em 1</option><option value="the-last-of-us">The Last of Us · Z6</option><option value="god-of-war-20th">God of War 20th Anniversary · ZA</option><option value="icon-blue">Icon Blue Special Edition · ZB</option><option value="ghost-of-yotei" data-parcial="1">Ghost of Yōtei Limited Edition · ZC · sem amostragem em 6</option><option value="marathon" data-parcial="1">Marathon Limited Edition · ZD · sem amostragem em 6</option><option value="genshin-impact" data-parcial="1">Genshin Impact Limited Edition · ZE · sem amostragem em 6</option><option value="007-first-light" data-parcial="1">007 First Light Limited Edition · ZF · sem amostragem em 7</option></optgroup>
-      </select>
-    </div>
-    <div class="prova">
-      <div class="prova-rot">Controle<span class="papel" data-campo="papel" data-hef-alvo="html"></span></div>
-      <div class="linha" data-bloco="controles-do-mapa"><button class="bt" data-gesto="escolher-na-fita" data-pref="todos" data-controle="">Todos</button><button class="bt on" data-jogador="1" data-colorway="cosmic-red" data-luz="#0000ff" data-gesto="escolher-na-fita" data-pref="p1" data-controle="">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> <span class="via">USB</span></button><button class="bt" data-jogador="2" data-colorway="starlight-blue" data-luz="#ff0000" data-gesto="escolher-na-fita" data-pref="p2" data-controle="">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> <span class="via">BT</span></button><button class="bt" data-jogador="3" data-colorway="galactic-purple" data-luz="#00ff00" data-gesto="escolher-na-fita" data-pref="p3" data-controle="">P3 <span class="pt">•</span> Galactic Purple <span class="pt">•</span> <span class="via">BT</span></button><button class="bt" data-jogador="4" data-colorway="white" data-luz="#ff0080" data-gesto="escolher-na-fita" data-pref="p4" data-controle="">P4 <span class="pt">•</span> White <span class="pt">•</span> <span class="via">USB</span></button><button class="bt" data-jogador="0">Nenhum</button></div>
-    </div>
-    <div class="prova-nota" id="nota">&nbsp;</div>
+  <div class="mc-perfil">
+    <label class="mc-rot" for="perfil">Perfil</label>
+    <select id="perfil" class="campo2" data-todo="2" data-dica="Navegação, point and click e trocas de botão">
+      <optgroup label="Navegação"><option value="nav">Navegar no computador</option></optgroup>
+      <optgroup label="Point and click"><option value="vn">Visual novel</option><option value="mouse">Só mouse</option><option value="tm">Teclado e mouse</option><option value="orpheus">Orpheus</option></optgroup>
+      <optgroup label="Trocar os botões"><option value="maid">Maid Life SS</option></optgroup>
+      <option value="novo">+ Novo perfil…</option>
+    </select>
+    <span class="etiqueta" data-todo="3" data-dica="A cor do tipo marca os botões mudados">Navegação</span>
+    <label class="mc-rot" for="nome">Nome</label>
+    <input id="nome" class="campo2 nome2" data-todo="4" value="Navegar no computador">
+    <span class="mc-rot">Usar em</span>
+    <span class="usar-em" data-todo="5"></span>
   </div>
+  <div class="mapa mc-mapa">
+    <div class="mc-lado">
+<button class="b2 item-l2" data-b="l2"><span class="b2-gl"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
-  <div class="mapa">
-    <div class="lado-ds captura" data-todo="1">
-<?xml version="1.0" encoding="utf-8"?>
-<svg data-colorway="cosmic-red" class="ds" data-todo="6" data-colorway="cosmic-red" xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
+  <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
+  <text x="10" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L2</text>
+  <line x1="16" y1="24" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <polyline points="12,27 16,31 20,27" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+</svg></span><span class="b2-nm">L2</span><span class="b2-val">—</span></button>
+<button class="b2 item-l1" data-b="l1"><span class="b2-gl"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <rect x="4" y="10" width="24" height="14" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
+  <text x="10" y="21" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L1</text>
+</svg></span><span class="b2-nm">L1</span><span class="b2-val">—</span></button>
+<button class="b2 item-dpad_up" data-b="dpad_up"><span class="b2-gl"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <polygon points="16,5 24,16 19,16 19,27 13,27 13,16 8,16" fill="currentColor"/>
+</svg></span><span class="b2-nm">Cima</span><span class="b2-val">—</span></button>
+<button class="b2 item-dpad_left" data-b="dpad_left"><span class="b2-gl"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <polygon points="5,16 16,8 16,13 27,13 27,19 16,19 16,24" fill="currentColor"/>
+</svg></span><span class="b2-nm">Esquerda</span><span class="b2-val">—</span></button>
+<button class="b2 item-dpad_down" data-b="dpad_down"><span class="b2-gl"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <polygon points="16,27 8,16 13,16 13,5 19,5 19,16 24,16" fill="currentColor"/>
+</svg></span><span class="b2-nm">Baixo</span><span class="b2-val">—</span></button>
+<button class="b2 item-dpad_right" data-b="dpad_right"><span class="b2-gl"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <polygon points="27,16 16,8 16,13 5,13 5,19 16,19 16,24" fill="currentColor"/>
+</svg></span><span class="b2-nm">Direita</span><span class="b2-val">—</span></button>
+<button class="b2 item-stick_l" data-b="l3"><span class="b2-gl"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
+  <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+  <text x="13" y="19" font-family="monospace" font-size="7" font-weight="bold" fill="currentColor">L</text>
+</svg></span><span class="b2-nm">L3 clique</span><span class="b2-val">—</span></button>
+<button class="b2 item-stick_l" data-b="l3_direcao"><span class="b2-gl"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
+  <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+  <text x="13" y="19" font-family="monospace" font-size="7" font-weight="bold" fill="currentColor">L</text>
+</svg></span><span class="b2-nm">L3 direção</span><span class="b2-val">—</span></button>
+<button class="b2 item-share" data-b="create"><span class="b2-gl"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <line x1="16" y1="7" x2="16" y2="20" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+  <line x1="8"  y1="11" x2="12.5" y2="21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+  <line x1="24" y1="11" x2="19.5" y2="21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+</svg></span><span class="b2-nm">Share</span><span class="b2-val">—</span></button>
+    </div>
+    <div class="mc-centro">
+      <div class="mc-desenho" data-todo="6">
+<svg data-colorway="cosmic-red" class="ds" xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
   <defs>
     <filter id="mp-outline-filter-0" bx:preset="outline 1 0.2 #fff6" color-interpolation-filters="sRGB" x="-50%" y="-50%" width="200%" height="200%">
       <feMorphology in="SourceAlpha" result="dilated" operator="dilate" radius="0.2"/>
@@ -1256,346 +1443,298 @@
   <g class="alvo a-options"><rect x="-37.043" y="-26.122" width="1.796" height="3.685" rx="1" ry="1" transform="matrix(-0.984808, -0.173648, -0.173648, 0.984808, 125.210805, 60.11082)" style="transform-origin: -36.145px -24.279px"/></g>
   <g class="alvo a-mic"><g transform="matrix(1.036309, 0, 0, 0.991123, -2.292725, 0.09071) matrix(0.839587, 0, 0, 0.839587, 10.326056, 10.035711)"><rect x="61.763" y="69.697" width="5.228" height="0.896" rx="0.235" ry="0.235"/></g></g>
 </svg>
-          <div class="caixa-cap" data-todo="1" data-id="captura" aria-live="polite">
-        <div class="rot">Grava em</div>
-        <div class="grava-em" data-campo="captura-perfil" title="O perfil de point and click que a aba Navegação escolheu.">Point and click (mouse)</div>
-        <div class="peca-esc" data-campo="captura-peca">Cruz</div>
-        <div class="pede">Aperte uma tecla, um botão do mouse ou um botão do controle.</div>
-        <div class="tecla" data-campo="captura-tecla" data-todo="2">Clique esquerdo</div>
-        <div class="linha">
-          <button class="bt salvar" data-gesto="captura-salvar" data-todo="2" title="Grava no perfil de point and click escolhido.">Salvar</button>
-        </div>
-        <div class="linha" data-todo="3">
-          <button class="bt" data-gesto="captura-exportar" title="Guarda os atalhos num arquivo do computador.">Exportar</button>
-          <button class="bt" data-gesto="captura-importar" title="Lê os atalhos de um arquivo do computador.">Importar</button>
-        </div>
       </div>
-    </div>
-    <div class="lado-lista">
-    <div class="grupo">
-      <div class="grupo-rot">Botões da face</div>
-      <div class="item item-triangle" data-campo="aceso-triangle" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-
-  <polygon points="16,6 27,25 5,25" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-</svg></span><span class="txt" data-campo="acao-triangle" data-hef-alvo="atributo" data-hef-atributo="title" title="Na Navegação: Botão direito"><b>Triângulo</b><span class="ap">△</span><span class="troca" data-campo="trocada-triangle" data-hef-alvo="classe" data-hef-classe="tem">No jogo: <b data-campo="troca-triangle" data-hef-alvo="html"></b></span><span class="id mono">triangle</span></span></div>
-      <div class="item item-circle" data-campo="aceso-circle" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-
-  <circle cx="16" cy="16" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
-</svg></span><span class="txt" data-campo="acao-circle" data-hef-alvo="atributo" data-hef-atributo="title" title="Na Navegação: Enter"><b>Círculo</b><span class="ap">○</span><span class="troca" data-campo="trocada-circle" data-hef-alvo="classe" data-hef-classe="tem">No jogo: <b data-campo="troca-circle" data-hef-alvo="html"></b></span><span class="id mono">circle</span></span></div>
-      <div class="item item-square" data-campo="aceso-square" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-
-  <rect x="7" y="7" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-</svg></span><span class="txt" data-campo="acao-square" data-hef-alvo="atributo" data-hef-atributo="title" title="Na Navegação: Esc"><b>Quadrado</b><span class="ap">□</span><span class="troca" data-campo="trocada-square" data-hef-alvo="classe" data-hef-classe="tem">No jogo: <b data-campo="troca-square" data-hef-alvo="html"></b></span><span class="id mono">square</span></span></div>
-      <div class="item item-cross on" data-todo="1" data-campo="aceso-cross" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-
-  <line x1="8" y1="8" x2="24" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <line x1="24" y1="8" x2="8" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></span><span class="txt" data-campo="acao-cross" data-hef-alvo="atributo" data-hef-atributo="title" title="Na Navegação: Botão esquerdo"><b>Cruz</b><span class="ap">X|cruz|equis</span><span class="troca" data-campo="trocada-cross" data-hef-alvo="classe" data-hef-classe="tem">No jogo: <b data-campo="troca-cross" data-hef-alvo="html"></b></span><span class="id mono">cross</span></span></div>
-    </div>
-    <div class="grupo">
-      <div class="grupo-rot">Direcional</div>
-      <div class="item item-dpad_up" data-campo="aceso-dpad_up" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-
-  <polygon points="16,5 24,16 19,16 19,27 13,27 13,16 8,16" fill="currentColor"/>
-</svg></span><span class="txt" data-campo="acao-dpad_up" data-hef-alvo="atributo" data-hef-atributo="title" title="Na Navegação: Seta para cima"><b>D-pad cima</b><span class="ap">↑</span><span class="troca" data-campo="trocada-dpad_up" data-hef-alvo="classe" data-hef-classe="tem">No jogo: <b data-campo="troca-dpad_up" data-hef-alvo="html"></b></span><span class="id mono">dpad_up</span></span></div>
-      <div class="item item-dpad_right" data-campo="aceso-dpad_right" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-
-  <polygon points="27,16 16,8 16,13 5,13 5,19 16,19 16,24" fill="currentColor"/>
-</svg></span><span class="txt" data-campo="acao-dpad_right" data-hef-alvo="atributo" data-hef-atributo="title" title="Na Navegação: Seta para a direita"><b>D-pad direita</b><span class="ap">→</span><span class="troca" data-campo="trocada-dpad_right" data-hef-alvo="classe" data-hef-classe="tem">No jogo: <b data-campo="troca-dpad_right" data-hef-alvo="html"></b></span><span class="id mono">dpad_right</span></span></div>
-      <div class="item item-dpad_down" data-campo="aceso-dpad_down" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-
-  <polygon points="16,27 8,16 13,16 13,5 19,5 19,16 24,16" fill="currentColor"/>
-</svg></span><span class="txt" data-campo="acao-dpad_down" data-hef-alvo="atributo" data-hef-atributo="title" title="Na Navegação: Seta para baixo"><b>D-pad baixo</b><span class="ap">↓</span><span class="troca" data-campo="trocada-dpad_down" data-hef-alvo="classe" data-hef-classe="tem">No jogo: <b data-campo="troca-dpad_down" data-hef-alvo="html"></b></span><span class="id mono">dpad_down</span></span></div>
-      <div class="item item-dpad_left" data-campo="aceso-dpad_left" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-
-  <polygon points="5,16 16,8 16,13 27,13 27,19 16,19 16,24" fill="currentColor"/>
-</svg></span><span class="txt" data-campo="acao-dpad_left" data-hef-alvo="atributo" data-hef-atributo="title" title="Na Navegação: Seta para a esquerda"><b>D-pad esquerda</b><span class="ap">←</span><span class="troca" data-campo="trocada-dpad_left" data-hef-alvo="classe" data-hef-classe="tem">No jogo: <b data-campo="troca-dpad_left" data-hef-alvo="html"></b></span><span class="id mono">dpad_left</span></span></div>
-    </div>
-    <div class="grupo">
-      <div class="grupo-rot">Ombros</div>
-      <div class="item item-l1" data-campo="aceso-l1" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-
-  <rect x="4" y="10" width="24" height="14" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
-  <text x="10" y="21" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L1</text>
-</svg></span><span class="txt" data-campo="acao-l1" data-hef-alvo="atributo" data-hef-atributo="title" title="Na Navegação: Alt + Shift + Tab"><b>L1</b><span class="troca" data-campo="trocada-l1" data-hef-alvo="classe" data-hef-classe="tem">No jogo: <b data-campo="troca-l1" data-hef-alvo="html"></b></span><span class="id mono">l1</span></span><span class="nota-peca" title="Ombro, o de CIMA, e ele ENCOSTA no casco — ela, 27/08: 'aumenta a altura vertical ... pra que toquem o controle'.">i</span></div>
-      <div class="item item-r1" data-campo="aceso-r1" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-
-  <rect x="4" y="10" width="24" height="14" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
-  <text x="9" y="21" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R1</text>
-</svg></span><span class="txt" data-campo="acao-r1" data-hef-alvo="atributo" data-hef-atributo="title" title="Na Navegação: Alt + Tab"><b>R1</b><span class="troca" data-campo="trocada-r1" data-hef-alvo="classe" data-hef-classe="tem">No jogo: <b data-campo="troca-r1" data-hef-alvo="html"></b></span><span class="id mono">r1</span></span><span class="nota-peca" title="Ombro, o de CIMA, encostado no casco.">i</span></div>
-    </div>
-    <div class="grupo">
-      <div class="grupo-rot">Gatilhos</div>
-      <div class="item item-l2" data-campo="aceso-l2" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-
-  <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
-  <text x="10" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L2</text>
-  <line x1="16" y1="24" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <polyline points="12,27 16,31 20,27" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-</svg></span><span class="txt" data-campo="acao-l2" data-hef-alvo="atributo" data-hef-atributo="title" title="Na Navegação: Botão esquerdo"><b>L2</b><span class="ap">gatilho adaptativo esquerdo</span><span class="troca" data-campo="trocada-l2" data-hef-alvo="classe" data-hef-classe="tem">No jogo: <b data-campo="troca-l2" data-hef-alvo="html"></b></span><span class="id mono">l2</span></span><span class="nota-peca" title="Gatilho adaptativo, e é o de BAIXO.">i</span></div>
-      <div class="item item-r2" data-campo="aceso-r2" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-
-  <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
-  <text x="9" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R2</text>
-  <line x1="16" y1="24" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <polyline points="12,27 16,31 20,27" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-</svg></span><span class="txt" data-campo="acao-r2" data-hef-alvo="atributo" data-hef-atributo="title" title="Na Navegação: Botão direito"><b>R2</b><span class="ap">gatilho adaptativo direito</span><span class="troca" data-campo="trocada-r2" data-hef-alvo="classe" data-hef-classe="tem">No jogo: <b data-campo="troca-r2" data-hef-alvo="html"></b></span><span class="id mono">r2</span></span><span class="nota-peca" title="Gatilho adaptativo, e é o de BAIXO.">i</span></div>
-    </div>
-    <div class="grupo">
-      <div class="grupo-rot">Analógicos</div>
-      <div class="item item-stick_l" data-campo="aceso-stick_l" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-
-  <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
-  <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
-  <text x="13" y="19" font-family="monospace" font-size="7" font-weight="bold" fill="currentColor">L</text>
-</svg></span><span class="txt" data-campo="acao-stick_l" data-hef-alvo="atributo" data-hef-atributo="title" title="Na Navegação: Movimento do cursor (direção) · Abrir e fechar o teclado na tela (clique)"><b>Analógico esquerdo</b><span class="ap">L3</span><span class="troca" data-campo="trocada-stick_l" data-hef-alvo="classe" data-hef-classe="tem">No jogo: <b data-campo="troca-stick_l" data-hef-alvo="html"></b></span><span class="id mono">stick_l</span></span><span class="nota-peca" title="UMA volta, não três: 'os analógicos tem várias voltas ao invés de uma'. Clique e direção são duas entradas na mesma peça.">i</span></div>
-      <div class="item item-stick_r" data-campo="aceso-stick_r" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-
-  <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
-  <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
-  <text x="13" y="19" font-family="monospace" font-size="7" font-weight="bold" fill="currentColor">R</text>
-</svg></span><span class="txt" data-campo="acao-stick_r" data-hef-alvo="atributo" data-hef-atributo="title" title="Na Navegação: Rolagem vertical e horizontal (direção) · Botão do meio (clique)"><b>Analógico direito</b><span class="ap">R3</span><span class="troca" data-campo="trocada-stick_r" data-hef-alvo="classe" data-hef-classe="tem">No jogo: <b data-campo="troca-stick_r" data-hef-alvo="html"></b></span><span class="id mono">stick_r</span></span><span class="nota-peca" title="UMA volta, não três. Clique e direção são duas entradas na mesma peça.">i</span></div>
-    </div>
-    <div class="grupo">
-      <div class="grupo-rot">Centro</div>
-      <div class="item item-share" data-campo="aceso-share" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-
-  <line x1="16" y1="7" x2="16" y2="20" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
-  <line x1="8"  y1="11" x2="12.5" y2="21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
-  <line x1="24" y1="11" x2="19.5" y2="21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
-</svg></span><span class="txt" data-campo="acao-share" data-hef-alvo="atributo" data-hef-atributo="title" title="Na Navegação: PrintScreen"><b>Share</b><span class="ap">Create|Select</span><span class="troca" data-campo="trocada-share" data-hef-alvo="classe" data-hef-classe="tem">No jogo: <b data-campo="troca-share" data-hef-alvo="html"></b></span><span class="id mono">share</span></span><span class="nota-peca" title="CORRIGIDO 27/08: era o id `l2` no SVG. Fica à esquerda do touchpad, colado nele.">i</span></div>
-      <div class="item item-options" data-campo="aceso-options" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-
-  <line x1="7" y1="10" x2="25" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <line x1="7" y1="16" x2="25" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <line x1="7" y1="22" x2="25" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></span><span class="txt" data-campo="acao-options" data-hef-alvo="atributo" data-hef-atributo="title" title="Na Navegação: Super (tecla Windows)"><b>Options</b><span class="ap">Start|Menu</span><span class="troca" data-campo="trocada-options" data-hef-alvo="classe" data-hef-classe="tem">No jogo: <b data-campo="troca-options" data-hef-alvo="html"></b></span><span class="id mono">options</span></span><span class="nota-peca" title="CORRIGIDO 27/08: era o id `r2` no SVG. Fica à direita do touchpad, colado nele.">i</span></div>
-      <div class="item item-touchpad" data-campo="aceso-touchpad" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+      <div class="mc-baixo">
+<button class="b2 item-touchpad" data-b="tp_toque"><span class="b2-gl"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <rect x="3" y="8" width="26" height="16" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="11" cy="16" r="1.5" fill="currentColor"/>
   <circle cx="16" cy="16" r="1.5" fill="currentColor"/>
   <circle cx="21" cy="16" r="1.5" fill="currentColor"/>
-</svg></span><span class="txt" data-campo="acao-touchpad" data-hef-alvo="atributo" data-hef-atributo="title" title="Na Navegação: Backspace (clique esquerdo) · Delete (clique direito) · Enter (clique central)"><b>Touchpad</b><span class="id mono">touchpad</span></span><span class="nota-peca" title="1920x1080, DOIS pontos de toque, cada um com id e flag de contato. Clique esquerdo, direito e central.">i</span></div>
-      <div class="item item-ps" data-campo="aceso-ps" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+</svg></span><span class="b2-nm">Toque</span><span class="b2-val">—</span></button>
+<button class="b2 item-touchpad" data-b="tp_esq"><span class="b2-gl"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <rect x="3" y="8" width="26" height="16" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
+  <circle cx="11" cy="16" r="1.5" fill="currentColor"/>
+  <circle cx="16" cy="16" r="1.5" fill="currentColor"/>
+  <circle cx="21" cy="16" r="1.5" fill="currentColor"/>
+</svg></span><span class="b2-nm">Esquerda</span><span class="b2-val">—</span></button>
+<button class="b2 item-touchpad" data-b="tp_meio"><span class="b2-gl"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <rect x="3" y="8" width="26" height="16" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
+  <circle cx="11" cy="16" r="1.5" fill="currentColor"/>
+  <circle cx="16" cy="16" r="1.5" fill="currentColor"/>
+  <circle cx="21" cy="16" r="1.5" fill="currentColor"/>
+</svg></span><span class="b2-nm">Meio</span><span class="b2-val">—</span></button>
+<button class="b2 item-touchpad" data-b="tp_dir"><span class="b2-gl"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <rect x="3" y="8" width="26" height="16" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
+  <circle cx="11" cy="16" r="1.5" fill="currentColor"/>
+  <circle cx="16" cy="16" r="1.5" fill="currentColor"/>
+  <circle cx="21" cy="16" r="1.5" fill="currentColor"/>
+</svg></span><span class="b2-nm">Direita</span><span class="b2-val">—</span></button>
+<button class="b2 item-ps" data-b="ps"><span class="b2-gl"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <g transform="translate(16 16) scale(0.99425) translate(-16.0925 -16.0)">
     <path fill="currentColor" d="M 1.348 21.736 C 0.195 22.543 0.408 23.935 3.04 24.805 C 5.671 25.675 8.73 25.855 11.422 25.371 C 11.345 25.371 11.575 25.371 11.422 25.371 L 11.422 22.624 L 8.807 23.513 C 7.807 23.835 6.807 23.916 5.808 23.675 C 5.039 23.432 5.192 22.947 6.115 22.543 L 11.422 20.604 L 11.422 17.616 L 4.039 20.282 C 3.117 20.604 2.193 21.09 1.348 21.736 Z M 19.188 9.619 L 19.188 17.455 C 22.34 19.07 24.801 17.455 24.801 13.254 C 24.801 8.973 23.34 7.034 19.111 5.5 C 16.881 4.692 14.574 3.965 12.267 3.48 L 12.267 26.825 L 17.65 28.521 L 17.65 8.892 C 17.65 8.004 17.65 7.358 18.266 7.599 C 19.111 7.842 19.188 8.731 19.188 9.619 Z M 29.184 19.878 C 26.955 19.07 24.571 18.746 22.263 18.989 C 20.982 19.073 19.78 19.455 18.573 19.878 L 18.573 23.028 L 23.571 21.09 C 24.571 20.766 25.571 20.685 26.57 20.928 C 27.339 21.171 27.185 21.655 26.262 22.059 L 18.573 25.047 L 18.573 28.116 L 29.184 23.997 C 29.954 23.675 30.645 23.27 31.261 22.624 C 31.799 21.817 31.568 20.685 29.184 19.878 Z"/>
   </g>
-</svg></span><span class="txt" data-campo="acao-ps" data-hef-alvo="atributo" data-hef-atributo="title" title="Na Navegação: — Sem tecla —"><b>PS</b><span class="ap">botão home</span><span class="id mono">ps</span></span><span class="nota-peca" title="O glifo É o botão: sem anel em volta, decisão dela em 27/08.">i</span><ol class="gestos"><li><span class="n">1</span>PS + Options · Suspender mouse e teclado</li><li><span class="n">2</span>PS + D-pad cima · Próximo perfil</li><li><span class="n">3</span>PS + D-pad baixo · Perfil anterior</li><li><span class="n">4</span>PS + R3 · Próximo modo</li><li><span class="n">5</span>PS + L3 · Próxima máscara</li><li><span class="n">6</span>PS · Abrir a Steam</li></ol></div>
+</svg></span><span class="b2-nm">PS</span><span class="b2-val">—</span></button>
+      </div>
+      <div class="sel2" hidden data-todo="7" role="dialog" aria-label="O que o botão faz">
+        <div class="sel2-topo"><span class="sel2-tit"><span class="sel2-b">Cruz</span> vira</span>
+          <div class="seg2" role="tablist"><button class="on" data-aba="controle">Controle</button><button data-aba="mouse">Mouse</button><button data-aba="teclado">Teclado</button></div>
+          <button class="sel2-x" aria-label="Fechar">×</button></div>
+        <div class="sel2-grade" data-aba="controle"><button class="op3" data-v="Cruz"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <line x1="8" y1="8" x2="24" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <line x1="24" y1="8" x2="8" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+</svg><span>Cruz</span></button><button class="op3" data-v="Círculo"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <circle cx="16" cy="16" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
+</svg><span>Círculo</span></button><button class="op3" data-v="Quadrado"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <rect x="7" y="7" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+</svg><span>Quadrado</span></button><button class="op3" data-v="Triângulo"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <polygon points="16,6 27,25 5,25" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+</svg><span>Triângulo</span></button><button class="op3" data-v="Cima"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <polygon points="16,5 24,16 19,16 19,27 13,27 13,16 8,16" fill="currentColor"/>
+</svg><span>Cima</span></button><button class="op3" data-v="Baixo"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <polygon points="16,27 8,16 13,16 13,5 19,5 19,16 24,16" fill="currentColor"/>
+</svg><span>Baixo</span></button><button class="op3" data-v="Esquerda"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <polygon points="5,16 16,8 16,13 27,13 27,19 16,19 16,24" fill="currentColor"/>
+</svg><span>Esquerda</span></button><button class="op3" data-v="Direita"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <polygon points="27,16 16,8 16,13 5,13 5,19 16,19 16,24" fill="currentColor"/>
+</svg><span>Direita</span></button><button class="op3" data-v="L1"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <rect x="4" y="10" width="24" height="14" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
+  <text x="10" y="21" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L1</text>
+</svg><span>L1</span></button><button class="op3" data-v="R1"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <rect x="4" y="10" width="24" height="14" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
+  <text x="9" y="21" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R1</text>
+</svg><span>R1</span></button><button class="op3" data-v="L2"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
+  <text x="10" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L2</text>
+  <line x1="16" y1="24" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <polyline points="12,27 16,31 20,27" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+</svg><span>L2</span></button><button class="op3" data-v="R2"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
+  <text x="9" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R2</text>
+  <line x1="16" y1="24" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <polyline points="12,27 16,31 20,27" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+</svg><span>R2</span></button><button class="op3" data-v="L3"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
+  <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+  <text x="13" y="19" font-family="monospace" font-size="7" font-weight="bold" fill="currentColor">L</text>
+</svg><span>L3</span></button><button class="op3" data-v="R3"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
+  <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+  <text x="13" y="19" font-family="monospace" font-size="7" font-weight="bold" fill="currentColor">R</text>
+</svg><span>R3</span></button><button class="op3" data-v="Options"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <line x1="7" y1="10" x2="25" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <line x1="7" y1="16" x2="25" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <line x1="7" y1="22" x2="25" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+</svg><span>Options</span></button><button class="op3" data-v="Share"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <line x1="16" y1="7" x2="16" y2="20" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+  <line x1="8"  y1="11" x2="12.5" y2="21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+  <line x1="24" y1="11" x2="19.5" y2="21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+</svg><span>Share</span></button><button class="op3" data-v="PS"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <g transform="translate(16 16) scale(0.99425) translate(-16.0925 -16.0)">
+    <path fill="currentColor" d="M 1.348 21.736 C 0.195 22.543 0.408 23.935 3.04 24.805 C 5.671 25.675 8.73 25.855 11.422 25.371 C 11.345 25.371 11.575 25.371 11.422 25.371 L 11.422 22.624 L 8.807 23.513 C 7.807 23.835 6.807 23.916 5.808 23.675 C 5.039 23.432 5.192 22.947 6.115 22.543 L 11.422 20.604 L 11.422 17.616 L 4.039 20.282 C 3.117 20.604 2.193 21.09 1.348 21.736 Z M 19.188 9.619 L 19.188 17.455 C 22.34 19.07 24.801 17.455 24.801 13.254 C 24.801 8.973 23.34 7.034 19.111 5.5 C 16.881 4.692 14.574 3.965 12.267 3.48 L 12.267 26.825 L 17.65 28.521 L 17.65 8.892 C 17.65 8.004 17.65 7.358 18.266 7.599 C 19.111 7.842 19.188 8.731 19.188 9.619 Z M 29.184 19.878 C 26.955 19.07 24.571 18.746 22.263 18.989 C 20.982 19.073 19.78 19.455 18.573 19.878 L 18.573 23.028 L 23.571 21.09 C 24.571 20.766 25.571 20.685 26.57 20.928 C 27.339 21.171 27.185 21.655 26.262 22.059 L 18.573 25.047 L 18.573 28.116 L 29.184 23.997 C 29.954 23.675 30.645 23.27 31.261 22.624 C 31.799 21.817 31.568 20.685 29.184 19.878 Z"/>
+  </g>
+</svg><span>PS</span></button><button class="op3" data-v="Touchpad"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <rect x="3" y="8" width="26" height="16" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
+  <circle cx="11" cy="16" r="1.5" fill="currentColor"/>
+  <circle cx="16" cy="16" r="1.5" fill="currentColor"/>
+  <circle cx="21" cy="16" r="1.5" fill="currentColor"/>
+</svg><span>Touchpad</span></button></div>
+        <div class="sel2-grade" data-aba="mouse" hidden><button class="op3 txt" data-v="Botão esquerdo"><span>Botão esquerdo</span></button><button class="op3 txt" data-v="Botão direito"><span>Botão direito</span></button><button class="op3 txt" data-v="Botão do meio"><span>Botão do meio</span></button><button class="op3 txt" data-v="Movimento do cursor"><span>Movimento do cursor</span></button><button class="op3 txt" data-v="Rolagem"><span>Rolagem</span></button><button class="op3 txt" data-v="Rolagem para cima"><span>Rolagem para cima</span></button><button class="op3 txt" data-v="Rolagem para baixo"><span>Rolagem para baixo</span></button><button class="op3 txt" data-v="Voltar"><span>Voltar</span></button><button class="op3 txt" data-v="Avançar"><span>Avançar</span></button></div>
+        <div class="sel2-grade" data-aba="teclado" hidden><button class="op3 gravar" data-v="gravar"><span class="ponto"></span><span>Gravar tecla</span></button><button class="op3 txt" data-v="Enter"><span>Enter</span></button><button class="op3 txt" data-v="Esc"><span>Esc</span></button><button class="op3 txt" data-v="Espaço"><span>Espaço</span></button><button class="op3 txt" data-v="Backspace"><span>Backspace</span></button><button class="op3 txt" data-v="Delete"><span>Delete</span></button><button class="op3 txt" data-v="Tab"><span>Tab</span></button><button class="op3 txt" data-v="Ctrl"><span>Ctrl</span></button><button class="op3 txt" data-v="Shift"><span>Shift</span></button><button class="op3 txt" data-v="Alt + Tab"><span>Alt + Tab</span></button><button class="op3 txt" data-v="Super"><span>Super</span></button><button class="op3 txt" data-v="PrintScreen"><span>PrintScreen</span></button><button class="op3 txt" data-v="F11"><span>F11</span></button></div>
+        <div class="sel2-rod"><button class="op3 txt limpar" data-v="—"><span>Sem mudança</span></button></div>
+      </div>
     </div>
-    <div class="grupo">
-      <div class="grupo-rot">Sensores</div>
-      <div class="item item-feat-giroscopio" data-campo="aceso-feat-giroscopio" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+    <div class="mc-lado">
+<button class="b2 item-r2" data-b="r2"><span class="b2-gl"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
-  <circle cx="16" cy="16" r="4" fill="none" stroke="currentColor" stroke-width="2"/>
-  <ellipse cx="16" cy="16" rx="12" ry="5" fill="none" stroke="currentColor" stroke-width="2"/>
-  <ellipse cx="16" cy="16" rx="5" ry="12" fill="none" stroke="currentColor" stroke-width="2"/>
-</svg></span><span class="txt"><b>Giroscópio</b><span class="ap">gyro</span><span class="id mono">feat-giroscopio</span></span><span class="nota-peca" title="Mede a rotação do CONTROLE INTEIRO — por isso a peça dele é o corpo, e não uma caixa no meio da placa; ela contornou a região na tela, 27/08. 1024 LSB/(graus/s), mais ou menos 2048 graus/s. 250,0 Hz exatos no cabo, medido nesta casa.">i</span></div>
-      <div class="item item-feat-acelerometro" data-campo="aceso-feat-acelerometro" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
+  <text x="9" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R2</text>
+  <line x1="16" y1="24" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <polyline points="12,27 16,31 20,27" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+</svg></span><span class="b2-nm">R2</span><span class="b2-val">—</span></button>
+<button class="b2 item-r1" data-b="r1"><span class="b2-gl"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
-  <rect x="6" y="12" width="10" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
-  <line x1="3" y1="24" x2="29" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <path d="M20,16 h7 m-3,-3 l3,3 l-3,3" fill="none" stroke="currentColor" stroke-width="2"
-        stroke-linecap="round" stroke-linejoin="round"/>
-</svg></span><span class="txt"><b>Acelerômetro</b><span class="ap">accel</span><span class="id mono">feat-acelerometro</span></span><span class="nota-peca" title="Mede a aceleração do CONTROLE INTEIRO, como o giroscópio. 8192 LSB/g, mais ou menos 4 g.">i</span></div>
-    </div>
-    <div class="grupo">
-      <div class="grupo-rot">Luzes</div>
-      <div class="item item-lightbar"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect x="4" y="10" width="24" height="14" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
+  <text x="9" y="21" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R1</text>
+</svg></span><span class="b2-nm">R1</span><span class="b2-val">—</span></button>
+<button class="b2 item-triangle" data-b="triangle"><span class="b2-gl"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
-  <rect x="6"  y="7" width="4" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
-  <rect x="22" y="7" width="4" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
-  <line x1="13" y1="10" x2="13" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <line x1="19" y1="10" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></span><span class="txt"><b>Lightbar</b><span class="ap">barra de luz|iluminação</span><span class="id mono">lightbar</span></span><span class="nota-peca" title="Duas tiras que LADEIAM o touchpad e acompanham a borda dele. Uma feature, duas peças: o firmware não as endereça em separado.">i</span></div>
-      <div class="item item-led-jogador"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <polygon points="16,6 27,25 5,25" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+</svg></span><span class="b2-nm">Triângulo</span><span class="b2-val">—</span></button>
+<button class="b2 item-circle" data-b="circle"><span class="b2-gl"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
-  <rect x="3"  y="13" width="3" height="6" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
-  <rect x="11" y="13" width="3" height="6" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
-  <rect x="15" y="13" width="3" height="6" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
-  <rect x="19" y="13" width="3" height="6" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
-  <rect x="27" y="13" width="3" height="6" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
-</svg></span><span class="txt"><b>Indicador de jogador</b><span class="ap">cinco lâmpadas|posto|assento</span><span class="id mono">led-jogador</span></span><span class="nota-peca" title="As cinco lâmpadas montam sobre a BASE do touchpad, como o lightbar monta sobre as laterais — ela, 27/08. É o PADRÃO que diz o número: 1 | vão | 3 | vão | 1.">i</span></div>
-    </div>
-    <div class="grupo">
-      <div class="grupo-rot">Áudio</div>
-      <div class="item item-mic" data-campo="aceso-mic" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <circle cx="16" cy="16" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
+</svg></span><span class="b2-nm">Círculo</span><span class="b2-val">—</span></button>
+<button class="b2 item-cross" data-b="cross"><span class="b2-gl"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
-  <rect x="11" y="4" width="10" height="15" rx="5" ry="5" fill="none" stroke="currentColor" stroke-width="2"/>
-  <path d="M7,17 Q7,25 16,25 Q25,25 25,17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <line x1="16" y1="25" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <line x1="11" y1="30" x2="21" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></span><span class="txt"><b>Microfone</b><span class="id mono">mic</span></span><span class="nota-peca" title="O botão de MUDO, e ele é pequeno: a barra de 7x1 que estava aqui virava um risco atravessado no corpo, e ela viu — 'essa linha não existe no controle da vida real'.">i</span></div>
-      <div class="item item-alto-falante"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <line x1="8" y1="8" x2="24" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <line x1="24" y1="8" x2="8" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+</svg></span><span class="b2-nm">Cruz</span><span class="b2-val">—</span></button>
+<button class="b2 item-square" data-b="square"><span class="b2-gl"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
-  <path d="M6,12 h5 l7,-6 v20 l-7,-6 H6 Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-  <path d="M22,11 Q26,16 22,21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <path d="M26,7 Q32,16 26,25" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></span><span class="txt"><b>Alto-falante</b><span class="id mono">alto-falante</span></span><span class="nota-peca" title="Duas linhas de furos: 5 em cima e 4 embaixo.">i</span></div>
-    </div>
-    <div class="grupo">
-      <div class="grupo-rot">Energia</div>
-      <div class="item item-feat-bateria"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect x="7" y="7" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+</svg></span><span class="b2-nm">Quadrado</span><span class="b2-val">—</span></button>
+<button class="b2 item-stick_r" data-b="r3"><span class="b2-gl"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
-  <rect x="3" y="10" width="22" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
-  <path d="M27,14 v4" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
-  <line x1="7"  y1="14" x2="7"  y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <line x1="12" y1="14" x2="12" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <line x1="17" y1="14" x2="17" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></span><span class="txt"><b>Bateria</b><span class="id mono">feat-bateria</span></span><span class="nota-peca" title="As DUAS TIRAS DO LIGHTBAR são o medidor, e é o que o aparelho faz: cheias em 100%, apagadas em 0%, piscando vermelho quando está acabando. Decisão dela, 27/08.">i</span></div>
-    </div>
-    <div class="grupo">
-      <div class="grupo-rot">Vibração</div>
-      <div class="item item-feat-haptica" data-campo="aceso-feat-haptica" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
+  <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+  <text x="13" y="19" font-family="monospace" font-size="7" font-weight="bold" fill="currentColor">R</text>
+</svg></span><span class="b2-nm">R3 clique</span><span class="b2-val">—</span></button>
+<button class="b2 item-stick_r" data-b="r3_direcao"><span class="b2-gl"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
-  <rect x="3" y="13" width="26" height="14" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
-  <path d="M8 9 q2 -3 4 0 t4 0 t4 0 t4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <path d="M11 4 q1.5 -2.5 3 0 t3 0 t3 0 t3 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></span><span class="txt"><b>Háptica</b><span class="ap">sensor háptico</span><span class="id mono">feat-haptica</span></span><span class="nota-peca" title="A vibração fina que o jogo manda como som, tocada pelos dois motores.">i</span></div>
-      <div class="item item-feat-rumble-esquerdo" data-campo="aceso-feat-rumble-esquerdo" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
+  <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+  <text x="13" y="19" font-family="monospace" font-size="7" font-weight="bold" fill="currentColor">R</text>
+</svg></span><span class="b2-nm">R3 direção</span><span class="b2-val">—</span></button>
+<button class="b2 item-options" data-b="options"><span class="b2-gl"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
-  <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
-        fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-  <path d="M25,9 q4,7 0,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <path d="M29,5 q6,11 0,22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></span><span class="txt"><b>Motor de vibração esquerdo</b><span class="ap">motor forte</span><span class="id mono">feat-rumble-esquerdo</span></span><span class="nota-peca" title="Contrapeso maior — soa grosso.">i</span></div>
-      <div class="item item-feat-rumble-direito" data-campo="aceso-feat-rumble-direito" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-
-  <path d="M12,4 h6 q3,0 4,3 l3,10 q2,7 -2,11 q-4,4 -8,1 q-3,-2 -3,-7 z"
-        fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-  <path d="M7,10 q-3,6 0,12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <path d="M3,7 q-4,9 0,18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></span><span class="txt"><b>Motor de vibração direito</b><span class="ap">motor leve</span><span class="id mono">feat-rumble-direito</span></span><span class="nota-peca" title="Contrapeso menor — soa fino.">i</span></div>
-    </div>
+  <line x1="7" y1="10" x2="25" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <line x1="7" y1="16" x2="25" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <line x1="7" y1="22" x2="25" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+</svg></span><span class="b2-nm">Options</span><span class="b2-val">—</span></button>
     </div>
   </div>
-
+  <div class="mc-cursor" data-todo="8">
+    <span class="mc-rot">Mover com</span><select class="campo2"><option selected>Analógico esquerdo</option><option>Analógico direito</option><option>Touchpad</option><option>Giroscópio</option></select>
+    <span class="mc-rot">Devagar enquanto segura</span><select class="campo2"><option selected>L2</option><option>R2</option><option>L1</option><option>Nenhum</option></select>
+    <span class="mc-rot" data-dica="O cursor parado clica sozinho">Parar para clicar</span><span class="tog2 on" data-todo="9">0,6 s</span>
+    <span class="mc-rot" data-dica="Um clique prende; outro solta">Prender o clique</span><span class="tog2">Desligado</span>
+  </div>
+  <div class="mc-rod" data-todo="10">
+    <a class="btn2" href="06-navegacao.html">Cancelar</a>
+    <button class="btn2 amarelo">Voltar ao padrão</button>
+    <button class="btn2 roxo">Guardar</button>
   </div>
 </div>
-
-  <script>
-  // O PADRÃO DAS LÂMPADAS É DO PRODUTO — `core/led_control.py`. Copiar a tabela
-  // para cá seria criar a segunda verdade que este mapa existe para matar.
-  const PADRAO = {"1": [3], "2": [2, 4], "3": [1, 3, 5], "4": [1, 2, 4, 5]};
-  const PARCIAL = "hachurado = o acabamento não cabe num hexadecimal (iridescente, "
-                + "metálico, camuflado, arte); cinza chapado = zona sem amostragem.";
-  const ds = document.querySelector("svg.ds");
-  const barra = document.querySelector("#mp-lightbar");
-  const nota = document.querySelector("#nota");
-  const cw = document.querySelector("#cw");
-  const cx = document.querySelector(".cx");
-  const chips = document.querySelector('[data-bloco="controles-do-mapa"]');
-
-  function plastico(modelo) {
-    if (modelo) { ds.dataset.colorway = modelo; cw.value = modelo; }
-    else { delete ds.dataset.colorway; cw.value = ""; }
-    const op = cw.selectedOptions[0];
-    nota.textContent = op && op.dataset.parcial ? PARCIAL : " ";
-  }
-  cw.addEventListener("change", e => plastico(e.target.value));
-
-  // A BARRA DE LUZ E O JOGADOR ANDAM JUNTOS no banco de provas (o chip do
-  // desenho leva a cor do jogador em `data-luz`), e é assim no aparelho: o PS5
-  // acende as duas coisas ao numerar um controle. No produto o chip não leva
-  // cor, e a barra fica com a do aparelho, que o tique pinta (`luz-cor`).
-  function acende(n, luz) {
-    for (let i = 1; i <= 5; i++)
-      document.querySelector("#mp-led-jogador-" + i)
-              .classList.toggle("led-on", (PADRAO[n] || []).includes(i));
-    if (luz) {
-      barra.style.setProperty("--luz", luz);
-    } else if (n) {
-      barra.style.removeProperty("--luz");
-    } else {
-      barra.style.setProperty("--luz", "var(--luz-apagada)");
-    }
-  }
-
-  // O DESENHO SEGUE O CHIP: as lâmpadas pelo número do jogador, o plástico
-  // pelo modelo. O «Nenhum» é o desenho sem controle, e com ele o pisca não
-  // acende (`.sem-controle`). O «Cor do plástico» continua livre: escolher
-  // um modelo depois de um chip vale até o próximo chip.
-  // O «Todos» não é UM controle: o desenho dele é o do primeiro da mesa, o
-  // mesmo de quem o produto pinta a barra (`luz-cor`). Sem isso, as lâmpadas e
-  // o plástico ficavam os do chip anterior.
-  function primeiro() {
-    return chips.querySelector('.bt[data-jogador]:not([data-jogador="0"])');
-  }
-  function desenha(b) {
-    const d = b.hasAttribute("data-jogador") ? b : (primeiro() || b);
-    if (d.hasAttribute("data-jogador")) acende(+d.dataset.jogador, d.dataset.luz);
-    if (d.hasAttribute("data-colorway")) plastico(d.dataset.colorway);
-    cx.classList.toggle("sem-controle", d.dataset.jogador === "0");
-  }
-  // POR DELEGAÇÃO, porque o produto troca os chips a cada mudança da mesa: um
-  // ouvinte posto em cada botão ao carregar morreria com o bloco.
-  document.addEventListener("click", e => {
-    const b = e.target.closest('[data-bloco="controles-do-mapa"] .bt');
-    if (!b) return;
-    chips.querySelectorAll(".bt").forEach(x => x.classList.toggle("on", x === b));
-    desenha(b);
-  });
-  // A MESA SEM CONTROLE é o «Nenhum»: o bloco do produto chega só com ele, e
-  // o desenho não pode ficar com as lâmpadas e a barra do chip da bancada.
-  function segue() {
-    let b = chips.querySelector(".bt.on[data-jogador]") || primeiro();
-    if (!b) {
-      b = chips.querySelector('.bt[data-jogador="0"]');
-      if (b && !chips.querySelector(".bt.on")) b.classList.add("on");
-    }
-    if (b) desenha(b);
-  }
-  new MutationObserver(segue).observe(chips, {childList: true});
-
-  // O MAPA NASCE COM LUZ: o desenho do chip aceso. Sem jogador, o lightbar e as
-  // cinco lâmpadas ficam na cor de apagado — e ela reparou na ausência antes:
-  // "faltou só os dois lightbar e os led de player". O apagado continua a um
-  // clique, no botão "Nenhum".
-  segue();
-  </script>
-
-<style data-todo-css="menu-do-botao-direito">
-  .todo-menu{position:fixed;z-index:9999;display:none;min-width:168px;padding:4px;
-    border:1px solid var(--border-forte);border-radius:8px;background:var(--elevated);
-    box-shadow:0 6px 18px rgba(0,0,0,.45);font-family:'Space Grotesk',system-ui,sans-serif;font-size:13px}
-  .todo-menu.aberto{display:block}
-  .todo-menu button{display:block;width:100%;height:28px;padding:0 14px;border:0;border-radius:5px;
-    background:transparent;color:var(--fg);font:inherit;text-align:left;cursor:pointer}
-  .todo-menu button:hover{background:var(--sel-bg,rgba(189,147,249,.16))}
-  .todo-menu button[aria-disabled="true"]{color:var(--texto-mudo);cursor:default;background:transparent}
-  .todo-menu hr{border:0;border-top:1px solid var(--border-sutil);margin:4px 2px}
-</style>
-<div class="todo-menu aberto" id="todo-menu-direito" data-todo="4" role="menu" aria-label="Menu do Hefesto"
-     style="left:50px;top:190px"
-     title="O menu de verdade é o do sistema, no tema do COSMIC; aqui ele aparece aberto só para se ver.">
-  <button role="menuitem" data-item="copiar" aria-disabled="true">Copiar</button>
-  <hr>
-  <button role="menuitem" data-item="atualizar">Atualizar</button>
-  <button role="menuitem" data-item="ligar-desligar" title="Faz o mesmo que o Desligado da bandeja e da aba Jogar: o Hefesto sai da frente do jogo, que passa a ler o controle direto (modo nativo). O serviço segue de pé.">Desligar</button>
-  <button role="menuitem" data-item="reiniciar">Reiniciar</button>
-  <hr>
-  <button role="menuitem" data-item="fechar">Fechar</button>
-</div>
-<script data-todo="4">
+<script>/* rodada 2: o perfil pinta as linhas e o desenho; clicar num botão abre o seletor.
+   Âncoras para as fotos: #point-and-click, #trocar, #escolher. */
 (() => {
-  const m = document.getElementById('todo-menu-direito');
-  const rotulo = () => {
-    const desligado = document.body.classList.contains('nativo') || !!document.querySelector('#hef-desligado:checked');
-    { const ld = m.querySelector('[data-item="ligar-desligar"]'); ld.textContent = desligado ? 'Ligar' : 'Desligar'; ld.title = desligado ? 'Faz o mesmo que o Ligado da bandeja e da aba Jogar: liga o serviço se estiver parado e volta a entregar o controle ao jogo pelo Hefesto.' : 'Faz o mesmo que o Desligado da bandeja e da aba Jogar: o Hefesto sai da frente do jogo, que passa a ler o controle direto (modo nativo). O serviço segue de pé.'; }
-  };
-  document.addEventListener('contextmenu', (e) => {
-    e.preventDefault();
-    m.querySelector('[data-item="copiar"]').setAttribute('aria-disabled', String(!String(getSelection()).trim()));
-    rotulo();
-    m.classList.add('aberto');
-    m.style.left = Math.min(e.clientX, innerWidth - m.offsetWidth - 8) + 'px';
-    m.style.top = Math.min(e.clientY, innerHeight - m.offsetHeight - 8) + 'px';
+  const PERFIS = {"nav": {"tipo": "nav", "rot": "Navegação", "nome": "Navegar no computador", "jogos": ["Fora do jogo"], "m": {"cross": "Botão esquerdo", "circle": "Enter", "square": "Esc", "triangle": "Botão direito", "dpad_up": "Seta para cima", "dpad_down": "Seta para baixo", "dpad_left": "Seta para a esquerda", "dpad_right": "Seta para a direita", "l1": "Alt + Shift + Tab", "r1": "Alt + Tab", "l2": "Botão esquerdo", "r2": "Botão direito", "l3": "Teclado na tela", "l3_direcao": "Movimento do cursor", "r3": "Botão do meio", "r3_direcao": "Rolagem", "options": "Super", "create": "PrintScreen", "tp_toque": "Movimento do cursor", "tp_esq": "Backspace", "tp_meio": "Enter", "tp_dir": "Delete"}}, "vn": {"tipo": "pac", "rot": "Point and click", "nome": "Visual novel", "jogos": [], "m": {"cross": "Botão esquerdo", "circle": "Botão direito", "square": "Ctrl", "triangle": "Esc", "l1": "Rolagem para cima", "r1": "Rolagem para baixo", "l3_direcao": "Movimento do cursor", "tp_toque": "Movimento do cursor"}}, "mouse": {"tipo": "pac", "rot": "Point and click", "nome": "Só mouse", "jogos": [], "m": {"cross": "Botão esquerdo", "circle": "Botão direito", "l3_direcao": "Movimento do cursor", "r3_direcao": "Rolagem", "tp_toque": "Movimento do cursor"}}, "tm": {"tipo": "pac", "rot": "Point and click", "nome": "Teclado e mouse", "jogos": [], "m": {"cross": "Botão esquerdo", "circle": "Esc", "square": "Espaço", "triangle": "Enter", "dpad_up": "Seta para cima", "dpad_down": "Seta para baixo", "dpad_left": "Seta para a esquerda", "dpad_right": "Seta para a direita", "l3_direcao": "Movimento do cursor"}}, "orpheus": {"tipo": "pac", "rot": "Point and click", "nome": "Orpheus", "jogos": ["Orpheus"], "m": {"cross": "Botão esquerdo", "circle": "Botão direito", "square": "Ctrl", "triangle": "Esc", "r1": "Rolagem para baixo", "l3_direcao": "Movimento do cursor"}}, "maid": {"tipo": "troca", "rot": "Trocar os botões", "nome": "Maid Life SS", "jogos": ["Maid Life SS"], "m": {"cross": "Quadrado", "square": "Cruz"}}};
+  const PADRAO = {"1": [3], "2": [2, 4], "3": [1, 3, 5], "4": [1, 2, 4, 5]};
+  const mc = document.querySelector('.mc'), sel = document.getElementById('perfil'), nome = document.getElementById('nome');
+  const eti = document.querySelector('.etiqueta'), usar = document.querySelector('.usar-em');
+  const pop = document.querySelector('.sel2'), ds = document.querySelector('svg.ds');
+  let atual = 'nav', botao = 'cross';
+  function pinta() {
+    const p = PERFIS[atual];
+    mc.dataset.tipo = p.tipo; eti.textContent = p.rot; nome.value = p.nome;
+    usar.innerHTML = p.jogos.map(j => `<span class="jogo">${j}</span>`).join('') + '<span class="jogo mais">+ Jogo</span>';
+    document.querySelectorAll('.b2').forEach(b => {
+      const val = p.m[b.dataset.b];
+      b.querySelector('.b2-val').textContent = val || '—';
+      b.classList.toggle('muda', !!val);
+      b.classList.toggle('on', b.dataset.b === botao);
+    });
+  }
+  function perfil(k) { if (!PERFIS[k]) return; atual = k; sel.value = k; pinta(); }
+  sel.addEventListener('change', () => perfil(sel.value));
+  function abre(b, aba) {
+    botao = b.dataset.b; pinta();
+    pop.querySelector('.sel2-b').textContent = b.querySelector('.b2-nm').textContent;
+    const val = PERFIS[atual].m[botao];
+    pop.querySelectorAll('.op3').forEach(o => o.classList.toggle('on', o.dataset.v === val));
+    aba = aba || (pop.querySelector(`.sel2-grade[data-aba="controle"] .op3[data-v="${val}"]`) ? 'controle'
+                  : pop.querySelector(`.sel2-grade[data-aba="teclado"] .op3[data-v="${val}"]`) ? 'teclado' : 'mouse');
+    mostra(aba); pop.hidden = false;
+  }
+  function mostra(aba) {
+    pop.querySelectorAll('.seg2 button').forEach(x => x.classList.toggle('on', x.dataset.aba === aba));
+    pop.querySelectorAll('.sel2-grade').forEach(g => g.hidden = g.dataset.aba !== aba);
+  }
+  document.querySelectorAll('.b2').forEach(b => b.addEventListener('click', () => abre(b)));
+  pop.querySelector('.seg2').addEventListener('click', e => { const t = e.target.closest('button'); if (t) mostra(t.dataset.aba); });
+  pop.querySelector('.sel2-x').addEventListener('click', () => { pop.hidden = true; });
+  pop.addEventListener('click', e => {
+    const o = e.target.closest('.op3'); if (!o || o.dataset.v === 'gravar') return;
+    if (o.dataset.v === '—') delete PERFIS[atual].m[botao]; else PERFIS[atual].m[botao] = o.dataset.v;
+    pop.hidden = true; pinta();
   });
-  document.addEventListener('click', (e) => { if (!m.contains(e.target)) m.classList.remove('aberto'); rotulo(); });
-  document.addEventListener('change', rotulo);
-  rotulo();
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') m.classList.remove('aberto'); });
+  document.querySelectorAll('.tog2').forEach(t => t.addEventListener('click', () => {
+    const on = t.classList.toggle('on'); if (!/s$/.test(t.textContent)) t.textContent = on ? 'Ligado' : 'Desligado'; }));
+  function acende(c) {
+    ds.dataset.colorway = c.dataset.colorway;
+    for (let i = 1; i <= 5; i++)
+      document.getElementById('mp-led-jogador-' + i).classList.toggle('led-on', (PADRAO[c.dataset.jogador] || []).includes(i));
+    document.getElementById('mp-lightbar').style.setProperty('--luz', c.dataset.luz);
+  }
+  document.querySelectorAll('.mc-chips .chip').forEach(c => c.addEventListener('click', () => {
+    document.querySelectorAll('.mc-chips .chip').forEach(x => x.classList.toggle('on', x === c)); acende(c); }));
+  acende(document.querySelector('.mc-chips .chip.on'));
+  const h = location.hash;
+  if (h === '#point-and-click') perfil(new URLSearchParams(location.search).get('perfil') || 'vn');
+  else if (h === '#trocar') perfil('maid');
+  else if (h === '#escolher') { perfil('maid'); abre(document.querySelector('.b2[data-b="cross"]'), 'controle'); }
+  else pinta();
+})();
+</script>
+<div class="menu-hefesto" id="menu-desenhado" role="menu" aria-label="Menu do Hefesto" data-todo="11" hidden style="left:37px;top:536px">
+  <button role="menuitem" disabled>Copiar</button><hr>
+  <button role="menuitem">Atualizar</button>
+  <button role="menuitem" data-dica="O Hefesto sai da frente e o jogo lê o controle direto">Desligar</button>
+  <button role="menuitem">Reiniciar</button><hr><button role="menuitem">Fechar</button>
+</div>
+<script>/* O menu desenhado aberto só na foto do menu: abra a página com #menu. */
+if (location.hash === '#menu') document.getElementById('menu-desenhado').hidden = false;</script>
+<script id="base-comum">
+/* Base comum das abas (rodada 2): a dica no hover e o menu do botão direito. Copiada IGUAL em todo mockup. */
+(() => {
+  const dica = document.createElement('div'); dica.id = 'hef-dica'; dica.setAttribute('role', 'tooltip');
+  document.addEventListener('DOMContentLoaded', () => document.body.append(dica));
+  let alvo = null;
+  const mostrar = el => {
+    alvo = el; dica.textContent = el.dataset.dica;
+    if (!dica.isConnected) document.body.append(dica);
+    const r = el.getBoundingClientRect(), d = dica.getBoundingClientRect();
+    let x = r.left + r.width / 2 - d.width / 2, y = r.bottom + 8;
+    if (y + d.height > innerHeight - 6) y = r.top - d.height - 8;
+    dica.style.left = Math.max(6, Math.min(x, innerWidth - d.width - 6)) + 'px'; dica.style.top = y + 'px';
+    dica.classList.add('visivel');
+  };
+  const esconder = () => { alvo = null; dica.classList.remove('visivel'); };
+  for (const [ev, f] of [['mouseover', 'in'], ['focusin', 'in'], ['mouseout', 'out'], ['focusout', 'out']])
+    document.addEventListener(ev, e => {
+      const el = e.target.closest && e.target.closest('[data-dica]');
+      if (f === 'in' && el && el !== alvo) mostrar(el);
+      if (f === 'out' && el && !el.contains(e.relatedTarget)) esconder();
+    });
+  // O menu do botão direito: Copiar (cinza sem seleção), Atualizar, Desligar/Ligar, Reiniciar, Fechar.
+  document.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    document.querySelectorAll('.menu-hefesto.vivo').forEach(m => m.remove());
+    const m = document.createElement('div'); m.className = 'menu-hefesto vivo'; m.setAttribute('role', 'menu');
+    const sel = String(getSelection()).trim() !== '';
+    m.innerHTML = `<button role="menuitem" ${sel ? '' : 'disabled'}>Copiar</button><hr>
+      <button role="menuitem">Atualizar</button>
+      <button role="menuitem" data-dica="O Hefesto sai da frente e o jogo lê o controle direto">Desligar</button>
+      <button role="menuitem">Reiniciar</button><hr><button role="menuitem">Fechar</button>`;
+    document.body.append(m);
+    const r = m.getBoundingClientRect();
+    m.style.left = Math.min(e.clientX, innerWidth - r.width - 6) + 'px';
+    m.style.top = Math.min(e.clientY, innerHeight - r.height - 6) + 'px';
+  });
+  document.addEventListener('click', e => { if (!e.target.closest('.menu-hefesto')) document.querySelectorAll('.menu-hefesto.vivo').forEach(m => m.remove()); });
 })();
 </script>
 </body>

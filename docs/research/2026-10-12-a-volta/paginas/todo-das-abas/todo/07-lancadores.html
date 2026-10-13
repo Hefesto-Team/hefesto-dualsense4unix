@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<title>Hefesto — aba LANÇADORES</title>
+<title>Hefesto — aba EXPERIMENTAL</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -1947,9 +1947,89 @@
 #t6:checked ~ .ja-tira label[for=t6]{color:var(--fg);border-bottom-color:var(--pink);font-weight:600}
 #t6:checked ~ .ja-telas > .t6{display:grid}
 </style>
-<style id="todo-alvos" data-todo="9">
-  .ajuda{width:24px;height:24px;flex:0 0 24px;line-height:22px}
-  [data-gesto]{min-height:24px}
+<style id="alvos-de-24">[data-gesto]{min-height:24px}</style>
+<style id="rodada-2-grupo-3">
+  /* Os lançadores: os três botões iguais em todos; o selo da Steam com o marcador dos impedimentos. */
+  .lf-botoes{display:inline-flex;gap:6px;flex:none}
+  .lf .btn.mini.apagado{border-color:var(--border-sutil);color:var(--texto-mudo);opacity:.55;pointer-events:none}
+  .lf.ausente .lanc-nome{color:var(--texto-mudo)}
+  .lanc-selo.com-imped{display:inline-flex;align-items:center;gap:6px;cursor:help}
+  .lanc-selo .imped{font-style:normal;min-width:15px;height:15px;border-radius:8px;background:var(--orange);color:var(--app-bg);
+    display:inline-flex;align-items:center;justify-content:center;font-size:9.5px;padding:0 4px}
+  /* As extensões sem a linha de descrição. */
+  .ext{grid-template-columns:28px minmax(170px,1fr) 196px 120px auto 30px 26px}
+  .ext-quem{cursor:help}
+  /* Criar perfis e Configurar, janelas curtas. */
+  .cj-busca{height:var(--h-acao);border-radius:7px;padding:0 10px;border:1px solid var(--border-forte);background:var(--app-bg);
+    color:var(--fg);font-family:inherit;font-size:12px;margin-bottom:10px}
+  .cj-lista{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+  .cj-lista li{display:flex;align-items:center;gap:10px;min-height:40px;border-bottom:1px solid var(--border-sutil);font-size:12.5px;color:var(--fg)}
+  .cj-lista li:last-child{border-bottom:0}
+  .cj-lista .btn.mini,.cj-tem{margin-left:auto}
+  .cj-lista .btn.mini{height:26px;padding:0 12px;font-size:11px}
+  .cj-tem{font-size:11px;color:var(--green)}
+  .lc-linha{display:grid;grid-template-columns:200px minmax(0,1fr);align-items:center;gap:12px;min-height:42px;border-bottom:1px solid var(--border-sutil)}
+  .lc-linha:last-child{border-bottom:0}
+  .lc-linha > span:first-child{font-size:12px;color:var(--texto-suave)}
+  .lc-val{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--fg);min-width:0}
+  .lc-val code{font-family:'JetBrains Mono',monospace;font-size:11.5px}
+  .lc-val small{font-size:11px;color:var(--texto-mudo)}
+  .lc-val .btn.mini{height:26px;padding:0 10px;font-size:11px;text-decoration:none;margin-left:auto}
+  .lanc-novo-campo .seg.mini{justify-content:flex-start}
+  .lanc-novo-campo .seg.mini button{height:30px;padding:0 14px}
+  /* Meus toques: os controles de verdade, em duas molduras. */
+  .ja-tela.t3 > .moldura{padding:6px 14px 10px}
+  .ja-tela.t3 .ja-linha{min-height:42px;grid-template-columns:112px minmax(0,1fr)}
+  .ja-tela.t3 > .moldura:first-child .ja-linha{grid-template-columns:140px minmax(0,1fr)}
+  .ja-tela.t3 .ja-linha.empilha,.ja-tela.t3 > .moldura:first-child .ja-linha.empilha{grid-template-columns:1fr;padding:9px 0 10px}
+  .ja-tela.t3 .seg.mini button{height:30px;padding:0 12px}
+  .pc-sub[data-dica]{cursor:help}
+  /* Respiro (conferência): linhas dos lançadores mais altas, colunas mais afastadas; Meus toques mais arejado. */
+  .lanc-fila{column-gap:36px}
+  .lf{min-height:46px;padding:8px 4px;gap:10px}
+  .lf .btn.mini{height:28px;padding:0 12px}
+  .lf-botoes{gap:8px}
+  .ja-tela.t3 > .moldura{padding:10px 16px 14px}
+  .ja-tela.t3 .ja-linha{min-height:52px}
+  .ja-tela.t3 .seg.mini button{height:32px;padding:0 14px}
+</style>
+<style id="base-comum">
+/* ===== Base comum das abas (rodada 2, 12/10/2026) =====
+   Copiada IGUAL em todo mockup do todo. Três peças: a dica no hover (sem «?»), o Modo automático
+   e o menu do botão direito desenhado no visual das abas (BRIEF-T6, opção B). */
+
+/* 1. A dica: qualquer frase, botão ou área com data-dica mostra a dica ao passar o mouse ou focar.
+      Nenhum botão «?» existe mais. A dica tem no máximo ~12 palavras: show, don't tell. */
+[data-dica]{cursor:help}
+button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"][data-dica]{cursor:pointer}
+#hef-dica{position:fixed;z-index:2147483000;max-width:280px;padding:7px 11px;border-radius:8px;
+  background:#1b1c25;border:1px solid var(--border-forte,#44475a);color:var(--texto-suave,#c8ccda);
+  font:500 12.5px/1.45 'Space Grotesk',system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.45);pointer-events:none;
+  opacity:0;transform:translateY(3px);transition:opacity .12s,transform .12s}
+#hef-dica.visivel{opacity:1;transform:none}
+
+/* 2. O Modo automático: pílula com bolinha. Os dois estados têm de se distinguir num relance.
+      Desligado: contorno neutro, bolinha vazia, letra suave (vale o que está na aba).
+      Ligado: ciano cheio, bolinha branca acesa, letra branca; a área que ele governa esmaece. */
+.modo-auto{display:inline-flex;align-items:center;gap:9px;height:34px;padding:0 16px 0 12px;border-radius:999px;
+  border:1px solid var(--border-forte,#44475a);background:transparent;color:var(--texto-suave,#c8ccda);
+  font:600 13.5px/1 'Space Grotesk',system-ui,sans-serif;cursor:pointer;transition:background .15s,border-color .15s,color .15s,box-shadow .15s}
+.modo-auto .p{width:11px;height:11px;border-radius:50%;border:2px solid var(--texto-mudo,#9a9eb8);background:transparent;
+  transition:all .15s}
+.modo-auto:hover{border-color:#5fd3e6;color:#fff}
+.modo-auto[aria-pressed="true"]{background:#0e7c8c;border-color:#5fd3e6;color:#fff;box-shadow:0 0 0 3px rgba(95,211,230,.18)}
+.modo-auto[aria-pressed="true"] .p{border-color:#fff;background:#fff;box-shadow:0 0 8px #fff}
+.modo-auto:focus-visible{outline:2px solid var(--cyan,#8be9fd);outline-offset:2px}
+.governado-pelo-jogo{opacity:.42;pointer-events:none;filter:saturate(.6)}
+
+/* 3. O menu do botão direito, no visual das abas. */
+.menu-hefesto{position:fixed;z-index:2147482000;min-width:190px;padding:6px;border-radius:12px;
+  background:#252733;border:1px solid var(--border-forte,#44475a);box-shadow:0 14px 34px rgba(0,0,0,.5)}
+.menu-hefesto button{display:flex;width:100%;align-items:center;gap:10px;height:34px;padding:0 12px;border:0;
+  border-radius:8px;background:transparent;color:var(--fg,#f8f8f2);font:500 13.5px/1 'Space Grotesk',system-ui,sans-serif;text-align:left;cursor:pointer}
+.menu-hefesto button:hover{background:rgba(189,147,249,.14)}
+.menu-hefesto button[disabled]{color:var(--texto-mudo,#9a9eb8);opacity:.55;cursor:default;background:transparent}
+.menu-hefesto hr{border:0;border-top:1px solid var(--border-sutil,#343746);margin:5px 4px}
 </style>
 </head>
 <body data-campo="nativo" data-hef-alvo="classe" data-hef-classe="nativo" data-hef-quando="sim">
@@ -2095,18 +2175,13 @@
       <span class="so-no-nativo" title="Com o Hefesto desligado, o jogo manda: aqui só se vê quem está conectado."></span>
     </div>
     <div class="conectado"><span class="bolinha">●</span> <b data-campo="conta-b">1 USB · 1 BT</b></div>
-    <div class="perfil-ativo">
+    <div class="perfil-ativo" data-dica="Tudo o que você mudar cai neste perfil ao salvar">
       <span class="pa-rot">Perfil ativo</span>
       <span class="pa-nome" data-campo="perfil">—</span>
       <!-- `tabindex` de 07/09/2026: este `?` está no CABEÇALHO, logo nas dez
            abas, e explica onde o "Salvar perfil" grava. Sem ele o `<span>` não
            recebe foco e o `el.click()` do controle não o abria em aba nenhuma. -->
-      <span class="ajuda" data-todo="9" tabindex="0">?<span class="dica" style="left:auto;right:22px">
-        Tudo o que você mudar em qualquer aba cai <b>neste</b> perfil quando clicar em
-        <b>Salvar perfil</b>.<br><br>
-        Cada controle guarda a <b>sua</b> configuração aqui dentro, pelo ID da peça — amanhã,
-        em outra porta ou no rádio, ele traz de volta o que você deixou hoje.
-      </span></span>
+
     </div>
   </div>
 
@@ -2118,7 +2193,7 @@
     <a class="aba" href="04-iluminacao.html">Iluminação</a>
     <a class="aba" href="05-vibracao.html">Vibração</a>
     <a class="aba" href="06-navegacao.html">Navegação</a>
-    <a class="aba ativa" href="07-lancadores.html">Lançadores</a>
+    <a class="aba ativa" href="07-lancadores.html" data-todo="1">Experimental</a>
     <a class="aba" href="08-conexoes.html">Conexões</a>
     <a class="aba" href="09-sistema.html">Sistema</a>
     <a class="aba" href="10-perfis.html">Perfis</a>
@@ -2130,118 +2205,38 @@
     <div class="quadro">
       <input class="abre" type="checkbox" id="cx7-1" checked>
       <div class="quadro-topo">
-        <label class="quadro-titulo" for="cx7-1" data-todo="1">Lançadores</label>
-        <span class="ajuda" data-todo="9">?<span class="dica">
-          Esta aba procura os lançadores instalados nesta máquina. O perfil casa pelo
-          <b>nome do processo</b> e pela <b>janela</b> — o jogo pode vir de qualquer um deles.<br><br>
-          O que impede um jogo de receber o controle é do <b>lançador</b>, nunca do controle.<br><br>
-          <b>Detectar o jogo aberto</b> é o caminho curto: abra o jogo, volte aqui e clique.
-        </span></span>
-        <span class="conta" data-campo="lanc-conta" data-hef-alvo="html">2 localizados <span class="sep">·</span> 2 com impedimentos</span>
-      </div>
-      <div class="quadro-corpo">
-        <div class="acoes" style="margin-top:0;margin-bottom:12px">
-          <button class="btn roxo" data-gesto="detectar">Detectar o jogo aberto</button>
-          <button class="btn" data-gesto="procurar">Procurar de novo</button>
-          <a class="btn" href="#novo-lancador" data-gesto="adicionar-lancador">Adicionar um lançador</a>
-        </div>
-        <div class="lanc-fila" data-todo="1">
-          <div class="lf" data-lancador="steam">
-            <span class="lf-nome"><span class="lanc-nome">Steam</span></span>
-            <span class="lanc-selo localizado">Localizado</span>
-            <span class="ajuda" data-todo="9">?<span class="dica">O perfil casa pelo nome do processo e pela janela.</span></span>
-            <a class="lf-imped" href="#impedimentos" data-todo="6" data-gesto="ver-impedimentos" data-v="steam" title="Os jogos que não recebem o controle, e o que impede cada um.">2 com impedimento</a>
-            <span class="lanc-jogos" title="48 jogos">48 jogos</span>
-            <a class="btn mini" href="#escolher-jogo" data-gesto="criar-perfil-para-um-jogo" data-v="steam">Criar perfil</a><button class="btn mini" data-gesto="abrir-lancador" data-v="steam" title="Abrir o lançador">Abrir</button>
-          </div>
-          <div class="lf ausente" data-lancador="heroic">
-            <span class="lf-nome"><span class="lanc-nome">Heroic (Epic · GOG)</span></span>
-            <span class="lanc-selo nao_sei">Não sei</span>
-            <span class="ajuda" data-todo="9">?<span class="dica">O perfil casa pelo nome do processo e pela janela.</span></span>
-            <span class="lanc-jogos" title="—">—</span>
-            <button class="btn mini" data-gesto="abrir-lancador" data-v="heroic" title="Abrir o lançador">Abrir</button>
-          </div>
-          <div class="lf ausente" data-lancador="lutris">
-            <span class="lf-nome"><span class="lanc-nome">Lutris</span></span>
-            <span class="lanc-selo nao_sei">Não sei</span>
-            <span class="ajuda" data-todo="9">?<span class="dica">O perfil casa pelo nome do processo e pela janela.</span></span>
-            <span class="lanc-jogos" title="—">—</span>
-            <button class="btn mini" data-gesto="abrir-lancador" data-v="lutris" title="Abrir o lançador">Abrir</button>
-          </div>
-          <div class="lf ausente" data-lancador="flatpak">
-            <span class="lf-nome"><span class="lanc-nome">Flatpak</span></span>
-            <span class="lanc-selo nao_sei">Não sei</span>
-            <span class="ajuda" data-todo="9">?<span class="dica">O perfil casa pelo nome do processo e pela janela.</span></span>
-            <span class="lanc-jogos" title="—">—</span>
-            <button class="btn mini" data-gesto="abrir-lancador" data-v="flatpak" title="Abrir o lançador">Abrir</button>
-          </div>
-          <div class="lf ausente" data-lancador="retroarch">
-            <span class="lf-nome"><span class="lanc-nome">RetroArch</span></span>
-            <span class="lanc-selo nao_sei">Não sei</span>
-            <span class="ajuda" data-todo="9">?<span class="dica">O perfil casa pelo nome do processo e pela janela.</span></span>
-            <span class="lanc-jogos" title="—">—</span>
-            <button class="btn mini" data-gesto="abrir-lancador" data-v="retroarch" title="Abrir o lançador">Abrir</button>
-          </div>
-          <div class="lf ausente" data-lancador="emuladores">
-            <span class="lf-nome"><span class="lanc-nome">Dolphin · mGBA</span></span>
-            <span class="lanc-selo nao_sei">Não sei</span>
-            <span class="ajuda" data-todo="9">?<span class="dica">O perfil casa pelo nome do processo e pela janela.</span></span>
-            <span class="lanc-jogos" title="—">—</span>
-            <button class="btn mini" data-gesto="abrir-lancador" data-v="emuladores" title="Abrir o lançador">Abrir</button>
-          </div>
-          <div class="lf" data-lancador="kyty" data-todo="2">
-            <span class="lf-nome"><span class="lanc-nome">Kyty</span></span>
-            <span class="lanc-selo localizado">Localizado</span>
-            <span class="ajuda" data-todo="9">?<span class="dica">Emulador de PS5. O perfil casa pelo nome do processo e pela janela.</span></span>
-            <span class="lanc-jogos" title="2 jogos">2 jogos</span>
-            <a class="btn mini" href="#escolher-jogo" data-gesto="criar-perfil-para-um-jogo" data-v="kyty">Criar perfil</a><button class="btn mini" data-gesto="abrir-lancador" data-v="kyty" title="Abrir o lançador">Abrir</button>
-          </div>
-        </div>
-      </div>
-    </div>
+        <label class="quadro-titulo" for="cx7-1" data-todo="2">Extensões</label>
 
-    <div class="quadro">
-      <input class="abre" type="checkbox" id="cx7-2" checked>
-      <div class="quadro-topo">
-        <label class="quadro-titulo" for="cx7-2" data-todo="3">Modificações</label>
-        <span class="ajuda" data-todo="9">?<span class="dica">
-          As extensões e as modificações da comunidade. Cada uma diz, antes de ligar,
-          o que <b>lê</b> e o que <b>muda</b> no controle.<br><br>
-          Desligar devolve o controle ao que estava; remover apaga a pasta dela.<br><br>
-          <b>Oficial</b> é a que sai do Hefesto-Team; <b>comunidade</b> é qualquer outra.
-        </span></span>
         <span class="conta" data-campo="mod-conta">2 instaladas <span class="sep">·</span> 2 ligadas</span>
       </div>
       <div class="quadro-corpo">
-          <div class="ext-lista" data-todo="3">
+          <div class="ext-lista">
           <div class="ext" data-modificacao="kyty">
             <span class="ext-ico" style="color:var(--cyan)"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8h12a4 4 0 0 1 4 4v1a3 3 0 0 1-5.4 1.8L15 13H9l-1.6 1.8A3 3 0 0 1 2 13v-1a4 4 0 0 1 4-4z"/><path d="M7 10.5v3M5.5 12h3"/><circle cx="16" cy="11" r=".6" fill="currentColor"/><circle cx="18" cy="13" r=".6" fill="currentColor"/></svg></span>
-            <div class="ext-quem">
+            <div class="ext-quem" data-todo="3" data-dica="Põe o Kyty entre os lançadores, com gatilhos, luz e vibração">
               <span class="ext-nome">Kyty</span>
               <span class="ext-sub"><span class="lanc-selo oficial">Oficial</span><span class="ext-ver">0.1.0</span></span>
             </div>
-            <div class="ext-faz" data-todo="7" title="Põe o Kyty, emulador de PS5, entre os lançadores, e o jogo aberto por ele recebe os gatilhos, a luz e a vibração do perfil.">Põe o Kyty, emulador de PS5, entre os lançadores, e o jogo aberto por ele recebe os gatilhos, a luz e a vibração do perfil.</div>
             <div class="ext-para"><span class="ext-rot">Para</span>Todos</div>
             <div class="ext-estado"><span class="bol-ok">●</span>Kyty localizado</div>
-            <span class="nj-tog ligado" data-gesto="ligar-modificacao" data-v="kyty" title="Ligar ou desligar esta modificação"><span class="pino"></span><span class="txt">Ligada</span></span>
-            <a class="ext-conf" data-todo="4" href="#kyty" data-gesto="configurar-modificacao" data-v="kyty" title="Configurações desta modificação"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></a>
-            <button class="ext-mais" data-gesto="mais-da-modificacao" data-v="kyty" title="Atualizar, abrir a pasta ou remover">⋮</button>
+            <span class="nj-tog ligado" data-gesto="ligar-modificacao" data-v="kyty" data-dica="Liga ou desliga esta extensão"><span class="pino"></span><span class="txt">Ligada</span></span>
+            <a class="ext-conf" href="#kyty" data-gesto="configurar-modificacao" data-v="kyty" data-dica="Configurações desta extensão"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></a>
+            <button class="ext-mais" data-gesto="mais-da-modificacao" data-v="kyty" data-dica="Atualizar, abrir a pasta ou remover">⋮</button>
           </div>
           <div class="ext" data-modificacao="intiface">
             <span class="ext-ico" style="color:var(--pink)"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12c2-5 4-5 6 0s4 5 6 0 4-5 6 0 2 3 2 3"/></svg></span>
-            <div class="ext-quem">
-              <span class="ext-nome">Acessórios pelo Intiface</span>
+            <div class="ext-quem" data-dica="A vibração do controle chega aos brinquedos Lovense">
+              <span class="ext-nome" data-todo="4">Lovense pelo Intiface</span>
               <span class="ext-sub"><span class="lanc-selo oficial">Oficial</span><span class="ext-ver">0.1.0</span></span>
             </div>
-            <div class="ext-faz" data-todo="7" title="A vibração do controle chega também aos acessórios ligados ao Intiface, na mesma forma, até o teto que você escolher.">A vibração do controle chega também aos acessórios ligados ao Intiface, na mesma forma, até o teto que você escolher.</div>
-            <div class="ext-para ext-quando" data-todo="5"><span><span class="ext-rot">Para</span>Controle 1</span><span title="Ligado: os acessórios seguem a vibração do controle 1 em qualquer jogo, sempre que houver um acessório ligado. Desligado: só nos perfis marcados Adulto."><span class="ext-rot">Quando</span><select class="ext-sel"><option selected>Jogo marcado Adulto</option><option>Qualquer jogo, com acessório ligado</option><option>Só quando eu ligar</option></select></span></div>
+            <div class="ext-para ext-quando"><span><span class="ext-rot">Para</span>Cosmic Red</span><span data-dica="Quando os brinquedos seguem a vibração do controle"><span class="ext-rot">Quando</span><select class="ext-sel"><option selected>Jogo marcado Adulto</option><option>Qualquer jogo, com acessório ligado</option><option>Só quando eu ligar</option></select></span></div>
             <div class="ext-estado"><span class="bol-ok">●</span>3 acessórios</div>
-            <span class="nj-tog ligado" data-gesto="ligar-modificacao" data-v="intiface" title="Ligar ou desligar esta modificação"><span class="pino"></span><span class="txt">Ligada</span></span>
-            <a class="ext-conf" data-todo="4" href="#acessorios" data-gesto="configurar-modificacao" data-v="intiface" title="Configurações desta modificação"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></a>
-            <button class="ext-mais" data-gesto="mais-da-modificacao" data-v="intiface" title="Atualizar, abrir a pasta ou remover">⋮</button>
+            <span class="nj-tog ligado" data-gesto="ligar-modificacao" data-v="intiface" data-dica="Liga ou desliga esta extensão"><span class="pino"></span><span class="txt">Ligada</span></span>
+            <a class="ext-conf" href="#acessorios" data-gesto="configurar-modificacao" data-v="intiface" data-todo="5" data-dica="Configurações desta extensão"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></a>
+            <button class="ext-mais" data-gesto="mais-da-modificacao" data-v="intiface" data-dica="Atualizar, abrir a pasta ou remover">⋮</button>
           </div>
           </div>
-          <div class="ext-instalar ext-instalar-pe" data-todo="3">
+          <div class="ext-instalar ext-instalar-pe">
             <span class="ext-inst-rot">Instalar de um endereço</span>
             <input type="text" data-linha="mod-endereco" placeholder="https://github.com/…">
             <a class="btn" href="#" data-gesto="escolher-arquivo-da-modificacao">Escolher a pasta…</a>
@@ -2250,6 +2245,59 @@
       </div>
     </div>
 
+    <div class="quadro">
+      <input class="abre" type="checkbox" id="cx7-2" checked>
+      <div class="quadro-topo">
+        <label class="quadro-titulo" for="cx7-2" data-todo="8" data-dica="O perfil casa pelo processo e pela janela do jogo">Lançadores</label>
+        <span class="conta" data-campo="lanc-conta" data-hef-alvo="html">2 localizados</span>
+      </div>
+      <div class="quadro-corpo">
+        <div class="acoes" style="margin-top:0;margin-bottom:12px">
+          <button class="btn roxo" data-gesto="detectar" data-dica="Abra o jogo, volte aqui e clique">Detectar o jogo aberto</button>
+          <button class="btn" data-gesto="procurar">Procurar de novo</button>
+          <a class="btn" href="#novo-lancador" data-gesto="adicionar-lancador">Adicionar um lançador</a>
+        </div>
+        <div class="lanc-fila">
+          <div class="lf" data-lancador="steam">
+            <span class="lf-nome"><span class="lanc-nome">Steam</span></span>
+            <span class="lanc-selo localizado com-imped" data-todo="7" data-dica="Sackboy: Steam Input ligado · RE Village: fora do Proton fixado">Localizado<i class="imped">2</i></span>
+            <span class="lanc-jogos">48 jogos</span>
+            <span class="lf-botoes" data-todo="6"><button class="btn mini apagado" aria-disabled="true" data-gesto="identificar-lancador" data-v="steam">Identificar</button><a class="btn mini" href="#escolher-jogo" data-gesto="criar-perfil-para-um-jogo" data-v="steam">Criar perfis</a><a class="btn mini" href="#lanc-conf" data-gesto="configurar-lancador" data-v="steam">Configurar</a></span>
+          </div>
+          <div class="lf ausente" data-todo="15" data-lancador="heroic">
+            <span class="lf-nome"><span class="lanc-nome">Heroic (Epic · GOG)</span></span>
+            <span class="lanc-jogos"></span>
+            <span class="lf-botoes"><button class="btn mini" data-gesto="identificar-lancador" data-v="heroic">Identificar</button><a class="btn mini apagado" aria-disabled="true" href="#escolher-jogo" data-gesto="criar-perfil-para-um-jogo" data-v="heroic">Criar perfis</a><a class="btn mini apagado" aria-disabled="true" href="#lanc-conf" data-gesto="configurar-lancador" data-v="heroic">Configurar</a></span>
+          </div>
+          <div class="lf ausente" data-lancador="lutris">
+            <span class="lf-nome"><span class="lanc-nome">Lutris</span></span>
+            <span class="lanc-jogos"></span>
+            <span class="lf-botoes"><button class="btn mini" data-gesto="identificar-lancador" data-v="lutris">Identificar</button><a class="btn mini apagado" aria-disabled="true" href="#escolher-jogo" data-gesto="criar-perfil-para-um-jogo" data-v="lutris">Criar perfis</a><a class="btn mini apagado" aria-disabled="true" href="#lanc-conf" data-gesto="configurar-lancador" data-v="lutris">Configurar</a></span>
+          </div>
+          <div class="lf ausente" data-lancador="flatpak">
+            <span class="lf-nome"><span class="lanc-nome">Flatpak</span></span>
+            <span class="lanc-jogos"></span>
+            <span class="lf-botoes"><button class="btn mini" data-gesto="identificar-lancador" data-v="flatpak">Identificar</button><a class="btn mini apagado" aria-disabled="true" href="#escolher-jogo" data-gesto="criar-perfil-para-um-jogo" data-v="flatpak">Criar perfis</a><a class="btn mini apagado" aria-disabled="true" href="#lanc-conf" data-gesto="configurar-lancador" data-v="flatpak">Configurar</a></span>
+          </div>
+          <div class="lf ausente" data-lancador="retroarch">
+            <span class="lf-nome"><span class="lanc-nome">RetroArch</span></span>
+            <span class="lanc-jogos"></span>
+            <span class="lf-botoes"><button class="btn mini" data-gesto="identificar-lancador" data-v="retroarch">Identificar</button><a class="btn mini apagado" aria-disabled="true" href="#escolher-jogo" data-gesto="criar-perfil-para-um-jogo" data-v="retroarch">Criar perfis</a><a class="btn mini apagado" aria-disabled="true" href="#lanc-conf" data-gesto="configurar-lancador" data-v="retroarch">Configurar</a></span>
+          </div>
+          <div class="lf ausente" data-lancador="emuladores">
+            <span class="lf-nome"><span class="lanc-nome">Dolphin · mGBA</span></span>
+            <span class="lanc-jogos"></span>
+            <span class="lf-botoes"><button class="btn mini" data-gesto="identificar-lancador" data-v="emuladores">Identificar</button><a class="btn mini apagado" aria-disabled="true" href="#escolher-jogo" data-gesto="criar-perfil-para-um-jogo" data-v="emuladores">Criar perfis</a><a class="btn mini apagado" aria-disabled="true" href="#lanc-conf" data-gesto="configurar-lancador" data-v="emuladores">Configurar</a></span>
+          </div>
+          <div class="lf" data-lancador="kyty">
+            <span class="lf-nome"><span class="lanc-nome">Kyty</span></span>
+            <span class="lanc-selo localizado">Localizado</span>
+            <span class="lanc-jogos">2 jogos</span>
+            <span class="lf-botoes"><button class="btn mini apagado" aria-disabled="true" data-gesto="identificar-lancador" data-v="kyty">Identificar</button><a class="btn mini" href="#escolher-jogo" data-gesto="criar-perfil-para-um-jogo" data-v="kyty">Criar perfis</a><a class="btn mini" href="#kyty" data-gesto="configurar-lancador" data-v="kyty">Configurar</a></span>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- ================= RODAPÉ ================= -->
@@ -2279,7 +2327,7 @@
          Aplicar e de Importar é o do produto, lido do `.glade`, não redigido aqui.
 
          `title=` e não a `.dica` da casa: a `.dica` precisa do embrulho
-         `<span class="ajuda" data-todo="9">?…</span>`, que existe para o ícone de interrogação —
+         `<span class="ajuda">?…</span>`, que existe para o ícone de interrogação —
          num botão ela viraria um "?" ao lado do rótulo, que não é o que o usuário pediu.
          `title=` é o que o `.glade` faz, e é o que já se usa em botão nesta casa
          (`aba09.py`).
@@ -2314,16 +2362,12 @@
 <div class="tela-nova" id="novo-lancador">
   <div class="tn-cx">
     <div class="tn-topo">
-      <span class="tn-tit">Adicionar um lançador</span>
-      <span class="ajuda" data-todo="9">?<span class="dica">
-        Diga o comando, o caminho do programa (é assim que entra um AppImage
-        solto) ou o nome do atalho — os três exemplos estão no campo. Confiro no
-        disco antes de guardar.
-      </span></span>
+      <span class="tn-tit" data-dica="Comando, caminho do programa ou nome do atalho">Adicionar um lançador</span>
+
       <a class="tn-x" href="#" title="Fechar">&times;</a>
     </div>
     <div class="tn-corpo">
-      <div class="lanc-novo-para" data-campo="lanc-novo-para-quem">Um lançador ou emulador que você usa</div>
+      <div class="lanc-novo-campo" data-todo="9"><span>Como ele entra</span><div class="seg mini"><button class="on" data-dica="Um programa já instalado nesta máquina">Do sistema</button><button data-dica="Um pacote de extensão, como o Kyty">Como extensão</button></div></div>
       <label class="lanc-novo-campo">
         <span>Como ele se chama</span>
         <input type="text" data-linha="lanc-novo-rotulo" placeholder="Ryujinx">
@@ -2349,54 +2393,69 @@
 </div>
 
 <div class="tela-nova" id="escolher-jogo">
-  <div class="tn-cx" id="lanc-escolha"><div class="tn-topo">
-      <span class="tn-tit">Adicionar à lista de exclusão — </span>
-      <span class="ajuda" data-todo="9">?<span class="dica">Adicionar jogo à lista de exclusão do Hefesto: o jogo passa a ver o controle como se o Hefesto não estivesse instalado — sem máscara, sem perfil, sem luz, sem vibração do Hefesto, sem Proton fixado. «Tirar da lista» devolve tudo.</span></span>
-      <a class="tn-x" href="#" title="Fechar">&times;</a>
+  <div class="tn-cx" id="lanc-escolha" role="dialog" aria-modal="true" aria-label="Criar perfis">
+    <div class="tn-topo">
+      <span class="tn-tit" data-dica="Cada jogo ganha um perfil que entra sozinho">Criar perfis · Steam</span>
+      <a class="tn-x" href="#" data-dica="Fechar">×</a>
     </div>
     <div class="tn-corpo">
-      <div class="lanc-novo-para">O jogo que você escolher vai ver o controle <b>como se o Hefesto não estivesse instalado</b>: sem máscara, sem perfil, sem luz e sem vibração do Hefesto. «Tirar da lista» devolve tudo.</div>
-      <div class="excl-nota">Nenhum jogo aqui ainda. Quando houver, eles aparecem nesta lista.</div>
+      <input class="cj-busca" type="text" placeholder="Procurar um jogo">
+      <ul class="cj-lista" data-todo="10"><li><span class="cj-nome">Sackboy: A Big Adventure</span><span class="cj-tem">Tem perfil</span></li><li><span class="cj-nome">Resident Evil Village</span><button class="btn mini" data-gesto="criar-perfil-do-jogo">Criar</button></li><li><span class="cj-nome">Mortal Kombat 1</span><span class="cj-tem">Tem perfil</span></li><li><span class="cj-nome">Hades II</span><button class="btn mini" data-gesto="criar-perfil-do-jogo">Criar</button></li><li><span class="cj-nome">Hollow Knight: Silksong</span><button class="btn mini" data-gesto="criar-perfil-do-jogo">Criar</button></li></ul>
+    </div>
+    <div class="tn-rod">
+      <a class="btn" href="#">Fechar</a>
+      <a class="btn roxo" href="#">Criar para todos</a>
+    </div>
+  </div>
+</div>
+<div class="tela-nova" id="lanc-conf">
+  <div class="tn-cx" role="dialog" aria-modal="true" aria-label="Configurar o lançador">
+    <div class="tn-topo">
+      <span class="tn-tit">Configurar · Steam</span>
+      <a class="tn-x" href="#" data-dica="Fechar">×</a>
+    </div>
+    <div class="tn-corpo" data-todo="11">
+      <div class="lc-linha"><span>Como entrou</span><span class="lc-val">Do sistema</span></div>
+      <div class="lc-linha"><span>Onde ele está</span><span class="lc-val"><code>~/.steam/steam</code><a class="btn mini" href="#lanc-conf">Escolher a pasta…</a></span></div>
+      <div class="lc-linha"><span>Pastas dos jogos</span><span class="lc-val"><code>steamapps</code><small>48 jogos</small></span></div>
+      <div class="lc-linha"><span data-dica="O perfil entra sozinho quando o jogo abre">Cada jogo ganha o seu perfil</span><span class="lc-val"><span class="nj-tog ligado" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Ligado</span></span></span></div>
     </div>
     <div class="tn-rod">
       <a class="btn" href="#">Cancelar</a>
-
-    </div></div>
+      <a class="btn roxo" href="#">Guardar</a>
+    </div>
+  </div>
 </div>
-
-
-<div class="tela-nova" id="kyty" data-todo="4">
+<div class="tela-nova" id="kyty">
   <div class="tn-cx larga ky-cx" role="dialog" aria-modal="true" aria-label="Kyty">
     <div class="tn-topo">
-      <span class="tn-tit">Kyty</span>
-      <span class="ajuda" data-todo="9" tabindex="0">?<span class="dica">As opções da modificação Kyty. O Kyty aparece em Lançadores como a Steam; aqui fica o que o Hefesto passa ao emulador quando abre um jogo. Cada linha mostra, embaixo, a opção do Kyty que ela ajusta.</span></span>
-      <div class="pc-molde" style="margin:0 0 0 14px"><span class="pc-rot">Molde</span><div class="seg mini "><button class="on">Do perfil</button></div>
-        <span class="ajuda" data-todo="9" tabindex="0">?<span class="dica"><b>Do perfil</b>: a vibração, a cor da barra e o som seguem o perfil do Hefesto de cada jogo.</span></span></div>
+      <span class="tn-tit" data-dica="O que o Hefesto passa ao Kyty quando abre um jogo">Kyty</span>
+
+      <div class="pc-molde" style="margin:0 0 0 14px"><span class="pc-rot">Molde</span><div class="seg mini " data-dica="Vibração, cor e som seguem o perfil de cada jogo"><button class="on">Do perfil</button></div>
+</div>
       <span class="pc-para"><span class="ext-rot">Para</span>Todos</span>
       <a class="tn-x" href="#" title="Fechar">×</a>
     </div>
     <div class="tn-corpo">
-      <p class="ky-frase">Abra um jogo pelo Kyty, em Lançadores, e ele recebe os gatilhos, a luz e a vibração do perfil.
-        As opções abaixo valem para todo jogo aberto por ele.</p>
       <div class="ky-grade">
         <div class="ac-card"><div class="ac-topo"><span class="ac-tit">Programa</span><span class="ac-sub">KytyPS5 para Linux</span></div>
           <div class="ky-linha"><div class="ky-rot"><span>Versão instalada</span></div><div class="ky-ctrl"><span class="mono" style="font-size:11.5px;color:var(--fg)">2026-10-08 · aa3b2cd</span><span class="ky-selo" title="A soma sha256 confere com a publicada">Conferida</span></div></div>
-          <div class="ky-linha"><div class="ky-rot"><span>Versão nova<span class="ajuda" data-todo="9" tabindex="0">?<span class="dica">Só procura quando você clica. Nunca baixa nada sozinho.</span></span></span></div><div class="ky-ctrl"><button class="btn mini">Procurar versão nova</button></div></div>
+          <div class="ky-linha"><div class="ky-rot"><span data-dica="Só procura quando você clica; nunca baixa sozinho">Versão nova</span></div><div class="ky-ctrl"><button class="btn mini">Procurar versão nova</button></div></div>
           <div class="ky-linha"><div class="ky-rot"><span>Avisar quando sair versão nova</span></div><div class="ky-ctrl"><span class="nj-tog" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Desligado</span></span></div></div>
         </div>
         <div class="ac-card"><div class="ac-topo"><span class="ac-tit">Jogos</span><span class="ac-sub">2 jogos achados</span></div>
-          <div class="ky-linha"><div class="ky-rot"><span>Pastas dos jogos<span class="ajuda" data-todo="9" tabindex="0">?<span class="dica">Lido do Kyty.ini; o Hefesto só escreve nele com o Kyty fechado.</span></span></span><code>game_dirs</code></div><div class="ky-ctrl"><span class="ky-pasta">~/Jogos/PS5<button class="btn">Tirar</button></span><button class="btn mini">Adicionar pasta…</button></div></div>
-          <div class="ky-linha"><div class="ky-rot"><span>Cada jogo ganha o seu perfil</span><code>pelo código PPSA no título da janela</code></div><div class="ky-ctrl"><span class="nj-tog ligado" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Ligado</span></span></div></div>
+          <div class="ky-linha"><div class="ky-rot"><span data-dica="Lido do Kyty.ini; só escreve com o Kyty fechado">Pastas dos jogos</span></div><div class="ky-ctrl"><span class="ky-pasta">~/Jogos/PS5<button class="btn">Tirar</button></span><button class="btn mini">Adicionar pasta…</button></div></div>
+          <div class="ky-linha"><div class="ky-rot"><span data-dica="Pelo código PPSA no título da janela">Cada jogo ganha o seu perfil</span></div><div class="ky-ctrl"><span class="nj-tog ligado" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Ligado</span></span></div></div>
           <div class="ky-linha"><div class="ky-rot"><span>Criar o perfil de um jogo</span></div><div class="ky-ctrl"><a class="btn mini" href="#">Escolher o jogo…</a></div></div>
         </div>
         <div class="ac-card"><div class="ac-topo"><span class="ac-tit">Controle</span></div>
-          <div class="ky-linha"><div class="ky-rot"><span>Vibração</span><code>--controller-vibration</code></div><div class="ky-ctrl"><div class="campo-num mini"><span class="par"><span class="bignum" data-min="0" data-max="100" data-passo="5"><button class="passo">−</button><b>100</b><button class="passo">+</button></span><span class="un">%</span></span></div></div></div>
-          <div class="ky-linha"><div class="ky-rot"><span>Cor da barra</span><code>--controller-color</code></div><div class="ky-ctrl"><div class="seg mini "><button class="on">Do perfil</button><button class="">Escolher</button></div></div></div>
-          <div class="ky-linha"><div class="ky-rot"><span>Um controle por vez<span class="ajuda" data-todo="9" tabindex="0">?<span class="dica">Enquanto o Kyty roda, o Hefesto esconde dele os controles do P2 em diante.</span></span></span></div><div class="ky-ctrl"><span class="nj-tog" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Desligado</span></span></div></div>
+          <div class="ky-linha"><div class="ky-rot"><span>Vibração</span></div><div class="ky-ctrl"><div class="campo-num mini"><span class="par"><span class="bignum" data-min="0" data-max="100" data-passo="5"><button class="passo">−</button><b>100</b><button class="passo">+</button></span><span class="un">%</span></span></div></div></div>
+          <div class="ky-linha"><div class="ky-rot"><span>Cor da barra</span></div><div class="ky-ctrl"><div class="seg mini "><button class="on">Do perfil</button><button class="">Escolher</button></div></div></div>
+          <div class="ky-linha"><div class="ky-rot"><span data-dica="O Kyty vê só o primeiro controle">Um controle por vez</span></div><div class="ky-ctrl"><span class="nj-tog" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Desligado</span></span></div></div>
         </div>
         <div class="ac-card"><div class="ac-topo"><span class="ac-tit">Som</span></div>
-          <div class="ky-linha"><div class="ky-rot"><span>Volume do alto-falante do controle</span><code>--controller-volume</code></div><div class="ky-ctrl"><div class="campo-num mini"><span class="par"><span class="bignum" data-min="0" data-max="100" data-passo="5"><button class="passo">−</button><b>100</b><button class="passo">+</button></span><span class="un">%</span></span></div></div></div>
-          <div class="ky-linha"><div class="ky-rot"><span>Microfone</span><code>--mic</code></div><div class="ky-ctrl"><select class="campo-linha"><option selected>O do controle</option><option>Nenhum</option><option>Escolher…</option></select></div></div>
+          <div class="ky-linha"><div class="ky-rot"><span>Volume do alto-falante do controle</span></div><div class="ky-ctrl"><div class="campo-num mini"><span class="par"><span class="bignum" data-min="0" data-max="100" data-passo="5"><button class="passo">−</button><b>100</b><button class="passo">+</button></span><span class="un">%</span></span></div></div></div>
+          <div class="ky-linha"><div class="ky-rot"><span>Microfone</span></div><div class="ky-ctrl"><select class="campo-linha"><option selected>O do controle</option><option>Nenhum</option><option>Escolher…</option></select></div></div>
           <div class="ky-linha"><div class="ky-rot"><span>Testar o alto-falante</span></div><div class="ky-ctrl"><button class="btn mini">Tocar 2 s</button></div></div>
         </div>
       </div>
@@ -2411,13 +2470,13 @@
 <!-- ===== fim da aba ===== -->
 
 
-<div class="tela-nova" id="acessorios" data-todo="4">
-  <div class="tn-cx ja-cx" role="dialog" aria-modal="true" aria-label="Acessórios pelo Intiface">
+<div class="tela-nova" id="acessorios">
+  <div class="tn-cx ja-cx" role="dialog" aria-modal="true" aria-label="Lovense pelo Intiface">
     <div class="tn-topo">
-      <span class="tn-tit">Acessórios</span>
-      <span class="ajuda" data-todo="9" tabindex="0">?<span class="dica">As opções da modificação «Acessórios pelo Intiface». O jogo continua mandando: tudo o que se liga aqui só soma ao que o jogo pede, nunca tira. Tudo nasce desligado.</span></span>
-      <div class="pc-molde"><span class="pc-rot">Molde</span><div class="seg mini "><button class="">Calmo</button><button class="on">Brincalhão</button><button class="">Do jeito do jogo</button></div>
-        <span class="ajuda" data-todo="9" tabindex="0">?<span class="dica"><b>Calmo</b>: degraus, sem surto, sem surpresa, luz sem pisca.<br><b>Brincalhão</b>: em onda, acentos do jogo, surto e meus toques ligados.<br><b>Do jeito do jogo</b>: só segue o jogo, com o nível como volume.</span></span></div>
+      <span class="tn-tit" data-dica="Tudo aqui só soma ao que o jogo pede">Lovense</span>
+
+      <div class="pc-molde"><span class="pc-rot">Molde</span><div class="seg mini " data-dica="Calmo: degraus. Brincalhão: em onda. Do jeito do jogo: segue o jogo"><button class="">Calmo</button><button class="on">Brincalhão</button><button class="">Do jeito do jogo</button></div>
+</div>
       <span class="pc-para"><span class="ext-rot">Perfil</span>meu_perfil<span class="ja-marca">Adulto</span></span>
       <button class="ja-parar" title="Todos os aparelhos a zero na hora. O nível e o perfil ficam guardados."><svg viewBox="0 0 16 16" width="13" height="13"><rect x="3" y="3" width="10" height="10" rx="1.5" fill="currentColor"/></svg>Parar tudo</button>
       <a class="tn-x" href="#" title="Fechar">×</a>
@@ -2455,60 +2514,54 @@
         </div>
       </div>
       <div class="ja-sessao"><span class="ja-rot">Esta sessão</span>
-        <div class="ja-ses-l">Para sozinho em <b>27 min</b><em>sem gesto e sem jogo</em></div>
+        <div class="ja-ses-l" data-dica="Sem gesto e sem jogo, ele para sozinho">Para sozinho em <b>27 min</b></div>
         <div class="ja-ses-l">Surto <b>pronto</b><span class="ja-recarga" title="Recarga de 10 s"><i></i></span></div>
-        <div class="ja-ses-l">Surpresa <b>desligada</b><em>na aba Perfis</em></div>
+        <div class="ja-ses-l" data-dica="Liga-se na aba Perfis">Surpresa <b>desligada</b></div>
       </div>
-      <div class="ja-dono"><span class="ext-rot">Comanda</span>P1 · Cosmic Red<em>o freio é sempre do dono</em></div>
+      <div class="ja-dono" data-dica="O freio é sempre do dono"><span class="ext-rot">Comanda</span>Cosmic Red</div>
     </div>
       <div class="ja-abas">
-        <input type="radio" name="ja-aba" id="t0"><input type="radio" name="ja-aba" id="t1" checked><input type="radio" name="ja-aba" id="t2"><input type="radio" name="ja-aba" id="t3"><input type="radio" name="ja-aba" id="t4"><input type="radio" name="ja-aba" id="t5"><input type="radio" name="ja-aba" id="t6">
-        <div class="ja-tira"><label for="t0">Segurança</label><label for="t1">Gestos</label><label for="t2">O que seguem</label><label for="t3">Meus toques</label><label for="t4">Touchpad</label><label for="t5">Luz</label><label for="t6">Perfis</label></div>
+        <input type="radio" name="ja-aba" id="t0"><input type="radio" name="ja-aba" id="t1"><input type="radio" name="ja-aba" id="t2"><input type="radio" name="ja-aba" id="t3" checked><input type="radio" name="ja-aba" id="t4"><input type="radio" name="ja-aba" id="t5"><input type="radio" name="ja-aba" id="t6">
+        <div class="ja-tira"><label for="t3" data-todo="12" data-dica="Vibrar a cada coisa que você faz no controle">Meus toques</label><label for="t0">Segurança</label><label for="t1">Gestos</label><label for="t2">O que seguem</label><label for="t4">Touchpad</label><label for="t5">Luz</label><label for="t6">Perfis</label></div>
         <div class="ja-telas"><div class="ja-tela t0">
     <div class="moldura"><div class="pc-sub">Ligar</div>
       <div class="ja-linha "><span>A modificação</span><div class="ja-ctrl"><span class="nj-tog ligado" data-on="Ligada" data-off="Desligada"><span class="pino"></span><span class="txt">Ligada</span></span></div></div>
-      <div class="ja-linha "><span>Quando<span class="ajuda" data-todo="9" tabindex="0">?<span class="dica"><b>Jogo marcado Adulto</b>: só nos perfis com essa marca, posta à mão na aba Perfis.<br><b>Qualquer jogo</b>: sempre que um acessório estiver ligado.<br><b>Só quando eu ligar</b>: nada liga sozinho; só os gestos ou o nível aqui do lado.</span></span></span><div class="ja-ctrl"><select class="campo-linha"><option selected>Jogo marcado Adulto</option><option>Qualquer jogo, com acessório ligado</option><option>Só quando eu ligar</option></select></div></div>
-      <div class="ja-linha "><span>Teto geral<span class="ajuda" data-todo="9" tabindex="0">?<span class="dica">O nível 10 vale este teto, nunca 100 % do aparelho. Com 50 %, o nível 10 é o passo 10 de 20.</span></span></span><div class="ja-ctrl"><div class="campo-num mini"><span class="par"><span class="bignum" data-min="5" data-max="100" data-passo="5"><button class="passo">−</button><b>50</b><button class="passo">+</button></span><span class="un">% do aparelho</span></span></div></div></div>
+      <div class="ja-linha "><span data-dica="Adulto: só perfis marcados. Qualquer jogo. Ou só quando você ligar">Quando</span><div class="ja-ctrl"><select class="campo-linha"><option selected>Jogo marcado Adulto</option><option>Qualquer jogo, com acessório ligado</option><option>Só quando eu ligar</option></select></div></div>
+      <div class="ja-linha "><span data-dica="O nível 10 vale este teto, nunca 100 % do aparelho">Teto geral</span><div class="ja-ctrl"><div class="campo-num mini"><span class="par"><span class="bignum" data-min="5" data-max="100" data-passo="5"><button class="passo">−</button><b>50</b><button class="passo">+</button></span><span class="un">% do aparelho</span></span></div></div></div>
       <div class="ja-linha "><span>Parar sozinho</span><div class="ja-ctrl"><div class="campo-num mini"><span class="par"><span class="bignum" data-min="5" data-max="120" data-passo="5"><button class="passo">−</button><b>30</b><button class="passo">+</button></span><span class="un">min parado</span></span></div></div></div>
-      <div class="ja-linha "><span>Aparelho novo<span class="ajuda" data-todo="9" tabindex="0">?<span class="dica">Um aparelho que aparece pela primeira vez começa com o teto pela metade.</span></span></span><div class="ja-ctrl"><div class="campo-num mini"><span class="par"><span class="bignum" data-min="10" data-max="100" data-passo="10"><button class="passo">−</button><b>50</b><button class="passo">+</button></span><span class="un">% do teto</span></span></div></div></div>
+      <div class="ja-linha "><span data-dica="Aparelho novo começa com o teto pela metade">Aparelho novo</span><div class="ja-ctrl"><div class="campo-num mini"><span class="par"><span class="bignum" data-min="10" data-max="100" data-passo="10"><button class="passo">−</button><b>50</b><button class="passo">+</button></span><span class="un">% do teto</span></span></div></div></div>
       <div class="pc-sub" style="margin-top:6px">Servidor</div>
-      <div class="ja-linha "><span>Servidor<span class="ajuda" data-todo="9" tabindex="0">?<span class="dica"><b>Engine</b>: a modificação liga e desliga o servidor junto com ela.<br><b>Central</b>: você abre o programa; a modificação só se conecta.</span></span></span><div class="ja-ctrl"><div class="seg mini "><button class="on">Engine</button><button class="">Central</button></div></div></div>
-      <div class="ja-linha "><span>Endereço<span class="ajuda" data-todo="9" tabindex="0">?<span class="dica">Fora desta máquina a tela avisa: a vibração passaria pela rede.</span></span></span><div class="ja-ctrl"><input type="text" value="127.0.0.1:12345"><span class="ja-ok">● local</span></div></div>
+      <div class="ja-linha "><span data-dica="Engine: liga junto. Central: você abre o programa">Servidor</span><div class="ja-ctrl"><div class="seg mini "><button class="on">Engine</button><button class="">Central</button></div></div></div>
+      <div class="ja-linha "><span data-dica="Fora desta máquina, a vibração passa pela rede">Endereço</span><div class="ja-ctrl"><input type="text" value="127.0.0.1:12345"><span class="ja-ok">● local</span></div></div>
     </div>
     <div class="moldura"><div class="pc-sub">Teto de cada aparelho</div>
       <div class="ja-linha "><span>Lovense Nora</span><div class="ja-ctrl"><div class="campo-num mini"><span class="par"><span class="bignum" data-min="5" data-max="100" data-passo="5"><button class="passo">−</button><b>50</b><button class="passo">+</button></span><span class="un">% do aparelho</span></span></div></div></div><div class="ja-linha "><span>Lovense Domi</span><div class="ja-ctrl"><div class="campo-num mini"><span class="par"><span class="bignum" data-min="5" data-max="100" data-passo="5"><button class="passo">−</button><b>50</b><button class="passo">+</button></span><span class="un">% do aparelho</span></span></div></div></div><div class="ja-linha "><span>Lovense Ferri</span><div class="ja-ctrl"><div class="campo-num mini"><span class="par"><span class="bignum" data-min="5" data-max="100" data-passo="5"><button class="passo">−</button><b>50</b><button class="passo">+</button></span><span class="un">% do aparelho</span></span></div></div></div>
-      <div class="pc-sub" style="margin-top:6px">Tudo para sozinho quando</div>
-      <div class="ja-fixo" style="padding:2px 0 6px">o jogo fecha · o controle cai · o Hefesto reinicia · a modificação para ·
-        o servidor fica 0,5 s sem a batida do Hefesto. Nada disso se desliga.</div>
-      <div class="ja-linha "><span>E também por<span class="ajuda" data-todo="9" tabindex="0">?<span class="dica">Funciona com a janela fechada, dentro e fora da camada de uma mão.</span></span></span><div class="ja-ctrl"><span class="ja-combo"><svg class="gl" width="18" height="18" viewBox="0 0 32 32"><title>PS</title><circle cx="16" cy="16" r="11" fill="none" stroke="currentColor" stroke-width="2"/><text x="16" y="19.5" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">PS</text></svg><i>+</i><svg class="gl" width="18" height="18" viewBox="0 0 32 32"><title>L2</title><rect x="4" y="9" width="24" height="15" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><text x="16" y="20.5" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L2</text></svg><em>até o fundo</em></span></div></div>
+      <div class="pc-sub" style="margin-top:6px" data-dica="Jogo fecha, controle cai ou o Hefesto reinicia">Tudo para sozinho quando</div>
+      <div class="ja-linha "><span data-dica="Funciona com a janela fechada">E também por</span><div class="ja-ctrl"><span class="ja-combo"><svg class="gl" width="18" height="18" viewBox="0 0 32 32"><title>PS</title><circle cx="16" cy="16" r="11" fill="none" stroke="currentColor" stroke-width="2"/><text x="16" y="19.5" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">PS</text></svg><i>+</i><svg class="gl" width="18" height="18" viewBox="0 0 32 32"><title>L2</title><rect x="4" y="9" width="24" height="15" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><text x="16" y="20.5" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L2</text></svg><em>até o fundo</em></span></div></div>
     </div></div><div class="ja-tela t1 l-larga">
-    <div class="moldura"><div class="pc-sub">Os gestos</div>
+    <div class="moldura"><div class="pc-sub" data-dica="Com o PS segurado, os gatilhos não chegam ao jogo">Os gestos</div>
       <table class="ja-gestos"><colgroup><col style="width:31%"><col style="width:36%"><col></colgroup>
         <tr><th>O que fazer</th><th>Gesto</th><th>O controle responde</th></tr><tr class=""><td>Ligar ou subir um</td><td><span class="ja-combo"><svg class="gl" width="18" height="18" viewBox="0 0 32 32"><title>PS</title><circle cx="16" cy="16" r="11" fill="none" stroke="currentColor" stroke-width="2"/><text x="16" y="19.5" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">PS</text></svg><i>+</i><svg class="gl" width="18" height="18" viewBox="0 0 32 32"><title>R2</title><rect x="4" y="9" width="24" height="15" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><text x="16" y="20.5" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R2</text></svg><em>toque</em></span></td><td class="r">Toque à direita</td></tr><tr class=""><td>Subir sem parar</td><td><span class="ja-combo"><svg class="gl" width="18" height="18" viewBox="0 0 32 32"><title>PS</title><circle cx="16" cy="16" r="11" fill="none" stroke="currentColor" stroke-width="2"/><text x="16" y="19.5" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">PS</text></svg><i>+</i><svg class="gl" width="18" height="18" viewBox="0 0 32 32"><title>R2</title><rect x="4" y="9" width="24" height="15" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><text x="16" y="20.5" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R2</text></svg><em>segurado</em></span></td><td class="r">Um toque por degrau</td></tr><tr class=""><td>Descer um</td><td><span class="ja-combo"><svg class="gl" width="18" height="18" viewBox="0 0 32 32"><title>PS</title><circle cx="16" cy="16" r="11" fill="none" stroke="currentColor" stroke-width="2"/><text x="16" y="19.5" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">PS</text></svg><i>+</i><svg class="gl" width="18" height="18" viewBox="0 0 32 32"><title>L2</title><rect x="4" y="9" width="24" height="15" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><text x="16" y="20.5" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L2</text></svg><em>leve</em></span></td><td class="r">Toque à esquerda</td></tr><tr class="para"><td>Parar tudo</td><td><span class="ja-combo"><svg class="gl" width="18" height="18" viewBox="0 0 32 32"><title>PS</title><circle cx="16" cy="16" r="11" fill="none" stroke="currentColor" stroke-width="2"/><text x="16" y="19.5" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">PS</text></svg><i>+</i><svg class="gl" width="18" height="18" viewBox="0 0 32 32"><title>L2</title><rect x="4" y="9" width="24" height="15" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><text x="16" y="20.5" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L2</text></svg><em>até o fundo</em></span></td><td class="r">Dois toques longos</td></tr><tr class=""><td>Próximo perfil</td><td><span class="ja-combo"><svg class="gl" width="18" height="18" viewBox="0 0 32 32"><title>PS</title><circle cx="16" cy="16" r="11" fill="none" stroke="currentColor" stroke-width="2"/><text x="16" y="19.5" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">PS</text></svg><i>+</i><svg class="gl" width="18" height="18" viewBox="0 0 32 32"><title>R1</title><rect x="4" y="9" width="24" height="15" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><text x="16" y="20.5" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R1</text></svg></span></td><td class="r">Toques = o número dele</td></tr><tr class=""><td>Perfil anterior</td><td><span class="ja-combo"><svg class="gl" width="18" height="18" viewBox="0 0 32 32"><title>PS</title><circle cx="16" cy="16" r="11" fill="none" stroke="currentColor" stroke-width="2"/><text x="16" y="19.5" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">PS</text></svg><i>+</i><svg class="gl" width="18" height="18" viewBox="0 0 32 32"><title>L1</title><rect x="4" y="9" width="24" height="15" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><text x="16" y="20.5" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L1</text></svg></span></td><td class="r">Toques = o número dele</td></tr><tr class=""><td>Surto de 2 s</td><td><span class="ja-combo"><svg class="gl" width="18" height="18" viewBox="0 0 32 32"><title>PS</title><circle cx="16" cy="16" r="11" fill="none" stroke="currentColor" stroke-width="2"/><text x="16" y="19.5" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">PS</text></svg><i>+</i><svg class="gl" width="18" height="18" viewBox="0 0 32 32"><title>R2</title><rect x="4" y="9" width="24" height="15" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><text x="16" y="20.5" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R2</text></svg><em>duas vezes</em></span></td><td class="r">Luzinhas: a recarga</td></tr><tr class=""><td>Camada de uma mão</td><td><span class="ja-combo"><svg class="gl" width="18" height="18" viewBox="0 0 32 32"><title>PS</title><circle cx="16" cy="16" r="11" fill="none" stroke="currentColor" stroke-width="2"/><text x="16" y="19.5" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">PS</text></svg><em>duas vezes</em></span></td><td class="r">Luzinhas: o nível</td></tr></table>
-      <div class="ja-fixo" style="padding:6px 0 2px">Com o PS segurado, R2, L2, R1 e L1 não chegam ao jogo. As cinco luzinhas
-        mostram o nível por 2 s e voltam ao número do jogador.</div>
     </div>
     <div class="moldura"><div class="pc-sub">Como os gestos respondem</div>
-      <div class="ja-linha "><span>Gestos do PS<span class="ajuda" data-todo="9" tabindex="0">?<span class="dica">Segurar o PS e apertar R2, L2, R1 ou L1. Desligados, nenhum gesto age; o Parar tudo da janela continua.</span></span></span><div class="ja-ctrl"><span class="nj-tog ligado" data-on="Ligados" data-off="Desligados"><span class="pino"></span><span class="txt">Ligados</span></span></div></div>
-      <div class="ja-linha "><span>O R2 sobe por<span class="ajuda" data-todo="9" tabindex="0">?<span class="dica"><b>Degraus</b>: cada toque sobe um, previsível.<br><b>Acelerador</b>: com o PS segurado, a pressão do R2 é o nível, ao vivo; soltar o PS crava o nível.</span></span></span><div class="ja-ctrl"><div class="seg mini "><button class="on">Degraus</button><button class="">Acelerador</button></div></div></div>
-      <div class="ja-linha "><span>Quantos degraus<span class="ajuda" data-todo="9" tabindex="0">?<span class="dica"><b>Quatro</b> é a régua da PS5: desligado, fraco, médio, forte.</span></span></span><div class="ja-ctrl"><div class="seg mini "><button class="on">Dez</button><button class="">Quatro</button></div></div></div>
-      <div class="ja-linha "><span>Freio a partir de<span class="ajuda" data-todo="9" tabindex="0">?<span class="dica">Para quem tem pouca força na mão, baixe o fundo.</span></span></span><div class="ja-ctrl"><div class="campo-num mini"><span class="par"><span class="bignum" data-min="50" data-max="100" data-passo="5"><button class="passo">−</button><b>90</b><button class="passo">+</button></span><span class="un">% do L2</span></span></div></div></div>
-      <div class="ja-linha "><span>Camada de uma mão<span class="ajuda" data-todo="9" tabindex="0">?<span class="dica">PS duas vezes liga a camada: R2, L2, R1 e L1 sozinhos fazem os gestos, sem chegar ao jogo. Outro PS duplo desliga, e ela se desliga sozinha depois de 6 s sem gesto.</span></span></span><div class="ja-ctrl"><span class="nj-tog" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Desligado</span></span></div></div>
-      <div class="ja-linha "><span>Lado único<span class="ajuda" data-todo="9" tabindex="0">?<span class="dica"><b>Direito</b>: R2 sobe, R1 desce, R1 segurado 0,6 s para tudo; os perfis vão para ← e → com o PS. O esquerdo é o espelho.</span></span></span><div class="ja-ctrl"><select class="campo-linha"><option selected>Nenhum</option><option>Só a mão direita</option><option>Só a mão esquerda</option></select></div></div>
-      <div class="ja-linha "><span>No modo nativo<span class="ajuda" data-todo="9" tabindex="0">?<span class="dica">No modo nativo o jogo lê o controle direto e o R2 do gesto chega ao jogo. Por isso nasce desligado.</span></span></span><div class="ja-ctrl"><span class="nj-tog" data-on="Valem" data-off="Desligados"><span class="pino"></span><span class="txt">Desligados</span></span></div></div>
+      <div class="ja-linha "><span data-dica="Segure o PS e aperte R2, L2, R1 ou L1">Gestos do PS</span><div class="ja-ctrl"><span class="nj-tog ligado" data-on="Ligados" data-off="Desligados"><span class="pino"></span><span class="txt">Ligados</span></span></div></div>
+      <div class="ja-linha "><span data-dica="Degraus: um por toque. Acelerador: a pressão do R2 é o nível">O R2 sobe por</span><div class="ja-ctrl"><div class="seg mini "><button class="on">Degraus</button><button class="">Acelerador</button></div></div></div>
+      <div class="ja-linha "><span data-dica="Quatro é a régua da PS5">Quantos degraus</span><div class="ja-ctrl"><div class="seg mini "><button class="on">Dez</button><button class="">Quatro</button></div></div></div>
+      <div class="ja-linha "><span data-dica="Para pouca força na mão, baixe o fundo">Freio a partir de</span><div class="ja-ctrl"><div class="campo-num mini"><span class="par"><span class="bignum" data-min="50" data-max="100" data-passo="5"><button class="passo">−</button><b>90</b><button class="passo">+</button></span><span class="un">% do L2</span></span></div></div></div>
+      <div class="ja-linha "><span data-dica="PS duas vezes: os gatilhos sozinhos fazem os gestos">Camada de uma mão</span><div class="ja-ctrl"><span class="nj-tog" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Desligado</span></span></div></div>
+      <div class="ja-linha "><span data-dica="Direito: R2 sobe, R1 desce. O esquerdo é o espelho">Lado único</span><div class="ja-ctrl"><select class="campo-linha"><option selected>Nenhum</option><option>Só a mão direita</option><option>Só a mão esquerda</option></select></div></div>
+      <div class="ja-linha "><span data-dica="No modo nativo o R2 do gesto chega ao jogo">No modo nativo</span><div class="ja-ctrl"><span class="nj-tog" data-on="Valem" data-off="Desligados"><span class="pino"></span><span class="txt">Desligados</span></span></div></div>
       <div class="ja-linha "><span>Toque de confirmação</span><div class="ja-ctrl"><span class="nj-tog ligado" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Ligado</span></span></div></div>
-      <div class="ja-linha "><span>Quem comanda<span class="ajuda" data-todo="9" tabindex="0">?<span class="dica">O P2 pode subir e trocar o perfil. O fundo do L2 do P1 para sempre, mesmo cedido, e a cessão acaba quando o jogo fecha.</span></span></span><div class="ja-ctrl"><select class="campo-linha"><option selected>O meu controle (P1)</option><option>O P2</option><option>Qualquer um</option></select></div></div>
+      <div class="ja-linha "><span data-dica="O segundo controle sobe e troca; o freio do dono sempre para">Quem comanda</span><div class="ja-ctrl"><select class="campo-linha"><option selected>Cosmic Red</option><option>Starlight Blue</option><option>Qualquer um</option></select></div></div>
     </div></div><div class="ja-tela t2">
-    <div class="moldura"><div class="pc-sub">O que os acessórios seguem</div>
+    <div class="moldura"><div class="pc-sub" data-dica="Motor esquerdo vai ao motor 1; o direito, ao 2">O que os acessórios seguem</div>
       <div class="ja-ops">
         <button class="ja-op on"><span class="ja-op-txt"><b>O jogo</b><span>A vibração que o jogo pede ao controle, motor por motor.</span></span></button>
         <button class="ja-op"><span class="ja-op-txt"><b>O que o controle sente</b><span>O jogo e os meus toques, já misturados.</span></span></button>
         <button class="ja-op"><span class="ja-op-txt"><b>Só meus toques</b><span>O que eu faço no controle; o jogo não entra.</span></span></button>
       </div>
-      <div class="ja-linha "><span>Força do «Segue o jogo»<span class="ajuda" data-todo="9" tabindex="0">?<span class="dica">Multiplica o que o jogo pede, sempre abaixo do teto.</span></span></span><div class="ja-ctrl"><div class="campo-num mini"><span class="par"><span class="bignum" data-min="0.2" data-max="3" data-passo="0.1"><button class="passo">−</button><b>1,0</b><button class="passo">+</button></span><span class="un">×</span></span></div></div></div>
-      <div class="ja-linha "><span>Acentos do jogo<span class="ajuda" data-todo="9" tabindex="0">?<span class="dica">Cada tranco da vibração do jogo dá um acento curto por cima do perfil: o jogo vira a percussão.</span></span></span><div class="ja-ctrl"><span class="nj-tog ligado" data-on="Ligados" data-off="Desligados"><span class="pino"></span><span class="txt">Ligados</span></span></div></div>
-      <div class="ja-fixo" style="padding:6px 0 2px">O motor esquerdo do controle vai ao motor 1 do Nora, o direito ao motor 2.
-        Aparelho de um motor recebe o maior dos dois.</div>
+      <div class="ja-linha "><span data-dica="Multiplica o que o jogo pede, abaixo do teto">Força do «Segue o jogo»</span><div class="ja-ctrl"><div class="campo-num mini"><span class="par"><span class="bignum" data-min="0.2" data-max="3" data-passo="0.1"><button class="passo">−</button><b>1,0</b><button class="passo">+</button></span><span class="un">×</span></span></div></div></div>
+      <div class="ja-linha "><span data-dica="Cada tranco do jogo vira um acento curto">Acentos do jogo</span><div class="ja-ctrl"><span class="nj-tog ligado" data-on="Ligados" data-off="Desligados"><span class="pino"></span><span class="txt">Ligados</span></span></div></div>
     </div>
     <div class="moldura"><div class="pc-sub">Como os três tocam juntos</div>
       <div class="ja-ops">
@@ -2516,23 +2569,21 @@
         <button class="ja-op"><svg width="74" height="34" viewBox="0 0 74 34"><polyline points="0.0,17.0 1.9,13.3 3.7,9.9 5.5,7.3 7.4,5.6 9.2,5.0 11.1,5.6 12.9,7.3 14.8,9.9 16.7,13.3 18.5,17.0 20.4,20.7 22.2,24.1 24.1,26.7 25.9,28.4 27.8,29.0 29.6,28.4 31.4,26.7 33.3,24.1 35.1,20.7 37.0,17.0 38.9,13.3 40.7,9.9 42.5,7.3 44.4,5.6 46.2,5.0 48.1,5.6 50.0,7.3 51.8,9.9 53.6,13.3 55.5,17.0 57.4,20.7 59.2,24.1 61.0,26.7 62.9,28.4 64.8,29.0 66.6,28.4 68.5,26.7 70.3,24.1 72.1,20.7 74.0,17.0" fill="none" stroke="var(--pink)" stroke-width="1.5" opacity="1"/><polyline points="0.0,27.4 1.9,28.7 3.7,28.9 5.5,28.0 7.4,25.9 9.2,23.0 11.1,19.5 12.9,15.7 14.8,12.1 16.7,9.0 18.5,6.6 20.4,5.3 22.2,5.1 24.1,6.0 25.9,8.1 27.8,11.0 29.6,14.5 31.4,18.3 33.3,21.9 35.1,25.0 37.0,27.4 38.9,28.7 40.7,28.9 42.5,28.0 44.4,25.9 46.2,23.0 48.1,19.5 50.0,15.7 51.8,12.1 53.6,9.0 55.5,6.6 57.4,5.3 59.2,5.1 61.0,6.0 62.9,8.1 64.8,11.0 66.6,14.5 68.5,18.3 70.3,21.9 72.1,25.0 74.0,27.4" fill="none" stroke="var(--cyan)" stroke-width="1.5" opacity="1"/><polyline points="0.0,6.6 1.9,9.0 3.7,12.1 5.5,15.7 7.4,19.5 9.2,23.0 11.1,25.9 12.9,28.0 14.8,28.9 16.7,28.7 18.5,27.4 20.4,25.0 22.2,21.9 24.1,18.3 25.9,14.5 27.8,11.0 29.6,8.1 31.4,6.0 33.3,5.1 35.1,5.3 37.0,6.6 38.9,9.0 40.7,12.1 42.5,15.7 44.4,19.5 46.2,23.0 48.1,25.9 50.0,28.0 51.8,28.9 53.6,28.7 55.5,27.4 57.4,25.0 59.2,21.9 61.0,18.3 62.9,14.5 64.8,11.0 66.6,8.1 68.5,6.0 70.3,5.1 72.1,5.3 74.0,6.6" fill="none" stroke="var(--purple)" stroke-width="1.5" opacity="1"/></svg><span class="ja-op-txt"><b>Em onda</b><span>O mesmo perfil, um terço de volta atrasado em cada um: a vibração passa de um ao outro.</span></span></button>
         <button class="ja-op on"><svg width="74" height="34" viewBox="0 0 74 34"><polyline points="0.0,17.0 1.9,13.3 3.7,9.9 5.5,7.3 7.4,5.6 9.2,5.0 11.1,5.6 12.9,7.3 14.8,9.9 16.7,13.3 18.5,17.0 20.4,20.7 22.2,24.1 24.1,26.7 25.9,28.4 27.8,29.0 29.6,28.4 31.4,26.7 33.3,24.1 35.1,20.7 37.0,17.0 38.9,13.3 40.7,9.9 42.5,7.3 44.4,5.6 46.2,5.0 48.1,5.6 50.0,7.3 51.8,9.9 53.6,13.3 55.5,17.0 57.4,20.7 59.2,24.1 61.0,26.7 62.9,28.4 64.8,29.0 66.6,28.4 68.5,26.7 70.3,24.1 72.1,20.7 74.0,17.0" fill="none" stroke="var(--pink)" stroke-width="1.5" opacity="1"/><polyline points="0.0,8.0 1.9,9.3 3.7,10.7 5.5,12.0 7.4,13.4 9.2,14.7 11.1,16.1 12.9,17.4 14.8,18.8 16.7,20.1 18.5,21.5 20.4,22.8 22.2,24.2 24.1,25.6 25.9,8.9 27.8,10.2 29.6,11.6 31.4,12.9 33.3,14.3 35.1,15.6 37.0,17.0 38.9,18.4 40.7,19.7 42.5,21.0 44.4,22.4 46.2,23.8 48.1,25.1 50.0,8.5 51.8,9.8 53.6,11.1 55.5,12.5 57.4,13.9 59.2,15.2 61.0,16.5 62.9,17.9 64.8,19.2 66.6,20.6 68.5,22.0 70.3,23.3 72.1,24.6 74.0,8.0" fill="none" stroke="var(--cyan)" stroke-width="1.5" opacity="1"/><polyline points="0.0,8.0 1.9,8.0 3.7,8.0 5.5,8.0 7.4,26.0 9.2,26.0 11.1,26.0 12.9,26.0 14.8,8.0 16.7,8.0 18.5,8.0 20.4,8.0 22.2,26.0 24.1,26.0 25.9,26.0 27.8,26.0 29.6,8.0 31.4,8.0 33.3,8.0 35.1,8.0 37.0,26.0 38.9,26.0 40.7,26.0 42.5,26.0 44.4,8.0 46.2,8.0 48.1,8.0 50.0,8.0 51.8,26.0 53.6,26.0 55.5,26.0 57.4,26.0 59.2,8.0 61.0,8.0 62.9,8.0 64.8,8.0 66.6,26.0 68.5,26.0 70.3,26.0 72.1,26.0 74.0,8.0" fill="none" stroke="var(--purple)" stroke-width="1.5" opacity="1"/></svg><span class="ja-op-txt"><b>Cada um um papel</b><span>Cada aparelho escolhe a sua fonte na coluna «Agora»: o perfil, o jogo, os meus toques ou um lado do touchpad.</span></span></button>
       </div>
-    </div></div><div class="ja-tela t3" data-todo="10">
-    <p class="ja-frase">Vibrar a cada coisa que eu faço, não só quando o jogo manda. <b>Mora no perfil do jogo e se muda na aba Vibração</b>;
-      aqui só se lê, e vale também sem acessório nenhum.</p>
-    <div class="moldura"><div class="pc-sub">O que vibra no controle</div>
-      <div class="ja-linha "><span>O que vibra</span><div class="ja-ctrl"><span class="ja-valor">Jogo e meus toques</span></div></div>
-      <div class="ja-linha "><span>Mistura</span><div class="ja-ctrl"><span class="ja-valor">O maior dos dois</span></div></div>
-      <div class="ja-linha "><span>Força dos meus toques</span><div class="ja-ctrl"><span class="ja-valor">30 % do controle</span></div></div>
-      <div class="ja-linha "><span></span><div class="ja-ctrl"><a class="btn mini" href="05-vibracao.html" data-gesto="abrir-meus-toques" style="height:26px;display:inline-flex;align-items:center;text-decoration:none" title="Abre a seção Meus toques na aba Vibração.">Mudar na aba Vibração</a></div></div>
+    </div></div><div class="ja-tela t3" data-todo="13">
+    <div class="moldura"><div class="pc-sub">Vibração</div>
+      <div class="ja-linha empilha"><span>O que vibra</span><div class="ja-ctrl"><div class="seg mini"><button class="">Só o jogo</button><button class="on">Jogo e meus toques</button><button class="">Só meus toques</button></div></div></div>
+      <div class="ja-linha "><span>Mistura</span><div class="ja-ctrl"><div class="seg mini"><button class="on">O maior dos dois</button><button class="">Somar</button></div></div></div>
+      <div class="ja-linha "><span>Força dos meus toques</span><div class="ja-ctrl"><div class="campo-num mini"><span class="par"><span class="bignum" data-min="0" data-max="100" data-passo="5"><button class="passo">−</button><b>30</b><button class="passo">+</button></span><span class="un">% do controle</span></span></div></div></div>
     </div>
     <div class="moldura"><div class="pc-sub">Cada entrada</div>
-      <div class="ja-linha "><span>Analógicos</span><div class="ja-ctrl"><span class="ja-valor">Movimento</span></div></div>
-      <div class="ja-linha "><span>Botões</span><div class="ja-ctrl"><span class="ja-valor">Ligado</span></div></div>
-      <div class="ja-linha "><span>Gatilhos</span><div class="ja-ctrl"><span class="ja-valor">Ligado</span></div></div>
-      <div class="ja-linha "><span>Chacoalhar</span><div class="ja-ctrl"><span class="ja-valor">Desligado</span></div></div>
+      <div class="ja-linha "><span>Analógicos</span><div class="ja-ctrl"><div class="seg mini"><button class="">Não</button><button class="on">Movimento</button><button class="">Posição</button></div></div></div>
+      <div class="ja-linha "><span>Botões</span><div class="ja-ctrl"><span class="nj-tog ligado" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Ligado</span></span></div></div>
+      <div class="ja-linha "><span>Gatilhos</span><div class="ja-ctrl"><span class="nj-tog ligado" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Ligado</span></span></div></div>
+      <div class="ja-linha "><span>Chacoalhar</span><div class="ja-ctrl"><span class="nj-tog" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Desligado</span></span></div></div>
+      <div class="ja-linha "><span>Touchpad</span><div class="ja-ctrl"><div class="seg mini"><button class="">Não</button><button class="on">Pelos lados</button><button class="">Mistura</button></div></div></div>
     </div></div><div class="ja-tela t4">
-    <div class="moldura"><div class="pc-sub">O touchpad vibra</div>
-      <div class="ja-linha "><span>Leitura<span class="ajuda" data-todo="9" tabindex="0">?<span class="dica"><b>Pelos lados</b>: a metade direita vibra o lado direito, a esquerda o esquerdo; a faixa do meio, os dois.<br><b>Mistura</b>, a mesa de mistura: deslizar da esquerda para a direita faz a vibração atravessar o controle; para cima, sobe.</span></span></span><div class="ja-ctrl"><div class="seg mini "><button class="">Não</button><button class="on">Pelos lados</button><button class="">Mistura</button></div></div></div>
+    <div class="moldura"><div class="pc-sub" data-dica="O touchpad segue fazendo o que fazia; o Hefesto só escuta">O touchpad vibra</div>
+      <div class="ja-linha "><span data-dica="Pelos lados: cada metade, o seu lado. Mistura: o dedo equilibra">Leitura</span><div class="ja-ctrl"><div class="seg mini "><button class="">Não</button><button class="on">Pelos lados</button><button class="">Mistura</button></div></div></div>
       <svg class="ja-tp" viewBox="0 0 420 214" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="tp-e" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#bd93f9" stop-opacity=".55"/><stop offset="1" stop-color="#bd93f9" stop-opacity=".06"/></linearGradient>
@@ -2560,28 +2611,25 @@
   <text x="404" y="182" text-anchor="middle" fill="#9a9eb8" font-family="Space Grotesk, sans-serif" font-size="10">fraco</text>
   <text x="210" y="207" text-anchor="middle" fill="#9a9eb8" font-family="Space Grotesk, sans-serif" font-size="10">a altura do dedo é a força · dois dedos, os dois lados</text>
 </svg>
-      <div class="ja-fixo">O touchpad continua fazendo o que fazia, no jogo e no cursor: o Hefesto só escuta.</div>
     </div>
     <div class="moldura"><div class="pc-sub">Ajustes</div>
-      <div class="ja-linha "><span>A altura do dedo<span class="ajuda" data-todo="9" tabindex="0">?<span class="dica"><b>Força</b>: no alto, forte; embaixo, fraco.<br><b>Fixa</b>: tocar só liga o lado, no nível de agora.</span></span></span><div class="ja-ctrl"><div class="seg mini "><button class="on">Força</button><button class="">Invertida</button><button class="">Fixa</button></div></div></div>
-      <div class="ja-linha "><span>Dedo parado<span class="ajuda" data-todo="9" tabindex="0">?<span class="dica"><b>Vibra</b>: enquanto o dedo estiver lá.<br><b>Só o toque</b>: um pulso ao encostar.</span></span></span><div class="ja-ctrl"><div class="seg mini "><button class="on">Vibra</button><button class="">Só o toque</button></div></div></div>
-      <div class="ja-linha "><span>Deslize rápido<span class="ajuda" data-todo="9" tabindex="0">?<span class="dica">Um deslize rápido vira um surto que corre no sentido do dedo.</span></span></span><div class="ja-ctrl"><span class="nj-tog ligado" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Ligado</span></span></div></div>
-      <div class="ja-linha "><span>Clique<span class="ajuda" data-todo="9" tabindex="0">?<span class="dica">Apertar o touchpad dá um acento forte de 0,2 s nos dois lados.</span></span></span><div class="ja-ctrl"><span class="nj-tog ligado" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Ligado</span></span></div></div>
-      <div class="pc-sub" style="margin-top:6px">Que lado vai a cada aparelho</div>
+      <div class="ja-linha "><span data-dica="Força: alto é forte. Fixa: tocar só liga o lado">A altura do dedo</span><div class="ja-ctrl"><div class="seg mini "><button class="on">Força</button><button class="">Invertida</button><button class="">Fixa</button></div></div></div>
+      <div class="ja-linha "><span data-dica="Vibra: enquanto o dedo fica. Só o toque: um pulso">Dedo parado</span><div class="ja-ctrl"><div class="seg mini "><button class="on">Vibra</button><button class="">Só o toque</button></div></div></div>
+      <div class="ja-linha "><span data-dica="Deslize rápido vira um surto no sentido do dedo">Deslize rápido</span><div class="ja-ctrl"><span class="nj-tog ligado" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Ligado</span></span></div></div>
+      <div class="ja-linha "><span data-dica="Apertar o touchpad dá um acento forte nos dois lados">Clique</span><div class="ja-ctrl"><span class="nj-tog ligado" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Ligado</span></span></div></div>
+      <div class="pc-sub" style="margin-top:6px" data-dica="Em lados opostos, o dedo faz o balanço entre os dois">Que lado vai a cada aparelho</div>
       <div class="ja-linha "><span>Lovense Nora</span><div class="ja-ctrl"><select class="campo-linha"><option selected>Motor 1 esquerda, 2 direita</option><option>Os dois lados juntos</option></select></div></div>
       <div class="ja-linha "><span>Lovense Domi</span><div class="ja-ctrl"><select class="campo-linha"><option selected>Lado direito</option><option>Lado esquerdo</option><option>O maior dos dois lados</option></select></div></div>
       <div class="ja-linha "><span>Lovense Ferri</span><div class="ja-ctrl"><select class="campo-linha"><option selected>Lado esquerdo</option><option>Lado direito</option><option>O maior dos dois lados</option></select></div></div>
-      <div class="ja-fixo" style="padding:6px 0 2px">Com Domi e Ferri em lados opostos, o dedo vira o balanço entre os dois.</div>
     </div></div><div class="ja-tela t5">
-    <div class="moldura"><div class="pc-sub">A barra de luz</div>
-      <div class="ja-linha "><span>A luz acompanha<span class="ajuda" data-todo="9" tabindex="0">?<span class="dica">Só em perfil marcado Adulto. Fora dele, a barra é a do perfil.</span></span></span><div class="ja-ctrl"><span class="nj-tog ligado" data-on="Ligada" data-off="Desligada"><span class="pino"></span><span class="txt">Ligada</span></span></div></div>
+    <div class="moldura"><div class="pc-sub" data-dica="No máximo um ciclo por segundo; o jogo que pinta vence">A barra de luz</div>
+      <div class="ja-linha "><span data-dica="Só em perfil marcado Adulto">A luz acompanha</span><div class="ja-ctrl"><span class="nj-tog ligado" data-on="Ligada" data-off="Desligada"><span class="pino"></span><span class="txt">Ligada</span></span></div></div>
       <div class="ja-linha empilha"><span>Cor</span><div class="ja-ctrl"><div class="ja-tons" data-luz="1"><button class="tom on" style="background:#7A0010" data-cor="#7A0010" title="Vermelho escuro"></button><button class="tom" style="background:#7EB8D4" data-cor="#7EB8D4" title="#7EB8D4"></button><button class="tom" style="background:#FF5555" data-cor="#FF5555" title="#FF5555"></button><button class="tom" style="background:#50FA7B" data-cor="#50FA7B" title="#50FA7B"></button><button class="tom" style="background:#FF79C6" data-cor="#FF79C6" title="#FF79C6"></button><button class="tom" style="background:#F1FA8C" data-cor="#F1FA8C" title="#F1FA8C"></button><button class="tom" style="background:#8BE9FD" data-cor="#8BE9FD" title="#8BE9FD"></button><button class="tom" style="background:#FFB86C" data-cor="#FFB86C" title="#FFB86C"></button><button class="tom" style="background:#BD93F9" data-cor="#BD93F9" title="#BD93F9"></button><button class="tom" style="background:#B8F976" data-cor="#B8F976" title="#B8F976"></button><button class="tom" style="background:#76F9B8" data-cor="#76F9B8" title="#76F9B8"></button><button class="tom" style="background:#F8F8F2" data-cor="#F8F8F2" title="#F8F8F2"></button></div></div></div>
-      <div class="ja-linha empilha"><span>Cor que esquenta<span class="ajuda" data-todo="9" tabindex="0">?<span class="dica">O pulso vai da primeira cor, no nível baixo, para esta, no nível alto.</span></span></span><div class="ja-ctrl"><div class="ja-tons"><button class="tom nenhuma on" title="Nenhuma"></button><button class="tom" style="background:#FF5555" title="#FF5555"></button><button class="tom" style="background:#50FA7B" title="#50FA7B"></button><button class="tom" style="background:#FF79C6" title="#FF79C6"></button><button class="tom" style="background:#F1FA8C" title="#F1FA8C"></button><button class="tom" style="background:#8BE9FD" title="#8BE9FD"></button><button class="tom" style="background:#FFB86C" title="#FFB86C"></button></div></div></div>
+      <div class="ja-linha empilha"><span data-dica="O pulso vai da primeira cor a esta, com o nível">Cor que esquenta</span><div class="ja-ctrl"><div class="ja-tons"><button class="tom nenhuma on" title="Nenhuma"></button><button class="tom" style="background:#FF5555" title="#FF5555"></button><button class="tom" style="background:#50FA7B" title="#50FA7B"></button><button class="tom" style="background:#FF79C6" title="#FF79C6"></button><button class="tom" style="background:#F1FA8C" title="#F1FA8C"></button><button class="tom" style="background:#8BE9FD" title="#8BE9FD"></button><button class="tom" style="background:#FFB86C" title="#FFB86C"></button></div></div></div>
       <div class="ja-linha "><span>O fundo do pulso</span><div class="ja-ctrl"><div class="seg mini "><button class="on">Apaga</button><button class="">20 %</button><button class="">50 %</button></div></div></div>
-      <div class="ja-linha "><span>Sem pisca<span class="ajuda" data-todo="9" tabindex="0">?<span class="dica">A barra não pulsa: o brilho só acompanha o nível, devagar.</span></span></span><div class="ja-ctrl"><span class="nj-tog" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Desligado</span></span></div></div>
-      <div class="ja-fixo" style="padding:6px 0 2px">No máximo um ciclo por segundo, sempre em curva, nunca em degrau. O jogo que pinta a barra vence.</div>
+      <div class="ja-linha "><span data-dica="O brilho só acompanha o nível, devagar">Sem pisca</span><div class="ja-ctrl"><span class="nj-tog" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Desligado</span></span></div></div>
     </div>
-    <div class="moldura"><div class="pc-sub">Como fica</div>
+    <div class="moldura"><div class="pc-sub" data-dica="O pulso acelera com o nível; parado, a cor fica fixa">Como fica</div>
       <div class="ja-luz-prev">
         <div class="ja-barra-luz"><span></span></div>
         <div class="ja-escala"></div>
@@ -2592,8 +2640,6 @@
       <text x="25" y="16" text-anchor="end">100 %</text><text x="25" y="99" text-anchor="end">0</text><text x="30" y="112" text-anchor="middle">0 s</text><text x="112" y="112" text-anchor="middle">2 s</text><text x="195" y="112" text-anchor="middle">4 s</text><text x="278" y="112" text-anchor="middle">6 s</text><text x="360" y="112" text-anchor="middle">8 s</text>
       <polyline points="30.0,12.0 32.1,12.1 34.1,12.5 36.2,13.2 38.2,14.1 40.3,15.2 42.4,16.6 44.4,18.2 46.5,20.0 48.6,22.1 50.6,24.3 52.7,26.7 54.8,29.3 56.8,32.1 58.9,34.9 60.9,37.9 63.0,41.0 65.1,44.2 67.1,47.4 69.2,50.7 71.2,54.0 73.3,57.3 75.4,60.6 77.4,63.8 79.5,67.0 81.6,70.1 83.6,73.1 85.7,75.9 87.8,78.7 89.8,81.3 91.9,83.7 93.9,85.9 96.0,88.0 98.1,89.8 100.1,91.4 102.2,92.8 104.2,93.9 106.3,94.8 108.4,95.5 110.4,95.9 112.5,96.0 114.6,95.9 116.6,95.5 118.7,94.8 120.8,93.9 122.8,92.8 124.9,91.4 126.9,89.8 129.0,88.0 131.1,85.9 133.1,83.7 135.2,81.3 137.2,78.7 139.3,75.9 141.4,73.1 143.4,70.1 145.5,67.0 147.6,63.8 149.6,60.6 151.7,57.3 153.8,54.0 155.8,50.7 157.9,47.4 159.9,44.2 162.0,41.0 164.1,37.9 166.1,34.9 168.2,32.1 170.2,29.3 172.3,26.7 174.4,24.3 176.4,22.1 178.5,20.0 180.6,18.2 182.6,16.6 184.7,15.2 186.8,14.1 188.8,13.2 190.9,12.5 192.9,12.1 195.0,12.0 197.1,12.1 199.1,12.5 201.2,13.2 203.2,14.1 205.3,15.2 207.4,16.6 209.4,18.2 211.5,20.0 213.6,22.1 215.6,24.3 217.7,26.7 219.7,29.3 221.8,32.1 223.9,34.9 225.9,37.9 228.0,41.0 230.1,44.2 232.1,47.4 234.2,50.7 236.2,54.0 238.3,57.3 240.4,60.6 242.4,63.8 244.5,67.0 246.6,70.1 248.6,73.1 250.7,75.9 252.8,78.7 254.8,81.3 256.9,83.7 258.9,85.9 261.0,88.0 263.1,89.8 265.1,91.4 267.2,92.8 269.2,93.9 271.3,94.8 273.4,95.5 275.4,95.9 277.5,96.0 279.6,95.9 281.6,95.5 283.7,94.8 285.8,93.9 287.8,92.8 289.9,91.4 291.9,89.8 294.0,88.0 296.1,85.9 298.1,83.7 300.2,81.3 302.2,78.7 304.3,75.9 306.4,73.1 308.4,70.1 310.5,67.0 312.6,63.8 314.6,60.6 316.7,57.3 318.8,54.0 320.8,50.7 322.9,47.4 324.9,44.2 327.0,41.0 329.1,37.9 331.1,34.9 333.2,32.1 335.2,29.3 337.3,26.7 339.4,24.3 341.4,22.1 343.5,20.0 345.6,18.2 347.6,16.6 349.7,15.2 351.8,14.1 353.8,13.2 355.9,12.5 357.9,12.1 360.0,12.0" fill="none" stroke="#9a9eb8" stroke-width="1.3" opacity="0.55"/><polyline points="30.0,12.0 32.1,12.2 34.1,12.9 36.2,14.1 38.2,15.6 40.3,17.6 42.4,20.0 44.4,22.8 46.5,25.9 48.6,29.3 50.6,33.0 52.7,36.9 54.8,41.0 56.8,45.3 58.9,49.6 60.9,54.0 63.0,58.4 65.1,62.7 67.1,67.0 69.2,71.1 71.2,75.0 73.3,78.7 75.4,82.1 77.4,85.2 79.5,88.0 81.6,90.4 83.6,92.4 85.7,93.9 87.8,95.1 89.8,95.8 91.9,96.0 93.9,95.8 96.0,95.1 98.1,93.9 100.1,92.4 102.2,90.4 104.2,88.0 106.3,85.2 108.4,82.1 110.4,78.7 112.5,75.0 114.6,71.1 116.6,67.0 118.7,62.7 120.8,58.4 122.8,54.0 124.9,49.6 126.9,45.3 129.0,41.0 131.1,36.9 133.1,33.0 135.2,29.3 137.2,25.9 139.3,22.8 141.4,20.0 143.4,17.6 145.5,15.6 147.6,14.1 149.6,12.9 151.7,12.2 153.8,12.0 155.8,12.2 157.9,12.9 159.9,14.1 162.0,15.6 164.1,17.6 166.1,20.0 168.2,22.8 170.2,25.9 172.3,29.3 174.4,33.0 176.4,36.9 178.5,41.0 180.6,45.3 182.6,49.6 184.7,54.0 186.8,58.4 188.8,62.7 190.9,67.0 192.9,71.1 195.0,75.0 197.1,78.7 199.1,82.1 201.2,85.2 203.2,88.0 205.3,90.4 207.4,92.4 209.4,93.9 211.5,95.1 213.6,95.8 215.6,96.0 217.7,95.8 219.7,95.1 221.8,93.9 223.9,92.4 225.9,90.4 228.0,88.0 230.1,85.2 232.1,82.1 234.2,78.7 236.2,75.0 238.3,71.1 240.4,67.0 242.4,62.7 244.5,58.4 246.6,54.0 248.6,49.6 250.7,45.3 252.8,41.0 254.8,36.9 256.9,33.0 258.9,29.3 261.0,25.9 263.1,22.8 265.1,20.0 267.2,17.6 269.2,15.6 271.3,14.1 273.4,12.9 275.4,12.2 277.5,12.0 279.6,12.2 281.6,12.9 283.7,14.1 285.8,15.6 287.8,17.6 289.9,20.0 291.9,22.8 294.0,25.9 296.1,29.3 298.1,33.0 300.2,36.9 302.2,41.0 304.3,45.3 306.4,49.6 308.4,54.0 310.5,58.4 312.6,62.7 314.6,67.0 316.7,71.1 318.8,75.0 320.8,78.7 322.9,82.1 324.9,85.2 327.0,88.0 329.1,90.4 331.1,92.4 333.2,93.9 335.2,95.1 337.3,95.8 339.4,96.0 341.4,95.8 343.5,95.1 345.6,93.9 347.6,92.4 349.7,90.4 351.8,88.0 353.8,85.2 355.9,82.1 357.9,78.7 360.0,75.0" fill="none" stroke="#ff79c6" stroke-width="2.2" opacity="1"/>
       </svg>
-        <div class="ja-fixo">O pulso fica mais rápido conforme o nível: do nível 1 (respiração lenta) ao nível 10 (um ciclo por segundo).
-          Parado, a luz fica fixa na cor.</div>
       </div>
     </div></div><div class="ja-tela t6 l-larga">
     <div class="moldura"><div class="pc-sub">A roda dos perfis <span class="ja-num-roda">PS + R1 avança · PS + L1 volta</span></div>
@@ -2616,14 +2662,14 @@
           <a class="btn mini" href="05-vibracao.html">Editar</a><button class="btn mini">Duplicar</button></div></div>
     </div>
     <div class="moldura"><div class="pc-sub">Para brincar</div>
-      <div class="ja-linha "><span>Lembrar o último nível<span class="ajuda" data-todo="9" tabindex="0">?<span class="dica">O PS + R2 volta onde estava. Depois de mais de 10 min parado, volta no máximo à metade.</span></span></span><div class="ja-ctrl"><span class="nj-tog ligado" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Ligado</span></span></div></div>
-      <div class="ja-linha "><span>Surto<span class="ajuda" data-todo="9" tabindex="0">?<span class="dica">O molde «Brincalhão» liga. PS + R2 duas vezes: 2 s no teto e volta ao nível. Recarga de 10 s; as luzinhas mostram a recarga enchendo.</span></span></span><div class="ja-ctrl"><span class="nj-tog ligado" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Ligado</span></span></div></div>
-      <div class="ja-linha "><span>Carga<span class="ajuda" data-todo="9" tabindex="0">?<span class="dica">Só no modo Acelerador: segurar PS + R2 no fundo por 3 s carrega; soltar dispara um surto do tamanho da carga, até o teto.</span></span></span><div class="ja-ctrl"><span class="nj-tog" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Desligado</span></span></div></div>
+      <div class="ja-linha "><span data-dica="Depois de 10 min parado, volta no máximo à metade">Lembrar o último nível</span><div class="ja-ctrl"><span class="nj-tog ligado" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Ligado</span></span></div></div>
+      <div class="ja-linha "><span data-dica="PS + R2 duas vezes: 2 s no teto">Surto</span><div class="ja-ctrl"><span class="nj-tog ligado" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Ligado</span></span></div></div>
+      <div class="ja-linha "><span data-dica="Segure PS + R2 no fundo 3 s; soltar dispara">Carga</span><div class="ja-ctrl"><span class="nj-tog" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Desligado</span></span></div></div>
       <div class="pc-sub" style="margin-top:6px">Surpresa</div>
-      <div class="ja-linha "><span>Surpresa<span class="ajuda" data-todo="9" tabindex="0">?<span class="dica">Troca de perfil e de nível sozinha, dentro dos limites daqui. O freio desfaz na hora e desliga a surpresa até a próxima sessão.</span></span></span><div class="ja-ctrl"><span class="nj-tog" data-on="Ligada" data-off="Desligada"><span class="pino"></span><span class="txt">Desligada</span></span></div></div>
+      <div class="ja-linha "><span data-dica="Troca perfil e nível sozinha; o freio desfaz">Surpresa</span><div class="ja-ctrl"><span class="nj-tog" data-on="Ligada" data-off="Desligada"><span class="pino"></span><span class="txt">Desligada</span></span></div></div>
       <div class="ja-linha "><span>A cada</span><div class="ja-ctrl"><select class="campo-linha"><option selected>30 a 90 s, sorteado</option><option>1 a 3 min, sorteado</option><option>3 a 6 min, sorteado</option></select></div></div>
       <div class="ja-linha "><span>Até</span><div class="ja-ctrl"><div class="campo-num mini"><span class="par"><span class="bignum" data-min="10" data-max="100" data-passo="10"><button class="passo">−</button><b>70</b><button class="passo">+</button></span><span class="un">% do teto</span></span></div></div></div>
-      <div class="ja-linha "><span>Aviso antes<span class="ajuda" data-todo="9" tabindex="0">?<span class="dica">Um toque leve no controle 1 s antes de cada troca.</span></span></span><div class="ja-ctrl"><span class="nj-tog ligado" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Ligado</span></span></div></div>
+      <div class="ja-linha "><span data-dica="Um toque leve 1 s antes de cada troca">Aviso antes</span><div class="ja-ctrl"><span class="nj-tog ligado" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Ligado</span></span></div></div>
     </div></div></div>
       </div>
     </div>
@@ -2637,13 +2683,6 @@
 <!-- ===== fim da aba ===== -->
 
 
-<div class="tela-nova" id="impedimentos" data-todo="6">
-  <div class="tn-cx" role="dialog" aria-modal="true" aria-label="Jogos com impedimento">
-    <div class="tn-topo"><span class="tn-tit">Jogos com impedimento</span><span class="ajuda" data-todo="9">?<span class="dica">O que impede é do lançador, nunca do controle. Cada linha diz onde se resolve.</span></span><a class="tn-x" href="#" title="Fechar">&times;</a></div>
-    <div class="tn-corpo"><div class="lanc-novo-para">Steam</div><table class="imp-lista"><tr><th>Jogo</th><th>O que impede</th><th></th></tr><tr><td>Sackboy: A Big Adventure</td><td>O Steam Input está ligado para este jogo.</td><td><button class="btn mini" data-gesto="abrir-no-lancador">Abrir na Steam</button></td></tr><tr><td>Resident Evil Village</td><td>O jogo não usa o Proton fixado.</td><td><button class="btn mini" data-gesto="abrir-no-lancador">Abrir na Steam</button></td></tr></table></div>
-    <div class="tn-rod"><a class="btn" href="#">Fechar</a></div>
-  </div>
-</div>
 <script>
 (function(){
   var alvo = document.body.dataset.abre;
@@ -2685,47 +2724,53 @@
   }
 })();
 </script>
-<style data-todo-css="menu-do-botao-direito">
-  .todo-menu{position:fixed;z-index:9999;display:none;min-width:168px;padding:4px;
-    border:1px solid var(--border-forte);border-radius:8px;background:var(--elevated);
-    box-shadow:0 6px 18px rgba(0,0,0,.45);font-family:'Space Grotesk',system-ui,sans-serif;font-size:13px}
-  .todo-menu.aberto{display:block}
-  .todo-menu button{display:block;width:100%;height:28px;padding:0 14px;border:0;border-radius:5px;
-    background:transparent;color:var(--fg);font:inherit;text-align:left;cursor:pointer}
-  .todo-menu button:hover{background:var(--sel-bg)}
-  .todo-menu button[aria-disabled="true"]{color:var(--texto-mudo);cursor:default;background:transparent}
-  .todo-menu hr{border:0;border-top:1px solid var(--border-sutil);margin:4px 2px}
-</style>
-<div class="todo-menu aberto" id="todo-menu-direito" data-todo="8" role="menu" aria-label="Menu do Hefesto"
-     style="left:300px;top:636px"
-     title="O menu de verdade é o do sistema, no tema do COSMIC; aqui ele aparece aberto só para se ver.">
-  <button role="menuitem" data-item="copiar" aria-disabled="true">Copiar</button>
-  <hr>
-  <button role="menuitem" data-item="atualizar">Atualizar</button>
-  <button role="menuitem" data-item="ligar-desligar" title="Faz o mesmo que o Desligado da bandeja e da aba Jogar: o Hefesto sai da frente do jogo, que passa a ler o controle direto (modo nativo). O serviço segue de pé.">Desligar</button>
-  <button role="menuitem" data-item="reiniciar">Reiniciar</button>
-  <hr>
-  <button role="menuitem" data-item="fechar">Fechar</button>
+
+<div class="menu-hefesto" id="menu-desenhado" role="menu" aria-label="Menu do Hefesto" data-todo="14" hidden style="left:602px;top:584px">
+  <button role="menuitem" disabled>Copiar</button><hr>
+  <button role="menuitem">Atualizar</button>
+  <button role="menuitem" data-dica="O Hefesto sai da frente e o jogo lê o controle direto">Desligar</button>
+  <button role="menuitem">Reiniciar</button><hr><button role="menuitem">Fechar</button>
 </div>
-<script>
+<script>/* O menu desenhado aberto só na foto do menu: abra a página com #menu. */
+if (location.hash === '#menu') document.getElementById('menu-desenhado').hidden = false;</script>
+<script id="base-comum">
+/* Base comum das abas (rodada 2): a dica no hover e o menu do botão direito. Copiada IGUAL em todo mockup. */
 (() => {
-  const m = document.getElementById('todo-menu-direito');
-  const rotulo = () => {
-    const desligado = document.body.classList.contains('nativo') || !!document.querySelector('#hef-desligado:checked');
-    { const ld = m.querySelector('[data-item="ligar-desligar"]'); ld.textContent = desligado ? 'Ligar' : 'Desligar'; ld.title = desligado ? 'Faz o mesmo que o Ligado da bandeja e da aba Jogar: liga o serviço se estiver parado e volta a entregar o controle ao jogo pelo Hefesto.' : 'Faz o mesmo que o Desligado da bandeja e da aba Jogar: o Hefesto sai da frente do jogo, que passa a ler o controle direto (modo nativo). O serviço segue de pé.'; }
+  const dica = document.createElement('div'); dica.id = 'hef-dica'; dica.setAttribute('role', 'tooltip');
+  document.addEventListener('DOMContentLoaded', () => document.body.append(dica));
+  let alvo = null;
+  const mostrar = el => {
+    alvo = el; dica.textContent = el.dataset.dica;
+    if (!dica.isConnected) document.body.append(dica);
+    const r = el.getBoundingClientRect(), d = dica.getBoundingClientRect();
+    let x = r.left + r.width / 2 - d.width / 2, y = r.bottom + 8;
+    if (y + d.height > innerHeight - 6) y = r.top - d.height - 8;
+    dica.style.left = Math.max(6, Math.min(x, innerWidth - d.width - 6)) + 'px'; dica.style.top = y + 'px';
+    dica.classList.add('visivel');
   };
-  document.addEventListener('contextmenu', (e) => {
+  const esconder = () => { alvo = null; dica.classList.remove('visivel'); };
+  for (const [ev, f] of [['mouseover', 'in'], ['focusin', 'in'], ['mouseout', 'out'], ['focusout', 'out']])
+    document.addEventListener(ev, e => {
+      const el = e.target.closest && e.target.closest('[data-dica]');
+      if (f === 'in' && el && el !== alvo) mostrar(el);
+      if (f === 'out' && el && !el.contains(e.relatedTarget)) esconder();
+    });
+  // O menu do botão direito: Copiar (cinza sem seleção), Atualizar, Desligar/Ligar, Reiniciar, Fechar.
+  document.addEventListener('contextmenu', e => {
     e.preventDefault();
-    m.querySelector('[data-item="copiar"]').setAttribute('aria-disabled', String(!String(getSelection()).trim()));
-    rotulo();
-    m.classList.add('aberto');
-    m.style.left = Math.min(e.clientX, innerWidth - m.offsetWidth - 8) + 'px';
-    m.style.top = Math.min(e.clientY, innerHeight - m.offsetHeight - 8) + 'px';
+    document.querySelectorAll('.menu-hefesto.vivo').forEach(m => m.remove());
+    const m = document.createElement('div'); m.className = 'menu-hefesto vivo'; m.setAttribute('role', 'menu');
+    const sel = String(getSelection()).trim() !== '';
+    m.innerHTML = `<button role="menuitem" ${sel ? '' : 'disabled'}>Copiar</button><hr>
+      <button role="menuitem">Atualizar</button>
+      <button role="menuitem" data-dica="O Hefesto sai da frente e o jogo lê o controle direto">Desligar</button>
+      <button role="menuitem">Reiniciar</button><hr><button role="menuitem">Fechar</button>`;
+    document.body.append(m);
+    const r = m.getBoundingClientRect();
+    m.style.left = Math.min(e.clientX, innerWidth - r.width - 6) + 'px';
+    m.style.top = Math.min(e.clientY, innerHeight - r.height - 6) + 'px';
   });
-  document.addEventListener('click', (e) => { if (!m.contains(e.target)) m.classList.remove('aberto'); rotulo(); });
-  document.addEventListener('change', rotulo);
-  rotulo();
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') m.classList.remove('aberto'); });
+  document.addEventListener('click', e => { if (!e.target.closest('.menu-hefesto')) document.querySelectorAll('.menu-hefesto.vivo').forEach(m => m.remove()); });
 })();
 </script>
 </body>
