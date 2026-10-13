@@ -66,7 +66,7 @@ class _Controle:
             for i, u in enumerate(OS_QUATRO)
         ]
 
-    def ultima(self, uniq: str, *, agora: bool = False) -> int | None | str:
+    def ultima(self, uniq: str, *, agora: bool = False) -> int | str | None:
         """A última escrita deste controle EM VOO (ou a de `agora`, no meio da corrida)."""
         do_uniq = [v for u, v in (self.escritas if agora else self.em_voo) if u == uniq]
         return do_uniq[-1] if do_uniq else "nenhuma"
