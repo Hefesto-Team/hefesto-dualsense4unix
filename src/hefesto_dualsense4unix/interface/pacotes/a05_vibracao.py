@@ -1120,7 +1120,7 @@ def _aplicar_a_forca(ctx: Contexto, p: Any, uniq: str,
                                     modelo % _nome_do_degrau(mostra))}
     # clicar "Máximo" não gravava (`with_controller_rumble` limpa o override
     # igual ao global), não acendia (o degrau herdado saía vazio) e não dizia
-    # quebraria a COR-04 (`with_controller_rumble`.
+    # quebraria a COR-04 (`with_controller_rumble`).
     if not mudou and policy != "custom":
         modelo = (FRASE_JA_E_A_ESCOLHA_DESTA_COLUNA if propria
                   else FRASE_DO_QUE_A_COLUNA_MOSTRA)

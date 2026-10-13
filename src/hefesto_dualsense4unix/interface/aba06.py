@@ -1223,7 +1223,7 @@ def ajuda(txt, largura="", vivas=()):
     return (f'<span class="{cls}" tabindex="0">?'
             f'<span class="dica"{st}>{corpo}</span></span>')
 
-# <!-- noqa-acento: citação literal --> O PS + L3 anda
+# O PS + L3 anda
 #: O de fábrica de cada linha sai do produto (`acoes_do_gesto.PADRAO`), e as
 COMBOS = [(g.numero, g.pecas, _acoes_do_gesto.rotulo(_acoes_do_gesto.PADRAO[g.chave]))
           for g in _acoes_do_gesto.GESTOS.values()]

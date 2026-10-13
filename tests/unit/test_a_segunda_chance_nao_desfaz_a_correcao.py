@@ -5,8 +5,8 @@ massa, o endereço de antes dele e o leva pelo código. Quando a massa corrigiu 
 nascido errado, o de antes é o errado, e levá-lo desfaz a correção (o `a09_sistema.py:234 -> :271`
 da paridade). O texto, sem a pista em crase ao lado, não separa a massa que corrigiu da que errou:
 a trava (``A_SEGUNDA_CHANCE_ATRAVESSA_A_MASSA_QUE_MUDOU_O_TRECHO = False``) manda à mão toda massa
-que mudou o trecho citado, e deixa passar a que só acompanhou o código. O valor do padrão é decisão
-de produto, pela amostra; a régua prova a trava ligada.
+que mudou o trecho citado, e deixa passar a que só acompanhou o código. O valor do padrão sai da
+amostra; a régua prova a trava ligada.
 
 Os esperados saem do ALVO: `:3` (`VALOR = 1`), `:7` (`return 1`), `:10` (`def segunda`), `:12`
 (`return x`), `:15` (`def terceira`), `:16` (`return 3`).
@@ -96,5 +96,5 @@ def test_a_massa_que_so_acompanhou_o_codigo_deixa_a_segunda_chance_passar(
 
 
 def test_sem_a_trava_o_padrao_segue_como_estava(repo: Path) -> None:
-    """O padrão é decisão de produto, pela amostra: hoje a segunda chance atravessa."""
+    """O padrão sai da amostra: hoje a segunda chance atravessa."""
     assert _script().A_SEGUNDA_CHANCE_ATRAVESSA_A_MASSA_QUE_MUDOU_O_TRECHO is True  # type: ignore[no-untyped-call]

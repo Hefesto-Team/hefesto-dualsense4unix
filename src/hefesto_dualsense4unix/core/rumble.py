@@ -149,7 +149,7 @@ def _effective_mult(
     **A FORÇA DE UM CONTROLE NÃO SAI DAQUI, sai de :func:`forca_do_controle`**
     (09/10/2026), que compõe esta política com a bateria DAQUELE controle e o
     fator da peça dele, e põe o teto do orçamento por último, como ``min``: o
-    teto vence a peça (decisão de produto).
+    teto vence a peça (decisão por delegação).
     Esta função segue como a conta da política global, para quem pergunta sem
     controle (a tela, o resumo).
 
@@ -247,8 +247,8 @@ def forca_do_controle(
        :data:`BATERIA_SEM_LEITURA`) e o debounce dele em ``memoria[uniq]``;
     2. vezes o fator da peça (``escala``), o que a peça escolheu sobre o global;
     3. o teto do orçamento da mesa por último, como ``min``: o Perfil
-       Econômico poupa a bateria, e a peça em Máximo não o fura (decisão de
-       produto).
+       Econômico poupa a bateria, e a peça em Máximo não o fura (decisão por
+       delegação).
 
     ``memoria`` é mutada: guarda ``(âncora, instante)`` do ``auto`` por
     controle, e ``uniq`` ``None`` usa a chave vazia.

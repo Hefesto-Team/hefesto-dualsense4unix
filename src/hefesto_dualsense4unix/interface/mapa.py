@@ -161,7 +161,7 @@ SEM_BOTAO = {"corpo"}
 
 # A HÁPTICA TEM LUGAR NO DESENHO (decisão de produto), e o lugar é
 # o do glifo dela: a área do touchpad, com ondas na borda de cima. O grupo nasce
-# aqui, e não no `ds_limpo.svg`, porque o arquivo do desenho vem do `mockup/` aprovado e este
+# aqui, e não no `ds_limpo.svg`, porque o arquivo do desenho é o original e este
 # gerador já o enriquece com os alvos e as marcas de troca.
 HAPTICA = "feat-haptica"
 

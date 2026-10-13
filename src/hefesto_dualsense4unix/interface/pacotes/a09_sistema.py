@@ -673,7 +673,7 @@ def _repouso_do_painel(state: dict[str, Any] | None,
         partes.append("")
         partes.append(ROTULO_DA_IDENTIDADE)
         partes += [f"  {_linha_de_identidade(c, mesa or [])}" for c in vivos]
-    # <!-- noqa-acento: citação literal --> O painel rola até o
+    # O painel rola até o
     partes += ["", ROTULO_DO_DIARIO, _diario()]
     return "\n".join(partes).strip()
 

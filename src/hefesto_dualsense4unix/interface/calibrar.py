@@ -547,7 +547,7 @@ def _quem(c):
 def controle(c):
     """O cartão de UM controle — o desenho, a identidade e as seis linhas vazias.
 
-    A PRIMEIRA LINHA DIZ QUEM JOGA (07/10/2026, a [45] dela): o nome que o usuário deu ao controle e o
+    A PRIMEIRA LINHA DIZ QUEM JOGA (07/10/2026, a resposta [45]): o nome que o usuário deu ao controle e o
     número, ou só o número sem nome. A Calibrar não tem lâmpadas, por isso leva os dois. «Player N»
     e o «Sony •» saíram para a gramática da casa (`P<n>`).
     """
