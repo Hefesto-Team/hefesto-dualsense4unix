@@ -63,7 +63,9 @@ def _linha_do_tique(counters: Any) -> tuple[str, str] | None:
 
     O `_poll_loop` mede cada tique: quantos passaram do orçamento de 16,7 ms, o
     p99 e o pior da última janela, e o relógio lento que estava no pior tique.
-    ``None`` quando o daemon ainda não mediu (ou não conhece a medida).
+    ``None`` quando o daemon ainda não mediu (ou não conhece a medida). Antes de a
+    primeira janela fechar, o p99 e o pior ainda não existem, e a linha fica só
+    com a contagem: medida que não há não sai como zero.
     """
     if not isinstance(counters, dict):
         return None
@@ -77,6 +79,9 @@ def _linha_do_tique(counters: Any) -> tuple[str, str] | None:
         return f"{quanto / 1000:.1f}".replace(".", ",")
 
     estouros = counters.get("poll.tique.estouros", 0)
+    contagem = f"tique do laço: {estouros} de {medidos} acima de 16,7 ms"
+    if "poll.tique.p99_us" not in counters:
+        return ("[ OK ]", contagem)
     relogios = {
         chave[len(_PREFIXO_DO_RELOGIO):]: valor
         for chave, valor in counters.items()
@@ -91,8 +96,7 @@ def _linha_do_tique(counters: Any) -> tuple[str, str] | None:
         onde = f", o pior com «{pior.replace('_', ' ')}»"
     return (
         "[ OK ]",
-        f"tique do laço: {estouros} de {medidos} acima de 16,7 ms; "
-        f"p99 {ms('poll.tique.p99_us')} ms, pior {ms('poll.tique.pior_us')} ms{onde}",
+        f"{contagem}; p99 {ms('poll.tique.p99_us')} ms, pior {ms('poll.tique.pior_us')} ms{onde}",
     )
 
 

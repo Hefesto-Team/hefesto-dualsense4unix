@@ -1,8 +1,7 @@
 """O tique tem orçamento e a manutenção não para a entrada.
 
 O-TIQUE-TEM-ORCAMENTO-E-A-MANUTENCAO-NAO-PARA-A-ENTRADA-01. O `_poll_loop` de
-produção roda aqui, num daemon de mentira que declara tudo o que o laço usa
-(`test_o_duble_do_poll_loop_acompanha_o_produto` cobra o irmão de cada uso).
+produção roda aqui, num daemon de mentira que declara o que o laço usa.
 
 Mordidas (arranque a cura, veja reprovar, devolva):
 
@@ -341,6 +340,17 @@ def test_o_doctor_sem_medida_nao_inventa_a_linha() -> None:
     assert cmd_doctor._linha_do_tique(None) is None
     assert cmd_doctor._linha_do_tique({}) is None
     assert cmd_doctor._linha_do_tique({"poll.tique.medidos": 0}) is None
+
+
+def test_o_doctor_antes_da_primeira_janela_nao_diz_p99_zero() -> None:
+    """Sem a janela fechada não há p99 nem pior: a linha fica só com a contagem.
+
+    MORDIDA: tire o retorno antecipado de `_linha_do_tique`, e sai «p99 0,0 ms».
+    """
+    linha = cmd_doctor._linha_do_tique({"poll.tique.medidos": 120})
+
+    assert linha is not None
+    assert linha[1] == "tique do laço: 0 de 120 acima de 16,7 ms", linha
 
 
 def test_o_p99_da_janela_e_o_pior_de_cada_relogio() -> None:

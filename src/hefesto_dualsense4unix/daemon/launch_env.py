@@ -102,13 +102,13 @@ ENV_ALLOWLIST = (
 )
 
 # `PAR_DUALSENSE_FISICO` (do dono, `core/numeros_da_sony.py`) é o que as listas de ignorar do
-# SDL e do Proton escondem do jogo. O nosso pad virtual usa outro PID em toda máscara
-# DualSense: quem separa os dois é o `HID_PHYS` do nó, não este par.
+# SDL e do Proton escondem do jogo. O nosso pad usa outro PID em toda máscara DualSense, e no
+# `/proc/bus/input/devices` o jogo vê os dois lado a lado (quem os separa é o `HID_PHYS`):
+#
+#     event2   Sony ... DualSense Wireless Controller       054c:0ce6  (físico)
+#     event6   DualSense Wireless Controller (Hefesto P1)   054c:0df2  (nosso)
 
-#: O espelho que o Steam Input cria. No `/proc/bus/input/devices` o jogo vê, lado a lado:
-#:
-#:     event2   Sony ... DualSense Wireless Controller       054c:0ce6  (físico)
-#:     event6   DualSense Wireless Controller (Hefesto P1)   054c:0df2  (nosso)
+#: O pad virtual que o Steam Input cria (Valve, `28de:11ff`).
 PAR_STEAM_INPUT_VIRTUAL = (0x28DE, 0x11FF)
 
 _MASCARAS_SO_EVDEV = frozenset({"xbox", "nintendo"})
