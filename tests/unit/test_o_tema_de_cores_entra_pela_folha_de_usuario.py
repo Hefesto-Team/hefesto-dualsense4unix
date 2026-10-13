@@ -146,6 +146,21 @@ def test_o_tema_reprovado_nao_liga_e_diz_o_par(tmp_path: Path) -> None:
     assert agora.avisos == ("«Tema antigo» também tem tema, e vale o da «Tema apagado».",)
 
 
+def test_o_manifesto_que_nao_abre_vai_aos_avisos_e_o_outro_tema_liga(tmp_path: Path) -> None:
+    """A modificação ligada cujo manifesto não abre não liga tema, e a frase dela não some."""
+    lg = _lugares(tmp_path)
+    _instalada(lg, "quebrada", {"folha": TEMA_VALIDO}, ligada_em="2026-10-11T10:00:00")
+    (lg.codigo / "quebrada" / "hefesto-mod.json").write_text("{", encoding="utf-8")
+    assert tm.tema_da_casa(lg).folha == ""
+    sozinha = tm.tema_da_casa(lg)
+    assert len(sozinha.avisos) == 1
+    assert sozinha.avisos[0].startswith("O manifesto de «Tema quebrada» não abriu:")
+    _instalada(lg, "azul", {"folha": TEMA_VALIDO})
+    agora = tm.tema_da_casa(lg)
+    assert agora.de == "azul" and "--c-teclado:#00e5ff !important" in agora.folha
+    assert agora.avisos == sozinha.avisos
+
+
 # --- a régua do token: o Python diz o nome, a folha diz a cor -----------------------------
 
 exigir_gi_real("importa `interface.pacotes.a08_conexoes`, que carrega o GTK")

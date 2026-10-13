@@ -242,22 +242,25 @@ def tema_da_casa(lugares: Any = None) -> TemaDaCasa:
     except instalador.InstalacaoRecusadaError as exc:
         return TemaDaCasa(recusa=exc.frase)
     candidatos = []
+    sem_manifesto: list[str] = []
     for entrada in registro.values():
         if not entrada.ligada or "tema" not in entrada.permissoes_aceitas:
             continue
         pasta = lg.codigo / entrada.id
         try:
             manifesto = ler_manifesto(pasta)
-        except ManifestoRecusadoError:
+        except ManifestoRecusadoError as exc:
+            # o manifesto que não abre não liga tema nenhum, e a frase dele vai aos avisos
+            sem_manifesto.append(f"O manifesto de «{entrada.nome}» não abriu: {exc.frase}")
             continue
         if "tema" in manifesto.tipos and manifesto.tema is not None:
             candidatos.append((entrada.ligada_em, entrada.id, manifesto, pasta))
     if not candidatos:
-        return TemaDaCasa()
+        return TemaDaCasa(avisos=tuple(sem_manifesto))
     candidatos.sort(key=lambda c: (c[0], c[1]))
     _quando, mod_id, manifesto, pasta = candidatos[-1]
-    avisos = tuple(f"«{c[2].nome}» também tem tema, e vale o da «{manifesto.nome}»."
-                   for c in candidatos[:-1])
+    avisos = (*sem_manifesto, *(f"«{c[2].nome}» também tem tema, e vale o da «{manifesto.nome}»."
+                                for c in candidatos[:-1]))
     try:
         aceito = validar(folha_do_manifesto(manifesto.tema, pasta))
     except TemaRecusadoError as exc:
