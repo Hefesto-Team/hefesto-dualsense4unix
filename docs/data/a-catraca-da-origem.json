@@ -55,7 +55,7 @@
       "data": "2026-10-13",
       "nota": "remendos de sintoma por arquivo",
       "o_que_conta": "remendos de sintoma acima do teto de cada arquivo",
-      "piso": 1028,
+      "piso": 1026,
       "por_item": {
         "__init__.py": 1,
         "app/actions/base.py": 1,
@@ -88,7 +88,7 @@
         "core/sysfs_leds.py": 7,
         "core/system_check.py": 2,
         "daemon/battery_journal.py": 2,
-        "daemon/connection.py": 54,
+        "daemon/connection.py": 52,
         "daemon/ganho_da_haptica.py": 7,
         "daemon/ipc_handlers.py": 73,
         "daemon/ipc_rumble_policy.py": 2,
