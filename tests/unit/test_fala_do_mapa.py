@@ -133,6 +133,11 @@ _COPIAS_DECLARADAS: dict[str, str] = {
         "número. Fica declarada em vez de curada — e é a diferença entre "
         "cópia da regra e outra regra que só usa a mesma vírgula."
     ),
+    "mods/tema.py": (
+        "13/10/2026 — NÃO É A MESMA CONTA. `_numero` escreve o contraste WCAG com "
+        "DUAS casas e o sufixo `:1` (`4,50:1`), que é a forma do critério; "
+        "`formata_pt_br` é de uma casa e diria `4,5`, outro número no limiar."
+    ),
     "interface/aba02.py": (
         "03/09/2026 — a conta é a mesma, o CONTRATO não. Esta devolve "
         "`f\"{v:.1f}\".replace(\".\", \",\").removesuffix(\",0\")`: ela "

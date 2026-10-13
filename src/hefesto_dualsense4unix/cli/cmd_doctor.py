@@ -9,6 +9,7 @@ from typing import Any
 import typer
 from rich.console import Console
 
+from hefesto_dualsense4unix.app.fala_do_mapa import formata_pt_br
 from hefesto_dualsense4unix.cli.ipc_client import IpcClient, IpcError
 from hefesto_dualsense4unix.utils.repo_files import (
     bases_de_instalacao,
@@ -76,7 +77,7 @@ def _linha_do_tique(counters: Any) -> tuple[str, str] | None:
     def ms(chave: str) -> str:
         valor = counters.get(chave)
         quanto = valor if isinstance(valor, int) and not isinstance(valor, bool) else 0
-        return f"{quanto / 1000:.1f}".replace(".", ",")
+        return formata_pt_br(quanto / 1000)
 
     estouros = counters.get("poll.tique.estouros", 0)
     contagem = f"tique do laço: {estouros} de {medidos} acima de 16,7 ms"
