@@ -1480,7 +1480,7 @@ def atualizar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     thread: síncrono, este botão congelaria a janela inteira por nove segundos e
     meio, e quem clicou concluiria que o app travou. É também a razão de
     `daemon.reload` ter teto de 15 s em `ponte.TETOS` — e `chamar_detalhado`
-    consulta o MESMO `ponte.teto()` que o `chamar` (`pacotes/ponte.py:164`),
+    consulta o MESMO `ponte.teto()` que o `chamar` (`pacotes/ponte.py:147`),
     conferido: trocar de função não encolheu a espera para os 250 ms do padrão.
     Se encolher, este botão passa a recusar todo clique que funciona.
 
@@ -1500,7 +1500,7 @@ def atualizar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     **O RETORNO SE LÊ — 06/09/2026, e é a `ONDA5-09-02`.** Até hoje a linha era
     `p.chamar("daemon.reload")`, e `chamar` devolve `bool` que ninguém lia.
     `_safe_call` devolve `False` para serviço desligado, socket ausente, timeout
-    e erro JSON-RPC (`app/ipc_bridge.py:74-81`); o gesto não levantava, o
+    e erro JSON-RPC (`app/ipc_bridge.py:142-170`); o gesto não levantava, o
     piloto executava o ramo do sucesso (`_deu_certo`,
     `interface/hefesto_vivo.py:3030`) e
     a tela dizia **"Pronto."** em verde. **A cena inteira, com o serviço

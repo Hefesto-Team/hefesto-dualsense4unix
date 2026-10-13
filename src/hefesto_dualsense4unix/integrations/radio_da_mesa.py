@@ -30,7 +30,7 @@ aditiva abaixo é o lado otimista; ver «O AR, DESDE 23/09/2026».
 
 **A segunda metade é MEDIÇÃO, e é do projeto.** O A/B de 25/07/2026, mesmo
 controle, três janelas de 3 s
-(``integrations/dualsense_bt_audio.py:76-78``)::
+(medição do projeto; o comentário que a trazia saiu do módulo)::
 
     mic DESLIGADO  : input 260.4 Hz   audio   0.0 Hz   total 260.4 Hz
     mic LIGADO     : input 170.5 Hz   audio 106.2 Hz   total 276.7 Hz
@@ -142,7 +142,7 @@ SLOTS_POR_RELATORIO = 1
 CHAVE_NO_MAPA_DE_CANAIS = "audio.microfone"
 
 #: Relatórios de entrada por segundo, mic desligado. A/B de 2026-07-25,
-#: ``integrations/dualsense_bt_audio.py:76``. Mesma medição que
+#: medição do projeto, sem endereço de linha. Mesma medição que
 #: :data:`CHAVE_NO_MAPA_DE_CANAIS` registra em ``radio_ressalva``.
 HZ_INPUT_SEM_MIC = 260.4
 

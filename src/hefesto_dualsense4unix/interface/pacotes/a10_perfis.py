@@ -494,7 +494,7 @@ def _mesa_com_rotulo(mesa: list[dict[str, Any]], conectados: Any = ()) -> list[d
     FATO ERRADO, SUBSTITUÍDO — 02/09/2026. A docstring de
     `perfis_web.pacote_da_aba` afirma que a mesa vem *"no formato que
     ``mesa_viva.mesa_do_estado`` devolve mais ``rotulo`` e ``plastico``"*, e o
-    `_linhas_da_guarda` lê `controle.get("rotulo")` (`perfis_web.py:300`).
+    `_linhas_da_guarda` lê `controle.get("rotulo")` (`perfis_web.py:307`).
     **`mesa_do_estado` não devolve nenhum dos dois** — os campos dela são
     `pref`, `uniq`, `jogador`, `cor`, `nome`, `via`, `transporte`, `alvo`,
     `mascara` e `botoes` (`mesa_viva.py:428`, `mesa_do_estado`). Medido: `guarda.nome` saía
@@ -1476,7 +1476,7 @@ def voltar_a_de_ontem(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
     indistinguível de um desfazer que não pegou.
 
     A FRASE É A DA CLI, que era o único chamador antes desta tela: *"perfil
-    restaurado: X (versão …)"* (`cli/cmd_profile.py:263`). O carimbo da versão
+    restaurado: X (versão …)"* (`cli/cmd_profile.py:259`). O carimbo da versão
     entra porque é ele que o `profile historico` lista  (noqa-acento: nome do
     subcomando da CLI, ASCII em `cmd_profile.py:211`) — é o que ela digita para
     voltar a outra, e sem ele a frase não diz de onde veio.
