@@ -5121,6 +5121,82 @@ check_bluez_curas_do_backport() {
     fi
 }
 
+# A versão do bluez que o gerenciador de pacotes tinha ANTES do backport entrar:
+# é a linha `upgrade bluez:<arq> <velha> <backport>` do próprio dpkg, que é quem
+# sabe de onde o backport nasceu. Lê o log atual e os rotacionados (texto e .gz);
+# sem registro (log rotacionado fora, ou pacote instalado sem `upgrade`), não há
+# base e a resposta é vazia — o doctor diz «não sei», nunca inventa. Uma troca de
+# revisão do próprio backport (`~hefesto` para `~hefesto`) não é a origem dele:
+# a linha só vale quando a versão VELHA não é nossa.
+# HEFESTO_DOCTOR_DPKG_LOG desvia o log (o teste e a bancada).
+_bluez_base_do_backport() {
+    local log base="" achou
+    local logs=("${HEFESTO_DOCTOR_DPKG_LOG:-/var/log/dpkg.log}")
+    if [[ -z "${HEFESTO_DOCTOR_DPKG_LOG:-}" ]]; then
+        local extra
+        for extra in /var/log/dpkg.log.*; do
+            [[ -f "${extra}" ]] && logs+=("${extra}")
+        done
+    fi
+    # do log mais novo ao mais antigo (dpkg.log, .1, .2.gz…): o primeiro que
+    # registra a entrada de um backport vence
+    for log in $(printf '%s\n' "${logs[@]}" | sort -V); do
+        [[ -r "${log}" ]] || continue
+        if [[ "${log}" == *.gz ]]; then
+            achou="$(zcat "${log}" 2>/dev/null | grep -E ' (upgrade|install) bluez:[^ ]+ [^ ~]+ [^ ]*~hefesto' | tail -1 || true)"
+        else
+            achou="$(grep -E ' (upgrade|install) bluez:[^ ]+ [^ ~]+ [^ ]*~hefesto' "${log}" 2>/dev/null | tail -1 || true)"
+        fi
+        if [[ -n "${achou}" ]]; then
+            base="$(awk '{print $5}' <<<"${achou}")"
+            break
+        fi
+    done
+    [[ -n "${base}" && "${base}" != "<none>" ]] && printf '%s\n' "${base}"
+}
+
+# A maior versão do bluez que um REPOSITÓRIO da distro publica (`apt-cache policy`,
+# só leitura). Fora a linha do que está instalado (`/var/lib/dpkg/status`) e fora
+# o nosso backport: é o que o `apt` aplicaria se o backport não estivesse por cima.
+_bluez_candidata_da_distro() {
+    command -v apt-cache >/dev/null 2>&1 || return 1
+    local versao="" melhor="" v
+    local texto
+    texto="$(LC_ALL=C apt-cache policy bluez 2>/dev/null)" || return 1
+    while IFS= read -r v; do
+        [[ -n "${v}" ]] || continue
+        if [[ -z "${melhor}" ]] || dpkg --compare-versions "${v}" gt "${melhor}" 2>/dev/null; then
+            melhor="${v}"
+        fi
+    done < <(awk '
+        /^[ *]+[0-9][^ ]* +[0-9]+$/ { sub(/^[ *]+/, ""); vlinha = $1; next }
+        /^ +[0-9]+ +[^ ]/ { if (vlinha != "" && $2 != "/var/lib/dpkg/status" && vlinha !~ /~hefesto/) print vlinha; next }
+        ' <<<"${texto}")
+    [[ -n "${melhor}" ]] && printf '%s\n' "${melhor}"
+}
+
+# Com o backport por cima, o `apt` nunca aplica a correção de segurança da
+# distro: a versão da casa (`5.86-…~hefesto`) é maior que a `5.72-0ubuntu5.N` do
+# `noble-updates`, e nada avisava. Só a família `apt` (a que tem `apt-cache`).
+check_bluez_distro_depois_do_backport() {
+    local pacote candidata base
+    command -v dpkg-query >/dev/null 2>&1 || return 0
+    pacote="$(dpkg-query -W -f='${Version}' bluez 2>/dev/null || true)"
+    [[ "${pacote}" == *~hefesto* ]] || return 0
+    candidata="$(_bluez_candidata_da_distro || true)"
+    [[ -n "${candidata}" ]] || return 0
+    base="$(_bluez_base_do_backport || true)"
+    if [[ -z "${base}" ]]; then
+        info "o bluez ${pacote} é o backport do Hefesto, e não achei de que versão da distro ele nasceu (o dpkg.log não a guarda): a distro publica o bluez ${candidata}, que o apt não aplica por cima do backport"
+        return 0
+    fi
+    if dpkg --compare-versions "${candidata}" gt "${base}" 2>/dev/null; then
+        warn "a distro publicou o bluez ${candidata} depois do backport, que nasceu sobre o ${base}; o apt não aplica a correção dela por cima do ${pacote}. Reconstrua o backport para levar a correção$(so_no_checkout "(scripts/construir_bluez_backport.sh, pela receita em docs/usage/receita-backport-bluez.md)")"
+    else
+        pass "o backport do bluez (${pacote}) está em dia com a distro (a candidata dela, ${candidata}, não passa da base ${base})"
+    fi
+}
+
 check_bluez_backport_version() {
     if ! command -v dpkg >/dev/null 2>&1; then
         info "dpkg ausente (sistema não-Debian?) — pulo o check de versão do bluez"
@@ -5145,12 +5221,18 @@ check_bluez_backport_version() {
             warn "bluez ${ver}${origem} >= ${_BZ_TETO} — o 5.87 carrega um uso-depois-de-liberado em dev_disconnected (src/adapter.c: device_is_connected() chamado depois de adapter_remove_connection() liberar o device; commit 5d836f1). A correção 5bc6aa79 está um commit DEPOIS do 5.87 e nenhum lançamento a carregava até 07/08/2026 — se esta versão é o 5.88 ou mais nova, confira se ela já traz o 5bc6aa79 e suba o teto (_BZ_TETO) no doctor.sh. O alvo do Hefesto é o backport 5.86$(so_no_checkout "(./install.sh, passo 3f)")."
             ;;
         old)
-            fail "bluez ${ver}${origem} < 5.79 — crashes crônicos de input/HIDP (heap corruption, 6x/5 dias medidos) documentados; aplique o backport: $(conselho_de_instalacao)$(so_no_checkout "(o passo 3f aplica sozinho se os .debs estiverem em ~/.cache/hefesto-dualsense4unix/bluez-backport/; senão, gere-os com scripts/construir_bluez_backport.sh, pela receita em docs/usage/receita-backport-bluez.md)")"
+            # AVISO, não falha (O-BLUEZ-DA-CASA-NAO-CONGELA-A-SEGURANCA-01, 13/10/2026): o
+            # piso é medido e fica, mas a severidade não cabe. Quem usa só o cabo não
+            # perde nada, e quem usa o rádio não cura isso sem sair do repositório
+            # da distro — Ubuntu 24.04 e Mint 22 (5.72) e Debian 12 (5.66) caem aqui
+            # na primeira corrida. O backport é uma opção, não uma ordem.
+            warn "bluez ${ver}${origem} < 5.79 — com controles pelo rádio o bluetoothd pode cair (crashes de input/HIDP, heap corruption, 6x em 5 dias medidos no 5.72); o cabo não depende disso. O backport do Hefesto é a opção para quem usa o rádio: $(conselho_de_instalacao)$(so_no_checkout "(o passo 3f aplica sozinho se os .debs estiverem em ~/.cache/hefesto-dualsense4unix/bluez-backport/; senão, gere-os com scripts/construir_bluez_backport.sh, pela receita em docs/usage/receita-backport-bluez.md)")"
             ;;
         *)
             info "bluez não encontrado (nem daemon em execução, nem pacote) — pulo o check de versão"
             ;;
     esac
+    check_bluez_distro_depois_do_backport
 }
 
 # hefesto-bt-agent.service (Onda R): agente NoInputNoOutput persistente que

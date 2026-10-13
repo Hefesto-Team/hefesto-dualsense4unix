@@ -126,10 +126,12 @@ class TestCheckBluezBackportVersion:
         assert "daemon em execução" in saida
         assert "5.64" not in saida, "o pacote velho não pode aparecer no veredito"
 
-    def test_bluez_velho_e_fail(self, tmp_path: Path) -> None:
+    def test_bluez_velho_e_warn_com_o_efeito(self, tmp_path: Path) -> None:
+        """O piso fica, a severidade não: aviso (O-BLUEZ-DA-CASA-NAO-CONGELA-A-SEGURANCA-01)."""
         fake_bin = self._fake_dpkg_query(tmp_path, "5.72-0ubuntu5.5")
         saida = _rodar_check("check_bluez_backport_version", fake_bin)
-        assert "[FAIL]" in saida
+        assert "[WARN]" in saida
+        assert "[FAIL]" not in saida
         assert "5.72-0ubuntu5.5" in saida
         assert "backport" in saida.lower()
 
