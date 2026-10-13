@@ -15,6 +15,7 @@ import json
 import re
 import shutil
 import sys
+import tempfile
 import time
 from pathlib import Path
 from types import ModuleType
@@ -285,27 +286,48 @@ def test_a_linha_torta_sai_sozinha_e_o_titulo_fora_da_forma_tambem(tmp_path: Pat
 def test_na_caixa_o_leitor_le_a_casa_e_nao_escreve_nem_ve_a_sessao(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """ARRANQUE o ``--ro-bind / /``, a cobertura da sessão ou o ``--unshare-all`` e isto reprova.
+
+    A CASA DE MENTIRA MORA FORA DO ``/tmp``, como a de verdade (``/home``,
+    ``/run/user``): a caixa cobre o ``/tmp`` inteiro, e uma casa dentro dele
+    sumiria de qualquer jeito, o que fazia a régua passar com a raiz gravável
+    (medido em 13/10/2026). O ``/var/tmp`` fica visível na caixa, como o ``/home``.
+    """
     bwrap = shutil.which("bwrap")
     if bwrap is None:
         pytest.skip("sem bwrap nesta máquina: a caixa não existe para provar")
-    xdg_run = tmp_path / "xdg_run"
-    xdg_run.mkdir()
-    (xdg_run / "bus").write_text("", encoding="utf-8")
-    monkeypatch.setenv("XDG_RUNTIME_DIR", str(xdg_run))
-    corpo = (
-        "import json, os\n"
-        "try:\n"
-        "    open('escrito', 'w').close(); escreveu = 'sim'\n"
-        "except OSError:\n"
-        "    escreveu = 'não'\n"
-        f"ve = 'sim' if os.listdir({str(xdg_run)!r}) else 'não'\n"
-        "print(json.dumps([{'chave': 'A', 'nome': 'escreveu-' + escreveu},\n"
-        "                  {'chave': 'B', 'nome': 've-a-sessao-' + ve}]))\n")
-    leitor = _leitor(tmp_path, corpo)
-    biblioteca = censo.ler_por_processo(leitor, bwrap=bwrap)
-    assert biblioteca.estado == censo.LIDO, biblioteca.erros
-    assert [j.nome for j in biblioteca.jogos] == ["escreveu-não", "ve-a-sessao-não"]
-    assert not (leitor.pasta / "escrito").exists()
+    try:
+        casa = Path(tempfile.mkdtemp(prefix="hef-caixa-", dir="/var/tmp"))
+    except OSError:
+        pytest.skip("sem /var/tmp gravável: a casa fora do /tmp não nasce")
+    try:
+        (casa / "Kyty.ini").write_text("[Kyty]\ngame_dirs=/jogos\n", encoding="utf-8")
+        sessao = casa / "run"
+        sessao.mkdir()
+        (sessao / "bus").write_text("", encoding="utf-8")
+        monkeypatch.setenv("XDG_RUNTIME_DIR", str(sessao))
+        corpo = (
+            "import json, os, socket\n"
+            f"casa = {str(casa)!r}\n"
+            "leu = 'sim' if 'game_dirs' in open(os.path.join(casa, 'Kyty.ini')).read() else 'não'\n"
+            "try:\n"
+            "    open(os.path.join(casa, 'escrito'), 'w').close(); escreveu = 'sim'\n"
+            "except OSError:\n"
+            "    escreveu = 'não'\n"
+            "ve = 'sim' if os.listdir(os.path.join(casa, 'run')) else 'não'\n"
+            "rede = 'só-lo' if [n for _i, n in socket.if_nameindex()] == ['lo'] else 'com-rede'\n"
+            "print(json.dumps([{'chave': 'A', 'nome': 'leu-' + leu},\n"
+            "                  {'chave': 'B', 'nome': 'escreveu-' + escreveu},\n"
+            "                  {'chave': 'C', 'nome': 've-a-sessao-' + ve},\n"
+            "                  {'chave': 'D', 'nome': 'rede-' + rede}]))\n")
+        leitor = _leitor(tmp_path, corpo)
+        biblioteca = censo.ler_por_processo(leitor, bwrap=bwrap)
+        assert biblioteca.estado == censo.LIDO, biblioteca.erros
+        assert {j.chave: j.nome for j in biblioteca.jogos} == {
+            "A": "leu-sim", "B": "escreveu-não", "C": "ve-a-sessao-não", "D": "rede-só-lo"}
+        assert not (casa / "escrito").exists()
+    finally:
+        shutil.rmtree(casa, ignore_errors=True)
 
 
 def test_o_perfil_do_jogo_casa_pelo_id_no_titulo(
