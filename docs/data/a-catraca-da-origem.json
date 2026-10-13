@@ -202,17 +202,17 @@
       "universo": 368
     },
     "tamanho": {
-      "data": "2026-10-09",
+      "data": "2026-10-12",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1006916,
+      "piso": 1054614,
       "por_item": {
-        "docs": 60165,
-        "scripts": 109318,
-        "src": 293892,
-        "tests": 543541
+        "docs": 106431,
+        "scripts": 109331,
+        "src": 294410,
+        "tests": 544442
       },
-      "razao": "tamanho: +41 linhas (1006875 -> 1006916), pagas por Origem: D-0310-A-BORDA-DO-CARTAO-E-O-PLASTICO, D-2909-O-CARTAO-DIZ-QUEM-JOGA, D-2909-OS-CHIPS-DO-TOQUE-E-DA-INCLINACAO-ALTERNAM-COMO-A-MIRA; registrado no fecho, topo 58a4e0d17150",
+      "razao": "tamanho: +47698 linhas (1006916 -> 1054614), pagas por Origem: vibracao.haptics_vcm; registrado no fecho, topo 1cd8dacff888",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -285,10 +285,16 @@
           "de": 1006875,
           "para": 1006916,
           "razao": "tamanho: +41 linhas (1006875 -> 1006916), pagas por Origem: D-0310-A-BORDA-DO-CARTAO-E-O-PLASTICO, D-2909-O-CARTAO-DIZ-QUEM-JOGA, D-2909-OS-CHIPS-DO-TOQUE-E-DA-INCLINACAO-ALTERNAM-COMO-A-MIRA; registrado no fecho, topo 58a4e0d17150"
+        },
+        {
+          "data": "2026-10-12",
+          "de": 1006916,
+          "para": 1054614,
+          "razao": "tamanho: +47698 linhas (1006916 -> 1054614), pagas por Origem: vibracao.haptics_vcm; registrado no fecho, topo 1cd8dacff888"
         }
       ],
       "unidade": "linhas",
-      "universo": 2615
+      "universo": 2658
     }
   }
 }
