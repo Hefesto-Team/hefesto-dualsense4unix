@@ -113,6 +113,20 @@ _FIRMWARE_UPDATE_VERSION_OFFSET = 44
 LIMITE_DA_VIBRACAO_V2 = 0x0224
 
 
+def _acordar_a_volta_de(handle: Any) -> None:
+    """Acorda a volta de um handle depois de mudar um objeto POR DENTRO (gatilho, luz).
+
+    A-VIBRACAO-DO-JOGO-NAO-ESPERA-O-SONO-DA-VOLTA-01. Os campos soltos do handle
+    acordam sozinhos (`_PinnedPyDualSense.__setattr__`); `triggerR.setForce` e
+    `light.setColorI` mexem num objeto que o handle não vê. Handle sem a API (um
+    dublê) fica como estava: a volta acorda no prazo dela.
+    """
+    acordar = getattr(handle, "acordar_a_volta", None)
+    if callable(acordar):
+        with contextlib.suppress(Exception):
+            acordar()
+
+
 def versao_do_firmware(feature: bytes | None) -> int | None:
     """O `update_version` (u16 LE no byte 44) da feature 0x20, ou None se não cabe."""
     if feature is None or len(feature) < _FIRMWARE_UPDATE_VERSION_OFFSET + 2:
@@ -240,6 +254,15 @@ REPORT_THREAD_THROTTLE_SEC: float = float(
 )
 
 REPORT_THREAD_THROTTLE_MAX_SEC: float = 0.032
+
+#: O espaçamento mínimo entre duas escritas do MESMO controle no cabo. É o
+#: intervalo de serviço do endpoint OUT do DualSense, medido no descritor
+#: (`bInterval 6` em USB High Speed, `2^5 x 125 us` = 4,00 ms, `docs/protocol/
+#: driver-hid-playstation.md`, «Cabo: 250 Hz»): escrever mais rápido que isso só
+#: enfileira URB no controlador USB compartilhado. Cada controle tem o endpoint
+#: dele, então o piso NÃO soma por jogador. A-VIBRACAO-DO-JOGO-NAO-ESPERA-O-SONO-
+#: DA-VOLTA-01.
+PISO_DE_ESCRITA_DO_CABO_SEC: float = 0.004
 
 #: 64 leituras esvaziam uma fila cheia e mais um report que chegue no meio. Com
 LEITURAS_POR_VOLTA: int = 64
@@ -707,6 +730,30 @@ def _fechar_os_handles_juntos(handles: Iterable[Any]) -> None:
                 handle.close()
 
 
+#: Os campos do handle que entram no report: mudar um acorda a volta
+#: (:meth:`_PinnedPyDualSense.__setattr__`).
+_CAMPOS_QUE_MEXEM_NA_SAIDA: frozenset[str] = frozenset(
+    {
+        "leftMotor",
+        "rightMotor",
+        "_rumble_active",
+        "_rumble_stop_pending",
+        "_raw_trigger_right",
+        "_raw_trigger_left",
+        "_haptica_de_audio",
+        "_vibracao_v2",
+        "_mic_mute_desejado",
+        "_mic_led_desejado",
+        "_volumes_audio",
+        "_preamp_audio",
+        "_suppress_leds",
+        "_brilho_das_luzes",
+        "_output_muted",
+        "ds_thread",
+    }
+)
+
+
 class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
     """`pydualsense` "pinada" a um hidraw `path` específico (multi-controle).
 
@@ -756,6 +803,17 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
     #: O-CONTROLE-VIBRA-NO-MODO-DO-FIRMWARE-DELE-01.
     _vibracao_v2: bool = False
 
+    #: A-VIBRACAO-DO-JOGO-NAO-ESPERA-O-SONO-DA-VOLTA-01 — o que a volta espera
+    #: entre duas passadas. `_acordar` é armado por quem muda a saída (o motor, o
+    #: gatilho, a luz, o áudio...): a volta acorda na hora em vez de dormir o
+    #: `_throttle_sec` inteiro. `_piso_de_escrita_sec` é o espaçamento mínimo
+    #: entre DUAS escritas deste controle, por transporte (o cabo: o serviço do
+    #: endpoint; o rádio: a disputa de CRC do adaptador dele). Defaults de classe
+    #: pelo motivo dos vizinhos: o dublê nasce por `__new__`, sem Event, e então
+    #: a volta dorme o `_throttle_sec` como sempre dormiu, sem piso.
+    _acordar: threading.Event | None = None
+    _piso_de_escrita_sec: float = 0.0
+
     #: O `hid_device`. Toda chamada ao C deste handle (o `read` da volta, o
     #: modo do `read`, o `write` de qualquer thread) entra e sai contada sob
     _entrega: threading.Lock = threading.Lock()
@@ -780,6 +838,8 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         # da pydualsense 0.7.5 é MALFORMADO (layout off-by-one: [1]=0x02 fixo,
         self._suppress_leds = True
         self._throttle_sec = REPORT_THREAD_THROTTLE_SEC
+        self._piso_de_escrita_sec = REPORT_THREAD_THROTTLE_SEC
+        self._acordar = threading.Event()
         self._last_out_report: list[int] | None = None
         self._last_write_at = 0.0
         self._last_change_at = float("-inf")
@@ -837,6 +897,26 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         self._mic_mudo_em_voo: bool = False
         self._mic_mudo_em: float | None = None
         self._mic_posse_solta_pela_mao: bool = False
+
+    def __setattr__(self, nome: str, valor: Any) -> None:
+        """Mudar um campo que entra no report acorda a volta: a saída não espera o sono.
+
+        O dono único do «a réplica mudou»: o motor do jogo (`leftMotor`,
+        `rightMotor`), os blocos crus do gatilho, os bits de posse do áudio e do
+        mic, o modo da vibração, o brilho, e o sinal de fechar. O que muda por
+        DENTRO de um objeto (`triggerR.setForce`, `light.setColorI`) acorda por
+        :meth:`acordar_a_volta`, chamada por quem o muda
+        (`PyDualSenseController._apply_trigger` e companhia).
+        """
+        super().__setattr__(nome, valor)
+        if nome in _CAMPOS_QUE_MEXEM_NA_SAIDA:
+            self.acordar_a_volta()
+
+    def acordar_a_volta(self) -> None:
+        """Arma o evento da volta: a próxima passada começa agora, não no fim do sono."""
+        acordar = self._acordar
+        if acordar is not None:
+            acordar.set()
 
     def init(self) -> None:
         """O `init()` do upstream, mas a `report_thread` é daemon e diz de quem é."""
@@ -951,6 +1031,11 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         sem_espera = False
         while self.ds_thread:
             try:
+                acordar = self._acordar
+                if acordar is not None:
+                    # Limpa ANTES de montar o report: quem arma durante a
+                    # passada deixa o evento de pé e a próxima volta não dorme.
+                    acordar.clear()
                 if not sem_espera:
                     with self._no_c():
                         _hid_set_nonblocking(self.device)
@@ -987,15 +1072,14 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
                     ):
                         deve_escrever = True
                         self._saida_adiada_pelo_silencio = False
+                    # O piso de escrita do transporte vale pelo sono do fim da
+                    # volta (`_dormir_a_volta`): quem acorda a espera dorme só o
+                    # que falta do piso, e nunca começa a próxima passada antes.
                     if deve_escrever:
                         self.writeReport(out)
                         self._last_out_report = out
                         self._last_write_at = now
-                throttle = self._throttle_sec
-                if throttle > 0:
-                    time.sleep(throttle)
-                elif not lidos:
-                    time.sleep(ESPERA_DA_VOLTA_VAZIA_SEM_THROTTLE_SEC)
+                self._dormir_a_volta(acordar, lidos=bool(lidos))
             except OSError:
                 self.connected = False
                 break
@@ -1011,6 +1095,35 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
                     err=str(exc),
                 )
                 break
+
+    def _dormir_a_volta(self, acordar: threading.Event | None, *, lidos: bool) -> None:
+        """O fim da passada: espera o prazo da volta OU a mudança da saída.
+
+        A-VIBRACAO-DO-JOGO-NAO-ESPERA-O-SONO-DA-VOLTA-01. Antes, toda passada
+        terminava em `time.sleep(_throttle_sec)` (8 ms por controle, até 32 ms
+        com quatro): a vibração, o gatilho e a luz que o jogo pedia esperavam
+        a volta acabar. Agora o prazo continua sendo o teto da espera (a leitura
+        e o keepalive seguem no ritmo de sempre), mas uma mudança de saída o
+        interrompe. O que sobra do piso de escrita do transporte é dormido por
+        inteiro, nunca mais que isso. Sem o evento (dublê por `__new__`), a
+        volta dorme o sono de antes.
+        """
+        throttle = self._throttle_sec
+        if acordar is None:
+            if throttle > 0:
+                time.sleep(throttle)
+            elif not lidos:
+                time.sleep(ESPERA_DA_VOLTA_VAZIA_SEM_THROTTLE_SEC)
+            return
+        if throttle <= 0:
+            if not lidos and not acordar.is_set():
+                acordar.wait(ESPERA_DA_VOLTA_VAZIA_SEM_THROTTLE_SEC)
+            return
+        if not acordar.is_set() and not acordar.wait(throttle):
+            return
+        falta = self._piso_de_escrita_sec - (time.monotonic() - self._last_write_at)
+        if falta > 0:
+            time.sleep(min(falta, throttle))
 
     def _a_saida_espera_a_entrada(self, agora: float) -> bool:
         """No rádio, não escrever enquanto a entrada está muda há tempo demais."""
@@ -2839,6 +2952,7 @@ class PyDualSenseController(IController):
                 with contextlib.suppress(Exception):
                     handle._throttle_sec = throttle
                     handle._output_muted = self._output_mute
+            self._aplicar_os_pisos_de_escrita_locked()
         novas_bt = 0
         for _key, handle in new_handles:
             with contextlib.suppress(Exception):
@@ -2910,6 +3024,54 @@ class PyDualSenseController(IController):
             self._reapply_desired(key, handle)
         # acabaram de surgir. Sintoma provado ao vivo: boot com os DualSense
         self.reassert_resolved_outputs()
+
+    def _aplicar_os_pisos_de_escrita_locked(self) -> None:
+        """O espaçamento mínimo entre duas escritas de cada controle, por transporte.
+
+        A-VIBRACAO-DO-JOGO-NAO-ESPERA-O-SONO-DA-VOLTA-01. O sono da volta era
+        `min(0,008 x n, 0,032)` com `n` = TODOS os controles abertos, no cabo e
+        no rádio: a conta nasceu da disputa de CRC do Bluetooth
+        (BUG-MULTI-CONTROLLER-BT-CRC-CONTENTION-01) e somava também os do cabo,
+        cada um no endpoint dele. Agora:
+
+        - **cabo**: o piso próprio de :data:`PISO_DE_ESCRITA_DO_CABO_SEC`, igual
+          para um ou quatro controles;
+        - **rádio**: `REPORT_THREAD_THROTTLE_SEC x n`, com `n` só os controles
+          NO MESMO ADAPTADOR (a disputa de CRC é por rádio), no teto de
+          :data:`REPORT_THREAD_THROTTLE_MAX_SEC`. A variável de ambiente do
+          throttle continua mandando aqui. Controle cujo adaptador não se lê
+          cai no mesmo grupo (a conta de antes, sem os do cabo).
+
+        Chamado sob `_io_lock`, a cada `connect` (a leitura do `/sys` é cacheada
+        pelo dono do mapa).
+        """
+        radio: dict[str, str] = {}
+        for key, handle in self._handles.items():
+            if self._detect_transport(handle) == "bt":
+                radio[key] = self._key_to_uniq(key) or key
+        adaptadores: dict[str, str] = {}
+        if radio:
+            try:
+                from hefesto_dualsense4unix.integrations import radio_da_mesa
+
+                adaptadores = radio_da_mesa.adaptador_por_uniq(sorted(set(radio.values())))
+            except Exception as exc:
+                logger.debug("adaptador_do_radio_ilegivel", err=str(exc))
+        no_adaptador: dict[str, int] = {}
+        for uniq in radio.values():
+            grupo = adaptadores.get(uniq, "")
+            no_adaptador[grupo] = no_adaptador.get(grupo, 0) + 1
+        for key, handle in self._handles.items():
+            if key in radio:
+                grupo = adaptadores.get(radio[key], "")
+                piso = min(
+                    REPORT_THREAD_THROTTLE_SEC * max(1, no_adaptador[grupo]),
+                    REPORT_THREAD_THROTTLE_MAX_SEC,
+                )
+            else:
+                piso = PISO_DE_ESCRITA_DO_CABO_SEC
+            with contextlib.suppress(Exception):
+                handle._piso_de_escrita_sec = piso
 
     def _close_handles(self, keep: set[str]) -> None:
         """Fecha (e remove) os handles cujas chaves não estão em `keep`."""
@@ -3282,6 +3444,7 @@ class PyDualSenseController(IController):
                 op(handle)
             except Exception as exc:
                 logger.warning("output_handle_failed", op=what, key=key, err=str(exc))
+            _acordar_a_volta_de(handle)
 
     def _for_each_com_key(
         self,
@@ -3306,6 +3469,7 @@ class PyDualSenseController(IController):
                 op(handle, key)
             except Exception as exc:
                 logger.warning("output_handle_failed", op=what, key=key, err=str(exc))
+            _acordar_a_volta_de(handle)
 
     def suprimir_player_leds(self, ativo: bool) -> bool:
         """Liga/desliga a escrita dos LEDs de JOGADOR. Instrumento de eliminação."""
@@ -3917,6 +4081,7 @@ class PyDualSenseController(IController):
                 pydual_op(handle)
             except Exception as exc:
                 logger.warning("output_handle_failed", op=what, key=key, err=str(exc))
+            _acordar_a_volta_de(handle)
 
     @staticmethod
     def _apply_trigger(handle: pydualsense, side: Side, effect: TriggerEffect) -> None:
@@ -3924,6 +4089,7 @@ class PyDualSenseController(IController):
         trigger.mode = PyDualSenseController._coerce_mode(effect.mode)
         for idx, value in enumerate(effect.forces):
             trigger.setForce(idx, value)
+        _acordar_a_volta_de(handle)
 
     def _reapply_desired(self, key: str, handle: pydualsense) -> None:
         """Re-aplica o estado desejado DESTE controle num handle recém-aberto.
@@ -4160,6 +4326,8 @@ class PyDualSenseController(IController):
         except Exception as exc:
             logger.warning("reapply_perfil_no_hotplug_falhou", op=what, err=str(exc))
             return False
+        finally:
+            _acordar_a_volta_de(handle)
         return True
 
     def set_trigger(self, side: Side, effect: TriggerEffect) -> None:
@@ -5725,6 +5893,7 @@ class PyDualSenseController(IController):
         trigger.mode = TriggerModes.Off
         for idx in range(7):
             trigger.setForce(idx, 0)
+        _acordar_a_volta_de(handle)
 
     def resolved_player_leds_for(
         self, uniq: str

@@ -213,6 +213,33 @@ class _CDoHidapi:
         return self.ffi.NULL
 
 
+class _EventoVirtual:
+    """O evento da volta no relógio virtual: esperar é dormir nele.
+
+    A volta termina cada passada esperando um `threading.Event` (a vibração que
+    o jogo pede a acorda), e o `Event.wait` real não anda o relógio virtual deste
+    arquivo. Sem mudança de saída armada, a espera é o sono de sempre.
+    """
+
+    def __init__(self, dormir: Callable[[float], None]) -> None:
+        self._dormir = dormir
+        self._armado = False
+
+    def set(self) -> None:
+        self._armado = True
+
+    def clear(self) -> None:
+        self._armado = False
+
+    def is_set(self) -> bool:
+        return self._armado
+
+    def wait(self, timeout: float | None = None) -> bool:
+        if not self._armado:
+            self._dormir(timeout or 0.0)
+        return self._armado
+
+
 class _Bancada:
     """O relógio virtual, o lado C de mentira e os wrappers de verdade."""
 
@@ -259,6 +286,7 @@ class _Bancada:
         h.ds_thread = True
         h.connected = True
         h._throttle_sec = _throttle(n)
+        h._acordar = _EventoVirtual(self._dormir)
         return h
 
     def rodar(self, h: bp._PinnedPyDualSense, *, segundos: float) -> None:
