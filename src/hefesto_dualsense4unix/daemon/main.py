@@ -6,7 +6,7 @@ import os
 import sys
 
 from hefesto_dualsense4unix.core.controller import IController
-from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
+from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig, IpcIndisponivel
 from hefesto_dualsense4unix.utils.logging_config import configure_logging, get_logger
 
 
@@ -59,11 +59,19 @@ def run_daemon(poll_hz: int | None = None, auto_reconnect: bool = True) -> int:
 
     from hefesto_dualsense4unix.utils import chave
 
-    motivo = chave.motivo_do_desligamento()
+    try:
+        motivo = chave.motivo_do_desligamento()
+    except chave.PastaIlegivel as exc:
+        logger.error("daemon_pasta_ilegivel", pasta=str(exc.pasta), err=str(exc.erro))
+        print(exc.recado(), file=sys.stderr)
+        # 1: é falha de permissão, e só a saída diferente de zero aciona o
+        # `Restart=on-failure` e o `OnFailure=` da unit.
+        return 1
     if motivo is not None:
         logger.warning("daemon_recusado_pela_chave", motivo=motivo)
         print(chave.recado_da_recusa(motivo), file=sys.stderr)
-        # 0, e não 1: SIGTERM limpo e saída zero não disparam o
+        # 0, e não 1: a chave é decisão gravada; saída zero não aciona o
+        # `Restart=on-failure` nem o `OnFailure=` da unit.
         return 0
 
     from hefesto_dualsense4unix.utils.migrate_legacy_paths import migrate_legacy_paths
@@ -114,6 +122,9 @@ def run_daemon(poll_hz: int | None = None, auto_reconnect: bool = True) -> int:
     try:
         asyncio.run(vigiado(daemon.run()))
         return 0
+    except IpcIndisponivel as exc:
+        print(exc.recado(), file=sys.stderr)
+        return 1
     except KeyboardInterrupt:
         logger.info("daemon_interrupted")
         return 130

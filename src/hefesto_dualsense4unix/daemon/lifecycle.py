@@ -13,6 +13,7 @@ import time
 from collections.abc import Awaitable, Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Final, Literal, cast, get_args
 
 from hefesto_dualsense4unix.core.controller import ControllerState, IController
@@ -328,6 +329,25 @@ def _canal_mudaria(daemon: Any, caminho: str | None) -> bool:
         return False
     mascara = getattr(device, "flavor", None)
     return quer_uhid(caminho_do_vpad(device), mascara) != quer_uhid(caminho, mascara)
+
+
+class IpcIndisponivel(RuntimeError):  # noqa: N818 — o projeto é em português
+    """O socket de conversa não abriu: o daemon não deve ficar no ar sem ele."""
+
+    def __init__(self, caminho: Path, erro: BaseException) -> None:
+        self.caminho = caminho
+        self.erro = erro
+        super().__init__(f"o socket {caminho} não abriu: {erro}")
+
+    def recado(self) -> str:
+        """O quê, por quê e o que fazer, para o terminal e o diário."""
+        return (
+            "O daemon NÃO ficou no ar: o Hefesto não conseguiu abrir o socket "
+            f"de conversa em {self.caminho}.\n"
+            f"  {self.erro}\n"
+            "Sem ele a janela, a bandeja e a CLI não falam com o daemon.\n"
+            f"Confira o dono e a permissão da pasta:  ls -ld {self.caminho.parent}"
+        )
 
 
 @dataclass
@@ -880,7 +900,14 @@ class Daemon:
         try:
             self._tasks = [asyncio.create_task(self._poll_loop(), name="poll_loop")]
             if self.config.ipc_enabled:
-                await self._safe_start("ipc", self._start_ipc)
+                # O IPC é essencial: sem socket a janela, a bandeja e a CLI dizem
+                # «offline» com o processo no ar. A falha encerra o `run()`; o
+                # systemd tenta de novo e, no limite, o `OnFailure=` devolve o controle.
+                await self._safe_start(
+                    "ipc",
+                    self._start_ipc,
+                    essencial=lambda exc: IpcIndisponivel(self._caminho_do_socket(), exc),
+                )
             if self.config.dsu_enabled:
                 await self._safe_start("dsu", self._start_dsu)
             if self.config.udp_enabled:
@@ -3605,8 +3632,26 @@ class Daemon:
             await self._metrics_subsystem.stop()
             self._metrics_subsystem = None
 
-    async def _safe_start(self, name: str, starter: Callable[[], Any]) -> None:
-        """Inicia um subsystem isolando falhas (FEAT-DAEMON-RESILIENT-SUBSYSTEMS-01)."""
+    def _caminho_do_socket(self) -> Path:
+        servidor = self._ipc_server
+        caminho = getattr(servidor, "socket_path", None)
+        if caminho is not None:
+            return Path(caminho)
+        from hefesto_dualsense4unix.utils.xdg_paths import ipc_socket_name, runtime_dir
+
+        return runtime_dir() / ipc_socket_name()
+
+    async def _safe_start(
+        self,
+        name: str,
+        starter: Callable[[], Any],
+        essencial: Callable[[Exception], Exception] | None = None,
+    ) -> None:
+        """Inicia um subsystem isolando falhas (FEAT-DAEMON-RESILIENT-SUBSYSTEMS-01).
+
+        `essencial` devolve a exceção com que o `run()` termina quando este
+        subsistema não sobe; sem ele, a falha só entra no diário.
+        """
         try:
             result = starter()
             if inspect.isawaitable(result):
@@ -3616,6 +3661,8 @@ class Daemon:
             logger.error(
                 "subsystem_start_failed", subsystem=name, err=str(exc), exc_info=True
             )
+            if essencial is not None:
+                raise essencial(exc) from exc
 
     def _audit_config_on_boot(self) -> None:
         """Valida os perfis no boot e avisa o usuário se houver corrompidos"""
