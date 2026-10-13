@@ -765,7 +765,7 @@ def test_a_sonda_do_bluez_nao_aceita_caminho_que_so_contem_a_raiz(arvore: str | 
 # --- o caminho ``/org/bluez`` em código também é conhecimento do dono ---
 
 _ISENTOS_DO_CAMINHO = {
-    # sai com: O-BLUEZ-SO-PELA-PORTA-OFICIAL-01
+    # sai com: O-NO-DO-APARELHO-DO-ZUMBI-SE-PERGUNTA-AO-DONO-DO-BLUEZ-01
     "integrations/conexao_zumbi.py": "re.compile do nó do aparelho, refeito fora do dono",
 }
 
