@@ -320,9 +320,16 @@ def test_a_janela_pede_o_tema_ligado_quando_ninguem_diz_qual(
 # --- o retratista fotografa com o tema --------------------------------------------------
 
 
-def test_o_retratista_le_o_tema_pela_mesma_regua(tmp_path: Path) -> None:
+def test_o_retratista_le_o_tema_pela_mesma_regua(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     from hefesto_dualsense4unix.interface import olhar
 
+    # Sem a recusa do `--tema` com o `--doc`, o retratista fotografaria as dez abas COM o tema
+    # para dentro de docs/usage/assets/: o lugar das fotos vira um erro, e nada se grava.
+    def _sem_foto(*_a: Any, **_k: Any) -> int:
+        raise AssertionError("o --tema com o --doc chegou a fotografar")
+
+    monkeypatch.setattr(olhar, "_todas", _sem_foto)
     bom, ruim = tmp_path / "bom.css", tmp_path / "ruim.css"
     bom.write_text(TEMA_VALIDO, encoding="utf-8")
     ruim.write_text(":root{--fg:#30313d}", encoding="utf-8")
