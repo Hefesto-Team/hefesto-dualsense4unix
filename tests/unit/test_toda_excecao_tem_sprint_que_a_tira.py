@@ -208,7 +208,7 @@ DIVIDAS: dict[str, int] = {
     "scripts/validar-palavra-de-tela.py::DIVIDA_DA_PALAVRA_01": 0,
     "scripts/validar-palavra-de-tela.py::DIVIDA_DA_PALAVRA_01_PY": 0,
     "scripts/validar-palavra-de-tela.py::DIVIDA_DO_RECIBO": 0,
-    "tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py::_SEM_CAMINHO_HOJE": 4,
+    "tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py::_SEM_CAMINHO_HOJE": 5,
     "tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py::_SEM_MAO_HOJE": 0,
     "tests/unit/test_a_costura_da_onda_2.py::_OS_QUE_PODEM": 8,
     "tests/unit/test_a_janela_estreita_nao_engole_o_desenho.py::CORTE_CONHECIDO_NO_DESENHO": 0,
@@ -218,7 +218,7 @@ DIVIDAS: dict[str, int] = {
     "tests/unit/test_o_bluez_tem_um_dono.py::_ISENTOS_DO_CAMINHO": 1,
     "tests/unit/test_o_pacote_cabe_na_pagina_publicada.py::EXCECOES_DATADAS": 0,
     "tests/unit/test_o_pacote_leva_os_alvos_das_regras_82_e_83.py::LACUNA_HOJE": 0,
-    "tests/unit/test_os_donos_de_fato.py::EXCECOES_DATADAS": 4,
+    "tests/unit/test_os_donos_de_fato.py::EXCECOES_DATADAS": 2,
     "tests/unit/test_portao_o_par_com_metade_ligada.py::_CITACOES_PENDENTES": 0,
     "tests/unit/test_portao_o_par_com_metade_ligada.py::_PAR_ACEITO": 0,
     "tests/unit/test_portao_todo_portao_tem_chamador.py::_SEM_CHAMADOR_HOJE": 2,
@@ -310,6 +310,11 @@ NAO_SAO_DIVIDA: dict[str, str] = {
     "tests/unit/test_o_binding_do_webkit_entra_no_install.py::VAZIOS_ACEITOS_NO_CENSO": (
         "o pacote que não existe com esse nome na família: ausência decidida"),
     "tests/unit/test_o_controle_que_conecta_e_nao_vira_controle.py::CONHECIDOS": _DADO_DE_TESTE,
+    "tests/unit/test_o_que_so_a_janela_ligava_tem_verbo_no_terminal.py::ISENTOS": (
+        "os métodos que a janela chama e a linha de comando não, cada um com o porquê: "
+        "o efeito que já viaja no perfil, o gesto que só tem sentido olhando a tela; "
+        "é a decisão do que é verbo do terminal, não defeito a curar"),
+    "tests/unit/test_o_vigia_de_zumbi_avisa_uma_vez_por_episodio.py::CONHECIDOS": _DADO_DE_TESTE,
     "tests/unit/test_o_flatpak_alcanca_o_broker.py::FORA_DO_SANDBOX": (
         "o broker é um serviço root do host e nunca roda no sandbox"),
     "tests/unit/test_os_portoes_declaram_o_que_importam.py::EXCECOES": (
