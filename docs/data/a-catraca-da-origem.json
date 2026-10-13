@@ -2,10 +2,10 @@
   "_LEIA": "O PISO DAS CATRACAS. Não se edita à mão: `--aceitar` desce, `--forcar-piso «razão»` sobe com razão e data.",
   "medidas": {
     "casos-especiais-fora-do-dono": {
-      "data": "2026-10-08",
+      "data": "2026-10-13",
       "nota": "ramos por eixo, fora dos arquivos dono de cada eixo",
       "o_que_conta": "ramos que decidem por eixo, escritos fora do dono do eixo",
-      "piso": 41,
+      "piso": 39,
       "por_item": {
         "app/actions/external_controllers.py::transporte": 1,
         "broker/hidraw_broker.py::modelo": 3,
@@ -27,14 +27,13 @@
         "interface/aba08.py::transporte": 1,
         "interface/aba09.py::transporte": 2,
         "interface/aba10.py::mascara": 1,
-        "interface/cartao_do_controle.py::jogador": 2,
         "interface/monta.py::jogador": 1,
         "interface/monta.py::transporte": 2,
         "interface/pacotes/a08_conexoes.py::transporte": 6,
         "interface/sistema.py::transporte": 1,
         "testing/fake_controller.py::transporte": 1
       },
-      "razao": "08/10/2026, leva 1.11, nativo-1-12: o broker veste o PID que o pad pede (O-BROKER-VESTE-O-PID-QUE-O-PAD-PEDE-01) e o ramo de uhid_gamepad._o_pad_em_usb sai (43 -> 42); o ramo de transporte de sinal_da_barra.py já tinha saído na base (42 -> 41)",
+      "razao": "o teto desceu sozinho com o número",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -50,13 +49,13 @@
         }
       ],
       "unidade": "ramos",
-      "universo": 364
+      "universo": 385
     },
     "remendos-de-sintoma": {
       "data": "2026-10-13",
       "nota": "remendos de sintoma por arquivo",
       "o_que_conta": "remendos de sintoma acima do teto de cada arquivo",
-      "piso": 1036,
+      "piso": 1028,
       "por_item": {
         "__init__.py": 1,
         "app/actions/base.py": 1,
@@ -78,7 +77,7 @@
         "cli/cmd_test.py": 1,
         "cli/cmd_tray.py": 2,
         "cli/ipc_client.py": 1,
-        "core/backend_pydualsense.py": 47,
+        "core/backend_pydualsense.py": 46,
         "core/escritor_cru.py": 3,
         "core/evdev_reader.py": 18,
         "core/events.py": 1,
@@ -89,13 +88,13 @@
         "core/sysfs_leds.py": 7,
         "core/system_check.py": 2,
         "daemon/battery_journal.py": 2,
-        "daemon/connection.py": 55,
+        "daemon/connection.py": 54,
         "daemon/ganho_da_haptica.py": 7,
         "daemon/ipc_handlers.py": 73,
         "daemon/ipc_rumble_policy.py": 2,
         "daemon/ipc_server.py": 4,
         "daemon/launch_env.py": 15,
-        "daemon/lifecycle.py": 46,
+        "daemon/lifecycle.py": 42,
         "daemon/sensor_hub.py": 16,
         "daemon/service_install.py": 1,
         "daemon/subsystems/alto_falante.py": 17,
@@ -190,7 +189,7 @@
         "interface/pacotes/a02_controles.py": 5,
         "interface/pacotes/a03_gatilhos.py": 4,
         "interface/pacotes/a04_iluminacao.py": 2,
-        "interface/pacotes/a05_vibracao.py": 7,
+        "interface/pacotes/a05_vibracao.py": 5,
         "interface/pacotes/a06_navegacao.py": 3,
         "interface/pacotes/a07_lancadores.py": 8,
         "interface/pacotes/a08_conexoes.py": 21,
@@ -216,7 +215,7 @@
         "utils/single_instance.py": 9,
         "utils/tela_de_mentira.py": 3
       },
-      "razao": "A-CATRACA-DA-ORIGEM-CONTA-O-SUPPRESS-QUE-SO-ENGOLE-01, conferência de 13/10: o conjunto renasceu no topo 55e58afaf da integra/fds-2, e o código costurado depois da medida de 10/10 traz 15 suppress(Exception) que a regra nova conta (core/backend_pydualsense +3, daemon/subsystems/coop +3, daemon/subsystems/alto_falante +2, daemon/ipc_rumble_policy +2, mods/porta +2, daemon/lifecycle +1, daemon/subsystems/hotkey +1, integrations/dualsense_bt_audio +1) e 11 a menos nos cli/ e no app/ipc_bridge; nenhum arquivo do conjunto sobe; 1032 -> 1036",
+      "razao": "o teto desceu sozinho com o número",
       "subidas": [
         {
           "data": "2026-10-10",
@@ -238,7 +237,7 @@
         }
       ],
       "unidade": "remendos",
-      "universo": 373
+      "universo": 385
     },
     "tamanho": {
       "data": "2026-10-12",
