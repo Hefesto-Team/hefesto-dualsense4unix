@@ -334,3 +334,45 @@ def test_o_connect_le_o_firmware_de_todo_handle_novo(
 
     assert visto == ["aabbcc000001"]
     assert handle._vibracao_v2 is True
+
+
+@pytest.mark.parametrize("bt", [False, True], ids=["cabo", "radio"])
+def test_a_reconexao_que_nao_le_herda_o_firmware_ja_lido(
+    hidraw: dict[str, Any], bt: bool
+) -> None:
+    """O firmware é do controle: o handle novo cuja leitura falha fica no modo já lido.
+
+    A troca de nó e a reconexão recriam o handle; um CRC do rádio que não fecha
+    nesse instante não devolve o controle à v1 que ele não fala.
+    """
+    primeiro = _handle(path=b"/dev/hidraw3", bt=bt)
+    backend = _backend(aabbcc000001=primeiro)
+    hidraw["/dev/hidraw3"] = _feature_0x20(0x0630, bt=bt)
+    backend._conhecer_o_firmware("aabbcc000001", primeiro)
+
+    segundo = _handle(path=b"/dev/hidraw9", bt=bt)
+    backend._handles = {"aabbcc000001": segundo}
+    hidraw["/dev/hidraw9"] = _feature_0x20(0x0630, bt=True, corromper=True) if bt else OSError(
+        5, "Input/output error"
+    )
+    backend._conhecer_o_firmware("aabbcc000001", segundo)
+
+    common = segundo._build_common(rumble_asserted=True)
+    assert common[rep.COMMON_VALID_FLAG2] & FLAG2_V2 and not common[0] & FLAG0_V1
+    assert backend._firmware_por_uniq == {"aabbcc000001": 0x0630}
+
+
+def test_a_leitura_nova_vence_a_guardada(hidraw: dict[str, Any]) -> None:
+    """Firmware atualizado entre duas conexões: vale o que o controle diz agora."""
+    primeiro = _handle(path=b"/dev/hidraw3")
+    backend = _backend(aabbcc000001=primeiro)
+    hidraw["/dev/hidraw3"] = _feature_0x20(0x0630)
+    backend._conhecer_o_firmware("aabbcc000001", primeiro)
+
+    segundo = _handle(path=b"/dev/hidraw9")
+    backend._handles = {"aabbcc000001": segundo}
+    hidraw["/dev/hidraw9"] = _feature_0x20(0x0223)
+    backend._conhecer_o_firmware("aabbcc000001", segundo)
+
+    assert segundo._build_common(rumble_asserted=True)[0] & FLAG0_V1
+    assert backend._firmware_por_uniq == {"aabbcc000001": 0x0223}

@@ -1949,9 +1949,11 @@ class PyDualSenseController(IController):
         self._haptica_de_audio_por_uniq: set[str] = set()
         # O-CONTROLE-VIBRA-NO-MODO-DO-FIRMWARE-DELE-01: o `update_version` que
         # cada controle disse na conexão (feature 0x20), por MAC. None = a
-        # leitura falhou ou o CRC do rádio não fechou: o DualSense comum fica
-        # na v1. Guardado aqui, e não só no handle, porque a troca de nó e a
-        # reconexão RECRIAM o handle e o firmware é do controle, não do nó.
+        # leitura falhou ou o CRC do rádio não fechou, e nenhuma conexão anterior
+        # o leu: o DualSense comum fica na v1. Guardado aqui, e não só no
+        # handle, porque a troca de nó e a reconexão RECRIAM o handle e o
+        # firmware é do controle, não do nó: a leitura que falha num handle
+        # novo herda a versão já lida (`_conhecer_o_firmware`).
         self._firmware_por_uniq: dict[str, int | None] = {}
         # R-20 item 2: escala de brilho POR CONTROLE, aplicada à BASE do merge.
         # Um override que só mexia no brilho materializava a cor GLOBAL no
@@ -2135,11 +2137,16 @@ class PyDualSenseController(IController):
                 key, _FIRMWARE_FEATURE_ID, _FIRMWARE_FEATURE_SIZE, "firmware"
             )
         )
-        edge = bool(getattr(handle, "is_edge", False))
-        v2 = fala_a_vibracao_v2(versao, edge=edge)
         if uniq is not None:
             with self._io_lock:
+                if versao is None:
+                    # A leitura falhou neste handle (o CRC do rádio, um ioctl
+                    # recusado na troca de nó): o firmware é do controle, e o
+                    # que ele disse numa conexão anterior continua valendo.
+                    versao = self._firmware_por_uniq.get(uniq)
                 self._firmware_por_uniq[uniq] = versao
+        edge = bool(getattr(handle, "is_edge", False))
+        v2 = fala_a_vibracao_v2(versao, edge=edge)
         definir = getattr(handle, "set_vibracao_v2", None)
         if callable(definir):
             definir(v2)
