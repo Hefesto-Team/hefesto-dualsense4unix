@@ -89,13 +89,24 @@ def test_o_job_roda_a_sonda_e_sobe_a_saida_mesmo_se_ela_falhar() -> None:
 
 
 def test_o_shellcheck_enxerga_a_pasta_da_sonda() -> None:
-    """Uma pasta de scripts que nenhum linter vê é o portão cego de sempre."""
-    for arquivo in (CI, PORTOES):
-        linhas = [li for li in arquivo.read_text(encoding="utf-8").splitlines()
-                  if "shellcheck -S error" in li]
-        assert linhas, f"{arquivo.name} perdeu a varredura do shellcheck"
-        assert all("scripts/banco_de_prova/*.sh" in li for li in linhas), (
-            f"{arquivo.name}: a varredura não inclui scripts/banco_de_prova/*.sh")
+    """Uma pasta de scripts que nenhum linter vê é o portão cego de sempre.
+
+    O comando mora na tabela do `portoes.sh`, e o CI o chama pelo nome, com `--so shellcheck`
+    (O-CI-CHAMA-OS-PORTOES-PELO-NOME-01); o `run:` que voltar a escrevê-lo também leva a pasta.
+    """
+    from tests.unit.test_portao_a_lista_de_portoes_e_uma_so import o_ci_chama
+
+    linhas = [li for li in PORTOES.read_text(encoding="utf-8").splitlines()
+              if "shellcheck -S error" in li]
+    assert linhas, "portoes.sh perdeu a varredura do shellcheck"
+    assert all("scripts/banco_de_prova/*.sh" in li for li in linhas), (
+        "portoes.sh: a varredura não inclui scripts/banco_de_prova/*.sh")
+    comando = linhas[0].split("|")[3]
+    texto_ci = CI.read_text(encoding="utf-8")
+    assert o_ci_chama(comando, texto_ci), "o ci.yml não roda a varredura do shellcheck da tabela"
+    diretas = [li for li in texto_ci.splitlines() if "shellcheck -S error" in li]
+    assert all("scripts/banco_de_prova/*.sh" in li for li in diretas), (
+        "ci.yml: a varredura escrita à mão não inclui scripts/banco_de_prova/*.sh")
 
 
 # 2. AS PEÇAS PURAS DO PLÁSTICO

@@ -77,6 +77,27 @@ def test_o_add_forcado_ja_commitado_reprova(repo: Path) -> None:
     assert feito.returncode == 1, feito.stdout
 
 
+def test_o_ignore_pessoal_de_quem_roda_nao_reprova_o_versionado(repo: Path, tmp_path: Path) -> None:
+    """A regra é a do `.gitignore` do repositório, nunca a da máquina de quem roda.
+
+    Com `--exclude-standard`, um `*.md` no `core.excludesFile` pessoal (ou no `.git/info/exclude`)
+    reprovava o README versionado e mandava tirá-lo do índice; no CI, sem esse ignore, verde.
+    """
+    pessoal = tmp_path / "ignore-pessoal"
+    pessoal.write_text("*.md\n", encoding="utf-8")
+    _git(repo, "config", "core.excludesFile", str(pessoal))
+    (repo / ".git" / "info").mkdir(exist_ok=True)
+    (repo / ".git" / "info" / "exclude").write_text("README.md\n", encoding="utf-8")
+    feito = _roda(repo)
+    assert feito.returncode == 0, feito.stdout + feito.stderr
+    assert "README.md" not in feito.stdout
+    # e o ignorado do `.gitignore` continua reprovando com a regra dele, não com a pessoal
+    _git(repo, "add", "-f", "docs/process/x.md")
+    feito = _roda(repo)
+    assert feito.returncode == 1, feito.stdout
+    assert ".gitignore:2:docs/process/" in feito.stdout, feito.stdout
+
+
 def test_git_rm_cached_devolve_o_verde_e_deixa_o_disco(repo: Path) -> None:
     _git(repo, "add", "-f", "docs/process/x.md")
     _git(repo, "rm", "-q", "--cached", "docs/process/x.md")

@@ -7,9 +7,14 @@ porque o repositório carrega só o produto) entrou com `git add -f` numa branch
 perguntou, porque as réguas que listam a árvore pedem `--cached --others`, nunca o versionado que casa regra de
 ignorado.
 
-A pergunta é sobre o ÍNDICE, não sobre o disco: `git ls-files --cached --ignored --exclude-standard`. Ela responde
-igual num clone do CI (que não tem ignorado no disco) e na árvore de quem trabalha. Cada achado sai com a regra que
-ele casa (`git check-ignore --no-index -v`), que é o que diz a quem lê se o erro é o arquivo ou a regra.
+A pergunta é sobre o ÍNDICE, não sobre o disco: `git ls-files --cached --ignored`. Ela responde igual num clone do
+CI (que não tem ignorado no disco) e na árvore de quem trabalha. Cada achado sai com a regra que ele casa
+(`git check-ignore --no-index -v`), que é o que diz a quem lê se o erro é o arquivo ou a regra.
+
+As regras são só as dos `.gitignore` do repositório (`--exclude-per-directory=.gitignore`), nunca as de quem roda
+(13/10/2026, na conferência): com `--exclude-standard` entravam o `core.excludesFile` e o `.git/info/exclude` da
+máquina, e um `*.md` no ignore pessoal de alguém reprovava o README versionado e mandava tirá-lo do índice. O
+contrato é o `.gitignore`; o ignore pessoal não é do repositório, e o CI não o tem.
 
 Sem `.git` não há índice a perguntar: sai «NÃO MEDIDO» na primeira linha, que o `portoes.sh` não conta como verde.
 """
@@ -46,7 +51,8 @@ def _git(raiz: Path, *args: str) -> str:
 
 def versionados_ignorados(raiz: Path) -> list[str]:
     """Os caminhos do índice que casam uma regra de ignorado."""
-    saida = _git(raiz, "ls-files", "-z", "--cached", "--ignored", "--exclude-standard")
+    saida = _git(raiz, "ls-files", "-z", "--cached", "--ignored",
+                 "--exclude-per-directory=.gitignore")
     return sorted(c for c in saida.split("\0") if c)
 
 

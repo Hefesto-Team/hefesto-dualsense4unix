@@ -255,6 +255,9 @@ NAO_SAO_DIVIDA: dict[str, str] = {
     "scripts/check_faixa_sintetica.py::_ARVORE_IGNORADA": (
         "onde a faixa sintética é o próprio dado: fixture, documento e captura"),
     "scripts/check_nada_aponta_para_a_janela.py::_PASTAS_IGNORADAS": _PASTAS_DE_MAQUINA,
+    "scripts/check_o_ignorado_fica_fora_do_indice.py::ISENTOS": (
+        "o arquivo ignorado que mora no índice de propósito, com data e quem pediu; nasce vazia, "
+        "e o teste da régua exige que continue assim até alguém escrever o porquê"),
     "scripts/check_paridade_gtk_html.py::APOSENTADOS": (
         "os arquivos da janela GTK, aposentada por decisão dela (D-0609-GTK-LEVA-INTEIRA)"),
     "scripts/medir_decisoes_sem_prova.py::ESTADOS_CONHECIDOS": (
@@ -298,6 +301,7 @@ NAO_SAO_DIVIDA: dict[str, str] = {
         "o vocabulário das duas guardas de GTK real"),
     "tests/unit/test_install_garante_deps_em_qualquer_familia.py::VAZIOS_ACEITOS": (
         "o pacote que não existe com esse nome na família: ausência decidida"),
+    "tests/unit/test_nenhum_caminho_desta_maquina_no_codigo.py::ISENTOS": _A_PROPRIA_REGUA,
     "tests/unit/test_mic_em_todo_formato_01.py::_MODOS_FORA_DO_MIC": (
         "o modo que não é decisão sobre o microfone (o nó que não dorme)"),
     "tests/unit/test_nativo_rumble_01_a_recusa_chega_na_tela.py::RESPOSTA_DE_ACEITE": (
