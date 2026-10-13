@@ -72,6 +72,11 @@ VEREDITOS: dict[str, tuple[str, int, str]] = {
         "`steam -shutdown`: pede à Steam de pé que feche, e volta em segundos; "
         "não faz nascer Steam nenhuma",
     ),
+    "integrations/censo_dos_lancadores.py::ler_por_processo": (
+        "ajudante", 1,
+        "o leitor da biblioteca que uma modificação declara, na caixa do `bwrap`: "
+        "grupo próprio, prazo da modificação, e o `_parar` mata o grupo no `finally`",
+    ),
     "integrations/fora_do_servico.py::abrir": (
         "o dono", 1,
         "o `Popen` de reserva: quem chama já é da pessoa, ou não há systemd de "
