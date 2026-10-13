@@ -193,3 +193,33 @@ def test_o_desktop_le_o_latch_do_primario() -> None:
     assert mgr.combo_buttons_active({"ps", "r3"}, de=P2) == {"ps", "r3"}
     assert mgr.combo_buttons_active({"r3"}, de=P1) == frozenset()
     assert mgr.combo_buttons_active({"r3"}, de=P2) == {"r3"}
+
+
+@pytest.mark.parametrize("mascara", MASCARAS)
+def test_o_latch_atravessa_o_tique_dos_atalhos(
+    monkeypatch: pytest.MonkeyPatch, mascara: str
+) -> None:
+    """O laço de verdade: entre um tique e outro, os atalhos esquecem quem não leram.
+
+    O `observar_os_atalhos` chama o `soltar_quem_saiu` com as chaves que ELE leu
+    (o `primary_uniq` do P1 e o MAC de cada jogador do co-op). Se a chave do
+    latch no pad não for a mesma, o latch some a cada tique, e o R3 que ainda
+    está apertado depois de o PS soltar chega ao jogo.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems.poll import observar_os_atalhos
+
+    mesa = _Mesa(monkeypatch, mascara)
+    mesa.daemon._coop_manager = mesa.coop
+    agora = 1000.0
+    for botoes in (("ps", "r3"), ("r3",), (), ("r3",)):
+        mesa.p1(*botoes)
+        mesa.p2(*botoes)
+        observar_os_atalhos(mesa.daemon, frozenset(botoes), now=agora)
+        agora += 0.5
+
+    for pad, no in ((mesa.pad_p1, mesa.no_p1), (mesa.pad_p2, mesa.no_p2)):
+        codigo = pad._resolve_evdev("r3", ecodes)
+        assert codigo is not None
+        assert no.teclas.count((codigo, 1)) == 1, (
+            f"o latch não atravessou o tique dos atalhos: {no.teclas}"
+        )
