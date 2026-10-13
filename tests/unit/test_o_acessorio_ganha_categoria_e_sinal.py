@@ -251,6 +251,13 @@ def test_a_cena_inteira_do_bluez_ate_a_linha(monkeypatch: pytest.MonkeyPatch) ->
         assert ponto and ponto.group(1) == fx.SINAL
         assert ponto.group(2) == f"Sinal {-61 - k} dBm · {fx.DIVIDE_O_RADIO}"
         assert ponto.group(2).count("dBm") == 1
+    # sem o número do rádio, o ponto diz a frase UMA vez, no título e na fala
+    sem_sinal = fx.montar([fx.Adaptador(id="L1", nome="Meio", aparelhos=(
+        fx.AparelhoNoAdaptador(id="y", tipo="acessorio", nome="Sensor", le=True),))], ())
+    ponto_sem = a08._o_ponto(sem_sinal.grupos[0][1][0])
+    for campo in ("title", "aria-label"):
+        dito = re.search(rf'{campo}="([^"]*)"', ponto_sem)
+        assert dito and dito.group(1) == fx.DIVIDE_O_RADIO, (campo, ponto_sem)
 
 
 # --- a tela no WebKit: a textura e o ponto, no motor dela ---------------------------------

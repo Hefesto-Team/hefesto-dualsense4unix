@@ -215,8 +215,10 @@ def _linha_do_aparelho(
                     qualidade_do_enlace=ap.qualidade_do_enlace, rssi=ap.rssi)
     outros = tuple(i.id for i in irmaos if i.id != ap.id)
     if ap.le:
-        return linha(celulas=_celulas_do_le(), sem_faixa=DIVIDE_O_RADIO,
-                     selo=selo_do_sinal(ap.rssi), briga=outros, dica=DIVIDE_O_RADIO)
+        selo = selo_do_sinal(ap.rssi)
+        # sem o número, o ponto já diz a frase pela faixa; a dica só a leva ao lado do sinal
+        return linha(celulas=_celulas_do_le(), sem_faixa=DIVIDE_O_RADIO, selo=selo, briga=outros,
+                     dica=DIVIDE_O_RADIO if selo is not None else "")
     perdidos = ap.evitados if ap.evitados is not None else adaptador.evitados
     if perdidos is None:
         return linha(sem_faixa=NAO_SE_MEDE, briga=outros)

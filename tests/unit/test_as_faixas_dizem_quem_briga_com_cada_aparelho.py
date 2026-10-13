@@ -77,7 +77,8 @@ def test_enlace_le_tem_os_40_canais_nao_medidos_e_sem_mapa_nao_se_mede() -> None
     regua = _regua(_aparelho("relogio", "relogio", le=True), _aparelho("celular", "celular"),
                    evitados={3, 4})
     (relogio, _celular), = [linhas for _a, linhas in regua.grupos]
-    assert relogio.sem_faixa == fx.DIVIDE_O_RADIO and relogio.dica == fx.DIVIDE_O_RADIO
+    assert relogio.sem_faixa == fx.DIVIDE_O_RADIO and relogio.dica == "", (
+        "sem o sinal, a dica repetia a frase que a faixa já diz")
     assert len(relogio.celulas) == 79 and relogio.bons is None
     assert {c.estado for c in relogio.celulas} == {fx.NAO_MEDIDO, fx.ANUNCIO}, (
         "o mapa do adaptador virou o do enlace LE")
