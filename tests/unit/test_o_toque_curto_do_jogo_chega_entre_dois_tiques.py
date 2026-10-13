@@ -16,7 +16,7 @@ import os
 import threading
 from collections.abc import Iterator
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 
 import pytest
 
@@ -29,6 +29,7 @@ from tests.unit.test_a_entrada_de_cada_jogador_chega_inteira import (
     Relogio,
     _esperar,
     _evento_de_saida,
+    _o_jogo_fecha,
     _vibracao,
     _virtual,
 )
@@ -137,6 +138,43 @@ def test_uhid_o_par_que_fica_e_o_mais_forte_sai_uma_vez_so(
         pad.stop()
 
 
+def test_uhid_o_pico_segura_os_tiques_do_piso_e_depois_sai_o_ultimo_par(
+    kernel_do_uhid: KernelDoUhid, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O piso do toque é `_TOQUE_MINIMO_TIQUES`: com 2, o zero sai dois tiques depois."""
+    monkeypatch.setattr(uhid_gamepad, "_TOQUE_MINIMO_TIQUES", 2)
+    fisico = Fisico()
+    pad = _virtual(Relogio(), fisico)
+    try:
+        _o_jogo_escreve(kernel_do_uhid, pad, (200, 200), (0, 0))
+
+        pad.pump_ff()
+        pad.pump_ff()
+        assert fisico.vibracao == [(200, 200)], "o pico não segurou o piso inteiro"
+        pad.pump_ff()
+        assert fisico.vibracao == [(200, 200), (0, 0)]
+    finally:
+        pad.stop()
+
+
+def test_uhid_o_jogo_que_fecha_com_o_motor_girando_para_no_primeiro_tique(
+    kernel_do_uhid: KernelDoUhid,
+) -> None:
+    """A parada do fim da sessão vence o pulso do intervalo: o motor não gira depois."""
+    fisico = Fisico()
+    pad = _virtual(Relogio(), fisico)
+    try:
+        _o_jogo_escreve(kernel_do_uhid, pad, (90, 90), (250, 250))
+        _o_jogo_fecha(kernel_do_uhid, pad)
+
+        pad.pump_ff()
+        assert fisico.vibracao == [(0, 0)], (
+            f"o jogo fechou e o controle ainda recebeu o pulso: {fisico.vibracao}"
+        )
+    finally:
+        pad.stop()
+
+
 class _Uinput:
     """O pad `uinput` com o evdev de mentira, o relógio de mentira e o sink gravador."""
 
@@ -153,8 +191,8 @@ class _Uinput:
         self.device: _FakeUInput = _FakeUInput.instances[0]
         # O fio da vibração está de pé: o tique só soma e entrega (`pump_ff`), e o
         # laço do fio roda aqui por `o_fio_atende`.
-        self.pad._ff_fio = SimpleNamespace(  # type: ignore[assignment]
-            is_alive=lambda: True, join=lambda timeout=None: None
+        self.pad._ff_fio = cast(
+            Any, SimpleNamespace(is_alive=lambda: True, join=lambda timeout=None: None)
         )
 
     def o_fio_atende(self, em: float) -> None:
