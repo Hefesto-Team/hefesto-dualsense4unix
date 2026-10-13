@@ -935,6 +935,7 @@ _DECLARADOS = {
     "comentario-cortado": ("@sempre", "merge-base com o dev: o piso por arquivo anda com a base"),
     "o-ignorado-fica-fora-do-indice": ("@head", "git ls-files --cached --ignored: o índice"),
     "citacoes-novas": ("@sempre", "merge-base com o dev: a linha acrescentada desde o pé"),
+    "texto-enxuto": ("@sempre", "merge-base com o dev e os não rastreados: o que mudou desde o pé"),
 }
 
 
