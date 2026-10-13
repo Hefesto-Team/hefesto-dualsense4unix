@@ -16,6 +16,12 @@ from hefesto_dualsense4unix.utils.xdg_paths import runtime_dir
 
 logger = get_logger(__name__)
 
+#: O prazo que o desligamento do daemon tem, e o único que a troca de instância espera
+#: antes do SIGKILL. É o `TimeoutStopSec` de `assets/hefesto-dualsense4unix.service`
+#: (o orçamento do som, o broker e o microfone cabem nele); um teste confere os dois.
+PRAZO_DO_DESLIGAMENTO_S = 45.0
+
+#: A espera da GUI pelo lock (`acquire_or_bring_to_front`): a GUI não tem desligamento longo.
 SIGTERM_GRACE_SEC = 2.0
 SIGTERM_POLL_INTERVAL_SEC = 0.05
 
@@ -112,7 +118,10 @@ def _read_existing_pid(path: Path) -> int | None:
 
 
 def _terminate_predecessor(pid: int) -> None:
-    """SIGTERM com grace 2s, depois SIGKILL. No-op se já morreu.
+    """SIGTERM, espera o desligamento inteiro, e só então SIGKILL. No-op se já morreu.
+
+    A espera sai assim que o predecessor some, então o custo é o tempo real do
+    desligamento; `PRAZO_DO_DESLIGAMENTO_S` é só o teto de quem estoura.
 
     Defesa em profundidade (AUDIT-FINDING-SINGLE-INSTANCE-PID-RECYCLE-01):
     antes de sinalizar, confirma via `/proc/<pid>/comm` e `/proc/<pid>/cmdline`
@@ -138,7 +147,7 @@ def _terminate_predecessor(pid: int) -> None:
         logger.warning("single_instance_sigterm_negado", pid=pid, err=str(exc))
         return
 
-    deadline = time.monotonic() + SIGTERM_GRACE_SEC
+    deadline = time.monotonic() + PRAZO_DO_DESLIGAMENTO_S
     while time.monotonic() < deadline:
         if not is_alive(pid):
             logger.info("single_instance_predecessor_saiu_sigterm", pid=pid)
@@ -173,7 +182,7 @@ def acquire_or_takeover(name: str) -> int:
             fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except OSError as exc:
             if exc.errno in (errno.EWOULDBLOCK, errno.EAGAIN):
-                deadline = time.monotonic() + SIGTERM_GRACE_SEC
+                deadline = time.monotonic() + PRAZO_DO_DESLIGAMENTO_S
                 while time.monotonic() < deadline:
                     time.sleep(SIGTERM_POLL_INTERVAL_SEC)
                     try:
@@ -391,6 +400,7 @@ def release(name: str) -> None:
 
 
 __all__ = [
+    "PRAZO_DO_DESLIGAMENTO_S",
     "SIGTERM_GRACE_SEC",
     "_is_hefesto_dualsense4unix_process",
     "abrir_a_porta_de_frente",

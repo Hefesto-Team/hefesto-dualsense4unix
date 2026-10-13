@@ -30,6 +30,8 @@ SuccessExitStatus=143 SIGTERM
 # é declarado. Cabe o orçamento do som (ORCAMENTO_DO_STOP_S, 10 s), os dois join
 # dele (4 s) e o join e um estouro do microfone (7 s), com folga para o resto do
 # desligamento; estourar aqui é SIGKILL, e o SIGKILL deixa os nós de som órfãos.
+# É também o prazo que a troca de instância espera antes do SIGKILL
+# (`utils/single_instance.PRAZO_DO_DESLIGAMENTO_S`); um teste confere os dois.
 TimeoutStopSec=45
 Environment=PYTHONUNBUFFERED=1
 

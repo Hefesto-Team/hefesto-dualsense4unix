@@ -115,8 +115,8 @@ def test_takeover_mata_predecessor(
         assert pid_file.read_text().strip() == str(own)
 
         codigo = filho.wait(timeout=10)
-        assert codigo in (-signal.SIGTERM, -signal.SIGKILL), (
-            f"filho não saiu por sinal do takeover: código {codigo}"
+        assert codigo == -signal.SIGTERM, (
+            f"filho não saiu pelo SIGTERM do takeover: código {codigo}"
         )
         assert not single_instance.is_alive(filho.pid)
     finally:
@@ -290,8 +290,8 @@ def test_takeover_mata_predecessor_hefesto(
         assert own == os.getpid()
 
         codigo = filho.wait(timeout=10)
-        assert codigo in (-signal.SIGTERM, -signal.SIGKILL), (
-            f"predecessor legítimo tinha de sair por sinal: código {codigo}"
+        assert codigo == -signal.SIGTERM, (
+            f"predecessor legítimo tinha de sair pelo SIGTERM, nunca pelo SIGKILL: código {codigo}"
         )
         assert not single_instance.is_alive(filho.pid)
     finally:
