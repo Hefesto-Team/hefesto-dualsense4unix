@@ -20,7 +20,10 @@ from pathlib import Path
 
 from hefesto_dualsense4unix.utils import identidade, units_de_usuario
 from hefesto_dualsense4unix.utils.logging_config import get_logger
-from hefesto_dualsense4unix.utils.repo_files import bases_de_instalacao
+from hefesto_dualsense4unix.utils.repo_files import (
+    bases_de_instalacao,
+    como_atualizar_esta_instalacao,
+)
 
 logger = get_logger(__name__)
 
@@ -114,8 +117,8 @@ class ServiceInstaller:
             assets = find_assets_dir()
         except FileNotFoundError as exc:
             raise UnitNaoInstalavelError(
-                "não achei o modelo da unit nesta instalação (assets/). Reinstale o Hefesto "
-                "pelo pacote da sua distribuição ou rode o ./install.sh do repositório."
+                "não achei o modelo da unit nesta instalação (assets/): "
+                f"{como_atualizar_esta_instalacao()}."
             ) from exc
         src = assets / SERVICE_NORMAL
         if not src.exists():
