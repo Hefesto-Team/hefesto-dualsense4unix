@@ -1,6 +1,6 @@
 """Registry de subsystems do daemon.
 
-Ordem de start: poll → ipc → udp → autoswitch → mouse → rumble → bt_mic →
+Ordem de start: poll → ipc → dsu → udp → autoswitch → mouse → rumble → bt_mic →
 plugins → metrics. Cada subsystem implementa o protocolo definido em base.py.
 
 MetricsSubsystem é condicional: só sobe se metrics_enabled=True na config.
@@ -67,6 +67,7 @@ from hefesto_dualsense4unix.daemon.subsystems.autoswitch import AutoswitchSubsys
 from hefesto_dualsense4unix.daemon.subsystems.base import Subsystem
 from hefesto_dualsense4unix.daemon.subsystems.bt_mic import BtMicSubsystem
 from hefesto_dualsense4unix.daemon.subsystems.conexoes import ConexoesSubsystem
+from hefesto_dualsense4unix.daemon.subsystems.dsu import DsuSubsystem
 from hefesto_dualsense4unix.daemon.subsystems.gamepad import GamepadSubsystem
 from hefesto_dualsense4unix.daemon.subsystems.ipc import IpcSubsystem
 from hefesto_dualsense4unix.daemon.subsystems.metrics import MetricsSubsystem
@@ -80,6 +81,7 @@ SUBSYSTEM_REGISTRY: list[type[Subsystem]] = [
     PollSubsystem,
     IpcSubsystem,
     UdpSubsystem,
+    DsuSubsystem,
     AutoswitchSubsystem,
     MouseSubsystem,
     GamepadSubsystem,
@@ -97,6 +99,7 @@ __all__ = [
     "AutoswitchSubsystem",
     "BtMicSubsystem",
     "ConexoesSubsystem",
+    "DsuSubsystem",
     "GamepadSubsystem",
     "IpcSubsystem",
     "MetricsSubsystem",

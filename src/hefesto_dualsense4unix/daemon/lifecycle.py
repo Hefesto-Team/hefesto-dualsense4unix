@@ -337,6 +337,10 @@ class DaemonConfig:
     udp_enabled: bool = True
     udp_host: str = "127.0.0.1"
     udp_port: int = 6969
+    # O servidor DSU (cemuhook) para o emulador. `False` aqui mantém a suíte fora
+    # da porta; quem liga o servidor da usuária é o `main.py`, pelo `maquina.json`.
+    dsu_enabled: bool = False
+    dsu_port: int = 26760
     autoswitch_enabled: bool = True
     mouse_emulation_enabled: bool = False
     mouse_speed: int = 6
@@ -654,6 +658,8 @@ class Daemon:
     _tasks: list[asyncio.Task[Any]] = field(default_factory=list)
     _ipc_server: Any = None
     _udp_server: Any = None
+    _servidor_dsu: Any = None
+    _tarefa_dsu: Any = None
     _autoswitch: Any = None
     _mouse_device: Any = None
     _keyboard_device: Any = None
@@ -873,6 +879,8 @@ class Daemon:
             self._tasks = [asyncio.create_task(self._poll_loop(), name="poll_loop")]
             if self.config.ipc_enabled:
                 await self._safe_start("ipc", self._start_ipc)
+            if self.config.dsu_enabled:
+                await self._safe_start("dsu", self._start_dsu)
             if self.config.udp_enabled:
                 await self._safe_start("udp", self._start_udp)
             if self.config.autoswitch_enabled:
@@ -3398,6 +3406,16 @@ class Daemon:
         from hefesto_dualsense4unix.daemon.subsystems.ipc import start_ipc
 
         await start_ipc(self)
+
+    async def _start_dsu(self) -> None:
+        from hefesto_dualsense4unix.daemon.subsystems.dsu import start_dsu
+
+        await start_dsu(self)
+
+    async def _stop_dsu(self) -> None:
+        from hefesto_dualsense4unix.daemon.subsystems.dsu import stop_dsu
+
+        await stop_dsu(self)
 
     async def _start_udp(self) -> None:
         from hefesto_dualsense4unix.daemon.subsystems.udp import start_udp

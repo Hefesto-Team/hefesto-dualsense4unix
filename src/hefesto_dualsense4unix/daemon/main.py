@@ -85,8 +85,10 @@ def run_daemon(poll_hz: int | None = None, auto_reconnect: bool = True) -> int:
         logger.warning("daemon_nice_unavailable")
 
     from hefesto_dualsense4unix.utils import session
+    from hefesto_dualsense4unix.utils.maquina import servidor_dsu_declarado
 
     controller = build_controller()
+    servidor_dsu = servidor_dsu_declarado()
     config = DaemonConfig(
         poll_hz=poll_hz or int(os.getenv("HEFESTO_DUALSENSE4UNIX_POLL_HZ", "60")),
         auto_reconnect=auto_reconnect,
@@ -100,6 +102,10 @@ def run_daemon(poll_hz: int | None = None, auto_reconnect: bool = True) -> int:
         plugins_enabled=session.load_plugins_enabled(),
         metrics_enabled=session.load_metrics_enabled(),
     )
+    # Fora do construtor de propósito: as páginas contam os parâmetros dele
+    # (test_doc_verdade_02), e o servidor DSU vem do maquina.json, não da subida.
+    config.dsu_enabled = servidor_dsu.ligado
+    config.dsu_port = servidor_dsu.porta
     daemon = Daemon(controller=controller, config=config)
 
     logger.info("daemon_main", fake=os.getenv("HEFESTO_DUALSENSE4UNIX_FAKE") == "1")

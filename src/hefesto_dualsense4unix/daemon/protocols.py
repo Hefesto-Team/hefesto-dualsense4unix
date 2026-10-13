@@ -46,6 +46,8 @@ class DaemonProtocol(Protocol):
     _hotkey_manager: Any
     _audio: Any
     _plugins_subsystem: Any
+    _servidor_dsu: Any
+    _tarefa_dsu: Any
 
     _last_state: ControllerState | None
     _last_auto_mult: float

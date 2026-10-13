@@ -9,7 +9,7 @@ import tempfile
 import threading
 from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
-from typing import Any, Literal, NamedTuple
+from typing import Any, Final, Literal, NamedTuple
 
 from pydantic import (
     BaseModel,
@@ -1214,6 +1214,41 @@ def carregar_maquina() -> MaquinaConfig:
     except Exception as exc:
         logger.debug("maquina_load_falhou", err=str(exc))
     return MaquinaConfig()
+
+
+SERVIDOR_DSU_PORTA_PADRAO: Final = 26760
+
+
+class ServidorDsuDeclarado(NamedTuple):
+    """O que o ``maquina.json`` diz do servidor DSU: ligado ou não, e a porta."""
+
+    ligado: bool
+    porta: int
+
+
+def servidor_dsu_declarado() -> ServidorDsuDeclarado:
+    """``"servidor_dsu": {"ligado": bool, "porta": int}``, campo de topo do documento.
+
+    **Nasce ligado**: ausente, ``null``, torto ou ilegível vale ligado na 26760;
+    só ``"ligado": false`` desliga. É uma chave que o schema não conhece de
+    propósito, e por isso não sobe a ``version``: ``_so_o_que_o_schema_conhece``
+    a ignora na leitura e a gravação a devolve ao arquivo. **Nunca levanta.**
+    """
+    padrao = ServidorDsuDeclarado(True, SERVIDOR_DSU_PORTA_PADRAO)
+    try:
+        bruto = _ler_documento()
+        if bruto is None or bruto.get(VERSION_FIELD) != MAQUINA_SCHEMA_VERSION:
+            return padrao
+        campo = bruto.get("servidor_dsu")
+        if not isinstance(campo, Mapping):
+            return padrao
+        porta = campo.get("porta")
+        if not isinstance(porta, int) or isinstance(porta, bool) or not 1 <= porta <= 65535:
+            porta = SERVIDOR_DSU_PORTA_PADRAO
+        return ServidorDsuDeclarado(campo.get("ligado") is not False, porta)
+    except Exception as exc:
+        logger.debug("maquina_servidor_dsu_falhou", err=str(exc))
+        return padrao
 
 
 class ResultadoDaGravacao(NamedTuple):

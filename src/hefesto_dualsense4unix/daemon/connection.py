@@ -1423,6 +1423,10 @@ async def shutdown(daemon: DaemonProtocol) -> None:
         with contextlib.suppress(Exception):
             osk.close()
         daemon._osk_controller = None
+    parar_dsu = getattr(daemon, "_stop_dsu", None)
+    if getattr(daemon, "_servidor_dsu", None) is not None and callable(parar_dsu):
+        with contextlib.suppress(Exception):
+            await asyncio.wait_for(parar_dsu(), timeout=2.0)
     if daemon._ipc_server is not None:
         with contextlib.suppress(Exception):
             await asyncio.wait_for(daemon._ipc_server.stop(), timeout=2.0)
