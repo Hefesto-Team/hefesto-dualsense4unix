@@ -27,6 +27,7 @@ from pathlib import Path
 import pytest
 
 from hefesto_dualsense4unix.daemon.ipc_server import IpcServer
+from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.profiles import loader as loader_module
 from hefesto_dualsense4unix.profiles.loader import (
     gesto_de_agora,
@@ -281,7 +282,7 @@ def test_nenhum_handler_do_ipc_grava_por_executor_que_perde_o_gesto() -> None:
 
 
 def _servidor() -> IpcServer:
-    return IpcServer(controller=None, store=None, profile_manager=None)  # type: ignore[arg-type]
+    return IpcServer(controller=None, store=StateStore(), profile_manager=None)  # type: ignore[arg-type]
 
 
 async def test_o_dispatch_poe_ipc_metodo_e_o_gesto_atravessa_o_to_thread(

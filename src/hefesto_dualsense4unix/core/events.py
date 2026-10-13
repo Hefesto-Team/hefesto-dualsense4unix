@@ -27,6 +27,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import threading
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from typing import Any
@@ -73,6 +74,10 @@ class EventBus:
     _subs: dict[str, list[_Subscriber]] = field(default_factory=dict)
     _loop: asyncio.AbstractEventLoop | None = None
     _estado: dict[str, Any] = field(default_factory=dict)
+    #: Quantos eventos cada tópico já publicou (com ou sem assinante): é o que o
+    #: `hefesto_events_dispatched_total{topic}` das métricas lê.
+    _publicados: dict[str, int] = field(default_factory=dict)
+    _trava_da_contagem: threading.Lock = field(default_factory=threading.Lock)
 
     def bind_loop(self, loop: asyncio.AbstractEventLoop) -> None:
         """Marca qual loop o bus serve. Chamado uma vez no start do daemon."""
@@ -93,6 +98,8 @@ class EventBus:
 
     def publish(self, topic: str, payload: Any) -> None:
         """Publica um evento. Seguro para chamar de threads não-loop."""
+        with self._trava_da_contagem:
+            self._publicados[topic] = self._publicados.get(topic, 0) + 1
         if topic in TOPICOS_DE_ESTADO:
             self._estado[topic] = payload
         subs = list(self._subs.get(topic, ()))
@@ -136,6 +143,11 @@ class EventBus:
                 topic,
             )
             sub.overflow_logged = True
+
+    def contagem_por_topico(self) -> dict[str, int]:
+        """Cópia da contagem de eventos publicados, por tópico."""
+        with self._trava_da_contagem:
+            return dict(self._publicados)
 
     def topics(self) -> Iterable[str]:
         return tuple(self._subs.keys())

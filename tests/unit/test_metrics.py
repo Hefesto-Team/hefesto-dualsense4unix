@@ -8,6 +8,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from hefesto_dualsense4unix.core.events import EventBus, EventTopic
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.daemon.subsystems.metrics import (
     _BIND_HOST,
@@ -92,7 +93,7 @@ class TestMetricsCollector:
 
     def test_battery_pct_com_controller_conectado(self) -> None:
         payload = self._collector(battery=75).collect()
-        match = re.search(r"hefesto_battery_pct (\d+)", payload)
+        match = re.search(r'hefesto_battery_pct\{jogador="1"\} (\d+)', payload)
         assert match is not None
         assert int(match.group(1)) == 75
 
@@ -101,7 +102,7 @@ class TestMetricsCollector:
         store = StateStore()
         collector = MetricsCollector(store=store, controller=MagicMock())
         payload = collector.collect()
-        match = re.search(r"hefesto_battery_pct (-?\d+)", payload)
+        match = re.search(r'hefesto_battery_pct\{jogador="1"\} (-?\d+)', payload)
         assert match is not None
         assert int(match.group(1)) == -1
 
@@ -109,7 +110,9 @@ class TestMetricsCollector:
         """hefesto_controller_connected deve ter label transport='usb' quando conectado."""
         payload = self._collector(battery=80).collect()
         assert 'transport="usb"' in payload
-        match = re.search(r'hefesto_controller_connected\{transport="usb"\} (\d)', payload)
+        match = re.search(
+            r'hefesto_controller_connected\{jogador="1",transport="usb"\} (\d)', payload
+        )
         assert match is not None
         assert int(match.group(1)) == 1
 
@@ -119,7 +122,7 @@ class TestMetricsCollector:
         collector = MetricsCollector(store=store, controller=MagicMock())
         payload = collector.collect()
         match = re.search(
-            r'hefesto_controller_connected\{transport="([^"]+)"\} (\d)', payload
+            r'hefesto_controller_connected\{jogador="1",transport="([^"]+)"\} (\d)', payload
         )
         assert match is not None
         assert int(match.group(2)) == 0
@@ -151,11 +154,12 @@ class TestMetricsCollector:
         assert 'status="ok"' in payload
 
     def test_events_dispatched_com_topic(self) -> None:
-        """hefesto_events_dispatched_total deve expor tópicos como labels."""
-        payload = self._collector(
-            extra_counters={"event.battery_change": 7}
-        ).collect()
-        assert 'topic="battery_change"' in payload
+        """hefesto_events_dispatched_total expõe os tópicos que o bus publicou."""
+        bus = EventBus()
+        bus.publish(EventTopic.BATTERY_CHANGE, 7)
+        collector = MetricsCollector(store=StateStore(), controller=MagicMock(), bus=bus)
+        payload = collector.collect()
+        assert 'topic="battery.change"' in payload
 
     def test_button_down_up_contadores(self) -> None:
         """Contadores de botão refletem bumps em button.down.emitted e button.up.emitted."""

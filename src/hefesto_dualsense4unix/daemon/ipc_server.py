@@ -387,8 +387,10 @@ class IpcServer(IpcHandlersMixin):
         # O gesto do pedido, para o `profile_salvo` de quem grava no meio dele:
         # `asyncio.to_thread` leva o contexto junto.
         marca_do_gesto = gesto_de_agora.set(f"ipc:{method}")
+        status = "erro"
         try:
             result = await handler(params)
+            status = "ok"
         except FileNotFoundError as exc:
             return _json_rpc_error(req_id, CODE_PROFILE_NOT_FOUND, str(exc))
         except ValueError as exc:
@@ -402,6 +404,10 @@ class IpcServer(IpcHandlersMixin):
             )
         finally:
             gesto_de_agora.reset(marca_do_gesto)
+            # Um pedido, uma contagem: é o `hefesto_ipc_requests_total{method,status}`
+            # das métricas. Só método CONHECIDO chega aqui, então o rótulo não cresce
+            # com o que um cliente inventar.
+            self.store.bump(f"ipc.{method}.{status}")
             ms = (time.perf_counter() - t0) * 1000
             if ms > TETO_DO_PEDIDO_MS:
                 logger.info("ipc_lento", metodo=method, ms=round(ms))

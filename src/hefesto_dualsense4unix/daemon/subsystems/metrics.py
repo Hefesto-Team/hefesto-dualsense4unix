@@ -78,9 +78,80 @@ def _render_labeled(
 class MetricsCollector:
     """Coleta métricas do StateStore e do estado do controller."""
 
-    def __init__(self, store: Any, controller: Any) -> None:
+    def __init__(
+        self,
+        store: Any,
+        controller: Any,
+        bus: Any = None,
+        daemon: Any = None,
+    ) -> None:
         self._store = store
         self._controller = controller
+        self._bus = bus
+        self._daemon = daemon
+
+    def _controles(self, snap: Any) -> list[tuple[int, str, bool, int | float]]:
+        """Um item por controle: ``(jogador, transporte, conectado, bateria)``.
+
+        A fonte é a do ``daemon.state_full`` (``describe_controllers``, só getattrs
+        baratos, sem HID) e o número é o do cartão «Controle N» da janela: o slot
+        da sessão e, sem ele, a posição. Sem a fonte (backend sem a lista), cai no
+        controle do topo do store, como `jogador="1"`.
+        """
+        describe = getattr(self._controller, "describe_controllers", None)
+        entradas: list[dict[str, Any]] = []
+        if callable(describe):
+            try:
+                bruto = describe()
+            except Exception as exc:
+                logger.debug("metrics_describe_controllers_falhou", err=str(exc))
+                bruto = None
+            if isinstance(bruto, list):
+                entradas = [e for e in bruto if isinstance(e, dict)]
+        if not entradas:
+            conectado = snap.controller is not None
+            transporte = (
+                getattr(snap.controller, "transport", "usb") or "usb"
+                if conectado
+                else "unknown"
+            )
+            bateria = snap.last_battery_pct if snap.last_battery_pct is not None else -1
+            return [(1, str(transporte), conectado, bateria)]
+
+        from hefesto_dualsense4unix.daemon.ipc_handlers import _numero_de_exibicao
+
+        itens: dict[int, tuple[int, str, bool, int | float]] = {}
+        for entrada in entradas:
+            if self._daemon is not None and "player_slot" not in entrada:
+                entrada = {**entrada, "player_slot": self._slot_de(entrada.get("uniq"))}
+            jogador = _numero_de_exibicao(entrada)
+            conectado = bool(entrada.get("connected"))
+            transporte = str(entrada.get("transport") or "unknown")
+            bateria = entrada.get("battery_pct")
+            valor: int | float = (
+                bateria
+                if conectado and isinstance(bateria, (int, float)) and not isinstance(bateria, bool)
+                else -1
+            )
+            itens.setdefault(jogador, (jogador, transporte, conectado, valor))
+        return [itens[j] for j in sorted(itens)]
+
+    def _slot_de(self, uniq: Any) -> int | None:
+        """Slot de sessão do controle `uniq` (leitura pura, sem atribuir)."""
+        if not isinstance(uniq, str):
+            return None
+        registro = getattr(self._daemon, "identity_registry", None)
+        slot_de = getattr(registro, "slot_for", None)
+        if not callable(slot_de):
+            return None
+        try:
+            bruto = slot_de(uniq, assign=False)
+        except Exception as exc:
+            logger.debug("metrics_slot_falhou", err=str(exc))
+            return None
+        if isinstance(bruto, int) and not isinstance(bruto, bool):
+            return bruto
+        return None
 
     def collect(self) -> str:
         """Gera o payload completo em Prometheus text exposition format."""
@@ -97,32 +168,25 @@ class MetricsCollector:
             )
         )
 
-        transport = "unknown"
-        connected = 0
-        try:
-            if snap.controller is not None:
-                connected = 1
-                transport = getattr(snap.controller, "transport", "usb") or "usb"
-        except Exception:
-            connected = 0
+        controles = self._controles(snap)
         parts.append(
             _render_labeled(
                 "hefesto_controller_connected",
-                "1 se o controller está conectado, 0 caso contrário",
+                "1 se o controle do jogador está conectado, 0 caso contrário",
                 "gauge",
                 [
-                    ({"transport": str(transport)}, connected),
+                    ({"jogador": str(j), "transport": t}, 1 if ok else 0)
+                    for j, t, ok, _bat in controles
                 ],
             )
         )
 
-        # -- battery_pct -----------------------------------------------------
-        battery = snap.last_battery_pct if snap.last_battery_pct is not None else -1
         parts.append(
-            _format_gauge(
+            _render_labeled(
                 "hefesto_battery_pct",
-                "Nível de bateria atual em porcentagem (-1 se desconhecido)",
-                battery,
+                "Nível de bateria do controle do jogador em porcentagem (-1 se desconhecido)",
+                "gauge",
+                [({"jogador": str(j)}, bat) for j, _t, _ok, bat in controles],
             )
         )
 
@@ -167,11 +231,12 @@ class MetricsCollector:
             )
         )
 
-        event_series: _LabeledSeries = []
-        for key, value in counters.items():
-            if key.startswith("event."):
-                topic = key[len("event."):]
-                event_series.append(({"topic": topic}, value))
+        contagem_do_bus = (
+            self._bus.contagem_por_topico() if self._bus is not None else {}
+        )
+        event_series: _LabeledSeries = [
+            ({"topic": topico}, valor) for topico, valor in sorted(contagem_do_bus.items())
+        ]
 
         if event_series:
             parts.append(
@@ -236,12 +301,24 @@ def _make_handler(collector: MetricsCollector) -> type[http.server.BaseHTTPReque
     return _MetricsHandler
 
 
+class _ServidorDeMetricas(socketserver.TCPServer):
+    """``TCPServer`` que religa a porta em ``TIME_WAIT``.
+
+    O ``allow_reuse_address`` tem de existir ANTES do bind, e o bind é do
+    construtor: atribuído à instância depois dele, não muda nada, e o daemon que
+    reinicia com uma conexão da porta ainda em ``TIME_WAIT`` sobe sem métricas.
+    """
+
+    allow_reuse_address = True
+
+
 class MetricsSubsystem:
     """Subsystem que expõe métricas em formato Prometheus via HTTP."""
 
     name = "metrics"
 
-    def __init__(self) -> None:
+    def __init__(self, daemon: Any = None) -> None:
+        self._daemon = daemon
         self._server: socketserver.TCPServer | None = None
         self._thread: threading.Thread | None = None
 
@@ -249,12 +326,16 @@ class MetricsSubsystem:
         """Inicia o servidor HTTP de métricas em thread daemon."""
         cfg = ctx.config
         port: int = _porta_efetiva(getattr(cfg, "metrics_port", 9090))
-        collector = MetricsCollector(store=ctx.store, controller=ctx.controller)
+        collector = MetricsCollector(
+            store=ctx.store,
+            controller=ctx.controller,
+            bus=ctx.bus,
+            daemon=self._daemon,
+        )
         handler_cls = _make_handler(collector)
 
         try:
-            server = socketserver.TCPServer((_BIND_HOST, port), handler_cls)
-            server.allow_reuse_address = True
+            server = _ServidorDeMetricas((_BIND_HOST, port), handler_cls)
         except OSError as exc:
             logger.warning(
                 "metrics_bind_failed",

@@ -250,6 +250,8 @@ class UdpHandler:
                 logger.warning("udp_rate_limited", ip=ip)
                 self._last_warn_at = now
             return
+        # Passou do limitador: é o `hefesto_udp_packets_total{result="accepted"}`.
+        self.store.bump("udp.accepted")
 
         if len(data) > MAX_DATAGRAM_BYTES:
             self.store.bump("udp.oversize")

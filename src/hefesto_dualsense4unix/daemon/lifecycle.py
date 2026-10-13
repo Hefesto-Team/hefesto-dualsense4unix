@@ -3466,7 +3466,7 @@ class Daemon:
         from hefesto_dualsense4unix.daemon.context import DaemonContext
         from hefesto_dualsense4unix.daemon.subsystems.metrics import MetricsSubsystem
 
-        ms = MetricsSubsystem()
+        ms = MetricsSubsystem(daemon=self)
         if not ms.is_enabled(self.config):
             return
 

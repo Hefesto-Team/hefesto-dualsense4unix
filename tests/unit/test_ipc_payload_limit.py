@@ -10,6 +10,7 @@ from hefesto_dualsense4unix.daemon.ipc_server import (
     MAX_PAYLOAD_BYTES,
     IpcServer,
 )
+from hefesto_dualsense4unix.daemon.state_store import StateStore
 
 
 def _make_raw(payload_dict: dict[str, object]) -> bytes:
@@ -17,7 +18,7 @@ def _make_raw(payload_dict: dict[str, object]) -> bytes:
 
 
 def _server() -> IpcServer:
-    return IpcServer(controller=None, store=None, profile_manager=None)  # type: ignore[arg-type]
+    return IpcServer(controller=None, store=StateStore(), profile_manager=None)  # type: ignore[arg-type]
 
 
 @pytest.mark.asyncio
