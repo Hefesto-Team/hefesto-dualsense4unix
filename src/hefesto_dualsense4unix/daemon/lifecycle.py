@@ -3,13 +3,14 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import functools
 import importlib
 import inspect
 import os
 import signal
 import threading
 import time
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import Any, Final, Literal, cast, get_args
@@ -2922,14 +2923,14 @@ class Daemon:
                 )
             return
         self._mode_pendente = None
+        self.apply_profile_mode(
+            pendencia.mode, profile=pendencia.profile, origin="pendencia"
+        )
         logger.info(
             "profile_mode_pendencia_aplicada",
             profile=pendencia.profile_name,
             kind=getattr(pendencia.mode, "kind", None),
             origin=pendencia.origin,
-        )
-        self.apply_profile_mode(
-            pendencia.mode, profile=pendencia.profile, origin="pendencia"
         )
 
     def apply_profile_rumble_policy(
@@ -4266,6 +4267,7 @@ class Daemon:
         grab_reconcile_next_at: float = 0.0
         relogios = _RelogiosLentos(loop.time())
         medidor = _MedidorDoTique(self.store)
+        passos = _PassosDoLaco(self.store)
         from hefesto_dualsense4unix.daemon.subsystems.coop import get_coop_manager
         from hefesto_dualsense4unix.daemon.subsystems.quem_mexe import anotar_o_primario
         previous_buttons: frozenset[str] = frozenset()
@@ -4297,8 +4299,7 @@ class Daemon:
                     except Exception as exc:
                         logger.warning("pad_do_p1_ancorar_falhou", err=str(exc))
                     # sem ela o co-op não existe e os quatro DualSense viram um
-                    with contextlib.suppress(Exception):
-                        self.aplicar_gamepad_para_multiplos_controles()
+                    passos.passo("coop_gamepad", self.aplicar_gamepad_para_multiplos_controles)
                 elif nome == "bateria":
                     self._amostrar_bateria(tick_started)
                 elif nome == "led_externo":
@@ -4310,8 +4311,7 @@ class Daemon:
                 elif nome == "exposicao_nativa":
                     self._reconciliar_exposicao_do_modo_nativo()
                 elif nome == "modo_pendente":
-                    with contextlib.suppress(Exception):
-                        self._drenar_modo_pendente()
+                    passos.passo("modo_pendente", self._drenar_modo_pendente)
                 elif nome == "launch":
                     from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
                         _reconciliar_launch,
@@ -4352,20 +4352,28 @@ class Daemon:
             try:
                 state = await self._run_blocking(self.controller.read_state)
             except Exception as exc:
-                logger.warning("poll_read_failed", err=str(exc), exc_info=True)
-                registrar_queda_da_bateria(self, "poll_read_failed", tick_started)
-                if was_connected:
-                    esquecer_a_leitura_publicada()
-                self.bus.publish(EventTopic.CONTROLLER_DISCONNECTED, {"reason": str(exc)})
+                # O `read_state` real não faz E/S (lê o que as threads mantêm): uma
+                # leitura que levanta é defeito de código, e nenhum handle sai da
+                # mesa por isso. A borda é uma por episódio; a volta espera o
+                # próximo tique, com ou sem `auto_reconnect` (a queda de verdade
+                # entra pelo `reconnect_loop`). O assentamento não recomeça: nenhum
+                # handle foi reaberto, e o co-op (`forward_all`) segue andando.
+                if passos.falhou("leitura", exc):
+                    registrar_queda_da_bateria(self, "poll_read_failed", tick_started)
+                    if was_connected:
+                        esquecer_a_leitura_publicada()
+                    self.bus.publish(
+                        EventTopic.CONTROLLER_DISCONNECTED, {"reason": str(exc)}
+                    )
+                    levar_o_big_picture(self, None, frozenset())
                 terminar_o_tique(tick_started)
-                if self.config.auto_reconnect:
-                    from hefesto_dualsense4unix.daemon.connection import reconnect
-
-                    previous_buttons = frozenset()
-                    was_connected = False
-                    await reconnect(self)
-                    continue
-                break
+                stop_event = self._stop_event
+                assert stop_event is not None
+                with contextlib.suppress(asyncio.TimeoutError):
+                    await _esperar_o_tique(self, stop_event, period)
+                    break
+                continue
+            passos.deu_certo("leitura")
 
             if not was_connected:
                 self._input_ready_at = tick_started + INPUT_GRACE_SEC
@@ -4390,18 +4398,19 @@ class Daemon:
                 evdev_watchdog_next_at = tick_started + EVDEV_WATCHDOG_SEC
                 heal = getattr(self.controller, "heal_evdev_if_stale", None)
                 if heal is not None:
-                    with contextlib.suppress(Exception):
-                        if await self._run_blocking(heal):
-                            self.store.bump("evdev.watchdog.reopen")
+                    reabriu = await passos.passo_async(
+                        "heal_evdev", functools.partial(self._run_blocking, heal)
+                    )
+                    if reabriu is not _FALHOU and reabriu:
+                        self.store.bump("evdev.watchdog.reopen")
 
             if tick_started >= grab_reconcile_next_at:
                 grab_reconcile_next_at = tick_started + GRAB_RECONCILE_SEC
-                with contextlib.suppress(Exception):
-                    from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
-                        reconciliar_grab_do_primario,
-                    )
+                from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+                    reconciliar_grab_do_primario,
+                )
 
-                    reconciliar_grab_do_primario(self)
+                passos.passo("grab_do_primario", lambda: reconciliar_grab_do_primario(self))
 
             buttons_pressed = self._evdev_buttons_once()
             current_buttons = state.buttons_pressed
@@ -4724,6 +4733,56 @@ class _RelogiosLentos:
             periodo = self._periodo[nome]
             self._proximo[nome] = proximo + periodo * (int((agora - proximo) / periodo) + 1)
         return vencidos
+
+
+_FALHOU: Final = object()
+
+
+class _PassosDoLaco:
+    """O embrulho ÚNICO dos passos do `_poll_loop`: uma falha não derruba o laço nem some.
+
+    Cada falha soma ``poll.erro.<nome>`` no store; o ``warning`` com o traceback
+    sai UMA vez por episódio (o log volta só quando o passo dá certo de novo).
+    Nenhuma falha de passo desmonta a mesa: o laço segue para o próximo tique.
+    """
+
+    __slots__ = ("_em_erro", "_store")
+
+    def __init__(self, store: Any) -> None:
+        self._store = store
+        self._em_erro: set[str] = set()
+
+    def falhou(self, nome: str, exc: BaseException) -> bool:
+        """Conta a falha de ``nome``; ``True`` se ela abre um episódio novo."""
+        self._store.bump(f"poll.erro.{nome}")
+        if nome in self._em_erro:
+            return False
+        self._em_erro.add(nome)
+        logger.warning("passo_do_laco_falhou", passo=nome, err=str(exc), exc_info=exc)
+        return True
+
+    def deu_certo(self, nome: str) -> None:
+        self._em_erro.discard(nome)
+
+    def passo(self, nome: str, fn: Callable[[], Any]) -> Any:
+        """Roda ``fn``; devolve o resultado dela, ou ``_FALHOU``."""
+        try:
+            resultado = fn()
+        except Exception as exc:
+            self.falhou(nome, exc)
+            return _FALHOU
+        self.deu_certo(nome)
+        return resultado
+
+    async def passo_async(self, nome: str, fn: Callable[[], Awaitable[Any]]) -> Any:
+        """O mesmo de :meth:`passo` para uma corrotina."""
+        try:
+            resultado = await fn()
+        except Exception as exc:
+            self.falhou(nome, exc)
+            return _FALHOU
+        self.deu_certo(nome)
+        return resultado
 
 
 def _gravar_medida(store: Any, nome: str, valor: int) -> None:

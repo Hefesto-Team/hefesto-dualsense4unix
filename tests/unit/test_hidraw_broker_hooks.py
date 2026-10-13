@@ -794,38 +794,3 @@ class TestRestoreRecovery:
 
         asyncio.run(connection.reconnect_loop(daemon, input_watch=watch))
         assert ("restore", "/dev/hidrawX") in broker.calls
-
-    def test_reconnect_legado_restaura_antes_do_connect(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        from hefesto_dualsense4unix.daemon import connection
-
-        broker = FakeBroker()
-        broker.hidden = ["/dev/hidrawX"]
-        monkeypatch.setattr(connection.os.path, "exists", lambda _p: True)
-        ordem: list[str] = []
-
-        async def _connect_with_retry(_daemon: Any) -> None:
-            ordem.append("connect")
-
-        monkeypatch.setattr(connection, "connect_with_retry", _connect_with_retry)
-
-        config = DaemonConfig()
-        config.reconnect_backoff_sec = 0.0
-        daemon = SimpleNamespace(
-            controller=SimpleNamespace(disconnect=lambda: None),
-            config=config,
-            _hidraw_broker_client=broker,
-            _arm_input_grace=lambda: None,
-        )
-
-        async def _run_blocking(fn: Any, *args: Any) -> Any:
-            return fn(*args)
-
-        daemon._run_blocking = _run_blocking
-
-        asyncio.run(connection.reconnect(daemon))
-        assert ("restore", "/dev/hidrawX") in broker.calls
-        assert ordem == ["connect"]
-        indice_restore = broker.calls.index(("restore", "/dev/hidrawX"))
-        assert indice_restore >= 0

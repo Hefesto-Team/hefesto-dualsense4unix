@@ -292,9 +292,9 @@ def _esperas_do_poll_loop() -> tuple[int, int]:
     return pelo_aperto, diretas
 
 
-def test_regua_6_as_tres_esperas_do_laco_acordam_com_o_aperto() -> None:
-    """As três esperas do `_poll_loop` (fora da mesa, assentamento, fim do"""
-    assert _esperas_do_poll_loop() == (3, 0)
+def test_regua_6_as_quatro_esperas_do_laco_acordam_com_o_aperto() -> None:
+    """As quatro esperas do `_poll_loop` acordam com o aperto, nenhuma é direta."""
+    assert _esperas_do_poll_loop() == (4, 0)
 
 
 def test_regua_7_quatro_leitores_a_100_apertos_nao_passam_de_250_voltas(

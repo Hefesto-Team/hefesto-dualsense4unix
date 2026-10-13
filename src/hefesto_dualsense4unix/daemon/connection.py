@@ -565,16 +565,6 @@ async def _restore_hidden_before_reopen(daemon: DaemonProtocol) -> None:
             logger.info("hidraw_broker_restore_recovery", nodes=restored)
 
 
-async def reconnect(daemon: DaemonProtocol) -> None:
-    """Desconecta e tenta reconectar com backoff."""
-    with contextlib.suppress(Exception):
-        await daemon._run_blocking(daemon.controller.disconnect)
-    await asyncio.sleep(daemon.config.reconnect_backoff_sec)
-    await _restore_hidden_before_reopen(daemon)
-    await connect_with_retry(daemon)
-    daemon._arm_input_grace()
-
-
 async def reconnect_loop(
     daemon: DaemonProtocol, *, input_watch: InputDirWatch | None = None
 ) -> None:
@@ -587,9 +577,9 @@ async def reconnect_loop(
         falhadas em DEBUG (evita inundar journal a cada 5s).
       - Restaura último perfil exatamente uma vez na primeira conexão bem-sucedida.
 
-    O loop coopera com o poll_loop: quando `read_state` levanta após perda de
-    conexão, o poll loop dispara `reconnect()` (legado) e o probe deste loop
-    detectará a transição back-online no próximo tick.
+    Este loop é o ÚNICO dono da reconexão: o poll loop não desconecta nem
+    reconecta (uma leitura que levanta é defeito de código e espera o próximo
+    tique); a queda de verdade entra pelo probe daqui.
 
     FEAT-BACKEND-HOTPLUG-FAST-01: quando ONLINE, o sleep de 30s é fatiado em
     `RECONNECT_HOTPLUG_POLL_INTERVAL_SEC` consultando um `InputDirWatch`
@@ -597,7 +587,7 @@ async def reconnect_loop(
     (`controller.connect()` no executor); sem mudança, o custo por fatia é um
     listdir (~µs) e o check de 30s permanece como fallback. Reentrância segura:
     `connect()` é idempotente e tem a guarda `_opening` sob `_io_lock` no
-    backend — um `reconnect()` concorrente do poll loop não duplica abertura.
+    backend — dois `connect()` concorrentes não duplicam a abertura.
     `input_watch` é injetável para testes; None cria o watch real.
 
     GATILHO-DA-COR-01: este laço é também o RELÓGIO ÚNICO do mecanismo de
@@ -1479,7 +1469,6 @@ __all__ = [
     "reaplicar_som_de_quem_trocou_de_transporte",
     "reapply_mic_after_connect",
     "reapply_speaker_after_connect",
-    "reconnect",
     "reconnect_loop",
     "registrar_gatilho",
     "registrar_gatilho_da_lightbar",

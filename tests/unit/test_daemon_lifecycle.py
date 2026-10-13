@@ -206,14 +206,13 @@ class _ControleQueCaiPeloProbe(FakeController):
 
 
 class _ControleQueSomeNaLeitura(FakeController):
-    """A queda pela porta da LEITURA — e SÓ por ela.
+    """A leitura que levanta — e SÓ ela.
 
-    Um DualSense que sai da mesa de vez aparece primeiro como leitura que
-    levanta, com o handle ainda aberto (`poll_read_failed` antes do
-    `probe_offline`, ver `DiarioDaBateria.registrar_queda`). Depois de
-    `leituras` leituras boas, a próxima levanta como o hidraw que sumiu, e a
-    reconexão não acha ninguém — como o backend real, cujo `connect()` devolve
-    sem levantar e fica fora de linha.
+    O `read_state` real não faz E/S (lê o `ds.state` e o snapshot do evdev que as
+    threads mantêm), então uma leitura que levanta é defeito de código, e não a
+    queda de um DualSense (essa entra pelo `probe_offline` do `reconnect_loop`).
+    Depois de `leituras` leituras boas, a próxima levanta como o hidraw que
+    sumiu; o handle segue aberto e a mesa não se desmonta.
     """
 
     def __init__(self, leituras: int) -> None:

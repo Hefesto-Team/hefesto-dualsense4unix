@@ -296,25 +296,36 @@ def test_arm_input_grace_noop_without_loop() -> None:
 
 
 @pytest.mark.asyncio
-async def test_reconnect_rearms_grace(monkeypatch: pytest.MonkeyPatch) -> None:
-    """`connection.reconnect` rearma o settling após reconectar."""
+async def test_reconnect_loop_rearms_grace() -> None:
+    """A volta do controle pelo `reconnect_loop` (o único dono da reconexão) rearma o settling."""
     from hefesto_dualsense4unix.daemon import connection as conn
 
     fc = FakeController(transport="usb", states=[_state()])
-    fc.connect()
     daemon = Daemon(controller=fc, config=_config(auto_reconnect=True))
     daemon._executor = MagicMock()
-
-    monkeypatch.setattr(daemon.config, "reconnect_backoff_sec", 0.0)
+    parada = asyncio.Event()
+    daemon._stop_event = parada
 
     async def _run_blocking(fn, *args):  # type: ignore[no-untyped-def]
         return fn(*args)
 
-    monkeypatch.setattr(daemon, "_run_blocking", _run_blocking)
+    daemon._run_blocking = _run_blocking  # type: ignore[method-assign]
+    daemon._is_stopping = parada.is_set  # type: ignore[method-assign]
+    assert fc.is_connected() is False
 
     loop = asyncio.get_running_loop()
     before = loop.time()
-    await conn.reconnect(daemon)
+    tarefa = asyncio.create_task(
+        conn.reconnect_loop(daemon, input_watch=MagicMock(poll=lambda: False))
+    )
+    try:
+        for _ in range(500):
+            if daemon._input_ready_at > 0.0:
+                break
+            await asyncio.sleep(0.01)
+    finally:
+        parada.set()
+        await asyncio.wait_for(tarefa, timeout=5.0)
 
     assert daemon._input_ready_at >= before + INPUT_GRACE_SEC
     assert fc.is_connected() is True
