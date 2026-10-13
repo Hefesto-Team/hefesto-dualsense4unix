@@ -99,6 +99,40 @@ DEFEND_DISPLAY_MIN_INTERVAL_S = 30.0
 _CALIBRATION_FEATURE_ID = 0x05
 _CALIBRATION_FEATURE_SIZE = 41
 
+#: A feature 0x20 (informações de firmware): 64 bytes, e o `update_version` é o
+#: u16 little-endian do byte 44 (`hid-playstation.c`, `dualsense_get_firmware_info`).
+_FIRMWARE_FEATURE_ID = 0x20
+_FIRMWARE_FEATURE_SIZE = 64
+_FIRMWARE_UPDATE_VERSION_OFFSET = 44
+
+#: A partir desta versão o firmware do DualSense (o de 2021 em diante) entende a
+#: vibração v2, com o byte do motor em escala cheia. É o limiar do SDL e do
+#: SpecialK, e o §4.1 de `docs/protocol/dualsense-energia-e-vibracao.md` o
+#: recomenda: o do driver (`0x0215`) tem cara de conversão decimal/hexadecimal
+#: perdida. O Edge não passa por este teste, é sempre v2.
+LIMITE_DA_VIBRACAO_V2 = 0x0224
+
+
+def versao_do_firmware(feature: bytes | None) -> int | None:
+    """O `update_version` (u16 LE no byte 44) da feature 0x20, ou None se não cabe."""
+    if feature is None or len(feature) < _FIRMWARE_UPDATE_VERSION_OFFSET + 2:
+        return None
+    return int.from_bytes(
+        feature[_FIRMWARE_UPDATE_VERSION_OFFSET : _FIRMWARE_UPDATE_VERSION_OFFSET + 2],
+        "little",
+    )
+
+
+def fala_a_vibracao_v2(versao: int | None, *, edge: bool) -> bool:
+    """O controle vibra no modo v2? O Edge sempre; o DualSense, pelo firmware lido.
+
+    Sem leitura (versão vazia) o DualSense comum fica na v1, que todo firmware
+    entende: pedir a v2 a quem não a conhece é vibração que não sai.
+    """
+    if edge:
+        return True
+    return versao is not None and versao >= LIMITE_DA_VIBRACAO_V2
+
 
 def _read_feature_via_hidraw(
     path: str,
@@ -713,6 +747,14 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
     #: `HAPTICS_SELECT`. A-VIBRACAO-NAO-DESLIGA-A-HAPTICA-01; ver
     #: :meth:`set_haptica_de_audio` e `_build_common`.
     _haptica_de_audio: bool = False
+
+    #: O firmware deste controle entende a vibração v2 (o byte do motor em escala
+    #: cheia, `COMPATIBLE_VIBRATION2`). Quem diz é o controlador, que lê a
+    #: feature 0x20 na conexão (:meth:`PyDualSenseController.
+    #: _conhecer_o_firmware`); sem leitura fica na v1, como sempre foi. Default
+    #: de classe pelo mesmo motivo dos vizinhos: o dublê nasce por `__new__`.
+    #: O-CONTROLE-VIBRA-NO-MODO-DO-FIRMWARE-DELE-01.
+    _vibracao_v2: bool = False
 
     #: O `hid_device`. Toda chamada ao C deste handle (o `read` da volta, o
     #: modo do `read`, o `write` de qualquer thread) entra e sai contada sob
@@ -1430,6 +1472,16 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         """
         self._haptica_de_audio = bool(ativa)
 
+    def set_vibracao_v2(self, ativa: bool) -> None:
+        """O firmware deste controle fala a vibração v2 (ou só a v1).
+
+        O-CONTROLE-VIBRA-NO-MODO-DO-FIRMWARE-DELE-01. O vpad se apresenta com a
+        0x20 canônica (`0x0630`), então o jogo, o kernel e o SDL falam com ele em
+        v2; o físico recebia esses bytes em v1, outro regime do mesmo byte. Com
+        isto o `_build_common` pede o modo que o firmware do físico entende.
+        """
+        self._vibracao_v2 = bool(ativa)
+
     def set_audio_volumes(
         self,
         *,
@@ -1573,12 +1625,21 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
             )
             flag1 &= ~rep.VALID_FLAG1_MOTOR_POWER
             flag2 &= ~rep.VALID_FLAG2_COMPATIBLE_VIBRATION2
-        elif self._haptica_de_audio:
-            # A-VIBRACAO-NAO-DESLIGA-A-HAPTICA-01 (03/10/2026): o HAPTICS_SELECT
-            # troca os atuadores para a vibração emulada e CALA a háptica por
-            # áudio até o bit cair (hid-playstation, SDL, pydualsense). Com a
-            # háptica tocando, o rumble vai só com COMPATIBLE_VIBRATION.
-            flag0 &= ~rep.VALID_FLAG0_HAPTICS_SELECT
+        else:
+            # O-CONTROLE-VIBRA-NO-MODO-DO-FIRMWARE-DELE-01: o modo da vibração é
+            # o que o firmware do controle entende, o mesmo que o kernel pede
+            # (`hid-playstation.c`, `dualsense_output_worker`): na v2 o bit é o
+            # `COMPATIBLE_VIBRATION2` do flag2 e o `COMPATIBLE_VIBRATION` do
+            # flag0 cai; na v1 é o de hoje. O byte do motor sai cheio nas duas.
+            if self._vibracao_v2:
+                flag0 &= ~rep.VALID_FLAG0_COMPATIBLE_VIBRATION
+                flag2 |= rep.VALID_FLAG2_COMPATIBLE_VIBRATION2
+            if self._haptica_de_audio:
+                # A-VIBRACAO-NAO-DESLIGA-A-HAPTICA-01 (03/10/2026): o
+                # HAPTICS_SELECT troca os atuadores para a vibração emulada e
+                # CALA a háptica por áudio até o bit cair (hid-playstation, SDL,
+                # pydualsense). Com a háptica tocando, o rumble vai sem ele.
+                flag0 &= ~rep.VALID_FLAG0_HAPTICS_SELECT
         if suppress_leds:
             flag1 &= ~(
                 rep.VALID_FLAG1_LIGHTBAR_CONTROL_ENABLE
@@ -1773,6 +1834,12 @@ class PyDualSenseController(IController):
         # acima: a troca de nó (rádio para cabo) e a reconexão RECRIAM o
         # handle, e o dono das pontes só diz a borda.
         self._haptica_de_audio_por_uniq: set[str] = set()
+        # O-CONTROLE-VIBRA-NO-MODO-DO-FIRMWARE-DELE-01: o `update_version` que
+        # cada controle disse na conexão (feature 0x20), por MAC. None = a
+        # leitura falhou ou o CRC do rádio não fechou: o DualSense comum fica
+        # na v1. Guardado aqui, e não só no handle, porque a troca de nó e a
+        # reconexão RECRIAM o handle e o firmware é do controle, não do nó.
+        self._firmware_por_uniq: dict[str, int | None] = {}
         # R-20 item 2: escala de brilho POR CONTROLE, aplicada à BASE do merge.
         # Um override que só mexia no brilho materializava a cor GLOBAL no
         # slot por-uniq (`_controllers_to_specs` resolvia `lightbar` do global
@@ -1874,41 +1941,102 @@ class PyDualSenseController(IController):
         aceitar: uma calibração corrompida carimbada no vpad quebraria o
         motion inteiro, não só o drift.
         """
+        with self._io_lock:
+            key = self._primary_key if uniq is None else self._key_for_uniq(uniq)
+        if key is None:
+            return None
+        return self._ler_a_feature(
+            key, _CALIBRATION_FEATURE_ID, _CALIBRATION_FEATURE_SIZE, "calibration"
+        )
+
+    def _ler_a_feature(
+        self, key: str, feature_id: int, size: int, rotulo: str
+    ) -> bytes | None:
+        """Uma feature do controle `key` pelo hidraw dele, ou None (fail-safe).
+
+        O dono único da leitura: a calibração (0x05) e o firmware (0x20) passam
+        por aqui, com o mesmo fd efêmero, o mesmo opener do broker e a mesma
+        conferência — o tamanho, o id e, no rádio, o CRC-32 dos 4 últimos bytes.
+        """
         from hefesto_dualsense4unix.core.ds_output_report import (
             BT_FEATURE_CRC_SEED,
             bt_crc32,
         )
 
         with self._io_lock:
-            key = self._primary_key if uniq is None else self._key_for_uniq(uniq)
-            handle = self._handles.get(key) if key is not None else None
+            handle = self._handles.get(key)
             if handle is None:
                 return None
             transporte = self._detect_transport(handle)
-            path = self.hidraw_path(uniq)
-            if path is None:
+            caminho = getattr(handle, "_pinned_path", None)
+            if not isinstance(caminho, bytes):
+                return None
+            path = caminho.decode("utf-8", "replace")
+            if not path.startswith("/dev/hidraw"):
                 return None
             try:
                 data = _read_feature_via_hidraw(
                     path,
-                    _CALIBRATION_FEATURE_ID,
-                    _CALIBRATION_FEATURE_SIZE,
+                    feature_id,
+                    size,
                     opener=self._feature_opener,
                 )
             except OSError as exc:
-                logger.info("calibration_read_failed", key=key, err=str(exc))
+                logger.info(f"{rotulo}_read_failed", key=key, err=str(exc))
                 return None
-        if len(data) != _CALIBRATION_FEATURE_SIZE or data[0] != _CALIBRATION_FEATURE_ID:
-            logger.warning(
-                "calibration_report_invalido", key=key, tamanho=len(data)
-            )
+        if len(data) != size or data[0] != feature_id:
+            logger.warning(f"{rotulo}_report_invalido", key=key, tamanho=len(data))
             return None
         if transporte == "bt":
             crc = int.from_bytes(data[-4:], "little")
             if bt_crc32(data[:-4], seed=BT_FEATURE_CRC_SEED) != crc:
-                logger.warning("calibration_crc_invalido", key=key)
+                logger.warning(f"{rotulo}_crc_invalido", key=key)
                 return None
         return data
+
+    def read_update_version(self, uniq: str | None = None) -> int | None:
+        """O `update_version` do firmware do controle `uniq` (None = primário).
+
+        Lê a feature 0x20 pelo mesmo caminho da calibração e devolve o u16 LE
+        do byte 44. Qualquer falha (leitura, tamanho, CRC do rádio) devolve None.
+        """
+        with self._io_lock:
+            key = self._primary_key if uniq is None else self._key_for_uniq(uniq)
+        if key is None:
+            return None
+        return versao_do_firmware(
+            self._ler_a_feature(
+                key, _FIRMWARE_FEATURE_ID, _FIRMWARE_FEATURE_SIZE, "firmware"
+            )
+        )
+
+    def _conhecer_o_firmware(self, key: str, handle: pydualsense) -> None:
+        """Na conexão: lê o firmware do controle e põe o handle no modo dele.
+
+        O-CONTROLE-VIBRA-NO-MODO-DO-FIRMWARE-DELE-01. Chamado para todo handle
+        novo (a conexão, a reconexão, a troca de nó), fora do `_io_lock`.
+        """
+        uniq = self._key_to_uniq(key)
+        versao = versao_do_firmware(
+            self._ler_a_feature(
+                key, _FIRMWARE_FEATURE_ID, _FIRMWARE_FEATURE_SIZE, "firmware"
+            )
+        )
+        edge = bool(getattr(handle, "is_edge", False))
+        v2 = fala_a_vibracao_v2(versao, edge=edge)
+        if uniq is not None:
+            with self._io_lock:
+                self._firmware_por_uniq[uniq] = versao
+        definir = getattr(handle, "set_vibracao_v2", None)
+        if callable(definir):
+            definir(v2)
+        logger.info(
+            "firmware_do_controle_lido",
+            uniq=_endereco_mascarado(uniq),
+            update_version=None if versao is None else f"0x{versao:04x}",
+            edge=edge,
+            vibracao="v2" if v2 else "v1",
+        )
 
     @property
     def primary_uniq(self) -> str | None:
@@ -2777,6 +2905,8 @@ class PyDualSenseController(IController):
         for key, handle in new_handles:
             with contextlib.suppress(Exception):
                 self.assumir_volume_padrao_na_adocao(key, handle)
+            with contextlib.suppress(Exception):
+                self._conhecer_o_firmware(key, handle)
             self._reapply_desired(key, handle)
         # acabaram de surgir. Sintoma provado ao vivo: boot com os DualSense
         self.reassert_resolved_outputs()
