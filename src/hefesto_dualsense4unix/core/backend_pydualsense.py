@@ -2652,7 +2652,7 @@ class PyDualSenseController(IController):
 
         Existe porque `get_output_target_index/uniq` mascaram esse estado e o `_handle_rumble_set`
         precisa recusar com `MOTIVO_ALVO_FORA_DA_MESA` antes de `set_rumble`, no molde da
-        NATIVO-RUMBLE-01 (BROADCAST-PROIBIDO-01, Z3-5; redação provisória, a validar por ela).
+        NATIVO-RUMBLE-01 (BROADCAST-PROIBIDO-01, Z3-5; redação provisória, a validar pelo usuário).
         Led/gatilho/player guardam o valor no override por-uniq e respondem `"registrado"`
         (MESA-CHEIA-09).
         """
@@ -4857,7 +4857,7 @@ class PyDualSenseController(IController):
 
     @staticmethod
     def _read_battery_opt(ds: pydualsense) -> int | None:
-        """Bateria 0-100 de UM handle, ou None quando indisponível (BATERIA-QUE-PULA-01).
+        """Bateria 0-100 de UM handle, ou None quando indisponível (BATERIA-QUE-PULA-01, 16/09/2026).
 
         Só getattrs no `DSBattery` (sem HID I/O; seguro fora do `_io_lock`). `Level` nasce 0, então
         0 é «ninguém reportou»: devolve None, nunca «0%» na reconexão (um DualSense real reporta ao
