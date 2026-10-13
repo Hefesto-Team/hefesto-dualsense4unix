@@ -159,3 +159,20 @@ def test_o_arquivo_ausente_e_o_comeco_limpo_sem_aviso(casa: Path) -> None:
     assert _guardados(casa) == []
     novo = json.loads(_arquivo(casa).read_text(encoding="utf-8"))
     assert [e[IDENTITY_FIELD] for e in novo[MASKS_FIELD]] == ["aabbcc000003"]
+
+
+def test_o_ilegivel_guardado_e_memoria_de_controle_que_o_esquecer_leva(casa: Path) -> None:
+    """A cópia guarda os endereços dos controles: o «esquecer» tem de achá-la."""
+    from fnmatch import fnmatch
+
+    from hefesto_dualsense4unix.utils import memoria_dos_controles as m
+
+    casa.mkdir(parents=True, exist_ok=True)
+    _arquivo(casa).write_text('{"version": 1, "masks": [{"identity": "aabbcc0000', encoding="utf-8")
+    _a_escolha_seguinte(casa)
+    (guardado,) = _guardados(casa)
+
+    relativo = f"{m.SLUG}/{guardado.name}"
+    donos = [lg for lg in m.lugares(m.CONTROLES) if fnmatch(relativo, lg.caminho)]
+    assert donos, f"«{relativo}» guarda endereço de controle e não está no inventário"
+    assert all(lg.raiz == "config" and lg.ato == m.MOVER for lg in donos)

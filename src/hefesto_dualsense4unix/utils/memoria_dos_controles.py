@@ -234,6 +234,12 @@ INVENTARIO: tuple[Lugar, ...] = (
         "a máscara escolhida para cada controle externo, por endereço",
     ),
     Lugar(
+        "mascaras-ilegiveis", "config", f"{_C}/controller_masks.json.ilegivel-*",
+        "daemon/subsystems/external_mask.py:SUFIXO_DO_ILEGIVEL",
+        USUARIO, CONTROLES, MOVER,
+        "os bytes do controller_masks.json que não se leram, guardados antes da escrita",
+    ),
+    Lugar(
         "declaracao-da-mesa", "config", f"{_C}/maquina.json",
         "utils/maquina.py:_MAQUINA_FILE",
         USUARIO, CONTROLES, MOVER,
