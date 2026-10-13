@@ -170,16 +170,12 @@ python3Packages.buildPythonApplication rec {
   postInstall = ''
     # Udev rules.
     #
-    # O-NO-NASCE-FECHADO-01 (auditoria de 20/09/2026, bloqueante 3): a regra do
-    # no (a 73-hefesto, que era a 70 ate 25/09/2026) vai
-    # para o diretorio VIVO na variante ABERTA, e nao e opiniao — e a unica
-    # metade da cura que este pacote consegue entregar. O asset versionado
-    # fecha o no do DualSense (TAG-="uaccess", 0600 root) contando que o broker
-    # o abra sob pedido; e o broker e um servico de SISTEMA instalado fora
-    # desta derivacao. Gravar o asset fechado aqui deixaria o DualSense
-    # inutilizavel — e o produto e para qualquer usuario (ordem dela,
-    # 11/09/2026).
-    bash scripts/regra_do_no_aberta.sh assets/73-hefesto-ps5-controller.rules \
+    # O-BROKER-SERVE-QUEM-ESTA-NA-FRENTE-01: a regra do no (a 73-hefesto) vai
+    # FECHADA (TAG-="uaccess", 0600 root) para o diretorio VIVO, porque esta
+    # derivacao leva o broker junto (mais abaixo, como unit de sistema sem uid
+    # nem grupo por maquina) e o modulo NixOS o liga. As duas metades da cura
+    # saem juntas. (Ate 13/10/2026 a variante era a ABERTA, por falta do broker.)
+    install -Dm644 assets/73-hefesto-ps5-controller.rules \
         $out/lib/udev/rules.d/73-hefesto-ps5-controller.rules
     install -Dm644 assets/71-uinput.rules \
         $out/lib/udev/rules.d/71-uinput.rules
@@ -253,6 +249,19 @@ python3Packages.buildPythonApplication rec {
     substituteInPlace $out/lib/systemd/system/hefesto-bt-bonds-snapshot.service \
         --replace-fail /usr/local/lib/hefesto-dualsense4unix \
                        $out/libexec/hefesto-dualsense4unix
+    # O BROKER ROOT (BROKER-01; O-BROKER-SERVE-QUEM-ESTA-NA-FRENTE-01). Atende
+    # quem esta na frente do seat, perguntando ao logind: a unit nao tem uid nem
+    # grupo por maquina. O binario mora no $out, com o python do store no
+    # shebang, e o `loginctl` e o do store (o NixOS nao tem /usr/bin/loginctl).
+    install -Dm755 src/hefesto_dualsense4unix/broker/hidraw_broker.py \
+        $out/libexec/hefesto-dualsense4unix/hefesto-hidraw-broker
+    substituteInPlace $out/libexec/hefesto-dualsense4unix/hefesto-hidraw-broker \
+        --replace-fail "#!/usr/bin/env python3" "#!${python3Packages.python.interpreter}"
+    bash scripts/broker_do_pacote.sh $out/lib/systemd/system \
+        $out/libexec/hefesto-dualsense4unix/hefesto-hidraw-broker
+    sed -i "/^Environment=HEFESTO_BROKER_NO_NASCE_FECHADO=1/a Environment=HEFESTO_BROKER_LOGINCTL=${systemd}/bin/loginctl" \
+        $out/lib/systemd/system/hefesto-hidraw-broker.service
+    grep -q "^Environment=HEFESTO_BROKER_LOGINCTL=" $out/lib/systemd/system/hefesto-hidraw-broker.service
     # O udev e o systemd rodam o alvo com o PATH deles, que não tem `find`,
     # `flock` nem `logger`: o wrapper entrega o que o script chama.
     wrapProgram $out/libexec/hefesto-dualsense4unix/bt_nosniff_now.sh \

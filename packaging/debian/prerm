@@ -50,11 +50,19 @@ case "$1" in
         if command -v systemctl >/dev/null 2>&1 \
                 && { systemctl is-enabled hefesto-hidraw-broker.socket >/dev/null 2>&1 \
                      || systemctl is-active hefesto-hidraw-broker.service >/dev/null 2>&1 \
-                     || [ -e /etc/systemd/system/hefesto-hidraw-broker.socket ]; }; then
+                     || [ -e /etc/systemd/system/hefesto-hidraw-broker.socket ] \
+                     || [ -e /usr/lib/systemd/system/hefesto-hidraw-broker.socket ]; }; then
             systemctl disable --now hefesto-hidraw-broker.socket \
                 hefesto-hidraw-broker.service 2>/dev/null || true
             if [ -x /usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker ]; then
                 /usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker \
+                    --restore-all-and-exit 2>/dev/null || true
+            fi
+            # O broker do pacote (O-BROKER-SERVE-QUEM-ESTA-NA-FRENTE-01): o
+            # dpkg apaga o binário e as units depois, e o restore tem de rodar
+            # antes.
+            if [ -x /usr/lib/hefesto-dualsense4unix/hefesto-hidraw-broker ]; then
+                /usr/lib/hefesto-dualsense4unix/hefesto-hidraw-broker \
                     --restore-all-and-exit 2>/dev/null || true
             fi
             rm -f /etc/systemd/system/hefesto-hidraw-broker.service \

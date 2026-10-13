@@ -20,6 +20,29 @@ case "$1" in
             fi
         fi
 
+        # BROKER-01 (O-BROKER-SERVE-QUEM-ESTA-NA-FRENTE-01): o broker root vem
+        # no pacote (/usr/lib/systemd/system, sem uid nem grupo por máquina: ele
+        # atende quem está na frente do seat, perguntando ao logind), e a regra
+        # do nó vai FECHADA. As duas metades da cura saem juntas.
+        # A unit que o helper renderizava antes, com o uid GRAVADO, ficou em
+        # /etc e vence a do pacote: sai, porque o broker novo não precisa dela.
+        for _u in service socket; do
+            if grep -qs '^Environment=HEFESTO_BROKER_ALLOWED_UID=' \
+                    "/etc/systemd/system/hefesto-hidraw-broker.${_u}"; then
+                rm -f "/etc/systemd/system/hefesto-hidraw-broker.${_u}"
+            fi
+        done
+        if command -v systemctl >/dev/null 2>&1; then
+            systemctl enable hefesto-hidraw-broker.socket \
+                hefesto-hidraw-broker.service >/dev/null 2>&1 || true
+            # Sem systemd rodando (chroot, contêiner) o enable acima basta: o
+            # broker sobe no próximo boot.
+            if [ -d /run/systemd/system ]; then
+                systemctl daemon-reload || true
+                systemctl start hefesto-hidraw-broker.socket || true
+            fi
+        fi
+
         # Reload das regras udev para DualSense
         if command -v udevadm >/dev/null 2>&1; then
             udevadm control --reload-rules
@@ -47,12 +70,12 @@ case "$1" in
         echo "Para habilitar o inicio automatico do daemon:"
         echo "  systemctl --user enable --now hefesto-dualsense4unix.service"
         echo ""
-        echo "Broker root hide-hidraw (BROKER-01 — esconde o controle FISICO do"
-        echo "jogo, cura de raiz do duplicado; o postinst roda sem sessao e NAO"
-        echo "pode renderizar o uid — ative da SUA sessao de usuario) e os modulos"
-        echo "DKMS patchados hid-nintendo (Onda T — cura de raiz do probe BT dos"
-        echo "controles Nintendo/8BitDo) e rtw88_usb (Onda W — cura de raiz do"
-        echo "fantasma USB do dongle WiFi; ambos requerem os pacotes dkms + headers):"
+        echo "O broker root hide-hidraw (BROKER-01 — esconde o controle FISICO do"
+        echo "jogo, cura de raiz do duplicado) ja foi ligado: ele atende quem esta"
+        echo "na frente do computador. Os modulos DKMS patchados hid-nintendo (Onda T"
+        echo "— cura de raiz do probe BT dos controles Nintendo/8BitDo) e rtw88_usb"
+        echo "(Onda W — cura de raiz do fantasma USB do dongle WiFi; ambos requerem"
+        echo "os pacotes dkms + headers) saem deste helper:"
         echo "  sudo /usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh"
         echo ""
         echo "Ou abra 'Hefesto' no menu de aplicativos."

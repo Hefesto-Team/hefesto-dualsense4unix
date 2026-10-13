@@ -182,20 +182,12 @@ UDEV_RULES_GLOBS=(
 for rules_file in "${UDEV_RULES_GLOBS[@]}"; do
     [ -f "$rules_file" ] && cp "$rules_file" "${STAGING}/usr/lib/udev/rules.d/"
 done
-# O-NO-NASCE-FECHADO-01 (auditoria de 20/09/2026, bloqueante 3). O laço acima
-# acabou de copiar a regra do nó FECHADA (a 73-hefesto, que era a 70 até
-# 25/09/2026) para o diretório VIVO — e o .deb NÃO instala o
-# broker (o `postinst` roda sem sessão e não pode renderizar o uid; quem
-# instala o broker é o `install-host-udev.sh`, DEPOIS, à mão). Um `apt install`
-# que fecha o nó sem pôr ninguém para abri-lo entrega um DualSense
-# INUTILIZÁVEL, e o produto é para qualquer usuário (ordem, 11/09/2026).
-#
-# Então o diretório VIVO leva a variante ABERTA, sobrescrevendo o que o laço
-# copiou. O ESPELHO de /usr/share (mais abaixo) continua com o asset FECHADO
-# de propósito: ele não é lido pelo udev — é a FONTE do helper, que grava em
-# /etc/udev/rules.d/ (que vence /usr/lib) quando o broker entra junto.
-bash scripts/regra_do_no_aberta.sh assets/73-hefesto-ps5-controller.rules \
-    "${STAGING}/usr/lib/udev/rules.d/73-hefesto-ps5-controller.rules"
+# O-BROKER-SERVE-QUEM-ESTA-NA-FRENTE-01: o laço acima copia a regra do nó
+# FECHADA (a 73-hefesto) para o diretório VIVO e é assim que ela fica, porque
+# este .deb leva o broker junto (mais abaixo): a unit não tem uid nem grupo
+# por máquina, então o `postinst` consegue ligá-la sem sessão. As duas metades
+# da cura viajam juntas. (Até 13/10/2026 o diretório vivo levava a variante
+# ABERTA, por falta do broker.)
 
 # v3.3.1: bundla install-host-udev.sh em /usr/share para re-aplicar regras
 # manualmente fora do apt install (ex: usuário renomeou /etc/udev/rules.d/
@@ -401,14 +393,18 @@ for rules_file in "${UDEV_RULES_GLOBS[@]}"; do
         "${STAGING}/usr/share/hefesto-dualsense4unix/udev-rules/$(basename "$rules_file")"
 done
 # ---------------------------------------------------------------------------
-# BROKER-01 (Onda S — fd-injection): binário standalone + units-template
+# BROKER-01 (Onda S — fd-injection): o broker como unit de SISTEMA do pacote
 # ---------------------------------------------------------------------------
-# O binário (stdlib pura) e as units NÃO ativam sozinhos aqui — postinst do
-# .deb roda sem sessão (SUDO_UID ausente ⇒ renderizaria uid 0, PROIBIDO —
-# lição 6). Só empacota; a ATIVAÇÃO (render __SESSION_UID__/__SESSION_GROUP__
-# + enable --now do .socket) é o mesmo helper install-host-udev.sh já
-# bundlado acima — rode-o depois do apt install para ligar o broker.
+# O broker atende quem está na frente do seat (pergunta ao logind), então a
+# unit não leva uid nem grupo e o .deb a entrega pronta, com o binário em
+# /usr/lib e a regra do nó fechada (O-BROKER-SERVE-QUEM-ESTA-NA-FRENTE-01). O
+# `postinst` a liga. Os modelos em /usr/share seguem para o helper
+# install-host-udev.sh, que reinstala por cima quando alguém o roda.
 echo "Copiando broker root hide-hidraw (hefesto-hidraw-broker) ..."
+install -Dm755 src/hefesto_dualsense4unix/broker/hidraw_broker.py \
+    "${STAGING}/usr/lib/hefesto-dualsense4unix/hefesto-hidraw-broker"
+bash scripts/broker_do_pacote.sh "${STAGING}/usr/lib/systemd/system" \
+    /usr/lib/hefesto-dualsense4unix/hefesto-hidraw-broker
 mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/broker"
 install -Dm644 src/hefesto_dualsense4unix/broker/hidraw_broker.py \
     "${STAGING}/usr/share/hefesto-dualsense4unix/broker/hidraw_broker.py"
@@ -568,7 +564,8 @@ echo ""
 echo "Para instalar localmente:"
 echo "  sudo apt install ./${OUTPUT_DEB}"
 echo ""
-echo "Broker root hide-hidraw (BROKER-01) — ative depois do apt install:"
+echo "Broker root hide-hidraw (BROKER-01) — o postinst o liga sozinho."
+echo "Módulos DKMS (precisam de dkms e dos headers do kernel) — depois do apt install:"
 echo "  sudo /usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh"
 echo ""
 echo "Para verificar conteúdo:"

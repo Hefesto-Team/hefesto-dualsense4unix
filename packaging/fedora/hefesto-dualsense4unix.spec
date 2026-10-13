@@ -167,20 +167,13 @@ install -Dm644 assets/simbolico/hefesto-dualsense4unix-symbolic.svg \
 # As 82/83/84 (no-sniff do Pro, snapshot de bond, variante do clone 8BitDo)
 # faltavam aqui: o install-host-udev.sh exige TODAS as 14 no pre-flight.
 #
-# O-NO-NASCE-FECHADO-01 (auditoria de 20/09/2026, bloqueante 3): a regra do nó
-# (a 73-hefesto, que era a 70 até 25/09/2026) vai para
-# o diretório VIVO na variante ABERTA, e não é opinião — é a única metade da
-# cura que este pacote consegue entregar. O asset versionado fecha o nó do
-# DualSense (TAG-="uaccess", 0600 root) contando que o broker o abra sob
-# pedido; e o broker é instalado FORA do manifesto do rpm (o
-# install-host-udev.sh, abaixo, precisa do uid da SESSAO e o %%post roda sem
-# ela). Gravar o asset fechado aqui deixaria o DualSense inutilizavel no
-# `dnf install` ate alguem rodar o helper a mao — e o produto e para qualquer
-# usuario (ordem dela, 11/09/2026). Quando o helper roda e o broker entra, ele
-# grava a variante FECHADA em /etc/udev/rules.d/, que VENCE o %{_udevrulesdir}.
-bash scripts/regra_do_no_aberta.sh assets/73-hefesto-ps5-controller.rules \
-    %{buildroot}%{_udevrulesdir}/73-hefesto-ps5-controller.rules
+# O-BROKER-SERVE-QUEM-ESTA-NA-FRENTE-01: a regra do no (a 73-hefesto) vai
+# FECHADA (TAG-="uaccess", 0600 root) para o diretorio VIVO, porque este rpm
+# leva o broker junto (mais abaixo, como unit de sistema sem uid nem grupo por
+# maquina) e o %%post o liga. As duas metades da cura saem juntas. (Ate
+# 13/10/2026 a variante era a ABERTA, por falta do broker.)
 install -Dm644 -t %{buildroot}%{_udevrulesdir} \
+    assets/73-hefesto-ps5-controller.rules \
     assets/71-uhid.rules \
     assets/71-uinput.rules \
     assets/72-ps5-controller-autosuspend.rules \
@@ -260,10 +253,15 @@ fi
 install -Dm755 scripts/install-host-udev.sh \
     %{buildroot}%{_datadir}/%{app_id}/scripts/install-host-udev.sh
 
-# BROKER-01 (Onda S — fd-injection): binario standalone + units-template do
-# broker root hide-hidraw. NAO ativa sozinho aqui — %post roda sem sessao de
-# usuario (renderizaria uid 0, PROIBIDO — licao 6). O install-host-udev.sh
-# acima (ja empacotado) e o caminho de ATIVACAO pos-instalacao.
+# BROKER-01 (Onda S — fd-injection): o broker root hide-hidraw como unit de
+# SISTEMA do rpm (O-BROKER-SERVE-QUEM-ESTA-NA-FRENTE-01). Ele atende quem esta
+# na frente do seat, perguntando ao logind, entao a unit nao tem uid nem grupo
+# por maquina e o %%post a liga. Os modelos em %{_datadir} seguem para o
+# install-host-udev.sh (modulos DKMS e o resto).
+install -Dm755 src/hefesto_dualsense4unix/broker/hidraw_broker.py \
+    %{buildroot}/usr/lib/%{app_id}/hefesto-hidraw-broker
+bash scripts/broker_do_pacote.sh %{buildroot}%{_unitdir} \
+    /usr/lib/%{app_id}/hefesto-hidraw-broker
 install -Dm644 src/hefesto_dualsense4unix/broker/hidraw_broker.py \
     %{buildroot}%{_datadir}/%{app_id}/broker/hidraw_broker.py
 install -Dm644 -t %{buildroot}%{_datadir}/%{app_id}/systemd/ \
@@ -349,17 +347,33 @@ if [ -e /etc/udev/rules.d/70-ps5-controller.rules ]; then
             /etc/udev/rules.d/73-hefesto-ps5-controller.rules
     fi
 fi
+# BROKER-01: a unit que o helper renderizava antes, com o uid GRAVADO, ficou em
+# /etc e vence a do rpm: sai, porque o broker novo nao precisa dela.
+for _u in service socket; do
+    if grep -qs '^Environment=HEFESTO_BROKER_ALLOWED_UID=' \
+            "/etc/systemd/system/hefesto-hidraw-broker.${_u}"; then
+        rm -f "/etc/systemd/system/hefesto-hidraw-broker.${_u}"
+    fi
+done
+/usr/bin/systemctl enable hefesto-hidraw-broker.socket \
+    hefesto-hidraw-broker.service >/dev/null 2>&1 || :
+# Sem systemd rodando (chroot, conteiner) o enable acima basta: o broker sobe no
+# proximo boot.
+if [ -d /run/systemd/system ]; then
+    /usr/bin/systemctl daemon-reload >/dev/null 2>&1 || :
+    /usr/bin/systemctl start hefesto-hidraw-broker.socket >/dev/null 2>&1 || :
+fi
 # Recarrega udev rules + carrega uinput. Idempotente.
 /usr/sbin/udevadm control --reload-rules || :
 /usr/sbin/udevadm trigger || :
 /usr/sbin/modprobe uinput 2>/dev/null || :
 
 cat <<MSG
-Broker root hide-hidraw (BROKER-01 — esconde o controle FISICO do jogo,
-cura de raiz do duplicado; requer sessao de usuario, NUNCA root puro) e
-modulos DKMS patchados hid-nintendo (Onda T — cura de raiz do probe BT dos
-controles Nintendo/8BitDo) e rtw88_usb (Onda W — cura de raiz do fantasma
-USB do dongle WiFi; requer dkms + kernel-devel):
+O broker root hide-hidraw (BROKER-01 — esconde o controle FISICO do jogo, cura
+de raiz do duplicado) ja foi ligado: ele atende quem esta na frente do
+computador. Os modulos DKMS patchados hid-nintendo (Onda T — cura de raiz do
+probe BT dos controles Nintendo/8BitDo) e rtw88_usb (Onda W — cura de raiz do
+fantasma USB do dongle WiFi; requer dkms + kernel-devel) saem deste helper:
   sudo %{_datadir}/%{app_id}/scripts/install-host-udev.sh
 MSG
 
@@ -383,6 +397,11 @@ if [ $1 -eq 0 ]; then
         hefesto-hidraw-broker.service >/dev/null 2>&1 || :
     if [ -x /usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker ]; then
         /usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker \
+            --restore-all-and-exit >/dev/null 2>&1 || :
+    fi
+    # O broker do rpm: o rpm apaga o binario e as units depois do %%preun.
+    if [ -x /usr/lib/%{app_id}/hefesto-hidraw-broker ]; then
+        /usr/lib/%{app_id}/hefesto-hidraw-broker \
             --restore-all-and-exit >/dev/null 2>&1 || :
     fi
     rm -f /etc/systemd/system/hefesto-hidraw-broker.service \
@@ -517,6 +536,9 @@ fi
 %{_datadir}/%{app_id}/dkms/hid-playstation/
 %{_datadir}/%{app_id}/dkms/rtw88-usb/
 %{_datadir}/%{app_id}/broker/hidraw_broker.py
+/usr/lib/%{app_id}/hefesto-hidraw-broker
+%{_unitdir}/hefesto-hidraw-broker.service
+%{_unitdir}/hefesto-hidraw-broker.socket
 %{_datadir}/%{app_id}/systemd/hefesto-hidraw-broker.service
 %{_datadir}/%{app_id}/systemd/hefesto-hidraw-broker.socket
 %{_datadir}/%{app_id}/scripts/bt_nosniff_now.sh

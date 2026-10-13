@@ -21,6 +21,26 @@ post_install() {
         fi
     fi
 
+    # BROKER-01 (O-BROKER-SERVE-QUEM-ESTA-NA-FRENTE-01): o broker root vem no
+    # pacote (/usr/lib/systemd/system, sem uid nem grupo por maquina: ele atende
+    # quem esta na frente do seat, perguntando ao logind), e a regra do no vai
+    # FECHADA. A unit que o helper renderizava antes, com o uid GRAVADO, ficou
+    # em /etc e vence a do pacote: sai, porque o broker novo nao precisa dela.
+    for _u in service socket; do
+        if grep -qs '^Environment=HEFESTO_BROKER_ALLOWED_UID=' \
+                "/etc/systemd/system/hefesto-hidraw-broker.${_u}"; then
+            rm -f "/etc/systemd/system/hefesto-hidraw-broker.${_u}"
+        fi
+    done
+    systemctl enable hefesto-hidraw-broker.socket \
+        hefesto-hidraw-broker.service >/dev/null 2>&1 || true
+    # Sem systemd rodando (chroot, conteiner) o enable acima basta: o broker
+    # sobe no proximo boot.
+    if [ -d /run/systemd/system ]; then
+        systemctl daemon-reload 2>/dev/null || true
+        systemctl start hefesto-hidraw-broker.socket 2>/dev/null || true
+    fi
+
     echo ">>> Recarregando udev rules para o DualSense..."
     udevadm control --reload-rules
     udevadm trigger
@@ -39,11 +59,12 @@ post_install() {
   Para a GUI:
     hefesto-dualsense4unix-gui
 
-  Broker root hide-hidraw (BROKER-01 — esconde o controle FISICO do jogo,
-  cura de raiz do duplicado; requer sessao de usuario, NUNCA root puro) e
-  modulos DKMS patchados hid-nintendo (Onda T — cura de raiz do probe BT
-  dos controles Nintendo/8BitDo) e rtw88_usb (Onda W — cura de raiz do
-  fantasma USB do dongle WiFi; requer dkms + linux-headers):
+  O broker root hide-hidraw (BROKER-01 — esconde o controle FISICO do jogo,
+  cura de raiz do duplicado) ja foi ligado: ele atende quem esta na frente
+  do computador. Os modulos DKMS patchados hid-nintendo (Onda T — cura de
+  raiz do probe BT dos controles Nintendo/8BitDo) e rtw88_usb (Onda W — cura
+  de raiz do fantasma USB do dongle WiFi; requer dkms + linux-headers) saem
+  deste helper:
     sudo /usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh
 
   Pacotes opcionais recomendados:
@@ -79,12 +100,18 @@ pre_remove() {
     # orfao); o belt explicito roda o MESMO restore ANTES de o pacman apagar
     # o binario (a ordem do pacman remove os arquivos DEPOIS de pre_remove).
     if systemctl is-enabled hefesto-hidraw-broker.socket >/dev/null 2>&1 \
-            || systemctl is-active hefesto-hidraw-broker.service >/dev/null 2>&1; then
+            || systemctl is-active hefesto-hidraw-broker.service >/dev/null 2>&1 \
+            || [ -e /usr/lib/systemd/system/hefesto-hidraw-broker.socket ]; then
         echo ">>> Desabilitando broker root hide-hidraw (hefesto-hidraw-broker)..."
         systemctl disable --now hefesto-hidraw-broker.socket hefesto-hidraw-broker.service \
             2>/dev/null || true
         if [ -x /usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker ]; then
             /usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker --restore-all-and-exit \
+                2>/dev/null || true
+        fi
+        # O broker do pacote: o pacman apaga o binario e as units depois.
+        if [ -x /usr/lib/hefesto-dualsense4unix/hefesto-hidraw-broker ]; then
+            /usr/lib/hefesto-dualsense4unix/hefesto-hidraw-broker --restore-all-and-exit \
                 2>/dev/null || true
         fi
         rm -f /etc/systemd/system/hefesto-hidraw-broker.service \

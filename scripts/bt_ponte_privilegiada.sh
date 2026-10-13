@@ -101,8 +101,8 @@
 #                                             (STORM-USB-02). Sem dado: quem
 #                                             escolhe é o /sys, pelas guardas do
 #                                             bt_rebind_orphans.sh
-#   regra-sudo <USUARIA>  —                   imprime o /etc/sudoers.d (não
-#                                             instala)
+#   regra-sudo <USUARIA|%GRUPO> — imprime o /etc/sudoers.d (não instala; o
+#                                             install passa %hefesto)
 #
 # Os verbos sem dado não leem o stdin: quem os chama (o watchdog, o
 # storm_watch, o install) não fecha o stdin, e um verbo que o esperasse ficaria
@@ -307,7 +307,7 @@ uso: bt_ponte_privilegiada.sh <verbo> [segundos]   (os dados vêm pelo STDIN)
   desconectar        MAC do adaptador, MAC do controle
   reiniciar-travado  —
   religar-orfaos     —
-  regra-sudo <USUARIA>
+  regra-sudo <USUARIA|%GRUPO>
 
   exemplo: printf '%s\n%s\n' <adaptador> <controle> | sudo bt_ponte_privilegiada.sh esquecer
 
@@ -366,6 +366,21 @@ _usuaria() {
     [[ "${valor}" != "ALL" ]] \
         || _recusar "'ALL' é palavra reservada do sudoers (concederia a TODO MUNDO), não um nome de usuária"
     VALIDADO="${valor}"
+}
+
+#: Quem a regra do sudoers abre: uma conta (`fulana`) ou um grupo (`%hefesto`).
+#: O install passa o GRUPO: a regra por conta valia só para quem instalou, e a
+#: segunda conta da máquina ficava sem a ponte (O-BROKER-SERVE-QUEM-ESTA-NA-
+#: FRENTE-01). O nome depois do `%` passa pela MESMA faixa e pela mesma recusa
+#: do `ALL`, e o `%` sozinho não é nome.
+_principal_do_sudoers() {
+    local valor="${1:-}"
+    if [[ "${valor}" == %* ]]; then
+        _usuaria "${valor#%}"
+        VALIDADO="%${VALIDADO}"
+        return 0
+    fi
+    _usuaria "${valor}"
 }
 
 #: O endereço de um aparelho, pela próxima linha do stdin (contenção 1). As
@@ -1341,7 +1356,7 @@ case "${VERBO}" in
         ;;
     regra-sudo)
         [[ $# -eq 1 ]] || _recusar "regra-sudo recebe exatamente 1 argumento (nome da usuária)"
-        _usuaria "${1}"; ARG_USUARIA="${VALIDADO}"
+        _principal_do_sudoers "${1}"; ARG_USUARIA="${VALIDADO}"
         verbo_regra_sudo "${ARG_USUARIA}"
         ;;
     ajuda|--help|-h)

@@ -1308,9 +1308,9 @@ _ensaio_camada() {
             fi
             _faria_root "instalar o broker em /usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker"
             if [[ "${ABRIR_O_NO:-0}" -eq 1 ]]; then
-                _faria_root "instalar /etc/systemd/system/hefesto-hidraw-broker.service e .socket (renderizados com o seu uid e grupo, sabendo que o nó nasce ABERTO: --no-fechar-o-no)"
+                _faria_root "instalar /etc/systemd/system/hefesto-hidraw-broker.service e .socket (sem uid nem grupo por máquina; o nó nasce ABERTO: --no-fechar-o-no)"
             else
-                _faria_root "instalar /etc/systemd/system/hefesto-hidraw-broker.service e .socket (renderizados com o seu uid e grupo)"
+                _faria_root "instalar /etc/systemd/system/hefesto-hidraw-broker.service e .socket (sem uid nem grupo por máquina: atende quem está na frente do computador)"
             fi
             _faria_root "systemctl daemon-reload e enable --now hefesto-hidraw-broker.socket"
             _faria "gravar o registro de posse em ${HOME}/.local/state/hefesto-dualsense4unix/broker-owner.conf"
@@ -1343,6 +1343,7 @@ _ensaio_camada() {
             ;;
         bt-ponte)
             _faria_root "instalar /usr/local/lib/hefesto-dualsense4unix/bt_ponte_privilegiada.sh"
+            _faria_root "pôr a sua conta no grupo hefesto (a regra do sudoers da ponte é do grupo, e não só sua)"
             _faria_root "gravar /etc/sudoers.d/49-hefesto-bt-ponte (0440 root:root) — CONFERIDO com 'visudo -c' antes; se não passar, nada é gravado"
             ;;
         placa)

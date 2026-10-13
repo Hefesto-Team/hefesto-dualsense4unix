@@ -1,9 +1,8 @@
 # hefesto-hidraw-broker.socket — ativação por socket do broker root (BROKER-01)
 #
-# Instalado pelo install.sh em /etc/systemd/system/ com o placeholder
-# __SESSION_GROUP__ renderizado (id -gn do dono da sessão). O systemd cria o
-# socket como root ANTES do serviço — elimina a corrida "daemon conecta antes
-# do broker subir".
+# Instalado pelo install.sh em /etc/systemd/system/, sem nada por máquina
+# (O-BROKER-SERVE-QUEM-ESTA-NA-FRENTE-01). O systemd cria o socket como root
+# ANTES do serviço — elimina a corrida "daemon conecta antes do broker subir".
 # instalado por hefesto-dualsense4unix (install.sh) — remoção: uninstall.sh
 #
 # A SOCKET UNIT é a DONA do diretório e do arquivo de socket (lição 4/#10 da
@@ -25,11 +24,13 @@ ListenStream=/run/hefesto-hidraw-broker/broker.sock
 # Accept=no: passa o socket de ESCUTA (fd 3) a UMA instância; o broker faz
 # accept() e mantém a conexão viva como lease de crash-restore (fail-safe EOF).
 Accept=no
-# DAC de primeira barreira: só o grupo da sessão alcança o socket. O
-# SO_PEERCRED (in-band) é a barreira AUTORITATIVA — a DAC é anti-DoS.
-SocketMode=0660
+# Qualquer conta alcança o socket: quem o broker ATENDE não é decidido pelo
+# modo do arquivo, e sim pelo SO_PEERCRED confrontado com a sessão ativa do
+# seat (logind) a cada conexão. Um grupo fixo deixaria de fora a segunda conta
+# da máquina, e o grupo da conta que instalou não é o dela.
+SocketMode=0666
 SocketUser=root
-SocketGroup=__SESSION_GROUP__
+SocketGroup=root
 # O diretório /run/hefesto-hidraw-broker precisa ser atravessável pela usuária.
 DirectoryMode=0755
 

@@ -283,21 +283,26 @@ class TestOsPacotesNaoFechamSemPorta:
         ],
         ids=["arch", "fedora", "nix", "deb"],
     )
-    def test_o_diretorio_vivo_do_pacote_recebe_a_variante_aberta(
+    def test_o_pacote_que_fecha_o_no_leva_o_broker_que_o_abre(
         self, receita: Path, diretorio_vivo: str
     ) -> None:
-        """A MORDIDA do bloqueante 3.
+        """A MORDIDA do bloqueante 3, na forma de hoje (13/10/2026).
 
-        Apague a chamada ao `regra_do_no_aberta.sh` de qualquer uma das quatro
-        receitas e ela volta a gravar o asset FECHADO no diretório que o udev
-        LÊ — sem instalar o broker, que mora fora do manifesto do pacote. O
+        Até então o pacote gravava a regra ABERTA, porque o broker precisava de
+        um uid que o pacote não conhecia. A unit do broker agora não tem uid
+        (atende quem está na frente do seat), e as quatro receitas levam a regra
+        FECHADA e o broker juntos. Apague a chamada ao `broker_do_pacote.sh` de
+        qualquer uma e ela volta a fechar o nó sem pôr ninguém para abri-lo: o
         DualSense nasce `0600 root` e ninguém o abre.
         """
         texto = receita.read_text(encoding="utf-8")
         assert diretorio_vivo in texto, "a receita mudou de destino"
-        assert "regra_do_no_aberta.sh" in texto, (
-            f"{receita.name} grava a regra do nó no diretório vivo sem passar pela "
-            "variante aberta — e o pacote não instala o broker"
+        assert "broker_do_pacote.sh" in texto, (
+            f"{receita.name} grava a regra do nó FECHADA no diretório vivo sem levar o "
+            "broker que a abre"
+        )
+        assert "bash scripts/regra_do_no_aberta.sh" not in texto, (
+            f"{receita.name} ainda grava a variante aberta no diretório vivo"
         )
 
     def test_o_helper_so_fecha_o_no_quando_instala_o_broker(self) -> None:

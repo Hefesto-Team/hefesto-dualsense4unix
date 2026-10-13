@@ -52,12 +52,11 @@ def _run_render(
     service_src: Path,
     socket_src: Path,
     out_dir: Path,
-    uid: str,
-    grupo: str,
+    fechado: str = "",
 ) -> subprocess.CompletedProcess[str]:
     script = (
         f"{render_fn_src}\n"
-        f'_render_broker_units "{service_src}" "{socket_src}" "{out_dir}" "{uid}" "{grupo}"\n'
+        f'_render_broker_units "{service_src}" "{socket_src}" "{out_dir}" "{fechado}"\n'
     )
     return subprocess.run(
         ["bash", "-c", script], capture_output=True, text=True, check=False
@@ -65,56 +64,52 @@ def _run_render(
 
 
 class TestRenderBrokerUnitsComportamental:
-    """Execução REAL de bash contra os assets de B1 — comportamento, não texto."""
+    """Execução REAL de bash contra os assets de B1 — comportamento, não texto.
 
-    def test_sed_produz_uid_e_grupo_reais(self, render_fn_src: str, tmp_path: Path) -> None:
-        if not SERVICE_ASSET.exists() or not SOCKET_ASSET.exists():
-            pytest.skip("assets/systemd/hefesto-hidraw-broker.{service,socket} ausentes (lote B1)")
-        result = _run_render(
-            render_fn_src, SERVICE_ASSET, SOCKET_ASSET, tmp_path, "1000", "usuaria"
-        )
+    O-BROKER-SERVE-QUEM-ESTA-NA-FRENTE-01: a unit não leva uid nem grupo; a única
+    troca por máquina é o `__NO_NASCE_FECHADO__`.
+    """
+
+    def test_o_render_nao_grava_uid_nem_grupo(self, render_fn_src: str, tmp_path: Path) -> None:
+        result = _run_render(render_fn_src, SERVICE_ASSET, SOCKET_ASSET, tmp_path)
         assert result.returncode == 0, result.stderr
 
         service_out = (tmp_path / "hefesto-hidraw-broker.service").read_text(encoding="utf-8")
         socket_out = (tmp_path / "hefesto-hidraw-broker.socket").read_text(encoding="utf-8")
 
-        assert "HEFESTO_BROKER_ALLOWED_UID=1000" in service_out
-        assert "SocketGroup=usuaria" in socket_out
+        assert "HEFESTO_BROKER_ALLOWED_UID" not in service_out
         assert "__SESSION_" not in service_out
         assert "__SESSION_" not in socket_out
+        assert "SocketGroup=root" in socket_out
+        assert "SocketMode=0666" in socket_out
 
-    def test_uid_e_grupo_nunca_cruzam(self, render_fn_src: str, tmp_path: Path) -> None:
-        """Placeholders são DISTINTOS por arquivo — uid nunca vaza pro"""
-        if not SERVICE_ASSET.exists() or not SOCKET_ASSET.exists():
-            pytest.skip("assets/systemd/hefesto-hidraw-broker.{service,socket} ausentes (lote B1)")
-        result = _run_render(
-            render_fn_src, SERVICE_ASSET, SOCKET_ASSET, tmp_path, "4242", "grupo-teste"
-        )
-        assert result.returncode == 0, result.stderr
-        service_out = (tmp_path / "hefesto-hidraw-broker.service").read_text(encoding="utf-8")
-        socket_out = (tmp_path / "hefesto-hidraw-broker.socket").read_text(encoding="utf-8")
-        assert "grupo-teste" not in service_out
-        assert "4242" not in socket_out
+    def test_o_no_nasce_fechado_e_a_unica_troca(self, render_fn_src: str, tmp_path: Path) -> None:
+        for argumento, esperado in (("", "1"), ("1", "1"), ("0", "0")):
+            saida = tmp_path / f"fechado-{argumento or 'padrão'}"
+            saida.mkdir()
+            result = _run_render(render_fn_src, SERVICE_ASSET, SOCKET_ASSET, saida, argumento)
+            assert result.returncode == 0, result.stderr
+            texto = (saida / "hefesto-hidraw-broker.service").read_text(encoding="utf-8")
+            assert f"Environment=HEFESTO_BROKER_NO_NASCE_FECHADO={esperado}\n" in texto
 
     def test_guarda_pos_render_pega_placeholder_sobrando(
         self, render_fn_src: str, tmp_path: Path
     ) -> None:
-        """Asset com o token ERRADO (typo/edição futura sem seguir o"""
+        """Asset com um token que o render não conhece (edição futura sem seguir o"""
         fake_service = tmp_path / "fake.service"
         fake_socket = tmp_path / "fake.socket"
         fake_service.write_text(
-            "Environment=HEFESTO_BROKER_ALLOWED_UID=__SESSION_UID_TYPO__\n",
-            encoding="utf-8",
+            "Environment=HEFESTO_BROKER_ALLOWED_UID=__SESSION_UID__\n", encoding="utf-8"
         )
-        fake_socket.write_text("SocketGroup=__SESSION_GROUP__\n", encoding="utf-8")
+        fake_socket.write_text("SocketGroup=root\n", encoding="utf-8")
         out_dir = tmp_path / "out"
         out_dir.mkdir()
 
-        result = _run_render(render_fn_src, fake_service, fake_socket, out_dir, "1000", "usuaria")
+        result = _run_render(render_fn_src, fake_service, fake_socket, out_dir)
         assert result.returncode == 1
 
         service_out = (out_dir / "hefesto-hidraw-broker.service").read_text(encoding="utf-8")
-        assert "__SESSION_UID_TYPO__" in service_out, "sed não deveria ter casado o token errado"
+        assert "__SESSION_UID__" in service_out, "o render não deveria preencher o uid de volta"
 
     def test_guarda_pega_service_ok_mas_socket_com_placeholder_sobrando(
         self, render_fn_src: str, tmp_path: Path
@@ -122,14 +117,12 @@ class TestRenderBrokerUnitsComportamental:
         """Um dos dois arquivos renderizar limpo não basta — a guarda olha"""
         fake_service = tmp_path / "fake.service"
         fake_socket = tmp_path / "fake.socket"
-        fake_service.write_text(
-            "Environment=HEFESTO_BROKER_ALLOWED_UID=__SESSION_UID__\n", encoding="utf-8"
-        )
-        fake_socket.write_text("SocketGroup=__SESSION_GRUPO_TYPO__\n", encoding="utf-8")
+        fake_service.write_text("Environment=A=1\n", encoding="utf-8")
+        fake_socket.write_text("SocketGroup=__SESSION_GROUP__\n", encoding="utf-8")
         out_dir = tmp_path / "out"
         out_dir.mkdir()
 
-        result = _run_render(render_fn_src, fake_service, fake_socket, out_dir, "1000", "usuaria")
+        result = _run_render(render_fn_src, fake_service, fake_socket, out_dir)
         assert result.returncode == 1
 
 
@@ -146,15 +139,12 @@ class TestInstallStep3hContrato:
         assert '"${SKIP_UDEV}" -eq 0' in step3h
         assert "command -v sudo" in step3h
 
-    def test_uid_resolvido_como_sudo_uid_ou_id_u(self) -> None:
-        assert '_broker_uid="${SUDO_UID:-$(id -u)}"' in INSTALL
-
-    def test_uid_0_aborta_com_a_mensagem_antes_de_qualquer_sudo_install(self) -> None:
-        msg_idx = INSTALL.index("SESSION_UID resolveu 0")
-        assert "Passo ABORTADO" in INSTALL[msg_idx : msg_idx + 400]
-        uid_check_idx = INSTALL.index('"${_broker_uid}" == "0"')
-        broker_install_idx = INSTALL.index("_broker_bin_dst}\" 2>/dev/null")
-        assert uid_check_idx < broker_install_idx
+    def test_o_install_nao_resolve_uid_nem_grupo_para_o_broker(self) -> None:
+        """O broker atende quem está na frente do seat: o install não grava ninguém."""
+        corpo = _extract_bash_function(INSTALL, "install_broker_host")
+        assert "_broker_uid" not in corpo
+        assert "_broker_grupo" not in corpo
+        assert "SESSION_UID" not in corpo
 
     def test_render_chamado_antes_de_instalar_o_binario(self) -> None:
         render_call_idx = INSTALL.index("_render_broker_units \\")

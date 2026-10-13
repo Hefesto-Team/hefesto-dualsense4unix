@@ -1,8 +1,8 @@
 # hefesto-hidraw-broker.service — broker root que esconde o hidraw do DualSense
 # físico do jogo E serve fd O_RDWR ao daemon via SCM_RIGHTS (cmd open —
 # fd-injection, Onda S). BROKER-01 / FUT-01 / PLAT-02. PRIMEIRO serviço de
-# SISTEMA do projeto (os demais são --user). Instalado pelo install.sh com
-# __SESSION_UID__ renderizado.
+# SISTEMA do projeto (os demais são --user). Instalado pelo install.sh sem uid
+# gravado: quem ele atende é a sessão ativa do seat, perguntada ao logind.
 # instalado por hefesto-dualsense4unix (install.sh) — remoção: uninstall.sh
 #
 # HARDENING — diretivas que NÃO PODEM entrar (quebrariam hide/restore/open):
@@ -32,9 +32,9 @@ After=hefesto-hidraw-broker.socket
 Type=notify
 NotifyAccess=main
 ExecStart=/usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker
-# uid autorizado (a sessão dona); gravado pelo install a partir de SUDO_UID.
-# O broker RECUSA uid 0 (lição 6: render errado nunca vira broker de root).
-Environment=HEFESTO_BROKER_ALLOWED_UID=__SESSION_UID__
+# SEM uid na unit (O-BROKER-SERVE-QUEM-ESTA-NA-FRENTE-01): o broker atende a
+# conta que está na frente do seat — `ActiveSession` do seat0 e o `User` dela,
+# no logind — a cada pedido, e devolve o nó a ela. O broker RECUSA uid 0.
 # O-NO-NASCE-FECHADO-01 (decisão dela, 20/09/2026): "1" quando o
 # 73-hefesto-ps5-controller.rules instalado FECHA o nó do DualSense físico
 # (TAG-="uaccess", 0600 root) e o broker é quem o abre sob pedido. Renderizado

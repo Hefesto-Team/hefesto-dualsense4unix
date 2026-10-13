@@ -151,21 +151,13 @@ package() {
     # As 82/83/84 (no-sniff do Pro, snapshot de bond, variante do clone 8BitDo)
     # faltavam aqui: o install-host-udev.sh exige TODAS as 14 no pre-flight.
     #
-    # O-NO-NASCE-FECHADO-01 (auditoria de 20/09/2026, bloqueante 3): a regra do
-    # nó (a 73-hefesto, que era a 70 até 25/09/2026) vai
-    # para o diretório VIVO na variante ABERTA, e não é opinião — é a única
-    # metade da cura que este pacote consegue entregar. O asset versionado
-    # fecha o nó do DualSense (`TAG-="uaccess"`, 0600 root) contando que o
-    # broker o abra sob pedido; e o broker é instalado FORA do manifesto do
-    # pacman (o `install-host-udev.sh`, abaixo, precisa do uid da SESSÃO e o
-    # post_install roda sem ela). Gravar o asset fechado aqui deixaria o
-    # DualSense inutilizável no `pacman -S` até alguém rodar o helper à mão —
-    # e o produto é para qualquer usuário (ordem dela, 11/09/2026).
-    # Quando o helper roda e o broker entra, ele grava a variante FECHADA em
-    # /etc/udev/rules.d/, que VENCE /usr/lib/udev/rules.d/ no udev.
-    bash scripts/regra_do_no_aberta.sh assets/73-hefesto-ps5-controller.rules \
-        "$pkgdir/usr/lib/udev/rules.d/73-hefesto-ps5-controller.rules"
+    # O-BROKER-SERVE-QUEM-ESTA-NA-FRENTE-01: a regra do nó (a 73-hefesto) vai
+    # FECHADA (`TAG-="uaccess"`, 0600 root) para o diretório VIVO, porque este
+    # pacote leva o broker junto (mais abaixo, como unit de sistema sem uid nem
+    # grupo por máquina) e o post_install o liga. As duas metades da cura
+    # saem juntas. (Até 13/10/2026 a variante era a ABERTA, por falta do broker.)
     install -Dm644 -t "$pkgdir/usr/lib/udev/rules.d/" \
+        assets/73-hefesto-ps5-controller.rules \
         assets/71-uhid.rules \
         assets/71-uinput.rules \
         assets/72-ps5-controller-autosuspend.rules \
@@ -240,12 +232,16 @@ package() {
             "$pkgdir/usr/lib/systemd/user/${base}"
     done
 
-    # BROKER-01 (Onda S — fd-injection): binário standalone + units-template
-    # do broker root hide-hidraw. NÃO ativa sozinho aqui — pacman roda
-    # package()/hooks sem sessão (sem SUDO_UID equivalente ⇒ renderizaria uid
-    # 0, PROIBIDO — lição 6). Bundla também o install-host-udev.sh (mesmo
-    # helper do .deb/Flatpak) para o usuário ATIVAR depois de instalar:
+    # BROKER-01 (Onda S — fd-injection): o broker root hide-hidraw como unit
+    # de SISTEMA do pacote (O-BROKER-SERVE-QUEM-ESTA-NA-FRENTE-01). Ele atende
+    # quem está na frente do seat, perguntando ao logind, então a unit não tem
+    # uid nem grupo por máquina e o post_install a liga. Os modelos em
+    # /usr/share seguem para o install-host-udev.sh (módulos DKMS e o resto):
     #   sudo /usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh
+    install -Dm755 src/hefesto_dualsense4unix/broker/hidraw_broker.py \
+        "$pkgdir/usr/lib/hefesto-dualsense4unix/hefesto-hidraw-broker"
+    bash scripts/broker_do_pacote.sh "$pkgdir/usr/lib/systemd/system" \
+        /usr/lib/hefesto-dualsense4unix/hefesto-hidraw-broker
     install -Dm644 src/hefesto_dualsense4unix/broker/hidraw_broker.py \
         "$pkgdir/usr/share/hefesto-dualsense4unix/broker/hidraw_broker.py"
     install -Dm644 -t "$pkgdir/usr/share/hefesto-dualsense4unix/systemd/" \

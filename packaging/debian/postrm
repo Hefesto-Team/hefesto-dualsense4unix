@@ -34,6 +34,10 @@ case "$1" in
             /usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker \
                 --restore-all-and-exit 2>/dev/null || true
         fi
+        if [ -x /usr/lib/hefesto-dualsense4unix/hefesto-hidraw-broker ]; then
+            /usr/lib/hefesto-dualsense4unix/hefesto-hidraw-broker \
+                --restore-all-and-exit 2>/dev/null || true
+        fi
         rm -f /etc/systemd/system/hefesto-hidraw-broker.service \
               /etc/systemd/system/hefesto-hidraw-broker.socket \
               /usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker

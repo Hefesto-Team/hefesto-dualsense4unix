@@ -60,6 +60,12 @@ in
     systemd.packages = [ cfg.package ];
     systemd.timers.hefesto-bt-bonds-snapshot.wantedBy = [ "timers.target" ];
 
+    # O broker root hide-hidraw (O-BROKER-SERVE-QUEM-ESTA-NA-FRENTE-01): a regra
+    # 73 vai FECHADA e é ele quem abre o nó sob pedido, para quem está na frente
+    # do seat. As duas metades saem juntas, então o módulo o liga.
+    systemd.sockets.hefesto-hidraw-broker.wantedBy = [ "sockets.target" ];
+    systemd.services.hefesto-hidraw-broker.wantedBy = [ "multi-user.target" ];
+
     # `ReadWritePaths=/var/lib/hefesto-dualsense4unix` na unidade: o systemd recusa
     # montar o espaço de nomes se o caminho não existe.
     systemd.tmpfiles.rules = [

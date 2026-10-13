@@ -20,6 +20,11 @@ projeto) roda como root isolado/hardened e, a pedido do daemon:
     root e devolve o fd via SCM_RIGHTS na MESMA conexão — o motion reader do
     daemon NUNCA reabre por caminho, então o hide deixa de ter qualquer
     interação com o ciclo de vida do gyro (a classe de bugs broker/motion morre).
+  - QUEM ELE ATENDE (O-BROKER-SERVE-QUEM-ESTA-NA-FRENTE-01): a sessão ativa do
+    seat, perguntada ao logind (`loginctl`: `ActiveSession` e `User`) a cada
+    pedido — a unit não grava uid. A conta que entra na frente leva o controle
+    e a conexão da que ficou atrás cai. Root nunca é atendido; sem logind, ou
+    com o seat sem ninguém, o pedido é recusado com o motivo.
   - os nós de ENTRADA (HIDE-SO-O-HIDRAW-02, 24/09/2026): o evdev e o joydev
     do MESMO aparelho seguem o hidraw — fechados com ele, e abertos só pelo
     pedido do Modo Nativo (`expose` com `"entradas": true`). O `open` serve
@@ -89,8 +94,19 @@ from dataclasses import dataclass, field
 from typing import Any
 
 DEFAULT_SOCKET_PATH = "/run/hefesto-hidraw-broker/broker.sock"
-#: Env com o uid autorizado (renderizado pelo install a partir de SUDO_UID).
+#: Env com um uid FIXO (opcional). Sem ela, quem o broker atende é a sessão
+#: ativa do seat, perguntada ao logind a cada pedido
+#: (O-BROKER-SERVE-QUEM-ESTA-NA-FRENTE-01): a unit não grava uid nenhum.
 ALLOWED_UID_ENV = "HEFESTO_BROKER_ALLOWED_UID"
+#: Gancho de teste/instalação: o caminho do ``loginctl`` (a porta oficial do
+#: logind). Um caminho que não existe = logind ausente.
+LOGINCTL_ENV = "HEFESTO_BROKER_LOGINCTL"
+SEAT_PADRAO = "seat0"
+#: Quanto tempo a resposta do logind vale: o pedido do jogo não pode custar um
+#: processo cada, e a troca de usuário é gesto de segundos.
+VALIDADE_DA_SESSAO_S = 1.0
+#: Quanto esperar o ``loginctl`` responder: parado, ele recusaria todo pedido.
+PRAZO_DO_LOGINCTL_S = 3.0
 #: controller.rules` instalado FECHA o nó do DualSense físico (`TAG-="uaccess"`, 0600
 NO_NASCE_FECHADO_ENV = "HEFESTO_BROKER_NO_NASCE_FECHADO"
 MAX_LINE_BYTES = 4096
@@ -613,8 +629,11 @@ class FsAclOps:
         except OSError:
             return False
 
-    def is_exposed_to(self, node: str, uid: int) -> bool:
-        """True se o nó está no estado canônico exposto (0660 + ACL do uid)."""
+    def is_exposed_to(self, node: str, uid: int | None) -> bool:
+        """True se o nó está no estado canônico exposto (0660 + ACL do uid).
+
+        ``uid=None`` = exposto a ALGUÉM (a varredura de quando não se sabe quem).
+        """
         try:
             st = os.stat(node)
             if stat_mod.S_IMODE(st.st_mode) != 0o660:
@@ -622,7 +641,8 @@ class FsAclOps:
             blob = os.getxattr(node, _ACL_XATTR)
         except OSError:
             return False
-        return uid in decode_acl_user_uids(blob)
+        uids = decode_acl_user_uids(blob)
+        return bool(uids) if uid is None else uid in uids
 
     def open_node(self, node: str, base: str) -> int:
         """open(2) O_RDWR|O_CLOEXEC|O_NOFOLLOW + revalidação pós-open NO fd."""
@@ -1260,13 +1280,70 @@ PEDIDOS_QUE_RETOMAM = frozenset({"hide", "expose", "pad_usb_montar"})
 MARCA_DA_ENTREGA_PATH = "/run/hefesto-hidraw-broker/entregue"
 
 
+def _loginctl() -> str | None:
+    """O ``loginctl`` do sistema (o PATH de um serviço é curto: tenta os fixos)."""
+    forcado = os.environ.get(LOGINCTL_ENV)
+    if forcado is not None:
+        return forcado if os.access(forcado, os.X_OK) else None
+    for caminho in ("/usr/bin/loginctl", "/bin/loginctl"):
+        if os.access(caminho, os.X_OK):
+            return caminho
+    return None
+
+
+def _pergunta_ao_logind(loginctl: str, *args: str) -> str | None:
+    import subprocess
+
+    try:
+        r = subprocess.run(
+            [loginctl, *args],
+            capture_output=True,
+            text=True,
+            timeout=PRAZO_DO_LOGINCTL_S,
+            check=False,
+            env={"LC_ALL": "C", "PATH": "/usr/bin:/bin"},
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        # Diz POR QUE ninguém foi atendido: sandbox da unit que barra o
+        # loginctl, binário que sumiu ou logind parado leem-se igual de fora.
+        _log("loginctl_falhou", erro=type(exc).__name__)
+        return None
+    if r.returncode != 0:
+        _log("loginctl_recusou", rc=r.returncode)
+        return None
+    return r.stdout.strip()
+
+
+def uid_da_sessao_ativa(seat: str = SEAT_PADRAO) -> int | None:
+    """O uid de quem está na frente do seat, perguntado ao logind (``loginctl``).
+
+    A ``ActiveSession`` do seat e o ``User`` dela, as duas propriedades que o
+    ``org.freedesktop.login1`` publica. ``None`` = ninguém na frente, logind
+    ausente ou resposta que não é um uid. Root não é «quem está na frente»: o
+    broker nunca atende uid 0 (lição 6 da auditoria).
+    """
+    loginctl = _loginctl()
+    if loginctl is None:
+        return None
+    sessao = _pergunta_ao_logind(
+        loginctl, "show-seat", seat, "--property=ActiveSession", "--value"
+    )
+    if not sessao or not re.fullmatch(r"[A-Za-z0-9_.-]+", sessao):
+        return None
+    dono = _pergunta_ao_logind(loginctl, "show-session", sessao, "--property=User", "--value")
+    if not dono or not dono.isdigit():
+        return None
+    uid = int(dono)
+    return uid if uid > 0 else None
+
+
 class BrokerState:
     """Protocolo + contabilidade de lease. Puro (fs injetável) e testável."""
 
     def __init__(
         self,
         *,
-        allowed_uid: int,
+        allowed_uid: int | None = None,
         ops: Any | None = None,
         validator: Callable[[str], str | None] | None = None,
         dev_root: str = "/dev",
@@ -1281,8 +1358,21 @@ class BrokerState:
         reinicio_sem_abrir: Callable[[], bool] = reinicio_sem_abrir_pedido,
         pad_ops: PadUsbOps | None = None,
         marca_da_entrega: str | None = None,
+        quem_esta_na_frente: Callable[[], int | None] | None = None,
+        relogio: Callable[[], float] = time.monotonic,
     ) -> None:
+        #: O uid FIXO (a env ou o argumento do belt); ``None`` = quem está na
+        #: frente do seat, perguntado a ``quem_esta_na_frente`` (o logind).
         self.allowed_uid = allowed_uid
+        if allowed_uid is None and quem_esta_na_frente is None:
+            raise ValueError("sem uid fixo, o broker precisa de quem diga quem está na frente")
+        self._quem_esta_na_frente = quem_esta_na_frente
+        self._relogio_da_sessao = relogio
+        self._sessao_lida_em: float | None = None
+        self._sessao_lida: int | None = None
+        #: O último uid que a sessão ativa deu: serve às varreduras que correm
+        #: sem cliente (entrega, retomada) quando o seat ficou sem ninguém.
+        self._ultimo_uid: int | None = None
         #: Onde gravar a marca da entrega; ``None`` = não grava (o ``main`` passa
         #: :data:`MARCA_DA_ENTREGA_PATH`).
         self._marca_da_entrega = marca_da_entrega
@@ -1321,6 +1411,33 @@ class BrokerState:
         #: nenhum pedido do Hefesto o recolheu ainda.
         self.entregue = False
 
+
+    def uid_autorizado(self) -> int | None:
+        """Quem o broker atende AGORA: o uid fixo, ou o da sessão ativa do seat.
+
+        ``None`` = ninguém (logind ausente, seat vazio ou só root): o pedido é
+        recusado. Root nunca é atendido, nem como uid fixo.
+        """
+        if self._quem_esta_na_frente is None:
+            return self.allowed_uid if self.allowed_uid else None
+        agora = self._relogio_da_sessao()
+        if self._sessao_lida_em is None or agora - self._sessao_lida_em >= VALIDADE_DA_SESSAO_S:
+            self._sessao_lida = self._quem_esta_na_frente()
+            self._sessao_lida_em = agora
+        uid = self._sessao_lida
+        if uid:
+            self._ultimo_uid = uid
+            return uid
+        return None
+
+    def esquecer_a_sessao_lida(self) -> None:
+        """Descarta a resposta guardada do logind (o próximo pedido pergunta de novo)."""
+        self._sessao_lida_em = None
+
+    def uid_para_agir(self) -> int | None:
+        """O uid das operações de arquivo: o autorizado, ou o último que houve."""
+        uid = self.uid_autorizado()
+        return uid if uid is not None else self._ultimo_uid
 
     def _validate(self, node: str) -> str | None:
         if self._validator is not None:
@@ -1364,8 +1481,12 @@ class BrokerState:
         op = getattr(self._ops, "abrir_entradas" if abrir else "fechar_entradas", None)
         if not callable(op):
             return
+        uid = self.uid_para_agir()
+        if abrir and uid is None:
+            self._log("entradas_sem_dono", node=canon)
+            return
         try:
-            mudados, falhos = op(base, self.allowed_uid) if abrir else op(base)
+            mudados, falhos = op(base, uid) if abrir else op(base)
         except OSError as exc:
             self._log("entradas_falharam", node=canon, abrir=abrir, err=str(exc))
             return
@@ -1601,8 +1722,9 @@ class BrokerState:
             return {"ok": True, "cmd": cmd, "node": canon, "state": "exposed"}
         if self._lease_holders(canon) > 0:
             return self._fs_fechar(canon, base, cmd=cmd)
-        if not self.no_nasce_fechado:
-            resposta = self._fs_restore(canon, base, self.allowed_uid)
+        uid = self.uid_para_agir()
+        if not self.no_nasce_fechado and uid is not None:
+            resposta = self._fs_restore(canon, base, uid)
             resposta["cmd"] = cmd
             return resposta
         return self._fs_fechar(canon, base, cmd=cmd)
@@ -1806,11 +1928,15 @@ class BrokerState:
                  "contrato": "usbip_vudc"},
                 None,
             )
+        uid_do_pad = self.uid_autorizado()
+        if uid_do_pad is None:
+            self._log("pad_usb_sem_dono", gadget=nome)
+            return ({"ok": False, "cmd": cmd, "error": "sem_sessao_ativa"}, None)
         porta: int | None = None
         try:
             self._pad_ops.montar(nome, serial, descritor, udcs[0], (vendor, product))
             porta = self._pad_ops.ligar(udcs[0], porta_do_serial(serial))
-            fd = self._pad_ops.ceder_hidg(nome, self.allowed_uid)
+            fd = self._pad_ops.ceder_hidg(nome, uid_do_pad)
         except OSError as exc:
             with contextlib.suppress(OSError):
                 self._pad_ops.desmontar(nome, porta)
@@ -2021,9 +2147,14 @@ class BrokerState:
             return []
         # Sem cliente, o que ainda consta é lease órfã de restore que falhou:
         # entregar é o restore que faltou.
+        uid = self.uid_autorizado()
+        if uid is None:
+            # Ninguém na frente do seat: não há a quem entregar (o nó segue
+            # fechado, e a varredura repete quando alguém entrar).
+            return []
         antes = set(self.hidden) | set(self.expostos)
         entregues = restore_all_physical(
-            uid=self.allowed_uid,
+            uid=uid,
             ops=self._ops,
             dev_root=self._dev_root,
             sys_class_hidraw=self._sys_class_hidraw,
@@ -2058,7 +2189,7 @@ class BrokerState:
         tirar a ACL não fecha fd aberto, e é o preço de ter parado o Hefesto.
         """
         fechados = fechar_todo_fisico(
-            uid=self.allowed_uid,
+            uid=self.uid_para_agir(),
             ops=self._ops,
             dev_root=self._dev_root,
             sys_class_hidraw=self._sys_class_hidraw,
@@ -2095,8 +2226,11 @@ class BrokerState:
                         abrir(base, entry.uid)
             if callable(abrir):
                 for canon in sorted(self.expostos):
+                    uid_agora = self.uid_para_agir()
+                    if uid_agora is None:
+                        continue
                     with contextlib.suppress(OSError):
-                        abrir(canon.rsplit("/", 1)[-1], self.allowed_uid)
+                        abrir(canon.rsplit("/", 1)[-1], uid_agora)
         self.by_conn.clear()
         self.podados_by_conn.clear()
         self.expostos.clear()
@@ -2217,7 +2351,7 @@ def restore_all_physical(
 
 def fechar_todo_fisico(
     *,
-    uid: int,
+    uid: int | None,
     ops: Any | None = None,
     dev_root: str = "/dev",
     sys_class_hidraw: str = "/sys/class/hidraw",
@@ -2225,7 +2359,11 @@ def fechar_todo_fisico(
     validator: Callable[[str], str | None] | None = None,
     log: Callable[..., None] = _log,
 ) -> list[str]:
-    """Varre /sys/class/hidraw e FECHA (`0600 root`) todo físico ainda exposto."""
+    """Varre /sys/class/hidraw e FECHA (`0600 root`) todo físico ainda exposto.
+
+    ``uid=None``: sem uid conhecido (o seat sem ninguém), fecha o que estiver
+    aberto a QUALQUER usuário.
+    """
     fs_ops = (
         ops
         if ops is not None
@@ -2321,10 +2459,21 @@ class Broker:
         except OSError:
             sock.close()
             return None
-        if uid != self._state.allowed_uid:
-            self._log("peer_rejected", peer_uid=uid, peer_pid=pid)
+        autorizado = self._state.uid_autorizado()
+        if autorizado is None:
+            self._log("peer_rejected", peer_uid=uid, peer_pid=pid, motivo="sem_sessao_ativa")
             sock.close()
             return None
+        if uid != autorizado:
+            self._log(
+                "peer_rejected",
+                peer_uid=uid,
+                peer_pid=pid,
+                motivo="nao_e_quem_esta_na_frente",
+            )
+            sock.close()
+            return None
+        self._soltar_quem_ficou_atras(autorizado)
         conn_id = self._next_conn_id
         self._next_conn_id += 1
         sock.setblocking(False)
@@ -2439,6 +2588,24 @@ class Broker:
         finally:
             os.close(fd)
 
+    def _soltar_quem_ficou_atras(self, autorizado: int) -> None:
+        """A conta que entrou na frente leva o controle: a conexão da que ficou atrás cai.
+
+        Só vale com a sessão perguntada ao logind; com um uid fixo (o belt, a
+        env) só esse uid conecta e não há ninguém atrás.
+        """
+        if self._state.allowed_uid is not None:
+            return
+        for chave in list(self._sel.get_map().values()):
+            tipo, conn_id = chave.data
+            if tipo != "conn" or self._peer_uids.get(conn_id, autorizado) == autorizado:
+                continue
+            self._log("peer_solto", conn=conn_id, peer_uid=self._peer_uids.get(conn_id),
+                      motivo="ficou_atras_na_troca_de_usuario")
+            sock = chave.fileobj
+            assert isinstance(sock, socket.socket)
+            self._close_conn(sock, conn_id)
+
     def _close_conn(self, sock: socket.socket, conn_id: int) -> None:
         with contextlib.suppress(KeyError, ValueError):
             self._sel.unregister(sock)
@@ -2527,7 +2694,7 @@ def entrega_herdada(path: str | None = None) -> bool:
         return False
 
 
-def _o_repouso_do_inicio(allowed_uid: int, *, no_nasce_fechado: bool) -> bool:
+def _o_repouso_do_inicio(allowed_uid: int | None, *, no_nasce_fechado: bool) -> bool:
     """O físico no começo do broker; ``True`` = a entrega foi herdada e ficou.
 
     Com a cura do nó fechado, o broker fecha tudo ao nascer, salvo quando a
@@ -2536,7 +2703,11 @@ def _o_repouso_do_inicio(allowed_uid: int, *, no_nasce_fechado: bool) -> bool:
     devolveria o controle a ninguém.
     """
     if not no_nasce_fechado:
-        restore_all_physical(uid=allowed_uid)
+        uid = allowed_uid if allowed_uid is not None else uid_da_sessao_ativa()
+        if uid is None:
+            _log("repouso_sem_sessao_ativa")
+            return False
+        restore_all_physical(uid=uid)
         return False
     if entrega_herdada():
         _log("entrega_herdada", marca=MARCA_DA_ENTREGA_PATH)
@@ -2568,14 +2739,15 @@ def main(argv: list[str] | None = None) -> int:
         type=int,
         default=None,
         help=(
-            "uid da sessão para o modo --restore-all-and-exit quando a env "
-            f"{ALLOWED_UID_ENV} não está presente (belt de uninstall/purge)"
+            "uid da sessão para os modos --restore-all-and-exit e "
+            f"--fechar-tudo-e-sair quando a env {ALLOWED_UID_ENV} não está presente "
+            "(belt de uninstall/purge); sem ele, quem está na frente do seat"
         ),
     )
     parser.add_argument(
         "--unit-path",
         default=DEFAULT_UNIT_PATH,
-        help="unit instalada de onde parsear o uid no belt (fallback final)",
+        help="unit instalada de onde parsear um uid gravado no belt (units antigas)",
     )
     parser.add_argument(
         "--socket-path",
@@ -2598,8 +2770,9 @@ def main(argv: list[str] | None = None) -> int:
             if allowed_uid is not None:
                 _log("allowed_uid_from_unit", unit=args.unit_path, uid=allowed_uid)
         if allowed_uid is None:
-            _log("allowed_uid_missing", env=ALLOWED_UID_ENV)
-            return 1
+            allowed_uid = uid_da_sessao_ativa()
+            if allowed_uid is not None:
+                _log("allowed_uid_da_sessao_ativa", uid=allowed_uid)
         if allowed_uid == 0:
             _log("allowed_uid_root_recusado", env=ALLOWED_UID_ENV)
             return 1
@@ -2612,19 +2785,24 @@ def main(argv: list[str] | None = None) -> int:
             if entrega_herdada():
                 _log("entrega_herdada", belt="fechar-tudo-e-sair")
                 return 0
+            # Sem ninguém na frente (o boot), `uid=None` fecha o que estiver
+            # aberto a qualquer usuário.
             fechados = fechar_todo_fisico(uid=allowed_uid)
             _log("fechar_tudo_done", count=len(fechados))
             return 0
         if args.restore_all_and_exit and no_nasce_fechado and reinicio_sem_abrir_pedido():
             _log("reinicio_sem_abrir", belt="restore-all-and-exit")
             return 0
+        if allowed_uid is None:
+            # Ninguém na frente do seat: não há a quem devolver o nó. Ele
+            # segue fechado (root) — o fail-safe —, e a entrega do broker que
+            # sobe volta a varrer quando alguém entrar.
+            _log("restore_sem_sessao_ativa")
+            return 0
         restored = restore_all_physical(uid=allowed_uid)
         _log("restore_all_done", count=len(restored))
         return 0
 
-    if allowed_uid is None:
-        _log("allowed_uid_missing", env=ALLOWED_UID_ENV)
-        return 1
     if allowed_uid == 0:
         _log("allowed_uid_root_recusado", env=ALLOWED_UID_ENV)
         return 1
@@ -2636,8 +2814,10 @@ def main(argv: list[str] | None = None) -> int:
         listen = _manual_listen_socket(args.socket_path)
         _log("listening_manual", path=args.socket_path)
 
+    # Sem uid fixo, o broker atende quem está na frente do seat, a cada pedido.
     state = BrokerState(
         allowed_uid=allowed_uid,
+        quem_esta_na_frente=uid_da_sessao_ativa if allowed_uid is None else None,
         no_nasce_fechado=no_nasce_fechado,
         marca_da_entrega=MARCA_DA_ENTREGA_PATH,
     )
@@ -2653,7 +2833,7 @@ def main(argv: list[str] | None = None) -> int:
     _sd_notify("READY=1")
     _log(
         "ready",
-        allowed_uid=allowed_uid,
+        allowed_uid=allowed_uid if allowed_uid is not None else "quem-esta-na-frente",
         no_nasce_fechado=no_nasce_fechado,
         graca_da_entrega_s=broker._graca_da_entrega_s,
     )

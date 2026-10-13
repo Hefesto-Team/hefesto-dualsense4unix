@@ -50,9 +50,11 @@ class TestSocketUnit:
 
     def test_dac_do_socket(self, socket_text: str) -> None:
         d = _directives(socket_text)
-        assert d["SocketMode"] == ["0660"]
+        assert d["SocketMode"] == ["0666"]
         assert d["SocketUser"] == ["root"]
-        assert d["SocketGroup"] == ["__SESSION_GROUP__"]
+        # Sem grupo por máquina: quem o broker ATENDE sai do logind, a cada
+        # conexão (O-BROKER-SERVE-QUEM-ESTA-NA-FRENTE-01), e não do modo do arquivo.
+        assert d["SocketGroup"] == ["root"]
         assert d["DirectoryMode"] == ["0755"]
 
     def test_socket_unit_e_a_dona_do_diretorio(self, socket_text: str) -> None:
@@ -141,7 +143,6 @@ class TestServiceHardening:
             "/usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker --restore-all-and-exit"
         ]
         assert d["Environment"] == [
-            "HEFESTO_BROKER_ALLOWED_UID=__SESSION_UID__",
             "HEFESTO_BROKER_NO_NASCE_FECHADO=__NO_NASCE_FECHADO__",
         ]
         assert d["Restart"] == ["on-failure"]
@@ -159,7 +160,14 @@ class TestBrokerStandalone:
         assert "hefesto_dualsense4unix" not in re.sub(r'"""[\s\S]*?"""', "", texto, count=1)
         assert "import pydualsense" not in texto
 
-    def test_executa_standalone_e_recusa_sem_uid(self, tmp_path: Path) -> None:
+    def test_executa_standalone_e_sem_sessao_ativa_nao_restaura_nada(
+        self, tmp_path: Path
+    ) -> None:
+        """Sem uid na unit e sem logind, o belt diz que não há para quem devolver.
+
+        O `loginctl` aponta para um caminho que não existe (logind ausente): sem a
+        troca, o teste perguntaria ao logind DESTA máquina.
+        """
         resultado = subprocess.run(
             [
                 sys.executable,
@@ -171,11 +179,15 @@ class TestBrokerStandalone:
             capture_output=True,
             text=True,
             cwd=str(tmp_path),
-            env={"PATH": "/usr/bin:/bin"},
+            env={
+                "PATH": "/usr/bin:/bin",
+                "HEFESTO_BROKER_LOGINCTL": str(tmp_path / "sem-loginctl"),
+            },
             timeout=30,
         )
-        assert resultado.returncode == 1
-        assert "allowed_uid_missing" in resultado.stdout
+        assert resultado.returncode == 0
+        assert "restore_sem_sessao_ativa" in resultado.stdout
+        assert "allowed_uid_missing" not in resultado.stdout
 
     def test_recusa_uid_zero(self, tmp_path: Path) -> None:
         resultado = subprocess.run(
@@ -257,10 +269,12 @@ class TestPlaceholders:
         d_socket = _directives(socket_text)
         valores_service = [v for vals in d_service.values() for v in vals]
         valores_socket = [v for vals in d_socket.values() for v in vals]
-        assert sum("__SESSION_UID__" in v for v in valores_service) == 1
-        assert sum("__SESSION_GROUP__" in v for v in valores_socket) == 1
-        assert not any("__SESSION_GROUP__" in v for v in valores_service)
-        assert not any("__SESSION_UID__" in v for v in valores_socket)
+        # Nada de uid nem de grupo por máquina: a única troca que sobra é o
+        # `__NO_NASCE_FECHADO__`, e só na unit do serviço.
+        assert not any("__SESSION_" in v for v in valores_service)
+        assert not any("__SESSION_" in v for v in valores_socket)
+        assert sum("__NO_NASCE_FECHADO__" in v for v in valores_service) == 1
+        assert not any("__NO_NASCE_FECHADO__" in v for v in valores_socket)
 
 
 class TestParseAllowedUidDaUnit:

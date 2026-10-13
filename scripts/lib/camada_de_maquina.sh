@@ -155,28 +155,27 @@ opcao_do_modprobe() {
     ' "$1" 2>/dev/null
 }
 
-# Render das units do broker root hide-hidraw (BROKER-01/Onda S): substitui
-# __SESSION_UID__/__SESSION_GROUP__ pelos valores reais da sessão e GARANTE
-# que nenhum placeholder sobra (guarda pós-render — lição 6 da auditoria:
-# nunca instalar unit com __SESSION_* literal, que autorizaria um uid
-# inválido no .service ou deixaria o .socket sem grupo). Escreve os 2
-# arquivos renderizados em "${out_dir}" e devolve 0; devolve 1 SEM escrever
-# nada utilizável se o placeholder sobrar (ex.: asset editado errado). Função
-# isolada de propósito — testável sem sudo/systemctl (tests/unit/
-# test_install_broker_step.py).
+# Render das units do broker root hide-hidraw (BROKER-01/Onda S): a única coisa
+# por máquina que sobrou é o `__NO_NASCE_FECHADO__` — nem uid nem grupo: o
+# broker atende a conta que está na frente do seat (O-BROKER-SERVE-QUEM-ESTA-
+# NA-FRENTE-01). GARANTE que nenhum placeholder sobra (guarda pós-render —
+# lição 6 da auditoria: nunca instalar unit com __SESSION_* ou
+# __NO_NASCE_FECHADO__ literal). Escreve os 2 arquivos renderizados em
+# "${out_dir}" e devolve 0; devolve 1 se o placeholder sobrar (ex.: asset
+# editado errado). Função isolada de propósito — testável sem sudo/systemctl
+# (tests/unit/test_install_broker_step.py).
 _render_broker_units() {
-    local service_src="$1" socket_src="$2" out_dir="$3" uid="$4" grupo="$5"
-    # O-NO-NASCE-FECHADO-01: o 6º argumento é 1 quando a regra udev instalada
+    local service_src="$1" socket_src="$2" out_dir="$3"
+    # O-NO-NASCE-FECHADO-01: o 4º argumento é 1 quando a regra udev instalada
     # FECHA o nó do físico. Default 1 — é DEFAULT POR ORDEM DE PRODUTO ("isso deveria
     # estar no install por default"), e um default 0 aqui faria a metade de
     # cima da cura (a udev) ficar sem a metade de baixo (o broker): nó fechado
     # que ninguém abre.
-    local fechado="${6:-1}"
-    sed -e "s/__SESSION_UID__/${uid}/" -e "s/__NO_NASCE_FECHADO__/${fechado}/" \
+    local fechado="${4:-1}"
+    sed -e "s/__NO_NASCE_FECHADO__/${fechado}/" \
         "${service_src}" \
         > "${out_dir}/hefesto-hidraw-broker.service"
-    sed "s/__SESSION_GROUP__/${grupo}/" "${socket_src}" \
-        > "${out_dir}/hefesto-hidraw-broker.socket"
+    cat "${socket_src}" > "${out_dir}/hefesto-hidraw-broker.socket"
     if grep -q '__SESSION_\|__NO_NASCE_FECHADO__' \
             "${out_dir}/hefesto-hidraw-broker.service" \
             "${out_dir}/hefesto-hidraw-broker.socket"; then
@@ -287,15 +286,8 @@ install_broker_host() {
         warn "sudo recusado — broker hide-hidraw pulado (re-execute ./install.sh)"
         return 0
     fi
-    _broker_uid="${SUDO_UID:-$(id -u)}"
-    if [[ "${_broker_uid}" == "0" ]]; then
-        # Lição 6 (auditoria): renderizar uid 0 criaria um broker que só
-        # autoriza ROOT — nenhum daemon de usuária conseguiria conectar.
-        # Aborta SÓ este passo (nunca o install inteiro).
-        warn "SESSION_UID resolveu 0 (root) — o broker autorizaria ROOT e nenhum daemon de usuária conectaria. Rode ./install.sh da SESSÃO da usuária (sudo é pedido internamente). Passo ABORTADO."
-        return 0
-    fi
-    _broker_grupo="$(id -gn -- "${_broker_uid}")"
+    # Sem uid nem grupo por máquina: o broker atende a conta que está na frente
+    # do seat. Quem roda o install como root puro (sem sessão) instala igual.
     _broker_bin_src="${ROOT_DIR}/src/hefesto_dualsense4unix/broker/hidraw_broker.py"
     _broker_bin_dst="/usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker"
     _broker_tmp="$(mktemp -d)"
@@ -304,7 +296,7 @@ install_broker_host() {
     elif ! _render_broker_units \
             "${ROOT_DIR}/assets/systemd/hefesto-hidraw-broker.service" \
             "${ROOT_DIR}/assets/systemd/hefesto-hidraw-broker.socket" \
-            "${_broker_tmp}" "${_broker_uid}" "${_broker_grupo}" \
+            "${_broker_tmp}" \
             "$(( ${ABRIR_O_NO:-0} == 1 ? 0 : 1 ))"; then
         warn "render das units do broker deixou placeholder __SESSION_* sobrando — broker NÃO instalado"
     elif ! sudo install -Dm755 "${_broker_bin_src}" "${_broker_bin_dst}" 2>/dev/null; then
@@ -317,8 +309,7 @@ install_broker_host() {
     else
         sudo systemctl daemon-reload >/dev/null 2>&1 || true
         if sudo systemctl enable --now hefesto-hidraw-broker.socket >/dev/null 2>&1; then
-            printf '      hefesto-hidraw-broker.socket habilitado (uid %s, grupo %s — só o .socket; o .service sobe na 1ª conexão)\n' \
-                "${_broker_uid}" "${_broker_grupo}"
+            printf '      hefesto-hidraw-broker.socket habilitado (atende quem está na frente do computador — só o .socket; o .service sobe na 1ª conexão)\n'
             # Registro de posse p/ uninstall (mesma disciplina do
             # cmdline-owners PLAT-03): caminhos + sha256, p/ o
             # uninstall remover SÓ o que fomos NÓS que instalamos.
@@ -617,6 +608,20 @@ install_bt_resilience_host() {
     fi
 }
 
+# O grupo `hefesto` existe e a conta que instala está nele. A regra do sudoers
+# da ponte é do GRUPO (a por conta valia só para quem instalou, e a segunda
+# conta da máquina ficava sem a ponte); o `install_udev.sh` cria o mesmo grupo,
+# e `groupadd -f` não reclama de um que já existe. Devolve 1 se não pôde.
+_garantir_a_conta_no_grupo_hefesto() {
+    local conta="$1"
+    getent group hefesto >/dev/null 2>&1 \
+        || sudo groupadd -f -r hefesto 2>/dev/null || return 1
+    if [[ ",$(getent group hefesto | cut -d: -f4)," != *",${conta},"* ]]; then
+        sudo usermod -aG hefesto "${conta}" 2>/dev/null || return 1
+    fi
+    return 0
+}
+
 # PONTE-PRIVILEGIADA-01 (22/08/2026) — a infraestrutura que faz o botão de mover
 # um controle de dongle existir SEM a janela pedir senha.
 #
@@ -649,6 +654,7 @@ install_bt_resilience_host() {
 # ACIMA DA BIFURCAÇÃO e chamada dos DOIS lados, como a resiliência acima: isto é
 # mudança de SISTEMA, ortogonal ao formato do aplicativo. Portão:
 # `tests/unit/test_install_serve_os_dois_lados_da_cerca.py`.
+
 install_bt_ponte_privilegiada_host() {
     local _ponte_fonte="${ROOT_DIR}/scripts/bt_ponte_privilegiada.sh"
     local _ponte_alvo=/usr/local/lib/hefesto-dualsense4unix/bt_ponte_privilegiada.sh
@@ -683,8 +689,13 @@ install_bt_ponte_privilegiada_host() {
         warn "não consegui criar arquivo temporário — regra do sudoers NÃO gravada"
         return 0
     }
-    if ! bash "${_ponte_alvo}" regra-sudo "${_ponte_usuaria}" >"${_ponte_tmp}" 2>/dev/null; then
-        warn "a ponte recusou gerar a regra para '${_ponte_usuaria}' — nada gravado em ${_ponte_regra}"
+    if ! _garantir_a_conta_no_grupo_hefesto "${_ponte_usuaria}"; then
+        warn "não consegui pôr '${_ponte_usuaria}' no grupo hefesto — regra do sudoers NÃO gravada (a regra é do grupo)"
+        rm -f "${_ponte_tmp}"
+        return 0
+    fi
+    if ! bash "${_ponte_alvo}" regra-sudo "%hefesto" >"${_ponte_tmp}" 2>/dev/null; then
+        warn "a ponte recusou gerar a regra para o grupo hefesto — nada gravado em ${_ponte_regra}"
         rm -f "${_ponte_tmp}"
         return 0
     fi
@@ -702,8 +713,8 @@ install_bt_ponte_privilegiada_host() {
     fi
     rm -f "${_ponte_tmp}"
     printf '      ponte privilegiada instalada: mover controle entre dongles sem digitar senha\n'
-    printf '        (%s, NOPASSWD só para %s; os verbos nomeados um a um, o endereço\n' \
-        "${_ponte_regra}" "${_ponte_usuaria}"
+    printf '        (%s, NOPASSWD só para o grupo hefesto; os verbos nomeados um a um, o endereço\n' \
+        "${_ponte_regra}"
     printf '         e o nome novo pelo stdin, e NENHUM verbo que execute comando livre)\n'
     if sudo -n -l -U "${_ponte_usuaria}" "${_ponte_alvo}" adaptadores >/dev/null 2>&1; then
         printf '      conferido no próprio sudo: a regra já vale para %s (não é só arquivo no disco)\n' "${_ponte_usuaria}"
