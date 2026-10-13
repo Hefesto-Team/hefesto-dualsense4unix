@@ -257,14 +257,6 @@ def test_o_fim_da_sessao_do_pad_zera_quem_ainda_vibrava(mesa: _Mesa, relogio: _R
 
 # 5. O jogo que fecha, o perfil que muda.
 
-def _anunciador(
-    bus: EventBus, store: Any, appid: list[int | None]
-) -> tuple[AnunciadorDoJogo, Any]:
-    daemon = SimpleNamespace(bus=bus)
-    type(daemon).appid_em_cena = property(lambda _s: appid[0])  # type: ignore[attr-defined]
-    return AnunciadorDoJogo(bus, store, daemon), daemon
-
-
 def test_o_jogo_que_fecha_vira_evento_e_cala_a_batida(
     mesa: _Mesa, relogio: _Relogio
 ) -> None:
@@ -367,7 +359,7 @@ def test_as_duas_rotas_de_subida_ligam_o_anunciador(
         ctx = SimpleNamespace(daemon=daemon, controller=None, store=daemon.store, bus=daemon.bus)
         asyncio.run(sub.AutoswitchSubsystem().start(ctx))  # type: ignore[arg-type]
     else:
-        asyncio.run(sub.start_autoswitch(daemon))  # type: ignore[arg-type]
+        asyncio.run(sub.start_autoswitch(daemon))
 
     assert capturado["window_reader"]() == {"wm_class": "x"}
 
