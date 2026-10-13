@@ -242,7 +242,7 @@ CAMPOS_DA_RECEITA: tuple[str, ...] = tuple(f.name for f in fields(Receita))
 # O-ESTILO-DO-PERFIL-LIGA-O-MOTOR-DO-TATO-01 (09/10/2026): a receita do estilo
 # (`profiles/estilos_de_jogo.Receita`, a que a tela não mostra) nasceu noutro
 # conjunto, com outro vocabulário. A ponte entre as duas línguas mora aqui, e
-# cada número tem nome. Escolhas nossas, a validar pelo usuário na bancada.
+# cada número tem nome, e cada um é valor de partida.
 #: A força do toque pelo degrau de vibração do estilo (`Estilo.vibracao`).
 FORCA_DO_DEGRAU: dict[str, float] = {"max": 1.0, "balanceado": 0.6, "economia": 0.35}
 #: A luz do estilo que respira ou pisca pulsa a cada tiro; a parada não reage.
@@ -539,7 +539,7 @@ class BordaDoDedo:
 # A-VIBRACAO-FINA-BATE-A-CADA-TIRO-01: a borda do rumble que o jogo pede.
 # Um tiro por BORDA, nunca por nível: o pedido repetido igual (o `cosmic-osk`
 # manda vibração nula a ~20 por segundo por pad) e o nível sustentado não são
-# borda. Os limiares são de partida, a validar na bancada.
+# borda. Os limiares são de partida.
 RUMBLE_DISPARA = 80
 RUMBLE_SUBIDA = 64
 RUMBLE_REARMA = 48

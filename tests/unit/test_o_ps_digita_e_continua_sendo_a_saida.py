@@ -163,7 +163,7 @@ def test_o_de_fabrica_da_linha_do_ps_e_nenhuma_tecla():
     """A linha do PS só digita (01/10/2026): o de fábrica dela é «— Sem tecla —».
 
     O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01, `D-0110-A-LINHA-DO-PS-SO-DIGITA`
-    (por delegação, a validar pelo usuário). Até ali o de fábrica dela era o degrau
+    (01/10/2026). Até ali o de fábrica dela era o degrau
     da máquina (`DaemonConfig.ps_button_action`, «Abrir a Steam»), e o PS tinha
     dois donos para o mesmo ato. O que o toque no PS faz no computador é o ⑥ da
     tabela dos gestos; a linha não lê mais o degrau.

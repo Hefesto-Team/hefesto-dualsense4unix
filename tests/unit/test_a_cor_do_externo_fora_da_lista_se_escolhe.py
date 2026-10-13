@@ -1,8 +1,8 @@
 """A-LINHA-DO-EXTERNO-VOLTA-AOS-30-PX-E-A-COR-FORA-DA-LISTA-SE-ESCOLHE-01: a cor do externo.
 
 A docstring de ``ControleDeclarado`` prometia um «campo "Outra"» de texto livre que a tela nunca
-teve (a janela GTK que o tinha saiu no ``f1dd18fd8``). A decisão por delegação de 08/10/2026, a
-validar pelo usuário, é a do caminho que não tira nada: a tela continua com a lista dos nomes de
+teve (a janela GTK que o tinha saiu no ``f1dd18fd8``). A decisão de produto de 08/10/2026
+é a do caminho que não tira nada: a tela continua com a lista dos nomes de
 fábrica, e as duas docstrings passam a dizer o que ela faz. O que se mede aqui, com o
 ``maquina.json`` dublado no ponto em que a mesa o lê:
 

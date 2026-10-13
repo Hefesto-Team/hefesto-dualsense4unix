@@ -56,7 +56,7 @@ caixa o `SDL_GAMECONTROLLER_IGNORE_DEVICES` e o `PROTON_DISABLE_HIDRAW`, com o
 Modo Nativo ligado em foco — zero controles. A caixa continua sendo a estrada
 da carona; o `system.env` do `.yml` do jogo passou a ser a camada da EXCLUSÃO
 («A CAMADA DO JOGO DO LUTRIS», mais abaixo). O motivo 1 caiu: o PyYAML passou a
-dependência de execução (por delegação, a validar pelo usuário), o mesmo leitor do
+dependência de execução, o mesmo leitor do
 Lutris, e nenhum YAML se escreve à mão. O motivo 2 continua medido: o Lutris
 dela segue sem jogo.
 

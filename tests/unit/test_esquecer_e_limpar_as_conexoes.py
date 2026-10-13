@@ -15,7 +15,7 @@ voltava ao reabrir; o teclado no ar não tinha como ser esquecido e o fone fora
 do ar nem aparecia; a dobra do controle que desligou ficava; e a chave tirada
 por outro programa, com o serviço vivo, ficava sem lápide.
 
-As decisões (decisão de produto, 30/09/2026, a validar pelo usuário):
+As decisões (decisão de produto, 30/09/2026):
 D-3009-A-LINHA-TEM-APARELHO, D-3009-O-ESQUECER-TEM-NOME,
 D-3009-A-CASA-SE-LIMPA-SOZINHA (pela resposta de produto; os momentos e as guardas de
 a decisão de produto) e D-3009-TODO-ESQUECER-TEM-LAPIDE.

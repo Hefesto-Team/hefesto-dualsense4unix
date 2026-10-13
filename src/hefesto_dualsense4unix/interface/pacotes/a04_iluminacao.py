@@ -2346,7 +2346,7 @@ def apagar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     resposta deixa a barra ACESA, que é exatamente a cara de "não cliquei
     direito".
 
-    O APAGADO É O BRILHO, E NÃO A COR — 25/09/2026, decisão por delegação
+    O APAGADO É O BRILHO, E NÃO A COR — 25/09/2026, decisão de produto
     (`D-2509-O-DESLIGAR-E-O-BRILHO-EM-ZERO`, A-04-PERGUNTA-AO-DAEMON-VIVO-01).
     O preto ia ao disco como a cor do controle, e desde 22/09 o preto é
     «não opinou»: a troca manual, o boot e o «Salvar perfil» acendiam a barra

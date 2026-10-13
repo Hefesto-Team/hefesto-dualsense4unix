@@ -199,7 +199,7 @@ async def test_o_broadcast_dela_vence_o_jogo(tmp_path: Path) -> None:
 
     A regra de 16/09 («meu perfil manda») caiu em 03/10/2026: o jogo manda, e na
     ausência dele o perfil ganha. O gesto do usuário na interface é a ordem mais nova
-    (por delegação, a validar pelo usuário), e o «Todos» é gesto como o clique num
+    (decisão de produto), e o «Todos» é gesto como o clique num
     controle.
     """
     server, ctl, no_1, no_2 = _mesa_com_dois_controles(tmp_path)

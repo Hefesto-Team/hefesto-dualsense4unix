@@ -7,7 +7,7 @@ não segura evdev de DualSense NENHUM — só o ``hidraw``, e o de TODOS os vpad
 Com máscara DualSense a resposta saía vazia por construção: nenhum controle
 vibrava, e o diário não dizia nada.
 
-**A decisão** (``D-2609-QUEM-JOGA-E-QUEM-MEXE``, por delegação): quem joga é o
+**A decisão** (``D-2609-QUEM-JOGA-E-QUEM-MEXE``): quem joga é o
 físico que teve entrada — botão, gatilho ou eixo fora da zona morta — desde
 que o jogo abriu, somado ao endpoint dele tocando. Contar o ``hidraw``
 devolveria o espelhado de 20/09 (o P3 vibrando num jogo de um jogador), e o

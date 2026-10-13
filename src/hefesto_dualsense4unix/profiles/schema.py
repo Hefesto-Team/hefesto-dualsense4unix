@@ -2363,8 +2363,8 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         "`None` = nenhum estilo aplicado pelo gesto da aba Perfis. O estilo é "
         "escolha dela por perfil, e o motor do tato fica desligado no perfil sem "
         "estilo, como antes de o estilo existir "
-        "(O-ESTILO-DO-PERFIL-LIGA-O-MOTOR-DO-TATO-01, 09/10/2026, «a validar por "
-        "ela»). Semear um estilo poria o tato de um gênero em todo jogo.",
+        "(O-ESTILO-DO-PERFIL-LIGA-O-MOTOR-DO-TATO-01, 09/10/2026). "
+        "Semear um estilo poria o tato de um gênero em todo jogo.",
     ),
     "Profile.receita_do_tato": Nascimento(
         E_CONTRATO,

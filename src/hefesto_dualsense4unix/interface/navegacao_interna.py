@@ -27,7 +27,7 @@ from typing import Any
 PREFIXOS_DA_VOLTA = ("01", "02", "03", "04", "05")
 
 #: O analógico esquerdo anda um passo ao cruzar meia deflexão (o repouso é 128),
-#: e repete enquanto segurado. Por delegação, a bancada mede (a sprint, item 2).
+#: e repete enquanto segurado. É valor de partida (a sprint, item 2).
 LIMIAR_DO_ANALOGICO = 64
 REPETICAO_DO_ANALOGICO_S = 0.25
 

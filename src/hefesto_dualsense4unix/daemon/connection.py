@@ -399,7 +399,7 @@ def _o_nome_que_o_boot_restaura(store: Any, *, appid_em_cena: int | None = None)
 
     O JOGO EM CENA VEM ANTES DA ESCOLHA — A-TRAVA-DO-JOGO-ABERTO-TEM-UM-DONO-01
     (01/10/2026, `D-3009-O-REINICIO-COM-O-JOGO-ABERTO-NASCE-NO-PERFIL-DO-JOGO`,
-    a validar pelo usuário). Com um jogo aberto na hora do boot (o «Reiniciar», o
+    decisão de produto). Com um jogo aberto na hora do boot (o «Reiniciar», o
     install, uma queda do serviço), o perfil cuja regra `steam_app_<appid>`
     casa com ele é o que vale, e o primeiro pad nasce no modo dele: o
     autoswitch o poria nove segundos depois, com a trava já protegendo o modo
@@ -411,7 +411,7 @@ def _o_nome_que_o_boot_restaura(store: Any, *, appid_em_cena: int | None = None)
     pulava todo perfil com regra de janela, e o Freestyle entrava no lugar
     (O-MODO-FREESTYLE-03). No disco do usuário isso é todo perfil que não é o
     Freestyle: medido no diário de 28 e 29/09, seis boots com a sessão em Pro
-    Jank Footy, e nenhum abriu no perfil que ela tinha ativado. A fala do usuário de
+    Jank Footy, e nenhum abriu no perfil que ela tinha ativado. A decisão de
     29/09 revogou a regra para a escolha do usuário.
     """
     from hefesto_dualsense4unix.profiles.loader import NOME_DO_PADRAO

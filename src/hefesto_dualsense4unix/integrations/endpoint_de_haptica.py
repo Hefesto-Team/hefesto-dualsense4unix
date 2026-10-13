@@ -411,7 +411,7 @@ def nome_do_endpoint(uniq: str) -> str:
 def rotulo_da_haptica(numero: int | None) -> str:
     """A FORMA A — «Háptica do Controle N (DualSense Wireless Controller)».
 
-    **Decidido por delegação em 24/09/2026**, pelo padrão que ela fixou
+    **Decidido em 24/09/2026**, pelo padrão de produto fixado
     para o alto-falante e o microfone em 23/09 (A-FORJA-VALIDA-O-SOM-01, E6): o
     nome dela na frente, o ``iProduct`` da Sony atrás, e nada de endereço. O
     rótulo de antes, «DualSense <hex6> (háptica)», punha o rabo do endereço do

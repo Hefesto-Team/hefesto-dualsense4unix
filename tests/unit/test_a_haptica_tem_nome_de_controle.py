@@ -6,7 +6,7 @@ rabo do endereço do controle no rótulo — e, com o P3 e o P4 no BT, a célula
 ``mapa-audio.saida_dedicada.payload_do_degrau-cabo`` da bancada contava quatro
 placas DualSense onde pede duas.
 
-A DECISÃO, por delegação de produto e pelo padrão de produto (a forma A de 23/09 vale para
+A DECISÃO, pelo padrão de produto (a forma A de 23/09 vale para
 tudo que o Hefesto publica; nada de endereço na tela), está DIGITADA aqui de
 propósito: «Háptica do Controle N (DualSense Wireless Controller)», com o
 número do jogador, republicado quando o número muda. A régua lê a decisão, não

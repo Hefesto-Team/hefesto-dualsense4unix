@@ -2355,8 +2355,8 @@ class PyDualSenseController(IController):
         O jogo manda; na ausência dele, o perfil ganha (decisão de
         03/10/2026, que revoga a PERFIL-MANDA-01 de 16/09): o perfil carimbado
         não tira o que o jogo pintou. O GESTO do usuário na interface (`usuaria`) é
-        a ordem mais nova, e vale o último que mandou (por delegação, a
-        validar pelo usuário): ele solta o que o jogo pintou NAQUELES campos, até o jogo
+        a ordem mais nova, e vale o último que mandou (decisão de
+        produto): ele solta o que o jogo pintou NAQUELES campos, até o jogo
         pintar de novo.
         """
         donos = self._desired_owner_by_uniq.setdefault(uniq, {})
@@ -5778,7 +5778,7 @@ class PyDualSenseController(IController):
         `_a_carta_menor_locked` (O-MODO-XBOX-NAO-E-QUEDA-02, item 4). Com o
         posto vazio, senta quem tem a carta menor, e não o 1º que conectou.
 
-        **A DECISÃO (24/09/2026, por delegação de produto,
+        **A DECISÃO (24/09/2026,
         `D-2409-O-JOGO-ESPERA-O-LUGAR-GUARDADO`):** o jogo também espera a carta
         1. Com o P1 fora dentro do prazo, o P2 virava primário na hora e passava
         a dirigir o vpad do jogador 1 do jogo enquanto a lâmpada e a tela

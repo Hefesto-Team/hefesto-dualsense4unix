@@ -8,7 +8,7 @@ posto, ninguém pediu o `restore` daquele nome, e a conexão do daemon (a lease)
 seguiu viva. O kernel deu o `hidraw6` ao pad do P2, e o broker passou a dizer
 «escondido» sobre ele.
 
-A cura (a `D-2909-A-LEASE-E-DO-APARELHO`, por delegação): a lease guarda o pai
+A cura (a `D-2909-A-LEASE-E-DO-APARELHO`): a lease guarda o pai
 HID do nó no pedido, e antes de todo pedido e no EOF o broker compara o pai de
 agora com o guardado. Mudou ou sumiu, a lease acaba, sem tocar no fs. Sysfs
 mudo (`None`) não poda.

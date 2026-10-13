@@ -85,7 +85,7 @@ mesmo controle.
 O «CONECTAR» (D8) é o mesmo caminho sem alvo: a janela abre no destino com
 mais vaga de ponte (:func:`plano_de_radio.ordem_dos_destinos`), e NADA PAREIA
 SEM O CLIQUE DO USUÁRIO (O-PAREAR-ESPERA-O-CLIQUE-01, D-3009-O-PAREAR-E-O-CLIQUE-DELA,
-30/09/2026, a validar pelo usuário): a janela pareia o aparelho que
+30/09/2026): a janela pareia o aparelho que
 o usuário escolheu no «Parear» da linha dele (:meth:`CentralDoRadio._a_escolha_dela`),
 e só um que a janela viu (o «Parear de Novo» escolhe antes). Até 30/09 ela pareava o primeiro
 controle que aparecesse, em meio segundo, antes de a tela o mostrar. E O CONTROLE QUE VOLTA PELO

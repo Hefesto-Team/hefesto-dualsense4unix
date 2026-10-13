@@ -2,7 +2,7 @@
 
 A linha 17 das 21 dela (06/09/2026) é o critério de aceitação: *"o P2 sai por
 20 segundos, volta como P2, e os outros três não trocam de número"*. Decidida
-em 24/09/2026 por delegação (``D-2409-O-ASSENTO-GUARDADO-NAO-ANDA``): dentro
+em 24/09/2026 (``D-2409-O-ASSENTO-GUARDADO-NAO-ANDA``): dentro
 do prazo do lugar guardado ninguém anda; passado o prazo, a NUM-01 volta (um
 até N entre quem está na mesa).
 

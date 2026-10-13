@@ -5370,7 +5370,7 @@ def _os_que_nao_conectaram(ctx: Contexto, movimentos: list[dict[str, Any]], agor
     ou o «esperando» que passou de :data:`ESPERA_NA_TELA_S`.
 
     A LINHA TEM APARELHO (ESQUECER-E-LIMPAR-AS-CONEXOES-01,
-    D-3009-A-LINHA-TEM-APARELHO, 30/09/2026, a validar pelo usuário).
+    D-3009-A-LINHA-TEM-APARELHO, 30/09/2026).
     A busca que ninguém respondeu (o movimento sem endereço) virava «DualSense ·
     Não Conectou», com o desenho do controle, a borda laranja e a caixa que
     abria — o *«controle fantasma»* dela. Agora a linha só existe enquanto há um

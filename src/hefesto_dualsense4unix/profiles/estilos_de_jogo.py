@@ -74,8 +74,8 @@ Point-and-click liga a Navegação, pela seção `mode` do perfil). As outras
 (O-ESTILO-DO-PERFIL-LIGA-O-MOTOR-DO-TATO-01) o perfil guarda a CHAVE do estilo
 (`Profile.estilo`), e o motor do tato vivo lê o toque, o lado e a luz daqui,
 pela tradução `daemon/subsystems/tato_vivo.receita_do_estilo`. Todo número vem
-de fonte pública, citada na linha; o que é escolha nossa diz «escolha», a
-validar pelo usuário na bancada.
+de fonte pública, citada na linha; o que é escolha de produto diz «escolha»,
+e é valor de partida.
 """
 
 from __future__ import annotations

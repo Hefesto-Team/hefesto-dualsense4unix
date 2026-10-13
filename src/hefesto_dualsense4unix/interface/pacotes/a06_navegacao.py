@@ -219,7 +219,7 @@ PAPEL_DO_CURSOR = "Move o cursor"
 
 #: A lista «Tipo de navegação» (A-NAVEGACAO-INTERNA-E-UM-MODO-QUE-SE-LIGA-EM-QUALQUER-ABA-01):
 #: o tipo que o daemon guarda (`navegacao.interna.set {tipo}`) e o rótulo que a lista mostra,
-#: na ordem do pedido. A Interna vem primeiro, pela fala do usuário.
+#: na ordem do pedido. A Interna vem primeiro.
 TIPO_INTERNA = "interna"
 TIPO_COMPUTADOR = "computador"
 ROTULOS_DO_TIPO: dict[str, str] = {
@@ -851,7 +851,7 @@ def a_mira_do_cartao(dele: dict[str, Any], ctx: Contexto) -> dict[str, str]:
 def move_o_cursor(dele: dict[str, Any], ctx: Contexto, primario: bool) -> bool:
     """Este controle, que NÃO navega o PC, move o cursor agora pelo giro?
 
-    A-MIRA-NA-NAVEGACAO-02, 25/09/2026, por delegação de produto. É o que o daemon
+    A-MIRA-NA-NAVEGACAO-02, 25/09/2026, decisão de produto. É o que o daemon
     faz, e não uma frase nova: na Navegação o `mouse.mover_o_cursor_pelo_giro`
     leva ao cursor o giro de TODA peça com a Mira acesa, e o cartão dizia «Só
     a janela» sobre um controle que movia o cursor da máquina.

@@ -31,7 +31,7 @@ _PAD_A_CAMINHO_S = _CALIB_PRAZO_S + ESPERA_PELA_ORDEM_S + 4.0
 #: quanto vale o retrato da mesa que o ``sync`` publica (duas voltas e folga).
 _A_MESA_VALE_S = 5.0
 
-# O jogador que cedeu o aparelho ao posto de P1 (09/10/2026, a validar pelo usuário):
+# O jogador que cedeu o aparelho ao posto de P1 (09/10/2026):
 # «calado»: o pad dele para de falar com o aparelho na cessão (o motor que ele
 # deixou ligado para ali, uma vez) e o recolhimento não manda parada nem zero;
 # «com-parada» é o de antes. O interruptor mora no ambiente do daemon.
@@ -2046,7 +2046,7 @@ class CoopManager:
     def o_posto_do_p1_espera(self, uniq: str) -> bool:
         """O posto do P1 que caiu ESPERA por ele? — a decisão de 24/09/2026.
 
-        `D-2409-O-JOGO-ESPERA-O-LUGAR-GUARDADO`, por delegação de produto: com o P1
+        `D-2409-O-JOGO-ESPERA-O-LUGAR-GUARDADO`: com o P1
         fora dentro do prazo, o vpad do jogador 1 fica parado à espera dele e o
         P2 continua no vpad 2. São três as decisões de produto que já diziam isso —
         *o primário espera a carta 1* e *o Hefesto manda no número, sempre*

@@ -15,7 +15,7 @@ depois): o 359, o 180 e o «sem número» saíam na mesma cor, e só o 60 mudava
 opacidade 0,8; o glifo tinha um par de arcos só; e o ``a08`` atribuía o
 ``CANAIS_DO_BT = 79`` e o ``HZ_QUE_ENGASGA = 125.0`` à mão.
 
-As decisões (decisão de produto, 30/09/2026, a validar pelo usuário):
+As decisões (decisão de produto, 30/09/2026):
 D-3009-O-HZ-SE-PINTA-PELO-QUE-O-JOGO-RECEBE e
 D-3009-OS-CANAIS-SE-PINTAM-PELO-PISO-DO-SALTO. A distância de verdade é o RSSI
 do enlace (D-3009-A-DISTANCIA-E-O-RSSI-E-ESPERA-A-PROVA), e o leitor dele

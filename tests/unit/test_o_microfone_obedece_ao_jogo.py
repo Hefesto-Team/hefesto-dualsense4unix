@@ -1,7 +1,7 @@
 """A luz e o mudo do microfone obedecem ao jogo (A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-AO-JOGO-01).
 
-**A DECISÃO** (D-2909-O-MICROFONE-OBEDECE-AO-JOGO, por delegação, a
-validar pelo usuário; revoga a D-2909-A-LUZ-DO-MIC-NAO-OBEDECE-AO-JOGO). O princípio é do usuário,
+**A DECISÃO** (D-2909-O-MICROFONE-OBEDECE-AO-JOGO, que
+revoga a D-2909-A-LUZ-DO-MIC-NAO-OBEDECE-AO-JOGO). O princípio é do usuário,
 de 29/09, ~21h20: *«Garantir que o inpút do joogo  # (noqa-acento: citação literal)
 chegue ao controle do jogador. Aí se o jogo (…) desliga e liga o  # (noqa-acento: citação literal)
 microfone do user (…) aí o
