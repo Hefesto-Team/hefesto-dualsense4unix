@@ -188,7 +188,7 @@
   .rotulo .nome { display: block; font-weight: 600; }
   .rotulo .caminho { display: block; font-family: var(--font-dado); color: var(--color-ink-faint); font-size: .6875rem; }
   .rotulo .vazio { color: var(--color-ink-faint); font-style: italic; }
-  /* o nome que ela deu à entrada: uma linha só, com reticências */
+  /* o nome que o usuário deu à entrada: uma linha só, com reticências */
   .rotulo .nomeada { display: block; font-weight: 700; white-space: nowrap;
                      overflow: hidden; text-overflow: ellipsis; }
   .rotulo .veredito { display: block; font-weight: 600; }
@@ -1414,7 +1414,7 @@
       + ensinaNaEntrada(porta)
       + (achado && alocacao[porta.n] === achado ? ' data-achado="1"' : "")
       + ' aria-label="' + titulo + '" title="' + titulo + '"></button><span class="rotulo">';
-    /* O NOME QUE ELA DEU, na primeira linha do rótulo — cortado com
+    /* O NOME QUE O USUÁRIO DEU, na primeira linha do rótulo — cortado com
        reticências, e inteiro na dica. O selo `.num` continua o número:
        é o do metal. */
     var batismo = nomeDe(porta.n);
@@ -1592,7 +1592,7 @@
     for (var i = 0; i < TIPOS_DO_APARELHO.length; i++) if (TIPOS_DO_APARELHO[i][0] === t) return TIPOS_DO_APARELHO[i][1];
     return t;
   }
-  /* o nome que ela deu vence; depois o tipo que o usuário disse; depois o que a máquina leu */
+  /* o nome que o usuário deu vence; depois o tipo que o usuário disse; depois o que a máquina leu */
   function rotuloDoAparelho(a) {
     return a.nomeDeclarado || (a.tipoDeclarado ? rotuloDoTipo(a.tipoDeclarado) : a.tipo);
   }
@@ -2251,10 +2251,10 @@
     leituraAnterior = "antes";
     CONTROLES = f.controles || controlesSobre(APARELHOS, EXEMPLO.controles);
     quantos = CONTROLES.length;
-    /* O QUE ELA DECLAROU EM CADA ENTRADA — 26/09/2026, o editor da entrada.
+    /* O QUE O USUÁRIO DECLAROU EM CADA ENTRADA — 26/09/2026, o editor da entrada.
        Toda entrada do mapa dela vem, com {} quando ela não disse nada, e as
        chaves são as que o editor GRAVA no disco. A que o desenho monta do que
-       ela declarou (as do hub, a ponta do extensor) não vem: ali, e no
+       o usuário declarou (as do hub, a ponta do extensor) não vem: ali, e no
        exemplo, o editor fica só na tela. */
     DECLARADO = JSON.parse(JSON.stringify(f.declarado || {}));
     GRAVA = Object.keys(DECLARADO);
@@ -2308,7 +2308,7 @@
          entradas, e isso se lê como "não tenho nada ligado". */
       throw new Error("arranjo incompleto, falta: " + falta.join(", "));
     }
-    /* O REEXAME RELÊ O QUE ELA ENSINOU, porque o ensinar grava no disco
+    /* O REEXAME RELÊ O QUE O USUÁRIO ENSINOU, porque o ensinar grava no disco
        (O-MAPA-QUE-ELA-CORRIGE-01, D-2609-ENSINAR-GRAVA-O-NO). Até aqui o
        mapa da tela era guardado por cima da releitura: o que ela ensinava
        só vivia na memória, e a releitura o desfazia. */
