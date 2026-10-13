@@ -102,7 +102,7 @@ NOMES_DO_DESENHO = (
     "Mortal Kombat", "Elden Ring", "Don't Scream", "Wendigo Blue",
     "Orpheus: To Hell and Back", "Mina the Hollower",
     "Xiaomi Scale S400", "Xiaomi Band 9",
-    "Teclado", "Mouse", "Caixa de som", "Fone", "Celular", "Relógio",
+    "Teclado", "Mouse", "Caixa de som", "Fone", "Celular", "Relógio", "Acessório",
     "Esquerda", "Meio", "Direita",
 )
 

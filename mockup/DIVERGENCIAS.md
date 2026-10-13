@@ -34,3 +34,13 @@ seção daqui**: a aba deixou de estar em trabalho.
   sempre as três Entradas continuam em 2; uma Entrada que varre (teto 849) com dois controles cai para 1. A página do
   produto continua em «N/2» até publicar, e o limite do produto só segue a capacidade quando a bancada ligar o
   `radio_da_mesa.N_MAX_PELA_CAPACIDADE`.
+
+## 08-conexoes.html
+- **13/10/2026** — o aparelho de baixa energia que não diz o tipo ganha a categoria «Acessório» (glifo, palavra,
+  legenda e cor próprios), a faixa dele são os 40 canais de baixa energia «não medidos» com os três de anúncio
+  marcados, e o ponto diz o sinal em dBm sem julgar (sprint O-ACESSORIO-SEM-TIPO-GANHA-CATEGORIA-E-SINAL-NA-CONEXOES-01,
+  a opção 1 escolhida em 09/10/2026). Na cena do desenho o acessório ocupa a linha do relógio; o relógio continua na
+  legenda. As cores de cada tipo passam a tokens da raiz (`--c-<tipo>`, `--sala-<tipo>`), que um tema de cores
+  alcança (sprint O-TEMA-DE-CORES-ENTRA-PELA-FOLHA-DE-USUARIO-01), com os mesmos valores de antes. O pacote da aba já
+  escreve os tokens e as células novas, e só a página publicada traz a folha que os define: a 08 se publica junto
+  com o código, no mesmo fecho.
