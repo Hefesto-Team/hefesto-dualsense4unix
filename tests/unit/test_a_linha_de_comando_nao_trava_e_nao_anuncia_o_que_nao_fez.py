@@ -79,7 +79,13 @@ def servico_mudo(monkeypatch: pytest.MonkeyPatch) -> Iterator[_ServicoMudo]:
 
 
 class _SemControle:
-    """O backend de um posto vago: abre, aceita tudo, não tem controle."""
+    """O backend de um posto vago: abre, aceita tudo, não tem controle.
+
+    O `read_state` responde o que o backend de verdade responde sem aparelho
+    (`core/backend_pydualsense.py`, o ramo `ds is None`): bateria 0 e o transporte
+    inicial «usb». Um dublê que levantasse aqui cairia no `except` do fallback e
+    esconderia a conferência que a régua mede.
+    """
 
     def __init__(self, *_a: Any, **_k: Any) -> None:
         self.comandos: list[str] = []
@@ -94,7 +100,9 @@ class _SemControle:
         return False
 
     def read_state(self) -> Any:
-        raise AssertionError("não se lê o estado de um controle ausente")
+        from types import SimpleNamespace
+
+        return SimpleNamespace(connected=False, transport="usb", battery_pct=0)
 
     def set_led(self, *_a: Any, **_k: Any) -> None:
         self.comandos.append("set_led")
@@ -160,6 +168,19 @@ def test_o_servico_ausente_segue_sendo_leitura_direta(
 
 
 # O aparelho ausente ---------------------------------------------------------------------
+
+
+def test_status_sem_controle_nao_inventa_transporte_nem_bateria(
+    monkeypatch: pytest.MonkeyPatch, sem_controle: type[_SemControle]
+) -> None:
+    async def _fora() -> None:
+        return None
+
+    monkeypatch.setattr(cmd_status, "_daemon_status_via_ipc", _fora)
+    resultado = runner.invoke(app, ["status"])
+    assert resultado.exit_code == 0
+    assert "usb" not in resultado.output.lower()
+    assert "sem controle disponivel" not in resultado.output
 
 
 def test_battery_sem_controle_nao_inventa_zero_por_cento(
@@ -237,6 +258,61 @@ def test_version_nao_escreve_diario_no_stderr(tmp_path: Path) -> None:
     assert r.returncode == 0
     assert r.stdout.strip()
     assert r.stderr == ""
+
+
+def _lar_de_mentira(casa: Path) -> dict[str, str]:
+    casa.mkdir()
+    (casa / "r").mkdir(mode=0o700)
+    env = {
+        **os.environ,
+        "HOME": str(casa),
+        "XDG_CONFIG_HOME": str(casa / "c"),
+        "XDG_STATE_HOME": str(casa / "s"),
+        "XDG_DATA_HOME": str(casa / "d"),
+        "XDG_CACHE_HOME": str(casa / "k"),
+        "XDG_RUNTIME_DIR": str(casa / "r"),
+    }
+    env.pop("HEFESTO_DUALSENSE4UNIX_LOG_LEVEL", None)
+    return env
+
+
+def _o_script_instalado(pasta: Path) -> Path:
+    """A forma do `hefesto-dualsense4unix` que o pip instala: um script com esse nome."""
+    script = pasta / "hefesto-dualsense4unix"
+    script.write_text(
+        f"#!{sys.executable}\n"
+        "import sys\n"
+        "from hefesto_dualsense4unix.cli.app import main\n"
+        "sys.exit(main())\n",
+        encoding="utf-8",
+    )
+    script.chmod(0o755)
+    return script
+
+
+def test_o_script_instalado_tambem_nasce_calado(tmp_path: Path) -> None:
+    # `profile list` num lar novo roda as migrações e a semeadura (o conftest as
+    # desliga; aqui elas rodam no lar de mentira), que em INFO escrevem no stderr.
+    env = _lar_de_mentira(tmp_path / "casa")
+    env.pop("HEFESTO_DUALSENSE4UNIX_SKIP_PRESET_SEED", None)
+    r = subprocess.run(
+        [str(_o_script_instalado(tmp_path)), "profile", "list"],
+        capture_output=True, text=True, env=env, timeout=60, check=False,
+    )
+    assert r.returncode == 0
+    assert r.stdout.strip()
+    assert r.stderr == ""
+
+
+def test_o_i18n_nao_aparece_nem_com_o_diario_em_info(tmp_path: Path) -> None:
+    # O `daemon start` segue em INFO: a linha do idioma não pode entrar no diário dele.
+    env = {**_lar_de_mentira(tmp_path / "casa"), "HEFESTO_DUALSENSE4UNIX_LOG_LEVEL": "INFO"}
+    r = subprocess.run(
+        [str(_o_script_instalado(tmp_path)), "version"],
+        capture_output=True, text=True, env=env, timeout=60, check=False,
+    )
+    assert r.returncode == 0
+    assert "i18n_initialized" not in r.stdout + r.stderr
 
 
 # O rc do doctor ------------------------------------------------------------------------------
