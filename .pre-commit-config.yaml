@@ -187,3 +187,6 @@ repos:
         entry: python3 scripts/o-texto-enxuto.py --aplicar --restagear
         language: system
         files: '\.(py|md|csv)$'
+        # Em série: em paralelo, os `git add` disputam o index.lock e o arquivo
+        # corrigido fica fora do índice (medido com 40 arquivos no pre-commit 4.7.0).
+        require_serial: true

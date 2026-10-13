@@ -54,6 +54,7 @@ RAIZES_DA_FALA = ("src/", "tests/", "scripts/")
 
 AJUDA = {
     "dela": "rode `--aplicar`: a troca é mecânica",
+    "dela-no-codigo": "mora num texto que o código usa (a AST mudaria): troque à mão e, se vira página, republique",
     "fala": "a fala vira a regra; a citação literal mora em docs/data/decisoes-de-produto.csv",
     "docstring": "a docstring fica com o contrato; a história vai para docs/research/o-porque-dos-modulos.md",
     "cortado": "termine a frase em até duas linhas ou apague o fragmento",
@@ -215,6 +216,29 @@ def citacoes_novas(raiz: Path, documentos: set[str]) -> list[Achado]:
     return [Achado(a.documento, a.linha, "citação", a.motivo) for a in achados if a.documento in documentos]
 
 
+def _sem_docstrings(fonte: str) -> str:
+    arvore = ast.parse(fonte)
+    for no in ast.walk(arvore):
+        if isinstance(no, ast.Module | ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef) and no.body:
+            primeiro = no.body[0]
+            if isinstance(primeiro, ast.Expr) and isinstance(primeiro.value, ast.Constant) \
+                    and isinstance(primeiro.value.value, str):
+                no.body = no.body[1:] or [ast.Pass()]
+    return ast.dump(arvore)
+
+
+def mesmo_codigo(antes: str, depois: str) -> bool:
+    """A AST, tirando as docstrings, é a mesma? É a prova de que a troca só tocou texto.
+
+    O neutralizador também troca o comentário CSS ou JS dentro de uma string que vira página; isso muda o
+    código, então não é mecânico aqui.
+    """
+    try:
+        return _sem_docstrings(antes) == _sem_docstrings(depois)
+    except SyntaxError:
+        return False
+
+
 def examinar(raiz: Path, rel: str, texto: str, aplicar: bool) -> tuple[str, list[Achado]]:
     """``(texto corrigido, achados)``: o mecânico sai trocado, o resto vem apontado."""
     achados: list[Achado] = []
@@ -224,10 +248,13 @@ def examinar(raiz: Path, rel: str, texto: str, aplicar: bool) -> tuple[str, list
         novo = nz.reescrever_arquivo(texto, tipo)
         if novo != texto:
             linha, quantas = _primeira_linha_trocada(texto, novo)
-            dito = f"corrigido ({quantas} linha(s) trocada(s))" if aplicar else AJUDA["dela"]
-            achados.append(Achado(rel, linha, "dela", f"o «dela» que aponta para a pessoa: {dito}", True))
-            if aplicar:
-                texto = novo
+            if tipo == "py" and not mesmo_codigo(texto, novo):
+                achados.append(Achado(rel, linha, "dela", f"o «dela» que aponta para a pessoa {AJUDA['dela-no-codigo']}"))
+            else:
+                dito = f"corrigido ({quantas} linha(s) trocada(s))" if aplicar else AJUDA["dela"]
+                achados.append(Achado(rel, linha, "dela", f"o «dela» que aponta para a pessoa: {dito}", True))
+                if aplicar:
+                    texto = novo
     for arquivo, linha in falas_em_comentario({rel: texto}):
         achados.append(Achado(arquivo, linha, "fala", f"fala citada em comentário: {AJUDA['fala']}"))
     if not rel.endswith(".py") or not rel.startswith(RAIZES_DA_FALA):
@@ -303,9 +330,9 @@ def rodar(raiz: Path, arquivos: list[str], aplicar: bool, restagear: bool) -> in
     achados += citacoes_novas(raiz, {a for a in arquivos if a.endswith((".md", ".csv"))})
     soltos = []
     for rel in corrigidos:
-        if restagear and no_indice(raiz, rel):
-            _git(raiz, "add", "--", rel)
-        elif restagear:
+        if not restagear:
+            continue
+        if not no_indice(raiz, rel) or _git(raiz, "add", "--", rel).returncode != 0:
             soltos.append(rel)
     restantes = [a for a in achados if not (aplicar and a.mecanico)]
     if not achados and not soltos:
@@ -319,7 +346,7 @@ def rodar(raiz: Path, arquivos: list[str], aplicar: bool, restagear: bool) -> in
     if len(achados) > TETO_DA_SAIDA:
         print(f"(e mais {len(achados) - TETO_DA_SAIDA})")
     for rel in soltos:
-        print(f"{rel}: corrigido no disco, mas não estava no índice; rode `git add {rel}`")
+        print(f"{rel}: corrigido no disco, mas fora do índice; rode `git add {rel}`")
     return 1 if restantes or soltos else 0
 
 
