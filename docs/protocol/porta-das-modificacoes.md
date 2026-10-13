@@ -55,7 +55,7 @@ Os dois últimos são do jogo e do perfil, e cada um é uma permissão à parte:
   faltava. A batida roda no tique do gamepad virtual do P1, e `jogo.fechou` sai do tique do autoswitch (só com
   ele ligado): no Modo Nativo o Hefesto não vê a vibração;
 - `perfil.marcas` (`ler:perfil.marcas`) entrega `nome: "perfil.trocou"`: `{perfil, marcas: [...], t}`, a cada
-  troca do perfil efetivo. É estado, não evento: o serviço guarda o último, e quem assina depois recebe o
+  troca do perfil efetivo ou das marcas do arquivo dele (a marca posta no jogo já aberto também vale). É estado, não evento: o serviço guarda o último, e quem assina depois recebe o
   de agora logo na assinatura. As marcas são as do arquivo do perfil (`[]` sem marca), e o envelope leva o
   `uniq` do posto.
 
