@@ -208,9 +208,16 @@ class GanhoDaHaptica:
         return set(com_dono)
 
     def devolver_as_placas(self, *, runner: Rodar | None = None) -> None:
-        """No ``stop``: os traseiros de toda placa escrita voltam a 1,0."""
+        """No ``stop``: os traseiros de toda placa escrita voltam a 1,0.
+
+        Servidor calado (o recuo) não recebe a placa seguinte: um estouro e nada mais.
+        """
+        from hefesto_dualsense4unix.integrations import dualsense_bt_audio
+
         placas, self._placas = dict(self._placas), {}
         for placa in placas:
+            if dualsense_bt_audio.PACTL.mudo():
+                return
             with contextlib.suppress(Exception):
                 self._escrever_traseiros(placa, 1.0, runner)
 

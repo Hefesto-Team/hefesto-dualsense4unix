@@ -19,6 +19,7 @@ from typing import Any
 
 import pytest
 
+from hefesto_dualsense4unix.daemon import ganho_da_haptica
 from hefesto_dualsense4unix.daemon.subsystems import alto_falante as sub_mod
 from hefesto_dualsense4unix.integrations import alto_falante_bt as afb
 from hefesto_dualsense4unix.integrations import dualsense_bt_audio, retrato_do_som
@@ -156,9 +157,10 @@ def _timeout_stop_da_unit() -> float:
 def test_o_servidor_travado_paga_um_estouro_e_nada_mais(
     monkeypatch: pytest.MonkeyPatch, relogio: Relogio
 ) -> None:
-    """MORDIDA: tirar a regra do servidor calado do ``parar``, da conferência e da varredura."""
+    """MORDIDA: tirar a regra do servidor calado do ``parar``, da varredura ou das placas."""
     servidor = _servidor(monkeypatch, relogio, demora=afb._TIMEOUT_PACTL_S)
     ger = _mesa(servidor)
+    monkeypatch.setattr(ganho_da_haptica.GANHO, "_placas", {"placa_0": 1.0, "placa_1": 1.0})
     inicio = relogio.agora
     _parar_o_som(ger)
     assert relogio.agora - inicio <= afb.ORCAMENTO_DO_STOP_S
