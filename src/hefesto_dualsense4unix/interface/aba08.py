@@ -2124,16 +2124,17 @@ def _cena_do_desenho() -> dict:
                       "nome": "", "rotulo": "DualSense", "desligado": True,
                       "esperando": False, "fixo": True})
     cheio["nao_conectou"] = True
-    # O celular e o relógio que o BlueZ também lista no adaptador cheio (o desenho 1), e o teclado
-    # que o «Descobrir» já mediu (o mouse ainda não): as duas formas de um receptor.
-    aparelhos += [
-        {"id": f"celular-{cheio['id']}", "tipo": "celular", "lugar": cheio["id"],
-         "nome": "Celular", "rotulo": "Celular", "esperando": False, "fixo": False},
-        {"id": f"relogio-{cheio['id']}", "tipo": "relogio", "lugar": cheio["id"],
-         "nome": "Relógio", "rotulo": "Relógio", "esperando": False, "fixo": False}]
+    # O celular que o BlueZ também lista no adaptador cheio (o desenho 1), e o teclado que o
+    # «Descobrir» já mediu (o mouse ainda não): as duas formas de um receptor.
+    aparelhos.append({"id": f"celular-{cheio['id']}", "tipo": "celular", "lugar": cheio["id"],
+                      "nome": "Celular", "rotulo": "Celular", "esperando": False,
+                      "fixo": False})
     # O aparelho de baixa energia que não diz o tipo (O-ACESSORIO-SEM-TIPO-GANHA-CATEGORIA-E-
     # SINAL-NA-CONEXOES-01): chega «outro», como o BlueZ o dá, e a regra da cena o faz
     # «Acessório» pelo enlace LE; a faixa são os 40 canais «não medido», e o ponto, o sinal.
+    # Ele ocupa a linha que era do relógio do desenho 1: uma linha a mais no adaptador cheio
+    # (sete aparelhos em duas colunas) custava 29 px, e a seção aberta passava a rolar 13 px na
+    # janela maximizada (1918 por 840). O relógio continua na legenda e na régua.
     acessorio = "aa:bb:cc:00:00:e1"
     aparelhos.append({"id": acessorio, "tipo": "outro", "lugar": cheio["id"],
                       "nome": "Acessório", "rotulo": "Acessório", "pareado": True,
