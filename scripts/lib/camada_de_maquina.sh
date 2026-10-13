@@ -253,6 +253,7 @@ install_osk_host() {
 # /usr/share/alsa/ucm2/conf.d/USB-Audio/, sem tocar arquivo do alsa-ucm-conf.
 # Opt-out: --no-ucm; e o --no-udev, como toda escrita no sistema.
 install_ucm_dualsense_host() {
+    _pula_por_so_leitura ucm && return 0
     if [[ "${NO_UCM}" -eq 1 ]]; then
         printf '      perfil UCM do DualSense pulado (--no-ucm) — a vibração dos jogos da Sony não chega pelo cabo\n'
         return 0
@@ -907,6 +908,34 @@ PYEOF
     fi
 }
 
+# DISTRO SOMENTE LEITURA (Bazzite, Silverblue, Kinoite, SteamOS): o /usr é da
+# imagem do sistema. Módulo DKMS, initramfs e arquivo em /usr/share não têm onde
+# gravar (ou somem no próximo update da imagem), e tentar só enche a tela de erro
+# que ninguém cura. A pergunta é a de `_familia_pacotes` (install.sh), que tem o
+# dono da marca; aqui só se lê. Cada item diz o EFEITO de ficar de fora, para
+# quem instala saber o que perde.
+_distro_so_leitura() {
+    declare -F _familia_pacotes >/dev/null 2>&1 || return 1
+    [[ "$(_familia_pacotes)" == "imutavel" ]]
+}
+
+_efeito_so_leitura() {
+    case "$1" in
+        playstation) printf 'o microfone do DualSense pelo rádio fica desligado (vale o driver de fábrica, sem as curas da casa)' ;;
+        nintendo)    printf 'o controle da Nintendo pode não subir pelo rádio (vale o driver de fábrica)' ;;
+        rtw88)       printf 'o dongle Wi-Fi USB não ganha a cura do fantasma USB (vale o driver de fábrica)' ;;
+        uhid)        printf 'o uhid de fábrica segue, sem a contrapressão' ;;
+        initramfs)   printf 'nenhum módulo da casa entra, então não há o que regenerar' ;;
+        ucm)         printf 'a vibração dos jogos da Sony pelo cabo depende do perfil UCM que a própria imagem trouxer' ;;
+    esac
+}
+
+# A linha do install real (a do ensaio é o `_nao_faria` do install.sh).
+_pula_por_so_leitura() {
+    _distro_so_leitura || return 1
+    printf '      pulado (distro somente leitura) — %s\n' "$(_efeito_so_leitura "$1")"
+}
+
 # Onda T (desenho: o estudo «desenho-onda-t-patch-dkms» de 20/07/2026):
 # módulo hid-nintendo patchado (probe BT resiliente + module params) via DKMS
 # genérico (scripts/dkms_lib.sh — reusado pela Onda W/rtw88). DEFAULT ON (regra
@@ -917,6 +946,7 @@ PYEOF
 # função só decide SE chama (flag/sudo) e a mensagem de ativação, nunca
 # recarrega/descarrega o módulo.
 install_dkms_hid_nintendo_host() {
+    _pula_por_so_leitura nintendo && return 0
     if [[ "${NO_DKMS}" -eq 1 ]]; then
         printf '      pulado (--no-dkms)\n'
         return 0
@@ -1029,6 +1059,7 @@ install_dkms_hid_nintendo_host() {
 #
 # O `--no-dkms` também o pula: quem recusa DKMS recusa todos.
 install_dkms_uhid_host() {
+    _pula_por_so_leitura uhid && return 0
     if [[ "${COM_UHID_CONTRAPRESSAO:-0}" -ne 1 ]]; then
         printf '      pulado (opt-in: ./install.sh --uhid-contrapressao)\n'
         return 0
@@ -1102,6 +1133,7 @@ install_dkms_uhid_host() {
 # 3 s), o uhid entrega -EIO ao driver e o controle inteiro é perdido. Detalhe
 # completo em assets/dkms/hid-playstation/README.md.
 install_dkms_hid_playstation_host() {
+    _pula_por_so_leitura playstation && return 0
     if [[ "${NO_DKMS}" -eq 1 ]]; then
         printf '      pulado (--no-dkms)\n'
         return 0
@@ -1202,6 +1234,7 @@ install_dkms_hid_playstation_host() {
 # Silenciosa e no-op quando nenhum módulo DKMS ficou staged (--no-dkms, dkms
 # ausente, build falho): quem marca é só o ramo de sucesso da lib.
 flush_initramfs_host() {
+    _pula_por_so_leitura initramfs && return 0
     if [[ "${NO_DKMS}" -eq 1 ]]; then
         printf '      pulado (--no-dkms)\n'
         return 0
@@ -1272,6 +1305,7 @@ _rtw88_adaptadores_presentes() {
 }
 
 install_dkms_rtw88_usb_host() {
+    _pula_por_so_leitura rtw88 && return 0
     if [[ "${NO_DKMS}" -eq 1 ]]; then
         printf '      pulado (--no-dkms)\n'
         return 0

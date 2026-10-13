@@ -522,7 +522,7 @@ ask_yn() {
 # O desenho, em três peças, e o molde é da própria casa
 # (`scripts/install_osk.sh:206-220`, que já despacha por família):
 #
-#   _familia_pacotes()  descobre a família (apt/dnf/pacman/nenhum);
+#   _familia_pacotes()  descobre a família (apt/dnf/pacman/imutavel/nenhum);
 #   _pkg_nome()         UMA tabela: nome canônico -> nome em cada família;
 #   run_pkg()           instala nomes canônicos na família corrente.
 #
@@ -560,9 +560,25 @@ _OS_RELEASE="${HEFESTO_OS_RELEASE:-/etc/os-release}"
 # padrão e sobrevive a máquinas com dois gerenciadores instalados); o PATH só
 # decide quando o os-release não conclui. `HEFESTO_FAMILIA_PACOTES` é o gancho
 # de teste, no mesmo espírito do `HEFESTO_OSK_GERENCIADOR`.
+#
+# `imutavel` vem ANTES do `ID_LIKE`: Bazzite (`ID_LIKE=fedora`) e SteamOS
+# (`ID_LIKE=arch`) parecem dnf e pacman pelo os-release, e ali `dnf install` não
+# tem onde gravar e o `pacman` que grava some no próximo update da imagem. A
+# marca é a do sistema: `/run/ostree-booted` (rpm-ostree e bootc: Silverblue,
+# Kinoite, Bazzite) ou o `steamos-readonly status` ligado. O caminho da marca
+# tem o gancho `HEFESTO_OSTREE_MARCA`, para o teste não depender desta máquina.
 _familia_pacotes() {
     if [[ -n "${HEFESTO_FAMILIA_PACOTES:-}" ]]; then
         printf '%s\n' "${HEFESTO_FAMILIA_PACOTES}"
+        return 0
+    fi
+    if [[ -e "${HEFESTO_OSTREE_MARCA:-/run/ostree-booted}" ]]; then
+        printf 'imutavel\n'
+        return 0
+    fi
+    if command -v steamos-readonly >/dev/null 2>&1 \
+        && [[ "$(steamos-readonly status 2>/dev/null | tr -d '[:space:]' | tr 'A-Z' 'a-z')" == "enabled" ]]; then
+        printf 'imutavel\n'
         return 0
     fi
     local _id="" _id_like="" _token
@@ -738,6 +754,18 @@ run_pkg() {
     local _familia _canon _nome _parte
     local _nomes=()
     _familia="$(_familia_pacotes)"
+    # Distro somente leitura: não há gerente de pacotes a chamar. O ensaio diz
+    # que não instalaria e segue (o plano descreve o caminho em que a imagem já
+    # traz o que falta); a instalação de verdade avisa e devolve 1, e quem
+    # chamou cai no ramo de «não consegui», que já imprime o comando manual.
+    if [[ "${_familia}" == "imutavel" ]]; then
+        if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+            _nao_faria "instalar pacote(s) $*: a distro é somente leitura e não há gerente de pacotes a chamar"
+            return 0
+        fi
+        warn "distro somente leitura — não instalei $*: a imagem do sistema não aceita pacote solto"
+        return 1
+    fi
     for _canon in "$@"; do
         _nome="$(_pkg_nome "${_canon}" "${_familia}")"
         if [[ -z "${_nome}" ]]; then
@@ -783,6 +811,7 @@ comando_manual_pkg() {
         apt)    printf 'sudo apt install %s\n' "${_lista}" ;;
         dnf)    printf 'sudo dnf install %s\n' "${_lista}" ;;
         pacman) printf 'sudo pacman -S %s\n' "${_lista}" ;;
+        imutavel) printf 'peça à imagem do sistema o equivalente a: %s\n' "${_lista}" ;;
         *)      printf 'instale pela sua distro o equivalente a: %s\n' "${_lista}" ;;
     esac
 }
@@ -1023,9 +1052,14 @@ _garantir_deps_de_sistema() {
     # aborte. Quem está lá tem de sair sabendo o que instalar à mão — inclusive
     # o que é OBRIGATÓRIO, que aqui vira aviso porque o instalador não tem como
     # cumprir a promessa nem como julgar o sistema de pacotes da pessoa.
-    if [[ "${_familia}" == "nenhum" ]]; then
-        warn "não reconheço o gerenciador de pacotes desta distro — não instalei nada"
-        printf '      Instale o equivalente na sua distro (nome no Debian/Ubuntu como referência):\n'
+    if [[ "${_familia}" == "nenhum" || "${_familia}" == "imutavel" ]]; then
+        if [[ "${_familia}" == "imutavel" ]]; then
+            warn "distro somente leitura — não instalei nada: o que falta tem de vir da imagem do sistema"
+            printf '      Peça-o pela camada de pacotes da sua distro (nome no Debian/Ubuntu como referência):\n'
+        else
+            warn "não reconheço o gerenciador de pacotes desta distro — não instalei nada"
+            printf '      Instale o equivalente na sua distro (nome no Debian/Ubuntu como referência):\n'
+        fi
         for _canon in ${_obrig[@]+"${_obrig[@]}"} ${_import[@]+"${_import[@]}"}; do
             printf '        %-14s %s\n' "${_canon}" "$(_pkg_nome "${_canon}" apt)"
         done
@@ -1280,6 +1314,17 @@ source "${ROOT_DIR}/scripts/lib/camada_de_maquina.sh"
 # descreve, e a régua `tests/unit/test_o_ensaio_respeita_os_portoes.py`
 # confere, função por função, que as flags lidas lá são as lidas aqui.
 _ensaio_camada() {
+    # Distro somente leitura: o plano não promete o que a imagem não aceita.
+    if _distro_so_leitura; then
+        case "$1" in
+            dkms-nintendo)    _nao_faria "módulo DKMS hefesto-hid-nintendo (distro somente leitura): $(_efeito_so_leitura nintendo)"; return 0 ;;
+            dkms-rtw88)       _nao_faria "módulo DKMS hefesto-rtw88-usb (distro somente leitura): $(_efeito_so_leitura rtw88)"; return 0 ;;
+            dkms-playstation) _nao_faria "módulo DKMS hefesto-hid-playstation (distro somente leitura): $(_efeito_so_leitura playstation)"; return 0 ;;
+            dkms-uhid)        _nao_faria "uhid com contrapressão (distro somente leitura): $(_efeito_so_leitura uhid)"; return 0 ;;
+            initramfs)        _nao_faria "regenerar o initramfs (distro somente leitura): $(_efeito_so_leitura initramfs)"; return 0 ;;
+            ucm)              _nao_faria "perfil UCM do DualSense (distro somente leitura): $(_efeito_so_leitura ucm)"; return 0 ;;
+        esac
+    fi
     case "$1" in
         udev)
             if [[ "${SKIP_UDEV}" -eq 1 ]]; then
@@ -1644,6 +1689,11 @@ _reconhecimento() {
         printf '      referência, e seguir sem instalar nada — em Nix ou Gentoo, use o\n'
         printf '      pacote da sua distro (ver docs/usage/instalacao.md).\n'
         achou_algo=1
+    elif [[ "${_fam}" == "imutavel" ]]; then
+        warn "distro somente leitura (Bazzite, Silverblue, SteamOS ou parente)"
+        printf '      O install não chama gerente de pacotes nem DKMS: grava só a casa do\n'
+        printf '      usuário, as regras udev e as units em /etc, e diz o que fica de fora.\n'
+        achou_algo=1
     elif [[ "${_fam}" != "apt" ]]; then
         warn "distro fora da família Debian/Ubuntu — o install usa ${_fam}"
         printf '      As dependências de sistema são instaladas pelo %s, com os nomes que\n' "${_fam}"
@@ -1684,7 +1734,8 @@ _reconhecimento() {
     # chave os módulos NÃO se instalam (`dkms_install_patched_module`).
     # shellcheck source=scripts/dkms_lib.sh
     source "${ROOT_DIR}/scripts/dkms_lib.sh"
-    if [[ "${NO_DKMS}" -eq 0 ]] && dkms_secure_boot_ligado && ! dkms_chave_mok_inscrita; then
+    if [[ "${NO_DKMS}" -eq 0 ]] && [[ "${_fam}" != "imutavel" ]] \
+        && dkms_secure_boot_ligado && ! dkms_chave_mok_inscrita; then
         warn "Secure Boot ligado, e a chave do DKMS não está inscrita"
         printf '      Os módulos do Hefesto não vão ser instalados: o kernel os recusaria\n'
         printf '      no boot, e o DualSense ficaria sem driver nenhum. O driver de fábrica\n'
@@ -1724,7 +1775,14 @@ ok
 # instalador nem PERGUNTAVA sobre os módulos — as três curas de raiz sumiam em
 # silêncio, que é o verde mentiroso descrito acima. Agora vale em toda família
 # reconhecida, com os nomes da tabela.
-if [[ "${NO_DKMS}" -eq 0 ]] && [[ "$(_familia_pacotes)" != "nenhum" ]]; then
+if [[ "${NO_DKMS}" -eq 0 ]] && [[ "$(_familia_pacotes)" == "imutavel" ]]; then
+    # Sem gerente de pacotes e sem DKMS: uma linha por item, com o efeito, e o
+    # install segue com a casa do usuário e o /etc (udev e units).
+    printf '\n      Distro somente leitura: não há gerente de pacotes nem DKMS a chamar. O que fica de fora:\n'
+    printf '        módulos DKMS: %s\n' "$(_efeito_so_leitura playstation)"
+    printf '        perfil UCM:   %s\n' "$(_efeito_so_leitura ucm)"
+    printf '      O resto segue: a casa do usuário, as regras udev e as units em /etc.\n'
+elif [[ "${NO_DKMS}" -eq 0 ]] && [[ "$(_familia_pacotes)" != "nenhum" ]]; then
     _dkms_faltando=()
     command -v dkms >/dev/null 2>&1 || _dkms_faltando+=("dkms")
     command -v make >/dev/null 2>&1 || _dkms_faltando+=("compilador")
@@ -2074,7 +2132,7 @@ if ! "${VENV_DIR}/bin/python" -c \
     if [[ "${REPLY,,}" =~ ^y ]]; then
         printf '      instalando...\n'
         run_pkg python-gi python-gi-cairo gtk3 appindicator gi-dev \
-            || die "falha ao instalar GTK3 — verifique a conexão e tente novamente"
+            || die "falha ao instalar GTK3 — $([[ "$(_familia_pacotes)" == "imutavel" ]] && printf 'a imagem do sistema não os trouxe; peça-os pela camada de pacotes da sua distro' || printf 'verifique a conexão e tente novamente')"
         printf '      GTK3 instalado\n'
     else
         die "GTK3 obrigatório. Instale manualmente e reexecute ./install.sh"

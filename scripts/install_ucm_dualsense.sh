@@ -142,7 +142,7 @@ do_aplicar() {
     # roteiro que ali nunca vai funcionar. O que vale nessas distros é o UCM
     # que ela mesma traz — dizer isso e sair limpo é a resposta honesta.
     if usr_so_leitura; then
-        info "${RAIZ_UCM} está num sistema de arquivos só de leitura (distro imutável) — nada gravado; vale o perfil UCM que a própria distro traz"
+        info "${RAIZ_UCM} está num sistema de arquivos só de leitura (distro imutável) — nada gravado; efeito: a vibração dos jogos da Sony pelo cabo só chega se o perfil UCM da própria imagem do sistema já conhecer o DualSense"
         return 0
     fi
     local -a esperados=()
@@ -177,6 +177,10 @@ do_aplicar() {
 
 do_remover() {
     local velho n=0
+    if usr_so_leitura; then
+        info "${RAIZ_UCM} está num sistema de arquivos só de leitura (distro imutável) — nada removido"
+        return 0
+    fi
     while IFS= read -r velho; do
         [[ -n "${velho}" ]] || continue
         as_root rm -f "${GANCHOS}/${velho}"
