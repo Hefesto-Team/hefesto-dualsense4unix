@@ -133,7 +133,7 @@ def _censo(recarregar: bool = False) -> Any:
 
 
 def _logica_do_mapa() -> Any:
-    """O rascunho do gabinete DO USUÁRIO — `LogicaDoMapa` sobre o que ela declarou."""
+    """O rascunho do gabinete DO USUÁRIO — `LogicaDoMapa` sobre o que o usuário declarou."""
     global _LOGICA
     if _LOGICA is None:
         perfil._com_o_src()
@@ -275,7 +275,7 @@ def _mesa_declarada(declaracao: Any) -> dict[str, Any]:
     """As duas respostas que barramento nenhum dá: a altura e a visada.
 
     Elas alimentam `exame_da_mesa.vizinhanca_das_portas`, e é o que fecha o laço
-    dos gestos `sala-altura` e `sala-visada`: o que ela declarou muda a linha do
+    dos gestos `sala-altura` e `sala-visada`: o que o usuário declarou muda a linha do
     Check-up desta MESMA aba.
     """
     try:
@@ -449,7 +449,7 @@ def _itens_da_tela() -> list[Any]:
         if chave == CHAVE_DA_LEITURA and _o_aviso_do_grab(_ULTIMO_ESTADO) is None:
             continue
         conferidas.append(item)
-    # `secao_exame._desenhar_o_que_fazer` a escreve com estas palavras: *"As
+    # `secao_exame._desenhar_o_que_fazer` a escreve com estas palavras.
     # `teclado_so_no_hub`, ambas `atencao`, medidas nesta  # (noqa-acento) id
     return sorted(conferidas, key=lambda i: getattr(i, "ordem", None) is None)
 
@@ -1067,8 +1067,8 @@ def _html_do_mapa() -> str:
     """As faces do gabinete DO USUÁRIO, desenhadas pelo produto.
 
     O DESENHO É UM SÓ (`interface/conexoes.html_do_mapa`) e o gerador do mockup
-    usa o MESMO — a diferença é o dado: lá é a cena de bancada, aqui é o que ela
-    declarou. Foi assim que a extração se provou fiel: a página regerada saiu
+    usa o MESMO — a diferença é o dado: lá é a cena de bancada, aqui é o que
+    o usuário declarou. Foi assim que a extração se provou fiel: a página regerada saiu
     byte a byte igual à que o usuário aprovou.
 
     O VEREDITO VEM DO MOTOR, e não de uma cópia: `veredito_do_quadrado` chama
@@ -1151,7 +1151,7 @@ _FACE_DO_EXTERNO = ("cross", "circle", "square", "triangle")
 
 def a_declaracao_do_externo(entrada: dict[str, Any],
                             declaracao: Any = None) -> dict[str, str]:
-    """A cor e a família dos botões que ELA declarou deste controle externo.
+    """A cor e a família dos botões que o usuário declarou deste controle externo.
 
     O-CARTAO-DO-EXTERNO-MOSTRA-O-QUE-ELA-DECLAROU-01 (08/10/2026). A FONTE É A
     DA MESA que as dez abas leem (`mesa_viva.cor_declarada` e
@@ -1190,7 +1190,7 @@ def a_declaracao_do_externo(entrada: dict[str, Any],
 
 
 def marcas_do_externo(entrada: dict[str, Any], elemento: str) -> tuple[str, str]:
-    """``(atributos da raiz do cartão, a peça dos botões)`` do que ela declarou.
+    """``(atributos da raiz do cartão, a peça dos botões)`` do que o usuário declarou.
 
     Os DOIS CARTÕES (Jogar e Conexões) chamam esta função e só ela: a cor vira a
     cor da borda do cartão (a borda do assento é a cor do plástico, e a do
@@ -2115,7 +2115,7 @@ def _o_pacote(ctx: Contexto, medida: _MedidaDoTique) -> dict[str, Any]:
             "ponte": bool(c.get("uniq") in (st.get("pontes_confirmadas") or {})),
             "fragil": bool(c.get("uniq") in (st.get("native_bt_fragil_controles") or [])),
             "mic-existe": "Ligado" if _mic_declarado(declaracao, uniq) else "Desligado",
-            # DESLIGADA no `maquina.json` dela (medido em 03/09), a tela
+            # DESLIGADA no `maquina.json` do usuário (medido em 03/09), a tela
             "mic-caminho": caminho_do_microfone(str(c.get("transport") or "")),
             # nascia apagado no P1 e aceso no P2 porque foi assim que o mockup
             "luz-trava": trava_da_luz(str(c.get("transport") or "")),
@@ -2537,7 +2537,7 @@ def _chave_no_perfil(ctx: Contexto, uniq: str) -> str:
     """A chave deste controle em ``Profile.controllers`` — doze hexa, ou ``""``.
 
     DUAS RÉGUAS, E AS DUAS TÊM DE CONCORDAR. A do PERFIL é `norm_mac` do
-    esquema (`profiles/schema.py:1402`), que canoniza `aa:bb:…` em `aabbcc…`; a
+    esquema (`profiles/schema.py:1400`), que canoniza `aa:bb:…` em `aabbcc…`; a
     do `maquina.json` é `app.actions.external_controllers.chave_de_maquina`, que
     faz o mesmo e ainda RECUSA o MAC forjado que começa em `02` — o que o
     `usb_probe_degrade` inventa somando VID, PID e bus, e que dois clones do
@@ -3272,7 +3272,6 @@ _LARGURA_DA_ENTRADA = round(2 * HZ_INPUT_SEM_MIC, 1)
 _LARGURA_DO_MIC = round(2 * (HZ_INPUT_COM_MIC + HZ_AUDIO_COM_MIC - HZ_INPUT_SEM_MIC), 1)
 _LARGURA_DA_PONTE = round((FATIAS_DA_PONTE + 1) * HZ_DA_PONTE, 1)
 
-#: grande, verborrágico e confuso"*.  (noqa-acento: citação literal)
 SEGURE = "Segure PS + Create"
 NOMEAR = "Nomear"
 #: o nome do adaptador na faixa quando ele não tem nome nem entrada lida.
@@ -5320,7 +5319,7 @@ def _o_aberto(lugares: list[dict[str, Any]], aparelhos: list[dict[str, Any]],
     espera = _onde_espera(lugares, aparelhos)
     if espera:
         return espera
-    # as caixas nascem fechadas (desenho aprovado de 05/10/2026): abre a que ela clicar, ou a
+    # as caixas nascem fechadas (desenho aprovado de 05/10/2026): abre a que o usuário clicar, ou a
     # que pede atenção (o controle esperando, o que não conectou)
     return next((str(lug["id"]) for lug in lugares if lug.get("nao_conectou")), None)
 
@@ -5782,7 +5781,7 @@ def _perto(aparelhos_bz: tuple[Any, ...], adaptadores_bz: tuple[Any, ...],
     pergunta à classe, ao ``Icon`` e só então ao ``Modalias``
     (:func:`em_fundo.e_controle_do_bluez`, o mesmo dono da central) — antes de parear,
     o BlueZ não tem o ``Modalias`` do DualSense, e a linha dele caía no
-    desenho genérico. O nome é o que ela deu ou o que o aparelho anuncia
+    desenho genérico. O nome é o que o usuário deu ou o que o aparelho anuncia
     (:func:`nome_do_jogador.nomes_por_endereco`); sem ele, «DualSense» ou a palavra do tipo.
     Nunca o endereço.
     """
@@ -6172,7 +6171,7 @@ def parear_de_novo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
         _tirar_a_linha(p, linha)
     _ligar_a_busca(p, True, lid)
     # O mesmo clique é a escolha do usuário: a central pareia ESTE endereço quando a janela o
-    # ver. Se ela não aceitar agora, a busca segue aberta e o «Parear» da lista fecha.
+    # ver. Se não aceitar agora, a busca segue aberta e o «Parear» da lista fecha.
     with contextlib.suppress(Exception):
         _pedir_ao_radio(p, str(linha["aparelho"]), lid)
     _abrir_na_tela(lid)

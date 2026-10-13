@@ -154,7 +154,7 @@ from . import (
 
 # ---------------------------------------------------------------------------
 #     dados = touchpad_do_inputs(inputs)
-# aqui era que `touchpad_do_inputs` *"exige `bloco['x']` e `bloco['y']`: um
+# aqui era que `touchpad_do_inputs`.
 # controles do usuário na mesa (um `usb`, um `bt`), 60 leituras de `daemon.state_full`
 #     touchpad presente ......... 36 amostras
 #     `inputs` SEM a chave ...... 24 (o aquecimento: o reader do touchpad nasce
@@ -229,7 +229,7 @@ def texto_do_xy(x: Any, y: Any) -> str:
     return _markup_xy(int(x), int(y)).replace("\n", "<br>")
 
 
-# A QUEIXA, com dois DualSense na mesa (um no cabo, um no rádio): *"não funciona
+# A QUEIXA, com dois DualSense na mesa (um no cabo, um no rádio).
 # `touchpad_do_inputs` devolve `(tocando, fx, fy)` em 0..1, e
 # para ACENDER (`data-hef-alvo="classe"`) e os dois `<span class="p">` dos
 
@@ -1092,7 +1092,7 @@ ROTA_OUVIR_JUNTO = "junto"
 
 ROTA_NADA_NO_CONTROLE = "nada"
 
-#: *"Mas fazer isso certo com mockup antes."* É o `"pc"` de sempre — a rota 3
+#: É o `"pc"` de sempre — a rota 3
 ROTA_TUDO_NO_CONTROLE = "pc"
 
 BOTOES_DA_FILEIRA_DO_SOM = ("jogo", ROTA_OUVIR_JUNTO, ROTA_NADA_NO_CONTROLE,
@@ -1425,7 +1425,7 @@ def _o_computador_sem_perfil() -> dict[str, Any]:
 
 
 def nomes_de_quem_joga() -> dict[str, str]:
-    """``{endereço: nome}`` que ela deu a cada controle — o leitor único, chamado e não copiado.
+    """``{endereço: nome}`` que o usuário deu a cada controle — o leitor único, não copiado.
 
     É ``nome_do_jogador.nomes_dos_donos``, o mesmo leitor da Iluminação e da Vibração: a leitura
     em fundo do ``Alias`` do BlueZ (validade de 3 s, o mesmo fundo da seção do rádio da 08), que
@@ -1489,7 +1489,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         a = c.get("audio") or {}
         mic_volume = volume_do_microfone(a)
         mic_ganho = ganho_do_microfone(uniq)
-        #      de onde o dado mora"* (`controller_card.py:1121`). Medido na mesa
+        # (`controller_card.py:1121`). Medido na mesa
         sp_lido = speaker_do_entry(c)
         # o botão «Padrão» só existe na página que o tem: antes do `--publicar`, a tela é a de hoje
         alto_em_padrao = ("alto-padrao" in _enderecos_da_pagina()
@@ -1514,7 +1514,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # Esta linha era `VIA_DO_TRANSPORTE.get(…)`, a SIGLA DE MÁQUINA, e o
         # transporte DUAS VEZES no mesmo cabeçalho. Hoje `identidade_de` passou a
         #   transport='bt'   identidade_de='rádio'   via_na_tela='BT'
-        # O comentário do bloco do `peca` já nomeava o defeito — *"o cabeçalho
+        # O comentário do bloco do `peca` já nomeava o defeito.
         # A PERGUNTA É AO PRÓPRIO `identidade_de`, e não a uma palavra escrita:
         via_na_tela = palavra_do_transporte(c.get("transport"))
         nome_na_tela = identidade_de(c, ctx.mesa)
@@ -1527,7 +1527,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                              else 0,
             # Não é perda de dado: os três continuam a UM `.get` do `state_full`
             #
-            # um mapa: *"`backend == "uhid"` implica máscara DualSense e não
             # uhid para saída Xbox (`home_actions.mascara_viva:914`). E `uinput`
             # é AMBÍGUO de propósito — Xbox normal e DualSense degradado usam o
             "mascara": casa.get("mascara") or mesa_viva.NOME_DA_MASCARA.get(
@@ -1539,7 +1538,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             "mic-selo": selo_composto(a),
             "mic-retorno": (mesa_viva.BOTAO_MIC_RETORNO
                             if monitor_do_microfone.esta_ligado(uniq) else ""),
-            # leigo)"*.  # noqa-acento: citação literal
             "mic-num": (
                 mic_volume if mic_volume is not None else mesa_viva.SEM_LEITOR
             ),
@@ -1568,7 +1566,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 ),
                 # 06/09/2026. O dado chegou à tela na BATERIA-PARADA-01 (o
                 # `battery_state` viaja no mesmo dicionário do `battery_pct`,
-                # tá carregando tambem"*.  # noqa-acento: citação literal
                 "bateria-carga": carga_na_tela(c.get("battery_state")),
                 "touch-ponto": toque_ponto,
                 "touch-ponto-2": toque_ponto2,
@@ -1649,7 +1646,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                     c, getattr(ctx, "state", None) or {}) or "",
                 # endereço até 03/09/2026. Ver `leitura_viva`, que traz a mesa
                 **leitura_viva(c),
-                # A FAMÍLIA DOS BOTÕES DE FACE que ela declarou (`controles.botoes`
+                # A FAMÍLIA DOS BOTÕES DE FACE que o usuário declarou (`controles.botoes`
                 # ou o modo da chave física): vazia é o desenho do DualSense, e o
                 # alvo `atributo` apaga o `data-botoes` quando chega vazia.
                 **_so_se_a_pagina_tiver({"botoes": str(casa.get("botoes") or "")}),
@@ -1664,7 +1661,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 "mic-apagado": microfone_apagado(c),
                 "card-vpad": dica_do_titulo(c, getattr(ctx, "state", None) or {}) or "",
                 "alto-selo": selo_do_som(saida_muda_do_entry(c)) or NADA_A_DIZER,
-                # seria melhor que dormindo?"*  <!-- noqa-acento: citação literal -->
                 "alto-canal": (mesa_viva.selo_do_alto_falante(
                     bool(sp_lido and sp_lido[1]),
                     True,
@@ -2219,7 +2215,7 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     dele = ctx.por_uniq(uniq)
 
     if qual == "microfone":
-        # qual é o oposto"* (`controller_card.acao_mic`). Sem a chave `audio`
+        # (`controller_card.acao_mic`). Sem a chave `audio`
         # A FRASE É A DO PRODUTO, e a condição também: `acao_mic(...)` é o dono
         acao = acao_mic(dele)
         if not acao.sensivel:
@@ -2816,7 +2812,7 @@ def volume_padrao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
                 and secao.get("volume") is not None
                 else lido[0] if lido is not None else padrao)
     if estava:
-        # desliga: o aparelho volta ao que ela tinha escolhido
+        # desliga: o aparelho volta ao que o usuário tinha escolhido
         alvo, lembrar = guardado, {"volume_padrao": False, "volume": guardado}
     else:
         alvo, lembrar = padrao, {"volume_padrao": True, "volume": guardado}

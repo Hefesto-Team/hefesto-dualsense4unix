@@ -272,7 +272,7 @@ class LeitorDeCor:
         self._agenda.esquecer_ausentes(vivos)
 
 
-#: linhas diziam *"o catálogo do produto tem DUAS máscaras, não três"* e
+#: linhas diziam «o catálogo do produto tem DUAS máscaras, não três» e
 NOME_DA_MASCARA = {
     "dualsense": "DualSense",
     "xbox": "Xbox 360",
@@ -332,7 +332,7 @@ def _declarado(uniq: str, declaracao: Any = None) -> Any:
 
 
 def cor_declarada(uniq: str, declaracao: Any = None) -> CorDoPlastico | None:
-    """A cor do plástico que ELA declarou para este controle (`controles.cor`).
+    """A cor do plástico que o usuário declarou para este controle (`controles.cor`).
 
     É o fio que faltava: o campo existia no `maquina.json` e nenhuma tela o lia.
     Vale onde o aparelho não responde a cor (o rádio, o controle de outra marca),
@@ -349,7 +349,7 @@ def cor_declarada(uniq: str, declaracao: Any = None) -> CorDoPlastico | None:
 def familia_dos_botoes(uniq: str, declaracao: Any = None) -> str:
     """`"xbox"`, `"nintendo"` ou `""` (o desenho do DualSense) para este controle.
 
-    O que ela declarou manda: `controles.botoes` (só o desenho da tela) vence o
+    O que o usuário declarou manda: `controles.botoes` (só o desenho da tela) vence o
     `controles.modo` (a chave física do controle). Sem nenhum dos dois, `""`.
     """
     declarado = _declarado(uniq, declaracao)
@@ -435,7 +435,7 @@ def mesa_do_estado(
     """Os itens de mesa que `monta`/`aba02` sabem desenhar, na ordem da tela.
 
     `declaracao` é o `maquina.json` já lido (os testes); sem ela, o disco, relido
-    só quando o arquivo muda. A cor e a família dos botões que ELA declarou saem
+    só quando o arquivo muda. A cor e a família dos botões que o usuário declarou saem
     daqui para as dez abas de uma vez: é a mesa que todas leem.
     """
     conectados = _por_numero_de_identidade(controles_conectados(state))
@@ -453,7 +453,7 @@ def mesa_do_estado(
         # guardou do sysfs) ou o da família, e o desenho fica no neutro: um
         cor = cores.get(uniq)
         if cor is None or not getattr(cor, "codigo", ""):  # (noqa-acento): nome de atributo
-            # sem cor LIDA do aparelho: a que ela declarou (`controles.cor`).
+            # sem cor LIDA do aparelho: a declarada (`controles.cor`).
             cor = cor_declarada(uniq, declaracao) or cor
         slug, nome = "", MODELO_GENERICO
         if cor is not None:
@@ -476,8 +476,8 @@ def mesa_do_estado(
                 # respondia certo na aba 02 — e o comentário DELE já afirmava
                 # (errado) que as duas traduções eram a mesma. Agora são.
                 # A razão está escrita no dono da frase longa
-                # (`app/actions/home_actions.py`): *"'?' não é resposta —
-                # é a tela encolhendo os ombros"*.
+                # (`app/actions/home_actions.py`): «'?' não é resposta —
+                # é a tela encolhendo os ombros».
                 "via": _via_do_transporte(transporte),
                 "transporte": transporte,
                 "alvo": (uniq == alvo) if alvo else (posicao == 1),
@@ -629,7 +629,6 @@ def selo_do_alto_falante(mudo: bool, sabemos: bool) -> str:
     return DESLIGADO if mudo else ATIVO
 
 
-#: pegar o controle de primeira)"*.  <!-- noqa-acento: citação literal -->
 
 BOTAO_MIC_RETORNO = "retorno"
 

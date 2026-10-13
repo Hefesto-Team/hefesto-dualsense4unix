@@ -1,4 +1,4 @@
-"""O nome que ela deu ao controle, com UM leitor e o filtro dele junto.
+"""O nome que o usuário deu ao controle, com UM leitor e o filtro dele junto.
 
 A-LINHA-MODELO-DIZ-O-NOME-DO-JOGADOR-01 (06/10/2026, ela: *«em qualquer aba onde tivermos modelo
 tem que aparecer o nome do jogador também.»*). O nome tem dono desde a 08: o ``Alias`` do BlueZ,
@@ -31,7 +31,7 @@ def mac(valor: object) -> str:
 
 
 def nome_dado(nome: str) -> str:
-    """O nome que ela deu (controle ou adaptador), com a primeira letra maiúscula.
+    """O nome que o usuário deu (controle ou adaptador), com a primeira letra maiúscula.
 
     Ordem de 05/10/2026, 13h: *«Nome que o user colocar pra controle mesmo se ele colocar
     minúsculo o app corrige colocando a primeira letra maiúscula»*. Só a primeira letra; o resto
@@ -52,7 +52,7 @@ def e_nome_dela(nome: str) -> bool:
 
 
 def nomes_por_endereco(aparelhos_bz: tuple[Any, ...]) -> dict[str, str]:
-    """O nome que ela deu a cada controle, pelo ENDEREÇO — um só por aparelho.
+    """O nome que o usuário deu a cada controle, pelo ENDEREÇO — um só por aparelho.
 
     Só o controle ganha a primeira letra maiúscula, o adaptador fica como veio.
     """
@@ -74,5 +74,5 @@ def nomes_dos_donos() -> dict[str, str]:
 
 
 def o_nome_de(nomes: dict[str, str], uniq: object) -> str:
-    """O nome que ela deu ao controle `uniq`, ou vazio (o número «P N» é da linha)."""
+    """O nome que o usuário deu ao controle `uniq`, ou vazio (o número «P N» é da linha)."""
     return nomes.get(mac(uniq), "")

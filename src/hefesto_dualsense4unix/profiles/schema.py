@@ -20,7 +20,7 @@ from hefesto_dualsense4unix.profiles.steam_app import steam_appid_from_wm_class
 
 MascaraDeGamepad = Literal["dualsense", "xbox", "nintendo"]
 
-#: teto o acompanha. O tooltip do deslizador já prometia *"acima de 100 sai mais
+#: teto o acompanha. O tooltip do deslizador já prometia.
 RUMBLE_CUSTOM_MULT_MAX = 2.0
 
 
@@ -209,7 +209,6 @@ class TriggerConfig(BaseModel):
         return bool(self.params) and isinstance(self.params[0], list)
 
 
-#: rigidos e os controles com tudo ativado por default"*  # (noqa-acento: citação literal)
 MODO_DE_NASCIMENTO_DO_GATILHO = "Rigid"
 PARAMS_DE_NASCIMENTO_DO_GATILHO: list[int] = [5, 200]
 
@@ -250,7 +249,7 @@ class LedsConfig(BaseModel):
     # outro dia fossilizado no arquivo — e dois DualSense acendiam o MESMO
     # `#0000FF`. Sem este campo o resolvedor tinha de ADIVINHAR qual repetição
     lightbar_para_o_numero: int | None = None
-    # linha LEDs, nascendo no Fraco"*. Quem enxerga pouco não tinha como
+    # Quem enxerga pouco não tinha como
     player_led_brightness: Literal["fraco", "medio", "forte"] = "fraco"  # noqa-acento: chave ASCII
     #: ``None`` = ninguém escolheu o modo: vale a leitura de :func:`decidir_o_modo_da_luz`.
     modo: ModoDaAba | None = None
@@ -612,9 +611,9 @@ class ProfileSpeakerConfig(BaseModel):
     muted: bool = False
     rota: int | None = Field(default=None, ge=0, le=3)
     #: A FONTE do nó de som deste controle — ``"mix"`` (todo o som do PC cai
-    #: aqui também, o *«HDMI completo»* dela) ou ``"sfx"`` (o nó fica livre para
-    #: a corrente que o jogo mandar). Pedido, 08/09/2026: *"os somns seja
-    #: hdmi completo seja o canal do sfx caindo pra cada controle"*.
+    #: aqui também, o «HDMI completo») ou ``"sfx"`` (o nó fica livre para
+    #: a corrente que o jogo mandar). Decisão de produto, 08/09/2026: cada
+    #: controle é o HDMI completo (``mix``) ou o canal do sfx (``sfx``).
     #: <!-- noqa-acento: citação literal -->
     #:
     #: **ADITIVO e sem bump de versão**, como a ``rota``: perfil antigo carrega
@@ -624,7 +623,7 @@ class ProfileSpeakerConfig(BaseModel):
     #: O BOTÃO «PADRÃO» DO VOLUME (04/10/2026, desenho aprovado em `docs/process/estudos/
     #: 2026-10-04-o-jogo-decide/`): ligado, o volume do alto-falante deste controle é o do JOGO
     #: (100% do registrador, sem ajuste do Hefesto) e a barra fica travada; o ``volume`` guardado
-    #: espera e volta quando ela desliga o botão. ``None`` e ``False`` não mudam o que o perfil
+    #: espera e volta quando o usuário desliga o botão. ``None`` e ``False`` não mudam o perfil
     #: já fazia: quem tinha um volume escolhido segue com ele. O perfil SEM a seção também é Padrão
     #: (não opina; a adoção põe o controle em 100%), e é assim que o perfil novo nasce.
     volume_padrao: bool | None = None
@@ -852,7 +851,6 @@ class ControllerRumbleOverride(BaseModel):
 
     motor_forte_pct: int | None = None
 
-    #: 50% então será 150 em um e 75% no outro"*. <!-- noqa-acento: citação literal -->
     motor_fraco_pct: int | None = None
 
     haptica_pct: int | None = None
@@ -1002,7 +1000,7 @@ class ControllerMicOverride(BaseModel):
 
     muted: bool | None = None
 
-    #: diferentes"*. Com dois DualSense no cabo há DUAS placas de som
+    #: Com dois DualSense no cabo há DUAS placas de som
     volume: int | None = Field(default=None, ge=0, le=100)
 
     #: acima, só que mais forte: o ganho é da PLACA ALSA, e com dois DualSense
@@ -1101,12 +1099,12 @@ class ControllerOverrides(BaseModel):
     speaker: ProfileSpeakerConfig | None = None
     mic: ControllerMicOverride | None = None
     sensores: ControllerSensoresOverride | None = None
-    #: *"Como este controle aparece nos jogos"*, SÓ desta peça — MASCARA-NO-
-    #: PERFIL-01 (08/09/2026, decisão de produto: *"pode entrar sim"*).
+    #: «Como este controle aparece nos jogos», SÓ desta peça — MASCARA-NO-
+    #: PERFIL-01 (08/09/2026, decisão de produto: a máscara entra no perfil).
     #:
     #: ``None`` = **volte ao padrão**, e esta é a ÚNICA seção desta classe em
-    #: que ``None`` não quer dizer *"sem opinião"*. É decisão, 09/09/2026:
-    #: *"Default é Hefesto dualsense padrão"*. O controle que o perfil não
+    #: que ``None`` não quer dizer «sem opinião». É decisão, 09/09/2026:
+    #: o padrão é «Hefesto DualSense padrão». O controle que o perfil não
     #: declara perde a máscara própria e passa a seguir o
     #: ``mode.gamepad_flavor`` do perfil e, sem ele, o
     #: não declara. A régua da ordem mede o comportamento dos três degraus, não
@@ -1149,7 +1147,7 @@ class Profile(BaseModel):
     movimento: ProfileMovimentoConfig | None = None
     mouse: ProfileMouseConfig | None = None
     # flag global `keyboard_emulation.flag` (utils/session.py:306), enquanto o
-    # chamada por nenhum caminho de ativação real"*. Por 24 dias foi verdade —
+    # Por 24 dias foi verdade —
     # preferência GLOBAL, e esta precedência deixaria de existir na ativação
     teclado_emulado: bool | None = None
     # «Só dentro do jogo» da Função do teclado: com `teclado_emulado` ligado, o

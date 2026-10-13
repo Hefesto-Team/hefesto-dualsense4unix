@@ -724,7 +724,7 @@ def _apagar_os_lugares_sem_dono(
     aqui.
 
     O `!important` NÃO É ZELO: a `--luz` chega como `style="--luz:#ff0000"` no
-    próprio elemento (`monta.py:982`), e estilo de linha vence qualquer regra
+    próprio elemento (`monta.py:980`), e estilo de linha vence qualquer regra
     de folha que não o traga.
     """
     if not identidade:
@@ -993,7 +993,7 @@ def _linhas_dos_botoes(p: dict[str, Any]) -> dict[str, str]:
     }
 
 
-# `input_actions.frase_dos_atalhos_fora_da_lista` termina com *"nada nesta aba
+# `input_actions.frase_dos_atalhos_fora_da_lista` termina com.
 # "Guardar" faz `apply_button_actions` reescrever o conjunto todo a partir do de
 # fábrica (`profiles/manager.py:561`, `core/acoes_de_botao.resolver`, que nunca
 # cada linha faz sai de `core/acoes_de_botao`.
@@ -1132,7 +1132,7 @@ def atalhos_que_param_de_valer(p: dict[str, Any]) -> list[tuple[str, str]]:
 
 
 # `Super`, e `dehumanize_binding` traduz —, e a tela nova só oferecia uma LISTA
-#   `input_actions.dehumanize_binding` o que ela digita -> token cru
+#   `input_actions.dehumanize_binding` o que o usuário digita -> token cru
 # mudança não pegou". Ver `_tabela_efetiva` em `core/acoes_de_botao.py`.
 
 
@@ -3293,7 +3293,7 @@ SEM_GESTO: dict[str, str] = {
     # do `DEFAULT_BUTTON_BINDINGS`, e combo nenhum aparece lá.
     # de IPC nenhum escreve" o `ps_button_action`. Escreve — `daemon.reload`
     # `acao-do-gesto` SAIU DAQUI em 01/10/2026 (OS-GESTOS-DO-CONTROLE-01): a
-    # ou desenvolvidas."* `Profile.button_actions` nasceu, o
+    # `Profile.button_actions` nasceu, o
     # `core/acoes_de_botao` virou o dono do vocabulário e do padrão, e o device
     # (`Profile.button_actions`): seis das sete linhas são botões de
     # `guardar-remapeamento` e `padrao-remapeamento` SAÍRAM DAQUI em 13/09/2026

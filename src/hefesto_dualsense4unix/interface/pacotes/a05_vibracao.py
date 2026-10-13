@@ -506,7 +506,7 @@ def _pct_da_coluna(policy: str, custom: Any) -> dict[str, str]:
     )
 
 
-# fixo fizesse ela o que fizesse com as barras. A prosa da VIBRA-MULT-01 em
+# fixo fizesse o usuário o que fizesse com as barras. A prosa da VIBRA-MULT-01 em
 # `state_full` e a busca por `player` cabe em três linhas.
 
 
@@ -637,7 +637,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 
 
 def _identidade_do_modelo(item: dict[str, Any] | None, nomes: dict[str, str], pronta: str) -> str:
-    """A linha «Modelo» com o nome que ela deu ao controle (o `Alias`); sem nome, a que já vinha."""
+    """A linha «Modelo» com o nome que o usuário deu (o `Alias`); sem nome, a que já vinha."""
     quem = o_nome_de(nomes, (item or {}).get("uniq"))
     if not item or not quem:
         return pronta
@@ -653,7 +653,7 @@ def _sem_marcacao(texto: str) -> str:
     return _re.sub(r"\s*•\s*", " · ", sem_tags).strip()
 
 
-# disso — `app/actions/rumble_actions.py` escreve *"não há IPC de política
+# disso — `app/actions/rumble_actions.py` escreve.
 from . import Batimento, coracao, gesto, largada  # noqa: E402
 
 #: estável (`app/actions/rumble_actions.py`, `weak = 160` / `strong =
@@ -662,8 +662,8 @@ PAR_DE_TESTE = (160, 220)
 _O_PULSO_SAIU = "07/09/2026 — o Testar virou estado; ver `_EM_TESTE`"
 
 #: Os controles com o «Testar» da vibração LIGADO agora. UM POR CONTROLE: o
-#: teste de um não toca no do outro (03/10/2026, ela: *«vibração e háptico é
-#: por cada controle e precisam funcionar em independente»*). Era um `uniq` só,
+#: teste de um não toca no do outro (03/10/2026, decisão de produto: vibração e háptico são
+#: por controle e funcionam de forma independente). Era um `uniq` só,
 #: e ligar o do P2 calava o do P1.
 _EM_TESTE: set[str] = set()
 
@@ -673,7 +673,7 @@ def em_teste() -> frozenset[str]:
     return frozenset(_EM_TESTE)
 
 
-#: O mesmo para o «Háptica» (botões lado a lado, a resposta [24] dela).
+#: O mesmo para o «Háptica» (botões lado a lado, a resposta [24]).
 _EM_TESTE_DA_HAPTICA: set[str] = set()
 
 
@@ -1120,7 +1120,7 @@ def _aplicar_a_forca(ctx: Contexto, p: Any, uniq: str,
                                     modelo % _nome_do_degrau(mostra))}
     # clicar "Máximo" não gravava (`with_controller_rumble` limpa o override
     # igual ao global), não acendia (o degrau herdado saía vazio) e não dizia
-    # quebraria a COR-04 (`with_controller_rumble`: *"o override guarda só o que
+    # quebraria a COR-04 (`with_controller_rumble`.
     if not mudou and policy != "custom":
         modelo = (FRASE_JA_E_A_ESCOLHA_DESTA_COLUNA if propria
                   else FRASE_DO_QUE_A_COLUNA_MOSTRA)

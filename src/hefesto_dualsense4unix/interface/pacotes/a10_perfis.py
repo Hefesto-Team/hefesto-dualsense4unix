@@ -350,7 +350,7 @@ def _desfecho_para_a_tela() -> str:
     return frase
 
 
-#: `data-hef-alvo="largura"` estaria *"já escrito na BANCADA (`aba10.py`),
+#: `data-hef-alvo="largura"` estaria.
 #:                       desta frente; está no relatório.
 #: `data-hef-alvo="classe"`, e o produto passou a acender e apagar cada uma.
 NAO_PINTAVEIS = ("guarda.linhas", "editor.prioridade.dica",
@@ -1124,7 +1124,7 @@ def _rotulo_do_remover(alvo: str) -> str:
     não tem diálogo. O `on_profile_remove` da janela estável abre um
     `gui_dialogs.confirm_delete_profile` (`profiles_actions.py`), que é
     GTK e MODAL; daqui não dá para abri-lo, porque **os gestos rodam em
-    thread** (`hefesto_vivo.py:2703`) e GTK só aceita diálogo no laço principal.
+    thread** (`hefesto_vivo.py:2701`) e GTK só aceita diálogo no laço principal.
 
     **FATO CADUCO, SUBSTITUÍDO — 02/09/2026.** Aqui estava escrito que *"a
     recusa do piloto não serve de pergunta: ela sai em `stderr`, no terminal,
@@ -1943,9 +1943,9 @@ def _sem_o_ajuste_do_estilo(controllers: Any, *, gatilho: bool,
     """O mapa `controllers` sem o gatilho e o degrau da vibração por controle.
 
     O estilo é a escolha mais nova para o perfil INTEIRO (O-ESTILO-CHEGA-AO-GATILHO-
-    E-A-VIBRACAO-DE-CADA-CONTROLE-01, a validar por ela): no aparelho o ajuste do
+    E-A-VIBRACAO-DE-CADA-CONTROLE-01): no aparelho o ajuste do
     controle vence o global, e o «Guardar» da aba Gatilhos grava sempre no do
-    controle; sem esta limpeza, o controle cujo gatilho ela guardou ignorava todo
+    controle; sem esta limpeza, o controle cujo gatilho o usuário guardou ignorava todo
     estilo dali em diante. Sai `triggers` e, de `rumble`, só `policy` e
     `custom_mult`, de TODA entrada (o controle desligado também herda quando
     voltar). Sair é deixar o `model_fields_set`, que é o que o disco grava
@@ -2720,7 +2720,7 @@ SEM_ECO = ("selecionar", "editor.nome", "editor.ambiente", "editor.jogo",
            "editor.prioridade", "editor.estilo",
            "detectar", "novo", "duplicar", "remover", "voltar-a-de-ontem",
            "recarregar",
-           # `state_full` muda quando ela arrasta uma divisa.
+           # `state_full` muda quando o usuário arrasta uma divisa.
            "procurar", "ordenar", "largura-da-coluna")
 
 

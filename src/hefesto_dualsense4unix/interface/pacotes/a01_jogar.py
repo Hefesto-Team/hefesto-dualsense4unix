@@ -30,7 +30,6 @@ CADEADO_CEGO = "cadeado-cego"
 
 #: `cobertura` é a promessa que a régua confere: uma chave nova que não entre
 DA_PAGINA: tuple[str, ...] = (
-    # dela: *"em jogar remover essa seção do atenção, nenhum aviso esse —
     # `aviso-texto` e `aviso-vivo`.
     # ELES SAEM PORQUE A PÁGINA SAIU, e não por escolha: um endereço emitido sem
     #
@@ -53,7 +52,7 @@ DA_PAGINA: tuple[str, ...] = (
 )
 
 #: ser verdade no mesmo dia:** `gamepad.mask.set` nasceu recebendo `uniq`, o
-#: o que o desenho dela mostra — os dois cartões acendiam o MESMO chip. A
+#: o que o desenho mostra — os dois cartões acendiam o MESMO chip. A
 POR_CARTAO: tuple[str, ...] = ("plastico", "desenho", "jogador", "jogador-espera",
                                "bateria", "identidade", "mascara-cartao",
                                "marcador-principal")
@@ -106,11 +105,11 @@ RESSALVA_DA_MASCARA = (
 #: no dia em que as duas se afastarem. É a mesma escolha que a `MESA_VAZIA` já
 #: fez com a frase gêmea da bancada, e pelo mesmo motivo.
 #:
-#: DECISÃO DE PRODUTO, portanto: a palavra que vai à tela nova é a que ela
+#: DECISÃO DE PRODUTO, portanto: a palavra que vai à tela nova é a que o usuário
 #: já leu na janela antiga.
 #: A RAZÃO DO ESMAECIDO, no ponteiro do mouse — a segunda metade da decisão
-#: [02]: *"o número perde a cor forte enquanto o daemon não confirmar o jogador,
-#: e o porquê fica no ponteiro do mouse."*
+#: [02]: o número perde a cor forte enquanto o daemon não confirmar o jogador,
+#: e o porquê fica no ponteiro do mouse.
 #:
 #: ELA É `title`, LOGO É CRAVADA, e isso aqui é seguro pela razão que o
 #: `aba01.cartao` já escreve: o piloto **não tem alvo de pintura para atributo
@@ -153,8 +152,8 @@ def _cadeado(state: dict[str, Any]) -> str:
 #: pedaço da frase seria mais frágil que a régua. **A DIVERGÊNCIA MORRE PELA
 MARCA_DO_PRIMARIO = "primário"
 
-#: (`is_primary`) — e é ele quem navega o PC"*), e é dele que o daemon publica a
-#: `is_primary`"*). As duas coisas são medidas, e é isso que a dica diz.
+#: e é dele que o daemon publica a
+#: As duas coisas são medidas, e é isso que a dica diz.
 PRIMARIO_DICA = (
     "É por este controle que o Hefesto navega o computador. "
     "Quem o escolhe é o serviço."
@@ -249,7 +248,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         via = palavra_do_transporte(casa.get("transporte") or c.get("transport"))
         cartoes[uniq] = {
             "plastico": _cor_do_plastico(str(casa.get("cor") or "")),
-            # *"os svgs do dualsense (…) não são os que o meu mapa cataloga"*.
             # `""` QUANDO A COR NÃO É PINTÁVEL, pela mesma régua da borda: o
             "desenho": _colorway_do_desenho(str(casa.get("cor") or "")),
             # abaixo, mostrava com o botão 2 ACESO. O dono lê `player_slot`
@@ -801,8 +799,8 @@ def _html_dos_externos(ctx: Contexto) -> str:
 
     **NOTA DE 08/10/2026 (O-CARTAO-DO-EXTERNO-MOSTRA-O-QUE-ELA-DECLAROU-01):** a
     cor que o usuário declarou (`controles.cor`) é a palavra dele, não uma medida do
-    Hefesto: o cartão a mostra na borda, com a família dos botões que ela
-    declarou, e sem declaração nada se desenha. Quem lê é
+    Hefesto: o cartão a mostra na borda, com a família dos botões que
+    o usuário declarou, e sem declaração nada se desenha. Quem lê é
     `a08_conexoes.marcas_do_externo`, o mesmo dono dos dois cartões.
 
     **NEM NÚMERO DE JOGADOR ESMAECIDO, NEM BATERIA.** O externo não é jogador do
@@ -958,8 +956,8 @@ CHIP_DO_NATIVO = "nativo"
 ROTULO_DO_NATIVO = "Nativo"
 
 #: OS DOIS BOTÕES DO DESLIGADO, e o que cada um faz com a lista do Steam Input.
-#: *«Desligar o hefesto = Nativo na origem. Steam Input sai de Ligado.»* — ela,
-#: 08/10/2026. Os dois são o modo `native`; o que os separa é o jogo da vez
+#: Regra de produto de 08/10/2026: desligar o Hefesto é Nativo na origem, e o
+#: Steam Input sai de Ligado. Os dois são o modo `native`; o que os separa é o jogo da vez
 #: entrar (Steam Input) ou sair (Nativo) da lista. O Steam Input continua lendo
 #: o `steam_input` da ponte dele em `painel.CHIPS_DA_ESCADA`.
 CHIPS_DO_DESLIGADO: tuple[str, ...] = (CHIP_DO_NATIVO, CHIP_DO_STEAM_INPUT)
@@ -1316,7 +1314,7 @@ def _estado_da_tela(state: dict[str, Any]) -> dict[str, str]:
 
     # NO DESLIGADO, O NATIVO OU O STEAM INPUT — NO-DESLIGADO-A-STEAM-NAO-SE-METE-
     # E-O-JOGO-MANDA-01, 08/10/2026. Os dois são o modo `native`; acende o Steam
-    # Input quando o jogo da vez está na lista dela, e o Nativo nos outros casos.
+    # Input quando o jogo da vez está na lista do usuário, e o Nativo nos outros casos.
     # No Ligado o Steam Input não é mais botão, e a lista não acende nada.
     steam = ""
     if ligado is False:
@@ -1637,7 +1635,7 @@ def _dizer_se_nao_confirmou(confirmou: bool) -> None:
 
 
 #: daquele conjunto têm teto próprio e declarado: `gamepad.mask.set` (2,0 s, e
-#: «Xbox» dela no `interface.log` de 22/09 — `modo-xbox → aplicado`, depois
+#: «Xbox» no `interface.log` de 22/09 — `modo-xbox → aplicado`, depois
 ACHADO_DO_TIMEOUT = (
     "ponte.TETOS dá 2,0 s aos cinco métodos desta aba, o mesmo valor de "
     "mode_transition.MODE_IPC_TIMEOUT_S; o teto de 250 ms é só o dos métodos "
@@ -1864,7 +1862,7 @@ def modo_nativo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     return _o_clique_da_fileira(ctx, o, p, CHIP_DO_NATIVO)
 
 
-#     steam_launch_options.add_appid_to_steam_input_allowlist  a vontade dela
+#     steam_launch_options.add_appid_to_steam_input_allowlist  a vontade do usuário
 #     steam_launch_options.with_steam_closed                 fechar e reabrir
 NOTA_DA_ESCOLHA = "escolhido na aba Jogar: usar os controles da própria Steam"
 
@@ -2283,7 +2281,7 @@ def mascara_do_controle(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, A
     # TIMEOUT. O dicionário virava o prazo, `teto(metodo)` o  # (parâmetro) noqa-acento
     # o chip DualSense do P1 não criava o `controller_masks.json` e não mexia em
     # POR QUE NINGUÉM VIU: `gamepad.mask.set` não estava em `METODOS` (a régua
-    # deu"*). `gamepad.mask.set` responde `{"gravado": false, "motivo": …}`
+    # `gamepad.mask.set` responde `{"gravado": false, "motivo": …}`
     ok, motivo = p.chamar_detalhado("gamepad.mask.set", uniq=uniq, flavor=flavor)
     if not ok:
         # `gamepad.mask.set` recusa em voz alta com o catálogo do que aceita.

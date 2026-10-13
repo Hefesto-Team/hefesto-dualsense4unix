@@ -154,14 +154,14 @@ if _tinta.exists():
 
 SEM_ALVO = {"feat-giroscopio", "feat-acelerometro", "feat-bateria"}
 
-# O CHASSI NÃO É BOTÃO (ela, 03/10/2026: «removermos o chassi como botão»): sem
+# O CHASSI NÃO É BOTÃO (decisão de produto, 03/10/2026): sem
 # alvo no desenho e sem linha na lista. A linha dele fica no CSV das peças, que
 # é o dono delas; o que sai é só o que se podia apontar e clicar.
 SEM_BOTAO = {"corpo"}
 
-# A HÁPTICA TEM LUGAR NO DESENHO (ela: «falta colocarmos o háptico»), e o lugar é
+# A HÁPTICA TEM LUGAR NO DESENHO (decisão de produto), e o lugar é
 # o do glifo dela: a área do touchpad, com ondas na borda de cima. O grupo nasce
-# aqui, e não no `ds_limpo.svg`, porque o arquivo do desenho é dela e este
+# aqui, e não no `ds_limpo.svg`, porque o arquivo do desenho vem do `mockup/` aprovado e este
 # gerador já o enriquece com os alvos e as marcas de troca.
 HAPTICA = "feat-haptica"
 

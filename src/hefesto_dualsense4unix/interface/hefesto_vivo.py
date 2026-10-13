@@ -47,7 +47,7 @@ from hefesto_dualsense4unix.interface.janela import JanelaDaAba  # noqa: E402
 from hefesto_dualsense4unix.profiles.loader import gesto_de_agora  # noqa: E402
 
 #: A PRIMEIRA PÁGINA é a Jogar, que é a primeira da tira. Não é escolha de
-#: gosto: é a aba que o `.desktop` dela abre.
+#: gosto: é a aba que o `.desktop` abre.
 PRIMEIRA = "01-jogar.html"
 
 #: O tique da pintura. **100 ms — o mesmo da janela GTK**
@@ -55,10 +55,10 @@ PRIMEIRA = "01-jogar.html"
 #: (`controles_vivos.TIQUE_MS`). As três leituras ao vivo do produto batem.
 #:
 #: FATO ERRADO, SUBSTITUÍDO EM 04/09/2026: esta linha dizia `500` e o comentário
-#: justificava o número afirmando que *"500 ms é o mesmo do `controles_vivos`"*.
+#: justificava o número afirmando que «500 ms é o mesmo do `controles_vivos`».
 #: Não era: o `controles_vivos.py:119` sempre teve `TIQUE_MS = 100`. O número
-#: errado tinha consequência medida — ela relatou *"delay absurdo em controles"*
-#: olhando a aba 02, onde meio segundo de atraso separa o dedo do desenho.
+#: errado tinha consequência medida — um «delay absurdo em controles»
+#: visto na aba 02, onde meio segundo de atraso separa o dedo do desenho.
 #:
 #: O CUSTO FOI MEDIDO ANTES DE BAIXAR, com o daemon do usuário vivo e dois DualSense
 #:
@@ -78,7 +78,6 @@ TIQUE_MS = 100
 #: **E O TEXTO DESTE COMENTÁRIO É PARTE DO PROBLEMA**, o que se descobriu na
 MS_DA_PISCADA = 1500
 
-#: recarregada é o que ela vê.
 
 #: O CONTRATO TEM DUAS PONTAS: o pacote devolve `{"armou": True, …}` (o lado da
 CHAVE_DO_CLIQUE_QUE_SO_ARMOU = "armou"
@@ -124,7 +123,7 @@ def _a_pagina_pedida(pedido: str) -> str:
     return pedido
 
 
-#: `a04_iluminacao.banco_de_luzes` — *"nenhum `data-controle` nasce aqui"* —, e
+#: `a04_iluminacao.banco_de_luzes` — «nenhum `data-controle` nasce aqui» —, e
 #: A LISTA É DE PERMITIDOS, e o dono dos assentos é `pacotes.TODOS_OS_LUGARES`.
 #: `test_o_seletor_do_dono_pergunta_ao_dono` exige que os três digam o mesmo.
 #:
@@ -140,7 +139,7 @@ SELETOR_DO_DONO: str
 #: * `blocos` e `fita` TROCAM HTML INTEIRO — `innerHTML` no container, `outerHTML`
 #:   no nó. É o defeito que a `A-TELA-SAMBA-01` mediu em 06/09/2026: quem clicou
 #:   fica com o `mousedown` num nó que já não existe. Aqui seria pior, porque o
-#:   nó arrancado é o campo em que ela está DIGITANDO;
+#:   nó arrancado é o campo em que o usuário está DIGITANDO;
 #: * `recado` e `recados` eram o canal de AVISO na tela. **Desde 13/09/2026
 #:   nenhum dos dois chega a ela** (TELA-CALADA-01 e FRASES-E-DICAS-01): o
 #:   `recado` vai ao diário e o `recados` ninguém mais pinta. A recusa fica pelo
@@ -878,7 +877,7 @@ BOOTSTRAP = r"""
   // mapa, e não como texto num `data-`: os botões desta casa têm `<span>` dentro
   // (o `.pt` da fita, os ícones), e devolver `textContent` os achataria — o
   // botão voltaria da espera diferente de como entrou.
-  // A ALAVANCA SEM ENDEREÇO E O NÚMERO DELA — O-NUMERO-DA-BARRA-NAO-CONGELA-NO-VALOR-VELHO-01,
+  // A ALAVANCA SEM ENDEREÇO E O NÚMERO DA ALAVANCA — O-NUMERO-DA-BARRA-NAO-CONGELA-NO-VALOR-VELHO-01,
   // 09/10/2026. A barra da aba Gatilhos é um `<input type=range>` sem `data-campo` por cima do
   // trilho, e o número dela é o `.num` ao lado, que só o bloco do pacote reescreve. Medido: mexer
   // a segunda barra antes de o bloco voltar recolhia a coluna pelo TEXTO velho da primeira e
@@ -1103,7 +1102,7 @@ BOOTSTRAP = r"""
     // um filho que ainda não existe.
     //
     // O SEGUNDO CASO É O MAPA DO GABINETE (01/09/2026): as faces e as entradas
-    // são as que ELA declarou, e podem ser zero. Enquanto o bloco era estático,
+    // são as que o usuário declarou, e podem ser zero. Enquanto o bloco era estático,
     // a aba mostrava um gabinete de bancada — e os seis botões que mexem no
     // mapa não podiam ser ligados, porque clicar declararia no disco do usuário o
     // desenho de um exemplo.
@@ -1630,7 +1629,6 @@ BOOTSTRAP = r"""
 """
 
 
-#: paginas isso ocorre."*  <!-- noqa-acento: citação literal -->
 #: Medido em 11/09/2026 nesta árvore, com o daemon vivo, um DualSense no cabo,
 DICA_DA_CASA = r"""
 (function(){
@@ -2958,7 +2956,7 @@ class Piloto:
         # O `uniq` DO CLIQUE vai aos dois relatos (`_recusou_dizendo` e
         alvo = norm_mac(str(o.get("uniq") or "")) or ""
 
-        # dela: `daemon.reload` leva **9,5 segundos** — `daemon.resume` leva 1
+        # `daemon.reload` leva **9,5 segundos** — `daemon.resume` leva 1
         def trabalhar() -> None:
             desta_vez: tuple[str, str] = ("", "")
             so_armou = False
@@ -3285,7 +3283,6 @@ class Piloto:
             print(f"ERRO: o bootstrap não instalou em {self.pagina}: {erro}", file=sys.stderr)
             return
         self.pronto = True
-        # que é o defeito que ela relatou *"em todas as paginas"*.  # noqa-acento: citação literal
         self.ponte.perguntar(DICA_DA_CASA, self._dica_instalada)
         from hefesto_dualsense4unix.interface import arranjo_desta_maquina
 
@@ -4007,7 +4004,6 @@ class Piloto:
         if not alvo.exists():
             self.tela._morrer(f"não existe a página pedida: {alvo.name}")
             return False
-        # sobre o teste naquele momento isso nao interfere in game"*  # (noqa-acento: citação literal)
         pacotes.largar_o_que_as_abas_seguram(ponte)
         _soltar_as_ondas()
         self.view.load_uri(alvo.as_uri())

@@ -480,7 +480,7 @@ _TETO_DA_ORDEM_DOS_ADAPTADORES = 63
 
 
 class AdaptadorDeclarado(BaseModel):
-    """Um adaptador Bluetooth pelo ENDEREÇO: o nome que ela deu a ele.
+    """Um adaptador Bluetooth pelo ENDEREÇO: o nome que o usuário deu a ele.
 
     ``D-2609-O-ADAPTADOR-TEM-NOME-PROPRIO`` (26/09/2026), pedido: *«temos
     o nome das entradas e o nome dos dispositivos. Eles estão se confundindo»*.
@@ -1359,7 +1359,7 @@ def chave_do_adaptador(endereco: object) -> str | None:
 
 
 def nome_dado_ao_adaptador(maquina: MaquinaConfig | None, endereco: object) -> str:
-    """O nome que ela deu a este adaptador — ``""`` quando não deu."""
+    """O nome que o usuário deu a este adaptador — ``""`` quando não deu."""
     chave = chave_do_adaptador(endereco)
     if maquina is None or chave is None:
         return ""
@@ -1402,7 +1402,7 @@ def guardar_ordem_dos_adaptadores(enderecos: Sequence[str]) -> list[str]:
 
 
 def nomes_dos_controles(maquina: MaquinaConfig) -> dict[str, str]:
-    """``{chave de controle: o nome que ela deu}`` — só quem tem nome."""
+    """``{chave de controle: o nome que o usuário deu}`` — só quem tem nome."""
     return {
         chave: declarado.nome
         for chave, declarado in (maquina.controles or {}).items()
@@ -1411,7 +1411,7 @@ def nomes_dos_controles(maquina: MaquinaConfig) -> dict[str, str]:
 
 
 def gravar_o_nome_do_controle(endereco: str, nome: str | None) -> bool:
-    """Grava (ou, com ``None``/vazio, esquece) o nome que ela deu. **Nunca levanta.**"""
+    """Grava (ou, com ``None``/vazio, esquece) o nome que o usuário deu. **Nunca levanta.**"""
     chave = chave_do_controle(endereco)
     if chave is None:
         return False

@@ -78,7 +78,7 @@ SEGUNDOS_PARA_ESQUECER_O_CRASH = 60.0
 
 CANAL_PADRAO = "hefesto"
 
-#: No vídeo dela a pintura chega em 1 a 2 quadros (33 a 66 ms) depois de a
+#: No vídeo gravado na bancada a pintura chega em 1 a 2 quadros (33 a 66 ms) depois de a
 #: página aparecer. O prazo é a rede de segurança do caso em que o piloto NÃO
 #: pinta — travado, ou sem o bootstrap: aí a tela mostra o arquivo como está
 #: (o desenho), que é o comportamento de antes, em vez de ficar sem miolo.
@@ -427,7 +427,6 @@ class JanelaDaAba:
                 titulo, subtitulo or "", self._gesto_da_barra
             )
             self.janela.set_titlebar(barra)
-            # do print arruma automaticamente"*  <!-- noqa-acento: citação literal -->
             self.janela.connect("window-state-event", self._a_barra_se_refaz)
             self.janela.connect("destroy", Gtk.main_quit)
         self.janela.add(self.view)

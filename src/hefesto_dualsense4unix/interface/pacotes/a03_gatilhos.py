@@ -227,7 +227,7 @@ def _todos_os_lugares_da_pagina() -> frozenset[str]:
     return frozenset(_QUALQUER_LUGAR.findall(_pagina_publicada()))
 
 
-#: O QUE O DESENHO OFERECE PARA DIZER "NÃO HÁ NADA AQUI" — decisão 13 dela,
+#: O QUE O DESENHO OFERECE PARA DIZER "NÃO HÁ NADA AQUI" — decisão 13,
 TRAVESSAO = "—"
 
 
@@ -318,15 +318,14 @@ def descricao_do_modo(chave: str) -> str:
     return str(getattr(spec, "description", "") or "")
 
 
-#: O QUE A TELA CHAMA O «DESLIGADO» DO GATILHO — 03/10/2026, ela: *«o certo
-#: seria os controles obedecerem quando o jogo manda e na
-#: ausencia disso o perfil ganha»*  (noqa-acento: citação literal).
+#: O QUE A TELA CHAMA O «DESLIGADO» DO GATILHO — 03/10/2026, decisão de produto: os controles
+#: obedecem quando o jogo manda e, na ausência disso, o perfil ganha.
 #: A chave segue sendo `Off` (o perfil não muda de forma, e o
 #: `trigger.reset` do gesto é o mesmo): o que muda é o NOME, que diz o que o
 #: gesto faz. O dono do rótulo do produto (`trigger_specs`, «Desligado») não
 #: muda: a CLI e o daemon seguem falando dele.
 #:
-#: 06/10/2026, ela: o rótulo da chave `Off` é «Sem efeito» (o jogo que comanda
+#: 06/10/2026: o rótulo da chave `Off` é «Sem efeito» (o jogo que comanda
 #: vence nos dois modos; o rótulo diz o que o Hefesto faz, não quem decide). O
 #: NOME da constante ficou, porque os testes e o desenho a leem por ele.
 ROTULO_DO_JOGO_DECIDE = "Sem efeito"
@@ -623,7 +622,7 @@ def _o_que_o_controle_recebe(p: dict[str, Any] | None, uniq: str,
 # `load_gui_prefs`, `save_gui_prefs`, `set_pref`. **É reuso, e a LEI 0 desta
 
 #: A CHAVE NA CAIXA DE PREFERÊNCIAS. Ela não está nos `_DEFAULTS` do
-#: `gui_prefs` de propósito: ausente quer dizer "ela ainda não salvou nenhum",
+#: `gui_prefs` de propósito: ausente quer dizer "o usuário ainda não salvou nenhum",
 #: que é diferente de "salvou e apagou todos" — e `load_gui_prefs` devolve o
 CHAVE_DOS_MEUS = "gatilhos_meus_efeitos"
 
@@ -930,7 +929,7 @@ def html_das_opcoes_de_modo() -> str:
 
     def rotular(m: re.Match[str]) -> str:
         if m.group("valor") == TRAVESSAO and "hidden" not in m.group("cabeca"):
-            # O `—` é do lugar vazio, não da lista que ela abre — também numa
+            # O `—` é do lugar vazio, não da lista que se abre — também numa
             # página publicada antes de o desenho o esconder.
             return m.group(0).replace(">", ' hidden="">', 1)
         rot = do_produto.get(m.group("valor"))

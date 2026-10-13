@@ -744,7 +744,7 @@ class AutoSwitcher:
                     store, "o_jogo_em_cena_fechou", jogo=jogo or "", candidato=name
                 )
                 return False
-        # O jogo que só está em cena (sem a janela dele em foco) não passa por cima do que ela
+        # O jogo que só está em cena (sem a janela dele em foco) não passa por cima do que o usuário
         # escolheu à mão: a prova de jogo vivo entra por si, mas não solta a trava.
         e_outro_jogo = (
             not veio_da_escolha
@@ -783,8 +783,9 @@ class AutoSwitcher:
             and getattr(self.store, "native_mode_origin", None) != "profile"
         ):
             return
-        # por trigger.reset ou profile.switch explícito. Sem isso, ao ligar a
-        # *"isso nao faz sentido mais."*  # (noqa-acento): citação literal
+        # por trigger.reset ou profile.switch explícito. Sem isso, ao ligar a aba Mouse (que
+        # move o cursor e muda o foco de janela), o autoswitch reaplicaria o fallback e zeraria
+        # o trigger recém-aplicado.
         if self._a_trava_da_mao_segura(name, profile, info, veio_da_escolha, veio_do_jogo):
             self._log_suppressed_once(
                 "autoswitch_suppressed_by_manual_profile_lock", name, info

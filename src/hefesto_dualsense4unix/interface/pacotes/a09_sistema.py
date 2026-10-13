@@ -83,7 +83,7 @@ SEM_DONO: dict[str, str] = {
                "produto de hoje (medido em `interface/sistema.py:68`)",
 }
 
-#: CADUCA — não errada quando foi escrita, caduca. Ela dizia *"a pintura não tem
+#: CADUCA — não errada quando foi escrita, caduca. Ela dizia.
 #: `aba_sistema.ENDERECOS` e NÃO EXISTE na página: o gerador nunca emitiu este
 NAO_CHEGA_NA_TELA: dict[str, str] = {}
 
@@ -164,7 +164,6 @@ def _limpar_o_painel() -> None:
     _PERGUNTA.clear()
 
 
-#: aparecendo"*. <!-- noqa-acento: citação literal -->
 #: <!-- noqa-acento: citação literal -->
 RECIBO_QUE_FICA_NA_TELA = ("corrigir-vulkan",)
 
@@ -674,7 +673,7 @@ def _repouso_do_painel(state: dict[str, Any] | None,
         partes.append("")
         partes.append(ROTULO_DA_IDENTIDADE)
         partes += [f"  {_linha_de_identidade(c, mesa or [])}" for c in vivos]
-    # bug»*. <!-- noqa-acento: citação literal --> O painel rola até o
+    # <!-- noqa-acento: citação literal --> O painel rola até o
     partes += ["", ROTULO_DO_DIARIO, _diario()]
     return "\n".join(partes).strip()
 
@@ -1155,7 +1154,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     fora["bateria-perfil"] = perfil_da_bateria
     fora[REGISTRO] = _no_painel(repouso)
     exame = bruto.get("exame")
-    # D-A-CONTAGEM-DO-EXAME-SAIU — 25/09/2026, 22h13, pedido: *«Remove esse
+    # D-A-CONTAGEM-DO-EXAME-SAIU — 25/09/2026, 22h13, pedido.
     if isinstance(exame, dict):
         fora["exame-lista"] = _html_do_exame(_com_os_avisos(exame, ctx))
     tira = _html_da_fita(ctx.mesa)
@@ -1315,7 +1314,6 @@ def _linha_do_exame(achado: dict[str, Any]) -> str:
             "</span></div>")
 
 
-#: ali. Pra ficar simples pro user.»* <!-- noqa-acento: citação literal -->
 CORTES_DA_CABECA = (" (", " — ", ". ")
 
 
@@ -1421,7 +1419,7 @@ def _trava(ctx: Contexto, nome: str,
         return None
 
 
-#: `aba_sistema.travas()` tranca o `ver-detalhes` com a frase *"O serviço está
+#: `aba_sistema.travas()` tranca o `ver-detalhes` com a frase.
 #: não tem regra de sensibilidade, e `_aplicar_sensibilidade_ligar_desligar` só
 #: `interface/sistema.travas()`, que é a camada do produto e território de outra
 TRAVA_QUE_NAO_VALE_AQUI: dict[str, str] = {
@@ -1455,7 +1453,7 @@ def retomar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     p.chamar("daemon.resume")
 
 
-#: `daemon.reload` **fez o trabalho e a resposta nunca chegou** — *"o pior
+#: `daemon.reload` **fez o trabalho e a resposta nunca chegou**.
 SEM_RESPOSTA_DO_SERVICO = (
     "Não consegui falar com o serviço: pode não ter reaplicado nada, e pode ter "
     "reaplicado sem me responder. Clique de novo com o serviço de pé.")
@@ -1561,7 +1559,7 @@ def perfil_da_mesa(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     POR QUE `machine.declare` E NÃO `rumble.policy_set`, que seria o palpite: o
     teto da MESA e a política de vibração são dois donos diferentes. O
-    `_effective_mult` (`core/rumble.py:104`) lê os dois e aplica `min` entre
+    `_effective_mult` (`core/rumble.py:105`) lê os dois e aplica `min` entre
     eles — `_sob_o_teto`, nunca produto —, então gravar a escolha do usuário como
     política apagaria a política por controle que as outras abas escrevem. Quem
     é dono desta escolha é o `orcamento.teto` do `maquina.json`, e o contrato do
@@ -1577,7 +1575,7 @@ def perfil_da_mesa(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     E ELE PEGA NA HORA, sem reiniciar nada: o `_handle_machine_declare`
     (`daemon/ipc_handlers.py:5780`) relê o `maquina.json` e **rebinda**
-    `daemon._maquina`; o `_orcamento_declarado` (`core/rumble.py:93`) lê a
+    `daemon._maquina`; o `_orcamento_declarado` (`core/rumble.py:94`) lê a
     fonte a cada pedido de vibração, e não uma cópia do boot. Está escrito lá
     com todas as letras: *"uma cópia feita no boot ficaria velha exatamente no
     instante em que ela acabou de escolher"*.
@@ -1625,7 +1623,7 @@ def autostart(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     ter dois estados, o clique não muda nem a aparência (não há um `<script>` na
     página que troque a classe localmente), e quem clica não tem como saber que
     não pegou. Medido em execução em 02/09: `autostart` estava entre os SETE
-    gestos desta página sem dono — o clique caía em `hefesto_vivo.py:2664`,
+    gestos desta página sem dono — o clique caía em `hefesto_vivo.py:2662`,
     imprimia `[gesto sem dono]` no stdout do processo e voltava.
 
     O QUE ELE MANDA É O CONTRÁRIO DO QUE ESTÁ LIDO, e a leitura é a mesma que
@@ -1714,7 +1712,6 @@ CONFIRMA = "Confirma?"
 _CONFIRMA_DO_GESTO: dict[str, str] = {}
 
 
-#: O VERBO É DO USUÁRIO — *"em sistema um específico pra parar o Daemon E Ativar o
 ATIVAR = "Ativar o serviço"
 
 DESLIGAR = "parar-ou-retomar"

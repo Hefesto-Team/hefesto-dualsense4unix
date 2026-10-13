@@ -702,8 +702,6 @@ def fileira_de_tons(meu: str, casas: dict[str, list[dict[str, Any]]],
         if donos:
             estilo += f";--dono:{tinta_da_linha(donos)}"
         titulo = _os_nomes(outros) if outros else titulo_da_casa(i)
-        # setar alguma cor de um coleguinha"*. <!-- noqa-acento: citação -->
-        # tinhamos resolvido esse aviso"*. <!-- noqa-acento: citação -->
         aberto = ("" if outros else f' data-gesto="cor" data-hex="{cru}"')
         travado = ' aria-disabled="true"' if outros else ""
         linhas.append(
@@ -1269,15 +1267,14 @@ def desenho_da_luz(tinta: str, brilho: float, jogador: int, dica: str = "",
     aviso = f" {CLASSE_DA_INCERTA}" if incerta else ""
     diz = f' title="{dica}"' if dica else ""
     tira = f'<span class="tira-luz %s{aviso}"{veste}{marca}{diz}></span>'
-    #: aba com os quatro DualSense na mesa: *"pq tá surgindo os leds no lado da
-    #: a forma final, que é o contrato desta função: *"só olhar a linha de cima
-    #: reenvio (`reenviar-desenho`). Ficaram as DUAS tiras — *"os leds. barra de
+    #: aba com os quatro DualSense na mesa.
+    #: a forma final, que é o contrato desta função.
+    #: reenvio (`reenviar-desenho`). Ficaram as DUAS tiras.
     #: ESPELHO do número, sem escolha própria.
     try:
         lampadas = monta.luzinhas(jogador)
     except KeyError:
         # O DONO SABE O OVERFLOW E O ATALHO DA BANCADA NÃO. `player_led_pattern`
-        # DualSense pode legitimamente cair no slot 5+"* e que *"≥9 cai no padrão
         # `monta.luzinhas(9)` levanta `KeyError`. Medido em 02/09/2026.
         lampadas = ""
     return "\n".join(recuo + linha for linha in (
@@ -1633,7 +1630,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         if casa_dele:
             donos[_numero(ctx, c)] = casa_dele
 
-    #: o nome que ela deu a cada controle (o `Alias`), pelo leitor único; a linha «Modelo» o diz
+    #: o nome que o usuário deu a cada controle (o `Alias`), pelo leitor único; a «Modelo» o diz
     nomes_dela = nomes_dos_donos()
     pecas = _as_pecas_da_mesa(ctx, p)
     cor_de = [peca["cor"] for peca in pecas]
@@ -2583,7 +2580,7 @@ def brilho(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
 
     **A FRASE ENCOLHEU — 04/09/2026, decisão [04] dela**, entre três opções: a
     frase inteira, uma frase curta, e o silêncio. O usuário escolheu a curta, e a
-    razão que ela deu é a que este arquivo já sabia: a versão longa gastava três
+    razão que o usuário deu é a que este arquivo já sabia: a versão longa gastava três
     linhas de cartão *"repetindo com palavras o que a tira tracejada já mostra
     sem palavra nenhuma"*. O que saiu foi a explicação do *"porque não há cor a
     reacender"*; o que ficou é o que só a frase pode dizer — quanto foi guardado
@@ -2630,7 +2627,7 @@ def brilho(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
                       uniq=uniq, origem="interface-nova")
 
     # {"recado": …}`: com o motor sem afirmar a cor — a Steam com o `fd`, ou
-    # `player_slot_color(numero)`"*. Duas funções do mesmo arquivo, o mesmo
+    # Duas funções do mesmo arquivo, o mesmo
     # grava a escolha do usuário; ver `_guardar_a_cor_no_perfil`.
     alvo = _a_cor_guardada_que_vale(ctx, antes, dele) or _a_cor_de_agora(ctx, antes, dele)
     _escrever_a_cor(ctx, p, uniq, alvo, brilho=_fracao_do_disco(pct))
@@ -3200,7 +3197,6 @@ def player(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     return _o_recado(_acender_o_numero(ctx, p, uniq, n))
 
 
-# ELA DISPENSOU O CAMINHO no dia seguinte, olhando a aba com os quatro DualSense
 
 
 # `lightbar_brightness` de TODOS os overrides por controle e religava

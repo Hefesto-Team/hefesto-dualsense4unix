@@ -90,8 +90,8 @@ from hefesto_dualsense4unix.integrations import censo_dos_lancadores as _censo
 #: **A `cura_por_estrada` SAIU DAQUI — LANCADOR-LOCALIZAR-01, 10/09/2026.** Ela
 #: era importada para uma pergunta só: *quem tem por onde receber o ambiente?*,
 #: que decidia o botão «Consertar» do cartão LOCALIZADO. O botão saiu por
-#: palavra de produto — *"se tenho tudo instalado e tá pra ser identificado não tem
-#: pq ter o botão de consertar"* — e com ele a pergunta.  # noqa-acento: citação literal
+#: palavra de produto (quem tem tudo instalado e identificado não precisa do
+#: botão de consertar), e com ele a pergunta.
 #: O módulo FICA, com a dívida declarada em
 #: `tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py`: a lacuna que ele
 #: curava continua aberta, e quem a fecha é a LANCADOR-CARONA-01.
@@ -99,11 +99,10 @@ from hefesto_dualsense4unix.integrations import sandbox_dos_lancadores as _caixa
 
 SELOS = {
     "ok": "CHEGAM",
-    #: **«COM IMPEDIMENTO» DESDE 11/09/2026 — A2-007, e o usuário aprovou**: *"ok
-    #: aprovadíssimo todas. Manda ver."*  # noqa-acento: citação literal
+    #: **«COM IMPEDIMENTO» DESDE 11/09/2026 — A2-007, aprovada pelo usuário.**
     #:
     #: ELE DIZIA «NÃO CHEGAM», e a contagem do topo (:func:`conta_html`) já
-    #: chamava o mesmo fato de *"N com impedimentos"* — duas palavras para uma
+    #: chamava o mesmo fato de «N com impedimentos» — duas palavras para uma
     #: coisa só, a dois centímetros uma da outra, e quem lê tinha de traduzir
     #: uma na outra. É a mesma cura que em 09/09 trocou «encontrados» por
     #: «localizados» no topo.
@@ -115,12 +114,12 @@ SELOS = {
     "off": "NÃO LOCALIZADO",
     "nao_sei": "NÃO SEI",
     #: **O POSITIVO DO PAR — 09/09/2026, LANCADORES-ZERO-01 §5.2**, e a palavra
-    #: é dela (`D-0809-O-SELO-DOS-LANCADORES-DIZ-LOCALIZADO`): *"Deveria ter
-    #: Não Localizado"*.  # noqa-acento: citação literal
+    #: é do usuário (`D-0809-O-SELO-DOS-LANCADORES-DIZ-LOCALIZADO`): o par de
+    #: «Não Localizado» é «Localizado».
     #:
     #: O DEFEITO QUE ELE MATA: cinco lançadores INSTALADOS recebiam `NÃO SEI`,
-    #: porque o selo respondia *"sei ler a biblioteca dele?"*. Ela leu isso
-    #: como *"a aba lançadores tá identificando nada"* — e estava  # noqa-acento: citação
+    #: porque o selo respondia «sei ler a biblioteca dele?». A aba parecia não
+    #: identificar nada, e estava
     #: certa: um selo grande e negativo sobre um programa instalado não diz
     #: outra coisa.
     #:
@@ -132,7 +131,7 @@ SELOS = {
 
 #: A classe da MOLDURA do cartão, por selo. `nao_sei` divide a moldura apagada
 #: com `off` de propósito: as duas dizem "não há o que agir aqui", e um terceiro
-#: tom só acrescentaria uma cor para ela decodificar.
+#: tom só acrescentaria uma cor para decodificar.
 #: `localizado` divide a moldura de `ok`: as duas dizem "este está aqui e não
 #: há impedimento a agir". Um quarto tom só acrescentaria cor para decodificar.
 MOLDURA = {"ok": "chega", "warn": "impede", "off": "ausente",
@@ -207,8 +206,8 @@ class Lancador:
     tem_lista: bool = False
     #: O produto ACHOU este lançador nesta máquina? É o que a contagem do topo
     #: soma, e é um campo próprio de propósito: derivar "encontrado" do SELO
-    #: confunde duas perguntas diferentes — *"o lançador está aqui?"* e *"os
-    #: controles chegam nele?"*. Um lançador achado cujo interior o produto não
+    #: confunde duas perguntas diferentes — «o lançador está aqui?» e «os
+    #: controles chegam nele?». Um lançador achado cujo interior o produto não
     #: sabe ler é `presente=True` com selo `nao_sei`, e as duas coisas são
     #: verdade ao mesmo tempo.
     presente: bool = False
@@ -390,7 +389,7 @@ FILEIRA_VAZIA = "<!-- nada a oferecer neste cartão -->"
 #: `steam-fora=""`, e o `escrever()` do BOOTSTRAP troca vazio por travessão
 #: ANTES de despachar o alvo (`hefesto_vivo.py:61`), inclusive para
 #: `alvo === 'html'`. **O da Steam ilegível é permanente** — justo a tela em que
-#: ela precisa ler uma mensagem, com um traço mudo pendurado embaixo.
+#: o usuário precisa ler uma mensagem, com um traço mudo pendurado embaixo.
 #:
 #: POR QUE UM COMENTÁRIO E NÃO UMA FRASE: nos dois estados o produto **não sabe**
 #: o que há na lista. Escrever "nenhum jogo com pendência" ali seria afirmar o
@@ -403,21 +402,21 @@ SEM_LISTA = "<!-- ainda não há lista para este cartão -->"
 #: O CORPO DO CARTÃO DA STEAM ENQUANTO A PRIMEIRA LEITURA NÃO VOLTOU — e ele
 #: NÃO É UMA FRASE, pela mesma razão de :data:`SEM_LISTA`.
 #:
-#: TELA-CALADA-02, 13/09/2026. Aqui morava *«Estou lendo a sua biblioteca da
-#: Steam…»*, uma notícia de fundo em primeira pessoa — e a palavra de produto sobre as
-#: frases de status é *"em todas as abas da interface"*. Quem já diz que a
+#: TELA-CALADA-02, 13/09/2026. Aqui morava «Estou lendo a sua biblioteca da
+#: Steam…», uma notícia de fundo em primeira pessoa — e a regra de produto para as
+#: frases de status vale em todas as abas da interface. Quem já diz que a
 #: leitura está em curso é o canto do cartão (:data:`AINDA_LENDO`, no
 #: `steam-jogos`). Um `""` aqui viraria travessão no `escrever()` do BOOTSTRAP;
 #: o comentário não é vazio, e o navegador o renderiza como nada.
 SEM_FRASE = "<!-- a primeira leitura da Steam ainda não voltou -->"
 
 #: A LISTA DE JOGOS VAZIA DO CARTÃO DA STEAM — e ela deixou de ser uma frase
-#: em 22/09/2026. Era *«Nada pendente, e você não tirou nem dispensou nenhum
-#: jogo.»*, e o usuário mandou sair: *"isso na steam essa frase tem que sumir pra
-#: nivelarmos a altura do bloco da styeam com demais."* A frase e a linha de
+#: em 22/09/2026. Era «Nada pendente, e você não tirou nem dispensou nenhum
+#: jogo.», e a frase saiu para nivelar a altura do bloco da Steam
+#: com os demais. A frase e a linha de
 #: cima dela custavam 28 px que só o cartão da Steam pagava (156 contra 128 da
-#: fileira de baixo), e o desenho da aba já dizia que a lista *"só aparece
-#: quando há o que dizer"* (o comentário da `.lanc-fora`, em `aba07.py`).
+#: fileira de baixo), e o desenho da aba já dizia que a lista «só aparece
+#: quando há o que dizer» (o comentário da `.lanc-fora`, em `aba07.py`).
 #:
 #: É UM COMENTÁRIO pela razão de :data:`SEM_LISTA`: `""` viraria travessão no
 #: `escrever()` do BOOTSTRAP. E comentário não conta para o `:empty`, então a
@@ -505,37 +504,37 @@ def cartoes_html(lancadores: list[Lancador]) -> str:
 #: DESENHO da tela estática: o gerador o escreve dentro do `data-campo`, e o
 #: pacote o repinta com o mesmo texto enquanto não houver cartão apontado.
 #: ELA DIZIA O QUE NÓS NÃO TEMOS, e foi apanhada pelo portão no mesmo dia em que
-#: nasceu: *"Um lançador ou emulador que o Hefesto **ainda não** traz de
-#: fábrica"* — o «ainda não» põe o sujeito em NÓS e transforma a linha numa
-#: confissão de dívida. A ordem, 07/09/2026: *"O app tem que funcionar e não
-#: mostrar na tela que o app não presta."*
+#: nasceu: «Um lançador ou emulador que o Hefesto **ainda não** traz de
+#: fábrica» — o «ainda não» põe o sujeito em NÓS e transforma a linha numa
+#: confissão de dívida. A regra de produto, 07/09/2026: o app funciona e não
+#: mostra na tela que o app não presta.
 #:
-#: O SUJEITO CERTO É ELA, e a frase fica melhor: quem está para ser acrescentado
-#: é um lançador que ELA usa. O fato não se perdeu — quem chega a esta tela já
-#: sabe que o lançador não tem cartão, porque foi por isso que ela a abriu.
+#: O SUJEITO CERTO É O USUÁRIO, e a frase fica melhor: quem está para ser
+#: acrescentado é um lançador que ELE usa. O fato não se perdeu — quem chega a esta tela já
+#: sabe que o lançador não tem cartão, porque foi por isso que a abriu.
 NOVO_SEM_ALVO = "Um lançador ou emulador que você usa"
 
 #: O que a linha diz quando a tela abriu pelo botão de um CARTÃO
 #: (:data:`ADICIONAR_ROTULO`). O `{nome}` é o nome daquele cartão, e é o que
-#: responde à única pergunta que ela faria olhando dois campos vazios: *para
+#: responde à única pergunta que o usuário faria olhando dois campos vazios: *para
 #: qual?*
 #:
 #: **A FRASE PERDEU O ARTIGO EM 08/09/2026, e foi a FOTO que mostrou.** Ela
-#: dizia *"Onde está **o** {nome} nesta máquina"*, e o artigo masculino estava
+#: dizia «Onde está **o** {nome} nesta máquina», e o artigo masculino estava
 #: certo nos cinco cartões que chegavam aqui — o Heroic, o Lutris, o Flatpak, o
 #: RetroArch, o Dolphin. No dia em que o cartão da STEAM ganhou o botão
-#: (:func:`acao_de_localizar`), a tela passou a dizer *"o Steam"* — e esta casa
+#: (:func:`acao_de_localizar`), a tela passou a dizer «o Steam» — e esta casa
 #: escreve **a** Steam em toda a aba, do corpo do cartão à frase da sentinela.
 #:
-#: NÃO SE CONSERTA COM UMA TABELA DE GÊNERO: o `{nome}` também vem do que ELA
+#: NÃO SE CONSERTA COM UMA TABELA DE GÊNERO: o `{nome}` também vem do que o usuário
 #: digitou ao acrescentar um cartão novo, e adivinhar o artigo de um nome que
 #: ainda não existe é palpite na tela do usuário. A frase sem artigo é verdadeira para
 #: todo nome — inclusive os que ainda não foram inventados.
 #:
 #: O «ele» FICA, e ele não é descuido: é a MESMA palavra do rótulo do campo logo
-#: abaixo (*"Onde ele está"*), que já vale para os seis cartões. O sujeito ali é
+#: abaixo («Onde ele está»), que já vale para os seis cartões. O sujeito ali é
 #: *o lançador*, e não o nome próprio — trocar o pronome aqui deixaria a linha e
-#: o campo que ela responde falando de coisas diferentes.
+#: o campo que o usuário responde falando de coisas diferentes.
 NOVO_PARA_O_CARTAO = "{nome} — onde ele está nesta máquina"
 
 
@@ -684,8 +683,8 @@ def linhas_de_jogos(itens: list[JogoNaLista]) -> str:
 # O ENDEREÇO `lanc-quantos` E A FUNÇÃO `quantos_html` SAÍRAM EM 11/09/2026, e
 # saíram JUNTOS com o trecho do "?" que os consumia — A2-002, aprovada pelo usuário.
 #
-# O QUE ELES FORAM, e o custo está pago: o "?" do quadro dizia *"a resposta vale
-# igual para os 2 (1 no cabo, 1 no rádio)"*, e até 03/09 aquele `2` vinha de
+# O QUE ELES FORAM, e o custo está pago: o "?" do quadro dizia «a resposta vale
+# igual para os 2 (1 no cabo, 1 no rádio)», e até 03/09 aquele `2` vinha de
 # `monta.CONECTADOS` — a mesa do DESENHO, congelada no HTML, ao lado de um
 # cabeçalho que LIA o aparelho. A cura daquele dia foi dar-lhe endereço e
 # alimentá-lo da mesa viva (`a07_lancadores.quantos_da_mesa`).
@@ -706,7 +705,7 @@ def conta_html(achados: int, impedidos: int) -> str:
     #: **"localizados", E NÃO "encontrados" — 09/09/2026, §5.2.** A palavra do
     #: cabeçalho passa a ser a MESMA do selo: com `LOCALIZADO` no cartão e
     #: "encontrados" no topo, a tela diria duas palavras para o mesmo fato, e
-    #: ela teria de traduzir uma na outra ao ler.
+    #: o usuário teria de traduzir uma na outra ao ler.
     return (f'{_plural(achados, "localizado", "localizados")} '
             f'<span class="sep">·</span> '
             f'{_plural(impedidos, "com impedimento", "com impedimentos")}')
@@ -760,10 +759,10 @@ class SemCenso:
     nome: str
     atalhos: tuple[str, ...] = ()
     comandos: tuple[str, ...] = ()
-    #: ELA declarou este lançador (ou ensinou onde este embutido está)?
+    #: O usuário declarou este lançador (ou ensinou onde este embutido está)?
     #:
     #: É O QUE DECIDE O BOTÃO DE TIRAR, e nada mais: um cartão declarado tem de
-    #: poder sair, senão a lista dela vira lixo permanente. Num embutido que ela
+    #: poder sair, senão a lista vira lixo permanente. Num embutido que o usuário
     #: ensinou, tirar desfaz o ensino e devolve a busca de fábrica — as duas
     #: coisas são o mesmo ato, e por isso é o mesmo botão.
     declarado: bool = False
@@ -776,7 +775,7 @@ class SemCenso:
     #: O leitor da biblioteca que uma modificação declara (o censo o chama).
     leitor: _censo.LeitorPorProcesso | None = None
     #: O ``id`` da modificação que trouxe este lançador; vazio no de fábrica e
-    #: no que ela declarou. Ele não ganha marca no cartão (escolha dela de
+    #: no que o usuário declarou. Ele não ganha marca no cartão (escolha do usuário de
     #: 09/10/2026, ~16h15): sair é desligar a modificação, e não o «Tirar daqui».
     modificacao: str = ""
 
@@ -786,8 +785,8 @@ class SemCenso:
 #: próprio.
 #:
 #: A PROVA DE 02/09/2026 CADUCOU, e o número que ela citava era este:
-#: *"o `grep -rniE "heroic|lutris|…" src` devolve CINCO linhas fora desta aba,
-#: e as cinco são COMENTÁRIO"*. **Remedido em 10/09/2026: são 58 linhas**, e
+#: «o `grep -rniE "heroic|lutris|…" src` devolve CINCO linhas fora desta aba,
+#: e as cinco são COMENTÁRIO». **Remedido em 10/09/2026: são 58 linhas**, e
 #: `integrations/cura_por_estrada.py` LÊ e ESCREVE o `config.json` do Heroic
 #: (`_ler_heroic`, `_escrever_no_heroic`, `CHAVE_DO_HEROIC`).
 #:
@@ -805,19 +804,17 @@ class SemCenso:
 #: pacote da distribuição.
 #:
 #: **NÃO HÁ CARTÃO DA EPIC, E A DECISÃO É DE PRODUTO — 08/09/2026.** O usuário pediu um
-#: (*"Seria interessante termos o da Epic Games Aqui também não?"*), ele foi
-#: feito, o usuário viu e desfez — a grafia é a dela, e fica:
-#: *"melhor deixar só heróic e tirar epic games não?"*  # noqa-acento: citação literal
+#: cartão da Epic, ele foi
+#: feito, o usuário viu e desfez: ficou só o Heroic, sem a Epic Games.
 #:
-#: A SEGUNDA PALAVRA É A QUE VALE, e o argumento dela fecha o caso melhor que o
+#: O DESFAZER É O QUE VALE, e o argumento fecha o caso melhor que o
 #: cartão fechava: **quem entrega o jogo da Epic nesta máquina é o Heroic**, e o
 #: rótulo do cartão dele já diz «Epic · GOG» desde que ele nasceu. Um cartão da
 #: Epic ao lado teria de procurar o Heroic para não dizer NÃO LOCALIZADO numa
 #: máquina onde os jogos da Epic abrem — ou seja, **dois cartões da mesma tela
 #: procurando o mesmo programa em disco**, e o segundo existindo só para repetir
 #: a resposta do primeiro.
-#: Decisão de produto: *"Epic e gog ficam dentro do heróic.  # noqa-acento: citação literal
-#: Melhor mesmo seu ponto"*.
+#: Decisão de produto: Epic e GOG ficam dentro do Heroic.
 #:
 #: **O RÓTULO DO HEROIC NÃO MUDA**, e agora ele carrega mais do que carregava:
 #: com o cartão fora, o «(Epic · GOG)» é o ÚNICO lugar da tela onde a Epic
@@ -865,21 +862,21 @@ A_STEAM = SemCenso("steam", "Steam",
                    ("steam", "com.valvesoftware.Steam", "steam-native"),
                    ("steam", "steam-native"))
 
-#: OS SEIS QUE VÊM DE FÁBRICA. :data:`SEM_FONTE` responde outra coisa (*"sei ler
-#: a biblioteca dele?"*) e percorrê-la para procurar deixava a Steam de fora da
+#: OS SEIS QUE VÊM DE FÁBRICA. :data:`SEM_FONTE` responde outra coisa («sei ler
+#: a biblioteca dele?») e percorrê-la para procurar deixava a Steam de fora da
 #: única pergunta que o produto sabe responder sobre todos sem inventar.
 #:
 #: **ELE NÃO É A LISTA QUE SE PROCURA — quem responde isso é :func:`procurados`,
-#: e a diferença nasceu em 08/09/2026 com o lançador declarado por ELA.** O
+#: e a diferença nasceu em 08/09/2026 com o lançador declarado pelo usuário.** O
 #: nome antigo (`PROCURADOS`) morreu de propósito: enquanto uma constante
 #: respondesse "o que se procura", quem a lesse por hábito procuraria só os de
-#: fábrica e o lançador que ela acrescentou seria invisível — calado, e só na
+#: fábrica e o lançador que o usuário acrescentou seria invisível — calado, e só na
 #: máquina do usuário. Um nome que mente é pior que um nome comprido.
 EMBUTIDOS: tuple[SemCenso, ...] = (A_STEAM, *SEM_FONTE)
 
 
 def procurados(declarados: tuple[SemCenso, ...] = ()) -> tuple[SemCenso, ...]:
-    """Os :data:`EMBUTIDOS` **mais** o que ELA declarou — a lista única.
+    """Os :data:`EMBUTIDOS` **mais** o que o usuário declarou — a lista única.
 
     É esta que se procura em disco, esta que se ordena e esta que vira cartão.
     Um segundo caminho de busca para o declarado seria a assimetria que esta
@@ -945,10 +942,10 @@ def procurados(declarados: tuple[SemCenso, ...] = ()) -> tuple[SemCenso, ...]:
 #: leitura de disco voltar.
 #:
 #: ELA DIZIA O QUE FALTA, e agora diz o que FUNCIONA. Ordem, 07/09/2026:
-#: *"O app tem que funcionar e não mostrar na tela que o app não presta. (…) o
-#: layout não informa os nossos defeitos."* A frase antiga abria com *"Ainda
-#: não sei olhar este lançador"* e fechava com *"nenhuma linha dele olha para
-#: cá hoje"* — duas confissões em volta do único fato que serve a quem lê.
+#: Regra de produto: o app funciona e não mostra na tela que o app não presta; o
+#: layout não informa os nossos defeitos. A frase antiga abria com «Ainda
+#: não sei olhar este lançador» e fechava com «nenhuma linha dele olha para
+#: cá hoje» — duas confissões em volta do único fato que serve a quem lê.
 #:
 #: O FATO SOBREVIVEU INTEIRO, e é o do meio: o perfil casa por processo e por
 #: janela, então um jogo aberto de lá entra pelo mesmo caminho de qualquer
@@ -956,8 +953,8 @@ def procurados(declarados: tuple[SemCenso, ...] = ()) -> tuple[SemCenso, ...]:
 #: mora.
 #:
 #: **A SEGUNDA ORAÇÃO SAIU EM 11/09/2026 — A2-012, aprovada pelo usuário.** Ela era
-#: a primeira dita de novo (*"um jogo aberto por aqui entra pelo mesmo caminho
-#: de qualquer outro"* é o que *"casa pelo nome do processo e pela janela"* já
+#: a primeira dita de novo («um jogo aberto por aqui entra pelo mesmo caminho
+#: de qualquer outro» é o que «casa pelo nome do processo e pela janela» já
 #: diz), e o custo era de CINCO VEZES: na tela do usuário a frase ocupa cinco
 #: cartões empilhados.
 #: 118 → 50 caracteres, cinco vezes.
@@ -988,19 +985,19 @@ ABRIR = "abrir-lancador"
 #: 10/09/2026, e o que caiu foi o VASO, não a cura.
 #:
 #: `CONSERTAR_LANCADOR` e `CONSERTAR_LANCADOR_ROTULO` moravam nesta linha desde
-#: 09/09. Ela leu o cartão como ele estava pintado — selo `LOCALIZADO`, moldura
+#: 09/09. O cartão era lido como estava pintado — selo `LOCALIZADO`, moldura
 #: `chega`, e a frase dizendo que *um jogo aberto por aqui entra pelo mesmo
-#: caminho de qualquer outro* — e recusou o botão: *"na real não faz sentido.
-#: Digo se tenho tudo instalado e tá pra ser identificado não tem pq ter o botão
-#: de consertar."*  Uma cura oferecida onde a tela não declarou defeito nenhum
+#: caminho de qualquer outro* — e o botão foi recusado: quem tem tudo
+#: instalado e identificado não precisa de botão de consertar. Uma cura
+#: oferecida onde a tela não declarou defeito nenhum
 #: lê-se como cura de coisa nenhuma.
 #:
 #: **A LACUNA CONTINUA ABERTA**, e é por isso que `integrations/cura_por_estrada`
 #: fica: `hefesto-launch` só age com jogo da Steam, e nenhum jogo do Heroic, do
 #: Lutris, do RetroArch, do Dolphin ou do mGBA tem um. O vaso certo é a CARONA
-#: — palavra de 16/08, em `app/actions/carona_do_wrapper.py:7`: *"nem
-#: precisa ter um botão na gui, mas ele se auto corrigir ao clicarmos em aplicar
-#: ou salvar o perfil"*. Quem o constrói é a LANCADOR-CARONA-01.
+#: — decisão de 16/08, em `app/actions/carona_do_wrapper.py:7`: sem botão na
+#: interface, o ajuste se corrige ao aplicar ou salvar o perfil. Quem o
+#: constrói é a LANCADOR-CARONA-01.
 
 
 
@@ -1027,9 +1024,9 @@ ADICIONAR = "adicionar-lancador"
 #: O RÓTULO DO BOTÃO DO CARTÃO — e ele DIZ A PALAVRA DO SELO, de propósito.
 #:
 #: A PALAVRA DE PRODUTO VEIO EM DUAS ETAPAS, e a segunda corrigiu a primeira. Em
-#: 08/09/2026 o usuário disse *"o Botão Abrir o Lançador deveria ser o Adicionar
-#: Launcher"*, e o rótulo nasceu em inglês e igual ao do botão global. Olhando a
-#: aba, ela voltou: *"Adicionar novo Lançador? Seria legal um sinônimo né?"* —
+#: 08/09/2026 o pedido foi que o botão «Abrir o Lançador» virasse «Adicionar
+#: Launcher», e o rótulo nasceu em inglês e igual ao do botão global. Olhando a
+#: aba, o pedido seguinte foi «Adicionar novo Lançador», com um sinônimo —
 #: três pedidos numa frase, e os três estão atendidos aqui: **português**,
 #: **"novo" no que é novo**, e **os dois botões falando palavras diferentes**.
 #:
@@ -1039,9 +1036,9 @@ ADICIONAR = "adicionar-lancador"
 #: *não localizado → localizar este lançador*.
 #:
 #: **ELE NÃO INSTALA NADA, e é o próprio cartão que diz por quê:** a frase do
-#: estado NÃO LOCALIZADO termina em *"Instalado de outro jeito (um AppImage
-#: solto, por exemplo) ele não aparece aqui"*. Então «Localizar este Lançador»
-#: quer dizer **"ele está aqui, eu te mostro onde"** — ela aponta o caminho e o
+#: estado NÃO LOCALIZADO termina em «Instalado de outro jeito (um AppImage
+#: solto, por exemplo) ele não aparece aqui». Então «Localizar este Lançador»
+#: quer dizer **"ele está aqui, eu te mostro onde"** — o usuário aponta o caminho e o
 #: cartão passa a acender. O botão do cartão que ACHOU continua sendo «Abrir o
 #: lançador»: são dois estados, dois botões, e trocar o rótulo dos dois faria o
 #: cartão aceso oferecer um registro que já existe.
@@ -1049,8 +1046,8 @@ ADICIONAR = "adicionar-lancador"
 #: «L» no meio da frase não era palavra de produto: a mesma aba já escrevia «Localizar
 #: um lançador» em minúscula no título da tela de registro
 #: (:data:`TELA_DO_NOVO_TITULO`), e duas grafias para uma palavra é o que o item
-#: 4 da §2 do índice proíbe — *"Esse tipo de coisa não pode se repetir na
-#: interface."*  # noqa-acento: citação literal
+#: 4 da §2 do índice proíbe: o mesmo erro não pode se repetir na
+#: interface.
 ADICIONAR_ROTULO = "Localizar este lançador"
 
 #: O RÓTULO DO MESMO BOTÃO NO CARTÃO QUE JÁ FOI LOCALIZADO — 11/09/2026,
@@ -1065,8 +1062,8 @@ ADICIONAR_ROTULO = "Localizar este lançador"
 #: para este jogo». O ato aqui é CORRETIVO (o que o produto achou não é o que o usuário
 #: quer), e o rótulo passa a dizê-lo.
 #:
-#: **ENCOLHEU EM 21/09/2026**, palavra de produto: *"reescreve o texto para que os
-#: botões os 4 fiquem em uma linha só"*. A fileira do cartão tem 531 px no
+#: **ENCOLHEU EM 21/09/2026**, palavra de produto: o texto se reescreve para que os
+#: 4 botões fiquem em uma linha só. A fileira do cartão tem 531 px no
 #: WebKit e os quatro somavam ~680; a frase inteira foi para o `title`
 #: (:data:`APONTAR_DICA`), que é onde o rótulo curto se explica.
 APONTAR_ROTULO = "Outro caminho"
@@ -1075,8 +1072,8 @@ APONTAR_DICA = "Apontar outro caminho para este lançador"
 #: A frase de quem PROCUROU E NÃO ACHOU.
 #:
 #: **ELA DIZ «NÃO LOCALIZEI» DESDE 08/09/2026**, e a razão é a mesma do selo: a
-#: palavra de produto foi *"ao invés de não achei"*, e a tela dizia a frase que ela
-#: recusou em DOIS lugares — o selo, em maiúsculas, e a primeira oração daqui.
+#: palavra de produto é «não localizei» ao invés de «não achei», e a tela dizia a frase
+#: recusada em DOIS lugares — o selo, em maiúsculas, e a primeira oração daqui.
 #: Trocar só o selo deixaria a mesma tela com as duas grafias, uma ao lado da
 #: outra. **O NOME DA CONSTANTE FICA**: ele nomeia o ESTADO ("procurei e não
 #: achei"), que não mudou, e é lido por réguas que perguntam pelo estado.
@@ -1088,13 +1085,13 @@ APONTAR_DICA = "Apontar outro caminho para este lançador"
 #: fato serve. O que faltava à frase era justamente o que FAZER, e é o que ela
 #: diz agora. 262 → 112.
 #:
-#: ELA CONTINUA SEM AFIRMAR QUE O LANÇADOR NÃO ESTÁ NA MÁQUINA — *"onde sei
-#: procurar"* é o mesmo cuidado da frase longa (um AppImage solto, um script no
+#: ELA CONTINUA SEM AFIRMAR QUE O LANÇADOR NÃO ESTÁ NA MÁQUINA — «onde sei
+#: procurar» é o mesmo cuidado da frase longa (um AppImage solto, um script no
 #: `~/bin`), em cinco palavras.
 #:
 #: **VIROU RÓTULO DE ESTADO EM 13/09/2026 — FRASES-E-DICAS-02, §I.5.** A frase
 #: de 11/09 falava em primeira pessoa e mandava usar o botão do cartão; a ordem
-#: dela de 13/09, no índice da terceira lista, tira instrução e narração da
+#: de 13/09, no índice da terceira lista, tira instrução e narração da
 #: tela. O selo já diz NÃO LOCALIZADO e o botão ao lado já é a saída; o corpo
 #: diz só onde o produto não achou. Até seis palavras, sem primeira pessoa e
 #: sem mando — a régua `_e_rotulo_de_estado` de
@@ -1110,8 +1107,8 @@ DIZ_NAO_LI = "<b>Biblioteca da Steam ilegível</b>"
 #: O RÓTULO DO BOTÃO GLOBAL — o que nasce vazio, para o que o Hefesto não
 #: conhece de fábrica.
 #:
-#: **ELE É O OUTRO ATO, e a palavra de produto separa os dois:** este diz *"tem um que
-#: você não conhece"*, o do cartão diz *"ele está aqui, te mostro onde"*. Foi
+#: **ELE É O OUTRO ATO, e a palavra de produto separa os dois:** este diz «tem um que
+#: você não conhece», o do cartão diz «ele está aqui, te mostro onde». Foi
 #: para isso que o usuário pediu o sinônimo — dois botões com a mesma frase na mesma
 #: tela fazem quem lê procurar a diferença que a tela não mostra.
 #:
@@ -1122,12 +1119,12 @@ DIZ_NAO_LI = "<b>Biblioteca da Steam ilegível</b>"
 #: justamente um emulador.
 #:
 #: OS DOIS PASSARAM A DIZER O MESMO — 11/09/2026, aprovado pelo usuário. O botão
-#: dizia *"Adicionar novo Lançador"* e a tela que ele abre dizia *"Localizar
-#: um lançador"*: dois nomes para a mesma tela, e ainda com maiúscula
+#: dizia «Adicionar novo Lançador» e a tela que ele abre dizia «Localizar
+#: um lançador»: dois nomes para a mesma tela, e ainda com maiúscula
 #: decorativa no botão. Os dois passam a ser «Adicionar um lançador».
 #:
 #: DUAS PROPOSTAS APROVADAS SE ENCONTRARAM AQUI, e esta é a que ficou. A
-#: A2-005 pedia só a minúscula (*"Adicionar novo lançador"*) e dava o título
+#: A2-005 pedia só a minúscula («Adicionar novo lançador») e dava o título
 #: da tela por «mantido» — o usuário olhou o botão sozinho. A B1 olhou os DOIS
 #: endereços e viu o nome duplo. A minúscula que a A2 pediu está dentro desta,
 #: e a regra desta casa decide o resto: *quando a cura conhece a causa, ela
@@ -1137,8 +1134,7 @@ ADICIONAR_NOVO_ROTULO = "Adicionar um lançador"
 # ---------------------------------------------------------------------------
 # O SELETOR DO SISTEMA — LANCADOR-LOCALIZAR-01, 10/09/2026, decisão de produto
 #
-#     "aí eu mesmo abro a tela e procuro o .desktop"   # noqa-acento: citação
-#                                                      # literal
+# O usuário abre a tela do sistema e procura o `.desktop`.
 #
 # O usuário escolheu a opção (C) — **campo + botão que abre o seletor**, e o campo de
 # texto FICA: ele é o único caminho para um AppImage solto, que não tem
@@ -1155,14 +1151,14 @@ ADICIONAR_NOVO_ROTULO = "Adicionar um lançador"
 PROCURAR_O_ARQUIVO = "procurar-o-arquivo"
 
 #: O RÓTULO, e ele NÃO diz «Procurar…» de propósito — foi medido nesta aba.
-#: «Procurar de novo» já é o botão do topo do quadro, e ele quer dizer *"varra a
-#: máquina outra vez"*: é a busca automática, sobre os SEIS cartões. Este quer
-#: dizer *"eu te mostro o arquivo"*, sobre UM. Duas palavras iguais para dois
+#: «Procurar de novo» já é o botão do topo do quadro, e ele quer dizer «varra a
+#: máquina outra vez»: é a busca automática, sobre os SEIS cartões. Este quer
+#: dizer «eu te mostro o arquivo», sobre UM. Duas palavras iguais para dois
 #: atos diferentes na mesma tela é a quebra de "mesma família, mesma coisa" que
 #: esta aba já pagou uma vez (o `.lanc .btn` que encolhia).
 #:
-#: **É TEXTO DE TELA, e por isso está escrito para ela conferir na bancada.**
-#: Se ela preferir a palavra de produto — *"procuro o .desktop"* —, é trocar esta
+#: **É TEXTO DE TELA, e por isso está escrito para o usuário conferir na bancada.**
+#: Se ele preferir a palavra «procuro o .desktop», é trocar esta
 #: linha: o gesto, a recusa e a régua não dependem do rótulo.
 PROCURAR_O_ARQUIVO_ROTULO = "Escolher o arquivo…"
 
@@ -1170,7 +1166,7 @@ PROCURAR_O_ARQUIVO_ROTULO = "Escolher o arquivo…"
 #: 11/09/2026, aprovado pelo usuário: um nome por tela.
 #:
 #: O QUE CADUCOU E O QUE FICOU. Até 11/09 este título era neutro
-#: (*"Localizar um lançador"*) justamente para não ser o rótulo de NENHUM dos
+#: («Localizar um lançador») justamente para não ser o rótulo de NENHUM dos
 #: dois botões, e o parágrafo abaixo diz por quê. A decisão de 11/09 é
 #: mais forte para o botão global — botão e destino com nomes diferentes fazem
 #: quem clica duvidar de onde chegou. **O que a medição de 08/09 travava
@@ -1181,8 +1177,8 @@ PROCURAR_O_ARQUIVO_ROTULO = "Escolher o arquivo…"
 #: Enquanto os dois botões diziam a mesma frase, dar o rótulo de um deles ao
 #: título era inofensivo; com a palavra de produto separando os atos, deixou de ser:
 #: aberta pelo botão do cartão do RetroArch (:data:`ADICIONAR_ROTULO`), a caixa
-#: mostraria :data:`ADICIONAR_NOVO_ROTULO` — *"novo"* — em cima da linha que diz
-#: *"Onde está o RetroArch nesta máquina"*. **Duas células da mesma tela dizendo
+#: mostraria :data:`ADICIONAR_NOVO_ROTULO` — «novo» — em cima da linha que diz
+#: «Onde está o RetroArch nesta máquina». **Duas células da mesma tela dizendo
 #: o contrário uma da outra** é o defeito que esta aba inteira existe para
 #: matar.
 #:
@@ -1193,8 +1189,8 @@ PROCURAR_O_ARQUIVO_ROTULO = "Escolher o arquivo…"
 #: (:data:`NOVO_PARA_QUEM`) é quem diz de qual dos dois se trata.
 TELA_DO_NOVO_TITULO = "Adicionar um lançador"
 
-#: O gesto de TIRAR. *O que se acrescenta se tira* — sem ele a lista dela vira
-#: lixo permanente, e um cartão que ela não consegue remover é pior que a
+#: O gesto de TIRAR. *O que se acrescenta se tira* — sem ele a lista vira
+#: lixo permanente, e um cartão que o usuário não consegue remover é pior que a
 #: ausência dele.
 REMOVER = "esquecer-lancador"
 
@@ -1210,21 +1206,21 @@ REMOVER_ROTULO = "Tirar daqui"
 #: clique some sem uma palavra.
 TELA_DO_NOVO = "novo-lancador"
 
-#: OS DOIS CAMPOS QUE ELA DIGITA, e eles são `data-linha` — **nunca
+#: OS DOIS CAMPOS QUE O USUÁRIO DIGITA, e eles são `data-linha` — **nunca
 #: `data-campo`**, e a diferença aqui é a diferença entre funcionar e brigar
-#: com ela.
+#: com quem digita.
 #:
 #: O piloto recolhe a forma por `[data-linha],[data-campo]` e chaveia pelo
 #: primeiro que existir (`hefesto_vivo.py`, o bloco `forma:`), então `data-linha`
 #: basta para o valor chegar ao Python. O que ele NÃO faz é pintar: um
 #: `data-campo` num `<input>` seria repintado a cada tique — dez vezes por
-#: segundo, por cima do que ela está digitando. É o samba que a `A-TELA-SAMBA-01`
+#: segundo, por cima do que o usuário está digitando. É o samba que a `A-TELA-SAMBA-01`
 #: mediu, e num campo de texto ele não é cosmético: apaga a frase no meio.
 NOVO_ROTULO = "lanc-novo-rotulo"
 NOVO_ALVO = "lanc-novo-alvo"
 
 #: O endereço da linha que diz PARA QUEM a tela de registro está aberta. Este é
-#: `data-campo` de verdade — é TEXTO, o produto é o dono, e ela não digita nele.
+#: `data-campo` de verdade — é TEXTO, o produto é o dono, e o usuário não digita nele.
 NOVO_PARA_QUEM = "lanc-novo-para-quem"
 
 
@@ -1233,8 +1229,8 @@ NOVO_PARA_QUEM = "lanc-novo-para-quem"
 #
 # Aqui moravam os nomes e os rótulos do «Desligar o Steam Input», do «Deixar
 # tudo pronto» e do «Copiar a linha» (e, até a tarde, do «Este jogo não
-# funciona»). A palavra de produto: *"a ideia é termos os mesmos botões pra todos os
-# lançadores. sempre."* O que eles faziam à mão o produto faz sozinho — o guarda
+# funciona»). A palavra de produto: os mesmos botões para todos os
+# lançadores, sempre. O que eles faziam à mão o produto faz sozinho — o guarda
 # desliga o Steam Input e o vigia repõe o atalho (`hefesto-steam-input-guard`)
 # —, e a marca do Steam Input por jogo continua no chip da aba Jogar.
 # ---------------------------------------------------------------------------
@@ -1425,9 +1421,9 @@ class Leitura:
     reparaveis: tuple[tuple[str, str, str], ...] = ()
     #: os que não chamam e ninguém deve tocar (lista de IGNORE estendida à mão).
     intocaveis: tuple[tuple[str, str, str], ...] = ()
-    #: os que ELA tirou, no `jogos_sem_wrapper.txt`: `(appid, rótulo)`.
+    #: os que o usuário tirou, no `jogos_sem_wrapper.txt`: `(appid, rótulo)`.
     recusados: tuple[tuple[str, str], ...] = ()
-    #: os que ELA dispensou do LEMBRETE, no `launch_dialog_dismissed.json`:
+    #: os que o usuário dispensou do LEMBRETE, no `launch_dialog_dismissed.json`:
     #: `(appid, rótulo)`. É outra lista e outra pergunta — ver `lista_de_jogos`.
     dispensados: tuple[tuple[str, str], ...] = ()
     #: quantos jogos estão INSTALADOS — o vdf guarda linha de jogo desinstalado.
@@ -1442,7 +1438,7 @@ class Leitura:
     #: distinção é o ponto inteiro: as duas viram frases diferentes na tela.
     #: A `steam` entrou no mapa em 02/09 — ver :data:`A_STEAM`.
     onde_estao: tuple[tuple[str, str], ...] = ()
-    #: O QUE ELA DECLAROU no `maquina.json` — 08/09/2026. Um lançador que o
+    #: O QUE O USUÁRIO DECLAROU no `maquina.json` — 08/09/2026. Um lançador que o
     #: Hefesto não conhece de fábrica, ou o ENSINO de onde um de fábrica está.
     #:
     #: ELE VEM PELA `Leitura` e não por import, e é a mesma razão de tudo neste
@@ -1596,8 +1592,8 @@ def acao_de_localizar(chave: str, rotulo: str = ADICIONAR_ROTULO) -> Acao:
 def acao_de_tirar(chave: str) -> Acao:
     """O «Tirar daqui» de UM cartão, pela mesma razão de :func:`acao_de_localizar`.
 
-    *O QUE SE ACRESCENTA SE TIRA*, e isso vale para os SEIS: um cartão que ela
-    ensinou e não consegue desensinar deixa o caminho errado gravado para
+    *O QUE SE ACRESCENTA SE TIRA*, e isso vale para os SEIS: um cartão que
+    o usuário ensinou e não consegue desensinar deixa o caminho errado gravado para
     sempre. Quem decide se ele aparece é o chamador, que sabe se há declaração.
     """
     return Acao(REMOVER_ROTULO, "", REMOVER, chave)
@@ -1607,11 +1603,11 @@ def acao_de_tirar(chave: str) -> Acao:
 # OS LANÇADORES IGUAIS — OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01
 # ---------------------------------------------------------------------------
 #
-# O pedido é de produto, 21/09/2026: *"Todos os lançadores precisam ter os mesmos
-# botões e textos da steam adaptados pra eles"*, e o «Este jogo não funciona»
-# vira *"Adicionar jogo a lista de exclusão do Hefesto (cujo objetivo é
-# garantir que tal jogo não use nenhuma feature do hefesto)"*.  # noqa-acento: citação literal
-# O desenho foi APROVADO pelo usuário no mesmo dia (*"perfeito aprovadíssimo."*),
+# O pedido é de produto, 21/09/2026: todos os lançadores têm os mesmos
+# botões e textos da Steam, adaptados a eles, e o «Este jogo não funciona»
+# vira «Adicionar jogo a lista de exclusão do Hefesto (cujo objetivo é
+# garantir que tal jogo não use nenhuma feature do hefesto)».
+# O desenho foi APROVADO pelo usuário no mesmo dia,
 # e está nas fotos «os-lancadores-iguais» de 21/09/2026.
 #
 # A FILEIRA É DE QUATRO NOS OITO CARTÕES: abrir, criar perfil, apontar outro
@@ -1657,8 +1653,8 @@ CONFIRMAR_PERFIL_ROTULO = "Criar o perfil"
 TIRAR_DA_EXCLUSAO = "tirar-da-exclusao"
 TIRAR_DA_EXCLUSAO_ROTULO = "Tirar da lista"
 #: O PÉ DO CARTÃO SÓ EXISTE COM JOGO EXCLUÍDO — 21/09/2026, palavra de produto:
-#: *"remove aquele status que é uma linha por si só o nenhum jogo na lista de
-#: exclusão. Não precisamos disso na interface."* A frase do vazio saiu daqui e
+#: sai o status de uma linha só («nenhum jogo na lista de
+#: exclusão»), que a interface não precisa. A frase do vazio saiu daqui e
 #: de :func:`rodape_da_exclusao_html`, que devolve nada para a lista vazia.
 
 
@@ -1852,7 +1848,7 @@ def cartao_da_steam(lida: Leitura | None) -> Lancador:
     # família, mesma coisa" que esta aba já pagou uma vez (o `.lanc .btn` que
     # encolhia). A exceção é o cartão em ERRO, o único estado em que ele
     # responde uma pergunta que o cartão fez.
-    # O BOTÃO GANHOU ENDEREÇO — 03/09/2026, decisão 17 dela (ligar o botão, com
+    # O BOTÃO GANHOU ENDEREÇO — 03/09/2026, decisão 17 (ligar o botão, com
     # o gesto isento da prova automática). Quem atende é
     # `a07_lancadores.abrir_lancador`, e o `v` diz QUAL lançador — sem ele o
     # gesto teria de adivinhar pelo texto do botão, que é o mesmo nos seis.
@@ -1881,8 +1877,8 @@ def cartao_da_steam(lida: Leitura | None) -> Lancador:
     if lida.onde_esta_a_steam == "" and not lida.viu_a_biblioteca:
         # PROCUREI E NÃO ACHEI, e o rótulo é o MESMO dos outros cinco
         # (:data:`DIZ_NAO_ACHEI`) de propósito: uma segunda redação para o mesmo
-        # fato seria texto de tela que ela não decidiu, e duas frases que
-        # envelhecem separadas — o defeito que a decisão 14 dela nomeou
+        # fato seria texto de tela que não foi decidido, e duas frases que
+        # envelhecem separadas — o defeito que a decisão 14 nomeou
         # ("uma frase, um dono").
         #
         # O BOTÃO É O «LOCALIZAR», E NÃO O «ABRIR» — 08/09/2026, e era um BECO:
@@ -1906,8 +1902,8 @@ def cartao_da_steam(lida: Leitura | None) -> Lancador:
         # O CORPO DIZ O ESTADO, E NÃO A HISTÓRIA — TELA-CALADA-02, 13/09/2026.
         #
         # Até aqui ia a frase inteira da sentinela, a cada tique e sem clique:
-        # *"2 jogos nunca receberam as Opções de Inicialização do Hefesto na
-        # Steam: … Feche a Steam e eu reponho."* O pedido foi tirar as frases de status
+        # «2 jogos nunca receberam as Opções de Inicialização do Hefesto na
+        # Steam: … Feche a Steam e eu reponho.» O pedido foi tirar as frases de status
         # de todas as abas da interface.
         #
         # O QUE NÃO SE PERDEU: o NOME de cada jogo está na lista do cartão, dois
@@ -1922,8 +1918,8 @@ def cartao_da_steam(lida: Leitura | None) -> Lancador:
         # mesma tela (`a07_lancadores._porque`).
         diz = f"<b>{_plural(falta, 'jogo', 'jogos')} sem o atalho</b>"
         # O «CONSERTAR» E O «VER O QUE IMPEDE» SAÍRAM — 21/09/2026, palavra
-        # dela: *"a ideia é termos os mesmos botões pra todos os lançadores.
-        # sempre."* O reparo é do vigia (`hefesto-steam-input-guard`, a cada
+        # de produto: os mesmos botões para todos os lançadores,
+        # sempre. O reparo é do vigia (`hefesto-steam-input-guard`, a cada
         # 30 min e a cada escrita da Steam), e na mesma noite ele repôs o
         # atalho do PRAGMATA sem clique nenhum. O motivo de cada jogo está na
         # lista do pé do cartão.
@@ -1940,25 +1936,25 @@ def cartao_da_steam(lida: Leitura | None) -> Lancador:
         # está instalado, "instalados" não —, e a tela não dava como saber
         # disso. Quem lê vê 63 > 22 e conclui que um dos dois está errado.
         #
-        # DECIDIDO — PO, 04/09/2026, `07[04]`: *"O corpo nomeia o conjunto"*.
+        # DECIDIDO — PO, 04/09/2026, `07[04]`: o corpo nomeia o conjunto.
         # Três palavras, zero linha nova, nenhum botão: as duas contagens
         # continuam as que o produto mediu, e a frase passa a dizer que elas
         # contam coisas diferentes. As outras duas opções morreram por medição:
         # contar só instalados apagaria as dezenas de jogos já preparados, e pôr
         # os dois números no canto disputa a linha com o selo em janela estreita.
-        # A FRASE DO ATALHO SAIU — 21/09/2026, palavra de produto: *"todos tem que
-        # serem iguais"*. Ela dizia *"Os controles chegam. O atalho de
-        # inicialização está no lugar em N jogos"* — um texto que só a Steam
+        # A FRASE DO ATALHO SAIU — 21/09/2026, palavra de produto: todos os
+        # cartões iguais. A frase dizia «Os controles chegam. O atalho de
+        # inicialização está no lugar em N jogos» — um texto que só a Steam
         # tinha. O corpo de todo cartão localizado passou a ser o MESMO
-        # contador (:func:`contador_html`), e o que ela precisa saber quando
+        # contador (:func:`contador_html`), e o que o usuário precisa saber quando
         # o atalho falta continua dito no ramo de cima, em laranja.
         diz = ""
         # O SELO DA STEAM É `LOCALIZADO` COMO OS OUTROS CINCO — 11/09/2026,
-        # ordem de produto: *"troca o chegam da steam por localizado como os  (noqa-acento) citação
-        # demais"*.
+        # ordem de produto: trocar o «chegam» da Steam por «localizado», como os
+        # demais.
         #
         # A `CHEGAM` era a última sobra de quando o selo respondia DUAS
-        # perguntas ao mesmo tempo — *"está aqui?"* e *"o controle chega?"*. Os
+        # perguntas ao mesmo tempo — «está aqui?» e «o controle chega?». Os
         # outros cinco cartões já tinham sido separados em 09/09
         # (`D-0809-O-SELO-DOS-LANCADORES-DIZ-LOCALIZADO`), e a Steam ficou para
         # trás com uma palavra só dela: seis cartões lado a lado, cinco dizendo
@@ -1973,7 +1969,7 @@ def cartao_da_steam(lida: Leitura | None) -> Lancador:
         selo = "localizado"
 
     # A LINHA DO STEAM INPUT SAIU DO CARTÃO — 21/09/2026, com os dois botões
-    # dela («Desligar o Steam Input» e «Deixar tudo pronto»). O guarda desliga
+    # («Desligar o Steam Input» e «Deixar tudo pronto»). O guarda desliga
     # o Steam Input sozinho (`hefesto-steam-input-guard`), e o que é por jogo
     # mora no chip «Steam Input» da aba Jogar. Um cartão igual aos outros
     # sete não tem uma linha que só ele tem.
@@ -1985,7 +1981,7 @@ def cartao_da_steam(lida: Leitura | None) -> Lancador:
     # sozinha — e hoje quem repõe é o `hefesto-steam-input-guard`. O buraco que sobra é
     # só o dos intocáveis — os jogos que o produto DECIDIU nunca tocar
     # (`apply_wrapper_vdf_text` os pula por construção), e para os quais o
-    # carimbo já escreve *"N jogos com a linha intocável — só reparo manual"*.
+    # carimbo já escreve «N jogos com a linha intocável — só reparo manual».
     # Era uma tela prometendo um reparo manual sem oferecer um caminho para
     # fazê-lo: **não existia UM botão de copiar em toda a interface nova.**
     #
@@ -2006,9 +2002,9 @@ def cartao_da_steam(lida: Leitura | None) -> Lancador:
     #
     # ELE JÁ ESTAVA NO `off` DESDE 08/09 e faltava aqui, que é a metade do
     # buraco que ninguém tinha medido: quando a Steam ESTÁ achada e o que o
-    # Hefesto achou não é o que ela quer, não havia por onde dizer — e a recusa
-    # do botão global confessava isso na tela (*"hoje o cartão não tem por onde
-    # trocar"*), que é o que a decisão de 07/09 proíbe.
+    # Hefesto achou não é o que o usuário quer, não havia por onde dizer — e a recusa
+    # do botão global confessava isso na tela («hoje o cartão não tem por onde
+    # trocar»), que é o que a decisão de 07/09 proíbe.
     #
     # E É A REGRA DE 05/09 DESTA CASA: *quando a cura conhece a causa, ela cobre
     # TODOS os chamadores.* Pôr o botão só nos cinco `cartao_sem_censo` deixaria
@@ -2115,8 +2111,8 @@ def cartao_sem_censo(item: SemCenso, onde: str | None,
     localizar = (acao_de_localizar(item.chave),)
     # E O MESMO BOTÃO COM O RÓTULO DO OUTRO ESTADO — A2-022, 11/09/2026. Ver
     # :data:`APONTAR_ROTULO`: mesmo gesto, mesma tela, mesma gravação.
-    # E O TIRAR, SÓ ONDE HÁ O QUE TIRAR: o cartão que ELA ensinou. Nos de
-    # fábrica que ela nunca tocou não há declaração a esquecer, e um botão que
+    # E O TIRAR, SÓ ONDE HÁ O QUE TIRAR: o cartão que o usuário ensinou. Nos de
+    # fábrica que ele nunca tocou não há declaração a esquecer, e um botão que
     # não tem o que fazer é o botão que finge.
     tirar = (acao_de_tirar(item.chave),) if item.declarado else ()
     if onde is None:
@@ -2127,7 +2123,7 @@ def cartao_sem_censo(item: SemCenso, onde: str | None,
                         jogos="—", diz=DIZ_NAO_ACHEI,
                         acoes=localizar + tirar)
     #: **O CENSO ENTRA AQUI — LANCADORES-ZERO-01 §5, 09/09/2026.** Era
-    #: `selo="nao_sei", jogos="—"` para todo lançador ACHADO, e é o que ela
+    #: `selo="nao_sei", jogos="—"` para todo lançador ACHADO, e é o que o usuário
     #: viu. Agora o selo diz `LOCALIZADO` (está aqui) e a linha de baixo diz o
     #: que a biblioteca tem — ou o que fazer para ela existir.
     #:
@@ -2139,8 +2135,8 @@ def cartao_sem_censo(item: SemCenso, onde: str | None,
     resumo = do_disco.resumo(item.chave)
     #: **O «CONSERTAR» SAIU DAQUI — LANCADOR-LOCALIZAR-01, 10/09/2026.** Ele
     #: nascera pendurado no estado POSITIVO: selo `LOCALIZADO`, moldura `chega`
-    #: — a MESMA do `ok`/CHEGAM da Steam — e a frase do corpo terminando em *"um
-    #: jogo aberto por aqui entra pelo mesmo caminho de qualquer outro"*. Nada
+    #: — a MESMA do `ok`/CHEGAM da Steam — e a frase do corpo terminando em «um
+    #: jogo aberto por aqui entra pelo mesmo caminho de qualquer outro». Nada
     #: no cartão declarava defeito, e embaixo disso o produto oferecia
     #: *consertar*. O contraste que prova é o cartão da Steam: lá o mesmo verbo
     #: tem antecedente — selo `NÃO CHEGAM`, moldura `impede`, e a frase logo
@@ -2149,24 +2145,24 @@ def cartao_sem_censo(item: SemCenso, onde: str | None,
     #: **O «LOCALIZAR» ENTRA NO LUGAR, e ele não é botão novo** — é o
     #: :func:`acao_de_localizar` que o estado `off` já usava. O que mudou é o
     #: ESTADO em que ele aparece: até hoje só o cartão NÃO LOCALIZADO o tinha,
-    #: e os seis cartões dela estão localizados — o botão que o usuário pediu *"no
-    #: Máximo"* estava no produto e não alcançava um cartão sequer dela.
+    #: e os seis cartões do usuário estão localizados — o botão pedido, «no
+    #: Máximo», estava no produto e não alcançava um cartão sequer.
     #:
     #: **ELE VEM DEPOIS DO «ABRIR», e a ordem é o que cada um responde:** o
     #: cartão está localizado, então o ato normal é abrir; localizar de novo é o
-    #: ato CORRETIVO — *"o que ele achou não é o que eu quero"* —, e ato
+    #: ato CORRETIVO — «o que ele achou não é o que eu quero» —, e ato
     #: corretivo não disputa a primeira posição com o ato normal. É a mesma
     #: leitura de cima para baixo que fez o selo e o botão falarem a mesma
     #: palavra em :data:`ADICIONAR_ROTULO`.
     #:
     #: **E ISSO FECHA UM BECO NA TELA:** a recusa do botão global
     #: (`a07_lancadores._recusa_de_quem_ja_tem_cartao`) dizia, para o cartão já
-    #: achado, *"hoje o cartão não tem por onde trocar"* — o produto confessando
+    #: achado, «hoje o cartão não tem por onde trocar» — o produto confessando
     #: dívida nossa, que a decisão de 07/09 proíbe. Com o «Localizar» aqui,
     #: o buraco some e a frase perde a razão de existir.
     #: **O RESUMO VAI PARA A LINHA `jogos`, e não para o corpo** — §5.2 da
-    #: sprint: *"a linha de baixo diz «37 jogos na biblioteca · 0 instalados»"*.
-    #: É o mesmo lugar em que a Steam imprime *"23 jogos instalados"*, e ele é
+    #: sprint: a linha de baixo diz «37 jogos na biblioteca · 0 instalados».
+    #: É o mesmo lugar em que a Steam imprime «23 jogos instalados», e ele é
     #: uma linha própria no cartão.
     #:
     #: **MEDIDO NA TELA VIVA, 09/09/2026:** com o resumo colado na frente do
@@ -2191,7 +2187,7 @@ def cartoes(lida: Leitura | None) -> list[Lancador]:
     """Os cartões: o que tem censo, e os que só têm presença.
 
     O NÚMERO SAIU DAQUI EM 08/09/2026, e a razão continua valendo depois de a
-    conta voltar ao que era: são os SEIS de fábrica **mais o que ELA declarou**,
+    conta voltar ao que era: são os SEIS de fábrica **mais o que o usuário declarou**,
     e o segundo grupo só existe na máquina do usuário — a página publicada nasce com
     os seis, e os declarados chegam pela troca da grade inteira (`_pintura`, no
     pacote). Cravar um número aqui faria a régua reprovar a máquina do usuário.

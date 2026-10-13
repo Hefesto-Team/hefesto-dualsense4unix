@@ -439,8 +439,6 @@ def exigencia_invisivel(match: Match) -> str:
     )
 
 
-#     "seria legal nome do programa launcher aqui: A gente adicionaria  (noqa-acento) cita ela
-
 PROCEDENCIA_DA_NAVEGACAO = "Navegação"
 
 PROCEDENCIA_DE_QUALQUER_JOGO = "Qualquer jogo"

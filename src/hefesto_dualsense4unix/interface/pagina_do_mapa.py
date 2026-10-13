@@ -66,7 +66,7 @@ from hefesto_dualsense4unix.utils.rotulo_da_entrada import (
 ORIGEM = (onde.RAIZ / "mockup" / "congelados" / "2026-08-24-mapa-das-portas.html")
 
 #: Onde o gerador escreve. A BANCADA, nunca o publicado — o produto só recebe
-#: pelo `--publicar`, que é ato dela (`interface/onde.py`).
+#: pelo `--publicar`, que é ato da costura (`interface/onde.py`).
 DESTINO = onde.BANCADA / "mapa-das-portas.html"
 
 
@@ -157,7 +157,7 @@ CENSO_DE_EXEMPLO: dict[str, Any] = {
                               "wifi": "4-2"}},
     },
     #: A FILEIRA DE CONTROLES É SIMULADOR, não leitura: os botões `1 2 3 4` ao
-    #: lado dela existem para a pessoa perguntar *"e se fossem quatro?"*. Por
+    #: lado dela existem para a pessoa perguntar «e se fossem quatro?». Por
     #: isso ela NÃO vem no censo vivo — vem daqui, e o `controlesSobre` a
     #: espalha pelos adaptadores que a máquina de quem abre tiver.
     "controles": [
@@ -179,7 +179,7 @@ CORES_POR_CLASSE: dict[str, str] = {
     str(a["classe"]): str(a["cor"]) for a in CENSO_DE_EXEMPLO["aparelhos"]
 }
 
-#: A COR DO TIPO QUE ELA DECLAROU (O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01): o tipo decide a cor
+#: A COR DO TIPO DECLARADO (O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01): o tipo decide a cor
 #: em todo o app, e as de teclado, mouse, Wi-Fi e caixa de som são as da régua da aba 08
 #: (``aba08`` ``--c-<tipo>``). A webcam leva a da classe.
 COR_POR_TIPO_DECLARADO: dict[str, str] = {
@@ -275,7 +275,7 @@ def _bloco_do_censo(nome: str) -> str:
 #: navegador, por exemplo — o que se vê é o exemplo, e o cabeçalho diz isso.
 #:
 #: ELA RECUSA O QUE NÃO ENTENDE. Um arranjo sem `faces` desenharia um gabinete
-#: sem entrada nenhuma e a pessoa leria isso como *"não tenho nada ligado"* —
+#: sem entrada nenhuma e a pessoa leria isso como «não tenho nada ligado» —
 #: o vazio mais convincente que existe. Aqui a recusa é barulhenta e a página
 #: fica com o exemplo, que ao menos se declara exemplo.
 ABRE_A_PORTA = """\
@@ -307,10 +307,10 @@ ABRE_A_PORTA = """\
     leituraAnterior = "antes";
     CONTROLES = f.controles || controlesSobre(APARELHOS, EXEMPLO.controles);
     quantos = CONTROLES.length;
-    /* O QUE ELA DECLAROU EM CADA ENTRADA — 26/09/2026, o editor da entrada.
+    /* O QUE O USUÁRIO DECLAROU EM CADA ENTRADA — 26/09/2026, o editor da entrada.
        Toda entrada do mapa dela vem, com {} quando ela não disse nada, e as
        chaves são as que o editor GRAVA no disco. A que o desenho monta do que
-       ela declarou (as do hub, a ponta do extensor) não vem: ali, e no
+       o usuário declarou (as do hub, a ponta do extensor) não vem: ali, e no
        exemplo, o editor fica só na tela. */
     DECLARADO = JSON.parse(JSON.stringify(f.declarado || {}));
     GRAVA = Object.keys(DECLARADO);
@@ -364,7 +364,7 @@ ABRE_A_PORTA = """\
          entradas, e isso se lê como "não tenho nada ligado". */
       throw new Error("arranjo incompleto, falta: " + falta.join(", "));
     }
-    /* O REEXAME RELÊ O QUE ELA ENSINOU, porque o ensinar grava no disco
+    /* O REEXAME RELÊ O QUE O USUÁRIO ENSINOU, porque o ensinar grava no disco
        (O-MAPA-QUE-ELA-CORRIGE-01, D-2609-ENSINAR-GRAVA-O-NO). Até aqui o
        mapa da tela era guardado por cima da releitura: o que ela ensinava
        só vivia na memória, e a releitura o desfazia. */
@@ -388,8 +388,8 @@ ABRE_A_PORTA = """\
 
 #: ══ A CAIXA DA JANELA — 24/09/2026 ═════════════════════════════════════════
 #:
-#: A palavra de produto, na página da sessão dos desenhos: *«Vira caixa da janela,
-#: rolando por dentro»*. Até aqui esta era uma página de DOCUMENTO — a
+#: A palavra de produto, na página da sessão dos desenhos: vira caixa da janela,
+#: rolando por dentro. Até aqui esta era uma página de DOCUMENTO — a
 #: `.pagina` com `max-width:1180px` (a largura das abas antes de 08/09) e a
 #: página inteira rolando: na TV da bancada, 1180 x 2195 ao lado de uma janela de
 #: 1600 x 808. O recuo e o tamanho vêm do dono comum das três páginas avulsas
@@ -1693,7 +1693,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
     ),
     # ═══ O EXEMPLO CONTINUA DIZENDO QUE É EXEMPLO — 26/09/2026 ═══
     # A conferência da O-MAPA-DAS-CONEXOES-NO-PRODUTO-01. O pedido
-    # (*«leitura deste computador · 26/09/2026 03h13 essa info some»*) é sobre
+    # (a linha «leitura deste computador · 26/09/2026 03h13» não pode sumir) é sobre
     # a leitura DA MÁQUINA DO USUÁRIO, e a edição do cabeçalho tirou junto a única
     # defesa de 11/09: quem ainda não mapeou nada via o gabinete de exemplo
     # (os aparelhos de outra pessoa, «4 Coisas para Mudar de Lugar») sem nada
@@ -2377,7 +2377,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             ' ap.tipo'
         ),
         depois=(
-            '    /* O NOME QUE ELA DEU, na primeira linha do rótulo — cor'
+            '    /* O NOME QUE O USUÁRIO DEU, na primeira linha do rótulo — cor'
             'tado com\n'
             '       reticências, e inteiro na dica. O selo `.num` continu'
             'a o número:\n'
@@ -2400,7 +2400,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
         depois=(
             '  .rotulo .vazio { color: var(--color-ink-faint); font-style'
             ': italic; }\n'
-            '  /* o nome que ela deu à entrada: uma linha só, com reticên'
+            '  /* o nome que o usuário deu à entrada: uma linha só, com reticên'
             'cias */\n'
             '  .rotulo .nomeada { display: block; font-weight: 700; white'
             '-space: nowrap;\n'
@@ -3581,7 +3581,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '][1];\n'
             '    return t;\n'
             '  }\n'
-            '  /* o nome que ela deu vence; depois o tipo que o usuário disse'
+            '  /* o nome que o usuário deu vence; depois o tipo que o usuário disse'
             '; depois o que a máquina leu */\n'
             '  function rotuloDoAparelho(a) {\n'
             '    return a.nomeDeclarado || (a.tipoDeclarado ? rotuloDoT'
@@ -6146,12 +6146,12 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
 
 #: ══ AS EDIÇÕES QUE ESPERAM A SESSÃO DOS DESENHOS — 24/09/2026 ════════════
 #:
-#: A tela para no mockup até o OK dela (ordem de 23/09), e esta página tem DUAS
+#: A tela para no mockup até a aprovação do desenho (ordem de 23/09), e esta página tem DUAS
 #: casas que o gerador responde: a bancada, que o `main()` grava, e a cópia do
 #: produto, que só muda pelo `--publicar`. As edições daqui entram na bancada e
 #: ficam FORA da conta da cópia do produto (o `com_as_que_esperam=False`)
 #: — é isso que deixa a régua da igualdade (`test_arranjo_invariantes`) verde
-#: enquanto o desenho espera por ela.
+#: enquanto o desenho espera a aprovação.
 #:
 #: QUEM PUBLICAR, no mesmo commit do `--publicar mapa-das-portas.html`, junta
 #: as edições daqui ao fim de `EDICOES` e deixa esta tupla vazia. A régua da

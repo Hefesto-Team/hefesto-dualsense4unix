@@ -23,7 +23,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 #: As abas por controle do perfil do jogo, onde o R1 e o L1 dão a volta (o
-#: desenho dela de 03/10: Jogar, Controles, Gatilhos, Iluminação e Vibração).
+#: desenho de 03/10: Jogar, Controles, Gatilhos, Iluminação e Vibração).
 PREFIXOS_DA_VOLTA = ("01", "02", "03", "04", "05")
 
 #: O analógico esquerdo anda um passo ao cruzar meia deflexão (o repouso é 128),

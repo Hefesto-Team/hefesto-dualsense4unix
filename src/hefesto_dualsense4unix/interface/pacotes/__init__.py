@@ -186,7 +186,6 @@ def largada(fn: Callable[[Any], None]) -> Callable[[Any], None]:
     return fn
 
 
-#: afins."* <!-- noqa-acento: citação literal -->
 #: começa com `if not na_mesa: return`, então com a mesa vazia a thread de
 PODAS: list[Callable[[frozenset[str]], None]] = []
 
@@ -890,8 +889,6 @@ def topo(ctx: Contexto) -> dict[str, Any]:
         # O NATIVO, para as cinco abas por controle (a camada recusa o gesto; a tela só se
         # ACINZENTA). `sim` com o `native_mode` de pé; o resto, não, inclusive o daemon calado.
         "nativo": "sim" if no_nativo(ctx.state) else "nao",  # noqa-acento: valor que a página lê
-        # *"Esse x controles cai fora  # (noqa-acento: citação literal)
-        # pra ganharmos espaçço Lateral"*.  # (noqa-acento: citação literal)
         "conta-b": conta_b or SEM_CONTROLE_NA_MESA,
         "perfil": ativo or "—",
         "rodape.aplicar": _dica_do_aplicar(ctx.state),
@@ -904,7 +901,7 @@ _SEM_PERFIL = "no perfil ativo"
 
 
 # O `any` não entra em seleção automática nenhuma (o gerente, desde 01/10): ele
-# vale quando ela o escolhe, que é a cauda do `manual`. O Freestyle é o botão, e
+# vale quando o usuário o escolhe, que é a cauda do `manual`. O Freestyle é o botão, e
 # a cauda dele mora no Aplicar (`_dica_do_aplicar`), não aqui.
 _QUANDO_VOLTA = {
     "jogo": "o que você salvar aqui volta sozinho toda vez que este jogo abrir.",

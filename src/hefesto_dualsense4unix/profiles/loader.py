@@ -87,7 +87,6 @@ def _lock_path(path: Path) -> Path:
 # FIX-PACKAGING-SEED-PARITY-01: semeadura em RUNTIME dos presets default.
 SEED_MARKER_NAME = ".seeded_presets"
 
-# Decisão de produto, literal: *"Meu_perfil como perfil default nao deveria existir.  noqa-acento
 # em 05/09: 33 perfis, e SÓ DOIS são catch-all (`fallback` prio 0 e
 NOME_DO_PADRAO = "Freestyle"
 ARQUIVO_DO_PADRAO = "freestyle.json"
@@ -206,7 +205,6 @@ def seed_default_presets(
     return copied
 
 
-# DualSense."*
 # justificada pela H1 da auditoria pré-release ("a máscara DualSense faz o jogo
 
 
@@ -287,7 +285,6 @@ def migrate_default_profile_name(dest_dir: Path | None = None) -> str | None:
     return renomeado
 
 
-# isso."*  (noqa-acento: citação literal)
 
 _PERSONALIZADO_VIROU_FREESTYLE_MARKER = ".personalizado_virou_freestyle"
 
@@ -469,7 +466,6 @@ def o_perfil_de_fora_do_jogo() -> str | None:
     return None
 
 
-# features ativadas por default."*  (noqa-acento: citação literal)
 _FREESTYLE_DE_FABRICA_NASCE_LIGADO_MARKER = ".freestyle_de_fabrica_nasce_ligado"
 
 

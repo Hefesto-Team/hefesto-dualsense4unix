@@ -21,7 +21,6 @@ DS   = (_F / "ds_limpo.svg").read_text()
 
 LOGO = (R / "assets/hefesto-logo.svg").read_text()
 
-#: logo? Ela tá piquetuxa em 30 apenas"*. <!-- noqa-acento: citação literal -->
 MARCA_DA_LOGO = '<div class="logo"><!--LOGO--></div>'
 
 
@@ -123,7 +122,7 @@ def numero_do_jogador(n: Any) -> str:
 
 def dono_na_linha(nomes: dict[str, str], uniq: str, jogador: Any, *,
                   em_html: bool = False) -> str:
-    """Quem joga com o controle: o nome que ela deu a ele, ou o «P N» quando não há nome.
+    """Quem joga com o controle: o nome que o usuário deu a ele, ou o «P N» quando não há nome.
 
     A REGRA É UMA SÓ, e mora aqui (D-2909-O-CARTAO-DIZ-QUEM-JOGA): a 08 a mostra no campo do dono,
     o cartão aberto da 02 e a Calibrar a mostram no título. `nomes` é `{endereço: nome}` do
@@ -155,7 +154,7 @@ def quem_joga_com_o_numero(nomes: dict[str, str], uniq: str, jogador: Any) -> st
 
 
 def partes_do_modelo(c: dict[str, Any]) -> list[str]:
-    """As partes TEXTO da linha «Modelo» (04 e 05): `Pn`, o nome que ela deu, o modelo e a via.
+    """As partes TEXTO da linha «Modelo» (04 e 05): `Pn`, o nome que o usuário deu, o modelo e a via.
 
     A ordem é UMA e mora aqui: o gerador a junta com o `SEPARADOR`, e os pacotes das duas abas a
     juntam com « • » no que o piloto pinta. Sem nome (`dono` vazio ou ausente) a parte some, e a
@@ -175,12 +174,12 @@ def rotulo(c: dict[str, Any], forma: str = "completa") -> str:
     if forma == "peca":
         corpo = SEPARADOR.join([c["nome"], c["via"]])
         quem = c.get("quem")
-        # `<quem>` vai na frente e só aparece no cartão ABERTO (a tira fechada tem o «Pn •» dela)
+        # `<quem>` vai na frente e só aparece no cartão ABERTO (a tira fechada tem o «Pn •»)
         return f'<span class="so-aberto">{quem}{SEPARADOR}</span>{corpo}' if quem else corpo
     return SEPARADOR.join(["Sony", f'Player {c["jogador"]}', c["nome"], c["via"]])
 
 
-#: que fiquem em harmonia"*. `core/led_control.player_slot_color` devolve
+#: `core/led_control.player_slot_color` devolve
 #: primárias cruas (#0000FF, #FF0000, #00FF00…) — cor de monitor de teste ao lado
 #: na 04, e a medição mostrou o resultado: a 02 continuou pintando #0000FF na barra
 #: tem azul próprio, e mapear o azul do player 1 para o ciano fazia DUAS casas da
@@ -378,9 +377,8 @@ def _endereco_do_chip(pref: str, inerte: bool) -> str:
 
 
 #: OS DOIS MODOS DE UMA ABA — pedido de 06/10/2026, nas abas Iluminação e
-#: Gatilhos, que falam igual: *«Modo automático (Se selecionado) o player não
-#: consegue interagir com os botões da página. Modo personalizado (Que permite
-#: alterar as cores)»*  (noqa-acento: citação literal). Um par de botões na faixa do
+#: Gatilhos, que falam igual: Modo automático (o player não interage com os
+#: botões da página) e Modo personalizado (que permite alterar as cores). Um par de botões na faixa do
 #: título, com a mesma largura; o escolhido acende. No Automático, a folha da aba
 #: deixa as colunas paradas pelo `data-modo-da-aba` do quadro (o pacote o escreve).
 MODO_AUTOMATICO = "automatico"  # (noqa-acento: valor de atributo)
@@ -501,7 +499,7 @@ def fita(ativo: str = "todos", inerte: bool = False,
     for c in lista:
         on = " on" if str(c["pref"]) in acesos else ""
         nome = c["nome"] if mesa is None else identidade_do_chip(c, mesa)
-        # `identidade_de` é *"o transporte sozinho"* — honesto num card, que só
+        # `identidade_de` é «o transporte sozinho» — honesto num card, que só
         if mesa is not None and nome in (_degrau_do_transporte(c), c["via"],
                                          TRAVESSAO):
             nome = ""
@@ -533,7 +531,7 @@ def identidade_do_chip(c: dict[str, Any], mesa: list[dict[str, Any]]) -> str:
     **A TRADUÇÃO DE UMA CHAVE, e ela é a única lógica daqui:** `identidade_de`
     lê `transport` (o nome CRU do daemon) e o item da mesa guarda o mesmo fato
     como `transporte` (`mesa_viva.mesa_do_estado:328`). Sem esta linha o último
-    degrau da ordem — *"o transporte sozinho"* — cai no travessão, e o controle
+    degrau da ordem — «o transporte sozinho» — cai no travessão, e o controle
     do rádio aparece como `P2 • — • BT` quando podia dizer `P2 • BT • BT`.
     O certo é `identidade_de` aprender as duas grafias, ou a mesa publicar a do
     daemon; enquanto isso não acontece, a tradução mora aqui, à vista.

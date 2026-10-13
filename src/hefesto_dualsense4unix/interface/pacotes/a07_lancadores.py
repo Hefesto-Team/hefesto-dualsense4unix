@@ -256,7 +256,7 @@ def _porque(motivo: str) -> str:
 
 
 def _declarados() -> tuple[desenho.SemCenso, ...]:
-    """O que ELA declarou no `maquina.json`, no molde do procurador."""
+    """O que o usuário declarou no `maquina.json`, no molde do procurador."""
     # veria, porque o motor estava todo lá.
     perfil._com_o_src()
     from hefesto_dualsense4unix.utils.maquina import carregar_maquina
@@ -358,7 +358,7 @@ def _onde_estao_os_lancadores(
     com `presente=True` cravado. Numa casa de mentira sem Steam nenhuma o topo
     dizia **"1 encontrado"** e o cartão acendia o selo verde `CHEGAM`. Agora a
     lista percorrida é :func:`desenho.procurados`, que devolve os de fábrica
-    **mais** o que ela declarou.
+    **mais** o que o usuário declarou.
 
     UM PROCURADOR SÓ, E É ESTE — 08/09/2026. O lançador que ela acrescenta pelo
     botão de registro não ganha busca própria: ele entra na MESMA lista,
@@ -542,7 +542,7 @@ def _valores(lida: desenho.Leitura | None) -> dict[str, str]:
     return desenho.Quadro(lancadores=desenho.cartoes(lida)).valores()
 
 
-# `gamepad_emulation.wrapper_used` a cada tique — *"há jogo aberto AGORA e ele
+# `gamepad_emulation.wrapper_used` a cada tique.
 # sem clique nenhum (`home_actions.wrapper_banner_text`, consumido pela Início
 def _o_jogo_em_foco(state: dict[str, Any] | None) -> str:
     """O appid do jogo Steam em foco AGORA, ou `""`. **Não toca o disco.**"""
@@ -1056,7 +1056,7 @@ def _quem_repoe_o_atalho(lida: desenho.Leitura | None, appid: int) -> str:
     """O fim da frase do jogo sem o atalho — a promessa só quando há quem a cumpra.
 
     A PROMESSA É SÓ PARA O REPARÁVEL (`Leitura.reparaveis`, da mesma passada do
-    censo que a sentinela usa): o jogo que ELA tirou (`recusados`, o
+    censo que a sentinela usa): o jogo que o usuário tirou (`recusados`, o
     `jogos_sem_wrapper.txt`) ou o intocável fica sem o atalho de propósito, e
     prometer que ele volta seria a tela afirmando o que ninguém vai fazer.
     Sem leitura ainda (`None`), também não se promete — o ponto final basta.
@@ -1322,7 +1322,7 @@ def _sem_acento(texto: str) -> str:
 
 
 def chave_do_rotulo(rotulo: str) -> str:
-    """A chave de um lançador novo, a partir do nome que ELA deu.
+    """A chave de um lançador novo, a partir do nome que o usuário deu.
 
     ELA VIRA ATRIBUTO DE HTML (`data-lancador`, e o prefixo de todo `data-campo`
     do cartão), então a forma é a que `maquina._CHAVE_DE_LANCADOR` cobra:
@@ -1606,7 +1606,7 @@ def procurar_o_arquivo(ctx: Contexto, o: dict[str, Any], p: Any
 
 @gesto("07-lancadores.html", desenho.REMOVER, grava="machine_declare")
 def esquecer_lancador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """«Tirar daqui» — desfaz o que ela declarou sobre um lançador.
+    """«Tirar daqui» — desfaz o que o usuário declarou sobre um lançador.
 
     *O QUE SE ACRESCENTA SE TIRA.* Sem isto a lista dela vira lixo permanente:
     um cartão acrescentado por engano ficaria na tela para sempre, e a única
@@ -1656,7 +1656,7 @@ def _ok_e_motivo(resposta: Any) -> tuple[bool, str | None]:
 METODO_DA_RECARGA = "launch_env.refresh"
 
 #: o wrapper vive em dois arquivos em disco, e o `state_full` não tem UMA chave
-# `machine_declare` ENTROU EM 08/09/2026 com o lançador declarado por ELA: é a
+# `machine_declare` ENTROU EM 08/09/2026 com o lançador declarado pelo usuário: é a
 PONTE: set[str] = {"chamar", "machine_declare", "escolher_arquivo"}
 METODOS: set[str] = {"machine.declare"}
 
@@ -1673,7 +1673,7 @@ SEM_ECO = ("procurar", "detectar",
            "abrir-lancador",
            # `maquina.json`, e o `state_full` não tem UMA chave sobre a
            desenho.ADICIONAR, desenho.REMOVER,
-           # — e o `state_full` não tem UMA chave sobre lançador. Quando ela
+           # — e o `state_full` não tem UMA chave sobre lançador.
            desenho.PROCURAR_O_ARQUIVO)
 
 # bloco «O «Consertar» DOS OUTROS LANÇADORES SAIU», logo abaixo de `calados`.

@@ -5,8 +5,8 @@ por perfil. A marca é eixo à parte: um jogo pode ser visual novel E adulto, co
 qualquer estilo. Este módulo é o dono do vocabulário (`Profile.marcas` guarda as
 chaves) e da regra do que cada marca liga.
 
-A marca é só da pessoa: nada a sugere pela rede, e ela não sai da máquina (escolha
-dela de 09/10/2026, AS-MARCAS-VISUAL-NOVEL-E-ADULTO-SE-SOMAM-AO-ESTILO-01).
+A marca é só da pessoa: nada a sugere pela rede, e ela não sai da máquina (escolha de 09/10/2026,
+AS-MARCAS-VISUAL-NOVEL-E-ADULTO-SE-SOMAM-AO-ESTILO-01).
 """
 from __future__ import annotations
 

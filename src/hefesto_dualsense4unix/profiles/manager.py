@@ -71,8 +71,7 @@ _RESULTADO_PARA_RELATORIO: dict[str, str] = {
 }
 
 
-# Ela, 27/09 à tarde: *«O freestyle nao deveria se comportar como  (noqa-acento: citação)
-# jogo.»*  (noqa-acento: citação literal)
+# O Freestyle não se comporta como jogo.
 
 
 class OFreestyleMandaError(RuntimeError):
@@ -1961,7 +1960,7 @@ def gravar_a_navegacao_no_perfil_ativo(
         mudou["mouse"] = mouse
     # O STATUS DO MODO NÃO ESCOLHE O TECLADO DO JOGO (O-ESCOPO-SAI-DAS-ABAS-01):
     # vai ao perfil só quando ele já sobrepõe o cartão do teclado; nos outros
-    # casos vai ao computador, para o jogo não ganhar uma escolha que ela não fez.
+    # casos vai ao computador, para o jogo não ganhar uma escolha que o usuário não fez.
     from hefesto_dualsense4unix.profiles import o_padrao_do_computador as opc
 
     if opc.sobrepoe(profile, "teclado"):
@@ -2394,7 +2393,7 @@ APPLIERS_DO_DAEMON: tuple[tuple[str, str], ...] = (
 )
 
 
-#: *"falta `rumble_passthrough_applier`"* — que é o nome do parâmetro, não o
+#: «falta `rumble_passthrough_applier`» — que é o nome do parâmetro, não o
 SECAO_DO_APPLIER: dict[str, str] = {
     "mouse_applier": "mouse",
     "suppression_applier": "suppress_desktop_emulation",
