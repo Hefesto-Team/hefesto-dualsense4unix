@@ -1634,7 +1634,7 @@ def _pref_do_alvo(ctx: Contexto) -> str:
     """Qual lugar da mesa a saída está mirando — `p1`..`p4`, ou `todos`.
 
     A conversão tem duas ordens: o daemon guarda `output_target_index`, a POSIÇÃO em `controllers`
-    ("0 = primário", `ipc_handlers.py:3188`); o desenho endereça por `pref`, o NÚMERO do jogador
+    ("0 = primário", `ipc_handlers.py:3192`); o desenho endereça por `pref`, o NÚMERO do jogador
     desde 20/09/2026 (`mesa_viva._lugares_da_mesa`). Com o P1 fora, o índice 0 é o P2 e o `pref`
     dele é `p2`; divergem sempre que um lugar fica vazio ou o primário não é o de menor número (a
     armadilha de `_indice`, do lado do gesto); a ponte é o `uniq`.
@@ -1977,7 +1977,7 @@ def _indice(ctx: Contexto, uniq: str) -> int | None:
     """A posição daquele controle em `controllers` — o que o daemon numera.
 
     **Não é o número do jogador.** `controller.target.set` pede `index`, "posição em `controllers`,
-    0 = primário" (`ipc_handlers.py:3188`); `status_actions._controller_target_rows:1579` ORDENA a
+    0 = primário" (`ipc_handlers.py:3192`); `status_actions._controller_target_rows:1579` ORDENA a
     lista pelo número de identidade e CARREGA o `index` da enumeração em cada linha (*"a usuária
     clicaria no chip do 1 e editaria outro controle"*). O `index` vem publicado por entrada (o campo
     de `ipc_handlers._numero_de_exibicao:526`); sem ele, a posição na lista é a mesma conta, e
@@ -2046,7 +2046,7 @@ def alvo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     É o `title` do número e do aparelho de cada cartão (*"Escolhe só este controle: a luz, os
     gatilhos e a vibração passam a mirar nele. A fita do topo passa a apontar para ele."*), e
-    `controller.target.set` faz isso (`daemon/ipc_handlers.py:3192`: *"Com o alvo setado,
+    `controller.target.set` faz isso (`daemon/ipc_handlers.py:3196`: *"Com o alvo setado,
     lightbar/gatilhos/player-LED/rumble/mic-LED passam a mirar SÓ aquele controle"*), o método do
     seletor da GUI estável (`app/actions/status_actions.py`). Sem função no `ipc_bridge` (degrau 3
     da ponte), passa pelo mesmo `_safe_call` e timeout.
@@ -2072,7 +2072,7 @@ def todos(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"▴": volta ao broadcast — as ações voltam a valer para a mesa inteira.
 
     O `title` é o contrato (*"Fecha. A fita volta para «Todos» e todos abrem juntos."*). No daemon
-    "Todos" é `index: null` (`ipc_handlers.py:3258-3259`), o `None` da linha 0 do seletor da GUI
+    "Todos" é `index: null` (`ipc_handlers.py:3262-3263`), o `None` da linha 0 do seletor da GUI
     estável (`status_actions._controller_target_rows:1586`). Não precisa do `uniq`, único desta aba
     assim ("todos" não tem sujeito); exigir um prenderia a saída no último controle escolhido quando
     ela fechasse a linha pela seta.
@@ -2171,7 +2171,7 @@ def mic_existe(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     o enxerga"*, a PONTE: `ControleDeclarado.microfone` no `maquina.json` (`utils/maquina.py:522`),
     decisão de 22/08/2026 (*"por controle"*). O clique vale AGORA: `_handle_machine_declare` relê o
     disco, rebinda `daemon._maquina` e sobe ou desce o subsystem `bt_mic` no mesmo pedido
-    (`ipc_handlers.py:4865`, QUATRO-MICROFONES-01: *"o 'Aplicar' tem de VALER agora"*).
+    (`ipc_handlers.py:4871`, QUATRO-MICROFONES-01: *"o 'Aplicar' tem de VALER agora"*).
 
     **Desligar grava `False`** (18/09/2026, a inversão): gravava `None` enquanto o default era
     silêncio, mas com a ordem *"todos os controles tem que nascer com tudo mic, giroscopio e afins"*
@@ -2645,7 +2645,7 @@ def ignorar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 # deduzido: as chaves de topo do `state_full` do daemon vivo são 47, e nenhuma
 # delas é `mapa` nem `maquina`. O caminho é `machine_declare` →
-# `_handle_machine_declare` (`daemon/ipc_handlers.py:4865`) → `maquina.json`, e
+# `_handle_machine_declare` (`daemon/ipc_handlers.py:4871`) → `maquina.json`, e
 
 
 def _gravar_o_mapa(p: Any) -> None:

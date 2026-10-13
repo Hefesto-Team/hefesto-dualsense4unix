@@ -944,7 +944,7 @@ class ControllerMicOverride(BaseModel):
     ``lifecycle.apply_profile_mic(uniq=…)`` →
     ``set_microphone_mute(muted, uniq=…)`` → ``_handle_for(uniq)``, que casa o
     MAC normalizado com o handle daquela peça
-    (``core/backend_pydualsense.py:3493``). O alvo está no parâmetro em todo
+    (``core/backend_pydualsense.py:3495``). O alvo está no parâmetro em todo
     degrau, e é o que separa *"guardei"* de *"chegou ao aparelho"*.
 
     **DESDE A O-MUDO-E-DO-CONTROLE-01 O PERFIL NÃO LEVA O MUDO**, nem o da

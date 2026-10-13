@@ -852,7 +852,7 @@ def _par_das_barras(
 
     1. **Esta função lia duas chaves que o daemon não publica no bloco de onde
        ela lia.** `last_weak` e `last_strong` moram no TOPO do `rumble_ff`
-       (`daemon/ipc_handlers.py:2066`), e o que chegava aqui era um bloco de
+       (`daemon/ipc_handlers.py:2067`), e o que chegava aqui era um bloco de
        `per_vpad`, que não tem nem uma nem outra. As duas leituras davam `0`
        sempre, o `if` caía sempre no :data:`PAR_DE_TESTE`, e o "Testar" mandava
        `(160, 220)` **fizesse ela o que fizesse com as barras**. Medido com a
@@ -883,7 +883,7 @@ def _par_das_barras(
     está na entrega, com as linhas nomeadas.
 
     A INVERSÃO É A ARMADILHA DESTE ASSUNTO: `weak` é o motor da DIREITA (`d`) e
-    `strong` o da ESQUERDA (`e`) — `core/backend_pydualsense.py:2632` faz
+    `strong` o da ESQUERDA (`e`) — `core/backend_pydualsense.py:2634` faz
     `setLeftMotor(eff_strong)`. A tradução não se digita aqui: ela é de
     `app/telas/vibracao.LADO_PARA_MOTOR`, e :func:`_barras_dos_motores` já
     devolve o mapa na língua da tela.
@@ -1334,7 +1334,7 @@ def forca(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     **FATO SUBSTITUÍDO, e era o parágrafo final deste docstring:** *"a política
     é da MESA, não da coluna … clicar 'Economia' na coluna do P2 muda os
     quatro"*. Era verdade enquanto o gesto chamava `rumble.policy_set`, que não
-    aceita `uniq` (`daemon/ipc_handlers.py:3076`). O usuário decidiu **construir por
+    aceita `uniq` (`daemon/ipc_handlers.py:3080`). O usuário decidiu **construir por
     controle**, e o caminho já existia inteiro pelo PERFIL — ver
     :func:`_gravar_a_forca`. O clique da coluna deixou de mexer nos vizinhos.
 
