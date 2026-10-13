@@ -380,8 +380,8 @@ class DaemonConfig:
     #: até ela reabrir a aba Vibração e clicar em "Parar", e nada na tela dizia
     #: por quê, porque a tela já não estava lá.
     #:
-    #: Quem rebate é `interface/pacotes/a05_vibracao._bater_o_coracao_do_teste`,
-    #: a cada 1 s enquanto a janela vive. A ordem de produto: *"o testar e parar é
+    #: Quem rebate é `interface/pacotes/a05_vibracao._rebater_o_teste`, na fila
+    #: do controle, a cada 1 s enquanto a janela vive. A ordem de produto: *"o testar e parar é
     #: sobre o teste naquele momento isso nao interfere in game"*  (noqa-acento: citação literal)
     rumble_active_em: float | None = None
     #: O par fixado de CADA controle, `{dono: (weak, strong, carimbo)}` (o `None` é a mesa
