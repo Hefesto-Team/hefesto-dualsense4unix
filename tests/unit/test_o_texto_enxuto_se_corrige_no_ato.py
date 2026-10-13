@@ -10,6 +10,7 @@ só desce.
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 import pwd
@@ -19,6 +20,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -105,6 +107,17 @@ def repo_de_mentira(tmp_path: Path, com_gancho: bool = True) -> Path:
     git(repo, "add", "-A")
     git(repo, "commit", "-q", "-m", "base")
     return repo
+
+
+def _a_regua(nome: str) -> Any:
+    """O módulo da régua real, do ``scripts/`` da árvore: a resposta que o script tem de repetir."""
+    modulo = "regua_" + re.sub(r"\W", "_", nome)
+    if modulo not in sys.modules:
+        spec = importlib.util.spec_from_file_location(modulo, SCRIPTS / nome)
+        assert spec is not None and spec.loader is not None
+        sys.modules[modulo] = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(sys.modules[modulo])
+    return sys.modules[modulo]
 
 
 def o_script(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
@@ -199,6 +212,47 @@ class TestAsReguasMordem:
         (repo / PACOTE / "z.py").write_text("X = 'GRANDE'\n", encoding="utf-8")
         assert "`f` tem 99 linhas (limite 2)" in o_script(repo, PACOTE + "/z.py").stdout
 
+    def test_o_dela_num_texto_que_o_codigo_usa_so_se_aponta(self, tmp_path: Path) -> None:
+        """A troca que muda a AST (o CSS dentro de uma string de página) não é mecânica."""
+        repo = repo_de_mentira(tmp_path)
+        fonte = 'CSS = "  /* o nome que ' + "ela" + ' deu */"\n'
+        (repo / PACOTE / "pagina.py").write_text(fonte, encoding="utf-8")
+        corrida = o_script(repo, "--aplicar", PACOTE + "/pagina.py")
+        assert corrida.returncode == 1 and "[dela]" in corrida.stdout, corrida.stdout
+        assert "a AST mudaria" in corrida.stdout
+        assert (repo / PACOTE / "pagina.py").read_text(encoding="utf-8") == fonte, "não escreve"
+
+    @pytest.mark.parametrize(
+        ("regua", "fonte"),
+        [
+            ("dela", DELA + "X = 1\n"),
+            ("dela", "# a cor " + "dela" + " vem do aparelho\nX = 1\n"),
+            ("fala", FALA + "X = 1\n"),
+            ("fala", "# a regra é curta\nX = 1\n"),
+            ("cortado", CORTADO + "X = 1\n"),
+            ("cortado", "# o rádio reinicia porque o laço para.\nX = 1\n"),
+            ("docstring", "def g() -> int:\n" + _docstring_de(11, "    ") + "    return 2\n"),
+            ("docstring", "def g() -> int:\n" + _docstring_de(10, "    ") + "    return 2\n"),
+        ],
+    )
+    def test_a_mesma_entrada_da_a_resposta_da_regua(
+        self, tmp_path: Path, regua: str, fonte: str
+    ) -> None:
+        """Dos dois lados: a régua do dono reprova, o script aponta; ela passa, ele cala."""
+        repo = repo_de_mentira(tmp_path)
+        (repo / PACOTE / "n.py").write_text(fonte, encoding="utf-8")
+        nz = _a_regua("neutralizar-o-texto.py")
+        dl = _a_regua("check_docstring_longa.py")
+        cc = _a_regua("check_comentario_cortado.py")
+        falas = _a_regua("o-texto-enxuto.py").falas_em_comentario
+        reprova = {
+            "dela": nz.reescrever_arquivo(fonte, "py") != fonte,
+            "fala": bool(falas({PACOTE + "/n.py": fonte})),
+            "cortado": any(pergunta(fonte) for pergunta in cc.PERGUNTAS.values()),
+            "docstring": bool(dl.docstrings_longas(fonte)),
+        }[regua]
+        assert (f"[{regua}]" in o_script(repo, PACOTE + "/n.py").stdout) == reprova
+
     @pytest.mark.parametrize(
         "ausente",
         [
@@ -269,6 +323,7 @@ class TestOMesmoGanchoEmCasaENoCI:
         gancho = o_gancho_do_yaml()
         assert "o-texto-enxuto.py" in gancho["entry"] and "--aplicar" in gancho["entry"]
         assert gancho["language"] == "system"
+        assert gancho.get("require_serial") is True, "em paralelo, os `git add` disputam o índice"
         ci = CI_YML.read_text(encoding="utf-8")
         assert "pre-commit run --all-files" in ci, "o job pre-commit roda o YAML inteiro"
 
@@ -320,6 +375,73 @@ class TestOMesmoGanchoEmCasaENoCI:
         git(repo, "add", PACOTE + "/w.py")
         fala = _rodar_o_pre_commit_real(repo)
         assert fala.returncode == 1 and "[fala]" in fala.stdout
+        git(repo, "reset", "-q", "--hard")
+        for i in range(40):
+            (repo / PACOTE / f"m{i}.py").write_text(DELA + f"X = {i}\n", encoding="utf-8")
+        git(repo, "add", PACOTE)
+        muitos = _rodar_o_pre_commit_real(repo)
+        assert muitos.returncode == 0, muitos.stdout + muitos.stderr
+        assert git(repo, "diff") == "", "todo arquivo corrigido voltou ao índice"
+
+
+class TestOGanchoDoGitRodaOYaml:
+    """O ``scripts/hooks/pre-commit`` da árvore roda o mesmo ``.pre-commit-config.yaml`` do CI."""
+
+    def _com_o_gancho_do_git(self, tmp_path: Path) -> Path:
+        repo = repo_de_mentira(tmp_path)
+        gancho = repo / ".git" / "hooks" / "pre-commit"
+        shutil.copy2(SCRIPTS / "hooks" / "pre-commit", gancho)
+        gancho.chmod(0o755)
+        return repo
+
+    def _commit(self, repo: Path, **ambiente: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            ["git", "-C", str(repo), "commit", "-q", "-m", "um commit"],
+            capture_output=True,
+            text=True,
+            env={**AMBIENTE, "PRE_COMMIT_HOME": str(repo.parent / "pc-home"), **ambiente},
+            check=False,
+        )
+
+    def test_o_gancho_chama_o_framework_na_fase_do_commit(self, tmp_path: Path) -> None:
+        repo = self._com_o_gancho_do_git(tmp_path)
+        chamadas = tmp_path / "chamadas.txt"
+        falso = tmp_path / "pre-commit-falso"
+        falso.write_text(
+            f'#!/bin/sh\necho "$@" >> {chamadas}\nexit "${{RC_FALSO:-0}}"\n', encoding="utf-8"
+        )
+        falso.chmod(0o755)
+        (repo / PACOTE / "x.py").write_text("X = 1\n", encoding="utf-8")
+        git(repo, "add", PACOTE + "/x.py")
+        reprovou = self._commit(repo, HEFESTO_PRE_COMMIT=str(falso), RC_FALSO="1")
+        assert reprovou.returncode != 0, "o framework reprovou, o commit não sai"
+        assert chamadas.read_text(encoding="utf-8").split() == ["run", "--hook-stage", "pre-commit"]
+        assert self._commit(repo, HEFESTO_PRE_COMMIT=str(falso)).returncode == 0
+
+    @pytest.mark.skipif(shutil.which("pre-commit") is not None, reason="o framework está no PATH")
+    def test_sem_o_framework_avisa_e_deixa_passar(self, tmp_path: Path) -> None:
+        repo = self._com_o_gancho_do_git(tmp_path)
+        (repo / PACOTE / "x.py").write_text("X = 1\n", encoding="utf-8")
+        git(repo, "add", PACOTE + "/x.py")
+        feito = self._commit(repo, HEFESTO_PRE_COMMIT="")
+        assert feito.returncode == 0 and "só roda no CI" in feito.stderr
+
+    @pytest.mark.skipif(
+        _o_pre_commit_real() is None,
+        reason="sem o `pre-commit` instalado (defina HEFESTO_PRE_COMMIT)",
+    )
+    def test_o_commit_de_verdade_corrige_o_dela_e_barra_a_fala(self, tmp_path: Path) -> None:
+        repo = self._com_o_gancho_do_git(tmp_path)
+        [comando] = _o_pre_commit_real() or [""]
+        (repo / PACOTE / "x.py").write_text(DELA + "X = 1\n", encoding="utf-8")
+        git(repo, "add", PACOTE + "/x.py")
+        passou = self._commit(repo, HEFESTO_PRE_COMMIT=comando)
+        assert passou.returncode == 0, passou.stdout + passou.stderr
+        assert git(repo, "show", f"HEAD:{PACOTE}/x.py") == DELA_TROCADO + "X = 1\n"
+        (repo / PACOTE / "x.py").write_text(FALA + "X = 1\n", encoding="utf-8")
+        git(repo, "add", PACOTE + "/x.py")
+        barrou = self._commit(repo, HEFESTO_PRE_COMMIT=comando)
+        assert barrou.returncode != 0 and "[fala]" in barrou.stdout + barrou.stderr
 
 
 # --------------------------------------------------------------------------- o portão e o CI
@@ -499,8 +621,18 @@ class TestOGanchoDaEscrita:
         saida, _ = _gancho(repo, _gesto(repo, PACOTE + "/x.py", "Edit"), tmp_path)
         assert saida.returncode == 0
         contexto = json.loads(saida.stdout)["hookSpecificOutput"]["additionalContext"]
-        assert "[fala]" in contexto and "corrigido" in contexto and "Releia" in contexto
+        assert "[fala]" in contexto and "corrigiu" in contexto and "Releia" in contexto
         assert (repo / PACOTE / "x.py").read_text(encoding="utf-8").startswith(DELA_TROCADO)
+
+    def test_so_o_mecanico_tambem_avisa_para_reler(self, tmp_path: Path) -> None:
+        """O script sai 0 depois de corrigir: calado, o próximo Edit cairia num arquivo velho."""
+        repo = repo_de_mentira(tmp_path, com_gancho=False)
+        (repo / PACOTE / "x.py").write_text(DELA + "X = 1\n", encoding="utf-8")
+        saida, _ = _gancho(repo, _gesto(repo, PACOTE + "/x.py", "Edit"), tmp_path)
+        assert saida.returncode == 0
+        contexto = json.loads(saida.stdout)["hookSpecificOutput"]["additionalContext"]
+        assert "Releia" in contexto and "Falta" not in contexto
+        assert len(contexto) < 300, "a mensagem é lida por modelo: curta"
 
     def test_sem_o_script_o_gesto_segue_e_o_diario_ganha_uma_linha(self, tmp_path: Path) -> None:
         repo = repo_de_mentira(tmp_path, com_gancho=False)
