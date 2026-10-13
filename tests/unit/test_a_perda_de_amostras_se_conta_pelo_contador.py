@@ -93,6 +93,14 @@ def test_a_volta_do_uint32_nao_e_perda(report: Any) -> None:
     assert reader.reports_perdidos == 0
 
 
+@pytest.mark.parametrize("report", [_usb, _bt], ids=["cabo", "radio"])
+def test_o_buraco_que_atravessa_a_volta_do_uint32_conta(report: Any) -> None:
+    """De 0xFFFFFFFE a 1 faltam o 0xFFFFFFFF e o 0: a volta não esconde a perda."""
+    reader = _leitor()
+    _ler(reader, [report(0xFFFFFFFE), report(1)])
+    assert reader.reports_perdidos == 2
+
+
 def test_reabrir_o_fd_nao_conta_o_salto_da_reabertura() -> None:
     reader = _leitor()
     _ler(reader, [_bt(n) for n in (100, 101)])
