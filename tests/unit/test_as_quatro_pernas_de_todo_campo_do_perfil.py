@@ -317,10 +317,11 @@ _PERNAS: dict[str, dict[str, Resposta]] = {
     },
     "marcas": {
         p: NaoSeAplica(
-            "não chega ao controle hoje: a «Adulto» não muda nada no aparelho, e o molde "
-            "de botões da «Visual novel» (`profiles/marcas_do_jogo.py::molde_dos_botoes`) "
-            "ainda não tem caminho até a tabela; ganha pernas com a "
-            "O-POINT-AND-CLICK-SERVE-A-VISUAL-NOVEL-01."
+            "não chega ao controle: a «Adulto» não muda nada no aparelho, e o molde de "
+            "botões da «Visual novel» (`profiles/marcas_do_jogo.py::molde_dos_botoes`) não "
+            "tem caminho até a tabela; o molde passa ao estilo `visual_novel` "
+            "(O-POINT-AND-CLICK-SERVE-A-VISUAL-NOVEL-01, nota de 12/10) e o campo sai com a "
+            "AS-MARCAS-VIRAM-OS-ESTILOS-VISUAL-NOVEL-E-ADULTO-01."
         )
         for p in PERNAS
     },

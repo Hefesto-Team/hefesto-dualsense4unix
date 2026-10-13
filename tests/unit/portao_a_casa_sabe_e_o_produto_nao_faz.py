@@ -1280,14 +1280,15 @@ _NAO_E_PROMESSA: dict[str, str] = {
 }
 
 _SEM_CAMINHO_HOJE: dict[str, str] = {
-    # sai com: O-POINT-AND-CLICK-SERVE-A-VISUAL-NOVEL-01
+    # sai com: AS-MARCAS-VIRAM-OS-ESTILOS-VISUAL-NOVEL-E-ADULTO-01
     "profiles/marcas_do_jogo.py::molde_dos_botoes": (
         "13/10/2026 — o molde da tabela de botões que a marca «Visual novel» pede com o "
         "estilo Point-and-click (AS-MARCAS-VISUAL-NOVEL-E-ADULTO-SE-SOMAM-AO-ESTILO-01, "
-        "profiles/marcas_do_jogo.py:57). O caminho se perde porque a tabela do molde ainda "
-        "não existe: quem a consome é a O-POINT-AND-CLICK-SERVE-A-VISUAL-NOVEL-01 (aberta), "
-        "como a própria sprint das marcas registra no «Pendente». Fecha quando a receita do "
-        "estilo ganhar o molde e o perfil aplicado o pedir por aqui."
+        "profiles/marcas_do_jogo.py:57). O caminho se perde porque nenhum perfil aplicado "
+        "pergunta pelo molde, e não vai perguntar por aqui: a nota de 12/10 da "
+        "O-POINT-AND-CLICK-SERVE-A-VISUAL-NOVEL-01 tira o molde da marca e o põe no estilo "
+        "`visual_novel`. Sai quando a AS-MARCAS-VIRAM-OS-ESTILOS-VISUAL-NOVEL-E-ADULTO-01 "
+        "apagar o `marcas_do_jogo.py` (está no `apaga:` dela)."
     ),
     # 09/10/2026, leva 1-11, costura do pads-1-14: as duas do multi-1-14, nascidas para a B9.
     # sai com: O-DEGRAU-DO-MEIO-E-A-FRASE-DA-FAIXA-SE-LIGAM-DEPOIS-DA-B9-01
