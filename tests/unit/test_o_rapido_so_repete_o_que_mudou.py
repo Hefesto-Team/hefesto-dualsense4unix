@@ -162,7 +162,7 @@ def test_morde_o_simbolo_dentro_de_outro_maior_continua_sem_casar(tmp_path: Path
 
 # --- o endereço filtra por arquivo antes de descer às linhas --------------------------------------
 
-_OCTETOS = ("06", "de", "ad", "4c", "5d", "6e")
+_OCTETOS = ("aa", "bb", "cc", "4c", "5d", "6e")
 
 
 def _formas(o: tuple[str, ...]) -> dict[str, str]:
@@ -209,8 +209,8 @@ def test_o_filtro_por_arquivo_da_o_mesmo_veredito_da_varredura_por_linha(
         "borda.txt": "f" + "".join(_OCTETOS[3:]) + "f\n" + "4c-5d-6e-" + "\n",
         "isento.md": formas["separada"] + " <!-- endereco-de-mentira: fixture -->\n",
         "tudo.txt": "\n".join(formas.values()) + "\n" + formas["colada"].upper() + "\n",
-        "espacado.txt": "06 de ad 4c 5d 6e\n" + "0a.12.34.56.78.9a\n",
-        "mascarado.txt": "06:de:ad:00:00:6e\n",
+        "espacado.txt": "aa bb cc 4c 5d 6e\n" + "0a.12.34.56.78.9a\n",
+        "mascarado.txt": "aa:bb:cc:00:00:6e\n",
     }
     arquivos = []
     for nome, texto in casos.items():
