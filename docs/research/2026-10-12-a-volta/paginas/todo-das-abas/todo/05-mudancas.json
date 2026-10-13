@@ -125,7 +125,7 @@
     },
     {
       "sprint": "A-FORCA-DA-VIBRACAO-DE-CADA-CONTROLE-SAI-DE-UM-FUNIL-SO-COM-A-BATERIA-DELE-E-O-TETO-01",
-      "o_que_muda": "Implementada na fds-1: a força de cada controle sai de um funil só, com a bateria dele e o teto (decisão por delegação, a validar por ela)."
+      "o_que_muda": "Implementada na fds-1: a força de cada controle sai de um funil só, com a bateria dele e o teto (decisão por delegação)."
     },
     {
       "sprint": "O-ESTILO-CHEGA-AO-GATILHO-E-A-VIBRACAO-DE-CADA-CONTROLE-01",
