@@ -59,7 +59,7 @@ def _sem_perfis(monkeypatch: pytest.MonkeyPatch) -> None:
     """Apaga a evidência nº 2: nenhum perfil no disco casa coisa nenhuma."""
     from hefesto_dualsense4unix.profiles import manager as manager_module
 
-    monkeypatch.setattr(manager_module, "load_all_profiles", lambda: [])
+    monkeypatch.setattr(manager_module, "perfis_para_consulta", lambda: [])
 
 
 def _daemon_no_desktop() -> Daemon:
