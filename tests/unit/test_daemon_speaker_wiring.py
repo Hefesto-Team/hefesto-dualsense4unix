@@ -9,7 +9,7 @@ import pytest
 
 from hefesto_dualsense4unix.daemon import connection as connection_mod
 from hefesto_dualsense4unix.daemon.connection import (
-    connect_with_retry,
+    reaplicar_som_em_todos_os_alvos,
     reapply_speaker_after_connect,
     restore_last_profile,
 )
@@ -107,6 +107,12 @@ def _perfil(nome: str, **kw: object) -> Profile:
 
 def _daemon(backend: _BackendComAudio) -> Daemon:
     return Daemon(controller=backend, config=DaemonConfig())
+
+
+async def _conectar(daemon: Any) -> None:
+    """A borda de conexão do `reconnect_loop`: o controle abre e o som volta a cada alvo."""
+    await daemon._run_blocking(daemon.controller.connect)
+    await reaplicar_som_em_todos_os_alvos(daemon)
 
 
 def _sem_executor(daemon: Any, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -469,14 +475,14 @@ class TestReaplicacaoNoConnect:
     async def test_connect_reaplica_o_volume_do_perfil_ativo(
         self, isolated_profiles_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """MORDIDA: arrancar a chamada de `connect_with_retry` faz o replug"""
+        """O replug devolve ao controle o volume do perfil ativo."""
         save_profile(_perfil("som", speaker={"volume": 180}))
         backend = _BackendComAudio()
         daemon = Daemon(controller=backend, config=DaemonConfig())
         _sem_executor(daemon, monkeypatch)
         daemon.store.set_active_profile("som")
 
-        await connect_with_retry(daemon)  # type: ignore[arg-type]
+        await _conectar(daemon)
 
         assert [e["volume"] for e in backend.escritas_de_audio] == [180]
 
@@ -491,7 +497,7 @@ class TestReaplicacaoNoConnect:
         _sem_executor(daemon, monkeypatch)
         daemon.store.set_active_profile("legado")
 
-        await connect_with_retry(daemon)  # type: ignore[arg-type]
+        await _conectar(daemon)
 
         assert backend.escritas_de_audio == []
         assert backend.speaker_state_for() is None
@@ -504,7 +510,7 @@ class TestReaplicacaoNoConnect:
         daemon = Daemon(controller=backend, config=DaemonConfig())
         _sem_executor(daemon, monkeypatch)
 
-        await connect_with_retry(daemon)  # type: ignore[arg-type]
+        await _conectar(daemon)
 
         assert backend.escritas_de_audio == []
 
@@ -557,10 +563,10 @@ async def test_ciclo_perfil_replug_perfil_nunca_perde_o_volume(
     )
 
     manager.activate("baixo", origin="manual")
-    await connect_with_retry(daemon)  # type: ignore[arg-type]
-    await connect_with_retry(daemon)  # type: ignore[arg-type]
+    await _conectar(daemon)
+    await _conectar(daemon)
     manager.activate("alto", origin="autoswitch")
-    await connect_with_retry(daemon)  # type: ignore[arg-type]
+    await _conectar(daemon)
 
     assert [e["volume"] for e in backend.escritas_de_audio] == [60, 60, 60, 220, 220]
     assert backend.speaker_state_for() == {"volume": 220, "muted": False}

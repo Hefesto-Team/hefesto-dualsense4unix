@@ -4,7 +4,6 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import functools
-import importlib
 import inspect
 import os
 import signal
@@ -3482,10 +3481,8 @@ class Daemon:
         O módulo se importa numa thread: o pydantic dos manifestos custa dezenas
         de milissegundos no disco frio, e o laço de 60 Hz já está girando.
         """
-        modulo = await asyncio.to_thread(
-            importlib.import_module, "hefesto_dualsense4unix.mods.supervisor"
-        )
-        supervisor = modulo.supervisor_do_servico(self)
+        supervisor_do_servico = await asyncio.to_thread(_a_fabrica_do_supervisor)
+        supervisor = supervisor_do_servico(self)
         if supervisor is None:
             return
         await supervisor.iniciar()
@@ -4891,6 +4888,18 @@ class _MedidorDoTique:
         )
         self._duracoes.clear()
         self._pior_por_relogio.clear()
+
+
+def _a_fabrica_do_supervisor() -> Callable[[Any], Any]:
+    """A porta das modificações, importada só quando o serviço a abre.
+
+    O ``from … import`` fica no corpo, e não num ``importlib.import_module``
+    com o nome em texto, para que o caminho do serviço ao supervisor seja
+    import de verdade: lido pelo mypy e pelo mapa do que o produto alcança.
+    """
+    from hefesto_dualsense4unix.mods.supervisor import supervisor_do_servico
+
+    return supervisor_do_servico
 
 
 def _agendar_o_sinal_de_jogo(daemon: Any) -> None:

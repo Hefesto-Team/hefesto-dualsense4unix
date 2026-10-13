@@ -33,7 +33,7 @@ daemon/
     mouse.py            (MouseSubsystem + start/stop/dispatch_mouse)
     rumble.py           (RumbleSubsystem + reassert_rumble + _effective_mult_inline)
     hotkey.py           (start/stop_hotkey_manager + mic_button_loop)
-    connection.py       (connect_with_retry + reconnect + restore_last_profile + shutdown)
+    connection.py       (reconnect_loop + restore_last_profile + shutdown)
 ```
 
 ### Protocol Subsystem

@@ -48,8 +48,6 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 logger = get_logger(__name__)
 
 
-BACKOFF_MAX_SEC: float = 30.0
-
 #: Intervalo entre probes de hot-reconnect quando o controle está desconectado
 RECONNECT_PROBE_INTERVAL_SEC: float = 5.0
 
@@ -63,33 +61,6 @@ RECONNECT_HOTPLUG_POLL_INTERVAL_SEC: float = 2.0
 PASSO_ENQUANTO_O_GATILHO_ESTA_ARMADO_SEC: float = 0.25
 
 PASSO_ENQUANTO_UM_CONTROLE_TROCA_DE_TRANSPORTE_SEC: float = 0.5
-
-
-async def connect_with_retry(daemon: DaemonProtocol) -> None:
-    """Tenta conectar o controller com backoff exponencial. Publica CONTROLLER_CONNECTED."""
-    backoff = daemon.config.reconnect_backoff_sec
-    while True:
-        try:
-            await daemon._run_blocking(daemon.controller.connect)
-            transport = daemon.controller.get_transport()
-            daemon.bus.publish(EventTopic.CONTROLLER_CONNECTED, {"transport": transport})
-            logger.info("controller_connected", transport=transport)
-            await reaplicar_som_em_todos_os_alvos(daemon)
-            return
-        except Exception as exc:
-            logger.warning("controller_connect_failed", err=str(exc), exc_info=True)
-            if not daemon.config.auto_reconnect:
-                raise
-            stop_event = getattr(daemon, "_stop_event", None)
-            if stop_event is not None:
-                try:
-                    await asyncio.wait_for(stop_event.wait(), timeout=backoff)
-                    return
-                except asyncio.TimeoutError:
-                    pass
-            else:
-                await asyncio.sleep(backoff)
-            backoff = min(backoff * 2, BACKOFF_MAX_SEC)
 
 
 async def reapply_speaker_after_connect(
@@ -570,7 +541,7 @@ async def reconnect_loop(
 ) -> None:
     """Probe não-bloqueante de conexão com o DualSense (BUG-DAEMON-NO-DEVICE-FATAL-01).
 
-    Diferente de `connect_with_retry` (legado, bloqueante e reusado pela CLI):
+    O que ele garante:
       - Nunca bloqueia o boot — `Daemon.run()` cria esta task em background.
       - Respeita `daemon._stop_event` durante todos os waits.
       - Loga transições offline→online e online→offline em INFO; tentativas
@@ -1452,7 +1423,6 @@ async def shutdown(daemon: DaemonProtocol) -> None:
 
 
 __all__ = [
-    "BACKOFF_MAX_SEC",
     "PASSO_ENQUANTO_O_GATILHO_ESTA_ARMADO_SEC",
     "PASSO_ENQUANTO_UM_CONTROLE_TROCA_DE_TRANSPORTE_SEC",
     "RECONNECT_HOTPLUG_POLL_INTERVAL_SEC",
@@ -1464,7 +1434,6 @@ __all__ = [
     "armar_gatilho_da_cor",
     "armar_gatilho_da_cor_por_evento",
     "armar_gatilho_da_cor_por_numeracao",
-    "connect_with_retry",
     "disparar_gatilhos_devidos",
     "reaplicar_som_de_quem_trocou_de_transporte",
     "reapply_mic_after_connect",

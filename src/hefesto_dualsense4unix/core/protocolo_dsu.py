@@ -13,8 +13,9 @@ Dois lados:
   levanta ``ValueError`` com o nome do campo (e nunca ``struct.error``), porque
   quem chama é código nosso e o erro tem de dizer qual contador estourou.
 
-``validar_saida`` é o inverso de cada ``montar_*``: o ensaio e os testes o usam
-para recusar um pacote que o Azahar recusaria.
+``validar_saida`` é o inverso de cada ``montar_*``: os testes o usam para recusar
+um pacote que o Azahar recusaria. O ensaio do emulador tem o leitor dele, sem
+import do produto.
 """
 
 from __future__ import annotations

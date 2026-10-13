@@ -442,6 +442,24 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
         "a casa troca X por Y com `systemctl --user set-environment`. Nenhum "
         "fluxo dela passa por aqui; a decisão está «a validar por ela»."
     ),
+    "HEFESTO_BROKER_LOGINCTL": (
+        "13/10/2026, O-BROKER-SERVE-QUEM-ESTA-NA-FRENTE-01 — o caminho do `loginctl` que o "
+        "broker pergunta (broker/hidraw_broker.py:103, `_loginctl`). Sem a chave o broker "
+        "procura `/usr/bin/loginctl` e `/bin/loginctl`, que é o caminho de produção em toda "
+        "distro que o install cobre. Os testes a apontam para um caminho que não existe e "
+        "simulam o logind ausente; o pacote Nix a escreve porque o NixOS não tem `/usr/bin` "
+        "(packaging/nix/package.nix:262). Ligá-la não abre feature nenhuma: só diz onde mora "
+        "um binário do sistema."
+    ),
+    "HEFESTO_WIREPLUMBER_SISTEMA": (
+        "13/10/2026, as regras do som no WirePlumber da distro — desvia as pastas de sistema "
+        "que decidem a forma do drop-in (utils/xdg_paths.py:97, `wireplumber_forma`; as "
+        "irmãs em shell são `scripts/doctor.sh:1722` e "
+        "`scripts/fix_wireplumber_default_source.sh:100`). O comentário do dono escreve a "
+        "razão: «existe para o teste e para a bancada: o lar de mentira declara um "
+        "/usr/share/wireplumber falso». Nenhuma unit, install ou empacotamento a escreve, e "
+        "ligá-la não abre feature nenhuma."
+    ),
 }
 
 _PROMESSA_DE_AMBIENTE: dict[str, str] = {
@@ -457,6 +475,36 @@ _PROMESSA_DE_AMBIENTE: dict[str, str] = {
         " jogador e de qual transporte veio o gesto. Quem a liga é o próprio despachante, a cada "
         "gesto."
     ),
+    "HEFESTO_MOD_ID": (
+        "13/10/2026, ADR-021 — o Hefesto PÕE esta chave no ambiente de cada modificação que "
+        "abre (o id do manifesto): é o contrato do supervisor com a "
+        "modificação filha, que a lê para "
+        "falar com o serviço. Quem a liga é o próprio supervisor, a cada modificação aberta."
+    ),
+    "HEFESTO_MOD_SOCKET": (
+        "13/10/2026, ADR-021 — o Hefesto PÕE esta chave no ambiente de cada modificação que "
+        "abre (o caminho da porta do serviço): é o contrato do supervisor com a "
+        "modificação filha, que a lê para "
+        "falar com o serviço. Quem a liga é o próprio supervisor, a cada modificação aberta."
+    ),
+    "HEFESTO_MOD_FICHA": (
+        "13/10/2026, ADR-021 — o Hefesto PÕE esta chave no ambiente de cada modificação que "
+        "abre (a ficha que a porta confere): é o contrato do supervisor com a "
+        "modificação filha, que a lê para "
+        "falar com o serviço. Quem a liga é o próprio supervisor, a cada modificação aberta."
+    ),
+    "HEFESTO_MOD_DADOS": (
+        "13/10/2026, ADR-021 — o Hefesto PÕE esta chave no ambiente de cada modificação que "
+        "abre (a pasta de dados dela): é o contrato do supervisor com a "
+        "modificação filha, que a lê para "
+        "falar com o serviço. Quem a liga é o próprio supervisor, a cada modificação aberta."
+    ),
+    "HEFESTO_MOD_API": (
+        "13/10/2026, ADR-021 — o Hefesto PÕE esta chave no ambiente de cada modificação que "
+        "abre (a versão da API das modificações): é o contrato do supervisor com a "
+        "modificação filha, que a lê para "
+        "falar com o serviço. Quem a liga é o próprio supervisor, a cada modificação aberta."
+    ),
     "HEFESTO_DUALSENSE4UNIX_CONEXAO_ZUMBI": (
         "A chave que DESLIGA o vigia das conexões de rádio "
         "(daemon/subsystems/conexoes.py). É promessa dela, de 18/09/2026: "
@@ -470,11 +518,11 @@ _PROMESSA_DE_AMBIENTE: dict[str, str] = {
         "controles com hidraw) acusando ZERO zumbis."
     ),
     "HEFESTO_BROKER_ALLOWED_UID": (
-        "Qual UID pode falar com o broker de hidraw (broker/hidraw_broker.py:77). "
-        "É promessa de sistema: sem ela o broker não serve a sessão dela. "
-        "MEDIDO em 12/08/2026: LIGADA, por `Environment=` em "
-        "assets/systemd/hefesto-hidraw-broker.service:37, com o UID substituído "
-        "pelo instalador."
+        "Um uid FIXO para o broker de hidraw atender (broker/hidraw_broker.py:100). "
+        "REMEDIDO em 13/10/2026 (O-BROKER-SERVE-QUEM-ESTA-NA-FRENTE-01, commit 7f1a5f562): "
+        "a unit deixou de gravar uid, e o broker atende quem está na frente do seat, "
+        "perguntado ao logind a cada pedido. A promessa de servir a sessão dela continua; "
+        "a mão dela deixou de ser a env. Ver `_MAO_FORA_DO_AMBIENTE`."
     ),
     "HEFESTO_BROKER_NO_NASCE_FECHADO": (
         "Se o nó hidraw do DualSense físico NASCE FECHADO — `0600 root`, pela "
@@ -512,6 +560,54 @@ _PROMESSA_DE_AMBIENTE: dict[str, str] = {
 }
 
 _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
+    "HEFESTO_MOD_ID": (
+        "mods/supervisor.py::Supervisor",
+        "13/10/2026 — a mão é o supervisor das modificações: o `Supervisor._abrir` "
+        "(mods/supervisor.py:484) põe a chave no ambiente da modificação antes de abri-la, "
+        "e o serviço o sobe pelo `Daemon._start_mods` (daemon/lifecycle.py). Não há "
+        "`Environment=` a escrever: a chave nasce a cada modificação, para ela, e não para "
+        "o serviço.",
+    ),
+    "HEFESTO_MOD_SOCKET": (
+        "mods/supervisor.py::Supervisor",
+        "13/10/2026 — a mão é o supervisor das modificações: o `Supervisor._abrir` "
+        "(mods/supervisor.py:484) põe a chave no ambiente da modificação antes de abri-la, "
+        "e o serviço o sobe pelo `Daemon._start_mods` (daemon/lifecycle.py). Não há "
+        "`Environment=` a escrever: a chave nasce a cada modificação, para ela, e não para "
+        "o serviço.",
+    ),
+    "HEFESTO_MOD_FICHA": (
+        "mods/supervisor.py::Supervisor",
+        "13/10/2026 — a mão é o supervisor das modificações: o `Supervisor._abrir` "
+        "(mods/supervisor.py:484) põe a chave no ambiente da modificação antes de abri-la, "
+        "e o serviço o sobe pelo `Daemon._start_mods` (daemon/lifecycle.py). Não há "
+        "`Environment=` a escrever: a chave nasce a cada modificação, para ela, e não para "
+        "o serviço.",
+    ),
+    "HEFESTO_MOD_DADOS": (
+        "mods/supervisor.py::Supervisor",
+        "13/10/2026 — a mão é o supervisor das modificações: o `Supervisor._abrir` "
+        "(mods/supervisor.py:484) põe a chave no ambiente da modificação antes de abri-la, "
+        "e o serviço o sobe pelo `Daemon._start_mods` (daemon/lifecycle.py). Não há "
+        "`Environment=` a escrever: a chave nasce a cada modificação, para ela, e não para "
+        "o serviço.",
+    ),
+    "HEFESTO_MOD_API": (
+        "mods/supervisor.py::Supervisor",
+        "13/10/2026 — a mão é o supervisor das modificações: o `Supervisor._abrir` "
+        "(mods/supervisor.py:484) põe a chave no ambiente da modificação antes de abri-la, "
+        "e o serviço o sobe pelo `Daemon._start_mods` (daemon/lifecycle.py). Não há "
+        "`Environment=` a escrever: a chave nasce a cada modificação, para ela, e não para "
+        "o serviço.",
+    ),
+    "HEFESTO_BROKER_ALLOWED_UID": (
+        "broker/hidraw_broker.py::uid_da_sessao_ativa",
+        "13/10/2026 — A MÃO É O DEFAULT (O-BROKER-SERVE-QUEM-ESTA-NA-FRENTE-01, commit "
+        "7f1a5f562): sem a chave, o `main` do broker passa `uid_da_sessao_ativa` ao "
+        "`BrokerState` como quem está na frente, e o logind responde a cada pedido. A env só "
+        "FIXA um uid, e escrevê-la na unit seria voltar ao uid gravado que aquela cura tirou; "
+        "os pacotes apagam a unit velha que ainda a traz (packaging/debian/postinst:30).",
+    ),
     "HEFESTO_JOGADOR": (
         "daemon/subsystems/hotkey.py::start_hotkey_manager",
         "02/10/2026 — a mão é o despachante dos gestos: `start_hotkey_manager` (hotkey.py:712) "
@@ -586,6 +682,14 @@ _SEM_MAO_HOJE: dict[str, str] = {}
 
 
 _NAO_E_PROMESSA: dict[str, str] = {
+    "core/protocolo_dsu.py::validar_saida": (
+        "13/10/2026, O-SERVIDOR-DSU-LEVA-O-TOQUE-E-O-MOVIMENTO-AO-EMULADOR-01 — é o oráculo "
+        "dos testes, não do produto: o docstring do módulo diz que ela é «o inverso de cada "
+        "montar_*», para recusar o pacote que o Azahar recusaria, e o único leitor é "
+        "`tests/unit/test_o_protocolo_dsu_fala_o_que_o_emulador_aceita.py:134`. O ensaio "
+        "`scripts/ensaios/o_dsu_chega_ao_emulador.py` não a usa, de propósito: ele não "
+        "importa nada do produto. O servidor só monta pacotes; quem os lê é o emulador."
+    ),
     "interface/monta.py::par_de_modos": (
         "08/10/2026, O-MODO-AUTOMATICO — é do gerador do desenho, não do produto: os geradores "
         "da 03 e da 04 (`interface/aba03.py` e `aba04.py`, a chamada `monta_.par_de_modos`) "
@@ -1176,6 +1280,15 @@ _NAO_E_PROMESSA: dict[str, str] = {
 }
 
 _SEM_CAMINHO_HOJE: dict[str, str] = {
+    # sai com: O-POINT-AND-CLICK-SERVE-A-VISUAL-NOVEL-01
+    "profiles/marcas_do_jogo.py::molde_dos_botoes": (
+        "13/10/2026 — o molde da tabela de botões que a marca «Visual novel» pede com o "
+        "estilo Point-and-click (AS-MARCAS-VISUAL-NOVEL-E-ADULTO-SE-SOMAM-AO-ESTILO-01, "
+        "profiles/marcas_do_jogo.py:57). O caminho se perde porque a tabela do molde ainda "
+        "não existe: quem a consome é a O-POINT-AND-CLICK-SERVE-A-VISUAL-NOVEL-01 (aberta), "
+        "como a própria sprint das marcas registra no «Pendente». Fecha quando a receita do "
+        "estilo ganhar o molde e o perfil aplicado o pedir por aqui."
+    ),
     # 09/10/2026, leva 1-11, costura do pads-1-14: as duas do multi-1-14, nascidas para a B9.
     # sai com: O-DEGRAU-DO-MEIO-E-A-FRASE-DA-FAIXA-SE-LIGAM-DEPOIS-DA-B9-01
     "integrations/radio_da_mesa.py::ordem_de_ceder": (
@@ -2517,9 +2630,9 @@ class TestOPortaoMorde:
 
     def test_a_varredura_enxerga_a_unica_env_escrita_de_verdade(self) -> None:
         """O detector de ESCRITA de ambiente, contra contagem independente."""
-        assert portas_que_ligam("HEFESTO_BROKER_ALLOWED_UID") == ["unit"], (
-            "o detector não vê `Environment=HEFESTO_BROKER_ALLOWED_UID=` em "
-            "assets/systemd/hefesto-hidraw-broker.service:37 — a régua de "
+        assert portas_que_ligam("HEFESTO_BROKER_NO_NASCE_FECHADO") == ["unit"], (
+            "o detector não vê `Environment=HEFESTO_BROKER_NO_NASCE_FECHADO=` em "
+            "assets/systemd/hefesto-hidraw-broker.service:44 — a régua de "
             "escrita de ambiente quebrou"
         )
 
@@ -2945,7 +3058,7 @@ class TestOPortaoMorde:
 
     def test_a_unica_porta_real_da_arvore_sobrevive_a_poda(self) -> None:
         """A poda medida contra a árvore viva, e não contra a plausibilidade."""
-        assert portas_que_ligam("HEFESTO_BROKER_ALLOWED_UID") == ["unit"], (
+        assert portas_que_ligam("HEFESTO_BROKER_NO_NASCE_FECHADO") == ["unit"], (
             "a poda de `_PASTAS_DE_ARTEFATO` levou junto a única porta de "
             "verdade da árvore — a exclusão ficou larga demais"
         )

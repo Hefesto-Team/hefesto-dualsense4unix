@@ -56,15 +56,6 @@ def test_o_dono_diz_os_numeros_do_dualsense() -> None:
     assert dono.PAR_DUALSENSE_FISICO == (0x054C, 0x0CE6)
 
 
-def test_o_pad_nosso_se_responde_pelo_hid_phys_e_nao_pelo_pid() -> None:
-    assert dono.e_nosso_pad("hefesto-vpad0") is True
-    assert dono.e_nosso_pad("  HEFESTO-VPAD3 ") is True
-    # o Edge físico divide o PID do nosso pad e não é nosso: o PID não responde a pergunta
-    assert dono.e_nosso_pad("aa:bb:cc:00:00:ff") is False
-    assert dono.e_nosso_pad("") is False
-    assert dono.e_nosso_pad(None) is False
-
-
 def test_o_dono_concorda_com_as_constantes_que_ainda_nao_migraram() -> None:
     """Enquanto os módulos não importam do dono, o literal deles não pode divergir dele."""
     from hefesto_dualsense4unix.core import evdev_reader

@@ -162,21 +162,6 @@ def wireplumber_dropin(nome_conf: str, config_home: Path | None = None) -> Path:
     )
 
 
-def wireplumber_dropins_em_toda_forma(
-    nome_conf: str, config_home: Path | None = None
-) -> list[Path]:
-    """O mesmo drop-in nas DUAS formas: quem remove tira as duas.
-
-    Uma troca de WirePlumber (0.4 para 0.5, ou o contrário) deixa a forma velha
-    no disco, calada.
-    """
-    return [
-        wireplumber_pasta_da_forma(forma, config_home)
-        / wireplumber_nome_do_dropin(nome_conf, forma)
-        for forma in (FORMA_CONF, FORMA_LUA)
-    ]
-
-
 def wireplumber_config_dir(ensure: bool = False) -> Path:
     """Diretório dos drop-ins do WirePlumber — honra `XDG_CONFIG_HOME` (T-05,
     ONDA0-Z7, 24/08/2026), na forma que o WirePlumber instalado lê.
@@ -256,7 +241,6 @@ __all__ = [
     "state_dir",
     "wireplumber_config_dir",
     "wireplumber_dropin",
-    "wireplumber_dropins_em_toda_forma",
     "wireplumber_forma",
     "wireplumber_nome_do_dropin",
     "wireplumber_pasta_da_forma",

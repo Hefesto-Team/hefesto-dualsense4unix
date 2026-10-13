@@ -30,7 +30,6 @@ from hefesto_dualsense4unix.utils.xdg_paths import (
     WIREPLUMBER_SISTEMA_ENV_VAR,
     wireplumber_config_dir,
     wireplumber_dropin,
-    wireplumber_dropins_em_toda_forma,
     wireplumber_forma,
     wireplumber_nome_do_dropin,
 )
@@ -133,13 +132,6 @@ def test_o_dropin_mora_na_pasta_e_na_forma_certas(
     assert wireplumber_dropin(f"{N54}.conf") == (
         lar / ".config/wireplumber/wireplumber.conf.d" / f"{N54}.conf"
     )
-
-
-def test_quem_remove_tira_as_duas_formas(lar: Path) -> None:
-    caminhos = wireplumber_dropins_em_toda_forma(f"{N51}.conf")
-    assert [c.name for c in caminhos] == [f"{N51}.conf", f"{N51}.lua"]
-    assert [c.parent.name for c in caminhos] == ["wireplumber.conf.d", "main.lua.d"]
-    assert all(str(c).startswith(str(lar)) for c in caminhos)
 
 
 def test_a_variavel_vazia_cai_no_padrao(lar: Path, monkeypatch: pytest.MonkeyPatch) -> None:

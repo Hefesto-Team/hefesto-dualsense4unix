@@ -5,8 +5,9 @@ de hardware com PID novo muda UM arquivo, e `scripts/check_numeros_da_sony.py` c
 quantas linhas ainda carregam o literal fora deste dono (a catraca só desce).
 
 O Edge físico e o nosso pad virtual compartilham o PID Edge: o `hid_playstation` registra
-o pad forjado como DualSense completo, e quem separa o físico do nosso nunca é o PID, é o
-``HID_PHYS`` do nó (`e_nosso_pad`).
+o pad forjado como DualSense completo, e quem separa o físico do nosso nunca é o PID: é o
+``HID_PHYS`` do nó, e a pergunta inteira (o uhid e o gadget) tem dono em
+`integrations/pad_usb.e_pad_nosso`.
 """
 
 from __future__ import annotations
@@ -33,11 +34,6 @@ PAR_DUALSENSE_FISICO = (VENDOR_SONY, PID_DUALSENSE)
 HID_PHYS_DO_PAD = "hefesto-vpad"
 
 
-def e_nosso_pad(hid_phys: str | None) -> bool:
-    """Este nó é o pad do Hefesto? Responde pelo ``HID_PHYS``, nunca pelo PID."""
-    return bool(hid_phys) and str(hid_phys).strip().casefold().startswith(HID_PHYS_DO_PAD)
-
-
 __all__ = [
     "HID_PHYS_DO_PAD",
     "PAR_DUALSENSE_FISICO",
@@ -46,5 +42,4 @@ __all__ = [
     "PID_DUALSENSE",
     "PID_DUALSENSE_EDGE",
     "VENDOR_SONY",
-    "e_nosso_pad",
 ]
