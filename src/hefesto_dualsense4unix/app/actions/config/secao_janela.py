@@ -28,7 +28,7 @@ def _recibo(host: Any, linha: Any) -> Any:
     return rotulo
 
 
-# `_abrir_a_aba_sistema` VIVEU AQUI e saiu com o botão dela (LEX-4, 25/08/2026).
+# `_abrir_a_aba_sistema` VIVEU AQUI e saiu com o botão (LEX-4, 25/08/2026).
 
 
 def _fileira(titulo: str, *, dica: str | None = None) -> tuple[Any, Any]:

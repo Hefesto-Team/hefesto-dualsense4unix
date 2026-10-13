@@ -700,8 +700,8 @@ class IpcHandlersMixin:
                 name, origin="manual", relatorio=relatorio
             )
         except Exception:
-            # Atomicidade (a mesma que a docstring já promete ao marker): uma
-            # a trava que ela tinha armado — `profile.switch` com nome
+            # Atomicidade (a mesma que a docstring já promete ao marker): uma ativação que
+            # FALHOU não custa ao usuário a trava que ele tinha armado, nem congela a troca.
             self.store.mark_manual_profile_lock(lock_antes)
             raise
         if self.daemon is not None:
@@ -2392,8 +2392,8 @@ class IpcHandlersMixin:
                     result["gamepad_emulation"]["degraded"] = motivo is not None
                     if motivo is not None:
                         result["gamepad_emulation"]["degraded_motivo"] = motivo
-                # respondia: *"o jogo está vendo um DualSense por um canal que
-                # DualSense de pé e o caminho Xbox, a tela diz «Sony DualSense»
+                # A tela diz o que o jogo vê: com o DualSense de pé e o caminho Xbox,
+                # ela diz «Sony DualSense»
                 with contextlib.suppress(Exception):
                     from hefesto_dualsense4unix.integrations import (
                         canal_sem_imu as _sem_imu,
@@ -5909,7 +5909,7 @@ class IpcHandlersMixin:
         total = await ps.reload(ctx)
         return {"status": "ok", "total": total}
 
-    # AR-MEDIDO-01 (23/09/2026), R10 e R11 dela — o ar no `state_full`
+    # AR-MEDIDO-01 (23/09/2026), R10 e R11 — o ar no `state_full`
     # deslocaria todas as âncoras de baixo. O gancho no `state_full` é uma
 
     _medidor_de_ar: Any = None

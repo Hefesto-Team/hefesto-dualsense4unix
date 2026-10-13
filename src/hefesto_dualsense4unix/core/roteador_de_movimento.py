@@ -295,7 +295,7 @@ def ativo(dono: object) -> ArranjoDeMovimento | None:
     return None
 
 
-# migração: os campos são os mesmos"*. Entrou.  <!-- noqa-acento: citação literal -->
+# Entrou.
 
 _ATRIBUTO_POR_PECA: Final = "_roteador_de_movimento_por_peca"
 

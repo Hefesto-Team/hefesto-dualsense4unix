@@ -195,7 +195,7 @@ class SpeakerDraft(BaseModel):
     #: (`AltoFalanteSubsystem._fonte_do_controle`), mas o caminho de disco da
     #: janela e da aba Perfis passa por este draft: sem o campo, todo "Salvar
     #: Perfil" reescrevia a seção do som sem ele. É a família exata do item 13
-    #: do laudo de 05/09 — *"o Salvar DESTRUÍA o que a aba tinha gravado"*.
+    #: do laudo de 05/09: o Salvar destruía o que a aba tinha gravado.
     fonte: Literal["mix", "sfx"] | None = None
     #: o botão «Padrão» do volume (`ProfileSpeakerConfig.volume_padrao`): sem o campo aqui, todo
     #: «Salvar Perfil» o apagaria, que é a família do `fonte` logo acima.
@@ -379,7 +379,7 @@ class DraftConfig(BaseModel):
     suppress_dirty: bool = False
     source_controllers: Any | None = None
     controllers_esvaziados_nesta_edicao: bool = False
-    # (`profiles_actions._build_profile_from_editor`). O gesto mais banal dela
+    # (`profiles_actions._build_profile_from_editor`). O gesto mais banal do usuário
     # `manager.pontes_confirmadas()` e a escada de `integrations/ponte_escada.py`
     source_ponte: Any | None = None
     # valendo): `button_actions={"circle": "KEY_ESC"}` entrava e saía `None`;

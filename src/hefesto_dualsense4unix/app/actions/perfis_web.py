@@ -133,7 +133,7 @@ GUARDA_SEM_DAEMON = (
 
 #: (merge por campo, PERFIL-01).
 #: a tupla ``("leds", "triggers", "rumble", "speaker")``, digitada, com a
-#: existe"*. O merge levou os dois, e o que sobrou foi a pior das combinações:
+#: O merge levou os dois, e o que sobrou foi a pior das combinações:
 #: o daemon aplicando o mudo só daquele controle (``apply_controller_mics``), a
 SECOES_POR_CONTROLE: tuple[str, ...] = tuple(ControllerOverrides.model_fields)
 

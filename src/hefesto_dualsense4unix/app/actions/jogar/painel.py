@@ -340,12 +340,12 @@ class Aviso(NamedTuple):
     nome: str
 
 
-#: (``tests/unit/test_a_frase_refutada_da_allowlist.py``) por começar com *"O
-#: Hefesto saiu da frente"* — a construção que a medição dela derrubou em
+#: (``tests/unit/test_a_frase_refutada_da_allowlist.py``) por começar com «O
+#: Hefesto saiu da frente» — a construção que a medição derrubou em
 #: 06/08. Aqui não há verbo de afastamento nenhum: há o que o produto NÃO monta
 #: e quem, em vez dele, conta.
 #:
-#: E ELA NÃO AFIRMA O QUE NINGUÉM MEDIU. *"O jogo vê dois jogadores"* seria
+#: E ELA NÃO AFIRMA O QUE NINGUÉM MEDIU. «O jogo vê dois jogadores» seria
 #: afirmação forte sem régua — a §4.2 da sprint é **inferido do código**, e a
 #: medição que a fecharia (dois DualSense num jogo de co-op local, no cabo e no
 #: rádio) é bancada, na MESA-DE-QUATRO-01. A frase diz de quem é a conta,
@@ -359,8 +359,8 @@ FRASE_DO_MODO_NATIVO = (
 )
 
 #: O SELO DA LINHA ACIMA. ``MODO`` é a palavra do glossário
-#: (``docs/A-LINGUA-DESTA-CASA``, §2: *"**Modo**: Jogar pelo Hefesto · Conexão
-#: Nativa (Sony) · Controlar o PC"*), e a escada de gravidade que o ordena é
+#: (``docs/A-LINGUA-DESTA-CASA``, §2: «**Modo**: Jogar pelo Hefesto · Conexão
+#: Nativa (Sony) · Controlar o PC»), e a escada de gravidade que o ordena é
 #: ``a01_jogar.ORDEM_DA_GRAVIDADE``.
 SELO_DO_MODO = "MODO"
 
@@ -470,7 +470,6 @@ _NAO_CONFERIU = "Não consegui conferir a numeração dos controles."
 _NAO_COMPACTOU = "Não consegui ajustar a numeração dos controles."
 
 
-#: fora."* <!-- noqa-acento: citação literal -->
 #: `integrations/gesto_de_reconexao.reconectar`.
 _VOLTARAM_PELO_RADIO = "{quantos} controle(s) voltaram pelo rádio."
 _ESPERAM_O_PS = (

@@ -3128,7 +3128,7 @@ class PyDualSenseController(IController):
     def _o_lugar_do_deposto_espera_locked(self, key: str) -> bool:
         """A reserva do posto passa dos 30 s enquanto a pergunta da vaga diz que espera.
 
-        `D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA` (dela, 02/10/2026): com o jogo
+        `D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA` (02/10/2026): com o jogo
         na autoridade, o prazo do lugar guardado para no registro, e o posto do
         P1 é o mesmo lugar. Caducar a reserva aqui, no relógio próprio, punha o
         P2 no vpad do jogador 1 com a lâmpada dizendo 2. Quem decide é a mesma
@@ -5601,7 +5601,7 @@ class PyDualSenseController(IController):
         lado = "left" if side == "left" else "right"
         with self._io_lock:
             # O jogo manda no gatilho, de qualquer perfil e do Freestyle (decisão
-            # dela de 03/10/2026, que revoga a PERFIL-MANDA-01 de 16/09) — mas o
+            # de produto de 03/10/2026, que revoga a PERFIL-MANDA-01 de 16/09) — mas o
             # «sem efeito» de quem nunca mandou um efeito é ausência, e o perfil
             # vale até o jogo provar (04/10/2026).
             if alvo not in self._jogo_provou_o_gatilho:

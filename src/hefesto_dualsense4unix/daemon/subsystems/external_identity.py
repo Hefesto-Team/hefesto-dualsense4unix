@@ -163,7 +163,7 @@ LED_MIN_INTERVAL_SEC = 2.0
 #:
 #: **O que "calar" é, e por que não é "apagar".** Com este interruptor em
 #: ``False`` o tick faz ZERO escritas — não apaga a barra do Pro nem a lightbar
-#: do 8BitDo. O critério dela é *"o produto não pode AFIRMAR jogador"*, e apagar
+#: do 8BitDo. O critério é que o produto não pode AFIRMAR jogador, e apagar
 #: também é afirmar: seria a nossa mão, no mesmo nó, dizendo "este controle não
 #: tem jogador", destruindo o padrão que o firmware/kernel põe ali sozinho (na
 #: lightbar do 8BitDo em modo DS4, acesa é o sinal de "ligado"; apagá-la trocaria
@@ -172,8 +172,8 @@ LED_MIN_INTERVAL_SEC = 2.0
 #: pare o daemon e a luz não muda. Três razões a mais: o rádio fica sem tráfego
 #: de LED na direção do firmware mais frágil da mesa (o clone do 8BitDo morre
 #: sob bombardeio — `daemon/ipc_handlers.py:589-591`); o precedente MEDIDO desta
-#: casa já traduz "parar de afirmar" como *"zero escritas, sem apagar
-#: ativamente"* (o gate ``auto_numbers`` logo abaixo, R-14/NUMA-03c), e ter duas
+#: casa já traduz "parar de afirmar" como «zero escritas, sem apagar
+#: ativamente» (o gate ``auto_numbers`` logo abaixo, R-14/NUMA-03c), e ter duas
 #: doutrinas para a mesma frase é como se perde uma; e o custo de voltar é uma
 #: linha.
 #:
@@ -192,7 +192,7 @@ LED_MIN_INTERVAL_SEC = 2.0
 #: REINICIA com o controle já conectado, o número que a versão anterior acendeu
 #: FICA aceso — resíduo nosso, não afirmação nova. Reconectar o controle (ou
 #: religá-lo) devolve o padrão do firmware. Apagar uma vez na transição foi
-#: recusado de propósito: é exatamente a escrita que o critério dela proíbe.
+#: recusado de propósito: é exatamente a escrita que o critério proíbe.
 EXTERNAL_PLAYER_LED_ENABLED = False
 
 #: GYRO-02: faixa Nintendo que ESTA bancada tem. **Não é mais o gatilho do
@@ -212,9 +212,9 @@ NINTENDO_REAL_OUI = OUI_PRO_DESTA_BANCADA
 #: Só USB — e o porteiro é NOSSO, não do aparelho.
 #:
 #: **FATO ERRADO, SUBSTITUÍDO em 03/09/2026 (ONDA-TRANSPORTE-IDENTIDADE).**
-#: Esta nota dizia *"FASE 1 (GYRO-02): só USB. BT é o MESMO território de
+#: Esta nota dizia «FASE 1 (GYRO-02): só USB. BT é o MESMO território de
 #: subcomando que matou o 8BitDo — falta medição de campo com o kernel-watch
-#: `[JOYCON]` limpo antes de liberar por rádio"*, e isso lia como *território
+#: `[JOYCON]` limpo antes de liberar por rádio», e isso lia como *território
 #: não medido*: quem chegasse aqui procurando o que falta iria medir o rádio.
 #: A leitura do fonte derrubou a premissa, e o que falta é OUTRA coisa.
 #:

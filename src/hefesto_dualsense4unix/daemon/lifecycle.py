@@ -374,7 +374,12 @@ class DaemonConfig:
     gamepad_emulation_enabled: bool = False
     # vpad é DualSense Edge por arquitetura (UHID-04) e a máscara dualsense
     gamepad_flavor: str = "dualsense"
+    # MODO-DE-CONEXAO-01 (13/09/2026) — O CAMINHO, ao lado da máscara e separado
     # dela: `"dualsense"` (o canal próprio do DualSense, vpad uhid) ou `"xbox"`
+    # (o canal comum, vpad uinput). `None` = ninguém escolheu, e o caminho sai da
+    # máscara como saía antes (`virtual_pad.caminho_resolvido`). Quem escreve é
+    # `gamepad._guardar_o_caminho`, depois de o aparelho alcançar o pedido; o
+    # boot relê a escolha de `gamepad_caminho.flag`.
     gamepad_caminho: str | None = None
     gamepad_caminho_global: str | None = None
     coop_enabled: bool = True
@@ -408,12 +413,12 @@ class DaemonConfig:
     #: Passado `subsystems/rumble.TETO_DO_RUMBLE_FIXADO_S` sem um carimbo novo, o
     #: `reassert_rumble` devolve os motores ao JOGO. É a rede para a janela que
     #: MORRE com o "Testar" ligado — até 15/09 isso deixava o jogo sem vibração
-    #: até ela reabrir a aba Vibração e clicar em "Parar", e nada na tela dizia
+    #: até o usuário reabrir a aba Vibração e clicar em "Parar", e nada na tela dizia
     #: por quê, porque a tela já não estava lá.
     #:
     #: Quem rebate é `interface/pacotes/a05_vibracao._rebater_o_teste`, na fila
-    #: do controle, a cada 1 s enquanto a janela vive. A ordem de produto: *"o testar e parar é
-    #: sobre o teste naquele momento isso nao interfere in game"*  (noqa-acento: citação literal)
+    #: do controle, a cada 1 s enquanto a janela vive. A regra de produto: o testar e parar
+    #: só valem para o teste daquele momento e não interferem no jogo.
     rumble_active_em: float | None = None
     #: O par fixado de CADA controle, `{dono: (weak, strong, carimbo)}` (o `None` é a mesa
     #: inteira). `rumble_active`, `rumble_active_uniq` e `rumble_active_em` são o resumo

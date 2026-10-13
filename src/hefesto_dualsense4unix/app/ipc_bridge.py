@@ -59,7 +59,7 @@ TETOS: dict[str, float] = {
     "gamepad.mask.set": 2.0,
     "identity.number.set": 2.0,
     # O pedido do «Procurar» espera a busca SUBIR no serviço (o BlueZ abre a janela:
-    # 107 a 366 ms medidos no diário dela em 03/10), e o serviço espera, no pior caso,
+    # 107 a 366 ms medidos no diário da bancada em 03/10), e o serviço espera, no pior caso,
     # o prazo da trava mais 1 s. O prazo de tela de 0,25 s dava «não respondeu» sobre
     # uma busca que subia.
     "radio.busca.set": PRAZO_DA_TRAVA_DO_GESTO_S + 2.0,
@@ -1241,7 +1241,7 @@ def haptica_testar(uniq: str, ligado: bool) -> tuple[bool, dict[str, Any] | None
     return corpo is not None, corpo
 
 
-# medição dela é esta: a aba Mouse fala `mouse.emulation.set` por `call_async`
+# A medição é esta: a aba Mouse fala `mouse.emulation.set` por `call_async`
 
 __all__ = [
     "PROFILE_SWITCH_TIMEOUT_S",

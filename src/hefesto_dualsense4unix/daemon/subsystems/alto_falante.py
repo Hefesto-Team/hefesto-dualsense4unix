@@ -272,7 +272,6 @@ class GerenciadorDeNosDeSom:
             ponte_do_radio=self._ponte_do_radio(uniq),
         )
 
-    # som via canal de audio externo do controle"*.  # (noqa-acento): a digitação é do usuário
 
     def _reafinar(
         self,

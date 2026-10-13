@@ -33,7 +33,6 @@ KeyBinding = tuple[str, ...]
 
 TOKEN_OPEN_OSK = "__OPEN_OSK__"
 TOKEN_CLOSE_OSK = "__CLOSE_OSK__"
-#: *"deixar no preset do botão L3, no mapeamento, abrir o teclado virtual e
 #: Os dois antigos continuam valendo — o que muda é qual deles o L3 recebe de
 #: fábrica.
 TOKEN_TOGGLE_OSK = "__TOGGLE_OSK__"

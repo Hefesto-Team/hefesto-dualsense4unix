@@ -37,7 +37,7 @@ PRIORIDADE_MAXIMA = _schema.PRIORIDADE_MAXIMA
 _FOLGA_ACIMA_DO_CATCH_ALL = 10
 
 
-# DualSense."* — e escolher entre dois botões sem saber o que cada um custa não
+# e escolher entre dois botões sem saber o que cada um custa não
 
 
 LABEL_SO_MANUAL = ROTULO_SO_QUANDO_ESCOLHER

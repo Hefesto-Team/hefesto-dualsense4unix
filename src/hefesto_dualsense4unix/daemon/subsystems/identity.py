@@ -30,7 +30,14 @@ logger = get_logger(__name__)
 
 _CONTROLLERS_FILE = "controllers.json"
 
-#: dela: externo com o slot 1, DualSense em 2 e 3) sobreviveria para sempre,
+#: R-23: versão do SCHEMA de ``controllers.json``. É o que decide se o mapa
+#: gravado ainda vale — o ``boot_id`` deixou de decidir. Bump OBRIGATÓRIO sempre
+#: que a REGRA de numeração mudar: um arquivo de versão diferente é descartado UMA
+#: vez e a sessão seguinte renumera com a regra nova. Sem isso, a numeração torta
+#: gravada pela versão anterior (medida numa bancada: externo com o slot 1,
+#: DualSense em 2 e 3) sobreviveria para sempre, justamente porque agora o mapa
+#: NÃO morre mais no reboot.
+#: 2 = R-23/R-24 (slot sobrevive ao boot + espaço de numeração único).
 CONTROLLERS_SCHEMA_VERSION = 3
 
 ORDER_FIELD = "order"

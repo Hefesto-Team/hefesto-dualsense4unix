@@ -232,7 +232,7 @@ _ENDERECO_DE_RADIO = re.compile(r"(?i)(?<![0-9a-f])[0-9a-f]{2}(?::[0-9a-f]{2}){5
 
 
 def nome_da_porta(endereco: str, *, amostra: Mapping[str, Any] | None = None) -> str:
-    """O nome que a tela dá a este adaptador — o que ela deu, «Entrada 3» ou"""
+    """O nome que a tela dá a este adaptador — o que o usuário deu, «Entrada 3» ou"""
     try:
         from hefesto_dualsense4unix.integrations import bluez_dbus
 

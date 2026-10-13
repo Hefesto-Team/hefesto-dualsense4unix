@@ -262,7 +262,6 @@ class AppTray:
                 pass
             self._indicator = None
 
-    # coisa."* <!-- noqa-acento: citação literal -->
     def _montar_os_atos_do_jogo(self) -> None:
         """«Ligado/Desligado» e «Reconectar controles» — os da aba Jogar."""
         if self._menu is None:
@@ -497,7 +496,6 @@ class AppTray:
                 (p.get("name") for p in profiles if p.get("active")),
                 None,
             )
-            # remover o numero de perfis"*. <!-- noqa-acento: citação -->
             label = (
                 _("Hefesto - DualSense4Unix - perfil: %s") % active
                 if active

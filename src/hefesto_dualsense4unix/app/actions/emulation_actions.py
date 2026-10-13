@@ -27,7 +27,7 @@ logger = get_logger(__name__)
 
 
 # "/dev/input/js*"))`. Medido nesta máquina em 31/07/2026, com UM DualSense no
-#   js0  Sony … DualSense Wireless Controller           uniq=<MAC dela>
+#   js0  Sony … DualSense Wireless Controller           uniq=<MAC do controle>
 #   js1  Sony … DualSense … Motion Sensors              uniq=<O MESMO MAC>
 #   js2  DualSense Wireless Controller (Hefesto P1)    uniq=02:fe:00:00:00:01
 #   js3  DualSense … (Hefesto P1) Motion Sensors        uniq=<O MESMO>

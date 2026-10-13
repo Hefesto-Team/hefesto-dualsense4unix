@@ -49,8 +49,8 @@ MOTOR_PARA_BARRA: dict[str, str] = {"strong": "forte_pct", "weak": "fraco_pct"}
 #: para — a palavra é do comentário de ``rumble_actions._POLICY_MULT:67-69``.
 #:
 #: FICA ESCRITO porque ele é o degrau da escada que NÃO é botão da tela: o
-#: ``Auto`` saiu da aba em 05/09/2026, pela palavra de produto (*"segue os três modos
-#: sempre"*), e :func:`degraus_da_forca` o deixa de fora por este nome. A
+#: ``Auto`` saiu da aba em 05/09/2026, pela palavra de produto («segue os três modos
+#: sempre»), e :func:`degraus_da_forca` o deixa de fora por este nome. A
 #: escada continua com ele — a mesa em ``Auto`` é estado que o produto ainda
 #: sabe dizer (:func:`_pedido_da_politica`).
 FORCA_SEM_MULTIPLICADOR = "auto"

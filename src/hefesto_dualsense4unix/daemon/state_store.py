@@ -148,8 +148,6 @@ class StateStore:
                 for mac, limiar in self._udp_trigger_thresholds.items()
             }
 
-    # *"isso nao faz sentido mais."*  # (noqa-acento): citação literal
-
     def set_window_detect_backend(self, backend: str | None, healthy: bool) -> None:
         """Semeia o diagnóstico do detector na partida do autoswitch."""
         with self._lock:

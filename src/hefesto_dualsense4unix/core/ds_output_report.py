@@ -53,12 +53,12 @@ VALID_FLAG0_HAPTICS_SELECT = 0x02
 VALID_FLAG0_RIGHT_TRIGGER_FFB = 0x04
 VALID_FLAG0_LEFT_TRIGGER_FFB = 0x08
 #:
-#: TEXTO DE 01/08/2026, preservado porque proveniência não se apaga: *"O
+#: TEXTO DE 01/08/2026, preservado porque proveniência não se apaga: «O
 #: kernel (`hid-playstation`) declara common[4..7] como `reserved[4]` e NUNCA
 #: os escreve; a nomenclatura por bit vem da documentação de comunidade do
 #: report 0x02 (Nielk1 / DS5 wiki), que é a única fonte que os descreve — por
 #: isso o mapeamento bitbyte está documentado como PROVÁVEL, não como
-#: medido."*
+#: medido.»
 #:
 #: NOTA DATADA DE 11/08/2026 — o parágrafo acima CADUCOU, e caducou contra
 #: este mesmo arquivo: os TETOS logo abaixo (`TETO_HEADPHONE_VOLUME`,

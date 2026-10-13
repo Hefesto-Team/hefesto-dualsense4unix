@@ -543,7 +543,6 @@ class DesfechoDaRota:
     sink: str = ""
 
 
-#: Ela dizia *"este controle não publica placa de som — pelo rádio o DualSense
 #: * a primeira continua exata — o DualSense **não** expõe placa ALSA própria
 MOTIVO_ROTA_SEM_SINK: Final[str] = (
     "não achei a saída de som deste controle agora, então não há para onde "

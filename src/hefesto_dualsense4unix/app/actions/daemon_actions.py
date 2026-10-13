@@ -423,7 +423,7 @@ def interpretar_prontuario_dos_jogos(censo: object) -> tuple[str, str] | None:
     família F2 no seu exemplar mais caro desta casa. Ligar não é "chamar em
     qualquer lugar": o lugar é o cartão "Saúde do sistema" desta aba, no molde
     do `medir_guarda_do_steam_input` — **uma linha só quando há divergência,
-    calada quando está alinhado**, que é a regra que ela deu em 22/08 para o
+    calada quando está alinhado**, que é a regra que o usuário deu em 22/08 para o
     vigia.
 
     O que a linha nomeia é `Prontuario.ponte_divergente`: existe um carimbo

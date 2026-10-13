@@ -86,7 +86,7 @@ def plan_mode_transition(
         ]
     if mode_id == MODE_DESKTOP:
         # a ORDEM não mudou. Era `mouse.emulation.restore`, que lê a flag de
-        # `key_bindings`, `button_actions` e a supressão. A ordem de produto: *"o modo
+        # `key_bindings`, `button_actions` e a supressão. A ordem de produto.
         return [
             ("native.mode.set", {"enabled": False, "origin": "manual"}),
             ("gamepad.emulation.set", {"enabled": False, "origin": "manual"}),

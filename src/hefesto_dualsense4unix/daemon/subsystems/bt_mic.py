@@ -268,7 +268,7 @@ def uniqs_pedidos(config: DaemonConfig | Any) -> frozenset[str]:
     return frozenset(norm_mac(str(u)) or "" for u in pedidos) - {""}
 
 
-# A queixa, de 16/09, com o DualSense no rádio: *"o canal de som não
+# A queixa, de 16/09, com o DualSense no rádio.
 # acessibilidade — quem usa o microfone do DualSense como único microfone (o
 
 

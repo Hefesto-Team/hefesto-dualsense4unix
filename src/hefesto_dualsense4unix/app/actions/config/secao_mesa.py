@@ -63,8 +63,8 @@ A ordem de precedência tem três degraus, e ela é o desenho:
    das quatro linhas de rádio vizinho, só UMA cai aqui.
 
 A junção entre as duas leituras é o `no` — o caminho real no sysfs, a mesma
-convenção nos dois módulos. Nunca o `vid:pid`, que é a chave do que ELA
-declarou e que se repete quando há duas unidades do mesmo aparelho.
+convenção nos dois módulos. Nunca o `vid:pid`, que é a chave do que
+o usuário declarou e que se repete quando há duas unidades do mesmo aparelho.
 
 O NOME DE CADA ADAPTADOR (22/08/2026)
 --------------------------------------

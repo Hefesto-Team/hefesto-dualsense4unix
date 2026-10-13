@@ -147,7 +147,7 @@ LINHAS_DO_TETO: tuple[LinhaDoTeto, ...] = (
 )
 
 #: que a tabela mostra, e o dia em que a barra de luz ganhar esse ponto ela
-#: gastando menos»* — a luz fica mais fraca e não apaga. <!-- noqa-acento: citação literal -->
+#: a luz fica mais fraca e não apaga.
 def _dica_da_bateria_longa() -> str:
     """O que o perfil de bateria faz HOJE, e o que fica como está."""
     chave = TETO_POR_PERFIL[PERFIL_BATERIA_LONGA]

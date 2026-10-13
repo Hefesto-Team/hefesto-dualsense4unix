@@ -92,7 +92,7 @@ DESFECHOS_EMULACAO_ATIVA = frozenset(
     {EMU_APLICADO, EMU_JA_ESTAVA, EMU_BLOQUEADO_POR_JOGO}
 )
 
-#:   - ``"gesto_de_perfil"`` — ela ATIVOU um perfil na mão (`profile.switch` da
+#:   - ``"gesto_de_perfil"`` — o usuário ATIVOU um perfil na mão (`profile.switch` da
 ORIGENS_GESTO_DELA = frozenset({"manual", "gesto_de_perfil"})
 
 ORIGENS_QUE_PASSAM_COM_O_JOGO: dict[str, str] = {
@@ -181,7 +181,7 @@ def _broker_sync_grab(daemon: DaemonProtocol, grab: bool) -> None:
         if grab:
             if daemon.is_native_mode():
                 return
-            # o hidraw para entregar o DualSense pela API dela"*. O raciocínio
+            # O raciocínio
             node = hidraw_fn()
             if isinstance(node, str) and node:
                 broker_call_nonblocking(daemon, lambda: client.hide(node))
@@ -1456,7 +1456,6 @@ def _guardar_o_caminho(
     escolhido = normalizar_caminho(caminho)
     if escolhido is None or origin != "manual":
         return
-    # vazamento."*  <!-- noqa-acento: citação literal -->
     if _ha_jogo_em_foco(daemon):
         logger.info(
             "caminho_do_gesto_ficou_no_jogo",
@@ -1706,7 +1705,7 @@ def start_gamepad_emulation_desfecho(
                 save_gamepad_emulation,
             )
 
-            # medido na bancada: o gesto com que ela diz «Sony DualSense»
+            # medido na bancada: o gesto com que o usuário diz «Sony DualSense»
             # `gamepad.mask.set`, que grava no registro por aparelho.
             if flavor is not None:
                 save_gamepad_emulation(True, key)
