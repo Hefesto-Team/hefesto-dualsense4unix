@@ -1095,7 +1095,7 @@ def _jogo_do_leitor(linha: object, molde: str) -> JogoDoLancador | None:
 
 
 def ler_por_processo(leitor: LeitorPorProcesso, *,
-                     bwrap: str | None | bool = True) -> BibliotecaDoLancador:
+                     bwrap: str | bool | None = True) -> BibliotecaDoLancador:
     """A biblioteca que o leitor da modificação devolve — e nunca levanta.
 
     Prazo estourado, saída grande demais, código de saída diferente de zero ou

@@ -39,9 +39,7 @@ _LEITOR_BOM = (
 
 @pytest.fixture(scope="module")
 def a07() -> ModuleType:
-    from hefesto_dualsense4unix.interface.pacotes import a07_lancadores
-
-    return a07_lancadores
+    return importlib.import_module("hefesto_dualsense4unix.interface.pacotes.a07_lancadores")
 
 
 @pytest.fixture(autouse=True)
