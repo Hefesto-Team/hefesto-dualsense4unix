@@ -92,10 +92,11 @@ class AnunciadorDoJogo:
 
     def ver(self) -> None:
         """Compara com o que disse da última vez e diz a diferença. Nunca levanta."""
-        with contextlib.suppress(Exception):
-            self._ver_o_perfil()
-        with contextlib.suppress(Exception):
-            self._ver_o_jogo()
+        for passo in (self._ver_o_perfil, self._ver_o_jogo):
+            try:
+                passo()
+            except Exception as exc:
+                logger.debug("anunciador_do_jogo_falhou", passo=passo.__name__, err=str(exc))
 
     def _ver_o_perfil(self) -> None:
         nome = getattr(self._store, "active_profile", None)

@@ -23,7 +23,6 @@ lê igual.
 """
 from __future__ import annotations
 
-import contextlib
 import threading
 import time
 from dataclasses import dataclass
@@ -72,7 +71,8 @@ def _vista_do(daemon: Any, *, criar: bool) -> _Vista | None:
     vista = _Vista()
     try:
         setattr(daemon, _ATRIBUTO, vista)
-    except Exception:
+    except AttributeError as exc:  # um dublê sem lugar para a tabela: sem batida, sem erro
+        logger.debug("jogo_vibracao_sem_tabela", err=str(exc))
         return None
     return vista
 
@@ -100,8 +100,11 @@ def _jogador_de(daemon: Any, uniq: str | None) -> int | None:
     registro = getattr(daemon, "identity_registry", None)
     perguntar = getattr(registro, "numero_da_lampada", None)
     if callable(perguntar):
-        with contextlib.suppress(Exception):
+        try:
             bruto = perguntar(uniq, assign=False)
+        except Exception as exc:
+            logger.debug("jogo_vibracao_sem_numero", uniq=uniq, err=str(exc))
+        else:
             if isinstance(bruto, int) and not isinstance(bruto, bool) and bruto >= 1:
                 return bruto
     from hefesto_dualsense4unix.daemon.subsystems.base import slot_de_sessao
@@ -114,7 +117,7 @@ def _publicar(daemon: Any, uniq: str | None, linha: _Linha, agora: float) -> Non
     publicar = getattr(getattr(daemon, "bus", None), "publish", None)
     if not callable(publicar):
         return
-    with contextlib.suppress(Exception):
+    try:
         publicar(
             EventTopic.JOGO_VIBRACAO,
             {
@@ -125,6 +128,8 @@ def _publicar(daemon: Any, uniq: str | None, linha: _Linha, agora: float) -> Non
                 "t": agora,
             },
         )
+    except Exception as exc:
+        logger.debug("jogo_vibracao_nao_publicada", uniq=uniq, err=str(exc))
 
 
 def dizer_a_vibracao(

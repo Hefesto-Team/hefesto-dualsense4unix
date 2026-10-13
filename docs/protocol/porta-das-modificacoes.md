@@ -34,12 +34,30 @@ desconhecida ou um processo que não foi o supervisor que abriu fecham a conexã
 | `vibracao.set` | `{uniq, fraco, forte}` (0 a 255) | `escrever:vibracao` | o resultado do `rumble.set` |
 | `gatilho.set` | `{uniq, lado: esquerdo\|direito, modo, params}` | `escrever:gatilho` | o resultado do `trigger.set` |
 
-Os tópicos de leitura são estes, todos do controle do posto (o barramento da versão 1 só publica ele):
+Os tópicos de leitura são estes. Os quatro primeiros são do controle do posto:
 
 - `estado`: o estado do controle a cada tique;
 - `botoes`: um botão apertado ou solto;
 - `bateria`: a carga;
 - `conexao`: o controle que entra ou sai.
+
+Os dois últimos são do jogo e do perfil, e cada um é uma permissão à parte:
+
+- `jogo.vibracao` (`ler:jogo.vibracao`) entrega duas notificações. `nome: "jogo.vibracao"` é a vibração que o
+  jogo pede a UM controle, de qualquer jogador (P1 a P4), com o `uniq` dele no envelope:
+  `{uniq, jogador, pedido: [fraco, forte], efetivo: [fraco, forte], t}`. `pedido` é o que o jogo mandou;
+  `efetivo` é o que chegou aos motores (`[0, 0]` quando o par fixado pela tela vence ou a escrita foi
+  recusada), e a batida segue o `efetivo`. `jogador` é o número que o controle acende agora (ou `null`); `t` é
+  o `time.monotonic()` do serviço. Enquanto o `efetivo` não for zero o evento se repete a cada 250 ms, mesmo
+  sem valor novo: quem acompanha para o aparelho dele quando a batida some. O teto é de 60 por segundo por
+  controle; o que o teto atrasa sai no tique seguinte, e o último valor, sobretudo o zero, sempre chega.
+  `nome: "jogo.fechou"` (`{appid, t}`) diz que o jogo em cena saiu; quem vibrava recebe antes o zero que
+  faltava. A batida roda no tique do gamepad virtual do P1, e `jogo.fechou` sai do tique do autoswitch (só com
+  ele ligado): no Modo Nativo o Hefesto não vê a vibração;
+- `perfil.marcas` (`ler:perfil.marcas`) entrega `nome: "perfil.trocou"`: `{perfil, marcas: [...], t}`, a cada
+  troca do perfil efetivo. É estado, não evento: o serviço guarda o último, e quem assina depois recebe o
+  de agora logo na assinatura. As marcas são as do arquivo do perfil (`[]` sem marca), e o envelope leva o
+  `uniq` do posto.
 
 As escritas valem para qualquer controle, de P1 a P4, pelo `uniq` dele.
 
