@@ -14,12 +14,16 @@ from __future__ import annotations
 
 import contextlib
 import itertools
+import json
 import socket
 import struct
+import subprocess
+import sys
 import threading
 import time
 import zlib
 from collections.abc import Callable, Iterator
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
@@ -600,3 +604,66 @@ def test_a_thread_nao_morre_com_lixo_na_porta(montar: Callable[..., SimpleNamesp
     mundo.envia(sock, _pede_versao())
     assert len(_juntar(sock, 0.4)) == 1
     assert threading.active_count() >= 1
+
+
+# -- 13 · o ensaio que o confere vivo --------------------------------------------------------
+
+
+def _ensaio(porta: int, *extra: str) -> subprocess.CompletedProcess[str]:
+    raiz = Path(__file__).resolve().parents[2]
+    return subprocess.run(
+        [
+            sys.executable,
+            str(raiz / "scripts/ensaios/o_dsu_chega_ao_emulador.py"),
+            "--porta",
+            str(porta),
+            "--segundos",
+            "1.5",
+            "--json",
+            *extra,
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+
+
+def test_13_o_ensaio_aprova_o_servidor_do_e4_com_um_g_parado(
+    montar: Callable[..., SimpleNamespace],
+) -> None:
+    mundo = montar(fontes={UNIQ_1: _andando()})
+    feito = _ensaio(mundo.servidor.porta, "--sem-dono")
+    assert feito.returncode == 0, feito.stdout + feito.stderr
+    relato = json.loads(feito.stdout)
+    assert relato["ok"] is True and relato["versao"] == 1001
+    assert relato["por_segundo"] >= 8 and relato["crc_ruim"] == 0
+
+
+def test_13b_o_ensaio_reprova_sem_servidor_e_diz_o_degrau(
+    montar: Callable[..., SimpleNamespace],
+) -> None:
+    sem_dono = montar()
+    porta = sem_dono.servidor.porta
+    sem_dono.servidor.parar()
+    feito = _ensaio(porta, "--sem-dono")
+    assert feito.returncode == 1
+    assert "sem resposta de versão em 2 s" in json.loads(feito.stdout)["falha"]
+
+
+def test_13c_o_ensaio_reprova_a_porta_que_nao_e_do_daemon(
+    montar: Callable[..., SimpleNamespace],
+) -> None:
+    mundo = montar(fontes={UNIQ_1: _andando()})
+    feito = _ensaio(mundo.servidor.porta)
+    assert feito.returncode == 1
+    assert "de outro processo" in json.loads(feito.stdout)["falha"]
+
+
+def test_13d_o_ensaio_reprova_a_aceleracao_fora_de_um_g(
+    montar: Callable[..., SimpleNamespace],
+) -> None:
+    mundo = montar(fontes={UNIQ_1: _andando(aceleracao=(0.0, 0.0, 3.0))})
+    feito = _ensaio(mundo.servidor.porta, "--sem-dono")
+    assert feito.returncode == 1
+    assert "aceleração média" in json.loads(feito.stdout)["falha"]
