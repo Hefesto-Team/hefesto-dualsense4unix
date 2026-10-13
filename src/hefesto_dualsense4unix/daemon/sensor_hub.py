@@ -84,11 +84,33 @@ import contextlib
 import threading
 import time
 from collections.abc import Callable
+from dataclasses import dataclass
 from typing import Any, ClassVar
 
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
+
+
+@dataclass(frozen=True)
+class AmostraDoDsu:
+    """O que o servidor DSU lê de UM controle num instante, sem arredondar.
+
+    ``carimbo_us`` e ``epoca`` são os do ``MotionSensorReader``
+    (``carimbo_us`` é ``None`` sem leitor de movimento ou antes do primeiro
+    carimbo). ``toques`` são os dedos do último quadro fechado do touchpad,
+    em ordem de slot; vazio sem dedo ou sem leitor de touchpad.
+    """
+
+    giro: tuple[float, float, float] = (0.0, 0.0, 0.0)
+    aceleracao: tuple[float, float, float] = (0.0, 0.0, 0.0)
+    carimbo_us: int | None = None
+    epoca: int = 0
+    toques: tuple[Any, ...] = ()
+    #: Quais leitores responderam. Giro e aceleração zerados sem
+    #: ``com_movimento`` são ausência, não repouso.
+    com_movimento: bool = False
+    com_toque: bool = False
 
 
 class SensorHub:
@@ -125,6 +147,8 @@ class SensorHub:
         #: `state_full` pede sensor de TODO controle que já tem `inputs`, e
         self._demanda_entradas: dict[str, float] = {}
         self._demanda_do_toque: dict[str, float] = {}
+        #: Os controles cujo dedo o servidor DSU segura (``segurar_o_dedo``).
+        self._dedo_segurado: dict[str, float] = {}
         self._motion: dict[str, Any] = {}
         self._touch: dict[str, Any] = {}
         self._gamepad: dict[str, Any] = {}
@@ -352,6 +376,7 @@ class SensorHub:
             self._demanda.clear()
             self._demanda_entradas.clear()
             self._demanda_do_toque.clear()
+            self._dedo_segurado.clear()
         for reader in readers:
             with contextlib.suppress(Exception):
                 reader.stop()
@@ -396,9 +421,14 @@ class SensorHub:
             self._demanda_entradas = {
                 u: t for u, t in self._demanda_entradas.items() if u in vivos_entradas
             }
+            segurados = {
+                u
+                for u, t in self._dedo_segurado.items()
+                if (agora - t) <= self._DEDO_SEGURADO_TTL_S
+            }
             desejados: dict[str, set[str]] = {
                 "motion": vivos_sensores | desligados,
-                "touchpad": vivos_sensores,
+                "touchpad": vivos_sensores | segurados,
                 "gamepad": vivos_entradas,
             }
             sobrando = [
@@ -630,6 +660,9 @@ class SensorHub:
 
 
     _TOQUE_ROTEADO_TTL_S: ClassVar[float] = 1.5
+    #: Quanto o dedo fica guardado para o emulador depois do último pedido do
+    #: servidor DSU. É o mesmo prazo da inscrição do cliente (5 s).
+    _DEDO_SEGURADO_TTL_S: ClassVar[float] = 5.0
 
     def aceleracao_do_movimento(self, uniq: str) -> tuple[float, float, float] | None:
         """O acelerômetro de `uniq` AGORA, em g; `None` sem leitor."""
@@ -645,6 +678,74 @@ class SensorHub:
             return (float(acel.x), float(acel.y), float(acel.z))
         except Exception:
             return None
+
+    def amostra_do_dsu(self, uniq: str) -> AmostraDoDsu | None:
+        """Giro, aceleração, carimbo, época e toques de `uniq` AGORA; `None` sem leitor.
+
+        IRMÃ MAGRA do servidor DSU, no molde da `velocidade_do_movimento`: sem
+        arredondar, sem montar dicionário, nunca levanta e NÃO DRENA nada
+        (nem o ângulo, nem o delta do cursor). Registra a demanda dos sensores,
+        e é isso que mantém os leitores vivos enquanto um emulador pede; sem
+        pedido, o TTL os apaga em 5 s.
+
+        Um leitor que levanta não derruba o outro: o toque some da amostra sem
+        levar o movimento, e vice-versa. Sem nenhum dos dois, `None`.
+        """
+        agora = self._relogio()
+        with self._lock:
+            self._demanda[uniq] = agora
+            motion = self._motion.get(uniq)
+            touch = self._touch.get(uniq)
+        self._garantir_manutencao()
+        if motion is None and touch is None:
+            return None
+        giro: tuple[float, float, float] = (0.0, 0.0, 0.0)
+        aceleracao: tuple[float, float, float] = (0.0, 0.0, 0.0)
+        carimbo_us: int | None = None
+        epoca = 0
+        toques: tuple[Any, ...] = ()
+        com_movimento = com_toque = False
+        if motion is not None:
+            try:
+                amostra = motion.amostra_do_movimento()
+                g, a = amostra.giro, amostra.aceleracao
+                giro = (float(g[0]), float(g[1]), float(g[2]))
+                aceleracao = (float(a[0]), float(a[1]), float(a[2]))
+                carimbo_us = amostra.carimbo_us
+                epoca = int(amostra.epoca)
+                com_movimento = True
+            except Exception:
+                com_movimento = False
+        if touch is not None:
+            try:
+                toques = tuple(touch.touch_state().pontos)
+                com_toque = True
+            except Exception:
+                toques = ()
+        if not (com_movimento or com_toque):
+            return None
+        return AmostraDoDsu(
+            giro=giro,
+            aceleracao=aceleracao,
+            carimbo_us=carimbo_us,
+            epoca=epoca,
+            toques=toques,
+            com_movimento=com_movimento,
+            com_toque=com_toque,
+        )
+
+    def segurar_o_dedo(self, uniq: str) -> None:
+        """Guarda o dedo de `uniq` para o emulador pelos próximos 5 s.
+
+        Enquanto o servidor DSU renova, o nó «Touchpad» do controle fica com
+        `EVIOCGRAB`: o libinput para de ver o dedo (o cursor do PC não anda) e
+        este hub segue lendo. O prazo vence sozinho; sem renovação o grab solta
+        na volta seguinte da manutenção. O grab do movimento e o do toque são
+        independentes.
+        """
+        with self._lock:
+            self._dedo_segurado[uniq] = self._relogio()
+        self._garantir_manutencao()
 
     def toque_da_peca(self, uniq: str) -> tuple[Any, bool] | None:
         """O dedo de `uniq` AGORA e o clique: `(TouchState, clicado)`; `None` sem leitor."""
@@ -670,12 +771,19 @@ class SensorHub:
         with self._lock:
             leitores = dict(self._touch)
             vistos = dict(self._demanda_do_toque)
+            segurados = dict(self._dedo_segurado)
             self._demanda_do_toque = {
                 u: t for u, t in vistos.items() if agora - t <= self._TOQUE_ROTEADO_TTL_S
             }
+            self._dedo_segurado = {
+                u: t for u, t in segurados.items() if agora - t <= self._DEDO_SEGURADO_TTL_S
+            }
         for uniq, leitor in leitores.items():
             visto = vistos.get(uniq)
-            querido = visto is not None and agora - visto <= self._TOQUE_ROTEADO_TTL_S
+            segurado = segurados.get(uniq)
+            querido = (
+                visto is not None and agora - visto <= self._TOQUE_ROTEADO_TTL_S
+            ) or (segurado is not None and agora - segurado <= self._DEDO_SEGURADO_TTL_S)
             aplicar = getattr(leitor, "set_grab", None)
             if not callable(aplicar):
                 continue
@@ -688,4 +796,4 @@ class SensorHub:
                 aplicar(querido)
 
 
-__all__ = ["SensorHub"]
+__all__ = ["AmostraDoDsu", "SensorHub"]

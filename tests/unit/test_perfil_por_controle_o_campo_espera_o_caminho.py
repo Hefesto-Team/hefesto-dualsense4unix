@@ -470,6 +470,7 @@ def test_o_interruptor_de_sensor_existe_e_e_por_peca() -> None:
     }
     assert publicos == {
         "aceleracao_do_movimento",
+        "amostra_do_dsu",
         "angulo_do_movimento",
         "apertos",
         "entradas",
@@ -477,6 +478,7 @@ def test_o_interruptor_de_sensor_existe_e_e_por_peca() -> None:
         "hz_do_movimento",
         "leitura",
         "reconciliar",
+        "segurar_o_dedo",
         "stop_all",
         "toque_da_peca",
         "velocidade_do_movimento",

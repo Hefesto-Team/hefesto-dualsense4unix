@@ -4652,6 +4652,12 @@ class _HubAusente:
     def toque_da_peca(self, uniq: str) -> None:
         return None
 
+    def amostra_do_dsu(self, uniq: str) -> None:
+        return None
+
+    def segurar_o_dedo(self, uniq: str) -> None:
+        return None
+
 
 HUB_AUSENTE = _HubAusente()
 

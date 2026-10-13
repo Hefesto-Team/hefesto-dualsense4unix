@@ -2029,6 +2029,9 @@ class TouchpadReader(_EvdevReconnectLoop):
         self._accum_dy: int = 0
         self._mt_slot: int = 0
         self._mt_slots: dict[int, dict[str, int | None]] = {}
+        #: Os dedos do último quadro FECHADO (``SYN_REPORT``). ``None`` até o
+        #: primeiro quadro: antes dele vale o que os eventos já disseram.
+        self._mt_publicado: tuple[PontoDeToque, ...] | None = None
         self._ponteiro_do_sistema: bool = False
 
     @property
@@ -2050,7 +2053,11 @@ class TouchpadReader(_EvdevReconnectLoop):
                 y=self._last_abs_y,
                 largura=self._TOUCHPAD_WIDTH,
                 altura=self._TOUCHPAD_HEIGHT,
-                pontos=self._pontos_agora(),
+                pontos=(
+                    self._mt_publicado
+                    if self._mt_publicado is not None
+                    else self._pontos_agora()
+                ),
             )
 
     def consume_motion(self) -> tuple[int, int]:
@@ -2093,6 +2100,11 @@ class TouchpadReader(_EvdevReconnectLoop):
         )
 
     def _handle_event(self, event: Any, ecodes: Any) -> None:
+        if event.type == getattr(ecodes, "EV_SYN", 0):
+            if event.code == getattr(ecodes, "SYN_REPORT", 0):
+                with self._lock:
+                    self._mt_publicado = self._pontos_agora()
+            return
         if event.type == ecodes.EV_ABS:
             if event.code == ecodes.ABS_X:
                 with self._lock:
@@ -2136,10 +2148,11 @@ class TouchpadReader(_EvdevReconnectLoop):
                 self._mt_slot, {"identidade": -1, "x": None, "y": None}
             )
             if codigo == cod_id:
+                # Levantar o dedo só troca a identidade por -1; o X e o Y ficam
+                # como o kernel os guarda. O kernel NÃO reenvia a coordenada
+                # que não mudou (``input.c``), então o dedo seguinte que cai no
+                # mesmo X chega sem ele: apagar aqui fazia o toque sumir.
                 slot["identidade"] = int(event.value)
-                if int(event.value) == -1:
-                    slot["x"] = None
-                    slot["y"] = None
             elif codigo == cod_x:
                 slot["x"] = int(event.value)
             elif codigo == cod_y:
@@ -2182,6 +2195,7 @@ class TouchpadReader(_EvdevReconnectLoop):
             self._touching = False
             self._mt_slots.clear()
             self._mt_slot = 0
+            self._mt_publicado = None
             self._motion_last_x = None
             self._motion_last_y = None
             self._accum_dx = 0
@@ -2239,6 +2253,23 @@ def g_por_unidade(valor: int, resolucao: int) -> float:
     return valor / escala
 
 
+@dataclass(frozen=True)
+class AmostraDoMovimento:
+    """Giro, aceleração e carimbo do MESMO instante, sem arredondar.
+
+    ``carimbo_us`` é o ``MSC_TIMESTAMP`` do kernel (u32 em microssegundos)
+    desenrolado para u64; ``None`` até o primeiro carimbo da abertura.
+    ``epoca`` sobe a cada abertura do nó: o relógio do kernel recomeça em cada
+    ``hid_device``, e quem compara carimbos só pode subtrair dentro da mesma
+    época.
+    """
+
+    giro: tuple[float, float, float] = (0.0, 0.0, 0.0)
+    aceleracao: tuple[float, float, float] = (0.0, 0.0, 0.0)
+    carimbo_us: int | None = None
+    epoca: int = 0
+
+
 class MotionSensorReader(_EvdevReconnectLoop):
     """Lê o giroscópio E o acelerômetro de UM DualSense pelo node "… Motion Sensors".
 
@@ -2294,6 +2325,9 @@ class MotionSensorReader(_EvdevReconnectLoop):
         self._resolucoes_accel: dict[str, int] = {}
         self._angulo: dict[str, float] = {"x": 0.0, "y": 0.0, "z": 0.0}
         self._ultimo_syn: float | None = None
+        self._epoca: int = 0
+        self._carimbo_us: int | None = None
+        self._carimbo_bruto: int | None = None
 
     def consume_angulo(self) -> tuple[float, float, float]:
         """Ângulo percorrido em cada eixo desde a última chamada — e ZERA."""
@@ -2382,6 +2416,26 @@ class MotionSensorReader(_EvdevReconnectLoop):
                 x=self._accel["x"], y=self._accel["y"], z=self._accel["z"]
             )
 
+    def amostra_do_movimento(self) -> AmostraDoMovimento:
+        """Giro, aceleração, carimbo e época de um instante só (um lock)."""
+        with self._lock:
+            return AmostraDoMovimento(
+                giro=(self._eixos["x"], self._eixos["y"], self._eixos["z"]),
+                aceleracao=(self._accel["x"], self._accel["y"], self._accel["z"]),
+                carimbo_us=self._carimbo_us,
+                epoca=self._epoca,
+            )
+
+    def _registrar_o_carimbo(self, valor: int) -> None:
+        """Desenrola o ``MSC_TIMESTAMP`` (u32, µs) para um contador u64 que só sobe."""
+        bruto = valor & 0xFFFFFFFF
+        with self._lock:
+            if self._carimbo_bruto is None or self._carimbo_us is None:
+                self._carimbo_us = bruto
+            else:
+                self._carimbo_us += (bruto - self._carimbo_bruto) & 0xFFFFFFFF
+            self._carimbo_bruto = bruto
+
 
     def _locate(self) -> Path | None:
         mapa = discover_dualsense_motion_evdevs()
@@ -2399,6 +2453,10 @@ class MotionSensorReader(_EvdevReconnectLoop):
     def _on_device_opened(self, dev: Any) -> None:
         """Lê a escala de cada eixo do `absinfo` do node recém-aberto."""
         self._zerar_a_taxa(aberto=True)
+        with self._lock:
+            self._epoca += 1
+            self._carimbo_us = None
+            self._carimbo_bruto = None
         resolucoes: dict[str, int] = {}
         resolucoes_accel: dict[str, int] = {}
         try:
@@ -2429,10 +2487,16 @@ class MotionSensorReader(_EvdevReconnectLoop):
             self._resolucoes_accel = {}
             self._angulo = {"x": 0.0, "y": 0.0, "z": 0.0}
             self._ultimo_syn = None
+            self._carimbo_us = None
+            self._carimbo_bruto = None
         self._zerar_a_taxa(aberto=False)
         self._grab_volta_a_pendente()
 
     def _handle_event(self, event: Any, ecodes: Any) -> None:
+        if event.type == getattr(ecodes, "EV_MSC", None):
+            if event.code == getattr(ecodes, "MSC_TIMESTAMP", None):
+                self._registrar_o_carimbo(int(event.value))
+            return
         if event.type == ecodes.EV_SYN:
             if event.code == ecodes.SYN_REPORT:
                 carimbo = float(event.sec) + float(event.usec) / 1e6
@@ -2595,6 +2659,7 @@ __all__ = [
     "ESPECIE_DUALSENSE",
     "ESPECIE_EXTERNAL",
     "AccelSnapshot",
+    "AmostraDoMovimento",
     "EixoAbsoluto",
     "EvdevReader",
     "EvdevSnapshot",

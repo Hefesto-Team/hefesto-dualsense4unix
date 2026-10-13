@@ -32,8 +32,10 @@ from hefesto_dualsense4unix.core.evdev_reader import TouchpadReader
 class _Ecodes:
     """O módulo real, reduzido — COM os códigos multitouch."""
 
+    EV_SYN = 0
     EV_ABS = 3
     EV_KEY = 1
+    SYN_REPORT = 0
     ABS_X = 0
     ABS_Y = 1
     ABS_MT_SLOT = 47
@@ -112,24 +114,62 @@ def test_levantar_o_primeiro_dedo_nao_renumera_o_segundo() -> None:
     assert [(p.slot, p.x, p.y) for p in pontos] == [(1, 1865, 28)]
 
 
-def test_o_dedo_levantado_nao_deixa_a_posicao_velha_para_tras() -> None:
-    """Reapoiar tem de esperar o kernel dizer ONDE, não herdar o de antes."""
+def _fechar_o_quadro(reader: TouchpadReader) -> None:
+    """O ``SYN_REPORT``: é nele que o kernel fecha um quadro de eventos."""
+    reader._handle_event(_evento(_Ecodes.EV_SYN, _Ecodes.SYN_REPORT, 0), _Ecodes)
+
+
+def test_o_dedo_levantado_guarda_a_coordenada_como_o_kernel() -> None:
+    """O ``-1`` só troca a identidade; X e Y ficam, como no slot do kernel.
+
+    O kernel não reenvia a coordenada que não mudou. Um dedo novo que cai no
+    mesmo X chega com identidade nova e SEM X: o toque tem de estar lá, na
+    coordenada guardada, e não sumir (E3 do servidor DSU).
+    """
     reader = _reader()
     _dedo(reader, 0, 900, 300, ident=7)
+    _fechar_o_quadro(reader)
     _levantar(reader, 0)
+    _fechar_o_quadro(reader)
 
     assert reader.touch_state().pontos == ()
 
-    reader._handle_event(
-        _evento(_Ecodes.EV_ABS, _Ecodes.ABS_MT_SLOT, 0), _Ecodes
-    )
-    reader._handle_event(
-        _evento(_Ecodes.EV_ABS, _Ecodes.ABS_MT_TRACKING_ID, 9), _Ecodes
-    )
-    assert reader.touch_state().pontos == (), (
-        "um slot com identidade nova e sem coordenada virou ponto: "
-        "a bolinha apareceria na posição do dedo ANTERIOR"
-    )
+    reader._handle_event(_evento(_Ecodes.EV_ABS, _Ecodes.ABS_MT_SLOT, 0), _Ecodes)
+    reader._handle_event(_evento(_Ecodes.EV_ABS, _Ecodes.ABS_MT_TRACKING_ID, 9), _Ecodes)
+    _fechar_o_quadro(reader)
+
+    pontos = reader.touch_state().pontos
+    assert [(p.slot, p.x, p.y, p.identidade) for p in pontos] == [(0, 900, 300, 9)]
+
+
+def test_dois_toques_seguidos_no_mesmo_x_aparecem_os_dois() -> None:
+    """O defeito medido: o segundo toque, no mesmo X do primeiro, sumia."""
+    reader = _reader()
+    _dedo(reader, 0, 900, 300, ident=7)
+    _fechar_o_quadro(reader)
+    primeiro = reader.touch_state().pontos
+    _levantar(reader, 0)
+    _fechar_o_quadro(reader)
+    reader._handle_event(_evento(_Ecodes.EV_ABS, _Ecodes.ABS_MT_TRACKING_ID, 8), _Ecodes)
+    reader._handle_event(_evento(_Ecodes.EV_ABS, _Ecodes.ABS_MT_POSITION_Y, 301), _Ecodes)
+    _fechar_o_quadro(reader)
+    segundo = reader.touch_state().pontos
+
+    assert [(p.x, p.y, p.identidade) for p in primeiro] == [(900, 300, 7)]
+    assert [(p.x, p.y, p.identidade) for p in segundo] == [(900, 301, 8)]
+
+
+def test_o_quadro_so_se_publica_no_syn_report() -> None:
+    """Um dedo pela metade (identidade já, coordenada ainda não) não vaza."""
+    reader = _reader()
+    _dedo(reader, 0, 100, 200, ident=1)
+    _fechar_o_quadro(reader)
+
+    reader._handle_event(_evento(_Ecodes.EV_ABS, _Ecodes.ABS_MT_POSITION_X, 500), _Ecodes)
+
+    assert [(p.x, p.y) for p in reader.touch_state().pontos] == [(100, 200)]
+    _fechar_o_quadro(reader)
+    assert [(p.x, p.y) for p in reader.touch_state().pontos] == [(500, 200)]
 
 
 def test_o_ecodes_sem_multitouch_nao_derruba_o_laco_de_eventos() -> None:
