@@ -51,6 +51,7 @@ INTERVALO_MAXIMO_S: Final = 0.100  # nunca mais de 100 ms sem pacote
 MAXIMO_DE_CLIENTES: Final = 32
 SALTO_MAXIMO_DO_RELOGIO_US: Final = 1_000_000
 _MASCARA_DO_CONTADOR: Final = 0xFFFFFFFF
+PRAZO_DA_THREAD_S: Final = 2.0
 _ESPERA_OCIOSA_S: Final = 0.1
 _ESPERA_COM_CLIENTE_S: Final = 0.002
 
@@ -160,9 +161,11 @@ class ServidorDsu:
         thread = self._thread
         self._thread = None
         if thread is not None and thread is not threading.current_thread():
-            thread.join(timeout=2.0)
-        with contextlib.suppress(Exception):
+            thread.join(timeout=PRAZO_DA_THREAD_S)
+        try:
             self._neutro_para_todos(sock, self._agora())
+        except Exception as exc:
+            logger.debug("dsu_neutro_final_falhou", err=str(exc))
         self._sock = None
         with contextlib.suppress(OSError):
             sock.close()
@@ -177,8 +180,10 @@ class ServidorDsu:
 
     def _bump(self, nome: str, delta: int = 1) -> None:
         if self._store is not None:
-            with contextlib.suppress(Exception):
+            try:
                 self._store.bump(nome, delta)
+            except Exception as exc:
+                logger.debug("dsu_contador_falhou", nome=nome, err=str(exc))
 
     def _agora(self) -> float:
         return float(self._relogio())
@@ -271,8 +276,10 @@ class ServidorDsu:
         if hub is None:
             return
         for numero in _slots_da_inscricao((slot, mac), tabela):
-            with contextlib.suppress(Exception):
+            try:
                 hub.segurar_o_dedo(tabela[numero].uniq)
+            except Exception as exc:
+                logger.debug("dsu_segurar_o_dedo_falhou", err=str(exc))
 
     # -- o envio ---------------------------------------------------------------
 
@@ -329,8 +336,10 @@ class ServidorDsu:
         est.mac = publicado.mac
         amostra = None
         if hub is not None:
-            with contextlib.suppress(Exception):
+            try:
                 amostra = hub.amostra_do_dsu(publicado.uniq)
+            except Exception as exc:
+                logger.debug("dsu_amostra_falhou", err=str(exc))
         toques = self._toques(est, amostra)
         chave = (
             (
@@ -411,10 +420,12 @@ class ServidorDsu:
         giroscopio = acelerometro = True
         mirando = False
         if self._registro is not None:
-            with contextlib.suppress(Exception):
+            try:
                 estado = self._registro.estado(uniq)
                 giroscopio, acelerometro = bool(estado.giroscopio), bool(estado.acelerometro)
                 mirando = bool(self._registro.roteado(uniq))
+            except Exception as exc:
+                logger.debug("dsu_registro_falhou", err=str(exc))
         gx, gy, gz = amostra.giro
         ax, ay, az = amostra.aceleracao
         giro = (gx, -gy, -gz) if giroscopio and not mirando else zero

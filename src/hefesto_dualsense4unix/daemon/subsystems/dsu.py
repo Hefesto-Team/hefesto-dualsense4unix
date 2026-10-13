@@ -14,9 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import os
 from collections.abc import Mapping, Sequence
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
 
 from hefesto_dualsense4unix.daemon.servidor_dsu import ServidorDsu, SlotDsu
@@ -72,55 +70,25 @@ def hub_do_laco(daemon: Any) -> Any:
     return garantir()
 
 
+def _publicar_uma_vez(daemon: Any, servidor: ServidorDsu) -> None:
+    try:
+        servidor.publicar(montar_a_tabela(daemon), hub_do_laco(daemon))
+    except Exception as exc:
+        logger.debug("dsu_tabela_falhou", err=str(exc))
+
+
 async def _manter_a_tabela(daemon: Any, servidor: ServidorDsu) -> None:
     """Publica (tabela, hub) no servidor a cada ``INTERVALO_DA_TABELA_S``."""
     while True:
-        try:
-            servidor.publicar(montar_a_tabela(daemon), hub_do_laco(daemon))
-        except asyncio.CancelledError:
-            raise
-        except Exception as exc:
-            logger.debug("dsu_tabela_falhou", err=str(exc))
+        _publicar_uma_vez(daemon, servidor)
         await asyncio.sleep(INTERVALO_DA_TABELA_S)
 
 
-def dono_da_porta(porta: int) -> str | None:
-    """A linha de comando de quem escuta a ``porta`` UDP, ou ``None`` se não se sabe.
-
-    Lê ``/proc/net/udp`` (inode) e os ``fd`` dos processos que a usuária pode
-    ver. Só leitura; nunca levanta.
-    """
-    try:
-        alvo = f":{porta:04X}"
-        inodes: set[str] = set()
-        for linha in Path("/proc/net/udp").read_text().splitlines()[1:]:
-            campos = linha.split()
-            if len(campos) > 9 and campos[1].endswith(alvo) and campos[9] != "0":
-                inodes.add(campos[9])
-        if not inodes:
-            return None
-        for pasta in Path("/proc").iterdir():
-            if not pasta.name.isdigit():
-                continue
-            with contextlib.suppress(OSError):
-                for fd in (pasta / "fd").iterdir():
-                    with contextlib.suppress(OSError):
-                        alvo_do_fd = os.readlink(fd)
-                        if alvo_do_fd.startswith("socket:[") and alvo_do_fd[8:-1] in inodes:
-                            bruto = (pasta / "cmdline").read_bytes()
-                            texto = bruto.replace(b"\0", b" ").decode(errors="replace").strip()
-                            return f"{pasta.name}: {texto[:160]}" if texto else pasta.name
-    except Exception:
-        return None
-    return None
-
-
 def _porta_ocupada(porta: int, exc: OSError) -> OSError:
-    quem = dono_da_porta(porta)
-    de_quem = f"de {quem}" if quem else "de outro processo"
     return OSError(
-        f"a porta UDP {porta} do servidor DSU é {de_quem} ({exc.strerror}); "
-        'troque-a em "servidor_dsu" do maquina.json'
+        f"a porta UDP {porta} do servidor DSU já tem dono ({exc.strerror}); "
+        'troque-a em "servidor_dsu" do maquina.json, ou veja quem a usa com '
+        f"`ss -ulpn 'sport = :{porta}'`"
     )
 
 
@@ -141,12 +109,17 @@ async def stop_dsu(daemon: DaemonProtocol) -> None:
     tarefa, daemon._tarefa_dsu = getattr(daemon, "_tarefa_dsu", None), None
     if tarefa is not None:
         tarefa.cancel()
-        with contextlib.suppress(asyncio.CancelledError, Exception):
-            await tarefa
+        try:
+            with contextlib.suppress(asyncio.CancelledError):
+                await tarefa
+        except Exception as exc:
+            logger.debug("dsu_tarefa_da_tabela_falhou", err=str(exc))
     servidor, daemon._servidor_dsu = daemon._servidor_dsu, None
     if servidor is not None:
-        with contextlib.suppress(Exception):
+        try:
             await asyncio.to_thread(servidor.parar)
+        except Exception as exc:
+            logger.warning("dsu_parar_falhou", err=str(exc))
 
 
 class DsuSubsystem:
@@ -174,7 +147,6 @@ class DsuSubsystem:
 
 __all__ = [
     "DsuSubsystem",
-    "dono_da_porta",
     "hub_do_laco",
     "montar_a_tabela",
     "start_dsu",
