@@ -204,7 +204,7 @@ def test_o_guardado_por_assinatura_e_um_dono_so(dono_armado: None) -> None:
 def test_a_ativacao_pelo_tique_no_laco_nao_semeia(
     dono_armado: None, biblioteca_mudada: list[str]
 ) -> None:
-    """A troca que ATIVA no laço lê o perfil escolhido do disco, e essa leitura também não semeia."""
+    """A troca que ATIVA no laço lê do disco o perfil escolhido, e essa leitura não semeia."""
     _quarenta_perfis_parados()
     sw = AutoSwitcher(manager=_gerente(), window_reader=lambda: dict(JANELA), debounce_sec=0.0)
 
