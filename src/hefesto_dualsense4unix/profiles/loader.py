@@ -1677,6 +1677,8 @@ def desligar_a_leitura_pela_assinatura() -> None:
 
 def load_all_profiles() -> list[Profile]:
     """Lê todos os perfis JSON do diretório, pulando os inválidos com warning."""
+    _maybe_seed_presets()
+    _talvez_semear_jogos()
     return _ler_todos_os_perfis(copiar=True)
 
 
@@ -1687,6 +1689,8 @@ def perfis_para_consulta() -> list[Profile]:
     edita, e copia o que for usar (a escolha copia só o perfil escolhido). Fora da leitura pela
     assinatura, cada chamada lê do disco, como o :func:`load_all_profiles`.
     """
+    _maybe_seed_presets()
+    _talvez_semear_jogos()
     return _ler_todos_os_perfis(copiar=False)
 
 
@@ -1702,9 +1706,7 @@ def _no_laco_do_servico() -> bool:
 
 
 def _ler_todos_os_perfis(*, copiar: bool) -> list[Profile]:
-    """O miolo das duas leituras (no laço do serviço, o :func:`_talvez_semear_jogos` não semeia)."""
-    _maybe_seed_presets()
-    _talvez_semear_jogos()
+    """O miolo das duas leituras, depois das semeaduras que cada porta dispara."""
     directory = profiles_dir(ensure=True)
     profiles: list[Profile] = []
     pela_assinatura = _ode.armado() or _LEITURA_LIGADA_PELO_PROCESSO
