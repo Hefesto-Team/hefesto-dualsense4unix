@@ -10,6 +10,6 @@ Escutar UDP em `127.0.0.1:26760` e falar o protocolo descrito em `docs/protocol/
 
 ## Consequências
 - **Sem autenticação**, como a porta 6969 do DSX (ADR-003): quem alcança a porta lê o toque e o movimento dos controles. O que contém o estrago é o bind em loopback, fixo em `127.0.0.1`; `0.0.0.0` e IPv6 ficam fora. O servidor só **lê**: não escreve no controle, e a vibração do protocolo não é implementada.
-- **O preço de nascer ligado:** a porta fica aberta mesmo para quem não usa emulador, e o leitor de toque e de movimento só trabalha enquanto há cliente (a demanda vence em 5 s). Porta ocupada não derruba o daemon: o subsistema entra em `_failed_subsystems` e o aviso diz de quem é a porta.
+- **O preço de nascer ligado:** a porta fica aberta mesmo para quem não usa emulador, e o leitor de toque e de movimento só trabalha enquanto há cliente (a demanda vence em 5 s). Porta ocupada não derruba o daemon: o subsistema entra em `_failed_subsystems`, o aviso diz que a porta tem dono e aponta o `ss -ulpn`, e quem nomeia o dono é o ensaio `scripts/ensaios/o_dsu_chega_ao_emulador.py`.
 - Mesmo limite de taxa do DSX (global 2000 pacotes/s, 1000 por IP).
 - A tela do servidor DSU fica para uma sprint própria, na sessão dos desenhos.

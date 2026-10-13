@@ -18,8 +18,10 @@ desligar, ponha no `~/.config/hefesto-dualsense4unix/maquina.json`:
 
 e reinicie o serviço: `systemctl --user restart hefesto-dualsense4unix.service`.
 A porta também se troca ali (`"porta": 26760`). Se outro programa já ocupa a
-porta (um evdevhook2, um DS4Windows sob Wine), o Hefesto sobe sem o servidor e
-o diagnóstico diz de quem é a porta.
+porta (um evdevhook2, um DS4Windows sob Wine), o Hefesto sobe sem o servidor, e
+o diário do serviço diz que a porta já tem dono. Quem é o dono, o ensaio diz:
+`python3 scripts/ensaios/o_dsu_chega_ao_emulador.py --slot 0` (ou
+`ss -ulpn 'sport = :26760'`).
 
 **Enquanto um emulador escuta, o dedo no touchpad não move o cursor do PC**:
 o Hefesto segura o nó do touchpad para o jogo. Cinco segundos depois que o
