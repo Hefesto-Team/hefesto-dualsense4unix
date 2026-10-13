@@ -445,6 +445,9 @@ rapido|numeros-da-sony-morde|pytest|tests/unit/test_os_numeros_da_sony_tem_um_do
 # de docstring acima de 10 só descem; a história mora em docs/research/o-porque-dos-modulos.md.
 rapido|docstring-longa|py|scripts/check_docstring_longa.py|src/** scripts/check_docstring_longa.py docs/data/a-catraca-da-docstring-longa.json
 rapido|docstring-longa-morde|pytest|tests/unit/test_a_docstring_longa_so_desce.py|src/** scripts/** docs/data/a-catraca-da-docstring-longa.json tests/unit/test_a_docstring_longa_so_desce.py
+rapido|texto-enxuto|py|scripts/o-texto-enxuto.py --conferir --mudados|@sempre
+rapido|texto-enxuto-catraca|py|scripts/o-texto-enxuto.py --catraca|src/** scripts/o-texto-enxuto.py docs/data/o-texto-enxuto.json
+rapido|texto-enxuto-morde|pytest|tests/unit/test_o_texto_enxuto_se_corrige_no_ato.py|scripts/** src/** .pre-commit-config.yaml tests/unit/test_o_texto_enxuto_se_corrige_no_ato.py
 rapido|ruff|bin|ruff check src/ tests/|src/** tests/** pyproject.toml .gitignore
 # O `scripts/ci/*.sh` entrou em 19/08/2026 com o primeiro script da pasta: diretório de scripts que nenhum
 # linter enxerga é portão cego.

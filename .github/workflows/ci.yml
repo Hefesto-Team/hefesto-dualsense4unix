@@ -81,7 +81,7 @@ jobs:
           echo "$RUNNER_TEMP/venv/bin" >> "$GITHUB_PATH"
 
       - name: Os portões do job, pelo nome na tabela
-        run: bash scripts/portoes.sh --so anonimato pecas-do-dualsense cores-do-dualsense altura-do-cartao regua-de-tela endereco-de-radio serial-de-aparelho mac-por-oui mac-de-fixture test-data faixa-sintetica comentario-cortado desenho-aprovado os-quatro-lugares identidade-de-cima cor-vem-do-aparelho tela-nao-confessa janela-nao-confessa maiuscula-decorativa maiuscula-decorativa-morde so-a-primeira-letra grafia-do-nome grafia-do-nome-morde projeto-traduzivel projeto-traduzivel-morde numeros-da-sony numeros-da-sony-morde docstring-longa docstring-longa-morde
+        run: bash scripts/portoes.sh --so anonimato pecas-do-dualsense cores-do-dualsense altura-do-cartao regua-de-tela endereco-de-radio serial-de-aparelho mac-por-oui mac-de-fixture test-data faixa-sintetica comentario-cortado desenho-aprovado os-quatro-lugares identidade-de-cima cor-vem-do-aparelho tela-nao-confessa janela-nao-confessa maiuscula-decorativa maiuscula-decorativa-morde so-a-primeira-letra grafia-do-nome grafia-do-nome-morde projeto-traduzivel projeto-traduzivel-morde numeros-da-sony numeros-da-sony-morde docstring-longa docstring-longa-morde texto-enxuto texto-enxuto-catraca texto-enxuto-morde
 
   acentuacao:
     name: Acentuação PT-BR estrita (py${{ matrix.python }})
