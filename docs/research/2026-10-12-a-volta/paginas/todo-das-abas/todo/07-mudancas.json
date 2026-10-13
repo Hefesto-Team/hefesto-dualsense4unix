@@ -243,6 +243,40 @@
    "ancora": "todo-07-24",
    "seletor": ".ja-tela.l-larga > .moldura:last-child .ja-linha",
    "conflito": ""
+  },
+  {
+   "n": 25,
+   "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
+   "o_que_muda": "Cada extensão mostra uma linha curta do que faz, sob o nome",
+   "origem": "RODADA-4",
+   "resposta": "todo-07-r4-25",
+   "ancora": "todo-07-25",
+   "seletor": ".ext-faz",
+   "conflito": "Substitui o item 3: a descrição tinha virado dica e volta à vista, por pedido dela."
+  },
+  {
+   "n": 26,
+   "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
+   "o_que_muda": "Os lançadores viram cartões com desenho, os achados primeiro, enchendo a altura sem vão",
+   "origem": "RODADA-4",
+   "resposta": "todo-07-r4-26",
+   "ancora": "todo-07-26",
+   "seletor": ".lanc-fila",
+   "conflito": "A validar por ela."
+  },
+  {
+   "n": 27,
+   "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
+   "o_que_muda": "«Adicionar um lançador» vira o último cartão da grade",
+   "origem": "RODADA-4",
+   "resposta": "todo-07-r4-27",
+   "ancora": "todo-07-27",
+   "seletor": ".lf-novo",
+   "conflito": "A validar por ela."
+  },
+  {
+   "n": 28,
+   "o_que_muda": "O «Quando» da Lovense começa em «Os jogos que eu escolher»; «Jogos com estilo Adulto» vira uma das opções"
   }
  ],
  "por_baixo": [

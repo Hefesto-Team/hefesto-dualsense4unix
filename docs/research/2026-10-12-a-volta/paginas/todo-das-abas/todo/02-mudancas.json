@@ -131,6 +131,15 @@
       "origem": "RODADA-3",
       "ancora": ".moldura > .sticks",
       "conflito": ""
+    },
+    {
+      "n": 15,
+      "sprint": "A-ABA-CONTROLES-DO-TODO-01",
+      "o_que_muda": "«Calibrar giroscópio» com a mesma letra do Modo automático",
+      "resposta": "todo-02-r4-15",
+      "origem": "RODADA-4",
+      "ancora": ".sensores .btn",
+      "conflito": ""
     }
   ],
   "estados": {

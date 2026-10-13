@@ -598,6 +598,20 @@
   /* todo-01-5: todo alvo com no mínimo 24 px, com a mesma letra. */
   [data-gesto]{min-height:24px}
 </style>
+<style data-aba="rodada-4">
+  /* RODADA 4 (12/10): o botão do canto do quadro é UM só desenho, o mesmo do Modo automático das outras
+     abas (34 px de altura, pílula, 600 13,5 px). O Modo Freestyle e o Reconectar moram no canto superior
+     direito do quadro deles, com a mesma largura e a mesma altura. */
+  .quadro-topo{--w-canto:166px}
+  .quadro-topo > .cadeado,.quadro-topo > .canto{
+    display:inline-flex;align-items:center;justify-content:center;gap:9px;flex:0 0 auto;margin-left:auto;
+    width:var(--w-canto);height:34px;padding:0 16px 0 12px;box-sizing:border-box;border-radius:999px;
+    font:600 13.5px/1 'Space Grotesk',system-ui,sans-serif;white-space:nowrap;cursor:pointer}
+  .quadro-topo > .canto{border:1px solid var(--border-forte);background:transparent;color:var(--texto-suave)}
+  .quadro-topo > .canto:hover{border-color:var(--texto-suave);color:var(--fg)}
+  .quadro-topo > .canto .gira{flex:0 0 auto}
+  .quadro-topo > .cadeado .p{width:11px;height:11px}
+</style>
 <style id="base-comum">
 /* ===== Base comum das abas (rodada 2, 12/10/2026) =====
    Copiada IGUAL em todo mockup do todo. Três peças: a dica no hover (sem «?»), o Modo automático
@@ -1174,7 +1188,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     <div class="quadro">
       <div class="quadro-topo">
         <span class="quadro-titulo" data-dica="O desenho dos botões no jogo, por controle">O controle é visto como:</span>
-
+        <button class="canto" type="button" data-gesto="reconectar" data-dica="Desliga e liga de novo todos os controles"><svg class="gira" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M10 6a4 4 0 1 1-1.2-2.85" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M9.4 1.2v2.4H7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Reconectar</button>
       </div>
       <div class="quadro-corpo">
 
@@ -2437,7 +2451,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
             <span>●</span>
             <span>Vai mudar para <b data-campo="pendente-alvo">Sony DualSense</b> quando você clicar em <b>Aplicar</b></span>
           </div>
-          <button class="btn" data-gesto="reconectar">Reconectar controles</button>
 
         </div>
 

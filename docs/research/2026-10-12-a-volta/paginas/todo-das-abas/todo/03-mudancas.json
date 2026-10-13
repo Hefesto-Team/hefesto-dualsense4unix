@@ -113,6 +113,24 @@
       "origem": "RODADA-2 §A3",
       "ancora": ".menu-hefesto",
       "conflito": ""
+    },
+    {
+      "n": 13,
+      "sprint": "A-ABA-GATILHOS-DO-TODO-01",
+      "o_que_muda": "O L2 e o R2 desenhados à esquerda dos controles",
+      "resposta": "todo-03-r4-13",
+      "origem": "RODADA-4",
+      "ancora": ".g2-canto",
+      "conflito": ""
+    },
+    {
+      "n": 14,
+      "sprint": "A-ABA-GATILHOS-DO-TODO-01",
+      "o_que_muda": "Uma linha só, de ponta a ponta, embaixo dos controles",
+      "resposta": "todo-03-r4-14",
+      "origem": "RODADA-4",
+      "ancora": ".g2-sep-cab",
+      "conflito": ""
     }
   ],
   "estados": {

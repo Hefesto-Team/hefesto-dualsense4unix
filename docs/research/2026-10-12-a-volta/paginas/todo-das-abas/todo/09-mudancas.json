@@ -103,6 +103,16 @@
    "ancora": "todo-09-10",
    "seletor": ".registro .log",
    "conflito": ""
+  },
+  {
+   "n": 11,
+   "sprint": "A-ABA-SISTEMA-DO-TODO-01",
+   "o_que_muda": "«Parar o serviço» passa a dizer «Parar»",
+   "origem": "RODADA-4",
+   "resposta": "todo-09-r4-11",
+   "ancora": "todo-09-11",
+   "seletor": "[data-gesto=parar-ou-retomar]",
+   "conflito": ""
   }
  ],
  "por_baixo": [

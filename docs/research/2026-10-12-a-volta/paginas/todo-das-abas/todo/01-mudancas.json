@@ -90,6 +90,24 @@
       "origem": "RODADA-2 §A3",
       "ancora": ".menu-hefesto",
       "conflito": ""
+    },
+    {
+      "n": 10,
+      "sprint": "A-ABA-JOGAR-DO-TODO-01",
+      "o_que_muda": "«Reconectar» sobe para o canto de cima, à direita do quadro",
+      "resposta": "todo-01-r4-10",
+      "origem": "RODADA-4",
+      "ancora": "[data-gesto=\"reconectar\"]",
+      "conflito": ""
+    },
+    {
+      "n": 11,
+      "sprint": "A-ABA-JOGAR-DO-TODO-01",
+      "o_que_muda": "Modo Freestyle e Reconectar com o mesmo tamanho e altura do Modo automático",
+      "resposta": "todo-01-r4-11",
+      "origem": "RODADA-4",
+      "ancora": ".quadro-topo > .cadeado",
+      "conflito": ""
     }
   ],
   "estados": {

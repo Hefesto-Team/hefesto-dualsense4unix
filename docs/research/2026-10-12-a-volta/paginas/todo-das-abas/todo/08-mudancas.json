@@ -113,6 +113,16 @@
    "ancora": "todo-08-11",
    "seletor": ".cartao-dica .cd-x",
    "conflito": ""
+  },
+  {
+   "n": 12,
+   "sprint": "A-ABA-CONEXOES-DO-TODO-01",
+   "o_que_muda": "Os cartões dos controles perdem os botões de perfil; o perfil se escolhe na aba Sistema",
+   "origem": "RODADA-4",
+   "resposta": "todo-08-r4-12",
+   "ancora": "todo-08-12",
+   "seletor": ".gc-corpo",
+   "conflito": "O «Personalizado» saiu junto com Máximo e Econômico: sozinho não escolhe nada, e também está na 09."
   }
  ],
  "por_baixo": [
