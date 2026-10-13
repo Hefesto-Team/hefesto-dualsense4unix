@@ -163,6 +163,36 @@ def test_bloco_torto_deixa_so_aquela_de_fora(
         x.chave for x in desenho.EMBUTIDOS], "sem modificação, a lista mudou"
 
 
+def test_o_tirar_daqui_nao_alcanca_o_cartao_da_modificacao(
+    a07: ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
+    """ARRANQUE o ``if not x.modificacao`` de ``esquecer_lancador`` e isto reprova.
+
+    O botão não é pintado no cartão da modificação, mas o gesto não confia no
+    desenho: um clique com a chave dela gravaria um esquecimento que não tira
+    nada e diria «Tirei KytyPS5 daqui» com o cartão ainda na tela.
+    """
+    lg = _plantar(tmp_path)
+    _no_xdg(monkeypatch, lg)
+    _so_as_modificacoes(a07, monkeypatch)
+
+    class _Ponte:
+        def __init__(self) -> None:
+            self.chamadas: list[object] = []
+
+        def machine_declare(self, pedido: object) -> bool:
+            self.chamadas.append(pedido)
+            return True
+
+    class _Ctx:
+        state: dict[str, object] | None = None
+
+    ponte = _Ponte()
+    with pytest.raises(RuntimeError):
+        a07.esquecer_lancador(_Ctx(), {"gesto": desenho.REMOVER, "v": "kytyps5"}, ponte)
+    assert ponte.chamadas == [], f"o gesto gravou sobre o cartão da modificação: {ponte.chamadas}"
+
+
 def test_a_modificacao_com_a_chave_de_fabrica_ensina_sem_dar_o_tirar() -> None:
     leitor = censo.LeitorPorProcesso("retroarch", "RetroArch", ("ler.py",), Path("/x"))
     ensino = desenho.SemCenso("retroarch", "Outro nome", ("meu-retro",), (),

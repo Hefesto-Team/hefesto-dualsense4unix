@@ -1630,7 +1630,8 @@ def esquecer_lancador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
             "escolhido por acaso.")
         raise ValueError(
             "O clique não disse de qual lançador se trata. Nada foi tirado.")
-    declarados = {x.chave: x.nome for x in _declarados()}
+    # O cartão que veio de uma modificação não se tira daqui: sair é desligá-la.
+    declarados = {x.chave: x.nome for x in _declarados() if not x.modificacao}
     if qual not in declarados:
         raise RuntimeError(
             "Não há nada a tirar: este cartão é de fábrica e você não apontou "
