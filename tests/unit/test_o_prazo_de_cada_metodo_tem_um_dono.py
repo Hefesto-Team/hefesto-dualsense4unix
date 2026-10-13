@@ -23,6 +23,10 @@ from typing import Any
 import pytest
 from typer.testing import CliRunner
 
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("importa `interface.pacotes.ponte`, que carrega o GTK")
+
 from hefesto_dualsense4unix.app import ipc_bridge
 from hefesto_dualsense4unix.cli import ipc_client
 from hefesto_dualsense4unix.cli.app import app

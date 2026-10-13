@@ -18,6 +18,10 @@ from typing import Any
 
 import pytest
 
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("importa `app.actions.daemon_actions`, que carrega o GTK")
+
 from hefesto_dualsense4unix.app.actions import daemon_actions
 from hefesto_dualsense4unix.integrations import window_detect
 from hefesto_dualsense4unix.integrations.window_backends import cosmic_toplevel, wlr_toplevel

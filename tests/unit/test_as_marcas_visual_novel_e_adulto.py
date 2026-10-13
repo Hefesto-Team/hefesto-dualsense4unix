@@ -15,6 +15,10 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("importa `app.actions.perfis_web`, que carrega o GTK")
+
 from hefesto_dualsense4unix.app.actions import perfis_web
 from hefesto_dualsense4unix.core.controller import OutputSpec
 from hefesto_dualsense4unix.profiles import loader, marcas_do_jogo
