@@ -42,7 +42,7 @@ Envelope do **dialeto do Hefesto** — textual, o mesmo efeito:
 Vira **deadzone do gatilho no gamepad virtual**, igual ao DSX: abaixo do limiar o jogo lê zero, do limiar em diante o valor bruto passa intacto (sem reescala). Três coisas que o exemplo acima não conta:
 
 - **Só tem efeito com a emulação de gamepad ligada.** Em Modo Nativo não existe pad virtual: o limiar é guardado e não faz nada. O daemon loga `udp_trigger_threshold` em `info` a cada mudança — é assim que se confere.
-- **Vale para o jogador 1.** O índice de controle é descartado.
+- **Vale para cada jogador.** O limiar é guardado para o destino da aba Conexões (em «Todos», cada controle aberto), e o pad virtual de cada jogador corta o seu. O índice de controle é descartado.
 - **É pegajoso:** sobrevive à saída do mod. Mande `ResetToUserSettings` ao encerrar (ou reinicie o daemon) para voltar ao padrão `0`.
 
 O layout canônico do DSX (`[controllerIndex, side, value]`, com `side` em 1=Left / 2=Right) também é aceito.
@@ -72,7 +72,7 @@ s.sendto(json.dumps(pkt).encode(), ("127.0.0.1", 6969))
 Não há resposta no fio — UDP fire-and-forget, como no DSX. O que existe são contadores no `state_store`, visíveis pelo IPC de estado:
 
 - `udp.applied.<type>` — instrução executada.
-- `udp.error.<type>` — instrução conhecida que falhou na validação (parâmetro fora de range, preset inexistente, modo de gatilho sem tradução).
+- `udp.error.<type>` — instrução conhecida que falhou na validação (parâmetro fora de range, preset inexistente, modo de gatilho sem tradução, nenhum controle de destino para o gatilho ou o limiar).
 - `udp.unknown_instruction` — `type` que este daemon não conhece (também vai para o log `warn`).
 - `udp.dsx_envelope` — pacote chegou no formato canônico do DSX (sem `version`).
 - `udp.controller_index_ignorado` — o mod endereçou um controle que não o primário.
