@@ -14,6 +14,9 @@ Tópicos canônicos do domínio Hefesto - DualSense4Unix (constantes em `EventTo
   - `controller.connected` / `controller.disconnected`.
   - `trigger.set`        — trigger efetivamente aplicado.
   - `led.set`            — led efetivamente aplicado.
+  - `jogo.vibracao`      — o par que o jogo pediu a UM controle e o que chegou aos motores.
+  - `jogo.fechou`        — o jogo em cena saiu.
+  - `perfil.trocou`      — o perfil efetivo mudou (guardado: quem assina depois recebe o de agora).
 
 Thread-safety: `publish` pode ser chamado de dentro de um executor
 (thread diferente do loop). A entrega usa `loop.call_soon_threadsafe`
@@ -45,6 +48,15 @@ class EventTopic:
     MIC_DA_MESA = "mic.da_mesa"
     MIC_DO_JOGO = "mic.do_jogo"
     SOM_DO_SISTEMA = "som.do_sistema"
+    JOGO_VIBRACAO = "jogo.vibracao"
+    JOGO_FECHOU = "jogo.fechou"
+    PERFIL_TROCOU = "perfil.trocou"
+
+
+#: Os tópicos de ESTADO: o último valor publicado fica guardado e vai a quem assina depois,
+#: porque o estado vale até a próxima troca e quem conecta com o jogo já aberto não tem
+#: de esperá-la. Evento (a vibração, o jogo que fechou) não entra aqui: repeti-lo seria mentir.
+TOPICOS_DE_ESTADO: frozenset[str] = frozenset({EventTopic.PERFIL_TROCOU})
 
 
 @dataclass
@@ -60,6 +72,7 @@ class EventBus:
     queue_maxsize: int = DEFAULT_QUEUE_MAXSIZE
     _subs: dict[str, list[_Subscriber]] = field(default_factory=dict)
     _loop: asyncio.AbstractEventLoop | None = None
+    _estado: dict[str, Any] = field(default_factory=dict)
 
     def bind_loop(self, loop: asyncio.AbstractEventLoop) -> None:
         """Marca qual loop o bus serve. Chamado uma vez no start do daemon."""
@@ -70,6 +83,8 @@ class EventBus:
         queue: asyncio.Queue[Any] = asyncio.Queue(maxsize=self.queue_maxsize)
         sub = _Subscriber(queue=queue)
         self._subs.setdefault(topic, []).append(sub)
+        if topic in self._estado:
+            queue.put_nowait(self._estado[topic])
         return queue
 
     def unsubscribe(self, topic: str, queue: asyncio.Queue[Any]) -> None:
@@ -78,6 +93,8 @@ class EventBus:
 
     def publish(self, topic: str, payload: Any) -> None:
         """Publica um evento. Seguro para chamar de threads não-loop."""
+        if topic in TOPICOS_DE_ESTADO:
+            self._estado[topic] = payload
         subs = list(self._subs.get(topic, ()))
         if not subs:
             return
@@ -127,4 +144,4 @@ class EventBus:
         return len(self._subs.get(topic, []))
 
 
-__all__ = ["DEFAULT_QUEUE_MAXSIZE", "EventBus", "EventTopic"]
+__all__ = ["DEFAULT_QUEUE_MAXSIZE", "TOPICOS_DE_ESTADO", "EventBus", "EventTopic"]

@@ -60,6 +60,11 @@ import time
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, Literal
 
+from hefesto_dualsense4unix.daemon.subsystems.vibracao_do_jogo import (
+    bater_a_vibracao,
+    dizer_a_vibracao,
+    esquecer_a_vibracao,
+)
 from hefesto_dualsense4unix.profiles.schema import MOTOR_PCT_PADRAO
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -649,11 +654,15 @@ def apply_game_rumble(
         (:func:`_mults_por_motor`). Sem ``target_uniq`` e sem ``vpad``, numa
         mesa que se escreve por controle, o pedido vai a cada um que o
         ``set_rumble`` alcançaria, com a força dele.
+      - A-VIBRACAO-DO-CONTROLE-CHEGA-AOS-ACESSORIOS-PELO-BUTTPLUG-01 (13/10/2026): cada
+        pedido, inclusive o que o par fixado vence, vira o evento ``jogo.vibracao`` com
+        o par pedido e o efetivo (`vibracao_do_jogo`); a batida de 250 ms sai do tique.
     """
     from hefesto_dualsense4unix.daemon.subsystems.rumble import par_fixado_vale_para
 
     if par_fixado_vale_para(daemon.config, target_uniq):
         _levar_a_haptica_fina(daemon, vpad, target_uniq, 0, 0)
+        dizer_a_vibracao(daemon, target_uniq, (weak, strong), None)
         return None
     controller = daemon.controller
     if target_uniq is None and vpad is None:
@@ -688,24 +697,36 @@ def apply_game_rumble(
     ):
         motores = (0, 0)
 
+    efetivo = _entregar_o_rumble(controller, target_uniq, motores, (weak_eff, strong_eff))
+    dizer_a_vibracao(daemon, target_uniq, (weak, strong), efetivo)
+    return efetivo
+
+
+def _entregar_o_rumble(
+    controller: Any,
+    target_uniq: str | None,
+    motores: tuple[int, int],
+    efetivo: tuple[int, int],
+) -> tuple[int, int] | None:
+    """Escreve o par no controle (por endereço, quando pedido). ``None`` = nada foi escrito."""
     # Any: o targeting por-uniq é opcional no backend (só o PyDualSense o
     rumble_for: Any = getattr(controller, "set_rumble_for", None)
     if target_uniq is not None:
         if callable(rumble_for):
             try:
                 if rumble_for(target_uniq, *motores):
-                    return (weak_eff, strong_eff)
+                    return efetivo
             except Exception as exc:
                 logger.warning("game_rumble_target_failed", err=str(exc), target=target_uniq)
                 return None
         logger.debug("game_rumble_sem_alvo_descartado", target=target_uniq)
         return None
     try:
-        controller.set_rumble(weak=weak_eff, strong=strong_eff)
+        controller.set_rumble(weak=efetivo[0], strong=efetivo[1])
     except Exception as exc:
         logger.warning("game_rumble_failed", err=str(exc))
         return None
-    return (weak_eff, strong_eff)
+    return efetivo
 
 
 def _levar_a_haptica_fina(
@@ -823,6 +844,8 @@ def end_game_output_session(
 ) -> None:
     """Fim da sessão uhid do jogador: devolve perfil/paleta/co-op (REPLICA-03)."""
     _esquecer_o_numero_do_jogo(daemon, target_uniq)
+    if target_uniq is not None:
+        esquecer_a_vibracao(daemon, target_uniq)
     fn: Any = getattr(daemon.controller, "end_game_session_for", None)
     if target_uniq is None or not callable(fn):
         logger.debug("game_session_end_sem_alvo", target=target_uniq)
@@ -1960,6 +1983,7 @@ def dispatch_gamepad(
     """Repassa o estado do controle ao gamepad virtual."""
     _reconciliar_launch(daemon)
     _avisar_troca_de_modo(daemon)
+    bater_a_vibracao(daemon)
     device = daemon._gamepad_device
     if device is None:
         return

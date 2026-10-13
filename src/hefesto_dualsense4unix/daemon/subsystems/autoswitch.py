@@ -3,13 +3,16 @@ from __future__ import annotations
 
 import contextlib
 import os
+import time
 from typing import TYPE_CHECKING, Any
 
+from hefesto_dualsense4unix.core.events import EventTopic
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from hefesto_dualsense4unix.core.events import EventBus
     from hefesto_dualsense4unix.daemon.context import DaemonContext
     from hefesto_dualsense4unix.daemon.lifecycle import DaemonConfig
     from hefesto_dualsense4unix.daemon.protocols import DaemonProtocol
@@ -67,7 +70,80 @@ def _o_jogo_em_cena_do_servico(daemon: object) -> Callable[[], int | None]:
     return _ler
 
 
-def _build_diag_window_reader(store: StateStore) -> Callable[[], dict[str, Any]]:
+class AnunciadorDoJogo:
+    """Diz no barramento o perfil que mudou (`perfil.trocou`) e o jogo que fechou (`jogo.fechou`).
+
+    A-VIBRACAO-DO-CONTROLE-CHEGA-AOS-ACESSORIOS-PELO-BUTTPLUG-01. Olha o que o serviço já
+    sabe a cada leitura da janela, que é o tique do autoswitch: o perfil ativo do store, que
+    toda ativação publica, de qualquer origem (a janela, o jogo em cena, a tela, o terminal), e
+    o `appid_em_cena` do serviço. A primeira leitura diz o perfil de agora (a carga inicial), e
+    o barramento o guarda para quem assina depois. `jogo.fechou` esquece também a batida da
+    vibração, para o evento que ficou pendente não sair com o jogo já fechado.
+    """
+
+    _NUNCA: object = object()
+
+    def __init__(self, bus: EventBus, store: Any, daemon: Any) -> None:
+        self._bus = bus
+        self._store = store
+        self._daemon = daemon
+        self._perfil: object = self._NUNCA
+        self._appid: int | None = None
+
+    def ver(self) -> None:
+        """Compara com o que disse da última vez e diz a diferença. Nunca levanta."""
+        with contextlib.suppress(Exception):
+            self._ver_o_perfil()
+        with contextlib.suppress(Exception):
+            self._ver_o_jogo()
+
+    def _ver_o_perfil(self) -> None:
+        nome = getattr(self._store, "active_profile", None)
+        nome = nome if isinstance(nome, str) and nome else None
+        if nome == self._perfil:
+            return
+        self._perfil = nome
+        self._bus.publish(
+            EventTopic.PERFIL_TROCOU,
+            {"perfil": nome, "marcas": _marcas_do_perfil(nome), "t": time.monotonic()},
+        )
+
+    def _ver_o_jogo(self) -> None:
+        appid = getattr(self._daemon, "appid_em_cena", None)
+        appid = appid if isinstance(appid, int) and not isinstance(appid, bool) else None
+        anterior, self._appid = self._appid, appid
+        if anterior is None or appid == anterior:
+            return
+        from hefesto_dualsense4unix.daemon.subsystems.vibracao_do_jogo import (
+            esquecer_a_vibracao,
+        )
+
+        self._bus.publish(
+            EventTopic.JOGO_FECHOU, {"appid": anterior, "t": time.monotonic()}
+        )
+        esquecer_a_vibracao(self._daemon)
+
+
+def _marcas_do_perfil(nome: str | None) -> list[str]:
+    """As marcas que o arquivo do perfil guarda agora, sem semear nem varrer o disco."""
+    if nome is None:
+        return []
+    from hefesto_dualsense4unix.profiles.loader import perfil_em_disco
+
+    perfil = perfil_em_disco(nome)
+    marcas = getattr(perfil, "marcas", None)
+    return [m for m in marcas if isinstance(m, str)] if marcas else []
+
+
+def _anunciador_do(bus: object, store: Any, daemon: object) -> AnunciadorDoJogo | None:
+    """O anunciador do serviço, ou `None` sem barramento (um dublê enxuto de teste)."""
+    publicar = getattr(bus, "publish", None)
+    return AnunciadorDoJogo(bus, store, daemon) if callable(publicar) else None  # type: ignore[arg-type]
+
+
+def _build_diag_window_reader(
+    store: StateStore, anunciador: AnunciadorDoJogo | None = None
+) -> Callable[[], dict[str, Any]]:
     """Constrói o window reader e o instrumenta com diagnóstico no store."""
     from hefesto_dualsense4unix.integrations.window_detect import build_window_reader
 
@@ -122,6 +198,8 @@ def _build_diag_window_reader(store: StateStore) -> Callable[[], dict[str, Any]]
             wm_class if isinstance(wm_class, str) else None,
             reason=getattr(reader, "last_reason", None),
         )
+        if anunciador is not None:
+            anunciador.ver()
         return info
 
     return _read
@@ -144,7 +222,9 @@ class AutoswitchSubsystem:
         manager = gerente_do_daemon(daemon, controller=ctx.controller, store=ctx.store)
         self._autoswitch = AutoSwitcher(
             manager=manager,
-            window_reader=_build_diag_window_reader(ctx.store),
+            window_reader=_build_diag_window_reader(
+                ctx.store, _anunciador_do(getattr(ctx, "bus", None), ctx.store, daemon)
+            ),
             store=ctx.store,
             modo_jogo_padrao_applier=getattr(
                 daemon, "aplicar_modo_jogo_padrao", None
@@ -185,7 +265,10 @@ async def start_autoswitch(daemon: DaemonProtocol) -> None:
     manager = gerente_do_daemon(daemon, store=daemon.store)
     daemon._autoswitch = AutoSwitcher(
         manager=manager,
-        window_reader=_build_diag_window_reader(daemon.store),
+        window_reader=_build_diag_window_reader(
+            daemon.store,
+            _anunciador_do(getattr(daemon, "bus", None), daemon.store, daemon),
+        ),
         store=daemon.store,
         modo_jogo_padrao_applier=getattr(daemon, "aplicar_modo_jogo_padrao", None),
         modo_jogo_padrao_reverter=getattr(daemon, "reverter_modo_jogo_padrao", None),
@@ -198,4 +281,4 @@ async def start_autoswitch(daemon: DaemonProtocol) -> None:
         daemon._autoswitch.start()
 
 
-__all__ = ["AutoswitchSubsystem", "start_autoswitch"]
+__all__ = ["AnunciadorDoJogo", "AutoswitchSubsystem", "start_autoswitch"]

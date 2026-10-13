@@ -36,6 +36,15 @@ TOPICOS_DE_LEITURA: dict[str, tuple[str, ...]] = {
         EventTopic.CONTROLLER_CONNECTED,
         EventTopic.CONTROLLER_DISCONNECTED,
     ),
+    # A vibração que o jogo pede a cada controle (com o número do jogador) e o aviso de que o
+    # jogo fechou: quem acompanha a vibração precisa dos dois, e por isso é uma permissão só.
+    "jogo.vibracao": (  # (noqa-acento): contrato ASCII
+        EventTopic.JOGO_VIBRACAO,
+        EventTopic.JOGO_FECHOU,
+    ),
+    # O perfil efetivo e as marcas dele. Fica à parte do jogo: saber que o perfil tem a marca
+    # «Adulto» é dado da pessoa, e quem só quer a vibração não o recebe.
+    "perfil.marcas": (EventTopic.PERFIL_TROCOU,),
 }
 
 #: ``escrever:<canal>``: os canais do controle que uma modificação pode pedir.
@@ -52,6 +61,10 @@ _O_QUE_DEIXA: dict[str, str] = {
     "ler:botoes": "Saber quando um botão é apertado e solto.",
     "ler:bateria": "Saber a carga da bateria.",
     "ler:conexao": "Saber quando um controle entra ou sai.",  # (noqa-acento): contrato ASCII
+    "ler:jogo.vibracao": (  # (noqa-acento): contrato ASCII
+        "Saber a vibração que o jogo pede a cada controle e quando o jogo fecha."
+    ),
+    "ler:perfil.marcas": "Saber o perfil em uso e as marcas dele.",
     "escrever:luz": "Mudar a cor da luz de um controle.",
     "escrever:vibracao": "Fazer um controle vibrar.",
     "escrever:gatilho": "Mudar a resistência dos gatilhos de um controle.",
