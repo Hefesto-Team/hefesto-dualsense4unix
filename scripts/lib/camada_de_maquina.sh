@@ -1368,8 +1368,8 @@ install_wifi_usb_host() {
 # O install PERGUNTA. `--desempenho` e `--sem-desempenho` respondem sem
 # perguntar; sem TTY (o `--yes`, o CI) vale o PADRÃO: sim no desktop, não no
 # notebook (a máquina com bateria, `power_supply/BAT*`), onde o desempenho custa
-# a bateria de quem joga fora da tomada. O padrão é escolha de produto
-# pelo padrão de produto, a validar pelo usuário.
+# a bateria de quem joga fora da tomada. O padrão é escolha de produto.
+#
 #
 # Cada ajuste é um arquivo permanente, e o mecanismo mora em
 # `scripts/desempenho.sh` (aplicar e remover; o uninstall chama o mesmo dono).
