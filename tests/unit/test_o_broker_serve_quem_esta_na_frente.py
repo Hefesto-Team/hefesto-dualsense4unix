@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import os
 import re
+import shutil
 import socket
 import stat
 import subprocess
@@ -470,6 +471,47 @@ class TestRegraSudoPorGrupo:
         r = self._regra(tmp_path, ruim)
         assert r.returncode != 0
         assert "NOPASSWD" not in r.stdout
+
+    def test_o_grupo_e_a_conta_saem_cada_um_na_sua_linha(self, tmp_path: Path) -> None:
+        """O grupo serve a segunda conta; a conta vale já, antes do novo login."""
+        r = subprocess.run(
+            ["bash", str(PONTE), "regra-sudo", "%hefesto", "fulana"],
+            capture_output=True,
+            text=True,
+            cwd=str(tmp_path),
+            env={"PATH": "/usr/bin:/bin", "HOME": str(tmp_path)},
+            check=False,
+        )
+        assert r.returncode == 0, r.stderr
+        linhas = re.findall(r"^(\S+) ALL=\(root\) NOPASSWD: HEFESTO_BT_PONTE$", r.stdout, re.MULTILINE)
+        assert linhas == ["%hefesto", "fulana"]
+        visudo = shutil.which("visudo") or next(
+            (c for c in ("/usr/sbin/visudo", "/sbin/visudo") if os.path.exists(c)), None
+        )
+        if visudo is not None:
+            regra = tmp_path / "regra"
+            regra.write_text(r.stdout, encoding="utf-8")
+            v = subprocess.run([visudo, "-cqf", str(regra)], capture_output=True, text=True, check=False)
+            assert v.returncode == 0, v.stdout + v.stderr
+
+    def test_um_principal_torto_entre_bons_recusa_a_regra_inteira(self, tmp_path: Path) -> None:
+        r = subprocess.run(
+            ["bash", str(PONTE), "regra-sudo", "%hefesto", "ALL"],
+            capture_output=True,
+            text=True,
+            cwd=str(tmp_path),
+            env={"PATH": "/usr/bin:/bin", "HOME": str(tmp_path)},
+            check=False,
+        )
+        assert r.returncode != 0
+        assert "NOPASSWD" not in r.stdout
+
+    def test_o_install_abre_a_ponte_ao_grupo_e_a_conta_que_instala(self) -> None:
+        """Só o grupo deixava a conta que acabou de entrar nele sem a ponte até o novo login."""
+        texto = CAMADA.read_text(encoding="utf-8")
+        i = texto.index("install_bt_ponte_privilegiada_host() {")
+        corpo = texto[i : texto.index("\n}\n", i)]
+        assert re.search(r'regra-sudo "%hefesto" "\$\{_ponte_usuaria\}"', corpo), corpo
 
     def test_o_install_poe_a_conta_no_grupo_hefesto(self) -> None:
         texto = CAMADA.read_text(encoding="utf-8")

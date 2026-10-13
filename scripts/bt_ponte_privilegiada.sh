@@ -101,8 +101,9 @@
 #                                             (STORM-USB-02). Sem dado: quem
 #                                             escolhe é o /sys, pelas guardas do
 #                                             bt_rebind_orphans.sh
-#   regra-sudo <USUARIA|%GRUPO> — imprime o /etc/sudoers.d (não instala; o
-#                                             install passa %hefesto)
+#   regra-sudo <USUARIA|%GRUPO>... — imprime o /etc/sudoers.d (não instala;
+#                                             o install passa %hefesto e a conta
+#                                             que instala)
 #
 # Os verbos sem dado não leem o stdin: quem os chama (o watchdog, o
 # storm_watch, o install) não fecha o stdin, e um verbo que o esperasse ficaria
@@ -307,7 +308,7 @@ uso: bt_ponte_privilegiada.sh <verbo> [segundos]   (os dados vêm pelo STDIN)
   desconectar        MAC do adaptador, MAC do controle
   reiniciar-travado  —
   religar-orfaos     —
-  regra-sudo <USUARIA|%GRUPO>
+  regra-sudo <USUARIA|%GRUPO>...
 
   exemplo: printf '%s\n%s\n' <adaptador> <controle> | sudo bt_ponte_privilegiada.sh esquecer
 
@@ -1250,7 +1251,7 @@ verbo_religar_orfaos() {
 #: para o `visudo -c`. Verbo novo no `case` lá embaixo tem de aparecer aqui, ou
 #: a janela não consegue chamá-lo — que é o sentido certo da falha.
 verbo_regra_sudo() {
-    local usuaria="$1"
+    local principal
     #: NENHUM argumento de aparelho, e nenhum `*`: o endereço e o nome novo vêm
     #: pelo stdin (contenção 1), e a linha de comando que o sudo permite é o
     #: verbo e nada mais. Um verbo com argumento na regra casa SÓ aquele
@@ -1261,7 +1262,7 @@ verbo_regra_sudo() {
     #: NOPASSWD estreito vira NOPASSWD largo.
     cat <<FIM
 # /etc/sudoers.d/49-hefesto-bt-ponte — gerado por
-# ${ALVO_INSTALADO} regra-sudo ${usuaria}
+# ${ALVO_INSTALADO} regra-sudo $*
 #
 # A ponte privilegiada do Bluetooth: o sudo é do install e vale para o app
 # inteiro. NÃO editar à mão: o install regrava.
@@ -1283,8 +1284,14 @@ Cmnd_Alias HEFESTO_BT_PONTE = \\
     ${ALVO_INSTALADO} descobrir [0-9][0-9], \\
     ${ALVO_INSTALADO} descobrir [0-9][0-9][0-9]
 
-${usuaria} ALL=(root) NOPASSWD: HEFESTO_BT_PONTE
 FIM
+    #: Uma linha por principal. O install passa o grupo E a conta que instala: o
+    #: sudo, no `group_source` padrão, lê os grupos do PROCESSO, e quem acabou de
+    #: entrar no grupo `hefesto` só o carrega no próximo login. Sem a linha da
+    #: conta, o botão de mover controle pediria senha até lá.
+    for principal in "$@"; do
+        printf '%s ALL=(root) NOPASSWD: HEFESTO_BT_PONTE\n' "${principal}"
+    done
 }
 
 # --- despacho ---------------------------------------------------------------
@@ -1355,9 +1362,12 @@ case "${VERBO}" in
         verbo_religar_orfaos
         ;;
     regra-sudo)
-        [[ $# -eq 1 ]] || _recusar "regra-sudo recebe exatamente 1 argumento (nome da usuária)"
-        _principal_do_sudoers "${1}"; ARG_USUARIA="${VALIDADO}"
-        verbo_regra_sudo "${ARG_USUARIA}"
+        [[ $# -ge 1 ]] || _recusar "regra-sudo recebe ao menos 1 argumento (nome da usuária ou %grupo)"
+        _principais=()
+        for _p in "$@"; do
+            _principal_do_sudoers "${_p}"; _principais+=("${VALIDADO}")
+        done
+        verbo_regra_sudo "${_principais[@]}"
         ;;
     ajuda|--help|-h)
         _uso

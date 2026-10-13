@@ -695,7 +695,10 @@ install_bt_ponte_privilegiada_host() {
         rm -f "${_ponte_tmp}"
         return 0
     fi
-    if ! bash "${_ponte_alvo}" regra-sudo "%hefesto" >"${_ponte_tmp}" 2>/dev/null; then
+    # O grupo E a conta: a linha do grupo serve a segunda conta da máquina, e a
+    # da conta vale já, sem esperar o novo login que o `usermod -aG` pede (o sudo
+    # lê os grupos do processo, não o /etc/group).
+    if ! bash "${_ponte_alvo}" regra-sudo "%hefesto" "${_ponte_usuaria}" >"${_ponte_tmp}" 2>/dev/null; then
         warn "a ponte recusou gerar a regra para o grupo hefesto — nada gravado em ${_ponte_regra}"
         rm -f "${_ponte_tmp}"
         return 0
@@ -714,8 +717,8 @@ install_bt_ponte_privilegiada_host() {
     fi
     rm -f "${_ponte_tmp}"
     printf '      ponte privilegiada instalada: mover controle entre dongles sem digitar senha\n'
-    printf '        (%s, NOPASSWD só para o grupo hefesto; os verbos nomeados um a um, o endereço\n' \
-        "${_ponte_regra}"
+    printf '        (%s, NOPASSWD só para o grupo hefesto e para %s; os verbos nomeados um a um, o endereço\n' \
+        "${_ponte_regra}" "${_ponte_usuaria}"
     printf '         e o nome novo pelo stdin, e NENHUM verbo que execute comando livre)\n'
     if sudo -n -l -U "${_ponte_usuaria}" "${_ponte_alvo}" adaptadores >/dev/null 2>&1; then
         printf '      conferido no próprio sudo: a regra já vale para %s (não é só arquivo no disco)\n' "${_ponte_usuaria}"
