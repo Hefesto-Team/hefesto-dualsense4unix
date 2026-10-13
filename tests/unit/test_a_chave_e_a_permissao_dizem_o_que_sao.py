@@ -166,3 +166,12 @@ def test_o_main_sai_com_1_quando_o_ipc_nao_abre(
     erro = capsys.readouterr().err
     assert "ls -ld" in erro
     assert str(runtime_sem_escrita) in erro
+
+
+def test_o_socket_ocupado_nao_manda_conferir_permissao(tmp_path: Path) -> None:
+    sock = tmp_path / "run" / "hefesto.sock"
+    ocupado = IpcIndisponivel(sock, RuntimeError(f"socket ocupado por outro daemon em {sock}"))
+    assert f"ls -l {sock}" in ocupado.recado()
+    assert "ls -ld" not in ocupado.recado()
+    negado = IpcIndisponivel(sock, PermissionError(13, "Permission denied"))
+    assert f"ls -ld {sock.parent}" in negado.recado()

@@ -341,12 +341,16 @@ class IpcIndisponivel(RuntimeError):  # noqa: N818 — o projeto é em portuguê
 
     def recado(self) -> str:
         """O quê, por quê e o que fazer, para o terminal e o diário."""
+        if isinstance(self.erro, PermissionError):
+            conserto = f"Confira o dono e a permissão da pasta:  ls -ld {self.caminho.parent}"
+        else:
+            conserto = f"Confira quem está com o socket:  ls -l {self.caminho}"
         return (
             "O daemon NÃO ficou no ar: o Hefesto não conseguiu abrir o socket "
             f"de conversa em {self.caminho}.\n"
             f"  {self.erro}\n"
             "Sem ele a janela, a bandeja e a CLI não falam com o daemon.\n"
-            f"Confira o dono e a permissão da pasta:  ls -ld {self.caminho.parent}"
+            f"{conserto}"
         )
 
 

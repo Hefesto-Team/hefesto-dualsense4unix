@@ -33,18 +33,23 @@ def _config(**over: object) -> DaemonConfig:
 async def test_failing_subsystem_does_not_kill_daemon(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    # O IPC saiu deste caso em 13/10/2026: ele é essencial e a falha dele encerra o
+    # `run()` (A-CHAVE-E-A-PERMISSAO-DIZEM-O-QUE-SAO-01). O opcional é o UDP.
     monkeypatch.setattr(
         "hefesto_dualsense4unix.utils.session.load_paused_state", lambda: False
     )
     fc = FakeController(transport="usb", states=[_state()])
     bus = EventBus()
     store = StateStore()
-    daemon = Daemon(controller=fc, bus=bus, store=store, config=_config(ipc_enabled=True))
+    daemon = Daemon(
+        controller=fc, bus=bus, store=store,
+        config=_config(ipc_enabled=False, udp_enabled=True),
+    )
 
     async def _boom() -> None:
-        raise RuntimeError("ipc explodiu no start")
+        raise RuntimeError("udp explodiu no start")
 
-    monkeypatch.setattr(daemon, "_start_ipc", _boom)
+    monkeypatch.setattr(daemon, "_start_udp", _boom)
 
     run_task = asyncio.create_task(daemon.run())
     for _ in range(500):
@@ -54,6 +59,6 @@ async def test_failing_subsystem_does_not_kill_daemon(
     daemon.stop()
     await run_task
 
-    assert "ipc" in daemon._failed_subsystems
-    assert "explodiu" in daemon._failed_subsystems["ipc"]
+    assert "udp" in daemon._failed_subsystems
+    assert "explodiu" in daemon._failed_subsystems["udp"]
     assert store.counter("poll.tick") >= 1
