@@ -33,6 +33,26 @@
    "ancora": "todo-radio-3",
    "seletor": "[data-dica]",
    "conflito": ""
+  },
+  {
+   "n": 4,
+   "sprint": "A-ABA-MAPAS-DO-RADIO-E-DAS-PORTAS-DO-TODO-01",
+   "o_que_muda": "As barras dos adaptadores começam e acabam na mesma reta",
+   "origem": "RODADA-3",
+   "resposta": "todo-radio-r3-4",
+   "ancora": "todo-radio-4",
+   "seletor": ".lugar-topo",
+   "conflito": ""
+  },
+  {
+   "n": 5,
+   "sprint": "A-ABA-MAPAS-DO-RADIO-E-DAS-PORTAS-DO-TODO-01",
+   "o_que_muda": "Os aparelhos do adaptador aberto têm o mesmo respiro dos dois lados",
+   "origem": "RODADA-3",
+   "resposta": "todo-radio-r3-5",
+   "ancora": "todo-radio-5",
+   "seletor": ".aparelhos > .linha",
+   "conflito": ""
   }
  ],
  "por_baixo": [

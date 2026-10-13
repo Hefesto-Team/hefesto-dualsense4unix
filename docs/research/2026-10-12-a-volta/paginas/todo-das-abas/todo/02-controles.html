@@ -973,6 +973,11 @@
   .criar .meu{color:var(--texto-suave)}
   .criar .meu i{width:7px;height:7px;border-radius:50%;background:var(--cor,var(--purple));flex:0 0 auto}
 </style>
+<style data-aba="rodada-3">
+  /* RODADA 3 (12/10): os dois analógicos (100 px cada) e o vão de 8 somavam 208 numa moldura de 204 por
+     dentro, e o da direita passava 4 px do respiro. Com vão de 4 o par fecha na borda dos dois lados. */
+  .moldura > .sticks{column-gap:4px}
+</style>
 <style id="base-comum">
 /* ===== Base comum das abas (rodada 2, 12/10/2026) =====
    Copiada IGUAL em todo mockup do todo. Três peças: a dica no hover (sem «?»), o Modo automático
@@ -1119,8 +1124,8 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     <div class="fita" data-dica="O que você mudar vai para o controle escolhido">
       <span>Selecionar:</span>
       <label for="c-todos" class="chip" data-gesto="escolher-na-fita" data-pref="todos" data-controle="" data-dica="Abre os quatro">Todos</label>
-      <label for="c-p1" class="chip plastico" data-campo="fita-chip" data-gesto="escolher-na-fita" data-pref="p1" data-controle="" data-dica="Abre este controle">P1 <span class="pt">•</span> <span data-campo="fita-peca">Cosmic Red</span> <span class="pt">•</span> <span data-campo="fita-via"><span class="via">USB</span></span></label>
-      <label for="c-p2" class="chip plastico" data-campo="fita-chip" data-gesto="escolher-na-fita" data-pref="p2" data-controle="" data-dica="Abre este controle">P2 <span class="pt">•</span> <span data-campo="fita-peca">Starlight Blue</span> <span class="pt">•</span> <span data-campo="fita-via"><span class="via">BT</span></span></label>
+      <label for="c-p1" class="chip plastico" data-campo="fita-chip" data-gesto="escolher-na-fita" data-pref="p1" data-controle="" data-dica="Abre este controle"><span data-campo="fita-peca">Cosmic Red</span> <span class="pt">•</span> <span data-campo="fita-via"><span class="via">USB</span></span></label>
+      <label for="c-p2" class="chip plastico" data-campo="fita-chip" data-gesto="escolher-na-fita" data-pref="p2" data-controle="" data-dica="Abre este controle"><span data-campo="fita-peca">Starlight Blue</span> <span class="pt">•</span> <span data-campo="fita-via"><span class="via">BT</span></span></label>
       <span class="so-no-nativo" data-dica="Hefesto desligado: o jogo manda"></span>
     </div>
     <div class="conectado"><span class="bolinha">●</span> <b data-campo="conta-b">1 USB · 1 BT</b></div>

@@ -660,6 +660,31 @@
   .mc .mapa:has(.item-triangle.muda) #mp-triangle :is(.peca, rect, circle, path, ellipse){fill:var(--tipo) !important;stroke:var(--tipo) !important}
   .mc .mapa:has(.item-triangle.on) #mp-triangle :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
 </style>
+<style data-todo-css="rodada-3">
+  /* rodada 3 (12/10): tudo na grade das três colunas, medido no getBoundingClientRect */
+  /* os quatro controles com a mesma largura, o nome no centro */
+  .mc-chips{display:grid;grid-auto-flow:column;grid-auto-columns:1fr}
+  .mc-chips .chip{text-align:center}
+  /* a linha do perfil segue as colunas de baixo: Perfil sobre a esquerda, Nome sobre o desenho, Usar em sobre a direita */
+  .mc-perfil{display:grid;grid-template-columns:292px minmax(0,1fr) 292px;gap:20px}
+  .mc-perfil .cel{display:flex;align-items:center;gap:12px;min-width:0}
+  #perfil,.nome2{width:auto;flex:1 1 0;min-width:0}
+  .mc-perfil .usar-em{margin-left:auto}
+  /* as colunas dos lados têm a altura do desenho e o bloco fica no meio da área, com o mesmo respiro em cima e embaixo */
+  .mapa.mc-mapa{align-items:stretch;align-content:center}
+  .mc-centro{height:auto}
+  .mc-lado{justify-content:space-between}
+  /* a faixa de mudado não empurra o campo: a borda tem a mesma espessura nos dois casos */
+  .b2.muda{border-left:1px solid var(--tipo);box-shadow:inset 2px 0 0 var(--tipo)}
+  /* o touchpad usa as mesmas medidas de linha dos lados, e o nome cabe sem encostar no campo */
+  .mc-baixo .b2{grid-template-columns:24px 58px minmax(0,1fr);gap:8px}
+  /* Controle, Mouse e Teclado com a mesma largura */
+  .seg2{display:grid;grid-auto-flow:column;grid-auto-columns:1fr}
+  /* a faixa do cursor ocupa a largura toda */
+  .mc-cursor{display:grid;grid-template-columns:repeat(4,auto);justify-content:space-between}
+  .mc-cursor .par2{display:flex;align-items:center;gap:12px}
+  .mc-cursor .mc-rot + .campo2,.mc-cursor .mc-rot + .tog2{margin-right:0}
+</style>
 <style id="base-comum">
 /* ===== Base comum das abas (rodada 2, 12/10/2026) =====
    Copiada IGUAL em todo mockup do todo. Três peças: a dica no hover (sem «?»), o Modo automático
@@ -707,6 +732,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     <div class="mc-chips" data-todo="1"><button class="chip plastico on" style="--plastico:#ae335a" data-colorway="cosmic-red" data-jogador="1" data-luz="#0000ff">Cosmic Red <span class="pt">•</span> USB</button><button class="chip plastico" style="--plastico:#7eb8d4" data-colorway="starlight-blue" data-jogador="2" data-luz="#ff0000">Starlight Blue <span class="pt">•</span> BT</button><button class="chip plastico" style="--plastico:#8a6fc4" data-colorway="galactic-purple" data-jogador="3" data-luz="#00ff00">Galactic Purple <span class="pt">•</span> BT</button><button class="chip plastico" style="--plastico:#e8e8ec" data-colorway="white" data-jogador="4" data-luz="#ff0080">White <span class="pt">•</span> USB</button></div>
   </div>
   <div class="mc-perfil">
+    <span class="cel">
     <label class="mc-rot" for="perfil">Perfil</label>
     <select id="perfil" class="campo2" data-todo="2" data-dica="Navegação, point and click e trocas de botão">
       <optgroup label="Navegação"><option value="nav">Navegar no computador</option></optgroup>
@@ -714,11 +740,16 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       <optgroup label="Trocar os botões"><option value="maid">Maid Life SS</option></optgroup>
       <option value="novo">+ Novo perfil…</option>
     </select>
+    </span>
+    <span class="cel">
     <span class="etiqueta" data-todo="3" data-dica="A cor do tipo marca os botões mudados">Navegação</span>
     <label class="mc-rot" for="nome">Nome</label>
     <input id="nome" class="campo2 nome2" data-todo="4" value="Navegar no computador">
+    </span>
+    <span class="cel">
     <span class="mc-rot">Usar em</span>
     <span class="usar-em" data-todo="5"></span>
+    </span>
   </div>
   <div class="mapa mc-mapa">
     <div class="mc-lado">
@@ -1617,10 +1648,10 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     </div>
   </div>
   <div class="mc-cursor" data-todo="8">
-    <span class="mc-rot">Mover com</span><select class="campo2"><option selected>Analógico esquerdo</option><option>Analógico direito</option><option>Touchpad</option><option>Giroscópio</option></select>
-    <span class="mc-rot">Devagar enquanto segura</span><select class="campo2"><option selected>L2</option><option>R2</option><option>L1</option><option>Nenhum</option></select>
-    <span class="mc-rot" data-dica="O cursor parado clica sozinho">Parar para clicar</span><span class="tog2 on" data-todo="9">0,6 s</span>
-    <span class="mc-rot" data-dica="Um clique prende; outro solta">Prender o clique</span><span class="tog2">Desligado</span>
+    <span class="par2"><span class="mc-rot">Mover com</span><select class="campo2"><option selected>Analógico esquerdo</option><option>Analógico direito</option><option>Touchpad</option><option>Giroscópio</option></select></span>
+    <span class="par2"><span class="mc-rot">Devagar enquanto segura</span><select class="campo2"><option selected>L2</option><option>R2</option><option>L1</option><option>Nenhum</option></select></span>
+    <span class="par2"><span class="mc-rot" data-dica="O cursor parado clica sozinho">Parar para clicar</span><span class="tog2 on" data-todo="9">0,6 s</span></span>
+    <span class="par2"><span class="mc-rot" data-dica="Um clique prende; outro solta">Prender o clique</span><span class="tog2">Desligado</span></span>
   </div>
   <div class="mc-rod" data-todo="10">
     <a class="btn2" href="06-navegacao.html">Cancelar</a>

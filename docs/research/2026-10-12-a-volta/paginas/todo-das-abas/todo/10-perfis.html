@@ -1887,6 +1887,15 @@
   .guarda col[data-coluna="id"]{width:122px}
   .quadro-titulo[data-dica],.cab[data-dica]{cursor:help}
 </style>
+<style data-todo-css="rodada-3">
+  /* rodada 3 (12/10): o lado direito na mesma reta do esquerdo, medido no getBoundingClientRect */
+  /* o Estilo de jogo ocupa a linha inteira, como o Nome do jogo e o Aplicar em acima dele */
+  .campo select.destaque.estreito{flex:1 1 auto;width:100%}
+  /* a tabela por controle cabe no quadro: 136 + 114 + o Status = a largura do quadro, sem passar 5 px da borda */
+  .guarda col[data-coluna="id"]{width:114px}
+  /* a coluna ordenada mostra a seta ao lado do nome */
+  .rolo .tab thead th[data-coluna]{cursor:pointer;user-select:none}
+</style>
 <style id="base-comum">
 /* ===== Base comum das abas (rodada 2, 12/10/2026) =====
    Copiada IGUAL em todo mockup do todo. Três peças: a dica no hover (sem «?»), o Modo automático
@@ -2066,8 +2075,8 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     <div class="fita inerte" data-dica="O perfil guarda os quatro controles">
       <span>Selecionar:</span>
       <label class="chip on">Todos</label>
-      <label class="chip plastico on" data-campo="fita-chip" style="--plastico:#ae335a" data-dica="A borda é a cor do plástico">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> <span class="via">USB</span></label>
-      <label class="chip plastico on" data-campo="fita-chip" style="--plastico:#7eb8d4" data-dica="A borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> <span class="via">BT</span></label>
+      <label class="chip plastico on" data-campo="fita-chip" style="--plastico:#ae335a" data-dica="A borda é a cor do plástico">Cosmic Red <span class="pt">•</span> <span class="via">USB</span></label>
+      <label class="chip plastico on" data-campo="fita-chip" style="--plastico:#7eb8d4" data-dica="A borda é a cor do plástico">Starlight Blue <span class="pt">•</span> <span class="via">BT</span></label>
       <span class="so-no-nativo" data-dica="Hefesto desligado: o jogo manda"></span>
     </div>
     <div class="conectado"><span class="bolinha">●</span> <b data-campo="conta-b">1 USB · 1 BT</b></div>
@@ -2088,7 +2097,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     <a class="aba" href="04-iluminacao.html">Iluminação</a>
     <a class="aba" href="05-vibracao.html">Vibração</a>
     <a class="aba" href="06-navegacao.html">Navegação</a>
-    <a class="aba" href="07-lancadores.html">Lançadores</a>
+    <a class="aba" href="07-lancadores.html">Experimental</a>
     <a class="aba" href="08-conexoes.html">Conexões</a>
     <a class="aba" href="09-sistema.html">Sistema</a>
     <a class="aba ativa" href="10-perfis.html">Perfis</a>
@@ -2836,6 +2845,33 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   });
   if (location.hash === '#eventos') alvos.querySelector('[data-v="eventos"]').click();
   if (ativo) ativo.textContent = 'Mortal Kombat';
+})();
+</script>
+<script>/* rodada 3: clique duplo no cabeçalho Nome, Criado em ou Modificado em ordena a lista; o segundo inverte.
+   O nome começa de A a Z; as datas começam da mais nova; perfil sem data («—») fica sempre embaixo. */
+(() => {
+  const corpo = document.querySelector('tbody[data-hef="perfis.lista"]');
+  const col = {nome: 0, criado: 1, modificado: 2};
+  const data = t => { const m = t.match(/(\d{2})\/(\d{2})\/(\d{4})/); return m ? +(m[3] + m[2] + m[1]) : null; };
+  document.addEventListener('click', e => {
+    const seta = e.target.closest && e.target.closest('.rolo .ordena[data-hef-gesto="ordenar"]'); if (!seta) return;
+    const c = seta.dataset.coluna, i = col[c]; if (i === undefined) return;
+    const antes = seta.dataset.ordem || '';
+    const ordem = antes ? (antes === '↑' ? '↓' : '↑') : (c === 'nome' ? '↑' : '↓');
+    document.querySelectorAll('.rolo .ordena[data-hef-gesto="ordenar"]').forEach(x => { delete x.dataset.ordem; });
+    seta.dataset.ordem = ordem;
+    const sinal = ordem === '↑' ? 1 : -1;
+    const linhas = [...corpo.rows];
+    linhas.sort((a, b) => {
+      const ta = a.cells[i].textContent.trim(), tb = b.cells[i].textContent.trim();
+      if (i === 0) return sinal * ta.localeCompare(tb, 'pt-BR');
+      const da = data(ta), db = data(tb);
+      if (da === null && db === null) return a.cells[0].textContent.localeCompare(b.cells[0].textContent, 'pt-BR');
+      if (da === null) return 1; if (db === null) return -1;
+      return sinal * (da - db);
+    });
+    linhas.forEach(tr => corpo.appendChild(tr));
+  });
 })();
 </script>
 <div class="menu-hefesto" id="menu-desenhado" role="menu" aria-label="Menu do Hefesto" data-todo="11" hidden style="left:992px;top:8px">

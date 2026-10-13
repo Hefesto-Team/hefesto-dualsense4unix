@@ -149,6 +149,24 @@
    "origem": "RODADA-2 §A6",
    "ancora": "[data-todo=\"11\"]",
    "conflito": ""
+  },
+  {
+   "n": 17,
+   "sprint": "A-ABA-PERFIS-DO-TODO-01",
+   "o_que_muda": "Estilo de jogo na largura dos outros campos",
+   "resposta": "rodada-3",
+   "origem": "RODADA-3 §conferência",
+   "ancora": ".campo select.destaque.estreito",
+   "conflito": ""
+  },
+  {
+   "n": 18,
+   "sprint": "A-ABA-PERFIS-DO-TODO-01",
+   "o_que_muda": "Tabela dos controles sem passar da borda",
+   "resposta": "rodada-3",
+   "origem": "RODADA-3 §conferência",
+   "ancora": ".guarda",
+   "conflito": ""
   }
  ],
  "estados": {

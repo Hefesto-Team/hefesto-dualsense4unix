@@ -1993,6 +1993,16 @@
   .ja-tela.t3 .ja-linha{min-height:52px}
   .ja-tela.t3 .seg.mini button{height:32px;padding:0 14px}
 </style>
+<style id="rodada-3-g3">
+/* Rodada 3 (conferência de desenho): as linhas encostam na mesma reta do quadro, e nada passa da coluna. */
+.ext,.lf{padding-left:0;padding-right:0}
+.ja-ap-pe{grid-template-columns:minmax(0,1fr) 54px 52px}
+.ja-ctrl > .seg.mini{flex:1 1 auto;min-width:0;width:100%;justify-content:stretch}
+.ja-ctrl > .seg.mini button,.ja-tela.t3 .ja-ctrl > .seg.mini button{flex:1 1 auto;min-width:0;padding:0 10px}
+.ja-ctrl > select,.ja-ctrl > .campo-linha{flex:1 1 auto;min-width:0;width:100%;max-width:none}
+.ja-ctrl > .ja-tons{flex:1 1 auto;display:grid;grid-template-columns:repeat(12,22px);justify-content:space-between}
+.ja-tela.l-larga > .moldura:last-child .ja-linha:not(.empilha){grid-template-columns:136px minmax(0,1fr)}
+</style>
 <style id="base-comum">
 /* ===== Base comum das abas (rodada 2, 12/10/2026) =====
    Copiada IGUAL em todo mockup do todo. Três peças: a dica no hover (sem «?»), o Modo automático

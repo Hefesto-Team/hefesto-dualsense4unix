@@ -104,6 +104,69 @@
    "origem": "RODADA-2 §A6",
    "ancora": "[data-todo=\"11\"]",
    "conflito": ""
+  },
+  {
+   "n": 12,
+   "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
+   "o_que_muda": "Os quatro controles com a mesma largura",
+   "resposta": "rodada-3",
+   "origem": "RODADA-3 §conferência",
+   "ancora": ".mc-chips",
+   "conflito": ""
+  },
+  {
+   "n": 13,
+   "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
+   "o_que_muda": "Linha do perfil alinhada às três colunas de baixo",
+   "resposta": "rodada-3",
+   "origem": "RODADA-3 §conferência",
+   "ancora": ".mc-perfil",
+   "conflito": ""
+  },
+  {
+   "n": 14,
+   "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
+   "o_que_muda": "Colunas dos lados da altura do desenho",
+   "resposta": "rodada-3",
+   "origem": "RODADA-3 §conferência",
+   "ancora": ".mapa.mc-mapa",
+   "conflito": ""
+  },
+  {
+   "n": 15,
+   "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
+   "o_que_muda": "Campos na mesma reta, mudados ou não",
+   "resposta": "rodada-3",
+   "origem": "RODADA-3 §conferência",
+   "ancora": ".b2.muda",
+   "conflito": ""
+  },
+  {
+   "n": 16,
+   "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
+   "o_que_muda": "«Esquerda» do touchpad sem encostar no campo",
+   "resposta": "rodada-3",
+   "origem": "RODADA-3 §conferência",
+   "ancora": ".mc-baixo .b2",
+   "conflito": ""
+  },
+  {
+   "n": 17,
+   "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
+   "o_que_muda": "Controle, Mouse e Teclado com a mesma largura",
+   "resposta": "rodada-3",
+   "origem": "RODADA-3 §conferência",
+   "ancora": ".seg2",
+   "conflito": ""
+  },
+  {
+   "n": 18,
+   "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
+   "o_que_muda": "Faixa do cursor na largura toda",
+   "resposta": "rodada-3",
+   "origem": "RODADA-3 §conferência",
+   "ancora": ".mc-cursor",
+   "conflito": ""
   }
  ],
  "estados": {

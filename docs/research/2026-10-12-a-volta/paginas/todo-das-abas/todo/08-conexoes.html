@@ -2287,6 +2287,18 @@
   .radio .ar-rot,.radio .ar-rot button.rotulo{height:20px}
   .radio .sala{gap:5px}
 </style>
+<style id="rodada-3-g3">
+/* Rodada 3 (conferência de desenho): as barras dos adaptadores começam e acabam na mesma reta. */
+.radio .lugar-topo{display:grid;grid-template-columns:24px auto 116px 26px minmax(110px,1fr) auto;column-gap:8px;align-items:center}
+.radio .lugar-topo > .abre-lugar{grid-column:1}
+.radio .lugar-topo > .lugar-nome{grid-column:2}
+.radio .lugar-topo > .onde{grid-column:3;min-width:0}
+.radio .lugar-topo > .sino{grid-column:4}
+.radio .lugar-topo > .barra-do-lugar{grid-column:5;min-width:0}
+.radio .lugar-topo > .lugar-conta{grid-column:6;margin-left:0;display:grid;grid-template-columns:auto auto 48px;column-gap:8px;justify-content:end}
+.radio .lugar-topo > .lugar-conta > .sobra{justify-self:start}
+.cartao-dica .cd-x{margin-right:0}
+</style>
 <style id="base-comum">
 /* ===== Base comum das abas (rodada 2, 12/10/2026) =====
    Copiada IGUAL em todo mockup do todo. Três peças: a dica no hover (sem «?»), o Modo automático
@@ -2466,8 +2478,8 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     <div class="fita" title="O que você mudar nesta aba vai para o controle escolhido aqui.">
       <span>Selecionar:</span>
       <label class="chip" data-gesto="escolher-na-fita" data-pref="todos" data-controle="">Todos</label>
-      <label class="chip plastico on" data-campo="fita-chip" data-gesto="escolher-na-fita" data-pref="p1" data-controle="" style="--plastico:#ae335a" title="Cosmic Red — a borda é a cor do plástico">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> <span class="via">USB</span></label>
-      <label class="chip plastico" data-campo="fita-chip" data-gesto="escolher-na-fita" data-pref="p2" data-controle="" style="--plastico:#7eb8d4" title="Starlight Blue — a borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> <span class="via">BT</span></label>
+      <label class="chip plastico on" data-campo="fita-chip" data-gesto="escolher-na-fita" data-pref="p1" data-controle="" style="--plastico:#ae335a" title="Cosmic Red — a borda é a cor do plástico">Cosmic Red <span class="pt">•</span> <span class="via">USB</span></label>
+      <label class="chip plastico" data-campo="fita-chip" data-gesto="escolher-na-fita" data-pref="p2" data-controle="" style="--plastico:#7eb8d4" title="Starlight Blue — a borda é a cor do plástico">Starlight Blue <span class="pt">•</span> <span class="via">BT</span></label>
       <span class="so-no-nativo" title="Com o Hefesto desligado, o jogo manda: aqui só se vê quem está conectado."></span>
     </div>
     <div class="conectado"><span class="bolinha">●</span> <b data-campo="conta-b">1 USB · 1 BT</b></div>

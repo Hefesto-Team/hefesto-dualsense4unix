@@ -2383,6 +2383,25 @@
   .navega-com .chip{flex:1;justify-content:center;height:30px;padding:0 10px}
   .tn-rod{padding-top:6px}
 </style>
+<style data-todo-css="rodada-3">
+  /* rodada 3 (12/10): o lado direito na mesma reta do esquerdo, medido no getBoundingClientRect */
+  /* o miolo não rola (overflow:hidden), então a calha da barra não se reserva: com ela a margem
+     direita do quadro era 33 px contra 18 da esquerda */
+  .miolo{scrollbar-gutter:auto}
+  /* os gestos usam a mesma coluna de rótulo das opções de cima: o campo começa na mesma reta */
+  .nav2-opcoes{--rot2:140px}
+  .op2{grid-template-columns:var(--rot2) minmax(0,1fr)}
+  .tab.ges2 td.b{width:calc(var(--rot2) + 12px)}
+  /* a janela da acessibilidade: o controle ocupa a célula inteira, e os botões de um grupo têm a mesma largura */
+  .ac2{grid-template-columns:184px minmax(0,1fr)}
+  .ac2-ctl > *{flex:1 1 0;min-width:0}
+  .ac2-ctl .campo-num.mini{flex:1 1 0}
+  .ac2-ctl .seg.mini,.ac2-ctl .ac-chips{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:6px}
+  .ac2-ctl .seg.mini button,.ac2-ctl .ac-chips .chip{justify-content:center;text-align:center;padding-left:8px;padding-right:8px;white-space:nowrap}
+  .ac2-ctl .campo-num.mini .par{flex:1 1 auto}
+  .ac2-ctl .campo-num.mini .bignum{flex:1 1 auto;justify-content:space-between}
+  .ac2-ctl .nj-tog{height:28px;border-radius:7px}
+</style>
 <style id="base-comum">
 /* ===== Base comum das abas (rodada 2, 12/10/2026) =====
    Copiada IGUAL em todo mockup do todo. Três peças: a dica no hover (sem «?»), o Modo automático
@@ -2526,7 +2545,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   </g>
 </svg></div>
     <div class="marca-nome"><span class="m-hef">Hefesto</span><br><span class="m-ds">DualSense<span class="m-4">4</span>Unix</span></div>
-    <div class="fita inerte" data-dica="Vale para o computador, um cursor só" data-campo="fita-chips" data-hef-alvo="html"><span>Selecionar:</span><label class="chip on">Todos</label><label class="chip plastico on" data-campo="fita-chip" style="--plastico:#ae335a" data-dica="A borda é a cor do plástico">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</label><label class="chip plastico on" data-campo="fita-chip" style="--plastico:#7eb8d4" data-dica="A borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</label></div>
+    <div class="fita inerte" data-dica="Vale para o computador, um cursor só" data-campo="fita-chips" data-hef-alvo="html"><span>Selecionar:</span><label class="chip on">Todos</label><label class="chip plastico on" data-campo="fita-chip" style="--plastico:#ae335a" data-dica="A borda é a cor do plástico">Cosmic Red <span class="pt">•</span> USB</label><label class="chip plastico on" data-campo="fita-chip" style="--plastico:#7eb8d4" data-dica="A borda é a cor do plástico">Starlight Blue <span class="pt">•</span> BT</label></div>
     <div class="conectado"><span class="bolinha">●</span> <b data-campo="conta-b">1 USB · 1 BT</b></div>
     <div class="perfil-ativo" data-dica="Onde cai o que você salvar">
       <span class="pa-rot">Perfil ativo</span>
@@ -2542,7 +2561,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     <a class="aba" href="04-iluminacao.html">Iluminação</a>
     <a class="aba" href="05-vibracao.html">Vibração</a>
     <a class="aba ativa" href="06-navegacao.html">Navegação</a>
-    <a class="aba" href="07-lancadores.html">Lançadores</a>
+    <a class="aba" href="07-lancadores.html">Experimental</a>
     <a class="aba" href="08-conexoes.html">Conexões</a>
     <a class="aba" href="09-sistema.html">Sistema</a>
     <a class="aba" href="10-perfis.html">Perfis</a>
@@ -2903,7 +2922,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
           <div class="ac2"><span class="ac2-rot">Curva</span><span class="ac2-ctl"><div class="seg mini"><button class="on">Linear</button><button>Precisa</button><button>Estável</button><button>Digital</button></div></span></div>
           <div class="ac2"><span class="ac2-rot">Sensibilidade</span><span class="ac2-ctl"><div class="campo-num mini"><span class="par"><span class="bignum"><button class="passo">−</button><b>100</b><button class="passo">+</button></span><span class="un">%</span></span></div></span></div>
           <div class="ac2"><span class="ac2-rot">Inverter</span><span class="ac2-ctl"><div class="ac-chips"><span class="chip">Eixo Y</span><span class="chip">Eixo X</span><span class="chip">Trocar os lados</span></div></span></div>
-          <div class="ac2" data-todo="18"><span class="ac2-rot" data-dica="Mexer o controle move o analógico">Usar giroscópio como analógico</span><span class="ac2-ctl"><select class="campo-linha"><option>Desligado</option><option selected>Analógico direito</option><option>Analógico esquerdo</option></select><select class="campo-linha"><option>Sempre</option><option selected>Segurando L2</option></select></span></div>
+          <div class="ac2" data-todo="18"><span class="ac2-rot" data-dica="Mexer o controle move o analógico">Giroscópio como analógico</span><span class="ac2-ctl"><select class="campo-linha"><option>Desligado</option><option selected>Analógico direito</option><option>Analógico esquerdo</option></select><select class="campo-linha"><option>Sempre</option><option selected>Segurando L2</option></select></span></div>
         </div>
       </div>
     </div>

@@ -50,6 +50,15 @@
       "origem": "RODADA-2 §A3",
       "ancora": ".menu-hefesto",
       "conflito": ""
+    },
+    {
+      "n": 6,
+      "sprint": "A-JANELA-CALIBRAR-GIROSCOPIO-DO-TODO-01",
+      "o_que_muda": "As barras das leituras começam todas na mesma reta",
+      "resposta": "todo-calibrar-r3-6",
+      "origem": "RODADA-3",
+      "ancora": ".lin > .r",
+      "conflito": ""
     }
   ],
   "estados": {

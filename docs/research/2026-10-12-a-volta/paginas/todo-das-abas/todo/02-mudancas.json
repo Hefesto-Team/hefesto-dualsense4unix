@@ -122,6 +122,15 @@
       "origem": "RODADA-2 §A3",
       "ancora": ".menu-hefesto",
       "conflito": ""
+    },
+    {
+      "n": 14,
+      "sprint": "A-ABA-CONTROLES-DO-TODO-01",
+      "o_que_muda": "Os dois analógicos cabem na moldura, com o mesmo respiro dos dois lados",
+      "resposta": "todo-02-r3-14",
+      "origem": "RODADA-3",
+      "ancora": ".moldura > .sticks",
+      "conflito": ""
     }
   ],
   "estados": {

@@ -93,6 +93,26 @@
    "ancora": "todo-08-9",
    "seletor": "#cx8-3 ~ .quadro-corpo",
    "conflito": ""
+  },
+  {
+   "n": 10,
+   "sprint": "A-ABA-CONEXOES-DO-TODO-01",
+   "o_que_muda": "As barras dos adaptadores começam e acabam na mesma reta",
+   "origem": "RODADA-3",
+   "resposta": "todo-08-r3-10",
+   "ancora": "todo-08-10",
+   "seletor": ".radio .lugar-topo",
+   "conflito": ""
+  },
+  {
+   "n": 11,
+   "sprint": "A-ABA-CONEXOES-DO-TODO-01",
+   "o_que_muda": "O × dos cartões fica na mesma reta do «Ver no mapa»",
+   "origem": "RODADA-3",
+   "resposta": "todo-08-r3-11",
+   "ancora": "todo-08-11",
+   "seletor": ".cartao-dica .cd-x",
+   "conflito": ""
   }
  ],
  "por_baixo": [

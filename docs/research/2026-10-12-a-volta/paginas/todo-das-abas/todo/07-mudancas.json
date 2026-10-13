@@ -183,6 +183,66 @@
    "ancora": "todo-07-18",
    "seletor": ".ja-linha select",
    "conflito": ""
+  },
+  {
+   "n": 19,
+   "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
+   "o_que_muda": "O acessório de dois motores se chama «Lovense Nora», também no desenho do touchpad",
+   "origem": "RODADA-3",
+   "resposta": "todo-07-r3-19",
+   "ancora": "todo-07-19",
+   "seletor": "#acessorios .ja-ap-nome, svg.ja-tp",
+   "conflito": ""
+  },
+  {
+   "n": 20,
+   "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
+   "o_que_muda": "Extensões e lançadores encostam na mesma reta do quadro, dos dois lados",
+   "origem": "RODADA-3",
+   "resposta": "todo-07-r3-20",
+   "ancora": "todo-07-20",
+   "seletor": ".ext, .lf",
+   "conflito": ""
+  },
+  {
+   "n": 21,
+   "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
+   "o_que_muda": "Na janela Lovense, o «4 · 3/20» cabe na coluna sem passar da borda",
+   "origem": "RODADA-3",
+   "resposta": "todo-07-r3-21",
+   "ancora": "todo-07-21",
+   "seletor": ".ja-ap-pe",
+   "conflito": ""
+  },
+  {
+   "n": 22,
+   "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
+   "o_que_muda": "Meus toques: os botões cabem na coluna e acabam na mesma reta",
+   "origem": "RODADA-3",
+   "resposta": "todo-07-r3-22",
+   "ancora": "todo-07-22",
+   "seletor": ".ja-ctrl > .seg.mini",
+   "conflito": ""
+  },
+  {
+   "n": 23,
+   "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
+   "o_que_muda": "Luz: as cores ocupam a linha toda, e as duas fileiras ficam em colunas",
+   "origem": "RODADA-3",
+   "resposta": "todo-07-r3-23",
+   "ancora": "todo-07-23",
+   "seletor": ".ja-ctrl > .ja-tons",
+   "conflito": ""
+  },
+  {
+   "n": 24,
+   "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
+   "o_que_muda": "Perfis: o «Até» cabe na moldura, e os menus acabam na mesma reta",
+   "origem": "RODADA-3",
+   "resposta": "todo-07-r3-24",
+   "ancora": "todo-07-24",
+   "seletor": ".ja-tela.l-larga > .moldura:last-child .ja-linha",
+   "conflito": ""
   }
  ],
  "por_baixo": [

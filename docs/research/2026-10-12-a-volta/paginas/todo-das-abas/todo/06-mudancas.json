@@ -185,6 +185,51 @@
       "origem": "RODADA-2 §A6",
       "ancora": "[data-todo=\"19\"]",
       "conflito": ""
+    },
+    {
+      "n": 21,
+      "sprint": "A-ABA-NAVEGACAO-DO-TODO-01",
+      "o_que_muda": "Quadro com a mesma margem dos dois lados",
+      "resposta": "rodada-3",
+      "origem": "RODADA-3 §conferência",
+      "ancora": ".miolo",
+      "conflito": ""
+    },
+    {
+      "n": 22,
+      "sprint": "A-ABA-NAVEGACAO-DO-TODO-01",
+      "o_que_muda": "Gestos do PS na mesma reta dos campos de cima",
+      "resposta": "rodada-3",
+      "origem": "RODADA-3 §conferência",
+      "ancora": ".tab.ges2",
+      "conflito": ""
+    },
+    {
+      "n": 23,
+      "sprint": "A-ABA-NAVEGACAO-DO-TODO-01",
+      "o_que_muda": "Acessibilidade: cada controle vai até o fim da linha",
+      "resposta": "rodada-3",
+      "origem": "RODADA-3 §conferência",
+      "ancora": ".ac2-ctl",
+      "conflito": ""
+    },
+    {
+      "n": 24,
+      "sprint": "A-ABA-NAVEGACAO-DO-TODO-01",
+      "o_que_muda": "Botões de um mesmo grupo com a mesma largura",
+      "resposta": "rodada-3",
+      "origem": "RODADA-3 §conferência",
+      "ancora": ".ac2-ctl .seg.mini",
+      "conflito": ""
+    },
+    {
+      "n": 25,
+      "sprint": "A-ABA-NAVEGACAO-DO-TODO-01",
+      "o_que_muda": "«Giroscópio como analógico» numa linha só",
+      "resposta": "rodada-3",
+      "origem": "RODADA-3 §conferência",
+      "ancora": ".ac2",
+      "conflito": ""
     }
   ],
   "estados": {

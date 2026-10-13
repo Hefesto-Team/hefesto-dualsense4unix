@@ -2008,10 +2008,10 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 
     /* os modos */
     document.getElementById("modos").innerHTML =
-        '<button class="modo" data-modo="mesa" aria-pressed="' + (modo === "mesa") + '">Atual</button>'
-      + '<button class="modo destaque" data-modo="ideal" aria-pressed="' + (modo === "ideal") + '">Sugestões</button>'
-      + '<button class="modo" data-modo="mao" aria-pressed="' + (modo === "mao") + '">Adicionar</button>'
-      + '<button class="modo" data-modo="registro" aria-pressed="' + (modo === "registro") + '">Registro</button>';
+        '<button class="modo" data-modo="mesa" data-dica="Onde cada aparelho está agora" aria-pressed="' + (modo === "mesa") + '">Atual</button>'
+      + '<button class="modo destaque" data-modo="ideal" data-dica="Onde cada aparelho funciona melhor" aria-pressed="' + (modo === "ideal") + '">Sugestões</button>'
+      + '<button class="modo" data-modo="mao" data-dica="A melhor entrada para um aparelho novo" aria-pressed="' + (modo === "mao") + '">Adicionar</button>'
+      + '<button class="modo" data-modo="registro" data-dica="O que entrou e saiu das entradas" aria-pressed="' + (modo === "registro") + '">Registro</button>';
     var noRegistro = modo === "registro";
     document.getElementById("registro").hidden = !noRegistro;
     document.querySelector(".palco").hidden = noRegistro;
@@ -2133,7 +2133,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
           + "<b>" + pend.length + (reg === "hub" ? " no hub" : " no PC") + " sem entrada marcada</b>"
           + '<div class="pend-lista">'
           + pend.map(function (x) {
-              return '<button class="chip pend" data-ap="' + x.ap.id + '"'
+              return '<button class="chip pend" data-ap="' + x.ap.id + '" data-dica="Clique e marque a entrada onde ele está"'
                 + (segurando === x.ap.id ? ' data-segurando="1"' : "") + ">"
                 + '<i class="marca" style="background:' + x.ap.cor + '"></i>'
                 + '<span class="txt"><b>' + x.ap.tipo + "</b><span>" + x.caminho + "</span></span></button>";
@@ -2157,15 +2157,16 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     function chipDaCadeia(a, recuado) {
       var p = modo === "ideal" ? portaDeEm(r.plano, a.id) : portaDe(a.id);
       var org = ORIGEM[a.id], hub = HUB_FISICO[a.id], enl = ENLACE[a.id];
-      var dica = org ? "Base do sistema: " + org[0] + ". Driver: " + org[1] + "." : a.nome;
+      /* A dica fala do que a pessoa faz, não do sistema por baixo (rodada 3). */
+      var dica = p ? "Na Entrada " + p + ". Clique para trocar" : "Sem entrada marcada. Clique e marque a entrada";
       var titulo = a.nomeDeclarado || hub || rotuloDoAparelho(a);
       return '<button class="chip' + (recuado ? " recuado" : "") + '" data-ap="' + a.id + '"' + (p ? ' data-alocado="1"' : "")
-        + (org ? '' : "") + ' title="' + emAtributo(dica) + '"'
+        + ' data-dica="' + emAtributo(dica) + '"'
         + (segurando === a.id ? ' data-segurando="1"' : "") + ">"
         + '<i class="marca" style="background:' + a.cor + '"></i>'
         + '<span class="txt"><b' + (hub ? '' : "") + ">" + emAtributo(titulo) + "</b>"
         + "<span>" + emAtributo(a.nome) + "</span>"
-        + (enl ? '<span class="enlace" title="Pode ser a entrada, o hub, o cabo, o extensor ou o próprio aparelho.">' + enl + "</span>" : "")
+        + (enl ? '<span class="enlace" data-dica="A entrada, o cabo ou o extensor segura a velocidade">' + enl + "</span>" : "")
         + "</span>"
         + (p ? '<span class="num">' + p + "</span>" : "") + "</button>";
     }
@@ -2182,7 +2183,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     htmlDaCadeia += APARELHOS.filter(function (a) { return !jaNaCadeia[a.id]; })
       .map(function (a) { return chipDaCadeia(a, false); }).join("");
     htmlDaCadeia += SUMIRAM.map(function (a) {
-      return '<div class="chip sumiu" title="Este computador já teve este aparelho e ele não apareceu agora.">'
+      return '<div class="chip sumiu" data-dica="Já esteve neste computador e não apareceu agora">'
         + '<i class="marca" style="background:' + a.cor + '"></i>'
         + '<span class="txt"><b>' + emAtributo(a.tipo) + "</b><span>" + emAtributo(a.nome) + " · Não apareceu neste início</span></span></div>";
     }).join("");

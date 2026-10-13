@@ -33,6 +33,16 @@
    "ancora": "todo-portas-3",
    "seletor": "[data-dica]",
    "conflito": ""
+  },
+  {
+   "n": 4,
+   "sprint": "A-ABA-MAPAS-DO-RADIO-E-DAS-PORTAS-DO-TODO-01",
+   "o_que_muda": "A cadeia fala com você: «Na Entrada 4. Clique para trocar», sem nome de driver",
+   "origem": "RODADA-3",
+   "resposta": "todo-portas-r3-4",
+   "ancora": "todo-portas-4",
+   "seletor": "#bandeja .chip",
+   "conflito": ""
   }
  ],
  "por_baixo": [

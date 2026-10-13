@@ -2015,6 +2015,34 @@
   .criar .meu{color:var(--texto-suave)}
   .criar .meu i{width:7px;height:7px;border-radius:50%;background:var(--cor,var(--purple));flex:0 0 auto}
 </style>
+<style data-aba="rodada-3">
+  /* RODADA 3 (12/10): as fatias entre as divisórias são iguais e o conteúdo fica no meio de cada uma.
+     O vão entre as colunas vira padding simétrico: a divisória é a borda da fatia, e o respiro dos dois
+     lados dela é o mesmo (1 da borda + 13 = 14 = o padding do quadro), a coluna dos nomes leva o vão
+     consigo, e a última fatia vai até a borda do quadro. */
+  .vib-quadro .vib{grid-template-columns:calc(var(--larg-rot) + var(--gap-col)) repeat(4,minmax(0,1fr));
+                   column-gap:0;margin-right:-14px}
+  .vib > .rotulos{padding-right:var(--gap-col)}
+  .vib .ctrl{padding:0 14px 0 13px}
+  .vib > div > *::before{left:-13px;right:-14px}
+  .vib > div:not(:last-child) > *::before{right:-14px}
+  .vib > div:last-child > *::before{right:0}
+  .vib > .rotulos > *::before{left:0;right:calc(var(--gap-col) * -1)}
+  /* Toda linha de barra é a mesma grade: glifo · trilho · número · unidade, e a unidade termina na
+     borda da célula. A da Força ganhou o glifo do controle inteiro (o pedido dela): o trilho começa e
+     acaba no mesmo x dos de baixo, e a linha fecha na mesma reta dos degraus de cima. */
+  .vib-quadro .vib{--r-barra:36px;--r-forca:79px}
+  .vib .motor{grid-template-columns:36px minmax(0,1fr) 44px 8px}
+  .vib .motor .teto{text-align:right;justify-self:end;white-space:nowrap}
+  .vib .forca .motor{position:relative}
+  /* o «Máx» não ocupa coluna: acende sobre a ponta do trilho, sem mexer em nada */
+  .vib .forca .teto.mx{position:absolute;top:-3px;right:68px}
+  .glifo-forca{cursor:default}
+  .glifo-forca .casco{stroke:var(--texto-suave)}
+  .glifo-forca .vibra{fill:currentColor;opacity:.9}
+  .glifo-forca .onda{stroke:currentColor}
+  .glifo-forca:not(.on) .casco{stroke:var(--texto-mudo)}
+</style>
 <style id="base-comum">
 /* ===== Base comum das abas (rodada 2, 12/10/2026) =====
    Copiada IGUAL em todo mockup do todo. Três peças: a dica no hover (sem «?»), o Modo automático
@@ -2194,8 +2222,8 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     <div class="fita inerte">
       <span>Selecionar:</span>
       <label class="chip on">Todos</label>
-      <label class="chip plastico on" data-campo="fita-chip" style="--plastico:#ae335a" data-dica="A borda é a cor do plástico">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> <span class="via">USB</span></label>
-      <label class="chip plastico on" data-campo="fita-chip" style="--plastico:#7eb8d4" data-dica="A borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> <span class="via">BT</span></label>
+      <label class="chip plastico on" data-campo="fita-chip" style="--plastico:#ae335a" data-dica="A borda é a cor do plástico">Cosmic Red <span class="pt">•</span> <span class="via">USB</span></label>
+      <label class="chip plastico on" data-campo="fita-chip" style="--plastico:#7eb8d4" data-dica="A borda é a cor do plástico">Starlight Blue <span class="pt">•</span> <span class="via">BT</span></label>
       <span class="so-no-nativo" data-dica="Hefesto desligado: o jogo manda"></span>
     </div>
     <div class="conectado"><span class="bolinha">●</span> <b data-campo="conta-b">1 USB · 1 BT</b></div>
@@ -2613,7 +2641,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                  data-hef-classe="padrao">
               <div class="seg" data-campo="degrau-herdado" data-hef-alvo="classe"
                    data-hef-classe="herdado"><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="economia" data-papel="forca" data-forca="economia">Economia</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="balanceado" data-papel="forca" data-forca="balanceado">Padrão</button><button class="on" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="max" data-papel="forca" data-forca="max">Máximo</button></div>
-              <div class="motor mult"><span></span><input class="trilho arrasta" type="range" min="0" max="200" step="10" value="150" data-papel="intensidade" data-campo="mult-pos" data-hef-alvo="valor" data-dica="Quanto da vibração chega a este controle"><span class="num" data-campo="mult">150%</span><span class="teto mx" data-campo="mult-teto" data-hef-alvo="classe">Máx</span></div>
+              <div class="motor mult"><span class="lado glifo-forca on" role="img" aria-label="O controle inteiro" data-dica="Os dois motores e a háptica: tudo que vibra"><svg class="gl gl-ctrl" width="28" height="22" viewBox="0 0 40 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path class="casco" d="M11 9H29Q33 9 34 13L35.5 22Q36.3 27 33 27Q31 27 29.5 24L28 21H12L10.5 24Q9 27 7 27Q3.7 27 4.5 22L6 13Q7 9 11 9Z" fill="none" stroke-width="1.8" stroke-linejoin="round"/><rect class="casco" x="15" y="11" width="10" height="5" rx="1.2" fill="none" stroke-width="1.4"/><circle class="casco" cx="15.6" cy="20.2" r="2.3" fill="none" stroke-width="1.4"/><circle class="casco" cx="24.4" cy="20.2" r="2.3" fill="none" stroke-width="1.4"/><path class="vibra" d="M6 13L4.5 22Q3.7 27 7 27Q9 27 10.5 24L12 21L11.4 15Q9 12.4 6 13Z"/><path class="vibra" d="M34 13L35.5 22Q36.3 27 33 27Q31 27 29.5 24L28 21L28.6 15Q31 12.4 34 13Z"/><path class="onda" d="M2 15.5q-1.6 3.5 0 7M38 15.5q1.6 3.5 0 7" fill="none" stroke-width="1.6" stroke-linecap="round"/></svg></span><input class="trilho arrasta" type="range" min="0" max="200" step="10" value="150" data-papel="intensidade" data-campo="mult-pos" data-hef-alvo="valor" data-dica="Quanto da vibração chega a este controle"><span class="num" data-campo="mult">150</span><span class="teto">%</span><span class="teto mx" data-campo="mult-teto" data-hef-alvo="classe">Máx</span></div>
             </div>
             <div class="motor mult haptica" data-campo="haptica-fora" data-hef-alvo="classe" data-hef-classe="fora"><button class="haptica-lado lado on" data-gesto="haptica" data-campo="lado-h" data-hef-alvo="classe" data-hef-quando="1" data-dica="A vibração fina que o jogo manda como som"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Háptica</title>
 
@@ -2979,7 +3007,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                  data-hef-classe="padrao">
               <div class="seg" data-campo="degrau-herdado" data-hef-alvo="classe"
                    data-hef-classe="herdado"><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="economia" data-papel="forca" data-forca="economia">Economia</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="balanceado" data-papel="forca" data-forca="balanceado">Padrão</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="max" data-papel="forca" data-forca="max">Máximo</button></div>
-              <div class="motor mult"><span></span><input class="trilho arrasta" type="range" min="0" max="200" step="10" value="100" data-papel="intensidade" data-campo="mult-pos" data-hef-alvo="valor" data-dica="Quanto da vibração chega a este controle"><span class="num" data-campo="mult">100%</span><span class="teto mx" data-campo="mult-teto" data-hef-alvo="classe">Máx</span></div>
+              <div class="motor mult"><span class="lado glifo-forca on" role="img" aria-label="O controle inteiro" data-dica="Os dois motores e a háptica: tudo que vibra"><svg class="gl gl-ctrl" width="28" height="22" viewBox="0 0 40 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path class="casco" d="M11 9H29Q33 9 34 13L35.5 22Q36.3 27 33 27Q31 27 29.5 24L28 21H12L10.5 24Q9 27 7 27Q3.7 27 4.5 22L6 13Q7 9 11 9Z" fill="none" stroke-width="1.8" stroke-linejoin="round"/><rect class="casco" x="15" y="11" width="10" height="5" rx="1.2" fill="none" stroke-width="1.4"/><circle class="casco" cx="15.6" cy="20.2" r="2.3" fill="none" stroke-width="1.4"/><circle class="casco" cx="24.4" cy="20.2" r="2.3" fill="none" stroke-width="1.4"/><path class="vibra" d="M6 13L4.5 22Q3.7 27 7 27Q9 27 10.5 24L12 21L11.4 15Q9 12.4 6 13Z"/><path class="vibra" d="M34 13L35.5 22Q36.3 27 33 27Q31 27 29.5 24L28 21L28.6 15Q31 12.4 34 13Z"/><path class="onda" d="M2 15.5q-1.6 3.5 0 7M38 15.5q1.6 3.5 0 7" fill="none" stroke-width="1.6" stroke-linecap="round"/></svg></span><input class="trilho arrasta" type="range" min="0" max="200" step="10" value="100" data-papel="intensidade" data-campo="mult-pos" data-hef-alvo="valor" data-dica="Quanto da vibração chega a este controle"><span class="num" data-campo="mult">100</span><span class="teto">%</span><span class="teto mx" data-campo="mult-teto" data-hef-alvo="classe">Máx</span></div>
             </div>
             <div class="motor mult haptica" data-campo="haptica-fora" data-hef-alvo="classe" data-hef-classe="fora"><button class="haptica-lado lado on" data-gesto="haptica" data-campo="lado-h" data-hef-alvo="classe" data-hef-quando="1" data-dica="A vibração fina que o jogo manda como som"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Háptica</title>
 
@@ -3345,7 +3373,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                  data-hef-classe="padrao">
               <div class="seg" data-campo="degrau-herdado" data-hef-alvo="classe"
                    data-hef-classe="herdado"><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="economia" data-papel="forca" data-forca="economia">Economia</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="balanceado" data-papel="forca" data-forca="balanceado">Padrão</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="max" data-papel="forca" data-forca="max">Máximo</button></div>
-              <div class="motor mult"><span></span><input class="trilho arrasta" type="range" min="0" max="200" step="10" value="0" data-papel="intensidade" data-campo="mult-pos" data-hef-alvo="valor" data-dica="Quanto da vibração chega a este controle"><span class="num" data-campo="mult">—</span><span class="teto mx" data-campo="mult-teto" data-hef-alvo="classe">Máx</span></div>
+              <div class="motor mult"><span class="lado glifo-forca" role="img" aria-label="O controle inteiro" data-dica="Os dois motores e a háptica: tudo que vibra"><svg class="gl gl-ctrl" width="28" height="22" viewBox="0 0 40 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path class="casco" d="M11 9H29Q33 9 34 13L35.5 22Q36.3 27 33 27Q31 27 29.5 24L28 21H12L10.5 24Q9 27 7 27Q3.7 27 4.5 22L6 13Q7 9 11 9Z" fill="none" stroke-width="1.8" stroke-linejoin="round"/><rect class="casco" x="15" y="11" width="10" height="5" rx="1.2" fill="none" stroke-width="1.4"/><circle class="casco" cx="15.6" cy="20.2" r="2.3" fill="none" stroke-width="1.4"/><circle class="casco" cx="24.4" cy="20.2" r="2.3" fill="none" stroke-width="1.4"/><path class="vibra" d="M6 13L4.5 22Q3.7 27 7 27Q9 27 10.5 24L12 21L11.4 15Q9 12.4 6 13Z"/><path class="vibra" d="M34 13L35.5 22Q36.3 27 33 27Q31 27 29.5 24L28 21L28.6 15Q31 12.4 34 13Z"/><path class="onda" d="M2 15.5q-1.6 3.5 0 7M38 15.5q1.6 3.5 0 7" fill="none" stroke-width="1.6" stroke-linecap="round"/></svg></span><input class="trilho arrasta" type="range" min="0" max="200" step="10" value="0" data-papel="intensidade" data-campo="mult-pos" data-hef-alvo="valor" data-dica="Quanto da vibração chega a este controle"><span class="num" data-campo="mult">—</span><span class="teto">%</span><span class="teto mx" data-campo="mult-teto" data-hef-alvo="classe">Máx</span></div>
             </div>
             <div class="motor mult haptica" data-campo="haptica-fora" data-hef-alvo="classe" data-hef-classe="fora"><button class="haptica-lado lado" data-gesto="haptica" data-campo="lado-h" data-hef-alvo="classe" data-hef-quando="1" data-dica="A vibração fina que o jogo manda como som"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Háptica</title>
 
@@ -3711,7 +3739,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                  data-hef-classe="padrao">
               <div class="seg" data-campo="degrau-herdado" data-hef-alvo="classe"
                    data-hef-classe="herdado"><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="economia" data-papel="forca" data-forca="economia">Economia</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="balanceado" data-papel="forca" data-forca="balanceado">Padrão</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="max" data-papel="forca" data-forca="max">Máximo</button></div>
-              <div class="motor mult"><span></span><input class="trilho arrasta" type="range" min="0" max="200" step="10" value="0" data-papel="intensidade" data-campo="mult-pos" data-hef-alvo="valor" data-dica="Quanto da vibração chega a este controle"><span class="num" data-campo="mult">—</span><span class="teto mx" data-campo="mult-teto" data-hef-alvo="classe">Máx</span></div>
+              <div class="motor mult"><span class="lado glifo-forca" role="img" aria-label="O controle inteiro" data-dica="Os dois motores e a háptica: tudo que vibra"><svg class="gl gl-ctrl" width="28" height="22" viewBox="0 0 40 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path class="casco" d="M11 9H29Q33 9 34 13L35.5 22Q36.3 27 33 27Q31 27 29.5 24L28 21H12L10.5 24Q9 27 7 27Q3.7 27 4.5 22L6 13Q7 9 11 9Z" fill="none" stroke-width="1.8" stroke-linejoin="round"/><rect class="casco" x="15" y="11" width="10" height="5" rx="1.2" fill="none" stroke-width="1.4"/><circle class="casco" cx="15.6" cy="20.2" r="2.3" fill="none" stroke-width="1.4"/><circle class="casco" cx="24.4" cy="20.2" r="2.3" fill="none" stroke-width="1.4"/><path class="vibra" d="M6 13L4.5 22Q3.7 27 7 27Q9 27 10.5 24L12 21L11.4 15Q9 12.4 6 13Z"/><path class="vibra" d="M34 13L35.5 22Q36.3 27 33 27Q31 27 29.5 24L28 21L28.6 15Q31 12.4 34 13Z"/><path class="onda" d="M2 15.5q-1.6 3.5 0 7M38 15.5q1.6 3.5 0 7" fill="none" stroke-width="1.6" stroke-linecap="round"/></svg></span><input class="trilho arrasta" type="range" min="0" max="200" step="10" value="0" data-papel="intensidade" data-campo="mult-pos" data-hef-alvo="valor" data-dica="Quanto da vibração chega a este controle"><span class="num" data-campo="mult">—</span><span class="teto">%</span><span class="teto mx" data-campo="mult-teto" data-hef-alvo="classe">Máx</span></div>
             </div>
             <div class="motor mult haptica" data-campo="haptica-fora" data-hef-alvo="classe" data-hef-classe="fora"><button class="haptica-lado lado" data-gesto="haptica" data-campo="lado-h" data-hef-alvo="classe" data-hef-quando="1" data-dica="A vibração fina que o jogo manda como som"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Háptica</title>
 

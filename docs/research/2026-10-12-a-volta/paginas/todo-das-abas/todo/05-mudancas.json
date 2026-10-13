@@ -77,6 +77,33 @@
       "origem": "RODADA-2 §A3",
       "ancora": ".menu-hefesto",
       "conflito": ""
+    },
+    {
+      "n": 9,
+      "sprint": "A-ABA-VIBRACAO-DO-TODO-01",
+      "o_que_muda": "As quatro colunas têm a mesma largura e o lado direito tem o mesmo respiro do esquerdo",
+      "resposta": "todo-05-r3-9",
+      "origem": "RODADA-3",
+      "ancora": ".vib",
+      "conflito": ""
+    },
+    {
+      "n": 10,
+      "sprint": "A-ABA-VIBRACAO-DO-TODO-01",
+      "o_que_muda": "A Força ganha o desenho do controle inteiro, com o que vibra aceso; a barra começa e acaba junto com as de baixo",
+      "resposta": "todo-05-r3-10",
+      "origem": "RODADA-3",
+      "ancora": ".glifo-forca",
+      "conflito": ""
+    },
+    {
+      "n": 11,
+      "sprint": "A-ABA-VIBRACAO-DO-TODO-01",
+      "o_que_muda": "O «%» fica na mesma reta, encostado na borda da coluna, em todas as barras",
+      "resposta": "todo-05-r3-11",
+      "origem": "RODADA-3",
+      "ancora": ".vib .motor .teto",
+      "conflito": ""
     }
   ],
   "estados": {

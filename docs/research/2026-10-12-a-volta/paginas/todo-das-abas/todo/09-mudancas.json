@@ -93,6 +93,16 @@
    "ancora": "todo-09-9",
    "seletor": "#menu-desenhado",
    "conflito": ""
+  },
+  {
+   "n": 10,
+   "sprint": "A-ABA-SISTEMA-DO-TODO-01",
+   "o_que_muda": "O registro diz Cosmic Red e Starlight Blue, não p1 e p2",
+   "origem": "RODADA-3",
+   "resposta": "todo-09-r3-10",
+   "ancora": "todo-09-10",
+   "seletor": ".registro .log",
+   "conflito": ""
   }
  ],
  "por_baixo": [

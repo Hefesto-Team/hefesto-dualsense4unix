@@ -2016,6 +2016,24 @@
   .criar .meu{color:var(--texto-suave)}
   .criar .meu i{width:7px;height:7px;border-radius:50%;background:var(--cor,var(--purple));flex:0 0 auto}
 </style>
+<style data-aba="rodada-3">
+  /* RODADA 3 (12/10): as fatias entre as divisórias são iguais e o conteúdo fica no meio de cada uma.
+     O vão entre as colunas vira padding simétrico (1 da borda + 13 = 14 = o padding do quadro), a coluna
+     dos nomes leva o vão consigo, e a última fatia vai até a borda do quadro. */
+  .luz-grade{grid-template-columns:calc(var(--larg-rot) + var(--gap-col)) repeat(4,minmax(0,1fr));
+             column-gap:0;margin-right:-14px}
+  .luz-grade > .rotulos{padding-right:var(--gap-col)}
+  .luz-grade .ctrl{padding:0 14px 0 13px}
+  .luz-grade > div > *::before{left:-13px;right:-14px}
+  .luz-grade > div:not(:last-child) > *::before{right:-14px}
+  .luz-grade > div:last-child > *::before{right:0}
+  .luz-grade > .rotulos > *::before{left:0;right:calc(var(--gap-col) * -1)}
+  /* a lista de efeitos ocupa o que sobra ao lado do Desligar, em vez de impor a largura do nome mais
+     longo: era ela que alargava a coluna 14 px além da divisória */
+  .g4-efeito{flex:1 1 0;width:0}
+  /* a linha Criar não cabia: o «Respiro calmo» saía 3 px cortado na borda. O campo do nome cede 14 px. */
+  .criar .nome-criar{width:136px}
+</style>
 <style id="base-comum">
 /* ===== Base comum das abas (rodada 2, 12/10/2026) =====
    Copiada IGUAL em todo mockup do todo. Três peças: a dica no hover (sem «?»), o Modo automático
@@ -2195,8 +2213,8 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     <div class="fita inerte">
       <span>Selecionar:</span>
       <label class="chip on">Todos</label>
-      <label class="chip plastico on" data-campo="fita-chip" style="--plastico:#ae335a" data-dica="A borda é a cor do plástico">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> <span class="via">USB</span></label>
-      <label class="chip plastico on" data-campo="fita-chip" style="--plastico:#7eb8d4" data-dica="A borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> <span class="via">BT</span></label>
+      <label class="chip plastico on" data-campo="fita-chip" style="--plastico:#ae335a" data-dica="A borda é a cor do plástico">Cosmic Red <span class="pt">•</span> <span class="via">USB</span></label>
+      <label class="chip plastico on" data-campo="fita-chip" style="--plastico:#7eb8d4" data-dica="A borda é a cor do plástico">Starlight Blue <span class="pt">•</span> <span class="via">BT</span></label>
       <span class="so-no-nativo" data-dica="Hefesto desligado: o jogo manda"></span>
     </div>
     <div class="conectado"><span class="bolinha">●</span> <b data-campo="conta-b">1 USB · 1 BT</b></div>

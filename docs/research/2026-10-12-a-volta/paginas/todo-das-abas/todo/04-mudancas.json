@@ -77,6 +77,24 @@
       "origem": "RODADA-2 §A3",
       "ancora": ".menu-hefesto",
       "conflito": ""
+    },
+    {
+      "n": 9,
+      "sprint": "A-ABA-ILUMINACAO-DO-TODO-01",
+      "o_que_muda": "As quatro colunas têm a mesma largura e o conteúdo fica no meio, entre as divisórias",
+      "resposta": "todo-04-r3-9",
+      "origem": "RODADA-3",
+      "ancora": ".luz-grade",
+      "conflito": ""
+    },
+    {
+      "n": 10,
+      "sprint": "A-ABA-ILUMINACAO-DO-TODO-01",
+      "o_que_muda": "A linha Criar cabe inteira: nenhum efeito sai cortado na borda",
+      "resposta": "todo-04-r3-10",
+      "origem": "RODADA-3",
+      "ancora": ".criar .nome-criar",
+      "conflito": ""
     }
   ],
   "estados": {
