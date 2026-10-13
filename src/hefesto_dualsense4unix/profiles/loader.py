@@ -1416,9 +1416,14 @@ def _relatar_semeadura(
 
 
 def _talvez_semear_jogos() -> None:
-    """O gatilho automático: barato quando nada mudou, best-effort sempre."""
+    """O gatilho automático: barato quando nada mudou, best-effort sempre.
+
+    No laço do serviço não semeia: quem anda a semeadura ali é o passo fora do laço da troca
+    automática (`AutoSwitcher._ler_fora_do_laco`). Vale para toda leitura de perfil feita no laço,
+    a varredura e a carga do perfil que a troca ativa.
+    """
     global _ultima_varredura_de_jogos, _assinatura_da_biblioteca_vista
-    if os.environ.get(SEED_SKIP_ENV_VAR) == "1":
+    if os.environ.get(SEED_SKIP_ENV_VAR) == "1" or _no_laco_do_servico():
         return
     agora = time.monotonic()
     if (
@@ -1697,14 +1702,9 @@ def _no_laco_do_servico() -> bool:
 
 
 def _ler_todos_os_perfis(*, copiar: bool) -> list[Profile]:
-    """O miolo das duas leituras. No laço do serviço a semeadura dos jogos não roda.
-
-    Quem a anda no serviço é o passo fora do laço da troca automática
-    (`AutoSwitcher._ler_fora_do_laco`), com o mesmo intervalo do :func:`_talvez_semear_jogos`.
-    """
+    """O miolo das duas leituras (no laço do serviço, o :func:`_talvez_semear_jogos` não semeia)."""
     _maybe_seed_presets()
-    if not _no_laco_do_servico():
-        _talvez_semear_jogos()
+    _talvez_semear_jogos()
     directory = profiles_dir(ensure=True)
     profiles: list[Profile] = []
     pela_assinatura = _ode.armado() or _LEITURA_LIGADA_PELO_PROCESSO

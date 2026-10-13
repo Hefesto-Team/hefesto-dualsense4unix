@@ -67,8 +67,16 @@ def test_o_leitor_lento_nao_para_o_relogio_de_60_hz(dono_armado: None) -> None:
     """Leitor de 200 ms, 40 perfis e um relógio a 60 Hz no mesmo laço: nenhum quadro passa de 40 ms.
 
     Os perfis entram frios: a primeira leitura decodifica os 40, e ela também anda fora do laço.
+    A ativação do perfil da janela segue no laço; ela é aquecida antes, porque no serviço os
+    módulos que a primeira ativação importa (o backend, a identidade) já estão carregados, e a
+    importação fria de um processo de teste não é o custo do serviço.
     """
     _quarenta_perfis_parados()
+    aquecer = AutoSwitcher(manager=_gerente(), window_reader=lambda: dict(JANELA), debounce_sec=0.0)
+    aquecer._tick(dict(JANELA), 0.0)
+    aquecer._tick(dict(JANELA), 1.0)
+    assert aquecer._current_profile == "jogo07"
+    loader._PERFIS_PELA_ASSINATURA.esquecer()
 
     def leitor_lento() -> dict[str, Any]:
         time.sleep(0.2)
@@ -191,3 +199,19 @@ def test_o_guardado_por_assinatura_e_um_dono_so(dono_armado: None) -> None:
     guardados = loader._PERFIS_PELA_ASSINATURA._guardados
     assert len(guardados) == 40
     assert Path(next(iter(guardados))).parent == profiles_dir()
+
+
+def test_a_ativacao_pelo_tique_no_laco_nao_semeia(
+    dono_armado: None, biblioteca_mudada: list[str]
+) -> None:
+    """A troca que ATIVA no laço lê o perfil escolhido do disco, e essa leitura também não semeia."""
+    _quarenta_perfis_parados()
+    sw = AutoSwitcher(manager=_gerente(), window_reader=lambda: dict(JANELA), debounce_sec=0.0)
+
+    async def dois_tiques_no_laco() -> None:
+        sw._tick(dict(JANELA), 0.0)
+        sw._tick(dict(JANELA), 1.0)
+
+    asyncio.run(dois_tiques_no_laco())
+    assert sw._current_profile == "jogo07", "o tique não ativou o perfil da janela"
+    assert biblioteca_mudada == [], "a ativação no laço semeou"
