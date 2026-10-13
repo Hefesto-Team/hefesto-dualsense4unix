@@ -182,6 +182,21 @@ Consequência: os doze modos "prontos" do DSX não funcionam no Hefesto, como
 diz docs/protocol/udp-schema.md. Um mod que chame Instruction.Hard() não
 produz efeito.
 
+Servidor DSU (cemuhook)
+-----------------------
+
+O servidor de toque e movimento em 127.0.0.1:26760 (daemon/servidor_dsu.py e
+core/protocolo_dsu.py) fala o protocolo DSU, descrito pela especificação
+v1993/cemuhook-protocol, publicada sob a Unlicense. O que o Hefesto usa são
+fatos de interoperabilidade: o formato do cabeçalho, os tipos, os tamanhos e os
+offsets dos pacotes, a soma de verificação e os prazos que os emuladores esperam. Nenhum
+deles é código de terceiro.
+
+O comportamento dos emuladores foi conferido LENDO o fonte do Azahar, do
+Dolphin, do evdevhook2 e do DS4Windows (todos GPL) e do Cemu (MPL-2.0), e nada
+desse código foi copiado, traduzido ou adaptado. A cada fato,
+docs/protocol/o-protocolo-dsu.md aponta a fonte pelo endereço completo.
+
 A licença das curvas próprias
 -----------------------------
 
