@@ -54,6 +54,8 @@ from __future__ import annotations
 import os
 from collections.abc import Callable, Iterable, Mapping
 
+from hefesto_dualsense4unix.utils.texto_do_sysfs import ler_texto
+
 RAIZ_SYSFS = "/sys"
 
 RAIZ_HIDRAW = "/sys/class/hidraw"
@@ -144,7 +146,7 @@ def usb_pai_por_uniq(
         return saida
     from hefesto_dualsense4unix.integrations import pad_usb
 
-    leitor = ler if ler is not None else _ler_texto
+    leitor = ler if ler is not None else ler_texto
     for no in nos:
         dispositivo = os.path.join(raiz, no, "device")
         campos = pad_usb.campos_do_uevent(leitor(os.path.join(dispositivo, "uevent")))
@@ -167,15 +169,6 @@ def usb_pai_por_uniq(
             continue
         saida[original] = dispositivo_usb_pai(dispositivo, existe=existe, real=real)
     return saida
-
-
-def _ler_texto(caminho: str) -> str:
-    """Lê um arquivo de ``/sys``; "" em qualquer erro — sysfs some sob a mão."""
-    try:
-        with open(caminho, encoding="utf-8", errors="replace") as arquivo:
-            return arquivo.read()
-    except OSError:
-        return ""
 
 
 def _so_hex(valor: str) -> str:

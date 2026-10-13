@@ -6,8 +6,8 @@ from typing import Any
 import typer
 from rich.console import Console
 
+from hefesto_dualsense4unix.cli.chamada_ao_daemon import chamar_o_daemon
 from hefesto_dualsense4unix.cli.cmd_steam import app as steam_input_app
-from hefesto_dualsense4unix.cli.ipc_client import IpcError
 
 app = typer.Typer(
     name="gamepad",
@@ -17,28 +17,6 @@ app = typer.Typer(
 console = Console()
 
 app.add_typer(steam_input_app, name="steam-input")
-
-
-def _call_sync(method: str, params: dict[str, Any] | None = None) -> Any:
-    """Chama método IPC e converte IpcError/OSError em mensagem amigável."""
-    from hefesto_dualsense4unix.app.ipc_bridge import (
-        FRASE_DO_PRAZO_VENCIDO,
-        _run_call,
-        prazo_vencido,
-        teto_da_linha_de_comando,
-    )
-
-    try:
-        return _run_call(method, params, timeout=teto_da_linha_de_comando(method))
-    except IpcError as exc:
-        if prazo_vencido(exc):
-            console.print(f"[yellow]{FRASE_DO_PRAZO_VENCIDO}[/yellow]")
-            raise typer.Exit(code=2) from None
-        console.print(f"[red]daemon recusou chamada:[/red] {exc.message}")
-        raise typer.Exit(code=2) from None
-    except (FileNotFoundError, ConnectionError, OSError) as exc:
-        console.print(f"[red]daemon offline[/red] (socket IPC inacessível): {exc}")
-        raise typer.Exit(code=3) from None
 
 
 @app.command("on")
@@ -60,7 +38,7 @@ def cmd_on(
     if flavor is not None:
         params["flavor"] = flavor
     params["origin"] = "manual"
-    result = _call_sync("gamepad.emulation.set", params)
+    result = chamar_o_daemon(console, "gamepad.emulation.set", params)
     ok = isinstance(result, dict) and bool(result.get("enabled"))
     active = result.get("flavor") if isinstance(result, dict) else None
     if ok:
@@ -75,7 +53,7 @@ def cmd_on(
 @app.command("off")
 def cmd_off() -> None:
     """Desliga o gamepad virtual no daemon (libera o grab do controle)."""
-    _call_sync("gamepad.emulation.set", {"enabled": False, "origin": "manual"})
+    chamar_o_daemon(console, "gamepad.emulation.set", {"enabled": False, "origin": "manual"})
     console.print("[green]gamepad virtual desligado[/green]")
 
 
@@ -84,7 +62,7 @@ def cmd_status(
     as_json: bool = typer.Option(False, "--json", help="Saída como JSON (scripts)."),
 ) -> None:
     """Mostra o estado atual do gamepad virtual no daemon."""
-    state = _call_sync("daemon.state_full")
+    state = chamar_o_daemon(console, "daemon.state_full")
     gp = state.get("gamepad_emulation") if isinstance(state, dict) else None
     if not isinstance(gp, dict):
         gp = {"enabled": None, "flavor": None}
@@ -130,7 +108,9 @@ def cmd_mask(
             "`gamepad mask <sabor> --uniq <endereço>`."
         )
         raise typer.Exit(code=2)
-    result = _call_sync("gamepad.mask.set", {"uniq": uniq, "flavor": "" if limpar else sabor})
+    result = chamar_o_daemon(
+        console, "gamepad.mask.set", {"uniq": uniq, "flavor": "" if limpar else sabor}
+    )
     corpo = result if isinstance(result, dict) else {}
     if corpo.get("motivo") == "aparelho_nao_vestiu":
         console.print(

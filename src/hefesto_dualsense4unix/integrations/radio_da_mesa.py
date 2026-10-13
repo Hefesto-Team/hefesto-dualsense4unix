@@ -122,6 +122,7 @@ from hefesto_dualsense4unix.integrations.ar_do_adaptador import (
     NIVEL_MEDIO,
 )
 from hefesto_dualsense4unix.utils.logging_config import get_logger
+from hefesto_dualsense4unix.utils.texto_do_sysfs import ler_texto
 
 _log = get_logger(__name__)
 
@@ -215,7 +216,7 @@ def _mapa_do_hidraw(
     mapa: dict[str, str] = {}
     completo = True
     for no in sorted(listar(raiz)):
-        texto = _ler_texto(os.path.join(raiz, no, "device", "uevent"))
+        texto = ler_texto(os.path.join(raiz, no, "device", "uevent"))
         if not texto:
             completo = False
             continue
@@ -344,7 +345,7 @@ def adaptador_por_uniq(
         nos = sorted(listar(raiz))
     except OSError:
         return saida
-    leitor = ler if ler is not None else _ler_texto
+    leitor = ler if ler is not None else ler_texto
     for no in nos:
         texto = leitor(os.path.join(raiz, no, "device", "uevent"))
         hex_uniq = _hex(_valor_do_uevent(texto, _MARCA_UNIQ))
@@ -958,15 +959,6 @@ def _valor_do_uevent(texto: str, marca: str) -> str:
         if linha.startswith(marca):
             return linha[len(marca) :].strip()
     return ""
-
-
-def _ler_texto(caminho: str) -> str:
-    """Lê um arquivo de ``/sys``; "" em qualquer erro — sysfs some sob a mão."""
-    try:
-        with open(caminho, encoding="utf-8", errors="replace") as arquivo:
-            return arquivo.read()
-    except OSError:
-        return ""
 
 
 def _hex(valor: str) -> str:

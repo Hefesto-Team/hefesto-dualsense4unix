@@ -74,6 +74,8 @@ import re
 from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, field
 
+from hefesto_dualsense4unix.utils.texto_do_sysfs import ler_texto
+
 RAIZ_USB_PADRAO = "/sys/bus/usb/devices"
 
 ESTADO_VAZIO = "not attached"
@@ -152,7 +154,7 @@ def listar_entradas(
     real: Callable[[str], str] = os.path.realpath,
 ) -> tuple[NoDeEntrada, ...]:
     """Todos os nós de entrada da máquina, ordenados por hub e número."""
-    leitor = _ler_texto if ler is None else ler
+    leitor = ler_texto if ler is None else ler
     try:
         nomes = sorted(listar(raiz_usb))
     except OSError:
@@ -337,15 +339,6 @@ def _talvez_inteiro(valor: str) -> int | None:
         return int(valor)
     except ValueError:
         return None
-
-
-def _ler_texto(caminho: str) -> str:
-    """Lê um arquivo de ``/sys``; ``""`` em qualquer erro — sysfs some sob a mão."""
-    try:
-        with open(caminho, encoding="utf-8", errors="replace") as arquivo:
-            return arquivo.read()
-    except OSError:
-        return ""
 
 
 __all__ = [

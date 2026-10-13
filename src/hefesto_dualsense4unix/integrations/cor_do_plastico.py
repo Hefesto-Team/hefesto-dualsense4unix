@@ -100,6 +100,7 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 
 from hefesto_dualsense4unix.utils.logging_config import get_logger
+from hefesto_dualsense4unix.utils.texto_do_sysfs import ler_texto
 
 logger = get_logger(__name__)
 
@@ -628,7 +629,7 @@ def alvo_do_controle(
     procurado = (uniq or "").replace(":", "").strip().lower()
     if not procurado:
         return None
-    leitor = ler if ler is not None else _ler_texto
+    leitor = ler if ler is not None else ler_texto
     if resolver is None:
         resolver = os.path.realpath if ler is None else (lambda caminho: caminho)
     try:
@@ -654,14 +655,6 @@ def alvo_do_controle(
             caminho=f"/dev/{no}", transporte=transporte, modelo=MODELOS[achado[1]]
         )
     return None
-
-
-def _ler_texto(caminho: str) -> str:
-    try:
-        with open(caminho, encoding="utf-8", errors="replace") as arquivo:
-            return arquivo.read()
-    except OSError:
-        return ""
 
 
 def _perguntar_ao_hidraw(

@@ -57,7 +57,7 @@ Cada subsystem implementa o protocolo. A ordem de start é definida por `SUBSYST
 A classe `Daemon` permanece em `lifecycle.py` com a mesma API pública que existia antes do refactor:
 
 - Métodos públicos: `run()`, `stop()`, `reload_config()`, `set_mouse_emulation()`.
-- Métodos privados (chamados por testes): `_start_hotkey_manager()`, `_stop_hotkey_manager()`, `_start_mouse_emulation()`, `_stop_mouse_emulation()`, `_reassert_rumble()`, `_evdev_buttons_once()`, `_dispatch_mouse_emulation()`, `_start_ipc()`, `_start_udp()`, `_start_autoswitch()`, `_start_mic_hotkey()`.
+- Métodos privados (chamados por testes): `_start_hotkey_manager()`, `_start_mouse_emulation()`, `_reassert_rumble()`, `_evdev_buttons_once()`, `_dispatch_mouse_emulation()`, `_start_ipc()`, `_start_udp()`, `_start_autoswitch()`.
 - Atributos: `controller`, `bus`, `store`, `config`, `_hotkey_manager`, `_audio`, `_mouse_device`, `_ipc_server`, `_udp_server`, `_autoswitch`, `_last_auto_mult`, `_last_auto_change_at`.
 - Todos os identificadores importáveis: `BatteryDebouncer`, `DaemonConfig`, `_effective_mult_inline`, `AUTO_DEBOUNCE_SEC`, `BATTERY_DEBOUNCE_SEC`, `BATTERY_DELTA_THRESHOLD_PCT`, `BATTERY_MIN_INTERVAL_SEC`, `DEFAULT_POLL_HZ`, `RUMBLE_POLICY_MULT`.
 

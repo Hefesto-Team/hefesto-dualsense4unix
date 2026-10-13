@@ -110,6 +110,7 @@ from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, field
 
 from hefesto_dualsense4unix.integrations import receptor_sem_fio as _receptor_sem_fio
+from hefesto_dualsense4unix.utils.texto_do_sysfs import ler_texto
 
 GRAU_LIDO = "lido"
 GRAU_DESCONHECIDO = "desconhecido"
@@ -281,7 +282,7 @@ def ler_o_barramento(
     real: Callable[[str], str] = os.path.realpath,
 ) -> Censo:
     """Uma varredura de ``/sys``, e o barramento inteiro sai dela."""
-    leitor = _ler_texto if ler is None else ler
+    leitor = ler_texto if ler is None else ler
     try:
         nomes = sorted(listar(raiz_usb))
     except OSError:
@@ -713,15 +714,6 @@ def _talvez_inteiro(valor: str) -> int | None:
 def _campo(no: str, atributo: str, ler: Callable[[str], str]) -> str:
     """Um atributo do nó, já sem o ``\\n`` do sysfs — ``""`` se não houver."""
     return ler(os.path.join(no, atributo)).strip()
-
-
-def _ler_texto(caminho: str) -> str:
-    """Lê um arquivo de ``/sys``; ``""`` em qualquer erro — sysfs some sob a mão."""
-    try:
-        with open(caminho, encoding="utf-8", errors="replace") as arquivo:
-            return arquivo.read()
-    except OSError:
-        return ""
 
 
 __all__ = [

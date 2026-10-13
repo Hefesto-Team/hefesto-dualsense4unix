@@ -68,6 +68,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
 from hefesto_dualsense4unix.integrations.usb_pai import dispositivo_usb_pai
+from hefesto_dualsense4unix.utils.texto_do_sysfs import ler_texto
 
 _INTERFACE_BT = re.compile(r"^hci[0-9]+$")
 
@@ -161,7 +162,7 @@ def ler_a_mesa(
     real: Callable[[str], str] = os.path.realpath,
 ) -> Mesa:
     """As três leituras de uma vez — adaptadores, rádios e quem está colado."""
-    leitor = _ler_texto if ler is None else ler
+    leitor = ler_texto if ler is None else ler
     adaptadores = adaptadores_bluetooth(
         raiz_bt=raiz_bt, listar=listar, ler=leitor, existe=existe, real=real
     )
@@ -184,7 +185,7 @@ def adaptadores_bluetooth(
     real: Callable[[str], str] = os.path.realpath,
 ) -> list[Adaptador]:
     """Os adaptadores Bluetooth da máquina, em ordem estável de interface."""
-    leitor = _ler_texto if ler is None else ler
+    leitor = ler_texto if ler is None else ler
     try:
         nomes = sorted(listar(raiz_bt))
     except OSError:
@@ -239,7 +240,7 @@ def radios_do_barramento(
     uma subida pela árvore — quem precisa de ``existe`` é o
     ``dispositivo_usb_pai`` do lado dos adaptadores.
     """
-    leitor = _ler_texto if ler is None else ler
+    leitor = ler_texto if ler is None else ler
     try:
         nomes = sorted(listar(raiz_usb))
     except OSError:
@@ -391,15 +392,6 @@ def _inteiro(valor: str) -> int:
 def _campo(no: str, atributo: str, ler: Callable[[str], str]) -> str:
     """Um atributo do nó, já sem o ``\\n`` do sysfs — ``""`` se não houver."""
     return ler(os.path.join(no, atributo)).strip()
-
-
-def _ler_texto(caminho: str) -> str:
-    """Lê um arquivo de ``/sys``; "" em qualquer erro — sysfs some sob a mão."""
-    try:
-        with open(caminho, encoding="utf-8", errors="replace") as arquivo:
-            return arquivo.read()
-    except OSError:
-        return ""
 
 
 __all__ = [

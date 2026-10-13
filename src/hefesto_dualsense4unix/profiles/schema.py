@@ -283,6 +283,24 @@ def com_o_brilho_das_luzes_de(antes: LedsConfig | None, novos: LedsConfig) -> Le
     return novos.model_copy(update={campo: antes.player_led_brightness})
 
 
+def _conferir_custom_mult(policy: str | None, custom_mult: float | None) -> None:
+    """A regra do ``custom_mult`` das duas bordas (a seção global e a peça): faixa e coerência.
+
+    ``custom_mult`` fora de ``policy="custom"`` é erro semântico (o valor seria
+    silenciosamente ignorado pelo daemon): a borda recusa o par incoerente cedo.
+    """
+    if custom_mult is None:
+        return
+    if not (0.0 <= custom_mult <= RUMBLE_CUSTOM_MULT_MAX):
+        raise ValueError(
+            f"custom_mult fora de [0.0, {RUMBLE_CUSTOM_MULT_MAX}]: {custom_mult}"
+        )
+    if policy != "custom":
+        raise ValueError(
+            f"custom_mult só é válido com policy='custom' (policy={policy!r})"
+        )
+
+
 class RumbleConfig(BaseModel):
     """Seção de rumble do perfil."""
 
@@ -300,17 +318,7 @@ class RumbleConfig(BaseModel):
         seria silenciosamente ignorado pelo daemon) — rejeitamos cedo, na
         borda do schema, com mensagem clara.
         """
-        if self.custom_mult is not None:
-            if not (0.0 <= self.custom_mult <= RUMBLE_CUSTOM_MULT_MAX):
-                raise ValueError(
-                    f"custom_mult fora de [0.0, {RUMBLE_CUSTOM_MULT_MAX}]: "
-                    f"{self.custom_mult}"
-                )
-            if self.policy != "custom":
-                raise ValueError(
-                    "custom_mult só é válido com policy='custom' "
-                    f"(policy={self.policy!r})"
-                )
+        _conferir_custom_mult(self.policy, self.custom_mult)
         return self
 
 
@@ -877,17 +885,7 @@ class ControllerRumbleOverride(BaseModel):
     @model_validator(mode="after")
     def _validate_custom_mult(self) -> ControllerRumbleOverride:
         """MESMA regra do ``RumbleConfig`` — a borda recusa o par incoerente."""
-        if self.custom_mult is not None:
-            if not (0.0 <= self.custom_mult <= RUMBLE_CUSTOM_MULT_MAX):
-                raise ValueError(
-                    f"custom_mult fora de [0.0, {RUMBLE_CUSTOM_MULT_MAX}]: "
-                    f"{self.custom_mult}"
-                )
-            if self.policy != "custom":
-                raise ValueError(
-                    "custom_mult só é válido com policy='custom' "
-                    f"(policy={self.policy!r})"
-                )
+        _conferir_custom_mult(self.policy, self.custom_mult)
         return self
 
     @model_validator(mode="after")
@@ -1939,7 +1937,13 @@ def perfil_no_modo(profile: Profile) -> Profile:
 
 
 def _mult_da_vibracao(policy: str | None, custom_mult: float | None) -> float | None:
-    """O multiplicador de uma política fixa, lido do dono dos degraus."""
+    """Multiplicador de uma política FIXA de rumble, ou None se não há.
+
+    Fonte única: a MESMA tabela `RUMBLE_POLICY_MULT` que o daemon usa
+    (`daemon.subsystems.rumble`), com import lazy — `profiles/` não importa
+    `daemon/` no topo. `auto` devolve None de propósito: ele não é um número,
+    é uma função da bateria (ver `ControllerRumbleOverride`).
+    """
     if policy is None:
         return None
     if policy == "custom":

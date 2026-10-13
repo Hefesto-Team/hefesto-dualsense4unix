@@ -3332,11 +3332,6 @@ class Daemon:
 
         start_hotkey_manager(self)
 
-    def _stop_hotkey_manager(self) -> None:
-        """Thin wrapper — backcompat."""
-        from hefesto_dualsense4unix.daemon.subsystems.hotkey import stop_hotkey_manager
-
-        stop_hotkey_manager(self)
 
     def _start_mouse_emulation(self) -> bool:
         """Thin wrapper — backcompat."""
@@ -3344,11 +3339,6 @@ class Daemon:
 
         return start_mouse_emulation(self)
 
-    def _stop_mouse_emulation(self) -> None:
-        """Thin wrapper — backcompat."""
-        from hefesto_dualsense4unix.daemon.subsystems.mouse import stop_mouse_emulation
-
-        stop_mouse_emulation(self)
 
     def _start_gamepad_emulation(self) -> bool:
         """Thin wrapper — gamepad virtual (FEAT-DSX-GAMEPAD-FLAVOR-01)."""
@@ -3428,11 +3418,6 @@ class Daemon:
 
         await start_autoswitch(self)
 
-    def _start_mic_hotkey(self) -> None:
-        """Thin wrapper — backcompat."""
-        from hefesto_dualsense4unix.daemon.subsystems.hotkey import start_mic_hotkey
-
-        start_mic_hotkey(self)
 
     async def _start_plugins(self) -> None:
         """Inicializa o PluginsSubsystem se ``plugins_enabled`` (``hefesto plugin ligar``)."""
@@ -3453,11 +3438,6 @@ class Daemon:
         await ps.start(ctx)
         self._plugins_subsystem = ps
 
-    async def _stop_plugins(self) -> None:
-        """Para o PluginsSubsystem de forma limpa."""
-        if self._plugins_subsystem is not None:
-            await self._plugins_subsystem.stop()
-            self._plugins_subsystem = None
 
     async def _start_mods(self) -> None:
         """O supervisor das modificações (ADR-021): obedece ao ``mods.json``.

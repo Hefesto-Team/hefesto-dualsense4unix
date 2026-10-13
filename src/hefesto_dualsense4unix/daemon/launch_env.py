@@ -69,6 +69,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from hefesto_dualsense4unix.core import o_dono_do_evento as _ode
+from hefesto_dualsense4unix.core.numeros_da_sony import PAR_DUALSENSE_FISICO
 from hefesto_dualsense4unix.integrations import ponte_escada, ponte_tentativa
 from hefesto_dualsense4unix.profiles.steam_app import steam_appid_from_wm_class
 from hefesto_dualsense4unix.utils.leitura_pela_assinatura import (
@@ -100,10 +101,11 @@ ENV_ALLOWLIST = (
     "PROTON_ENABLE_MHWILDS_USB_AUDIO",
 )
 
-#: DualSense FÍSICO. Ele estava cravado DENTRO das duas strings abaixo; agora é
-#: `054c:0df2`, é o MESMO do nosso vpad em toda máscara DualSense (uhid e
-PAR_DUALSENSE_FISICO = (0x054C, 0x0CE6)
+# `PAR_DUALSENSE_FISICO` (do dono, `core/numeros_da_sony.py`) é o que as listas de ignorar do
+# SDL e do Proton escondem do jogo. O nosso pad virtual usa outro PID em toda máscara
+# DualSense: quem separa os dois é o `HID_PHYS` do nó, não este par.
 
+#: O espelho que o Steam Input cria. No `/proc/bus/input/devices` o jogo vê, lado a lado:
 #:
 #:     event2   Sony ... DualSense Wireless Controller       054c:0ce6  (físico)
 #:     event6   DualSense Wireless Controller (Hefesto P1)   054c:0df2  (nosso)

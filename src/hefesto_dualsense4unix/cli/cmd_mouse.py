@@ -17,7 +17,7 @@ from typing import Any
 import typer
 from rich.console import Console
 
-from hefesto_dualsense4unix.cli.ipc_client import IpcError
+from hefesto_dualsense4unix.cli.chamada_ao_daemon import chamar_o_daemon
 
 app = typer.Typer(
     name="mouse",
@@ -25,30 +25,6 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 console = Console()
-
-
-def _call_sync(method: str, params: dict[str, Any] | None = None) -> Any:
-    """Chama método IPC e converte IpcError/OSError em mensagem amigável."""
-    from hefesto_dualsense4unix.app.ipc_bridge import (
-        FRASE_DO_PRAZO_VENCIDO,
-        _run_call,
-        prazo_vencido,
-        teto_da_linha_de_comando,
-    )
-
-    try:
-        return _run_call(method, params, timeout=teto_da_linha_de_comando(method))
-    except IpcError as exc:
-        if prazo_vencido(exc):
-            console.print(f"[yellow]{FRASE_DO_PRAZO_VENCIDO}[/yellow]")
-            raise typer.Exit(code=2) from None
-        console.print(f"[red]daemon recusou chamada:[/red] {exc.message}")
-        raise typer.Exit(code=2) from None
-    except (FileNotFoundError, ConnectionError, OSError) as exc:
-        console.print(
-            f"[red]daemon offline[/red] (socket IPC inacessível): {exc}"
-        )
-        raise typer.Exit(code=3) from None
 
 
 @app.command("on")
@@ -68,7 +44,7 @@ def cmd_on(
         params["scroll_speed"] = scroll_speed
 
     params["origin"] = "manual"
-    result = _call_sync("mouse.emulation.set", params)
+    result = chamar_o_daemon(console, "mouse.emulation.set", params)
     ok = isinstance(result, dict) and bool(result.get("enabled"))
     if ok:
         console.print("[green]emulação de mouse ligada[/green]")
@@ -82,7 +58,7 @@ def cmd_on(
 @app.command("off")
 def cmd_off() -> None:
     """Desliga a emulação de mouse no daemon."""
-    _call_sync("mouse.emulation.set", {"enabled": False, "origin": "manual"})
+    chamar_o_daemon(console, "mouse.emulation.set", {"enabled": False, "origin": "manual"})
     console.print("[green]emulação de mouse desligada[/green]")
 
 
@@ -93,7 +69,7 @@ def cmd_status(
     ),
 ) -> None:
     """Mostra estado atual da emulação de mouse no daemon."""
-    state = _call_sync("daemon.state_full")
+    state = chamar_o_daemon(console, "daemon.state_full")
     mouse = state.get("mouse_emulation") if isinstance(state, dict) else None
     if not isinstance(mouse, dict):
         mouse = {"enabled": None, "speed": None, "scroll_speed": None}

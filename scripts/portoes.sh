@@ -436,6 +436,11 @@ rapido|portoes-lentos-rapidos|pytest|tests/unit/test_os_portoes_lentos_ficam_rap
 # um estudo de `docs/process/` entrou assim numa branch de leva sem portão nenhum perguntar. A pergunta é
 # ao ÍNDICE (`git ls-files -ci --exclude-standard`), e por isso roda igual no clone do CI.
 rapido|o-ignorado-fica-fora-do-indice|py|scripts/check_o_ignorado_fica_fora_do_indice.py|@head
+# OS NÚMEROS DA SONY TÊM UM DONO SÓ (13/10/2026, OS-NUMEROS-DA-SONY-E-OS-AJUDANTES-COPIADOS-TEM-UM-DONO-SO-01):
+# o VID/PID do DualSense estava escrito à mão em quinze módulos, com conjuntos que divergiam. A catraca conta as
+# linhas com o literal fora de `core/numeros_da_sony.py` (o piso só desce) e a régua prova que ela morde.
+rapido|numeros-da-sony|py|scripts/check_numeros_da_sony.py|src/** scripts/check_numeros_da_sony.py
+rapido|numeros-da-sony-morde|pytest|tests/unit/test_os_numeros_da_sony_tem_um_dono.py|src/** scripts/** tests/unit/test_os_numeros_da_sony_tem_um_dono.py
 rapido|ruff|bin|ruff check src/ tests/|src/** tests/** pyproject.toml .gitignore
 # O `scripts/ci/*.sh` entrou em 19/08/2026 com o primeiro script da pasta: diretório de scripts que nenhum
 # linter enxerga é portão cego.

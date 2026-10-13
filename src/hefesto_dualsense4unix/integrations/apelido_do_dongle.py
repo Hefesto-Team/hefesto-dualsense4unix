@@ -133,6 +133,7 @@ from hefesto_dualsense4unix.core.linhagem_nintendo import (
     _e_da_linhagem_nintendo,
 )
 from hefesto_dualsense4unix.integrations import bluez_dbus
+from hefesto_dualsense4unix.utils.texto_do_sysfs import ler_texto
 
 #: de ``scripts/bt_active_mode.sh:142`` — os dois escritores têm de produzir a
 PREFIXO_NINTENDO = "Nintendo"
@@ -238,7 +239,7 @@ def adaptadores_com_nintendo(
     ler: Callable[[str], str] | None = None,
 ) -> frozenset[str]:
     """Endereços (minúsculos, com ``:``) dos adaptadores que hospedam Nintendo."""
-    leitor = _ler_texto if ler is None else ler
+    leitor = ler_texto if ler is None else ler
     try:
         nos = sorted(listar(raiz))
     except OSError:
@@ -410,15 +411,6 @@ def _valor_do_uevent(texto: str, marca: str) -> str:
         if linha.startswith(marca):
             return linha[len(marca) :].strip()
     return ""
-
-
-def _ler_texto(caminho: str) -> str:
-    """Lê um arquivo de ``/sys``; "" em qualquer erro — sysfs some sob a mão."""
-    try:
-        with open(caminho, encoding="utf-8", errors="replace") as arquivo:
-            return arquivo.read()
-    except OSError:
-        return ""
 
 
 __all__ = [

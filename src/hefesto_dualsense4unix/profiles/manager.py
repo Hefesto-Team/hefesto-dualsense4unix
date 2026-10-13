@@ -36,6 +36,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     Profile,
     ProfileModeConfig,
     ProfileMouseConfig,
+    _mult_da_vibracao,
     controles_em_economia,
     e_endereco_de_jogo,
     economia_da_mesa,
@@ -2301,23 +2302,6 @@ _RUMBLE_POLICY_PADRAO = "balanceado"
 VOLUME_DO_PADRAO = volume_do_percentual(100)
 
 
-def _mult_da_politica(policy: str | None, custom_mult: float | None) -> float | None:
-    """Multiplicador de uma política FIXA de rumble, ou None se não há.
-
-    Fonte única: a MESMA tabela `RUMBLE_POLICY_MULT` que o daemon usa
-    (`daemon.subsystems.rumble`), com import lazy — `profiles/` não importa
-    `daemon/` no topo. `auto` devolve None de propósito: ele não é um número,
-    é uma função da bateria (ver `ControllerRumbleOverride`).
-    """
-    if policy is None:
-        return None
-    if policy == "custom":
-        return None if custom_mult is None else float(custom_mult)
-    from hefesto_dualsense4unix.daemon.subsystems.rumble import RUMBLE_POLICY_MULT
-
-    return RUMBLE_POLICY_MULT.get(policy)
-
-
 def fator_da_unidade(
     policy_da_peca: str | None,
     policy_global: str | None,
@@ -2343,10 +2327,10 @@ def fator_da_unidade(
     Os dois "globais" são coisas diferentes, e confundi-los é o defeito que esta
     função existe para não deixar repetir.
     """
-    base = _mult_da_politica(policy_global or _RUMBLE_POLICY_PADRAO, custom_global)
+    base = _mult_da_vibracao(policy_global or _RUMBLE_POLICY_PADRAO, custom_global)
     if base is None or base <= 0.0:
         return None
-    mult = _mult_da_politica(policy_da_peca, custom_da_peca)
+    mult = _mult_da_vibracao(policy_da_peca, custom_da_peca)
     return None if mult is None else mult / base
 
 
@@ -2358,14 +2342,14 @@ def _controllers_to_rumble_scales(
     out: dict[str, float] = {}
     policy_global = getattr(global_rumble, "policy", None) or _RUMBLE_POLICY_PADRAO
     custom_global = getattr(global_rumble, "custom_mult", None)
-    base = _mult_da_politica(policy_global, custom_global)
+    base = _mult_da_vibracao(policy_global, custom_global)
     for uniq, cfg in (controllers or {}).items():
         if cfg.rumble is None:
             continue
         campos = cfg.rumble.model_fields_set
         if "policy" not in campos:
             continue
-        if _mult_da_politica(cfg.rumble.policy, cfg.rumble.custom_mult) is None:
+        if _mult_da_vibracao(cfg.rumble.policy, cfg.rumble.custom_mult) is None:
             continue
         if base is None or base <= 0.0:
             logger.info(

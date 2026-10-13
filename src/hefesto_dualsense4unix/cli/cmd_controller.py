@@ -25,7 +25,7 @@ from typing import Any
 import typer
 from rich.console import Console
 
-from hefesto_dualsense4unix.cli.ipc_client import IpcError
+from hefesto_dualsense4unix.cli.chamada_ao_daemon import chamar_o_daemon
 
 app = typer.Typer(
     name="controller",
@@ -33,28 +33,6 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 console = Console()
-
-
-def _call_sync(method: str, params: dict[str, Any] | None = None) -> Any:
-    """Chama método IPC e converte IpcError/OSError em mensagem amigável."""
-    from hefesto_dualsense4unix.app.ipc_bridge import (
-        FRASE_DO_PRAZO_VENCIDO,
-        _run_call,
-        prazo_vencido,
-        teto_da_linha_de_comando,
-    )
-
-    try:
-        return _run_call(method, params, timeout=teto_da_linha_de_comando(method))
-    except IpcError as exc:
-        if prazo_vencido(exc):
-            console.print(f"[yellow]{FRASE_DO_PRAZO_VENCIDO}[/yellow]")
-            raise typer.Exit(code=2) from None
-        console.print(f"[red]daemon recusou chamada:[/red] {exc.message}")
-        raise typer.Exit(code=2) from None
-    except (FileNotFoundError, ConnectionError, OSError) as exc:
-        console.print(f"[red]daemon offline[/red] (socket IPC inacessível): {exc}")
-        raise typer.Exit(code=3) from None
 
 
 def _slot_of(controller: dict[str, Any]) -> int | None:
@@ -80,7 +58,7 @@ def _numero_exibido(controller: dict[str, Any]) -> int:
 
 def _conectados() -> list[dict[str, Any]]:
     """Lista de controles CONECTADOS do `daemon.state_full` (defensiva)."""
-    state = _call_sync("daemon.state_full")
+    state = chamar_o_daemon(console, "daemon.state_full")
     controllers = state.get("controllers") if isinstance(state, dict) else None
     if not isinstance(controllers, list):
         return []
@@ -125,7 +103,7 @@ def cmd_target(
             index = int(alvos[0].get("index", n - 1))
         else:
             index = n - 1
-    result = _call_sync("controller.target.set", {"index": index})
+    result = chamar_o_daemon(console, "controller.target.set", {"index": index})
     effective = result.get("target_index") if isinstance(result, dict) else None
     if effective is None:
         console.print("[green]alvo de output: todos os controles[/green] (broadcast)")
@@ -148,7 +126,7 @@ def cmd_list(
     ),
 ) -> None:
     """Lista os controles conectados e qual é o alvo de output atual."""
-    state = _call_sync("daemon.state_full")
+    state = chamar_o_daemon(console, "daemon.state_full")
     controllers = state.get("controllers") if isinstance(state, dict) else None
     target_index = state.get("output_target_index") if isinstance(state, dict) else None
     if not isinstance(controllers, list):
@@ -157,7 +135,7 @@ def cmd_list(
 
     externos: list[dict[str, Any]] | None = None
     if external:
-        listagem = _call_sync("controller.list", {"external": True})
+        listagem = chamar_o_daemon(console, "controller.list", {"external": True})
         raw_ext = listagem.get("external") if isinstance(listagem, dict) else None
         if isinstance(raw_ext, list):
             externos = [e for e in raw_ext if isinstance(e, dict)]
