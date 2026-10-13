@@ -217,7 +217,7 @@ def linha_da_pausa(state: object) -> Linha:
     """A pausa, que CHEGA À TELA PELA PRIMEIRA VEZ.
 
     ``state_full["paused"]`` é publicado desde sempre
-    (``daemon/ipc_handlers.py:1614``) e os dois únicos leitores em ``app/`` são
+    (``daemon/ipc_handlers.py:1264``) e os dois únicos leitores em ``app/`` são
     a aba inicial e a Emulação — **esta aba nunca o leu**.
 
     E O VALOR DIZ **O QUE A PAUSA É** — 11/09/2026, A1-007/008. Sem isso,

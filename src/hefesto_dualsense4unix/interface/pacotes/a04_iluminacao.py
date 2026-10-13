@@ -81,7 +81,7 @@ NUMEROS = (1, 2, 3, 4)
 
 ANEL_DO_DONO = "players.dono"
 
-#: #: O alvo da cor do plástico (desde 03/09/2026): `escrever()` faz
+#: O alvo da cor do plástico (desde 03/09/2026): `escrever()` faz
 #: `el.style.setProperty('--plastico', …)`.
 ALVO_DO_PLASTICO = "plastico"
 
@@ -135,7 +135,7 @@ def colorway_do_aparelho(casa: dict[str, Any]) -> str:
     traduziu o código de fábrica do broker para o slug do desenho, e a mesa o carrega em `cor`.
     """
     return str(casa.get("cor") or "")
-#: #: Anel do dono sem cor: `.players .dono{…border:2px solid var(--plastico)}` precisa de
+#: Anel do dono sem cor: `.players .dono{…border:2px solid var(--plastico)}` precisa de
 #: `--plastico`; sem ele, tracejado.
 ANEL_INCERTO = "border:2px dashed var(--comment)"
 
@@ -189,7 +189,7 @@ def brilho_do_controle(p: dict[str, Any] | None, uniq: str) -> float | None:
         return None
     leds = p.get("leds")
     global_ = leds.get("lightbar_brightness") if isinstance(leds, dict) else None
-    #: #: Bancada: o `state_full` publica `uniq='143a9a0000ab'`, já normalizado.
+    #: Bancada: o `state_full` publica `uniq='143a9a0000ab'`, já normalizado.
     alvo = chave_do_override(uniq)
     meu = next((v for k, v in (p.get("controllers") or {}).items()
                 if chave_do_override(str(k)) == alvo), None)
@@ -223,7 +223,7 @@ def brilho_aceso(c: dict[str, Any] | None, p: dict[str, Any] | None,
     return brilho_do_controle(p, uniq)
 
 
-#: #: O GESTO DO PAR DOS MODOS (A-O-MODO-AUTOMATICO-E-O-PERSONALIZADO-01, 08/10/2026), no lugar do
+#: O GESTO DO PAR DOS MODOS (A-O-MODO-AUTOMATICO-E-O-PERSONALIZADO-01, 08/10/2026), no lugar do
 #: interruptor `auto-cores` (D-13): #: automático = interruptor ligado; personalizado = desligado
 #: com a cor de cada controle guardada. É também o endereço do quadro, que #: carrega o modo no
 #: `data-modo-da-aba`.
@@ -324,7 +324,7 @@ def _com_o_brilho(rgb: tuple[int, int, int], brilho: float) -> tuple[int, int, i
     return LedSettings(lightbar=rgb).apply_brightness(brilho).lightbar
 
 
-#: #: Fora da guia (HLS, matiz em graus): azul #0000FF 240,00° (automático do P1), vizinho mais
+#: Fora da guia (HLS, matiz em graus): azul #0000FF 240,00° (automático do P1), vizinho mais
 #: perto a 30,12°.
 FORA_DA_GUIA = ("#0080FF", "#FF00FF", "#000000")
 
@@ -826,7 +826,7 @@ def um_botao_de_player(nome: str, meu: int, n: int,
     voltaria calado a um dos estados acima.
     """
     cor = _cor_do_plastico(str(dono.get("cor") or "")) if dono else ""
-    #: # O endereço e o alvo andam juntos: endereço sem alvo é meia fechadura.
+    #: O endereço e o alvo andam juntos: endereço sem alvo é meia fechadura.
     onde = (f'data-hef="{endereco_do_anel(n)}" '
             f'data-hef-alvo="{ALVO_DO_PLASTICO}"')
     if dono is None:
@@ -990,7 +990,7 @@ def desenho_da_luz(tinta: str, brilho: float, jogador: int, dica: str = "",
     try:
         lampadas = monta.luzinhas(jogador)
     except KeyError:
-        # # O dono (`player_led_pattern`) sabe o overflow e o atalho da bancada não:
+        # O dono (`player_led_pattern`) sabe o overflow e o atalho da bancada não:
         # `monta.luzinhas(9)` levanta `KeyError` (medido em 02/09/2026).
         lampadas = ""
     return "\n".join(recuo + linha for linha in (
@@ -2511,7 +2511,7 @@ def player(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """"Dar o Player N a este controle" — o número E as cinco lâmpadas.
 
     Não é `identity.renumber` (COMPACTA todos preservando a ordem relativa e mora na aba Início,
-    `interface/pacotes/a01_jogar.py:2427`); "este controle é o 2" foi o comando que faltou até
+    `interface/pacotes/a01_jogar.py:1986`); "este controle é o 2" foi o comando que faltou até
     25/07.
 
     Devolve `(ok, motivo)` com o motivo já em frase (`_MOTIVOS_NUMERO`); levantar com ele faz o

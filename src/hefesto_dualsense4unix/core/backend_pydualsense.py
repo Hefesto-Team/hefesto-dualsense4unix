@@ -61,12 +61,12 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-#: #: PID do DualSense Edge.
+#: PID do DualSense Edge.
 DUALSENSE_EDGE_PID = 0x0DF2
 
 KERNEL_DEFAULT_BLUE: tuple[int, int, int] = (0, 0, 128)
 
-#: #: Piscadas do aviso: poucas e lentas o bastante para contar e ler a cor.
+#: Piscadas do aviso: poucas e lentas o bastante para contar e ler a cor.
 AVISO_PISCADAS = 3
 AVISO_ACESO_S = 0.15
 AVISO_APAGADO_S = 0.12
@@ -86,8 +86,8 @@ _FIRMWARE_FEATURE_ID = 0x20
 _FIRMWARE_FEATURE_SIZE = 64
 _FIRMWARE_UPDATE_VERSION_OFFSET = 44
 
-#: #: Firmware a partir daqui entende a vibração v2 (limiar do SDL e do SpecialK,
-#: #: `docs/protocol/dualsense-energia-e-vibracao.md` §4.1); o Edge é sempre v2.
+#: Firmware a partir daqui entende a vibração v2 (limiar do SDL e do SpecialK,
+#: `docs/protocol/dualsense-energia-e-vibracao.md` §4.1); o Edge é sempre v2.
 LIMITE_DA_VIBRACAO_V2 = 0x0224
 
 
@@ -192,7 +192,7 @@ def _is_virtual_hidraw(path: bytes) -> bool:
         bus=pad_usb.bus_do_hid_id(uevent.get("HID_ID", "")),
     )
 
-#: #: Teto do `init()` do pydualsense, que pode travar em `D (disk sleep)` num USB degenerado;
+#: Teto do `init()` do pydualsense, que pode travar em `D (disk sleep)` num USB degenerado;
 #: passado o prazo o #: backend fica offline e o reconnect_loop tenta de novo (a thread é
 #: abandonada).
 INIT_TIMEOUT_SEC: float = float(os.environ.get("HEFESTO_DUALSENSE4UNIX_INIT_TIMEOUT_SEC", "5"))
@@ -205,7 +205,7 @@ REPORT_THREAD_THROTTLE_SEC: float = float(
 
 REPORT_THREAD_THROTTLE_MAX_SEC: float = 0.032
 
-#: #: Espaçamento mínimo entre duas escritas do MESMO controle no cabo: o serviço do endpoint OUT (4
+#: Espaçamento mínimo entre duas escritas do MESMO controle no cabo: o serviço do endpoint OUT (4
 #: ms, #: `docs/protocol/driver-hid-playstation.md`, «Cabo: 250 Hz»), por controle.
 #: A-VIBRACAO-DO-JOGO-NAO-ESPERA-O-SONO-DA-VOLTA-01.
 PISO_DE_ESCRITA_DO_CABO_SEC: float = 0.004
@@ -283,8 +283,8 @@ def _byte_da_rota(handle: Any, rota: int | None) -> int | None:
     """
     if rota is None:
         return None
-    # # SOM-CANAL-01: base ZERO apagava o `FORCE_INTERNAL_MIC` e o microfone parava de captar; o
-    # byte não se lê de volta, # então a base é a mais conservadora: microfone interno ligado.
+    # SOM-CANAL-01: base ZERO apagava o `FORCE_INTERNAL_MIC` e o microfone parava de captar; o
+    # byte não se lê de volta, então a base é a mais conservadora: microfone interno ligado.
     vigente = rep.AUDIO_CONTROL_BASE_SEGURA
     volumes = getattr(handle, "_volumes_audio", None)
     if isinstance(volumes, list) and len(volumes) > 3 and volumes[3] is not None:
@@ -578,7 +578,7 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
     """`pydualsense` pinada a um hidraw `path` (via `hidapi.Device`), para manter N instâncias, uma
     por controle."""
 
-    # # Defaults de CLASSE: a suíte constrói dublês sem passar pelo `__init__`.
+    # Defaults de CLASSE: a suíte constrói dublês sem passar pelo `__init__`.
 
     _write_lock: threading.Lock = threading.Lock()
 
@@ -587,28 +587,28 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
     #: Um aviso por episódio, não um por ciclo.
     _leitura_vazia_avisada: bool = False
 
-    #: #: A saída do rádio ficou DEVIDA com a entrada muda: ao voltar, uma escrita entrega só o
+    #: A saída do rádio ficou DEVIDA com a entrada muda: ao voltar, uma escrita entrega só o
     #: estado de agora.
     _saida_adiada_pelo_silencio: bool = False
 
-    #: #: BATERIA-QUE-PULA-01: quantos reports este handle ACEITOU.
+    #: BATERIA-QUE-PULA-01: quantos reports este handle ACEITOU.
     _reports_aceitos: int = 0
     _reports_recusados: int = 0
     _recusa_avisada: bool = False
 
     _brilho_das_luzes: int = degrau_do_brilho_das_luzes(None)
 
-    #: #: A háptica por áudio toca neste controle (ponte `0x32` no rádio, laço do cabo): o rumble
+    #: A háptica por áudio toca neste controle (ponte `0x32` no rádio, laço do cabo): o rumble
     #: sai sem #: `HAPTICS_SELECT`. A-VIBRACAO-NAO-DESLIGA-A-HAPTICA-01; ver
     #: :meth:`set_haptica_de_audio`.
     _haptica_de_audio: bool = False
 
-    #: #: O firmware entende a vibração v2 (motor em escala cheia, `COMPATIBLE_VIBRATION2`); vem da
+    #: O firmware entende a vibração v2 (motor em escala cheia, `COMPATIBLE_VIBRATION2`); vem da
     #: feature 0x20 lida na #: conexão, sem leitura fica v1.
     #: O-CONTROLE-VIBRA-NO-MODO-DO-FIRMWARE-DELE-01.
     _vibracao_v2: bool = False
 
-    #: #: A-VIBRACAO-DO-JOGO-NAO-ESPERA-O-SONO-DA-VOLTA-01: `_acordar` acorda a volta na hora em vez
+    #: A-VIBRACAO-DO-JOGO-NAO-ESPERA-O-SONO-DA-VOLTA-01: `_acordar` acorda a volta na hora em vez
     #: de dormir o #: `_throttle_sec`; `_piso_de_escrita_sec` é o espaçamento mínimo entre duas
     #: escritas, por transporte.
     _acordar: threading.Event | None = None
@@ -630,8 +630,8 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         self._pinned_is_edge = is_edge
         self._write_lock = threading.Lock()
         self._entrega = threading.Lock()
-        # # LIGHTBAR-BT-ADOPT-01: nasce TRUE, nunca False: o report_thread escreve assim que o
-        # handle abre, antes do # `_refresh_sysfs_leds`, e o 1º report BT da pydualsense 0.7.5
+        # LIGHTBAR-BT-ADOPT-01: nasce TRUE, nunca False: o report_thread escreve assim que o
+        # handle abre, antes do `_refresh_sysfs_leds`, e o 1º report BT da pydualsense 0.7.5
         # sairia malformado.
         self._suppress_leds = True
         self._throttle_sec = REPORT_THREAD_THROTTLE_SEC
@@ -647,9 +647,9 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         self._bt_seq = 0
         self._raw_trigger_right: bytes | None = None
         self._raw_trigger_left: bytes | None = None
-        # # AUDIO-OWNER-01: os dois campos de áudio que o upstream autorizava em todo report sem
-        # valor; enquanto None, os # bits de validação saem zerados e o firmware mantém o que tinha.
-        # `_mic_mute_desejado` (common[9], flag1 0x02): o # dono no Linux é o kernel
+        # AUDIO-OWNER-01: os dois campos de áudio que o upstream autorizava em todo report sem
+        # valor; enquanto None, os bits de validação saem zerados e o firmware mantém o que tinha.
+        # `_mic_mute_desejado` (common[9], flag1 0x02): o dono no Linux é o kernel
         # (`hid-playstation`); ver BT-MIC-GATING-01 em `integrations/dualsense_bt_audio.py`.
         self._mic_mute_desejado: bool | None = None
         self._mic_led_desejado: int | bool | None = None
@@ -960,8 +960,8 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
             ),
         )
 
-    # # QUEDA-QUE-PENDURA-01: o `close()` do upstream faz `join()` SEM TETO sobre uma thread cujo
-    # `read` bloqueava; com o # controle sumindo do rádio sem despedida, o join pendurava para
+    # QUEDA-QUE-PENDURA-01: o `close()` do upstream faz `join()` SEM TETO sobre uma thread cujo
+    # `read` bloqueava; com o controle sumindo do rádio sem despedida, o join pendurava para
     # sempre. Daqui o `close()` tem teto e o laço lê sem espera.
     def close(self) -> None:
         """O `close()` do upstream com teto, e sem fechar por cima de ninguém."""
@@ -1112,8 +1112,8 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
             return
         self._mic_mudo_seq += 1
         posse = getattr(self, "_mic_mute_desejado", None)
-        # # O aperto se lê contra o que o firmware VAI segurar: com a posse nossa e a escrita viva o
-        # bit do report ainda é o # velho. Onde o jogo é dono do hidraw a posse não vai ao fio: vale
+        # O aperto se lê contra o que o firmware VAI segurar: com a posse nossa e a escrita viva o
+        # bit do report ainda é o velho. Onde o jogo é dono do hidraw a posse não vai ao fio: vale
         # o bit.
         escreve = isinstance(posse, bool) and not getattr(self, "_output_muted", False)
         referencia = posse if escreve else mudo
@@ -1140,7 +1140,7 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         `True`/`False` autorizam `MIC_MUTE_LED_CONTROL_ENABLE` e escrevem o byte; `None` devolve o
         campo ao kernel. Espelha em `self.audio.microphone_led` o que foi pedido.
         """
-        # # `bool` é subclasse de `int`: o ramo guarda `True`/`False` inalterados e acrescenta o
+        # `bool` é subclasse de `int`: o ramo guarda `True`/`False` inalterados e acrescenta o
         # NÍVEL (ver `common[8]` em `_build_common`).
         self._mic_led_desejado = (
             None if aceso is None else aceso if isinstance(aceso, int) else bool(aceso)
@@ -1245,7 +1245,7 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         brilho_das_luzes = int(self._brilho_das_luzes)
         if not suppress_leds:
             flag2 |= rep.VALID_FLAG2_LED_BRIGHTNESS_CONTROL_ENABLE
-        # # AUDIO-OWNER-01: os bits de áudio do flag0 caem TODOS e só voltam para os bytes de que
+        # AUDIO-OWNER-01: os bits de áudio do flag0 caem TODOS e só voltam para os bytes de que
         # alguém assumiu a posse.
         flag0 &= ~rep.VALID_FLAG0_AUDIO_MASK
         for bit, valor in zip(_AUDIO_FLAG0_BITS, volumes, strict=False):
@@ -1262,14 +1262,14 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
             flag1 &= ~rep.VALID_FLAG1_MOTOR_POWER
             flag2 &= ~rep.VALID_FLAG2_COMPATIBLE_VIBRATION2
         else:
-            # # O-CONTROLE-VIBRA-NO-MODO-DO-FIRMWARE-DELE-01: na v2 o bit é o
-            # `COMPATIBLE_VIBRATION2` do flag2 e o do flag0 cai # (como o `hid-playstation`); na v1
+            # O-CONTROLE-VIBRA-NO-MODO-DO-FIRMWARE-DELE-01: na v2 o bit é o
+            # `COMPATIBLE_VIBRATION2` do flag2 e o do flag0 cai (como o `hid-playstation`); na v1
             # é o de sempre. O byte do motor sai cheio nas duas.
             if self._vibracao_v2:
                 flag0 &= ~rep.VALID_FLAG0_COMPATIBLE_VIBRATION
                 flag2 |= rep.VALID_FLAG2_COMPATIBLE_VIBRATION2
             if self._haptica_de_audio:
-                # # A-VIBRACAO-NAO-DESLIGA-A-HAPTICA-01: `HAPTICS_SELECT` cala a háptica por áudio;
+                # A-VIBRACAO-NAO-DESLIGA-A-HAPTICA-01: `HAPTICS_SELECT` cala a háptica por áudio;
                 # com ela tocando, o rumble vai sem ele.
                 flag0 &= ~rep.VALID_FLAG0_HAPTICS_SELECT
         if suppress_leds:
@@ -1316,7 +1316,7 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         common[rep.COMMON_VALID_FLAG2] = flag2
         if not suppress_leds:
             common[41] = int(self.light.pulseOptions.value) & 0xFF
-            # # ESTE BYTE É O BRILHO DOS LEDS DE JOGADOR, não o da barra.
+            # ESTE BYTE É O BRILHO DOS LEDS DE JOGADOR, não o da barra.
             common[42] = brilho_das_luzes & 0xFF
             common[43] = int(self.light.playerNumber.value) & 0xFF
             common[44] = int(self.light.TouchpadColor[0]) & 0xFF
@@ -1397,34 +1397,34 @@ class PyDualSenseController(IController):
         self._offline: bool = False
         self._desired_default = _DesiredOutput()
         self._desired_by_uniq: dict[str, _DesiredOutput] = {}
-        # # Procedência (camada) de cada campo escrito, para a ativação de perfil soltar só a camada
+        # Procedência (camada) de cada campo escrito, para a ativação de perfil soltar só a camada
         # dela.
         self._desired_owner_by_uniq: dict[str, dict[str, str]] = {}
-        # # A PROCEDÊNCIA DA COR de cada override (`{uniq: número | constante}`): para qual número a
-        # cor foi escolhida. # Par do `_desired_owner_by_uniq` (QUE camada escreveu); quando o
-        # número do aparelho muda, a cor gravada vira # fóssil e sai sozinha
+        # A PROCEDÊNCIA DA COR de cada override (`{uniq: número | constante}`): para qual número a
+        # cor foi escolhida. Par do `_desired_owner_by_uniq` (QUE camada escreveu); quando o
+        # número do aparelho muda, a cor gravada vira fóssil e sai sozinha
         # (`led_control.cores_sem_colisao`).
         self._procedencia_da_cor: dict[str, object] = {}
         self._brilho_da_cor: dict[str, tuple[tuple[int, int, int], float]] = {}
         self._desired_coop_by_uniq: dict[str, _DesiredOutput] = {}
-        # # Mapa próprio, por-uniq, ao lado do merge: o handle é RECRIADO a co-op. Chaveado pelo MAC
-        # 12-hex de `_key_to_uniq` # (a guarda de 12 dígitos impede o pseudo-MAC de path levar a
+        # Mapa próprio, por-uniq, ao lado do merge: o handle é RECRIADO a co-op. Chaveado pelo MAC
+        # 12-hex de `_key_to_uniq` (a guarda de 12 dígitos impede o pseudo-MAC de path levar a
         # posse ao controle errado).
         self._mic_mute_by_uniq: dict[str, bool] = {}
-        # # A-VIBRACAO-NAO-DESLIGA-A-HAPTICA-01: quem tem a háptica por áudio tocando, por MAC; mora
-        # aqui porque a troca de nó # e a reconexão RECRIAM o handle e o dono das pontes só diz a
+        # A-VIBRACAO-NAO-DESLIGA-A-HAPTICA-01: quem tem a háptica por áudio tocando, por MAC; mora
+        # aqui porque a troca de nó e a reconexão RECRIAM o handle e o dono das pontes só diz a
         # borda.
         self._haptica_de_audio_por_uniq: set[str] = set()
-        # # O-CONTROLE-VIBRA-NO-MODO-DO-FIRMWARE-DELE-01: o `update_version` que cada controle disse
-        # na conexão (feature # 0x20), por MAC. `None` = nunca lido (fica na v1). O firmware é do
-        # controle, não do nó: a leitura que falha num # handle novo herda a versão já lida
+        # O-CONTROLE-VIBRA-NO-MODO-DO-FIRMWARE-DELE-01: o `update_version` que cada controle disse
+        # na conexão (feature 0x20), por MAC. `None` = nunca lido (fica na v1). O firmware é do
+        # controle, não do nó: a leitura que falha num handle novo herda a versão já lida
         # (`_conhecer_o_firmware`).
         self._firmware_por_uniq: dict[str, int | None] = {}
-        # # R-20 item 2: escala de brilho POR CONTROLE, aplicada à BASE do merge (global e
-        # automática), nunca ao override, que # já traz o brilho dele (`_scaled_led`).
+        # R-20 item 2: escala de brilho POR CONTROLE, aplicada à BASE do merge (global e
+        # automática), nunca ao override, que já traz o brilho dele (`_scaled_led`).
         self._led_scale_by_uniq: dict[str, float] = {}
-        # # POR-UNIDADE-01: escala de VIBRAÇÃO por-uniq, irmã do `_led_scale_by_uniq`; guarda o
-        # FATOR por peça, pois o daemon só # escala a política GLOBAL
+        # POR-UNIDADE-01: escala de VIBRAÇÃO por-uniq, irmã do `_led_scale_by_uniq`; guarda o
+        # FATOR por peça, pois o daemon só escala a política GLOBAL
         # (`DaemonConfig.rumble_policy`).
         self._rumble_scale_by_uniq: dict[str, float] = {}
         self._auto_output_provider: Callable[[str], _DesiredOutput | None] | None = None
@@ -1433,8 +1433,8 @@ class PyDualSenseController(IController):
         self._exposicao_do_no = None
         self._game_output_by_uniq: dict[str, _DesiredOutput] = {}
         self._game_triggers_by_uniq: dict[str, dict[str, bytes]] = {}
-        # # PERFIL ATÉ O JOGO PROVAR: o «sem efeito» do gatilho e o preto da lightbar são ausência
-        # até o jogo mandar um efeito # (ou cor) de verdade naquele controle e partida; depois o
+        # PERFIL ATÉ O JOGO PROVAR: o «sem efeito» do gatilho e o preto da lightbar são ausência
+        # até o jogo mandar um efeito (ou cor) de verdade naquele controle e partida; depois o
         # jogo manda, e `end_game_session_for` zera o «já provou».
         self._jogo_provou_o_gatilho: set[str] = set()
         self._jogo_provou_a_luz: set[str] = set()
@@ -1573,7 +1573,7 @@ class PyDualSenseController(IController):
         if uniq is not None:
             with self._io_lock:
                 if versao is None:
-                    # # A leitura falhou neste handle: vale o que o controle disse numa conexão
+                    # A leitura falhou neste handle: vale o que o controle disse numa conexão
                     # anterior (o firmware é do controle).
                     versao = self._firmware_por_uniq.get(uniq)
                 self._firmware_por_uniq[uniq] = versao
@@ -1864,7 +1864,7 @@ class PyDualSenseController(IController):
         )
         game = self._game_output_by_uniq.get(uniq) if uniq is not None else None
         if game is not None and self._game_wins():
-            # # O jogo manda; sem ele, o perfil ganha (decisão de 03/10/2026, revoga
+            # O jogo manda; sem ele, o perfil ganha (decisão de 03/10/2026, revoga
             # PERFIL-MANDA-01). Só a numeração é do Hefesto.
             nao_pinta = numeracao_do_jogo(
                 {nome: getattr(game, nome) for nome in _OUTPUT_FIELDS}
@@ -2173,14 +2173,14 @@ class PyDualSenseController(IController):
             return None
         exc = result[0] if result else None
         if exc is not None:
-            # # `pydualsense.__find_device()` levanta `Exception("No device detected")`: corrida com
-            # unplug entre enumerate e open, # tratada como ausência (None); as demais propagam.
+            # `pydualsense.__find_device()` levanta `Exception("No device detected")`: corrida com
+            # unplug entre enumerate e open, tratada como ausência (None); as demais propagam.
             if "No device detected" in str(exc):
                 return None
             raise exc
         return ds
 
-    # # --- ciclo de vida / reconciliação (hotplug) ---
+    # --- ciclo de vida / reconciliação (hotplug) ---
 
     def connect(self) -> None:
         """Reconcilia os handles abertos com os controles fisicamente plugados; idempotente, é o
@@ -2277,12 +2277,12 @@ class PyDualSenseController(IController):
         if novas_bt:
             with self._io_lock:
                 self._conexoes_bt_novas += novas_bt
-        # # `core/lightbar_reset.py` derruba o claim da lightbar no firmware por BT: o que caducou é
-        # MANDÁ-LO, não o layout # do report. LIGHTBAR-BT-CULPADO-01.
+        # `core/lightbar_reset.py` derruba o claim da lightbar no firmware por BT: o que caducou é
+        # MANDÁ-LO, não o layout do report. LIGHTBAR-BT-CULPADO-01.
 
-        # # LIGHTBAR-BT-RESET-02: o 0x08 acima só cobre handles NOVOS; um wake BT sem reabrir o
-        # handle também derruba o claim # (caso medido 2026-07-20). Reenvia o 0x08 SÓ na assinatura
-        # do wake, nunca por timer (evita flicker); snapshot sob # lock, I/O fora dele, best-effort.
+        # LIGHTBAR-BT-RESET-02: o 0x08 acima só cobre handles NOVOS; um wake BT sem reabrir o
+        # handle também derruba o claim (caso medido 2026-07-20). Reenvia o 0x08 SÓ na assinatura
+        # do wake, nunca por timer (evita flicker); snapshot sob lock, I/O fora dele, best-effort.
         new_keys = {k for k, _ in new_handles}
         with self._io_lock:
             reclaim_candidates = (
@@ -2444,8 +2444,8 @@ class PyDualSenseController(IController):
             self._primary_key = self._quem_senta_no_posto(sentado=self._primary_key)
         if self._primary_key is None or self._primary_key == prev:
             return
-        # # E1: o co-op precisa SOLTAR o node do controle que virou primário ANTES de o leitor mirar
-        # nele (depois, o `EBUSY` já # aconteceu e morre o Jogador 2).
+        # E1: o co-op precisa SOLTAR o node do controle que virou primário ANTES de o leitor mirar
+        # nele (depois, o `EBUSY` já aconteceu e morre o Jogador 2).
         self._avisar_troca_de_primario(
             self._key_to_uniq(prev) if prev else None, self.primary_uniq
         )
@@ -2985,7 +2985,7 @@ class PyDualSenseController(IController):
                 ok_no = False
             mudo = self._output_mute or getattr(handle, "_output_muted", False)
             if mudo and not apesar_do_mudo:
-                # # Modo nativo: o hidraw é do jogo e nenhum report cru sai por baixo dele
+                # Modo nativo: o hidraw é do jogo e nenhum report cru sai por baixo dele
                 # (FEAT-NATIVE-OUTPUT-MUTE-01); o nó basta.
                 return ok_no, cor_do_radio, players
             return self._escrever_barra_e_numero_bt(
@@ -3259,7 +3259,7 @@ class PyDualSenseController(IController):
         except Exception as exc:
             logger.debug("lightbar_hidraw_bt_falhou", op=what, key=key, err=str(exc))
             return False
-        # # A memória do `_repintar_a_luz_de_um` é o último quadro INTEIRO: sem cor ou sem número o
+        # A memória do `_repintar_a_luz_de_um` é o último quadro INTEIRO: sem cor ou sem número o
         # quadro é parcial e a memória não vale.
         quadro = None
         if rgb is not None and players is not None:
@@ -3490,11 +3490,11 @@ class PyDualSenseController(IController):
     def set_mic_led(self, aceso: bool, *, uniq: str | None = None) -> None:
         """Acende/apaga o LED do microfone no ALVO, ou no controle `uniq` (MIC-DA-MESA-ELEICAO-01).
 
-        Chama `ds.audio.setMicrophoneLED` e a posse de `common[8]` é tomada (`_escrever_led_do_mic`,
-        AUDIO-OWNER-01); o byte cai em report[9] no cabo e report[11] no rádio. Com `uniq` escreve
-        SÓ naquele handle e grava SÓ no override dele; sem ele, o `record` zeraria o `mic_led` de
-        todos os overrides. `aceso` = microfone VIVO (inversão pedida em 01/09/2026); quem decide é
-        o chamador (`mic_da_mesa.py`).
+        Chama `ds.audio.setMicrophoneLED`; toma a posse de `common[8]` (`_escrever_led_do_mic`,
+        AUDIO-OWNER-01): report[9] no cabo, report[11] no rádio. CORRIGIDO em 15/08/2026: a
+        pydualsense 0.7.5 diz outReport[10] no BT, errado por um. Com `uniq` escreve só naquele
+        handle e no override dele (sem ele, o `record` zeraria o `mic_led` de todos). `aceso` = mic
+        VIVO (inversão de 01/09/2026); quem decide é o chamador (`mic_da_mesa.py`).
         """
         flag = bool(aceso)
         if uniq is not None:
@@ -4170,7 +4170,7 @@ class PyDualSenseController(IController):
         if base is None:
             return None
         fator = self._led_scale_by_uniq.get(uniq, 1.0)
-        # # o fator é `brilho_do_controle / brilho_do_perfil`
+        # o fator é `brilho_do_controle / brilho_do_perfil`
         return round(max(0.0, min(1.0, base * fator)), 9)
 
     def brilho_da_barra_para(self, uniq: str) -> float | None:
@@ -4307,8 +4307,8 @@ class PyDualSenseController(IController):
             return False
         lado = "left" if side == "left" else "right"
         with self._io_lock:
-            # # O jogo manda no gatilho (decisão de 03/10/2026, revoga PERFIL-MANDA-01), mas o «sem
-            # efeito» de quem nunca mandou efeito # é ausência: o perfil vale até o jogo provar
+            # O jogo manda no gatilho (decisão de 03/10/2026, revoga PERFIL-MANDA-01), mas o «sem
+            # efeito» de quem nunca mandou efeito é ausência: o perfil vale até o jogo provar
             # (04/10/2026).
             if alvo not in self._jogo_provou_o_gatilho:
                 if gatilho_do_jogo_sem_efeito(block_b):
@@ -4857,7 +4857,7 @@ class PyDualSenseController(IController):
 
     @staticmethod
     def _read_battery_opt(ds: pydualsense) -> int | None:
-        """Bateria 0-100 de UM handle, ou None quando indisponível (BATERIA-QUE-PULA-01, 16/09/2026).
+        """Bateria 0-100 de UM handle, ou None se indisponível (BATERIA-QUE-PULA-01, 16/09/2026).
 
         Só getattrs no `DSBattery` (sem HID I/O; seguro fora do `_io_lock`). `Level` nasce 0, então
         0 é «ninguém reportou»: devolve None, nunca «0%» na reconexão (um DualSense real reporta ao
@@ -4983,7 +4983,7 @@ class PyDualSenseController(IController):
                 self._posto_vago_de = None
             return self._ds
 
-    #: #: A última carga lida do dono do posto de P1, `(battery_pct, battery_state)`.
+    #: A última carga lida do dono do posto de P1, `(battery_pct, battery_state)`.
     _carga_do_posto: tuple[int, str | None] = (0, None)
 
     def _ler_a_carga_do_posto(self, ds: pydualsense) -> tuple[int, str | None]:

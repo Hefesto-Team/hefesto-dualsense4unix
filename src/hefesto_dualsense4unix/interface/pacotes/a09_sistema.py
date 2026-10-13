@@ -1466,12 +1466,12 @@ def atualizar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     O QUE ELE FAZ DE VERDADE, medido no fonte do daemon em 05/09/2026, e é
     MENOS do que "recarregar a configuração" dá a entender: o clique manda
     `daemon.reload` **sem `config_overrides`**, então `overrides` chega `{}`
-    (`daemon/ipc_handlers.py:4542`) e `new_cfg = replace(self.daemon.config)` é
+    (`daemon/ipc_handlers.py:3834`) e `new_cfg = replace(self.daemon.config)` é
     uma cópia de valor igual (`:4553`). Os dois ramos que reaplicariam mouse e
     teclado comparam `old` com `new` (`daemon/lifecycle.py:1236` e `:1299`) e
     **nunca disparam** — o registro sai com `keys_changed=[]` (`:2094-2098`).
     Duas coisas acontecem, e são estas: `lifecycle.py:1117-1118` derruba e sobe
-    o leitor dos atalhos do controle, e `ipc_handlers.py:4599` reescreve os
+    o leitor dos atalhos do controle, e `ipc_handlers.py:3891` reescreve os
     arquivos de ambiente que a Steam usa. **A dica da aba diz essas duas**
     (`interface/aba09.py`, da `ONDA5-09-01`), e esta é a medição que a sustenta.
 
@@ -1574,7 +1574,7 @@ def perfil_da_mesa(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     `ipc_bridge`. Não é uma segunda porta para o disco.
 
     E ELE PEGA NA HORA, sem reiniciar nada: o `_handle_machine_declare`
-    (`daemon/ipc_handlers.py:5803`) relê o `maquina.json` e **rebinda**
+    (`daemon/ipc_handlers.py:4865`) relê o `maquina.json` e **rebinda**
     `daemon._maquina`; o `_orcamento_declarado` (`core/rumble.py:94`) lê a
     fonte a cada pedido de vibração, e não uma cópia do boot. Está escrito lá
     com todas as letras: *"uma cópia feita no boot ficaria velha exatamente no
