@@ -202,6 +202,26 @@ async def test_cycle_sem_a_rota_do_aviso_troca_sem_piscar_pelo_set_led(
 
 
 @pytest.mark.asyncio
+async def test_cycle_que_falha_devolve_o_lock_e_a_cor_e_a_falha_sobe(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A ativação que levanta não deixa o lock armado nem a barra no branco."""
+    _patch_manager(monkeypatch)
+
+    def _levanta(self: _FakeManager, name: str, *, origin: str = "manual") -> _FakeProfile:
+        raise RuntimeError("o perfil não abriu")
+
+    monkeypatch.setattr(_FakeManager, "activate", _levanta)
+    d = _FakeDaemon(active="a")
+    with pytest.raises(RuntimeError):
+        await build_profile_cycle_callback(d, +1)()
+    assert d.store.locked == 0.0, "o lock manual ficou armado depois da falha"
+    assert d.controller.leds == [(255, 255, 255)]
+    assert d.controller.devolvidas == 1, "a cor do perfil não voltou depois da falha"
+    assert d.store.active_profile == "a"
+
+
+@pytest.mark.asyncio
 async def test_cycle_skip_com_menos_de_dois_perfis(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
