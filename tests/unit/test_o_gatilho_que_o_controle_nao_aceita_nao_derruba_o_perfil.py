@@ -197,3 +197,33 @@ def test_o_autoswitch_ativa_uma_vez_com_a_janela_parada(
     falhas = [c for c in log.warning.call_args_list if c[0][0] == "autoswitch_activate_failed"]
     assert falhas == []
     assert store.active_profile == "RigidoUm"
+
+
+@pytest.mark.parametrize("por_controle", [False, True], ids=["global", "por-controle"])
+def test_com_o_padrao_do_computador_o_relatorio_ainda_nomeia_o_recusado(
+    perfis: Path, por_controle: bool
+) -> None:
+    """Com o padrão do computador declarado, a vista é revalidada e perde o motivo privado.
+
+    A ativação colhe os recusados do perfil carregado, não da vista: sem isso, quem tem um
+    padrão do computador (o caso comum) veria «gatilhos» aplicados com o lado desligado.
+    """
+    from hefesto_dualsense4unix.profiles import o_padrao_do_computador as opc
+    from hefesto_dualsense4unix.profiles.loader import load_profile
+    from hefesto_dualsense4unix.utils import maquina
+
+    assert maquina.gravar_o_computador({"global": {"mouse": {"speed": 9}}})
+    _escrever(perfis, "RigidoUm", RECUSADOS["RigidoUm"], por_controle=por_controle)
+    vista = opc.o_que_vale(load_profile("RigidoUm"))
+    lado = (vista.controllers[P1].triggers if por_controle else vista.triggers).left
+    assert lado.mode == "Off" and lado.motivo_da_recusa is None, "a vista não foi revalidada"
+
+    fc = ControleQueGuardaACamada() if por_controle else FakeController()
+    fc.connect()
+    store = StateStore()
+    relatorio: dict[str, str] = {}
+    ProfileManager(controller=fc, store=store).activate("RigidoUm", relatorio=relatorio)
+
+    assert store.active_profile == "RigidoUm"
+    assert relatorio["trigger"].startswith("recusado")
+    assert "Rigid" in relatorio["trigger"]
