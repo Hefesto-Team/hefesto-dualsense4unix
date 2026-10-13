@@ -6,10 +6,12 @@ import contextlib
 import json
 import time
 from collections import deque
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
-from hefesto_dualsense4unix.core.controller import IController
+from hefesto_dualsense4unix.core.controller import IController, OutputSpec
+from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 from hefesto_dualsense4unix.core.trigger_effects import bloco_do_efeito, build_from_name
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -174,6 +176,14 @@ def _como_indice(raw: object) -> int | None:
         return None
 
 
+class _IndiceSemJogadorError(Exception):
+    """O `controllerIndex` do mod pede um jogador que não está na mesa."""
+
+    def __init__(self, indice: int | None) -> None:
+        super().__init__(f"índice {indice} sem jogador na mesa")
+        self.indice = indice
+
+
 class RateLimiter:
     """Dois limites sobrepostos: global + per-IP (V3-1)."""
 
@@ -237,9 +247,13 @@ class UdpHandler:
     controller: IController
     store: StateStore
     rate_limiter: RateLimiter = field(default_factory=RateLimiter)
+    #: `{MAC: número do jogador}` da mesa de agora (`CoopManager.numeros_de_jogador`).
+    #: Sem ele, o número vem da posição do controle em `describe_controllers`.
+    jogadores: Callable[[], Mapping[str, int]] | None = None
     warn_limit_once_per_sec: float = 1.0
     _last_warn_at: float = 0.0
     _gatilhos_pintados: dict[tuple[str, str], bytes] = field(default_factory=dict)
+    _indices_avisados: set[tuple[str, int | None]] = field(default_factory=set)
 
     def handle_datagram(self, data: bytes, addr: tuple[str, int]) -> None:
         ip = addr[0]
@@ -315,35 +329,23 @@ class UdpHandler:
             elif kind == "TriggerThreshold":
                 self._do_trigger_threshold(params)
             elif kind == "ResetToUserSettings":
-                self._do_reset()
+                self._do_reset(params)
             else:
                 self.store.bump("udp.unknown_instruction")
                 logger.warning("udp_unknown_instruction", kind=kind, ip=ip)
                 return
             self.store.bump(f"udp.applied.{kind}")
+        except _IndiceSemJogadorError as exc:
+            # Descartada, nunca «todos»: não é aplicada nem é erro do pacote.
+            self.store.bump("udp.indice_sem_jogador")
+            if (kind, exc.indice) not in self._indices_avisados:
+                self._indices_avisados.add((kind, exc.indice))
+                logger.warning(
+                    "udp_indice_sem_jogador", kind=kind, index=exc.indice, ip=ip
+                )
         except Exception as exc:
             self.store.bump(f"udp.error.{kind}")
             logger.warning("udp_instruction_error", kind=kind, err=str(exc), ip=ip)
-
-    def _nota_indice(self, indice: int | None, *, kind: str) -> None:
-        """Registra que o `controllerIndex` do DSX foi DESCARTADO.
-
-        Índice 0 é silencioso porque é o caso normal: o SDK do DSX declara
-        `public const int ControllerIndex = 0;` e todos os helpers de
-        `Instruction.cs` mandam essa constante — na prática o ecossistema
-        inteiro endereça o primeiro controle.
-
-        Índice != 0 é o caso que a mantenedora tem em casa (quatro controles,
-        um por jogador) e o único em que o descarte MENTE: o mod pede o
-        jogador 2 e o LED acende no 1. Rotear de verdade exigiria o mapa
-        MAC->jogador, que vive no `CoopManager`, e o `UdpHandler` recebe só
-        `controller` e `store`. Enquanto a fiação não existir, o descarte é
-        pelo menos AUDÍTAVEL: contador + warn com o índice pedido.
-        """
-        if indice is None or indice == 0:
-            return
-        self.store.bump("udp.controller_index_ignorado")
-        logger.warning("udp_controller_index_ignorado", kind=kind, index=indice)
 
     def _do_trigger_update(self, params: list[Any]) -> None:
         """Aceita o dialeto do Hefesto e o layout canônico do DSX."""
@@ -355,19 +357,20 @@ class UdpHandler:
             if side is None:
                 raise ValueError(f"TriggerUpdate side invalido: {side_raw!r}")
             mode_name: str = mode_raw
+            destinos = self._destinos()
         else:
             if len(params) < 3:
                 raise ValueError("TriggerUpdate (DSX) precisa [idx, side, mode, ...]")
-            self._nota_indice(_como_indice(params[0]), kind="TriggerUpdate")
+            destinos = self._destinos(_como_indice(params[0]))
             side = parse_side(params[1])
             if side is None:
                 raise ValueError(f"TriggerUpdate side invalido: {params[1]!r}")
             mode_name, rest = resolve_dsx_trigger_mode(params[2], params[3:])
         rest_ints = [int(v) for v in rest]
         bloco = bloco_do_efeito(build_from_name(mode_name, rest_ints))
-        self._pintar_como_jogo(side, bloco)
+        self._pintar_como_jogo(side, bloco, destinos)
 
-    def _pintar_como_jogo(self, side: str, bloco: bytes) -> None:
+    def _pintar_como_jogo(self, side: str, bloco: bytes, destinos: list[str]) -> None:
         """Grava o bloco na camada do JOGO de cada destino, nunca no desejo da pessoa.
 
         Quem manda pelo DSX é o mod do jogo: o perfil de cada controle fica
@@ -375,39 +378,95 @@ class UdpHandler:
         `ResetToUserSettings` solta só o que foi pintado aqui.
         """
         escrever = getattr(self.controller, "set_game_trigger_for", None)
-        destinos = self._destinos()
         if not callable(escrever) or not destinos:
             raise ValueError("TriggerUpdate sem controle de destino")
         for uniq in destinos:
             if escrever(uniq, side, bloco):
                 self._gatilhos_pintados[(uniq, side)] = bloco
 
-    def _destinos(self) -> list[str]:
-        """Os MACs que uma instrução do DSX alcança: o destino do seletor de saída.
+    def _destinos(self, indice: int | None = None) -> list[str]:
+        """Os MACs que uma instrução do DSX alcança.
 
-        Ponto único: é aqui que o índice do mod passa a escolher o jogador.
+        Sem índice (o dialeto do Hefesto), o destino do seletor de saída. Com
+        índice (o layout canônico do DSX), só o jogador que o mod pediu.
         """
+        if indice is not None:
+            uniq = self._uniq_do_indice(indice)
+            if uniq is not None:
+                return [uniq]
         destinos_de = getattr(self.controller, "uniqs_do_destino", None)
         return list(destinos_de()) if callable(destinos_de) else []
+
+    def _numeros(self) -> dict[str, int] | None:
+        """`{MAC: número do jogador}` da mesa de agora, ou `None` sem endereço por MAC."""
+        if self.jogadores is not None:
+            return {norm_mac(mac) or mac: int(n) for mac, n in self.jogadores().items()}
+        descrever = getattr(self.controller, "describe_controllers", None)
+        if not callable(descrever):
+            return None
+        return {
+            str(item["uniq"]): int(item["index"]) + 1
+            for item in descrever()
+            if item.get("connected") and item.get("uniq") and item.get("index") is not None
+        }
+
+    def _uniq_do_indice(self, indice: int | None) -> str | None:
+        """O MAC do jogador `indice + 1` (índice 0 é o jogador 1, até o 3, o jogador 4).
+
+        `None` só para o backend sem endereço por MAC, que tem um controle só:
+        o índice 0 é ele. Índice sem jogador na mesa levanta `_IndiceSemJogadorError`.
+        """
+        if indice is None:
+            raise ValueError("controllerIndex não é um inteiro")
+        numeros = self._numeros()
+        if numeros is None:
+            if indice == 0:
+                return None
+            raise _IndiceSemJogadorError(indice)
+        for uniq, numero in numeros.items():
+            if numero == indice + 1:
+                return uniq
+        raise _IndiceSemJogadorError(indice)
+
+    def _escrever_saida(
+        self,
+        indice: int | None,
+        spec: OutputSpec,
+        *,
+        kind: str,
+        sem_endereco: Callable[[], None],
+    ) -> None:
+        """Escreve `spec` SÓ no controle do jogador `indice`, por `apply_output_for`."""
+        uniq = self._uniq_do_indice(indice)
+        if uniq is None:
+            sem_endereco()
+            return
+        resultado = self.controller.apply_output_for(uniq, spec)
+        if resultado in ("falhou", "sem_alvo"):
+            raise ValueError(f"{kind} não chegou ao controle do índice {indice}: {resultado}")
 
     def _do_rgb_update(self, params: list[Any]) -> None:
         if len(params) < 4:
             raise ValueError("RGBUpdate precisa [idx, r, g, b]")
         idx, r, g, b = params[:4]
-        self._nota_indice(_como_indice(idx), kind="RGBUpdate")
-        r_c = max(0, min(255, int(r)))
-        g_c = max(0, min(255, int(g)))
-        b_c = max(0, min(255, int(b)))
-        self.controller.set_led((r_c, g_c, b_c))
+        cor = (
+            max(0, min(255, int(r))),
+            max(0, min(255, int(g))),
+            max(0, min(255, int(b))),
+        )
+        self._escrever_saida(
+            _como_indice(idx),
+            OutputSpec(led=cor),
+            kind="RGBUpdate",
+            sem_endereco=lambda: self.controller.set_led(cor),
+        )
 
     def _do_player_led(self, params: list[Any]) -> None:
         """Aceita `[idx, bitmask]` (Hefesto) e `[idx, b1..b5]` (DSX canônico)."""
         if len(params) >= 6:
-            self._nota_indice(_como_indice(params[0]), kind="PlayerLED")
             acesos = [bool(v) for v in params[1:6]]
             mask = sum(1 << i for i, aceso in enumerate(acesos) if aceso)
         elif len(params) >= 2:
-            self._nota_indice(_como_indice(params[0]), kind="PlayerLED")
             mask = int(params[1])
         else:
             raise ValueError("PlayerLED precisa [idx, bitmask] ou [idx, b1..b5]")
@@ -418,15 +477,21 @@ class UdpHandler:
             bool(mask & 0b01000),
             bool(mask & 0b10000),
         )
-        self.controller.set_player_leds(bits)
+        self._escrever_saida(
+            _como_indice(params[0]),
+            OutputSpec(player_leds=bits),
+            kind="PlayerLED",
+            sem_endereco=lambda: self.controller.set_player_leds(bits),
+        )
         self.store.bump(f"udp.player_led.{mask}")
 
     def _do_mic_led(self, params: list[Any]) -> None:
         """Aceita `[state]` (Hefesto) e `[idx, MicLEDMode]` (DSX canônico)."""
         if not params:
             raise ValueError("MicLED precisa [state]")
+        indice: int | None = None
         if len(params) >= 2:
-            self._nota_indice(_como_indice(params[0]), kind="MicLED")
+            indice = _como_indice(params[0])
             modo = int(params[1])
             if modo not in DSX_MIC_LED_MODES:
                 raise ValueError(f"MicLED modo DSX desconhecido: {modo}")
@@ -437,7 +502,15 @@ class UdpHandler:
                 logger.warning("udp_mic_led_pulse_degradado")
         else:
             state = bool(params[0])
-        self.controller.set_mic_led(state)
+        if len(params) >= 2:
+            self._escrever_saida(
+                indice,
+                OutputSpec(mic_led=state),
+                kind="MicLED",
+                sem_endereco=lambda: self.controller.set_mic_led(state),
+            )
+        else:
+            self.controller.set_mic_led(state)
         self.store.bump(f"udp.mic_led.{int(state)}")
 
     def _do_trigger_threshold(self, params: list[Any]) -> None:
@@ -459,8 +532,7 @@ class UdpHandler:
         o que torna isso auditável em vez de silencioso.
         """
         side, value, indice = parse_side_and_value(params, kind="TriggerThreshold")
-        self._nota_indice(indice, kind="TriggerThreshold")
-        destinos = self._destinos()
+        destinos = self._destinos(indice)
         if not destinos:
             raise ValueError("TriggerThreshold sem controle de destino")
         for uniq in destinos:
@@ -468,19 +540,35 @@ class UdpHandler:
         self.store.bump(f"udp.trigger_threshold.{side}.{value}")
         logger.info("udp_trigger_threshold", side=side, value=value, controles=len(destinos))
 
-    def _do_reset(self) -> None:
+    def _do_reset(self, params: list[Any] | None = None) -> None:
         """`ResetToUserSettings` do DSX: solta o gatilho que o DSX pintou, e o perfil volta.
 
-        Só a camada que o DSX pintou, em cada MAC: a luz e a sessão do pad
-        virtual do jogo não são tocadas. O limiar dos gatilhos também sai.
+        Com índice (`[idx]`, o layout do DSX), só o jogador pedido; sem
+        parâmetro, todos. Só a camada que o DSX pintou, em cada MAC: a luz e a
+        sessão do pad virtual do jogo não são tocadas. O limiar dos gatilhos
+        do(s) controle(s) também sai.
         """
         soltar = getattr(self.controller, "soltar_o_gatilho_do_jogo_for", None)
-        pintados = list(self._gatilhos_pintados.items())
-        self._gatilhos_pintados.clear()
+        if params:
+            uniq = self._uniq_do_indice(_como_indice(params[0]))
+            alvo = None if uniq is None else {uniq}
+        else:
+            alvo = None
+        pintados = [
+            item for item in self._gatilhos_pintados.items()
+            if alvo is None or item[0][0] in alvo
+        ]
+        for chave, _bloco in pintados:
+            del self._gatilhos_pintados[chave]
         if callable(soltar):
             for (uniq, side), bloco in pintados:
                 soltar(uniq, side, bloco)
-        self.store.clear_udp_trigger_thresholds()
+        if alvo is None:
+            self.store.clear_udp_trigger_thresholds()
+        else:
+            for uniq in alvo:
+                for side in ("left", "right"):
+                    self.store.set_udp_trigger_threshold(uniq, side, 0)
         self.store.bump("udp.reset_parcial")
         logger.info(
             "udp_reset_to_user_settings_parcial",
@@ -497,12 +585,16 @@ class UdpServer:
     host: str = DEFAULT_HOST
     port: int = DEFAULT_PORT
     rate_limiter: RateLimiter | None = None
+    jogadores: Callable[[], Mapping[str, int]] | None = None
     _transport: asyncio.DatagramTransport | None = None
 
     async def start(self) -> None:
         rate = self.rate_limiter or RateLimiter()
         handler = UdpHandler(
-            controller=self.controller, store=self.store, rate_limiter=rate
+            controller=self.controller,
+            store=self.store,
+            rate_limiter=rate,
+            jogadores=self.jogadores,
         )
         loop = asyncio.get_running_loop()
         self._transport, _ = await loop.create_datagram_endpoint(

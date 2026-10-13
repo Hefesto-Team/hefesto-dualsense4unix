@@ -384,13 +384,15 @@ def test_mic_led_pulse_degrada_com_contador_proprio():
     assert fc.mic_led_history == [True]
 
 
-def test_controller_index_diferente_de_zero_e_auditavel():
-    """Com 4 controles, endereçar o P2 e acertar o P1 não pode ser silencioso."""
-    handler, _, store = _mk_handler()
+def test_indice_sem_jogador_e_descartado_e_contado():
+    """Um backend de controle único só tem o índice 0: o 1 não vira «todos»."""
+    handler, fc, store = _mk_handler()
     pkt = {"instructions": [{"type": 2, "parameters": [1, 10, 20, 30]}]}
     handler.handle_datagram(_datagram(pkt), ("127.0.0.1", 12345))
-    assert store.counter("udp.controller_index_ignorado") == 1
-    assert store.counter("udp.applied.RGBUpdate") == 1
+    assert store.counter("udp.indice_sem_jogador") == 1
+    assert store.counter("udp.applied.RGBUpdate") == 0
+    assert store.counter("udp.error.RGBUpdate") == 0
+    assert [c for c in fc.commands if c.kind == "set_led"] == []
 
 
 def test_dialeto_do_hefesto_intacto_com_version_e_type_string():

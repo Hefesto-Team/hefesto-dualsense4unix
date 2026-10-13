@@ -106,10 +106,8 @@ def test_o_trigger_update_pinta_como_jogo_e_nao_apaga_o_perfil(destino: int | No
     _mandar(handler, DSX_FEEDBACK)
 
     assert _r2(backend, MACS[0]) == BLOCO_DSX
-    if destino is None:
-        assert _r2(backend, MACS[1]) == BLOCO_DSX
-    else:
-        assert _r2(backend, MACS[1]) == te.bloco_do_efeito(PERFIL_P2)
+    # O índice 0 do mod é o jogador 1: o seletor em «Todos» não o espalha.
+    assert _r2(backend, MACS[1]) == te.bloco_do_efeito(PERFIL_P2)
     for uniq, perfil in zip(UNIQS, (PERFIL_P1, PERFIL_P2), strict=True):
         assert _gatilho_do_perfil(backend, uniq) == perfil, "o mod apagou o perfil"
         assert _dono(backend, uniq) == "perfil", "o mod virou gesto da pessoa"

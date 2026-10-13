@@ -88,11 +88,11 @@ aspiracional: é o que `daemon/udp_server.py` executa, com teste para cada uma.
 | type                  | layout DSX                     | layout Hefesto      | efeito real |
 |-----------------------|--------------------------------|---------------------|-------------|
 | `TriggerUpdate`       | `[idx, side, mode, p1..pN]`    | `[side, preset, …]` | O preset de `core/trigger_effects.py` vira o bloco do gatilho e vai à **camada do jogo** do controle de destino (`set_game_trigger_for`), como o que o jogo manda pelo pad virtual: o perfil de cada controle fica intacto embaixo e o gesto da pessoa vence até o mod repintar. Modos: ver abaixo. |
-| `RGBUpdate`           | `[idx, r, g, b]`               | idem                | `set_led`, com clamp em 0-255. |
-| `PlayerLED`           | `[idx, b1..b5]` (5 booleanos)  | `[idx, bitmask]`    | `set_player_leds`. Desambiguado por aridade (6 params = DSX). |
-| `MicLED`              | `[idx, MicLEDMode]`            | `[state]`           | `set_mic_led`. `Pulse` (1) **degrada** para aceso, com `udp.mic_led.pulse_degradado`. |
+| `RGBUpdate`           | `[idx, r, g, b]`               | idem                | A barra do jogador `idx + 1` (`apply_output_for`), com clamp em 0-255. |
+| `PlayerLED`           | `[idx, b1..b5]` (5 booleanos)  | `[idx, bitmask]`    | Os LEDs de jogador do controle `idx + 1` (`apply_output_for`). Desambiguado por aridade (6 params = DSX). |
+| `MicLED`              | `[idx, MicLEDMode]`            | `[state]`           | O LED do mic do controle `idx + 1` (no dialeto `[state]`, o destino do seletor). `Pulse` (1) **degrada** para aceso, com `udp.mic_led.pulse_degradado`. |
 | `TriggerThreshold`    | `[idx, side, value]`           | `[side, value]`     | **Deadzone do gatilho no gamepad virtual** — ver abaixo. |
-| `ResetToUserSettings` | `[]`                           | `[]`                | **PARCIAL:** solta o gatilho que o DSX pintou (o do perfil volta) e zera as deadzones. Não restaura cor/player-LED/mic. |
+| `ResetToUserSettings` | `[idx]` ou `[]`                | `[]`                | **PARCIAL:** solta o gatilho que o DSX pintou (o do perfil volta) e zera as deadzones, só do controle `idx + 1`, ou de todos sem índice. Não restaura cor/player-LED/mic. |
 
 `side` aceita `"left"`/`"right"` ou o ordinal do enum `Trigger` (1=Left, 2=Right).
 
@@ -140,16 +140,19 @@ ou medir os bytes do DSX em execução. Até lá, o pedido falha com
 
 ## `controllerIndex`
 
-**Descartado** — tudo é aplicado no controle primário. Índice `0` é silencioso
-porque é o caso normal: o SDK declara `public const int ControllerIndex = 0;` e
-todos os helpers de `Instruction.cs` mandam essa constante.
+**É o jogador:** índice `0` é o jogador 1, `1` o jogador 2, até o `3`, o jogador
+4, pelo mesmo número do cartão «Controle N» (`CoopManager.numeros_de_jogador`).
+No layout canônico do DSX, cada instrução com índice escreve **só no controle
+dele**, cabo ou rádio, mesmo com o seletor da aba Conexões em «Todos».
 
-Índice **diferente de zero** é o caso que morde numa casa com quatro controles
-(um por jogador): o mod pede o jogador 2 e o efeito sai no 1. Rotear de verdade
-exige o mapa MAC→jogador, que vive no `CoopManager`, enquanto o `UdpHandler`
-recebe apenas `controller` e `store` — a fiação não existe. Enquanto não
-existir, o descarte é ao menos **auditável**: contador
-`udp.controller_index_ignorado` e `log.warn` com o índice pedido.
+Índice **sem controle na mesa** (o `7`, ou o `3` com dois controles) é
+descartado e contado em `udp.indice_sem_jogador`, com um `log.warn` por tipo e
+índice. Nunca vira «todos»: a instrução não conta em `udp.applied.*` nem em
+`udp.error.*`.
+
+O dialeto do Hefesto, sem índice (`TriggerUpdate [side, mode, …]`,
+`MicLED [state]`, `TriggerThreshold [side, value]`), segue o destino do
+seletor.
 
 ## `TriggerThreshold` — o que ela faz (e onde não faz nada)
 
@@ -172,10 +175,10 @@ Consequências que o autor do mod precisa saber:
   controle físico direto) não existe pad virtual onde cortar: o limiar fica
   guardado e não faz nada. O daemon loga `udp_trigger_threshold` em `info`
   toda vez que o valor muda — é por aí que se audita.
-- **Vale para cada jogador, por MAC.** O `controllerIndex` do DSX é
-  descartado (ver seção própria): o limiar é guardado para o destino da aba
-  Conexões, ou para cada controle aberto em «Todos», e o pad virtual de cada
-  jogador (o do P1 e os do co-op) corta o seu.
+- **Vale para cada jogador, por MAC.** Com o `controllerIndex` do DSX, o
+  limiar é do jogador pedido; sem índice, do destino da aba Conexões, ou de
+  cada controle aberto em «Todos». O pad virtual de cada jogador (o do P1 e os
+  do co-op) corta o seu.
 - **É pegajoso.** Um limiar alto sobrevive à saída do mod. `ResetToUserSettings`
   (ou reiniciar o daemon) volta ao padrão `0`.
 - Estado corrente exposto em `StateStore.udp_trigger_threshold_de(mac)` e
@@ -192,7 +195,7 @@ DSX. O que **ainda não** funciona sem adaptação, para não haver ilusão:
 | Modos de gatilho "prontos" (12 dos 19 helpers de `Instruction.cs`: `Normal` à parte, todos de `GameCube` a `VibrateTriggerPulse`) | `udp.error.TriggerUpdate`; o gatilho não muda |
 | `PlayerLEDNewRevision` (ordinal 6) | `udp.unknown_instruction`; sem efeito |
 | Mods do dialeto RacingDSX (ordinal 6 = `TriggerThreshold`) | `udp.unknown_instruction`; sem efeito |
-| `controllerIndex != 0` | aplicado no controle primário, com `log.warn` |
+| `controllerIndex` sem controle na mesa | descartado, com `udp.indice_sem_jogador` |
 | `MicLED` modo `Pulse` | acende fixo em vez de pulsar |
 | `GetDSXStatus` / qualquer resposta no fio | não há canal de resposta; um mod que espere confirmação do DSX não a recebe |
 | `ResetToUserSettings` | devolve só o gatilho do perfil e a deadzone |
