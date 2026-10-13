@@ -27,6 +27,10 @@ depends=(
     'python-gobject'
     'python-cairo'
     'gtk3'
+    # O WEBKIT É A INTERFACE: `interface/janela.py` exige o WebKit2 4.1 (GTK 3)
+    # sem alternativa. Dependência DURA, paridade com gir1.2-webkit2-4.1 (.deb),
+    # webkit2gtk4.1 (.spec) e webkitgtk_4_1 (Nix). Este pacote traz o typelib.
+    'webkit2gtk-4.1'
     'libayatana-appindicator'
     'hidapi'
     'libnotify'

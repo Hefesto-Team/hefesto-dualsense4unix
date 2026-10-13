@@ -37,6 +37,9 @@ BuildRequires:  gettext
 Requires:       python3 >= 3.10
 Requires:       python3-gobject
 Requires:       gtk3
+# O WEBKIT E A INTERFACE: interface/janela.py exige o WebKit2 4.1 (GTK 3) sem
+# alternativa. No Fedora o typelib vem dentro do proprio webkit2gtk4.1.
+Requires:       webkit2gtk4.1
 Requires:       libayatana-appindicator-gtk3
 Requires:       hidapi
 Requires:       libnotify

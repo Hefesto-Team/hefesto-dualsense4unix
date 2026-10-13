@@ -804,14 +804,12 @@ _DEPS_DE_SISTEMA=(
     "svg-loader|obrigatoria|svg|o ícone da bandeja some"
     "toolchain-c|importante|toolchain|as extensões sem wheel (python-uinput, evdev) não compilam e o passo 2 pode abortar"
     "appindicator|importante|appindicator|a bandeja não nasce: a janela abre, o ícone ao lado do relógio não"
-    # ROTA-WEBKIT. `importante` VIRA `obrigatoria` — a troca é desta palavra,
-    # nesta linha — no dia em que ela adotar a rota: aí o mockup É a interface
-    # e sem o binding não há tela nenhuma. Enquanto a decisão não é dela,
-    # ninguém paga o peso obrigatório de uma rota que pode não ser escolhida:
-    # medido em 29/08/2026, são 25,2 MB baixados e ~93 MB em disco no apt (o
-    # gir mais a `libwebkit2gtk-4.1-0`, sem contar as transitivas), e 140 MB em
-    # disco no Arch.
-    "webkit2gtk|importante|webkit|a rota WebKit (o mockup HTML dentro de um Gtk.Window) não abre nesta máquina; a interface GTK 3.0 de hoje continua inteira, e é só por isso que esta linha ainda não é obrigatória"
+    # O WebKit É A INTERFACE. O `interface/janela.py` faz `require_version("WebKit2",
+    # "4.1")` sem alternativa (a janela GTK saiu em 06/09, `D-0609-GTK-LEVA-INTEIRA`),
+    # então sem o binding a janela morre com `Namespace WebKit2 not available`
+    # enquanto o daemon sobe: por isso é `obrigatoria`. Peso medido em 29/08/2026:
+    # 25,2 MB baixados e ~93 MB em disco no apt, 140 MB no Arch.
+    "webkit2gtk|obrigatoria|webkit|a interface não abre: o serviço sobe, mas a janela morre com «Namespace WebKit2 not available»"
     "desktop-utils|importante|cmd:desktop-file-validate,update-desktop-database,gtk-update-icon-cache|o atalho e o ícone podem não aparecer no menu do sistema"
     "imagemagick|importante|cmd:convert|o ícone fica só no 256x256, sem as resoluções menores"
     # LUZ-DO-MIC-01 (03/09/2026). A luz do botão de mudo deixou de espelhar o

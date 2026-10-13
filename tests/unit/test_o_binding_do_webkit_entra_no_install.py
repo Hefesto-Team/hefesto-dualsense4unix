@@ -130,18 +130,17 @@ def test_o_censo_pede_o_binding() -> None:
         "pelo EFEITO (o motor carrega?), como manda o desenho do `_dep_presente`"
     )
     assert razao.strip(), "a linha ficou sem o 'o que quebra sem ele'"
-    assert criticidade == "importante", (
-        "a criticidade do binding mudou. Ela é `importante` **de propósito**: a "
-        "rota WebKit ainda não foi escolhida por ela, e enquanto não for, "
-        "ninguém pode pagar ~93 MB em disco por uma decisão que não foi "
-        "tomada. NO DIA EM QUE A ROTA FOR ADOTADA a linha vira `obrigatoria` — "
-        "e este teste é o outro lugar que muda junto, de propósito: a troca "
-        "tem de ser consciente"
+    assert criticidade == "obrigatoria", (
+        "a criticidade do binding voltou a ser `importante`. O `interface/"
+        "janela.py` faz `require_version('WebKit2', '4.1')` sem alternativa (a "
+        "janela GTK saiu em 06/09, D-0609-GTK-LEVA-INTEIRA): sem o binding o "
+        "serviço sobe e a janela não abre, então o install tem de morrer pedindo "
+        "o pacote, não avisar e seguir"
     )
 
 
-def test_a_troca_para_obrigatoria_esta_escrita_em_cima_da_linha() -> None:
-    """A decisão adiada tem de estar ESCRITA onde ela será feita."""
+def test_o_comentario_da_rota_adiada_saiu_porque_a_decisao_foi_tomada() -> None:
+    """A decisão que o comentário esperava foi tomada: ele não pode seguir dizendo o contrário."""
     linhas = INSTALL.splitlines()
     alvo = next(
         (i for i, x in enumerate(linhas) if x.strip().startswith(f'"{CANONICO}|')),
@@ -151,12 +150,11 @@ def test_a_troca_para_obrigatoria_esta_escrita_em_cima_da_linha() -> None:
     inicio = alvo
     while inicio > 0 and linhas[inicio - 1].strip().startswith("#"):
         inicio -= 1
-    acima = "\n".join(linhas[inicio:alvo])
-    assert "obrigatoria" in acima.lower(), (
-        "o comentário acima da linha do binding não diz que ela vira "
-        "`obrigatoria` no dia em que a rota WebKit for adotada. A decisão é "
-        "dela e ainda não foi tomada: sem essa nota, a próxima pessoa não tem "
-        "como saber que a troca é de UMA palavra, nesta linha"
+    acima = "\n".join(linhas[inicio:alvo]).lower()
+    assert "vira `obrigatoria`" not in acima and "enquanto a decisão não é dela" not in acima, (
+        "o comentário acima da linha do binding voltou a dizer que a troca para "
+        "`obrigatoria` ainda é futura: a decisão foi tomada e o texto velho "
+        "obriga a próxima pessoa a escolher entre duas afirmações"
     )
 
 

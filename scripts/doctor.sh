@@ -373,6 +373,34 @@ finally:
     fi
 }
 
+# O WebKit É A INTERFACE. A pergunta é a mesma do `interface/janela.py`
+# (`require_version("WebKit2", "4.1")`, sem alternativa) e pelo EFEITO: o
+# binding carrega E o motor responde (`get_major_version` toca um símbolo da
+# biblioteca; o typelib sem a `libwebkit2gtk-4.1` passa pelo `require_version`
+# e só cai aí). Sem ele o serviço sobe e a janela morre com «Namespace WebKit2
+# not available» — por isso é falha, e o nome do pacote vem da família da
+# máquina (os três foram medidos no censo do install.sh, `_pkg_nome`).
+check_binding_webkit() {
+    local py; py="$(_python_do_produto)"
+    [[ -z "${py}" ]] && { warn "sem python para conferir o WebKit da interface"; return; }
+    if "${py}" -c "import gi
+gi.require_version('WebKit2', '4.1')
+from gi.repository import WebKit2
+WebKit2.get_major_version()" >/dev/null 2>&1; then
+        pass "WebKit 4.1 presente (a interface consegue abrir)"
+        return
+    fi
+    local pacote="gir1.2-webkit2-4.1 (Debian/Ubuntu), webkit2gtk4.1 (Fedora) ou webkit2gtk-4.1 (Arch)"
+    if command -v apt-get >/dev/null 2>&1; then
+        pacote="sudo apt install gir1.2-webkit2-4.1"
+    elif command -v dnf >/dev/null 2>&1; then
+        pacote="sudo dnf install webkit2gtk4.1"
+    elif command -v pacman >/dev/null 2>&1; then
+        pacote="sudo pacman -S webkit2gtk-4.1"
+    fi
+    fail "WebKit 4.1 AUSENTE — o serviço sobe, mas a janela não abre (Namespace WebKit2 not available). Instale: ${pacote}, ou $(conselho_de_instalacao)"
+}
+
 check_service() {
     command -v systemctl >/dev/null 2>&1 || { warn "systemctl ausente — não checo o serviço"; return; }
     local state
@@ -8915,6 +8943,7 @@ main() {
     # por defeito de configuração.
     check_libhidapi
     check_loader_svg
+    check_binding_webkit
     hdr "kernel / udev"
     check_udev
     check_o_no_fisico_nasce_sem_acl

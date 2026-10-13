@@ -10,6 +10,10 @@
 , fetchFromGitHub
 , fetchurl
 , gtk3
+# O WEBKIT E A INTERFACE: interface/janela.py exige o WebKit2 4.1 (GTK 3) sem
+# alternativa. Nos buildInputs para o wrapGAppsHook3 pôr o typelib no
+# GI_TYPELIB_PATH do wrapper (e a biblioteca no caminho de carga).
+, webkitgtk_4_1
 , libayatana-appindicator
 , hidapi
 , libnotify
@@ -70,6 +74,7 @@ python3Packages.buildPythonApplication rec {
 
   buildInputs = [
     gtk3
+    webkitgtk_4_1
     libayatana-appindicator
     hidapi
     libnotify
