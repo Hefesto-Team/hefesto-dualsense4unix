@@ -834,7 +834,7 @@ As `A-13` a `A-25` são de 12 e 13/08, e a maioria também é erro meu:
   às 22:00:33 de 12/08 eu escrevi uma causa de firmware — *"foi power off do
   firmware por proteção"* — sem uma única medição que a sustentasse, num
   documento cuja pergunta de abertura é qual instrumento está mentindo. O usuário
-  corrigiu na hora, e a regra que ela deu vale mais que o episódio: *"presumir
+  corrigiu na hora, e a regra que o usuário deu vale mais que o episódio: *"presumir
   nunca pode ser feito, trabalhamos com evidências"*.
 
   **As duas falas acima são relato da sessão de 12→13/08, não citação de
