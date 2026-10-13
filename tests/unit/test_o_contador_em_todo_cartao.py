@@ -89,7 +89,7 @@ def test_o_contador_casa_a_janela_sem_ligar_para_maiusculas(monkeypatch):
     jogos = [types.SimpleNamespace(classe_de_janela=c)
              for c in ("Com.Um.Jogo", "outro.jogo", "")]
     monkeypatch.setattr(desenho._censo, "biblioteca_do_cartao",
-                        lambda chave, lar=None: types.SimpleNamespace(
+                        lambda chave, lar=None, *, leitor=None: types.SimpleNamespace(
                             resumo="", jogos=jogos))
     monkeypatch.setattr(desenho._caixa, "app_ids_do_cartao", lambda *a, **k: ())
     monkeypatch.setattr(desenho, "resposta_do_flatpak", lambda *a, **k: "")
