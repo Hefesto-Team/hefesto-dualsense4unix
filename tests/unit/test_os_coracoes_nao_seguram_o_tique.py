@@ -211,3 +211,63 @@ def test_a_recusa_vai_ao_diario_uma_vez_por_episodio(
         assert len(linhas) == 2, (
             f"{uniq}: {len(linhas)} linha(s) de recusa no diário, esperava uma por "
             f"episódio (duas): {linhas}")
+
+
+# O BATIMENTO NÃO DESFAZ O ARRASTE (13/10/2026, conferência do conjunto). O par do
+# batimento é lido no tique, e o batimento sai depois, na fila do controle. Se um
+# gesto de barra daquele controle ainda está no ar quando o tique lê, o batimento
+# entra atrás dele com o par de ANTES do arraste e o reenvia por cima do novo: a
+# barra mostra o motor calado e a mão sente o motor ligado até o próximo batimento.
+
+CHAVE_P1 = "aabbcc000001"
+
+
+class PonteDasBarras(PonteDormente):
+    """A mesma ponte lenta, que guarda o par de cada `rumble.set` e grava a barra."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.pares: list[tuple[str, int, int]] = []
+
+    def rumble_set_checked(self, weak: int, strong: int, uniq: str | None = None
+                           ) -> tuple[bool, str | None]:
+        resposta = super().rumble_set_checked(weak, strong, uniq=uniq)
+        with self.trava:
+            self.pares.append((str(uniq), weak, strong))
+        return resposta
+
+    def rumble_motores_set(self, *, forte_pct: int | None = None,
+                           fraco_pct: int | None = None, haptica_pct: int | None = None,
+                           uniq: str | None = None) -> tuple[bool, dict[str, Any] | None]:
+        time.sleep(DEMORA_S)
+        return True, {"status": "ok"}
+
+
+def test_o_batimento_atras_do_arraste_nao_reenvia_o_par_velho() -> None:
+    """A barra esquerda do P1 vai a zero com o batimento lido no meio: o motor fica calado."""
+    p = PonteDasBarras()
+    ctx = _ctx()
+    ctx.state.update({"rumble_policy": "max",
+                      "rumble_motores": {CHAVE_P1: {"forte_pct": 100, "fraco_pct": 100}}})
+    acao = pacotes.gesto_da_pagina("05-vibracao.html", "motor")
+    assert acao is not None
+    o = {"uniq": P1, "lado": "e", "valor": "0"}
+    erros: list[BaseException] = []
+
+    def arrastar() -> None:
+        try:
+            acao(ctx, o, p)
+        except BaseException as erro:
+            erros.append(erro)
+
+    fio = pacotes.despachar("05-vibracao.html", "motor", o, arrastar)
+    time.sleep(0.05)
+    pacotes.bater_os_coracoes(ctx, p)
+    fio.join(5)
+    _esperar_as_filas()
+    assert erros == [], f"o gesto da barra levantou: {erros!r}"
+    do_p1 = [(w, s) for u, w, s in p.pares if u == P1]
+    assert do_p1, "nem o arraste mandou o par do P1"
+    assert do_p1[-1][1] == 0, (
+        f"o último par do P1 foi {do_p1[-1]} (os pares: {do_p1}): o batimento lido "
+        "antes do arraste chegou depois dele e religou o motor que a barra calou")

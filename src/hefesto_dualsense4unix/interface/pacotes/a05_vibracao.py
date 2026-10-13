@@ -706,9 +706,11 @@ def parar_o_teste(uniq: str | None = None) -> None:
     if uniq is None:
         _EM_TESTE.clear()
         _BATEU_EM.clear()
+        _O_GESTO_MANDOU_O_PAR_EM.clear()
         return
     _EM_TESTE.discard(uniq)
     _BATEU_EM.pop(uniq, None)
+    _O_GESTO_MANDOU_O_PAR_EM.pop(uniq, None)
 
 
 SEGUNDOS_ENTRE_BATIMENTOS = 1.0
@@ -744,20 +746,25 @@ def _bater_o_coracao_do_teste(ctx: Contexto, p: Any) -> dict[str, Batimento]:
             parar_o_teste(uniq)
             continue
         weak, strong = _par_das_barras(ctx, uniq)
-        batidas[uniq] = functools.partial(_rebater_o_teste, p, uniq, weak, strong)
+        batidas[uniq] = functools.partial(_rebater_o_teste, p, uniq, weak, strong, agora)
     return batidas
 
 
-def _rebater_o_teste(p: Any, uniq: str, weak: int, strong: int) -> str:
+def _rebater_o_teste(p: Any, uniq: str, weak: int, strong: int, lido_em: float) -> str:
     """O batimento da vibração, já na fila do controle. Devolve a recusa, ou `""`.
 
     O «Parar» que entrou na fila antes dele já tirou a marca: aí ele não manda nada.
+    E o gesto de barra que entrou antes dele já mandou o par novo depois que este
+    foi lido (`lido_em`): reenviar o velho desfaria o arraste até o próximo batimento.
     """
-    if uniq not in _EM_TESTE:
+    if uniq not in _EM_TESTE or _O_GESTO_MANDOU_O_PAR_EM.get(uniq, 0.0) > lido_em:
         return ""
     ok, motivo = _resposta(p.rumble_set_checked(weak, strong, uniq=uniq))
     return "" if ok else (motivo or "o serviço não respondeu ao rumble.set")
 
+
+#: Quando o gesto de cada controle em teste mandou o par por último (`_refrescar_o_teste`).
+_O_GESTO_MANDOU_O_PAR_EM: dict[str, float] = {}
 
 _BATEU_A_HAPTICA_EM: dict[str, float] = {}
 
@@ -916,6 +923,7 @@ def _refrescar_o_teste(
     weak, strong = _par_das_barras(ctx, uniq, acabou_de_gravar=acabou_de_gravar)
     with contextlib.suppress(Exception):
         p.rumble_set_checked(weak, strong, uniq=uniq)
+    _O_GESTO_MANDOU_O_PAR_EM[uniq] = _monotonic()
 
 
 #: caminho DO USUÁRIO, pelo piloto) e :func:`_indice` (a guarda contra o broadcast,
