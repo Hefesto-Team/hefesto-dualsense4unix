@@ -522,7 +522,9 @@ class TestRegraSudoPorGrupo:
             check=False,
         )
         assert r.returncode == 0, r.stderr
-        linhas = re.findall(r"^(\S+) ALL=\(root\) NOPASSWD: HEFESTO_BT_PONTE$", r.stdout, re.MULTILINE)
+        linhas = re.findall(
+            r"^(\S+) ALL=\(root\) NOPASSWD: HEFESTO_BT_PONTE$", r.stdout, re.MULTILINE
+        )
         assert linhas == ["%hefesto", "fulana"]
         visudo = shutil.which("visudo") or next(
             (c for c in ("/usr/sbin/visudo", "/sbin/visudo") if os.path.exists(c)), None
@@ -530,7 +532,9 @@ class TestRegraSudoPorGrupo:
         if visudo is not None:
             regra = tmp_path / "regra"
             regra.write_text(r.stdout, encoding="utf-8")
-            v = subprocess.run([visudo, "-cqf", str(regra)], capture_output=True, text=True, check=False)
+            v = subprocess.run(
+                [visudo, "-cqf", str(regra)], capture_output=True, text=True, check=False
+            )
             assert v.returncode == 0, v.stdout + v.stderr
 
     def test_um_principal_torto_entre_bons_recusa_a_regra_inteira(self, tmp_path: Path) -> None:

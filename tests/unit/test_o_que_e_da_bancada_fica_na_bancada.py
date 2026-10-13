@@ -487,7 +487,7 @@ DOCTOR = RAIZ / "scripts" / "doctor.sh"
 
 
 def _sys_do_doctor(tmp_path: Path, *, bateria: bool) -> Path:
-    """Um /sys com um host xHCI em economia, um teclado e um Bluetooth em 'auto' e um DualSense em 'on'."""
+    """Um /sys: host xHCI em economia, teclado e Bluetooth em 'auto', DualSense em 'on'."""
     sysfs = tmp_path / "sys-doctor"
     host = sysfs / "bus" / "pci" / "devices" / "0000:00:14.0"
     (host / "power").mkdir(parents=True)
@@ -552,7 +552,8 @@ class TestODoctorSabeDaBateria:
             check=False,
             env={"PATH": "/usr/bin:/bin", "HOME": str(tmp_path), "HEFESTO_DOCTOR_SYS": str(sysfs)},
         )
-        assert "[WARN] economia de energia ATIVA em 1 device(s) USB: 1-3 (054c" in r.stdout, r.stdout
+        esperado = "[WARN] economia de energia ATIVA em 1 device(s) USB: 1-3 (054c"
+        assert esperado in r.stdout, r.stdout
 
     def test_sem_bateria_todo_device_em_economia_e_aviso(self, tmp_path: Path) -> None:
         saida = _doctor_roda(tmp_path, "check_usb_power_devices", bateria=False)
