@@ -185,7 +185,7 @@ class _NumeroForaDaMesaError(Exception):
 _WRAPPER_MARKER_TTL_SEC = 2.0
 
 #: BG-02: TTL (s) das pontes confirmadas no tique do `state_full`; sem teto, cada tique varreria
-#: `profiles_dir()` #: (`load_all_profiles()` abre cada `.json` sob `FileLock`).
+#: `profiles_dir()` (`load_all_profiles()` abre cada `.json` sob `FileLock`).
 _PONTES_CONFIRMADAS_TTL_SEC = 5.0
 
 
@@ -505,7 +505,7 @@ class IpcHandlersMixin:
     daemon: DaemonProtocol
 
     #: STATUS-01: cache TTL das leituras sysfs de lightbar (lazy, por instância; ver
-    #: `_lightbar_read_cached`). Default None #: de propósito: o mixin não é dataclass, então isto
+    #: `_lightbar_read_cached`). Default None de propósito: o mixin não é dataclass, então isto
     #: não vira field do `IpcServer`.
     _lightbar_read_cache: (
         dict[str, tuple[float, tuple[int, int, int] | None, bool]] | None
@@ -770,10 +770,11 @@ class IpcHandlersMixin:
 
         * **Não** registra por controle: ``_record_desired_locked(None, ...)`` NIVELA (limpa o campo
         nos overrides e solta o dono), e re-registrar desfaria o nivelamento que "Todos" promete
-        (14/08). * ``guardado_em`` só vem no alvo AUSENTE; para "Todos" o valor foi ao default, sem
-        endereço. * **Não** afirma em **Modo Nativo** (``report_thread`` mudo, nenhum byte sai;
-        CONSERTO 1.3). * **Não** afirma quando não sabe (mesa vazia, backend sem seletor, alvo sem
-        MAC estável): as duas listas vazias.
+        (14/08).
+        * ``guardado_em`` só vem no alvo AUSENTE; para "Todos" o valor foi ao default, sem endereço.
+        * **Não** afirma em **Modo Nativo** (``report_thread`` mudo, nenhum byte sai; CONSERTO 1.3).
+        * **Não** afirma quando não sabe (mesa vazia, backend sem seletor, alvo sem MAC estável): as
+          duas listas vazias.
 
         BROADCAST-PROIBIDO-01: antes de ler ``get_output_target_index`` (que MASCARA "Todos" e "alvo
         sumiu" no mesmo ``None``) pergunta ``alvo_de_output_ausente``; alvo FORA da mesa devolve
@@ -2291,14 +2292,16 @@ class IpcHandlersMixin:
         - ``player_slot``: número de sessão (COR-01/D6) do `identity_registry`, com ``assign=False``
           (ler nunca aloca); ausente → None.
         - ``lightbar_rgb``/``lightbar_on``/``lightbar_source``: a cor efetiva CONHECIDA, decidida
-          pelo DONO DA ESCRITA: * ``"sysfs"``: nó gravável E escrito por nós (`_sysfs_written`); a
-          classe LED é a verdade, e SÓ aqui ``(0, 0, 0)`` é "apagada"; * ``"desired"``: nó não
-          gravável (a escrita foi por hidraw, classe stale) mas o backend conhece a última cor
-          (`resolved_led_for`); * ``"desconhecida"``: rgb None, NUNCA rotulada "apagada" (o LED pode
-          brilhar o azul do kernel). Modo Nativo: a barra é do Hefesto
-          (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`,
-          `D-2409-NO-NATIVO-A-TELA-MOSTRA-A-COR`). D8: expõe-se UMA cor, a efetiva pós-escala de
-          brilho; o contraste do traço é da tela (`cor_do_plastico.tom_para_a_borda`).
+          pelo DONO DA ESCRITA:
+          * ``"sysfs"``: nó gravável E escrito por nós (`_sysfs_written`); a classe LED é a verdade,
+            e SÓ aqui ``(0, 0, 0)`` é "apagada";
+          * ``"desired"``: nó não gravável (a escrita foi por hidraw, classe stale) mas o backend
+            conhece a última cor (`resolved_led_for`);
+          * ``"desconhecida"``: rgb None, NUNCA rotulada "apagada" (o LED pode brilhar o azul do
+            kernel). Modo Nativo: a barra é do Hefesto
+            (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`,
+            `D-2409-NO-NATIVO-A-TELA-MOSTRA-A-COR`). D8: expõe-se UMA cor, a efetiva pós-escala de
+            brilho; o contraste do traço é da tela (`cor_do_plastico.tom_para_a_borda`).
         - ``lightbar_disputada`` (ESCRITOR-CRU-01): outro processo (hoje só a Steam) segura o
           ``hidraw`` deste controle, então ``lightbar_rgb`` é a cor PEDIDA e pode não ser a acesa
           (16/08: o mesmo ``[0 255 0]`` apagada e verde). Sai da foto do sentinela (tique de 30 s);
@@ -2313,11 +2316,11 @@ class IpcHandlersMixin:
           graus/s) e ``touchpad`` (``{touching,x,y,width,height}``) via `SensorHub` (S2), ou None.
           **TRÊS FONTES, nesta ordem (a ordem é o contrato):** 1. o PRIMÁRIO espelha o `state` do
           topo (`daemon._last_state`, mesma fonte; armadilha A-09); `state` None fica None e NÃO cai
-          para a 3; 2. secundário promovido pelo co-op: `CoopManager.live_snapshots()`; 3.
-          **STATUS-04**: qualquer outro conectado, por um `EvdevReader` PASSIVO do `SensorHub`
-          (:meth:`_inputs_passivos`), que cura a mesa pela metade com o co-op desmontado (Nativo,
-          emulação off, suspensão por Steam Input). Sem nenhuma → None (o card mostra "—", nunca um
-          valor congelado).
+          para a 3; 2. secundário promovido pelo co-op: `CoopManager.live_snapshots()`;
+          3. **STATUS-04**: qualquer outro conectado, por um `EvdevReader` PASSIVO do `SensorHub`
+            (:meth:`_inputs_passivos`), que cura a mesa pela metade com o co-op desmontado (Nativo,
+            emulação off, suspensão por Steam Input). Sem nenhuma → None (o card mostra "—", nunca
+            um valor congelado).
         - ``vpad_backend``/``vpad_motivo`` (BT-03): backend do vpad DO JOGADOR deste controle
           ("uhid" | "uinput") e o motivo da degradação (`fallback_motivo`: "uhid_indisponivel",
           "uhid_start_falhou", "uhid_bind_falhou", "uhid_vetado_pelo_chamador", "sem_uhid"). Por
@@ -2410,8 +2413,9 @@ class IpcHandlersMixin:
         chave tem uma fonte:
 
         * ``nome_declarado``: o que O usuário nomeou, de `maquina.json` (`controles[<uniq>].cor`,
-        C2); zero I/O (o `_maquina` é REBINDADO no "Aplicar" do `machine.declare`); * ``modelo``: o
-        nome de fábrica decodificado dos caracteres 5-6 do serial (`integrations/cor_do_plastico`);
+        C2); zero I/O (o `_maquina` é REBINDADO no "Aplicar" do `machine.declare`);
+        * ``modelo``: o nome de fábrica decodificado dos caracteres 5-6 do serial
+          (`integrations/cor_do_plastico`);
         * ``serial``: o serial de fábrica de 17 caracteres, cru.
 
         **A disciplina é `None`**: um ``modelo=None`` vira travessão; um modelo inventado é o
@@ -3740,9 +3744,11 @@ class IpcHandlersMixin:
         TRÊS ESCRITAS, a ordem é o contrato:
 
         1. **o registro vivo** (`core/virtual_motion.REGISTRO`), que o report consulta a ~250 Hz e o
-        jogo sente; 2. **o perfil** (`ControllerOverrides.sensores`), para sobreviver ao replug e à
-        troca de perfil; 3. **o `EVIOCGRAB`** no nó "Motion Sensors", pelo `SensorHub`, que alcança
-        quem lê evdev direto.
+        jogo sente;
+        2. **o perfil** (`ControllerOverrides.sensores`), para sobreviver ao replug e à troca de
+          perfil;
+        3. **o `EVIOCGRAB`** no nó "Motion Sensors", pelo `SensorHub`, que alcança quem lê evdev
+          direto.
 
         A RESPOSTA DIZ QUAL METADE PEGOU (SENSORES-NO-JOGO-02, 13/09/2026, §1): o zero em Modo
         Virtual era da libSDL2 2.30.0 do sistema (nos runtimes da Steam o vpad expõe os dois
@@ -4693,8 +4699,8 @@ class IpcHandlersMixin:
 
         1. **o registro vivo** (`external_mask.registro_de_mascaras`), que a `mascara_efetiva`
         consulta na criação de todo vpad e no tique do co-op, e faz a escolha valer AGORA (sem ele a
-        tela diria "aplicado" sobre um vpad que não mudou); 2. **o perfil ativo**, o DONO, para a
-        escolha sobreviver à troca de perfil.
+        tela diria "aplicado" sobre um vpad que não mudou);
+        2. **o perfil ativo**, o DONO, para a escolha sobreviver à troca de perfil.
 
         SEM PERFIL ATIVO (ou `uniq` que não é MAC de peça) a escrita 2 não ocorre e a 1 sim: a
         resposta diz `gravado: false` com o `motivo` em vez de recusar o gesto (recusar deixaria a

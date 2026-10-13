@@ -87,7 +87,8 @@ _FIRMWARE_FEATURE_SIZE = 64
 _FIRMWARE_UPDATE_VERSION_OFFSET = 44
 
 #: Firmware a partir daqui entende a vibração v2 (limiar do SDL e do SpecialK,
-#: `docs/protocol/dualsense-energia-e-vibracao.md` §4.1); o Edge é sempre v2.
+#: `docs/protocol/dualsense-energia-e-vibracao.md` §4.1); o Edge é sempre v2. Não é o `0x0215`
+#: do driver, que tem cara de conversão decimal/hexadecimal perdida.
 LIMITE_DA_VIBRACAO_V2 = 0x0224
 
 
@@ -193,8 +194,8 @@ def _is_virtual_hidraw(path: bytes) -> bool:
     )
 
 #: Teto do `init()` do pydualsense, que pode travar em `D (disk sleep)` num USB degenerado;
-#: passado o prazo o #: backend fica offline e o reconnect_loop tenta de novo (a thread é
-#: abandonada).
+#: passado o prazo o backend fica offline e o reconnect_loop tenta de novo (a thread é
+#: abandonada). 5 s cobre o caso patológico sem pesar no boot: o `init()` sadio volta em <300 ms.
 INIT_TIMEOUT_SEC: float = float(os.environ.get("HEFESTO_DUALSENSE4UNIX_INIT_TIMEOUT_SEC", "5"))
 
 #: saturando o controlador USB compartilhado — e o adaptador Bluetooth vive no
@@ -205,8 +206,9 @@ REPORT_THREAD_THROTTLE_SEC: float = float(
 
 REPORT_THREAD_THROTTLE_MAX_SEC: float = 0.032
 
-#: Espaçamento mínimo entre duas escritas do MESMO controle no cabo: o serviço do endpoint OUT (4
-#: ms, #: `docs/protocol/driver-hid-playstation.md`, «Cabo: 250 Hz»), por controle.
+#: Espaçamento mínimo entre duas escritas do MESMO controle no cabo: o serviço do endpoint OUT
+#: (`bInterval 6` em High Speed = 4 ms, `docs/protocol/driver-hid-playstation.md`, «Cabo: 250
+#: Hz»); mais rápido só enfileira URB no controlador USB. É por controle e não soma por jogador.
 #: A-VIBRACAO-DO-JOGO-NAO-ESPERA-O-SONO-DA-VOLTA-01.
 PISO_DE_ESCRITA_DO_CABO_SEC: float = 0.004
 
@@ -599,17 +601,17 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
     _brilho_das_luzes: int = degrau_do_brilho_das_luzes(None)
 
     #: A háptica por áudio toca neste controle (ponte `0x32` no rádio, laço do cabo): o rumble
-    #: sai sem #: `HAPTICS_SELECT`. A-VIBRACAO-NAO-DESLIGA-A-HAPTICA-01; ver
+    #: sai sem `HAPTICS_SELECT`. A-VIBRACAO-NAO-DESLIGA-A-HAPTICA-01; ver
     #: :meth:`set_haptica_de_audio`.
     _haptica_de_audio: bool = False
 
     #: O firmware entende a vibração v2 (motor em escala cheia, `COMPATIBLE_VIBRATION2`); vem da
-    #: feature 0x20 lida na #: conexão, sem leitura fica v1.
+    #: feature 0x20 lida na conexão, sem leitura fica v1.
     #: O-CONTROLE-VIBRA-NO-MODO-DO-FIRMWARE-DELE-01.
     _vibracao_v2: bool = False
 
     #: A-VIBRACAO-DO-JOGO-NAO-ESPERA-O-SONO-DA-VOLTA-01: `_acordar` acorda a volta na hora em vez
-    #: de dormir o #: `_throttle_sec`; `_piso_de_escrita_sec` é o espaçamento mínimo entre duas
+    #: de dormir o `_throttle_sec`; `_piso_de_escrita_sec` é o espaçamento mínimo entre duas
     #: escritas, por transporte.
     _acordar: threading.Event | None = None
     _piso_de_escrita_sec: float = 0.0
@@ -2731,10 +2733,10 @@ class PyDualSenseController(IController):
         """Manda o Reset LED state (0x08) SOB DEMANDA. É um INSTRUMENTO (LIGHTBAR-MEDIR-O-0X08-01).
 
         Escreve pelo handle que o daemon já tem aberto, sem disputar o hidraw. `uniq` restringe a um
-        controle; devolve `{key: enviou?}` (vazio = nenhum handle). Fora do caminho automático desde
-        04/08 (LIGHTBAR-BT-CULPADO-01: 7/7 travas dentro da janela pós-conexão); a hipótese aberta é
-        que o 0x08 devolve o claim se não vier em cima da conexão. Nenhum caminho automático o
-        chama.
+        controle; devolve `{key: enviou?}` (vazio = nenhum handle). Fora do caminho automático
+        desde 04/08 (LIGHTBAR-BT-CULPADO-01: 7/7 travas dentro da janela de ~3,4 s pós-conexão;
+        fora dela não trava); a hipótese aberta é que o 0x08 devolve o claim se não vier em cima
+        da conexão. Nenhum caminho automático o chama.
         """
         from hefesto_dualsense4unix.core.lightbar_reset import send_release_leds
 

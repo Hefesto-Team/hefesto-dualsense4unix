@@ -677,18 +677,20 @@ def move_o_cursor(dele: dict[str, Any], ctx: Contexto, primario: bool) -> bool:
 
     1. **não é quem navega** — o primário já diz «Navega o PC»;
     2. **a Mira dele está acesa** — bloco `mira`, pelo leitor do chip da aba Controles
-    (`a02_controles._mira_ligada`); sem leitura é não; 3. **o modo vivo é a Navegação** — leitor da
-    dica do Giroscópio (`a02_controles._na_navegacao`, o `mode_of_state`); no Virtual e no Xbox a
-    Mira vai ao analógico direito do controle virtual, e no Nativo não anda; 4. **o giroscópio dele
-    chega** — o interruptor do chip (`sensores.giroscopio_ligado`, `a02_controles._sensor_ligado`) e
-    o leitor de movimento aberto (`inputs.gyro`, `controller_card.gyro_do_inputs`); o motor pergunta
-    as duas coisas (`gamepad.aplicar_o_movimento`), e sem uma o cursor não anda; sem leitura é não;
+      (`a02_controles._mira_ligada`); sem leitura é não;
+    3. **o modo vivo é a Navegação** — leitor da dica do Giroscópio (`a02_controles._na_navegacao`,
+      o `mode_of_state`); no Virtual e no Xbox a Mira vai ao analógico direito do controle virtual,
+      e no Nativo não anda;
+    4. **o giroscópio dele chega** — o interruptor do chip (`sensores.giroscopio_ligado`,
+      `a02_controles._sensor_ligado`) e o leitor de movimento aberto (`inputs.gyro`,
+      `controller_card.gyro_do_inputs`); o motor pergunta as duas coisas
+      (`gamepad.aplicar_o_movimento`), e sem uma o cursor não anda; sem leitura é não;
     5. **o mouse move o cursor AGORA** — `mouse_emulation.despachando`, dono único no daemon
-    (`ipc_handlers._bloqueio_da_emulacao_de_desktop`): «Status do Modo» ligado, mouse virtual de pé,
-    nem modo jogo nem jogo calando o desktop; é a conjunção com que o `lifecycle._poll_loop` decide
-    rodar o tique da Navegação. O `enabled` sozinho é fraco: com o PS segurado (modo jogo) segue
-    `true`, a linha do mouse diz «em pausa» e o cartão afirmaria o cursor (a conferência
-    fotografou).
+      (`ipc_handlers._bloqueio_da_emulacao_de_desktop`): «Status do Modo» ligado, mouse virtual de
+      pé, nem modo jogo nem jogo calando o desktop; é a conjunção com que o `lifecycle._poll_loop`
+      decide rodar o tique da Navegação. O `enabled` sozinho é fraco: com o PS segurado (modo jogo)
+      segue `true`, a linha do mouse diz «em pausa» e o cartão afirmaria o cursor (a conferência
+      fotografou).
 
     Os leitores são da aba Controles de propósito: o chip e a dica do Giroscópio de lá falam do
     MESMO fato, e duas leituras divergiriam na primeira correção.
@@ -1490,11 +1492,12 @@ def _partir_de(chave: str, atual: int, sentido: int) -> int:
     Três condições, e as três desligam a memória sozinhas:
 
     1. **o daemon ainda diz o mesmo número** (se já publica outro, por aplicar, aparar ou mexida
-    pela GTK, a partida volta a ser ele); 2. **o clique vai para o mesmo lado**: dois `+` seguidos
-    somam; `+` seguido de `-` parte do DAEMON (repetir é *ande mais*, inverter em meio segundo é
-    ambíguo, e a leitura conservadora é a que o `PROVAS` desta aba cobra). O interruptor manda
-    `sentido=0` e cai sempre aqui: o segundo clique é *desfaça*, nunca *ande mais*; 3. **o relógio
-    ainda está na janela do tique** (`MEMORIA_DE_UM_CLIQUE`).
+    pela GTK, a partida volta a ser ele);
+    2. **o clique vai para o mesmo lado**: dois `+` seguidos somam; `+` seguido de `-` parte do
+      DAEMON (repetir é *ande mais*, inverter em meio segundo é ambíguo, e a leitura conservadora é
+      a que o `PROVAS` desta aba cobra). O interruptor manda `sentido=0` e cai sempre aqui: o
+      segundo clique é *desfaça*, nunca *ande mais*;
+    3. **o relógio ainda está na janela do tique** (`MEMORIA_DE_UM_CLIQUE`).
 
     Fica só com o que o Hefesto não recusou (`_reservar`): alvo guardado de clique RECUSADO
     (`sem_device`) fazia o seguinte partir de número que nunca existiu (pedia 8 com o daemon em 6,

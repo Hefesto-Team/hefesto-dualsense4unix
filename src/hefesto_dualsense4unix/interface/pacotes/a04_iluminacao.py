@@ -224,8 +224,8 @@ def brilho_aceso(c: dict[str, Any] | None, p: dict[str, Any] | None,
 
 
 #: O GESTO DO PAR DOS MODOS (A-O-MODO-AUTOMATICO-E-O-PERSONALIZADO-01, 08/10/2026), no lugar do
-#: interruptor `auto-cores` (D-13): #: automático = interruptor ligado; personalizado = desligado
-#: com a cor de cada controle guardada. É também o endereço do quadro, que #: carrega o modo no
+#: interruptor `auto-cores` (D-13): automático = interruptor ligado; personalizado = desligado
+#: com a cor de cada controle guardada. É também o endereço do quadro, que carrega o modo no
 #: `data-modo-da-aba`.
 GESTO_DO_MODO = "modo-da-luz"
 
@@ -533,14 +533,14 @@ def fileira_de_tons(meu: str, casas: dict[str, list[dict[str, Any]]],
     Cada casa responde «de quem é?» pela mesa das casas (`as_casas_da_mesa`;
     A-PALETA-MARCA-A-COR-DE-CADA-CONTROLE-01):
 
-    * `on` quando a casa tem este controle;
-    * X quando a casa tem outro dono e não tem este (preto com contorno branco, porque a cor do
-    plástico sumia no tom pastel); no «Todos» a casa de todos não ganha X em coluna nenhuma; *
-    `data-gesto` só onde a recusa passa: a casa sem dono e a casa só dele. A que ele divide com
-    outros (o «Todos», o global num tom) fica `on`, sem X nem gesto, com `aria-disabled` (o clique
-    piscava a recusa); * o `title` da casa com dono alheio nomeia os donos (um X mudo obriga a
-    adivinhar); * a linha: toda casa com dono, a dele também; a casa dele é a que tem a linha da cor
-    da moldura e não tem X.
+    * `on` quando a casa tem este controle; * X quando a casa tem outro dono e não tem este (preto
+    com contorno branco, porque a cor do plástico sumia no tom pastel); no «Todos» a casa de todos
+    não ganha X em coluna nenhuma;
+    * `data-gesto` só onde a recusa passa: a casa sem dono e a casa só dele. A que ele divide com
+      outros (o «Todos», o global num tom) fica `on`, sem X nem gesto, com `aria-disabled` (o clique
+      piscava a recusa); * o `title` da casa com dono alheio nomeia os donos (um X mudo obriga a
+      adivinhar); * a linha: toda casa com dono, a dele também; a casa dele é a que tem a linha da
+      cor da moldura e não tem X.
 
     :param meu: quem é esta coluna (`uniq` no produto, o lugar na bancada).
     :param casas: a mesa das casas (`as_casas_da_mesa`), com este controle.
@@ -584,8 +584,8 @@ def cor_escolhida(efetiva: Any, brilho: float | None) -> Any:
 
         a caixa `#RRGGBB`   dizia `#00007F`, cor que ela nunca pediu
         a marca dos 8 tons  apagava em todos (`data-hef-quando` compara com `#0000FF`)
-        a tira              pintava o hex CRU e ainda aplicava `opacity:0.5`: o brilho escurecia
-        DUAS vezes
+        a tira              pintava o hex CRU e ainda aplicava `opacity:0.5`: o brilho
+                            escurecia DUAS vezes
 
     A cura é a INVERSÃO pela fórmula do produto, não uma divisão (`127/0.5` dá 254 e a marca
     seguiria apagada por um): aplica-se a conta do dono (`_com_o_brilho`) aos tons e vê-se qual
@@ -628,13 +628,14 @@ def _o_tom_que_acende(efetiva: Any,
 
     * **nenhum tom casa**: a luz publicada é de OUTRO brilho. O gesto `brilho` grava no disco antes
     de o daemon publicar a luz nova (o `state_full` guarda a leitura do nó por 1 s), e por meio
-    segundo cada tique invertia a luz velha com o brilho novo; * **a luz está apagada**: a 0% os
-    catorze acendem preto, e acima de 0% o `#000000` é o único que acende preto; subindo o trilho a
-    partir de 0% a coluna inteira virava preta por meio segundo. Luz apagada não diz cor (o preto é
-    banido como cor, ordem de 22/09 que `led_control.cor_escolhida` guarda); a de quem apagou pelo
-    «Desligar» está GRAVADA com brilho 0%, e o degrau seguinte da escada a devolve; * **mais de um
-    tom casa**: de 0,4% a 0,7% o vermelho, o rosa e o laranja acendem `(1, 0, 0)`, e há trios iguais
-    no azul e no verde. Devolver o primeiro da tabela seria escolher por ela.
+    segundo cada tique invertia a luz velha com o brilho novo;
+    * **a luz está apagada**: a 0% os catorze acendem preto, e acima de 0% o `#000000` é o único que
+      acende preto; subindo o trilho a partir de 0% a coluna inteira virava preta por meio segundo.
+      Luz apagada não diz cor (o preto é banido como cor, ordem de 22/09 que
+      `led_control.cor_escolhida` guarda); a de quem apagou pelo «Desligar» está GRAVADA com brilho
+      0%, e o degrau seguinte da escada a devolve;
+    * **mais de um tom casa**: de 0,4% a 0,7% o vermelho, o rosa e o laranja acendem `(1, 0, 0)`, e
+      há trios iguais no azul e no verde. Devolver o primeiro da tabela seria escolher por ela.
 
     A 100% (ou sem brilho) não há conta a desfazer: a luz é o tom, se for um dos catorze.
     """
@@ -1780,7 +1781,6 @@ def _a_cor_do_global(cru: dict[str, Any] | None) -> tuple[int, int, int] | None:
     return a_cor_nao_e_o_preto((r, g, b))
 
 
-# viu: o controle branco oscilando entre a cor dela e o azul, porque a escolha
 @gesto("04-iluminacao.html", "cor", grava="gravar_pelo_gesto")
 def cor(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """O usuário clicou num tom. A cor vai AO CONTROLE NA HORA.
@@ -2379,9 +2379,9 @@ def _acender_o_numero(ctx: Contexto, p: Any, uniq: str, n: int) -> str:
     move. `coop.sync` já existe para isso (*"Não liga nem desliga nada"*, *"reconciliar nunca
     ressuscita o que o jogo suspendeu"*); escrever o override seria escrever debaixo de quem manda;
     * **o co-op não manda**: a camada automática SEGUE o número no `reassert` do handler, a menos
-    que um override por-uniq esteja preso acima (o que a janela GTK deixa ao usar "Desenho do PN",
-    `lightbar_actions._enviar_player_leds`). O override é reescrito com o padrão do número de AGORA,
-    do dono da tabela (`core/led_control.player_led_pattern`, a mesma de `luzinhas`).
+      que um override por-uniq esteja preso acima (o que a janela GTK deixa ao usar "Desenho do PN",
+      `lightbar_actions._enviar_player_leds`). O override é reescrito com o padrão do número de
+      AGORA, do dono da tabela (`core/led_control.player_led_pattern`, a mesma de `luzinhas`).
 
     Preço do segundo ramo: um override por-uniq PRENDE as lâmpadas acima da camada automática, e
     depois um controle que saia da mesa não faz os outros reacenderem sozinhos (a GTK paga o mesmo
@@ -2511,7 +2511,7 @@ def player(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """"Dar o Player N a este controle" — o número E as cinco lâmpadas.
 
     Não é `identity.renumber` (COMPACTA todos preservando a ordem relativa e mora na aba Início,
-    `interface/pacotes/a01_jogar.py:1986`); "este controle é o 2" foi o comando que faltou até
+    `interface/pacotes/a01_jogar.py:1990`); "este controle é o 2" foi o comando que faltou até
     25/07.
 
     Devolve `(ok, motivo)` com o motivo já em frase (`_MOTIVOS_NUMERO`); levantar com ele faz o

@@ -330,19 +330,22 @@ def _avisos(ctx: Contexto) -> list[dict[str, str]]:
     0. **o serviço calado** (:func:`_aviso_do_servico_calado`): a única que responde sobre a
     AUSÊNCIA de estado e fala quando as outras calam; primeira na lista e na escada
     (:data:`ORDEM_DA_GRAVIDADE`), pois com o serviço calado toda outra linha descreveria estado que
-    a tela não leu; 1. **as seis de `painel.AVISOS_DA_TELA`**: pausa, vpad degradado, rádio frágil,
-    jogo sem wrapper, cadeado da troca automática e detector cego; funções puras de `home_actions`,
-    e `painel.avisos_do_estado` trata a que levanta (selo ``ERRO``); 2. **o opt-out antigo**
-    (`home_actions.aviso_de_opt_out_antigo`): fora de `AVISOS_DA_TELA` porque pede dois argumentos
-    que só a tela sabe (escolha de disco DESLIGADA, `painel.modo_lembrado()` lendo o
-    ``gamepad_disabled.flag``; e quantos controles há, `ctx.conectados`); é a pergunta de 31/08
-    (*"não sei se segue desativado"*); 3. **a ponte com o jogo** (:func:`_aviso_da_ponte`), só
-    quando é má notícia; fica no canal e fora da 09 (:func:`_avisos_com_outra_casa`); 3-bis. **a
-    divergência de máscara** (:func:`_aviso_da_divergencia_de_mascara`), o ALARME do daemon desde a
-    MASCARA-01; mora aqui e não em `AVISOS_DA_TELA` porque volta em markup do Pango, como a ponte
-    (portão); 4. **a cura do travamento do USB** (:func:`_aviso_da_cura_do_travamento`),
-    ONDA5-01-01, 06/09/2026; lê o disco e não o `state`; 5. **os achados GRAVES do exame**
-    (`a08_conexoes._exame`); os ``certo`` ficam de fora, a coluna chama-se Atenção.
+    a tela não leu;
+    1. **as seis de `painel.AVISOS_DA_TELA`**: pausa, vpad degradado, rádio frágil, jogo sem
+      wrapper, cadeado da troca automática e detector cego; funções puras de `home_actions`, e
+      `painel.avisos_do_estado` trata a que levanta (selo ``ERRO``);
+    2. **o opt-out antigo** (`home_actions.aviso_de_opt_out_antigo`): fora de `AVISOS_DA_TELA`
+      porque pede dois argumentos que só a tela sabe (escolha de disco DESLIGADA,
+      `painel.modo_lembrado()` lendo o ``gamepad_disabled.flag``; e quantos controles há,
+      `ctx.conectados`); é a pergunta de 31/08 (*"não sei se segue desativado"*);
+    3. **a ponte com o jogo** (:func:`_aviso_da_ponte`), só quando é má notícia; fica no canal e
+      fora da 09 (:func:`_avisos_com_outra_casa`); 3-bis. **a divergência de máscara**
+      (:func:`_aviso_da_divergencia_de_mascara`), o ALARME do daemon desde a MASCARA-01; mora aqui e
+      não em `AVISOS_DA_TELA` porque volta em markup do Pango, como a ponte (portão);
+    4. **a cura do travamento do USB** (:func:`_aviso_da_cura_do_travamento`), ONDA5-01-01,
+      06/09/2026; lê o disco e não o `state`;
+    5. **os achados GRAVES do exame** (`a08_conexoes._exame`); os ``certo`` ficam de fora, a coluna
+      chama-se Atenção.
 
     O que fica escrito é a LISTA, que se conta sozinha: o número desta docstring errou três vezes
     (06/09/2026); quem acrescentar uma fonte acrescenta um item, não um número. O selo do opt-out é
@@ -623,10 +626,11 @@ def _html_dos_externos(ctx: Contexto) -> str:
     * ``_format_external_title``: *"Controle 3 — 8BitDo"*. O número é o SLOT GLOBAL de co-op, **o
     mesmo que o Hefesto escreve no LED de player**; a marca vem de
     ``external_controllers.brand_of``, a única que desmente o VID mentido pelo clone em modo
-    DualShock4 (o OUI do MAC vence); * ``_format_external_subtitle``: *"cabo · o Hefesto só vê"*,
-    com a palavra do transporte de ``home_actions.palavra_do_transporte``; *
-    ``external_controllers.nintendo_bt_warning``: a armadilha do ``hid-nintendo`` (SINAL da linha
-    305 do CSV), só no rádio e só para VID Nintendo; ``None`` nos outros e a linha não nasce.
+    DualShock4 (o OUI do MAC vence);
+    * ``_format_external_subtitle``: *"cabo · o Hefesto só vê"*, com a palavra do transporte de
+      ``home_actions.palavra_do_transporte``;
+    * ``external_controllers.nintendo_bt_warning``: a armadilha do ``hid-nintendo`` (SINAL da linha
+      305 do CSV), só no rádio e só para VID Nintendo; ``None`` nos outros e a linha não nasce.
 
     **Sem cor de plástico**: a folha das 28 é dos DualSense (`docs/data/cores-do-dualsense.csv`) e
     inventar borda afirmaria modelo que ninguém mediu (mesma regra que faz `_cor_do_plastico`
@@ -1682,10 +1686,10 @@ def modo_steam(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | Non
     1. **a vontade dela**: uma linha num arquivo NOSSO, reversível, com a recarga atrás. A lista é
     relida do disco a cada consulta, mas o que entrega a entrada do jogo ao controle só nasce quando
     o daemon rematerializa o `steam_app_<appid>.env`; sem `launch_env.refresh` a marca só valeria no
-    próximo arranque e ela clicaria de novo achando que não pegou; 2. **a ponte**: reescreve o
-    `localconfig.vdf` DO USUÁRIO, e a Steam tem de estar FECHADA (ela regrava o arquivo ao sair e
-    engole a edição). Aberta, o dono ADIA; o chip acende pela escolha e a faixa diz «Liga quando a
-    Steam fechar» (:func:`_o_que_o_chip_diz`).
+    próximo arranque e ela clicaria de novo achando que não pegou;
+    2. **a ponte**: reescreve o `localconfig.vdf` DO USUÁRIO, e a Steam tem de estar FECHADA (ela
+      regrava o arquivo ao sair e engole a edição). Aberta, o dono ADIA; o chip acende pela escolha
+      e a faixa diz «Liga quando a Steam fechar» (:func:`_o_que_o_chip_diz`).
 
     **O primeiro clique avisa, o segundo fecha** (23/09/2026,
     `D-2309-STEAM-INPUT-A-FRASE-E-O-CLIQUE`). Com a Steam aberta, sem jogo aberto e o jogo em `"0"`,
@@ -1955,9 +1959,9 @@ def cadeado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     1. **um clique chega DUAS vezes**: o ouvinte único do piloto está em `click` **e** `change`
     (`hefesto_vivo.BOOTSTRAP`) e `<input type="checkbox">` dispara os dois (o `change` nasceu para
-    `<select>` e campos de texto); dois toggles seriam NO-OP; 2. **o daemon poderia inverter a
-    partir de outro estado**: o absoluto é a escolha lida da tela, o toggle é a tela obedecendo a
-    estado que ela não viu.
+    `<select>` e campos de texto); dois toggles seriam NO-OP;
+    2. **o daemon poderia inverter a partir de outro estado**: o absoluto é a escolha lida da tela,
+      o toggle é a tela obedecendo a estado que ela não viu.
 
     O `evento` filtra a segunda entrega para o disco receber UMA escrita por clique
     (`profiles.manager.ligar_o_freestyle` grava). O `change` é o escolhido por só disparar quando a

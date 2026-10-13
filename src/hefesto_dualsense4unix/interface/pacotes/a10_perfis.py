@@ -18,10 +18,9 @@ TREZE gestos com dono (01 a 03/09/2026):
     novo                um perfil em branco, com a regra do jogo em foco
     duplicar            `model_copy` com "(cópia)" no nome, e o editor abre nela
     remover             `delete_profile`, com a pergunta NO RÓTULO do botão
-    editor.prioridade   o `<input type=range>` ("Slider, como você pediu"); era o único campo do
-    editor sem caminho de escrita editor.estilo       escolher um estilo APLICA a receita: gatilho,
-    degrau de vibração e a cor de cada controle ("Construir o motor"); as receitas moram em
-    `profiles/estilos_de_jogo.py`, num lugar só
+    editor.prioridade   o `<input type=range>` ("Slider, como você pediu")
+    editor.estilo       escolher um estilo APLICA a receita: gatilho, degrau de vibração e a
+                        cor de cada controle ("Construir o motor"), de `profiles/estilos_de_jogo.py`
 
 A segunda leva só foi possível por três correções (nenhuma do daemon): (1) o clique passou a trazer
 `valor`, o `value` do `<input>`/`<select>` (o ouvinte mandava `texto: alvo.textContent`, vazio num
@@ -1111,9 +1110,9 @@ def ativar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     `<tr>` só trazia `data-hef-perfil`; quem clicava no BOTÃO mandava `texto="Ativar"` e o gesto
     pedia ao daemon um perfil chamado "Ativar". Hoje a célula do nome marca `selecionar` e o botão
     age sobre o escolhido: `_ESCOLHIDO` primeiro, `texto` como último recurso (é o que a prova
-    declarada exercita). 2. **A recusa do daemon sumia.** `profile_switch` devolve `False` quando
-    não confirmou (ATIVAR-NAO-MENTE-01) e o retorno era descartado; levantar aqui faz o botão
-    recusar dizendo.
+    declarada exercita).
+    2. **A recusa do daemon sumia.** `profile_switch` devolve `False` quando não confirmou
+      (ATIVAR-NAO-MENTE-01) e o retorno era descartado; levantar aqui faz o botão recusar dizendo.
     """
     nome = _ESCOLHIDO or str(o.get("texto") or "").strip()
     if not nome:
@@ -1161,9 +1160,10 @@ def voltar_a_de_ontem(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
     como "não está salvando"). Só quando o restaurado é o que está VALENDO, pois reaplicar outro
     trocaria o perfil pelas costas dela. Era `profile.switch` até 01/10/2026, a ativação À MÃO, e o
     desfazer de perfil de jogo posto pelo autoswitch o gravava como escolha do usuário
-    (O-HEFESTO-ABRE-NO-ULTIMO-PERFIL-E-O-FREESTYLE-DIZ-A-VERDADE-01). * `launch_env.refresh`: a
-    regra pode ter mudado, e com ela o `steam_app_<id>.env` de antecipação; é o aviso que Salvar e
-    Remover da estável mandam (`footer_actions.py`), na ordem de lá (reaplicar, depois avisar).
+    (O-HEFESTO-ABRE-NO-ULTIMO-PERFIL-E-O-FREESTYLE-DIZ-A-VERDADE-01).
+    * `launch_env.refresh`: a regra pode ter mudado, e com ela o `steam_app_<id>.env` de
+      antecipação; é o aviso que Salvar e Remover da estável mandam (`footer_actions.py`), na ordem
+      de lá (reaplicar, depois avisar).
 
     A comparação é por SLUG (R-10, `profiles/slug.py`): com "Navegação" no disco e "Navegacao" no
     daemon, `==` cru diria perfis diferentes e não reaplicaria.
@@ -1503,11 +1503,12 @@ def editor_ambiente(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] 
     * **seletor travado**: perfil que casa por regra que a tela não sabe mostrar
     (`window_title_regex`, lista de classes) abre o campo travado com a frase do que fazer; aceitar
     a troca ali seria o R-12 (regra fina trocada por "Todos"). Medido: sete dos nove perfis de
-    fábrica caem aí. * **a guarda da forma preservada**: se a procedência escolhida é a MESMA que o
-    campo já mostrava, não grava. Sem ela, perfil em «Instalado aqui» cuja regra é por
-    `process_name` (``guard``, medido no disco) seria reescrito como `window_class` por um gesto que
-    não mudou nada na tela (trocar um dado por outro que *"casa por acaso"* é o R-12 já pago). Quem
-    quer mudar muda a opção, e a reescrita é o pedido.
+    fábrica caem aí.
+    * **a guarda da forma preservada**: se a procedência escolhida é a MESMA que o campo já
+      mostrava, não grava. Sem ela, perfil em «Instalado aqui» cuja regra é por `process_name`
+      (``guard``, medido no disco) seria reescrito como `window_class` por um gesto que não mudou
+      nada na tela (trocar um dado por outro que *"casa por acaso"* é o R-12 já pago). Quem quer
+      mudar muda a opção, e a reescrita é o pedido.
     """
     from hefesto_dualsense4unix.profiles.simple_match import (
         MSG_ESCOLHA_O_JOGO,
@@ -1854,15 +1855,16 @@ def detectar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 
     * **jogo da Steam**: a classe vem `steam_app_<id>` e o appid sai pela fonte única
     `profiles/steam_app.steam_appid_from_wm_class` (UNIFICA-PREDICADO-01); a regra vira "Jogo da
-    Steam" com o número. * **jogo de fora da Steam**: GRAVA A CLASSE (06/09/2026, ONDA5-10-01),
-    regra "Jogo (pela janela)" com a `wm_class`. Havia uma recusa aqui ("o produto só guarda como
-    `MatchCriteria(window_class=…)`, regra que o editor não sabe MOSTRAR; o perfil abriria
-    travado"), certa na premissa e errada na conclusão: se gravar a regra empurra o perfil para fora
-    da tela, **a tela aprende a regra**, e `simple_match` ganhou o preset `"janela"` e os TRÊS
-    seletores o rótulo antes de o botão gravar um byte. Vale daquele bloco que o preset NÃO é
-    `process_name`: é outro dado (basename de `/proc/PID/exe`) e casaria por acaso. * **nenhuma
-    janela em foco**: RECUSA, a única honesta que sobrou (`classe` vazia ou `"unknown"`); nomeia o
-    que viu.
+    Steam" com o número.
+    * **jogo de fora da Steam**: GRAVA A CLASSE (06/09/2026, ONDA5-10-01), regra "Jogo (pela
+      janela)" com a `wm_class`. Havia uma recusa aqui ("o produto só guarda como
+      `MatchCriteria(window_class=…)`, regra que o editor não sabe MOSTRAR; o perfil abriria
+      travado"), certa na premissa e errada na conclusão: se gravar a regra empurra o perfil para
+      fora da tela, **a tela aprende a regra**, e `simple_match` ganhou o preset `"janela"` e os
+      TRÊS seletores o rótulo antes de o botão gravar um byte. Vale daquele bloco que o preset NÃO é
+      `process_name`: é outro dado (basename de `/proc/PID/exe`) e casaria por acaso.
+    * **nenhuma janela em foco**: RECUSA, a única honesta que sobrou (`classe` vazia ou
+      `"unknown"`); nomeia o que viu.
 
     `last_class` ANTES de `current_class`: a primeira é a última classe ÚTIL
     (`launch_wrapper_dialog.py`) e sobrevive ao foco ir para a janela do Hefesto, o que acontece ao
