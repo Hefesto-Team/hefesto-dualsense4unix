@@ -10,7 +10,7 @@ Rodada 3 reaberta em 14/10/2026; ajustes feitos no mesmo dia em `todo/` (a pági
 ## r3b-05-12
 - **Sprint:** A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-01
 - **As palavras dela:** «na real remove os botões e força de cibração vira só o slicer. esse controle ali dentro não é o controle do dualsense remove e coloca o certo. o do lado do slicer do força dos controles.» <!-- noqa-acento: citação literal dela -->
-- **O que mudou:** Saíram os quatro botões (Forte, Média, Fraca, Desligada): a «Força da vibração» é só o trilho com a porcentagem, na mesma altura e no mesmo formato das linhas de baixo (nas vagas sem controle, o travessão, como nas outras). O ícone ao lado do trilho trocou o controle genérico por um DualSense no traço dos ícones de baixo (corpo com as duas empunhaduras, o touchpad e os dois analógicos), no mesmo quadrado laranja. A linha ficou menos alta e a imagem do controle ganhou o espaço.
+- **O que mudou:** Saíram os quatro botões (Forte, Média, Fraca, Desligada): a «Força da vibração» é só o trilho com a porcentagem, na mesma altura e no mesmo formato das linhas de baixo (nas vagas sem controle, o travessão, como nas outras). O ícone ao lado do trilho trocou o controle genérico por um DualSense no traço dos ícones de baixo (corpo com as duas empunhaduras, o touchpad largo, o direcional, os quatro botões e os dois analógicos), no mesmo quadrado laranja. A linha ficou menos alta e a imagem do controle ganhou o espaço.
 
 ## r3b-06-26
 - **Sprint:** A-ABA-NAVEGACAO-DO-TODO-01
