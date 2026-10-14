@@ -1206,6 +1206,31 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         """Devolve ao firmware SÓ o `common[6]`. MIC-VOLUME-02."""
         self._volumes_audio[2] = None
 
+    def escrever_so_o_som(self, *, radio: bool) -> bool:
+        """Escreve o report MÍNIMO do som: os bytes de áudio com dono, o pré-amp e mais nada.
+
+        É o caminho do Modo Nativo, em que o laço não escreve (FEAT-NATIVE-OUTPUT-MUTE-01) e o
+        deslizante ficava só na memória. Vibração, gatilhos e luzes saem sem autorização, e o
+        firmware conserva o que o jogo escreveu neles; envelope `0x02` no cabo, `0x31` no rádio
+        (`radio`, do `_detect_transport` do backend).
+        """
+        common = bytearray(rep.COMMON_LEN)
+        flag0 = 0
+        for bit, offset, valor in zip(
+            _AUDIO_FLAG0_BITS, _AUDIO_COMMON_OFFSETS, self._volumes_audio, strict=False
+        ):
+            if valor is not None:
+                flag0 |= bit
+                common[offset] = int(valor) & 0xFF
+        if self._preamp_audio is not None:
+            common[1] = rep.VALID_FLAG1_AUDIO_CONTROL2_ENABLE
+            common[rep.COMMON_AUDIO_CONTROL2] = int(self._preamp_audio) & rep.SP_PREAMP_GAIN_MASK
+        common[0] = flag0
+        if not flag0 and not common[1]:
+            return False
+        report = rep.build_bt_report(common, seq=0) if radio else rep.build_usb_report(common)
+        return _escrita_completa(self.writeReport(list(report)), len(report))
+
     def setLeftMotor(self, intensity: int) -> None:  # noqa: N802 - nome do upstream
         super().setLeftMotor(intensity)
         self._track_rumble_transition()
@@ -3634,6 +3659,12 @@ class PyDualSenseController(IController):
                 preamp=rep.SP_PREAMP_GAIN_PADRAO,
                 audio_path=_byte_da_rota(handle, rota),
             )
+            if getattr(self, "_output_mute", False) or getattr(handle, "_output_muted", False):
+                # Modo Nativo: o laço não escreve, e o som sai sozinho no report mínimo dele.
+                escrever = getattr(handle, "escrever_so_o_som", None)
+                if callable(escrever) and not escrever(radio=not cabo):
+                    logger.warning("som_no_nativo_nao_saiu", op=op)
+                    return False
         except Exception as exc:
             logger.warning("output_handle_failed", op=op, err=str(exc))
             return False
