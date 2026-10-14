@@ -3,7 +3,7 @@
   "nome": "Navegação",
   "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/_integra-1-11/src/hefesto_dualsense4unix/interface/paginas/06-navegacao.html",
   "depois": "/home/vitoriamaria/.local/state/hefesto-casa/leva-volta/todo/06-navegacao.html",
-  "rodada": 2,
+  "rodada": 3,
   "sprint_unificada": "A-ABA-NAVEGACAO-DO-TODO-01",
   "mudancas": [
     {
@@ -230,6 +230,40 @@
       "origem": "RODADA-3 §conferência",
       "ancora": ".ac2",
       "conflito": ""
+    },
+    {
+      "n": 26,
+      "sprint": "A-ABA-NAVEGACAO-DO-TODO-01",
+      "o_que_muda": "O «i» do quadro volta: ele abre a explicação da aba, e o × fecha",
+      "resposta": "todo-06-r3-26",
+      "origem": "escolha dela de 13/10",
+      "ancora": ".nav-topo",
+      "conflito": "",
+      "rodada": 3,
+      "ancora_antes": ".nav2-grade",
+      "js": "document.querySelector('.nav-i').click()",
+      "leituras": {
+        "A": {
+          "ancora": "#",
+          "o_que": "O quadro se chama «Navegação», com o «i» ao lado do título"
+        },
+        "B": {
+          "ancora": "#leitura-b",
+          "o_que": "Sem título: só o «i», no canto do quadro"
+        }
+      },
+      "pergunta": "O quadro leva o título «Navegação» com o «i» ao lado (A), ou fica sem título, só com o «i» no canto (B)?"
+    },
+    {
+      "n": 27,
+      "sprint": "A-ABA-NAVEGACAO-DO-TODO-01",
+      "o_que_muda": "Os moldes do point and click passam a ser quatro: Point and click, Visual novel, Mouse e Mouse e teclado",
+      "resposta": "todo-06-r3-27",
+      "origem": "escolha dela de 13/10",
+      "ancora": "[data-r3=\"27\"]",
+      "conflito": "",
+      "rodada": 3,
+      "ancora_antes": "[data-gesto=\"point-and-click-perfil\"]"
     }
   ],
   "estados": {

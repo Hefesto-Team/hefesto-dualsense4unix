@@ -2327,6 +2327,30 @@
 .at-pc .btn.configurar{flex:0 0 auto;height:28px;display:inline-flex;align-items:center;padding:0 14px;font-size:11.5px;margin-left:auto;text-decoration:none}
 .dois-donos{display:block;font-size:10.5px;color:var(--texto-mudo);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tab tr.dois td{height:34px}
+  /* Rodada 3 (13/10): o título «Navegação» e o «i» do quadro voltam; o × fecha a explicação.
+     Leitura A: o título com o «i» ao lado. Leitura B (#leitura-b): sem título, só o «i» no canto. */
+  .nav2{position:relative}
+  .nav-topo{display:flex;align-items:center;gap:8px;padding:12px 16px 0;position:relative}
+  .nav-i{width:20px;height:20px;border-radius:50%;border:1px solid var(--comment,#6272a4);background:transparent;color:var(--texto-suave);
+    font:700 12px/1 'JetBrains Mono',monospace;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0}
+  .nav-i:hover,.nav-i[aria-expanded="true"]{border-color:var(--purple);color:var(--fg);background:var(--sel-bg)}
+  .nav-expl{position:absolute;z-index:20;top:40px;left:16px;width:360px;padding:12px 34px 12px 14px;border-radius:9px;
+    border:1px solid var(--purple);background:var(--app-bg);color:var(--fg);font:500 12.5px/1.45 'Space Grotesk',system-ui,sans-serif;
+    box-shadow:0 8px 24px rgba(0,0,0,.45)}
+  .nav-expl[hidden]{display:none}
+  .nav-expl p{margin:0}
+  .nav-expl-x{position:absolute;top:6px;right:8px;border:0;background:transparent;color:var(--texto-suave);font-size:16px;cursor:pointer}
+  .nav-expl-x:hover{color:var(--fg)}
+  body.leitura-b .nav-topo{position:absolute;top:8px;right:10px;padding:0;z-index:5}
+  body.leitura-b .nav-topo .quadro-titulo{display:none}
+  body.leitura-b .nav-expl{left:auto;right:0;top:28px}
+  /* Rodada 3: a aba já passava 74px da altura em 1212x740 (e 5px em 1212x809); as linhas se apertam
+     em tela baixa para o título caber sem rolar. */
+  @media (max-height:860px){.nav2 .tab.bt2 td{height:30px!important} .nav2 .tab.bt2 select{height:26px} .nav2 .op2{height:31px}
+    .nav2 .op2 :is(.campo-linha,.campo-num,.seg.mini button){height:26px} .nav2 .tab.ges2 td{height:25px!important} .nav2 .tab.ges2 select{height:23px}}
+  @media (max-height:780px){.nav2 .tab.bt2 td{height:26px!important} .nav2 .tab.bt2 select{height:23px} .nav2 .op2{height:27px}
+    .nav2 .op2 :is(.campo-linha,.campo-num,.seg.mini button){height:23px} .nav2 .tab.ges2 td{height:22px!important} .nav2 .tab.ges2 select{height:20px}
+    .nav2-botoes,.nav2-opcoes{padding-block:8px} .nav2 > .quadro-corpo{padding-block:10px}}
 </style>
 <style data-todo-css="rodada-2">
   /* rodada 2 (12/10): os botões primeiro, as opções ao lado, a fila de baixo com respiro */
@@ -2570,6 +2594,14 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 
   <div class="miolo">
     <div class="quadro estica nav2" data-quem="hefesto" data-dica-area="O controle vira mouse e teclado do computador">
+      <div class="nav-topo" data-r3="26">
+        <span class="quadro-titulo">Navegação</span>
+        <button class="nav-i" type="button" aria-expanded="false" aria-controls="nav-expl" aria-label="O que é a Navegação">i</button>
+        <div class="nav-expl" id="nav-expl" role="dialog" aria-label="O que é a Navegação" hidden>
+          <p>Aqui o controle vira mouse e teclado do computador: cada botão faz o que está na lista. Em «Quem navega» você escolhe se quem traduz é o Hefesto ou a Steam.</p>
+          <button class="nav-expl-x" type="button" aria-label="Fechar">×</button>
+        </div>
+      </div>
       <div class="quadro-corpo">
         <div class="nav2-grade">
           <section class="nav2-botoes" data-todo="1">
@@ -2728,8 +2760,8 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                 <span class="chip plastico" style="--plastico:#7eb8d4">Starlight Blue</span>
               </div></div>
             <div class="op2 do-hefesto"><span class="op2-rot">Perfil de point and click</span>
-              <select class="campo-linha" data-gesto="point-and-click-perfil" data-todo="8" data-dica="O botão Point and click edita o escolhido">
-                <optgroup label="Moldes"><option selected>Visual novel</option><option>Só mouse</option><option>Teclado e mouse</option></optgroup>
+              <select class="campo-linha" data-gesto="point-and-click-perfil" data-todo="8" data-r3="27" data-dica="O botão Point and click edita o escolhido">
+                <optgroup label="Moldes" data-r3="27"><option selected>Point and click</option><option>Visual novel</option><option>Mouse</option><option>Mouse e teclado</option></optgroup>
                 <optgroup label="Meus perfis"><option>Maid Life SS</option></optgroup>
               </select></div>
             <div class="op2 do-hefesto"><span class="op2-rot">Função do teclado</span>
@@ -2958,6 +2990,17 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 </div>
 <script>/* O menu desenhado aberto só na foto do menu: abra a página com #menu. */
 if (location.hash === '#menu') document.getElementById('menu-desenhado').hidden = false;</script>
+<script data-aba="leitura">
+/* Rodada 3: a mesma aba em duas leituras da escolha dela; #leitura-b mostra a segunda. */
+const leituraB = () => document.body.classList.toggle('leitura-b', location.hash.includes('leitura-b'));
+document.addEventListener('DOMContentLoaded', leituraB); addEventListener('hashchange', leituraB);
+document.addEventListener('click', e => {
+  const i = e.target.closest('.nav-i'), x = e.target.closest('.nav-expl-x');
+  if (!i && !x) return;
+  const ex = document.getElementById('nav-expl'), abre = !!i && ex.hidden;
+  ex.hidden = !abre; document.querySelector('.nav-i').setAttribute('aria-expanded', String(abre));
+});
+</script>
 <script id="base-comum">
 /* Base comum das abas (rodada 2): a dica no hover e o menu do botão direito. Copiada IGUAL em todo mockup. */
 (() => {
