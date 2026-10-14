@@ -2,7 +2,7 @@
   "aba": "02",
   "nome": "Controles",
   "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/_integra-1-11/src/hefesto_dualsense4unix/interface/paginas/02-controles.html",
-  "depois": "/home/vitoriamaria/.local/state/hefesto-casa/leva-volta/todo/02-controles.html",
+  "depois": "docs/research/2026-10-12-a-volta/paginas/todo-das-abas/todo/02-controles.html",
   "rodada": 3,
   "sprint_unificada": "A-ABA-CONTROLES-DO-TODO-01",
   "mudancas": [
@@ -151,11 +151,51 @@
       "conflito": "",
       "rodada": 3,
       "ancora_antes": ".quadro.criar"
+    },
+    {
+      "n": 17,
+      "sprint": "O-ESTADO-DIZ-O-QUE-O-JOGO-VE-DE-CADA-CONTROLE-01",
+      "o_que_muda": "Ao lado da forma que o jogo vê, o botão «O que chega» abre as doze funções (botões, analógicos, gatilho analógico, gatilho adaptativo, vibração, háptica, luz, luz de jogador, giroscópio, touchpad, microfone, alto-falante), cada uma como Nativo, Pelo Hefesto ou Não chega",
+      "resposta": "a tela não pode dizer o que o daemon não diz (resposta da chave xbox)",
+      "origem": "rodada 4 (o que faltava desenho)",
+      "ancora": "",
+      "seletor": "",
+      "conflito": "A lista mostra o caso do Xbox 360 no modo Xbox; para o DualSense tudo vira Nativo, e para o Pro Controller o gatilho analógico e a luz de jogador não chegam. A «Luz» como «Pelo Hefesto» é leitura nossa da tabela medida: a validar por você.",
+      "ajuste_r4": {
+        "pedido": "remove isso. muito confuso. estamos melhorando e diminuindo texto, ordenando tudo e deixando menos confuso e maluco mais clean",
+        "feito": "Saiu o bloco inteiro: o botão «O que chega» das duas faixas, a janela com as doze funções e o estado de exemplo da janela. A faixa de cada controle volta a dizer só a forma que o jogo vê (DualSense, Xbox 360)."
+      },
+      "rodada": 4
+    },
+    {
+      "n": 18,
+      "sprint": "OS-ALVOS-E-A-LETRA-CRESCEM-E-A-INTERFACE-GANHA-TAMANHO-01",
+      "o_que_muda": "Na aba Controles, só com a seção dos quatro controles, os 15 alvos de menos de 24 px (interruptores, deslizantes de volume, botões de mudo e de padrão, botão «Ligado» do touchpad, seletores de controle) crescem para 24 px, e toda letra abaixo de 12 px sobe para 12 px; o corpo do quadro aperta o respiro para não rolar",
+      "resposta": "sua resposta de 13/10, ~23h40: botões e letra. Todo alvo de toque com 24 px no mínimo e nenhuma letra abaixo de 12 px, com cada aba refeita sem rolagem",
+      "origem": "rodada 4 (o que faltava desenho)",
+      "ancora": "html.alvos-24",
+      "seletor": ".sw, .puxa-vol, .mudo-i, .padrao-i, label.faixa, button",
+      "conflito": "Medido na página do todo: 15 alvos abaixo de 24 px e 88 de 129 textos abaixo de 12 px; depois, 0 e 0. Ficam abaixo de 12 px só as letras desenhadas dentro dos ícones dos botões L1, R1, L2 e R2 (10,7 px), que são parte do ícone e não texto da interface. ?alvos=hoje mostra a tela sem a mudança.",
+      "ajuste_r4": {
+        "pedido": "galatic purple nem tá conectado só deixa o p do player e desconectado.",
+        "feito": "O controle desconectado mostra só a vaga: «Player 3 • Desconectado» e «Player 4 • Desconectado», sem cor de plástico, máscara, microfone, sensores nem bateria. Os conectados seguem chamados pela cor do plástico. Ficam os alvos de 24 px e a letra de 12 px."
+      },
+      "ajuste_seis": {
+        "pedido": "B: «P3 • Desconectado» (só a letra e o número)",
+        "feito": "As duas vagas sem controle dizem «P3 • Desconectado» e «P4 • Desconectado», sem a palavra «Player»; o resto da faixa segue como estava (sem cor de plástico, sem dado nem botão)."
+      },
+      "ajuste_v3": {
+        "id": "c3",
+        "pedido": "Textao do botão. Deixa só o texto mira virtual nos dois analógicos",
+        "feito": "Os botões sob o Analógico esquerdo e o direito dizem só «Mira virtual», com a mesma largura (a da coluna) e 26 px de altura, letra de 12 px, numa linha só; a explicação («Girar o controle move o analógico esquerdo/direito») fica na dica. Ligar e desligar não muda a altura do cartão."
+      },
+      "rodada": 4
     }
   ],
   "estados": {
     "automatico": "document.querySelector('.modo-auto').click()",
-    "menu": "window.MX=492;window.MY=262;(() => { const x = window.MX || 960, y = window.MY || 560;\n  document.elementFromPoint(x, y).dispatchEvent(new MouseEvent('contextmenu', {bubbles: true, clientX: x, clientY: y}));\n  const d = [...document.querySelectorAll('.menu-hefesto button')].find(b => b.textContent.trim() === 'Desligar');\n  d.dispatchEvent(new MouseEvent('mouseover', {bubbles: true})); })()\n"
+    "menu": "window.MX=492;window.MY=262;(() => { const x = window.MX || 960, y = window.MY || 560;\n  document.elementFromPoint(x, y).dispatchEvent(new MouseEvent('contextmenu', {bubbles: true, clientX: x, clientY: y}));\n  const d = [...document.querySelectorAll('.menu-hefesto button')].find(b => b.textContent.trim() === 'Desligar');\n  d.dispatchEvent(new MouseEvent('mouseover', {bubbles: true})); })()\n",
+    "hoje": "02-controles.html?alvos=hoje"
   },
   "por_baixo": [
     {
@@ -262,5 +302,9 @@
     }
   ],
   "altura_px": 809,
-  "rola": false
+  "rola": false,
+  "origem_da_pagina": "r3 (v3) + rodada 4",
+  "consertos_da_fusao": [
+    "A faixa do Cosmic Red diz «Cosmic Red • USB», sem nome de pessoa."
+  ]
 }

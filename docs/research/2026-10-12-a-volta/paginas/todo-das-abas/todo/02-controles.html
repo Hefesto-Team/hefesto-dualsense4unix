@@ -1018,6 +1018,24 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 .menu-hefesto button[disabled]{color:var(--texto-mudo,#9a9eb8);opacity:.55;cursor:default;background:transparent}
 .menu-hefesto hr{border:0;border-top:1px solid var(--border-sutil,#343746);margin:5px 4px}
 </style>
+<style data-todo-css="desconectado-r4">
+/* Ajuste da rodada 4 (02-18): o controle desconectado mostra só a vaga do jogador e «Desconectado», sem cor de plástico, máscara, microfone, sensores nem bateria. */
+.ctl[data-conectado="nao"] > .faixa > :not(.card-nome){display:none !important}
+</style>
+<style data-todo-css="alvos-r4">
+/* Rodada 4: a sua resposta de 13/10 (~23h40), botões e letra: todo alvo de toque com 24 px e nenhuma letra abaixo de 12 px. ?alvos=hoje mostra a tela sem a mudança. */
+html.alvos-24 :is(button,select,input:not([type=checkbox]):not([type=radio]):not([type=hidden]),textarea,summary,[role=button],.nj-tog,.sw,.passo,label.faixa,.nav-i,.mudo-i,.padrao-i){min-height:24px;box-sizing:border-box}
+html.alvos-24 :is(button,[role=button],.nj-tog,.passo,.nav-i,.mudo-i,.padrao-i){min-width:24px}
+html.alvos-24 :is(input[type=checkbox],input[type=radio]):not(.radio-mesa){min-width:24px;min-height:24px}
+html.alvos-24 input[type=range]{height:24px}
+html.letra-12 .quadro-corpo{gap:7px;padding-bottom:10px}
+</style>
+<style data-todo-css="mira-virtual-v3">
+/* As respostas à v3 (14/10): os dois botões sob os analógicos dizem só «Mira virtual», numa linha, com a mesma largura
+   e a mesma altura, ligados ou não. A explicação fica na dica. */
+.chip-virtual>.sw{white-space:nowrap;height:26px;min-height:26px;line-height:1;font-size:12px;padding:0 8px;gap:6px;
+  width:100%;max-width:none;box-sizing:border-box}
+</style>
 </head>
 <body class="por-controle" data-campo="nativo" data-hef-alvo="classe" data-hef-classe="nativo" data-hef-quando="sim">
 
@@ -1171,7 +1189,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 
       <input class="radio-mesa" type="radio" name="mesa" id="c-p1" data-campo="card-aberto" data-hef-alvo="marcado" checked>
       <label class="faixa" for="c-p1" data-dica="Abre este controle">
-          <span class="card-nome" data-campo="card-vpad" data-hef-alvo="atributo" data-hef-atributo="title"><span class="so-aberto"><span data-campo="quem-joga" data-hef-alvo="html">Vitória</span> <span class="pt">•</span> </span><span data-campo="peca">Cosmic Red</span> <span class="pt">•</span> <span data-campo="via">USB</span></span>
+          <span class="card-nome" data-campo="card-vpad" data-hef-alvo="atributo" data-hef-atributo="title"><span data-campo="peca">Cosmic Red</span> <span class="pt">•</span> <span data-campo="via">USB</span></span>
           <span class="div">·</span>
 
 
@@ -1223,7 +1241,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
             <div class="sticks">
               <div>
                 <div class="stick-topo"><div class="stick-rot">Analógico<br>esquerdo</div>
-                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual on" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico esquerdo" data-todo="6"><span class="p"></span>Usar giroscópio como analógico</button></span></span></div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual on" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico esquerdo" data-todo="6"><span class="p"></span>Mira virtual</button></span></span></div>
                 <div class="stick" data-stick="l">
                   <span class="rotl" data-campo="l3">L3</span>
                   <span data-campo="pos-ana-e-jogo" data-hef-alvo="posicao" style="--hef-x:43.1%;--hef-y:78.4%"><span class="pj on" data-campo="ana-e-jogo" data-hef-alvo="classe"></span></span>
@@ -1232,7 +1250,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
               </div>
               <div>
                 <div class="stick-topo"><div class="stick-rot">Analógico<br>direito</div>
-                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico direito" data-todo="6"><span class="p"></span>Usar giroscópio como analógico</button></span></span></div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico direito" data-todo="6"><span class="p"></span>Mira virtual</button></span></span></div>
                 <div class="stick" data-stick="r">
                   <span class="rotl" data-campo="r3">R3</span>
                   <span data-campo="pos-ana-d-jogo" data-hef-alvo="posicao"><span class="pj" data-campo="ana-d-jogo" data-hef-alvo="classe"></span></span>
@@ -1487,7 +1505,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
             <div class="sticks">
               <div>
                 <div class="stick-topo"><div class="stick-rot">Analógico<br>esquerdo</div>
-                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico esquerdo" data-todo="6"><span class="p"></span>Usar giroscópio como analógico</button></span></span></div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico esquerdo" data-todo="6"><span class="p"></span>Mira virtual</button></span></span></div>
                 <div class="stick" data-stick="l">
                   <span class="rotl" data-campo="l3">L3</span>
                   <span data-campo="pos-ana-e-jogo" data-hef-alvo="posicao"><span class="pj" data-campo="ana-e-jogo" data-hef-alvo="classe"></span></span>
@@ -1496,7 +1514,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
               </div>
               <div>
                 <div class="stick-topo"><div class="stick-rot">Analógico<br>direito</div>
-                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico direito" data-todo="6"><span class="p"></span>Usar giroscópio como analógico</button></span></span></div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico direito" data-todo="6"><span class="p"></span>Mira virtual</button></span></span></div>
                 <div class="stick" data-stick="r">
                   <span class="rotl" data-campo="r3">R3</span>
                   <span data-campo="pos-ana-d-jogo" data-hef-alvo="posicao"><span class="pj" data-campo="ana-d-jogo" data-hef-alvo="classe"></span></span>
@@ -1699,7 +1717,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 
       <input class="radio-mesa" type="radio" name="mesa" id="c-p3" data-campo="card-aberto" data-hef-alvo="marcado">
       <label class="faixa" for="c-p3" data-dica="Nenhum controle aqui">
-          <span class="card-nome" data-campo="card-vpad" data-hef-alvo="atributo" data-hef-atributo="title"><span data-campo="peca">Galactic Purple</span> <span class="pt">•</span> <span data-campo="via">Desconectado</span></span>
+          <span class="card-nome" data-campo="card-vpad" data-hef-alvo="atributo" data-hef-atributo="title"><span data-campo="peca">P3</span> <span class="pt">•</span> <span data-campo="via">Desconectado</span></span>
           <span class="div">·</span>
 
 
@@ -1751,7 +1769,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
             <div class="sticks">
               <div>
                 <div class="stick-topo"><div class="stick-rot">Analógico<br>esquerdo</div>
-                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico esquerdo" data-todo="6"><span class="p"></span>Usar giroscópio como analógico</button></span></span></div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico esquerdo" data-todo="6"><span class="p"></span>Mira virtual</button></span></span></div>
                 <div class="stick" data-stick="l">
                   <span class="rotl" data-campo="l3">—</span>
                   <span data-campo="pos-ana-e-jogo" data-hef-alvo="posicao"><span class="pj" data-campo="ana-e-jogo" data-hef-alvo="classe"></span></span>
@@ -1760,7 +1778,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
               </div>
               <div>
                 <div class="stick-topo"><div class="stick-rot">Analógico<br>direito</div>
-                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico direito" data-todo="6"><span class="p"></span>Usar giroscópio como analógico</button></span></span></div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico direito" data-todo="6"><span class="p"></span>Mira virtual</button></span></span></div>
                 <div class="stick" data-stick="r">
                   <span class="rotl" data-campo="r3">—</span>
                   <span data-campo="pos-ana-d-jogo" data-hef-alvo="posicao"><span class="pj" data-campo="ana-d-jogo" data-hef-alvo="classe"></span></span>
@@ -1963,7 +1981,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 
       <input class="radio-mesa" type="radio" name="mesa" id="c-p4" data-campo="card-aberto" data-hef-alvo="marcado">
       <label class="faixa" for="c-p4" data-dica="Nenhum controle aqui">
-          <span class="card-nome" data-campo="card-vpad" data-hef-alvo="atributo" data-hef-atributo="title"><span data-campo="peca">White</span> <span class="pt">•</span> <span data-campo="via">Desconectado</span></span>
+          <span class="card-nome" data-campo="card-vpad" data-hef-alvo="atributo" data-hef-atributo="title"><span data-campo="peca">P4</span> <span class="pt">•</span> <span data-campo="via">Desconectado</span></span>
           <span class="div">·</span>
 
 
@@ -2015,7 +2033,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
             <div class="sticks">
               <div>
                 <div class="stick-topo"><div class="stick-rot">Analógico<br>esquerdo</div>
-                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico esquerdo" data-todo="6"><span class="p"></span>Usar giroscópio como analógico</button></span></span></div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico esquerdo" data-todo="6"><span class="p"></span>Mira virtual</button></span></span></div>
                 <div class="stick" data-stick="l">
                   <span class="rotl" data-campo="l3">—</span>
                   <span data-campo="pos-ana-e-jogo" data-hef-alvo="posicao"><span class="pj" data-campo="ana-e-jogo" data-hef-alvo="classe"></span></span>
@@ -2024,7 +2042,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
               </div>
               <div>
                 <div class="stick-topo"><div class="stick-rot">Analógico<br>direito</div>
-                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico direito" data-todo="6"><span class="p"></span>Usar giroscópio como analógico</button></span></span></div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico direito" data-todo="6"><span class="p"></span>Mira virtual</button></span></span></div>
                 <div class="stick" data-stick="r">
                   <span class="rotl" data-campo="r3">—</span>
                   <span data-campo="pos-ana-d-jogo" data-hef-alvo="posicao"><span class="pj" data-campo="ana-d-jogo" data-hef-alvo="classe"></span></span>
@@ -2300,6 +2318,21 @@ document.querySelectorAll('.seg-criar').forEach(s => s.addEventListener('click',
     m.style.top = Math.min(e.clientY, innerHeight - r.height - 6) + 'px';
   });
   document.addEventListener('click', e => { if (!e.target.closest('.menu-hefesto')) document.querySelectorAll('.menu-hefesto.vivo').forEach(m => m.remove()); });
+})();
+</script>
+<script data-aba="alvos-r4">
+(function () {
+  if (new URLSearchParams(location.search).get('alvos') === 'hoje') return;
+  document.documentElement.classList.add('alvos-24');
+  document.documentElement.classList.add('letra-12');
+  function piso() {
+    document.querySelectorAll('body *').forEach(function (e) {
+      if (e.closest('svg') || ['SCRIPT', 'STYLE'].indexOf(e.tagName) >= 0) return;
+      var tem = ['INPUT', 'SELECT', 'TEXTAREA'].indexOf(e.tagName) >= 0 || Array.prototype.some.call(e.childNodes, function (n) { return n.nodeType === 3 && n.nodeValue.trim(); });
+      if (tem && parseFloat(getComputedStyle(e).fontSize) < 12) e.style.setProperty('font-size', '12px', 'important');
+    });
+  }
+  window.addEventListener('load', function () { piso(); setTimeout(piso, 400); });
 })();
 </script>
 </body>
