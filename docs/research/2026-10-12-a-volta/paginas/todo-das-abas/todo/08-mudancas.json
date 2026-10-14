@@ -360,6 +360,7 @@
   "consertos_da_fusao": [
     "A vaga sem controle diz «P3 • Desconectado» e «P4 • Desconectado» (q4B).",
     "O nome de quem joga nasce vazio nas duas vagas, como em qualquer instalação.",
-    "No rádio, os quatro controles se chamam pela cor do plástico."
+    "No rádio, os quatro controles se chamam pela cor do plástico.",
+    "Na conferência, o ✓ do Mic e do Som sai do verde e fica na cor do texto: nenhum aviso verde."
   ]
 }
