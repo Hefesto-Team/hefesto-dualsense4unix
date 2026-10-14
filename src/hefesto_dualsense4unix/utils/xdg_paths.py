@@ -60,9 +60,19 @@ def cache_dir(ensure: bool = False) -> Path:
 
 
 def runtime_dir(ensure: bool = False) -> Path:
-    """XDG_RUNTIME_DIR/hefesto-dualsense4unix; fallback p/ cache/runtime se ausente."""
-    runtime = _DIRS.user_runtime_dir
-    p = Path(runtime) if runtime else cache_dir() / "runtime"
+    """XDG_RUNTIME_DIR/hefesto-dualsense4unix; fallback p/ cache/runtime se ausente.
+
+    O ``XDG_RUNTIME_DIR`` declarado é lido aqui, e não pelo ``platformdirs``: do
+    4.12 em diante ele troca a pasta que não é 0700 pela ``/run/user/<uid>``, e o
+    socket e os pid files iriam para um lugar diferente do que o resto do produto
+    lê pela mesma variável.
+    """
+    declarado = os.environ.get("XDG_RUNTIME_DIR", "").strip()
+    if os.path.isabs(declarado):
+        p = Path(declarado) / _DIRS.appname
+    else:
+        runtime = _DIRS.user_runtime_dir
+        p = Path(runtime) if runtime else cache_dir() / "runtime"
     if ensure:
         p.mkdir(parents=True, exist_ok=True)
     return p
