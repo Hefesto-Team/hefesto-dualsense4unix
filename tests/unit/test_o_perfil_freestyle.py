@@ -533,12 +533,16 @@ def test_com_o_modo_freestyle_ligado_o_jogo_nao_entra(
                                    "Freestyle"]
 
 
-def test_com_o_modo_freestyle_desligado_a_volta_e_a_escolha_dela(
+def test_com_o_modo_freestyle_desligado_o_jogo_entra_e_fica(
     semeadura_ligada: None,
 ) -> None:
-    """Desligado, o boot abre na escolha do usuário, o jogo entra e a volta é a ela."""
+    """Desligado, o boot abre na escolha do usuário, e o jogo entra e FICA na volta.
+
+    D-1410-O-PERFIL-FICA-NO-ULTIMO-JOGO: o perfil do último jogo vale até ela
+    mudar ou outro jogo iniciar; a janela sem perfil próprio não devolve a escolha.
+    """
     assert _cena(travado=False, escolha="Sofá") == ["Sofá", "Sofá",
-                                                    "Mullet Mad Jack", "Sofá"]
+                                                    "Mullet Mad Jack", "Mullet Mad Jack"]
 
 
 def test_sem_escolha_o_desligado_nao_cai_no_freestyle(semeadura_ligada: None) -> None:
