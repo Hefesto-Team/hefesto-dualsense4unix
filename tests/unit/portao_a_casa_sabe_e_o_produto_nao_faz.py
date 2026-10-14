@@ -1100,19 +1100,6 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "`tests/unit/test_as_duas_reguas_do_arranjo_divergem_onde.py`): apagá-la "
         "decidiria por ela, e ligá-la também."
     ),
-    "integrations/arranjo_da_mesa.py::receita": (
-        "29/09/2026, A-CONEXOES-DIZ-O-QUE-O-PRODUTO-JA-MEDE-01 — não é promessa "
-        "ao produto: `receita` é parte da gêmea Python do motor do arranjo que "
-        "nasceu em JavaScript no mockup "
-        "`mockup/congelados/2026-08-24-mapa-das-portas.html`, presa a ele pelos "
-        "testes de equivalência "
-        "(`tests/unit/test_arranjo_da_mesa_bate_com_o_mockup.py`). A escolha "
-        "entre esta régua e a do `plano_de_radio` é palavra DELA, com a "
-        "divergência medida na mão "
-        "(D-A-REGUA-DO-ARRANJO-SE-DECIDE-COM-A-DIVERGENCIA-NA-MAO, "
-        "`tests/unit/test_as_duas_reguas_do_arranjo_divergem_onde.py`): apagá-la "
-        "decidiria por ela, e ligá-la também."
-    ),
     "integrations/arranjo_da_mesa.py::reexame": (
         "29/09/2026, A-CONEXOES-DIZ-O-QUE-O-PRODUTO-JA-MEDE-01 — não é promessa "
         "ao produto: `reexame` é parte da gêmea Python do motor do arranjo que "

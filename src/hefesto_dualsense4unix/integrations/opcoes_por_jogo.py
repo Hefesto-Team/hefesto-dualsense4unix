@@ -438,27 +438,18 @@ def compor_linha(vivo: str, desejada: str, anterior: str = "") -> str | None:
     return " ".join(novo)
 
 
-def definir_opcoes_vdf_text(
-    texto: str,
-    desejadas: dict[str, str],
-    escritas: dict[str, str] | None = None,
-) -> tuple[str, list[str], list[tuple[str, str]]]:
-    """Põe ``desejadas`` (``{appid: linha}``) na árvore CANÔNICA, compondo com a linha viva.
-
-    A ``LaunchOptions`` é a filha direta do bloco do jogo (um ``}`` de filho não o fecha);
-    as cópias em blocos filhos recebem o mesmo valor. Só o nosso trecho troca
-    (:func:`compor_linha`); linha que não se compõe vai a ``pulados`` com ``linha_dela_diverge``.
-    """
-    return compor_opcoes_vdf_text(texto, desejadas, escritas)[:3]
-
-
 def compor_opcoes_vdf_text(
     texto: str,
     desejadas: dict[str, str],
     escritas: dict[str, str] | None = None,
     instalados: Sequence[str] = (),
 ) -> tuple[str, list[str], list[tuple[str, str]], dict[str, str]]:
-    """O :func:`definir_opcoes_vdf_text` e, de quebra, o valor composto de cada jogo escrito.
+    """Põe ``desejadas`` (``{appid: linha}``) na árvore CANÔNICA, compondo com a linha viva.
+
+    A ``LaunchOptions`` é a filha direta do bloco do jogo (um ``}`` de filho não o fecha);
+    as cópias em blocos filhos recebem o mesmo valor. Só o nosso trecho troca
+    (:func:`compor_linha`); linha que não se compõe vai a ``pulados`` com ``linha_dela_diverge``.
+    Devolve também o valor composto de cada jogo escrito.
 
     ``instalados``: o jogo da tabela com ``appmanifest`` e sem bloco ganha o bloco antes.
     """
