@@ -358,6 +358,25 @@ def _sem(tokens: list[str], tirar: list[str]) -> list[str]:
     return resto
 
 
+#: O que separa um comando do outro na linha: o atalho entra no trecho que roda o jogo.
+_OPERADORES = frozenset({"&&", "||", ";", "|", "&"})
+_ATRIBUICAO = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
+
+
+def _inicio_do_trecho_do_jogo(tokens: list[str]) -> int:
+    """Onde começa o comando que leva o ``%command%``: depois do último ``&&`` (ou ``;``)."""
+    fim = tokens.index(_COMANDO) if _COMANDO in tokens else 0
+    return max((i + 1 for i in range(fim) if tokens[i] in _OPERADORES), default=0)
+
+
+def _atribuicoes_e_resto(tokens: list[str]) -> tuple[list[str], list[str]]:
+    """As ``VAR=valor`` do começo e o resto (``gamemoderun``, ``mangohud``…), na ordem dada."""
+    i = 0
+    while i < len(tokens) and _ATRIBUICAO.match(tokens[i]):
+        i += 1
+    return tokens[:i], tokens[i:]
+
+
 def _opcoes_da_linha(linha: str) -> tuple[list[str], list[str]] | None:
     """``(antes, depois)`` do ``%command%`` do que a TABELA escreveu, sem o atalho."""
     tokens = _tokens(linha)
@@ -391,8 +410,11 @@ def compor_linha(vivo: str, desejada: str, anterior: str = "") -> str | None:
     atalho = _tokens(WRAPPER_PREFIX)
     com_atalho = quer[: len(atalho)] == atalho
     pos = _acha(vivos, atalho)
-    antes_do_atalho = vivos[:pos] if pos is not None else []
-    resto = vivos[pos + len(atalho):] if pos is not None else vivos
+    if pos is None:
+        pos = _inicio_do_trecho_do_jogo(vivos)
+        antes_do_atalho, resto = vivos[:pos], vivos[pos:]
+    else:
+        antes_do_atalho, resto = vivos[:pos], vivos[pos + len(atalho):]
     dele = _parte_antes_e_depois(resto)
     nosso = _opcoes_da_linha(desejada)
     if dele is None or nosso is None:
@@ -406,7 +428,10 @@ def compor_linha(vivo: str, desejada: str, anterior: str = "") -> str | None:
     novo = list(antes_do_atalho)
     if com_atalho:
         novo += atalho
-    novo += pre_dele + nosso[0]
+    # As variáveis antes de qualquer comando: `gamemoderun A=1 %command%` rodaria `A=1`.
+    var_dele, cmd_dele = _atribuicoes_e_resto(pre_dele)
+    var_nossa, cmd_nosso = _atribuicoes_e_resto(nosso[0])
+    novo += var_dele + var_nossa + cmd_dele + cmd_nosso
     if tinha_comando:
         novo.append(_COMANDO)
     novo += pos_dele + nosso[1]

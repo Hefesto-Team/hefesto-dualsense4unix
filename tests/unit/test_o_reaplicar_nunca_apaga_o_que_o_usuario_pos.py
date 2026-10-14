@@ -231,3 +231,20 @@ def test_compor_linha_nas_bordas() -> None:
     assert opj.compor_linha("A=1 %command% B=2 %command%", desejada) is None
     com_args = opj.compor_linha(f"{slo.WRAPPER_PREFIX} %command% -w", desejada)
     assert com_args is not None and com_args.endswith("%command% -w")
+
+
+def test_o_atalho_entra_no_trecho_que_roda_o_jogo_e_nunca_antes_do_e_comercial_dela() -> None:
+    """Sem o atalho na linha, ele vai depois do `&&` dela: antes, o `env` do wrapper
+    receberia a variável dela como comando e o jogo abriria sem o Hefesto."""
+    desejada = opj.linha_desejada(OPCOES, com_atalho=True)
+    composta = opj.compor_linha(f"{DELA} %command%", desejada)
+    assert composta == f"{DELA} {desejada}"
+
+
+def test_o_comando_dela_antes_do_jogo_fica_depois_das_variaveis_da_tabela() -> None:
+    """`gamemoderun VKD3D_CONFIG=… %command%` rodaria a variável como programa."""
+    desejada = opj.linha_desejada(OPCOES, com_atalho=True)
+    composta = opj.compor_linha("MANGOHUD=1 gamemoderun %command% -w", desejada)
+    assert composta == (
+        f"{slo.WRAPPER_PREFIX} MANGOHUD=1 VKD3D_CONFIG=no_upload_hvv gamemoderun %command% -w"
+    )
