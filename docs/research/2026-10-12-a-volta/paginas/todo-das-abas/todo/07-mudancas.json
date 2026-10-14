@@ -281,35 +281,47 @@
     {
       "n": 29,
       "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
-      "o_que_muda": "«Lovense pelo Intiface» nomeia só a primeira extensão, e nas duas direções: o controle vibra os brinquedos, e os programas da Intiface vibram o controle",
+      "o_que_muda": "As três Lovense viram uma extensão só, «Lovense», com as três formas dentro e uma chave para cada; sem selo verde nem «ok», só os três botões",
       "resposta": "todo-07-r3-29",
       "origem": "escolha dela de 13/10",
       "ancora": "[data-r3=\"29\"]",
       "conflito": "",
       "rodada": 3,
-      "ancora_antes": "[data-modificacao=\"intiface\"] .ext-faz"
+      "ancora_antes": "[data-modificacao=\"intiface\"] .ext-faz",
+      "ajuste_r3": {
+        "pedido": "Não. O botão desligar tem diferença de largura com o botão ligado. Esses 3 features do lovense são uma extensão só. e a ŕea tem que ser melhorna largura o botão e ocom numeros dentro tem um verde distoante do tema tem que ser removido. os alinhamentos não tão legais. a distribuição dos elementos da guia extensões tão muito estranhos. pouco organicos e verdadeiramente feios. esse 2 dentro do verde gritante da steam tá péssimo não deveriamos ter avisos verdes.  na real não temos que ter avisos de ok ali.. só os 3 botões mesmo.",
+        "feito": "As três Lovense viraram UMA extensão, «Lovense», com as três formas dentro (Pelo Intiface, Pelo celular, DualSense como brinquedo), cada uma com a sua chave. Ligada e Desligada têm a mesma largura (104 px). Saíram o selo verde com número, a coluna de «ok» (✓ Kyty, 3 acessórios, App no Game Mode, Sem apps) e o 2 verde da Steam; cada linha ficou só com os três botões: ligar, configurar e ⋮. Uma grade só para as cinco linhas, com o mesmo espaçamento."
+      }
     },
     {
       "n": 30,
       "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
-      "o_que_muda": "A segunda extensão Lovense, «Lovense pelo celular»: o app da Lovense no celular, pelo Game Mode na rede de casa (porta 20010), como no Planet Lust",
+      "o_que_muda": "«Pelo celular»: o app da Lovense no celular, pelo Game Mode na rede de casa, como forma dentro da extensão Lovense",
       "resposta": "todo-07-r3-30",
       "origem": "escolha dela de 13/10",
       "ancora": "[data-r3=\"30\"]",
       "conflito": "",
       "rodada": 3,
-      "ancora_antes": ".ext-lista"
+      "ancora_antes": ".ext-lista",
+      "ajuste_r3": {
+        "pedido": "(sem texto, voto «ajustar»; vale a resposta da 29)",
+        "feito": "«Lovense pelo celular» virou a forma «Pelo celular» dentro da extensão Lovense, com chave e engrenagem próprias, na mesma grade e com a chave do mesmo tamanho das outras."
+      }
     },
     {
       "n": 31,
       "sprint": "O-HEFESTO-E-SERVIDOR-BUTTPLUG-DO-PROPRIO-DUALSENSE-01",
-      "o_que_muda": "A extensão «DualSense como brinquedo»: os apps de brinquedo vibram o controle, nada pela nuvem, e a extensão nasce desligada",
+      "o_que_muda": "«DualSense como brinquedo»: a terceira forma da extensão Lovense, que nasce desligada",
       "resposta": "todo-07-r3-31",
       "origem": "escolha dela de 13/10",
       "ancora": "[data-r3=\"31\"]",
       "conflito": "",
       "rodada": 3,
-      "ancora_antes": ".ext-lista"
+      "ancora_antes": ".ext-lista",
+      "ajuste_r3": {
+        "pedido": "(sem texto, voto «ajustar»; vale a resposta da 29)",
+        "feito": "«DualSense como brinquedo» virou a terceira forma da extensão Lovense, nasce desligada, com a chave do mesmo tamanho das outras e sem aviso de estado."
+      }
     },
     {
       "n": 32,
@@ -326,18 +338,22 @@
     {
       "n": 33,
       "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
-      "o_que_muda": "Para as quatro extensões caberem sem rolar, «Detectar o jogo aberto» e «Procurar de novo» sobem para a linha do título dos Lançadores, e a lista das extensões deixa de rolar",
+      "o_que_muda": "Saem «Detectar o jogo aberto», «Procurar de novo» e a contagem verde ao lado do título «Lançadores»",
       "resposta": "todo-07-r3-33",
       "origem": "escolha dela de 13/10",
-      "ancora": ".lanc-acoes.no-topo",
+      "ancora": ".quadro.estica > .quadro-topo",
       "conflito": "",
       "rodada": 3,
-      "ancora_antes": ".lanc-acoes"
+      "ancora_antes": ".lanc-acoes",
+      "ajuste_r3": {
+        "pedido": "remove os botões aí e remove o 1 e 2 e o ok do lado do lançadores.",
+        "feito": "Saíram «Detectar o jogo aberto» e «Procurar de novo» e a contagem com o ✓ verde ao lado do título «Lançadores». O título ficou sozinho; a lista das extensões não rola."
+      }
     },
     {
       "n": 34,
       "sprint": "A-ABA-LANCADORES-GANHA-AS-MODIFICACOES-01",
-      "o_que_muda": "O desenho B ajustado vira página própria, para você comparar com o Experimental: os lançadores em cima, as modificações embaixo, as duas seções abertas",
+      "o_que_muda": "A aba fica como o Experimental (a B foi recusada em 14/10): extensões em cima, lançadores embaixo, com os impedimentos da Steam numa linha e a engrenagem ao lado de cada chave",
       "resposta": "todo-07-r3-34",
       "origem": "escolha dela de 13/10",
       "ancora": ".miolo",
@@ -357,26 +373,35 @@
         }
       },
       "pergunta": "A aba fica como o Experimental (A) ou como o B ajustado (B)?",
-      "pagina": "07-lancadores-b.html"
+      "pagina": "07-lancadores.html",
+      "ajuste_r3": {
+        "pedido": "A (a aba fica como o Experimental, com as extensões em cima e os lançadores embaixo)",
+        "feito": "A aba é a Experimental. A página do B (07-lancadores-b.html) saiu do índice e ficou no git com uma nota de recusada em 14/10. O que o B trazia e valia entrou no A: os impedimentos da Steam numa linha («2 com impedimento»), e a engrenagem ao lado da chave de cada forma e extensão."
+      },
+      "escolha": "A"
     },
     {
       "n": 35,
       "sprint": "A-ABA-LANCADORES-GANHA-AS-MODIFICACOES-01",
-      "o_que_muda": "Cabem seis modificações sem rolar nos três tamanhos: as linhas encolhem e os lançadores deixam de esticar (a foto põe duas linhas de exemplo)",
+      "o_que_muda": "A lista das extensões cabe sem rolar nos três tamanhos, até seis linhas (a foto põe uma linha de exemplo)",
       "resposta": "todo-07-r3-35",
       "origem": "escolha dela de 13/10",
       "ancora": ".ext-lista",
       "conflito": "",
       "rodada": 3,
       "ancora_antes": ".ext-lista",
-      "pagina": "07-lancadores-b.html",
+      "pagina": "07-lancadores.html",
       "antes_pagina": "opcao-b-07.html (desenho B de 09/10)",
-      "hash": "#seis"
+      "ajuste_r3": {
+        "pedido": "(sem texto, voto «ajustar»; vale o que ela pediu na 36: botões de largura igual, sem verde)",
+        "feito": "A lista das extensões cabe sem rolar nos três tamanhos, com até seis linhas: a frase de cada forma vira só a dica quando a janela é baixa (menos de 780 px). A foto põe uma linha de exemplo da comunidade."
+      },
+      "js": "(function(){var l=document.querySelector('.ext-lista');var k=l.querySelector('[data-modificacao=kyty]');for(var i=1;i<=1;i++){var c=k.cloneNode(true);c.removeAttribute('data-modificacao');c.querySelector('.ext-nome').textContent='Exemplo da comunidade '+i;var o=c.querySelector('.lanc-selo');o.textContent='Comunidade';o.className='lanc-selo comunidade';c.querySelector('.ext-faz').textContent='Uma linha de exemplo, só para medir a lista';c.querySelector('.nj-tog').className='nj-tog';c.querySelector('.nj-tog .txt').textContent='Desligada';l.appendChild(c);}})()"
     },
     {
       "n": 36,
       "sprint": "A-ABA-LANCADORES-GANHA-AS-MODIFICACOES-01",
-      "o_que_muda": "Os impedimentos da Steam numa linha do cartão, «2 com impedimento»; o clique abre a lista dos jogos, cada um com o seu conserto",
+      "o_que_muda": "Os impedimentos da Steam numa linha do cartão, «2 com impedimento»; o clique abre a lista, com os botões da mesma largura",
       "resposta": "todo-07-r3-36",
       "origem": "escolha dela de 13/10",
       "ancora": ".imp-cx",
@@ -384,21 +409,29 @@
       "rodada": 3,
       "ancora_antes": ".lf[data-lancador=\"steam\"]",
       "js": "location.hash='#impedimentos'",
-      "pagina": "07-lancadores-b.html",
-      "antes_pagina": "opcao-b-07.html (desenho B de 09/10)"
+      "pagina": "07-lancadores.html",
+      "antes_pagina": "opcao-b-07.html (desenho B de 09/10)",
+      "ajuste_r3": {
+        "pedido": "padronização de largura dos bortões muito feio.",
+        "feito": "No diálogo dos impedimentos, os dois botões de conserto têm a mesma largura (176 px) e os dois de baixo também (Fechar e Resolver os dois, 334 px). Na lista dos lançadores, Identificar, Criar perfis e Configurar têm 76 px em todas as linhas, e «2 com impedimento» ficou na linha da Steam com a mesma altura dos botões, sem selo verde."
+      }
     },
     {
       "n": 37,
       "sprint": "A-ABA-LANCADORES-GANHA-AS-MODIFICACOES-01",
-      "o_que_muda": "Cada modificação ganha o botão de configurações, ao lado da chave",
+      "o_que_muda": "A engrenagem de cada extensão e de cada forma fica ao lado da chave, do mesmo tamanho",
       "resposta": "todo-07-r3-37",
       "origem": "escolha dela de 13/10",
       "ancora": ".ext-conf",
       "conflito": "",
       "rodada": 3,
       "ancora_antes": ".nj-tog",
-      "pagina": "07-lancadores-b.html",
-      "antes_pagina": "opcao-b-07.html (desenho B de 09/10)"
+      "pagina": "07-lancadores.html",
+      "antes_pagina": "opcao-b-07.html (desenho B de 09/10)",
+      "ajuste_r3": {
+        "pedido": "(sem texto, voto «ajustar»; vale o que ela pediu na 36: botões de largura igual, sem verde)",
+        "feito": "A engrenagem de configurações fica ao lado da chave em todas as linhas (30 px de largura, a mesma em Kyty, Pelo Intiface, Pelo celular e DualSense como brinquedo), sem texto e sem aviso verde."
+      }
     }
   ],
   "por_baixo": [
