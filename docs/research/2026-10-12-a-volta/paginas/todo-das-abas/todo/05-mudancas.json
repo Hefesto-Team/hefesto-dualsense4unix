@@ -125,7 +125,12 @@
           "o_que": "Só os quatro passos, sem trilho"
         }
       },
-      "pergunta": "O trilho fica embaixo dos quatro passos, até 100% (A), ou some e ficam só os passos (B)?"
+      "pergunta": "O trilho fica embaixo dos quatro passos, até 100% (A), ou some e ficam só os passos (B)?",
+      "ajuste_r3": {
+        "pedido": "(sem voto) fica o antes ali no a e remove a seção inferior do criar efeitos novos também. nome dos players 3 e 4 mesma coisa.",
+        "feito": "Ficou a leitura A: os quatro passos e, embaixo, o trilho fino até 100%; a leitura B saiu da página. A seção «Criar efeitos novos» saiu do pé da aba. As vagas 3 e 4 mostram o campo do nome vazio, sem «Galactic Purple» e «White». Os quatro passos ganharam a mesma largura (duas fileiras de dois, porque «Desligada» não cabe numa fileira de quatro iguais) e a linha da força cresceu para respirar."
+      },
+      "escolha": "A"
     }
   ],
   "estados": {

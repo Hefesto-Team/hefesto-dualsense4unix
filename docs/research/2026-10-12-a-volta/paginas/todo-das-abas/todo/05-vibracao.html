@@ -1972,11 +1972,10 @@
   body.nativo.por-controle .r-aplicar,body.nativo.por-controle .r-salvar,
   body.nativo.por-controle .r-importar{visibility:hidden}
   /* Rodada 3 (13/10): a força em quatro passos do firmware, como no PS5; o Máximo de 150% sai.
-     Leitura A: os passos e o trilho até 100%. Leitura B (#leitura-b): só os passos. */
-  .vib .seg.passos{grid-template-columns:auto auto auto auto;gap:4px}
-  .vib .seg.passos button{padding:0 6px;font-size:11.5px}
-  body.leitura-b .vib .forca .motor.mult{display:none}
-  body.leitura-b .vib .forca{align-content:center}
+     Ficou a leitura A, escolhida por ela em 14/10: os passos e, embaixo, o trilho até 100%. */
+  /* Ajuste de 14/10: os quatro botões têm a mesma largura (duas fileiras de dois: «Desligada» não cabe numa fileira de quatro iguais) */
+  .vib .seg.passos{grid-template-columns:1fr 1fr;gap:4px}
+  .vib .seg.passos button{height:26px;padding:0 4px;font-size:12px}
 </style>
 
 
@@ -2001,25 +2000,7 @@
   .vib .rot-ctrl .pt{margin:0 6px}
   .vib [data-controle="p1"][data-conectado="sim"] .rot-ctrl{border-color:#ae335a}
   .vib [data-controle="p2"][data-conectado="sim"] .rot-ctrl{border-color:#7eb8d4}
-  .vib [data-conectado="nao"] .rot-ctrl{color:var(--texto-mudo);border-color:var(--border-sutil)}
-  .criar{flex:0 0 auto}
-  .criar .criar-linha{display:flex;align-items:center;gap:12px;padding:12px 16px;flex-wrap:nowrap;min-width:0}
-  .criar .quadro-titulo{flex:0 0 auto;margin-right:4px}
-  .criar .seg-criar{display:inline-flex;gap:4px;flex:0 0 auto}
-  .criar .seg-criar button,.criar .meu{height:30px;padding:0 12px;border-radius:999px;font:500 12.5px/1 'Space Grotesk',system-ui,sans-serif;
-    border:1px solid var(--linha);background:var(--app-bg);color:var(--texto-mudo);cursor:pointer;white-space:nowrap;
-    display:inline-flex;align-items:center;gap:7px}
-  .criar .seg-criar button.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600}
-  .criar .seg-criar button:hover:not(.on),.criar .meu:hover{border-color:var(--comment);color:var(--texto-suave)}
-  .criar .nome-criar{height:30px;width:150px;flex:0 0 auto;padding:0 11px;border-radius:7px;border:1px solid var(--linha);
-    background:var(--app-bg);color:var(--fg);font:500 12.5px 'Space Grotesk',system-ui,sans-serif}
-  .criar .nome-criar::placeholder{color:var(--texto-mudo)}
-  .criar .btn-criar{height:30px;padding:0 14px;border-radius:7px;border:1px solid var(--purple);background:rgba(189,147,249,.12);
-    color:var(--purple);font:600 12.5px/1 'Space Grotesk',system-ui,sans-serif;cursor:pointer;flex:0 0 auto}
-  .criar .btn-criar:hover{background:rgba(189,147,249,.22)}
-  .criar .meus{display:flex;gap:6px;margin-left:auto;align-items:center;min-width:0;overflow:hidden}
-  .criar .meu{color:var(--texto-suave)}
-  .criar .meu i{width:7px;height:7px;border-radius:50%;background:var(--cor,var(--purple));flex:0 0 auto}
+  .vib [data-conectado="nao"] .rot-ctrl{color:var(--texto-mudo);border:1px dashed var(--border-sutil);background:transparent}
 </style>
 <style data-aba="rodada-3">
   /* RODADA 3 (12/10): as fatias entre as divisórias são iguais e o conteúdo fica no meio de cada uma.
@@ -2048,6 +2029,10 @@
   .glifo-forca .vibra{fill:currentColor;opacity:.9}
   .glifo-forca .onda{stroke:currentColor}
   .glifo-forca:not(.on) .casco{stroke:var(--texto-mudo)}
+</style>
+<style data-aba="rodada-3-ajuste">
+  /* Ajuste de 14/10: a linha da força pede 26+4+26 dos passos, 7 de vão e 26 do trilho, e respira nas duas pontas */
+  .vib-quadro .vib{--r-forca:110px}
 </style>
 <style id="base-comum">
 /* ===== Base comum das abas (rodada 2, 12/10/2026) =====
@@ -3372,7 +3357,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg></div>
-            <div class="rot-ctrl" data-hef="identidade" data-todo="4">Galactic Purple <span class="pt">•</span> Desconectado</div>
+            <div class="rot-ctrl" data-hef="identidade" data-todo="4" aria-label="Nenhum controle aqui"></div>
             <div class="forca" data-campo="padrao" data-hef-alvo="classe"
                  data-hef-classe="padrao">
               <div class="seg passos" data-r3="12" role="group" aria-label="Força da vibração, os quatro passos do firmware"><button class="" data-papel="forca" data-forca="forte" aria-pressed="false">Forte</button><button class="" data-papel="forca" data-forca="media" aria-pressed="false">Média</button><button class="" data-papel="forca" data-forca="fraca" aria-pressed="false">Fraca</button><button class="" data-papel="forca" data-forca="desligada" aria-pressed="false">Desligada</button></div>
@@ -3737,7 +3722,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg></div>
-            <div class="rot-ctrl" data-hef="identidade" data-todo="4">White <span class="pt">•</span> Desconectado</div>
+            <div class="rot-ctrl" data-hef="identidade" data-todo="4" aria-label="Nenhum controle aqui"></div>
             <div class="forca" data-campo="padrao" data-hef-alvo="classe"
                  data-hef-classe="padrao">
               <div class="seg passos" data-r3="12" role="group" aria-label="Força da vibração, os quatro passos do firmware"><button class="" data-papel="forca" data-forca="forte" aria-pressed="false">Forte</button><button class="" data-papel="forca" data-forca="media" aria-pressed="false">Média</button><button class="" data-papel="forca" data-forca="fraca" aria-pressed="false">Fraca</button><button class="" data-papel="forca" data-forca="desligada" aria-pressed="false">Desligada</button></div>
@@ -3833,19 +3818,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
         <div class="vib-estado" id="vib-estado"></div>
       </div>
     </div>
-    <div class="quadro criar" data-todo="3">
-      <div class="criar-linha">
-        <span class="quadro-titulo" data-dica="O automático pode usar o que você criar">Criar efeitos novos</span>
-        <span class="seg-criar" role="group" aria-label="Jeito"><button class="on" type="button" data-dica="Batidas no ritmo">Batida</button><button type="button" data-dica="Sobe e desce devagar">Onda</button><button type="button" data-dica="Um tranco curto">Tranco</button></span>
-        <span class="seg-criar" role="group" aria-label="Motor"><button type="button" data-dica="Punho esquerdo, som grosso">Esquerdo</button><button type="button" data-dica="Punho direito, som fino">Direito</button><button class="on" type="button">Os dois</button></span>
-        <input class="nome-criar" type="text" placeholder="Nome do efeito" aria-label="Nome do efeito" value="Coração">
-        <button class="btn-criar" type="button" data-dica="Guarda o efeito">Criar</button>
-        <span class="meus" aria-label="Seus efeitos">
-          <button class="meu" type="button" style="--cor:var(--pink)" data-dica="Toca no controle"><i></i>Coração</button>
-          <button class="meu" type="button" style="--cor:var(--orange)" data-dica="Toca no controle"><i></i>Motor ligando</button>
-        </span>
-      </div>
-    </div>
 
 
 
@@ -3922,15 +3894,6 @@ document.querySelectorAll('.modo-auto').forEach(b => b.addEventListener('click',
   b.setAttribute('aria-pressed', String(on));
   document.querySelectorAll(b.dataset.governa).forEach(el => el.classList.toggle('governado-pelo-jogo', on));
 }));
-</script>
-<script data-aba="criar">
-document.querySelectorAll('.seg-criar').forEach(s => s.addEventListener('click', e => {
-  const b = e.target.closest('button'); if (b) s.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); }));
-</script>
-<script data-aba="leitura">
-/* Rodada 3: a mesma aba em duas leituras da escolha dela; #leitura-b mostra a segunda. */
-const leituraB = () => document.body.classList.toggle('leitura-b', location.hash.includes('leitura-b'));
-document.addEventListener('DOMContentLoaded', leituraB); addEventListener('hashchange', leituraB);
 </script>
 <script id="base-comum">
 /* Base comum das abas (rodada 2): a dica no hover e o menu do botão direito. Copiada IGUAL em todo mockup. */
