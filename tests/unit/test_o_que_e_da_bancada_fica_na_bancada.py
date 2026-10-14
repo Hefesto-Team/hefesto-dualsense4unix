@@ -589,6 +589,39 @@ class TestODoctorSabeDaBateria:
         )
         assert "[WARN] DEFEITO: cmdline: 054c:0df2:gn (no sysfs)" in r.stdout, r.stdout
         assert "200 ms por pedido" in r.stdout
+        assert "reinicie o computador" in r.stdout, "com o bootloader curado, o conselho é o reboot"
+
+    def test_depois_do_install_o_doctor_manda_reiniciar_e_nao_reinstalar(
+        self, tmp_path: Path,
+    ) -> None:
+        """O install curou o bootloader; o boot de agora ainda traz o 0df2:gn.
+
+        MORDIDA: com o conselho único de antes, a linha deste boot sozinha dava
+        DEFEITO com «rode ./install.sh», que ela já rodou.
+        """
+        boot = tmp_path / "cmdline"
+        boot.write_text("quiet usbcore.quirks=054c:0ce6:gn,054c:0df2:gn\n", encoding="utf-8")
+        stub = tmp_path / "kernelstub.json"
+        stub.write_text('{"user": {"kernel_options": ["usbcore.quirks=054c:0df2:gn"]}}\n',
+                        encoding="utf-8")
+
+        def _roda(kernelstub: Path) -> str:
+            return subprocess.run(
+                [BASH, "-c", f'source "{DOCTOR}"; QUIET=0; check_cmdline_pad_virtual'],
+                capture_output=True, text=True, timeout=60, check=False,
+                env={"PATH": "/usr/bin:/bin", "HOME": str(tmp_path),
+                     "HEFESTO_DOCTOR_SYS": str(tmp_path / "sys-vazio"),
+                     "HEFESTO_DOCTOR_CMDLINE": str(boot),
+                     "HEFESTO_DOCTOR_KERNELSTUB": str(kernelstub),
+                     "HEFESTO_DOCTOR_GRUB": str(tmp_path / "vazio")},
+            ).stdout
+
+        so_o_boot = _roda(tmp_path / "vazio")
+        assert "DEFEITO" not in so_o_boot, so_o_boot
+        assert "some no próximo boot" in so_o_boot, so_o_boot
+        com_o_bootloader = _roda(stub)
+        defeito = "[WARN] DEFEITO: cmdline: 054c:0df2:gn (neste boot no kernelstub)"
+        assert defeito in com_o_bootloader, com_o_bootloader
 
     def test_a_pergunta_do_doctor_e_a_do_install(self) -> None:
         """O mesmo glob nos dois: um BAT2 contaria num e não no outro."""

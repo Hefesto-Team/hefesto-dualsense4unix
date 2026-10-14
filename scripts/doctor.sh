@@ -7924,14 +7924,19 @@ check_cmdline_pad_virtual() {
     local cmdline="${HEFESTO_DOCTOR_CMDLINE:-/proc/cmdline}"
     local kstub="${HEFESTO_DOCTOR_KERNELSTUB:-/etc/kernelstub/configuration}"
     local grub="${HEFESTO_DOCTOR_GRUB:-/etc/default/grub}"
-    local velho="054c:0df2:gn" onde=""
+    local velho="054c:0df2:gn" onde="" agendado=0 vivo=0
     local sysq="${HEFESTO_DOCTOR_SYS:-/sys}/module/usbcore/parameters/quirks"
     grep -qF "${velho}" "${cmdline}" 2>/dev/null && onde="${onde} neste boot"
-    { [[ -r "${kstub}" ]] && grep -qF "${velho}" "${kstub}" 2>/dev/null; } && onde="${onde} no kernelstub"
-    { [[ -r "${grub}" ]] && grep -qF "${velho}" "${grub}" 2>/dev/null; } && onde="${onde} no grub"
-    { [[ -r "${sysq}" ]] && grep -qF "${velho}" "${sysq}" 2>/dev/null; } && onde="${onde} no sysfs"
-    if [[ -n "${onde}" ]]; then
+    { [[ -r "${kstub}" ]] && grep -qF "${velho}" "${kstub}" 2>/dev/null; } && { onde="${onde} no kernelstub"; agendado=1; }
+    { [[ -r "${grub}" ]] && grep -qF "${velho}" "${grub}" 2>/dev/null; } && { onde="${onde} no grub"; agendado=1; }
+    { [[ -r "${sysq}" ]] && grep -qF "${velho}" "${sysq}" 2>/dev/null; } && { onde="${onde} no sysfs"; vivo=1; }
+    # O install já curou o bootloader e o boot ainda é o velho: o conselho é reiniciar.
+    if [[ "${agendado}" -eq 1 ]]; then
         warn "DEFEITO: cmdline: ${velho} (${onde# }) — o pad virtual espera 200 ms por pedido; com 4 controles o jogo perde os controles. $(conselho_de_instalacao)$(so_no_checkout "(o passo 3e tira o 054c:0df2 e mantém o 054c:0ce6)")"
+    elif [[ "${vivo}" -eq 1 ]]; then
+        warn "DEFEITO: cmdline: ${velho} (${onde# }) — o pad virtual espera 200 ms por pedido; com 4 controles o jogo perde os controles. O bootloader já está curado: reinicie o computador."
+    elif [[ -n "${onde}" ]]; then
+        info "cmdline: ${velho} só na linha deste boot, fora do sysfs e do bootloader — some no próximo boot"
     fi
 }
 
