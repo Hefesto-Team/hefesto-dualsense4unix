@@ -1,223 +1,259 @@
 {
- "aba": "mapa-do-controle",
- "nome": "Mapa do controle",
- "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/_integra-1-11/src/hefesto_dualsense4unix/interface/paginas/mapa-do-controle.html",
- "depois": "/home/vitoriamaria/.local/state/hefesto-casa/leva-volta/todo/mapa-do-controle.html",
- "rodada": 2,
- "sprint_unificada": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
- "mudancas": [
-  {
-   "n": 1,
-   "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
-   "o_que_muda": "Quatro controles pela cor; saem Todos e Nenhum",
-   "resposta": "todo-controle-6",
-   "origem": "RODADA-2 §D Mapa",
-   "ancora": "[data-todo=\"1\"]",
-   "conflito": ""
+  "aba": "mapa-do-controle",
+  "nome": "Mapa do controle",
+  "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/_integra-1-11/src/hefesto_dualsense4unix/interface/paginas/mapa-do-controle.html",
+  "depois": "/home/vitoriamaria/.local/state/hefesto-casa/leva-volta/todo/mapa-do-controle.html",
+  "rodada": 3,
+  "sprint_unificada": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
+  "mudancas": [
+    {
+      "n": 1,
+      "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
+      "o_que_muda": "Quatro controles pela cor; saem Todos e Nenhum",
+      "resposta": "todo-controle-6",
+      "origem": "RODADA-2 §D Mapa",
+      "ancora": "[data-todo=\"1\"]",
+      "conflito": ""
+    },
+    {
+      "n": 2,
+      "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
+      "o_que_muda": "Lista suspensa dos perfis: navegação, point and click, trocas",
+      "resposta": "todo-controle-1",
+      "origem": "RODADA-2 §D Mapa",
+      "ancora": "[data-todo=\"2\"]",
+      "conflito": ""
+    },
+    {
+      "n": 3,
+      "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
+      "o_que_muda": "A cor do tipo marca os botões mudados",
+      "resposta": "todo-controle-1",
+      "origem": "RODADA-2 §D Mapa",
+      "ancora": "[data-todo=\"3\"]",
+      "conflito": "A delimitação é uma cor por tipo: roxo navegação, ciano point and click, laranja troca."
+    },
+    {
+      "n": 4,
+      "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
+      "o_que_muda": "Nome do perfil e os jogos em que vale",
+      "resposta": "todo-06-2",
+      "origem": "RODADA-2 §D Mapa",
+      "ancora": "[data-todo=\"4\"]",
+      "conflito": ""
+    },
+    {
+      "n": 5,
+      "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
+      "o_que_muda": "Cada botão do DualSense com o que faz, sem texto repetido",
+      "resposta": "todo-controle-1",
+      "origem": "RODADA-2 §D Mapa",
+      "ancora": ".b2",
+      "conflito": ""
+    },
+    {
+      "n": 6,
+      "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
+      "o_que_muda": "O botão escolhido acende na lista e no desenho",
+      "resposta": "todo-controle-1",
+      "origem": "RODADA-2 §D Mapa",
+      "ancora": ".b2.on",
+      "conflito": ""
+    },
+    {
+      "n": 7,
+      "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
+      "o_que_muda": "Clicar num botão abre o que ele vira",
+      "resposta": "todo-controle-1",
+      "origem": "RODADA-2 §D Mapa",
+      "ancora": "[data-todo=\"7\"]",
+      "conflito": ""
+    },
+    {
+      "n": 8,
+      "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
+      "o_que_muda": "Controle, Mouse ou Teclado, e Gravar tecla",
+      "resposta": "todo-controle-1",
+      "origem": "RODADA-2 §D Mapa",
+      "ancora": "[data-todo=\"7\"]",
+      "conflito": ""
+    },
+    {
+      "n": 9,
+      "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
+      "o_que_muda": "Point and click mostra a faixa do cursor",
+      "resposta": "todo-06-4",
+      "origem": "RODADA-2 §D Mapa",
+      "ancora": "[data-todo=\"8\"]",
+      "conflito": ""
+    },
+    {
+      "n": 10,
+      "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
+      "o_que_muda": "Cancelar, Voltar ao padrão e Guardar embaixo",
+      "resposta": "todo-controle-1",
+      "origem": "RODADA-2 §D Mapa",
+      "ancora": "[data-todo=\"10\"]",
+      "conflito": ""
+    },
+    {
+      "n": 11,
+      "sprint": "A-BASE-COMUM-DAS-ABAS-01",
+      "o_que_muda": "Menu do botão direito desenhado",
+      "resposta": "brief-T6-2",
+      "origem": "RODADA-2 §A6",
+      "ancora": "[data-todo=\"11\"]",
+      "conflito": ""
+    },
+    {
+      "n": 12,
+      "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
+      "o_que_muda": "Os quatro controles com a mesma largura",
+      "resposta": "rodada-3",
+      "origem": "RODADA-3 §conferência",
+      "ancora": ".mc-chips",
+      "conflito": ""
+    },
+    {
+      "n": 13,
+      "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
+      "o_que_muda": "Linha do perfil alinhada às três colunas de baixo",
+      "resposta": "rodada-3",
+      "origem": "RODADA-3 §conferência",
+      "ancora": ".mc-perfil",
+      "conflito": ""
+    },
+    {
+      "n": 14,
+      "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
+      "o_que_muda": "Colunas dos lados da altura do desenho",
+      "resposta": "rodada-3",
+      "origem": "RODADA-3 §conferência",
+      "ancora": ".mapa.mc-mapa",
+      "conflito": ""
+    },
+    {
+      "n": 15,
+      "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
+      "o_que_muda": "Campos na mesma reta, mudados ou não",
+      "resposta": "rodada-3",
+      "origem": "RODADA-3 §conferência",
+      "ancora": ".b2.muda",
+      "conflito": ""
+    },
+    {
+      "n": 16,
+      "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
+      "o_que_muda": "«Esquerda» do touchpad sem encostar no campo",
+      "resposta": "rodada-3",
+      "origem": "RODADA-3 §conferência",
+      "ancora": ".mc-baixo .b2",
+      "conflito": ""
+    },
+    {
+      "n": 17,
+      "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
+      "o_que_muda": "Controle, Mouse e Teclado com a mesma largura",
+      "resposta": "rodada-3",
+      "origem": "RODADA-3 §conferência",
+      "ancora": ".seg2",
+      "conflito": ""
+    },
+    {
+      "n": 18,
+      "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
+      "o_que_muda": "Faixa do cursor na largura toda",
+      "resposta": "rodada-3",
+      "origem": "RODADA-3 §conferência",
+      "ancora": ".mc-cursor",
+      "conflito": ""
+    },
+    {
+      "n": 19,
+      "sprint": "O-REMAPEAMENTO-VALE-POR-JOGADOR-01",
+      "o_que_muda": "O mapa ganha o «Vale para» no topo: você escolhe o controle pela cor do plástico, e cada um guarda o seu mapa",
+      "resposta": "todo-mapa-do-controle-r3-19",
+      "origem": "escolha dela de 13/10",
+      "ancora": ".vale-rot",
+      "conflito": "",
+      "rodada": 3,
+      "ancora_antes": ".mc-chips"
+    },
+    {
+      "n": 20,
+      "sprint": "O-BOTAO-GRAVA-E-TOCA-UMA-SEQUENCIA-01",
+      "o_que_muda": "O «<botão> vira» ganha o quarto tipo, Sequência: você grava, vê os passos com o intervalo, escolhe se toca uma vez, repete ou liga e desliga, e ouve antes de guardar",
+      "resposta": "todo-mapa-do-controle-r3-20",
+      "origem": "escolha dela de 13/10",
+      "ancora": ".seq-grade",
+      "conflito": "",
+      "rodada": 3,
+      "ancora_antes": ".seg2",
+      "hash": "#sequencia",
+      "js_antes": "document.querySelector('.b2[data-b=\"cross\"]').click()"
+    },
+    {
+      "n": 21,
+      "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
+      "o_que_muda": "Os moldes do Perfil têm os mesmos quatro nomes da Navegação: Point and click, Visual novel, Mouse e Mouse e teclado",
+      "resposta": "todo-mapa-do-controle-r3-21",
+      "origem": "escolha dela de 13/10",
+      "ancora": "#perfil",
+      "conflito": "",
+      "rodada": 3,
+      "ancora_antes": "#perfil",
+      "hash": "#point-and-click"
+    }
+  ],
+  "estados": {
+    "point-and-click": "location.hash = '#point-and-click'; location.reload()",
+    "escolher": "document.querySelector('.b2[data-b=\"cross\"]').click()",
+    "menu": "document.getElementById('menu-desenhado').hidden = false"
   },
-  {
-   "n": 2,
-   "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
-   "o_que_muda": "Lista suspensa dos perfis: navegação, point and click, trocas",
-   "resposta": "todo-controle-1",
-   "origem": "RODADA-2 §D Mapa",
-   "ancora": "[data-todo=\"2\"]",
-   "conflito": ""
-  },
-  {
-   "n": 3,
-   "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
-   "o_que_muda": "A cor do tipo marca os botões mudados",
-   "resposta": "todo-controle-1",
-   "origem": "RODADA-2 §D Mapa",
-   "ancora": "[data-todo=\"3\"]",
-   "conflito": "A delimitação é uma cor por tipo: roxo navegação, ciano point and click, laranja troca."
-  },
-  {
-   "n": 4,
-   "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
-   "o_que_muda": "Nome do perfil e os jogos em que vale",
-   "resposta": "todo-06-2",
-   "origem": "RODADA-2 §D Mapa",
-   "ancora": "[data-todo=\"4\"]",
-   "conflito": ""
-  },
-  {
-   "n": 5,
-   "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
-   "o_que_muda": "Cada botão do DualSense com o que faz, sem texto repetido",
-   "resposta": "todo-controle-1",
-   "origem": "RODADA-2 §D Mapa",
-   "ancora": ".b2",
-   "conflito": ""
-  },
-  {
-   "n": 6,
-   "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
-   "o_que_muda": "O botão escolhido acende na lista e no desenho",
-   "resposta": "todo-controle-1",
-   "origem": "RODADA-2 §D Mapa",
-   "ancora": ".b2.on",
-   "conflito": ""
-  },
-  {
-   "n": 7,
-   "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
-   "o_que_muda": "Clicar num botão abre o que ele vira",
-   "resposta": "todo-controle-1",
-   "origem": "RODADA-2 §D Mapa",
-   "ancora": "[data-todo=\"7\"]",
-   "conflito": ""
-  },
-  {
-   "n": 8,
-   "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
-   "o_que_muda": "Controle, Mouse ou Teclado, e Gravar tecla",
-   "resposta": "todo-controle-1",
-   "origem": "RODADA-2 §D Mapa",
-   "ancora": "[data-todo=\"7\"]",
-   "conflito": ""
-  },
-  {
-   "n": 9,
-   "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
-   "o_que_muda": "Point and click mostra a faixa do cursor",
-   "resposta": "todo-06-4",
-   "origem": "RODADA-2 §D Mapa",
-   "ancora": "[data-todo=\"8\"]",
-   "conflito": ""
-  },
-  {
-   "n": 10,
-   "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
-   "o_que_muda": "Cancelar, Voltar ao padrão e Guardar embaixo",
-   "resposta": "todo-controle-1",
-   "origem": "RODADA-2 §D Mapa",
-   "ancora": "[data-todo=\"10\"]",
-   "conflito": ""
-  },
-  {
-   "n": 11,
-   "sprint": "A-BASE-COMUM-DAS-ABAS-01",
-   "o_que_muda": "Menu do botão direito desenhado",
-   "resposta": "brief-T6-2",
-   "origem": "RODADA-2 §A6",
-   "ancora": "[data-todo=\"11\"]",
-   "conflito": ""
-  },
-  {
-   "n": 12,
-   "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
-   "o_que_muda": "Os quatro controles com a mesma largura",
-   "resposta": "rodada-3",
-   "origem": "RODADA-3 §conferência",
-   "ancora": ".mc-chips",
-   "conflito": ""
-  },
-  {
-   "n": 13,
-   "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
-   "o_que_muda": "Linha do perfil alinhada às três colunas de baixo",
-   "resposta": "rodada-3",
-   "origem": "RODADA-3 §conferência",
-   "ancora": ".mc-perfil",
-   "conflito": ""
-  },
-  {
-   "n": 14,
-   "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
-   "o_que_muda": "Colunas dos lados da altura do desenho",
-   "resposta": "rodada-3",
-   "origem": "RODADA-3 §conferência",
-   "ancora": ".mapa.mc-mapa",
-   "conflito": ""
-  },
-  {
-   "n": 15,
-   "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
-   "o_que_muda": "Campos na mesma reta, mudados ou não",
-   "resposta": "rodada-3",
-   "origem": "RODADA-3 §conferência",
-   "ancora": ".b2.muda",
-   "conflito": ""
-  },
-  {
-   "n": 16,
-   "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
-   "o_que_muda": "«Esquerda» do touchpad sem encostar no campo",
-   "resposta": "rodada-3",
-   "origem": "RODADA-3 §conferência",
-   "ancora": ".mc-baixo .b2",
-   "conflito": ""
-  },
-  {
-   "n": 17,
-   "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
-   "o_que_muda": "Controle, Mouse e Teclado com a mesma largura",
-   "resposta": "rodada-3",
-   "origem": "RODADA-3 §conferência",
-   "ancora": ".seg2",
-   "conflito": ""
-  },
-  {
-   "n": 18,
-   "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
-   "o_que_muda": "Faixa do cursor na largura toda",
-   "resposta": "rodada-3",
-   "origem": "RODADA-3 §conferência",
-   "ancora": ".mc-cursor",
-   "conflito": ""
-  }
- ],
- "estados": {
-  "point-and-click": "location.hash = '#point-and-click'; location.reload()",
-  "escolher": "document.querySelector('.b2[data-b=\"cross\"]').click()",
-  "menu": "document.getElementById('menu-desenhado').hidden = false"
- },
- "por_baixo": [
-  {
-   "sprint": "A-CAPTURA-DE-TECLA-SE-FAZ-SOBRE-O-MAPA-DO-CONTROLE-01",
-   "o_que_muda": "Absorvida pela unificada: o Gravar tecla e o salvar no perfil."
-  },
-  {
-   "sprint": "A-INTERFACE-INTEIRA-SE-ALCANCA-PELO-CONTROLE-E-PELO-TECLADO-01",
-   "o_que_muda": "O seletor ganha role=dialog e foco; a foto não muda."
-  },
-  {
-   "sprint": "O-CURSOR-GANHA-PRECISAO-PERMANENCIA-E-CLIQUE-TRAVADO-01",
-   "o_que_muda": "Parar para clicar e Prender o clique no daemon."
-  },
-  {
-   "sprint": "O-TEMA-DE-CORES-ENTRA-PELA-FOLHA-DE-USUARIO-01",
-   "o_que_muda": "Só tokens do :root."
-  }
- ],
- "fora": [
-  {
-   "sprint": "NO-MODO-XBOX-TUDO-FUNCIONA-01",
-   "motivo": "Espera ela; nada nestas páginas."
-  },
-  {
-   "sprint": "A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01",
-   "motivo": "Espera ela; nada nestas páginas."
-  },
-  {
-   "sprint": "A-MIRA-PELO-GIRO-VALE-EM-JOGO-QUE-SO-FALA-XBOX-01",
-   "motivo": "Caducou."
-  },
-  {
-   "sprint": "I18N-DA-TELA-NOVA-01",
-   "motivo": "Fora da leva; nada de texto novo depende dela."
-  },
-  {
-   "sprint": "TRADUZIR-O-PROJETO-01",
-   "motivo": "Fora da leva; nada de texto novo depende dela."
-  },
-  {
-   "sprint": "A-ABA-NAVEGACAO-TEM-OS-DOIS-POINT-AND-CLICK-E-A-VELOCIDADE-QUE-FUNCIONA-01",
-   "motivo": "A parte da 06 é de outro montador."
-  }
- ],
- "altura_px": 809,
- "rola": false
+  "por_baixo": [
+    {
+      "sprint": "A-CAPTURA-DE-TECLA-SE-FAZ-SOBRE-O-MAPA-DO-CONTROLE-01",
+      "o_que_muda": "Absorvida pela unificada: o Gravar tecla e o salvar no perfil."
+    },
+    {
+      "sprint": "A-INTERFACE-INTEIRA-SE-ALCANCA-PELO-CONTROLE-E-PELO-TECLADO-01",
+      "o_que_muda": "O seletor ganha role=dialog e foco; a foto não muda."
+    },
+    {
+      "sprint": "O-CURSOR-GANHA-PRECISAO-PERMANENCIA-E-CLIQUE-TRAVADO-01",
+      "o_que_muda": "Parar para clicar e Prender o clique no daemon."
+    },
+    {
+      "sprint": "O-TEMA-DE-CORES-ENTRA-PELA-FOLHA-DE-USUARIO-01",
+      "o_que_muda": "Só tokens do :root."
+    }
+  ],
+  "fora": [
+    {
+      "sprint": "NO-MODO-XBOX-TUDO-FUNCIONA-01",
+      "motivo": "Espera ela; nada nestas páginas."
+    },
+    {
+      "sprint": "A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01",
+      "motivo": "Espera ela; nada nestas páginas."
+    },
+    {
+      "sprint": "A-MIRA-PELO-GIRO-VALE-EM-JOGO-QUE-SO-FALA-XBOX-01",
+      "motivo": "Caducou."
+    },
+    {
+      "sprint": "I18N-DA-TELA-NOVA-01",
+      "motivo": "Fora da leva; nada de texto novo depende dela."
+    },
+    {
+      "sprint": "TRADUZIR-O-PROJETO-01",
+      "motivo": "Fora da leva; nada de texto novo depende dela."
+    },
+    {
+      "sprint": "A-ABA-NAVEGACAO-TEM-OS-DOIS-POINT-AND-CLICK-E-A-VELOCIDADE-QUE-FUNCIONA-01",
+      "motivo": "A parte da 06 é de outro montador."
+    }
+  ],
+  "altura_px": 809,
+  "rola": false
 }

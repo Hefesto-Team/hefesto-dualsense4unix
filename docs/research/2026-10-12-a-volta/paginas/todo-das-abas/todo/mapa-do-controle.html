@@ -729,14 +729,14 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   <div class="mc-topo">
     <a class="voltar2" href="06-navegacao.html" onclick="if (history.length > 1) { history.back(); return false }" data-dica="Volta para a Navegação">← Voltar</a>
     <h1>Mapa do controle</h1>
-    <div class="mc-chips" data-todo="1"><button class="chip plastico on" style="--plastico:#ae335a" data-colorway="cosmic-red" data-jogador="1" data-luz="#0000ff">Cosmic Red <span class="pt">•</span> USB</button><button class="chip plastico" style="--plastico:#7eb8d4" data-colorway="starlight-blue" data-jogador="2" data-luz="#ff0000">Starlight Blue <span class="pt">•</span> BT</button><button class="chip plastico" style="--plastico:#8a6fc4" data-colorway="galactic-purple" data-jogador="3" data-luz="#00ff00">Galactic Purple <span class="pt">•</span> BT</button><button class="chip plastico" style="--plastico:#e8e8ec" data-colorway="white" data-jogador="4" data-luz="#ff0080">White <span class="pt">•</span> USB</button></div>
+    <span class="vale-rot" data-r3="19" data-dica="O mapa vale só para o controle escolhido; cada controle guarda o seu">Vale para</span><div class="mc-chips" data-todo="1"><button class="chip plastico on" style="--plastico:#ae335a" data-colorway="cosmic-red" data-jogador="1" data-luz="#0000ff">Cosmic Red <span class="pt">•</span> USB</button><button class="chip plastico" style="--plastico:#7eb8d4" data-colorway="starlight-blue" data-jogador="2" data-luz="#ff0000">Starlight Blue <span class="pt">•</span> BT</button><button class="chip plastico" style="--plastico:#8a6fc4" data-colorway="galactic-purple" data-jogador="3" data-luz="#00ff00">Galactic Purple <span class="pt">•</span> BT</button><button class="chip plastico" style="--plastico:#e8e8ec" data-colorway="white" data-jogador="4" data-luz="#ff0080">White <span class="pt">•</span> USB</button></div>
   </div>
   <div class="mc-perfil">
     <span class="cel">
     <label class="mc-rot" for="perfil">Perfil</label>
     <select id="perfil" class="campo2" data-todo="2" data-dica="Navegação, point and click e trocas de botão">
       <optgroup label="Navegação"><option value="nav">Navegar no computador</option></optgroup>
-      <optgroup label="Point and click"><option value="vn">Visual novel</option><option value="mouse">Só mouse</option><option value="tm">Teclado e mouse</option><option value="orpheus">Orpheus</option></optgroup>
+      <optgroup label="Point and click" data-r3="21"><option value="pc">Point and click</option><option value="vn">Visual novel</option><option value="mouse">Mouse</option><option value="tm">Mouse e teclado</option><option value="orpheus">Orpheus</option></optgroup>
       <optgroup label="Trocar os botões"><option value="maid">Maid Life SS</option></optgroup>
       <option value="novo">+ Novo perfil…</option>
     </select>
@@ -1164,7 +1164,19 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     svg[data-colorway="007-first-light"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
     svg[data-colorway="007-first-light"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
     svg[data-colorway="007-first-light"] .z-simbolos{color:var(--z-simbolos) !important}
-  </style>
+    /* rodada 3 (13/10) */
+  .vale-rot{font-size:12px;color:var(--texto-mudo);margin-left:auto;margin-right:-6px;white-space:nowrap}
+  .vale-rot + .mc-chips{margin-left:0}
+  .sel2-tit{white-space:nowrap}
+  .seq-grade{grid-template-columns:repeat(2,1fr)}
+  .seq-passos{grid-column:1 / -1;display:flex;flex-wrap:wrap;align-items:center;gap:6px;min-height:42px;padding:6px 10px;border-radius:8px;
+    border:1px dashed var(--linha);background:var(--app-bg)}
+  .seq-p{padding:4px 10px;border-radius:6px;border:1px solid var(--purple);color:var(--fg);font-size:12px}
+  .seq-t{font-size:11px;color:var(--texto-mudo);font-family:'JetBrains Mono',monospace}
+  .seq-campo{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--texto-suave)}
+  .seq-campo select{flex:1;min-width:0;height:34px;border-radius:7px;border:1px solid var(--linha);background:var(--app-bg);color:var(--fg);font:12px var(--f)}
+  .seq-tocar{grid-column:1 / -1;justify-content:center}
+</style>
   </defs>
   <title>DualSense — mapa de peças, para editar</title>
   <g id="mp-share" class="z-painel" data-entrada="share"><title>Share (Create)</title><rect class="peca" x="37.043" y="26.122" width="1.796" height="3.685" style="fill: #b11f54; stroke: rgb(0, 0, 0); stroke-width: 0px; stroke-miterlimit: 1; transform-box: fill-box; transform-origin: 50% 50%;" rx="1" ry="1" transform="matrix(0.984808, -0.173648, 0.173648, 0.984808, 0.740345, 7.866827)"/></g>
@@ -1513,7 +1525,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       </div>
       <div class="sel2" hidden data-todo="7" role="dialog" aria-label="O que o botão faz">
         <div class="sel2-topo"><span class="sel2-tit"><span class="sel2-b">Cruz</span> vira</span>
-          <div class="seg2" role="tablist"><button class="on" data-aba="controle">Controle</button><button data-aba="mouse">Mouse</button><button data-aba="teclado">Teclado</button></div>
+          <div class="seg2" role="tablist"><button class="on" data-aba="controle">Controle</button><button data-aba="mouse">Mouse</button><button data-aba="teclado">Teclado</button><button data-aba="sequencia" data-r3="20">Sequência</button></div>
           <button class="sel2-x" aria-label="Fechar">×</button></div>
         <div class="sel2-grade" data-aba="controle"><button class="op3" data-v="Cruz"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
@@ -1592,6 +1604,13 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   <circle cx="16" cy="16" r="1.5" fill="currentColor"/>
   <circle cx="21" cy="16" r="1.5" fill="currentColor"/>
 </svg><span>Touchpad</span></button></div>
+<div class="sel2-grade seq-grade" data-aba="sequencia" hidden>
+          <button class="op3 gravar" data-v="gravar"><span class="ponto"></span><span>Gravar a sequência</span></button>
+          <div class="seq-passos" aria-label="A sequência gravada"><span class="seq-p">Cruz</span><span class="seq-t">80 ms</span><span class="seq-p">Círculo</span><span class="seq-t">120 ms</span><span class="seq-p">R1</span><span class="seq-t">60 ms</span><span class="seq-p">Seta para cima</span></div>
+          <label class="seq-campo">Ao apertar<select><option selected>Toca uma vez</option><option>Repete enquanto eu segurar</option><option>Liga e desliga</option></select></label>
+          <label class="seq-campo">Ritmo<select><option selected>O gravado</option><option>Mais rápido</option><option>Mais devagar</option></select></label>
+          <button class="op3 txt seq-tocar" data-v="gravar"><span>Tocar para ouvir</span></button>
+        </div>
         <div class="sel2-grade" data-aba="mouse" hidden><button class="op3 txt" data-v="Botão esquerdo"><span>Botão esquerdo</span></button><button class="op3 txt" data-v="Botão direito"><span>Botão direito</span></button><button class="op3 txt" data-v="Botão do meio"><span>Botão do meio</span></button><button class="op3 txt" data-v="Movimento do cursor"><span>Movimento do cursor</span></button><button class="op3 txt" data-v="Rolagem"><span>Rolagem</span></button><button class="op3 txt" data-v="Rolagem para cima"><span>Rolagem para cima</span></button><button class="op3 txt" data-v="Rolagem para baixo"><span>Rolagem para baixo</span></button><button class="op3 txt" data-v="Voltar"><span>Voltar</span></button><button class="op3 txt" data-v="Avançar"><span>Avançar</span></button></div>
         <div class="sel2-grade" data-aba="teclado" hidden><button class="op3 gravar" data-v="gravar"><span class="ponto"></span><span>Gravar tecla</span></button><button class="op3 txt" data-v="Enter"><span>Enter</span></button><button class="op3 txt" data-v="Esc"><span>Esc</span></button><button class="op3 txt" data-v="Espaço"><span>Espaço</span></button><button class="op3 txt" data-v="Backspace"><span>Backspace</span></button><button class="op3 txt" data-v="Delete"><span>Delete</span></button><button class="op3 txt" data-v="Tab"><span>Tab</span></button><button class="op3 txt" data-v="Ctrl"><span>Ctrl</span></button><button class="op3 txt" data-v="Shift"><span>Shift</span></button><button class="op3 txt" data-v="Alt + Tab"><span>Alt + Tab</span></button><button class="op3 txt" data-v="Super"><span>Super</span></button><button class="op3 txt" data-v="PrintScreen"><span>PrintScreen</span></button><button class="op3 txt" data-v="F11"><span>F11</span></button></div>
         <div class="sel2-rod"><button class="op3 txt limpar" data-v="—"><span>Sem mudança</span></button></div>
@@ -1662,7 +1681,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 <script>/* rodada 2: o perfil pinta as linhas e o desenho; clicar num botão abre o seletor.
    Âncoras para as fotos: #point-and-click, #trocar, #escolher. */
 (() => {
-  const PERFIS = {"nav": {"tipo": "nav", "rot": "Navegação", "nome": "Navegar no computador", "jogos": ["Fora do jogo"], "m": {"cross": "Botão esquerdo", "circle": "Enter", "square": "Esc", "triangle": "Botão direito", "dpad_up": "Seta para cima", "dpad_down": "Seta para baixo", "dpad_left": "Seta para a esquerda", "dpad_right": "Seta para a direita", "l1": "Alt + Shift + Tab", "r1": "Alt + Tab", "l2": "Botão esquerdo", "r2": "Botão direito", "l3": "Teclado na tela", "l3_direcao": "Movimento do cursor", "r3": "Botão do meio", "r3_direcao": "Rolagem", "options": "Super", "create": "PrintScreen", "tp_toque": "Movimento do cursor", "tp_esq": "Backspace", "tp_meio": "Enter", "tp_dir": "Delete"}}, "vn": {"tipo": "pac", "rot": "Point and click", "nome": "Visual novel", "jogos": [], "m": {"cross": "Botão esquerdo", "circle": "Botão direito", "square": "Ctrl", "triangle": "Esc", "l1": "Rolagem para cima", "r1": "Rolagem para baixo", "l3_direcao": "Movimento do cursor", "tp_toque": "Movimento do cursor"}}, "mouse": {"tipo": "pac", "rot": "Point and click", "nome": "Só mouse", "jogos": [], "m": {"cross": "Botão esquerdo", "circle": "Botão direito", "l3_direcao": "Movimento do cursor", "r3_direcao": "Rolagem", "tp_toque": "Movimento do cursor"}}, "tm": {"tipo": "pac", "rot": "Point and click", "nome": "Teclado e mouse", "jogos": [], "m": {"cross": "Botão esquerdo", "circle": "Esc", "square": "Espaço", "triangle": "Enter", "dpad_up": "Seta para cima", "dpad_down": "Seta para baixo", "dpad_left": "Seta para a esquerda", "dpad_right": "Seta para a direita", "l3_direcao": "Movimento do cursor"}}, "orpheus": {"tipo": "pac", "rot": "Point and click", "nome": "Orpheus", "jogos": ["Orpheus"], "m": {"cross": "Botão esquerdo", "circle": "Botão direito", "square": "Ctrl", "triangle": "Esc", "r1": "Rolagem para baixo", "l3_direcao": "Movimento do cursor"}}, "maid": {"tipo": "troca", "rot": "Trocar os botões", "nome": "Maid Life SS", "jogos": ["Maid Life SS"], "m": {"cross": "Quadrado", "square": "Cruz"}}};
+  const PERFIS = {"nav":{"tipo":"nav","rot":"Navegação","nome":"Navegar no computador","jogos":["Fora do jogo"],"m":{"cross":"Botão esquerdo","circle":"Enter","square":"Esc","triangle":"Botão direito","dpad_up":"Seta para cima","dpad_down":"Seta para baixo","dpad_left":"Seta para a esquerda","dpad_right":"Seta para a direita","l1":"Alt + Shift + Tab","r1":"Alt + Tab","l2":"Botão esquerdo","r2":"Botão direito","l3":"Teclado na tela","l3_direcao":"Movimento do cursor","r3":"Botão do meio","r3_direcao":"Rolagem","options":"Super","create":"PrintScreen","tp_toque":"Movimento do cursor","tp_esq":"Backspace","tp_meio":"Enter","tp_dir":"Delete"}},"pc":{"tipo":"pac","rot":"Point and click","nome":"Point and click","jogos":[],"m":{"cross":"Botão esquerdo","circle":"Botão direito","square":"Ctrl","triangle":"Esc","l1":"Rolagem para cima","r1":"Rolagem para baixo","l3_direcao":"Movimento do cursor","tp_toque":"Movimento do cursor"}},"vn":{"tipo":"pac","rot":"Point and click","nome":"Visual novel","jogos":[],"m":{"cross":"Botão esquerdo","circle":"Botão direito","square":"Ctrl","triangle":"Esc","l1":"Rolagem para cima","r1":"Rolagem para baixo","l3_direcao":"Movimento do cursor","tp_toque":"Movimento do cursor"}},"mouse":{"tipo":"pac","rot":"Point and click","nome":"Mouse","jogos":[],"m":{"cross":"Botão esquerdo","circle":"Botão direito","l3_direcao":"Movimento do cursor","r3_direcao":"Rolagem","tp_toque":"Movimento do cursor"}},"tm":{"tipo":"pac","rot":"Point and click","nome":"Mouse e teclado","jogos":[],"m":{"cross":"Botão esquerdo","circle":"Esc","square":"Espaço","triangle":"Enter","dpad_up":"Seta para cima","dpad_down":"Seta para baixo","dpad_left":"Seta para a esquerda","dpad_right":"Seta para a direita","l3_direcao":"Movimento do cursor"}},"orpheus":{"tipo":"pac","rot":"Point and click","nome":"Orpheus","jogos":["Orpheus"],"m":{"cross":"Botão esquerdo","circle":"Botão direito","square":"Ctrl","triangle":"Esc","r1":"Rolagem para baixo","l3_direcao":"Movimento do cursor"}},"maid":{"tipo":"troca","rot":"Trocar os botões","nome":"Maid Life SS","jogos":["Maid Life SS"],"m":{"cross":"Quadrado","square":"Cruz"}}};
   const PADRAO = {"1": [3], "2": [2, 4], "3": [1, 3, 5], "4": [1, 2, 4, 5]};
   const mc = document.querySelector('.mc'), sel = document.getElementById('perfil'), nome = document.getElementById('nome');
   const eti = document.querySelector('.etiqueta'), usar = document.querySelector('.usar-em');
@@ -1714,7 +1733,8 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     document.querySelectorAll('.mc-chips .chip').forEach(x => x.classList.toggle('on', x === c)); acende(c); }));
   acende(document.querySelector('.mc-chips .chip.on'));
   const h = location.hash;
-  if (h === '#point-and-click') perfil(new URLSearchParams(location.search).get('perfil') || 'vn');
+  if (h === '#point-and-click') perfil(new URLSearchParams(location.search).get('perfil') || 'pc');
+  else if (h === '#sequencia') { perfil('pc'); abre(document.querySelector('.b2[data-b="cross"]'), 'sequencia'); }
   else if (h === '#trocar') perfil('maid');
   else if (h === '#escolher') { perfil('maid'); abre(document.querySelector('.b2[data-b="cross"]'), 'controle'); }
   else pinta();

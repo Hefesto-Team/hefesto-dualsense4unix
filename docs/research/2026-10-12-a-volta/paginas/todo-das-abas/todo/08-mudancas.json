@@ -158,7 +158,8 @@
       "conflito": "",
       "rodada": 3,
       "ancora_antes": "[data-id=\"W1\"]",
-      "js": "location.hash='#acionador'"
+      "js": "location.hash='#acionador'",
+      "js_antes": "document.getElementById('cx8-3').click(); document.querySelector('.abre-lugar[data-alvo=L1]').click()"
     },
     {
       "n": 16,
@@ -170,7 +171,8 @@
       "conflito": "",
       "rodada": 3,
       "ancora_antes": "[data-id=\"W1\"]",
-      "js": "location.hash='#tipo-do-aparelho'"
+      "js": "location.hash='#tipo-do-aparelho'",
+      "js_antes": "document.getElementById('cx8-3').click(); document.querySelector('.abre-lugar[data-alvo=L1]').click()"
     },
     {
       "n": 17,
