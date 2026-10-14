@@ -45,6 +45,7 @@ MORDIDAS = {
     "letra-07": _m("document.querySelectorAll('.ja-tela.t2 .pc-sub').forEach(function(x){x.style.fontSize='11px';});"),
     "largura-07": _m("document.querySelector('.ja-tela.t2 .t2-segue .ja-op').style.width='70%';"),
     "nome-calibrar": _m("var m=document.querySelector('.mira .mira-topo');var s=document.createElement('span');s.className='quem';s.textContent='Vitória';m.insertBefore(s,m.firstChild);"),
+    "barra-calibrar": _m("document.querySelectorAll('.lin > .r').forEach(function(x){x.style.flex='0 0 82px';});"),
     "conta-calibrar": _m("var a=document.querySelector('.rodape .acoes');var s=document.createElement('span');s.className='quantos';s.textContent='2 controles conectados';a.parentNode.insertBefore(s,a);"),
 }
 
@@ -142,7 +143,9 @@ JS_PEDIDO = r"""
     var lg=[...document.querySelectorAll('.grade > .lugar')];
     lg.forEach(function(l){var t=txt(l);if(!/^Player \d Desconectado$/.test(t))falta.push('a vaga diz «'+t.slice(0,40)+'»');});
     var ctr=document.querySelector('.ctr');if(ctr&&parseFloat(getComputedStyle(ctr).rowGap)<8)falta.push('o respiro apertado da rodada 4 voltou (gap '+getComputedStyle(ctr).rowGap+')');
-    if(!document.querySelector('.selo-av'))falta.push('o selo do giroscópio como analógico sumiu');}
+    if(!document.querySelector('.selo-av'))falta.push('o selo do giroscópio como analógico sumiu');
+    [...document.querySelectorAll('.ctr')].forEach(function(c){var xs=[...c.querySelectorAll('.lin > .g')].map(function(g){return Math.round(g.getBoundingClientRect().left);});
+      if(xs.length&&Math.max.apply(null,xs)-Math.min.apply(null,xs)>1)falta.push('as barras da leitura não começam juntas '+[...new Set(xs)]);});}
   return falta;})
 """
 
@@ -236,6 +239,13 @@ def medir_conferencia(nav) -> int:
     esperado = ["r4-01-12", "r4-02-17", "r4-02-18", "r4-07-34", "r4-07-35", "r4-calibrar-7"]
     if ids != esperado:
         ruins.append(f"os cartões são {ids}")
+    for largura in (1212, 390):
+        pg.set_viewport_size({"width": largura, "height": 809})
+        pg.wait_for_timeout(200)
+        sw = pg.evaluate("[document.documentElement.scrollWidth, innerWidth]")
+        if sw[0] > sw[1]:
+            ruins.append(f"rolagem lateral em {largura} px {sw}")
+    pg.set_viewport_size({"width": 1212, "height": 809})
     if "aprovadas" not in pg.evaluate("document.querySelector('.aprovadas') ? 'aprovadas' : ''"):
         ruins.append("a linha das aprovadas sumiu")
     else:
