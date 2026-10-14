@@ -394,7 +394,7 @@
       "antes_pagina": "opcao-b-07.html (desenho B de 09/10)",
       "ajuste_r3": {
         "pedido": "(sem texto, voto «ajustar»; vale o que ela pediu na 36: botões de largura igual, sem verde)",
-        "feito": "A lista das extensões cabe sem rolar nos três tamanhos, com até seis linhas: a frase de cada forma vira só a dica quando a janela é baixa (menos de 780 px). A foto põe uma linha de exemplo da comunidade."
+        "feito": "A lista das extensões cabe sem rolar nos três tamanhos, com até seis linhas: a frase de cada forma vira só a dica quando a janela é baixa (menos de 780 px). A foto põe uma linha de exemplo da comunidade. Em 1212x809 o espaço entre as linhas também diminui um pouco, para a sexta linha caber."
       },
       "js": "(function(){var l=document.querySelector('.ext-lista');var k=l.querySelector('[data-modificacao=kyty]');for(var i=1;i<=1;i++){var c=k.cloneNode(true);c.removeAttribute('data-modificacao');c.querySelector('.ext-nome').textContent='Exemplo da comunidade '+i;var o=c.querySelector('.lanc-selo');o.textContent='Comunidade';o.className='lanc-selo comunidade';c.querySelector('.ext-faz').textContent='Uma linha de exemplo, só para medir a lista';c.querySelector('.nj-tog').className='nj-tog';c.querySelector('.nj-tog .txt').textContent='Desligada';l.appendChild(c);}})()"
     },

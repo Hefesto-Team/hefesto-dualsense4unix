@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Os ajustes da rodada 3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#191a21;--app-bg:#1f2029;--painel:#262834;--borda:#3a3d4f;--fg:#eceef5;--texto:#cfd2de;--suave:#9aa0b8;--roxo:#8B00FF;--roxo-claro:#bd93f9;--laranja:#ffb86c;--rosa:#ff79c6}
+:root[data-theme="light"]{--bg:#f4f4f8;--app-bg:#fff;--painel:#ececf3;--borda:#cfd0dc;--fg:#1d1e27;--texto:#34364a;--suave:#5b5f78;--roxo-claro:#6b2fd0;--laranja:#a85a00;--rosa:#c2217f}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--texto);font:15.5px/1.65 Inter,system-ui,sans-serif;overflow-x:hidden}
+h1,h2,h3{font-family:'Space Grotesk',system-ui,sans-serif;color:var(--fg);margin:0}
+a{color:var(--roxo-claro)}
+button{font:inherit;cursor:pointer}
+header{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--borda)}
+.topo{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:14px 16px}
+.topo h1{font-size:20px;color:var(--roxo-claro)}
+.topo .conta{color:var(--suave);font-size:14px}
+.topo .vai{flex:1}
+#copiar{background:var(--roxo);color:#fff;border:0;border-radius:999px;padding:7px 16px;font-weight:600;min-height:32px}
+#estado{font-size:13px;color:var(--suave)}
+nav{display:flex;gap:8px;flex-wrap:wrap;padding:0 16px 12px}
+nav a{text-decoration:none;color:var(--suave);background:var(--painel);border-radius:999px;padding:3px 12px;font-size:13px}
+nav a.feito{color:var(--roxo-claro);box-shadow:inset 0 0 0 1px var(--roxo-claro)}
+main{padding:28px 16px 80px;max-width:1500px;margin:0 auto}
+.intro{max-width:78ch;margin:0 0 20px}
+.aprovadas{max-width:78ch;margin:0 0 28px;color:var(--suave);font-size:14px}
+h2.sec{font-size:19px;margin:30px 0 12px}
+.tabela{overflow-x:auto;margin:0 0 36px;border:1px solid var(--borda);border-radius:16px;background:var(--app-bg)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;vertical-align:top;padding:9px 12px;border-bottom:1px solid var(--borda)}
+td.sp{white-space:nowrap;color:var(--fg);font-weight:600}
+section{scroll-margin-top:130px;background:var(--app-bg);border:1px solid var(--borda);border-radius:16px;padding:clamp(16px,2.4vw,32px);margin:0 0 32px}
+.cab{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+.cab h2{font-size:20px}
+.sprint{color:var(--suave);font-size:12px;overflow-wrap:anywhere}
+.pill{display:inline-block;border-radius:999px;padding:1px 10px;font-size:12.5px;white-space:nowrap}
+.pill.rec{background:rgba(255,184,108,.14);color:var(--laranja)}
+.dela{max-width:84ch;margin:0 0 10px;color:var(--fg)}
+blockquote.dela{border-left:3px solid var(--roxo-claro);padding:4px 0 4px 14px;font-style:italic}
+.dela.sem{color:var(--laranja);font-size:14px}
+.feito{max-width:84ch;margin:0 0 18px}
+.fotos{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,520px),1fr));gap:24px}
+.col h3{font-size:13px;color:var(--suave);letter-spacing:.04em;text-transform:uppercase;margin:0 0 8px}
+.grade{display:grid;gap:14px}
+figure{margin:0}
+figure img{width:100%;height:auto;display:block;border-radius:10px;border:1px solid var(--borda)}
+figcaption{font-size:12.5px;color:var(--suave);margin:0 0 6px}
+.validar{display:grid;gap:12px;margin-top:22px;max-width:84ch}
+.links{display:flex;gap:10px;flex-wrap:wrap}
+.abrir{text-decoration:none;background:var(--painel);border:1px solid var(--borda);padding:5px 14px;border-radius:999px;font-size:14px;min-height:28px}
+.votos{display:flex;gap:10px;flex-wrap:wrap}
+.votos button{flex:1;min-width:130px;min-height:40px;background:var(--painel);border:1px solid var(--borda);color:var(--fg);border-radius:10px;padding:9px 12px;font-weight:600}
+.votos button[aria-pressed=true]{background:rgba(139,0,255,.18);border-color:var(--roxo-claro);color:var(--roxo-claro)}
+.votos button[data-v=ajustar][aria-pressed=true]{background:rgba(255,184,108,.14);border-color:var(--laranja);color:var(--laranja)}
+textarea{width:100%;min-height:80px;background:var(--painel);color:var(--fg);border:1px solid var(--borda);border-radius:10px;padding:12px 14px;font:15px/1.55 Inter,sans-serif;resize:vertical}
+textarea:focus{outline:none;border-color:var(--roxo-claro)}
+</style>
+</head>
+<body>
+<header>
+  <div class="topo">
+    <h1>Os ajustes da rodada 3</h1>
+    <span class="conta" id="conta"></span>
+    <span class="vai"></span>
+    <span id="estado"></span>
+    <button id="copiar" type="button">Copiar suas respostas</button>
+  </div>
+  <nav id="sumario"><a href="#c-03-15" data-nav="r3-03-15">03-15</a><a href="#c-04-11" data-nav="r3-04-11">04-11</a><a href="#c-05-12" data-nav="r3-05-12">05-12</a><a href="#c-06-26" data-nav="r3-06-26">06-26</a><a href="#c-07-29" data-nav="r3-07-29">07-29</a><a href="#c-07-30" data-nav="r3-07-30">07-30</a><a href="#c-07-31" data-nav="r3-07-31">07-31</a><a href="#c-07-33" data-nav="r3-07-33">07-33</a><a href="#c-07-34" data-nav="r3-07-34">07-34</a><a href="#c-07-35" data-nav="r3-07-35">07-35</a><a href="#c-07-36" data-nav="r3-07-36">07-36</a><a href="#c-07-37" data-nav="r3-07-37">07-37</a><a href="#c-08-14" data-nav="r3-08-14">08-14</a><a href="#c-10-19" data-nav="r3-10-19">10-19</a></nav>
+</header>
+<main>
+<p class="intro">Você respondeu a rodada 3 e pediu ajuste em catorze mudanças. Cada uma está aqui com as suas palavras, o que mudou, a foto de antes (como você viu) e a de depois, com a parte nova contornada de rosa. Aprove ou diga o que falta.</p>
+<p class="aprovadas"><b>Já aprovadas por você, sem cartão:</b> 02-16, 06-27, 07-32, 08-13, 10-20, mapa do controle 19, mapa do controle 20, mapa do controle 21. Na 07-34 você escolheu a leitura A; o cartão dela mostra como ela ficou.</p>
+<h2 class="sec">O que você pediu e o que mudou</h2>
+<div class="tabela"><table><thead><tr><th>Mudança</th><th>O que mudou</th></tr></thead><tbody><tr><td class="sp">03-15</td><td>A linha «Força do gatilho» virou um seletor por controle, do mesmo tamanho dos de cima, com «Pelo estilo do jogo» como primeira escolha e o padrão; Forte, Média, Fraca e Desligada ficam como escolha fixa.</td></tr><tr><td class="sp">04-11</td><td>Saíram o botão «Desligar» e a chave «Sem piscar» do topo.</td></tr><tr><td class="sp">05-12</td><td>Ficou a leitura A: os quatro passos e, embaixo, o trilho fino até 100%; a leitura B saiu da página.</td></tr><tr><td class="sp">06-26</td><td>Ficou a leitura A (título «Navegação»), e o «i» saiu.</td></tr><tr><td class="sp">07-29</td><td>As três Lovense viraram UMA extensão, «Lovense», com as três formas dentro (Pelo Intiface, Pelo celular, DualSense como brinquedo), cada uma com a sua chave.</td></tr><tr><td class="sp">07-30</td><td>«Lovense pelo celular» virou a forma «Pelo celular» dentro da extensão Lovense, com chave e engrenagem próprias, na mesma grade e com a chave do mesmo tamanho das outras.</td></tr><tr><td class="sp">07-31</td><td>«DualSense como brinquedo» virou a terceira forma da extensão Lovense, nasce desligada, com a chave do mesmo tamanho das outras e sem aviso de estado.</td></tr><tr><td class="sp">07-33</td><td>Saíram «Detectar o jogo aberto» e «Procurar de novo» e a contagem com o ✓ verde ao lado do título «Lançadores».</td></tr><tr><td class="sp">07-34</td><td>A aba é a Experimental.</td></tr><tr><td class="sp">07-35</td><td>A lista das extensões cabe sem rolar nos três tamanhos, com até seis linhas: a frase de cada forma vira só a dica quando a janela é baixa (menos de 780 px).</td></tr><tr><td class="sp">07-36</td><td>No diálogo dos impedimentos, os dois botões de conserto têm a mesma largura (176 px) e os dois de baixo também (Fechar e Resolver os dois, 334 px).</td></tr><tr><td class="sp">07-37</td><td>A engrenagem de configurações fica ao lado da chave em todas as linhas (30 px de largura, a mesma em Kyty, Pelo Intiface, Pelo celular e DualSense como brinquedo), sem texto e sem aviso verde.</td></tr><tr><td class="sp">08-14</td><td>Na linha do Acionador USB, «Usar como botões de…» e o «Trazer de volta» da linha de baixo ficaram com o mesmo tamanho (150 x 24 px) e na mesma coluna; o botão tinha 22 px de altura.</td></tr><tr><td class="sp">10-19</td><td>Recusada em 14/10/2026: o segundo controle saiu da página (o campo do Editar e as regras dele).</td></tr></tbody></table></div>
+<section id="c-03-15" data-id="r3-03-15" data-titulo="Nova linha «Força do gatilho», um seletor por controle com os quatro passos do f">
+<div class="cab"><h2>03-15 · Nova linha «Força do gatilho», um seletor por controle com os quatro passos do firmware: Forte, Média, Fraca e Desligada, como no PS5</h2><span class="sprint">A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-01</span></div>
+<blockquote class="dela">«eu vi agora isso deveria ser decido pelo estilo de jogo também não?»</blockquote> <!-- noqa-acento: citação literal dela -->
+<p class="feito"><b>O que mudou.</b> A linha «Força do gatilho» virou um seletor por controle, do mesmo tamanho dos de cima, com «Pelo estilo do jogo» como primeira escolha e o padrão; Forte, Média, Fraca e Desligada ficam como escolha fixa. Saíram os quatro botões lado a lado.</p>
+<div class="fotos"><div class="col"><h3>Antes</h3><div class="grade"><figure><figcaption>Como você viu</figcaption><a href="../fotos/03-m15.png" target="_blank" rel="noopener"><img loading="lazy" src="../fotos/03-m15.png" alt="03-15: Como você viu"></a></figure></div></div><div class="col"><h3>Depois</h3><div class="grade"><figure><figcaption>Agora</figcaption><a href="fotos/03-m15.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/03-m15.png" alt="03-15: Agora"></a></figure></div></div></div>
+<div class="validar"><div class="links"><a class="abrir" href="../03-gatilhos.html">Abrir a página</a></div>
+<div class="votos"><button type="button" data-v="aprova" aria-pressed="false">Aprovo</button><button type="button" data-v="ajustar" aria-pressed="false">Ajustar</button></div>
+<textarea rows="3" placeholder="Se quiser ajustar, escreva aqui o que falta" aria-label="Seu texto sobre 03-15"></textarea></div>
+</section>
+<section id="c-04-11" data-id="r3-04-11" data-titulo="O «Sem piscar» deixa de ser ajuste global: entra na lista de efeitos de cada con">
+<div class="cab"><h2>04-11 · O «Sem piscar» deixa de ser ajuste global: entra na lista de efeitos de cada controle, ao lado de «Sem efeito»; luz que nunca troca mais de três vezes por segundo, o piscar vira transição lenta</h2><span class="sprint">A-LUZ-DO-CONTROLE-NAO-PISCA-PARA-QUEM-E-SENSIVEL-A-LUZ-01</span></div>
+<blockquote class="dela">«Tira o desligar ali dos efeitos. tira o botão de sem piscar. eke ebtra en efeitos, assim como o sem efeito (pra representar o desligar). E sem controle conectado ele tem que aparecer o vazio deixar o nome do controle ali fica muito estranho. Fora que realmente pensando agoraas duas linhas dava pra virar uma só. esses 3 averdes. 2 rosas. sei lá. não tá legal e deixa o layout muito sufocado. melhora o respiro.»</blockquote> <!-- noqa-acento: citação literal dela -->
+<p class="feito"><b>O que mudou.</b> Saíram o botão «Desligar» e a chave «Sem piscar» do topo. A lista de efeitos de cada controle ganhou «Sem efeito» (apaga a barra) e «Sem piscar» (só transição lenta), e o seletor ocupa a largura inteira da linha. A vaga sem controle mostra o campo vazio, sem o nome. As duas fileiras de doze cores viraram uma de oito (saíram o verde-limão, o menta, o magenta e o branco: ficam um verde e um rosa). A linha Cor encolheu e o passo entre as linhas subiu de 10 para 14 px.</p>
+<div class="fotos"><div class="col"><h3>Antes</h3><div class="grade"><figure><figcaption>Como você viu</figcaption><a href="../fotos/04-m11.png" target="_blank" rel="noopener"><img loading="lazy" src="../fotos/04-m11.png" alt="04-11: Como você viu"></a></figure></div></div><div class="col"><h3>Depois</h3><div class="grade"><figure><figcaption>Agora</figcaption><a href="fotos/04-m11.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/04-m11.png" alt="04-11: Agora"></a></figure></div></div></div>
+<div class="validar"><div class="links"><a class="abrir" href="../04-iluminacao.html">Abrir a página</a></div>
+<div class="votos"><button type="button" data-v="aprova" aria-pressed="false">Aprovo</button><button type="button" data-v="ajustar" aria-pressed="false">Ajustar</button></div>
+<textarea rows="3" placeholder="Se quiser ajustar, escreva aqui o que falta" aria-label="Seu texto sobre 04-11"></textarea></div>
+</section>
+<section id="c-05-12" data-id="r3-05-12" data-titulo="A força da vibração vira os quatro passos do firmware, por controle: Forte, Médi">
+<div class="cab"><h2>05-12 · A força da vibração vira os quatro passos do firmware, por controle: Forte, Média, Fraca e Desligada, como no PS5. O Máximo de 150% e os três botões Economia, Padrão e Máximo saem</h2><span class="sprint">A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-01</span></div>
+<blockquote class="dela">«(sem voto) fica o antes ali no a e remove a seção inferior do criar efeitos novos também. nome dos players 3 e 4 mesma coisa.»</blockquote> <!-- noqa-acento: citação literal dela -->
+<p class="feito"><b>O que mudou.</b> Ficou a leitura A: os quatro passos e, embaixo, o trilho fino até 100%; a leitura B saiu da página. A seção «Criar efeitos novos» saiu do pé da aba. As vagas 3 e 4 mostram o campo do nome vazio, sem «Galactic Purple» e «White». Os quatro passos ganharam a mesma largura (duas fileiras de dois, porque «Desligada» não cabe numa fileira de quatro iguais) e a linha da força cresceu para respirar.</p>
+<div class="fotos"><div class="col"><h3>Antes</h3><div class="grade"><figure><figcaption>Como você viu</figcaption><a href="../fotos/05-m12.png" target="_blank" rel="noopener"><img loading="lazy" src="../fotos/05-m12.png" alt="05-12: Como você viu"></a></figure></div></div><div class="col"><h3>Depois</h3><div class="grade"><figure><figcaption>Agora</figcaption><a href="fotos/05-m12.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/05-m12.png" alt="05-12: Agora"></a></figure></div></div></div>
+<div class="validar"><div class="links"><a class="abrir" href="../05-vibracao.html">Abrir a página</a></div>
+<div class="votos"><button type="button" data-v="aprova" aria-pressed="false">Aprovo</button><button type="button" data-v="ajustar" aria-pressed="false">Ajustar</button></div>
+<textarea rows="3" placeholder="Se quiser ajustar, escreva aqui o que falta" aria-label="Seu texto sobre 05-12"></textarea></div>
+</section>
+<section id="c-06-26" data-id="r3-06-26" data-titulo="A explicação da aba aparece quando o mouse fica parado sobre o quadro (e no foco">
+<div class="cab"><h2>06-26 · A explicação da aba aparece quando o mouse fica parado sobre o quadro (e no foco do teclado), sem botão «i»</h2><span class="sprint">A-ABA-NAVEGACAO-DO-TODO-01</span></div>
+<blockquote class="dela">«a mas remove o i, deixe que ele apareça se eu deixar o mouse sob a área.»</blockquote> <!-- noqa-acento: citação literal dela -->
+<p class="feito"><b>O que mudou.</b> Ficou a leitura A (título «Navegação»), e o «i» saiu. A explicação aparece na faixa do título, ao lado de «Navegação», quando o mouse fica parado meio segundo sobre o quadro e também no foco do teclado; some quando o mouse sai. Não cobre nenhum campo. A leitura B saiu da página.</p>
+<div class="fotos"><div class="col"><h3>Antes</h3><div class="grade"><figure><figcaption>Como você viu</figcaption><a href="../fotos/06-m26.png" target="_blank" rel="noopener"><img loading="lazy" src="../fotos/06-m26.png" alt="06-26: Como você viu"></a></figure></div></div><div class="col"><h3>Depois</h3><div class="grade"><figure><figcaption>Agora</figcaption><a href="fotos/06-m26.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/06-m26.png" alt="06-26: Agora"></a></figure></div></div></div>
+<div class="validar"><div class="links"><a class="abrir" href="../06-navegacao.html">Abrir a página</a></div>
+<div class="votos"><button type="button" data-v="aprova" aria-pressed="false">Aprovo</button><button type="button" data-v="ajustar" aria-pressed="false">Ajustar</button></div>
+<textarea rows="3" placeholder="Se quiser ajustar, escreva aqui o que falta" aria-label="Seu texto sobre 06-26"></textarea></div>
+</section>
+<section id="c-07-29" data-id="r3-07-29" data-titulo="As três Lovense viram uma extensão só, «Lovense», com as três formas dentro e um">
+<div class="cab"><h2>07-29 · As três Lovense viram uma extensão só, «Lovense», com as três formas dentro e uma chave para cada; sem selo verde nem «ok», só os três botões</h2><span class="sprint">A-ABA-EXPERIMENTAL-DO-TODO-01</span></div>
+<blockquote class="dela">«Não. O botão desligar tem diferença de largura com o botão ligado. Esses 3 features do lovense são uma extensão só. e a ŕea tem que ser melhorna largura o botão e ocom numeros dentro tem um verde distoante do tema tem que ser removido. os alinhamentos não tão legais. a distribuição dos elementos da guia extensões tão muito estranhos. pouco organicos e verdadeiramente feios. esse 2 dentro do verde gritante da steam tá péssimo não deveriamos ter avisos verdes.  na real não temos que ter avisos de ok ali.. só os 3 botões mesmo.»</blockquote> <!-- noqa-acento: citação literal dela -->
+<p class="feito"><b>O que mudou.</b> As três Lovense viraram UMA extensão, «Lovense», com as três formas dentro (Pelo Intiface, Pelo celular, DualSense como brinquedo), cada uma com a sua chave. Ligada e Desligada têm a mesma largura (104 px). Saíram o selo verde com número, a coluna de «ok» (✓ Kyty, 3 acessórios, App no Game Mode, Sem apps) e o 2 verde da Steam; cada linha ficou só com os três botões: ligar, configurar e ⋮. Uma grade só para as cinco linhas, com o mesmo espaçamento.</p>
+<div class="fotos"><div class="col"><h3>Antes</h3><div class="grade"><figure><figcaption>Como você viu</figcaption><a href="../fotos/07-m29.png" target="_blank" rel="noopener"><img loading="lazy" src="../fotos/07-m29.png" alt="07-29: Como você viu"></a></figure></div></div><div class="col"><h3>Depois</h3><div class="grade"><figure><figcaption>Agora</figcaption><a href="fotos/07-m29.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/07-m29.png" alt="07-29: Agora"></a></figure></div></div></div>
+<div class="validar"><div class="links"><a class="abrir" href="../07-lancadores.html">Abrir a página</a></div>
+<div class="votos"><button type="button" data-v="aprova" aria-pressed="false">Aprovo</button><button type="button" data-v="ajustar" aria-pressed="false">Ajustar</button></div>
+<textarea rows="3" placeholder="Se quiser ajustar, escreva aqui o que falta" aria-label="Seu texto sobre 07-29"></textarea></div>
+</section>
+<section id="c-07-30" data-id="r3-07-30" data-titulo="«Pelo celular»: o app da Lovense no celular, pelo Game Mode na rede de casa, com">
+<div class="cab"><h2>07-30 · «Pelo celular»: o app da Lovense no celular, pelo Game Mode na rede de casa, como forma dentro da extensão Lovense</h2><span class="sprint">A-ABA-EXPERIMENTAL-DO-TODO-01</span></div>
+<p class="dela sem">Você pediu ajuste sem texto: diga o que faltou. Apliquei o que você deu nas outras respostas: larguras iguais, nenhum aviso verde, respiro e nada sufocado.</p>
+<p class="feito"><b>O que mudou.</b> «Lovense pelo celular» virou a forma «Pelo celular» dentro da extensão Lovense, com chave e engrenagem próprias, na mesma grade e com a chave do mesmo tamanho das outras.</p>
+<div class="fotos"><div class="col"><h3>Antes</h3><div class="grade"><figure><figcaption>Como você viu</figcaption><a href="../fotos/07-m30.png" target="_blank" rel="noopener"><img loading="lazy" src="../fotos/07-m30.png" alt="07-30: Como você viu"></a></figure></div></div><div class="col"><h3>Depois</h3><div class="grade"><figure><figcaption>Agora</figcaption><a href="fotos/07-m30.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/07-m30.png" alt="07-30: Agora"></a></figure></div></div></div>
+<div class="validar"><div class="links"><a class="abrir" href="../07-lancadores.html">Abrir a página</a></div>
+<div class="votos"><button type="button" data-v="aprova" aria-pressed="false">Aprovo</button><button type="button" data-v="ajustar" aria-pressed="false">Ajustar</button></div>
+<textarea rows="3" placeholder="Se quiser ajustar, escreva aqui o que falta" aria-label="Seu texto sobre 07-30"></textarea></div>
+</section>
+<section id="c-07-31" data-id="r3-07-31" data-titulo="«DualSense como brinquedo»: a terceira forma da extensão Lovense, que nasce desl">
+<div class="cab"><h2>07-31 · «DualSense como brinquedo»: a terceira forma da extensão Lovense, que nasce desligada</h2><span class="sprint">O-HEFESTO-E-SERVIDOR-BUTTPLUG-DO-PROPRIO-DUALSENSE-01</span></div>
+<p class="dela sem">Você pediu ajuste sem texto: diga o que faltou. Apliquei o que você deu nas outras respostas: larguras iguais, nenhum aviso verde, respiro e nada sufocado.</p>
+<p class="feito"><b>O que mudou.</b> «DualSense como brinquedo» virou a terceira forma da extensão Lovense, nasce desligada, com a chave do mesmo tamanho das outras e sem aviso de estado.</p>
+<div class="fotos"><div class="col"><h3>Antes</h3><div class="grade"><figure><figcaption>Como você viu</figcaption><a href="../fotos/07-m31.png" target="_blank" rel="noopener"><img loading="lazy" src="../fotos/07-m31.png" alt="07-31: Como você viu"></a></figure></div></div><div class="col"><h3>Depois</h3><div class="grade"><figure><figcaption>Agora</figcaption><a href="fotos/07-m31.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/07-m31.png" alt="07-31: Agora"></a></figure></div></div></div>
+<div class="validar"><div class="links"><a class="abrir" href="../07-lancadores.html">Abrir a página</a></div>
+<div class="votos"><button type="button" data-v="aprova" aria-pressed="false">Aprovo</button><button type="button" data-v="ajustar" aria-pressed="false">Ajustar</button></div>
+<textarea rows="3" placeholder="Se quiser ajustar, escreva aqui o que falta" aria-label="Seu texto sobre 07-31"></textarea></div>
+</section>
+<section id="c-07-33" data-id="r3-07-33" data-titulo="Saem «Detectar o jogo aberto», «Procurar de novo» e a contagem verde ao lado do ">
+<div class="cab"><h2>07-33 · Saem «Detectar o jogo aberto», «Procurar de novo» e a contagem verde ao lado do título «Lançadores»</h2><span class="sprint">A-ABA-EXPERIMENTAL-DO-TODO-01</span></div>
+<blockquote class="dela">«remove os botões aí e remove o 1 e 2 e o ok do lado do lançadores.»</blockquote> <!-- noqa-acento: citação literal dela -->
+<p class="feito"><b>O que mudou.</b> Saíram «Detectar o jogo aberto» e «Procurar de novo» e a contagem com o ✓ verde ao lado do título «Lançadores». O título ficou sozinho; a lista das extensões não rola.</p>
+<div class="fotos"><div class="col"><h3>Antes</h3><div class="grade"><figure><figcaption>Como você viu</figcaption><a href="../fotos/07-m33.png" target="_blank" rel="noopener"><img loading="lazy" src="../fotos/07-m33.png" alt="07-33: Como você viu"></a></figure></div></div><div class="col"><h3>Depois</h3><div class="grade"><figure><figcaption>Agora</figcaption><a href="fotos/07-m33.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/07-m33.png" alt="07-33: Agora"></a></figure></div></div></div>
+<div class="validar"><div class="links"><a class="abrir" href="../07-lancadores.html">Abrir a página</a></div>
+<div class="votos"><button type="button" data-v="aprova" aria-pressed="false">Aprovo</button><button type="button" data-v="ajustar" aria-pressed="false">Ajustar</button></div>
+<textarea rows="3" placeholder="Se quiser ajustar, escreva aqui o que falta" aria-label="Seu texto sobre 07-33"></textarea></div>
+</section>
+<section id="c-07-34" data-id="r3-07-34" data-titulo="A aba fica como o Experimental (a B foi recusada em 14/10): extensões em cima, l">
+<div class="cab"><h2>07-34 · A aba fica como o Experimental (a B foi recusada em 14/10): extensões em cima, lançadores embaixo, com os impedimentos da Steam numa linha e a engrenagem ao lado de cada chave</h2><span class="sprint">A-ABA-LANCADORES-GANHA-AS-MODIFICACOES-01</span></div>
+<p class="dela">Você escolheu a leitura <b>A</b>: a aba Experimental, com as extensões em cima e os lançadores embaixo.</p>
+<p class="feito"><b>O que mudou.</b> A aba é a Experimental. A página do B (07-lancadores-b.html) saiu do índice e ficou no git com uma nota de recusada em 14/10. O que o B trazia e valia entrou no A: os impedimentos da Steam numa linha («2 com impedimento»), e a engrenagem ao lado da chave de cada forma e extensão.</p>
+<div class="fotos"><div class="col"><h3>Antes</h3><div class="grade"><figure><figcaption>Como você viu (a A)</figcaption><a href="../fotos/07-m34-a.png" target="_blank" rel="noopener"><img loading="lazy" src="../fotos/07-m34-a.png" alt="07-34: Como você viu (a A)"></a></figure><figure><figcaption>A B, recusada</figcaption><a href="../fotos/07-m34-b.png" target="_blank" rel="noopener"><img loading="lazy" src="../fotos/07-m34-b.png" alt="07-34: A B, recusada"></a></figure></div></div><div class="col"><h3>Depois</h3><div class="grade"><figure><figcaption>Agora</figcaption><a href="fotos/07-m34.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/07-m34.png" alt="07-34: Agora"></a></figure></div></div></div>
+<div class="validar"><div class="links"><a class="abrir" href="../07-lancadores.html">Abrir a página</a></div>
+<div class="votos"><button type="button" data-v="aprova" aria-pressed="false">Aprovo</button><button type="button" data-v="ajustar" aria-pressed="false">Ajustar</button></div>
+<textarea rows="3" placeholder="Se quiser ajustar, escreva aqui o que falta" aria-label="Seu texto sobre 07-34"></textarea></div>
+</section>
+<section id="c-07-35" data-id="r3-07-35" data-titulo="A lista das extensões cabe sem rolar nos três tamanhos, até seis linhas (a foto ">
+<div class="cab"><h2>07-35 · A lista das extensões cabe sem rolar nos três tamanhos, até seis linhas (a foto põe uma linha de exemplo)</h2><span class="sprint">A-ABA-LANCADORES-GANHA-AS-MODIFICACOES-01</span></div>
+<p class="dela sem">Você pediu ajuste sem texto: diga o que faltou. Apliquei o que você deu nas outras respostas: larguras iguais, nenhum aviso verde, respiro e nada sufocado.</p>
+<p class="feito"><b>O que mudou.</b> A lista das extensões cabe sem rolar nos três tamanhos, com até seis linhas: a frase de cada forma vira só a dica quando a janela é baixa (menos de 780 px). A foto põe uma linha de exemplo da comunidade. Em 1212x809 o espaço entre as linhas também diminui um pouco, para a sexta linha caber.</p>
+<div class="fotos"><div class="col"><h3>Antes</h3><div class="grade"><figure><figcaption>Como você viu</figcaption><a href="../fotos/07-m35.png" target="_blank" rel="noopener"><img loading="lazy" src="../fotos/07-m35.png" alt="07-35: Como você viu"></a></figure></div></div><div class="col"><h3>Depois</h3><div class="grade"><figure><figcaption>Agora</figcaption><a href="fotos/07-m35.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/07-m35.png" alt="07-35: Agora"></a></figure></div></div></div>
+<div class="validar"><div class="links"><a class="abrir" href="../07-lancadores.html">Abrir a página</a></div>
+<div class="votos"><button type="button" data-v="aprova" aria-pressed="false">Aprovo</button><button type="button" data-v="ajustar" aria-pressed="false">Ajustar</button></div>
+<textarea rows="3" placeholder="Se quiser ajustar, escreva aqui o que falta" aria-label="Seu texto sobre 07-35"></textarea></div>
+</section>
+<section id="c-07-36" data-id="r3-07-36" data-titulo="Os impedimentos da Steam numa linha do cartão, «2 com impedimento»; o clique abr">
+<div class="cab"><h2>07-36 · Os impedimentos da Steam numa linha do cartão, «2 com impedimento»; o clique abre a lista, com os botões da mesma largura</h2><span class="sprint">A-ABA-LANCADORES-GANHA-AS-MODIFICACOES-01</span></div>
+<blockquote class="dela">«padronização de largura dos bortões muito feio.»</blockquote> <!-- noqa-acento: citação literal dela -->
+<p class="feito"><b>O que mudou.</b> No diálogo dos impedimentos, os dois botões de conserto têm a mesma largura (176 px) e os dois de baixo também (Fechar e Resolver os dois, 334 px). Na lista dos lançadores, Identificar, Criar perfis e Configurar têm 76 px em todas as linhas, e «2 com impedimento» ficou na linha da Steam com a mesma altura dos botões, sem selo verde.</p>
+<div class="fotos"><div class="col"><h3>Antes</h3><div class="grade"><figure><figcaption>Como você viu</figcaption><a href="../fotos/07-m36.png" target="_blank" rel="noopener"><img loading="lazy" src="../fotos/07-m36.png" alt="07-36: Como você viu"></a></figure></div></div><div class="col"><h3>Depois</h3><div class="grade"><figure><figcaption>Agora</figcaption><a href="fotos/07-m36.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/07-m36.png" alt="07-36: Agora"></a></figure></div></div></div>
+<div class="validar"><div class="links"><a class="abrir" href="../07-lancadores.html">Abrir a página</a><a class="abrir" href="../07-lancadores.html#impedimentos">Abrir o diálogo dos impedimentos</a></div>
+<div class="votos"><button type="button" data-v="aprova" aria-pressed="false">Aprovo</button><button type="button" data-v="ajustar" aria-pressed="false">Ajustar</button></div>
+<textarea rows="3" placeholder="Se quiser ajustar, escreva aqui o que falta" aria-label="Seu texto sobre 07-36"></textarea></div>
+</section>
+<section id="c-07-37" data-id="r3-07-37" data-titulo="A engrenagem de cada extensão e de cada forma fica ao lado da chave, do mesmo ta">
+<div class="cab"><h2>07-37 · A engrenagem de cada extensão e de cada forma fica ao lado da chave, do mesmo tamanho</h2><span class="sprint">A-ABA-LANCADORES-GANHA-AS-MODIFICACOES-01</span></div>
+<p class="dela sem">Você pediu ajuste sem texto: diga o que faltou. Apliquei o que você deu nas outras respostas: larguras iguais, nenhum aviso verde, respiro e nada sufocado.</p>
+<p class="feito"><b>O que mudou.</b> A engrenagem de configurações fica ao lado da chave em todas as linhas (30 px de largura, a mesma em Kyty, Pelo Intiface, Pelo celular e DualSense como brinquedo), sem texto e sem aviso verde.</p>
+<div class="fotos"><div class="col"><h3>Antes</h3><div class="grade"><figure><figcaption>Como você viu</figcaption><a href="../fotos/07-m37.png" target="_blank" rel="noopener"><img loading="lazy" src="../fotos/07-m37.png" alt="07-37: Como você viu"></a></figure></div></div><div class="col"><h3>Depois</h3><div class="grade"><figure><figcaption>Agora</figcaption><a href="fotos/07-m37.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/07-m37.png" alt="07-37: Agora"></a></figure></div></div></div>
+<div class="validar"><div class="links"><a class="abrir" href="../07-lancadores.html">Abrir a página</a></div>
+<div class="votos"><button type="button" data-v="aprova" aria-pressed="false">Aprovo</button><button type="button" data-v="ajustar" aria-pressed="false">Ajustar</button></div>
+<textarea rows="3" placeholder="Se quiser ajustar, escreva aqui o que falta" aria-label="Seu texto sobre 07-37"></textarea></div>
+</section>
+<section id="c-08-14" data-id="r3-08-14" data-titulo="Na linha do aparelho de entrada, «Usar como botões de…» abre a janela onde cada ">
+<div class="cab"><h2>08-14 · Na linha do aparelho de entrada, «Usar como botões de…» abre a janela onde cada tecla dele cai num botão do controle, escolhido sobre o desenho real do DualSense</h2><span class="sprint">OS-ACIONADORES-USB-ENTRAM-COMO-BOTOES-DO-CONTROLE-01</span></div>
+<p class="dela sem">Você pediu ajuste sem texto: diga o que faltou. Apliquei o que você deu nas outras respostas: larguras iguais, nenhum aviso verde, respiro e nada sufocado.</p>
+<p class="feito"><b>O que mudou.</b> Na linha do Acionador USB, «Usar como botões de…» e o «Trazer de volta» da linha de baixo ficaram com o mesmo tamanho (150 x 24 px) e na mesma coluna; o botão tinha 22 px de altura. Na janela do acionador, a lista das teclas ganhou respiro (linhas de 40 px, letra de 13 px, botões de 34 px) e a janela ficou um pouco mais larga. Você pediu ajuste sem texto: diga o que faltou.</p>
+<div class="fotos"><div class="col"><h3>Antes</h3><div class="grade"><figure><figcaption>Como você viu: a linha</figcaption><a href="../fotos/08-m14.png" target="_blank" rel="noopener"><img loading="lazy" src="../fotos/08-m14.png" alt="08-14: Como você viu: a linha"></a></figure><figure><figcaption>Como você viu: a janela</figcaption><a href="../fotos/08-m15.png" target="_blank" rel="noopener"><img loading="lazy" src="../fotos/08-m15.png" alt="08-14: Como você viu: a janela"></a></figure></div></div><div class="col"><h3>Depois</h3><div class="grade"><figure><figcaption>Agora: a linha</figcaption><a href="fotos/08-m14.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/08-m14.png" alt="08-14: Agora: a linha"></a></figure><figure><figcaption>Agora: a janela</figcaption><a href="fotos/08-m14-b.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/08-m14-b.png" alt="08-14: Agora: a janela"></a></figure></div></div></div>
+<div class="validar"><div class="links"><a class="abrir" href="../08-conexoes.html">Abrir a página</a><a class="abrir" href="../08-conexoes.html#acionador">Abrir a janela do acionador</a></div>
+<div class="votos"><button type="button" data-v="aprova" aria-pressed="false">Aprovo</button><button type="button" data-v="ajustar" aria-pressed="false">Ajustar</button></div>
+<textarea rows="3" placeholder="Se quiser ajustar, escreva aqui o que falta" aria-label="Seu texto sobre 08-14"></textarea></div>
+</section>
+<section id="c-10-19" data-id="r3-10-19" data-titulo="O segundo controle mora no perfil do jogo: o controle que joga, mais o segundo c">
+<div class="cab"><h2>10-19 · O segundo controle mora no perfil do jogo: o controle que joga, mais o segundo controle, e a chave; os botões do segundo somam aos do primeiro, e a vibração vai aos dois</h2><span class="pill rec">Recusada em 14/10/2026</span><span class="sprint">DOIS-CONTROLES-JOGAM-COMO-UM (a sprint caducou com a recusa)</span></div>
+<blockquote class="dela">«não sei se pedi isso de verdade. Mas recusado a ideia.»</blockquote> <!-- noqa-acento: citação literal dela -->
+<p class="feito"><b>O que mudou.</b> Recusada em 14/10/2026: o segundo controle saiu da página (o campo do Editar e as regras dele). A página volta a ser a da rodada 2, com a tabela dos controles inteira em 740.</p>
+<div class="fotos"><div class="col"><h3>Antes</h3><div class="grade"><figure><figcaption>Como você viu</figcaption><a href="../fotos/10-m19.png" target="_blank" rel="noopener"><img loading="lazy" src="../fotos/10-m19.png" alt="10-19: Como você viu"></a></figure></div></div><div class="col"><h3>Depois</h3><div class="grade"><figure><figcaption>Agora, sem o segundo controle</figcaption><a href="fotos/10-m19.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/10-m19.png" alt="10-19: Agora, sem o segundo controle"></a></figure></div></div></div>
+<div class="validar"><div class="links"><a class="abrir" href="../10-perfis.html">Abrir a página</a></div>
+<div class="votos"><button type="button" data-v="aprova" aria-pressed="false">Aprovo</button><button type="button" data-v="ajustar" aria-pressed="false">Ajustar</button></div>
+<textarea rows="3" placeholder="Se quiser ajustar, escreva aqui o que falta" aria-label="Seu texto sobre 10-19"></textarea></div>
+</section>
+</main>
+<script>
+(function () {
+  var CHAVE = 'hefesto-ajustes-r3';
+  var ROTA = (location.protocol.indexOf('http') === 0 ? '' : 'http://127.0.0.1:8766') + '/respostas-ajustes-r3';
+  var RESP = {};
+  try { RESP = JSON.parse(localStorage.getItem(CHAVE) || '{}') || {}; } catch (e) { RESP = {}; }
+  var estado = document.getElementById('estado');
+  var relogio = null;
+  function dd(n) { return (n < 10 ? '0' : '') + n; }
+  function guardarLocal() { try { localStorage.setItem(CHAVE, JSON.stringify(RESP)); return true; } catch (e) { return false; } }
+  function salvar() {
+    var local = guardarLocal();
+    var ctl = ('AbortController' in window) ? new AbortController() : null;
+    var t = ctl ? setTimeout(function () { ctl.abort(); }, 3000) : null;
+    fetch(ROTA, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(RESP), signal: ctl ? ctl.signal : undefined})
+      .then(function (r) { if (t) clearTimeout(t); if (!r.ok) throw new Error(String(r.status)); var a = new Date(); estado.textContent = 'Salvo às ' + dd(a.getHours()) + ':' + dd(a.getMinutes()); })
+      .catch(function () { estado.textContent = local ? 'Guardado só neste navegador: o servidor da página está fora do ar' : 'Sem como guardar: use o botão de copiar'; });
+  }
+  function mexeu() { clearTimeout(relogio); relogio = setTimeout(salvar, 600); conta(); }
+  function conta() {
+    var cartoes = document.querySelectorAll('section[data-id]'), feitos = 0;
+    cartoes.forEach(function (s) {
+      var r = RESP[s.dataset.id], ok = !!(r && r.voto);
+      if (ok) feitos++;
+      var a = document.querySelector('[data-nav="' + s.dataset.id + '"]'); if (a) a.classList.toggle('feito', ok);
+    });
+    document.getElementById('conta').textContent = feitos + ' de ' + cartoes.length + ' respondidas';
+  }
+  function pintar() {
+    document.querySelectorAll('section[data-id]').forEach(function (s) {
+      var r = RESP[s.dataset.id] || {}, ta = s.querySelector('textarea');
+      ta.value = r.texto || '';
+      s.querySelectorAll('.votos button').forEach(function (b) { b.setAttribute('aria-pressed', r.voto === b.dataset.v ? 'true' : 'false'); });
+    });
+    conta();
+  }
+  document.querySelectorAll('section[data-id]').forEach(function (s) {
+    var id = s.dataset.id, ta = s.querySelector('textarea');
+    s.querySelectorAll('.votos button').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var nova = RESP[id] && RESP[id].voto === b.dataset.v ? '' : b.dataset.v;
+        RESP[id] = Object.assign({texto: ''}, RESP[id] || {}, {voto: nova});
+        s.querySelectorAll('.votos button').forEach(function (x) { x.setAttribute('aria-pressed', x.dataset.v === nova ? 'true' : 'false'); });
+        guardarLocal(); mexeu();
+      });
+    });
+    ta.addEventListener('input', function () { RESP[id] = Object.assign({voto: ''}, RESP[id] || {}, {texto: ta.value}); guardarLocal(); mexeu(); });
+  });
+  pintar();
+  try {
+    var ctl0 = ('AbortController' in window) ? new AbortController() : null;
+    var t0 = ctl0 ? setTimeout(function () { ctl0.abort(); }, 1500) : null;
+    fetch(ROTA, {signal: ctl0 ? ctl0.signal : undefined}).then(function (r) { if (t0) clearTimeout(t0); return r.ok ? r.json() : null; })
+      .then(function (s) {
+        if (s && typeof s === 'object') {
+          Object.keys(s).forEach(function (k) { if (k.indexOf('r3-') === 0 && s[k] && typeof s[k] === 'object') RESP[k] = s[k]; });
+          guardarLocal(); pintar();
+        }
+      }).catch(function () { /* vale o que está neste navegador */ });
+  } catch (e) { /* sem rede */ }
+  document.getElementById('copiar').addEventListener('click', function () {
+    var linhas = ['Respostas dos ajustes da rodada 3'];
+    document.querySelectorAll('section[data-id]').forEach(function (s) {
+      var r = RESP[s.dataset.id] || {}, rot = {aprova: 'aprovo', ajustar: 'ajustar'}[r.voto] || 'sem resposta';
+      linhas.push('- ' + s.dataset.id + ': ' + rot + (r.texto ? ' — ' + r.texto.replace(/\s+/g, ' ') : ''));
+    });
+    var txt = linhas.join('\n');
+    function janela(t) { var ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); estado.textContent = 'Copiado'; } catch (e) { estado.textContent = 'Selecione e copie'; } ta.remove(); }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(function () { estado.textContent = 'Copiado'; }, function () { janela(txt); });
+    else janela(txt);
+  });
+})();
+</script>
+</body>
+</html>
