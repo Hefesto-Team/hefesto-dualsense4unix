@@ -255,7 +255,7 @@
       "pergunta": "O quadro leva o título «Navegação» com o «i» ao lado (A), ou fica sem título, só com o «i» no canto (B)?",
       "ajuste_r3": {
         "pedido": "a mas remove o i, deixe que ele apareça se eu deixar o mouse sob a área.",
-        "feito": "Ficou a leitura A (título «Navegação»), e o «i» saiu. A explicação aparece na faixa do título, ao lado de «Navegação», quando o mouse fica parado meio segundo sobre o quadro e também no foco do teclado; some quando o mouse sai. Não cobre nenhum campo. A leitura B saiu da página."
+        "feito": "Ficou a leitura A (título «Navegação»), e o «i» saiu. A explicação aparece na faixa do título, ao lado de «Navegação», quando o mouse fica parado meio segundo sobre essa faixa, onde o «i» ficava, e também no foco do teclado nela; some quando o mouse sai. Sobre a tabela ela não acende. Não cobre nenhum campo. A leitura B saiu da página."
       },
       "escolha": "A"
     },
