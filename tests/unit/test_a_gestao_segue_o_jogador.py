@@ -327,7 +327,7 @@ O_RADIO_E_O_RECURSO = (
     "ruído no rádio",
 )
 
-DE_OUTRA_POSSE = ("em outra porta ou no rádio",)
+DE_OUTRA_POSSE: tuple[str, ...] = ()
 
 
 class _TextoDeTela(HTMLParser):
