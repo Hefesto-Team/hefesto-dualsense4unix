@@ -145,6 +145,10 @@
       "ajuste_r3": {
         "pedido": "eu vi agora isso deveria ser decido pelo estilo de jogo também não?",
         "feito": "A linha «Força do gatilho» virou um seletor por controle, do mesmo tamanho dos de cima, com «Pelo estilo do jogo» como primeira escolha e o padrão; Forte, Média, Fraca e Desligada ficam como escolha fixa. Saíram os quatro botões lado a lado. Ela vale para L2 e R2, então ganhou linha própria abaixo de um separador, com «L2 R2» à esquerda e o rótulo na mesma coluna dos de cima."
+      },
+      "ajuste_r3b": {
+        "pedido": "não eu tava falando do desenho do lado esquerdio no nome dos controles.aquele lá de cima. Essa linha de força do gatilho não existe pro user. o estilo de jogo determina isso.",
+        "feito": "A linha «Força do gatilho» saiu inteira: o estilo do jogo decide a força. O desenho do L2 e R2, no alto à esquerda da linha dos nomes dos controles, passou a mostrar o estilo do jogo: duas linhas, L2 e R2, com o efeito que o estilo escolheu (com o Modo automático ligado) ou o que está escolhido (desligado). É só leitura, não é botão; com o Modo automático ligado ele fica aceso e o resto esmaece."
       }
     }
   ],
