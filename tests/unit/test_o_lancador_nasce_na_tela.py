@@ -71,7 +71,7 @@ def test_o_atalho_instalado_abre_o_motor_com_a_tela() -> None:
 
 
 def test_o_lancador_do_tray_declara_a_tela() -> None:
-    """O «Abrir painel» do tray chama o lançador de `~/.local/bin`."""
+    """O «Abrir programa» do tray chama o lançador de `~/.local/bin`."""
     linha = _lancador_do_instalador()
     assert re.match(
         r'^HEFESTO_NA_TELA="\\\$\{HEFESTO_NA_TELA:-1\}"\s+setsid\s+nohup\s+'

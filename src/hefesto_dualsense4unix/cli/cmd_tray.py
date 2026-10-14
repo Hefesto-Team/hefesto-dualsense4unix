@@ -58,13 +58,7 @@ def _trocar_de_perfil(nome: str) -> bool:
 
 
 def _estado() -> dict[str, Any] | None:
-    """O snapshot que vira `N controles · Bat N% · Perfil` no menu.
-
-    `daemon.state_full` E NÃO `daemon.status`: o `status` não traz a lista de
-    controles, e o `AppTray._controllers_suffix_from_state` a lê para dizer
-    quantos estão na mesa. Pedir o menor dos dois faria o tray mostrar sempre
-    «1 controle».
-    """
+    """O estado completo do daemon, que pinta o «Ligado/Desligado» e o «Parar/Ativar»."""
     resposta = _chamar("daemon.state_full")
     return resposta if isinstance(resposta, dict) else None
 

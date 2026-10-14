@@ -4,7 +4,7 @@
 //! (offline = ícone "indisponível"; bateria < 15% = ícone de alerta; conectado
 //! = martelo do app). Clicar abre um popover com bateria, transporte, perfil
 //! ativo, o modo do sistema (Desktop / Jogo / Jogo nativo, com co-op e máscara
-//! do gamepad), a lista clicável de perfis (troca via IPC) e "Abrir painel"
+//! do gamepad), a lista clicável de perfis (troca via IPC) e "Abrir programa"
 //! (spawn da GUI). Enquanto o popover está aberto, um tick ~1.5 Hz reconsulta o daemon via
 //! `daemon.state_full`. Sem hardware/daemon, tudo degrada para "offline" — nunca
 //! entra em pânico.
@@ -60,7 +60,7 @@ pub enum SystemMode {
 const ICON_APP: &str = "com.vitoriamaria.HefestoDualsense4Unix-symbolic";
 /// Período de refresh do estado enquanto o popover está aberto (~1.5 Hz).
 const REFRESH_MS: u64 = 700;
-/// Binário da GUI a abrir no "Abrir painel".
+/// Binário da GUI a abrir no "Abrir programa".
 const GUI_BIN: &str = "hefesto-dualsense4unix-gui";
 /// Como o jogo vê o controle quando o daemon ainda não respondeu qual é a máscara.
 ///
@@ -103,7 +103,7 @@ pub enum Message {
     SwitchProfile(String),
     /// Resultado de `profile.switch`.
     ProfileSwitched(Result<String, IpcError>),
-    /// "Abrir painel" — lança a GUI.
+    /// "Abrir programa" — lança a GUI.
     OpenPanel,
     /// "Fechar painel" — fecha a janela da GUI (o daemon SEGUE rodando).
     ClosePanel,
@@ -522,7 +522,7 @@ impl HefestoApplet {
             menu_button(
                 cosmic::iced::widget::row![
                     icon::from_name("preferences-system-symbolic").size(16),
-                    text::body("Abrir painel"),
+                    text::body("Abrir programa"),
                 ]
                 .spacing(spacing.space_xs)
                 .align_y(cosmic::iced::Alignment::Center),

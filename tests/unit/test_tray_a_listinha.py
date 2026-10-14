@@ -306,25 +306,12 @@ def test_o_reconectar_faz_os_dois_passos_da_aba_jogar(
     assert chamados == ["coop.sync", "identity.renumber"]
 
 
-def test_o_titulo_nao_conta_perfis(gtk_de_mentira: Any) -> None:
-    """*"no tray remover o numero de perfis"* — palavra, 21/09/2026."""
+def test_o_titulo_e_so_o_nome(gtk_de_mentira: Any) -> None:
+    """O título é «Hefesto - DualSense4Unix» (14/10/2026): o perfil ativo mora no submenu."""
     tray = _tray(gtk_de_mentira)
-    tray._status_item = _Item("")
-    tray._profiles_submenu = _Menu()
-
-    tray._render_profiles([{"name": "Padrão"}, {"name": "Outro"}])
-
-    assert "perfis" not in tray._status_item.get_label()
-    assert tray._status_item.get_label() == "Hefesto - DualSense4Unix"
-
-
-def test_o_titulo_continua_dizendo_o_perfil_ativo(gtk_de_mentira: Any) -> None:
-    """O que saiu foi a CONTAGEM, não a resposta — o perfil de agora fica."""
-    tray = _tray(gtk_de_mentira)
-    tray._status_item = _Item("")
+    tray._status_item = _Item("Hefesto - DualSense4Unix")
     tray._profiles_submenu = _Menu()
 
     tray._render_profiles([{"name": "Padrão"}, {"name": "Meu", "active": True}])
 
-    assert tray._status_item.get_label() == (
-        "Hefesto - DualSense4Unix - perfil: Meu")
+    assert tray._status_item.get_label() == "Hefesto - DualSense4Unix"

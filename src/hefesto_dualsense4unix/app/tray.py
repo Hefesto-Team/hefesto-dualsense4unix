@@ -147,15 +147,9 @@ class AppTray:
 
         self._menu = Gtk.Menu()
 
-        self._status_item = Gtk.MenuItem(label=_("Hefesto - DualSense4Unix (carregando...)"))
+        self._status_item = Gtk.MenuItem(label=_("Hefesto - DualSense4Unix"))
         self._status_item.set_sensitive(False)
         self._menu.append(self._status_item)
-
-        show = Gtk.MenuItem(label=_("Abrir painel"))
-        show.connect("activate", lambda _w: self.on_show_window())
-        self._menu.append(show)
-
-        self._montar_os_atos_do_jogo()
 
         self._menu.append(Gtk.SeparatorMenuItem())
 
@@ -164,11 +158,18 @@ class AppTray:
         self._profiles_item.set_submenu(self._profiles_submenu)
         self._menu.append(self._profiles_item)
 
+        self._menu.append(Gtk.SeparatorMenuItem())
+
+        show = Gtk.MenuItem(label=_("Abrir programa"))
+        show.connect("activate", lambda _w: self.on_show_window())
+        self._menu.append(show)
+
+        self._montar_os_atos_do_jogo()
         self._montar_os_atos_do_servico()
 
         self._menu.append(Gtk.SeparatorMenuItem())
 
-        quit_item = Gtk.MenuItem(label=_("Sair do Hefesto - DualSense4Unix"))
+        quit_item = Gtk.MenuItem(label=_("Sair"))
         quit_item.connect("activate", lambda _w: self._ao_sair())
         self._menu.append(quit_item)
 
@@ -427,9 +428,7 @@ class AppTray:
         """Callback de sucesso (thread GTK via GLib.idle_add): renderiza tudo."""
         self._refresh_inflight = False
         profiles, state = data
-        self._render_profiles(
-            profiles, self._controllers_suffix_from_state(state)
-        )
+        self._render_profiles(profiles)
         self._pintar_o_estado_dos_atos(state)
         return False
 
@@ -439,30 +438,7 @@ class AppTray:
         return False
 
 
-    @staticmethod
-    def _controllers_suffix_from_state(state: dict[str, Any] | None) -> str:
-        """' · N controles (BT + USB)' quando há 2+ conectados; '' caso contrário."""
-        if not isinstance(state, dict):
-            return ""
-        controllers = state.get("controllers")
-        if not isinstance(controllers, list):
-            return ""
-        conectados = [
-            c for c in controllers if isinstance(c, dict) and c.get("connected")
-        ]
-        if len(conectados) <= 1:
-            return ""
-        transportes = " + ".join(
-            (c.get("transport") or "?").upper() for c in conectados
-        )
-        return _(" · %(n)d controles (%(t)s)") % {
-            "n": len(conectados),
-            "t": transportes,
-        }
-
-    def _render_profiles(
-        self, profiles: list[dict[str, Any]], controllers_suffix: str = ""
-    ) -> None:
+    def _render_profiles(self, profiles: list[dict[str, Any]]) -> None:
         if self._profiles_submenu is None:
             return
         for item in self._profile_menu_items:
@@ -490,18 +466,6 @@ class AppTray:
                 self._profile_menu_items.append(item)
 
         self._profiles_submenu.show_all()
-
-        if self._status_item is not None:
-            active = next(
-                (p.get("name") for p in profiles if p.get("active")),
-                None,
-            )
-            label = (
-                _("Hefesto - DualSense4Unix - perfil: %s") % active
-                if active
-                else _("Hefesto - DualSense4Unix")
-            )
-            self._status_item.set_label(label + controllers_suffix)
 
     def _ensinar_o_caminho_do_icone(self, icone: str) -> None:
         """Diz ao PAINEL onde o arquivo do ícone mora, em vez de só o nome."""
