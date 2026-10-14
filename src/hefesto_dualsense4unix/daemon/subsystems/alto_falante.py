@@ -1986,6 +1986,8 @@ class AltoFalanteSubsystem:
             motores = lidos if all(respostas) else None
             GANHO.ler_do_daemon(getattr(self, "_daemon", None))
             for sink_com_motor in lidos:
+                if self._parar.is_set():
+                    break  # o stop devolve as placas: a volta atrasada não as enche de novo
                 garantir_a_placa_cheia(sink_com_motor)
 
         # PRAGMATA de 26/09 ficou sem ninguém), e em 21/09 o evdev pôs os QUATRO
@@ -2483,6 +2485,7 @@ class AltoFalanteSubsystem:
                 *(asyncio.to_thread(o.descer) for o in ouvidos), return_exceptions=True
             )
         from hefesto_dualsense4unix.integrations.alto_falante_bt import (
+            devolver_as_placas,
             fim_do_orcamento_do_stop,
             no_orcamento_do_stop,
             registrar_dizedor_da_fonte,
@@ -2491,6 +2494,10 @@ class AltoFalanteSubsystem:
         # O-STOP-DO-SOM-TEM-ORCAMENTO-E-NAO-PERGUNTA-AO-SERVIDOR-MUDO-01: daqui em
         # diante todo `pactl` divide um orçamento só, e roda fora do laço.
         fim = fim_do_orcamento_do_stop()
+        try:
+            await asyncio.to_thread(no_orcamento_do_stop, fim, devolver_as_placas)
+        except Exception as exc:
+            logger.warning("som_placas_nao_devolvidas", err=str(exc))
         governador, self.governador = self.governador, None
         if governador is not None:
             with contextlib.suppress(Exception):

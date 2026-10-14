@@ -1633,6 +1633,24 @@ def _nenhum_registro_de_identidade_atravessa() -> Iterator[None]:
 
 
 @pytest.fixture(autouse=True)
+def _nenhuma_placa_cheia_atravessa() -> Iterator[None]:
+    """O registro das placas que o Hefesto encheu morre com o caso.
+
+    Sem isto, a placa de mentira que um caso encheu chegava ao ``stop`` do caso seguinte, e o
+    ``devolver_as_placas`` mandava o ``pactl`` ao servidor de som de verdade.
+    """
+    modulo = sys.modules.get("hefesto_dualsense4unix.integrations.alto_falante_bt")
+    registro = getattr(modulo, "_PLACAS_COMO_ESTAVAM", None) if modulo else None
+    if registro is not None:
+        registro.clear()
+    yield
+    modulo = sys.modules.get("hefesto_dualsense4unix.integrations.alto_falante_bt")
+    registro = getattr(modulo, "_PLACAS_COMO_ESTAVAM", None) if modulo else None
+    if registro is not None:
+        registro.clear()
+
+
+@pytest.fixture(autouse=True)
 def _nenhum_sensor_desligado_atravessa() -> Iterator[None]:
     """O `virtual_motion.REGISTRO` morre com o caso, como o `identity._registry`.
 

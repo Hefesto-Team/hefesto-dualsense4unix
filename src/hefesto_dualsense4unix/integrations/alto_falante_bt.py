@@ -2247,6 +2247,13 @@ class OuvidoDaPlaca(OuvidoDoNo):
 #: fluxo do laço do cabo (``haptica_do_cabo``) e na ponte do rádio.
 PISO_DOS_MOTORES = 100
 
+#: O que o sistema tinha em cada placa FÍSICA antes de o Hefesto enchê-la, em por cento por
+#: canal. O ``stop`` devolve (`devolver_as_placas`): sem isso o WirePlumber guarda os 100 % e o
+#: som da máquina sai alto com o daemon parado. O endpoint do produto fica de fora: nasce e
+#: morre com ele.
+_PLACAS_COMO_ESTAVAM: dict[str, list[int]] = {}
+_TRAVA_DAS_PLACAS = threading.Lock()
+
 
 def volumes_do_sink(nome: str, runner: Callable[[list[str]], str | None] | None = None
                     ) -> list[int] | None:
@@ -2264,10 +2271,40 @@ def garantir_a_placa_cheia(
         return False
     if all(v == PISO_DOS_MOTORES for v in volumes[:4]):
         return False
+    if "HEFESTO" not in nome:
+        with _TRAVA_DAS_PLACAS:
+            _PLACAS_COMO_ESTAVAM.setdefault(nome, list(volumes[:4]))
     correr: Any = runner or rodar_pactl
     correr(["pactl", "set-sink-volume", nome, *[f"{PISO_DOS_MOTORES}%"] * 4])
     logger.info("som_placa_cheia", sink=nome, eram=volumes[:4], agora=PISO_DOS_MOTORES)
     return True
+
+
+def devolver_as_placas(
+    runner: Callable[[list[str]], str | None] | None = None,
+) -> list[str]:
+    """No ``stop``: cada placa que o Hefesto encheu volta ao que o sistema tinha. Devolve as
+    placas escritas.
+
+    Servidor calado (o recuo) não recebe a placa seguinte: um estouro e nada mais. O registro
+    se esvazia antes, e um segundo ``stop`` não reescreve nada.
+    """
+    with _TRAVA_DAS_PLACAS:
+        placas = dict(_PLACAS_COMO_ESTAVAM)
+        _PLACAS_COMO_ESTAVAM.clear()
+    correr: Any = runner or rodar_pactl
+    devolvidas: list[str] = []
+    for nome, eram in placas.items():
+        if _o_recuo().mudo():
+            break
+        try:
+            correr(["pactl", "set-sink-volume", nome, *[f"{v}%" for v in eram]])
+        except Exception as exc:
+            logger.warning("som_placa_nao_devolvida", sink=nome, err=str(exc))
+            continue
+        devolvidas.append(nome)
+        logger.info("som_placa_devolvida", sink=nome, agora=eram)
+    return devolvidas
 
 
 def sinks_com_motores(runner: Callable[[list[str]], str | None] | None = None
@@ -3195,6 +3232,7 @@ __all__ = [
     "conferir_o_alvo_do_gravador",
     "controle_de_audio_035",
     "descricao_do_alto_falante",
+    "devolver_as_placas",
     "diagnosticar",
     "e_radio",
     "escritor_de_hidraw",
