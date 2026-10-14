@@ -34,6 +34,9 @@ MORDIDAS = {
                    "d.textContent='Aqui o controle vira mouse e teclado do computador: cada botão faz o que está na lista.';t.appendChild(d);"),
     "dialogo-alto": _m("var l=document.querySelector('#lovense .lv-linha');if(l){for(var i=0;i<6;i++)l.parentNode.appendChild(l.cloneNode(true));}"),
     "dialogo-botao": _m("var t=document.querySelector('#lovense .nj-tog');if(t)t.style.width='140px';"),
+    "leitura-solta": _m("var l=document.querySelector('.g2-leitura');l.style.gridTemplateColumns='auto 1fr';l.style.width='max-content';l.style.margin='0 auto';"),
+    "conf-botoes": _m("document.querySelectorAll('#lanc-conf .lc-val .btn.mini').forEach(function(b){b.style.width='auto';});"),
+    "dica-passo": _m("var t=document.querySelector('.vib .forca input[type=range]');t.setAttribute('data-dica','Ajuste fino dentro do passo');"),
 }
 
 # Mede o que está visível: o JS roda dentro da página.
@@ -100,7 +103,13 @@ JS_PEDIDO_BASE = r"""
     if(!cn||!vis(cn)||!cn.querySelector('svg'))falta.push('o desenho do L2 e R2 sumiu do alto');
     else{var lt=cn.querySelector('.g2-leitura');
       if(!lt||!vis(lt)||lt.querySelectorAll('[data-leitura]').length!==2||[...lt.querySelectorAll('[data-leitura]')].some(function(x){return !x.textContent.trim();}))falta.push('o desenho não mostra o efeito do estilo para L2 e R2');
-      if(cn.querySelector('button,select,input,a'))falta.push('o desenho virou controle (tem de ser só leitura)');}
+      if(cn.querySelector('button,select,input,a'))falta.push('o desenho virou controle (tem de ser só leitura)');
+      // a leitura segue a grade de baixo: L2 e R2 no centro da coluna dos ícones, o efeito na borda esquerda dos rótulos
+      var rb=lt&&lt.querySelector('b'),rs=lt&&lt.querySelector('[data-leitura]'),gl=document.querySelector('.g2-gl'),ro=document.querySelector('.g2-rot .sec-rot');
+      if(rb&&rs&&gl&&ro){var cb=rb.getBoundingClientRect(),cg=gl.getBoundingClientRect();
+        if(Math.abs((cb.left+cb.right)/2-(cg.left+cg.right)/2)>1.5)falta.push('o L2 da leitura não fica na coluna dos ícones');
+        if(Math.abs(rs.getBoundingClientRect().left-ro.getBoundingClientRect().left)>1.5)falta.push('o efeito da leitura não começa na borda dos rótulos');
+        if(rs.scrollWidth>rs.clientWidth+1)falta.push('o efeito da leitura sai cortado');}}
     var ca=document.querySelector('.modo-auto');if(ca){ca.click();var lt2=document.querySelector('.g2-leitura');
       if(lt2&&!/Rígido simples/.test(lt2.textContent))falta.push('com o Modo automático, o desenho não mostra o estilo');
       var s1=document.querySelector('.g2-acion');s1.value='Rigid';s1.dispatchEvent(new Event('change'));ca.click();
@@ -118,6 +127,7 @@ JS_PEDIDO_BASE = r"""
     if(gl.length<2)falta.push('o ícone da força sumiu');
     if(gl.some(function(g){return g.querySelector('path.casco,path.vibra,path.onda');}))falta.push('o ícone da força é o controle genérico de antes');
     if(gl.some(function(g){return !g.querySelector('svg rect');}))falta.push('o ícone da força não tem o touchpad do DualSense');
+    if([...document.querySelectorAll('.vib .forca [data-dica]')].some(function(x){return /passo/i.test(x.getAttribute('data-dica'));}))falta.push('a dica da força ainda fala do passo que saiu');
     var ln=[...document.querySelectorAll('.vib .forca > .motor')].filter(vis);
     if(!ln.length||ln.some(function(m){return !m.querySelector('input[type=range]');}))falta.push('a força não é só o trilho');}
   if(aba==='06'){var tp=document.querySelector('.nav-topo');
@@ -179,6 +189,7 @@ JS_DIALOGO = r"""
       if(A>0.05&&G>R+35&&G>B+35&&G>120&&!e.closest('.nj-tog')&&!e.matches('.ext-rot,.ext-rot *'))out.verdes.push([e.className||e.tagName,i?'fundo':'cor',c]);});
   });
   var ws=[];cx.querySelectorAll('.nj-tog').forEach(function(e){ws.push(Math.round(e.getBoundingClientRect().width*10)/10);});out.igual=ws;
+  var bs=[];cx.querySelectorAll('.lc-val .btn.mini').forEach(function(e){bs.push(Math.round(e.getBoundingClientRect().width*10)/10);});out.botoes=bs;
   var gs=[];cx.querySelectorAll('.lv-linha .ext-conf').forEach(function(e){gs.push(Math.round(e.getBoundingClientRect().width*10)/10);});out.engr=gs;
   return out;})
 """
@@ -211,6 +222,8 @@ def medir_dialogos(nav, mordida: str) -> int:
                         ruins.append(f"verde de aviso {d['verdes'][:3]}")
                     if len(d["igual"]) >= 2 and max(d["igual"]) - min(d["igual"]) > 0.5:
                         ruins.append(f"as chaves do diálogo têm larguras diferentes {sorted(set(d['igual']))}")
+                    if did == "lanc-conf" and len(d.get("botoes", [])) >= 2 and max(d["botoes"]) - min(d["botoes"]) > 0.5:
+                        ruins.append(f"os botões da coluna da direita têm larguras diferentes {sorted(set(d['botoes']))}")
                     if len(d.get("engr", [])) >= 2 and max(d["engr"]) - min(d["engr"]) > 0.5:
                         ruins.append(f"as engrenagens do diálogo têm larguras diferentes {sorted(set(d['engr']))}")
                 rot = f"{aba} #{did} {w}x{h}"
