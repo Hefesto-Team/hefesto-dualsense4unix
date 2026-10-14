@@ -144,7 +144,7 @@
       "ancora_antes": ".g2-gl.g2-r2",
       "ajuste_r3": {
         "pedido": "eu vi agora isso deveria ser decido pelo estilo de jogo também não?",
-        "feito": "A linha «Força do gatilho» virou um seletor por controle, do mesmo tamanho dos de cima, com «Pelo estilo do jogo» como primeira escolha e o padrão; Forte, Média, Fraca e Desligada ficam como escolha fixa. Saíram os quatro botões lado a lado."
+        "feito": "A linha «Força do gatilho» virou um seletor por controle, do mesmo tamanho dos de cima, com «Pelo estilo do jogo» como primeira escolha e o padrão; Forte, Média, Fraca e Desligada ficam como escolha fixa. Saíram os quatro botões lado a lado. Ela vale para L2 e R2, então ganhou linha própria abaixo de um separador, com «L2 R2» à esquerda e o rótulo na mesma coluna dos de cima."
       }
     }
   ],
