@@ -104,6 +104,9 @@ def test_todo_gesto_do_html_tem_dono_ou_esta_declarado_sem_dono(a07):
 
     no_html = set(GESTO.findall(_bancada()))
     com_dono = {n for (p, n) in pacotes.GESTOS if p == PAGINA}
+    # O menu do botão direito é da casa, com um dono só em `hefesto_vivo` (régua em
+    # `test_a_base_comum_das_abas.py`): a página o traz, mas o gesto não é do usuário.
+    no_html -= pacotes.camada.GESTOS_DO_MENU
     assert no_html <= com_dono, (
         f"a página tem gestos que ninguém atende: {sorted(no_html - com_dono)}")
     assert com_dono - no_html <= {"consertar", "ver-o-que-impede",
