@@ -8296,7 +8296,7 @@ check_hefesto_hid_playstation_dkms() {
     if [[ "${staged}" -eq 1 ]]; then
         warn "${efeito} — o driver do Hefesto já está instalado para este kernel e entra no PRÓXIMO BOOT: reinicie o computador"
     elif [[ -n "${baseline}" && "${na_lista}" -eq 0 ]]; then
-        warn "${efeito} — o kernel ${kver} não está entre os conferidos (${validados:-nenhum}), e o driver do Hefesto não se constrói nele de propósito (patch/BASELINE); o de fábrica segue"
+        warn "${efeito} — o kernel ${kver} não está entre os conferidos (${validados:-nenhum}), e o driver do Hefesto não se constrói nele de propósito (patch/BASELINE); o de fábrica segue. Para o microfone voltar, inicie um kernel dessa lista ou espere o Hefesto conferir este"
     elif [[ -r "${ROOT_DIR}/scripts/dkms_lib.sh" ]] \
          && ( source "${ROOT_DIR}/scripts/dkms_lib.sh"; dkms_secure_boot_ligado && ! dkms_chave_mok_inscrita ); then
         warn "${efeito} — Secure Boot ligado e a chave do DKMS não está inscrita, e sem ela o driver do Hefesto não se instala: $( source "${ROOT_DIR}/scripts/dkms_lib.sh"; dkms_passo_da_mok )"
