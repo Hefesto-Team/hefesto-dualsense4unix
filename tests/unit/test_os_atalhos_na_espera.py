@@ -933,7 +933,7 @@ class TestOLacoDeProducao:
         tarefa = asyncio.create_task(daemon.run())
         try:
             await asyncio.wait_for(cobriu.wait(), PRAZO_DO_LACO)
-        except TimeoutError:
+        except asyncio.TimeoutError:  # no 3.10 não é o TimeoutError embutido
             chegou = sorted(set(observados), key=str)
             falta = sorted(esperados - set(observados), key=str)
             pytest.fail(
