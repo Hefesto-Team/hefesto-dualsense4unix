@@ -98,6 +98,7 @@ def test_o_botao_cinza_diz_a_razao_no_proprio_botao() -> None:
 
     MORDIDA: devolver o `<span class="ajuda porque">` ao `botao_cinza` reprova.
     """
+    # A decisão: D-1410-A-RAZAO-DO-CINZA-MORA-NO-BOTAO.
     html = monta.botao_cinza("Parar o serviço", "parar", "parar-razao", "Já está parado.")
     assert "ajuda" not in html, html
     assert ">?<" not in html.replace(" ", ""), html
@@ -108,6 +109,7 @@ def test_o_botao_cinza_diz_a_razao_no_proprio_botao() -> None:
 
 def test_o_que_resta_de_ajuda_e_de_outra_sprint_e_so_diminui() -> None:
     """Quem ainda escreve `class="ajuda"` está declarado, e o número não cresce."""
+    # A decisão: D-1410-A-RAZAO-DO-CINZA-MORA-NO-BOTAO.
     achados = {p.name: len(_CLASSE_AJUDA.findall(p.read_text(encoding="utf-8")))
                for p in _arquivos_da_interface()
                if p.name not in SEM_AJUDA}
@@ -291,6 +293,7 @@ def test_o_modo_sobrevive_ao_salvar_do_rodape() -> None:
 
     MORDIDA: tirar `modo=self.rumble.modo` ou `controles_modo=` do `to_profile` reprova.
     """
+    # A decisão: D-1410-OS-MODOS-SAO-CAMPOS-DO-PERFIL.
     from hefesto_dualsense4unix.app.draft_config import DraftConfig
 
     save_profile(_perfil("Jogo X", controles_modo=AUTO, rumble={"modo": AUTO}))
@@ -306,6 +309,7 @@ def test_o_perfil_sem_modo_escolhido_sai_igual_ao_de_ontem() -> None:
     chave `"modo": null` em todo save o faria recusar TODOS os perfis num downgrade
     (QUEM-E-QUEM-02). MORDIDA: tirar o serializador do `RumbleConfig` reprova.
     """
+    # A decisão: D-1410-OS-MODOS-SAO-CAMPOS-DO-PERFIL.
     import json
 
     caminho = save_profile(_perfil("Jogo X"))
@@ -321,6 +325,7 @@ def test_o_perfil_sem_modo_escolhido_sai_igual_ao_de_ontem() -> None:
 
 def test_os_modos_nao_se_deduzem_do_perfil() -> None:
     """Sem nada escrito a aba segue no Personalizado: o Automático nunca nasce por dedução."""
+    # A decisão: D-1410-OS-MODOS-SAO-CAMPOS-DO-PERFIL.
     from hefesto_dualsense4unix.interface.pacotes import a02_controles, a05_vibracao
 
     vib, ctl = a05_vibracao.modo_da_vibracao_do_perfil, a02_controles.modo_dos_controles_do_perfil
@@ -344,6 +349,7 @@ def test_o_webkit_cala_o_menu_dele() -> None:
 
     MORDIDA: devolver `False` (ou tirar a ligação do sinal) reprova.
     """
+    # A decisão: D-1410-O-MENU-DO-BOTAO-DIREITO-E-DA-CASA.
     from hefesto_dualsense4unix.interface import janela
 
     assert janela.PonteDaTela._calar_o_menu_do_webkit(None, None, None, None) is True
@@ -378,6 +384,7 @@ def test_os_itens_do_menu_que_mexem_na_maquina_estao_nos_perigosos() -> None:
 
     MORDIDA: tirar o `grava=` dos itens no `hefesto_vivo._registrar_o_menu` reprova.
     """
+    # A decisão: D-1410-O-MENU-DO-BOTAO-DIREITO-E-DA-CASA.
     perigosos = pacotes.perigosos()
     fora = sorted(g for g in ("menu-desligar", "menu-reiniciar", "menu-fechar")
                   if ("*", g) not in perigosos)
@@ -387,6 +394,7 @@ def test_os_itens_do_menu_que_mexem_na_maquina_estao_nos_perigosos() -> None:
 
 def test_o_desligar_do_menu_pede_a_confirmacao_da_sistema() -> None:
     """O item «Desligar» troca o texto para «Confirma?» antes do 2º clique, como na aba Sistema."""
+    # A decisão: D-1410-O-MENU-DO-BOTAO-DIREITO-E-DA-CASA.
     js = (INTERFACE / "base-comum.js").read_text(encoding="utf-8")
     assert "Confirma?" in js
     from hefesto_dualsense4unix.interface.pacotes import a09_sistema
@@ -536,6 +544,7 @@ def test_o_item_do_servico_diz_desligar_ou_ligar(servico: str, esperado: dict[st
 
     MORDIDA: fixar o rótulo «Desligar» no JS da base reprova os casos parado e pausado.
     """
+    # A decisão: D-1410-O-MENU-DO-BOTAO-DIREITO-E-DA-CASA.
     if not CHROME.exists():
         pytest.skip("sem o Chrome do sistema: a régua não tem motor")
     from playwright.sync_api import sync_playwright
@@ -587,6 +596,7 @@ def test_a_dica_da_casa_abre_no_foco_do_teclado_e_fecha_ao_sair() -> None:
 
     MORDIDA: tirar o ouvinte `focusin` da `DICA_DA_CASA` reprova (a caixa não abre no Tab).
     """
+    # A decisão: D-1410-A-DICA-ABRE-NO-FOCO.
     if not CHROME.exists():
         pytest.skip("sem o Chrome do sistema: a régua não tem motor")
     from playwright.sync_api import sync_playwright
@@ -619,6 +629,7 @@ CHAVES = {
 
 
 def test_uma_chave_por_feature_e_a_dos_gatilhos_fica() -> None:
+    # A decisão: D-1410-OS-EFEITOS-DELA-TEM-UM-DONO.
     from hefesto_dualsense4unix.interface.pacotes import meus_efeitos
 
     assert meus_efeitos.CHAVES == CHAVES
@@ -667,6 +678,7 @@ def test_criar_efeito_recusa_o_que_nao_e_efeito() -> None:
 
 def test_a_03_le_a_biblioteca_pelo_dono_novo() -> None:
     """`a03.meus_efeitos()` e a gravação da 03 passam pelo mesmo dono, na chave que já existia."""
+    # A decisão: D-1410-OS-EFEITOS-DELA-TEM-UM-DONO.
     from hefesto_dualsense4unix.interface.pacotes import a03_gatilhos, meus_efeitos
 
     a03_gatilhos._guardar_meus_efeitos({"Recuo": {"left": {"mode": "Rigid", "params": [1]}}})
