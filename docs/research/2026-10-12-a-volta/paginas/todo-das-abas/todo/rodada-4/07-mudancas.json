@@ -1,0 +1,42 @@
+{
+ "aba": "07-lancadores",
+ "nome": "Experimental",
+ "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/mockups-rodada-4/docs/research/2026-10-12-a-volta/paginas/todo-das-abas/todo/07-lancadores.html",
+ "depois": "/mnt/Apate/Desenvolvimento/hefesto-voo/mockups-rodada-4/docs/research/2026-10-12-a-volta/paginas/todo-das-abas/todo/rodada-4/07-lancadores.html",
+ "rodada": 4,
+ "altura_px": 809,
+ "rola": false,
+ "estados": {
+  "o-que-seguem": "07-lancadores.html?aba=t2#acessorios",
+  "com-dois-jogos-marcados": "07-lancadores.html?aba=t2&marcados=1#acessorios"
+ },
+ "mudancas": [
+  {
+   "n": 34,
+   "sprint": "OS-ACESSORIOS-SEGUEM-OS-JOGOS-ESCOLHIDOS-COM-A-FORCA-NO-DESLIZANTE-01",
+   "o_que_muda": "A janela Lovense, em «O que seguem», ganha a lista dos jogos que têm perfil, uma caixa por jogo; nasce toda vazia, e só você marca",
+   "resposta": "resposta 1 de 12/10 (~22h): vale em qualquer jogo que você escolher",
+   "origem": "rodada 4 (o que faltava desenho)",
+   "ancora": "[data-todo=\"34\"]",
+   "seletor": ".ja-tela.t2 .jg-lista",
+   "conflito": "Os nomes são de exemplo (os jogos com perfil). Sem nenhum jogo marcado e com «Os jogos que eu escolher» no «Quando», os acessórios ficam parados."
+  },
+  {
+   "n": 35,
+   "sprint": "OS-ACESSORIOS-SEGUEM-OS-JOGOS-ESCOLHIDOS-COM-A-FORCA-NO-DESLIZANTE-01",
+   "o_que_muda": "No lugar de «Força do Segue o jogo − 1,0 +», um deslizante por canal (Vibração, Gatilho, Háptica) para cada aparelho, de 0 a 20; o aparelho recebe o maior dos três",
+   "resposta": "resposta 2 de 12/10 (~22h) e a de ~23h: um deslizante por canal, por aparelho",
+   "origem": "rodada 4 (o que faltava desenho)",
+   "ancora": "[data-todo=\"35\"]",
+   "seletor": ".ja-tela.t2 .fz-grade",
+   "conflito": "O padrão de fábrica dos três é 10/20 (50 %), decidido por delegação, a validar por você."
+  }
+ ],
+ "por_baixo": [
+  {
+   "sprint": "O-GATILHO-E-A-HAPTICA-DO-JOGO-VIRAM-EVENTOS-PARA-AS-EXTENSOES-01",
+   "o_que_muda": "Nada na tela além dos canais Gatilho e Háptica da 35."
+  }
+ ],
+ "fora": []
+}
