@@ -42,6 +42,9 @@ JS_MEDIR = r"""
     var s=getComputedStyle(e);
     if(e!==document.body&&e!==document.documentElement&&(s.overflowY==='hidden'||s.overflowY==='auto'||s.overflowY==='scroll')&&e.scrollHeight>e.clientHeight+1&&!e.matches('textarea,select,pre'))
       out.cortes.push([nome(e),e.scrollHeight,e.clientHeight]);
+    // o conteúdo que passa da borda do quadro sem rolar (overflow visível): a linha sai pela moldura
+    if(e.matches('.quadro')&&s.overflowY==='visible'&&e.scrollHeight>e.clientHeight+1)
+      out.cortes.push([nome(e)+' (transborda)',e.scrollHeight,e.clientHeight]);
     if(e.matches('button,select,input:not([type=hidden]):not([type=range]),a[href],.nj-tog,[role=button]')){var r=e.getBoundingClientRect();
       if(r.height<24||r.width<24)out.pequenos.push([nome(e),Math.round(r.width*10)/10,Math.round(r.height*10)/10,(e.textContent||'').trim().slice(0,18)]);}
     var tem=false;for(var n=e.firstChild;n;n=n.nextSibling)if(n.nodeType===3&&n.textContent.trim())tem=true;
@@ -68,6 +71,37 @@ IGUAIS = {
            ["botões do conserto no diálogo", "#impedimentos .imp-conserta, #impedimentos .imp-item .btn"]],
     "08": [["Usar como botões / Trazer de volta", "[data-r3='13'] .features .btn, [data-r3='14'] .features .btn"]],
 }
+
+# O que ela pediu, conferido no DOM: cada página devolve a lista do que falta (vazia = o pedido está ali).
+JS_PEDIDO_BASE = r"""
+(function(aba){
+  function vis(e){var r=e.getBoundingClientRect();if(r.width<1||r.height<1)return false;
+    for(var p=e;p;p=p.parentElement){var t=getComputedStyle(p);if(t.display==='none'||t.visibility==='hidden'||+t.opacity===0)return false;}return true;}
+  function textos(sel){return [...document.querySelectorAll(sel)].filter(vis).map(function(e){return (e.textContent||'').trim();});}
+  function tem(sel,txt){return textos(sel).some(function(t){return t.indexOf(txt)>=0;});}
+  var falta=[];
+  var jan=document.querySelector('.janela .miolo')||document.body;
+  if(aba==='03'){var f=[...document.querySelectorAll('.g2-forca-sel')].filter(vis);
+    if(f.length<2)falta.push('a força por controle sumiu');
+    if(f.some(function(x){return x.options[0].text!=='Pelo estilo do jogo';}))falta.push('«Pelo estilo do jogo» não é a primeira escolha da força');}
+  if(aba==='04'){if(tem('.miolo button, .miolo [role=button]','Desligar'))falta.push('o «Desligar» voltou aos efeitos');
+    if(tem('.miolo .quadro-topo *, .miolo button, .miolo .nj-tog','Sem piscar'))falta.push('«Sem piscar» voltou como chave');
+    [...document.querySelectorAll('.miolo select')].filter(vis).forEach(function(x){var o=[...x.options].map(function(y){return y.text;});
+      if(o.indexOf('Sem efeito')<0||o.indexOf('Sem piscar')<0)falta.push('um seletor de efeito sem «Sem efeito» ou «Sem piscar»');});
+    if(tem('.miolo *','Desconectado'))falta.push('a vaga sem controle mostra nome');}
+  if(aba==='05'){if(tem('.miolo *','Criar efeitos novos'))falta.push('«Criar efeitos novos» voltou');
+    if(tem('.miolo *','Desconectado'))falta.push('as vagas 3 e 4 mostram nome');}
+  if(aba==='06'){var e=document.getElementById('nav-expl');if(!e||getComputedStyle(e).opacity!=='0')falta.push('a explicação aparece sem o mouse');
+    if([...document.querySelectorAll('.miolo button, .miolo .ajuda, .miolo [aria-label=Explicar]')].filter(vis).some(function(x){return (x.textContent||'').trim()==='i';}))falta.push('o «i» voltou');}
+  if(aba==='07'){var t=[...document.querySelectorAll('.quadro-titulo')].find(function(x){return x.textContent.trim()==='Lançadores';});
+    var topo=t&&t.closest('.quadro-topo');if(!topo||topo.textContent.trim()!=='Lançadores')falta.push('o título dos Lançadores tem mais que o nome');
+    if(tem('.miolo *','Detectar o jogo aberto')||tem('.miolo *','Procurar de novo'))falta.push('«Detectar» ou «Procurar de novo» voltou');
+    var nomes=textos('.ext-lista .ext-nome').filter(function(x){return /Lovense/.test(x);});
+    if(nomes.length!==1)falta.push('a Lovense não é uma extensão só ('+nomes.length+')');
+    if([...document.querySelectorAll('.ext-lista [data-modificacao=intiface],.ext-lista [data-modificacao=lovense-celular],.ext-lista [data-modificacao=buttplug]')].filter(vis).length!==3)falta.push('faltam as três formas da Lovense');}
+  if(aba==='10'){if([...document.querySelectorAll('[data-r3="19"]')].some(vis))falta.push('o campo do segundo controle voltou');}
+  return falta;})
+"""
 
 
 def verde_permitido(pagina: str, item) -> bool:
@@ -118,6 +152,7 @@ def medir(pw, mordida: str = "") -> int:
                     m["letrinhas"] = [x for x in m["letrinhas"] if any(c.isalnum() for c in x[2])]
                     if m["letrinhas"]:
                         ruins.append(f"letra < 12 px {m['letrinhas'][:4]}")
+                ruins += [f"o pedido: {x}" for x in pg.evaluate(JS_PEDIDO_BASE, aba)]
                 rot = f"{aba} {w}x{h}" + (" +exemplo" if exemplo else "")
                 if ruins:
                     falhas += len(ruins)

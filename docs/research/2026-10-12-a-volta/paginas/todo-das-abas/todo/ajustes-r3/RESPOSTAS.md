@@ -5,7 +5,7 @@ Rodada 3 respondida em 13/10/2026; ajustes feitos em 14/10/2026 em `todo/` (a p�
 ## r3-03-15
 - **Sprint:** A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-01
 - **As palavras dela:** «eu vi agora isso deveria ser decido pelo estilo de jogo também não?» <!-- noqa-acento: citação literal dela -->
-- **O que mudou:** A linha «Força do gatilho» virou um seletor por controle, do mesmo tamanho dos de cima, com «Pelo estilo do jogo» como primeira escolha e o padrão; Forte, Média, Fraca e Desligada ficam como escolha fixa. Saíram os quatro botões lado a lado.
+- **O que mudou:** A linha «Força do gatilho» virou um seletor por controle, do mesmo tamanho dos de cima, com «Pelo estilo do jogo» como primeira escolha e o padrão; Forte, Média, Fraca e Desligada ficam como escolha fixa. Saíram os quatro botões lado a lado. Ela vale para L2 e R2, então ganhou linha própria abaixo de um separador, com «L2 R2» à esquerda e o rótulo na mesma coluna dos de cima.
 
 ## r3-04-11
 - **Sprint:** A-LUZ-DO-CONTROLE-NAO-PISCA-PARA-QUEM-E-SENSIVEL-A-LUZ-01
@@ -20,7 +20,7 @@ Rodada 3 respondida em 13/10/2026; ajustes feitos em 14/10/2026 em `todo/` (a p�
 ## r3-06-26
 - **Sprint:** A-ABA-NAVEGACAO-DO-TODO-01
 - **As palavras dela:** «a mas remove o i, deixe que ele apareça se eu deixar o mouse sob a área.» <!-- noqa-acento: citação literal dela -->
-- **O que mudou:** Ficou a leitura A (título «Navegação»), e o «i» saiu. A explicação aparece na faixa do título, ao lado de «Navegação», quando o mouse fica parado meio segundo sobre o quadro e também no foco do teclado; some quando o mouse sai. Não cobre nenhum campo. A leitura B saiu da página.
+- **O que mudou:** Ficou a leitura A (título «Navegação»), e o «i» saiu. A explicação aparece na faixa do título, ao lado de «Navegação», quando o mouse fica parado meio segundo sobre essa faixa, onde o «i» ficava, e também no foco do teclado nela; some quando o mouse sai. Sobre a tabela ela não acende. Não cobre nenhum campo. A leitura B saiu da página.
 
 ## r3-07-29
 - **Sprint:** A-ABA-EXPERIMENTAL-DO-TODO-01
@@ -50,7 +50,7 @@ Rodada 3 respondida em 13/10/2026; ajustes feitos em 14/10/2026 em `todo/` (a p�
 ## r3-07-35
 - **Sprint:** A-ABA-LANCADORES-GANHA-AS-MODIFICACOES-01
 - **As palavras dela:** (voto «ajustar», sem texto)
-- **O que mudou:** A lista das extensões cabe sem rolar nos três tamanhos, com até seis linhas: a frase de cada forma vira só a dica quando a janela é baixa (menos de 780 px). A foto põe uma linha de exemplo da comunidade. Em 1212x809 o espaço entre as linhas também diminui um pouco, para a sexta linha caber.
+- **O que mudou:** A lista das extensões cabe sem rolar nos três tamanhos, com até seis linhas: a frase de cada forma vira só a dica quando a janela é baixa (menos de 780 px). A foto põe uma linha de exemplo da comunidade. Em 1212x809 o espaço entre as linhas também diminui um pouco, para a sexta linha caber, e os cartões dos lançadores ficam um pouco mais baixos para a última fileira não sair da moldura.
 
 ## r3-07-36
 - **Sprint:** A-ABA-LANCADORES-GANHA-AS-MODIFICACOES-01
