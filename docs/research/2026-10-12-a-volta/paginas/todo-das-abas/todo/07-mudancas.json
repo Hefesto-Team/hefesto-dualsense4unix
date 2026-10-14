@@ -2,7 +2,7 @@
   "aba": "07",
   "nome": "Experimental",
   "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/_integra-1-11/src/hefesto_dualsense4unix/interface/paginas/07-lancadores.html",
-  "depois": "/home/vitoriamaria/.local/state/hefesto-casa/leva-volta/todo/07-lancadores.html",
+  "depois": "docs/research/2026-10-12-a-volta/paginas/todo-das-abas/todo/07-lancadores.html",
   "mudancas": [
     {
       "n": 1,
@@ -457,6 +457,40 @@
         "pedido": "(sem texto, voto «ajustar»; vale o que ela pediu na 36: botões de largura igual, sem verde)",
         "feito": "A engrenagem de configurações fica ao lado da chave em todas as linhas (30 px de largura, a mesma em Kyty, Pelo Intiface, Pelo celular e DualSense como brinquedo), sem texto e sem aviso verde."
       }
+    },
+    {
+      "n": 38,
+      "sprint": "OS-ACESSORIOS-SEGUEM-OS-JOGOS-ESCOLHIDOS-COM-A-FORCA-NO-DESLIZANTE-01",
+      "o_que_muda": "A janela Lovense, em «O que seguem», ganha a lista dos jogos que têm perfil, uma caixa por jogo; nasce toda vazia, e só você marca",
+      "resposta": "resposta 1 de 12/10 (~22h): vale em qualquer jogo que você escolher",
+      "origem": "rodada 4 (o que faltava desenho)",
+      "ancora": "[data-todo=\"38\"]",
+      "seletor": ".ja-tela.t2 .jg-lista",
+      "conflito": "Os nomes são de exemplo (os jogos com perfil). Sem nenhum jogo marcado e com «Os jogos que eu escolher» no «Quando», os acessórios ficam parados.",
+      "ajuste_r4": {
+        "pedido": "ajustar os elementos tem muita coisa na tela e tá bagunçada mas a ideia é isso aí",
+        "feito": "A aba «O que seguem» da janela Lovense virou uma grade de duas colunas iguais e duas linhas da mesma altura. Em cima, «O que os acessórios seguem» e «Como os três tocam juntos» são três botões do mesmo tamanho cada, só com o nome (a explicação foi para a dica). Embaixo, os jogos: a frase «Nenhum jogo marcado…» saiu e cada jogo é uma linha de 36 px, com a caixa e o nome. Toda letra da aba tem 12 px ou mais. Os jogos e a força continuam dentro da janela que a engrenagem abre, nunca na lista."
+      },
+      "n_na_rodada_4": 34,
+      "fusao": "Na rodada 4 era a 34, número que a r3 já usava; virou 38.",
+      "rodada": 4
+    },
+    {
+      "n": 39,
+      "sprint": "OS-ACESSORIOS-SEGUEM-OS-JOGOS-ESCOLHIDOS-COM-A-FORCA-NO-DESLIZANTE-01",
+      "o_que_muda": "No lugar de «Força do Segue o jogo − 1,0 +», um deslizante por canal (Vibração, Gatilho, Háptica) para cada aparelho, de 0 a 20; o aparelho recebe o maior dos três",
+      "resposta": "resposta 2 de 12/10 (~22h) e a de ~23h: um deslizante por canal, por aparelho",
+      "origem": "rodada 4 (o que faltava desenho)",
+      "ancora": "[data-todo=\"39\"]",
+      "seletor": ".ja-tela.t2 .fz-grade",
+      "conflito": "O padrão de fábrica dos três é 10/20 (50 %), decidido por delegação, a validar por você.",
+      "ajuste_r4": {
+        "pedido": "(ajustar, sem texto)",
+        "feito": "A força de cada canal ficou com um título só («Força de cada canal», de 0 a 20) e uma grade de três colunas iguais: Vibração, Gatilho e Háptica no topo, e cada aparelho numa faixa com os três deslizantes alinhados embaixo do nome. Saíram as legendas «dois motores» e «um motor» e o «/20» de cada número; o deslizante tem 24 px de altura."
+      },
+      "n_na_rodada_4": 35,
+      "fusao": "Na rodada 4 era a 35, número que a r3 já usava; virou 39.",
+      "rodada": 4
     }
   ],
   "por_baixo": [
@@ -507,6 +541,10 @@
     {
       "sprint": "A-VOLTA-DOS-ACESSORIOS-SE-SENTE-NO-CONTROLE-E-NA-LUZ-01",
       "o_que_muda": "O motor da janela Lovense (mudanças 5, 12 e 13); o desenho não muda."
+    },
+    {
+      "sprint": "O-GATILHO-E-A-HAPTICA-DO-JOGO-VIRAM-EVENTOS-PARA-AS-EXTENSOES-01",
+      "o_que_muda": "Nada na tela além dos canais Gatilho e Háptica da 35."
     }
   ],
   "fora": [
@@ -533,5 +571,10 @@
   ],
   "altura_px": 809,
   "rola": false,
-  "rodada": 3
+  "rodada": 3,
+  "origem_da_pagina": "r3 (v3) + rodada 4",
+  "estados": {
+    "o-que-seguem": "07-lancadores.html?aba=t2#acessorios",
+    "com-dois-jogos-marcados": "07-lancadores.html?aba=t2&marcados=1#acessorios"
+  }
 }
