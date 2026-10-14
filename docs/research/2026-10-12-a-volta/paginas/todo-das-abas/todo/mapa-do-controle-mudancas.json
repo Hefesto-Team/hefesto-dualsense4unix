@@ -2,7 +2,7 @@
   "aba": "mapa-do-controle",
   "nome": "Mapa do controle",
   "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/_integra-1-11/src/hefesto_dualsense4unix/interface/paginas/mapa-do-controle.html",
-  "depois": "/home/vitoriamaria/.local/state/hefesto-casa/leva-volta/todo/mapa-do-controle.html",
+  "depois": "docs/research/2026-10-12-a-volta/paginas/todo-das-abas/todo/mapa-do-controle.html",
   "rodada": 3,
   "sprint_unificada": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
   "mudancas": [
@@ -204,6 +204,32 @@
       "ancora_antes": "#perfil",
       "hash": "#point-and-click",
       "js": "(() => { const s=document.querySelector('#perfil'); const r=s.getBoundingClientRect(); s.size=s.options.length+s.querySelectorAll('optgroup').length; s.style.cssText+=';position:fixed;z-index:99;height:auto;left:'+r.left+'px;top:'+r.top+'px;width:'+r.width+'px'; return s.size })()"
+    },
+    {
+      "n": 22,
+      "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
+      "o_que_muda": "Os moldes têm os mesmos quatro nomes da aba Navegação: Point and click, Visual novel, Mouse e Mouse e teclado; sai o grupo «Point and click» com «Só mouse», «Teclado e mouse» e Orpheus",
+      "resposta": "confirmação dela de 13/10 (~22h)",
+      "origem": "rodada 4 (o que faltava desenho)",
+      "ancora": "[data-todo=\"22\"]",
+      "seletor": "#perfil optgroup[label=\"Moldes\"] option",
+      "conflito": "Orpheus e Maid Life SS passam para «Meus perfis», porque são perfis seus e não moldes: a Navegação só lista os quatro moldes.",
+      "n_na_rodada_4": 19,
+      "fusao": "Na rodada 4 era a 19. Disputa com a 21 da r3 (os quatro moldes num grupo «Point and click»): vence a rodada 4, o grupo se chama «Moldes» e guarda os quatro da 21.",
+      "rodada": 4
+    },
+    {
+      "n": 23,
+      "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
+      "o_que_muda": "Seus perfis (Orpheus, Maid Life SS) ganham um grupo próprio, «Meus perfis», depois dos moldes",
+      "resposta": "consequência da 19",
+      "origem": "rodada 4 (o que faltava desenho)",
+      "ancora": "[data-todo=\"23\"]",
+      "seletor": "#perfil optgroup[label=\"Meus perfis\"] option",
+      "conflito": "A página do todo tinha Orpheus sob «Point and click» e Maid Life SS sob «Trocar os botões»; ao pôr os moldes nos nomes da Navegação, os dois ficaram sem grupo.",
+      "n_na_rodada_4": 20,
+      "fusao": "Na rodada 4 era a 20. O grupo «Meus perfis» (Orpheus e Maid) entra abaixo de «Moldes».",
+      "rodada": 4
     }
   ],
   "estados": {
@@ -256,5 +282,6 @@
     }
   ],
   "altura_px": 809,
-  "rola": false
+  "rola": false,
+  "origem_da_pagina": "r3 (v3) + rodada 4"
 }
