@@ -1,22 +1,23 @@
 """A interface é a lei: o deslizante do alto-falante e do fone vale no FIRMWARE, por controle.
 
-A cura `d61af1907` pôs a placa do cabo em 100 % (`alto_falante_bt.garantir_a_placa_cheia`), e ela
-escalava o alto-falante e o fone: com os 40 % do WirePlumber (fator 0,064, -23,9 dB) fora do
-caminho, a mesma posição do deslizante soava ~24 dB mais alta. E no Modo Nativo o laço não escreve
-(FEAT-NATIVE-OUTPUT-MUTE-01), então o deslizante só valia na memória.
+O byte que sai em `common[4]` (fone) e `common[5]` (alto-falante) é o do deslizante, o MESMO no
+cabo e no rádio. A placa do cabo fica em 100 % (`alto_falante_bt.garantir_a_placa_cheia`, a
+`d61af1907`), e ela não é régua: a placa nos 40 % do WirePlumber (fator 0,064, -23,9 dB) era o
+defeito. Decisão por delegação, 14/10/2026, depois da rodada 1 da bancada: com o desconto da placa
+de antes no byte do cabo (a `76747f07d`), o White no cabo soava «super baixo» e o rádio «alto e
+bom», na mesma posição do deslizante. E no Modo Nativo o laço não escreve
+(FEAT-NATIVE-OUTPUT-MUTE-01), então o som sai no report mínimo dele.
 
-A régua: para os controles 1 a 4, no cabo e no rádio, com o Nativo ligado e desligado, o byte que
-sai em `common[4]` (fone) e `common[5]` (alto-falante) é o do deslizante pela conta única
-(`speaker_scale.registrador_no_firmware`), só no controle escolhido, e a placa não é o destino.
+A régua: para os controles 1 a 4, no cabo e no rádio, com o Nativo ligado e desligado, o byte é o
+do deslizante, só no controle escolhido, e a placa não é o destino.
 
-MORDIDAS: trocar `placa_cheia=cabo` por `placa_cheia=False` em `_escrever_volume_no_handle` reprova
-o cabo; arrancar o bloco do Modo Nativo dele reprova o Nativo; mandar o deslizante ao `pactl`
-reprova `test_a_placa_nunca_e_o_destino_do_deslizante`.
+MORDIDAS: descontar qualquer coisa do byte no cabo (`efetivo = pref // 2` quando `cabo`, em
+`_escrever_volume_no_handle`) reprova o cabo e `test_o_cabo_e_o_radio_dao_o_mesmo_byte`;
+arrancar o bloco do Modo Nativo dele reprova o Nativo; mandar o deslizante ao `pactl` reprova
+`test_a_placa_nunca_e_o_destino_do_deslizante`.
 """
-
 from __future__ import annotations
 
-import math
 import threading
 from types import SimpleNamespace
 from typing import Any
@@ -28,12 +29,7 @@ from hefesto_dualsense4unix.core.backend_pydualsense import (
     PyDualSenseController,
     _PinnedPyDualSense,
 )
-from hefesto_dualsense4unix.core.speaker_scale import (
-    FATOR_DA_PLACA_DE_ANTES,
-    _db_do_registrador,
-    registrador_no_firmware,
-    volume_do_percentual,
-)
+from hefesto_dualsense4unix.core.speaker_scale import volume_do_percentual
 from hefesto_dualsense4unix.integrations import alto_falante_bt
 
 CHAVES = [f"AA:BB:CC:00:00:0{n}" for n in range(1, 5)]
@@ -117,7 +113,7 @@ def test_o_byte_do_firmware_e_o_do_deslizante(
 ) -> None:
     inst, handles = _mesa(transporte, nativo=nativo)
     deslizante = volume_do_percentual(percentual)
-    esperado = registrador_no_firmware(deslizante, placa_cheia=transporte == "cabo")
+    esperado = deslizante
 
     assert inst.set_speaker_volume(deslizante, uniq=UNIQS[jogador - 1]) is True
 
@@ -151,26 +147,20 @@ def test_o_mudo_no_nativo_sai_como_zero(transporte: str) -> None:
     assert common[rep.COMMON_SPEAKER_VOLUME] == common[rep.COMMON_HEADPHONE_VOLUME] == 0
 
 
-@pytest.mark.parametrize("percentual", range(1, 101))
-def test_a_mesma_posicao_soa_como_soava_com_a_placa_nos_40(percentual: int) -> None:
-    """No papel, pela curva de 01/08: até 1 dB do nível de antes (A CONFIRMAR NO APARELHO)."""
+@pytest.mark.parametrize("nativo", [False, True], ids=["dualsense", "nativo"])
+@pytest.mark.parametrize("percentual", [1, 25, 50, 75, 100])
+def test_o_cabo_e_o_radio_dao_o_mesmo_byte(percentual: int, nativo: bool) -> None:
+    """A mesma posição do deslizante, o mesmo byte no fio, nos dois transportes e nos quatro."""
     deslizante = volume_do_percentual(percentual)
-    antes = _db_do_registrador(deslizante) + 20 * math.log10(FATOR_DA_PLACA_DE_ANTES)
-    agora = _db_do_registrador(registrador_no_firmware(deslizante, placa_cheia=True))
-    if registrador_no_firmware(deslizante, placa_cheia=True) > 1:
-        assert abs(agora - antes) <= 1.0, (percentual, deslizante)
-
-
-def test_a_conta_e_monotona_e_zero_e_mudo() -> None:
-    bytes_do_cabo = [
-        registrador_no_firmware(volume_do_percentual(p), placa_cheia=True) for p in range(101)
-    ]
-    assert bytes_do_cabo[0] == 0
-    assert all(b >= 1 for b in bytes_do_cabo[1:]), "acima de zero nunca é mudo"
-    assert bytes_do_cabo == sorted(bytes_do_cabo)
-    for p in range(101):
-        v = volume_do_percentual(p)
-        assert registrador_no_firmware(v, placa_cheia=False) == v, "o rádio nunca passou pela placa"
+    bytes_de: dict[str, list[tuple[int, int]]] = {}
+    for transporte in ("cabo", "radio"):
+        inst, handles = _mesa(transporte, nativo=nativo)
+        for uniq in UNIQS:
+            assert inst.set_speaker_volume(deslizante, uniq=uniq) is True
+        bytes_de[transporte] = [
+            (h._volumes_audio[0], h._volumes_audio[1]) for h in handles
+        ]
+    assert bytes_de["cabo"] == bytes_de["radio"] == [(deslizante, deslizante)] * len(UNIQS)
 
 
 def test_a_placa_nunca_e_o_destino_do_deslizante(monkeypatch: pytest.MonkeyPatch) -> None:

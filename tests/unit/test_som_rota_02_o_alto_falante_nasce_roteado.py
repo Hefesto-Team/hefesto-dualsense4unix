@@ -30,7 +30,6 @@ from typing import Any
 
 from hefesto_dualsense4unix.core import backend_pydualsense as bp
 from hefesto_dualsense4unix.core import ds_output_report as rep
-from hefesto_dualsense4unix.core.speaker_scale import registrador_no_firmware
 
 
 from tests.unit.test_som_sempre_01_o_volume_nasce_em_cem import (
@@ -74,9 +73,7 @@ class TestOAltoFalanteNasceRoteado:
 
         inst.assumir_volume_padrao_na_adocao(CHAVE, handle)
 
-        assert handle._volumes_audio[1] == registrador_no_firmware(
-            bp.VOLUME_PADRAO_DO_SOM, placa_cheia=True
-        )
+        assert handle._volumes_audio[1] == bp.VOLUME_PADRAO_DO_SOM
 
     def test_o_padrao_nao_cala_a_televisao_dela(self) -> None:
         """A MORDIDA: trocar o padrão por 3 manda TODO o som para o controle."""
