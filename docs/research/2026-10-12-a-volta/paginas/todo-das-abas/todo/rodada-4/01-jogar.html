@@ -650,17 +650,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 .menu-hefesto button[disabled]{color:var(--texto-mudo,#9a9eb8);opacity:.55;cursor:default;background:transparent}
 .menu-hefesto hr{border:0;border-top:1px solid var(--border-sutil,#343746);margin:5px 4px}
 </style>
-<style data-todo-css="o-jogo-ve-r4">
-/* Rodada 4: o que o jogo vê de cada controle, a forma, o canal e o motivo quando difere do escolhido. */
-.jv{display:grid;gap:2px;padding:4px 8px 5px;border-radius:6px;background:rgba(189,147,249,.07);font-size:11.5px;color:var(--texto-mudo);line-height:1.35}
-.jv .jv-l{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
-.jv b{color:var(--fg);font-weight:600}
-.jv .jv-c{color:var(--texto-suave)}
-.jv .jv-c::before{content:"· "}
-.jv .jv-m{color:var(--orange,#ffb86c);font-size:11px}
-.jv .jv-m:empty{display:none}
-body.nativo .jv{display:none}
-</style>
 </head>
 <body class="por-controle" data-campo="nativo" data-hef-alvo="classe" data-hef-classe="nativo" data-hef-quando="sim">
 
@@ -1520,7 +1509,7 @@ body.nativo .jv{display:none}
                   <span class="chip" data-gesto="mascara" data-mascara="Xbox 360" data-campo="mascara-cartao" data-hef-alvo="classe" data-hef-quando="Xbox 360">Xbox 360</span>
                   <span class="chip" data-gesto="mascara" data-mascara="Nintendo Pro" data-campo="mascara-cartao" data-hef-alvo="classe" data-hef-quando="Nintendo Pro">Nintendo Pro</span>
 <span class="visto-fixo" data-dica="Desligado: o jogo vê o controle como ele é"><svg class="cad" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M3.6 5.2V3.9a2.4 2.4 0 0 1 4.8 0v1.3" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="2.3" y="5.2" width="7.4" height="5.4" rx="1.1" fill="currentColor"/></svg>DualSense</span><span class="visto-legenda">O jogo vê o próprio controle</span>
-                </div><div class="jv" data-todo="12" data-dica="O que o jogo enxerga: a forma do controle e o canal por onde ele chega"><span class="jv-l">O jogo vê <b class="jv-f">DualSense</b><span class="jv-c">Canal próprio</span></span><span class="jv-m"></span></div>
+                </div>
               </div>
               <div class="cartao"
                    data-controle="p2" data-conectado="sim">
@@ -1828,7 +1817,7 @@ body.nativo .jv{display:none}
                   <span class="chip on" data-gesto="mascara" data-mascara="Xbox 360" data-campo="mascara-cartao" data-hef-alvo="classe" data-hef-quando="Xbox 360">Xbox 360</span>
                   <span class="chip" data-gesto="mascara" data-mascara="Nintendo Pro" data-campo="mascara-cartao" data-hef-alvo="classe" data-hef-quando="Nintendo Pro">Nintendo Pro</span>
 <span class="visto-fixo" data-dica="Desligado: o jogo vê o controle como ele é"><svg class="cad" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M3.6 5.2V3.9a2.4 2.4 0 0 1 4.8 0v1.3" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="2.3" y="5.2" width="7.4" height="5.4" rx="1.1" fill="currentColor"/></svg>DualSense</span><span class="visto-legenda">O jogo vê o próprio controle</span>
-                </div><div class="jv" data-todo="12" data-dica="O que o jogo enxerga: a forma do controle e o canal por onde ele chega"><span class="jv-l">O jogo vê <b class="jv-f">Xbox 360</b><span class="jv-c">Canal comum</span></span><span class="jv-m"></span></div>
+                </div>
               </div>
               <div class="cartao off"
                    data-controle="p3" data-conectado="nao"
@@ -2537,18 +2526,6 @@ document.querySelectorAll('.cadeado').forEach(b => b.addEventListener('click', (
   });
   document.addEventListener('click', e => { if (!e.target.closest('.menu-hefesto')) document.querySelectorAll('.menu-hefesto.vivo').forEach(m => m.remove()); });
 })();
-</script>
-<script data-aba="o-jogo-ve-r4">
-/* Rodada 4: ?estado=modo-xbox, pro ou queda mostra os outros casos do que o jogo vê. */
-document.addEventListener('DOMContentLoaded', () => {
-  const dados = {"padrao": {"p1": ["DualSense", "Canal próprio", ""], "p2": ["Xbox 360", "Canal comum", ""]}, "modo-xbox": {"p1": ["Xbox 360", "Canal comum", "Modo Xbox: tudo vira Xbox 360"], "p2": ["Xbox 360", "Canal comum", "Modo Xbox: tudo vira Xbox 360"]}, "pro": {"p1": ["DualSense", "Canal próprio", ""], "p2": ["Pro Controller", "Canal comum", "Sem gatilho analógico nem luz de jogador"]}, "queda": {"p1": ["DualSense", "Canal comum", "Sem canal próprio: o touchpad vira mouse"], "p2": ["Xbox 360", "Canal comum", ""]}};
-  if (new URLSearchParams(location.search).get('estado') === 'modo-xbox') document.querySelectorAll('.so-ligado .degrau').forEach(d => d.classList.toggle('on', d.dataset.degrau === 'xbox'));
-  const e = dados[new URLSearchParams(location.search).get('estado')] || dados.padrao;
-  for (const [c, [forma, canal, motivo]] of Object.entries(e)) {
-    const j = document.querySelector('[data-controle="' + c + '"] .jv'); if (!j) continue;
-    j.querySelector('.jv-f').textContent = forma; j.querySelector('.jv-c').textContent = canal; j.querySelector('.jv-m').textContent = motivo;
-  }
-});
 </script>
 </body>
 </html>
