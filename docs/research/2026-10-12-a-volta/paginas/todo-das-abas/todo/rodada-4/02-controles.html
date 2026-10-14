@@ -1018,21 +1018,9 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 .menu-hefesto button[disabled]{color:var(--texto-mudo,#9a9eb8);opacity:.55;cursor:default;background:transparent}
 .menu-hefesto hr{border:0;border-top:1px solid var(--border-sutil,#343746);margin:5px 4px}
 </style>
-<style data-todo-css="o-jogo-ve-02-r4">
-.jv-btn{flex:none;height:24px;padding:0 9px;border-radius:6px;border:1px solid var(--border-forte);background:transparent;color:var(--texto-suave);font:inherit;font-size:11.5px;cursor:pointer}
-.jv-btn:hover{border-color:var(--comment);color:var(--fg)}
-.jv-pop{position:fixed;z-index:60;width:520px;padding:12px 14px 12px;border:1px solid var(--border-forte);border-radius:10px;background:var(--app-bg);box-shadow:0 10px 28px rgba(0,0,0,.55);font-size:12px;color:var(--texto-suave)}
-.jv-pop[hidden]{display:none}
-.jv-pop h4{margin:0 0 2px;font:600 13px 'Space Grotesk',system-ui,sans-serif;color:var(--fg)}
-.jv-pop .jv-sub{color:var(--texto-mudo);font-size:11.5px}
-.jv-pop .jv-mot{margin:6px 0 2px;color:var(--orange,#ffb86c);font-size:11.5px}
-.jv-grade{display:grid;grid-template-columns:1fr 1fr;gap:0 18px;margin-top:8px}
-.jv-fn{display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px;min-height:28px;border-top:1px solid var(--border-sutil)}
-.jv-fn em{font-style:normal;font-size:11px;padding:1px 8px;border-radius:999px;white-space:nowrap}
-.jv-fn em.n{color:#50fa7b;background:rgba(80,250,123,.12)}
-.jv-fn em.h{color:#bd93f9;background:rgba(189,147,249,.14)}
-.jv-fn em.x{color:var(--texto-mudo);background:rgba(255,255,255,.06)}
-.jv-fn small{display:block;color:var(--texto-mudo);font-size:10.5px}
+<style data-todo-css="desconectado-r4">
+/* Ajuste da rodada 4 (02-18): o controle desconectado mostra só a vaga do jogador e «Desconectado», sem cor de plástico, máscara, microfone, sensores nem bateria. */
+.ctl[data-conectado="nao"] > .faixa > :not(.card-nome){display:none !important}
 </style>
 <style data-todo-css="alvos-r4">
 /* Rodada 4: a sua resposta de 13/10 (~23h40), botões e letra: todo alvo de toque com 24 px e nenhuma letra abaixo de 12 px. ?alvos=hoje mostra a tela sem a mudança. */
@@ -1199,7 +1187,7 @@ html.letra-12 .quadro-corpo{gap:7px;padding-bottom:10px}
           <span class="div">·</span>
 
 
-          <span class="leia" data-dica="Como o jogo vê. Giroscópio indo ao jogo, ~250 Hz"><b data-campo="mascara">DualSense</b></span><button class="jv-btn" data-todo="17" data-dica="Quais funções chegam ao jogo, e por onde">O que chega</button><span class="div so-fechado">·</span>
+          <span class="leia" data-dica="Como o jogo vê. Giroscópio indo ao jogo, ~250 Hz"><b data-campo="mascara">DualSense</b></span><span class="div so-fechado">·</span>
           <span class="leia so-fechado" data-dica="O som deste microfone chega ao PC">Microfone <span class="selo-ativo on" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">ATIVO</span></span></span>
 
           <span class="no-jogo" data-campo="giro-no-jogo" data-hef-alvo="atributo"
@@ -1463,7 +1451,7 @@ html.letra-12 .quadro-corpo{gap:7px;padding-bottom:10px}
           <span class="div">·</span>
 
 
-          <span class="leia" data-dica="Xbox 360 não leva giroscópio ao jogo; no Hefesto segue ativo"><b data-campo="mascara">Xbox 360</b></span><button class="jv-btn" data-todo="17" data-dica="Quais funções chegam ao jogo, e por onde">O que chega</button><span class="div so-fechado">·</span>
+          <span class="leia" data-dica="Xbox 360 não leva giroscópio ao jogo; no Hefesto segue ativo"><b data-campo="mascara">Xbox 360</b></span><span class="div so-fechado">·</span>
           <span class="leia so-fechado" data-dica="Microfone calado">Microfone <span class="selo-ativo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo cortado" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">DESLIGADO</span></span></span>
 
           <span class="no-jogo" data-campo="giro-no-jogo" data-hef-alvo="atributo"
@@ -1723,7 +1711,7 @@ html.letra-12 .quadro-corpo{gap:7px;padding-bottom:10px}
 
       <input class="radio-mesa" type="radio" name="mesa" id="c-p3" data-campo="card-aberto" data-hef-alvo="marcado">
       <label class="faixa" for="c-p3" data-dica="Nenhum controle aqui">
-          <span class="card-nome" data-campo="card-vpad" data-hef-alvo="atributo" data-hef-atributo="title"><span data-campo="peca">Galactic Purple</span> <span class="pt">•</span> <span data-campo="via">Desconectado</span></span>
+          <span class="card-nome" data-campo="card-vpad" data-hef-alvo="atributo" data-hef-atributo="title"><span data-campo="peca">Player 3</span> <span class="pt">•</span> <span data-campo="via">Desconectado</span></span>
           <span class="div">·</span>
 
 
@@ -1987,7 +1975,7 @@ html.letra-12 .quadro-corpo{gap:7px;padding-bottom:10px}
 
       <input class="radio-mesa" type="radio" name="mesa" id="c-p4" data-campo="card-aberto" data-hef-alvo="marcado">
       <label class="faixa" for="c-p4" data-dica="Nenhum controle aqui">
-          <span class="card-nome" data-campo="card-vpad" data-hef-alvo="atributo" data-hef-atributo="title"><span data-campo="peca">White</span> <span class="pt">•</span> <span data-campo="via">Desconectado</span></span>
+          <span class="card-nome" data-campo="card-vpad" data-hef-alvo="atributo" data-hef-atributo="title"><span data-campo="peca">Player 4</span> <span class="pt">•</span> <span data-campo="via">Desconectado</span></span>
           <span class="div">·</span>
 
 
@@ -2325,16 +2313,6 @@ document.querySelectorAll('.seg-criar').forEach(s => s.addEventListener('click',
   });
   document.addEventListener('click', e => { if (!e.target.closest('.menu-hefesto')) document.querySelectorAll('.menu-hefesto.vivo').forEach(m => m.remove()); });
 })();
-</script>
-<div class="jv-pop" id="jv-pop" role="dialog" aria-label="O que chega ao jogo" hidden data-todo="17"><h4>O jogo vê um Xbox 360</h4><div class="jv-sub">Canal comum · rádio</div><div class="jv-mot">O modo Xbox troca toda máscara por Xbox 360</div><div class="jv-grade"><div class="jv-fn"><span>Botões</span><em class="n">Nativo</em></div><div class="jv-fn"><span>Analógicos</span><em class="n">Nativo</em></div><div class="jv-fn"><span>Gatilho analógico</span><em class="n">Nativo</em></div><div class="jv-fn"><span>Gatilho adaptativo</span><em class="h">Pelo Hefesto</em></div><div class="jv-fn"><span>Vibração</span><em class="n">Nativo</em></div><div class="jv-fn"><span>Háptica</span><em class="h">Pelo Hefesto</em></div><div class="jv-fn"><span>Luz</span><em class="h">Pelo Hefesto</em></div><div class="jv-fn"><span>Luz de jogador</span><em class="x">Não chega</em></div><div class="jv-fn"><span>Giroscópio<small>Como analógico: desligado</small></span><em class="x">Não chega</em></div><div class="jv-fn"><span>Touchpad<small>Como mouse do PC</small></span><em class="h">Pelo Hefesto</em></div><div class="jv-fn"><span>Microfone</span><em class="h">Pelo Hefesto</em></div><div class="jv-fn"><span>Alto-falante</span><em class="h">Pelo Hefesto</em></div></div></div><script data-aba="o-jogo-ve-02-r4">
-/* Rodada 4: o botão «O que chega» abre a lista das doze funções; ?estado=o-que-chega já a abre. */
-document.addEventListener('DOMContentLoaded', () => {
-  const pop = document.getElementById('jv-pop');
-  const abrir = (b) => { const r = b.getBoundingClientRect(); pop.hidden = false; const h = pop.offsetHeight; pop.style.left = Math.min(r.left, innerWidth - 540) + 'px'; pop.style.top = (r.bottom + 6 + h > innerHeight - 8 ? Math.max(8, r.top - h - 6) : r.bottom + 6) + 'px'; };
-  document.querySelectorAll('.jv-btn').forEach(b => b.addEventListener('click', (ev) => { ev.preventDefault(); ev.stopPropagation(); pop.hidden ? abrir(b) : (pop.hidden = true); }));
-  document.addEventListener('click', (ev) => { if (!pop.contains(ev.target)) pop.hidden = true; });
-  if (new URLSearchParams(location.search).get('estado') === 'o-que-chega') abrir(document.querySelectorAll('.jv-btn')[1]);
-});
 </script>
 <script data-aba="alvos-r4">
 (function () {
