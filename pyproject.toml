@@ -158,6 +158,15 @@ module = [
 ]
 ignore_missing_imports = true
 
+# O `evdev.ecodes` tem duas formas, e quem escolhe é a máquina que compilou o evdev (14/10/2026):
+# o `setup.py` dele gera o `ecodes.py` com as constantes num Python de ambiente vazio e, se esse
+# Python falha, copia o `ecodes_runtime.py`, que as cria em tempo de execução. No `act` a roda do
+# 1.9.3 sai com 97 KB (a cópia) e no runner do GitHub com 115 KB (as constantes), e o mypy reprova
+# ali 49 linhas de `ecodes.EV_KEY` que aprova aqui. O módulo é dinâmico de verdade: entra como `Any`.
+[[tool.mypy.overrides]]
+module = ["evdev.ecodes"]
+follow_imports = "skip"
+
 # Os geradores de HTML e as ferramentas de conferência da janela não passam em `strict`;
 # o caminho do produto (`hefesto_vivo`, `pacotes/*`, `onde`, `mesa_viva`, `monta`) passa.
 [[tool.mypy.overrides]]
