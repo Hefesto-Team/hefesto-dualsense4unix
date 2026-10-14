@@ -1,0 +1,2519 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hefesto — o mapa das entradas</title>
+<style>
+  :root {
+    /* Paleta Drácula — os tokens de scripts/paleta_da_casa.py, byte a byte.
+       O mockup tem de parecer parte do Hefesto, não um site sobre ele. */
+    --color-paper:      #282a36;
+    --color-paper-2:    #21222c;
+    --color-paper-3:    #343746;
+    --color-rule:       #44475a;
+    --color-ink:        #f8f8f2;
+    --color-ink-quiet:  #a8b0c8;
+    --color-ink-faint:  #6272a4;
+    --color-accent:     #bd93f9;
+    --color-ok:         #50fa7b;
+    --color-lacuna:     #ffb86c;
+    --color-alerta:     #ff5555;
+    --color-frio:       #8be9fd;
+
+    /* Pilha do sistema, como manda a casa: nada de fonte web, abre sem rede. */
+    --font-corpo: ui-sans-serif, system-ui, "Cantarell", "Fira Sans", "Segoe UI", Roboto, sans-serif;
+    --font-dado:  ui-monospace, "JetBrains Mono", "Fira Mono", "DejaVu Sans Mono", monospace;
+
+    --space-3xs: .25rem; --space-2xs: .5rem;  --space-xs: .75rem;
+    --space-sm:  1rem;   --space-md:  1.5rem; --space-lg: 2.5rem;
+
+    --text-xs: .75rem;  --text-sm: .8125rem; --text-base: .9375rem;
+    --text-lg: 1.125rem; --text-xl: 1.5rem;
+
+    --radius-sm: 3px; --radius-md: 6px;
+    --ease-out: cubic-bezier(.22,.61,.36,1);
+    --dur-fast: 120ms;
+
+    --usb3: #2c5f9e;
+    --usb2: #5b6072;
+  }
+
+  * { box-sizing: border-box; }
+  /* A CAIXA DA JANELA — 24/09/2026, decisão de produto: «vira caixa da janela,
+     rolando por dentro». O recuo e o tamanho são os das abas (as três
+     linhas no fim deste bloco); o cabeçalho fica e o `.corpo` rola. */
+  body {
+    margin: 0; background: #11121a; color: var(--color-ink);
+    font-family: var(--font-corpo); font-size: var(--text-base); line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .pagina { background: var(--color-paper); border: 1px solid var(--color-paper-3);
+            border-radius: 11px; overflow: hidden; display: flex; flex-direction: column;
+            padding: var(--space-md) var(--space-sm) 0; }
+  .pagina > .topo { flex: 0 0 auto; }
+  .pagina > .corpo { flex: 1; min-height: 0; overflow-y: auto;
+                     margin: 0 calc(-1 * var(--space-sm));
+                     padding: 0 var(--space-sm) var(--space-lg); }
+  :root{--recuo-do-corpo:16px;--piso-da-vista:777px;--teto-da-vista:855px;--alt-janela:clamp(var(--piso-da-vista), calc(100dvh - var(--recuo-do-corpo) * 2), var(--teto-da-vista))}
+  body{padding:var(--recuo-do-corpo)}
+  .pagina{width:min(100%,1600px);height:var(--alt-janela);max-width:100%;max-height:calc(100dvh - var(--recuo-do-corpo) * 2)}
+
+  /* ─── cabeçalho ─────────────────────────────────────────── */
+  .topo { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2xs) var(--space-sm);
+          padding-bottom: var(--space-xs); border-bottom: 1px solid var(--color-rule); }
+  .topo h1 { margin: 0; font-size: var(--text-xl); font-weight: 600; letter-spacing: -.01em; }
+  .topo h1 em { color: var(--color-accent); font-style: normal; }
+  .topo .nota { color: var(--color-ink-faint); font-size: var(--text-sm); margin-left: auto; }
+  /* A DATA NÃO PODE SER `.nota` — 11/09/2026. A folha do produto apaga toda
+     `.nota` (bilhete de projeto), e aqui isso deixava a página afirmando
+     «o arranjo de agora» sobre uma leitura congelada. A data é DADO da
+     página, então tem classe própria, que a folha do produto não esconde. */
+  .topo .quando { color: var(--color-ink-faint); font-size: var(--text-sm); margin-left: auto;
+                  font-family: var(--font-dado); }
+
+  /* ─── os três modos ─────────────────────────────────────── */
+  .modos { display: flex; flex-wrap: wrap; gap: var(--space-2xs); margin-top: var(--space-md); }
+  .modo {
+    font: inherit; font-size: var(--text-sm); font-weight: 600;
+    background: var(--color-paper-3); color: var(--color-ink);
+    border: 1px solid var(--color-rule); border-radius: var(--radius-sm);
+    padding: .45rem .85rem; cursor: pointer;
+    transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+  }
+  .modo:hover { background: var(--color-rule); }
+  .modo:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+  .modo[aria-pressed="true"] { border-color: var(--color-accent); background: color-mix(in srgb, var(--color-accent) 22%, var(--color-paper-3)); }
+  .modo.destaque[aria-pressed="false"] { border-color: color-mix(in srgb, var(--color-ok) 55%, transparent); color: var(--color-ok); }
+  .modo.destaque[aria-pressed="true"] { border-color: var(--color-ok); background: color-mix(in srgb, var(--color-ok) 20%, var(--color-paper-3)); color: var(--color-ink); }
+
+  /* ─── o painel que muda com o modo ──────────────────────── */
+  .painel { margin-top: var(--space-2xs); border: 1px solid var(--color-rule);
+            border-radius: var(--radius-md); background: var(--color-paper-2); padding: var(--space-sm); }
+  .painel > p.chamada { margin: 0 0 var(--space-2xs); font-size: var(--text-base); font-weight: 600; }
+  .painel > p.chamada .grande { color: var(--color-ok); }
+  .escolhas { display: flex; flex-wrap: wrap; gap: var(--space-2xs); }
+  .escolha { font: inherit; font-size: var(--text-sm); display: inline-flex; align-items: center; gap: .4rem;
+             background: var(--color-paper-3); color: var(--color-ink); border: 1px solid var(--color-rule);
+             border-radius: var(--radius-sm); padding: .35rem .7rem; cursor: pointer; }
+  .escolha:hover { background: var(--color-rule); }
+  .escolha:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+  .escolha[aria-pressed="true"] { border-color: var(--color-accent); background: color-mix(in srgb, var(--color-accent) 20%, var(--color-paper-3)); }
+  .escolha i { width: .55rem; height: .55rem; border-radius: 50%; flex: none; }
+
+  .licao { margin-top: var(--space-sm); padding-top: var(--space-sm); border-top: 1px solid var(--color-rule);
+           display: grid; grid-template-columns: minmax(0,1fr) minmax(0,15rem); gap: var(--space-sm); align-items: start; }
+  @media (max-width: 760px) { .licao { grid-template-columns: 1fr; } }
+  .licao .texto { margin: 0; font-size: var(--text-sm); color: var(--color-ink-quiet); max-width: 62ch; }
+  .licao .texto b { color: var(--color-ink); font-weight: 600; }
+  .conta-caixa { border: 1px solid var(--color-rule); border-radius: var(--radius-sm); background: var(--color-paper);
+                 padding: var(--space-2xs) var(--space-xs); font-size: var(--text-xs); }
+  .conta-caixa b { display: block; color: var(--color-ink); margin-bottom: .2rem; }
+  .conta-caixa div { font-family: var(--font-dado); color: var(--color-ink-quiet); font-variant-numeric: tabular-nums; }
+
+  /* ─── a receita: os movimentos ──────────────────────────── */
+  .receita { list-style: none; margin: 0; padding: 0; counter-reset: passo;
+             display: flex; flex-direction: column; gap: var(--space-2xs); }
+  .receita > li { counter-increment: passo; display: grid; grid-template-columns: 1.7rem minmax(0,1fr); gap: var(--space-2xs);
+                  border: 1px solid var(--color-rule); border-left: 3px solid var(--color-ok);
+                  border-radius: var(--radius-sm); background: var(--color-paper); padding: var(--space-2xs) var(--space-xs); }
+  .receita > li::before { content: counter(passo); font-family: var(--font-dado); font-weight: 600;
+                          color: var(--color-ok); font-size: var(--text-sm); line-height: 1.6; }
+  .receita h4 { margin: 0 0 .15rem; font-size: var(--text-base); font-weight: 600; }
+  .receita ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: .18rem; }
+  .receita ul li { display: flex; flex-wrap: wrap; gap: .4rem; align-items: baseline; font-size: var(--text-sm); color: var(--color-ink-quiet); }
+  .receita ul li b { color: var(--color-ink); font-weight: 600; }
+  .nada-a-fazer { border: 1px solid color-mix(in srgb, var(--color-ok) 45%, var(--color-rule));
+                  border-left: 3px solid var(--color-ok); border-radius: var(--radius-sm);
+                  background: var(--color-paper); padding: var(--space-xs) var(--space-sm); }
+  .nada-a-fazer b { color: var(--color-ok); }
+  .acoes { display: flex; flex-wrap: wrap; gap: var(--space-2xs); margin-top: var(--space-sm); }
+  .btn { font: inherit; font-size: var(--text-sm); background: var(--color-paper-3); color: var(--color-ink);
+         border: 1px solid var(--color-rule); border-radius: var(--radius-sm); padding: .35rem .7rem; cursor: pointer; }
+  .btn:hover { background: var(--color-rule); }
+  .btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+  .btn.forte { border-color: var(--color-ok); color: var(--color-ok); }
+
+  .selo { flex: none; font-family: var(--font-dado); font-size: .625rem; text-transform: uppercase;
+          letter-spacing: .06em; padding: .05rem .38rem; border-radius: 2px; border: 1px solid; }
+  .selo.medido   { color: var(--color-ok);     border-color: color-mix(in srgb, var(--color-ok) 45%, transparent); }
+  .selo.espec    { color: var(--color-frio);   border-color: color-mix(in srgb, var(--color-frio) 45%, transparent); }
+  .selo.derivado { color: var(--color-lacuna); border-color: color-mix(in srgb, var(--color-lacuna) 45%, transparent); }
+
+  /* ─── o palco ───────────────────────────────────────────── */
+  .palco { display: grid; grid-template-columns: minmax(0,1fr) 268px; gap: var(--space-md); align-items: start; margin-top: var(--space-md); }
+  @media (max-width: 900px) { .palco { grid-template-columns: 1fr; } }
+  .faces { display: flex; flex-direction: column; gap: var(--space-md); }
+  .face-cab { display: flex; align-items: baseline; gap: var(--space-2xs); margin-bottom: var(--space-2xs); }
+  .face-cab h3 { margin: 0; font-size: var(--text-sm); font-weight: 600; text-transform: uppercase; letter-spacing: .07em; }
+  .face-cab .quantas { font-size: var(--text-xs); color: var(--color-ink-faint); font-family: var(--font-dado); }
+  /* a divergência do hub: uma linha a mais, sem culpa */
+  .diverge { margin: 0 0 var(--space-2xs); font-size: var(--text-xs); color: var(--color-lacuna); }
+  .edita .lido { font-size: var(--text-xs); color: var(--color-ink-quiet); }
+  .edita .origem { font-size: var(--text-xs); color: var(--color-ink-quiet); }
+
+  .chapa { border: 1px solid var(--color-rule); border-radius: var(--radius-md);
+           background: linear-gradient(160deg, var(--color-paper-3), var(--color-paper-2)); padding: var(--space-sm); }
+  .chapa.grade-tras { display: grid; grid-template-columns: repeat(2, max-content); gap: .55rem var(--space-md); }
+  .chapa.coluna { display: flex; flex-direction: column; gap: .55rem; }
+  .chapa.fileira { display: grid; grid-template-columns: repeat(3, max-content); gap: .55rem var(--space-md); }
+  @media (max-width: 640px) { .chapa.fileira, .chapa.grade-tras { grid-template-columns: max-content; } }
+
+  /* ─── um soquete ────────────────────────────────────────── */
+  .soquete { display: flex; align-items: flex-start; gap: .45rem; }
+  .num { flex: none; min-width: 1.5rem; height: 1.5rem; padding: 0 .3rem; border-radius: 99px;
+         display: inline-grid; place-items: center; font-family: var(--font-dado); font-size: .6875rem;
+         font-weight: 600; background: var(--color-paper); color: var(--color-ink-quiet);
+         border: 1px solid var(--color-rule); margin-top: .05rem; }
+  .plug { position: relative; flex: none; margin-top: .05rem; width: 3.4rem; height: 1.45rem; border-radius: 2px;
+          border: 1px solid #0d0e13; cursor: pointer; padding: 0; background: var(--usb2);
+          transition: box-shadow var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out); }
+  .plug.v3 { background: var(--usb3); }
+  .plug::after { content: ""; position: absolute; left: .28rem; right: .28rem; top: .3rem; height: .34rem;
+                 border-radius: 1px; background: rgba(248,248,242,.55); }
+  .plug:hover { transform: translateY(-1px); }
+  .plug:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; }
+  .plug[data-v="cheia"]  { box-shadow: 0 0 0 2px var(--color-accent); }
+  .plug[data-v="melhor"] { box-shadow: 0 0 0 3px var(--color-ok), 0 0 16px 2px rgba(80,250,123,.4); }
+  .plug[data-v="serve"]  { box-shadow: 0 0 0 2px var(--color-ink-faint); }
+  .plug[data-v="evite"]  { box-shadow: 0 0 0 2px var(--color-lacuna); }
+  .plug[data-v="ruim"]   { box-shadow: 0 0 0 2px var(--color-alerta), 0 0 14px 2px rgba(255,85,85,.32); }
+  .plug[data-v="chega"]  { box-shadow: 0 0 0 3px var(--color-ok), 0 0 16px 2px rgba(80,250,123,.4); }
+  .plug[data-v="sai"]    { box-shadow: 0 0 0 2px var(--color-alerta); opacity: .55; }
+  .plug[data-v="fica"]   { box-shadow: 0 0 0 2px var(--color-ink-faint); }
+  .plug[data-problema="1"] { box-shadow: 0 0 0 2px var(--color-alerta), 0 0 14px 2px rgba(255,85,85,.32); }
+
+  .rotulo { min-width: 8.6rem; max-width: 13rem; font-size: var(--text-xs); line-height: 1.35; }
+  .rotulo .nome { display: block; font-weight: 600; }
+  .rotulo .caminho { display: block; font-family: var(--font-dado); color: var(--color-ink-faint); font-size: .6875rem; }
+  .rotulo .vazio { color: var(--color-ink-faint); font-style: italic; }
+  /* o nome que ela deu à entrada: uma linha só, com reticências */
+  .rotulo .nomeada { display: block; font-weight: 700; white-space: nowrap;
+                     overflow: hidden; text-overflow: ellipsis; }
+  .rotulo .veredito { display: block; font-weight: 600; }
+  .rotulo .veredito.melhor, .rotulo .veredito.chega { color: var(--color-ok); }
+  .rotulo .veredito.serve, .rotulo .veredito.fica { color: var(--color-ink-quiet); }
+  .rotulo .veredito.evite { color: var(--color-lacuna); }
+  .rotulo .veredito.ruim, .rotulo .veredito.sai { color: var(--color-alerta); }
+  .rotulo .veredito.cheia { color: var(--color-ink-faint); }
+  .rotulo .porque { display: block; color: var(--color-ink-quiet); }
+
+  .por-confirmar {
+    margin-top: var(--space-2xs); padding: var(--space-2xs) var(--space-xs);
+    border: 1px dashed var(--color-lacuna); border-radius: var(--radius-sm);
+    background: color-mix(in srgb, var(--color-lacuna) 8%, var(--color-paper-2));
+  }
+  .por-confirmar > b { display: block; font-size: var(--text-sm); color: var(--color-lacuna); margin-bottom: .3rem; }
+  .pend-lista { display: flex; flex-wrap: wrap; gap: .3rem; }
+  .pend-lista .chip.pend { width: auto; min-width: 11rem; }
+  .por-confirmar .pend-ajuda { display: block; margin-top: .35rem; font-size: var(--text-xs); color: var(--color-ink-faint); }
+  .plug[data-v="fora"] { opacity: .35; box-shadow: none; cursor: not-allowed; }
+  .rotulo .veredito.fora { color: var(--color-ink-faint); }
+
+  .filho { margin-left: 2rem; padding-left: var(--space-sm); border-left: 2px dashed var(--color-rule); margin-top: .3rem; }
+  .filho .cabo { font-size: var(--text-xs); color: var(--color-ink-faint); margin-bottom: .2rem; }
+
+  /* ─── bandeja ───────────────────────────────────────────── */
+  .bandeja { border: 1px solid var(--color-rule); border-radius: var(--radius-md); background: var(--color-paper-2); padding: var(--space-xs); }
+  .bandeja h3 { margin: 0 0 var(--space-3xs); font-size: var(--text-sm); font-weight: 600; }
+  .bandeja p.ajuda { margin: 0 0 var(--space-2xs); font-size: var(--text-xs); color: var(--color-ink-faint); }
+  .lista { display: flex; flex-direction: column; gap: .3rem; }
+  .chip { display: flex; align-items: center; gap: .5rem; width: 100%; font: inherit; font-size: var(--text-xs);
+          text-align: left; background: var(--color-paper-3); color: var(--color-ink);
+          border: 1px solid var(--color-rule); border-radius: var(--radius-sm); padding: .35rem .5rem; cursor: pointer; }
+  .chip:hover { border-color: var(--color-ink-faint); }
+  .chip:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+  .chip[data-alocado="1"] { opacity: .45; }
+  .chip[data-segurando="1"] { border-color: var(--color-ok); background: color-mix(in srgb, var(--color-ok) 16%, var(--color-paper-3)); opacity: 1; }
+  .chip .marca { flex: none; width: .5rem; height: .5rem; border-radius: 50%; }
+  .chip .txt { flex: 1; min-width: 0; }
+  .chip .txt b { display: block; font-weight: 600; }
+  .chip .txt span { display: block; font-family: var(--font-dado); color: var(--color-ink-faint); font-size: .6875rem; }
+
+  .legenda { display: flex; flex-wrap: wrap; gap: var(--space-sm); margin-top: var(--space-xs);
+             font-size: var(--text-xs); color: var(--color-ink-faint); }
+  .legenda span { display: inline-flex; align-items: center; gap: .35rem; }
+  .amostra { width: 1.4rem; height: .65rem; border-radius: 2px; border: 1px solid #0d0e13; flex: none; }
+  .amostra.v3 { background: var(--usb3); } .amostra.v2 { background: var(--usb2); }
+  .amostra.r-ok { background: transparent; border: 2px solid var(--color-ok); }
+  .amostra.r-ev { background: transparent; border: 2px solid var(--color-lacuna); }
+  .amostra.r-ru { background: transparent; border: 2px solid var(--color-alerta); }
+
+  /* ─── desempenho ────────────────────────────────────────── */
+  .secao { margin-top: var(--space-lg); }
+  .secao > h2 { margin: 0 0 var(--space-2xs); font-size: var(--text-base); font-weight: 600; color: var(--color-accent); }
+  .secao > .sub { margin: 0 0 var(--space-sm); font-size: var(--text-sm); color: var(--color-ink-faint); max-width: 70ch; }
+  .moldura { border: 1px solid var(--color-rule); border-radius: var(--radius-md); background: var(--color-paper-2); padding: var(--space-sm); }
+  .adaptadores { display: flex; flex-direction: column; gap: var(--space-2xs); }
+  .adap { display: grid; grid-template-columns: 13rem minmax(0,1fr) 10rem; gap: var(--space-2xs) var(--space-sm); align-items: center; font-size: var(--text-sm); }
+  @media (max-width: 720px) { .adap { grid-template-columns: 1fr; } }
+  .adap .quem b { font-weight: 600; }
+  .adap .quem span { display: block; font-family: var(--font-dado); font-size: var(--text-xs); color: var(--color-ink-faint); }
+  .barra { height: .55rem; border-radius: 99px; background: var(--color-paper-3); border: 1px solid var(--color-rule); overflow: hidden; }
+  .barra i { display: block; height: 100%; background: var(--color-accent); }
+  .barra i.folgada  { background: var(--color-ok); }
+  .barra i.apertada { background: var(--color-lacuna); }
+  .barra i.cheia    { background: var(--color-alerta); }
+  .conta { font-family: var(--font-dado); font-size: var(--text-xs); font-variant-numeric: tabular-nums; color: var(--color-ink-quiet); text-align: right; }
+  .conta em { font-style: normal; color: var(--color-ok); }
+  .conta em.folgada  { color: var(--color-ok); }
+  .conta em.apertada { color: var(--color-lacuna); }
+  .conta em.cheia    { color: var(--color-alerta); }
+
+  .linha-perfil { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; margin-bottom: .5rem; }
+  .linha-mic { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem;
+               margin: 0 0 .9rem; padding: var(--space-2xs) var(--space-xs);
+               border: 1px solid var(--color-rule); border-left: 3px solid var(--color-frio);
+               border-radius: var(--radius-sm); background: var(--color-paper); }
+  .linha-mic > b { font-size: var(--text-sm); margin-right: .3rem; }
+  .mic-porque { flex: 1 1 22rem; font-size: var(--text-xs); color: var(--color-ink-faint); }
+  .mic-porque b { color: var(--color-ink-quiet); }
+
+  .controles-ctl { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; margin-bottom: .5rem; }
+  .ctl-rot { font-size: var(--text-sm); color: var(--color-ink-quiet); }
+  .ctl-nota { margin: 0 0 .9rem; font-size: var(--text-xs); color: var(--color-ink-faint); max-width: 74ch; }
+  .ctl-nota b { color: var(--color-ink-quiet); }
+  .veredito-mesa { margin-top: .7rem; padding: var(--space-2xs) var(--space-xs); border-radius: var(--radius-sm);
+                   border: 1px solid var(--color-rule); border-left: 3px solid var(--color-ok);
+                   font-size: var(--text-sm); color: var(--color-ink-quiet); }
+  .veredito-mesa.ruim { border-left-color: var(--color-alerta); }
+  .veredito-mesa.aviso { border-left-color: var(--color-lacuna); margin-top: .5rem; }
+  .veredito-mesa b { color: var(--color-ink); }
+  .veredito-mesa .selo { display: inline-block; }
+  ul.mudar { margin: .4rem 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: .3rem; }
+  ul.mudar li { font-size: var(--text-sm); }
+  ul.mudar .passo { color: var(--color-ink-faint); font-size: var(--text-xs); }
+
+  .rodape { margin-top: var(--space-lg); padding-top: var(--space-sm); border-top: 1px solid var(--color-rule);
+            font-size: var(--text-xs); color: var(--color-ink-faint); max-width: 78ch; }
+  .rodape p { margin: 0 0 var(--space-2xs); }
+  .rodape code { font-family: var(--font-dado); color: var(--color-ink-quiet); }
+  .rodape b { color: var(--color-ink-quiet); }
+  .rolar { overflow-x: auto; }
+</style>
+<style>
+  /* O MAPA DAS CONEXÕES — 26/09/2026, os pedidos olhando a página. */
+  /* «a cor de fonte de qualquer cinza que tem na página muda pra branco» */
+  :root { --color-ink-quiet: #f8f8f2; --color-ink-faint: #f8f8f2; }
+  .pagina { --texto-suave: #f8f8f2; --texto-mudo: #f8f8f2; }
+  /* as bordas que usavam o cinza continuam cinza: só a LETRA ficou branca */
+  .plug[data-v="serve"], .plug[data-v="fica"] { box-shadow: 0 0 0 2px #6272a4; }
+  .chip:hover { border-color: #6272a4; }
+  /* o cartão que já tem entrada não se apaga mais: o número diz que ele tem lugar */
+  .chip[data-alocado="1"] { opacity: 1; }
+  /* «Examinar» mora no cabeçalho, onde estava a data da leitura */
+  .topo .examinar { margin-left: auto; align-self: center; display: inline-flex;
+                    align-items: center; gap: .4rem; }
+  .topo .examinar span { pointer-events: none; }
+  /* a linha do exemplo já empurra o «Examinar» para a direita */
+  .topo .quando + .examinar { margin-left: 0; }
+  .painel span.fina { margin-left: .8rem; font-weight: 400; font-size: var(--text-sm); }
+  /* o editor da entrada: o que tem nela e a velocidade dela */
+  .palco { position: relative; }
+  .rotulo .decl { display: inline-block; margin: .15rem 0 0 .4rem; padding: 0 .4rem;
+                  border: 1px solid var(--color-accent); border-radius: var(--radius-sm);
+                  color: var(--color-accent); font-size: .6875rem; }
+  .edita { position: absolute; z-index: 5; width: 300px; display: flex; flex-direction: column;
+           gap: .6rem; padding: .7rem .8rem; background: var(--color-paper-2);
+           border: 1px solid var(--color-accent); border-radius: var(--radius-md);
+           box-shadow: 0 8px 24px rgba(0,0,0,.45); }
+  .edita[hidden] { display: none; }
+  .edita-cab { display: flex; align-items: center; gap: .5rem; }
+  .edita-cab b { font-size: var(--text-base); }
+  .edita-cab span { font-size: var(--text-xs); }
+  .edita-cab .fecha { margin-left: auto; min-width: 0; width: 1.8rem; height: 1.8rem;
+                      padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+  .edita-linha { display: flex; flex-direction: column; gap: .3rem; }
+  .edita-linha > span { font-size: var(--text-xs); font-weight: 600; }
+  .edita .seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .3rem; }
+  .edita .seg.dois { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .edita .seg .escolha { justify-content: center; text-align: center; }
+  /* a escolha que não cabe: cinza, com a razão na dica, e responde (D-03) */
+  .edita .seg .escolha.apagado { opacity: .45; cursor: not-allowed; }
+  .edita .seg .escolha.apagado:hover { background: var(--color-paper-3); }
+  /* o nome da entrada: o campo tem fundo, cor e borda próprios — no
+     WebKitGTK o campo sem eles nasce com as cores do sistema */
+  .edita .campo-nome { font: inherit; font-size: var(--text-sm); width: 100%;
+                         box-sizing: border-box; padding: .35rem .5rem;
+                         background: var(--color-paper); color: var(--color-ink);
+                         border: 1px solid var(--color-rule); border-radius: var(--radius-sm); }
+  .edita .campo-nome:focus { outline: none; border-color: var(--color-accent); }
+  /* a lista da troca: fundo, cor e borda próprios (no WebKitGTK o que não
+     os tem nasce cinza) */
+  .edita .troca { font: inherit; font-size: var(--text-sm); width: 100%;
+                  box-sizing: border-box; padding: .3rem .4rem;
+                  background: var(--color-paper); color: var(--color-ink);
+                  border: 1px solid var(--color-rule); border-radius: var(--radius-sm); }
+  .edita .troca option { background: var(--color-paper); color: var(--color-ink); }
+  /* O NOME COMPRIDO NO CABEÇALHO — 26/09/2026: a face desce inteira para a
+     linha de baixo quando não cabe ao lado do nome, e o «Fechar» fica no canto. */
+  .edita-cab { flex-wrap: wrap; position: relative; padding-right: 2.2rem; row-gap: .1rem; }
+  .edita-cab span { white-space: nowrap; }
+  .edita-cab .fecha { position: absolute; top: 0; right: 0; }
+  /* O PAINEL DO APARELHO — 04/10/2026, O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01 */
+  .rotulo .ap-btn { display: inline-block; max-width: 100%; margin: 0; padding: .06rem .45rem;
+                    font: inherit; font-weight: 600; text-align: left; cursor: pointer;
+                    background: var(--color-paper-3); border: 1px solid var(--color-rule);
+                    border-radius: var(--radius-sm); }
+  .rotulo .ap-btn:hover { border-color: #6272a4; }
+  .rotulo .ap-btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+  .rotulo .ap-btn[draggable="true"] { cursor: grab; }
+  .edita .acoes-do-aparelho a.btn { display: inline-block; text-decoration: none; }
+  .soquete.alvo-do-arrasto { outline: 2px dashed var(--color-ok); outline-offset: 3px; border-radius: var(--radius-sm); }
+  body.arrastando .soquete[data-soquete] { cursor: copy; }
+  .edita .ap-cab { padding-right: 2.2rem; }
+  .edita .campo-nome.titulo { font-weight: 700; font-size: var(--text-base); background: transparent;
+                              border: 0; border-bottom: 1px dashed var(--color-rule); border-radius: 0;
+                              padding: .15rem 0; }
+  .edita .tipos, .edita .etqs { display: flex; flex-wrap: wrap; gap: .3rem; }
+  .edita .tipos .escolha { display: inline-flex; align-items: center; gap: .3rem; padding: .2rem .5rem; }
+  .edita .tipos .escolha i { width: .55rem; height: .55rem; border-radius: 50%; display: inline-block; }
+  .edita .tipos .escolha[aria-pressed="true"] { border-color: var(--color-accent);
+                    background: color-mix(in srgb, var(--color-accent) 18%, var(--color-paper-3)); }
+  .edita .etq { padding: .12rem .45rem; font-family: var(--font-dado); font-size: .6875rem;
+                border: 1px solid var(--color-rule); border-radius: var(--radius-sm); }
+  .edita .etq.medida { border-style: dashed; }
+  /* A FAIXA DELE (desenho 2): pintado é o canal bom; vazio, com a marca de quem o tomou */
+  .edita .faixa-dele { display: grid; grid-template-columns: repeat(79, 1fr); gap: 1px;
+                       height: .75rem; }
+  .edita .faixa-dele i { display: block; border-radius: 1px; background: transparent;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-rule) 60%, transparent); }
+  .edita .faixa-dele i.b, .edita .faixa-dele i.o {
+    background: var(--cor-faixa, var(--color-ink)); box-shadow: none; }
+  .edita .faixa-dele i.p { box-shadow: inset 0 -3px 0 var(--marca, var(--color-rule)); }
+  .edita .faixa-dele i.o { box-shadow: inset 0 -3px 0 var(--marca, transparent); }
+  .edita .faixa-dele-txt { display: block; margin-top: .25rem; font-family: var(--font-dado);
+                           font-size: .6875rem; text-transform: none; }
+  .edita .faixa-dele-txt .marca-txt { display: inline-block; width: .5rem; height: .5rem;
+    margin-right: .25rem; border-radius: 1px; background: var(--marca); }
+  .edita .onde { display: flex; align-items: center; justify-content: space-between; gap: .5rem;
+                 font-size: var(--text-sm); }
+  .edita .chave { display: inline-flex; align-items: center; gap: .4rem; font: inherit;
+                  font-size: var(--text-xs); color: var(--color-ink); cursor: pointer;
+                  background: transparent; border: 0; padding: .1rem; }
+  .edita .chave i { position: relative; width: 2rem; height: 1.1rem; border-radius: 1rem;
+                    background: var(--color-paper-3); border: 1px solid var(--color-rule); }
+  .edita .chave i::after { content: ""; position: absolute; top: 1px; left: 1px; width: .85rem; height: .85rem;
+                           border-radius: 50%; background: var(--color-ink); transition: transform .15s; }
+  .edita .chave[aria-checked="true"] i { background: var(--color-accent); border-color: var(--color-accent); }
+  .edita .chave[aria-checked="true"] i::after { transform: translateX(.9rem); }
+  .edita .chave:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+  .edita .faz { display: flex; align-items: center; justify-content: space-between; gap: .5rem;
+                padding: .45rem .55rem; border: 1px solid color-mix(in srgb, var(--color-ok) 45%, transparent);
+                border-radius: var(--radius-sm); font-size: var(--text-sm);
+                background: color-mix(in srgb, var(--color-ok) 8%, var(--color-paper-2)); }
+  .edita .acoes-do-aparelho { flex-direction: row; flex-wrap: wrap; gap: .4rem; }
+  .edita .dica-id { margin: 0; font-size: var(--text-xs); }
+  .edita .mais summary { cursor: pointer; font-size: var(--text-xs); font-weight: 600; }
+  .edita .mais[open] { display: flex; flex-direction: column; gap: .6rem; }
+  .plug[data-achado="1"] { box-shadow: 0 0 0 3px var(--color-accent), 0 0 18px 3px rgba(189,147,249,.55); }
+  .aviso-uma-linha { display: flex; align-items: center; gap: .6rem; margin: 0;
+                     padding: .45rem .7rem; border: 1px solid color-mix(in srgb, var(--color-ok) 55%, transparent);
+                     border-radius: var(--radius-sm); font-size: var(--text-sm);
+                     background: color-mix(in srgb, var(--color-ok) 10%, var(--color-paper-2)); }
+  .aviso-uma-linha .ok { color: var(--color-ok); font-weight: 700; }
+  .aviso-uma-linha .btn.pequeno { padding: .1rem .5rem; font-size: var(--text-xs); }
+  .aviso-uma-linha .aviso-fecha { margin-left: auto; min-width: 0; width: 1.8rem; height: 1.8rem; padding: 0; }
+  .aviso-detalhe { margin-top: .6rem; }
+  .leitura-da-maquina { margin: .5rem 0 0; font-size: var(--text-xs); line-height: 1.5; }
+  /* «Arruma o alinhamento dos blocos» — 26/09/2026. O «Voltar» entra na linha
+     do título, os três modos têm a mesma largura, as colunas de entradas têm a
+     mesma largura em todas as chapas, e a bandeja começa na altura da primeira
+     chapa e acompanha a rolagem. */
+  .topo { padding-left: 0 !important; align-items: center; }
+  .topo > a[href="08-conexoes.html"] { position: static !important; }
+  .modos { display: grid; grid-template-columns: repeat(3, 8.5rem); }
+  .modos .modo { justify-content: center; text-align: center; }
+  /* AS ENTRADAS SE ARRUMAM SOZINHAS — 01/10/2026 (pedido d): quantas colunas de
+     17rem couberem, nas três formas; a Frente vira uma linha, e o hub, duas. */
+  .chapa.coluna, .chapa.grade-tras, .chapa.fileira {
+    display: grid; grid-template-columns: repeat(auto-fill, 17rem); gap: .55rem var(--space-md); }
+  /* A LEGENDA SOBE para a linha dos modos, à direita (pedido e) */
+  .pagina > .corpo { display: grid; grid-template-columns: auto minmax(0, 1fr);
+                     column-gap: var(--space-md); align-content: start; }
+  .pagina > .corpo > * { grid-column: 1 / -1; }
+  .pagina > .corpo > .modos { grid-column: 1; grid-row: 1; }
+  .pagina > .corpo > .legenda { grid-column: 2; grid-row: 1; justify-self: end;
+                                align-self: center; margin-top: 0; }
+  .palco > .bandeja { margin-top: 29px; position: sticky; top: .5rem; }
+  /* «ATUALMENTE CONECTADO» ROLA POR DENTRO e acaba no fim da última face (pedido a).
+     Só com o palco em duas colunas: numa coluna só a bandeja tem linha própria,
+     e a altura da linha seria zero. */
+  @media (min-width: 901px) {
+    .palco > .bandeja { position: static; align-self: stretch; height: 0;
+                        min-height: calc(100% - 29px); box-sizing: border-box;
+                        display: flex; flex-direction: column; }
+    .palco > .bandeja .lista { flex: 1 1 0; min-height: 0; overflow-y: auto; }
+  }
+  @media (max-width: 900px) {
+    .palco > .bandeja .lista { max-height: 22rem; overflow-y: auto; }
+  }
+  /* O ADICIONAR NUMA LINHA: a pergunta e as escolhas lado a lado (pedido g) */
+  .painel > #chamada-mao { display: inline-block; margin: 0 var(--space-sm) 0 0;
+                           vertical-align: middle; }
+  .painel > #chamada-mao + .escolhas { display: inline-flex; vertical-align: middle; }
+  /* O «?» DA CASA: a razão de cada movimento das Sugestões mora nele (pedido f).
+     O `p.ajuda` da bandeja é outra peça: a regra mora só dentro da receita. */
+  .receita .ajuda { display: inline-grid; place-items: center; width: 17px; height: 17px;
+                    margin-left: .45rem; border-radius: 50%; border: 1px solid var(--color-rule);
+                    color: var(--color-ink-quiet); font-size: 11px; font-weight: 400;
+                    line-height: 1; cursor: help; position: relative; vertical-align: middle; }
+  .receita .ajuda:hover, .receita .ajuda:focus { border-color: var(--color-frio);
+                                                 color: var(--color-frio); outline: none; }
+  .receita .ajuda .dica { display: none; position: absolute; left: 22px; top: -4px;
+                          width: 26rem; z-index: 40; flex-direction: column; gap: .3rem;
+                          padding: .55rem .7rem; background: var(--color-paper-2);
+                          border: 1px solid var(--color-rule); border-radius: var(--radius-md);
+                          font-size: var(--text-xs); line-height: 1.5;
+                          color: var(--color-ink); text-align: left; }
+  .receita .ajuda:hover .dica, .receita .ajuda:focus .dica,
+  .receita .ajuda:focus-within .dica { display: flex; }
+  .receita .ajuda .dica > span { display: flex; gap: .4rem; align-items: baseline; }
+  .painel > p.ganho { margin: .5rem 0 0; display: flex; gap: .4rem; align-items: baseline;
+                      font-size: var(--text-sm); }
+  @media (max-width: 640px) {
+    .chapa.coluna, .chapa.fileira, .chapa.grade-tras { grid-template-columns: minmax(0, 1fr); }
+    .modos { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .palco > .bandeja { margin-top: 0; position: static; }
+    .pagina > .corpo > .legenda { grid-column: 1 / -1; grid-row: auto; justify-self: start; }
+  }
+
+  /* ══ 05/10/2026, conjunto «Conexões 3»: o desenho aprovado do Mapa ══ */
+  .pagina > .topo { padding-top: 6px; padding-bottom: 6px; margin-bottom: 6px; }
+  .painel { padding: 8px 14px; }
+  .palco { margin-top: 8px; }
+  .faces { gap: 4px; }
+  .face-cab { margin-top: 8px; margin-bottom: 4px; }
+  .chapa { padding-top: 6px; padding-bottom: 6px; row-gap: 4px; }
+  .chapa.coluna, .chapa.grade-tras, .chapa.fileira { grid-template-columns: repeat(auto-fill, minmax(205px, 1fr)); }
+  .por-confirmar { padding: 6px 12px; margin-top: 6px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+  .por-confirmar > b { margin: 0; }
+  .pend-lista { margin: 0; }
+  .receita { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 6px; margin: 6px 0; }
+  .receita > li { margin: 0; padding: 6px 10px; }
+  .receita h4 { font-size: 13.5px; margin: 0; }
+  .painel .acoes { margin-top: 6px; }
+  .palco > .bandeja .lista { overflow: visible; gap: 4px; flex: none; }
+  .bandeja .chip { padding-top: 4px; padding-bottom: 4px; }
+  .bandeja .chip .num { height: 1.2rem; min-width: 1.2rem; margin-top: 0; }
+  @media (min-width: 901px) { .palco > .bandeja { height: auto; min-height: 0; align-self: start; } }
+  /* o painel único: o aparelho e a entrada, lado a lado */
+  #edita.painel-unico { position: fixed; z-index: 80; width: 540px; max-width: calc(100vw - 24px); padding: 0; gap: 0;
+                        background: var(--color-paper-2); border: 1px solid var(--color-rule); border-radius: 14px;
+                        box-shadow: 0 18px 48px rgba(0,0,0,.6); }
+  .painel-unico .cab { display: flex; align-items: center; gap: 10px; padding: 14px 16px 12px; }
+  .painel-unico .cab .bola { width: 12px; height: 12px; border-radius: 50%; flex: none; }
+  .painel-unico .cab b { font-size: 16px; }
+  .painel-unico .cab .onde { font-size: 13px; }
+  .painel-unico .cab .fecha { margin-left: auto; background: none; border: 0; color: inherit; font-size: 20px;
+                              line-height: 1; cursor: pointer; padding: 2px 6px; border-radius: 6px; }
+  .painel-unico .colunas { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--color-rule); }
+  .painel-unico .col { padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .painel-unico .col + .col { border-left: 1px solid var(--color-rule); }
+  .painel-unico h5 { margin: 0; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: #6272a4; }
+  .painel-unico .campo { display: grid; grid-template-columns: 72px minmax(0, 1fr); align-items: center; gap: 10px; }
+  .painel-unico .campo > span { font-size: 13px; }
+  .painel-unico .seg { display: flex; gap: 2px; padding: 2px; border: 1px solid var(--color-rule); border-radius: 8px;
+                       background: var(--color-paper); }
+  .painel-unico .seg .escolha { flex: 1; justify-content: center; border: 0; background: none; padding: 4px 6px; }
+  .painel-unico .seg .escolha[aria-pressed="true"] { background: color-mix(in srgb, var(--color-accent) 20%, transparent);
+                                                     font-weight: 600; }
+  .painel-unico .seg .escolha.apagado { opacity: .45; cursor: not-allowed; }
+  .painel-unico .sel { position: relative; display: flex; align-items: center; }
+  .painel-unico .sel i { position: absolute; left: 10px; width: 9px; height: 9px; border-radius: 50%; pointer-events: none; }
+  .painel-unico select { width: 100%; font: inherit; font-size: var(--text-sm); padding: 6px 10px 6px 26px;
+                         background: var(--color-paper); color: var(--color-ink); border: 1px solid var(--color-rule);
+                         border-radius: 8px; cursor: pointer; }
+  .painel-unico select option { background: var(--color-paper); color: var(--color-ink); }
+  .painel-unico .estado { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 6px 10px;
+                          border-radius: 8px; min-height: 32px; box-sizing: border-box; }
+  .painel-unico .estado.bom { background: color-mix(in srgb, var(--color-ok) 9%, transparent); color: var(--color-ok); }
+  .painel-unico .estado.troca { background: color-mix(in srgb, var(--color-lacuna) 9%, transparent); color: var(--color-lacuna); }
+  .painel-unico .estado.troca .btn { margin-left: auto; padding: 3px 12px; }
+  .painel-unico .vazia { flex: 1; display: flex; align-items: center; justify-content: center; text-align: center;
+                         min-height: 90px; padding: 0 10px; font-size: 13px; color: #6272a4;
+                         border: 1px dashed var(--color-rule); border-radius: 10px; }
+  .painel-unico .pe { display: flex; align-items: center; gap: 8px; justify-content: flex-end; padding: 12px 16px;
+                      border-top: 1px solid var(--color-rule); }
+  .painel-unico .pe .dica-id { margin-right: auto; font-size: var(--text-xs); }
+  .painel-unico .chave { justify-self: start; }
+</style>
+<style data-todo-css="cadeia-e-registro">
+  .modos { grid-template-columns: repeat(4, 8.5rem); }
+  .palco[hidden], .painel[hidden], .legenda[hidden], .registro[hidden] { display: none !important; }
+  .bandeja .chip.recuado { margin-left: 1rem; width: calc(100% - 1rem); }
+  .palco > .bandeja .lista { gap: 3px; }
+  .bandeja .chip { padding-top: 2px; padding-bottom: 2px; }
+  .por-confirmar { padding-top: 4px; padding-bottom: 4px; margin-top: 4px; }
+  .face-cab { margin-top: 6px; }
+  .bandeja .chip .txt span.enlace { color: var(--color-lacuna); }
+  .bandeja .chip.sumiu { opacity: .5; border-style: dashed; cursor: default; }
+  .registro { margin-top: 8px; border: 1px solid var(--color-rule); border-radius: var(--radius-md);
+              background: var(--color-paper-2); padding: 8px 14px; }
+  .registro-cab { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 6px; }
+  .registro-cab .ouvindo { font-size: var(--text-xs); color: var(--color-ink-faint); font-family: var(--font-dado); }
+  .registro-linhas { list-style: none; margin: 0; padding: 0; max-height: 540px; overflow-y: auto; }
+  .registro-linhas li { display: grid; grid-template-columns: 4rem 9.5rem minmax(0, 1fr) 11rem; align-items: center;
+                        gap: .75rem; padding: 6px 4px; border-top: 1px solid var(--color-rule); font-size: var(--text-sm); }
+  .registro-linhas li:first-child { border-top: 0; }
+  .registro-linhas time { font-family: var(--font-dado); color: var(--color-ink-faint); font-size: var(--text-xs); }
+  .registro-linhas .ev { font-weight: 600; color: var(--color-ok); }
+  .registro-linhas .ev.sai { color: var(--color-ink-quiet); }
+  .registro-linhas .ev.lento, .registro-linhas .ev.sumiu { color: var(--color-lacuna); }
+  .registro-linhas .quem { display: flex; align-items: center; gap: .5rem; min-width: 0; color: var(--color-ink-quiet); }
+  .registro-linhas .quem b { color: var(--color-ink); font-weight: 600; }
+  .registro-linhas .quem .marca { flex: none; width: .5rem; height: .5rem; border-radius: 50%; }
+  .registro-linhas .onde { color: var(--color-ink-faint); font-size: var(--text-xs); text-align: right; }
+</style>
+<style id="todo-alvos">
+  .ap-btn{min-height:24px}
+  .plug{min-height:24px}
+</style>
+<style data-todo-css="sem-rolagem">
+  /* Volta 2 (12/10): o corpo rolava 5 px em 1212x809 (já rolava 8 no publicado): o pé de 40 px vira 32. */
+  .pagina > .corpo{padding-bottom:32px}
+</style>
+<style id="base-comum">
+/* ===== Base comum das abas (rodada 2, 12/10/2026) =====
+   Copiada IGUAL em todo mockup do todo. Três peças: a dica no hover (sem «?»), o Modo automático
+   e o menu do botão direito desenhado no visual das abas (BRIEF-T6, opção B). */
+
+/* 1. A dica: qualquer frase, botão ou área com data-dica mostra a dica ao passar o mouse ou focar.
+      Nenhum botão «?» existe mais. A dica tem no máximo ~12 palavras: show, don't tell. */
+[data-dica]{cursor:help}
+button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"][data-dica]{cursor:pointer}
+#hef-dica{position:fixed;z-index:2147483000;max-width:280px;padding:7px 11px;border-radius:8px;
+  background:#1b1c25;border:1px solid var(--border-forte,#44475a);color:var(--texto-suave,#c8ccda);
+  font:500 12.5px/1.45 'Space Grotesk',system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.45);pointer-events:none;
+  opacity:0;transform:translateY(3px);transition:opacity .12s,transform .12s}
+#hef-dica.visivel{opacity:1;transform:none}
+
+/* 2. O Modo automático: pílula com bolinha. Os dois estados têm de se distinguir num relance.
+      Desligado: contorno neutro, bolinha vazia, letra suave (vale o que está na aba).
+      Ligado: ciano cheio, bolinha branca acesa, letra branca; a área que ele governa esmaece. */
+.modo-auto{display:inline-flex;align-items:center;gap:9px;height:34px;padding:0 16px 0 12px;border-radius:999px;
+  border:1px solid var(--border-forte,#44475a);background:transparent;color:var(--texto-suave,#c8ccda);
+  font:600 13.5px/1 'Space Grotesk',system-ui,sans-serif;cursor:pointer;transition:background .15s,border-color .15s,color .15s,box-shadow .15s}
+.modo-auto .p{width:11px;height:11px;border-radius:50%;border:2px solid var(--texto-mudo,#9a9eb8);background:transparent;
+  transition:all .15s}
+.modo-auto:hover{border-color:#5fd3e6;color:#fff}
+.modo-auto[aria-pressed="true"]{background:#0e7c8c;border-color:#5fd3e6;color:#fff;box-shadow:0 0 0 3px rgba(95,211,230,.18)}
+.modo-auto[aria-pressed="true"] .p{border-color:#fff;background:#fff;box-shadow:0 0 8px #fff}
+.modo-auto:focus-visible{outline:2px solid var(--cyan,#8be9fd);outline-offset:2px}
+.governado-pelo-jogo{opacity:.42;pointer-events:none;filter:saturate(.6)}
+
+/* 3. O menu do botão direito, no visual das abas. */
+.menu-hefesto{position:fixed;z-index:2147482000;min-width:190px;padding:6px;border-radius:12px;
+  background:#252733;border:1px solid var(--border-forte,#44475a);box-shadow:0 14px 34px rgba(0,0,0,.5)}
+.menu-hefesto button{display:flex;width:100%;align-items:center;gap:10px;height:34px;padding:0 12px;border:0;
+  border-radius:8px;background:transparent;color:var(--fg,#f8f8f2);font:500 13.5px/1 'Space Grotesk',system-ui,sans-serif;text-align:left;cursor:pointer}
+.menu-hefesto button:hover{background:rgba(189,147,249,.14)}
+.menu-hefesto button[disabled]{color:var(--texto-mudo,#9a9eb8);opacity:.55;cursor:default;background:transparent}
+.menu-hefesto hr{border:0;border-top:1px solid var(--border-sutil,#343746);margin:5px 4px}
+</style>
+</head>
+<body>
+<div class="pagina">
+
+  <header class="topo" style="position:relative;padding-left:132px">
+    <!-- O BOTÃO DE VOLTAR — 30/08/2026, pergunta de produto: "ok temos um botão pra vir
+         pra cá. Mas e o botão pra voltar?". Não havia nenhum href de saída nesta
+         página. O destino não é chute: `grep -l mapa-das-portas.html` devolve UMA
+         aba, a Conexões — e ela existe ao lado desta cópia, não ao lado da
+         origem congelada, que tem três arquivos e nenhuma aba. -->
+    <a href="08-conexoes.html" data-dica="Volta para a aba Conexões"
+       style="position:absolute;left:0;top:2px;display:inline-flex;align-items:center;gap:6px;
+              padding:5px 11px;border-radius:7px;text-decoration:none;
+              border:1px solid var(--border-forte);background:var(--panel);
+              color:var(--texto-suave);font-size:12px">← Voltar</a>
+    <h1>Mapa das <em>conexões</em></h1>
+    <p class="quando" id="de-quando">Leitura de exemplo · 24/08/2026</p>
+    <button class="btn examinar" id="reexaminar" data-dica="Lê de novo e mostra o que mudou de lugar"><span aria-hidden="true">⟳</span> Examinar</button>
+  </header>
+
+  <div class="corpo">
+  <div class="modos" id="modos"></div>
+  <section class="painel" id="painel"></section>
+
+  <section class="registro" id="registro" data-todo="8" hidden aria-label="Registro">
+    <div class="registro-cab">
+      <span class="ouvindo" data-dica="O que entra e sai das entradas USB">Ouvindo desde 13:02</span>
+      <button class="btn" id="registro-copiar" data-dica="Copia o registro para um relato">Copiar</button>
+    </div>
+    <ol class="registro-linhas">
+      <li><time>13:41</time><span class="ev lento">Ficou mais lento</span><span class="quem"><i class="marca" style="background:#f8f8f2"></i><b>Hub</b> TP-Link UH700</span><span class="onde">Entrada 4</span></li>
+      <li><time>13:40</time><span class="ev">Voltou</span><span class="quem"><i class="marca" style="background:#f8f8f2"></i><b>Hub</b> TP-Link UH700</span><span class="onde">Entrada 4</span></li>
+      <li><time>13:40</time><span class="ev sai">Saiu</span><span class="quem"><i class="marca" style="background:#f8f8f2"></i><b>Hub</b> TP-Link UH700</span><span class="onde">Entrada 4</span></li>
+      <li><time>13:38</time><span class="ev">Entrou</span><span class="quem"><i class="marca" style="background:#bd93f9"></i><b>Bluetooth</b> TP-Link UB500</span><span class="onde">Sem entrada marcada</span></li>
+      <li><time>13:25</time><span class="ev">Entrou</span><span class="quem"><i class="marca" style="background:#ff5555"></i><b>Wi-Fi</b> Archer T3U</span><span class="onde">Sem entrada marcada</span></li>
+      <li><time>13:24</time><span class="ev sai">Saiu</span><span class="quem"><i class="marca" style="background:#ff5555"></i><b>Wi-Fi</b> Archer T3U</span><span class="onde">Entrada 11</span></li>
+      <li><time>13:10</time><span class="ev">Entrou</span><span class="quem"><i class="marca" style="background:#ffb86c"></i><b>Teclado</b> Receptor 2,4 GHz</span><span class="onde">Entrada 1</span></li>
+      <li><time>13:02</time><span class="ev sumiu">Não apareceu</span><span class="quem"><i class="marca" style="background:#bd93f9"></i><b>Bluetooth</b> Asus USB-BT500</span><span class="onde">—</span></li>
+    </ol>
+  </section>
+
+  <div class="palco">
+    <div class="edita painel-unico" id="edita" hidden></div>
+    <div class="faces" id="faces"></div>
+    <aside class="bandeja">
+      <h3 data-dica="Os hubs e o que pende deles; embaixo, o direto">A cadeia</h3>
+      <p class="ajuda" id="ajuda-bandeja"></p>
+      <div class="lista" id="bandeja"></div>
+    </aside>
+  </div>
+
+  <div class="legenda" id="legenda"></div>
+
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ══ 1. O ARRANJO QUE ESTA PÁGINA DESENHA ════════════════════════════
+     O exemplo abaixo é a leitura de 24/08/2026 de um gabinete só, e é o
+     que se vê enquanto ninguém entregar outra. O produto entrega a desta
+     máquina por `window.hefestoArranjo`, lá embaixo, e o cabeçalho diz
+     qual das duas está na tela. Quem escreve este bloco é
+     `interface/pagina_do_mapa.CENSO_DE_EXEMPLO`.                        */
+  var EXEMPLO = {
+    "quando": "leitura de exemplo · 24/08/2026",
+    "aparelhos": [
+      {"id": "bt-a", "tipo": "Bluetooth", "nome": "TP-Link UB500", "sementeDoCaminho": "3-1.2", "cor": "#bd93f9", "classe": "bt", "usb": 2, "mA": 500},
+      {"id": "bt-b", "tipo": "Bluetooth", "nome": "TP-Link UB500", "sementeDoCaminho": "3-1.1.4", "cor": "#bd93f9", "classe": "bt", "usb": 2, "mA": 500},
+      {"id": "bt-c", "tipo": "Bluetooth", "nome": "TP-Link UB500", "sementeDoCaminho": "3-3", "cor": "#bd93f9", "classe": "bt", "usb": 2, "mA": 500},
+      {"id": "wifi", "tipo": "Wi-Fi", "nome": "Archer T3U", "sementeDoCaminho": "4-1.1.2", "cor": "#ff5555", "classe": "wifi", "usb": 3, "mA": 504},
+      {"id": "webcam", "tipo": "Webcam", "nome": "Logitech C920", "sementeDoCaminho": "3-4", "cor": "#8be9fd", "classe": "webcam", "usb": 2, "mA": 500},
+      {"id": "teclado", "tipo": "Teclado", "nome": "Receptor 2,4 GHz", "sementeDoCaminho": "3-1.4", "cor": "#ffb86c", "classe": "teclado", "usb": 2, "mA": 100},
+      {"id": "mouse", "tipo": "Mouse", "nome": "Receptor 2,4 GHz", "sementeDoCaminho": "1-3", "cor": "#f1fa8c", "classe": "mouse", "usb": 2, "mA": 98},
+      {"id": "hub", "tipo": "Hub", "nome": "TP-Link UH700", "sementeDoCaminho": "3-1", "cor": "#6272a4", "classe": "hub", "usb": 3, "mA": 100}
+    ],
+    "faces": [
+      {"nome": "Frente do gabinete", "forma": "coluna", "perto": true, "regiao": "pc", "portas": [{"n": "1", "usb": 3, "onde": "pc", "par": "2"}, {"n": "2", "usb": 3, "onde": "pc", "par": "1"}]},
+      {"nome": "Traseira", "forma": "grade-tras", "regiao": "pc", "donaDaFaixaPc": true, "portas": [{"n": "3", "usb": 3, "onde": "pc", "par": "4"}, {"n": "4", "usb": 3, "onde": "pc", "par": "3"}, {"n": "5", "usb": 3, "onde": "pc", "par": "6"}, {"n": "6", "usb": 3, "onde": "pc", "par": "5"}, {"n": "7", "usb": 2, "onde": "pc", "par": "8"}, {"n": "8", "usb": 2, "onde": "pc", "par": "7"}]},
+      {"nome": "Hub, no alto do rack", "forma": "fileira", "alto": true, "regiao": "hub", "portas": [{"n": "9", "usb": 3, "onde": "hub", "pos": 1, "par": "10"}, {"n": "10", "usb": 3, "onde": "hub", "pos": 2, "par": "9"}, {"n": "11", "usb": 3, "onde": "hub", "pos": 3, "par": "12"}, {"n": "12", "usb": 3, "onde": "hub", "pos": 4, "par": "11"}, {"n": "13", "usb": 3, "onde": "hub", "pos": 5, "par": "14"}, {"n": "14", "usb": 3, "onde": "hub", "pos": 6, "par": "13"}, {"n": "15", "usb": 3, "onde": "hub", "pos": 7, "filho": {"n": "15a", "usb": 3, "onde": "hub", "pos": 9, "esticada": true, "cabo": "Extensor de 1 m"}}]}
+    ],
+    "mapa": {"1": "1-3", "4": "3-1", "5": "3-3", "6": "3-4", "9": "3-1.2", "11": "4-1.1.2", "13": "3-1.4", "15a": "3-1.1.4"},
+    "leituras": {"antes": {"rotulo": "20h15 — antes de você mexer", "caminho": {"mouse": "1-3", "hub": "3-1", "bt-c": "3-3", "webcam": "3-4", "bt-a": "3-1.2", "wifi": "4-1.1.2", "teclado": "3-1.4", "bt-b": "3-1.1.4"}}, "agora": {"rotulo": "22h50 — depois dos seus movimentos", "caminho": {"teclado": "1-3", "webcam": "1-4", "mouse": "1-6", "hub": "3-1", "bt-c": "3-1.1.1", "bt-b": "3-1.1.4", "bt-a": "3-1.2", "wifi": "4-2"}}},
+    "controles": [
+      {"nome": "Jogador 1", "mic": true, "onde": "bt-a"},
+      {"nome": "Jogador 2", "mic": true, "onde": "bt-a"},
+      {"nome": "Jogador 3", "mic": true, "onde": "bt-b"},
+      {"nome": "Jogador 4", "mic": true, "onde": "bt-b"}
+    ]
+  };
+
+  /* `fonte` é o arranjo em cena: nasce no exemplo acima e é trocado
+     inteiro por `window.hefestoArranjo(dado)`. `CAMPOS_DO_ARRANJO` é o
+     que uma entrega tem de trazer para ser aceita. */
+  var CAMPOS_DO_ARRANJO = ["quando", "aparelhos", "faces", "mapa", "leituras"];
+
+  /* ══ A CADEIA (todo da volta, O-MAPA-DAS-CONEXOES-MOSTRA-A-CADEIA-USB-E-O-REGISTRO-DELA-01) ══
+     No produto quem entrega isto é o censo da cadeia USB; aqui é a cena de exemplo. */
+  var ORIGEM = {
+    "hub": ["Genesys Logic · Hub", "hub"],
+    "bt-a": ["Realtek · Bluetooth", "btusb"], "bt-b": ["Realtek · Bluetooth", "btusb"], "bt-c": ["Realtek · Bluetooth", "btusb"],
+    "wifi": ["Realtek · Wi-Fi", "rtw88_8822bu"], "webcam": ["Logitech · Webcam", "uvcvideo"],
+    "teclado": ["Receptor sem fio · Teclado", "usbhid"], "mouse": ["Receptor sem fio · Mouse", "usbhid"]
+  };
+  var HUB_FISICO = { "hub": "Hub USB 3 · 7 entradas" };
+  var ENLACE = { "hub": "480 Mb/s · Sabe 5 Gb/s" };
+  var SUMIRAM = [{ "tipo": "Bluetooth", "nome": "Asus USB-BT500", "cor": "#bd93f9" }];
+  var fonte = EXEMPLO;
+  var APARELHOS = fonte.aparelhos;
+
+  /* ══ 2. AS FACES — quantas entradas cada face do gabinete tem ════════
+     Isto não se mede: nenhuma leitura de `/sys` sabe em que face do metal
+     o buraco fica. Quem declara é quem olha o gabinete. Ver o rodapé.   */
+  var FACES = fonte.faces;
+
+  /* ══ 2.1 O MAPA DECLARADO: entrada -> caminho de barramento ══════════
+     Esta é a virada de modelo que faz a re-identificação existir. O mapa NÃO
+     guarda "entrada 9 tem um Bluetooth" — guarda "entrada 9 é o caminho
+     3-1.2". Qual aparelho está lá é DERIVADO da leitura de agora, pelo
+     caminho. Assim, quando ela troca um aparelho de lugar, o caminho dele
+     muda, o mapa continua valendo, e o produto reconhece sozinho quem foi
+     para onde — sem ela declarar nada de novo.                             */
+  var MAPA = fonte.mapa;
+
+  /* ══ 2.2 AS DUAS LEITURAS ════════════════════════════════════════════
+     Duas leituras de `/sys` separadas por um "Reexaminar": é assim que o
+     produto sabe quem mudou de lugar. No exemplo são as de 20h15 e 22h50
+     de 24/08/2026; com o censo vivo são as que a máquina de quem abriu
+     entregou.                                                           */
+  var LEITURAS = fonte.leituras;
+
+  /* O MAPA MOSTRA SEMPRE A MESA DE AGORA.
+     A primeira versão abria na leitura antiga para dar o "antes e depois", e
+     ela abriu a página horas depois de mexer nos cabos e viu o Wi-Fi no hub,
+     de onde ela mesma o tinha tirado. Estado velho como padrão é o defeito
+     F7 desta casa: a tela afirma com confiança uma coisa que não é mais
+     verdade. O "antes" é o termo de COMPARAÇÃO do reexame, nunca o estado. */
+  var leituraAtual = "agora";
+  var leituraAnterior = "antes";
+  var MAPA_ORIGINAL = null;
+  function leitura() { return LEITURAS[leituraAtual].caminho; }
+
+  /* entrada -> id do aparelho, DERIVADO: junta o mapa com a leitura */
+  function alocacaoDerivada() {
+    var out = {}, cam = leitura();
+    Object.keys(MAPA).forEach(function (porta) {
+      for (var id in cam) if (cam[id] === MAPA[porta]) { out[porta] = id; return; }
+    });
+    return out;
+  }
+
+  /* ══ 2.3 A REGIÃO, DEDUZIDA DO BARRAMENTO ════════════════════════════
+     O produto não sabe em qual ENTRADA um aparelho novo está — mas sabe se
+     ele pende do hub ou está direto no gabinete, porque o caminho de
+     barramento conta a topologia. Isso reduz o palpite de dezesseis entradas
+     para sete ou oito, e é DEDUÇÃO, não chute: `3-1.1.1` pende de `3-1`, que
+     é o hub. Esconder o aparelho por não saber a entrada exata é jogar fora
+     a metade da informação que existe.
+
+     O lado USB 3.0 do mesmo hub físico aparece noutro barramento (`4-1.x`
+     contra `3-1.x`) porque hub 3.0 é dual-bus — mesmo metal, dois números.  */
+  function regiaoDoCaminho(c) {
+    /* O HUB É QUEM TEM A CLASSE DE HUB — 26/09/2026. Aqui se perguntava
+       pelo aparelho de id "hub", que só o exemplo tem: no produto a
+       resposta era sempre «não sei», e o reexame dizia «está direto no
+       gabinete» de quem estava no hub. */
+    var cam = leitura();
+    var hubs = APARELHOS.filter(function (a) { return a.classe === "hub" && cam[a.id]; })
+      .map(function (a) { return cam[a.id]; });
+    if (!hubs.length || !c) return null;
+    return hubs.some(function (h) {
+      if (c.indexOf(h + ".") === 0) return true;
+      var mh = h.match(/^(\d+)-(.+)$/), mc = c.match(/^(\d+)-(.+)$/);
+      return !!(mh && mc && mc[1] !== mh[1] && mc[2].indexOf(mh[2] + ".") === 0);
+    }) ? "hub" : "pc";
+  }
+
+  /* aparelhos que a leitura vê e o mapa não sabe onde estão */
+  function semEntrada() {
+    var cam = leitura(), conhecidos = {};
+    Object.keys(MAPA).forEach(function (p) { conhecidos[MAPA[p]] = p; });
+    return APARELHOS.filter(function (a) {
+      var c = cam[a.id];
+      return c && !conhecidos[c];
+    }).map(function (a) {
+      var c = cam[a.id];
+      return { ap: a, caminho: c, regiao: regiaoDoCaminho(c) };
+    });
+  }
+  /* as entradas candidatas de uma região, ainda livres */
+  function candidatas(regiao) {
+    var usadas = {};
+    Object.keys(MAPA).forEach(function (n) { usadas[n] = true; });
+    return todasPortas().filter(function (p) {
+      if (usadas[p.n]) return false;
+      return regiao === "hub" ? p.onde === "hub" : p.onde === "pc";
+    });
+  }
+
+  var NA_MAO = [
+    { id: "bt", rotulo: "Dongle Bluetooth", cor: "#bd93f9" },
+    { id: "wifi", rotulo: "Adaptador Wi-Fi", cor: "#ff5555" },
+    { id: "teclado", rotulo: "Receptor do teclado", cor: "#ffb86c" },
+    { id: "mouse", rotulo: "Receptor do mouse", cor: "#f1fa8c" },
+    { id: "webcam", rotulo: "Webcam", cor: "#8be9fd" }
+  ];
+
+  var LICOES = {
+    bt: { texto: "É este que carrega os seus controles. Duas coisas o atrapalham, e as duas são de <b>lugar</b>: "
+        + "tráfego de USB 3.0 num vizinho próximo, e outro rádio de 2,4 GHz colado nele. Um terceiro fator não "
+        + "é lugar, é conta — <b>cada adaptador tem 1600 vezes de falar por segundo</b>, e todo controle ligado "
+        + "nele divide isso.",
+      conta: { titulo: "A conta de um adaptador", linhas: [
+        "1 controle com mic ....  276,7 / 1600", "2 controles com mic ...  553,4 / 1600",
+        "4 controles com mic ... 1106,8 / 1600", "5 controles com mic ... 1383,5 / 1600"] } },
+    wifi: { texto: "Ele quer uma <b>entrada USB 3.0</b> para ter velocidade — e é o tráfego dele em 3.0 que vira "
+        + "ruído para os dongles Bluetooth por perto. O bom lugar é uma entrada azul <b>direta do PC</b>, longe de "
+        + "onde as antenas de rádio moram.", conta: null },
+    teclado: { texto: "O teclado tem uma exigência que não é de rádio: precisa estar numa <b>entrada direta do "
+        + "PC</b>. Hub externo nem sempre é ligado pelo firmware, e sem teclado você não entra na BIOS nem nas "
+        + "telas de recuperação.", conta: null },
+    mouse: { texto: "É um rádio de 2,4 GHz pequeno. Não precisa de entrada azul e não gosta de estar colado noutro "
+        + "rádio — dois receptores encostados se atrapalham.", conta: null },
+    webcam: { texto: "Não emite rádio, mas <b>come banda e energia</b>: 500&nbsp;mA e vídeo contínuo. Não precisa "
+        + "de entrada azul, e ocupá-la tira uma entrada de quem precisa.", conta: null }
+  };
+
+  MAPA_ORIGINAL = Object.assign({}, MAPA);
+  var alocacao = alocacaoDerivada();
+  var modo = "mesa";       /* mesa | ideal | mao */
+  var naMao = null;
+  var segurando = null;
+
+  function acha(id) { for (var i = 0; i < APARELHOS.length; i++) if (APARELHOS[i].id === id) return APARELHOS[i]; return null; }
+  function portaDeEm(mapa, id) { for (var k in mapa) if (mapa[k] === id) return k; return null; }
+  /* SEMPRE derivado da leitura viva. A versão que lia um `alocacao` cacheado
+     dava resposta VELHA depois de um reexame — o dongle que ela moveu ainda
+     era relatado na entrada antiga. Cache de estado derivado é a fonte do
+     defeito, não a otimização. */
+  function portaDe(id) { return portaDeEm(alocacaoDerivada(), id); }
+  function todasPortas() { var r = []; FACES.forEach(function (f) { f.portas.forEach(function (p) { r.push(p); if (p.filho) r.push(p.filho); }); }); return r; }
+  function porNum(n) { var t = todasPortas(); for (var i = 0; i < t.length; i++) if (t[i].n === String(n)) return t[i]; return null; }
+  /* DONO ÚNICO de "qual o caminho deste aparelho AGORA".
+     A bandeja lia `a.caminho` — o campo gravado na constante — enquanto a
+     faixa lia a leitura viva. Duas verdades na mesma tela sobre a mesma
+     coisa: depois de um reexame a bandeja publicava o caminho de ANTES.
+     O campo da constante vira só semente da primeira leitura.              */
+  function caminhoDe(id) { return leitura()[id] || null; }
+
+  function classeDe(id) { var a = acha(id); return a ? a.classe : null; }
+  function ehRadio(c) { return c === "bt" || c === "wifi" || c === "teclado" || c === "mouse"; }
+
+  /* Um dongle na entrada-filha ocupa também a entrada-mãe (o extensor está nela). */
+  function maeDe(n) { var t = todasPortas(); for (var i = 0; i < t.length; i++) if (t[i].filho && t[i].filho.n === String(n)) return t[i]; return null; }
+  function ocupada(mapa, p) {
+    if (mapa[p.n]) return true;
+    if (p.filho && mapa[p.filho.n]) return true;          /* a mãe some quando o filho é usado */
+    var m = maeDe(p.n); if (m && mapa[m.n]) return true;  /* o filho some quando a mãe é usada */
+    return false;
+  }
+
+  /* ══ 3. O CÁLCULO — o melhor arranjo, e por quê ══════════════════════
+     Cada porta ganha uma NOTA para cada aparelho, e o aparelho vai para a
+     porta de maior nota. Duas regras salvam a credibilidade do conselho:
+
+       · ficar parado vale um ponto de bônus — entre portas equivalentes,
+         a que já está ocupada vence, e o produto não manda mexer à toa;
+       · só vira MOVIMENTO se a porta nova tiver nota MAIOR que a de hoje.
+
+     Não é otimizador global: é nota explicável, porque conselho que a
+     pessoa não entende ela não segue.                                    */
+  var REGRAS = {
+    teclado: [
+      { n: 100, quando: function (p) { return p.onde === "pc"; }, peso: "essencial", selo: "espec",
+        txt: "entrada direta do PC: hub externo nem sempre é ligado pelo firmware, e sem teclado você não entra na BIOS" },
+      { n: 20, quando: function (p, ctx) { return ctx.perto; }, selo: "derivado",
+        txt: "na frente, que é a mais perto de você" },
+      { n: -30, quando: function (p, ctx) { return ctx.vizinhoRadio; }, peso: "essencial", selo: "espec",
+        txt: "longe de outro rádio de 2,4 GHz — dois receptores encostados se atrapalham" },
+      { n: -6, quando: function (p) { return p.usb === 3; }, selo: "derivado",
+        txt: "sem gastar uma entrada azul, que ele não usa" }
+    ],
+    wifi: [
+      { n: 100, quando: function (p) { return p.onde === "pc"; }, peso: "essencial", selo: "espec",
+        txt: "fora do hub: o tráfego dele em 5 Gbps é o que vira ruído em 2,4 GHz para os dongles do mesmo hub" },
+      { n: 40, quando: function (p) { return p.usb === 3; }, selo: "derivado",
+        txt: "entrada azul, para ele manter a velocidade" },
+      { n: -30, quando: function (p, ctx) { return ctx.vizinhoRadio; }, peso: "essencial", selo: "espec",
+        txt: "sem outro rádio colado" }
+    ],
+    bt: [
+      { n: 60, quando: function (p) { return p.onde === "hub"; }, selo: "derivado",
+        txt: "no alto do rack, com a antena acima da linha das cabeças" },
+      { n: 25, quando: function (p) { return !!p.esticada; }, selo: "derivado",
+        txt: "na ponta do extensor: a antena que fica mais longe das outras" },
+      { n: -120, quando: function (p, ctx) { return p.onde === "hub" && ctx.superspeedNoHub; }, peso: "essencial", selo: "espec",
+        txt: "sem o Wi-Fi usando o SuperSpeed do mesmo hub" },
+      { n: -45, quando: function (p, ctx) { return ctx.vizinhoRadio; }, peso: "essencial", selo: "espec",
+        txt: "sem outro rádio de 2,4 GHz na entrada colada" }
+    ],
+    mouse: [
+      { n: 40, quando: function (p) { return p.onde === "pc"; }, selo: "derivado",
+        txt: "entrada direta do PC" },
+      { n: -40, quando: function (p, ctx) { return ctx.vizinhoRadio; }, peso: "essencial", selo: "espec",
+        txt: "longe do receptor do teclado — dois rádios de 2,4 GHz encostados se atrapalham" },
+      { n: 10, quando: function (p) { return p.usb === 2; }, selo: "derivado",
+        txt: "entrada preta, sem gastar a azul que ele não usa" }
+    ],
+    webcam: [
+      { n: 12, quando: function (p) { return p.usb === 2; }, selo: "derivado",
+        txt: "entrada preta: ela não usa a velocidade da azul, e a azul faz falta a quem usa" },
+      { n: 6, quando: function (p) { return p.onde === "pc"; }, selo: "derivado",
+        txt: "direta do PC, sem gastar entrada do hub" }
+    ],
+    hub: [
+      { n: 40, quando: function (p) { return p.onde === "pc"; }, peso: "essencial", selo: "derivado",
+        txt: "entrada direta do PC — o hub não pode pendurar em si mesmo" },
+      { n: 20, quando: function (p) { return p.usb === 3; }, selo: "derivado",
+        txt: "entrada azul, para o hub entregar o que ele oferece" }
+    ]
+  };
+
+  /* separação entre dongles: quanto mais longe do irmão mais próximo, melhor */
+  function bonusSeparacao(p, jaPostos) {
+    if (!jaPostos.length || p.pos === undefined) return { n: 0 };
+    var d = Math.min.apply(null, jaPostos.map(function (q) { return Math.abs((q.pos || 0) - p.pos); }));
+    return { n: Math.min(d, 6) * 6, selo: "espec",
+             txt: "com " + d + " posiç" + (d === 1 ? "ão" : "ões") + " de folga até o dongle mais próximo — dois rádios colados se atrapalham" };
+  }
+
+  function notaDe(ap, porta, plano, jaPostos) {
+    var face = FACES.filter(function (f) { return f.portas.some(function (x) { return x.n === porta.n || (x.filho && x.filho.n === porta.n); }); })[0] || {};
+    var vz = porta.par ? classeDe(plano[porta.par] || alocacao[porta.par]) : null;
+    var ctx = { perto: !!face.perto, vizinhoRadio: !!(vz && ehRadio(vz)),
+                superspeedNoHub: (function () { var w = portaDeEm(plano, "wifi") || portaDe("wifi"); var pw = w && porNum(w); return !!(pw && pw.onde === "hub"); })() };
+    var n = 0, razoes = [], peso = "melhora";
+    (REGRAS[ap.classe] || []).forEach(function (r) {
+      if (!r.quando(porta, ctx)) return;
+      n += r.n;
+      if (r.n > 0) razoes.push({ selo: r.selo, txt: r.txt });
+      if (r.peso === "essencial" && r.n > 0) peso = "essencial";
+    });
+    /* penalidades que não casaram viram exigências satisfeitas: também explicam */
+    (REGRAS[ap.classe] || []).forEach(function (r) {
+      if (r.n >= 0 || r.quando(porta, ctx)) return;
+      razoes.push({ selo: r.selo, txt: r.txt });
+      if (r.peso === "essencial") peso = "essencial";
+    });
+    if (ap.classe === "bt") {
+      var b = bonusSeparacao(porta, jaPostos);
+      n += b.n; if (b.n > 0) razoes.push({ selo: b.selo, txt: b.txt });
+    }
+    return { n: n, razoes: razoes, peso: peso };
+  }
+
+  /* O HUB DESENHADO — 26/09/2026. A face que o desenho monta de um hub
+     declarado (`daEntrada`) tem entradas que ninguém leu: o número e a
+     quantidade são do desenho. A Sugestão nunca manda um aparelho para
+     dentro delas. Medido: com o dongle direto na 5 e o hub declarado
+     na 5, ela mandava o dongle «da Entrada 5 para a 5.1». */
+  function doHubDesenhado(p) {
+    return FACES.some(function (f) {
+      return !!f.daEntrada && f.portas.some(function (x) { return x === p || x.filho === p; });
+    });
+  }
+
+  function planejar(op) {
+    op = op || {};
+    var bonusParado = op.bonusParado === undefined ? 1 : op.bonusParado;
+    var proibida = op.proibir || function () { return false; };
+    alocacao = alocacaoDerivada();   /* nunca planejar sobre leitura velha */
+    var plano = {}, motivo = {};
+    /* A FILEIRA «SEM LUGAR» NÃO ENTRA NO PLANO — 04/10/2026: sem o lugar (a face) o motor não
+       tem o que julgar, então quem está nela fica onde está e ninguém é mandado para lá. */
+    APARELHOS.forEach(function (a) { if (aparelhoSemLugar(a.id)) plano[portaDe(a.id)] = a.id; });
+    var portas = todasPortas().filter(function (p) { return !proibida(p) && !doHubDesenhado(p) && !semLugar(p); });
+    /* ordem de decisão: quem tem exigência dura escolhe antes */
+    var ordem = ["hub", "teclado", "wifi", "bt", "mouse", "webcam"];
+    var jaPostos = [];
+    /* O APARELHO QUE O PLANO NÃO SABE ARRUMAR FICA ONDE ESTÁ — 04/10/2026,
+       AS-DICAS-SAO-CARTOES-COM-UM-GESTO-01. Um aparelho de classe fora da
+       ordem de decisão (um pendrive, uma placa que ninguém classificou) nunca
+       entra no plano; sem esta reserva a entrada dele valia como livre, outro
+       aparelho a recebia e o mapa dizia «sai daqui» sem destino. A entrada
+       fica com ele, com o motivo «fica». É a gêmea de
+       `arranjo_da_mesa._o_que_o_plano_nao_sabe_arrumar_fica`. */
+    APARELHOS.forEach(function (a) {
+      if (ordem.indexOf(a.classe) !== -1) return;
+      var hoje = portaDe(a.id);
+      if (!hoje || plano[hoje]) return;
+      plano[hoje] = a.id;
+      motivo[a.id] = { razoes: [], peso: "melhora", ganho: 0, forcado: false, essencial: false };
+    });
+
+    ordem.forEach(function (cl) {
+      APARELHOS.filter(function (a) { return a.classe === cl && !aparelhoSemLugar(a.id); }).forEach(function (ap) {
+        var cands = portas.filter(function (p) { return !ocupada(plano, p); });
+        if (!cands.length) return;
+        var atual = portaDe(ap.id);
+        var melhor = null, melhorNota = null;
+        cands.forEach(function (p) {
+          var nota = notaDe(ap, p, plano, jaPostos);
+          /* bônus de ficar parado: só desempata, nunca troca uma escolha melhor */
+          var efetiva = nota.n + (p.n === atual ? bonusParado : 0);
+          if (melhor === null || efetiva > melhorNota.efetiva) { melhor = p; melhorNota = { nota: nota, efetiva: efetiva }; }
+        });
+        if (!melhor) return;
+        plano[melhor.n] = ap.id;
+        /* Se a porta de hoje foi tomada por outro aparelho no plano, o
+           movimento é FORCADO — nao ha "ficar onde esta" para comparar, e
+           esconde-lo faria o mapa e a receita discordarem na tela. */
+        var tomada = atual && plano[atual] && plano[atual] !== ap.id;
+        var notaAtual = (atual && !tomada) ? notaDe(ap, porNum(atual), plano, jaPostos).n : -Infinity;
+        var razoes = melhorNota.nota.razoes.slice();
+        if (tomada) razoes.unshift({ selo: "derivado",
+          txt: "a " + naFraseDe(atual) + " passou a ser do " + (acha(plano[atual]) || {}).tipo + ", então este precisa de outro lugar" });
+        motivo[ap.id] = {
+          razoes: razoes,
+          peso: melhorNota.nota.peso,
+          ganho: tomada ? Infinity : (melhorNota.nota.n - notaAtual),
+          forcado: !!tomada,
+          essencial: !!tomada || (melhorNota.nota.peso === "essencial" && (melhorNota.nota.n - notaAtual) >= 30)
+        };
+        if (ap.classe === "bt") jaPostos.push(melhor);
+      });
+    });
+
+    /* Passe final: aparelhos INTERCAMBIÁVEIS (mesma classe e mesmo modelo)
+       não têm por que trocar de lugar entre si. Se um deles já está numa
+       das portas de destino, ele fica nela — o conjunto de portas é o mesmo,
+       e cada troca evitada é um movimento a menos que ela precisa fazer.
+       Sem isto o plano mandava mover dois UB500 idênticos entre a 9 e a 15a. */
+    var porModelo = {};
+    APARELHOS.forEach(function (a) {
+      var k = a.classe + "|" + a.nome;
+      (porModelo[k] = porModelo[k] || []).push(a);
+    });
+    Object.keys(porModelo).forEach(function (k) {
+      var grupo = porModelo[k];
+      if (grupo.length < 2) return;
+      var destinos = grupo.map(function (a) { return portaDeEm(plano, a.id); }).filter(Boolean);
+      if (destinos.length < 2) return;
+      var novo = {}, sobram = destinos.slice(), pendentes = [];
+      grupo.forEach(function (a) {
+        var hoje = portaDe(a.id), i = sobram.indexOf(hoje);
+        if (hoje && i !== -1) { novo[a.id] = hoje; sobram.splice(i, 1); }
+        else pendentes.push(a);
+      });
+      pendentes.forEach(function (a) { novo[a.id] = sobram.shift(); });
+      destinos.forEach(function (d) { delete plano[d]; });
+      grupo.forEach(function (a) { if (novo[a.id]) plano[novo[a.id]] = a.id; });
+      /* o motivo acompanha a porta, não o aparelho: recalcula para quem mudou */
+      grupo.forEach(function (a) {
+        var p = novo[a.id]; if (!p) return;
+        var atual = portaDe(a.id);
+        var n = notaDe(a, porNum(p), plano, jaPostos.filter(function (q) { return q.n !== p; }));
+        var tomada2 = atual && plano[atual] && plano[atual] !== a.id;
+        var na = (atual && !tomada2) ? notaDe(a, porNum(atual), plano, []).n : -Infinity;
+        var rz = n.razoes.slice();
+        if (tomada2) rz.unshift({ selo: "derivado",
+          txt: "a " + naFraseDe(atual) + " passou a ser do " + (acha(plano[atual]) || {}).tipo + ", então este precisa de outro lugar" });
+        motivo[a.id] = { razoes: rz, peso: n.peso, ganho: tomada2 ? Infinity : (n.n - na), forcado: !!tomada2,
+                         essencial: !!tomada2 || (n.peso === "essencial" && (n.n - na) >= 30) };
+      });
+    });
+
+    oMapaSoMoveOQueAReceitaManda(plano, motivo, jaPostos, proibida);
+    return { plano: plano, motivo: motivo };
+  }
+
+  /* A ÚNICA regra de "isto vira ordem de serviço", e ela tem UM DONO. Ela
+     morava dentro de receita(), e o mapa — que sai de planejar() — não a
+     consultava: nas variantes que PROÍBEM a entrada de hoje o desenho mostrava
+     o aparelho no lugar novo e a receita não mandava mexer, e quem olhava a
+     tela via o aparelho noutro lugar SEM instrução nenhuma. Agora as duas
+     beiras perguntam a mesma coisa aqui. D-MAPA-SEM-RECEITA, 25/08/2026.      */
+  function receitaManda(de, para, m) {
+    if (!para || de === para) return false;
+    /* quem ainda não tem lugar no mapa entra sempre: não há "ficar onde está"
+       para comparar. Quem já tem lugar só entra se o movimento MELHORA. */
+    return !de || (!!m && m.ganho > 0);
+  }
+
+  /* A frase que a receita diz quando a variante tirou do tabuleiro a entrada em
+     que o aparelho está hoje — o único caso em que ele sai de um lugar bom sem
+     ganho nenhum, e sem esta linha a ordem de serviço não teria porquê. */
+  var PORQUE_A_VARIANTE_TIROU = "esta opção não usa a entrada {de}, onde ele está hoje";
+
+  /* D-MAPA-SEM-RECEITA: se não há ordem, o mapa não move nada. Roda DEPOIS do
+     passe dos intercambiáveis, que ainda troca destinos entre irmãos.
+     Duas entradas de hoje NÃO aceitam o aparelho de volta, e nas duas o
+     movimento vira ORDEM em vez de sumir do mapa: a que a variante proibiu
+     (devolvê-lo desenharia um dongle no extensor numa opção chamada "sem o
+     extensor") e a que outro aparelho tomou.                               */
+  function oMapaSoMoveOQueAReceitaManda(plano, motivo, jaPostos, proibida) {
+    APARELHOS.forEach(function (a) {
+      var de = portaDe(a.id), para = portaDeEm(plano, a.id);
+      if (!de || !para || de === para) return;
+      if (receitaManda(de, para, motivo[a.id])) return;
+      var pd = porNum(de);
+      if (!pd) return;                 /* entrada declarada que não existe em face nenhuma */
+
+      delete plano[para];
+      var tirada = !!proibida(pd);
+      var volta = !tirada && !ocupada(plano, pd);
+      var destino = volta ? de : para;
+      var porta = volta ? pd : porNum(para);
+      plano[destino] = a.id;
+      if (!porta) return;
+      var n = notaDe(a, porta, plano, jaPostos.filter(function (q) { return q.n !== destino; }));
+      var tomada = de && plano[de] && plano[de] !== a.id;
+      var na = tomada ? -Infinity : notaDe(a, pd, plano, []).n;
+      var rz = n.razoes.slice();
+      if (tomada) rz.unshift({ selo: "derivado",
+        txt: "a " + naFraseDe(de) + " passou a ser do " + (acha(plano[de]) || {}).tipo + ", então este precisa de outro lugar" });
+      else if (!volta) rz.unshift({ selo: "derivado", txt: PORQUE_A_VARIANTE_TIROU.replace("{de}", de) });
+      motivo[a.id] = { razoes: rz, peso: n.peso,
+        ganho: (tomada || !volta) ? Infinity : (n.n - na),
+        forcado: !!tomada || !volta,
+        essencial: !!tomada || !volta || (n.peso === "essencial" && (n.n - na) >= 30) };
+    });
+  }
+
+  /* ══ 4. A RECEITA: a diferença entre o que está e o que devia ════════
+     Só entra aqui o que MELHORA. Aparelho que já está numa porta tão boa
+     quanto a melhor candidata fica onde está, e não vira movimento — e o mapa
+     pergunta à MESMA função, para os dois nunca discordarem na tela.       */
+  function receita(op) {
+    var r = planejar(op), movs = [];
+    APARELHOS.forEach(function (a) {
+      var de = portaDe(a.id), para = portaDeEm(r.plano, a.id);
+      var m = r.motivo[a.id] || { razoes: [], essencial: false, ganho: 0 };
+      if (!receitaManda(de, para, m)) return;
+
+      var linhas = [];
+      if (de) {
+        var pd = porNum(de);
+        if (pd && pd.onde === "hub" && a.classe === "wifi")
+          linhas.push({ s: "medido", t: "Hoje ele está no hub, e os dois chips do hub enumeram a <b>5000M</b> (<code>4-1</code>, <code>4-1.1</code>): o enlace SuperSpeed fica treinado, e é o <b>tráfego</b> dele que irradia." });
+        else if (pd && pd.onde === "hub" && a.classe === "teclado")
+          linhas.push({ s: "medido", t: "Hoje ele está pendurado no hub (<code>" + caminhoDe(a.id) + "</code>)." });
+        else
+          linhas.push({ s: "medido", t: "Hoje ele está na entrada <b>" + de + "</b> (<code>" + caminhoDe(a.id) + "</code>)." });
+      } else {
+        linhas.push({ s: "medido", t: "Ele apareceu no sistema e ainda não tem lugar no mapa." });
+      }
+      m.razoes.slice(0, 3).forEach(function (z) {
+        linhas.push({ s: z.selo, t: z.txt.charAt(0).toUpperCase() + z.txt.slice(1) + "." });
+      });
+      movs.push({
+        essencial: !!m.essencial, ganho: m.ganho,
+        titulo: emAtributo(rotuloDoAparelho(a)) + " → " + emAtributo(rotuloDe(para)),
+        linhas: linhas
+      });
+    });
+    /* os essenciais primeiro, e dentro deles o de maior ganho */
+    movs.sort(function (x, y) {
+      if (x.essencial !== y.essencial) return x.essencial ? -1 : 1;
+      if (x.ganho === y.ganho) return 0;
+      return y.ganho > x.ganho ? 1 : -1;
+    });
+    if (movs.length) {
+      movs.push({
+        titulo: "O que muda quando você terminar", semNumero: true,
+        linhas: [
+          { s: "derivado", t: "Os dongles ficam no alto e separados, com o Wi-Fi fora do hub deles." },
+          { s: "derivado", t: "<b>Quanto isso melhora o seu Bluetooth não foi medido nesta máquina.</b> O ensaio que responde conta os quadros que chegam e confere se vieram inteiros — antes e depois da mudança." }
+        ]
+      });
+    }
+    return movs;
+  }
+  function rot(a) {
+    if (a.classe === "bt") return { g: "o", n: "dongle Bluetooth" };
+    if (a.classe === "hub") return { g: "o", n: "cabo do hub" };
+    if (a.classe === "webcam") return { g: "a", n: "webcam" };
+    return { g: "o", n: a.tipo.toLowerCase() };
+  }
+
+  /* ══ 5. O julgamento por porta, no modo "estou segurando" ════════════ */
+  function superspeedNoHub() {
+    var p = portaDe("wifi"); var pp = p && porNum(p);
+    return !!(pp && pp.onde === "hub");
+  }
+  function frase1(t) { t = String(t || ""); return t.charAt(0).toUpperCase() + t.slice(1); }
+  function julgar(porta) {
+    var oc = alocacao[porta.n];
+    if (oc) { var a = acha(oc); return { v: "cheia", txt: "Ocupada", porque: a.tipo + " — clique para tirar" }; }
+    if (ocupada(alocacao, porta)) return { v: "cheia", txt: "Ocupada", porque: porta.filho ? "Com o extensor" : "A entrada-mãe está em uso" };
+    if (segurando) {
+      var reg = regiaoDoCaminho(leitura()[segurando]);
+      var mesmaRegiao = reg === null || (reg === "hub" ? porta.onde === "hub" : porta.onde === "pc");
+      if (!mesmaRegiao) return { v: "fora", txt: "Outra região",
+        porque: reg === "hub" ? "este está no hub" : "este está direto no PC" };
+    }
+    if (!naMao) return null;
+
+    var noHub = porta.onde === "hub";
+    var vz = porta.par ? acha(alocacao[porta.par]) : null;
+    var vzRadio = vz && ehRadio(vz.classe);
+
+    if (naMao === "bt") {
+      if (noHub && superspeedNoHub()) return { v: "ruim", txt: "Evite", porque: "o Wi-Fi usa o SuperSpeed deste mesmo hub, e esse tráfego vira ruído em 2,4 GHz" };
+      if (vzRadio) return { v: "evite", txt: "Vale evitar", porque: "colada no " + vz.tipo + ", na " + naFraseDe(porta.par) };
+      if (porta.esticada) return { v: "melhor", txt: "Melhor lugar", porque: "na ponta do extensor: a antena mais longe das outras" };
+      if (noHub) return { v: "melhor", txt: "Melhor lugar", porque: "no alto do rack, com a antena acima das cabeças" };
+      return { v: "serve", txt: "Serve", porque: "entrada direta, mas na altura da escrivaninha" };
+    }
+    if (naMao === "wifi") {
+      if (noHub) return { v: "ruim", txt: "Evite", porque: "aqui o tráfego dele em 5 Gbps fica ao lado dos dongles do controle" };
+      if (porta.usb !== 3) return { v: "evite", txt: "Vale evitar", porque: "entrada preta — o Wi-Fi perde velocidade" };
+      if (vzRadio) return { v: "evite", txt: "Vale evitar", porque: "colada no " + vz.tipo + ", na " + naFraseDe(porta.par) };
+      return { v: "melhor", txt: "Melhor lugar", porque: "azul, direta do PC e longe das antenas de rádio" };
+    }
+    if (naMao === "teclado") {
+      if (noHub) return { v: "ruim", txt: "Evite", porque: "no hub você pode ficar sem teclado na BIOS" };
+      if (vzRadio) return { v: "evite", txt: "Vale evitar", porque: "colada no " + vz.tipo + ", na " + naFraseDe(porta.par) };
+      return { v: "melhor", txt: "Melhor lugar", porque: "direta do PC — funciona na BIOS e na recuperação" };
+    }
+    if (naMao === "mouse") {
+      if (vzRadio) return { v: "evite", txt: "Vale evitar", porque: "colada no " + vz.tipo + ", na " + naFraseDe(porta.par) };
+      if (noHub && superspeedNoHub()) return { v: "evite", txt: "Vale evitar", porque: "hub com o tráfego do Wi-Fi ao lado" };
+      if (porta.usb === 3) return { v: "serve", txt: "Serve", porque: "gasta uma entrada azul que ele não usa" };
+      return { v: "melhor", txt: "Melhor lugar", porque: "entrada preta, longe de outro rádio" };
+    }
+    if (naMao === "webcam") {
+      if (porta.usb === 3) return { v: "serve", txt: "Serve", porque: "gasta uma entrada azul que ela não precisa" };
+      return { v: "melhor", txt: "Melhor lugar", porque: "entrada preta, que é o que ela pede" };
+    }
+    return null;
+  }
+
+  /* ══ 4.1 AS VARIANTES ════════════════════════════════════════════════
+     Um arranjo só não serve: o melhor no papel pode ser impossível na mesa
+     — o cabo não alcança, o hub está longe, a entrada de trás é inacessível.
+     Cada variante é a MESMA regra com uma restrição declarada, e a tela diz
+     o que se perde em cada uma.                                            */
+  var VARIANTES = [
+    { id: "melhor", rotulo: "Ideal", op: {},
+      desc: "Sem restrição: o arranjo que a regra escolhe quando tudo é possível." },
+    { id: "poucos", rotulo: "Menos trocas", op: { bonusParado: 45 },
+      desc: "Aceita um lugar pior para você mexer em menos coisas. Bom quando desmontar o arranjo custa caro." },
+    { id: "sem-ext", rotulo: "Sem extensor", op: { proibir: function (p) { return !!p.esticada; } },
+      desc: "Para quando o cabo de extensão não alcança onde você queria, ou você não quer usá-lo." },
+    { id: "so-pc", rotulo: "Sem hub", op: { proibir: function (p) { return p.onde === "hub"; } },
+      desc: "Só as entradas do gabinete. É o caso de quem não tem hub — e de notebook." }
+  ];
+  var variante = "melhor";
+  function opDaVariante() {
+    for (var i = 0; i < VARIANTES.length; i++) if (VARIANTES[i].id === variante) return VARIANTES[i].op;
+    return {};
+  }
+  /* O QUE SE PERDE, em palavra. "437 pontos pior" não diz nada a ninguém;
+     a pessoa precisa saber O QUÊ fica pior, para decidir se aceita.        */
+  function consequencias(op) {
+    var pl = planejar(op).plano, out = [];
+    var bts = APARELHOS.filter(function (a) { return a.classe === "bt"; })
+      .map(function (a) { return porNum(portaDeEm(pl, a.id)); }).filter(Boolean);
+    var noAlto = bts.filter(function (p) { return p.onde === "hub"; }).length;
+    if (bts.length && noAlto === 0) out.push("os dongles ficam na altura da escrivaninha, não no alto do rack");
+    else if (noAlto < bts.length) out.push((bts.length - noAlto) + " dongle(s) fora do alto");
+    if (!bts.some(function (p) { return p.esticada; })) out.push("o extensor não é usado");
+    var poss = bts.map(function (p) { return p.pos; }).filter(function (x) { return x !== undefined; }).sort(function (a, b) { return a - b; });
+    var minVao = poss.length > 1 ? Math.min.apply(null, poss.slice(1).map(function (v, i) { return v - poss[i]; })) : null;
+    if (minVao !== null && minVao <= 1) out.push("dois dongles ficam em entradas coladas");
+    var colados = 0;
+    APARELHOS.forEach(function (a) {
+      if (!ehRadio(a.classe)) return;
+      var p = porNum(portaDeEm(pl, a.id)); if (!p || !p.par) return;
+      var viz = pl[p.par]; if (viz && ehRadio(classeDe(viz))) colados++;
+    });
+    if (colados) out.push(Math.ceil(colados / 2) + " par(es) de rádio ficam colados");
+    return out;
+  }
+
+  /* a nota total de um plano: só para ordenar as variantes entre si */
+  function qualidade(op) {
+    var r = planejar(op), t = 0, ja = [];
+    APARELHOS.forEach(function (a) {
+      var p = portaDeEm(r.plano, a.id); if (!p) { t -= 60; return; }
+      var pt = porNum(p); if (!pt) return;
+      t += notaDe(a, pt, r.plano, ja).n;
+      if (a.classe === "bt") ja.push(pt);
+    });
+    return t;
+  }
+
+  /* ══ 4.2 A RE-IDENTIFICAÇÃO ══════════════════════════════════════════
+     Ela mexeu nos cabos. O caminho de barramento de quem mudou é outro; o
+     serial não. Comparando as duas leituras, o produto diz o que saiu de
+     onde — e, quando a entrada nova está declarada no mapa, ele diz para
+     onde, sem ela escrever nada.                                          */
+  /* a linha de "de onde eu sei" de cada aparelho que mudou de lugar */
+  function linhaDoAchado(m, reconhecido) {
+    var abre = '<li><span class="selo derivado">derivado</span><span>';
+    if (reconhecido) {
+      return abre + "A entrada já está marcada no mapa.</span></li>";
+    }
+    var reg = regiaoDoCaminho(m.agora);
+    var onde = (reg === "hub")
+      ? "pende do hub, então ele <b>está no hub</b>"
+      : "não pende do hub, então ele <b>está direto no gabinete</b>";
+    return abre + "O caminho <code>" + m.agora + "</code> " + onde
+         + ". Falta marcar a entrada: clique nele e depois na entrada certa.</span></li>";
+  }
+
+  function reexame(de, para) {
+    var a = LEITURAS[de].caminho, b = LEITURAS[para].caminho;
+    var porCaminho = {};
+    Object.keys(MAPA).forEach(function (n) { porCaminho[MAPA[n]] = n; });
+    var mudou = [];
+    APARELHOS.forEach(function (ap) {
+      if (a[ap.id] === b[ap.id]) return;
+      mudou.push({
+        ap: ap, antes: a[ap.id], agora: b[ap.id],
+        entradaAntes: porCaminho[a[ap.id]] || null,
+        entradaAgora: porCaminho[b[ap.id]] || null
+      });
+    });
+    return mudou;
+  }
+
+  /* ══ 4.3 OS CONTROLES: onde cada um deve ficar para render 100% ══════
+     O bond do Bluetooth fica PRESO ao adaptador em que nasceu — o BlueZ não
+     reequilibra sozinho, e plugar outro dongle não move ninguém. Então quem
+     está em qual adaptador é escolha, e é escolha que decide se a mesa cheia
+     funciona. O produto sabe onde cada controle está: o `HID_PHYS` do uevent
+     do nó hidraw publica o MAC do adaptador, e abre como uid 1000, sem sudo.
+
+     A CONTA, medida (`integrations/dualsense_bt_audio.py:76-78`, A/B de 25/07/2026):
+       sem microfone .. 260,4 relatórios por segundo
+       com microfone .. 276,7  (o áudio NÃO abre canal novo: divide a fila)
+     Gatilho, vibração, barra de luz, giroscópio e touch andam no MESMO canal
+     HID — eles não somam pacote. **Só o microfone muda a conta.**            */
+  /* O NÚMERO TEM UM DONO SÓ, e aí é `integrations/radio_da_mesa.py`, que tem
+     portão contra `docs/data/mapa-controles.csv`. Estas três linhas guardavam
+     260 / 277 / 1600 — a MESMA medição, arredondada. Agora são os números
+     exatos, iguais aos do Python byte a byte: 170,5 de entrada + 106,2 de áudio
+     = 276,7 com microfone. D-OS-NUMEROS-DO-RADIO-TEM-UM-DONO-SO, 25/08/2026. */
+  var CUSTO_SEM_MIC = 260.4, CUSTO_COM_MIC = 276.7, SLOTS = 1600;
+
+  /* fatia de segundo com vírgula, do jeito daqui: 830.0999999999999 não é número
+     que se mostre a ninguém. SÓ para a tela — a conta nunca arredonda. */
+  function fatias(v) { return (Math.round(v * 10) / 10).toString().replace(".", ","); }
+
+  /* AS TRÊS FAIXAS, e elas são a régua que a casa já escreveu
+     (DESEMPENHO-A-CONTA-DE-SLOTS-01:147). A primeira versão desta tela conhecia
+     só DOIS estados — "folgada" para tudo abaixo de 1600 e "não cabe" acima — e
+     por isso dizia "Cabe, com folga" na configuração exata do público deste
+     produto: quatro controles num adaptador só, 1106,8 de 1600, que é 69,2%. A
+     régua da casa chama isso de APERTADA. Falso verde no caso que mais importa. */
+  function faixa(usado) {
+    var f = usado / SLOTS;
+    if (f <= 0.60) return { nome: "Folgada",  classe: "folgada" };
+    if (f <= 0.85) return { nome: "Apertada", classe: "apertada" };
+    return { nome: "Cheia", classe: "cheia" };
+  }
+
+  /* ══ O PERFIL DE DESEMPENHO ══════════════════════════════════════════
+     Substitui os CINCO degraus do "Orçamento" de hoje, dos quais QUATRO não
+     fazem nada — medido em `core/rumble.py`: `_ORCAMENTO_COM_TETO` só casa
+     com "economia"; `balanceado`, `max`, `auto` e o não-declarado devolvem
+     `None`. E o teto alcança a vibração e mais nada, coisa que a própria
+     tela já confessa.
+
+     UMA decisão no lugar de muitas — mas o MICROFONE fica FORA do perfil,
+     de propósito. Ele é o único do grupo que capta a sala, e o mapa de
+     canais registra que ele nasce desligado por **privacidade e banda**, não
+     só banda. Perfil que liga microfone sozinho transforma uma escolha de
+     desempenho numa escolha de privacidade feita pelas costas.
+
+     O que cada perfil governa é o que custa BATERIA. E aqui está o buraco
+     honesto: **nenhum dos 178 ensaios desta casa mediu consumo por feature.**
+     Os números de bateria abaixo estão marcados como NÃO MEDIDO até alguém
+     pôr um controle carregado na mesa e cronometrar.                        */
+  var PERFIS = [
+    { id: "tudo", rotulo: "Tudo ligado",
+      resumo: "Gatilho adaptativo, vibração no que o jogo pedir, barra de luz, giroscópio e touchpad.",
+      liga: { gatilho: true, vibracao: "sem teto", lightbar: true },
+      bateria: "não medido" },
+    { id: "bateria", rotulo: "Bateria longa",
+      resumo: "Vibração com teto de 30% e barra de luz apagada. Gatilho, giroscópio e touchpad continuam.",
+      liga: { gatilho: true, vibracao: "30%", lightbar: false },
+      bateria: "não medido" },
+    { id: "escolho", rotulo: "Eu escolho",
+      resumo: "Abre os ajustes de cada aba, um por um. É o que existe hoje.",
+      liga: null, bateria: "—" }
+  ];
+  var perfil = "tudo";
+  function perfilAtual() {
+    for (var i = 0; i < PERFIS.length; i++) if (PERFIS[i].id === perfil) return PERFIS[i];
+    return PERFIS[0];
+  }
+  /* migração dos valores que já estão no disco dela, sem perder nada:
+     "economia" tinha teto e vira Bateria longa; os quatro que devolviam
+     None se comportavam igual e viram Tudo ligado — quatro nomes para um
+     comportamento só é o defeito, não a variedade.                          */
+  var MIGRACAO = { economia: "bateria", balanceado: "tudo", max: "tudo",
+                   auto: "tudo", "": "tudo", custom: "escolho" };
+
+  var CONTROLES = fonte.controles;
+  var quantos = CONTROLES.length;
+
+  function custo(c) { return c.mic ? CUSTO_COM_MIC : CUSTO_SEM_MIC; }
+  function adaptadores() {
+    return APARELHOS.filter(function (a) { return a.classe === "bt"; })
+      .map(function (a) {
+        var p = portaDe(a.id);
+        return { id: a.id, entrada: p, rotulo: p ? naFraseDe(p) : "entrada por confirmar" };
+      });
+  }
+
+  /* O ARRANJO DOS CONTROLES.
+     Regra que salva a credibilidade do conselho, a mesma do mapa: **ninguém
+     troca de adaptador à toa.** Trocar custa caro de verdade aqui — desfazer
+     o pareamento e parear de novo, com o controle na mão.
+     Então parte-se de onde cada um JÁ está, e só se move alguém quando isso
+     BAIXA a carga do adaptador mais cheio. Sem isso, o plano mandava trocar
+     três controles entre dongles idênticos, sem ganho nenhum.               */
+  function planoDosControles() {
+    var ads = adaptadores();
+    if (!ads.length) return { ads: [], carga: {}, destino: {}, cabe: false, sobra: 0 };
+    var vivos = CONTROLES.slice(0, quantos);
+    var carga = {}, destino = {};
+    ads.forEach(function (a) { carga[a.id] = 0; });
+
+    /* 1. cada um fica onde está — se o adaptador dele ainda existe */
+    var orfaos = [];
+    vivos.forEach(function (c) {
+      if (carga[c.onde] !== undefined) { destino[c.nome] = c.onde; carga[c.onde] += custo(c); }
+      else orfaos.push(c);
+    });
+    /* 2. quem perdeu o adaptador vai para o menos carregado */
+    orfaos.forEach(function (c) {
+      var m = ads[0];
+      ads.forEach(function (a) { if (carga[a.id] < carga[m.id]) m = a; });
+      destino[c.nome] = m.id; carga[m.id] += custo(c);
+    });
+    /* 3. rebalanceia SÓ enquanto isso baixar o pico */
+    for (var volta = 0; volta < vivos.length * 2; volta++) {
+      var cheio = ads[0], vazio = ads[0];
+      ads.forEach(function (a) {
+        if (carga[a.id] > carga[cheio.id]) cheio = a;
+        if (carga[a.id] < carga[vazio.id]) vazio = a;
+      });
+      if (cheio.id === vazio.id) break;
+      var cand = vivos.filter(function (c) { return destino[c.nome] === cheio.id; });
+      if (!cand.length) break;
+      var c = cand[cand.length - 1];
+      var picoAntes = carga[cheio.id];
+      var picoDepois = Math.max(carga[cheio.id] - custo(c), carga[vazio.id] + custo(c));
+      if (picoDepois >= picoAntes) break;          /* não melhora: para */
+      carga[cheio.id] -= custo(c); carga[vazio.id] += custo(c); destino[c.nome] = vazio.id;
+    }
+
+    var pico = Math.max.apply(null, ads.map(function (a) { return carga[a.id]; }));
+    /* quantos MAIS cabem: simula acrescentar até um adaptador estourar.
+       Dividir a folga total daria número maior e falso — controle não se
+       parte entre dois adaptadores. */
+    var teste = {}, sobra = 0;
+    ads.forEach(function (a) { teste[a.id] = carga[a.id]; });
+    while (sobra < 32) {
+      var m2 = ads[0];
+      ads.forEach(function (a) { if (teste[a.id] < teste[m2.id]) m2 = a; });
+      if (teste[m2.id] + CUSTO_COM_MIC > SLOTS) break;
+      teste[m2.id] += CUSTO_COM_MIC; sobra++;
+    }
+    return { ads: ads, carga: carga, destino: destino, cabe: pico <= SLOTS, sobra: sobra };
+  }
+
+  /* ══ 6. DESENHO ══════════════════════════════════════════════════════ */
+  function soqueteHTML(porta, ctx) {
+    var h = "", ap = null, estado = "", vered = "", porque = "", problema = "";
+
+    if (ctx.modo === "ideal" && !semLugar(porta)) {
+      var idPlano = ctx.plano[porta.n], idAgora = alocacao[porta.n];
+      ap = idPlano ? acha(idPlano) : null;
+      if (idPlano && idPlano !== idAgora) {
+        /* SÓ O VEREDITO — 01/10/2026 (pedido f): de onde e para onde já estão
+           na lista de cima. */
+        estado = "chega";
+      } else if (!idPlano && idAgora) {
+        ap = acha(idAgora); estado = "sai";
+      } else if (idPlano) { estado = "fica"; }
+    } else {
+      var id = alocacao[porta.n];
+      ap = id ? acha(id) : null;
+      var j = semLugar(porta) ? null : julgar(porta);
+      if (ap) {
+        estado = "cheia";
+        if (ap.classe === "wifi" && porta.onde === "hub") { problema = ' data-problema="1"'; vered = "Mudar daqui"; }
+        if (ap.classe === "teclado" && porta.onde === "hub") { problema = ' data-problema="1"'; vered = "Mudar daqui"; }
+      } else if (j) { estado = j.v; if (j.v !== "fora") { vered = j.txt; porque = j.porque; } }
+    }
+
+    var titulo = ap ? ap.tipo + " — " + ap.nome : rotuloDe(porta.n) + " vazia";
+    h += '<div class="soquete" data-soquete="' + porta.n + '"><span class="num">' + porta.n + "</span>"
+      + '<button class="plug' + (porta.usb === 3 ? " v3" : "") + '" data-porta="' + porta.n + '"'
+      + (estado ? ' data-v="' + estado + '"' : "") + problema
+      + ensinaNaEntrada(porta)
+      + (achado && alocacao[porta.n] === achado ? ' data-achado="1"' : "")
+      + ' aria-label="' + titulo + '" title="' + titulo + '"></button><span class="rotulo">';
+    /* O NOME QUE ELA DEU, na primeira linha do rótulo — cortado com
+       reticências, e inteiro na dica. O selo `.num` continua o número:
+       é o do metal. */
+    var batismo = nomeDe(porta.n);
+    if (batismo) h += '<span class="nomeada" title="' + emAtributo(batismo) + '">'
+      + emAtributo(batismo) + '</span>';
+    if (ap) {
+      h += '<button class="ap-btn nome" data-ap-abre="' + porta.n + '"'
+        + ((doProduto() ? GRAVA.indexOf(String(porta.n)) !== -1 : true) ? ' draggable="true"' : "")
+        + ' style="color:' + ap.cor + '" title="Abrir o painel de ' + emAtributo(rotuloDoAparelho(ap))
+        + '">' + emAtributo(rotuloDoAparelho(ap)) + '</button><span class="caminho">' + (caminhoDe(ap.id) || "—") + "</span>";
+      if (vered) h += '<span class="veredito ' + estado + '">' + vered + "</span>";
+      if (porque) h += '<span class="porque">' + frase1(porque) + "</span>";
+    } else if (vered) {
+      h += '<span class="veredito ' + estado + '">' + vered + '</span><span class="porque">' + frase1(porque) + "</span>";
+    } else {
+      h += '<span class="vazio">Vazia</span>';
+    }
+    if ((DECLARADO[porta.n] && DECLARADO[porta.n].liga === "hub") || HUB_LIDO[porta.n]) h += '<span class="decl">Hub</span>';
+    h += "</span></div>";
+    if (porta.filho) h += '<div class="filho"><div class="cabo">↳ ' + porta.filho.cabo + "</div>" + soqueteHTML(porta.filho, ctx) + "</div>";
+    return h;
+  }
+
+  /* ══ O EDITOR DA ENTRADA — 26/09/2026 ══════════════════════════════════
+     Pedido: «ao clicar em um desses usb mapeados eu pudesse setar que tem
+     tal coisa lá. no caso o hub ou afins». E a velocidade é a outra metade: o
+     kernel só sabe se a entrada é USB 3.0 pelo par que a placa-mãe declara, e
+     ela pode corrigir o que o firmware diz. `DECLARADO` é o que o usuário disse nesta
+     página; gravar no `maquina.json` é do produto. */
+  var DECLARADO = {};
+  var editando = null;
+  /* O NOME DA ENTRADA — 26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (D1). Pedido
+     dela: «me referi as portas renomear». O nome é da POSIÇÃO, e quem o
+     compõe é o Python (`utils/rotulo_da_entrada`): o produto entrega os
+     `rotulos` no arranjo. A palavra de reserva é a do dono, que o gerador
+     escreve aqui; no exemplo, o nome é o que se digitou nesta tela. */
+  var PALAVRA_DA_ENTRADA = "Entrada";
+  var PALAVRA_NA_FRASE = "entrada";
+  var MAXIMO_DO_NOME = 24;
+  /* o nome da face de um hub declarado, no disco: o do dono */
+  var FACE_DO_HUB = "Hub na Entrada {numero}";
+  var ROTULOS = {};
+  var HUB_LIDO = {};
+  var USB_DE = {};
+  var FRASES_DA_ORIGEM = {"placa": "É o que a placa-mãe diz.", "declarada": "É o que você disse.", "aparelho": "Um aparelho está nela a 5 Gbps.", "": "A placa-mãe não diz. Diga você."};
+  /* a origem só se diz no produto: no exemplo ninguém mediu nada */
+  function origemDaVelocidade(n) {
+    if (!doProduto() || !podeGravar(n)) return "";
+    var frase = FRASES_DA_ORIGEM[USB_DE[String(n)] || ""];
+    return frase ? '<span class="origem">' + frase + "</span>" : "";
+  }
+  function rotuloDe(n) {
+    var r = ROTULOS[String(n)];
+    if (r) return r.rotulo;
+    return nomeDe(n) || PALAVRA_DA_ENTRADA + " " + n;
+  }
+  function nomeDe(n) { return (DECLARADO[n] || {}).nome || ""; }
+  /* o sintagma sem artigo, para o meio da frase: «Entrada 3», «entrada Meio» */
+  function naFraseDe(n) {
+    var r = ROTULOS[String(n)];
+    if (r) return r.naFrase;
+    var nome = nomeDe(n);
+    return nome ? PALAVRA_NA_FRASE + " " + nome : PALAVRA_DA_ENTRADA + " " + n;
+  }
+  function emAtributo(t) {
+    return String(t).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+  }
+  /* «TROCAR COM…» — 26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (D-2609-TROCAR-MOVE-
+     O-BURACO). Pedido: «trocar elas de lugar no mapeamento». Só nas
+     entradas que gravam, sem as pontas; cada opção diz o nome, a face e o que
+     está nela. O produto troca o buraco das duas, e a página repinta pelo
+     disco. */
+  function faceDe(m) {
+    var f = FACES.filter(function (x) {
+      return x.portas.some(function (q) { return q.n === m || (q.filho && q.filho.n === m); });
+    })[0];
+    return f ? f.nome : "";
+  }
+  function linhaDaTroca(n) {
+    if (GRAVA.indexOf(String(n)) === -1 || !/^[0-9]{1,3}$/.test(String(n))) return "";
+    var outras = GRAVA.filter(function (m) { return m !== String(n) && /^[0-9]{1,3}$/.test(m); });
+    if (!outras.length) return "";
+    return '<div class="edita-linha"><span>Mover para…</span>'
+      + '<select class="troca" data-gesto="entrada-trocar" data-entrada="' + n + '">'
+      + '<option value="">Mover para…</option>'
+      + outras.map(function (m) {
+          var ali = alocacao[m] ? acha(alocacao[m]) : null;
+          var partes = [rotuloDe(m), faceDe(m), ali ? ali.tipo : "vazia"].filter(Boolean);
+          return '<option value="' + m + '">' + emAtributo(partes.join(" · ")) + "</option>";
+        }).join("")
+      + "</select></div>";
+  }
+  function linhaDoNome(n) {
+    return '<div class="edita-linha"><span>Nome da entrada</span><input class="campo-nome" type="text"'
+      + ' data-nome="' + n + '"' + gravaNaEntrada(n, "entrada-nome")
+      + ' maxlength="' + MAXIMO_DO_NOME + '" value="' + emAtributo(nomeDe(n)) + '"'
+      + ' placeholder="' + emAtributo(PALAVRA_DA_ENTRADA + " " + n) + '" aria-label="Nome"></div>';
+  }
+  /* O EDITOR GRAVA — 26/09/2026. `GRAVA` são as entradas do mapa de quem abre,
+     entregues pelo produto em `hefestoArranjo`; só nelas o botão leva o gesto
+     ao disco. No exemplo e nas entradas que o desenho monta do que ela
+     declarou (as do hub, a ponta do extensor), o editor fica só na tela. */
+  var GRAVA = [];
+  /* A PONTA DO EXTENSOR GRAVA — 26/09/2026. A ponta de um extensor
+     declarado numa entrada que grava é a entrada-filha dele no disco
+     (`entrada_a_entrada.ponta_do_extensor`): o número puro mais «a». As
+     do hub desenhado (`5.1`…) não cabem no disco, e não gravam. */
+  function podeGravar(n) {
+    n = String(n);
+    if (GRAVA.indexOf(n) !== -1) return true;
+    var mae = maeDe(n);
+    return !!mae && /^[0-9]{1,3}$/.test(mae.n) && n === mae.n + "a"
+      && GRAVA.indexOf(mae.n) !== -1 && (DECLARADO[mae.n] || {}).liga === "extensor";
+  }
+  function gravaNaEntrada(n, gesto) {
+    if (!podeGravar(n)) return "";
+    return ' data-gesto="' + gesto + '" data-entrada="' + n + '"';
+  }
+  /* O PLUGUE QUE APRENDE — 26/09/2026, D-2609-ENSINAR-GRAVA-O-NO. Com um
+     aparelho fora do mapa na mão, a entrada livre do mapa dela leva o
+     gesto `entrada-ensinar` e o caminho em que a página lê o aparelho
+     agora; o produto grava o nó dele na entrada. Só as do disco
+     (`GRAVA`): a ponta e o hub desenhado não têm nó a gravar. E só
+     as que acendem: a ocupada e a de «outra região» (o aparelho
+     direto no PC não está num buraco do hub) ficam sem o gesto. */
+  function ensinaNaEntrada(porta) {
+    if (!segurando || !doProduto() || GRAVA.indexOf(String(porta.n)) === -1) return "";
+    var c = leitura()[segurando], j = julgar(porta);
+    if (!c || (j && (j.v === "cheia" || j.v === "fora"))) return "";
+    return ' data-gesto="entrada-ensinar" data-entrada="' + porta.n
+      + '" data-caminho="' + emAtributo(c) + '"';
+  }
+
+  function declarar(n, campo, valor) {
+    var p = porNum(n);
+    if (!p) return;
+    var d = DECLARADO[n] || (DECLARADO[n] = {});
+    d[campo] = valor;
+    if (campo === "usb") p.usb = valor;
+    if (campo !== "liga") return;
+    /* A DEDUPLICAÇÃO É PELA LIGAÇÃO (D-2609-O-HUB-PENDE-DA-ENTRADA): só a face
+       de quatro buracos que ESTA tela desenhou sai; a face ligada à entrada
+       fica, e o hub dela não ganha uma segunda. */
+    FACES = FACES.filter(function (f) { return !(f.fantasma && f.daEntrada === String(n)); });
+    delete p.filho;
+    var ligada = FACES.some(function (f) { return f.daEntrada === String(n); });
+    if (valor === "hub" && !ligada) {
+      FACES.push({ nome: FACE_DO_HUB.replace("{numero}", n), titulo: "Hub na " + naFraseDe(n),
+        fantasma: true, forma: "fileira", regiao: "hub", daEntrada: String(n),
+        portas: [1, 2, 3, 4].map(function (i) { return { n: n + "." + i, usb: p.usb, onde: "hub", pos: i }; }) });
+    } else if (valor === "extensor") {
+      p.filho = { n: n + "a", usb: p.usb, onde: p.onde, esticada: true, cabo: "Extensor, declarado por você" };
+    }
+  }
+
+  /* ══ O PAINEL DO APARELHO — 04/10/2026, O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01 ═══════
+     Pedido: «clicar num dispositivo não oferece modificá-lo ou identificá-lo, nem no
+     mapa nem em Atualmente Conectado». Clicar em QUALQUER aparelho (o botão com o nome dele
+     no mapa, ou o cartão da lista) abre este painel, flutuando ao lado dele. Em cima, o que
+     ela corrige: o nome, o tipo (o tipo decide a cor em todo o app) e a chave «Extensor».
+     No meio, o que a máquina vê, em etiquetas sem botão. Embaixo, uma linha só: o que fazer.
+     QUEM VENCE: a máquina no que mede (o chip, a velocidade, os hubs: etiquetas sem botão), a
+     pessoa no resto (o nome, o tipo, o extensor). O tipo que ela diz decide a cor e o nome em
+     todo o app; no motor ele só pesa quando a máquina não leu a classe do aparelho. */
+  var TIPOS_DO_APARELHO = [["teclado", "Teclado"], ["mouse", "Mouse"], ["wifi", "Wi-Fi"], ["webcam", "Webcam"], ["caixa_de_som", "Caixa de som"], ["outro", "Outro"]];
+  var COR_DO_TIPO = {"teclado": "#ffb86c", "mouse": "#f1fa8c", "wifi": "#c3e88d", "webcam": "#8be9fd", "caixa_de_som": "#bd93f9", "outro": "#9a9eb8"};
+  var LUGARES_DA_ENTRADA = ["Frente do gabinete", "Atrás do gabinete", "Topo do gabinete", "Lateral do gabinete", "Num hub ou extensão", "No monitor", "Outro lugar"];
+  var TIPO_DA_CLASSE = { teclado: "teclado", mouse: "mouse", wifi: "wifi", webcam: "webcam" };
+  var AVISO_SOME_EM_MS = 10000;
+  var editandoDe = "mapa", identificando = null, achado = null;
+  var avisoTimer = null, avisoAberto = false, arrastando = null;
+
+  function aparelhoDaEntrada(n) { return alocacao[n] ? acha(alocacao[n]) : null; }
+  function rotuloDoTipo(t) {
+    for (var i = 0; i < TIPOS_DO_APARELHO.length; i++) if (TIPOS_DO_APARELHO[i][0] === t) return TIPOS_DO_APARELHO[i][1];
+    return t;
+  }
+  /* o nome que ela deu vence; depois o tipo que o usuário disse; depois o que a máquina leu */
+  function rotuloDoAparelho(a) {
+    return a.nomeDeclarado || (a.tipoDeclarado ? rotuloDoTipo(a.tipoDeclarado) : a.tipo);
+  }
+  function editavelNoProduto(quem) { return !doProduto() || !!quem.modelo; }
+
+  /* A CHAVE «EXTENSOR» — é da porta, separada do que está ligado nela (hub, aparelho): ligada,
+     o aparelho continua dito na entrada e o motor lê a entrada como esticada. */
+  function chaveDoExtensor(n) {
+    var soNaTela = doProduto() && !podeGravar(n);
+    if (soNaTela) return "";
+    var ligado = !!(DECLARADO[n] || {}).extensor;
+    return '<button class="chave" role="switch" aria-checked="' + ligado + '" data-extensor="' + n + '"'
+      + ' data-ligado="' + (!ligado) + '"' + gravaNaEntrada(n, "entrada-extensor")
+      + ' title="Há um cabo de extensão entre esta entrada e o aparelho" aria-label="Extensor"><i></i></button>';
+  }
+  function linhaDoExtensor(n) {
+    var c = chaveDoExtensor(n);
+    return c ? '<div class="edita-linha"><span>Extensor</span><div class="onde">'
+      + '<span>Tem um cabo de extensão nesta entrada?</span>' + c + "</div></div>" : "";
+  }
+  /* O «LUGAR» — a face do gabinete (o campo do Mapear, no mesmo dono). Só no produto, onde a
+     entrada grava: no exemplo ninguém guarda nada. */
+  function linhaDoLugar(n) {
+    if (!doProduto() || !podeGravar(n) || !/^[0-9]{1,3}$/.test(String(n))) return "";
+    var atual = faceDe(n), nomes = LUGARES_DA_ENTRADA.slice();
+    FACES.forEach(function (f) { if (!f.semLugar && !f.daEntrada && nomes.indexOf(f.nome) === -1) nomes.push(f.nome); });
+    return '<div class="edita-linha"><span>Lugar</span><select class="troca" data-gesto="entrada-lugar"'
+      + ' data-entrada="' + n + '" aria-label="Lugar">'
+      + (atual && nomes.indexOf(atual) !== -1 ? "" : '<option value="" selected>Sem lugar</option>')
+      + nomes.map(function (nome) {
+          return '<option value="' + emAtributo(nome) + '"' + (nome === atual ? " selected" : "") + ">"
+            + emAtributo(nome) + "</option>";
+        }).join("")
+      + "</select></div>";
+  }
+  function semLugar(p) {
+    return FACES.some(function (f) { return !!f.semLugar && f.portas.indexOf(p) !== -1; });
+  }
+  function aparelhoSemLugar(id) {
+    var p = portaDe(id), pp = p && porNum(p);
+    return !!(pp && semLugar(pp));
+  }
+
+  function identificavel(quem) { return !/^054c:/.test(quem.modelo || ""); }
+
+  /* ══ O PAINEL ÚNICO — 05/10/2026, o desenho aprovado ══════════════════════════════
+     Clicar na entrada, no aparelho, na lista «Conectado agora» ou num aparelho sem entrada
+     abre o MESMO painel, perto do que foi clicado: o aparelho de um lado, a entrada do outro.
+     O que leva `data-gesto` o produto grava e a página espera o disco; no exemplo, muda só
+     na tela. Fecha no botão de fechar, no Esc ou com um clique fora. */
+  var editandoAp = null;
+  function faceDaPorta(p) {
+    return FACES.filter(function (f) {
+      return f.portas.some(function (x) { return x === p || x.filho === p; });
+    })[0];
+  }
+  function estadoDoAparelho(n, quem) {
+    if ((!quem.classe && !quem.tipoDeclarado) || aparelhoSemLugar(quem.id)) return "";
+    var r = planejar({}), para = portaDeEm(r.plano, quem.id);
+    var m = r.motivo[quem.id] || { razoes: [], essencial: false, ganho: 0 };
+    if (receitaManda(n, para, m)) {
+      var razao = m.razoes.length ? m.razoes[0].txt : "";
+      return '<div class="estado troca"' + (razao ? ' title="' + emAtributo(frase1(razao)) + '"' : "")
+        + "><span>Melhor na " + emAtributo(naFraseDe(para)) + '</span><button class="btn" id="ver-a-sugestao">Ver</button></div>';
+    }
+    return n ? '<div class="estado bom">✓ Boa entrada</div>' : "";
+  }
+  function colunaDoAparelho(n, quem, p) {
+    var h = "<h5>Aparelho</h5>";
+    if (!quem) {
+      return h + '<div class="vazia">' + (p && ocupada(alocacao, p) ? "Ocupada pelo extensor" : "Nada ligado aqui") + "</div>";
+    }
+    var edita = editavelNoProduto(quem);
+    var g = function (gesto) {
+      return quem.modelo ? ' data-gesto="' + gesto + '" data-modelo="' + quem.modelo + '"' : "";
+    };
+    h += '<label class="campo"><span>Nome</span><input class="campo-nome" type="text"'
+      + ' data-nome-do-aparelho="' + emAtributo(quem.id) + '"' + g("aparelho-nome")
+      + (edita ? "" : " disabled") + ' maxlength="' + MAXIMO_DO_NOME + '"'
+      + ' value="' + emAtributo(quem.nomeDeclarado || "") + '"'
+      + ' placeholder="' + emAtributo(rotuloDoAparelho(quem)) + '" aria-label="Nome do aparelho"></label>';
+    /* o tipo que a máquina mede (o rádio Bluetooth, o hub) não se troca aqui */
+    var tipoAgora = quem.tipoDeclarado || TIPO_DA_CLASSE[quem.classe] || "";
+    var daMaquina = !tipoAgora && !!quem.classe;
+    var cor = tipoAgora ? (COR_DO_TIPO[tipoAgora] || quem.cor) : quem.cor;
+    var opcoes = daMaquina ? "<option selected>" + emAtributo(quem.tipo) + "</option>"
+      : (tipoAgora ? "" : '<option value="" selected></option>') + TIPOS_DO_APARELHO.map(function (t) {
+          return '<option value="' + t[0] + '"' + (t[0] === tipoAgora ? " selected" : "") + ">" + t[1] + "</option>";
+        }).join("");
+    h += '<label class="campo"><span>Tipo</span><span class="sel"><i style="background:' + emAtributo(cor) + '"></i>'
+      + '<select class="tipo-do-aparelho"' + (daMaquina ? "" : g("aparelho-tipo"))
+      + (edita && !daMaquina ? "" : " disabled") + ' aria-label="Tipo do aparelho">' + opcoes + "</select></span></label>";
+    return h + estadoDoAparelho(n, quem);
+  }
+  function colunaDaEntrada(n, p, quem) {
+    var h = "<h5>Entrada</h5>";
+    if (!p) return h + '<div class="vazia">Clique na entrada certa no mapa</div>';
+    var soNaTela = doProduto() && !podeGravar(n);
+    h += '<label class="campo"><span>Nome</span><input class="campo-nome" type="text" data-nome="' + n + '"'
+      + gravaNaEntrada(n, "entrada-nome") + (soNaTela ? " disabled" : "") + ' maxlength="' + MAXIMO_DO_NOME + '"'
+      + ' value="' + emAtributo(nomeDe(n)) + '" placeholder="' + emAtributo(PALAVRA_DA_ENTRADA + " " + n) + '"'
+      + ' aria-label="Nome da entrada"></label>';
+    var lido = !!HUB_LIDO[n];
+    var liga = (DECLARADO[n] || {}).liga || (lido || (quem && quem.classe === "hub") ? "hub" : "direto");
+    h += '<div class="campo"><span>Tipo</span><div class="seg">' + [["direto", "Direta"], ["hub", "Hub"]].map(function (o) {
+        /* O HUB NÃO CABE ONDE HÁ UM APARELHO DIRETO QUE NÃO É HUB, e o «Direta» não cabe onde o
+           computador lê um hub: cinza, com a razão na dica (a D-03 dela), e o clique não declara. */
+        var razao = o[0] === "direto" && lido ? "O computador lê um hub nesta entrada"
+          : o[0] === "hub" && quem && quem.classe !== "hub" && !lido ? quem.tipo + " está direto nesta entrada" : "";
+        var trava = soNaTela || razao;
+        return '<button class="escolha' + (trava ? " apagado" : "") + '" data-liga="' + o[0] + '"'
+          + (trava ? ' aria-disabled="true"' : gravaNaEntrada(n, "entrada-o-que-tem"))
+          + (razao ? ' title="' + emAtributo(razao) + '"' : "")
+          + ' aria-pressed="' + (liga === o[0]) + '">' + o[1] + "</button>";
+      }).join("") + "</div></div>";
+    var origem = doProduto() && podeGravar(n) ? FRASES_DA_ORIGEM[USB_DE[String(n)] || ""] || "" : "";
+    h += '<div class="campo"><span>USB</span><div class="seg"' + (origem ? ' title="' + emAtributo(origem) + '"' : "") + ">"
+      + [[3, "3.0"], [2, "2.0"]].map(function (o) {
+          return '<button class="escolha' + (soNaTela ? ' apagado" aria-disabled="true"' : '"') + ' data-usb="' + o[0] + '"'
+            + (soNaTela ? "" : gravaNaEntrada(n, "entrada-velocidade")) + ' aria-pressed="' + (p.usb === o[0]) + '"'
+            + ' aria-label="USB ' + o[1] + '">' + o[1] + "</button>";
+        }).join("") + "</div></div>";
+    var chave = chaveDoExtensor(n);
+    return h + (chave ? '<div class="campo"><span>Extensor</span>' + chave + "</div>" : "");
+  }
+  function peDoPainel(n, quem) {
+    if (!quem) return "";
+    var edita = editavelNoProduto(quem);
+    var gVolta = ' data-gesto="voltar-ao-automatico"' + (quem.modelo ? ' data-modelo="' + quem.modelo + '"' : "")
+      + (n && podeGravar(n) ? ' data-entrada="' + n + '"' : "");
+    return '<div class="pe">'
+      + (identificando === quem.id ? '<span class="dica-id">Tire e ponha de novo, depois clique em Examinar.</span>' : "")
+      + (identificavel(quem) ? '<button class="btn" id="identificar" title="Acende a entrada dele depois do Examinar">Identificar</button>' : "")
+      + '<button class="btn" id="voltar-ao-automatico" title="Esquece o nome e o tipo que você deu"'
+      + (doProduto() ? gVolta : "") + (edita ? "" : " disabled") + ">Automático</button></div>";
+  }
+  function htmlDoPainel(n, quem) {
+    var p = n ? porNum(n) : null, face = p ? faceDaPorta(p) : null;
+    var lugar = face ? (face.titulo || face.nome) : "";
+    var titulo = quem ? rotuloDoAparelho(quem) : rotuloDe(n);
+    var onde = quem ? (n ? rotuloDe(n) + (lugar ? " · " + lugar : "") : "Sem entrada marcada") : lugar;
+    return '<div class="cab"><span class="bola" style="background:' + emAtributo(quem ? quem.cor : "var(--color-rule)") + '"></span>'
+      + "<b>" + emAtributo(titulo) + '</b><span class="onde">' + emAtributo(onde) + "</span>"
+      + '<button class="fecha" id="edita-fecha" aria-label="Fechar">&times;</button></div>'
+      + '<div class="colunas"><div class="col">' + colunaDoAparelho(n, quem, p) + "</div>"
+      + '<div class="col">' + colunaDaEntrada(n, p, quem) + "</div></div>" + peDoPainel(n, quem);
+  }
+  function posicionar(ed, alvo) {
+    if (!alvo) return;
+    var r = alvo.getBoundingClientRect(), w = ed.offsetWidth, h = ed.offsetHeight;
+    var naLista = !!alvo.closest(".bandeja");
+    var x = naLista ? r.left - w - 8 : r.left, y = naLista ? r.top : r.bottom + 8;
+    if (x + w > innerWidth - 12) x = innerWidth - 12 - w;
+    if (y + h > innerHeight - 12) y = naLista ? innerHeight - 12 - h : r.top - 8 - h;
+    ed.style.left = Math.max(12, x) + "px";
+    ed.style.top = Math.max(12, y) + "px";
+  }
+
+  function mostrarEditor() {
+    var ed = document.getElementById("edita");
+    if (!ed) return;
+    var n = editandoAp ? null : editando;
+    var quem = editandoAp ? acha(editandoAp) : (n ? aparelhoDaEntrada(n) : null);
+    var plug = n && porNum(n) && document.querySelector('.plug[data-porta="' + n + '"]');
+    var soNaTela = n && doProduto() && !podeGravar(n);
+    if (modo === "ideal" || (!editandoAp && !plug) || (editandoAp && !quem) || (soNaTela && !quem)) {
+      ed.hidden = true; ed.innerHTML = ""; return;
+    }
+    ed.innerHTML = htmlDoPainel(n, quem);
+    ed.hidden = false;
+    var chip = (editandoAp || editandoDe === "lista") && quem
+      ? document.querySelector('.pend-lista .chip[data-ap="' + quem.id + '"]')
+        || document.querySelector('#bandeja .chip[data-ap="' + quem.id + '"]') : null;
+    posicionar(ed, chip || plug);
+  }
+
+  /* TROCAR DE LUGAR É ARRASTAR para a outra entrada, com «Mover para…» no painel para quem usa
+     teclado ou leitor de tela. No produto o gesto é o `entrada-trocar` (o mesmo do «Mover
+     para…»); no exemplo a troca é só na tela. */
+  function podeMover(de, para) {
+    if (de === para) return false;
+    if (doProduto()) return GRAVA.indexOf(String(de)) !== -1 && GRAVA.indexOf(String(para)) !== -1
+      && /^[0-9]{1,3}$/.test(String(de)) && /^[0-9]{1,3}$/.test(String(para));
+    return !!porNum(de) && !!porNum(para);
+  }
+  function moverPara(de, para) {
+    if (!podeMover(de, para)) return;
+    if (doProduto()) {
+      var sel = document.createElement("select");
+      sel.hidden = true;
+      sel.setAttribute("data-gesto", "entrada-trocar");
+      sel.setAttribute("data-entrada", de);
+      sel.innerHTML = '<option value="' + para + '" selected>' + para + "</option>";
+      document.body.appendChild(sel);
+      sel.dispatchEvent(new Event("change", { bubbles: true }));
+      document.body.removeChild(sel);
+      return;
+    }
+    var cd = MAPA[de], cp = MAPA[para];
+    if (cd) MAPA[para] = cd; else delete MAPA[para];
+    if (cp) MAPA[de] = cp; else delete MAPA[de];
+    editando = null;
+    pintar();
+  }
+  document.addEventListener("dragstart", function (ev) {
+    var b = ev.target.closest && ev.target.closest(".ap-btn[data-ap-abre]");
+    if (!b || !ev.dataTransfer) return;
+    arrastando = b.getAttribute("data-ap-abre");
+    ev.dataTransfer.setData("text/plain", arrastando);
+    ev.dataTransfer.effectAllowed = "move";
+    document.body.classList.add("arrastando");
+  });
+  function limparOsAlvos() {
+    var alvos = document.querySelectorAll(".soquete.alvo-do-arrasto");
+    for (var i = 0; i < alvos.length; i++) alvos[i].classList.remove("alvo-do-arrasto");
+  }
+  document.addEventListener("dragend", function () {
+    arrastando = null; document.body.classList.remove("arrastando"); limparOsAlvos();
+  });
+  document.addEventListener("dragover", function (ev) {
+    var s = arrastando && ev.target.closest && ev.target.closest(".soquete[data-soquete]");
+    if (!s || !podeMover(arrastando, s.getAttribute("data-soquete"))) return;
+    ev.preventDefault();
+    limparOsAlvos();
+    s.classList.add("alvo-do-arrasto");
+  });
+  document.addEventListener("drop", function (ev) {
+    var s = arrastando && ev.target.closest && ev.target.closest(".soquete[data-soquete]");
+    if (!s) return;
+    ev.preventDefault();
+    var de = arrastando;
+    arrastando = null; document.body.classList.remove("arrastando"); limparOsAlvos();
+    moverPara(de, s.getAttribute("data-soquete"));
+  });
+
+  /* O AVISO DE «MUDOU DE LUGAR» é uma linha com ✓ que some sozinha em 10 s: «Ver» abre o
+     detalhe (e o segura até ela fechar) e o ✕ fecha na hora. */
+  function oAvisoDeUmaLinha(mudou, detalhe) {
+    var frase, sab = mudou.filter(function (m) { return m.entradaAgora; }).length;
+    if (!mudou.length) frase = "Nada mudou de lugar.";
+    else if (mudou.length === 1) {
+      var m = mudou[0], nome = String(m.ap.tipo || "aparelho").toLowerCase();
+      frase = m.entradaAgora
+        ? "O " + nome + " mudou para a " + naFraseDe(m.entradaAgora) + "."
+        : "O " + nome + " mudou de lugar; falta marcar a entrada.";
+    } else {
+      frase = mudou.length + " aparelhos mudaram de lugar"
+        + (sab === mudou.length ? "." : sab ? "; " + sab + " com a entrada marcada." : "; falta marcar as entradas.");
+    }
+    return '<p class="aviso-uma-linha" role="status"><span class="ok" aria-hidden="true">✓</span>'
+      + "<span>" + emAtributo(frase) + "</span>"
+      + (mudou.length ? '<button class="btn pequeno" id="aviso-ver" aria-expanded="' + avisoAberto + '">Ver</button>' : "")
+      + '<button class="btn aviso-fecha" id="aviso-fecha" aria-label="Fechar o aviso">&times;</button></p>'
+      + (avisoAberto ? '<div class="aviso-detalhe">' + detalhe + "</div>" : "");
+  }
+  var avisoLeituras = null;
+  function acharOIdentificado() {
+    if (!identificando) return;
+    if (reexame(leituraAnterior, leituraAtual).some(function (m) { return m.ap.id === identificando; })) {
+      achado = identificando;
+    }
+    identificando = null;
+  }
+  function cuidarDoAviso() {
+    if (modo !== "reexame") {
+      if (avisoTimer) { clearTimeout(avisoTimer); avisoTimer = null; }
+      avisoAberto = false; avisoLeituras = null;
+      return;
+    }
+    /* uma leitura nova (outro `Examinar`) recomeça os 10 s */
+    if (avisoLeituras !== LEITURAS) {
+      recomecarOAviso(); avisoLeituras = LEITURAS; acharOIdentificado();
+    }
+    if (avisoTimer || avisoAberto) return;
+    avisoTimer = setTimeout(function () {
+      avisoTimer = null;
+      if (modo === "reexame" && !avisoAberto) { modo = "mesa"; pintar(); }
+    }, AVISO_SOME_EM_MS);
+  }
+  function recomecarOAviso() {
+    if (avisoTimer) { clearTimeout(avisoTimer); avisoTimer = null; }
+    avisoAberto = false; avisoLeituras = null;
+  }
+
+  document.addEventListener("keydown", function (ev) {
+    if (ev.key === "Escape" && (editando || editandoAp)) { editando = null; editandoAp = null; segurando = null; pintar(); }
+  });
+  /* O NOME, NO EXEMPLO — 26/09/2026. No produto o campo leva o gesto
+     `entrada-nome`, e a página espera o disco; aqui, sem produto, o nome
+     fica só na tela. */
+  document.addEventListener("change", function (ev) {
+    var sel = ev.target.closest && ev.target.closest("#edita select.tipo-do-aparelho");
+    if (sel && !sel.hasAttribute("data-gesto")) {
+      var ap2 = editandoAp ? acha(editandoAp) : aparelhoDaEntrada(editando);
+      if (ap2 && sel.value) { ap2.tipoDeclarado = sel.value; ap2.cor = COR_DO_TIPO[sel.value] || ap2.cor; }
+      pintar(); return;
+    }
+    var campo = ev.target.closest && ev.target.closest("#edita [data-nome]");
+    if (!campo || campo.hasAttribute("data-gesto")) return;
+    declarar(campo.getAttribute("data-nome"), "nome", campo.value.trim().slice(0, MAXIMO_DO_NOME));
+    pintar();
+  });
+
+  function pintar() {
+    /* o hub nasce com o cinza da paleta (#6272a4), e o cinza da letra saiu */
+    APARELHOS.forEach(function (a) { if (a.cor === "#6272a4") a.cor = "#f8f8f2"; });
+    alocacao = alocacaoDerivada();
+    var op = opDaVariante();
+    var r = planejar(op);
+    var ctx = { modo: modo, plano: r.plano };
+
+    /* os modos */
+    document.getElementById("modos").innerHTML =
+        '<button class="modo" data-modo="mesa" data-dica="Onde cada aparelho está agora" aria-pressed="' + (modo === "mesa") + '">Atual</button>'
+      + '<button class="modo destaque" data-modo="ideal" data-dica="Onde cada aparelho funciona melhor" aria-pressed="' + (modo === "ideal") + '">Sugestões</button>'
+      + '<button class="modo" data-modo="mao" data-dica="A melhor entrada para um aparelho novo" aria-pressed="' + (modo === "mao") + '">Adicionar</button>'
+      + '<button class="modo" data-modo="registro" data-todo="8" data-dica="O que entrou e saiu das entradas" aria-pressed="' + (modo === "registro") + '">Registro</button>';
+    var noRegistro = modo === "registro";
+    document.getElementById("registro").hidden = !noRegistro;
+    document.querySelector(".palco").hidden = noRegistro;
+    document.getElementById("painel").hidden = noRegistro;
+    document.getElementById("legenda").hidden = noRegistro;
+
+    /* o painel */
+    var painel = document.getElementById("painel"), html = "";
+    /* html é concatenado: o modo ideal empilha abas de variante + receita */
+    if (modo === "ideal") {
+      var qMelhor = qualidade({});
+      /* O SUGESTÕES FALA MENOS — 01/10/2026 (pedido f): os botões dizem só o
+         arranjo, cada movimento é uma linha com as razões no «?», e da conta do
+         fim fica a linha do ganho não medido (D-LINHA-DO-GANHO-NAO-MEDIDO). */
+      html += '<div class="escolhas" style="margin-bottom:.4rem">'
+        + VARIANTES.map(function (v) {
+            return '<button class="escolha" data-var="' + v.id + '" aria-pressed="' + (variante === v.id) + '">'
+              + "<b>" + v.rotulo + "</b></button>";
+          }).join("")
+        + "</div>"
+        + (function () {
+            var c = consequencias(op), base = consequencias({});
+            var novas = c.filter(function (x) { return base.indexOf(x) === -1; });
+            return novas.length ? '<p style="margin:0 0 .4rem;font-size:var(--text-sm);color:var(--color-ink-quiet)">'
+              + '<b style="color:var(--color-lacuna)">O que se perde:</b> ' + novas.join("; ") + ".</p>" : "";
+          })();
+      var movs = receita(op);
+      var reais = movs.filter(function (m) { return !m.semNumero; });
+      if (!reais.length) {
+        html += '<div class="nada-a-fazer"><b>Nada a mover.</b></div>';
+      } else {
+        html += '<p class="chamada"><span class="grande">' + reais.length + " troca" + (reais.length > 1 ? "s" : "") + "</span></p>"
+             + '<ol class="receita">'
+             + reais.map(function (m) {
+                 return '<li><div><h4 data-todo="1" data-dica="' + emAtributo(String(m.linhas[0] ? m.linhas[0].t : "").replace(/<[^>]+>/g, "")) + '">' + m.titulo + "</h4></div></li>";
+               }).join("")
+             + "</ol>";
+        html += '<div class="acoes"><button class="btn forte ja-movi"' + examinaNoProduto() + '>Já mudei</button>'
+             +  '<button class="btn" id="voltar">Desfazer</button></div>';
+      }
+    } else if (modo === "reexame") {
+      var mudou = reexame(leituraAnterior, leituraAtual);
+      if (!mudou.length) {
+        html = '<div class="nada-a-fazer"><b>Nada mudou de lugar.</b></div>';
+      } else {
+        var sabidos = mudou.filter(function (m) { return m.entradaAgora; });
+        var novos = mudou.filter(function (m) { return !m.entradaAgora; });
+        html = '<p class="chamada"><span class="grande">' + mudou.length
+          + "</span> aparelho" + (mudou.length > 1 ? "s mudaram" : " mudou") + " de lugar."
+          + (sabidos.length ? " " + sabidos.length + " com a entrada já marcada." : "") + "</p>"
+          + '<ol class="receita">'
+          + mudou.map(function (m) {
+              var reconhecido = !!m.entradaAgora;
+              return "<li><div><h4>" + m.ap.tipo + " · " + m.ap.nome
+                + (reconhecido ? "" : "  ·  em entrada não declarada") + "</h4><ul>"
+                + '<li><span class="selo medido">medido</span><span>'
+                + (m.antes ? "Estava em <code>" + m.antes + "</code>"
+                    + (m.entradaAntes ? " (entrada <b>" + m.entradaAntes + "</b>)" : "")
+                    + ", agora está em " : "Agora está em ")
+                + "<code>" + m.agora + "</code>"
+                + (reconhecido ? " (entrada <b>" + m.entradaAgora + "</b>)" : "") + ".</span></li>"
+                + linhaDoAchado(m, reconhecido)
+                + "</ul></div></li>";
+            }).join("")
+          + "</ol>";
+        if (novos.length) {
+          html += '<div class="nada-a-fazer" style="margin-top:.6rem;border-left-color:var(--color-lacuna)">'
+            + '<b style="color:var(--color-lacuna)">' + novos.length + " sem entrada marcada</b>"
+            + '<p style="margin:.3rem 0 0;font-size:var(--text-sm);color:var(--color-ink-quiet)">'
+            + Object.keys(MAPA).length + " de " + todasPortas().length + " entradas marcadas."
+            + " Marcar as vazias também faz o reconhecimento não falhar.</p></div>";
+        }
+      }
+      html += '<div class="acoes"><button class="btn" id="voltar-leitura">Fechar</button>'
+        + '<button class="btn" id="ver-antes">Ver como o arranjo estava ' + (leituraAtual === "agora" ? "antes" : "agora") + "</button></div>";
+      html = oAvisoDeUmaLinha(mudou, html);
+    } else if (modo === "mao") {
+      html = '<p class="chamada" id="chamada-mao">O que vai conectar?</p><div class="escolhas">'
+        + NA_MAO.map(function (m) { return '<button class="escolha" data-mao="' + m.id + '" aria-pressed="' + (naMao === m.id) + '"><i style="background:' + m.cor + '"></i>' + m.rotulo + "</button>"; }).join("")
+        + "</div>";
+      if (naMao && LICOES[naMao]) {
+        var L = LICOES[naMao];
+        html += '<div class="licao"><p class="texto">' + L.texto + "</p>"
+          + (L.conta ? '<div class="conta-caixa"><b>' + L.conta.titulo + "</b>" + L.conta.linhas.map(function (x) { return "<div>" + x + "</div>"; }).join("") + "</div>" : "")
+          + "</div>";
+      }
+    } else {
+      var pend = receita(op).filter(function (m) { return !m.semNumero; }).length;
+      var sem = semEntrada();
+      html = '<p class="chamada">' + (pend
+        ? '<span class="grande">' + pend + "</span> coisa" + (pend > 1 ? "s" : "") + " para mudar de lugar"
+        : "Nada a mudar de lugar")
+        + ' <span class="fina">'
+        + (leituraAtual === "agora" ? "" : '<b style="color:var(--color-lacuna)">leitura antiga</b> · ')
+        + Object.keys(MAPA).length + " de " + todasPortas().length + " entradas mapeadas"
+        + (sem.length ? ' · <b style="color:var(--color-lacuna)">' + sem.length + " aparelho"
+            + (sem.length > 1 ? "s" : "") + " fora do mapa</b>" : "")
+        + (pend ? ' · Clique em <b style="color:var(--color-ok)">Sugestões</b>' : "")
+        + "</span></p>";
+    }
+    painel.innerHTML = html;
+    cuidarDoAviso();
+
+    /* as faces */
+    document.getElementById("faces").innerHTML = FACES.map(function (f) {
+      var mapa = modo === "ideal" ? r.plano : alocacao;
+      var total = f.portas.length + f.portas.filter(function (p) { return p.filho; }).length;
+      var cheias = f.portas.reduce(function (s, p) { return s + (mapa[p.n] ? 1 : 0) + (p.filho && mapa[p.filho.n] ? 1 : 0); }, 0);
+      /* os aparelhos que ESTA região tem e cuja entrada ainda não foi
+         declarada: eles aparecem, porque o produto os vê. Esconder seria
+         mentir sobre a mesa dela. */
+      var reg = f.regiao;
+      var pend = (modo === "ideal") ? [] : semEntrada().filter(function (x) { return x.regiao === reg; });
+      /* a região "pc" tem duas faces: a faixa vai numa só, para não duplicar */
+      if (reg === "pc" && !f.donaDaFaixaPc) pend = [];
+      var faixa = "";
+      if (pend.length) {
+        faixa = '<div class="por-confirmar">'
+          + "<b>" + pend.length + (reg === "hub" ? " no hub" : " no PC") + " sem entrada marcada</b>"
+          + '<div class="pend-lista">'
+          + pend.map(function (x) {
+              return '<button class="chip pend" data-ap="' + x.ap.id + '" data-dica="Clique e marque a entrada onde ele está"'
+                + (segurando === x.ap.id ? ' data-segurando="1"' : "") + ">"
+                + '<i class="marca" style="background:' + x.ap.cor + '"></i>'
+                + '<span class="txt"><b>' + x.ap.tipo + "</b><span>" + x.caminho + "</span></span></button>";
+            }).join("")
+          + "</div>"
+          + "</div>";
+      }
+      /* A FACE DIZ DE QUAL ENTRADA PENDE (D-2609-O-HUB-PENDE-DA-ENTRADA): o
+         título é do dono («Hub na Entrada 3»), e a divergência é uma linha
+         a mais, sem culpa. */
+      return '<div><div class="face-cab"><h3>' + (f.titulo || f.nome) + '</h3><span class="quantas">' + cheias + " de " + total + " ocupadas</span></div>"
+        + (f.diverge ? '<p class="diverge">' + f.diverge + "</p>" : "")
+        + '<div class="rolar"><div class="chapa ' + f.forma + '">' + f.portas.map(function (p) { return soqueteHTML(p, ctx); }).join("") + "</div></div>"
+        + (f.leitura && modo !== "ideal"
+            ? '<p class="leitura-da-maquina">' + f.leitura.map(emAtributo).join(" · ") + "</p>" : "")
+        + faixa + "</div>";
+    }).join("");
+
+    /* a bandeja */
+    var camDaCadeia = leitura();
+    function chipDaCadeia(a, recuado) {
+      var p = modo === "ideal" ? portaDeEm(r.plano, a.id) : portaDe(a.id);
+      var org = ORIGEM[a.id], hub = HUB_FISICO[a.id], enl = ENLACE[a.id];
+      /* A dica fala do que a pessoa faz, não do sistema por baixo (rodada 3). */
+      var dica = p ? "Na Entrada " + p + ". Clique para trocar" : "Sem entrada marcada. Clique e marque a entrada";
+      var titulo = a.nomeDeclarado || hub || rotuloDoAparelho(a);
+      return '<button class="chip' + (recuado ? " recuado" : "") + '" data-ap="' + a.id + '"' + (p ? ' data-alocado="1"' : "")
+        + ' data-dica="' + emAtributo(dica) + '"' + (hub ? ' data-todo="5"' : "")
+        + (segurando === a.id ? ' data-segurando="1"' : "") + ">"
+        + '<i class="marca" style="background:' + a.cor + '"></i>'
+        + '<span class="txt"><b' + (hub ? '' : "") + ">" + emAtributo(titulo) + "</b>"
+        + "<span>" + emAtributo(a.nome) + "</span>"
+        + (enl ? '<span class="enlace" data-todo="6" data-dica="A entrada, o cabo ou o extensor segura a velocidade">' + enl + "</span>" : "")
+        + "</span>"
+        + (p ? '<span class="num">' + p + "</span>" : "") + "</button>";
+    }
+    var hubsDaCadeia = APARELHOS.filter(function (a) { return a.classe === "hub" && camDaCadeia[a.id]; });
+    var jaNaCadeia = {};
+    var htmlDaCadeia = hubsDaCadeia.map(function (h) {
+      jaNaCadeia[h.id] = true;
+      var dele = APARELHOS.filter(function (a) {
+        var c = camDaCadeia[a.id];
+        return a.id !== h.id && c && c.indexOf(camDaCadeia[h.id] + ".") === 0;
+      });
+      return chipDaCadeia(h, false) + dele.map(function (a) { jaNaCadeia[a.id] = true; return chipDaCadeia(a, true); }).join("");
+    }).join("");
+    htmlDaCadeia += APARELHOS.filter(function (a) { return !jaNaCadeia[a.id]; })
+      .map(function (a) { return chipDaCadeia(a, false); }).join("");
+    htmlDaCadeia += SUMIRAM.map(function (a) {
+      return '<div class="chip sumiu" data-todo="7" data-dica="Já esteve neste computador e não apareceu agora">'
+        + '<i class="marca" style="background:' + a.cor + '"></i>'
+        + '<span class="txt"><b>' + emAtributo(a.tipo) + "</b><span>" + emAtributo(a.nome) + " · Não apareceu neste início</span></span></div>";
+    }).join("");
+    document.getElementById("bandeja").innerHTML = htmlDaCadeia;
+    /* A DICA DIZ QUE A ENTRADA ABRE UM EDITOR — 26/09/2026: nada na tela
+       dizia, e ela nunca o achou. Quantos estão sem lugar já está no
+       painel («fora do mapa»). */
+    document.getElementById("ajuda-bandeja").textContent = "";
+
+    /* legenda */
+    document.getElementById("legenda").innerHTML = modo === "ideal"
+      ? '<span><i class="amostra r-ok"></i> Entra aqui</span><span><i class="amostra r-ru"></i> Sai daqui</span>'
+        + '<span><i class="amostra v3"></i> USB 3.0</span><span><i class="amostra v2"></i> USB 2.0</span>'
+      : modo === "mao"
+      ? '<span><i class="amostra r-ok"></i> Melhor lugar</span><span><i class="amostra r-ev"></i> Vale evitar</span>'
+        + '<span><i class="amostra r-ru"></i> Evite</span><span><i class="amostra v3"></i> USB 3.0</span><span><i class="amostra v2"></i> USB 2.0</span>'
+      : '<span><i class="amostra v3"></i> USB 3.0</span><span><i class="amostra v2"></i> USB 2.0</span>'
+        + '<span><i class="amostra r-ru"></i> Lugar ruim</span>';
+
+    mostrarEditor();
+  }
+
+  /* ══ 7. INTERAÇÃO ════════════════════════════════════════════════════ */
+  document.addEventListener("click", function (ev) {
+    /* O EDITOR DA ENTRADA — 26/09/2026. Os gestos dele vêm antes de todos:
+       um botão dentro do editor não pode cair no clique do plugue embaixo. */
+    if (ev.target.closest(".modo[data-modo]")) { editando = null; editandoAp = null; segurando = null; }
+    if (ev.target.id === "edita-fecha") { editando = null; editandoAp = null; segurando = null; pintar(); return; }
+    var lg = ev.target.closest("#edita [data-liga]");
+    /* A TELA ESPERA O DISCO — 26/09/2026, D-2609-A-TELA-DO-MAPA-ESPERA-O-DISCO.
+       O botão que leva o gesto ao disco não pinta nada aqui: ele fica
+       «em voo» (o carimbo do piloto), o produto grava e devolve o
+       arranjo relido, e a página repinta pelo que o disco diz. Uma
+       recusa não repinta, e a piscada acha o botão clicado. No
+       exemplo, sem produto, a pintura continua local. */
+    if (lg && lg.hasAttribute("data-gesto")) return;
+    if (lg) {
+      /* o apagado responde e não declara: a razão está na dica */
+      if (lg.getAttribute("aria-disabled") !== "true") declarar(editando, "liga", lg.getAttribute("data-liga"));
+      pintar(); return;
+    }
+    /* O PAINEL DO APARELHO — 04/10/2026. O que leva `data-gesto` o produto grava e a página
+       espera o disco; o que não leva (o exemplo) muda só na tela. */
+    var abre = ev.target.closest("[data-ap-abre]");
+    if (abre) {
+      achado = null; editandoDe = "mapa"; editandoAp = null; segurando = null;
+      editando = abre.getAttribute("data-ap-abre"); if (modo === "ideal") modo = "mesa";
+      pintar(); return;
+    }
+    var ext = ev.target.closest("#edita [data-extensor]");
+    if (ext && ext.hasAttribute("data-gesto")) return;
+    if (ext) {
+      var liga = ext.getAttribute("data-ligado") === "true", pe = porNum(editando);
+      declarar(editando, "extensor", liga); if (pe) pe.esticada = liga;
+      pintar(); return;
+    }
+    var tp = ev.target.closest("#edita [data-tipodito]");
+    if (tp && (tp.hasAttribute("data-gesto") || tp.disabled)) return;
+    if (tp) {
+      var ap0 = aparelhoDaEntrada(editando);
+      if (ap0) {
+        ap0.tipoDeclarado = tp.getAttribute("data-tipodito");
+        ap0.cor = COR_DO_TIPO[ap0.tipoDeclarado] || ap0.cor;
+      }
+      pintar(); return;
+    }
+    var vauto = ev.target.closest("#edita #voltar-ao-automatico");
+    if (vauto && (vauto.hasAttribute("data-gesto") || vauto.disabled)) return;
+    if (vauto) {
+      var ap1 = aparelhoDaEntrada(editando);
+      if (ap1) { delete ap1.tipoDeclarado; delete ap1.nomeDeclarado; ap1.cor = ap1.corDaMaquina || ap1.cor; }
+      if (DECLARADO[editando]) delete DECLARADO[editando].extensor;
+      var pv = porNum(editando); if (pv) pv.esticada = false;
+      pintar(); return;
+    }
+    if (ev.target.closest("#edita #identificar")) {
+      identificando = alocacao[editando] || null; pintar(); return;
+    }
+    if (ev.target.id === "ver-a-sugestao") { editando = null; editandoAp = null; segurando = null; modo = "ideal"; pintar(); return; }
+    if (ev.target.id === "aviso-ver") { avisoAberto = true; pintar(); return; }
+    if (ev.target.id === "aviso-fecha") { modo = "mesa"; pintar(); return; }
+    var ub = ev.target.closest("#edita [data-usb]");
+    if (ub && ub.hasAttribute("data-gesto")) return;
+    if (ub) {
+      if (ub.getAttribute("aria-disabled") !== "true") declarar(editando, "usb", parseInt(ub.getAttribute("data-usb"), 10));
+      pintar(); return;
+    }
+    if ((editando || editandoAp) && !ev.target.closest("#edita") && !ev.target.closest(".plug[data-porta]")
+        && !ev.target.closest(".chip[data-ap]")) {
+      editando = null; editandoAp = null; segurando = null; pintar();
+    }
+    var m = ev.target.closest(".modo[data-modo]");
+    if (m) { modo = m.getAttribute("data-modo"); if (modo !== "mao") { naMao = null; segurando = null; } pintar(); return; }
+
+    var pb = ev.target.closest(".escolha[data-perfil]");
+    if (pb) { perfil = pb.getAttribute("data-perfil"); pintar(); return; }
+    var qb = ev.target.closest(".escolha[data-quantos]");
+    if (qb) { quantos = parseInt(qb.getAttribute("data-quantos"), 10); pintar(); return; }
+    var mb = ev.target.closest(".escolha[data-mic-de]");
+    if (mb) { var quem = mb.getAttribute("data-mic-de");
+      CONTROLES.forEach(function (c) { if (c.nome === quem) c.mic = !c.mic; }); pintar(); return; }
+
+    var vb = ev.target.closest(".escolha[data-var]");
+    if (vb) { variante = vb.getAttribute("data-var"); pintar(); return; }
+
+    if (ev.target.id === "reexaminar" || ev.target.classList.contains("ja-movi")) {
+      /* relata a diferença; NÃO troca o que o mapa mostra. No produto quem
+         abre o reexame é a leitura nova, que chega pelo `hefestoArranjo`. */
+      if (doProduto()) return;
+      recomecarOAviso(); modo = "reexame"; segurando = null; naMao = null; pintar(); return;
+    }
+    if (ev.target.id === "voltar-leitura") { modo = "mesa"; pintar(); return; }
+    if (ev.target.id === "ver-antes") {
+      var t = leituraAtual; leituraAtual = leituraAnterior; leituraAnterior = t;
+      modo = "mesa"; pintar(); return;
+    }
+    /* O "aplicar" saiu, e o motivo fica escrito: ele gravava
+       `novo[n] = cam[pl[n]]` — o caminho de HOJE do aparelho que o plano QUERIA
+       naquela entrada, não o caminho do soquete. Os dois só coincidem quando não
+       há nada a mover; em todo caso interessante ele escrevia uma ligação falsa,
+       e mapa que mente é pior que mapa vazio. O lugar de aprender a ligação é o
+       reexame, que LÊ o sistema de novo e pergunta. Ver a §7.3 da
+       MOTOR-DO-ARRANJO-01. */
+    if (ev.target.id === "voltar") { MAPA = Object.assign({}, MAPA_ORIGINAL); pintar(); return; }
+
+    var esc = ev.target.closest(".escolha[data-mao]");
+    if (esc) { var x = esc.getAttribute("data-mao"); naMao = (naMao === x ? null : x); segurando = null; pintar(); return; }
+
+    var chip = ev.target.closest(".chip[data-ap]");
+    /* NO PRODUTO, O APARELHO QUE JÁ ESTÁ NUMA ENTRADA abre o editor dela: quem
+       corrige ali é o «Trocar com…» (um ato por porta). O que não está em
+       entrada nenhuma continua indo para a mão, para ser ensinado. */
+    if (chip && portaDe(chip.getAttribute("data-ap"))) {
+      achado = null; editandoDe = "lista"; editandoAp = null;
+      editando = portaDe(chip.getAttribute("data-ap")); modo = "mesa";
+      segurando = null; naMao = null; pintar(); return;
+    }
+    if (chip) {
+      /* o aparelho sem entrada: o painel abre perto dele e diz o passo; o clique na entrada certa
+         marca o lugar dele (as candidatas acendem) */
+      var ap = acha(chip.getAttribute("data-ap"));
+      achado = null; editando = null; editandoAp = ap.id; segurando = ap.id; naMao = null; modo = "mesa";
+      pintar(); return;
+    }
+
+    var plug = ev.target.closest(".plug[data-porta]");
+    if (plug) {
+      if (modo === "ideal") return;
+      var n = plug.getAttribute("data-porta"), p = porNum(n);
+      if (segurando) {
+        /* NO PRODUTO A PÁGINA ESPERA O DISCO (D-2609-ENSINAR-GRAVA-O-NO): o
+           plugue candidato levou o gesto, e o arranjo relido tira o
+           aparelho da mão. A entrada que não grava não aprende: o que
+           ficava só na memória a releitura desfazia. */
+        if (doProduto()) return;
+        if (ocupada(alocacao, p)) return;
+        /* ENSINAR O MAPA: esta entrada é o caminho deste aparelho, para sempre */
+        var c = leitura()[segurando];
+        if (c) {
+          Object.keys(MAPA).forEach(function (k) { if (MAPA[k] === c) delete MAPA[k]; });
+          MAPA[n] = c;
+        }
+        segurando = null; naMao = null; editandoAp = null; modo = "mesa"; editando = n;
+      } else {
+        /* o plugue abre o editor dela: o que tem nesta entrada, e a velocidade */
+        editando = n;
+      }
+      pintar(); return;
+    }
+  });
+
+  /* ══ A PORTA PARA O CENSO DE QUEM ABRE — 11/09/2026 ══════════════════
+     Até aqui esta página só sabia desenhar UM gabinete: o que estava digitado
+     no JavaScript dela. `hefestoArranjo` é por onde o produto entrega a
+     leitura da máquina de quem abriu, e a página se repinta inteira com ela.
+     Ver `interface/pagina_do_mapa.py` e `interface/arranjo_desta_maquina.py`. */
+  function controlesSobre(aparelhos, base) {
+    /* A fileira de controles é SIMULADOR — os botões 1..4 ao lado dela são a
+       pergunta "e se fossem quatro?". O censo vivo não a traz; ela se espalha
+       pelos adaptadores que a máquina de quem abre tiver. */
+    var bts = aparelhos.filter(function (a) { return a.classe === "bt"; });
+    return base.map(function (c, i) {
+      return { nome: c.nome, mic: c.mic, onde: bts.length ? bts[i % bts.length].id : null };
+    });
+  }
+
+  function aplicarArranjo(f, manterOEditor) {
+    fonte = f;
+    APARELHOS = f.aparelhos;
+    FACES = f.faces;
+    MAPA = f.mapa;
+    /* O "Voltar" do reexame restaura ESTE mapa. Deixá-lo com o do exemplo
+       devolveria a pessoa a um gabinete que não é o dela, com um clique. */
+    MAPA_ORIGINAL = Object.assign({}, MAPA);
+    LEITURAS = f.leituras;
+    leituraAtual = "agora";
+    leituraAnterior = "antes";
+    CONTROLES = f.controles || controlesSobre(APARELHOS, EXEMPLO.controles);
+    quantos = CONTROLES.length;
+    /* O QUE ELA DECLAROU EM CADA ENTRADA — 26/09/2026, o editor da entrada.
+       Toda entrada do mapa dela vem, com {} quando ela não disse nada, e as
+       chaves são as que o editor GRAVA no disco. A que o desenho monta do que
+       ela declarou (as do hub, a ponta do extensor) não vem: ali, e no
+       exemplo, o editor fica só na tela. */
+    DECLARADO = JSON.parse(JSON.stringify(f.declarado || {}));
+    GRAVA = Object.keys(DECLARADO);
+    /* O NOME DE CADA ENTRADA, composto pelo dono (O-MAPA-QUE-ELA-CORRIGE-01):
+       `entrada_a_entrada.rotulos_das_entradas`. */
+    ROTULOS = f.rotulos || {};
+    /* AS ENTRADAS EM QUE O COMPUTADOR LÊ UM HUB (D-2609-O-HUB-PENDE-DA-
+       ENTRADA): o editor delas nasce com «Hub», e o plugue ganha a marca. */
+    HUB_LIDO = f.hubLido || {};
+    /* DE ONDE VEIO A VELOCIDADE de cada entrada: a mesma precedência que
+       pintou o plugue (aparelho, depois o que o usuário disse, depois a placa). */
+    USB_DE = f.usbDe || {};
+    /* A VOLTA DE UMA GRAVAÇÃO NÃO FECHA O EDITOR — 26/09/2026,
+       O-MAPA-QUE-ELA-CORRIGE-01: o usuário clicou numa entrada, e a entrada
+       continua aberta com o que o disco diz agora. */
+    if (!manterOEditor) editando = null;
+  }
+
+  function dizerDeQuando() {
+    /* O cabeçalho nasce dizendo o exemplo, no HTML, para a página ser honesta
+       mesmo sem JavaScript nenhum. FATO SUBSTITUÍDO em 26/09/2026: aqui ele
+       passava a dizer de quando era a leitura desta máquina, e o usuário pediu que
+       isso saísse («essa info some»). A linha existe só para o exemplo se
+       dizer exemplo; com a leitura de quem abre, ela sai da página. */
+    var el = document.getElementById("de-quando");
+    if (el && fonte.quando !== EXEMPLO.quando) el.remove();
+  }
+
+  /* O «EXAMINAR» NO PRODUTO — 26/09/2026, O-MAPA-DAS-CONEXOES-NO-PRODUTO-02.
+     Com a leitura desta máquina na tela, quem relê é o produto: o botão leva
+     o gesto `reexaminar`, a leitura nova sai fora do fio da janela e volta por
+     `hefestoArranjo(dado, true)`, com a que a página tinha como «antes». No
+     exemplo não há o que reler, e o reexame é o das duas leituras dele. */
+  function doProduto() { return fonte !== EXEMPLO; }
+  function examinaNoProduto() { return doProduto() ? ' data-gesto="reexaminar"' : ""; }
+  function marcarOExaminar() {
+    var ex = document.querySelector(".topo #reexaminar");
+    if (ex && doProduto()) ex.setAttribute("data-gesto", "reexaminar");
+  }
+
+  window.hefestoArranjo = function (dado, como) {
+    /* COMO ELE CHEGA — 26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01: `false` é a
+       abertura, `true` é o «Examinar», e "gravou" é a volta
+       de uma gravação do editor (`arranjo_desta_maquina.CHAVE_DEPOIS_DE_GRAVAR`):
+       a página repinta pelo disco sem mudar de modo nem fechar o editor. */
+    var comoReexame = como === true;
+    var gravou = como === "gravou";
+    var falta = CAMPOS_DO_ARRANJO.filter(function (c) { return !dado || !dado[c]; });
+    if (falta.length) {
+      /* RECUSAR É METADE DO TRABALHO: meio arranjo desenharia um gabinete sem
+         entradas, e isso se lê como "não tenho nada ligado". */
+      throw new Error("arranjo incompleto, falta: " + falta.join(", "));
+    }
+    /* O REEXAME RELÊ O QUE ELA ENSINOU, porque o ensinar grava no disco
+       (O-MAPA-QUE-ELA-CORRIGE-01, D-2609-ENSINAR-GRAVA-O-NO). Até aqui o
+       mapa da tela era guardado por cima da releitura: o que ela ensinava
+       só vivia na memória, e a releitura o desfazia. */
+    /* a leitura anterior da tela fica: gravar não é reexaminar */
+    var antesDaTela = gravou && LEITURAS ? LEITURAS.antes : null;
+    aplicarArranjo(dado, gravou);
+    if (antesDaTela) LEITURAS = { agora: dado.leituras.agora, antes: antesDaTela };
+    if (comoReexame) {
+      modo = "reexame"; segurando = null; naMao = null;
+    }
+    /* o aparelho que estava na mão foi ensinado: ele sai da mão */
+    if (gravou && segurando) { segurando = null; naMao = null; modo = "mesa"; }
+    dizerDeQuando();
+    marcarOExaminar();
+    pintar();
+    return "ok";
+  };
+
+  pintar();
+})();
+</script>
+
+<div class="menu-hefesto" id="menu-desenhado" role="menu" aria-label="Menu do Hefesto" data-todo="2" hidden style="left:690px;top:540px">
+  <button role="menuitem" disabled>Copiar</button><hr>
+  <button role="menuitem">Atualizar</button>
+  <button role="menuitem" data-dica="O Hefesto sai da frente e o jogo lê o controle direto">Desligar</button>
+  <button role="menuitem">Reiniciar</button><hr><button role="menuitem">Fechar</button>
+</div>
+<script>/* O menu desenhado aberto só na foto do menu: abra a página com #menu. */
+if (location.hash === '#menu') document.getElementById('menu-desenhado').hidden = false;</script>
+<script id="base-comum">
+/* Base comum das abas (rodada 2): a dica no hover e o menu do botão direito. Copiada IGUAL em todo mockup. */
+(() => {
+  const dica = document.createElement('div'); dica.id = 'hef-dica'; dica.setAttribute('role', 'tooltip');
+  document.addEventListener('DOMContentLoaded', () => document.body.append(dica));
+  let alvo = null;
+  const mostrar = el => {
+    alvo = el; dica.textContent = el.dataset.dica;
+    if (!dica.isConnected) document.body.append(dica);
+    const r = el.getBoundingClientRect(), d = dica.getBoundingClientRect();
+    let x = r.left + r.width / 2 - d.width / 2, y = r.bottom + 8;
+    if (y + d.height > innerHeight - 6) y = r.top - d.height - 8;
+    dica.style.left = Math.max(6, Math.min(x, innerWidth - d.width - 6)) + 'px'; dica.style.top = y + 'px';
+    dica.classList.add('visivel');
+  };
+  const esconder = () => { alvo = null; dica.classList.remove('visivel'); };
+  for (const [ev, f] of [['mouseover', 'in'], ['focusin', 'in'], ['mouseout', 'out'], ['focusout', 'out']])
+    document.addEventListener(ev, e => {
+      const el = e.target.closest && e.target.closest('[data-dica]');
+      if (f === 'in' && el && el !== alvo) mostrar(el);
+      if (f === 'out' && el && !el.contains(e.relatedTarget)) esconder();
+    });
+  // O menu do botão direito: Copiar (cinza sem seleção), Atualizar, Desligar/Ligar, Reiniciar, Fechar.
+  document.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    document.querySelectorAll('.menu-hefesto.vivo').forEach(m => m.remove());
+    const m = document.createElement('div'); m.className = 'menu-hefesto vivo'; m.setAttribute('role', 'menu');
+    const sel = String(getSelection()).trim() !== '';
+    m.innerHTML = `<button role="menuitem" ${sel ? '' : 'disabled'}>Copiar</button><hr>
+      <button role="menuitem">Atualizar</button>
+      <button role="menuitem" data-dica="O Hefesto sai da frente e o jogo lê o controle direto">Desligar</button>
+      <button role="menuitem">Reiniciar</button><hr><button role="menuitem">Fechar</button>`;
+    document.body.append(m);
+    const r = m.getBoundingClientRect();
+    m.style.left = Math.min(e.clientX, innerWidth - r.width - 6) + 'px';
+    m.style.top = Math.min(e.clientY, innerHeight - r.height - 6) + 'px';
+  });
+  document.addEventListener('click', e => { if (!e.target.closest('.menu-hefesto')) document.querySelectorAll('.menu-hefesto.vivo').forEach(m => m.remove()); });
+})();
+</script>
+<script data-aba="registro">
+/* Rodada 4: #registro abre a página já na aba «Registro». */
+if (location.hash === '#registro') { document.addEventListener('DOMContentLoaded', () => document.querySelector('.modo[data-modo="registro"]').click()); }
+</script>
+</body>
+</html>
