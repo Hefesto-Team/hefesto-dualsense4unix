@@ -1,4 +1,11 @@
-"""FOCO-ERRANTE-01 — a janela da Steam levava o perfil do jogo junto."""
+"""FOCO-ERRANTE-01 — a janela da Steam levava o perfil do jogo junto.
+
+Nota de 14/10/2026 (D-1410-O-PERFIL-FICA-NO-ULTIMO-JOGO): desde então a janela
+de lançador não ativa perfil nenhum, nem o feito para ela, e a pergunta do jogo
+vivo nem chega a ela. A guarda do jogo vivo continua valendo para toda outra
+janela com perfil próprio, e se mede aqui com a Navegação de uma janela que não
+é de lançador (``JANELA_DA_NAVEGACAO``).
+"""
 
 from __future__ import annotations
 
@@ -38,6 +45,9 @@ CLASSE_DO_JOGO = f"steam_app_{APPID}"
 JANELA_DO_JOGO = {"wm_class": CLASSE_DO_JOGO, "wm_name": "DON'T SCREAM"}
 
 JANELA_DO_CLIENTE_STEAM = {"wm_class": "steam", "wm_name": ""}
+
+#: Uma janela com perfil próprio que não é de jogo nem de lançador.
+JANELA_DA_NAVEGACAO = {"wm_class": "kodi", "wm_name": "Kodi"}
 
 OUTRO_APPID = 1599660
 
@@ -86,7 +96,7 @@ def _os_dois_perfis() -> list[Profile]:
     """O disco do usuário, reduzido ao par que brigou: o jogo e a navegação."""
     return [
         _perfil("dont_scream", janela=CLASSE_DO_JOGO, prioridade=97),
-        _perfil("navegacao", janela="steam", prioridade=50),
+        _perfil("navegacao", janela=JANELA_DA_NAVEGACAO["wm_class"], prioridade=50),
     ]
 
 
@@ -112,10 +122,15 @@ def _entrar_no_jogo(sw: AutoSwitcher, store: StateStore) -> float:
     return 1.0
 
 
-def _focar_a_steam(sw: AutoSwitcher, inicio: float, tiques: int = 20) -> None:
-    """Segura a janela do cliente Steam em foco por `tiques` a 2 Hz."""
+def _focar_a_navegacao(
+    sw: AutoSwitcher,
+    inicio: float,
+    tiques: int = 20,
+    janela: dict[str, str] = JANELA_DA_NAVEGACAO,
+) -> None:
+    """Segura a janela com perfil próprio em foco por `tiques` a 2 Hz."""
     for i in range(tiques):
-        sw._tick(dict(JANELA_DO_CLIENTE_STEAM), inicio + 0.5 * (i + 1))
+        sw._tick(dict(janela), inicio + 0.5 * (i + 1))
 
 
 def _marker(
@@ -161,7 +176,7 @@ def test_a_janela_do_cliente_steam_nao_troca_o_perfil_com_o_jogo_vivo(
     agora = _entrar_no_jogo(sw, store)
 
     with structlog.testing.capture_logs() as registros:
-        _focar_a_steam(sw, agora)
+        _focar_a_navegacao(sw, agora)
 
     assert store.active_profile == "dont_scream"
     trocas = [r for r in registros if r["event"] == "profile_autoswitch"]
@@ -181,13 +196,13 @@ def test_a_recusa_preserva_o_gatilho_e_a_lightbar_do_jogo(
     assert lightbar_do_jogo is not None, "o perfil do jogo nem chegou ao LED"
     escritas = store.counter("profile.activated")
 
-    _focar_a_steam(sw, agora)
+    _focar_a_navegacao(sw, agora)
 
     assert controller.last_led == lightbar_do_jogo
     assert store.counter("profile.activated") == escritas
 
 
-def test_sem_jogo_vivo_a_janela_da_steam_troca_normalmente(
+def test_sem_jogo_vivo_a_janela_com_perfil_proprio_troca_normalmente(
     perfis_isolados: Path,
 ) -> None:
     """MORDIDA nº 2: arranque o termo de VITALIDADE e este teste reprova."""
@@ -195,9 +210,25 @@ def test_sem_jogo_vivo_a_janela_da_steam_troca_normalmente(
     sw = _switcher(manager, store, jogo_vivo=lambda: None)
     agora = _entrar_no_jogo(sw, store)
 
-    _focar_a_steam(sw, agora)
+    _focar_a_navegacao(sw, agora)
 
     assert store.active_profile == "navegacao"
+
+
+def test_sem_jogo_vivo_a_janela_da_steam_nao_ativa_a_navegacao_feita_para_ela(
+    perfis_isolados: Path,
+) -> None:
+    """D-1410-O-PERFIL-FICA-NO-ULTIMO-JOGO: a Navegação feita para a Steam não entra por ela."""
+    manager, store = _bancada([
+        *_os_dois_perfis(),
+        _perfil("navegacao_da_steam", janela="steam", prioridade=99),
+    ])
+    sw = _switcher(manager, store, jogo_vivo=lambda: None)
+    agora = _entrar_no_jogo(sw, store)
+
+    _focar_a_navegacao(sw, agora, janela=JANELA_DO_CLIENTE_STEAM)
+
+    assert store.active_profile == "dont_scream"
 
 
 def test_o_jogo_morre_e_a_guarda_solta(perfis_isolados: Path) -> None:
@@ -207,12 +238,12 @@ def test_o_jogo_morre_e_a_guarda_solta(perfis_isolados: Path) -> None:
     sw = _switcher(manager, store, jogo_vivo=lambda: APPID if vivo[0] else None)
     agora = _entrar_no_jogo(sw, store)
 
-    _focar_a_steam(sw, agora, tiques=10)
+    _focar_a_navegacao(sw, agora, tiques=10)
     assert store.active_profile == "dont_scream"
 
     vivo[0] = False
-    sw._tick(dict(JANELA_DO_CLIENTE_STEAM), agora + 6.0)
-    sw._tick(dict(JANELA_DO_CLIENTE_STEAM), agora + 6.5)
+    sw._tick(dict(JANELA_DA_NAVEGACAO), agora + 6.0)
+    sw._tick(dict(JANELA_DA_NAVEGACAO), agora + 6.5)
 
     assert store.active_profile == "navegacao"
 
@@ -239,7 +270,7 @@ def test_a_guarda_so_vale_para_o_jogo_do_perfil_corrente(
     sw = _switcher(manager, store, jogo_vivo=lambda: OUTRO_APPID)
     agora = _entrar_no_jogo(sw, store)
 
-    _focar_a_steam(sw, agora)
+    _focar_a_navegacao(sw, agora)
 
     assert store.active_profile == "navegacao"
 
@@ -250,14 +281,17 @@ def test_perfil_de_desktop_corrente_nao_ganha_guarda_nenhuma(
     """A guarda exige que o perfil CORRENTE seja a regra própria de um jogo."""
     from hefesto_dualsense4unix.utils.session import save_last_profile
 
-    manager, store = _bancada([_perfil("desktop"), _perfil("navegacao", janela="steam")])
+    manager, store = _bancada([
+        _perfil("desktop"),
+        _perfil("navegacao", janela=JANELA_DA_NAVEGACAO["wm_class"]),
+    ])
     save_last_profile("desktop")
     sw = _switcher(manager, store, jogo_vivo=lambda: APPID)
     sw._tick({"wm_class": "nautilus"}, 0.0)
     sw._tick({"wm_class": "nautilus"}, 1.0)
     assert store.active_profile == "desktop"
 
-    _focar_a_steam(sw, 1.0)
+    _focar_a_navegacao(sw, 1.0)
 
     assert store.active_profile == "navegacao"
 
@@ -280,7 +314,7 @@ def test_o_jogo_vivo_nao_expira_aos_quinze_minutos(
     )
     agora = _entrar_no_jogo(sw, store)
 
-    _focar_a_steam(sw, agora)
+    _focar_a_navegacao(sw, agora)
 
     assert store.active_profile == "dont_scream"
 
@@ -331,7 +365,7 @@ def test_pid_reciclado_nao_segura_o_perfil(
     )
     agora = _entrar_no_jogo(sw, store)
 
-    _focar_a_steam(sw, agora)
+    _focar_a_navegacao(sw, agora)
 
     assert store.active_profile == "navegacao"
 
@@ -381,7 +415,7 @@ def test_a_recusa_loga_uma_vez_por_episodio(perfis_isolados: Path) -> None:
     agora = _entrar_no_jogo(sw, store)
 
     with structlog.testing.capture_logs() as registros:
-        _focar_a_steam(sw, agora, tiques=40)
+        _focar_a_navegacao(sw, agora, tiques=40)
 
     recusas = [
         r for r in registros if r["event"] == "autoswitch_recusou_a_troca_com_o_jogo_vivo"
@@ -399,10 +433,10 @@ def test_um_episodio_novo_volta_a_aparecer_no_journal(perfis_isolados: Path) -> 
     agora = _entrar_no_jogo(sw, store)
 
     with structlog.testing.capture_logs() as registros:
-        _focar_a_steam(sw, agora, tiques=6)
+        _focar_a_navegacao(sw, agora, tiques=6)
         sw._tick(dict(JANELA_DO_JOGO), agora + 5.0)
         sw._tick(dict(JANELA_DO_JOGO), agora + 5.5)
-        _focar_a_steam(sw, agora + 6.0, tiques=6)
+        _focar_a_navegacao(sw, agora + 6.0, tiques=6)
 
     recusas = [
         r for r in registros if r["event"] == "autoswitch_recusou_a_troca_com_o_jogo_vivo"
@@ -441,7 +475,7 @@ def test_sem_leitor_injetado_a_guarda_nao_derruba_o_tique(
     sw = _switcher(manager, store)
     agora = _entrar_no_jogo(sw, store)
 
-    _focar_a_steam(sw, agora)
+    _focar_a_navegacao(sw, agora)
 
     assert store.active_profile == "navegacao"
 
@@ -456,6 +490,6 @@ def test_leitor_que_levanta_nao_derruba_o_tique(perfis_isolados: Path) -> None:
     sw = _switcher(manager, store, jogo_vivo=_explode)
     agora = _entrar_no_jogo(sw, store)
 
-    _focar_a_steam(sw, agora)
+    _focar_a_navegacao(sw, agora)
 
     assert store.active_profile == "navegacao"

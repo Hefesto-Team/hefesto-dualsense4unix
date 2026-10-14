@@ -32,7 +32,10 @@ from hefesto_dualsense4unix.profiles.schema import (
     perfil_e_de_jogo,
     perfil_e_regra_de_jogo,
 )
-from hefesto_dualsense4unix.profiles.steam_app import steam_appid_from_wm_class
+from hefesto_dualsense4unix.profiles.steam_app import (
+    e_janela_de_lancador,
+    steam_appid_from_wm_class,
+)
 from hefesto_dualsense4unix.utils import identidade
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -163,6 +166,7 @@ class AutoSwitcher:
     _current_especifico: bool = False
     _freestyle_log_key: str | None = None
     _fica_log_key: str | None = None
+    _lancador_log_key: str | None = None
     #: O perfil de JOGO que a última ativação pôs (o nome), enquanto ele vale.
     _perfil_do_ultimo_jogo: str | None = None
     _estado_modo_jogo_padrao: str = ""
@@ -385,7 +389,10 @@ class AutoSwitcher:
                     profile, motivo, veio_do_jogo = do_jogo, MOTIVO_SEM_CANDIDATO, True
         if profile is None and motivo == MOTIVO_SEM_CANDIDATO and self._fica_no_ultimo_jogo(info):
             return
+        if not sem_informacao and not veio_do_jogo and self._o_lancador_nao_ativa(info):
+            return
         self._fica_log_key = None
+        self._lancador_log_key = None
         veio_da_escolha = False
         if profile is None and motivo == MOTIVO_SEM_CANDIDATO:
             profile = self._perfil_da_escolha()
@@ -437,7 +444,7 @@ class AutoSwitcher:
         jogo até ela mudar ou outro jogo iniciar. O perfil de jogo que vale agora
         não devolve a escolha; quem o tira é ela (a crença sincroniza pelo
         store), outro jogo (a regra dele ou o jogo em cena) ou a janela com
-        perfil próprio que não é de jogo.
+        perfil próprio que não é de jogo nem de lançador.
         """
         corrente = self._current_profile
         if corrente is None or corrente != self._perfil_do_ultimo_jogo:
@@ -449,6 +456,30 @@ class AutoSwitcher:
         if self._fica_log_key != chave:
             self._fica_log_key = chave
             logger.info("autoswitch_fica_no_ultimo_jogo", wm_class=chave, current=corrente)
+        return True
+
+    def _o_lancador_nao_ativa(self, info: dict[str, Any]) -> bool:
+        """A janela em foco é de lançador? Então nada muda: nem perfil, nem modo.
+
+        D-1410-O-PERFIL-FICA-NO-ULTIMO-JOGO (14/10/2026): a janela da Steam, do
+        Heroic, do Lutris… não ativa perfil nenhum, nem o Navegação, nem a volta
+        à escolha do usuário, e não solta o modo jogo padrão. Fica o que vale agora: o
+        do último jogo, o que ela ativou à mão ou o do boot. O jogo em cena
+        (``veio_do_jogo``) não passa por aqui: outro jogo que inicia leva o perfil.
+        """
+        wm_class = str(info.get("wm_class") or "")
+        if not e_janela_de_lancador(wm_class):
+            return False
+        self._last_candidate = None
+        if not self._suppression_active():
+            self._suppress_log_key = None
+        if self._lancador_log_key != wm_class:
+            self._lancador_log_key = wm_class
+            logger.info(
+                "autoswitch_lancador_nao_ativa_perfil",
+                wm_class=wm_class,
+                current=self._current_profile or "",
+            )
         return True
 
     def _perfil_do_jogo_em_cena(self) -> Profile | None:

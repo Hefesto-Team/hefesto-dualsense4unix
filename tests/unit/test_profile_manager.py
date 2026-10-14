@@ -130,12 +130,12 @@ def test_prioridade_ainda_decide_entre_perfis_igualmente_especificos(
     """A especificidade não pode atropelar o tuning 50-80 dos presets."""
     save_profile(
         _mk_profile(
-            "navegacao", priority=50, match=MatchCriteria(window_class=["steam"])
+            "navegacao", priority=50, match=MatchCriteria(window_class=["kodi"])
         )
     )
     save_profile(
         _mk_profile(
-            "sackboy", priority=80, match=MatchCriteria(window_class=["steam"])
+            "sackboy", priority=80, match=MatchCriteria(window_class=["kodi"])
         )
     )
     save_profile(Profile(name="fallback", match=MatchAny(), priority=0))
@@ -143,7 +143,7 @@ def test_prioridade_ainda_decide_entre_perfis_igualmente_especificos(
     fc = FakeController()
     fc.connect()
     manager = ProfileManager(controller=fc)
-    picked = manager.select_for_window({"wm_class": "steam"})
+    picked = manager.select_for_window({"wm_class": "kodi"})
     assert picked is not None
     assert picked.name == "sackboy"
 

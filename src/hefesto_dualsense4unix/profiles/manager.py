@@ -46,7 +46,6 @@ from hefesto_dualsense4unix.profiles.schema import (
     leds_do_perfil_na_economia,
     leds_na_economia,
     normalizar_gamepad_flavor,
-    perfil_e_de_jogo,
     perfil_no_modo,
     vibracao_na_economia,
 )
@@ -1388,11 +1387,12 @@ class ProfileManager:
         casaram = [p for p in perfis_para_consulta() if p.matches(dict(window_info))]
         candidates = [p for p in casaram if not p.e_catch_all]
         if e_janela_de_lancador(wm_class):
-            # OS-QUATRO-EM-HARMONIA-01, item 4: o lançador (Steam, Heroic,
-            # Lutris…) não é jogo, e perfil de jogo nenhum entra pela janela
-            # dele, mesmo que a classe dele esteja na regra do perfil. O perfil
-            # feito para a janela do lançador (a Navegação da Steam) segue.
-            candidates = [p for p in candidates if not perfil_e_de_jogo(p)]
+            # D-1410-O-PERFIL-FICA-NO-ULTIMO-JOGO: o lançador (Steam, Heroic,
+            # Lutris…) não é jogo, e perfil NENHUM entra pela janela dele, nem o
+            # de jogo cuja regra traz a classe dele, nem o feito para ela (a
+            # Navegação da Steam). Até 14/10 este último seguia, e a Navegação
+            # entrava por cima do perfil do jogo que ela tinha acabado de fechar.
+            candidates = []
         e_janela_de_jogo = e_endereco_de_jogo(wm_class)
         if not candidates:
             if not e_janela_de_jogo:

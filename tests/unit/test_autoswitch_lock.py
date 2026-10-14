@@ -67,7 +67,7 @@ def _perfil_do_jogo() -> Profile:
 def _navegacao() -> Profile:
     return Profile(
         name="Navegação",
-        match=MatchCriteria(window_class=["steam"]),
+        match=MatchCriteria(window_class=["kodi"]),
         priority=50,
     )
 
@@ -95,7 +95,7 @@ class TestAutoswitchRespeitaOFreestyle:
         sw = _switcher_real(store)
 
         for t in (0.0, 0.6, 30.0, 300.0):
-            sw._tick({"wm_class": "steam", "wm_name": "Steam"}, t)
+            sw._tick({"wm_class": "kodi", "wm_name": "Kodi"}, t)
 
         assert sw._current_profile is None
         assert store.active_profile is None
@@ -150,7 +150,7 @@ class TestAutoswitchRespeitaOFreestyle:
         sw = _switcher_real(store)
 
         for t in (0.0, 0.5, 1.0, 1.5, 2.0):
-            sw._tick({"wm_class": "steam"}, t)
+            sw._tick({"wm_class": "kodi"}, t)
 
         eventos = [
             c
@@ -175,7 +175,7 @@ class TestFreestyleNoRunLoop:
         manager = ProfileManager(controller=fc, store=store)
         sw = AutoSwitcher(
             manager=manager,
-            window_reader=lambda: {"wm_class": "steam"},
+            window_reader=lambda: {"wm_class": "kodi"},
             poll_interval_sec=0.02,
             debounce_sec=0.02,
             store=store,
@@ -230,7 +230,7 @@ class TestFreestyleNoRunLoop:
         fc = FakeController()
         fc.connect()
         manager = ProfileManager(controller=fc, store=store)
-        janela = {"wm_class": "steam"}
+        janela = {"wm_class": "kodi"}
         sw = AutoSwitcher(
             manager=manager,
             window_reader=lambda: dict(janela),
