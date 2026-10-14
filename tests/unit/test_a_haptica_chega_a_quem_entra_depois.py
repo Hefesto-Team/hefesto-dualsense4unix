@@ -15,6 +15,7 @@ from typing import Any, ClassVar
 
 import pytest
 
+from hefesto_dualsense4unix.profiles.schema import HAPTICA_PCT_PADRAO
 from hefesto_dualsense4unix.daemon.subsystems import alto_falante as mod
 from hefesto_dualsense4unix.integrations import alto_falante_bt as af
 from hefesto_dualsense4unix.integrations import audio_ks_dualsense as ks
@@ -330,7 +331,7 @@ def mesa(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> _Mesa:
     monkeypatch.setattr(af, "_rodar", servidor)
     monkeypatch.setattr(eh, "RAIZ_DO_SYSFS", sysfs)
     monkeypatch.setattr(af, "PonteDeSomPorRadio", _PonteDeMentira)
-    monkeypatch.setattr(af, "garantir_motores_audiveis", lambda *_a, **_k: False)
+    monkeypatch.setattr(af, "garantir_a_placa_cheia", lambda *_a, **_k: False)
     monkeypatch.setattr(af, "sink_do_controle", lambda uniq, *_a, **_k: m.placas.get(uniq, ""))
 
     def _fonte(no: str, **kw: Any) -> tuple[Any, Any, str]:
@@ -465,7 +466,8 @@ def test_so_quem_mexeu_vibra_no_cabo_e_o_alto_falante_passa_nos_dois(mesa: _Mesa
     um = mesa.servidor.volumes[mesa.servidor.fluxo_do_laco(_P1)]
     dois = mesa.servidor.volumes[mesa.servidor.fluxo_do_laco(_P2)]
     assert um == ["100%", "100%", "0%", "0%"], f"o P1 parado vibrou: {um}"
-    assert dois == ["100%", "100%", "100%", "100%"], f"o P2 na mão não vibrou: {dois}"
+    aberto = f"{HAPTICA_PCT_PADRAO / 100:.4f}"
+    assert dois == ["100%", "100%", aberto, aberto], f"o P2 na mão não vibrou: {dois}"
     for _chave_do_laco, captura, destino, canais, mapa in mesa.lacos.ligacoes:
         assert (canais, mapa) == (4, MAPA), "o laço não leva os quatro canais um a um"
         assert captura.isdigit() and destino.isdigit(), "o laço pelo nome cai na fonte padrão"

@@ -206,7 +206,7 @@ def mesa(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> _Mesa:
     monkeypatch.setattr(pad_usb, "_INTERFACE_DO_APARELHO", {})
     monkeypatch.setattr(dba, "_NUMERADOR_DE_ASSENTO", lambda u: m.assentos.get(u))
     monkeypatch.setattr(af, "PonteDeSomPorRadio", _PonteDeMentira)
-    monkeypatch.setattr(af, "garantir_motores_audiveis", lambda *_a, **_k: False)
+    monkeypatch.setattr(af, "garantir_a_placa_cheia", lambda *_a, **_k: False)
     monkeypatch.setattr(af, "sink_do_controle", lambda *_a, **_k: "")
     monkeypatch.setattr(
         af, "fonte_do_monitor_do_no", lambda no, **_kw: ((lambda _n: b""), f"g:{no}", "")

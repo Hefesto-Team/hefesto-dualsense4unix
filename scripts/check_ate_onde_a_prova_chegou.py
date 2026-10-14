@@ -76,8 +76,8 @@ A_PROVA_QUE_FALTA: dict[str, tuple[str, str, str]] = {
     "haptica": (
         "médio",
         "2026-09-29-O-GANHO-DA-HAPTICA-TEM-DONO-01.md",
-        "o ganho de 0 a 200% por controle chega aos traseiros da placa daquele "
-        "controle no cabo e ao conversor da ponte antes do int8 no rádio, com as "
+        "o ganho de 0 a 200% por controle chega aos traseiros do fluxo do laço "
+        "daquele controle no cabo e ao conversor da ponte antes do int8 no rádio, com as "
         "réguas da sprint mordendo nos dois transportes; falta o passo 0 da sprint "
         "(o tremor pelo nível) e a mão dela nos Caminhos da Forja a 100, 150 e 200",
     ),

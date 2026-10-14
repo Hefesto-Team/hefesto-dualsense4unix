@@ -5,21 +5,15 @@ from __future__ import annotations
 import ast
 import functools
 import inspect
-import math
-import textwrap
 from pathlib import Path
 from typing import Any
 
 import pytest
 
-from hefesto_dualsense4unix.daemon.ganho_da_haptica import (
-    VOLUME_NORMAL,
-    GanhoDaHaptica,
-    linear_do_cru,
-    placas_do_piso,
-)
+from hefesto_dualsense4unix.daemon.ganho_da_haptica import GanhoDaHaptica
 from hefesto_dualsense4unix.integrations import alto_falante_bt as af
-from hefesto_dualsense4unix.integrations.alto_falante_bt import garantir_motores_audiveis
+from hefesto_dualsense4unix.integrations.alto_falante_bt import garantir_a_placa_cheia
+from hefesto_dualsense4unix.integrations.haptica_do_cabo import HapticaDoCabo, RotaDoCabo
 from hefesto_dualsense4unix.profiles import loader as loader_module
 from hefesto_dualsense4unix.profiles.loader import save_profile
 from hefesto_dualsense4unix.profiles.schema import (
@@ -44,80 +38,62 @@ from tests.unit.test_cada_motor_tem_o_seu_multiplicador import (
 _SONY = "alsa_output.usb-Sony_Interactive_Entertainment_Wireless_Controller"
 PLACA_BRANCO = f"{_SONY}-00.analog-surround-40"
 PLACA_PRETO = f"{_SONY}-00.2.analog-surround-40"
-ENDPOINT = "alsa_output.usb-HEFESTO-lugar1-00.analog-surround-40"
-
-
-def _cru_do_linear(fator: float) -> int:
-    return round(VOLUME_NORMAL * (max(fator, 0.0) ** (1.0 / 3.0)))
-
-
-def _forma(texto: str) -> str:
-    if texto.endswith("dB"):
-        return "db"
-    if texto.endswith("%"):
-        return "pct"
-    if "." in texto:
-        return "linear"
-    return "cru"
-
-
-def _cru_do_texto(texto: str) -> int:
-    """As quatro formas do ``pactl``: cru, fator linear, ``%`` (cúbico) e dB."""
-    forma = _forma(texto)
-    if forma == "db":
-        return _cru_do_linear(10 ** (float(texto[:-2]) / 20.0))
-    if forma == "pct":
-        return round(VOLUME_NORMAL * float(texto[:-1]) / 100.0)
-    if forma == "linear":
-        return _cru_do_linear(float(texto))
-    return int(texto)
-
-
-class ServidorDeMentira:
-    """O ``pactl`` do lado do servidor: lista e escreve o volume cru por canal."""
-
-    def __init__(self, sinks: dict[str, list[int]]) -> None:
-        self.sinks = {n: list(v) for n, v in sinks.items()}
-        self.escritas: list[list[str]] = []
-
-    def __call__(self, argv: list[str]) -> str | None:
-        if argv[:2] == ["pactl", "set-sink-volume"]:
-            nome, vols = argv[2], argv[3:]
-            if len({_forma(v) for v in vols}) > 1:
-                return None
-            self.escritas.append(list(argv))
-            self.sinks[nome] = [_cru_do_texto(v) for v in vols]
-            return ""
-        if pj.e_lista_json(argv, "sinks"):
-            canais = ["front-left", "front-right", "rear-left", "rear-right"]
-            return pj.texto(*(
-                pj.no(1, nome, extra={"volume": {
-                    c: {"value": v, "value_percent": f"{round(100 * v / VOLUME_NORMAL)}%",
-                        "db": f"{20 * math.log10(max(linear_do_cru(v), 1e-9)):.2f} dB"}
-                    for c, v in zip(canais, vols, strict=False)}})
-                for nome, vols in self.sinks.items()))
-        if argv[:2] == ["pactl", "list"] and "short" in argv:
-            return "\n".join(
-                f"{i}\t{n}\tmodule-alsa-card.c\ts16le 4ch 48000Hz\tRUNNING"
-                for i, n in enumerate(self.sinks, start=1)
-            )
-        return None
-
-    def traseiros(self, nome: str) -> list[float]:
-        return [round(linear_do_cru(v), 3) for v in self.sinks[nome][2:4]]
-
-    def frente(self, nome: str) -> list[int]:
-        return self.sinks[nome][:2]
-
-
-def _servidor() -> ServidorDeMentira:
-    cheio = [VOLUME_NORMAL] * 4
-    quarenta = [26214, 26214, VOLUME_NORMAL, VOLUME_NORMAL]
-    return ServidorDeMentira({PLACA_BRANCO: quarenta, PLACA_PRETO: list(cheio), ENDPOINT: cheio})
+MARCA = {BRANCO: "APARELHOBRANCO", PRETO: "APARELHOPRETO"}
 
 
 def _placa_de(uniq: str, _mesa: Any) -> str:
     return {BRANCO: PLACA_BRANCO, PRETO: PLACA_PRETO}.get(uniq, "")
+
+
+class _Lacos:
+    """O dono dos laços de mentira: liga, diz que está ligado e desliga."""
+
+    def __init__(self) -> None:
+        self.ligados: set[str] = set()
+
+    def ligar(self, chave: str, **_k: Any) -> bool:
+        self.ligados.add(chave)
+        return True
+
+    def esta_ligado(self, chave: str) -> bool:
+        return chave in self.ligados
+
+    def desligar(self, chave: str) -> None:
+        self.ligados.discard(chave)
+
+
+class _CaboDeMentira:
+    """O laço de cada controle no cabo, com o ``pactl`` que anota o volume de cada fluxo."""
+
+    def __init__(self) -> None:
+        self.escritas: list[list[str]] = []
+        self.cabo = HapticaDoCabo(
+            _Lacos(), indice_do_fluxo=lambda no: no, pactl=self._pactl
+        )
+
+    def _pactl(self, argv: list[str]) -> str:
+        self.escritas.append(list(argv))
+        return ""
+
+    def volta(self, dono: GanhoDaHaptica, uniqs: list[str], *, abertos: bool = True) -> None:
+        from hefesto_dualsense4unix.daemon.subsystems import alto_falante as mod
+
+        rotas = {
+            MARCA[u]: RotaDoCabo(captura=f"c{u}", destino=f"d{u}", dono=u) for u in uniqs
+        }
+        original, mod.GANHO = mod.GANHO, dono
+        try:
+            ganhos = mod.AltoFalanteSubsystem._ganhos_das_rotas(rotas)
+        finally:
+            mod.GANHO = original
+        self.cabo.casar(rotas, set(rotas) if abertos else set(), ganhos)
+
+    def motores(self, uniq: str) -> list[float]:
+        """Os traseiros que o fluxo do laço DESTE controle recebeu por último."""
+        do_laco = [e for e in self.escritas if MARCA[uniq].lower() in e[2]]
+        assert do_laco, f"o laço de {uniq} não recebeu volume nenhum"
+        return [round(float(v.rstrip("%")) / (100.0 if v.endswith("%") else 1.0), 3)
+                for v in do_laco[-1][5:7]]
 
 
 def _dono(**pcts: int) -> GanhoDaHaptica:
@@ -129,29 +105,6 @@ def _dono(**pcts: int) -> GanhoDaHaptica:
         for k, v in pcts.items()
     })
     return dono
-
-
-class TestOServidorDeMentiraNaoEMaisFrouxoQueOReal:
-    def test_quarenta_por_cento_guarda_o_numero_medido_em_29_09(self) -> None:
-        """``40%`` é -23,88 dB: o WirePlumber guardou 0,063997 linear na placa dela."""
-        srv = _servidor()
-        srv(["pactl", "set-sink-volume", PLACA_PRETO, "40%", "40%", "40%", "40%"])
-        guardado = linear_do_cru(srv.sinks[PLACA_PRETO][0])
-        assert round(guardado, 6) == pytest.approx(0.063997, abs=2e-6)
-
-    def test_as_quatro_formas(self) -> None:
-        srv = _servidor()
-        srv(["pactl", "set-sink-volume", PLACA_PRETO, "1.5", "1.5", "1.5", "1.5"])
-        assert srv.traseiros(PLACA_PRETO) == [1.5, 1.5]
-        srv(["pactl", "set-sink-volume", PLACA_PRETO, "3.52dB", "3.52dB", "3.52dB", "3.52dB"])
-        assert srv.traseiros(PLACA_PRETO) == [1.5, 1.5]
-        srv(["pactl", "set-sink-volume", PLACA_PRETO, "150%", "150%", "150%", "150%"])
-        assert srv.traseiros(PLACA_PRETO) == [3.375, 3.375]
-
-    def test_formas_misturadas_sao_recusadas(self) -> None:
-        srv = _servidor()
-        misturado = ["pactl", "set-sink-volume", PLACA_PRETO, "65536", "65536", "1.5", "1.5"]
-        assert srv(misturado) is None
 
 
 class TestOCampo:
@@ -177,107 +130,102 @@ class TestOCampo:
         assert mexeu.model_dump(mode="json")["haptica_pct"] == 180
 
 
-class TestACaboAPlaca:
-    def test_a_placa_recebe_fator_linear(self) -> None:
-        """Régua 1: 150 % vira 1,5 no servidor, e não 3,375 (o ``%`` é cúbico)."""
-        srv = _servidor()
-        dono = _dono(branco=150)
-        com_dono = dono.escrever_nas_placas(
-            [BRANCO], [BRANCO], list(srv.sinks), runner=srv, placa_de=_placa_de
-        )
-        assert com_dono == {PLACA_BRANCO}
-        assert srv.traseiros(PLACA_BRANCO) == [1.5, 1.5]
-        assert srv.frente(PLACA_BRANCO) == [26214, 26214], "a frente é dela e não se toca"
-        db = 20 * math.log10(srv.traseiros(PLACA_BRANCO)[0])
-        assert db == pytest.approx(3.52, abs=0.01)
+CHEIO = ("Volume: front-left: 65536 / 100% / 0.00 dB,   front-right: 65536 / 100% / 0.00 dB,   "
+         "rear-left: 65536 / 100% / 0.00 dB,   rear-right: 65536 / 100% / 0.00 dB")
+MEDIDO_EM_14_10 = (
+    "Volume: front-left: 26214 /  40% / -23.88 dB,   front-right: 26214 /  40% / -23.88 dB,   "
+    "rear-left: 131072 / 126% / 6.02 dB,   rear-right: 131072 / 126% / 6.02 dB"
+)
 
-    def test_sem_opiniao_vale_o_padrao_na_placa(self) -> None:
-        srv = _servidor()
-        GanhoDaHaptica().escrever_nas_placas(
-            [BRANCO], [BRANCO], list(srv.sinks), runner=srv, placa_de=_placa_de
-        )
-        assert srv.traseiros(PLACA_BRANCO) == [HAPTICA_PCT_PADRAO / 100] * 2
 
-    def test_o_piso_nao_briga_com_o_ganho(self) -> None:
-        """Régua 2: ``haptica_pct=50``, duas voltas → -6,02 dB nos traseiros."""
-        srv = _servidor()
-        dono = _dono(branco=50)
-        for _volta in range(2):
-            lidos = af.sinks_com_motores(srv)
-            com_dono = dono.escrever_nas_placas(
-                [BRANCO], [BRANCO], lidos, runner=srv, placa_de=_placa_de
-            )
-            for sink in placas_do_piso(lidos, com_dono):
-                garantir_motores_audiveis(sink, srv)
-        assert srv.traseiros(PLACA_BRANCO) == [0.5, 0.5]
-        assert 20 * math.log10(0.5) == pytest.approx(-6.02, abs=0.01)
+def _placa(volume_linha: str) -> tuple[Any, list[list[str]]]:
+    escritas: list[list[str]] = []
 
-    def test_a_volta_do_subsystem_pula_a_placa_com_dono(self) -> None:
-        """A volta de verdade passa pelo ``placas_do_piso`` (o que a régua 2 reproduz)."""
-        from hefesto_dualsense4unix.daemon.subsystems.alto_falante import AltoFalanteSubsystem
+    def correr(cmd: list[str]) -> str | None:
+        if pj.e_lista_json(cmd, "sinks"):
+            return pj.json_do_longo(f"Sink #9\n\tName: {PLACA_BRANCO}\n\t{volume_linha}\n")
+        escritas.append(cmd)
+        return ""
 
-        fonte = textwrap.dedent(inspect.getsource(AltoFalanteSubsystem._casar_as_pontes))
-        chamadas = [
-            n for n in ast.walk(ast.parse(fonte))
-            if isinstance(n, ast.For) and isinstance(n.iter, ast.Call)
-            and getattr(n.iter.func, "id", "") == "placas_do_piso"
-        ]
-        assert chamadas, "a varredura do piso tem de pular as placas com dono"
-        assert any(
-            isinstance(c, ast.Call) and getattr(c.func, "id", "") == "garantir_motores_audiveis"
-            for c in ast.walk(chamadas[0])
+    return correr, escritas
+
+
+class TestNoCaboOGanhoMoraNoFluxoDoLaco:
+    """OS-QUATRO-EM-HARMONIA-01, item 1: a placa fica cheia, o ganho vai ao fluxo do laço.
+
+    Medido no fio em 14/10/2026: com a placa em ``40/40/126/126`` o fio dava pico
+    0,064 vezes o pedido nos motores; o nó ALSA aplica a FRENTE aos quatro canais. MORDIDA:
+    devolver o ganho aos traseiros da placa (o ``_escrever_traseiros`` de antes)
+    reprova ``test_a_placa_fica_cheia_nos_quatro``, e tirar o ganho do
+    ``_aplicar_o_portao`` reprova as réguas de cada controle.
+    """
+
+    def test_a_placa_fica_cheia_nos_quatro(self) -> None:
+        correr, escritas = _placa(MEDIDO_EM_14_10)
+        assert garantir_a_placa_cheia(PLACA_BRANCO, correr) is True
+        assert escritas == [["pactl", "set-sink-volume", PLACA_BRANCO, *["100%"] * 4]], (
+            "volume por canal na placa USB não vale: o nó aplica a frente aos motores"
         )
 
-    def test_o_ganho_vai_a_placa_daquele_controle_e_so_a_ela(self) -> None:
-        """Régua 3: dois controles, 50 e 150; o endpoint fica em 0 dB."""
-        srv = _servidor()
-        dono = _dono(branco=50, preto=150)
-        dono.escrever_nas_placas(
-            [BRANCO, PRETO], [BRANCO, PRETO], list(srv.sinks), runner=srv, placa_de=_placa_de
-        )
-        assert srv.traseiros(PLACA_BRANCO) == [0.5, 0.5]
-        assert srv.traseiros(PLACA_PRETO) == [1.5, 1.5]
-        assert srv.traseiros(ENDPOINT) == [1.0, 1.0]
+    def test_a_placa_cheia_nao_e_reescrita(self) -> None:
+        correr, escritas = _placa(CHEIO)
+        assert garantir_a_placa_cheia(PLACA_BRANCO, correr) is False
+        assert escritas == []
 
-    def test_o_endpoint_nunca_e_placa_com_dono(self) -> None:
-        srv = _servidor()
-        com_dono = _dono(branco=180).escrever_nas_placas(
-            [BRANCO], [BRANCO], list(srv.sinks), runner=srv, placa_de=lambda _u, _m: ENDPOINT
-        )
-        assert com_dono == set()
-        assert srv.traseiros(ENDPOINT) == [1.0, 1.0]
+    def test_o_laco_recebe_fator_linear(self) -> None:
+        """150 % vira 1,5 no fluxo, e não 3,375 (o ``%`` do servidor é cúbico)."""
+        mesa = _CaboDeMentira()
+        mesa.volta(_dono(branco=150), [BRANCO])
+        assert mesa.motores(BRANCO) == [1.5, 1.5]
+        assert mesa.escritas[-1][3:5] == ["100%", "100%"], "a frente do laço passa cheia"
 
-    def test_desligada_cala_os_traseiros(self) -> None:
-        srv = _servidor()
-        _dono(branco=0).escrever_nas_placas(
-            [BRANCO], [BRANCO], list(srv.sinks), runner=srv, placa_de=_placa_de
-        )
-        assert srv.traseiros(PLACA_BRANCO) == [0.0, 0.0]
+    def test_sem_opiniao_vale_o_padrao_no_laco(self) -> None:
+        mesa = _CaboDeMentira()
+        mesa.volta(GanhoDaHaptica(), [BRANCO])
+        assert mesa.motores(BRANCO) == [HAPTICA_PCT_PADRAO / 100] * 2
 
-    def test_so_escreve_quando_difere(self) -> None:
-        srv = _servidor()
-        dono = _dono(branco=150)
+    def test_o_ganho_vai_ao_laco_daquele_controle_e_so_a_ele(self) -> None:
+        """Dois controles, 50 e 150: cada laço leva o seu."""
+        mesa = _CaboDeMentira()
+        mesa.volta(_dono(branco=50, preto=150), [BRANCO, PRETO])
+        assert mesa.motores(BRANCO) == [0.5, 0.5]
+        assert mesa.motores(PRETO) == [1.5, 1.5]
+
+    def test_desligada_cala_os_motores_do_laco(self) -> None:
+        mesa = _CaboDeMentira()
+        mesa.volta(_dono(branco=0), [BRANCO])
+        assert mesa.motores(BRANCO) == [0.0, 0.0]
+
+    def test_o_portao_fechado_vence_o_ganho(self) -> None:
+        mesa = _CaboDeMentira()
+        mesa.volta(_dono(branco=150), [BRANCO], abertos=False)
+        assert mesa.motores(BRANCO) == [0.0, 0.0]
+
+    def test_mudar_o_deslizante_reescreve_e_repetir_nao(self) -> None:
+        mesa = _CaboDeMentira()
         for _ in range(3):
-            dono.escrever_nas_placas(
-                [BRANCO], [BRANCO], list(srv.sinks), runner=srv, placa_de=_placa_de
-            )
-        assert len(srv.escritas) == 1
+            mesa.volta(_dono(branco=150), [BRANCO])
+        assert len(mesa.escritas) == 1
+        mesa.volta(_dono(branco=60), [BRANCO])
+        assert len(mesa.escritas) == 2
+        assert mesa.motores(BRANCO) == [0.6, 0.6]
 
-    def test_o_stop_devolve_a_placa(self) -> None:
-        """Régua 8: o ganho não sobrevive ao Hefesto — 1,5 volta a 1,0."""
-        srv = _servidor()
-        dono = _dono(branco=150)
-        dono.escrever_nas_placas(
-            [BRANCO], [BRANCO], list(srv.sinks), runner=srv, placa_de=_placa_de
+    def test_ninguem_escreve_volume_por_canal_na_placa(self) -> None:
+        """A régua do destino errado: nenhum dono escreve traseiros diferentes da frente."""
+        raiz = Path(inspect.getfile(GanhoDaHaptica)).parents[1]
+        culpados = []
+        for arquivo in raiz.rglob("*.py"):
+            arvore = ast.parse(arquivo.read_text(encoding="utf-8"))
+            for no in ast.walk(arvore):
+                if isinstance(no, ast.List) and any(
+                    isinstance(e, ast.Constant) and e.value == "set-sink-volume"
+                    for e in no.elts
+                ) and len(no.elts) > 4:
+                    culpados.append(f"{arquivo.relative_to(raiz)}:{no.lineno}")
+        assert culpados == [], (
+            "volume por canal escrito num sink (a placa USB aplica a frente aos quatro): "
+            f"{culpados}"
         )
-        dono.devolver_as_placas(runner=srv)
-        assert srv.traseiros(PLACA_BRANCO) == [1.0, 1.0]
-        assert srv.frente(PLACA_BRANCO) == [26214, 26214]
-
-    def test_o_stop_do_subsystem_chama_a_devolucao(self) -> None:
-        from hefesto_dualsense4unix.daemon.subsystems.alto_falante import AltoFalanteSubsystem
-
-        assert "GANHO.devolver_as_placas" in inspect.getsource(AltoFalanteSubsystem.stop)
 
 
 def _meia_escala(n: int) -> bytes:
@@ -513,17 +461,15 @@ class TestAEconomiaCortaAHaptica:
         assert dono.fator(BRANCO) == pytest.approx(0.3)
         assert dono.pct(BRANCO) == 150, "o teto é leitura: o que ela escolheu não muda"
         assert dono.pct_que_vale(BRANCO) == 30
-        srv = _servidor()
-        dono.escrever_nas_placas([BRANCO], [BRANCO], [PLACA_BRANCO], runner=srv,
-                                 placa_de=_placa_de)
-        assert srv.traseiros(PLACA_BRANCO) == [0.3, 0.3]
+        mesa = _CaboDeMentira()
+        mesa.volta(dono, [BRANCO])
+        assert mesa.motores(BRANCO) == [0.3, 0.3]
         assert set(_bloco(functools.partial(dono.fator, BRANCO))) == {19}
 
         dono.ler_o_teto(_mesa_com_orcamento("balanceado"))
         assert dono.fator(BRANCO) == pytest.approx(1.5)
-        dono.escrever_nas_placas([BRANCO], [BRANCO], [PLACA_BRANCO], runner=srv,
-                                 placa_de=_placa_de)
-        assert srv.traseiros(PLACA_BRANCO) == [1.5, 1.5]
+        mesa.volta(dono, [BRANCO])
+        assert mesa.motores(BRANCO) == [1.5, 1.5]
 
     def test_o_teto_e_min_e_nunca_produto(self) -> None:
         """Abaixo do teto, o ganho passa inteiro: 20 % na Economia é 0,2, e não 0,06."""
@@ -591,10 +537,10 @@ class TestAEconomiaCortaAHaptica:
             assert dono.pct_que_vale(BRANCO) == 30
             assert dono.pct(BRANCO) == 150, "o teto é leitura: o que ela escolheu não muda"
             assert dono.fator(PRETO) == pytest.approx(1.5), "a economia é DAQUELE controle"
-            srv = _servidor()
-            dono.escrever_nas_placas([BRANCO], [BRANCO], [PLACA_BRANCO], runner=srv,
-                                     placa_de=_placa_de)
-            assert srv.traseiros(PLACA_BRANCO) == [0.3, 0.3]
+            mesa = _CaboDeMentira()
+            mesa.volta(dono, [BRANCO, PRETO])
+            assert mesa.motores(BRANCO) == [0.3, 0.3]
+            assert mesa.motores(PRETO) == [1.5, 1.5]
             assert set(_bloco(functools.partial(dono.fator, BRANCO))) == {19}
             declaracao.controles = {}
             dono.ler_o_teto(_mesa_com_orcamento(None))

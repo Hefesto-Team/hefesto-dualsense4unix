@@ -554,7 +554,6 @@ PORTAS: dict[tuple[str, str], str] = {
     ("integrations/eleicao_de_microfone.py", "_ler"): "eleicao_de_microfone._rodar",
     ("integrations/eleicao_de_microfone.py", "_texto"): "eleicao_de_microfone._rodar",
     ("integrations/endpoint_de_haptica.py", "chamar"): "alto_falante_bt._rodar",
-    ("integrations/endpoint_de_haptica.py", "self.runner"): "alto_falante_bt._rodar",
     ("integrations/ganho_do_microfone.py", "audio_saida.rodar_leitura"):
         "audio_saida.rodar_leitura",
     ("integrations/quem_ouve_o_microfone.py", "_rodar"): "eleicao_de_microfone._rodar",

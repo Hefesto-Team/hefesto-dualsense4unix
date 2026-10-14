@@ -1,23 +1,22 @@
-"""O dono do ganho da háptica por áudio — um por controle, em fator linear."""
+"""O dono do ganho da háptica por áudio — um por controle, em fator linear.
+
+Quem o aplica é o caminho de cada controle, nunca a placa: no cabo, o volume do
+fluxo do laço (``haptica_do_cabo``); no rádio, a ponte (``ganho_da_haptica``).
+OS-QUATRO-EM-HARMONIA-01 (14/10/2026): os traseiros da placa USB não valem, o nó
+ALSA aplica a frente aos quatro canais.
+"""
 
 from __future__ import annotations
 
 import contextlib
-from collections.abc import Callable, Iterable, Sequence
 from typing import Any
 
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-VOLUME_NORMAL = 65536
-
-TOLERANCIA_PCT = 1.0
-
 #: Em Padrão a háptica chega como o jogo mandou: 100 %, sem o ganho guardado.
 PCT_DO_JOGO = 100
-
-Rodar = Callable[[list[str]], "str | None"]
 
 
 def _chave(uniq: str | None) -> str | None:
@@ -31,27 +30,11 @@ def _chave(uniq: str | None) -> str | None:
     return None
 
 
-def linear_do_cru(cru: int) -> float:
-    """O fator de amplitude de um volume cru (a escala do servidor é cúbica)."""
-    return float((max(cru, 0) / VOLUME_NORMAL) ** 3)
-
-
-def linear_do_pct(pct: float) -> float:
-    """O fator de amplitude do `%` do servidor (40 % → 0,064)."""
-    return float((max(pct, 0.0) / 100.0) ** 3)
-
-
-def pct_do_linear(fator: float) -> float:
-    """O `%` do servidor de um fator de amplitude (1,5 → 114,5 %)."""
-    return 100.0 * float(max(fator, 0.0) ** (1.0 / 3.0))
-
-
 class GanhoDaHaptica:
     """O ganho por controle, lido do perfil que vale; um só no processo (:data:`GANHO`)."""
 
     def __init__(self) -> None:
         self._escritos: dict[str, int] = {}
-        self._placas: dict[str, float] = {}
         self._pelo_carregador: str | None = None
         self._teto: float | None = None
         self._em_economia: frozenset[str] = frozenset()
@@ -176,81 +159,6 @@ class GanhoDaHaptica:
         """O ganho que vale agora, em %: o escolhido sob o teto do orçamento."""
         return round(self.fator(uniq) * 100.0)
 
-    def escrever_nas_placas(
-        self,
-        no_cabo: Iterable[str],
-        na_mesa: Sequence[str],
-        placas_com_motores: Iterable[str],
-        *,
-        runner: Rodar | None = None,
-        placa_de: Callable[[str, Sequence[str]], str] | None = None,
-    ) -> set[str]:
-        """Os traseiros da placa de cada controle no cabo recebem o ganho dele."""
-        from hefesto_dualsense4unix.integrations.alto_falante_bt import sink_do_controle
-        from hefesto_dualsense4unix.integrations.endpoint_de_haptica import MARCA_DO_NOME
-
-        achar: Any = placa_de or (lambda u, mesa: sink_do_controle(u, mesa, runner=runner))
-        placas = set(placas_com_motores)
-        com_dono: dict[str, str] = {}
-        for uniq in no_cabo:
-            if not uniq:
-                continue
-            placa = ""
-            with contextlib.suppress(Exception):
-                placa = str(achar(uniq, list(na_mesa)) or "")
-            if not placa or placa not in placas or MARCA_DO_NOME in placa:
-                continue
-            com_dono[placa] = uniq
-        for placa, uniq in com_dono.items():
-            fator = self.fator(uniq)
-            self._placas[placa] = fator
-            self._escrever_traseiros(placa, fator, runner)
-        return set(com_dono)
-
-    def devolver_as_placas(self, *, runner: Rodar | None = None) -> None:
-        """No ``stop``: os traseiros de toda placa escrita voltam a 1,0.
-
-        Servidor calado (o recuo) não recebe a placa seguinte: um estouro e nada mais.
-        """
-        from hefesto_dualsense4unix.integrations import dualsense_bt_audio
-
-        placas, self._placas = dict(self._placas), {}
-        for placa in placas:
-            if dualsense_bt_audio.PACTL.mudo():
-                return
-            with contextlib.suppress(Exception):
-                self._escrever_traseiros(placa, 1.0, runner)
-
-    @staticmethod
-    def _escrever_traseiros(placa: str, fator: float, runner: Rodar | None) -> bool:
-        """Escreve os traseiros em fator linear, a frente como estava. True = escreveu."""
-        from hefesto_dualsense4unix.integrations.alto_falante_bt import (
-            rodar_pactl,
-            volumes_do_sink,
-        )
-
-        volumes = volumes_do_sink(placa, runner)
-        if not volumes or len(volumes) < 4:
-            return False
-        alvo = pct_do_linear(fator)
-        if all(abs(v - alvo) <= TOLERANCIA_PCT for v in volumes[2:4]):
-            return False
-        frente = [f"{linear_do_pct(v):.6f}" for v in volumes[:2]]
-        correr: Any = runner or rodar_pactl
-        correr([
-            "pactl", "set-sink-volume", placa, *frente, f"{fator:.4f}", f"{fator:.4f}",
-        ])
-        logger.info(
-            "haptica_ganho_na_placa",
-            sink=placa, eram_pct=volumes[2:4], agora=round(fator, 4),
-        )
-        return True
-
 
 GANHO = GanhoDaHaptica()
 
-
-def placas_do_piso(lidos: Iterable[str], com_dono: Iterable[str]) -> list[str]:
-    """As placas que a varredura do piso de 100 % ainda levanta: as SEM dono."""
-    dono = set(com_dono)
-    return [s for s in lidos if s not in dono]

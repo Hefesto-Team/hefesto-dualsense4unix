@@ -115,7 +115,7 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any
 
-from hefesto_dualsense4unix.daemon.ganho_da_haptica import GANHO, placas_do_piso
+from hefesto_dualsense4unix.daemon.ganho_da_haptica import GANHO
 from hefesto_dualsense4unix.daemon.subsystems.base import numero_do_assento_na_mesa
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -1498,7 +1498,7 @@ class AltoFalanteSubsystem:
                     if _abre(dono):
                         abertos.add(marca)
             logger.debug("haptica_do_cabo_servidor_mudo", ficam=sorted(rotas))
-            self._o_cabo().casar(rotas, abertos)
+            self._o_cabo().casar(rotas, abertos, self._ganhos_das_rotas(rotas))
             return
         placas = set(motores)
         ouvir: dict[str, str] = {}
@@ -1528,8 +1528,16 @@ class AltoFalanteSubsystem:
                 ) and not este_joga,
                 controles=controles,
             )
-        self._o_cabo().casar(rotas, abertos)
+        self._o_cabo().casar(rotas, abertos, self._ganhos_das_rotas(rotas))
         self._casar_os_ouvidos_das_placas(ouvir)
+
+    @staticmethod
+    def _ganhos_das_rotas(rotas: Mapping[str, Any]) -> dict[str, float]:
+        """O ganho da háptica de cada laço, pelo controle dono da rota, e de nenhum outro."""
+        return {
+            marca: GANHO.fator(str(getattr(rota, "dono", "") or "") or None)
+            for marca, rota in rotas.items()
+        }
 
     def _casar_os_ouvidos_das_placas(self, ouvir: Mapping[str, str]) -> None:
         """Um ouvido por controle no cabo, na placa dele; quem saiu ou trocou de placa desce."""
@@ -1622,19 +1630,6 @@ class AltoFalanteSubsystem:
         except Exception:
             logger.debug("haptica_no_ar_ilegivel", exc_info=True)
         return False
-
-    def _o_ganho_nas_placas(self, controles: list[Any], placas: list[str]) -> set[str]:
-        """Relê o ganho do perfil e o escreve na placa de cada controle no cabo."""
-        from hefesto_dualsense4unix.integrations.alto_falante_bt import e_radio
-
-        GANHO.ler_do_daemon(getattr(self, "_daemon", None))
-        na_mesa = [u for u in (str(getattr(c, "uniq", "") or "") for c in controles) if u]
-        no_cabo = [
-            str(getattr(c, "uniq", "") or "")
-            for c in controles
-            if not e_radio(str(getattr(c, "transporte", "") or ""))
-        ]
-        return GANHO.escrever_nas_placas(no_cabo, na_mesa, placas)
 
     def _avisar_ancoras_que_faltam(self, faltam: int, aparelhos: int) -> None:
         """O aparelho sem âncora USB fica sem endpoint — e diz isso.
@@ -1833,7 +1828,7 @@ class AltoFalanteSubsystem:
             PonteDeSomPorRadio,
             e_radio,
             fonte_do_monitor_do_no,
-            garantir_motores_audiveis,
+            garantir_a_placa_cheia,
             nome_do_sink,
             rodar_pactl,
             sink_esta_tocando,
@@ -1956,9 +1951,9 @@ class AltoFalanteSubsystem:
 
             lidos = list(sinks_com_motores(_perguntar))
             motores = lidos if all(respostas) else None
-            com_dono = self._o_ganho_nas_placas(controles, lidos)
-            for sink_com_motor in placas_do_piso(lidos, com_dono):
-                garantir_motores_audiveis(sink_com_motor)
+            GANHO.ler_do_daemon(getattr(self, "_daemon", None))
+            for sink_com_motor in lidos:
+                garantir_a_placa_cheia(sink_com_motor)
 
         # PRAGMATA de 26/09 ficou sem ninguém), e em 21/09 o evdev pôs os QUATRO
         self._ver_quem_toca_nos_endpoints()
@@ -2411,8 +2406,6 @@ class AltoFalanteSubsystem:
         # O-STOP-DO-SOM-TEM-ORCAMENTO-E-NAO-PERGUNTA-AO-SERVIDOR-MUDO-01: daqui em
         # diante todo `pactl` divide um orçamento só, e roda fora do laço.
         fim = fim_do_orcamento_do_stop()
-        with contextlib.suppress(Exception):
-            await asyncio.to_thread(no_orcamento_do_stop, fim, GANHO.devolver_as_placas)
         governador, self.governador = self.governador, None
         if governador is not None:
             with contextlib.suppress(Exception):

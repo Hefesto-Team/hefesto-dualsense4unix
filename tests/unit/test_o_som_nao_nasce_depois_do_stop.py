@@ -191,14 +191,17 @@ def test_a_volta_que_passa_do_join_nao_ergue_no_nem_ponte(
     )
     volta: dict[str, threading.Thread | None] = {}
 
-    def _devolver_as_placas(*_a: Any, **_k: Any) -> None:
+    parar_o_governador = _Governador.parar
+
+    def _parar_o_governador(self: Any, *a: Any, **k: Any) -> Any:
         """O passo do stop depois do `join`: a volta sai do `pactl` lento aqui."""
         solta.set()
         thread = volta["thread"]
         if thread is not None:
             thread.join(ESPERA)
+        return parar_o_governador(self, *a, **k)
 
-    monkeypatch.setattr(mod.GANHO, "devolver_as_placas", _devolver_as_placas)
+    monkeypatch.setattr(_Governador, "parar", _parar_o_governador)
 
     async def _cena() -> None:
         await sub.start(SimpleNamespace(controller=None, store=None))

@@ -520,22 +520,6 @@ def rotulo_no_ar(
     return ""
 
 
-def _volume_da_frente(saida_do_pactl: str, nome_do_sink: str) -> tuple[str, str]:
-    """Os dois volumes da FRENTE deste sink, na forma que o `pactl` aceita.
-
-    ``saida_do_pactl`` é o ``pactl --format=json list sinks``. Sem o sink, ou sem
-    dois canais com número, a frente é ``100%``.
-    """
-    for no in porta_do_som.nos_do_texto(saida_do_pactl):
-        if no.nome != nome_do_sink:
-            continue
-        lidos = [c.porcento.strip() for c in no.canais[:2] if c.porcento.strip().endswith("%")]
-        if len(lidos) == 2:
-            return (lidos[0], lidos[1])
-        break
-    return ("100%", "100%")
-
-
 def varrer_endpoints_orfaos(
     vivos: Iterable[str],
     runner: Callable[[list[str]], str | None] | None = None,
@@ -760,23 +744,17 @@ class EndpointDeHaptica:
         return False
 
     def _ligar_os_motores(self) -> None:
-        """Põe os canais traseiros em :data:`VOLUME_DOS_MOTORES`, preservando a frente."""
-        atual = self.runner(porta_do_som.argv_da_lista("sinks")) or ""
-        frente = _volume_da_frente(atual, self.nome)
+        """Os quatro canais do nó em :data:`VOLUME_DOS_MOTORES` (a placa cheia).
+
+        OS-QUATRO-EM-HARMONIA-01, item 1: o nó nasce com os 40 % do WirePlumber, e
+        volume por canal no sink não é onde mora volume nenhum do Hefesto.
+        """
         try:
-            self.runner([
-                "pactl", "set-sink-volume", self.nome,
-                frente[0], frente[1], VOLUME_DOS_MOTORES, VOLUME_DOS_MOTORES,
-            ])
+            self.runner(["pactl", "set-sink-volume", self.nome, *[VOLUME_DOS_MOTORES] * 4])
         except Exception as exc:  # pragma: no cover — pactl é o mundo de fora
             logger.warning("haptica_motores_sem_volume", controle=self.marca, err=str(exc))
             return
-        logger.info(
-            "haptica_motores_ligados",
-            controle=self.marca,
-            frente=list(frente),
-            motores=VOLUME_DOS_MOTORES,
-        )
+        logger.info("haptica_motores_ligados", controle=self.marca, volume=VOLUME_DOS_MOTORES)
 
     def parar(self) -> None:
         """Derruba o nó. Silencioso quando ele já não está de pé."""

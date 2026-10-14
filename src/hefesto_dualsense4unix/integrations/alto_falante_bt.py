@@ -2239,8 +2239,12 @@ class OuvidoDaPlaca(OuvidoDoNo):
         self.placa = placa
 
 
-#: O PISO DOS MOTORES no sink de 4 canais do DualSense — HAPTICA-CABO-VOLUME-01
-#: os canais 3-4 são os MOTORES: a háptica do DualSense viaja como áudio nos
+#: A PLACA CHEIA: os quatro canais do sink de 4 canais do DualSense ficam em 100 %.
+#: OS-QUATRO-EM-HARMONIA-01, item 1 (14/10/2026), medido no fio: o nó ALSA aplica o
+#: volume da FRENTE aos quatro canais (`40/40/126/126` → pico 1024 de 16000 nos motores;
+#: `100/100/100/100` → pico 20526). Volume por canal neste nó não vale; cada volume
+#: tem nó próprio: o alto-falante no ``speaker_volume`` do firmware, a háptica no
+#: fluxo do laço do cabo (``haptica_do_cabo``) e na ponte do rádio.
 PISO_DOS_MOTORES = 100
 
 
@@ -2251,26 +2255,18 @@ def volumes_do_sink(nome: str, runner: Callable[[list[str]], str | None] | None 
     return porta_do_som.volumes_do_no("sinks", nome, correr)
 
 
-def garantir_motores_audiveis(
+def garantir_a_placa_cheia(
     nome: str, runner: Callable[[list[str]], str | None] | None = None
 ) -> bool:
-    """Levanta os canais TRASEIROS do sink ao piso. True = havia o que levantar."""
+    """Os quatro canais do sink voltam a 100 %. True = havia o que acertar."""
     volumes = volumes_do_sink(nome, runner)
     if not volumes or len(volumes) < 4:
         return False
-    frente, traseiros = volumes[:2], volumes[2:4]
-    if min(traseiros) >= PISO_DOS_MOTORES:
+    if all(v == PISO_DOS_MOTORES for v in volumes[:4]):
         return False
     correr: Any = runner or rodar_pactl
-    correr([
-        "pactl", "set-sink-volume", nome,
-        f"{frente[0]}%", f"{frente[1]}%",
-        f"{PISO_DOS_MOTORES}%", f"{PISO_DOS_MOTORES}%",
-    ])
-    logger.info(
-        "haptica_motores_levantados",
-        sink=nome, eram=traseiros, agora=PISO_DOS_MOTORES, frente=frente,
-    )
+    correr(["pactl", "set-sink-volume", nome, *[f"{PISO_DOS_MOTORES}%"] * 4])
+    logger.info("som_placa_cheia", sink=nome, eram=volumes[:4], agora=PISO_DOS_MOTORES)
     return True
 
 

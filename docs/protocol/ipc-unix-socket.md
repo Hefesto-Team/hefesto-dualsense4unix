@@ -295,8 +295,8 @@ o motor não usa.
 **O ganho da háptica por áudio vai no mesmo pedido** (29/09/2026): `haptica_pct`, de 0 a 200, com o mesmo contrato (omitido não mexe; o
 padrão, 150, apaga a chave). Ele não multiplica o degrau: no PCM do jogo a Força não
 alcança, e esta barra é o único fator. Quem o aplica é o dono do ganho
-(`daemon/ganho_da_haptica.py`), relido no mesmo ato: os traseiros da placa daquele
-controle no cabo, em fator linear, e o conversor da ponte no rádio, antes do int8. No
+(`daemon/ganho_da_haptica.py`), relido no mesmo ato: os traseiros do fluxo do laço daquele
+controle no cabo, em fator linear (a placa fica cheia), e o conversor da ponte no rádio, antes do int8. No
 `state_full`, cada controle traz `haptica_pct` (o que o usuário escolheu), `haptica_vale_pct`
 (o que vale: na Economia, no máximo 30), `haptica_alcanca` (o Hefesto está no caminho
 dele) e `haptica_no_ar` (há háptica chegando a ele agora: no cabo, o monitor da placa

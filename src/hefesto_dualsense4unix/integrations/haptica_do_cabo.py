@@ -70,6 +70,13 @@ VOLUME_FECHADO = "0%"
 _LACOS = Lacos(FAMILIA_DO_LACO_DO_CABO)
 
 
+def volume_dos_motores(aberto: bool, ganho: float) -> str:
+    """O volume dos traseiros do fluxo do laço: fechado é zero, aberto é o ganho linear."""
+    if not aberto:
+        return VOLUME_FECHADO
+    return f"{max(float(ganho), 0.0):.4f}"
+
+
 def no_de_captura(marca: str) -> str:
     """O ``node.name`` do lado de captura do laço do aparelho desta marca."""
     return f"input.{MARCA_DO_LACO_DO_CABO}{chave_do_aparelho(marca)}"
@@ -125,6 +132,7 @@ class HapticaDoCabo:
         self._conferir_alvo = conferir
         self._rotas: dict[str, RotaDoCabo] = {}
         self._portao: dict[str, bool] = {}
+        self._motores: dict[str, str] = {}
         self._conferidos: set[str] = set()
         self._recusadas: dict[str, RotaDoCabo] = {}
 
@@ -136,9 +144,19 @@ class HapticaDoCabo:
         """O portão aplicado ao laço do aparelho: aberto, fechado ou ``None`` (não aplicado)."""
         return self._portao.get(marca)
 
-    def casar(self, rotas: Mapping[str, RotaDoCabo], abertos: Iterable[str]) -> None:
-        """Os laços ficam os de ``rotas``, e os motores abertos os de ``abertos``."""
+    def casar(
+        self,
+        rotas: Mapping[str, RotaDoCabo],
+        abertos: Iterable[str],
+        ganhos: Mapping[str, float] | None = None,
+    ) -> None:
+        """Os laços ficam os de ``rotas``, e os motores abertos os de ``abertos``.
+
+        ``ganhos`` é o fator linear da háptica de cada marca (o ``GANHO`` do dono
+        dela); sem ele, os motores abertos vão a 1,0.
+        """
         querem_abrir = set(abertos)
+        ganho_de = dict(ganhos or {})
         for marca in [n for n in self._rotas if n not in rotas]:
             self.soltar(marca)
         for marca, rota in rotas.items():
@@ -159,8 +177,12 @@ class HapticaDoCabo:
                 self._rotas[marca] = rota
                 logger.info("haptica_do_cabo_laco_de_pe", controle=marca)
             aberto = marca in querem_abrir
-            if self._portao.get(marca) is not aberto and self._aplicar_o_portao(marca, aberto):
+            motores = volume_dos_motores(aberto, ganho_de.get(marca, 1.0))
+            if (
+                self._portao.get(marca) is not aberto or self._motores.get(marca) != motores
+            ) and self._aplicar_o_portao(marca, aberto, motores):
                 self._portao[marca] = aberto
+                self._motores[marca] = motores
 
     def _conferir(self, marca: str, rota: RotaDoCabo) -> bool:
         """O lado de captura do laço está no endpoint do aparelho? ``False`` = caiu."""
@@ -187,8 +209,14 @@ class HapticaDoCabo:
         self._recusadas[marca] = rota
         return False
 
-    def _aplicar_o_portao(self, marca: str, aberto: bool) -> bool:
-        """O volume do fluxo do laço na placa: a frente cheia, os motores pelo portão."""
+    def _aplicar_o_portao(
+        self, marca: str, aberto: bool, motores: str
+    ) -> bool:
+        """O volume do fluxo do laço na placa: a frente cheia, os motores pelo portão e pelo ganho.
+
+        É o único lugar do cabo onde mora o ganho da háptica (OS-QUATRO-EM-HARMONIA-01,
+        item 1): o volume por canal de um FLUXO é do conversor dele, e não do nó ALSA.
+        """
         from hefesto_dualsense4unix.integrations.alto_falante_bt import rodar_pactl
 
         correr = self._pactl or rodar_pactl
@@ -200,7 +228,6 @@ class HapticaDoCabo:
                 indice = indice_do_fluxo(no_do_laco, rodar_pactl)
             if indice is None:
                 return False
-            motores = VOLUME_ABERTO if aberto else VOLUME_FECHADO
             resposta = correr([
                 "pactl", "set-sink-input-volume", indice,
                 VOLUME_ABERTO, VOLUME_ABERTO, motores, motores,
@@ -210,7 +237,12 @@ class HapticaDoCabo:
             return False
         if resposta is None:
             return False
-        logger.info("haptica_do_cabo_portao", controle=marca, motores_abertos=aberto)
+        logger.info(
+            "haptica_do_cabo_portao",
+            controle=marca,
+            motores_abertos=aberto,
+            motores=motores,
+        )
         return True
 
     def soltar(self, marca: str) -> None:
@@ -219,6 +251,7 @@ class HapticaDoCabo:
         if self._rotas.pop(marca, None) is not None:
             logger.info("haptica_do_cabo_laco_solto", controle=marca)
         self._portao.pop(marca, None)
+        self._motores.pop(marca, None)
         self._conferidos.discard(marca)
 
     def parar(self) -> None:
@@ -237,4 +270,5 @@ __all__ = [
     "alvo_do_no",
     "chave_do_aparelho",
     "no_de_captura",
+    "volume_dos_motores",
 ]

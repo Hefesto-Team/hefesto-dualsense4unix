@@ -7,6 +7,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from hefesto_dualsense4unix.daemon.ganho_da_haptica import PCT_DO_JOGO
+from hefesto_dualsense4unix.profiles.schema import HAPTICA_PCT_PADRAO
 from hefesto_dualsense4unix.daemon.subsystems import rumble
 from hefesto_dualsense4unix.integrations import alto_falante_bt as af
 from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
@@ -25,7 +27,9 @@ from tests.unit.test_a_haptica_chega_a_quem_entra_depois import (  # noqa: F401
 _QUATRO = (_P1, _P2, _P3, _P4)
 _APARELHOS = (("3-8", 28), ("3-7", 29), ("3-6", 30), ("3-5", 31))
 
-_ABERTO = ["100%", "100%", "100%", "100%"]
+# Os motores abertos levam o ganho em fator linear, o do degrau Padrão, que é o do
+# ``DaemonConfig`` de fábrica (OS-QUATRO-EM-HARMONIA-01).
+_ABERTO = ["100%", "100%", *[f"{PCT_DO_JOGO / 100:.4f}"] * 2]
 _FECHADO = ["100%", "100%", "0%", "0%"]
 
 
@@ -119,9 +123,9 @@ def test_o_servidor_mudo_no_nativo_segue_com_os_motores_abertos(
     pedidos: list[tuple[set[str], set[str]]] = []
     casar = mesa.sub._cabo.casar
 
-    def _espiar(rotas: Any, abertos: Any) -> None:
+    def _espiar(rotas: Any, abertos: Any, ganhos: Any = None) -> None:
         pedidos.append((set(rotas), set(abertos)))
-        casar(rotas, abertos)
+        casar(rotas, abertos, ganhos)
 
     monkeypatch.setattr(mesa.sub._cabo, "casar", _espiar)
     monkeypatch.setattr(af, "_rodar", lambda _argv: None)
@@ -154,4 +158,5 @@ def test_o_duble_que_responde_tudo_nao_abre_os_motores(mesa: _Mesa) -> None:  # 
     mesa.sub._daemon = MagicMock()
     mesa.volta(*controles)
     assert _motores(mesa, 2) == _FECHADO, "o dublê que responde tudo abriu o motor do P2"
-    assert _motores(mesa, 1) == _ABERTO
+    # O dublê não diz o degrau: vale o ganho guardado de fábrica.
+    assert _motores(mesa, 1) == ["100%", "100%", *[f"{HAPTICA_PCT_PADRAO / 100:.4f}"] * 2]

@@ -55,28 +55,28 @@ ZERO_ATRAS = ("Volume: front-left: 65536 / 100% / 0.00 dB,   "
 
 
 def test_os_quarenta_por_cento_sao_levantados() -> None:
-    """O caso medido no cabo dela: 40% nos quatro."""
+    """O caso medido no cabo dela: 40% nos quatro, e a placa volta CHEIA.
+
+    OS-QUATRO-EM-HARMONIA-01 (14/10/2026): a frente não se preserva mais. O nó
+    ALSA aplica a frente aos motores, e o alto-falante tem volume próprio no
+    firmware. MORDIDA: devolver a frente «como estava» reprova aqui.
+    """
     correr, escritas = _pactl(QUARENTA)
-    assert bt.garantir_motores_audiveis(SINK, correr) is True
-    assert len(escritas) == 1
-    assert escritas[0][:3] == ["pactl", "set-sink-volume", SINK]
-    assert escritas[0][3:] == ["40%", "40%", "100%", "100%"], (
-        "os da FRENTE têm de voltar como estavam — são o alto-falante, e "
-        "aquele volume é escolha dela"
-    )
+    assert bt.garantir_a_placa_cheia(SINK, correr) is True
+    assert escritas == [["pactl", "set-sink-volume", SINK, "100%", "100%", "100%", "100%"]]
 
 
 def test_o_zero_do_endpoint_tambem() -> None:
     """O caso do endpoint que o produto publica: traseiros em 0%."""
     correr, escritas = _pactl(ZERO_ATRAS)
-    assert bt.garantir_motores_audiveis(SINK, correr) is True
+    assert bt.garantir_a_placa_cheia(SINK, correr) is True
     assert escritas[0][3:] == ["100%", "100%", "100%", "100%"]
 
 
 def test_quem_ja_esta_no_piso_nao_e_reescrito() -> None:
     """Sem esta guarda, uma volta a cada 5 s vira uma escrita a cada 5 s."""
     correr, escritas = _pactl(CEM)
-    assert bt.garantir_motores_audiveis(SINK, correr) is False
+    assert bt.garantir_a_placa_cheia(SINK, correr) is False
     assert escritas == []
 
 
@@ -84,7 +84,7 @@ def test_sink_estereo_nao_e_caso_deste_piso() -> None:
     """Dois canais não têm motor: o endpoint de som por rádio é `s16le 2ch`."""
     correr, escritas = _pactl("Volume: front-left: 65536 / 100% / 0.00 dB,   "
                               "front-right: 65536 / 100% / 0.00 dB")
-    assert bt.garantir_motores_audiveis(SINK, correr) is False
+    assert bt.garantir_a_placa_cheia(SINK, correr) is False
     assert escritas == []
 
 
@@ -98,7 +98,7 @@ def test_servidor_mudo_nao_escreve() -> None:
         escritas.append(cmd)
         return ""
 
-    assert bt.garantir_motores_audiveis(SINK, correr) is False
+    assert bt.garantir_a_placa_cheia(SINK, correr) is False
     assert escritas == []
 
 
@@ -116,14 +116,6 @@ def test_o_piso_e_cem_e_esta_declarado() -> None:
     """O número é o que a medição sustenta, e mora num lugar só."""
     assert bt.PISO_DOS_MOTORES == 100
     assert eh.VOLUME_DOS_MOTORES == "100%"
-
-
-def test_o_endpoint_le_a_frente_antes_de_escrever() -> None:
-    """`set-sink-volume` com quatro valores define os QUATRO — a frente é do usuário."""
-    saida = pj.json_do_longo(f"Sink #9\n\tName: {SINK}\n\t{QUARENTA}\n")
-    assert eh._volume_da_frente(saida, SINK) == ("40%", "40%")
-    assert eh._volume_da_frente(saida, "outro_sink") == ("100%", "100%")
-    assert eh._volume_da_frente("", SINK) == ("100%", "100%")
 
 
 def test_o_endpoint_liga_os_motores_ao_publicar() -> None:
@@ -153,7 +145,7 @@ def test_o_endpoint_liga_os_motores_ao_publicar() -> None:
         "o endpoint subiu sem dizer o volume dos motores — é o defeito de 19/09, "
         "em que os canais 3-4 nasciam em 0% e o jogo escrevia no nada"
     )
-    assert escritas[0][-2:] == [eh.VOLUME_DOS_MOTORES, eh.VOLUME_DOS_MOTORES]
+    assert escritas[0][3:] == [eh.VOLUME_DOS_MOTORES] * 4, "o endpoint nasce cheio nos quatro"
 
 
 LISTA_CURTA = (
