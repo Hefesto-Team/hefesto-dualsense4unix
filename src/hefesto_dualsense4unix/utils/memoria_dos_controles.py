@@ -499,6 +499,8 @@ CLASSIFICACAO: dict[str, tuple[str, str]] = {
     "hefesto-mod.json": ("fora", "o manifesto que vem dentro de cada modificação"),
     "winevulkan.json": ("fora", "o driver Vulkan do Wine, lido no prefixo"),
     "PROVA-DA-FOTO.txt": ("fora", "saída da bancada de fotos (olhar.py)"),
+    "USB-Audio/Sony/DualSense-PS5-HiFi.conf": ("fora", "o UCM do alsa-ucm-conf; o doctor só lê"),
+    "USB-Audio/Hefesto/DualSense-HiFi.conf": ("install", "o verbo UCM do install; o doctor só lê"),
 }
 
 
