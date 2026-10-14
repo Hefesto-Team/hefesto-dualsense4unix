@@ -358,6 +358,8 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 .lugar span{font-size:12px}
 /* Sem o nome repetido, o fio de cima da mira dobrava com o da leitura: fica um só. */
 .mira::before{display:none}
+/* Em 1212x740 o respiro de antes passava 10 px do corpo: só ali o passo da mira encolhe de 13 para 10 px. */
+@media (max-height:760px){.mira{gap:10px}}
 </style>
 <style data-todo-css="alvos-r4">
 /* Rodada 4: a sua resposta de 13/10 (~23h40), botões e letra: todo alvo de toque com 24 px e nenhuma letra abaixo de 12 px. ?alvos=hoje mostra a tela sem a mudança. */
