@@ -494,10 +494,7 @@ class AutoSwitcher:
         self._ultimo_jogo_do_boot_lido = True
         from hefesto_dualsense4unix.utils.session import o_ultimo_jogo
 
-        try:
-            do_disco = o_ultimo_jogo()
-        except Exception:
-            return
+        do_disco = o_ultimo_jogo()
         if do_disco is not None and do_disco == corrente:
             self._perfil_do_ultimo_jogo = corrente
 

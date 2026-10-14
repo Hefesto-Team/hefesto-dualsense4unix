@@ -209,8 +209,8 @@ def _ultimo_jogo_cru() -> str | None:
         nome = data.get(_ULTIMO_JOGO_KEY) if isinstance(data, dict) else None
         if isinstance(nome, str) and nome.strip():
             return nome.strip()
-    except Exception:
-        pass
+    except (OSError, ValueError) as exc:
+        logger.debug("ultimo_jogo_ilegivel", err=str(exc))
     return None
 
 
@@ -231,7 +231,7 @@ def esquecer_o_ultimo_jogo(nome: str | None = None) -> None:
         return
     if nome is not None and atual != nome and not mesmo_slug(atual, nome):
         return
-    with contextlib.suppress(Exception):
+    with contextlib.suppress(OSError):
         (config_dir() / _ULTIMO_JOGO_FILE).unlink(missing_ok=True)
         logger.info("o_ultimo_jogo_esquecido", perfil=atual)
 
