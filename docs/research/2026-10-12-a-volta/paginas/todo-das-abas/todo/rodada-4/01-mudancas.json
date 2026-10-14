@@ -1,0 +1,28 @@
+{
+ "aba": "01-jogar",
+ "nome": "Jogar",
+ "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/mockups-rodada-4/docs/research/2026-10-12-a-volta/paginas/todo-das-abas/todo/01-jogar.html",
+ "depois": "/mnt/Apate/Desenvolvimento/hefesto-voo/mockups-rodada-4/docs/research/2026-10-12-a-volta/paginas/todo-das-abas/todo/rodada-4/01-jogar.html",
+ "rodada": 4,
+ "altura_px": 809,
+ "rola": false,
+ "estados": {
+  "modo-xbox": "01-jogar.html?estado=modo-xbox",
+  "pro": "01-jogar.html?estado=pro",
+  "queda": "01-jogar.html?estado=queda"
+ },
+ "mudancas": [
+  {
+   "n": 12,
+   "sprint": "O-ESTADO-DIZ-O-QUE-O-JOGO-VE-DE-CADA-CONTROLE-01",
+   "o_que_muda": "Cada cartão de controle ganha a linha «O jogo vê»: a forma (DualSense, Xbox 360 ou Pro Controller), o canal (próprio ou comum) e, em laranja, o motivo quando difere do que você escolheu",
+   "resposta": "a tela não pode dizer o que o daemon não diz (resposta da chave xbox)",
+   "origem": "rodada 4 (o que faltava desenho)",
+   "ancora": "[data-todo=\"12\"]",
+   "seletor": ".cartao .jv",
+   "conflito": "Os quatro casos estão na página: padrão, ?estado=modo-xbox, ?estado=pro e ?estado=queda. O texto do motivo é de exemplo; o daemon manda o motivo pronto."
+  }
+ ],
+ "por_baixo": [],
+ "fora": []
+}

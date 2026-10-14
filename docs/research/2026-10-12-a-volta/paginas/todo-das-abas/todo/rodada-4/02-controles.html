@@ -1,0 +1,2332 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Hefesto — aba CONTROLES (o todo)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+
+  :root{
+    --app-bg:#21222c; --panel:#282a36; --elevated:#2b2d3a;
+    --border-sutil:#343746; --border-forte:#44475a;
+
+    --fg:#f8f8f2; --texto-suave:#c8ccda; --texto-mudo:#9a9eb8; --comment:#8896c4;
+    --cyan:#8be9fd; --green:#50fa7b; --orange:#ffb86c;
+    --pink:#ff79c6; --purple:#bd93f9; --red:#ff5555; --yellow:#f1fa8c;
+    --sel-bg:rgba(189,147,249,0.16);
+
+    --rot-campo:var(--green);
+
+    --linha:#53576f;
+
+    --rot-linha:var(--linha);
+
+
+    --cosmic-red:#ae335a; --nova-pink:#e35b8c; --starlight-blue:#7eb8d4;
+    --galactic-purple:#74588e; --midnight-black:#606062;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:#11121a; color:var(--fg);
+    font-family:'Space Grotesk',system-ui,sans-serif;
+
+    padding:var(--recuo-do-corpo); display:flex; flex-direction:column; align-items:center; gap:18px;
+  }
+  .mono{font-family:'JetBrains Mono',ui-monospace,monospace}
+
+
+
+  .janela{
+    width:min(100%,1600px); height:var(--alt-janela); max-width:100%; background:var(--app-bg);
+
+    max-height:calc(100dvh - var(--recuo-do-corpo) * 2);
+    display:flex; flex-direction:column;
+    border:1px solid var(--linha); border-radius:10px; overflow:hidden;
+    box-shadow:0 18px 50px rgba(0,0,0,.45);
+  }
+
+
+
+  .logo{
+    width:46px;height:46px;border-radius:50%;flex:0 0 46px;
+    background:radial-gradient(circle at 35% 30%,#3b2d5c,#1a1b24 70%);
+    border:1px solid var(--linha);
+    display:flex;align-items:center;justify-content:center;font-size:12px;
+  }
+
+
+  .fita-linha{display:flex;align-items:center;gap:10px;padding:10px 18px 12px}
+  .conectado{margin-left:auto;text-align:right;font-size:12.5px;color:var(--green);white-space:nowrap}
+  .conectado .bolinha{color:var(--green)}
+  .fita{
+    display:flex;align-items:center;gap:8px;
+    font-size:12px;color:var(--texto-mudo);
+  }
+  .marca-nome{font-size:14px;line-height:1.15;font-weight:700;letter-spacing:-.01em;
+              white-space:nowrap;color:var(--fg);margin-right:6px}
+  .marca-nome .m-hef{color:var(--pink)}
+  .marca-nome .m-4{color:var(--green)}
+  .fita > span:first-child{font-size:13.5px;color:var(--texto-suave)}
+
+  .perfil-ativo{
+    display:flex;align-items:center;gap:7px;
+    padding:5px 11px;border-radius:7px;
+    border:1px solid var(--linha);background:var(--panel);
+  }
+  .pa-rot{font-size:10.5px;color:var(--comment);}
+  .pa-nome{font-size:12.5px;color:var(--pink);font-weight:600}
+
+  .fita.inerte{color:var(--comment)}
+
+  .fita{position:relative}
+  .so-no-nativo{display:none}
+  body.nativo .fita .so-no-nativo{display:block;position:absolute;inset:0;z-index:2;cursor:default}
+  body.nativo .fita{color:var(--comment)}
+  body.nativo .fita .chip,body.nativo .fita .chip.on,body.nativo .fita .chip.plastico{
+    border-color:var(--border-sutil);background:transparent;color:var(--comment);
+    font-weight:400;--borda-do-chip:1px}
+
+  .visto-fixo,.visto-legenda,.trava-nativo{display:none}
+  body.nativo .visto-fixo{grid-column:1/-1;display:flex;align-items:center;justify-content:center;
+    gap:7px;height:28px;border:1px solid var(--border-sutil);border-radius:7px;
+    background:transparent;color:var(--texto-suave);font-size:12px;font-weight:600;cursor:default}
+  body.nativo .visto-fixo .cad{color:var(--comment)}
+  body.nativo .visto-legenda{grid-column:1/-1;height:28px;display:flex;align-items:center;
+    justify-content:center;color:var(--comment);font-size:11.5px}
+  body.nativo .cartao.off .visto-fixo,body.nativo .cartao.off .visto-legenda{display:none}
+  body.nativo .mascara .chip{display:none}
+  body.nativo .cartao.alvo{background:var(--app-bg)}
+  body.nativo .trava-nativo{display:inline-flex;align-items:center;gap:6px;margin-left:auto;
+    margin-right:10px;color:var(--comment);font-size:12px;cursor:default}
+  body.nativo .trava-nativo .cad{color:var(--comment)}
+
+  .chip{
+    --borda-do-chip:1px;
+    padding:5px 12px;border-radius:6px;font-size:12px;
+    border:var(--borda-do-chip) solid var(--linha);background:var(--app-bg);color:var(--texto-mudo);
+    cursor:default;
+  }
+  .chip.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600}
+
+  .chip.plastico{--borda-do-chip:2px}
+
+  .fita .chip{padding-top:calc(7px - var(--borda-do-chip));
+              padding-bottom:calc(7px - var(--borda-do-chip));
+              white-space:nowrap}
+
+  .chip.plastico{border-color:var(--plastico, var(--border-forte))}
+
+
+  select option{background:var(--panel);color:var(--fg)}
+  select option:checked{background:var(--sel-bg);color:var(--fg)}
+
+
+  .tira{display:flex;gap:2px;padding:0 12px;border-bottom:1px solid var(--linha)}
+  .aba{
+    padding:11px 13px;font-size:13px;color:var(--texto-mudo);
+    border-bottom:2px solid transparent;white-space:nowrap;cursor:default;
+  }
+  a.aba{text-decoration:none;cursor:pointer}
+  a.aba:hover{color:var(--texto-suave);background:rgba(255,255,255,.03)}
+  .aba.falta{opacity:.35;cursor:not-allowed}
+  .aba.ativa{color:var(--fg);border-bottom-color:var(--pink);font-weight:600}
+
+
+
+  .miolo{padding:16px 3px 18px 18px;display:flex;flex-direction:column;gap:14px;
+         flex:1;min-height:0;overflow-y:auto;scrollbar-gutter:stable}
+
+
+  .miolo > .quadro.estica{flex-grow:1;flex-shrink:1;min-height:0;
+                          display:flex;flex-direction:column}
+  .miolo > .quadro.estica > .quadro-corpo{flex:1;min-height:0;display:flex;flex-direction:column}
+
+  .quadro{border:1px solid var(--linha);border-radius:9px;background:var(--panel)}
+  .quadro-topo{
+    display:flex;align-items:center;gap:8px;padding:11px 14px 0;
+  }
+  .quadro-titulo{font-size:13.5px;font-weight:600;color:var(--purple)}
+
+  .ajuda{
+    width:17px;height:17px;border-radius:50%;flex:0 0 17px;
+    border:1px solid var(--linha);color:var(--texto-mudo);
+    font-size:11px;line-height:15px;text-align:center;cursor:help;position:relative;
+  }
+  .ajuda:hover{border-color:var(--cyan);color:var(--cyan)}
+  .ajuda:hover .dica{display:block}
+
+  .ajuda:focus{border-color:var(--cyan);color:var(--cyan);outline:none}
+  .ajuda:focus .dica,
+  .ajuda:focus-within .dica{display:block}
+  .dica{
+    display:none;position:absolute;left:22px;top:-4px;width:330px;z-index:40;
+    background:var(--elevated);border:1px solid var(--linha);border-radius:7px;
+    padding:9px 11px;font-size:11.5px;line-height:1.5;color:var(--texto-suave);
+    text-align:left;font-weight:400;box-shadow:0 8px 24px rgba(0,0,0,.5);
+  }
+  .dica b{color:var(--fg)}
+  .quadro-corpo{padding:10px 14px 14px}
+
+
+  .quadro > input.abre{position:absolute;width:0;height:0;opacity:0;pointer-events:none}
+  label.quadro-titulo{cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+  label.quadro-titulo::before{content:"▾";font-size:10px;color:var(--texto-mudo);width:9px}
+  .quadro:has(> input.abre:not(:checked)) label.quadro-titulo::before{content:"▸"}
+  .quadro:has(> input.abre:not(:checked)) > .quadro-corpo{display:none}
+
+  .miolo > .quadro.estica:has(> input.abre:not(:checked)){flex:0 0 auto}
+
+
+  .linha-rot{font-size:12px;font-weight:600;color:var(--rot-campo);margin-bottom:7px}
+
+
+  .seg{display:flex;gap:7px;flex-wrap:wrap}
+  .seg button{
+    flex:1;min-width:150px;padding:9px 10px;border-radius:7px;font-size:12.5px;
+    font-family:inherit;border:1px solid var(--linha);
+    background:var(--app-bg);color:var(--texto-mudo);cursor:pointer;
+  }
+  .seg button.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600}
+  .seg button:hover:not(.on){border-color:var(--comment);color:var(--texto-suave)}
+
+  .seg button:disabled{border-color:var(--border-sutil);color:var(--texto-mudo);cursor:not-allowed}
+  .seg button:disabled:hover{border-color:var(--border-sutil);color:var(--texto-mudo)}
+
+
+  .estado{
+    display:flex;align-items:center;gap:7px;margin-top:9px;
+    font-size:12px;color:var(--texto-mudo);
+  }
+  .estado .valor{color:var(--fg);font-weight:600}
+  .estado .verde{color:var(--green)}
+  .estado .laranja{color:var(--orange)}
+
+
+  .escada{display:flex;align-items:stretch;gap:7px}
+  .degrau{
+    flex:1;display:flex;align-items:center;justify-content:center;gap:7px;
+    padding:9px 10px;border-radius:7px;
+    font-size:12.5px;border:1px solid var(--linha);
+    background:var(--app-bg);color:var(--texto-mudo);cursor:pointer;white-space:nowrap;
+  }
+  .degrau i{
+    font-style:normal;font-family:'JetBrains Mono',monospace;font-size:10px;
+    width:15px;height:15px;line-height:14px;text-align:center;border-radius:50%;
+    border:1px solid var(--linha);color:var(--comment);
+  }
+  .degrau:hover:not(.on){border-color:var(--comment);color:var(--texto-suave)}
+  .degrau.on{
+    border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600;
+  }
+  .degrau.on i{border-color:var(--purple);color:var(--purple)}
+
+  .seta{color:var(--texto-mudo);font-size:13px}
+
+
+  .pendente{
+    display:flex;align-items:center;gap:7px;margin-top:8px;padding:7px 10px;
+    border:1px dashed var(--orange);border-radius:6px;
+    font-size:11.5px;color:var(--orange);background:rgba(255,184,108,.07);
+  }
+
+
+  .avisos{
+    min-height:38px;border:1px solid var(--linha);border-radius:9px;
+    background:var(--panel);padding:9px 14px;display:flex;align-items:center;gap:9px;
+    font-size:12px;
+  }
+  .avisos.vazio{color:var(--comment);border-style:dashed}
+  .selo{
+    font-size:10.5px;padding:2px 7px;border-radius:4px;font-weight:600;
+    font-family:'JetBrains Mono',monospace;
+  }
+  .selo.alerta{background:var(--orange);color:var(--app-bg)}
+  .conta{margin-left:auto;font-size:11px;color:var(--texto-mudo)}
+  .link{color:var(--cyan);text-decoration:none;border-bottom:1px dotted var(--cyan);cursor:pointer}
+
+
+  .mesa{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .contagem{font-size:13px}
+  .contagem .n{color:var(--cyan);font-weight:600;font-family:'JetBrains Mono',monospace}
+  .pecas{display:flex;gap:7px}
+
+  .cartao{
+    display:flex;align-items:center;gap:6px;padding:5px 10px 5px 6px;
+    border:2px solid var(--linha);border-radius:7px;background:var(--app-bg);
+    font-size:11.5px;color:var(--texto-suave);
+  }
+
+  .cartao .pl{font-family:'JetBrains Mono',monospace;color:var(--fg);font-weight:500}
+  .cartao .via{color:var(--texto-mudo);font-size:11px}
+  .cartao .bat{color:var(--green);font-family:'JetBrains Mono',monospace;font-size:11px}
+
+  .acoes{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}
+
+  .btn{
+    padding:8px 13px;border-radius:7px;font-size:12.5px;font-family:inherit;cursor:pointer;
+    border:1px solid var(--linha);background:transparent;color:var(--texto-suave);
+  }
+  .btn:hover{border-color:var(--texto-suave);color:var(--fg)}
+  .btn.verde{color:var(--green)}
+  .btn.vermelho{color:var(--red)}
+  .btn.roxo{color:var(--purple)}
+  .btn.verde:hover{border-color:var(--green);color:var(--green)}
+  .btn.vermelho:hover{border-color:var(--red);color:var(--red)}
+  .btn.roxo:hover{border-color:var(--purple);color:var(--purple)}
+
+
+  .dupla{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+  .conta-avisos{margin-left:auto;font-size:11px;color:var(--texto-mudo)}
+  .aviso-item{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--texto-suave)}
+  .sub-secao{margin-top:14px;padding-top:12px;border-top:1px solid var(--linha)}
+  .sep{color:var(--texto-mudo);margin:0 3px}
+
+  .faixa-final{display:flex;align-items:center;gap:12px;margin-top:12px}
+  .faixa-final .pendente{flex:1;margin-top:0}
+  .col-atencao{border-left:1px solid var(--linha);padding-left:16px}
+
+
+
+  .rodape{
+    display:flex;align-items:center;gap:10px;padding:6px 18px;
+    border-top:1px solid var(--linha);background:var(--app-bg);
+  }
+
+  .rodape .r-aplicar{margin-left:auto}
+  .rodape button{
+    padding:8px 15px;border-radius:7px;font-size:12.5px;font-family:inherit;
+    font-weight:600;cursor:pointer;border:1px solid transparent;
+  }
+  .r-aplicar{background:var(--green);color:var(--app-bg)}
+  .r-salvar{border-color:var(--purple)!important;color:var(--purple);background:transparent}
+  .r-importar{border-color:var(--orange)!important;color:var(--orange);background:transparent}
+  .r-exportar{border-color:var(--comment)!important;color:var(--texto-mudo);background:transparent}
+
+  .marca{color:var(--orange)}
+
+
+  .logo{background:none;border:none;overflow:hidden}
+  .logo svg{width:44px;height:44px;display:block}
+  .ds-svg{width:100%;height:auto;display:block}
+  .cartao .ds-svg{width:72px;flex:0 0 72px}
+
+
+  [data-conectado="nao"] .ds-svg,
+  .ds-svg[data-conectado="nao"]{display:none}
+  .ds-motores{max-width:250px;margin:6px auto}
+
+  .ds-svg .oculta{opacity:0}
+  .ds-svg .oculta.acesa{opacity:.95}
+
+
+  .ds-svg .peca{fill:#6b7385}
+
+  .ds-svg .sem-tinta{fill:none !important;stroke:none !important}
+
+  .ds-svg [id$="-touchpad"] .peca,
+  .ds-svg [id$="-l1"] .peca,
+  .ds-svg [id$="-r1"] .peca{stroke-width:.9;stroke-linejoin:round}
+
+
+
+
+  :root{
+    --h-escolha:36px;
+    --h-acao:34px;
+    --gap:14px;
+    --pad-quadro:14px;
+    --rot:92px;
+
+    --recuo-do-corpo:16px;
+    --piso-da-vista:777px;
+    --teto-da-vista:855px;
+    --alt-janela:clamp(var(--piso-da-vista),
+                       calc(100dvh - var(--recuo-do-corpo) * 2),
+                       var(--teto-da-vista));
+  }
+  .seg button,.modos button,.players button,.degrau,select.pronto,.escolha{
+    height:var(--h-escolha);padding-top:0;padding-bottom:0;
+    display:flex;align-items:center;
+  }
+  .modos button{justify-content:flex-start}
+  .seg button,.players button,.degrau{justify-content:center}
+  select.pronto{display:block;line-height:calc(var(--h-escolha) - 2px)}
+  .btn,.mini{height:var(--h-acao);padding-top:0;padding-bottom:0;
+             display:inline-flex;align-items:center;justify-content:center}
+  .rodape button{height:var(--h-acao);padding-top:0;padding-bottom:0;min-width:104px;text-align:center;justify-content:center} /* os quatro com o tamanho do maior */
+  .campo .nome,.barra .nome{flex:0 0 var(--rot)}
+
+
+
+  .pt{color:var(--comment);margin:0 1px;font-size:10px;vertical-align:1px}
+
+
+
+
+  [data-controle][data-conectado="nao"]:not(.vazia) button,
+  [data-controle][data-conectado="nao"]:not(.vazia) input,
+  [data-controle][data-conectado="nao"]:not(.vazia) select,
+  [data-controle][data-conectado="nao"]:not(.vazia) textarea,
+  [data-controle][data-conectado="nao"]:not(.vazia) [contenteditable]{
+    display:none !important}
+
+  [data-controle][data-conectado="nao"]:not(.vazia){border-color:var(--border-forte)}
+
+
+  [data-controle][data-conectado="nao"]:not(.vazia) .ds-svg{
+    visibility:hidden !important}
+
+
+  .btn.apagado,.seg button.apagado{
+    border-color:var(--border-sutil);color:var(--texto-mudo);cursor:not-allowed}
+  .btn.apagado:hover,.seg button.apagado:hover{
+    border-color:var(--border-sutil);color:var(--texto-mudo)}
+
+
+  .btn:not(.apagado) + .ajuda.porque,
+  .seg button:not(.apagado) + .ajuda.porque{display:none}
+  .ajuda.porque:has(.dica:empty){display:none}
+  .ajuda.porque:has(.nada){display:none}
+
+  .ajuda.porque{align-self:center;margin-left:-4px}
+
+
+  .ressalva{font-size:11.5px;line-height:1.5;color:var(--texto-mudo);margin-top:5px}
+  .ressalva:empty{display:none}
+  .ressalva:has(.nada){display:none}
+
+
+  .fita:not(.inerte) label.chip{cursor:pointer}
+
+
+
+  .gl{display:inline-block;vertical-align:-6px;flex:0 0 auto}
+  .gls{display:inline-flex;align-items:center;gap:5px}
+  .gls .mais{color:var(--comment);font-size:11px;margin:0 1px}
+
+
+  .luzinhas{--led-apagado:#4a4f5c; --led-aceso:#e8ecf5;
+            display:flex;gap:3px;align-items:center}
+  .luzinhas i{width:6px;height:6px;border-radius:2px;background:var(--led-apagado);display:block}
+  .luzinhas i.on{background:var(--led-aceso);box-shadow:0 0 6px rgba(255,255,255,.85)}
+  .luzinhas .vao{width:4px;background:none;box-shadow:none}
+
+
+
+
+
+
+
+
+  .radio-mesa{position:absolute;width:0;height:0;opacity:0;margin:0}
+  .quadro-corpo{overflow-y:auto;gap:9px}
+
+  .ctl{display:flex;flex-direction:column;flex:0 0 auto;height:var(--h-acao);
+       border:2px solid var(--plastico);border-radius:9px;background:var(--app-bg);
+       position:relative}
+
+
+  .ctl > .faixa{flex:1;margin:0;padding:0 26px;border:0;border-radius:0;
+                background:transparent;flex-wrap:nowrap;white-space:nowrap;
+                cursor:pointer;-webkit-user-select:none;user-select:none}
+
+  .ctl:hover{background:rgba(255,255,255,.03)}
+
+
+
+  .ctl.off{height:24px;border:1px solid var(--border-forte);background:transparent}
+  .ctl.off > .faixa{cursor:default;color:var(--linha)}
+  .ctl.off:hover{background:transparent}
+  .ctl.off .card-nome,
+  .ctl.off .div,
+  .ctl.off .leia,
+  .ctl.off .bat{color:var(--linha)}
+
+
+  .ctl[data-conectado="nao"] .bat .cheio,
+  .ctl[data-conectado="nao"] .vol .cheio{width:0 !important}
+
+  .ctl[data-conectado="nao"] .onda i{
+    height:16% !important;background:var(--border-forte);opacity:.35}
+  .ctl[data-conectado="nao"] .vol .cheio::after{display:none}
+  .ctl[data-conectado="nao"] .barra-luz{color:var(--panel) !important}
+  .ctl[data-conectado="nao"] .sensores-peca .sw{
+    border-color:var(--border-forte);background:var(--app-bg);color:var(--texto-mudo)}
+  .ctl[data-conectado="nao"] .sensores-peca .sw .p{
+    background:var(--border-forte);box-shadow:none}
+
+
+
+  .sensores .btn{display:inline-flex;align-items:center;text-decoration:none;
+                 height:var(--h-acao);padding:0 13px;font-size:12.5px}
+  .corpo-cx{flex:0 0 0;height:0;overflow:hidden;visibility:hidden}
+
+  .quadro-corpo::-webkit-scrollbar{width:10px}
+  .quadro-corpo::-webkit-scrollbar-track{background:transparent}
+  .quadro-corpo::-webkit-scrollbar-thumb{background:var(--border-forte);border-radius:5px}
+  .quadro-corpo::-webkit-scrollbar-thumb:hover{background:var(--comment)}
+
+
+  .card-nome{font-size:12.5px;font-weight:600;color:var(--fg)}
+
+
+  .bat{flex:0 0 var(--larg-bateria);display:flex;align-items:center;gap:9px;
+       font-size:11.5px;color:var(--texto-mudo)}
+  .bat .trilho{flex:1;height:6px;border-radius:3px;background:var(--border-forte);position:relative}
+  .bat .cheio{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--purple)}
+  .bat .n{font-family:'JetBrains Mono',monospace;color:var(--fg);flex:0 0 42px;text-align:right}
+
+  .bat .carga{flex:0 0 13px;height:13px;display:flex;align-items:center;
+              justify-content:center}
+  .bat .carga-i{display:flex;align-items:center;justify-content:center;
+                width:13px;height:13px}
+  .bat .carga-i svg{display:none}
+  .ctl[data-conectado="nao"] .bat .carga-i svg{display:none !important}
+
+  .faixa{display:flex;align-items:center;gap:9px;
+         font-size:11.5px;color:var(--texto-mudo);
+         }
+  .faixa b{color:var(--texto-suave)}
+
+  .faixa > span{line-height:14px}
+
+  .faixa .leia{cursor:help}
+  .faixa .div{color:var(--texto-mudo)}
+
+  .faixa .no-jogo{display:none}
+
+  .faixa .no-jogo > .no-jogo-t{display:inline}
+
+  .gat{display:flex;flex-direction:column;justify-content:space-around;flex:1}
+  .gat-linha{display:grid;grid-template-columns:20px 1fr;align-items:center;gap:8px;
+             font-size:11px;color:var(--texto-mudo);margin-bottom:9px}
+  .gat-linha:last-child{margin-bottom:0}
+  .gat-linha .trilho{position:relative;height:8px;border-radius:4px;background:var(--panel);
+                     border:1px solid var(--border-forte)}
+  .gat-linha .cheio{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:var(--pink)}
+
+  .gat-linha .n{position:absolute;top:-14px;left:50%;transform:translateX(-50%);
+                white-space:nowrap;
+                font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--texto-suave)}
+
+
+  .card-corpo{display:grid;gap:11px;
+              grid-template-columns:minmax(0,168fr) minmax(0,226fr) minmax(0,212fr)
+                                    minmax(0,290fr) minmax(0,140fr);
+              padding:12px 14px 0;align-items:stretch}
+
+  .card-corpo > div{display:flex;flex-direction:column}
+  .card-corpo > div > .moldura{flex:1;display:flex;flex-direction:column}
+  .card-corpo > div > .moldura:first-child{flex:1;display:flex;flex-direction:column}
+
+  .card-corpo > div:first-child > .moldura.touchp{flex:0 0 auto}
+  .card-corpo > div:first-child > .moldura.luz{flex:1 1 0%;min-height:55px}
+  .card-corpo > div:first-child > .moldura.led{flex:1 1 0%;min-height:41px}
+  .moldura.luz .barra-luz{flex:1;min-height:20px}
+
+  .lampadas{flex:1;display:flex;align-items:center;justify-content:center}
+
+  .card-corpo > div:last-child > .moldura{display:flex;flex-direction:column}
+
+
+
+
+  .card-corpo > div:last-child > .moldura.leituras{flex:0 0 auto}
+
+
+  .card-corpo > div:last-child > .moldura.leituras > .eixo{height:14px;flex:0 0 auto;
+                                                           grid-template-columns:11px 46px 1fr;gap:6px}
+
+  .card-corpo > div:last-child > .moldura.leituras{gap:0;padding:5px 9px}
+  .card-corpo > div:last-child > .moldura.gatilhos{flex:1 1 auto;min-height:72px}
+
+  .sub-sensor{font-size:10px;color:var(--rot-campo);font-weight:600;margin-top:3px;line-height:12px}
+  .sub-sensor:first-of-type{margin-top:2px}
+  .sub-sensor .mudo{font-weight:400}
+
+  .moldura.touchp .touch{flex:0 0 auto;height:auto;aspect-ratio:16/9}
+  .moldura > .sticks{display:grid;grid-template-columns:1fr 1fr;height:100%}
+
+  .moldura > .sticks > div{display:flex;flex-direction:column;justify-content:space-between}
+  .moldura > .sticks .stick{flex:0 0 auto;align-self:center}
+  .moldura > .sticks .xy{margin-top:0}
+  .moldura > .glifos{height:100%;align-content:space-between}
+
+  .moldura{border:1px solid var(--border-forte);border-radius:6px;background:var(--app-bg);padding:3px 9px}
+
+  .rot{font-size:11.5px;font-weight:600;color:var(--rot-campo);margin-bottom:5px}
+  .rot-linha{display:flex;align-items:center}
+
+  .de-quem{margin-left:auto;font-size:10.5px;color:var(--texto-mudo)}
+
+  .rot .mudo{color:var(--texto-mudo);font-weight:400}
+  .sob{font-size:10.5px;color:var(--texto-mudo);margin-top:4px}
+  .touch{border-radius:4px;background:var(--panel);position:relative}
+
+
+  .touch .ponto{position:absolute;width:8px;height:8px;border-radius:50%;background:var(--cyan);
+                box-shadow:0 0 8px var(--cyan);transform:translate(-50%,-50%);opacity:0}
+  .touch .ponto.on{opacity:1}
+
+  .barra-luz{height:20px;border-radius:4px;background:currentColor;color:var(--panel)}
+
+  .sticks{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+  .stick-rot{font-size:10.5px;font-weight:600;color:var(--rot-campo);text-align:center;line-height:1.3;
+             padding-top:8px;margin-bottom:5px}
+
+  .stick{width:100px;height:100px;border-radius:50%;border:2px solid var(--plastico);
+         position:relative;margin:0 auto;display:flex;align-items:center;justify-content:center}
+  .stick::before,.stick::after{content:'';position:absolute;
+    background:color-mix(in srgb, var(--plastico) 30%, transparent)}
+  .stick::before{left:50%;top:6px;bottom:6px;width:1px}
+  .stick::after{top:50%;left:6px;right:6px;height:1px}
+  .stick .rotl{font-family:'JetBrains Mono',monospace;font-size:26px;
+
+               color:color-mix(in srgb, var(--plastico) 72%, transparent)}
+
+  .stick .p{position:absolute;width:9px;height:9px;border-radius:50%;background:var(--pink);z-index:2;
+            transform:translate(-50%,-50%)}
+
+  .stick .pj{position:absolute;width:13px;height:13px;box-sizing:border-box;border-radius:50%;
+             border:2px solid var(--green);background:transparent;box-shadow:0 0 6px var(--green);
+             z-index:1;transform:translate(-50%,-50%);opacity:0}
+  .stick .pj.on{opacity:1}
+  .xy{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--texto-suave);
+      text-align:center;margin-top:6px;line-height:1.5}
+  .eixo{display:grid;grid-template-columns:11px 52px 1fr;align-items:center;gap:8px;
+        font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--texto-suave);height:18px}
+  .eixo .g{height:6px;border-radius:3px;background:var(--panel);position:relative}
+
+  .eixo .v{position:absolute;top:0;bottom:0;border-radius:3px;background:currentColor}
+  .eixo .v.neg{right:50%}
+  .eixo .v.pos{left:50%}
+
+
+  .onda{height:18px;display:flex;align-items:flex-end;gap:2px;margin-bottom:5px}
+  .onda i{flex:1;background:var(--cyan);border-radius:1px;display:block;opacity:.85}
+  .onda.mudo i{background:var(--border-forte);opacity:.5}
+
+  .onda-do-mudo{display:contents}
+  .onda-do-mudo.calada>.onda:not(.sem-leitura) i{background:var(--border-forte);opacity:.5}
+
+  .onda.sem-leitura i{height:16% !important;background:var(--border-forte);opacity:.35}
+
+
+  .selo-ativo,.rot .selo-som{font-size:9.5px;
+              font-family:'JetBrains Mono',monospace;padding:1px 6px;
+              border-radius:3px;font-weight:600;line-height:1.5}
+  .selo-ativo{background:var(--border-forte);color:var(--texto-suave);
+              display:inline-flex;align-items:center;gap:3px;
+              vertical-align:middle}
+  .selo-ativo.on{background:var(--green);color:var(--app-bg)}
+
+  .rot .selo-ativo.no-rotulo{vertical-align:1px;margin-left:5px}
+  .rot .selo-ativo.no-rotulo:has(.nada){display:none}
+  .rot .selo-ativo.no-rotulo:has(.selo-palavra:empty){display:none}
+
+  .mic-glifo{position:relative;display:inline-flex;flex:0 0 auto;width:9px;height:9px}
+  .mic-glifo svg{display:block}
+  .mic-glifo.cortado::after{content:'';position:absolute;left:-1.5px;top:50%;
+    width:12px;height:1.5px;background:currentColor;border-radius:1px;
+    transform:translateY(-50%) rotate(-45deg)}
+
+  .vol{display:flex;align-items:center;gap:8px;height:17px}
+  .vol .trilho{flex:1;height:5px;border-radius:3px;background:var(--panel);position:relative}
+  .vol .cheio{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--purple)}
+  .vol .cheio::after{content:'';position:absolute;right:-5px;top:-4px;width:12px;height:12px;
+    border-radius:50%;background:var(--purple);border:2px solid var(--app-bg)}
+  .vol .n{flex:0 0 30px;text-align:right;font-family:'JetBrains Mono',monospace;
+          font-size:10.5px;color:var(--fg)}
+
+
+  .rot-vol{flex:0 0 46px;font-size:11px;color:var(--muted);white-space:nowrap}
+  .ganho .un{flex:0 0 16px;font-size:10px;color:var(--muted);
+    font-family:'JetBrains Mono',monospace}
+  .ganho .trilho{flex:1;height:5px;border-radius:3px;background:var(--panel);position:relative}
+  .ganho .cheio{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--purple)}
+  .ganho .cheio::after{content:'';position:absolute;right:-5px;top:-4px;width:12px;height:12px;
+    border-radius:50%;background:var(--purple);border:2px solid var(--app-bg)}
+  .ganho .n{flex:0 0 30px;text-align:right;font-family:'JetBrains Mono',monospace;
+    font-size:10.5px;color:var(--fg)}
+
+  .ganho.sem-ganho .trilho,.ganho.sem-ganho .n{opacity:.4}
+  .ganho.sem-ganho .cheio::after{display:none}
+
+  .ganho + .ajuda.porque{margin-left:4px}
+
+
+
+  .padrao-i{height:16px;flex:0 0 auto;border-radius:5px;cursor:pointer;padding:0 6px;
+            border:1px solid var(--border-forte);background:var(--panel);color:var(--texto-mudo);
+            font-size:10px;line-height:14px;font-family:inherit}
+  .padrao-i.on{border-color:var(--green);color:var(--green)}
+  .moldura:has(.padrao-i.on) .puxa-vol{display:none}
+  .moldura:has(.padrao-i.on) .vol .cheio{background:var(--green);
+    width:100% !important}
+  .moldura:has(.padrao-i.on) .vol .cheio::after{display:none}
+  .moldura:has(.padrao-i.on) .vol .n{flex:0 0 auto;color:var(--green)}
+  .mudo-i{width:16px;height:16px;flex:0 0 16px;border-radius:5px;cursor:pointer;
+          border:1px solid var(--border-forte);background:var(--panel);color:var(--texto-mudo);
+          font-size:10px;line-height:14px;text-align:center;padding:0;font-family:inherit}
+
+
+
+  .mudo-i[disabled]{opacity:.4;cursor:not-allowed}
+
+  .vol[data-porque] .mudo-i{border-color:var(--border-sutil);
+                            color:var(--texto-mudo);cursor:not-allowed}
+  .vol[data-porque] .mudo-i:hover{border-color:var(--border-sutil);
+                                  color:var(--texto-mudo)}
+
+  .vol:not([data-porque]) .ajuda.porque{display:none}
+
+
+  .rot .selo-som{background:var(--orange);color:var(--app-bg);
+    vertical-align:1px;margin-left:3px}
+  .rot .selo-som:has(.nada){display:none}
+  .rot .selo-som:empty{display:none}
+
+
+  .moldura[data-bloco="microfone"][data-apagado="sem-alvo"] .vol,
+  .moldura[data-bloco="microfone"][data-apagado="sem-alvo"] .rota,
+  .moldura[data-bloco="microfone"][data-apagado="sem-fonte"] .vol .trilho,
+  .moldura[data-bloco="microfone"][data-apagado="sem-fonte"] .vol .n,
+  .moldura[data-bloco="alto-falante"][data-apagado="sem-alvo"] .vol,
+  .moldura[data-bloco="alto-falante"][data-apagado="sem-alvo"] .rota{opacity:.45}
+  .moldura[data-bloco="microfone"][data-apagado="sem-alvo"] .mudo-i,
+  .moldura[data-bloco="microfone"][data-apagado] .puxa-vol,
+  .moldura[data-bloco="microfone"][data-apagado="sem-alvo"] .rota button,
+  .moldura[data-bloco="alto-falante"][data-apagado="sem-alvo"] .mudo-i,
+  .moldura[data-bloco="alto-falante"][data-apagado="sem-alvo"] .puxa-vol,
+  .moldura[data-bloco="alto-falante"][data-apagado="sem-alvo"] .rota button{cursor:not-allowed}
+
+
+
+  .puxa-vol{position:absolute;left:-7px;top:50%;transform:translateY(-50%);
+    width:calc(100% + 12px);height:12px;margin:0;padding:0;
+    -webkit-appearance:none;appearance:none;background:transparent;cursor:pointer}
+  .puxa-vol::-webkit-slider-runnable-track{height:12px;background:transparent;border:0}
+  .puxa-vol::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+    width:12px;height:12px;border-radius:50%;background:transparent;border:0;
+    cursor:pointer}
+
+  .puxa-vol:focus-visible{outline:2px solid var(--purple);outline-offset:4px}
+
+
+
+
+
+
+
+
+  .rota{display:flex;flex-direction:column;gap:2px;margin-top:5px}
+  .rota button{flex:0 0 auto;height:17px;border-radius:5px;font-size:10.5px;white-space:nowrap;font-family:inherit;
+    border:1px solid var(--border-forte);background:var(--panel);color:var(--texto-mudo);cursor:pointer}
+  .rota button.on,.rota .aceso-do-mic.on>button{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600}
+
+  .rota.quatro{gap:1px}
+  .rota.quatro button{height:auto;min-height:17px;white-space:normal;
+    line-height:11px;padding:0}
+  .rota.quatro .par{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    gap:1px 3px}
+
+  .rota.mic-modo{flex-direction:row;flex-wrap:wrap;gap:5px}
+  .rota.mic-modo button{flex:1;height:19px}
+  .rota.mic-modo .aceso-do-mic{display:contents}
+
+  .mic-modo.sem-nativo button[data-mic-modo="nativo"],
+  .mic-modo.sem-nativo button[data-mic-modo="nativo"]:hover{
+    border-color:var(--border-sutil);background:var(--panel);
+    color:var(--texto-mudo);font-weight:400;cursor:not-allowed}
+
+  .glifos{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;justify-items:stretch}
+  .gb{width:100%;height:100%;min-height:46px;display:flex;align-items:center;
+      justify-content:center;color:var(--texto-suave);min-width:0}
+
+  .gb svg{width:100%;height:auto;max-width:38px;max-height:38px}
+  .gb.plast{color:var(--plastico)}
+  .gb.on{color:var(--pink);filter:drop-shadow(0 0 6px rgba(255,121,198,.55))}
+
+  .sensores{display:flex;gap:8px;margin-left:auto}
+
+
+  .sensores-peca{display:grid;grid-auto-flow:column;grid-auto-columns:auto;
+                 gap:6px;margin-left:auto}
+  .sensores-peca .sw{
+
+    height:17px;border-radius:6px;font-size:10.5px;font-family:inherit;cursor:pointer;
+
+    border:1px solid var(--green);background:rgba(80,250,123,.09);color:var(--green);
+    display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:0 7px;
+  }
+  .sensores-peca .sw .p{width:6px;height:6px;border-radius:50%;background:var(--green);
+                        box-shadow:0 0 6px var(--green)}
+  .sensores-peca .sw.off,.sensores-peca .chip-da-mira.off>.sw{border-color:var(--border-forte);background:var(--app-bg);color:var(--texto-mudo)}
+  .sensores-peca .sw.off .p,.sensores-peca .chip-da-mira.off>.sw .p{background:var(--border-forte);box-shadow:none}
+
+  .sensores-peca .dica-do-giro{display:contents}
+
+  .sensores-peca .chip-da-mira{display:contents}
+
+  .sensores-peca.sem-mira .sw[data-gesto="mira"],
+  .sensores-peca.sem-mira .sw[data-gesto="mira"]:hover{
+    border-color:var(--border-sutil);background:var(--app-bg);color:var(--texto-mudo);
+    cursor:not-allowed}
+  .sensores-peca.sem-mira .sw[data-gesto="mira"] .p{
+    background:var(--border-sutil);box-shadow:none}
+
+  .stick-topo{display:flex;flex-direction:column}
+  .chip-virtual{display:flex;justify-content:center;margin-top:4px}
+  .chip-virtual>.sw{height:17px;border-radius:6px;font-size:10.5px;font-family:inherit;
+    cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;
+    justify-content:center;gap:6px;padding:0 10px;
+    border:1px solid var(--border-forte);background:var(--app-bg);color:var(--texto-mudo)}
+  .chip-virtual>.sw .p{width:6px;height:6px;border-radius:50%;background:var(--border-forte)}
+  .chip-virtual.on>.sw{border-color:var(--green);background:rgba(80,250,123,.09);color:var(--green)}
+  .chip-virtual.on>.sw .p{background:var(--green);box-shadow:0 0 6px var(--green)}
+  .chip-virtual>.sw.sem-mira,.chip-virtual>.sw.sem-mira:hover{
+    border-color:var(--border-sutil);background:var(--app-bg);color:var(--texto-mudo);
+    cursor:not-allowed}
+  .chip-virtual>.sw.sem-mira .p{background:var(--border-sutil);box-shadow:none}
+
+  .pausa-da-inclinacao{display:contents}
+  .pausa-da-inclinacao.parada .chip-virtual.on>.sw{opacity:.5}
+  .pausa-da-inclinacao.parada .chip-virtual.on>.sw .p{box-shadow:none}
+
+  .chip-virtual>.sw{white-space:normal;height:auto;min-height:17px;line-height:12px;
+    padding:2px 6px;gap:4px;font-size:10px;text-align:center;width:100%;max-width:112px}
+  .ctl:has(.chip-da-mira.off) .chip-virtual>.sw,
+  .ctl:has(.chip-da-mira.off) .chip-virtual.on>.sw{
+    border-color:var(--border-sutil);background:var(--app-bg);color:var(--texto-mudo)}
+  .ctl:has(.chip-da-mira.off) .chip-virtual>.sw .p{background:var(--border-sutil);box-shadow:none}
+
+  .rota.toque-modo{position:absolute;left:5px;right:5px;bottom:5px;margin:0;
+    flex-direction:row;gap:5px;z-index:1}
+  .rota.toque-modo .aceso-do-toque{display:contents}
+  .rota.toque-modo button{flex:1;min-width:0}
+  .rota .aceso-do-toque.on>button{border-color:var(--purple);background:var(--sel-bg);
+    color:var(--fg);font-weight:600}
+  .rota.toque-modo button.sem-mira,.rota.toque-modo button.sem-mira:hover{
+    border-color:var(--border-sutil);background:var(--panel);color:var(--texto-mudo);
+    font-weight:400;cursor:not-allowed}
+  .touch .ponto{z-index:2}
+
+  .glifos[data-botoes] .gb[data-glifo]::before{font-weight:700;font-size:22px;
+    line-height:1}
+  .glifos[data-botoes="xbox"] .gb[data-glifo="cross"] svg{display:none}
+  .glifos[data-botoes="xbox"] .gb[data-glifo="cross"]::before{content:"A"}
+  .glifos[data-botoes="xbox"] .gb[data-glifo="circle"] svg{display:none}
+  .glifos[data-botoes="xbox"] .gb[data-glifo="circle"]::before{content:"B"}
+  .glifos[data-botoes="xbox"] .gb[data-glifo="square"] svg{display:none}
+  .glifos[data-botoes="xbox"] .gb[data-glifo="square"]::before{content:"X"}
+  .glifos[data-botoes="xbox"] .gb[data-glifo="triangle"] svg{display:none}
+  .glifos[data-botoes="xbox"] .gb[data-glifo="triangle"]::before{content:"Y"}
+  .glifos[data-botoes="nintendo"] .gb[data-glifo="cross"] svg{display:none}
+  .glifos[data-botoes="nintendo"] .gb[data-glifo="cross"]::before{content:"B"}
+  .glifos[data-botoes="nintendo"] .gb[data-glifo="circle"] svg{display:none}
+  .glifos[data-botoes="nintendo"] .gb[data-glifo="circle"]::before{content:"A"}
+  .glifos[data-botoes="nintendo"] .gb[data-glifo="square"] svg{display:none}
+  .glifos[data-botoes="nintendo"] .gb[data-glifo="square"]::before{content:"Y"}
+  .glifos[data-botoes="nintendo"] .gb[data-glifo="triangle"] svg{display:none}
+  .glifos[data-botoes="nintendo"] .gb[data-glifo="triangle"]::before{content:"X"}
+
+  .bat .carga-i[data-carga="Carregando"] .g-raio{display:block;color:var(--green)}
+  .bat .carga-i[data-carga="Cheio"] .g-cheio{display:block;color:var(--green)}
+  .bat .carga-i[data-carga="Fora de faixa"] .g-atencao{display:block;color:var(--orange)}
+  .bat .carga-i[data-carga="Erro de carga"] .g-atencao{display:block;color:var(--orange)}
+  .faixa{--larg-bateria:240px}
+
+  .ctl .touch .ponto,.ctl .stick .p,.ctl .stick .pj{left:var(--hef-x,50.2%);top:var(--hef-y,50.2%)}
+
+  .ctl:has(> input:checked),
+  body:has(#c-todos:checked) .ctl{height:auto;flex:0 0 auto;padding-bottom:12px;
+    background:linear-gradient(0deg,var(--sel-bg),var(--sel-bg)),var(--panel)}
+  .ctl:has(> input:checked) > .faixa,
+  body:has(#c-todos:checked) .ctl > .faixa{flex:0 0 var(--h-acao);margin:10px 14px 0;padding:0 11px;
+    border:1px solid var(--border-sutil);border-radius:7px;background:var(--app-bg);
+    flex-wrap:wrap;white-space:normal}
+  .ctl:has(> input:checked) > .corpo-cx,
+  body:has(#c-todos:checked) .ctl > .corpo-cx{flex:0 0 auto;height:auto;overflow:visible;visibility:visible;
+    display:flex;flex-direction:column}
+  .ctl:has(> input:checked) > .corpo-cx > .card-corpo,
+  body:has(#c-todos:checked) .ctl > .corpo-cx > .card-corpo{flex:0 0 auto}
+
+  .miolo > .quadro.estica{flex:0 1 auto}
+  .ctl:has(> input:checked) .so-fechado,
+  body:has(#c-todos:checked) .ctl .so-fechado{display:none}
+
+  .so-aberto{display:none}
+  .ctl:has(> input:checked) .so-aberto,
+  body:has(#c-todos:checked) .ctl .so-aberto{display:inline}
+
+  .ctl:has(> input:checked) .card-nome,
+  body:has(#c-todos:checked) .ctl .card-nome{max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  .ctl:has(> input:checked) .faixa .no-jogo[aria-label],
+  body:has(#c-todos:checked) .ctl .faixa .no-jogo[aria-label]{display:block;flex:1 1 0;min-width:0;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    color:var(--texto-mudo);font-weight:400}
+
+  .ctl.off:has(> input:checked),
+  body:has(#c-todos:checked) .ctl.off{height:24px;flex:0 0 auto;padding-bottom:0;
+    background:transparent}
+  .ctl.off:has(> input:checked) > .faixa,
+  body:has(#c-todos:checked) .ctl.off > .faixa{flex:1;margin:0;padding:0 26px;
+    border:0;border-radius:0;background:transparent;
+    flex-wrap:nowrap;white-space:nowrap}
+  .ctl.off:has(> input:checked) > .corpo-cx,
+  body:has(#c-todos:checked) .ctl.off > .corpo-cx{flex:0 0 0;height:0;overflow:hidden;
+    visibility:hidden;display:block}
+  .ctl.off:has(> input:checked) .so-fechado,
+  body:has(#c-todos:checked) .ctl.off .so-fechado{display:inline}
+  .ctl.off:has(> input:checked) .so-aberto,
+  body:has(#c-todos:checked) .ctl.off .so-aberto{display:none}
+  body:has(#c-todos:checked) .chip[for="c-todos"],
+  body:has(#c-todos:checked) .chip[for="c-p1"],
+  body:has(#c-todos:checked) .chip[for="c-p2"],
+  body:has(#c-todos:checked) .chip[for="c-p3"],
+  body:has(#c-todos:checked) .chip[for="c-p4"],
+  body:has(#c-p1:checked) .chip[for="c-p1"],
+  body:has(#c-p2:checked) .chip[for="c-p2"],
+  body:has(#c-p3:checked) .chip[for="c-p3"],
+  body:has(#c-p4:checked) .chip[for="c-p4"]{background:var(--sel-bg);color:var(--fg);font-weight:600}
+  .fita label.chip{cursor:pointer}
+
+  .nota li.foi{color:var(--texto-mudo);border-left:2px solid var(--border-forte);
+    padding-left:9px;list-style:none;margin-left:-16px}
+
+  .mudo-i[data-som="ATIVO"]{border-color:var(--green);color:var(--green)}
+  .mudo-i[data-som="DESLIGADO"]{border-color:var(--orange);color:var(--orange);
+    background:rgba(255,184,108,.1)}
+
+
+  .mudo-i[data-mic-luz="retorno"]{
+    border-color:var(--green);color:var(--green)}
+
+
+  body.nativo.por-controle :is([data-gesto],[data-modo],[data-hef-gesto],[data-papel],[data-forca],[data-player],[data-sensor],[data-rota],[data-mudo],[data-mic-modo],[data-v]):not(:is([data-gesto=cadeado],[data-gesto=hefesto],[data-gesto=modo-nativo],[data-gesto=modo-steam],[data-gesto=reconectar])){
+    pointer-events:none;cursor:default;-webkit-appearance:none;appearance:none;
+    background:transparent!important;border-color:var(--border-sutil)!important;
+    color:var(--comment)!important;font-weight:400!important;box-shadow:none!important}
+  body.nativo.por-controle .nativo-nao{pointer-events:none;cursor:default;
+    background:transparent!important;border-color:var(--border-sutil)!important;
+    color:var(--comment)!important;font-weight:400!important;box-shadow:none!important}
+  body.nativo.por-controle :is([data-gesto=cadeado],[data-gesto=hefesto],[data-gesto=modo-nativo],[data-gesto=modo-steam],[data-gesto=reconectar]){pointer-events:auto}
+  body.nativo.por-controle .guardar,body.nativo.por-controle .par-modo,
+  body.nativo.por-controle .par-modo + .ajuda,
+  body.nativo.por-controle .r-aplicar,body.nativo.por-controle .r-salvar,
+  body.nativo.por-controle .r-importar{visibility:hidden}
+</style>
+<style data-campo="plastico-css" data-hef-alvo="html">
+  .ctl[data-controle],.fita .chip[for]{--plastico:var(--border-forte)}
+  .ctl[data-controle="p1"],.fita .chip[for="c-p1"]{--plastico:#ae335a}
+  .ctl[data-controle="p2"],.fita .chip[for="c-p2"]{--plastico:#7eb8d4}
+</style>
+<style data-aba="rodada-2">
+
+  .moldura.touchp .todo-sw-toque{margin-left:auto;height:17px;border-radius:6px;font-size:10.5px;font-family:inherit;
+    cursor:pointer;border:1px solid var(--green);background:rgba(80,250,123,.09);color:var(--green);
+    display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:0 7px;font-weight:400}
+  .moldura.touchp .todo-sw-toque .p{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green)}
+  .moldura.touchp .todo-sw-toque.off{border-color:var(--border-forte);background:var(--app-bg);color:var(--texto-mudo)}
+  .moldura.touchp .todo-sw-toque.off .p{background:var(--border-forte);box-shadow:none}
+  .ctl[data-conectado="nao"] .moldura.touchp .todo-sw-toque{border-color:var(--border-sutil);background:transparent;color:var(--texto-mudo)}
+  .ctl[data-conectado="nao"] .moldura.touchp .todo-sw-toque .p{background:var(--border-sutil);box-shadow:none}
+  .touch .todo-terca{position:absolute;top:0;bottom:0;width:33.334%;border-radius:4px}
+  .touch .todo-terca:nth-child(1){left:0}
+  .touch .todo-terca:nth-child(2){left:33.333%}
+  .touch .todo-terca:nth-child(3){left:66.666%}
+  .touch .todo-terca.on{background:var(--sel-bg);box-shadow:inset 0 0 0 1px var(--purple)}
+  .moldura.todo-toque-off .touch > :not(.todo-mudo){opacity:.35}
+  /* respiro: as molduras ganham padding de verdade (A3); a da luz respeita o de baixo (todo-02) */
+  .moldura{padding:7px 10px 9px}
+  .card-corpo > div:last-child > .moldura.leituras{padding:7px 10px 9px}
+  .moldura.luz .barra-luz{margin-bottom:2px}
+  /* o cabeçalho: os dois botões com a mesma altura e a mesma borda */
+  .sensores{align-items:center;gap:10px}
+  /* a mesma letra do Modo automático ao lado (600 13,5 px Space Grotesk) */
+  .sensores .btn{height:34px;border-radius:999px;padding:0 16px;box-sizing:border-box;
+                 font:600 13.5px/1 'Space Grotesk',system-ui,sans-serif}
+  /* as três rotas do alto-falante, uma por linha */
+  .rota.tres{gap:3px}
+  .rota.tres button{height:22px;min-height:22px;white-space:nowrap;text-align:center;padding:0 9px}
+  .chip-virtual>.sw{padding:4px 4px;gap:3px;line-height:13px;max-width:none}
+  .moldura.gatilhos .rot{margin-bottom:10px}
+  .quadro.estica{flex:1 1 auto}
+  .criar{flex:0 0 auto}
+  .criar .criar-linha{display:flex;align-items:center;gap:12px;padding:12px 16px;flex-wrap:nowrap;min-width:0}
+  .criar .quadro-titulo{flex:0 0 auto;margin-right:4px}
+  .criar .seg-criar{display:inline-flex;gap:4px;flex:0 0 auto}
+  .criar .seg-criar button,.criar .meu{height:30px;padding:0 12px;border-radius:999px;font:500 12.5px/1 'Space Grotesk',system-ui,sans-serif;
+    border:1px solid var(--linha);background:var(--app-bg);color:var(--texto-mudo);cursor:pointer;white-space:nowrap;
+    display:inline-flex;align-items:center;gap:7px}
+  .criar .seg-criar button.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600}
+  .criar .seg-criar button:hover:not(.on),.criar .meu:hover{border-color:var(--comment);color:var(--texto-suave)}
+  .criar .nome-criar{height:30px;width:150px;flex:0 0 auto;padding:0 11px;border-radius:7px;border:1px solid var(--linha);
+    background:var(--app-bg);color:var(--fg);font:500 12.5px 'Space Grotesk',system-ui,sans-serif}
+  .criar .nome-criar::placeholder{color:var(--texto-mudo)}
+  .criar .btn-criar{height:30px;padding:0 14px;border-radius:7px;border:1px solid var(--purple);background:rgba(189,147,249,.12);
+    color:var(--purple);font:600 12.5px/1 'Space Grotesk',system-ui,sans-serif;cursor:pointer;flex:0 0 auto}
+  .criar .btn-criar:hover{background:rgba(189,147,249,.22)}
+  .criar .meus{display:flex;gap:6px;margin-left:auto;align-items:center;min-width:0;overflow:hidden}
+  .criar .meu{color:var(--texto-suave)}
+  .criar .meu i{width:7px;height:7px;border-radius:50%;background:var(--cor,var(--purple));flex:0 0 auto}
+</style>
+<style data-aba="rodada-3">
+  /* RODADA 3 (12/10): os dois analógicos (100 px cada) e o vão de 8 somavam 208 numa moldura de 204 por
+     dentro, e o da direita passava 4 px do respiro. Com vão de 4 o par fecha na borda dos dois lados. */
+  .moldura > .sticks{column-gap:4px}
+</style>
+<style id="base-comum">
+/* ===== Base comum das abas (rodada 2, 12/10/2026) =====
+   Copiada IGUAL em todo mockup do todo. Três peças: a dica no hover (sem «?»), o Modo automático
+   e o menu do botão direito desenhado no visual das abas (BRIEF-T6, opção B). */
+
+/* 1. A dica: qualquer frase, botão ou área com data-dica mostra a dica ao passar o mouse ou focar.
+      Nenhum botão «?» existe mais. A dica tem no máximo ~12 palavras: show, don't tell. */
+[data-dica]{cursor:help}
+button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"][data-dica]{cursor:pointer}
+#hef-dica{position:fixed;z-index:2147483000;max-width:280px;padding:7px 11px;border-radius:8px;
+  background:#1b1c25;border:1px solid var(--border-forte,#44475a);color:var(--texto-suave,#c8ccda);
+  font:500 12.5px/1.45 'Space Grotesk',system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.45);pointer-events:none;
+  opacity:0;transform:translateY(3px);transition:opacity .12s,transform .12s}
+#hef-dica.visivel{opacity:1;transform:none}
+
+/* 2. O Modo automático: pílula com bolinha. Os dois estados têm de se distinguir num relance.
+      Desligado: contorno neutro, bolinha vazia, letra suave (vale o que está na aba).
+      Ligado: ciano cheio, bolinha branca acesa, letra branca; a área que ele governa esmaece. */
+.modo-auto{display:inline-flex;align-items:center;gap:9px;height:34px;padding:0 16px 0 12px;border-radius:999px;
+  border:1px solid var(--border-forte,#44475a);background:transparent;color:var(--texto-suave,#c8ccda);
+  font:600 13.5px/1 'Space Grotesk',system-ui,sans-serif;cursor:pointer;transition:background .15s,border-color .15s,color .15s,box-shadow .15s}
+.modo-auto .p{width:11px;height:11px;border-radius:50%;border:2px solid var(--texto-mudo,#9a9eb8);background:transparent;
+  transition:all .15s}
+.modo-auto:hover{border-color:#5fd3e6;color:#fff}
+.modo-auto[aria-pressed="true"]{background:#0e7c8c;border-color:#5fd3e6;color:#fff;box-shadow:0 0 0 3px rgba(95,211,230,.18)}
+.modo-auto[aria-pressed="true"] .p{border-color:#fff;background:#fff;box-shadow:0 0 8px #fff}
+.modo-auto:focus-visible{outline:2px solid var(--cyan,#8be9fd);outline-offset:2px}
+.governado-pelo-jogo{opacity:.42;pointer-events:none;filter:saturate(.6)}
+
+/* 3. O menu do botão direito, no visual das abas. */
+.menu-hefesto{position:fixed;z-index:2147482000;min-width:190px;padding:6px;border-radius:12px;
+  background:#252733;border:1px solid var(--border-forte,#44475a);box-shadow:0 14px 34px rgba(0,0,0,.5)}
+.menu-hefesto button{display:flex;width:100%;align-items:center;gap:10px;height:34px;padding:0 12px;border:0;
+  border-radius:8px;background:transparent;color:var(--fg,#f8f8f2);font:500 13.5px/1 'Space Grotesk',system-ui,sans-serif;text-align:left;cursor:pointer}
+.menu-hefesto button:hover{background:rgba(189,147,249,.14)}
+.menu-hefesto button[disabled]{color:var(--texto-mudo,#9a9eb8);opacity:.55;cursor:default;background:transparent}
+.menu-hefesto hr{border:0;border-top:1px solid var(--border-sutil,#343746);margin:5px 4px}
+</style>
+<style data-todo-css="o-jogo-ve-02-r4">
+.jv-btn{flex:none;height:24px;padding:0 9px;border-radius:6px;border:1px solid var(--border-forte);background:transparent;color:var(--texto-suave);font:inherit;font-size:11.5px;cursor:pointer}
+.jv-btn:hover{border-color:var(--comment);color:var(--fg)}
+.jv-pop{position:fixed;z-index:60;width:520px;padding:12px 14px 12px;border:1px solid var(--border-forte);border-radius:10px;background:var(--app-bg);box-shadow:0 10px 28px rgba(0,0,0,.55);font-size:12px;color:var(--texto-suave)}
+.jv-pop[hidden]{display:none}
+.jv-pop h4{margin:0 0 2px;font:600 13px 'Space Grotesk',system-ui,sans-serif;color:var(--fg)}
+.jv-pop .jv-sub{color:var(--texto-mudo);font-size:11.5px}
+.jv-pop .jv-mot{margin:6px 0 2px;color:var(--orange,#ffb86c);font-size:11.5px}
+.jv-grade{display:grid;grid-template-columns:1fr 1fr;gap:0 18px;margin-top:8px}
+.jv-fn{display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px;min-height:28px;border-top:1px solid var(--border-sutil)}
+.jv-fn em{font-style:normal;font-size:11px;padding:1px 8px;border-radius:999px;white-space:nowrap}
+.jv-fn em.n{color:#50fa7b;background:rgba(80,250,123,.12)}
+.jv-fn em.h{color:#bd93f9;background:rgba(189,147,249,.14)}
+.jv-fn em.x{color:var(--texto-mudo);background:rgba(255,255,255,.06)}
+.jv-fn small{display:block;color:var(--texto-mudo);font-size:10.5px}
+</style>
+</head>
+<body class="por-controle" data-campo="nativo" data-hef-alvo="classe" data-hef-classe="nativo" data-hef-quando="sim">
+
+<div class="janela">
+
+
+  <div class="fita-linha">
+    <div class="logo"><svg width="40" height="40" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Hefesto - DualSense4Unix" xmlns:bx="https://boxy-svg.com">
+  <defs>
+    <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8be9fd"/>
+      <stop offset="0.5" stop-color="#bd93f9"/>
+      <stop offset="1" stop-color="#ff79c6"/>
+    </linearGradient>
+    <linearGradient id="flameOut" x1="-0.003" y1="0.998" x2="-0.003" y2="-0.002">
+      <stop offset="0" stop-color="#bd93f9"/>
+      <stop offset="1" stop-color="#ff79c6"/>
+    </linearGradient>
+    <linearGradient id="flameIn" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#ffb86c"/>
+      <stop offset="1" stop-color="#f1fa8c"/>
+    </linearGradient>
+    <filter id="outline-filter-0" bx:preset="outline 1 1 #666" color-interpolation-filters="sRGB" x="-50%" y="-50%" width="200%" height="200%">
+      <feMorphology in="SourceAlpha" result="dilated" operator="dilate" radius="1"/>
+      <feFlood flood-color="#666" result="flood"/>
+      <feComposite in="flood" in2="dilated" operator="in" result="outline"/>
+      <feMerge>
+        <feMergeNode in="outline"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="inner-shadow-filter-0" bx:preset="inner-shadow 1 0 0 2 0.11 rgba(0,0,0,0.7)" color-interpolation-filters="sRGB" x="-50%" y="-50%" width="200%" height="200%">
+      <feOffset dx="0" dy="0"/>
+      <feGaussianBlur stdDeviation="2"/>
+      <feComposite operator="out" in="SourceGraphic"/>
+      <feComponentTransfer result="choke">
+        <feFuncA type="linear" slope="0.22"/>
+      </feComponentTransfer>
+      <feFlood flood-color="rgba(0,0,0,0.7)" result="color"/>
+      <feComposite operator="in" in="color" in2="choke" result="shadow"/>
+      <feComposite operator="over" in="shadow" in2="SourceGraphic"/>
+    </filter>
+    <filter id="outline-filter-1" bx:preset="outline 1 1 #979797" color-interpolation-filters="sRGB" x="-50%" y="-50%" width="200%" height="200%">
+      <feMorphology in="SourceAlpha" result="dilated" operator="dilate" radius="1"/>
+      <feFlood flood-color="#979797" result="flood"/>
+      <feComposite in="flood" in2="dilated" operator="in" result="outline"/>
+      <feMerge>
+        <feMergeNode in="outline"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <linearGradient gradientUnits="userSpaceOnUse" x1="100" y1="34" x2="100" y2="158" id="gradient-0">
+      <stop offset="0" style="stop-color: rgb(186, 218, 85)"/>
+      <stop offset="1" style="stop-color: rgb(37.355% 50.439% 0%)"/>
+    </linearGradient>
+    <filter id="outline-filter-2" bx:preset="outline 1 1 #666" color-interpolation-filters="sRGB" x="-50%" y="-50%" width="200%" height="200%">
+      <feMorphology in="SourceAlpha" result="dilated" operator="dilate" radius="1"/>
+      <feFlood flood-color="#666" result="flood"/>
+      <feComposite in="flood" in2="dilated" operator="in" result="outline"/>
+      <feMerge>
+        <feMergeNode in="outline"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="outline-filter-3" bx:preset="outline 1 1 #979797" color-interpolation-filters="sRGB" x="-50%" y="-50%" width="200%" height="200%">
+      <feMorphology in="SourceAlpha" result="dilated" operator="dilate" radius="1"/>
+      <feFlood flood-color="#979797" result="flood"/>
+      <feComposite in="flood" in2="dilated" operator="in" result="outline"/>
+      <feMerge>
+        <feMergeNode in="outline"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <path d="M 100 193.999 C 172.361 193.743 217.308 115.249 180.906 52.711 C 144.503 -9.826 54.052 -9.506 18.094 53.289 C -5.416 94.346 5.252 146.478 43 174.999" fill="none" stroke="url(#ring)" stroke-width="6" stroke-linecap="round" style="transform-box: fill-box; transform-origin: 50% 50%;" transform="matrix(-1, 0, 0, -1, -0.000001, -0.000015)">
+    <title>Borda</title>
+  </path>
+  <circle cx="152.739" cy="22.298" r="5" fill="#ff79c6">
+    <title>Bolinha rosa</title>
+  </circle>
+  <circle cx="100" cy="6" r="5" fill="#8be9fd">
+    <title>Bolinha azul</title>
+  </circle>
+  <g transform="matrix(1.379977, 0, 0, 1.333431, -34.042732, -34.915073)" style="opacity: 0.19;">
+    <title>Fogo</title>
+    <path d="M100 74 C116 92 122 104 122 118 C122 136 112 148 100 148 C88 148 78 136 78 118 C78 108 83 100 90 95 C90 108 96 112 100 112 C104 104 100 90 100 74 Z" fill="url(#flameIn)">
+      <title>Chama amarela</title>
+    </path>
+    <path d="M 100 34 C 126 62 138 82 138 108 C 138 138 122 158 100 158 C 78 158 62 138 62 108 C 62 105.76 62.157 103.521 62.465 101.303 C 64.357 87.678 71.96 74.88 84 68 C 82 90 92 98 100 98 C 108 90 100 62 100 34 Z" fill="url(#flameOut)" style="stroke: url(&quot;#gradient-0&quot;); filter: none;">
+      <title>Chama vermelha</title>
+    </path>
+  </g>
+  <g transform="matrix(1.171298, 0, 0, 1.34795, -11.189997, -58.698445)" style="filter: url(&quot;#inner-shadow-filter-0&quot;);">
+    <title>Bigorna</title>
+    <path d="M 72.98 156.035 L 119.044 156.035 L 110.984 170.38 L 81.043 170.38 L 72.98 156.035 Z" fill="#bd93f9" style="filter: url(&quot;#outline-filter-3&quot;);"/>
+    <path d="M 73.242 165.913 L 116.795 165.913 L 124.054 179.913 L 65.983 179.913 L 73.242 165.913 Z" fill="#6272a4" style=""/>
+    <path d="M 56 132 L 128 132 L 148 142 L 128 152 L 119 152 L 119 156 L 73 156 L 73 142 L 56 142 L 56 132 Z" fill="#f8f8f2" style="filter: url(&quot;#outline-filter-1&quot;);"/>
+  </g>
+  <g transform="matrix(0.514677, -1.055068, 0.985237, 0.428599, -20.237259, -19.007107)" style="transform-origin: 100px 88px;">
+    <title>Martelo</title>
+    <rect x="95" y="44" width="10" height="78" rx="5" fill="#ffb86c" style="filter: url(&quot;#outline-filter-2&quot;);"/>
+    <rect x="70" y="108" width="60" height="24" rx="6" style="fill: rgb(144, 144, 144); paint-order: stroke markers; filter: url(&quot;#outline-filter-0&quot;);"/>
+  </g>
+</svg></div>
+    <div class="marca-nome"><span class="m-hef">Hefesto</span><br><span class="m-ds">DualSense<span class="m-4">4</span>Unix</span></div>
+    <div class="fita" data-dica="O que você mudar vai para o controle escolhido">
+      <span>Selecionar:</span>
+      <label for="c-todos" class="chip" data-gesto="escolher-na-fita" data-pref="todos" data-controle="" data-dica="Abre os quatro">Todos</label>
+      <label for="c-p1" class="chip plastico" data-campo="fita-chip" data-gesto="escolher-na-fita" data-pref="p1" data-controle="" data-dica="Abre este controle"><span data-campo="fita-peca">Cosmic Red</span> <span class="pt">•</span> <span data-campo="fita-via"><span class="via">USB</span></span></label>
+      <label for="c-p2" class="chip plastico" data-campo="fita-chip" data-gesto="escolher-na-fita" data-pref="p2" data-controle="" data-dica="Abre este controle"><span data-campo="fita-peca">Starlight Blue</span> <span class="pt">•</span> <span data-campo="fita-via"><span class="via">BT</span></span></label>
+      <span class="so-no-nativo" data-dica="Hefesto desligado: o jogo manda"></span>
+    </div>
+    <div class="conectado"><span class="bolinha">●</span> <b data-campo="conta-b">1 USB · 1 BT</b></div>
+    <div class="perfil-ativo" data-dica="Onde cai o que você salvar">
+      <span class="pa-rot">Perfil ativo</span>
+      <span class="pa-nome" data-campo="perfil">—</span>
+
+    </div>
+  </div>
+
+
+  <div class="tira">
+    <a class="aba" href="01-jogar.html">Jogar</a>
+    <a class="aba ativa" href="02-controles.html">Controles</a>
+    <a class="aba" href="../03-gatilhos.html">Gatilhos</a>
+    <a class="aba" href="../04-iluminacao.html">Iluminação</a>
+    <a class="aba" href="../05-vibracao.html">Vibração</a>
+    <a class="aba" href="06-navegacao.html">Navegação</a>
+    <a class="aba" href="07-lancadores.html">Experimental</a>
+    <a class="aba" href="08-conexoes.html">Conexões</a>
+    <a class="aba" href="09-sistema.html">Sistema</a>
+    <a class="aba" href="../10-perfis.html">Perfis</a>
+  </div>
+
+
+  <div class="miolo">
+
+    <div class="quadro estica" data-r3="16">
+      <div class="quadro-topo">
+        <span class="quadro-titulo" data-dica="Clique num controle para abrir">Dispositivos conectados</span>
+        <span class="trava-nativo" data-dica="Hefesto desligado: o jogo manda. Volta ao ligar"><svg class="cad" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M3.6 5.2V3.9a2.4 2.4 0 0 1 4.8 0v1.3" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="2.3" y="5.2" width="7.4" height="5.4" rx="1.1" fill="currentColor"/></svg>O jogo manda</span>
+
+        <span class="sensores">
+          <a class="btn nativo-nao" href="calibrar-sensores.html" data-todo="3" data-dica="Todos parados numa superfície plana">Calibrar giroscópio</a>
+          <button class="modo-auto" type="button" data-gesto="modo-automatico" data-todo="2" aria-pressed="false" data-governa=".card-corpo .moldura.touchp, .card-corpo [data-bloco=microfone], .card-corpo [data-bloco=alto-falante]" data-dica="O jogo decide toque e som; o estilo do jogo ajusta"><span class="p"></span>Modo automático</button>
+        </span>
+      </div>
+      <div class="quadro-corpo">
+        <input class="radio-mesa" type="radio" name="mesa" id="c-todos">
+    <div class="ctl card" data-controle="p1">
+
+      <input class="radio-mesa" type="radio" name="mesa" id="c-p1" data-campo="card-aberto" data-hef-alvo="marcado" checked>
+      <label class="faixa" for="c-p1" data-dica="Abre este controle">
+          <span class="card-nome" data-campo="card-vpad" data-hef-alvo="atributo" data-hef-atributo="title"><span class="so-aberto"><span data-campo="quem-joga" data-hef-alvo="html">Vitória</span> <span class="pt">•</span> </span><span data-campo="peca">Cosmic Red</span> <span class="pt">•</span> <span data-campo="via">USB</span></span>
+          <span class="div">·</span>
+
+
+          <span class="leia" data-dica="Como o jogo vê. Giroscópio indo ao jogo, ~250 Hz"><b data-campo="mascara">DualSense</b></span><button class="jv-btn" data-todo="17" data-dica="Quais funções chegam ao jogo, e por onde">O que chega</button><span class="div so-fechado">·</span>
+          <span class="leia so-fechado" data-dica="O som deste microfone chega ao PC">Microfone <span class="selo-ativo on" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">ATIVO</span></span></span>
+
+          <span class="no-jogo" data-campo="giro-no-jogo" data-hef-alvo="atributo"
+                data-hef-atributo="aria-label" aria-label="Giroscópio: fluindo para o jogo (~250 Hz)"><span
+                class="no-jogo-t" data-campo="giro-no-jogo"></span></span>
+          <span class="sensores-peca" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-todo="9">
+            <span class="dica-do-giro" data-campo="giro-dica" data-hef-alvo="atributo" data-hef-atributo="title" data-dica="O jogo recebe o giro"><button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><span class="p"></span>Giroscópio</button></span>
+            <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" data-dica="O jogo recebe a inclinação e o chacoalhar"><span class="p"></span>Acelerômetro</button>
+          </span>
+
+          <span class="bat">Bateria
+            <span class="trilho"><span class="cheio" data-campo="bateria-barra"
+              data-hef-alvo="largura" style="width:100%"></span></span>
+            <span class="n" data-campo="bateria">100%</span><span class="carga" data-campo="bateria-carga" data-hef-alvo="atributo" data-hef-atributo="title" data-dica="Cheio"><i class="carga-i" data-campo="bateria-carga" data-hef-alvo="atributo" data-hef-atributo="data-carga" data-carga="Cheio"><svg class="g-raio" viewBox="0 0 24 24" width="11" height="11" aria-hidden="true" focusable="false"><path d="M13 2 4 14h6l-1 8 9-12h-6z" fill="currentColor"/></svg><svg class="g-cheio" viewBox="0 0 24 24" width="11" height="11" aria-hidden="true" focusable="false"><path d="M4 12.5 9.5 18 20 6.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><svg class="g-atencao" viewBox="0 0 24 24" width="11" height="11" aria-hidden="true" focusable="false"><path d="M12 3 22 20H2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 9.5v4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="17" r="1.15" fill="currentColor"/></svg></i></span></span>
+      </label>
+      <div class="corpo-cx">
+      <div class="card-corpo">
+
+        <div>
+          <div class="moldura touchp">
+            <div class="rot rot-linha">Touchpad
+              <button class="sw todo-sw-toque" data-gesto="touchpad" data-campo="touchpad" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" data-dica="Toque vai ao jogo; sem suporte, move o cursor" data-todo="5"><span class="p"></span>Ligado</button></div>
+            <div class="touch" data-todo="4">
+              <span class="todo-terca" data-campo="touch-regiao" data-hef-alvo="classe" data-hef-quando="esquerda"></span><span class="todo-terca on" data-campo="touch-regiao" data-hef-alvo="classe" data-hef-quando="meio"></span><span class="todo-terca" data-campo="touch-regiao" data-hef-alvo="classe" data-hef-quando="direita"></span>
+              <span data-campo="pos-touch" data-hef-alvo="posicao" style="--hef-x:62%;--hef-y:44%"><span class="ponto ponto-1 on" data-campo="touch-ponto" data-hef-alvo="classe"></span></span>
+              </div>
+          </div>
+
+          <div class="moldura luz" style="margin-top:9px" data-todo="10">
+            <div class="rot rot-linha" data-campo="luz-porque" data-hef-alvo="atributo" data-hef-atributo="title" data-dica="A cor do número do jogador">Barra de luz
+              <span class="de-quem" data-campo="luz-hex">#7EB8D4</span></div>
+            <div class="barra-luz" data-campo="luz-cor" data-hef-alvo="cor"
+              style="color:#7EB8D4"></div>
+          </div>
+          <div class="moldura led" style="margin-top:9px" data-dica="As cinco lâmpadas dizem o número">
+            <div class="rot rot-linha">LED do jogador</div>
+
+            <div class="lampadas" data-campo="lampadas"
+              data-hef-alvo="html"><span class="luzinhas"><i></i><span class="vao"></span><i></i><i class="on"></i><i></i><span class="vao"></span><i></i></span></div>
+          </div>
+        </div>
+
+        <div>
+          <div class="moldura">
+            <div class="sticks">
+              <div>
+                <div class="stick-topo"><div class="stick-rot">Analógico<br>esquerdo</div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual on" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico esquerdo" data-todo="6"><span class="p"></span>Usar giroscópio como analógico</button></span></span></div>
+                <div class="stick" data-stick="l">
+                  <span class="rotl" data-campo="l3">L3</span>
+                  <span data-campo="pos-ana-e-jogo" data-hef-alvo="posicao" style="--hef-x:43.1%;--hef-y:78.4%"><span class="pj on" data-campo="ana-e-jogo" data-hef-alvo="classe"></span></span>
+                  <span class="p" data-campo="pos-ana-e" data-hef-alvo="posicao" style="--hef-x:23.5%;--hef-y:78.4%"></span></div>
+                <div class="xy" data-xy="l" data-campo="xy-l" data-hef-alvo="html">X: 60<br>Y:200</div>
+              </div>
+              <div>
+                <div class="stick-topo"><div class="stick-rot">Analógico<br>direito</div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico direito" data-todo="6"><span class="p"></span>Usar giroscópio como analógico</button></span></span></div>
+                <div class="stick" data-stick="r">
+                  <span class="rotl" data-campo="r3">R3</span>
+                  <span data-campo="pos-ana-d-jogo" data-hef-alvo="posicao"><span class="pj" data-campo="ana-d-jogo" data-hef-alvo="classe"></span></span>
+                  <span class="p" data-campo="pos-ana-d" data-hef-alvo="posicao" style="--hef-x:70.6%;--hef-y:35.3%"></span></div>
+                <div class="xy" data-xy="r" data-campo="xy-r" data-hef-alvo="html">X:180<br>Y: 90</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="moldura">
+            <div class="glifos" data-campo="botoes" data-hef-alvo="atributo" data-hef-atributo="data-botoes">
+            <span class="gb on" data-glifo="cross" data-campo="glifo-cross" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Cruz</title>
+
+  <line x1="8" y1="8" x2="24" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <line x1="24" y1="8" x2="8" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+</svg></span>
+            <span class="gb" data-glifo="circle" data-campo="glifo-circle" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Círculo</title>
+
+  <circle cx="16" cy="16" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
+</svg></span>
+            <span class="gb" data-glifo="square" data-campo="glifo-square" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Quadrado</title>
+
+  <rect x="7" y="7" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+</svg></span>
+            <span class="gb" data-glifo="triangle" data-campo="glifo-triangle" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Triângulo</title>
+
+  <polygon points="16,6 27,25 5,25" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+</svg></span>
+            <span class="gb on" data-glifo="dpad_up" data-campo="glifo-dpad_up" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad cima</title>
+
+  <polygon points="16,5 24,16 19,16 19,27 13,27 13,16 8,16" fill="currentColor"/>
+</svg></span>
+            <span class="gb" data-glifo="dpad_down" data-campo="glifo-dpad_down" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad baixo</title>
+
+  <polygon points="16,27 8,16 13,16 13,5 19,5 19,16 24,16" fill="currentColor"/>
+</svg></span>
+            <span class="gb" data-glifo="dpad_left" data-campo="glifo-dpad_left" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad esquerda</title>
+
+  <polygon points="5,16 16,8 16,13 27,13 27,19 16,19 16,24" fill="currentColor"/>
+</svg></span>
+            <span class="gb" data-glifo="dpad_right" data-campo="glifo-dpad_right" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad direita</title>
+
+  <polygon points="27,16 16,8 16,13 5,13 5,19 16,19 16,24" fill="currentColor"/>
+</svg></span>
+            <span class="gb" data-glifo="l1" data-campo="glifo-l1" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L1</title>
+
+  <rect x="4" y="10" width="24" height="14" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
+  <text x="10" y="21" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L1</text>
+</svg></span>
+            <span class="gb" data-glifo="r1" data-campo="glifo-r1" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>R1</title>
+
+  <rect x="4" y="10" width="24" height="14" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
+  <text x="9" y="21" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R1</text>
+</svg></span>
+            <span class="gb on" data-glifo="l2" data-campo="glifo-l2" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L2</title>
+
+  <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
+  <text x="10" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L2</text>
+  <line x1="16" y1="24" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <polyline points="12,27 16,31 20,27" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+</svg></span>
+            <span class="gb" data-glifo="r2" data-campo="glifo-r2" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>R2</title>
+
+  <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
+  <text x="9" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R2</text>
+  <line x1="16" y1="24" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <polyline points="12,27 16,31 20,27" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+</svg></span>
+            <span class="gb" data-glifo="share" data-campo="glifo-share" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Share</title>
+
+  <line x1="16" y1="7" x2="16" y2="20" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+  <line x1="8"  y1="11" x2="12.5" y2="21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+  <line x1="24" y1="11" x2="19.5" y2="21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+</svg></span>
+            <span class="gb" data-glifo="options" data-campo="glifo-options" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Options</title>
+
+  <line x1="7" y1="10" x2="25" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <line x1="7" y1="16" x2="25" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <line x1="7" y1="22" x2="25" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+</svg></span>
+            <span class="gb" data-glifo="ps" data-campo="glifo-ps" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>PS</title>
+
+  <g transform="translate(16 16) scale(0.99425) translate(-16.0925 -16.0)">
+    <path fill="currentColor" d="M 1.348 21.736 C 0.195 22.543 0.408 23.935 3.04 24.805 C 5.671 25.675 8.73 25.855 11.422 25.371 C 11.345 25.371 11.575 25.371 11.422 25.371 L 11.422 22.624 L 8.807 23.513 C 7.807 23.835 6.807 23.916 5.808 23.675 C 5.039 23.432 5.192 22.947 6.115 22.543 L 11.422 20.604 L 11.422 17.616 L 4.039 20.282 C 3.117 20.604 2.193 21.09 1.348 21.736 Z M 19.188 9.619 L 19.188 17.455 C 22.34 19.07 24.801 17.455 24.801 13.254 C 24.801 8.973 23.34 7.034 19.111 5.5 C 16.881 4.692 14.574 3.965 12.267 3.48 L 12.267 26.825 L 17.65 28.521 L 17.65 8.892 C 17.65 8.004 17.65 7.358 18.266 7.599 C 19.111 7.842 19.188 8.731 19.188 9.619 Z M 29.184 19.878 C 26.955 19.07 24.571 18.746 22.263 18.989 C 20.982 19.073 19.78 19.455 18.573 19.878 L 18.573 23.028 L 23.571 21.09 C 24.571 20.766 25.571 20.685 26.57 20.928 C 27.339 21.171 27.185 21.655 26.262 22.059 L 18.573 25.047 L 18.573 28.116 L 29.184 23.997 C 29.954 23.675 30.645 23.27 31.261 22.624 C 31.799 21.817 31.568 20.685 29.184 19.878 Z"/>
+  </g>
+</svg></span>
+            <span class="gb" data-glifo="touchpad" data-campo="glifo-touchpad" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Touchpad</title>
+
+  <rect x="3" y="8" width="26" height="16" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
+  <circle cx="11" cy="16" r="1.5" fill="currentColor"/>
+  <circle cx="16" cy="16" r="1.5" fill="currentColor"/>
+  <circle cx="21" cy="16" r="1.5" fill="currentColor"/>
+</svg></span>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="moldura" data-bloco="microfone"
+               data-campo="mic-apagado" data-hef-alvo="atributo" data-hef-atributo="data-apagado" data-todo="7">
+
+            <div class="rot rot-linha">Microfone
+              <span class="selo-ativo on" style="margin-left:5px" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">ATIVO</span></span>
+
+
+            </div>
+            <span class="onda-do-mudo" data-campo="mic-onda-calada" data-hef-alvo="classe" data-hef-classe="calada" data-hef-quando="sim"><span class="onda" data-campo="mic-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="mic-onda-0" data-hef-alvo="altura" style="height:22%"></i><i data-campo="mic-onda-1" data-hef-alvo="altura" style="height:48%"></i><i data-campo="mic-onda-2" data-hef-alvo="altura" style="height:72%"></i><i data-campo="mic-onda-3" data-hef-alvo="altura" style="height:95%"></i><i data-campo="mic-onda-4" data-hef-alvo="altura" style="height:64%"></i><i data-campo="mic-onda-5" data-hef-alvo="altura" style="height:38%"></i><i data-campo="mic-onda-6" data-hef-alvo="altura" style="height:52%"></i><i data-campo="mic-onda-7" data-hef-alvo="altura" style="height:80%"></i><i data-campo="mic-onda-8" data-hef-alvo="altura" style="height:44%"></i><i data-campo="mic-onda-9" data-hef-alvo="altura" style="height:26%"></i><i data-campo="mic-onda-10" data-hef-alvo="altura" style="height:58%"></i><i data-campo="mic-onda-11" data-hef-alvo="altura" style="height:88%"></i><i data-campo="mic-onda-12" data-hef-alvo="altura" style="height:40%"></i><i data-campo="mic-onda-13" data-hef-alvo="altura" style="height:20%"></i></span></span>
+            <div class="vol" data-campo="mic-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
+
+              <span class="rot-vol">Volume</span>
+              <span class="trilho"><span class="cheio" data-campo="mic-barra"
+                data-hef-alvo="largura" style="width:80%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="80" data-gesto="volume" data-volume="microfone" data-campo="mic-barra" data-hef-alvo="valor" aria-label="Volume do microfone deste controle" data-dica="Quanto do microfone chega ao PC"></span>
+              <span class="n" data-campo="mic-num">80</span>
+              <button class="mudo-i" data-gesto="mic-retorno" data-campo="mic-retorno" data-hef-alvo="atributo" data-hef-atributo="data-mic-luz" data-dica="Ouvir a própria voz como o jogo ouve" aria-pressed="false">🎙</button>
+            </div>
+
+
+            <div class="ressalva" data-campo="mic-ressalva" data-hef-alvo="html"><i class="nada"></i></div>
+
+          </div>
+          <div class="moldura" style="margin-top:9px" data-bloco="alto-falante"
+               data-campo="alto-apagado" data-hef-alvo="atributo" data-hef-atributo="data-apagado">
+
+            <div class="rot rot-linha">Alto-falante
+              <span data-campo="alto-canal-porque" data-hef-alvo="atributo" data-hef-atributo="title"><span class="selo-ativo no-rotulo on" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M17 8.5a5 5 0 0 1 0 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="alto-canal" data-hef-alvo="html">ATIVO</span></span></span>
+              <span class="selo-som" data-campo="alto-selo" data-hef-alvo="html"><i class="nada"></i></span>
+            </div>
+            <span class="onda" data-campo="alto-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="alto-onda-0" data-hef-alvo="altura" style="height:100%"></i><i data-campo="alto-onda-1" data-hef-alvo="altura" style="height:88%"></i><i data-campo="alto-onda-2" data-hef-alvo="altura" style="height:64%"></i><i data-campo="alto-onda-3" data-hef-alvo="altura" style="height:92%"></i><i data-campo="alto-onda-4" data-hef-alvo="altura" style="height:76%"></i><i data-campo="alto-onda-5" data-hef-alvo="altura" style="height:54%"></i><i data-campo="alto-onda-6" data-hef-alvo="altura" style="height:82%"></i><i data-campo="alto-onda-7" data-hef-alvo="altura" style="height:96%"></i><i data-campo="alto-onda-8" data-hef-alvo="altura" style="height:70%"></i><i data-campo="alto-onda-9" data-hef-alvo="altura" style="height:48%"></i><i data-campo="alto-onda-10" data-hef-alvo="altura" style="height:86%"></i><i data-campo="alto-onda-11" data-hef-alvo="altura" style="height:60%"></i><i data-campo="alto-onda-12" data-hef-alvo="altura" style="height:74%"></i><i data-campo="alto-onda-13" data-hef-alvo="altura" style="height:90%"></i></span>
+            <div class="vol" data-campo="alto-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
+              <button class="padrao-i" type="button" data-gesto="volume-padrao" data-campo="alto-padrao" data-hef-alvo="classe" data-hef-classe="on" data-dica="Volume do jogo, sem ajuste">Padrão</button>
+              <span class="trilho"><span class="cheio" data-campo="alto-barra"
+                data-hef-alvo="largura" style="width:100%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="100" data-gesto="volume" data-volume="alto-falante" data-campo="alto-barra" data-hef-alvo="valor" aria-label="Volume do alto-falante deste controle" data-dica="Volume do alto-falante deste controle"></span>
+              <span class="n" data-campo="alto-num">100</span>
+              <button class="mudo-i" data-gesto="mudo" data-mudo="alto-falante" data-campo="alto-mudo" data-hef-alvo="atributo" data-hef-atributo="data-som" data-som="ATIVO" data-dica="Cala o alto-falante sem perder o volume">♪</button>
+            </div>
+
+
+            <div class="rota tres">
+              <button class="on" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo" data-todo="8" data-dica="Efeitos do jogo no controle; o som do PC no PC">Canais sonoros nativos - Padrão</button>
+              <button data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc" data-todo="8" data-dica="Todo o som sai no controle; o PC fica mudo">Canais sonoros apenas no DualSense</button>
+              <button data-gesto="rota" data-rota="nada" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="nada" data-todo="8" data-dica="Todo o som sai no PC; o controle fica mudo">Canais sonoros apenas no PC</button>
+            </div>
+          </div>
+        </div>
+
+        <div>
+
+          <div class="moldura leituras" data-bloco="giroscopio">
+            <div class="rot" data-dica="Leitura viva, em graus por segundo">Giroscópio
+            </div>
+            <div class="eixo" data-eixo="giro-x"><span>X</span><span data-campo="giro-x">+143.2</span>
+              <span class="g" data-campo="giro-x-cor" data-hef-alvo="cor" style="color:var(--red)"><span
+                class="v neg" data-campo="giro-x-neg" data-hef-alvo="largura" style="width:0%"></span><span
+                class="v pos" data-campo="giro-x-pos" data-hef-alvo="largura" style="width:22%"></span></span></div>
+            <div class="eixo" data-eixo="giro-y"><span>Y</span><span data-campo="giro-y">−412.0</span>
+              <span class="g" data-campo="giro-y-cor" data-hef-alvo="cor" style="color:var(--green)"><span
+                class="v neg" data-campo="giro-y-neg" data-hef-alvo="largura" style="width:38%"></span><span
+                class="v pos" data-campo="giro-y-pos" data-hef-alvo="largura" style="width:0%"></span></span></div>
+            <div class="eixo" data-eixo="giro-z"><span>Z</span><span data-campo="giro-z"> +22.8</span>
+              <span class="g" data-campo="giro-z-cor" data-hef-alvo="cor" style="color:var(--cyan)"><span
+                class="v neg" data-campo="giro-z-neg" data-hef-alvo="largura" style="width:0%"></span><span
+                class="v pos" data-campo="giro-z-pos" data-hef-alvo="largura" style="width:4%"></span></span></div>
+          </div>
+          <div class="moldura leituras" style="margin-top:9px" data-bloco="acelerometro">
+            <div class="rot">Acelerômetro</div>
+            <div class="eixo" data-eixo="accel-x"><span>X</span><span data-campo="accel-x"> +0.105</span>
+              <span class="g" data-campo="accel-x-cor" data-hef-alvo="cor" style="color:var(--cyan)"><span
+                class="v neg" data-campo="accel-x-neg" data-hef-alvo="largura" style="width:0%"></span><span
+                class="v pos" data-campo="accel-x-pos" data-hef-alvo="largura" style="width:3%"></span></span></div>
+            <div class="eixo" data-eixo="accel-y"><span>Y</span><span data-campo="accel-y"> +0.976</span>
+              <span class="g" data-campo="accel-y-cor" data-hef-alvo="cor" style="color:var(--green)"><span
+                class="v neg" data-campo="accel-y-neg" data-hef-alvo="largura" style="width:0%"></span><span
+                class="v pos" data-campo="accel-y-pos" data-hef-alvo="largura" style="width:24%"></span></span></div>
+            <div class="eixo" data-eixo="accel-z"><span>Z</span><span data-campo="accel-z"> +0.170</span>
+              <span class="g" data-campo="accel-z-cor" data-hef-alvo="cor" style="color:var(--cyan)"><span
+                class="v neg" data-campo="accel-z-neg" data-hef-alvo="largura" style="width:0%"></span><span
+                class="v pos" data-campo="accel-z-pos" data-hef-alvo="largura" style="width:4%"></span></span></div>
+          </div>
+          <div class="moldura gatilhos" style="margin-top:9px">
+            <div class="rot">Gatilhos</div>
+            <div class="gat">
+              <div class="gat-linha" data-gatilho="l2"><span>L2</span>
+                <span class="trilho"><span class="cheio" data-campo="l2-barra"
+                  data-hef-alvo="largura" style="width:78%"></span>
+                  <span class="n" data-campo="l2-num">200 / 255</span></span></div>
+              <div class="gat-linha" data-gatilho="r2"><span>R2</span>
+                <span class="trilho"><span class="cheio" data-campo="r2-barra"
+                  data-hef-alvo="largura" style="width:15%"></span>
+                  <span class="n" data-campo="r2-num">40 / 255</span></span></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      </div>
+    </div>
+    <div class="ctl card" data-controle="p2">
+
+      <input class="radio-mesa" type="radio" name="mesa" id="c-p2" data-campo="card-aberto" data-hef-alvo="marcado">
+      <label class="faixa" for="c-p2" data-dica="Abre este controle">
+          <span class="card-nome" data-campo="card-vpad" data-hef-alvo="atributo" data-hef-atributo="title"><span data-campo="peca">Starlight Blue</span> <span class="pt">•</span> <span data-campo="via">BT</span></span>
+          <span class="div">·</span>
+
+
+          <span class="leia" data-dica="Xbox 360 não leva giroscópio ao jogo; no Hefesto segue ativo"><b data-campo="mascara">Xbox 360</b></span><button class="jv-btn" data-todo="17" data-dica="Quais funções chegam ao jogo, e por onde">O que chega</button><span class="div so-fechado">·</span>
+          <span class="leia so-fechado" data-dica="Microfone calado">Microfone <span class="selo-ativo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo cortado" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">DESLIGADO</span></span></span>
+
+          <span class="no-jogo" data-campo="giro-no-jogo" data-hef-alvo="atributo"
+                data-hef-atributo="aria-label" aria-label="Giroscópio: fluindo para o jogo (~250 Hz)"><span
+                class="no-jogo-t" data-campo="giro-no-jogo"></span></span>
+          <span class="sensores-peca" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-todo="9">
+            <span class="dica-do-giro" data-campo="giro-dica" data-hef-alvo="atributo" data-hef-atributo="title" data-dica="O jogo recebe o giro"><button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><span class="p"></span>Giroscópio</button></span>
+            <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" data-dica="O jogo recebe a inclinação e o chacoalhar"><span class="p"></span>Acelerômetro</button>
+          </span>
+
+          <span class="bat">Bateria
+            <span class="trilho"><span class="cheio" data-campo="bateria-barra"
+              data-hef-alvo="largura" style="width:64%"></span></span>
+            <span class="n" data-campo="bateria">64%</span><span class="carga" data-campo="bateria-carga" data-hef-alvo="atributo" data-hef-atributo="title" data-dica="Carregando"><i class="carga-i" data-campo="bateria-carga" data-hef-alvo="atributo" data-hef-atributo="data-carga" data-carga="Carregando"><svg class="g-raio" viewBox="0 0 24 24" width="11" height="11" aria-hidden="true" focusable="false"><path d="M13 2 4 14h6l-1 8 9-12h-6z" fill="currentColor"/></svg><svg class="g-cheio" viewBox="0 0 24 24" width="11" height="11" aria-hidden="true" focusable="false"><path d="M4 12.5 9.5 18 20 6.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><svg class="g-atencao" viewBox="0 0 24 24" width="11" height="11" aria-hidden="true" focusable="false"><path d="M12 3 22 20H2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 9.5v4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="17" r="1.15" fill="currentColor"/></svg></i></span></span>
+      </label>
+      <div class="corpo-cx">
+      <div class="card-corpo">
+
+        <div>
+          <div class="moldura touchp todo-toque-off">
+            <div class="rot rot-linha">Touchpad
+              <button class="sw todo-sw-toque off" data-gesto="touchpad" data-campo="touchpad" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" data-dica="O toque não chega ao jogo; fora dele, cursor" data-todo="5"><span class="p"></span>Desligado</button></div>
+            <div class="touch" data-todo="4">
+              <span class="todo-terca" data-campo="touch-regiao" data-hef-alvo="classe" data-hef-quando="esquerda"></span><span class="todo-terca" data-campo="touch-regiao" data-hef-alvo="classe" data-hef-quando="meio"></span><span class="todo-terca" data-campo="touch-regiao" data-hef-alvo="classe" data-hef-quando="direita"></span>
+              <span data-campo="pos-touch" data-hef-alvo="posicao" style="--hef-x:50%;--hef-y:50%"><span class="ponto ponto-1" data-campo="touch-ponto" data-hef-alvo="classe"></span></span>
+</div>
+          </div>
+
+          <div class="moldura luz" style="margin-top:9px" data-todo="10">
+            <div class="rot rot-linha" data-campo="luz-porque" data-hef-alvo="atributo" data-hef-atributo="title" data-dica="A cor do número do jogador">Barra de luz
+              <span class="de-quem" data-campo="luz-hex">#FF5555</span></div>
+            <div class="barra-luz" data-campo="luz-cor" data-hef-alvo="cor"
+              style="color:#FF5555"></div>
+          </div>
+          <div class="moldura led" style="margin-top:9px" data-dica="As cinco lâmpadas dizem o número">
+            <div class="rot rot-linha">LED do jogador</div>
+
+            <div class="lampadas" data-campo="lampadas"
+              data-hef-alvo="html"><span class="luzinhas"><i></i><span class="vao"></span><i class="on"></i><i></i><i class="on"></i><span class="vao"></span><i></i></span></div>
+          </div>
+        </div>
+
+        <div>
+          <div class="moldura">
+            <div class="sticks">
+              <div>
+                <div class="stick-topo"><div class="stick-rot">Analógico<br>esquerdo</div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico esquerdo" data-todo="6"><span class="p"></span>Usar giroscópio como analógico</button></span></span></div>
+                <div class="stick" data-stick="l">
+                  <span class="rotl" data-campo="l3">L3</span>
+                  <span data-campo="pos-ana-e-jogo" data-hef-alvo="posicao"><span class="pj" data-campo="ana-e-jogo" data-hef-alvo="classe"></span></span>
+                  <span class="p" data-campo="pos-ana-e" data-hef-alvo="posicao" style="--hef-x:50.2%;--hef-y:50.2%"></span></div>
+                <div class="xy" data-xy="l" data-campo="xy-l" data-hef-alvo="html">X:128<br>Y:128</div>
+              </div>
+              <div>
+                <div class="stick-topo"><div class="stick-rot">Analógico<br>direito</div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico direito" data-todo="6"><span class="p"></span>Usar giroscópio como analógico</button></span></span></div>
+                <div class="stick" data-stick="r">
+                  <span class="rotl" data-campo="r3">R3</span>
+                  <span data-campo="pos-ana-d-jogo" data-hef-alvo="posicao"><span class="pj" data-campo="ana-d-jogo" data-hef-alvo="classe"></span></span>
+                  <span class="p" data-campo="pos-ana-d" data-hef-alvo="posicao" style="--hef-x:50.2%;--hef-y:50.2%"></span></div>
+                <div class="xy" data-xy="r" data-campo="xy-r" data-hef-alvo="html">X:128<br>Y:128</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="moldura">
+            <div class="glifos" data-campo="botoes" data-hef-alvo="atributo" data-hef-atributo="data-botoes">
+            <span class="gb" data-glifo="cross" data-campo="glifo-cross" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Cruz</title>
+
+  <line x1="8" y1="8" x2="24" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <line x1="24" y1="8" x2="8" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+</svg></span>
+            <span class="gb" data-glifo="circle" data-campo="glifo-circle" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Círculo</title>
+
+  <circle cx="16" cy="16" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
+</svg></span>
+            <span class="gb" data-glifo="square" data-campo="glifo-square" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Quadrado</title>
+
+  <rect x="7" y="7" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+</svg></span>
+            <span class="gb" data-glifo="triangle" data-campo="glifo-triangle" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Triângulo</title>
+
+  <polygon points="16,6 27,25 5,25" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+</svg></span>
+            <span class="gb" data-glifo="dpad_up" data-campo="glifo-dpad_up" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad cima</title>
+
+  <polygon points="16,5 24,16 19,16 19,27 13,27 13,16 8,16" fill="currentColor"/>
+</svg></span>
+            <span class="gb" data-glifo="dpad_down" data-campo="glifo-dpad_down" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad baixo</title>
+
+  <polygon points="16,27 8,16 13,16 13,5 19,5 19,16 24,16" fill="currentColor"/>
+</svg></span>
+            <span class="gb" data-glifo="dpad_left" data-campo="glifo-dpad_left" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad esquerda</title>
+
+  <polygon points="5,16 16,8 16,13 27,13 27,19 16,19 16,24" fill="currentColor"/>
+</svg></span>
+            <span class="gb" data-glifo="dpad_right" data-campo="glifo-dpad_right" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad direita</title>
+
+  <polygon points="27,16 16,8 16,13 5,13 5,19 16,19 16,24" fill="currentColor"/>
+</svg></span>
+            <span class="gb" data-glifo="l1" data-campo="glifo-l1" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L1</title>
+
+  <rect x="4" y="10" width="24" height="14" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
+  <text x="10" y="21" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L1</text>
+</svg></span>
+            <span class="gb" data-glifo="r1" data-campo="glifo-r1" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>R1</title>
+
+  <rect x="4" y="10" width="24" height="14" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
+  <text x="9" y="21" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R1</text>
+</svg></span>
+            <span class="gb" data-glifo="l2" data-campo="glifo-l2" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L2</title>
+
+  <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
+  <text x="10" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L2</text>
+  <line x1="16" y1="24" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <polyline points="12,27 16,31 20,27" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+</svg></span>
+            <span class="gb" data-glifo="r2" data-campo="glifo-r2" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>R2</title>
+
+  <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
+  <text x="9" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R2</text>
+  <line x1="16" y1="24" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <polyline points="12,27 16,31 20,27" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+</svg></span>
+            <span class="gb" data-glifo="share" data-campo="glifo-share" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Share</title>
+
+  <line x1="16" y1="7" x2="16" y2="20" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+  <line x1="8"  y1="11" x2="12.5" y2="21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+  <line x1="24" y1="11" x2="19.5" y2="21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+</svg></span>
+            <span class="gb" data-glifo="options" data-campo="glifo-options" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Options</title>
+
+  <line x1="7" y1="10" x2="25" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <line x1="7" y1="16" x2="25" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <line x1="7" y1="22" x2="25" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+</svg></span>
+            <span class="gb" data-glifo="ps" data-campo="glifo-ps" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>PS</title>
+
+  <g transform="translate(16 16) scale(0.99425) translate(-16.0925 -16.0)">
+    <path fill="currentColor" d="M 1.348 21.736 C 0.195 22.543 0.408 23.935 3.04 24.805 C 5.671 25.675 8.73 25.855 11.422 25.371 C 11.345 25.371 11.575 25.371 11.422 25.371 L 11.422 22.624 L 8.807 23.513 C 7.807 23.835 6.807 23.916 5.808 23.675 C 5.039 23.432 5.192 22.947 6.115 22.543 L 11.422 20.604 L 11.422 17.616 L 4.039 20.282 C 3.117 20.604 2.193 21.09 1.348 21.736 Z M 19.188 9.619 L 19.188 17.455 C 22.34 19.07 24.801 17.455 24.801 13.254 C 24.801 8.973 23.34 7.034 19.111 5.5 C 16.881 4.692 14.574 3.965 12.267 3.48 L 12.267 26.825 L 17.65 28.521 L 17.65 8.892 C 17.65 8.004 17.65 7.358 18.266 7.599 C 19.111 7.842 19.188 8.731 19.188 9.619 Z M 29.184 19.878 C 26.955 19.07 24.571 18.746 22.263 18.989 C 20.982 19.073 19.78 19.455 18.573 19.878 L 18.573 23.028 L 23.571 21.09 C 24.571 20.766 25.571 20.685 26.57 20.928 C 27.339 21.171 27.185 21.655 26.262 22.059 L 18.573 25.047 L 18.573 28.116 L 29.184 23.997 C 29.954 23.675 30.645 23.27 31.261 22.624 C 31.799 21.817 31.568 20.685 29.184 19.878 Z"/>
+  </g>
+</svg></span>
+            <span class="gb" data-glifo="touchpad" data-campo="glifo-touchpad" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Touchpad</title>
+
+  <rect x="3" y="8" width="26" height="16" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
+  <circle cx="11" cy="16" r="1.5" fill="currentColor"/>
+  <circle cx="16" cy="16" r="1.5" fill="currentColor"/>
+  <circle cx="21" cy="16" r="1.5" fill="currentColor"/>
+</svg></span>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="moldura" data-bloco="microfone"
+               data-campo="mic-apagado" data-hef-alvo="atributo" data-hef-atributo="data-apagado" data-todo="7">
+
+            <div class="rot rot-linha">Microfone
+              <span class="selo-ativo" style="margin-left:5px" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo cortado" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">DESLIGADO</span></span>
+
+
+            </div>
+            <span class="onda-do-mudo calada" data-campo="mic-onda-calada" data-hef-alvo="classe" data-hef-classe="calada" data-hef-quando="sim"><span class="onda" data-campo="mic-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="mic-onda-0" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-1" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-2" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-3" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-4" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-5" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-6" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-7" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-8" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-9" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-10" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-11" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-12" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-13" data-hef-alvo="altura" style="height:16%"></i></span></span>
+            <div class="vol" data-campo="mic-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
+
+              <span class="rot-vol">Volume</span>
+              <span class="trilho"><span class="cheio" data-campo="mic-barra"
+                data-hef-alvo="largura" style="width:0%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="0" data-gesto="volume" data-volume="microfone" data-campo="mic-barra" data-hef-alvo="valor" aria-label="Volume do microfone deste controle" data-dica="Quanto do microfone chega ao PC"></span>
+              <span class="n" data-campo="mic-num">0</span>
+              <button class="mudo-i" data-gesto="mic-retorno" data-campo="mic-retorno" data-hef-alvo="atributo" data-hef-atributo="data-mic-luz" data-dica="Ouvir a própria voz como o jogo ouve" aria-pressed="false">🎙</button>
+            </div>
+
+
+            <div class="ressalva" data-campo="mic-ressalva" data-hef-alvo="html"><i class="nada"></i></div>
+
+          </div>
+          <div class="moldura" style="margin-top:9px" data-bloco="alto-falante"
+               data-campo="alto-apagado" data-hef-alvo="atributo" data-hef-atributo="data-apagado">
+
+            <div class="rot rot-linha">Alto-falante
+              <span data-campo="alto-canal-porque" data-hef-alvo="atributo" data-hef-atributo="title"><span class="selo-ativo no-rotulo on" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M17 8.5a5 5 0 0 1 0 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="alto-canal" data-hef-alvo="html">ATIVO</span></span></span>
+              <span class="selo-som" data-campo="alto-selo" data-hef-alvo="html"><i class="nada"></i></span>
+            </div>
+            <span class="onda" data-campo="alto-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="alto-onda-0" data-hef-alvo="altura" style="height:70%"></i><i data-campo="alto-onda-1" data-hef-alvo="altura" style="height:52%"></i><i data-campo="alto-onda-2" data-hef-alvo="altura" style="height:66%"></i><i data-campo="alto-onda-3" data-hef-alvo="altura" style="height:44%"></i><i data-campo="alto-onda-4" data-hef-alvo="altura" style="height:72%"></i><i data-campo="alto-onda-5" data-hef-alvo="altura" style="height:58%"></i><i data-campo="alto-onda-6" data-hef-alvo="altura" style="height:48%"></i><i data-campo="alto-onda-7" data-hef-alvo="altura" style="height:64%"></i><i data-campo="alto-onda-8" data-hef-alvo="altura" style="height:54%"></i><i data-campo="alto-onda-9" data-hef-alvo="altura" style="height:70%"></i><i data-campo="alto-onda-10" data-hef-alvo="altura" style="height:46%"></i><i data-campo="alto-onda-11" data-hef-alvo="altura" style="height:60%"></i><i data-campo="alto-onda-12" data-hef-alvo="altura" style="height:50%"></i><i data-campo="alto-onda-13" data-hef-alvo="altura" style="height:68%"></i></span>
+            <div class="vol" data-campo="alto-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
+              <button class="padrao-i" type="button" data-gesto="volume-padrao" data-campo="alto-padrao" data-hef-alvo="classe" data-hef-classe="on" data-dica="Volume do jogo, sem ajuste">Padrão</button>
+              <span class="trilho"><span class="cheio" data-campo="alto-barra"
+                data-hef-alvo="largura" style="width:70%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="70" data-gesto="volume" data-volume="alto-falante" data-campo="alto-barra" data-hef-alvo="valor" aria-label="Volume do alto-falante deste controle" data-dica="Volume do alto-falante deste controle"></span>
+              <span class="n" data-campo="alto-num">70</span>
+              <button class="mudo-i" data-gesto="mudo" data-mudo="alto-falante" data-campo="alto-mudo" data-hef-alvo="atributo" data-hef-atributo="data-som" data-som="ATIVO" data-dica="Cala o alto-falante sem perder o volume">♪</button>
+            </div>
+
+
+            <div class="rota tres">
+              <button data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo" data-todo="8" data-dica="Efeitos do jogo no controle; o som do PC no PC">Canais sonoros nativos - Padrão</button>
+              <button data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc" data-todo="8" data-dica="Todo o som sai no controle; o PC fica mudo">Canais sonoros apenas no DualSense</button>
+              <button class="on" data-gesto="rota" data-rota="nada" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="nada" data-todo="8" data-dica="Todo o som sai no PC; o controle fica mudo">Canais sonoros apenas no PC</button>
+            </div>
+          </div>
+        </div>
+
+        <div>
+
+          <div class="moldura leituras" data-bloco="giroscopio">
+            <div class="rot" data-dica="Leitura viva, em graus por segundo">Giroscópio
+            </div>
+            <div class="eixo" data-eixo="giro-x"><span>X</span><span data-campo="giro-x">  +0.0</span>
+              <span class="g" data-campo="giro-x-cor" data-hef-alvo="cor" style="color:var(--border-forte)"><span
+                class="v neg" data-campo="giro-x-neg" data-hef-alvo="largura" style="width:0%"></span><span
+                class="v pos" data-campo="giro-x-pos" data-hef-alvo="largura" style="width:1%"></span></span></div>
+            <div class="eixo" data-eixo="giro-y"><span>Y</span><span data-campo="giro-y">  +0.0</span>
+              <span class="g" data-campo="giro-y-cor" data-hef-alvo="cor" style="color:var(--border-forte)"><span
+                class="v neg" data-campo="giro-y-neg" data-hef-alvo="largura" style="width:0%"></span><span
+                class="v pos" data-campo="giro-y-pos" data-hef-alvo="largura" style="width:1%"></span></span></div>
+            <div class="eixo" data-eixo="giro-z"><span>Z</span><span data-campo="giro-z">  +0.0</span>
+              <span class="g" data-campo="giro-z-cor" data-hef-alvo="cor" style="color:var(--border-forte)"><span
+                class="v neg" data-campo="giro-z-neg" data-hef-alvo="largura" style="width:0%"></span><span
+                class="v pos" data-campo="giro-z-pos" data-hef-alvo="largura" style="width:1%"></span></span></div>
+          </div>
+          <div class="moldura leituras" style="margin-top:9px" data-bloco="acelerometro">
+            <div class="rot">Acelerômetro</div>
+            <div class="eixo" data-eixo="accel-x"><span>X</span><span data-campo="accel-x"> −0.032</span>
+              <span class="g" data-campo="accel-x-cor" data-hef-alvo="cor" style="color:var(--cyan)"><span
+                class="v neg" data-campo="accel-x-neg" data-hef-alvo="largura" style="width:1%"></span><span
+                class="v pos" data-campo="accel-x-pos" data-hef-alvo="largura" style="width:0%"></span></span></div>
+            <div class="eixo" data-eixo="accel-y"><span>Y</span><span data-campo="accel-y"> +0.998</span>
+              <span class="g" data-campo="accel-y-cor" data-hef-alvo="cor" style="color:var(--green)"><span
+                class="v neg" data-campo="accel-y-neg" data-hef-alvo="largura" style="width:0%"></span><span
+                class="v pos" data-campo="accel-y-pos" data-hef-alvo="largura" style="width:25%"></span></span></div>
+            <div class="eixo" data-eixo="accel-z"><span>Z</span><span data-campo="accel-z"> +0.041</span>
+              <span class="g" data-campo="accel-z-cor" data-hef-alvo="cor" style="color:var(--cyan)"><span
+                class="v neg" data-campo="accel-z-neg" data-hef-alvo="largura" style="width:0%"></span><span
+                class="v pos" data-campo="accel-z-pos" data-hef-alvo="largura" style="width:1%"></span></span></div>
+          </div>
+          <div class="moldura gatilhos" style="margin-top:9px">
+            <div class="rot">Gatilhos</div>
+            <div class="gat">
+              <div class="gat-linha" data-gatilho="l2"><span>L2</span>
+                <span class="trilho"><span class="cheio" data-campo="l2-barra"
+                  data-hef-alvo="largura" style="width:0%"></span>
+                  <span class="n" data-campo="l2-num">0 / 255</span></span></div>
+              <div class="gat-linha" data-gatilho="r2"><span>R2</span>
+                <span class="trilho"><span class="cheio" data-campo="r2-barra"
+                  data-hef-alvo="largura" style="width:0%"></span>
+                  <span class="n" data-campo="r2-num">0 / 255</span></span></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      </div>
+    </div>
+    <div class="ctl card off" data-controle="p3" data-conectado="nao">
+
+      <input class="radio-mesa" type="radio" name="mesa" id="c-p3" data-campo="card-aberto" data-hef-alvo="marcado">
+      <label class="faixa" for="c-p3" data-dica="Nenhum controle aqui">
+          <span class="card-nome" data-campo="card-vpad" data-hef-alvo="atributo" data-hef-atributo="title"><span data-campo="peca">Galactic Purple</span> <span class="pt">•</span> <span data-campo="via">Desconectado</span></span>
+          <span class="div">·</span>
+
+
+          <span class="leia" data-dica="Como o jogo vê este controle; troca na aba Jogar"><b data-campo="mascara">—</b></span><span class="div so-fechado">·</span>
+          <span class="leia so-fechado" data-dica="O som deste microfone chega ao PC">Microfone <span class="selo-ativo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">—</span></span></span>
+
+          <span class="no-jogo" data-campo="giro-no-jogo" data-hef-alvo="atributo"
+                data-hef-atributo="aria-label"><span
+                class="no-jogo-t" data-campo="giro-no-jogo"></span></span>
+          <span class="sensores-peca" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-todo="9">
+            <span class="dica-do-giro" data-campo="giro-dica" data-hef-alvo="atributo" data-hef-atributo="title"><button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><span class="p"></span>Giroscópio</button></span>
+            <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" data-dica="O jogo recebe a inclinação e o chacoalhar"><span class="p"></span>Acelerômetro</button>
+          </span>
+
+          <span class="bat">Bateria
+            <span class="trilho"><span class="cheio" data-campo="bateria-barra"
+              data-hef-alvo="largura" style="width:31%"></span></span>
+            <span class="n" data-campo="bateria">—</span><span class="carga" data-campo="bateria-carga" data-hef-alvo="atributo" data-hef-atributo="title"><i class="carga-i" data-campo="bateria-carga" data-hef-alvo="atributo" data-hef-atributo="data-carga"><svg class="g-raio" viewBox="0 0 24 24" width="11" height="11" aria-hidden="true" focusable="false"><path d="M13 2 4 14h6l-1 8 9-12h-6z" fill="currentColor"/></svg><svg class="g-cheio" viewBox="0 0 24 24" width="11" height="11" aria-hidden="true" focusable="false"><path d="M4 12.5 9.5 18 20 6.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><svg class="g-atencao" viewBox="0 0 24 24" width="11" height="11" aria-hidden="true" focusable="false"><path d="M12 3 22 20H2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 9.5v4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="17" r="1.15" fill="currentColor"/></svg></i></span></span>
+      </label>
+      <div class="corpo-cx">
+      <div class="card-corpo">
+
+        <div>
+          <div class="moldura touchp">
+            <div class="rot rot-linha">Touchpad
+              <button class="sw todo-sw-toque" data-gesto="touchpad" data-campo="touchpad" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" data-dica="Toque vai ao jogo; sem suporte, move o cursor" data-todo="5"><span class="p"></span>Ligado</button></div>
+            <div class="touch" data-todo="4">
+              <span class="todo-terca" data-campo="touch-regiao" data-hef-alvo="classe" data-hef-quando="esquerda"></span><span class="todo-terca" data-campo="touch-regiao" data-hef-alvo="classe" data-hef-quando="meio"></span><span class="todo-terca" data-campo="touch-regiao" data-hef-alvo="classe" data-hef-quando="direita"></span>
+              <span data-campo="pos-touch" data-hef-alvo="posicao"><span class="ponto ponto-1" data-campo="touch-ponto" data-hef-alvo="classe"></span></span>
+              </div>
+          </div>
+
+          <div class="moldura luz" style="margin-top:9px" data-todo="10">
+            <div class="rot rot-linha" data-campo="luz-porque" data-hef-alvo="atributo" data-hef-atributo="title">Barra de luz
+              <span class="de-quem" data-campo="luz-hex">—</span></div>
+            <div class="barra-luz" data-campo="luz-cor" data-hef-alvo="cor"
+              style="color:#50FA7B"></div>
+          </div>
+          <div class="moldura led" style="margin-top:9px" data-dica="As cinco lâmpadas dizem o número">
+            <div class="rot rot-linha">LED do jogador</div>
+
+            <div class="lampadas" data-campo="lampadas"
+              data-hef-alvo="html"><span class="luzinhas"><i class="on"></i><span class="vao"></span><i></i><i class="on"></i><i></i><span class="vao"></span><i class="on"></i></span></div>
+          </div>
+        </div>
+
+        <div>
+          <div class="moldura">
+            <div class="sticks">
+              <div>
+                <div class="stick-topo"><div class="stick-rot">Analógico<br>esquerdo</div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico esquerdo" data-todo="6"><span class="p"></span>Usar giroscópio como analógico</button></span></span></div>
+                <div class="stick" data-stick="l">
+                  <span class="rotl" data-campo="l3">—</span>
+                  <span data-campo="pos-ana-e-jogo" data-hef-alvo="posicao"><span class="pj" data-campo="ana-e-jogo" data-hef-alvo="classe"></span></span>
+                  <span class="p" data-campo="pos-ana-e" data-hef-alvo="posicao"></span></div>
+                <div class="xy" data-xy="l" data-campo="xy-l" data-hef-alvo="html">X:128<br>Y:128</div>
+              </div>
+              <div>
+                <div class="stick-topo"><div class="stick-rot">Analógico<br>direito</div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico direito" data-todo="6"><span class="p"></span>Usar giroscópio como analógico</button></span></span></div>
+                <div class="stick" data-stick="r">
+                  <span class="rotl" data-campo="r3">—</span>
+                  <span data-campo="pos-ana-d-jogo" data-hef-alvo="posicao"><span class="pj" data-campo="ana-d-jogo" data-hef-alvo="classe"></span></span>
+                  <span class="p" data-campo="pos-ana-d" data-hef-alvo="posicao"></span></div>
+                <div class="xy" data-xy="r" data-campo="xy-r" data-hef-alvo="html">X:141<br>Y:122</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="moldura">
+            <div class="glifos" data-campo="botoes" data-hef-alvo="atributo" data-hef-atributo="data-botoes">
+            <span class="gb" data-glifo="cross" data-campo="glifo-cross" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Cruz</title>
+
+  <line x1="8" y1="8" x2="24" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <line x1="24" y1="8" x2="8" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+</svg></span>
+            <span class="gb" data-glifo="circle" data-campo="glifo-circle" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Círculo</title>
+
+  <circle cx="16" cy="16" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
+</svg></span>
+            <span class="gb" data-glifo="square" data-campo="glifo-square" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Quadrado</title>
+
+  <rect x="7" y="7" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+</svg></span>
+            <span class="gb" data-glifo="triangle" data-campo="glifo-triangle" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Triângulo</title>
+
+  <polygon points="16,6 27,25 5,25" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+</svg></span>
+            <span class="gb" data-glifo="dpad_up" data-campo="glifo-dpad_up" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad cima</title>
+
+  <polygon points="16,5 24,16 19,16 19,27 13,27 13,16 8,16" fill="currentColor"/>
+</svg></span>
+            <span class="gb" data-glifo="dpad_down" data-campo="glifo-dpad_down" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad baixo</title>
+
+  <polygon points="16,27 8,16 13,16 13,5 19,5 19,16 24,16" fill="currentColor"/>
+</svg></span>
+            <span class="gb" data-glifo="dpad_left" data-campo="glifo-dpad_left" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad esquerda</title>
+
+  <polygon points="5,16 16,8 16,13 27,13 27,19 16,19 16,24" fill="currentColor"/>
+</svg></span>
+            <span class="gb" data-glifo="dpad_right" data-campo="glifo-dpad_right" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad direita</title>
+
+  <polygon points="27,16 16,8 16,13 5,13 5,19 16,19 16,24" fill="currentColor"/>
+</svg></span>
+            <span class="gb" data-glifo="l1" data-campo="glifo-l1" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L1</title>
+
+  <rect x="4" y="10" width="24" height="14" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
+  <text x="10" y="21" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L1</text>
+</svg></span>
+            <span class="gb" data-glifo="r1" data-campo="glifo-r1" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>R1</title>
+
+  <rect x="4" y="10" width="24" height="14" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
+  <text x="9" y="21" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R1</text>
+</svg></span>
+            <span class="gb" data-glifo="l2" data-campo="glifo-l2" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L2</title>
+
+  <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
+  <text x="10" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L2</text>
+  <line x1="16" y1="24" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <polyline points="12,27 16,31 20,27" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+</svg></span>
+            <span class="gb" data-glifo="r2" data-campo="glifo-r2" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>R2</title>
+
+  <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
+  <text x="9" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R2</text>
+  <line x1="16" y1="24" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <polyline points="12,27 16,31 20,27" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+</svg></span>
+            <span class="gb" data-glifo="share" data-campo="glifo-share" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Share</title>
+
+  <line x1="16" y1="7" x2="16" y2="20" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+  <line x1="8"  y1="11" x2="12.5" y2="21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+  <line x1="24" y1="11" x2="19.5" y2="21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+</svg></span>
+            <span class="gb" data-glifo="options" data-campo="glifo-options" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Options</title>
+
+  <line x1="7" y1="10" x2="25" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <line x1="7" y1="16" x2="25" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <line x1="7" y1="22" x2="25" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+</svg></span>
+            <span class="gb" data-glifo="ps" data-campo="glifo-ps" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>PS</title>
+
+  <g transform="translate(16 16) scale(0.99425) translate(-16.0925 -16.0)">
+    <path fill="currentColor" d="M 1.348 21.736 C 0.195 22.543 0.408 23.935 3.04 24.805 C 5.671 25.675 8.73 25.855 11.422 25.371 C 11.345 25.371 11.575 25.371 11.422 25.371 L 11.422 22.624 L 8.807 23.513 C 7.807 23.835 6.807 23.916 5.808 23.675 C 5.039 23.432 5.192 22.947 6.115 22.543 L 11.422 20.604 L 11.422 17.616 L 4.039 20.282 C 3.117 20.604 2.193 21.09 1.348 21.736 Z M 19.188 9.619 L 19.188 17.455 C 22.34 19.07 24.801 17.455 24.801 13.254 C 24.801 8.973 23.34 7.034 19.111 5.5 C 16.881 4.692 14.574 3.965 12.267 3.48 L 12.267 26.825 L 17.65 28.521 L 17.65 8.892 C 17.65 8.004 17.65 7.358 18.266 7.599 C 19.111 7.842 19.188 8.731 19.188 9.619 Z M 29.184 19.878 C 26.955 19.07 24.571 18.746 22.263 18.989 C 20.982 19.073 19.78 19.455 18.573 19.878 L 18.573 23.028 L 23.571 21.09 C 24.571 20.766 25.571 20.685 26.57 20.928 C 27.339 21.171 27.185 21.655 26.262 22.059 L 18.573 25.047 L 18.573 28.116 L 29.184 23.997 C 29.954 23.675 30.645 23.27 31.261 22.624 C 31.799 21.817 31.568 20.685 29.184 19.878 Z"/>
+  </g>
+</svg></span>
+            <span class="gb" data-glifo="touchpad" data-campo="glifo-touchpad" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Touchpad</title>
+
+  <rect x="3" y="8" width="26" height="16" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
+  <circle cx="11" cy="16" r="1.5" fill="currentColor"/>
+  <circle cx="16" cy="16" r="1.5" fill="currentColor"/>
+  <circle cx="21" cy="16" r="1.5" fill="currentColor"/>
+</svg></span>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="moldura" data-bloco="microfone"
+               data-campo="mic-apagado" data-hef-alvo="atributo" data-hef-atributo="data-apagado" data-todo="7">
+
+            <div class="rot rot-linha">Microfone
+              <span class="selo-ativo" style="margin-left:5px" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">—</span></span>
+
+
+            </div>
+            <span class="onda-do-mudo" data-campo="mic-onda-calada" data-hef-alvo="classe" data-hef-classe="calada" data-hef-quando="sim"><span class="onda" data-campo="mic-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="mic-onda-0" data-hef-alvo="altura" style="height:18%"></i><i data-campo="mic-onda-1" data-hef-alvo="altura" style="height:30%"></i><i data-campo="mic-onda-2" data-hef-alvo="altura" style="height:22%"></i><i data-campo="mic-onda-3" data-hef-alvo="altura" style="height:41%"></i><i data-campo="mic-onda-4" data-hef-alvo="altura" style="height:28%"></i><i data-campo="mic-onda-5" data-hef-alvo="altura" style="height:19%"></i><i data-campo="mic-onda-6" data-hef-alvo="altura" style="height:35%"></i><i data-campo="mic-onda-7" data-hef-alvo="altura" style="height:24%"></i><i data-campo="mic-onda-8" data-hef-alvo="altura" style="height:30%"></i><i data-campo="mic-onda-9" data-hef-alvo="altura" style="height:20%"></i><i data-campo="mic-onda-10" data-hef-alvo="altura" style="height:38%"></i><i data-campo="mic-onda-11" data-hef-alvo="altura" style="height:26%"></i><i data-campo="mic-onda-12" data-hef-alvo="altura" style="height:22%"></i><i data-campo="mic-onda-13" data-hef-alvo="altura" style="height:31%"></i></span></span>
+            <div class="vol" data-campo="mic-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
+
+              <span class="rot-vol">Volume</span>
+              <span class="trilho"><span class="cheio" data-campo="mic-barra"
+                data-hef-alvo="largura" style="width:60%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="60" data-gesto="volume" data-volume="microfone" data-campo="mic-barra" data-hef-alvo="valor" aria-label="Volume do microfone deste controle" data-dica="Quanto do microfone chega ao PC"></span>
+              <span class="n" data-campo="mic-num">—</span>
+              <button class="mudo-i" data-gesto="mic-retorno" data-campo="mic-retorno" data-hef-alvo="atributo" data-hef-atributo="data-mic-luz" data-dica="Ouvir a própria voz como o jogo ouve" aria-pressed="false">🎙</button>
+            </div>
+
+
+            <div class="ressalva" data-campo="mic-ressalva" data-hef-alvo="html"><i class="nada"></i></div>
+
+          </div>
+          <div class="moldura" style="margin-top:9px" data-bloco="alto-falante"
+               data-campo="alto-apagado" data-hef-alvo="atributo" data-hef-atributo="data-apagado">
+
+            <div class="rot rot-linha">Alto-falante
+              <span data-campo="alto-canal-porque" data-hef-alvo="atributo" data-hef-atributo="title"><span class="selo-ativo no-rotulo" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M17 8.5a5 5 0 0 1 0 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="alto-canal" data-hef-alvo="html"><i class="nada"></i></span></span></span>
+              <span class="selo-som" data-campo="alto-selo" data-hef-alvo="html"><i class="nada"></i></span>
+            </div>
+            <span class="onda" data-campo="alto-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="alto-onda-0" data-hef-alvo="altura" style="height:55%"></i><i data-campo="alto-onda-1" data-hef-alvo="altura" style="height:40%"></i><i data-campo="alto-onda-2" data-hef-alvo="altura" style="height:62%"></i><i data-campo="alto-onda-3" data-hef-alvo="altura" style="height:48%"></i><i data-campo="alto-onda-4" data-hef-alvo="altura" style="height:58%"></i><i data-campo="alto-onda-5" data-hef-alvo="altura" style="height:36%"></i><i data-campo="alto-onda-6" data-hef-alvo="altura" style="height:50%"></i><i data-campo="alto-onda-7" data-hef-alvo="altura" style="height:44%"></i><i data-campo="alto-onda-8" data-hef-alvo="altura" style="height:60%"></i><i data-campo="alto-onda-9" data-hef-alvo="altura" style="height:38%"></i><i data-campo="alto-onda-10" data-hef-alvo="altura" style="height:52%"></i><i data-campo="alto-onda-11" data-hef-alvo="altura" style="height:46%"></i><i data-campo="alto-onda-12" data-hef-alvo="altura" style="height:42%"></i><i data-campo="alto-onda-13" data-hef-alvo="altura" style="height:56%"></i></span>
+            <div class="vol" data-campo="alto-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
+              <button class="padrao-i" type="button" data-gesto="volume-padrao" data-campo="alto-padrao" data-hef-alvo="classe" data-hef-classe="on" data-dica="Volume do jogo, sem ajuste">Padrão</button>
+              <span class="trilho"><span class="cheio" data-campo="alto-barra"
+                data-hef-alvo="largura" style="width:55%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="55" data-gesto="volume" data-volume="alto-falante" data-campo="alto-barra" data-hef-alvo="valor" aria-label="Volume do alto-falante deste controle" data-dica="Volume do alto-falante deste controle"></span>
+              <span class="n" data-campo="alto-num">—</span>
+              <button class="mudo-i" data-gesto="mudo" data-mudo="alto-falante" data-campo="alto-mudo" data-hef-alvo="atributo" data-hef-atributo="data-som" data-dica="Cala o alto-falante sem perder o volume">♪</button>
+            </div>
+
+
+            <div class="rota tres">
+              <button data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo" data-todo="8" data-dica="Efeitos do jogo no controle; o som do PC no PC">Canais sonoros nativos - Padrão</button>
+              <button data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc" data-todo="8" data-dica="Todo o som sai no controle; o PC fica mudo">Canais sonoros apenas no DualSense</button>
+              <button data-gesto="rota" data-rota="nada" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="nada" data-todo="8" data-dica="Todo o som sai no PC; o controle fica mudo">Canais sonoros apenas no PC</button>
+            </div>
+          </div>
+        </div>
+
+        <div>
+
+          <div class="moldura leituras" data-bloco="giroscopio">
+            <div class="rot" data-dica="Leitura viva, em graus por segundo">Giroscópio
+            </div>
+            <div class="eixo" data-eixo="giro-x"><span>X</span><span data-campo="giro-x">—</span>
+              <span class="g" data-campo="giro-x-cor" data-hef-alvo="cor" style="color:var(--cyan)"><span
+                class="v neg" data-campo="giro-x-neg" data-hef-alvo="largura" style="width:0%"></span><span
+                class="v pos" data-campo="giro-x-pos" data-hef-alvo="largura" style="width:3%"></span></span></div>
+            <div class="eixo" data-eixo="giro-y"><span>Y</span><span data-campo="giro-y">—</span>
+              <span class="g" data-campo="giro-y-cor" data-hef-alvo="cor" style="color:var(--cyan)"><span
+                class="v neg" data-campo="giro-y-neg" data-hef-alvo="largura" style="width:2%"></span><span
+                class="v pos" data-campo="giro-y-pos" data-hef-alvo="largura" style="width:0%"></span></span></div>
+            <div class="eixo" data-eixo="giro-z"><span>Z</span><span data-campo="giro-z">—</span>
+              <span class="g" data-campo="giro-z-cor" data-hef-alvo="cor" style="color:var(--cyan)"><span
+                class="v neg" data-campo="giro-z-neg" data-hef-alvo="largura" style="width:0%"></span><span
+                class="v pos" data-campo="giro-z-pos" data-hef-alvo="largura" style="width:1%"></span></span></div>
+          </div>
+          <div class="moldura leituras" style="margin-top:9px" data-bloco="acelerometro">
+            <div class="rot">Acelerômetro</div>
+            <div class="eixo" data-eixo="accel-x"><span>X</span><span data-campo="accel-x">—</span>
+              <span class="g" data-campo="accel-x-cor" data-hef-alvo="cor" style="color:"><span
+                class="v neg" data-campo="accel-x-neg" data-hef-alvo="largura" style="width:0%"></span><span
+                class="v pos" data-campo="accel-x-pos" data-hef-alvo="largura" style="width:0%"></span></span></div>
+            <div class="eixo" data-eixo="accel-y"><span>Y</span><span data-campo="accel-y">—</span>
+              <span class="g" data-campo="accel-y-cor" data-hef-alvo="cor" style="color:"><span
+                class="v neg" data-campo="accel-y-neg" data-hef-alvo="largura" style="width:0%"></span><span
+                class="v pos" data-campo="accel-y-pos" data-hef-alvo="largura" style="width:0%"></span></span></div>
+            <div class="eixo" data-eixo="accel-z"><span>Z</span><span data-campo="accel-z">—</span>
+              <span class="g" data-campo="accel-z-cor" data-hef-alvo="cor" style="color:"><span
+                class="v neg" data-campo="accel-z-neg" data-hef-alvo="largura" style="width:0%"></span><span
+                class="v pos" data-campo="accel-z-pos" data-hef-alvo="largura" style="width:0%"></span></span></div>
+          </div>
+          <div class="moldura gatilhos" style="margin-top:9px">
+            <div class="rot">Gatilhos</div>
+            <div class="gat">
+              <div class="gat-linha" data-gatilho="l2"><span>L2</span>
+                <span class="trilho"><span class="cheio" data-campo="l2-barra"
+                  data-hef-alvo="largura" style="width:0%"></span>
+                  <span class="n" data-campo="l2-num">—</span></span></div>
+              <div class="gat-linha" data-gatilho="r2"><span>R2</span>
+                <span class="trilho"><span class="cheio" data-campo="r2-barra"
+                  data-hef-alvo="largura" style="width:7%"></span>
+                  <span class="n" data-campo="r2-num">—</span></span></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      </div>
+    </div>
+    <div class="ctl card off" data-controle="p4" data-conectado="nao">
+
+      <input class="radio-mesa" type="radio" name="mesa" id="c-p4" data-campo="card-aberto" data-hef-alvo="marcado">
+      <label class="faixa" for="c-p4" data-dica="Nenhum controle aqui">
+          <span class="card-nome" data-campo="card-vpad" data-hef-alvo="atributo" data-hef-atributo="title"><span data-campo="peca">White</span> <span class="pt">•</span> <span data-campo="via">Desconectado</span></span>
+          <span class="div">·</span>
+
+
+          <span class="leia" data-dica="Como o jogo vê este controle; troca na aba Jogar"><b data-campo="mascara">—</b></span><span class="div so-fechado">·</span>
+          <span class="leia so-fechado" data-dica="Microfone calado">Microfone <span class="selo-ativo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">—</span></span></span>
+
+          <span class="no-jogo" data-campo="giro-no-jogo" data-hef-alvo="atributo"
+                data-hef-atributo="aria-label"><span
+                class="no-jogo-t" data-campo="giro-no-jogo"></span></span>
+          <span class="sensores-peca" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-todo="9">
+            <span class="dica-do-giro" data-campo="giro-dica" data-hef-alvo="atributo" data-hef-atributo="title"><button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><span class="p"></span>Giroscópio</button></span>
+            <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" data-dica="O jogo recebe a inclinação e o chacoalhar"><span class="p"></span>Acelerômetro</button>
+          </span>
+
+          <span class="bat">Bateria
+            <span class="trilho"><span class="cheio" data-campo="bateria-barra"
+              data-hef-alvo="largura" style="width:88%"></span></span>
+            <span class="n" data-campo="bateria">—</span><span class="carga" data-campo="bateria-carga" data-hef-alvo="atributo" data-hef-atributo="title"><i class="carga-i" data-campo="bateria-carga" data-hef-alvo="atributo" data-hef-atributo="data-carga"><svg class="g-raio" viewBox="0 0 24 24" width="11" height="11" aria-hidden="true" focusable="false"><path d="M13 2 4 14h6l-1 8 9-12h-6z" fill="currentColor"/></svg><svg class="g-cheio" viewBox="0 0 24 24" width="11" height="11" aria-hidden="true" focusable="false"><path d="M4 12.5 9.5 18 20 6.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><svg class="g-atencao" viewBox="0 0 24 24" width="11" height="11" aria-hidden="true" focusable="false"><path d="M12 3 22 20H2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 9.5v4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="17" r="1.15" fill="currentColor"/></svg></i></span></span>
+      </label>
+      <div class="corpo-cx">
+      <div class="card-corpo">
+
+        <div>
+          <div class="moldura touchp">
+            <div class="rot rot-linha">Touchpad
+              <button class="sw todo-sw-toque" data-gesto="touchpad" data-campo="touchpad" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" data-dica="Toque vai ao jogo; sem suporte, move o cursor" data-todo="5"><span class="p"></span>Ligado</button></div>
+            <div class="touch" data-todo="4">
+              <span class="todo-terca" data-campo="touch-regiao" data-hef-alvo="classe" data-hef-quando="esquerda"></span><span class="todo-terca" data-campo="touch-regiao" data-hef-alvo="classe" data-hef-quando="meio"></span><span class="todo-terca" data-campo="touch-regiao" data-hef-alvo="classe" data-hef-quando="direita"></span>
+              <span data-campo="pos-touch" data-hef-alvo="posicao"><span class="ponto ponto-1" data-campo="touch-ponto" data-hef-alvo="classe"></span></span>
+              </div>
+          </div>
+
+          <div class="moldura luz" style="margin-top:9px" data-todo="10">
+            <div class="rot rot-linha" data-campo="luz-porque" data-hef-alvo="atributo" data-hef-atributo="title">Barra de luz
+              <span class="de-quem" data-campo="luz-hex">—</span></div>
+            <div class="barra-luz" data-campo="luz-cor" data-hef-alvo="cor"
+              style="color:#FF79C6"></div>
+          </div>
+          <div class="moldura led" style="margin-top:9px" data-dica="As cinco lâmpadas dizem o número">
+            <div class="rot rot-linha">LED do jogador</div>
+
+            <div class="lampadas" data-campo="lampadas"
+              data-hef-alvo="html"><span class="luzinhas"><i class="on"></i><span class="vao"></span><i class="on"></i><i></i><i class="on"></i><span class="vao"></span><i class="on"></i></span></div>
+          </div>
+        </div>
+
+        <div>
+          <div class="moldura">
+            <div class="sticks">
+              <div>
+                <div class="stick-topo"><div class="stick-rot">Analógico<br>esquerdo</div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico esquerdo" data-todo="6"><span class="p"></span>Usar giroscópio como analógico</button></span></span></div>
+                <div class="stick" data-stick="l">
+                  <span class="rotl" data-campo="l3">—</span>
+                  <span data-campo="pos-ana-e-jogo" data-hef-alvo="posicao"><span class="pj" data-campo="ana-e-jogo" data-hef-alvo="classe"></span></span>
+                  <span class="p" data-campo="pos-ana-e" data-hef-alvo="posicao"></span></div>
+                <div class="xy" data-xy="l" data-campo="xy-l" data-hef-alvo="html">X:128<br>Y:128</div>
+              </div>
+              <div>
+                <div class="stick-topo"><div class="stick-rot">Analógico<br>direito</div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico direito" data-todo="6"><span class="p"></span>Usar giroscópio como analógico</button></span></span></div>
+                <div class="stick" data-stick="r">
+                  <span class="rotl" data-campo="r3">—</span>
+                  <span data-campo="pos-ana-d-jogo" data-hef-alvo="posicao"><span class="pj" data-campo="ana-d-jogo" data-hef-alvo="classe"></span></span>
+                  <span class="p" data-campo="pos-ana-d" data-hef-alvo="posicao"></span></div>
+                <div class="xy" data-xy="r" data-campo="xy-r" data-hef-alvo="html">X: 96<br>Y:128</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="moldura">
+            <div class="glifos" data-campo="botoes" data-hef-alvo="atributo" data-hef-atributo="data-botoes">
+            <span class="gb" data-glifo="cross" data-campo="glifo-cross" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Cruz</title>
+
+  <line x1="8" y1="8" x2="24" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <line x1="24" y1="8" x2="8" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+</svg></span>
+            <span class="gb" data-glifo="circle" data-campo="glifo-circle" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Círculo</title>
+
+  <circle cx="16" cy="16" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
+</svg></span>
+            <span class="gb" data-glifo="square" data-campo="glifo-square" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Quadrado</title>
+
+  <rect x="7" y="7" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+</svg></span>
+            <span class="gb" data-glifo="triangle" data-campo="glifo-triangle" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Triângulo</title>
+
+  <polygon points="16,6 27,25 5,25" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+</svg></span>
+            <span class="gb" data-glifo="dpad_up" data-campo="glifo-dpad_up" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad cima</title>
+
+  <polygon points="16,5 24,16 19,16 19,27 13,27 13,16 8,16" fill="currentColor"/>
+</svg></span>
+            <span class="gb" data-glifo="dpad_down" data-campo="glifo-dpad_down" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad baixo</title>
+
+  <polygon points="16,27 8,16 13,16 13,5 19,5 19,16 24,16" fill="currentColor"/>
+</svg></span>
+            <span class="gb" data-glifo="dpad_left" data-campo="glifo-dpad_left" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad esquerda</title>
+
+  <polygon points="5,16 16,8 16,13 27,13 27,19 16,19 16,24" fill="currentColor"/>
+</svg></span>
+            <span class="gb" data-glifo="dpad_right" data-campo="glifo-dpad_right" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad direita</title>
+
+  <polygon points="27,16 16,8 16,13 5,13 5,19 16,19 16,24" fill="currentColor"/>
+</svg></span>
+            <span class="gb" data-glifo="l1" data-campo="glifo-l1" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L1</title>
+
+  <rect x="4" y="10" width="24" height="14" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
+  <text x="10" y="21" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L1</text>
+</svg></span>
+            <span class="gb" data-glifo="r1" data-campo="glifo-r1" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>R1</title>
+
+  <rect x="4" y="10" width="24" height="14" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
+  <text x="9" y="21" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R1</text>
+</svg></span>
+            <span class="gb" data-glifo="l2" data-campo="glifo-l2" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L2</title>
+
+  <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
+  <text x="10" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L2</text>
+  <line x1="16" y1="24" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <polyline points="12,27 16,31 20,27" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+</svg></span>
+            <span class="gb" data-glifo="r2" data-campo="glifo-r2" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>R2</title>
+
+  <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
+  <text x="9" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R2</text>
+  <line x1="16" y1="24" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <polyline points="12,27 16,31 20,27" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+</svg></span>
+            <span class="gb" data-glifo="share" data-campo="glifo-share" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Share</title>
+
+  <line x1="16" y1="7" x2="16" y2="20" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+  <line x1="8"  y1="11" x2="12.5" y2="21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+  <line x1="24" y1="11" x2="19.5" y2="21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+</svg></span>
+            <span class="gb" data-glifo="options" data-campo="glifo-options" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Options</title>
+
+  <line x1="7" y1="10" x2="25" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <line x1="7" y1="16" x2="25" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <line x1="7" y1="22" x2="25" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+</svg></span>
+            <span class="gb" data-glifo="ps" data-campo="glifo-ps" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>PS</title>
+
+  <g transform="translate(16 16) scale(0.99425) translate(-16.0925 -16.0)">
+    <path fill="currentColor" d="M 1.348 21.736 C 0.195 22.543 0.408 23.935 3.04 24.805 C 5.671 25.675 8.73 25.855 11.422 25.371 C 11.345 25.371 11.575 25.371 11.422 25.371 L 11.422 22.624 L 8.807 23.513 C 7.807 23.835 6.807 23.916 5.808 23.675 C 5.039 23.432 5.192 22.947 6.115 22.543 L 11.422 20.604 L 11.422 17.616 L 4.039 20.282 C 3.117 20.604 2.193 21.09 1.348 21.736 Z M 19.188 9.619 L 19.188 17.455 C 22.34 19.07 24.801 17.455 24.801 13.254 C 24.801 8.973 23.34 7.034 19.111 5.5 C 16.881 4.692 14.574 3.965 12.267 3.48 L 12.267 26.825 L 17.65 28.521 L 17.65 8.892 C 17.65 8.004 17.65 7.358 18.266 7.599 C 19.111 7.842 19.188 8.731 19.188 9.619 Z M 29.184 19.878 C 26.955 19.07 24.571 18.746 22.263 18.989 C 20.982 19.073 19.78 19.455 18.573 19.878 L 18.573 23.028 L 23.571 21.09 C 24.571 20.766 25.571 20.685 26.57 20.928 C 27.339 21.171 27.185 21.655 26.262 22.059 L 18.573 25.047 L 18.573 28.116 L 29.184 23.997 C 29.954 23.675 30.645 23.27 31.261 22.624 C 31.799 21.817 31.568 20.685 29.184 19.878 Z"/>
+  </g>
+</svg></span>
+            <span class="gb" data-glifo="touchpad" data-campo="glifo-touchpad" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Touchpad</title>
+
+  <rect x="3" y="8" width="26" height="16" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
+  <circle cx="11" cy="16" r="1.5" fill="currentColor"/>
+  <circle cx="16" cy="16" r="1.5" fill="currentColor"/>
+  <circle cx="21" cy="16" r="1.5" fill="currentColor"/>
+</svg></span>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="moldura" data-bloco="microfone"
+               data-campo="mic-apagado" data-hef-alvo="atributo" data-hef-atributo="data-apagado" data-todo="7">
+
+            <div class="rot rot-linha">Microfone
+              <span class="selo-ativo" style="margin-left:5px" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">—</span></span>
+
+
+            </div>
+            <span class="onda-do-mudo" data-campo="mic-onda-calada" data-hef-alvo="classe" data-hef-classe="calada" data-hef-quando="sim"><span class="onda" data-campo="mic-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="mic-onda-0" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-1" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-2" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-3" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-4" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-5" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-6" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-7" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-8" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-9" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-10" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-11" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-12" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-13" data-hef-alvo="altura" style="height:16%"></i></span></span>
+            <div class="vol" data-campo="mic-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
+
+              <span class="rot-vol">Volume</span>
+              <span class="trilho"><span class="cheio" data-campo="mic-barra"
+                data-hef-alvo="largura" style="width:75%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="75" data-gesto="volume" data-volume="microfone" data-campo="mic-barra" data-hef-alvo="valor" aria-label="Volume do microfone deste controle" data-dica="Quanto do microfone chega ao PC"></span>
+              <span class="n" data-campo="mic-num">—</span>
+              <button class="mudo-i" data-gesto="mic-retorno" data-campo="mic-retorno" data-hef-alvo="atributo" data-hef-atributo="data-mic-luz" data-dica="Ouvir a própria voz como o jogo ouve" aria-pressed="false">🎙</button>
+            </div>
+
+
+            <div class="ressalva" data-campo="mic-ressalva" data-hef-alvo="html"><i class="nada"></i></div>
+
+          </div>
+          <div class="moldura" style="margin-top:9px" data-bloco="alto-falante"
+               data-campo="alto-apagado" data-hef-alvo="atributo" data-hef-atributo="data-apagado">
+
+            <div class="rot rot-linha">Alto-falante
+              <span data-campo="alto-canal-porque" data-hef-alvo="atributo" data-hef-atributo="title"><span class="selo-ativo no-rotulo" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M17 8.5a5 5 0 0 1 0 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="alto-canal" data-hef-alvo="html"><i class="nada"></i></span></span></span>
+              <span class="selo-som" data-campo="alto-selo" data-hef-alvo="html"><i class="nada"></i></span>
+            </div>
+            <span class="onda" data-campo="alto-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="alto-onda-0" data-hef-alvo="altura" style="height:80%"></i><i data-campo="alto-onda-1" data-hef-alvo="altura" style="height:66%"></i><i data-campo="alto-onda-2" data-hef-alvo="altura" style="height:74%"></i><i data-campo="alto-onda-3" data-hef-alvo="altura" style="height:58%"></i><i data-campo="alto-onda-4" data-hef-alvo="altura" style="height:84%"></i><i data-campo="alto-onda-5" data-hef-alvo="altura" style="height:62%"></i><i data-campo="alto-onda-6" data-hef-alvo="altura" style="height:70%"></i><i data-campo="alto-onda-7" data-hef-alvo="altura" style="height:76%"></i><i data-campo="alto-onda-8" data-hef-alvo="altura" style="height:54%"></i><i data-campo="alto-onda-9" data-hef-alvo="altura" style="height:68%"></i><i data-campo="alto-onda-10" data-hef-alvo="altura" style="height:60%"></i><i data-campo="alto-onda-11" data-hef-alvo="altura" style="height:78%"></i><i data-campo="alto-onda-12" data-hef-alvo="altura" style="height:64%"></i><i data-campo="alto-onda-13" data-hef-alvo="altura" style="height:72%"></i></span>
+            <div class="vol" data-campo="alto-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
+              <button class="padrao-i" type="button" data-gesto="volume-padrao" data-campo="alto-padrao" data-hef-alvo="classe" data-hef-classe="on" data-dica="Volume do jogo, sem ajuste">Padrão</button>
+              <span class="trilho"><span class="cheio" data-campo="alto-barra"
+                data-hef-alvo="largura" style="width:80%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="80" data-gesto="volume" data-volume="alto-falante" data-campo="alto-barra" data-hef-alvo="valor" aria-label="Volume do alto-falante deste controle" data-dica="Volume do alto-falante deste controle"></span>
+              <span class="n" data-campo="alto-num">—</span>
+              <button class="mudo-i" data-gesto="mudo" data-mudo="alto-falante" data-campo="alto-mudo" data-hef-alvo="atributo" data-hef-atributo="data-som" data-dica="Cala o alto-falante sem perder o volume">♪</button>
+            </div>
+
+
+            <div class="rota tres">
+              <button data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo" data-todo="8" data-dica="Efeitos do jogo no controle; o som do PC no PC">Canais sonoros nativos - Padrão</button>
+              <button data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc" data-todo="8" data-dica="Todo o som sai no controle; o PC fica mudo">Canais sonoros apenas no DualSense</button>
+              <button data-gesto="rota" data-rota="nada" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="nada" data-todo="8" data-dica="Todo o som sai no PC; o controle fica mudo">Canais sonoros apenas no PC</button>
+            </div>
+          </div>
+        </div>
+
+        <div>
+
+          <div class="moldura leituras" data-bloco="giroscopio">
+            <div class="rot" data-dica="Leitura viva, em graus por segundo">Giroscópio
+            </div>
+            <div class="eixo" data-eixo="giro-x"><span>X</span><span data-campo="giro-x">—</span>
+              <span class="g" data-campo="giro-x-cor" data-hef-alvo="cor" style="color:var(--cyan)"><span
+                class="v neg" data-campo="giro-x-neg" data-hef-alvo="largura" style="width:2%"></span><span
+                class="v pos" data-campo="giro-x-pos" data-hef-alvo="largura" style="width:0%"></span></span></div>
+            <div class="eixo" data-eixo="giro-y"><span>Y</span><span data-campo="giro-y">—</span>
+              <span class="g" data-campo="giro-y-cor" data-hef-alvo="cor" style="color:var(--green)"><span
+                class="v neg" data-campo="giro-y-neg" data-hef-alvo="largura" style="width:0%"></span><span
+                class="v pos" data-campo="giro-y-pos" data-hef-alvo="largura" style="width:6%"></span></span></div>
+            <div class="eixo" data-eixo="giro-z"><span>Z</span><span data-campo="giro-z">—</span>
+              <span class="g" data-campo="giro-z-cor" data-hef-alvo="cor" style="color:var(--cyan)"><span
+                class="v neg" data-campo="giro-z-neg" data-hef-alvo="largura" style="width:0%"></span><span
+                class="v pos" data-campo="giro-z-pos" data-hef-alvo="largura" style="width:1%"></span></span></div>
+          </div>
+          <div class="moldura leituras" style="margin-top:9px" data-bloco="acelerometro">
+            <div class="rot">Acelerômetro</div>
+            <div class="eixo" data-eixo="accel-x"><span>X</span><span data-campo="accel-x">—</span>
+              <span class="g" data-campo="accel-x-cor" data-hef-alvo="cor" style="color:var(--orange)"><span
+                class="v neg" data-campo="accel-x-neg" data-hef-alvo="largura" style="width:0%"></span><span
+                class="v pos" data-campo="accel-x-pos" data-hef-alvo="largura" style="width:10%"></span></span></div>
+            <div class="eixo" data-eixo="accel-y"><span>Y</span><span data-campo="accel-y">—</span>
+              <span class="g" data-campo="accel-y-cor" data-hef-alvo="cor" style="color:var(--green)"><span
+                class="v neg" data-campo="accel-y-neg" data-hef-alvo="largura" style="width:0%"></span><span
+                class="v pos" data-campo="accel-y-pos" data-hef-alvo="largura" style="width:22%"></span></span></div>
+            <div class="eixo" data-eixo="accel-z"><span>Z</span><span data-campo="accel-z">—</span>
+              <span class="g" data-campo="accel-z-cor" data-hef-alvo="cor" style="color:var(--cyan)"><span
+                class="v neg" data-campo="accel-z-neg" data-hef-alvo="largura" style="width:5%"></span><span
+                class="v pos" data-campo="accel-z-pos" data-hef-alvo="largura" style="width:0%"></span></span></div>
+          </div>
+          <div class="moldura gatilhos" style="margin-top:9px">
+            <div class="rot">Gatilhos</div>
+            <div class="gat">
+              <div class="gat-linha" data-gatilho="l2"><span>L2</span>
+                <span class="trilho"><span class="cheio" data-campo="l2-barra"
+                  data-hef-alvo="largura" style="width:4%"></span>
+                  <span class="n" data-campo="l2-num">—</span></span></div>
+              <div class="gat-linha" data-gatilho="r2"><span>R2</span>
+                <span class="trilho"><span class="cheio" data-campo="r2-barra"
+                  data-hef-alvo="largura" style="width:100%"></span>
+                  <span class="n" data-campo="r2-num">—</span></span></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      </div>
+    </div>
+      </div>
+    </div>
+
+
+  </div>
+
+
+  <div class="rodape">
+
+    <button class="r-aplicar" data-campo="rodape.aplicar"
+            data-hef-alvo="atributo" data-hef-atributo="title"
+            data-dica="Vale agora, sem gravar no perfil">Aplicar</button>
+    <button class="r-salvar" data-campo="rodape.salvar"
+            data-hef-alvo="atributo" data-hef-atributo="title"
+            data-dica="Grava no perfil ativo">Salvar perfil</button>
+    <button class="r-importar" data-dica="Abre um perfil .json">Importar</button>
+    <button class="r-exportar" data-campo="rodape.exportar"
+            data-hef-alvo="atributo" data-hef-atributo="title"
+            data-dica="Salva o perfil ativo num .json">Exportar</button>
+  </div>
+
+</div>
+
+
+
+
+
+<script data-aba="modo-automatico">
+/* O Modo automático da aba: liga e desliga, e a área que ele governa esmaece (data-governa). */
+document.querySelectorAll('.modo-auto').forEach(b => b.addEventListener('click', () => {
+  const on = b.getAttribute('aria-pressed') !== 'true';
+  b.setAttribute('aria-pressed', String(on));
+  document.querySelectorAll(b.dataset.governa).forEach(el => el.classList.toggle('governado-pelo-jogo', on));
+}));
+</script>
+<script data-aba="criar">
+document.querySelectorAll('.seg-criar').forEach(s => s.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (b) s.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); }));
+</script>
+<script id="base-comum">
+/* Base comum das abas (rodada 2): a dica no hover e o menu do botão direito. Copiada IGUAL em todo mockup. */
+(() => {
+  const dica = document.createElement('div'); dica.id = 'hef-dica'; dica.setAttribute('role', 'tooltip');
+  document.addEventListener('DOMContentLoaded', () => document.body.append(dica));
+  let alvo = null;
+  const mostrar = el => {
+    alvo = el; dica.textContent = el.dataset.dica;
+    if (!dica.isConnected) document.body.append(dica);
+    const r = el.getBoundingClientRect(), d = dica.getBoundingClientRect();
+    let x = r.left + r.width / 2 - d.width / 2, y = r.bottom + 8;
+    if (y + d.height > innerHeight - 6) y = r.top - d.height - 8;
+    dica.style.left = Math.max(6, Math.min(x, innerWidth - d.width - 6)) + 'px'; dica.style.top = y + 'px';
+    dica.classList.add('visivel');
+  };
+  const esconder = () => { alvo = null; dica.classList.remove('visivel'); };
+  for (const [ev, f] of [['mouseover', 'in'], ['focusin', 'in'], ['mouseout', 'out'], ['focusout', 'out']])
+    document.addEventListener(ev, e => {
+      const el = e.target.closest && e.target.closest('[data-dica]');
+      if (f === 'in' && el && el !== alvo) mostrar(el);
+      if (f === 'out' && el && !el.contains(e.relatedTarget)) esconder();
+    });
+  // O menu do botão direito: Copiar (cinza sem seleção), Atualizar, Desligar/Ligar, Reiniciar, Fechar.
+  document.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    document.querySelectorAll('.menu-hefesto.vivo').forEach(m => m.remove());
+    const m = document.createElement('div'); m.className = 'menu-hefesto vivo'; m.setAttribute('role', 'menu');
+    const sel = String(getSelection()).trim() !== '';
+    m.innerHTML = `<button role="menuitem" ${sel ? '' : 'disabled'}>Copiar</button><hr>
+      <button role="menuitem">Atualizar</button>
+      <button role="menuitem" data-dica="O Hefesto sai da frente e o jogo lê o controle direto">Desligar</button>
+      <button role="menuitem">Reiniciar</button><hr><button role="menuitem">Fechar</button>`;
+    document.body.append(m);
+    const r = m.getBoundingClientRect();
+    m.style.left = Math.min(e.clientX, innerWidth - r.width - 6) + 'px';
+    m.style.top = Math.min(e.clientY, innerHeight - r.height - 6) + 'px';
+  });
+  document.addEventListener('click', e => { if (!e.target.closest('.menu-hefesto')) document.querySelectorAll('.menu-hefesto.vivo').forEach(m => m.remove()); });
+})();
+</script>
+<div class="jv-pop" id="jv-pop" role="dialog" aria-label="O que chega ao jogo" hidden data-todo="17"><h4>O jogo vê um Xbox 360</h4><div class="jv-sub">Canal comum · rádio</div><div class="jv-mot">O modo Xbox troca toda máscara por Xbox 360</div><div class="jv-grade"><div class="jv-fn"><span>Botões</span><em class="n">Nativo</em></div><div class="jv-fn"><span>Analógicos</span><em class="n">Nativo</em></div><div class="jv-fn"><span>Gatilho analógico</span><em class="n">Nativo</em></div><div class="jv-fn"><span>Gatilho adaptativo</span><em class="h">Pelo Hefesto</em></div><div class="jv-fn"><span>Vibração</span><em class="n">Nativo</em></div><div class="jv-fn"><span>Háptica</span><em class="h">Pelo Hefesto</em></div><div class="jv-fn"><span>Luz</span><em class="h">Pelo Hefesto</em></div><div class="jv-fn"><span>Luz de jogador</span><em class="x">Não chega</em></div><div class="jv-fn"><span>Giroscópio<small>Mira Virtual desligada</small></span><em class="x">Não chega</em></div><div class="jv-fn"><span>Touchpad<small>como mouse do PC</small></span><em class="h">Pelo Hefesto</em></div><div class="jv-fn"><span>Microfone</span><em class="h">Pelo Hefesto</em></div><div class="jv-fn"><span>Alto-falante</span><em class="h">Pelo Hefesto</em></div></div></div><script data-aba="o-jogo-ve-02-r4">
+/* Rodada 4: o botão «O que chega» abre a lista das doze funções; ?estado=o-que-chega já a abre. */
+document.addEventListener('DOMContentLoaded', () => {
+  const pop = document.getElementById('jv-pop');
+  const abrir = (b) => { const r = b.getBoundingClientRect(); pop.hidden = false; const h = pop.offsetHeight; pop.style.left = Math.min(r.left, innerWidth - 540) + 'px'; pop.style.top = (r.bottom + 6 + h > innerHeight - 8 ? Math.max(8, r.top - h - 6) : r.bottom + 6) + 'px'; };
+  document.querySelectorAll('.jv-btn').forEach(b => b.addEventListener('click', (ev) => { ev.preventDefault(); ev.stopPropagation(); pop.hidden ? abrir(b) : (pop.hidden = true); }));
+  document.addEventListener('click', (ev) => { if (!pop.contains(ev.target)) pop.hidden = true; });
+  if (new URLSearchParams(location.search).get('estado') === 'o-que-chega') abrir(document.querySelectorAll('.jv-btn')[1]);
+});
+</script>
+</body>
+</html>
