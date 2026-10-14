@@ -152,7 +152,7 @@
       },
       "ajuste_seis": {
         "pedido": "mds some tudo que tá ali do lado esquerdo dos botões do controle e os botões de controles não conectados não aparecem ali. Coloca Controle com fonte verde. E numa fonte branca abaixa ewscreve Estilo de jogo: Nome do estilo setado em perfis.",
-        "feito": "A célula à esquerda dos nomes dos controles perdeu o desenho do L2 e R2 e as duas linhas da leitura. Ficaram duas linhas, na borda dos rótulos de baixo: «Controle», no verde dos rótulos de linha, e abaixo, em branco, «Estilo de jogo: FPS» (o estilo escolhido em Perfis; é só leitura). Galactic Purple e White, que estão desconectados, saíram da linha do alto; ficam só Cosmic Red e Starlight Blue, cada um na largura da coluna dele, e as vagas sem controle seguem vazias embaixo. O Modo automático continua."
+        "feito": "A célula à esquerda dos nomes dos controles perdeu o desenho do L2 e R2 e as duas linhas da leitura. Ficaram duas linhas, na borda dos rótulos de baixo: «Controle», no verde dos rótulos de linha, e abaixo, em branco, «Estilo de jogo: FPS» (o estilo escolhido em Perfis; é só leitura). Galactic Purple e White, que estão desconectados, saíram da linha do alto; ficam só Cosmic Red e Starlight Blue, cada um na largura da coluna dele, e as vagas sem controle seguem vazias embaixo. Um estilo de nome longo (Point and click) desce para a linha de baixo, sem invadir a coluna do primeiro controle. O Modo automático continua."
       }
     }
   ],

@@ -39,6 +39,7 @@ MORDIDAS = {
                      "d.innerHTML='<b>L2</b><span data-leitura=l2>Metralhadora</span><b>R2</b><span data-leitura=r2>Arco de flecha</span>';c.appendChild(d);"),
     "q1-desconectado": _m("var c=document.querySelector('.g2-cab[data-controle=p3]');c.classList.remove('vazio');"
                           "c.innerHTML='<div class=cabeca><span><span class=\"chip vazio\">Galactic Purple <span class=pt>•</span> Desconectado</span></span></div>';"),
+    "q1-nome-longo": _m("var s=document.querySelector('.g2-canto .g2-estilo');s.style.whiteSpace='nowrap';"),
     "q1-cor": _m("document.querySelector('.g2-canto .sec-rot').style.color='#f8f8f2';"),
     "q2-para": _m("var p=document.querySelector('.ext[data-modificacao=lovense] .ext-para');p.innerHTML='<span class=ext-rot>Para</span>Todos';"),
     "q2-conta": _m("document.querySelector('#lovense .lv-linha:last-child .nj-tog').classList.add('ligado');"),
@@ -117,7 +118,11 @@ JS_PEDIDO_BASE = r"""
       else if(getComputedStyle(rc).color!==getComputedStyle(ro).color)falta.push('«Controle» não tem a cor verde dos rótulos de linha');
       if(es&&getComputedStyle(es).color!==getComputedStyle(document.querySelector('.g2-acion')).color)falta.push('«Estilo de jogo» não está em branco');
       [rc,es].forEach(function(x){if(x&&ro&&Math.abs(x.getBoundingClientRect().left-ro.getBoundingClientRect().left)>1.5)falta.push('a linha «'+x.textContent.trim().slice(0,14)+'» não começa na borda dos rótulos de baixo');
-        if(x&&x.getBoundingClientRect().right>document.querySelector('.g2-cab').getBoundingClientRect().left-4)falta.push('a linha «'+x.textContent.trim().slice(0,14)+'» encosta no chip');});}
+        if(x&&x.getBoundingClientRect().right>document.querySelector('.g2-cab').getBoundingClientRect().left-4)falta.push('a linha «'+x.textContent.trim().slice(0,14)+'» encosta no chip');});
+      // o estilo mais longo de Perfis (Point and click) também não pode invadir a coluna do primeiro controle
+      var nm=cn.querySelector('[data-estilo]');if(nm&&es){var ant=nm.textContent;nm.textContent='Point and click';
+        if(Math.max(es.getBoundingClientRect().right,nm.getBoundingClientRect().right)>document.querySelector('.g2-cab').getBoundingClientRect().left-4)falta.push('o estilo «Point and click» invade a coluna do primeiro controle');
+        if(document.documentElement.scrollHeight>innerHeight)falta.push('o estilo «Point and click» faz a página rolar');nm.textContent=ant;}}
     var cabs=[...document.querySelectorAll('.g2-cab')].filter(vis);
     if(cabs.some(function(c){return /Desconectado/.test(c.textContent)||c.querySelector('.chip.vazio');}))falta.push('um controle desconectado aparece na linha do alto');
     if(cabs.filter(function(c){return c.querySelector('.chip');}).length!==2)falta.push('a linha do alto não tem os dois controles conectados');
