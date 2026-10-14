@@ -19,7 +19,11 @@
    "origem": "rodada 4 (o que faltava desenho)",
    "ancora": "[data-todo=\"34\"]",
    "seletor": ".ja-tela.t2 .jg-lista",
-   "conflito": "Os nomes são de exemplo (os jogos com perfil). Sem nenhum jogo marcado e com «Os jogos que eu escolher» no «Quando», os acessórios ficam parados."
+   "conflito": "Os nomes são de exemplo (os jogos com perfil). Sem nenhum jogo marcado e com «Os jogos que eu escolher» no «Quando», os acessórios ficam parados.",
+   "ajuste_r4": {
+    "pedido": "ajustar os elementos tem muita coisa na tela e tá bagunçada mas a ideia é isso aí",
+    "feito": "A aba «O que seguem» da janela Lovense virou uma grade de duas colunas iguais e duas linhas da mesma altura. Em cima, «O que os acessórios seguem» e «Como os três tocam juntos» são três botões do mesmo tamanho cada, só com o nome (a explicação foi para a dica). Embaixo, os jogos: a frase «Nenhum jogo marcado…» saiu e cada jogo é uma linha de 36 px, com a caixa e o nome. Toda letra da aba tem 12 px ou mais. Os jogos e a força continuam dentro da janela que a engrenagem abre, nunca na lista."
+   }
   },
   {
    "n": 35,
@@ -29,7 +33,11 @@
    "origem": "rodada 4 (o que faltava desenho)",
    "ancora": "[data-todo=\"35\"]",
    "seletor": ".ja-tela.t2 .fz-grade",
-   "conflito": "O padrão de fábrica dos três é 10/20 (50 %), decidido por delegação, a validar por você."
+   "conflito": "O padrão de fábrica dos três é 10/20 (50 %), decidido por delegação, a validar por você.",
+   "ajuste_r4": {
+    "pedido": "(ajustar, sem texto)",
+    "feito": "A força de cada canal ficou com um título só («Força de cada canal», de 0 a 20) e uma grade de três colunas iguais: Vibração, Gatilho e Háptica no topo, e cada aparelho numa faixa com os três deslizantes alinhados embaixo do nome. Saíram as legendas «dois motores» e «um motor» e o «/20» de cada número; o deslizante tem 24 px de altura."
+   }
   }
  ],
  "por_baixo": [
