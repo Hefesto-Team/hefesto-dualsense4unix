@@ -2,7 +2,7 @@
   "aba": "08",
   "nome": "Conexões",
   "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/_integra-1-11/src/hefesto_dualsense4unix/interface/paginas/08-conexoes.html",
-  "depois": "/home/vitoriamaria/.local/state/hefesto-casa/leva-volta/todo/08-conexoes.html",
+  "depois": "docs/research/2026-10-12-a-volta/paginas/todo-das-abas/todo/08-conexoes.html",
   "mudancas": [
     {
       "n": 1,
@@ -190,6 +190,19 @@
       "conflito": "",
       "rodada": 3,
       "ancora_antes": ".gc-est[data-campo=\"est-mira\"]"
+    },
+    {
+      "n": 18,
+      "sprint": "A-ABA-CONEXOES-DO-TODO-01",
+      "o_que_muda": "A linha «Giroscópio como analógico» sai do cartão de cada controle: o giroscópio só aparece na aba Controles, na Navegação e na janela Calibrar giroscópio",
+      "resposta": "confirmado por você em 13/10, ~22h: o giroscópio sai da aba Conexões",
+      "origem": "rodada 4 (o que faltava desenho)",
+      "ancora": "[data-todo=\"18\"]",
+      "seletor": ".gc-resumo",
+      "conflito": "Substitui a 08-6 do todo («Analógico virtual» vira «Giroscópio como analógico»): a linha que ela renomeava deixa de existir nesta aba.",
+      "n_na_rodada_4": 13,
+      "fusao": "Na rodada 4 era a 13. É a mesma ideia da 17 da r3 (a linha do giroscópio sai do cartão); a 18 completa a 17: o terceiro cartão também perde a linha da mira.",
+      "rodada": 4
     }
   ],
   "por_baixo": [
@@ -244,6 +257,10 @@
     {
       "sprint": "O-ASSENTO-GUARDADO-NAO-ANDA-03",
       "o_que_muda": "O lugar guardado não anda na tela nem na lâmpada; o desenho é o mesmo."
+    },
+    {
+      "sprint": "O-MAPA-DAS-CONEXOES-MOSTRA-A-CADEIA-USB-E-O-REGISTRO-DELA-01",
+      "o_que_muda": "O cartão não muda; a cadeia mora no mapa das portas."
     }
   ],
   "fora": [
@@ -338,5 +355,11 @@
   ],
   "altura_px": 809,
   "rola": false,
-  "rodada": 3
+  "rodada": 3,
+  "origem_da_pagina": "r3 (v3) + rodada 4",
+  "consertos_da_fusao": [
+    "A vaga sem controle diz «P3 • Desconectado» e «P4 • Desconectado» (q4B).",
+    "O nome de quem joga nasce vazio nas duas vagas, como em qualquer instalação.",
+    "No rádio, os quatro controles se chamam pela cor do plástico."
+  ]
 }
