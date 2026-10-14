@@ -148,7 +148,11 @@
       "rodada": 3,
       "ancora_antes": "[data-id=\"W1\"]",
       "js": "document.getElementById('cx8-3').click(); document.querySelector('.abre-lugar[data-alvo=L1]').click()",
-      "js_antes": "document.getElementById('cx8-3').click(); document.querySelector('.abre-lugar[data-alvo=L1]').click()"
+      "js_antes": "document.getElementById('cx8-3').click(); document.querySelector('.abre-lugar[data-alvo=L1]').click()",
+      "ajuste_r3": {
+        "pedido": "(sem texto, voto «ajustar»: ela não disse o que faltou; valem os critérios das outras respostas: larguras iguais, sem aviso verde, respiro, nada sufocado)",
+        "feito": "Na linha do Acionador USB, «Usar como botões de…» e o «Trazer de volta» da linha de baixo ficaram com o mesmo tamanho (150 x 24 px) e na mesma coluna; o botão tinha 22 px de altura. Na janela do acionador, a lista das teclas ganhou respiro (linhas de 40 px, letra de 13 px, botões de 34 px) e a janela ficou um pouco mais larga. Você pediu ajuste sem texto: diga o que faltou."
+      }
     },
     {
       "n": 15,
