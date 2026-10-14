@@ -1446,8 +1446,8 @@ def o_jogo_que_o_boot_restaura(
             do_jogo = perfil_do_appid(appid_em_cena)
         if (do_jogo is not None and do_jogo.name == nome) or o_ultimo_jogo() == nome:
             return perfil
-    except Exception:
-        return None
+    except Exception as exc:
+        logger.warning("o_jogo_do_boot_nao_se_leu", perfil=nome, err=str(exc))
     return None
 
 
