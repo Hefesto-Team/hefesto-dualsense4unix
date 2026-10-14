@@ -571,6 +571,25 @@ class TestODoctorSabeDaBateria:
         saida = _doctor_roda(tmp_path, "check_cmdline_platform", bateria=False)
         assert "[WARN] cmdline: usbcore.autosuspend=-1 ausente" in saida, saida
 
+    def test_o_n_no_pad_virtual_e_defeito_no_doctor(self, tmp_path: Path) -> None:
+        """14/10/2026: o 054c:0df2:gn espera 200 ms por pedido ao pad virtual."""
+        saida = _doctor_roda(tmp_path, "check_cmdline_pad_virtual", bateria=False)
+        assert "054c:0df2" not in saida, "sem o token velho o doctor não fala dele"
+        sysq = tmp_path / "sys-doctor" / "module" / "usbcore" / "parameters" / "quirks"
+        sysq.parent.mkdir(parents=True)
+        sysq.write_text("054c:0ce6:gn,054c:0df2:gn\n", encoding="utf-8")
+        r = subprocess.run(
+            [BASH, "-c", f'source "{DOCTOR}"; QUIET=0; check_cmdline_pad_virtual'],
+            capture_output=True, text=True, timeout=60, check=False,
+            env={"PATH": "/usr/bin:/bin", "HOME": str(tmp_path),
+                 "HEFESTO_DOCTOR_SYS": str(tmp_path / "sys-doctor"),
+                 "HEFESTO_DOCTOR_CMDLINE": str(tmp_path / "vazio"),
+                 "HEFESTO_DOCTOR_KERNELSTUB": str(tmp_path / "vazio"),
+                 "HEFESTO_DOCTOR_GRUB": str(tmp_path / "vazio")},
+        )
+        assert "[WARN] DEFEITO: cmdline: 054c:0df2:gn (no sysfs)" in r.stdout, r.stdout
+        assert "200 ms por pedido" in r.stdout
+
     def test_a_pergunta_do_doctor_e_a_do_install(self) -> None:
         """O mesmo glob nos dois: um BAT2 contaria num e não no outro."""
         doctor = DOCTOR.read_text(encoding="utf-8")

@@ -72,7 +72,7 @@ inscrever a chave do DKMS e reiniciar. O instalador diz qual chave inscrever:
 | `~/.config/systemd/user/` | as suas unidades, que ficam rodando: o serviço (`hefesto-dualsense4unix.service`), a vigia do USB (`hefesto-dualsense4unix-storm-watch.service`) e o vigia do Steam Input (`hefesto-steam-input-guard.path`, `hefesto-steam-input-guard.timer` e `hefesto-steam-input-guard.service`). A que abre a janela no início da sessão (`hefesto-dualsense4unix-gui-hotplug.service`) só entra se você aceitar |
 | `/usr/local/lib/hefesto-dualsense4unix/` | o programa desse serviço e os scripts de manutenção do Bluetooth |
 | `/var/lib/hefesto-dualsense4unix/bt-bonds/` | cópias de segurança dos pareamentos Bluetooth |
-| cmdline do kernel | `usbcore.autosuspend=-1` (só em computador sem bateria) e `usbcore.quirks=054c:0ce6:gn,054c:0df2:gn`, pelo kernelstub ou pelo grub. Um valor que já existia é preservado, e o desinstalador tira só o que o Hefesto pôs |
+| cmdline do kernel | `usbcore.autosuspend=-1` (só em computador sem bateria) e `usbcore.quirks=054c:0ce6:gn`, pelo kernelstub ou pelo grub. Um valor que já existia é preservado (só o `054c:0df2:gn` que o Hefesto punha até 14/10/2026 sai), e o desinstalador tira só o que o Hefesto pôs |
 | módulos de kernel (DKMS) | `hefesto-hid-playstation`, `hefesto-hid-nintendo` e `hefesto-rtw88-usb`. Eles não apagam os módulos de fábrica e valem a partir do próximo boot |
 | teclado na tela | `wvkbd` ou `onboard`, pelo gerenciador de pacotes |
 | a Steam | desliga o Steam Input, põe o Hefesto nas Opções de Inicialização dos jogos e fixa o Proton, sempre com cópia de segurança |

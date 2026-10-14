@@ -263,6 +263,9 @@ def gesto_de_instalar(
 
 
 _QUIRK_RE = re.compile(r"054c:0ce6")
+# O `n` (DELAY_CTRL_MSG) no PID do pad virtual: o Hefesto o gravava até 14/10/2026
+# (ADR 018, nota datada). Cada pedido de controle ao pad espera 200 ms.
+_QUIRK_DO_PAD_VIRTUAL_RE = re.compile(r"054c:0df2:[a-z]*n")
 # DualSense COM ignore_ctl_error (o que ataca o mixer que martela o EP0).
 _SND_QUIRK_RE = re.compile(r"054c:0ce6:.*ignore_ctl_error")
 _CARD_HEADER_RE = re.compile(r"^\s*\d+\s*\[")
@@ -358,6 +361,13 @@ def check_quirk(quirks_text: str | None = None) -> tuple[str, str]:
             ).read_text(encoding="utf-8", errors="ignore")
         except Exception:
             quirks_text = ""
+    if _QUIRK_DO_PAD_VIRTUAL_RE.search(quirks_text or ""):
+        return WARN, (
+            "defeito: o pad virtual (054c:0df2) espera 200 ms por pedido; com 4 "
+            f"controles o jogo perde os controles. {PREFIXO_DA_CURA}"
+            f"{gesto_de_atualizar()} e reinicie o computador (a linha do kernel "
+            "troca no próximo boot)."
+        )
     if _QUIRK_RE.search(quirks_text or ""):
         return OK, "quirk anti-storm ativo (054c:0ce6 — áudio USB espaçado)"
     return WARN, (

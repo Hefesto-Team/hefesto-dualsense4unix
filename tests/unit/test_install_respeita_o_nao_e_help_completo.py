@@ -280,7 +280,7 @@ class TestDocumentacaoHonesta:
 
     def test_cmdline_declara_o_quirk_que_entra_por_default(self) -> None:
         linha = next(linha for linha in DOC.splitlines() if "cmdline do kernel |" in linha)
-        assert "usbcore.quirks=054c:0ce6:gn,054c:0df2:gn" in linha, (
+        assert "usbcore.quirks=054c:0ce6:gn`" in linha, (
             "o passo 3e grava os quirks POR DEFAULT — a tabela omitia"
         )
 

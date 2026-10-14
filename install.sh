@@ -31,7 +31,7 @@
 #                         são aplicadas automaticamente (re-cópia é idempotente).
 #                         Se Flatpak Hefesto está instalado, também propaga.
 #   --with-usb-quirk      OPT-IN (default OFF): aplica o quirk de boot
-#                         usbcore.quirks=054c:0ce6:gn,054c:0df2:gn — a alavanca do
+#                         usbcore.quirks=054c:0ce6:gn — a alavanca do
 #                         storm -71 que PRESERVA o áudio do DualSense (ALTERNATIVA
 #                         à regra 75 de áudio-off; use uma OU outra). É cmdline do
 #                         kernel (NÃO é regra udev); ciente do bootloader
@@ -2342,7 +2342,7 @@ fi
 # 3b. Quirk de boot do áudio USB (OPT-IN — default OFF; cmdline, NÃO udev)
 # ---------------------------------------------------------------------------
 # A alavanca do storm -71 que PRESERVA o áudio do DualSense
-# (usbcore.quirks=054c:0ce6:gn,054c:0df2:gn). É um PARÂMETRO DE CMDLINE do
+# (usbcore.quirks=054c:0ce6:gn). É um PARÂMETRO DE CMDLINE do
 # kernel — uma regra udev não consegue alterar o próprio enumeramento do device,
 # por isso entra como passo de install ciente do bootloader (kernelstub/grub).
 # Mudança de cmdline é sensível: só aplica com --with-usb-quirk. ALTERNATIVA à
@@ -2351,7 +2351,7 @@ fi
 if [[ "${WITH_USB_QUIRK}" -eq 1 ]]; then
     step "3b" "quirk de boot usbcore.quirks (preserva o áudio do DualSense)"
     if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
-        _faria_root "acrescentar usbcore.quirks=054c:0ce6:gn,054c:0df2:gn ao cmdline do kernel (kernelstub ou grub) — vale no PRÓXIMO boot"
+        _faria_root "acrescentar usbcore.quirks=054c:0ce6:gn ao cmdline do kernel (kernelstub ou grub) — vale no PRÓXIMO boot"
     elif bash "${ROOT_DIR}/scripts/install_usb_quirk.sh"; then
         printf '      quirk aplicado (vale no próximo boot) — confira: scripts/install_usb_quirk.sh --status\n'
     else
@@ -2580,7 +2580,7 @@ fi
 # ---------------------------------------------------------------------------
 # 3e. Cmdline do kernel gerenciado (PLAT-03 item 2) — DEFAULT, registro de dono
 # ---------------------------------------------------------------------------
-# Garante usbcore.autosuspend=-1 + usbcore.quirks=054c:0ce6:gn,054c:0df2:gn no
+# Garante usbcore.autosuspend=-1 + usbcore.quirks=054c:0ce6:gn no
 # cmdline do PRÓXIMO boot, com as regras provadas no estudo 2026-07-18:
 #   - o kernel respeita SÓ UM token usbcore.quirks= → o passo faz MERGE no
 #     token existente (delete + add do fundido), NUNCA adiciona um segundo;

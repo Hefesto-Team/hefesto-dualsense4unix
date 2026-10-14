@@ -7,8 +7,11 @@ CMDLINE_AURORA = (
     "initrd=\\EFI\\Pop_OS\\initrd.img root=UUID=7c6a1403 ro "
     "systemd.show_status=false loglevel=0 mitigations=off nvidia-drm.modeset=1 "
     "quiet usbcore.autosuspend=-1 acpi_enforce_resources=lax splash "
-    "pcie_aspm=off nvidia-drm.fbdev=1 usbcore.quirks=054c:0ce6:gn,054c:0df2:gn"
+    "pcie_aspm=off nvidia-drm.fbdev=1 usbcore.quirks=054c:0ce6:gn"
 )
+
+#: O token que o Hefesto gravava até 14/10/2026, com o ``n`` no pad virtual.
+TOKEN_VELHO = "usbcore.quirks=054c:0ce6:gn,054c:0df2:gn"
 
 CMDLINE_VIRGEM = "quiet splash loglevel=0"
 
@@ -30,7 +33,7 @@ class TestMaquinaVirgem:
         assert auto.token == "usbcore.autosuspend=-1"
         assert auto.owner == kc.OWNER_HEFESTO
         assert quirks.op == kc.OP_ADD
-        assert quirks.token == "usbcore.quirks=054c:0ce6:gn,054c:0df2:gn"
+        assert quirks.token == "usbcore.quirks=054c:0ce6:gn"
         assert quirks.owner == kc.OWNER_HEFESTO
 
     def test_simulacao_produz_token_unico(self) -> None:
@@ -63,7 +66,7 @@ class TestMergeTokenUnico:
         assert quirks.op == kc.OP_REPLACE
         assert quirks.owner == kc.OWNER_COMPARTILHADO
         assert quirks.remove_tokens == ("usbcore.quirks=0bda:8153:k",)
-        assert quirks.token == "usbcore.quirks=0bda:8153:k,054c:0ce6:gn,054c:0df2:gn"
+        assert quirks.token == "usbcore.quirks=0bda:8153:k,054c:0ce6:gn"
 
     def test_nunca_dois_tokens_no_resultado(self) -> None:
         cenarios = [
@@ -85,15 +88,50 @@ class TestMergeTokenUnico:
         assert quirks.op == kc.OP_REPLACE
         assert len(quirks.remove_tokens) == 2
         assert quirks.token == (
-            "usbcore.quirks=0bda:8153:k,1234:5678:g,054c:0ce6:gn,054c:0df2:gn"
+            "usbcore.quirks=0bda:8153:k,1234:5678:g,054c:0ce6:gn"
         )
 
     def test_id_parcialmente_presente_completa_sem_duplicar(self) -> None:
-        cmdline = "usbcore.quirks=054c:0ce6:gn"
+        cmdline = "usbcore.quirks=0bda:8153:k,054c:0ce6:gn"
         plano = _by_param(kc.plan_cmdline(cmdline))
         quirks = plano[kc.QUIRKS_PARAM]
-        assert quirks.token == "usbcore.quirks=054c:0ce6:gn,054c:0df2:gn"
+        assert quirks.op == kc.OP_NONE
         assert quirks.token.count("054c:0ce6") == 1
+
+
+class TestOPadVirtualSemEspera:
+    """14/10/2026: o ``n`` no ``054c:0df2`` espera 200 ms por pedido de controle.
+
+    Com 4 controles o ``SDL_Init`` do ``winebus`` passava de 20 s, o prazo de
+    10 s do ``services.exe`` vencia e o jogo ficava sem controle nenhum.
+    """
+
+    def test_maquina_virgem_nao_ganha_o_0df2(self) -> None:
+        quirks = _by_param(kc.plan_cmdline(CMDLINE_VIRGEM))[kc.QUIRKS_PARAM]
+        assert "054c:0df2" not in quirks.token
+
+    def test_o_token_velho_migra_para_o_novo(self) -> None:
+        quirks = _by_param(kc.plan_cmdline(f"quiet {TOKEN_VELHO}"))[kc.QUIRKS_PARAM]
+        assert quirks.op == kc.OP_REPLACE
+        assert quirks.remove_tokens == (TOKEN_VELHO,)
+        assert quirks.token == "usbcore.quirks=054c:0ce6:gn"
+        assert "migração" in quirks.reason
+
+    def test_a_migracao_preserva_o_terceiro(self) -> None:
+        cmdline = "usbcore.quirks=0bda:8153:k,054c:0ce6:gn,054c:0df2:gn"
+        quirks = _by_param(kc.plan_cmdline(cmdline))[kc.QUIRKS_PARAM]
+        assert quirks.token == "usbcore.quirks=0bda:8153:k,054c:0ce6:gn"
+
+    def test_o_0df2_alterado_por_terceiro_fica(self) -> None:
+        cmdline = "usbcore.quirks=054c:0ce6:gn,054c:0df2:g"
+        quirks = _by_param(kc.plan_cmdline(cmdline))[kc.QUIRKS_PARAM]
+        assert quirks.op == kc.OP_NONE
+        assert "054c:0df2:g" in quirks.token
+
+    def test_a_simulacao_da_migracao_deixa_um_token_so(self) -> None:
+        tokens = kc.parse_cmdline(f"quiet {TOKEN_VELHO} splash")
+        final = kc.apply_plan(tokens, kc.plan_tokens(tokens))
+        assert kc.tokens_for_param(final, kc.QUIRKS_PARAM) == ["usbcore.quirks=054c:0ce6:gn"]
 
 
 class TestFlagsMortas:
@@ -130,11 +168,10 @@ class TestUninstallStrip:
         assert restante == "usbcore.quirks=0bda:8153:k"
 
     def test_strip_de_token_so_nosso_deleta_inteiro(self) -> None:
-        restante, mudou = kc.strip_quirks_token(
-            "usbcore.quirks=054c:0ce6:gn,054c:0df2:gn"
-        )
-        assert mudou
-        assert restante is None
+        for token in ("usbcore.quirks=054c:0ce6:gn", TOKEN_VELHO):
+            restante, mudou = kc.strip_quirks_token(token)
+            assert mudou, token
+            assert restante is None, token
 
     def test_strip_nao_toca_entrada_alterada_por_terceiro(self) -> None:
         restante, mudou = kc.strip_quirks_token("usbcore.quirks=054c:0ce6:xyz")

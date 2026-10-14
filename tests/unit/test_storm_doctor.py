@@ -7,10 +7,18 @@ from hefesto_dualsense4unix.integrations import storm_doctor as sd
 
 
 def test_quirk_presente_e_ausente() -> None:
-    tag, _ = sd.check_quirk("054c:0ce6:gn,054c:0df2:gn")
+    tag, _ = sd.check_quirk("054c:0ce6:gn")
     assert tag == sd.OK
     tag2, _ = sd.check_quirk("")
     assert tag2 == sd.WARN
+
+
+def test_o_n_no_pad_virtual_e_defeito() -> None:
+    """14/10/2026: o `n` no 054c:0df2 espera 200 ms por pedido ao pad virtual."""
+    tag, msg = sd.check_quirk("054c:0ce6:gn,054c:0df2:gn")
+    assert tag == sd.WARN, msg
+    assert "200 ms" in msg and "4 controles" in msg, msg
+    assert sd.check_quirk("054c:0ce6:gn,054c:0df2:g")[0] == sd.OK
 
 
 def test_steam_input_ligado_desligado_ausente(tmp_path: Path) -> None:

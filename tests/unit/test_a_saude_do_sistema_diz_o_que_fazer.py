@@ -61,6 +61,9 @@ def cenas(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
 
     return {
         "quirk_do_usbcore_ausente": frase(sd.check_quirk(""), sd.WARN),
+        "quirk_no_pad_virtual": frase(
+            sd.check_quirk("054c:0ce6:gn,054c:0df2:gn"), sd.WARN
+        ),
         "steam_nao_instalada": frase(
             sd.check_steam_input(_casa_sem_steam(tmp_path)), sd.INFO
         ),
@@ -174,11 +177,11 @@ def test_todo_ramo_de_alarme_tem_uma_cena(
         and no.value.elts[0].id in {"WARN", "INFO"}
     ]
 
-    assert len(ramos) == 12, (
+    assert len(ramos) == 13, (
         f"o `storm_doctor` passou a ter {len(ramos)} ramos de alarme, e esta "
-        "bancada cobre 12 (em 13 cenas). Acrescente a cena do ramo novo em "
+        "bancada cobre 13 (em 14 cenas). Acrescente a cena do ramo novo em "
         "`cenas()` e ajuste este número no mesmo commit — senão a frase nova "
         "nasce sem o 'o que fazer' e ninguém vê.\n"
         f"Linhas: {ramos}"
     )
-    assert len(cenas(tmp_path, monkeypatch)) == 13
+    assert len(cenas(tmp_path, monkeypatch)) == 14

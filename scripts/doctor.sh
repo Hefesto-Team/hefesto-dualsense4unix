@@ -1316,7 +1316,7 @@ check_input_uaccess() {
 }
 
 # FEAT-DSX-DEFINITIVE-FIX-01 §7.5 (Opção D): o quirk de boot
-# usbcore.quirks=054c:0ce6:gn,054c:0df2:gn é a alavanca do storm -71 que PRESERVA
+# usbcore.quirks=054c:0ce6:gn é a alavanca do storm -71 que PRESERVA
 # o áudio do DualSense (ALTERNATIVA à regra 75, que desliga o áudio). É um
 # PARÂMETRO DE CMDLINE do kernel (NÃO é regra udev). Este check é puramente
 # informativo: NUNCA fail nem warn. Reporta ativo (/proc/cmdline), agendado
@@ -4944,7 +4944,7 @@ check_cmdline_platform() {
     local kstub="${HEFESTO_DOCTOR_KERNELSTUB:-/etc/kernelstub/configuration}"
     local grub="${HEFESTO_DOCTOR_GRUB:-/etc/default/grub}"
     _doctor_tem_bateria && bateria=1
-    for tok in "usbcore.autosuspend=-1" "054c:0ce6:gn" "054c:0df2:gn"; do
+    for tok in "usbcore.autosuspend=-1" "054c:0ce6:gn"; do
         ativo=0; agendado=0
         grep -qF "${tok}" "${cmdline}" 2>/dev/null && ativo=1
         { [[ -r "${kstub}" ]] && grep -qF "${tok}" "${kstub}" 2>/dev/null; } && agendado=1
@@ -7916,6 +7916,25 @@ readonly HEFESTO_DKMS_HID_NINTENDO_VER="1.0.0"
 # doctor daria pass.
 readonly HEFESTO_DKMS_KERNEL_TESTED="7.0.11-76070011-generic"
 
+# O `n` no 054c:0df2 (o pad virtual) é DEFEITO desde 14/10/2026 (ADR 018, nota
+# datada): cada pedido de controle espera 200 ms, e com quatro controles o
+# `winebus` passa do prazo do Wine e o jogo fica sem controle. Mora longe do
+# `check_cmdline_platform` para não deslocar as citações `doctor.sh:linha`.
+check_cmdline_pad_virtual() {
+    local cmdline="${HEFESTO_DOCTOR_CMDLINE:-/proc/cmdline}"
+    local kstub="${HEFESTO_DOCTOR_KERNELSTUB:-/etc/kernelstub/configuration}"
+    local grub="${HEFESTO_DOCTOR_GRUB:-/etc/default/grub}"
+    local velho="054c:0df2:gn" onde=""
+    local sysq="${HEFESTO_DOCTOR_SYS:-/sys}/module/usbcore/parameters/quirks"
+    grep -qF "${velho}" "${cmdline}" 2>/dev/null && onde="${onde} neste boot"
+    { [[ -r "${kstub}" ]] && grep -qF "${velho}" "${kstub}" 2>/dev/null; } && onde="${onde} no kernelstub"
+    { [[ -r "${grub}" ]] && grep -qF "${velho}" "${grub}" 2>/dev/null; } && onde="${onde} no grub"
+    { [[ -r "${sysq}" ]] && grep -qF "${velho}" "${sysq}" 2>/dev/null; } && onde="${onde} no sysfs"
+    if [[ -n "${onde}" ]]; then
+        warn "DEFEITO: cmdline: ${velho} (${onde# }) — o pad virtual espera 200 ms por pedido; com 4 controles o jogo perde os controles. $(conselho_de_instalacao)$(so_no_checkout "(o passo 3e tira o 054c:0df2 e mantém o 054c:0ce6)")"
+    fi
+}
+
 # A LISTA INTEIRA, LIDA DA BASELINE — 01/09/2026, e a constante acima deixou de
 # ser a resposta sozinha.
 #
@@ -9099,6 +9118,7 @@ main() {
     check_kernel_watch
     check_familias_do_radio
     check_cmdline_platform
+    check_cmdline_pad_virtual
     hdr "rádio e pareamento (G2)"
     check_bluez_backport_version
     check_bluez_curas_do_backport

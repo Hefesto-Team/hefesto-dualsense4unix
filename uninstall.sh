@@ -13,7 +13,7 @@
 #                        broker sai, e fechada ela deixaria o controle sem dono.
 #   --udev               [DEPRECATED] no-op — remoção é default desde v3.8.3.
 #   --remove-usb-quirk   EXPLÍCITO (default NÃO remove): tira o quirk de boot
-#                        usbcore.quirks=054c:0ce6:gn,054c:0df2:gn do cmdline
+#                        usbcore.quirks=054c:0ce6:gn do cmdline
 #                        (kernelstub/grub) via scripts/install_usb_quirk.sh --remove.
 #                        Por default NÃO remove: cmdline é sensível e pode ser
 #                        mantido por outra ferramenta do usuário.

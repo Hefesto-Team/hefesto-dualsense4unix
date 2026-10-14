@@ -7,7 +7,11 @@ from dataclasses import dataclass
 AUTOSUSPEND_PARAM = "usbcore.autosuspend"
 AUTOSUSPEND_TOKEN = "usbcore.autosuspend=-1"
 QUIRKS_PARAM = "usbcore.quirks"
-HEFESTO_QUIRK_IDS: tuple[str, ...] = ("054c:0ce6:gn", "054c:0df2:gn")
+HEFESTO_QUIRK_IDS: tuple[str, ...] = ("054c:0ce6:gn",)
+#: O que o Hefesto gravou antes e TIRA ao fundir (ADR 018, nota de 14/10/2026):
+#: no ``054c:0df2`` do pad virtual o ``n`` espera 200 ms por pedido de controle,
+#: e com quatro controles o jogo perde os controles. Sai só a entrada exata.
+HEFESTO_QUIRK_IDS_VELHOS: tuple[str, ...] = ("054c:0df2:gn",)
 
 OWNER_HEFESTO = "hefesto"
 OWNER_TERCEIRO = "terceiro"
@@ -67,17 +71,25 @@ def _quirks_entries(token: str) -> list[str]:
 def merge_quirks_token(
     existing_tokens: Sequence[str],
     desired_ids: Sequence[str] = HEFESTO_QUIRK_IDS,
+    obsolete_ids: Sequence[str] = HEFESTO_QUIRK_IDS_VELHOS,
 ) -> tuple[str, bool]:
-    """Funde os IDs desejados no token ÚNICO ``usbcore.quirks=``."""
+    """Funde os IDs desejados no token ÚNICO ``usbcore.quirks=``.
+
+    As entradas de ``obsolete_ids`` (as que o Hefesto gravava antes) saem.
+    """
+    velhos = set(obsolete_ids) - set(desired_ids)
     result: list[str] = []
     keys: dict[str, int] = {}
+    changed = len(existing_tokens) > 1
     for token in existing_tokens:
         for entry in _quirks_entries(token):
+            if entry in velhos:
+                changed = True
+                continue
             key = _entry_key(entry)
             if key not in keys:
                 keys[key] = len(result)
                 result.append(entry)
-    changed = len(existing_tokens) > 1
     for want in desired_ids:
         key = _entry_key(want)
         if key in keys:
@@ -94,7 +106,7 @@ def merge_quirks_token(
 
 def strip_quirks_token(
     existing_token: str,
-    ids_to_remove: Sequence[str] = HEFESTO_QUIRK_IDS,
+    ids_to_remove: Sequence[str] = HEFESTO_QUIRK_IDS + HEFESTO_QUIRK_IDS_VELHOS,
 ) -> tuple[str | None, bool]:
     """Inverso do merge, para o UNINSTALL de um token "compartilhado"."""
     ours = set(ids_to_remove)
@@ -168,6 +180,22 @@ def _plan_quirks(
             token=present[0],
             owner=OWNER_TERCEIRO,
             reason="token único já contém os IDs do hefesto — não tocar",
+        )
+    velhos = [
+        e for t in present for e in _quirks_entries(t) if e in HEFESTO_QUIRK_IDS_VELHOS
+    ]
+    if velhos:
+        return CmdlineAction(
+            param=QUIRKS_PARAM,
+            op=OP_REPLACE,
+            token=merged,
+            remove_tokens=tuple(present),
+            owner=OWNER_COMPARTILHADO,
+            reason=(
+                f"migração: {', '.join(velhos)} sai (o pad virtual esperava 200 ms "
+                "por pedido; com 4 controles o jogo perde os controles); "
+                "uninstall remove só os IDs do hefesto"
+            ),
         )
     return CmdlineAction(
         param=QUIRKS_PARAM,

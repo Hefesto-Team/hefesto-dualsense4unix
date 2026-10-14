@@ -34,7 +34,7 @@
 # mic/fone do DualSense, NÃO instale esta regra e exporte
 # HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED=1 — o doctor para de alarmar e o
 # fix do WirePlumber preserva o mic. Alternativa que mantém o áudio E reduz o
-# storm: o quirk usbcore.quirks=054c:0ce6:gn,054c:0df2:gn (DELAY_INIT+DELAY_CTRL_MSG)
+# storm: o quirk usbcore.quirks=054c:0ce6:gn (DELAY_INIT+DELAY_CTRL_MSG)
 # — use UMA OU OUTRA, nunca as duas. Ver FEAT-DSX-DEFINITIVE-FIX-01 §7.5.
 
 # --- PRIMÁRIO: deautoriza a interface de áudio antes do probe (race-reduzido) ---

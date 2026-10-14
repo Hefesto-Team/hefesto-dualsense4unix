@@ -36,7 +36,7 @@ reverteu a conclusão da parte 2 da Decisão original. Registro corrigido:
 ### Duas alavancas de software suportadas pelo Hefesto (uma OU outra, nunca as duas)
 
 - **(A) Quirk de cmdline que PRESERVA o áudio.**
-  `usbcore.quirks=054c:0ce6:gn,054c:0df2:gn` (`g` = `USB_QUIRK_DELAY_INIT`,
+  `usbcore.quirks=054c:0ce6:gn,054c:0df2:gn` até 14/10/2026 (ver a nota abaixo) (`g` = `USB_QUIRK_DELAY_INIT`,
   `n` = `USB_QUIRK_DELAY_CTRL_MSG`): espaça exatamente a rajada que derruba o
   link — o áudio ainda enumera, só mais devagar, sem tombar. Aplicado por
   `scripts/install_usb_quirk.sh` ou `./install.sh --with-usb-quirk` (opt-in,
@@ -49,6 +49,22 @@ reverteu a conclusão da parte 2 da Decisão original. Registro corrigido:
 
 São **alternativas**: o quirk preserva o áudio; a regra 75 sacrifica o áudio.
 Não usar as duas ao mesmo tempo.
+
+### Nota (2026-10-14): o `054c:0df2` sai do quirk
+
+O token da alavanca (A) passa a ser `usbcore.quirks=054c:0ce6:gn`. O
+`054c:0df2` é o PID do pad virtual do Hefesto (gadget no `vhci_hcd`), e o `n`
+dele faz o `usb_control_msg` dormir 200 ms antes de cada pedido de controle
+(medido com bpftrace: 208 ms por pedido). Com quatro controles, o `SDL_Init` do
+`winebus` levava ~23 s, passava do prazo de 10 s do `services.exe` e o jogo
+ficava sem controle nenhum; a mesma espera dava ~6 s de enumeração por pad. Sem
+o `0df2` no sysfs, a enumeração caiu para 0,2–1,1 s por pad e o jogo abriu os
+doze nós. O storm `-71` acima foi medido só no `0ce6` físico, no xHCI; o pad
+virtual vive no `vhci`, sem esse storm. Quem tem o token velho é migrado
+(`kernel_cmdline.HEFESTO_QUIRK_IDS_VELHOS`, `install_usb_quirk.sh`), e o doctor
+acusa o `054c:0df2:gn` como defeito. Decisão por delegação, a validar pelo usuário:
+o DualSense Edge físico, que tem o mesmo PID, perde o `gn` do usbcore e fica
+com a cura da camada de som (`hefesto-dualsense-storm.conf`).
 
 ### Diagnóstico
 
