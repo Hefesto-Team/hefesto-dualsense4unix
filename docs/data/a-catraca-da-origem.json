@@ -243,14 +243,14 @@
       "data": "2026-10-14",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1097171,
+      "piso": 1097244,
       "por_item": {
-        "docs": 117956,
-        "scripts": 112119,
-        "src": 298057,
-        "tests": 569039
+        "docs": 118047,
+        "scripts": 112123,
+        "src": 298048,
+        "tests": 569026
       },
-      "razao": "tamanho: +12575 linhas (1084596 -> 1097171), pagas por Origem: D-1310-O-DIARIO-ESCREVE-O-TRACEBACK-SEM-OS-LOCAIS, D-1310-O-RUNTIME-DECLARADO-VENCE-O-PLATFORMDIRS, D-1310-O-TESTE-DO-LACO-ESPERA-PELA-CONDICAO, D-1310-O-WIFI-USB-E-O-RTW88-SO-COM-O-ADAPTADOR-PRESENTE; registrado no fecho, topo 44c0d1a339c5",
+      "razao": "tamanho: +73 linhas (1097171 -> 1097244), pagas por Origem: D-1310-O-DIARIO-ESCREVE-O-TRACEBACK-SEM-OS-LOCAIS, D-1310-O-RUNTIME-DECLARADO-VENCE-O-PLATFORMDIRS, D-1310-O-TESTE-DO-LACO-ESPERA-PELA-CONDICAO, D-1310-O-WIFI-USB-E-O-RTW88-SO-COM-O-ADAPTADOR-PRESENTE; registrado no fecho, topo 81d203239181",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -347,6 +347,12 @@
           "de": 1084596,
           "para": 1097171,
           "razao": "tamanho: +12575 linhas (1084596 -> 1097171), pagas por Origem: D-1310-O-DIARIO-ESCREVE-O-TRACEBACK-SEM-OS-LOCAIS, D-1310-O-RUNTIME-DECLARADO-VENCE-O-PLATFORMDIRS, D-1310-O-TESTE-DO-LACO-ESPERA-PELA-CONDICAO, D-1310-O-WIFI-USB-E-O-RTW88-SO-COM-O-ADAPTADOR-PRESENTE; registrado no fecho, topo 44c0d1a339c5"
+        },
+        {
+          "data": "2026-10-14",
+          "de": 1097171,
+          "para": 1097244,
+          "razao": "tamanho: +73 linhas (1097171 -> 1097244), pagas por Origem: D-1310-O-DIARIO-ESCREVE-O-TRACEBACK-SEM-OS-LOCAIS, D-1310-O-RUNTIME-DECLARADO-VENCE-O-PLATFORMDIRS, D-1310-O-TESTE-DO-LACO-ESPERA-PELA-CONDICAO, D-1310-O-WIFI-USB-E-O-RTW88-SO-COM-O-ADAPTADOR-PRESENTE; registrado no fecho, topo 81d203239181"
         }
       ],
       "unidade": "linhas",
