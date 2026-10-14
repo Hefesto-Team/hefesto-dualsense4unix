@@ -234,14 +234,14 @@
     {
       "n": 26,
       "sprint": "A-ABA-NAVEGACAO-DO-TODO-01",
-      "o_que_muda": "O «i» do quadro volta: ele abre a explicação da aba, e o × fecha",
+      "o_que_muda": "A explicação da aba aparece quando o mouse fica parado sobre o quadro (e no foco do teclado), sem botão «i»",
       "resposta": "todo-06-r3-26",
       "origem": "escolha dela de 13/10",
       "ancora": ".nav-topo",
       "conflito": "",
       "rodada": 3,
       "ancora_antes": ".nav2-grade",
-      "js": "document.querySelector('.nav-i').click()",
+      "js": "document.querySelector('.nav2 select').focus()",
       "leituras": {
         "A": {
           "ancora": "#",
@@ -252,7 +252,12 @@
           "o_que": "Sem título: só o «i», no canto do quadro"
         }
       },
-      "pergunta": "O quadro leva o título «Navegação» com o «i» ao lado (A), ou fica sem título, só com o «i» no canto (B)?"
+      "pergunta": "O quadro leva o título «Navegação» com o «i» ao lado (A), ou fica sem título, só com o «i» no canto (B)?",
+      "ajuste_r3": {
+        "pedido": "a mas remove o i, deixe que ele apareça se eu deixar o mouse sob a área.",
+        "feito": "Ficou a leitura A (título «Navegação»), e o «i» saiu. A explicação aparece na faixa do título, ao lado de «Navegação», quando o mouse fica parado meio segundo sobre o quadro e também no foco do teclado; some quando o mouse sai. Não cobre nenhum campo. A leitura B saiu da página."
+      },
+      "escolha": "A"
     },
     {
       "n": 27,
