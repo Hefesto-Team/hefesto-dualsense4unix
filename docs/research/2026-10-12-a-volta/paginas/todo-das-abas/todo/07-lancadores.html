@@ -2119,6 +2119,10 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   @media (max-height:780px){.ext{min-height:0;padding:4px 0}.ext-forma{padding:2px 0}.ext-ramo{margin-top:-4px;height:calc(50% + 4px)}
     /* baixo, a frase de cada forma vira só a dica (o texto está no `data-dica`): cabem seis linhas sem rolar */
     .ext-forma .ext-faz,.ext-grupo .ext-faz{display:none}.ext-forma{min-height:32px}.miolo{gap:10px}.lanc-fila{gap:4px 12px}}
+  /* com a sexta extensão, o piso de 42 px por cartão empurrava a última fileira dos lançadores para fora da moldura
+     (9 px em 1212x809): o piso desce, e o 1fr continua enchendo a altura quando sobra */
+  @media (max-height:860px){.lanc-fila{grid-auto-rows:minmax(38px,1fr)}}
+  @media (max-height:780px){.lanc-fila{grid-auto-rows:minmax(32px,1fr)}}
 </style>
 <style data-aba="rodada-3-letra">
   /* Rodada 3 (14/10): nenhuma letra abaixo de 12 px nesta aba, como ela pediu */
