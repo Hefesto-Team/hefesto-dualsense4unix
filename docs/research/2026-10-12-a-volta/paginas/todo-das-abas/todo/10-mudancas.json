@@ -1,250 +1,272 @@
 {
- "aba": "10",
- "nome": "Perfis",
- "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/_integra-1-11/src/hefesto_dualsense4unix/interface/paginas/10-perfis.html",
- "depois": "/home/vitoriamaria/.local/state/hefesto-casa/leva-volta/todo/10-perfis.html",
- "rodada": 2,
- "sprint_unificada": "A-ABA-PERFIS-DO-TODO-01",
- "mudancas": [
-  {
-   "n": 1,
-   "sprint": "A-ABA-PERFIS-DO-TODO-01",
-   "o_que_muda": "Saem os dois «Criar perfil de point and click»",
-   "resposta": "todo-10-1",
-   "origem": "RODADA-2 §D 10",
-   "ancora": "[data-todo=\"2\"]",
-   "conflito": ""
+  "aba": "10",
+  "nome": "Perfis",
+  "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/_integra-1-11/src/hefesto_dualsense4unix/interface/paginas/10-perfis.html",
+  "depois": "/home/vitoriamaria/.local/state/hefesto-casa/leva-volta/todo/10-perfis.html",
+  "rodada": 3,
+  "sprint_unificada": "A-ABA-PERFIS-DO-TODO-01",
+  "mudancas": [
+    {
+      "n": 1,
+      "sprint": "A-ABA-PERFIS-DO-TODO-01",
+      "o_que_muda": "Saem os dois «Criar perfil de point and click»",
+      "resposta": "todo-10-1",
+      "origem": "RODADA-2 §D 10",
+      "ancora": "[data-todo=\"2\"]",
+      "conflito": ""
+    },
+    {
+      "n": 2,
+      "sprint": "A-ABA-PERFIS-DO-TODO-01",
+      "o_que_muda": "Duplicar, Novo, Remover e Ativar dividem a barra igual",
+      "resposta": "todo-10-1",
+      "origem": "RODADA-2 §D 10",
+      "ancora": "[data-todo=\"4\"]",
+      "conflito": ""
+    },
+    {
+      "n": 3,
+      "sprint": "A-ABA-PERFIS-DO-TODO-01",
+      "o_que_muda": "Estilo de jogo ganha Visual novel e Adulto",
+      "resposta": "todo-10-1",
+      "origem": "RODADA-2 §D 10",
+      "ancora": "[data-todo=\"3\"]",
+      "conflito": ""
+    },
+    {
+      "n": 4,
+      "sprint": "A-ABA-PERFIS-DO-TODO-01",
+      "o_que_muda": "Clicar na linha ativa o perfil e abre o editor",
+      "resposta": "todo-10-1",
+      "origem": "RODADA-2 §C3",
+      "ancora": "[data-todo=\"5\"]",
+      "conflito": ""
+    },
+    {
+      "n": 5,
+      "sprint": "A-ABA-PERFIS-DO-TODO-01",
+      "o_que_muda": "Duplo clique no cabeçalho ordena a lista",
+      "resposta": "todo-10-1",
+      "origem": "RODADA-2 §C3",
+      "ancora": "[data-todo=\"6\"]",
+      "conflito": ""
+    },
+    {
+      "n": 6,
+      "sprint": "A-ABA-PERFIS-DO-TODO-01",
+      "o_que_muda": "A lista inteira cabe sem rolar",
+      "resposta": "todo-10-1",
+      "origem": "RODADA-2 §A7",
+      "ancora": "[data-todo=\"7\"]",
+      "conflito": ""
+    },
+    {
+      "n": 7,
+      "sprint": "A-ABA-PERFIS-DO-TODO-01",
+      "o_que_muda": "Eventos: escolher quando, ou um comando ou .sh",
+      "resposta": "brief-T4-2",
+      "origem": "RODADA-2 §B T4",
+      "ancora": "[data-todo=\"8\"]",
+      "conflito": ""
+    },
+    {
+      "n": 8,
+      "sprint": "A-ABA-PERFIS-DO-TODO-01",
+      "o_que_muda": "Perfil antigo sem data mostra traço",
+      "resposta": "brief-T4-3",
+      "origem": "RODADA-2 §B T4",
+      "ancora": "[data-todo=\"9\"]",
+      "conflito": ""
+    },
+    {
+      "n": 9,
+      "sprint": "A-ABA-PERFIS-DO-TODO-01",
+      "o_que_muda": "Os quatro controles pela cor, com o ID inteiro",
+      "resposta": "todo-10-1",
+      "origem": "RODADA-2 §A7",
+      "ancora": "[data-todo=\"10\"]",
+      "conflito": ""
+    },
+    {
+      "n": 10,
+      "sprint": "A-ABA-PERFIS-DO-TODO-01",
+      "o_que_muda": "Colunas Criado em e Modificado em",
+      "resposta": "brief-T4",
+      "origem": "RODADA-2 §B T4",
+      "ancora": "th[data-coluna=\"criado\"]",
+      "conflito": ""
+    },
+    {
+      "n": 11,
+      "sprint": "A-ABA-PERFIS-DO-TODO-01",
+      "o_que_muda": "Nome do jogo no lugar de Nome, Detectar e Preferência",
+      "resposta": "brief-T4",
+      "origem": "RODADA-2 §B T4",
+      "ancora": "[data-hef=\"editor.jogo\"]",
+      "conflito": ""
+    },
+    {
+      "n": 12,
+      "sprint": "A-ABA-PERFIS-DO-TODO-01",
+      "o_que_muda": "Aplicar em: Jogos, Navegação, Programas e Eventos",
+      "resposta": "brief-T4",
+      "origem": "RODADA-2 §B T4",
+      "ancora": ".alvos",
+      "conflito": ""
+    },
+    {
+      "n": 13,
+      "sprint": "A-ABA-PERFIS-DO-TODO-01",
+      "o_que_muda": "Qual vale primeiro: arrastar os perfis do mesmo jogo",
+      "resposta": "brief-T4",
+      "origem": "RODADA-2 §B T4",
+      "ancora": ".ordem-vale",
+      "conflito": ""
+    },
+    {
+      "n": 14,
+      "sprint": "A-ABA-PERFIS-DO-TODO-01",
+      "o_que_muda": "Estilo Nativo no topo: o jogo decide",
+      "resposta": "todo-10-1",
+      "origem": "RODADA-2 §C1",
+      "ancora": "[data-hef=\"editor.estilo\"]",
+      "conflito": ""
+    },
+    {
+      "n": 15,
+      "sprint": "A-BASE-COMUM-DAS-ABAS-01",
+      "o_que_muda": "Sem «?»: a dica no mouse",
+      "resposta": "todo-10-1",
+      "origem": "RODADA-2 §A1",
+      "ancora": "[data-dica]",
+      "conflito": ""
+    },
+    {
+      "n": 16,
+      "sprint": "A-BASE-COMUM-DAS-ABAS-01",
+      "o_que_muda": "Menu do botão direito desenhado",
+      "resposta": "brief-T6-2",
+      "origem": "RODADA-2 §A6",
+      "ancora": "[data-todo=\"11\"]",
+      "conflito": ""
+    },
+    {
+      "n": 17,
+      "sprint": "A-ABA-PERFIS-DO-TODO-01",
+      "o_que_muda": "Estilo de jogo na largura dos outros campos",
+      "resposta": "rodada-3",
+      "origem": "RODADA-3 §conferência",
+      "ancora": ".campo select.destaque.estreito",
+      "conflito": ""
+    },
+    {
+      "n": 18,
+      "sprint": "A-ABA-PERFIS-DO-TODO-01",
+      "o_que_muda": "Tabela dos controles sem passar da borda",
+      "resposta": "rodada-3",
+      "origem": "RODADA-3 §conferência",
+      "ancora": ".guarda",
+      "conflito": ""
+    },
+    {
+      "n": 19,
+      "sprint": "DOIS-CONTROLES-JOGAM-COMO-UM-NO-COPILOTO-01",
+      "o_que_muda": "O copiloto mora no perfil do jogo: o controle que joga, mais o copiloto, e a chave; os botões do segundo somam aos do primeiro, e a vibração vai aos dois",
+      "resposta": "todo-10-r3-19",
+      "origem": "escolha dela de 13/10",
+      "ancora": ".copiloto",
+      "conflito": "",
+      "rodada": 3,
+      "ancora_antes": ".ordem-vale"
+    },
+    {
+      "n": 20,
+      "sprint": "A-ABA-PERFIS-DO-TODO-01",
+      "o_que_muda": "Para o copiloto caber, os campos do Editar encolhem nas janelas baixas, e a tabela dos controles volta a mostrar o White inteiro em 1212x740",
+      "resposta": "todo-10-r3-20",
+      "origem": "escolha dela de 13/10",
+      "ancora": ".guarda",
+      "conflito": "",
+      "rodada": 3,
+      "ancora_antes": ".guarda"
+    }
+  ],
+  "estados": {
+    "eventos": "document.querySelector('[data-v=\"eventos\"]').click()",
+    "menu": "document.getElementById('menu-desenhado').hidden = false"
   },
-  {
-   "n": 2,
-   "sprint": "A-ABA-PERFIS-DO-TODO-01",
-   "o_que_muda": "Duplicar, Novo, Remover e Ativar dividem a barra igual",
-   "resposta": "todo-10-1",
-   "origem": "RODADA-2 §D 10",
-   "ancora": "[data-todo=\"4\"]",
-   "conflito": ""
-  },
-  {
-   "n": 3,
-   "sprint": "A-ABA-PERFIS-DO-TODO-01",
-   "o_que_muda": "Estilo de jogo ganha Visual novel e Adulto",
-   "resposta": "todo-10-1",
-   "origem": "RODADA-2 §D 10",
-   "ancora": "[data-todo=\"3\"]",
-   "conflito": ""
-  },
-  {
-   "n": 4,
-   "sprint": "A-ABA-PERFIS-DO-TODO-01",
-   "o_que_muda": "Clicar na linha ativa o perfil e abre o editor",
-   "resposta": "todo-10-1",
-   "origem": "RODADA-2 §C3",
-   "ancora": "[data-todo=\"5\"]",
-   "conflito": ""
-  },
-  {
-   "n": 5,
-   "sprint": "A-ABA-PERFIS-DO-TODO-01",
-   "o_que_muda": "Duplo clique no cabeçalho ordena a lista",
-   "resposta": "todo-10-1",
-   "origem": "RODADA-2 §C3",
-   "ancora": "[data-todo=\"6\"]",
-   "conflito": ""
-  },
-  {
-   "n": 6,
-   "sprint": "A-ABA-PERFIS-DO-TODO-01",
-   "o_que_muda": "A lista inteira cabe sem rolar",
-   "resposta": "todo-10-1",
-   "origem": "RODADA-2 §A7",
-   "ancora": "[data-todo=\"7\"]",
-   "conflito": ""
-  },
-  {
-   "n": 7,
-   "sprint": "A-ABA-PERFIS-DO-TODO-01",
-   "o_que_muda": "Eventos: escolher quando, ou um comando ou .sh",
-   "resposta": "brief-T4-2",
-   "origem": "RODADA-2 §B T4",
-   "ancora": "[data-todo=\"8\"]",
-   "conflito": ""
-  },
-  {
-   "n": 8,
-   "sprint": "A-ABA-PERFIS-DO-TODO-01",
-   "o_que_muda": "Perfil antigo sem data mostra traço",
-   "resposta": "brief-T4-3",
-   "origem": "RODADA-2 §B T4",
-   "ancora": "[data-todo=\"9\"]",
-   "conflito": ""
-  },
-  {
-   "n": 9,
-   "sprint": "A-ABA-PERFIS-DO-TODO-01",
-   "o_que_muda": "Os quatro controles pela cor, com o ID inteiro",
-   "resposta": "todo-10-1",
-   "origem": "RODADA-2 §A7",
-   "ancora": "[data-todo=\"10\"]",
-   "conflito": ""
-  },
-  {
-   "n": 10,
-   "sprint": "A-ABA-PERFIS-DO-TODO-01",
-   "o_que_muda": "Colunas Criado em e Modificado em",
-   "resposta": "brief-T4",
-   "origem": "RODADA-2 §B T4",
-   "ancora": "th[data-coluna=\"criado\"]",
-   "conflito": ""
-  },
-  {
-   "n": 11,
-   "sprint": "A-ABA-PERFIS-DO-TODO-01",
-   "o_que_muda": "Nome do jogo no lugar de Nome, Detectar e Preferência",
-   "resposta": "brief-T4",
-   "origem": "RODADA-2 §B T4",
-   "ancora": "[data-hef=\"editor.jogo\"]",
-   "conflito": ""
-  },
-  {
-   "n": 12,
-   "sprint": "A-ABA-PERFIS-DO-TODO-01",
-   "o_que_muda": "Aplicar em: Jogos, Navegação, Programas e Eventos",
-   "resposta": "brief-T4",
-   "origem": "RODADA-2 §B T4",
-   "ancora": ".alvos",
-   "conflito": ""
-  },
-  {
-   "n": 13,
-   "sprint": "A-ABA-PERFIS-DO-TODO-01",
-   "o_que_muda": "Qual vale primeiro: arrastar os perfis do mesmo jogo",
-   "resposta": "brief-T4",
-   "origem": "RODADA-2 §B T4",
-   "ancora": ".ordem-vale",
-   "conflito": ""
-  },
-  {
-   "n": 14,
-   "sprint": "A-ABA-PERFIS-DO-TODO-01",
-   "o_que_muda": "Estilo Nativo no topo: o jogo decide",
-   "resposta": "todo-10-1",
-   "origem": "RODADA-2 §C1",
-   "ancora": "[data-hef=\"editor.estilo\"]",
-   "conflito": ""
-  },
-  {
-   "n": 15,
-   "sprint": "A-BASE-COMUM-DAS-ABAS-01",
-   "o_que_muda": "Sem «?»: a dica no mouse",
-   "resposta": "todo-10-1",
-   "origem": "RODADA-2 §A1",
-   "ancora": "[data-dica]",
-   "conflito": ""
-  },
-  {
-   "n": 16,
-   "sprint": "A-BASE-COMUM-DAS-ABAS-01",
-   "o_que_muda": "Menu do botão direito desenhado",
-   "resposta": "brief-T6-2",
-   "origem": "RODADA-2 §A6",
-   "ancora": "[data-todo=\"11\"]",
-   "conflito": ""
-  },
-  {
-   "n": 17,
-   "sprint": "A-ABA-PERFIS-DO-TODO-01",
-   "o_que_muda": "Estilo de jogo na largura dos outros campos",
-   "resposta": "rodada-3",
-   "origem": "RODADA-3 §conferência",
-   "ancora": ".campo select.destaque.estreito",
-   "conflito": ""
-  },
-  {
-   "n": 18,
-   "sprint": "A-ABA-PERFIS-DO-TODO-01",
-   "o_que_muda": "Tabela dos controles sem passar da borda",
-   "resposta": "rodada-3",
-   "origem": "RODADA-3 §conferência",
-   "ancora": ".guarda",
-   "conflito": ""
-  }
- ],
- "estados": {
-  "eventos": "document.querySelector('[data-v=\"eventos\"]').click()",
-  "menu": "document.getElementById('menu-desenhado').hidden = false"
- },
- "por_baixo": [
-  {
-   "sprint": "O-EDITOR-DA-ABA-PERFIS-SO-GRAVA-NO-PERFIL-QUE-MOSTRA-01",
-   "o_que_muda": "Nada na tela."
-  },
-  {
-   "sprint": "O-ATIVAR-DA-ABA-PERFIS-AGE-SOBRE-O-PERFIL-QUE-O-EDITOR-MOSTRA-01",
-   "o_que_muda": "O botão Ativar é o mesmo."
-  },
-  {
-   "sprint": "A-GUARDA-DO-EDITOR-ACHA-O-AJUSTE-DE-CADA-CONTROLE-01",
-   "o_que_muda": "Nada na tela."
-  },
-  {
-   "sprint": "O-SALVAR-E-O-APLICAR-LEEM-O-PERFIL-01",
-   "o_que_muda": "Nada na tela."
-  },
-  {
-   "sprint": "O-ESTILO-CHEGA-AO-GATILHO-E-A-VIBRACAO-DE-CADA-CONTROLE-01",
-   "o_que_muda": "Nada na tela."
-  },
-  {
-   "sprint": "O-PERSONALIZADO-DESLIGA-A-RECEITA-DO-ESTILO-ANTERIOR-01",
-   "o_que_muda": "Nada na tela."
-  },
-  {
-   "sprint": "A-RECEITA-DO-TATO-SE-LE-SEM-SEMEAR-NEM-VARRER-01",
-   "o_que_muda": "Nada na tela."
-  },
-  {
-   "sprint": "O-POINT-AND-CLICK-SERVE-A-VISUAL-NOVEL-01",
-   "o_que_muda": "A marca Visual novel liga o point and click por baixo."
-  },
-  {
-   "sprint": "CADA-FEATURE-TEM-UM-DONO-SO-NA-INTERFACE-01",
-   "o_que_muda": "A 10 não edita botão; a régua só confirma."
-  },
-  {
-   "sprint": "A-INTERFACE-INTEIRA-SE-ALCANCA-PELO-CONTROLE-E-PELO-TECLADO-01",
-   "o_que_muda": "As 15 linhas da lista ganham tabindex=0."
-  },
-  {
-   "sprint": "O-TEMA-DE-CORES-ENTRA-PELA-FOLHA-DE-USUARIO-01",
-   "o_que_muda": "Só tokens do :root."
-  }
- ],
- "fora": [
-  {
-   "sprint": "NO-MODO-XBOX-TUDO-FUNCIONA-01",
-   "motivo": "Espera ela; nada nestas páginas."
-  },
-  {
-   "sprint": "A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01",
-   "motivo": "Espera ela; nada nestas páginas."
-  },
-  {
-   "sprint": "A-MIRA-PELO-GIRO-VALE-EM-JOGO-QUE-SO-FALA-XBOX-01",
-   "motivo": "Caducou."
-  },
-  {
-   "sprint": "I18N-DA-TELA-NOVA-01",
-   "motivo": "Fora da leva; nada de texto novo depende dela."
-  },
-  {
-   "sprint": "TRADUZIR-O-PROJETO-01",
-   "motivo": "Fora da leva; nada de texto novo depende dela."
-  },
-  {
-   "sprint": "O-ESTILO-DO-PERFIL-LIGA-O-MOTOR-DO-TATO-01",
-   "motivo": "Já costurada na 1-11: está no antes."
-  }
- ],
- "altura_px": 809,
- "rola": false
+  "por_baixo": [
+    {
+      "sprint": "O-EDITOR-DA-ABA-PERFIS-SO-GRAVA-NO-PERFIL-QUE-MOSTRA-01",
+      "o_que_muda": "Nada na tela."
+    },
+    {
+      "sprint": "O-ATIVAR-DA-ABA-PERFIS-AGE-SOBRE-O-PERFIL-QUE-O-EDITOR-MOSTRA-01",
+      "o_que_muda": "O botão Ativar é o mesmo."
+    },
+    {
+      "sprint": "A-GUARDA-DO-EDITOR-ACHA-O-AJUSTE-DE-CADA-CONTROLE-01",
+      "o_que_muda": "Nada na tela."
+    },
+    {
+      "sprint": "O-SALVAR-E-O-APLICAR-LEEM-O-PERFIL-01",
+      "o_que_muda": "Nada na tela."
+    },
+    {
+      "sprint": "O-ESTILO-CHEGA-AO-GATILHO-E-A-VIBRACAO-DE-CADA-CONTROLE-01",
+      "o_que_muda": "Nada na tela."
+    },
+    {
+      "sprint": "O-PERSONALIZADO-DESLIGA-A-RECEITA-DO-ESTILO-ANTERIOR-01",
+      "o_que_muda": "Nada na tela."
+    },
+    {
+      "sprint": "A-RECEITA-DO-TATO-SE-LE-SEM-SEMEAR-NEM-VARRER-01",
+      "o_que_muda": "Nada na tela."
+    },
+    {
+      "sprint": "O-POINT-AND-CLICK-SERVE-A-VISUAL-NOVEL-01",
+      "o_que_muda": "A marca Visual novel liga o point and click por baixo."
+    },
+    {
+      "sprint": "CADA-FEATURE-TEM-UM-DONO-SO-NA-INTERFACE-01",
+      "o_que_muda": "A 10 não edita botão; a régua só confirma."
+    },
+    {
+      "sprint": "A-INTERFACE-INTEIRA-SE-ALCANCA-PELO-CONTROLE-E-PELO-TECLADO-01",
+      "o_que_muda": "As 15 linhas da lista ganham tabindex=0."
+    },
+    {
+      "sprint": "O-TEMA-DE-CORES-ENTRA-PELA-FOLHA-DE-USUARIO-01",
+      "o_que_muda": "Só tokens do :root."
+    }
+  ],
+  "fora": [
+    {
+      "sprint": "NO-MODO-XBOX-TUDO-FUNCIONA-01",
+      "motivo": "Espera ela; nada nestas páginas."
+    },
+    {
+      "sprint": "A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01",
+      "motivo": "Espera ela; nada nestas páginas."
+    },
+    {
+      "sprint": "A-MIRA-PELO-GIRO-VALE-EM-JOGO-QUE-SO-FALA-XBOX-01",
+      "motivo": "Caducou."
+    },
+    {
+      "sprint": "I18N-DA-TELA-NOVA-01",
+      "motivo": "Fora da leva; nada de texto novo depende dela."
+    },
+    {
+      "sprint": "TRADUZIR-O-PROJETO-01",
+      "motivo": "Fora da leva; nada de texto novo depende dela."
+    },
+    {
+      "sprint": "O-ESTILO-DO-PERFIL-LIGA-O-MOTOR-DO-TATO-01",
+      "motivo": "Já costurada na 1-11: está no antes."
+    }
+  ],
+  "altura_px": 809,
+  "rola": false
 }

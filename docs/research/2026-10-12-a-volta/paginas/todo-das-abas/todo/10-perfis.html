@@ -1933,6 +1933,19 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 .menu-hefesto button:hover{background:rgba(189,147,249,.14)}
 .menu-hefesto button[disabled]{color:var(--texto-mudo,#9a9eb8);opacity:.55;cursor:default;background:transparent}
 .menu-hefesto hr{border:0;border-top:1px solid var(--border-sutil,#343746);margin:5px 4px}
+  /* rodada 3 (13/10): o copiloto mora no perfil do jogo */
+  .cop-val{display:flex;align-items:center;gap:8px}
+  .campo .cop-val select.cop-sel{flex:1 1 0 !important;min-width:0 !important;width:0 !important;max-width:none}
+  .cop-val{min-width:0;overflow:hidden}
+  @media (max-height:860px){.campo{height:32px} .campo input,.campo select,.campo .seg button{height:32px !important;min-height:0} .ordem-vale li{height:26px} .ordem-vale{margin:0 0 6px}}
+  @media (max-height:780px){.campos{padding:8px 12px} .campo{height:28px;margin-bottom:3px} .campo input,.campo select,.campo .seg button{height:28px !important}
+    .ordem-vale li{height:24px} .ordem-vale ol{gap:3px} .ordem-vale .cab{margin-bottom:3px} .tab.miuda thead th{padding:3px 8px}}
+  .cop-mais{color:var(--texto-mudo);font-weight:600}
+  .nj-tog{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border:1px solid var(--border-forte);border-radius:6px;font-size:11.5px;
+          color:var(--texto-mudo);cursor:pointer;user-select:none;white-space:nowrap;flex:none}
+  .nj-tog .pino{width:7px;height:7px;border-radius:50%;background:var(--border-forte)}
+  .nj-tog.ligado{border-color:var(--green);background:rgba(80,250,123,.1);color:var(--green)}
+  .nj-tog.ligado .pino{background:var(--green);box-shadow:0 0 6px var(--green)}
 </style>
 </head>
 <body data-campo="nativo" data-hef-alvo="classe" data-hef-classe="nativo" data-hef-quando="sim">
@@ -2235,6 +2248,10 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                 <option>Simulação/Voo</option>
                 <option>Personalizado</option>
                 </select></span>
+              </div>
+              <div class="campo copiloto" data-r3="19">
+                <span data-dica="O segundo controle não ganha controle próprio no jogo: os botões dele somam aos do primeiro, e a vibração vai aos dois. Vale só neste jogo">Copiloto:</span>
+                <span class="val cop-val"><select class="estreito cop-sel" aria-label="O controle que joga"><option selected>Cosmic Red</option><option>Starlight Blue</option><option>White</option><option>Galactic Purple</option></select><span class="cop-mais">+</span><select class="estreito cop-sel" aria-label="O copiloto"><option>Cosmic Red</option><option selected>Starlight Blue</option><option>White</option><option>Galactic Purple</option><option>Ninguém</option></select><span class="nj-tog ligado cop-tog" data-hef-gesto="editor.copiloto" data-dica="Liga ou desliga o copiloto neste jogo"><span class="pino"></span><span class="txt">Ligado</span></span></span>
               </div>
               <div class="ordem-vale" data-hef="editor.ordem">
                 <div class="cab" data-dica="Arraste: o de cima vale quando os dois servem">Qual vale primeiro</div>
