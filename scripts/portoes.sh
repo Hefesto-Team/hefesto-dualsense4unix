@@ -456,7 +456,10 @@ completo|referencias-docs|py|scripts/validar-referencias-docs.py --all
 completo|anonimato|bash|scripts/check_anonymity.sh
 completo|autoria-arvore|py|scripts/check_autoria.py arvore|@sempre
 completo|acentuacao|py|scripts/validar-acentuacao.py --all
-completo|mypy|bin|mypy src/hefesto_dualsense4unix|src/** pyproject.toml
+# Cada mypy com o seu cache (13/10/2026): o cache do mypy 2 é um banco SQLite, e os dois portões
+# em paralelo sobre a mesma pasta fria dão `database is locked` e INTERNAL ERROR em ~200 ms
+# (2 de 3 corridas do CI; 3 de 30 pares aqui).
+completo|mypy|bin|mypy --cache-dir .mypy_cache/src src/hefesto_dualsense4unix|src/** pyproject.toml
 # OS TESTES QUE JÁ PASSAM NO MYPY NÃO VOLTAM A SUJAR (09/10/2026,
 # A-DIVIDA-DA-BASE-DESCE-POR-ARQUIVO-E-POR-QUEM-TOCA-01): `mypy tests/` inteiro dá milhares de
 # erros e não cabe em portão nenhum; `tests/mypy-limpos.txt` lista, um caminho por linha e sem
@@ -466,7 +469,7 @@ completo|mypy|bin|mypy src/hefesto_dualsense4unix|src/** pyproject.toml
 # O `--follow-imports=silent` mede SÓ os arquivos da lista: sem ele, o `tests/conftest.py` e todo
 # teste importado reprovam por conta própria, e nenhum teste que os importa entra na lista.
 # Custo medido com o cache frio: de 3,5 a 5,2 s com seis arquivos (09/10, máquina carregada).
-completo|mypy-testes|bin|mypy --follow-imports=silent @tests/mypy-limpos.txt|tests/** src/** pyproject.toml
+completo|mypy-testes|bin|mypy --cache-dir .mypy_cache/testes --follow-imports=silent @tests/mypy-limpos.txt|tests/** src/** pyproject.toml
 completo|coleta-sem-gtk|py|scripts/check_a_coleta_sem_gtk.py
 suite|suite|bin|pytest -q
 TABELA
