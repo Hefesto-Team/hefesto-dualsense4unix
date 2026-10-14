@@ -19,7 +19,7 @@ Miniaplicativos, com botão **"Adicionar"**. É o "tray de verdade" no COSMIC.
   - bateria (% + transporte USB/Bluetooth);
   - perfil ativo;
   - **lista clicável de perfis** (clique troca o perfil via `profile.switch`);
-  - **Abrir painel** → lança a GUI (`hefesto-dualsense4unix-gui`).
+  - **Abrir programa** → lança a GUI (`hefesto-dualsense4unix-gui`).
 - Enquanto o popover está aberto, reconsulta o daemon (`daemon.state_full`) a
   ~1,5 Hz. Se o daemon não estiver rodando, **degrada graciosamente** (sem
   crash): mostra "Daemon desconectado".

@@ -3390,7 +3390,7 @@ fi
 # interface nova chama); o que mudou foi o LANÇADOR.
 # O `.desktop` E O LANÇADOR DO TRAY PRECISAM DIZER A MESMA COISA — 19/09/2026.
 # Até aqui o `.desktop` do menu dela abria com `GDK_BACKEND=x11` e o
-# `~/.local/bin/hefesto-dualsense4unix-gui` (que o «Abrir painel» do tray usa)
+# `~/.local/bin/hefesto-dualsense4unix-gui` (que o «Abrir programa» do tray usa)
 # NÃO: dois caminhos para a MESMA janela, com backends diferentes. Um deles
 # perdia o tema do portal e o outro não, e ninguém tinha como saber qual janela
 # estava vendo. Com o XWayland fora do default, os dois passam a ser iguais.
@@ -4104,7 +4104,7 @@ fi
 # O QUE ENTRA NO LUGAR: o tray SNI (`app/tray.py`, subido por
 # `cli/cmd_tray.py`), com autostart escrito no passo 4. Ele aparece sem
 # configuração nenhuma, funciona fora do COSMIC, e o menu dele é mais rico —
-# «Abrir painel», a lista de perfis e o estado, todos falando com o daemon.
+# «Abrir programa», a lista de perfis e o estado, todos falando com o daemon.
 #
 # E A PREMISSA QUE O ADIAVA CAIU JUNTO: este projeto dizia que em Pop!_OS
 # COSMIC *"o `org.kde.StatusNotifierWatcher` que o libayatana usa não existe"*.

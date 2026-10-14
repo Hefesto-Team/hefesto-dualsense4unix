@@ -153,12 +153,12 @@ def test_a_marca_do_item_ativo_e_a_mesma_nas_duas_superficies_que_listam() -> No
     )
 
 
-def test_abrir_painel_e_a_mesma_frase_na_bandeja_e_no_applet() -> None:
+def test_abrir_programa_e_a_mesma_frase_na_bandeja_e_no_applet() -> None:
     """Os dois menus do painel oferecem a mesma ação; têm de a chamar igual."""
-    assert '_("Abrir painel")' in _BANDEJA.read_text(encoding="utf-8"), (
+    assert '_("Abrir programa")' in _BANDEJA.read_text(encoding="utf-8"), (
         "a bandeja renomeou o item que abre a janela — confira o applet junto"
     )
-    assert '"Abrir painel"' in _APPLET.read_text(encoding="utf-8"), (
+    assert '"Abrir programa"' in _APPLET.read_text(encoding="utf-8"), (
         "o applet renomeou o item que abre a janela — confira a bandeja junto"
     )
 

@@ -165,7 +165,7 @@ class TestAsOnzeFrasesObedecemAInstalacao:
 
     @staticmethod
     def _frase_do_tray(monkeypatch: pytest.MonkeyPatch) -> str:
-        """O ramo "o lançador não está no PATH" do «Abrir painel»."""
+        """O ramo "o lançador não está no PATH" do «Abrir programa»."""
         from hefesto_dualsense4unix.cli import cmd_tray
 
         def _sem_lancador(*_args: object, **_kwargs: object) -> None:

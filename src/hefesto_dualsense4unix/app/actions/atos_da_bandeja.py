@@ -17,7 +17,7 @@ VERBOS: dict[str, str] = {"reiniciar": "restart", "parar": "stop", "ativar": "st
 
 
 def abrir_o_painel() -> None:
-    """O «Abrir painel» — a diferença que mais pesa entre os dois trays."""
+    """O «Abrir programa» — a diferença que mais pesa entre os dois trays."""
     try:
         subprocess.Popen(
             [LANCADOR_DO_PAINEL],

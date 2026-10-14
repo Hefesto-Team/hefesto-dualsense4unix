@@ -17,7 +17,7 @@ import pytest
 
 from tests.unit import test_tray_a_listinha as base
 
-ROTULO = "Sair do Hefesto - DualSense4Unix"
+ROTULO = "Sair"
 
 gtk_de_mentira = base.gtk_de_mentira
 
@@ -94,7 +94,7 @@ def _tray_montado(mod: Any, monkeypatch: pytest.MonkeyPatch, **extras: Any) -> A
 
 def _sair(tray: Any) -> Any:
     itens = [i for i in tray._menu.itens if i.get_label() == ROTULO]
-    assert len(itens) == 1, "o item Sair tem de existir uma vez só, com o nome da casa"
+    assert len(itens) == 1, "o item Sair tem de existir uma vez só"
     return itens[0]
 
 
@@ -155,3 +155,17 @@ def test_o_sair_e_o_parar_chamam_o_mesmo_ato(
     tray._servico_item.emitir()
     _sair(tray).emitir()
     assert pedidos == ["stop", "stop"]
+
+
+def test_o_menu_segue_a_ordem_dela(
+        gtk_de_mentira: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A ordem de 14/10/2026: o nome, Perfis, Abrir programa, o jogo, o serviço e Sair."""
+    tray = _tray_montado(gtk_de_mentira, monkeypatch,
+                         on_servico=lambda _v: True, on_set_modo=lambda _l: True,
+                         on_reconectar=lambda: True)
+    rotulos = ["—" if isinstance(i, base._Separador) else i.get_label()
+               for i in tray._menu.itens]
+    assert rotulos == [
+        "Hefesto - DualSense4Unix", "—", "Perfis", "—", "Abrir programa", "—",
+        "Ligado", "Desligado", "Reconectar controles", "—",
+        "Reiniciar o serviço", "Parar o serviço", "—", "Sair"]

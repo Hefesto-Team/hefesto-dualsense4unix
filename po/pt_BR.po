@@ -393,16 +393,12 @@ msgid "Hefesto - DualSense4Unix (carregando...)"
 msgstr "Hefesto - DualSense4Unix (carregando...)"
 
 #: src/hefesto_dualsense4unix/app/tray.py:222
-msgid "Abrir painel"
-msgstr "Abrir painel"
+msgid "Abrir programa"
+msgstr "Abrir programa"
 
 #: src/hefesto_dualsense4unix/app/tray.py:228
 msgid "Perfis"
 msgstr "Perfis"
-
-#: src/hefesto_dualsense4unix/app/tray.py:239
-msgid "Sair do Hefesto - DualSense4Unix"
-msgstr "Sair do Hefesto - DualSense4Unix"
 
 #: src/hefesto_dualsense4unix/app/tray.py:445
 #, python-format
