@@ -2,7 +2,7 @@
   "aba": "05",
   "nome": "Vibração",
   "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/_integra-1-11/src/hefesto_dualsense4unix/interface/paginas/05-vibracao.html",
-  "depois": "/home/vitoriamaria/.local/state/hefesto-casa/leva-volta/todo/05-vibracao.html",
+  "depois": "docs/research/2026-10-12-a-volta/paginas/todo-das-abas/todo/05-vibracao.html",
   "rodada": 3,
   "sprint_unificada": "A-ABA-VIBRACAO-DO-TODO-01",
   "mudancas": [
@@ -286,5 +286,10 @@
     }
   ],
   "altura_px": 809,
-  "rola": false
+  "rola": false,
+  "origem_da_pagina": "r3 (v3)",
+  "consertos_da_fusao": [
+    "A vaga sem controle diz «P3 • Desconectado» e «P4 • Desconectado» (q4B).",
+    "O Cosmic Red se chama pela cor, sem nome de pessoa."
+  ]
 }

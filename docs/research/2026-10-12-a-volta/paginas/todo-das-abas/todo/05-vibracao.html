@@ -2073,6 +2073,11 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 .menu-hefesto button[disabled]{color:var(--texto-mudo,#9a9eb8);opacity:.55;cursor:default;background:transparent}
 .menu-hefesto hr{border:0;border-top:1px solid var(--border-sutil,#343746);margin:5px 4px}
 </style>
+<style data-conserto="a vaga sem controle diz «P3 • Desconectado» (q4B)">
+/* Conserto da fusão (14/10): a vaga sem controle diz «P3 • Desconectado» (q4B). */
+.vib .ctrl.off[data-conectado="nao"] .rot-ctrl{color:var(--texto-mudo)}
+.vib .ctrl.off[data-conectado="nao"] .rot-ctrl b{color:var(--texto-suave);font-weight:600}
+</style>
 </head>
 <body class="por-controle" data-campo="nativo" data-hef-alvo="classe" data-hef-classe="nativo" data-hef-quando="sim">
 
@@ -2628,7 +2633,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg></div>
-            <div class="rot-ctrl" data-hef="identidade" data-todo="4">Vitória <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</div>
+            <div class="rot-ctrl" data-hef="identidade" data-todo="4">Cosmic Red <span class="pt">•</span> USB</div>
             <div class="forca" data-campo="padrao" data-hef-alvo="classe"
                  data-hef-classe="padrao">
               <div class="motor mult"><span class="lado glifo-forca on" role="img" aria-label="O controle inteiro" data-dica="Os dois motores e a háptica: tudo que vibra"><svg class="gl gl-ctrl" width="20" height="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" aria-hidden="true"><title>DualSense</title><path d="M8.5 7H23.5C26.6 7 28.4 8.9 29.1 12.2L30.6 22.6C31.1 26.6 27.9 28.6 25.6 26.6L21.4 21.9Q16 19.6 10.6 21.9L6.4 26.6C4.1 28.6 0.9 26.6 1.4 22.6L2.9 12.2C3.6 8.9 5.4 7 8.5 7Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><rect x="10.2" y="7" width="11.6" height="6.4" rx="1" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="12.4" cy="17" r="1.7" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="19.6" cy="17" r="1.7" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M6.6 11.4V15.4M4.6 13.4H8.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="25.4" cy="11.9" r="0.9" fill="currentColor"/><circle cx="25.4" cy="14.9" r="0.9" fill="currentColor"/><circle cx="23.9" cy="13.4" r="0.9" fill="currentColor"/><circle cx="26.9" cy="13.4" r="0.9" fill="currentColor"/></svg></span><input class="trilho arrasta" type="range" min="0" max="100" step="5" value="100" data-papel="intensidade" data-campo="mult-pos" data-hef-alvo="valor" data-dica="A força de tudo que vibra neste controle: 100% é o que o firmware entrega, e o trilho só abaixa"><span class="num" data-campo="mult">100</span><span class="teto">%</span></div>
@@ -3356,7 +3361,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg></div>
-            <div class="rot-ctrl" data-hef="identidade" data-todo="4" aria-label="Nenhum controle aqui"></div>
+            <div class="rot-ctrl" data-hef="identidade" data-todo="4"><b>P3</b> <span class="pt">•</span> Desconectado</div>
             <div class="forca" data-campo="padrao" data-hef-alvo="classe"
                  data-hef-classe="padrao">
               <div class="motor mult"><span class="lado glifo-forca" role="img" aria-label="O controle inteiro" data-dica="Os dois motores e a háptica: tudo que vibra"><svg class="gl gl-ctrl" width="20" height="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" aria-hidden="true"><title>DualSense</title><path d="M8.5 7H23.5C26.6 7 28.4 8.9 29.1 12.2L30.6 22.6C31.1 26.6 27.9 28.6 25.6 26.6L21.4 21.9Q16 19.6 10.6 21.9L6.4 26.6C4.1 28.6 0.9 26.6 1.4 22.6L2.9 12.2C3.6 8.9 5.4 7 8.5 7Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><rect x="10.2" y="7" width="11.6" height="6.4" rx="1" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="12.4" cy="17" r="1.7" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="19.6" cy="17" r="1.7" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M6.6 11.4V15.4M4.6 13.4H8.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="25.4" cy="11.9" r="0.9" fill="currentColor"/><circle cx="25.4" cy="14.9" r="0.9" fill="currentColor"/><circle cx="23.9" cy="13.4" r="0.9" fill="currentColor"/><circle cx="26.9" cy="13.4" r="0.9" fill="currentColor"/></svg></span><input class="trilho arrasta" type="range" min="0" max="100" step="5" value="0" data-papel="intensidade" data-campo="mult-pos" data-hef-alvo="valor" data-dica="A força de tudo que vibra neste controle: 100% é o que o firmware entrega, e o trilho só abaixa"><span class="num" data-campo="mult">—</span><span class="teto">%</span></div>
@@ -3720,7 +3725,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg></div>
-            <div class="rot-ctrl" data-hef="identidade" data-todo="4" aria-label="Nenhum controle aqui"></div>
+            <div class="rot-ctrl" data-hef="identidade" data-todo="4"><b>P4</b> <span class="pt">•</span> Desconectado</div>
             <div class="forca" data-campo="padrao" data-hef-alvo="classe"
                  data-hef-classe="padrao">
               <div class="motor mult"><span class="lado glifo-forca" role="img" aria-label="O controle inteiro" data-dica="Os dois motores e a háptica: tudo que vibra"><svg class="gl gl-ctrl" width="20" height="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" aria-hidden="true"><title>DualSense</title><path d="M8.5 7H23.5C26.6 7 28.4 8.9 29.1 12.2L30.6 22.6C31.1 26.6 27.9 28.6 25.6 26.6L21.4 21.9Q16 19.6 10.6 21.9L6.4 26.6C4.1 28.6 0.9 26.6 1.4 22.6L2.9 12.2C3.6 8.9 5.4 7 8.5 7Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><rect x="10.2" y="7" width="11.6" height="6.4" rx="1" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="12.4" cy="17" r="1.7" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="19.6" cy="17" r="1.7" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M6.6 11.4V15.4M4.6 13.4H8.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="25.4" cy="11.9" r="0.9" fill="currentColor"/><circle cx="25.4" cy="14.9" r="0.9" fill="currentColor"/><circle cx="23.9" cy="13.4" r="0.9" fill="currentColor"/><circle cx="26.9" cy="13.4" r="0.9" fill="currentColor"/></svg></span><input class="trilho arrasta" type="range" min="0" max="100" step="5" value="0" data-papel="intensidade" data-campo="mult-pos" data-hef-alvo="valor" data-dica="A força de tudo que vibra neste controle: 100% é o que o firmware entrega, e o trilho só abaixa"><span class="num" data-campo="mult">—</span><span class="teto">%</span></div>
