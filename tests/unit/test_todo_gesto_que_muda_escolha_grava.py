@@ -56,6 +56,18 @@ ATOS: dict[Chave, str] = {
     ("*", "exportar"):
         "ato: copia o arquivo do perfil para FORA, onde ela escolhe; nenhum "
         "perfil nem aparelho dela muda",
+    ("*", "menu-atualizar"):
+        "ato: o botão direito manda reler o que o Hefesto lê (`daemon.reload`); "
+        "nenhuma escolha dela muda (A-BASE-COMUM-DAS-ABAS-01)",
+    ("*", "menu-desligar"):
+        "ato: o botão direito chama o «Parar» do serviço da aba Sistema, com os "
+        "mesmos dois cliques; ele não muda campo de perfil (A-BASE-COMUM-DAS-ABAS-01)",
+    ("*", "menu-reiniciar"):
+        "ato: o botão direito chama o «Reiniciar» da aba Sistema; reinicia o "
+        "serviço e não muda campo de perfil (A-BASE-COMUM-DAS-ABAS-01)",
+    ("*", "menu-fechar"):
+        "ato: o botão direito fecha a janela do piloto; nada de perfil nem de "
+        "daemon (A-BASE-COMUM-DAS-ABAS-01)",
     ("*", "escolher-na-fita"):
         "tela: o chip do «Selecionar:» só escolhe qual controle a aba mira "
         "(`hefesto_vivo.ESCOLHA_DA_FITA`); nada de perfil, nada de daemon",

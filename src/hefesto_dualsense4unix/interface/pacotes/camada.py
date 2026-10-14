@@ -190,6 +190,10 @@ VIVOS_NO_NATIVO: frozenset[tuple[str, str]] = frozenset({
 #: Salvar e o Importar mandam o perfil ao controle e recusam no Nativo, nas cinco
 #: abas por controle; o Exportar só grava um arquivo e segue vivo.
 RODAPE_VIVO_NO_NATIVO = frozenset({"exportar"})
+
+#: O menu do botão direito é de TODA página (`("*", gesto)`) e vive no Nativo: Atualizar,
+#: Desligar, Reiniciar e Fechar são atos do computador e da janela, não escolhas do Hefesto.
+GESTOS_DO_MENU = frozenset({"menu-atualizar", "menu-desligar", "menu-reiniciar", "menu-fechar"})
 FRASE_NO_NATIVO = "Em modo nativo o jogo lê este controle direto, e o Hefesto não grava aqui."
 MIRA_CINZA_NO_NATIVO = (
     "Em modo nativo o jogo lê este controle direto, e o analógico virtual não grava."
@@ -235,7 +239,7 @@ def recusa_no_nativo(pagina: str, gesto: str, state: Any) -> str | None:
     """
     if (pagina, gesto) not in FRASES_NO_NATIVO and (
             pagina not in ABAS_POR_CONTROLE or (pagina, gesto) in VIVOS_NO_NATIVO
-            or gesto in RODAPE_VIVO_NO_NATIVO):
+            or gesto in RODAPE_VIVO_NO_NATIVO or gesto in GESTOS_DO_MENU):
         return None
     if CAMADA.get((pagina, gesto)) == JANELA or not no_nativo(state):
         return None
@@ -251,6 +255,7 @@ __all__ = [
     "CONTROLE",
     "FRASES_NO_NATIVO",
     "FRASE_NO_NATIVO",
+    "GESTOS_DO_MENU",
     "JANELA",
     "JOGO",
     "MIRA_CINZA_NO_NATIVO",

@@ -296,6 +296,14 @@ class PonteDaTela:
             )
         self.ucm = ucm
         self.view = WebKit2.WebView.new_with_user_content_manager(ucm)
+        # O botão direito é da casa: o menu do WebKit não abre, e quem responde é o
+        # menu HTML da base comum, que aciona gestos.
+        self.view.connect("context-menu", self._calar_o_menu_do_webkit)
+
+    @staticmethod
+    def _calar_o_menu_do_webkit(_view: Any, _menu: Any, _evento: Any, _resultado: Any) -> bool:
+        """`True` diz ao WebKit que o menu já foi tratado, e ele não abre o seu."""
+        return True
 
     def dizer(self, funcao: str, *argumentos: object) -> None:
         """Chama uma função da página com os argumentos serializados em JSON."""
@@ -451,10 +459,17 @@ class JanelaDaAba:
             GLib.timeout_add(atraso, self._repintar_a_decoracao)
         return False
 
+    def fechar(self) -> None:
+        """Fecha a janela e encerra o laço. É o «Fechar» do menu do botão direito e o da barra."""
+        if self.oculta:
+            Gtk.main_quit()
+        else:
+            self.janela.close()
+
     def _gesto_da_barra(self, _botao: Any, gesto: str) -> None:
         """Minimizar, maximizar/restaurar ou fechar, pelos botões desta casa."""
         if gesto == "fechar":
-            self.janela.close()
+            self.fechar()
         elif gesto == "minimizar":
             self.janela.iconify()
         elif gesto == "maximizar":

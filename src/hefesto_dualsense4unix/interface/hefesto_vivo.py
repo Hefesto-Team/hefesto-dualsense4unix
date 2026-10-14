@@ -2140,6 +2140,40 @@ def _registrar_a_fita() -> None:
         pacotes.gesto("*", monta.GESTO_DA_FITA)(_escolher_na_fita)
 
 
+#: Quem fecha a janela: o `Fechar` do menu do botão direito. O piloto o põe aqui ao nascer.
+_FECHAR_A_JANELA: list[Callable[[], None]] = []
+
+#: Os itens do menu do botão direito (`base-comum.js`) que já têm gesto na aba Sistema: o do menu
+#: é o MESMO gesto, despachado de qualquer página. Desligar pede os dois cliques de lá.
+ITENS_DO_MENU_NA_SISTEMA = {
+    "menu-atualizar": "atualizar",
+    "menu-desligar": "parar-ou-retomar",
+    "menu-reiniciar": "reiniciar",
+}
+
+
+def _gesto_do_menu(nome_na_sistema: str) -> Callable[[Any, dict[str, Any], Any], Any]:
+    """O gesto do menu que chama o da aba Sistema, procurado na hora (a tabela se enche ao importar)."""
+    def agir(ctx: Any, o: dict[str, Any], ipc: Any) -> Any:
+        return pacotes.GESTOS[("09-sistema.html", nome_na_sistema)](ctx, o, ipc)
+    return agir
+
+
+def _fechar_pelo_menu(ctx: Any, o: dict[str, Any], ipc: Any) -> None:
+    """`Fechar` do menu do botão direito: fecha a janela, no fio do GTK."""
+    if _FECHAR_A_JANELA:
+        GLib.idle_add(_FECHAR_A_JANELA[0])
+
+
+def _registrar_o_menu() -> None:
+    """Os gestos do menu do botão direito no despachante, uma vez só e para toda página."""
+    for gesto_do_menu, na_sistema in ITENS_DO_MENU_NA_SISTEMA.items():
+        if ("*", gesto_do_menu) not in pacotes.GESTOS:
+            pacotes.gesto("*", gesto_do_menu)(_gesto_do_menu(na_sistema))
+    if ("*", "menu-fechar") not in pacotes.GESTOS:
+        pacotes.gesto("*", "menu-fechar")(_fechar_pelo_menu)
+
+
 def _a_fita_desta_pagina_escolhe(pagina: str) -> bool:
     """`monta.a_fita_escolhe`, sem derrubar a janela numa página que não é aba."""
     try:
@@ -2814,6 +2848,7 @@ class Piloto:
         )
         self.view = self.tela.view
         self.ponte = self.tela.ponte
+        _FECHAR_A_JANELA[:] = [self.tela.fechar]
         self.view.connect("load-changed", self._carregou)
         self._abertura["janela"] = time.monotonic()
         _importar_as_abas(self.tela)
@@ -4447,6 +4482,7 @@ def _ligar_as_abas() -> None:
     """O que depende das dez abas: o gesto da fita e a lista dos perigosos."""
     global PERIGOSOS, SELETOR_DO_DONO
     _registrar_a_fita()
+    _registrar_o_menu()
     PERIGOSOS = pacotes.perigosos()
     SELETOR_DO_DONO = '[data-uniq],[data-controle=""],' + ",".join(
         f'[data-controle="{lugar}"]' for lugar in sorted(pacotes.TODOS_OS_LUGARES))
