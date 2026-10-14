@@ -1,0 +1,38 @@
+{
+ "aba": "mapa-do-controle",
+ "nome": "Mapa do controle",
+ "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/mockups-rodada-4/docs/research/2026-10-12-a-volta/paginas/todo-das-abas/todo/mapa-do-controle.html",
+ "depois": "/mnt/Apate/Desenvolvimento/hefesto-voo/mockups-rodada-4/docs/research/2026-10-12-a-volta/paginas/todo-das-abas/todo/rodada-4/mapa-do-controle.html",
+ "rodada": 4,
+ "altura_px": 809,
+ "rola": false,
+ "mudancas": [
+  {
+   "n": 19,
+   "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
+   "o_que_muda": "Os moldes têm os mesmos quatro nomes da aba Navegação: Point and click, Visual novel, Mouse e Mouse e teclado; sai o grupo «Point and click» com «Só mouse», «Teclado e mouse» e Orpheus",
+   "resposta": "confirmação dela de 13/10 (~22h)",
+   "origem": "rodada 4 (o que faltava desenho)",
+   "ancora": "[data-todo=\"19\"]",
+   "seletor": "#perfil optgroup[label=\"Moldes\"] option",
+   "conflito": "Orpheus e Maid Life SS passam para «Meus perfis», porque são perfis seus e não moldes: a Navegação só lista os quatro moldes."
+  },
+  {
+   "n": 20,
+   "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
+   "o_que_muda": "Seus perfis (Orpheus, Maid Life SS) ganham um grupo próprio, «Meus perfis», depois dos moldes",
+   "resposta": "consequência da 19",
+   "origem": "rodada 4 (o que faltava desenho)",
+   "ancora": "[data-todo=\"20\"]",
+   "seletor": "#perfil optgroup[label=\"Meus perfis\"] option",
+   "conflito": "A página do todo tinha Orpheus sob «Point and click» e Maid Life SS sob «Trocar os botões»; ao pôr os moldes nos nomes da Navegação, os dois ficaram sem grupo."
+  }
+ ],
+ "por_baixo": [
+  {
+   "sprint": "A-CAPTURA-DE-TECLA-SE-FAZ-SOBRE-O-MAPA-DO-CONTROLE-01",
+   "o_que_muda": "Nada além da 19 e da 20; o resto do mapa é o da página do todo."
+  }
+ ],
+ "fora": []
+}
