@@ -1679,11 +1679,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 .menu-hefesto button[disabled]{color:var(--texto-mudo,#9a9eb8);opacity:.55;cursor:default;background:transparent}
 .menu-hefesto hr{border:0;border-top:1px solid var(--border-sutil,#343746);margin:5px 4px}
 </style>
-<style data-conserto="a vaga sem controle diz «P3 • Desconectado» (q4B)">
-/* Conserto da fusão (14/10): a vaga sem controle diz «P3 • Desconectado» (q4B). */
-.g2-cab .chip.vaga{border:1px dashed var(--border-sutil);background:transparent;color:var(--texto-mudo);font-weight:400;cursor:default}
-.g2-cab .chip.vaga b{color:var(--texto-suave);font-weight:600}
-</style>
 </head>
 <body class="por-controle" data-campo="nativo" data-hef-alvo="classe" data-hef-classe="nativo" data-hef-quando="sim">
 
@@ -1869,8 +1864,8 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
           <div class="g2-canto" data-seis="q1" data-v3="c1 n2" aria-label="Controle e estilo de jogo"><span class="sec-rot g2-canto-rot">Controle</span><span class="g2-estilo" data-campo="estilo-do-perfil" data-dica="O estilo escolhido em Perfis. Só leitura"><span class="g2-estilo-rot">Estilo de jogo</span><span class="g2-estilo-nome" data-estilo>FPS</span></span></div>
           <div class="g2-cab" data-todo="6" data-controle="p1"><div class="cabeca" data-campo="plastico" data-hef-alvo="plastico" style="--plastico:#ae335a"><span data-campo="chip-do-controle" data-hef-alvo="html"><span class="chip plastico" data-dica="A borda é a cor do plástico">Cosmic Red <span class="pt">•</span> USB</span></span></div></div>
           <div class="g2-cab" data-todo="6" data-controle="p2"><div class="cabeca" data-campo="plastico" data-hef-alvo="plastico" style="--plastico:#7eb8d4"><span data-campo="chip-do-controle" data-hef-alvo="html"><span class="chip plastico" data-dica="A borda é a cor do plástico">Starlight Blue <span class="pt">•</span> BT</span></span></div></div>
-          <div class="g2-cab vazio" data-controle="p3"><span class="chip vaga"><b>P3</b> <span class="pt">•</span> Desconectado</span></div>
-          <div class="g2-cab vazio" data-controle="p4"><span class="chip vaga"><b>P4</b> <span class="pt">•</span> Desconectado</span></div>
+          <div class="g2-cab vazio" data-controle="p3" aria-hidden="true"></div>
+          <div class="g2-cab vazio" data-controle="p4" aria-hidden="true"></div>
           <div class="g2-sep g2-sep-cab"></div>
           <div class="g2-gl g2-l2" aria-label="L2"><svg class="gl" width="36" height="36" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L2</title>
 
