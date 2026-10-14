@@ -52,10 +52,14 @@ MORDIDAS = {
     "q6-rotulo": _m("document.querySelectorAll('.mira .desl[data-seis=q6] .r').forEach(function(r){r.textContent='Só enquanto eu segurar';});"),
     "q6-opcoes": _m("document.querySelectorAll('select[data-gesto=mira-segurar]').forEach(function(x){var o=document.createElement('option');o.text='Cruz';x.add(o);});"),
     "barra-calibrar": _m("document.querySelectorAll('.lin > .r').forEach(function(x){x.style.flex='0 0 82px';});"),
-    # as respostas à v3 (14/10): c3 na 02
+    # as respostas à v3 (14/10): c3 na 02, n4 na Calibrar
     "c3-textao": _m("document.querySelectorAll('.chip-virtual>.sw').forEach(function(b){b.lastChild.textContent='Usar giroscópio como analógico';});"),
     "c3-largura": _m("var b=document.querySelector('.chip-virtual>.sw');b.style.width='80%';"),
     "c3-pula": _m("var st=document.createElement('style');st.textContent='.chip-virtual.on>.sw{height:34px!important}';document.head.appendChild(st);"),
+    "n4-sempre-mostra": _m("var st=document.createElement('style');st.textContent='.desl .mira-quando .mira-botao{display:block!important}';document.head.appendChild(st);"),
+    "n4-outra-linha": _m("var st=document.createElement('style');st.textContent='.desl .mira-quando .mira-botao{grid-row:2!important;grid-column:1/-1!important}';document.head.appendChild(st);"),
+    "n4-sem-botoes": _m("document.querySelectorAll('.mira-botao').forEach(function(x){x.remove(x.options.length-1);});"),
+    "n4-nome-corta": _m("document.querySelectorAll('.mira-botao option').forEach(function(o){if(o.title)o.textContent=o.title;});"),
     "conta-calibrar": _m("var a=document.querySelector('.rodape .acoes');var s=document.createElement('span');s.className='quantos';s.textContent='2 controles conectados';a.parentNode.insertBefore(s,a);"),
 }
 
@@ -181,6 +185,26 @@ JS_PEDIDO = r"""
       if(op!=='Sempre|Só segurando um botão')falta.push('o seletor da mira tem «'+op.slice(0,50)+'»');
       if(x.options[x.selectedIndex].text!=='Sempre')falta.push('o «Sempre» não segue escolhido');
       if(!r||r.textContent.trim()!=='A mira se move')falta.push('a linha não diz «A mira se move»');});
+    // n4 (v3): o seletor do botão aparece ao lado, na mesma linha, só com «Só segurando um botão»; nada pula nem rola
+    var BOT='cruz|circulo|quadrado|triangulo|l1|r1|l2|r2|l3|r3|cima|baixo|esquerda|direita|options|share';
+    ss.forEach(function(x){var q=x.closest('.mira-quando'),b=q&&q.querySelector('select[data-gesto=mira-botao]'),dl=x.closest('.desl'),inv=dl&&dl.nextElementSibling;
+      if(!b){falta.push('o seletor do botão que segura a mira não existe');return;}
+      if([...b.options].map(function(o){return o.value;}).join('|')!==BOT)falta.push('o seletor do botão não tem os dezesseis botões: '+[...b.options].map(function(o){return o.value;}).join('|').slice(0,60));
+      if(vis(b))falta.push('com «Sempre», o seletor do botão aparece');
+      var y0=[inv.getBoundingClientRect().top,document.documentElement.scrollHeight];
+      x.value='segurando';x.dispatchEvent(new Event('change',{bubbles:true}));
+      var a=x.getBoundingClientRect(),c=b.getBoundingClientRect(),d=dl.getBoundingClientRect(),y1=[inv.getBoundingClientRect().top,document.documentElement.scrollHeight];
+      if(!vis(b))falta.push('com «Só segurando um botão», o seletor do botão não aparece');
+      else{if(Math.abs(a.top-c.top)>1||Math.abs(a.height-c.height)>0.5)falta.push('o seletor do botão não fica na mesma linha e na mesma altura');
+        if(c.left<a.right)falta.push('o seletor do botão não fica ao lado do primeiro');
+        if(c.right>d.right+0.5)falta.push('o seletor do botão passa da coluna');
+        // o texto de cada escolha cabe no seletor (um clone com a largura natural da escolha)
+        [[x,'Só segurando um botão']].concat([...b.options].map(function(o){return [b,o.text];})).forEach(function(p){var t=p[0].cloneNode(false);t.style.position='absolute';t.style.width='auto';t.add(new Option(p[1]));q.appendChild(t);
+          var w=t.getBoundingClientRect().width;t.remove();if(w>p[0].getBoundingClientRect().width+0.5)falta.push('«'+p[1]+'» não cabe no seletor ('+Math.round(w)+' > '+Math.round(p[0].getBoundingClientRect().width)+')');});}
+      if(Math.abs(y0[0]-y1[0])>0.5)falta.push('o seletor do botão faz a linha de baixo pular');
+      if(y1[1]>innerHeight)falta.push('o seletor do botão faz a janela rolar');
+      x.value='sempre';x.dispatchEvent(new Event('change',{bubbles:true}));
+      if(vis(b))falta.push('de volta a «Sempre», o seletor do botão não some');});
     [...document.querySelectorAll('.ctr')].forEach(function(c){var xs=[...c.querySelectorAll('.lin > .g')].map(function(g){return Math.round(g.getBoundingClientRect().left);});
       if(xs.length&&Math.max.apply(null,xs)-Math.min.apply(null,xs)>1)falta.push('as barras da leitura não começam juntas '+[...new Set(xs)]);});}
   return falta;})
