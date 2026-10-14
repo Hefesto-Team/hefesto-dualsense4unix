@@ -66,6 +66,7 @@ from __future__ import annotations
 
 import json
 import pathlib
+import re
 import shutil
 import sys
 
@@ -263,11 +264,16 @@ class TestODesenhoCarregaAPeca:
 
     @pytest.mark.parametrize("nome", a09.BOTOES_CINZAS)
     def test_a_dica_leva_o_mesmo_campo(self, nome: str) -> None:
+        """A razão do cinza é a dica do próprio botão (D-1410-A-RAZAO-DO-CINZA-MORA-NO-BOTAO)."""
         campo = f"{nome}{a09.SUFIXO_DA_RAZAO}"
-        assert (f'<span class="dica" data-campo="{campo}" data-hef-alvo="html">'
-                in _html()), (
-            f"o `?` de {nome!r} não recebe {campo!r}. Um campo só alimenta os "
-            "dois: com dois, dá para pintar um botão cinza sem razão.")
+        achado = re.search(rf'<button[^>]*data-gesto="{nome}"[^>]*>', _html())
+        assert achado, f"o botão {nome!r} sumiu"
+        assert f'data-campo="{campo}"' in achado.group(0), achado.group(0)
+        assert 'data-hef-razao="sim"' in achado.group(0), (
+            f"o botão {nome!r} não escreve a razão na própria dica. Um campo só "
+            "alimenta o cinza e a razão: com dois, dá para pintar um botão cinza sem razão.")
+        assert f'<span class="dica" data-campo="{campo}"' not in _html(), (
+            "o «?» voltou ao lado do botão")
 
     def test_nenhum_botao_cinza_emite_disabled(self) -> None:
         """*"Apagado e ainda assim responde."* `disabled` mata o clique."""
@@ -322,14 +328,12 @@ LER_A_TELA = r"""
   for(const g of alvos){
     const b = document.querySelector('[data-gesto="' + g + '"]');
     if(!b){ botoes[g] = null; continue; }
-    const ajuda = b.nextElementSibling;
-    const dica = ajuda ? ajuda.querySelector('.dica') : null;
     botoes[g] = {
       apagado: b.classList.contains('apagado'),
       aria: b.getAttribute('aria-disabled'),
-      // O QUE A TELA MOSTRA, e não o que a regra diz: `display` vem do CSSOM.
-      ajuda_visivel: ajuda ? getComputedStyle(ajuda).display !== 'none' : null,
-      razao: dica ? (dica.textContent || '').trim() : null,
+      // A razão é a dica do próprio botão, escrita pelo piloto (`data-hef-razao`).
+      tem_dica: b.hasAttribute('data-dica'),
+      razao: b.getAttribute('data-dica'),
       rotulo: (b.textContent || '').trim(),
       largura: Math.round(b.getBoundingClientRect().width),
     };
@@ -543,16 +547,16 @@ class TestNaTelaViva:
             assert visto["aria"] == "true", (nome, visto)
             assert visto["razao"] == do_produto[f"{nome}{a09.SUFIXO_DA_RAZAO}"]
 
-    def test_o_interrogacao_aparece_com_a_razao(self, na_tela: dict) -> None:
+    def test_a_razao_vira_a_dica_do_botao(self, na_tela: dict) -> None:
         for nome, visto in na_tela["com-razao"]["botoes"].items():
-            assert visto["ajuda_visivel"] is True, (nome, visto)
+            assert visto["tem_dica"] is True, (nome, visto)
 
     def test_a_razao_vazia_apaga_o_cinza_de_volta(self, na_tela: dict) -> None:
         """A metade que faz a peça ser um ESTADO e não um carimbo."""
         for nome, visto in na_tela["sem-razao"]["botoes"].items():
             assert visto["apagado"] is False, (nome, visto)
             assert visto["aria"] == "false", (nome, visto)
-            assert visto["ajuda_visivel"] is False, (nome, visto)
+            assert visto["tem_dica"] is False, (nome, visto)
 
     def test_as_duas_colunas_irmas_acabam_no_mesmo_y_nos_dois_estados(
             self, na_tela: dict) -> None:
@@ -565,14 +569,13 @@ class TestNaTelaViva:
                 f"e a de ações em y={visto['fim_da_acao']} — {desencontro}px de "
                 "desencontro. Duas colunas irmãs desta aba acabam no mesmo y.")
 
-    def test_o_interrogacao_nao_faz_a_faixa_crescer(self, na_tela: dict) -> None:
-        """O motivo do invólucro `.acao`, e ele é de ALTURA."""
+    def test_a_razao_nao_faz_a_faixa_crescer(self, na_tela: dict) -> None:
+        """A razão mora na dica: a faixa mede o mesmo com o cinza e sem ele."""
         com = na_tela["com-razao"]["altura_da_faixa"]
         sem = na_tela["sem-razao"]["altura_da_faixa"]
         assert com == sem, (
-            f"a faixa mede {com}px com os três `?` à vista e {sem}px sem eles — "
-            f"{abs(com - sem)}px que o `?` cobrou de altura. Ele tem de ficar "
-            "na LINHA do botão (`.acao`), não numa fileira própria.")
+            f"a faixa mede {com}px com a razão e {sem}px sem ela — "
+            f"{abs(com - sem)}px que a razão cobrou de altura.")
 
     def test_a_aba_nao_passa_a_rolar_por_dentro_com_os_tres_cinzas(
             self, na_tela: dict) -> None:
@@ -582,12 +585,12 @@ class TestNaTelaViva:
                 f"{quando}: o miolo rola {na_tela[quando]['rola_por_dentro']}px "
                 "por dentro — foi assim que a aba escondeu 93px em 28/08.")
 
-    def test_o_botao_encolhe_em_vez_de_estourar_a_coluna(
+    def test_o_botao_nao_muda_de_largura_com_a_razao(
             self, na_tela: dict) -> None:
-        """Com o `?` à vista o botão perde largura; nenhum dos dois transborda."""
+        """Sem o `?` ao lado, a razão não cobra largura: o botão mede o mesmo nos dois estados."""
         for nome, com in na_tela["com-razao"]["botoes"].items():
             sem = na_tela["sem-razao"]["botoes"][nome]
-            assert com["largura"] < sem["largura"], (nome, com, sem)
+            assert com["largura"] == sem["largura"], (nome, com, sem)
 
     def test_o_botao_diz_que_esta_trabalhando(self, na_tela: dict) -> None:
         import aba09
