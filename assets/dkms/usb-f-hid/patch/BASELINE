@@ -1,0 +1,47 @@
+# Baseline do módulo DKMS hefesto-usb-f-hid (14/10/2026)
+# O f_hid.c deste diretório == o de fábrica do STABLE v7.1.5 + o patch da
+# lista PATCH abaixo. O u_hid.h é o de fábrica, sem modificação: está aqui
+# porque o pacote linux-headers não o distribui e o f_hid.c o inclui.
+# Paridade verificável (reverte):
+#   patch -R -p5 f_hid.c < patch/0001-*.patch
+# deve reproduzir exatamente SHA256_VANILLA_C.
+#
+# Proveniência do de fábrica, e ela é conferível pelos dois lados:
+#   raw.githubusercontent.com/pop-os/linux/<POP_LINUX_COMMIT>/drivers/usb/gadget/function/f_hid.c
+#   git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/plain/drivers/usb/gadget/function/f_hid.c?h=v7.1.5
+# Os dois dão o mesmo SHA256_VANILLA_C, e o mesmo vale para o u_hid.h
+# (medido em 14/10/2026). O commit do Pop é o que o pacote do kernel desta
+# máquina nomeia: `apt-cache policy linux-image-7.1.5-76070105-generic`
+# termina em `~38a419f`.
+#
+# NÃO use `srcversion` para conferir proveniência: como no hid-playstation,
+# ele não é reprodutível entre build in-tree e out-of-tree. Medido em
+# 14/10/2026: o f_hid.c de fábrica do v7.1.5 compilado fora da árvore dá
+# C4C1038B9B73C82842B1B1F, e o in-tree do 7.1.5-76070105 é
+# 2517788801D7F858316B340 (o modpost soma o u_hid.h só dentro da árvore). O
+# juiz de identidade do fonte é o sha256 do .c, e só ele.
+#
+# A MARCA: o patch expõe `get_report_sized` (0444, sempre Y), em
+# /sys/module/usb_f_hid/parameters/get_report_sized. Nada mais no sysfs separa
+# este módulo do de fábrica, e o daemon e o doctor leem por ela.
+#
+# O RITUAL PARA ACRESCENTAR UM KERNEL ao BUILD_EXCLUSIVE_KERNEL do dkms.conf,
+# e nenhum passo é opcional:
+#   1. o f_hid.c e o u_hid.h de fábrica daquele kernel (o do commit do Pop que
+#      o pacote dele nomeia) têm de ser os SHA256_VANILLA_C e SHA256_U_HID_H
+#      desta base. Se NÃO forem, o patch é refeito sobre o stable daquele
+#      kernel e este BASELINE muda inteiro — nunca se acrescenta o kernel com
+#      o arquivo de outro;
+#   2. o patchado compila contra os headers dele
+#      (`make -C /lib/modules/<kernel>/build M=<cópia desta pasta> modules`),
+#      com o `parm: get_report_sized` no `modinfo` do `.ko`;
+#   3. só então o build entra na regex e em KERNELS_VALIDADOS — a mesma lista
+#      nos dois lugares, e uma régua cobra os dois sentidos.
+KERNEL_BASE=v7.1.5
+KERNEL_TESTED=7.1.5-76070105-generic
+KERNELS_VALIDADOS=7.1.5-76070105
+POP_LINUX_COMMIT=38a419fc95c5eae36afa2f13e459a7fc4f4a68f5
+SHA256_VANILLA_C=cfa52338bd467506d4fd3786de67fd556124226733ea1a7f8d9730165282e036
+SHA256_PATCHED_C=e293200fc7789b66b45a2d7e6dbd9377bd33d93eab953b4e23b46c93ca252f99
+SHA256_U_HID_H=5a0d6537a7f78e5ad4593889f8df07be6375c03a3f6a37ea8c7e546800dce595
+PATCH=0001-usb-gadget-f_hid-size-GET_REPORT-responses-to-the-s.patch

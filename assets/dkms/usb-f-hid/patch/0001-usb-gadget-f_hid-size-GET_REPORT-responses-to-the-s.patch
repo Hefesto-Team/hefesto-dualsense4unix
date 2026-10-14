@@ -1,0 +1,121 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Hefesto DualSense4Unix Project <hefesto-dualsense4unix@users.noreply.github.com>
+Date: Wed, 14 Oct 2026 22:00:00 -0300
+Subject: [PATCH] usb: gadget: f_hid: size GET_REPORT responses to the stored
+ report
+
+get_report_workqueue_handler() answers a GET_REPORT with
+
+	req->zero = 0;
+	req->length = min(wLength, report_length, MAX_REPORT_LENGTH);
+
+so the response is always as long as the smallest of the three, and never as
+long as the report userspace stored with GADGET_HID_WRITE_GET_REPORT, even
+though struct usb_hidg_report carries a @length documented as "length of the
+report response". With a report descriptor whose feature reports are shorter
+than 64 bytes and a host that asks for more, the response is padded to 64
+bytes, which fills the ep0 packets exactly (maxpacket 64), and since
+req->zero is cleared no zero-length packet ends the data stage. The host
+keeps waiting for the rest of the transfer until its control timeout.
+
+That host is a common one: SDL's HIDAPI backend and Wine's winebus read
+feature reports through HIDIOCGFEATURE with a 128-byte buffer, and hidraw
+passes that size on as wLength. Measured on a Pop!_OS 24.04 machine
+(7.1.5) with four DualSense-compatible gadgets on usbip-vudc and vhci-hcd: every
+HIDIOCGFEATURE(128) on a gadget hidraw returned -ETIMEDOUT after ~5.1 s, for
+every feature report, while a real DualSense on the same host answers the
+41-byte and 20-byte reports with a short packet in milliseconds. Four pads
+times a handful of feature reports times 5 s does not fit in the 10 s that
+Wine's services.exe gives winebus to start, so a game under Proton started
+with no controller at all.
+
+End the response at the stored report length when it is shorter, and ask
+for a zero-length packet whenever the response is shorter than wLength, so
+the data stage is always terminated. Both the immediate path and the path
+that waits for userspace size the request the same way. When nothing was
+stored for the report id, the length is unchanged (the zeroed buffer).
+
+With the patch the same HIDIOCGFEATURE(128) calls return 41, 20 and 64 bytes
+in 2-6 ms on all four gadgets, with no timeouts.
+
+Also expose a read-only module parameter, get_report_sized, that is always
+Y. Nothing else in sysfs tells this module from one without the change, and
+userspace serving feature reports to such a host needs to know. The sizing
+itself never reads the parameter.
+
+Signed-off-by: Hefesto DualSense4Unix Project <hefesto-dualsense4unix@users.noreply.github.com>
+---
+  drivers/usb/gadget/function/f_hid.c |   31 ++++++++++++++++++++++++++++++-
+  1 file changed, 30 insertions(+), 1 deletion(-)
+
+--- a/drivers/usb/gadget/function/f_hid.c
++++ b/drivers/usb/gadget/function/f_hid.c
+@@ -30,6 +30,20 @@
+  */
+ #define GET_REPORT_TIMEOUT_MS 2500
+ 
++/*
++ * Read-only mark for the GET_REPORT response sizing in
++ * f_hidg_size_get_report(). Nothing else in sysfs tells a module that ends
++ * the response at the stored report length from one that pads it to 64 bytes
++ * without a zero-length packet, and userspace that serves feature reports to
++ * a host with a 128-byte wLength (SDL HIDAPI, Wine's winebus) needs to know:
++ * over the unpatched module every such request waits for the host timeout.
++ * The sizing itself never reads the parameter.
++ */
++static bool get_report_sized = true;
++module_param(get_report_sized, bool, 0444);
++MODULE_PARM_DESC(get_report_sized,
++		 "GET_REPORT responses end at the stored report length, with a zero-length packet when they fill ep0 packets (always Y)");
++
+ static int major, minors;
+ 
+ static const struct class hidg_class = {
+@@ -555,6 +569,20 @@
+ 	return NULL;
+ }
+ 
++/*
++ * The response is as long as the report userspace stored (its @length), and a
++ * response shorter than the host's wLength ends with a zero-length packet when
++ * it fills ep0 packets exactly: without it the host waits for the rest until
++ * its control timeout (5 s in usbhid).
++ */
++static void f_hidg_size_get_report(struct f_hidg *hidg, struct usb_request *req,
++				   struct report_entry *ptr)
++{
++	if (ptr && ptr->report_data.length && ptr->report_data.length < req->length)
++		req->length = ptr->report_data.length;
++	req->zero = req->length < hidg->get_report_req_report_length;
++}
++
+ static void get_report_workqueue_handler(struct work_struct *work)
+ {
+ 	struct f_hidg *hidg = container_of(work, struct f_hidg, work);
+@@ -572,7 +600,6 @@
+ 		return;
+ 	}
+ 
+-	req->zero = 0;
+ 	req->length = min_t(unsigned int, min_t(unsigned int, hidg->get_report_req_report_length,
+ 							      hidg->report_length),
+ 					  MAX_REPORT_LENGTH);
+@@ -582,6 +609,7 @@
+ 	if (ptr && !ptr->report_data.userspace_req) {
+ 		/* Report exists in list and it is to be used for immediate response */
+ 		req->buf = ptr->report_data.data;
++		f_hidg_size_get_report(hidg, req, ptr);
+ 		status = usb_ep_queue(cdev->gadget->ep0, req, GFP_ATOMIC);
+ 		hidg->get_report_returned = true;
+ 		spin_unlock_irqrestore(&hidg->get_report_spinlock, flags);
+@@ -622,6 +650,7 @@
+ 			req->buf = hidg->get_report.data;
+ 			memset(req->buf, 0x0, req->length);
+ 		}
++		f_hidg_size_get_report(hidg, req, ptr);
+ 
+ 		status = usb_ep_queue(cdev->gadget->ep0, req, GFP_ATOMIC);
+ 		spin_unlock_irqrestore(&hidg->get_report_spinlock, flags);
+-- 
+2.43.0
+
