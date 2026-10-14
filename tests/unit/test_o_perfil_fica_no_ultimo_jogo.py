@@ -72,6 +72,39 @@ def test_o_jogo_fecha_e_o_perfil_dele_fica(
 
 
 @pytest.mark.usefixtures("perfis_isolados")
+@pytest.mark.parametrize("quem_pos", ["o-lancamento", "o-boot-com-o-jogo-aberto"])
+def test_o_perfil_que_outro_pos_e_o_jogo_confirma_tambem_fica(
+    monkeypatch: pytest.MonkeyPatch, quem_pos: str
+) -> None:
+    """D-1410-O-PERFIL-FICA-NO-ULTIMO-JOGO: o perfil do jogo que o lançamento pôs fica.
+
+    Medido às 10h26m49 de 14/10: o Sackboy entrou com ``origin=launch``, e o
+    autoswitch só sincronizou a crença; sem a confirmação do tique, o jogo
+    fechava e a escolha entrava. O mesmo com o daemon reiniciado com o jogo aberto.
+
+    MORDIDA: tire a confirmação do ``_perfil_do_ultimo_jogo`` no ``_tick`` e o «lure» entra.
+    """
+    _a_escolha(monkeypatch, "lure")
+    manager, store = _bancada([
+        _perfil("sackboy", janela=CLASSE_DO_JOGO, prioridade=90),
+        _perfil("lure", janela=OUTRO_JOGO, prioridade=80),
+    ])
+    if quem_pos == "o-boot-com-o-jogo-aberto":
+        store.set_active_profile("sackboy")
+        sw = _switcher(manager, store, jogo_vivo=lambda: None)
+    else:
+        sw = _switcher(manager, store, jogo_vivo=lambda: None)
+        sw._tick({"wm_class": "firefox", "wm_name": ""}, 0.0)
+        store.set_active_profile("sackboy")
+    sw._tick(dict(JANELA_DO_JOGO), 1.0)
+    sw._tick(dict(JANELA_DO_JOGO), 2.0)
+    assert store.active_profile == "sackboy", "premissa: o jogo em foco confirma o perfil"
+    for i in range(60):
+        sw._tick({"wm_class": "steam", "wm_name": ""}, 3.0 + 0.5 * i)
+    assert store.active_profile == "sackboy"
+
+
+@pytest.mark.usefixtures("perfis_isolados")
 def test_outro_jogo_que_inicia_leva_o_perfil(monkeypatch: pytest.MonkeyPatch) -> None:
     _a_escolha(monkeypatch, "sackboy")
     sw, store, agora = _no_jogo()

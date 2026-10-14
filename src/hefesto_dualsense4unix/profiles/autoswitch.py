@@ -394,6 +394,10 @@ class AutoSwitcher:
 
         if candidate is not None and candidate == self._current_profile:
             self._current_especifico = not bool(getattr(profile, "e_catch_all", True))
+            if not veio_da_escolha and (veio_do_jogo or perfil_e_de_jogo(profile)):
+                # O jogo confirma o perfil que outro pôs (o lançamento, o boot com o
+                # jogo aberto): ele também é o do último jogo, e fica quando o jogo fecha.
+                self._perfil_do_ultimo_jogo = candidate
 
         self._sincronizar_modo_jogo_padrao(motivo, info)
 
