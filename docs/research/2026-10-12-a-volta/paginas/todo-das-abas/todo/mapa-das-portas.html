@@ -85,14 +85,13 @@
   .modo:hover { background: var(--color-rule); }
   .modo:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
   .modo[aria-pressed="true"] { border-color: var(--color-accent); background: color-mix(in srgb, var(--color-accent) 22%, var(--color-paper-3)); }
-  .modo.destaque[aria-pressed="false"] { border-color: color-mix(in srgb, var(--color-ok) 55%, transparent); color: var(--color-ok); }
-  .modo.destaque[aria-pressed="true"] { border-color: var(--color-ok); background: color-mix(in srgb, var(--color-ok) 20%, var(--color-paper-3)); color: var(--color-ink); }
+  /* «Sugestões» é um modo como os outros: sem o verde de aviso (conferência da fusão, 14/10). */
 
   /* ─── o painel que muda com o modo ──────────────────────── */
   .painel { margin-top: var(--space-2xs); border: 1px solid var(--color-rule);
             border-radius: var(--radius-md); background: var(--color-paper-2); padding: var(--space-sm); }
   .painel > p.chamada { margin: 0 0 var(--space-2xs); font-size: var(--text-base); font-weight: 600; }
-  .painel > p.chamada .grande { color: var(--color-ok); }
+  .painel > p.chamada .grande { color: var(--color-ink); }
   .escolhas { display: flex; flex-wrap: wrap; gap: var(--space-2xs); }
   .escolha { font: inherit; font-size: var(--text-sm); display: inline-flex; align-items: center; gap: .4rem;
              background: var(--color-paper-3); color: var(--color-ink); border: 1px solid var(--color-rule);
@@ -146,7 +145,7 @@
   @media (max-width: 900px) { .palco { grid-template-columns: 1fr; } }
   .faces { display: flex; flex-direction: column; gap: var(--space-md); }
   .face-cab { display: flex; align-items: baseline; gap: var(--space-2xs); margin-bottom: var(--space-2xs); }
-  .face-cab h3 { margin: 0; font-size: var(--text-sm); font-weight: 600; text-transform: uppercase; letter-spacing: .07em; }
+  .face-cab h3 { margin: 0; font-size: var(--text-sm); font-weight: 600; } /* só a primeira letra é maiúscula (conferência da fusão, 14/10) */
   .face-cab .quantas { font-size: var(--text-xs); color: var(--color-ink-faint); font-family: var(--font-dado); }
   /* a divergência do hub: uma linha a mais, sem culpa */
   .diverge { margin: 0 0 var(--space-2xs); font-size: var(--text-xs); color: var(--color-lacuna); }
@@ -636,7 +635,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   <div class="modos" id="modos"></div>
   <section class="painel" id="painel"></section>
 
-  <section class="registro" id="registro" hidden aria-label="Registro">
+  <section class="registro" id="registro" data-todo="8" hidden aria-label="Registro">
     <div class="registro-cab">
       <span class="ouvindo" data-dica="O que entra e sai das entradas USB">Ouvindo desde 13:02</span>
       <button class="btn" id="registro-copiar" data-dica="Copia o registro para um relato">Copiar</button>
@@ -2011,7 +2010,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
         '<button class="modo" data-modo="mesa" data-dica="Onde cada aparelho está agora" aria-pressed="' + (modo === "mesa") + '">Atual</button>'
       + '<button class="modo destaque" data-modo="ideal" data-dica="Onde cada aparelho funciona melhor" aria-pressed="' + (modo === "ideal") + '">Sugestões</button>'
       + '<button class="modo" data-modo="mao" data-dica="A melhor entrada para um aparelho novo" aria-pressed="' + (modo === "mao") + '">Adicionar</button>'
-      + '<button class="modo" data-modo="registro" data-dica="O que entrou e saiu das entradas" aria-pressed="' + (modo === "registro") + '">Registro</button>';
+      + '<button class="modo" data-modo="registro" data-todo="8" data-dica="O que entrou e saiu das entradas" aria-pressed="' + (modo === "registro") + '">Registro</button>';
     var noRegistro = modo === "registro";
     document.getElementById("registro").hidden = !noRegistro;
     document.querySelector(".palco").hidden = noRegistro;
@@ -2109,7 +2108,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
         + Object.keys(MAPA).length + " de " + todasPortas().length + " entradas mapeadas"
         + (sem.length ? ' · <b style="color:var(--color-lacuna)">' + sem.length + " aparelho"
             + (sem.length > 1 ? "s" : "") + " fora do mapa</b>" : "")
-        + (pend ? ' · Clique em <b style="color:var(--color-ok)">Sugestões</b>' : "")
+        + (pend ? ' · Clique em <b>Sugestões</b>' : "")
         + "</span></p>";
     }
     painel.innerHTML = html;
@@ -2161,12 +2160,12 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       var dica = p ? "Na Entrada " + p + ". Clique para trocar" : "Sem entrada marcada. Clique e marque a entrada";
       var titulo = a.nomeDeclarado || hub || rotuloDoAparelho(a);
       return '<button class="chip' + (recuado ? " recuado" : "") + '" data-ap="' + a.id + '"' + (p ? ' data-alocado="1"' : "")
-        + ' data-dica="' + emAtributo(dica) + '"'
+        + ' data-dica="' + emAtributo(dica) + '"' + (hub ? ' data-todo="5"' : "")
         + (segurando === a.id ? ' data-segurando="1"' : "") + ">"
         + '<i class="marca" style="background:' + a.cor + '"></i>'
         + '<span class="txt"><b' + (hub ? '' : "") + ">" + emAtributo(titulo) + "</b>"
         + "<span>" + emAtributo(a.nome) + "</span>"
-        + (enl ? '<span class="enlace" data-dica="A entrada, o cabo ou o extensor segura a velocidade">' + enl + "</span>" : "")
+        + (enl ? '<span class="enlace" data-todo="6" data-dica="A entrada, o cabo ou o extensor segura a velocidade">' + enl + "</span>" : "")
         + "</span>"
         + (p ? '<span class="num">' + p + "</span>" : "") + "</button>";
     }
@@ -2183,7 +2182,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     htmlDaCadeia += APARELHOS.filter(function (a) { return !jaNaCadeia[a.id]; })
       .map(function (a) { return chipDaCadeia(a, false); }).join("");
     htmlDaCadeia += SUMIRAM.map(function (a) {
-      return '<div class="chip sumiu" data-dica="Já esteve neste computador e não apareceu agora">'
+      return '<div class="chip sumiu" data-todo="7" data-dica="Já esteve neste computador e não apareceu agora">'
         + '<i class="marca" style="background:' + a.cor + '"></i>'
         + '<span class="txt"><b>' + emAtributo(a.tipo) + "</b><span>" + emAtributo(a.nome) + " · Não apareceu neste início</span></span></div>";
     }).join("");
@@ -2510,6 +2509,10 @@ if (location.hash === '#menu') document.getElementById('menu-desenhado').hidden 
   });
   document.addEventListener('click', e => { if (!e.target.closest('.menu-hefesto')) document.querySelectorAll('.menu-hefesto.vivo').forEach(m => m.remove()); });
 })();
+</script>
+<script data-aba="registro">
+/* Rodada 4: #registro abre a página já na aba «Registro». */
+if (location.hash === '#registro') { document.addEventListener('DOMContentLoaded', () => document.querySelector('.modo[data-modo="registro"]').click()); }
 </script>
 </body>
 </html>

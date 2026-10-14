@@ -1,0 +1,53 @@
+{
+ "aba": "mapa-das-portas",
+ "nome": "Mapa das portas",
+ "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/_integra-1-11/src/hefesto_dualsense4unix/interface/paginas/mapa-das-portas.html",
+ "depois": "/mnt/Apate/Desenvolvimento/hefesto-voo/mockups-rodada-4/docs/research/2026-10-12-a-volta/paginas/todo-das-abas/todo/rodada-4/mapa-das-portas.html",
+ "rodada": 4,
+ "altura_px": 809,
+ "rola": false,
+ "mudancas": [
+  {
+   "n": 5,
+   "sprint": "O-MAPA-DAS-CONEXOES-MOSTRA-A-CADEIA-USB-E-O-REGISTRO-DELA-01",
+   "o_que_muda": "O hub entra na cadeia como um só chip: «Hub USB 3 · 7 entradas», com os aparelhos dele logo abaixo",
+   "resposta": "Opção A, escolhida por você",
+   "origem": "rodada 4 (o que faltava desenho)",
+   "ancora": "[data-todo=\"5\"]",
+   "seletor": "#bandeja .chip",
+   "conflito": ""
+  },
+  {
+   "n": 6,
+   "sprint": "O-MAPA-DAS-CONEXOES-MOSTRA-A-CADEIA-USB-E-O-REGISTRO-DELA-01",
+   "o_que_muda": "O enlace do hub aparece sob o nome: «480 Mb/s · Sabe 5 Gb/s», em laranja quando o hub negocia menos do que sabe",
+   "resposta": "Opção A",
+   "origem": "rodada 4 (o que faltava desenho)",
+   "ancora": "[data-todo=\"6\"]",
+   "seletor": ".enlace",
+   "conflito": ""
+  },
+  {
+   "n": 7,
+   "sprint": "O-MAPA-DAS-CONEXOES-MOSTRA-A-CADEIA-USB-E-O-REGISTRO-DELA-01",
+   "o_que_muda": "O aparelho que sumiu fica na cadeia, apagado: «Não apareceu neste início»",
+   "resposta": "Opção A",
+   "origem": "rodada 4 (o que faltava desenho)",
+   "ancora": "[data-todo=\"7\"]",
+   "seletor": ".chip.sumiu",
+   "conflito": ""
+  },
+  {
+   "n": 8,
+   "sprint": "O-MAPA-DAS-CONEXOES-MOSTRA-A-CADEIA-USB-E-O-REGISTRO-DELA-01",
+   "o_que_muda": "Uma quarta aba, Registro, lista o que entrou, saiu, voltou e ficou lento, com hora e entrada; o botão Copiar leva o texto",
+   "resposta": "Opção A",
+   "origem": "rodada 4 (o que faltava desenho)",
+   "ancora": "[data-todo=\"8\"]",
+   "seletor": "[data-modo=\"registro\"], #registro",
+   "conflito": "DUAS LEITURAS na dica do nome: o BRIEF-ACESSORIOS-USB pede «Driver: hub» na dica; a rodada 3 (portas-4) pediu sem nome de driver. A página segue a rodada 3."
+  }
+ ],
+ "por_baixo": [],
+ "fora": []
+}

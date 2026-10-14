@@ -1,274 +1,366 @@
 {
- "aba": "08",
- "nome": "Conexões",
- "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/_integra-1-11/src/hefesto_dualsense4unix/interface/paginas/08-conexoes.html",
- "depois": "/home/vitoriamaria/.local/state/hefesto-casa/leva-volta/todo/08-conexoes.html",
- "mudancas": [
-  {
-   "n": 1,
-   "sprint": "A-ABA-CONEXOES-DO-TODO-01",
-   "o_que_muda": "O «?» do espectro vira dica em Dispositivos conectados",
-   "origem": "pedido-dela",
-   "resposta": "todo-08-3",
-   "ancora": "todo-08-1",
-   "seletor": "[data-todo=\"1\"]",
-   "conflito": ""
-  },
-  {
-   "n": 2,
-   "sprint": "A-ABA-CONEXOES-DO-TODO-01",
-   "o_que_muda": "O «i» dos cartões sai; o porquê vira dica",
-   "origem": "pedido-dela",
-   "resposta": "todo-08-3",
-   "ancora": "todo-08-2",
-   "seletor": ".cartao-dica h4",
-   "conflito": ""
-  },
-  {
-   "n": 3,
-   "sprint": "A-ABA-CONEXOES-DO-TODO-01",
-   "o_que_muda": "Ignorar vira um × no canto do cartão",
-   "origem": "desenho-nosso-a-validar",
-   "resposta": "todo-08-3",
-   "ancora": "todo-08-3",
-   "seletor": ".cd-x",
-   "conflito": "A validar por ela."
-  },
-  {
-   "n": 4,
-   "sprint": "A-ABA-CONEXOES-DO-TODO-01",
-   "o_que_muda": "O botão direito abre o menu das abas",
-   "origem": "regra-global",
-   "resposta": "todo-08",
-   "ancora": "todo-08-4",
-   "seletor": "#menu-desenhado",
-   "conflito": ""
-  },
-  {
-   "n": 5,
-   "sprint": "A-ABA-CONEXOES-DO-TODO-01",
-   "o_que_muda": "«Roxo quer conectar» vira «Galactic Purple quer conectar»",
-   "origem": "regra-global",
-   "resposta": "todo-08",
-   "ancora": "todo-08-5",
-   "seletor": ".t",
-   "conflito": ""
-  },
-  {
-   "n": 6,
-   "sprint": "A-ABA-CONEXOES-DO-TODO-01",
-   "o_que_muda": "«Analógico virtual» vira «Giroscópio como analógico»",
-   "origem": "desenho-nosso-a-validar",
-   "resposta": "todo-08",
-   "ancora": "todo-08-6",
-   "seletor": ".est",
-   "conflito": "A validar por ela."
-  },
-  {
-   "n": 7,
-   "sprint": "A-ABA-CONEXOES-DO-TODO-01",
-   "o_que_muda": "Nenhum «?» nos títulos nem nas janelas de mapear",
-   "origem": "pedido-dela",
-   "resposta": "todo-08-3",
-   "ancora": "todo-08-7",
-   "seletor": ".tn-tit",
-   "conflito": ""
-  },
-  {
-   "n": 8,
-   "sprint": "A-ABA-CONEXOES-DO-TODO-01",
-   "o_que_muda": "«Meio sufocado» diz Starlight Blue, não P2",
-   "origem": "regra-global",
-   "resposta": "todo-08",
-   "ancora": "todo-08-8",
-   "seletor": ".cartao-dica.nivel-grave .cd-pic",
-   "conflito": ""
-  },
-  {
-   "n": 9,
-   "sprint": "A-ABA-CONEXOES-DO-TODO-01",
-   "o_que_muda": "Rádio e adaptadores aberta cabe sem rolagem",
-   "origem": "regra-global",
-   "resposta": "todo-08",
-   "ancora": "todo-08-9",
-   "seletor": "#cx8-3 ~ .quadro-corpo",
-   "conflito": ""
-  },
-  {
-   "n": 10,
-   "sprint": "A-ABA-CONEXOES-DO-TODO-01",
-   "o_que_muda": "As barras dos adaptadores começam e acabam na mesma reta",
-   "origem": "RODADA-3",
-   "resposta": "todo-08-r3-10",
-   "ancora": "todo-08-10",
-   "seletor": ".radio .lugar-topo",
-   "conflito": ""
-  },
-  {
-   "n": 11,
-   "sprint": "A-ABA-CONEXOES-DO-TODO-01",
-   "o_que_muda": "O × dos cartões fica na mesma reta do «Ver no mapa»",
-   "origem": "RODADA-3",
-   "resposta": "todo-08-r3-11",
-   "ancora": "todo-08-11",
-   "seletor": ".cartao-dica .cd-x",
-   "conflito": ""
-  },
-  {
-   "n": 12,
-   "sprint": "A-ABA-CONEXOES-DO-TODO-01",
-   "o_que_muda": "Os cartões dos controles perdem os botões de perfil; o perfil se escolhe na aba Sistema",
-   "origem": "RODADA-4",
-   "resposta": "todo-08-r4-12",
-   "ancora": "todo-08-12",
-   "seletor": ".gc-corpo",
-   "conflito": "O «Personalizado» saiu junto com Máximo e Econômico: sozinho não escolhe nada, e também está na 09."
-  }
- ],
- "por_baixo": [
-  {
-   "sprint": "O-TEMA-DE-CORES-ENTRA-PELA-FOLHA-DE-USUARIO-01",
-   "o_que_muda": "Implementada na fds (voo/lancadores-fds): os --c-<tipo> e --sala-<tipo> sobem ao :root e a cor da faixa vira token; sem tema de modificação ligado, nada muda na tela."
-  },
-  {
-   "sprint": "CADA-FEATURE-TEM-UM-DONO-SO-NA-INTERFACE-01",
-   "o_que_muda": "A 08 não está na tabela do BRIEF-T7: a linha «Giroscópio como analógico» dos cartões só lê o estado, e o dono é a aba Controles."
-  },
-  {
-   "sprint": "SO-A-PRIMEIRA-LETRA-E-MAIUSCULA-EM-TODA-ABA-01",
-   "o_que_muda": "Já costurada na 1-11; o que sobra com maiúscula no meio são nomes (Entrada 4, os adaptadores Meio e Direita, as cores da Sony) e nomes de botão citados."
-  },
-  {
-   "sprint": "A-CADEIA-USB-SE-RECONHECE-EM-QUALQUER-PC-E-CADA-MUDANCA-VAI-AO-REGISTRO-01",
-   "o_que_muda": "O censo da cadeia USB e o diário usb-diario.jsonl que alimentam o Mapa das conexões; a 08 só abre o mapa pelo botão de sempre."
-  },
-  {
-   "sprint": "A-ABA-LANCADORES-GANHA-AS-MODIFICACOES-01",
-   "o_que_muda": "O acordeão «Modificações» da 08 passa a ser peça comum com a aba Lançadores; a 08 não muda."
-  },
-  {
-   "sprint": "O-VIGIA-DE-ZUMBI-PERGUNTA-E-AVISA-UMA-VEZ-POR-EPISODIO-01",
-   "o_que_muda": "O aviso do controle zumbi vai ao diário uma vez por episódio; nada na tela."
-  },
-  {
-   "sprint": "A-INTERFACE-INTEIRA-SE-ALCANCA-PELO-CONTROLE-E-PELO-TECLADO-01",
-   "o_que_muda": "Foco e atributos de teclado e controle nos alvos; a aparência não muda."
-  },
-  {
-   "sprint": "A-ALTURA-E-A-LARGURA-DA-JANELA-NAO-PULSAM-01",
-   "o_que_muda": "A janela não pulsa de tamanho; o desenho não muda."
-  },
-  {
-   "sprint": "A-JANELA-REGISTRA-O-PROPRIO-TAMANHO-E-O-MOTIVO-DE-FECHAR-01",
-   "o_que_muda": "O tamanho e o motivo de fechar vão ao diário; nada na tela."
-  },
-  {
-   "sprint": "FECHAR-A-JANELA-DEVOLVE-O-QUE-AS-ABAS-SEGURAVAM-01",
-   "o_que_muda": "Fechar a janela solta o que a aba segurava; nada na tela."
-  },
-  {
-   "sprint": "O-ASSENTO-GUARDADO-NAO-ANDA-01",
-   "o_que_muda": "O lugar guardado não anda na tela nem na lâmpada; o desenho é o mesmo."
-  },
-  {
-   "sprint": "O-ASSENTO-GUARDADO-NAO-ANDA-02",
-   "o_que_muda": "O lugar guardado não anda na tela nem na lâmpada; o desenho é o mesmo."
-  },
-  {
-   "sprint": "O-ASSENTO-GUARDADO-NAO-ANDA-03",
-   "o_que_muda": "O lugar guardado não anda na tela nem na lâmpada; o desenho é o mesmo."
-  }
- ],
- "fora": [
-  {
-   "sprint": "O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01",
-   "motivo": "Já no antes (integra/0410, na 1-11); espera só a bancada."
-  },
-  {
-   "sprint": "AS-DICAS-SAO-CARTOES-COM-UM-GESTO-01",
-   "motivo": "Já no antes (os quatro cartões de dica); espera só a bancada."
-  },
-  {
-   "sprint": "AS-FAIXAS-DIZEM-QUEM-BRIGA-COM-CADA-APARELHO-01",
-   "motivo": "Já no antes; espera só a bancada."
-  },
-  {
-   "sprint": "O-RECEPTOR-2-4G-SE-RECONHECE-E-DIZ-QUANDO-SOFRE-01",
-   "motivo": "Já no antes; espera só a bancada."
-  },
-  {
-   "sprint": "O-CONTROLE-JA-PAREADO-SE-PAREIA-DE-NOVO-NUM-CLIQUE-01",
-   "motivo": "Já no antes; espera só a bancada."
-  },
-  {
-   "sprint": "O-CONTROLE-QUE-PEDE-PARA-PAREAR-APARECE-MESMO-JA-CONHECIDO-01",
-   "motivo": "Já no antes (o cartão «Roxo quer conectar»); espera só a bancada."
-  },
-  {
-   "sprint": "O-WIFI-SE-LE-NAS-DUAS-BANDAS-E-TROCA-O-USB-PELA-BANDA-01",
-   "motivo": "Já no antes (o selo de quedas e a nota USB 3.0 + 2.4 GHz); espera só a bancada."
-  },
-  {
-   "sprint": "O-DESLIGADO-DEIXA-O-JOGO-DECIDIR-01",
-   "motivo": "Código costurado na integra/0410, já no antes; espera só a bancada."
-  },
-  {
-   "sprint": "A-HAPTICA-MORA-EM-VIBRACAO-E-O-ICONE-DO-APP-VOLTA-01",
-   "motivo": "Código costurado na integra/0410, já no antes; espera só a bancada."
-  },
-  {
-   "sprint": "O-DEGRAU-DO-MEIO-E-A-FRASE-DA-FAIXA-SE-LIGAM-DEPOIS-DA-B9-01",
-   "motivo": "Depende da bancada B9; a frase só aparece quando a procura da faixa termina sem faixa, estado que a cena não mostra."
-  },
-  {
-   "sprint": "MESA-DE-QUATRO-01",
-   "motivo": "Roteiro de bancada com quatro controles; não muda a tela."
-  },
-  {
-   "sprint": "I18N-DA-TELA-NOVA-01",
-   "motivo": "Tradução; não muda a tela em português."
-  },
-  {
-   "sprint": "TRADUZIR-O-PROJETO-01",
-   "motivo": "Tradução; não muda a tela em português."
-  },
-  {
-   "sprint": "A-ENTRADA-DE-CADA-JOGADOR-CHEGA-INTEIRA-01",
-   "motivo": "Já costurada na 1-11: está no antes."
-  },
-  {
-   "sprint": "O-SINAL-DE-CADA-CONTROLE-DIZ-SE-ELE-ESTA-LONGE-01",
-   "motivo": "Já costurada na 1-11: está no antes."
-  },
-  {
-   "sprint": "TODO-TEXTO-QUE-ABRE-UMA-LINHA-COMECA-COM-MAIUSCULA-01",
-   "motivo": "Já costurada na 1-11: está no antes."
-  },
-  {
-   "sprint": "A-FAIXA-DO-TECLADO-SE-ACHA-01",
-   "motivo": "Já costurada na 1-11: está no antes."
-  },
-  {
-   "sprint": "A-08-MOSTRA-O-DESENHO-DO-CONTROLE-E-O-HUB-PERGUNTA-A-ENTRADA-01",
-   "motivo": "Já costurada na 1-11: está no antes."
-  },
-  {
-   "sprint": "A-BANCADA-DE-MENTIRA-TEM-EXTERNO-E-A-SONDA-LE-A-DICA-01",
-   "motivo": "Já costurada na 1-11: está no antes."
-  },
-  {
-   "sprint": "A-LINHA-DO-EXTERNO-VOLTA-AOS-30-PX-E-A-COR-FORA-DA-LISTA-SE-ESCOLHE-01",
-   "motivo": "Já costurada na 1-11: está no antes."
-  },
-  {
-   "sprint": "A-PONTE-PAUSADA-DIZ-A-VERDADE-NA-CONEXOES-01",
-   "motivo": "Já costurada na 1-11: está no antes."
-  },
-  {
-   "sprint": "O-CONTROLLERS-JSON-ILEGIVEL-NAO-SE-SOBRESCREVE-CALADO-01",
-   "motivo": "Só a leitura do arquivo; nenhuma página muda."
-  }
- ],
- "altura_px": 809,
- "rola": false
+  "aba": "08",
+  "nome": "Conexões",
+  "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/_integra-1-11/src/hefesto_dualsense4unix/interface/paginas/08-conexoes.html",
+  "depois": "docs/research/2026-10-12-a-volta/paginas/todo-das-abas/todo/08-conexoes.html",
+  "mudancas": [
+    {
+      "n": 1,
+      "sprint": "A-ABA-CONEXOES-DO-TODO-01",
+      "o_que_muda": "O «?» do espectro vira dica em Dispositivos conectados",
+      "origem": "pedido-dela",
+      "resposta": "todo-08-3",
+      "ancora": "todo-08-1",
+      "seletor": "[data-todo=\"1\"]",
+      "conflito": ""
+    },
+    {
+      "n": 2,
+      "sprint": "A-ABA-CONEXOES-DO-TODO-01",
+      "o_que_muda": "O «i» dos cartões sai; o porquê vira dica",
+      "origem": "pedido-dela",
+      "resposta": "todo-08-3",
+      "ancora": "todo-08-2",
+      "seletor": ".cartao-dica h4",
+      "conflito": ""
+    },
+    {
+      "n": 3,
+      "sprint": "A-ABA-CONEXOES-DO-TODO-01",
+      "o_que_muda": "Ignorar vira um × no canto do cartão",
+      "origem": "desenho-nosso-a-validar",
+      "resposta": "todo-08-3",
+      "ancora": "todo-08-3",
+      "seletor": ".cd-x",
+      "conflito": "A validar por ela."
+    },
+    {
+      "n": 4,
+      "sprint": "A-ABA-CONEXOES-DO-TODO-01",
+      "o_que_muda": "O botão direito abre o menu das abas",
+      "origem": "regra-global",
+      "resposta": "todo-08",
+      "ancora": "todo-08-4",
+      "seletor": "#menu-desenhado",
+      "conflito": ""
+    },
+    {
+      "n": 5,
+      "sprint": "A-ABA-CONEXOES-DO-TODO-01",
+      "o_que_muda": "«Roxo quer conectar» vira «Galactic Purple quer conectar»",
+      "origem": "regra-global",
+      "resposta": "todo-08",
+      "ancora": "todo-08-5",
+      "seletor": ".t",
+      "conflito": ""
+    },
+    {
+      "n": 6,
+      "sprint": "A-ABA-CONEXOES-DO-TODO-01",
+      "o_que_muda": "«Analógico virtual» vira «Giroscópio como analógico»",
+      "origem": "desenho-nosso-a-validar",
+      "resposta": "todo-08",
+      "ancora": "todo-08-6",
+      "seletor": ".est",
+      "conflito": "A validar por ela."
+    },
+    {
+      "n": 7,
+      "sprint": "A-ABA-CONEXOES-DO-TODO-01",
+      "o_que_muda": "Nenhum «?» nos títulos nem nas janelas de mapear",
+      "origem": "pedido-dela",
+      "resposta": "todo-08-3",
+      "ancora": "todo-08-7",
+      "seletor": ".tn-tit",
+      "conflito": ""
+    },
+    {
+      "n": 8,
+      "sprint": "A-ABA-CONEXOES-DO-TODO-01",
+      "o_que_muda": "«Meio sufocado» diz Starlight Blue, não P2",
+      "origem": "regra-global",
+      "resposta": "todo-08",
+      "ancora": "todo-08-8",
+      "seletor": ".cartao-dica.nivel-grave .cd-pic",
+      "conflito": ""
+    },
+    {
+      "n": 9,
+      "sprint": "A-ABA-CONEXOES-DO-TODO-01",
+      "o_que_muda": "Rádio e adaptadores aberta cabe sem rolagem",
+      "origem": "regra-global",
+      "resposta": "todo-08",
+      "ancora": "todo-08-9",
+      "seletor": "#cx8-3 ~ .quadro-corpo",
+      "conflito": ""
+    },
+    {
+      "n": 10,
+      "sprint": "A-ABA-CONEXOES-DO-TODO-01",
+      "o_que_muda": "As barras dos adaptadores começam e acabam na mesma reta",
+      "origem": "RODADA-3",
+      "resposta": "todo-08-r3-10",
+      "ancora": "todo-08-10",
+      "seletor": ".radio .lugar-topo",
+      "conflito": ""
+    },
+    {
+      "n": 11,
+      "sprint": "A-ABA-CONEXOES-DO-TODO-01",
+      "o_que_muda": "O × dos cartões fica na mesma reta do «Ver no mapa»",
+      "origem": "RODADA-3",
+      "resposta": "todo-08-r3-11",
+      "ancora": "todo-08-11",
+      "seletor": ".cartao-dica .cd-x",
+      "conflito": ""
+    },
+    {
+      "n": 12,
+      "sprint": "A-ABA-CONEXOES-DO-TODO-01",
+      "o_que_muda": "Os cartões dos controles perdem os botões de perfil; o perfil se escolhe na aba Sistema",
+      "origem": "RODADA-4",
+      "resposta": "todo-08-r4-12",
+      "ancora": "todo-08-12",
+      "seletor": ".gc-corpo",
+      "conflito": "O «Personalizado» saiu junto com Máximo e Econômico: sozinho não escolhe nada, e também está na 09."
+    },
+    {
+      "n": 13,
+      "sprint": "O-HEFESTO-SABE-EM-QUAL-VAGA-DE-PAREAMENTO-O-CONTROLE-ESTA-01",
+      "o_que_muda": "Quando o controle está pareado com outro aparelho, a linha diz «O controle foi para outro aparelho», sem o selo vermelho de queda, e o botão vira «Trazer de volta»",
+      "resposta": "todo-08-r3-13",
+      "origem": "escolha dela de 13/10",
+      "ancora": "[data-r3=\"13\"]",
+      "conflito": "",
+      "rodada": 3,
+      "ancora_antes": "[data-id=\"nao-conectou-L1-P6\"]",
+      "js": "document.getElementById('cx8-3').click(); document.querySelector('.abre-lugar[data-alvo=L1]').click()",
+      "js_antes": "document.getElementById('cx8-3').click(); document.querySelector('.abre-lugar[data-alvo=L1]').click()"
+    },
+    {
+      "n": 14,
+      "sprint": "OS-ACIONADORES-USB-ENTRAM-COMO-BOTOES-DO-CONTROLE-01",
+      "o_que_muda": "Na linha do aparelho de entrada, «Usar como botões de…» abre a janela onde cada tecla dele cai num botão do controle, escolhido sobre o desenho real do DualSense",
+      "resposta": "todo-08-r3-14",
+      "origem": "escolha dela de 13/10",
+      "ancora": "[data-r3=\"14\"]",
+      "conflito": "",
+      "rodada": 3,
+      "ancora_antes": "[data-id=\"W1\"]",
+      "js": "document.getElementById('cx8-3').click(); document.querySelector('.abre-lugar[data-alvo=L1]').click()",
+      "js_antes": "document.getElementById('cx8-3').click(); document.querySelector('.abre-lugar[data-alvo=L1]').click()",
+      "ajuste_r3": {
+        "pedido": "(sem texto, voto «ajustar»: ela não disse o que faltou; valem os critérios das outras respostas: larguras iguais, sem aviso verde, respiro, nada sufocado)",
+        "feito": "Na linha do Acionador USB, «Usar como botões de…» e o «Trazer de volta» da linha de baixo ficaram com o mesmo tamanho (150 x 24 px) e na mesma coluna; o botão tinha 22 px de altura. Na janela do acionador, a lista das teclas ganhou respiro (linhas de 40 px, letra de 13 px, botões de 34 px) e a janela ficou um pouco mais larga. Você pediu ajuste sem texto: diga o que faltou."
+      }
+    },
+    {
+      "n": 15,
+      "sprint": "OS-ACIONADORES-USB-ENTRAM-COMO-BOTOES-DO-CONTROLE-01",
+      "o_que_muda": "A janela do acionador: as teclas à esquerda e o desenho real do controle à direita, com o controle escolhido pela cor",
+      "resposta": "todo-08-r3-15",
+      "origem": "escolha dela de 13/10",
+      "ancora": ".ac-cx",
+      "conflito": "",
+      "rodada": 3,
+      "ancora_antes": "[data-id=\"W1\"]",
+      "js": "location.hash='#acionador'",
+      "js_antes": "document.getElementById('cx8-3').click(); document.querySelector('.abre-lugar[data-alvo=L1]').click()"
+    },
+    {
+      "n": 16,
+      "sprint": "O-APARELHO-DO-BLUETOOTH-SEM-TIPO-SE-NOMEIA-PELA-PESSOA-01",
+      "o_que_muda": "O aparelho do Bluetooth sem tipo ganha o «?» na linha; o clique abre a grade dos tipos, com ícones grandes",
+      "resposta": "todo-08-r3-16",
+      "origem": "escolha dela de 13/10",
+      "ancora": ".tipo-cx",
+      "conflito": "",
+      "rodada": 3,
+      "ancora_antes": "[data-id=\"W1\"]",
+      "js": "location.hash='#tipo-do-aparelho'",
+      "js_antes": "document.getElementById('cx8-3').click(); document.querySelector('.abre-lugar[data-alvo=L1]').click()"
+    },
+    {
+      "n": 17,
+      "sprint": "A-ABA-CONEXOES-DO-TODO-01",
+      "o_que_muda": "O «Giroscópio como analógico» sai dos cartões dos controles: o ajuste mora na Navegação",
+      "resposta": "todo-08-r3-17",
+      "origem": "escolha dela de 13/10",
+      "ancora": ".gc-est[data-campo=\"est-visto\"]",
+      "conflito": "",
+      "rodada": 3,
+      "ancora_antes": ".gc-est[data-campo=\"est-mira\"]"
+    },
+    {
+      "n": 18,
+      "sprint": "A-ABA-CONEXOES-DO-TODO-01",
+      "o_que_muda": "A linha «Giroscópio como analógico» sai do cartão de cada controle: o giroscópio só aparece na aba Controles, na Navegação e na janela Calibrar giroscópio",
+      "resposta": "confirmado por você em 13/10, ~22h: o giroscópio sai da aba Conexões",
+      "origem": "rodada 4 (o que faltava desenho)",
+      "ancora": "[data-todo=\"18\"]",
+      "seletor": ".gc-resumo",
+      "conflito": "Substitui a 08-6 do todo («Analógico virtual» vira «Giroscópio como analógico»): a linha que ela renomeava deixa de existir nesta aba.",
+      "n_na_rodada_4": 13,
+      "fusao": "Na rodada 4 era a 13. É a mesma ideia da 17 da r3 (a linha do giroscópio sai do cartão); a 18 completa a 17: o terceiro cartão também perde a linha da mira.",
+      "rodada": 4
+    }
+  ],
+  "por_baixo": [
+    {
+      "sprint": "O-TEMA-DE-CORES-ENTRA-PELA-FOLHA-DE-USUARIO-01",
+      "o_que_muda": "Implementada na fds (voo/lancadores-fds): os --c-<tipo> e --sala-<tipo> sobem ao :root e a cor da faixa vira token; sem tema de modificação ligado, nada muda na tela."
+    },
+    {
+      "sprint": "CADA-FEATURE-TEM-UM-DONO-SO-NA-INTERFACE-01",
+      "o_que_muda": "A 08 não está na tabela do BRIEF-T7: a linha «Giroscópio como analógico» dos cartões só lê o estado, e o dono é a aba Controles."
+    },
+    {
+      "sprint": "SO-A-PRIMEIRA-LETRA-E-MAIUSCULA-EM-TODA-ABA-01",
+      "o_que_muda": "Já costurada na 1-11; o que sobra com maiúscula no meio são nomes (Entrada 4, os adaptadores Meio e Direita, as cores da Sony) e nomes de botão citados."
+    },
+    {
+      "sprint": "A-CADEIA-USB-SE-RECONHECE-EM-QUALQUER-PC-E-CADA-MUDANCA-VAI-AO-REGISTRO-01",
+      "o_que_muda": "O censo da cadeia USB e o diário usb-diario.jsonl que alimentam o Mapa das conexões; a 08 só abre o mapa pelo botão de sempre."
+    },
+    {
+      "sprint": "A-ABA-LANCADORES-GANHA-AS-MODIFICACOES-01",
+      "o_que_muda": "O acordeão «Modificações» da 08 passa a ser peça comum com a aba Lançadores; a 08 não muda."
+    },
+    {
+      "sprint": "O-VIGIA-DE-ZUMBI-PERGUNTA-E-AVISA-UMA-VEZ-POR-EPISODIO-01",
+      "o_que_muda": "O aviso do controle zumbi vai ao diário uma vez por episódio; nada na tela."
+    },
+    {
+      "sprint": "A-INTERFACE-INTEIRA-SE-ALCANCA-PELO-CONTROLE-E-PELO-TECLADO-01",
+      "o_que_muda": "Foco e atributos de teclado e controle nos alvos; a aparência não muda."
+    },
+    {
+      "sprint": "A-ALTURA-E-A-LARGURA-DA-JANELA-NAO-PULSAM-01",
+      "o_que_muda": "A janela não pulsa de tamanho; o desenho não muda."
+    },
+    {
+      "sprint": "A-JANELA-REGISTRA-O-PROPRIO-TAMANHO-E-O-MOTIVO-DE-FECHAR-01",
+      "o_que_muda": "O tamanho e o motivo de fechar vão ao diário; nada na tela."
+    },
+    {
+      "sprint": "FECHAR-A-JANELA-DEVOLVE-O-QUE-AS-ABAS-SEGURAVAM-01",
+      "o_que_muda": "Fechar a janela solta o que a aba segurava; nada na tela."
+    },
+    {
+      "sprint": "O-ASSENTO-GUARDADO-NAO-ANDA-01",
+      "o_que_muda": "O lugar guardado não anda na tela nem na lâmpada; o desenho é o mesmo."
+    },
+    {
+      "sprint": "O-ASSENTO-GUARDADO-NAO-ANDA-02",
+      "o_que_muda": "O lugar guardado não anda na tela nem na lâmpada; o desenho é o mesmo."
+    },
+    {
+      "sprint": "O-ASSENTO-GUARDADO-NAO-ANDA-03",
+      "o_que_muda": "O lugar guardado não anda na tela nem na lâmpada; o desenho é o mesmo."
+    },
+    {
+      "sprint": "O-MAPA-DAS-CONEXOES-MOSTRA-A-CADEIA-USB-E-O-REGISTRO-DELA-01",
+      "o_que_muda": "O cartão não muda; a cadeia mora no mapa das portas."
+    }
+  ],
+  "fora": [
+    {
+      "sprint": "O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01",
+      "motivo": "Já no antes (integra/0410, na 1-11); espera só a bancada."
+    },
+    {
+      "sprint": "AS-DICAS-SAO-CARTOES-COM-UM-GESTO-01",
+      "motivo": "Já no antes (os quatro cartões de dica); espera só a bancada."
+    },
+    {
+      "sprint": "AS-FAIXAS-DIZEM-QUEM-BRIGA-COM-CADA-APARELHO-01",
+      "motivo": "Já no antes; espera só a bancada."
+    },
+    {
+      "sprint": "O-RECEPTOR-2-4G-SE-RECONHECE-E-DIZ-QUANDO-SOFRE-01",
+      "motivo": "Já no antes; espera só a bancada."
+    },
+    {
+      "sprint": "O-CONTROLE-JA-PAREADO-SE-PAREIA-DE-NOVO-NUM-CLIQUE-01",
+      "motivo": "Já no antes; espera só a bancada."
+    },
+    {
+      "sprint": "O-CONTROLE-QUE-PEDE-PARA-PAREAR-APARECE-MESMO-JA-CONHECIDO-01",
+      "motivo": "Já no antes (o cartão «Roxo quer conectar»); espera só a bancada."
+    },
+    {
+      "sprint": "O-WIFI-SE-LE-NAS-DUAS-BANDAS-E-TROCA-O-USB-PELA-BANDA-01",
+      "motivo": "Já no antes (o selo de quedas e a nota USB 3.0 + 2.4 GHz); espera só a bancada."
+    },
+    {
+      "sprint": "O-DESLIGADO-DEIXA-O-JOGO-DECIDIR-01",
+      "motivo": "Código costurado na integra/0410, já no antes; espera só a bancada."
+    },
+    {
+      "sprint": "A-HAPTICA-MORA-EM-VIBRACAO-E-O-ICONE-DO-APP-VOLTA-01",
+      "motivo": "Código costurado na integra/0410, já no antes; espera só a bancada."
+    },
+    {
+      "sprint": "O-DEGRAU-DO-MEIO-E-A-FRASE-DA-FAIXA-SE-LIGAM-DEPOIS-DA-B9-01",
+      "motivo": "Depende da bancada B9; a frase só aparece quando a procura da faixa termina sem faixa, estado que a cena não mostra."
+    },
+    {
+      "sprint": "MESA-DE-QUATRO-01",
+      "motivo": "Roteiro de bancada com quatro controles; não muda a tela."
+    },
+    {
+      "sprint": "I18N-DA-TELA-NOVA-01",
+      "motivo": "Tradução; não muda a tela em português."
+    },
+    {
+      "sprint": "TRADUZIR-O-PROJETO-01",
+      "motivo": "Tradução; não muda a tela em português."
+    },
+    {
+      "sprint": "A-ENTRADA-DE-CADA-JOGADOR-CHEGA-INTEIRA-01",
+      "motivo": "Já costurada na 1-11: está no antes."
+    },
+    {
+      "sprint": "O-SINAL-DE-CADA-CONTROLE-DIZ-SE-ELE-ESTA-LONGE-01",
+      "motivo": "Já costurada na 1-11: está no antes."
+    },
+    {
+      "sprint": "TODO-TEXTO-QUE-ABRE-UMA-LINHA-COMECA-COM-MAIUSCULA-01",
+      "motivo": "Já costurada na 1-11: está no antes."
+    },
+    {
+      "sprint": "A-FAIXA-DO-TECLADO-SE-ACHA-01",
+      "motivo": "Já costurada na 1-11: está no antes."
+    },
+    {
+      "sprint": "A-08-MOSTRA-O-DESENHO-DO-CONTROLE-E-O-HUB-PERGUNTA-A-ENTRADA-01",
+      "motivo": "Já costurada na 1-11: está no antes."
+    },
+    {
+      "sprint": "A-BANCADA-DE-MENTIRA-TEM-EXTERNO-E-A-SONDA-LE-A-DICA-01",
+      "motivo": "Já costurada na 1-11: está no antes."
+    },
+    {
+      "sprint": "A-LINHA-DO-EXTERNO-VOLTA-AOS-30-PX-E-A-COR-FORA-DA-LISTA-SE-ESCOLHE-01",
+      "motivo": "Já costurada na 1-11: está no antes."
+    },
+    {
+      "sprint": "A-PONTE-PAUSADA-DIZ-A-VERDADE-NA-CONEXOES-01",
+      "motivo": "Já costurada na 1-11: está no antes."
+    },
+    {
+      "sprint": "O-CONTROLLERS-JSON-ILEGIVEL-NAO-SE-SOBRESCREVE-CALADO-01",
+      "motivo": "Só a leitura do arquivo; nenhuma página muda."
+    }
+  ],
+  "altura_px": 809,
+  "rola": false,
+  "rodada": 3,
+  "origem_da_pagina": "r3 (v3) + rodada 4",
+  "consertos_da_fusao": [
+    "A vaga sem controle diz «P3 • Desconectado» e «P4 • Desconectado» (q4B).",
+    "O nome de quem joga nasce vazio nas duas vagas, como em qualquer instalação.",
+    "No rádio, os quatro controles se chamam pela cor do plástico.",
+    "Na conferência, o ✓ do Mic e do Som sai do verde e fica na cor do texto: nenhum aviso verde."
+  ]
 }

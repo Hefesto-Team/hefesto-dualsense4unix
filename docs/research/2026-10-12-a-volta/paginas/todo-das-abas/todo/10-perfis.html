@@ -1933,6 +1933,10 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 .menu-hefesto button:hover{background:rgba(189,147,249,.14)}
 .menu-hefesto button[disabled]{color:var(--texto-mudo,#9a9eb8);opacity:.55;cursor:default;background:transparent}
 .menu-hefesto hr{border:0;border-top:1px solid var(--border-sutil,#343746);margin:5px 4px}
+  /* rodada 3 (13/10): os campos do Editar encolhem nas janelas baixas, e a tabela dos controles mostra o White inteiro */
+  @media (max-height:860px){.campo{height:32px} .campo input,.campo select,.campo .seg button{height:32px !important;min-height:0} .ordem-vale li{height:26px} .ordem-vale{margin:0 0 6px}}
+  @media (max-height:780px){.campos{padding:8px 12px} .campo{height:28px;margin-bottom:3px} .campo input,.campo select,.campo .seg button{height:28px !important}
+    .ordem-vale li{height:24px} .ordem-vale ol{gap:3px} .ordem-vale .cab{margin-bottom:3px} .tab.miuda thead th{padding:3px 8px}}
 </style>
 </head>
 <body data-campo="nativo" data-hef-alvo="classe" data-hef-classe="nativo" data-hef-quando="sim">

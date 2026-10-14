@@ -1,0 +1,50 @@
+{
+ "aba": "07-lancadores",
+ "nome": "Experimental",
+ "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/mockups-rodada-4/docs/research/2026-10-12-a-volta/paginas/todo-das-abas/todo/07-lancadores.html",
+ "depois": "/mnt/Apate/Desenvolvimento/hefesto-voo/mockups-rodada-4/docs/research/2026-10-12-a-volta/paginas/todo-das-abas/todo/rodada-4/07-lancadores.html",
+ "rodada": 4,
+ "altura_px": 809,
+ "rola": false,
+ "estados": {
+  "o-que-seguem": "07-lancadores.html?aba=t2#acessorios",
+  "com-dois-jogos-marcados": "07-lancadores.html?aba=t2&marcados=1#acessorios"
+ },
+ "mudancas": [
+  {
+   "n": 34,
+   "sprint": "OS-ACESSORIOS-SEGUEM-OS-JOGOS-ESCOLHIDOS-COM-A-FORCA-NO-DESLIZANTE-01",
+   "o_que_muda": "A janela Lovense, em «O que seguem», ganha a lista dos jogos que têm perfil, uma caixa por jogo; nasce toda vazia, e só você marca",
+   "resposta": "resposta 1 de 12/10 (~22h): vale em qualquer jogo que você escolher",
+   "origem": "rodada 4 (o que faltava desenho)",
+   "ancora": "[data-todo=\"34\"]",
+   "seletor": ".ja-tela.t2 .jg-lista",
+   "conflito": "Os nomes são de exemplo (os jogos com perfil). Sem nenhum jogo marcado e com «Os jogos que eu escolher» no «Quando», os acessórios ficam parados.",
+   "ajuste_r4": {
+    "pedido": "ajustar os elementos tem muita coisa na tela e tá bagunçada mas a ideia é isso aí",
+    "feito": "A aba «O que seguem» da janela Lovense virou uma grade de duas colunas iguais e duas linhas da mesma altura. Em cima, «O que os acessórios seguem» e «Como os três tocam juntos» são três botões do mesmo tamanho cada, só com o nome (a explicação foi para a dica). Embaixo, os jogos: a frase «Nenhum jogo marcado…» saiu e cada jogo é uma linha de 36 px, com a caixa e o nome. Toda letra da aba tem 12 px ou mais. Os jogos e a força continuam dentro da janela que a engrenagem abre, nunca na lista."
+   }
+  },
+  {
+   "n": 35,
+   "sprint": "OS-ACESSORIOS-SEGUEM-OS-JOGOS-ESCOLHIDOS-COM-A-FORCA-NO-DESLIZANTE-01",
+   "o_que_muda": "No lugar de «Força do Segue o jogo − 1,0 +», um deslizante por canal (Vibração, Gatilho, Háptica) para cada aparelho, de 0 a 20; o aparelho recebe o maior dos três",
+   "resposta": "resposta 2 de 12/10 (~22h) e a de ~23h: um deslizante por canal, por aparelho",
+   "origem": "rodada 4 (o que faltava desenho)",
+   "ancora": "[data-todo=\"35\"]",
+   "seletor": ".ja-tela.t2 .fz-grade",
+   "conflito": "O padrão de fábrica dos três é 10/20 (50 %), decidido por delegação, a validar por você.",
+   "ajuste_r4": {
+    "pedido": "(ajustar, sem texto)",
+    "feito": "A força de cada canal ficou com um título só («Força de cada canal», de 0 a 20) e uma grade de três colunas iguais: Vibração, Gatilho e Háptica no topo, e cada aparelho numa faixa com os três deslizantes alinhados embaixo do nome. Saíram as legendas «dois motores» e «um motor» e o «/20» de cada número; o deslizante tem 24 px de altura."
+   }
+  }
+ ],
+ "por_baixo": [
+  {
+   "sprint": "O-GATILHO-E-A-HAPTICA-DO-JOGO-VIRAM-EVENTOS-PARA-AS-EXTENSOES-01",
+   "o_que_muda": "Nada na tela além dos canais Gatilho e Háptica da 35."
+  }
+ ],
+ "fora": []
+}

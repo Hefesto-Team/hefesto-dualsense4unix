@@ -2,7 +2,7 @@
  "aba": "09",
  "nome": "Sistema",
  "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/_integra-1-11/src/hefesto_dualsense4unix/interface/paginas/09-sistema.html",
- "depois": "/home/vitoriamaria/.local/state/hefesto-casa/leva-volta/todo/09-sistema.html",
+ "depois": "docs/research/2026-10-12-a-volta/paginas/todo-das-abas/todo/09-sistema.html",
  "mudancas": [
   {
    "n": 1,
@@ -113,6 +113,17 @@
    "ancora": "todo-09-11",
    "seletor": "[data-gesto=parar-ou-retomar]",
    "conflito": ""
+  },
+  {
+   "n": 12,
+   "sprint": "OS-ALVOS-E-A-LETRA-CRESCEM-E-A-INTERFACE-GANHA-TAMANHO-01",
+   "o_que_muda": "Na aba Sistema todos os alvos já têm 24 px ou mais; os 18 textos pequenos (selos, siglas, o botão Copiar e o registro) sobem para 12 px",
+   "resposta": "sua resposta de 13/10, ~23h40: botões e letra. Todo alvo de toque com 24 px no mínimo e nenhuma letra abaixo de 12 px, com cada aba refeita sem rolagem",
+   "origem": "rodada 4 (o que faltava desenho)",
+   "ancora": "html.alvos-24",
+   "seletor": "button, select, input",
+   "conflito": "Medido na página do todo: 0 alvos abaixo de 24 px e 18 de 72 textos abaixo de 12 px; depois, 0 e 0. O seletor Padrão, Confortável e Espaçoso (09-3) não muda.",
+   "rodada": 4
   }
  ],
  "por_baixo": [
@@ -204,5 +215,12 @@
   }
  ],
  "altura_px": 809,
- "rola": false
+ "rola": false,
+ "origem_da_pagina": "r3 (v3) + rodada 4",
+ "estados": {
+  "hoje": "09-sistema.html?alvos=hoje"
+ },
+ "consertos_da_fusao": [
+  "Na conferência, as pílulas do Status que estão bem («✓ Ligado», «✓ OK») saem do verde e ficam neutras, na cor do texto, e «LIGADO» vira «Ligado»: nenhum aviso verde."
+ ]
 }

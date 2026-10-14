@@ -2,7 +2,7 @@
   "aba": "01",
   "nome": "Jogar",
   "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/_integra-1-11/src/hefesto_dualsense4unix/interface/paginas/01-jogar.html",
-  "depois": "/home/vitoriamaria/.local/state/hefesto-casa/leva-volta/todo/01-jogar.html",
+  "depois": "docs/research/2026-10-12-a-volta/paginas/todo-das-abas/todo/01-jogar.html",
   "rodada": 2,
   "sprint_unificada": "A-ABA-JOGAR-DO-TODO-01",
   "mudancas": [
@@ -108,6 +108,21 @@
       "origem": "RODADA-4",
       "ancora": ".quadro-topo > .cadeado",
       "conflito": ""
+    },
+    {
+      "n": 12,
+      "sprint": "O-ESTADO-DIZ-O-QUE-O-JOGO-VE-DE-CADA-CONTROLE-01",
+      "o_que_muda": "Cada cartão de controle ganha a linha «O jogo vê»: a forma (DualSense, Xbox 360 ou Pro Controller), o canal (próprio ou comum) e, em laranja, o motivo quando difere do que você escolheu",
+      "resposta": "a tela não pode dizer o que o daemon não diz (resposta da chave xbox)",
+      "origem": "rodada 4 (o que faltava desenho)",
+      "ancora": "",
+      "seletor": "",
+      "conflito": "Os quatro casos estão na página: padrão, ?estado=modo-xbox, ?estado=pro e ?estado=queda. O texto do motivo é de exemplo; o daemon manda o motivo pronto.",
+      "ajuste_r4": {
+        "pedido": "sem dica , remove essa zona extra, a seleção do botão já fala tudo.",
+        "feito": "A linha «O jogo vê» saiu dos dois cartões, com a dica e os estados de exemplo (modo Xbox, Pro Controller, queda). O cartão volta a ter só a seleção da forma (DualSense, Xbox 360, Nintendo Pro), que já diz o que o jogo vê. A letra do cartão sobe para 12 px e a bateria fica na cor do texto, sem o verde de «ok»."
+      },
+      "rodada": 4
     }
   ],
   "estados": {
@@ -211,5 +226,10 @@
     }
   ],
   "altura_px": 809,
-  "rola": false
+  "rola": false,
+  "origem_da_pagina": "r3 (v3) + rodada 4",
+  "consertos_da_fusao": [
+    "A vaga sem controle diz «P3 • Desconectado» e «P4 • Desconectado» (q4B).",
+    "Os cartões dizem «P1» e «P2», não «Player 1» e «Player 2»."
+  ]
 }

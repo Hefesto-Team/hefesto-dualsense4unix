@@ -1,361 +1,516 @@
 [
- {
-  "aba": "01",
-  "nome": "Jogar",
-  "depois": "01-jogar.html",
-  "marcas": {
-   "marcados": 3,
-   "numeros": [
-    "2",
-    "4",
-    "6"
-   ],
-   "todos": [
-    "4",
-    "6",
-    "2",
-    "7",
-    "3"
-   ]
+  {
+    "aba": "01",
+    "nome": "Jogar",
+    "depois": "01-jogar.html",
+    "marcas": {
+      "marcados": 3,
+      "numeros": [
+        "2",
+        "4",
+        "6"
+      ],
+      "todos": [
+        "4",
+        "6",
+        "2",
+        "7",
+        "3"
+      ]
+    }
+  },
+  {
+    "aba": "02",
+    "nome": "Controles",
+    "depois": "02-controles.html",
+    "marcas": {
+      "marcados": 14,
+      "numeros": [
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "12"
+      ],
+      "todos": [
+        "3",
+        "2",
+        "9",
+        "5",
+        "4",
+        "10",
+        "6",
+        "7",
+        "8",
+        "12"
+      ]
+    },
+    "rodada3": [
+      {
+        "n": 16,
+        "antes": "02-m16-antes.png",
+        "depois": "02-m16.png"
+      }
+    ]
+  },
+  {
+    "aba": "03",
+    "nome": "Gatilhos",
+    "depois": "03-gatilhos.html",
+    "marcas": {
+      "marcados": 19,
+      "numeros": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6"
+      ],
+      "todos": [
+        "1",
+        "6",
+        "2",
+        "3",
+        "4",
+        "5"
+      ]
+    },
+    "rodada3": [
+      {
+        "n": 15,
+        "antes": "03-m15-antes.png",
+        "depois": "03-m15.png"
+      }
+    ]
+  },
+  {
+    "aba": "04",
+    "nome": "Iluminação",
+    "depois": "04-iluminacao.html",
+    "marcas": {
+      "marcados": 12,
+      "numeros": [
+        "2",
+        "3",
+        "4",
+        "5",
+        "6"
+      ],
+      "todos": [
+        "2",
+        "6",
+        "3",
+        "5",
+        "4"
+      ]
+    },
+    "rodada3": [
+      {
+        "n": 11,
+        "antes": "04-m11-antes.png",
+        "depois": "04-m11.png"
+      }
+    ]
+  },
+  {
+    "aba": "05",
+    "nome": "Vibração",
+    "depois": "05-vibracao.html",
+    "marcas": {
+      "marcados": 7,
+      "numeros": [
+        "1",
+        "2",
+        "3",
+        "4"
+      ],
+      "todos": [
+        "1",
+        "2",
+        "4",
+        "3"
+      ]
+    },
+    "rodada3": [
+      {
+        "n": 12,
+        "antes": "05-m12-antes.png",
+        "depois": "05-m12.png",
+        "leituras": {
+          "A": "05-m12-a.png",
+          "B": "05-m12-b.png"
+        }
+      }
+    ]
+  },
+  {
+    "aba": "06",
+    "nome": "Navegação",
+    "depois": "06-navegacao.html",
+    "marcas": {
+      "marcados": 14,
+      "numeros": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16"
+      ],
+      "todos": [
+        "1",
+        "6",
+        "2",
+        "3",
+        "4",
+        "5",
+        "7",
+        "8",
+        "10",
+        "11",
+        "9",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19"
+      ]
+    },
+    "rodada3": [
+      {
+        "n": 26,
+        "antes": "06-m26-antes.png",
+        "depois": "06-m26.png",
+        "leituras": {
+          "A": "06-m26-a.png",
+          "B": "06-m26-b.png"
+        }
+      },
+      {
+        "n": 27,
+        "antes": "06-m27-antes.png",
+        "depois": "06-m27.png"
+      }
+    ]
+  },
+  {
+    "aba": "07",
+    "nome": "Experimental",
+    "depois": "07-lancadores.html",
+    "marcas": {
+      "marcados": 12,
+      "numeros": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "15",
+        "25",
+        "26",
+        "27"
+      ],
+      "todos": [
+        "1",
+        "2",
+        "3",
+        "25",
+        "4",
+        "5",
+        "8",
+        "26",
+        "7",
+        "6",
+        "15",
+        "27",
+        "9",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14"
+      ]
+    },
+    "rodada3": [
+      {
+        "n": 29,
+        "antes": "07-m29-antes.png",
+        "depois": "07-m29.png"
+      },
+      {
+        "n": 30,
+        "antes": "07-m30-antes.png",
+        "depois": "07-m30.png"
+      },
+      {
+        "n": 31,
+        "antes": "07-m31-antes.png",
+        "depois": "07-m31.png"
+      },
+      {
+        "n": 32,
+        "antes": "07-m32-antes.png",
+        "depois": "07-m32.png"
+      },
+      {
+        "n": 33,
+        "antes": "07-m33-antes.png",
+        "depois": "07-m33.png"
+      },
+      {
+        "n": 34,
+        "antes": "07-m34-antes.png",
+        "depois": "07-m34.png",
+        "leituras": {
+          "A": "07-m34-a.png",
+          "B": "07-m34-b.png"
+        }
+      },
+      {
+        "n": 35,
+        "antes": "07-m35-antes.png",
+        "depois": "07-m35.png"
+      },
+      {
+        "n": 36,
+        "antes": "07-m36-antes.png",
+        "depois": "07-m36.png"
+      },
+      {
+        "n": 37,
+        "antes": "07-m37-antes.png",
+        "depois": "07-m37.png"
+      }
+    ]
+  },
+  {
+    "aba": "08",
+    "nome": "Conexões",
+    "depois": "08-conexoes.html",
+    "marcas": {
+      "marcados": 5,
+      "numeros": [
+        "2",
+        "3"
+      ],
+      "todos": [
+        "2",
+        "3",
+        "1",
+        "4"
+      ]
+    },
+    "rodada3": [
+      {
+        "n": 13,
+        "antes": "08-m13-antes.png",
+        "depois": "08-m13.png"
+      },
+      {
+        "n": 14,
+        "antes": "08-m14-antes.png",
+        "depois": "08-m14.png"
+      },
+      {
+        "n": 15,
+        "antes": "08-m15-antes.png",
+        "depois": "08-m15.png"
+      },
+      {
+        "n": 16,
+        "antes": "08-m16-antes.png",
+        "depois": "08-m16.png"
+      },
+      {
+        "n": 17,
+        "antes": "08-m17-antes.png",
+        "depois": "08-m17.png"
+      }
+    ]
+  },
+  {
+    "aba": "09",
+    "nome": "Sistema",
+    "depois": "09-sistema.html",
+    "marcas": {
+      "marcados": 9,
+      "numeros": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "11"
+      ],
+      "todos": [
+        "1",
+        "4",
+        "2",
+        "3",
+        "11",
+        "5",
+        "6",
+        "7",
+        "9"
+      ]
+    }
+  },
+  {
+    "aba": "10",
+    "nome": "Perfis",
+    "depois": "10-perfis.html",
+    "marcas": {
+      "marcados": 15,
+      "numeros": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "9",
+        "10"
+      ],
+      "todos": [
+        "1",
+        "7",
+        "6",
+        "5",
+        "9",
+        "8",
+        "3",
+        "10",
+        "2",
+        "4",
+        "11"
+      ]
+    },
+    "rodada3": [
+      {
+        "n": 19,
+        "antes": "10-m19-antes.png",
+        "depois": "10-m19.png"
+      },
+      {
+        "n": 20,
+        "antes": "10-m20-antes.png",
+        "depois": "10-m20.png"
+      }
+    ]
+  },
+  {
+    "aba": "calibrar-sensores",
+    "nome": "Calibrar giroscópio",
+    "depois": "calibrar-sensores.html",
+    "marcas": {
+      "marcados": 4,
+      "numeros": [
+        "1",
+        "2",
+        "3"
+      ],
+      "todos": [
+        "1",
+        "2",
+        "3"
+      ]
+    }
+  },
+  {
+    "aba": "mapa-das-portas",
+    "nome": "Mapa das portas",
+    "depois": "mapa-das-portas.html",
+    "marcas": {
+      "marcados": 0,
+      "numeros": [],
+      "todos": [
+        "2"
+      ]
+    }
+  },
+  {
+    "aba": "mapa-do-controle",
+    "nome": "Mapa do controle",
+    "depois": "mapa-do-controle.html",
+    "marcas": {
+      "marcados": 7,
+      "numeros": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "10"
+      ],
+      "todos": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11"
+      ]
+    },
+    "rodada3": [
+      {
+        "n": 19,
+        "antes": "mapa-do-controle-m19-antes.png",
+        "depois": "mapa-do-controle-m19.png"
+      },
+      {
+        "n": 20,
+        "antes": "mapa-do-controle-m20-antes.png",
+        "depois": "mapa-do-controle-m20.png"
+      },
+      {
+        "n": 21,
+        "antes": "mapa-do-controle-m21-antes.png",
+        "depois": "mapa-do-controle-m21.png"
+      }
+    ]
+  },
+  {
+    "aba": "mapa-do-radio",
+    "nome": "Mapa do rádio",
+    "depois": "mapa-do-radio.html",
+    "marcas": {
+      "marcados": 4,
+      "numeros": [
+        "1"
+      ],
+      "todos": [
+        "1",
+        "2"
+      ]
+    }
   }
- },
- {
-  "aba": "02",
-  "nome": "Controles",
-  "depois": "02-controles.html",
-  "marcas": {
-   "marcados": 14,
-   "numeros": [
-    "2",
-    "3",
-    "4",
-    "5",
-    "6",
-    "7",
-    "8",
-    "9",
-    "10",
-    "12"
-   ],
-   "todos": [
-    "3",
-    "2",
-    "9",
-    "5",
-    "4",
-    "10",
-    "6",
-    "7",
-    "8",
-    "12"
-   ]
-  }
- },
- {
-  "aba": "03",
-  "nome": "Gatilhos",
-  "depois": "03-gatilhos.html",
-  "marcas": {
-   "marcados": 19,
-   "numeros": [
-    "1",
-    "2",
-    "3",
-    "4",
-    "5",
-    "6"
-   ],
-   "todos": [
-    "1",
-    "6",
-    "2",
-    "3",
-    "4",
-    "5"
-   ]
-  }
- },
- {
-  "aba": "04",
-  "nome": "Iluminação",
-  "depois": "04-iluminacao.html",
-  "marcas": {
-   "marcados": 12,
-   "numeros": [
-    "2",
-    "3",
-    "4",
-    "5",
-    "6"
-   ],
-   "todos": [
-    "2",
-    "6",
-    "3",
-    "5",
-    "4"
-   ]
-  }
- },
- {
-  "aba": "05",
-  "nome": "Vibração",
-  "depois": "05-vibracao.html",
-  "marcas": {
-   "marcados": 7,
-   "numeros": [
-    "1",
-    "2",
-    "3",
-    "4"
-   ],
-   "todos": [
-    "1",
-    "2",
-    "4",
-    "3"
-   ]
-  }
- },
- {
-  "aba": "06",
-  "nome": "Navegação",
-  "depois": "06-navegacao.html",
-  "marcas": {
-   "marcados": 14,
-   "numeros": [
-    "1",
-    "2",
-    "3",
-    "4",
-    "7",
-    "8",
-    "9",
-    "10",
-    "11",
-    "12",
-    "13",
-    "14",
-    "15",
-    "16"
-   ],
-   "todos": [
-    "1",
-    "6",
-    "2",
-    "3",
-    "4",
-    "5",
-    "7",
-    "8",
-    "10",
-    "11",
-    "9",
-    "12",
-    "13",
-    "14",
-    "15",
-    "16",
-    "17",
-    "18",
-    "19"
-   ]
-  }
- },
- {
-  "aba": "07",
-  "nome": "Experimental",
-  "depois": "07-lancadores.html",
-  "marcas": {
-   "marcados": 12,
-   "numeros": [
-    "1",
-    "2",
-    "3",
-    "4",
-    "5",
-    "6",
-    "7",
-    "8",
-    "15",
-    "25",
-    "26",
-    "27"
-   ],
-   "todos": [
-    "1",
-    "2",
-    "3",
-    "25",
-    "4",
-    "5",
-    "8",
-    "26",
-    "7",
-    "6",
-    "15",
-    "27",
-    "9",
-    "10",
-    "11",
-    "12",
-    "13",
-    "14"
-   ]
-  }
- },
- {
-  "aba": "08",
-  "nome": "Conexões",
-  "depois": "08-conexoes.html",
-  "marcas": {
-   "marcados": 5,
-   "numeros": [
-    "2",
-    "3"
-   ],
-   "todos": [
-    "2",
-    "3",
-    "1",
-    "4"
-   ]
-  }
- },
- {
-  "aba": "09",
-  "nome": "Sistema",
-  "depois": "09-sistema.html",
-  "marcas": {
-   "marcados": 9,
-   "numeros": [
-    "1",
-    "2",
-    "3",
-    "4",
-    "5",
-    "6",
-    "7",
-    "11"
-   ],
-   "todos": [
-    "1",
-    "4",
-    "2",
-    "3",
-    "11",
-    "5",
-    "6",
-    "7",
-    "9"
-   ]
-  }
- },
- {
-  "aba": "10",
-  "nome": "Perfis",
-  "depois": "10-perfis.html",
-  "marcas": {
-   "marcados": 15,
-   "numeros": [
-    "1",
-    "2",
-    "3",
-    "4",
-    "5",
-    "6",
-    "7",
-    "9",
-    "10"
-   ],
-   "todos": [
-    "1",
-    "7",
-    "6",
-    "5",
-    "9",
-    "8",
-    "3",
-    "10",
-    "2",
-    "4",
-    "11"
-   ]
-  }
- },
- {
-  "aba": "calibrar-sensores",
-  "nome": "Calibrar giroscópio",
-  "depois": "calibrar-sensores.html",
-  "marcas": {
-   "marcados": 4,
-   "numeros": [
-    "1",
-    "2",
-    "3"
-   ],
-   "todos": [
-    "1",
-    "2",
-    "3"
-   ]
-  }
- },
- {
-  "aba": "mapa-das-portas",
-  "nome": "Mapa das portas",
-  "depois": "mapa-das-portas.html",
-  "marcas": {
-   "marcados": 0,
-   "numeros": [],
-   "todos": [
-    "2"
-   ]
-  }
- },
- {
-  "aba": "mapa-do-controle",
-  "nome": "Mapa do controle",
-  "depois": "mapa-do-controle.html",
-  "marcas": {
-   "marcados": 7,
-   "numeros": [
-    "1",
-    "2",
-    "3",
-    "4",
-    "5",
-    "6",
-    "10"
-   ],
-   "todos": [
-    "1",
-    "2",
-    "3",
-    "4",
-    "5",
-    "6",
-    "7",
-    "8",
-    "9",
-    "10",
-    "11"
-   ]
-  }
- },
- {
-  "aba": "mapa-do-radio",
-  "nome": "Mapa do rádio",
-  "depois": "mapa-do-radio.html",
-  "marcas": {
-   "marcados": 4,
-   "numeros": [
-    "1"
-   ],
-   "todos": [
-    "1",
-    "2"
-   ]
-  }
- }
 ]

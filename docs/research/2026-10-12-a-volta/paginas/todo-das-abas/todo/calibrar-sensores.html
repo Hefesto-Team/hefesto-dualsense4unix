@@ -271,6 +271,16 @@
                color:var(--fg);font-family:inherit;font-size:12px;cursor:pointer}
   .desl .lista:hover{border-color:var(--comment)}
   .desl .lista option{background:var(--panel);color:var(--fg)}
+  /* As respostas à v3 (14/10): com «Só segurando um botão», o seletor do botão aparece ao lado, na mesma linha e na
+     mesma altura; com «Sempre», ele some e o primeiro volta à largura inteira. */
+  .desl .mira-quando{grid-row:2;grid-column:1 / -1;display:grid;grid-template-columns:minmax(0,1fr);column-gap:5px;min-width:0}
+  .desl .mira-quando.segurando{grid-template-columns:max-content minmax(0,1fr)}
+  /* a seta desenhada, mais estreita que a do sistema, para os dois caberem lado a lado com quatro controles na janela */
+  .desl .mira-quando .lista{appearance:none;-webkit-appearance:none;padding:0 21px 0 7px;
+    background:var(--app-bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23f8f8f2' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 7px center}
+  .desl .mira-quando .lista{grid-row:1;grid-column:auto;min-width:0}
+  .desl .mira-quando .mira-botao{display:none}
+  .desl .mira-quando.segurando .mira-botao{display:block}
   /* OS DOIS «INVERTER» TÊM A CARA DOS CHIPS DE SENSOR da aba Controles
      (`aba02.py`, `.sensores-peca .sw`): o mesmo verde aceso, o mesmo apagado,
      a mesma pastilha de 17px. É cópia declarada — esta página tem folha
@@ -294,14 +304,6 @@
   body{padding:var(--recuo-do-corpo)}
   .cx{width:min(100%,1600px);height:var(--alt-janela);max-width:100%;max-height:calc(100dvh - var(--recuo-do-corpo) * 2)}
 
-  /* T7: o analógico virtual tem um dono só, a aba Controles; aqui fica a leitura. */
-  .selo-av{display:inline-flex;align-items:center;gap:6px;height:20px;padding:0 8px;border-radius:6px;
-           border:1px dashed var(--border-forte);color:var(--texto-mudo);font-size:11px;white-space:nowrap;cursor:default}
-  .selo-av .p{width:6px;height:6px;border-radius:50%;background:var(--border-forte)}
-  .selo-av.on{border-color:var(--green);color:var(--green)}
-  .selo-av.on .p{background:var(--green);box-shadow:0 0 5px var(--green)}
-  .mira-topo.leitura{flex-direction:row;align-items:center}
-  .mira-topo.leitura .ajuda{margin-left:auto}
 </style>
 <style data-aba="rodada-2">
   /* cal-3 aprovada: alvos de 24 px */
@@ -349,6 +351,33 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 .menu-hefesto button:hover{background:rgba(189,147,249,.14)}
 .menu-hefesto button[disabled]{color:var(--texto-mudo,#9a9eb8);opacity:.55;cursor:default;background:transparent}
 .menu-hefesto hr{border:0;border-top:1px solid var(--border-sutil,#343746);margin:5px 4px}
+</style>
+<style data-todo-css="calibrar-r4-ajuste">
+/* Ajuste da rodada 4 (calibrar-7): o desenho de antes, com o respiro dele, e menos texto. Sai o nome repetido
+   em cima da mira e a contagem do rodapé; a vaga sem controle diz só o jogador e «Desconectado». */
+.lugar{flex-direction:column;gap:4px;font-family:inherit;font-size:13px;color:var(--texto-mudo)}
+.lugar b{font-weight:600;color:var(--texto-suave)}
+.lugar span{font-size:12px}
+/* Sem o nome repetido, o fio de cima da mira dobrava com o da leitura: fica um só. */
+.mira::before{display:none}
+/* Em 1212x740 o respiro de antes passava 10 px do corpo: só ali o passo da mira encolhe de 13 para 10 px. */
+@media (max-height:760px){.mira{gap:10px}}
+/* Com a letra de 12 px, «Acelerômetro» mede 86 px e a coluna de 82 empurrava a primeira linha dele 4 px: as seis barras começam juntas. */
+.lin > .r{flex:0 0 90px}
+</style>
+<style data-todo-css="calibrar-seis-respostas">
+/* As seis respostas (14/10): sem o selo do giroscópio como analógico em cima da mira, o fio entre o controle e a mira
+   volta a ser o da própria mira (um só); a vaga sem controle diz «P3 • Desconectado» numa linha. */
+.mira::before{display:block}
+.lugar{flex-direction:row;gap:6px}
+.lugar .pt{font-size:12px}
+</style>
+<style data-todo-css="alvos-r4">
+/* Rodada 4: a sua resposta de 13/10 (~23h40), botões e letra: todo alvo de toque com 24 px e nenhuma letra abaixo de 12 px. ?alvos=hoje mostra a tela sem a mudança. */
+html.alvos-24 :is(button,select,input:not([type=checkbox]):not([type=radio]):not([type=hidden]),textarea,summary,[role=button],.nj-tog,.sw,.passo,label.faixa,.nav-i,.mudo-i,.padrao-i){min-height:24px;box-sizing:border-box}
+html.alvos-24 :is(button,[role=button],.nj-tog,.passo,.nav-i,.mudo-i,.padrao-i){min-width:24px}
+html.alvos-24 :is(input[type=checkbox],input[type=radio]):not(.radio-mesa){min-width:24px;min-height:24px}
+html.alvos-24 input[type=range]{height:24px}
 </style>
 </head>
 <body>
@@ -760,7 +789,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg>
-              <span class="nome"><span class="l1"><b data-campo="quem-joga" data-hef-alvo="html">Vitória</b><span class="selo" data-campo="zero-estado" data-hef-alvo="atributo" data-hef-atributo="data-zero"><span class="t1">Parado</span><span class="t2">Medindo…</span><span class="t3">Calibrado</span><span class="t4">Mexeu</span></span></span>Cosmic Red <span class="pt">•</span> USB</span>
+              <span class="nome"><span class="l1"><b data-campo="quem-joga" data-hef-alvo="html">Cosmic Red</b><span class="selo" data-campo="zero-estado" data-hef-alvo="atributo" data-hef-atributo="data-zero"><span class="t1">Parado</span><span class="t2">Medindo…</span><span class="t3">Calibrado</span><span class="t4">Mexeu</span></span></span>USB</span>
             </div>
             <div class="leitura">
               <div class="lin" data-eixo="giro-x"><span class="r">Giroscópio</span><span class="v" data-campo="giro-x">—</span><span class="g" data-campo="giro-x-cor" data-hef-alvo="cor" style="color:var(--border-forte)"><i class="neg" data-campo="giro-x-neg" data-hef-alvo="largura" style="width:0%"></i><i class="pos" data-campo="giro-x-pos" data-hef-alvo="largura" style="width:0%"></i></span></div>
@@ -1149,7 +1178,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg>
-              <span class="nome"><span class="l1"><b data-campo="quem-joga" data-hef-alvo="html"></b><span class="selo" data-campo="zero-estado" data-hef-alvo="atributo" data-hef-atributo="data-zero"><span class="t1">Parado</span><span class="t2">Medindo…</span><span class="t3">Calibrado</span><span class="t4">Mexeu</span></span></span>Starlight Blue <span class="pt">•</span> BT</span>
+              <span class="nome"><span class="l1"><b data-campo="quem-joga" data-hef-alvo="html">Starlight Blue</b><span class="selo" data-campo="zero-estado" data-hef-alvo="atributo" data-hef-atributo="data-zero"><span class="t1">Parado</span><span class="t2">Medindo…</span><span class="t3">Calibrado</span><span class="t4">Mexeu</span></span></span>BT</span>
             </div>
             <div class="leitura">
               <div class="lin" data-eixo="giro-x"><span class="r">Giroscópio</span><span class="v" data-campo="giro-x">—</span><span class="g" data-campo="giro-x-cor" data-hef-alvo="cor" style="color:var(--border-forte)"><i class="neg" data-campo="giro-x-neg" data-hef-alvo="largura" style="width:0%"></i><i class="pos" data-campo="giro-x-pos" data-hef-alvo="largura" style="width:0%"></i></span></div>
@@ -1160,8 +1189,8 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
               <div class="lin" data-eixo="accel-z"><span class="r"></span><span class="v" data-campo="accel-z">—</span><span class="g" data-campo="accel-z-cor" data-hef-alvo="cor" style="color:var(--border-forte)"><i class="neg" data-campo="accel-z-neg" data-hef-alvo="largura" style="width:0%"></i><i class="pos" data-campo="accel-z-pos" data-hef-alvo="largura" style="width:0%"></i></span></div>
             </div>
           </div>
-          <div class="lugar" aria-label="Lugar vazio do Galactic Purple">Galactic Purple</div>
-          <div class="lugar" aria-label="Lugar vazio do White">White</div>
+          <div class="lugar" data-seis="q4" aria-label="P3 desconectado"><b>P3</b><span class="pt">•</span><span>Desconectado</span></div>
+          <div class="lugar" data-seis="q4" aria-label="P4 desconectado"><b>P4</b><span class="pt">•</span><span>Desconectado</span></div>
     </div>
 
     <!-- A MIRA VIRTUAL, uma coluna por controle embaixo do cartão dele — ver o
@@ -1169,19 +1198,15 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
          propósito: o dos cartões o produto remonta a cada tique. -->
     <div class="mira-cx" data-bloco="miras">
           <div class="mira" style="--plastico:#ae335a" data-controle="p1">
-            <span class="quem" data-campo="quem-joga" data-hef-alvo="html">Vitória</span>
-            <div class="mira-topo leitura"><span class="selo-av" data-campo="mira-lado-texto" data-hef-alvo="html" data-dica="Liga e escolhe o lado na aba Controles" data-todo="2"><span class="p"></span>Giroscópio como analógico: desligado</span></div>
               <label class="desl"><span class="r">O quanto um gesto anda</span><input class="trilho" type="range" min="1" max="12" step="1" value="6" data-gesto="mira-sensibilidade" data-campo="mira-sensibilidade" data-hef-alvo="valor" aria-label="O quanto um gesto anda" data-todo="3"><span class="n"><span data-campo="mira-sensibilidade-num">6</span></span></label>
-              <label class="desl"><span class="r">Ignorar tremor até</span><input class="trilho" type="range" min="1" max="60" step="1" value="3" data-gesto="mira-tremor" data-campo="mira-tremor" data-hef-alvo="valor" aria-label="Ignorar tremor até"><span class="n"><span data-campo="mira-tremor-num">3</span> <span class="un">graus/s</span></span></label>
-              <label class="desl"><span class="r">Só enquanto eu segurar</span><select class="lista" data-gesto="mira-segurar" data-campo="mira-segurar" data-hef-alvo="valor" aria-label="Só enquanto eu segurar"><option value="sempre" selected>Sempre</option><option value="mesmo_parado">Mesmo parado</option><option value="cross">Cruz</option><option value="circle">Círculo</option><option value="square">Quadrado</option><option value="triangle">Triângulo</option><option value="l1">L1</option><option value="r1">R1</option><option value="l2">L2</option><option value="r2">R2</option><option value="l3">L3</option><option value="r3">R3</option><option value="dpad_up">D-pad cima</option><option value="dpad_down">D-pad baixo</option><option value="dpad_left">D-pad esquerda</option><option value="dpad_right">D-pad direita</option><option value="options">Options</option><option value="create">Share</option></select></label>
+              <label class="desl"><span class="r">Ignorar tremor até</span><input class="trilho" type="range" min="1" max="60" step="1" value="3" data-gesto="mira-tremor" data-campo="mira-tremor" data-hef-alvo="valor" aria-label="Ignorar tremor até"><span class="n"><span data-campo="mira-tremor-num">3</span><span class="un">°/s</span></span></label>
+              <label class="desl" data-seis="q6" data-v3="n4"><span class="r">A mira se move</span><span class="mira-quando"><select class="lista" data-gesto="mira-segurar" data-campo="mira-segurar" data-hef-alvo="valor" aria-label="A mira se move"><option value="sempre" selected>Sempre</option><option value="segurando">Só segurando um botão</option></select><select class="lista mira-botao" data-gesto="mira-botao" data-campo="mira-botao" data-hef-alvo="valor" aria-label="O botão que segura a mira" data-dica="O botão que você segura para a mira se mover"><option value="cruz" title="Cruz" aria-label="Cruz">✕</option><option value="circulo" title="Círculo" aria-label="Círculo">○</option><option value="quadrado" title="Quadrado" aria-label="Quadrado">□</option><option value="triangulo" title="Triângulo" aria-label="Triângulo">△</option><option value="l1">L1</option><option value="r1">R1</option><option value="l2" selected>L2</option><option value="r2">R2</option><option value="l3">L3</option><option value="r3">R3</option><option value="cima" label="Seta ↑" title="Seta para cima">Seta ↑</option><option value="baixo" label="Seta ↓" title="Seta para baixo">Seta ↓</option><option value="esquerda" label="Seta ←" title="Seta para a esquerda">Seta ←</option><option value="direita" label="Seta →" title="Seta para a direita">Seta →</option><option value="options">Options</option><option value="share">Share</option></select></span></label>
               <div class="desl"><span class="r">Inverter</span><span class="inverter"><button class="sw off" data-gesto="mira-inverter" data-inverter="lado" data-campo="mira-inverter-lado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" aria-label="Inverter esquerda e direita"><span class="p"></span>Esquerda e direita</button><button class="sw off" data-gesto="mira-inverter" data-inverter="cima-baixo" data-campo="mira-inverter-cima-baixo" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" aria-label="Inverter cima e baixo"><span class="p"></span>Cima e baixo</button></span></div>
           </div>
           <div class="mira" style="--plastico:#7eb8d4" data-controle="p2">
-            <span class="quem" data-campo="quem-joga" data-hef-alvo="html">Starlight Blue</span>
-            <div class="mira-topo leitura"><span class="selo-av" data-campo="mira-lado-texto" data-hef-alvo="html" data-dica="Liga e escolhe o lado na aba Controles" data-todo="2"><span class="p"></span>Giroscópio como analógico: desligado</span></div>
               <label class="desl"><span class="r">O quanto um gesto anda</span><input class="trilho" type="range" min="1" max="12" step="1" value="6" data-gesto="mira-sensibilidade" data-campo="mira-sensibilidade" data-hef-alvo="valor" aria-label="O quanto um gesto anda"><span class="n"><span data-campo="mira-sensibilidade-num">6</span></span></label>
-              <label class="desl"><span class="r">Ignorar tremor até</span><input class="trilho" type="range" min="1" max="60" step="1" value="3" data-gesto="mira-tremor" data-campo="mira-tremor" data-hef-alvo="valor" aria-label="Ignorar tremor até"><span class="n"><span data-campo="mira-tremor-num">3</span> <span class="un">graus/s</span></span></label>
-              <label class="desl"><span class="r">Só enquanto eu segurar</span><select class="lista" data-gesto="mira-segurar" data-campo="mira-segurar" data-hef-alvo="valor" aria-label="Só enquanto eu segurar"><option value="sempre" selected>Sempre</option><option value="mesmo_parado">Mesmo parado</option><option value="cross">Cruz</option><option value="circle">Círculo</option><option value="square">Quadrado</option><option value="triangle">Triângulo</option><option value="l1">L1</option><option value="r1">R1</option><option value="l2">L2</option><option value="r2">R2</option><option value="l3">L3</option><option value="r3">R3</option><option value="dpad_up">D-pad cima</option><option value="dpad_down">D-pad baixo</option><option value="dpad_left">D-pad esquerda</option><option value="dpad_right">D-pad direita</option><option value="options">Options</option><option value="create">Share</option></select></label>
+              <label class="desl"><span class="r">Ignorar tremor até</span><input class="trilho" type="range" min="1" max="60" step="1" value="3" data-gesto="mira-tremor" data-campo="mira-tremor" data-hef-alvo="valor" aria-label="Ignorar tremor até"><span class="n"><span data-campo="mira-tremor-num">3</span><span class="un">°/s</span></span></label>
+              <label class="desl" data-seis="q6" data-v3="n4"><span class="r">A mira se move</span><span class="mira-quando"><select class="lista" data-gesto="mira-segurar" data-campo="mira-segurar" data-hef-alvo="valor" aria-label="A mira se move"><option value="sempre" selected>Sempre</option><option value="segurando">Só segurando um botão</option></select><select class="lista mira-botao" data-gesto="mira-botao" data-campo="mira-botao" data-hef-alvo="valor" aria-label="O botão que segura a mira" data-dica="O botão que você segura para a mira se mover"><option value="cruz" title="Cruz" aria-label="Cruz">✕</option><option value="circulo" title="Círculo" aria-label="Círculo">○</option><option value="quadrado" title="Quadrado" aria-label="Quadrado">□</option><option value="triangulo" title="Triângulo" aria-label="Triângulo">△</option><option value="l1">L1</option><option value="r1">R1</option><option value="l2" selected>L2</option><option value="r2">R2</option><option value="l3">L3</option><option value="r3">R3</option><option value="cima" label="Seta ↑" title="Seta para cima">Seta ↑</option><option value="baixo" label="Seta ↓" title="Seta para baixo">Seta ↓</option><option value="esquerda" label="Seta ←" title="Seta para a esquerda">Seta ←</option><option value="direita" label="Seta →" title="Seta para a direita">Seta →</option><option value="options">Options</option><option value="share">Share</option></select></span></label>
               <div class="desl"><span class="r">Inverter</span><span class="inverter"><button class="sw off" data-gesto="mira-inverter" data-inverter="lado" data-campo="mira-inverter-lado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" aria-label="Inverter esquerda e direita"><span class="p"></span>Esquerda e direita</button><button class="sw off" data-gesto="mira-inverter" data-inverter="cima-baixo" data-campo="mira-inverter-cima-baixo" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" aria-label="Inverter cima e baixo"><span class="p"></span>Cima e baixo</button></span></div>
           </div>
     </div>
@@ -1195,7 +1220,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
            botão, anunciando a ausência de uma frase que a página tirou de
            propósito. É o mesmo defeito que a aba Lançadores mediu em 11/09, e
            a casa já decidiu a cura: o alvo `html` trata vazio como vazio. -->
-      <span class="quantos" data-campo="quantos" data-hef-alvo="html">2 controles conectados</span>
+
       <span class="acoes">
         <button class="btn fazer" data-gesto="calibrar-comecar"><span class="t1">Começar</span><span class="t2">Medindo…</span><span class="t3">Calibrar de novo</span></button>
         <a class="btn" href="02-controles.html">Fechar</a>
@@ -1245,6 +1270,31 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     m.style.top = Math.min(e.clientY, innerHeight - r.height - 6) + 'px';
   });
   document.addEventListener('click', e => { if (!e.target.closest('.menu-hefesto')) document.querySelectorAll('.menu-hefesto.vivo').forEach(m => m.remove()); });
+})();
+</script>
+<script data-aba="mira-botao-v3">
+/* As respostas à v3 (14/10): o seletor do botão só aparece com «Só segurando um botão».
+   calibrar-sensores.html#segurando abre o mockup com o primeiro controle nesse estado. */
+(function () {
+  function ver(x) { x.closest('.mira-quando').classList.toggle('segurando', x.value === 'segurando'); }
+  var ss = document.querySelectorAll('select[data-gesto=mira-segurar]');
+  ss.forEach(function (x) { x.addEventListener('change', function () { ver(x); }); ver(x); });
+  if (location.hash === '#segurando' && ss[0]) { ss[0].value = 'segurando'; ver(ss[0]); }
+})();
+</script>
+<script data-aba="alvos-r4">
+(function () {
+  if (new URLSearchParams(location.search).get('alvos') === 'hoje') return;
+  document.documentElement.classList.add('alvos-24');
+  document.documentElement.classList.add('letra-12');
+  function piso() {
+    document.querySelectorAll('body *').forEach(function (e) {
+      if (e.closest('svg') || ['SCRIPT', 'STYLE'].indexOf(e.tagName) >= 0) return;
+      var tem = ['INPUT', 'SELECT', 'TEXTAREA'].indexOf(e.tagName) >= 0 || Array.prototype.some.call(e.childNodes, function (n) { return n.nodeType === 3 && n.nodeValue.trim(); });
+      if (tem && parseFloat(getComputedStyle(e).fontSize) < 12) e.style.setProperty('font-size', '12px', 'important');
+    });
+  }
+  window.addEventListener('load', function () { piso(); setTimeout(piso, 400); });
 })();
 </script>
 </body>

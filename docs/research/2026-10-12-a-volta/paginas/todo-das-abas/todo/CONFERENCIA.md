@@ -21,6 +21,46 @@ Conferente que corrige, `wf_eec4e930-fe0`. Tudo medido em Chrome sem janela (goo
 | **total** | **96** | **64** | 120 | 189 |
 
 
+## Rodada 3 (13/10)
+
+As escolhas dela de 13/10, uma mudança por item, com a origem «escolha dela de 13/10» em cada uma (`"rodada": 3` nos `*-mudancas.json`, `data-r3="<n>"` no html). Medido em Chrome sem janela (google-chrome do sistema), em 1212x809, 1212x740 e 1918x840: nenhuma página rola no corpo; as janelas novas (Buttplug, impedimentos, acionador, tipo do aparelho, Sequência) também não rolam por dentro. As fotos são `fotos/<aba>-m<n>-antes.png` e `fotos/<aba>-m<n>.png` (e `-a`/`-b` nas duas leituras), 56 ao todo, listadas em `fotos/rodada-3.json` e na chave `rodada3` do `fotos/indice.json`. O `index.html` mostra a rodada 3 em cima, mudança por mudança, com a chave `r3-<aba>-<n>`.
+
+| página | n | o que muda | sprint |
+| --- | --- | --- | --- |
+| 02 | 16 | sai a seção «Criar efeitos novos»; ficam só os quatro controles | OS-ALVOS-E-A-LETRA-CRESCEM-E-A-INTERFACE-GANHA-TAMANHO-01 |
+| 03 | 15 | a linha «Força do gatilho»: Forte, Média, Fraca e Desligada, por controle | A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-01 |
+| 04 | 11 | o ajuste global «Sem piscar» no topo | A-LUZ-DO-CONTROLE-NAO-PISCA-PARA-QUEM-E-SENSIVEL-A-LUZ-01 |
+| 05 | 12 | a força vira os quatro passos do firmware (**duas leituras**: com o trilho até 100% ou só os passos) | A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-01 |
+| 06 | 26 | o «i» volta (**duas leituras**: com o título «Navegação» ou só o «i» no canto) | A-ABA-NAVEGACAO-DO-TODO-01 |
+| 06 | 27 | os quatro moldes: Point and click, Visual novel, Mouse, Mouse e teclado | A-ABA-NAVEGACAO-DO-TODO-01 |
+| 07 | 29 | «Lovense pelo Intiface», nas duas direções | A-ABA-EXPERIMENTAL-DO-TODO-01 |
+| 07 | 30 | a extensão «Lovense pelo celular» (Game Mode, porta 20010) | A-ABA-EXPERIMENTAL-DO-TODO-01 |
+| 07 | 31 | a extensão «DualSense como brinquedo», nascida desligada | O-HEFESTO-E-SERVIDOR-BUTTPLUG-DO-PROPRIO-DUALSENSE-01 |
+| 07 | 32 | a janela de configurações da extensão, com as quatro etapas | O-HEFESTO-E-SERVIDOR-BUTTPLUG-DO-PROPRIO-DUALSENSE-01 |
+| 07 | 33 | «Detectar o jogo aberto» e «Procurar de novo» sobem ao título dos Lançadores | A-ABA-EXPERIMENTAL-DO-TODO-01 |
+| 07 B | 34 | o B ajustado em página própria, `07-lancadores-b.html` (**duas leituras**: o Experimental ou o B) | A-ABA-LANCADORES-GANHA-AS-MODIFICACOES-01 |
+| 07 B | 35 | seis modificações cabem sem rolar (a foto usa `#seis`) | A-ABA-LANCADORES-GANHA-AS-MODIFICACOES-01 |
+| 07 B | 36 | «2 com impedimento» na Steam, com a janela dos consertos | A-ABA-LANCADORES-GANHA-AS-MODIFICACOES-01 |
+| 07 B | 37 | a engrenagem de configurações em cada modificação | A-ABA-LANCADORES-GANHA-AS-MODIFICACOES-01 |
+| 08 | 13 | o controle em outro aparelho: «O controle foi para outro aparelho» e «Trazer de volta» | O-HEFESTO-SABE-EM-QUAL-VAGA-DE-PAREAMENTO-O-CONTROLE-ESTA-01 |
+| 08 | 14 | «Usar como botões de…» na linha do acionador USB | OS-ACIONADORES-USB-ENTRAM-COMO-BOTOES-DO-CONTROLE-01 |
+| 08 | 15 | a janela do acionador, com o desenho real do DualSense | OS-ACIONADORES-USB-ENTRAM-COMO-BOTOES-DO-CONTROLE-01 |
+| 08 | 16 | o «?» do aparelho sem tipo e a grade dos tipos | O-APARELHO-DO-BLUETOOTH-SEM-TIPO-SE-NOMEIA-PELA-PESSOA-01 |
+| 08 | 17 | o «Giroscópio como analógico» sai dos cartões | A-ABA-CONEXOES-DO-TODO-01 |
+| 10 | 19 | o par de controles no perfil do jogo (Cosmic Red + Starlight Blue, com a chave) | DOIS-CONTROLES-JOGAM-COMO-UM-NO-COPILOTO-01 |
+| 10 | 20 | os campos do Editar encolhem nas janelas baixas; a tabela mostra o White inteiro em 740 | A-ABA-PERFIS-DO-TODO-01 |
+| mapa-do-controle | 19 | o «Vale para» no topo, pela cor do plástico | O-REMAPEAMENTO-VALE-POR-JOGADOR-01 |
+| mapa-do-controle | 20 | o quarto tipo, Sequência (gravar, os passos, como toca, ouvir) | O-BOTAO-GRAVA-E-TOCA-UMA-SEQUENCIA-01 |
+| mapa-do-controle | 21 | os moldes com os quatro nomes da Navegação | A-ABA-MAPA-DO-CONTROLE-DO-TODO-01 |
+
+**Os três tamanhos, por página tocada:** 02, 03, 04, 05, 06, 07, 07 B, 08, 10 e mapa-do-controle, «não rola» em 1212x809, 1212x740 e 1918x840 (`fotos/rodada-3.json`, chave `medidas`).
+
+**A mordida.** Com o botão `.sem-piscar` arrancado da 04, o fotógrafo da rodada sai com `rc=1` e acusa as duas coisas: «o gesto `document.querySelector('.sem-piscar').click()` quebra» e «a âncora `.sem-piscar` não aparece em 04-iluminacao.html». Devolvido o botão, `rc=0`. O fotógrafo e as cópias de antes (as páginas do git em `ea889206e` e o desenho B de 09/10) moram em `~/.local/state/hefesto-casa/leva-depois-da-fds/mockups-r3/`.
+
+**O que já estava torto antes da rodada, e como ficou:** a 06 transbordava num quadro e a 07 cortava os Lançadores em 740; as duas ficaram curadas pela rodada. A lista da esquerda da 10 (`.rolo`, 418/358 em 740) já transbordava antes e segue igual. A 04 corta embaixo em 740, também de antes. O sensor háptico da 05 vai de 0 a 200%, e a escolha dos quatro passos não o tocou.
+
+**Conferido sem mudar:** nenhuma página cita o desligar por ociosidade (o desligar é só o gesto do PS por 10 s); os nomes de pessoa «Vitória», «Davi» e «Pedro» já estavam na 08.
+
 ## As ordens dela de 12/10 (14h40 e 14h52)
 
 Seis mudanças novas, com a origem «ordem dela de 12/10» na página (etiqueta roxa). Os itens velhos que diziam «par Modo automático | Modo personalizado» (03-2, 04-2, 05-2) perderam a frase.
@@ -295,3 +335,31 @@ Não mudam a tela (código, CI, bancada, install e processo):
 2026-08-31-A-BANCADA-QUE-O-RADIO-PEDE-INDICE.md 2026-09-10-OS-GESTOS-QUE-SO-ELA-PODE-FAZER.md 2026-09-17-SOM-CABO-QUALIDADE-01-a-queixa-que-o-codec-nao-explica.md 2026-09-18-RELEASE-NO-CLONE-LIMPO-01-a-esteira-dos-pacotes-cai-por-uma-pasta-que-nao-viaja.md 2026-09-19-HIDE-SO-O-HIDRAW-02-o-fisico-alcancavel-por-quatro-nos-de-entrada.md 2026-09-19-STORM-USB-01-o-ruido-de-porta-que-o-doctor-conta-e-ninguem-cura.md 2026-09-24-A-FAIXA-NA-MESA-FORA-DE-ORDEM-01.md 2026-09-27-A-ARVORE-TEM-UMA-SESSAO-SO-01.md 2026-09-27-A-GUARDA-FECHA-A-PORTA-01.md 2026-09-27-A-HISTORIA-REESCRITA-UMA-VEZ-SO-01.md 2026-09-27-AS-CITACOES-DE-COMMIT-SEGUEM-O-MAPA-01.md 2026-09-27-A-SENHA-SO-PASSA-PELO-ASKPASS-01.md 2026-09-27-O-DESPACHANTE-DAS-REGRAS-DA-CASA-01.md 2026-09-27-O-ENDERECO-NUNCA-CHEGA-A-CONVERSA-01.md 2026-09-27-O-GITHUB-SEM-RASTRO-FORA-DO-GIT-01.md 2026-09-27-O-PRODUTO-EM-QUALQUER-MAQUINA-01.md 2026-09-28-O-NIX-LEVA-AS-REGRAS-DO-HOST-01.md 2026-09-29-A-REPORT-THREAD-SAI-ANTES-DO-HANDLE-FECHAR-01.md 2026-10-01-O-ENGASGO-DO-JOGO-LEVE-SE-SEPARA-EM-ABBA-01.md 2026-10-01-O-FORJA-E-O-BANCO-DE-PROVA-DO-HEFESTO-01.md 2026-10-01-O-JOGO-LEVE-ACORDA-A-PLACA-01.md 2026-10-05-A-FORJA-SEM-RASTRO-01.md 2026-10-05-A-WIKI-NASCE-DO-QUE-O-REPOSITORIO-JA-SABE-01.md 2026-10-05-O-CONTEXTO-CHEGA-CERTO-A-QUEM-ABRE-A-SESSAO-02.md 2026-10-05-O-REPOSITORIO-NASCE-VIVO-01.md 2026-10-08-A-CASA-NAO-DEIXA-PASSAR-COMENTARIO-CORTADO-IMPORT-RELATIVO-NEM-POSSE-DE-ARQUIVO-QUE-NAO-EXISTE-01.md 2026-10-08-A-CITACAO-CURTA-DO-DIFF-LE-A-CELULA-E-A-SEGUNDA-CHANCE-NAO-DESFAZ-A-CORRECAO-01.md 2026-10-08-A-DIVIDA-DA-BASE-DESCE-POR-ARQUIVO-E-POR-QUEM-TOCA-01.md 2026-10-08-A-GRAVACAO-DO-YML-QUE-FALHA-DEPOIS-DA-ANOTACAO-VAI-AO-DIARIO-01.md 2026-10-08-A-JANELA-ABERTA-CABE-NA-PARTE-01.md 2026-10-08-AS-CITACOES-CURTAS-DO-CSV-ANDAM-COM-A-INTEIRA-01.md 2026-10-08-AS-FERRAMENTAS-DA-LEVA-NAO-CALAM-E-A-BASE-DELAS-FICA-VERDE-01.md 2026-10-08-AS-FERRAMENTAS-DE-MANUTENCAO-NAO-REESCREVEM-ALEM-DO-QUE-PROVAM-01.md 2026-10-08-A-SONDA-DO-BLUEZ-PERGUNTA-
 SO-AO-DONO-E-O-ENSAIO-PASSA-NO-TIPO-01.md 2026-10-08-AS-REGUAS-DO-RAMO-INTEIRO-E-DAS-QUATRO-RESPOSTAS-MORDEM-01.md 2026-10-08-O-BIG-PICTURE-SE-PROVA-NA-STEAM-E-O-MAPA-GANHA-AS-LINHAS-01.md 2026-10-08-O-CAMINHO-DO-BLUEZ-SO-NO-DONO-01.md 2026-10-08-O-COSTURAR-ACEITA-O-COMMIT-RESOLVIDO-A-MAO-SE-O-PATCH-FORA-DOS-GERADOS-JA-ESTA-NA-INTEGRACAO-01.md 2026-10-08-O-DUALSENSE-PELO-RADIO-NO-WINE-SE-EXPLICA-01.md 2026-10-08-O-DUBLE-DO-CONTROLE-FICA-DESPLUGADO-E-O-TESTE-DO-DAEMON-ESPERA-A-CONDICAO-01.md 2026-10-08-O-LOTE-DE-TESTES-DO-AGENTE-ISOLA-O-WEBKIT-COMO-A-SUITE-01.md 2026-10-08-O-MOLDE-DA-SPRINT-LISTA-TODO-CAMPO-QUE-O-PORTAO-LE-01.md 2026-10-09-A-BANDEJA-TEM-UM-DONO-SO-01.md 2026-10-09-A-CASCATA-DO-WAYLAND-SO-PERGUNTA-A-QUEM-RESPONDE-01.md 2026-10-09-A-CATRACA-DA-ORIGEM-CONTA-O-SUPPRESS-QUE-SO-ENGOLE-01.md 2026-10-09-A-CITACAO-NOVA-DE-LINHA-PROMETE-O-NOME-01.md 2026-10-09-A-COR-E-O-NUMERO-DO-PERFIL-CHEGAM-POR-TODA-ROTA-01.md 2026-10-09-A-FABRICA-NOVA-DO-FREESTYLE-ALCANCA-A-COPIA-DE-FABRICA-DE-ONTEM-01.md 2026-10-09-A-HAPTICA-DO-RADIO-SE-CONVERTE-SEM-PESAR-NA-PONTE-01.md 2026-10-09-A-LUZ-DO-MIC-SEGUE-O-BOTAO-QUANDO-NAO-SABE-QUEM-OUVE-01.md 2026-10-09-A-MASCARA-DO-PAD-SE-DECIDE-SO-NA-FABRICA-01.md 2026-10-09-A-PERDA-DE-AMOSTRAS-DO-MOVIMENTO-SE-CONTA-PELO-CONTADOR-DO-REPORT-01.md 2026-10-09-A-SETA-SEGURADA-SE-SOLTA-QUANDO-O-PERFIL-TROCA-01.md 2026-10-09-AS-METRICAS-CONTAM-O-QUE-A-PAGINA-PROMETE-01.md 2026-10-09-AS-MODIFICACOES-RODAM-FORA-DO-DAEMON-01.md 2026-10-09-A-SUITE-NAO-ACORDA-A-PLACA-DE-VERDADE-01.md 2026-10-09-A-TROCA-DE-DAEMON-ESPERA-O-DESLIGAMENTO-INTEIRO-01.md 2026-10-09-A-TROCA-PELA-JANELA-NAO-PARA-O-LACO-DO-CONTROLE-01.md 2026-10-09-NADA-QUE-O-GITIGNORE-EXCLUI-ENTRA-NO-REPOSITORIO-01.md 2026-10-09-O-APARELHO-QUE-VIRA-P1-SEGUE-ESCONDIDO-DO-JOGO-01.md 2026-10-09-O-ARQUIVO-DE-MASCARAS-ILEGIVEL-NAO-SE-SOBRESCREVE-CALADO-01.md 2026-10-09-O-BRANCO-DA-TROCA-DE-PERFIL-PISCA-SEM-GRAVAR-01.md 2026-10-09-O-CI-CHAMA-OS-PORTOES-PELO-NOME-01.md 2026-10-09-O-DSX-ACENDE-O-JOGAD
 OR-QUE-O-MOD-PEDE-01.md 2026-10-09-O-DSX-PINTA-COMO-JOGO-E-O-RESET-DEVOLVE-O-PERFIL-01.md 2026-10-09-O-ERRO-DO-LACO-DE-60-HZ-VAI-AO-DIARIO-E-NAO-DERRUBA-A-MESA-01.md 2026-10-09-O-GATILHO-QUE-O-CONTROLE-NAO-ACEITA-NAO-DERRUBA-O-PERFIL-01.md 2026-10-09-O-LIMIAR-DO-GATILHO-DO-DSX-VALE-PARA-CADA-JOGADOR-01.md 2026-10-09-O-MAPA-DA-VIBRACAO-DIZ-O-QUE-O-CODIGO-FAZ-01.md 2026-10-09-O-MICROFONE-DO-RADIO-DESLIGA-NO-STOP-MESMO-COM-A-VOLTA-EM-CURSO-01.md 2026-10-09-O-MODIFICADOR-SEGURADO-POR-OUTRO-BOTAO-NAO-SE-SOLTA-01.md 2026-10-09-O-MOUSE-EMULADO-TEM-UM-DONO-SO-01.md 2026-10-09-O-NO-DE-SOM-FICA-QUANDO-O-CONTROLE-SAI-01.md 2026-10-09-O-NO-E-A-PONTE-DO-SOM-NAO-NASCEM-DEPOIS-DO-STOP-01.md 2026-10-09-O-NO-LIGA-A-ROTA-INTEIRA-E-SEGUE-A-SAIDA-PADRAO-01.md 2026-10-09-O-PAD-CEDIDO-CALA-O-GATILHO-E-A-LUZ-TAMBEM-01.md 2026-10-09-O-PAD-QUE-NASCE-NAO-PARA-O-TIQUE-DOS-OUTROS-01.md 2026-10-09-O-PAR-DO-GESTO-DO-PS-NAO-CHEGA-AO-JOGO-01.md 2026-10-09-O-PERFIL-ANTIGO-DE-VIBRACAO-POR-POSICAO-CARREGA-NO-PISO-01.md 2026-10-09-O-PERFIL-DO-JOGO-ENTRA-SEM-LER-A-JANELA-01.md 2026-10-09-O-PLUGIN-RECARREGA-SEM-PERDER-OS-PLUGINS-01.md 2026-10-09-O-PS-ABRE-A-STEAM-PELO-DONO-QUE-JA-SABE-REABRIR-01.md 2026-10-09-O-QUE-SO-A-JANELA-LIGAVA-TEM-VERBO-NO-TERMINAL-01.md 2026-10-09-O-RAPIDO-SO-REPETE-O-QUE-MUDOU-01.md 2026-10-09-O-RECARREGAR-DOS-PLUGINS-NAO-APAGA-OS-PLUGINS-01.md 2026-10-09-OS-COMANDOS-E-OS-TESTES-NAO-SABEM-O-CAMINHO-DESTA-MAQUINA-01.md 2026-10-09-O-SOM-QUE-O-JOGO-MANDA-AO-CONTROLE-TOCA-TAMBEM-PELO-RADIO-01.md 2026-10-09-O-SUBSYSTEM-SOBE-E-DESCE-POR-UMA-LISTA-SO-01.md 2026-10-09-O-TIQUE-DE-30-S-SO-REPINTA-A-LUZ-QUE-O-KERNEL-PERDEU-01.md 2026-10-09-O-TOQUE-CURTO-DO-JOGO-CHEGA-AO-CONTROLE-MESMO-ENTRE-DOIS-TIQUES-01.md 2026-10-09-O-VERMELHO-NOVO-DA-COSTURA-NAO-SE-ESCONDE-NO-HERDADO-01.md 2026-10-09-O-VIGIA-DO-RADIO-SO-TOCA-OS-CONTROLES-DO-HEFESTO-01.md 2026-10-09-QUEM-SOLTA-O-CONTROLE-SOLTA-O-GATILHO-DE-TODOS-01.md 2026-10-12-A-CANONICA-RECEBE-O-QUE-AS-REIMPLEMENTACOES-ABERTAS-DIZEM-DO-SOM-E-DO-TO
+
+## Rodada 3: a conferência (13/10)
+
+**Veredito: aprovada com correções.** As 25 mudanças batem com as respostas de 13/10, e cada uma tem foto de antes e de depois (`fotos/<aba>-m<n>-antes.png` e `fotos/<aba>-m<n>.png`). Onde a resposta deixa duas leituras, a página mostra A e B lado a lado.
+
+A lista por página é a da seção «Rodada 3 (13/10)» acima; as leituras A/B são 05 n12, 06 n26 e 07 B n34.
+
+**Medida.** Nenhuma página rola no documento em 1212x809, 1212x740 e 1918x840, inclusive nas janelas (`#buttplug`, `#seis`, `#impedimentos`, `#acionador`, `#tipo-do-aparelho`, `#sequencia`, `#point-and-click`) e nas leituras B. A régua da conferência mede também a rolagem por dentro e o texto cortado em lista e folha: o único resto é a lista de perfis da 10 em 740 (anterior, abaixo).
+
+**O que a conferência corrigiu:**
+
+1. 07 e 07 B, janela «DualSense como brinquedo»: o chip do controle ficava por baixo do «Aparece»; a linha passa a `auto minmax(0,1fr)` e os botões apertam o respiro.
+2. 07 e 07 B, etapa 4: «O controle cair sempre para» virou «Tudo para se o controle cair».
+3. 07 e 07 B: o «Quando» cortava «Os jogos que eu escolher» (defeito anterior, copiado para a extensão nova do celular). A coluna vai de 196 para 230 px e a lista de 150 para 180.
+4. 08, janela do acionador: «Cross» e «Circle» viraram «Cruz» e «Círculo». O controle que foi para outro aparelho passa a ser o White, porque o cabeçalho mostra o Cosmic Red no USB.
+5. 04 em 1212x740: a aba rolava 68 px por dentro e escondia «Criar efeitos novos» (anterior). Na janela baixa o desenho do controle encolhe e o passo entre as linhas cai de 10 para 8. Com o «Sem piscar» ligado, o «lento» do Piscar cortava o efeito criado: o campo do nome cede 28 px.
+6. As fotos de 06 m27 e do mapa m21 mostram a lista dos moldes aberta, e o texto de 07 m31 e m32 troca o «dela» ambíguo por «a extensão».
+
+**A mordida:** sem a regra `.ext-quando .ext-sel{max-width:180px}` a régua acusa o corte (171 contra 148) nos três tamanhos; sem o `@media (max-height:780px)` da 04, ela acusa a `.miolo` rolando (617 contra 549) em 740. As duas voltaram.
+
+**Já era assim antes, fica anotado:**
+
+- 10 em 740: a lista de perfis mostra 13 de 15 linhas (`.rolo`, 418 contra 358); é lista com rolagem própria.
+- mapa: «Movimento do cursor» corta 3 px no `span.b2-val` em 1212; Galactic Purple e White aparecem conectados, enquanto as outras páginas os mostram desconectados.
+- Os nomes de jogador «Vitória» e «Davi» seguem no desenho; o «olhar» da rodada 2 da 04 cita «P1 • Vitória».
+- A marca da 07 m34 sobre a `.miolo` deixa uma linha rosa sob as abas.
+
+**Para a costura:** publicar o `index.html` como artifact; a catraca `check_a_origem.py`; o `--publicar` de cada aba no fecho. A fonte em `~/.local/state/hefesto-casa/leva-volta/todo/` não foi mexida. A resposta «botões e letra» (piso de 24 px e de 12 px) é da rodada 4.

@@ -1,0 +1,28 @@
+{
+ "aba": "08-conexoes",
+ "nome": "Conexões",
+ "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/mockups-rodada-4/docs/research/2026-10-12-a-volta/paginas/todo-das-abas/todo/08-conexoes.html",
+ "depois": "/mnt/Apate/Desenvolvimento/hefesto-voo/mockups-rodada-4/docs/research/2026-10-12-a-volta/paginas/todo-das-abas/todo/rodada-4/08-conexoes.html",
+ "rodada": 4,
+ "altura_px": 809,
+ "rola": false,
+ "mudancas": [
+  {
+   "n": 13,
+   "sprint": "A-ABA-CONEXOES-DO-TODO-01",
+   "o_que_muda": "A linha «Giroscópio como analógico» sai do cartão de cada controle: o giroscópio só aparece na aba Controles, na Navegação e na janela Calibrar giroscópio",
+   "resposta": "confirmado por você em 13/10, ~22h: o giroscópio sai da aba Conexões",
+   "origem": "rodada 4 (o que faltava desenho)",
+   "ancora": "[data-todo=\"13\"]",
+   "seletor": ".gc-resumo",
+   "conflito": "Substitui a 08-6 do todo («Analógico virtual» vira «Giroscópio como analógico»): a linha que ela renomeava deixa de existir nesta aba."
+  }
+ ],
+ "por_baixo": [
+  {
+   "sprint": "O-MAPA-DAS-CONEXOES-MOSTRA-A-CADEIA-USB-E-O-REGISTRO-DELA-01",
+   "o_que_muda": "O cartão não muda; a cadeia mora no mapa das portas."
+  }
+ ],
+ "fora": []
+}

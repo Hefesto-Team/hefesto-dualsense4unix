@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jogar: rodada 4</title>
+<style>
+  :root{--bg:#1e1f29;--panel:#282a36;--fg:#f8f8f2;--mudo:#9a9eb8;--roxo:#bd93f9;--borda:#44475a}
+  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);color:var(--fg);
+       font:14px/1.5 Inter,system-ui,sans-serif}
+  .aviso{max-width:480px;margin:16px;padding:20px 24px;background:var(--panel);border:1px solid var(--borda);border-radius:10px}
+  .aviso p{margin:0 0 12px}
+  .aviso p:last-child{margin:0}
+  .aviso .mudo{color:var(--mudo);font-size:12.5px}
+  a{color:var(--roxo)}
+</style>
+</head>
+<body>
+<div class="aviso">
+  <p>A cópia da rodada 4 da Jogar se juntou à página final, com tudo da r3 e da rodada 4.</p>
+  <p><a id="final" href="../01-jogar.html">Abrir a página final</a></p>
+  <p class="mudo">As fotos, a régua e as respostas da rodada 4 ficam nesta pasta, como história. O que entrou e de onde veio está no <a href="../FINAL.md">FINAL.md</a>.</p>
+</div>
+<script>
+  /* leva junto o estado da janela (?aba=…, #acessorios…) para a página final */
+  try { var a = document.getElementById('final'); a.href = a.getAttribute('href') + location.search + location.hash; } catch (e) {}
+</script>
+</body>
+</html>

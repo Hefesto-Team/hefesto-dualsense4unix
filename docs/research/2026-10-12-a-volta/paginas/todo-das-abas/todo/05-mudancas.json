@@ -2,8 +2,8 @@
   "aba": "05",
   "nome": "Vibração",
   "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/_integra-1-11/src/hefesto_dualsense4unix/interface/paginas/05-vibracao.html",
-  "depois": "/home/vitoriamaria/.local/state/hefesto-casa/leva-volta/todo/05-vibracao.html",
-  "rodada": 2,
+  "depois": "docs/research/2026-10-12-a-volta/paginas/todo-das-abas/todo/05-vibracao.html",
+  "rodada": 3,
   "sprint_unificada": "A-ABA-VIBRACAO-DO-TODO-01",
   "mudancas": [
     {
@@ -104,6 +104,37 @@
       "origem": "RODADA-3",
       "ancora": ".vib .motor .teto",
       "conflito": ""
+    },
+    {
+      "n": 12,
+      "sprint": "A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-01",
+      "o_que_muda": "A força da vibração vira os quatro passos do firmware, por controle: Forte, Média, Fraca e Desligada, como no PS5. O Máximo de 150% e os três botões Economia, Padrão e Máximo saem",
+      "resposta": "todo-05-r3-12",
+      "origem": "escolha dela de 13/10",
+      "ancora": ".vib .seg.passos",
+      "conflito": "",
+      "rodada": 3,
+      "ancora_antes": ".vib .forca",
+      "leituras": {
+        "A": {
+          "ancora": "#",
+          "o_que": "Os quatro passos e, embaixo, o trilho de ajuste fino até 100%"
+        },
+        "B": {
+          "ancora": "#leitura-b",
+          "o_que": "Só os quatro passos, sem trilho"
+        }
+      },
+      "pergunta": "O trilho fica embaixo dos quatro passos, até 100% (A), ou some e ficam só os passos (B)?",
+      "ajuste_r3": {
+        "pedido": "(sem voto) fica o antes ali no a e remove a seção inferior do criar efeitos novos também. nome dos players 3 e 4 mesma coisa.",
+        "feito": "Ficou a leitura A: os quatro passos e, embaixo, o trilho fino até 100%; a leitura B saiu da página. A seção «Criar efeitos novos» saiu do pé da aba. As vagas 3 e 4 mostram o campo do nome vazio, sem «Galactic Purple» e «White». Os quatro passos ganharam a mesma largura (duas fileiras de dois, porque «Desligada» não cabe numa fileira de quatro iguais) e a linha da força cresceu para respirar."
+      },
+      "escolha": "A",
+      "ajuste_r3b": {
+        "pedido": "na real remove os botões e força de cibração vira só o slicer. esse controle ali dentro não é o controle do dualsense remove e coloca o certo. o do lado do slicer do força dos controles.",
+        "feito": "Saíram os quatro botões (Forte, Média, Fraca, Desligada): a «Força da vibração» é só o trilho com a porcentagem, na mesma altura e no mesmo formato das linhas de baixo (nas vagas sem controle, o travessão, como nas outras). O ícone ao lado do trilho trocou o controle genérico por um DualSense desenhado no traço dos ícones de baixo (corpo com as duas empunhaduras, o touchpad largo, o direcional, os quatro botões e os dois analógicos), no mesmo quadrado laranja. A linha sobrou menos alta e a imagem do controle ganhou o espaço."
+      }
     }
   ],
   "estados": {
@@ -255,5 +286,10 @@
     }
   ],
   "altura_px": 809,
-  "rola": false
+  "rola": false,
+  "origem_da_pagina": "r3 (v3)",
+  "consertos_da_fusao": [
+    "A vaga sem controle diz «P3 • Desconectado» e «P4 • Desconectado» (q4B).",
+    "O Cosmic Red se chama pela cor, sem nome de pessoa."
+  ]
 }

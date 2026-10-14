@@ -2,8 +2,8 @@
   "aba": "04",
   "nome": "Iluminação",
   "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/_integra-1-11/src/hefesto_dualsense4unix/interface/paginas/04-iluminacao.html",
-  "depois": "/home/vitoriamaria/.local/state/hefesto-casa/leva-volta/todo/04-iluminacao.html",
-  "rodada": 2,
+  "depois": "docs/research/2026-10-12-a-volta/paginas/todo-das-abas/todo/04-iluminacao.html",
+  "rodada": 3,
   "sprint_unificada": "A-ABA-ILUMINACAO-DO-TODO-01",
   "mudancas": [
     {
@@ -95,6 +95,21 @@
       "origem": "RODADA-3",
       "ancora": ".criar .nome-criar",
       "conflito": ""
+    },
+    {
+      "n": 11,
+      "sprint": "A-LUZ-DO-CONTROLE-NAO-PISCA-PARA-QUEM-E-SENSIVEL-A-LUZ-01",
+      "o_que_muda": "O «Sem piscar» deixa de ser ajuste global: entra na lista de efeitos de cada controle, ao lado de «Sem efeito»; luz que nunca troca mais de três vezes por segundo, o piscar vira transição lenta",
+      "resposta": "todo-04-r3-11",
+      "origem": "escolha dela de 13/10",
+      "ancora": ".g4-efeito",
+      "conflito": "",
+      "rodada": 3,
+      "ancora_antes": ".quadro-topo .modo-auto",
+      "ajuste_r3": {
+        "pedido": "Tira o desligar ali dos efeitos. tira o botão de sem piscar. eke ebtra en efeitos, assim como o sem efeito (pra representar o desligar). E sem controle conectado ele tem que aparecer o vazio deixar o nome do controle ali fica muito estranho. Fora que realmente pensando agoraas duas linhas dava pra virar uma só. esses 3 averdes. 2 rosas. sei lá. não tá legal e deixa o layout muito sufocado. melhora o respiro.",
+        "feito": "Saíram o botão «Desligar» e a chave «Sem piscar» do topo. A lista de efeitos de cada controle ganhou «Sem efeito» (apaga a barra) e «Sem piscar» (só transição lenta), e o seletor ocupa a largura inteira da linha. A vaga sem controle mostra o campo vazio, sem o nome. As duas fileiras de doze cores viraram uma de oito (saíram o verde-limão, o menta, o magenta e o branco: ficam um verde e um rosa). A linha Cor encolheu e o passo entre as linhas subiu de 10 para 14 px."
+      }
     }
   ],
   "estados": {
@@ -258,5 +273,11 @@
     }
   ],
   "altura_px": 809,
-  "rola": false
+  "rola": false,
+  "origem_da_pagina": "r3 (v3)",
+  "consertos_da_fusao": [
+    "A vaga sem controle diz «P3 • Desconectado» e «P4 • Desconectado» (q4B).",
+    "O Cosmic Red se chama pela cor, sem nome de pessoa; as dicas dizem «jogador N».",
+    "A nota do antes e depois da troca só abre por #troca: a página não rola."
+  ]
 }

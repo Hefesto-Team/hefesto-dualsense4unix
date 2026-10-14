@@ -1169,10 +1169,10 @@ tabela,id,nome,a,b,c,d,e,f,g,h,i
 lugar,L1,,direto,1,4,Traseira,1500,0,USB 2.0
 lugar,L2,,hub,3,4.4,Num hub ou extensão,1500,0,USB 2.0,varrendo
 lugar,L3,,hub,3,4.1.4,Num hub ou extensão,1500,3,USB 2.0
-aparelho,P1,Vitória,controle,#ae335a,L3,520.8,32.6,375,Cosmic Red,mic+ponte+luz,L3|L2
-aparelho,P2,Pedro,controle,#7eb8d4,L3,520.8,32.6,375,Starlight Blue,mic+ponte+luz,L3
-aparelho,P3,Ana,controle,#e35b8c,L3,520.8,32.6,375,Nova Pink,mic+ponte+luz,L3
-aparelho,P4,Rafa,controle,#74588e,L3,520.8,32.6,375,Galactic Purple,mic+ponte+luz,L3|L1
+aparelho,P1,Cosmic Red,controle,#ae335a,L3,520.8,32.6,375,Cosmic Red,mic+ponte+luz,L3|L2
+aparelho,P2,Starlight Blue,controle,#7eb8d4,L3,520.8,32.6,375,Starlight Blue,mic+ponte+luz,L3
+aparelho,P3,Nova Pink,controle,#e35b8c,L3,520.8,32.6,375,Nova Pink,mic+ponte+luz,L3
+aparelho,P4,Galactic Purple,controle,#74588e,L3,520.8,32.6,375,Galactic Purple,mic+ponte+luz,L3|L1
 aparelho,S1,Caixa de som,caixa,,L2,366,0,0,,,L2
 aparelho,F1,Fone,fone,,L2,366,0,0,,,L2
 aparelho,W1,Webcam,webcam,,L1,0,0,0,,fixo,
@@ -1697,7 +1697,7 @@ function comoSeChama(ap) {
        que saía, e ela é pior que o silêncio: o controle já está identificado
        pela cor, que é a identidade dele nesta tela. */
     return 'o <b>' + texto(ap.cor_nome) + '</b>' +
-      (ap.nome ? ' de <b>' + texto(ap.nome) + '</b>' : '');
+      (ap.nome && ap.nome !== ap.cor_nome ? ' de <b>' + texto(ap.nome) + '</b>' : '');
   }
   /* O ARTIGO É MINÚSCULO E SEGUE O TIPO — «Mover O Cosmic Red» e «O Caixa de
      som» saíam na tela. Quem começa frase passa por `maiuscula`. */
@@ -1714,7 +1714,7 @@ function comoSeChamaOLugar(lug) {
 function comoSeLe(ap) {
   const q = ap.tipo === 'controle' && ap.cor_nome
     ? 'controle ' + ap.cor_nome : ap.tipo;
-  return ap.nome + ', ' + q;
+  return ap.nome === ap.cor_nome ? q : ap.nome + ', ' + q;
 }
 
 /* --------------------------------------------------------------- pintar */
@@ -2969,7 +2969,7 @@ function ensinarOnde(lug) {
    não arrasta. */
 function quemVemPraCa(lug) {
   const itens = APARELHOS.filter(a => a.lugar !== lug.id && !a.fixo)
-    .map(a => ({ rotulo: a.nome + (a.cor_nome ? ' \u00B7 ' + a.cor_nome : ''), a }));
+    .map(a => ({ rotulo: a.nome + (a.cor_nome && a.cor_nome !== a.nome ? ' \u00B7 ' + a.cor_nome : ''), a }));
   if (!itens.length) { abrirPainel('Nada para trazer', document.createElement('div')); return; }
   abrirPainel('Quem vem para ' + (lug.nome || 'a Entrada ' + lug.entrada) + '?',
     listaDeBotoes(itens, it => { fecharPainel(); pedirParaMover(it.a, lug.id); },

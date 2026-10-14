@@ -1,0 +1,40 @@
+{
+ "aba": "calibrar-sensores",
+ "nome": "Calibrar giroscópio",
+ "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/mockups-rodada-4/docs/research/2026-10-12-a-volta/paginas/todo-das-abas/todo/calibrar-sensores.html",
+ "depois": "/mnt/Apate/Desenvolvimento/hefesto-voo/mockups-rodada-4/docs/research/2026-10-12-a-volta/paginas/todo-das-abas/todo/rodada-4/calibrar-sensores.html",
+ "rodada": 4,
+ "altura_px": 809,
+ "rola": false,
+ "estados": {
+  "hoje": "calibrar-sensores.html?alvos=hoje",
+  "segurando": "calibrar-sensores.html#segurando"
+ },
+ "mudancas": [
+  {
+   "n": 7,
+   "sprint": "OS-ALVOS-E-A-LETRA-CRESCEM-E-A-INTERFACE-GANHA-TAMANHO-01",
+   "o_que_muda": "Na janela Calibrar giroscópio todos os alvos já têm 24 px ou mais; os 48 textos pequenos (valores, eixos, rótulos) sobem para 12 px, e o respiro entre os blocos aperta para a janela caber sem rolar",
+   "resposta": "sua resposta de 13/10, ~23h40: botões e letra. Todo alvo de toque com 24 px no mínimo e nenhuma letra abaixo de 12 px, com cada aba refeita sem rolagem",
+   "origem": "rodada 4 (o que faltava desenho)",
+   "ancora": "html.alvos-24",
+   "seletor": "button, select, input",
+   "conflito": "Medido na página do todo: 0 alvos abaixo de 24 px e 48 de 76 textos abaixo de 12 px; depois, 0 e 0. Em 1212x740 a janela do todo já rolava 33 px por dentro; com o respiro apertado ela deixa de rolar. Ficam abaixo de 12 px só as letras gravadas no desenho pequeno do controle (L1, R1, L2, R2, L, R).",
+   "ajuste_r4": {
+    "pedido": "antes tá melhor;. mmas o antes tá confuso tambem e muito cheio de texto.",
+    "feito": "Voltou o arranjo de antes, com o respiro dele entre os blocos; ficam os alvos de 24 px e a letra de 12 px. Saiu o texto que sobrava: o nome do controle repetido em cima da mira e o «2 controles conectados» do rodapé. As vagas sem controle dizem só «Player 3» e «Player 4» com «Desconectado», no lugar da cor do plástico em letra grande. Cabe sem rolar também em 1212x740. As seis barras da leitura começam juntas, e a unidade do tremor ficou «°/s»."
+   },
+   "ajuste_seis": {
+    "pedido": "q4 B: «P3 • Desconectado» (só a letra e o número). q5 A: sai o selo «Giroscópio como analógico: desligado»; ficam os números. q6 A: a linha vira «A mira se move», com as opções «Sempre» e «Só segurando um botão»",
+    "feito": "As vagas sem controle dizem «P3 • Desconectado» e «P4 • Desconectado», numa linha. Saiu o selo «Giroscópio como analógico: desligado» dos dois cartões; o fio entre a leitura e a mira ficou um só, e os números das barras e dos trilhos seguem. «Só enquanto eu segurar» virou «A mira se move», e o seletor tem só «Sempre» (escolhido) e «Só segurando um botão»."
+   },
+   "ajuste_v3": {
+    "id": "n4",
+    "pedido": "A: só com «Só segurando um botão» aparece ao lado um segundo seletor com os botões",
+    "feito": "Com «Só segurando um botão», aparece ao lado, na mesma linha e na mesma altura, um segundo seletor com os dezesseis botões (✕, ○, □, △, L1, R1, L2, R2, L3, R3, as quatro setas, Options e Share; o L2 vem escolhido). Com «Sempre», ele some. Os botões da face aparecem pelo símbolo, com o nome na dica, e a seta do seletor é desenhada mais estreita, para tudo caber com os quatro controles na janela de 1212 px. Nada pula de altura nem rola."
+   }
+  }
+ ],
+ "por_baixo": [],
+ "fora": []
+}

@@ -2,8 +2,8 @@
   "aba": "06",
   "nome": "Navegação",
   "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/_integra-1-11/src/hefesto_dualsense4unix/interface/paginas/06-navegacao.html",
-  "depois": "/home/vitoriamaria/.local/state/hefesto-casa/leva-volta/todo/06-navegacao.html",
-  "rodada": 2,
+  "depois": "docs/research/2026-10-12-a-volta/paginas/todo-das-abas/todo/06-navegacao.html",
+  "rodada": 3,
   "sprint_unificada": "A-ABA-NAVEGACAO-DO-TODO-01",
   "mudancas": [
     {
@@ -230,12 +230,69 @@
       "origem": "RODADA-3 §conferência",
       "ancora": ".ac2",
       "conflito": ""
+    },
+    {
+      "n": 26,
+      "sprint": "A-ABA-NAVEGACAO-DO-TODO-01",
+      "o_que_muda": "A explicação da aba aparece quando o mouse fica parado sobre o quadro (e no foco do teclado), sem botão «i»",
+      "resposta": "todo-06-r3-26",
+      "origem": "escolha dela de 13/10",
+      "ancora": ".nav-topo",
+      "conflito": "",
+      "rodada": 3,
+      "ancora_antes": ".nav2-grade",
+      "js": "document.querySelector('.nav2 select').focus()",
+      "leituras": {
+        "A": {
+          "ancora": "#",
+          "o_que": "O quadro se chama «Navegação», com o «i» ao lado do título"
+        },
+        "B": {
+          "ancora": "#leitura-b",
+          "o_que": "Sem título: só o «i», no canto do quadro"
+        }
+      },
+      "pergunta": "O quadro leva o título «Navegação» com o «i» ao lado (A), ou fica sem título, só com o «i» no canto (B)?",
+      "ajuste_r3": {
+        "pedido": "a mas remove o i, deixe que ele apareça se eu deixar o mouse sob a área.",
+        "feito": "Ficou a leitura A (título «Navegação»), e o «i» saiu. A explicação aparece na faixa do título, ao lado de «Navegação», quando o mouse fica parado meio segundo sobre essa faixa, onde o «i» ficava, e também no foco do teclado nela; some quando o mouse sai. Sobre a tabela ela não acende. Não cobre nenhum campo. A leitura B saiu da página."
+      },
+      "escolha": "A",
+      "ajuste_r3b": {
+        "pedido": "esse textão é toolti sobre o nome de navegação. reprovado.",
+        "feito": "A faixa de texto comprido saiu. O título ficou só «Navegação», e a explicação virou a dica da casa (data-dica) sobre a palavra: uma caixa pequena e flutuante que aparece com o mouse sobre o nome ou com o foco do teclado nele (o nome recebe o foco com Tab) e some ao sair."
+      }
+    },
+    {
+      "n": 27,
+      "sprint": "A-ABA-NAVEGACAO-DO-TODO-01",
+      "o_que_muda": "Os moldes do point and click passam a ser quatro: Point and click, Visual novel, Mouse e Mouse e teclado",
+      "resposta": "todo-06-r3-27",
+      "origem": "escolha dela de 13/10",
+      "ancora": "[data-r3=\"27\"]",
+      "conflito": "",
+      "rodada": 3,
+      "ancora_antes": "[data-gesto=\"point-and-click-perfil\"]",
+      "js": "(() => { const s=document.querySelector('select[data-r3=\"27\"]'); const r=s.getBoundingClientRect(); s.size=s.options.length+s.querySelectorAll('optgroup').length; s.style.cssText+=';position:fixed;z-index:99;height:auto;left:'+r.left+'px;top:'+r.top+'px;width:'+r.width+'px'; return s.size })()"
+    },
+    {
+      "n": 28,
+      "sprint": "OS-ALVOS-E-A-LETRA-CRESCEM-E-A-INTERFACE-GANHA-TAMANHO-01",
+      "o_que_muda": "Na Navegação e na janela Acessibilidade, os 7 alvos da aba (seletores de linha e o botão de navegação) e os 17 da janela (os botões «−» e «+» de cada passo e os seletores) passam a 24 px, e toda letra abaixo de 12 px sobe para 12 px",
+      "resposta": "sua resposta de 13/10, ~23h40: botões e letra. Todo alvo de toque com 24 px no mínimo e nenhuma letra abaixo de 12 px, com cada aba refeita sem rolagem",
+      "origem": "rodada 4 (o que faltava desenho)",
+      "ancora": "html.alvos-24",
+      "seletor": "button, select, input",
+      "conflito": "Medido na página do todo: 7 alvos abaixo de 24 px na aba e 24 com a janela Acessibilidade aberta (17 deles na própria janela); 22 e 57 textos abaixo de 12 px. Depois, 0 alvos e 0 textos. Ficam abaixo de 12 px só as letras gravadas no desenho do controle (L1, R1, L2, R2, L, R), que crescem e encolhem com o desenho.",
+      "rodada": 4
     }
   ],
   "estados": {
     "steam": "document.querySelector('.quem [data-v=\"steam\"]').click()",
     "acessibilidade": "location.hash = '#acessibilidade'",
-    "menu": "document.getElementById('menu-desenhado').hidden = false"
+    "menu": "document.getElementById('menu-desenhado').hidden = false",
+    "r4-acessibilidade": "06-navegacao.html#acessibilidade",
+    "hoje": "06-navegacao.html?alvos=hoje"
   },
   "por_baixo": [
     {
@@ -334,5 +391,6 @@
     }
   ],
   "altura_px": 809,
-  "rola": false
+  "rola": false,
+  "origem_da_pagina": "r3 (v3) + rodada 4"
 }

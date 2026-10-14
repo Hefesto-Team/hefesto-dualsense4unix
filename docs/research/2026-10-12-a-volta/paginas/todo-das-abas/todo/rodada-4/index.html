@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mockups da rodada 4</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#191a21;--app-bg:#1f2029;--painel:#262834;--borda:#3a3d4f;--fg:#eceef5;--texto:#cfd2de;--suave:#9aa0b8;--roxo:#8B00FF;--roxo-claro:#bd93f9;--verde:#50fa7b;--laranja:#ffb86c}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--texto);font:15.5px/1.65 Inter,system-ui,sans-serif;overflow-x:hidden}
+h1,h2{font-family:'Space Grotesk',system-ui,sans-serif;color:var(--fg);margin:0}
+a{color:var(--roxo-claro)}
+button{font:inherit;cursor:pointer}
+header{position:sticky;top:0;z-index:5;background:rgba(25,26,33,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--borda)}
+.topo{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:14px 16px}
+.topo h1{font-size:20px;color:var(--roxo-claro)}
+.topo .conta{color:var(--suave);font-size:14px}
+.topo .vai{flex:1}
+#copiar{background:var(--roxo);color:#fff;border:0;border-radius:999px;padding:7px 16px;font-weight:600}
+#estado{font-size:13px;color:var(--suave)}
+nav{display:flex;gap:8px;flex-wrap:wrap;padding:0 16px 12px}
+nav a{text-decoration:none;color:var(--suave);background:var(--painel);border-radius:999px;padding:3px 12px;font-size:13px}
+nav a.feito{color:var(--verde)}
+main{padding:28px 16px 80px;max-width:1500px;margin:0 auto}
+.intro{max-width:78ch;margin:0 0 28px}
+section{scroll-margin-top:130px;background:var(--app-bg);border:1px solid var(--borda);border-radius:16px;padding:clamp(16px,2.4vw,32px);margin:0 0 32px}
+.cab{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+.cab h2{font-size:21px}
+.sprint{color:var(--suave);font-size:12px;overflow-wrap:anywhere}
+.muda{max-width:84ch;margin:0 0 10px;color:var(--fg)}
+.porque{max-width:84ch;font-size:14px;color:var(--laranja);margin:0 0 18px}
+.fotos{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:20px}
+figure{margin:0}
+figure img{width:100%;height:auto;display:block;border-radius:10px;border:1px solid var(--borda)}
+figcaption{font:600 13px 'Space Grotesk',sans-serif;color:var(--suave);letter-spacing:.04em;text-transform:uppercase;margin:0 0 8px}
+.validar{display:grid;gap:12px;margin-top:22px;max-width:84ch}
+.links{display:flex;gap:10px;flex-wrap:wrap}
+.abrir{text-decoration:none;background:var(--painel);border:1px solid var(--borda);padding:5px 14px;border-radius:999px;font-size:14px}
+.votos{display:flex;gap:10px;flex-wrap:wrap}
+.votos button{flex:1;min-width:130px;background:var(--painel);border:1px solid var(--borda);color:var(--fg);border-radius:10px;padding:9px 12px;font-weight:600}
+.votos button[aria-pressed=true]{background:rgba(80,250,123,.16);border-color:var(--verde);color:var(--verde)}
+.votos button[data-v=ajustar][aria-pressed=true]{background:rgba(255,184,108,.14);border-color:var(--laranja);color:var(--laranja)}
+textarea{width:100%;min-height:80px;background:var(--painel);color:var(--fg);border:1px solid var(--borda);border-radius:10px;padding:12px 14px;font:15px/1.55 Inter,sans-serif;resize:vertical}
+textarea:focus{outline:none;border-color:var(--roxo-claro)}
+.tabela{overflow-x:auto;margin:0 0 36px;border:1px solid var(--borda);border-radius:16px;background:var(--app-bg)}
+table{border-collapse:collapse;width:100%;font-size:14px;min-width:760px}
+th,td{text-align:left;vertical-align:top;padding:9px 12px;border-bottom:1px solid var(--borda)}
+th{font:600 12px 'Space Grotesk',sans-serif;letter-spacing:.05em;text-transform:uppercase;color:var(--suave)}
+td.sp{font-size:12px;overflow-wrap:anywhere;color:var(--fg);max-width:340px}
+.pill{display:inline-block;border-radius:999px;padding:1px 10px;font-size:12.5px;white-space:nowrap}
+.pill.ok{background:rgba(80,250,123,.14);color:var(--verde)}
+.pill.novo{background:rgba(189,147,249,.16);color:var(--roxo-claro)}
+h2.sec{font-size:19px;margin:30px 0 12px}
+</style>
+</head>
+<body>
+<header>
+  <div class="topo">
+    <h1>Mockups da rodada 4</h1>
+    <span class="conta" id="conta"></span>
+    <span class="vai"></span>
+    <span id="estado"></span>
+    <button id="copiar" type="button">Copiar suas respostas</button>
+  </div>
+  <nav id="sumario"><a href="#c-mapa-do-controle-19" data-nav="mapa-do-controle-19">Mapa do controle 19</a><a href="#c-mapa-do-controle-20" data-nav="mapa-do-controle-20">Mapa do controle 20</a><a href="#c-08-conexoes-13" data-nav="08-conexoes-13">Conexões 13</a><a href="#c-mapa-das-portas-5" data-nav="mapa-das-portas-5">Mapa das portas 5</a><a href="#c-mapa-das-portas-6" data-nav="mapa-das-portas-6">Mapa das portas 6</a><a href="#c-mapa-das-portas-7" data-nav="mapa-das-portas-7">Mapa das portas 7</a><a href="#c-mapa-das-portas-8" data-nav="mapa-das-portas-8">Mapa das portas 8</a><a href="#c-07-34" data-nav="07-34">Experimental 34</a><a href="#c-07-35" data-nav="07-35">Experimental 35</a><a href="#c-01-12" data-nav="01-12">Jogar 12</a><a href="#c-02-17" data-nav="02-17">Controles 17</a><a href="#c-02-18" data-nav="02-18">Controles 18</a><a href="#c-06-28" data-nav="06-28">Navegação e Acessibilidade 28</a><a href="#c-09-12" data-nav="09-12">Sistema 12</a><a href="#c-calibrar-7" data-nav="calibrar-7">Calibrar giroscópio 7</a></nav>
+</header>
+<main>
+<p class="intro">Aqui estão todas as sprints de tela que ainda não tinham desenho. As que já estavam nas páginas do todo aparecem como cobertas, com o lugar onde estão. As que ganharam desenho novo têm o antes e o depois, e você valida de uma vez: aprova ou pede ajuste. Os alvos e a letra seguem a sua resposta das ~23h40, e o giroscópio sai da Conexões, como você confirmou às ~22h. As suas respostas ficam neste navegador, e o botão do topo copia tudo para você colar na conversa.</p>
+<h2 class="sec">As quatorze sprints, uma por uma</h2>
+<div class="tabela"><table><thead><tr><th>Sprint</th><th>Situação</th><th>Onde ver</th><th>O que há</th></tr></thead><tbody><tr><td class="sp">A-ABA-PERFIS-DO-TODO-01</td><td><span class="pill ok">coberta</span></td><td><a href="../10-perfis.html">10-perfis.html</a></td><td>mudanças 1 a 18 (estilo 3 e 14, «Quando» 7, datas 8 e 10)</td></tr><tr><td class="sp">A-ABA-MAPAS-DO-RADIO-E-DAS-PORTAS-DO-TODO-01</td><td><span class="pill ok">coberta</span></td><td><a href="../mapa-do-radio.html">mapa-do-radio.html</a> <a href="../mapa-das-portas.html">mapa-das-portas.html</a></td><td>mapa do rádio 1 a 5 e mapa das portas 1 a 4</td></tr><tr><td class="sp">CADA-FEATURE-TEM-UM-DONO-SO-NA-INTERFACE-01</td><td><span class="pill ok">coberta</span></td><td><a href="../02-controles.html">02-controles.html</a> <a href="../calibrar-sensores.html">calibrar-sensores.html</a></td><td>Controles 6 e 7, Calibrar 3</td></tr><tr><td class="sp">A-ABA-MAPA-DO-CONTROLE-DO-TODO-01</td><td><span class="pill novo">coberta e desenho novo</span></td><td><a href="../mapa-do-controle.html">mapa-do-controle.html</a></td><td>1 a 18 já estavam; a rodada 4 acrescenta 19 (moldes com os nomes da Navegação) e 20 (grupo Meus perfis)</td></tr><tr><td class="sp">A-ABA-CONEXOES-DO-TODO-01</td><td><span class="pill novo">coberta e desenho novo</span></td><td><a href="../08-conexoes.html">08-conexoes.html</a></td><td>1 a 12 já estavam; a rodada 4 acrescenta 13 (o giroscópio sai dos cartões, como você confirmou às ~22h; substitui a 08-6)</td></tr><tr><td class="sp">A-ABA-NAVEGACAO-DO-TODO-01</td><td><span class="pill ok">coberta</span></td><td><a href="../06-navegacao.html">06-navegacao.html</a></td><td>mudanças 1 a 27</td></tr><tr><td class="sp">A-ABA-SISTEMA-DO-TODO-01</td><td><span class="pill ok">coberta</span></td><td><a href="../09-sistema.html">09-sistema.html</a></td><td>mudanças 1 a 11</td></tr><tr><td class="sp">O-MAPA-DAS-CONEXOES-MOSTRA-A-CADEIA-USB-E-O-REGISTRO-DELA-01</td><td><span class="pill novo">desenho novo (marcação)</span></td><td><a href="../mapa-das-portas.html">mapa-das-portas.html</a></td><td>o desenho já existia na página sem âncora; a rodada 4 marca 5 (hub como um chip), 6 (enlace), 7 (não apareceu neste início) e 8 (aba Registro)</td></tr><tr><td class="sp">O-PERFIL-GUARDA-A-DATA-EM-QUE-NASCEU-E-A-DA-ULTIMA-MUDANCA-01</td><td><span class="pill ok">coberta</span></td><td><a href="../10-perfis.html">10-perfis.html</a></td><td>mudanças 8 e 10</td></tr><tr><td class="sp">A-ABA-EXPERIMENTAL-DO-TODO-01</td><td><span class="pill ok">coberta</span></td><td><a href="../07-lancadores.html">07-lancadores.html</a></td><td>mudanças 1 a 33</td></tr><tr><td class="sp">OS-ALVOS-E-A-LETRA-CRESCEM-E-A-INTERFACE-GANHA-TAMANHO-01</td><td><span class="pill novo">desenho novo</span></td><td><a href="../02-controles.html">02-controles.html</a> <a href="../06-navegacao.html">06-navegacao.html</a> <a href="../09-sistema.html">09-sistema.html</a> <a href="../calibrar-sensores.html">calibrar-sensores.html</a></td><td>Controles 18, Navegação 28 (aba e janela Acessibilidade), Sistema 12, Calibrar 7: botões e letra, como você respondeu às ~23h40 (alvos de 24 px, letra de 12 px, sem rolagem); o botão «Tamanho da interface» segue no 09 do todo</td></tr><tr><td class="sp">OS-ACESSORIOS-SEGUEM-OS-JOGOS-ESCOLHIDOS-COM-A-FORCA-NO-DESLIZANTE-01</td><td><span class="pill novo">desenho novo</span></td><td><a href="../07-lancadores.html?aba=t2#acessorios">07-lancadores.html</a></td><td>34 (lista de jogos com perfil, uma caixa por jogo, nasce vazia) e 35 (deslizante por canal e por aparelho)</td></tr><tr><td class="sp">O-JOGO-DOS-ACESSORIOS-CHEGA-A-ABA-VIBRACAO-E-AS-JANELAS-01</td><td><span class="pill ok">coberta</span></td><td><a href="../07-lancadores.html#kyty">07-lancadores.html</a></td><td>a janela do Kyty em quatro cartões (Programa, Jogos, Controle, Som) já está no 07 do todo, mudança 16; foto em fotos/07-lancadores-kyty.png</td></tr><tr><td class="sp">O-ESTADO-DIZ-O-QUE-O-JOGO-VE-DE-CADA-CONTROLE-01</td><td><span class="pill novo">desenho novo</span></td><td><a href="../01-jogar.html?estado=modo-xbox">01-jogar.html</a> <a href="../02-controles.html?estado=o-que-chega">02-controles.html</a></td><td>Jogar 12 (a forma que o jogo vê e o motivo) e Controles 17 (o que chega, função por função)</td></tr></tbody></table></div>
+<h2 class="sec">As nove que outras sprints já absorveram</h2>
+<div class="tabela"><table><thead><tr><th>Sprint</th><th colspan="3">Situação</th></tr></thead><tbody><tr><td class="sp">A-ABA-SISTEMA-FICA-COM-SEIS-LINHAS-E-O-REGISTRO-CABE-NA-JANELA-01</td><td colspan="3">absorvida por A-ABA-SISTEMA-DO-TODO-01 (09-sistema.html)</td></tr><tr><td class="sp">A-CAPTURA-DE-TECLA-SE-FAZ-SOBRE-O-MAPA-DO-CONTROLE-01</td><td colspan="3">absorvida por A-ABA-MAPA-DO-CONTROLE-DO-TODO-01 (mapa-do-controle.html)</td></tr><tr><td class="sp">A-ABA-NAVEGACAO-TEM-OS-DOIS-POINT-AND-CLICK-E-A-VELOCIDADE-QUE-FUNCIONA-01</td><td colspan="3">absorvida por A-ABA-NAVEGACAO-DO-TODO-01 (06-navegacao.html, mudança 10)</td></tr><tr><td class="sp">A-FUNCAO-DO-TECLADO-GANHA-O-SEMPRE-01</td><td colspan="3">absorvida por A-ABA-NAVEGACAO-DO-TODO-01 (06-navegacao.html, mudança 10)</td></tr><tr><td class="sp">O-PERFIL-SE-ACHA-PELO-NOME-DO-JOGO-E-SE-APLICA-EM-QUATRO-ALVOS-01</td><td colspan="3">absorvida por A-ABA-PERFIS-DO-TODO-01 (10-perfis.html)</td></tr><tr><td class="sp">O-TOUCHPAD-LIGA-E-DESLIGA-NA-ABA-CONTROLES-01</td><td colspan="3">absorvida por A-ABA-CONTROLES-DO-TODO-01 (02-controles.html, mudança 5)</td></tr><tr><td class="sp">O-BOTAO-DIREITO-ABRE-O-MENU-DO-HEFESTO-EM-TODA-ABA-01</td><td colspan="3">absorvida por A-BASE-COMUM-DAS-ABAS-01</td></tr><tr><td class="sp">O-POINT-AND-CLICK-FICA-NO-LIGADO-E-A-NAVEGACAO-NO-DESLIGADO-01</td><td colspan="3">absorvida por A-ABA-JOGAR-DO-TODO-01 (01-jogar.html, mudanças 2 e 3)</td></tr><tr><td class="sp">A-CADEIA-USB-SE-RECONHECE-EM-QUALQUER-PC-E-CADA-MUDANCA-VAI-AO-REGISTRO-01</td><td colspan="3">back-end do mapa das conexões: o desenho está nas mudanças 5 a 8 do mapa das portas</td></tr></tbody></table></div>
+<h2 class="sec">O que ganhou desenho novo, para você escolher</h2>
+<section id="c-mapa-do-controle-19" data-id="mapa-do-controle-19" data-titulo="Mapa do controle: os moldes com os nomes da Navegação">
+<div class="cab"><h2>Mapa do controle: os moldes com os nomes da Navegação</h2><span class="sprint">A-ABA-MAPA-DO-CONTROLE-DO-TODO-01</span></div>
+<p class="muda">Os moldes têm os mesmos quatro nomes da aba Navegação: Point and click, Visual novel, Mouse e Mouse e teclado; sai o grupo «Point and click» com «Só mouse», «Teclado e mouse» e Orpheus</p><p class="porque"><b>Para você decidir.</b> Orpheus e Maid Life SS passam para «Meus perfis», porque são perfis seus e não moldes: a Navegação só lista os quatro moldes.</p>
+<div class="fotos"><figure><figcaption>Antes</figcaption><a href="fotos/mapa-do-controle-m19-antes.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/mapa-do-controle-m19-antes.png" alt="Mapa do controle: os moldes com os nomes da Navegação: Antes"></a></figure><figure><figcaption>Depois</figcaption><a href="fotos/mapa-do-controle-m19.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/mapa-do-controle-m19.png" alt="Mapa do controle: os moldes com os nomes da Navegação: Depois"></a></figure><figure><figcaption>Com um molde escolhido</figcaption><a href="fotos/mapa-do-controle-m19-estado.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/mapa-do-controle-m19-estado.png" alt="Mapa do controle: os moldes com os nomes da Navegação: Com um molde escolhido"></a></figure></div>
+<div class="validar"><div class="links"><a class="abrir" href="../mapa-do-controle.html">Abrir a página</a></div><div class="votos"><button type="button" data-v="aprova" aria-pressed="false">Aprovo</button><button type="button" data-v="ajustar" aria-pressed="false">Ajustar</button></div><textarea placeholder="Se quiser ajustar, escreva aqui" aria-label="Seu comentário sobre Mapa do controle: os moldes com os nomes da Navegação"></textarea></div>
+</section>
+<section id="c-mapa-do-controle-20" data-id="mapa-do-controle-20" data-titulo="Mapa do controle: o grupo Meus perfis">
+<div class="cab"><h2>Mapa do controle: o grupo Meus perfis</h2><span class="sprint">A-ABA-MAPA-DO-CONTROLE-DO-TODO-01</span></div>
+<p class="muda">Seus perfis (Orpheus, Maid Life SS) ganham um grupo próprio, «Meus perfis», depois dos moldes</p><p class="porque"><b>Para você decidir.</b> A página do todo tinha Orpheus sob «Point and click» e Maid Life SS sob «Trocar os botões»; ao pôr os moldes nos nomes da Navegação, os dois ficaram sem grupo.</p>
+<div class="fotos"><figure><figcaption>Antes</figcaption><a href="fotos/mapa-do-controle-m20-antes.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/mapa-do-controle-m20-antes.png" alt="Mapa do controle: o grupo Meus perfis: Antes"></a></figure><figure><figcaption>Depois</figcaption><a href="fotos/mapa-do-controle-m20.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/mapa-do-controle-m20.png" alt="Mapa do controle: o grupo Meus perfis: Depois"></a></figure></div>
+<div class="validar"><div class="links"><a class="abrir" href="../mapa-do-controle.html">Abrir a página</a></div><div class="votos"><button type="button" data-v="aprova" aria-pressed="false">Aprovo</button><button type="button" data-v="ajustar" aria-pressed="false">Ajustar</button></div><textarea placeholder="Se quiser ajustar, escreva aqui" aria-label="Seu comentário sobre Mapa do controle: o grupo Meus perfis"></textarea></div>
+</section>
+<section id="c-08-conexoes-13" data-id="08-conexoes-13" data-titulo="Conexões: o giroscópio sai dos cartões">
+<div class="cab"><h2>Conexões: o giroscópio sai dos cartões</h2><span class="sprint">A-ABA-CONEXOES-DO-TODO-01</span></div>
+<p class="muda">A linha «Giroscópio como analógico» sai do cartão de cada controle: o giroscópio só aparece na aba Controles, na Navegação e na janela Calibrar giroscópio</p><p class="porque"><b>Para você decidir.</b> Substitui a 08-6 do todo («Analógico virtual» vira «Giroscópio como analógico»): a linha que ela renomeava deixa de existir nesta aba.</p>
+<div class="fotos"><figure><figcaption>Antes</figcaption><a href="fotos/08-conexoes-m13-antes.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/08-conexoes-m13-antes.png" alt="Conexões: o giroscópio sai dos cartões: Antes"></a></figure><figure><figcaption>Depois</figcaption><a href="fotos/08-conexoes-m13.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/08-conexoes-m13.png" alt="Conexões: o giroscópio sai dos cartões: Depois"></a></figure></div>
+<div class="validar"><div class="links"><a class="abrir" href="../08-conexoes.html">Abrir a página</a></div><div class="votos"><button type="button" data-v="aprova" aria-pressed="false">Aprovo</button><button type="button" data-v="ajustar" aria-pressed="false">Ajustar</button></div><textarea placeholder="Se quiser ajustar, escreva aqui" aria-label="Seu comentário sobre Conexões: o giroscópio sai dos cartões"></textarea></div>
+</section>
+<section id="c-mapa-das-portas-5" data-id="mapa-das-portas-5" data-titulo="Mapa das portas: o hub como um chip">
+<div class="cab"><h2>Mapa das portas: o hub como um chip</h2><span class="sprint">O-MAPA-DAS-CONEXOES-MOSTRA-A-CADEIA-USB-E-O-REGISTRO-DELA-01</span></div>
+<p class="muda">O hub entra na cadeia como um só chip: «Hub USB 3 · 7 entradas», com os aparelhos dele logo abaixo</p>
+<div class="fotos"><figure><figcaption>Antes</figcaption><a href="fotos/mapa-das-portas-m5-antes.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/mapa-das-portas-m5-antes.png" alt="Mapa das portas: o hub como um chip: Antes"></a></figure><figure><figcaption>Depois</figcaption><a href="fotos/mapa-das-portas-m5.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/mapa-das-portas-m5.png" alt="Mapa das portas: o hub como um chip: Depois"></a></figure></div>
+<div class="validar"><div class="links"><a class="abrir" href="../mapa-das-portas.html">Abrir a página</a></div><div class="votos"><button type="button" data-v="aprova" aria-pressed="false">Aprovo</button><button type="button" data-v="ajustar" aria-pressed="false">Ajustar</button></div><textarea placeholder="Se quiser ajustar, escreva aqui" aria-label="Seu comentário sobre Mapa das portas: o hub como um chip"></textarea></div>
+</section>
+<section id="c-mapa-das-portas-6" data-id="mapa-das-portas-6" data-titulo="Mapa das portas: o enlace do hub">
+<div class="cab"><h2>Mapa das portas: o enlace do hub</h2><span class="sprint">O-MAPA-DAS-CONEXOES-MOSTRA-A-CADEIA-USB-E-O-REGISTRO-DELA-01</span></div>
+<p class="muda">O enlace do hub aparece sob o nome: «480 Mb/s · Sabe 5 Gb/s», em laranja quando o hub negocia menos do que sabe</p>
+<div class="fotos"><figure><figcaption>Antes</figcaption><a href="fotos/mapa-das-portas-m6-antes.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/mapa-das-portas-m6-antes.png" alt="Mapa das portas: o enlace do hub: Antes"></a></figure><figure><figcaption>Depois</figcaption><a href="fotos/mapa-das-portas-m6.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/mapa-das-portas-m6.png" alt="Mapa das portas: o enlace do hub: Depois"></a></figure></div>
+<div class="validar"><div class="links"><a class="abrir" href="../mapa-das-portas.html">Abrir a página</a></div><div class="votos"><button type="button" data-v="aprova" aria-pressed="false">Aprovo</button><button type="button" data-v="ajustar" aria-pressed="false">Ajustar</button></div><textarea placeholder="Se quiser ajustar, escreva aqui" aria-label="Seu comentário sobre Mapa das portas: o enlace do hub"></textarea></div>
+</section>
+<section id="c-mapa-das-portas-7" data-id="mapa-das-portas-7" data-titulo="Mapa das portas: o que não apareceu neste início">
+<div class="cab"><h2>Mapa das portas: o que não apareceu neste início</h2><span class="sprint">O-MAPA-DAS-CONEXOES-MOSTRA-A-CADEIA-USB-E-O-REGISTRO-DELA-01</span></div>
+<p class="muda">O aparelho que sumiu fica na cadeia, apagado: «Não apareceu neste início»</p>
+<div class="fotos"><figure><figcaption>Antes</figcaption><a href="fotos/mapa-das-portas-m7-antes.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/mapa-das-portas-m7-antes.png" alt="Mapa das portas: o que não apareceu neste início: Antes"></a></figure><figure><figcaption>Depois</figcaption><a href="fotos/mapa-das-portas-m7.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/mapa-das-portas-m7.png" alt="Mapa das portas: o que não apareceu neste início: Depois"></a></figure></div>
+<div class="validar"><div class="links"><a class="abrir" href="../mapa-das-portas.html">Abrir a página</a></div><div class="votos"><button type="button" data-v="aprova" aria-pressed="false">Aprovo</button><button type="button" data-v="ajustar" aria-pressed="false">Ajustar</button></div><textarea placeholder="Se quiser ajustar, escreva aqui" aria-label="Seu comentário sobre Mapa das portas: o que não apareceu neste início"></textarea></div>
+</section>
+<section id="c-mapa-das-portas-8" data-id="mapa-das-portas-8" data-titulo="Mapa das portas: a aba Registro">
+<div class="cab"><h2>Mapa das portas: a aba Registro</h2><span class="sprint">O-MAPA-DAS-CONEXOES-MOSTRA-A-CADEIA-USB-E-O-REGISTRO-DELA-01</span></div>
+<p class="muda">Uma quarta aba, Registro, lista o que entrou, saiu, voltou e ficou lento, com hora e entrada; o botão Copiar leva o texto</p><p class="porque"><b>Para você decidir.</b> DUAS LEITURAS na dica do nome: o BRIEF-ACESSORIOS-USB pede «Driver: hub» na dica; a rodada 3 (portas-4) pediu sem nome de driver. A página segue a rodada 3.</p>
+<div class="fotos"><figure><figcaption>Antes</figcaption><a href="fotos/mapa-das-portas-m8-antes.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/mapa-das-portas-m8-antes.png" alt="Mapa das portas: a aba Registro: Antes"></a></figure><figure><figcaption>Depois</figcaption><a href="fotos/mapa-das-portas-m8.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/mapa-das-portas-m8.png" alt="Mapa das portas: a aba Registro: Depois"></a></figure></div>
+<div class="validar"><div class="links"><a class="abrir" href="../mapa-das-portas.html#registro">Abrir a página</a></div><div class="votos"><button type="button" data-v="aprova" aria-pressed="false">Aprovo</button><button type="button" data-v="ajustar" aria-pressed="false">Ajustar</button></div><textarea placeholder="Se quiser ajustar, escreva aqui" aria-label="Seu comentário sobre Mapa das portas: a aba Registro"></textarea></div>
+</section>
+<section id="c-07-34" data-id="07-34" data-titulo="Experimental: os jogos que os acessórios seguem">
+<div class="cab"><h2>Experimental: os jogos que os acessórios seguem</h2><span class="sprint">OS-ACESSORIOS-SEGUEM-OS-JOGOS-ESCOLHIDOS-COM-A-FORCA-NO-DESLIZANTE-01</span></div>
+<p class="muda">A janela Lovense, em «O que seguem», ganha a lista dos jogos que têm perfil, uma caixa por jogo; nasce toda vazia, e só você marca</p><p class="porque"><b>Para você decidir.</b> Os nomes são de exemplo (os jogos com perfil). Sem nenhum jogo marcado e com «Os jogos que eu escolher» no «Quando», os acessórios ficam parados.</p>
+<div class="fotos"><figure><figcaption>Antes</figcaption><a href="fotos/07-lancadores-m34-antes.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/07-lancadores-m34-antes.png" alt="Experimental: os jogos que os acessórios seguem: Antes"></a></figure><figure><figcaption>Depois</figcaption><a href="fotos/07-lancadores-m34.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/07-lancadores-m34.png" alt="Experimental: os jogos que os acessórios seguem: Depois"></a></figure></div>
+<div class="validar"><div class="links"><a class="abrir" href="../07-lancadores.html?aba=t2#acessorios">Abrir a página</a> <a class="abrir" href="../07-lancadores.html?aba=t2&amp;marcados=1#acessorios">Com dois jogos marcados</a></div><div class="votos"><button type="button" data-v="aprova" aria-pressed="false">Aprovo</button><button type="button" data-v="ajustar" aria-pressed="false">Ajustar</button></div><textarea placeholder="Se quiser ajustar, escreva aqui" aria-label="Seu comentário sobre Experimental: os jogos que os acessórios seguem"></textarea></div>
+</section>
+<section id="c-07-35" data-id="07-35" data-titulo="Experimental: a força de cada canal, por aparelho">
+<div class="cab"><h2>Experimental: a força de cada canal, por aparelho</h2><span class="sprint">OS-ACESSORIOS-SEGUEM-OS-JOGOS-ESCOLHIDOS-COM-A-FORCA-NO-DESLIZANTE-01</span></div>
+<p class="muda">No lugar de «Força do Segue o jogo − 1,0 +», um deslizante por canal (Vibração, Gatilho, Háptica) para cada aparelho, de 0 a 20; o aparelho recebe o maior dos três</p><p class="porque"><b>Para você decidir.</b> O padrão de fábrica dos três é 10/20 (50 %), decidido por delegação, a validar por você.</p>
+<div class="fotos"><figure><figcaption>Antes</figcaption><a href="fotos/07-lancadores-m35-antes.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/07-lancadores-m35-antes.png" alt="Experimental: a força de cada canal, por aparelho: Antes"></a></figure><figure><figcaption>Depois</figcaption><a href="fotos/07-lancadores-m35.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/07-lancadores-m35.png" alt="Experimental: a força de cada canal, por aparelho: Depois"></a></figure></div>
+<div class="validar"><div class="links"><a class="abrir" href="../07-lancadores.html?aba=t2#acessorios">Abrir a página</a></div><div class="votos"><button type="button" data-v="aprova" aria-pressed="false">Aprovo</button><button type="button" data-v="ajustar" aria-pressed="false">Ajustar</button></div><textarea placeholder="Se quiser ajustar, escreva aqui" aria-label="Seu comentário sobre Experimental: a força de cada canal, por aparelho"></textarea></div>
+</section>
+<section id="c-01-12" data-id="01-12" data-titulo="Jogar: o que o jogo vê de cada controle">
+<div class="cab"><h2>Jogar: o que o jogo vê de cada controle</h2><span class="sprint">O-ESTADO-DIZ-O-QUE-O-JOGO-VE-DE-CADA-CONTROLE-01</span></div>
+<p class="muda">Cada cartão de controle ganha a linha «O jogo vê»: a forma (DualSense, Xbox 360 ou Pro Controller), o canal (próprio ou comum) e, em laranja, o motivo quando difere do que você escolheu</p><p class="porque"><b>Para você decidir.</b> Os quatro casos estão na página: padrão, ?estado=modo-xbox, ?estado=pro e ?estado=queda. O texto do motivo é de exemplo; o daemon manda o motivo pronto.</p>
+<div class="fotos"><figure><figcaption>Antes</figcaption><a href="fotos/01-jogar-m12-antes.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/01-jogar-m12-antes.png" alt="Jogar: o que o jogo vê de cada controle: Antes"></a></figure><figure><figcaption>Depois</figcaption><a href="fotos/01-jogar-m12.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/01-jogar-m12.png" alt="Jogar: o que o jogo vê de cada controle: Depois"></a></figure><figure><figcaption>Modo Xbox</figcaption><a href="fotos/01-jogar-m12-modo-xbox.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/01-jogar-m12-modo-xbox.png" alt="Jogar: o que o jogo vê de cada controle: Modo Xbox"></a></figure><figure><figcaption>Pro Controller</figcaption><a href="fotos/01-jogar-m12-pro.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/01-jogar-m12-pro.png" alt="Jogar: o que o jogo vê de cada controle: Pro Controller"></a></figure><figure><figcaption>Queda</figcaption><a href="fotos/01-jogar-m12-queda.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/01-jogar-m12-queda.png" alt="Jogar: o que o jogo vê de cada controle: Queda"></a></figure></div>
+<div class="validar"><div class="links"><a class="abrir" href="../01-jogar.html">Padrão</a> <a class="abrir" href="../01-jogar.html?estado=modo-xbox">Modo Xbox</a> <a class="abrir" href="../01-jogar.html?estado=pro">Pro Controller</a> <a class="abrir" href="../01-jogar.html?estado=queda">Queda para o Xbox 360</a></div><div class="votos"><button type="button" data-v="aprova" aria-pressed="false">Aprovo</button><button type="button" data-v="ajustar" aria-pressed="false">Ajustar</button></div><textarea placeholder="Se quiser ajustar, escreva aqui" aria-label="Seu comentário sobre Jogar: o que o jogo vê de cada controle"></textarea></div>
+</section>
+<section id="c-02-17" data-id="02-17" data-titulo="Controles: o que chega ao jogo, função por função">
+<div class="cab"><h2>Controles: o que chega ao jogo, função por função</h2><span class="sprint">O-ESTADO-DIZ-O-QUE-O-JOGO-VE-DE-CADA-CONTROLE-01</span></div>
+<p class="muda">Ao lado da forma que o jogo vê, o botão «O que chega» abre as doze funções (botões, analógicos, gatilho analógico, gatilho adaptativo, vibração, háptica, luz, luz de jogador, giroscópio, touchpad, microfone, alto-falante), cada uma como Nativo, Pelo Hefesto ou Não chega</p><p class="porque"><b>Para você decidir.</b> A lista mostra o caso do Xbox 360 no modo Xbox; para o DualSense tudo vira Nativo, e para o Pro Controller o gatilho analógico e a luz de jogador não chegam. A «Luz» como «Pelo Hefesto» é leitura nossa da tabela medida: a validar por você.</p>
+<div class="fotos"><figure><figcaption>Antes</figcaption><a href="fotos/02-controles-m17-antes.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/02-controles-m17-antes.png" alt="Controles: o que chega ao jogo, função por função: Antes"></a></figure><figure><figcaption>Depois</figcaption><a href="fotos/02-controles-m17.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/02-controles-m17.png" alt="Controles: o que chega ao jogo, função por função: Depois"></a></figure></div>
+<div class="validar"><div class="links"><a class="abrir" href="../02-controles.html?estado=o-que-chega">Abrir a página</a></div><div class="votos"><button type="button" data-v="aprova" aria-pressed="false">Aprovo</button><button type="button" data-v="ajustar" aria-pressed="false">Ajustar</button></div><textarea placeholder="Se quiser ajustar, escreva aqui" aria-label="Seu comentário sobre Controles: o que chega ao jogo, função por função"></textarea></div>
+</section>
+<section id="c-02-18" data-id="02-18" data-titulo="Controles: alvos de 24 px e letra de 12 px">
+<div class="cab"><h2>Controles: alvos de 24 px e letra de 12 px</h2><span class="sprint">OS-ALVOS-E-A-LETRA-CRESCEM-E-A-INTERFACE-GANHA-TAMANHO-01</span></div>
+<p class="muda">Na aba Controles, só com a seção dos quatro controles, os 15 alvos de menos de 24 px (interruptores, deslizantes de volume, botões de mudo e de padrão, botão «Ligado» do touchpad, seletores de controle) crescem para 24 px, e toda letra abaixo de 12 px sobe para 12 px; o corpo do quadro aperta o respiro para não rolar</p><p class="porque"><b>Para você decidir.</b> Medido na página do todo: 15 alvos abaixo de 24 px e 88 de 129 textos abaixo de 12 px; depois, 0 e 0. Ficam abaixo de 12 px só as letras desenhadas dentro dos ícones dos botões L1, R1, L2 e R2 (10,7 px), que são parte do ícone e não texto da interface. ?alvos=hoje mostra a tela sem a mudança.</p>
+<div class="fotos"><figure><figcaption>Antes</figcaption><a href="fotos/02-controles-m18-antes.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/02-controles-m18-antes.png" alt="Controles: alvos de 24 px e letra de 12 px: Antes"></a></figure><figure><figcaption>Depois</figcaption><a href="fotos/02-controles-m18.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/02-controles-m18.png" alt="Controles: alvos de 24 px e letra de 12 px: Depois"></a></figure></div>
+<div class="validar"><div class="links"><a class="abrir" href="../02-controles.html">Abrir a página</a> <a class="abrir" href="../02-controles.html?alvos=hoje">Sem a mudança</a></div><div class="votos"><button type="button" data-v="aprova" aria-pressed="false">Aprovo</button><button type="button" data-v="ajustar" aria-pressed="false">Ajustar</button></div><textarea placeholder="Se quiser ajustar, escreva aqui" aria-label="Seu comentário sobre Controles: alvos de 24 px e letra de 12 px"></textarea></div>
+</section>
+<section id="c-06-28" data-id="06-28" data-titulo="Navegação e Acessibilidade: alvos de 24 px e letra de 12 px">
+<div class="cab"><h2>Navegação e Acessibilidade: alvos de 24 px e letra de 12 px</h2><span class="sprint">OS-ALVOS-E-A-LETRA-CRESCEM-E-A-INTERFACE-GANHA-TAMANHO-01</span></div>
+<p class="muda">Na Navegação e na janela Acessibilidade, os 7 alvos da aba (seletores de linha e o botão de navegação) e os 17 da janela (os botões «−» e «+» de cada passo e os seletores) passam a 24 px, e toda letra abaixo de 12 px sobe para 12 px</p><p class="porque"><b>Para você decidir.</b> Medido na página do todo: 7 alvos abaixo de 24 px na aba e 24 com a janela Acessibilidade aberta (17 deles na própria janela); 22 e 57 textos abaixo de 12 px. Depois, 0 alvos e 0 textos. Ficam abaixo de 12 px só as letras gravadas no desenho do controle (L1, R1, L2, R2, L, R), que crescem e encolhem com o desenho.</p>
+<div class="fotos"><figure><figcaption>Aba, antes</figcaption><a href="fotos/06-navegacao-m28-antes.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/06-navegacao-m28-antes.png" alt="Navegação e Acessibilidade: alvos de 24 px e letra de 12 px: Aba, antes"></a></figure><figure><figcaption>Aba, depois</figcaption><a href="fotos/06-navegacao-m28.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/06-navegacao-m28.png" alt="Navegação e Acessibilidade: alvos de 24 px e letra de 12 px: Aba, depois"></a></figure><figure><figcaption>Janela, antes</figcaption><a href="fotos/06-navegacao-acessibilidade-m28-antes.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/06-navegacao-acessibilidade-m28-antes.png" alt="Navegação e Acessibilidade: alvos de 24 px e letra de 12 px: Janela, antes"></a></figure><figure><figcaption>Janela, depois</figcaption><a href="fotos/06-navegacao-acessibilidade-m28.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/06-navegacao-acessibilidade-m28.png" alt="Navegação e Acessibilidade: alvos de 24 px e letra de 12 px: Janela, depois"></a></figure></div>
+<div class="validar"><div class="links"><a class="abrir" href="../06-navegacao.html">Aba</a> <a class="abrir" href="../06-navegacao.html#acessibilidade">Janela Acessibilidade</a> <a class="abrir" href="../06-navegacao.html?alvos=hoje">Sem a mudança</a></div><div class="votos"><button type="button" data-v="aprova" aria-pressed="false">Aprovo</button><button type="button" data-v="ajustar" aria-pressed="false">Ajustar</button></div><textarea placeholder="Se quiser ajustar, escreva aqui" aria-label="Seu comentário sobre Navegação e Acessibilidade: alvos de 24 px e letra de 12 px"></textarea></div>
+</section>
+<section id="c-09-12" data-id="09-12" data-titulo="Sistema: letra de 12 px">
+<div class="cab"><h2>Sistema: letra de 12 px</h2><span class="sprint">OS-ALVOS-E-A-LETRA-CRESCEM-E-A-INTERFACE-GANHA-TAMANHO-01</span></div>
+<p class="muda">Na aba Sistema todos os alvos já têm 24 px ou mais; os 18 textos pequenos (selos, siglas, o botão Copiar e o registro) sobem para 12 px</p><p class="porque"><b>Para você decidir.</b> Medido na página do todo: 0 alvos abaixo de 24 px e 18 de 72 textos abaixo de 12 px; depois, 0 e 0. O seletor Padrão, Confortável e Espaçoso (09-3) não muda.</p>
+<div class="fotos"><figure><figcaption>Antes</figcaption><a href="fotos/09-sistema-m12-antes.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/09-sistema-m12-antes.png" alt="Sistema: letra de 12 px: Antes"></a></figure><figure><figcaption>Depois</figcaption><a href="fotos/09-sistema-m12.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/09-sistema-m12.png" alt="Sistema: letra de 12 px: Depois"></a></figure></div>
+<div class="validar"><div class="links"><a class="abrir" href="../09-sistema.html">Abrir a página</a> <a class="abrir" href="../09-sistema.html?alvos=hoje">Sem a mudança</a></div><div class="votos"><button type="button" data-v="aprova" aria-pressed="false">Aprovo</button><button type="button" data-v="ajustar" aria-pressed="false">Ajustar</button></div><textarea placeholder="Se quiser ajustar, escreva aqui" aria-label="Seu comentário sobre Sistema: letra de 12 px"></textarea></div>
+</section>
+<section id="c-calibrar-7" data-id="calibrar-7" data-titulo="Calibrar giroscópio: letra de 12 px">
+<div class="cab"><h2>Calibrar giroscópio: letra de 12 px</h2><span class="sprint">OS-ALVOS-E-A-LETRA-CRESCEM-E-A-INTERFACE-GANHA-TAMANHO-01</span></div>
+<p class="muda">Na janela Calibrar giroscópio todos os alvos já têm 24 px ou mais; os 48 textos pequenos (valores, eixos, rótulos) sobem para 12 px, e o respiro entre os blocos aperta para a janela caber sem rolar</p><p class="porque"><b>Para você decidir.</b> Medido na página do todo: 0 alvos abaixo de 24 px e 48 de 76 textos abaixo de 12 px; depois, 0 e 0. Em 1212x740 a janela do todo já rolava 33 px por dentro; com o respiro apertado ela deixa de rolar. Ficam abaixo de 12 px só as letras gravadas no desenho pequeno do controle (L1, R1, L2, R2, L, R).</p>
+<div class="fotos"><figure><figcaption>Antes</figcaption><a href="fotos/calibrar-sensores-m7-antes.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/calibrar-sensores-m7-antes.png" alt="Calibrar giroscópio: letra de 12 px: Antes"></a></figure><figure><figcaption>Depois</figcaption><a href="fotos/calibrar-sensores-m7.png" target="_blank" rel="noopener"><img loading="lazy" src="fotos/calibrar-sensores-m7.png" alt="Calibrar giroscópio: letra de 12 px: Depois"></a></figure></div>
+<div class="validar"><div class="links"><a class="abrir" href="../calibrar-sensores.html">Abrir a página</a> <a class="abrir" href="../calibrar-sensores.html?alvos=hoje">Sem a mudança</a></div><div class="votos"><button type="button" data-v="aprova" aria-pressed="false">Aprovo</button><button type="button" data-v="ajustar" aria-pressed="false">Ajustar</button></div><textarea placeholder="Se quiser ajustar, escreva aqui" aria-label="Seu comentário sobre Calibrar giroscópio: letra de 12 px"></textarea></div>
+</section>
+<section id="c-kyty" data-id="kyty" data-titulo="Kyty: janela em quatro cartões" data-so-foto="1">
+<div class="cab"><h2>Kyty: a janela em quatro cartões (já coberta)</h2><span class="sprint">O-JOGO-DOS-ACESSORIOS-CHEGA-A-ABA-VIBRACAO-E-AS-JANELAS-01</span></div>
+<p class="muda">Esta já está no desenho do todo, na Experimental (mudança 16): Programa, Jogos, Controle e Som. A foto está aqui só para você conferir.</p>
+<div class="fotos"><figure><figcaption>Já no todo</figcaption><img loading="lazy" src="fotos/07-lancadores-kyty.png" alt="Janela do Kyty em quatro cartões"></figure></div>
+<div class="validar"><div class="links"><a class="abrir" href="../07-lancadores.html#kyty">Abrir a página</a></div><div class="votos"><button type="button" data-v="aprova" aria-pressed="false">Aprovo</button><button type="button" data-v="ajustar" aria-pressed="false">Ajustar</button></div><textarea placeholder="Se quiser ajustar, escreva aqui" aria-label="Seu comentário sobre a janela do Kyty"></textarea></div>
+</section>
+</main>
+<script>
+(function () {
+  var CHAVE = 'hefesto-rodada-4';
+  var RESP = {};
+  try { RESP = JSON.parse(localStorage.getItem(CHAVE) || '{}') || {}; } catch (e) { RESP = {}; }
+  var estado = document.getElementById('estado');
+  function guardar() {
+    try { localStorage.setItem(CHAVE, JSON.stringify(RESP)); estado.textContent = 'Salvo neste navegador'; }
+    catch (e) { estado.textContent = 'Sem armazenamento: use o botão de copiar'; }
+    conta();
+  }
+  function conta() {
+    var cartoes = document.querySelectorAll('section[data-id]'), feitos = 0;
+    cartoes.forEach(function (s) {
+      var r = RESP[s.dataset.id], ok = !!(r && r.v);
+      if (ok) feitos++;
+      var a = document.querySelector('[data-nav="' + s.dataset.id + '"]'); if (a) a.classList.toggle('feito', ok);
+    });
+    document.getElementById('conta').textContent = feitos + ' de ' + cartoes.length + ' respondidas';
+  }
+  document.querySelectorAll('section[data-id]').forEach(function (s) {
+    var id = s.dataset.id, r = RESP[id] || {}, ta = s.querySelector('textarea');
+    if (r.t) ta.value = r.t;
+    s.querySelectorAll('.votos button').forEach(function (b) {
+      b.setAttribute('aria-pressed', r.v === b.dataset.v ? 'true' : 'false');
+      b.addEventListener('click', function () {
+        var nova = RESP[id] && RESP[id].v === b.dataset.v ? '' : b.dataset.v;
+        RESP[id] = Object.assign(RESP[id] || {}, {v: nova});
+        s.querySelectorAll('.votos button').forEach(function (x) { x.setAttribute('aria-pressed', x.dataset.v === nova ? 'true' : 'false'); });
+        guardar();
+      });
+    });
+    ta.addEventListener('input', function () { RESP[id] = Object.assign(RESP[id] || {}, {t: ta.value}); guardar(); });
+  });
+  document.getElementById('copiar').addEventListener('click', function () {
+    var linhas = ['Respostas da rodada 4'];
+    document.querySelectorAll('section[data-id]').forEach(function (s) {
+      var r = RESP[s.dataset.id] || {}, rot = {aprova: 'aprovo', ajustar: 'ajustar'}[r.v] || 'sem resposta';
+      linhas.push('- ' + s.dataset.titulo + ' (' + s.dataset.id + '): ' + rot + (r.t ? ' — ' + r.t.replace(/\s+/g, ' ') : ''));
+    });
+    var txt = linhas.join('\n');
+    function aviso(m) { estado.textContent = m; }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(function () { aviso('Copiado'); }, function () { janela(txt); });
+    else janela(txt);
+    function janela(t) { var ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); aviso('Copiado'); } catch (e) { aviso('Selecione e copie'); } ta.remove(); }
+  });
+  conta();
+})();
+</script>
+</body>
+</html>
