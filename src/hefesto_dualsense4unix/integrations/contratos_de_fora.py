@@ -2,10 +2,10 @@
 
 O censo (``docs/data/contratos-de-fora.csv``) lista cada ponto de contato com o BlueZ, o
 PipeWire, o systemd, a Steam, o Proton, o kernel e o COSMIC. Aqui moram as perguntas que o
-``doctor`` faz a cada um, e a regra é a do censo: **a capacidade, nunca a versão**. Nenhuma
-sonda compara número de versão; todas perguntam se a porta existe e responde do jeito que o
-Hefesto usa (a interface D-Bus, o formato JSON do ``pactl``, o nó do kernel, o arquivo que a
-Steam promete).
+``doctor`` faz a cada um, e a regra é a do censo: **a capacidade, nunca a versão**, salvo o GE e
+o SDL, que mudam o padrão por dentro sem mudar porta (a faixa medida está nas constantes
+``GE_*`` e ``SDL_DO_EDGE``). Todas as outras perguntam se a porta existe e responde do jeito
+que o Hefesto usa (a interface D-Bus, o JSON do ``pactl``, o nó do kernel, o arquivo da Steam).
 
 Quando uma sonda não converge, a linha do doctor nomeia o CONTRATO que quebrou e o comando
 para conferir, em vez de falha calada. Dono que não existe nesta máquina (sem Steam, sem
@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
@@ -318,6 +319,196 @@ def _sonda_proton(amb: Ambiente) -> Resultado:
     return Resultado(OK)
 
 
+#: A EXCEÇÃO À REGRA DA CAPACIDADE (14/10/2026): o GE e o SDL mudam o que o jogo vê do controle sem
+#: mudar porta nenhuma (a lista por appid do GE que virou PROTON_SONY_AUTO_XINPUT=1; o 054c:0df2 que
+#: o SDL 3.4 passou a tratar como Edge). Para esses dois a única pergunta possível é a versão, e a
+#: linha do censo diz `pergunta=versão`. O Proton da Valve e o UCM não são por versão.
+#: A faixa do GE-Proton em que o Hefesto MEDIU o que o controle vê (o estudo do pino, 13/10/2026).
+GE_COM_A_PILHA_DO_CONTROLE = (11, 4)  # o 11-4 trouxe o alto-falante e a vibração pelo som
+GE_ULTIMO_COM_LISTA_POR_APPID = (11, 7)  # até aqui, PROTON_SONY_HIDRAW_XINPUT por appid
+GE_ULTIMO_MEDIDO = (11, 8)  # lido no script; sem rodada de jogo (o recibo da qualificação)
+_GE_RX = re.compile(r"GE-Proton(\d+)-(\d+)")
+
+#: A env que só o Proton com a pilha de som do controle traz no script `proton`.
+ENV_DA_PILHA_DE_SOM = "PROTON_ENABLE_MHWILDS_USB_AUDIO"
+
+#: O SDL em que o Hefesto MEDIU o 054c:0df2 do controle virtual (a 3.4.x, lida em 09/10/2026).
+SDL_DO_EDGE = (3, 4)
+_SDL_RX = re.compile(r"libSDL3\.so\.0\.(\d+)\.(\d+)$")
+
+#: O arquivo que o alsa-ucm-conf 1.2.15 traz para o DualSense, e o verbo que o Hefesto grava.
+UCM_DO_UPSTREAM = "USB-Audio/DualSense-PS5-HiFi.conf"
+UCM_DO_HEFESTO = "USB-Audio/Hefesto/DualSense-HiFi.conf"
+
+
+def _compatibilitytools(amb: Ambiente) -> list[Path]:
+    return [
+        p
+        for raiz in _raizes_da_steam(amb)
+        if (p := raiz / "compatibilitytools.d").is_dir()
+    ]
+
+
+def _texto_do_arquivo(caminho: Path, teto: int | None = None) -> str:
+    """O texto do arquivo, ou vazio se ele não abre: a sonda pergunta, e ausência não é defeito."""
+    try:
+        return caminho.read_text(encoding="utf-8", errors="replace")[:teto]
+    except OSError:
+        return ""
+
+
+def _versao_do_ge(pasta: Path) -> tuple[int, int] | None:
+    """``(11, 7)`` de ``GE-Proton11-7-x86_64``, ou do arquivo ``version`` quando o nome não diz."""
+    achou = _GE_RX.search(pasta.name) or _GE_RX.search(_texto_do_arquivo(pasta / "version", 200))
+    return (int(achou.group(1)), int(achou.group(2))) if achou else None
+
+
+def _fala_da_versao_do_ge(nome: str, versao: tuple[int, int]) -> str | None:
+    rotulo = f"{versao[0]}-{versao[1]}"
+    if versao < GE_COM_A_PILHA_DO_CONTROLE:
+        return (
+            f"{nome} é anterior ao 11-4, que trouxe o alto-falante e a vibração do controle pelo "
+            "som: o jogo nessa versão fica sem os dois"
+        )
+    if versao > GE_ULTIMO_MEDIDO:
+        return (
+            f"{nome} é posterior ao último GE que o Hefesto mediu (11-{GE_ULTIMO_MEDIDO[1]}): o "
+            "que ela liga por padrão para o controle não foi lido"
+        )
+    if versao > GE_ULTIMO_COM_LISTA_POR_APPID:
+        return (
+            f"{nome}: a lista por appid de PROTON_SONY_HIDRAW_XINPUT saiu e "
+            "PROTON_SONY_AUTO_XINPUT=1 vale para todo jogo com o Steam Input desligado, então o "
+            "controle virtual do Hefesto pode ganhar vaga XInput por cima da máscara escolhida "
+            f"(medido no script do {rotulo}, ainda sem rodada de jogo)"
+        )
+    return None
+
+
+def _sonda_ge_por_versao(amb: Ambiente) -> Resultado:
+    pastas = _compatibilitytools(amb)
+    if not _raizes_da_steam(amb):
+        return Resultado(AUSENTE, "a Steam não está instalada para este usuário")
+    instalados = [
+        (p.name, v)
+        for pasta in pastas
+        for p in sorted(pasta.glob("GE-Proton*"))
+        if p.is_dir() and (v := _versao_do_ge(p)) is not None
+    ]
+    if not instalados:
+        return Resultado(AUSENTE, "nenhum GE-Proton em compatibilitytools.d")
+    avisos = [a for nome, v in instalados if (a := _fala_da_versao_do_ge(nome, v))]
+    return Resultado(QUEBROU, "; ".join(avisos)) if avisos else Resultado(OK)
+
+
+def _chave_do_proton_da_valve(pasta: str) -> str:
+    """O nome que o ``CompatToolMapping`` usa: ``Proton 10.0`` é ``proton_10``."""
+    resto = re.sub(r"[^a-z0-9.]+", "_", pasta.lower()).strip("_")
+    return re.sub(r"\.0$", "", resto)
+
+
+def _sonda_proton_da_valve(amb: Ambiente) -> Resultado:
+    """O jogo que a Steam manda a um Proton da Valve perde a pilha de som do controle.
+
+    A pergunta é ao script ``proton`` da pasta: sem a env do som do controle ele não sabe
+    entregar o alto-falante nem a vibração pelo som. Só quem tem um jogo MAPEADO num desses
+    Protons é avisado; um Proton da Valve sem jogo nenhum não tira nada de ninguém. As pastas da
+    Steam, o mapa dos jogos e o nome de cada um vêm dos donos (``steam_launch_options``,
+    ``proton_pin``): aqui não há leitura própria de ``steamapps`` nem de ``config.vdf``.
+    """
+    from .proton_pin import default_config_vdf, extract_compat_tool_mapping
+    from .steam_launch_options import nome_do_appid, pastas_steamapps
+
+    if not _raizes_da_steam(amb):
+        return Resultado(AUSENTE, "a Steam não está instalada para este usuário")
+    sem_pilha: dict[str, str] = {}
+    com_script = False
+    for biblioteca in pastas_steamapps(amb.home):
+        for pasta in sorted((biblioteca / "common").glob("Proton*")):
+            script = pasta / "proton"
+            if not script.is_file():
+                continue  # resíduo sem o script (`dist.lock` e `files`): não é um Proton instalado
+            com_script = True
+            texto = _texto_do_arquivo(script)
+            if texto and ENV_DA_PILHA_DE_SOM not in texto:
+                sem_pilha[_chave_do_proton_da_valve(pasta.name)] = pasta.name
+    if not com_script:
+        return Resultado(AUSENTE, "nenhum Proton da Valve instalado")
+    mapa = extract_compat_tool_mapping(_texto_do_arquivo(default_config_vdf(amb.home)))
+    nomes: dict[str, list[str]] = {}
+    for appid, ferramenta in mapa.items():
+        do_proton = sem_pilha.get(ferramenta.lower())
+        if do_proton is not None:
+            nomes.setdefault(do_proton, []).append(nome_do_appid(appid, amb.home) or appid)
+    if not nomes:
+        return Resultado(OK)
+    partes = [
+        f"{pasta}: {', '.join(sorted(set(jogos))[:5])}" for pasta, jogos in sorted(nomes.items())
+    ]
+    return Resultado(
+        QUEBROU,
+        "jogo(s) num Proton da Valve, que não traz a pilha de som do controle (" + "; ".join(partes)
+        + "): perdem a vibração pelo som e o device KS do alto-falante",
+    )
+
+
+def _versoes_do_sdl(amb: Ambiente) -> list[tuple[str, tuple[int, int, int]]]:
+    """``[(onde, (3, minor, micro))]`` das libSDL3 que um jogo pode carregar, lidas pelo nome."""
+    pastas = [
+        amb.caminho("/usr/lib/x86_64-linux-gnu"),
+        amb.caminho("/usr/lib64"),
+        amb.caminho("/usr/lib"),
+    ]
+    from .steam_launch_options import pastas_steamapps
+
+    for biblioteca in pastas_steamapps(amb.home) if _raizes_da_steam(amb) else []:
+        for runtime in sorted((biblioteca / "common").glob("SteamLinuxRuntime_*")):
+            plataformas = sorted(runtime.glob("steamrt*_platform_*"))
+            if plataformas:  # a mais nova: é a que o jogo carrega
+                pastas.append(plataformas[-1] / "files" / "lib" / "x86_64-linux-gnu")
+    achados: list[tuple[str, tuple[int, int, int]]] = []
+    for pasta in pastas:
+        if not pasta.is_dir():
+            continue
+        for arquivo in sorted(pasta.glob("libSDL3.so.0.*")):
+            achou = _SDL_RX.search(arquivo.name)
+            if achou:
+                versao = (3, int(achou.group(1)), int(achou.group(2)))
+                achados.append((str(arquivo.parent), versao))
+    return achados
+
+
+def _sonda_sdl_por_versao(amb: Ambiente) -> Resultado:
+    achados = _versoes_do_sdl(amb)
+    if not achados:
+        return Resultado(AUSENTE, "nenhuma libSDL3 no sistema nem no runtime da Steam")
+    adiante = [
+        f"SDL {v[0]}.{v[1]}.{v[2]} em {onde}" for onde, v in achados if v[:2] > SDL_DO_EDGE
+    ]
+    if adiante:
+        return Resultado(
+            QUEBROU,
+            "; ".join(adiante) + f": é posterior ao {SDL_DO_EDGE[0]}.{SDL_DO_EDGE[1]}, o último em "
+            "que o Hefesto mediu o 054c:0df2 do controle virtual (Edge, rumble reforçado, "
+            "paddles); confira a vibração e as teclas traseiras num jogo SDL",
+        )
+    return Resultado(OK)
+
+
+def _sonda_ucm_de_um_dono_so(amb: Ambiente) -> Resultado:
+    raiz = amb.caminho("/usr/share/alsa") / "ucm2"
+    if not raiz.is_dir():
+        return Resultado(AUSENTE, "sem alsa-ucm-conf nesta máquina")
+    if (raiz / UCM_DO_UPSTREAM).is_file() and (raiz / UCM_DO_HEFESTO).is_file():
+        return Resultado(
+            QUEBROU,
+            f"o alsa-ucm-conf do sistema já traz {UCM_DO_UPSTREAM} e o do Hefesto também está "
+            f"instalado ({UCM_DO_HEFESTO}): os dois descrevem o mesmo controle e o nome do sink "
+            "muda. Tire o do Hefesto com scripts/install_ucm_dualsense.sh --remover",
+        )
+    return Resultado(OK)
+
+
 def _sonda_cosmic(amb: Ambiente) -> Resultado:
     if "COSMIC" not in amb.env.get("XDG_CURRENT_DESKTOP", "").upper():
         return Resultado(AUSENTE, "a sessão não é COSMIC")
@@ -390,6 +581,57 @@ CONTRATOS: tuple[Contrato, ...] = (
         promessa="cada Proton em compatibilitytools.d traz compatibilitytool.vdf e o `proton`",
         conferir="ls ~/.steam/steam/compatibilitytools.d/*/",
         sonda=_sonda_proton,
+    ),
+    Contrato(
+        id="ge-por-versao",
+        dono="proton",
+        promessa=(
+            "o GE-Proton instalado está na faixa em que o Hefesto mediu o que o controle vê "
+            "(11-4 a 11-8)"
+        ),
+        conferir="cat ~/.steam/steam/compatibilitytools.d/GE-Proton*/version",
+        sonda=_sonda_ge_por_versao,
+        cobre=("cfg:GE-Proton*",),
+    ),
+    Contrato(
+        id="proton-da-valve-sem-som",
+        dono="proton",
+        promessa=(
+            "nenhum jogo está num Proton da Valve, que não traz a pilha de som do controle "
+            "(a vibração pelo som e o device KS do alto-falante)"
+        ),
+        conferir=(
+            f"grep -c {ENV_DA_PILHA_DE_SOM} ~/.steam/steam/steamapps/common/Proton*/proton"
+        ),
+        sonda=_sonda_proton_da_valve,
+        cobre=("cfg:Proton*",),
+    ),
+    Contrato(
+        id="sdl-por-versao",
+        dono="sdl",
+        promessa=(
+            "a libSDL3 que o jogo carrega não passa do 3.4, onde o Hefesto mediu o 054c:0df2 "
+            "do controle virtual"
+        ),
+        conferir=(
+            "ls /usr/lib/x86_64-linux-gnu/libSDL3.so.0.* "
+            "~/.steam/steam/steamapps/common/SteamLinuxRuntime_*/*/files/lib/x86_64-linux-gnu/"
+            "libSDL3.so.0.*"
+        ),
+        sonda=_sonda_sdl_por_versao,
+        cobre=("path:/usr/lib/x86_64-linux-gnu",),
+    ),
+    Contrato(
+        id="ucm-de-um-dono-so",
+        dono="alsa-ucm-conf",
+        promessa=(
+            "o UCM do DualSense é de um dono só: o do sistema (alsa-ucm-conf 1.2.15 ou mais "
+            "novo) ou o do Hefesto"
+        ),
+        conferir=(
+            f"ls /usr/share/alsa/ucm2/{UCM_DO_UPSTREAM} /usr/share/alsa/ucm2/{UCM_DO_HEFESTO}"
+        ),
+        sonda=_sonda_ucm_de_um_dono_so,
     ),
     Contrato(
         id="cosmic-config",

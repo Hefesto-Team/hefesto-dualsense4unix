@@ -92,7 +92,8 @@ _CAMINHO_PROPRIO_RX = re.compile(r"hefesto|^/usr/(local|share|bin)/|/tmp/|^/sys/
 _DBUS_RX = re.compile(r"^(org\.(bluez|freedesktop|gnome|kde)|com\.system76|net\.hadess)(\.[A-Za-z0-9_]+)*$")
 _CFG_RX = re.compile(
     r"(^[\w.<>*/-]+\.vdf$|^steamapps$|^compatibilitytools\.d$|^\.steam$|^wireplumber$|"
-    r"^wireplumber\.conf\.d$|^pipewire$|^pipewire\.conf\.d$|^cosmic$|^lutris$|^heroic$)"
+    r"^wireplumber\.conf\.d$|^pipewire$|^pipewire\.conf\.d$|^cosmic$|^lutris$|^heroic$|"
+    r"^GE-Proton\*$|^Proton\*$|^ucm2$)"
 )
 _BIBLIOTECAS = frozenset({
     "evdev", "pyudev", "pydualsense", "pulsectl", "dbus", "dbus_next", "dbus_fast", "pydbus",
