@@ -878,19 +878,35 @@ def _estados(n: int) -> list[ControllerState]:
     ]
 
 
+PRAZO_DO_LACO = 5.0
+
+
 class TestOLacoDeProducao:
     """O `_poll_loop` de verdade entrega aos atalhos os botões de cada controle."""
 
     @staticmethod
     async def _rodar(
-        monkeypatch: pytest.MonkeyPatch, *, vaga: bool
+        monkeypatch: pytest.MonkeyPatch,
+        *,
+        vaga: bool,
+        esperados: frozenset[tuple[Any, frozenset[str]]],
     ) -> list[tuple[Any, frozenset[str]]]:
+        """Sobe o laço de verdade e espera, com prazo, os atalhos verem tudo o que se espera.
+
+        Espera pela CONDIÇÃO (o espião vê cada par controle-botões de `esperados`), não pelo
+        relógio: sob carga o laço de 200 Hz demora mais que um `sleep` fixo para chegar aos três
+        controles.
+        """
         monkeypatch.setattr("hefesto_dualsense4unix.daemon.lifecycle.INPUT_GRACE_SEC", 0.0)
         observados: list[tuple[Any, frozenset[str]]] = []
         original = HotkeyManager.observe
+        cobriu = asyncio.Event()
+        laco = asyncio.get_running_loop()
 
         def _espiao(self: Any, pressed: Any, *, now: Any = None, de: Any = None) -> Any:
             observados.append((de, frozenset(pressed)))
+            if esperados <= set(observados):
+                laco.call_soon_threadsafe(cobriu.set)
             return original(self, pressed, now=now, de=de)
 
         monkeypatch.setattr(HotkeyManager, "observe", _espiao)
@@ -915,30 +931,49 @@ class TestOLacoDeProducao:
         )
         daemon._coop_manager = _CoopDaEspera()
         tarefa = asyncio.create_task(daemon.run())
-        await asyncio.sleep(0.15)
-        daemon.stop()
-        await tarefa
+        try:
+            await asyncio.wait_for(cobriu.wait(), PRAZO_DO_LACO)
+        except TimeoutError:
+            chegou = sorted(set(observados), key=str)
+            falta = sorted(esperados - set(observados), key=str)
+            pytest.fail(
+                f"em {PRAZO_DO_LACO} s o laço não entregou tudo aos atalhos: "
+                f"chegou {chegou}, faltou {falta}"
+            )
+        finally:
+            daemon.stop()
+            await tarefa
         return observados
 
     @pytest.mark.asyncio
     async def test_na_vaga_o_laco_entrega_os_botoes_do_p2_e_do_p3(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        observados = await self._rodar(monkeypatch, vaga=True)
+        esperados = frozenset(
+            {
+                (P1, frozenset()),
+                (P2, frozenset({"triangle"})),
+                (P3, frozenset({"square"})),
+            }
+        )
+        observados = await self._rodar(monkeypatch, vaga=True, esperados=esperados)
         assert observados, "o laço não chamou os atalhos"
-        assert set(observados) == {
-            (P1, frozenset()),
-            (P2, frozenset({"triangle"})),
-            (P3, frozenset({"square"})),
-        }, f"o laço entregou aos atalhos {sorted(set(observados), key=str)}"
+        assert set(observados) == esperados, (
+            f"o laço entregou aos atalhos {sorted(set(observados), key=str)}"
+        )
 
     @pytest.mark.asyncio
     async def test_fora_da_vaga_o_laco_entrega_o_posto_e_os_outros(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        observados = await self._rodar(monkeypatch, vaga=False)
-        assert observados and set(observados) == {
-            (P1, frozenset({"cross"})),
-            (P2, frozenset({"triangle"})),
-            (P3, frozenset({"square"})),
-        }, f"o laço entregou aos atalhos {sorted(set(observados), key=str)}"
+        esperados = frozenset(
+            {
+                (P1, frozenset({"cross"})),
+                (P2, frozenset({"triangle"})),
+                (P3, frozenset({"square"})),
+            }
+        )
+        observados = await self._rodar(monkeypatch, vaga=False, esperados=esperados)
+        assert observados and set(observados) == esperados, (
+            f"o laço entregou aos atalhos {sorted(set(observados), key=str)}"
+        )
