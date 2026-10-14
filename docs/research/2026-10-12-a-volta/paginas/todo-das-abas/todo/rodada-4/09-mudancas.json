@@ -1,0 +1,26 @@
+{
+ "aba": "09-sistema",
+ "nome": "Sistema",
+ "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/mockups-rodada-4/docs/research/2026-10-12-a-volta/paginas/todo-das-abas/todo/09-sistema.html",
+ "depois": "/mnt/Apate/Desenvolvimento/hefesto-voo/mockups-rodada-4/docs/research/2026-10-12-a-volta/paginas/todo-das-abas/todo/rodada-4/09-sistema.html",
+ "rodada": 4,
+ "altura_px": 809,
+ "rola": false,
+ "estados": {
+  "hoje": "09-sistema.html?alvos=hoje"
+ },
+ "mudancas": [
+  {
+   "n": 12,
+   "sprint": "OS-ALVOS-E-A-LETRA-CRESCEM-E-A-INTERFACE-GANHA-TAMANHO-01",
+   "o_que_muda": "Na aba Sistema todos os alvos já têm 24 px ou mais; os 18 textos pequenos (selos, siglas, o botão Copiar e o registro) sobem para 12 px",
+   "resposta": "sua resposta de 13/10, ~23h40: botões e letra. Todo alvo de toque com 24 px no mínimo e nenhuma letra abaixo de 12 px, com cada aba refeita sem rolagem",
+   "origem": "rodada 4 (o que faltava desenho)",
+   "ancora": "html.alvos-24",
+   "seletor": "button, select, input",
+   "conflito": "Medido na página do todo: 0 alvos abaixo de 24 px e 18 de 72 textos abaixo de 12 px; depois, 0 e 0. O seletor Padrão, Confortável e Espaçoso (09-3) não muda."
+  }
+ ],
+ "por_baixo": [],
+ "fora": []
+}
