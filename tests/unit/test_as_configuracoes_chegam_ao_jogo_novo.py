@@ -163,6 +163,27 @@ def test_desligado_o_vigia_nao_escreve_nada_e_nenhum_jogo_novo_e_anunciado(casa:
     assert vigia.jogos_novos_a_receber(casa.home, config_home=casa.config) == []
 
 
+def test_desligar_depois_de_ligado_tira_os_dois_dropins_e_recarrega(casa: _Casa) -> None:
+    """Desligar devolve o guarda ao que era: sem isto o drop-in ficava acordando o guarda."""
+    chamadas: list[int] = []
+
+    def recarrega() -> bool:
+        chamadas.append(1)
+        return True
+
+    def garante() -> str:
+        return vigia.garantir(casa.home, config_home=casa.config, recarregar=recarrega)
+
+    assert garante() == vigia.ESCRITO
+    casa.desliga()
+    assert garante() == vigia.DESLIGADO
+    assert not (casa.unidades / "hefesto-steam-input-guard.path.d" / "caminhos.conf").exists()
+    assert not (casa.unidades / "hefesto-steam-input-guard.service.d" / "ritmo.conf").exists()
+    assert chamadas == [1, 1]
+    assert garante() == vigia.DESLIGADO
+    assert chamadas == [1, 1]
+
+
 def test_o_appid_do_jogo_novo_vem_do_appmanifest_e_a_ferramenta_da_steam_fica_de_fora(
     casa: _Casa,
 ) -> None:

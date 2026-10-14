@@ -167,6 +167,29 @@ def _gravar(destino: Path, texto: str) -> None:
         raise
 
 
+def _dropins(unidades: Path) -> tuple[Path, Path]:
+    return (
+        unidades / f"{UNIDADE}.path.d" / DROPIN_DOS_CAMINHOS,
+        unidades / f"{UNIDADE}.service.d" / DROPIN_DO_RITMO,
+    )
+
+
+def _tirar_os_dropins(
+    unidades: Path, dry_run: bool, recarregar: Callable[[], bool] | None
+) -> str:
+    """Desligado: o guarda volta a acordar só pelo `.path` versionado e pelo relógio."""
+    presentes = [d for d in _dropins(unidades) if d.is_file()]
+    if not presentes or dry_run:
+        return DESLIGADO
+    try:
+        for destino in presentes:
+            destino.unlink()
+    except OSError:
+        return ERRO
+    (recarregar or _recarregar_o_systemd)()
+    return DESLIGADO
+
+
 def garantir(
     home: Path | None = None,
     *,
@@ -176,22 +199,21 @@ def garantir(
 ) -> str:
     """Põe o vigia nos arquivos que a Steam regrava. Devolve o desfecho; nunca levanta.
 
-    `desligado` (interruptor) e `sem_unidade` (o guarda não está instalado) não
-    escrevem nada. Só reescreve quando o texto muda, e só então recarrega o systemd.
+    `desligado` (interruptor) tira os dois drop-ins que este módulo escreveu, se
+    houver, e volta o guarda ao que era; `sem_unidade` (o guarda não está instalado)
+    não escreve nada. Só reescreve quando o texto muda, e só então recarrega o systemd.
     """
-    if not interruptor_ligado(config_home):
-        return DESLIGADO
     unidades = _pasta_das_unidades(home)
+    if not interruptor_ligado(config_home):
+        return _tirar_os_dropins(unidades, dry_run, recarregar)
     if not (unidades / f"{UNIDADE}.path").is_file():
         return SEM_UNIDADE
     caminhos = caminhos_a_vigiar(home)
     if not caminhos:
         return SEM_STEAM
     base = home or Path.home()
-    alvos = {
-        unidades / f"{UNIDADE}.path.d" / DROPIN_DOS_CAMINHOS: texto_do_dropin(caminhos, base),
-        unidades / f"{UNIDADE}.service.d" / DROPIN_DO_RITMO: _RITMO,
-    }
+    dos_caminhos, do_ritmo = _dropins(unidades)
+    alvos = {dos_caminhos: texto_do_dropin(caminhos, base), do_ritmo: _RITMO}
     mudou = []
     for destino, texto in alvos.items():
         try:
