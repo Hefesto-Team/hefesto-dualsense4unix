@@ -694,8 +694,14 @@ JS_GERAL = r"""
     if(![...e.childNodes].some(function(x){return x.nodeType===3&&/Desconectado/.test(x.textContent);}))return;
     var r=e;for(var i=0;i<3&&r.parentElement&&!/P\d/.test(r.innerText);i++)r=r.parentElement;
     vagas.push(r.innerText.replace(/\s+/g,'').trim());});
+  // nenhum aviso verde (r3-07-29): o ✓ de um estado que está bem não é verde, nem no texto nem no fundo da pílula
+  function verde(c){var m=c.match(/[\d.]+/g);if(!m)return false;var R=+m[0],G=+m[1],B=+m[2],A=m.length>3?+m[3]:1;return A>0.05&&G>R+35&&G>B+35&&G>120;}
+  var certos=[];w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);
+  while((n=w.nextNode())){var ce=n.parentElement;if(!/✓/.test(n.textContent)||!ce||ce.closest('script,style')||!vis(ce))continue;
+    var onde=verde(getComputedStyle(ce).color)?'cor':'';for(var q=ce,k=0;!onde&&q&&k<3;q=q.parentElement,k++)if(verde(getComputedStyle(q).backgroundColor))onde='fundo';
+    if(onde)certos.push([nome(ce),onde,(ce.parentElement.textContent||'').trim().slice(0,20)]);}
   var jan=document.querySelector('.janela');
-  return {ditos:ditos,vagas:vagas,rolagemV:[document.documentElement.scrollHeight,innerHeight],rolagemH:[document.documentElement.scrollWidth,innerWidth],
+  return {ditos:ditos,vagas:vagas,certos:certos,rolagemV:[document.documentElement.scrollHeight,innerHeight],rolagemH:[document.documentElement.scrollWidth,innerWidth],
     janela:jan?[Math.round(jan.getBoundingClientRect().bottom),innerHeight,jan.scrollHeight,jan.clientHeight]:null};})()
 """
 
@@ -707,6 +713,8 @@ MORDIDAS_GERAL = {
     "vitoria-na-dica": _m("var e=document.querySelector('[data-dica]');e.setAttribute('data-dica','Controle da Vitória');"),
     # devolve uma mudança da rodada 4: a 38 (os jogos que os acessórios seguem) sai do diálogo da engrenagem
     "tira-a-38": _m("var j=document.querySelector('[data-todo=\"38\"]');document.querySelector('.miolo, body').appendChild(j);"),
+    # devolve o verde às pílulas da 09 e ao ✓ do Mic e do Som da 08
+    "certo-verde": _m("document.querySelectorAll('.saude .selo.ok, .gc-est .certo').forEach(function(e){e.style.background='rgb(80,250,123)';e.style.color='rgb(80,250,123)';});"),
     "rola": _m("var d=document.createElement('div');d.style.height='2000px';(document.querySelector('.janela .miolo')||document.body).appendChild(d);"),
 }
 MORDIDAS = {**MORDIDAS_R3, **MORDIDAS_R4, **MORDIDAS_GERAL}
@@ -714,7 +722,7 @@ assert len(MORDIDAS) == len(MORDIDAS_R3) + len(MORDIDAS_R4) + len(MORDIDAS_GERAL
 
 
 def medir_geral(nav, mordida: str) -> int:
-    """Nas catorze páginas finais: sem «Player N», sem «Vitória», as vagas como a q4B, sem rolar, sem erro de script."""
+    """Nas catorze páginas finais: sem «Player N», sem «Vitória», sem ✓ verde, as vagas como a q4B, sem rolar, sem erro de script."""
     falhas = 0
     for aba, arq in FINAIS.items():
         for (w, h) in TAMANHOS:
@@ -732,6 +740,8 @@ def medir_geral(nav, mordida: str) -> int:
                 ruins.append(f"erro de script {erros[:2]}")
             if g["ditos"]:
                 ruins.append(f"diz «Player N» ou «Vitória» {g['ditos'][:3]}")
+            if g["certos"]:
+                ruins.append(f"um ✓ verde de aviso {g['certos'][:3]}")
             if aba in VAGAS and len(g["vagas"]) != VAGAS[aba]:
                 ruins.append(f"há {len(g['vagas'])} vagas sem controle (têm de ser {VAGAS[aba]}): {g['vagas'][:4]}")
             ruins += [f"a vaga sem controle diz «{v[:40]}» (q4B: «P3 • Desconectado»)" for v in g["vagas"] if v not in ("P3•Desconectado", "P4•Desconectado")]
