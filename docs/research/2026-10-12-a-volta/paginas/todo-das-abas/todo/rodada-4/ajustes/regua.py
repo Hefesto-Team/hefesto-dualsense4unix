@@ -1,0 +1,308 @@
+#!/usr/bin/env python3
+# ruff: noqa: E501
+"""A régua dos ajustes da rodada 4: mede as quatro páginas tocadas em três tamanhos e a página de conferência, sem janela na tela.
+
+Uso: regua.py [--mordida <nome|js>] ; sai 0 se tudo passa. As mordidas nomeadas estão em MORDIDAS; cada uma devolve
+de propósito algo que ela mandou tirar, e a régua tem de reprovar. A página de conferência grava num servidor de
+mentira (page.route): a régua nunca escreve no arquivo de respostas de verdade.
+"""
+import json
+import sys
+from pathlib import Path
+
+from playwright.sync_api import sync_playwright
+
+R4 = Path(__file__).resolve().parent.parent
+PAGINAS = {
+    "01": "01-jogar.html",
+    "02": "02-controles.html",
+    "07": "07-lancadores.html?aba=t2#acessorios",
+    "calibrar": "calibrar-sensores.html",
+}
+TAMANHOS = [(1212, 809), (1212, 740), (1918, 840)]
+# Onde a régua mede alvos, letra e verde: o pedaço que estes ajustes tocaram.
+REGIAO = {
+    "01": "[data-controle]",  # os cartões, onde morava a linha «O jogo vê»
+    "02": ".ctl > .faixa, .ctl[data-conectado=nao]",  # a faixa de cada controle (onde morava o «O que chega») e o desconectado inteiro
+    "07": "#acessorios .ja-tela.t2",
+    "calibrar": "body",
+}
+
+
+def _m(corpo):
+    return "(function(){try{" + corpo + "}catch(e){}})()"
+
+
+MORDIDAS = {
+    "zona-01": _m("var c=document.querySelector('[data-controle=p1] [data-gesto=mascara]');var d=document.createElement('div');d.className='jv';"
+                  "d.setAttribute('data-todo','12');d.setAttribute('data-dica','O que o jogo enxerga');d.textContent='O jogo vê: Sony DualSense';c.parentNode.appendChild(d);"),
+    "botao-02": _m("var f=document.querySelector('.ctl[data-conectado=sim] > .faixa, .ctl:not([data-conectado=nao]) > .faixa');var b=document.createElement('button');"
+                   "b.className='jv-btn';b.setAttribute('data-todo','17');b.textContent='O que chega';f.appendChild(b);"),
+    "vaga-02": _m("var f=document.querySelector('.ctl[data-conectado=nao] > .faixa');var s=document.createElement('span');s.className='card-nome';"
+                  "s.textContent=' Galactic Purple';f.querySelector('.card-nome').appendChild(s);"),
+    "lista-07": _m("var l=document.querySelector('.ext-lista');var j=document.querySelector('[data-todo=\"34\"]');l.appendChild(j);"),
+    "legenda-07": _m("var g=document.querySelector('.fz-grade');var s=document.createElement('span');s.className='fz-leg';s.textContent='dois motores';g.appendChild(s);"),
+    "letra-07": _m("document.querySelectorAll('.ja-tela.t2 .pc-sub').forEach(function(x){x.style.fontSize='11px';});"),
+    "largura-07": _m("document.querySelector('.ja-tela.t2 .t2-segue .ja-op').style.width='70%';"),
+    "nome-calibrar": _m("var m=document.querySelector('.mira .mira-topo');var s=document.createElement('span');s.className='quem';s.textContent='Vitória';m.insertBefore(s,m.firstChild);"),
+    "conta-calibrar": _m("var a=document.querySelector('.rodape .acoes');var s=document.createElement('span');s.className='quantos';s.textContent='2 controles conectados';a.parentNode.insertBefore(s,a);"),
+}
+
+JS_MEDIR = r"""
+(function(reg){
+  function vis(e){var r=e.getBoundingClientRect();if(r.width<1||r.height<1)return false;
+    for(var p=e;p;p=p.parentElement){var t=getComputedStyle(p);if(t.display==='none'||t.visibility==='hidden'||+t.opacity===0)return false;}return true;}
+  function nome(e){var c=(typeof e.className==='string'?e.className:'').trim().split(/\s+/).slice(0,2).join('.');
+    return e.tagName.toLowerCase()+(c?'.'+c:'')+(e.id?'#'+e.id:'');}
+  var out={rolagemV:[document.documentElement.scrollHeight,innerHeight],rolagemH:[document.documentElement.scrollWidth,innerWidth],
+           cortes:[],pequenos:[],letrinhas:[],verdes:[]};
+  var jan=document.querySelector('.janela');
+  if(jan){out.janela=[Math.round(jan.getBoundingClientRect().bottom),innerHeight,jan.scrollHeight,jan.clientHeight];}
+  var vistos=new Set();
+  document.querySelectorAll(reg).forEach(function(raiz){[raiz].concat([...raiz.querySelectorAll('*')]).forEach(function(e){
+    if(vistos.has(e)||!vis(e)||e.closest('svg,script,style'))return;vistos.add(e);
+    var s=getComputedStyle(e);
+    if((s.overflowY==='hidden'||s.overflowY==='auto'||s.overflowY==='scroll')&&e.scrollHeight>e.clientHeight+1&&!e.matches('textarea,select,body,html'))
+      out.cortes.push([nome(e),e.scrollHeight,e.clientHeight]);
+    if(e.matches('button,select,input:not([type=hidden]),a[href],.nj-tog,[role=button]')){
+      // a caixa de marcar dentro de um rótulo conta pela linha inteira, que é onde se clica
+      var alvo=e.matches('input[type=checkbox],input[type=radio]')&&e.closest('label')?e.closest('label'):e;
+      var r=alvo.getBoundingClientRect();
+      if(r.height<24||r.width<24)out.pequenos.push([nome(alvo),Math.round(r.width*10)/10,Math.round(r.height*10)/10,(alvo.textContent||'').trim().slice(0,18)]);}
+    var tem=false;for(var n=e.firstChild;n;n=n.nextSibling)if(n.nodeType===3&&/[0-9A-Za-zÀ-ú]/.test(n.textContent))tem=true;
+    if(tem&&parseFloat(s.fontSize)<12)out.letrinhas.push([nome(e),s.fontSize,(e.textContent||'').trim().slice(0,18)]);
+    [s.color,s.backgroundColor,s.borderTopColor].forEach(function(c,i){var m=c.match(/rgba?\((\d+), (\d+), (\d+)(?:, ([\d.]+))?\)/);
+      if(!m)return;var r=+m[1],g=+m[2],b=+m[3],a=m[4]===undefined?1:+m[4];
+      if(a>0.05&&g>r+35&&g>b+35&&g>120&&!(i===2&&parseFloat(s.borderTopWidth)===0))out.verdes.push([nome(e),['cor','fundo','borda'][i],c,(e.textContent||'').trim().slice(0,18)]);});
+  });});
+  return out;})
+"""
+
+# Os grupos que têm de ter a mesma largura (e, nas molduras da 07, a mesma altura por linha).
+JS_IGUAIS = r"""
+(function(grupos){
+  return grupos.map(function(g){var ws=[];document.querySelectorAll(g[1]).forEach(function(e){var r=e.getBoundingClientRect();
+    if(r.width>0&&r.height>0)ws.push(Math.round((g[2]==='altura'?r.height:r.width)*10)/10);});return [g[0],g[1],ws];});})
+"""
+IGUAIS = {
+    "01": [],
+    "02": [["os quatro cartões", ".ctl"]],
+    "07": [["O que os acessórios seguem", ".ja-tela.t2 .t2-segue .ja-op"],
+           ["Como os três tocam juntos", ".ja-tela.t2 .t2-juntos .ja-op"],
+           ["as opções das duas molduras de cima", ".ja-tela.t2 .ja-op"],
+           ["as quatro molduras", ".ja-tela.t2 > .moldura"],
+           ["a altura das molduras de cima", ".ja-tela.t2 > .t2-segue, .ja-tela.t2 > .t2-juntos", "altura"],
+           ["a altura das molduras de baixo", ".ja-tela.t2 > .t2-jogos, .ja-tela.t2 > .t2-forca", "altura"],
+           ["os nove deslizantes", ".fz-c input[type=range]"],
+           ["as linhas dos jogos", ".jg-l"]],
+    "calibrar": [["os quatro lugares", ".controles > .ctr, .grade > .lugar"]],
+}
+
+# O que ela pediu, conferido no DOM: a lista do que falta (vazia = o pedido está ali).
+JS_PEDIDO = r"""
+(function(aba){
+  function vis(e){var r=e.getBoundingClientRect();if(r.width<1||r.height<1)return false;
+    for(var p=e;p;p=p.parentElement){var t=getComputedStyle(p);if(t.display==='none'||t.visibility==='hidden'||+t.opacity===0)return false;}return true;}
+  function txt(e){return (e.innerText||'').replace(/\s+/g,' ').trim();}
+  function visivelCom(re){return [...document.querySelectorAll('body *')].filter(function(e){return vis(e)&&!e.closest('script,style')&&
+    [...e.childNodes].some(function(n){return n.nodeType===3&&re.test(n.textContent);});}).map(function(e){return e.tagName.toLowerCase()+'.'+(e.className||'');});}
+  var falta=[];
+  if(aba==='01'){
+    if(document.querySelector('.jv,[data-aba="o-jogo-ve-r4"],[data-todo-css="o-jogo-ve-r4"]'))falta.push('a zona «O jogo vê» existe');
+    var v=visivelCom(/O jogo vê/);if(v.length)falta.push('o texto «O jogo vê» aparece em '+v.slice(0,2));
+    if(document.querySelector('[data-todo="12"][data-dica]'))falta.push('a dica da zona voltou');
+    if(document.querySelectorAll('[data-gesto=mascara]').length<2)falta.push('a seleção da forma sumiu dos cartões');}
+  if(aba==='02'){
+    if(document.querySelector('.jv-btn,#jv-pop,[data-todo="17"]'))falta.push('o bloco «O que chega» existe');
+    var c=visivelCom(/O que chega/);if(c.length)falta.push('o texto «O que chega» aparece em '+c.slice(0,2));
+    var des=[...document.querySelectorAll('.ctl[data-conectado=nao] > .faixa')];
+    if(des.length!==2)falta.push('há '+des.length+' faixas de controle desconectado (têm de ser 2)');
+    des.forEach(function(f){var t=txt(f);if(!/^Player \d • Desconectado$/.test(t))falta.push('o desconectado mostra mais que a vaga: «'+t.slice(0,60)+'»');});
+    [...document.querySelectorAll('.ctl[data-conectado=nao]')].forEach(function(k){if(/Galactic Purple|White|Cosmic Red|Starlight Blue/.test(txt(k)))falta.push('o desconectado tem cor de plástico');
+      if([...k.querySelectorAll('button,select,input,.mic,.bat,[data-campo=bateria]')].some(vis))falta.push('o desconectado tem controle ou dado visível');});}
+  if(aba==='07'){
+    var ac=document.querySelector('#acessorios');
+    [['34','os jogos'],['35','a força']].forEach(function(p){var e=document.querySelector('[data-todo="'+p[0]+'"]');
+      if(!e)falta.push(p[1]+' sumiu');else{if(!ac||!ac.contains(e))falta.push(p[1]+' fora do diálogo da engrenagem');
+        if(e.closest('.ext-lista'))falta.push(p[1]+' está na lista de extensões');}});
+    var eg=document.querySelector('.ext-lista .ext-conf[href="#acessorios"]');if(!eg)falta.push('a engrenagem da lista não abre o diálogo');
+    if(!document.querySelector('#t2:checked'))falta.push('a aba «O que seguem» não abriu');
+    var t2=document.querySelector('.ja-tela.t2');
+    if(t2){if(t2.querySelector('.jg-nota'))falta.push('a frase «Nenhum jogo marcado» voltou');
+      if(/dois motores|um motor|\/20/.test(txt(t2.querySelector('.fz-grade')||t2)))falta.push('as legendas ou o «/20» voltaram na força');
+      if([...t2.querySelectorAll('.ja-op')].some(function(o){return [...o.querySelectorAll('.ja-op-txt > :not(b)')].some(vis);}))falta.push('uma opção tem descrição visível além do nome');
+      if(t2.querySelectorAll('.jg-l input[type=checkbox]').length!==5)falta.push('a lista não tem os cinco jogos');
+      if(t2.querySelectorAll('.fz-c input[type=range]').length!==9)falta.push('a força não tem os nove deslizantes');
+      if(t2.scrollHeight>t2.clientHeight+1)falta.push('a aba rola por dentro');}
+    else falta.push('a aba «O que seguem» sumiu');}
+  if(aba==='calibrar'){
+    if(document.querySelector('.mira .quem,[data-campo=quem-joga].quem'))falta.push('o nome repetido em cima da mira voltou');
+    if(document.querySelector('.quantos'))falta.push('a contagem do rodapé voltou');
+    var q=visivelCom(/controles? conectados?/);if(q.length)falta.push('«controles conectados» aparece');
+    var lg=[...document.querySelectorAll('.grade > .lugar')];
+    lg.forEach(function(l){var t=txt(l);if(!/^Player \d Desconectado$/.test(t))falta.push('a vaga diz «'+t.slice(0,40)+'»');});
+    var ctr=document.querySelector('.ctr');if(ctr&&parseFloat(getComputedStyle(ctr).rowGap)<8)falta.push('o respiro apertado da rodada 4 voltou (gap '+getComputedStyle(ctr).rowGap+')');
+    if(!document.querySelector('.selo-av'))falta.push('o selo do giroscópio como analógico sumiu');}
+  return falta;})
+"""
+
+# Na Calibrar o «Começar» é o botão principal da janela (o verde do tema, igual em todas); na 07 a chave «Ligados» e na 02 a pastilha
+# «Giroscópio» acesa são estado de uma chave, não aviso.
+VERDE_DE_TEMA = ("nj-tog", "pino", "span.txt", "btn.fazer", "btn.prim", "button.sw", "span.p")
+
+
+def verde_de_aviso(item) -> bool:
+    nome, _tipo, _cor, _texto = item
+    return not any(t in nome for t in VERDE_DE_TEMA)
+
+
+def medir_paginas(nav, mordida: str) -> int:
+    falhas = 0
+    for aba, arq in PAGINAS.items():
+        for (w, h) in TAMANHOS:
+            pg = nav.new_page(viewport={"width": w, "height": h})
+            erros = []
+            pg.on("pageerror", lambda e, erros=erros: erros.append(str(e)[:80]))
+            pg.goto(f"file://{R4}/{arq}")
+            pg.wait_for_timeout(600)
+            if mordida:
+                pg.evaluate(mordida)
+                pg.wait_for_timeout(100)
+            m = pg.evaluate(JS_MEDIR, REGIAO[aba])
+            ruins = []
+            if erros:
+                ruins.append(f"erro de script {erros[:2]}")
+            if "janela" in m and aba != "07":
+                if m["janela"][0] > m["janela"][1] or m["janela"][2] > m["janela"][3] + 1:
+                    ruins.append(f"a janela rola ou passa da tela {m['janela']}")
+            elif m["rolagemV"][0] > m["rolagemV"][1]:
+                ruins.append(f"rolagem vertical {m['rolagemV']}")
+            if m["rolagemH"][0] > m["rolagemH"][1]:
+                ruins.append(f"rolagem lateral {m['rolagemH']}")
+            if aba == "07":
+                d = pg.evaluate("(function(){var c=document.querySelector('#acessorios .tn-cx');if(!c)return null;var r=c.getBoundingClientRect();"
+                                "return [Math.round(r.top),Math.round(r.bottom),Math.round(r.left),Math.round(r.right),c.scrollHeight,c.clientHeight];})()")
+                if not d:
+                    ruins.append("o diálogo da engrenagem não abriu")
+                elif d[0] < 0 or d[1] > h or d[2] < 0 or d[3] > w or d[4] > d[5] + 1:
+                    ruins.append(f"o diálogo passa da tela ou rola {d}")
+            if m["cortes"]:
+                ruins.append(f"corte por overflow {m['cortes'][:3]}")
+            if m["pequenos"]:
+                ruins.append(f"alvo < 24 px {m['pequenos'][:4]}")
+            if m["letrinhas"]:
+                ruins.append(f"letra < 12 px {m['letrinhas'][:4]}")
+            vs = [v for v in m["verdes"] if verde_de_aviso(v)]
+            if vs:
+                ruins.append(f"verde de aviso {vs[:4]}")
+            for ig in pg.evaluate(JS_IGUAIS, IGUAIS.get(aba, [])):
+                if len(ig[2]) < 2:
+                    ruins.append(f"o grupo «{ig[0]}» não foi achado ({ig[1]})")
+                elif max(ig[2]) - min(ig[2]) > 0.5:
+                    ruins.append(f"tamanhos diferentes em «{ig[0]}»: {sorted(set(ig[2]))}")
+            ruins += [f"o pedido: {x}" for x in pg.evaluate(JS_PEDIDO, aba)]
+            rot = f"{aba} {w}x{h}"
+            if ruins:
+                falhas += len(ruins)
+                print(f"REPROVA {rot}: " + " | ".join(ruins))
+            else:
+                print(f"ok      {rot}: sem rolagem, alvos ≥24 px, letra ≥12 px, sem verde de aviso, grupos iguais, o pedido está ali")
+            pg.close()
+    return falhas
+
+
+def medir_conferencia(nav) -> int:
+    """A página de conferência: abre, cada cartão grava (local e no servidor de mentira) e volta depois de recarregar, e nenhuma foto quebra."""
+    ruins = []
+    servidor = {"dados": {}, "posts": 0}
+
+    def rota(route, request):
+        if request.method == "POST":
+            servidor["dados"] = json.loads(request.post_data or "{}")
+            servidor["posts"] += 1
+            route.fulfill(status=200, body='{"ok":true}', headers={"Access-Control-Allow-Origin": "*", "Content-Type": "application/json"})
+        else:
+            route.fulfill(status=200, body=json.dumps(servidor["dados"]), headers={"Access-Control-Allow-Origin": "*", "Content-Type": "application/json"})
+
+    ctx = nav.new_context(viewport={"width": 1212, "height": 809})
+    ctx.route("**/respostas-ajustes-r4", rota)
+    pg = ctx.new_page()
+    erros = []
+    pg.on("pageerror", lambda e: erros.append(str(e)[:80]))
+    url = f"file://{R4}/ajustes/index.html"
+    pg.goto(url)
+    pg.wait_for_timeout(500)
+    ids = pg.evaluate("[...document.querySelectorAll('section[data-id]')].map(s=>s.dataset.id)")
+    esperado = ["r4-01-12", "r4-02-17", "r4-02-18", "r4-07-34", "r4-07-35", "r4-calibrar-7"]
+    if ids != esperado:
+        ruins.append(f"os cartões são {ids}")
+    if "aprovadas" not in pg.evaluate("document.querySelector('.aprovadas') ? 'aprovadas' : ''"):
+        ruins.append("a linha das aprovadas sumiu")
+    else:
+        ap = pg.evaluate("document.querySelector('.aprovadas').getBoundingClientRect().height")
+        if ap > 60:
+            ruins.append(f"a linha das aprovadas ocupa {ap} px (mais de duas linhas)")
+    # as fotos: cada uma entra na tela e carrega
+    n_img = pg.evaluate("document.images.length")
+    for i in range(n_img):
+        pg.evaluate("i=>document.images[i].scrollIntoView()", i)
+        pg.wait_for_timeout(120)
+    pg.wait_for_timeout(600)
+    quebradas = pg.evaluate("[...document.images].filter(i=>!(i.complete&&i.naturalWidth>0)).map(i=>i.getAttribute('src'))")
+    if quebradas or n_img < 13:
+        ruins.append(f"fotos quebradas {quebradas} de {n_img}")
+    # cada cartão: um voto e um texto
+    for k, sid in enumerate(esperado):
+        voto = "aprova" if k % 2 == 0 else "ajustar"
+        pg.click(f'section[data-id="{sid}"] .votos button[data-v="{voto}"]')
+        pg.fill(f'section[data-id="{sid}"] textarea', f"teste {sid}")
+    pg.wait_for_timeout(1200)
+    if servidor["posts"] == 0:
+        ruins.append("nenhum POST chegou ao servidor")
+    for k, sid in enumerate(esperado):
+        r = servidor["dados"].get(sid, {})
+        if r.get("voto") != ("aprova" if k % 2 == 0 else "ajustar") or r.get("texto") != f"teste {sid}":
+            ruins.append(f"o servidor não recebeu {sid}: {r}")
+    estado = pg.evaluate("document.getElementById('estado').textContent")
+    if not estado.startswith("Salvo às"):
+        ruins.append(f"o estado diz «{estado}»")
+    # volta do navegador: recarregar com o que ficou guardado nele
+    pg.reload()
+    pg.wait_for_timeout(700)
+    # volta do servidor: sem nada no navegador, o GET devolve
+    pg.evaluate("localStorage.clear()")
+    pg.reload()
+    pg.wait_for_timeout(900)
+    for k, sid in enumerate(esperado):
+        v = pg.evaluate(f"""(function(){{var s=document.querySelector('section[data-id="{sid}"]');
+          var b=s.querySelector('.votos button[aria-pressed=true]');return [b?b.dataset.v:'',s.querySelector('textarea').value];}})()""")
+        if v != ["aprova" if k % 2 == 0 else "ajustar", f"teste {sid}"]:
+            ruins.append(f"{sid} não voltou depois de recarregar: {v}")
+    conta = pg.evaluate("document.getElementById('conta').textContent")
+    if conta != "6 de 6 respondidas":
+        ruins.append(f"a conta diz «{conta}»")
+    if erros:
+        ruins.append(f"erro de script {erros[:2]}")
+    ctx.close()
+    if ruins:
+        print("REPROVA conferência: " + " | ".join(ruins))
+    else:
+        print(f"ok      conferência: 6 cartões, {n_img} fotos carregadas, cada voto e texto gravou e voltou (navegador e servidor)")
+    return len(ruins)
+
+
+def main() -> int:
+    mordida = sys.argv[2] if len(sys.argv) > 2 and sys.argv[1] == "--mordida" else ""
+    mordida = MORDIDAS.get(mordida, mordida)
+    with sync_playwright() as pw:
+        nav = pw.chromium.launch(channel="chrome", headless=True, args=["--no-sandbox"])
+        f = medir_paginas(nav, mordida)
+        if not mordida:
+            f += medir_conferencia(nav)
+        nav.close()
+    print(json.dumps({"falhas": f}))
+    return 1 if f else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

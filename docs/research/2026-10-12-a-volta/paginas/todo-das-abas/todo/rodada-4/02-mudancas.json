@@ -21,7 +21,7 @@
    "conflito": "A lista mostra o caso do Xbox 360 no modo Xbox; para o DualSense tudo vira Nativo, e para o Pro Controller o gatilho analógico e a luz de jogador não chegam. A «Luz» como «Pelo Hefesto» é leitura nossa da tabela medida: a validar por você.",
    "ajuste_r4": {
     "pedido": "remove isso. muito confuso. estamos melhorando e diminuindo texto, ordenando tudo e deixando menos confuso e maluco mais clean",
-    "feito": "Saiu o bloco inteiro: o botão «O que chega» das duas faixas, a janela com as doze funções e o estado ?estado=o-que-chega. A faixa de cada controle volta a dizer só a forma que o jogo vê (DualSense, Xbox 360)."
+    "feito": "Saiu o bloco inteiro: o botão «O que chega» das duas faixas, a janela com as doze funções e o estado de exemplo da janela. A faixa de cada controle volta a dizer só a forma que o jogo vê (DualSense, Xbox 360)."
    }
   },
   {
