@@ -19,8 +19,8 @@ aparelho não muda.
 
 A (b) NO CABO É O PORTÃO DO RÁDIO: os canais traseiros (os motores) passam só
 para quem joga; os da frente (o alto-falante) passam sempre. O portão é o
-volume do fluxo do laço na placa (``100% 100% 0% 0%`` para quem não joga), e
-não dois laços: um laço de dois canais ``[ FL FR ]`` lendo um monitor de
+volume do fluxo do laço na placa (``1.0000 1.0000 0.0000 0.0000`` para quem não
+joga), e não dois laços: um laço de dois canais ``[ FL FR ]`` lendo um monitor de
 quatro faria o PipeWire misturar os traseiros na frente, e o motor tocaria no
 alto-falante.
 
@@ -64,8 +64,13 @@ logger = get_logger(__name__)
 CANAIS = 4
 MAPA = "[ FL FR RL RR ]"
 
-VOLUME_ABERTO = "100%"
-VOLUME_FECHADO = "0%"
+#: Os quatro canais do fluxo do laço vão em FATOR LINEAR, e nunca em ``%``: os
+#: motores levam o ganho em fator, e o ``pactl`` recusa o comando que mistura as
+#: duas unidades (``Inconsistent volume specification.``, antes de falar com o
+#: servidor). Com a frente em ``100%`` o portão só fechava: do ``d61af1907``
+#: (14/10, 12h51) à rodada 1 da bancada, nenhum motor do laço abriu no cabo.
+VOLUME_ABERTO = "1.0000"
+VOLUME_FECHADO = "0.0000"
 
 _LACOS = Lacos(FAMILIA_DO_LACO_DO_CABO)
 
@@ -135,6 +140,7 @@ class HapticaDoCabo:
         self._motores: dict[str, str] = {}
         self._conferidos: set[str] = set()
         self._recusadas: dict[str, RotaDoCabo] = {}
+        self._falhas: dict[str, tuple[str, str]] = {}
 
     def aparelhos(self) -> dict[str, RotaDoCabo]:
         """As marcas com laço pedido, e a rota de cada uma. Leitura."""
@@ -227,16 +233,16 @@ class HapticaDoCabo:
             else:
                 indice = indice_do_fluxo(no_do_laco, rodar_pactl)
             if indice is None:
-                return False
+                return self._dizer_a_falha(marca, dono, "sem_fluxo_do_laco", motores)
             resposta = correr([
                 "pactl", "set-sink-input-volume", indice,
                 VOLUME_ABERTO, VOLUME_ABERTO, motores, motores,
             ])
         except Exception as exc:
-            logger.debug("haptica_do_cabo_portao_falhou", controle=marca, err=str(exc))
-            return False
+            return self._dizer_a_falha(marca, dono, f"erro: {exc}", motores)
         if resposta is None:
-            return False
+            return self._dizer_a_falha(marca, dono, "pactl_recusou", motores)
+        self._falhas.pop(marca, None)
         logger.info(
             "haptica_do_cabo_portao",
             controle=marca,
@@ -246,9 +252,27 @@ class HapticaDoCabo:
         )
         return True
 
+    def _dizer_a_falha(self, marca: str, dono: str, motivo: str, motores: str) -> bool:
+        """O portão que não se aplicou deixa rastro em ``info``, uma linha por mudança.
+
+        A volta tenta de novo a cada passada; sem esta linha, o portão preso
+        fechado (o de 14/10) não aparecia no diário.
+        """
+        if self._falhas.get(marca) != (motivo, motores):
+            self._falhas[marca] = (motivo, motores)
+            logger.info(
+                "haptica_do_cabo_portao_falhou",
+                controle=marca,
+                uniq=dono,
+                motivo=motivo,
+                motores=motores,
+            )
+        return False
+
     def soltar(self, marca: str) -> None:
         """O laço do aparelho cai. Idempotente — e vem ANTES de o endpoint cair."""
         self._lacos.desligar(chave_do_aparelho(marca))
+        self._falhas.pop(marca, None)
         if self._rotas.pop(marca, None) is not None:
             logger.info("haptica_do_cabo_laco_solto", controle=marca)
         self._portao.pop(marca, None)

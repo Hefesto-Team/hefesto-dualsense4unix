@@ -71,7 +71,9 @@ class _CaboDeMentira:
             _Lacos(), indice_do_fluxo=lambda no: no, pactl=self._pactl
         )
 
-    def _pactl(self, argv: list[str]) -> str:
+    def _pactl(self, argv: list[str]) -> str | None:
+        if not pj.o_pactl_aceita_os_volumes(argv[3:]):
+            return None
         self.escritas.append(list(argv))
         return ""
 
@@ -177,7 +179,7 @@ class TestNoCaboOGanhoMoraNoFluxoDoLaco:
         mesa = _CaboDeMentira()
         mesa.volta(_dono(branco=150), [BRANCO])
         assert mesa.motores(BRANCO) == [1.5, 1.5]
-        assert mesa.escritas[-1][3:5] == ["100%", "100%"], "a frente do laço passa cheia"
+        assert mesa.escritas[-1][3:5] == ["1.0000", "1.0000"], "a frente do laço passa cheia"
 
     def test_sem_opiniao_vale_o_padrao_no_laco(self) -> None:
         mesa = _CaboDeMentira()

@@ -191,3 +191,24 @@ def json_do_longo(longo: str) -> str:
     for o in objetos:
         o.pop("_tipo", None)
     return json.dumps(objetos)
+
+
+def _unidade_do_volume(valor: str) -> str:
+    """A unidade em que o ``parse_volume`` do ``pactl`` 16.1 lê um canal."""
+    texto = str(valor).strip().lstrip("+-")
+    if texto.endswith("%"):
+        return "%"
+    if texto.lower().endswith("db"):
+        return "dB"
+    return "fator" if "." in texto else "bruto"
+
+
+def o_pactl_aceita_os_volumes(valores: Sequence[str]) -> bool:
+    """Os canais de um ``set-*-volume`` passam pelo ``parse_volumes`` do ``pactl`` 16.1?
+
+    Ele recusa o comando inteiro (``Inconsistent volume specification.``, rc 1,
+    antes de falar com o servidor) quando os canais misturam unidades: ``100%``
+    com ``2.0000`` não passa. O dublê que aceita tudo deixou o portão dos
+    motores do cabo preso fechado de 14/10 até a rodada 1 da bancada.
+    """
+    return len({_unidade_do_volume(v) for v in valores}) <= 1

@@ -12,7 +12,11 @@ from hefesto_dualsense4unix.profiles.schema import HAPTICA_PCT_PADRAO
 from hefesto_dualsense4unix.daemon.subsystems import rumble
 from hefesto_dualsense4unix.integrations import alto_falante_bt as af
 from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
-from hefesto_dualsense4unix.integrations.haptica_do_cabo import chave_do_aparelho
+from hefesto_dualsense4unix.integrations.haptica_do_cabo import (
+    VOLUME_ABERTO,
+    VOLUME_FECHADO,
+    chave_do_aparelho,
+)
 from tests.unit.test_a_haptica_chega_a_quem_entra_depois import (  # noqa: F401
     _P1,
     _P2,
@@ -29,8 +33,8 @@ _APARELHOS = (("3-8", 28), ("3-7", 29), ("3-6", 30), ("3-5", 31))
 
 # Os motores abertos levam o ganho em fator linear, o do degrau Padrão, que é o do
 # ``DaemonConfig`` de fábrica (OS-QUATRO-EM-HARMONIA-01).
-_ABERTO = ["100%", "100%", *[f"{PCT_DO_JOGO / 100:.4f}"] * 2]
-_FECHADO = ["100%", "100%", "0%", "0%"]
+_ABERTO = [VOLUME_ABERTO, VOLUME_ABERTO, *[f"{PCT_DO_JOGO / 100:.4f}"] * 2]
+_FECHADO = [VOLUME_ABERTO, VOLUME_ABERTO, VOLUME_FECHADO, VOLUME_FECHADO]
 
 
 def _daemon(*, nativo: bool) -> Any:
@@ -159,4 +163,6 @@ def test_o_duble_que_responde_tudo_nao_abre_os_motores(mesa: _Mesa) -> None:  # 
     mesa.volta(*controles)
     assert _motores(mesa, 2) == _FECHADO, "o dublê que responde tudo abriu o motor do P2"
     # O dublê não diz o degrau: vale o ganho guardado de fábrica.
-    assert _motores(mesa, 1) == ["100%", "100%", *[f"{HAPTICA_PCT_PADRAO / 100:.4f}"] * 2]
+    assert _motores(mesa, 1) == [
+        VOLUME_ABERTO, VOLUME_ABERTO, *[f"{HAPTICA_PCT_PADRAO / 100:.4f}"] * 2
+    ]

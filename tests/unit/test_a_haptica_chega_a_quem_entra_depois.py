@@ -21,6 +21,8 @@ from hefesto_dualsense4unix.integrations import audio_ks_dualsense as ks
 from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
 from hefesto_dualsense4unix.integrations.haptica_do_cabo import (
     MAPA,
+    VOLUME_ABERTO,
+    VOLUME_FECHADO,
     HapticaDoCabo,
     chave_do_aparelho,
     no_de_captura,
@@ -233,7 +235,7 @@ class _Servidor:
             return "42\tprotocol-native.c\tjogo\n77\tPipeWire\tpw-loopback\n"
         if a[:2] == ["pactl", "set-sink-input-volume"]:
             indice = int(a[2])
-            if indice not in self.fluxos:
+            if indice not in self.fluxos or not pj.o_pactl_aceita_os_volumes(a[3:]):
                 return None
             self.volumes[indice] = a[3:]
             return ""
@@ -469,9 +471,13 @@ def test_so_quem_mexeu_vibra_no_cabo_e_o_alto_falante_passa_nos_dois(mesa: _Mesa
     mesa.volta(p1, p2)
     um = mesa.servidor.volumes[mesa.servidor.fluxo_do_laco(_P1)]
     dois = mesa.servidor.volumes[mesa.servidor.fluxo_do_laco(_P2)]
-    assert um == ["100%", "100%", "0%", "0%"], f"o P1 parado vibrou: {um}"
+    assert um == [VOLUME_ABERTO, VOLUME_ABERTO, VOLUME_FECHADO, VOLUME_FECHADO], (
+        f"o P1 parado vibrou: {um}"
+    )
     aberto = f"{HAPTICA_PCT_PADRAO / 100:.4f}"
-    assert dois == ["100%", "100%", aberto, aberto], f"o P2 na mão não vibrou: {dois}"
+    assert dois == [VOLUME_ABERTO, VOLUME_ABERTO, aberto, aberto], (
+        f"o P2 na mão não vibrou: {dois}"
+    )
     for _chave_do_laco, captura, destino, canais, mapa in mesa.lacos.ligacoes:
         assert (canais, mapa) == (4, MAPA), "o laço não leva os quatro canais um a um"
         assert captura.isdigit() and destino.isdigit(), "o laço pelo nome cai na fonte padrão"
