@@ -306,6 +306,10 @@
       "ajuste_r3": {
         "pedido": "(sem texto, voto «ajustar»; vale a resposta da 29)",
         "feito": "«Lovense pelo celular» virou a forma «Pelo celular» dentro da extensão Lovense, com chave e engrenagem próprias, na mesma grade e com a chave do mesmo tamanho das outras."
+      },
+      "ajuste_r3b": {
+        "pedido": "não. são uma edxtensão só da loven.se",
+        "feito": "A «Lovense pelo celular» deixou a lista: a Lovense é UMA linha só, igual à do Kyty (nome, selo, versão, uma linha de descrição, Para, chave Ligada/Desligada, engrenagem e ⋮). A engrenagem da Lovense abre um diálogo com as três formas (Pelo Intiface, Pelo celular e DualSense como brinquedo), cada uma com a sua chave e o seu Para/Quando; «Pelo celular» mora ali, com a chave, o Para e o Quando dela."
       }
     },
     {
@@ -321,6 +325,10 @@
       "ajuste_r3": {
         "pedido": "(sem texto, voto «ajustar»; vale a resposta da 29)",
         "feito": "«DualSense como brinquedo» virou a terceira forma da extensão Lovense, nasce desligada, com a chave do mesmo tamanho das outras e sem aviso de estado."
+      },
+      "ajuste_r3b": {
+        "pedido": "(ajustar, sem texto)",
+        "feito": "O «DualSense como brinquedo» também saiu da lista: é a terceira forma dentro do diálogo da engrenagem da Lovense, nasce desligada, com chave do mesmo tamanho das outras (104 px), o Para e a engrenagem para a configuração completa."
       }
     },
     {
@@ -348,6 +356,10 @@
       "ajuste_r3": {
         "pedido": "remove os botões aí e remove o 1 e 2 e o ok do lado do lançadores.",
         "feito": "Saíram «Detectar o jogo aberto» e «Procurar de novo» e a contagem com o ✓ verde ao lado do título «Lançadores». O título ficou sozinho; a lista das extensões não rola."
+      },
+      "ajuste_r3b": {
+        "pedido": "o lançadores o nome tá certo mas sem aquele aviso laranja ele sai.",
+        "feito": "Saiu o aviso laranja «2 com impedimento» da linha da Steam; o título «Lançadores» segue como está. Os impedimentos se veem no «Configurar» da Steam: o diálogo ganhou a linha «Impedimentos», com «Ver e resolver», que abre o diálogo deles. Os botões da linha seguem com a mesma largura (76 px)."
       }
     },
     {
@@ -396,7 +408,11 @@
         "pedido": "(sem texto, voto «ajustar»; vale o que ela pediu na 36: botões de largura igual, sem verde)",
         "feito": "A lista das extensões cabe sem rolar nos três tamanhos, com até seis linhas: a frase de cada forma vira só a dica quando a janela é baixa (menos de 780 px). A foto põe uma linha de exemplo da comunidade. Em 1212x809 o espaço entre as linhas também diminui um pouco, para a sexta linha caber, e os cartões dos lançadores ficam um pouco mais baixos para a última fileira não sair da moldura."
       },
-      "js": "(function(){var l=document.querySelector('.ext-lista');var k=l.querySelector('[data-modificacao=kyty]');for(var i=1;i<=1;i++){var c=k.cloneNode(true);c.removeAttribute('data-modificacao');c.querySelector('.ext-nome').textContent='Exemplo da comunidade '+i;var o=c.querySelector('.lanc-selo');o.textContent='Comunidade';o.className='lanc-selo comunidade';c.querySelector('.ext-faz').textContent='Uma linha de exemplo, só para medir a lista';c.querySelector('.nj-tog').className='nj-tog';c.querySelector('.nj-tog .txt').textContent='Desligada';l.appendChild(c);}})()"
+      "js": "(function(){var l=document.querySelector('.ext-lista');var k=l.querySelector('[data-modificacao=kyty]');for(var i=1;i<=1;i++){var c=k.cloneNode(true);c.removeAttribute('data-modificacao');c.querySelector('.ext-nome').textContent='Exemplo da comunidade '+i;var o=c.querySelector('.lanc-selo');o.textContent='Comunidade';o.className='lanc-selo comunidade';c.querySelector('.ext-faz').textContent='Uma linha de exemplo, só para medir a lista';c.querySelector('.nj-tog').className='nj-tog';c.querySelector('.nj-tog .txt').textContent='Desligada';l.appendChild(c);}})()",
+      "ajuste_r3b": {
+        "pedido": "são só duas extensões. uma linha pra cada, kity e lovense. o resto das configs vc clica e configura.",
+        "feito": "A lista tem duas linhas, Kyty e Lovense, no mesmo formato. Saiu a linha «Exemplo da comunidade» e a régua passou de seis linhas para duas. O resto se configura clicando na engrenagem; o diálogo da Lovense (fotografado aberto) cabe sem rolar nos três tamanhos."
+      }
     },
     {
       "n": 36,

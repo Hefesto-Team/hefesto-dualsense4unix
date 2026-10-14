@@ -2087,7 +2087,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   /* Rodada 3, ajuste (14/10): as três Lovense numa extensão só, cada forma com a sua chave; só os três botões
      por linha (ligar, configurar, ⋮), sem selo nem aviso de «ok»; uma grade, larguras iguais. */
   .ext-lista{max-height:none;overflow:visible}
-  .ext{grid-template-columns:28px minmax(220px,1fr) 372px 104px 30px 26px;column-gap:12px;align-items:center;min-height:0;padding:7px 0}
+  .ext{grid-template-columns:28px minmax(220px,1fr) 180px 104px 30px 26px;column-gap:12px;align-items:center;min-height:0;padding:7px 0}
   .ext-grupo{border-bottom:0;padding-bottom:3px}
   .ext-forma{border-bottom:0;padding:5px 0}
   .ext-forma:last-child{padding-bottom:3px}
@@ -2123,6 +2123,26 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
      (9 px em 1212x809): o piso desce, e o 1fr continua enchendo a altura quando sobra */
   @media (max-height:860px){.lanc-fila{grid-auto-rows:minmax(38px,1fr)}}
   @media (max-height:780px){.lanc-fila{grid-auto-rows:minmax(32px,1fr)}}
+</style>
+<style data-aba="rodada-3-volta-2">
+  /* Volta 2 (14/10): duas extensões, uma linha para cada (Kyty e Lovense); as três formas da Lovense moram no diálogo da
+     engrenagem, cada uma com a sua chave e o seu Para/Quando. Sem aviso laranja na linha da Steam. */
+  .ext{padding:12px 0}
+  .ext + .ext{border-top:1px solid var(--border-sutil)}
+  .ext-lista .ext:last-child{border-bottom:0}
+  @media (max-height:860px){.ext{padding:10px 0}}
+  @media (max-height:780px){.ext{padding:6px 0}}
+  .lv-cx{width:min(1000px,94vw)}
+  .lv-cx .tn-corpo{padding:8px 18px 16px}
+  .lv-linha{display:grid;grid-template-columns:minmax(0,1fr) 168px 276px 104px 30px;column-gap:14px;align-items:center;min-height:60px;
+    border-bottom:1px solid var(--border-sutil)}
+  .lv-linha:last-child{border-bottom:0}
+  .lv-linha .ext-nome{font-size:13px}
+  .lv-linha .ext-faz{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lv-para,.lv-quando{display:flex;align-items:center;gap:8px;white-space:nowrap}
+  .lv-para .ext-sel{width:112px}
+  .lv-quando .ext-sel{width:196px}
+  .lv-cx .ext-rot{font-size:12px}
 </style>
 <style data-aba="rodada-3-letra">
   /* Rodada 3 (14/10): nenhuma letra abaixo de 12 px nesta aba, como ela pediu */
@@ -2319,47 +2339,16 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
             <a class="ext-conf" href="#kyty" data-gesto="configurar-modificacao" data-v="kyty" data-dica="Configurações do Kyty"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></a>
             <button class="ext-mais" data-gesto="mais-da-modificacao" data-v="kyty" data-dica="Atualizar, abrir a pasta ou remover">⋮</button>
           </div>
-          <div class="ext ext-grupo" data-modificacao="lovense">
+          <div class="ext" data-modificacao="lovense" data-r3b="30">
             <span class="ext-ico" style="color:var(--pink)"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12c2-5 4-5 6 0s4 5 6 0 4-5 6 0 2 3 2 3"/></svg></span>
             <div class="ext-quem" data-todo="4">
               <span class="ext-sub"><span class="ext-nome">Lovense</span><span class="lanc-selo oficial">Oficial</span><span class="ext-ver">0.1.0</span></span>
-              <span class="ext-faz" data-dica="Uma extensão só, com três jeitos de ligar os brinquedos ao controle. Cada um liga e desliga sozinho">Uma extensão, três jeitos de ligar: cada um liga e desliga sozinho</span>
+              <span class="ext-faz" data-dica="Uma extensão só, com três jeitos de ligar os brinquedos. A engrenagem abre os três">Brinquedos da Lovense com o controle, em três jeitos de ligar</span>
             </div>
-            <span></span><span></span><span></span>
+            <div class="ext-para"><span class="ext-rot">Para</span>Todos</div>
+            <span class="nj-tog ligado" data-gesto="ligar-modificacao" data-v="lovense" data-dica="Liga ou desliga"><span class="pino"></span><span class="txt">Ligada</span></span>
+            <a class="ext-conf" href="#lovense" data-gesto="configurar-modificacao" data-v="lovense" data-dica="Configurações da Lovense: os três jeitos de ligar"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></a>
             <button class="ext-mais" data-gesto="mais-da-modificacao" data-v="lovense" data-dica="Atualizar, abrir a pasta ou remover">⋮</button>
-          </div>
-          <div class="ext ext-forma" data-modificacao="intiface" data-r3="29">
-            <span class="ext-ramo"></span>
-            <div class="ext-quem">
-              <span class="ext-nome">Pelo Intiface</span>
-              <span class="ext-faz" data-dica="Nas duas direções: o controle vibra os brinquedos, e os programas da Intiface vibram o controle">Nas duas direções, com os programas da Intiface</span>
-            </div>
-            <div class="ext-para"><span class="ext-rot">Para</span><span class="ext-cor">Cosmic Red</span><span class="ext-rot">Quando</span><select class="ext-sel" aria-label="Quando"><option selected>Os jogos que eu escolher</option><option>Qualquer jogo, com acessório ligado</option><option>Jogos com estilo Adulto</option><option>Só quando eu ligar</option></select></div>
-            <span class="nj-tog ligado" data-gesto="ligar-modificacao" data-v="intiface" data-dica="Liga ou desliga"><span class="pino"></span><span class="txt">Ligada</span></span>
-            <a class="ext-conf" href="#acessorios" data-gesto="configurar-modificacao" data-v="intiface" data-dica="Configurações: Lovense pelo Intiface"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></a>
-            <span></span>
-          </div>
-          <div class="ext ext-forma" data-modificacao="lovense-celular" data-r3="30">
-            <span class="ext-ramo"></span>
-            <div class="ext-quem">
-              <span class="ext-nome">Pelo celular</span>
-              <span class="ext-faz" data-dica="O app da Lovense no celular, pelo Game Mode na rede de casa (porta 20010), como no Planet Lust">O app da Lovense no celular, pelo Game Mode</span>
-            </div>
-            <div class="ext-para"><span class="ext-rot">Para</span><span class="ext-cor">Starlight Blue</span><span class="ext-rot">Quando</span><select class="ext-sel" aria-label="Quando"><option selected>Os jogos que eu escolher</option><option>Qualquer jogo, com acessório ligado</option><option>Jogos com estilo Adulto</option><option>Só quando eu ligar</option></select></div>
-            <span class="nj-tog ligado" data-gesto="ligar-modificacao" data-v="lovense-celular" data-dica="Liga ou desliga"><span class="pino"></span><span class="txt">Ligada</span></span>
-            <a class="ext-conf" href="#acessorios" data-gesto="configurar-modificacao" data-v="lovense-celular" data-dica="Configurações: Lovense pelo celular"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></a>
-            <span></span>
-          </div>
-          <div class="ext ext-forma" data-modificacao="buttplug" data-r3="31">
-            <span class="ext-ramo"></span>
-            <div class="ext-quem">
-              <span class="ext-nome">DualSense como brinquedo</span>
-              <span class="ext-faz" data-dica="Os apps de brinquedo, como a Intiface, vibram o controle. Nada passa pela nuvem, e a extensão nasce desligada">Os apps de brinquedo vibram o controle, sem nuvem</span>
-            </div>
-            <div class="ext-para"><span class="ext-rot">Para</span><span class="ext-cor">Todos</span></div>
-            <span class="nj-tog" data-gesto="ligar-modificacao" data-v="buttplug" data-dica="Liga ou desliga"><span class="pino"></span><span class="txt">Desligada</span></span>
-            <a class="ext-conf" href="#buttplug" data-gesto="configurar-modificacao" data-v="buttplug" data-dica="Configurações: DualSense como brinquedo, todas as etapas"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></a>
-            <span></span>
           </div>
           </div>
           <div class="ext-instalar ext-instalar-pe">
@@ -2381,7 +2370,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
           <div class="lf" data-lancador="steam">
             <span class="ext-ico lf-ico"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><path d="M14.5 13.8v5.4l4.6-2.7z"/></svg></span>
             <span class="lf-nome lf-nome-2"><span class="lanc-nome">Steam</span><span class="lf-n">48 jogos</span></span>
-            <a class="lf-imped btn mini" data-r3="36" href="#impedimentos" data-gesto="ver-impedimentos" data-v="steam" data-dica="Abre a lista dos jogos com impedimento">2 com impedimento</a>
             <span class="lf-botoes" data-todo="6"><button class="btn mini apagado" aria-disabled="true" data-gesto="identificar-lancador" data-v="steam">Identificar</button><a class="btn mini" href="#escolher-jogo" data-gesto="criar-perfil-para-um-jogo" data-v="steam">Criar perfis</a><a class="btn mini" href="#lanc-conf" data-gesto="configurar-lancador" data-v="steam">Configurar</a></span>
           </div>
           <div class="lf" data-lancador="kyty">
@@ -2536,6 +2524,41 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     </div>
   </div>
 </div>
+<div class="tela-nova" id="lovense">
+  <div class="tn-cx lv-cx" role="dialog" aria-modal="true" aria-label="Lovense" data-r3b="30">
+    <div class="tn-topo">
+      <span class="tn-tit" data-dica="Uma extensão só, com três jeitos de ligar. Cada um liga e desliga sozinho">Lovense</span>
+      <a class="tn-x" href="#" data-dica="Fechar">×</a>
+    </div>
+    <div class="tn-corpo">
+      <div class="lv-linha" data-modificacao="intiface" data-r3="29">
+        <div class="ext-quem"><span class="ext-nome">Pelo Intiface</span><span class="ext-faz" data-dica="O controle vibra os brinquedos, e os programas da Intiface vibram o controle">Nas duas direções, com os programas da Intiface</span></div>
+        <div class="lv-para"><span class="ext-rot">Para</span><select class="ext-sel" aria-label="Para"><option>Todos</option><option selected>Cosmic Red</option><option>Starlight Blue</option></select></div>
+        <div class="lv-quando"><span class="ext-rot">Quando</span><select class="ext-sel" aria-label="Quando"><option selected>Os jogos que eu escolher</option><option>Qualquer jogo, com acessório ligado</option><option>Jogos com estilo Adulto</option><option>Só quando eu ligar</option></select></div>
+        <span class="nj-tog ligado" data-gesto="ligar-modificacao" data-v="intiface" data-dica="Liga ou desliga"><span class="pino"></span><span class="txt">Ligada</span></span>
+        <a class="ext-conf" href="#acessorios" data-gesto="configurar-modificacao" data-v="intiface" data-dica="Mais configurações: Lovense pelo Intiface"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></a>
+      </div>
+      <div class="lv-linha" data-modificacao="lovense-celular" data-r3="30">
+        <div class="ext-quem"><span class="ext-nome">Pelo celular</span><span class="ext-faz" data-dica="O app da Lovense no celular, pelo Game Mode na rede de casa, como no Planet Lust">O app da Lovense no celular, pelo Game Mode</span></div>
+        <div class="lv-para"><span class="ext-rot">Para</span><select class="ext-sel" aria-label="Para"><option>Todos</option><option>Cosmic Red</option><option selected>Starlight Blue</option></select></div>
+        <div class="lv-quando"><span class="ext-rot">Quando</span><select class="ext-sel" aria-label="Quando"><option selected>Os jogos que eu escolher</option><option>Qualquer jogo, com acessório ligado</option><option>Jogos com estilo Adulto</option><option>Só quando eu ligar</option></select></div>
+        <span class="nj-tog ligado" data-gesto="ligar-modificacao" data-v="lovense-celular" data-dica="Liga ou desliga"><span class="pino"></span><span class="txt">Ligada</span></span>
+        <a class="ext-conf" href="#acessorios" data-gesto="configurar-modificacao" data-v="lovense-celular" data-dica="Mais configurações: Lovense pelo celular"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></a>
+      </div>
+      <div class="lv-linha" data-modificacao="buttplug" data-r3="31">
+        <div class="ext-quem"><span class="ext-nome">DualSense como brinquedo</span><span class="ext-faz" data-dica="Os apps de brinquedo, como a Intiface, vibram o controle. Nada passa pela nuvem">Os apps de brinquedo vibram o controle, sem nuvem</span></div>
+        <div class="lv-para"><span class="ext-rot">Para</span><select class="ext-sel" aria-label="Para"><option selected>Todos</option><option>Cosmic Red</option><option>Starlight Blue</option></select></div>
+        <div class="lv-quando"></div>
+        <span class="nj-tog" data-gesto="ligar-modificacao" data-v="buttplug" data-dica="Liga ou desliga"><span class="pino"></span><span class="txt">Desligada</span></span>
+        <a class="ext-conf" href="#buttplug" data-gesto="configurar-modificacao" data-v="buttplug" data-dica="Mais configurações: DualSense como brinquedo"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></a>
+      </div>
+    </div>
+    <div class="tn-rod">
+      <a class="btn" href="#">Cancelar</a>
+      <a class="btn roxo" href="#">Guardar</a>
+    </div>
+  </div>
+</div>
 <div class="tela-nova" id="impedimentos">
   <div class="tn-cx imp-cx" role="dialog" aria-modal="true" aria-label="Os jogos com impedimento">
     <div class="tn-topo">
@@ -2562,6 +2585,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       <div class="lc-linha"><span>Como entrou</span><span class="lc-val">Do sistema</span></div>
       <div class="lc-linha"><span>Onde ele está</span><span class="lc-val"><code>~/.steam/steam</code><a class="btn mini" href="#lanc-conf">Escolher a pasta…</a></span></div>
       <div class="lc-linha"><span>Pastas dos jogos</span><span class="lc-val"><code>steamapps</code><small>48 jogos</small></span></div>
+      <div class="lc-linha" data-r3b="33"><span>Impedimentos</span><span class="lc-val"><small>2 jogos não recebem gatilhos e vibração</small><a class="btn mini" href="#impedimentos" data-gesto="ver-impedimentos" data-v="steam">Ver e resolver</a></span></div>
       <div class="lc-linha"><span data-dica="O perfil entra sozinho quando o jogo abre">Cada jogo ganha o seu perfil</span><span class="lc-val"><span class="nj-tog ligado" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Ligado</span></span></span></div>
     </div>
     <div class="tn-rod">
