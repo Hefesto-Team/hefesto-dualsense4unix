@@ -1964,18 +1964,6 @@
   body.nativo.por-controle .guardar,
   body.nativo.por-controle .r-aplicar,body.nativo.por-controle .r-salvar,
   body.nativo.por-controle .r-importar{visibility:hidden}
-  /* Rodada 3 (13/10): o «Sem piscar» global, para quem é sensível a luz */
-  .quadro-topo .sem-piscar{margin-left:auto}
-  .quadro-topo .sem-piscar + .modo-auto{margin-left:10px}
-  .sem-piscar{display:inline-flex;align-items:center;gap:9px;height:34px;padding:0 16px 0 12px;border-radius:999px;cursor:pointer;
-    border:1px solid var(--linha);background:var(--app-bg);color:var(--texto-suave);font:600 13px/1 'Space Grotesk',system-ui,sans-serif}
-  .sem-piscar .p{width:11px;height:11px;border-radius:50%;border:2px solid var(--texto-mudo,#9a9eb8)}
-  .sem-piscar:hover{border-color:var(--yellow,#f1fa8c);color:var(--fg)}
-  .sem-piscar[aria-pressed="true"]{background:rgba(241,250,140,.14);border-color:var(--yellow,#f1fa8c);color:var(--fg)}
-  .sem-piscar[aria-pressed="true"] .p{border-color:var(--yellow,#f1fa8c);background:var(--yellow,#f1fa8c)}
-  body.sem-piscar-ligado .seg-criar button:nth-child(2)::after{content:" lento"}
-  /* com o «lento» o Piscar cresce 27 px e o «Respiro calmo» saía cortado na borda: o campo do nome cede 28 */
-  body.sem-piscar-ligado .criar .nome-criar{width:108px}
 </style>
 
 
@@ -2048,6 +2036,15 @@
   /* RODADA 3 (13/10): em 1212x740 a aba rolava 68 px por dentro e a linha Criar sumia. Na janela baixa o
      desenho do controle encolhe, a linha do Jogador aperta o respiro e o passo entre as linhas cai de 10 para 8. */
   @media (max-height:780px){.luz-grade{--r-des:44px;--r-player:40px;--r-ar:4px}}
+</style>
+<style data-aba="rodada-3-ajuste">
+  /* AJUSTE DA RODADA 3 (14/10): uma fileira só de cores, Sem piscar e Sem efeito dentro da lista de efeitos,
+     a vaga sem controle vazia e mais respiro entre as linhas */
+  .guia{flex-wrap:nowrap;max-width:none;margin:0;justify-content:space-between;column-gap:0}
+  .luz-grade [data-conectado="nao"] .ctrl-rot{border:1px dashed var(--border-sutil);background:transparent}
+  .luz-grade{--r-cor:66px;--r-ar:7px}
+  @media (max-height:780px){.luz-grade{--r-des:54px;--r-cor:62px;--r-ar:6px}}
+  .g4-efeito{height:34px}
 </style>
 <style id="base-comum">
 /* ===== Base comum das abas (rodada 2, 12/10/2026) =====
@@ -2606,7 +2603,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
         <!-- OS DOIS MODOS — pedido de 06/10/2026: o modo automático e o Modo
              Personalizado tomam o lugar do interruptor das cores automáticas e da
              frase da luz do jogo embaixo das colunas. -->
-        <button class="sem-piscar" type="button" data-gesto="sem-piscar" data-r3="11" aria-pressed="false" data-dica="Para quem é sensível a luz. Ligado, nenhuma luz troca mais de três vezes por segundo: o piscar vira transição lenta. Vale para os quatro controles e todos os estilos"><span class="p"></span>Sem piscar</button>
         <button class="modo-auto" type="button" data-gesto="modo-da-luz" data-todo="2" aria-pressed="false" data-governa=".luz-grade .ctrl" data-dica="O jogo pinta a barra; o estilo do perfil ajusta"><span class="p"></span>Modo automático</button>
       </div>
       <div class="quadro-corpo">
@@ -2969,10 +2965,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
             <button class="tom" style="background:#8BE9FD" data-gesto="cor" data-hex="#00FFFF" data-dica="Cor do 6. Pinta a barra, não muda o número"></button>
             <button class="tom" style="background:#FFB86C" data-gesto="cor" data-hex="#FF8000" data-dica="Cor do 7. Pinta a barra, não muda o número"></button>
             <button class="tom" style="background:#BD93F9" data-gesto="cor" data-hex="#8000FF" data-dica="Cor do 8. Pinta a barra, não muda o número"></button>
-            <button class="tom" style="background:#B8F976" data-gesto="cor" data-hex="#80FF00" data-dica="Pinta a barra, não muda o número"></button>
-            <button class="tom" style="background:#76F9B8" data-gesto="cor" data-hex="#00FF80" data-dica="Pinta a barra, não muda o número"></button>
-            <button class="tom" style="background:#F976F9" data-gesto="cor" data-hex="#FF00FF" data-todo="3"></button>
-            <button class="tom" style="background:#F8F8F2" data-gesto="cor" data-hex="#FFFFFF" data-dica="Pinta a barra, não muda o número"></button>
               </span>
             </span>
             <!-- E ELA REENVIA — 04/09/2026, decisão [03] dela. O `data-gesto`
@@ -3037,7 +3029,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
             </div>
           </div>
           <div class="cel-acoes">
-            <select class="g4-efeito" data-gesto="efeito-da-luz" aria-label="Efeito da barra" data-todo="5" data-dica="Luz fixa ou um efeito seu"><option selected>Luz fixa</option><optgroup label="Seus efeitos"><option>Alerta vermelho</option><option>Respiro calmo</option></optgroup></select><button class="btn vermelho" data-gesto="apagar" data-dica="Apaga a barra deste controle">Desligar</button>
+            <select class="g4-efeito" data-gesto="efeito-da-luz" aria-label="Efeito da barra" data-todo="5" data-dica="Sem efeito apaga a barra. Sem piscar nunca pisca: só transição lenta"><option>Sem efeito</option><option selected>Luz fixa</option><option>Sem piscar</option><optgroup label="Seus efeitos"><option>Alerta vermelho</option><option>Respiro calmo</option></optgroup></select>
             <!-- O TRAVESSÃO DESTA CÉLULA NASCE AQUI, escondido na coluna viva, e
                  é o único das sete que precisava nascer: as outras seis têm
                  `data-campo`, e o molde do lugar sem dono já escreve o traço
@@ -3368,10 +3360,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
             <button class="tom" style="background:#8BE9FD" data-gesto="cor" data-hex="#00FFFF" data-dica="Cor do 6. Pinta a barra, não muda o número"></button>
             <button class="tom" style="background:#FFB86C" data-gesto="cor" data-hex="#FF8000" data-dica="Cor do 7. Pinta a barra, não muda o número"></button>
             <button class="tom" style="background:#BD93F9" data-gesto="cor" data-hex="#8000FF" data-dica="Cor do 8. Pinta a barra, não muda o número"></button>
-            <button class="tom" style="background:#B8F976" data-gesto="cor" data-hex="#80FF00" data-dica="Pinta a barra, não muda o número"></button>
-            <button class="tom" style="background:#76F9B8" data-gesto="cor" data-hex="#00FF80" data-dica="Pinta a barra, não muda o número"></button>
-            <button class="tom" style="background:#F976F9" data-gesto="cor" data-hex="#FF00FF" data-todo="3"></button>
-            <button class="tom" style="background:#F8F8F2" data-gesto="cor" data-hex="#FFFFFF" data-dica="Pinta a barra, não muda o número"></button>
               </span>
             </span>
             <!-- E ELA REENVIA — 04/09/2026, decisão [03] dela. O `data-gesto`
@@ -3436,7 +3424,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
             </div>
           </div>
           <div class="cel-acoes">
-            <select class="g4-efeito" data-gesto="efeito-da-luz" aria-label="Efeito da barra" data-todo="5" data-dica="Luz fixa ou um efeito seu"><option selected>Luz fixa</option><optgroup label="Seus efeitos"><option>Alerta vermelho</option><option>Respiro calmo</option></optgroup></select><button class="btn vermelho" data-gesto="apagar" data-dica="Apaga a barra deste controle">Desligar</button>
+            <select class="g4-efeito" data-gesto="efeito-da-luz" aria-label="Efeito da barra" data-todo="5" data-dica="Sem efeito apaga a barra. Sem piscar nunca pisca: só transição lenta"><option>Sem efeito</option><option selected>Luz fixa</option><option>Sem piscar</option><optgroup label="Seus efeitos"><option>Alerta vermelho</option><option>Respiro calmo</option></optgroup></select>
             <!-- O TRAVESSÃO DESTA CÉLULA NASCE AQUI, escondido na coluna viva, e
                  é o único das sete que precisava nascer: as outras seis têm
                  `data-campo`, e o molde do lugar sem dono já escreve o traço
@@ -3739,7 +3727,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     </g>
 </svg>
           </div>
-          <div class="ctrl-rot" data-campo="identidade" data-todo="6">Galactic Purple <span class="pt">•</span> Desconectado</div>
+          <div class="ctrl-rot" data-campo="identidade" data-todo="6" aria-label="Nenhum controle aqui"></div>
           <div class="cel-cor">
             <span class="guia" data-todo="3">
               <span class="tons" data-campo="tons" data-hef-alvo="html">
@@ -3751,10 +3739,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
             <button class="tom" style="background:#8BE9FD" data-gesto="cor" data-hex="#00FFFF" data-dica="Cor do 6. Pinta a barra, não muda o número"></button>
             <button class="tom" style="background:#FFB86C" data-gesto="cor" data-hex="#FF8000" data-dica="Cor do 7. Pinta a barra, não muda o número"></button>
             <button class="tom" style="background:#BD93F9" data-gesto="cor" data-hex="#8000FF" data-dica="Cor do 8. Pinta a barra, não muda o número"></button>
-            <button class="tom" style="background:#B8F976" data-gesto="cor" data-hex="#80FF00" data-dica="Pinta a barra, não muda o número"></button>
-            <button class="tom" style="background:#76F9B8" data-gesto="cor" data-hex="#00FF80" data-dica="Pinta a barra, não muda o número"></button>
-            <button class="tom" style="background:#F976F9" data-gesto="cor" data-hex="#FF00FF" data-todo="3"></button>
-            <button class="tom" style="background:#F8F8F2" data-gesto="cor" data-hex="#FFFFFF" data-dica="Pinta a barra, não muda o número"></button>
               </span>
             </span>
             <!-- E ELA REENVIA — 04/09/2026, decisão [03] dela. O `data-gesto`
@@ -3812,7 +3796,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
             </div>
           </div>
           <div class="cel-acoes">
-            <select class="g4-efeito" data-gesto="efeito-da-luz" aria-label="Efeito da barra" data-todo="5" data-dica="Luz fixa ou um efeito seu"><option selected>Luz fixa</option><optgroup label="Seus efeitos"><option>Alerta vermelho</option><option>Respiro calmo</option></optgroup></select><button class="btn vermelho" data-gesto="apagar" data-dica="Apaga a barra deste controle">Desligar</button>
+            <select class="g4-efeito" data-gesto="efeito-da-luz" aria-label="Efeito da barra" data-todo="5" data-dica="Sem efeito apaga a barra. Sem piscar nunca pisca: só transição lenta"><option>Sem efeito</option><option selected>Luz fixa</option><option>Sem piscar</option><optgroup label="Seus efeitos"><option>Alerta vermelho</option><option>Respiro calmo</option></optgroup></select>
             <!-- O TRAVESSÃO DESTA CÉLULA NASCE AQUI, escondido na coluna viva, e
                  é o único das sete que precisava nascer: as outras seis têm
                  `data-campo`, e o molde do lugar sem dono já escreve o traço
@@ -4115,7 +4099,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     </g>
 </svg>
           </div>
-          <div class="ctrl-rot" data-campo="identidade" data-todo="6">White <span class="pt">•</span> Desconectado</div>
+          <div class="ctrl-rot" data-campo="identidade" data-todo="6" aria-label="Nenhum controle aqui"></div>
           <div class="cel-cor">
             <span class="guia" data-todo="3">
               <span class="tons" data-campo="tons" data-hef-alvo="html">
@@ -4127,10 +4111,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
             <button class="tom" style="background:#8BE9FD" data-gesto="cor" data-hex="#00FFFF" data-dica="Cor do 6. Pinta a barra, não muda o número"></button>
             <button class="tom" style="background:#FFB86C" data-gesto="cor" data-hex="#FF8000" data-dica="Cor do 7. Pinta a barra, não muda o número"></button>
             <button class="tom" style="background:#BD93F9" data-gesto="cor" data-hex="#8000FF" data-dica="Cor do 8. Pinta a barra, não muda o número"></button>
-            <button class="tom" style="background:#B8F976" data-gesto="cor" data-hex="#80FF00" data-dica="Pinta a barra, não muda o número"></button>
-            <button class="tom" style="background:#76F9B8" data-gesto="cor" data-hex="#00FF80" data-dica="Pinta a barra, não muda o número"></button>
-            <button class="tom" style="background:#F976F9" data-gesto="cor" data-hex="#FF00FF" data-todo="3"></button>
-            <button class="tom" style="background:#F8F8F2" data-gesto="cor" data-hex="#FFFFFF" data-dica="Pinta a barra, não muda o número"></button>
               </span>
             </span>
             <!-- E ELA REENVIA — 04/09/2026, decisão [03] dela. O `data-gesto`
@@ -4188,7 +4168,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
             </div>
           </div>
           <div class="cel-acoes">
-            <select class="g4-efeito" data-gesto="efeito-da-luz" aria-label="Efeito da barra" data-todo="5" data-dica="Luz fixa ou um efeito seu"><option selected>Luz fixa</option><optgroup label="Seus efeitos"><option>Alerta vermelho</option><option>Respiro calmo</option></optgroup></select><button class="btn vermelho" data-gesto="apagar" data-dica="Apaga a barra deste controle">Desligar</button>
+            <select class="g4-efeito" data-gesto="efeito-da-luz" aria-label="Efeito da barra" data-todo="5" data-dica="Sem efeito apaga a barra. Sem piscar nunca pisca: só transição lenta"><option>Sem efeito</option><option selected>Luz fixa</option><option>Sem piscar</option><optgroup label="Seus efeitos"><option>Alerta vermelho</option><option>Respiro calmo</option></optgroup></select>
             <!-- O TRAVESSÃO DESTA CÉLULA NASCE AQUI, escondido na coluna viva, e
                  é o único das sete que precisava nascer: as outras seis têm
                  `data-campo`, e o molde do lugar sem dono já escreve o traço
@@ -4371,11 +4351,6 @@ document.querySelectorAll('.modo-auto').forEach(b => b.addEventListener('click',
   b.setAttribute('aria-pressed', String(on));
   document.querySelectorAll(b.dataset.governa).forEach(el => el.classList.toggle('governado-pelo-jogo', on));
 }));
-</script>
-<script data-aba="sem-piscar">
-document.querySelectorAll('.sem-piscar').forEach(b => b.addEventListener('click', () => {
-  const on = b.getAttribute('aria-pressed') !== 'true';
-  b.setAttribute('aria-pressed', String(on)); document.body.classList.toggle('sem-piscar-ligado', on); }));
 </script>
 <script data-aba="criar">
 document.querySelectorAll('.seg-criar').forEach(s => s.addEventListener('click', e => {

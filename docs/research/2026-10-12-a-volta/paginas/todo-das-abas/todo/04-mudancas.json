@@ -99,14 +99,17 @@
     {
       "n": 11,
       "sprint": "A-LUZ-DO-CONTROLE-NAO-PISCA-PARA-QUEM-E-SENSIVEL-A-LUZ-01",
-      "o_que_muda": "O ajuste global «Sem piscar» no topo da aba: ligado, nenhuma luz troca mais de três vezes por segundo e o piscar vira transição lenta, nos quatro controles e em todos os estilos",
+      "o_que_muda": "O «Sem piscar» deixa de ser ajuste global: entra na lista de efeitos de cada controle, ao lado de «Sem efeito»; luz que nunca troca mais de três vezes por segundo, o piscar vira transição lenta",
       "resposta": "todo-04-r3-11",
       "origem": "escolha dela de 13/10",
-      "ancora": ".sem-piscar",
+      "ancora": ".g4-efeito",
       "conflito": "",
       "rodada": 3,
       "ancora_antes": ".quadro-topo .modo-auto",
-      "js": "document.querySelector('.sem-piscar').click()"
+      "ajuste_r3": {
+        "pedido": "Tira o desligar ali dos efeitos. tira o botão de sem piscar. eke ebtra en efeitos, assim como o sem efeito (pra representar o desligar). E sem controle conectado ele tem que aparecer o vazio deixar o nome do controle ali fica muito estranho. Fora que realmente pensando agoraas duas linhas dava pra virar uma só. esses 3 averdes. 2 rosas. sei lá. não tá legal e deixa o layout muito sufocado. melhora o respiro.",
+        "feito": "Saíram o botão «Desligar» e a chave «Sem piscar» do topo. A lista de efeitos de cada controle ganhou «Sem efeito» (apaga a barra) e «Sem piscar» (só transição lenta), e o seletor ocupa a largura inteira da linha. A vaga sem controle mostra o campo vazio, sem o nome. As duas fileiras de doze cores viraram uma de oito (saíram o verde-limão, o menta, o magenta e o branco: ficam um verde e um rosa). A linha Cor encolheu e o passo entre as linhas subiu de 10 para 14 px."
+      }
     }
   ],
   "estados": {
