@@ -7,33 +7,18 @@
  "altura_px": 809,
  "rola": false,
  "estados": {
-  "alvos-a": "09-sistema.html?alvos=a",
-  "alvos-b": "09-sistema.html?alvos=b"
+  "hoje": "09-sistema.html?alvos=hoje"
  },
  "mudancas": [
   {
    "n": 12,
    "sprint": "OS-ALVOS-E-A-LETRA-CRESCEM-E-A-INTERFACE-GANHA-TAMANHO-01",
-   "o_que_muda": "Na aba Sistema todos os alvos já têm 24 px ou mais, então a leitura A não muda nada; a leitura B sobe para 12 px os 18 textos pequenos (selos, siglas, o botão Copiar e o registro)",
-   "resposta": "botões e letra crescem: alvo de 24 px no mínimo e letra de 12 px no mínimo (a sua resposta); o desenho e o piso da letra seguem em aberto",
+   "o_que_muda": "Na aba Sistema todos os alvos já têm 24 px ou mais; os 18 textos pequenos (selos, siglas, o botão Copiar e o registro) sobem para 12 px",
+   "resposta": "sua resposta de 13/10, ~23h40: botões e letra. Todo alvo de toque com 24 px no mínimo e nenhuma letra abaixo de 12 px, com cada aba refeita sem rolagem",
    "origem": "rodada 4 (o que faltava desenho)",
    "ancora": "html.alvos-24",
    "seletor": "button, select, input",
-   "conflito": "Medido na página de hoje: 0 alvos abaixo de 24 px e 18 de 72 textos abaixo de 12 px. A leitura A é igual à tela de hoje (a foto mostra o mesmo desenho); a diferença está na B, que fica com 0 textos abaixo de 12 px. A leitura C (tamanho da interface) já está aqui na aba.",
-   "leituras": {
-    "A": "09-sistema.html?alvos=a",
-    "B": "09-sistema.html?alvos=b",
-    "descricao": {
-     "A": "Leitura A: todo alvo de toque passa a ter 24 px no mínimo, e a letra fica como está",
-     "B": "Leitura B: os mesmos 24 px e, além disso, nenhuma letra abaixo de 12 px"
-    },
-    "C": "Leitura C, já desenhada no 09-sistema.html: só o botão «Tamanho da interface» (Padrão, Confortável, Espaçoso), sem mexer nos tamanhos de hoje"
-   },
-   "fotos": [
-    "fotos/09-sistema-m12-antes.png",
-    "fotos/09-sistema-m12-a.png",
-    "fotos/09-sistema-m12-b.png"
-   ]
+   "conflito": "Medido na página do todo: 0 alvos abaixo de 24 px e 18 de 72 textos abaixo de 12 px; depois, 0 e 0. O seletor Padrão, Confortável e Espaçoso (09-3) não muda."
   }
  ],
  "por_baixo": [],
