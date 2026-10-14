@@ -1034,6 +1034,14 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 .jv-fn em.x{color:var(--texto-mudo);background:rgba(255,255,255,.06)}
 .jv-fn small{display:block;color:var(--texto-mudo);font-size:10.5px}
 </style>
+<style data-todo-css="alvos-r4">
+/* Rodada 4: ?alvos=a dá 24 px a todo alvo de toque, com a mesma letra; ?alvos=b dá os 24 px e o piso de 12 px na letra. */
+html.alvos-24 :is(button,select,input:not([type=checkbox]):not([type=radio]):not([type=hidden]),textarea,summary,[role=button],.nj-tog,.sw,.passo,label.faixa,.nav-i,.mudo-i,.padrao-i){min-height:24px;box-sizing:border-box}
+html.alvos-24 :is(button,[role=button],.nj-tog,.passo,.nav-i,.mudo-i,.padrao-i){min-width:24px}
+html.alvos-24 :is(input[type=checkbox],input[type=radio]):not(.radio-mesa){min-width:24px;min-height:24px}
+html.alvos-24 input[type=range]{height:24px}
+html.letra-12 .quadro-corpo{gap:7px;padding-bottom:10px}
+</style>
 </head>
 <body class="por-controle" data-campo="nativo" data-hef-alvo="classe" data-hef-classe="nativo" data-hef-quando="sim">
 
@@ -2327,6 +2335,23 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('click', (ev) => { if (!pop.contains(ev.target)) pop.hidden = true; });
   if (new URLSearchParams(location.search).get('estado') === 'o-que-chega') abrir(document.querySelectorAll('.jv-btn')[1]);
 });
+</script>
+<script data-aba="alvos-r4">
+(function () {
+  var o = new URLSearchParams(location.search).get('alvos');
+  if (!o) return;
+  document.documentElement.classList.add('alvos-24');
+  if (o !== 'b') return;
+  document.documentElement.classList.add('letra-12');
+  function piso() {
+    document.querySelectorAll('body *').forEach(function (e) {
+      if (e.closest('svg') || ['SCRIPT', 'STYLE'].indexOf(e.tagName) >= 0) return;
+      var tem = ['INPUT', 'SELECT', 'TEXTAREA'].indexOf(e.tagName) >= 0 || Array.prototype.some.call(e.childNodes, function (n) { return n.nodeType === 3 && n.nodeValue.trim(); });
+      if (tem && parseFloat(getComputedStyle(e).fontSize) < 12) e.style.setProperty('font-size', '12px', 'important');
+    });
+  }
+  window.addEventListener('load', function () { piso(); setTimeout(piso, 400); });
+})();
 </script>
 </body>
 </html>

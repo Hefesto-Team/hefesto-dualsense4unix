@@ -7,7 +7,9 @@
  "altura_px": 809,
  "rola": false,
  "estados": {
-  "o-que-chega": "02-controles.html?estado=o-que-chega"
+  "o-que-chega": "02-controles.html?estado=o-que-chega",
+  "alvos-a": "02-controles.html?alvos=a",
+  "alvos-b": "02-controles.html?alvos=b"
  },
  "mudancas": [
   {
@@ -19,6 +21,30 @@
    "ancora": "[data-todo=\"17\"]",
    "seletor": ".jv-btn, #jv-pop",
    "conflito": "A lista mostra o caso do Xbox 360 no modo Xbox; para o DualSense tudo vira Nativo, e para o Pro Controller o gatilho analógico e a luz de jogador não chegam. A «Luz» como «Pelo Hefesto» é leitura nossa da tabela medida: a validar por você."
+  },
+  {
+   "n": 18,
+   "sprint": "OS-ALVOS-E-A-LETRA-CRESCEM-E-A-INTERFACE-GANHA-TAMANHO-01",
+   "o_que_muda": "Na aba Controles, os 15 alvos de menos de 24 px (interruptores, deslizantes de volume, botões de mudo e de padrão, botão «Ligado» do touchpad, seletores de controle) crescem para 24 px; na leitura B a letra sobe para 12 px, e o corpo do quadro apertou o respiro para não rolar",
+   "resposta": "botões e letra crescem: alvo de 24 px no mínimo e letra de 12 px no mínimo (resposta dela); o desenho e o piso da letra seguem em aberto",
+   "origem": "rodada 4 (o que faltava desenho)",
+   "ancora": "html.alvos-24",
+   "seletor": ".sw, .puxa-vol, .mudo-i, .padrao-i, label.faixa, button",
+   "conflito": "Medido na página de hoje: 15 alvos abaixo de 24 px e 88 de 129 textos abaixo de 12 px. Na leitura A sobram 0 alvos; na B sobram 0 alvos e só os 4 textos de SVG. Sobram letras abaixo de 12 px só dentro de desenhos SVG (rótulos do gráfico), que não são texto da interface; a leitura B não os toca. Em 1212x740 a leitura B afrouxa o espaçamento do quadro em 2 px para não rolar.",
+   "leituras": {
+    "A": "02-controles.html?alvos=a",
+    "B": "02-controles.html?alvos=b",
+    "descricao": {
+     "A": "Leitura A: todo alvo de toque passa a ter 24 px no mínimo, e a letra fica como está",
+     "B": "Leitura B: os mesmos 24 px e, além disso, nenhuma letra abaixo de 12 px"
+    },
+    "C": "Leitura C, já desenhada no 09-sistema.html: só o botão «Tamanho da interface» (Padrão, Confortável, Espaçoso), sem mexer nos tamanhos de hoje"
+   },
+   "fotos": [
+    "fotos/02-controles-m18-antes.png",
+    "fotos/02-controles-m18-a.png",
+    "fotos/02-controles-m18-b.png"
+   ]
   }
  ],
  "por_baixo": [],
