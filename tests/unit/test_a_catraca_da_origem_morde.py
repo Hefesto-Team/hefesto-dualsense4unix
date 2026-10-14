@@ -490,7 +490,7 @@ def test_o_fecho_registra_a_subida_e_commita_so_o_caderno(arvore, tmp_path_facto
     assert _git(raiz, "rev-parse", "HEAD") == topo, "o --conferir não commita"
     r = fecho("--so", "catraca")
     assert r.returncode == 0, r.stdout + r.stderr
-    assert "piso do tamanho registrado e commitado" in r.stdout
+    assert "catraca: piso registrado e commitado" in r.stdout
     arvore_nova = _git(raiz, "write-tree")[:12]
     assert arvore_nova in r.stdout, "os recibos seguintes são da árvore nova do índice"
     assert _git(raiz, "log", "-1", "--format=%s").startswith("chore(catraca)")
@@ -501,7 +501,8 @@ def test_o_fecho_registra_a_subida_e_commita_so_o_caderno(arvore, tmp_path_facto
     (raiz / "outro.bin").unlink()
     commit = _git(raiz, "rev-parse", "HEAD")
     outra = fecho("--so", "catraca")
-    assert outra.returncode == 0 and "o piso não precisou subir" in outra.stdout, outra.stdout
+    assert outra.returncode == 0, outra.stdout
+    assert "a-catraca-da-origem.json não precisou subir" in outra.stdout, outra.stdout
     assert _git(raiz, "rev-parse", "HEAD") == commit, "idempotente: a segunda corrida não commita"
     _desce_ao_dev(raiz)
     assert rodar(paga=False) == 0, "o dev que recebe o merge ff do fecho fica verde"
