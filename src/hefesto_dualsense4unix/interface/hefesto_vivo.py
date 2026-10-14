@@ -571,6 +571,16 @@ BOOTSTRAP = r"""
           n += 1;
         }
       }
+      // A RAZÃO DO BOTÃO CINZA É A DICA DELE (`monta.botao_cinza`, 13/10/2026): o campo que
+      // acende o cinza escreve o `data-dica` do mesmo botão, e sem razão o atributo some.
+      if(el.hasAttribute('data-hef-razao')){
+        const razao = aceso && !vazio ? t : '';
+        if(razao){
+          if(el.getAttribute('data-dica') !== razao){ el.setAttribute('data-dica', razao); n += 1; }
+        } else if(el.hasAttribute('data-dica')){
+          el.removeAttribute('data-dica'); n += 1;
+        }
+      }
       if(el.classList.contains(c) === aceso) return n;
       el.classList.toggle(c, aceso);
       return n + 1;
@@ -1892,6 +1902,12 @@ DICA_DA_CASA = r"""
   // por cima de um `title=""` e mostraria a dica que a página mandou calar.
   function textoDe(el){
     if(!el || !el.getAttribute) return null;
+    // O `data-dica` É A DICA DA BASE COMUM (`base-comum.css`): lido ao vivo, na hora, porque o
+    // piloto o reescreve (a razão do botão cinza). Vazio ou ausente não diz nada e cede ao `title`.
+    if(el.hasAttribute('data-dica')){
+      var dd = String(el.getAttribute('data-dica') || '').trim();
+      if(dd) return dd;
+    }
     if(el.hasAttribute('data-hef-dica')){
       var g = String(el.getAttribute('data-hef-dica') || '').trim();
       return g ? g : '';

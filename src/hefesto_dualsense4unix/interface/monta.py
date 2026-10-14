@@ -19,6 +19,23 @@ TOPO = (_F / "topo.html").read_text()
 FIM  = (_F / "fim.html").read_text()
 DS   = (_F / "ds_limpo.svg").read_text()
 
+#: A BASE COMUM DAS ABAS (13/10/2026, A-BASE-COMUM-DAS-ABAS-01): a dica no hover, o Modo
+#: automático e o menu do botão direito. Dois arquivos, UMA vez por página, iguais em todas: o
+#: `<style id="base-comum">` entra no fim do `<head>` e o `<script id="base-comum">` antes do
+#: `</body>`. A página que não passa por `monta()` (a Calibrar) chama `com_a_base()` ela mesma.
+BASE_CSS = (_F / "base-comum.css").read_text(encoding="utf-8")
+BASE_JS = (_F / "base-comum.js").read_text(encoding="utf-8")
+
+
+def com_a_base(doc: str) -> str:
+    """O documento com a base comum posta UMA vez; levanta se ela já estiver lá ou faltar âncora."""
+    if 'id="base-comum"' in doc:
+        raise SystemExit("ERRO: a base comum já está nesta página; ela entra uma vez só")
+    if doc.count("</head>") != 1 or doc.count("</body>") != 1:
+        raise SystemExit("ERRO: a página não tem um `</head>` e um `</body>` para a base comum")
+    doc = doc.replace("</head>", f'<style id="base-comum">\n{BASE_CSS}</style>\n</head>', 1)
+    return doc.replace("</body>", f'<script id="base-comum">\n{BASE_JS}</script>\n</body>', 1)
+
 LOGO = (R / "assets/hefesto-logo.svg").read_text()
 
 MARCA_DA_LOGO = '<div class="logo"><!--LOGO--></div>'
@@ -394,7 +411,6 @@ CSS_DO_PAR_DE_MODOS = """
   .par-modo button:hover:not(.on){border-color:var(--comment);color:var(--fg)}
   .par-modo button.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);
     font-weight:600;cursor:default}
-  .quadro-topo .par-modo + .ajuda.esq .dica{left:auto;right:22px}
 """
 
 
@@ -411,6 +427,30 @@ def par_de_modos(gesto: str, modo: str) -> str:
             f' aria-pressed="{str(aceso).lower()}">{rot}</button>')
     return ('<span class="par-modo" role="group" aria-label="Modo da aba">'
             + "".join(botoes) + "</span>")
+
+
+#: A dica do botão do Modo automático: o que ele faz, curto, sem nenhum número do estilo.
+DICA_DO_MODO_AUTO = "O jogo manda; o estilo do perfil ajusta o resto"
+
+
+def modo_auto(gesto: str, ligado: bool = False, governa: str = "",
+              dica: str = DICA_DO_MODO_AUTO) -> str:
+    """O Modo automático como UM botão (A-BASE-COMUM-DAS-ABAS-01, 13/10/2026).
+
+    Ligado (`aria-pressed="true"`), o botão fica ciano e a área que o `governa` (um seletor
+    CSS) esmaece e para de aceitar clique — a base comum faz isso pelo `aria-pressed`, no desenho
+    e no produto. O clique alterna os dois modos no MESMO gesto de hoje (`data-modo` leva o
+    que o clique PEDE, e a base o mantém no sentido contrário do estado).
+    O campo é o do botão «automático» do par antigo, e o piloto o pinta pelo `aria-pressed`.
+    """
+    pedido = MODO_PERSONALIZADO if ligado else MODO_AUTOMATICO
+    alvo = f' data-governa="{html.escape(governa, quote=True)}"' if governa else ""
+    return (f'<button class="modo-auto" type="button" data-gesto="{gesto}"'
+            f' data-modo="{pedido}" data-campo="{gesto}-{MODO_AUTOMATICO}"'
+            f' data-hef-alvo="classe" data-hef-classe="ligado"'
+            f' data-hef-atributo="aria-pressed" aria-pressed="{str(ligado).lower()}"'
+            f' data-dica="{html.escape(dica, quote=True)}"{alvo}>'
+            f'<span class="p"></span>{ROTULO_DO_MODO[MODO_AUTOMATICO]}</button>')
 
 
 def rotulo_do_chip(c: dict[str, Any]) -> str:
@@ -762,27 +802,6 @@ CSS_FOLHA = """
   .btn.apagado:hover,.seg button.apagado:hover{
     border-color:var(--border-sutil);color:var(--texto-mudo)}
 
-  /* O `?` DA RAZÃO. Ele é o `.ajuda` que a página já tem — a mesma bolinha,
-     a mesma `.dica` — com a classe `porque` dizendo que o texto dela vem do
-     PRODUTO, e não do desenho. A distinção é da aba 08, onde a frase congelada
-     já mentiu ("está no cabo" com o controle no rádio).
-
-     TRÊS JEITOS DE ELE SUMIR, e os três existem porque as abas emitem de três
-     jeitos: colado ao botão (o botão não está cinza -> não há o que explicar),
-     com a dica VAZIA de nascença, e com o marcador `.nada` que o pacote manda
-     quando não há o que dizer. O marcador é preciso porque `escrever()` troca
-     valor vazio por travessão — sem ele, "nada a dizer" vira um `—` solto. */
-  .btn:not(.apagado) + .ajuda.porque,
-  .seg button:not(.apagado) + .ajuda.porque{display:none}
-  .ajuda.porque:has(.dica:empty){display:none}
-  .ajuda.porque:has(.nada){display:none}
-  /* ELE COLA NO BOTÃO DELE, e as duas linhas saíram da foto de 04/09: dentro
-     de `.acoes` (vão de 8px) o `?` ficava a 8px dos DOIS vizinhos e lia como
-     se explicasse o botão seguinte; e o `.ajuda` tem 17px de altura fixa num
-     flex que estica, então ele subia para o topo do botão, acima do texto que
-     explica. */
-  .ajuda.porque{align-self:center;margin-left:-4px}
-
   /* ---- S-02 · A RESSALVA É LINHA FIXA, E SÓ QUANDO EXISTE (D-02) ----
      No repouso ela não ocupa NADA: sem `display:none` a linha vazia continua
      cobrando a altura da fonte, que é o preço que a regra de 30/08
@@ -819,20 +838,24 @@ NADA_A_DIZER = '<i class="nada"></i>'
 
 def botao_cinza(rotulo: str, campo: str, tom: str = "", razao: str = "",
                 extra: str = "") -> str:
-    """O botão que a tela JÁ SABE que vai recusar: cinza, com a razão no `?`."""
+    """O botão que a tela JÁ SABE que vai recusar: cinza, com a razão na dica dele.
+
+    A RAZÃO É O `data-dica` DO PRÓPRIO BOTÃO (13/10/2026, A-BASE-COMUM-DAS-ABAS-01): o «?» ao
+    lado saiu das dez abas, e a dica da casa abre ao passar o mouse ou focar. O mesmo `campo` que
+    acende o cinza escreve a razão (`data-hef-razao` avisa o piloto), e sem razão o botão não
+    leva `data-dica` nenhum: o `title` dele volta a falar.
+    """
     if not campo:
         raise SystemExit(
             f"ERRO em botao_cinza({rotulo!r}): sem `campo` não há endereço, e "
             f"sem endereço o piloto não tem onde acender o cinza nem onde "
             f"escrever a razão — o botão nasceria congelado no desenho.")
     classes = " ".join(x for x in ("btn", tom, "apagado" if razao else "") if x)
+    dica = f' data-dica="{html.escape(razao, quote=True)}"' if razao else ""
     return (f'<button class="{classes}" data-campo="{campo}"'
             f' data-hef-alvo="classe" data-hef-classe="apagado"'
-            f' data-hef-atributo="aria-disabled"'
-            f'{" " + extra if extra else ""}>{rotulo}</button>'
-            f'<span class="ajuda porque" tabindex="0">?'
-            f'<span class="dica" data-campo="{campo}" data-hef-alvo="html">'
-            f'{html.escape(razao) if razao else NADA_A_DIZER}</span></span>')
+            f' data-hef-atributo="aria-disabled" data-hef-razao="sim"{dica}'
+            f'{" " + extra if extra else ""}>{rotulo}</button>')
 
 
 def ressalva(campo: str, texto: str = "") -> str:
@@ -1016,7 +1039,7 @@ CSS_DO_NATIVO = """
     color:var(--comment)!important;font-weight:400!important;box-shadow:none!important}
   body.nativo.por-controle :is([data-gesto=cadeado],[data-gesto=hefesto],[data-gesto=modo-nativo],[data-gesto=modo-steam],[data-gesto=reconectar]){pointer-events:auto}
   body.nativo.por-controle .guardar,body.nativo.por-controle .par-modo,
-  body.nativo.por-controle .par-modo + .ajuda,
+  body.nativo.por-controle .modo-auto,
   body.nativo.por-controle .r-aplicar,body.nativo.por-controle .r-salvar,
   body.nativo.por-controle .r-importar{visibility:hidden}
 """
@@ -1099,7 +1122,7 @@ def monta(arq: str, titulo_aba: str, miolo: str, css_extra: str = "",
         k = fim.index("</body>")
         fim = fim[:k] + legenda + "\n\n" + fim[k:]
     t = t.replace("<body>", corpo_da_pagina(arq), 1)
-    doc = t + '  <div class="miolo">\n' + miolo + '\n  </div>\n\n' + fim
+    doc = com_a_base(t + '  <div class="miolo">\n' + miolo + '\n  </div>\n\n' + fim)
     abertas, fechadas = doc.count("<div"), doc.count("</div>")
     if abertas != fechadas:
         raise SystemExit(

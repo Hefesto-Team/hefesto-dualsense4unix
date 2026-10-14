@@ -240,11 +240,9 @@ CSS = """
      funciona nesse modo (o `+` alcança a `.acao` vizinha). */
   .so-avulso:not(.mostra){display:none}
   .so-avulso.mostra + .acao{display:none}
-  /* a caixa do botão que pode ficar cinza: o `?` da razão fica na LINHA do
-     botão, e a altura é a mesma nos dois estados (régua 8). */
+  /* a caixa do botão que pode ficar cinza: a altura é a mesma nos dois estados (régua 8). */
   .acao{display:flex;align-items:center}
   .coluna .acao > .btn{flex:1;min-width:0;width:auto}
-  .coluna .ajuda.porque .dica{left:auto;right:22px}
   /* O BOTÃO DO SERVIÇO TEM DUAS CORES, e quem escolhe é o produto: vermelho
      quando o clique PARA, verde quando ele DEVOLVE o serviço (a pausa ativa,
      ou ele parado). A classe `verde` é acesa pelo campo que o pacote escreve
@@ -692,22 +690,14 @@ for _g in _CINZAS:
     if not _btn:
         raise SystemExit(f"ERRO: o botão de {_g!r} perdeu o endereço `{_campo}`.")
     for _exigido in ('data-hef-alvo="classe"', 'data-hef-classe="apagado"',
-                     'data-hef-atributo="aria-disabled"', f'data-gesto="{_g}"'):
+                     'data-hef-atributo="aria-disabled"', 'data-hef-razao="sim"',
+                     f'data-gesto="{_g}"'):
         if _exigido not in _btn.group(0):
             raise SystemExit(f"ERRO: o botão de {_g!r} perdeu `{_exigido}` — a peça "
-                             "da D-03 é inteira.")
-    if not re.search(r'<span class="dica" data-campo="' + re.escape(_campo)
-                     + r'" data-hef-alvo="html">', MIOLO):
-        raise SystemExit(f"ERRO: o `?` de {_g!r} não recebe `{_campo}` pelo alvo `html`.")
+                             "da D-03 é inteira (a razão mora no `data-dica` dele).")
 
-_PORQUES = MIOLO.count('class="ajuda porque"')
-_PORQUES_NA_CAIXA = sum(
-    _bloco.count('class="ajuda porque"')
-    for _bloco in re.findall(r'<div class="acao">.*?</div>\s*</div>', MIOLO, re.S))
-if len(_CINZAS) != _PORQUES or _PORQUES_NA_CAIXA != _PORQUES:
-    raise SystemExit(
-        f"ERRO: esta página tem {_PORQUES} `?` de razão e {_PORQUES_NA_CAIXA} "
-        f"deles dentro de uma `.acao` (esperados {len(_CINZAS)} nos dois).")
+if 'class="ajuda porque"' in MIOLO:
+    raise SystemExit("ERRO: o `?` da razão voltou: a razão do botão cinza é o `data-dica` dele.")
 
 # 9. O BOTÃO DO `daemon.reload` SE CHAMA "ATUALIZAR" PORQUE O USUÁRIO MANDOU (09-Q1),
 _RELOAD = re.search(r'<button class="btn"([^>]*)>([^<]*)</button>', "".join(
