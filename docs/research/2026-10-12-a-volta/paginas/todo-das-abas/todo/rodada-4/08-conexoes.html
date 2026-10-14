@@ -2338,9 +2338,9 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 .menu-hefesto hr{border:0;border-top:1px solid var(--border-sutil,#343746);margin:5px 4px}
 </style>
 <style data-todo-css="rodada-4">
-  /* Rodada 4 (13/10): o giroscópio na Conexões em duas leituras. A: o cartão mostra o estado, só leitura (o que a 08-6 já desenha).
-     B (#leitura-b): a linha sai do cartão; o ajuste e o estado moram na Controles, na Navegação e na Calibrar. */
-  body.leitura-b .gc-est[data-campo="est-mira"]{display:none}
+  /* Rodada 4 (13/10): o giroscópio sai da Conexões (confirmado por você às ~22h). A linha «Giroscópio como analógico»
+     some do cartão; o ajuste e o estado moram na Controles, na Navegação e na Calibrar. */
+  .gc-est[data-campo="est-mira"]{display:none}
 </style>
 </head>
 <body data-campo="nativo" data-hef-alvo="classe" data-hef-classe="nativo" data-hef-quando="sim">
@@ -3279,12 +3279,12 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                 <span class="gc-nome" data-campo="nome" data-hef-alvo="html" title="A borda é a cor lida deste aparelho.">Cosmic Red <span class="pt">•</span> USB <span class="pt">•</span> 100%</span>
               </div>
             </div>
-            <div class="gc-resumo">
+            <div class="gc-resumo" data-todo="13">
               <span class="gc-est" data-campo="est-mic" data-hef-alvo="html"><span class="est ok">Mic <i class="certo">✓</i></span></span>
               <span class="gc-est" data-campo="est-som" data-hef-alvo="html"><span class="est ok">Som <i class="certo">✓</i></span></span>
               <span class="gc-est" data-campo="est-modo" data-hef-alvo="html"><span class="est">Modo de conexão <b>Sony DualSense</b></span></span>
               <span class="gc-est" data-campo="est-visto" data-hef-alvo="html"><span class="est">Visto como <b>DualSense</b></span></span>
-              <span class="gc-est" data-campo="est-mira" data-todo="13" data-hef-alvo="html"><span class="est ok" title="O quanto um gesto anda: 6 • Ignorar tremor até: 3 graus/s • Só enquanto eu segurar: Sempre">Giroscópio como analógico <i class="certo">✓</i></span></span>
+              <span class="gc-est" data-campo="est-mira" data-hef-alvo="html"><span class="est ok" title="O quanto um gesto anda: 6 • Ignorar tremor até: 3 graus/s • Só enquanto eu segurar: Sempre">Giroscópio como analógico <i class="certo">✓</i></span></span>
             </div>
             <div class="gc-corpo">
               <span class="gc-luz"><div class="ressalva" data-campo="luz-espera" data-hef-alvo="html"><i class="nada"></i></div><i class="ltrava on" data-campo="luz-trava" data-hef-alvo="classe" data-hef-quando="cabo"></i><button class="btn" data-gesto="luz-nao-acende" data-campo="luz-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="Só funciona com o controle no BT. Este está no USB, onde a barra de luz não depende de reconexão."><svg class="i" aria-hidden="true"><use href="#rd-lampada"/></svg><span data-campo="luz-texto">A luz não acende</span></button></span>
@@ -3591,12 +3591,12 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                 <span class="gc-nome" data-campo="nome" data-hef-alvo="html">Starlight Blue <span class="pt">•</span> BT <span class="pt">•</span> 64%</span>
               </div>
             </div>
-            <div class="gc-resumo">
+            <div class="gc-resumo" data-todo="13">
               <span class="gc-est" data-campo="est-mic" data-hef-alvo="html"><span class="est ok">Mic <i class="certo">✓</i></span></span>
               <span class="gc-est" data-campo="est-som" data-hef-alvo="html"><span class="est ok">Som <i class="certo">✓</i></span></span>
               <span class="gc-est" data-campo="est-modo" data-hef-alvo="html"><span class="est">Modo de conexão <b>Sony DualSense</b></span></span>
               <span class="gc-est" data-campo="est-visto" data-hef-alvo="html"><span class="est">Visto como <b>Xbox 360</b></span></span>
-              <span class="gc-est" data-campo="est-mira" data-todo="13" data-hef-alvo="html"><span class="est" title="O quanto um gesto anda: 6 • Ignorar tremor até: 3 graus/s • Só enquanto eu segurar: Sempre">Giroscópio como analógico <b>Apagado</b></span></span>
+              <span class="gc-est" data-campo="est-mira" data-hef-alvo="html"><span class="est" title="O quanto um gesto anda: 6 • Ignorar tremor até: 3 graus/s • Só enquanto eu segurar: Sempre">Giroscópio como analógico <b>Apagado</b></span></span>
             </div>
             <div class="gc-corpo">
               <span class="gc-luz"><div class="ressalva" data-campo="luz-espera" data-hef-alvo="html"><i class="nada"></i></div><i class="ltrava" data-campo="luz-trava" data-hef-alvo="classe" data-hef-quando="cabo"></i><button class="btn" data-gesto="luz-nao-acende" data-campo="luz-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="Desliga este controle do BT. Aperte PS para ele voltar, e a barra de luz volta a obedecer."><svg class="i" aria-hidden="true"><use href="#rd-lampada"/></svg><span data-campo="luz-texto">A luz não acende</span></button></span>
@@ -3903,12 +3903,12 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                 <span class="gc-nome" data-campo="nome" data-hef-alvo="html"></span>
               </div>
             </div>
-            <div class="gc-resumo">
+            <div class="gc-resumo" data-todo="13">
               <span class="gc-est" data-campo="est-mic" data-hef-alvo="html">—</span>
               <span class="gc-est" data-campo="est-som" data-hef-alvo="html">—</span>
               <span class="gc-est" data-campo="est-modo" data-hef-alvo="html">—</span>
               <span class="gc-est" data-campo="est-visto" data-hef-alvo="html">—</span>
-              <span class="gc-est" data-campo="est-mira" data-todo="13" data-hef-alvo="html">—</span>
+              <span class="gc-est" data-campo="est-mira" data-hef-alvo="html">—</span>
             </div>
             <div class="gc-corpo">
               <span class="gc-luz"><div class="ressalva" data-campo="luz-espera" data-hef-alvo="html"><i class="nada"></i></div><i class="ltrava" data-campo="luz-trava" data-hef-alvo="classe" data-hef-quando="cabo"></i><button class="btn" data-gesto="luz-nao-acende" data-campo="luz-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="—"><svg class="i" aria-hidden="true"><use href="#rd-lampada"/></svg><span data-campo="luz-texto">—</span></button></span>
@@ -4215,12 +4215,12 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                 <span class="gc-nome" data-campo="nome" data-hef-alvo="html"></span>
               </div>
             </div>
-            <div class="gc-resumo">
+            <div class="gc-resumo" data-todo="13">
               <span class="gc-est" data-campo="est-mic" data-hef-alvo="html">—</span>
               <span class="gc-est" data-campo="est-som" data-hef-alvo="html">—</span>
               <span class="gc-est" data-campo="est-modo" data-hef-alvo="html">—</span>
               <span class="gc-est" data-campo="est-visto" data-hef-alvo="html">—</span>
-              <span class="gc-est" data-campo="est-mira" data-todo="13" data-hef-alvo="html">—</span>
+              <span class="gc-est" data-campo="est-mira" data-hef-alvo="html">—</span>
             </div>
             <div class="gc-corpo">
               <span class="gc-luz"><div class="ressalva" data-campo="luz-espera" data-hef-alvo="html"><i class="nada"></i></div><i class="ltrava" data-campo="luz-trava" data-hef-alvo="classe" data-hef-quando="cabo"></i><button class="btn" data-gesto="luz-nao-acende" data-campo="luz-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="—"><svg class="i" aria-hidden="true"><use href="#rd-lampada"/></svg><span data-campo="luz-texto">—</span></button></span>
@@ -5405,11 +5405,6 @@ if (location.hash === '#menu') document.getElementById('menu-desenhado').hidden 
   });
   document.addEventListener('click', e => { if (!e.target.closest('.menu-hefesto')) document.querySelectorAll('.menu-hefesto.vivo').forEach(m => m.remove()); });
 })();
-</script>
-<script data-aba="leitura">
-/* Rodada 4: a mesma aba em duas leituras do giroscópio; #leitura-b mostra a segunda. */
-const leituraB = () => document.body.classList.toggle('leitura-b', location.hash.includes('leitura-b'));
-document.addEventListener('DOMContentLoaded', leituraB); addEventListener('hashchange', leituraB);
 </script>
 </body>
 </html>
