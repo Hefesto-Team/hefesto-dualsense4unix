@@ -95,9 +95,7 @@ ROTULO_TREMOR = "Ignorar tremor até"
 UNIDADE_DO_TREMOR = "graus/s"
 SENSIBILIDADE = (1, 12, 6)
 TREMOR = (1, 60, 3)
-DE_ONDE_VEM_A_MIRA = ("Os movimentos deste controle movem o analógico escolhido, "
-                      "como na aba Controles. O Cursor do touchpad usa só o "
-                      "quanto um gesto anda.")
+DE_ONDE_VEM_A_MIRA = "Os movimentos do controle movem o analógico escolhido."
 
 #: A CALIBRAR COM POUCO TEXTO — 06/10/2026, leva 1.7 (desenho-navegacao, item
 #: 11). Pedido: menos texto, botões no mesmo padrão e a tela bonita de
@@ -107,11 +105,7 @@ DE_ONDE_VEM_A_MIRA = ("Os movimentos deste controle movem o analógico escolhido
 #: falso: o firmware não aceita escrita de calibração por nós (a família de
 #: fábrica, sem desfazer, `dualsense-referencia-canonica.md`), e quem guarda o
 #: zero é o Hefesto, por controle.
-AJUDA_DA_PAGINA = ("O giroscópio e o acelerômetro de todos os controles "
-                   "conectados, de uma vez. A calibração não muda os seus "
-                   "ajustes: ela mede o zero de cada controle parado, e o Hefesto "
-                   "o guarda para aquele controle. Se o cursor anda sozinho com o "
-                   "controle parado, é isto que resolve.")
+AJUDA_DA_PAGINA = "Mede o zero de cada controle parado; os seus ajustes não mudam."
 PASSOS = (
     ("e-parado", "Deixe parados",
      "Numa superfície plana, com os analógicos livres. Não precisa desconectar nada."),
@@ -232,17 +226,6 @@ CSS = """
         position:relative;padding-left:132px;flex:0 0 auto}
   h1{font-size:18px;font-weight:700;display:flex;align-items:center;gap:9px}
   h1 .p{color:var(--pink)}
-  /* O `?` É CÓPIA DECLARADA DO `.ajuda` DA FOLHA DA CASA (`topo.html`): esta
-     página tem folha própria, e um `?` com outra cara seria outro vocabulário. */
-  .ajuda{width:17px;height:17px;border-radius:50%;flex:0 0 17px;font-weight:400;
-         border:1px solid var(--linha);color:var(--texto-mudo);font-size:11px;
-         line-height:15px;text-align:center;cursor:help;position:relative}
-  .ajuda:hover,.ajuda:focus{border-color:var(--cyan);color:var(--cyan);outline:none}
-  .ajuda .dica{display:none;position:absolute;left:22px;top:-4px;width:330px;z-index:40;
-         background:var(--elevated);border:1px solid var(--linha);border-radius:7px;
-         padding:9px 11px;font-size:11.5px;line-height:1.5;color:var(--texto-suave);
-         text-align:left}
-  .ajuda:hover .dica,.ajuda:focus .dica,.ajuda:focus-within .dica{display:block}
   /* O PERFIL ATIVO, no canto do topo: cópia do `.perfil-ativo` do `topo.html` (a Calibrar é página
      avulsa e não tem a fita). Os ajustes da Mira caem no perfil que vale, e este chip diz qual. */
   .perfil-ativo{position:absolute;right:20px;top:17px;display:flex;align-items:center;gap:7px;
@@ -448,7 +431,6 @@ CSS = """
   .av:has(.liga.off) .lado > .sw{border-color:var(--border-sutil);color:var(--texto-mudo);
     background:var(--app-bg)}
   .av:has(.liga.off) .lado > .sw .p{background:var(--border-sutil);box-shadow:none}
-  .av > .ajuda{margin-left:auto}
   /* OS DOIS LADOS SÃO UM GRUPO: a mesma largura, lado a lado, na linha de baixo. */
   .av .lados{order:3;flex:1 0 100%;display:grid;grid-template-columns:1fr 1fr;gap:6px}
   .av .lado > .sw{width:100%;justify-content:center}
@@ -664,9 +646,8 @@ def mira(c):
     return (f'          <div class="mira" style="--plastico:{_plastico(c)}"'
             f' data-controle="{c.get("pref") or ""}">\n'
             f'            <span class="quem" data-campo="quem-joga" data-hef-alvo="html">{_quem(c)}</span>\n'
-            f'            <div class="mira-topo av">{_analogico_virtual()}'
-            f'<span class="ajuda" tabindex="0">?<span class="dica">{DE_ONDE_VEM_A_MIRA}'
-            f'</span></span></div>\n'
+            f'            <div class="mira-topo av" data-dica="{DE_ONDE_VEM_A_MIRA}">'
+            f'{_analogico_virtual()}</div>\n'
             f'{_deslizante("mira-sensibilidade", ROTULO_SENSIBILIDADE, SENSIBILIDADE, "mira-sensibilidade")}\n'
             f'{_deslizante("mira-tremor", ROTULO_TREMOR, TREMOR, "mira-tremor", UNIDADE_DO_TREMOR)}\n'
             f'{_segurar()}\n'
@@ -707,7 +688,7 @@ def documento(quem):
          abre o arquivo com duplo clique. O dono é o `caixa_da_janela.voltar`,
          o mesmo do mapa do controle. -->
     {caixa_da_janela.voltar("02-controles.html")}
-    <h1><span class="p">Calibrar sensores de movimento</span><span class="ajuda" tabindex="0">?<span class="dica">{AJUDA_DA_PAGINA}</span></span></h1>
+    <h1><span class="p" data-dica="{AJUDA_DA_PAGINA}">Calibrar sensores de movimento</span></h1>
     <div class="perfil-ativo"><span class="pa-rot">Perfil ativo</span><span class="pa-nome" data-campo="perfil">—</span></div>
   </div>
 
@@ -758,7 +739,7 @@ def documento(quem):
 </body>
 </html>
 '''
-    return "\n".join(l.rstrip() for l in html.split("\n"))
+    return monta.com_a_base("\n".join(l.rstrip() for l in html.split("\n")))
 
 
 def main():

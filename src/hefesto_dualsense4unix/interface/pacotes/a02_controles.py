@@ -2824,6 +2824,47 @@ def volume_padrao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     _lembrar_do_som(ctx, uniq, speaker=lembrar)
 
 
+GESTO_DO_MODO = "modo-dos-controles"
+
+
+def modo_dos_controles_do_perfil(p: dict[str, Any] | None) -> str:
+    """O modo da aba (Automático ou Personalizado), lido do perfil CRU.
+
+    Só o que está ESCRITO em ``controles_modo`` vale: sem perfil ou sem o campo, a aba segue como
+    sempre foi, no Personalizado — o Automático nunca se deduz.
+    """
+    from hefesto_dualsense4unix.profiles.schema import MODO_AUTOMATICO, MODO_PERSONALIZADO
+
+    escrito = p.get("controles_modo") if isinstance(p, dict) else None
+    return MODO_AUTOMATICO if escrito == MODO_AUTOMATICO else MODO_PERSONALIZADO
+
+
+@gesto("02-controles.html", GESTO_DO_MODO, grava="save_profile")
+def modo_dos_controles(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """O botão «Modo automático» da aba: grava ``controles_modo`` no perfil ativo.
+
+    Automático é os quatro controles aceitarem o que o jogo manda, sem ajuste do Hefesto. O
+    ``data-modo`` do botão diz o que o usuário PEDIU, e pedir o modo em que o perfil já está não
+    grava nada. Nada se apaga: as escolhas da aba ficam no perfil, e o Personalizado as devolve.
+    """
+    loader = _perfil._com_o_src()
+    from hefesto_dualsense4unix.profiles.schema import MODO_AUTOMATICO, MODO_PERSONALIZADO
+
+    pedido = str(o.get("modo") or "")
+    if pedido not in (MODO_AUTOMATICO, MODO_PERSONALIZADO):
+        raise ValueError(
+            f"{GESTO_DO_MODO}: o clique não disse qual modo. O botão manda o `data-modo`; "
+            f"um pedido sem ele não vem da tela")
+    nome = _perfil.nome_do_ativo(getattr(ctx, "state", None)).strip()
+    if not nome:
+        raise RuntimeError(
+            "sem perfil ativo não há onde guardar o modo. Escolha um perfil na aba Perfis.")
+    if modo_dos_controles_do_perfil(_perfil.ativo_que_vale(nome)) == pedido:
+        return
+    novo = loader.load_profile(nome).model_copy(update={"controles_modo": pedido})
+    loader.save_profile(novo, origem="interface-nova")
+
+
 PONTE = {"mic_canal_set_detalhado", "speaker_set",
          "mic_volume_set_detalhado", "sensor_set_detalhado",
          "mira_set_detalhado"}

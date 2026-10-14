@@ -85,12 +85,22 @@ def test_todo_gesto_das_dez_tem_camada() -> None:
     assert not faltam, f"gesto sem camada: {faltam}"
 
 
+#: O gesto nasceu com a base comum (A-BASE-COMUM-DAS-ABAS-01) e o botão «Modo automático» que o
+#: aciona entra na página com a sprint da própria aba (A-ABA-CONTROLES-DO-TODO-01 e
+#: A-ABA-VIBRACAO-DO-TODO-01). Sai desta lista no dia em que a página o trouxer.
+A_ABA_AINDA_TRAZ = {
+    ("02-controles.html", "modo-dos-controles"),
+    ("05-vibracao.html", "modo-da-vibracao"),
+}
+
+
 def test_toda_linha_da_camada_tem_gesto() -> None:
     """E toda linha tem gesto na página."""
     pac = _pacotes()
     camada = pac.camada
     vistos = _vistos()
-    sobra = sorted(f"{p}·{g}" for p, g in camada.CAMADA if (p, g) not in vistos)
+    sobra = sorted(f"{p}·{g}" for p, g in camada.CAMADA
+                   if (p, g) not in vistos and (p, g) not in A_ABA_AINDA_TRAZ)
     assert not sobra, f"linha sem gesto na página: {sobra}"
     assert set(camada.CAMADA.values()) <= camada.CAMADAS
 

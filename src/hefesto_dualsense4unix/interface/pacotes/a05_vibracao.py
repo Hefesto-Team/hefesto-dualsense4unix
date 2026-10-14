@@ -1634,6 +1634,49 @@ def testar_haptica(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     _BATEU_A_HAPTICA_EM[uniq] = _monotonic()
 
 
+GESTO_DO_MODO = "modo-da-vibracao"
+
+
+def modo_da_vibracao_do_perfil(p: dict[str, Any] | None) -> str:
+    """O modo da aba (Automático ou Personalizado), lido do perfil CRU.
+
+    Só o que está ESCRITO em ``rumble.modo`` vale: sem perfil, sem seção ou sem o campo, a aba segue
+    como sempre foi, no Personalizado — o Automático nunca se deduz.
+    """
+    from hefesto_dualsense4unix.profiles.schema import MODO_AUTOMATICO, MODO_PERSONALIZADO
+
+    rumble = p.get("rumble") if isinstance(p, dict) else None
+    escrito = rumble.get("modo") if isinstance(rumble, dict) else None
+    return MODO_AUTOMATICO if escrito == MODO_AUTOMATICO else MODO_PERSONALIZADO
+
+
+@gesto("05-vibracao.html", GESTO_DO_MODO, grava="save_profile")
+def modo_da_vibracao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """O botão «Modo automático» da aba: grava ``rumble.modo`` no perfil ativo.
+
+    O ``data-modo`` do botão diz o que o usuário PEDIU, e pedir o modo em que o perfil já está não
+    grava nada. Nada se apaga: as escolhas da aba ficam no perfil, e o Personalizado as devolve.
+    O modo só diz quem manda; a receita do estilo que o Automático lê é do motor do tato.
+    """
+    loader = _perfil._com_o_src()
+    from hefesto_dualsense4unix.profiles.schema import MODO_AUTOMATICO, MODO_PERSONALIZADO
+
+    pedido = str(o.get("modo") or "")
+    if pedido not in (MODO_AUTOMATICO, MODO_PERSONALIZADO):
+        raise ValueError(
+            f"{GESTO_DO_MODO}: o clique não disse qual modo. O botão manda o `data-modo`; "
+            f"um pedido sem ele não vem da tela")
+    nome = _perfil.nome_do_ativo(getattr(ctx, "state", None)).strip()
+    if not nome:
+        raise RuntimeError(
+            "sem perfil ativo não há onde guardar o modo. Escolha um perfil na aba Perfis.")
+    if modo_da_vibracao_do_perfil(_perfil.ativo_que_vale(nome)) == pedido:
+        return
+    prof = loader.load_profile(nome)
+    novo = prof.model_copy(update={"rumble": prof.rumble.model_copy(update={"modo": pedido})})
+    loader.save_profile(novo, origem="interface-nova")
+
+
 #: `perfil.gravar_e_reaplicar` grava e manda o daemon reaplicar. É a decisão
 PONTE = {"chamar", "profile_switch", "rumble_set_checked",
          "rumble_stop", "rumble_stop_checked", "rumble_passthrough",

@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, Literal, cast
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from hefesto_dualsense4unix.profiles.schema import RUMBLE_CUSTOM_MULT_MAX, LedsConfig
+from hefesto_dualsense4unix.profiles.schema import RUMBLE_CUSTOM_MULT_MAX, LedsConfig, ModoDaAba
 
 if TYPE_CHECKING:
     from hefesto_dualsense4unix.profiles.schema import Profile
@@ -102,6 +102,8 @@ class RumbleDraft(BaseModel):
     policy: Literal["economia", "balanceado", "max", "auto", "custom"] | None = None
     custom_mult: float | None = Field(default=None, ge=0.0, le=RUMBLE_CUSTOM_MULT_MAX)
     passthrough: bool = True
+    #: O modo da aba Vibração (``rumble.modo``): o draft não o edita, só o leva de volta ao perfil.
+    modo: ModoDaAba | None = None
 
 
 class MouseDraft(BaseModel):
@@ -382,6 +384,8 @@ class DraftConfig(BaseModel):
     # (`profiles_actions._build_profile_from_editor`). O gesto mais banal do usuário
     # `manager.pontes_confirmadas()` e a escada de `integrations/ponte_escada.py`
     source_ponte: Any | None = None
+    #: O modo da aba Controles (``Profile.controles_modo``): o draft só o leva de volta.
+    source_controles_modo: ModoDaAba | None = None
     # valendo): `button_actions={"circle": "KEY_ESC"}` entrava e saía `None`;
     # `Profile` (`Profile.button_actions` e `Profile.teclado_emulado`, em
     # método. O `button_actions` nasceu por decisão em 01/09 e nenhum
@@ -410,6 +414,7 @@ class DraftConfig(BaseModel):
             policy=profile.rumble.policy,
             custom_mult=profile.rumble.custom_mult,
             passthrough=profile.rumble.passthrough,
+            modo=profile.rumble.modo,
         )
 
         if profile.mouse is not None:
@@ -464,6 +469,7 @@ class DraftConfig(BaseModel):
             source_priority=profile.priority,
             source_controllers=profile.controllers,
             source_ponte=profile.ponte,
+            source_controles_modo=profile.controles_modo,
             source_button_actions=profile.button_actions,
             source_teclado_emulado=profile.teclado_emulado,
             source_teclado_so_no_jogo=profile.teclado_so_no_jogo,
@@ -594,7 +600,9 @@ class DraftConfig(BaseModel):
                 passthrough=self.rumble.passthrough,
                 policy=self.rumble.policy,
                 custom_mult=self.rumble.custom_mult,
+                modo=self.rumble.modo,
             ),
+            controles_modo=self.source_controles_modo,
             key_bindings=self.key_bindings,
             button_actions=self.source_button_actions,
             teclado_emulado=self.source_teclado_emulado,

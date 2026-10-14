@@ -308,6 +308,8 @@ class RumbleConfig(BaseModel):
     passthrough: bool = True
     policy: Literal["economia", "balanceado", "max", "auto", "custom"] | None = None
     custom_mult: float | None = None
+    #: ``None`` = ninguém escolheu o modo da aba Vibração (o botão «Modo automático»).
+    modo: ModoDaAba | None = None
 
     @model_validator(mode="after")
     def _validate_custom_mult(self) -> RumbleConfig:
@@ -1172,6 +1174,9 @@ class Profile(BaseModel):
     # um estilo que sai do produto (o «Co-op local» saiu em 25/09) não pode
     # impedir o perfil de carregar; o motor só não acha receita e fica desligado.
     estilo: str | None = None
+    # O modo da aba Controles (o botão «Modo automático»): ``None`` = ninguém escolheu, e a aba
+    # segue o que o perfil já diz. Automático: os controles aceitam o que o jogo manda.
+    controles_modo: ModoDaAba | None = None
     # O desvio da bancada: campos da receita do motor (`tato_vivo.Receita`) que
     # sobrepõem, um a um, a receita do estilo. None = a receita do estilo inteira.
     # O motor ignora o campo que não conhece e limita cada valor (`Receita.de`).
@@ -1921,6 +1926,18 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         "É a escolha do modo da aba Gatilhos. `None` = ninguém escolheu, e "
         "`decidir_o_modo_dos_gatilhos` lê o perfil: todo gatilho «Sem efeito» é "
         "Automático, o resto é Personalizado. Nada se reescreve.",
+    ),
+    "RumbleConfig.modo": Nascimento(
+        E_CONTRATO,
+        "É a escolha do modo da aba Vibração, não uma feature que nasce ligada. "
+        "`None` = ninguém escolheu, e a aba segue o que o perfil já diz. "
+        "Semear um modo de fábrica reescreveria o perfil de quem já escolheu.",
+    ),
+    "Profile.controles_modo": Nascimento(
+        E_CONTRATO,
+        "É a escolha do modo da aba Controles, não uma feature que nasce ligada. "
+        "`None` = ninguém escolheu, e a aba segue o que o perfil já diz. "
+        "Semear um modo de fábrica reescreveria o perfil de quem já escolheu.",
     ),
     "LedsConfig.lightbar_para_o_numero": Nascimento(
         E_CONTRATO,

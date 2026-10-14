@@ -87,6 +87,7 @@ ESCREVEM = {
     "voltar_ao_do_computador",
     "voltar_o_computador_ao_de_fabrica",
     "salvar_perfil",
+    "guardar_meus_efeitos",         # a biblioteca de efeitos dela, no `gui_preferences.json`
     "machine_declare",
     "set_mask",
     "clear_mask",

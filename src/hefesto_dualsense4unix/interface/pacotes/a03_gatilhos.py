@@ -42,6 +42,12 @@ from typing import Any
 from hefesto_dualsense4unix.interface.monta import MODO_AUTOMATICO
 
 from . import Contexto, jogador_de, perfil, registrar
+from .meus_efeitos import (
+    PREFIXO_DO_MEU,
+    SEPARADOR_DOS_MEUS,
+)
+from .meus_efeitos import guardar_meus_efeitos as _guardar_dos_gatilhos
+from .meus_efeitos import meus_efeitos as _meus_efeitos_da
 
 SEM_DONO: dict[str, str] = {}
 
@@ -617,51 +623,14 @@ def _o_que_o_controle_recebe(p: dict[str, Any] | None, uniq: str,
     return _o_lado_que_o_perfil_cala(disco)
 
 
-# `app/gui_prefs.py`, a mesma caixa de preferências da interface que já existe,
-# vazar no `$HOME` de quem roda) e tem três funções públicas de módulo —
-# `load_gui_prefs`, `save_gui_prefs`, `set_pref`. **É reuso, e a LEI 0 desta
-
-#: A CHAVE NA CAIXA DE PREFERÊNCIAS. Ela não está nos `_DEFAULTS` do
-#: `gui_prefs` de propósito: ausente quer dizer "o usuário ainda não salvou nenhum",
-#: que é diferente de "salvou e apagou todos" — e `load_gui_prefs` devolve o
-CHAVE_DOS_MEUS = "gatilhos_meus_efeitos"
-
-PREFIXO_DO_MEU = "meu:"
-
-SEPARADOR_DOS_MEUS = "Meus efeitos"
-
-
 def meus_efeitos() -> dict[str, Any]:
-    """Os efeitos que ELA salvou, do disco. `{}` quando não há nenhum.
-
-    NUNCA LEVANTA: `load_gui_prefs` já engole `JSONDecodeError` e `OSError` com
-    aviso no log e devolve os padrões. Um arquivo corrompido não pode derrubar a
-    pintura da aba inteira — a tela ficaria congelada sem dizer por quê.
-    """
-    try:
-        from hefesto_dualsense4unix.app.gui_prefs import load_gui_prefs
-
-        guardado = load_gui_prefs().get(CHAVE_DOS_MEUS)
-    except Exception:
-        return {}
-    if not isinstance(guardado, dict):
-        return {}
-    return {str(nome): valor for nome, valor in guardado.items()
-            if isinstance(valor, dict) and nome.strip()}
+    """Os efeitos dos gatilhos que ela guardou. O dono da biblioteca é `meus_efeitos.py`."""
+    return _meus_efeitos_da("gatilhos")
 
 
 def _guardar_meus_efeitos(todos: dict[str, Any]) -> None:
-    """Escreve a biblioteca de volta, PRESERVANDO o resto das preferências.
-
-    O `load` antes do `save` não é cerimônia: `save_gui_prefs` grava o
-    dicionário INTEIRO, e escrever só a nossa chave apagaria o
-    `advanced_editor` e o `ambiente_corrigido` dela.
-    """
-    from hefesto_dualsense4unix.app.gui_prefs import load_gui_prefs, save_gui_prefs
-
-    prefs = load_gui_prefs()
-    prefs[CHAVE_DOS_MEUS] = todos
-    save_gui_prefs(prefs)
+    """Escreve a biblioteca dos gatilhos, sem apagar o resto das preferências."""
+    _guardar_dos_gatilhos(todos, "gatilhos")
 
 
 def _meia_do_efeito(efeito: Any, disco: str) -> dict[str, Any] | None:
