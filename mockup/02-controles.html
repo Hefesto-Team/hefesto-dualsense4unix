@@ -431,42 +431,7 @@
     display:flex;align-items:center;gap:8px;padding:11px 14px 0;
   }
   .quadro-titulo{font-size:13.5px;font-weight:600;color:var(--purple)}
-  /* o ícone "?" — onde TODO texto longo passa a morar (D4 + D-TUDO-QUE-EXPLICA-VIRA-DICA) */
-  .ajuda{
-    width:17px;height:17px;border-radius:50%;flex:0 0 17px;
-    border:1px solid var(--linha);color:var(--texto-mudo);
-    font-size:11px;line-height:15px;text-align:center;cursor:help;position:relative;
-  }
-  .ajuda:hover{border-color:var(--cyan);color:var(--cyan)}
-  .ajuda:hover .dica{display:block}
-  /* ---------- O `?` ABRE NO FOCO, E NÃO SÓ SOB O PONTEIRO — 07/09/2026 ----------
-     ACHADO POR CONFERÊNCIA, medido na aba Navegação: `.ajuda` é um `<span>` sem
-     `tabindex`, e o ÚNICO caminho de revelação era `:hover`. Medido pelo caminho
-     exato que o controle usa (`hefesto_vivo`, `el.click()`):
-
-         APÓS el.click():  display da dica = 'none' · rect = 0 · foco = BODY
-
-     Isto acontecia na aba cujo próprio `?` diz *"Navegar a janela do Hefesto com
-     o controle"* — a tela que ensina a navegar sem rato era a que exigia um.
-
-     A REGRA MORA AQUI, NA FOLHA DA CASA, e não na aba onde foi achado: são 99
-     `?` em dez abas, e uma cura numa aba só deixaria as outras nove ensinando
-     que o `?` não responde ao controle. É a regra de 05/09 — *quando a cura
-     conhece a causa, ela cobre TODOS os chamadores*.
-
-     `:focus-within` E `:focus` OS DOIS, e não é redundância: o `:focus` pega o
-     próprio `?` recebendo o foco, e o `:focus-within` mantém a dica aberta se o
-     foco cair em algo DENTRO dela (um `<b>`, um `<tt>`, ou o que a frase viva
-     do produto trouxer). Sem o segundo, abrir e ler já fechava.
-
-     O `tabindex` É DO EMISSOR, não desta folha — uma regra de estilo não torna
-     um `<span>` focável. Quem já o emite é `aba06.ajuda()`; as outras nove abas
-     estão declaradas como dívida medida no relatório desta leva. Esta regra
-     nasce pronta para elas: no dia em que o atributo chegar, o `?` daquela aba
-     passa a abrir no foco sem tocar nesta folha de novo. */
-  .ajuda:focus{border-color:var(--cyan);color:var(--cyan);outline:none}
-  .ajuda:focus .dica,
-  .ajuda:focus-within .dica{display:block}
+  /* A DICA mora no `data-dica` do próprio botão ou área (`base-comum.css`/`.js`); nenhum «?» existe. */
   .dica{
     display:none;position:absolute;left:22px;top:-4px;width:330px;z-index:40;
     background:var(--elevated);border:1px solid var(--linha);border-radius:7px;
@@ -923,27 +888,6 @@
     border-color:var(--border-sutil);color:var(--texto-mudo);cursor:not-allowed}
   .btn.apagado:hover,.seg button.apagado:hover{
     border-color:var(--border-sutil);color:var(--texto-mudo)}
-
-  /* O `?` DA RAZÃO. Ele é o `.ajuda` que a página já tem — a mesma bolinha,
-     a mesma `.dica` — com a classe `porque` dizendo que o texto dela vem do
-     PRODUTO, e não do desenho. A distinção é da aba 08, onde a frase congelada
-     já mentiu ("está no cabo" com o controle no rádio).
-
-     TRÊS JEITOS DE ELE SUMIR, e os três existem porque as abas emitem de três
-     jeitos: colado ao botão (o botão não está cinza -> não há o que explicar),
-     com a dica VAZIA de nascença, e com o marcador `.nada` que o pacote manda
-     quando não há o que dizer. O marcador é preciso porque `escrever()` troca
-     valor vazio por travessão — sem ele, "nada a dizer" vira um `—` solto. */
-  .btn:not(.apagado) + .ajuda.porque,
-  .seg button:not(.apagado) + .ajuda.porque{display:none}
-  .ajuda.porque:has(.dica:empty){display:none}
-  .ajuda.porque:has(.nada){display:none}
-  /* ELE COLA NO BOTÃO DELE, e as duas linhas saíram da foto de 04/09: dentro
-     de `.acoes` (vão de 8px) o `?` ficava a 8px dos DOIS vizinhos e lia como
-     se explicasse o botão seguinte; e o `.ajuda` tem 17px de altura fixa num
-     flex que estica, então ele subia para o topo do botão, acima do texto que
-     explica. */
-  .ajuda.porque{align-self:center;margin-left:-4px}
 
   /* ---- S-02 · A RESSALVA É LINHA FIXA, E SÓ QUANDO EXISTE (D-02) ----
      No repouso ela não ocupa NADA: sem `display:none` a linha vazia continua
@@ -2579,7 +2523,7 @@
     border-color:var(--green);color:var(--green)}
 
 
-  body.nativo.por-controle :is([data-gesto],[data-modo],[data-hef-gesto],[data-papel],[data-forca],[data-player],[data-sensor],[data-rota],[data-mudo],[data-mic-modo],[data-v]):not(:is([data-gesto=cadeado],[data-gesto=hefesto],[data-gesto=modo-nativo],[data-gesto=modo-steam],[data-gesto=reconectar])){
+  body.nativo.por-controle :is([data-gesto],[data-modo],[data-hef-gesto],[data-papel],[data-forca],[data-player],[data-sensor],[data-rota],[data-mudo],[data-mic-modo],[data-v]):not(:is([data-gesto=cadeado],[data-gesto=hefesto],[data-gesto=modo-nativo],[data-gesto=modo-steam],[data-gesto=reconectar],.menu-hefesto *)){
     pointer-events:none;cursor:default;-webkit-appearance:none;appearance:none;
     background:transparent!important;border-color:var(--border-sutil)!important;
     color:var(--comment)!important;font-weight:400!important;box-shadow:none!important}
@@ -2588,9 +2532,58 @@
     color:var(--comment)!important;font-weight:400!important;box-shadow:none!important}
   body.nativo.por-controle :is([data-gesto=cadeado],[data-gesto=hefesto],[data-gesto=modo-nativo],[data-gesto=modo-steam],[data-gesto=reconectar]){pointer-events:auto}
   body.nativo.por-controle .guardar,body.nativo.por-controle .par-modo,
-  body.nativo.por-controle .par-modo + .ajuda,
+  body.nativo.por-controle .modo-auto,
   body.nativo.por-controle .r-aplicar,body.nativo.por-controle .r-salvar,
   body.nativo.por-controle .r-importar{visibility:hidden}
+
+  .ajuda{width:17px;height:17px;border-radius:50%;flex:0 0 17px;border:1px solid var(--linha);
+    color:var(--texto-mudo);font-size:11px;line-height:15px;text-align:center;cursor:help;position:relative}
+  .ajuda:hover,.ajuda:focus{border-color:var(--cyan);color:var(--cyan);outline:none}
+  .ajuda:hover .dica,.ajuda:focus .dica,.ajuda:focus-within .dica{display:block}
+  .quadro-topo .par-modo + .ajuda.esq .dica{left:auto;right:22px}
+  .btn:not(.apagado) + .ajuda.porque,.seg button:not(.apagado) + .ajuda.porque{display:none}
+  .ajuda.porque:has(.dica:empty),.ajuda.porque:has(.nada){display:none}
+  .ajuda.porque{align-self:center;margin-left:-4px}
+  body.nativo.por-controle .par-modo + .ajuda{visibility:hidden}
+</style>
+<style id="base-comum">
+/* ===== Base comum das abas (rodada 2, 12/10/2026) =====
+   Copiada IGUAL em todo mockup do todo. Três peças: a dica no hover (sem «?»), o Modo automático
+   e o menu do botão direito desenhado no visual das abas (BRIEF-T6, opção B). */
+
+/* 1. A dica: qualquer frase, botão ou área com data-dica mostra a dica ao passar o mouse ou focar.
+      Nenhum botão «?» existe mais. A dica tem no máximo ~12 palavras: show, don't tell.
+      A caixa `.da-base` é só a do desenho: na janela do produto a dona do `#hef-dica` é a camada do piloto. */
+[data-dica]{cursor:help}
+button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"][data-dica]{cursor:pointer}
+#hef-dica.da-base{position:fixed;z-index:2147483000;max-width:280px;padding:7px 11px;border-radius:8px;
+  background:#1b1c25;border:1px solid var(--border-forte,#44475a);color:var(--texto-suave,#c8ccda);
+  font:500 12.5px/1.45 'Space Grotesk',system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.45);pointer-events:none;
+  opacity:0;transform:translateY(3px);transition:opacity .12s,transform .12s}
+#hef-dica.da-base.visivel{opacity:1;transform:none}
+
+/* 2. O Modo automático: pílula com bolinha. Os dois estados têm de se distinguir num relance.
+      Desligado: contorno neutro, bolinha vazia, letra suave (vale o que está na aba).
+      Ligado: ciano cheio, bolinha branca acesa, letra branca; a área que ele governa esmaece. */
+.modo-auto{display:inline-flex;align-items:center;gap:9px;height:34px;padding:0 16px 0 12px;border-radius:999px;
+  border:1px solid var(--border-forte,#44475a);background:transparent;color:var(--texto-suave,#c8ccda);
+  font:600 13.5px/1 'Space Grotesk',system-ui,sans-serif;cursor:pointer;transition:background .15s,border-color .15s,color .15s,box-shadow .15s}
+.modo-auto .p{width:11px;height:11px;border-radius:50%;border:2px solid var(--texto-mudo,#9a9eb8);background:transparent;
+  transition:all .15s}
+.modo-auto:hover{border-color:#5fd3e6;color:#fff}
+.modo-auto[aria-pressed="true"]{background:#0e7c8c;border-color:#5fd3e6;color:#fff;box-shadow:0 0 0 3px rgba(95,211,230,.18)}
+.modo-auto[aria-pressed="true"] .p{border-color:#fff;background:#fff;box-shadow:0 0 8px #fff}
+.modo-auto:focus-visible{outline:2px solid var(--cyan,#8be9fd);outline-offset:2px}
+.governado-pelo-jogo{opacity:.42;pointer-events:none;filter:saturate(.6)}
+
+/* 3. O menu do botão direito, no visual das abas. */
+.menu-hefesto{position:fixed;z-index:2147482000;min-width:190px;padding:6px;border-radius:12px;
+  background:#252733;border:1px solid var(--border-forte,#44475a);box-shadow:0 14px 34px rgba(0,0,0,.5)}
+.menu-hefesto button{display:flex;width:100%;align-items:center;gap:10px;height:34px;padding:0 12px;border:0;
+  border-radius:8px;background:transparent;color:var(--fg,#f8f8f2);font:500 13.5px/1 'Space Grotesk',system-ui,sans-serif;text-align:left;cursor:pointer}
+.menu-hefesto button:hover{background:rgba(189,147,249,.14)}
+.menu-hefesto button[disabled]{color:var(--texto-mudo,#9a9eb8);opacity:.55;cursor:default;background:transparent}
+.menu-hefesto hr{border:0;border-top:1px solid var(--border-sutil,#343746);margin:5px 4px}
 </style>
 <style data-campo="plastico-css" data-hef-alvo="html">
   .ctl[data-controle],.fita .chip[for]{--plastico:var(--border-forte)}
@@ -2743,19 +2736,11 @@
       <span class="so-no-nativo" title="Com o Hefesto desligado, o jogo manda: aqui só se vê quem está conectado."></span>
     </div>
     <div class="conectado"><span class="bolinha">●</span> <b data-campo="conta-b">1 USB · 1 BT</b></div>
-    <div class="perfil-ativo">
+    <div class="perfil-ativo" data-dica="O que você mudar em qualquer aba cai neste perfil ao Salvar perfil.">
       <span class="pa-rot">Perfil ativo</span>
       <span class="pa-nome" data-campo="perfil">—</span>
-      <!-- `tabindex` de 07/09/2026: este `?` está no CABEÇALHO, logo nas dez
-           abas, e explica onde o "Salvar perfil" grava. Sem ele o `<span>` não
-           recebe foco e o `el.click()` do controle não o abria em aba nenhuma. -->
-      <span class="ajuda" tabindex="0">?<span class="dica" style="left:auto;right:22px">
-        Tudo o que você mudar em qualquer aba cai <b>neste</b> perfil quando clicar em
-        <b>Salvar perfil</b>.<br><br>
-        Cada controle guarda a <b>sua</b> configuração aqui dentro, pelo ID da peça — amanhã,
-        em outra porta ou no rádio, ele traz de volta o que você deixou hoje.
-      </span></span>
     </div>
+    <i hidden data-campo="servico" data-hef-alvo="atributo" data-hef-atributo="data-servico" data-servico="de-pe"></i>
   </div>
 
   <!-- ================= TIRA ================= -->
@@ -4950,11 +4935,8 @@
          MOCKUP que duplicava a informação como texto fixo na barra. O texto de
          Aplicar e de Importar é o do produto, lido do `.glade`, não redigido aqui.
 
-         `title=` e não a `.dica` da casa: a `.dica` precisa do embrulho
-         `<span class="ajuda">?…</span>`, que existe para o ícone de interrogação —
-         num botão ela viraria um "?" ao lado do rótulo, que não é o que o usuário pediu.
-         `title=` é o que o `.glade` faz, e é o que já se usa em botão nesta casa
-         (`aba09.py`).
+         `title=` e não `data-dica`: o `title=` é o que o `.glade` faz, e é o que já se
+         usa em botão nesta casa (`aba09.py`); a camada da dica da janela o colhe igual.
 
          O NOME DO PERFIL É DADO, E ERA LITERAL — corrigido em 03/09/2026, achado
          pela régua do mockup e nomeado pelo juiz da leva. O pedido trazia um
@@ -4985,5 +4967,85 @@
 
 <!-- ===== fim da aba ===== -->
 
+<script id="base-comum">
+/* Base comum das abas: a dica no hover e o menu do botão direito. Uma vez por página, igual em todas. */
+(() => {
+  /* A dica: só nasce aqui quando NÃO há a camada da janela (`__hefDica`, do piloto), que é a dona
+     do `#hef-dica` no produto. Os dois nunca rodam juntos: o teste vem a cada evento, porque a
+     camada da janela chega depois da carga da página. */
+  let dica = null, alvo = null;
+  const mostrar = el => {
+    if (!dica) { dica = document.createElement('div'); dica.id = 'hef-dica'; dica.className = 'da-base'; dica.setAttribute('role', 'tooltip'); }
+    alvo = el; dica.textContent = el.dataset.dica;
+    if (!dica.isConnected) document.body.append(dica);
+    const r = el.getBoundingClientRect(), d = dica.getBoundingClientRect();
+    let x = r.left + r.width / 2 - d.width / 2, y = r.bottom + 8;
+    if (y + d.height > innerHeight - 6) y = r.top - d.height - 8;
+    dica.style.left = Math.max(6, Math.min(x, innerWidth - d.width - 6)) + 'px'; dica.style.top = y + 'px';
+    dica.classList.add('visivel');
+  };
+  const esconder = () => { alvo = null; if (dica) dica.classList.remove('visivel'); };
+  for (const [ev, f] of [['mouseover', 'in'], ['focusin', 'in'], ['mouseout', 'out'], ['focusout', 'out']])
+    document.addEventListener(ev, e => {
+      if (window.__hefDica) return;
+      const el = e.target.closest && e.target.closest('[data-dica]');
+      if (f === 'in' && el && el.dataset.dica && el !== alvo) mostrar(el);
+      if (f === 'out' && el && !el.contains(e.relatedTarget)) esconder();
+    });
+  /* O Modo automático: a área que o botão governa esmaece enquanto ele está ligado, e o `data-modo`
+     leva o que o PRÓXIMO clique pede. Tudo parte do `aria-pressed`, que o piloto também pinta;
+     o clique só vira o `aria-pressed` na hora (depois de o piloto ter lido o `data-modo`). */
+  const sincronizar = b => {
+    const on = b.getAttribute('aria-pressed') === 'true';
+    const pedido = on ? 'personalizado' : 'automatico';
+    if (b.dataset.modo !== pedido) b.dataset.modo = pedido;
+    if (b.dataset.governa)
+      document.querySelectorAll(b.dataset.governa).forEach(el => el.classList.toggle('governado-pelo-jogo', on));
+  };
+  const sincronizarTodos = () => document.querySelectorAll('.modo-auto').forEach(sincronizar);
+  sincronizarTodos();
+  new MutationObserver(ms => {
+    if (ms.some(m => m.type === 'childList' || (m.target.matches && m.target.matches('.modo-auto')))) sincronizarTodos();
+  }).observe(document.body, {subtree: true, childList: true, attributes: true, attributeFilter: ['aria-pressed']});
+  document.addEventListener('click', e => {
+    const b = e.target.closest && e.target.closest('.modo-auto');
+    if (b) setTimeout(() => b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') === 'true' ? 'false' : 'true'), 0);
+  });
+  /* O menu do botão direito: Copiar (cinza sem seleção), Atualizar, Desligar ou Ligar, Reiniciar, Fechar.
+     Cada item é um `data-gesto` comum: no produto a janela o despacha como qualquer botão. O serviço
+     parado ou pausado vira «Ligar», de um clique só; o estado vem do `data-servico` do cabeçalho. */
+  const fechar = () => document.querySelectorAll('.menu-hefesto.vivo').forEach(m => m.remove());
+  document.addEventListener('contextmenu', e => {
+    e.preventDefault(); fechar();
+    const m = document.createElement('div'); m.className = 'menu-hefesto vivo'; m.setAttribute('role', 'menu');
+    const sel = String(getSelection()).trim() !== '';
+    const servico = (document.querySelector('[data-campo="servico"]') || {dataset: {}}).dataset.servico;
+    const ligar = servico === 'parado' || servico === 'pausado';
+    const item = ligar
+      ? '<button type="button" role="menuitem" data-gesto="menu-desligar" data-dica="O Hefesto volta a cuidar dos controles">Ligar</button>'
+      : '<button type="button" role="menuitem" data-gesto="menu-desligar" data-menu="desligar" data-dica="O Hefesto sai da frente e o jogo lê o controle direto">Desligar</button>';
+    m.innerHTML = `<button type="button" role="menuitem" data-menu="copiar" ${sel ? '' : 'disabled'}>Copiar</button><hr>
+      <button type="button" role="menuitem" data-gesto="menu-atualizar">Atualizar</button>
+      ${item}
+      <button type="button" role="menuitem" data-gesto="menu-reiniciar">Reiniciar</button><hr>
+      <button type="button" role="menuitem" data-gesto="menu-fechar">Fechar</button>`;
+    document.body.append(m);
+    const r = m.getBoundingClientRect();
+    m.style.left = Math.min(e.clientX, innerWidth - r.width - 6) + 'px';
+    m.style.top = Math.min(e.clientY, innerHeight - r.height - 6) + 'px';
+  });
+  document.addEventListener('click', e => {
+    const b = e.target.closest && e.target.closest('.menu-hefesto button');
+    if (!b) { fechar(); return; }
+    if (b.disabled) return;
+    if (b.dataset.menu === 'copiar') document.execCommand('copy');
+    /* Desligar pede dois cliques, como o «Parar» da aba Sistema: o primeiro troca a palavra, o segundo age. */
+    if (b.dataset.menu === 'desligar') {
+      if (b.textContent.trim() !== 'Confirma?') { setTimeout(() => { b.textContent = 'Confirma?'; }, 0); return; }
+    }
+    setTimeout(fechar, 0);
+  });
+})();
+</script>
 </body>
 </html>

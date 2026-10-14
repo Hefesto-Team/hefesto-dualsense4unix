@@ -29,17 +29,6 @@
         position:relative;padding-left:132px;flex:0 0 auto}
   h1{font-size:18px;font-weight:700;display:flex;align-items:center;gap:9px}
   h1 .p{color:var(--pink)}
-  /* O `?` É CÓPIA DECLARADA DO `.ajuda` DA FOLHA DA CASA (`topo.html`): esta
-     página tem folha própria, e um `?` com outra cara seria outro vocabulário. */
-  .ajuda{width:17px;height:17px;border-radius:50%;flex:0 0 17px;font-weight:400;
-         border:1px solid var(--linha);color:var(--texto-mudo);font-size:11px;
-         line-height:15px;text-align:center;cursor:help;position:relative}
-  .ajuda:hover,.ajuda:focus{border-color:var(--cyan);color:var(--cyan);outline:none}
-  .ajuda .dica{display:none;position:absolute;left:22px;top:-4px;width:330px;z-index:40;
-         background:var(--elevated);border:1px solid var(--linha);border-radius:7px;
-         padding:9px 11px;font-size:11.5px;line-height:1.5;color:var(--texto-suave);
-         text-align:left}
-  .ajuda:hover .dica,.ajuda:focus .dica,.ajuda:focus-within .dica{display:block}
   /* O PERFIL ATIVO, no canto do topo: cópia do `.perfil-ativo` do `topo.html` (a Calibrar é página
      avulsa e não tem a fita). Os ajustes da Mira caem no perfil que vale, e este chip diz qual. */
   .perfil-ativo{position:absolute;right:20px;top:17px;display:flex;align-items:center;gap:7px;
@@ -245,7 +234,6 @@
   .av:has(.liga.off) .lado > .sw{border-color:var(--border-sutil);color:var(--texto-mudo);
     background:var(--app-bg)}
   .av:has(.liga.off) .lado > .sw .p{background:var(--border-sutil);box-shadow:none}
-  .av > .ajuda{margin-left:auto}
   /* OS DOIS LADOS SÃO UM GRUPO: a mesma largura, lado a lado, na linha de baixo. */
   .av .lados{order:3;flex:1 0 100%;display:grid;grid-template-columns:1fr 1fr;gap:6px}
   .av .lado > .sw{width:100%;justify-content:center}
@@ -294,6 +282,45 @@
   body{padding:var(--recuo-do-corpo)}
   .cx{width:min(100%,1600px);height:var(--alt-janela);max-width:100%;max-height:calc(100dvh - var(--recuo-do-corpo) * 2)}
 </style>
+<style id="base-comum">
+/* ===== Base comum das abas (rodada 2, 12/10/2026) =====
+   Copiada IGUAL em todo mockup do todo. Três peças: a dica no hover (sem «?»), o Modo automático
+   e o menu do botão direito desenhado no visual das abas (BRIEF-T6, opção B). */
+
+/* 1. A dica: qualquer frase, botão ou área com data-dica mostra a dica ao passar o mouse ou focar.
+      Nenhum botão «?» existe mais. A dica tem no máximo ~12 palavras: show, don't tell.
+      A caixa `.da-base` é só a do desenho: na janela do produto a dona do `#hef-dica` é a camada do piloto. */
+[data-dica]{cursor:help}
+button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"][data-dica]{cursor:pointer}
+#hef-dica.da-base{position:fixed;z-index:2147483000;max-width:280px;padding:7px 11px;border-radius:8px;
+  background:#1b1c25;border:1px solid var(--border-forte,#44475a);color:var(--texto-suave,#c8ccda);
+  font:500 12.5px/1.45 'Space Grotesk',system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.45);pointer-events:none;
+  opacity:0;transform:translateY(3px);transition:opacity .12s,transform .12s}
+#hef-dica.da-base.visivel{opacity:1;transform:none}
+
+/* 2. O Modo automático: pílula com bolinha. Os dois estados têm de se distinguir num relance.
+      Desligado: contorno neutro, bolinha vazia, letra suave (vale o que está na aba).
+      Ligado: ciano cheio, bolinha branca acesa, letra branca; a área que ele governa esmaece. */
+.modo-auto{display:inline-flex;align-items:center;gap:9px;height:34px;padding:0 16px 0 12px;border-radius:999px;
+  border:1px solid var(--border-forte,#44475a);background:transparent;color:var(--texto-suave,#c8ccda);
+  font:600 13.5px/1 'Space Grotesk',system-ui,sans-serif;cursor:pointer;transition:background .15s,border-color .15s,color .15s,box-shadow .15s}
+.modo-auto .p{width:11px;height:11px;border-radius:50%;border:2px solid var(--texto-mudo,#9a9eb8);background:transparent;
+  transition:all .15s}
+.modo-auto:hover{border-color:#5fd3e6;color:#fff}
+.modo-auto[aria-pressed="true"]{background:#0e7c8c;border-color:#5fd3e6;color:#fff;box-shadow:0 0 0 3px rgba(95,211,230,.18)}
+.modo-auto[aria-pressed="true"] .p{border-color:#fff;background:#fff;box-shadow:0 0 8px #fff}
+.modo-auto:focus-visible{outline:2px solid var(--cyan,#8be9fd);outline-offset:2px}
+.governado-pelo-jogo{opacity:.42;pointer-events:none;filter:saturate(.6)}
+
+/* 3. O menu do botão direito, no visual das abas. */
+.menu-hefesto{position:fixed;z-index:2147482000;min-width:190px;padding:6px;border-radius:12px;
+  background:#252733;border:1px solid var(--border-forte,#44475a);box-shadow:0 14px 34px rgba(0,0,0,.5)}
+.menu-hefesto button{display:flex;width:100%;align-items:center;gap:10px;height:34px;padding:0 12px;border:0;
+  border-radius:8px;background:transparent;color:var(--fg,#f8f8f2);font:500 13.5px/1 'Space Grotesk',system-ui,sans-serif;text-align:left;cursor:pointer}
+.menu-hefesto button:hover{background:rgba(189,147,249,.14)}
+.menu-hefesto button[disabled]{color:var(--texto-mudo,#9a9eb8);opacity:.55;cursor:default;background:transparent}
+.menu-hefesto hr{border:0;border-top:1px solid var(--border-sutil,#343746);margin:5px 4px}
+</style>
 </head>
 <body>
 
@@ -303,7 +330,7 @@
          abre o arquivo com duplo clique. O dono é o `caixa_da_janela.voltar`,
          o mesmo do mapa do controle. -->
     <a class="voltar" href="02-controles.html" onclick="if (history.length > 1) { history.back(); return false }" title="Volta para a aba anterior.">← Voltar</a>
-    <h1><span class="p">Calibrar sensores de movimento</span><span class="ajuda" tabindex="0">?<span class="dica">O giroscópio e o acelerômetro de todos os controles conectados, de uma vez. A calibração não muda os seus ajustes: ela mede o zero de cada controle parado, e o Hefesto o guarda para aquele controle. Se o cursor anda sozinho com o controle parado, é isto que resolve.</span></span></h1>
+    <h1><span class="p" data-dica="Mede o zero de cada controle parado; os seus ajustes não mudam.">Calibrar sensores de movimento</span></h1>
     <div class="perfil-ativo"><span class="pa-rot">Perfil ativo</span><span class="pa-nome" data-campo="perfil">—</span></div>
   </div>
 
@@ -1114,7 +1141,7 @@
     <div class="mira-cx" data-bloco="miras">
           <div class="mira" style="--plastico:#ae335a" data-controle="p1">
             <span class="quem" data-campo="quem-joga" data-hef-alvo="html">P<span data-campo="jogador" data-hef-alvo="html">1</span></span>
-            <div class="mira-topo av"><span class="liga off" data-campo="mira-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="analogico-virtual"><span class="p"></span>Analógico virtual</button></span><span class="lados"><span class="lado" data-campo="mira-lado" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_esquerdo"><span class="p"></span>Esquerdo</button></span><span class="lado" data-campo="mira-lado" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="analogico_direito"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_direito"><span class="p"></span>Direito</button></span></span><span class="ajuda" tabindex="0">?<span class="dica">Os movimentos deste controle movem o analógico escolhido, como na aba Controles. O Cursor do touchpad usa só o quanto um gesto anda.</span></span></div>
+            <div class="mira-topo av" data-dica="Os movimentos do controle movem o analógico escolhido."><span class="liga off" data-campo="mira-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="analogico-virtual"><span class="p"></span>Analógico virtual</button></span><span class="lados"><span class="lado" data-campo="mira-lado" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_esquerdo"><span class="p"></span>Esquerdo</button></span><span class="lado" data-campo="mira-lado" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="analogico_direito"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_direito"><span class="p"></span>Direito</button></span></span></div>
               <label class="desl"><span class="r">O quanto um gesto anda</span><input class="trilho" type="range" min="1" max="12" step="1" value="6" data-gesto="mira-sensibilidade" data-campo="mira-sensibilidade" data-hef-alvo="valor" aria-label="O quanto um gesto anda"><span class="n"><span data-campo="mira-sensibilidade-num">6</span></span></label>
               <label class="desl"><span class="r">Ignorar tremor até</span><input class="trilho" type="range" min="1" max="60" step="1" value="3" data-gesto="mira-tremor" data-campo="mira-tremor" data-hef-alvo="valor" aria-label="Ignorar tremor até"><span class="n"><span data-campo="mira-tremor-num">3</span> <span class="un">graus/s</span></span></label>
               <label class="desl"><span class="r">Só enquanto eu segurar</span><select class="lista" data-gesto="mira-segurar" data-campo="mira-segurar" data-hef-alvo="valor" aria-label="Só enquanto eu segurar"><option value="sempre" selected>Sempre</option><option value="mesmo_parado">Mesmo parado</option><option value="cross">Cruz</option><option value="circle">Círculo</option><option value="square">Quadrado</option><option value="triangle">Triângulo</option><option value="l1">L1</option><option value="r1">R1</option><option value="l2">L2</option><option value="r2">R2</option><option value="l3">L3</option><option value="r3">R3</option><option value="dpad_up">D-pad cima</option><option value="dpad_down">D-pad baixo</option><option value="dpad_left">D-pad esquerda</option><option value="dpad_right">D-pad direita</option><option value="options">Options</option><option value="create">Share</option></select></label>
@@ -1122,7 +1149,7 @@
           </div>
           <div class="mira" style="--plastico:#7eb8d4" data-controle="p2">
             <span class="quem" data-campo="quem-joga" data-hef-alvo="html">P<span data-campo="jogador" data-hef-alvo="html">2</span></span>
-            <div class="mira-topo av"><span class="liga off" data-campo="mira-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="analogico-virtual"><span class="p"></span>Analógico virtual</button></span><span class="lados"><span class="lado" data-campo="mira-lado" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_esquerdo"><span class="p"></span>Esquerdo</button></span><span class="lado" data-campo="mira-lado" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="analogico_direito"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_direito"><span class="p"></span>Direito</button></span></span><span class="ajuda" tabindex="0">?<span class="dica">Os movimentos deste controle movem o analógico escolhido, como na aba Controles. O Cursor do touchpad usa só o quanto um gesto anda.</span></span></div>
+            <div class="mira-topo av" data-dica="Os movimentos do controle movem o analógico escolhido."><span class="liga off" data-campo="mira-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="analogico-virtual"><span class="p"></span>Analógico virtual</button></span><span class="lados"><span class="lado" data-campo="mira-lado" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_esquerdo"><span class="p"></span>Esquerdo</button></span><span class="lado" data-campo="mira-lado" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="analogico_direito"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_direito"><span class="p"></span>Direito</button></span></span></div>
               <label class="desl"><span class="r">O quanto um gesto anda</span><input class="trilho" type="range" min="1" max="12" step="1" value="6" data-gesto="mira-sensibilidade" data-campo="mira-sensibilidade" data-hef-alvo="valor" aria-label="O quanto um gesto anda"><span class="n"><span data-campo="mira-sensibilidade-num">6</span></span></label>
               <label class="desl"><span class="r">Ignorar tremor até</span><input class="trilho" type="range" min="1" max="60" step="1" value="3" data-gesto="mira-tremor" data-campo="mira-tremor" data-hef-alvo="valor" aria-label="Ignorar tremor até"><span class="n"><span data-campo="mira-tremor-num">3</span> <span class="un">graus/s</span></span></label>
               <label class="desl"><span class="r">Só enquanto eu segurar</span><select class="lista" data-gesto="mira-segurar" data-campo="mira-segurar" data-hef-alvo="valor" aria-label="Só enquanto eu segurar"><option value="sempre" selected>Sempre</option><option value="mesmo_parado">Mesmo parado</option><option value="cross">Cruz</option><option value="circle">Círculo</option><option value="square">Quadrado</option><option value="triangle">Triângulo</option><option value="l1">L1</option><option value="r1">R1</option><option value="l2">L2</option><option value="r2">R2</option><option value="l3">L3</option><option value="r3">R3</option><option value="dpad_up">D-pad cima</option><option value="dpad_down">D-pad baixo</option><option value="dpad_left">D-pad esquerda</option><option value="dpad_right">D-pad direita</option><option value="options">Options</option><option value="create">Share</option></select></label>
@@ -1149,5 +1176,85 @@
   </div>
 </div>
 
+<script id="base-comum">
+/* Base comum das abas: a dica no hover e o menu do botão direito. Uma vez por página, igual em todas. */
+(() => {
+  /* A dica: só nasce aqui quando NÃO há a camada da janela (`__hefDica`, do piloto), que é a dona
+     do `#hef-dica` no produto. Os dois nunca rodam juntos: o teste vem a cada evento, porque a
+     camada da janela chega depois da carga da página. */
+  let dica = null, alvo = null;
+  const mostrar = el => {
+    if (!dica) { dica = document.createElement('div'); dica.id = 'hef-dica'; dica.className = 'da-base'; dica.setAttribute('role', 'tooltip'); }
+    alvo = el; dica.textContent = el.dataset.dica;
+    if (!dica.isConnected) document.body.append(dica);
+    const r = el.getBoundingClientRect(), d = dica.getBoundingClientRect();
+    let x = r.left + r.width / 2 - d.width / 2, y = r.bottom + 8;
+    if (y + d.height > innerHeight - 6) y = r.top - d.height - 8;
+    dica.style.left = Math.max(6, Math.min(x, innerWidth - d.width - 6)) + 'px'; dica.style.top = y + 'px';
+    dica.classList.add('visivel');
+  };
+  const esconder = () => { alvo = null; if (dica) dica.classList.remove('visivel'); };
+  for (const [ev, f] of [['mouseover', 'in'], ['focusin', 'in'], ['mouseout', 'out'], ['focusout', 'out']])
+    document.addEventListener(ev, e => {
+      if (window.__hefDica) return;
+      const el = e.target.closest && e.target.closest('[data-dica]');
+      if (f === 'in' && el && el.dataset.dica && el !== alvo) mostrar(el);
+      if (f === 'out' && el && !el.contains(e.relatedTarget)) esconder();
+    });
+  /* O Modo automático: a área que o botão governa esmaece enquanto ele está ligado, e o `data-modo`
+     leva o que o PRÓXIMO clique pede. Tudo parte do `aria-pressed`, que o piloto também pinta;
+     o clique só vira o `aria-pressed` na hora (depois de o piloto ter lido o `data-modo`). */
+  const sincronizar = b => {
+    const on = b.getAttribute('aria-pressed') === 'true';
+    const pedido = on ? 'personalizado' : 'automatico';
+    if (b.dataset.modo !== pedido) b.dataset.modo = pedido;
+    if (b.dataset.governa)
+      document.querySelectorAll(b.dataset.governa).forEach(el => el.classList.toggle('governado-pelo-jogo', on));
+  };
+  const sincronizarTodos = () => document.querySelectorAll('.modo-auto').forEach(sincronizar);
+  sincronizarTodos();
+  new MutationObserver(ms => {
+    if (ms.some(m => m.type === 'childList' || (m.target.matches && m.target.matches('.modo-auto')))) sincronizarTodos();
+  }).observe(document.body, {subtree: true, childList: true, attributes: true, attributeFilter: ['aria-pressed']});
+  document.addEventListener('click', e => {
+    const b = e.target.closest && e.target.closest('.modo-auto');
+    if (b) setTimeout(() => b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') === 'true' ? 'false' : 'true'), 0);
+  });
+  /* O menu do botão direito: Copiar (cinza sem seleção), Atualizar, Desligar ou Ligar, Reiniciar, Fechar.
+     Cada item é um `data-gesto` comum: no produto a janela o despacha como qualquer botão. O serviço
+     parado ou pausado vira «Ligar», de um clique só; o estado vem do `data-servico` do cabeçalho. */
+  const fechar = () => document.querySelectorAll('.menu-hefesto.vivo').forEach(m => m.remove());
+  document.addEventListener('contextmenu', e => {
+    e.preventDefault(); fechar();
+    const m = document.createElement('div'); m.className = 'menu-hefesto vivo'; m.setAttribute('role', 'menu');
+    const sel = String(getSelection()).trim() !== '';
+    const servico = (document.querySelector('[data-campo="servico"]') || {dataset: {}}).dataset.servico;
+    const ligar = servico === 'parado' || servico === 'pausado';
+    const item = ligar
+      ? '<button type="button" role="menuitem" data-gesto="menu-desligar" data-dica="O Hefesto volta a cuidar dos controles">Ligar</button>'
+      : '<button type="button" role="menuitem" data-gesto="menu-desligar" data-menu="desligar" data-dica="O Hefesto sai da frente e o jogo lê o controle direto">Desligar</button>';
+    m.innerHTML = `<button type="button" role="menuitem" data-menu="copiar" ${sel ? '' : 'disabled'}>Copiar</button><hr>
+      <button type="button" role="menuitem" data-gesto="menu-atualizar">Atualizar</button>
+      ${item}
+      <button type="button" role="menuitem" data-gesto="menu-reiniciar">Reiniciar</button><hr>
+      <button type="button" role="menuitem" data-gesto="menu-fechar">Fechar</button>`;
+    document.body.append(m);
+    const r = m.getBoundingClientRect();
+    m.style.left = Math.min(e.clientX, innerWidth - r.width - 6) + 'px';
+    m.style.top = Math.min(e.clientY, innerHeight - r.height - 6) + 'px';
+  });
+  document.addEventListener('click', e => {
+    const b = e.target.closest && e.target.closest('.menu-hefesto button');
+    if (!b) { fechar(); return; }
+    if (b.disabled) return;
+    if (b.dataset.menu === 'copiar') document.execCommand('copy');
+    /* Desligar pede dois cliques, como o «Parar» da aba Sistema: o primeiro troca a palavra, o segundo age. */
+    if (b.dataset.menu === 'desligar') {
+      if (b.textContent.trim() !== 'Confirma?') { setTimeout(() => { b.textContent = 'Confirma?'; }, 0); return; }
+    }
+    setTimeout(fechar, 0);
+  });
+})();
+</script>
 </body>
 </html>
