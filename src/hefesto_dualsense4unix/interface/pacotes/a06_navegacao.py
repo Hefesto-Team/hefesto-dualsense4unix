@@ -783,7 +783,7 @@ def _linhas_dos_botoes(p: dict[str, Any]) -> dict[str, str]:
 
 # `input_actions.frase_dos_atalhos_fora_da_lista` termina com.
 # "Guardar" faz `apply_button_actions` reescrever o conjunto todo a partir do de
-# fábrica (`profiles/manager.py:581`, `core/acoes_de_botao.resolver`, que nunca
+# fábrica (`profiles/manager.py:585`, `core/acoes_de_botao.resolver`, que nunca
 # cada linha faz sai de `core/acoes_de_botao`.
 # ---------------------------------------------------------------------------
 

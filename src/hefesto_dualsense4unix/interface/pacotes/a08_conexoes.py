@@ -2284,12 +2284,12 @@ def _com_o_teto(prof: Any, chave: str, policy: str | None) -> Any:
     meio da partida não é de graça), como em `_com_os_gatilhos`.
 
     "Segue o global" apaga a seção inteira (``rumble=None``), não grava ``policy=None``:
-    `_controllers_to_rumble_scales` desvia em `cfg.rumble is None` (`profiles/manager.py:2336`) e em
+    `_controllers_to_rumble_scales` desvia em `cfg.rumble is None` (`profiles/manager.py:2346`) e em
     `"policy" not in model_fields_set` (`:2481`); o primeiro é o "campo não escrito = sem opinião"
     do merge por campo (`ControllerRumbleOverride`), e `custom_mult` sem `policy='custom'` a borda
     já recusa. Igual ao global também apaga (`app/draft_config.with_controller_rumble:1193-1223`):
     `_controllers_to_rumble_scales` calcula `mult / base` e DESCARTA o fator 1,0
-    (`profiles/manager.py:2288-2321`), então o override seria opinião que o motor ignora.
+    (`profiles/manager.py:2298-2331`), então o override seria opinião que o motor ignora.
     """
     from hefesto_dualsense4unix.profiles.schema import (
         ControllerOverrides,
