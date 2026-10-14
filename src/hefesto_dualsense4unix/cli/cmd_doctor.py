@@ -101,6 +101,48 @@ def _linha_do_tique(counters: Any) -> tuple[str, str] | None:
     )
 
 
+_ROTULO_DO_TRANSPORTE = {"usb": "cabo", "bt": "rádio"}
+
+
+def _linhas_do_firmware(controles: Any) -> list[tuple[str, str]]:
+    """A versão do firmware de cada controle, do ``controller.list`` do daemon.
+
+    A-VERSAO-DO-FIRMWARE-APARECE-NO-DOCTOR-E-NUNCA-SE-ATUALIZA-DAQUI-01. O daemon lê o
+    ``update_version`` (feature 0x20) quando o controle conecta, e a versão chega aqui em
+    ``firmware``; o doctor só LÊ o que ele disse, nunca escreve nada no controle. Abaixo do
+    ``LIMITE_DA_VIBRACAO_V2`` o SDL e o jogo tratam o controle de outro jeito, e o defeito de um
+    firmware velho parece defeito do Hefesto: o aviso diz onde se atualiza. O Edge é sempre v2 e
+    tem outra numeração: ele mostra a versão e nunca avisa. Versão não lida é ``[INFO]``.
+    """
+    if not isinstance(controles, list):
+        return []
+    from hefesto_dualsense4unix.core.backend_pydualsense import LIMITE_DA_VIBRACAO_V2
+
+    linhas: list[tuple[str, str]] = []
+    for posicao, controle in enumerate(controles):
+        if not isinstance(controle, dict) or not controle.get("connected"):
+            continue
+        numero = controle.get("numero")
+        if not isinstance(numero, int) or isinstance(numero, bool):
+            numero = posicao + 1
+        via = _ROTULO_DO_TRANSPORTE.get(str(controle.get("transport")))
+        nome = f"controle {numero}" + (f" ({via})" if via else "")
+        versao = controle.get("firmware")
+        if not isinstance(versao, int) or isinstance(versao, bool):
+            linhas.append(("[INFO]", f"{nome}: a versão do firmware ainda não foi lida"))
+        elif versao < LIMITE_DA_VIBRACAO_V2 and not controle.get("edge"):
+            linhas.append((
+                "[WARN]",
+                f"{nome}: firmware 0x{versao:04x}, anterior ao 0x{LIMITE_DA_VIBRACAO_V2:04x}, a "
+                "partir do qual o SDL trata o controle de outro jeito; um defeito dele pode ser "
+                "do firmware e não do Hefesto. Atualize pelo PS5 ou pelo aplicativo da Sony no "
+                "Windows: o Hefesto nunca atualiza firmware",
+            ))
+        else:
+            linhas.append(("[ OK ]", f"{nome}: firmware 0x{versao:04x}"))
+    return linhas
+
+
 async def _daemon_checks() -> list[tuple[str, str]]:
     """Checks que só o daemon conhece (via IPC). Retorna [(tag, mensagem)]."""
     rows: list[tuple[str, str]] = []
@@ -127,6 +169,15 @@ async def _daemon_checks() -> list[tuple[str, str]]:
             )
             if linha_do_tique is not None:
                 rows.append(linha_do_tique)
+            try:
+                controles = await client.call("controller.list")
+            except IpcError:
+                controles = None
+            rows.extend(
+                _linhas_do_firmware(
+                    controles.get("controllers") if isinstance(controles, dict) else None
+                )
+            )
     except IpcError as exc:
         from hefesto_dualsense4unix.app.ipc_bridge import prazo_vencido
 

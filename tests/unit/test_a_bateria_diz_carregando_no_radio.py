@@ -92,6 +92,7 @@ def _backend(handle: Any) -> PyDualSenseController:
     backend = PyDualSenseController.__new__(PyDualSenseController)
     backend._handles = {"aabbcc000002": handle}
     backend._primary_key = "aabbcc000002"
+    backend._firmware_por_uniq = {}
     backend._io_lock = threading.RLock()
     return backend
 

@@ -4677,7 +4677,7 @@ class PyDualSenseController(IController):
 
     def describe_controllers(self) -> list[dict[str, object]]:
         """Descreve cada controle conectado (IPC `controller.list`): `{index, connected, transport,
-        is_primary, uniq, battery_pct, battery_state}`.
+        is_primary, uniq, battery_pct, battery_state, firmware, edge}`.
 
         `index` é a POSIÇÃO em `list(self._handles)` (0 = primário), o número do seletor
         (FEAT-DSX-CONTROLLER-SELECTOR-01); `uniq` é o MAC normalizado e `battery_pct` a bateria por
@@ -4699,7 +4699,7 @@ class PyDualSenseController(IController):
                     "transport": self._detect_transport(handle) if connected else None,
                     "is_primary": key == primary,
                     "uniq": self._key_to_uniq(key),
-                    **self._carga(handle, connected),  # battery_pct + battery_state
+                    **self._carga(handle, connected), **self._o_firmware_de(key, handle),
                 }
             )
         return out
@@ -5264,6 +5264,19 @@ class PyDualSenseController(IController):
             self._recompute_primary()
             return self._primary_key != antes
 
+    def _o_firmware_de(self, key: str, handle: object) -> dict[str, object]:
+        """`{firmware, edge}` de um controle, para o `controller.list` (e o doctor).
+
+        `firmware` é o `update_version` que a conexão leu (None antes disso). Lê um dict que só a
+        conexão escreve, sem o `_io_lock` que a leitura da feature segura: o tique de estado não
+        espera por ela.
+        """
+        uniq = self._key_to_uniq(key)
+        return {
+            "firmware": self._firmware_por_uniq.get(uniq) if uniq is not None else None,
+            "edge": bool(getattr(handle, "is_edge", False)),
+        }
+
 
 #: (`battery_pct=..., battery_state=...`) e o `**self._carga(...)` no
 ESTADO_DE_CARGA: dict[int, str] = {
@@ -5277,6 +5290,7 @@ ESTADO_DE_CARGA: dict[int, str] = {
 
 
 _RELOGIO_DOS_PRAZOS: int = getattr(time, "CLOCK_BOOTTIME", time.CLOCK_MONOTONIC)
+
 
 
 def relogio_do_prazo() -> float:

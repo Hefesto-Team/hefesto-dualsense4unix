@@ -143,6 +143,7 @@ class TestOCampoExisteEChegaAoPayload:
         handle.conType = SimpleNamespace(name="USB")
         backend._handles = {"aabbcc000003": handle}
         backend._primary_key = "aabbcc000003"
+        backend._firmware_por_uniq = {}
 
         import threading
 
@@ -159,6 +160,7 @@ class TestOCampoExisteEChegaAoPayload:
         handle.connected = False
         backend._handles = {"aabbcc000003": handle}
         backend._primary_key = "aabbcc000003"
+        backend._firmware_por_uniq = {}
 
         import threading
 

@@ -121,7 +121,7 @@ dispatcher. Ela cobre o subconjunto v1 — a lista COMPLETA é a de cima.
 | `trigger.reset`     | `{side?: "left"\|"right"\|"both"}`            | `{status, aplicado_em, guardado_em}`   |
 | `led.set`           | `{rgb: [r,g,b], player_leds?: [bool]*5}`      | `{status, aplicado_em, guardado_em}`   |
 | `daemon.status`     | `{}`                                          | `{connected, battery_pct, transport, active_profile}` |
-| `controller.list`   | `{}`                                          | `{controllers: [{vid, pid, transport}]}` |
+| `controller.list`   | `{}`                                          | `{controllers: [{vid, pid, transport, firmware, edge}]}` |
 | `daemon.reload`     | `{}`                                          | `{status}`                             |
 | `mouse.emulation.set` | `{enabled?: bool, speed?: 1-12, scroll_speed?: 1-5}` | `{status, enabled}`             |
 | `native.mode.set`   | `{enabled?: bool}` (ausente = toggle)         | `{status, native_mode}`                |
