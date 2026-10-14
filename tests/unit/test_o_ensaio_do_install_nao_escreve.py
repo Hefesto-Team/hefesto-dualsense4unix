@@ -70,7 +70,28 @@ VERBOS_QUE_MUDAM = (
 PEDIDOS_DE_SENHA = ("-v", "-A")
 
 
-def _bancada(tmp_path: Path, *, com_credencial: bool = True) -> tuple[Path, Path, dict[str, str]]:
+def _sysfs_do_wifi(raiz: Path, *, com_wifi_usb: bool) -> Path:
+    """Um sysfs de mentira para o `wifi_usb.sh --lista`: com ou sem um Wi-Fi no barramento USB.
+
+    O plano do vigia depende de a máquina ter dongle (fc05e3599); o ensaio não pode
+    perguntar isso ao `/sys` de quem roda a régua.
+    """
+    usb = raiz / "bus" / "usb"
+    usb.mkdir(parents=True)
+    (raiz / "class" / "net").mkdir(parents=True)
+    if com_wifi_usb:
+        aparelho = raiz / "devices" / "usb1" / "1-1" / "1-1:1.0"
+        aparelho.mkdir(parents=True)
+        (aparelho / "subsystem").symlink_to(usb)
+        interface = raiz / "class" / "net" / "wlx0"
+        (interface / "wireless").mkdir(parents=True)
+        (interface / "device").symlink_to(aparelho)
+    return raiz
+
+
+def _bancada(
+    tmp_path: Path, *, com_credencial: bool = True, com_wifi_usb: bool = False
+) -> tuple[Path, Path, dict[str, str]]:
     """Um lar de mentira, um PATH só de dublês, e o ambiente que os usa."""
     lar = tmp_path / "lar"
     lar.mkdir()
@@ -101,13 +122,18 @@ def _bancada(tmp_path: Path, *, com_credencial: bool = True) -> tuple[Path, Path
     ambiente["XDG_STATE_HOME"] = str(lar / ".local" / "state")
     ambiente["XDG_CACHE_HOME"] = str(lar / ".cache")
     ambiente["XDG_DATA_HOME"] = str(lar / ".local" / "share")
+    ambiente["HEFESTO_WIFI_SYSFS"] = str(
+        _sysfs_do_wifi(tmp_path / "sys", com_wifi_usb=com_wifi_usb)
+    )
     return lar, diario, ambiente
 
 
 def _roda_ensaio(
-    tmp_path: Path, *flags: str, com_credencial: bool = True
+    tmp_path: Path, *flags: str, com_credencial: bool = True, com_wifi_usb: bool = False
 ) -> tuple[subprocess.CompletedProcess[str], Path, Path]:
-    lar, diario, ambiente = _bancada(tmp_path, com_credencial=com_credencial)
+    lar, diario, ambiente = _bancada(
+        tmp_path, com_credencial=com_credencial, com_wifi_usb=com_wifi_usb
+    )
     resultado = subprocess.run(
         [BASH, str(INSTALL_PATH), "--dry-run", *flags],
         capture_output=True,

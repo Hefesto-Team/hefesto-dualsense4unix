@@ -80,7 +80,7 @@ class TestPeloAto:
     def test_sem_flag_o_plano_tem_o_vigia_e_a_trava_e_nao_tem_o_uhid(
         self, tmp_path: Path
     ) -> None:
-        resultado, _lar, _diario = _roda_ensaio(tmp_path)
+        resultado, _lar, _diario = _roda_ensaio(tmp_path, com_wifi_usb=True)
         faria = _linhas_faria(resultado.stdout)
         assert "hefesto-wifi-usb-vigia.timer" in faria, resultado.stdout[-3000:]
         assert "/etc/tmpfiles.d/hefesto-dualsense4unix-radio.conf" in faria
@@ -89,8 +89,15 @@ class TestPeloAto:
         )
         assert "uhid com contrapressão (opt-in: --uhid-contrapressao)" in resultado.stdout
 
+    def test_sem_dongle_o_vigia_sai_do_plano_e_diz_o_porque(self, tmp_path: Path) -> None:
+        """O vigia só onde há Wi-Fi USB: D-1310-O-WIFI-USB-E-O-RTW88-SO-COM-O-ADAPTADOR-PRESENTE."""
+        resultado, _lar, _diario = _roda_ensaio(tmp_path, com_wifi_usb=False)
+        faria = _linhas_faria(resultado.stdout)
+        assert "hefesto-wifi-usb-vigia" not in faria, faria
+        assert "nenhuma interface Wi-Fi sob o barramento USB" in resultado.stdout
+
     def test_com_no_wifi_usb_o_vigia_sai_do_plano(self, tmp_path: Path) -> None:
-        resultado, _lar, _diario = _roda_ensaio(tmp_path, "--no-wifi-usb")
+        resultado, _lar, _diario = _roda_ensaio(tmp_path, "--no-wifi-usb", com_wifi_usb=True)
         faria = _linhas_faria(resultado.stdout)
         assert "hefesto-wifi-usb-vigia" not in faria, (
             "com --no-wifi-usb o ensaio ainda promete o vigia do Wi-Fi USB:\n" + faria
