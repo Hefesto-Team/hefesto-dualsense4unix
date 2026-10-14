@@ -2327,17 +2327,11 @@
 .at-pc .btn.configurar{flex:0 0 auto;height:28px;display:inline-flex;align-items:center;padding:0 14px;font-size:11.5px;margin-left:auto;text-decoration:none}
 .dois-donos{display:block;font-size:10.5px;color:var(--texto-mudo);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tab tr.dois td{height:34px}
-  /* Rodada 3 (13/10), ajustada em 14/10: o quadro leva o título «Navegação»; sem «i»: a explicação aparece na faixa do título
-     quando o mouse fica parado sobre ela (meio segundo), onde o «i» morava, e no foco do teclado nela; some quando sai. Não cobre
-     nada. Sobre o quadro inteiro ela ficaria acesa o tempo todo, porque o quadro é a aba inteira. */
+  /* Rodada 3, volta 2 (14/10): o título é só «Navegação»; a explicação é a dica da casa (data-dica) sobre a palavra,
+     no mouse e no foco do teclado, como as outras. A faixa de texto comprido saiu. */
   .nav2{position:relative}
   .nav-topo{display:flex;align-items:center;gap:12px;padding:12px 16px 0;position:relative;min-height:36px}
-  .nav-expl{flex:1 1 auto;min-width:0;margin:0;padding:0;font:500 12px/1.35 'Space Grotesk',system-ui,sans-serif;color:var(--texto-suave);
-    opacity:0;transition:opacity .12s;pointer-events:none}
-  .nav-expl p{margin:0}
-  .nav-topo:hover .nav-expl{opacity:1;transition-delay:.5s}
-  .nav-topo:focus-visible{outline:none}
-  .nav-topo:focus .nav-expl{opacity:1;transition-delay:0s}
+  .nav-topo .quadro-titulo:focus-visible{outline:2px solid var(--cyan,#8be9fd);outline-offset:3px;border-radius:4px}
   /* Rodada 3: a aba já passava 74px da altura em 1212x740 (e 5px em 1212x809); as linhas se apertam
      em tela baixa para o título caber sem rolar. */
   @media (max-height:860px){.nav2 .tab.bt2 td{height:30px!important} .nav2 .tab.bt2 select{height:26px} .nav2 .op2{height:31px}
@@ -2588,9 +2582,8 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 
   <div class="miolo">
     <div class="quadro estica nav2" data-quem="hefesto" data-dica-area="O controle vira mouse e teclado do computador">
-      <div class="nav-topo" data-r3="26" tabindex="0" aria-describedby="nav-expl">
-        <span class="quadro-titulo">Navegação</span>
-        <div class="nav-expl" id="nav-expl" role="note"><p>Aqui o controle vira mouse e teclado do computador: cada botão faz o que está na lista. Em «Quem navega» você escolhe se quem traduz é o Hefesto ou a Steam.</p></div>
+      <div class="nav-topo" data-r3="26">
+        <span class="quadro-titulo" tabindex="0" data-dica="O controle vira mouse e teclado do computador. Em «Quem navega», você escolhe quem traduz.">Navegação</span>
       </div>
       <div class="quadro-corpo">
         <div class="nav2-grade">
