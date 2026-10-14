@@ -1327,6 +1327,7 @@ _ensaio_camada() {
             dkms-rtw88)       _nao_faria "módulo DKMS hefesto-rtw88-usb (distro somente leitura): $(_efeito_so_leitura rtw88)"; return 0 ;;
             dkms-playstation) _nao_faria "módulo DKMS hefesto-hid-playstation (distro somente leitura): $(_efeito_so_leitura playstation)"; return 0 ;;
             dkms-uhid)        _nao_faria "uhid com contrapressão (distro somente leitura): $(_efeito_so_leitura uhid)"; return 0 ;;
+            dkms-usb-f-hid)   _nao_faria "módulo DKMS hefesto-usb-f-hid (distro somente leitura): $(_efeito_so_leitura usb_f_hid)"; return 0 ;;
             initramfs)        _nao_faria "regenerar o initramfs (distro somente leitura): $(_efeito_so_leitura initramfs)"; return 0 ;;
             ucm)              _nao_faria "perfil UCM do DualSense (distro somente leitura): $(_efeito_so_leitura ucm)"; return 0 ;;
         esac
@@ -1481,6 +1482,14 @@ _ensaio_camada() {
             _faria_root "compilar e instalar o módulo DKMS hefesto-uhid (só nos kernels conferidos do dkms.conf; fora deles o de fábrica assume)"
             _faria_root "instalar /etc/modprobe.d/hefesto-uhid.conf (backpressure=$(opcao_do_modprobe "${ROOT_DIR}/assets/modprobe.d/hefesto-uhid.conf" backpressure)) e, com o patchado já carregado, ligar a contrapressão a quente em /sys/module/uhid/parameters/backpressure (o uhid NUNCA é recarregado)"
             ;;
+        dkms-usb-f-hid)
+            if [[ "${NO_DKMS}" -eq 1 ]]; then
+                _nao_faria "módulo DKMS hefesto-usb-f-hid (--no-dkms)"
+                return 0
+            fi
+            _faria_root "compilar e instalar o módulo DKMS hefesto-usb-f-hid (a resposta do GET_REPORT dos pads USB virtuais; só nos kernels conferidos do dkms.conf)"
+            _faria_root "trocar o usb_f_hid carregado sem a marca get_report_sized: o daemon solta os pads, modprobe -r usb_f_hid e modprobe usb_f_hid, e o daemon sobe de novo (com gadget alheio, só no próximo boot)"
+            ;;
         ucm)
             if [[ "${NO_UCM}" -eq 1 ]]; then
                 _nao_faria "perfil UCM do DualSense (--no-ucm)"
@@ -1543,6 +1552,7 @@ _ENSAIO_CURAS_DE_HOST=(
     "install_desempenho_host:desempenho"
     "install_dkms_hid_playstation_host:dkms-playstation"
     "install_dkms_uhid_host:dkms-uhid"
+    "install_dkms_usb_f_hid_host:dkms-usb-f-hid"
     "install_ucm_dualsense_host:ucm"
     "flush_initramfs_host:initramfs"
 )
@@ -1928,6 +1938,11 @@ if [[ "${FORMAT}" != "native" ]]; then
     # do initramfs, que é um só para todos os módulos.
     step "dkms-u" "uhid com contrapressão (OPT-IN: --uhid-contrapressao)"
     install_dkms_uhid_host
+    # O-F-HID-FECHA-A-RESPOSTA: o usb_f_hid dos pads USB virtuais é mudança de
+    # KERNEL, ortogonal ao formato. Mesma função do passo 3k3 do nativo; ANTES
+    # do flush do initramfs.
+    step "dkms-f" "usb_f_hid corrigido (DKMS: a resposta do GET_REPORT dos pads USB virtuais)"
+    install_dkms_usb_f_hid_host
     # INITRAMFS-01: um flush só, DEPOIS de todos os DKMS (regenerar por módulo
     # custaria dezenas de segundos e ~140 MB de escrita cada). No-op se nenhum
     # módulo ficou staged.
@@ -3163,6 +3178,18 @@ install_dkms_hid_playstation_host
 # O produto está correto sem ele. Razão completa em assets/dkms/uhid/README.md.
 step "3k2" "uhid com contrapressão (OPT-IN: --uhid-contrapressao)"
 install_dkms_uhid_host
+
+# ---------------------------------------------------------------------------
+# 3k3. DKMS usb_f_hid — DEFAULT, sem flag (opt-out --no-dkms)
+# ---------------------------------------------------------------------------
+# O-F-HID-FECHA-A-RESPOSTA, 14/10/2026. O `usb_f_hid` de fábrica responde o
+# GET_REPORT sempre com 64 bytes e sem o pacote vazio; o `HIDIOCGFEATURE(128)`
+# do Wine e do SDL espera 5 s por feature, e com 4 pads o `winebus` estoura o
+# prazo do `services.exe`: o jogo no Proton sobe sem controle. Diferente dos
+# vizinhos, este TROCA A QUENTE quando o carregado não tem a marca, porque só
+# os pads do Hefesto o usam. Razão completa em assets/dkms/usb-f-hid/README.md.
+step "3k3" "usb_f_hid corrigido (DKMS: a resposta do GET_REPORT dos pads USB virtuais)"
+install_dkms_usb_f_hid_host
 
 # ---------------------------------------------------------------------------
 # 3l. Regenerar o initramfs (INITRAMFS-01) — DEFAULT, sem flag

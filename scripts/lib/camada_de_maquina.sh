@@ -928,6 +928,7 @@ _efeito_so_leitura() {
         nintendo)    printf 'o controle da Nintendo pode não subir pelo rádio (vale o driver de fábrica)' ;;
         rtw88)       printf 'o dongle Wi-Fi USB não ganha a cura do fantasma USB (vale o driver de fábrica)' ;;
         uhid)        printf 'o uhid de fábrica segue, sem a contrapressão' ;;
+        usb_f_hid)   printf 'o usb_f_hid de fábrica segue: o jogo no Proton espera 5 s por pedido de feature e pode perder os controles virtuais' ;;
         initramfs)   printf 'nenhum módulo da casa entra, então não há o que regenerar' ;;
         ucm)         printf 'a vibração dos jogos da Sony pelo cabo depende do perfil UCM que a própria imagem trouxer' ;;
     esac
@@ -1225,6 +1226,122 @@ install_dkms_hid_playstation_host() {
         printf '      o patchado vale no próximo boot (reconectar NÃO troca módulo carregado)\n'
     else
         printf '      hid_playstation descarregado — o patchado entra sozinho na próxima conexão\n'
+    fi
+    return 0
+}
+
+# O-F-HID-FECHA-A-RESPOSTA (14/10/2026): o `usb_f_hid` patchado, a função HID
+# dos pads USB virtuais. O de fábrica responde o GET_REPORT sempre com 64 bytes
+# e sem o pacote vazio, e o `HIDIOCGFEATURE(128)` do Wine e do SDL espera 5 s
+# por feature: com 4 pads o `winebus` estoura o prazo do `services.exe` e o jogo
+# no Proton sobe sem controle. DEFAULT ON, mesmo portão `--no-dkms`. A razão
+# completa está em assets/dkms/usb-f-hid/README.md.
+#
+# A TROCA A QUENTE mora aqui, e não no `dkms_lib.sh`, cujo contrato proíbe
+# `modprobe` e `rmmod`. Ela é possível neste módulo, e não nos vizinhos, porque
+# quem o usa é só o gadget dos pads: o daemon solta os pads e nada mais cai.
+install_dkms_usb_f_hid_host() {
+    _pula_por_so_leitura usb_f_hid && return 0
+    if [[ "${NO_DKMS}" -eq 1 ]]; then
+        printf '      pulado (--no-dkms)\n'
+        return 0
+    fi
+    if ! command -v sudo >/dev/null 2>&1; then
+        warn "sudo ausente — usb_f_hid patchado NÃO instalado (o de fábrica continua: o jogo no Proton espera 5 s por pedido de feature)"
+        return 0
+    fi
+    if ! sudo -n true 2>/dev/null; then
+        warn "sudo recusado — usb_f_hid patchado pulado (re-execute ./install.sh)"
+        return 0
+    fi
+    # shellcheck source=scripts/dkms_lib.sh
+    source "${ROOT_DIR}/scripts/dkms_lib.sh"
+    dkms_warn_secureboot_once
+    local _fhid_src="${ROOT_DIR}/assets/dkms/usb-f-hid"
+    dkms_install_patched_module hefesto-usb-f-hid \
+        "$(dkms_pkg_version "${_fhid_src}")" "${_fhid_src}" usb_f_hid
+    if ! dkms_module_from_updates usb_f_hid; then
+        warn "usb_f_hid patchado NÃO ficou staged (veja avisos acima; fora dos KERNELS_VALIDADOS de assets/dkms/usb-f-hid/patch/BASELINE o DKMS pula) — o de fábrica continua, e o jogo no Proton espera 5 s por pedido de feature"
+        return 0
+    fi
+    trocar_usb_f_hid_a_quente
+    return 0
+}
+
+# A marca do curado: `get_report_sized`, só de leitura e sempre Y. O de fábrica
+# não tem parâmetro nenhum.
+_usb_f_hid_tem_a_marca() {
+    [[ -e "${HEFESTO_SYS_MODULE:-/sys/module}/usb_f_hid/parameters/get_report_sized" ]]
+}
+
+_usb_f_hid_refcnt() {
+    cat "${HEFESTO_SYS_MODULE:-/sys/module}/usb_f_hid/refcnt" 2>/dev/null || printf '?'
+}
+
+# IDEMPOTENTE: com a marca no carregado, não toca; descarregado, o próximo
+# carregamento já é o curado. Sem a marca, troca quando só os pads do Hefesto o
+# seguram: para o daemon de usuário, o broker desmonta os `hefesto-pad-*` no EOF
+# da conexão, o refcnt chega a 0 dentro do prazo, troca e sobe o daemon se ele
+# estava no ar. Com gadget alheio, ou com o refcnt preso, não troca: o curado
+# vale no próximo boot, e o fecho diz «reinicie».
+trocar_usb_f_hid_a_quente() {
+    local _sys="${HEFESTO_SYS_MODULE:-/sys/module}"
+    local _gadgets="${HEFESTO_USB_GADGET_ROOT:-/sys/kernel/config/usb_gadget}"
+    local _prazo="${HEFESTO_USB_F_HID_PRAZO_S:-15}"
+    local _servico="hefesto-dualsense4unix.service"
+    local _pendente="a função HID dos pads USB virtuais (usb_f_hid)"
+    if [[ ! -d "${_sys}/usb_f_hid" ]]; then
+        printf '      usb_f_hid descarregado — o curado entra no próximo carregamento\n'
+        return 0
+    fi
+    if _usb_f_hid_tem_a_marca; then
+        printf '      usb_f_hid curado JÁ carregado (get_report_sized visível) — nada a trocar\n'
+        return 0
+    fi
+    local _g _nome _alheios="" _nossos=0
+    for _g in "${_gadgets}"/*/; do
+        [[ -d "${_g}" ]] || continue
+        compgen -G "${_g}functions/hid.*" >/dev/null || continue
+        _nome="$(basename "${_g}")"
+        case "${_nome}" in
+            hefesto-pad-*) _nossos=$((_nossos + 1)) ;;
+            *) _alheios="${_alheios:+${_alheios} }${_nome}" ;;
+        esac
+    done
+    if [[ -n "${_alheios}" ]]; then
+        warn "o usb_f_hid de fábrica serve um gadget que não é do Hefesto (${_alheios}) — não troco; o curado vale no próximo boot"
+        anotar_reinicio_pendente "${_pendente}"
+        return 0
+    fi
+    local _daemon_parado=0 _espera=0
+    if [[ "$(_usb_f_hid_refcnt)" != "0" ]]; then
+        if [[ "${_nossos}" -eq 0 ]]; then
+            warn "o usb_f_hid de fábrica está preso (refcnt $(_usb_f_hid_refcnt)) sem gadget do Hefesto — não troco; o curado vale no próximo boot"
+            anotar_reinicio_pendente "${_pendente}"
+            return 0
+        fi
+        if systemctl --user is-active --quiet "${_servico}" 2>/dev/null; then
+            printf '      %s pad(s) USB virtual(is) no ar — paro o daemon para o broker soltá-los\n' "${_nossos}"
+            systemctl --user stop "${_servico}" 2>/dev/null && _daemon_parado=1
+        fi
+        while [[ "$(_usb_f_hid_refcnt)" != "0" && "${_espera}" -lt $((_prazo * 2)) ]]; do
+            sleep 0.5
+            _espera=$((_espera + 1))
+        done
+    fi
+    if [[ "$(_usb_f_hid_refcnt)" != "0" ]]; then
+        warn "os pads USB virtuais não se soltaram em ${_prazo} s (refcnt $(_usb_f_hid_refcnt)) — não troco; o curado vale no próximo boot"
+        anotar_reinicio_pendente "${_pendente}"
+    elif sudo modprobe -r usb_f_hid 2>/dev/null && sudo modprobe usb_f_hid 2>/dev/null \
+         && _usb_f_hid_tem_a_marca; then
+        printf '      usb_f_hid trocado a quente: o curado já responde o GET_REPORT no tamanho certo\n'
+    else
+        warn "não consegui trocar o usb_f_hid a quente — o curado vale no próximo boot"
+        anotar_reinicio_pendente "${_pendente}"
+    fi
+    if [[ "${_daemon_parado}" -eq 1 ]]; then
+        systemctl --user start "${_servico}" 2>/dev/null \
+            || warn "não consegui subir o ${_servico} de volta — systemctl --user start ${_servico}"
     fi
     return 0
 }
