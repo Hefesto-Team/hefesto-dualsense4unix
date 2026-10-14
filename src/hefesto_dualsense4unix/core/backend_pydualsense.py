@@ -5209,14 +5209,24 @@ class PyDualSenseController(IController):
 
 
     def _cartas_locked(self, chaves: list[str]) -> dict[str, int]:
-        """A carta de cada key de `chaves` — vazio quando a mesa não tem carta."""
+        """A carta de cada key de `chaves` — vazio quando a mesa não tem carta.
+
+        A lâmpada acesa é a carta; a fila gravada só decide quando NINGUÉM tem
+        lâmpada. OS-QUATRO-EM-HARMONIA-01, item 2 (medido 14/10/2026, 10h42m09):
+        com um recém-chegado ainda sem lâmpada, a carta de TODOS caía para a
+        fila gravada, a escala de outra sessão, e o P1 sentado na lâmpada 1
+        passava a ser o 3º da fila. O posto pulou três vezes em 3 s, e o co-op
+        recriou os pads com o jogo aberto. Quem não tem lâmpada fica DEPOIS de
+        quem tem, na ordem da fila entre eles.
+        """
         uniqs = {k: self._key_to_uniq(k) for k in chaves}
         lampadas = {k: self._numero_do_slot(u) for k, u in uniqs.items()}
-        if chaves and all(n is not None for n in lampadas.values()):
-            return {k: n for k, n in lampadas.items() if n is not None}
+        acesas = {k: n for k, n in lampadas.items() if n is not None}
+        if chaves and len(acesas) == len(chaves):
+            return acesas
         consulta = getattr(self._auto_output_provider, "posto_na_fila", None)
         if not callable(consulta):
-            return {}
+            return self._depois_das_acesas(chaves, acesas, {})
         postos: dict[str, int | None] = {}
         for chave, uniq in uniqs.items():
             posto: int | None = None
@@ -5226,11 +5236,28 @@ class PyDualSenseController(IController):
                     if isinstance(bruto, int) and not isinstance(bruto, bool):
                         posto = bruto
             postos[chave] = posto
+        if acesas:
+            return self._depois_das_acesas(chaves, acesas, postos)
         conhecidos = [p for p in postos.values() if p is not None]
         if not conhecidos:
             return {}
         fim = max(conhecidos) + 1
         return {k: (p if p is not None else fim) for k, p in postos.items()}
+
+    @staticmethod
+    def _depois_das_acesas(
+        chaves: list[str], acesas: dict[str, int], postos: dict[str, int | None]
+    ) -> dict[str, int]:
+        """As lâmpadas acesas ficam; quem não tem lâmpada vem depois, na ordem da fila."""
+        if not acesas:
+            return {}
+        faltam = [k for k in chaves if k not in acesas]
+        na_fila = sorted(
+            faltam,
+            key=lambda k: (postos.get(k) is None, postos.get(k) or 0, faltam.index(k)),
+        )
+        fim = max(acesas.values()) + 1
+        return {**acesas, **{k: fim + i for i, k in enumerate(na_fila)}}
 
     def _na_ordem_da_carta_locked(self, chaves: list[str]) -> list[str]:
         """`chaves` na ordem da carta; o empate e a falta de carta ficam na de entrada."""

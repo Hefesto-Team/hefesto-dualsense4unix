@@ -262,7 +262,11 @@ def ancora_do_gadget(uniq: str) -> Ancora | None:
     o controle. None = o aparelho não tem gadget (o pad é uhid), e a âncora
     emprestada segue valendo para ele.
     """
-    interface = pad_usb.interface_do_aparelho(str(uniq or ""))
+    return ancora_da_interface(pad_usb.interface_do_aparelho(str(uniq or "")))
+
+
+def ancora_da_interface(interface: str | None) -> Ancora | None:
+    """A âncora de uma interface de gadget (o ``usb_device`` é o pai dela)."""
     if not interface:
         return None
     return Ancora(syspath=os.path.dirname(interface), declarado=interface)

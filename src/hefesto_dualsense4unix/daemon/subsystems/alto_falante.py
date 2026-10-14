@@ -1839,13 +1839,14 @@ class AltoFalanteSubsystem:
         )
         from hefesto_dualsense4unix.integrations.endpoint_de_haptica import (
             EndpointDeHaptica,
+            ancora_da_interface,
             ancora_do_gadget,
             ancoras,
             distribuir_ancoras,
             endpoints_de_pe_ou_nada,
             varrer_endpoints_orfaos,
         )
-        from hefesto_dualsense4unix.integrations.pad_usb import gadget_a_caminho
+        from hefesto_dualsense4unix.integrations.pad_usb import a_ancora_ou_a_espera
 
         vivos: dict[str, str] = {}
         for c in controles:
@@ -1919,15 +1920,26 @@ class AltoFalanteSubsystem:
                 logger.info("haptica_endpoint_reancorado", controle=marca, ancora=posta.syspath)
             if posta is None or not uniq:
                 continue
-            if atual is None and marca not in proprias and gadget_a_caminho(uniq):
+            if atual is None:
                 # O-PAR-DO-PAD: o endpoint NASCE casado. O gadget do pad deste
                 # aparelho (ou o do pad que ainda não sabe de quem é) montou e a
                 # âncora dele está a caminho; nascer agora seria nascer numa
                 # emprestada, e com o jogo tocando nele não se reancora mais. O
                 # prazo da montagem limita a espera: o pad que não enumera volta
-                # ao uhid e o aparelho empresta, como sempre.
-                logger.debug("haptica_endpoint_espera_o_gadget", controle=marca)
-                continue
+                # ao uhid e o aparelho empresta, como sempre. A pergunta é UMA,
+                # na hora de nascer (OS-QUATRO-EM-HARMONIA-01, item 2): a foto
+                # das ``proprias`` do começo da volta envelhece no meio dela.
+                interface, espera = a_ancora_ou_a_espera(uniq)
+                propria = ancora_da_interface(interface)
+                if propria is not None:
+                    posta = propria
+                elif espera:
+                    logger.debug("haptica_endpoint_espera_o_gadget", controle=marca)
+                    continue
+                else:
+                    logger.info(
+                        "haptica_endpoint_nasce_emprestado", controle=marca, ancora=posta.syspath
+                    )
             endpoint = EndpointDeHaptica(uniq=uniq, ancora=posta)
             if endpoint.iniciar():
                 self._endpoints[marca] = endpoint

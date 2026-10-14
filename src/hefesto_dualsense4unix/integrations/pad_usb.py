@@ -420,7 +420,7 @@ def anotar_gadget_a_caminho(serial: str, identidade: str, prazo_s: float) -> Non
 
     É a ordem que faz o endpoint de háptica NASCER casado: enquanto o gadget do
     aparelho está a caminho, o som não cria o endpoint dele numa âncora
-    emprestada (:func:`gadget_a_caminho`). ``identidade`` vazia = o pad ainda
+    emprestada (:func:`a_ancora_ou_a_espera`). ``identidade`` vazia = o pad ainda
     não sabe de quem é, e espera por todos até saber ou vencer o prazo. A
     identidade que chega depois troca o dono e mantém o prazo da montagem.
     """
@@ -508,24 +508,40 @@ def _por_decidir_locked(chave: str, momento: float) -> bool:
     return momento - primeira < _POR_DECIDIR_S
 
 
-def gadget_a_caminho(identidade: str, *, agora: float | None = None) -> bool:
-    """Há gadget montado, ainda sem âncora, que pode ser o do aparelho ``identidade``?
+def _a_caminho_locked(chave: str, momento: float) -> bool:
+    """Há gadget montado, ainda sem âncora, que pode ser o do aparelho ``chave``? Com a trava.
 
     True para o gadget do próprio aparelho e para o que ainda não sabe de quem
     é; o que venceu o prazo não conta (o pad que não enumera volta ao uhid, e o
     aparelho fica com a âncora emprestada de sempre). True também enquanto o
     co-op não decidiu o pad deste aparelho: ele o pôs na mesa e o pad não
     nasceu (:func:`anotar_pad_a_caminho`), ou está no ar e ainda não o viu (o
-    controle que entra com o jogo aberto, entre o sysfs e o ``sync``).
+    controle que entra com o jogo aberto, entre o sysfs e o ``sync``). Quem
+    pergunta é :func:`a_ancora_ou_a_espera`.
+    """
+    for vencido in [s for s, (_i, prazo) in _A_CAMINHO.items() if momento >= prazo]:
+        del _A_CAMINHO[vencido]
+    if any(dono in ("", chave) for dono, _prazo in _A_CAMINHO.values()):
+        return True
+    return _por_decidir_locked(chave, momento)
+
+
+def a_ancora_ou_a_espera(identidade: str, *, agora: float | None = None) -> tuple[str | None, bool]:
+    """A interface do gadget do aparelho, ou se ele está a caminho, numa pergunta só.
+
+    OS-QUATRO-EM-HARMONIA-01, item 2 (14/10/2026): duas perguntas em momentos
+    diferentes da volta deixavam o gadget que enumerava no meio sem âncora e sem
+    espera, e o endpoint nascia na emprestada. Sob a mesma trava não há meio
+    termo: ``(interface, False)``; ``(None, True)`` = espere; ``(None, False)`` =
+    o aparelho não tem gadget.
     """
     chave = _so_hex(identidade or "")
     momento = time.monotonic() if agora is None else agora
     with _TRAVA:
-        for vencido in [s for s, (_i, prazo) in _A_CAMINHO.items() if momento >= prazo]:
-            del _A_CAMINHO[vencido]
-        if any(dono in ("", chave) for dono, _prazo in _A_CAMINHO.values()):
-            return True
-        return _por_decidir_locked(chave, momento)
+        interface = _INTERFACE_DO_APARELHO.get(chave) if chave else None
+        if interface:
+            return interface, False
+        return None, _a_caminho_locked(chave, momento)
 
 
 def interface_do_aparelho(identidade: str) -> str | None:
@@ -620,6 +636,7 @@ __all__ = [
     "SERIAL_PREFIXO",
     "VPAD_HID_PHYS",
     "VPAD_UNIQ_PREFIXO",
+    "a_ancora_ou_a_espera",
     "a_mesa_saiu",
     "a_mesa_viu",
     "anotar_contrato_que_faltou",
@@ -635,7 +652,6 @@ __all__ = [
     "encurtar_a_caminho",
     "escrever_get_report",
     "esquecer_gadget",
-    "gadget_a_caminho",
     "gadget_chegou",
     "hidraw_do_gadget",
     "interface_do_aparelho",

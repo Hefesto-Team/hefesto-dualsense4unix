@@ -88,15 +88,15 @@ class TestAIdentidadeQueChegaDepois:
         pad = bancada.pad(identity=None)
         try:
             assert pad.start()
-            assert pad_usb.gadget_a_caminho(IDENTIDADE) is True
+            assert pad_usb.a_ancora_ou_a_espera(IDENTIDADE)[1] is True
             assert pad.ancorar_no_aparelho(IDENTIDADE) is True
             assert pad_usb.interface_do_aparelho(IDENTIDADE) is None
-            assert pad_usb.gadget_a_caminho(IDENTIDADE) is True
-            assert pad_usb.gadget_a_caminho(OUTRA) is False
+            assert pad_usb.a_ancora_ou_a_espera(IDENTIDADE)[1] is True
+            assert pad_usb.a_ancora_ou_a_espera(OUTRA)[1] is False
             bancada.enumerado = ENUMERADO
             assert bancada.esperar(lambda: pad.is_bound)
             assert pad_usb.interface_do_aparelho(IDENTIDADE) == INTERFACE_DO_GADGET
-            assert pad_usb.gadget_a_caminho(IDENTIDADE) is False
+            assert pad_usb.a_ancora_ou_a_espera(IDENTIDADE)[1] is False
         finally:
             pad.stop()
 
@@ -136,9 +136,9 @@ class TestAIdentidadeQueChegaDepois:
     ) -> None:
         pad = bancada.pad(identity=None)
         assert pad.start()
-        assert pad_usb.gadget_a_caminho(OUTRA) is True
+        assert pad_usb.a_ancora_ou_a_espera(OUTRA)[1] is True
         pad.stop()
-        assert pad_usb.gadget_a_caminho(OUTRA) is False
+        assert pad_usb.a_ancora_ou_a_espera(OUTRA)[1] is False
 
     def test_o_dono_que_chega_depois_nao_renova_o_prazo_da_montagem(self) -> None:
         """O prazo é o da montagem: a identidade que chega troca o dono, não o relógio.
@@ -152,8 +152,8 @@ class TestAIdentidadeQueChegaDepois:
         pad_usb.anotar_gadget_a_caminho("hefesto-pad-01-02fe00000001", "", 1.0)
         pad_usb.anotar_gadget_a_caminho("hefesto-pad-01-02fe00000001", IDENTIDADE, 60.0)
         depois = time.monotonic() + 2.0
-        assert pad_usb.gadget_a_caminho(IDENTIDADE) is True
-        assert pad_usb.gadget_a_caminho(IDENTIDADE, agora=depois) is False
+        assert pad_usb.a_ancora_ou_a_espera(IDENTIDADE)[1] is True
+        assert pad_usb.a_ancora_ou_a_espera(IDENTIDADE, agora=depois)[1] is False
 
 
 # --- 2. A identidade que muda --------------------------------------------------
@@ -328,7 +328,7 @@ def test_com_o_gadget_a_caminho_o_endpoint_nasce_casado(
 ) -> None:
     """A ordem: o pad monta, a âncora registra, e SÓ ENTÃO o endpoint nasce.
 
-    MORDIDA: em ``_casar_as_pontes``, tire o ``gadget_a_caminho`` — o endpoint
+    MORDIDA: em ``_casar_as_pontes``, tire a espera do ``a_ancora_ou_a_espera`` — o endpoint
     nasce na emprestada, e a âncora do gadget vira uma reancoragem (uma queda).
     """
     mesa = _mesa_com_gadgets(monkeypatch, tmp_path)
@@ -343,6 +343,51 @@ def test_com_o_gadget_a_caminho_o_endpoint_nasce_casado(
     mesa.volta(controle)
     assert h._ancora_do_aparelho(mesa.servidor, uniq) == _interface(n)
     assert mesa.servidor.quedas == []
+
+
+@pytest.mark.parametrize("transporte", ["bt", "cabo"])
+@pytest.mark.parametrize("uniq", list(_PADS), ids=["primeiro", "quarto"])
+def test_o_gadget_que_enumera_no_meio_da_volta_nao_empresta(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, transporte: str, uniq: str
+) -> None:
+    """OS-QUATRO-EM-HARMONIA-01, item 2: a âncora chega ENTRE as duas perguntas da volta.
+
+    Medido em 14/10/2026 (10h42m26): o gadget do White enumerou 93 ms antes de o
+    endpoint dele nascer na ``usb1/1-3``. A volta fotografou as âncoras próprias
+    no começo, o gadget registrou a dele e saiu do «a caminho», e a pergunta do
+    meio já dizia «não espera». MORDIDA: em ``_casar_as_pontes``, pergunte a espera
+    contra as ``proprias`` do começo da volta (``marca not in proprias``) em vez da
+    âncora que ``a_ancora_ou_a_espera`` devolve, e o endpoint nasce na emprestada.
+    """
+    mesa = _mesa_com_gadgets(monkeypatch, tmp_path)
+    n = _PADS[uniq]
+    serial = pad_usb.serial_do_pad(f"02:fe:00:80:00:0{n}")
+    pad_usb.anotar_gadget_a_caminho(serial, uniq, 30.0)
+    distribuir = eh.distribuir_ancoras
+
+    def _enumera_no_meio(*a: Any, **k: Any) -> Any:
+        pad_usb.registrar_gadget(uniq, _interface(n))
+        pad_usb.gadget_chegou(serial)
+        return distribuir(*a, **k)
+
+    monkeypatch.setattr(eh, "distribuir_ancoras", _enumera_no_meio)
+    controle = _chega(mesa, uniq, transporte)
+    mesa.volta(controle)
+    assert h._ancora_do_aparelho(mesa.servidor, uniq) == _interface(n)
+    assert mesa.servidor.quedas == []
+
+
+def test_a_pergunta_da_ancora_e_da_espera_e_uma_so(monkeypatch: pytest.MonkeyPatch) -> None:
+    """As três respostas, sob a mesma trava: a própria, a espera e a emprestada."""
+    monkeypatch.setattr(pad_usb, "_INTERFACE_DO_APARELHO", {})
+    monkeypatch.setattr(pad_usb, "_A_CAMINHO", {})
+    monkeypatch.setattr(pad_usb, "_A_MESA_VIU", None)
+    assert pad_usb.a_ancora_ou_a_espera(IDENTIDADE) == (None, False)
+    pad_usb.anotar_gadget_a_caminho("hefesto-pad-01-02fe00000001", IDENTIDADE, 30.0)
+    assert pad_usb.a_ancora_ou_a_espera(IDENTIDADE) == (None, True)
+    pad_usb.registrar_gadget(IDENTIDADE, _interface(1))
+    pad_usb.gadget_chegou("hefesto-pad-01-02fe00000001")
+    assert pad_usb.a_ancora_ou_a_espera(IDENTIDADE) == (_interface(1), False)
 
 
 def test_o_gadget_a_caminho_de_um_nao_segura_o_outro(
@@ -492,9 +537,9 @@ def test_o_p1_que_enumera_sem_dono_larga_o_som_em_tres_segundos(
         assert pad_usb._A_CAMINHO[serial][1] - time.monotonic() > 10.0
         bancada.enumerado = ENUMERADO
         assert bancada.esperar(lambda: pad.is_bound)
-        assert pad_usb.gadget_a_caminho(OUTRA) is True, "o relógio da identidade tem a vez"
+        assert pad_usb.a_ancora_ou_a_espera(OUTRA)[1] is True, "o relógio da identidade tem a vez"
         assert pad_usb._A_CAMINHO[serial][1] - time.monotonic() <= 3.0
-        assert pad_usb.gadget_a_caminho(OUTRA, agora=time.monotonic() + 3.1) is False
+        assert pad_usb.a_ancora_ou_a_espera(OUTRA, agora=time.monotonic() + 3.1)[1] is False
     finally:
         pad.stop()
 
@@ -502,32 +547,32 @@ def test_o_p1_que_enumera_sem_dono_larga_o_som_em_tres_segundos(
 def test_o_co_op_e_o_dono_unico_de_este_aparelho_vai_ganhar_pad() -> None:
     """O controle que entra com o jogo aberto: o som espera o co-op decidir.
 
-    MORDIDA: devolva só o laço do ``_A_CAMINHO`` em ``gadget_a_caminho`` (sem o
+    MORDIDA: devolva só o laço do ``_A_CAMINHO`` em ``_a_caminho_locked`` (sem o
     ``_por_decidir_locked``) e o aparelho não visto não espera.
     """
     import time
 
     agora = time.monotonic()
-    assert pad_usb.gadget_a_caminho(OUTRA) is False, "sem co-op no ar, ninguém espera"
+    assert pad_usb.a_ancora_ou_a_espera(OUTRA)[1] is False, "sem co-op no ar, ninguém espera"
     pad_usb.a_mesa_viu(None, 5.0)
-    assert pad_usb.gadget_a_caminho(OUTRA) is False, "renovar o que nunca foi lido não vale"
+    assert pad_usb.a_ancora_ou_a_espera(OUTRA)[1] is False, "renovar o que nunca foi lido não vale"
 
     pad_usb.a_mesa_viu([IDENTIDADE], 5.0)
-    assert pad_usb.gadget_a_caminho(IDENTIDADE) is False, "visto e sem pad a caminho"
-    assert pad_usb.gadget_a_caminho(OUTRA, agora=agora) is True, "o co-op ainda não o viu"
-    assert pad_usb.gadget_a_caminho(OUTRA, agora=agora + 4.9) is True
-    assert pad_usb.gadget_a_caminho(OUTRA, agora=agora + 5.1) is False, "espera no máximo 5 s"
+    assert pad_usb.a_ancora_ou_a_espera(IDENTIDADE)[1] is False, "visto e sem pad a caminho"
+    assert pad_usb.a_ancora_ou_a_espera(OUTRA, agora=agora)[1] is True, "o co-op ainda não o viu"
+    assert pad_usb.a_ancora_ou_a_espera(OUTRA, agora=agora + 4.9)[1] is True
+    assert pad_usb.a_ancora_ou_a_espera(OUTRA, agora=agora + 5.1)[1] is False, "espera até 5 s"
 
     pad_usb.anotar_pad_a_caminho(OUTRA, 10.0)
-    assert pad_usb.gadget_a_caminho(OUTRA) is True, "na mesa, com o pad por nascer"
-    assert pad_usb.gadget_a_caminho(IDENTIDADE) is False, "a espera é só dele"
+    assert pad_usb.a_ancora_ou_a_espera(OUTRA)[1] is True, "na mesa, com o pad por nascer"
+    assert pad_usb.a_ancora_ou_a_espera(IDENTIDADE)[1] is False, "a espera é só dele"
     pad_usb.pad_decidido(OUTRA)
     pad_usb.a_mesa_viu([IDENTIDADE, OUTRA], 5.0)
-    assert pad_usb.gadget_a_caminho(OUTRA) is False
+    assert pad_usb.a_ancora_ou_a_espera(OUTRA)[1] is False
 
     pad_usb.a_mesa_saiu()
     pad_usb.a_mesa_viu(None, 5.0)
-    assert pad_usb.gadget_a_caminho("aa:bb:cc:00:00:13") is False, "co-op fora: nada espera"
+    assert pad_usb.a_ancora_ou_a_espera("aa:bb:cc:00:00:13")[1] is False, "co-op fora: nada espera"
 
 
 def test_o_co_op_diz_ao_som_quem_vai_ganhar_pad_e_quando_o_pad_nasceu(
@@ -550,7 +595,7 @@ def test_o_co_op_diz_ao_som_quem_vai_ganhar_pad_e_quando_o_pad_nasceu(
     durante: dict[str, bool] = {}
 
     def nasce_vendo_o_som(flavor: Any, *, identity: str | None = None, **kw: Any) -> Any:
-        durante[str(identity)] = pad_usb.gadget_a_caminho(str(identity))
+        durante[str(identity)] = pad_usb.a_ancora_ou_a_espera(str(identity))[1]
         return nasce(flavor, identity=identity, **kw)
 
     monkeypatch.setattr(virtual_pad, "make_virtual_pad", nasce_vendo_o_som)
@@ -560,11 +605,11 @@ def test_o_co_op_diz_ao_som_quem_vai_ganhar_pad_e_quando_o_pad_nasceu(
 
     assert nascimentos[:1] == [steam.P2]
     assert durante[steam.P2] is True, "enquanto o pad nasce, o som ainda espera"
-    assert pad_usb.gadget_a_caminho(steam.P2) is False, "nasceu: o som cria o endpoint"
-    assert pad_usb.gadget_a_caminho(steam.P3) is True, "assentado e sem pad: espera"
-    assert pad_usb.gadget_a_caminho("02:fe:00:00:00:77") is True, "o co-op ainda não o viu"
+    assert pad_usb.a_ancora_ou_a_espera(steam.P2)[1] is False, "nasceu: o som cria o endpoint"
+    assert pad_usb.a_ancora_ou_a_espera(steam.P3)[1] is True, "assentado e sem pad: espera"
+    assert pad_usb.a_ancora_ou_a_espera("02:fe:00:00:00:77")[1] is True, "o co-op ainda não o viu"
     mgr._teardown_player(steam.P3)
-    assert pad_usb.gadget_a_caminho(steam.P3) is False, "saiu da mesa: não espera mais"
+    assert pad_usb.a_ancora_ou_a_espera(steam.P3)[1] is False, "saiu da mesa: não espera mais"
 
 
 def test_o_serial_leva_o_numero_e_o_jogo_os_ve_na_ordem() -> None:

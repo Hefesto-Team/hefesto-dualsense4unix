@@ -1657,7 +1657,7 @@ def _nenhum_gadget_a_caminho_atravessa() -> Iterator[None]:
     """O gadget que um caso montou e não enumerou não segura o som do caso seguinte.
 
     O-PAR-DO-PAD (12/10/2026): o som não cria o endpoint de háptica enquanto
-    houver gadget a caminho (``pad_usb.gadget_a_caminho``), e o pad sem dono
+    houver gadget a caminho (``pad_usb.a_ancora_ou_a_espera``), e o pad sem dono
     vale para todo aparelho até o prazo dele vencer.
     """
     try:

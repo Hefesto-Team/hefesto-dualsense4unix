@@ -624,7 +624,7 @@ class CoopManager:
         O controle que entra com o jogo aberto aparece no sysfs antes do
         ``sync`` (até 2 s); o som não cria o endpoint dele numa âncora
         emprestada enquanto o co-op, no ar, ainda não o viu
-        (``pad_usb.gadget_a_caminho``).
+        (``pad_usb.a_ancora_ou_a_espera``).
         """
         from hefesto_dualsense4unix.integrations import pad_usb
 
