@@ -351,7 +351,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 .menu-hefesto hr{border:0;border-top:1px solid var(--border-sutil,#343746);margin:5px 4px}
 </style>
 <style data-todo-css="alvos-r4">
-/* Rodada 4: ?alvos=a dá 24 px a todo alvo de toque, com a mesma letra; ?alvos=b dá os 24 px e o piso de 12 px na letra. */
+/* Rodada 4: a sua resposta de 13/10 (~23h40), botões e letra: todo alvo de toque com 24 px e nenhuma letra abaixo de 12 px. ?alvos=hoje mostra a tela sem a mudança. */
 html.alvos-24 :is(button,select,input:not([type=checkbox]):not([type=radio]):not([type=hidden]),textarea,summary,[role=button],.nj-tog,.sw,.passo,label.faixa,.nav-i,.mudo-i,.padrao-i){min-height:24px;box-sizing:border-box}
 html.alvos-24 :is(button,[role=button],.nj-tog,.passo,.nav-i,.mudo-i,.padrao-i){min-width:24px}
 html.alvos-24 :is(input[type=checkbox],input[type=radio]):not(.radio-mesa){min-width:24px;min-height:24px}
@@ -1257,10 +1257,8 @@ html.letra-12 .ctr{gap:4px}html.letra-12 .leitura{gap:4px;padding-top:5px}html.l
 </script>
 <script data-aba="alvos-r4">
 (function () {
-  var o = new URLSearchParams(location.search).get('alvos');
-  if (!o) return;
+  if (new URLSearchParams(location.search).get('alvos') === 'hoje') return;
   document.documentElement.classList.add('alvos-24');
-  if (o !== 'b') return;
   document.documentElement.classList.add('letra-12');
   function piso() {
     document.querySelectorAll('body *').forEach(function (e) {
