@@ -56,7 +56,10 @@ def _no_jogo(nome_do_jogo: str = "sackboy") -> tuple[object, object, float]:
 def test_o_jogo_fecha_e_o_perfil_dele_fica(
     monkeypatch: pytest.MonkeyPatch, janela: dict[str, str]
 ) -> None:
-    """MORDIDA: tire o ``_fica_no_ultimo_jogo`` do ``_tick`` e a escolha (o «lure») entra."""
+    """D-1410-O-PERFIL-FICA-NO-ULTIMO-JOGO: o jogo fecha e o perfil dele fica.
+
+    MORDIDA: tire o ``_fica_no_ultimo_jogo`` do ``_tick`` e a escolha (o «lure») entra.
+    """
     _a_escolha(monkeypatch, "lure")
     sw, store, agora = _no_jogo()
     with structlog.testing.capture_logs() as diario:
@@ -94,6 +97,8 @@ def test_o_perfil_de_jogo_com_a_classe_do_lancador_nao_entra_pela_janela_dele(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """O perfil de outro jogo cuja regra traz `steam` não entra pela janela da Steam.
+
+    D-1410-O-PERFIL-FICA-NO-ULTIMO-JOGO: janela de lançador não ativa perfil de jogo.
 
     MORDIDA: tire o filtro do ``e_janela_de_lancador`` em ``select_for_window_ex``.
     """
