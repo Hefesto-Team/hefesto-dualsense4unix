@@ -949,6 +949,7 @@ class TestOLacoDeProducao:
     async def test_na_vaga_o_laco_entrega_os_botoes_do_p2_e_do_p3(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        # Espera pela condição, não pelo relógio: D-1310-O-TESTE-DO-LACO-ESPERA-PELA-CONDICAO.
         esperados = frozenset(
             {
                 (P1, frozenset()),
@@ -966,6 +967,7 @@ class TestOLacoDeProducao:
     async def test_fora_da_vaga_o_laco_entrega_o_posto_e_os_outros(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        # Espera pela condição, não pelo relógio: D-1310-O-TESTE-DO-LACO-ESPERA-PELA-CONDICAO.
         esperados = frozenset(
             {
                 (P1, frozenset({"cross"})),
