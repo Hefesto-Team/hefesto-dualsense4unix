@@ -1731,17 +1731,6 @@ def materialize_launch_env(daemon: DaemonProtocol) -> None:
     _escrever_o_lancamento(foto)
 
 
-def _receitas_dos_jogos() -> dict[str, dict[str, str]]:
-    """``{appid: ambiente}`` dos jogos cujo disco liga uma receita com a peça. Nunca levanta."""
-    try:
-        from hefesto_dualsense4unix.integrations import receitas_de_ambiente
-
-        return receitas_de_ambiente.ambientes_dos_jogos()
-    except Exception:
-        logger.debug("receitas_de_ambiente_falhou", exc_info=True)
-        return {}
-
-
 def _a_parte_de_fora(
     foto: _FotoDoLancamento, devolver: Callable[[Callable[[], None]], None]
 ) -> None:
@@ -1845,6 +1834,17 @@ def _a_parte_de_fora(
         foto_ms=round(foto.foto_ms, 1),
         fora_ms=round((time.perf_counter() - t0) * 1000, 1),
     )
+
+
+def _receitas_dos_jogos() -> dict[str, dict[str, str]]:
+    """``{appid: ambiente}`` dos jogos cujo disco liga uma receita com a peça. Nunca levanta."""
+    try:
+        from hefesto_dualsense4unix.integrations import receitas_de_ambiente
+
+        return receitas_de_ambiente.ambientes_dos_jogos()
+    except Exception:
+        logger.debug("receitas_de_ambiente_falhou", exc_info=True)
+        return {}
 
 
 def _rodar_na_hora(acao: Callable[[], None]) -> None:
