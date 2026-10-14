@@ -21,6 +21,46 @@ Conferente que corrige, `wf_eec4e930-fe0`. Tudo medido em Chrome sem janela (goo
 | **total** | **96** | **64** | 120 | 189 |
 
 
+## Rodada 3 (13/10)
+
+As escolhas dela de 13/10, uma mudança por item, com a origem «escolha dela de 13/10» em cada uma (`"rodada": 3` nos `*-mudancas.json`, `data-r3="<n>"` no html). Medido em Chrome sem janela (google-chrome do sistema), em 1212x809, 1212x740 e 1918x840: nenhuma página rola no corpo; as janelas novas (Buttplug, impedimentos, acionador, tipo do aparelho, Sequência) também não rolam por dentro. As fotos são `fotos/<aba>-m<n>-antes.png` e `fotos/<aba>-m<n>.png` (e `-a`/`-b` nas duas leituras), 56 ao todo, listadas em `fotos/rodada-3.json` e na chave `rodada3` do `fotos/indice.json`. O `index.html` mostra a rodada 3 em cima, mudança por mudança, com a chave `r3-<aba>-<n>`.
+
+| página | n | o que muda | sprint |
+| --- | --- | --- | --- |
+| 02 | 16 | sai a seção «Criar efeitos novos»; ficam só os quatro controles | OS-ALVOS-E-A-LETRA-CRESCEM-E-A-INTERFACE-GANHA-TAMANHO-01 |
+| 03 | 15 | a linha «Força do gatilho»: Forte, Média, Fraca e Desligada, por controle | A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-01 |
+| 04 | 11 | o ajuste global «Sem piscar» no topo | A-LUZ-DO-CONTROLE-NAO-PISCA-PARA-QUEM-E-SENSIVEL-A-LUZ-01 |
+| 05 | 12 | a força vira os quatro passos do firmware (**duas leituras**: com o trilho até 100% ou só os passos) | A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-01 |
+| 06 | 26 | o «i» volta (**duas leituras**: com o título «Navegação» ou só o «i» no canto) | A-ABA-NAVEGACAO-DO-TODO-01 |
+| 06 | 27 | os quatro moldes: Point and click, Visual novel, Mouse, Mouse e teclado | A-ABA-NAVEGACAO-DO-TODO-01 |
+| 07 | 29 | «Lovense pelo Intiface», nas duas direções | A-ABA-EXPERIMENTAL-DO-TODO-01 |
+| 07 | 30 | a extensão «Lovense pelo celular» (Game Mode, porta 20010) | A-ABA-EXPERIMENTAL-DO-TODO-01 |
+| 07 | 31 | a extensão «DualSense como brinquedo», nascida desligada | O-HEFESTO-E-SERVIDOR-BUTTPLUG-DO-PROPRIO-DUALSENSE-01 |
+| 07 | 32 | a janela de configurações dela, com as quatro etapas | O-HEFESTO-E-SERVIDOR-BUTTPLUG-DO-PROPRIO-DUALSENSE-01 |
+| 07 | 33 | «Detectar o jogo aberto» e «Procurar de novo» sobem ao título dos Lançadores | A-ABA-EXPERIMENTAL-DO-TODO-01 |
+| 07 B | 34 | o B ajustado em página própria, `07-lancadores-b.html` (**duas leituras**: o Experimental ou o B) | A-ABA-LANCADORES-GANHA-AS-MODIFICACOES-01 |
+| 07 B | 35 | seis modificações cabem sem rolar (a foto usa `#seis`) | A-ABA-LANCADORES-GANHA-AS-MODIFICACOES-01 |
+| 07 B | 36 | «2 com impedimento» na Steam, com a janela dos consertos | A-ABA-LANCADORES-GANHA-AS-MODIFICACOES-01 |
+| 07 B | 37 | a engrenagem de configurações em cada modificação | A-ABA-LANCADORES-GANHA-AS-MODIFICACOES-01 |
+| 08 | 13 | o controle em outro aparelho: «O controle foi para outro aparelho» e «Trazer de volta» | O-HEFESTO-SABE-EM-QUAL-VAGA-DE-PAREAMENTO-O-CONTROLE-ESTA-01 |
+| 08 | 14 | «Usar como botões de…» na linha do acionador USB | OS-ACIONADORES-USB-ENTRAM-COMO-BOTOES-DO-CONTROLE-01 |
+| 08 | 15 | a janela do acionador, com o desenho real do DualSense | OS-ACIONADORES-USB-ENTRAM-COMO-BOTOES-DO-CONTROLE-01 |
+| 08 | 16 | o «?» do aparelho sem tipo e a grade dos tipos | O-APARELHO-DO-BLUETOOTH-SEM-TIPO-SE-NOMEIA-PELA-PESSOA-01 |
+| 08 | 17 | o «Giroscópio como analógico» sai dos cartões | A-ABA-CONEXOES-DO-TODO-01 |
+| 10 | 19 | o par de controles no perfil do jogo (Cosmic Red + Starlight Blue, com a chave) | DOIS-CONTROLES-JOGAM-COMO-UM-NO-COPILOTO-01 |
+| 10 | 20 | os campos do Editar encolhem nas janelas baixas; a tabela mostra o White inteiro em 740 | A-ABA-PERFIS-DO-TODO-01 |
+| mapa-do-controle | 19 | o «Vale para» no topo, pela cor do plástico | O-REMAPEAMENTO-VALE-POR-JOGADOR-01 |
+| mapa-do-controle | 20 | o quarto tipo, Sequência (gravar, os passos, como toca, ouvir) | O-BOTAO-GRAVA-E-TOCA-UMA-SEQUENCIA-01 |
+| mapa-do-controle | 21 | os moldes com os quatro nomes da Navegação | A-ABA-MAPA-DO-CONTROLE-DO-TODO-01 |
+
+**Os três tamanhos, por página tocada:** 02, 03, 04, 05, 06, 07, 07 B, 08, 10 e mapa-do-controle, «não rola» em 1212x809, 1212x740 e 1918x840 (`fotos/rodada-3.json`, chave `medidas`).
+
+**A mordida.** Com o botão `.sem-piscar` arrancado da 04, o fotógrafo da rodada sai com `rc=1` e acusa as duas coisas: «o gesto `document.querySelector('.sem-piscar').click()` quebra» e «a âncora `.sem-piscar` não aparece em 04-iluminacao.html». Devolvido o botão, `rc=0`. O fotógrafo e as cópias de antes (as páginas do git em `ea889206e` e o desenho B de 09/10) moram em `~/.local/state/hefesto-casa/leva-depois-da-fds/mockups-r3/`.
+
+**O que já estava torto antes da rodada, e como ficou:** a 06 transbordava num quadro e a 07 cortava os Lançadores em 740; as duas ficaram curadas pela rodada. A lista da esquerda da 10 (`.rolo`, 418/358 em 740) já transbordava antes e segue igual. A 04 corta embaixo em 740, também de antes. O sensor háptico da 05 vai de 0 a 200%, e a escolha dos quatro passos não o tocou.
+
+**Conferido sem mudar:** nenhuma página cita o desligar por ociosidade (o desligar é só o gesto do PS por 10 s); os nomes de pessoa «Vitória», «Davi» e «Pedro» já estavam na 08.
+
 ## As ordens dela de 12/10 (14h40 e 14h52)
 
 Seis mudanças novas, com a origem «ordem dela de 12/10» na página (etiqueta roxa). Os itens velhos que diziam «par Modo automático | Modo personalizado» (03-2, 04-2, 05-2) perderam a frase.

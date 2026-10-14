@@ -134,7 +134,8 @@
       "conflito": "",
       "rodada": 3,
       "ancora_antes": "[data-id=\"nao-conectou-L1-P6\"]",
-      "js": "document.getElementById('cx8-3').click(); document.querySelector('.abre-lugar[data-alvo=L1]').click()"
+      "js": "document.getElementById('cx8-3').click(); document.querySelector('.abre-lugar[data-alvo=L1]').click()",
+      "js_antes": "document.getElementById('cx8-3').click(); document.querySelector('.abre-lugar[data-alvo=L1]').click()"
     },
     {
       "n": 14,
@@ -146,7 +147,8 @@
       "conflito": "",
       "rodada": 3,
       "ancora_antes": "[data-id=\"W1\"]",
-      "js": "document.getElementById('cx8-3').click(); document.querySelector('.abre-lugar[data-alvo=L1]').click()"
+      "js": "document.getElementById('cx8-3').click(); document.querySelector('.abre-lugar[data-alvo=L1]').click()",
+      "js_antes": "document.getElementById('cx8-3').click(); document.querySelector('.abre-lugar[data-alvo=L1]').click()"
     },
     {
       "n": 15,

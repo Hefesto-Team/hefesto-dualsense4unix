@@ -1,0 +1,397 @@
+{
+  "rodada": 3,
+  "origem": "escolha dela de 13/10",
+  "mudancas": [
+    {
+      "aba": "02",
+      "n": 16,
+      "sprint": "OS-ALVOS-E-A-LETRA-CRESCEM-E-A-INTERFACE-GANHA-TAMANHO-01",
+      "o_que_muda": "Sai a seção «Criar efeitos novos»: a aba fica só com «Dispositivos conectados», os quatro controles, e o espaço que sobra é dos alvos maiores",
+      "resposta": "todo-02-r3-16",
+      "origem": "escolha dela de 13/10",
+      "pagina": "02-controles.html",
+      "antes_de": "02-controles.html",
+      "antes": "02-m16-antes.png",
+      "depois": "02-m16.png"
+    },
+    {
+      "aba": "03",
+      "n": 15,
+      "sprint": "A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-01",
+      "o_que_muda": "Nova linha «Força do gatilho», um seletor por controle com os quatro passos do firmware: Forte, Média, Fraca e Desligada, como no PS5",
+      "resposta": "todo-03-r3-15",
+      "origem": "escolha dela de 13/10",
+      "pagina": "03-gatilhos.html",
+      "antes_de": "03-gatilhos.html",
+      "antes": "03-m15-antes.png",
+      "depois": "03-m15.png"
+    },
+    {
+      "aba": "04",
+      "n": 11,
+      "sprint": "A-LUZ-DO-CONTROLE-NAO-PISCA-PARA-QUEM-E-SENSIVEL-A-LUZ-01",
+      "o_que_muda": "O ajuste global «Sem piscar» no topo da aba: ligado, nenhuma luz troca mais de três vezes por segundo e o piscar vira transição lenta, nos quatro controles e em todos os estilos",
+      "resposta": "todo-04-r3-11",
+      "origem": "escolha dela de 13/10",
+      "pagina": "04-iluminacao.html",
+      "antes_de": "04-iluminacao.html",
+      "antes": "04-m11-antes.png",
+      "depois": "04-m11.png"
+    },
+    {
+      "aba": "05",
+      "n": 12,
+      "sprint": "A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-01",
+      "o_que_muda": "A força da vibração vira os quatro passos do firmware, por controle: Forte, Média, Fraca e Desligada, como no PS5. O Máximo de 150% e os três botões Economia, Padrão e Máximo saem",
+      "resposta": "todo-05-r3-12",
+      "origem": "escolha dela de 13/10",
+      "pagina": "05-vibracao.html",
+      "antes_de": "05-vibracao.html",
+      "antes": "05-m12-antes.png",
+      "depois": "05-m12.png",
+      "pergunta": "O trilho fica embaixo dos quatro passos, até 100% (A), ou some e ficam só os passos (B)?",
+      "leituras": {
+        "A": {
+          "o_que": "Os quatro passos e, embaixo, o trilho de ajuste fino até 100%",
+          "pagina": "05-vibracao.html",
+          "foto": "05-m12-a.png"
+        },
+        "B": {
+          "o_que": "Só os quatro passos, sem trilho",
+          "pagina": "05-vibracao.html#leitura-b",
+          "foto": "05-m12-b.png"
+        }
+      }
+    },
+    {
+      "aba": "06",
+      "n": 26,
+      "sprint": "A-ABA-NAVEGACAO-DO-TODO-01",
+      "o_que_muda": "O «i» do quadro volta: ele abre a explicação da aba, e o × fecha",
+      "resposta": "todo-06-r3-26",
+      "origem": "escolha dela de 13/10",
+      "pagina": "06-navegacao.html",
+      "antes_de": "06-navegacao.html",
+      "antes": "06-m26-antes.png",
+      "depois": "06-m26.png",
+      "pergunta": "O quadro leva o título «Navegação» com o «i» ao lado (A), ou fica sem título, só com o «i» no canto (B)?",
+      "leituras": {
+        "A": {
+          "o_que": "O quadro se chama «Navegação», com o «i» ao lado do título",
+          "pagina": "06-navegacao.html",
+          "foto": "06-m26-a.png"
+        },
+        "B": {
+          "o_que": "Sem título: só o «i», no canto do quadro",
+          "pagina": "06-navegacao.html#leitura-b",
+          "foto": "06-m26-b.png"
+        }
+      }
+    },
+    {
+      "aba": "06",
+      "n": 27,
+      "sprint": "A-ABA-NAVEGACAO-DO-TODO-01",
+      "o_que_muda": "Os moldes do point and click passam a ser quatro: Point and click, Visual novel, Mouse e Mouse e teclado",
+      "resposta": "todo-06-r3-27",
+      "origem": "escolha dela de 13/10",
+      "pagina": "06-navegacao.html",
+      "antes_de": "06-navegacao.html",
+      "antes": "06-m27-antes.png",
+      "depois": "06-m27.png"
+    },
+    {
+      "aba": "07",
+      "n": 29,
+      "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
+      "o_que_muda": "«Lovense pelo Intiface» nomeia só a primeira extensão, e nas duas direções: o controle vibra os brinquedos, e os programas da Intiface vibram o controle",
+      "resposta": "todo-07-r3-29",
+      "origem": "escolha dela de 13/10",
+      "pagina": "07-lancadores.html",
+      "antes_de": "07-lancadores.html",
+      "antes": "07-m29-antes.png",
+      "depois": "07-m29.png"
+    },
+    {
+      "aba": "07",
+      "n": 30,
+      "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
+      "o_que_muda": "A segunda extensão Lovense, «Lovense pelo celular»: o app da Lovense no celular, pelo Game Mode na rede de casa (porta 20010), como no Planet Lust",
+      "resposta": "todo-07-r3-30",
+      "origem": "escolha dela de 13/10",
+      "pagina": "07-lancadores.html",
+      "antes_de": "07-lancadores.html",
+      "antes": "07-m30-antes.png",
+      "depois": "07-m30.png"
+    },
+    {
+      "aba": "07",
+      "n": 31,
+      "sprint": "O-HEFESTO-E-SERVIDOR-BUTTPLUG-DO-PROPRIO-DUALSENSE-01",
+      "o_que_muda": "A extensão «DualSense como brinquedo»: os apps de brinquedo vibram o controle, nada pela nuvem, e ela nasce desligada",
+      "resposta": "todo-07-r3-31",
+      "origem": "escolha dela de 13/10",
+      "pagina": "07-lancadores.html",
+      "antes_de": "07-lancadores.html",
+      "antes": "07-m31-antes.png",
+      "depois": "07-m31.png"
+    },
+    {
+      "aba": "07",
+      "n": 32,
+      "sprint": "O-HEFESTO-E-SERVIDOR-BUTTPLUG-DO-PROPRIO-DUALSENSE-01",
+      "o_que_muda": "A janela de configurações dela, nova: as quatro etapas (servidor, controles com teto e força de cada um, o que vibra, parar)",
+      "resposta": "todo-07-r3-32",
+      "origem": "escolha dela de 13/10",
+      "pagina": "07-lancadores.html",
+      "antes_de": "07-lancadores.html",
+      "antes": "07-m32-antes.png",
+      "depois": "07-m32.png"
+    },
+    {
+      "aba": "07",
+      "n": 33,
+      "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
+      "o_que_muda": "Para as quatro extensões caberem sem rolar, «Detectar o jogo aberto» e «Procurar de novo» sobem para a linha do título dos Lançadores, e a lista das extensões deixa de rolar",
+      "resposta": "todo-07-r3-33",
+      "origem": "escolha dela de 13/10",
+      "pagina": "07-lancadores.html",
+      "antes_de": "07-lancadores.html",
+      "antes": "07-m33-antes.png",
+      "depois": "07-m33.png"
+    },
+    {
+      "aba": "07",
+      "n": 34,
+      "sprint": "A-ABA-LANCADORES-GANHA-AS-MODIFICACOES-01",
+      "o_que_muda": "O desenho B ajustado vira página própria, para você comparar com o Experimental: os lançadores em cima, as modificações embaixo, as duas seções abertas",
+      "resposta": "todo-07-r3-34",
+      "origem": "escolha dela de 13/10",
+      "pagina": "07-lancadores-b.html",
+      "antes_de": "07-lancadores.html",
+      "antes": "07-m34-antes.png",
+      "depois": "07-m34.png",
+      "pergunta": "A aba fica como o Experimental (A) ou como o B ajustado (B)?",
+      "leituras": {
+        "A": {
+          "o_que": "O Experimental: as extensões em cima e os lançadores embaixo, com os impedimentos no marcador laranja do selo",
+          "pagina": "07-lancadores.html",
+          "foto": "07-m34-a.png"
+        },
+        "B": {
+          "o_que": "O B ajustado: a aba se chama Lançadores, com os lançadores em cima e as modificações embaixo",
+          "pagina": "07-lancadores-b.html",
+          "foto": "07-m34-b.png"
+        }
+      }
+    },
+    {
+      "aba": "07",
+      "n": 35,
+      "sprint": "A-ABA-LANCADORES-GANHA-AS-MODIFICACOES-01",
+      "o_que_muda": "Cabem seis modificações sem rolar nos três tamanhos: as linhas encolhem e os lançadores deixam de esticar (a foto põe duas linhas de exemplo)",
+      "resposta": "todo-07-r3-35",
+      "origem": "escolha dela de 13/10",
+      "pagina": "07-lancadores-b.html",
+      "antes_de": "opcao-b-07.html (desenho B de 09/10)",
+      "antes": "07-m35-antes.png",
+      "depois": "07-m35.png"
+    },
+    {
+      "aba": "07",
+      "n": 36,
+      "sprint": "A-ABA-LANCADORES-GANHA-AS-MODIFICACOES-01",
+      "o_que_muda": "Os impedimentos da Steam numa linha do cartão, «2 com impedimento»; o clique abre a lista dos jogos, cada um com o seu conserto",
+      "resposta": "todo-07-r3-36",
+      "origem": "escolha dela de 13/10",
+      "pagina": "07-lancadores-b.html",
+      "antes_de": "opcao-b-07.html (desenho B de 09/10)",
+      "antes": "07-m36-antes.png",
+      "depois": "07-m36.png"
+    },
+    {
+      "aba": "07",
+      "n": 37,
+      "sprint": "A-ABA-LANCADORES-GANHA-AS-MODIFICACOES-01",
+      "o_que_muda": "Cada modificação ganha o botão de configurações, ao lado da chave",
+      "resposta": "todo-07-r3-37",
+      "origem": "escolha dela de 13/10",
+      "pagina": "07-lancadores-b.html",
+      "antes_de": "opcao-b-07.html (desenho B de 09/10)",
+      "antes": "07-m37-antes.png",
+      "depois": "07-m37.png"
+    },
+    {
+      "aba": "08",
+      "n": 13,
+      "sprint": "O-HEFESTO-SABE-EM-QUAL-VAGA-DE-PAREAMENTO-O-CONTROLE-ESTA-01",
+      "o_que_muda": "Quando o controle está pareado com outro aparelho, a linha diz «O controle foi para outro aparelho», sem o selo vermelho de queda, e o botão vira «Trazer de volta»",
+      "resposta": "todo-08-r3-13",
+      "origem": "escolha dela de 13/10",
+      "pagina": "08-conexoes.html",
+      "antes_de": "08-conexoes.html",
+      "antes": "08-m13-antes.png",
+      "depois": "08-m13.png"
+    },
+    {
+      "aba": "08",
+      "n": 14,
+      "sprint": "OS-ACIONADORES-USB-ENTRAM-COMO-BOTOES-DO-CONTROLE-01",
+      "o_que_muda": "Na linha do aparelho de entrada, «Usar como botões de…» abre a janela onde cada tecla dele cai num botão do controle, escolhido sobre o desenho real do DualSense",
+      "resposta": "todo-08-r3-14",
+      "origem": "escolha dela de 13/10",
+      "pagina": "08-conexoes.html",
+      "antes_de": "08-conexoes.html",
+      "antes": "08-m14-antes.png",
+      "depois": "08-m14.png"
+    },
+    {
+      "aba": "08",
+      "n": 15,
+      "sprint": "OS-ACIONADORES-USB-ENTRAM-COMO-BOTOES-DO-CONTROLE-01",
+      "o_que_muda": "A janela do acionador: as teclas à esquerda e o desenho real do controle à direita, com o controle escolhido pela cor",
+      "resposta": "todo-08-r3-15",
+      "origem": "escolha dela de 13/10",
+      "pagina": "08-conexoes.html",
+      "antes_de": "08-conexoes.html",
+      "antes": "08-m15-antes.png",
+      "depois": "08-m15.png"
+    },
+    {
+      "aba": "08",
+      "n": 16,
+      "sprint": "O-APARELHO-DO-BLUETOOTH-SEM-TIPO-SE-NOMEIA-PELA-PESSOA-01",
+      "o_que_muda": "O aparelho do Bluetooth sem tipo ganha o «?» na linha; o clique abre a grade dos tipos, com ícones grandes",
+      "resposta": "todo-08-r3-16",
+      "origem": "escolha dela de 13/10",
+      "pagina": "08-conexoes.html",
+      "antes_de": "08-conexoes.html",
+      "antes": "08-m16-antes.png",
+      "depois": "08-m16.png"
+    },
+    {
+      "aba": "08",
+      "n": 17,
+      "sprint": "A-ABA-CONEXOES-DO-TODO-01",
+      "o_que_muda": "O «Giroscópio como analógico» sai dos cartões dos controles: o ajuste mora na Navegação",
+      "resposta": "todo-08-r3-17",
+      "origem": "escolha dela de 13/10",
+      "pagina": "08-conexoes.html",
+      "antes_de": "08-conexoes.html",
+      "antes": "08-m17-antes.png",
+      "depois": "08-m17.png"
+    },
+    {
+      "aba": "10",
+      "n": 19,
+      "sprint": "DOIS-CONTROLES-JOGAM-COMO-UM-NO-COPILOTO-01",
+      "o_que_muda": "O copiloto mora no perfil do jogo: o controle que joga, mais o copiloto, e a chave; os botões do segundo somam aos do primeiro, e a vibração vai aos dois",
+      "resposta": "todo-10-r3-19",
+      "origem": "escolha dela de 13/10",
+      "pagina": "10-perfis.html",
+      "antes_de": "10-perfis.html",
+      "antes": "10-m19-antes.png",
+      "depois": "10-m19.png"
+    },
+    {
+      "aba": "10",
+      "n": 20,
+      "sprint": "A-ABA-PERFIS-DO-TODO-01",
+      "o_que_muda": "Para o copiloto caber, os campos do Editar encolhem nas janelas baixas, e a tabela dos controles volta a mostrar o White inteiro em 1212x740",
+      "resposta": "todo-10-r3-20",
+      "origem": "escolha dela de 13/10",
+      "pagina": "10-perfis.html",
+      "antes_de": "10-perfis.html",
+      "antes": "10-m20-antes.png",
+      "depois": "10-m20.png"
+    },
+    {
+      "aba": "mapa-do-controle",
+      "n": 19,
+      "sprint": "O-REMAPEAMENTO-VALE-POR-JOGADOR-01",
+      "o_que_muda": "O mapa ganha o «Vale para» no topo: você escolhe o controle pela cor do plástico, e cada um guarda o seu mapa",
+      "resposta": "todo-mapa-do-controle-r3-19",
+      "origem": "escolha dela de 13/10",
+      "pagina": "mapa-do-controle.html",
+      "antes_de": "mapa-do-controle.html",
+      "antes": "mapa-do-controle-m19-antes.png",
+      "depois": "mapa-do-controle-m19.png"
+    },
+    {
+      "aba": "mapa-do-controle",
+      "n": 20,
+      "sprint": "O-BOTAO-GRAVA-E-TOCA-UMA-SEQUENCIA-01",
+      "o_que_muda": "O «<botão> vira» ganha o quarto tipo, Sequência: você grava, vê os passos com o intervalo, escolhe se toca uma vez, repete ou liga e desliga, e ouve antes de guardar",
+      "resposta": "todo-mapa-do-controle-r3-20",
+      "origem": "escolha dela de 13/10",
+      "pagina": "mapa-do-controle.html",
+      "antes_de": "mapa-do-controle.html",
+      "antes": "mapa-do-controle-m20-antes.png",
+      "depois": "mapa-do-controle-m20.png"
+    },
+    {
+      "aba": "mapa-do-controle",
+      "n": 21,
+      "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
+      "o_que_muda": "Os moldes do Perfil têm os mesmos quatro nomes da Navegação: Point and click, Visual novel, Mouse e Mouse e teclado",
+      "resposta": "todo-mapa-do-controle-r3-21",
+      "origem": "escolha dela de 13/10",
+      "pagina": "mapa-do-controle.html",
+      "antes_de": "mapa-do-controle.html",
+      "antes": "mapa-do-controle-m21-antes.png",
+      "depois": "mapa-do-controle-m21.png"
+    }
+  ],
+  "medidas": {
+    "02-controles.html": {
+      "1212x809": "não rola",
+      "1212x740": "não rola",
+      "1918x840": "não rola"
+    },
+    "03-gatilhos.html": {
+      "1212x809": "não rola",
+      "1212x740": "não rola",
+      "1918x840": "não rola"
+    },
+    "04-iluminacao.html": {
+      "1212x809": "não rola",
+      "1212x740": "não rola",
+      "1918x840": "não rola"
+    },
+    "05-vibracao.html": {
+      "1212x809": "não rola",
+      "1212x740": "não rola",
+      "1918x840": "não rola"
+    },
+    "06-navegacao.html": {
+      "1212x809": "não rola",
+      "1212x740": "não rola",
+      "1918x840": "não rola"
+    },
+    "07-lancadores-b.html": {
+      "1212x809": "não rola",
+      "1212x740": "não rola",
+      "1918x840": "não rola"
+    },
+    "07-lancadores.html": {
+      "1212x809": "não rola",
+      "1212x740": "não rola",
+      "1918x840": "não rola"
+    },
+    "08-conexoes.html": {
+      "1212x809": "não rola",
+      "1212x740": "não rola",
+      "1918x840": "não rola"
+    },
+    "10-perfis.html": {
+      "1212x809": "não rola",
+      "1212x740": "não rola",
+      "1918x840": "não rola"
+    },
+    "mapa-do-controle.html": {
+      "1212x809": "não rola",
+      "1212x740": "não rola",
+      "1918x840": "não rola"
+    }
+  }
+}
