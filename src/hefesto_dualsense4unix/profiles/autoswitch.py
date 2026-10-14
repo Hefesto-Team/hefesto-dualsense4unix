@@ -466,10 +466,11 @@ class AutoSwitcher:
 
         D-1410-O-PERFIL-FICA-NO-ULTIMO-JOGO: o reinício do serviço volta a ele
         (`utils.session.o_ultimo_jogo`); sem a gravação, o boot subia na escolha
-        à mão. Perfil que não é de jogo, posto por regra de janela, tira a memória.
+        à mão. Perfil que não é de jogo, posto por regra de janela, tira a memória,
+        também a que o boot restaurou sem a crença do autoswitch saber dela.
         """
         anterior = self._perfil_do_ultimo_jogo
-        if nome == anterior:
+        if nome is not None and nome == anterior:
             return
         self._perfil_do_ultimo_jogo = nome
         from hefesto_dualsense4unix.utils.session import (
@@ -479,8 +480,8 @@ class AutoSwitcher:
 
         if nome is not None:
             lembrar_o_ultimo_jogo(nome)
-        elif anterior is not None:
-            esquecer_o_ultimo_jogo(anterior)
+        else:
+            esquecer_o_ultimo_jogo()
 
     def _o_boot_veio_do_ultimo_jogo(self, corrente: str) -> None:
         """O perfil que vale é o do último jogo que o boot restaurou? Então ele fica.

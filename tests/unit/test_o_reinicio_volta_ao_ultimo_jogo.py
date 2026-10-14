@@ -136,3 +136,27 @@ def test_o_tique_nao_regrava_o_disco_a_cada_volta(monkeypatch: pytest.MonkeyPatc
         sw._tick(dict(JANELA_DO_JOGO), 0.5 * i)
     assert store.active_profile == "sackboy"
     assert gravados == ["sackboy"]
+
+
+@pytest.mark.usefixtures("perfis_isolados")
+def test_depois_do_boot_a_janela_com_perfil_proprio_tira_a_memoria_do_disco() -> None:
+    """Depois do reinício, a janela com perfil próprio que não é de jogo tira o último jogo.
+
+    O boot restaura o jogo pelo disco, com a crença do autoswitch vazia; a primeira
+    janela é a do Kodi, com perfil próprio. Dentro do processo o jogo saiu, então o
+    reinício seguinte não pode voltar a ele.
+
+    MORDIDA: devolva o ``elif anterior is not None:`` no ``_o_ultimo_jogo_passa_a`` e
+    o disco segue no «sackboy».
+    """
+    _jogou_e_fechou()
+    kodi = _perfil("kodi", janela="kodi", prioridade=50)
+    manager, store = _bancada([*_os_perfis(), kodi])
+    store.set_active_profile(_o_nome_que_o_boot_restaura(None))
+    assert store.active_profile == "sackboy", "premissa: o boot voltou ao último jogo"
+    sw = _switcher(manager, store, jogo_vivo=lambda: None)
+    for i in range(10):
+        sw._tick({"wm_class": "kodi", "wm_name": "Kodi"}, 0.5 * i)
+    assert store.active_profile == "kodi", "premissa: a janela com perfil próprio entrou"
+    assert session._ultimo_jogo_cru() is None, "a memória do jogo ficou no disco"
+    assert _o_nome_que_o_boot_restaura(None) == "lure"
