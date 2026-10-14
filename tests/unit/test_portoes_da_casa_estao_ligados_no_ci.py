@@ -1,6 +1,7 @@
 """Os portões que o `scripts/portoes.sh` manda rodar continuam LIGADOS no CI."""
 from __future__ import annotations
 
+import functools
 import re
 from pathlib import Path
 
@@ -129,9 +130,17 @@ def pelo_nome(comando: str, portao: str) -> bool:
 
     O-CI-CHAMA-OS-PORTOES-PELO-NOME-01 (10/10/2026): o CI chama os portões pelo nome.
     """
-    ids = {id_ for id_, (_, _, argv) in tabela(PORTOES_SH.read_text(encoding="utf-8")).items()
-           if argv.split()[0] == portao}
+    ids = _ids_por_script(PORTOES_SH.read_text(encoding="utf-8")).get(portao, frozenset())
     return bool(ids & set(ids_do_so(comando)))
+
+
+@functools.lru_cache(maxsize=4)
+def _ids_por_script(texto_sh: str) -> dict[str, frozenset[str]]:
+    """Os ids da tabela por script, uma leitura por texto: o `pelo_nome` roda ~14 mil vezes."""
+    por_script: dict[str, set[str]] = {}
+    for id_, (_, _, argv) in tabela(texto_sh).items():
+        por_script.setdefault(argv.split()[0], set()).add(id_)
+    return {script: frozenset(ids) for script, ids in por_script.items()}
 
 
 def linhas_que_rodam(passo: dict, portao: str) -> list[str]:
