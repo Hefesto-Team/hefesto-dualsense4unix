@@ -26,7 +26,7 @@
    "n": 18,
    "sprint": "OS-ALVOS-E-A-LETRA-CRESCEM-E-A-INTERFACE-GANHA-TAMANHO-01",
    "o_que_muda": "Na aba Controles, os 15 alvos de menos de 24 px (interruptores, deslizantes de volume, botões de mudo e de padrão, botão «Ligado» do touchpad, seletores de controle) crescem para 24 px; na leitura B a letra sobe para 12 px, e o corpo do quadro apertou o respiro para não rolar",
-   "resposta": "botões e letra crescem: alvo de 24 px no mínimo e letra de 12 px no mínimo (resposta dela); o desenho e o piso da letra seguem em aberto",
+   "resposta": "botões e letra crescem: alvo de 24 px no mínimo e letra de 12 px no mínimo (a sua resposta); o desenho e o piso da letra seguem em aberto",
    "origem": "rodada 4 (o que faltava desenho)",
    "ancora": "html.alvos-24",
    "seletor": ".sw, .puxa-vol, .mudo-i, .padrao-i, label.faixa, button",

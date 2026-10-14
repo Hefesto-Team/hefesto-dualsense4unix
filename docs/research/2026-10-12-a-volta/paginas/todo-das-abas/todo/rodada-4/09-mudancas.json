@@ -15,7 +15,7 @@
    "n": 12,
    "sprint": "OS-ALVOS-E-A-LETRA-CRESCEM-E-A-INTERFACE-GANHA-TAMANHO-01",
    "o_que_muda": "Na aba Sistema todos os alvos já têm 24 px ou mais, então a leitura A não muda nada; a leitura B sobe para 12 px os 18 textos pequenos (selos, siglas, o botão Copiar e o registro)",
-   "resposta": "botões e letra crescem: alvo de 24 px no mínimo e letra de 12 px no mínimo (resposta dela); o desenho e o piso da letra seguem em aberto",
+   "resposta": "botões e letra crescem: alvo de 24 px no mínimo e letra de 12 px no mínimo (a sua resposta); o desenho e o piso da letra seguem em aberto",
    "origem": "rodada 4 (o que faltava desenho)",
    "ancora": "html.alvos-24",
    "seletor": "button, select, input",

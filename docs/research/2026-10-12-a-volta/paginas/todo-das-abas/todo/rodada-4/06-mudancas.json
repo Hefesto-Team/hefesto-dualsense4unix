@@ -17,11 +17,11 @@
    "n": 28,
    "sprint": "OS-ALVOS-E-A-LETRA-CRESCEM-E-A-INTERFACE-GANHA-TAMANHO-01",
    "o_que_muda": "Na Navegação e na janela Acessibilidade, os 7 alvos da aba (seletores de linha e o botão de navegação) e os 17 da janela (os botões «−» e «+» de cada passo e os seletores) passam a 24 px; na leitura B a letra sobe para 12 px",
-   "resposta": "botões e letra crescem: alvo de 24 px no mínimo e letra de 12 px no mínimo (resposta dela); o desenho e o piso da letra seguem em aberto",
+   "resposta": "botões e letra crescem: alvo de 24 px no mínimo e letra de 12 px no mínimo (a sua resposta); o desenho e o piso da letra seguem em aberto",
    "origem": "rodada 4 (o que faltava desenho)",
    "ancora": "html.alvos-24",
    "seletor": "button, select, input",
-   "conflito": "Medido na página de hoje: 7 alvos abaixo de 24 px na aba e 24 na janela Acessibilidade; 22 e 57 textos abaixo de 12 px. Depois, 0 alvos nas duas leituras; na B sobram só 10 textos de SVG. Sobram letras abaixo de 12 px só dentro de desenhos SVG (rótulos do gráfico), que não são texto da interface; a leitura B não os toca.",
+   "conflito": "Medido na página de hoje: 7 alvos abaixo de 24 px na aba e 24 com a janela Acessibilidade aberta (17 deles na própria janela); 22 e 57 textos abaixo de 12 px. Depois, 0 alvos nas duas leituras; na B sobram só 10 textos de SVG. Sobram letras abaixo de 12 px só dentro de desenhos SVG (rótulos do gráfico), que não são texto da interface; a leitura B não os toca.",
    "leituras": {
     "A": "06-navegacao.html?alvos=a",
     "B": "06-navegacao.html?alvos=b",
