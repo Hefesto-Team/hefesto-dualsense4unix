@@ -43,7 +43,7 @@ MORDIDAS = {
     "q1-cor": _m("document.querySelector('.g2-canto .sec-rot').style.color='#f8f8f2';"),
     "q2-para": _m("var p=document.querySelector('.ext[data-modificacao=lovense] .ext-para');p.innerHTML='<span class=ext-rot>Para</span>Todos';"),
     "q2-conta": _m("document.querySelector('#lovense .lv-linha:last-child .nj-tog').classList.add('ligado');"),
-    # as respostas à v3 (14/10): c1, n1, n2 na 03
+    # as respostas à v3 (14/10): c1, n1, n2 na 03; n3 na 07
     "c1-sem-ds": _m("document.querySelector('.g2-gl.g2-ds').remove();"),
     "c1-ds-solto": _m("var d=document.querySelector('.g2-gl.g2-ds svg');d.setAttribute('width','24');d.setAttribute('height','24');"),
     "c1-nome-branco": _m("document.querySelector('.g2-canto .g2-estilo-nome').style.color='#f8f8f2';"),
@@ -51,6 +51,7 @@ MORDIDAS = {
     "n1-chips-apagam": _m("document.querySelector('.modo-auto').dataset.governa='.g2-grade > :not(.g2-canto)';"),
     "n2-linha-fica": _m("document.querySelector('.g2-canto .g2-estilo').style.display='flex';"),
     "n2-pula": _m("var st=document.createElement('style');st.textContent='.g2-canto:has(.g2-estilo-nome:empty) .g2-canto-rot{margin-top:30px}';document.head.appendChild(st);"),
+    "n3-chave-fica": _m("var k=document.querySelector('.ext[data-modificacao=lovense] > .nj-tog');k.replaceWith(k.cloneNode(true));"),
     "dica-passo": _m("var t=document.querySelector('.vib .forca input[type=range]');t.setAttribute('data-dica','Ajuste fino dentro do passo');"),
 }
 
@@ -216,6 +217,22 @@ JS_PEDIDO_BASE = r"""
     if(pl&&pk){var a1=pl.getBoundingClientRect(),a2=pk.getBoundingClientRect(),f1=getComputedStyle(pl.lastElementChild||pl),f2=getComputedStyle(pk);
       if(Math.abs(a1.left-a2.left)>0.5)falta.push('«'+pl.textContent.trim()+'» não fica no lugar do «Para»');
       if(f1.fontSize!==f2.fontSize||f1.fontFamily!==f2.fontFamily||f1.color!==f2.color)falta.push('a contagem da Lovense não tem a letra do «Todos»');}
+    // n3 (v3): as três formas desligadas deixam a chave da Lovense «Desligada» e «0 de 3 ligadas»; ligar a chave assim abre
+    // a engrenagem; ligar uma forma devolve a chave a «Ligada». No fim, o estado de antes volta.
+    var fs=[...document.querySelectorAll('#lovense .lv-linha .nj-tog')],kc=document.querySelector('.ext[data-modificacao=lovense] > .nj-tog'),lc=document.querySelector('[data-lv-conta]');
+    if(kc&&lc&&fs.length===3){var antes=fs.map(function(f){return f.classList.contains('ligado');}),h0=location.hash;
+      var clk=function(x){x.dispatchEvent(new MouseEvent('click',{bubbles:true}));};
+      fs.filter(function(f){return f.classList.contains('ligado');}).forEach(clk);
+      if(kc.classList.contains('ligado')||kc.textContent.trim()!=='Desligada')falta.push('com as três formas desligadas, a chave da Lovense não diz «Desligada»: «'+kc.textContent.trim()+'»');
+      if(lc.textContent.trim()!=='0 de 3 ligadas')falta.push('com as três formas desligadas, a linha não diz «0 de 3 ligadas»: «'+lc.textContent.trim()+'»');
+      clk(kc);
+      if(location.hash!=='#lovense')falta.push('ligar a chave com as três formas desligadas não abre a engrenagem');
+      if(kc.classList.contains('ligado'))falta.push('a chave da Lovense liga com as três formas desligadas');
+      clk(fs[0]);
+      if(!kc.classList.contains('ligado')||kc.textContent.trim()!=='Ligada')falta.push('ligar uma forma não devolve a chave da Lovense a «Ligada»');
+      fs.forEach(function(f,i){if(f.classList.contains('ligado')!==antes[i])clk(f);});
+      history.replaceState(null,'',location.pathname+location.search+h0);}
+    else falta.push('a chave da Lovense, a conta ou as três formas sumiram');
     var cf=document.querySelector('#lanc-conf a[href="#impedimentos"]');if(!cf)falta.push('o Configurar da Steam não leva aos impedimentos');}
   if(aba==='10'){if([...document.querySelectorAll('[data-r3="19"]')].some(vis))falta.push('o campo do segundo controle voltou');}
   return falta;})

@@ -295,6 +295,11 @@
       "ajuste_seis": {
         "pedido": "A: no lugar do «Para», a linha mostra «2 de 3 ligadas»; quem vai para quem fica só na engrenagem",
         "feito": "Na lista das extensões, a linha da Lovense trocou o «Para Todos» por «2 de 3 ligadas», no mesmo lugar e na mesma letra do «Todos» do Kyty. A conta vem das três formas do diálogo da engrenagem (Pelo Intiface e Pelo celular ligadas, DualSense como brinquedo desligada) e se refaz a cada clique. O Kyty segue com «Para Todos»; o Para de cada forma fica só no diálogo."
+      },
+      "ajuste_v3": {
+        "id": "n3",
+        "pedido": "A: a chave da Lovense desliga junto; ao ligar uma forma, volta a «Ligada»",
+        "feito": "Quando as três formas do diálogo da engrenagem ficam desligadas, a chave da linha da Lovense passa a «Desligada» e a linha diz «0 de 3 ligadas». Ligar uma forma devolve a chave a «Ligada». Ligar a chave da linha com as três desligadas abre a engrenagem, para você escolher qual ligar. As chaves das formas passaram a ligar e desligar no clique."
       }
     },
     {
