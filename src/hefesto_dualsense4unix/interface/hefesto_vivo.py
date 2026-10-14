@@ -2507,9 +2507,11 @@ MUDOS_SEGUIDOS_QUE_VOLTARAM = 3
 
 
 def _o_servico_so_demorou(erro: BaseException) -> bool:
-    """O tique mudo foi DEMORA (`TimeoutError`), e não serviço fora do ar?"""
-    return (isinstance(erro, TimeoutError)
-            or isinstance(erro.__cause__, TimeoutError))
+    """O tique mudo foi DEMORA (o prazo vencido), e não serviço fora do ar?"""
+    from hefesto_dualsense4unix.app.ipc_bridge import PRAZO_VENCIDO
+
+    return (isinstance(erro, PRAZO_VENCIDO)
+            or isinstance(erro.__cause__, PRAZO_VENCIDO))
 
 
 class FolgaDoServicoMudo:

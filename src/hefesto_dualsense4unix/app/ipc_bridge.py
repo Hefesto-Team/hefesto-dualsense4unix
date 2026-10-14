@@ -108,9 +108,14 @@ def _prazo(metodo: str, timeout: float | None) -> float:
     return teto(metodo) if timeout is None else timeout
 
 
+#: O prazo vencido do `asyncio.wait_for`: no 3.10 ele levanta o
+#: `asyncio.TimeoutError`, que só vira o `TimeoutError` embutido a partir do 3.11.
+PRAZO_VENCIDO = (TimeoutError, asyncio.TimeoutError)
+
+
 def prazo_vencido(exc: BaseException) -> bool:
     """``True`` quando o erro é o prazo vencido, e não a recusa do serviço."""
-    return isinstance(exc, IpcError) and isinstance(exc.__cause__, TimeoutError)
+    return isinstance(exc, IpcError) and isinstance(exc.__cause__, PRAZO_VENCIDO)
 
 
 def _get_executor() -> concurrent.futures.ThreadPoolExecutor:
