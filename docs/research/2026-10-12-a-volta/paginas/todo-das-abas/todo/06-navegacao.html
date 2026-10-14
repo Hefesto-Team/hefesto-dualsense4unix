@@ -2452,6 +2452,14 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 .menu-hefesto button[disabled]{color:var(--texto-mudo,#9a9eb8);opacity:.55;cursor:default;background:transparent}
 .menu-hefesto hr{border:0;border-top:1px solid var(--border-sutil,#343746);margin:5px 4px}
 </style>
+<style data-todo-css="alvos-r4">
+/* Rodada 4: a sua resposta de 13/10 (~23h40), botões e letra: todo alvo de toque com 24 px e nenhuma letra abaixo de 12 px. ?alvos=hoje mostra a tela sem a mudança. */
+html.alvos-24 :is(button,select,input:not([type=checkbox]):not([type=radio]):not([type=hidden]),textarea,summary,[role=button],.nj-tog,.sw,.passo,label.faixa,.nav-i,.mudo-i,.padrao-i){min-height:24px;box-sizing:border-box}
+html.alvos-24 :is(button,[role=button],.nj-tog,.passo,.nav-i,.mudo-i,.padrao-i){min-width:24px}
+html.alvos-24 :is(input[type=checkbox],input[type=radio]):not(.radio-mesa){min-width:24px;min-height:24px}
+html.alvos-24 input[type=range]{height:24px}
+
+</style>
 </head>
 <body data-campo="nativo" data-hef-alvo="classe" data-hef-classe="nativo" data-hef-quando="sim">
 
@@ -3011,6 +3019,21 @@ if (location.hash === '#menu') document.getElementById('menu-desenhado').hidden 
     m.style.top = Math.min(e.clientY, innerHeight - r.height - 6) + 'px';
   });
   document.addEventListener('click', e => { if (!e.target.closest('.menu-hefesto')) document.querySelectorAll('.menu-hefesto.vivo').forEach(m => m.remove()); });
+})();
+</script>
+<script data-aba="alvos-r4">
+(function () {
+  if (new URLSearchParams(location.search).get('alvos') === 'hoje') return;
+  document.documentElement.classList.add('alvos-24');
+  document.documentElement.classList.add('letra-12');
+  function piso() {
+    document.querySelectorAll('body *').forEach(function (e) {
+      if (e.closest('svg') || ['SCRIPT', 'STYLE'].indexOf(e.tagName) >= 0) return;
+      var tem = ['INPUT', 'SELECT', 'TEXTAREA'].indexOf(e.tagName) >= 0 || Array.prototype.some.call(e.childNodes, function (n) { return n.nodeType === 3 && n.nodeValue.trim(); });
+      if (tem && parseFloat(getComputedStyle(e).fontSize) < 12) e.style.setProperty('font-size', '12px', 'important');
+    });
+  }
+  window.addEventListener('load', function () { piso(); setTimeout(piso, 400); });
 })();
 </script>
 </body>

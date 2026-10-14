@@ -2,7 +2,7 @@
   "aba": "06",
   "nome": "Navegação",
   "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/_integra-1-11/src/hefesto_dualsense4unix/interface/paginas/06-navegacao.html",
-  "depois": "/home/vitoriamaria/.local/state/hefesto-casa/leva-volta/todo/06-navegacao.html",
+  "depois": "docs/research/2026-10-12-a-volta/paginas/todo-das-abas/todo/06-navegacao.html",
   "rodada": 3,
   "sprint_unificada": "A-ABA-NAVEGACAO-DO-TODO-01",
   "mudancas": [
@@ -274,12 +274,25 @@
       "rodada": 3,
       "ancora_antes": "[data-gesto=\"point-and-click-perfil\"]",
       "js": "(() => { const s=document.querySelector('select[data-r3=\"27\"]'); const r=s.getBoundingClientRect(); s.size=s.options.length+s.querySelectorAll('optgroup').length; s.style.cssText+=';position:fixed;z-index:99;height:auto;left:'+r.left+'px;top:'+r.top+'px;width:'+r.width+'px'; return s.size })()"
+    },
+    {
+      "n": 28,
+      "sprint": "OS-ALVOS-E-A-LETRA-CRESCEM-E-A-INTERFACE-GANHA-TAMANHO-01",
+      "o_que_muda": "Na Navegação e na janela Acessibilidade, os 7 alvos da aba (seletores de linha e o botão de navegação) e os 17 da janela (os botões «−» e «+» de cada passo e os seletores) passam a 24 px, e toda letra abaixo de 12 px sobe para 12 px",
+      "resposta": "sua resposta de 13/10, ~23h40: botões e letra. Todo alvo de toque com 24 px no mínimo e nenhuma letra abaixo de 12 px, com cada aba refeita sem rolagem",
+      "origem": "rodada 4 (o que faltava desenho)",
+      "ancora": "html.alvos-24",
+      "seletor": "button, select, input",
+      "conflito": "Medido na página do todo: 7 alvos abaixo de 24 px na aba e 24 com a janela Acessibilidade aberta (17 deles na própria janela); 22 e 57 textos abaixo de 12 px. Depois, 0 alvos e 0 textos. Ficam abaixo de 12 px só as letras gravadas no desenho do controle (L1, R1, L2, R2, L, R), que crescem e encolhem com o desenho.",
+      "rodada": 4
     }
   ],
   "estados": {
     "steam": "document.querySelector('.quem [data-v=\"steam\"]').click()",
     "acessibilidade": "location.hash = '#acessibilidade'",
-    "menu": "document.getElementById('menu-desenhado').hidden = false"
+    "menu": "document.getElementById('menu-desenhado').hidden = false",
+    "r4-acessibilidade": "06-navegacao.html#acessibilidade",
+    "hoje": "06-navegacao.html?alvos=hoje"
   },
   "por_baixo": [
     {
@@ -378,5 +391,6 @@
     }
   ],
   "altura_px": 809,
-  "rola": false
+  "rola": false,
+  "origem_da_pagina": "r3 (v3) + rodada 4"
 }
