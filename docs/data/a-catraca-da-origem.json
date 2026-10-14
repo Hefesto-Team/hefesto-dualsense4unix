@@ -243,14 +243,14 @@
       "data": "2026-10-14",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1097269,
+      "piso": 1099865,
       "por_item": {
-        "docs": 118053,
-        "scripts": 112123,
-        "src": 298048,
-        "tests": 569045
+        "docs": 118068,
+        "scripts": 112127,
+        "src": 298862,
+        "tests": 570808
       },
-      "razao": "tamanho: +4 linhas (1097265 -> 1097269), pagas por Origem: D-1310-O-DIARIO-ESCREVE-O-TRACEBACK-SEM-OS-LOCAIS, D-1310-O-RUNTIME-DECLARADO-VENCE-O-PLATFORMDIRS, D-1310-O-TESTE-DO-LACO-ESPERA-PELA-CONDICAO, D-1310-O-WIFI-USB-E-O-RTW88-SO-COM-O-ADAPTADOR-PRESENTE; registrado no fecho, topo 7ac6acaa6920",
+      "razao": "tamanho: +2596 linhas (1097269 -> 1099865), pagas por Origem: D-1310-O-DIARIO-ESCREVE-O-TRACEBACK-SEM-OS-LOCAIS, D-1310-O-RUNTIME-DECLARADO-VENCE-O-PLATFORMDIRS, D-1310-O-TESTE-DO-LACO-ESPERA-PELA-CONDICAO, D-1310-O-WIFI-USB-E-O-RTW88-SO-COM-O-ADAPTADOR-PRESENTE; registrado no fecho, topo 2eae2d042145",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -407,10 +407,16 @@
           "de": 1097265,
           "para": 1097269,
           "razao": "tamanho: +4 linhas (1097265 -> 1097269), pagas por Origem: D-1310-O-DIARIO-ESCREVE-O-TRACEBACK-SEM-OS-LOCAIS, D-1310-O-RUNTIME-DECLARADO-VENCE-O-PLATFORMDIRS, D-1310-O-TESTE-DO-LACO-ESPERA-PELA-CONDICAO, D-1310-O-WIFI-USB-E-O-RTW88-SO-COM-O-ADAPTADOR-PRESENTE; registrado no fecho, topo 7ac6acaa6920"
+        },
+        {
+          "data": "2026-10-14",
+          "de": 1097269,
+          "para": 1099865,
+          "razao": "tamanho: +2596 linhas (1097269 -> 1099865), pagas por Origem: D-1310-O-DIARIO-ESCREVE-O-TRACEBACK-SEM-OS-LOCAIS, D-1310-O-RUNTIME-DECLARADO-VENCE-O-PLATFORMDIRS, D-1310-O-TESTE-DO-LACO-ESPERA-PELA-CONDICAO, D-1310-O-WIFI-USB-E-O-RTW88-SO-COM-O-ADAPTADOR-PRESENTE; registrado no fecho, topo 2eae2d042145"
         }
       ],
       "unidade": "linhas",
-      "universo": 2816
+      "universo": 2827
     }
   }
 }
