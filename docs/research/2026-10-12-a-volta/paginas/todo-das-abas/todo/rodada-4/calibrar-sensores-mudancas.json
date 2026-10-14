@@ -1,0 +1,41 @@
+{
+ "aba": "calibrar-sensores",
+ "nome": "Calibrar giroscópio",
+ "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/mockups-rodada-4/docs/research/2026-10-12-a-volta/paginas/todo-das-abas/todo/calibrar-sensores.html",
+ "depois": "/mnt/Apate/Desenvolvimento/hefesto-voo/mockups-rodada-4/docs/research/2026-10-12-a-volta/paginas/todo-das-abas/todo/rodada-4/calibrar-sensores.html",
+ "rodada": 4,
+ "altura_px": 809,
+ "rola": false,
+ "estados": {
+  "alvos-a": "calibrar-sensores.html?alvos=a",
+  "alvos-b": "calibrar-sensores.html?alvos=b"
+ },
+ "mudancas": [
+  {
+   "n": 7,
+   "sprint": "OS-ALVOS-E-A-LETRA-CRESCEM-E-A-INTERFACE-GANHA-TAMANHO-01",
+   "o_que_muda": "Na janela Calibrar giroscópio todos os alvos já têm 24 px ou mais, então a leitura A não muda nada; a leitura B sobe para 12 px os 48 textos pequenos (valores, eixos, rótulos) e aperta o respiro entre os blocos",
+   "resposta": "botões e letra crescem: alvo de 24 px no mínimo e letra de 12 px no mínimo (resposta dela); o desenho e o piso da letra seguem em aberto",
+   "origem": "rodada 4 (o que faltava desenho)",
+   "ancora": "html.alvos-24",
+   "seletor": "button, select, input",
+   "conflito": "Medido na página de hoje: 0 alvos abaixo de 24 px e 48 de 76 textos abaixo de 12 px. Em 1212x740 a janela de hoje já rola 33 px por dentro (o corpo tem rolagem própria); a leitura B apertou o respiro e deixa de rolar, a A fica como hoje, e isso fica anotado para você escolher. Sobram letras abaixo de 12 px só dentro de desenhos SVG (rótulos do gráfico), que não são texto da interface; a leitura B não os toca.",
+   "leituras": {
+    "A": "calibrar-sensores.html?alvos=a",
+    "B": "calibrar-sensores.html?alvos=b",
+    "descricao": {
+     "A": "Leitura A: todo alvo de toque passa a ter 24 px no mínimo, e a letra fica como está",
+     "B": "Leitura B: os mesmos 24 px e, além disso, nenhuma letra abaixo de 12 px"
+    },
+    "C": "Leitura C, já desenhada no 09-sistema.html: só o botão «Tamanho da interface» (Padrão, Confortável, Espaçoso), sem mexer nos tamanhos de hoje"
+   },
+   "fotos": [
+    "fotos/calibrar-sensores-m7-antes.png",
+    "fotos/calibrar-sensores-m7-a.png",
+    "fotos/calibrar-sensores-m7-b.png"
+   ]
+  }
+ ],
+ "por_baixo": [],
+ "fora": []
+}
