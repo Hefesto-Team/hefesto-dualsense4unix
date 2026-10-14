@@ -3,7 +3,7 @@
   "nome": "Gatilhos",
   "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/_integra-1-11/src/hefesto_dualsense4unix/interface/paginas/03-gatilhos.html",
   "depois": "/home/vitoriamaria/.local/state/hefesto-casa/leva-volta/todo/03-gatilhos.html",
-  "rodada": 2,
+  "rodada": 3,
   "sprint_unificada": "A-ABA-GATILHOS-DO-TODO-01",
   "mudancas": [
     {
@@ -131,6 +131,17 @@
       "origem": "RODADA-4",
       "ancora": ".g2-sep-cab",
       "conflito": ""
+    },
+    {
+      "n": 15,
+      "sprint": "A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-01",
+      "o_que_muda": "Nova linha «Força do gatilho», um seletor por controle com os quatro passos do firmware: Forte, Média, Fraca e Desligada, como no PS5",
+      "resposta": "todo-03-r3-15",
+      "origem": "escolha dela de 13/10",
+      "ancora": ".g2-rot-forca",
+      "conflito": "",
+      "rodada": 3,
+      "ancora_antes": ".g2-gl.g2-r2"
     }
   ],
   "estados": {

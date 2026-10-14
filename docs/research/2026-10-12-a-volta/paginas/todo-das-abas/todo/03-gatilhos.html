@@ -1560,6 +1560,16 @@
   body.nativo.por-controle .guardar,
   body.nativo.por-controle .r-aplicar,body.nativo.por-controle .r-salvar,
   body.nativo.por-controle .r-importar{visibility:hidden}
+  /* Rodada 3 (13/10): a força do gatilho em quatro passos, por controle */
+  .g2-rot-forca{grid-column:1 / span 2;justify-content:flex-end;padding-right:2px;min-height:30px}
+  .g2-grade:has(.g2-forca){row-gap:10px}
+  .g2-grade:has(.g2-forca) .g2-cel:has(.g2-forca){min-height:30px}
+  .g2-forca{display:flex;width:100%;height:30px;border:1px solid var(--linha);border-radius:7px;overflow:hidden;background:var(--app-bg)}
+  .g2-forca button{flex:1 1 auto;min-width:0;border:0;border-left:1px solid var(--linha);background:transparent;color:var(--texto-suave);
+    font:500 12px/1 'Space Grotesk',system-ui,sans-serif;padding:0 4px;cursor:pointer;white-space:nowrap}
+  .g2-forca button:first-child{border-left:0}
+  .g2-forca button.on{background:var(--sel-bg);color:var(--fg);font-weight:700;box-shadow:inset 0 0 0 1px var(--purple)}
+  .g2-forca button:hover:not(.on){color:var(--fg)}
 </style>
 
 
@@ -1882,6 +1892,11 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
           <div class="g2-rot"><span class="sec-rot" data-todo="3" data-dica="O realismo que o acionamento ganha">Efeito de imersão</span></div>
           <div class="g2-cel" data-controle="p1"><select class="g2-imersao" data-gesto="pronto" data-campo="pronto-d" data-hef-alvo="valor" data-lado="d" data-dica="Realismo por cima do acionamento" data-todo="3"><option value="nenhum">Nenhum</option><optgroup label="Arco de flecha"><option selected>Corda que treme no fim</option><option>Flecha que escapa</option><option>Braço cansado</option></optgroup><optgroup label="Seus efeitos"><option>Recuo do MK</option></optgroup></select></div>
           <div class="g2-cel" data-controle="p2"><select class="g2-imersao" data-gesto="pronto" data-campo="pronto-d" data-hef-alvo="valor" data-lado="d" data-dica="Realismo por cima do acionamento" data-todo="3"><option value="nenhum" selected>Nenhum</option><optgroup label="Rígido"><option>Freio ABS que pulsa</option><option>Pedal no fundo</option><option>Porta emperrada</option></optgroup><optgroup label="Seus efeitos"><option>Recuo do MK</option></optgroup></select></div>
+          <div class="g2-cel vazio" data-controle="p3"></div>
+          <div class="g2-cel vazio" data-controle="p4"></div>
+          <div class="g2-rot g2-rot-forca" data-r3="15"><span class="sec-rot" data-dica="Os quatro passos do firmware, como no PS5. Vale para L2 e R2 deste controle">Força do gatilho</span></div>
+          <div class="g2-cel" data-controle="p1"><span class="g2-forca" role="group" aria-label="Força do gatilho" data-gesto="forca-do-gatilho"><button type="button" class="on" aria-pressed="true">Forte</button><button type="button" aria-pressed="false">Média</button><button type="button" aria-pressed="false">Fraca</button><button type="button" aria-pressed="false">Desligada</button></span></div>
+          <div class="g2-cel" data-controle="p2"><span class="g2-forca" role="group" aria-label="Força do gatilho" data-gesto="forca-do-gatilho"><button type="button" aria-pressed="false">Forte</button><button type="button" class="on" aria-pressed="true">Média</button><button type="button" aria-pressed="false">Fraca</button><button type="button" aria-pressed="false">Desligada</button></span></div>
           <div class="g2-cel vazio" data-controle="p3"></div>
           <div class="g2-cel vazio" data-controle="p4"></div>
         </div>
