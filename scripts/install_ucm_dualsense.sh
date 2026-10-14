@@ -137,14 +137,9 @@ do_aplicar() {
         warn "o ucm.conf desta distro não procura conf.d/ — o gancho não seria lido"
         return 0
     fi
-    # O UCM do DualSense é de um dono só. O alsa-ucm-conf 1.2.15 e o mais novo trazem o
-    # `DualSense-PS5-HiFi.conf`; por cima dele o nosso descreveria o mesmo controle duas vezes
-    # e o nome do sink mudaria. O do sistema ganha e nada se grava (o doctor acusa se os dois
-    # já estiverem no disco; `--remover` tira o nosso).
-    if [[ -f "${RAIZ_UCM}/USB-Audio/DualSense-PS5-HiFi.conf" ]]; then
-        info "o alsa-ucm-conf do sistema já traz o UCM do DualSense (USB-Audio/DualSense-PS5-HiFi.conf) — nada gravado; o do Hefesto não entra por cima"
-        return 0
-    fi
+    # O alsa-ucm-conf 1.2.15 traz o `USB-Audio/Sony/DualSense-PS5-HiFi.conf`, que abre o
+    # alto-falante em mono e esconde os canais 3-4 (a háptica). O nosso grava mesmo assim: o
+    # gancho de conf.d/ é lido antes do pacote, e o controle fica com um dono só, o nosso.
     # DISTRO IMUTÁVEL (Silverblue, Kinoite, Bazzite, SteamOS): o /usr é só de
     # leitura, o `install -D` falha, e o install mandava rodar de novo um
     # roteiro que ali nunca vai funcionar. O que vale nessas distros é o UCM

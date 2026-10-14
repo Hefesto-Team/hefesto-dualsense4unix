@@ -3,13 +3,15 @@
 OS-CONTRATOS-DO-GE-DO-SDL-E-DO-UCM-GANHAM-REGUA-E-AVISO-01. O GE-Proton e o SDL mudam o que o
 jogo vê do controle SEM mudar porta nenhuma (a lista por appid que virou
 `PROTON_SONY_AUTO_XINPUT=1`; o 054c:0df2 que o SDL 3.4 passou a tratar como Edge), e o
-alsa-ucm-conf 1.2.15 traz o UCM do DualSense por cima do nosso. As versões aqui são de
-mentira, numa Steam e num `/usr` de `tmp_path`: nada do que está instalado é lido.
+alsa-ucm-conf 1.2.15 traz um UCM do DualSense que esconde os canais da háptica. As versões aqui
+são de mentira, numa Steam e num `/usr` de `tmp_path`: nada do que está instalado é lido.
 
 A MORDIDA: tirar de `docs/data/contratos-de-fora.csv` a linha de um dos quatro contratos
 reprova `test_o_censo_tem_a_linha_de_cada_contrato`; subir `GE_ULTIMO_MEDIDO` sem medir reprova
-`test_ge_depois_do_ultimo_medido_avisa`; tirar o guarda do `install_ucm_dualsense.sh` reprova
-`test_o_roteiro_do_ucm_nao_grava_por_cima_do_upstream`.
+`test_ge_depois_do_ultimo_medido_avisa`; ler a lista por appid só no jogo mapeado (sem o padrão
+`"0"`) reprova `test_o_padrao_da_steam_leva_a_lista_aos_jogos_sem_escolha`; pôr no
+`install_ucm_dualsense.sh` um guarda que pula o nosso com o do sistema no disco reprova
+`test_o_roteiro_grava_o_nosso_mesmo_com_o_do_sistema`.
 """
 
 from __future__ import annotations
@@ -54,11 +56,26 @@ class _Casa:
     def amb(self) -> cf.Ambiente:
         return cf.Ambiente(home=self.home, env={}, raiz=self.usr)
 
-    def ge(self, pasta: str, *, version: str | None = None) -> Path:
+    def ge(
+        self,
+        pasta: str,
+        *,
+        version: str | None = None,
+        script: str | None = None,
+        interno: str | None = None,
+    ) -> Path:
         alvo = self.steam / "compatibilitytools.d" / pasta
         alvo.mkdir()
         if version is not None:
             (alvo / "version").write_text(version, encoding="utf-8")
+        if script is not None:
+            (alvo / "proton").write_text(script, encoding="utf-8")
+        if interno is not None:
+            (alvo / "compatibilitytool.vdf").write_text(
+                f'"compatibilitytools"\n{{\n  "compat_tools"\n  {{\n    "{interno}" // nome\n'
+                '    {\n      "install_path" "."\n    }\n  }\n}\n',
+                encoding="utf-8",
+            )
         return alvo
 
     def valve(self, pasta: str, *, com_env: bool, com_script: bool = True) -> Path:
@@ -69,12 +86,18 @@ class _Casa:
             (alvo / "proton").write_text(texto, encoding="utf-8")
         return alvo
 
-    def jogo(self, appid: str, nome: str, ferramenta: str) -> None:
+    def instalado(self, appid: str, nome: str) -> None:
         (self.steam / "steamapps" / f"appmanifest_{appid}.acf").write_text(
             f'"AppState"\n{{\n\t"appid"\t\t"{appid}"\n\t"name"\t\t"{nome}"\n'
             f'\t"installdir"\t\t"{nome}"\n}}\n',
             encoding="utf-8",
         )
+
+    def jogo(self, appid: str, nome: str, ferramenta: str) -> None:
+        self.instalado(appid, nome)
+        self.padrao(ferramenta, appid=appid)
+
+    def padrao(self, ferramenta: str, *, appid: str = "0") -> None:
         self.mapa[appid] = ferramenta
         linhas = [
             '"InstallConfigStore"', "{", '\t"Software"', "\t{", '\t\t"Valve"', "\t\t{",
@@ -152,6 +175,69 @@ def test_o_ge_bom_ao_lado_nao_apaga_o_aviso_do_outro(casa: _Casa) -> None:
     assert "GE-Proton11-7-x86_64" not in mensagem, mensagem
 
 
+_SCRIPT_DO_GE = """
+        if appid in [
+            "111",  # Jogo Um
+            "999",
+        ]:
+            self.env["PROTON_SONY_HIDRAW_XINPUT"] = "1"
+
+        if appid in ["222"]:
+            # self.env["PROTON_SONY_HIDRAW_XINPUT"] = "1"
+            self.env.setdefault("PROTON_SONY_DUALSENSE_AS_DUALSHOCK4", "1")
+
+        if appid in ["444"]:
+            self.env["PROTON_ENABLE_HIDRAW"] = "1"
+"""
+
+
+def test_a_lista_por_appid_le_o_efeito_de_cada_jogo() -> None:
+    assert cf._trocas_por_appid(_SCRIPT_DO_GE) == {
+        "111": {"XInput"},
+        "999": {"XInput"},
+        "222": {"DualShock 4"},
+    }
+
+
+def test_o_jogo_na_lista_do_ge_e_avisado_pelo_nome(casa: _Casa) -> None:
+    casa.ge("GE-Proton11-7-x86_64", script=_SCRIPT_DO_GE)
+    casa.jogo("111", "Jogo Um", "GE-Proton11-7-x86_64")
+    casa.jogo("222", "Jogo Dois", "GE-Proton11-7-x86_64")
+    casa.jogo("444", "Jogo Quatro", "GE-Proton11-7-x86_64")
+    tag, mensagem = _linha(casa.amb, "ge-por-versao")
+    assert tag == "[WARN]", mensagem
+    assert "como XInput a Jogo Um" in mensagem and "como DualShock 4 a Jogo Dois" in mensagem
+    assert "Jogo Quatro" not in mensagem and "máscara Xbox" in mensagem
+
+
+def test_o_jogo_da_lista_noutro_proton_nao_e_avisado(casa: _Casa) -> None:
+    casa.ge("GE-Proton11-7-x86_64", script=_SCRIPT_DO_GE)
+    casa.jogo("111", "Jogo Um", "proton_10")
+    assert _linha(casa.amb, "ge-por-versao")[0] == "[ OK ]"
+
+
+def test_o_padrao_da_steam_leva_a_lista_aos_jogos_sem_escolha(casa: _Casa) -> None:
+    interno = "GE-Proton11-7-x86_64"
+    casa.ge("GE-Proton-meu", version="GE-Proton11-7", script=_SCRIPT_DO_GE, interno=interno)
+    casa.padrao("GE-Proton11-7-x86_64")
+    casa.instalado("111", "Jogo Um")
+    casa.jogo("222", "Jogo Dois", "proton_10")
+    tag, mensagem = _linha(casa.amb, "ge-por-versao")
+    assert tag == "[WARN]", mensagem
+    assert "Jogo Um" in mensagem and "Jogo Dois" not in mensagem
+
+
+def test_a_raiz_da_steam_por_link_nao_dobra_o_aviso(tmp_path: Path) -> None:
+    casa = _Casa(tmp_path)
+    real = casa.home / ".local" / "share" / "Steam"
+    real.parent.mkdir(parents=True)
+    casa.steam.rename(real)
+    casa.steam.symlink_to(real)
+    casa.ge("GE-Proton11-9-x86_64")
+    mensagem = _linha(casa.amb, "ge-por-versao")[1]
+    assert mensagem.count("GE-Proton11-9-x86_64") == 1, mensagem
+
+
 def test_sem_ge_ou_sem_steam_e_informacao(casa: _Casa, tmp_path: Path) -> None:
     assert _linha(casa.amb, "ge-por-versao")[0] == "[INFO]"
     vazia = cf.Ambiente(home=tmp_path / "ninguem", env={}, raiz=tmp_path / "raiz")
@@ -191,6 +277,9 @@ def test_proton_da_valve_sem_jogo_nenhum_nao_tira_nada_de_ninguem(casa: _Casa) -
         ("Proton Hotfix", "proton_hotfix"),
         ("Proton - Experimental", "proton_experimental"),
         ("Proton 11.0", "proton_11"),
+        ("Proton 5.13", "proton_513"),
+        ("Proton 6.3", "proton_63"),
+        ("Proton 9.0 (Beta)", "proton_9"),
     ],
 )
 def test_o_nome_da_pasta_vira_o_nome_do_mapa_da_steam(casa: _Casa, pasta: str, chave: str) -> None:
@@ -198,6 +287,14 @@ def test_o_nome_da_pasta_vira_o_nome_do_mapa_da_steam(casa: _Casa, pasta: str, c
     casa.valve(pasta, com_env=False)
     casa.jogo("333", "Terceiro Jogo", chave)
     assert _linha(casa.amb, "proton-da-valve-sem-som")[0] == "[WARN]"
+
+
+def test_o_padrao_da_steam_num_proton_da_valve_nao_sai_como_zero(casa: _Casa) -> None:
+    casa.valve("Proton 10.0", com_env=False)
+    casa.padrao("proton_10")
+    tag, mensagem = _linha(casa.amb, "proton-da-valve-sem-som")
+    assert tag == "[WARN]", mensagem
+    assert "o padrão da Steam" in mensagem and ": 0" not in mensagem
 
 
 def test_residuo_sem_o_script_nao_e_proton_instalado(casa: _Casa) -> None:
@@ -249,22 +346,23 @@ def _ucm(casa: _Casa, *, upstream: bool, hefesto: bool) -> None:
     raiz = casa.usr / "usr" / "share" / "alsa" / "ucm2" / "USB-Audio"
     raiz.mkdir(parents=True, exist_ok=True)
     if upstream:
-        (raiz / "DualSense-PS5-HiFi.conf").write_text("Syntax 4\n", encoding="utf-8")
+        (raiz / "Sony").mkdir(exist_ok=True)
+        (raiz / "Sony" / "DualSense-PS5-HiFi.conf").write_text("Syntax 4\n", encoding="utf-8")
     if hefesto:
         (raiz / "Hefesto").mkdir(exist_ok=True)
         (raiz / "Hefesto" / "DualSense-HiFi.conf").write_text("Syntax 4\n", encoding="utf-8")
 
 
-def test_os_dois_ucm_juntos_avisam_e_dizem_como_tirar_o_nosso(casa: _Casa) -> None:
-    _ucm(casa, upstream=True, hefesto=True)
+def test_o_do_sistema_sem_o_nosso_avisa_que_a_haptica_some(casa: _Casa) -> None:
+    _ucm(casa, upstream=True, hefesto=False)
     tag, mensagem = _linha(casa.amb, "ucm-de-um-dono-so")
     assert tag == "[WARN]", mensagem
-    assert "DualSense-PS5-HiFi.conf" in mensagem
-    assert "install_ucm_dualsense.sh --remover" in mensagem
+    assert "Sony/DualSense-PS5-HiFi.conf" in mensagem and "háptica" in mensagem
+    assert "scripts/install_ucm_dualsense.sh" in mensagem and "--remover" not in mensagem
 
 
-@pytest.mark.parametrize(("upstream", "hefesto"), [(True, False), (False, True), (False, False)])
-def test_um_dono_so_ou_nenhum_cala(casa: _Casa, upstream: bool, hefesto: bool) -> None:
+@pytest.mark.parametrize(("upstream", "hefesto"), [(True, True), (False, True), (False, False)])
+def test_o_nosso_por_cima_ou_nenhum_cala(casa: _Casa, upstream: bool, hefesto: bool) -> None:
     _ucm(casa, upstream=upstream, hefesto=hefesto)
     assert _linha(casa.amb, "ucm-de-um-dono-so")[0] == "[ OK ]"
 
@@ -278,8 +376,9 @@ def _roteiro(base: Path, *, upstream: bool) -> tuple[subprocess.CompletedProcess
     (ucm / "conf.d" / "USB-Audio").mkdir(parents=True)
     (ucm / "ucm.conf").write_text('Directory "conf.d/${var:Driver}"\n', encoding="utf-8")
     if upstream:
-        (ucm / "USB-Audio" / "DualSense-PS5-HiFi.conf").parent.mkdir(exist_ok=True)
-        (ucm / "USB-Audio" / "DualSense-PS5-HiFi.conf").write_text("Syntax 4\n", encoding="utf-8")
+        do_sistema = ucm / "USB-Audio" / "Sony" / "DualSense-PS5-HiFi.conf"
+        do_sistema.parent.mkdir(parents=True)
+        do_sistema.write_text("Syntax 4\n", encoding="utf-8")
     sysfs = base / "sys"
     hub = sysfs / "devices" / "pci0000:00" / "0000:0c:00.3" / "usb1"
     hub.mkdir(parents=True)
@@ -293,12 +392,13 @@ def _roteiro(base: Path, *, upstream: bool) -> tuple[subprocess.CompletedProcess
     return feito, ucm
 
 
-def test_o_roteiro_do_ucm_nao_grava_por_cima_do_upstream(tmp_path: Path) -> None:
+def test_o_roteiro_grava_o_nosso_mesmo_com_o_do_sistema(tmp_path: Path) -> None:
+    """O do sistema esconde a háptica, e o gancho em conf.d/ é lido antes dele: o nosso entra."""
     feito, ucm = _roteiro(tmp_path, upstream=True)
     assert feito.returncode == 0, feito.stderr
-    assert "DualSense-PS5-HiFi.conf" in feito.stdout, feito.stdout
-    assert not (ucm / "USB-Audio" / "Hefesto").exists()
-    assert not list((ucm / "conf.d" / "USB-Audio").glob("*.conf"))
+    assert (ucm / "USB-Audio" / "Hefesto" / "DualSense-HiFi.conf").is_file(), feito.stdout
+    assert list((ucm / "conf.d" / "USB-Audio").glob("*.conf"))
+    assert (ucm / "USB-Audio" / "Sony" / "DualSense-PS5-HiFi.conf").is_file()
 
 
 def test_sem_o_upstream_o_roteiro_grava_como_sempre(tmp_path: Path) -> None:

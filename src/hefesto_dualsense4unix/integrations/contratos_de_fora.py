@@ -203,11 +203,12 @@ def _sonda_driver_sony(amb: Ambiente) -> Resultado:
 
 
 def _raizes_da_steam(amb: Ambiente) -> list[Path]:
-    return [
-        r
-        for r in (amb.home / ".steam" / "steam", amb.home / ".local" / "share" / "Steam")
-        if r.is_dir()
-    ]
+    """Cada raiz uma vez só: ``~/.steam/steam`` costuma ser link de ``~/.local/share/Steam``."""
+    raizes: list[Path] = []
+    for r in (amb.home / ".steam" / "steam", amb.home / ".local" / "share" / "Steam"):
+        if r.is_dir() and all(r.resolve() != vista.resolve() for vista in raizes):
+            raizes.append(r)
+    return raizes
 
 
 def _pasta_xdg(amb: Ambiente, variavel: str, padrao: str) -> Path:
@@ -336,8 +337,20 @@ ENV_DA_PILHA_DE_SOM = "PROTON_ENABLE_MHWILDS_USB_AUDIO"
 SDL_DO_EDGE = (3, 4)
 _SDL_RX = re.compile(r"libSDL3\.so\.0\.(\d+)\.(\d+)$")
 
-#: O arquivo que o alsa-ucm-conf 1.2.15 traz para o DualSense, e o verbo que o Hefesto grava.
-UCM_DO_UPSTREAM = "USB-Audio/DualSense-PS5-HiFi.conf"
+#: As envs que o script do GE liga POR APPID e que trocam o controle que o jogo vê por cima da
+#: máscara DualSense (as listas do `proton`, lidas no 11-7 e no 11-8 em 13/10/2026).
+TROCAS_DO_GE_POR_APPID = {
+    "PROTON_SONY_HIDRAW_XINPUT": "XInput",
+    "PROTON_SONY_DUALSENSE_AS_DUALSHOCK4": "DualShock 4",
+}
+_LISTA_POR_APPID_RX = re.compile(
+    r"if appid in \[(?P<lista>[^\]]*)\]:(?P<corpo>(?:\n[ \t]*(?:self\.env[^\n]*)?)+)"
+)
+_ENV_LIGADA_RX = re.compile(r'self\.env(?:\[\s*"(\w+)"\s*\]\s*=|\.setdefault\(\s*"(\w+)")')
+
+#: O arquivo que o alsa-ucm-conf 1.2.15 traz para o DualSense (o commit `36a111ad` do
+#: alsa-ucm-conf), e o verbo que o Hefesto grava.
+UCM_DO_UPSTREAM = "USB-Audio/Sony/DualSense-PS5-HiFi.conf"
 UCM_DO_HEFESTO = "USB-Audio/Hefesto/DualSense-HiFi.conf"
 
 
@@ -385,26 +398,95 @@ def _fala_da_versao_do_ge(nome: str, versao: tuple[int, int]) -> str | None:
     return None
 
 
+def _o_mapa_dos_jogos(amb: Ambiente) -> dict[str, str]:
+    """``{appid: ferramenta}`` do ``CompatToolMapping``, pelo dono (``proton_pin``).
+
+    O appid ``"0"`` é o padrão da Steam, que vale para todo jogo sem escolha própria.
+    """
+    from .proton_pin import default_config_vdf, extract_compat_tool_mapping
+
+    texto = _texto_do_arquivo(default_config_vdf(amb.home))
+    return {a: f.lower() for a, f in extract_compat_tool_mapping(texto).items() if f}
+
+
+def _nome_do_jogo(appid: str, amb: Ambiente) -> str:
+    from .steam_launch_options import nome_do_appid
+
+    if appid == "0":
+        return "o padrão da Steam (os jogos sem escolha própria)"
+    return nome_do_appid(appid, amb.home) or appid
+
+
+def _jogos_na_ferramenta(nomes: set[str], mapa: dict[str, str], amb: Ambiente) -> set[str]:
+    """Os appids que rodam na ferramenta: os mapeados nela e, se ela é o padrão, os sem escolha."""
+    jogos = {a for a, f in mapa.items() if f in nomes and a != "0"}
+    if mapa.get("0") in nomes:
+        from .proton_pin import list_installed_appids
+
+        jogos |= {a for a in list_installed_appids(amb.home) if a not in mapa}
+    return jogos
+
+
+def _trocas_por_appid(script: str) -> dict[str, set[str]]:
+    """``{appid: {"XInput", ...}}``: as listas ``if appid in [...]`` do script do GE."""
+    trocas: dict[str, set[str]] = {}
+    for bloco in _LISTA_POR_APPID_RX.finditer(re.sub(r"#[^\n]*", "", script)):
+        envs = {a or b for a, b in _ENV_LIGADA_RX.findall(bloco.group("corpo"))}
+        efeitos = {TROCAS_DO_GE_POR_APPID[e] for e in envs if e in TROCAS_DO_GE_POR_APPID}
+        for appid in re.findall(r'"(\d+)"', bloco.group("lista")) if efeitos else []:
+            trocas.setdefault(appid, set()).update(efeitos)
+    return trocas
+
+
+def _fala_das_trocas_do_ge(pasta: Path, mapa: dict[str, str], amb: Ambiente) -> str | None:
+    """O jogo nesse GE que a lista por appid do script troca de controle, pelo nome."""
+    trocas = _trocas_por_appid(_texto_do_arquivo(pasta / "proton"))
+    interno = re.search(
+        r'"compat_tools"\s*\{\s*"([^"]+)"', _texto_do_arquivo(pasta / "compatibilitytool.vdf")
+    )
+    nomes = {pasta.name.lower()} | ({interno.group(1).lower()} if interno else set())
+    por_efeito: dict[str, list[str]] = {}
+    for appid in sorted(_jogos_na_ferramenta(nomes, mapa, amb) & trocas.keys(), key=int):
+        for efeito in sorted(trocas[appid]):
+            por_efeito.setdefault(efeito, []).append(_nome_do_jogo(appid, amb))
+    if not por_efeito:
+        return None
+    partes = [f"como {efeito} a {', '.join(jogos[:5])}" for efeito, jogos in por_efeito.items()]
+    return (
+        f"{pasta.name} entrega o controle " + " e ".join(partes) + " (a lista por appid do "
+        "script), por cima da máscara DualSense do Hefesto; no jogo que recebe XInput, a máscara "
+        "Xbox no perfil dele põe o jogo e o Hefesto de acordo"
+    )
+
+
 def _sonda_ge_por_versao(amb: Ambiente) -> Resultado:
     pastas = _compatibilitytools(amb)
     if not _raizes_da_steam(amb):
         return Resultado(AUSENTE, "a Steam não está instalada para este usuário")
     instalados = [
-        (p.name, v)
+        (p, v)
         for pasta in pastas
         for p in sorted(pasta.glob("GE-Proton*"))
         if p.is_dir() and (v := _versao_do_ge(p)) is not None
     ]
     if not instalados:
         return Resultado(AUSENTE, "nenhum GE-Proton em compatibilitytools.d")
-    avisos = [a for nome, v in instalados if (a := _fala_da_versao_do_ge(nome, v))]
+    mapa = _o_mapa_dos_jogos(amb)
+    avisos = [
+        aviso
+        for p, v in instalados
+        for aviso in (_fala_da_versao_do_ge(p.name, v), _fala_das_trocas_do_ge(p, mapa, amb))
+        if aviso
+    ]
     return Resultado(QUEBROU, "; ".join(avisos)) if avisos else Resultado(OK)
 
 
 def _chave_do_proton_da_valve(pasta: str) -> str:
-    """O nome que o ``CompatToolMapping`` usa: ``Proton 10.0`` é ``proton_10``."""
-    resto = re.sub(r"[^a-z0-9.]+", "_", pasta.lower()).strip("_")
-    return re.sub(r"\.0$", "", resto)
+    """O nome que o ``CompatToolMapping`` usa: ``Proton 10.0`` é ``proton_10``, e ``Proton 5.13``
+    é ``proton_513``."""
+    nome = re.sub(r"\s*\(.*?\)", "", pasta.lower()).strip()
+    nome = re.sub(r"\.0$", "", nome).replace(".", "")
+    return re.sub(r"[^a-z0-9]+", "_", nome).strip("_")
 
 
 def _sonda_proton_da_valve(amb: Ambiente) -> Resultado:
@@ -416,8 +498,7 @@ def _sonda_proton_da_valve(amb: Ambiente) -> Resultado:
     Steam, o mapa dos jogos e o nome de cada um vêm dos donos (``steam_launch_options``,
     ``proton_pin``): aqui não há leitura própria de ``steamapps`` nem de ``config.vdf``.
     """
-    from .proton_pin import default_config_vdf, extract_compat_tool_mapping
-    from .steam_launch_options import nome_do_appid, pastas_steamapps
+    from .steam_launch_options import pastas_steamapps
 
     if not _raizes_da_steam(amb):
         return Resultado(AUSENTE, "a Steam não está instalada para este usuário")
@@ -434,12 +515,11 @@ def _sonda_proton_da_valve(amb: Ambiente) -> Resultado:
                 sem_pilha[_chave_do_proton_da_valve(pasta.name)] = pasta.name
     if not com_script:
         return Resultado(AUSENTE, "nenhum Proton da Valve instalado")
-    mapa = extract_compat_tool_mapping(_texto_do_arquivo(default_config_vdf(amb.home)))
     nomes: dict[str, list[str]] = {}
-    for appid, ferramenta in mapa.items():
-        do_proton = sem_pilha.get(ferramenta.lower())
+    for appid, ferramenta in _o_mapa_dos_jogos(amb).items():
+        do_proton = sem_pilha.get(ferramenta)
         if do_proton is not None:
-            nomes.setdefault(do_proton, []).append(nome_do_appid(appid, amb.home) or appid)
+            nomes.setdefault(do_proton, []).append(_nome_do_jogo(appid, amb))
     if not nomes:
         return Resultado(OK)
     partes = [
@@ -496,15 +576,21 @@ def _sonda_sdl_por_versao(amb: Ambiente) -> Resultado:
 
 
 def _sonda_ucm_de_um_dono_so(amb: Ambiente) -> Resultado:
+    """O do sistema abre o alto-falante em mono e esconde os canais 3 e 4, que são a háptica.
+
+    Com os dois no disco o dono é o do Hefesto: o ``ucm.conf`` lê o gancho de ``conf.d/`` antes
+    do ``USB-Audio.conf`` do pacote (o ``UseCasePath.confd1``, igual no 1.2.10 e no 1.2.15).
+    """
     raiz = amb.caminho("/usr/share/alsa") / "ucm2"
     if not raiz.is_dir():
         return Resultado(AUSENTE, "sem alsa-ucm-conf nesta máquina")
-    if (raiz / UCM_DO_UPSTREAM).is_file() and (raiz / UCM_DO_HEFESTO).is_file():
+    if (raiz / UCM_DO_UPSTREAM).is_file() and not (raiz / UCM_DO_HEFESTO).is_file():
         return Resultado(
             QUEBROU,
-            f"o alsa-ucm-conf do sistema já traz {UCM_DO_UPSTREAM} e o do Hefesto também está "
-            f"instalado ({UCM_DO_HEFESTO}): os dois descrevem o mesmo controle e o nome do sink "
-            "muda. Tire o do Hefesto com scripts/install_ucm_dualsense.sh --remover",
+            f"o alsa-ucm-conf do sistema traz {UCM_DO_UPSTREAM}, que abre o alto-falante do "
+            "controle em mono e não mostra os canais da háptica, e o do Hefesto não está "
+            "instalado: a vibração pelo som não chega ao controle no cabo. Instale o do Hefesto "
+            "com scripts/install_ucm_dualsense.sh",
         )
     return Resultado(OK)
 
@@ -587,7 +673,7 @@ CONTRATOS: tuple[Contrato, ...] = (
         dono="proton",
         promessa=(
             "o GE-Proton instalado está na faixa em que o Hefesto mediu o que o controle vê "
-            "(11-4 a 11-8)"
+            "(11-4 a 11-8), e a lista por appid do script não troca o controle de jogo nenhum"
         ),
         conferir="cat ~/.steam/steam/compatibilitytools.d/GE-Proton*/version",
         sonda=_sonda_ge_por_versao,
@@ -625,8 +711,8 @@ CONTRATOS: tuple[Contrato, ...] = (
         id="ucm-de-um-dono-so",
         dono="alsa-ucm-conf",
         promessa=(
-            "o UCM do DualSense é de um dono só: o do sistema (alsa-ucm-conf 1.2.15 ou mais "
-            "novo) ou o do Hefesto"
+            "o UCM do DualSense é de um dono só, o do Hefesto, que o ucm.conf lê antes do que o "
+            "alsa-ucm-conf 1.2.15 traz (o do sistema esconde os canais da háptica)"
         ),
         conferir=(
             f"ls /usr/share/alsa/ucm2/{UCM_DO_UPSTREAM} /usr/share/alsa/ucm2/{UCM_DO_HEFESTO}"
