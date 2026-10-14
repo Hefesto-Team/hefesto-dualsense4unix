@@ -1974,6 +1974,8 @@
   .sem-piscar[aria-pressed="true"]{background:rgba(241,250,140,.14);border-color:var(--yellow,#f1fa8c);color:var(--fg)}
   .sem-piscar[aria-pressed="true"] .p{border-color:var(--yellow,#f1fa8c);background:var(--yellow,#f1fa8c)}
   body.sem-piscar-ligado .seg-criar button:nth-child(2)::after{content:" lento"}
+  /* com o «lento» o Piscar cresce 27 px e o «Respiro calmo» saía cortado na borda: o campo do nome cede 28 */
+  body.sem-piscar-ligado .criar .nome-criar{width:108px}
 </style>
 
 
@@ -2043,6 +2045,9 @@
   .g4-efeito{flex:1 1 0;width:0}
   /* a linha Criar não cabia: o «Respiro calmo» saía 3 px cortado na borda. O campo do nome cede 14 px. */
   .criar .nome-criar{width:136px}
+  /* RODADA 3 (13/10): em 1212x740 a aba rolava 68 px por dentro e a linha Criar sumia. Na janela baixa o
+     desenho do controle encolhe, a linha do Jogador aperta o respiro e o passo entre as linhas cai de 10 para 8. */
+  @media (max-height:780px){.luz-grade{--r-des:44px;--r-player:40px;--r-ar:4px}}
 </style>
 <style id="base-comum">
 /* ===== Base comum das abas (rodada 2, 12/10/2026) =====
