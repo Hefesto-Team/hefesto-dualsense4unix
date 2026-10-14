@@ -40,6 +40,11 @@
    "ajuste_seis": {
     "pedido": "B: «P3 • Desconectado» (só a letra e o número)",
     "feito": "As duas vagas sem controle dizem «P3 • Desconectado» e «P4 • Desconectado», sem a palavra «Player»; o resto da faixa segue como estava (sem cor de plástico, sem dado nem botão)."
+   },
+   "ajuste_v3": {
+    "id": "c3",
+    "pedido": "Textao do botão. Deixa só o texto mira virtual nos dois analógicos",
+    "feito": "Os botões sob o Analógico esquerdo e o direito dizem só «Mira virtual», com a mesma largura (a da coluna) e 26 px de altura, letra de 12 px, numa linha só; a explicação («Girar o controle move o analógico esquerdo/direito») fica na dica. Ligar e desligar não muda a altura do cartão."
    }
   }
  ],

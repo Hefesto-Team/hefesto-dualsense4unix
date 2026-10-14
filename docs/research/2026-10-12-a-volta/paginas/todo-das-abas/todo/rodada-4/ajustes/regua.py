@@ -52,6 +52,10 @@ MORDIDAS = {
     "q6-rotulo": _m("document.querySelectorAll('.mira .desl[data-seis=q6] .r').forEach(function(r){r.textContent='Só enquanto eu segurar';});"),
     "q6-opcoes": _m("document.querySelectorAll('select[data-gesto=mira-segurar]').forEach(function(x){var o=document.createElement('option');o.text='Cruz';x.add(o);});"),
     "barra-calibrar": _m("document.querySelectorAll('.lin > .r').forEach(function(x){x.style.flex='0 0 82px';});"),
+    # as respostas à v3 (14/10): c3 na 02
+    "c3-textao": _m("document.querySelectorAll('.chip-virtual>.sw').forEach(function(b){b.lastChild.textContent='Usar giroscópio como analógico';});"),
+    "c3-largura": _m("var b=document.querySelector('.chip-virtual>.sw');b.style.width='80%';"),
+    "c3-pula": _m("var st=document.createElement('style');st.textContent='.chip-virtual.on>.sw{height:34px!important}';document.head.appendChild(st);"),
     "conta-calibrar": _m("var a=document.querySelector('.rodape .acoes');var s=document.createElement('span');s.className='quantos';s.textContent='2 controles conectados';a.parentNode.insertBefore(s,a);"),
 }
 
@@ -93,7 +97,7 @@ JS_IGUAIS = r"""
 """
 IGUAIS = {
     "01": [],
-    "02": [["os quatro cartões", ".ctl"]],
+    "02": [["os quatro cartões", ".ctl"], ["os botões «Mira virtual»", ".chip-virtual>.sw"]],
     "07": [["O que os acessórios seguem", ".ja-tela.t2 .t2-segue .ja-op"],
            ["Como os três tocam juntos", ".ja-tela.t2 .t2-juntos .ja-op"],
            ["as opções das duas molduras de cima", ".ja-tela.t2 .ja-op"],
@@ -128,7 +132,19 @@ JS_PEDIDO = r"""
     des.forEach(function(f){var t=txt(f);if(!/^P\d • Desconectado$/.test(t))falta.push('a vaga sem controle não diz «P<n> • Desconectado»: «'+t.slice(0,60)+'»');});
     if(visivelCom(/Player/).length)falta.push('uma vaga diz «Player» em '+visivelCom(/Player/).slice(0,2));
     [...document.querySelectorAll('.ctl[data-conectado=nao]')].forEach(function(k){if(/Galactic Purple|White|Cosmic Red|Starlight Blue/.test(txt(k)))falta.push('o desconectado tem cor de plástico');
-      if([...k.querySelectorAll('button,select,input,.mic,.bat,[data-campo=bateria]')].some(vis))falta.push('o desconectado tem controle ou dado visível');});}
+      if([...k.querySelectorAll('button,select,input,.mic,.bat,[data-campo=bateria]')].some(vis))falta.push('o desconectado tem controle ou dado visível');});
+    // c3 (v3): os dois botões sob os analógicos dizem só «Mira virtual», com a mesma largura e a mesma altura, e nada pula
+    var mv=[...document.querySelectorAll('.chip-virtual>.sw')].filter(vis);
+    if(mv.length<2)falta.push('os botões da mira virtual sumiram');
+    mv.forEach(function(b){var t=txt(b),r=b.getBoundingClientRect();if(t!=='Mira virtual')falta.push('um botão da mira diz «'+t.slice(0,40)+'»');
+      if(r.height<24)falta.push('o botão da mira tem '+Math.round(r.height)+' px de altura');
+      if(parseFloat(getComputedStyle(b).fontSize)<12)falta.push('o botão da mira tem letra de '+getComputedStyle(b).fontSize);
+      if(!b.getAttribute('data-dica'))falta.push('o botão da mira perdeu a dica');});
+    if(mv.length>=2){var hs=mv.map(function(b){return b.getBoundingClientRect().height;});if(Math.max.apply(null,hs)-Math.min.apply(null,hs)>0.5)falta.push('os botões da mira têm alturas diferentes '+hs);}
+    if(visivelCom(/giroscópio como analógico/i).length)falta.push('o texto «Usar giroscópio como analógico» aparece');
+    var cv=[...document.querySelectorAll('.chip-virtual')],mede=function(){return [...document.querySelectorAll('.ctl')].map(function(k){return Math.round(k.getBoundingClientRect().height*10);}).concat(mv.map(function(b){return Math.round(b.getBoundingClientRect().height*10);}));};
+    var h0=mede();cv.forEach(function(c){c.classList.toggle('on');});var h1=mede();cv.forEach(function(c){c.classList.toggle('on');});
+    if(h0.join()!==h1.join())falta.push('ligar ou desligar a mira virtual muda a altura do bloco');}
   if(aba==='07'){
     var ac=document.querySelector('#acessorios');
     [['34','os jogos'],['35','a força']].forEach(function(p){var e=document.querySelector('[data-todo="'+p[0]+'"]');

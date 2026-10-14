@@ -1030,6 +1030,12 @@ html.alvos-24 :is(input[type=checkbox],input[type=radio]):not(.radio-mesa){min-w
 html.alvos-24 input[type=range]{height:24px}
 html.letra-12 .quadro-corpo{gap:7px;padding-bottom:10px}
 </style>
+<style data-todo-css="mira-virtual-v3">
+/* As respostas à v3 (14/10): os dois botões sob os analógicos dizem só «Mira virtual», numa linha, com a mesma largura
+   e a mesma altura, ligados ou não. A explicação fica na dica. */
+.chip-virtual>.sw{white-space:nowrap;height:26px;min-height:26px;line-height:1;font-size:12px;padding:0 8px;gap:6px;
+  width:100%;max-width:none;box-sizing:border-box}
+</style>
 </head>
 <body class="por-controle" data-campo="nativo" data-hef-alvo="classe" data-hef-classe="nativo" data-hef-quando="sim">
 
@@ -1235,7 +1241,7 @@ html.letra-12 .quadro-corpo{gap:7px;padding-bottom:10px}
             <div class="sticks">
               <div>
                 <div class="stick-topo"><div class="stick-rot">Analógico<br>esquerdo</div>
-                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual on" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico esquerdo" data-todo="6"><span class="p"></span>Usar giroscópio como analógico</button></span></span></div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual on" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico esquerdo" data-todo="6"><span class="p"></span>Mira virtual</button></span></span></div>
                 <div class="stick" data-stick="l">
                   <span class="rotl" data-campo="l3">L3</span>
                   <span data-campo="pos-ana-e-jogo" data-hef-alvo="posicao" style="--hef-x:43.1%;--hef-y:78.4%"><span class="pj on" data-campo="ana-e-jogo" data-hef-alvo="classe"></span></span>
@@ -1244,7 +1250,7 @@ html.letra-12 .quadro-corpo{gap:7px;padding-bottom:10px}
               </div>
               <div>
                 <div class="stick-topo"><div class="stick-rot">Analógico<br>direito</div>
-                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico direito" data-todo="6"><span class="p"></span>Usar giroscópio como analógico</button></span></span></div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico direito" data-todo="6"><span class="p"></span>Mira virtual</button></span></span></div>
                 <div class="stick" data-stick="r">
                   <span class="rotl" data-campo="r3">R3</span>
                   <span data-campo="pos-ana-d-jogo" data-hef-alvo="posicao"><span class="pj" data-campo="ana-d-jogo" data-hef-alvo="classe"></span></span>
@@ -1499,7 +1505,7 @@ html.letra-12 .quadro-corpo{gap:7px;padding-bottom:10px}
             <div class="sticks">
               <div>
                 <div class="stick-topo"><div class="stick-rot">Analógico<br>esquerdo</div>
-                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico esquerdo" data-todo="6"><span class="p"></span>Usar giroscópio como analógico</button></span></span></div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico esquerdo" data-todo="6"><span class="p"></span>Mira virtual</button></span></span></div>
                 <div class="stick" data-stick="l">
                   <span class="rotl" data-campo="l3">L3</span>
                   <span data-campo="pos-ana-e-jogo" data-hef-alvo="posicao"><span class="pj" data-campo="ana-e-jogo" data-hef-alvo="classe"></span></span>
@@ -1508,7 +1514,7 @@ html.letra-12 .quadro-corpo{gap:7px;padding-bottom:10px}
               </div>
               <div>
                 <div class="stick-topo"><div class="stick-rot">Analógico<br>direito</div>
-                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico direito" data-todo="6"><span class="p"></span>Usar giroscópio como analógico</button></span></span></div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico direito" data-todo="6"><span class="p"></span>Mira virtual</button></span></span></div>
                 <div class="stick" data-stick="r">
                   <span class="rotl" data-campo="r3">R3</span>
                   <span data-campo="pos-ana-d-jogo" data-hef-alvo="posicao"><span class="pj" data-campo="ana-d-jogo" data-hef-alvo="classe"></span></span>
@@ -1763,7 +1769,7 @@ html.letra-12 .quadro-corpo{gap:7px;padding-bottom:10px}
             <div class="sticks">
               <div>
                 <div class="stick-topo"><div class="stick-rot">Analógico<br>esquerdo</div>
-                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico esquerdo" data-todo="6"><span class="p"></span>Usar giroscópio como analógico</button></span></span></div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico esquerdo" data-todo="6"><span class="p"></span>Mira virtual</button></span></span></div>
                 <div class="stick" data-stick="l">
                   <span class="rotl" data-campo="l3">—</span>
                   <span data-campo="pos-ana-e-jogo" data-hef-alvo="posicao"><span class="pj" data-campo="ana-e-jogo" data-hef-alvo="classe"></span></span>
@@ -1772,7 +1778,7 @@ html.letra-12 .quadro-corpo{gap:7px;padding-bottom:10px}
               </div>
               <div>
                 <div class="stick-topo"><div class="stick-rot">Analógico<br>direito</div>
-                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico direito" data-todo="6"><span class="p"></span>Usar giroscópio como analógico</button></span></span></div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico direito" data-todo="6"><span class="p"></span>Mira virtual</button></span></span></div>
                 <div class="stick" data-stick="r">
                   <span class="rotl" data-campo="r3">—</span>
                   <span data-campo="pos-ana-d-jogo" data-hef-alvo="posicao"><span class="pj" data-campo="ana-d-jogo" data-hef-alvo="classe"></span></span>
@@ -2027,7 +2033,7 @@ html.letra-12 .quadro-corpo{gap:7px;padding-bottom:10px}
             <div class="sticks">
               <div>
                 <div class="stick-topo"><div class="stick-rot">Analógico<br>esquerdo</div>
-                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico esquerdo" data-todo="6"><span class="p"></span>Usar giroscópio como analógico</button></span></span></div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico esquerdo" data-todo="6"><span class="p"></span>Mira virtual</button></span></span></div>
                 <div class="stick" data-stick="l">
                   <span class="rotl" data-campo="l3">—</span>
                   <span data-campo="pos-ana-e-jogo" data-hef-alvo="posicao"><span class="pj" data-campo="ana-e-jogo" data-hef-alvo="classe"></span></span>
@@ -2036,7 +2042,7 @@ html.letra-12 .quadro-corpo{gap:7px;padding-bottom:10px}
               </div>
               <div>
                 <div class="stick-topo"><div class="stick-rot">Analógico<br>direito</div>
-                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico direito" data-todo="6"><span class="p"></span>Usar giroscópio como analógico</button></span></span></div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico direito" data-todo="6"><span class="p"></span>Mira virtual</button></span></span></div>
                 <div class="stick" data-stick="r">
                   <span class="rotl" data-campo="r3">—</span>
                   <span data-campo="pos-ana-d-jogo" data-hef-alvo="posicao"><span class="pj" data-campo="ana-d-jogo" data-hef-alvo="classe"></span></span>
