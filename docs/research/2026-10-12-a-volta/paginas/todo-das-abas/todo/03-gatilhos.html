@@ -1567,6 +1567,8 @@
     font:500 12px/16px 'Space Grotesk',system-ui,sans-serif;color:var(--fg);cursor:help}
   .g2-canto .g2-leitura b{font:700 12px/16px 'JetBrains Mono',monospace;color:var(--rot-campo,var(--fg))}
   .g2-canto .g2-leitura span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* em tela baixa o respiro entre as linhas diminui, para o desenho com a leitura caber sem rolar */
+  @media (max-height:780px){.quadro .g2-grade{row-gap:8px;padding-top:4px}}
 </style>
 
 
