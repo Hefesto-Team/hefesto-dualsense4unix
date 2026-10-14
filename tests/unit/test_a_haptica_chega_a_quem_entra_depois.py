@@ -27,6 +27,7 @@ from hefesto_dualsense4unix.integrations.haptica_do_cabo import (
     chave_do_aparelho,
     no_de_captura,
 )
+from hefesto_dualsense4unix.integrations.retrato_do_som import e_leitura
 from tests.unit import pactl_json_de_mentira as pj
 from tests.unit import porta_de_mentira as porta
 from tests.unit.test_haptica_nativa_01_o_device_ks_que_o_jogo_procura import (
@@ -484,6 +485,42 @@ def test_so_quem_mexeu_vibra_no_cabo_e_o_alto_falante_passa_nos_dois(mesa: _Mesa
     assert {lig[1] for lig in mesa.lacos.ligacoes} == {
         str(mesa.servidor.indice(eh.nome_do_endpoint(u))) for u in (_P1, _P2)
     }
+
+
+def test_a_volta_parada_nao_escreve_no_servidor(
+    mesa: _Mesa, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Rodada 1 de 14/10 (só o White no cabo): o p99 do quadro foi de 24 a 43-46 ms.
+
+    Com o portão aberto recusado pelo ``pactl``, cada volta mandava o mesmo
+    ``set-sink-input-volume`` de novo, e cada escrita deixa os fluxos pendentes no
+    retrato do som: dois ``pactl`` a cada volta, a partida inteira. A volta parada
+    escreve só na borda, e depois nada.
+
+    MORDIDAS: ``VOLUME_ABERTO = "100%"`` (o servidor recusa e a volta reescreve) e o
+    ``casar`` sem a comparação com o que já está aplicado reprovam.
+    """
+    p1 = _no_cabo(mesa, _P1, 1, "3-8", 28)
+    p2 = _no_cabo(mesa, _P2, 2, "3-7", 29)
+    mesa.servidor.jogo_em.update({eh.nome_do_endpoint(_P1), eh.nome_do_endpoint(_P2)})
+    mesa.jogando.add(_P2)
+    servidor = mesa.servidor
+    feitas: list[list[str]] = []
+    original = servidor.__class__.__call__
+
+    def _contar(argv: list[str]) -> str | None:
+        if not e_leitura(argv):
+            feitas.append(list(argv))
+        return original(servidor, argv)
+
+    monkeypatch.setattr(af, "_rodar", _contar)
+    mesa.volta(p1, p2)
+    mesa.volta(p1, p2)
+    assert any(a[1] == "set-sink-input-volume" for a in feitas), "a borda não escreveu"
+    feitas.clear()
+    for _ in range(10):
+        mesa.volta(p1, p2)
+    assert feitas == [], f"dez voltas paradas escreveram {len(feitas)} vez(es): {feitas[:3]}"
 
 
 def _lancar(tmp_path: Path, sysfs: Path) -> str:
