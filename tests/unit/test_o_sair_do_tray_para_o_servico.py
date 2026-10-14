@@ -160,6 +160,7 @@ def test_o_sair_e_o_parar_chamam_o_mesmo_ato(
 def test_o_menu_segue_a_ordem_dela(
         gtk_de_mentira: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     """A ordem de 14/10/2026: o nome, Perfis, Abrir programa, o jogo, o serviço e Sair."""
+    # A decisão: D-1410-O-MENU-DA-BANDEJA-NA-ORDEM-DELA.
     tray = _tray_montado(gtk_de_mentira, monkeypatch,
                          on_servico=lambda _v: True, on_set_modo=lambda _l: True,
                          on_reconectar=lambda: True)
