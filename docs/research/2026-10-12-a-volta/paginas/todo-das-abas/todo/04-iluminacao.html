@@ -1964,6 +1964,16 @@
   body.nativo.por-controle .guardar,
   body.nativo.por-controle .r-aplicar,body.nativo.por-controle .r-salvar,
   body.nativo.por-controle .r-importar{visibility:hidden}
+  /* Rodada 3 (13/10): o «Sem piscar» global, para quem é sensível a luz */
+  .quadro-topo .sem-piscar{margin-left:auto}
+  .quadro-topo .sem-piscar + .modo-auto{margin-left:10px}
+  .sem-piscar{display:inline-flex;align-items:center;gap:9px;height:34px;padding:0 16px 0 12px;border-radius:999px;cursor:pointer;
+    border:1px solid var(--linha);background:var(--app-bg);color:var(--texto-suave);font:600 13px/1 'Space Grotesk',system-ui,sans-serif}
+  .sem-piscar .p{width:11px;height:11px;border-radius:50%;border:2px solid var(--texto-mudo,#9a9eb8)}
+  .sem-piscar:hover{border-color:var(--yellow,#f1fa8c);color:var(--fg)}
+  .sem-piscar[aria-pressed="true"]{background:rgba(241,250,140,.14);border-color:var(--yellow,#f1fa8c);color:var(--fg)}
+  .sem-piscar[aria-pressed="true"] .p{border-color:var(--yellow,#f1fa8c);background:var(--yellow,#f1fa8c)}
+  body.sem-piscar-ligado .seg-criar button:nth-child(2)::after{content:" lento"}
 </style>
 
 
@@ -2591,6 +2601,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
         <!-- OS DOIS MODOS — pedido de 06/10/2026: o modo automático e o Modo
              Personalizado tomam o lugar do interruptor das cores automáticas e da
              frase da luz do jogo embaixo das colunas. -->
+        <button class="sem-piscar" type="button" data-gesto="sem-piscar" data-r3="11" aria-pressed="false" data-dica="Para quem é sensível a luz. Ligado, nenhuma luz troca mais de três vezes por segundo: o piscar vira transição lenta. Vale para os quatro controles e todos os estilos"><span class="p"></span>Sem piscar</button>
         <button class="modo-auto" type="button" data-gesto="modo-da-luz" data-todo="2" aria-pressed="false" data-governa=".luz-grade .ctrl" data-dica="O jogo pinta a barra; o estilo do perfil ajusta"><span class="p"></span>Modo automático</button>
       </div>
       <div class="quadro-corpo">
@@ -4355,6 +4366,11 @@ document.querySelectorAll('.modo-auto').forEach(b => b.addEventListener('click',
   b.setAttribute('aria-pressed', String(on));
   document.querySelectorAll(b.dataset.governa).forEach(el => el.classList.toggle('governado-pelo-jogo', on));
 }));
+</script>
+<script data-aba="sem-piscar">
+document.querySelectorAll('.sem-piscar').forEach(b => b.addEventListener('click', () => {
+  const on = b.getAttribute('aria-pressed') !== 'true';
+  b.setAttribute('aria-pressed', String(on)); document.body.classList.toggle('sem-piscar-ligado', on); }));
 </script>
 <script data-aba="criar">
 document.querySelectorAll('.seg-criar').forEach(s => s.addEventListener('click', e => {

@@ -3,7 +3,7 @@
   "nome": "Iluminação",
   "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/_integra-1-11/src/hefesto_dualsense4unix/interface/paginas/04-iluminacao.html",
   "depois": "/home/vitoriamaria/.local/state/hefesto-casa/leva-volta/todo/04-iluminacao.html",
-  "rodada": 2,
+  "rodada": 3,
   "sprint_unificada": "A-ABA-ILUMINACAO-DO-TODO-01",
   "mudancas": [
     {
@@ -95,6 +95,18 @@
       "origem": "RODADA-3",
       "ancora": ".criar .nome-criar",
       "conflito": ""
+    },
+    {
+      "n": 11,
+      "sprint": "A-LUZ-DO-CONTROLE-NAO-PISCA-PARA-QUEM-E-SENSIVEL-A-LUZ-01",
+      "o_que_muda": "O ajuste global «Sem piscar» no topo da aba: ligado, nenhuma luz troca mais de três vezes por segundo e o piscar vira transição lenta, nos quatro controles e em todos os estilos",
+      "resposta": "todo-04-r3-11",
+      "origem": "escolha dela de 13/10",
+      "ancora": ".sem-piscar",
+      "conflito": "",
+      "rodada": 3,
+      "ancora_antes": ".quadro-topo .modo-auto",
+      "js": "document.querySelector('.sem-piscar').click()"
     }
   ],
   "estados": {
