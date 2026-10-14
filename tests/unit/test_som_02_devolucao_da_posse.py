@@ -12,6 +12,7 @@ import typer
 
 from hefesto_dualsense4unix.cli.ipc_client import IpcClient
 from hefesto_dualsense4unix.core import ds_output_report as rep
+from hefesto_dualsense4unix.core.speaker_scale import registrador_no_firmware
 from hefesto_dualsense4unix.daemon.ipc_server import IpcServer
 from hefesto_dualsense4unix.daemon.state_store import (
     StateStore,
@@ -71,7 +72,7 @@ class TestBackendDevolveAPosse:
         common = h1._build_common(rumble_asserted=False)
         assert common[0] & rep.VALID_FLAG0_SPEAKER_VOLUME
         assert common[0] & rep.VALID_FLAG0_HEADPHONE_VOLUME
-        assert common[rep.COMMON_SPEAKER_VOLUME] == 180
+        assert common[rep.COMMON_SPEAKER_VOLUME] == registrador_no_firmware(180, placa_cheia=True)
 
         assert inst.release_speaker_volume(uniq=MAC1) is True
         common = h1._build_common(rumble_asserted=False)
@@ -122,7 +123,7 @@ class TestBackendDevolveAPosse:
         inst.set_speaker_volume(90, uniq=MAC2)
         inst.release_speaker_volume(uniq=MAC1)
         assert h1._volumes_audio == [None, None, None, None]
-        assert h2._volumes_audio[1] == 90
+        assert h2._volumes_audio[1] == registrador_no_firmware(90, placa_cheia=True)
         assert inst.speaker_state_for(MAC2) == {"volume": 90, "muted": False}
 
     def test_release_sem_uniq_vai_no_primario(self) -> None:
@@ -131,7 +132,7 @@ class TestBackendDevolveAPosse:
         inst.set_speaker_volume(90, uniq=MAC2)
         assert inst.release_speaker_volume() is True
         assert h1._volumes_audio == [None, None, None, None]
-        assert h2._volumes_audio[1] == 90
+        assert h2._volumes_audio[1] == registrador_no_firmware(90, placa_cheia=True)
 
     def test_release_de_controle_inexistente_devolve_false(self) -> None:
         """Pedido que cai no vazio tem de se declarar — não pode virar "ok"."""

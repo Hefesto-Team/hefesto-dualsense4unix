@@ -48,7 +48,10 @@ from hefesto_dualsense4unix.core.led_control import (
     degrau_do_brilho_das_luzes,
     reescalar,
 )
-from hefesto_dualsense4unix.core.speaker_scale import volume_do_percentual
+from hefesto_dualsense4unix.core.speaker_scale import (
+    registrador_no_firmware,
+    volume_do_percentual,
+)
 from hefesto_dualsense4unix.core.trigger_effects import (
     TAMANHO_DO_BLOCO_DO_GATILHO,
     bloco_do_gatilho,
@@ -3621,7 +3624,10 @@ class PyDualSenseController(IController):
                 vigente = getattr(handle, "_speaker_volume_pref", None)
                 pref = int(vigente) if isinstance(vigente, int) else 0
             handle._speaker_volume_pref = pref
-            efetivo = 0 if muted else pref
+            # A tela é a lei: o byte do firmware é o da tela, descontada a placa cheia do cabo
+            # (`speaker_scale.registrador_no_firmware`); o alto-falante e o fone vão juntos.
+            cabo = self._detect_transport(handle) != "bt"
+            efetivo = 0 if muted else registrador_no_firmware(pref, placa_cheia=cabo)
             handle.set_audio_volumes(
                 headphone=efetivo,
                 speaker=efetivo,

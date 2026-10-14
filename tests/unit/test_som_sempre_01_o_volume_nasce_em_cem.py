@@ -50,8 +50,17 @@ from hefesto_dualsense4unix.core.backend_pydualsense import (
 )
 from hefesto_dualsense4unix.core.speaker_scale import (
     percentual_do_volume,
+    registrador_no_firmware,
     volume_do_percentual,
 )
+
+
+def _no_fio(volume: int) -> int:
+    """O byte do firmware no CABO (o dublê não tem `conType`): o da tela, sem a placa cheia."""
+    return registrador_no_firmware(volume, placa_cheia=True)
+
+
+NO_FIO = _no_fio(VOLUME_PADRAO_DO_SOM)
 
 
 class _Handle:
@@ -111,7 +120,7 @@ def test_a_adocao_toma_a_posse_e_poe_o_som_em_cem_por_cento() -> None:
 
     assert inst.assumir_volume_padrao_na_adocao("AA:BB:CC:00:00:01", handle) is True
 
-    assert handle._volumes_audio[1] == VOLUME_PADRAO_DO_SOM
+    assert handle._volumes_audio[1] == NO_FIO
     assert handle._speaker_volume_pref == VOLUME_PADRAO_DO_SOM
 
 
@@ -121,7 +130,7 @@ def test_o_fone_vai_junto_porque_ele_manda_por_cima_da_rota() -> None:
 
     inst.assumir_volume_padrao_na_adocao("AA:BB:CC:00:00:01", handle)
 
-    assert handle._volumes_audio[0] == VOLUME_PADRAO_DO_SOM
+    assert handle._volumes_audio[0] == NO_FIO
     assert handle._volumes_audio[0] == handle._volumes_audio[1]
 
 
@@ -206,7 +215,7 @@ def test_o_connect_poe_o_som_em_cem_em_todo_controle_que_ele_adota(
     )
 
     handle = criados["AA:BB:CC:00:00:01"]
-    assert handle._volumes_audio[1] == VOLUME_PADRAO_DO_SOM
+    assert handle._volumes_audio[1] == NO_FIO
     assert handle._speaker_volume_pref == VOLUME_PADRAO_DO_SOM
 
 
@@ -221,7 +230,7 @@ def test_vale_para_os_sete_controles_e_nao_so_para_o_primeiro(
 
     assert len(criados) == 7
     for chave in chaves:
-        assert criados[chave]._volumes_audio[1] == VOLUME_PADRAO_DO_SOM, chave
+        assert criados[chave]._volumes_audio[1] == NO_FIO, chave
 
 
 def test_o_controle_que_chega_numa_mesa_ja_online_tambem_nasce_em_cem(
@@ -235,7 +244,7 @@ def test_o_controle_que_chega_numa_mesa_ja_online_tambem_nasce_em_cem(
         inst, monkeypatch, ["AA:BB:CC:00:00:01", "AA:BB:CC:00:00:02"]
     )
 
-    assert criados["AA:BB:CC:00:00:02"]._volumes_audio[1] == VOLUME_PADRAO_DO_SOM
+    assert criados["AA:BB:CC:00:00:02"]._volumes_audio[1] == NO_FIO
 
 
 def test_a_adocao_nao_reescreve_handle_que_ja_estava_na_mesa(
@@ -251,11 +260,11 @@ def test_a_adocao_nao_reescreve_handle_que_ja_estava_na_mesa(
     inst._handles = {"AA:BB:CC:00:00:01": handle}  # type: ignore[dict-item]
     inst._primary_key = "AA:BB:CC:00:00:01"
     inst.set_speaker_volume(60)
-    assert handle._volumes_audio[1] == 60
+    assert handle._volumes_audio[1] == _no_fio(60)
 
     _connect_com_handles_falsos(inst, monkeypatch, ["AA:BB:CC:00:00:01"])
 
-    assert handle._volumes_audio[1] == 60, (
+    assert handle._volumes_audio[1] == _no_fio(60), (
         "o tique de hotplug reescreveu o volume que ela tinha acabado de "
         "escolher — a adoção é do handle NOVO, não da mesa inteira"
     )
@@ -268,7 +277,7 @@ def test_o_pedido_explicito_vence_o_padrao_da_adocao() -> None:
     inst.assumir_volume_padrao_na_adocao("AA:BB:CC:00:00:01", handle)
     inst.set_speaker_volume(40)
 
-    assert handle._volumes_audio[1] == 40
+    assert handle._volumes_audio[1] == _no_fio(40)
     assert inst.speaker_state_for() == {
         "volume": 40, "muted": False, "rota": ROTA_PADRAO_DO_SOM,
     }
@@ -288,7 +297,7 @@ def test_o_mudo_passa_a_funcionar_de_primeira_por_causa_da_adocao() -> None:
         "rota": ROTA_PADRAO_DO_SOM,
     }
     assert inst.set_speaker_volume(muted=False) is True
-    assert handle._volumes_audio[1] == VOLUME_PADRAO_DO_SOM
+    assert handle._volumes_audio[1] == NO_FIO
 
 
 def test_o_alto_falante_passa_a_aparecer_na_aba_status() -> None:
@@ -343,8 +352,8 @@ def test_o_report_carrega_os_cem_por_cento_com_o_bit_de_validacao_ligado() -> No
     inst.assumir_volume_padrao_na_adocao("AA:BB:CC:00:00:01", handle)
     common = handle._build_common(rumble_asserted=False)
 
-    assert common[4] == VOLUME_PADRAO_DO_SOM, "fone"
-    assert common[5] == VOLUME_PADRAO_DO_SOM, "alto-falante"
+    assert common[4] == NO_FIO, "fone"
+    assert common[5] == NO_FIO, "alto-falante"
     assert common[0] & 0x10, "o bit de validação do fone"
     assert common[0] & 0x20, "o bit de validação do alto-falante"
     assert common[0] & 0x40 == 0, "o microfone continua do kernel"

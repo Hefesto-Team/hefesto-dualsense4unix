@@ -51,6 +51,7 @@ from hefesto_dualsense4unix.core import ds_output_report as rep
 from hefesto_dualsense4unix.core.backend_pydualsense import (
     byte_do_volume_do_microfone,
 )
+from hefesto_dualsense4unix.core.speaker_scale import registrador_no_firmware
 
 P2 = "aabbcc000002"
 P3 = "aabbcc000003"
@@ -224,7 +225,8 @@ class TestADevolucaoNaoGastaOCampoVizinho:
         common = h2._build_common(rumble_asserted=False)
         assert common[0] & rep.VALID_FLAG0_MIC_VOLUME == 0
         assert common[rep.COMMON_MIC_VOLUME] == 0
-        assert common[rep.COMMON_SPEAKER_VOLUME] == 180, (
+        no_fio = registrador_no_firmware(180, placa_cheia=True)
+        assert common[rep.COMMON_SPEAKER_VOLUME] == no_fio, (
             "a devolução do microfone gastou o volume do alto-falante")
 
     def test_a_devolucao_inteira_continua_devolvendo_os_quatro(self) -> None:
