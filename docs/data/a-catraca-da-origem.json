@@ -243,14 +243,14 @@
       "data": "2026-10-14",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1097250,
+      "piso": 1097252,
       "por_item": {
-        "docs": 118047,
+        "docs": 118049,
         "scripts": 112123,
         "src": 298048,
         "tests": 569032
       },
-      "razao": "tamanho: +3 linhas (1097247 -> 1097250), pagas por Origem: D-1310-O-DIARIO-ESCREVE-O-TRACEBACK-SEM-OS-LOCAIS, D-1310-O-RUNTIME-DECLARADO-VENCE-O-PLATFORMDIRS, D-1310-O-TESTE-DO-LACO-ESPERA-PELA-CONDICAO, D-1310-O-WIFI-USB-E-O-RTW88-SO-COM-O-ADAPTADOR-PRESENTE; registrado no fecho, topo 62c58af3a05d",
+      "razao": "tamanho: +2 linhas (1097250 -> 1097252), pagas por Origem: D-1310-O-DIARIO-ESCREVE-O-TRACEBACK-SEM-OS-LOCAIS, D-1310-O-RUNTIME-DECLARADO-VENCE-O-PLATFORMDIRS, D-1310-O-TESTE-DO-LACO-ESPERA-PELA-CONDICAO, D-1310-O-WIFI-USB-E-O-RTW88-SO-COM-O-ADAPTADOR-PRESENTE; registrado no fecho, topo c930714c7c0a",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -365,6 +365,12 @@
           "de": 1097247,
           "para": 1097250,
           "razao": "tamanho: +3 linhas (1097247 -> 1097250), pagas por Origem: D-1310-O-DIARIO-ESCREVE-O-TRACEBACK-SEM-OS-LOCAIS, D-1310-O-RUNTIME-DECLARADO-VENCE-O-PLATFORMDIRS, D-1310-O-TESTE-DO-LACO-ESPERA-PELA-CONDICAO, D-1310-O-WIFI-USB-E-O-RTW88-SO-COM-O-ADAPTADOR-PRESENTE; registrado no fecho, topo 62c58af3a05d"
+        },
+        {
+          "data": "2026-10-14",
+          "de": 1097250,
+          "para": 1097252,
+          "razao": "tamanho: +2 linhas (1097250 -> 1097252), pagas por Origem: D-1310-O-DIARIO-ESCREVE-O-TRACEBACK-SEM-OS-LOCAIS, D-1310-O-RUNTIME-DECLARADO-VENCE-O-PLATFORMDIRS, D-1310-O-TESTE-DO-LACO-ESPERA-PELA-CONDICAO, D-1310-O-WIFI-USB-E-O-RTW88-SO-COM-O-ADAPTADOR-PRESENTE; registrado no fecho, topo c930714c7c0a"
         }
       ],
       "unidade": "linhas",
