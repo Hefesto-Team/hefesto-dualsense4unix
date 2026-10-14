@@ -507,6 +507,9 @@ command -v dkms >/dev/null 2>&1 \
     && [[ -n "$(dkms status hefesto-hid-playstation 2>/dev/null)" ]] \
     && _NEEDS_SUDO=1
 command -v dkms >/dev/null 2>&1 \
+    && [[ -n "$(dkms status hefesto-usb-f-hid 2>/dev/null)" ]] \
+    && _NEEDS_SUDO=1
+command -v dkms >/dev/null 2>&1 \
     && [[ -n "$(dkms status hefesto-hid-nintendo 2>/dev/null)" ]] \
     && _NEEDS_SUDO=1
 # Onda W: DKMS rtw88_usb patchado (fantasma USB) — dkms remove é root; sem
@@ -1556,17 +1559,17 @@ fi
 # in-tree para sempre (na Onda W, com hang_reset=Y). Avisa explícito.
 if ! command -v dkms >/dev/null 2>&1; then
     _orfaos=""
-    for _pkg in hefesto-hid-nintendo hefesto-rtw88-usb hefesto-hid-playstation; do
+    for _pkg in hefesto-hid-nintendo hefesto-rtw88-usb hefesto-hid-playstation hefesto-usb-f-hid; do
         compgen -G "/usr/src/${_pkg}-*" >/dev/null 2>&1 && _orfaos="${_orfaos} ${_pkg}(src)"
     done
-    for _ko in hid-nintendo rtw88_usb hid-playstation; do
+    for _ko in hid-nintendo rtw88_usb hid-playstation usb_f_hid; do
         compgen -G "/lib/modules/$(uname -r)/updates/dkms/${_ko}.ko*" >/dev/null 2>&1 \
             && _orfaos="${_orfaos} ${_ko}(.ko)"
     done
     if [[ -n "${_orfaos}" ]]; then
         log "AVISO: dkms ausente, mas há artefato DKMS do hefesto órfão:${_orfaos}"
         log "  o .ko em updates/dkms segue vencendo o in-tree — instale o dkms e re-rode ./uninstall.sh,"
-        log "  ou remova à mão: sudo rm -rf /usr/src/hefesto-* /lib/modules/\$(uname -r)/updates/dkms/{hid-nintendo,rtw88_usb,hid-playstation}.ko* && sudo depmod -a && sudo update-initramfs -u"
+        log "  ou remova à mão: sudo rm -rf /usr/src/hefesto-* /lib/modules/\$(uname -r)/updates/dkms/{hid-nintendo,rtw88_usb,hid-playstation,usb_f_hid}.ko* && sudo depmod -a && sudo update-initramfs -u"
     fi
 fi
 
@@ -1709,6 +1712,25 @@ if [[ -e /etc/modprobe.d/hefesto-hid-playstation.conf ]]; then
     else
         log "sudo indisponível — /etc/modprobe.d/hefesto-hid-playstation.conf NÃO removido"
         log "  sudo rm -f /etc/modprobe.d/hefesto-hid-playstation.conf"
+    fi
+fi
+
+# O-F-HID-FECHA-A-RESPOSTA (14/10/2026): o usb_f_hid dos pads USB virtuais sai
+# pelo mesmo caminho do hid-playstation. O módulo carregado não se troca aqui: o
+# de fábrica volta no próximo carregamento (o próximo boot, ou o broker depois
+# de um `modprobe -r usb_f_hid` sem pad no ar).
+if command -v dkms >/dev/null 2>&1 \
+        && [[ -n "$(dkms status hefesto-usb-f-hid 2>/dev/null)" ]]; then
+    if sudo -n true 2>/dev/null; then
+        log "removendo o patch DKMS do usb_f_hid (hefesto-usb-f-hid): dkms remove --all"
+        # shellcheck source=scripts/dkms_lib.sh
+        source "${ROOT_DIR}/scripts/dkms_lib.sh"
+        dkms_remove_patched_module hefesto-usb-f-hid \
+            "$(dkms_pkg_version "${ROOT_DIR}/assets/dkms/usb-f-hid")" \
+            usb_f_hid
+    else
+        log "sudo indisponível — patch DKMS do usb_f_hid NÃO removido"
+        log "  sudo dkms remove hefesto-usb-f-hid/1.0.0 --all"
     fi
 fi
 

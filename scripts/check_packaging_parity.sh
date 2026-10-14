@@ -990,6 +990,49 @@ else
     echo "[ OK ] dkms hid-playstation: assets/dkms/hid-playstation/dkms.conf ausente — nada a checar"
 fi
 
+# O-F-HID-FECHA-A-RESPOSTA (14/10/2026): o QUARTO módulo DKMS de série, o
+# usb_f_hid dos pads USB virtuais. Mesmo contrato do hid-playstation, e pela
+# mesma razão: AUTOINSTALL="yes" sobrevive ao `apt remove` se nenhum hook o
+# desregistrar. O Nix não tem DKMS nenhum: a lacuna está escrita no README dele.
+echo "== paridade da cura DKMS (assets/dkms/usb-f-hid × instaladores) =="
+if [[ -f assets/dkms/usb-f-hid/dkms.conf ]]; then
+    missing=()
+    for inst in scripts/build_deb.sh packaging/arch/PKGBUILD \
+                packaging/fedora/hefesto-dualsense4unix.spec; do
+        { grep -qF "dkms/usb-f-hid" "${inst}" 2>/dev/null \
+            && grep -qF "dkms_lib.sh" "${inst}" 2>/dev/null; } \
+            || missing+=("${inst}")
+    done
+    grep -qF "%{_datadir}/%{app_id}/dkms/usb-f-hid/" \
+        packaging/fedora/hefesto-dualsense4unix.spec 2>/dev/null \
+        || missing+=("packaging/fedora/hefesto-dualsense4unix.spec(%files)")
+    grep -qF "assets/dkms/usb-f-hid" flatpak/*.yml 2>/dev/null \
+        || missing+=("flatpak/*.yml")
+    grep -qF "dkms_install_patched_module hefesto-usb-f-hid" \
+        scripts/install-host-udev.sh 2>/dev/null \
+        || missing+=("scripts/install-host-udev.sh(não roda o DKMS)")
+    for hook in packaging/debian/prerm packaging/debian/postrm \
+                packaging/arch/hefesto-dualsense4unix.install \
+                packaging/fedora/hefesto-dualsense4unix.spec; do
+        grep -qF 'dkms remove "hefesto-usb-f-hid/' "${hook}" 2>/dev/null \
+            || missing+=("${hook}(remoção)")
+    done
+    grep -qF "dkms_remove_patched_module hefesto-usb-f-hid" uninstall.sh 2>/dev/null \
+        || missing+=("uninstall.sh")
+    grep -qF "usb-f-hid" packaging/nix/README.md 2>/dev/null \
+        || missing+=("packaging/nix/README.md(a lacuna escrita)")
+    if [[ "${#missing[@]}" -eq 0 ]]; then
+        echo "[ OK ] dkms usb-f-hid: fontes+lib em todos os formatos, o helper roda o DKMS e a remoção desregistra"
+    else
+        echo "[FAIL] dkms usb-f-hid: FALTANDO em: ${missing[*]}"
+        echo "       o dkms.conf tem AUTOINSTALL=yes: sem a remoção em TODO hook de"
+        echo "       pacote, o patchado se reconstrói a cada kernel para sempre."
+        rc=1
+    fi
+else
+    echo "[ OK ] dkms usb-f-hid: assets/dkms/usb-f-hid/dkms.conf ausente — nada a checar"
+fi
+
 # BROKER-01 (Onda S — fd-injection, achado #21 da auditoria): purge/remoção
 # não pode deixar a unit ROOT do broker órfã habilitada em NENHUMA forma de
 # empacotamento. Gate: só cobra paridade SE o repo realmente tem o broker

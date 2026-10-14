@@ -365,6 +365,11 @@ cp -a assets/dkms/hid-nintendo/. \
 mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/dkms/hid-playstation"
 cp -a assets/dkms/hid-playstation/. \
     "${STAGING}/usr/share/hefesto-dualsense4unix/dkms/hid-playstation/"
+# O-F-HID-FECHA-A-RESPOSTA (14/10/2026): fontes do usb_f_hid patchado (a
+# resposta do GET_REPORT dos pads USB virtuais) — mesma paridade.
+mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/dkms/usb-f-hid"
+cp -a assets/dkms/usb-f-hid/. \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/dkms/usb-f-hid/"
 # Onda W (2026-07-20): fontes DKMS do rtw88_usb patchado (device-gone +
 # port reset — cura de raiz do fantasma USB do dongle WiFi). Mesma rota da
 # Onda T: as fontes viajam no pacote e o install-host-udev.sh (que o

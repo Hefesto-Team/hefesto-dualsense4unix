@@ -415,6 +415,8 @@ modules:
       - cp -a assets/dkms/hid-nintendo /app/share/hefesto-dualsense4unix/dkms/
       # Contenção BT (2026-07-25): fontes do hid-playstation patchado.
       - cp -a assets/dkms/hid-playstation /app/share/hefesto-dualsense4unix/dkms/
+      # O-F-HID-FECHA-A-RESPOSTA (14/10/2026): fontes do usb_f_hid patchado.
+      - cp -a assets/dkms/usb-f-hid /app/share/hefesto-dualsense4unix/dkms/
       # Onda W (2026-07-20): fontes DKMS do rtw88_usb patchado (device-gone +
       # port reset — cura de raiz do fantasma USB do dongle WiFi). Mesma rota
       # da Onda T: o dkms roda a partir do HOST via install-host-udev.sh.

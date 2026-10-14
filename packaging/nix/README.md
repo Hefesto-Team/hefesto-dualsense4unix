@@ -109,6 +109,16 @@ bonds e o timer dela (`systemd.packages`), os módulos `uinput` e `uhid` e o
 diretório `/var/lib/hefesto-dualsense4unix`. O daemon e a interface seguem sendo
 do perfil de quem usa.
 
+**Os módulos de kernel patchados não entram no NixOS.** O NixOS não tem DKMS, e
+o módulo Nix não os constrói: os pacotes `assets/dkms/hid-playstation`,
+`hid-nintendo`, `rtw88-usb` e `usb-f-hid` ficam de fora. O que isso custa no
+`usb-f-hid` (14/10/2026): o `usb_f_hid` de fábrica responde o GET_REPORT dos
+pads USB virtuais com 64 bytes e sem o pacote vazio, e o jogo no Proton espera
+5 s por pedido de feature. O `doctor` diz `[FAIL]` sem a marca
+`/sys/module/usb_f_hid/parameters/get_report_sized`. A cura no Nix seria um
+`boot.extraModulePackages` com o fonte de `assets/dkms/usb-f-hid/`, ainda não
+escrito.
+
 ## home-manager — configuração do usuário
 
 ```nix

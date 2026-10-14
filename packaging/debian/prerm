@@ -141,6 +141,20 @@ case "$1" in
                 printf '0' > /sys/module/hid_playstation/parameters/feature_retries 2>/dev/null || true
             fi
         fi
+        # O-F-HID-FECHA-A-RESPOSTA: o modulo DKMS hefesto-usb-f-hid tambem nasce
+        # FORA do manifesto do pacote (install-host-udev.sh) — mesma simetria. Nao
+        # descarrega o modulo em uso: o de fabrica volta no proximo carregamento.
+        if command -v dkms >/dev/null 2>&1 \
+                && dkms status hefesto-usb-f-hid 2>/dev/null | grep -q .; then
+            dkms status hefesto-usb-f-hid 2>/dev/null \
+                | sed -n 's|^hefesto-usb-f-hid/\([^,: ]*\).*|\1|p' | sort -u \
+                | while read -r _v; do
+                    [ -n "${_v}" ] || continue
+                    dkms remove "hefesto-usb-f-hid/${_v}" --all 2>/dev/null || true
+                    rm -rf "/usr/src/hefesto-usb-f-hid-${_v}"
+                done
+            depmod -a >/dev/null 2>&1 || true
+        fi
         rm -f /etc/modprobe.d/hefesto-hid-playstation.conf
         ;;
 esac

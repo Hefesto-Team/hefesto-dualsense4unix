@@ -891,6 +891,54 @@ else
     echo "       módulo patchado, o 2º DualSense segue podendo se perder na probe."
 fi
 
+# -----------------------------------------------------------------------------
+# O-F-HID-FECHA-A-RESPOSTA (14/10/2026): o usb_f_hid patchado, a função HID dos
+# pads USB virtuais. O de fábrica responde o GET_REPORT sempre com 64 bytes e
+# sem o pacote vazio, e o jogo no Proton espera 5 s por pedido de feature. Mesma
+# rota dos blocos acima. A troca a quente aqui é só a SEM pad nenhum (refcnt 0):
+# este roteiro roda como root e não alcança o daemon de usuário que solta os
+# pads; com pads no ar, o curado vale no próximo boot.
+# -----------------------------------------------------------------------------
+FHID_DKMS_SRC=""
+for candidate in \
+    "/app/share/hefesto-dualsense4unix/dkms/usb-f-hid" \
+    "/usr/share/hefesto-dualsense4unix/dkms/usb-f-hid" \
+    "${SCRIPT_DIR}/../assets/dkms/usb-f-hid" \
+; do
+    if [[ -f "${candidate}/dkms.conf" ]]; then
+        FHID_DKMS_SRC="${candidate}"
+        break
+    fi
+done
+if [[ -n "${FHID_DKMS_SRC}" && -n "${DKMS_LIB_SH}" ]]; then
+    FHID_DKMS_VER="$(sed -n 's/^PACKAGE_VERSION="\(.*\)"$/\1/p' "${FHID_DKMS_SRC}/dkms.conf")"
+    if [[ -n "${FHID_DKMS_VER}" ]]; then
+        if [[ "$(id -u)" -eq 0 ]] && ! command -v sudo >/dev/null 2>&1; then
+            sudo() { "$@"; }
+        fi
+        echo ""
+        echo "A resposta do GET_REPORT dos pads USB virtuais: módulo DKMS usb_f_hid patchado ..."
+        # shellcheck source=dkms_lib.sh
+        source "${DKMS_LIB_SH}"
+        dkms_install_patched_module hefesto-usb-f-hid "${FHID_DKMS_VER}" \
+            "${FHID_DKMS_SRC}" usb_f_hid
+        if ! dkms_module_from_updates usb_f_hid; then
+            echo "  módulo patchado NÃO staged (avisos acima) — o de fábrica continua: o jogo no Proton espera 5 s por pedido de feature"
+        elif [[ ! -d /sys/module/usb_f_hid || -e /sys/module/usb_f_hid/parameters/get_report_sized ]]; then
+            echo "  módulo patchado staged (o curado já está carregado, ou entra no próximo carregamento)"
+        elif [[ "$(cat /sys/module/usb_f_hid/refcnt 2>/dev/null)" == "0" ]] \
+             && sudo modprobe -r usb_f_hid 2>/dev/null && sudo modprobe usb_f_hid 2>/dev/null; then
+            echo "  usb_f_hid trocado a quente (nenhum pad no ar)"
+        else
+            echo "  módulo patchado staged — com pads USB virtuais no ar, vale no próximo boot (ou rode ./install.sh, que solta os pads e troca)"
+        fi
+    fi
+else
+    echo ""
+    echo "AVISO: fontes DKMS do usb_f_hid não encontradas neste formato — sem o módulo"
+    echo "       patchado, o jogo no Proton espera 5 s por pedido de feature dos pads USB virtuais."
+fi
+
 # INITRAMFS-01 (2026-07-25): os blocos DKMS acima gravam em updates/dkms, mas o
 # initramfs leva uma CÓPIA do .ko e não é regenerado pelo dkms — sem isto o boot
 # seguinte carrega o módulo da geração ANTERIOR (e, como os params novos não

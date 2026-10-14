@@ -215,6 +215,11 @@ cp -a assets/dkms/hid-nintendo/. \
 mkdir -p %{buildroot}%{_datadir}/%{app_id}/dkms/hid-playstation
 cp -a assets/dkms/hid-playstation/. \
     %{buildroot}%{_datadir}/%{app_id}/dkms/hid-playstation/
+# O-F-HID-FECHA-A-RESPOSTA (14/10/2026): fontes do usb_f_hid patchado (a
+# resposta do GET_REPORT dos pads USB virtuais) — mesma paridade.
+mkdir -p %{buildroot}%{_datadir}/%{app_id}/dkms/usb-f-hid
+cp -a assets/dkms/usb-f-hid/. \
+    %{buildroot}%{_datadir}/%{app_id}/dkms/usb-f-hid/
 # Onda W (2026-07-20): fontes DKMS do rtw88_usb patchado (device-gone +
 # port reset — cura de raiz do fantasma USB do dongle WiFi). Mesma rota da
 # Onda T: o install-host-udev.sh roda o dkms add/build/install no host.
@@ -475,6 +480,20 @@ if [ $1 -eq 0 ]; then
             printf '0' > /sys/module/hid_playstation/parameters/feature_retries 2>/dev/null || :
         fi
     fi
+    # O-F-HID-FECHA-A-RESPOSTA: o modulo DKMS hefesto-usb-f-hid tambem nasce
+    # FORA do manifesto do pacote (install-host-udev.sh) — mesma simetria. Nao
+    # descarrega o modulo em uso: o de fabrica volta no proximo carregamento.
+    if command -v dkms >/dev/null 2>&1 \
+            && dkms status hefesto-usb-f-hid 2>/dev/null | grep -q .; then
+        dkms status hefesto-usb-f-hid 2>/dev/null \
+            | sed -n 's|^hefesto-usb-f-hid/\([^,: ]*\).*|\1|p' | sort -u \
+            | while read -r _v; do
+                [ -n "${_v}" ] || continue
+                dkms remove "hefesto-usb-f-hid/${_v}" --all >/dev/null 2>&1 || :
+                rm -rf "/usr/src/hefesto-usb-f-hid-${_v}"
+            done
+        depmod -a >/dev/null 2>&1 || :
+    fi
     # INITRAMFS-01: os `dkms remove` acima limpam /lib/modules, mas o initramfs
     # guarda uma COPIA dos .ko e seguiria entregando os modulos do hefesto no
     # boot. Regenera uma vez, best-effort (nunca falha a transacao do rpm).
@@ -536,6 +555,7 @@ fi
 # default o rpmbuild ABORTAVA com "Installed (but unpackaged) file(s) found",
 # ou seja o spec inteiro nao compilava.
 %{_datadir}/%{app_id}/dkms/hid-playstation/
+%{_datadir}/%{app_id}/dkms/usb-f-hid/
 %{_datadir}/%{app_id}/dkms/rtw88-usb/
 %{_datadir}/%{app_id}/broker/hidraw_broker.py
 /usr/lib/%{app_id}/hefesto-hidraw-broker
