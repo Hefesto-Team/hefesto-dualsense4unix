@@ -1560,16 +1560,13 @@
   body.nativo.por-controle .guardar,
   body.nativo.por-controle .r-aplicar,body.nativo.por-controle .r-salvar,
   body.nativo.por-controle .r-importar{visibility:hidden}
-  /* Rodada 3, volta 2 (14/10): a força do gatilho sai (o estilo do jogo decide); o desenho do L2 e R2 no canto só mostra o efeito */
-  .g2-canto{flex-direction:column;gap:4px;height:auto!important;align-self:center}
-  .g2-canto .gl-par{display:block}
-  /* a leitura segue a grade de baixo: L2 e R2 na coluna dos ícones, o efeito na coluna dos rótulos */
-  .g2-canto{align-items:stretch!important}
-  .g2-canto .gl-par{align-self:center}
-  .g2-canto .g2-leitura{display:grid;grid-template-columns:44px minmax(0,1fr);column-gap:14px;row-gap:2px;width:100%;box-sizing:border-box;
-    font:500 12px/16px 'Space Grotesk',system-ui,sans-serif;color:var(--fg);cursor:help}
-  .g2-canto .g2-leitura b{font:700 12px/16px 'JetBrains Mono',monospace;color:var(--rot-campo,var(--fg));text-align:center}
-  .g2-canto .g2-leitura span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* As seis respostas (14/10): a célula à esquerda dos controles diz «Controle» (verde, como os rótulos de linha)
+     e, abaixo, em branco, o estilo de jogo escolhido em Perfis. Começa na borda dos rótulos de baixo. */
+  .g2-grade > .g2-canto{grid-column:2;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;
+    gap:3px;height:auto;min-width:0}
+  .g2-canto .g2-canto-rot{line-height:16px}
+  .g2-canto .g2-estilo{font:500 12px/16px 'Space Grotesk',system-ui,sans-serif;color:var(--fg);white-space:nowrap;cursor:help}
+  .g2-cab.vazio{min-height:36px}
   /* em tela baixa o respiro entre as linhas diminui, para o desenho com a leitura caber sem rolar */
   @media (max-height:780px){.quadro .g2-grade{row-gap:8px;padding-top:4px}}
 </style>
@@ -1579,10 +1576,8 @@
   /* a grade nova dos gatilhos: tudo na mesma linha horizontal, com respiro */
   .g2-grade{display:grid;grid-template-columns:44px 132px repeat(4,minmax(0,1fr));column-gap:14px;row-gap:10px;
     align-items:center;padding:4px 4px 6px}
-  /* RODADA 4: o canto à esquerda dos chips leva o par L2 e R2 desenhado, e a divisória abaixo da linha
-     dos chips é uma reta só, de borda a borda, a mesma do separador entre o L2 e o R2 (.g2-sep). */
-  .g2-grade > .g2-canto{grid-column:1 / span 2;display:flex;align-items:center;justify-content:center;
-    height:36px;color:var(--fg)}
+  /* a divisória abaixo da linha dos chips é uma reta só, de borda a borda, a mesma do separador entre o L2 e o R2 (.g2-sep).
+     O canto à esquerda dos chips é o das seis respostas (14/10), na folha de cima. */
   .g2-cab{display:flex;justify-content:center}
   /* §J: o chip do controle tem a largura, a altura e a fonte dos campos de baixo, com o texto no centro */
   .g2-cab > .cabeca,.g2-cab > .cabeca > span{display:flex;width:100%}
@@ -1855,11 +1850,11 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       </div>
       <div class="quadro-corpo">
         <div class="g2-grade">
-          <div class="g2-canto" aria-label="L2 e R2"><svg class="gl-par" width="120" height="36" viewBox="0 0 120 36" xmlns="http://www.w3.org/2000/svg"><title>L2 e R2</title><path d="M6 34 C6 26 12 22 22 22 H98 C108 22 114 26 114 34" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M10 22 V11 C10 6.5 13 4 17.5 4 H34.5 C39 4 42 6.5 42 11 V22" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M78 22 V11 C78 6.5 81 4 85.5 4 H102.5 C107 4 110 6.5 110 11 V22" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><text x="26" y="16.8" text-anchor="middle" font-family="monospace" font-size="10" font-weight="bold" fill="currentColor">L2</text><text x="94" y="16.8" text-anchor="middle" font-family="monospace" font-size="10" font-weight="bold" fill="currentColor">R2</text><rect x="54" y="27" width="12" height="3.5" rx="1.75" fill="none" stroke="currentColor" stroke-width="1.5"/></svg><div class="g2-leitura" data-r3b="15" data-dica="Só leitura: L2 e R2 seguem o efeito que o estilo do jogo escolheu"><b>L2</b><span data-leitura="l2"></span><b>R2</b><span data-leitura="r2"></span></div></div>
+          <div class="g2-canto" data-seis="q1" aria-label="Controle e estilo de jogo"><span class="sec-rot g2-canto-rot">Controle</span><span class="g2-estilo" data-campo="estilo-do-perfil" data-dica="O estilo escolhido em Perfis. Só leitura">Estilo de jogo: <span data-estilo>FPS</span></span></div>
           <div class="g2-cab" data-todo="6" data-controle="p1"><div class="cabeca" data-campo="plastico" data-hef-alvo="plastico" style="--plastico:#ae335a"><span data-campo="chip-do-controle" data-hef-alvo="html"><span class="chip plastico" data-dica="A borda é a cor do plástico">Cosmic Red <span class="pt">•</span> USB</span></span></div></div>
           <div class="g2-cab" data-todo="6" data-controle="p2"><div class="cabeca" data-campo="plastico" data-hef-alvo="plastico" style="--plastico:#7eb8d4"><span data-campo="chip-do-controle" data-hef-alvo="html"><span class="chip plastico" data-dica="A borda é a cor do plástico">Starlight Blue <span class="pt">•</span> BT</span></span></div></div>
-          <div class="g2-cab" data-todo="6" data-controle="p3"><div class="cabeca" data-campo="plastico" data-hef-alvo="plastico"><span data-campo="chip-do-controle" data-hef-alvo="html"><span class="chip vazio" data-dica="Nenhum controle aqui">Galactic Purple <span class="pt">•</span> Desconectado</span></span></div></div>
-          <div class="g2-cab" data-todo="6" data-controle="p4"><div class="cabeca" data-campo="plastico" data-hef-alvo="plastico"><span data-campo="chip-do-controle" data-hef-alvo="html"><span class="chip vazio" data-dica="Nenhum controle aqui">White <span class="pt">•</span> Desconectado</span></span></div></div>
+          <div class="g2-cab vazio" data-controle="p3" aria-hidden="true"></div>
+          <div class="g2-cab vazio" data-controle="p4" aria-hidden="true"></div>
           <div class="g2-sep g2-sep-cab"></div>
           <div class="g2-gl g2-l2" aria-label="L2"><svg class="gl" width="36" height="36" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L2</title>
 
@@ -1994,29 +1989,6 @@ document.querySelectorAll('.modo-auto').forEach(b => b.addEventListener('click',
   b.setAttribute('aria-pressed', String(on));
   document.querySelectorAll(b.dataset.governa).forEach(el => el.classList.toggle('governado-pelo-jogo', on));
 }));
-</script>
-<script data-aba="leitura-do-estilo">
-/* O desenho do L2 e R2 só mostra: com o Modo automático ligado, o efeito que o estilo do jogo escolheu;
-   desligado, o que está escolhido na coluna do primeiro controle. Não é botão. */
-(function(){
-  const ESTILOS = {FPS: {l2: 'Rígido simples', r2: 'Arma semi-automática'}};
-  const estilo = 'FPS';
-  const auto = document.querySelector('.modo-auto');
-  const leitura = document.querySelector('.g2-leitura');
-  if (!leitura) return;
-  function texto(sel){const o = sel && sel.options[sel.selectedIndex]; return o ? o.text : '—';}
-  function atualizar(){
-    const e = ESTILOS[estilo], ligado = auto && auto.getAttribute('aria-pressed') === 'true';
-    const col = document.querySelectorAll('.g2-cel[data-controle="p1"] .g2-acion');
-    leitura.querySelector('[data-leitura=l2]').textContent = ligado ? e.l2 : texto(col[0]);
-    leitura.querySelector('[data-leitura=r2]').textContent = ligado ? e.r2 : texto(col[1]);
-    leitura.setAttribute('data-dica', ligado ? 'Estilo ' + estilo + ': o jogo escolheu estes efeitos para L2 e R2'
-      : 'Só leitura: o efeito escolhido para L2 e R2 no primeiro controle');
-  }
-  document.querySelectorAll('.g2-acion').forEach(s => s.addEventListener('change', atualizar));
-  if (auto) auto.addEventListener('click', atualizar);
-  atualizar();
-})();
 </script>
 <script data-aba="criar">
 document.querySelectorAll('.seg-criar').forEach(s => s.addEventListener('click', e => {

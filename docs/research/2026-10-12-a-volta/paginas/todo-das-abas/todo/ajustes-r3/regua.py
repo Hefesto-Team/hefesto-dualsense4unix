@@ -34,8 +34,12 @@ MORDIDAS = {
                    "d.textContent='Aqui o controle vira mouse e teclado do computador: cada botão faz o que está na lista.';t.appendChild(d);"),
     "dialogo-alto": _m("var l=document.querySelector('#lovense .lv-linha');if(l){for(var i=0;i<6;i++)l.parentNode.appendChild(l.cloneNode(true));}"),
     "dialogo-botao": _m("var t=document.querySelector('#lovense .nj-tog');if(t)t.style.width='140px';"),
-    "leitura-solta": _m("var l=document.querySelector('.g2-leitura');l.style.gridTemplateColumns='auto 1fr';l.style.width='max-content';l.style.margin='0 auto';"),
     "conf-botoes": _m("document.querySelectorAll('#lanc-conf .lc-val .btn.mini').forEach(function(b){b.style.width='auto';});"),
+    "q1-desenho": _m("var c=document.querySelector('.g2-canto');var d=document.createElement('div');d.className='g2-leitura';"
+                     "d.innerHTML='<b>L2</b><span data-leitura=l2>Metralhadora</span><b>R2</b><span data-leitura=r2>Arco de flecha</span>';c.appendChild(d);"),
+    "q1-desconectado": _m("var c=document.querySelector('.g2-cab[data-controle=p3]');c.classList.remove('vazio');"
+                          "c.innerHTML='<div class=cabeca><span><span class=\"chip vazio\">Galactic Purple <span class=pt>•</span> Desconectado</span></span></div>';"),
+    "q1-cor": _m("document.querySelector('.g2-canto .sec-rot').style.color='#f8f8f2';"),
     "dica-passo": _m("var t=document.querySelector('.vib .forca input[type=range]');t.setAttribute('data-dica','Ajuste fino dentro do passo');"),
 }
 
@@ -99,21 +103,26 @@ JS_PEDIDO_BASE = r"""
   if(aba==='03'){
     if(document.querySelectorAll('.g2-forca-sel,.g2-rot-forca,.g2-gl-forca').length)falta.push('a linha «Força do gatilho» existe');
     if(tem('.miolo *','Força do gatilho'))falta.push('o texto «Força do gatilho» aparece');
+    // as seis respostas, q1: a célula à esquerda dos controles tem só «Controle» e «Estilo de jogo: …», e os desconectados não aparecem
     var cn=document.querySelector('.g2-canto');
-    if(!cn||!vis(cn)||!cn.querySelector('svg'))falta.push('o desenho do L2 e R2 sumiu do alto');
-    else{var lt=cn.querySelector('.g2-leitura');
-      if(!lt||!vis(lt)||lt.querySelectorAll('[data-leitura]').length!==2||[...lt.querySelectorAll('[data-leitura]')].some(function(x){return !x.textContent.trim();}))falta.push('o desenho não mostra o efeito do estilo para L2 e R2');
-      if(cn.querySelector('button,select,input,a'))falta.push('o desenho virou controle (tem de ser só leitura)');
-      // a leitura segue a grade de baixo: L2 e R2 no centro da coluna dos ícones, o efeito na borda esquerda dos rótulos
-      var rb=lt&&lt.querySelector('b'),rs=lt&&lt.querySelector('[data-leitura]'),gl=document.querySelector('.g2-gl'),ro=document.querySelector('.g2-rot .sec-rot');
-      if(rb&&rs&&gl&&ro){var cb=rb.getBoundingClientRect(),cg=gl.getBoundingClientRect();
-        if(Math.abs((cb.left+cb.right)/2-(cg.left+cg.right)/2)>1.5)falta.push('o L2 da leitura não fica na coluna dos ícones');
-        if(Math.abs(rs.getBoundingClientRect().left-ro.getBoundingClientRect().left)>1.5)falta.push('o efeito da leitura não começa na borda dos rótulos');
-        if(rs.scrollWidth>rs.clientWidth+1)falta.push('o efeito da leitura sai cortado');}}
-    var ca=document.querySelector('.modo-auto');if(ca){ca.click();var lt2=document.querySelector('.g2-leitura');
-      if(lt2&&!/Rígido simples/.test(lt2.textContent))falta.push('com o Modo automático, o desenho não mostra o estilo');
-      var s1=document.querySelector('.g2-acion');s1.value='Rigid';s1.dispatchEvent(new Event('change'));ca.click();
-      if(!/Rígido(?! simples)/.test(document.querySelector('.g2-leitura').textContent))falta.push('o desenho não acompanha a escolha com o automático desligado');}}
+    if(!cn||!vis(cn))falta.push('a célula à esquerda dos controles sumiu');
+    else{var tx=[...cn.children].map(function(x){return x.textContent.trim();}).join(' ');
+      if(cn.children.length!==2||!/^Controle Estilo de jogo: \S+$/.test(tx))falta.push('a célula da esquerda não diz só «Controle» e «Estilo de jogo: …»: «'+tx.slice(0,50)+'»');
+      if(cn.querySelector('svg,[data-leitura],.g2-leitura')||/\b[LR]2\b/.test(tx))falta.push('o desenho ou a leitura do L2 e R2 voltou à célula da esquerda');
+      if(cn.querySelector('button,select,input,a'))falta.push('a célula da esquerda virou controle (tem de ser só leitura)');
+      var rc=cn.querySelector('.sec-rot'),es=cn.querySelector('.g2-estilo'),ro=document.querySelector('.g2-rot .sec-rot');
+      if(!rc||!/^Controle$/.test(rc.textContent.trim()))falta.push('«Controle» não tem a letra dos rótulos de linha');
+      else if(getComputedStyle(rc).color!==getComputedStyle(ro).color)falta.push('«Controle» não tem a cor verde dos rótulos de linha');
+      if(es&&getComputedStyle(es).color!==getComputedStyle(document.querySelector('.g2-acion')).color)falta.push('«Estilo de jogo» não está em branco');
+      [rc,es].forEach(function(x){if(x&&ro&&Math.abs(x.getBoundingClientRect().left-ro.getBoundingClientRect().left)>1.5)falta.push('a linha «'+x.textContent.trim().slice(0,14)+'» não começa na borda dos rótulos de baixo');
+        if(x&&x.getBoundingClientRect().right>document.querySelector('.g2-cab').getBoundingClientRect().left-4)falta.push('a linha «'+x.textContent.trim().slice(0,14)+'» encosta no chip');});}
+    var cabs=[...document.querySelectorAll('.g2-cab')].filter(vis);
+    if(cabs.some(function(c){return /Desconectado/.test(c.textContent)||c.querySelector('.chip.vazio');}))falta.push('um controle desconectado aparece na linha do alto');
+    if(cabs.filter(function(c){return c.querySelector('.chip');}).length!==2)falta.push('a linha do alto não tem os dois controles conectados');
+    // as colunas seguem a grade: cada chip na borda da coluna dele embaixo
+    ['p1','p2'].forEach(function(k){var ch=document.querySelector('.g2-cab[data-controle='+k+'] .chip'),ce=document.querySelector('.g2-cel[data-controle='+k+']');
+      if(ch&&ce){var a=ch.getBoundingClientRect(),c=ce.getBoundingClientRect();if(Math.abs(a.left-c.left)>1||Math.abs(a.width-c.width)>1)falta.push('o chip '+k+' desalinhou da coluna de baixo');}});
+    var ca=document.querySelector('.modo-auto');if(ca){ca.click();if(!vis(cn)||!/Estilo de jogo: \S/.test(cn.textContent))falta.push('com o Modo automático, a leitura do estilo some');ca.click();}}
   if(aba==='04'){if(tem('.miolo button, .miolo [role=button]','Desligar'))falta.push('o «Desligar» voltou aos efeitos');
     if(tem('.miolo .quadro-topo *, .miolo button, .miolo .nj-tog','Sem piscar'))falta.push('«Sem piscar» voltou como chave');
     [...document.querySelectorAll('.miolo select')].filter(vis).forEach(function(x){var o=[...x.options].map(function(y){return y.text;});
