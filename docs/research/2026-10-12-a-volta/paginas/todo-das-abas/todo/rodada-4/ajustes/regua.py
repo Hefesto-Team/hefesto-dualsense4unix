@@ -45,7 +45,12 @@ MORDIDAS = {
     "legenda-07": _m("var g=document.querySelector('.fz-grade');var s=document.createElement('span');s.className='fz-leg';s.textContent='dois motores';g.appendChild(s);"),
     "letra-07": _m("document.querySelectorAll('.ja-tela.t2 .pc-sub').forEach(function(x){x.style.fontSize='11px';});"),
     "largura-07": _m("document.querySelector('.ja-tela.t2 .t2-segue .ja-op').style.width='70%';"),
-    "nome-calibrar": _m("var m=document.querySelector('.mira .mira-topo');var s=document.createElement('span');s.className='quem';s.textContent='Vitória';m.insertBefore(s,m.firstChild);"),
+    "nome-calibrar": _m("var m=document.querySelector('.mira');var s=document.createElement('span');s.className='quem';s.textContent='Vitória';m.insertBefore(s,m.firstChild);"),
+    "q4-player-calibrar": _m("var b=document.querySelector('.controles > .lugar b');b.textContent='Player 3';"),
+    "q5-selo": _m("document.querySelectorAll('.mira').forEach(function(m){var d=document.createElement('div');d.className='mira-topo leitura';"
+                  "d.innerHTML='<span class=selo-av><span class=p></span>Giroscópio como analógico: desligado</span>';m.insertBefore(d,m.firstChild);});"),
+    "q6-rotulo": _m("document.querySelectorAll('.mira .desl[data-seis=q6] .r').forEach(function(r){r.textContent='Só enquanto eu segurar';});"),
+    "q6-opcoes": _m("document.querySelectorAll('select[data-gesto=mira-segurar]').forEach(function(x){var o=document.createElement('option');o.text='Cruz';x.add(o);});"),
     "barra-calibrar": _m("document.querySelectorAll('.lin > .r').forEach(function(x){x.style.flex='0 0 82px';});"),
     "conta-calibrar": _m("var a=document.querySelector('.rodape .acoes');var s=document.createElement('span');s.className='quantos';s.textContent='2 controles conectados';a.parentNode.insertBefore(s,a);"),
 }
@@ -97,7 +102,7 @@ IGUAIS = {
            ["a altura das molduras de baixo", ".ja-tela.t2 > .t2-jogos, .ja-tela.t2 > .t2-forca", "altura"],
            ["os nove deslizantes", ".fz-c input[type=range]"],
            ["as linhas dos jogos", ".jg-l"]],
-    "calibrar": [["os quatro lugares", ".controles > .ctr, .grade > .lugar"]],
+    "calibrar": [["os quatro lugares", ".controles > .ctr, .controles > .lugar, .grade > .lugar"]],
 }
 
 # O que ela pediu, conferido no DOM: a lista do que falta (vazia = o pedido está ali).
@@ -143,10 +148,23 @@ JS_PEDIDO = r"""
     if(document.querySelector('.mira .quem,[data-campo=quem-joga].quem'))falta.push('o nome repetido em cima da mira voltou');
     if(document.querySelector('.quantos'))falta.push('a contagem do rodapé voltou');
     var q=visivelCom(/controles? conectados?/);if(q.length)falta.push('«controles conectados» aparece');
-    var lg=[...document.querySelectorAll('.grade > .lugar')];
-    lg.forEach(function(l){var t=txt(l);if(!/^Player \d Desconectado$/.test(t))falta.push('a vaga diz «'+t.slice(0,40)+'»');});
+    var lg=[...document.querySelectorAll('.controles > .lugar, .grade > .lugar')];
+    if(lg.length!==2)falta.push('há '+lg.length+' vagas sem controle (têm de ser 2)');
+    // as seis respostas, q4: a vaga sem controle diz «P3 • Desconectado»; nenhuma vaga diz «Player»
+    lg.forEach(function(l){var t=txt(l);if(!/^P\d • Desconectado$/.test(t))falta.push('a vaga diz «'+t.slice(0,40)+'»');});
+    if(visivelCom(/Player/).length)falta.push('uma vaga diz «Player» em '+visivelCom(/Player/).slice(0,2));
     var ctr=document.querySelector('.ctr');if(ctr&&parseFloat(getComputedStyle(ctr).rowGap)<8)falta.push('o respiro apertado da rodada 4 voltou (gap '+getComputedStyle(ctr).rowGap+')');
-    if(!document.querySelector('.selo-av'))falta.push('o selo do giroscópio como analógico sumiu');
+    // q5: sai o selo «Giroscópio como analógico: desligado»; os números das barras ficam
+    if(document.querySelector('.selo-av')||visivelCom(/como analógico/).length)falta.push('o selo do giroscópio como analógico voltou');
+    if(document.querySelectorAll('.ctr .lin > .v').length<12||document.querySelectorAll('.mira .desl .n').length<4)falta.push('os números das barras sumiram');
+    // q6: «Só enquanto eu segurar» vira «A mira se move», com «Sempre» (escolhido) e «Só segurando um botão»
+    if(visivelCom(/Só enquanto eu segurar/).length||document.querySelector('[aria-label="Só enquanto eu segurar"]'))falta.push('o rótulo «Só enquanto eu segurar» voltou');
+    var ss=[...document.querySelectorAll('select[data-gesto=mira-segurar]')];
+    if(ss.length!==2)falta.push('há '+ss.length+' seletores de quando a mira se move (têm de ser 2)');
+    ss.forEach(function(x){var op=[...x.options].map(function(o){return o.text;}).join('|');var r=x.closest('.desl').querySelector('.r');
+      if(op!=='Sempre|Só segurando um botão')falta.push('o seletor da mira tem «'+op.slice(0,50)+'»');
+      if(x.options[x.selectedIndex].text!=='Sempre')falta.push('o «Sempre» não segue escolhido');
+      if(!r||r.textContent.trim()!=='A mira se move')falta.push('a linha não diz «A mira se move»');});
     [...document.querySelectorAll('.ctr')].forEach(function(c){var xs=[...c.querySelectorAll('.lin > .g')].map(function(g){return Math.round(g.getBoundingClientRect().left);});
       if(xs.length&&Math.max.apply(null,xs)-Math.min.apply(null,xs)>1)falta.push('as barras da leitura não começam juntas '+[...new Set(xs)]);});}
   return falta;})

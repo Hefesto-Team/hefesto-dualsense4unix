@@ -294,14 +294,6 @@
   body{padding:var(--recuo-do-corpo)}
   .cx{width:min(100%,1600px);height:var(--alt-janela);max-width:100%;max-height:calc(100dvh - var(--recuo-do-corpo) * 2)}
 
-  /* T7: o analógico virtual tem um dono só, a aba Controles; aqui fica a leitura. */
-  .selo-av{display:inline-flex;align-items:center;gap:6px;height:20px;padding:0 8px;border-radius:6px;
-           border:1px dashed var(--border-forte);color:var(--texto-mudo);font-size:11px;white-space:nowrap;cursor:default}
-  .selo-av .p{width:6px;height:6px;border-radius:50%;background:var(--border-forte)}
-  .selo-av.on{border-color:var(--green);color:var(--green)}
-  .selo-av.on .p{background:var(--green);box-shadow:0 0 5px var(--green)}
-  .mira-topo.leitura{flex-direction:row;align-items:center}
-  .mira-topo.leitura .ajuda{margin-left:auto}
 </style>
 <style data-aba="rodada-2">
   /* cal-3 aprovada: alvos de 24 px */
@@ -362,6 +354,13 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 @media (max-height:760px){.mira{gap:10px}}
 /* Com a letra de 12 px, «Acelerômetro» mede 86 px e a coluna de 82 empurrava a primeira linha dele 4 px: as seis barras começam juntas. */
 .lin > .r{flex:0 0 90px}
+</style>
+<style data-todo-css="calibrar-seis-respostas">
+/* As seis respostas (14/10): sem o selo do giroscópio como analógico em cima da mira, o fio entre o controle e a mira
+   volta a ser o da própria mira (um só); a vaga sem controle diz «P3 • Desconectado» numa linha. */
+.mira::before{display:block}
+.lugar{flex-direction:row;gap:6px}
+.lugar .pt{font-size:12px}
 </style>
 <style data-todo-css="alvos-r4">
 /* Rodada 4: a sua resposta de 13/10 (~23h40), botões e letra: todo alvo de toque com 24 px e nenhuma letra abaixo de 12 px. ?alvos=hoje mostra a tela sem a mudança. */
@@ -1180,8 +1179,8 @@ html.alvos-24 input[type=range]{height:24px}
               <div class="lin" data-eixo="accel-z"><span class="r"></span><span class="v" data-campo="accel-z">—</span><span class="g" data-campo="accel-z-cor" data-hef-alvo="cor" style="color:var(--border-forte)"><i class="neg" data-campo="accel-z-neg" data-hef-alvo="largura" style="width:0%"></i><i class="pos" data-campo="accel-z-pos" data-hef-alvo="largura" style="width:0%"></i></span></div>
             </div>
           </div>
-          <div class="lugar" aria-label="Player 3 desconectado"><b>Player 3</b><span>Desconectado</span></div>
-          <div class="lugar" aria-label="Player 4 desconectado"><b>Player 4</b><span>Desconectado</span></div>
+          <div class="lugar" data-seis="q4" aria-label="P3 desconectado"><b>P3</b><span class="pt">•</span><span>Desconectado</span></div>
+          <div class="lugar" data-seis="q4" aria-label="P4 desconectado"><b>P4</b><span class="pt">•</span><span>Desconectado</span></div>
     </div>
 
     <!-- A MIRA VIRTUAL, uma coluna por controle embaixo do cartão dele — ver o
@@ -1189,17 +1188,15 @@ html.alvos-24 input[type=range]{height:24px}
          propósito: o dos cartões o produto remonta a cada tique. -->
     <div class="mira-cx" data-bloco="miras">
           <div class="mira" style="--plastico:#ae335a" data-controle="p1">
-            <div class="mira-topo leitura"><span class="selo-av" data-campo="mira-lado-texto" data-hef-alvo="html" data-dica="Liga e escolhe o lado na aba Controles" data-todo="2"><span class="p"></span>Giroscópio como analógico: desligado</span></div>
               <label class="desl"><span class="r">O quanto um gesto anda</span><input class="trilho" type="range" min="1" max="12" step="1" value="6" data-gesto="mira-sensibilidade" data-campo="mira-sensibilidade" data-hef-alvo="valor" aria-label="O quanto um gesto anda" data-todo="3"><span class="n"><span data-campo="mira-sensibilidade-num">6</span></span></label>
               <label class="desl"><span class="r">Ignorar tremor até</span><input class="trilho" type="range" min="1" max="60" step="1" value="3" data-gesto="mira-tremor" data-campo="mira-tremor" data-hef-alvo="valor" aria-label="Ignorar tremor até"><span class="n"><span data-campo="mira-tremor-num">3</span><span class="un">°/s</span></span></label>
-              <label class="desl"><span class="r">Só enquanto eu segurar</span><select class="lista" data-gesto="mira-segurar" data-campo="mira-segurar" data-hef-alvo="valor" aria-label="Só enquanto eu segurar"><option value="sempre" selected>Sempre</option><option value="mesmo_parado">Mesmo parado</option><option value="cross">Cruz</option><option value="circle">Círculo</option><option value="square">Quadrado</option><option value="triangle">Triângulo</option><option value="l1">L1</option><option value="r1">R1</option><option value="l2">L2</option><option value="r2">R2</option><option value="l3">L3</option><option value="r3">R3</option><option value="dpad_up">D-pad cima</option><option value="dpad_down">D-pad baixo</option><option value="dpad_left">D-pad esquerda</option><option value="dpad_right">D-pad direita</option><option value="options">Options</option><option value="create">Share</option></select></label>
+              <label class="desl" data-seis="q6"><span class="r">A mira se move</span><select class="lista" data-gesto="mira-segurar" data-campo="mira-segurar" data-hef-alvo="valor" aria-label="A mira se move"><option value="sempre" selected>Sempre</option><option value="segurando">Só segurando um botão</option></select></label>
               <div class="desl"><span class="r">Inverter</span><span class="inverter"><button class="sw off" data-gesto="mira-inverter" data-inverter="lado" data-campo="mira-inverter-lado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" aria-label="Inverter esquerda e direita"><span class="p"></span>Esquerda e direita</button><button class="sw off" data-gesto="mira-inverter" data-inverter="cima-baixo" data-campo="mira-inverter-cima-baixo" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" aria-label="Inverter cima e baixo"><span class="p"></span>Cima e baixo</button></span></div>
           </div>
           <div class="mira" style="--plastico:#7eb8d4" data-controle="p2">
-            <div class="mira-topo leitura"><span class="selo-av" data-campo="mira-lado-texto" data-hef-alvo="html" data-dica="Liga e escolhe o lado na aba Controles" data-todo="2"><span class="p"></span>Giroscópio como analógico: desligado</span></div>
               <label class="desl"><span class="r">O quanto um gesto anda</span><input class="trilho" type="range" min="1" max="12" step="1" value="6" data-gesto="mira-sensibilidade" data-campo="mira-sensibilidade" data-hef-alvo="valor" aria-label="O quanto um gesto anda"><span class="n"><span data-campo="mira-sensibilidade-num">6</span></span></label>
               <label class="desl"><span class="r">Ignorar tremor até</span><input class="trilho" type="range" min="1" max="60" step="1" value="3" data-gesto="mira-tremor" data-campo="mira-tremor" data-hef-alvo="valor" aria-label="Ignorar tremor até"><span class="n"><span data-campo="mira-tremor-num">3</span><span class="un">°/s</span></span></label>
-              <label class="desl"><span class="r">Só enquanto eu segurar</span><select class="lista" data-gesto="mira-segurar" data-campo="mira-segurar" data-hef-alvo="valor" aria-label="Só enquanto eu segurar"><option value="sempre" selected>Sempre</option><option value="mesmo_parado">Mesmo parado</option><option value="cross">Cruz</option><option value="circle">Círculo</option><option value="square">Quadrado</option><option value="triangle">Triângulo</option><option value="l1">L1</option><option value="r1">R1</option><option value="l2">L2</option><option value="r2">R2</option><option value="l3">L3</option><option value="r3">R3</option><option value="dpad_up">D-pad cima</option><option value="dpad_down">D-pad baixo</option><option value="dpad_left">D-pad esquerda</option><option value="dpad_right">D-pad direita</option><option value="options">Options</option><option value="create">Share</option></select></label>
+              <label class="desl" data-seis="q6"><span class="r">A mira se move</span><select class="lista" data-gesto="mira-segurar" data-campo="mira-segurar" data-hef-alvo="valor" aria-label="A mira se move"><option value="sempre" selected>Sempre</option><option value="segurando">Só segurando um botão</option></select></label>
               <div class="desl"><span class="r">Inverter</span><span class="inverter"><button class="sw off" data-gesto="mira-inverter" data-inverter="lado" data-campo="mira-inverter-lado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" aria-label="Inverter esquerda e direita"><span class="p"></span>Esquerda e direita</button><button class="sw off" data-gesto="mira-inverter" data-inverter="cima-baixo" data-campo="mira-inverter-cima-baixo" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" aria-label="Inverter cima e baixo"><span class="p"></span>Cima e baixo</button></span></div>
           </div>
     </div>

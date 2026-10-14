@@ -22,6 +22,10 @@
    "ajuste_r4": {
     "pedido": "antes tá melhor;. mmas o antes tá confuso tambem e muito cheio de texto.",
     "feito": "Voltou o arranjo de antes, com o respiro dele entre os blocos; ficam os alvos de 24 px e a letra de 12 px. Saiu o texto que sobrava: o nome do controle repetido em cima da mira e o «2 controles conectados» do rodapé. As vagas sem controle dizem só «Player 3» e «Player 4» com «Desconectado», no lugar da cor do plástico em letra grande. Cabe sem rolar também em 1212x740. As seis barras da leitura começam juntas, e a unidade do tremor ficou «°/s»."
+   },
+   "ajuste_seis": {
+    "pedido": "q4 B: «P3 • Desconectado» (só a letra e o número). q5 A: sai o selo «Giroscópio como analógico: desligado»; ficam os números. q6 A: a linha vira «A mira se move», com as opções «Sempre» e «Só segurando um botão»",
+    "feito": "As vagas sem controle dizem «P3 • Desconectado» e «P4 • Desconectado», numa linha. Saiu o selo «Giroscópio como analógico: desligado» dos dois cartões; o fio entre a leitura e a mira ficou um só, e os números das barras e dos trilhos seguem. «Só enquanto eu segurar» virou «A mira se move», e o seletor tem só «Sempre» (escolhido) e «Só segurando um botão»."
    }
   }
  ],
