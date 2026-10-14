@@ -1563,9 +1563,12 @@
   /* Rodada 3, volta 2 (14/10): a força do gatilho sai (o estilo do jogo decide); o desenho do L2 e R2 no canto só mostra o efeito */
   .g2-canto{flex-direction:column;gap:4px;height:auto!important;align-self:center}
   .g2-canto .gl-par{display:block}
-  .g2-canto .g2-leitura{display:grid;grid-template-columns:auto 1fr;column-gap:8px;row-gap:2px;width:max-content;max-width:100%;box-sizing:border-box;
+  /* a leitura segue a grade de baixo: L2 e R2 na coluna dos ícones, o efeito na coluna dos rótulos */
+  .g2-canto{align-items:stretch!important}
+  .g2-canto .gl-par{align-self:center}
+  .g2-canto .g2-leitura{display:grid;grid-template-columns:44px minmax(0,1fr);column-gap:14px;row-gap:2px;width:100%;box-sizing:border-box;
     font:500 12px/16px 'Space Grotesk',system-ui,sans-serif;color:var(--fg);cursor:help}
-  .g2-canto .g2-leitura b{font:700 12px/16px 'JetBrains Mono',monospace;color:var(--rot-campo,var(--fg))}
+  .g2-canto .g2-leitura b{font:700 12px/16px 'JetBrains Mono',monospace;color:var(--rot-campo,var(--fg));text-align:center}
   .g2-canto .g2-leitura span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   /* em tela baixa o respiro entre as linhas diminui, para o desenho com a leitura caber sem rolar */
   @media (max-height:780px){.quadro .g2-grade{row-gap:8px;padding-top:4px}}
