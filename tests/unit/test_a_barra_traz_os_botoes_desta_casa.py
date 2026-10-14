@@ -67,6 +67,9 @@ def test_cada_gesto_chega_na_janela(gesto: str) -> None:
 
     quem = object.__new__(ponte_da_tela.JanelaDaAba)
     quem.janela = JanelaDeMentira()  # type: ignore[attr-defined]
+    # A barra só existe na janela À VISTA: o `fechar` da casa fecha a janela, e só a oculta
+    # (sem barra) encerra o laço direto.
+    quem.oculta = False  # type: ignore[attr-defined]
     quem._gesto_da_barra(None, gesto)
     esperado = {"fechar": "close", "minimizar": "iconify", "maximizar": "maximize"}
     assert chamados == [esperado[gesto]]

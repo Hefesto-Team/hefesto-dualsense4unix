@@ -249,6 +249,13 @@ _CLASSIFICACAO: dict[str, SecaoPorApplier | SecaoDireta] = {
             "`estilo`, lido pelo motor do tato vivo, não pela ativação."
         )
     ),
+    "controles_modo": SecaoDireta(
+        razao=(
+            "A-BASE-COMUM-DAS-ABAS-01 (13/10/2026). A escolha do botão «Modo "
+            "automático» da aba Controles, gravada pelo gesto `modo-dos-controles` "
+            "e lida pela tela. Nada é escrito no controle."
+        )
+    ),
     "marcas": SecaoDireta(
         razao=(
             "AS-MARCAS-VISUAL-NOVEL-E-ADULTO-SE-SOMAM-AO-ESTILO-01 (09/10/2026). "

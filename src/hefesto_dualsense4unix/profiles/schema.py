@@ -311,6 +311,16 @@ class RumbleConfig(BaseModel):
     #: ``None`` = ninguém escolheu o modo da aba Vibração (o botão «Modo automático»).
     modo: ModoDaAba | None = None
 
+    @model_serializer(mode="wrap")
+    def _o_modo_sem_escolha_nao_vai_ao_disco(
+        self, handler: SerializerFunctionWrapHandler
+    ) -> Any:
+        """Sem modo escolhido, a seção sai IDÊNTICA à de antes (QUEM-E-QUEM-02)."""
+        dados = handler(self)
+        if isinstance(dados, dict) and dados.get("modo") is None:
+            dados.pop("modo", None)
+        return dados
+
     @model_validator(mode="after")
     def _validate_custom_mult(self) -> RumbleConfig:
         """Range de ``custom_mult`` + coerência com ``policy``.
@@ -1197,7 +1207,7 @@ class Profile(BaseModel):
         if isinstance(dados, dict):
             for opcional in (
                 "ponte", "remapeamento", "movimento", "estilo", "receita_do_tato",
-                "marcas",
+                "marcas", "controles_modo",
             ):
                 if dados.get(opcional) is None:
                     dados.pop(opcional, None)

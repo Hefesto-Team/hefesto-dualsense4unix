@@ -290,6 +290,26 @@ def test_o_modo_sobrevive_ao_salvar_do_rodape() -> None:
     assert volta.rumble.modo == AUTO
 
 
+def test_o_perfil_sem_modo_escolhido_sai_igual_ao_de_ontem() -> None:
+    """Sem modo escolhido, nem `controles_modo` nem `rumble.modo` vão ao disco ou ao dump.
+
+    Um Hefesto anterior a esta sprint lê o `Profile` e o `RumbleConfig` com `extra="forbid"`: uma
+    chave `"modo": null` em todo save o faria recusar TODOS os perfis num downgrade
+    (QUEM-E-QUEM-02). MORDIDA: tirar o serializador do `RumbleConfig` reprova.
+    """
+    import json
+
+    caminho = save_profile(_perfil("Jogo X"))
+    gravado = json.loads(caminho.read_text(encoding="utf-8"))
+    assert "controles_modo" not in gravado
+    assert "modo" not in gravado["rumble"]
+    dump = load_profile("Jogo X").model_dump(mode="json")
+    assert "controles_modo" not in dump and "modo" not in dump["rumble"]
+    escolhido = save_profile(_perfil("Jogo Y", controles_modo=AUTO, rumble={"modo": AUTO}))
+    gravado = json.loads(escolhido.read_text(encoding="utf-8"))
+    assert gravado["controles_modo"] == AUTO and gravado["rumble"]["modo"] == AUTO
+
+
 def test_os_modos_nao_se_deduzem_do_perfil() -> None:
     """Sem nada escrito a aba segue no Personalizado: o Automático nunca nasce por dedução."""
     from hefesto_dualsense4unix.interface.pacotes import a02_controles, a05_vibracao
