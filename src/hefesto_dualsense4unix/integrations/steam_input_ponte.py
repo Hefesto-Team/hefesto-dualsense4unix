@@ -67,8 +67,8 @@ disciplina do `apply_wrapper_to_all_games` e do `--apply-quiet` do guarda, e o
 instante em que a reposição sobrevive"*. Com a Steam viva este módulo ADIA e
 diz que adiou; com um JOGO aberto ele nem cogita (fechar a Steam ali mataria o
 jogo). O instante certo já existe e já tem gatilho: o
-`hefesto-steam-input-guard`, que acorda quando o `userdata` muda — isto é,
-quando a Steam acabou de sair — e a cada 30 minutos como rede.
+`hefesto-steam-input-guard`, que acorda quando a Steam regrava o `localconfig.vdf` ou o `steamapps`
+(drop-in do `vigia_do_jogo_novo`; `PathChanged=…/userdata` não é recursivo) e a cada 30 min.
 
 NENHUM APPID EMBARCADO
 ----------------------
@@ -121,6 +121,7 @@ try:
         steam_input_allowlist_path,
         steam_running,
     )
+    from .vigia_do_jogo_novo import jogos_novos_a_receber
 except ImportError:  # pragma: no cover - executado como script avulso
     from steam_launch_options import (  # type: ignore[no-redef]
         discover_vdfs,
@@ -131,6 +132,7 @@ except ImportError:  # pragma: no cover - executado como script avulso
         steam_input_allowlist_path,
         steam_running,
     )
+    from vigia_do_jogo_novo import jogos_novos_a_receber  # type: ignore[no-redef]
 
 CHAVE = "UseSteamControllerConfig"
 _CHAVE_MIN = CHAVE.lower()
@@ -316,7 +318,7 @@ def _linha_com_valor(cru: str, valor: str) -> str:
 
 
 def ligar_no_texto(
-    texto: str, appids: Sequence[str]
+    texto: str, appids: Sequence[str], instalados: Sequence[str] = ()
 ) -> tuple[str, list[str], list[tuple[str, str]]]:
     """Garante `UseSteamControllerConfig = 2` para `appids`. Função PURA.
 
@@ -325,17 +327,17 @@ def ligar_no_texto(
 
     - a chave existe e está em `"0"`: troca o valor, preservando a linha;
     - o bloco do app existe sem a chave: insere a linha antes do `}` do bloco;
-    - o app nem tem bloco: cria o bloco no fim da árvore viva.
+    - o app nem tem bloco: cria no fim da árvore viva, se o arquivo o conhece ou é `instalado`.
 
     Devolve ``(texto_novo, ligados, [(appid, motivo_pulado), ...])``. Nada é
     escrito quando as réguas divergem ou a árvore viva não se prova — nesse
     caso TODOS os appids saem pulados, com o motivo.
     """
-    return _garantir_no_texto(texto, appids, LIGADO)
+    return _garantir_no_texto(texto, appids, LIGADO, instalados)
 
 
 def desligar_no_texto(
-    texto: str, appids: Sequence[str]
+    texto: str, appids: Sequence[str], instalados: Sequence[str] = ()
 ) -> tuple[str, list[str], list[tuple[str, str]]]:
     """Garante `UseSteamControllerConfig = 0` para `appids`. Função PURA.
 
@@ -344,11 +346,14 @@ def desligar_no_texto(
     o arquivo desconhece. Um valor que não é `"0"` (o `"1"` e o `"2"`) vira
     `"0"`.
     """
-    return _garantir_no_texto(texto, appids, DESLIGADO)
+    return _garantir_no_texto(texto, appids, DESLIGADO, instalados)
 
 
 def _garantir_no_texto(
-    texto: str, appids: Sequence[str], alvo_valor: str
+    texto: str,
+    appids: Sequence[str],
+    alvo_valor: str,
+    instalados: Sequence[str] = (),
 ) -> tuple[str, list[str], list[tuple[str, str]]]:
     """O corpo comum de `ligar_no_texto` e `desligar_no_texto`."""
     ja_esta = JA_LIGADO if alvo_valor == LIGADO else JA_DESLIGADO
@@ -392,7 +397,7 @@ def _garantir_no_texto(
             )
             ligados.append(appid)
             continue
-        if appid not in conhecidos:
+        if appid not in conhecidos and appid not in instalados:
             pulados.append((appid, JOGO_DESCONHECIDO))
             continue
         recuo, eol = _recuo_de(linhas, viva.fim)
@@ -544,6 +549,7 @@ def estado_da_ponte(
         if allowlist is not None
         else ler_allowlist(config_home)
     )
+    instalados = set(jogos_novos_a_receber(home, config_home=config_home))
     ligados: list[str] = []
     pendentes: list[Pendencia] = []
     sandbox: list[str] = []
@@ -577,7 +583,7 @@ def estado_da_ponte(
                 continue
             if appid in vistos:
                 continue
-            if appid not in conhecidos:
+            if appid not in conhecidos and appid not in instalados:
                 continue
             vistos.add(appid)
             pendentes.append(
@@ -632,6 +638,7 @@ def garantir_ponte(
         return PONTE_ADIADA_STEAM, estado, detalhe
 
     alvos = [p.appid for p in estado.pendentes]
+    instalados = jogos_novos_a_receber(home, config_home=config_home)
     houve_incerteza = False
     houve_erro = False
     ligou = False
@@ -645,7 +652,7 @@ def garantir_ponte(
             detalhe.append({"vdf": str(vdf), "appid": "", "desfecho": str(exc)})
             houve_erro = True
             continue
-        novo, ligados, pulados = ligar_no_texto(original, alvos)
+        novo, ligados, pulados = ligar_no_texto(original, alvos, instalados)
         for appid, motivo in pulados:
             detalhe.append({"vdf": str(vdf), "appid": appid, "desfecho": motivo})
             if motivo in (REGUAS_DIVERGEM, ARVORE_DESCONHECIDA):

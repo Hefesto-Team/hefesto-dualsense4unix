@@ -403,6 +403,11 @@ def discover_vdfs(home: Path | None = None) -> list[Path]:
     return out
 
 
+def caminho_do_localconfig(raiz: Path, conta: str) -> Path:
+    """O `localconfig.vdf` da conta: o arquivo que a Steam regrava ao sair."""
+    return raiz / "userdata" / conta / "config" / "localconfig.vdf"
+
+
 def is_sandboxed_layout(vdf: Path) -> bool:
     """True para vdf de Steam Flatpak/Snap (migração proibida — DEDUP-04)."""
     text = str(vdf)
@@ -496,8 +501,66 @@ def read_launch_options_by_appid(text: str) -> dict[str, str]:
     return {a: v for a, v in read_apps_by_appid(text).items() if v is not None}
 
 
+def garantir_blocos_no_texto(
+    text: str, appids: Sequence[str]
+) -> tuple[str, list[str]]:
+    """Cria, na árvore canônica, o bloco vazio dos jogos que ela ainda não tem. Puro.
+
+    A Steam só escreve o bloco de um jogo na primeira abertura dele; antes disso,
+    wrapper, opções e Steam Input recusavam o jogo como desconhecido. Este é o
+    bloco mínimo que ela mesma cria, no fim do ``…/Software/Valve/Steam/apps``.
+    Árvore canônica ausente ou duplicada: nada é criado (escrever no escuro é o
+    que o ``e_a_arvore_canonica`` existe para não deixar). Devolve
+    ``(texto_novo, appids_criados)``.
+    """
+    pedidos = [a for a in dict.fromkeys(str(x).strip() for x in appids) if a.isdigit()]
+    if not pedidos:
+        return text, []
+    lines = text.splitlines(keepends=True)
+    stack: list[str] = []
+    pending: str | None = None
+    existentes: set[str] = set()
+    fins: list[int] = []
+    for idx, raw in enumerate(lines):
+        line = raw.strip()
+        if not line:
+            continue
+        if line == "{":
+            stack.append(pending if pending is not None else "")
+            pending = None
+            if stack[-1].isdigit() and e_a_arvore_canonica(stack[:-1]):
+                existentes.add(stack[-1])
+            continue
+        if line == "}":
+            if stack and e_a_arvore_canonica(stack):
+                fins.append(idx)
+            if stack:
+                stack.pop()
+            pending = None
+            continue
+        key_only = _VDF_KEY_ONLY_RE.match(line)
+        if key_only is not None:
+            pending = _vdf_unescape(key_only.group("key"))
+    faltam = [a for a in pedidos if a not in existentes]
+    if len(fins) != 1 or not faltam:
+        return text, []
+    fim = fins[0]
+    corpo = lines[fim].rstrip("\r\n")
+    eol = lines[fim][len(corpo):] or "\n"
+    recuo = corpo[: len(corpo) - len(corpo.lstrip())] + "\t"
+    novos = [
+        linha
+        for appid in faltam
+        for linha in (f'{recuo}"{appid}"{eol}', f"{recuo}{{{eol}", f"{recuo}}}{eol}")
+    ]
+    return "".join(lines[:fim] + novos + lines[fim:]), faltam
+
+
 def apply_wrapper_vdf_text(
-    text: str, *, excluir: Sequence[str] | None = None
+    text: str,
+    *,
+    excluir: Sequence[str] | None = None,
+    instalados: Sequence[str] = (),
 ) -> tuple[str, list[str], list[tuple[str, str]]]:
     """Aplica o wrapper a todos os jogos da árvore CANÔNICA de UM vdf (puro).
 
@@ -518,18 +581,20 @@ def apply_wrapper_vdf_text(
 
     ``excluir``: appids que a USUÁRIA marcou como "não quero o wrapper neste
     jogo" (SENTINELA-WRAPPER-01). Saem com o motivo ``opt_out_da_usuaria`` e
-    nada é escrito neles — o produto não briga com a dona da máquina. (Quem
-    TIRA o atalho que eles já têm é o `tirar_o_atalho_dos_jogos`, chamado pelo
-    reparo do vigia desde 21/09/2026; aqui só se pula.) A lista
+    nada é escrito neles — o produto não briga com a dona da máquina. A lista
     vem do `jogos_sem_wrapper.txt`; ``None`` significa "não excluir ninguém"
     (o comportamento histórico), nunca "leia o arquivo real" — quem lê o
     arquivo é o chamador, para esta função continuar pura.
+
+    ``instalados``: appids com ``appmanifest``; sem bloco, ganham um (``garantir_blocos_no_texto``).
 
     Retorna ``(texto_novo, appids_aplicados, [(appid, motivo_skip), ...])``.
     O parse de blocos é o MESMO do ``read_launch_options_by_appid`` (pilha por
     linha); conteúdo fora do padrão passa intacto byte a byte.
     """
     fora = {str(a).strip() for a in (excluir or ())}
+    original = text
+    text, _ = garantir_blocos_no_texto(text, [a for a in instalados if a not in fora])
     lines = text.splitlines(keepends=True)
     applied: list[str] = []
     skipped: list[tuple[str, str]] = []
@@ -614,7 +679,7 @@ def apply_wrapper_vdf_text(
             pending = _vdf_unescape(key_only.group("key"))
 
     if not replacements and not insertions:
-        return text, applied, skipped
+        return original, applied, skipped
     out: list[str] = []
     insert_by_idx = dict(insertions)
     for idx, raw in enumerate(lines):
@@ -649,6 +714,7 @@ def apply_wrapper_to_all_games(
     *,
     dry_run: bool = False,
     excluir: Sequence[str] | None = None,
+    instalados: Sequence[str] = (),
 ) -> dict[str, list[dict[str, str]]]:
     """Aplica o wrapper a todos os jogos dos localconfig.vdf elegíveis.
 
@@ -695,7 +761,9 @@ def apply_wrapper_to_all_games(
                 {"vdf": str(vdf), "appid": "", "reason": str(exc)}
             )
             continue
-        new_text, applied, skipped = apply_wrapper_vdf_text(original, excluir=excluir)
+        new_text, applied, skipped = apply_wrapper_vdf_text(
+            original, excluir=excluir, instalados=instalados
+        )
         for appid, reason in skipped:
             result["skipped"].append(
                 {"vdf": str(vdf), "appid": appid, "reason": reason}
@@ -2001,9 +2069,16 @@ def main(argv: list[str] | None = None) -> int:
                 f"(jogos_sem_wrapper.txt): {', '.join(recusados)}"
             )
         try:
+            from .vigia_do_jogo_novo import jogos_novos_a_receber
+        except ImportError:  # pragma: no cover - executado como script avulso
+            from vigia_do_jogo_novo import jogos_novos_a_receber  # type: ignore[no-redef]
+        try:
             return _report_apply(
                 apply_wrapper_to_all_games(
-                    vdfs=vdfs, dry_run=args.dry_run, excluir=recusados
+                    vdfs=vdfs,
+                    dry_run=args.dry_run,
+                    excluir=recusados,
+                    instalados=jogos_novos_a_receber(),
                 ),
                 dry_run=args.dry_run,
             )

@@ -4,8 +4,12 @@ Description=Hefesto — vigia a pasta de usuário da Steam e reaplica Steam Inpu
 
 [Path]
 # A Steam reescreve localconfig.vdf ao sair / após updates, re-ativando o
-# PSSupport. PathChanged em userdata é best-effort (writes profundos via rename
-# podem não disparar); a garantia real é o .timer (rede de segurança a cada 30min).
+# PSSupport. PathChanged NÃO é recursivo: estes três vigiam só o userdata em si,
+# e o localconfig.vdf mora em userdata/<conta>/config/. Os caminhos que a Steam
+# de fato regrava (o localconfig.vdf de cada conta e o steamapps de cada
+# biblioteca) entram pelo drop-in hefesto-steam-input-guard.path.d/caminhos.conf,
+# que o vigia_do_jogo_novo.py escreve a cada ciclo do guarda. Estes três ficam
+# como rede, e o .timer (a cada 30min) como a garantia de último recurso.
 PathChanged=%h/.steam/steam/userdata
 PathChanged=%h/.local/share/Steam/userdata
 PathChanged=%h/.var/app/com.valvesoftware.Steam/.steam/steam/userdata

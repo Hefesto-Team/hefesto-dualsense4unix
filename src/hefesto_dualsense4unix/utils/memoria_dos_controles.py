@@ -487,6 +487,8 @@ CLASSIFICACAO: dict[str, tuple[str, str]] = {
     "runtime": ("install", "a pasta de execução de reserva"),
     "51-hefesto-dualsense-no-default-source.conf": ("install", "drop-in do WirePlumber"),
     "54-hefesto-dualsense-alto-falante-nunca-dorme.conf": ("install", "drop-in do WirePlumber"),
+    "caminhos.conf": ("install", "drop-in do guarda da Steam: os arquivos que a Steam regrava"),
+    "ritmo.conf": ("install", "drop-in do guarda da Steam: o limite de partidas por minuto"),
     ".hefesto-proton-pin.json": ("install", "o manifesto do Proton que o install extrai"),
     "mods": (CASA, "o código e os dados das modificações (codigo-das-modificacoes e "
              "dados-das-modificacoes); não identificam controle"),

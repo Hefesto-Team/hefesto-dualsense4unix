@@ -73,6 +73,7 @@ import os
 import re
 import sys
 import time
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any, TypedDict
 
@@ -82,24 +83,28 @@ try:
         _vdf_unescape,
         discover_vdfs,
         e_a_arvore_canonica,
+        garantir_blocos_no_texto,
         is_sandboxed_layout,
         ler_jogos_sem_wrapper,
         sem_wrapper_path,
         steam_game_running,
         steam_running,
     )
+    from .vigia_do_jogo_novo import jogos_novos_a_receber
 except ImportError:  # pragma: no cover - executado como script avulso pelo vigia
     from steam_launch_options import (  # type: ignore[no-redef]
         WRAPPER_PREFIX,
         _vdf_unescape,
         discover_vdfs,
         e_a_arvore_canonica,
+        garantir_blocos_no_texto,
         is_sandboxed_layout,
         ler_jogos_sem_wrapper,
         sem_wrapper_path,
         steam_game_running,
         steam_running,
     )
+    from vigia_do_jogo_novo import jogos_novos_a_receber  # type: ignore[no-redef]
 
 #: Onde a tabela mora, no molde do `jogos_sem_wrapper.txt`.
 TABELA_RELPATH = "hefesto-dualsense4unix/opcoes_por_jogo.txt"
@@ -426,9 +431,14 @@ def compor_opcoes_vdf_text(
     texto: str,
     desejadas: dict[str, str],
     escritas: dict[str, str] | None = None,
+    instalados: Sequence[str] = (),
 ) -> tuple[str, list[str], list[tuple[str, str]], dict[str, str]]:
-    """O :func:`definir_opcoes_vdf_text` e, de quebra, o valor composto de cada jogo escrito."""
+    """O :func:`definir_opcoes_vdf_text` e, de quebra, o valor composto de cada jogo escrito.
+
+    ``instalados``: o jogo da tabela com ``appmanifest`` e sem bloco ganha o bloco antes.
+    """
     escritas = escritas or {}
+    texto, _ = garantir_blocos_no_texto(texto, [a for a in desejadas if a in instalados])
     pilha: list[str] = []
     saida: list[str] = []
     aplicados: list[str] = []
@@ -693,6 +703,7 @@ def aplicar(
     desfeitos: list[dict[str, str]] = []
     anotar: list[tuple[str, str, str]] = []  # (appid, vdf, resultado)
     escritas = {a: e.get("valor", "") for a, e in ler_registro(estado_home).items()}
+    instalados = jogos_novos_a_receber(home, config_home=config_home)
     for vdf in alvos:
         if is_sandboxed_layout(vdf):
             pulados.append({"vdf": str(vdf), "appid": "", "reason": "vdf_sandbox"})
@@ -703,7 +714,7 @@ def aplicar(
             erros.append({"vdf": str(vdf), "appid": "", "reason": str(exc)})
             continue
         novo, feitos, deixados, compostos = compor_opcoes_vdf_text(
-            texto, desejadas, escritas)
+            texto, desejadas, escritas, instalados)
         relato["vdfs"] += 1
         pulados.extend(
             {"vdf": str(vdf), "appid": a, "reason": m} for a, m in deixados

@@ -103,15 +103,18 @@ def carregar_tabela(caminho: Path | None = None) -> tuple[Receita, ...]:
     return tuple(achadas)
 
 
-def _peca_ao_lado_do_executavel(raiz: Path, peca: str) -> bool | None:
+def _nomes_ao_lado_do_executavel(raiz: Path) -> frozenset[str]:
+    """Os arquivos (minúsculos) da pasta do executável; vazio quando nenhum se lê.
+
+    Vazio é sem ambiguidade: com executável lido, a pasta tem ao menos ele.
+    """
     exe = escolher_executavel(raiz)
     if exe is None:
-        return None
-    alvo = peca.lower()
+        return frozenset()
     try:
-        return any(p.name.lower() == alvo and p.is_file() for p in exe.parent.iterdir())
+        return frozenset(p.name.lower() for p in exe.parent.iterdir() if p.is_file())
     except OSError:
-        return None
+        return frozenset()
 
 
 def ler_jogo(raiz: Path | None, tabela: Iterable[Receita] | None = None) -> tuple[Leitura, ...]:
@@ -120,11 +123,15 @@ def ler_jogo(raiz: Path | None, tabela: Iterable[Receita] | None = None) -> tupl
         return ()
     receitas = carregar_tabela() if tabela is None else tuple(tabela)
     achadas: list[Leitura] = []
+    nomes: frozenset[str] | None = None
     for receita in receitas:
         sinal = next((s for s in receita.sinais if (raiz / s).is_file()), None)
         if sinal is None:
             continue
-        achadas.append(Leitura(receita, sinal, _peca_ao_lado_do_executavel(raiz, receita.peca)))
+        if nomes is None:
+            nomes = _nomes_ao_lado_do_executavel(raiz)
+        presente = receita.peca.lower() in nomes if nomes else None
+        achadas.append(Leitura(receita, sinal, presente))
     return tuple(achadas)
 
 

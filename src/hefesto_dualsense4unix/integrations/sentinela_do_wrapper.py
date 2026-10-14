@@ -123,6 +123,7 @@ try:
         WRAPPER_PREFIX,
         apply_wrapper_to_all_games,
         discover_vdfs,
+        garantir_blocos_no_texto,
         has_extended_ignore,
         is_sandboxed_layout,
         juntar_rotulos,
@@ -133,11 +134,14 @@ try:
         steam_running,
         tirar_o_atalho_dos_jogos,
     )
+    from .vigia_do_jogo_novo import garantir as garantir_o_vigia
+    from .vigia_do_jogo_novo import jogos_novos_a_receber
 except ImportError:  # pragma: no cover - executado como script avulso pelo doctor
     from steam_launch_options import (  # type: ignore[no-redef]
         WRAPPER_PREFIX,
         apply_wrapper_to_all_games,
         discover_vdfs,
+        garantir_blocos_no_texto,
         has_extended_ignore,
         is_sandboxed_layout,
         juntar_rotulos,
@@ -148,6 +152,8 @@ except ImportError:  # pragma: no cover - executado como script avulso pelo doct
         steam_running,
         tirar_o_atalho_dos_jogos,
     )
+    from vigia_do_jogo_novo import garantir as garantir_o_vigia  # type: ignore[no-redef]
+    from vigia_do_jogo_novo import jogos_novos_a_receber  # type: ignore[no-redef]
 
 REGISTRO_BASENAME = "wrapper-visto.json"
 
@@ -183,6 +189,8 @@ class Censo:
     recusados: list[str] = field(default_factory=list)
     recusados_com_wrapper: list[str] = field(default_factory=list)
     sandbox: list[str] = field(default_factory=list)
+    #: appids instalados (com `appmanifest`) que algum vdf ainda não tem em bloco.
+    sem_bloco: list[str] = field(default_factory=list)
     erros: list[str] = field(default_factory=list)
     steam_aberta: bool = False
     jogo_aberto: bool = False
@@ -292,6 +300,7 @@ def censo_do_wrapper(
     registro: Path | None = None,
     recusados: Sequence[str] | None = None,
     anotar: bool = True,
+    instalados: Sequence[str] = (),
 ) -> Censo:
     """Quem tem e quem não tem a chamada do wrapper. **Nunca escreve no vdf.**"""
     fora = list(recusados if recusados is not None else ler_jogos_sem_wrapper())
@@ -300,7 +309,9 @@ def censo_do_wrapper(
     recusados_com_wrapper: list[str] = []
     faltantes: list[JogoSemWrapper] = []
     sandbox: list[str] = []
+    sem_bloco: list[str] = []
     erros: list[str] = []
+    pedidos = [a for a in instalados if a not in fora_set]
     ja_visto = ler_registro(registro, home)
 
     alvos = list(vdfs) if vdfs is not None else discover_vdfs(home)
@@ -313,6 +324,9 @@ def censo_do_wrapper(
         except (OSError, ValueError) as exc:
             erros.append(f"{vdf}: {exc}")
             continue
+        sem_bloco.extend(
+            a for a in garantir_blocos_no_texto(texto, pedidos)[1] if a not in sem_bloco
+        )
         apps = read_apps_by_appid(texto)
         if not apps:
             erros.append(
@@ -353,6 +367,7 @@ def censo_do_wrapper(
         recusados=sorted(fora_set),
         recusados_com_wrapper=sorted(set(recusados_com_wrapper)),
         sandbox=sandbox,
+        sem_bloco=sem_bloco,
         erros=erros,
         steam_aberta=steam_running(),
         jogo_aberto=steam_game_running(),
@@ -451,8 +466,10 @@ def reparar_ou_adiar(
     que a vírgula fique órfã. Fica de fora só o que a subtração não alcança,
     que o censo continua reportando como intocável.
     """
-    censo = censo_do_wrapper(home, vdfs, registro=registro)
-    if not censo.reparaveis and not censo.recusados_com_wrapper:
+    instalados = jogos_novos_a_receber(home)
+    censo = censo_do_wrapper(home, vdfs, registro=registro, instalados=instalados)
+    novo_sem_bloco = bool(censo.sem_bloco)
+    if not censo.reparaveis and not censo.recusados_com_wrapper and not novo_sem_bloco:
         return REPARO_NADA, censo, None
     if censo.jogo_aberto:
         return REPARO_ADIADO_JOGO, censo, None
@@ -468,12 +485,13 @@ def reparar_ou_adiar(
             vdfs=list(vdfs) if vdfs is not None else None,
             dry_run=dry_run,
         )
-    if censo.reparaveis:
+    if censo.reparaveis or novo_sem_bloco:
         resultado = apply_wrapper_to_all_games(
             home=home,
             vdfs=list(vdfs) if vdfs is not None else None,
             dry_run=dry_run,
             excluir=censo.recusados,
+            instalados=instalados,
         )
     else:
         resultado = {"applied": [], "skipped": [], "errors": []}
@@ -576,6 +594,9 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.reparar:
+        # O vigia primeiro e sempre: escrever o drop-in não toca a Steam, então
+        # nem o jogo aberto nem a Steam viva o adiam.
+        print(f"[sentinela-wrapper] vigia do jogo novo: {garantir_o_vigia(dry_run=args.dry_run)}")
         status, censo, _ = reparar_ou_adiar(vdfs=args.vdf, dry_run=args.dry_run)
         _imprimir_relatorio(censo)
         print(f"[sentinela-wrapper] reparo: {status}")
