@@ -3,7 +3,7 @@
   "nome": "Controles",
   "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/_integra-1-11/src/hefesto_dualsense4unix/interface/paginas/02-controles.html",
   "depois": "/home/vitoriamaria/.local/state/hefesto-casa/leva-volta/todo/02-controles.html",
-  "rodada": 2,
+  "rodada": 3,
   "sprint_unificada": "A-ABA-CONTROLES-DO-TODO-01",
   "mudancas": [
     {
@@ -140,6 +140,17 @@
       "origem": "RODADA-4",
       "ancora": ".sensores .btn",
       "conflito": ""
+    },
+    {
+      "n": 16,
+      "sprint": "OS-ALVOS-E-A-LETRA-CRESCEM-E-A-INTERFACE-GANHA-TAMANHO-01",
+      "o_que_muda": "Sai a seção «Criar efeitos novos»: a aba fica só com «Dispositivos conectados», os quatro controles, e o espaço que sobra é dos alvos maiores",
+      "resposta": "todo-02-r3-16",
+      "origem": "escolha dela de 13/10",
+      "ancora": "[data-r3=\"16\"]",
+      "conflito": "",
+      "rodada": 3,
+      "ancora_antes": ".quadro.criar"
     }
   ],
   "estados": {
