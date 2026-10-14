@@ -5,7 +5,7 @@
 # idênticas, e sem este recibo o portão das fotos ficaria vermelho
 # para sempre.
 
-ensaio:  2026-10-13 18:20
+ensaio:  2026-10-14 04:42
 abas:    10
 modo:    --todas --publicado --doc
 origem:  src/hefesto_dualsense4unix/interface/paginas
@@ -17,13 +17,13 @@ vista:   recorte da .janela
 # tests/unit/test_retrato_das_abas_nao_vaza_dado_real.py).
 
 # soma sha256 de cada foto, em ordem alfabética
-5beea12d2dc452cb9b7a47eeee7691db8f22a75938fdd46e3cbda4077ba63f07  aba-01-jogar.png
-a05b507a8712bce08eae7e98b047d9bbc81d8d71025bea6ca6396ec1d24a4b2b  aba-02-controles.png
-e3153973d6d7f10d326b7bd43b819ec9bd5cfac8e335b1f769b45bce84ad6724  aba-03-gatilhos.png
-839798b7082507ddfb617888fe5b3d9ef7afe81d56dd765180db025df233df9f  aba-04-iluminacao.png
-cce164e625ab8c28b71825f34c95a0c6f9e0b76371100a3963a6f0b590b26dc4  aba-05-vibracao.png
-d9215923e045cbee238dfbb16a5381b78d66758f3e067dc5eb0ee0b41c185052  aba-06-navegacao.png
-103d32688cee1a8c96e4ff1a5d2765a571a79959fc02c4834beecca17fb638f5  aba-07-lancadores.png
+4f7c0debadc06cb8a494b72afe3c2cbcc861e60d0aad3e39c6602cc5453dbb9c  aba-01-jogar.png
+94af9317301a569283e8a73ee260c84a804af6dbec4339d9d32fb6fdc20d0b45  aba-02-controles.png
+5c936ec96ba3d0734e2ae1155aadd0f31b1ed80ddc8c72ccf78e5b448e894447  aba-03-gatilhos.png
+eb70b8b8f3ea58cdc5357744acbe1f0750a3354b21e5105f59e4cd5c4f6cd69e  aba-04-iluminacao.png
+920ca34ec674d0a1f16ffb2221f28cad95c7120367d3b98c4e90f343a0080e65  aba-05-vibracao.png
+a0f34cba27e4c557cd273d05b6c946bddb4b87ff02ac437c88f9114b162c1c48  aba-06-navegacao.png
+10a079264f6f680b98a8faa2de476c8fc5e7fd9cd4020fd8f6212b671738e6b9  aba-07-lancadores.png
 09941632649f95cc440d9c2a5f9c853f8025432739d2f565da2179006a9fe8b1  aba-08-conexoes.png
-056b7eb5318acf48ef698f5ba9e449ca8a3fd857f4b54580665bde91dab35f1d  aba-09-sistema.png
-78012bc0ce95b9a0cd3be10efa2333cfe39e14992417bb07a7f4851b3606774e  aba-10-perfis.png
+a1b3507fd867435957ff7137cb48658a50b066ae3e0e092bf837d45c7019f63a  aba-09-sistema.png
+a87932204912abfaafe196407ab6753ba2958bc437ed935b08d0daf2a38280bb  aba-10-perfis.png

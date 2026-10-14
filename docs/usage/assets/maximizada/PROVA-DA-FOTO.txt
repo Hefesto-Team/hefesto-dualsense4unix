@@ -5,7 +5,7 @@
 # idênticas, e sem este recibo o portão das fotos ficaria vermelho
 # para sempre.
 
-ensaio:  2026-10-13 18:20
+ensaio:  2026-10-14 04:42
 abas:    10
 modo:    --todas --publicado --doc --vista 1918x840
 origem:  src/hefesto_dualsense4unix/interface/paginas
@@ -17,13 +17,13 @@ vista:   1918x840
 # tests/unit/test_retrato_das_abas_nao_vaza_dado_real.py).
 
 # soma sha256 de cada foto, em ordem alfabética
-6f2d851ebae6e58e0f829edb0ccc02a39d104f96b1a1148e61fb4ea471c67b92  aba-01-jogar.png
-32cb7c72ab1d0246842d6f3dc4385206d285be4b6395f8b2afe03fad181de569  aba-02-controles.png
-a90b7b569b4709d45c73439b560967508687992efcae8083b8bfb9f1b02b60f4  aba-03-gatilhos.png
-271d16d9644f3eb990e9c7cd636e0d341159df390b1022962017fc29ea13dfd8  aba-04-iluminacao.png
-897e4a8009ccdd71cefdd207a55b19e4e62cc72e52052548653ad8fc055ba90b  aba-05-vibracao.png
-ffd18e8a442ecde545ea0b4e965a07cf80bee186112a03889175487e74fb8303  aba-06-navegacao.png
-245aa308d1b9cdca196a44da5745697516ba89fdb179fc9a391d9201ea69c177  aba-07-lancadores.png
+e4f2ceac9b1a7a5936be82aa907d6be3780f58f25f9d3f054f998c77ae2d7852  aba-01-jogar.png
+2d4d9ae39dbc29d7a777448c6674da9f258ebeb19017ebcba304845195bafac4  aba-02-controles.png
+d168911814dcd6df1dd66969beb861338bdabeac6287db49da8ea5a23f35c0e6  aba-03-gatilhos.png
+f510a9bcbbbdddeae98c9d865bb03e5a1cfb5dc757edea4db74e44ca0ee99a66  aba-04-iluminacao.png
+9ebf9698869a8338eed228682b82d09ca77149666cb9c924c928b9ced244faa7  aba-05-vibracao.png
+5e121fddf82d12730f260a654aa4f40fa75e5c275700509634fdd0b65e7f4148  aba-06-navegacao.png
+7fe4e3dfa93dfd80d09b118b0922537d87bb5e13da5a3da7b2a311dfb3fc3a54  aba-07-lancadores.png
 7ef68c49272ad7ce403d163a3926807408e6d872e15b7e0572b45b20eaa3a96e  aba-08-conexoes.png
-8b82a2f196478666c89fbb0a86d0712d7a5d1734dff162e744322a0611cc9f13  aba-09-sistema.png
-5ba533a1236f57cc38bc1f7f05c38b1039ff8367157c40eb4de3b0353b051f1a  aba-10-perfis.png
+cb133723dc91e19656bc994a6693c01782235933e88318141e8b37d785c997d6  aba-09-sistema.png
+9985a93105471d596586efdda9df7b67e4aa50c70933285a290df1be0dfe70b9  aba-10-perfis.png
