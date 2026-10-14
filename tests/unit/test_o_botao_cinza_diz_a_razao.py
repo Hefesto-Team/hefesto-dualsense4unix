@@ -66,25 +66,20 @@ O_QUE_O_NAVEGADOR_DESENHA = r"""
   let recebeu = 0;
   travado.addEventListener('click', () => { recebeu += 1; });
   travado.click();
-  // A DICA DESTE BOTÃO, e não a primeira da página: o `?` é o irmão IMEDIATO
-  // do botão, e é essa vizinhança que a folha usa para escondê-lo. Buscar por
-  // classe no documento devolveria a dica do botão LIVRE, que vem antes.
-  const dica = travado.nextElementSibling
-    ? travado.nextElementSibling.querySelector('.dica') : null;
   return {
     normal: cs('[data-campo="prova-livre"]'),
     apagado: cs('[data-campo="prova-travado"]'),
     apagado_com_tom: cs('[data-campo="prova-tom"]'),
     seg_livre: cs('#seg-livre'),
     seg_disabled: cs('#seg-travado'),
-    porque_do_travado: cs('[data-campo="prova-travado"] + .ajuda.porque'),
-    porque_do_livre: cs('[data-campo="prova-livre"] + .ajuda.porque'),
+    dica_do_travado: travado.getAttribute('data-dica'),
+    dica_do_livre: livre.getAttribute('data-dica'),
+    irmao_do_travado: travado.nextElementSibling ? travado.nextElementSibling.className : null,
     tem_atributo_disabled: travado.hasAttribute('disabled'),
     disabled_de_verdade: travado.disabled,
     livre_tem_a_classe: livre.classList.contains('apagado'),
     travado_tem_a_classe: travado.classList.contains('apagado'),
     clique_recebido: recebeu,
-    razao_na_dica: dica ? (dica.textContent || '').trim() : null,
     alvo_do_botao: travado.dataset.hefAlvo,
     classe_do_alvo: travado.dataset.hefClasse,
   };
@@ -144,9 +139,12 @@ def test_o_botao_cinza_nao_emite_disabled_no_html() -> None:
     assert 'data-hef-alvo="classe"' in marcado and 'data-hef-classe="apagado"' in marcado, (
         f"o botão perdeu o alvo do piloto — sem ele o cinza fica congelado no "
         f"desenho e nunca acende no produto:\n  {marcado}")
-    assert marcado.count('data-campo="x"') == 2, (
-        f"o botão e a dica têm de levar o MESMO `data-campo`: é o que impede a "
-        f"tela de mostrar cinza sem razão, ou razão sem cinza.\n  {marcado}")
+    assert marcado.count('data-campo="x"') == 1, (
+        f"o `?` ao lado saiu (A-BASE-COMUM-DAS-ABAS-01): o botão é o único dono "
+        f"do `data-campo`.\n  {marcado}")
+    assert f'data-dica="{RAZAO}"' in marcado and 'data-hef-razao="sim"' in marcado, (
+        f"a razão tem de viver no `data-dica` do PRÓPRIO botão, e o "
+        f"`data-hef-razao` avisa o piloto de que é ele quem a escreve:\n  {marcado}")
 
 
 def test_sem_razao_o_botao_nao_fica_cinza() -> None:
@@ -225,16 +223,13 @@ def test_apagado_e_ainda_assim_responde(medido: dict) -> None:
 
 @pytest.mark.skipif(not CHROME.exists(),
                     reason="sem o Chrome do sistema — a régua não tem motor")
-def test_o_ponto_de_interrogacao_so_aparece_quando_ha_razao(medido: dict) -> None:
-    """O `?` acompanha o cinza, e a razão dentro dele veio de quem chamou."""
-    assert medido["porque_do_livre"]["display"] == "none", (
-        f"o `?` apareceu ao lado de um botão que NÃO está cinza "
-        f"({medido['porque_do_livre']}) — um `?` sem nada a explicar é ruído "
-        f"com cara de dado.")
-    assert medido["porque_do_travado"]["display"] != "none", (
-        "o `?` sumiu ao lado do botão cinza — o botão ficaria apagado sem "
-        "dizer por quê, que é metade da D-03 perdida.")
-    assert medido["porque_do_travado"]["altura"] > 0
-    assert medido["razao_na_dica"] == RAZAO, (
-        f"a dica diz {medido['razao_na_dica']!r} e a razão passada foi "
+def test_a_razao_vive_no_botao_e_so_quando_ha_razao(medido: dict) -> None:
+    """A razão é o `data-dica` do próprio botão cinza; o livre não leva dica e não há `?`."""
+    assert medido["dica_do_livre"] is None, (
+        f"o botão que NÃO está cinza leva dica ({medido['dica_do_livre']!r}) — uma dica "
+        f"sem nada a explicar é ruído com cara de dado.")
+    assert medido["dica_do_travado"] == RAZAO, (
+        f"a dica diz {medido['dica_do_travado']!r} e a razão passada foi "
         f"{RAZAO!r} — o texto não atravessa de quem chama até a tela.")
+    assert not medido["irmao_do_travado"] or "ajuda" not in medido["irmao_do_travado"], (
+        "o `?` voltou ao lado do botão cinza: a dica mora no botão.")
