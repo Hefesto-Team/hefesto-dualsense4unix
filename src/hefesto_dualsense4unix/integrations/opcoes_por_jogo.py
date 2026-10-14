@@ -79,6 +79,7 @@ from typing import Any, TypedDict
 try:
     from .steam_launch_options import (
         WRAPPER_PREFIX,
+        _vdf_unescape,
         discover_vdfs,
         e_a_arvore_canonica,
         is_sandboxed_layout,
@@ -90,6 +91,7 @@ try:
 except ImportError:  # pragma: no cover - executado como script avulso pelo vigia
     from steam_launch_options import (  # type: ignore[no-redef]
         WRAPPER_PREFIX,
+        _vdf_unescape,
         discover_vdfs,
         e_a_arvore_canonica,
         is_sandboxed_layout,
@@ -123,6 +125,7 @@ ADIADO_JOGO = "adiado_jogo_aberto"
 ADIADO_STEAM = "adiado_steam_aberta"
 ERRO = "erro"
 SEM_CONTA = "conta_logada_desconhecida"
+LINHA_DELA_DIVERGE = "linha_dela_diverge"
 
 #: O que ``conferir`` diz de cada jogo da tabela (só leitura).
 OK = "ok"
@@ -312,26 +315,158 @@ def _e_chave(nu: str) -> bool:
     return nu.startswith('"') and nu.endswith('"') and nu.count('"') == 2
 
 
-def definir_opcoes_vdf_text(
-    texto: str, desejadas: dict[str, str]
-) -> tuple[str, list[str], list[tuple[str, str]]]:
-    """Põe ``desejadas`` (``{appid: linha pronta}``) na árvore CANÔNICA do vdf.
+_TOKEN_DA_LINHA = re.compile(r"""(?:[^\s'"]|'[^']*'|"[^"]*")+""")
+_COMANDO = "%command%"
 
-    O jogo é um QUADRO de profundidade fixa: a ``LaunchOptions`` que a Steam lê
-    é a FILHA DIRETA do bloco dele, e um ``}`` de bloco filho (``cloud``,
-    ``autocloud``…) não fecha o jogo. Uma ``LaunchOptions`` que já more dentro
-    de um filho é alinhada ao mesmo valor (nunca criada lá): a linha do jogo
-    tem um valor só, em todas as cópias que o bloco dele guarda.
+
+def _tokens(linha: str) -> list[str]:
+    """Os tokens da linha, com o que está entre aspas inteiro (``sh -c '…'`` é um só)."""
+    return _TOKEN_DA_LINHA.findall(linha)
+
+
+def _acha(tokens: list[str], trecho: list[str]) -> int | None:
+    """A posição onde ``trecho`` aparece inteiro e contíguo em ``tokens``, ou ``None``."""
+    if not trecho:
+        return None
+    for i in range(len(tokens) - len(trecho) + 1):
+        if tokens[i: i + len(trecho)] == trecho:
+            return i
+    return None
+
+
+def _parte_antes_e_depois(tokens: list[str]) -> tuple[list[str], list[str], bool] | None:
+    """``(antes do %command%, depois dele, tinha)``; ``None`` com mais de um ``%command%``."""
+    if tokens.count(_COMANDO) > 1:
+        return None
+    if _COMANDO not in tokens:
+        return [], tokens, False
+    i = tokens.index(_COMANDO)
+    return tokens[:i], tokens[i + 1:], True
+
+
+def _sem(tokens: list[str], tirar: list[str]) -> list[str]:
+    """``tokens`` sem UMA ocorrência de cada item de ``tirar``."""
+    resto = list(tokens)
+    for t in tirar:
+        if t in resto:
+            resto.remove(t)
+    return resto
+
+
+def _opcoes_da_linha(linha: str) -> tuple[list[str], list[str]] | None:
+    """``(antes, depois)`` do ``%command%`` do que a TABELA escreveu, sem o atalho."""
+    tokens = _tokens(linha)
+    atalho = _tokens(WRAPPER_PREFIX)
+    if tokens[: len(atalho)] == atalho:
+        tokens = tokens[len(atalho):]
+    partes = _parte_antes_e_depois(tokens)
+    return None if partes is None else (partes[0], partes[1])
+
+
+def compor_linha(vivo: str, desejada: str, anterior: str = "") -> str | None:
+    """A linha viva do jogo com o NOSSO trecho trocado pela ``desejada`` e o resto dela intacto.
+
+    O nosso trecho é o atalho do Hefesto e o que a tabela escreveu da última vez
+    (``anterior``, do registro do ``aplicar``). Tudo o mais na linha é do usuário e
+    sobrevive: o que vem antes do atalho, as variáveis que ele pôs ao lado das da
+    tabela, os argumentos depois do ``%command%``. ``None`` quando a composição
+    perderia um token dele: mais de um ``%command%`` na linha, na dele ou na da tabela.
     """
-    linhas = texto.splitlines(keepends=True)
+    if vivo == desejada:
+        return desejada
+    if not vivo.strip() or vivo.strip() == _COMANDO:
+        return desejada
+    vivos, quer = _tokens(vivo), _tokens(desejada)
+    if anterior:
+        antiga = _tokens(anterior)
+        i = _acha(vivos, antiga)
+        if i is not None:
+            spans = [m.span() for m in _TOKEN_DA_LINHA.finditer(vivo)]
+            return vivo[: spans[i][0]] + desejada + vivo[spans[i + len(antiga) - 1][1]:]
+    atalho = _tokens(WRAPPER_PREFIX)
+    com_atalho = quer[: len(atalho)] == atalho
+    pos = _acha(vivos, atalho)
+    antes_do_atalho = vivos[:pos] if pos is not None else []
+    resto = vivos[pos + len(atalho):] if pos is not None else vivos
+    dele = _parte_antes_e_depois(resto)
+    nosso = _opcoes_da_linha(desejada)
+    if dele is None or nosso is None:
+        return None
+    antigo = _opcoes_da_linha(anterior) if anterior else ([], [])
+    if antigo is None:
+        antigo = ([], [])
+    pre_dele = _sem(dele[0], nosso[0] + antigo[0])
+    pos_dele = _sem(dele[1], nosso[1] + antigo[1])
+    tinha_comando = dele[2] or _COMANDO in quer
+    novo = list(antes_do_atalho)
+    if com_atalho:
+        novo += atalho
+    novo += pre_dele + nosso[0]
+    if tinha_comando:
+        novo.append(_COMANDO)
+    novo += pos_dele + nosso[1]
+    return " ".join(novo)
+
+
+def definir_opcoes_vdf_text(
+    texto: str,
+    desejadas: dict[str, str],
+    escritas: dict[str, str] | None = None,
+) -> tuple[str, list[str], list[tuple[str, str]]]:
+    """Põe ``desejadas`` (``{appid: linha}``) na árvore CANÔNICA, compondo com a linha viva.
+
+    A ``LaunchOptions`` é a filha direta do bloco do jogo (um ``}`` de filho não o fecha);
+    as cópias em blocos filhos recebem o mesmo valor. Só o nosso trecho troca
+    (:func:`compor_linha`); linha que não se compõe vai a ``pulados`` com ``linha_dela_diverge``.
+    """
+    return compor_opcoes_vdf_text(texto, desejadas, escritas)[:3]
+
+
+def compor_opcoes_vdf_text(
+    texto: str,
+    desejadas: dict[str, str],
+    escritas: dict[str, str] | None = None,
+) -> tuple[str, list[str], list[tuple[str, str]], dict[str, str]]:
+    """O :func:`definir_opcoes_vdf_text` e, de quebra, o valor composto de cada jogo escrito."""
+    escritas = escritas or {}
     pilha: list[str] = []
     saida: list[str] = []
     aplicados: list[str] = []
     pulados: list[tuple[str, str]] = []
+    compostos: dict[str, str] = {}
     vistos: set[str] = set()
-    quadro: dict[str, object] | None = None
+    quadro: dict[str, Any] | None = None
 
-    for linha in linhas:
+    def fechar() -> None:
+        assert quadro is not None
+        appid = str(quadro["appid"])
+        vistos.add(appid)
+        linhas: list[tuple[int, bool, re.Match[str]]] = quadro["linhas"]
+        diretas = [v for v in linhas if v[1]]
+        referencia = (diretas or linhas)[0] if linhas else None
+        vivo = _vdf_unescape(referencia[2].group(3)) if referencia else ""
+        composto = compor_linha(vivo, desejadas[appid], escritas.get(appid, ""))
+        if composto is None:
+            pulados.append((appid, LINHA_DELA_DIVERGE))
+            return
+        querido = _valor_do_vdf(composto)
+        mudou = False
+        for idx, _, casou in linhas:
+            if casou.group(3) != querido:
+                saida[idx] = (
+                    f'{casou.group(1)}"LaunchOptions"{casou.group(2)}"{querido}"{casou.group(4)}'
+                )
+                mudou = True
+        if not diretas:
+            saida.append(f'{quadro["recuo"]}"LaunchOptions"\t\t"{querido}"\n')
+            mudou = True
+        compostos[appid] = composto
+        if mudou:
+            aplicados.append(appid)
+        else:
+            pulados.append((appid, "ja_e_o_desejado"))
+
+    for linha in texto.splitlines(keepends=True):
         nu = linha.strip()
         if _e_chave(nu):
             pilha.append(nu.strip('"'))
@@ -348,51 +483,27 @@ def definir_opcoes_vdf_text(
                 base = linha[: len(linha) - len(linha.lstrip())]
                 quadro = {
                     "appid": pilha[-1], "fundo": len(pilha), "recuo": base + "\t",
-                    "tem_linha": False, "igual": False, "mudou": False,
+                    "linhas": [],
                 }
             continue
         if nu == "}":
             if quadro is not None and len(pilha) == quadro["fundo"]:
-                appid = str(quadro["appid"])
-                if appid in desejadas:
-                    vistos.add(appid)
-                    if not quadro["tem_linha"]:
-                        valor = _valor_do_vdf(desejadas[appid])
-                        saida.append(f'{quadro["recuo"]}"LaunchOptions"\t\t"{valor}"\n')
-                        quadro["mudou"] = True
-                    if quadro["mudou"]:
-                        if appid not in aplicados:
-                            aplicados.append(appid)
-                    elif quadro["igual"]:
-                        pulados.append((appid, "ja_e_o_desejado"))
+                if str(quadro["appid"]) in desejadas:
+                    fechar()
                 quadro = None
             if pilha:
                 pilha.pop()
             saida.append(linha)
             continue
         casou = re.match(r'^(\s*)"LaunchOptions"(\s*)"((?:[^"\\]|\\.)*)"(\s*)$', linha)
-        if casou and quadro is not None:
-            no_jogo = len(pilha) == quadro["fundo"]
-            if no_jogo:
-                quadro["tem_linha"] = True
-            appid = str(quadro["appid"])
-            if appid in desejadas:
-                querido = _valor_do_vdf(desejadas[appid])
-                if casou.group(3) == querido:
-                    if no_jogo:
-                        quadro["igual"] = True
-                else:
-                    quadro["mudou"] = True
-                    saida.append(
-                        f'{casou.group(1)}"LaunchOptions"{casou.group(2)}"{querido}"{casou.group(4)}'
-                    )
-                    continue
+        if casou and quadro is not None and str(quadro["appid"]) in desejadas:
+            quadro["linhas"].append((len(saida), len(pilha) == quadro["fundo"], casou))
         saida.append(linha)
 
     for appid in desejadas:
         if appid not in vistos:
             pulados.append((appid, "jogo_nao_esta_neste_vdf"))
-    return "".join(saida), aplicados, pulados
+    return "".join(saida), aplicados, pulados, compostos
 
 
 def lugares_das_opcoes(texto: str, appid: str) -> tuple[bool, list[tuple[bool, str]]]:
@@ -581,6 +692,7 @@ def aplicar(
     ]
     desfeitos: list[dict[str, str]] = []
     anotar: list[tuple[str, str, str]] = []  # (appid, vdf, resultado)
+    escritas = {a: e.get("valor", "") for a, e in ler_registro(estado_home).items()}
     for vdf in alvos:
         if is_sandboxed_layout(vdf):
             pulados.append({"vdf": str(vdf), "appid": "", "reason": "vdf_sandbox"})
@@ -590,7 +702,8 @@ def aplicar(
         except OSError as exc:
             erros.append({"vdf": str(vdf), "appid": "", "reason": str(exc)})
             continue
-        novo, feitos, deixados = definir_opcoes_vdf_text(texto, desejadas)
+        novo, feitos, deixados, compostos = compor_opcoes_vdf_text(
+            texto, desejadas, escritas)
         relato["vdfs"] += 1
         pulados.extend(
             {"vdf": str(vdf), "appid": a, "reason": m} for a, m in deixados
@@ -613,7 +726,7 @@ def aplicar(
             continue
         for appid in feitos:
             lidas = opcoes_lidas_do_jogo(no_disco, appid)
-            querida = _valor_do_vdf(desejadas[appid])
+            querida = _valor_do_vdf(compostos[appid])
             if lidas and all(valor == querida for valor in lidas):
                 aplicados.append({"vdf": str(vdf), "appid": appid, "reason": ""})
                 anotar.append((appid, str(vdf), ESCRITO_E_CONFERIDO))
@@ -697,10 +810,12 @@ def conferir(
                 presente, achados = lugares_das_opcoes(texto, appid)
                 if not presente:
                     continue
-                querido = _valor_do_vdf(
-                    linha_desejada(opcoes, com_atalho=appid not in sem_atalho))
+                desejada = linha_desejada(opcoes, com_atalho=appid not in sem_atalho)
                 diretas = [v for direta, v in achados if direta]
-                if diretas and all(v == querido for _, v in achados):
+                if diretas and all(
+                    compor_linha(_vdf_unescape(v), desejada, desejada) == _vdf_unescape(v)
+                    for _, v in achados
+                ):
                     estado = OK
                 elif achados and not diretas:
                     estado = FORA_DO_LUGAR
@@ -736,6 +851,13 @@ def _imprimir(relato: Relato) -> int:
             f"onde a Steam a lê ({item['reason']})",
             file=sys.stderr,
         )
+    for item in relato["pulados"]:
+        if item["reason"] == LINHA_DELA_DIVERGE:
+            print(
+                f"[opcoes-por-jogo] {item['appid']}: {LINHA_DELA_DIVERGE} — a linha que "
+                "você escreveu não cabe com a da tabela sem perder parte dela; ficou como estava",
+                file=sys.stderr,
+            )
     for item in relato["erros"]:
         print(f"[opcoes-por-jogo] erro: {item['reason']}", file=sys.stderr)
     print(f"[opcoes-por-jogo] resultado={relato['status']}")

@@ -166,6 +166,61 @@ def _remove_token(value: str, token: str) -> str:
     return value[:start] + value[end:]
 
 
+def _tirar_vizinhos_legados(value: str, tokens: Sequence[str]) -> str:
+    """Tira de ``value`` os ``tokens`` colados ao NOSSO par de IGNORE, e só esses.
+
+    O veneno legado foi escrito como um bloco contíguo (a atribuição de IGNORE ao lado
+    dos co-ocorrentes). O mesmo token em outra posição da linha é dela e fica: arrancar
+    ``SDL_JOYSTICK_HIDAPI=0`` ou ``__GL_SHADER_DISK_CACHE=1`` de onde ela os pôs, só porque a
+    linha também tem o nosso par, era apagar o que o usuário escreveu.
+    """
+    out = value
+    achados = [
+        m for m in _IGNORE_ASSIGN_RE.finditer(out)
+        if any(i.strip().lower() == IGNORE_PAR_HEFESTO for i in m.group("lista").split(","))
+    ]
+    for k in reversed(range(len(achados))):
+        while True:
+            alvo = [
+                m for m in _IGNORE_ASSIGN_RE.finditer(out)
+                if any(
+                    i.strip().lower() == IGNORE_PAR_HEFESTO
+                    for i in m.group("lista").split(",")
+                )
+            ]
+            if k >= len(alvo):
+                break
+            inicio, fim = alvo[k].span()
+            vizinho = _vizinho_legado(out, inicio, fim, tokens)
+            if vizinho is None:
+                break
+            out = out[: vizinho[0]] + out[vizinho[1]:]
+    return out
+
+
+def _vizinho_legado(
+    value: str, inicio: int, fim: int, tokens: Sequence[str]
+) -> tuple[int, int] | None:
+    """O trecho (com um espaço) de um token de ``tokens`` colado à atribuição, ou ``None``."""
+    if fim < len(value) and value[fim] == " ":
+        for token in tokens:
+            fim_do_token = fim + 1 + len(token)
+            if value.startswith(token, fim + 1) and (
+                fim_do_token == len(value) or value[fim_do_token].isspace()
+            ):
+                return fim, fim_do_token
+    if inicio > 0 and value[inicio - 1] == " ":
+        for token in tokens:
+            inicio_do_token = inicio - 1 - len(token)
+            if inicio_do_token >= 0 and value.startswith(token, inicio_do_token) and (
+                inicio_do_token == 0 or value[inicio_do_token - 1].isspace()
+            ):
+                if inicio_do_token == 0:
+                    return 0, inicio
+                return inicio_do_token - 1, inicio - 1
+    return None
+
+
 def subtrair_nosso_ignore(value: str) -> str:
     """Tira o NOSSO par de dentro da lista de IGNORE, deixando a dela intacta."""
     out = value
@@ -251,11 +306,7 @@ def strip_value(value: str) -> str:
     out = value
     if WRAPPER_PREFIX in out:
         out = _remove_token(out, WRAPPER_PREFIX)
-    subtraida = subtrair_nosso_ignore(out)
-    if subtraida != out:
-        out = subtraida
-        for token in _COOCCURRING_TOKENS:
-            out = _remove_token(out, token)
+    out = subtrair_nosso_ignore(_tirar_vizinhos_legados(out, _COOCCURRING_TOKENS))
     if out.strip() == "%command%":
         return ""
     return out.strip() if out != value else out
@@ -265,13 +316,8 @@ def migrate_value(value: str) -> str:
     """Migra UMA LaunchOptions envenenada para a chamada do wrapper."""
     if has_extended_ignore(value):
         return value
-    out = value
-    subtraida = subtrair_nosso_ignore(out)
-    if subtraida != out:
-        out = subtraida
-        for token in (*_COOCCURRING_TOKENS, *_PRELOAD_TOKENS):
-            out = _remove_token(out, token)
-    out = out.strip()
+    out = _tirar_vizinhos_legados(value, (*_COOCCURRING_TOKENS, *_PRELOAD_TOKENS))
+    out = subtrair_nosso_ignore(out).strip()
     if WRAPPER_PREFIX in out:
         return out
     if not out:

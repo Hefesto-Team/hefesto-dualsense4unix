@@ -15,13 +15,17 @@ APPID = "990000021"
 OPCOES = "VKD3D_CONFIG=no_upload_hvv %command%"
 
 def _vdf_texto(appid: str = APPID) -> str:
-    """Um `localconfig.vdf` de mentira com as DUAS árvores `apps`."""
+    """Um `localconfig.vdf` de mentira com as DUAS árvores `apps`.
+
+    A linha do jogo nasce sem opção nenhuma (`%command%`): a tabela a completa. O que o
+    usuário escreveu por cima fica, e isso é do `test_o_reaplicar_nunca_apaga_o_que_o_usuario_pos`.
+    """
     return (
         '"UserLocalConfigStore"\n{\n'
         '\t"Software"\n\t{\n\t\t"Valve"\n\t\t{\n\t\t\t"Steam"\n\t\t\t{\n'
         '\t\t\t\t"apps"\n\t\t\t\t{\n'
         f'\t\t\t\t\t"{appid}"\n\t\t\t\t\t{{\n'
-        '\t\t\t\t\t\t"LaunchOptions"\t\t"algo velho %command%"\n'
+        '\t\t\t\t\t\t"LaunchOptions"\t\t"%command%"\n'
         '\t\t\t\t\t}\n'
         '\t\t\t\t\t"990000022"\n\t\t\t\t\t{\n'
         '\t\t\t\t\t\t"Playtime"\t\t"12"\n'
@@ -227,7 +231,7 @@ def _vdf_com_bloco_filho(appid: str = APPID) -> str:
         '\t\t\t\t\t\t"cloud"\n\t\t\t\t\t\t{\n'
         '\t\t\t\t\t\t\t"last_sync_state"\t\t"synchronized"\n'
         '\t\t\t\t\t\t}\n'
-        '\t\t\t\t\t\t"LaunchOptions"\t\t"algo velho %command%"\n'
+        '\t\t\t\t\t\t"LaunchOptions"\t\t"%command%"\n'
         '\t\t\t\t\t}\n'
         '\t\t\t\t\t"990000022"\n\t\t\t\t\t{\n'
         '\t\t\t\t\t\t"autocloud"\n\t\t\t\t\t\t{\n'
@@ -243,7 +247,7 @@ def test_a_opcao_entra_na_linha_do_jogo_e_nao_no_bloco_filho(tmp_path: Path) -> 
 
     ARRANQUE a profundidade do quadro (o `}` do filho voltar a fechar o jogo) e
     este teste reprova: a opção vai para dentro do `cloud` e o leitor do
-    produto ainda vê `algo velho`.
+    produto ainda vê a linha vazia (`%command%`).
     """
     vdf = tmp_path / "userdata" / "1" / "config" / "localconfig.vdf"
     vdf.parent.mkdir(parents=True)
