@@ -116,7 +116,10 @@ def _linhas_do_firmware(controles: Any) -> list[tuple[str, str]]:
     """
     if not isinstance(controles, list):
         return []
-    from hefesto_dualsense4unix.core.backend_pydualsense import LIMITE_DA_VIBRACAO_V2
+    from hefesto_dualsense4unix.core.backend_pydualsense import (
+        LIMITE_DA_VIBRACAO_V2,
+        fala_a_vibracao_v2,
+    )
 
     linhas: list[tuple[str, str]] = []
     for posicao, controle in enumerate(controles):
@@ -130,13 +133,12 @@ def _linhas_do_firmware(controles: Any) -> list[tuple[str, str]]:
         versao = controle.get("firmware")
         if not isinstance(versao, int) or isinstance(versao, bool):
             linhas.append(("[INFO]", f"{nome}: a versão do firmware ainda não foi lida"))
-        elif versao < LIMITE_DA_VIBRACAO_V2 and not controle.get("edge"):
+        elif not fala_a_vibracao_v2(versao, edge=bool(controle.get("edge"))):
             linhas.append((
                 "[WARN]",
-                f"{nome}: firmware 0x{versao:04x}, anterior ao 0x{LIMITE_DA_VIBRACAO_V2:04x}, a "
-                "partir do qual o SDL trata o controle de outro jeito; um defeito dele pode ser "
-                "do firmware e não do Hefesto. Atualize pelo PS5 ou pelo aplicativo da Sony no "
-                "Windows: o Hefesto nunca atualiza firmware",
+                f"{nome}: firmware 0x{versao:04x}, anterior ao 0x{LIMITE_DA_VIBRACAO_V2:04x}: o "
+                "controle vibra no modo antigo e o SDL o trata de outro jeito. Atualize pelo PS5 "
+                "ou pelo aplicativo da Sony no Windows; o Hefesto nunca atualiza firmware",
             ))
         else:
             linhas.append(("[ OK ]", f"{nome}: firmware 0x{versao:04x}"))

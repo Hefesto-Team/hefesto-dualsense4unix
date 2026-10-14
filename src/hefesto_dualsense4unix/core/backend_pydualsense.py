@@ -5292,7 +5292,6 @@ ESTADO_DE_CARGA: dict[int, str] = {
 _RELOGIO_DOS_PRAZOS: int = getattr(time, "CLOCK_BOOTTIME", time.CLOCK_MONOTONIC)
 
 
-
 def relogio_do_prazo() -> float:
     """Segundos no relógio dos dois prazos — o dono ÚNICO (O-ASSENTO-GUARDADO-NAO-ANDA-02).
 

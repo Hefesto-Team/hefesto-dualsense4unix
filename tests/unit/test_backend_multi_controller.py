@@ -318,6 +318,8 @@ class TestDescribeControllers:
                 "uniq": "aabbcc000003",
                 "battery_pct": 87,
                 "battery_state": None,
+                "firmware": None,
+                "edge": False,
             },
             {
                 "index": 1,
@@ -327,6 +329,8 @@ class TestDescribeControllers:
                 "uniq": "aabbcc000004",
                 "battery_pct": None,
                 "battery_state": None,
+                "firmware": None,
+                "edge": False,
             },
         ]
 
