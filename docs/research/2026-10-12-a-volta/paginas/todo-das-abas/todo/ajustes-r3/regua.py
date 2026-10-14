@@ -40,6 +40,8 @@ MORDIDAS = {
     "q1-desconectado": _m("var c=document.querySelector('.g2-cab[data-controle=p3]');c.classList.remove('vazio');"
                           "c.innerHTML='<div class=cabeca><span><span class=\"chip vazio\">Galactic Purple <span class=pt>•</span> Desconectado</span></span></div>';"),
     "q1-cor": _m("document.querySelector('.g2-canto .sec-rot').style.color='#f8f8f2';"),
+    "q2-para": _m("var p=document.querySelector('.ext[data-modificacao=lovense] .ext-para');p.innerHTML='<span class=ext-rot>Para</span>Todos';"),
+    "q2-conta": _m("document.querySelector('#lovense .lv-linha:last-child .nj-tog').classList.add('ligado');"),
     "dica-passo": _m("var t=document.querySelector('.vib .forca input[type=range]');t.setAttribute('data-dica','Ajuste fino dentro do passo');"),
 }
 
@@ -160,6 +162,15 @@ JS_PEDIDO_BASE = r"""
     else if([...lv.querySelectorAll('.lv-linha')].some(function(x){return !x.querySelector('.nj-tog')||!x.querySelector('.lv-para select');}))falta.push('uma forma da Lovense sem chave ou sem Para');
     else if([...lv.querySelectorAll('.lv-linha')].slice(0,2).some(function(x){return !x.querySelector('.lv-quando select');}))falta.push('Pelo Intiface e Pelo celular sem Quando');
     var eg=document.querySelector('.ext[data-modificacao=lovense] .ext-conf');if(!eg||eg.getAttribute('href')!=='#lovense')falta.push('a engrenagem da Lovense não abre o diálogo das três formas');
+    // as seis respostas, q2: a linha da Lovense diz quantas formas estão ligadas, e não «Para»; o Kyty segue com «Para Todos»
+    var pl=document.querySelector('.ext[data-modificacao=lovense] .ext-para'),pk=document.querySelector('.ext[data-modificacao=kyty] .ext-para');
+    var nlv=document.querySelectorAll('#lovense .lv-linha .nj-tog.ligado').length,tlv=document.querySelectorAll('#lovense .lv-linha .nj-tog').length;
+    if(!pl||pl.textContent.trim()!==nlv+' de '+tlv+' ligadas')falta.push('a linha da Lovense não diz «'+nlv+' de '+tlv+' ligadas»: «'+(pl?pl.textContent.trim():'')+'»');
+    if(pl&&/Para/.test(pl.textContent))falta.push('a linha da Lovense ainda diz «Para»');
+    if(!pk||pk.textContent.replace(/\s+/g,'')!=='ParaTodos')falta.push('o Kyty perdeu o «Para Todos»');
+    if(pl&&pk){var a1=pl.getBoundingClientRect(),a2=pk.getBoundingClientRect(),f1=getComputedStyle(pl.lastElementChild||pl),f2=getComputedStyle(pk);
+      if(Math.abs(a1.left-a2.left)>0.5)falta.push('«'+pl.textContent.trim()+'» não fica no lugar do «Para»');
+      if(f1.fontSize!==f2.fontSize||f1.fontFamily!==f2.fontFamily||f1.color!==f2.color)falta.push('a contagem da Lovense não tem a letra do «Todos»');}
     var cf=document.querySelector('#lanc-conf a[href="#impedimentos"]');if(!cf)falta.push('o Configurar da Steam não leva aos impedimentos');}
   if(aba==='10'){if([...document.querySelectorAll('[data-r3="19"]')].some(vis))falta.push('o campo do segundo controle voltou');}
   return falta;})

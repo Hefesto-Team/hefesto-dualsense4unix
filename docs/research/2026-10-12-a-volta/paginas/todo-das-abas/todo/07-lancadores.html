@@ -2349,7 +2349,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
               <span class="ext-sub"><span class="ext-nome">Lovense</span><span class="lanc-selo oficial">Oficial</span><span class="ext-ver">0.1.0</span></span>
               <span class="ext-faz" data-dica="Uma extensão só, com três jeitos de ligar os brinquedos. A engrenagem abre os três">Brinquedos da Lovense com o controle, em três jeitos de ligar</span>
             </div>
-            <div class="ext-para"><span class="ext-rot">Para</span>Todos</div>
+            <div class="ext-para" data-seis="q2" data-dica="Quantas das três formas estão ligadas. Quem vai para quem fica na engrenagem"><span data-lv-conta>2 de 3 ligadas</span></div>
             <span class="nj-tog ligado" data-gesto="ligar-modificacao" data-v="lovense" data-dica="Liga ou desliga"><span class="pino"></span><span class="txt">Ligada</span></span>
             <a class="ext-conf" href="#lovense" data-gesto="configurar-modificacao" data-v="lovense" data-dica="Configurações da Lovense: os três jeitos de ligar"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></a>
             <button class="ext-mais" data-gesto="mais-da-modificacao" data-v="lovense" data-dica="Atualizar, abrir a pasta ou remover">⋮</button>
@@ -2943,6 +2943,15 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   <button role="menuitem" data-dica="O Hefesto sai da frente e o jogo lê o controle direto">Desligar</button>
   <button role="menuitem">Reiniciar</button><hr><button role="menuitem">Fechar</button>
 </div>
+<script>/* As seis respostas (14/10): a linha da Lovense conta as formas ligadas no diálogo da engrenagem. */
+(function(){
+  var c = document.querySelector('[data-lv-conta]'); if (!c) return;
+  function contar(){ var t = document.querySelectorAll('#lovense .lv-linha .nj-tog');
+    var n = document.querySelectorAll('#lovense .lv-linha .nj-tog.ligado').length;
+    c.textContent = n + ' de ' + t.length + (n === 1 ? ' ligada' : ' ligadas'); }
+  document.addEventListener('click', function(){ setTimeout(contar, 0); });
+  contar();
+})();</script>
 <script>/* O menu desenhado aberto só na foto do menu: abra a página com #menu. */
 if (location.hash === '#menu') document.getElementById('menu-desenhado').hidden = false;</script>
 <script id="base-comum">
