@@ -18,7 +18,7 @@ cópias de `rodada-4/` viraram um aviso com o link para cá. A régua é `regua-
 | 08 Conexões | `08-conexoes.html` | 1–12 antes; 13–17 r3; 18 r4 (a 13 da rodada 4); fusão: «P3 • Desconectado», o rádio embutido pela cor do plástico, o nome de quem joga vazio |
 | 09 Sistema | `09-sistema.html` | 1–11 antes; 12 r4 |
 | 10 Perfis | `10-perfis.html` | 1–18 antes; 19–20 r3 |
-| Calibrar giroscópio | `calibrar-sensores.html` | 1–6 antes; 7 r4 (com q4, q5, q6, n4); fusão: o nome de quem joga vazio |
+| Calibrar giroscópio | `calibrar-sensores.html` | 1–6 antes; 7 r4 (com q4, q5, q6, n4); fusão: o cartão diz a cor do plástico no lugar do nome de quem joga |
 | Mapa das portas | `mapa-das-portas.html` | 1–4 antes; 5–8 r4 |
 | Mapa do controle | `mapa-do-controle.html` | 1–18 antes; 19–21 r3; 22–23 r4 (as 19 e 20 da rodada 4) |
 | Mapa do rádio | `mapa-do-radio.html` | 1–5 antes; fusão: cada aparelho pela cor do plástico, sem nome de pessoa |
@@ -42,7 +42,7 @@ Vence a resposta mais recente: a v3 > as seis > r4 e r3b > r3.
 - **A 06:** o «Navega com» só lista os conectados; não há vaga na página.
 - **A 04 rolava (1122 px em 809):** a nota do antes e depois ficava fora da janela; agora só abre por `#troca`.
 - **O nome de pessoa:** «Vitória», «Pedro», «Ana», «Rafa» e «Lia» viraram a cor do plástico de cada controle (05, 02,
-  04, 08, Mapa do rádio); o campo de quem joga nasce vazio, com a dica «Nome de quem joga» (08, Calibrar). No Mapa das
+  04, 08, Mapa do rádio); o campo de quem joga nasce vazio, com a dica «Nome de quem joga» (08), e o cartão da Calibrar diz a cor do plástico na linha do nome. No Mapa das
   portas, «Jogador 1» a «Jogador 4» ficam: é o número do jogador, não «Player». A citação sua na nota da 04 («o meu
   controle azul é o player 2») fica, como toda citação sua.
 
