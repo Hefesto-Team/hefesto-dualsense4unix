@@ -618,10 +618,14 @@ def test_entrar_no_perfil_do_jogo_continua_rapido(isolated_profiles_dir: Path):
     assert sw._current_profile == "madjack"
 
 
-def test_sair_do_perfil_de_jogo_para_a_escolha_exige_o_debounce_longo(
+def test_sair_do_perfil_de_jogo_para_janela_sem_regra_fica_no_jogo(
     isolated_profiles_dir: Path,
 ):
-    """O cenário exato do journal: alt-tab do jogo para uma janela que regra"""
+    """O alt-tab do jogo para uma janela sem regra: o perfil do jogo fica.
+
+    OS-QUATRO-EM-HARMONIA-01, item 4 (14/10/2026): o perfil fica no último jogo
+    até ela mudar ou outro jogo iniciar; a escolha não volta com o tempo.
+    """
     save_profile(
         _mk_profile(
             "madjack", match=MatchCriteria(window_class=["steam_app_2111190"])
@@ -644,7 +648,8 @@ def test_sair_do_perfil_de_jogo_para_a_escolha_exige_o_debounce_longo(
     assert sw._current_profile == "madjack"
 
     sw._tick({"wm_class": "firefox"}, 22.1)
-    assert sw._current_profile == "vitoria"
+    sw._tick({"wm_class": "firefox"}, 600.0)
+    assert sw._current_profile == "madjack"
 
 
 def test_alt_tab_curto_no_meio_do_jogo_nao_flipa(isolated_profiles_dir: Path):

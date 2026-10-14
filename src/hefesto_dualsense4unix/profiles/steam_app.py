@@ -8,6 +8,29 @@ _STEAM_APP_WC_RE = re.compile(r"^steam_app_(\d+)$", re.IGNORECASE)
 
 _WC_CLIENTE_STEAM = frozenset({"steam", "steamwebhelper"})
 
+#: As janelas dos LANÇADORES e das lojas (o cliente, nunca o jogo que ele abre),
+#: sem caixa: a classe nativa e o id do Flatpak de cada um.
+JANELAS_DE_LANCADOR = frozenset(
+    {
+        "steam", "steamwebhelper", "com.valvesoftware.steam",
+        "heroic", "com.heroicgameslauncher.hgl",
+        "lutris", "net.lutris.lutris",
+        "bottles", "com.usebottles.bottles",
+        "itch", "io.itch.itch", "minigalaxy", "rare",
+    }
+)
+
+
+def e_janela_de_lancador(wm_class: str | None) -> bool:
+    """True se `wm_class` é a janela de um LANÇADOR (Steam, Heroic, Lutris…), não de um jogo.
+
+    OS-QUATRO-EM-HARMONIA-01, item 4: nenhuma janela de lançador ativa perfil de
+    jogo, e o perfil fica no último jogo enquanto ela está em foco.
+    """
+    if not isinstance(wm_class, str):
+        return False
+    return wm_class.strip().casefold() in JANELAS_DE_LANCADOR
+
 
 def e_janela_do_cliente_steam(wm_class: str | None) -> bool:
     """True se `wm_class` é o CLIENTE Steam (loja/biblioteca/Big Picture)."""
@@ -60,6 +83,8 @@ def parece_endereco(texto: str | None) -> bool:
 
 
 __all__ = [
+    "JANELAS_DE_LANCADOR",
+    "e_janela_de_lancador",
     "parece_endereco",
     "steam_appid_de_texto",
     "steam_appid_from_wm_class",

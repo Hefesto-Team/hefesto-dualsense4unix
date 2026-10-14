@@ -1404,6 +1404,23 @@ def perfil_e_regra_de_jogo(profile: Profile | None, window_info: dict[str, Any])
     return _casa_sem_caixa(wm_class, match.window_class)
 
 
+def perfil_e_de_jogo(profile: Profile | None) -> bool:
+    """True quando o perfil é de um JOGO, olhando só o arquivo dele (sem a janela em foco).
+
+    É de jogo o perfil específico que diz servir para jogar (o modo, pelo
+    :func:`perfil_declara_modo_de_jogo`) ou cuja regra endereça um jogo (o
+    ``steam_app_N`` ou uma classe do cadastro). OS-QUATRO-EM-HARMONIA-01, item 4.
+    """
+    if profile is None or bool(getattr(profile, "e_catch_all", True)):
+        return False
+    if perfil_declara_modo_de_jogo(profile):
+        return True
+    match = getattr(profile, "match", None)
+    if not isinstance(match, MatchCriteria):
+        return False
+    return any(e_endereco_de_jogo(classe) for classe in match.window_class)
+
+
 def normalizar_gamepad_flavor(valor: object) -> MascaraDeGamepad | None:
     """Converte uma máscara CRUA na forma fechada que `ProfileModeConfig` aceita."""
     if valor == "dualsense":
@@ -2406,6 +2423,7 @@ __all__ = [
     "normalizar_gamepad_flavor",
     "origem_da_economia",
     "perfil_declara_modo_de_jogo",
+    "perfil_e_de_jogo",
     "perfil_e_regra_de_jogo",
     "perfil_no_modo",
     "registrar_classes_de_jogo",

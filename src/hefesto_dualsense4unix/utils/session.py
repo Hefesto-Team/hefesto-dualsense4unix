@@ -15,7 +15,7 @@ divergência: era o seed de migração de julho, cuja convergência já acontece
 
 O `store.active_profile` do daemon (publicado por `daemon.status`/`state_full`)
 é o perfil que VALE agora — outra pergunta: o jogo aberto entra por cima da
-escolha, e sai devolvendo-a.
+escolha e FICA depois que ele fecha, até ela mudar ou outro jogo entrar.
 
 Nunca propaga exceção: falha silenciosa em ambos os sentidos.
 """

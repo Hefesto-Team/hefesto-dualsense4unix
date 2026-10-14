@@ -178,8 +178,12 @@ def _ticar(vigia: AutoSwitcher, info: dict[str, str], de: float, ate: float) -> 
     return agora
 
 
-def test_sair_do_jogo_volta_a_escolha_dela() -> None:
-    """A escolha A, o jogo B pela janela, e o terminal: a volta é a A, no debounce lento."""
+def test_sair_do_jogo_fica_no_jogo_ate_ela_mudar() -> None:
+    """A escolha A, o jogo B pela janela, e o terminal: o B fica (OS-QUATRO-EM-HARMONIA-01).
+
+    A regra, 14/10/2026: o perfil fica no último jogo até ela mudar ou
+    outro jogo iniciar. Mudar volta a valer na hora.
+    """
     _o_disco()
     session.save_freestyle_ligado(False)
     store = StateStore()
@@ -192,12 +196,11 @@ def test_sair_do_jogo_volta_a_escolha_dela() -> None:
 
     inicio = agora
     vigia._tick(TERMINAL, inicio)
-    assert vigia._last_candidate == AVATAR, (
-        f"o seletor respondeu {vigia._last_candidate!r} para o terminal")
-    _ticar(vigia, TERMINAL, inicio + 0.5, inicio + 2.0)
-    assert store.active_profile == JOGO, "a volta saiu antes do debounce de saída"
-    _ticar(vigia, TERMINAL, inicio + 2.5, inicio + 13.0)
-    assert store.active_profile == AVATAR
+    _ticar(vigia, TERMINAL, inicio + 0.5, inicio + 60.0)
+    assert store.active_profile == JOGO, "o terminal tirou o perfil do último jogo"
+    gerente.activate(AVATAR, origin="manual")
+    _ticar(vigia, TERMINAL, inicio + 60.5, inicio + 75.0)
+    assert store.active_profile == AVATAR, "a mudança dela não valeu"
     assert FREESTYLE not in pedidos, "o autoswitch pediu o Freestyle desligado"
 
 

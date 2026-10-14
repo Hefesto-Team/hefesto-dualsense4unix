@@ -46,10 +46,14 @@ from hefesto_dualsense4unix.profiles.schema import (
     leds_do_perfil_na_economia,
     leds_na_economia,
     normalizar_gamepad_flavor,
+    perfil_e_de_jogo,
     perfil_no_modo,
     vibracao_na_economia,
 )
-from hefesto_dualsense4unix.profiles.steam_app import steam_appid_from_wm_class
+from hefesto_dualsense4unix.profiles.steam_app import (
+    e_janela_de_lancador,
+    steam_appid_from_wm_class,
+)
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -1380,9 +1384,15 @@ class ProfileManager:
         A escolha lê os perfis guardados sem cópia (só olha `match` e `priority`) e copia só o
         escolhido: quem o recebe pode editá-lo sem mexer no guardado.
         """
+        wm_class = str(window_info.get("wm_class") or "")
         casaram = [p for p in perfis_para_consulta() if p.matches(dict(window_info))]
         candidates = [p for p in casaram if not p.e_catch_all]
-        wm_class = str(window_info.get("wm_class") or "")
+        if e_janela_de_lancador(wm_class):
+            # OS-QUATRO-EM-HARMONIA-01, item 4: o lançador (Steam, Heroic,
+            # Lutris…) não é jogo, e perfil de jogo nenhum entra pela janela
+            # dele, mesmo que a classe dele esteja na regra do perfil. O perfil
+            # feito para a janela do lançador (a Navegação da Steam) segue.
+            candidates = [p for p in candidates if not perfil_e_de_jogo(p)]
         e_janela_de_jogo = e_endereco_de_jogo(wm_class)
         if not candidates:
             if not e_janela_de_jogo:

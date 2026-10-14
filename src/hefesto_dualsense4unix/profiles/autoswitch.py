@@ -29,6 +29,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     Profile,
     e_endereco_de_jogo,
     perfil_declara_modo_de_jogo,
+    perfil_e_de_jogo,
     perfil_e_regra_de_jogo,
 )
 from hefesto_dualsense4unix.profiles.steam_app import steam_appid_from_wm_class
@@ -161,6 +162,9 @@ class AutoSwitcher:
     _info_gap_active: bool = False
     _current_especifico: bool = False
     _freestyle_log_key: str | None = None
+    _fica_log_key: str | None = None
+    #: O perfil de JOGO que a última ativação pôs (o nome), enquanto ele vale.
+    _perfil_do_ultimo_jogo: str | None = None
     _estado_modo_jogo_padrao: str = ""
     _exclusao_em_foco: str | None = None
     _recusa_log_key: tuple[str, str] | None = None
@@ -379,6 +383,9 @@ class AutoSwitcher:
                 do_jogo = self._perfil_do_jogo_em_cena()
                 if do_jogo is not None:
                     profile, motivo, veio_do_jogo = do_jogo, MOTIVO_SEM_CANDIDATO, True
+        if profile is None and motivo == MOTIVO_SEM_CANDIDATO and self._fica_no_ultimo_jogo(info):
+            return
+        self._fica_log_key = None
         veio_da_escolha = False
         if profile is None and motivo == MOTIVO_SEM_CANDIDATO:
             profile = self._perfil_da_escolha()
@@ -418,6 +425,27 @@ class AutoSwitcher:
                 veio_da_escolha=veio_da_escolha,
                 veio_do_jogo=veio_do_jogo,
             )
+
+    def _fica_no_ultimo_jogo(self, info: dict[str, Any]) -> bool:
+        """O perfil do último jogo FICA quando a janela não tem perfil próprio?
+
+        OS-QUATRO-EM-HARMONIA-01, item 4 (14/10/2026): o perfil fica no último
+        jogo até ela mudar ou outro jogo iniciar. O perfil de jogo que vale agora
+        não devolve a escolha; quem o tira é ela (a crença sincroniza pelo
+        store), outro jogo (a regra dele ou o jogo em cena) ou a janela com
+        perfil próprio que não é de jogo.
+        """
+        corrente = self._current_profile
+        if corrente is None or corrente != self._perfil_do_ultimo_jogo:
+            return False
+        self._last_candidate = None
+        if not self._suppression_active():
+            self._suppress_log_key = None
+        chave = str(info.get("wm_class") or "")
+        if self._fica_log_key != chave:
+            self._fica_log_key = chave
+            logger.info("autoswitch_fica_no_ultimo_jogo", wm_class=chave, current=corrente)
+        return True
 
     def _perfil_do_jogo_em_cena(self) -> Profile | None:
         """O perfil PRÓPRIO do jogo que o serviço diz estar em cena, ou ``None``.
@@ -801,6 +829,9 @@ class AutoSwitcher:
             return
         self._current_profile = name
         self._entrou_pelo_jogo = name if veio_do_jogo else None
+        self._perfil_do_ultimo_jogo = (
+            name if veio_do_jogo or perfil_e_de_jogo(profile) else None
+        )
         if profile is not None:
             self._appids_do_perfil_nome = name
             self._appids_do_perfil_valor = _appids_de_jogo_do_perfil(profile)

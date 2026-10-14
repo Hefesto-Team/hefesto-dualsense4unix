@@ -17,6 +17,7 @@ from hefesto_dualsense4unix.integrations.steam_launch_options import (
     pastas_steamapps,
 )
 from hefesto_dualsense4unix.profiles.steam_app import (
+    JANELAS_DE_LANCADOR,
     parece_endereco,
     steam_appid_de_texto,
 )
@@ -316,15 +317,7 @@ _PROGRAMAS_QUE_ABREM_OUTRO = frozenset(
     {"xdg-open", "gio", "gtk-launch", "kde-open", "kde-open5"}
 )
 
-_LOJAS_SEM_CLASSE = frozenset(
-    {
-        "steam", "steamwebhelper", "com.valvesoftware.steam",
-        "heroic", "com.heroicgameslauncher.hgl",
-        "lutris", "net.lutris.lutris",
-        "bottles", "com.usebottles.bottles",
-        "itch", "io.itch.itch", "minigalaxy", "rare",
-    }
-)
+_LOJAS_SEM_CLASSE = JANELAS_DE_LANCADOR
 
 
 #: Os programas de loja que um atalho chama para abrir o jogo por eles

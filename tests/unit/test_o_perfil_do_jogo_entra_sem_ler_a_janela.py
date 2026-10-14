@@ -192,7 +192,7 @@ def test_o_leitor_que_levanta_nao_derruba_o_tique(perfis_isolados: Path) -> None
     assert store.active_profile == "geral"
 
 
-def test_quando_a_prova_some_e_a_leitura_segue_vazia_volta_a_escolha_dela(
+def test_quando_a_prova_some_e_a_leitura_segue_vazia_o_jogo_fica(
     perfis_isolados: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     from hefesto_dualsense4unix.utils import session
@@ -206,7 +206,8 @@ def test_quando_a_prova_some_e_a_leitura_segue_vazia_volta_a_escolha_dela(
     assert store.active_profile == "o_jogo"
     cena.appid = None
     _tiques(sw, {}, 3.0, 20.0)
-    assert store.active_profile == "navegacao"
+    # OS-QUATRO-EM-HARMONIA-01, item 4: o perfil fica no último jogo até ela mudar.
+    assert store.active_profile == "o_jogo"
 
 
 def test_a_prova_do_jogo_nao_passa_por_cima_do_que_ela_escolheu_a_mao(
