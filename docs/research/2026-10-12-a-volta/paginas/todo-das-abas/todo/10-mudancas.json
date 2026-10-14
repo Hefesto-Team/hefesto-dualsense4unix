@@ -177,12 +177,17 @@
       "ancora": ".copiloto",
       "conflito": "",
       "rodada": 3,
-      "ancora_antes": ".ordem-vale"
+      "ancora_antes": ".ordem-vale",
+      "ajuste_r3": {
+        "pedido": "não sei se pedi isso de verdade. Mas recusado a ideia.",
+        "feito": "Recusada em 14/10/2026: o segundo controle saiu da página (o campo do Editar e as regras dele). A página volta a ser a da rodada 2, com a tabela dos controles inteira em 740."
+      },
+      "recusada": "14/10/2026"
     },
     {
       "n": 20,
       "sprint": "A-ABA-PERFIS-DO-TODO-01",
-      "o_que_muda": "Para o copiloto caber, os campos do Editar encolhem nas janelas baixas, e a tabela dos controles volta a mostrar o White inteiro em 1212x740",
+      "o_que_muda": "Os campos do Editar encolhem nas janelas baixas, e a tabela dos controles volta a mostrar o White inteiro em 1212x740",
       "resposta": "todo-10-r3-20",
       "origem": "escolha dela de 13/10",
       "ancora": ".guarda",
