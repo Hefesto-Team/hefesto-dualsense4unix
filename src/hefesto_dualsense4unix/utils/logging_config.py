@@ -125,7 +125,11 @@ def cadeia_do_diario(fmt: str = "console", stream: Any = None) -> list[Processor
         renderer: Processor = structlog.processors.JSONRenderer()
     else:
         colors = stream.isatty() if hasattr(stream, "isatty") else False
-        renderer = structlog.dev.ConsoleRenderer(colors=colors)
+        # O traceback puro (D-1310-O-DIARIO-ESCREVE-O-TRACEBACK-SEM-OS-LOCAIS): o padrão
+        # com o rich desenha os locais de cada quadro, e o laço do daemon parava por ele.
+        renderer = structlog.dev.ConsoleRenderer(
+            colors=colors, exception_formatter=structlog.dev.plain_traceback
+        )
 
     return [*shared_processors, renderer, _mascarar_o_renderizado]
 
