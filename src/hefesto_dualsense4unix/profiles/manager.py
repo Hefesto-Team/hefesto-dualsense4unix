@@ -191,9 +191,13 @@ class ProfileManager:
             self.store.set_active_profile(None)
         if e_o_freestyle(name):
             ligar_o_freestyle(self.store, False)
-        from hefesto_dualsense4unix.utils.session import esquecer_a_escolha
+        from hefesto_dualsense4unix.utils.session import (
+            esquecer_a_escolha,
+            esquecer_o_ultimo_jogo,
+        )
 
         esquecer_a_escolha(name)
+        esquecer_o_ultimo_jogo(name)
         logger.info("profile_deleted", name=name)
 
     @staticmethod
@@ -357,9 +361,12 @@ class ProfileManager:
             gravar_a_escolha(profile.name)
             armar_a_trava_da_mao(self.store)
         elif origin == "launch":
+            from hefesto_dualsense4unix.utils.session import lembrar_o_ultimo_jogo
+
             soltar_a_trava_da_mao(
                 self.store, "lancamento_de_jogo_com_perfil", perfil=profile.name
             )
+            lembrar_o_ultimo_jogo(profile.name)
         return profile
 
     def apply(

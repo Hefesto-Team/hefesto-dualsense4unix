@@ -169,6 +169,7 @@ class AutoSwitcher:
     _lancador_log_key: str | None = None
     #: O perfil de JOGO que a última ativação pôs (o nome), enquanto ele vale.
     _perfil_do_ultimo_jogo: str | None = None
+    _ultimo_jogo_do_boot_lido: bool = False
     _estado_modo_jogo_padrao: str = ""
     _exclusao_em_foco: str | None = None
     _recusa_log_key: tuple[str, str] | None = None
@@ -404,7 +405,7 @@ class AutoSwitcher:
             if not veio_da_escolha and (veio_do_jogo or perfil_e_de_jogo(profile)):
                 # O jogo confirma o perfil que outro pôs (o lançamento, o boot com o
                 # jogo aberto): ele também é o do último jogo, e fica quando o jogo fecha.
-                self._perfil_do_ultimo_jogo = candidate
+                self._o_ultimo_jogo_passa_a(candidate)
 
         self._sincronizar_modo_jogo_padrao(motivo, info)
 
@@ -447,6 +448,8 @@ class AutoSwitcher:
         perfil próprio que não é de jogo nem de lançador.
         """
         corrente = self._current_profile
+        if corrente is not None and corrente != self._perfil_do_ultimo_jogo:
+            self._o_boot_veio_do_ultimo_jogo(corrente)
         if corrente is None or corrente != self._perfil_do_ultimo_jogo:
             return False
         self._last_candidate = None
@@ -457,6 +460,46 @@ class AutoSwitcher:
             self._fica_log_key = chave
             logger.info("autoswitch_fica_no_ultimo_jogo", wm_class=chave, current=corrente)
         return True
+
+    def _o_ultimo_jogo_passa_a(self, nome: str | None) -> None:
+        """O perfil do último jogo muda, e a memória do disco muda junto (só na troca).
+
+        D-1410-O-PERFIL-FICA-NO-ULTIMO-JOGO: o reinício do serviço volta a ele
+        (`utils.session.o_ultimo_jogo`); sem a gravação, o boot subia na escolha
+        à mão. Perfil que não é de jogo, posto por regra de janela, tira a memória.
+        """
+        anterior = self._perfil_do_ultimo_jogo
+        if nome == anterior:
+            return
+        self._perfil_do_ultimo_jogo = nome
+        from hefesto_dualsense4unix.utils.session import (
+            esquecer_o_ultimo_jogo,
+            lembrar_o_ultimo_jogo,
+        )
+
+        if nome is not None:
+            lembrar_o_ultimo_jogo(nome)
+        elif anterior is not None:
+            esquecer_o_ultimo_jogo(anterior)
+
+    def _o_boot_veio_do_ultimo_jogo(self, corrente: str) -> None:
+        """O perfil que vale é o do último jogo que o boot restaurou? Então ele fica.
+
+        Lê o disco uma vez por serviço: o boot restaura o perfil do último jogo
+        (`daemon.connection._o_nome_que_o_boot_restaura`) com a crença do
+        autoswitch vazia, e a primeira janela sem perfil devolvia a escolha.
+        """
+        if self._ultimo_jogo_do_boot_lido:
+            return
+        self._ultimo_jogo_do_boot_lido = True
+        from hefesto_dualsense4unix.utils.session import o_ultimo_jogo
+
+        try:
+            do_disco = o_ultimo_jogo()
+        except Exception:
+            return
+        if do_disco is not None and do_disco == corrente:
+            self._perfil_do_ultimo_jogo = corrente
 
     def _o_lancador_nao_ativa(self, info: dict[str, Any]) -> bool:
         """A janela em foco é de lançador? Então nada muda: nem perfil, nem modo.
@@ -864,7 +907,7 @@ class AutoSwitcher:
             return
         self._current_profile = name
         self._entrou_pelo_jogo = name if veio_do_jogo else None
-        self._perfil_do_ultimo_jogo = (
+        self._o_ultimo_jogo_passa_a(
             name if veio_do_jogo or perfil_e_de_jogo(profile) else None
         )
         if profile is not None:

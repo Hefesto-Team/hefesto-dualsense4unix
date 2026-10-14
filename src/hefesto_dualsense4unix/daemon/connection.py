@@ -375,21 +375,19 @@ def _o_nome_que_o_boot_restaura(store: Any, *, appid_em_cena: int | None = None)
     casa com ele é o que vale, e o primeiro pad nasce no modo dele: o
     autoswitch o poria nove segundos depois, com a trava já protegendo o modo
     de fora do jogo. Com o Freestyle ligado, vale o Freestyle, como sempre.
-    `appid_em_cena` é o do sinal de jogo (`Daemon.appid_em_cena`); sem ele, a
-    escolha do usuário.
+    `appid_em_cena` é o do sinal de jogo (`Daemon.appid_em_cena`); sem ele, o do
+    último jogo (`utils.session.o_ultimo_jogo`), e só sem ele a escolha do usuário.
 
-    NOTA DATADA — 01/10/2026: aqui morava a RESTORE-ESCOPO-01 (22/07), que
-    pulava todo perfil com regra de janela, e o Freestyle entrava no lugar
-    (O-MODO-FREESTYLE-03). No disco do usuário isso é todo perfil que não é o
-    Freestyle: medido no diário de 28 e 29/09, seis boots com a sessão em Pro
-    Jank Footy, e nenhum abriu no perfil que ela tinha ativado. A decisão de
-    29/09 revogou a regra para a escolha do usuário.
+    NOTA DATADA — 01/10/2026: a RESTORE-ESCOPO-01 (22/07), que pulava todo perfil
+    com regra de janela, foi revogada para a escolha do usuário; a medida está em
+    `docs/research/o-porque-dos-modulos.md` («o boot e o último jogo»).
     """
     from hefesto_dualsense4unix.profiles.loader import NOME_DO_PADRAO
     from hefesto_dualsense4unix.profiles.manager import e_o_freestyle, o_freestyle_manda
     from hefesto_dualsense4unix.utils.session import (
         a_escolha_dela,
         load_freestyle_ligado,
+        o_ultimo_jogo,
         resolve_boot_profile,
     )
 
@@ -402,6 +400,8 @@ def _o_nome_que_o_boot_restaura(store: Any, *, appid_em_cena: int | None = None)
         do_jogo = perfil_do_appid(appid_em_cena)
         if do_jogo is not None and not e_o_freestyle(do_jogo.name):
             return str(do_jogo.name)
+    if (ultimo := o_ultimo_jogo()) is not None:
+        return ultimo
     nome = resolve_boot_profile()
     if e_o_freestyle(nome):
         nome = a_escolha_dela(freestyle_ligado=False)

@@ -702,7 +702,12 @@ def _vigia_com_o_jogo(store: StateStore, vivo: list[int | None]) -> AutoSwitcher
 
 
 def test_com_o_jogo_vivo_a_janela_de_fora_nao_tira_o_perfil_dele(semeadura_ligada: None) -> None:
-    """A L2 do PRAGMATA (27/09, 21:09:06), curada: a janela em outra tela não o tira."""
+    """A L2 do PRAGMATA (27/09, 21:09:06), curada: a janela em outra tela não o tira.
+
+    Nota de 14/10/2026 (D-1410-O-PERFIL-FICA-NO-ULTIMO-JOGO): o jogo que morre também
+    não devolve a escolha. O perfil do jogo lançado fica até ela mudar ou outro jogo
+    iniciar, aqui e depois do reinício do serviço; até então a escolha («Sofá») voltava.
+    """
     loader.load_all_profiles()
     session.save_freestyle_ligado(False)
     _o_jogo()
@@ -720,7 +725,7 @@ def test_com_o_jogo_vivo_a_janela_de_fora_nao_tira_o_perfil_dele(semeadura_ligad
     vivo[0] = None
     for t in (301.0, 314.0):
         vigia._tick({"wm_class": "firefox", "wm_name": "Mozilla Firefox"}, t)
-    assert store.active_profile == "Sofá"
+    assert store.active_profile == JOGO
 
 
 def test_com_o_jogo_vivo_a_janela_de_outro_jogo_troca(semeadura_ligada: None) -> None:

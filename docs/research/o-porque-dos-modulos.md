@@ -1332,3 +1332,28 @@ a frente:
 Com "é tudo por controle", os três precisam ser reconciliados POR ELA. Está
 registrado, não resolvido.
 ~~~~
+
+## o boot e o último jogo (`daemon/connection.py`, `utils/session.py`)
+
+`D-1410-O-PERFIL-FICA-NO-ULTIMO-JOGO` (14/10/2026): o perfil do jogo fica depois
+que ele fecha, até ela mudar ou outro jogo iniciar, e o reinício do serviço não é
+nenhum dos dois. Medido no mesmo dia: o daemon reiniciou e subiu na escolha à mão
+(«Lure Of Passion»), com o gamepad desligado, por cima do perfil do último jogo,
+porque a memória dele era só do processo (`AutoSwitcher._perfil_do_ultimo_jogo`).
+
+A cura: o autoswitch e o lançamento (`origin="launch"`) gravam o perfil em
+`ultimo_jogo.json` só na troca; o `_o_nome_que_o_boot_restaura` o põe depois do
+Freestyle e do jogo em cena e antes da escolha, e o primeiro pad nasce no modo
+dele (`perfil_que_o_boot_restaura`). O gesto dela (`gravar_a_escolha`) e o perfil
+apagado (`ProfileManager.delete`) tiram a memória. Depois do boot, o autoswitch
+lê o disco uma vez (`_o_boot_veio_do_ultimo_jogo`), para a primeira janela sem
+perfil próprio não devolver a escolha. O `resolve_boot_profile` continua sendo a
+escolha do usuário: a aba Perfis destaca o que ela ativou, não o do jogo.
+
+Nota datada de 01/10/2026, que morava na docstring do `_o_nome_que_o_boot_restaura`:
+ali morava a RESTORE-ESCOPO-01 (22/07), que pulava todo perfil com regra de janela,
+e o Freestyle entrava no lugar (O-MODO-FREESTYLE-03). No disco do usuário isso é
+todo perfil que não é o Freestyle: medido no diário de 28 e 29/09, seis boots com a
+sessão em Pro Jank Footy, e nenhum abriu no perfil que ela tinha ativado. A decisão
+de 29/09 revogou a regra para a escolha do usuário.
+

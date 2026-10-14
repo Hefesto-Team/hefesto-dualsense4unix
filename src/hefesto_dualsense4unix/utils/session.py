@@ -15,7 +15,7 @@ divergência: era o seed de migração de julho, cuja convergência já acontece
 
 O `store.active_profile` do daemon (publicado por `daemon.status`/`state_full`)
 é o perfil que VALE agora — outra pergunta: o jogo aberto entra por cima da
-escolha e FICA depois que ele fecha, até ela mudar ou outro jogo entrar.
+escolha e FICA, até no reinício (:func:`lembrar_o_ultimo_jogo`), até ela mudar ou outro jogo entrar.
 
 Nunca propaga exceção: falha silenciosa em ambos os sentidos.
 """
@@ -157,10 +157,83 @@ def espelhar_a_escolha() -> None:
 
 
 def gravar_a_escolha(nome: str) -> None:
-    """O escritor único da escolha do usuário: o `session.json` e o espelho."""
+    """O escritor único da escolha do usuário: o `session.json` e o espelho.
+
+    O gesto do usuário é o que vem depois do último jogo, então a memória dele sai
+    (:func:`lembrar_o_ultimo_jogo`): o boot seguinte abre no que o usuário ativou.
+    """
     if not _e_o_freestyle(nome):
         save_last_profile(nome)
+    esquecer_o_ultimo_jogo()
     espelhar_a_escolha()
+
+
+_ULTIMO_JOGO_FILE = "ultimo_jogo.json"
+_ULTIMO_JOGO_KEY = "perfil"
+
+
+def _ultimo_jogo_path() -> Path:
+    return config_dir(ensure=True) / _ULTIMO_JOGO_FILE
+
+
+def lembrar_o_ultimo_jogo(nome: str) -> None:
+    """Grava o perfil do último jogo, o que o boot restaura antes da escolha.
+
+    D-1410-O-PERFIL-FICA-NO-ULTIMO-JOGO (14/10/2026): *«Ele deveria ficar
+    sempre com o perfil do último jogo aberto ou ativado. Até que eu mude ou
+    outro jogo inicie»*, e o reinício do serviço não é mudança dela. Medido no
+    mesmo dia: o daemon reiniciou e subiu na escolha à mão («Lure Of Passion»),
+    com o gamepad desligado, por cima do perfil do jogo que valia. Quem grava é
+    o autoswitch e o lançamento; quem apaga é o gesto do usuário
+    (:func:`gravar_a_escolha`) e o perfil apagado (`ProfileManager.delete`).
+    """  # noqa-acento: citação literal
+    if not isinstance(nome, str) or not nome.strip() or _e_o_freestyle(nome):
+        return
+    path = _ultimo_jogo_path()
+    try:
+        data = json.dumps({_ULTIMO_JOGO_KEY: nome.strip()}, ensure_ascii=False)
+        fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=".ultimo_jogo_")
+        try:
+            os.write(fd, data.encode())
+        finally:
+            os.close(fd)
+        os.replace(tmp, path)
+        logger.info("o_ultimo_jogo_lembrado", perfil=nome.strip())
+    except Exception as exc:
+        logger.debug("ultimo_jogo_save_failed", err=str(exc))
+
+
+def _ultimo_jogo_cru() -> str | None:
+    try:
+        data = json.loads((config_dir() / _ULTIMO_JOGO_FILE).read_text(encoding="utf-8"))
+        nome = data.get(_ULTIMO_JOGO_KEY) if isinstance(data, dict) else None
+        if isinstance(nome, str) and nome.strip():
+            return nome.strip()
+    except Exception:
+        pass
+    return None
+
+
+def o_ultimo_jogo() -> str | None:
+    """O perfil do último jogo, se ele ainda carrega e não é o Freestyle."""
+    nome = _ultimo_jogo_cru()
+    if nome and not _e_o_freestyle(nome) and _o_perfil_carrega(nome):
+        return nome
+    return None
+
+
+def esquecer_o_ultimo_jogo(nome: str | None = None) -> None:
+    """Apaga a memória do último jogo — toda, ou só se ela aponta `nome` (pelo slug)."""
+    from hefesto_dualsense4unix.profiles.slug import mesmo_slug
+
+    atual = _ultimo_jogo_cru()
+    if atual is None:
+        return
+    if nome is not None and atual != nome and not mesmo_slug(atual, nome):
+        return
+    with contextlib.suppress(Exception):
+        (config_dir() / _ULTIMO_JOGO_FILE).unlink(missing_ok=True)
+        logger.info("o_ultimo_jogo_esquecido", perfil=atual)
 
 
 def esquecer_a_escolha(nome: str | None = None) -> None:
