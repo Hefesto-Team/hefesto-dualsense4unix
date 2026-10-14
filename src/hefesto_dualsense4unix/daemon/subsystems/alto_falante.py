@@ -707,6 +707,8 @@ class AltoFalanteSubsystem:
     #: O ``state_full`` lê a amostra de ar DELE — um medidor só no daemon.
     governador: Any = None
     _esperando_vaga: frozenset[tuple[str, str]] = frozenset()
+    #: Por que cada controle pelo rádio está SEM ponte agora (só a borda vai ao log).
+    _sem_ponte_porque: Mapping[str, str] = MappingProxyType({})
 
     def __init__(
         self,
@@ -2032,6 +2034,12 @@ class AltoFalanteSubsystem:
                 escutar[lendo] = (uniq, CANAIS_DA_HAPTICA, "ouvido-haptica")
             if not som_toca and not leva and not frente_toca:
                 self._descer_ponte_ociosa(uniq)
+                self._dizer_por_que_sem_ponte(
+                    uniq,
+                    self._motivo_da_ponte_ociosa(
+                        uniq, endpoint, endpoint_aberto, este_joga or pelo_rumble
+                    ),
+                )
                 continue
             tipo = "som" if (som_toca or frente_toca) else "haptica"
             if o_jogo_manda and caminho and uniq not in self._pontes:
@@ -2052,6 +2060,9 @@ class AltoFalanteSubsystem:
                 if not frente_toca and not any(
                     self._o_no_tem_sinal(no) is True for no in abertos
                 ):
+                    self._dizer_por_que_sem_ponte(
+                        uniq, "no Nativo, a ponte espera sinal no som ou na vibração"
+                    )
                     continue
             if uniq in self._pontes:
                 # A ponte só sobe de novo quando o endpoint que ela LÊ muda: para
@@ -2087,6 +2098,9 @@ class AltoFalanteSubsystem:
                     vaga = None
                 if isinstance(vaga, Recusa):
                     esperando.add((uniq, tipo))
+                    self._dizer_por_que_sem_ponte(
+                        uniq, f"o governador do rádio recusou a vaga: {vaga.frase}"
+                    )
                     continue
             fonte, gravador, motivo = fonte_do_monitor_do_no(
                 nome_do_sink(uniq), uniq=uniq, papel="som"
@@ -2098,6 +2112,7 @@ class AltoFalanteSubsystem:
                     derrubar_leitor_de_pipe(gravador)
                 self._ponte_recusada[uniq] = time.monotonic()
                 logger.info("som_ponte_sem_fonte", uniq=uniq, motivo=motivo)
+                self._dizer_por_que_sem_ponte(uniq, f"o som não teve fonte: {motivo}")
                 continue
             fonte_h: Any = None
             gravador_h: Any = None
@@ -2150,13 +2165,18 @@ class AltoFalanteSubsystem:
                     **self._endpoint_da_ponte, uniq: lendo,
                 })
                 self._ponte_recusada.pop(uniq, None)
+                self._dizer_por_que_sem_ponte(uniq, None)
             else:
                 ponte.descer()
                 self._ponte_recusada[uniq] = time.monotonic()
                 logger.info("som_ponte_nao_subiu", uniq=uniq, motivo=ponte.motivo)
+                self._dizer_por_que_sem_ponte(uniq, f"a ponte não subiu: {ponte.motivo}")
         self._casar_os_ouvidos_do_radio(escutar)
         self._leva_da_ponte = MappingProxyType(leva_de)
         self._esperando_vaga = frozenset(esperando)
+        self._sem_ponte_porque = MappingProxyType(
+            {u: m for u, m in self._sem_ponte_porque.items() if u in vivos}
+        )
         self._vaga_da_ponte = MappingProxyType(
             {u: v for u, v in self._vaga_da_ponte.items() if u in self._pontes}
         )
@@ -2272,6 +2292,39 @@ class AltoFalanteSubsystem:
     def _a_ponte_leva_a_haptica(self, uniq: str) -> bool:
         """O bloco da háptica vai ao fio na ponte de ``uniq``? Lido a cada quadro."""
         return self._leva_da_ponte.get(uniq) is True
+
+    @staticmethod
+    def _motivo_da_ponte_ociosa(
+        uniq: str, endpoint: Any, endpoint_aberto: bool, portao_aberto: bool
+    ) -> str:
+        """Por que a ponte do rádio deste controle não tem o que levar, em uma frase."""
+        if endpoint is None:
+            return "o controle ainda não tem endpoint de vibração"
+        if not endpoint_aberto:
+            return "o jogo não abriu o som nem a vibração deste controle"
+        if not portao_aberto:
+            return "o jogo não joga com este controle (o portão da vibração está fechado)"
+        if GANHO.pct(uniq) <= 0:
+            return "a vibração deste controle está em 0"
+        return "o som e a vibração deste controle estão sem sinal"
+
+    def _dizer_por_que_sem_ponte(self, uniq: str, motivo: str | None) -> None:
+        """OS-QUATRO-EM-HARMONIA-01, item 3: a borda do «sem ponte», com o controle.
+
+        Medido em 14/10/2026 (10h42 a 10h45): o Cosmic Red pelo rádio ficou a
+        rodada inteira sem ponte, e o log não dizia uma palavra; o laço caía no
+        ``continue`` calado. Cada mudança de motivo vai ao log uma vez, e a ponte
+        que sobe limpa o motivo (``None``).
+        """
+        antes = self._sem_ponte_porque.get(uniq)
+        if motivo == antes:
+            return
+        resto = {u: m for u, m in self._sem_ponte_porque.items() if u != uniq}
+        self._sem_ponte_porque = MappingProxyType(
+            resto if motivo is None else {**resto, uniq: motivo}
+        )
+        if motivo is not None:
+            logger.info("som_radio_sem_ponte", uniq=uniq, motivo=motivo)
 
     def _descer_ponte_ociosa(self, uniq: str) -> None:
         """A ponte de quem não tem o que tocar desce. Idempotente."""
