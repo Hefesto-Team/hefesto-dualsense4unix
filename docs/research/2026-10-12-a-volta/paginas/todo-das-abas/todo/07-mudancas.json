@@ -303,7 +303,7 @@
     {
       "n": 31,
       "sprint": "O-HEFESTO-E-SERVIDOR-BUTTPLUG-DO-PROPRIO-DUALSENSE-01",
-      "o_que_muda": "A extensão «DualSense como brinquedo»: os apps de brinquedo vibram o controle, nada pela nuvem, e ela nasce desligada",
+      "o_que_muda": "A extensão «DualSense como brinquedo»: os apps de brinquedo vibram o controle, nada pela nuvem, e a extensão nasce desligada",
       "resposta": "todo-07-r3-31",
       "origem": "escolha dela de 13/10",
       "ancora": "[data-r3=\"31\"]",
@@ -314,7 +314,7 @@
     {
       "n": 32,
       "sprint": "O-HEFESTO-E-SERVIDOR-BUTTPLUG-DO-PROPRIO-DUALSENSE-01",
-      "o_que_muda": "A janela de configurações dela, nova: as quatro etapas (servidor, controles com teto e força de cada um, o que vibra, parar)",
+      "o_que_muda": "A janela de configurações da extensão, nova: as quatro etapas (servidor, controles com teto e força de cada um, o que vibra, parar)",
       "resposta": "todo-07-r3-32",
       "origem": "escolha dela de 13/10",
       "ancora": ".bp-cx",

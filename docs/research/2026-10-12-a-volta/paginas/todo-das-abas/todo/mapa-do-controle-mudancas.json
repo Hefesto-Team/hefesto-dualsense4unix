@@ -202,7 +202,8 @@
       "conflito": "",
       "rodada": 3,
       "ancora_antes": "#perfil",
-      "hash": "#point-and-click"
+      "hash": "#point-and-click",
+      "js": "(() => { const s=document.querySelector('#perfil'); const r=s.getBoundingClientRect(); s.size=s.options.length+s.querySelectorAll('optgroup').length; s.style.cssText+=';position:fixed;z-index:99;height:auto;left:'+r.left+'px;top:'+r.top+'px;width:'+r.width+'px'; return s.size })()"
     }
   ],
   "estados": {

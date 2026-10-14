@@ -263,7 +263,8 @@
       "ancora": "[data-r3=\"27\"]",
       "conflito": "",
       "rodada": 3,
-      "ancora_antes": "[data-gesto=\"point-and-click-perfil\"]"
+      "ancora_antes": "[data-gesto=\"point-and-click-perfil\"]",
+      "js": "(() => { const s=document.querySelector('select[data-r3=\"27\"]'); const r=s.getBoundingClientRect(); s.size=s.options.length+s.querySelectorAll('optgroup').length; s.style.cssText+=';position:fixed;z-index:99;height:auto;left:'+r.left+'px;top:'+r.top+'px;width:'+r.width+'px'; return s.size })()"
     }
   ],
   "estados": {
