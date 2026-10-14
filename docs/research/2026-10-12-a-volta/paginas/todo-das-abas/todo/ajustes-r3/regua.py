@@ -39,10 +39,18 @@ MORDIDAS = {
                      "d.innerHTML='<b>L2</b><span data-leitura=l2>Metralhadora</span><b>R2</b><span data-leitura=r2>Arco de flecha</span>';c.appendChild(d);"),
     "q1-desconectado": _m("var c=document.querySelector('.g2-cab[data-controle=p3]');c.classList.remove('vazio');"
                           "c.innerHTML='<div class=cabeca><span><span class=\"chip vazio\">Galactic Purple <span class=pt>•</span> Desconectado</span></span></div>';"),
-    "q1-nome-longo": _m("var s=document.querySelector('.g2-canto .g2-estilo');s.style.whiteSpace='nowrap';"),
+    "q1-nome-longo": _m("var s=document.querySelector('.g2-canto .g2-estilo');s.style.flexWrap='nowrap';"),
     "q1-cor": _m("document.querySelector('.g2-canto .sec-rot').style.color='#f8f8f2';"),
     "q2-para": _m("var p=document.querySelector('.ext[data-modificacao=lovense] .ext-para');p.innerHTML='<span class=ext-rot>Para</span>Todos';"),
     "q2-conta": _m("document.querySelector('#lovense .lv-linha:last-child .nj-tog').classList.add('ligado');"),
+    # as respostas à v3 (14/10): c1, n1, n2 na 03
+    "c1-sem-ds": _m("document.querySelector('.g2-gl.g2-ds').remove();"),
+    "c1-ds-solto": _m("var d=document.querySelector('.g2-gl.g2-ds svg');d.setAttribute('width','24');d.setAttribute('height','24');"),
+    "c1-nome-branco": _m("document.querySelector('.g2-canto .g2-estilo-nome').style.color='#f8f8f2';"),
+    "c1-duas-linhas": _m("document.querySelector('.g2-canto .g2-estilo').style.flexDirection='column';"),
+    "n1-chips-apagam": _m("document.querySelector('.modo-auto').dataset.governa='.g2-grade > :not(.g2-canto)';"),
+    "n2-linha-fica": _m("document.querySelector('.g2-canto .g2-estilo').style.display='flex';"),
+    "n2-pula": _m("var st=document.createElement('style');st.textContent='.g2-canto:has(.g2-estilo-nome:empty) .g2-canto-rot{margin-top:30px}';document.head.appendChild(st);"),
     "dica-passo": _m("var t=document.querySelector('.vib .forca input[type=range]');t.setAttribute('data-dica','Ajuste fino dentro do passo');"),
 }
 
@@ -110,13 +118,30 @@ JS_PEDIDO_BASE = r"""
     var cn=document.querySelector('.g2-canto');
     if(!cn||!vis(cn))falta.push('a célula à esquerda dos controles sumiu');
     else{var tx=[...cn.children].map(function(x){return x.textContent.trim();}).join(' ');
-      if(cn.children.length!==2||!/^Controle Estilo de jogo: \S+$/.test(tx))falta.push('a célula da esquerda não diz só «Controle» e «Estilo de jogo: …»: «'+tx.slice(0,50)+'»');
+      if(cn.children.length!==2||!/^Controle Estilo de jogo\S+$/.test(tx))falta.push('a célula da esquerda não diz só «Controle» e «Estilo de jogo» com o nome: «'+tx.slice(0,50)+'»');
       if(cn.querySelector('svg,[data-leitura],.g2-leitura')||/\b[LR]2\b/.test(tx))falta.push('o desenho ou a leitura do L2 e R2 voltou à célula da esquerda');
       if(cn.querySelector('button,select,input,a'))falta.push('a célula da esquerda virou controle (tem de ser só leitura)');
       var rc=cn.querySelector('.sec-rot'),es=cn.querySelector('.g2-estilo'),ro=document.querySelector('.g2-rot .sec-rot');
       if(!rc||!/^Controle$/.test(rc.textContent.trim()))falta.push('«Controle» não tem a letra dos rótulos de linha');
       else if(getComputedStyle(rc).color!==getComputedStyle(ro).color)falta.push('«Controle» não tem a cor verde dos rótulos de linha');
-      if(es&&getComputedStyle(es).color!==getComputedStyle(document.querySelector('.g2-acion')).color)falta.push('«Estilo de jogo» não está em branco');
+      var er=cn.querySelector('.g2-estilo-rot'),en=cn.querySelector('.g2-estilo-nome');
+      if(!er||er.textContent.trim()!=='Estilo de jogo'||getComputedStyle(er).color!==getComputedStyle(document.querySelector('.g2-acion')).color)falta.push('«Estilo de jogo» não está em branco');
+      // c1 (v3): o nome do estilo em roxo, à direita, na mesma linha de «Estilo de jogo», abaixo de «Controle»
+      if(!en||getComputedStyle(en).color!==getComputedStyle(document.querySelector('.g2-acion')).borderTopColor)falta.push('o nome do estilo não está em roxo');
+      if(er&&en&&rc){var a=er.getBoundingClientRect(),b=en.getBoundingClientRect(),c=rc.getBoundingClientRect();
+        if(Math.abs(a.top-b.top)>1)falta.push('«Estilo de jogo» e o nome do estilo não estão na mesma linha');
+        if(b.left<a.right)falta.push('o nome do estilo não fica à direita de «Estilo de jogo»');
+        if(Math.abs(b.right-es.getBoundingClientRect().right)>1)falta.push('o nome do estilo não encosta à direita da coluna dos rótulos');
+        if(a.top<c.bottom-1)falta.push('a linha do estilo não fica abaixo de «Controle»');}
+      // c1 (v3): o DualSense na coluna dos ícones, do tamanho do L2 e do R2, na linha dos controles
+      var ds=document.querySelector('.g2-gl.g2-ds'),l2=document.querySelector('.g2-gl.g2-l2');
+      if(!ds||!vis(ds)||!ds.querySelector('svg title')||ds.querySelector('svg title').textContent!=='DualSense')falta.push('o ícone do DualSense não está na coluna dos ícones');
+      else if(l2){var d=ds.querySelector('svg').getBoundingClientRect(),g=l2.querySelector('svg').getBoundingClientRect(),
+          cc=document.querySelector('.g2-cab .chip').getBoundingClientRect();
+        if(Math.abs((d.left+d.right)/2-(g.left+g.right)/2)>1)falta.push('o DualSense não fica na coluna do L2 e do R2');
+        if(Math.abs(d.width-g.width)>0.5||Math.abs(d.height-g.height)>0.5)falta.push('o DualSense não tem o tamanho do L2 e do R2: '+Math.round(d.width)+' e '+Math.round(g.width));
+        if(Math.abs((d.top+d.bottom)/2-(cc.top+cc.bottom)/2)>2)falta.push('o DualSense não fica na linha dos controles');
+        if(getComputedStyle(ds).borderRightStyle!==getComputedStyle(l2).borderRightStyle)falta.push('o DualSense sem a divisória dos ícones');}
       [rc,es].forEach(function(x){if(x&&ro&&Math.abs(x.getBoundingClientRect().left-ro.getBoundingClientRect().left)>1.5)falta.push('a linha «'+x.textContent.trim().slice(0,14)+'» não começa na borda dos rótulos de baixo');
         if(x&&x.getBoundingClientRect().right>document.querySelector('.g2-cab').getBoundingClientRect().left-4)falta.push('a linha «'+x.textContent.trim().slice(0,14)+'» encosta no chip');});
       // o estilo mais longo de Perfis (Point and click) também não pode invadir a coluna do primeiro controle
@@ -129,7 +154,22 @@ JS_PEDIDO_BASE = r"""
     // as colunas seguem a grade: cada chip na borda da coluna dele embaixo
     ['p1','p2'].forEach(function(k){var ch=document.querySelector('.g2-cab[data-controle='+k+'] .chip'),ce=document.querySelector('.g2-cel[data-controle='+k+']');
       if(ch&&ce){var a=ch.getBoundingClientRect(),c=ce.getBoundingClientRect();if(Math.abs(a.left-c.left)>1||Math.abs(a.width-c.width)>1)falta.push('o chip '+k+' desalinhou da coluna de baixo');}});
-    var ca=document.querySelector('.modo-auto');if(ca){ca.click();if(!vis(cn)||!/Estilo de jogo: \S/.test(cn.textContent))falta.push('com o Modo automático, a leitura do estilo some');ca.click();}}
+    var ca=document.querySelector('.modo-auto');if(ca){ca.click();if(!vis(cn)||!/Estilo de jogo\S/.test(cn.textContent))falta.push('com o Modo automático, a leitura do estilo some');
+      // n1 (v3): com o automático ligado, os chips, o DualSense e a célula ficam acesos; só a grade dos efeitos apaga
+      function op(e){var o=1;for(var p=e;p&&p.nodeType===1;p=p.parentElement){var t=getComputedStyle(p);o*=+t.opacity;if(t.filter!=='none')o*=0.99;}return o;}
+      [...document.querySelectorAll('.g2-cab .chip, .g2-canto, .g2-gl.g2-ds')].filter(vis).forEach(function(e){if(op(e)<0.999)falta.push('com o Modo automático, «'+(e.textContent.trim().slice(0,16)||'o DualSense')+'» fica apagado');});
+      if([...document.querySelectorAll('.g2-cel select, .g2-rot .sec-rot, .g2-gl:not(.g2-ds)')].filter(vis).some(function(e){return op(e)>0.9;}))falta.push('com o Modo automático, a grade dos efeitos não apaga');
+      ca.click();}
+    // n2 (v3): sem estilo no perfil, a linha do estilo some, fica só «Controle», e a grade não pula
+    var nn=cn&&cn.querySelector('[data-estilo]');if(nn){var an=nn.textContent,sp=document.querySelector('.g2-sep-cab'),c1=document.querySelector('.g2-cel');
+      var y0=[sp.getBoundingClientRect().top,c1.getBoundingClientRect().top];nn.textContent='';
+      var y1=[sp.getBoundingClientRect().top,c1.getBoundingClientRect().top];
+      if(vis(cn.querySelector('.g2-estilo')))falta.push('sem estilo no perfil, a linha «Estilo de jogo» não some');
+      if(!vis(cn.querySelector('.g2-canto-rot')))falta.push('sem estilo no perfil, «Controle» some junto');
+      if(Math.abs(y0[0]-y1[0])>0.5||Math.abs(y0[1]-y1[1])>0.5)falta.push('sem estilo no perfil, a grade pula: '+y0.map(Math.round)+' → '+y1.map(Math.round));
+      var cr=cn.querySelector('.g2-canto-rot').getBoundingClientRect(),ch=document.querySelector('.g2-cab .chip').getBoundingClientRect();
+      if(Math.abs((cr.top+cr.bottom)/2-(ch.top+ch.bottom)/2)>2)falta.push('sem estilo no perfil, «Controle» não fica no meio da linha dos controles');
+      nn.textContent=an;}}
   if(aba==='04'){if(tem('.miolo button, .miolo [role=button]','Desligar'))falta.push('o «Desligar» voltou aos efeitos');
     if(tem('.miolo .quadro-topo *, .miolo button, .miolo .nj-tog','Sem piscar'))falta.push('«Sem piscar» voltou como chave');
     [...document.querySelectorAll('.miolo select')].filter(vis).forEach(function(x){var o=[...x.options].map(function(y){return y.text;});

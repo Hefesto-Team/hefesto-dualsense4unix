@@ -22,7 +22,12 @@
       "resposta": "todo-03-1",
       "origem": "RODADA-2 §03",
       "ancora": "[data-todo=\"1\"]",
-      "conflito": ""
+      "conflito": "",
+      "ajuste_v3": {
+        "id": "n1",
+        "pedido": "A: ficam acesos; só a grade apaga",
+        "feito": "Com o Modo automático ligado, o DualSense, «Controle», o estilo de jogo e os chips dos controles ficam acesos. Só a grade dos efeitos (o L2, o R2, os rótulos e os seletores) apaga."
+      }
     },
     {
       "n": 3,
@@ -121,7 +126,12 @@
       "resposta": "todo-03-r4-13",
       "origem": "RODADA-4",
       "ancora": ".g2-canto",
-      "conflito": ""
+      "conflito": "",
+      "ajuste_v3": {
+        "id": "n2",
+        "pedido": "A: a linha do estilo some e fica só «Controle»",
+        "feito": "Sem estilo no perfil, a linha «Estilo de jogo» some e fica só «Controle», no meio da linha dos controles; a grade de baixo não sai do lugar. Para ver os dois estados no mockup: 03-gatilhos.html#sem-estilo (sem estilo) e 03-gatilhos.html#estilo=Point%20and%20click (nome longo)."
+      }
     },
     {
       "n": 14,
@@ -153,12 +163,18 @@
       "ajuste_seis": {
         "pedido": "mds some tudo que tá ali do lado esquerdo dos botões do controle e os botões de controles não conectados não aparecem ali. Coloca Controle com fonte verde. E numa fonte branca abaixa ewscreve Estilo de jogo: Nome do estilo setado em perfis.",
         "feito": "A célula à esquerda dos nomes dos controles perdeu o desenho do L2 e R2 e as duas linhas da leitura. Ficaram duas linhas, na borda dos rótulos de baixo: «Controle», no verde dos rótulos de linha, e abaixo, em branco, «Estilo de jogo: FPS» (o estilo escolhido em Perfis; é só leitura). Galactic Purple e White, que estão desconectados, saíram da linha do alto; ficam só Cosmic Red e Starlight Blue, cada um na largura da coluna dele, e as vagas sem controle seguem vazias embaixo. Um estilo de nome longo (Point and click) desce para a linha de baixo, sem invadir a coluna do primeiro controle. O Modo automático continua."
+      },
+      "ajuste_v3": {
+        "id": "c1",
+        "pedido": "coloca um dualsense coloca o estilo de jogo em branco no lado de onde deveria ter o svg e o jogo em si roxo do lado direito abaixo de controle",
+        "feito": "Na linha do alto, na coluna dos ícones do L2 e do R2, entrou um DualSense no mesmo traço e no mesmo tamanho deles, com a mesma divisória. Na coluna dos rótulos ficou «Controle» no verde e, embaixo, na mesma linha, «Estilo de jogo» em branco à esquerda e o nome do estilo (FPS) em roxo à direita. Os chips dos controles seguem como estavam e na grade de baixo. Um nome longo (Point and click) desce para a linha de baixo, à direita, sem invadir o primeiro chip."
       }
     }
   ],
   "estados": {
     "automatico": "document.querySelector('.modo-auto').click()",
-    "menu": "window.MX=900;window.MY=262;(() => { const x = window.MX || 960, y = window.MY || 560;\n  document.elementFromPoint(x, y).dispatchEvent(new MouseEvent('contextmenu', {bubbles: true, clientX: x, clientY: y}));\n  const d = [...document.querySelectorAll('.menu-hefesto button')].find(b => b.textContent.trim() === 'Desligar');\n  d.dispatchEvent(new MouseEvent('mouseover', {bubbles: true})); })()\n"
+    "menu": "window.MX=900;window.MY=262;(() => { const x = window.MX || 960, y = window.MY || 560;\n  document.elementFromPoint(x, y).dispatchEvent(new MouseEvent('contextmenu', {bubbles: true, clientX: x, clientY: y}));\n  const d = [...document.querySelectorAll('.menu-hefesto button')].find(b => b.textContent.trim() === 'Desligar');\n  d.dispatchEvent(new MouseEvent('mouseover', {bubbles: true})); })()\n",
+    "sem-estilo": "location.hash='#sem-estilo'"
   },
   "por_baixo": [
     {

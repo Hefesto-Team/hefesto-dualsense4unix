@@ -1565,9 +1565,17 @@
   .g2-grade > .g2-canto{grid-column:2;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;
     gap:3px;height:auto;min-width:0}
   .g2-canto .g2-canto-rot{line-height:16px}
-  .g2-canto .g2-estilo{font:500 12px/16px 'Space Grotesk',system-ui,sans-serif;color:var(--fg);cursor:help;max-width:100%}
-  /* um nome longo (Point and click) desce inteiro para a linha de baixo, sem invadir a coluna do primeiro controle */
+  /* As respostas à v3 (14/10): «Estilo de jogo» em branco à esquerda e o nome do estilo em roxo à direita, na mesma
+     linha, abaixo de «Controle». Um nome longo (Point and click) desce inteiro para a linha de baixo, à direita, sem
+     invadir a coluna do primeiro controle. Sem estilo no perfil, a linha some e fica só «Controle». */
+  .g2-canto{align-self:stretch}
+  .g2-canto .g2-estilo{display:flex;flex-wrap:wrap;justify-content:space-between;column-gap:8px;width:100%;
+    font:500 12px/16px 'Space Grotesk',system-ui,sans-serif;color:var(--fg);cursor:help}
   .g2-canto .g2-estilo > span{white-space:nowrap}
+  .g2-canto .g2-estilo-nome{color:var(--purple);font-weight:600;margin-left:auto}
+  .g2-canto .g2-estilo:has(.g2-estilo-nome:empty){display:none}
+  /* o DualSense na coluna dos ícones, no traço e no tamanho do L2 e do R2 */
+  .g2-grade > .g2-gl.g2-ds{grid-column:1;grid-row:auto}
   .g2-cab.vazio{min-height:36px}
   /* em tela baixa o respiro entre as linhas diminui, para o desenho com a leitura caber sem rolar */
   @media (max-height:780px){.quadro .g2-grade{row-gap:8px;padding-top:4px}}
@@ -1848,11 +1856,12 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       <div class="quadro-topo">
         <span class="quadro-titulo" data-dica="Uma coluna por controle; vale na hora">Gatilhos</span>
         <span class="trava-nativo" data-dica="Hefesto desligado: o jogo manda. Volta ao ligar"><svg class="cad" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M3.6 5.2V3.9a2.4 2.4 0 0 1 4.8 0v1.3" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="2.3" y="5.2" width="7.4" height="5.4" rx="1.1" fill="currentColor"/></svg>O jogo manda</span>
-        <button class="modo-auto" type="button" data-gesto="modo-dos-gatilhos" data-todo="1" aria-pressed="false" data-governa=".g2-grade > :not(.g2-canto)" data-dica="O jogo manda; o estilo do perfil (FPS) ajusta"><span class="p"></span>Modo automático</button>
+        <button class="modo-auto" type="button" data-gesto="modo-dos-gatilhos" data-todo="1" aria-pressed="false" data-governa=".g2-grade > :is(.g2-gl:not(.g2-ds),.g2-rot,.g2-cel,.g2-sep:not(.g2-sep-cab))" data-dica="O jogo manda; o estilo do perfil (FPS) ajusta"><span class="p"></span>Modo automático</button>
       </div>
       <div class="quadro-corpo">
         <div class="g2-grade">
-          <div class="g2-canto" data-seis="q1" aria-label="Controle e estilo de jogo"><span class="sec-rot g2-canto-rot">Controle</span><span class="g2-estilo" data-campo="estilo-do-perfil" data-dica="O estilo escolhido em Perfis. Só leitura"><span>Estilo de jogo:</span> <span data-estilo>FPS</span></span></div>
+          <div class="g2-gl g2-ds" data-v3="c1" aria-label="DualSense"><svg class="gl" width="36" height="36" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>DualSense</title><g transform="translate(16 16.5) scale(.82) translate(-16 -16.8)" fill="none" stroke="currentColor"><path d="M8.5 7H23.5C26.6 7 28.4 8.9 29.1 12.2L30.6 22.6C31.1 26.6 27.9 28.6 25.6 26.6L21.4 21.9Q16 19.6 10.6 21.9L6.4 26.6C4.1 28.6 0.9 26.6 1.4 22.6L2.9 12.2C3.6 8.9 5.4 7 8.5 7Z" stroke-width="2.44" stroke-linejoin="round"/><rect x="10.2" y="7" width="11.6" height="6.4" rx="1" stroke-width="1.9"/><circle cx="12.4" cy="17" r="1.7" stroke-width="1.8"/><circle cx="19.6" cy="17" r="1.7" stroke-width="1.8"/><path d="M6.6 11.4V15.4M4.6 13.4H8.6" stroke-width="1.8" stroke-linecap="round"/><g fill="currentColor" stroke="none"><circle cx="25.4" cy="11.9" r="1"/><circle cx="25.4" cy="14.9" r="1"/><circle cx="23.9" cy="13.4" r="1"/><circle cx="26.9" cy="13.4" r="1"/></g></g></svg></div>
+          <div class="g2-canto" data-seis="q1" data-v3="c1 n2" aria-label="Controle e estilo de jogo"><span class="sec-rot g2-canto-rot">Controle</span><span class="g2-estilo" data-campo="estilo-do-perfil" data-dica="O estilo escolhido em Perfis. Só leitura"><span class="g2-estilo-rot">Estilo de jogo</span><span class="g2-estilo-nome" data-estilo>FPS</span></span></div>
           <div class="g2-cab" data-todo="6" data-controle="p1"><div class="cabeca" data-campo="plastico" data-hef-alvo="plastico" style="--plastico:#ae335a"><span data-campo="chip-do-controle" data-hef-alvo="html"><span class="chip plastico" data-dica="A borda é a cor do plástico">Cosmic Red <span class="pt">•</span> USB</span></span></div></div>
           <div class="g2-cab" data-todo="6" data-controle="p2"><div class="cabeca" data-campo="plastico" data-hef-alvo="plastico" style="--plastico:#7eb8d4"><span data-campo="chip-do-controle" data-hef-alvo="html"><span class="chip plastico" data-dica="A borda é a cor do plástico">Starlight Blue <span class="pt">•</span> BT</span></span></div></div>
           <div class="g2-cab vazio" data-controle="p3" aria-hidden="true"></div>
@@ -1991,6 +2000,17 @@ document.querySelectorAll('.modo-auto').forEach(b => b.addEventListener('click',
   b.setAttribute('aria-pressed', String(on));
   document.querySelectorAll(b.dataset.governa).forEach(el => el.classList.toggle('governado-pelo-jogo', on));
 }));
+</script>
+<script data-aba="estilo-do-perfil">
+/* Os dois estados do estilo no mockup: 03-gatilhos.html#sem-estilo mostra o perfil sem estilo (só «Controle»),
+   e #estilo=Point%20and%20click mostra um nome longo. Sem âncora, o perfil tem o estilo FPS. */
+(() => {
+  const nome = document.querySelector('.g2-canto [data-estilo]'); if (!nome) return;
+  const padrao = nome.textContent;
+  const ler = () => { const h = decodeURIComponent(location.hash.slice(1));
+    nome.textContent = h === 'sem-estilo' ? '' : h.startsWith('estilo=') ? h.slice(7) : padrao; };
+  ler(); addEventListener('hashchange', ler);
+})();
 </script>
 <script data-aba="criar">
 document.querySelectorAll('.seg-criar').forEach(s => s.addEventListener('click', e => {
