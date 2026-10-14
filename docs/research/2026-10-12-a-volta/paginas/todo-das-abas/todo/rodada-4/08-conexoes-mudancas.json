@@ -1,0 +1,34 @@
+{
+ "aba": "08-conexoes",
+ "nome": "Conexões",
+ "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/mockups-rodada-4/docs/research/2026-10-12-a-volta/paginas/todo-das-abas/todo/08-conexoes.html",
+ "depois": "/mnt/Apate/Desenvolvimento/hefesto-voo/mockups-rodada-4/docs/research/2026-10-12-a-volta/paginas/todo-das-abas/todo/rodada-4/08-conexoes.html",
+ "rodada": 4,
+ "altura_px": 809,
+ "rola": false,
+ "mudancas": [
+  {
+   "n": 13,
+   "sprint": "A-ABA-CONEXOES-DO-TODO-01",
+   "o_que_muda": "O cartão do controle mostra o giroscópio como analógico? DUAS LEITURAS: A mantém a linha só de leitura nos cartões; B tira a linha, e o ajuste mora só na aba Controles",
+   "resposta": "a sprint diz «Esta aba não mostra esse ajuste»; a 08-6 já renomeou a linha para «Giroscópio como analógico»",
+   "origem": "rodada 4 (o que faltava desenho)",
+   "ancora": "[data-todo=\"13\"]",
+   "seletor": ".gc-est[data-campo=\"est-mira\"]",
+   "leituras": {
+    "a": "A linha fica só de leitura em cada cartão, como a página do todo já desenha (08-6).",
+    "b": "A linha sai do cartão; o giroscópio só aparece na aba Controles e na janela Calibrar sensores."
+   },
+   "foto_a": "fotos/08-conexoes-m13-a.png",
+   "foto_b": "fotos/08-conexoes-m13-b.png",
+   "conflito": "Substitui a 08-6 se você escolher B; a A deixa a 08-6 como está."
+  }
+ ],
+ "por_baixo": [
+  {
+   "sprint": "O-MAPA-DAS-CONEXOES-MOSTRA-A-CADEIA-USB-E-O-REGISTRO-DELA-01",
+   "o_que_muda": "O cartão não muda; a cadeia mora no mapa das portas."
+  }
+ ],
+ "fora": []
+}
