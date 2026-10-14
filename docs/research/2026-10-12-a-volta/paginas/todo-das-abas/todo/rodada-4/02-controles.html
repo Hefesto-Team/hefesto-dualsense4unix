@@ -1035,7 +1035,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 .jv-fn small{display:block;color:var(--texto-mudo);font-size:10.5px}
 </style>
 <style data-todo-css="alvos-r4">
-/* Rodada 4: ?alvos=a dá 24 px a todo alvo de toque, com a mesma letra; ?alvos=b dá os 24 px e o piso de 12 px na letra. */
+/* Rodada 4: a sua resposta de 13/10 (~23h40), botões e letra: todo alvo de toque com 24 px e nenhuma letra abaixo de 12 px. ?alvos=hoje mostra a tela sem a mudança. */
 html.alvos-24 :is(button,select,input:not([type=checkbox]):not([type=radio]):not([type=hidden]),textarea,summary,[role=button],.nj-tog,.sw,.passo,label.faixa,.nav-i,.mudo-i,.padrao-i){min-height:24px;box-sizing:border-box}
 html.alvos-24 :is(button,[role=button],.nj-tog,.passo,.nav-i,.mudo-i,.padrao-i){min-width:24px}
 html.alvos-24 :is(input[type=checkbox],input[type=radio]):not(.radio-mesa){min-width:24px;min-height:24px}
@@ -2326,7 +2326,7 @@ document.querySelectorAll('.seg-criar').forEach(s => s.addEventListener('click',
   document.addEventListener('click', e => { if (!e.target.closest('.menu-hefesto')) document.querySelectorAll('.menu-hefesto.vivo').forEach(m => m.remove()); });
 })();
 </script>
-<div class="jv-pop" id="jv-pop" role="dialog" aria-label="O que chega ao jogo" hidden data-todo="17"><h4>O jogo vê um Xbox 360</h4><div class="jv-sub">Canal comum · rádio</div><div class="jv-mot">O modo Xbox troca toda máscara por Xbox 360</div><div class="jv-grade"><div class="jv-fn"><span>Botões</span><em class="n">Nativo</em></div><div class="jv-fn"><span>Analógicos</span><em class="n">Nativo</em></div><div class="jv-fn"><span>Gatilho analógico</span><em class="n">Nativo</em></div><div class="jv-fn"><span>Gatilho adaptativo</span><em class="h">Pelo Hefesto</em></div><div class="jv-fn"><span>Vibração</span><em class="n">Nativo</em></div><div class="jv-fn"><span>Háptica</span><em class="h">Pelo Hefesto</em></div><div class="jv-fn"><span>Luz</span><em class="h">Pelo Hefesto</em></div><div class="jv-fn"><span>Luz de jogador</span><em class="x">Não chega</em></div><div class="jv-fn"><span>Giroscópio<small>Mira Virtual desligada</small></span><em class="x">Não chega</em></div><div class="jv-fn"><span>Touchpad<small>como mouse do PC</small></span><em class="h">Pelo Hefesto</em></div><div class="jv-fn"><span>Microfone</span><em class="h">Pelo Hefesto</em></div><div class="jv-fn"><span>Alto-falante</span><em class="h">Pelo Hefesto</em></div></div></div><script data-aba="o-jogo-ve-02-r4">
+<div class="jv-pop" id="jv-pop" role="dialog" aria-label="O que chega ao jogo" hidden data-todo="17"><h4>O jogo vê um Xbox 360</h4><div class="jv-sub">Canal comum · rádio</div><div class="jv-mot">O modo Xbox troca toda máscara por Xbox 360</div><div class="jv-grade"><div class="jv-fn"><span>Botões</span><em class="n">Nativo</em></div><div class="jv-fn"><span>Analógicos</span><em class="n">Nativo</em></div><div class="jv-fn"><span>Gatilho analógico</span><em class="n">Nativo</em></div><div class="jv-fn"><span>Gatilho adaptativo</span><em class="h">Pelo Hefesto</em></div><div class="jv-fn"><span>Vibração</span><em class="n">Nativo</em></div><div class="jv-fn"><span>Háptica</span><em class="h">Pelo Hefesto</em></div><div class="jv-fn"><span>Luz</span><em class="h">Pelo Hefesto</em></div><div class="jv-fn"><span>Luz de jogador</span><em class="x">Não chega</em></div><div class="jv-fn"><span>Giroscópio<small>Como analógico: desligado</small></span><em class="x">Não chega</em></div><div class="jv-fn"><span>Touchpad<small>Como mouse do PC</small></span><em class="h">Pelo Hefesto</em></div><div class="jv-fn"><span>Microfone</span><em class="h">Pelo Hefesto</em></div><div class="jv-fn"><span>Alto-falante</span><em class="h">Pelo Hefesto</em></div></div></div><script data-aba="o-jogo-ve-02-r4">
 /* Rodada 4: o botão «O que chega» abre a lista das doze funções; ?estado=o-que-chega já a abre. */
 document.addEventListener('DOMContentLoaded', () => {
   const pop = document.getElementById('jv-pop');
@@ -2338,10 +2338,8 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 <script data-aba="alvos-r4">
 (function () {
-  var o = new URLSearchParams(location.search).get('alvos');
-  if (!o) return;
+  if (new URLSearchParams(location.search).get('alvos') === 'hoje') return;
   document.documentElement.classList.add('alvos-24');
-  if (o !== 'b') return;
   document.documentElement.classList.add('letra-12');
   function piso() {
     document.querySelectorAll('body *').forEach(function (e) {

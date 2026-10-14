@@ -8,14 +8,13 @@
  "rola": false,
  "estados": {
   "o-que-chega": "02-controles.html?estado=o-que-chega",
-  "alvos-a": "02-controles.html?alvos=a",
-  "alvos-b": "02-controles.html?alvos=b"
+  "hoje": "02-controles.html?alvos=hoje"
  },
  "mudancas": [
   {
    "n": 17,
    "sprint": "O-ESTADO-DIZ-O-QUE-O-JOGO-VE-DE-CADA-CONTROLE-01",
-   "o_que_muda": "Ao lado da forma que o jogo vê, o botão «O que chega» abre as doze funções (botões, analógicos, gatilhos, vibração, háptica, luz, luz de jogador, giroscópio, touchpad, microfone, alto-falante), cada uma como Nativo, Pelo Hefesto ou Não chega",
+   "o_que_muda": "Ao lado da forma que o jogo vê, o botão «O que chega» abre as doze funções (botões, analógicos, gatilho analógico, gatilho adaptativo, vibração, háptica, luz, luz de jogador, giroscópio, touchpad, microfone, alto-falante), cada uma como Nativo, Pelo Hefesto ou Não chega",
    "resposta": "a tela não pode dizer o que o daemon não diz (resposta da chave xbox)",
    "origem": "rodada 4 (o que faltava desenho)",
    "ancora": "[data-todo=\"17\"]",
@@ -25,26 +24,12 @@
   {
    "n": 18,
    "sprint": "OS-ALVOS-E-A-LETRA-CRESCEM-E-A-INTERFACE-GANHA-TAMANHO-01",
-   "o_que_muda": "Na aba Controles, os 15 alvos de menos de 24 px (interruptores, deslizantes de volume, botões de mudo e de padrão, botão «Ligado» do touchpad, seletores de controle) crescem para 24 px; na leitura B a letra sobe para 12 px, e o corpo do quadro apertou o respiro para não rolar",
-   "resposta": "botões e letra crescem: alvo de 24 px no mínimo e letra de 12 px no mínimo (a sua resposta); o desenho e o piso da letra seguem em aberto",
+   "o_que_muda": "Na aba Controles, só com a seção dos quatro controles, os 15 alvos de menos de 24 px (interruptores, deslizantes de volume, botões de mudo e de padrão, botão «Ligado» do touchpad, seletores de controle) crescem para 24 px, e toda letra abaixo de 12 px sobe para 12 px; o corpo do quadro aperta o respiro para não rolar",
+   "resposta": "sua resposta de 13/10, ~23h40: botões e letra. Todo alvo de toque com 24 px no mínimo e nenhuma letra abaixo de 12 px, com cada aba refeita sem rolagem",
    "origem": "rodada 4 (o que faltava desenho)",
    "ancora": "html.alvos-24",
    "seletor": ".sw, .puxa-vol, .mudo-i, .padrao-i, label.faixa, button",
-   "conflito": "Medido na página de hoje: 15 alvos abaixo de 24 px e 88 de 129 textos abaixo de 12 px. Na leitura A sobram 0 alvos; na B sobram 0 alvos e só os 4 textos de SVG. Sobram letras abaixo de 12 px só dentro de desenhos SVG (rótulos do gráfico), que não são texto da interface; a leitura B não os toca. Em 1212x740 a leitura B afrouxa o espaçamento do quadro em 2 px para não rolar.",
-   "leituras": {
-    "A": "02-controles.html?alvos=a",
-    "B": "02-controles.html?alvos=b",
-    "descricao": {
-     "A": "Leitura A: todo alvo de toque passa a ter 24 px no mínimo, e a letra fica como está",
-     "B": "Leitura B: os mesmos 24 px e, além disso, nenhuma letra abaixo de 12 px"
-    },
-    "C": "Leitura C, já desenhada no 09-sistema.html: só o botão «Tamanho da interface» (Padrão, Confortável, Espaçoso), sem mexer nos tamanhos de hoje"
-   },
-   "fotos": [
-    "fotos/02-controles-m18-antes.png",
-    "fotos/02-controles-m18-a.png",
-    "fotos/02-controles-m18-b.png"
-   ]
+   "conflito": "Medido na página do todo: 15 alvos abaixo de 24 px e 88 de 129 textos abaixo de 12 px; depois, 0 e 0. Ficam abaixo de 12 px só as letras desenhadas dentro dos ícones dos botões L1, R1, L2 e R2 (10,7 px), que são parte do ícone e não texto da interface. ?alvos=hoje mostra a tela sem a mudança."
   }
  ],
  "por_baixo": [],
