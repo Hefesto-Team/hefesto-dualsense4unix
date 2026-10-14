@@ -218,19 +218,35 @@ FORA_DA_ARVORE: dict[tuple[str, str], str] = {
         "põe o texto na área de transferência DELA pelo `Gtk.Clipboard`, dentro "
         "de um `GLib.idle_add` — a chamada mora numa função aninhada, e o perigo "
         "é apagar o que ela tinha copiado, que nenhuma porta de disco nomeia",
+    # 13/10/2026, A-BASE-COMUM-DAS-ABAS-01: o menu do botão direito, em toda página.
+    ("*", "menu-desligar"):
+        "chama o `parar-ou-retomar` da aba Sistema procurado na hora em "
+        "`pacotes.GESTOS` (`hefesto_vivo._gesto_do_menu`); o `_systemctl` dele "
+        "fica atrás de uma consulta à tabela, onde a árvore não desce",
+    ("*", "menu-reiniciar"):
+        "chama o `reiniciar` da aba Sistema pela mesma tabela "
+        "(`hefesto_vivo._gesto_do_menu`): reinicia o serviço, e a árvore não vê o "
+        "`_systemctl` por trás da consulta",
+    ("*", "menu-fechar"):
+        "fecha a janela pelo `GLib.idle_add` do `JanelaDaAba.fechar` guardado em "
+        "`hefesto_vivo._FECHAR_A_JANELA`; a régua de clique que o acionasse "
+        "fecharia a própria janela que mede",
 }
 
 
 def _gestos_registrados():
-    """O registro do produto, chaveado por (página, nome) — nunca digitado."""
-    from hefesto_dualsense4unix.interface import pacotes
+    """O registro do produto, chaveado por (página, nome) — nunca digitado.
+
+    O `hefesto_vivo` entra junto: é ele que registra os gestos do menu do botão direito.
+    """
+    from hefesto_dualsense4unix.interface import hefesto_vivo, pacotes  # noqa: F401
 
     return dict(pacotes.GESTOS)
 
 
 def _declaracoes():
     """O que cada gesto DECLAROU com `grava=` — a fonte de `PERIGOSOS`."""
-    from hefesto_dualsense4unix.interface import pacotes
+    from hefesto_dualsense4unix.interface import hefesto_vivo, pacotes  # noqa: F401
 
     return dict(pacotes.GESTOS_QUE_MEXEM)
 

@@ -889,12 +889,21 @@ def topo(ctx: Contexto) -> dict[str, Any]:
         # O NATIVO, para as cinco abas por controle (a camada recusa o gesto; a tela só se
         # ACINZENTA). `sim` com o `native_mode` de pé; o resto, não, inclusive o daemon calado.
         "nativo": "sim" if no_nativo(ctx.state) else "nao",  # noqa-acento: valor que a página lê
+        # O item «Desligar»/«Ligar» do menu do botão direito lê daqui (A-BASE-COMUM-DAS-ABAS-01).
+        "servico": servico_do_menu(ctx.state),  # (noqa-acento) endereço da página
         "conta-b": conta_b or SEM_CONTROLE_NA_MESA,
         "perfil": ativo or "—",
         "rodape.aplicar": _dica_do_aplicar(ctx.state),
         "rodape.salvar": _dica_do_salvar(do_rodape),
         "rodape.exportar": _dica_do_exportar(do_rodape),
     }
+
+
+def servico_do_menu(state: dict[str, Any] | None) -> str:
+    """`de-pe`, `pausado` ou `parado`: o daemon que não respondeu o `state` conta como parado."""
+    if not state:
+        return "parado"
+    return "pausado" if state.get("paused") else "de-pe"
 
 
 _SEM_PERFIL = "no perfil ativo"

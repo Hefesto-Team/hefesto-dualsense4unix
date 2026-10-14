@@ -41,16 +41,22 @@
     const b = e.target.closest && e.target.closest('.modo-auto');
     if (b) setTimeout(() => b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') === 'true' ? 'false' : 'true'), 0);
   });
-  /* O menu do botão direito: Copiar (cinza sem seleção), Atualizar, Desligar, Reiniciar, Fechar.
-     Cada item é um `data-gesto` comum: no produto a janela o despacha como qualquer botão. */
+  /* O menu do botão direito: Copiar (cinza sem seleção), Atualizar, Desligar ou Ligar, Reiniciar, Fechar.
+     Cada item é um `data-gesto` comum: no produto a janela o despacha como qualquer botão. O serviço
+     parado ou pausado vira «Ligar», de um clique só; o estado vem do `data-servico` do cabeçalho. */
   const fechar = () => document.querySelectorAll('.menu-hefesto.vivo').forEach(m => m.remove());
   document.addEventListener('contextmenu', e => {
     e.preventDefault(); fechar();
     const m = document.createElement('div'); m.className = 'menu-hefesto vivo'; m.setAttribute('role', 'menu');
     const sel = String(getSelection()).trim() !== '';
+    const servico = (document.querySelector('[data-campo="servico"]') || {dataset: {}}).dataset.servico;
+    const ligar = servico === 'parado' || servico === 'pausado';
+    const item = ligar
+      ? '<button type="button" role="menuitem" data-gesto="menu-desligar" data-dica="O Hefesto volta a cuidar dos controles">Ligar</button>'
+      : '<button type="button" role="menuitem" data-gesto="menu-desligar" data-menu="desligar" data-dica="O Hefesto sai da frente e o jogo lê o controle direto">Desligar</button>';
     m.innerHTML = `<button type="button" role="menuitem" data-menu="copiar" ${sel ? '' : 'disabled'}>Copiar</button><hr>
       <button type="button" role="menuitem" data-gesto="menu-atualizar">Atualizar</button>
-      <button type="button" role="menuitem" data-gesto="menu-desligar" data-menu="desligar" data-dica="O Hefesto sai da frente e o jogo lê o controle direto">Desligar</button>
+      ${item}
       <button type="button" role="menuitem" data-gesto="menu-reiniciar">Reiniciar</button><hr>
       <button type="button" role="menuitem" data-gesto="menu-fechar">Fechar</button>`;
     document.body.append(m);

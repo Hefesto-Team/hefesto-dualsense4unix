@@ -73,8 +73,11 @@ def _arquivos_da_interface() -> list[pathlib.Path]:
 
 @pytest.mark.parametrize("nome", SEM_AJUDA)
 def test_a_posse_da_base_nao_tem_ajuda(nome: str) -> None:
-    """Nenhum `class="ajuda`, nenhum seletor `.ajuda` e nenhum botão de «?» na posse da base."""
-    fonte = _fonte(nome)
+    """Nenhum `class="ajuda`, nenhum seletor `.ajuda` e nenhum botão de «?» na posse da base.
+
+    A única folha que sobra é a `monta.CSS_DO_AJUDA_QUE_SAI`, e só enquanto há `ISENTOS`.
+    """
+    fonte = _fonte(nome).replace(getattr(monta, "CSS_DO_AJUDA_QUE_SAI", "\0"), "")
     assert not _CLASSE_AJUDA.search(fonte), f"{nome}: ainda escreve um `class=\"ajuda\"`"
     assert not _BOTAO_DE_INTERROGACAO.search(fonte), f"{nome}: tem botão cujo texto é «?»"
     achou = [m for m in _CSS_AJUDA.finditer(fonte)]
@@ -157,6 +160,30 @@ def paginas_geradas(tmp_path_factory: pytest.TempPathFactory) -> dict[str, str]:
                if re.match(r"(0\d|10)-", p.name) or p.name == "calibrar-sensores.html"}
     assert len(paginas) == 11, sorted(paginas)
     return paginas
+
+
+def test_a_folha_do_ajuda_que_sai_vive_so_enquanto_ha_isentos() -> None:
+    """Zerou o último «?» das abas: a folha de transição sai do `monta.py` junto."""
+    if not ISENTOS:
+        assert not hasattr(monta, "CSS_DO_AJUDA_QUE_SAI"), "ISENTOS zerou; tire a folha do monta"
+        return
+    assert ".ajuda:hover .dica" in monta.CSS_DO_AJUDA_QUE_SAI
+    assert ".ajuda.porque:has(.nada)" in monta.CSS_DO_AJUDA_QUE_SAI
+
+
+def test_a_pagina_com_o_span_leva_a_folha_e_a_sem_span_nao(paginas_geradas: dict[str, str]) -> None:
+    """O «?» que ainda sai de uma aba abre a dica e some sem razão; página sem ele não leva a folha.
+
+    MORDIDA: tirar a injeção do `monta.monta` reprova as páginas que ainda têm o span.
+    """
+    folha = monta.CSS_DO_AJUDA_QUE_SAI
+    sem_folha = sorted(n for n, doc in paginas_geradas.items()
+                       if _CLASSE_AJUDA.search(doc) and folha not in doc)
+    assert not sem_folha, f"página(s) com o «?» e sem a folha dele: {sem_folha}"
+    sobrando = sorted(n for n, doc in paginas_geradas.items()
+                      if not _CLASSE_AJUDA.search(doc) and folha in doc)
+    assert not sobrando, f"página(s) sem nenhum «?» e com a folha dele: {sobrando}"
+    assert any(folha in doc for doc in paginas_geradas.values()), "a folha não entrou em nenhuma"
 
 
 def test_toda_pagina_tem_a_base_uma_vez_e_identica_ao_arquivo(
@@ -317,6 +344,18 @@ def test_o_menu_vive_no_nativo() -> None:
             assert camada.recusa_no_nativo(aba, g, estado) is None, f"{aba}·{g}"
 
 
+def test_os_itens_do_menu_que_mexem_na_maquina_estao_nos_perigosos() -> None:
+    """Desligar, Reiniciar e Fechar declaram `grava=`: a régua de clique não os aciona sozinha.
+
+    MORDIDA: tirar o `grava=` dos itens no `hefesto_vivo._registrar_o_menu` reprova.
+    """
+    perigosos = pacotes.perigosos()
+    fora = sorted(g for g in ("menu-desligar", "menu-reiniciar", "menu-fechar")
+                  if ("*", g) not in perigosos)
+    assert not fora, f"item(ns) do menu fora dos perigosos: {fora}"
+    assert ("*", "menu-atualizar") not in perigosos, "Atualizar só relê a tela"
+
+
 def test_o_desligar_do_menu_pede_a_confirmacao_da_sistema() -> None:
     """O item «Desligar» troca o texto para «Confirma?» antes do 2º clique, como na aba Sistema."""
     js = (INTERFACE / "base-comum.js").read_text(encoding="utf-8")
@@ -403,6 +442,98 @@ def test_desligar_do_menu_pede_dois_cliques_e_clicar_fora_fecha(vivo: dict[str, 
     assert vivo["menu_apos_clicar_fora"] is False, "clicar fora não fechou o menu"
 
 
+_NO_NATIVO = """<!doctype html><html><head><meta charset="utf-8"><style>%s</style></head>
+<body class="por-controle nativo"><p id="texto">Texto</p>
+<button id="da-aba" data-gesto="cor">Cor</button></body></html>"""
+
+_MEDIR_O_MENU_NO_NATIVO = """() => {
+  document.getElementById('texto').dispatchEvent(
+    new MouseEvent('contextmenu', {bubbles: true, cancelable: true, clientX: 30, clientY: 30}));
+  const pe = el => getComputedStyle(el).pointerEvents;
+  const menu = document.querySelector('.menu-hefesto.vivo');
+  return {da_aba: pe(document.getElementById('da-aba')),
+          menu: menu ? [...menu.querySelectorAll('button[data-gesto]')].map(
+            b => [b.dataset.gesto, pe(b)]) : null};
+}"""
+
+
+def test_o_menu_aceita_clique_no_nativo_e_o_botao_da_aba_nao() -> None:
+    """A folha do Nativo cinza o que a aba grava, e o menu do botão direito não é da aba.
+
+    MORDIDA: tirar o `.menu-hefesto *` do `:not(...)` do `monta.CSS_DO_NATIVO` reprova
+    (os quatro itens ficam com `pointer-events:none` nas cinco abas por controle).
+    """
+    if not CHROME.exists():
+        pytest.skip("sem o Chrome do sistema: a régua não tem motor")
+    from playwright.sync_api import sync_playwright
+
+    doc = monta.com_a_base(_NO_NATIVO % monta.CSS_DO_NATIVO)
+    with sync_playwright() as pw:
+        navegador = pw.chromium.launch(executable_path=str(CHROME), args=["--no-sandbox"])
+        try:
+            pg = navegador.new_page(viewport={"width": 600, "height": 400})
+            pg.set_content(doc)
+            medido = pg.evaluate(_MEDIR_O_MENU_NO_NATIVO)
+        finally:
+            navegador.close()
+    assert medido["da_aba"] == "none", f"o controle da régua falhou: {medido}"
+    assert medido["menu"], medido
+    mortos = [g for g, pe in medido["menu"] if pe == "none"]
+    assert not mortos, f"item(ns) do menu sem clique no Nativo: {mortos}"
+
+
+_COM_O_SERVICO = """<!doctype html><html><head><meta charset="utf-8"></head><body>
+<i hidden data-campo="servico" data-servico="%s"></i><p id="texto">Texto</p></body></html>"""
+
+_O_ITEM_DO_SERVICO = """async () => {
+  const esperar = ms => new Promise(r => setTimeout(r, ms));
+  document.getElementById('texto').dispatchEvent(
+    new MouseEvent('contextmenu', {bubbles: true, cancelable: true, clientX: 30, clientY: 30}));
+  const b = document.querySelector('.menu-hefesto.vivo [data-gesto="menu-desligar"]');
+  const antes = b ? b.textContent.trim() : null;
+  if (b) { b.click(); await esperar(80); }
+  return {antes: antes, depois: b ? b.textContent.trim() : null,
+          menu_aberto: !!document.querySelector('.menu-hefesto.vivo')};
+}"""
+
+
+@pytest.mark.parametrize(("servico", "esperado"), [  # (noqa-acento) valor do contrato
+    ("de-pe", {"antes": "Desligar", "depois": "Confirma?", "menu_aberto": True}),
+    ("parado", {"antes": "Ligar", "depois": "Ligar", "menu_aberto": False}),
+    ("pausado", {"antes": "Ligar", "depois": "Ligar", "menu_aberto": False}),
+])
+def test_o_item_do_servico_diz_desligar_ou_ligar(servico: str, esperado: dict[str, Any]) -> None:
+    """De pé, «Desligar» pede dois cliques; parado ou pausado, «Ligar» age no primeiro.
+
+    MORDIDA: fixar o rótulo «Desligar» no JS da base reprova os casos parado e pausado.
+    """
+    if not CHROME.exists():
+        pytest.skip("sem o Chrome do sistema: a régua não tem motor")
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as pw:
+        navegador = pw.chromium.launch(executable_path=str(CHROME), args=["--no-sandbox"])
+        try:
+            pg = navegador.new_page(viewport={"width": 600, "height": 400})
+            pg.set_content(monta.com_a_base(_COM_O_SERVICO % servico))
+            medido = pg.evaluate(_O_ITEM_DO_SERVICO)
+        finally:
+            navegador.close()
+    assert medido == esperado, medido
+
+
+def test_o_cabecalho_leva_o_estado_do_servico() -> None:
+    """O `data-servico` do cabeçalho é endereço do `pacotes.topo`, nas dez abas."""
+    topo = (INTERFACE / "topo.html").read_text(encoding="utf-8")
+    assert 'data-campo="servico" data-hef-alvo="atributo" data-hef-atributo="data-servico"' in topo
+    assert pacotes.servico_do_menu({}) == "parado"
+    assert pacotes.servico_do_menu(None) == "parado"
+    assert pacotes.servico_do_menu({"paused": True, "connected": True}) == "pausado"
+    assert pacotes.servico_do_menu({"connected": True}) == "de-pe"
+    ctx = pacotes.Contexto(state={"connected": True}, mesa=[], conectados=[], estados={})
+    assert pacotes.topo(ctx)["servico"] == "de-pe"  # (noqa-acento) endereço da página
+
+
 # --- 5. a dica da casa lê o data-dica -------------------------------------------------------------
 
 def test_a_dica_da_casa_le_o_data_dica_ao_vivo() -> None:
@@ -412,6 +543,39 @@ def test_a_dica_da_casa_le_o_data_dica_ao_vivo() -> None:
     assert "data-hef-razao" in vivo
     js = (INTERFACE / "base-comum.js").read_text(encoding="utf-8")
     assert "window.__hefDica" in js, "a dica da base só cria a dela quando o piloto não tem a sua"
+
+
+_FOCO = """<!doctype html><html><head><meta charset="utf-8"></head><body>
+<button id="um" data-dica="A razão do botão">Um</button> <button id="dois">Dois</button>
+</body></html>"""
+
+_CAIXA = """() => { const c = document.getElementById('hef-dica');
+  return c ? {aberta: getComputedStyle(c).display !== 'none', texto: c.textContent} : null; }"""
+
+
+def test_a_dica_da_casa_abre_no_foco_do_teclado_e_fecha_ao_sair() -> None:
+    """O `data-dica` chega a quem anda pelo teclado ou pelo controle, na camada do produto.
+
+    MORDIDA: tirar o ouvinte `focusin` da `DICA_DA_CASA` reprova (a caixa não abre no Tab).
+    """
+    if not CHROME.exists():
+        pytest.skip("sem o Chrome do sistema: a régua não tem motor")
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as pw:
+        navegador = pw.chromium.launch(executable_path=str(CHROME), args=["--no-sandbox"])
+        try:
+            pg = navegador.new_page(viewport={"width": 600, "height": 400})
+            pg.set_content(_FOCO)
+            pg.evaluate(hefesto_vivo.DICA_DA_CASA)
+            pg.keyboard.press("Tab")
+            no_foco = pg.evaluate(_CAIXA)
+            pg.keyboard.press("Tab")
+            fora = pg.evaluate(_CAIXA)
+        finally:
+            navegador.close()
+    assert no_foco == {"aberta": True, "texto": "A razão do botão"}, no_foco
+    assert fora and fora["aberta"] is False, fora
 
 
 # --- 6. os efeitos que ela cria têm um dono só ----------------------------------------------------

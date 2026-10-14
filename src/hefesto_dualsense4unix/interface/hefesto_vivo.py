@@ -1664,7 +1664,8 @@ DICA_DA_CASA = r"""
     + 'box-shadow:0 8px 24px rgba(0,0,0,.5);';
   document.body.appendChild(caixa);
 
-  var E = {alvo: null, texto: '', tempo: 0, x: 0, y: 0, aberta: false, abriu: 0};
+  var E = {alvo: null, texto: '', tempo: 0, x: 0, y: 0, aberta: false, abriu: 0,
+           peloFoco: false};
 
   // O NOME ACESSÍVEL — F7, 11/09/2026, e ele é a DÍVIDA QUE A COLHEITA CRIOU.
   //
@@ -1964,7 +1965,7 @@ DICA_DA_CASA = r"""
   }
   function limpar(){
     esconder();
-    E.alvo = null; E.texto = '';
+    E.alvo = null; E.texto = ''; E.peloFoco = false;
   }
   function mostrar(){
     E.tempo = 0;
@@ -2012,6 +2013,25 @@ DICA_DA_CASA = r"""
   // elemento filho, que é o contrário do que se quer.
   document.addEventListener('mouseout', function(ev){
     if(!ev.relatedTarget) limpar();
+  }, true);
+  // O FOCO TAMBÉM ABRE (A-BASE-COMUM-DAS-ABAS-01, 13/10/2026): o «?» que abria no foco saiu, e a
+  // dica que mora no `data-dica` do próprio botão tem de chegar a quem anda pelo teclado ou pelo
+  // controle. Só o foco VISÍVEL e sem atraso; o clique do mouse também foca, e ali a dica é do
+  // ponteiro. A caixa nasce colada embaixo do elemento.
+  document.addEventListener('focusin', function(ev){
+    var el = ev.target, visivel = false;
+    try { visivel = !!(el && el.matches && el.matches(':focus-visible')); } catch(_){ visivel = false; }
+    if(!visivel) return;
+    var a = achar(el);
+    if(!a) return;
+    var r = el.getBoundingClientRect();
+    limpar();
+    E.alvo = a; E.texto = a.texto; E.peloFoco = true;
+    E.x = r.left - 14; E.y = r.bottom - 16;
+    mostrar();
+  }, true);
+  document.addEventListener('focusout', function(){
+    if(E.peloFoco){ E.peloFoco = false; limpar(); }
   }, true);
   document.addEventListener('mousedown', function(){ esconder(); }, true);
   document.addEventListener('wheel', function(){ esconder(); }, true);
@@ -2151,6 +2171,14 @@ ITENS_DO_MENU_NA_SISTEMA = {
     "menu-reiniciar": "reiniciar",
 }
 
+#: O que o item do menu mexe na máquina do usuário (`grava=` por frase: a árvore do `agir` não enxerga
+#: o `_systemctl` da aba Sistema). Sem isto, a régua de clique acionaria o item sozinha.
+O_QUE_O_MENU_MEXE = {
+    "menu-desligar": "para ou liga o serviço do Hefesto pela aba Sistema",
+    "menu-reiniciar": "reinicia o serviço do Hefesto pela aba Sistema",
+    "menu-fechar": "fecha a janela do Hefesto",
+}
+
 
 def _gesto_do_menu(nome_na_sistema: str) -> Callable[[Any, dict[str, Any], Any], Any]:
     """O gesto do menu que chama o da aba Sistema, procurado na hora (a tabela se enche ao importar)."""
@@ -2169,9 +2197,11 @@ def _registrar_o_menu() -> None:
     """Os gestos do menu do botão direito no despachante, uma vez só e para toda página."""
     for gesto_do_menu, na_sistema in ITENS_DO_MENU_NA_SISTEMA.items():
         if ("*", gesto_do_menu) not in pacotes.GESTOS:
-            pacotes.gesto("*", gesto_do_menu)(_gesto_do_menu(na_sistema))
+            pacotes.gesto("*", gesto_do_menu, grava=O_QUE_O_MENU_MEXE.get(gesto_do_menu, ""))(
+                _gesto_do_menu(na_sistema))
     if ("*", "menu-fechar") not in pacotes.GESTOS:
-        pacotes.gesto("*", "menu-fechar")(_fechar_pelo_menu)
+        pacotes.gesto("*", "menu-fechar", grava=O_QUE_O_MENU_MEXE["menu-fechar"])(
+            _fechar_pelo_menu)
 
 
 def _a_fita_desta_pagina_escolhe(pagina: str) -> bool:
@@ -3833,7 +3863,7 @@ class Piloto:
         """
         proibidos = sorted(
             g for g in dict.fromkeys(self.args.prova_clique.split(","))
-            if (self.pagina, g.strip()) in PERIGOSOS)
+            if (self.pagina, g.strip()) in PERIGOSOS or ("*", g.strip()) in PERIGOSOS)
         if proibidos and not self.args.incluir_perigosos:
             print(f"[prova] RECUSA: {', '.join(proibidos)} mexe(m) na máquina "
                   f"dela em {self.pagina}. Use --incluir-perigosos se for "
