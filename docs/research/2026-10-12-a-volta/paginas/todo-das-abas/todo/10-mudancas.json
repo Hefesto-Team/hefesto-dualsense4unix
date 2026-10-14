@@ -2,7 +2,7 @@
   "aba": "10",
   "nome": "Perfis",
   "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/_integra-1-11/src/hefesto_dualsense4unix/interface/paginas/10-perfis.html",
-  "depois": "/home/vitoriamaria/.local/state/hefesto-casa/leva-volta/todo/10-perfis.html",
+  "depois": "docs/research/2026-10-12-a-volta/paginas/todo-das-abas/todo/10-perfis.html",
   "rodada": 3,
   "sprint_unificada": "A-ABA-PERFIS-DO-TODO-01",
   "mudancas": [
@@ -273,5 +273,6 @@
     }
   ],
   "altura_px": 809,
-  "rola": false
+  "rola": false,
+  "origem_da_pagina": "r3 (v3)"
 }
