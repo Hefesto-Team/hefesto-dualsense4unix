@@ -15,11 +15,11 @@ cópias de `rodada-4/` viraram um aviso com o link para cá. A régua é `regua-
 | 05 Vibração | `05-vibracao.html` | 1–11 antes; 12 r3 (com r3b); fusão: «P3 • Desconectado», o Cosmic Red sem nome de pessoa |
 | 06 Navegação | `06-navegacao.html` | 1–25 antes; 26–27 r3 (com r3b); 28 r4 |
 | 07 Experimental | `07-lancadores.html` | 1–28 antes; 29–37 r3 (com r3b, q2, n3); 38–39 r4 (as 34 e 35 da rodada 4, no diálogo `#acessorios`) |
-| 08 Conexões | `08-conexoes.html` | 1–12 antes; 13–17 r3; 18 r4 (a 13 da rodada 4); fusão: «P3 • Desconectado», o rádio embutido pela cor do plástico, o nome de quem joga vazio |
-| 09 Sistema | `09-sistema.html` | 1–11 antes; 12 r4 |
+| 08 Conexões | `08-conexoes.html` | 1–12 antes; 13–17 r3; 18 r4 (a 13 da rodada 4); fusão: «P3 • Desconectado», o rádio embutido pela cor do plástico, o nome de quem joga vazio; conferência: o ✓ do Mic e do Som na cor do texto |
+| 09 Sistema | `09-sistema.html` | 1–11 antes; 12 r4; conferência: o Status que está bem em pílula neutra, «Ligado» e «OK» |
 | 10 Perfis | `10-perfis.html` | 1–18 antes; 19–20 r3 |
 | Calibrar giroscópio | `calibrar-sensores.html` | 1–6 antes; 7 r4 (com q4, q5, q6, n4); fusão: o cartão diz a cor do plástico no lugar do nome de quem joga |
-| Mapa das portas | `mapa-das-portas.html` | 1–4 antes; 5–8 r4 |
+| Mapa das portas | `mapa-das-portas.html` | 1–4 antes; 5–8 r4; conferência: «Sugestões» e o número da chamada sem verde, as faces sem caixa alta |
 | Mapa do controle | `mapa-do-controle.html` | 1–18 antes; 19–21 r3; 22–23 r4 (as 19 e 20 da rodada 4) |
 | Mapa do rádio | `mapa-do-radio.html` | 1–5 antes; fusão: cada aparelho pela cor do plástico, sem nome de pessoa |
 
@@ -45,6 +45,17 @@ Vence a resposta mais recente: a v3 > as seis > r4 e r3b > r3.
   04, 08, Mapa do rádio); o campo de quem joga nasce vazio, com a dica «Nome de quem joga» (08), e o cartão da Calibrar diz a cor do plástico na linha do nome. No Mapa das
   portas, «Jogador 1» a «Jogador 4» ficam: é o número do jogador, não «Player». A citação sua na nota da 04 («o meu
   controle azul é o player 2») fica, como toda citação sua.
+
+## A conferência (14/10/2026)
+
+«Não deveriamos ter avisos verdes» (r3-07-29) valia para as pílulas de estado que sobraram: a 09 tinha «✓ LIGADO» e
+«✓ OK» em fundo verde, em caixa alta e com letra de 10,5 px; agora são pílulas neutras na cor do texto, a 12 px. O
+laranja e o vermelho ficam, porque pedem ação. O mesmo na 08 (o ✓ do Mic e do Som) e no Mapa das portas («Sugestões»
+e o «4» da chamada). O verde de chave ligada, do Aplicar e dos rótulos de seção fica: é estado e marca, não aviso.
+
+As fotos, em 1212x809 e no estado de abertura de cada página, estão em
+`~/.local/state/hefesto-casa/leva-volta/final/fotos/`: uma por linha da tabela, mais `07-lancadores-acessorios.png`
+(o diálogo `#acessorios` com a aba t2 e dois marcados).
 
 ## As quatro dúvidas da v3, decididas por delegação (14/10/2026, a validar por você)
 
