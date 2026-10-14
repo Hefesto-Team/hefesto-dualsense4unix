@@ -38,10 +38,11 @@ TETO_DA_ABA_S = 20.0
 
 @contextmanager
 def _sem_o_rastreador() -> Iterator[None]:
-    """Suspende, neste fio, o rastreador de linhas (a cobertura da CI) enquanto
-    o tique é cronometrado: o teto é do custo do PRODUTO, e sob `--cov` cada
-    linha custa de 2 a 3 vezes mais (medido: a mediana da aba 10 sobe de 5 ms
-    para 12 ms, a 3 ms do teto, e uma máquina de CI 20 % mais lenta o cruza)."""
+    """Suspende, neste fio, o rastreador de linhas enquanto o tique é cronometrado.
+
+    Não basta para a cobertura no 3.12: com outro fio rastreado vivo, a linha
+    deste fio custa 2,6 vezes mais mesmo sem rastreador (medido em 13/10). Quem
+    pausa a cobertura em todos os fios é o `no_cover` da régua."""
     antes = sys.gettrace()
     sys.settrace(None)
     try:
@@ -149,10 +150,14 @@ def _p95(valores: list[float]) -> float:
     return ordenados[min(len(ordenados) - 1, round(0.95 * (len(ordenados) - 1)))]
 
 
+@pytest.mark.no_cover
 def test_o_tique_de_cada_aba_tem_teto(
     casa: SimpleNamespace, monkeypatch: pytest.MonkeyPatch  # noqa: F811
 ) -> None:
     """Dez abas, 40 tiques cada, a CPU do fio do GTK em cada tique: mediana até"""
+    # O teto é do custo do PRODUTO: sob `--cov` a mediana da aba 10 ia de 6,5 ms
+    # a 10,9 ms aqui e a 15,5 ms no CI de 13/10, acima do teto.
+    assert sys.gettrace() is None, "a cobertura está ligada durante a medida"
     custos = _medir_as_dez(monkeypatch)
     acima = {}
     for aba, valores in custos.items():
