@@ -40,6 +40,7 @@ MORDIDAS = {
                    "b.className='jv-btn';b.setAttribute('data-todo','17');b.textContent='O que chega';f.appendChild(b);"),
     "vaga-02": _m("var f=document.querySelector('.ctl[data-conectado=nao] > .faixa');var s=document.createElement('span');s.className='card-nome';"
                   "s.textContent=' Galactic Purple';f.querySelector('.card-nome').appendChild(s);"),
+    "q4-player-02": _m("var p=document.querySelector('.ctl[data-conectado=nao] [data-campo=peca]');p.textContent='Player 3';"),
     "lista-07": _m("var l=document.querySelector('.ext-lista');var j=document.querySelector('[data-todo=\"34\"]');l.appendChild(j);"),
     "legenda-07": _m("var g=document.querySelector('.fz-grade');var s=document.createElement('span');s.className='fz-leg';s.textContent='dois motores';g.appendChild(s);"),
     "letra-07": _m("document.querySelectorAll('.ja-tela.t2 .pc-sub').forEach(function(x){x.style.fontSize='11px';});"),
@@ -118,7 +119,9 @@ JS_PEDIDO = r"""
     var c=visivelCom(/O que chega/);if(c.length)falta.push('o texto «O que chega» aparece em '+c.slice(0,2));
     var des=[...document.querySelectorAll('.ctl[data-conectado=nao] > .faixa')];
     if(des.length!==2)falta.push('há '+des.length+' faixas de controle desconectado (têm de ser 2)');
-    des.forEach(function(f){var t=txt(f);if(!/^Player \d • Desconectado$/.test(t))falta.push('o desconectado mostra mais que a vaga: «'+t.slice(0,60)+'»');});
+    // as seis respostas, q4: a vaga sem controle diz só «P3 • Desconectado» (a letra e o número)
+    des.forEach(function(f){var t=txt(f);if(!/^P\d • Desconectado$/.test(t))falta.push('a vaga sem controle não diz «P<n> • Desconectado»: «'+t.slice(0,60)+'»');});
+    if(visivelCom(/Player/).length)falta.push('uma vaga diz «Player» em '+visivelCom(/Player/).slice(0,2));
     [...document.querySelectorAll('.ctl[data-conectado=nao]')].forEach(function(k){if(/Galactic Purple|White|Cosmic Red|Starlight Blue/.test(txt(k)))falta.push('o desconectado tem cor de plástico');
       if([...k.querySelectorAll('button,select,input,.mic,.bat,[data-campo=bateria]')].some(vis))falta.push('o desconectado tem controle ou dado visível');});}
   if(aba==='07'){

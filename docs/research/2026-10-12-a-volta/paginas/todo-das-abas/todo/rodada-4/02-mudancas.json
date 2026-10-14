@@ -36,6 +36,10 @@
    "ajuste_r4": {
     "pedido": "galatic purple nem tá conectado só deixa o p do player e desconectado.",
     "feito": "O controle desconectado mostra só a vaga: «Player 3 • Desconectado» e «Player 4 • Desconectado», sem cor de plástico, máscara, microfone, sensores nem bateria. Os conectados seguem chamados pela cor do plástico. Ficam os alvos de 24 px e a letra de 12 px."
+   },
+   "ajuste_seis": {
+    "pedido": "B: «P3 • Desconectado» (só a letra e o número)",
+    "feito": "As duas vagas sem controle dizem «P3 • Desconectado» e «P4 • Desconectado», sem a palavra «Player»; o resto da faixa segue como estava (sem cor de plástico, sem dado nem botão)."
    }
   }
  ],
