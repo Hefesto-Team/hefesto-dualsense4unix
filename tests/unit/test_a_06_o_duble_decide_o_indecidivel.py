@@ -114,6 +114,9 @@ ESTADO = {
     # e o desenho crava o Aplicar sem ela. Sem isto o endereço `rodape.aplicar`
     # (SO-O-FREESTYLE-VALE-EM-TODO-JOGO-01, 09/10/2026) concordaria com o desenho.
     "freestyle_ligado": True,
+    # O serviço PAUSADO: o desenho crava `de-pe` no selo do topo (A-BASE-COMUM-DAS-ABAS-01),
+    # e sem isto o selo concordaria com o desenho sob o dublê.
+    "paused": True,
 }
 
 
