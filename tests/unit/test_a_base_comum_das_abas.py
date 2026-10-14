@@ -326,6 +326,83 @@ def test_o_desligar_do_menu_pede_a_confirmacao_da_sistema() -> None:
     assert a09_sistema.CONFIRMA == "Confirma?"
 
 
+# --- 4b. a base viva num navegador: o clique direito e o automático ----------------------------
+
+CHROME = pathlib.Path("/usr/bin/google-chrome")
+
+_PAGINA_VIVA = """<!doctype html><html><head><meta charset="utf-8"></head><body>
+<div class="area" style="padding:40px;height:300px"><p id="texto">Texto qualquer da aba</p>
+%s
+<div id="alvo" class="coluna"></div></div></body></html>"""
+
+_GESTO_NO_NAVEGADOR = """async () => {
+  const esperar = ms => new Promise(r => setTimeout(r, ms));
+  const rel = {};
+  const auto = document.querySelector('.modo-auto');
+  const alvo = document.getElementById('alvo');
+  rel.auto_antes = {modo: auto.dataset.modo,
+                    governado: alvo.classList.contains('governado-pelo-jogo')};
+  auto.click(); await esperar(80);
+  rel.auto_depois = {modo: auto.dataset.modo, pressionado: auto.getAttribute('aria-pressed'),
+                     governado: alvo.classList.contains('governado-pelo-jogo')};
+  document.getElementById('texto').dispatchEvent(
+    new MouseEvent('contextmenu', {bubbles: true, cancelable: true, clientX: 60, clientY: 60}));
+  const menu = document.querySelector('.menu-hefesto.vivo');
+  rel.menu = menu ? [...menu.querySelectorAll('button')].map(b => ({
+    texto: b.textContent.trim(), gesto: b.dataset.gesto || null,
+    desabilitado: b.disabled})) : null;
+  const desligar = menu && menu.querySelector('[data-gesto="menu-desligar"]');
+  if (desligar) {
+    desligar.click(); await esperar(80);
+    rel.desligar_apos_o_clique = desligar.textContent.trim();
+  }
+  rel.menu_segue_aberto = !!document.querySelector('.menu-hefesto.vivo');
+  document.getElementById('texto').click(); await esperar(80);
+  rel.menu_apos_clicar_fora = !!document.querySelector('.menu-hefesto.vivo');
+  return rel;
+}"""
+
+
+@pytest.fixture(scope="module")
+def vivo() -> dict[str, Any]:
+    if not CHROME.exists():
+        pytest.skip("sem o Chrome do sistema: a régua não tem motor")
+    from playwright.sync_api import sync_playwright
+
+    corpo = monta.modo_auto("modo-da-vibracao", governa="#alvo")
+    doc = monta.com_a_base(_PAGINA_VIVA % corpo)
+    with sync_playwright() as pw:
+        navegador = pw.chromium.launch(executable_path=str(CHROME), args=["--no-sandbox"])
+        try:
+            pg = navegador.new_page(viewport={"width": 900, "height": 600})
+            pg.set_content(doc)
+            return dict(pg.evaluate(_GESTO_NO_NAVEGADOR))
+        finally:
+            navegador.close()
+
+
+def test_o_automatico_liga_e_a_area_que_ele_governa_esmaece(vivo: dict[str, Any]) -> None:
+    """O clique vira `aria-pressed`, o `data-modo` pede o contrário e o alvo ganha a classe."""
+    assert vivo["auto_antes"] == {"modo": AUTO, "governado": False}, vivo["auto_antes"]
+    assert vivo["auto_depois"] == {"modo": "personalizado", "pressionado": "true",
+                                   "governado": True}, vivo["auto_depois"]
+
+
+def test_o_botao_direito_abre_o_menu_da_casa_com_os_cinco_itens(vivo: dict[str, Any]) -> None:
+    """MORDIDA: renomear o ouvinte `contextmenu` no JS da base reprova (o menu nem nasce)."""
+    assert vivo["menu"] is not None, "o botão direito não abriu o menu do Hefesto"
+    assert [(i["texto"], i["gesto"]) for i in vivo["menu"]] == [
+        ("Copiar", None), ("Atualizar", "menu-atualizar"), ("Desligar", "menu-desligar"),
+        ("Reiniciar", "menu-reiniciar"), ("Fechar", "menu-fechar")]
+    assert vivo["menu"][0]["desabilitado"] is True, "Copiar sem seleção tem de ficar cinza"
+
+
+def test_desligar_do_menu_pede_dois_cliques_e_clicar_fora_fecha(vivo: dict[str, Any]) -> None:
+    assert vivo["desligar_apos_o_clique"] == "Confirma?"
+    assert vivo["menu_segue_aberto"] is True, "o menu fechou antes do segundo clique"
+    assert vivo["menu_apos_clicar_fora"] is False, "clicar fora não fechou o menu"
+
+
 # --- 5. a dica da casa lê o data-dica -------------------------------------------------------------
 
 def test_a_dica_da_casa_le_o_data_dica_ao_vivo() -> None:

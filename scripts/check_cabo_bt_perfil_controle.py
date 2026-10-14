@@ -126,6 +126,12 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "modo-dos-gatilhos": "o par Automático | Personalizado dos gatilhos grava `triggers.modo` "
                          "no perfil — o ATO no aparelho é o do gesto `modo` da 03",
     "pronto": "aplica o efeito já escolhido — o ATO é o do gesto `modo` da 03",
+    "modo-da-vibracao": "o par Automático | Personalizado da vibração grava `rumble.modo` no "
+                        "perfil — o ATO no aparelho é o de cada ajuste da 05",
+    "modo-dos-controles": "o par Automático | Personalizado dos controles grava "
+                          "`controles_modo` no perfil — o ATO no aparelho é o de cada ajuste da 02",
+    "criar-efeito": "guarda no `gui_prefs` um efeito que ela criou, com a chave da feature — é "
+                    "da tela; o ATO no aparelho é o do gesto que aplica o efeito",
     # O desenho aprovado virou a cx8-3. Nenhum destes muda o DualSense:
     "abrir-adaptador": "abre um adaptador no acordeão — é da tela",
     "adaptador-reordenar": "grava a ordem em que ela arrastou as caixas dos adaptadores, "
