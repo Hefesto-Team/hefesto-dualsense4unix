@@ -41,6 +41,21 @@ def test_a_borda_do_haptics_select_diz_o_controle_uma_vez() -> None:
     assert bordas == [(um, True), (dois, True), (um, False)]
 
 
+def test_o_volume_do_alto_falante_diz_o_controle_que_o_recebeu() -> None:
+    """Sem ``uniq``, o volume vai ao alvo de saída, e o log diz qual controle ele é.
+
+    MORDIDA: devolva o ``uniq=uniq or ""`` ao ``speaker_volume_set`` e a linha
+    sem endereço sai com o controle em branco.
+    """
+    ctl = _ctl_com(_handle_recem_nascido(radio=True))
+    ctl._handles[KEY_2] = _handle_recem_nascido(radio=False)
+    with structlog.testing.capture_logs() as diario:
+        ctl.set_speaker_volume(80)
+        ctl.set_speaker_volume(40, uniq=ctl._key_to_uniq(KEY_2))
+    ditos = [(r["uniq"], r["volume"]) for r in _eventos(diario, "speaker_volume_set")]
+    assert ditos == [(ctl._key_to_uniq(KEY_1), 80), (ctl._key_to_uniq(KEY_2), 40)]
+
+
 def test_o_portao_do_cabo_diz_o_controle_dono() -> None:
     """MORDIDA: tire o ``uniq=dono`` do ``haptica_do_cabo_portao``."""
     cabo = _CaboDeMentira()

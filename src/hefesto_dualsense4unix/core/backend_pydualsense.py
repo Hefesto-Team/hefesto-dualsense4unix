@@ -3595,9 +3595,9 @@ class PyDualSenseController(IController):
         ok = self._escrever_volume_no_handle(
             alvo, volume=volume, muted=muted, rota=rota, op="set_speaker_volume"
         )
-        logger.info(
-            "speaker_volume_set", uniq=uniq or "", volume=volume, muted=bool(muted), ok=ok
-        )
+        dono = next((self._key_to_uniq(k) for k, h in list(self._handles.items()) if h is alvo), "")
+        logger.info("speaker_volume_set", uniq=dono or uniq or "", volume=volume,
+                    muted=bool(muted), ok=ok)  # o dono: o alvo de saída quando não há endereço
         return ok
 
     def _escrever_volume_no_handle(
