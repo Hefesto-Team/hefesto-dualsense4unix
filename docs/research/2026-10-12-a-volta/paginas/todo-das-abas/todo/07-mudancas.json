@@ -1,356 +1,413 @@
 {
- "aba": "07",
- "nome": "Experimental",
- "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/_integra-1-11/src/hefesto_dualsense4unix/interface/paginas/07-lancadores.html",
- "depois": "/home/vitoriamaria/.local/state/hefesto-casa/leva-volta/todo/07-lancadores.html",
- "mudancas": [
-  {
-   "n": 1,
-   "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
-   "o_que_muda": "A aba «Lançadores» passa a se chamar «Experimental»",
-   "origem": "pedido-dela",
-   "resposta": "todo-07",
-   "ancora": "todo-07-1",
-   "seletor": ".aba.ativa",
-   "conflito": ""
-  },
-  {
-   "n": 2,
-   "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
-   "o_que_muda": "Extensões em cima, Lançadores embaixo",
-   "origem": "pedido-dela",
-   "resposta": "todo-07",
-   "ancora": "todo-07-2",
-   "seletor": "#cx7-1",
-   "conflito": ""
-  },
-  {
-   "n": 3,
-   "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
-   "o_que_muda": "A extensão perde a linha de descrição; vira dica",
-   "origem": "pedido-dela",
-   "resposta": "todo-07-7",
-   "ancora": "todo-07-3",
-   "seletor": ".ext-quem",
-   "conflito": ""
-  },
-  {
-   "n": 4,
-   "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
-   "o_que_muda": "«Acessórios pelo Intiface» vira «Lovense pelo Intiface»",
-   "origem": "desenho-nosso-a-validar",
-   "resposta": "todo-07-10",
-   "ancora": "todo-07-4",
-   "seletor": ".ext-nome",
-   "conflito": "A validar por ela."
-  },
-  {
-   "n": 5,
-   "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
-   "o_que_muda": "A engrenagem da Lovense abre a janela Lovense",
-   "origem": "pedido-dela",
-   "resposta": "todo-07-4",
-   "ancora": "todo-07-5",
-   "seletor": "#acessorios",
-   "conflito": ""
-  },
-  {
-   "n": 6,
-   "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
-   "o_que_muda": "Todo lançador tem Identificar, Criar perfis e Configurar",
-   "origem": "pedido-dela",
-   "resposta": "todo-07-6",
-   "ancora": "todo-07-6",
-   "seletor": ".lf-botoes",
-   "conflito": ""
-  },
-  {
-   "n": 7,
-   "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
-   "o_que_muda": "Os impedimentos viram dica no marcador do selo",
-   "origem": "pedido-dela",
-   "resposta": "todo-07-6",
-   "ancora": "todo-07-7",
-   "seletor": ".lanc-selo.com-imped",
-   "conflito": ""
-  },
-  {
-   "n": 8,
-   "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
-   "o_que_muda": "Nenhum «?»: a dica aparece ao passar o mouse",
-   "origem": "regra-global",
-   "resposta": "todo-07-9",
-   "ancora": "todo-07-8",
-   "seletor": "[data-dica]",
-   "conflito": ""
-  },
-  {
-   "n": 9,
-   "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
-   "o_que_muda": "Adicionar lançador: do sistema ou como extensão",
-   "origem": "pedido-dela",
-   "resposta": "todo-07-6",
-   "ancora": "todo-07-9",
-   "seletor": "#novo-lancador",
-   "conflito": ""
-  },
-  {
-   "n": 10,
-   "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
-   "o_que_muda": "Criar perfis abre a lista de jogos do lançador",
-   "origem": "desenho-nosso-a-validar",
-   "resposta": "todo-07-6",
-   "ancora": "todo-07-10",
-   "seletor": "#escolher-jogo",
-   "conflito": "A validar por ela."
-  },
-  {
-   "n": 11,
-   "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
-   "o_que_muda": "Configurar abre a pasta e as opções do lançador",
-   "origem": "desenho-nosso-a-validar",
-   "resposta": "todo-07-6",
-   "ancora": "todo-07-11",
-   "seletor": "#lanc-conf",
-   "conflito": "A validar por ela."
-  },
-  {
-   "n": 12,
-   "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
-   "o_que_muda": "A janela Lovense abre em Meus toques",
-   "origem": "desenho-nosso-a-validar",
-   "resposta": "todo-07-10",
-   "ancora": "todo-07-12",
-   "seletor": "#t3",
-   "conflito": "A validar por ela."
-  },
-  {
-   "n": 13,
-   "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
-   "o_que_muda": "Meus toques: o que vibra e cada entrada, sem textão",
-   "origem": "pedido-dela",
-   "resposta": "todo-07-10",
-   "ancora": "todo-07-13",
-   "seletor": ".ja-tela.t3",
-   "conflito": ""
-  },
-  {
-   "n": 14,
-   "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
-   "o_que_muda": "O botão direito abre o menu das abas",
-   "origem": "pedido-dela",
-   "resposta": "todo-07-8",
-   "ancora": "todo-07-14",
-   "seletor": "#menu-desenhado",
-   "conflito": ""
-  },
-  {
-   "n": 15,
-   "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
-   "o_que_muda": "Não achado: sem selo, só Identificar ativo",
-   "origem": "pedido-dela",
-   "resposta": "todo-07-1",
-   "ancora": "todo-07-15",
-   "seletor": ".lf.ausente",
-   "conflito": ""
-  },
-  {
-   "n": 16,
-   "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
-   "o_que_muda": "Kyty: sem a frase de abertura e sem nomes técnicos",
-   "origem": "regra-global",
-   "resposta": "todo-07-6",
-   "ancora": "todo-07-16",
-   "seletor": "#kyty .ky-grade",
-   "conflito": ""
-  },
-  {
-   "n": 17,
-   "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
-   "o_que_muda": "Lovense: as notas cinzas da coluna esquerda viram dica",
-   "origem": "regra-global",
-   "resposta": "todo-07-10",
-   "ancora": "todo-07-17",
-   "seletor": ".ja-sessao,.ja-dono",
-   "conflito": ""
-  },
-  {
-   "n": 18,
-   "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
-   "o_que_muda": "«Quem comanda» lista as cores do plástico, não P1/P2",
-   "origem": "regra-global",
-   "resposta": "todo-07-10",
-   "ancora": "todo-07-18",
-   "seletor": ".ja-linha select",
-   "conflito": ""
-  },
-  {
-   "n": 19,
-   "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
-   "o_que_muda": "O acessório de dois motores se chama «Lovense Nora», também no desenho do touchpad",
-   "origem": "RODADA-3",
-   "resposta": "todo-07-r3-19",
-   "ancora": "todo-07-19",
-   "seletor": "#acessorios .ja-ap-nome, svg.ja-tp",
-   "conflito": ""
-  },
-  {
-   "n": 20,
-   "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
-   "o_que_muda": "Extensões e lançadores encostam na mesma reta do quadro, dos dois lados",
-   "origem": "RODADA-3",
-   "resposta": "todo-07-r3-20",
-   "ancora": "todo-07-20",
-   "seletor": ".ext, .lf",
-   "conflito": ""
-  },
-  {
-   "n": 21,
-   "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
-   "o_que_muda": "Na janela Lovense, o «4 · 3/20» cabe na coluna sem passar da borda",
-   "origem": "RODADA-3",
-   "resposta": "todo-07-r3-21",
-   "ancora": "todo-07-21",
-   "seletor": ".ja-ap-pe",
-   "conflito": ""
-  },
-  {
-   "n": 22,
-   "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
-   "o_que_muda": "Meus toques: os botões cabem na coluna e acabam na mesma reta",
-   "origem": "RODADA-3",
-   "resposta": "todo-07-r3-22",
-   "ancora": "todo-07-22",
-   "seletor": ".ja-ctrl > .seg.mini",
-   "conflito": ""
-  },
-  {
-   "n": 23,
-   "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
-   "o_que_muda": "Luz: as cores ocupam a linha toda, e as duas fileiras ficam em colunas",
-   "origem": "RODADA-3",
-   "resposta": "todo-07-r3-23",
-   "ancora": "todo-07-23",
-   "seletor": ".ja-ctrl > .ja-tons",
-   "conflito": ""
-  },
-  {
-   "n": 24,
-   "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
-   "o_que_muda": "Perfis: o «Até» cabe na moldura, e os menus acabam na mesma reta",
-   "origem": "RODADA-3",
-   "resposta": "todo-07-r3-24",
-   "ancora": "todo-07-24",
-   "seletor": ".ja-tela.l-larga > .moldura:last-child .ja-linha",
-   "conflito": ""
-  },
-  {
-   "n": 25,
-   "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
-   "o_que_muda": "Cada extensão mostra uma linha curta do que faz, sob o nome",
-   "origem": "RODADA-4",
-   "resposta": "todo-07-r4-25",
-   "ancora": "todo-07-25",
-   "seletor": ".ext-faz",
-   "conflito": "Substitui o item 3: a descrição tinha virado dica e volta à vista, por pedido dela."
-  },
-  {
-   "n": 26,
-   "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
-   "o_que_muda": "Os lançadores viram cartões com desenho, os achados primeiro, enchendo a altura sem vão",
-   "origem": "RODADA-4",
-   "resposta": "todo-07-r4-26",
-   "ancora": "todo-07-26",
-   "seletor": ".lanc-fila",
-   "conflito": "A validar por ela."
-  },
-  {
-   "n": 27,
-   "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
-   "o_que_muda": "«Adicionar um lançador» vira o último cartão da grade",
-   "origem": "RODADA-4",
-   "resposta": "todo-07-r4-27",
-   "ancora": "todo-07-27",
-   "seletor": ".lf-novo",
-   "conflito": "A validar por ela."
-  },
-  {
-   "n": 28,
-   "o_que_muda": "O «Quando» da Lovense começa em «Os jogos que eu escolher»; «Jogos com estilo Adulto» vira uma das opções"
-  }
- ],
- "por_baixo": [
-  {
-   "sprint": "O-SHADPS4-QUE-JA-MORA-AQUI-01",
-   "o_que_muda": "O cartão do lançador nasce do .desktop; a linha é a mesma do item 1."
-  },
-  {
-   "sprint": "O-VITA3K-RECEBE-O-DUALSENSE-INTEIRO-01",
-   "o_que_muda": "O cartão do lançador nasce do .desktop; a linha é a mesma do item 1."
-  },
-  {
-   "sprint": "STEAM-INPUT-01",
-   "o_que_muda": "A frase da Steam deixa de apontar o «Consertar»; a causa vai à dica do marcador no selo."
-  },
-  {
-   "sprint": "O-MODO-QUE-NAO-SAI-DO-STEAM-INPUT-01",
-   "o_que_muda": "A frase da Steam deixa de apontar o «Consertar»; a causa vai à dica do marcador no selo."
-  },
-  {
-   "sprint": "O-TEMA-DE-CORES-ENTRA-PELA-FOLHA-DE-USUARIO-01",
-   "o_que_muda": "Só tokens; a foto não muda."
-  },
-  {
-   "sprint": "O-LANCADOR-DO-KYTYPS5-VEM-DA-MODIFICACAO-01",
-   "o_que_muda": "O perfil do Kyty casa pelo PPSA\\d{5}."
-  },
-  {
-   "sprint": "A-ABA-NAVEGACAO-TEM-OS-DOIS-POINT-AND-CLICK-E-A-VELOCIDADE-QUE-FUNCIONA-01",
-   "o_que_muda": "Já curado na 1-11."
-  },
-  {
-   "sprint": "O-JOGO-SE-DECLARA-NO-PRONTUARIO-PELO-QUE-A-STEAM-E-O-BINARIO-DIZEM-01",
-   "o_que_muda": "A ficha do jogo vem do prontuário; a causa aparece na dica do marcador no selo (mudança 7)."
-  },
-  {
-   "sprint": "AS-MODIFICACOES-MARCAM-O-GESTO-ESPERAM-PARAR-E-SAEM-NO-UNINSTALL-01",
-   "o_que_muda": "A chave Ligada e o ⋮ das modificações são os mesmos; o gesto, o parar e o uninstall são por baixo."
-  },
-  {
-   "sprint": "A-VIBRACAO-DO-CONTROLE-CHEGA-AOS-ACESSORIOS-PELO-BUTTPLUG-01",
-   "o_que_muda": "O motor da janela Lovense (mudanças 5, 12 e 13); o desenho não muda."
-  },
-  {
-   "sprint": "OS-GESTOS-DO-PS-COMANDAM-OS-ACESSORIOS-01",
-   "o_que_muda": "O motor da janela Lovense (mudanças 5, 12 e 13); o desenho não muda."
-  },
-  {
-   "sprint": "A-VOLTA-DOS-ACESSORIOS-SE-SENTE-NO-CONTROLE-E-NA-LUZ-01",
-   "o_que_muda": "O motor da janela Lovense (mudanças 5, 12 e 13); o desenho não muda."
-  }
- ],
- "fora": [
-  {
-   "sprint": "I18N-DA-TELA-NOVA-01",
-   "motivo": "A tradução não muda a tela em português."
-  },
-  {
-   "sprint": "A-JANELA-ESPERA-A-TRAVA-E-DIZ-A-CAUSA-01",
-   "motivo": "Já costurada na 1-11: está no antes."
-  },
-  {
-   "sprint": "O-REAPLICAR-NUNCA-APAGA-O-QUE-O-USUARIO-POS-NA-LAUNCH-OPTION-01",
-   "motivo": "Só a Launch Option da Steam; nenhuma página muda."
-  },
-  {
-   "sprint": "O-JOGO-QUE-PEDE-RECEITA-DE-AMBIENTE-A-RECEBE-PELO-WRAPPER-01",
-   "motivo": "Só o wrapper do lançamento; nenhuma página muda."
-  },
-  {
-   "sprint": "O-SERVIDOR-DSU-LEVA-O-TOQUE-E-O-MOVIMENTO-AO-EMULADOR-01",
-   "motivo": "A sprint diz «Sem tela nesta sprint»: a chave vai à sessão dos desenhos com nome próprio."
-  }
- ],
- "altura_px": 809,
- "rola": false
+  "aba": "07",
+  "nome": "Experimental",
+  "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/_integra-1-11/src/hefesto_dualsense4unix/interface/paginas/07-lancadores.html",
+  "depois": "/home/vitoriamaria/.local/state/hefesto-casa/leva-volta/todo/07-lancadores.html",
+  "mudancas": [
+    {
+      "n": 1,
+      "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
+      "o_que_muda": "A aba «Lançadores» passa a se chamar «Experimental»",
+      "origem": "pedido-dela",
+      "resposta": "todo-07",
+      "ancora": "todo-07-1",
+      "seletor": ".aba.ativa",
+      "conflito": ""
+    },
+    {
+      "n": 2,
+      "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
+      "o_que_muda": "Extensões em cima, Lançadores embaixo",
+      "origem": "pedido-dela",
+      "resposta": "todo-07",
+      "ancora": "todo-07-2",
+      "seletor": "#cx7-1",
+      "conflito": ""
+    },
+    {
+      "n": 3,
+      "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
+      "o_que_muda": "A extensão perde a linha de descrição; vira dica",
+      "origem": "pedido-dela",
+      "resposta": "todo-07-7",
+      "ancora": "todo-07-3",
+      "seletor": ".ext-quem",
+      "conflito": ""
+    },
+    {
+      "n": 4,
+      "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
+      "o_que_muda": "«Acessórios pelo Intiface» vira «Lovense pelo Intiface»",
+      "origem": "desenho-nosso-a-validar",
+      "resposta": "todo-07-10",
+      "ancora": "todo-07-4",
+      "seletor": ".ext-nome",
+      "conflito": "A validar por ela."
+    },
+    {
+      "n": 5,
+      "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
+      "o_que_muda": "A engrenagem da Lovense abre a janela Lovense",
+      "origem": "pedido-dela",
+      "resposta": "todo-07-4",
+      "ancora": "todo-07-5",
+      "seletor": "#acessorios",
+      "conflito": ""
+    },
+    {
+      "n": 6,
+      "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
+      "o_que_muda": "Todo lançador tem Identificar, Criar perfis e Configurar",
+      "origem": "pedido-dela",
+      "resposta": "todo-07-6",
+      "ancora": "todo-07-6",
+      "seletor": ".lf-botoes",
+      "conflito": ""
+    },
+    {
+      "n": 7,
+      "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
+      "o_que_muda": "Os impedimentos viram dica no marcador do selo",
+      "origem": "pedido-dela",
+      "resposta": "todo-07-6",
+      "ancora": "todo-07-7",
+      "seletor": ".lanc-selo.com-imped",
+      "conflito": ""
+    },
+    {
+      "n": 8,
+      "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
+      "o_que_muda": "Nenhum «?»: a dica aparece ao passar o mouse",
+      "origem": "regra-global",
+      "resposta": "todo-07-9",
+      "ancora": "todo-07-8",
+      "seletor": "[data-dica]",
+      "conflito": ""
+    },
+    {
+      "n": 9,
+      "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
+      "o_que_muda": "Adicionar lançador: do sistema ou como extensão",
+      "origem": "pedido-dela",
+      "resposta": "todo-07-6",
+      "ancora": "todo-07-9",
+      "seletor": "#novo-lancador",
+      "conflito": ""
+    },
+    {
+      "n": 10,
+      "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
+      "o_que_muda": "Criar perfis abre a lista de jogos do lançador",
+      "origem": "desenho-nosso-a-validar",
+      "resposta": "todo-07-6",
+      "ancora": "todo-07-10",
+      "seletor": "#escolher-jogo",
+      "conflito": "A validar por ela."
+    },
+    {
+      "n": 11,
+      "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
+      "o_que_muda": "Configurar abre a pasta e as opções do lançador",
+      "origem": "desenho-nosso-a-validar",
+      "resposta": "todo-07-6",
+      "ancora": "todo-07-11",
+      "seletor": "#lanc-conf",
+      "conflito": "A validar por ela."
+    },
+    {
+      "n": 12,
+      "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
+      "o_que_muda": "A janela Lovense abre em Meus toques",
+      "origem": "desenho-nosso-a-validar",
+      "resposta": "todo-07-10",
+      "ancora": "todo-07-12",
+      "seletor": "#t3",
+      "conflito": "A validar por ela."
+    },
+    {
+      "n": 13,
+      "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
+      "o_que_muda": "Meus toques: o que vibra e cada entrada, sem textão",
+      "origem": "pedido-dela",
+      "resposta": "todo-07-10",
+      "ancora": "todo-07-13",
+      "seletor": ".ja-tela.t3",
+      "conflito": ""
+    },
+    {
+      "n": 14,
+      "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
+      "o_que_muda": "O botão direito abre o menu das abas",
+      "origem": "pedido-dela",
+      "resposta": "todo-07-8",
+      "ancora": "todo-07-14",
+      "seletor": "#menu-desenhado",
+      "conflito": ""
+    },
+    {
+      "n": 15,
+      "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
+      "o_que_muda": "Não achado: sem selo, só Identificar ativo",
+      "origem": "pedido-dela",
+      "resposta": "todo-07-1",
+      "ancora": "todo-07-15",
+      "seletor": ".lf.ausente",
+      "conflito": ""
+    },
+    {
+      "n": 16,
+      "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
+      "o_que_muda": "Kyty: sem a frase de abertura e sem nomes técnicos",
+      "origem": "regra-global",
+      "resposta": "todo-07-6",
+      "ancora": "todo-07-16",
+      "seletor": "#kyty .ky-grade",
+      "conflito": ""
+    },
+    {
+      "n": 17,
+      "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
+      "o_que_muda": "Lovense: as notas cinzas da coluna esquerda viram dica",
+      "origem": "regra-global",
+      "resposta": "todo-07-10",
+      "ancora": "todo-07-17",
+      "seletor": ".ja-sessao,.ja-dono",
+      "conflito": ""
+    },
+    {
+      "n": 18,
+      "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
+      "o_que_muda": "«Quem comanda» lista as cores do plástico, não P1/P2",
+      "origem": "regra-global",
+      "resposta": "todo-07-10",
+      "ancora": "todo-07-18",
+      "seletor": ".ja-linha select",
+      "conflito": ""
+    },
+    {
+      "n": 19,
+      "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
+      "o_que_muda": "O acessório de dois motores se chama «Lovense Nora», também no desenho do touchpad",
+      "origem": "RODADA-3",
+      "resposta": "todo-07-r3-19",
+      "ancora": "todo-07-19",
+      "seletor": "#acessorios .ja-ap-nome, svg.ja-tp",
+      "conflito": ""
+    },
+    {
+      "n": 20,
+      "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
+      "o_que_muda": "Extensões e lançadores encostam na mesma reta do quadro, dos dois lados",
+      "origem": "RODADA-3",
+      "resposta": "todo-07-r3-20",
+      "ancora": "todo-07-20",
+      "seletor": ".ext, .lf",
+      "conflito": ""
+    },
+    {
+      "n": 21,
+      "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
+      "o_que_muda": "Na janela Lovense, o «4 · 3/20» cabe na coluna sem passar da borda",
+      "origem": "RODADA-3",
+      "resposta": "todo-07-r3-21",
+      "ancora": "todo-07-21",
+      "seletor": ".ja-ap-pe",
+      "conflito": ""
+    },
+    {
+      "n": 22,
+      "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
+      "o_que_muda": "Meus toques: os botões cabem na coluna e acabam na mesma reta",
+      "origem": "RODADA-3",
+      "resposta": "todo-07-r3-22",
+      "ancora": "todo-07-22",
+      "seletor": ".ja-ctrl > .seg.mini",
+      "conflito": ""
+    },
+    {
+      "n": 23,
+      "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
+      "o_que_muda": "Luz: as cores ocupam a linha toda, e as duas fileiras ficam em colunas",
+      "origem": "RODADA-3",
+      "resposta": "todo-07-r3-23",
+      "ancora": "todo-07-23",
+      "seletor": ".ja-ctrl > .ja-tons",
+      "conflito": ""
+    },
+    {
+      "n": 24,
+      "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
+      "o_que_muda": "Perfis: o «Até» cabe na moldura, e os menus acabam na mesma reta",
+      "origem": "RODADA-3",
+      "resposta": "todo-07-r3-24",
+      "ancora": "todo-07-24",
+      "seletor": ".ja-tela.l-larga > .moldura:last-child .ja-linha",
+      "conflito": ""
+    },
+    {
+      "n": 25,
+      "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
+      "o_que_muda": "Cada extensão mostra uma linha curta do que faz, sob o nome",
+      "origem": "RODADA-4",
+      "resposta": "todo-07-r4-25",
+      "ancora": "todo-07-25",
+      "seletor": ".ext-faz",
+      "conflito": "Substitui o item 3: a descrição tinha virado dica e volta à vista, por pedido dela."
+    },
+    {
+      "n": 26,
+      "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
+      "o_que_muda": "Os lançadores viram cartões com desenho, os achados primeiro, enchendo a altura sem vão",
+      "origem": "RODADA-4",
+      "resposta": "todo-07-r4-26",
+      "ancora": "todo-07-26",
+      "seletor": ".lanc-fila",
+      "conflito": "A validar por ela."
+    },
+    {
+      "n": 27,
+      "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
+      "o_que_muda": "«Adicionar um lançador» vira o último cartão da grade",
+      "origem": "RODADA-4",
+      "resposta": "todo-07-r4-27",
+      "ancora": "todo-07-27",
+      "seletor": ".lf-novo",
+      "conflito": "A validar por ela."
+    },
+    {
+      "n": 28,
+      "o_que_muda": "O «Quando» da Lovense começa em «Os jogos que eu escolher»; «Jogos com estilo Adulto» vira uma das opções"
+    },
+    {
+      "n": 29,
+      "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
+      "o_que_muda": "«Lovense pelo Intiface» nomeia só a primeira extensão, e nas duas direções: o controle vibra os brinquedos, e os programas da Intiface vibram o controle",
+      "resposta": "todo-07-r3-29",
+      "origem": "escolha dela de 13/10",
+      "ancora": "[data-r3=\"29\"]",
+      "conflito": "",
+      "rodada": 3,
+      "ancora_antes": "[data-modificacao=\"intiface\"] .ext-faz"
+    },
+    {
+      "n": 30,
+      "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
+      "o_que_muda": "A segunda extensão Lovense, «Lovense pelo celular»: o app da Lovense no celular, pelo Game Mode na rede de casa (porta 20010), como no Planet Lust",
+      "resposta": "todo-07-r3-30",
+      "origem": "escolha dela de 13/10",
+      "ancora": "[data-r3=\"30\"]",
+      "conflito": "",
+      "rodada": 3,
+      "ancora_antes": ".ext-lista"
+    },
+    {
+      "n": 31,
+      "sprint": "O-HEFESTO-E-SERVIDOR-BUTTPLUG-DO-PROPRIO-DUALSENSE-01",
+      "o_que_muda": "A extensão «DualSense como brinquedo»: os apps de brinquedo vibram o controle, nada pela nuvem, e ela nasce desligada",
+      "resposta": "todo-07-r3-31",
+      "origem": "escolha dela de 13/10",
+      "ancora": "[data-r3=\"31\"]",
+      "conflito": "",
+      "rodada": 3,
+      "ancora_antes": ".ext-lista"
+    },
+    {
+      "n": 32,
+      "sprint": "O-HEFESTO-E-SERVIDOR-BUTTPLUG-DO-PROPRIO-DUALSENSE-01",
+      "o_que_muda": "A janela de configurações dela, nova: as quatro etapas (servidor, controles com teto e força de cada um, o que vibra, parar)",
+      "resposta": "todo-07-r3-32",
+      "origem": "escolha dela de 13/10",
+      "ancora": ".bp-cx",
+      "conflito": "",
+      "rodada": 3,
+      "ancora_antes": ".ext-lista",
+      "js": "location.hash='#buttplug'"
+    },
+    {
+      "n": 33,
+      "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
+      "o_que_muda": "Para as quatro extensões caberem sem rolar, «Detectar o jogo aberto» e «Procurar de novo» sobem para a linha do título dos Lançadores, e a lista das extensões deixa de rolar",
+      "resposta": "todo-07-r3-33",
+      "origem": "escolha dela de 13/10",
+      "ancora": ".lanc-acoes.no-topo",
+      "conflito": "",
+      "rodada": 3,
+      "ancora_antes": ".lanc-acoes"
+    }
+  ],
+  "por_baixo": [
+    {
+      "sprint": "O-SHADPS4-QUE-JA-MORA-AQUI-01",
+      "o_que_muda": "O cartão do lançador nasce do .desktop; a linha é a mesma do item 1."
+    },
+    {
+      "sprint": "O-VITA3K-RECEBE-O-DUALSENSE-INTEIRO-01",
+      "o_que_muda": "O cartão do lançador nasce do .desktop; a linha é a mesma do item 1."
+    },
+    {
+      "sprint": "STEAM-INPUT-01",
+      "o_que_muda": "A frase da Steam deixa de apontar o «Consertar»; a causa vai à dica do marcador no selo."
+    },
+    {
+      "sprint": "O-MODO-QUE-NAO-SAI-DO-STEAM-INPUT-01",
+      "o_que_muda": "A frase da Steam deixa de apontar o «Consertar»; a causa vai à dica do marcador no selo."
+    },
+    {
+      "sprint": "O-TEMA-DE-CORES-ENTRA-PELA-FOLHA-DE-USUARIO-01",
+      "o_que_muda": "Só tokens; a foto não muda."
+    },
+    {
+      "sprint": "O-LANCADOR-DO-KYTYPS5-VEM-DA-MODIFICACAO-01",
+      "o_que_muda": "O perfil do Kyty casa pelo PPSA\\d{5}."
+    },
+    {
+      "sprint": "A-ABA-NAVEGACAO-TEM-OS-DOIS-POINT-AND-CLICK-E-A-VELOCIDADE-QUE-FUNCIONA-01",
+      "o_que_muda": "Já curado na 1-11."
+    },
+    {
+      "sprint": "O-JOGO-SE-DECLARA-NO-PRONTUARIO-PELO-QUE-A-STEAM-E-O-BINARIO-DIZEM-01",
+      "o_que_muda": "A ficha do jogo vem do prontuário; a causa aparece na dica do marcador no selo (mudança 7)."
+    },
+    {
+      "sprint": "AS-MODIFICACOES-MARCAM-O-GESTO-ESPERAM-PARAR-E-SAEM-NO-UNINSTALL-01",
+      "o_que_muda": "A chave Ligada e o ⋮ das modificações são os mesmos; o gesto, o parar e o uninstall são por baixo."
+    },
+    {
+      "sprint": "A-VIBRACAO-DO-CONTROLE-CHEGA-AOS-ACESSORIOS-PELO-BUTTPLUG-01",
+      "o_que_muda": "O motor da janela Lovense (mudanças 5, 12 e 13); o desenho não muda."
+    },
+    {
+      "sprint": "OS-GESTOS-DO-PS-COMANDAM-OS-ACESSORIOS-01",
+      "o_que_muda": "O motor da janela Lovense (mudanças 5, 12 e 13); o desenho não muda."
+    },
+    {
+      "sprint": "A-VOLTA-DOS-ACESSORIOS-SE-SENTE-NO-CONTROLE-E-NA-LUZ-01",
+      "o_que_muda": "O motor da janela Lovense (mudanças 5, 12 e 13); o desenho não muda."
+    }
+  ],
+  "fora": [
+    {
+      "sprint": "I18N-DA-TELA-NOVA-01",
+      "motivo": "A tradução não muda a tela em português."
+    },
+    {
+      "sprint": "A-JANELA-ESPERA-A-TRAVA-E-DIZ-A-CAUSA-01",
+      "motivo": "Já costurada na 1-11: está no antes."
+    },
+    {
+      "sprint": "O-REAPLICAR-NUNCA-APAGA-O-QUE-O-USUARIO-POS-NA-LAUNCH-OPTION-01",
+      "motivo": "Só a Launch Option da Steam; nenhuma página muda."
+    },
+    {
+      "sprint": "O-JOGO-QUE-PEDE-RECEITA-DE-AMBIENTE-A-RECEBE-PELO-WRAPPER-01",
+      "motivo": "Só o wrapper do lançamento; nenhuma página muda."
+    },
+    {
+      "sprint": "O-SERVIDOR-DSU-LEVA-O-TOQUE-E-O-MOVIMENTO-AO-EMULADOR-01",
+      "motivo": "A sprint diz «Sem tela nesta sprint»: a chave vai à sessão dos desenhos com nome próprio."
+    }
+  ],
+  "altura_px": 809,
+  "rola": false,
+  "rodada": 3
 }
