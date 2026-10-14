@@ -301,4 +301,5 @@ kernel,src/hefesto_dualsense4unix/mods/porta.py,path:/proc,_pai_de,oficial,capac
 hefesto,src/hefesto_dualsense4unix/mods/supervisor.py,cmd:<dinâmico>,<módulo>,oficial,capacidade,converge,o executável da modificação ou o bwrap muda de caminho: a modificação não sobe,-,,
 kernel,src/hefesto_dualsense4unix/mods/supervisor.py,path:/dev,comando_na_caixa,oficial,capacidade,converge,o /dev muda de forma: a caixa da modificação nasce sem o nó que ela pediu,-,,
 kernel,src/hefesto_dualsense4unix/mods/supervisor.py,path:/proc,comando_na_caixa,oficial,capacidade,converge,o /proc muda de forma: a caixa da modificação nasce sem a vista dos processos,-,,
+kernel,src/hefesto_dualsense4unix/integrations/window_detect.py,path:/proc,ExeDoWine.__init__,oficial,capacidade,converge,"o /proc/<pid>/cmdline, exe, stat ou comm muda de forma: o jogo no driver Wayland do Wine fica sem o processo e o perfil que casa pelo nome do exe não entra",-,,
 sistema,src/hefesto_dualsense4unix/mods/supervisor.py,path:/run/dbus,<módulo>,oficial,capacidade,converge,o soquete do barramento do sistema muda de lugar: a modificação que pede o rádio não fala com o BlueZ,-,,

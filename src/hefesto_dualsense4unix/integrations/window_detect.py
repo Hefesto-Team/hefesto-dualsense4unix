@@ -36,6 +36,10 @@ Chrome/Wayland em foco, o produto lia `wm_class="unknown"` e o
 from __future__ import annotations
 
 import os
+import time
+from collections.abc import Callable
+from dataclasses import replace
+from pathlib import Path
 from typing import Any
 
 from hefesto_dualsense4unix.integrations.window_backends.base import WindowBackend, WindowInfo
@@ -66,6 +70,129 @@ def backend_ve_nome_do_processo(backend: str | None) -> bool | None:
     return None
 
 
+#: O Wine a partir do 9.8 usa o nome do processo como `app_id` no driver Wayland: «jogo.exe».
+_SUFIXO_DO_EXE = ".exe"
+#: o carregador do Wine é o `exe` do processo do jogo (`wine64-preloader`, `wine-preloader`...).
+_PREFIXO_DO_CARREGADOR = "wine"
+_TETO_DA_LINHA_DE_COMANDO = 64 * 1024
+_PASSOS_ATE_O_WINESERVER = 8
+_ESPERA_DA_VARREDURA_S = 2.0
+
+
+def _app_id_e_de_exe(app_id: str) -> bool:
+    return app_id.lower().endswith(_SUFIXO_DO_EXE) and len(app_id) > len(_SUFIXO_DO_EXE)
+
+
+def _ultimo_da_linha(arg: str) -> str:
+    """O nome de arquivo de um argumento, com caminho Windows ou Unix."""
+    return arg.replace("\\", "/").rsplit("/", 1)[-1]
+
+
+class ExeDoWine:
+    """Casa o `app_id` «jogo.exe» com o processo do Wine que o roda.
+
+    A janela do driver Wayland só traz o `app_id`; o perfil do jogo casa por `process_name`
+    (o basename do `exe` do processo), e nenhum backend Wayland manda PID. O casamento é pela
+    árvore de processos: o processo cuja linha de comando nomeia o `.exe` E que é do Wine (o
+    `exe` dele é o carregador do Wine, ou um ancestral é o `wineserver`). Quem só cita o
+    `.exe` (o `proton waitforexitandrun`, o `reaper`) não conta. A conta é cara, então o PID
+    achado fica guardado até o processo sair, e o «não achei» espera dois segundos.
+    """
+
+    def __init__(
+        self,
+        proc_dir: Path | str = "/proc",
+        relogio: Callable[[], float] = time.monotonic,
+    ) -> None:
+        self._proc = Path(proc_dir)
+        self._relogio = relogio
+        self._achados: dict[str, int] = {}
+        self._sem_resposta_ate: dict[str, float] = {}
+
+    def completar(self, info: WindowInfo) -> WindowInfo:
+        """`info` com `pid` e `exe_basename` do jogo, se o `app_id` é um `.exe` do Wine."""
+        app_id = info.app_id or ""
+        if info.exe_basename or not _app_id_e_de_exe(app_id):
+            return info
+        pid = self._pid_do(app_id)
+        if pid is None:
+            return info
+        return replace(info, pid=pid, exe_basename=_ultimo_da_linha(app_id))
+
+    def _pid_do(self, app_id: str) -> int | None:
+        guardado = self._achados.get(app_id)
+        if guardado is not None and self._e_do_jogo(guardado, app_id):
+            return guardado
+        self._achados.pop(app_id, None)
+        agora = self._relogio()
+        if agora < self._sem_resposta_ate.get(app_id, float("-inf")):
+            return None
+        achado = self._varre(app_id)
+        if achado is None:
+            self._sem_resposta_ate[app_id] = agora + _ESPERA_DA_VARREDURA_S
+            return None
+        self._sem_resposta_ate.pop(app_id, None)
+        self._achados[app_id] = achado
+        return achado
+
+    def _varre(self, app_id: str) -> int | None:
+        try:
+            nomes = sorted(n for n in os.listdir(self._proc) if n.isdigit())
+        except OSError:
+            nomes = []
+        for nome in nomes:
+            if self._e_do_jogo(int(nome), app_id):
+                return int(nome)
+        return None
+
+    def _e_do_jogo(self, pid: int, app_id: str) -> bool:
+        alvo = app_id.lower()
+        argumentos = self._linha_de_comando(pid)
+        if not any(_ultimo_da_linha(a).lower() == alvo for a in argumentos):
+            return False
+        return self._e_do_wine(pid)
+
+    def _linha_de_comando(self, pid: int) -> list[str]:
+        try:
+            with open(self._proc / str(pid) / "cmdline", "rb") as fh:
+                bruto = fh.read(_TETO_DA_LINHA_DE_COMANDO)
+        except OSError:
+            return []
+        return [a.decode("utf-8", "replace") for a in bruto.split(b"\0") if a]
+
+    def _e_do_wine(self, pid: int) -> bool:
+        if self._nome_do_exe(pid).lower().startswith(_PREFIXO_DO_CARREGADOR):
+            return True
+        atual = pid
+        for _ in range(_PASSOS_ATE_O_WINESERVER):
+            atual = self._pai(atual)
+            if atual <= 1:
+                return False
+            if self._nome_do_exe(atual) == "wineserver" or self._comm(atual) == "wineserver":
+                return True
+        return False
+
+    def _nome_do_exe(self, pid: int) -> str:
+        try:
+            return os.path.basename(os.readlink(self._proc / str(pid) / "exe"))
+        except OSError:
+            return ""
+
+    def _comm(self, pid: int) -> str:
+        try:
+            return (self._proc / str(pid) / "comm").read_text(encoding="utf-8").strip()
+        except OSError:
+            return ""
+
+    def _pai(self, pid: int) -> int:
+        """O PID do pai pelo `stat`; o nome pode ter `)`, então corta no último."""
+        try:
+            texto = (self._proc / str(pid) / "stat").read_text(encoding="utf-8")
+            return int(texto.rsplit(")", 1)[1].split()[1])
+        except (OSError, IndexError, ValueError):
+            return 0
+
+
 class _WaylandCascadeBackend:
     """Cascade: cosmic → wlrctl → None."""
 
@@ -82,6 +209,7 @@ class _WaylandCascadeBackend:
         self._fallback_announced: bool = False
         self.last_failure_reason: str | None = None
         self._last_source: str | None = None
+        self._exe_do_wine = ExeDoWine()
 
     @property
     def backend_name(self) -> str:
@@ -101,7 +229,7 @@ class _WaylandCascadeBackend:
         if info is not None:
             self._last_source = "cosmic"
             self.last_failure_reason = None
-            return info
+            return self._exe_do_wine.completar(info)
 
         info = self._wlrctl.get_active_window_info()
         if info is not None:
@@ -116,7 +244,7 @@ class _WaylandCascadeBackend:
                     ),
                 )
                 self._fallback_announced = True
-            return info
+            return self._exe_do_wine.completar(info)
 
         self.last_failure_reason = MOTIVO_CASCATA_SEM_LEITURA
         return None
@@ -171,7 +299,7 @@ class _XlibComCosmicBackend:
                     hint=(
                         "o X não enxergou a janela em foco (app Wayland "
                         "nativo) e a leitura veio do compositor; o nome do "
-                        "processo não vem por este caminho."
+                        "processo só vem para o jogo do Wine (app_id `.exe`)."
                     ),
                 )
                 self._anunciado = True
@@ -355,6 +483,7 @@ __all__ = [
     "MOTIVO_BACKEND_SEM_MOTIVO",
     "MOTIVO_CASCATA_SEM_LEITURA",
     "MOTIVO_JANELA_SEM_CLASSE",
+    "ExeDoWine",
     "WindowReaderDiag",
     "backend_ve_nome_do_processo",
     "build_window_reader",
