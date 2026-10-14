@@ -1592,7 +1592,7 @@ def _teto_do_controle(
     A chave é o `uniq` NORMALIZADO: doze hexa minúsculos sem separador, pelo :func:`_so_hex` deste
     arquivo (a cópia que morava aqui perdera o `.strip()` e um `uniq` com espaço gravava numa chave
     e a pintura procurava outra). É o que `Profile._validate_controllers_keys` canoniza ao carregar
-    (`profiles/schema.py:1305`) e está no disco; `aa:bb:…` não acharia nada e a tela mostraria
+    (`profiles/schema.py:1320`) e está no disco; `aa:bb:…` não acharia nada e a tela mostraria
     "Segue o global" para sempre. O `uniq` cru é a segunda chave porque `perfil.ativo` lê o JSON
     **sem** o pydantic (de propósito, para seção nova não congelar a aba) e arquivo editado à mão
     pode trazer dois-pontos.
