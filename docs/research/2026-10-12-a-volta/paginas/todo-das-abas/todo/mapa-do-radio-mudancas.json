@@ -2,7 +2,7 @@
  "aba": "mapa-do-radio",
  "nome": "Mapa do rádio",
  "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/_integra-1-11/src/hefesto_dualsense4unix/interface/paginas/mapa-do-radio.html",
- "depois": "/home/vitoriamaria/.local/state/hefesto-casa/leva-volta/todo/mapa-do-radio.html",
+ "depois": "docs/research/2026-10-12-a-volta/paginas/todo-das-abas/todo/mapa-do-radio.html",
  "mudancas": [
   {
    "n": 1,
@@ -84,5 +84,9 @@
   }
  ],
  "altura_px": 809,
- "rola": false
+ "rola": false,
+ "origem_da_pagina": "r3 (v3)",
+ "consertos_da_fusao": [
+  "Os quatro controles se chamam pela cor do plástico; a frase não repete a cor quando o nome é a cor."
+ ]
 }
