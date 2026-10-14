@@ -325,6 +325,15 @@ _PERNAS: dict[str, dict[str, Resposta]] = {
         )
         for p in PERNAS
     },
+    "controles_modo": {
+        p: NaoSeAplica(
+            "não chega ao controle: é o modo da aba Controles (Automático ou Personalizado), "
+            "lido só pela interface (`interface/pacotes/a02_controles.py::"
+            "modo_dos_controles_do_perfil`); o daemon não o lê, e o caminho até ele é da "
+            "O-ESTILO-DO-JOGO-GOVERNA-O-AUTOMATICO-EM-TODAS-AS-ABAS-01."
+        )
+        for p in PERNAS
+    },
     "name": {p: NaoSeAplica(_NAO_CHEGA) for p in PERNAS},
     "version": {p: NaoSeAplica(_NAO_CHEGA) for p in PERNAS},
     "priority": {p: NaoSeAplica(_NAO_CHEGA) for p in PERNAS},
