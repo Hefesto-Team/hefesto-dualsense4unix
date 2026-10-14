@@ -16,7 +16,7 @@ from hefesto_dualsense4unix.utils import xdg_paths
 class _PlatformdirsQueTroca:
     """O platformdirs 4.12 diante de uma pasta 0755: responde a pasta padrão."""
 
-    appname = xdg_paths._DIRS.appname
+    appname = xdg_paths._APP
     user_runtime_dir = "/run/user/4242/hefesto-dualsense4unix"
     user_cache_dir = "/nao/usado"
 
@@ -36,7 +36,7 @@ def test_a_pasta_declarada_vale_em_qualquer_modo(
     pasta.chmod(modo)
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(pasta))
     try:
-        assert xdg_paths.runtime_dir() == pasta / xdg_paths._DIRS.appname
+        assert xdg_paths.runtime_dir() == pasta / xdg_paths._APP
     finally:
         pasta.chmod(0o700)
 

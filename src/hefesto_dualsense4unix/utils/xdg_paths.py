@@ -13,7 +13,8 @@ from platformdirs import PlatformDirs
 from hefesto_dualsense4unix.utils import identidade
 
 # state, perfis e o diretório do socket IPC saem todos daqui. Por isso ele não
-_DIRS = PlatformDirs(identidade.atual().slug)
+_APP = identidade.atual().slug
+_DIRS = PlatformDirs(_APP)
 
 
 IPC_SOCKET_DEFAULT_NAME = "hefesto-dualsense4unix.sock"
@@ -69,7 +70,7 @@ def runtime_dir(ensure: bool = False) -> Path:
     """
     declarado = os.environ.get("XDG_RUNTIME_DIR", "").strip()
     if os.path.isabs(declarado):
-        p = Path(declarado) / _DIRS.appname
+        p = Path(declarado) / _APP
     else:
         runtime = _DIRS.user_runtime_dir
         p = Path(runtime) if runtime else cache_dir() / "runtime"
