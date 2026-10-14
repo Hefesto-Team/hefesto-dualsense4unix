@@ -55,7 +55,7 @@
       "data": "2026-10-14",
       "nota": "remendos de sintoma por arquivo",
       "o_que_conta": "remendos de sintoma acima do teto de cada arquivo",
-      "piso": 1023,
+      "piso": 1022,
       "por_item": {
         "__init__.py": 1,
         "app/actions/base.py": 1,
@@ -140,7 +140,7 @@
         "integrations/diario_do_radio.py": 3,
         "integrations/dualsense_bt_audio.py": 15,
         "integrations/eleicao_de_microfone.py": 1,
-        "integrations/endpoint_de_haptica.py": 11,
+        "integrations/endpoint_de_haptica.py": 10,
         "integrations/entradas_do_gabinete.py": 3,
         "integrations/exame_da_mesa.py": 5,
         "integrations/filho_de_som.py": 7,
