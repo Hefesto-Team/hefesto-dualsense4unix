@@ -71,6 +71,7 @@ from pathlib import Path
 
 try:
     from .api_de_entrada import Evidencia, Veredito, examinar_pasta
+    from .receitas_de_ambiente import pecas_que_faltam
     from .steam_input_ponte import (
         PONTE_LIGADA,
         PONTE_NADA,
@@ -93,6 +94,7 @@ try:
     )
 except ImportError:  # pragma: no cover - executado como script avulso
     from api_de_entrada import Evidencia, Veredito, examinar_pasta  # type: ignore[no-redef]
+    from receitas_de_ambiente import pecas_que_faltam  # type: ignore[no-redef]
     from steam_input_ponte import (  # type: ignore[no-redef]
         PONTE_LIGADA,
         PONTE_NADA,
@@ -125,6 +127,7 @@ LINHA_INTOCAVEL = "linha_intocavel"
 SEM_EXECUTAVEL = "sem_executavel"
 EXCECAO_INERTE = "excecao_inerte"
 PONTE_DIVERGENTE = "ponte_divergente"
+FALTA_A_PECA = "falta_a_peca"
 
 _ESTORVOS: dict[str, tuple[str, str, bool]] = {
     SEM_WRAPPER: (
@@ -158,6 +161,14 @@ _ESTORVOS: dict[str, tuple[str, str, bool]] = {
         "sobrevive — com ela viva, a Steam regrava o arquivo ao sair e "
         "engole).",
         True,
+    ),
+    FALTA_A_PECA: (
+        "O jogo traz no disco o sinal de que precisa de uma variável de ambiente para "
+        "abrir, mas a peça que ela exige não está ao lado do executável. Sem a peça, "
+        "passar a variável quebraria o jogo, e o Hefesto não a passa.",
+        "Ponha a peça ao lado do executável do jogo. Com ela no lugar, o Hefesto passa "
+        "a variável sozinho ao abrir o jogo.",
+        False,
     ),
     PONTE_DIVERGENTE: (
         "A ponte que já foi CONFIRMADA neste jogo não é a que está de pé hoje: "
@@ -319,10 +330,13 @@ class Estorvo:
     """Um impedimento nomeado, e o que fazer com ele."""
 
     chave: str
+    #: O que só este jogo sabe (a peça que falta); entra no fim do texto, se houver.
+    detalhe: str = ""
 
     @property
     def o_que(self) -> str:
-        return _ESTORVOS[self.chave][0]
+        texto = _ESTORVOS[self.chave][0]
+        return f"{texto} (falta: {self.detalhe})" if self.detalhe else texto
 
     @property
     def a_cura(self) -> str:
@@ -348,7 +362,8 @@ class Prontuario:
     steam_input_global: str | None = None
     na_allowlist: bool = False
     ponte: Ponte | None = None
-
+    #: As peças que uma receita de ambiente pede ao lado do executável e o disco não tem.
+    pecas_que_faltam: tuple[str, ...] = ()
 
     @property
     def tem_wrapper(self) -> bool:
@@ -396,6 +411,8 @@ class Prontuario:
             achados.append(Estorvo(EXCECAO_INERTE))
         if self.raiz is not None and (self.evidencia is None or not self.evidencia.executavel):
             achados.append(Estorvo(SEM_EXECUTAVEL))
+        if self.pecas_que_faltam:
+            achados.append(Estorvo(FALTA_A_PECA, ", ".join(self.pecas_que_faltam)))
         if self.ponte_divergente:
             achados.append(Estorvo(PONTE_DIVERGENTE))
         return achados
@@ -453,6 +470,7 @@ class Prontuario:
             "na_allowlist": self.na_allowlist,
             "ponte": self.ponte.como_dicionario() if self.ponte else None,
             "ponte_divergente": self.ponte_divergente,
+            "pecas_que_faltam": list(self.pecas_que_faltam),
             "estorvos": [
                 {"chave": e.chave, "o_que": e.o_que, "cura": e.a_cura,
                  "automatica": e.automatica}  # (noqa-acento): chave de JSON
@@ -682,6 +700,7 @@ def levantar_censo(
                 steam_input_global=global_ps,
                 na_allowlist=appid in permitidos,
                 ponte=carimbos.get(appid),
+                pecas_que_faltam=pecas_que_faltam(raiz) if examinar else (),
             )
         )
     return Censo(jogos=fichas, erros=erros)

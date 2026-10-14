@@ -1731,6 +1731,17 @@ def materialize_launch_env(daemon: DaemonProtocol) -> None:
     _escrever_o_lancamento(foto)
 
 
+def _receitas_dos_jogos() -> dict[str, dict[str, str]]:
+    """``{appid: ambiente}`` dos jogos cujo disco liga uma receita com a peça. Nunca levanta."""
+    try:
+        from hefesto_dualsense4unix.integrations import receitas_de_ambiente
+
+        return receitas_de_ambiente.ambientes_dos_jogos()
+    except Exception:
+        logger.debug("receitas_de_ambiente_falhou", exc_info=True)
+        return {}
+
+
 def _a_parte_de_fora(
     foto: _FotoDoLancamento, devolver: Callable[[Callable[[], None]], None]
 ) -> None:
@@ -1759,6 +1770,7 @@ def _a_parte_de_fora(
     em_cena = foto.em_cena
     divergencias: list[dict[str, Any]] = []
     freestyle = _o_freestyle_que_manda(leitor)
+    receitas = _receitas_dos_jogos()
     for appid, do_jogo in _steam_profiles(leitor):
         profile = freestyle if freestyle is not None else do_jogo
         modo = _modo_antecipado(
@@ -1793,7 +1805,20 @@ def _a_parte_de_fora(
             )
         name = f"steam_app_{appid}.env"
         _write_atomic(
-            target / name, _render(env_do_modo(modo), f"{estado_do_perfil} | vivo: {estado}")
+            target / name,
+            _render(
+                {**env_do_modo(modo), **receitas.get(str(appid), {})},
+                f"{estado_do_perfil} | vivo: {estado}",
+            ),
+        )
+        desired.add(name)
+    for appid_da_receita, da_receita in receitas.items():
+        name = f"steam_app_{appid_da_receita}.env"
+        if name in desired:
+            continue
+        _write_atomic(
+            target / name,
+            _render({**default_env, **da_receita}, f"receita de ambiente | vivo: {estado}"),
         )
         desired.add(name)
     devolver(lambda: foto.publicar(divergencias))

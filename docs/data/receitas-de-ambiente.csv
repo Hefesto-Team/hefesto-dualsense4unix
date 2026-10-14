@@ -1,0 +1,20 @@
+# AS RECEITAS DE AMBIENTE POR SINAL — 13/10/2026
+#
+# Dono: `src/hefesto_dualsense4unix/integrations/receitas_de_ambiente.py`.
+# Uma linha = um SINAL no disco do jogo que diz que ele só abre com uma variável
+# de ambiente, a variável, o valor e a PEÇA que ela exige. Sem appid: o produto é
+# para qualquer computador, e o que identifica o jogo é o que ele traz na pasta.
+#
+# Colunas
+#   id        nome da receita (único)
+#   sinais    arquivos na RAIZ da pasta do jogo, separados por `|`; basta um existir
+#   variavel  só as que o `hefesto-launch` aceita (`WINEDLLOVERRIDES`)
+#   valor     na forma `nome=n` ou `nome=n,b`; vários separados por `;`
+#   peca      arquivo que tem de existir AO LADO do executável do jogo; sem ele o
+#             valor quebraria o jogo, e a receita não é passada (o prontuário avisa)
+#
+# A primeira linha é a família GDK (jogos do Xbox no PC, runtime `xgameruntime`):
+# o Proton não traz essa DLL, e o jogo só abre quando a nativa, posta ao lado do
+# executável, é a que carrega.
+id,sinais,variavel,valor,peca
+gdk-xgameruntime,MicrosoftGame.config|installscript-gamingrepair.vdf,WINEDLLOVERRIDES,xgameruntime=n,xgameruntime.dll

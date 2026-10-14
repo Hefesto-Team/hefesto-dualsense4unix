@@ -39,6 +39,59 @@
 
 set -u
 
+# --- A receita de ambiente do jogo (O-JOGO-QUE-PEDE-RECEITA-DE-AMBIENTE-A-RECEBE-PELO-WRAPPER-01)
+# O jogo da família GDK só abre no Proton com a `xgameruntime.dll` ao lado do
+# executável e `WINEDLLOVERRIDES=xgameruntime=n`. Quem escreve a linha no
+# arquivo de ambiente é o daemon, a partir de `docs/data/receitas-de-ambiente.csv`
+# e só com a peça no disco; aqui o wrapper confere a FORMA, porque o arquivo é
+# texto e a variável vai ao ambiente do jogo: `nome[,nome]=n` ou `=n,b`, entradas
+# separadas por `;`, nomes só de DLL. Qualquer outra forma é descartada com uma
+# linha no diário, e o jogo abre sem ela. Quem já pôs a variável no ambiente
+# (Launch Option, shell) manda. O Proton ACRESCENTA ao `WINEDLLOVERRIDES`
+# herdado, então passar a variável não pisa no que ele põe. SÓ SHELL PURO.
+override_de_dll_valido() {
+    od_resto="$1;"
+    [ -n "$1" ] || return 1
+    od_viu=0
+    while [ -n "$od_resto" ]; do
+        od_entrada="${od_resto%%;*}"
+        od_resto="${od_resto#*;}"
+        [ -n "$od_entrada" ] || continue
+        od_nomes="${od_entrada%%=*}"
+        case "$od_entrada" in *=*) ;; *) return 1 ;; esac
+        od_modo="${od_entrada#*=}"
+        case "$od_modo" in n|n,b) ;; *) return 1 ;; esac
+        case "$od_nomes" in
+            ''|,*|*,|*,,*|*[!A-Za-z0-9_.,-]*) return 1 ;;
+        esac
+        od_viu=1
+    done
+    [ "$od_viu" = 1 ]
+}
+
+receita_de_dll() {
+    [ -z "${WINEDLLOVERRIDES+x}" ] || return 1
+    override_de_dll_valido "$1" && return 0
+    if command -v logger >/dev/null 2>&1; then
+        logger -t hefesto-launch "receita de ambiente descartada: WINEDLLOVERRIDES fora da forma nome=n" >/dev/null 2>&1 || true
+    fi
+    return 1
+}
+
+# A receita é um canal PRÓPRIO, fora da allowlist de `decide_envs`: aquela é a
+# lista do que o Hefesto escreve em todo lançador (e o uninstall devolve), e o
+# `WINEDLLOVERRIDES` é variável que o usuário também escreve. Aqui só a linha
+# do arquivo do jogo (`steam_app_<id>.env`), nunca a do `default.env`.
+receita_do_jogo() {
+    case "$1" in */steam_app_*.env) ;; *) return 0 ;; esac
+    while IFS= read -r rj_linha; do
+        case "$rj_linha" in
+            WINEDLLOVERRIDES=*) receita_de_dll "${rj_linha#*=}" && printf '%s\n' "$rj_linha" ;;
+        esac
+    done < "$1"
+    return 0
+}
+
 decide_envs() {
     # Imprime no stdout uma linha VAR=VAL por env aprovada. Qualquer falha
     # (return sem imprimir) significa "nenhuma env nossa".
@@ -100,6 +153,7 @@ PYEOF
             PROTON_ENABLE_MHWILDS_USB_AUDIO=*)   printf '%s\n' "$line" ;;
         esac
     done < "$envfile"
+    receita_do_jogo "$envfile"
     return 0
 }
 
