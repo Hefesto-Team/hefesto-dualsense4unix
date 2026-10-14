@@ -1281,6 +1281,15 @@ _NAO_E_PROMESSA: dict[str, str] = {
 }
 
 _SEM_CAMINHO_HOJE: dict[str, str] = {
+    # sai com: A-ABA-VIBRACAO-DO-TODO-01
+    "interface/monta.py::modo_auto": (
+        "13/10/2026 — o botão único do «Modo automático» (A-BASE-COMUM-DAS-ABAS-01), "
+        "que a base comum já pinta pelo `aria-pressed` e os gestos `modo-da-vibracao` e "
+        "`modo-dos-controles` já gravam. O caminho se perde porque nenhum gerador de aba "
+        "o chama ainda: os pares antigos seguem nas abas 02 a 05. Fecha quando a "
+        "A-ABA-VIBRACAO-DO-TODO-01 trocar o par da 05 por `monta.modo_auto` (o passo 3 "
+        "dela); a 02, a 03 e a 04 seguem nas sprints «do todo» de cada uma."
+    ),
     # sai com: AS-MARCAS-VIRAM-OS-ESTILOS-VISUAL-NOVEL-E-ADULTO-01
     "profiles/marcas_do_jogo.py::molde_dos_botoes": (
         "13/10/2026 — o molde da tabela de botões que a marca «Visual novel» pede com o "
