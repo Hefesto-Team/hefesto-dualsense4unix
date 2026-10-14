@@ -858,15 +858,15 @@ class Daemon:
                 self.store, appid_em_cena=self.appid_em_cena
             )
             self._caminho_do_boot = caminho_do_boot
+            if not self.config.gamepad_emulation_enabled and _o_pad_do_jogo_volta_no_boot(
+                self, perfil_do_boot
+            ):
+                self._mode_from_profile = "gamepad"
             if mascara_do_boot is not None and self.config.gamepad_emulation_enabled:
                 self.config.gamepad_flavor = mascara_do_boot
             if perfil_do_boot is not None:
-                logger.info(
-                    "modo_do_boot_pelo_perfil",
-                    perfil=perfil_do_boot,
-                    caminho=caminho_do_boot,
-                    mascara=mascara_do_boot,
-                )
+                logger.info("modo_do_boot_pelo_perfil", perfil=perfil_do_boot,
+                            caminho=caminho_do_boot, mascara=mascara_do_boot)
         self.config.gamepad_caminho = self._caminho_do_boot
         # teclado era o único dos três sem flag em disco, e por isso o único que
         # não tinha como ser desligado). Três valores: `None` = nunca configurada
@@ -5011,6 +5011,29 @@ def _volta_do_aperto(daemon: Any) -> None:
             daemon._dispatch_gamepad_emulation(estado, daemon._evdev_buttons_once())
     except Exception as exc:
         logger.debug("volta_do_aperto_falhou", err=str(exc))
+
+
+def _o_pad_do_jogo_volta_no_boot(daemon: Any, perfil_do_boot: str | None) -> bool:
+    """O perfil de jogo que o boot restaura pede o gamepad? Então o pad nasce ligado.
+
+    D-1410-O-PERFIL-FICA-NO-ULTIMO-JOGO (14/10/2026): medido no reinício do
+    serviço, o perfil do último jogo voltava e o gamepad não, porque o flag em
+    disco é o da escolha de fora do jogo (o modo que o jogo liga não o grava).
+    Só o perfil de jogo (`connection.o_jogo_que_o_boot_restaura`, o em cena ou o
+    último) liga; a escolha e o Freestyle seguem nos flags
+    (BUG-BOOT-RESTORE-FLIPS-EMULATION-01), e o flag em disco não muda.
+    """
+    from hefesto_dualsense4unix.daemon.connection import o_jogo_que_o_boot_restaura
+
+    perfil = o_jogo_que_o_boot_restaura(
+        getattr(daemon, "store", None), appid_em_cena=getattr(daemon, "appid_em_cena", None)
+    )
+    if getattr(getattr(perfil, "mode", None), "kind", None) != "gamepad":
+        return False
+    daemon.config.gamepad_emulation_enabled = True
+    daemon.config.mouse_emulation_enabled = False
+    logger.info("o_pad_do_jogo_volta_no_boot", perfil=perfil_do_boot)
+    return True
 
 
 __all__ = [

@@ -1422,6 +1422,35 @@ async def shutdown(daemon: DaemonProtocol) -> None:
     logger.info("daemon_stopped")
 
 
+def o_jogo_que_o_boot_restaura(
+    store: Any = None, *, appid_em_cena: int | None = None,
+) -> Any | None:
+    """O perfil que o boot restaura, só quando ele vem de um jogo (o em cena ou o último).
+
+    D-1410-O-PERFIL-FICA-NO-ULTIMO-JOGO: o perfil do jogo volta com o modo dele,
+    e quem pergunta é o boot do pad (`lifecycle`), porque o restore não aplica
+    o modo. A escolha de fora do jogo e o Freestyle dão ``None``: ali os flags
+    persistidos governam. Nunca levanta.
+    """
+    perfil = perfil_que_o_boot_restaura(store, appid_em_cena=appid_em_cena)
+    nome = getattr(perfil, "name", None)
+    if not nome:
+        return None
+    try:
+        from hefesto_dualsense4unix.utils.session import o_ultimo_jogo
+
+        do_jogo = None
+        if appid_em_cena is not None:
+            from hefesto_dualsense4unix.profiles.manager import perfil_do_appid
+
+            do_jogo = perfil_do_appid(appid_em_cena)
+        if (do_jogo is not None and do_jogo.name == nome) or o_ultimo_jogo() == nome:
+            return perfil
+    except Exception:
+        return None
+    return None
+
+
 __all__ = [
     "PASSO_ENQUANTO_O_GATILHO_ESTA_ARMADO_SEC",
     "PASSO_ENQUANTO_UM_CONTROLE_TROCA_DE_TRANSPORTE_SEC",
@@ -1435,6 +1464,7 @@ __all__ = [
     "armar_gatilho_da_cor_por_evento",
     "armar_gatilho_da_cor_por_numeracao",
     "disparar_gatilhos_devidos",
+    "o_jogo_que_o_boot_restaura",
     "reaplicar_som_de_quem_trocou_de_transporte",
     "reapply_mic_after_connect",
     "reapply_speaker_after_connect",
