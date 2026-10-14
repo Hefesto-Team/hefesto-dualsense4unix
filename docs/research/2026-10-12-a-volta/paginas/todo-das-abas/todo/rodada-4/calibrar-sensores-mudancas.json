@@ -18,7 +18,11 @@
    "origem": "rodada 4 (o que faltava desenho)",
    "ancora": "html.alvos-24",
    "seletor": "button, select, input",
-   "conflito": "Medido na página do todo: 0 alvos abaixo de 24 px e 48 de 76 textos abaixo de 12 px; depois, 0 e 0. Em 1212x740 a janela do todo já rolava 33 px por dentro; com o respiro apertado ela deixa de rolar. Ficam abaixo de 12 px só as letras gravadas no desenho pequeno do controle (L1, R1, L2, R2, L, R)."
+   "conflito": "Medido na página do todo: 0 alvos abaixo de 24 px e 48 de 76 textos abaixo de 12 px; depois, 0 e 0. Em 1212x740 a janela do todo já rolava 33 px por dentro; com o respiro apertado ela deixa de rolar. Ficam abaixo de 12 px só as letras gravadas no desenho pequeno do controle (L1, R1, L2, R2, L, R).",
+   "ajuste_r4": {
+    "pedido": "antes tá melhor;. mmas o antes tá confuso tambem e muito cheio de texto.",
+    "feito": "Voltou o arranjo de antes, com o respiro dele entre os blocos; ficam os alvos de 24 px e a letra de 12 px. Saiu o texto que sobrava: o nome do controle repetido em cima da mira e o «2 controles conectados» do rodapé. As vagas sem controle dizem só «Player 3» e «Player 4» com «Desconectado», no lugar da cor do plástico em letra grande. Cabe sem rolar também em 1212x740."
+   }
   }
  ],
  "por_baixo": [],

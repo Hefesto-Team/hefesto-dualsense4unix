@@ -350,13 +350,21 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 .menu-hefesto button[disabled]{color:var(--texto-mudo,#9a9eb8);opacity:.55;cursor:default;background:transparent}
 .menu-hefesto hr{border:0;border-top:1px solid var(--border-sutil,#343746);margin:5px 4px}
 </style>
+<style data-todo-css="calibrar-r4-ajuste">
+/* Ajuste da rodada 4 (calibrar-7): o desenho de antes, com o respiro dele, e menos texto. Sai o nome repetido
+   em cima da mira e a contagem do rodapé; a vaga sem controle diz só o jogador e «Desconectado». */
+.lugar{flex-direction:column;gap:4px;font-family:inherit;font-size:13px;color:var(--texto-mudo)}
+.lugar b{font-weight:600;color:var(--texto-suave)}
+.lugar span{font-size:12px}
+/* Sem o nome repetido, o fio de cima da mira dobrava com o da leitura: fica um só. */
+.mira::before{display:none}
+</style>
 <style data-todo-css="alvos-r4">
 /* Rodada 4: a sua resposta de 13/10 (~23h40), botões e letra: todo alvo de toque com 24 px e nenhuma letra abaixo de 12 px. ?alvos=hoje mostra a tela sem a mudança. */
 html.alvos-24 :is(button,select,input:not([type=checkbox]):not([type=radio]):not([type=hidden]),textarea,summary,[role=button],.nj-tog,.sw,.passo,label.faixa,.nav-i,.mudo-i,.padrao-i){min-height:24px;box-sizing:border-box}
 html.alvos-24 :is(button,[role=button],.nj-tog,.passo,.nav-i,.mudo-i,.padrao-i){min-width:24px}
 html.alvos-24 :is(input[type=checkbox],input[type=radio]):not(.radio-mesa){min-width:24px;min-height:24px}
 html.alvos-24 input[type=range]{height:24px}
-html.letra-12 .ctr{gap:4px}html.letra-12 .leitura{gap:4px;padding-top:5px}html.letra-12 .corpo{gap:8px;padding:10px 20px 12px}
 </style>
 </head>
 <body>
@@ -1168,8 +1176,8 @@ html.letra-12 .ctr{gap:4px}html.letra-12 .leitura{gap:4px;padding-top:5px}html.l
               <div class="lin" data-eixo="accel-z"><span class="r"></span><span class="v" data-campo="accel-z">—</span><span class="g" data-campo="accel-z-cor" data-hef-alvo="cor" style="color:var(--border-forte)"><i class="neg" data-campo="accel-z-neg" data-hef-alvo="largura" style="width:0%"></i><i class="pos" data-campo="accel-z-pos" data-hef-alvo="largura" style="width:0%"></i></span></div>
             </div>
           </div>
-          <div class="lugar" aria-label="Lugar vazio do Galactic Purple">Galactic Purple</div>
-          <div class="lugar" aria-label="Lugar vazio do White">White</div>
+          <div class="lugar" aria-label="Player 3 desconectado"><b>Player 3</b><span>Desconectado</span></div>
+          <div class="lugar" aria-label="Player 4 desconectado"><b>Player 4</b><span>Desconectado</span></div>
     </div>
 
     <!-- A MIRA VIRTUAL, uma coluna por controle embaixo do cartão dele — ver o
@@ -1177,7 +1185,6 @@ html.letra-12 .ctr{gap:4px}html.letra-12 .leitura{gap:4px;padding-top:5px}html.l
          propósito: o dos cartões o produto remonta a cada tique. -->
     <div class="mira-cx" data-bloco="miras">
           <div class="mira" style="--plastico:#ae335a" data-controle="p1">
-            <span class="quem" data-campo="quem-joga" data-hef-alvo="html">Vitória</span>
             <div class="mira-topo leitura"><span class="selo-av" data-campo="mira-lado-texto" data-hef-alvo="html" data-dica="Liga e escolhe o lado na aba Controles" data-todo="2"><span class="p"></span>Giroscópio como analógico: desligado</span></div>
               <label class="desl"><span class="r">O quanto um gesto anda</span><input class="trilho" type="range" min="1" max="12" step="1" value="6" data-gesto="mira-sensibilidade" data-campo="mira-sensibilidade" data-hef-alvo="valor" aria-label="O quanto um gesto anda" data-todo="3"><span class="n"><span data-campo="mira-sensibilidade-num">6</span></span></label>
               <label class="desl"><span class="r">Ignorar tremor até</span><input class="trilho" type="range" min="1" max="60" step="1" value="3" data-gesto="mira-tremor" data-campo="mira-tremor" data-hef-alvo="valor" aria-label="Ignorar tremor até"><span class="n"><span data-campo="mira-tremor-num">3</span> <span class="un">graus/s</span></span></label>
@@ -1185,7 +1192,6 @@ html.letra-12 .ctr{gap:4px}html.letra-12 .leitura{gap:4px;padding-top:5px}html.l
               <div class="desl"><span class="r">Inverter</span><span class="inverter"><button class="sw off" data-gesto="mira-inverter" data-inverter="lado" data-campo="mira-inverter-lado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" aria-label="Inverter esquerda e direita"><span class="p"></span>Esquerda e direita</button><button class="sw off" data-gesto="mira-inverter" data-inverter="cima-baixo" data-campo="mira-inverter-cima-baixo" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" aria-label="Inverter cima e baixo"><span class="p"></span>Cima e baixo</button></span></div>
           </div>
           <div class="mira" style="--plastico:#7eb8d4" data-controle="p2">
-            <span class="quem" data-campo="quem-joga" data-hef-alvo="html">Starlight Blue</span>
             <div class="mira-topo leitura"><span class="selo-av" data-campo="mira-lado-texto" data-hef-alvo="html" data-dica="Liga e escolhe o lado na aba Controles" data-todo="2"><span class="p"></span>Giroscópio como analógico: desligado</span></div>
               <label class="desl"><span class="r">O quanto um gesto anda</span><input class="trilho" type="range" min="1" max="12" step="1" value="6" data-gesto="mira-sensibilidade" data-campo="mira-sensibilidade" data-hef-alvo="valor" aria-label="O quanto um gesto anda"><span class="n"><span data-campo="mira-sensibilidade-num">6</span></span></label>
               <label class="desl"><span class="r">Ignorar tremor até</span><input class="trilho" type="range" min="1" max="60" step="1" value="3" data-gesto="mira-tremor" data-campo="mira-tremor" data-hef-alvo="valor" aria-label="Ignorar tremor até"><span class="n"><span data-campo="mira-tremor-num">3</span> <span class="un">graus/s</span></span></label>
@@ -1203,7 +1209,7 @@ html.letra-12 .ctr{gap:4px}html.letra-12 .leitura{gap:4px;padding-top:5px}html.l
            botão, anunciando a ausência de uma frase que a página tirou de
            propósito. É o mesmo defeito que a aba Lançadores mediu em 11/09, e
            a casa já decidiu a cura: o alvo `html` trata vazio como vazio. -->
-      <span class="quantos" data-campo="quantos" data-hef-alvo="html">2 controles conectados</span>
+
       <span class="acoes">
         <button class="btn fazer" data-gesto="calibrar-comecar"><span class="t1">Começar</span><span class="t2">Medindo…</span><span class="t3">Calibrar de novo</span></button>
         <a class="btn" href="02-controles.html">Fechar</a>
