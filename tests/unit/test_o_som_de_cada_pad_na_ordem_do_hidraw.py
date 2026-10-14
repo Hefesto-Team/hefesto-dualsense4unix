@@ -6,8 +6,8 @@ vence tudo); a ORDEM em que os nós nascem não era: o laço do
 controles, e o Wine dá o identificador canônico da Sony ao primeiro DualSense
 da lista (patch 0187; o nosso nó não tem ``alsa.card`` para o 0189 reordenar).
 
-A régua monta um ``/sys`` de mentira (âncoras emprestadas e o gadget de cada
-pad sob o ``vhci_hcd``), o registro do gadget do próprio ``pad_usb`` e um
+A régua monta um ``/sys`` de mentira (o gadget de cada pad sob o
+``vhci_hcd``), o registro do gadget do próprio ``pad_usb`` e um
 servidor de som de mentira, e mede, com dois e com quatro pads, no cabo e no
 rádio: cada nó aponta para o gadget do SEU pad, nenhum gadget serve a dois nós,
 e os nós nascem na ordem dos assentos. O controle que sai e volta renasce no
@@ -159,7 +159,6 @@ class _Mesa:
     sub: Any
     servidor: _Servidor
     sysfs: Path
-    emprestadas: set[str]
     assentos: dict[str, int] = field(default_factory=dict)
     jogo: bool = False
 
@@ -186,11 +185,6 @@ def mesa(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> _Mesa:
 
     monkeypatch.delenv(eh.INTERRUPTOR_DA_ORDEM_DOS_NOS, raising=False)
     sysfs = tmp_path / "sys"
-    emprestadas: set[str] = set()
-    for i in range(1, 6):
-        real = sysfs / "devices" / "pci0000:00" / "usb3" / f"3-{i}"
-        _usb_device(sysfs, real, busnum="3", devnum=10 + i)
-        emprestadas.add(f"/devices/pci0000:00/usb3/3-{i}/3-{i}:1.0")
     for n in range(1, 5):
         real = sysfs / "devices" / "platform" / "vhci_hcd.0" / "usb9" / f"9-{n}"
         _usb_device(
@@ -200,9 +194,8 @@ def mesa(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> _Mesa:
     servidor = _Servidor()
     sub = mod.AltoFalanteSubsystem(gerenciador=None, fonte_de_controles=list)
     sub._cabo = HapticaDoCabo(lacos=_Lacos(), conferir=lambda _no: None)
-    m = _Mesa(sub=sub, servidor=servidor, sysfs=sysfs, emprestadas=emprestadas)
+    m = _Mesa(sub=sub, servidor=servidor, sysfs=sysfs)
     monkeypatch.setattr(af, "_rodar", servidor)
-    monkeypatch.setattr(eh, "RAIZ_DO_SYSFS", sysfs)
     monkeypatch.setattr(pad_usb, "_INTERFACE_DO_APARELHO", {})
     monkeypatch.setattr(dba, "_NUMERADOR_DE_ASSENTO", lambda u: m.assentos.get(u))
     monkeypatch.setattr(af, "PonteDeSomPorRadio", _PonteDeMentira)
@@ -301,14 +294,14 @@ def test_cada_no_nasce_no_gadget_do_seu_pad_na_ordem_dos_assentos(
     assert len(set(caminhos)) == quantos, f"um gadget serve a dois nós: {caminhos}"
 
 
-def test_sem_o_gadget_o_no_volta_a_ancora_emprestada(mesa: _Mesa) -> None:
+def test_sem_o_gadget_o_no_nao_nasce(mesa: _Mesa) -> None:
+    """TODO-PAD-TEM-PORTA-PROPRIA-01 (14/10/2026): até 14/10 ele nascia numa emprestada."""
     uniqs = _U[:2]
     mesa.assentos = {_U[0]: 2, _U[1]: 1}
     mesa.gadget(_U[1])
     mesa.volta(uniqs, "bluetooth")
     assert mesa.ancora_de(_U[1]) == _interface_do_gadget(2)
-    assert mesa.ancora_de(_U[0]) in mesa.emprestadas
-    assert mesa.ancora_de(_U[0]) != mesa.ancora_de(_U[1])
+    assert mesa.servidor.cargas == [eh.nome_do_endpoint(_U[1])]
 
 
 def _sai_e_volta(mesa: _Mesa, transporte: str) -> tuple[list[str], list[str]]:
@@ -413,6 +406,8 @@ def test_o_interruptor_devolve_a_ordem_do_endereco(
 ) -> None:
     monkeypatch.setenv(eh.INTERRUPTOR_DA_ORDEM_DOS_NOS, eh.ORDEM_PELO_ENDERECO)
     mesa.assentos = dict(_ASSENTO)
+    for u in _U:
+        mesa.gadget(u)
     mesa.volta(_U, "bluetooth")
     assert mesa.servidor.cargas == [eh.nome_do_endpoint(u) for u in _U]
 

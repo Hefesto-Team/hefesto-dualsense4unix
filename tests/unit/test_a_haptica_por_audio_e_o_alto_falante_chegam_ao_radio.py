@@ -40,6 +40,7 @@ from tests.unit.test_no_modo_xbox_a_haptica_fina import (  # noqa: F401
     mundo,
 )
 from tests.unit.test_no_modo_xbox_a_haptica_fina import _P1 as _X1
+from tests.unit.porta_de_mentira import todo_pad_tem_porta
 
 P1, P2, P3, P4 = (f"aa:bb:cc:00:00:2{i}" for i in range(1, 5))
 MESA = (P1, P2, P3, P4)
@@ -108,12 +109,7 @@ class Mesa:
         monkeypatch.setattr(af, "fonte_do_monitor_do_no", self._fonte)
         monkeypatch.setattr(af, "CodificadorOpus", _Codificador)
         monkeypatch.setattr(eh, "EndpointDeHaptica", _EndpointDeMentira)
-        monkeypatch.setattr(
-            eh,
-            "ancoras",
-            lambda *a, **k: [eh.Ancora(syspath=f"/d/{i}", declarado=f"/d/{i}/i:1.0")
-                             for i in range(4)],
-        )
+        todo_pad_tem_porta(monkeypatch)
         monkeypatch.setattr(eh, "endpoints_de_pe", lambda *a, **k: {})
         monkeypatch.setattr(eh, "varrer_endpoints_orfaos", lambda *a, **k: None)
         self.daemon = SimpleNamespace()

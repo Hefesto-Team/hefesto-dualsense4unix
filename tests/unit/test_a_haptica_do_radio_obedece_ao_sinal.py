@@ -11,6 +11,7 @@ import pytest
 
 from hefesto_dualsense4unix.integrations import alto_falante_bt as af
 from hefesto_dualsense4unix.integrations import haptica_bt
+from tests.unit.porta_de_mentira import todo_pad_tem_porta
 
 #: O ``0x36`` com o ``0x10`` em todo quadro: a háptica em [76], os dados em [78].
 TAMANHO_036 = af.TAMANHO_DO_DEGRAU[af.DEGRAU_COMBINADO]
@@ -316,12 +317,7 @@ class MesaDeQuatro:
         monkeypatch.setattr(af, "a_ponte_do_radio_pode_subir", lambda: (True, ""))
         monkeypatch.setattr(af, "fonte_do_monitor_do_no", self._fonte)
         monkeypatch.setattr(eh, "EndpointDeHaptica", _EndpointDeMentira)
-        monkeypatch.setattr(
-            eh,
-            "ancoras",
-            lambda *a, **k: [eh.Ancora(syspath=f"/d/{i}", declarado=f"/d/{i}/i:1.0")
-                             for i in range(4)],
-        )
+        todo_pad_tem_porta(monkeypatch)
         monkeypatch.setattr(eh, "endpoints_de_pe", lambda *a, **k: {})
         monkeypatch.setattr(eh, "varrer_endpoints_orfaos", lambda *a, **k: None)
         self.daemon = SimpleNamespace()

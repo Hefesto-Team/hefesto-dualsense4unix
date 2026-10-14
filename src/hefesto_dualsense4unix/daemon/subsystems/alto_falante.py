@@ -731,7 +731,8 @@ class AltoFalanteSubsystem:
         self._ponte_recusada: dict[str, float] = {}
         #: ``{nó: (uniq, quando)}`` do ouvido que não achou fonte, até o recuo vencer.
         self._ouvido_sem_fonte: dict[str, tuple[str, float]] = {}
-        self._faltam_ancoras = 0
+        #: ``{marca: motivo}`` do aparelho sem a porta USB própria, já dito no log.
+        self._sem_porta: dict[str, str] = {}
         self._fontes_em_cache: tuple[dict[str, str], Any] = ({}, None)
         self._fonte_viva: dict[str, str] = {}
         self._store: Any = None
@@ -1060,7 +1061,7 @@ class AltoFalanteSubsystem:
             refazer=ordem == ORDEM_PELO_ASSENTO,
         )
         # O plano já refeito uma vez não se refaz: o nó do meio que não nasce
-        # (sem âncora, ou o servidor recusa) faria os de trás renascerem a cada volta.
+        # (sem porta própria, ou o servidor recusa) faria os de trás renascerem a cada volta.
         plano = (tuple(na_ordem), tuple(refazer))
         if not refazer or plano == getattr(self, "_ordem_ja_refeita", None):
             self._ordem_ja_refeita = plano if refazer else None
@@ -1652,33 +1653,23 @@ class AltoFalanteSubsystem:
             logger.debug("haptica_no_ar_ilegivel", exc_info=True)
         return False
 
-    def _avisar_ancoras_que_faltam(self, faltam: int, aparelhos: int) -> None:
-        """O aparelho sem âncora USB fica sem endpoint — e diz isso.
+    def _dizer_sem_porta_propria(self, marca: str, uniq: str) -> None:
+        """O aparelho sem a porta USB própria fica sem endpoint, e o log diz por quê.
 
-        **POR APARELHO DESDE 02/10/2026** (A-HAPTICA-E-POR-APARELHO-01; de 28/09
-        a 02/10 a conta era por lugar): um endpoint por DualSense da mesa, nos
-        dois transportes. O controle sem âncora segue pela placa no cabo e fica
-        sem vibração no rádio.
-
-        **INSTALL-UNIVERSAL, 18/09/2026.** O endpoint da háptica precisa de uma
-        âncora por controle (um aparelho USB com interface e sem placa de som),
-        e o :func:`distribuir_ancoras` só entrega enquanto houver: o que sobra
-        era pulado por um ``continue`` mudo. Num desktop sobram âncoras; num
-        notebook com a mesa de quatro, podem faltar — e a vibração de um
-        jogador sumia sem rastro.
-
-        O aviso sai **na mudança**, porque esta volta roda a cada
-        :data:`RECONCILIA_S`, e um aviso por volta encheria o journal. Nada vai
-        para a tela (a dívida é nossa, não dela): o ``doctor.sh`` conta as
-        mesmas âncoras e diz o gesto.
+        TODO-PAD-TEM-PORTA-PROPRIA-01 (14/10/2026): sem o gadget do pad dele
+        (faltou contrato, o broker recusou além das oito portas, o gadget não
+        enumerou), nenhum endpoint com o nome da Sony nasce para ele. A linha
+        sai na mudança do motivo, porque esta volta roda a cada
+        :data:`RECONCILIA_S`; o motivo é o que o pad anotou
+        (:func:`pad_usb.porque_sem_porta`). Nada vai para a tela.
         """
-        if faltam == self._faltam_ancoras:
+        from hefesto_dualsense4unix.integrations.pad_usb import porque_sem_porta
+
+        motivo = porque_sem_porta(uniq)
+        if self._sem_porta.get(marca) == motivo:
             return
-        if faltam > 0:
-            logger.warning("haptica_sem_ancora", faltam=faltam, aparelhos=aparelhos)
-        else:
-            logger.info("haptica_ancoras_bastam", aparelhos=aparelhos)
-        self._faltam_ancoras = faltam
+        self._sem_porta[marca] = motivo
+        logger.warning("haptica_sem_porta_propria", uniq=uniq, motivo=motivo)
 
     def _quem_o_jogo_le(self, controles: list[Any]) -> set[str]:
         """Os ``uniq`` (em minúsculas) cujo evdev algum processo de jogo segura. PISTA, NÃO VOTO.
@@ -1862,8 +1853,6 @@ class AltoFalanteSubsystem:
             EndpointDeHaptica,
             ancora_da_interface,
             ancora_do_gadget,
-            ancoras,
-            distribuir_ancoras,
             endpoints_de_pe_ou_nada,
             varrer_endpoints_orfaos,
         )
@@ -1906,29 +1895,29 @@ class AltoFalanteSubsystem:
                 self._o_cabo().soltar(marca)
                 self._parar_o_tocador(marca)
                 self._endpoints.pop(marca, None)
+            # TODO-PAD-TEM-PORTA-PROPRIA-01: no servidor fica só o endpoint de quem tem a
+            # porta própria (ou o que esta casa já segura); o resto, inclusive o de âncora
+            # emprestada que um processo anterior deixou, cai.
+            com_porta = [
+                m for m, u in de_pe_agora.items()
+                if m in self._endpoints or ancora_do_gadget(u) is not None
+            ]
             with contextlib.suppress(Exception):
-                varrer_endpoints_orfaos(de_pe_agora, de_pe=de_pe)
+                caidos = set(varrer_endpoints_orfaos(com_porta, de_pe=de_pe))
+                de_pe = {
+                    nome: [(m, c) for m, c in instancias if m not in caidos]
+                    for nome, instancias in de_pe.items()
+                }
 
         na_ordem = self._nos_na_ordem(de_pe_agora, de_pe)
-        proprias = {
-            marca: propria
-            for marca, uniq in de_pe_agora.items()
-            if (propria := ancora_do_gadget(uniq)) is not None
-        }
-        postas = distribuir_ancoras(
-            de_pe_agora, ancoras(), de_pe,
-            ja_postas={m: e.ancora for m, e in self._endpoints.items()},
-            ocupados=set(aparelho_de.values()),
-            proprias=proprias,
-        )
+        for marca in [m for m in self._sem_porta if m not in de_pe_agora]:
+            self._sem_porta.pop(marca, None)
         for marca in na_ordem:
             uniq = de_pe_agora[marca]
-            posta = postas.get(marca)
             atual = self._endpoints.get(marca)
             if atual is not None:
-                if posta is None:
-                    continue
-                if posta.syspath == atual.ancora.syspath:
+                propria = ancora_do_gadget(uniq)
+                if propria is not None and propria.syspath == atual.ancora.syspath:
                     self._renovar_o_rotulo_da_haptica(atual)
                     continue
                 lido = {self._endpoint_da_ponte.get(u) for u in self._pontes}
@@ -1938,40 +1927,35 @@ class AltoFalanteSubsystem:
                 self._parar_o_tocador(marca)
                 self._endpoints.pop(marca, None)
                 atual.parar()
-                logger.info("haptica_endpoint_reancorado", controle=marca, ancora=posta.syspath)
-            if posta is None or not uniq:
-                continue
-            if atual is None:
-                # O-PAR-DO-PAD: o endpoint NASCE casado. O gadget do pad deste
-                # aparelho (ou o do pad que ainda não sabe de quem é) montou e a
-                # âncora dele está a caminho; nascer agora seria nascer numa
-                # emprestada, e com o jogo tocando nele não se reancora mais. O
-                # prazo da montagem limita a espera: o pad que não enumera volta
-                # ao uhid e o aparelho empresta, como sempre. A pergunta é UMA,
-                # na hora de nascer (OS-QUATRO-EM-HARMONIA-01, item 2): a foto
-                # das ``proprias`` do começo da volta envelhece no meio dela.
-                interface, espera = a_ancora_ou_a_espera(uniq)
-                propria = ancora_da_interface(interface)
-                if propria is not None:
-                    posta = propria
-                elif espera:
-                    logger.debug("haptica_endpoint_espera_o_gadget", controle=marca)
-                    continue
+                if propria is None:
+                    logger.info("haptica_endpoint_desce_sem_a_porta", controle=marca)
                 else:
                     logger.info(
-                        "haptica_endpoint_nasce_emprestado", controle=marca, ancora=posta.syspath
+                        "haptica_endpoint_reancorado", controle=marca, ancora=propria.syspath
                     )
-            endpoint = EndpointDeHaptica(uniq=uniq, ancora=posta)
+            if not uniq:
+                continue
+            # O-PAR-DO-PAD e TODO-PAD-TEM-PORTA-PROPRIA-01: o endpoint NASCE na porta
+            # própria, e só nela. Com o gadget a caminho, espera; sem gadget, fica
+            # sem endpoint e o log diz por quê. A pergunta é UMA, na hora de nascer
+            # (OS-QUATRO-EM-HARMONIA-01, item 2): uma foto do começo da volta
+            # envelhece no meio dela.
+            interface, espera = a_ancora_ou_a_espera(uniq)
+            propria = ancora_da_interface(interface)
+            if propria is None:
+                if espera:
+                    logger.debug("haptica_endpoint_espera_o_gadget", controle=marca)
+                else:
+                    self._dizer_sem_porta_propria(marca, uniq)
+                continue
+            self._sem_porta.pop(marca, None)
+            endpoint = EndpointDeHaptica(uniq=uniq, ancora=propria)
             if endpoint.iniciar():
                 self._endpoints[marca] = endpoint
                 if atual is None and getattr(endpoint, "module_id", None) is not None:
                     self._avisar_quem_o_jogo_nao_conhece(marca)
         if not self._donos_da_volta:
             self._sem_registro_no_jogo = frozenset()
-        self._avisar_ancoras_que_faltam(
-            sum(1 for m in de_pe_agora if m not in self._endpoints and m not in postas),
-            len(de_pe_agora),
-        )
 
         motores: list[str] | None = None
         with contextlib.suppress(Exception):

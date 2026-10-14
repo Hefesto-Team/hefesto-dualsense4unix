@@ -1676,17 +1676,21 @@ def _nenhum_gadget_a_caminho_atravessa() -> Iterator[None]:
 
     O-PAR-DO-PAD (12/10/2026): o som não cria o endpoint de háptica enquanto
     houver gadget a caminho (``pad_usb.a_ancora_ou_a_espera``), e o pad sem dono
-    vale para todo aparelho até o prazo dele vencer.
+    vale para todo aparelho até o prazo dele vencer. A porta registrada e o
+    motivo de quem ficou sem ela (TODO-PAD-TEM-PORTA-PROPRIA-01) também não
+    atravessam de um caso ao outro.
     """
     try:
         from hefesto_dualsense4unix.integrations import pad_usb
     except ModuleNotFoundError:
         yield
         return
-    pad_usb._A_CAMINHO.clear()
+    for estado in (pad_usb._A_CAMINHO, pad_usb._INTERFACE_DO_APARELHO, pad_usb._SEM_PORTA):
+        estado.clear()
     pad_usb.a_mesa_saiu()
     yield
-    pad_usb._A_CAMINHO.clear()
+    for estado in (pad_usb._A_CAMINHO, pad_usb._INTERFACE_DO_APARELHO, pad_usb._SEM_PORTA):
+        estado.clear()
     pad_usb.a_mesa_saiu()
 
 
@@ -2001,17 +2005,6 @@ def ds5_de_bancada(
 ) -> Any:
     """O handle de bancada do transporte DESTE caso (ver `fabrica_de_bancada`)."""
     return fabrica_de_bancada(transporte)
-
-
-@pytest.fixture(autouse=True, scope="session")
-def _nenhuma_ancora_de_usb_viva_na_suite(tmp_path_factory: pytest.TempPathFactory) -> None:
-    """A suíte não enxerga o barramento USB DELA."""
-    vazio = tmp_path_factory.mktemp("sysfs-sem-usb")
-    try:
-        from hefesto_dualsense4unix.integrations import endpoint_de_haptica
-    except ModuleNotFoundError:
-        return
-    endpoint_de_haptica.RAIZ_DO_SYSFS = vazio
 
 
 @pytest.fixture(autouse=True, scope="session")

@@ -367,6 +367,12 @@ def bus_do_hid_id(hid_id: str) -> int | None:
 
 _TRAVA = threading.Lock()
 _INTERFACE_DO_APARELHO: dict[str, str] = {}
+#: ``{12 hex do aparelho: motivo}``: por que o pad dele ficou sem a porta USB
+#: própria (o broker recusou, faltou contrato, não enumerou). O pad escreve, e o
+#: som lê quando o aparelho fica sem endpoint (``haptica_sem_porta_propria``).
+_SEM_PORTA: dict[str, str] = {}
+#: o motivo de quem nunca disse nada: o pad do aparelho não pediu gadget.
+SEM_GADGET = "sem_gadget"
 _CONTRATO_QUE_FALTOU: list[str] = []
 #: ``{serial do gadget: (12 hex do aparelho ou "", prazo monotônico)}``: o gadget
 #: montado que ainda não deu a âncora. "" é o pad que montou antes de saber de
@@ -384,7 +390,7 @@ _A_MESA_VIU: tuple[frozenset[str], float] | None = None
 _PRIMEIRA_PERGUNTA: dict[str, float] = {}
 #: uma volta do ``coop.sync`` (2 s) e folga: depois disso, o aparelho que o
 #: co-op não viu não é dele (o primário sem MAC, um aparelho que o evdev não
-#: lista) e o som cria o endpoint como sempre.
+#: lista) e o som decide sem esperar: com a porta própria, o endpoint; sem ela, nenhum.
 _POR_DECIDIR_S = 5.0
 
 
@@ -399,10 +405,11 @@ def registrar_gadget(identidade: str, interface: str) -> None:
         return
     with _TRAVA:
         _INTERFACE_DO_APARELHO[chave] = interface
+        _SEM_PORTA.pop(chave, None)
 
 
 def esquecer_gadget(identidade: str, interface: str | None = None) -> None:
-    """O gadget do aparelho desceu: o som dele volta à âncora emprestada.
+    """O gadget do aparelho desceu: o som dele fica sem endpoint até a porta voltar.
 
     Com ``interface``, só esquece se o registro ainda for o DESTE gadget: o
     aparelho que trocou de pad (o P1 que passou a outro controle, o cedido ao
@@ -419,8 +426,8 @@ def anotar_gadget_a_caminho(serial: str, identidade: str, prazo_s: float) -> Non
     """O gadget de ``serial`` montou e a âncora dele chega em até ``prazo_s``.
 
     É a ordem que faz o endpoint de háptica NASCER casado: enquanto o gadget do
-    aparelho está a caminho, o som não cria o endpoint dele numa âncora
-    emprestada (:func:`a_ancora_ou_a_espera`). ``identidade`` vazia = o pad ainda
+    aparelho está a caminho, o som espera por ele (:func:`a_ancora_ou_a_espera`)
+    e o endpoint nasce na porta própria. ``identidade`` vazia = o pad ainda
     não sabe de quem é, e espera por todos até saber ou vencer o prazo. A
     identidade que chega depois troca o dono e mantém o prazo da montagem.
     """
@@ -513,7 +520,7 @@ def _a_caminho_locked(chave: str, momento: float) -> bool:
 
     True para o gadget do próprio aparelho e para o que ainda não sabe de quem
     é; o que venceu o prazo não conta (o pad que não enumera volta ao uhid, e o
-    aparelho fica com a âncora emprestada de sempre). True também enquanto o
+    aparelho fica sem endpoint). True também enquanto o
     co-op não decidiu o pad deste aparelho: ele o pôs na mesa e o pad não
     nasceu (:func:`anotar_pad_a_caminho`), ou está no ar e ainda não o viu (o
     controle que entra com o jogo aberto, entre o sysfs e o ``sync``). Quem
@@ -533,7 +540,7 @@ def a_ancora_ou_a_espera(identidade: str, *, agora: float | None = None) -> tupl
     diferentes da volta deixavam o gadget que enumerava no meio sem âncora e sem
     espera, e o endpoint nascia na emprestada. Sob a mesma trava não há meio
     termo: ``(interface, False)``; ``(None, True)`` = espere; ``(None, False)`` =
-    o aparelho não tem gadget.
+    o aparelho não tem gadget, e o motivo é :func:`porque_sem_porta`.
     """
     chave = _so_hex(identidade or "")
     momento = time.monotonic() if agora is None else agora
@@ -542,6 +549,25 @@ def a_ancora_ou_a_espera(identidade: str, *, agora: float | None = None) -> tupl
         if interface:
             return interface, False
         return None, _a_caminho_locked(chave, momento)
+
+
+def anotar_sem_porta(identidade: str, motivo: str) -> None:
+    """O pad do aparelho ficou sem a porta USB própria, por ``motivo``.
+
+    TODO-PAD-TEM-PORTA-PROPRIA-01 (14/10/2026): o aparelho sem porta fica sem
+    endpoint com o nome da Sony, e o log diz por quê. Quem sabe o porquê é o
+    pad; quem diz é o som, uma vez, quando o aparelho fica sem endpoint.
+    """
+    chave = _so_hex(identidade or "")
+    if chave and motivo:
+        with _TRAVA:
+            _SEM_PORTA[chave] = str(motivo)
+
+
+def porque_sem_porta(identidade: str) -> str:
+    """O motivo anotado pelo pad, ou :data:`SEM_GADGET` quando ele não disse nada."""
+    with _TRAVA:
+        return _SEM_PORTA.get(_so_hex(identidade or ""), SEM_GADGET)
 
 
 def interface_do_aparelho(identidade: str) -> str | None:
@@ -633,6 +659,7 @@ __all__ = [
     "GADGET_HID_WRITE_GET_REPORT",
     "MAX_PADS_USB",
     "MODULOS_DO_GADGET",
+    "SEM_GADGET",
     "SERIAL_PREFIXO",
     "VPAD_HID_PHYS",
     "VPAD_UNIQ_PREFIXO",
@@ -642,6 +669,7 @@ __all__ = [
     "anotar_contrato_que_faltou",
     "anotar_gadget_a_caminho",
     "anotar_pad_a_caminho",
+    "anotar_sem_porta",
     "aparelho_presente",
     "bus_do_hid_id",
     "campos_do_uevent",
@@ -659,6 +687,7 @@ __all__ = [
     "ler_o_id_do_get_report",
     "pacote_do_get_report",
     "pad_decidido",
+    "porque_sem_porta",
     "registrar_gadget",
     "serial_do_pad",
     "sob_o_vhci",

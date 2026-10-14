@@ -2061,71 +2061,6 @@ check_ucm_do_dualsense() {
     fi
 }
 
-# AS ÂNCORAS USB DOS LUGARES (INSTALL-UNIVERSAL, 18/09/2026; POR LUGAR DESDE
-# 28/09/2026, A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01).
-#
-# O endpoint que o jogo acha é um nó nosso por LUGAR (P1 a P4), que declara o
-# `sysfs.path` de um aparelho USB SEM placa de som — a âncora de onde o Wine
-# tira o ContainerId. É uma âncora por lugar (duas iguais seriam dois endpoints
-# com o mesmo ContainerId), e o daemon só entrega enquanto houver. O controle
-# sentado num lugar sem âncora vibra pela própria placa no cabo, e fica sem
-# vibração no rádio. Num desktop sobram âncoras (o próprio adaptador Bluetooth
-# e os hubs internos); num notebook, podem faltar.
-#
-# A conta é contra os quatro lugares, e AVISA só quando falta âncora para um
-# lugar OCUPADO: com dois na mesa e uma âncora, é «1 lugar sem âncora». Os
-# lugares livres sem âncora saem como informação, porque são de quem entrar
-# depois.
-#
-# A pergunta é a MESMA do daemon, importada e não redigitada:
-# `endpoint_de_haptica.ancoras` e `LUGARES`, os DualSense no rádio do
-# `dualsense_bt_audio` e os do cabo com placa do `audio_ks_dualsense` (o mesmo
-# dono que o registro do lançamento lê), sem arrastar o pacote do daemon. Sem o
-# pacote ao alcance (python sem as dependências), o check se declara incapaz em
-# vez de responder. HEFESTO_SYSFS existe para os testes.
-check_ancoras_dos_lugares_da_haptica() {
-    local py saida mesa ancoras lugares em_uso
-    py="$(_python_do_produto)"
-    [[ -n "${py}" ]] || { info "sem python para conferir as âncoras da vibração"; return; }
-    saida="$(HEFESTO_SRC="${ROOT_DIR}/src" HEFESTO_SYSFS="${HEFESTO_SYSFS:-/sys}" \
-        "${py}" - <<'PY' 2>/dev/null
-import os
-import sys
-from pathlib import Path
-
-src = os.environ.get("HEFESTO_SRC", "")
-if src and os.path.isdir(src):
-    sys.path.insert(0, src)
-try:
-    from hefesto_dualsense4unix.integrations.audio_ks_dualsense import controles_no_cabo
-    from hefesto_dualsense4unix.integrations.dualsense_bt_audio import nos_dualsense_bluetooth
-    from hefesto_dualsense4unix.integrations.endpoint_de_haptica import LUGARES, ancoras
-except Exception:  # noqa: BLE001 - qualquer falha de import é "não sei"
-    print("sem-produto")
-    raise SystemExit(0)
-sysfs = Path(os.environ.get("HEFESTO_SYSFS") or "/sys")
-radio = {n.uniq for n in nos_dualsense_bluetooth(str(sysfs / "class" / "hidraw")) if n.uniq}
-cabo = controles_no_cabo(sysfs)
-print(len(radio) + len(cabo), len(ancoras(sysfs)), len(LUGARES))
-PY
-)" || saida=""
-    if [[ ! "${saida}" =~ ^[0-9]+\ [0-9]+\ [0-9]+$ ]]; then
-        info "âncoras da vibração não conferidas (o pacote não está ao alcance do python ${py})"
-        return
-    fi
-    read -r mesa ancoras lugares <<< "${saida}"
-    em_uso=$(( mesa < lugares ? mesa : lugares ))
-    if [[ "${mesa}" -eq 0 ]]; then
-        info "nenhum DualSense na mesa — âncoras da vibração não conferidas (${ancoras} disponível(is))"
-    elif [[ "${ancoras}" -ge "${lugares}" ]]; then
-        pass "âncoras USB da vibração: ${ancoras} para os ${lugares} lugares"
-    elif [[ "${em_uso}" -gt "${ancoras}" ]]; then
-        warn "$((em_uso - ancoras)) lugar(es) sem âncora: a vibração precisa de um aparelho USB sem som por lugar; ligue um hub ou um dongle — há ${ancoras} para ${mesa} DualSense na mesa, e o controle de um lugar sem âncora vibra pela placa no cabo e fica sem vibração no rádio"
-    else
-        info "${ancoras} âncora(s) USB para os ${lugares} lugares da vibração: bastam para os ${mesa} DualSense na mesa; quem entrar depois num lugar sem âncora vibra pela placa no cabo e fica sem vibração no rádio"
-    fi
-}
-
 # G2 item 5: sink de áudio PADRÃO mudo — sintoma do incidente U12 de hoje
 # (mute global escondia áudio/haptic de todo mundo, não só do DualSense).
 # Função PURA (_wpctl_volume_muted) só interpreta o texto do `wpctl
@@ -3589,7 +3524,9 @@ PY
 # O-PAD-VIRTUAL-E-O-SOM-DELE-NASCEM-NO-MESMO-USB-01 (07/10/2026): o pad virtual
 # nasce como DualSense USB (um gadget só HID ligado pelo `vhci_hcd`) onde o
 # kernel cumpre o contrato, e como uhid onde não cumpre. Sem pai USB, o jogo
-# com a biblioteca da Sony pode não casar o som com o controle. A pergunta é a
+# com a biblioteca da Sony pode não casar o som com o controle, e desde
+# 14/10/2026 o pad sem porta própria não publica endpoint de háptica
+# (TODO-PAD-TEM-PORTA-PROPRIA-01): a âncora emprestada saiu. A pergunta é a
 # do daemon (`system_check.contrato_do_pad_em_usb`), importada e não
 # redigitada. O `GADGET_HID_WRITE_GET_REPORT` e a enumeração pelo `vhci` só se
 # medem montando: quando faltam, o daemon diz no diário
@@ -3635,7 +3572,7 @@ PY
         "faltam:?")
             info "o contrato do pad em USB não se deixou ler" ;;
         faltam:*)
-            warn "o kernel não traz ${saida#faltam:} — o pad virtual nasce uhid, sem pai USB, e o jogo com a biblioteca da Sony pode não casar o som com o controle; com os módulos instalados para este kernel, reinicie o hefesto-hidraw-broker (ele os carrega)" ;;
+            warn "o kernel não traz ${saida#faltam:} — o pad virtual nasce uhid, sem porta USB própria, e fica sem a háptica por áudio no rádio (no cabo ela segue pela placa do controle); com os módulos instalados para este kernel, reinicie o hefesto-hidraw-broker (ele os carrega)" ;;
         *)
             info "contrato do pad em USB não conferido (o pacote não está ao alcance do python ${py})" ;;
     esac
@@ -9186,7 +9123,6 @@ main() {
     check_dualsense_sink_disabled
     check_dropin_do_alto_falante_acordado
     check_ucm_do_dualsense
-    check_ancoras_dos_lugares_da_haptica
     check_audio_sink_muted
     check_mic_mute_persistido
     check_mic_perfil_sem_sinal

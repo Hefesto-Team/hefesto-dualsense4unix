@@ -622,9 +622,8 @@ class CoopManager:
         """O retrato da mesa para o som: quem o co-op já viu (``None`` = o mesmo de antes).
 
         O controle que entra com o jogo aberto aparece no sysfs antes do
-        ``sync`` (até 2 s); o som não cria o endpoint dele numa âncora
-        emprestada enquanto o co-op, no ar, ainda não o viu
-        (``pad_usb.a_ancora_ou_a_espera``).
+        ``sync`` (até 2 s); o som espera pela porta dele enquanto o co-op, no
+        ar, ainda não o viu (``pad_usb.a_ancora_ou_a_espera``).
         """
         from hefesto_dualsense4unix.integrations import pad_usb
 

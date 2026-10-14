@@ -26,6 +26,7 @@ import pytest
 from hefesto_dualsense4unix.daemon.subsystems import alto_falante as mod
 from hefesto_dualsense4unix.integrations import alto_falante_bt as som
 from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
+from tests.unit import porta_de_mentira as porta
 
 _P1, _P2, _P3, _P4 = (f"aa:bb:cc:5e:a3:c{n}" for n in (1, 2, 3, 4))
 _QUINTO = "aa:bb:cc:5e:a3:c5"
@@ -200,8 +201,8 @@ def test_resposta_sem_nenhum_modulo_tambem_e_nao_sei(servidor: _Servidor) -> Non
 
 
 def test_o_endpoint_da_haptica_que_sumiu_por_fora_sobe_de_novo(servidor: _Servidor) -> None:
-    ancora = eh.Ancora(syspath="/devices/pci0000:00/usb3/3-1",
-                       declarado="/devices/pci0000:00/usb3/3-1/3-1:1.0")
+    ancora = eh.ancora_da_interface(porta.dar_porta(_P1, 1))
+    assert ancora is not None
     endpoint = eh.EndpointDeHaptica(uniq=_P1, ancora=ancora, runner=servidor)
     assert endpoint.iniciar()
     velho = endpoint.module_id
@@ -215,8 +216,8 @@ def test_o_endpoint_da_haptica_que_sumiu_por_fora_sobe_de_novo(servidor: _Servid
 
 
 def test_o_endpoint_com_o_servidor_mudo_segue_de_pe(servidor: _Servidor) -> None:
-    ancora = eh.Ancora(syspath="/devices/pci0000:00/usb3/3-1",
-                       declarado="/devices/pci0000:00/usb3/3-1/3-1:1.0")
+    ancora = eh.ancora_da_interface(porta.dar_porta(_P1, 1))
+    assert ancora is not None
     endpoint = eh.EndpointDeHaptica(uniq=_P1, ancora=ancora, runner=servidor)
     assert endpoint.iniciar()
     servidor.mudo = True
@@ -260,8 +261,8 @@ def test_o_no_novo_nao_carrega_ao_lado_do_que_o_daemon_velho_deixou(
 
 def test_o_endpoint_do_daemon_anterior_e_adotado_e_nao_duplicado(servidor: _Servidor) -> None:
     # A decisão D-0810-O-NO-DE-SOM-ORFAO-SE-DERRUBA.
-    ancora = eh.Ancora(syspath="/devices/pci0000:00/usb3/3-2",
-                       declarado="/devices/pci0000:00/usb3/3-2/3-2:1.0")
+    ancora = eh.ancora_da_interface(porta.dar_porta(_P2, 2))
+    assert ancora is not None
     assert eh.EndpointDeHaptica(uniq=_P2, ancora=ancora, runner=servidor).iniciar()
     depois = eh.EndpointDeHaptica(uniq=_P2, ancora=ancora, runner=servidor)
     assert depois.iniciar()

@@ -1152,35 +1152,24 @@ def mesa_do_som(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 class TestOSomSeAncoraNoGadget:
-    def test_o_gadget_nunca_e_ancora_emprestada(self, mesa_do_som: Path) -> None:
-        """D-0710-O-SOM-DO-PAD-ANCORA-NO-GADGET: o gadget é âncora só do próprio aparelho."""
-        from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
-
-        achadas = [a.syspath for a in eh.ancoras(mesa_do_som)]
-        assert achadas == [
-            "/devices/pci0000:00/0000:00:14.0/usb1/1-2",
-            "/devices/pci0000:00/0000:00:14.0/usb1/1-3",
-        ]
-
-    def test_o_aparelho_com_gadget_ancora_nele_e_o_sem_gadget_empresta(
+    def test_o_aparelho_com_gadget_ancora_nele_e_o_sem_gadget_fica_sem_ancora(
         self, mesa_do_som: Path
     ) -> None:
+        """D-0710-O-SOM-DO-PAD-ANCORA-NO-GADGET e D-1410-TODO-PAD-TEM-PORTA-PROPRIA.
+
+        A âncora é o gadget do próprio aparelho e nenhuma outra: o hub e o
+        receptor da mesa não são âncora de ninguém.
+        """
         from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
-        from hefesto_dualsense4unix.integrations.dualsense_bt_audio import marca_do_aparelho
 
         com, sem = "aa:bb:cc:00:00:01", "aa:bb:cc:00:00:02"
         interface = "/devices/platform/vhci_hcd.0/usb3/3-1/3-1:1.0"
         pad_usb.registrar_gadget(com, interface)
-        marca_com, marca_sem = marca_do_aparelho(com), marca_do_aparelho(sem)
-        emprestadas = eh.ancoras(mesa_do_som)
-        postas = eh.distribuir_ancoras(
-            [marca_com, marca_sem], emprestadas,
-            ja_postas={marca_com: emprestadas[0]},
-            proprias={marca_com: eh.ancora_do_gadget(com)},  # type: ignore[dict-item]
-        )
-        assert postas[marca_com].declarado == interface
-        assert postas[marca_sem].syspath == emprestadas[0].syspath
+        propria = eh.ancora_do_gadget(com)
+        assert propria is not None and propria.declarado == interface
         assert eh.ancora_do_gadget(sem) is None
+        assert eh.a_porta_e_dele(com, propria)
+        assert not eh.a_porta_e_dele(sem, propria)
 
     def test_o_no_de_som_e_o_pad_dao_o_mesmo_container(
         self, mesa_do_som: Path, tmp_path: Path
@@ -1220,6 +1209,7 @@ def test_o_alto_falante_ancora_o_no_do_aparelho_no_gadget_dele(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     """A reconciliação do daemon, com a mesa de mentira da háptica: P3 tem gadget."""
+    from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
     from tests.unit import test_a_haptica_chega_a_quem_entra_depois as h
 
     mesa = h.mesa.__wrapped__(monkeypatch, tmp_path)  # type: ignore[attr-defined]
@@ -1232,8 +1222,7 @@ def test_o_alto_falante_ancora_o_no_do_aparelho_no_gadget_dele(
         mesa.assentos[uniq] = lugar
     mesa.volta(h._Controle(h._P3, "bt", "/dev/hidraw3"), h._Controle(h._P4, "bt", "/dev/hidraw4"))
     assert h._ancora_do_aparelho(mesa.servidor, h._P3) == interface
-    emprestada = h._ancora_do_aparelho(mesa.servidor, h._P4)
-    assert "/vhci_hcd." not in emprestada and emprestada.startswith("/devices/pci0000:00/")
+    assert mesa.servidor.do_nome(eh.nome_do_endpoint(h._P4)) == [], "sem porta, sem endpoint"
     do_gadget = [c for c in mesa.registro() if c.container_pid == 0x0DF2]
     assert [(c.bus, c.dev) for c in do_gadget] == [(5, 2)]
 

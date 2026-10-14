@@ -179,7 +179,6 @@ VARIANTES_DO_LEITOR = {
     "integrations/pad_usb.py::_ler_atributo": "devolve o texto sem as pontas (`.strip()`)",
     "integrations/no_do_vpad.py::_texto_do_sysfs": "devolve o texto sem as pontas (`.strip()`)",
     "integrations/faixa_do_wifi.py::_ler_arquivo": "devolve o texto sem as pontas (`.strip()`)",
-    "integrations/endpoint_de_haptica.py::_ler": "lê Path em ascii e devolve sem as pontas",
     "integrations/sinal_da_barra.py::_ler": "abre sem errors='replace' e devolve sem as pontas",
 }
 

@@ -17,11 +17,12 @@ são os mesmos.
 
 from __future__ import annotations
 
-from pathlib import Path
 
 import pytest
 
 from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
+from tests.unit import porta_de_mentira as porta
+
 
 def _rabo_hex(uniq: str) -> str:
     """Os seis hex do rabo do endereço: a forma que os nomes levavam antes de 02/10/2026."""
@@ -44,36 +45,11 @@ def _runner_que_grava(saida: str = "42\n"):
 
 
 @pytest.fixture
-def ancora(tmp_path: Path) -> eh.Ancora:
-    return eh.Ancora(
-        syspath="/devices/pci0000:00/usb3/3-4",
-        declarado="/devices/pci0000:00/usb3/3-4/3-4:1.0",
-        nome="USB2.1 Hub",
-    )
-
-
-@pytest.fixture
-def sysfs(tmp_path: Path) -> Path:
-    """Um sysfs de mentira: um hub com interface, um sem, e um com placa de som."""
-    raiz = tmp_path / "sys"
-    devs = raiz / "bus" / "usb" / "devices"
-    for nome, tem_interface, tem_som in (
-        ("3-4", True, False),
-        ("3-5", False, False),
-        ("3-6", True, True),
-    ):
-        d = devs / nome
-        d.mkdir(parents=True)
-        (d / "busnum").write_text("3\n")
-        (d / "devnum").write_text("2\n")
-        (d / "product").write_text(f"aparelho {nome}\n")
-        if tem_interface:
-            iface = d / f"{nome}:1.0"
-            iface.mkdir()
-            (iface / "uevent").write_text("DEVTYPE=usb_interface\n")
-            if tem_som:
-                (iface / "sound" / "card3").mkdir(parents=True)
-    return raiz
+def ancora() -> eh.Ancora:
+    """A porta USB virtual do pad do ``_UNIQ`` (TODO-PAD-TEM-PORTA-PROPRIA-01)."""
+    resposta = eh.ancora_da_interface(porta.dar_porta(_UNIQ, 4))
+    assert resposta is not None
+    return resposta
 
 
 def test_o_nome_tem_as_tres_agulhas_que_o_ge_procura() -> None:
@@ -172,39 +148,3 @@ def test_servidor_que_nao_responde_nao_vira_no_de_mentira(ancora: eh.Ancora) -> 
 def test_o_monitor_e_de_onde_a_ponte_le(ancora: eh.Ancora) -> None:
     no = eh.EndpointDeHaptica(uniq=_UNIQ, ancora=ancora, runner=lambda _a: "1\n")
     assert no.monitor == no.nome + ".monitor"
-
-
-def test_ancora_precisa_de_interface_para_declarar(sysfs: Path) -> None:
-    achadas = {a.syspath.rsplit("/", 1)[-1] for a in eh.ancoras(sysfs)}
-    assert "3-4" in achadas
-    assert "3-5" not in achadas, "sem interface, o GUID subiria ao hub raiz"
-
-
-def test_aparelho_com_placa_de_som_nao_e_ancora(sysfs: Path) -> None:
-    """O ContainerId dele já é o de um endpoint de verdade."""
-    achadas = {a.syspath.rsplit("/", 1)[-1] for a in eh.ancoras(sysfs)}
-    assert "3-6" not in achadas
-
-
-_MARCAS = [eh.marca_do_aparelho(u) for u in _QUATRO]
-
-
-def test_cada_aparelho_ganha_uma_ancora_diferente() -> None:
-    """Âncoras iguais são ContainerIds iguais: a háptica do 2 iria para o 1."""
-    lista = [eh.Ancora(syspath=f"/d/{i}", declarado=f"/d/{i}/i:1.0") for i in range(4)]
-    posto = eh.distribuir_ancoras(list(reversed(_MARCAS)), lista)
-    assert len(posto) == 4
-    assert len({a.syspath for a in posto.values()}) == 4
-
-
-def test_a_distribuicao_nao_depende_da_ordem_dos_aparelhos() -> None:
-    lista = [eh.Ancora(syspath=f"/d/{i}", declarado=f"/d/{i}/i:1.0") for i in range(4)]
-    um, dois = _MARCAS[:2]
-    assert eh.distribuir_ancoras([um, dois], lista) == eh.distribuir_ancoras([dois, um], lista)
-
-
-def test_mais_aparelhos_que_ancoras_nao_repete_ancora() -> None:
-    """Repetir seria pior que faltar: dois endpoints com o mesmo container."""
-    lista = [eh.Ancora(syspath="/d/0", declarado="/d/0/i:1.0")]
-    posto = eh.distribuir_ancoras(_MARCAS[:2], lista)
-    assert len(posto) == 1

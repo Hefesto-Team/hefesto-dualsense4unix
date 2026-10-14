@@ -134,7 +134,6 @@ def mesa(monkeypatch: pytest.MonkeyPatch) -> Any:
     monkeypatch.setattr(af, "a_ponte_do_radio_pode_subir", lambda: (True, ""))
     monkeypatch.setattr(af, "PonteDeSomPorRadio", _PonteDeMentira)
     monkeypatch.setattr(eh, "EndpointDeHaptica", _EndpointDeMentira)
-    monkeypatch.setattr(eh, "ancoras", lambda *a, **k: [])
     monkeypatch.setattr(eh, "endpoints_de_pe", lambda *a, **k: {})
     monkeypatch.setattr(eh, "varrer_endpoints_orfaos", lambda *a, **k: None)
     monkeypatch.setattr(mod, "ESPERA_DA_VOLTA_S", 0.05)

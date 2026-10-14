@@ -22,6 +22,8 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+import pytest
+
 from hefesto_dualsense4unix.daemon.subsystems.bt_mic import (
     uniqs_negados,
     uniqs_recusados,
@@ -34,6 +36,7 @@ from hefesto_dualsense4unix.integrations.endpoint_de_haptica import (
     nome_do_endpoint,
     varrer_endpoints_orfaos,
 )
+from hefesto_dualsense4unix.integrations import pad_usb
 
 _REAL = "02001a0000"
 _A, _B = f"{_REAL}01", f"{_REAL}02"
@@ -100,15 +103,21 @@ def test_no_sem_endereco_nunca_entra() -> None:
 _L1, _L2 = _A, _B
 
 _ANCORA = Ancora(
-    syspath="/sys/devices/pci0000:00/usb3/3-4",
-    declarado="/devices/pci0000:00/usb3/3-4",
+    syspath="/devices/platform/vhci_hcd.0/usb3/3-4",
+    declarado="/devices/platform/vhci_hcd.0/usb3/3-4/3-4:1.0",
     nome="DualSense",
 )
 _OUTRA = Ancora(
-    syspath="/sys/devices/pci0000:00/usb3/3-4/3-4.1",
-    declarado="/devices/pci0000:00/usb3/3-4/3-4.1",
+    syspath="/devices/platform/vhci_hcd.0/usb3/3-5",
+    declarado="/devices/platform/vhci_hcd.0/usb3/3-5/3-5:1.0",
     nome="DualSense",
 )
+
+
+@pytest.fixture(autouse=True)
+def _o_l1_na_porta_dele() -> None:
+    """TODO-PAD-TEM-PORTA-PROPRIA-01: o endpoint só nasce na porta do próprio pad."""
+    pad_usb.registrar_gadget(_L1, _ANCORA.declarado)
 
 
 class _Pactl:

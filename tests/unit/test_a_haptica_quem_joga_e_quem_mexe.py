@@ -57,6 +57,7 @@ from tests.unit.test_haptica_por_radio_01_a_ponte_troca_de_modo import (
     _EndpointDeMentira,
     _PonteDeMentira,
 )
+from tests.unit.porta_de_mentira import todo_pad_tem_porta
 
 P1, P2, P3, P4 = (f"aa:bb:cc:00:00:0{i}" for i in range(1, 5))
 MESA = (P1, P2, P3, P4)
@@ -167,13 +168,7 @@ class Bancada:
         )
         monkeypatch.setattr(af, "PonteDeSomPorRadio", _PonteDeMentira)
         monkeypatch.setattr(eh, "EndpointDeHaptica", _EndpointDeMentira)
-        monkeypatch.setattr(
-            eh,
-            "ancoras",
-            lambda *a, **k: [
-                eh.Ancora(syspath=f"/d/{i}", declarado=f"/d/{i}/i:1.0") for i in range(4)
-            ],
-        )
+        todo_pad_tem_porta(monkeypatch)
         monkeypatch.setattr(eh, "endpoints_de_pe", lambda *a, **k: {})
         monkeypatch.setattr(eh, "varrer_endpoints_orfaos", lambda *a, **k: None)
         monkeypatch.setattr(broker, "abrir_hidraw", lambda no, **_: type("N", (), {"fd": 7})())

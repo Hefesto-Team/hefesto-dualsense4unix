@@ -21,10 +21,11 @@ Lido no fonte em 18/09/2026 e medido no PRAGMATA no mesmo dia:
   ``Wireless_Controller`` e ``Speaker__sink`` (patch 0060);
 * o formato é ``FLOAT32LE``, 48 kHz, **quatro canais** (patch 0063).
 
-**Nada disso pergunta como o CONTROLE está ligado.** É por isso que o gadget
-USB (``usbip-vudc``) deixou de ser necessário: ele existia para produzir estes
-mesmos campos, e exigia raiz, módulos de kernel e ``linux-tools`` da versão
-exata — o que fere *"o produto é para qualquer usuário"*.
+**Nada disso pergunta como o CONTROLE está ligado** — mas a biblioteca da
+Sony casa o HID com o áudio pelo ``ContainerId``, e o áudio sem HID do mesmo
+contêiner é varrido sem parar (o engasgo de 12/10). Por isso a âncora é a
+interface do gadget USB do PRÓPRIO pad (``usbip-vudc`` + ``vhci_hcd``), e o
+aparelho sem gadget fica sem endpoint (:func:`a_porta_e_dele`, 14/10/2026).
 
 A ÂNCORA, E O ERRO DE UM NÍVEL QUE CUSTOU UM LANÇAMENTO
 --------------------------------------------------------
@@ -126,7 +127,6 @@ import time
 from array import array
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any
 
 from hefesto_dualsense4unix.integrations import pad_usb, porta_do_som
@@ -164,9 +164,6 @@ MOLDE_DO_NOME = (
 #: A MARCA que separa os nós DESTA casa dos de um DualSense por cabo de
 MARCA_DO_NOME = "HEFESTO"
 
-#: conta das âncoras do ``doctor.sh`` (uma por DualSense, até quatro).
-LUGARES: tuple[int, ...] = (1, 2, 3, 4)
-
 MARCA_DO_ENSAIO = "hefesto.origem=ensaio"
 
 AGULHAS = (
@@ -197,70 +194,14 @@ class Ancora:
     nome: str = ""
 
 
-def _ler(caminho: Path) -> str:
-    try:
-        return caminho.read_text(encoding="ascii", errors="replace").strip()
-    except OSError:
-        return ""
-
-
-RAIZ_DO_SYSFS = Path("/sys")
-
-
-def ancoras(sysfs: Path | None = None) -> list[Ancora]:
-    """Os ``usb_device`` que servem de âncora, na ordem do barramento."""
-    sysfs = RAIZ_DO_SYSFS if sysfs is None else sysfs
-    raiz = sysfs / "bus" / "usb" / "devices"
-    achadas: list[Ancora] = []
-    try:
-        entradas = sorted(raiz.iterdir())
-    except OSError:
-        return achadas
-    try:
-        raiz_txt = str(sysfs.resolve())
-    except OSError:
-        return achadas
-    for dev in entradas:
-        if not (_ler(dev / "busnum").isdigit() and _ler(dev / "devnum").isdigit()):
-            continue
-        if any(dev.glob("*/sound/card*")):
-            continue
-        if _e_gadget_nosso(dev):
-            continue  # o gadget de um pad é a âncora do PRÓPRIO aparelho, nunca emprestada
-        interface = next(
-            (i for i in sorted(dev.glob(f"{dev.name}:*")) if (i / "uevent").is_file()), None
-        )
-        if interface is None:
-            continue
-        try:
-            achadas.append(
-                Ancora(
-                    syspath=str(dev.resolve()).replace(raiz_txt, "", 1),
-                    declarado=str(interface.resolve()).replace(raiz_txt, "", 1),
-                    nome=_ler(dev / "product"),
-                )
-            )
-        except OSError:
-            continue
-    return achadas
-
-
-def _e_gadget_nosso(dev: Path) -> bool:
-    try:
-        caminho = str(dev.resolve())
-    except OSError:
-        return False
-    return pad_usb.e_pad_nosso(caminho)
-
-
 def ancora_do_gadget(uniq: str) -> Ancora | None:
-    """A âncora PRÓPRIA do aparelho: a interface do gadget do pad dele.
+    """A âncora do aparelho: a interface do gadget do pad dele, a ÚNICA que ele tem.
 
     O-PAD-VIRTUAL-E-O-SOM-DELE-NASCEM-NO-MESMO-USB-01 (07/10/2026). O pad em
     USB e o nó de som sobem ao MESMO ``usb_device``: o ``winebus`` e o
     ``winepulse`` tiram dele o mesmo ``ContainerId``, e o jogo casa o som com
-    o controle. None = o aparelho não tem gadget (o pad é uhid), e a âncora
-    emprestada segue valendo para ele.
+    o controle. None = o aparelho não tem gadget, e fica sem endpoint
+    (TODO-PAD-TEM-PORTA-PROPRIA-01, 14/10/2026: a âncora emprestada saiu).
     """
     return ancora_da_interface(pad_usb.interface_do_aparelho(str(uniq or "")))
 
@@ -272,72 +213,22 @@ def ancora_da_interface(interface: str | None) -> Ancora | None:
     return Ancora(syspath=os.path.dirname(interface), declarado=interface)
 
 
-def distribuir_ancoras(
-    aparelhos: Iterable[str],
-    disponiveis: Iterable[Ancora],
-    de_pe: Mapping[str, Sequence[tuple[str, str]]] | None = None,
-    *,
-    ja_postas: Mapping[str, Ancora] | None = None,
-    ocupados: Iterable[str] = (),
-    proprias: Mapping[str, Ancora] | None = None,
-) -> dict[str, Ancora]:
-    """Uma âncora por APARELHO, e NUNCA a mesma para dois. Função pura.
+def a_porta_e_dele(uniq: str, ancora: Ancora) -> bool:
+    """A âncora é a interface do gadget DESTE aparelho, de pé agora?
 
-    ``proprias`` (marca → a âncora do gadget dele) vence tudo: a âncora
-    emprestada fica só para o aparelho sem gadget.
-
-    O aparelho sem gadget (sem os módulos, ou além das oito portas) mantém o
-    endpoint emprestado (12/10/2026). A RE Engine acha a
-    háptica pelo contêiner do PRÓPRIO endpoint e não olha o HID; a biblioteca da
-    Sony casa o HID com o áudio pelo contêiner. O pad uhid não tem contêiner USB
-    e nunca casa, com endpoint ou sem: é o HID sem par que faz o jogo varrer o
-    áudio, e áudio sem HID não a dispara (rodada B de 12/10). Tirar o endpoint
-    perderia a háptica da RE Engine sem curar a varredura; a cura é a porta.
+    TODO-PAD-TEM-PORTA-PROPRIA-01 (14/10/2026), por ordem de produto: todo pad tem a
+    porta USB virtual dele. O endpoint com o nome da Sony só nasce, e só se
+    adota, na porta do próprio pad. A âncora emprestada (um hub,
+    um dongle, de 18/09 a 14/10) dava ao jogo um áudio cujo ``ContainerId`` não
+    casa com HID nenhum, e a biblioteca da Sony o varre sem parar: o engasgo
+    de 12/10 e de 14/10, com 1 a 4 controles, em qualquer ordem e transporte.
     """
-    lista = list(disponiveis)
-    por_aparelho = {a.syspath: a for a in lista}
-    por_declarado = {a.declarado: a for a in lista}
-    ordem = sorted({str(m) for m in aparelhos if nome_da_marca(str(m))})
-    postas: dict[str, Ancora] = {}
-    tomadas: set[str] = set()
-
-    def tomar(marca: str, ancora: Ancora | None) -> bool:
-        if ancora is None or ancora.syspath in tomadas:
-            return False
-        postas[marca] = ancora
-        tomadas.add(ancora.syspath)
-        return True
-
-    for marca in ordem:
-        tomar(marca, (proprias or {}).get(marca))
-    lembradas = ja_postas or {}
-    for marca in ordem:
-        if marca in postas:
-            continue
-        lembrada = lembradas.get(marca)
-        if lembrada is not None and lembrada.syspath in por_aparelho:
-            tomar(marca, lembrada)
-    servidor = de_pe or {}
-    for marca in ordem:
-        if marca in postas:
-            continue
-        for _module_id, caminho in servidor.get(nome_da_marca(marca), ()):
-            if tomar(marca, por_declarado.get(caminho)):
-                break
-    livres = (a for a in lista if a.syspath not in tomadas)
-    na_mesa = {str(m) for m in ocupados}
-    for marca in [m for m in ordem if m in na_mesa] + [m for m in ordem if m not in na_mesa]:
-        if marca in postas:
-            continue
-        for ancora in livres:
-            if tomar(marca, ancora):
-                break
-    return postas
+    return bool(ancora.declarado) and pad_usb.interface_do_aparelho(uniq) == ancora.declarado
 
 
 #: O-SOM-DE-CADA-PAD-NA-ORDEM-DO-HIDRAW-01 (09/10/2026): a ordem em que os nós
 #: NASCEM no servidor de som. O par pad → nó já é por identidade
-#: (:func:`distribuir_ancoras`); a ordem é o que o Wine olha primeiro: o primeiro
+#: (:func:`ancora_do_gadget`); a ordem é o que o Wine olha primeiro: o primeiro
 #: DualSense da lista leva o identificador canônico (patch 0187), e o nosso nó
 #: não tem ``alsa.card`` para o 0189 reordenar. «assento»: na ordem dos
 #: jogadores (a da luz e a dos pads), e o nó que ficou fora dela renasce atrás
@@ -544,9 +435,9 @@ def varrer_endpoints_orfaos(
     mesma conta: a varredura lê TODO nó desta casa (:data:`MARCA_DO_NOME`), e
     não só os de nome novo.
 
-    ``de_pe`` é a resposta de :func:`endpoints_de_pe` que quem chama já tem: a
-    mesma pergunta semeia :func:`distribuir_ancoras`, e fazê-la duas vezes por
-    volta seria um ``pactl`` a mais a cada reconciliação. Sem ela, pergunta.
+    ``de_pe`` é a resposta de :func:`endpoints_de_pe` que quem chama já tem:
+    fazê-la duas vezes por volta seria um ``pactl`` a mais a cada
+    reconciliação. Sem ela, pergunta.
 
     Devolve os ``module_id`` derrubados, para o log e para a régua.
     """
@@ -644,6 +535,13 @@ class EndpointDeHaptica:
             self.rotulo = ""
         if not self.nome:
             logger.info("haptica_endpoint_sem_identidade")
+            return False
+        if not a_porta_e_dele(self.uniq, self.ancora):
+            logger.warning(
+                "haptica_endpoint_recusa_porta_alheia",
+                controle=self.marca,
+                ancora=self.ancora.syspath,
+            )
             return False
         instancias = endpoints_de_pe(self.runner).get(self.nome, [])
         iguais = [m for m, caminho in instancias if caminho == self.ancora.declarado]
@@ -1319,7 +1217,6 @@ __all__ = [
     "FREQUENCIA_DO_FORTE_HZ",
     "FREQUENCIA_DO_FRACO_HZ",
     "INTERRUPTOR_DA_ORDEM_DOS_NOS",
-    "LUGARES",
     "MARCA_DO_ENSAIO",
     "MARCA_DO_TOCADOR",
     "MOLDE_DO_NOME",
@@ -1335,13 +1232,13 @@ __all__ = [
     "Ancora",
     "EndpointDeHaptica",
     "TocadorDoRumble",
+    "a_porta_e_dele",
+    "ancora_da_interface",
     "ancora_do_gadget",
-    "ancoras",
     "argv_do_tocador",
     "bloco_da_haptica",
     "conferir_o_destino_do_tocador",
     "descricao_da_haptica",
-    "distribuir_ancoras",
     "endpoints_de_pe",
     "fluxos_nos_endpoints",
     "forma_do_toque",

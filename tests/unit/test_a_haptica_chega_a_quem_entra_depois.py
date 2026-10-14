@@ -7,7 +7,6 @@ import re
 import shlex
 import shutil
 import subprocess
-import sys
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -27,6 +26,7 @@ from hefesto_dualsense4unix.integrations.haptica_do_cabo import (
     no_de_captura,
 )
 from tests.unit import pactl_json_de_mentira as pj
+from tests.unit import porta_de_mentira as porta
 from tests.unit.test_haptica_nativa_01_o_device_ks_que_o_jogo_procura import (
     _DaemonQueResponde,
     _path_minimo,
@@ -35,7 +35,6 @@ from tests.unit.udev_de_mentira import usec_pela_pasta
 
 RAIZ = Path(__file__).resolve().parents[2]
 WRAPPER = RAIZ / "assets" / "hefesto-launch.sh"
-DOCTOR = RAIZ / "scripts" / "doctor.sh"
 
 _P1, _P2, _P3, _P4 = (f"aa:bb:cc:00:00:0{n}" for n in (1, 2, 3, 4))
 
@@ -43,18 +42,20 @@ _P1, _P2, _P3, _P4 = (f"aa:bb:cc:00:00:0{n}" for n in (1, 2, 3, 4))
 _SONY = {"device.bus": "usb", "device.vendor.id": "054c", "device.product.id": "0ce6"}
 
 
-# O /sys de mentira: âncoras (USB sem placa de som) e DualSense no cabo
+# O /sys de mentira: a porta USB virtual de cada pad (o gadget, sem placa de som)
+# e os DualSense no cabo
 
 
 def _aparelho(
-    sysfs: Path, nome: str, *, vid: str, pid: str, devnum: int, placa: bool = False
+    sysfs: Path, nome: str, *, vid: str, pid: str, devnum: int, placa: bool = False,
+    onde: str = "pci0000:00",
 ) -> Path:
     """Um ``usb_device`` em ``devices/``, com o atalho em ``bus/usb/devices``.
 
-    O atalho é o que o kernel publica, e é por ele que ``ancoras()`` e
-    ``controles_no_cabo()`` leem; o caminho resolvido é o que o nó declara.
+    O atalho é o que o kernel publica, e é por ele que ``controles_no_cabo()``
+    lê; o caminho resolvido é o que o nó declara.
     """
-    real = sysfs / "devices" / "pci0000:00" / "usb3" / nome
+    real = sysfs / "devices" / onde / "usb3" / nome
     interface = real / f"{nome}:1.0"
     interface.mkdir(parents=True)
     (interface / "uevent").write_text("DEVTYPE=usb_interface\n", encoding="utf-8")
@@ -70,10 +71,13 @@ def _aparelho(
     return real
 
 
-def _sysfs(tmp_path: Path, *, ancoras: int, no_cabo: int = 0) -> Path:
+def _sysfs(tmp_path: Path, *, portas: int, no_cabo: int = 0) -> Path:
+    """As ``portas`` do ``vhci_hcd`` (``porta_de_mentira.interface_da_porta``) e o cabo."""
     sysfs = tmp_path / "sys"
-    for i in range(ancoras):
-        _aparelho(sysfs, f"3-{i + 1}", vid="2357", pid="0604", devnum=10 + i)
+    for i in range(portas):
+        _aparelho(
+            sysfs, f"3-{i + 1}", vid="054c", pid="0ce6", devnum=10 + i, onde="platform/vhci_hcd.0"
+        )
     for i in range(no_cabo):
         _aparelho(sysfs, f"3-{8 - i}", vid="054c", pid="0ce6", devnum=28 + i, placa=True)
     return sysfs
@@ -324,12 +328,12 @@ def mesa(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> _Mesa:
     _PonteDeMentira.criadas = []
     servidor = _Servidor()
     lacos = _Lacos(servidor)
-    sysfs = _sysfs(tmp_path, ancoras=4)
+    sysfs = _sysfs(tmp_path, portas=4)
     sub = mod.AltoFalanteSubsystem(gerenciador=None, fonte_de_controles=list)
     sub._cabo = HapticaDoCabo(lacos=lacos, conferir=lambda _no: None)
     m = _Mesa(sub=sub, servidor=servidor, lacos=lacos, sysfs=sysfs)
     monkeypatch.setattr(af, "_rodar", servidor)
-    monkeypatch.setattr(eh, "RAIZ_DO_SYSFS", sysfs)
+    porta.todo_pad_tem_porta(monkeypatch)
     monkeypatch.setattr(af, "PonteDeSomPorRadio", _PonteDeMentira)
     monkeypatch.setattr(af, "garantir_a_placa_cheia", lambda *_a, **_k: False)
     monkeypatch.setattr(af, "sink_do_controle", lambda uniq, *_a, **_k: m.placas.get(uniq, ""))
@@ -543,54 +547,32 @@ def test_o_dualsense_no_radio_liga_a_opcao(tmp_path: Path) -> None:
     assert _lancar(tmp_path / "com-o-radio", sysfs) == "1"
 
 
-def test_o_aparelho_sem_ancora_deixa_o_cabo_na_placa(
-    monkeypatch: pytest.MonkeyPatch, mesa: _Mesa, tmp_path: Path
+@pytest.mark.parametrize("com", [_P1, _P2])
+def test_o_aparelho_sem_porta_deixa_o_cabo_na_placa(
+    monkeypatch: pytest.MonkeyPatch, mesa: _Mesa, com: str
 ) -> None:
-    """Uma âncora e dois no cabo: um pelo endpoint, o outro pelo ``BUSNUM-DEVNUM``."""
-    uma = _sysfs(tmp_path / "uma", ancoras=1)
-    monkeypatch.setattr(eh, "RAIZ_DO_SYSFS", uma)
-    mesa.sysfs = uma
+    """Dois no cabo e só um com porta: um pelo endpoint, o outro pelo ``BUSNUM-DEVNUM``.
+
+    TODO-PAD-TEM-PORTA-PROPRIA-01: quem fica sem a porta é qualquer um, e não
+    o segundo a chegar nem o de marca maior.
+    """
+    from hefesto_dualsense4unix.integrations import pad_usb
+
+    monkeypatch.setattr(pad_usb, "_INTERFACE_DO_APARELHO", {})
+    porta.dar_porta(com, 1)
     p1 = _no_cabo(mesa, _P1, 1, "3-8", 28)
     p2 = _no_cabo(mesa, _P2, 2, "3-7", 29)
     mesa.volta(p1, p2)
-    com, sem = sorted((_P1, _P2), key=eh.marca_do_aparelho)
+    sem = _P2 if com == _P1 else _P1
     aparelho = {_P1: "3-8", _P2: "3-7"}
     assert mesa.servidor.nossos() == [eh.nome_do_endpoint(com)]
-    assert set(mesa.lacos.vivos) == {_chave(com)}, "o aparelho sem âncora ganhou laço"
+    assert set(mesa.lacos.vivos) == {_chave(com)}, "o aparelho sem porta ganhou laço"
     instancias = _instancias(mesa.registro())
-    assert _do_aparelho(uma, aparelho[sem]) in instancias, "o controle sem âncora ficou sem bloco"
-    assert _do_aparelho(uma, aparelho[com]) not in instancias, "um controle tem dois alvos"
-    assert len(instancias) == 2
-
-
-def _doctor(tmp_path: Path, sysfs: Path) -> str:
-    feito = subprocess.run(
-        ["bash", "-c",
-         f'source "{DOCTOR}"; '
-         f"_python_do_produto() {{ printf '%s\\n' '{sys.executable}'; }}; "
-         "check_ancoras_dos_lugares_da_haptica"],
-        capture_output=True, text=True, timeout=60, check=False,
-        env={"PATH": "/usr/bin:/bin", "HOME": str(tmp_path), "HEFESTO_SYSFS": str(sysfs)},
+    assert _do_aparelho(mesa.sysfs, aparelho[sem]) in instancias, (
+        "o controle sem porta ficou sem bloco"
     )
-    return feito.stdout + feito.stderr
-
-
-def test_o_doctor_diz_o_lugar_sem_ancora(tmp_path: Path) -> None:
-    """Dois na mesa e uma âncora: «1 lugar(es) sem âncora»."""
-    saida = _doctor(tmp_path, _sysfs(tmp_path, ancoras=1, no_cabo=2))
-    assert "[WARN] 1 lugar(es) sem âncora" in saida, saida
-    assert "há 1 para 2 DualSense na mesa" in saida
-
-
-def test_o_doctor_conta_contra_os_quatro_lugares(tmp_path: Path) -> None:
-    """Âncoras que bastam para quem está na mesa, e não para os quatro: informação."""
-    saida = _doctor(tmp_path, _sysfs(tmp_path, ancoras=2, no_cabo=1))
-    assert "[WARN]" not in saida and "[ OK ]" not in saida, saida
-    assert "2 âncora(s) USB para os 4 lugares" in saida
-    cheio = tmp_path / "cheio"
-    cheio.mkdir()
-    saida = _doctor(cheio, _sysfs(cheio, ancoras=4, no_cabo=1))
-    assert "[ OK ] âncoras USB da vibração: 4 para os 4 lugares" in saida, saida
+    assert _do_aparelho(mesa.sysfs, aparelho[com]) not in instancias, "um controle tem dois alvos"
+    assert len(instancias) == 2
 
 
 def test_os_endpoints_de_nome_velho_caem_na_primeira_volta(mesa: _Mesa) -> None:
@@ -650,7 +632,7 @@ def test_sem_cabo_o_dono_da_lista_nao_pergunta_pelos_fluxos(tmp_path: Path) -> N
         perguntas.append(tuple(argv))
         return ""
 
-    sysfs = _sysfs(tmp_path, ancoras=1)
+    sysfs = _sysfs(tmp_path, portas=1)
     assert ks.controles_do_registro(sysfs, usec_pela_pasta(tmp_path / "udev"), servidor) == []
     assert perguntas == [("pactl", "--format=json", "list", "sinks")]
 
@@ -663,7 +645,7 @@ def test_o_servidor_mudo_cala_a_segunda_pergunta(tmp_path: Path) -> None:
         perguntas.append(tuple(argv))
         return None
 
-    sysfs = _sysfs(tmp_path, ancoras=0, no_cabo=1)
+    sysfs = _sysfs(tmp_path, portas=0, no_cabo=1)
     lista = ks.controles_do_registro(sysfs, usec_pela_pasta(tmp_path / "udev"), mudo)
     assert [(c.bus, c.dev) for c in lista] == [(3, 28)], "o cabo tem de seguir pela placa"
     assert perguntas == [("pactl", "--format=json", "list", "sinks")]
@@ -720,9 +702,8 @@ def _quem_le(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, str, str]]:
 def test_o_no_que_a_ponte_ainda_le_nao_se_reancora_antes_de_ela_descer(
     mesa: _Mesa, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """O jogo fecha o fluxo e a âncora do P1 sai, na mesma volta."""
-    cinco = _sysfs(tmp_path / "cinco", ancoras=5)
-    monkeypatch.setattr(eh, "RAIZ_DO_SYSFS", cinco)
+    """O jogo fecha o fluxo e o gadget do P1 volta noutra porta, na mesma volta."""
+    cinco = _sysfs(tmp_path / "cinco", portas=5)
     mesa.sysfs = cinco
     ordem: list[str] = []
     descer = _PonteDeMentira.descer
@@ -748,11 +729,10 @@ def test_o_no_que_a_ponte_ainda_le_nao_se_reancora_antes_de_ela_descer(
 
     monkeypatch.setattr(af, "_rodar", _pactl)
     servidor.jogo_em.clear()
-    ancora_usb = ancora_de_antes.split("/")[-2]
-    (cinco / "bus" / "usb" / "devices" / ancora_usb).unlink()
+    assert porta.dar_porta(_P1, 5) != ancora_de_antes
     mesa.volta(um)
     mesa.volta(um)
-    assert f"endpoint:{nome_do_1}" in ordem, "o nó da âncora que saiu não se reancorou"
+    assert f"endpoint:{nome_do_1}" in ordem, "o nó da porta que saiu não se reancorou"
     assert f"ponte:{_P1}" in ordem
     assert ordem.index(f"ponte:{_P1}") < ordem.index(f"endpoint:{nome_do_1}"), ordem
     assert _ancora_do_aparelho(mesa.servidor, _P1) != ancora_de_antes
@@ -773,28 +753,15 @@ def test_o_servidor_mudo_nao_derruba_o_laco_do_cabo(
     assert _chave(_P1) not in mesa.lacos.vivos, "o laço de quem saiu do cabo ficou"
 
 
-def test_as_livres_vao_primeiro_a_quem_esta_na_mesa() -> None:
-    """A conta pura, pelas marcas: duas âncoras, três aparelhos, um deles na mesa."""
-    a, b, c = sorted(eh.marca_do_aparelho(u) for u in (_P1, _P2, _P3))
-    duas = [eh.Ancora(syspath=f"/d/{i}", declarado=f"/d/{i}/i:1.0") for i in range(2)]
-    postas = eh.distribuir_ancoras((a, b, c), duas, ocupados={c})
-    assert {m: x.syspath for m, x in postas.items()} == {c: "/d/0", a: "/d/1"}
-    postas = eh.distribuir_ancoras((a, b, c), duas, ja_postas={a: duas[0]}, ocupados={c})
-    assert {m: x.syspath for m, x in postas.items()} == {a: "/d/0", c: "/d/1"}
-    assert eh.distribuir_ancoras((1, 2), duas) == {}  # type: ignore[arg-type]
-
-
 def test_a_reancoragem_solta_o_laco_antes_do_endpoint(
     mesa: _Mesa, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """A âncora do aparelho do P1 saiu: o laço cai ANTES de o endpoint cair."""
-    cinco = _sysfs(tmp_path / "cinco", ancoras=5)
-    monkeypatch.setattr(eh, "RAIZ_DO_SYSFS", cinco)
+    """O gadget do P1 voltou noutra porta: o laço cai ANTES de o endpoint cair."""
+    cinco = _sysfs(tmp_path / "cinco", portas=5)
     mesa.sysfs = cinco
     p1 = _no_cabo(mesa, _P1, 1, "3-8", 28)
     mesa.volta(p1)
     assert _chave(_P1) in mesa.lacos.vivos
-    ancora_usb = _ancora_do_aparelho(mesa.servidor, _P1).split("/")[-2]
     ordem: list[str] = []
     desligar = mesa.lacos.desligar
     servidor = mesa.servidor
@@ -812,9 +779,9 @@ def test_a_reancoragem_solta_o_laco_antes_do_endpoint(
 
     monkeypatch.setattr(mesa.lacos, "desligar", _desligar)
     monkeypatch.setattr(af, "_rodar", _pactl)
-    (cinco / "bus" / "usb" / "devices" / ancora_usb).unlink()
+    porta.dar_porta(_P1, 5)
     mesa.volta(p1)
-    assert "endpoint" in ordem, "o endpoint da âncora que saiu não se reancorou"
+    assert "endpoint" in ordem, "o endpoint da porta que saiu não se reancorou"
     assert ordem[:1] == [f"laço:{_chave(_P1)}"], ordem
     assert _chave(_P1) in mesa.lacos.vivos, "o laço não voltou no endpoint reancorado"
 

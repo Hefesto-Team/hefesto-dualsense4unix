@@ -114,6 +114,7 @@ from tests.unit.test_o_jogo_espera_a_carta_do_lugar_guardado import (  # noqa: F
     Relogio,
     config_isolado,
 )
+from tests.unit.porta_de_mentira import todo_pad_tem_porta
 
 _PID_DO_JOGO = 4242
 _PRIMEIRO_EVENTO_DE_VPAD = 500
@@ -407,11 +408,7 @@ def _as_pontes_de_mentira(monkeypatch: pytest.MonkeyPatch) -> dict[str, bool]:
     )
     monkeypatch.setattr(af, "clientes_conectados", lambda *_a, **_k: frozenset({"4243"}))
     monkeypatch.setattr(eh, "EndpointDeHaptica", _EndpointDeMentira)
-    monkeypatch.setattr(
-        eh,
-        "ancoras",
-        lambda *a, **k: [eh.Ancora(syspath=f"/d/{i}", declarado=f"/d/{i}/i:1.0") for i in range(4)],
-    )
+    todo_pad_tem_porta(monkeypatch)
     monkeypatch.setattr(broker, "abrir_hidraw", lambda no, **_: type("N", (), {"fd": 7})())
     return tocando
 

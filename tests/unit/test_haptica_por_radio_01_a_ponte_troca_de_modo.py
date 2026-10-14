@@ -24,6 +24,7 @@ from typing import Any, ClassVar
 import pytest
 
 from hefesto_dualsense4unix.daemon.subsystems import alto_falante as mod
+from tests.unit.porta_de_mentira import todo_pad_tem_porta
 
 
 @dataclass
@@ -127,10 +128,7 @@ def bancada(monkeypatch: pytest.MonkeyPatch) -> _Estado:
     monkeypatch.setattr(af, "PonteDeSomPorRadio", _PonteDeMentira)
     monkeypatch.setattr(af, "sink_esta_tocando", lambda nome, *a, **k: tocando.get(nome, False))
     monkeypatch.setattr(eh, "EndpointDeHaptica", _EndpointDeMentira)
-    monkeypatch.setattr(
-        eh, "ancoras", lambda *a, **k: [eh.Ancora(syspath=f"/d/{i}", declarado=f"/d/{i}/i:1.0")
-                                        for i in range(4)]
-    )
+    todo_pad_tem_porta(monkeypatch)
     monkeypatch.setattr(broker, "abrir_hidraw", lambda no, **_: type("N", (), {"fd": 7})())
 
     monkeypatch.setattr(

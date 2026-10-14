@@ -8,3 +8,5 @@ tests/unit/test_a_seta_segurada_se_solta_quando_o_perfil_troca.py
 tests/unit/test_a_tecla_dividida_so_solta_com_o_ultimo_botao.py
 tests/unit/test_o_branco_da_troca_de_perfil_pisca_sem_gravar.py
 tests/unit/test_o_lancador_vem_da_modificacao.py
+tests/unit/porta_de_mentira.py
+tests/unit/test_todo_pad_tem_porta_propria.py

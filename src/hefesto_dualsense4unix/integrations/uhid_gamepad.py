@@ -1821,7 +1821,7 @@ class UhidDualSense:
         O-PAR-DO-PAD (12/10/2026): o P1 nasce com o ``primary_uniq`` que houver
         na hora, e no boot ele ainda é vazio; o gadget montava sem dono, a
         âncora nunca se registrava, e o endpoint de háptica do primeiro
-        controle ficava numa âncora emprestada para sempre. Quem sabe o dono
+        controle ficava sem a porta dele para sempre. Quem sabe o dono
         avisa aqui quando ele chega ou muda, e o gadget e o estacionamento (que
         pergunta pela identidade) passam a valer para ele. ``None`` ou uma
         identidade sem os 12 hex é «não sei», e não apaga o dono que havia.
@@ -2360,10 +2360,9 @@ def _pedir_ao_broker(
         contrato = (resposta or {}).get("contrato")
         if contrato:
             pad_usb.anotar_contrato_que_faltou(str(contrato))
-        logger.info(
-            "pad_usb_indisponivel_fica_o_uhid",
-            motivo=(resposta or {}).get("error", "broker_fora_do_ar"),
-        )
+        motivo = str((resposta or {}).get("error", "broker_fora_do_ar"))
+        pad_usb.anotar_sem_porta(identidade, motivo)
+        logger.info("pad_usb_indisponivel_fica_o_uhid", motivo=motivo)
         return None
     return _GadgetDoPad(
         cliente=cliente,
@@ -2510,10 +2509,12 @@ def _o_pad_em_usb(pad: UhidDualSense, features: dict[int, bytes]) -> bool:
         faltam = CONTRATO_QUE_FALTA()
         if faltam:
             _avisar_o_contrato_que_falta(faltam)
+            pad_usb.anotar_sem_porta(pad.identity or "", "sem_contrato:" + "+".join(faltam))
             return False
         try:
             serial = pad_usb.serial_do_pad(pad.mac, pad.player)
         except ValueError:
+            pad_usb.anotar_sem_porta(pad.identity or "", "sem_serial")
             return False
         gadget = PEDIR_O_PAD_USB(serial, bytes(pad.blueprint["descriptor"]), pad.identity or "",
                                  (DUALSENSE_VENDOR, pad.product))
@@ -2528,6 +2529,7 @@ def _o_pad_em_usb(pad: UhidDualSense, features: dict[int, bytes]) -> bool:
             pad_usb.anotar_contrato_que_faltou(pad_usb.CONTRATO_DO_IOCTL)
         logger.warning("pad_usb_features_recusadas_fica_o_uhid", err=str(exc),
                        player=pad.player)
+        pad_usb.anotar_sem_porta(pad.identity or "", "features_recusadas")
         gadget.desmontar()
         return False
     prazo_s = _GADGET_ENUMERA_S
@@ -2560,6 +2562,9 @@ def _vigiar_a_enumeracao(pad: UhidDualSense) -> None:
         if prazo is not None and pad.time_fn() >= prazo:
             _sair_da_fila(gadget.serial)
             pad._gadget_falhou = True
+            pad_usb.anotar_sem_porta(
+                pad.identity or gadget.identidade, "nao_enumerou"  # (noqa-acento): chave de máquina
+            )
         return
     _sair_da_fila(gadget.serial)
     with _TRAVA_DA_ANCORA:

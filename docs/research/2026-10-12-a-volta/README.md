@@ -92,7 +92,10 @@ dispositivos varridos; é o HID sem áudio no mesmo aparelho que dispara.
   sai de `pad.identity or ""` (:2431). Sem ela,
   `src/hefesto_dualsense4unix/integrations/endpoint_de_haptica.py`
   `ancora_do_gadget` (~256-268) devolve `None`, e `distribuir_ancoras` (~271-325)
-  empresta uma interface USB qualquer da máquina.
+  empresta uma interface USB qualquer da máquina. *Nota de 14/10/2026:* o
+  empréstimo saiu do produto (`D-1410-TODO-PAD-TEM-PORTA-PROPRIA`); o aparelho
+  sem a porta do próprio pad fica sem endpoint, e o log diz por quê
+  (`haptica_sem_porta_propria`).
 - **O endpoint emprestado não se reancora com o jogo aberto:**
   `src/hefesto_dualsense4unix/daemon/subsystems/alto_falante.py` ~1818-1824.
 - **O hidraw do gadget passava pelo filtro de aparelho.** `controles_na_lista`, no

@@ -14,9 +14,10 @@ prova, nesta ordem:
 2. **A identidade que muda** — o posto de P1 que passa a outro controle leva a
    âncora junto, sem apagar o registro novo do aparelho antigo.
 3. **Quem avisa o pad** — o relógio da identidade do laço do daemon.
-4. **O endpoint nasce casado** — com o gadget do aparelho a caminho, o som não
-   cria o endpoint numa emprestada; o 1º e o 4º, no rádio e no cabo. O aparelho
-   sem gadget (o 5º pad, a máquina sem os módulos) segue com a emprestada.
+4. **O endpoint nasce casado** — com o gadget do aparelho a caminho, o som
+   espera; o 1º e o 4º, no rádio e no cabo. O aparelho sem gadget (o 5º pad, a
+   máquina sem os módulos) fica sem endpoint, e o log diz por quê
+   (TODO-PAD-TEM-PORTA-PROPRIA-01, 14/10/2026: a âncora emprestada saiu).
 5. **O pad nosso não é aparelho** — o ``hidraw`` do gadget sai da lista do som
    pelo dono único, e não ganha endpoint órfão.
 6. **A fila, o dono único e o número** (a Tarefa 2) — os gadgets montados juntos
@@ -36,7 +37,10 @@ import pytest
 
 # O ``external_mask`` sobe antes do leitor falso da bancada do co-op, que não
 # tem o ``BUTTON_MAP`` que o módulo lê ao carregar.
-from hefesto_dualsense4unix.daemon.subsystems import external_mask  # noqa: F401
+from hefesto_dualsense4unix.daemon.subsystems import (  # noqa: F401
+    alto_falante,
+    external_mask,
+)
 from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
 from hefesto_dualsense4unix.integrations import pad_usb
 from tests.unit import test_a_haptica_chega_a_quem_entra_depois as h
@@ -355,22 +359,22 @@ def test_o_gadget_que_enumera_no_meio_da_volta_nao_empresta(
     Medido em 14/10/2026 (10h42m26): o gadget do White enumerou 93 ms antes de o
     endpoint dele nascer na ``usb1/1-3``. A volta fotografou as âncoras próprias
     no começo, o gadget registrou a dele e saiu do «a caminho», e a pergunta do
-    meio já dizia «não espera». MORDIDA: em ``_casar_as_pontes``, pergunte a espera
-    contra as ``proprias`` do começo da volta (``marca not in proprias``) em vez da
-    âncora que ``a_ancora_ou_a_espera`` devolve, e o endpoint nasce na emprestada.
+    meio já dizia «não espera». MORDIDA: em ``_casar_as_pontes``, pergunte a porta
+    num retrato tirado no começo da volta em vez de ``a_ancora_ou_a_espera`` na
+    hora de nascer, e o aparelho fica sem endpoint na volta em que a porta chegou.
     """
     mesa = _mesa_com_gadgets(monkeypatch, tmp_path)
     n = _PADS[uniq]
     serial = pad_usb.serial_do_pad(f"02:fe:00:80:00:0{n}")
     pad_usb.anotar_gadget_a_caminho(serial, uniq, 30.0)
-    distribuir = eh.distribuir_ancoras
+    na_ordem = alto_falante.AltoFalanteSubsystem._nos_na_ordem
 
-    def _enumera_no_meio(*a: Any, **k: Any) -> Any:
+    def _enumera_no_meio(self: Any, *a: Any, **k: Any) -> Any:
         pad_usb.registrar_gadget(uniq, _interface(n))
         pad_usb.gadget_chegou(serial)
-        return distribuir(*a, **k)
+        return na_ordem(self, *a, **k)
 
-    monkeypatch.setattr(eh, "distribuir_ancoras", _enumera_no_meio)
+    monkeypatch.setattr(alto_falante.AltoFalanteSubsystem, "_nos_na_ordem", _enumera_no_meio)
     controle = _chega(mesa, uniq, transporte)
     mesa.volta(controle)
     assert h._ancora_do_aparelho(mesa.servidor, uniq) == _interface(n)
@@ -378,7 +382,7 @@ def test_o_gadget_que_enumera_no_meio_da_volta_nao_empresta(
 
 
 def test_a_pergunta_da_ancora_e_da_espera_e_uma_so(monkeypatch: pytest.MonkeyPatch) -> None:
-    """As três respostas, sob a mesma trava: a própria, a espera e a emprestada."""
+    """As três respostas, sob a mesma trava: a própria, a espera e «sem porta»."""
     monkeypatch.setattr(pad_usb, "_INTERFACE_DO_APARELHO", {})
     monkeypatch.setattr(pad_usb, "_A_CAMINHO", {})
     monkeypatch.setattr(pad_usb, "_A_MESA_VIU", None)
@@ -394,61 +398,77 @@ def test_o_gadget_a_caminho_de_um_nao_segura_o_outro(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     mesa = _mesa_com_gadgets(monkeypatch, tmp_path)
-    pad_usb.anotar_gadget_a_caminho(pad_usb.serial_do_pad("02:fe:00:80:00:04"), h._P4, 30.0)
+    pad_usb.registrar_gadget(h._P1, _interface(1))
+    pad_usb.anotar_gadget_a_caminho(pad_usb.serial_do_pad("02:fe:00:00:00:04"), h._P4, 30.0)
     um, quatro = _chega(mesa, h._P1, "bt"), _chega(mesa, h._P4, "bt")
     mesa.volta(um, quatro)
     assert mesa.servidor.do_nome(eh.nome_do_endpoint(h._P4)) == []
-    assert "/vhci_hcd." not in h._ancora_do_aparelho(mesa.servidor, h._P1)
-
-
-def test_o_aparelho_sem_gadget_segue_com_a_emprestada_na_hora(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    """O 5º pad e a máquina sem os módulos: o endpoint de mentira de hoje fica."""
-    mesa = _mesa_com_gadgets(monkeypatch, tmp_path)
-    mesa.volta(_chega(mesa, h._P1, "bt"))
-    emprestada = h._ancora_do_aparelho(mesa.servidor, h._P1)
-    assert emprestada.startswith("/devices/pci0000:00/")
-
-
-def test_o_prazo_vencido_empresta(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """O gadget que não enumera não deixa o aparelho sem háptica para sempre."""
-    mesa = _mesa_com_gadgets(monkeypatch, tmp_path)
-    pad_usb.anotar_gadget_a_caminho(pad_usb.serial_do_pad("02:fe:00:80:00:01"), "", 0.0)
-    mesa.volta(_chega(mesa, h._P1, "bt"))
-    assert h._ancora_do_aparelho(mesa.servidor, h._P1).startswith("/devices/pci0000:00/")
-
-
-def test_a_ancora_que_chega_depois_reancora_sem_jogo(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    """O endpoint que nasceu antes do pad (a janela antes da montagem) se corrige."""
-    mesa = _mesa_com_gadgets(monkeypatch, tmp_path)
-    controle = _chega(mesa, h._P1, "bt")
-    mesa.volta(controle)
-    assert "/vhci_hcd." not in h._ancora_do_aparelho(mesa.servidor, h._P1)
-    pad_usb.registrar_gadget(h._P1, _interface(1))
-    mesa.volta(controle)
     assert h._ancora_do_aparelho(mesa.servidor, h._P1) == _interface(1)
 
 
-def test_com_o_jogo_tocando_na_emprestada_o_endpoint_fica(
+@pytest.mark.parametrize("transporte", ["bt", "cabo"])
+def test_o_aparelho_sem_gadget_fica_sem_endpoint_e_o_log_diz_por_que(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, transporte: str
+) -> None:
+    """O 5º pad e a máquina sem os módulos: nenhum endpoint com o nome da Sony.
+
+    TODO-PAD-TEM-PORTA-PROPRIA-01 (14/10/2026). Até 14/10 este caso dava ao
+    aparelho uma âncora emprestada (um hub), e o jogo varria o áudio sem HID
+    do mesmo ``ContainerId``. MORDIDA: devolva o empréstimo em
+    ``_casar_as_pontes`` e o endpoint nasce fora do ``vhci_hcd``.
+    """
+    import structlog
+
+    mesa = _mesa_com_gadgets(monkeypatch, tmp_path)
+    pad_usb.anotar_sem_porta(h._P1, "pad_usb_sem_udc_livre")
+    with structlog.testing.capture_logs() as registros:
+        mesa.volta(_chega(mesa, h._P1, transporte))
+    assert mesa.servidor.do_nome(eh.nome_do_endpoint(h._P1)) == []
+    ditos = [r for r in registros if r["event"] == "haptica_sem_porta_propria"]
+    assert [(r["uniq"], r["motivo"]) for r in ditos] == [(h._P1, "pad_usb_sem_udc_livre")]
+
+
+def test_o_prazo_vencido_nao_empresta(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """O gadget que não enumera deixa o aparelho sem endpoint, e a espera acaba."""
+    mesa = _mesa_com_gadgets(monkeypatch, tmp_path)
+    pad_usb.anotar_gadget_a_caminho(pad_usb.serial_do_pad("02:fe:00:00:00:01"), "", 0.0)
+    mesa.volta(_chega(mesa, h._P1, "bt"))
+    assert mesa.servidor.do_nome(eh.nome_do_endpoint(h._P1)) == []
+    assert pad_usb.a_ancora_ou_a_espera(h._P1) == (None, False)
+
+
+def test_a_porta_que_chega_depois_faz_o_endpoint_nascer(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """O aparelho cuja porta chega depois ganha o endpoint nela, sem queda nenhuma."""
+    mesa = _mesa_com_gadgets(monkeypatch, tmp_path)
+    controle = _chega(mesa, h._P1, "bt")
+    mesa.volta(controle)
+    assert mesa.servidor.do_nome(eh.nome_do_endpoint(h._P1)) == []
+    pad_usb.registrar_gadget(h._P1, _interface(1))
+    mesa.volta(controle)
+    assert h._ancora_do_aparelho(mesa.servidor, h._P1) == _interface(1)
+    assert mesa.servidor.quedas == []
+
+
+def test_com_o_jogo_tocando_o_endpoint_da_porta_velha_fica(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     """A regra que fica (e por que o endpoint tem de NASCER casado).
 
     Descarregar o null-sink debaixo de um fluxo do jogo move o fluxo para a
     saída padrão (a háptica do jogo sai na caixa de som) e o device KS que o
-    Proton gravou no lançamento aponta para o ``sysfs.path`` velho.
+    Proton gravou no lançamento aponta para o ``sysfs.path`` velho. O gadget
+    que volta noutra porta com o jogo tocando espera o jogo soltar o nó.
     """
     mesa = _mesa_com_gadgets(monkeypatch, tmp_path)
+    pad_usb.registrar_gadget(h._P1, _interface(1))
     controle = _chega(mesa, h._P1, "bt")
     mesa.volta(controle)
-    emprestada = h._ancora_do_aparelho(mesa.servidor, h._P1)
     mesa.servidor.jogo_em.add(eh.nome_do_endpoint(h._P1))
-    pad_usb.registrar_gadget(h._P1, _interface(1))
+    pad_usb.registrar_gadget(h._P1, _interface(2))
     mesa.volta(controle)
-    assert h._ancora_do_aparelho(mesa.servidor, h._P1) == emprestada
+    assert h._ancora_do_aparelho(mesa.servidor, h._P1) == _interface(1)
     assert mesa.servidor.quedas == []
 
 

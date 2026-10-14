@@ -41,6 +41,7 @@ import structlog
 from hefesto_dualsense4unix.core.formas_do_endereco import formas_do_endereco
 from hefesto_dualsense4unix.integrations import alto_falante_bt as af
 from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
+from tests.unit import porta_de_mentira as porta
 from tests.unit.test_a_haptica_chega_a_quem_entra_depois import (  # noqa: F401
     _P1,
     _P2,
@@ -203,9 +204,9 @@ def test_os_tres_nos_do_controle_dizem_o_aparelho(
 
     assert af.SinkVirtualPipeWire(uniq=uniq, runner=servidor).iniciar()
     canal.abrir(uniq, dba.descricao_do_microfone(uniq))
-    endpoint = eh.EndpointDeHaptica(
-        uniq=uniq, ancora=eh.Ancora(syspath="/d/1", declarado="/d/1/i:1.0"), runner=servidor
-    )
+    ancora = eh.ancora_da_interface(porta.dar_porta(uniq, 1))
+    assert ancora is not None
+    endpoint = eh.EndpointDeHaptica(uniq=uniq, ancora=ancora, runner=servidor)
     assert endpoint.iniciar()
 
     marca = eh.marca_do_aparelho(uniq)

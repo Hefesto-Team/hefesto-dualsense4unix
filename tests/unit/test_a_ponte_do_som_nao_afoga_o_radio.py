@@ -9,6 +9,7 @@ import pytest
 
 from hefesto_dualsense4unix.daemon.subsystems import alto_falante as mod
 from hefesto_dualsense4unix.integrations.alto_falante_bt import nome_do_sink
+from tests.unit.porta_de_mentira import todo_pad_tem_porta
 
 MESA = [f"aa:bb:cc:00:00:0{n}" for n in (1, 2, 3, 4)]
 
@@ -119,13 +120,7 @@ def bancada(monkeypatch: pytest.MonkeyPatch) -> _Bancada:
     )
     monkeypatch.setattr(fs, "derrubar_leitor_de_pipe", lambda g, **_k: b.colhidos.append(g))
     monkeypatch.setattr(eh, "EndpointDeHaptica", _EndpointDeMentira)
-    monkeypatch.setattr(
-        eh,
-        "ancoras",
-        lambda *a, **k: [
-            eh.Ancora(syspath=f"/d/{i}", declarado=f"/d/{i}/i:1.0") for i in range(4)
-        ],
-    )
+    todo_pad_tem_porta(monkeypatch)
     monkeypatch.setattr(broker, "abrir_hidraw", lambda no, **_: type("N", (), {"fd": 7})())
     monkeypatch.setattr(
         mod.AltoFalanteSubsystem, "_quem_o_jogo_le", lambda self, controles: set()

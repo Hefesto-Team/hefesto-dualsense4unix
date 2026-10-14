@@ -116,6 +116,15 @@ def _ancora(i: int) -> eh.Ancora:
 
 _ANCORAS = [_ancora(i) for i in range(4)]
 
+
+@pytest.fixture(autouse=True)
+def _cada_um_na_porta_dele() -> None:
+    """TODO-PAD-TEM-PORTA-PROPRIA-01: o P(n) tem o gadget na ``_ANCORAS[n-1]``."""
+    from hefesto_dualsense4unix.integrations import pad_usb
+
+    for uniq, ancora in zip((_P1, _P2, _P3, _P4), _ANCORAS, strict=True):
+        pad_usb.registrar_gadget(uniq, ancora.declarado)
+
 _Assentos = dict[str, int | None]
 
 
@@ -312,11 +321,11 @@ def test_a_identidade_do_no_fica_intacta(assentos: _Assentos) -> None:
 def test_o_no_publicado_diz_o_controle(assentos: _Assentos) -> None:
     """O que a lista de som MOSTRA, lido do servidor depois do ``load-module``."""
     servidor = _Servidor()
-    no = eh.EndpointDeHaptica(uniq=_P4, ancora=_ANCORAS[1], runner=servidor)
+    no = eh.EndpointDeHaptica(uniq=_P4, ancora=_ANCORAS[3], runner=servidor)
     assert no.iniciar() is True
     (publicado,) = servidor.do_nome(eh.nome_do_endpoint(_P4))
     assert servidor.descricao(publicado) == f"{_HAPTICA} 4{_SONY}"
-    assert publicado["props"]["sysfs.path"] == _ANCORAS[1].declarado
+    assert publicado["props"]["sysfs.path"] == _ANCORAS[3].declarado
     assert publicado["canais"] == 4
     assert no.rotulo == f"{_HAPTICA} 4{_SONY}", "o nó não lembra o rótulo que publicou"
 
@@ -467,7 +476,6 @@ def mesa(monkeypatch: pytest.MonkeyPatch, assentos: _Assentos) -> _Mesa:
         servidor.sink_de_fora(som.nome_do_sink(uniq), som.descricao_do_alto_falante(uniq), canais=2)
     monkeypatch.setattr(eh, "rodar_pactl", servidor)
     monkeypatch.setattr(som, "rodar_pactl", servidor)
-    monkeypatch.setattr(eh, "ancoras", lambda *a, **k: list(_ANCORAS))
     monkeypatch.setattr(
         som, "fonte_do_monitor_do_no", lambda no, **kw: ((lambda _n: b""), f"gravador:{no}", "")
     )
@@ -637,7 +645,7 @@ def test_o_no_herdado_de_rotulo_ilegivel_nao_se_toca(mesa: _Mesa) -> None:
         "format=float32le", "rate=48000", "channels=4",
         "channel_map=front-left,front-right,rear-left,rear-right",
         'sink_properties="device.bus=usb device.vendor.id=054c device.product.id=0ce6 '
-        f'sysfs.path={_ANCORAS[0].declarado} priority.session=0"',
+        f'sysfs.path={_ANCORAS[2].declarado} priority.session=0"',
     ])
     mesa.volta()
     mesa.volta()
@@ -666,7 +674,7 @@ def test_o_no_que_nem_com_o_rotulo_velho_volta_renasce_na_volta_seguinte(
 def test_o_rotulo_novo_que_nao_sobe_devolve_o_velho(assentos: _Assentos) -> None:
     """Um rótulo velho é melhor que endpoint nenhum — a ordem do nó do som."""
     servidor = _Servidor()
-    no = eh.EndpointDeHaptica(uniq=_P3, ancora=_ANCORAS[0], runner=servidor)
+    no = eh.EndpointDeHaptica(uniq=_P3, ancora=_ANCORAS[2], runner=servidor)
     assert no.iniciar() is True
     assentos[_P3] = 2
     servidor.recusar_cargas = 1

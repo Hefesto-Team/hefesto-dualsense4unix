@@ -244,7 +244,6 @@ def som(monkeypatch: pytest.MonkeyPatch) -> Any:
     monkeypatch.setattr(af, "PonteDeSomPorRadio", _PonteDeMentira)
     monkeypatch.setattr(af, "fonte_do_monitor_do_no", _fonte)
     monkeypatch.setattr(fs, "derrubar_leitor_de_pipe", lambda *_a, **_k: None)
-    monkeypatch.setattr(eh, "ancoras", lambda *a, **k: [])
     monkeypatch.setattr(eh, "endpoints_de_pe", lambda *a, **k: {})
     monkeypatch.setattr(eh, "varrer_endpoints_orfaos", lambda *a, **k: None)
     monkeypatch.setattr(af, "sinks_com_motores", lambda *a, **k: [])

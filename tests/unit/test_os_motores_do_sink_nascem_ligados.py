@@ -120,6 +120,8 @@ def test_o_piso_e_cem_e_esta_declarado() -> None:
 
 def test_o_endpoint_liga_os_motores_ao_publicar() -> None:
     """Publicar o nó e não dizer o volume é o defeito — a chamada tem de estar lá."""
+    from tests.unit import porta_de_mentira as porta
+
     chamadas: list[list[str]] = []
 
     def correr(cmd: list[str]) -> str | None:
@@ -137,7 +139,9 @@ def test_o_endpoint_liga_os_motores_ao_publicar() -> None:
     quem.taxa_hz = 48000
     quem.runner = correr
     quem._module_id = None
-    quem.ancora = eh.Ancora(syspath="/sys/devices/x", declarado="/sys/devices/x/1-1:1.0")
+    ancora = eh.ancora_da_interface(porta.dar_porta(quem.uniq, 1))
+    assert ancora is not None
+    quem.ancora = ancora
 
     assert quem.iniciar() is True
     escritas = [c for c in chamadas if c[:2] == ["pactl", "set-sink-volume"]]
