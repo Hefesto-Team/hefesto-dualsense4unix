@@ -333,6 +333,72 @@
       "conflito": "",
       "rodada": 3,
       "ancora_antes": ".lanc-acoes"
+    },
+    {
+      "n": 34,
+      "sprint": "A-ABA-LANCADORES-GANHA-AS-MODIFICACOES-01",
+      "o_que_muda": "O desenho B ajustado vira página própria, para você comparar com o Experimental: os lançadores em cima, as modificações embaixo, as duas seções abertas",
+      "resposta": "todo-07-r3-34",
+      "origem": "escolha dela de 13/10",
+      "ancora": ".miolo",
+      "conflito": "",
+      "rodada": 3,
+      "ancora_antes": ".miolo",
+      "leituras": {
+        "A": {
+          "pagina": "07-lancadores.html",
+          "ancora": "#",
+          "o_que": "O Experimental: as extensões em cima e os lançadores embaixo, com os impedimentos no marcador laranja do selo"
+        },
+        "B": {
+          "pagina": "07-lancadores-b.html",
+          "ancora": "#",
+          "o_que": "O B ajustado: a aba se chama Lançadores, com os lançadores em cima e as modificações embaixo"
+        }
+      },
+      "pergunta": "A aba fica como o Experimental (A) ou como o B ajustado (B)?",
+      "pagina": "07-lancadores-b.html"
+    },
+    {
+      "n": 35,
+      "sprint": "A-ABA-LANCADORES-GANHA-AS-MODIFICACOES-01",
+      "o_que_muda": "Cabem seis modificações sem rolar nos três tamanhos: as linhas encolhem e os lançadores deixam de esticar (a foto põe duas linhas de exemplo)",
+      "resposta": "todo-07-r3-35",
+      "origem": "escolha dela de 13/10",
+      "ancora": ".ext-lista",
+      "conflito": "",
+      "rodada": 3,
+      "ancora_antes": ".ext-lista",
+      "pagina": "07-lancadores-b.html",
+      "antes_pagina": "opcao-b-07.html (desenho B de 09/10)",
+      "hash": "#seis"
+    },
+    {
+      "n": 36,
+      "sprint": "A-ABA-LANCADORES-GANHA-AS-MODIFICACOES-01",
+      "o_que_muda": "Os impedimentos da Steam numa linha do cartão, «2 com impedimento»; o clique abre a lista dos jogos, cada um com o seu conserto",
+      "resposta": "todo-07-r3-36",
+      "origem": "escolha dela de 13/10",
+      "ancora": ".imp-cx",
+      "conflito": "",
+      "rodada": 3,
+      "ancora_antes": ".lf[data-lancador=\"steam\"]",
+      "js": "location.hash='#impedimentos'",
+      "pagina": "07-lancadores-b.html",
+      "antes_pagina": "opcao-b-07.html (desenho B de 09/10)"
+    },
+    {
+      "n": 37,
+      "sprint": "A-ABA-LANCADORES-GANHA-AS-MODIFICACOES-01",
+      "o_que_muda": "Cada modificação ganha o botão de configurações, ao lado da chave",
+      "resposta": "todo-07-r3-37",
+      "origem": "escolha dela de 13/10",
+      "ancora": ".ext-conf",
+      "conflito": "",
+      "rodada": 3,
+      "ancora_antes": ".nj-tog",
+      "pagina": "07-lancadores-b.html",
+      "antes_pagina": "opcao-b-07.html (desenho B de 09/10)"
     }
   ],
   "por_baixo": [
