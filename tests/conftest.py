@@ -2715,6 +2715,25 @@ def pytest_collection_modifyitems(config: Any, items: list[Any]) -> None:
             item.add_marker(pytest.mark.skip(reason=motivo))
 
 
+def pytest_collection_finish(session: Any) -> None:
+    """Congela no coletor de lixo o que a coleta deixou vivo.
+
+    Medido em 14/10/2026: a coleta de `tests/unit` deixa ~1 milhão de objetos,
+    e cada passada cheia do coletor custa 345 ms aqui e 1,2 a 2,3 s no runner
+    do CI, uma a cada poucos por cento da suíte. O servidor e o cliente do IPC
+    dos testes moram neste processo, e o cliente espera 1 s pelo
+    `daemon.state_full` desde 13/10: a pausa caía dentro do prazo e o teste de
+    contrato reprovava com «o daemon não respondeu em 1 s». O daemon de
+    verdade não carrega a coleta. Congelado, o que a coleta deixou sai da
+    varredura (a passada cheia cai a 0 ms); o que os testes criam depois
+    continua recolhido.
+    """
+    import gc
+
+    gc.collect()
+    gc.freeze()
+
+
 os.environ.setdefault("PYTHONFAULTHANDLER", "1")
 
 
