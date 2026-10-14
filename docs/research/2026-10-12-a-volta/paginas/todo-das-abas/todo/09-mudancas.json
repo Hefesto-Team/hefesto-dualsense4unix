@@ -219,5 +219,8 @@
  "origem_da_pagina": "r3 (v3) + rodada 4",
  "estados": {
   "hoje": "09-sistema.html?alvos=hoje"
- }
+ },
+ "consertos_da_fusao": [
+  "Na conferência, as pílulas do Status que estão bem («✓ Ligado», «✓ OK») saem do verde e ficam neutras, na cor do texto, e «LIGADO» vira «Ligado»: nenhum aviso verde."
+ ]
 }

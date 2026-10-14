@@ -1126,6 +1126,11 @@
   .gls .mais{color:var(--comment);font-size:11px;margin:0 1px}
 
 </style>
+<style data-conserto="nenhum aviso verde: o estado que está bem fica na cor do texto">
+/* Conserto da conferência da fusão (14/10): «não deveriamos ter avisos verdes» (r3-07-29). O estado que está bem
+   fica numa pílula neutra, na cor do texto; o laranja e o vermelho continuam, porque esses pedem ação. */
+.saude .selo.ok{background:transparent;color:var(--texto-suave);box-shadow:inset 0 0 0 1px var(--border-forte)}
+</style>
 <style id="alvos-de-24">[data-gesto]{min-height:24px}</style>
 <style id="rodada-2-grupo-3">
   /* As quatro colunas, na ordem dela: Funcionamento do app, Interface, Perfil global de bateria, Saúde do app. */
@@ -1372,8 +1377,8 @@ html.alvos-24 input[type=range]{height:24px}
         </div>
         <div class="status3 seis">
           <div class="col-lista" data-id="status-lista" data-campo="status-lista" data-hef-alvo="html">
-            <div class="saude" data-id="hefesto-estado"><span class="selo ok"><span class="sg">✓</span>LIGADO</span><span class="txt" title="Roda por trás e volta sozinho se travar."><span>Serviço</span></span></div>
-            <div class="saude" data-id="hefesto-troca-de-perfil"><span class="selo ok"><span class="sg">✓</span>LIGADO</span><span class="txt" title="O perfil do jogo entra sozinho quando ele abre."><span>Troca de perfil ao abrir o jogo</span></span></div>
+            <div class="saude" data-id="hefesto-estado"><span class="selo ok"><span class="sg">✓</span>Ligado</span><span class="txt" title="Roda por trás e volta sozinho se travar."><span>Serviço</span></span></div>
+            <div class="saude" data-id="hefesto-troca-de-perfil"><span class="selo ok"><span class="sg">✓</span>Ligado</span><span class="txt" title="O perfil do jogo entra sozinho quando ele abre."><span>Troca de perfil ao abrir o jogo</span></span></div>
           </div>
           <div class="risco"></div>
           <div class="col-lista" data-id="exame-lista" data-campo="exame-lista" data-hef-alvo="html">
