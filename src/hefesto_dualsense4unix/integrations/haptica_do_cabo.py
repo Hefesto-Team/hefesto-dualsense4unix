@@ -180,7 +180,7 @@ class HapticaDoCabo:
             motores = volume_dos_motores(aberto, ganho_de.get(marca, 1.0))
             if (
                 self._portao.get(marca) is not aberto or self._motores.get(marca) != motores
-            ) and self._aplicar_o_portao(marca, aberto, motores):
+            ) and self._aplicar_o_portao(marca, aberto, motores, dono=rota.dono):
                 self._portao[marca] = aberto
                 self._motores[marca] = motores
 
@@ -210,7 +210,7 @@ class HapticaDoCabo:
         return False
 
     def _aplicar_o_portao(
-        self, marca: str, aberto: bool, motores: str
+        self, marca: str, aberto: bool, motores: str, *, dono: str = ""
     ) -> bool:
         """O volume do fluxo do laço na placa: a frente cheia, os motores pelo portão e pelo ganho.
 
@@ -240,6 +240,7 @@ class HapticaDoCabo:
         logger.info(
             "haptica_do_cabo_portao",
             controle=marca,
+            uniq=dono,
             motores_abertos=aberto,
             motores=motores,
         )

@@ -709,6 +709,8 @@ class AltoFalanteSubsystem:
     _esperando_vaga: frozenset[tuple[str, str]] = frozenset()
     #: Por que cada controle pelo rádio está SEM ponte agora (só a borda vai ao log).
     _sem_ponte_porque: Mapping[str, str] = MappingProxyType({})
+    #: O ganho da háptica que cada controle no rádio leva, o último dito no log (item 6).
+    _ganho_do_radio_dito: Mapping[str, int] = MappingProxyType({})
 
     def __init__(
         self,
@@ -1533,6 +1535,23 @@ class AltoFalanteSubsystem:
         self._o_cabo().casar(rotas, abertos, self._ganhos_das_rotas(rotas))
         self._casar_os_ouvidos_das_placas(ouvir)
 
+    def _dizer_o_ganho_do_radio(self, vivos: Mapping[str, str]) -> None:
+        """A borda do ganho da háptica de cada controle no rádio, com o ``uniq``.
+
+        OS-QUATRO-EM-HARMONIA-01, item 6: no rádio o ganho vai na amostra da
+        ponte (``ConversorDeHaptica``), e só esta linha diz quanto cada controle
+        leva no fio. Uma linha por mudança, nunca por volta.
+        """
+        dito = dict(self._ganho_do_radio_dito)
+        for uniq in vivos:
+            pct = GANHO.pct_que_vale(uniq)
+            if dito.get(uniq) != pct:
+                dito[uniq] = pct
+                logger.info("som_radio_ganho_da_haptica", uniq=uniq, pct=pct)
+        self._ganho_do_radio_dito = MappingProxyType(
+            {u: p for u, p in dito.items() if u in vivos}
+        )
+
     @staticmethod
     def _ganhos_das_rotas(rotas: Mapping[str, Any]) -> dict[str, float]:
         """O ganho da háptica de cada laço, pelo controle dono da rota, e de nenhum outro."""
@@ -1982,6 +2001,7 @@ class AltoFalanteSubsystem:
         except Exception:
             logger.warning("haptica_do_cabo_falhou", exc_info=True)
 
+        self._dizer_o_ganho_do_radio(vivos)
         governador = self.governador
         esperando: set[tuple[str, str]] = set()
         o_jogo_manda = self._o_jogo_manda_nos_motores()

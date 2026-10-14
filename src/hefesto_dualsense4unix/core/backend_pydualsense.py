@@ -3595,7 +3595,9 @@ class PyDualSenseController(IController):
         ok = self._escrever_volume_no_handle(
             alvo, volume=volume, muted=muted, rota=rota, op="set_speaker_volume"
         )
-        logger.info("speaker_volume_set", volume=volume, muted=bool(muted), ok=ok)
+        logger.info(
+            "speaker_volume_set", uniq=uniq or "", volume=volume, muted=bool(muted), ok=ok
+        )
         return ok
 
     def _escrever_volume_no_handle(
@@ -4284,12 +4286,22 @@ class PyDualSenseController(IController):
         if alvo is None:
             return False
         with self._io_lock:
+            mudou = (alvo in self._haptica_de_audio_por_uniq) is not bool(ativa)
             if ativa:
                 self._haptica_de_audio_por_uniq.add(alvo)
             else:
                 self._haptica_de_audio_por_uniq.discard(alvo)
             key = self._key_for_uniq(alvo)
             handle = self._handles.get(key) if key is not None else None
+        if mudou:
+            # OS-QUATRO-EM-HARMONIA-01, item 6: a borda do `HAPTICS_SELECT`, por controle.
+            # Com a háptica por áudio tocando, o rumble deste controle sai SEM ele.
+            logger.info(
+                "haptics_select_borda",
+                uniq=alvo,
+                haptica_de_audio=bool(ativa),
+                haptics_select="fora" if ativa else "com_o_rumble",
+            )
         definir = getattr(handle, "set_haptica_de_audio", None)
         if not callable(definir):
             return False
