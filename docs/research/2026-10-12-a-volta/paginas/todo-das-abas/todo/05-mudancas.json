@@ -3,7 +3,7 @@
   "nome": "Vibração",
   "antes": "/mnt/Apate/Desenvolvimento/hefesto-voo/_integra-1-11/src/hefesto_dualsense4unix/interface/paginas/05-vibracao.html",
   "depois": "/home/vitoriamaria/.local/state/hefesto-casa/leva-volta/todo/05-vibracao.html",
-  "rodada": 2,
+  "rodada": 3,
   "sprint_unificada": "A-ABA-VIBRACAO-DO-TODO-01",
   "mudancas": [
     {
@@ -104,6 +104,28 @@
       "origem": "RODADA-3",
       "ancora": ".vib .motor .teto",
       "conflito": ""
+    },
+    {
+      "n": 12,
+      "sprint": "A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-01",
+      "o_que_muda": "A força da vibração vira os quatro passos do firmware, por controle: Forte, Média, Fraca e Desligada, como no PS5. O Máximo de 150% e os três botões Economia, Padrão e Máximo saem",
+      "resposta": "todo-05-r3-12",
+      "origem": "escolha dela de 13/10",
+      "ancora": ".vib .seg.passos",
+      "conflito": "",
+      "rodada": 3,
+      "ancora_antes": ".vib .forca",
+      "leituras": {
+        "A": {
+          "ancora": "#",
+          "o_que": "Os quatro passos e, embaixo, o trilho de ajuste fino até 100%"
+        },
+        "B": {
+          "ancora": "#leitura-b",
+          "o_que": "Só os quatro passos, sem trilho"
+        }
+      },
+      "pergunta": "O trilho fica embaixo dos quatro passos, até 100% (A), ou some e ficam só os passos (B)?"
     }
   ],
   "estados": {
