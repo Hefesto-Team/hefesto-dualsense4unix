@@ -139,5 +139,8 @@
  ],
  "altura_px": 809,
  "rola": false,
- "origem_da_pagina": "r3 (v3) + rodada 4"
+ "origem_da_pagina": "r3 (v3) + rodada 4",
+ "consertos_da_fusao": [
+  "Na conferência, «Sugestões» é um modo como os outros e o número da chamada fica na cor do texto, sem o verde de aviso; os títulos das faces (Frente do gabinete, Traseira, Hub, no alto do rack) saem da caixa alta."
+ ]
 }
