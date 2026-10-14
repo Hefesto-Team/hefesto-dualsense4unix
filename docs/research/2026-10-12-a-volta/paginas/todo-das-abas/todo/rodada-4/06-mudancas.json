@@ -7,38 +7,19 @@
  "altura_px": 809,
  "rola": false,
  "estados": {
-  "alvos-a": "06-navegacao.html?alvos=a",
-  "alvos-b": "06-navegacao.html?alvos=b",
-  "acessibilidade-a": "06-navegacao.html?alvos=a#acessibilidade",
-  "acessibilidade-b": "06-navegacao.html?alvos=b#acessibilidade"
+  "acessibilidade": "06-navegacao.html#acessibilidade",
+  "hoje": "06-navegacao.html?alvos=hoje"
  },
  "mudancas": [
   {
    "n": 28,
    "sprint": "OS-ALVOS-E-A-LETRA-CRESCEM-E-A-INTERFACE-GANHA-TAMANHO-01",
-   "o_que_muda": "Na Navegação e na janela Acessibilidade, os 7 alvos da aba (seletores de linha e o botão de navegação) e os 17 da janela (os botões «−» e «+» de cada passo e os seletores) passam a 24 px; na leitura B a letra sobe para 12 px",
-   "resposta": "botões e letra crescem: alvo de 24 px no mínimo e letra de 12 px no mínimo (a sua resposta); o desenho e o piso da letra seguem em aberto",
+   "o_que_muda": "Na Navegação e na janela Acessibilidade, os 7 alvos da aba (seletores de linha e o botão de navegação) e os 17 da janela (os botões «−» e «+» de cada passo e os seletores) passam a 24 px, e toda letra abaixo de 12 px sobe para 12 px",
+   "resposta": "sua resposta de 13/10, ~23h40: botões e letra. Todo alvo de toque com 24 px no mínimo e nenhuma letra abaixo de 12 px, com cada aba refeita sem rolagem",
    "origem": "rodada 4 (o que faltava desenho)",
    "ancora": "html.alvos-24",
    "seletor": "button, select, input",
-   "conflito": "Medido na página de hoje: 7 alvos abaixo de 24 px na aba e 24 com a janela Acessibilidade aberta (17 deles na própria janela); 22 e 57 textos abaixo de 12 px. Depois, 0 alvos nas duas leituras; na B sobram só 10 textos de SVG. Sobram letras abaixo de 12 px só dentro de desenhos SVG (rótulos do gráfico), que não são texto da interface; a leitura B não os toca.",
-   "leituras": {
-    "A": "06-navegacao.html?alvos=a",
-    "B": "06-navegacao.html?alvos=b",
-    "descricao": {
-     "A": "Leitura A: todo alvo de toque passa a ter 24 px no mínimo, e a letra fica como está",
-     "B": "Leitura B: os mesmos 24 px e, além disso, nenhuma letra abaixo de 12 px"
-    },
-    "C": "Leitura C, já desenhada no 09-sistema.html: só o botão «Tamanho da interface» (Padrão, Confortável, Espaçoso), sem mexer nos tamanhos de hoje"
-   },
-   "fotos": [
-    "fotos/06-navegacao-m28-antes.png",
-    "fotos/06-navegacao-m28-a.png",
-    "fotos/06-navegacao-m28-b.png",
-    "fotos/06-navegacao-acessibilidade-m28-antes.png",
-    "fotos/06-navegacao-acessibilidade-m28-a.png",
-    "fotos/06-navegacao-acessibilidade-m28-b.png"
-   ]
+   "conflito": "Medido na página do todo: 7 alvos abaixo de 24 px na aba e 24 com a janela Acessibilidade aberta (17 deles na própria janela); 22 e 57 textos abaixo de 12 px. Depois, 0 alvos e 0 textos. Ficam abaixo de 12 px só as letras gravadas no desenho do controle (L1, R1, L2, R2, L, R), que crescem e encolhem com o desenho."
   }
  ],
  "por_baixo": [],
