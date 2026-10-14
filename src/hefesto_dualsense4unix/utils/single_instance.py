@@ -36,7 +36,12 @@ def _pid_file(name: str) -> Path:
 
 
 def is_alive(pid: int) -> bool:
-    """Retorna True se o processo existe e é sinalizável pelo user atual."""
+    """Retorna True se o processo existe, é sinalizável pelo user atual e não é zumbi.
+
+    O zumbi já saiu (soltou o lock e as portas) e só espera o pai recolhê-lo,
+    mas o `kill(pid, 0)` ainda o acha: sem olhar o estado, a troca de instância
+    esperava o prazo inteiro do desligamento por um processo que já tinha saído.
+    """
     if pid <= 0:
         return False
     try:
@@ -45,7 +50,17 @@ def is_alive(pid: int) -> bool:
         return False
     except PermissionError:
         return True
-    return True
+    return not _e_zumbi(pid)
+
+
+def _e_zumbi(pid: int) -> bool:
+    """O estado do `/proc/<pid>/stat` (o campo depois do nome) é `Z` ou `X`."""
+    try:
+        stat = Path(f"/proc/{pid}/stat").read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return False
+    estado = stat.rpartition(")")[2].split(maxsplit=1)[:1]
+    return estado in (["Z"], ["X"])
 
 
 def _read_proc_comm(pid: int) -> str | None:

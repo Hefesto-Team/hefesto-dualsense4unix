@@ -88,6 +88,24 @@ def test_is_alive_processo_proprio(isolated_runtime: Path) -> None:
     assert single_instance.is_alive(os.getpid())
 
 
+def test_is_alive_zumbi_ja_saiu(isolated_runtime: Path) -> None:
+    """O zumbi responde ao `kill(pid, 0)`, mas já saiu: a troca não espera por ele.
+
+    Antes, cada takeover dos testes esperava os 45 s do desligamento pelo filho
+    que já tinha saído e só faltava recolher (14/10/2026).
+    """
+    filho = subprocess.Popen([sys.executable, "-c", "pass"])
+    try:
+        stat = Path(f"/proc/{filho.pid}/stat")
+        limite = time.monotonic() + 10
+        while stat.read_text().rpartition(")")[2].split()[0] != "Z":
+            assert time.monotonic() < limite, "o filho não virou zumbi em 10 s"
+            time.sleep(0.02)
+        assert not single_instance.is_alive(filho.pid)
+    finally:
+        filho.wait(timeout=5)
+
+
 def test_pid_orfao_sem_sigterm(isolated_runtime: Path) -> None:
     """Pid file com PID morto é sobrescrito sem tentar matar."""
     pid_file = Path(os.environ["XDG_RUNTIME_DIR"]) / "hefesto-dualsense4unix" / "daemon.pid"
