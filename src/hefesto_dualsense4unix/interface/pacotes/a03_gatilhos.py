@@ -378,7 +378,7 @@ def _o_modo_escrito_e_automatico(p: dict[str, Any] | None) -> bool:
 
 
 RECADO_DO_AUTOMATICO_PARADO = (
-    "Os gatilhos estão no modo automático: sem efeito, e o jogo comanda quando quiser. "
+    "Os gatilhos estão no modo automático: o jogo comanda, e o estilo do perfil ajusta. "
     "Passe para o modo personalizado para escolher.")
 
 
@@ -1893,7 +1893,7 @@ def modo_dos_gatilhos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
         "triggers": prof.triggers.model_copy(update={"modo": pedido})})
     _gravar_so_o_gatilho(novo, p)
     perfil.reaplicar(nome, ctx, p)
-    return {"recado": ("Gatilhos no modo automático: sem efeito, o jogo comanda."
+    return {"recado": ("Gatilhos no modo automático: o jogo manda; o estilo ajusta."
                        if pedido == MODO_AUTOMATICO
                        else "Gatilhos no modo personalizado: valem as suas escolhas.")}
 
