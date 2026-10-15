@@ -940,7 +940,8 @@
     justify-content:center;border-radius:7px;font:600 12.5px 'Space Grotesk',system-ui,sans-serif;
     padding:0 11px;white-space:nowrap}
   .g2-cab .chip .pt{margin:0 6px}
-  .g2-cab[data-conectado="nao"] > .cabeca{visibility:hidden}
+  /* o lugar vazio mostra «Px · Desconectado», apagado, como no desenho do todo */
+  .g2-cab[data-conectado="nao"] .chip{color:var(--comment);border:1px solid var(--border-sutil)}
   .g2-gl{grid-row:span 2;display:flex;align-items:center;justify-content:center;color:var(--fg);
     align-self:stretch;border-right:1px solid var(--border-sutil)}
   .g2-grade > .g2-gl.g2-ds{grid-column:1;grid-row:auto}

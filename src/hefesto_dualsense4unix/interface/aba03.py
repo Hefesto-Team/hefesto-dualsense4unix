@@ -113,7 +113,8 @@ CSS = CSS_GLIFO + """
     justify-content:center;border-radius:7px;font:600 12.5px 'Space Grotesk',system-ui,sans-serif;
     padding:0 11px;white-space:nowrap}
   .g2-cab .chip .pt{margin:0 6px}
-  .g2-cab[data-conectado="nao"] > .cabeca{visibility:hidden}
+  /* o lugar vazio mostra «Px · Desconectado», apagado, como no desenho do todo */
+  .g2-cab[data-conectado="nao"] .chip{color:var(--comment);border:1px solid var(--border-sutil)}
   .g2-gl{grid-row:span 2;display:flex;align-items:center;justify-content:center;color:var(--fg);
     align-self:stretch;border-right:1px solid var(--border-sutil)}
   .g2-grade > .g2-gl.g2-ds{grid-column:1;grid-row:auto}
@@ -259,7 +260,7 @@ def _chip(c):
 
     A marcação tem um dono só, o pacote: o produto escreve nos dois endereços que ela deixa.
     A cor se resolve aqui, com a régua estrita: `cor_da_zona` levanta num colorway que o
-    desenho não tem. Num lugar vazio o chip existe (o endereço tem de existir) e a folha o esconde.
+    desenho não tem. Num lugar vazio o chip diz «Px · Desconectado», apagado.
     """
     vivo = c.get("conectado", True)
     return _cabeca_do_controle(

@@ -306,8 +306,12 @@ def test_o_nome_do_controle_tem_a_largura_da_coluna_e_a_tela_nao_rola() -> None:
       const sel = [...document.querySelectorAll('.g2-acion')].map(e => e.getBoundingClientRect());
       const imer = [...document.querySelectorAll('.g2-imersao')]
         .map(e => e.getBoundingClientRect());
+      const vazios = [...document.querySelectorAll('.g2-cab[data-conectado="nao"] .chip')]
+        .map(e => [e.innerText.trim(), getComputedStyle(e).visibility,
+                   e.getBoundingClientRect().width]);
       const d = document.documentElement;
-      return {chip: chip.map(r => [r.left, r.width]), acion: sel.map(r => [r.left, r.width]),
+      return {chip: chip.map(r => [r.left, r.width]), vazios,
+              acion: sel.map(r => [r.left, r.width]),
               imer: imer.map(r => [r.left, r.width]),
               rola: d.scrollHeight > d.clientHeight + 1,
               lateral: d.scrollWidth > d.clientWidth + 1};
@@ -327,3 +331,7 @@ def test_o_nome_do_controle_tem_a_largura_da_coluna_e_a_tela_nao_rola() -> None:
             f"{(esq, larg)} contra {m['acion'][i]}")
         assert abs(larg - m["imer"][i][1]) < 1.5, (i, larg, m["imer"][i])
     assert not m["rola"] and not m["lateral"], m
+    # o lugar vazio diz que ali cabe um controle, como no desenho do todo
+    assert m["vazios"] and all(
+        v[0].endswith("Desconectado") and v[1] == "visible" and v[2] > 0 for v in m["vazios"]), (
+        m["vazios"])
