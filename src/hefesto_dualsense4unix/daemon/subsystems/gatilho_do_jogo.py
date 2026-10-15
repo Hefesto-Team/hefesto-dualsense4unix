@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
@@ -27,18 +28,6 @@ TAMANHO_DO_BLOCO = 11
 ZONAS_DO_CURSO = 10
 
 DESLIGADO = "desligado"
-
-#: Os modos do bloco pelo primeiro byte.
-_MODO_POR_BYTE: dict[int, str] = {
-    0x00: DESLIGADO,
-    0x05: DESLIGADO,
-    0x21: "resistencia",  # (noqa-acento): contrato ASCII
-    0x22: "arco",
-    0x23: "galope",
-    0x25: "arma",
-    0x26: "vibracao",
-    0x27: "metralhadora",
-}
 
 #: O lado como o evento o diz; o gatilho do jogo chega como `left`/`right`.
 _LADO = {"left": "esquerdo", "right": "direito"}
@@ -61,32 +50,65 @@ def _forca_por_zona(bloco: bytes, zonas: list[int]) -> list[int]:
     return [((empacotado >> (3 * z)) & 0x07) + 1 for z in zonas]
 
 
+def _forca_do_maior(bloco: bytes, zonas: list[int]) -> float:
+    return max(_forca_por_zona(bloco, zonas)) / 8.0
+
+
+def _forca_do_byte_3(bloco: bytes, _zonas: list[int]) -> float:
+    return ((bloco[3] & 0x07) + 1) / 8.0
+
+
+def _forca_das_duas_amplitudes(bloco: bytes, _zonas: list[int]) -> float:
+    return (max(bloco[3] & 0x07, (bloco[3] >> 3) & 0x07) + 1) / 8.0
+
+
+def _forca_do_galope(_bloco: bytes, _zonas: list[int]) -> float:
+    return 1.0  # o bloco carrega os pés e a frequência, não uma força
+
+
+def _leitor(
+    nome: str, forca_de: Callable[[bytes, list[int]], float]
+) -> Callable[[bytes], Decodificado]:
+    def _ler(bloco: bytes) -> Decodificado:
+        zonas = _zonas(bloco)
+        if not zonas:
+            return (DESLIGADO, 0.0, 0.0)
+        posicao = zonas[0] / (ZONAS_DO_CURSO - 1)
+        return (nome, round(forca_de(bloco, zonas), 4), round(posicao, 4))
+
+    return _ler
+
+
+def _desligado(_bloco: bytes) -> Decodificado:
+    return (DESLIGADO, 0.0, 0.0)
+
+
+def _legado(bloco: bytes) -> Decodificado:
+    """Um primeiro byte que a referência não decodifica: ligado ou não, sem força nem posição."""
+    return ("outro", 1.0 if any(bloco[1:]) else 0.0, 0.0)
+
+
+#: O leitor de cada modo pelo primeiro byte do bloco; o que não está aqui é ``outro``.
+_LEITOR_POR_BYTE: dict[int, Callable[[bytes], Decodificado]] = {
+    0x00: _desligado,
+    0x05: _desligado,
+    0x21: _leitor("resistencia", _forca_do_maior),  # (noqa-acento): contrato ASCII
+    0x22: _leitor("arco", _forca_do_byte_3),
+    0x23: _leitor("galope", _forca_do_galope),
+    0x25: _leitor("arma", _forca_do_byte_3),
+    0x26: _leitor("vibracao", _forca_do_maior),
+    0x27: _leitor("metralhadora", _forca_das_duas_amplitudes),
+}
+
+
 def decodificar_o_bloco(bloco: bytes) -> Decodificado:
     """``(modo, força, posição)`` de um bloco de gatilho de 11 bytes.
 
     Bloco curto, ou com a máscara de zonas vazia, é ``desligado``. Nunca levanta.
     """
     if len(bloco) < TAMANHO_DO_BLOCO:
-        return (DESLIGADO, 0.0, 0.0)
-    modo = _MODO_POR_BYTE.get(bloco[0])
-    if modo is None:
-        ligado = any(bloco[1:])
-        return ("outro", 1.0 if ligado else 0.0, 0.0)
-    if modo == DESLIGADO:
-        return (DESLIGADO, 0.0, 0.0)
-    zonas = _zonas(bloco)
-    if not zonas:
-        return (DESLIGADO, 0.0, 0.0)
-    posicao = zonas[0] / (ZONAS_DO_CURSO - 1)
-    if modo in ("resistencia", "vibracao"):  # (noqa-acento): contrato ASCII
-        forca = max(_forca_por_zona(bloco, zonas)) / 8.0
-    elif modo in ("arma", "arco"):
-        forca = ((bloco[3] & 0x07) + 1) / 8.0
-    elif modo == "metralhadora":
-        forca = (max(bloco[3] & 0x07, (bloco[3] >> 3) & 0x07) + 1) / 8.0
-    else:  # galope: o bloco carrega os pés e a frequência, não uma força
-        forca = 1.0
-    return (modo, round(forca, 4), round(posicao, 4))
+        return _desligado(bloco)
+    return _LEITOR_POR_BYTE.get(bloco[0], _legado)(bloco)
 
 
 @dataclass
@@ -94,7 +116,7 @@ class _Linha:
     """O último bloco dito de UM lado de UM controle, e o que falta dizer dele."""
 
     bloco: bytes
-    modo: str
+    ligada: bool
     enviado_em: float
     pendente: bytes | None
 
@@ -189,7 +211,7 @@ def _dizer(
                 return  # nada ligado e nada se liga: não há o que dizer
             # `agora - 1.0`: o primeiro de um lado nunca espera o teto.
             linha = vista.linhas[chave] = _Linha(
-                b"", DESLIGADO, enviado_em=agora - 1.0, pendente=None
+                b"", False, enviado_em=agora - 1.0, pendente=None
             )
         if bloco == linha.bloco and linha.pendente is None:
             return  # o jogo reescreveu o mesmo gatilho
@@ -197,7 +219,7 @@ def _dizer(
             linha.pendente = bloco  # o tique seguinte diz (`bater_o_gatilho`)
             return
         linha.bloco, linha.pendente, linha.enviado_em = bloco, None, agora
-        linha.modo = decodificar_o_bloco(bloco)[0]
+        linha.ligada = decodificar_o_bloco(bloco)[0] != DESLIGADO
     _publicar(daemon, uniq, lado, bloco, agora)
 
 
@@ -214,7 +236,7 @@ def bater_o_gatilho(daemon: Any, agora: float | None = None) -> None:
             if pendente is None or agora - linha.enviado_em < INTERVALO_MINIMO_S:
                 continue
             linha.bloco, linha.pendente, linha.enviado_em = pendente, None, agora
-            linha.modo = decodificar_o_bloco(pendente)[0]
+            linha.ligada = decodificar_o_bloco(pendente)[0] != DESLIGADO
             a_dizer.append((uniq, lado, pendente))
     for uniq, lado, bloco in a_dizer:
         _publicar(daemon, uniq, lado, bloco, agora)
@@ -248,7 +270,7 @@ def esquecer_o_gatilho(
             if alvo is not None and uniq != alvo:
                 continue
             linha = vista.linhas.pop((uniq, lado))
-            if linha.modo != DESLIGADO or (
+            if linha.ligada or (
                 linha.pendente is not None
                 and decodificar_o_bloco(linha.pendente)[0] != DESLIGADO
             ):

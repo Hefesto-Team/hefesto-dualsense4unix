@@ -1997,7 +1997,7 @@ def _bater_os_eventos_do_jogo(daemon: Any) -> None:
     from hefesto_dualsense4unix.daemon.subsystems.gatilho_do_jogo import bater_o_gatilho
     from hefesto_dualsense4unix.integrations.envelope_da_haptica import bater_o_envelope
 
-    with contextlib.suppress(Exception):
+    try:
         bater_o_gatilho(daemon)
         bater_o_envelope(daemon)
         appid = getattr(daemon, "appid_em_cena", None)
@@ -2008,6 +2008,8 @@ def _bater_os_eventos_do_jogo(daemon: Any) -> None:
         daemon._appid_dos_eventos_do_jogo = appid
         if anterior is not None:
             _esquecer_os_eventos_do_jogo(daemon)
+    except Exception as exc:  # o tique do gamepad não cai por causa de quem escuta
+        logger.debug("eventos_do_jogo_no_tique_falharam", err=str(exc))
 
 
 def dispatch_gamepad(
