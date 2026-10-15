@@ -610,8 +610,8 @@ class IpcHandlersMixin:
         (O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01).
 
         A mesma cadeia do `profile.switch` (`ProfileManager.reaplicar`), sem o que é da escolha
-        (sessão, marcador, Freestyle, trava da troca à mão); resposta na forma da do
-        `profile.switch`.
+        (sessão, marcador, último jogo, Freestyle); a trava da troca à mão ele arma, por ser gesto
+        (D-1410-O-APLICAR-SEGURA). Resposta na forma da do `profile.switch`.
         """
         name = params.get("name")
         if not isinstance(name, str) or not name:

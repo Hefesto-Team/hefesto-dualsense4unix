@@ -271,18 +271,11 @@ class ProfileManager:
     ) -> Profile:
         """O perfil inteiro de novo aos controles, sem virar a escolha do usuário.
 
-        O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01 (01/10/2026). O «Aplicar» mandava
-        `profile.apply_draft` (já removido), que levava menos da metade do
-        perfil: ficavam de fora o volume e o ganho do microfone, os sensores, a
-        máscara, a mira, o modo e a política de vibração. Agora ele roda a
-        MESMA cadeia da ativação, com todas as camadas.
-
-        Os appliers recebem a origem `manual`: o «Aplicar» é gesto do usuário
-        (`D-A-MASCARA-POR-CONTROLE-VALE-NO-APLICAR`), e com o jogo na
-        autoridade a R-04 vale igual à da ativação. O que ele NÃO faz é o que
-        só a escolha faz: não grava o `session.json` nem o
-        `active_profile.txt`, não mexe no Modo Freestyle e não arma a trava da
-        troca à mão (essa é do handler do `profile.switch`).
+        A mesma cadeia da ativação, com a origem `manual` nos appliers. Por ser
+        gesto, arma a trava da troca à mão como o «Ativar» (D-1410-O-APLICAR-SEGURA);
+        não grava o `session.json`, o `active_profile.txt` nem o `ultimo_jogo.json`,
+        e não mexe no Modo Freestyle (D-0110-O-APLICAR-NAO-E-ESCOLHA). O porquê está
+        em `docs/research/o-porque-dos-modulos.md` («o Aplicar e a trava da mão»).
         """
         return self._ativar(name, origin="manual", relatorio=relatorio, e_a_escolha=False)
 
@@ -359,6 +352,8 @@ class ProfileManager:
             if not e_o_freestyle(profile.name):
                 ligar_o_freestyle(self.store, False)
             gravar_a_escolha(profile.name)
+            armar_a_trava_da_mao(self.store)
+        elif reaplicacao:
             armar_a_trava_da_mao(self.store)
         elif origin == "launch":
             from hefesto_dualsense4unix.utils.session import lembrar_o_ultimo_jogo

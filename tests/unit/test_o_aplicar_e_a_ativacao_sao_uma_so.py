@@ -207,23 +207,37 @@ def test_todo_campo_do_perfil_e_de_cada_controle_e_levado_pelo_aplicar(
 
 
 def test_o_aplicar_nao_e_escolha_nem_liga_o_freestyle() -> None:
-    """O `reaplicar` não grava a sessão nem o marcador, e não mexe no Freestyle."""
+    """O `reaplicar` não grava a sessão, o marcador nem o último jogo, e não mexe no Freestyle.
+
+    D-1410-O-APLICAR-SEGURA: ele arma a trava, mas o disco fica byte a byte como estava.
+    """
     loader.save_profile(_o_perfil_inteiro(), origem="régua")
     store = StateStore()
     gerente, _chegou = _gerente(_ControleQueAnota(), store)
     session.save_last_profile("A Escolha Dela")
+    session.lembrar_o_ultimo_jogo("O Último Jogo")
+    sessao_antes = session._session_path().read_bytes()
+    ultimo_antes = session._ultimo_jogo_path().read_bytes()
 
     gerente.reaplicar(NOME)
 
     assert session.load_last_profile() == "A Escolha Dela", (
         "o «Aplicar» gravou a escolha dela")
+    assert session._session_path().read_bytes() == sessao_antes, "o «Aplicar» mexeu no session.json"
+    assert session._ultimo_jogo_path().read_bytes() == ultimo_antes, (
+        "o «Aplicar» mexeu no ultimo_jogo.json")
     assert session.read_active_marker() is None, "o «Aplicar» escreveu o marcador"
     assert store.freestyle_ligado is False
     assert store.active_profile == NOME
 
 
-def test_o_profile_reaplicar_do_daemon_nao_arma_a_trava_da_troca_a_mao() -> None:
-    """O handler do `profile.reaplicar` responde como o switch e não arma a trava."""
+def test_o_profile_reaplicar_do_daemon_arma_a_trava_da_troca_a_mao() -> None:
+    """O handler do `profile.reaplicar` responde como o switch e arma a trava, sem prazo.
+
+    D-1410-O-APLICAR-SEGURA (14/10/2026): o «Aplicar» é gesto do usuário e segura até o
+    próximo gesto ou outro jogo com perfil. MORDIDA: tire o ``armar_a_trava_da_mao``
+    do ramo da reaplicação no ``_ativar`` e a trava não arma.
+    """
     import time
 
     from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
@@ -242,8 +256,8 @@ def test_o_profile_reaplicar_do_daemon_nao_arma_a_trava_da_troca_a_mao() -> None
 
     assert resposta["active_profile"] == NOME
     assert resposta["mode_aplicado"] is True and "mode" in resposta["secoes"]
-    assert not store.manual_profile_lock_active(time.monotonic()), (
-        "o «Aplicar» armou a trava da troca à mão")
+    assert store.manual_profile_lock_active(time.monotonic() + 3600.0), (
+        "o «Aplicar» não armou a trava da troca à mão (ou armou com prazo)")
     (_args, kwargs), = chegou["mode_applier"]
     assert kwargs["origin"] == "manual", (
         "o «Aplicar» é gesto dela: a R-04 vale igual à da ativação")

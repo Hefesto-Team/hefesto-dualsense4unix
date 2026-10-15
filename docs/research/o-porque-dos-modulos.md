@@ -1397,3 +1397,23 @@ pelo contêiner do gadget. Sem jogo, o endpoint desce como antes. Só o laço do
 e a ponte do rádio se soltam, porque o aparelho saiu da mesa. O nó de som e o
 microfone descem como antes: eles não declaram `sysfs.path`, e o jogo não os
 acha pelo contêiner.
+
+## o Aplicar e a trava da mão (`profiles/manager.py`, `ProfileManager.reaplicar`)
+
+O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01 (01/10/2026): o «Aplicar» mandava o
+`profile.apply_draft`, que levava menos da metade do perfil (ficavam de fora o
+volume e o ganho do microfone, os sensores, a máscara, a mira, o modo e a política
+de vibração). Desde então ele roda a mesma cadeia da ativação (`_ativar`), e os
+appliers recebem a origem `manual` (`D-A-MASCARA-POR-CONTROLE-VALE-NO-APLICAR`).
+
+`D-1410-O-APLICAR-SEGURA` (14/10/2026): a D-0110 deixava o «Aplicar» sem a trava
+da troca à mão, e com o terminal em foco o autoswitch caía no «sem candidato» e
+devolvia a escolha aos 12 s (`DEFAULT_DEBOUNCE_SAIDA_SEC`), por cima do perfil que
+ela tinha aplicado. Agora o `reaplicar` arma a trava com o mesmo dono do «Ativar»
+(`armar_a_trava_da_mao`), e quem a solta é o mesmo de sempre: o próximo gesto
+dela, outro jogo com perfil em foco, o lançamento de um jogo com perfil
+(`_a_trava_da_mao_segura`, `origin="launch"`). Ele continua sem gravar a escolha
+nem o último jogo, que é a parte da D-0110 que fica: o boot não aprende um perfil
+que ela não escolheu. Como o funil das abas (`interface/pacotes/perfil.
+gravar_e_reaplicar`) também passa pelo `profile.reaplicar` quando o perfil gravado
+é o que vale, um ajuste numa aba também arma a trava sobre o perfil que já valia.
