@@ -747,8 +747,10 @@ def test_o_ponto_do_touchpad_obedece_a_classe_na_tela(arquivo: pathlib.Path):
         f"em {arquivo.name} a classe `on` não acende o ponto: {apagados} — o "
         f"pacote emitiria 'sim' e a tela ficaria muda")
 
+    # A palavra «Sem toque» saiu do desenho de 15/10/2026 (o touchpad ganhou o interruptor e as
+    # terças): sem ela ao lado, só a classe decide, e a comparação fica para o desenho que a tem.
     discordam = [d for d in cheios
-                 if (d["estado"] == sem_toque) == d["aceso_na_cena"]]
+                 if d["estado"] and (d["estado"] == sem_toque) == d["aceso_na_cena"]]
     assert not discordam, (
         f"em {arquivo.name} o desenho contradiz a palavra do card ao lado: "
         f"{discordam}. O ponto marca ONDE o dedo está; sem toque não há ponto")
@@ -756,7 +758,7 @@ def test_o_ponto_do_touchpad_obedece_a_classe_na_tela(arquivo: pathlib.Path):
     import monta
 
     afirmam = [d for d in vazios
-               if d["aceso_na_cena"] or d["estado"] != monta.TRAVESSAO]
+               if d["aceso_na_cena"] or (d["estado"] and d["estado"] != monta.TRAVESSAO)]
     assert not afirmam, (
         f"em {arquivo.name} um assento SEM controle afirma toque: {afirmam}. "
         f"O ponto marca onde o dedo está, e num lugar vazio não há dedo — a "

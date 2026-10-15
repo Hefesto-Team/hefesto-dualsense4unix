@@ -123,129 +123,25 @@ class TestOUcmLigaOElemento:
         )
 
 
-class TestOTrilhoDoGanhoNaLinhaQueElaAprovou:
-    """**A RÉGUA MEDIA O ARRANJO QUE ELA RECUSOU — invertida em 21/09/2026.**"""
+class TestOGanhoSaiDoDesenhoDoTodo:
+    """**O DESENHO DO TODO (15/10/2026) NÃO TEM A LINHA DO GANHO.**
 
-    def test_o_ganho_e_uma_linha_propria_como_o_volume(self) -> None:
-        """Ele é um `.vol`, e herda dele o `flex`, o `gap` e a altura."""
+    O microfone fica só com o Volume. O ganho segue com dono no back-end (o gesto `ganho-mic`,
+    o aparelho e o UCM), mas sem botão na tela. MORDIDA: ponha o `<div class="vol ganho">` de
+    volta no gerador e os dois casos reprovam.
+    """
+
+    def test_o_gerador_nao_tem_a_linha_do_ganho(self) -> None:
         from hefesto_dualsense4unix.interface import aba02
 
-        assert 'class="vol ganho"' in aba02.MIOLO, (
-            "o bloco do ganho deixou de ser uma `.vol` — sem ela o trilho não "
-            "herda regra nenhuma e desenha invisível")
-        css = aba02.CSS
-        for filho in (".ganho .un", ".ganho .n", ".ganho.sem-ganho .trilho"):
-            assert filho in css, f"falta `{filho}` na folha"
+        assert 'class="vol ganho"' not in aba02.MIOLO
+        assert 'data-gesto="ganho-mic"' not in aba02.MIOLO
+        assert "ganho" not in aba02.CSS.lower() or ".ganho .un" not in aba02.CSS
 
-    def test_o_rotulo_do_ganho_esta_na_linha_dele(self) -> None:
-        """A linha do ganho diz «Ganho», senão os dois trilhos ficam iguais."""
-        from hefesto_dualsense4unix.interface import aba02
-
-        bloco = re.search(r'<div class="vol ganho"(.*?)</div>',
-                          aba02.MIOLO, re.S)
-        assert bloco, "o bloco do ganho sumiu do desenho"
-        assert "rot-vol" in bloco.group(1), (
-            "a linha do ganho perdeu o rótulo — os dois trilhos do microfone "
-            "viram dois trilhos iguais")
-
-    def test_os_dois_enderecos_do_ganho_existem_na_pagina(self) -> None:
-        """A barra e o número têm `data-campo`, senão o desenho congela."""
-        from hefesto_dualsense4unix.interface import aba02
-
-        pagina = aba02.MIOLO
-        esperado = len(aba02.MESA)
-        barra = re.findall(
-            r'data-campo="mic-ganho-barra"\s+data-hef-alvo="largura"', pagina)
-        assert len(barra) == esperado, (
-            f"o campo `mic-ganho-barra` (alvo `largura`) aparece {len(barra)} "
-            f"vez(es) e a mesa tem {esperado} lugares"
-        )
-        num = re.findall(r'data-campo="mic-ganho-num"(?!\s+data-hef-alvo)',
-                         pagina)
-        assert len(num) == esperado, (
-            f"o campo `mic-ganho-num` aparece {len(num)} vez(es) sem alvo "
-            f"declarado e a mesa tem {esperado} lugares"
-        )
-
-    def test_a_pergunta_carrega_a_unidade_e_a_diferenca(self) -> None:
-        """§6.4: o `?` diz a unidade e separa ganho de volume."""
-        from hefesto_dualsense4unix.interface import aba02
-
-        dica = aba02.DICA_GANHO_MIC.lower()
-        assert "db" in dica, "a dica não diz a unidade do ganho"
-        assert "amplifica" in dica, (
-            "a dica não diz o que o GANHO é — «o quanto o aparelho amplifica "
-            "o que entra»"
-        )
-        assert "entrega" in dica, (
-            "a dica não diz o que o VOLUME é — «o quanto disso o produto "
-            "entrega» —, e sem o contraste ela explica um trilho só"
-        )
-        assert aba02.DICA_GANHO_MIC in aba02.MIOLO, (
-            "a dica tem dono no gerador mas não chegou à página"
-        )
-
-
-CHROME = Path("/usr/bin/google-chrome")
-
-
-@pytest.mark.skipif(not CHROME.exists(), reason="Chrome do sistema ausente")
-class TestOCinzaDoRadioNaoCobraAltura:
-    """O estado do RÁDIO custa 17px de LARGURA e zero de altura — medido."""
-
-    def test_com_o_cinza_e_o_ponto_de_interrogacao_o_cartao_nao_cresce(
-        self, tmp_path: Path
-    ) -> None:
-        """Aciona o cinza nas quatro molduras e mede o cartão nas três larguras."""
-        playwright = pytest.importorskip("playwright.sync_api")
-        from hefesto_dualsense4unix.interface import aba02, onde
-        from hefesto_dualsense4unix.interface.pacotes import a02_controles as a02
-
-        pagina = onde.pagina("02-controles.html")
-        if not pagina.exists():  # pragma: no cover - árvore sem bancada
-            pytest.skip(f"a bancada não está no disco — {pagina}")
-        medir = """(razao) => {
-          const alto = () => Math.max(...[...document.querySelectorAll(
-              '.ctl.card:not(.off)')].map(
-              c => Math.round(c.getBoundingClientRect().height * 100) / 100));
-          let n = 0;
-          for (const g of document.querySelectorAll('.ganho')) {
-            g.classList.add('sem-ganho');
-            const q = g.parentElement.querySelector(
-              '[data-campo="mic-ganho-fora"][data-hef-alvo="html"]');
-            if (q) { q.innerHTML = razao; n++; }
-          }
-          return {altura: alto(), acionados: n,
-                  transborda: document.documentElement.scrollWidth >
-                              document.documentElement.clientWidth};
-        }"""
-        with playwright.sync_playwright() as pw:
-            nav = pw.chromium.launch(executable_path=str(CHROME),
-                                     args=["--no-sandbox"])
-            try:
-                for larg in (1120, 1180, 1440):
-                    pg = nav.new_page(viewport={"width": larg, "height": 1080},
-                                      device_scale_factor=1)
-                    pg.goto(pagina.as_uri())
-                    pg.wait_for_load_state("networkidle")
-                    pg.wait_for_timeout(250)
-                    visto = pg.evaluate(medir, a02.RAZAO_DO_GANHO_FORA)
-                    pg.close()
-                    assert visto["acionados"] == len(aba02.MESA), (
-                        f"{larg}px: o cinza foi acionado em "
-                        f"{visto['acionados']} moldura(s) de {len(aba02.MESA)} "
-                        "— régua que acha zero é ERRO, não silêncio"
-                    )
-                    assert visto["altura"] <= aba02.PARA_O_CARD, (
-                        f"{larg}px: com o `?` do ganho aceso o cartão mede "
-                        f"{visto['altura']}px e a caixa reserva "
-                        f"{aba02.PARA_O_CARD} — no rádio a aba passa a rolar"
-                    )
-                    assert not visto["transborda"], (
-                        f"{larg}px: a página passou a transbordar na horizontal"
-                    )
-            finally:
-                nav.close()
+    def test_a_pagina_do_desenho_nao_tem_os_enderecos_do_ganho(self) -> None:
+        doc = (RAIZ / "mockup" / "02-controles.html").read_text(encoding="utf-8")
+        for campo in ("mic-ganho-barra", "mic-ganho-num", "mic-ganho-fora"):
+            assert f'data-campo="{campo}"' not in doc, f"{campo} voltou ao desenho"
 
 
 class TestODonoDoNumeroPerguntaAoAparelho:
@@ -518,22 +414,12 @@ class TestODonoDoNumeroPerguntaAoAparelho:
         faria o microfone do usuário ficar mais baixo do que está hoje, numa sprint
         cujo nome é «ter dono», não «mudar o som».
         """
-        from hefesto_dualsense4unix.interface import aba02
         from hefesto_dualsense4unix.interface.pacotes import a02_controles as a02
 
         assert a02.GANHO_PADRAO_PCT == 100, (
             "o default do ganho é o TOPO da faixa, que é o que o firmware "
             "entrega — ver a docstring da constante"
         )
-        assert aba02.GANHO_PADRAO_PCT == a02.GANHO_PADRAO_PCT, (
-            "o desenho e o produto discordam sobre o default; dois números "
-            "para a mesma opinião é como eles divergem"
-        )
-        assert aba02.sinal_do_ganho(a02.GANHO_PADRAO_PCT) == "+48", (
-            "o desenho parado tem de dizer o topo da faixa que o aparelho "
-            "mediu (+48 dB)"
-        )
-        assert aba02.sinal_do_ganho(0) == "+0"
 
     def test_o_pacote_nao_emite_o_ganho_antes_de_ela_publicar(
         self, monkeypatch: pytest.MonkeyPatch

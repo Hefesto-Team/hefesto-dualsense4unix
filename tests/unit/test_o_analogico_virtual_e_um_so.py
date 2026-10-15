@@ -361,8 +361,6 @@ def test_o_clique_no_lado_pela_02_e_pela_calibrar(
     assert (dele.destino, dele.acelerometro, dele.lado) == (_ESQ, _ESQ, _ESQ)
     cards = list(a02.pacote(_ctx(_lidos(servidor)))["cards"].values())
     assert [c["mira-lado"] for c in cards] == ["nenhum", _ESQ, "nenhum", "nenhum"]
-    assert [c["mira-ligada"] for c in cards] == [
-        a02.SENSOR_DESLIGADO, a02.SENSOR_LIGADO, a02.SENSOR_DESLIGADO, a02.SENSOR_DESLIGADO]
 
     _gesto("calibrar-sensores.html", "analogico-lado")(
         _ctx(_lidos(servidor)), {"uniq": _P2, "lado": _DIR}, ponte)
@@ -376,6 +374,27 @@ def test_o_clique_no_lado_pela_02_e_pela_calibrar(
     assert (colunas["p2"]["mira-lado"], colunas["p2"]["mira-ligada"]) == (
         "nenhum", a02.SENSOR_DESLIGADO)
     assert _movimento(_P2).lado == _DIR, "apagar pela Calibrar esqueceu o lado"
+
+
+def test_clicar_no_lado_aceso_da_02_desliga_a_mira(
+        perfis: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+        com_a_bancada: None) -> None:
+    """O «Mira virtual» da 02 liga o lado no apagado e DESLIGA no aceso (todo, 15/10/2026).
+
+    MORDIDA: tire o ramo do lado aceso do `analogico_lado` e o segundo clique volta a ligar.
+    """
+    from pacotes import ponte
+
+    servidor = _servidor(tmp_path)
+    _ligar_a_ponte_ao_servidor(monkeypatch, servidor)
+    gesto = _gesto("02-controles.html", "analogico-lado")
+
+    gesto(_ctx(_lidos(servidor)), {"uniq": _P2, "lado": _ESQ}, ponte)
+    assert _movimento(_P2).destino == _ESQ
+    gesto(_ctx(_lidos(servidor)), {"uniq": _P2, "lado": _ESQ}, ponte)
+    dele = _movimento(_P2)
+    assert dele.destino != _ESQ and dele.acelerometro != _ESQ, "o clique no aceso não desligou"
+    assert dele.lado == _ESQ, "desligar esqueceu o lado"
 
 
 class _Ponte:

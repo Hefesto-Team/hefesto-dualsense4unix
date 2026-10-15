@@ -183,7 +183,9 @@ class TestOQueATelaLe:
         from pacotes import a02_controles as a02
 
         monkeypatch.setattr(a02, "A_FILEIRA_TEM_TRES", False)
-        assert a02.aceso_da_fileira(P1, _dele(P1, "mix")) == "jogo"
+        # Sem o «junto» na tela (as três rotas do todo, 15/10/2026), o perfil «junto» acende o
+        # que o descreve: o som do jogo e o do PC no controle (o botão «apenas no DualSense»).
+        assert a02.aceso_da_fileira(P1, _dele(P1, "mix")) == "pc"
 
 
 class TestOGesto:

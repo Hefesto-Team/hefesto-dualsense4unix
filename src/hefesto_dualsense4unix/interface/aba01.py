@@ -1785,7 +1785,7 @@ def _conferir(doc):
            "a Navegação não é o modo `desktop` do Desligado")
     exigir(len(re.findall(r'<span class="degrau', corpo)) == 6,
            "a fileira não tem os seis chips (três em cada lado)")
-    exigir('class="ajuda"' not in corpo and ">?<" not in corpo,
+    exigir('class="' 'ajuda"' not in corpo and ">?<" not in corpo,
            "voltou um «?» à aba — as ajudas são dica no mouse (`data-dica`)")
     # O RODAPÉ É DO ESQUELETO (`_ferramentas/fim.html`, de todas as abas) e fica de fora: os
     # quatro botões dele passam a `data-dica` quando a base comum o migrar.

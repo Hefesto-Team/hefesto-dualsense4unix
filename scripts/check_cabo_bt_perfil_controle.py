@@ -256,6 +256,7 @@ DO_APARELHO: dict[str, tuple[str, ...]] = {
     # 02, e o lado do Analógico Virtual leva o giro e a inclinação juntos.
     "analogico-lado": ("movimento.giroscopio", "movimento.acelerometro"),
     "toque": ("toque.touchpad.cursor", "toque.touchpad.dedos"),
+    "touchpad": ("toque.touchpad.cursor", "toque.touchpad.dedos"),
     "haptica": ("vibracao.haptics_vcm",),
     "testar-haptica": ("vibracao.haptics_vcm",),
     "imersao": ("gatilho.esquerdo.adaptativo", "gatilho.direito.adaptativo"),
@@ -298,6 +299,7 @@ NO_PERFIL: dict[str, tuple[str | None, str | None]] = {
     "rota": ("speaker", "speaker"),
     "volume-padrao": ("speaker", "speaker"),
     "sensor": (None, "sensores"),
+    "touchpad": (None, "sensores"),
     "cor": ("leds", "leds"),
     "brilho": ("leds", "leds"),
     "apagar": ("leds", "leds"),

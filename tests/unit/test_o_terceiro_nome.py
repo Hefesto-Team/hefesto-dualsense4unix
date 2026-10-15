@@ -25,8 +25,9 @@ PACOTE = pathlib.Path(
     "src/hefesto_dualsense4unix/interface/pacotes/a02_controles.py")
 
 MESA = 4
-NOME_DELA = "Tudo no PC e nada no controle"
-NOME_DO_QUARTO = "Tudo no controle e nada no PC"
+#: Os nomes do TODO de 15/10/2026; os de 20/09 caducaram com ele.
+NOME_DELA = "Canais sonoros apenas no PC"
+NOME_DO_QUARTO = "Canais sonoros apenas no DualSense"
 NOME_DE_ONTEM = "Tudo na TV e Nada no Controle"
 
 def _a_02_esta_em_trabalho() -> bool:
@@ -44,7 +45,7 @@ def _a_02_esta_em_trabalho() -> bool:
 
 
 @pytest.mark.parametrize("alvo", [PUBLICADO, BANCADA], ids=["publicado", "mockup"])
-class TestOsQuatroNomesNaTela:
+class TestOsTresNomesNaTela:
     """**O PUBLICADO SÓ FICA ATRÁS ENQUANTO A 02 ESTIVER DECLARADA EM"""
 
     def _corpo(self, alvo: pathlib.Path) -> str:
@@ -70,15 +71,15 @@ class TestOsQuatroNomesNaTela:
             f"o quarto botão diz {sorted(set(vistos)) or '[]'} e o nome dele é "
             f"{NOME_DO_QUARTO!r}")
 
-    def test_a_fileira_tem_quatro(self, alvo: pathlib.Path) -> None:
+    def test_a_fileira_tem_tres(self, alvo: pathlib.Path) -> None:
         """**A régua que impede a cura de passar do ponto.** Quatro respostas"""
-        assert len(re.findall(r'data-gesto="rota"', self._corpo(alvo))) == 4 * MESA
+        assert len(re.findall(r'data-gesto="rota"', self._corpo(alvo))) == 3 * MESA
 
     def test_a_ordem_e_a_escala_dela(self, alvo: pathlib.Path) -> None:
-        """Pouco · tudo · nada · só aqui, em todos os cartões."""
+        """Padrão · só no DualSense · só no PC, em todos os cartões (o «junto» saiu da tela)."""
         ordem = re.findall(r'data-gesto="rota" data-rota="([a-z]+)"',
                            self._corpo(alvo))
-        assert ordem == ["jogo", "junto", "nada", "pc"] * MESA, ordem
+        assert ordem == ["jogo", "pc", "nada"] * MESA, ordem
 
 
 class TestOAtoMudouParaCaberNoNome:

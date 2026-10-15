@@ -53,3 +53,15 @@ seção daqui**: a aba deixou de estar em trabalho.
   34 px no canto do quadro, e o «Reconectar controles» sai da faixa final (sprint A-ABA-JOGAR-DO-TODO-01).
   Até publicar, o produto roda o pacote novo sobre a página de antes, que tem quatro chips em `modo-aceso`, o
   «Reconectar controles» na faixa e a ajuda com «?»; a lembrança do lado da Navegação já vale na interface.
+
+## 02-controles.html
+- **15/10/2026** — o touchpad liga e desliga em cada controle: o interruptor «Ligado | Desligado» do alto do quadro
+  troca o cartão, a superfície esmaece desligada e acende o terço onde o dedo está; «Cursor», «Botões» e a frase do
+  número de toques saem. O alto-falante passa de quatro botões a três, uma linha cada («Canais sonoros nativos -
+  Padrão», «apenas no DualSense», «apenas no PC»); a linha do Ganho sai do microfone; a Mira virtual vai para baixo de
+  cada analógico (clicar no aceso desliga); o «Calibrar sensores de movimento» vira «Calibrar giroscópio», ao lado do
+  Modo automático; nenhum «?» na aba, cada explicação é uma `data-dica` curta (sprint A-ABA-CONTROLES-DO-TODO-01).
+  Até publicar, o produto roda o pacote novo sobre a página de antes, que tem os quatro botões do som, o Ganho, o chip
+  da mira no cabeçalho e o «Cursor | Botões»: o pacote só emite o interruptor, as terças e o botão da mira por
+  analógico quando a página os tem, e o perfil «junto» acende o botão «apenas no DualSense» quando o «junto» não existe.
+  O passo `junto` do roteiro do piloto sai no mesmo commit do `--publicar`.

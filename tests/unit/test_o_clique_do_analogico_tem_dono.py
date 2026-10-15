@@ -201,11 +201,11 @@ def test_a_aba_controles_nao_deixa_endereco_da_pagina_sem_pintor():
 def test_o_gerador_le_o_texto_de_tela_do_pacote(a02):
     """O `aba02.py` não pode ter uma SEGUNDA cópia das mesmas palavras."""
     import aba02
-    from hefesto_dualsense4unix.interface import sensores as sensor_widgets
 
-    donos = {"ROTULO_DO_CLIQUE": a02, "CLICADO": a02, "texto_toques": sensor_widgets}
+    # O «1 toque» saiu da tela no desenho de 15/10/2026 (o touchpad ganhou o interruptor).
+    donos = {"ROTULO_DO_CLIQUE": a02, "CLICADO": a02}
     achados = [n for n in donos if hasattr(aba02, n)]
-    assert len(achados) >= 2, (
+    assert len(achados) >= 1, (
         f"o gerador só conhece {achados} — se ele parou de importar o texto de "
         f"tela do dono, esta régua ficou vazia e não mede mais nada.")
     for nome in achados:

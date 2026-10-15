@@ -709,15 +709,6 @@ def test_o_metodo_esta_no_dispatcher() -> None:
 _RAIZ = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_RAIZ / "src" / "hefesto_dualsense4unix" / "interface"))
 
-#: 06/10/2026, leva 1.7 (desenho-navegacao, item 12): a frase de 23/09
-#: (`D-2309-A-MIRA-VIRTUAL`)
-#: perdeu o «como mira (analógico R)», porque o lado agora se escolhe embaixo de
-#: cada analógico, e o chip passou a se chamar «Analógico virtual».
-_DICA_DELA = ("Usar os movimentos do controle como um analógico, para "
-              "pessoas com deficiência motora. O lado se escolhe embaixo "
-              "de cada analógico.")
-
-
 def _cartoes_da_bancada() -> list[tuple[str, str]]:
     """`(abertura, miolo)` de cada cartão da aba Controles, na bancada."""
     doc = (_RAIZ / "mockup/02-controles.html").read_text(encoding="utf-8")
@@ -727,30 +718,21 @@ def _cartoes_da_bancada() -> list[tuple[str, str]]:
     return [(parte.split(">", 1)[0], parte) for parte in partes]
 
 
-def test_o_chip_da_mira_esta_em_cada_controle_com_a_dica_dela() -> None:
-    """MORDIDA: troque uma vírgula da dica no gerador, ou tire o `off`, e reprova."""
+def test_a_mira_mora_embaixo_do_analogico_e_nao_no_cabecalho() -> None:
+    """O DESENHO DO TODO (15/10/2026): o botão da mira saiu do cabeçalho do cartão.
+
+    Ela mora embaixo de cada analógico, numa linha só, «Mira virtual». MORDIDA: ponha o
+    `chip-da-mira` de volta no grupo dos sensores e isto reprova.
+    """
     for abertura, miolo in _cartoes_da_bancada():
-        chips = re.findall(r'<span class="chip-da-mira([^"]*)"([^>]*)>'
-                           r'<button class="sw" data-gesto="mira"([^>]*)>'
-                           r'<span class="p"></span>([^<]*)</button></span>', miolo)
-        assert len(chips) == 1, f"{abertura}: {len(chips)} chip(s) da mira"
-        classe, involucro, atributos, rotulo = chips[0]
-        assert rotulo == "Analógico virtual", rotulo
-        assert f'title="{_DICA_DELA}"' in atributos, atributos
-        assert 'data-campo="mira-ligada"' in involucro
-        assert 'data-hef-quando="DESLIGADO"' in involucro
-        assert 'data-campo="mira-fora"' in atributos
-        assert 'data-hef-atributo="aria-disabled"' in atributos
-        # 08/10/2026 (O-ANALOGICO-VIRTUAL-E-UM-SO): o exemplo do anel do jogo (o P1, com a
-        # inclinação no esquerdo) é o analógico virtual aceso; o resto nasce desligado.
-        exemplo = 'class="chip-virtual on"' in miolo
-        if 'data-conectado="nao"' not in abertura:
-            assert ("off" in classe.split()) != exemplo, (
-                f"{abertura}: o chip da mira não bate com o lado aceso — ela nasce "
-                "desligada, e o exemplo do anel nasce aceso")
+        assert "chip-da-mira" not in miolo and 'data-gesto="mira"' not in miolo, abertura
         grupo = miolo.split('<span class="sensores-peca"', 1)[1].split("\n          </span>", 1)[0]
-        assert grupo.index('data-sensor="acelerometro"') < grupo.index(
-            'data-gesto="mira"'), "o chip não está ao lado dos dois de sensor"
+        assert grupo.index('data-sensor="giroscopio"') < grupo.index('data-sensor="acelerometro"')
+        chips = re.findall(r'<span class="chip-virtual[^"]*"[^>]*><button[^>]*'
+                           r'data-gesto="analogico-lado"[^>]*>.*?</button>', miolo, re.S)
+        assert len(chips) == 2, f"{abertura}: {len(chips)} «Mira virtual» (um por analógico)"
+        for chip in chips:
+            assert "Mira virtual" in chip, chip[:200]
 
 
 def test_o_chip_giroscopio_nao_mudou() -> None:
@@ -760,7 +742,7 @@ def test_o_chip_giroscopio_nao_mudou() -> None:
                           r'data-sensor="giroscopio" data-campo="giro-ligado"[^>]*>'
                           r'<span class="p"></span>([^<]*)</button>', miolo)
         assert giro == ["Giroscópio"], (abertura, giro)
-        dica = re.findall(r'<span class="dica-do-giro"[^>]*?(?: title="([^"]*)")?>'
+        dica = re.findall(r'<span class="dica-do-giro"[^>]*?(?: data-dica="([^"]*)")?>'
                           r'<button[^>]*data-sensor="giroscopio"', miolo)
         esperada = ("" if 'data-conectado="nao"' in abertura
                     else "Ligado: o jogo recebe o giro deste controle.")

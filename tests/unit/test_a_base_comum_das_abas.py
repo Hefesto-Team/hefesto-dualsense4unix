@@ -49,8 +49,6 @@ SEM_AJUDA = ("topo.html", "fim.html", "monta.py", "janela.py", "hefesto_vivo.py"
 #: aba (`abaNN.py`) e as páginas que ela monta saem na sprint da aba (`A-ABA-<nome>-DO-TODO-01`),
 #: que troca o «?» pelo `data-dica`. O número só diminui, e a linha sai quando o arquivo zera.
 ISENTOS: dict[str, int] = {
-    "aba01.py": 3,  # sai com: A-ABA-JOGAR-DO-TODO-01
-    "aba02.py": 6,  # sai com: A-ABA-CONTROLES-DO-TODO-01
     "aba03.py": 2,  # sai com: A-ABA-GATILHOS-DO-TODO-01
     "aba04.py": 5,  # sai com: A-ABA-ILUMINACAO-DO-TODO-01
     "aba06.py": 2,  # sai com: A-ABA-NAVEGACAO-DO-TODO-01

@@ -335,8 +335,8 @@ def test_a_bancada_tem_a_dica_e_o_cinza_em_cada_controle() -> None:
 
     doc = _bancada_02()
     invol = re.findall(r'<span class="dica-do-giro" data-campo="giro-dica" '
-                       r'data-hef-alvo="atributo" data-hef-atributo="title"'
-                       r'(?: title="([^"]*)")?><button ([^>]*)>', doc)
+                       r'data-hef-alvo="atributo" data-hef-atributo="data-dica"'
+                       r'(?: data-dica="([^"]*)")?><button ([^>]*)>', doc)
     assert len(invol) == 4, invol
     assert sorted(t for t, _ in invol if t) == [_DICA_DE_HOJE] * 2
     assert not any("title=" in b for _, b in invol)

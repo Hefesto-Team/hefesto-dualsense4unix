@@ -65,6 +65,14 @@ A_PROVA_QUE_FALTA: dict[str, tuple[str, str, str]] = {
         "volta à tela com o Daemon de verdade, P1 a P4, no USB e no BT; falta o jogo "
         "aberto andar com o controle inclinado na mão dela, que é a prova da sprint",
     ),
+    "touchpad": (
+        "médio",
+        "2026-09-27-NO-MODO-XBOX-TUDO-FUNCIONA-01.md",
+        "o interruptor «Ligado | Desligado» grava o campo `touchpad` no perfil do controle, e "
+        "`toque.touchpad.cursor` e `toque.touchpad.dedos` estão em MONTOU nos dois transportes. "
+        "A régua dos dublês grava e relê o campo por controle; falta o jogo aberto, com o "
+        "Desligado calando o toque no controle dela, que é a prova da sprint",
+    ),
     "toque": (
         "médio",
         "2026-09-27-NO-MODO-XBOX-TUDO-FUNCIONA-01.md",

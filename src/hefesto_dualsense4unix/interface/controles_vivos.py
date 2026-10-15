@@ -319,7 +319,6 @@ window.HEF = (function(){
     n += est(q('.bat .cheio', c), {width:d.bat.w}) + txt(q('.bat .n', c), d.bat.n);
     n += est(q('.touch .ponto', c),
              {left:d.touch.left, top:d.touch.top, opacity:d.touch.vis?'1':'0'});
-    n += txt(q('[data-campo="touch-estado"]', c), d.touch.estado);
     for(const lado of ['l','r']){
       const s = d.sticks[lado];
       n += est(q('.stick[data-stick="'+lado+'"] .p', c), {left:s.left, top:s.top});
@@ -1106,7 +1105,6 @@ class Janela:
                 "left": f'{e["touch"][0]}%',
                 "top": f'{e["touch"][1]}%',
                 "vis": e["tocando"],
-                "estado": aba02.texto_toques(1 if e["tocando"] else 0),
             },
             "sticks": {
                 "l": {

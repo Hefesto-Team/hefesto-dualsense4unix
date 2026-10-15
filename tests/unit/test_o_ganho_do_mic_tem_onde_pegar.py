@@ -30,7 +30,23 @@ PACOTE = pathlib.Path(
 MESA = 4
 
 
-@pytest.mark.parametrize("alvo", [PUBLICADO, BANCADA], ids=["publicado", "mockup"])
+def test_o_desenho_do_todo_nao_tem_a_linha_do_ganho() -> None:
+    """O desenho de 15/10/2026 deixa o microfone só com o Volume (o gesto segue no back-end).
+
+    MORDIDA: ponha o `<input data-gesto="ganho-mic">` de volta no gerador e isto reprova.
+    """
+    corpo = BANCADA.read_text(encoding="utf-8")
+    assert 'data-gesto="ganho-mic"' not in corpo and 'class="vol ganho"' not in corpo
+
+
+@pytest.fixture()
+def alvo() -> pathlib.Path:
+    """A página PUBLICADA, enquanto ela ainda tem o trilho (o `--publicar` da costura o tira)."""
+    if 'data-gesto="ganho-mic"' not in PUBLICADO.read_text(encoding="utf-8"):
+        pytest.skip("a página publicada já saiu sem a linha do Ganho (desenho de 15/10/2026)")
+    return PUBLICADO
+
+
 class TestOGanhoTemOndePegar:
     def test_ha_um_input_de_ganho_em_cada_cartao(self, alvo: pathlib.Path) -> None:
         """**A MORDIDA PRINCIPAL: troque o `<input>` por um `<span>`.**"""

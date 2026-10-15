@@ -134,6 +134,9 @@ def _pares(a02, onde=None) -> dict[str, list[str]]:
     rota = sorted(a02.BOTOES_DA_FILEIRA_DO_SOM)
     if onde == PUBLICADO and _a_02_esta_em_trabalho():
         rota = [v for v in rota if v != a02.ROTA_TUDO_NO_CONTROLE]
+    if onde == BANCADA:
+        # o todo de 15/10/2026: três botões, o «junto» saiu da tela
+        rota = [v for v in rota if v != a02.ROTA_OUVIR_JUNTO]
     return {"alto-rota": rota}
 
 

@@ -492,7 +492,8 @@ def test_nada_abre_na_tela_so_o_chip_apaga_pela_metade(monkeypatch: pytest.Monke
             '<span class="pausa-da-inclinacao" data-campo="inclinacao-parada" '
             'data-hef-alvo="classe" data-hef-classe="parada" '
             f'data-hef-quando="{a02.INCLINACAO_PARADA}">'), chip
-        assert "dialog" not in chip and "title=\"" + aba02.DICA_DA_INCLINACAO[destino] in chip
+        assert "dialog" not in chip and "title=" not in chip and (
+            'data-dica="' + aba02.DICA_DA_INCLINACAO[destino] + '"') in chip
     assert ".pausa-da-inclinacao.parada .chip-virtual.on>.sw{opacity:.5}" in aba02.CSS
     import pacotes
 

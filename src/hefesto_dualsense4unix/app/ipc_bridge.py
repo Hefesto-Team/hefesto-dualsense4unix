@@ -1011,14 +1011,17 @@ def sensor_set_detalhado(
     *,
     giroscopio: bool | None = None,
     acelerometro: bool | None = None,
+    touchpad: str | None = None,
     uniq: str | None = None,
 ) -> dict[str, Any] | None:
-    """``sensor.set`` com a RESPOSTA inteira do daemon — o giro e o accel."""
+    """``sensor.set`` com a RESPOSTA inteira do daemon — o giro, o accel e o touchpad."""
     payload: dict[str, Any] = {}
     if giroscopio is not None:
         payload["giroscopio"] = bool(giroscopio)
     if acelerometro is not None:
         payload["acelerometro"] = bool(acelerometro)
+    if touchpad is not None:
+        payload["touchpad"] = touchpad
     if not payload:
         return None
     if uniq:

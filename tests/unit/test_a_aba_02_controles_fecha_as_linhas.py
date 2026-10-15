@@ -429,16 +429,18 @@ O_QUE_O_NAVEGADOR_DESENHA = r"""
   const linha = bloco.querySelector('.vol');
   const botao = bloco.querySelector('.mudo-i');
   const antes = cs(botao);
-  const ajuda = bloco.querySelector('.ajuda.porque');
-  const porque_sem = cs(ajuda);
+  // 15/10/2026 (o todo): o «?» saiu; a razão é a dica do invólucro `.porque-dica`.
+  const invol = bloco.querySelector('.porque-dica[data-campo]');
+  const porque_sem = cs(invol);
   // O PRODUTO ESCREVE AS DUAS EXPRESSÕES DO MESMO CAMPO, num tique só: o
   // atributo da linha (alvo `atributo`) e o conteúdo da dica (alvo `html`). A
   // régua faz o mesmo — escrever só o atributo mediria meia pintura, e a folha
   // das dez esconde o `?` com a dica vazia, com razão.
   linha.setAttribute('data-porque', 'razão de prova');
-  ajuda.querySelector('.dica').innerHTML = 'razão de prova';
+  if (invol) invol.setAttribute('data-dica', 'razão de prova');
   const depois = cs(botao);
-  const porque_com = cs(ajuda);
+  const porque_com = cs(invol);
+  const porque_dica = invol ? invol.getAttribute('data-dica') : null;
   // O CLIQUE — a metade que `disabled` mataria. Num botão `disabled`,
   // `HTMLElement.click()` não dispara ouvinte nenhum.
   let recebeu = 0;
@@ -481,7 +483,7 @@ O_QUE_O_NAVEGADOR_DESENHA = r"""
   return {
     botao_antes: antes, botao_depois: depois, clique_recebido: recebeu,
     botao_tem_disabled: botao.hasAttribute('disabled'),
-    porque_sem: porque_sem, porque_com: porque_com,
+    porque_sem: porque_sem, porque_com: porque_com, porque_dica: porque_dica,
     casco: casco, bordas: bordas,
     // UM ELEMENTO POR CARTÃO: a barra de luz, no quadro com o nome dela.
     luz_cor_no_card: card.querySelectorAll('[data-campo="luz-cor"]').length,
@@ -526,11 +528,11 @@ def test_o_botao_de_som_apaga_e_ainda_assim_responde(desenhado: dict[str, Any]) 
         "navega pelo controle até a razão")
     assert not desenhado["botao_tem_disabled"], (
         "o `disabled` voltou: ele mata o clique, e o PO decidiu o contrário")
-    assert desenhado["porque_sem"]["display"] == "none", (
-        "o `?` apareceu ao lado de um botão que NÃO está apagado — um `?` sem "
-        "nada a explicar é ruído com cara de dado")
-    assert desenhado["porque_com"]["display"] != "none", (
-        "o `?` não apareceu com o botão apagado — a razão ficou inalcançável")
+    assert not desenhado["porque_sem"].get("ausente"), (
+        "a linha do volume perdeu o invólucro da razão (`.porque-dica`)")
+    assert desenhado["porque_com"]["display"] == "contents" and (
+        desenhado["porque_dica"] == "razão de prova"), (
+        "a razão do botão apagado não chega à dica do invólucro — ficou inalcançável")
 
 
 def test_a_borda_do_cartao_tem_a_cor_do_plastico(desenhado: dict[str, Any]) -> None:
@@ -762,10 +764,9 @@ def test_a_dica_do_som_nao_manda_para_janela_nenhuma() -> None:
             f"a dica do {nome} voltou a pôr uma linha de comando na tela — "
             f"a língua desta casa a proíbe em texto de tela: {dica!r}")
 
-    # proprio  # noqa-acento: citação literal
-    assert "controle" in a02_gerador.DICA_MIC_TESTAR.lower(), (
-        "a dica do 🎙 não diz mais onde se cala o microfone — o ato saiu da "
-        "tela e quem lê precisa saber que ele está no plástico")
+    # 15/10/2026 (o todo): a dica do 🎙 é UMA frase curta do desenho, sem a ordem de calar o
+    # microfone no plástico; o estado do microfone mora na dica da luz ao lado.
+    assert a02_gerador.DICA_MIC_TESTAR.count(".") == 0 and len(a02_gerador.DICA_MIC_TESTAR) < 60
 
 
 def test_nenhum_botao_de_som_promete_botao_nesta_tela() -> None:

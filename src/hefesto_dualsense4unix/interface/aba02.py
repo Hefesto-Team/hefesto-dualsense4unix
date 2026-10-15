@@ -9,7 +9,6 @@ from monta import (monta, trava_do_nativo, glifo, rotulo, cabe_o_todos, CSS_GLIF
                    ressalva as monta_ressalva, tom_da_casa)
 
 # A DIREÇÃO É OBRIGATÓRIA, e não gosto: o `portao_a_casa_sabe_e_o_produto_nao_faz`
-from hefesto_dualsense4unix.interface.sensores import texto_toques
 # `texto_motion` monta a LINHA DO GIROSCÓPIO (o desenho pergunta com uma cena,
 from hefesto_dualsense4unix.app.actions.home_actions import palavra_do_transporte
 from hefesto_dualsense4unix.interface.cartao_do_controle import texto_motion
@@ -21,7 +20,7 @@ from pacotes.a02_controles import (DICA_ALTO_SEM_POSSE,
                                    DICA_DA_LUZ as DE_QUEM_E_A_LUZ)
 from pacotes.a02_controles import (DICA_DO_GIRO, DICA_DO_GIRO_COM_A_MIRA,
                                    DICA_DO_GIRO_NO_CURSOR, MIRA_NO_NATIVO)
-from pacotes.a02_controles import INCLINACAO_PARADA
+from pacotes.a02_controles import GESTO_DO_MODO, INCLINACAO_PARADA, regiao_do_toque
 from pacotes.a02_controles import (ACENDE_O_JOGO, CAMPOS_DO_JOGO,
                                    DICA_DO_PONTO_DO_JOGO)
 # divergem calada — esta casa já pagou isso com o `--plastico`. O `pos` era
@@ -805,62 +804,7 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
     border-radius:50%;background:var(--purple);border:2px solid var(--app-bg)}
   .vol .n{flex:0 0 30px;text-align:right;font-family:'JetBrains Mono',monospace;
           font-size:10.5px;color:var(--fg)}
-  /* ---------- O TRILHO DO GANHO DE ENTRADA (O-GANHO-DO-MIC-TEM-DONO-01) -----
-     20/09/2026, decisão de produto: *"deixa o slicer 2 dele na telka"*. <!-- noqa-acento: citação literal -->
-
-     ELE MORA NA LINHA DO RÓTULO, e isso é ORÇAMENTO, não estética. Os quatro
-     arranjos foram medidos no DOM a 1120, 1180 e 1440px, e o cartão tem
-     **0,37px** de folga contra o teto de `PARA_O_CARD`:
-
-       linha nova embaixo do volume .......... +22,00px   o portão REPROVA
-       na fileira dos modos .................. +2,00px    REPROVA, e encolhe os dois
-       dividindo o trilho do volume .......... 0,00px     cabe, e o volume cai a 48px
-       na linha do rótulo (este) ............. 0,00px     cabe, e não encolhe nada
-
-     É O ÚNICO QUE NÃO COBRA DE NINGUÉM, e tem precedente aqui mesmo: os botões
-     Virtual/Nativo moravam nesta linha até 31/08 *porque ali o custo de altura
-     era ZERO*. Eles saíram por serem TRÊS. Um trilho cabe.
-
-     **CLASSE PRÓPRIA, E NUNCA UM `.vol`.** As regras do trilho são
-     `.vol .trilho`/`.vol .cheio`: fora de um `.vol` ele desenha INVISÍVEL, e
-     foi o que aconteceu na primeira tentativa desta medição. Mas a saída óbvia
-     — embrulhar num `.vol` — custa **5px**, porque `.vol` tem `height:22px`
-     FIXA e esta linha tem 17: o cartão vai de 327,63 para 332,63 e o
-     `scripts/check_a_altura_do_cartao.py` reprova. São as MESMAS declarações,
-     sem a altura fixa.
-
-     O `.n` PEDE 34px E NÃO 30: o número aqui é o dB com sinal (`+48`), que é um
-     caractere mais largo que o `80` do volume. Com 30 ele sai cortado, e o
-     mesmo portão mede corte de texto. */
-  /* O GANHO É UMA `.vol` — ele DEIXOU de morar na linha do rótulo em 20/09,
-     por ordem de produto, e com isso deixou de precisar de caixa própria: a linha
-     herda `display:flex`, `gap` e os 22px de altura da `.vol`, e o que sobra
-     aqui é só o que ele tem A MAIS — a unidade e o número de quatro caracteres.
-     O `flex:1 1 0` e o `margin-left` que ele tinha eram para disputar o vão da
-     linha do rótulo com o selo e o `?`; não há mais vão a disputar. */
   .rot-vol{flex:0 0 46px;font-size:11px;color:var(--muted);white-space:nowrap}
-  .ganho .un{flex:0 0 16px;font-size:10px;color:var(--muted);
-    font-family:'JetBrains Mono',monospace}
-  .ganho .trilho{flex:1;height:5px;border-radius:3px;background:var(--panel);position:relative}
-  .ganho .cheio{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--purple)}
-  .ganho .cheio::after{content:'';position:absolute;right:-5px;top:-4px;width:12px;height:12px;
-    border-radius:50%;background:var(--purple);border:2px solid var(--app-bg)}
-  .ganho .n{flex:0 0 30px;text-align:right;font-family:'JetBrains Mono',monospace;
-    font-size:10.5px;color:var(--fg)}
-  /* O GANHO FORA DE ALCANCE veste o MESMO cinza do «Nativo» no rádio, e pela
-     mesma razão dela: o que não alcança não some da tela — fica cinza, e o
-     porquê vai no `?` ao lado. O endereço mora no CONTAINER porque o alvo é
-     `classe`, e um campo só alimenta o cinza e a razão (ver
-     `a02_controles.ganho_fora_de_alcance`). */
-  .ganho.sem-ganho .trilho,.ganho.sem-ganho .n{opacity:.4}
-  .ganho.sem-ganho .cheio::after{display:none}
-  /* O `?` DO GANHO SÓ EXISTE NO ESTADO CINZA — as duas regras da folha comum
-     (`:has(.dica:empty)` e `:has(.nada)`) o escondem sozinhas quando não há
-     razão, e por isso ele custa ZERO largura no cabo. Estes 4px são para ele
-     não encostar no número quando aparece: `+48` e o `?` colados leem como um
-     caractere só. Sai da largura do trilho, que é `flex:1 1 0`, e não da
-     altura — medido nas três larguras. */
-  .ganho + .ajuda.porque{margin-left:4px}
   /* O 🎙 E O ♪ SÃO `<button>`, E NÃO ERAM (29/08/2026). Eram `<span>` com
      `cursor:pointer` e nada atrás: nem `data-*` para a ponte achar, nem ouvinte
      para o clique cair em algum lugar. Medido — dois cliques sintéticos neles
@@ -1183,35 +1127,10 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   .rota button{flex:0 0 auto;height:17px;border-radius:5px;font-size:10.5px;white-space:nowrap;font-family:inherit;
     border:1px solid var(--border-forte);background:var(--panel);color:var(--texto-mudo);cursor:pointer}
   .rota button.on,.rota .aceso-do-mic.on>button{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600}
-  /* A FILEIRA DA SAÍDA DE SOM TEM QUATRO — 24/09/2026, O-TERCEIRO-NOME-DELA-01,
-     e o preço foi medido antes de escrito (Chrome headless, cartão aberto).
-
-     QUATRO EMPILHADOS CUSTAVAM 19 PX (mais um botão de 17 e um vão de 2), e o
-     cartão tinha 1,4 px de folga: 326,6 contra os 328 de `PARA_O_CARD`. Lado a
-     lado em grade de dois os dois primeiros não cabem — o mais longo pede
-     239 px e a meia coluna dá 128 — e quebrariam em TRÊS linhas.
-
-     O QUE CABE É O ESPELHO: os dois primeiros continuam inteiros, cada um numa
-     linha, e os dois últimos dividem a de baixo (`.par`). Na janela do
-     produto (1180) e na de 1120 cada um deles quebra em duas linhas de 11 px
-     (24 com a borda); de 1440 para cima eles cabem numa linha só e a fileira
-     fica com a altura de antes. A conta, a 1180: 17 + 17 + 24 com dois vãos
-     de 1 dá 60, contra os 55 de três empilhados, e os 5 px voltam do rótulo
-     do alto-falante, que virou linha como o do microfone (4,6 px). O cartão
-     fica em 327.
-
-     O `white-space:normal` VALE PARA OS QUATRO, e é a decisão de 12/09
-     aplicada aqui: numa janela menor que o desenho o rótulo QUEBRA em vez de
-     cortar. O preço é altura, e só onde aperta.
-
-     A CLASSE `quatro` E NÃO O `data-bloco`: toda regra que casa a moldura do
-     alto-falante pelo endereço dela é a guarda do cinza (`data-apagado`), e a
-     régua da onda dois cobra exatamente isso. */
-  .rota.quatro{gap:1px}
-  .rota.quatro button{height:auto;min-height:17px;white-space:normal;
-    line-height:11px;padding:0}
-  .rota.quatro .par{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
-    gap:1px 3px}
+  /* A FILEIRA DA SAÍDA DE SOM TEM TRÊS, UMA POR LINHA — todo, 15/10/2026. O «junto» saiu da tela
+     e os nomes do alvo cabem numa linha só; o cartão perde o que o par de baixo custava. */
+  .rota.trio{gap:3px}
+  .rota.trio button{height:22px;min-height:22px;white-space:nowrap;text-align:center;padding:0 9px}
   /* O MODO DO MICROFONE CONTINUA DEITADO, e agora precisa dizê-lo — 20/09/2026.
      Enquanto as duas fileiras eram a mesma, o `.mic-modo` não tinha uma linha
      própria de estilo, e o bloco de comentário mais acima registra por quê. A
@@ -1322,18 +1241,13 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   }
   .sensores-peca .sw .p{width:6px;height:6px;border-radius:50%;background:var(--green);
                         box-shadow:0 0 6px var(--green)}
-  .sensores-peca .sw.off,.sensores-peca .chip-da-mira.off>.sw{border-color:var(--border-forte);background:var(--app-bg);color:var(--texto-mudo)}
-  .sensores-peca .sw.off .p,.sensores-peca .chip-da-mira.off>.sw .p{background:var(--border-forte);box-shadow:none}
+  .sensores-peca .sw.off{border-color:var(--border-forte);background:var(--app-bg);color:var(--texto-mudo)}
+  .sensores-peca .sw.off .p{background:var(--border-forte);box-shadow:none}
   /* A DICA DO GIROSCÓPIO MORA NUM INVÓLUCRO SEM CAIXA — 24/09/2026,
      A-MIRA-POR-MOVIMENTO-NA-TELA-02. `display:contents` tira o invólucro da
      grade: quem ocupa a coluna continua sendo o botão, e a largura dos três
      não muda um pixel. O `title` dele é o que muda com a Mira acesa. */
   .sensores-peca .dica-do-giro{display:contents}
-  /* O CINZA QUE O LEITOR DE TELA OUVE — A-MIRA-NA-NAVEGACAO-01, 24/09/2026. O
-     `aria-disabled` só vale no próprio botão, e um elemento aceita UM alvo: o
-     aceso da Mira desceu para este invólucro sem caixa, e o botão ficou com o
-     cinza (`mira-fora`) e o `aria-disabled` que o piloto deriva dele. */
-  .sensores-peca .chip-da-mira{display:contents}
   /* NO MODO NATIVO O CHIP DA MIRA FICA CINZA — decisão, 24/09/2026:
      *"fica cinza no Nativo, sem gravar"*. A cara é a do cinza da casa
      (`.btn.apagado`, `monta.py`): a borda sutil, o texto mudo e o cursor que
@@ -1372,31 +1286,47 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   .pausa-da-inclinacao{display:contents}
   .pausa-da-inclinacao.parada .chip-virtual.on>.sw{opacity:.5}
   .pausa-da-inclinacao.parada .chip-virtual.on>.sw .p{box-shadow:none}
-  /* «USAR COMO ANALÓGICO VIRTUAL» EM DUAS LINHAS — 06/10/2026, leva 1.7. A
-     coluna de cada analógico tem ~100px, e a frase em uma linha passaria dela.
-     Com o analógico virtual apagado no cabeçalho, os dois chips ficam cinza e
-     seguem clicáveis: o clique num lado acende o analógico virtual nele. */
-  .chip-virtual>.sw{white-space:normal;height:auto;min-height:17px;line-height:12px;
-    padding:2px 6px;gap:4px;font-size:10px;text-align:center;width:100%;max-width:112px}
-  .ctl:has(.chip-da-mira.off) .chip-virtual>.sw,
-  .ctl:has(.chip-da-mira.off) .chip-virtual.on>.sw{
-    border-color:var(--border-sutil);background:var(--app-bg);color:var(--texto-mudo)}
-  .ctl:has(.chip-da-mira.off) .chip-virtual>.sw .p{background:var(--border-sutil);box-shadow:none}
-  /* O «CURSOR | BOTÕES» NA SUPERFÍCIE DO TOUCHPAD — 28/09/2026. A forma é a do
-     «Virtual | Nativo» do microfone, e ele mora por cima da superfície, no pé
-     dela: a coluna não tem altura para uma fileira embaixo (ver
-     `modo_do_toque`). O ponto do dedo fica por cima dos dois botões, para o
-     dedo na zona do L2 continuar aparecendo. */
-  .rota.toque-modo{position:absolute;left:5px;right:5px;bottom:5px;margin:0;
-    flex-direction:row;gap:5px;z-index:1}
-  .rota.toque-modo .aceso-do-toque{display:contents}
-  .rota.toque-modo button{flex:1;min-width:0}
-  .rota .aceso-do-toque.on>button{border-color:var(--purple);background:var(--sel-bg);
-    color:var(--fg);font-weight:600}
-  .rota.toque-modo button.sem-mira,.rota.toque-modo button.sem-mira:hover{
-    border-color:var(--border-sutil);background:var(--panel);color:var(--texto-mudo);
-    font-weight:400;cursor:not-allowed}
+  /* «MIRA VIRTUAL» EM UMA LINHA — todo, 15/10/2026: o botão diz só isso, com a mesma largura e a
+     mesma altura, ligado ou não; o lado vai na dica. */
+  .chip-virtual>.sw{white-space:nowrap;height:26px;min-height:26px;line-height:1;font-size:12px;
+    padding:0 8px;gap:6px;width:100%;max-width:none;box-sizing:border-box}
+  /* O INTERRUPTOR DO TOUCHPAD E AS TERÇAS — todo, 15/10/2026. O rótulo diz o estado de agora
+     (Ligado/Desligado, trocados pelo `.off`); a terça acesa é onde o dedo está, sem texto. Desligado,
+     a superfície fica a 35%: o toque não chega ao jogo. */
+  .moldura.touchp .todo-sw-toque{margin-left:auto;height:17px;border-radius:6px;font-size:10.5px;
+    font-family:inherit;cursor:pointer;border:1px solid var(--green);background:rgba(80,250,123,.09);
+    color:var(--green);display:inline-flex;align-items:center;justify-content:center;gap:5px;
+    padding:0 7px;font-weight:400}
+  .moldura.touchp .todo-sw-toque .p{width:6px;height:6px;border-radius:50%;background:var(--green);
+    box-shadow:0 0 6px var(--green)}
+  .moldura.touchp .todo-sw-toque .t-des{display:none}
+  .moldura.touchp .todo-sw-toque.off .t-lig{display:none}
+  .moldura.touchp .todo-sw-toque.off .t-des{display:inline}
+  .moldura.touchp .todo-sw-toque.off{border-color:var(--border-forte);background:var(--app-bg);
+    color:var(--texto-mudo)}
+  .moldura.touchp .todo-sw-toque.off .p{background:var(--border-forte);box-shadow:none}
+  .ctl[data-conectado="nao"] .moldura.touchp .todo-sw-toque{border-color:var(--border-sutil);
+    background:transparent;color:var(--texto-mudo)}
+  .ctl[data-conectado="nao"] .moldura.touchp .todo-sw-toque .p{background:var(--border-sutil);
+    box-shadow:none}
+  .touch .todo-terca{position:absolute;top:0;bottom:0;width:33.334%;border-radius:4px}
+  .touch .todo-terca:nth-child(1){left:0}
+  .touch .todo-terca:nth-child(2){left:33.333%}
+  .touch .todo-terca:nth-child(3){left:66.666%}
+  .touch .todo-terca.on{background:var(--sel-bg);box-shadow:inset 0 0 0 1px var(--purple)}
+  .moldura.touchp:has(.todo-sw-toque.off) .touch > *{opacity:.35}
+  /* A RAZÃO DOS VOLUMES É A DICA DO INVÓLUCRO, sem caixa. */
+  .porque-dica{display:contents}
   .touch .ponto{z-index:2}
+  /* O RESPIRO E O CABEÇALHO DO TODO (15/10/2026): as molduras ganham padding de verdade, a da luz
+     respeita o de baixo, e os dois botões do canto têm a mesma altura e a mesma letra. */
+  .moldura{padding:5px 10px 7px}
+  .card-corpo > div:last-child > .moldura.leituras{padding:5px 10px 7px}
+  .moldura.luz .barra-luz{margin-bottom:2px}
+  .moldura > .sticks{column-gap:4px}
+  .sensores{align-items:center;gap:10px}
+  .sensores .btn{height:34px;border-radius:999px;padding:0 16px;box-sizing:border-box;
+                 font:600 13.5px/1 'Space Grotesk',system-ui,sans-serif}
 """
 
 GL16 = [("cross","✕"),("circle","○"),("square","□"),("triangle","△"),
@@ -1468,7 +1398,17 @@ def luz_do_jogador(c):
     return tom_da_casa("#%02X%02X%02X" % player_slot_color(c["jogador"]))
 
 
-DICA_TOQUE = "O ponto marca onde o dedo está. Sem toque, não há ponto."
+#: O interruptor do touchpad de cada controle (todo, 15/10/2026): o rótulo diz o estado de agora.
+ROTULO_TOUCHPAD_LIGADO = "Ligado"
+ROTULO_TOUCHPAD_DESLIGADO = "Desligado"
+DICA_DO_TOUCHPAD = "Toque vai ao jogo; sem suporte, move o cursor"
+#: O canto do alto (todo, 15/10/2026): o Calibrar mudou de nome, e o Modo automático governa as três
+#: áreas que o jogo decide (toque, microfone e alto-falante). Ligado, elas esmaecem e não aceitam clique.
+ROTULO_DO_CALIBRAR = "Calibrar giroscópio"
+DICA_DO_CALIBRAR = "Todos parados numa superfície plana"
+GOVERNA_DO_MODO_AUTOMATICO = (".card-corpo .moldura.touchp, .card-corpo [data-bloco=microfone], "
+                              ".card-corpo [data-bloco=alto-falante]")
+DICA_DO_MODO_AUTOMATICO = "O jogo decide toque e som; o estilo do jogo ajusta"
 
 _CENA_DO_GIRO = {"player": 1, "is_primary": True, "transport": "usb",
                  "uniq": "aabbcc000001"}
@@ -1498,28 +1438,18 @@ LUGAR_VAZIO_AQUI = "Lugar vazio: nenhum controle conectado aqui."
 #: chip embaixo do analógico escolhe qual dos dois os movimentos movem. Com o
 #: chip do cabeçalho apagado, os dois de baixo ficam cinza (`.ctl:has(...)`).
 ROTULO_DA_MIRA_VIRTUAL = "Analógico virtual"
-DICA_DA_MIRA_VIRTUAL = ("Usar os movimentos do controle como um analógico, para "
-                        "pessoas com deficiência motora. O lado se escolhe embaixo "
-                        "de cada analógico.")
-
-ROTULO_DA_INCLINACAO = "Usar como analógico virtual"
+ROTULO_DA_INCLINACAO = "Mira virtual"
 DICA_DA_INCLINACAO = {
-    "analogico_esquerdo": "Os movimentos do controle movem o analógico esquerdo.",
-    "analogico_direito": "Os movimentos do controle movem o analógico direito.",
+    "analogico_esquerdo": "Girar o controle move o analógico esquerdo",
+    "analogico_direito": "Girar o controle move o analógico direito",
 }
-ROTULO_DO_CURSOR = "Cursor"
-DICA_DO_CURSOR = ("Usar o touchpad deste controle como mouse no jogo; o clique "
-                  "dele é o botão esquerdo.")
-ROTULO_DOS_BOTOES = "Botões"
-DICA_DOS_BOTOES = ("Usar o touchpad como botões: os dois terços da esquerda são o "
-                   "direcional; à direita, em cima o L1 e embaixo o L2.")
 
 
 def chip_da_inclinacao(destino, aceso=False):
-    """O «Usar como analógico virtual» embaixo do nome de UM analógico — o lado.
+    """O «Mira virtual» embaixo do nome de UM analógico — o lado.
 
     O aceso é o `mira-lado` (o lado do analógico virtual, `a02_controles.lado_aceso`) e o
-    clique é o gesto `analogico-lado`, o mesmo da Calibrar. O invólucro
+    clique é o gesto `analogico-lado`: no apagado liga o lado, no aceso desliga a mira. O invólucro
     `inclinacao-parada` é a pausa do controle parado (29/09/2026): o daemon diz
     `inclinacao_parada` no bloco `mira`, e o chip aceso fica meio apagado.
     """
@@ -1531,39 +1461,23 @@ def chip_da_inclinacao(destino, aceso=False):
             f'<button class="sw" data-gesto="analogico-lado" data-lado="{destino}" '
             f'data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" '
             f'data-hef-quando="{MIRA_NO_NATIVO}" data-hef-atributo="aria-disabled" '
-            f'title="{DICA_DA_INCLINACAO[destino]}"><span class="p"></span>'
+            f'data-dica="{DICA_DA_INCLINACAO[destino]}"><span class="p"></span>'
             f'{ROTULO_DA_INCLINACAO}</button></span></span>')
 
 
-def modo_do_toque():
-    """O «Cursor | Botões» na superfície do touchpad — 28/09/2026."""
-    def botao(valor, rotulo_do_botao, dica):
-        return (f'<span class="aceso-do-toque" data-campo="toque-modo" '
-                f'data-hef-alvo="classe" data-hef-quando="{valor}">'
-                f'<button data-gesto="toque" data-toque="{valor}" data-campo="mira-fora" '
-                f'data-hef-alvo="classe" data-hef-classe="sem-mira" '
-                f'data-hef-quando="{MIRA_NO_NATIVO}" data-hef-atributo="aria-disabled" '
-                f'title="{dica}">{rotulo_do_botao}</button></span>')
-    return (f'<span class="rota toque-modo">{botao("cursor", ROTULO_DO_CURSOR, DICA_DO_CURSOR)}'
-            f'{botao("zonas", ROTULO_DOS_BOTOES, DICA_DOS_BOTOES)}</span>')
+def sensores_da_peca(c):
+    """OS DOIS INTERRUPTORES DE SENSOR, UM PAR POR CONTROLE.
 
-
-def sensores_da_peca(c, virtual=False):
-    """OS DOIS INTERRUPTORES DE SENSOR, UM PAR POR CONTROLE, e o «Analógico virtual».
-
-    `virtual` acende o chip na cena do desenho: o exemplo do anel do P1 (a
-    inclinação no esquerdo) é o analógico virtual aceso naquele lado (08/10/2026,
-    O-ANALOGICO-VIRTUAL-E-UM-SO): chip apagado com o lado aceso seria a tela
-    velha, de dois interruptores. O produto repinta pelo `mira-ligada`.
+    O chip «Analógico virtual» saiu daqui no todo (15/10/2026): a mira virtual mora embaixo de
+    cada analógico, e o botão de lá liga e desliga.
     """
     return f'''          <span class="sensores-peca" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="{MIRA_NO_NATIVO}">
-            <span class="dica-do-giro" data-campo="giro-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="{DICA_DO_GIRO}"><button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><span class="p"></span>Giroscópio</button></span>
-            <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
-            <span class="chip-da-mira{"" if virtual else " off"}" data-campo="mira-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="mira" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="{MIRA_NO_NATIVO}" data-hef-atributo="aria-disabled" title="{DICA_DA_MIRA_VIRTUAL}"><span class="p"></span>{ROTULO_DA_MIRA_VIRTUAL}</button></span>
+            <span class="dica-do-giro" data-campo="giro-dica" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="{DICA_DO_GIRO}"><button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><span class="p"></span>Giroscópio</button></span>
+            <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" data-dica="O jogo recebe a inclinação e o chacoalhar"><span class="p"></span>Acelerômetro</button>
           </span>'''
 
 
-def identidade(c, *, bat, carga=None, meio="", virtual=False):
+def identidade(c, *, bat, carga=None, meio=""):
     """A LINHA DE IDENTIDADE, e ela é UMA SÓ.
 
     Sai daqui a linha das quatro caixas — a do controle aberto e a dos fechados,
@@ -1710,7 +1624,7 @@ def identidade(c, *, bat, carga=None, meio="", virtual=False):
           <span class="no-jogo" data-campo="giro-no-jogo" data-hef-alvo="atributo"
                 data-hef-atributo="aria-label" aria-label="{GIRO_NO_JOGO_DO_DESENHO}"><span
                 class="no-jogo-t" data-campo="giro-no-jogo">{GIRO_NO_JOGO_DO_DESENHO}</span></span>
-{sensores_da_peca(c, virtual)}
+{sensores_da_peca(c)}
           <!-- A BATERIA GANHOU ENDEREÇO EM 01/09/2026, e até aqui ela era a
                PINTURA DO MOCKUP para sempre: o pacote da aba emite `bateria`
                desde que nasceu, e não havia um `data-campo` onde ele caísse —
@@ -1819,47 +1733,31 @@ def selo_do_microfone(mic_mudo, *, estilo=""):
 
 # decisão de produto (a versão antiga não segue disponível — `pyproject.toml`).
 # digitar nada.
-DICA_MIC_TESTAR = ("Liga o retorno: você se ouve enquanto ele estiver aceso, "
-                   "com o volume e o ganho desta coluna já aplicados — é assim "
-                   "que o jogo te ouve. Clique de novo para desligar. Para "
-                   "calar o microfone, use o botão do próprio controle.")
-# QUAL É O PREÇO, medido no protocolo e não suposto: o DualSense **não devolve**
-#: LINGUA-A3. Ela dizia a única coisa que separava este botão do vizinho da
-DICA_OUVIR_JUNTO = ("O som do PC sai no alto-falante deste controle e continua "
-                    "saindo no PC. Serve para jogar acompanhado: cada um ouve "
-                    "no próprio controle.")
+DICA_MIC_TESTAR = "Ouvir a própria voz como o jogo ouve"
 
-#   <!-- noqa-acento: citação literal -->
-#: <!-- noqa-acento: citação literal -->
-ROTULO_SO_OS_EFEITOS = "Efeitos do jogo no controle, áudio do PC no PC"
-ROTULO_EFEITOS_MAIS_O_PC = "Efeitos do jogo e áudio do PC no controle"
+#: As três rotas do alto-falante (todo, 15/10/2026). O «junto» saiu da tela; o gesto segue aceito
+#: no back-end.
+ROTULO_SO_OS_EFEITOS = "Canais sonoros nativos - Padrão"
+DICA_SO_OS_EFEITOS = "Efeitos do jogo no controle; o som do PC no PC"
 
 #: (`audio_saida.mandar_o_som_do_pc`, byte `rota=3`) e calava a televisão.
-ROTULO_NADA_NO_CONTROLE = "Tudo no PC e nada no controle"
+ROTULO_NADA_NO_CONTROLE = "Canais sonoros apenas no PC"
 
-DICA_NADA_NO_CONTROLE = (
-    "Todo o som, inclusive o deste controle, sai no PC, e o alto-falante deste "
-    "controle para de tocar. O microfone e a vibração não mudam.")
+DICA_NADA_NO_CONTROLE = "Todo o som sai no PC; o controle fica mudo"
 
 #:     <!-- noqa-acento: citação literal -->
 #: sistema mandada para este controle (`audio_saida.mandar_o_som_do_pc`). O
-ROTULO_TUDO_NO_CONTROLE = "Tudo no controle e nada no PC"
+ROTULO_TUDO_NO_CONTROLE = "Canais sonoros apenas no DualSense"
 
-DICA_TUDO_NO_CONTROLE = (
-    "Todo o som do PC sai só no alto-falante deste controle, e o PC fica em "
-    "silêncio. Vale para um controle por vez. O microfone e a vibração não "
-    "mudam.")
+DICA_TUDO_NO_CONTROLE = "Todo o som sai no controle; o PC fica mudo"
 
 # O BOTÃO «PADRÃO» DO VOLUME — 04/10/2026, desenho aprovado em
 # `docs/process/estudos/2026-10-04-o-jogo-decide/` (item 2). Ligado, o volume do alto-falante é o
 # do jogo, a barra fica verde e travada e a palavra ocupa o lugar do número; desligado, ela ajusta.
 # O microfone fica de fora: o jogo não manda nada ao microfone do controle.
 ROTULO_PADRAO = "Padrão"
-DICA_ALTO_PADRAO = ("Ligado: o volume é o do jogo, sem ajuste. "
-                    "Desligado: você escolhe o volume deste alto-falante.")
-DICA_ALTO_MUDO = ("Cala o alto-falante do controle, sem perder o volume "
-                  "guardado. A partir daqui quem guarda esse volume é o "
-                  "Hefesto.")
+DICA_ALTO_PADRAO = "Volume do jogo, sem ajuste"
+DICA_ALTO_MUDO = "Cala o alto-falante sem perder o volume"
 
 
 # letra: o botão com `data-hef-alvo="classe"` acendendo `apagado`, o
@@ -1885,7 +1783,10 @@ def linha_de_volume(campo, razao=""):
     classe.
     """
     porque = f' data-porque="{razao}"' if razao else ""
-    return (f'<div class="vol" data-campo="{campo}" data-hef-alvo="atributo"'
+    dica = f' data-dica="{razao}"' if razao else ""
+    return (f'<div class="porque-dica" data-campo="{campo}" data-hef-alvo="atributo"'
+            f' data-hef-atributo="data-dica"{dica}>'
+            f'<div class="vol" data-campo="{campo}" data-hef-alvo="atributo"'
             f' data-hef-atributo="data-porque"{porque}>')
 
 
@@ -1907,43 +1808,14 @@ def sufixo_do_canal(c):
             f' data-hef-alvo="html">{palavra}</span></span></span>')
 
 
-def ponto_de_interrogacao(campo, razao=""):
-    """O `?` da razão — a mesma marcação da peça das dez, com o mesmo `.nada`."""
-    return (f'<span class="ajuda porque">?'
-            f'<span class="dica" data-campo="{campo}" data-hef-alvo="html">'
-            f'{razao or NADA_A_DIZER}</span></span>')
 
 # E O DESLIZANTE DO ALTO-FALANTE DESTRAVA O ♪. O DualSense não devolve o volume,
 ROTULO_VOL_MIC = "Volume do microfone deste controle"
-DICA_VOL_MIC = ("Arraste para escolher quanto do microfone deste controle chega ao "
-                "PC. Não é o mudo: a luz vermelha fica acesa e o botão do "
-                "controle continua valendo. Grava na hora.")
+DICA_VOL_MIC = "Quanto do microfone chega ao PC"
 ROTULO_VOL_ALTO = "Volume do alto-falante deste controle"
-DICA_VOL_ALTO = ("Arraste para escolher o volume do alto-falante deste controle. "
-                 "O primeiro arrasto é o que destrava o ♪.")
+DICA_VOL_ALTO = "Volume do alto-falante deste controle"
 
-GANHO_TOPO_DB = 48
-
-#: onde a razão está escrita — *o único microfone do usuário é o do DualSense*, e
-GANHO_PADRAO_PCT = 100
-
-ROTULO_GANHO_MIC = "Ganho de entrada do microfone deste controle, em decibéis"
-#      versao  # noqa-acento: citação literal, com a digitação original
 ROTULO_LINHA_VOLUME = "Volume"
-ROTULO_LINHA_GANHO = "Ganho"
-
-UNIDADE_DO_GANHO = "dB"
-
-DICA_GANHO_MIC = (
-    "Ganho de entrada: o quanto o aparelho amplifica o que entra no microfone, "
-    "de 0 a +48 dB. É outro trilho, e não o de baixo — aquele é o volume, "
-    "o quanto desse som o produto entrega ao PC."
-)
-
-
-def sinal_do_ganho(pct):
-    """O dB do DESENHO PARADO para uma posição na faixa, com sinal."""
-    return f"{GANHO_TOPO_DB * max(0, min(100, int(pct))) / 100:+.0f}"
 
 DICA_MIC_VIRTUAL = ("O microfone deste controle passa pelo Hefesto: pelo rádio, "
                     "é assim que ele ganha um canal só dele. Quem o põe no ar é "
@@ -1960,7 +1832,7 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
           giro, mic_v, mic_mudo, mic_vol, alto_v, rota_nada,
           alto_mudo=False, alto_pode=True, mic_posse=False, tocando=True,
           accel=None, conectado=True,
-          mic_ganho=GANHO_PADRAO_PCT, no_jogo=None):
+          no_jogo=None):
     """Uma caixa de controle, a partir do ITEM DA MESA — nunca de um nome digitado.
 
     É UMA função para as duas formas, porque agora é uma caixa só: o rádio diz
@@ -2027,7 +1899,11 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
     selo_do_mic = selo_do_microfone(mic_mudo, estilo=' style="margin-left:5px"')
     # é o que a bancada responde HOJE, medido no `state_full` dos dois
     alto_som = SELO_MUDO if alto_mudo else SELO_ATIVO
-    toque_txt = texto_toques((1 if tocando else 0) + (1 if tocando2 else 0))
+    regiao = regiao_do_toque(touch) if tocando else ""
+    tercas = "".join(
+        f'<span class="todo-terca{" on" if regiao == lado else ""}" data-campo="touch-regiao"'
+        f' data-hef-alvo="classe" data-hef-quando="{lado}"></span>'
+        for lado in ("esquerda", "meio", "direita"))
     # alcança (`data-hef-alvo="classe"`) e o que faz o desenho parar de
     ponto_on = " on" if tocando else ""
     ponto2_on = " on" if tocando2 else ""
@@ -2042,7 +1918,7 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
     # linha, mesma barra. O que muda é a UNIDADE (g, não graus/s) e a
     accel_html = chr(10).join(gx("accel", e, v, cor) for e, v, cor in (accel or []))
     fx = f'''      <label class="faixa" for="{rid}" title="{ABRE_O_CARD if conectado else LUGAR_VAZIO_AQUI}">
-{identidade(c, bat=bat, carga=carga, meio=resumo_fechado(mic_mudo), virtual=no_jogo is not None)}
+{identidade(c, bat=bat, carga=carga, meio=resumo_fechado(mic_mudo))}
       </label>'''
     corpo_do_card = f'''    <div class="{classe}"{casca} data-controle="{c.get("uniq") or c["pref"]}"{marca}>
       <!-- O ACORDEÃO GANHOU O DÉCIMO ALVO — T-07, 04/09/2026. A ONDA0-P
@@ -2067,11 +1943,11 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
         <div>
           <div class="moldura touchp">
             <div class="rot rot-linha">Touchpad
-              <span class="de-quem" data-campo="touch-estado" title="{DICA_TOQUE}">{toque_txt}</span></div>
+              <button class="sw todo-sw-toque" data-gesto="touchpad" data-campo="touchpad" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" data-dica="{DICA_DO_TOUCHPAD}"><span class="p"></span><span class="t-lig">{ROTULO_TOUCHPAD_LIGADO}</span><span class="t-des">{ROTULO_TOUCHPAD_DESLIGADO}</span></button></div>
             <div class="touch">
+              {tercas}
               <span data-campo="{CAMPOS_DA_POSICAO["touch"]}" data-hef-alvo="posicao"{onde_esta(touch[0], touch[1])}><span class="ponto ponto-1{ponto_on}" data-campo="touch-ponto" data-hef-alvo="classe"></span></span>
-              <span data-campo="{CAMPOS_DA_POSICAO["touch2"]}" data-hef-alvo="posicao"{onde_esta(touch2[0], touch2[1])}><span class="ponto ponto-2{ponto2_on}" data-campo="touch-ponto-2" data-hef-alvo="classe"></span></span>
-              {modo_do_toque()}</div>
+              <span data-campo="{CAMPOS_DA_POSICAO["touch2"]}" data-hef-alvo="posicao"{onde_esta(touch2[0], touch2[1])}><span class="ponto ponto-2{ponto2_on}" data-campo="touch-ponto-2" data-hef-alvo="classe"></span></span></div>
           </div>
           <!-- O TRAVESSÃO VIROU PALAVRA — decisão, 04/09/2026 [02]:
                *"palavra curta no lugar do travessão, frase inteira no hover"*,
@@ -2167,20 +2043,8 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
                  botão que desfaz algo que não acontece ensina errado. O
                  `mic.set {{muted: null}}` segue no daemon (`ipc_handlers.py`) e
                  devolve a posse ao `hid-playstation`. -->
-            <div class="rot rot-linha">Microfone
-              {selo_do_mic}
-              <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
-                A barra mostra o som <b>entrando agora</b>. O <b>🎙</b> liga o
-                retorno: você se ouve como o jogo te ouve. Para calar o
-                microfone, use o botão do próprio controle.<br><br>
-                A luz <b>acesa</b> quer dizer que o microfone está ligado —
-                não que alguém esteja ouvindo. Ela <b>pisca</b> quando um
-                programa está gravando e entra som; a linha abaixo diz qual.
-                <br><br>
-                Os <b>dois botões abaixo</b> dizem por onde esse som chega ao PC.
-                <br><br>
-                {DICA_GANHO_MIC}
-              </span></span>
+            <div class="rot rot-linha" data-dica="O som deste microfone chega ao PC">Microfone
+              <span class="porque-dica" data-dica="Luz acesa: microfone ligado, não que alguém esteja ouvindo">{selo_do_mic}</span>
               <!-- O MODO DO MICROFONE — pedido, 30/08: *"tá faltando o Modo do
                    Mic: Virtual, Desativado e Nativo"*.
 
@@ -2210,20 +2074,10 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
                    dois alvos num endereço só: `a02_controles.volume_do_microfone`. -->
               <span class="rot-vol">{ROTULO_LINHA_VOLUME}</span>
               <span class="trilho"><span class="cheio" data-campo="mic-barra"
-                data-hef-alvo="largura" style="width:{mic_vol}%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="{mic_vol}" data-gesto="volume" data-volume="microfone" data-campo="mic-barra" data-hef-alvo="valor" aria-label="{ROTULO_VOL_MIC}" title="{DICA_VOL_MIC}"></span>
+                data-hef-alvo="largura" style="width:{mic_vol}%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="{mic_vol}" data-gesto="volume" data-volume="microfone" data-campo="mic-barra" data-hef-alvo="valor" aria-label="{ROTULO_VOL_MIC}" data-dica="{DICA_VOL_MIC}"></span>
               <span class="n" data-campo="mic-num">{mic_vol}</span>
-              <button class="mudo-i" data-gesto="mic-retorno" data-campo="mic-retorno" data-hef-alvo="atributo" data-hef-atributo="{ATRIBUTO_DA_LUZ_DO_MIC}" title="{DICA_MIC_TESTAR}" aria-pressed="false">🎙</button>
-              {ponto_de_interrogacao("mic-porque")}
-            </div>
-            <div class="vol ganho" data-campo="mic-ganho-fora" data-hef-alvo="classe"
-                 data-hef-classe="sem-ganho" title="{DICA_GANHO_MIC}" role="group"
-                 aria-label="{ROTULO_GANHO_MIC}">
-              <span class="rot-vol">{ROTULO_LINHA_GANHO}</span>
-              <span class="trilho"><span class="cheio" data-campo="mic-ganho-barra"
-                data-hef-alvo="largura" style="width:{mic_ganho}%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="{mic_ganho}" data-gesto="ganho-mic" data-campo="mic-ganho-barra" data-hef-alvo="valor" aria-label="{ROTULO_GANHO_MIC}" title="{DICA_GANHO_MIC}"></span>
-              <span class="n" data-campo="mic-ganho-num">{sinal_do_ganho(mic_ganho)}</span>
-              <span class="un">{UNIDADE_DO_GANHO}</span>{ponto_de_interrogacao("mic-ganho-fora")}
-            </div>
+              <button class="mudo-i" data-gesto="mic-retorno" data-campo="mic-retorno" data-hef-alvo="atributo" data-hef-atributo="{ATRIBUTO_DA_LUZ_DO_MIC}" data-dica="{DICA_MIC_TESTAR}" aria-pressed="false">🎙</button>
+            </div></div>
             <!-- O PAR «VIRTUAL | NATIVO» SAIU — decisão, 02/10/2026
                  (OS-NOS-DE-SOM-SEM-O-ENDERECO-NO-NOME-01): todo controle tem o
                  microfone dele, no cabo e no BT, e a entrada da máquina é o
@@ -2271,22 +2125,15 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
             <div class="rot rot-linha">Alto-falante
               {sufixo_do_canal(c)}
               <span class="selo-som" data-campo="alto-selo" data-hef-alvo="html">{NADA_A_DIZER}</span>
-              <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
-                <b>{ROTULO_SO_OS_EFEITOS}</b>: só o que o jogo mandar para este controle sai no alto-falante dele.
-                <b>{ROTULO_EFEITOS_MAIS_O_PC}</b>: tudo o que a máquina toca cai aqui também, e continua saindo no PC.
-                <b>{ROTULO_NADA_NO_CONTROLE}</b>: o alto-falante deste controle para de tocar, e todo o som, inclusive o dele, sai no PC.
-                <b>{ROTULO_TUDO_NO_CONTROLE}</b>: todo o som do PC sai só no alto-falante deste controle, e o PC fica em silêncio.
-              </span></span>
             </div>
             {onda(alto_v, lado="alto")}
             {linha_de_volume("alto-porque", "" if alto_pode else DICA_ALTO_SEM_POSSE)}
-              <button class="padrao-i" type="button" data-gesto="volume-padrao" data-campo="alto-padrao" data-hef-alvo="classe" data-hef-classe="on" title="{DICA_ALTO_PADRAO}">{ROTULO_PADRAO}</button>
+              <button class="padrao-i" type="button" data-gesto="volume-padrao" data-campo="alto-padrao" data-hef-alvo="classe" data-hef-classe="on" data-dica="{DICA_ALTO_PADRAO}">{ROTULO_PADRAO}</button>
               <span class="trilho"><span class="cheio" data-campo="alto-barra"
-                data-hef-alvo="largura" style="width:{alto_v[0]}%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="{alto_v[0]}" data-gesto="volume" data-volume="alto-falante" data-campo="alto-barra" data-hef-alvo="valor" aria-label="{ROTULO_VOL_ALTO}" title="{DICA_VOL_ALTO}"></span>
+                data-hef-alvo="largura" style="width:{alto_v[0]}%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="{alto_v[0]}" data-gesto="volume" data-volume="alto-falante" data-campo="alto-barra" data-hef-alvo="valor" aria-label="{ROTULO_VOL_ALTO}" data-dica="{DICA_VOL_ALTO}"></span>
               <span class="n" data-campo="alto-num">{alto_v[0]}</span>
-              <button class="mudo-i" data-gesto="mudo" data-mudo="alto-falante" data-campo="alto-mudo" data-hef-alvo="atributo" data-hef-atributo="{ATRIBUTO_DO_SOM}" {ATRIBUTO_DO_SOM}="{alto_som}" title="{DICA_ALTO_MUDO}">♪</button>
-              {ponto_de_interrogacao("alto-porque", "" if alto_pode else DICA_ALTO_SEM_POSSE)}
-            </div>
+              <button class="mudo-i" data-gesto="mudo" data-mudo="alto-falante" data-campo="alto-mudo" data-hef-alvo="atributo" data-hef-atributo="{ATRIBUTO_DO_SOM}" {ATRIBUTO_DO_SOM}="{alto_som}" data-dica="{DICA_ALTO_MUDO}">♪</button>
+            </div></div>
             <!-- TRÊS BOTÕES, UMA PERGUNTA — 10/09/2026 (a A3). A fileira
                  responde *"o que este controle ouve?"*, e o terceiro estado é
                  a `fonte` que o produto já obedecia sem ninguém poder
@@ -2307,13 +2154,10 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
                  quebra em duas linhas; da janela de 1440 para cima cabem numa
                  só. A gramática não muda: mesmo gesto, mesmo endereço, cada
                  botão com o seu valor. -->
-            <div class="rota quatro">
-              <button class="{'on' if not rota_nada else ''}" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">{ROTULO_SO_OS_EFEITOS}</button>
-              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="{DICA_OUVIR_JUNTO}">{ROTULO_EFEITOS_MAIS_O_PC}</button>
-              <span class="par">
-                <button class="{'on' if rota_nada else ''}" data-gesto="rota" data-rota="nada" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="nada" title="{DICA_NADA_NO_CONTROLE}">{ROTULO_NADA_NO_CONTROLE}</button>
-                <button data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc" title="{DICA_TUDO_NO_CONTROLE}">{ROTULO_TUDO_NO_CONTROLE}</button>
-              </span>
+            <div class="rota trio">
+              <button class="{'on' if not rota_nada else ''}" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo" data-dica="{DICA_SO_OS_EFEITOS}">{ROTULO_SO_OS_EFEITOS}</button>
+              <button data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc" data-dica="{DICA_TUDO_NO_CONTROLE}">{ROTULO_TUDO_NO_CONTROLE}</button>
+              <button class="{'on' if rota_nada else ''}" data-gesto="rota" data-rota="nada" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="nada" data-dica="{DICA_NADA_NO_CONTROLE}">{ROTULO_NADA_NO_CONTROLE}</button>
             </div>
           </div>
         </div>
@@ -2337,14 +2181,7 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
                Os números do acelerômetro do P1 são MEDIDOS, no daemon vivo:
                {{'x': 0.105, 'y': 0.976, 'z': 0.170}} — |v| = 0,996 g, a gravidade. -->
           <div class="moldura leituras" data-bloco="giroscopio">
-            <div class="rot">Giroscópio
-              <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica" style="left:auto;right:22px">
-                Leitura viva do controle.<br><br>
-                O <b>giroscópio</b> mede o quanto ele gira, em graus por segundo;
-                o <b>acelerômetro</b> mede a inclinação, em g.<br><br>
-                Um traço no lugar do número quer dizer que a leitura ainda não chegou.
-              </span></span>
-            </div>
+            <div class="rot" data-dica="Leitura viva, em graus por segundo">Giroscópio</div>
 {giro_html}
           </div>
           <div class="moldura leituras" style="margin-top:9px" data-bloco="acelerometro">
@@ -2807,14 +2644,7 @@ CSS += f"""
 MIOLO = f'''
     <div class="quadro estica">
       <div class="quadro-topo">
-        <span class="quadro-titulo">Dispositivos conectados</span>
-        <span class="ajuda">?<span class="dica">
-          Os <b>controles conectados agora</b>.<br><br>
-          <b>Clique num deles para abri-lo</b> — os outros fecham; escolhê-lo na
-          <b>fita</b> lá em cima faz o mesmo.<br><br>
-          A <b>borda</b> tem a cor do controle, e o <b>fundo lilás</b> diz qual está
-          escolhido. <b>Todos</b> abre os {QUANTOS_NA_MESA} de uma vez.
-        </span></span>
+        <span class="quadro-titulo" data-dica="Clique num controle para abrir">Dispositivos conectados</span>
         {trava_do_nativo("nestes ajustes")}
         <!-- O CALIBRAR FICA NO CANTO SUPERIOR DIREITO, sozinho desde 29/09/2026.
              Em 31/08 eram dois botões aqui (*"A posição deles volta pro canto
@@ -2823,8 +2653,8 @@ MIOLO = f'''
              controle deveria ter saído da guia de Controles e ter ficado só na
              guia conexões."* A classe `.sensores` continua a alinhá-lo à direita. -->
         <span class="sensores">
-          <a class="btn nativo-nao" href="calibrar-sensores.html"
-             title="Calibra o giroscópio e o acelerômetro de todos os controles conectados, com todos parados numa superfície plana.">Calibrar sensores de movimento</a>
+          <a class="btn nativo-nao" href="calibrar-sensores.html" data-dica="{DICA_DO_CALIBRAR}">{ROTULO_DO_CALIBRAR}</a>
+          {_monta_modulo.modo_auto(GESTO_DO_MODO, False, GOVERNA_DO_MODO_AUTOMATICO, DICA_DO_MODO_AUTOMATICO)}
         </span>
       </div>
       <div class="quadro-corpo">
@@ -2836,9 +2666,18 @@ MIOLO = f'''
 
 
 LEGENDA = f'''<div class="nota">
+  <h2>O que muda em 15/10 (desenho)</h2>
+  <ul>
+    <li><b>O touchpad liga e desliga em cada controle.</b> O botão do alto do quadro diz <b>{ROTULO_TOUCHPAD_LIGADO}</b> ou <b>{ROTULO_TOUCHPAD_DESLIGADO}</b>, e a escolha é daquele controle. Desligado, a superfície esmaece: dentro do jogo o toque não chega a ele; fora do jogo o cursor segue valendo. Os botões «Cursor» e «Botões» e a frase do número de toques saíram, e a superfície acende o terço onde o dedo está.</li>
+    <li><b>A Mira virtual mora embaixo de cada analógico</b>, num botão só, com o lado na dica. Clicar no aceso desliga. O botão do cabeçalho do cartão saiu.</li>
+    <li><b>O alto-falante tem três botões, um por linha</b>: {ROTULO_SO_OS_EFEITOS}, {ROTULO_TUDO_NO_CONTROLE} e {ROTULO_NADA_NO_CONTROLE}. O quarto saiu da tela.</li>
+    <li><b>O Microfone fica só com o Volume.</b> A linha do Ganho saiu do desenho.</li>
+    <li><b>Nenhum «?» na aba</b>: cada explicação virou uma dica curta, no próprio botão.</li>
+    <li><b>O botão do canto do alto agora é {ROTULO_DO_CALIBRAR}</b>, ao lado do Modo automático, que esmaece o toque, o microfone e o alto-falante enquanto o jogo decide.</li>
+  </ul>
   <h2>O que muda em 06/10 (desenho)</h2>
   <ul>
-    <li><b>«Mira Virtual» virou «{ROTULO_DA_MIRA_VIRTUAL}»</b>, e o chip embaixo de cada analógico virou <b>«{ROTULO_DA_INCLINACAO}»</b>: o do cabeçalho liga, o de baixo escolhe o analógico. Com o do cabeçalho apagado, os dois de baixo ficam cinza.</li>
+    <li class="foi"><b>«Mira Virtual» virou «{ROTULO_DA_MIRA_VIRTUAL}»</b>, e o chip embaixo de cada analógico virou <b>«{ROTULO_DA_INCLINACAO}»</b>: o do cabeçalho liga, o de baixo escolhe o analógico. Com o do cabeçalho apagado, os dois de baixo ficam cinza.</li>
   </ul>
   <h2>O que mudou em 07/10</h2>
   <ul>
@@ -2850,15 +2689,15 @@ LEGENDA = f'''<div class="nota">
   </ul>
   <h2>O que mudou em 24/09</h2>
   <ul>
-    <li><b>Cada controle ganhou o botão «{ROTULO_DA_MIRA_VIRTUAL}»</b>, ao lado de <b>Giroscópio</b> e <b>Acelerômetro</b>, como você pediu: <i>"Cria um botão virtual ao lado de giroscopio e acelerometro chamado Mira Virtual"</i>. Aceso, virar aquele controle move o <b>analógico direito</b> dele — e só dele. Ele nasce <b>apagado</b>, a dica é a sua frase (<i>{DICA_DA_MIRA_VIRTUAL}</i>), e o <b>Giroscópio</b> não mudou. Uma coisa muda com a mira acesa no modo <b>Virtual</b>: o jogo deixa de receber o giro daquele controle como giroscópio e passa a recebê-lo só pelo analógico direito, para a câmera não andar em dobro. O quanto um gesto anda e o «Ignorar tremor até» ficam na tela <b>Calibrar sensores de movimento</b>.</li>
-    <li><b>A dica do Giroscópio muda quando a {ROTULO_DA_MIRA_VIRTUAL} está acesa</b> naquele controle, como você escolheu: passa a dizer <i>«{DICA_DO_GIRO_COM_A_MIRA}»</i> Com ela apagada, continua a de sempre, e cada controle diz a sua.</li>
-    <li><b>No modo nativo o botão «{ROTULO_DA_MIRA_VIRTUAL}» fica cinza e não grava</b>, como você escreveu: <i>"A exceção do nativo todo o resto deve ter mira Virtual"</i>. Com o <b>Sony DualSense</b> e o <b>Xbox</b> ele funciona, no USB e no BT, nos quatro controles. O «Só enquanto eu segurar» e o «Inverter» entraram na tela <b>Calibrar sensores de movimento</b>.</li>
-    <li><b>Na Navegação, a {ROTULO_DA_MIRA_VIRTUAL} acesa move o cursor.</b> Virar aquele controle anda o ponteiro, com a mesma sensibilidade, o mesmo «Ignorar tremor até», o «Só enquanto eu segurar» e o «Inverter». Vale nos quatro controles, no USB e no BT, e dois controles com a mira acesa somam o movimento. A dica do <b>Giroscópio</b> passa a dizer <i>«{DICA_DO_GIRO_NO_CURSOR}»</i></li>
-    <li><b>Com o Giroscópio desligado, o cartão não diz mais que o giro está indo para o jogo.</b> E no <b>Modo nativo</b> a <b>Barra de luz</b> mostra a cor que está no controle, e não mais «Jogo»: quem pinta a barra continua sendo o Hefesto.</li>
-    <li><b>O botão cinza avisa o leitor de tela</b>: o «{ROTULO_DA_MIRA_VIRTUAL}» no modo nativo é anunciado como indisponível. Na tela, nada mudou de lugar.</li>
-    <li><b>O quarto botão do alto-falante voltou</b> — <b>{ROTULO_TUDO_NO_CONTROLE}</b> —, como você pediu: <i>"Gostaria de voltar o botão o 4 mas acho que quebraria o layout vertical. Na real temos que encaixar ele. Mas fazer isso certo com mockup antes."</i> Ele manda todo o som do PC para o alto-falante daquele controle e deixa o PC em silêncio. Vale para um controle por vez: o último clique decide, e clicar no de outro controle passa o som para ele. Para caber sem o cartão crescer, os dois de baixo dividem a mesma linha — um é o espelho do outro — e o rótulo do <b>Alto-falante</b> ficou da altura do rótulo do <b>Microfone</b>.</li>
-    <li><b>«TV» virou «PC» nos botões do alto-falante</b>, como você decidiu: quem usa fone ou monitor não tem televisão. Os três de antes passaram a dizer <b>{ROTULO_SO_OS_EFEITOS}</b>, <b>{ROTULO_EFEITOS_MAIS_O_PC}</b> e <b>{ROTULO_NADA_NO_CONTROLE}</b>, e o que cada um faz não mudou.</li>
-    <li><b>O «?» do Microfone diz o que o 🎙 faz hoje</b>: ele liga o retorno, e você se ouve como o jogo te ouve. A frase de antes dizia que ele calava o microfone e apagava a luz vermelha, e isso deixou de ser verdade em 21/09 — quem cala é o botão do próprio controle.</li>
+    <li class="foi"><b>Cada controle ganhou o botão «{ROTULO_DA_MIRA_VIRTUAL}»</b>, ao lado de <b>Giroscópio</b> e <b>Acelerômetro</b>, como você pediu: <i>"Cria um botão virtual ao lado de giroscopio e acelerometro chamado Mira Virtual"</i>. Aceso, virar aquele controle move o <b>analógico direito</b> dele — e só dele. Ele nasce <b>apagado</b>, a dica era a sua frase, e o <b>Giroscópio</b> não mudou. Uma coisa muda com a mira acesa no modo <b>Virtual</b>: o jogo deixa de receber o giro daquele controle como giroscópio e passa a recebê-lo só pelo analógico direito, para a câmera não andar em dobro. O quanto um gesto anda e o «Ignorar tremor até» ficam na tela <b>Calibrar sensores de movimento</b>.</li>
+    <li class="foi"><b>A dica do Giroscópio muda quando a {ROTULO_DA_MIRA_VIRTUAL} está acesa</b> naquele controle, como você escolheu: passa a dizer <i>«{DICA_DO_GIRO_COM_A_MIRA}»</i> Com ela apagada, continua a de sempre, e cada controle diz a sua.</li>
+    <li class="foi"><b>No modo nativo o botão «{ROTULO_DA_MIRA_VIRTUAL}» fica cinza e não grava</b>, como você escreveu: <i>"A exceção do nativo todo o resto deve ter mira Virtual"</i>. Com o <b>Sony DualSense</b> e o <b>Xbox</b> ele funciona, no USB e no BT, nos quatro controles. O «Só enquanto eu segurar» e o «Inverter» entraram na tela <b>Calibrar sensores de movimento</b>.</li>
+    <li class="foi"><b>Na Navegação, a {ROTULO_DA_MIRA_VIRTUAL} acesa move o cursor.</b> Virar aquele controle anda o ponteiro, com a mesma sensibilidade, o mesmo «Ignorar tremor até», o «Só enquanto eu segurar» e o «Inverter». Vale nos quatro controles, no USB e no BT, e dois controles com a mira acesa somam o movimento. A dica do <b>Giroscópio</b> passa a dizer <i>«{DICA_DO_GIRO_NO_CURSOR}»</i></li>
+    <li class="foi"><b>Com o Giroscópio desligado, o cartão não diz mais que o giro está indo para o jogo.</b> E no <b>Modo nativo</b> a <b>Barra de luz</b> mostra a cor que está no controle, e não mais «Jogo»: quem pinta a barra continua sendo o Hefesto.</li>
+    <li class="foi"><b>O botão cinza avisa o leitor de tela</b>: o «{ROTULO_DA_MIRA_VIRTUAL}» no modo nativo é anunciado como indisponível. Na tela, nada mudou de lugar.</li>
+    <li class="foi"><b>O quarto botão do alto-falante voltou</b> — <b>{ROTULO_TUDO_NO_CONTROLE}</b> —, como você pediu: <i>"Gostaria de voltar o botão o 4 mas acho que quebraria o layout vertical. Na real temos que encaixar ele. Mas fazer isso certo com mockup antes."</i> Ele manda todo o som do PC para o alto-falante daquele controle e deixa o PC em silêncio. Vale para um controle por vez: o último clique decide, e clicar no de outro controle passa o som para ele. Para caber sem o cartão crescer, os dois de baixo dividem a mesma linha — um é o espelho do outro — e o rótulo do <b>Alto-falante</b> ficou da altura do rótulo do <b>Microfone</b>.</li>
+    <li class="foi"><b>«TV» virou «PC» nos botões do alto-falante</b>, como você decidiu: quem usa fone ou monitor não tem televisão. Os três de antes passaram a dizer <b>{ROTULO_SO_OS_EFEITOS}</b>, <b>Efeitos do jogo e áudio do PC no controle</b> e <b>{ROTULO_NADA_NO_CONTROLE}</b>, e o que cada um faz não mudou.</li>
+    <li class="foi"><b>O «?» do Microfone diz o que o 🎙 faz hoje</b>: ele liga o retorno, e você se ouve como o jogo te ouve. A frase de antes dizia que ele calava o microfone e apagava a luz vermelha, e isso deixou de ser verdade em 21/09 — quem cala é o botão do próprio controle.</li>
   </ul>
 
   <h2>O que mudou em 20/09</h2>
@@ -2969,12 +2808,12 @@ LEGENDA = f'''<div class="nota">
 TERMOS_DA_TELA = (
     "Liberar", "Efeitos do Jogo no Controle, Áudio da TV na TV", "Efeitos do Jogo e Áudio da TV no Controle",
     "Só no controle", "Tudo na TV e Nada no Controle",
-    ROTULO_SO_OS_EFEITOS, ROTULO_EFEITOS_MAIS_O_PC, ROTULO_NADA_NO_CONTROLE,
+    ROTULO_SO_OS_EFEITOS, ROTULO_NADA_NO_CONTROLE,
     ROTULO_TUDO_NO_CONTROLE,
-    "Calibrar sensores de movimento", "Mapa do controle", "Dispositivos conectados",
-    "Sem toque", "Tocando", "LED do jogador", "Barra de luz", "Touchpad",
+    ROTULO_DO_CALIBRAR, "Mapa do controle", "Dispositivos conectados",
+    "Ligado", "Desligado", "LED do jogador", "Barra de luz", "Touchpad",
     "Microfone", "Alto-falante", "Gatilhos", "Giroscópio",
-    "Acelerômetro", "Virtual", "Nativo", ROTULO_DA_MIRA_VIRTUAL,
+    "Acelerômetro", "Virtual", "Nativo", ROTULO_DA_INCLINACAO,
 )
 
 
@@ -3177,16 +3016,13 @@ def _conferir(doc):
     exigir('data-mic-modo="' not in corpo and 'data-gesto="mic-modo"' not in corpo,
            "o par «Virtual | Nativo» do microfone voltou — saiu em 02/10/2026")
 
-    for rota, palavra_dela in (("jogo", "Efeitos do jogo no controle, áudio do PC no PC"),
-                               ("junto", "Efeitos do jogo e áudio do PC no controle"),
-                               ("nada", "Tudo no PC e nada no controle"),
-                               ("pc", "Tudo no controle e nada no PC")):
+    for rota, palavra_dela in (("jogo", ROTULO_SO_OS_EFEITOS),
+                               ("pc", ROTULO_TUDO_NO_CONTROLE),
+                               ("nada", ROTULO_NADA_NO_CONTROLE)):
         vistos = re.findall(rf'data-rota="{rota}"[^>]*>([^<]*)</button>', corpo)
         exigir(vistos == [palavra_dela] * len(MESA),
                f"o botão `{rota}` da rota do som diz {sorted(set(vistos)) or '[]'} "
-               f"e a palavra dela é {palavra_dela!r} — os quatro nomes são uma "
-               f"escala de QUANTO SOM ENTRA NO CONTROLE: pouco · tudo · nada · "
-               f"só aqui")
+               f"e a palavra do todo é {palavra_dela!r}")
 
     for campo in ("bateria", "bateria-barra"):
         exigir(corpo.count(f'data-campo="{campo}"') == len(MESA),
@@ -3213,7 +3049,6 @@ def _conferir(doc):
     for campo, alvos in (("bateria-barra", ("largura",)),
                          ("alto-barra", ("largura", "valor")),
                          ("mic-barra", ("largura", "valor")),
-                         ("mic-ganho-barra", ("largura", "valor")),
                          ("luz-cor", ("cor",)), ("touch-ponto", ("classe",)),
                          ("touch-ponto-2", ("classe",))):
         tags = re.findall(r'<[^>]*data-campo="' + re.escape(campo) + r'"[^>]*>', corpo)
@@ -3232,23 +3067,12 @@ def _conferir(doc):
     exigir(corpo.count('data-gesto="sensor"') == 2 * len(MESA),
            f"os {2 * len(MESA)} interruptores de sensor não têm "
            f"`data-gesto` — o clique volta a morrer no stderr")
-    miras = re.findall(r'<span class="chip-da-mira([^"]*)" data-campo="mira-ligada"[^>]*>'
-                       r'<button class="sw" data-gesto="mira"[^>]*title="([^"]*)"',
-                       corpo)
-    exigir(len(miras) == len(MESA),
-           f"o chip «{ROTULO_DA_MIRA_VIRTUAL}» tem de estar nos {len(MESA)} "
-           f"controles, e está em {len(miras)}")
-    # `.ctl[data-conectado="nao"]` (ver `_so_o_travessao`). Os conectados, não.
-    exigir(sum("off" in cls.split() for cls, _ in miras)
-           == len(CONECTADOS) - sum(ESTADO[c["pref"]].get("no_jogo") is not None
-                                    for c in CONECTADOS),
-           "o chip da mira nasceu aceso no desenho de um controle conectado fora do "
-           "exemplo do anel — ela nasce desligada")
-    exigir(all(dica == DICA_DA_MIRA_VIRTUAL for _, dica in miras),
-           "a dica do chip da mira não é mais a frase dela")
+    exigir("chip-da-mira" not in corpo and 'data-gesto="mira"' not in corpo,
+           f"o botão «{ROTULO_DA_MIRA_VIRTUAL}» voltou ao cabeçalho do cartão: a mira mora "
+           f"embaixo de cada analógico, no «{ROTULO_DA_INCLINACAO}» (todo, 15/10/2026)")
     dicas_do_giro = re.findall(
         r'<span class="dica-do-giro" data-campo="giro-dica" data-hef-alvo="atributo" '
-        r'data-hef-atributo="title"(?: title="([^"]*)")?>'
+        r'data-hef-atributo="data-dica"(?: data-dica="([^"]*)")?>'
         r'<button ([^>]*data-sensor="giroscopio"[^>]*)>',
         corpo)
     exigir(len(dicas_do_giro) == len(MESA),
@@ -3265,29 +3089,38 @@ def _conferir(doc):
     exigir(corpo.count(
         f'<span class="sensores-peca" data-campo="mira-fora" data-hef-alvo="classe" '
         f'data-hef-classe="sem-mira" data-hef-quando="{MIRA_NO_NATIVO}">') == len(MESA),
-        f"o grupo dos chips perdeu o endereço do cinza da Mira em algum dos "
-        f"{len(MESA)} controles — no Nativo o chip continuaria clicável")
-    exigir(len(re.findall(
-        r'<button class="sw" data-gesto="mira" data-campo="mira-fora" '
-        r'data-hef-alvo="classe" data-hef-classe="sem-mira" '
-        rf'data-hef-quando="{MIRA_NO_NATIVO}" data-hef-atributo="aria-disabled"',
-        corpo)) == len(MESA),
-        "o chip da Mira perdeu o `aria-disabled` em algum controle — no Nativo "
-        "ele fica cinza e o leitor de tela o anuncia como clicável")
+        f"o grupo dos sensores perdeu o endereço do cinza da Mira em algum dos "
+        f"{len(MESA)} controles")
     for destino in DICA_DA_INCLINACAO:
         exigir(corpo.count(chip_da_inclinacao(destino))
                + corpo.count(chip_da_inclinacao(destino, aceso=True)) == len(MESA),
                f"o chip «{ROTULO_DA_INCLINACAO}» do {destino} não está nos "
                f"{len(MESA)} controles")
-    exigir(corpo.count(modo_do_toque()) == len(MESA),
-           f"o «{ROTULO_DO_CURSOR} | {ROTULO_DOS_BOTOES}» do touchpad não está nos "
-           f"{len(MESA)} controles")
+    exigir(corpo.count('data-gesto="touchpad"') == len(MESA),
+           f"o interruptor «{ROTULO_TOUCHPAD_LIGADO} | {ROTULO_TOUCHPAD_DESLIGADO}» do touchpad "
+           f"não está nos {len(MESA)} controles")
+    exigir(corpo.count('class="todo-terca') == 3 * len(MESA)
+           and not re.search(r'class="todo-terca[^"]*"[^>]*>[^<]', corpo),
+           "as três terças do touchpad não estão nos controles, ou ganharam texto")
+    for velho in ("Cursor", "Botões", "Sem toque", 'data-campo="touch-estado"', 'class="' 'ajuda'):
+        exigir(velho not in corpo, f"{velho!r} voltou ao miolo: saiu no todo de 15/10/2026")
+    exigir("?<span" not in corpo and ">?<" not in corpo,
+           "um «?» voltou à aba: cada explicação é uma dica curta no próprio botão")
+    exigir('data-gesto="ganho-mic"' not in corpo,
+           "a linha do Ganho voltou ao microfone: ele fica só com o Volume")
+    exigir('data-rota="junto"' not in corpo and 'class="rota trio"' in corpo
+           and corpo.count('class="rota trio"') == len(MESA),
+           "a fileira do alto-falante não tem as três rotas, uma por linha")
+    _canto = re.sub(r'<span class="trava-nativo".*?</span>', "",
+                    MIOLO.split('<div class="quadro-corpo">', 1)[0], flags=re.S)
+    _trilhos = "".join(re.findall(r'<input class="puxa-vol"[^>]*>', corpo))
+    exigir("title=" not in _canto and "title=" not in _trilhos,
+           "o canto do alto ou o deslizante de volume ganhou `title` estático: a dica é `data-dica`")
 
-    trilhos = {"volume": 2, "ganho-mic": 1}
+    trilhos = {"volume": 2}
     exigir(corpo.count('type="range"') == sum(trilhos.values()) * len(MESA),
            f"os {sum(trilhos.values()) * len(MESA)} deslizantes sumiram — os "
-           f"volumes voltam a ser pintura, o ♪ volta a travar para sempre e o "
-           f"ganho volta a ser um número sem onde pegar")
+           f"volumes voltam a ser pintura e o ♪ volta a travar para sempre")
     for gesto_do_trilho, quantos in trilhos.items():
         vistos = len(re.findall(
             r'type="range"[^>]*data-gesto="' + gesto_do_trilho + r'"'
@@ -3333,8 +3166,7 @@ def _conferir(doc):
            f"o rótulo da moldura do alto-falante aparece "
            f"{len(rotulos_do_alto)} vez(es) e a mesa tem {len(MESA)} lugar(es)")
     for _rotulo in rotulos_do_alto:
-        visivel = re.sub(r"<[^>]+>", "", re.sub(
-            r'<span class="ajuda".*?</span></span>', "", _rotulo, flags=re.S))
+        visivel = re.sub(r"<[^>]+>", "", _rotulo)
         exigir(not re.search(r"\d", visivel),
                f"um número voltou ao rótulo do alto-falante ({visivel.strip()!r}): "
                f"a linha de baixo já mostra o volume no `alto-num`, e o item 2.3 "
@@ -3364,15 +3196,17 @@ def _conferir(doc):
                f"o lugar vazio voltou a poder abrir: sumiu a regra que fecha "
                f"{oque} (`{regra.splitlines()[0]}`)")
 
-    destino, rot = "calibrar-sensores.html", "Calibrar sensores de movimento"
+    destino, rot = "calibrar-sensores.html", ROTULO_DO_CALIBRAR
     exigir(f'href="{destino}"' in corpo, f"o botão {rot!r} sumiu")
     exigir(onde.pagina(destino).exists(),
            f"o botão {rot!r} aponta para {destino}, que NÃO existe na bancada")
     exigir('href="mapa-do-controle.html"' not in corpo,
            "o Mapa do controle mora na aba Conexões (29/09)")
     exigir("Calibrar sensores da mesa" not in corpo, "o nome antigo do Calibrar voltou")
-    exigir(">Calibrar sensores de movimento</a>" in corpo,
-           "o rótulo do Calibrar não é o que ela aprovou")
+    exigir(f">{ROTULO_DO_CALIBRAR}</a>" in corpo,
+           "o rótulo do Calibrar não é o do todo")
+    exigir('data-gesto="modo-dos-controles"' in corpo.split('<div class="quadro-corpo">', 1)[0],
+           "o Modo automático saiu do canto do alto")
     topo = corpo.split('<div class="quadro-corpo">', 1)[0]
     exigir('href="calibrar-sensores.html"' in topo,
            "o Calibrar saiu do canto superior direito")
@@ -3451,10 +3285,6 @@ def _conferir(doc):
     exigir(corpo.count(chip_da_inclinacao("analogico_esquerdo", aceso=True)) == 1
            and chip_da_inclinacao("analogico_direito", aceso=True) not in corpo,
            f"o anel do exemplo acende sem o «{ROTULO_DA_INCLINACAO}» do mesmo analógico aceso")
-    exigir(len([cls for cls, _ in miras if "off" not in cls.split()])
-           - (len(MESA) - len(CONECTADOS)) == 1,
-           f"o exemplo do anel tem o lado aceso e o «{ROTULO_DA_MIRA_VIRTUAL}» apagado — "
-           "a tela velha, de dois interruptores")
     for nome in {str(c["nome"]) for c in CONECTADOS}:
         exigir(corpo.count(nome) == corpo.count(f'<span data-campo="peca">{nome}</span>'),
                f"o nome de plástico `{nome}` aparece no miolo sem endereço")

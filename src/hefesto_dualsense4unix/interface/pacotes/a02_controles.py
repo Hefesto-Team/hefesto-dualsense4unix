@@ -1127,11 +1127,15 @@ def _a_pagina_tem_o_ouvir_junto() -> bool:
 
 
 def aceso_da_fileira(uniq: str, entry: Any) -> str:
-    """Qual dos QUATRO botões da fileira do som acende — 10/09/2026, A3."""
+    """Qual botão da fileira do som acende (três na tela do todo, 15/10/2026)."""
     aceso = aceso_da_rota(uniq, entry)
-    if aceso in (ROTA_TUDO_NO_CONTROLE, ROTA_NADA_NO_CONTROLE) or not A_FILEIRA_TEM_TRES:
+    if aceso in (ROTA_TUDO_NO_CONTROLE, ROTA_NADA_NO_CONTROLE):
         return aceso
-    return ROTA_OUVIR_JUNTO if fonte_do_controle(entry) == "mix" else aceso
+    if fonte_do_controle(entry) != "mix":
+        return aceso
+    # Sem o botão «junto» na tela (as três rotas do todo, 15/10/2026), o perfil «junto» acende o
+    # que está mais perto: o som do PC chega ao controle.
+    return ROTA_OUVIR_JUNTO if A_FILEIRA_TEM_TRES else ROTA_TUDO_NO_CONTROLE
 
 
 # AS QUATRO FACES, e cada uma tem chave própria no `state_full.audio` desde a
@@ -1465,6 +1469,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     """
     import mesa_viva
 
+    from hefesto_dualsense4unix.profiles.schema import MODO_AUTOMATICO
+
     cards = {}
     na_mesa = tuple(str(c.get("uniq") or "") for c in ctx.conectados if c.get("uniq"))
     _camada_1(
@@ -1550,7 +1556,11 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 "mic-ganho-barra": mic_ganho[0] if mic_ganho is not None else 0,
                 "mic-ganho-fora": ganho_fora_de_alcance(uniq),
             } if A_PAGINA_TEM_O_GANHO else {}),
-            "touch-estado": toque_txt,
+            **_so_se_a_pagina_tiver({
+                "touch-estado": toque_txt,
+                "touchpad": _selo_do_sensor(_toque_ligado(c)),
+                "touch-regiao": regiao_do_toque(onde_o_dedo),
+            }),
             **{
                 campo: (
                     (CLICADO % rot if campo in apertados else rot)
@@ -1675,6 +1685,10 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             for m in ctx.mesa
         ],
         "fita-via": [str(m.get("via") or "") for m in ctx.mesa],
+        f"{GESTO_DO_MODO}-automatico": (
+            "sim" if modo_dos_controles_do_perfil(_perfil.ativo_que_vale(
+                _perfil.nome_do_ativo(getattr(ctx, "state", None)).strip() or None))
+            == MODO_AUTOMATICO else ""),
     })
     return {"cards": cards, "mesa": da_pagina, "sem_dono": {},
             LUGAR_VAZIO: {"alto-canal": TRAVESSAO},
@@ -1722,6 +1736,22 @@ def _sensor_ligado(dele: dict[str, Any], qual: str) -> bool | None:
         return None
     valor = bloco.get(f"{qual}_ligado")
     return valor if isinstance(valor, bool) else None
+
+
+def _toque_ligado(dele: dict[str, Any]) -> bool | None:
+    """`True`/`False` do touchpad deste controle (`sensores.touchpad`); `None` = sem leitura."""
+    bloco = dele.get("sensores")
+    if not isinstance(bloco, dict):
+        return None
+    valor = bloco.get("touchpad")
+    return {"ligado": True, "desligado": False}.get(valor) if isinstance(valor, str) else None
+
+
+def regiao_do_toque(onde: tuple[float, float] | None) -> str:
+    """`esquerda`, `meio` ou `direita` do dedo (x em %), nos terços do leitor; vazio sem dedo."""
+    if onde is None:
+        return ""
+    return "esquerda" if onde[0] < 100 / 3 else "direita" if onde[0] >= 200 / 3 else "meio"
 
 
 def _mira_ligada(dele: dict[str, Any]) -> bool | None:
@@ -2499,6 +2529,36 @@ def sensor(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise RuntimeError(frase)
 
 
+SEM_LEITURA_DO_TOUCHPAD = (
+    "sem a leitura do touchpad deste controle, o interruptor não sabe para que lado ir."
+)
+
+
+@gesto("02-controles.html", "touchpad", grava="sensor_set_detalhado")
+def touchpad(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """O interruptor «Ligado | Desligado» do touchpad de UM controle (15/10/2026).
+
+    Lê `sensores.touchpad` do estado do daemon e manda o OPOSTO pelo `sensor.set`, com o `uniq`
+    do cartão clicado: o daemon guarda a escolha por controle e a leva ao perfil. Sem leitura
+    recusa, em vez de chutar o lado. Dentro do jogo, Desligado cala o toque; fora dele o
+    cursor segue valendo (D-1510-O-DESLIGADO-FORA-DO-JOGO-E-CURSOR).
+    """
+    uniq = _uniq(o)
+    if not uniq:
+        raise ValueError("touchpad: o clique não disse em qual controle")
+    agora = _toque_ligado(ctx.por_uniq(uniq))
+    if agora is None:
+        raise RuntimeError(SEM_LEITURA_DO_TOUCHPAD)
+    corpo = _corpo(p.sensor_set_detalhado(
+        touchpad="desligado" if agora else "ligado", uniq=uniq))
+    if corpo is None:
+        raise RuntimeError(
+            "o Hefesto não confirmou o touchpad: ou ele parou, ou este controle se desligou")
+    frase = frase_do_interruptor_de_sensor(corpo)
+    if frase:
+        raise RuntimeError(frase)
+
+
 SEM_LEITURA_DA_MIRA = (
     "a leitura ainda não chegou deste controle, e o botão da mira não sabe "
     "para que lado ir."
@@ -2642,7 +2702,21 @@ def escolher_o_lado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 @gesto("02-controles.html", "analogico-lado", grava="mira_set_detalhado")
 def analogico_lado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """O «Usar como analógico virtual» embaixo de um analógico: escolhe o lado e liga."""
+    """O «Mira virtual» embaixo de um analógico: no apagado liga o lado, no aceso desliga a mira."""
+    from hefesto_dualsense4unix.core import roteador_de_movimento as rot
+
+    uniq = _uniq(o)
+    lado = str(o.get("lado") or "")
+    if uniq and lado in rot.LADOS_DO_VIRTUAL and lado == lado_aceso(ctx.por_uniq(uniq)):
+        corpo = _corpo(p.mira_set_detalhado(ligada=False, uniq=uniq))
+        if corpo is None:
+            raise RuntimeError(
+                "o Hefesto não confirmou a mira: ou ele parou, ou este controle se desligou")
+        if corpo.get("status") == "nativo":
+            raise RuntimeError(MIRA_CINZA_NO_NATIVO)
+        if corpo.get("status") != "ok":
+            raise RuntimeError(MIRA_SEM_O_CONTROLE)
+        return
     escolher_o_lado(ctx, o, p)
 
 
@@ -2887,4 +2961,4 @@ PROVAS = [
                  "uniq": "aa:bb:cc:00:00:01"})]},
 ]
 
-SEM_CHAMADA = ("sensor", "mira", "analogico-lado", "toque")
+SEM_CHAMADA = ("sensor", "touchpad", "mira", "analogico-lado", "toque")

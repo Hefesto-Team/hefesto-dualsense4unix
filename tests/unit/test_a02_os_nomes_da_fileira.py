@@ -10,11 +10,12 @@ import pytest
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
+#: Os nomes do TODO de 15/10/2026 (as três rotas, uma por linha); os de 20/09 caducaram com ele, e
+#: o quarto botão («junto») saiu da tela: o perfil `junto` acende «apenas no DualSense».
 DELA: dict[str, str] = {
-    "jogo": "Efeitos do jogo no controle, áudio do PC no PC",
-    "junto": "Efeitos do jogo e áudio do PC no controle",
-    "nada": "Tudo no PC e nada no controle",
-    "pc": "Tudo no controle e nada no PC",
+    "jogo": "Canais sonoros nativos - Padrão",
+    "nada": "Canais sonoros apenas no PC",
+    "pc": "Canais sonoros apenas no DualSense",
 }
 
 DE_ONTEM = ("Efeitos do Jogo no Controle, Áudio da TV na TV",
@@ -50,8 +51,13 @@ def test_o_desenho_diz_a_palavra_dela_em_todos_os_cartoes(rota: str) -> None:
         f"o botão `{rota}` sumiu do desenho: nenhum `data-rota={rota}` com "
         f"rótulo na bancada")
     assert set(vistos) == {DELA[rota]}, (
-        f"o botão `{rota}` diz {sorted(set(vistos))} e a palavra dela de "
-        f"20/09 é {DELA[rota]!r}")
+        f"o botão `{rota}` diz {sorted(set(vistos))} e o nome do todo de "
+        f"15/10 é {DELA[rota]!r}")
+
+
+def test_o_botao_junto_saiu_da_tela() -> None:
+    """MORDIDA: devolva o `data-rota="junto"` ao gerador e isto reprova."""
+    assert not _rotulos(_bancada(), "junto"), "o quarto botão voltou à fileira do som"
 
 
 def test_o_botao_de_espera_nao_voltou() -> None:
@@ -60,7 +66,7 @@ def test_o_botao_de_espera_nao_voltou() -> None:
 
     assert set(_rotulos(doc, "pc")) <= {DELA["pc"]}, (
         f"o botão `pc` diz {sorted(set(_rotulos(doc, 'pc')))} — o nome dele é "
-        f"{DELA['pc']!r}, o espelho do terceiro")
+        f"{DELA['pc']!r}")
     vivo = re.sub(r"<!--.*?-->|/\*.*?\*/", "", doc, flags=re.S)
     assert EM_ESPERA not in vivo, (
         f"o rótulo de espera {EM_ESPERA!r} voltou à TELA; o ato mudou e o "
@@ -79,7 +85,7 @@ def test_a_moldura_do_alto_falante_nao_diz_tv() -> None:
     """Nada que a moldura do alto-falante MOSTRA diz «TV» — rótulo, dica de"""
     doc = re.sub(r"<!--.*?-->", "", _bancada(), flags=re.S)
     molduras = re.findall(
-        r'<div class="moldura"[^>]*data-bloco="alto-falante".*?<div class="rota quatro">.*?</div>',
+        r'<div class="moldura"[^>]*data-bloco="alto-falante".*?<div class="rota trio">.*?</div>',
         doc, flags=re.S)
     assert molduras, "o desenho perdeu a moldura do alto-falante (ou a fileira)"
     for moldura in molduras:
@@ -91,17 +97,17 @@ def test_a_moldura_do_alto_falante_nao_diz_tv() -> None:
             f"…{lido[max(0, achado.start() - 60):achado.end() + 20]}…")
 
 
-def test_a_fileira_tem_os_quatro_botoes_no_mesmo_numero_de_cartoes() -> None:
-    """Os quatro são UM estado: nenhum pode faltar num cartão que tem os outros."""
+def test_a_fileira_tem_os_tres_botoes_no_mesmo_numero_de_cartoes() -> None:
+    """Os três são UM estado: nenhum pode faltar num cartão que tem os outros."""
     doc = _bancada()
     quantos = {rota: len(_rotulos(doc, rota)) for rota in DELA}
 
     assert len(set(quantos.values())) == 1, (
-        f"a fileira do som não tem os quatro botões nos mesmos cartões: {quantos}")
+        f"a fileira do som não tem os três botões nos mesmos cartões: {quantos}")
     assert all(quantos.values()), f"a fileira do som sumiu do desenho: {quantos}"
 
 
-@pytest.mark.parametrize("rota", ["jogo", "junto", "nada", "pc"])
+@pytest.mark.parametrize("rota", ["jogo", "nada", "pc"])
 def test_o_nome_interno_nao_chega_ao_botao(rota: str) -> None:
     """A tela nunca diz «sfx» nem «mix» — é metade da correção dela."""
     for rotulo in _rotulos(_bancada(), rota):
@@ -118,13 +124,12 @@ def test_o_gerador_guarda_a_palavra_dela(rota: str) -> None:
 
     das_constantes = {
         "jogo": aba02.ROTULO_SO_OS_EFEITOS,
-        "junto": aba02.ROTULO_EFEITOS_MAIS_O_PC,
         "nada": aba02.ROTULO_NADA_NO_CONTROLE,
         "pc": aba02.ROTULO_TUDO_NO_CONTROLE,
     }
     assert das_constantes[rota] == DELA[rota], (
         f"o gerador emite {das_constantes[rota]!r} para o botão `{rota}` e a "
-        f"palavra dela é {DELA[rota]!r}")
+        f"palavra do todo é {DELA[rota]!r}")
 
 
 def test_o_gerador_e_o_desenho_nao_divergiram() -> None:
@@ -133,7 +138,6 @@ def test_o_gerador_e_o_desenho_nao_divergiram() -> None:
 
     doc = _bancada()
     for rota, constante in (("jogo", aba02.ROTULO_SO_OS_EFEITOS),
-                            ("junto", aba02.ROTULO_EFEITOS_MAIS_O_PC),
                             ("nada", aba02.ROTULO_NADA_NO_CONTROLE),
                             ("pc", aba02.ROTULO_TUDO_NO_CONTROLE)):
         assert set(_rotulos(doc, rota)) == {constante}, (

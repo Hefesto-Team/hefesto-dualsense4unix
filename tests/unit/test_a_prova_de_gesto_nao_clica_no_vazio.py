@@ -50,6 +50,10 @@ def test_todo_passo_do_roteiro_acha_alvo_na_tela(alvo: Path) -> None:
     html = alvo.read_text(encoding="utf-8")
     mortos: list[str] = []
     for _ms, seletor in _roteiro():
+        if alvo == BANCADA and 'data-rota="junto"' in seletor:
+            # 15/10/2026 (todo): o desenho tem três rotas; o produto ainda renderiza a
+            # PUBLICADA, com o «junto». O passo sai do roteiro no mesmo commit do `--publicar`.
+            continue
         for pedaco in _alvos_do_seletor(seletor):
             if pedaco not in html:
                 mortos.append(f"{seletor}  (falta {pedaco!r})")
