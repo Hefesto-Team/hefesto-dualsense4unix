@@ -1662,7 +1662,7 @@ ATENÇÃO: **O gamepad virtual deste projeto nunca escreve o byte 53** — ele s
 > | lê o byte 53 do report cru do físico | `core/physical_report_reader.py:437` (`extract_jack_status`), offset (`JACK_STATUS_OFFSET`) em `:176` | **ALTA** — lido no código |
 > | entrega ao vpad na borda | `core/physical_report_reader.py:941-976` (`_observe_jack`) | **ALTA** |
 > | o vpad espelha, mascarado nos três bits conhecidos | `integrations/uhid_gamepad.py:1290` (`forward_jack`), com `_STATUS1_BITS_CONHECIDOS = 0x07` em `:337` | **ALTA** |
-> | o byte sai no report do vpad | `integrations/uhid_gamepad.py:1273`, offset `_STATUS1_OFFSET = 53` em `:331` | **ALTA** |
+> | o byte sai no report do vpad | `integrations/uhid_gamepad.py:1277`, offset `_STATUS1_OFFSET = 53` em `:331` | **ALTA** |
 >
 > **(2) A conclusão estava INVERTIDA — e este é o erro mais perigoso dos
 > dois**, porque sobreviveria mesmo se a cura nunca tivesse sido feita. Os bits
@@ -1700,7 +1700,7 @@ ATENÇÃO: **O gamepad virtual deste projeto nunca escreve o byte 53** — ele s
 >
 > A escala **não é percentual**: são **11 níveis** (5, 15, ..., 95, 100) num
 > nibble. E este byte também é espelhado ao vpad desde 09/08
-> (`integrations/uhid_gamepad.py:1297` `forward_battery`, saindo em `:1726`,
+> (`integrations/uhid_gamepad.py:1301` `forward_battery`, saindo em `:1726`,
 > offset `_STATUS_OFFSET = 52` em `:504`) — a mesma leva do byte 53.
 >
 > **Grau: FONTE DESTA MÁQUINA** — o `switch` de `charging_status` dentro de
