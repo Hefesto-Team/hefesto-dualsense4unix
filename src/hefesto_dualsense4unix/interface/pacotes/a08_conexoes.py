@@ -2988,6 +2988,7 @@ TIPO_PELO_ICONE = {
     "input-keyboard": "teclado", "input-mouse": "mouse", "input-tablet": "mouse",
     "audio-headset": "fone", "audio-headphones": "fone", "audio-card": "caixa",
     "camera-video": "webcam", "camera-photo": "webcam", "phone": "celular",
+    "input-gaming": "gamepad",
 }
 PALAVRA_DO_TIPO = {"teclado": "teclado", "mouse": "mouse", "fone": "fone",
                    "caixa": "caixa de som", "webcam": "webcam", "outro": "aparelho",
@@ -3367,7 +3368,8 @@ def html_da_linha(ap: dict[str, Any], cena: dict[str, Any], com_hz: bool = False
     arrasta = not ap.get("fixo") and not esperando
     nome = str(ap.get("nome") or "")
     rotulo = str(ap.get("rotulo") or "")
-    quem = "controle" if ap.get("tipo") == "controle" else str(ap.get("tipo"))
+    tipo = str(ap.get("tipo"))
+    quem = "controle" if tipo == "controle" else PALAVRA_DO_TIPO.get(tipo, tipo)
     le = _x(f"{nome_na_conexoes(ap) or rotulo}, {quem}")
     if arrasta:
         abre = (f'<div class="linha" data-id="{aid}" data-alvo="{aid}" draggable="true" '
@@ -4740,6 +4742,13 @@ def _quedas_por_adaptador(historico: dict[str, Any] | None, caminhos: dict[str, 
 def _tipo_pela_classe(classe: int | None) -> str:
     if not isinstance(classe, int):
         return "outro"
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.integrations.gesto_de_pareamento import e_controle
+
+    if e_controle(classe):
+        # O controle que não é o DualSense (o Pro Controller, o 8BitDo, o do Xbox): a ``Class``
+        # já diz que é controle, e a linha não pergunta à pessoa o que ele é.
+        return "gamepad"
     maior, menor = (classe >> 8) & 0x1F, (classe >> 2) & 0x3F
     if maior == 0x02:
         return "celular"

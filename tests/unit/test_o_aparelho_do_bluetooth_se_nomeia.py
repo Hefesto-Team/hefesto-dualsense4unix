@@ -124,6 +124,27 @@ def test_sem_escolha_o_aparelho_fica_outro_e_pergunta() -> None:
     assert ap["tipo"] == "outro" and ap["tipo_dela"] is False
 
 
+@pytest.mark.parametrize(("icone", "classe"), [("input-gaming", None), ("", 0x002508),
+                                               ("", 0x002504)])
+def test_o_controle_que_a_class_ou_o_icon_dizem_nao_pergunta(icone: str,
+                                                             classe: int | None) -> None:
+    """O Pro Controller, o 8BitDo e o do Xbox anunciam ``input-gaming`` e a ``Class`` 0x2508.
+
+    O Bluetooth DISSE o que eles são: a linha leva o glifo de controle, não o «?» nem o «Sem tipo».
+    MORDIDA: tirar o ``e_controle`` de :func:`a08._tipo_pela_classe` (ou o ``input-gaming`` do
+    ``TIPO_PELO_ICONE``) devolve o «?» a um controle que se anunciou.
+    """
+    ctx = a08.Contexto(state={"controllers": []}, mesa=[], conectados=[], estados={})
+    (ap,) = a08._aparelhos_da_cena(ctx, ctx.state, {}, [],
+                                   (_bluez(icone=icone, classe=classe),), {ADAPTADOR: LUGAR},
+                                   [LUGAR])
+    assert (ap["tipo"], ap["tipo_dela"]) == ("gamepad", False)
+    linha = a08.html_da_linha(ap, {"aparelhos": [ap], "lugares": [{"id": LUGAR}]})
+    assert "tipo-qual" not in linha and "Sem tipo" not in linha
+    # o leitor de tela ouve a palavra da tela, nunca a chave interna
+    assert ", controle — " in linha and ", gamepad" not in linha
+
+
 def test_a_escolha_se_guarda_pelo_endereco_e_vence_a_adivinhacao(
         monkeypatch: pytest.MonkeyPatch) -> None:
     ponte = _escolher(monkeypatch, "fone")
