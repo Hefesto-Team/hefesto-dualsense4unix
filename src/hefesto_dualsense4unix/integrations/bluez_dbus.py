@@ -36,6 +36,17 @@ ERRO_REJEITADO = "org.bluez.Error.Rejected"
 ERRO_CANCELADO = "org.bluez.Error.Canceled"
 ERRO_JA_EXISTE = "org.bluez.Error.AlreadyExists"
 
+#: O ``Pair`` que ficou sem resposta: o tempo estourou (o Gio diz «Timeout was
+#: reached» sem nome de erro, e o ``busctl`` só diz que não deu) ou o barramento
+#: respondeu por ele. O bluetoothd 5.86 deixa o ``Pair`` assim quando o bond
+#: já está feito e a busca de SDP não começa (curado na 5.87, ``622a46ebc``).
+_PAIR_SEM_RESPOSTA = frozenset({
+    "",
+    "org.freedesktop.DBus.Error.NoReply",
+    "org.freedesktop.DBus.Error.Timeout",
+    "org.freedesktop.DBus.Error.TimedOut",
+})
+
 RECUSA_DA_SUITE = "hefesto.RecusaDaSuite"
 SEM_BARRAMENTO = "hefesto.SemBarramento"
 SEM_AGENTE = "hefesto.SemAgente"
@@ -787,11 +798,29 @@ class LeitorDoBluez:
             return recusa
         try:
             with na_trava(quem):
-                escrita = self.chamar(caminho, APARELHO, "Pair", espera=espera, quem=quem)
-                if escrita.feita:
-                    self.confiar(caminho, quem=quem)
+                return self._pair_e_trusted(caminho, espera, quem)
         except TravaOcupadaError as ocupada:
             return Escrita(False, TRAVA_OCUPADA, str(ocupada))
+
+    def _vinculado(self, caminho: str) -> bool:
+        """O nó diz ``Paired`` e ``Bonded`` verdadeiros, os dois."""
+        return all(
+            como_booleano(self.propriedade(caminho, APARELHO, nome)) is True
+            for nome in ("Paired", "Bonded")
+        )
+
+    def _pair_e_trusted(self, caminho: str, espera: float, quem: str) -> Escrita:
+        """``Pair`` e ``Trusted``, na trava; o ``Pair`` mudo se confere pelo bond que ele fez."""
+        ja_vinculado = self._vinculado(caminho)
+        escrita = self.chamar(caminho, APARELHO, "Pair", espera=espera, quem=quem)
+        if (not escrita.feita and not escrita.nem_tentou
+                and escrita.erro in _PAIR_SEM_RESPOSTA
+                and not ja_vinculado and self._vinculado(caminho)):
+            _registrar("bluez_pair_sem_resposta_com_bond", nivel="warning",
+                       erro=escrita.erro or None, hci=_hci_de(caminho.rsplit("/dev_", 1)[0]))
+            escrita = Escrita(True, mensagem="o Pair não respondeu, e o bond está feito")
+        if escrita.feita:
+            self.confiar(caminho, quem=quem)
         return escrita
 
     def comecar_busca(self, caminho_do_adaptador: str, *, quem: str = QUEM_PADRAO) -> Escrita:
@@ -1565,12 +1594,9 @@ class DonoVivo(LeitorDoBluez):
             return super().parear(caminho, espera=espera, quem=quem)
         try:
             with na_trava(quem), agente.esperando(caminho):
-                escrita = self.chamar(caminho, APARELHO, "Pair", espera=espera, quem=quem)
-                if escrita.feita:
-                    self.confiar(caminho, quem=quem)
+                return self._pair_e_trusted(caminho, espera, quem)
         except TravaOcupadaError as ocupada:
             return Escrita(False, TRAVA_OCUPADA, str(ocupada))
-        return escrita
 
     def _agente_pronto(self) -> Any:
         from hefesto_dualsense4unix.integrations.agente_de_pareamento import AgenteDePareamento

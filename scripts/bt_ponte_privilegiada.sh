@@ -801,9 +801,9 @@ verbo_parear() {
         _dizer_seco "busctl set-property org.bluez ${caminho} org.bluez.Device1 Trusted b true"
         return 0
     fi
-    #: 45 s cobre o pareamento mais lento medido; sem teto, um controle que
-    #: sumiu no meio do gesto deixaria root pendurado até o fim da sessão.
-    if ! timeout 45 busctl call org.bluez "${caminho}" org.bluez.Device1 Pair >/dev/null 2>&1; then
+    #: O `Pair` e, quando ele cala, a conferência pelo bond que ele fez: ver
+    #: `_parear_o_no`, junto do despacho.
+    if ! _parear_o_no "${caminho}"; then
         _erro "Pair() falhou em ${controle} via ${adaptador} — o controle está em modo de pareamento (PS + Create) e dentro da janela de busca?"
         exit 1
     fi
@@ -1292,6 +1292,34 @@ FIM
     for principal in "$@"; do
         printf '%s ALL=(root) NOPASSWD: HEFESTO_BT_PONTE\n' "${principal}"
     done
+}
+
+# --- o Pair que cala (O-PAREAMENTO-SEM-RESPOSTA-SE-CONFERE-PELO-BOND-01) ----
+
+#: O nó diz `Paired` e `Bonded` verdadeiros, os dois.
+_vinculado() {
+    local nome valor
+    for nome in Paired Bonded; do
+        valor="$(busctl get-property org.bluez "$1" org.bluez.Device1 "${nome}" 2>/dev/null \
+            | sed -E 's/^b //' || true)"
+        [[ "${valor}" == "true" ]] || return 1
+    done
+    return 0
+}
+
+#: O `Pair` deste nó. 45 s cobre o pareamento mais lento medido; sem teto, um
+#: controle que sumiu no meio do gesto deixaria root pendurado até o fim da
+#: sessão. O `Pair` sem resposta não é veredito: o bluetoothd 5.86 cala quando
+#: o bond já está feito e a busca de SDP não começa (curado na 5.87). O bond que
+#: ESTE `Pair` fez responde por ele; o que já estava lá antes, não.
+_parear_o_no() {
+    local caminho="$1" hci="${1#/org/bluez/}" ja_vinculado=0
+    hci="${hci%%/*}"
+    _vinculado "${caminho}" && ja_vinculado=1
+    timeout 45 busctl call org.bluez "${caminho}" org.bluez.Device1 Pair >/dev/null 2>&1 && return 0
+    (( ja_vinculado == 0 )) && _vinculado "${caminho}" || return 1
+    _registrar "o Pair não respondeu no adaptador ${hci}, e o bond está feito"
+    return 0
 }
 
 # --- despacho ---------------------------------------------------------------

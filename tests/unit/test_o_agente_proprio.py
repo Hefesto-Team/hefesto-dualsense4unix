@@ -166,7 +166,7 @@ def test_sem_conexao_viva_o_pareamento_fica_com_o_piso() -> None:
     leitor = bd.pelo_executor(executar)
     assert not leitor.atende_o_proprio_pareamento
     assert leitor.parear(DISPOSITIVO).feita
-    assert [c[4] for c in chamadas] == ["Pair", "Trusted"]
+    assert [c[4] for c in chamadas if c[0] != "get-property"] == ["Pair", "Trusted"]
 
 
 def test_sob_a_suite_o_agente_nao_se_registra_no_sistema() -> None:
