@@ -1,6 +1,5 @@
 # A PASTA, não /tmp: estas três liam um `monta` de /tmp — o de 26/08 23:50 —
 import ast
-import html
 import importlib.util
 import pathlib
 import re
@@ -24,7 +23,7 @@ from hefesto_dualsense4unix.integrations import dicas_da_conexao as _dicas  # no
 from hefesto_dualsense4unix.integrations import ordens_da_mesa as _ordens  # noqa: E402
 from pacotes import a08_conexoes as _pacote08  # noqa: E402
 from hefesto_dualsense4unix.mods import tema as _tema  # noqa: E402
-from pacotes.a11_calibrar_sensores import bloco_de_nascenca as _mira_de_nascenca  # noqa: E402
+import pacotes as _pacote_base  # noqa: E402
 
 def _valor(no, ja):
     """O valor de um nó de AST, resolvendo NOME contra o que já foi lido."""
@@ -220,7 +219,7 @@ CAMPO_DAS_DICAS = "dicas"
 
 #: o controle conhecido que pede para parear no desenho (O-CONTROLE-QUE-PEDE-PARA-PAREAR-…-01):
 #: o «Roxo», ouvido pelo primeiro adaptador do desenho
-PEDIDO_DO_DESENHO = {"aparelho": "AABBCC0000F7", "lugar": "L1", "nome": "Roxo"}
+PEDIDO_DO_DESENHO = {"aparelho": "AABBCC0000F7", "lugar": "L1", "nome": "Galactic Purple"}
 
 
 def _dicas_da_cena():
@@ -246,7 +245,7 @@ def _dicas_da_cena():
             _dicas.dica_do_pedido(PEDIDO_DO_DESENHO["aparelho"], PEDIDO_DO_DESENHO["nome"],
                                   "da Entrada 4", PEDIDO_DO_DESENHO["lugar"]),
             _dicas.dica_do_movimento(_dicas.Movimento(
-                controle="p2", jogador=2, nome_do_controle="o controle", de_id="meio",
+                controle="p2", jogador=2, nome_do_controle="Starlight Blue", de_id="meio",
                 de_nome="Meio", para_id="direita", para_nome="Direita", controles_no_de=3,
                 bons=20, sufocado=True)),
             _dicas.dica_da_ordem(wifi, "atencao", slot=0, dica_de_ignorar=_pacote08.DICA_DO_IGNORAR),  # (noqa-acento): chave de máquina
@@ -345,7 +344,11 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .gc-item.off .gc-cabeca{border-bottom:0}
   .gc-item.off .gc-resumo,
   .gc-item.off .gc-corpo{display:none}
-  .gc-item.off .gc-dono{visibility:hidden}
+  .gc-item.off .gc-dono,
+  .gc-item.off .gc-num{display:none}
+  .gc-item.off .gc-nome b{color:var(--texto-suave);font-weight:600}
+  .gc-item.off .gc-nome{font-weight:400}
+  .gc-item.off .gc-nome .sep{margin:0 6px;color:var(--texto-mudo)}
   .gc-item.off .ds-mini{opacity:.3}
   .gc-item.off .gc-abre,
   .gc-item.off .gc-num{pointer-events:none;color:var(--comment)}
@@ -398,27 +401,18 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .cartao-dica h4{flex:1;min-width:0;margin:0;font-size:12.5px;font-weight:600;color:var(--fg);
            line-height:1.3}
   /* a palavra do nível mora no nome da região (`aria-label`), não num texto escondido: texto
-     recortado de propósito é, para a régua da janela estreita, texto que a janela engoliu */
-  .cartao-dica .cd-info{flex:0 0 18px;width:18px;height:18px;border-radius:50%;padding:0;
-              border:1px solid var(--linha);background:none;color:var(--texto-mudo);
-              display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
-  .cartao-dica .cd-info .cd-i{width:12px;height:12px;fill:none;stroke:currentColor;
-              stroke-width:2.6;stroke-linecap:round}
-  .cartao-dica .cd-info .cd-i circle{fill:currentColor;stroke:none}
-  .cartao-dica .cd-info:hover,.cartao-dica .cd-info[aria-expanded="true"]{border-color:var(--cyan);color:var(--cyan)}
+     recortado de propósito é, para a régua da janela estreita, texto que a janela engoliu.
+     O × ignora o conselho (o mesmo gesto do antigo «Ignorar»); o porquê vive no hover do título. */
+  .cartao-dica .cd-x{flex:0 0 24px;width:24px;height:24px;margin:-4px 0 -4px 0;padding:0;
+              border:0;border-radius:5px;background:none;color:var(--texto-mudo);font-size:16px;
+              line-height:1;display:inline-flex;align-items:center;justify-content:center;
+              cursor:pointer}
+  .cartao-dica .cd-x:hover{background:var(--sel-bg);color:var(--fg)}
   .cd-detalhe{margin:0;font-size:11px;font-family:'JetBrains Mono',monospace;
               color:var(--texto-mudo)}
   .cartao-dica .cd-pic{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:0;
              font-size:10.5px;font-family:'JetBrains Mono',monospace;color:var(--texto-mudo)}
   .cartao-dica .cd-pic i{font-style:normal;color:var(--green)}
-  .cd-porque{position:absolute;left:-1px;right:-1px;top:calc(100% + 4px);z-index:30;
-             padding:10px 12px;border:1px solid var(--border-forte);border-radius:8px;
-             background:var(--panel);box-shadow:0 8px 24px rgba(0,0,0,.6);
-             font-size:11.5px;line-height:1.4;color:var(--texto-suave)}
-  .cd-porque p{margin:0 0 6px}
-  .cartao-dica .cd-ignora{background:none;border:0;padding:0;min-height:0;height:auto;
-             font-size:11.5px;color:var(--texto-mudo);text-decoration:underline;cursor:pointer}
-  .cartao-dica .cd-ignora:hover{color:var(--fg)}
   .cd-acao{margin-top:auto;display:flex;justify-content:flex-end}
   .cartao-dica .cd-botao{display:flex;align-items:center;justify-content:center;width:auto;
               box-sizing:border-box;min-height:28px;padding:0 12px;text-align:center;
@@ -589,33 +583,10 @@ CSS = CSS_GLIFO + CSS_POPUP + """
                font-size:12px;color:var(--texto-mudo);white-space:nowrap}
   .gc-est .est > b{margin-left:auto;min-width:0;overflow:hidden;text-overflow:ellipsis;
                    color:var(--fg);font-weight:600}
-  .gc-est .est > .certo{margin-left:auto;font-style:normal;font-weight:700;color:var(--green)}
+  .gc-est .est > .certo{margin-left:auto;font-style:normal;font-weight:700;color:var(--texto-suave)}
   .gc-est .est > b + .certo{margin-left:0}
   .gc-est .est.warn > b{color:var(--orange)}
   .gc-corpo{display:flex;flex-direction:column;gap:5px;margin-top:auto;padding-top:10px}
-  /* O PERFIL DE DESEMPENHO É DO CONTROLE — 26/09/2026, pedido: *«Modo
-     Economia de Bateria Deveria Ser o perfil de desempenho»* e *«perfil do
-     desempenho deveria aparecer por controle»*. Os três botões do mapa das
-     conexões desceram para cada cartão; o aceso é o deste controle. */
-  .gc-perfil{display:flex;flex-direction:column;gap:5px}
-  .gc-perfil .rot{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--texto-mudo)}
-  /* CADA BOTÃO COM A LARGURA DA PALAVRA DELE, E A SOBRA REPARTIDA — medido
-     em 26/09/2026 (A-GESTAO-DOS-CONTROLES-NO-PRODUTO-01): com três colunas
-     iguais, «Bateria Longa» e «Personalizado» perdiam 7 a 8 px no tamanho do
-     desenho (1212 px) e viravam reticências. Com `flex:1 1 auto` a 11px os
-     três cabem a partir de 1181 px, a menor janela com quatro cartões numa
-     fileira (abaixo dela a grade vira duas e o cartão alarga). Os nomes dela
-     de 26/09 («Perfil máximo», «Perfil econômico») pedem 246 px numa linha de
-     245: o vão de 2 px, 1 px de respiro e a letra 0,2 px mais junta devolvem
-     os 15 que faltavam. */
-  .gc-perfil .seg{display:flex;flex-wrap:nowrap;gap:2px}
-  /* `min-width:0` porque o `.btn` do esqueleto nasce com 150px, e três de 150
-     não cabem num cartão de 350. */
-  .gc-perfil .seg .btn{flex:1 1 auto;width:auto;min-width:0;height:26px;padding:0 1px;font-size:11px;
-                       letter-spacing:-.2px;
-                       white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .gc-perfil .seg .btn.on{border-color:var(--purple);background:rgba(189,147,249,.16);
-                          color:var(--fg);font-weight:600}
   /* «A LUZ NÃO ACENDE» VIROU BOTÃO — 26/09/2026, pedido: *«A luz não
      acende isso deveria ser um botão»*. Era link pontilhado.
      O TEXTO ABAIXO É DE 25/09. «A LUZ NÃO ACENDE» ERA UM LINK DISCRETO, e não um botão do tamanho da
@@ -1120,27 +1091,14 @@ def desenho_do_controle(c, luz):
 
 #: `<span data-campo="nome" data-hef-alvo="html">` que no lugar cheio traz o
 def nome_do_lugar_vazio(c):
-    """O rótulo do lugar sem aparelho: nenhum (desenho aprovado de 05/10/2026, só o «P N»)."""
-    return ""
+    """O rótulo do lugar sem aparelho: «P3 • Desconectado» (conserto de 14/10/2026, q4B)."""
+    return (f'<b>P{c["jogador"]}</b><span class="sep">{_pacote_base.PONTO_DO_ROTULO}</span>'
+            f'{_pacote_base.SEM_NINGUEM_AQUI}')
 
 
 #: 26/09/2026; a bateria foi para o nome (`nome_com_a_bateria`).
-ESTADOS_DA_LINHA = ("est-mic", "est-som", "est-modo", "est-visto", "est-mira")
+ESTADOS_DA_LINHA = ("est-mic", "est-som", "est-modo", "est-visto")
 DONO_DA_CENA = {"p1": "Vitória"}
-PERFIL_DA_CENA = {"p1": "tudo_ligado", "p2": "bateria_longa"}
-from hefesto_dualsense4unix.app.actions.config import secao_orcamento as _orc  # noqa: E402
-
-PERFIS_DO_CARTAO = tuple((p, _orc.ROTULOS_DOS_PERFIS[p], _orc.DICAS_DO_CARTAO[p])
-                         for p in _orc.PERFIS)
-
-
-def botao_do_perfil(pid, rotulo, dica, aceso):
-    """Um dos três botões: o produto acende o do controle pelo endereço `perfil`"""
-    return (f'<button class="btn{" on" if aceso else ""}" data-gesto="perfil-do-controle" '
-            f'value="{pid}" role="radio" aria-checked="{"true" if aceso else "false"}" '
-            f'data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" '
-            f'data-hef-quando="{pid}" data-hef-atributo="aria-checked" '
-            f'title="{dica}">{rotulo}</button>')
 DONO_DICA = ("Escreva o nome de quem joga com este controle. O nome fica no controle: "
              "vale em qualquer entrada e adaptador. Apague para voltar a «P N».")
 from types import SimpleNamespace  # noqa: E402
@@ -1149,17 +1107,12 @@ _DECLARACAO_DA_BANCADA = SimpleNamespace(controles={}, orcamento=SimpleNamespace
 DICAS_DA_CENA = _dicas_da_cena()
 
 
-#: Quem tem a Mira acesa na cena: o P1, com os números de nascença da Calibrar (lidos de lá).
-MIRA_ACESA_NA_CENA = {"p1"}
-
-
 def _estado_da_bancada(c):
-    """Os cinco selos da cena, pelo MESMO dono que o produto chama a cada tique."""
+    """Os quatro selos da cena, pelo MESMO dono que o produto chama a cada tique."""
     radio = e_radio(c)
     vivo = {"uniq": "", "transport": "bt" if radio else "usb",
             "battery_pct": DA_CONTROLES[c["pref"]]["bat"], "hz_movimento": 480,
-            "hz_voz": 1 if radio else None, "speaker": {"volume": 100, "muted": False},
-            "mira": _mira_de_nascenca(c["pref"] in MIRA_ACESA_NA_CENA)}
+            "hz_voz": 1 if radio else None, "speaker": {"volume": 100, "muted": False}}
     return _pacote08.estado_do_controle(vivo, {"mascara": c["mascara"]}, {"native_mode": False},
                                         _DECLARACAO_DA_BANCADA, _MODO_DA_CENA)
 
@@ -1263,11 +1216,6 @@ def linha_do_controle(c):
 {chr(10).join(f'              <span class="gc-est" data-campo="{k}" data-hef-alvo="html">{estado.get(k, TRAVESSAO)}</span>' for k in ESTADOS_DA_LINHA)}
             </div>
             <div class="gc-corpo">
-              <div class="gc-perfil">
-                <div class="seg" role="radiogroup" aria-label="Perfil de desempenho">
-{chr(10).join('                  ' + botao_do_perfil(pid, rotulo, dica, PERFIL_DA_CENA.get(c["pref"], "tudo_ligado") == pid) for pid, rotulo, dica in PERFIS_DO_CARTAO)}
-                </div>
-              </div>
               {bloco_da_luz}
             </div>
           </div>'''
@@ -1354,27 +1302,9 @@ _confere_no_produto(_JULGAR, [
     'f"colada no {vizinho.tipo}, na entrada {entrada.par}"',
 ])
 
-def _virgula(n):
-    from hefesto_dualsense4unix.app.fala_do_mapa import formata_pt_br
-
-    return formata_pt_br(n)
-
-
-OS_DOIS_RELOGIOS = (
-    f"A entrada aparece para mim em ~{_virgula(CALIB['SEGUNDOS_ATE_O_NO'])} s. "
-    f"O controle só consegue vibrar por volta de "
-    f"{_virgula(CALIB['SEGUNDOS_ATE_A_VIBRACAO'][0])} a "
-    f"{_virgula(CALIB['SEGUNDOS_ATE_A_VIBRACAO'][1])} s — e essa demora é uma "
-    "correção que o próprio Hefesto instala para ele não falhar. Não é você, e "
-    "não é o seu cabo.")
-_confere_no_produto(
-    R / "src/hefesto_dualsense4unix/interface/calibracao_das_entradas.py",
-    ["A entrada aparece para mim em ~", "Não é você, e não é o "])
-
-
-def ajuda(txt, largura=""):
-    st = f' style="width:{largura}"' if largura else ""
-    return f'<span class="ajuda">?<span class="dica"{st}>{txt}</span></span>'
+#: O que o título de cada janela de mapear diz ao passar o mouse (o «?» saiu, 13/10/2026).
+DICA_DO_MAPEAR = "Clique no aparelho, depois na entrada em que ele está"
+DICA_DO_MAPEAR_PORTAS = "Use o mesmo DualSense em todas as entradas"
 
 
 # todas as letras que o DualSense por cabo é `03/00/00` — classe de entrada sem
@@ -1432,10 +1362,6 @@ def veredito(n, esticada=False):
 #:   · `especie`   — os dois DualSense por cabo saem sem classe no motor.
 LACUNAS = ["LACUNA_POSICAO", "LACUNA_VELOCIDADE", "LACUNA_ESPECIE"]
 
-
-_CONFISSAO_ITENS = [f"· {MAPA['CONFISSAO'][k]}" for k in LACUNAS]
-CONFISSAO_EM_DICA = ("<b>" + html.escape(MAPA["CONFISSAO_ABERTURA"]) + "</b><br>"
-                     + "<br>".join(html.escape(i) for i in _CONFISSAO_ITENS))
 
 _POR_EXTENSO = _pacote08.PALAVRA_DA_CONTA
 if len(LACUNAS) not in _POR_EXTENSO:
@@ -1539,8 +1465,8 @@ def pergunta_da_sala(texto, dica, respostas, marcada, gesto):
 
     O QUE **NÃO** VEIO ANEXADO: o produto gruda a `moldura.QUANDO_VALE` no fim
     desta dica, porque a seção dele não tem onde mais dizê-la. A frase
-    (`GRAVA_NO_CLIQUE`) abre o «?» da janelinha, junto da explicação: texto
-    explicativo é dica, e não corpo da tela. **NÃO É `ESPERA_O_APLICAR`**, que este docstring
+    (`GRAVA_NO_CLIQUE`) tem dono em `logica_do_mapa` e não mora mais na tela do
+    desenho: o título da janela leva só o hover curto do todo (13/10/2026). **NÃO É `ESPERA_O_APLICAR`**, que este docstring
     nomeava até 06/09/2026: aquela é a irmã dela, a da janela GTK que espera o
     "Aplicar", e esta tela grava no clique desde 01/09.
 
@@ -1573,18 +1499,7 @@ TELA_MAPEAR = f'''
 <div class="tela-nova" id="mapear-entradas">
   <div class="tn-cx">
     <div class="tn-topo">
-      <span class="tn-tit">{MAPEAR_ENTRADAS}</span>
-      {ajuda(
-        MAPA["EXPLICACAO"] + " " + MAPA["GRAVA_NO_CLIQUE"] + "<br><br>"
-        "O gesto tem <b>dois tempos</b>: clique no aparelho, depois na entrada em que ele "
-        "está. Um aparelho fica em <b>um</b> lugar — pôr onde ele não estava o tira de onde "
-        "estava, no mesmo gesto.<br><br>"
-        "Enquanto há um aparelho escolhido, <b>todo quadrado publica o juízo</b> para "
-        "<i>ele</i>: sem sujeito a pergunta “aqui serve?” não existe, e a tela cala.<br><br>"
-        "As duas perguntas do fim <b>mudaram-se da aba para cá</b> em 28/08, e aqui elas "
-        "preenchem um vazio real: esta janela não guardava um único fato que só você tem. "
-        "<b>Sem resposta</b> não é o mesmo que <b>“Não sei”</b>.<br><br>"
-        + CONFISSAO_EM_DICA)}
+      <span class="tn-tit" data-dica="{DICA_DO_MAPEAR}">{MAPEAR_ENTRADAS}</span>
       <a class="tn-x" href="#" title="Fechar">×</a>
     </div>
     <div class="tn-corpo">
@@ -1752,7 +1667,6 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
                 white-space:normal}
   .radio .porta:hover{text-decoration:none}
   .radio .marca{color:inherit}
-  .radio .espectro-cab .ajuda{line-height:normal;text-align:center;flex:none;position:static}
   .radio .quadro-topo.cab{margin-bottom:0}
   .radio .quadro-topo.cab .conta{margin-left:4px}
   .radio .lugar:not(.aberto) > .aparelhos{display:none}
@@ -1972,6 +1886,25 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio .cadeado.ligada{border-color:var(--green);background:rgba(80,250,123,.09);
                   color:var(--green)}
   .radio .cadeado.ligada .p{background:var(--green);box-shadow:0 0 6px var(--green)}
+  /* O DESENHO DO TODO (13/10/2026, mudanças 9 e 10): a Rádio aberta cabe sem rolagem (as
+     faixas e os vãos encolhem 2 px, o desenho é o mesmo), e as barras dos adaptadores começam
+     e acabam na mesma reta, qualquer que seja o nome ou a conta do adaptador. */
+  .radio .ar,.radio .ar-do{gap:5px}
+  .radio .ar-duas{row-gap:5px}
+  .radio .ar-grupo{margin-top:3px}
+  .radio .ar-rot,.radio .ar-rot button.rotulo{height:20px}
+  .radio .sala{gap:5px}
+  .radio .lugar-topo{display:grid;grid-template-columns:24px auto 116px 26px minmax(110px,1fr) auto;
+                     column-gap:8px;align-items:center}
+  .radio .lugar-topo > .abre-lugar{grid-column:1}
+  .radio .lugar-topo > .lugar-nome{grid-column:2}
+  .radio .lugar-topo > .onde{grid-column:3;min-width:0}
+  .radio .lugar-topo > .sino{grid-column:4}
+  .radio .lugar-topo > .barra-do-lugar{grid-column:5;min-width:0}
+  .radio .lugar-topo > .lugar-conta{grid-column:6;margin-left:0;display:grid;
+                                    grid-template-columns:auto auto 48px;column-gap:8px;
+                                    justify-content:end}
+  .radio .lugar-topo > .lugar-conta > .sobra{justify-self:start}
 """ + f"  :root{{{_RAIZ_DAS_CORES_DOS_TIPOS}}}\n"
 
 
@@ -2213,9 +2146,7 @@ SPRITE_DOS_EXTERNOS = (
 
 ENCAIXE_CURTO = "Encaixe o DualSense numa entrada vazia."
 
-AJUDA_DO_AR = ("Cada linha é um aparelho, nos mesmos 79 canais. Pintado é o canal bom; o vazio "
-               "é o canal perdido, e a marca embaixo é a cor de quem briga ali. Passe o mouse "
-               "numa linha: acendem ela e quem briga com ela.")  # noqa-acento (texto de tela)
+AJUDA_DO_AR = "Cada linha é um aparelho; passe o mouse para ver quem briga"
 
 LEGENDA_DAS_FAIXAS = (
     '<div class="ar-legenda" role="group" aria-label="Acender por tipo">'
@@ -2701,22 +2632,9 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
         bal.remove(); return;
       }
     });
-    // AS DICAS (AS-DICAS-SAO-CARTOES-COM-UM-GESTO-01): o ⓘ abre o porquê do cartão, e o botão
-    // de mover abre a MESMA pergunta de todo mover (o molde é o do balão da lâmpada).
+    // AS DICAS (AS-DICAS-SAO-CARTOES-COM-UM-GESTO-01): o botão de mover abre a MESMA pergunta de
+    // todo mover (o molde é o do balão da lâmpada). O porquê vive no hover do título.
     document.addEventListener('click', function(ev){
-      var info = perto(ev, '.dicas .cd-info');
-      todos('.dicas .cd-info[aria-expanded="true"]').forEach(function(x){
-        if(x === info || perto(ev, '.cd-porque')) return;
-        x.setAttribute('aria-expanded', 'false');
-        var p = document.getElementById(x.getAttribute('aria-controls')); if(p) p.hidden = true;
-      });
-      if(info){
-        var aberto = info.getAttribute('aria-expanded') === 'true';
-        info.setAttribute('aria-expanded', aberto ? 'false' : 'true');
-        var porque = document.getElementById(info.getAttribute('aria-controls'));
-        if(porque) porque.hidden = aberto;
-        return;
-      }
       var mover = perto(ev, '.dicas .cd-botao[data-destino]');
       if(mover) perguntar(moldeDe(mover.dataset.alvo, mover.dataset.destino));
     });
@@ -2932,12 +2850,7 @@ TELA_MAPEAR_PORTAS = f'''
 <div class="tela-nova" id="mapear-portas">
   <div class="tn-cx mp-cx">
     <div class="tn-topo">
-      <span class="tn-tit">{MAPEAR_ENTRADAS}</span>
-      {ajuda("Use o mesmo DualSense em todas: ligue o cabo numa entrada, espere o Hefesto "
-             "mostrar o que mediu dela e salve; o <b>nome</b> e o <b>lugar</b> são opcionais. "
-             "Depois passe o cabo para a próxima. O nome e o lugar aparecem na "
-             "<b>Gestão de controles</b> e em <b>Rádio e adaptadores</b>.<br><br>"
-             + _pacote08.MAPEAR_DICA_DA_PORTA)}
+      <span class="tn-tit" data-dica="{DICA_DO_MAPEAR_PORTAS}">{MAPEAR_ENTRADAS}</span>
       <a class="tn-x" href="#" title="Fechar">×</a>
     </div>
     <div class="tn-corpo mp" id="mp-forma">
@@ -3006,8 +2919,7 @@ def cerimonia(ident, pergunta, contador, quem, botoes, dica, rodape):
 <div class="tela-nova" id="{ident}">
   <div class="tn-cx">
     <div class="tn-topo">
-      <span class="tn-tit">{MAPEAR_UMA_A_UMA}</span>
-      {ajuda(dica + "<br><br>" + OS_DOIS_RELOGIOS)}
+      <span class="tn-tit" data-dica="{dica}">{MAPEAR_UMA_A_UMA}</span>
       <a class="tn-x" href="#" title="Fechar" data-gesto="entrada-parar">×</a>
     </div>
     <div class="tn-corpo">
@@ -3044,10 +2956,7 @@ TELA_SENTADA = cerimonia(
         f'value="{f}" title="Cria uma entrada nesta face para este aparelho e para o que '
         f'estiver pendurado nele. Gravado na hora.">{f}</button>'
         for i, f in enumerate(CALIB["FACES"])),
-    "A pergunta é sobre a <b>entrada</b>, não sobre o aparelho: mesmo quando o kernel "
-    "não diz o que é a coisa, você sabe em que buraco ela está.<br><br>"
-    "O rótulo é <b>espécie · nome do kernel</b>. O caminho fica à vista porque é a única "
-    "coisa que distingue dois aparelhos idênticos.",
+    "A pergunta é sobre a entrada, não sobre o aparelho",
     f'<button class="btn" data-gesto="entrada-pular" title="Pula esta entrada, sem gravar '
     f'nada e sem perguntar de novo.">{CALIB["ROTULO_NAO_SEI"]}</button>\n      {JA_CHEGA}')
 
@@ -3061,10 +2970,7 @@ TELA_FIM = cerimonia(
     f'{CALIB["ROTULO_VOU_MOSTRAR"]}</button>'
     f'<a class="btn" href="#" data-gesto="entrada-parar" title="Fecha a janela. Mesmo destino do “{CALIB["ROTULO_JA_CHEGA"]}”.">'
     f'{CALIB["ROTULO_DEIXAR_PARA_DEPOIS"]}</a>',
-    CALIB["CONVITE_EM_PE"] + "<br><br>"
-    "É um <b>fim de verdade</b>: sem aviso de incompletude, sem selo de pendência, sem "
-    "cartaz. O contador some, porque não há mais o que contar nesta fase.<br><br>"
-    "Quem já tem lugar para tudo <b>abre a janela direto aqui</b>.",
+    "Falta marcar as entradas vazias",
     JA_CHEGA)
 
 TELA_EM_PE = cerimonia(
@@ -3075,10 +2981,7 @@ TELA_EM_PE = cerimonia(
     f'<button class="btn foco" data-gesto="entrada-nao-alcanco" title="Tira esta entrada da '
     f'conta de vez: não vira dívida, não vira aviso, e o Hefesto não volta a perguntar. Ela '
     f'diminui o TOTAL do contador, não o feito.">{CALIB["ROTULO_NAO_ALCANCO"]}</button>',
-    CALIB["CONVITE_DO_ENCAIXE"] + "<br><br>"
-    "Aqui a face <b>não se pergunta</b>: toda entrada aprendida de pé é gravada em "
-    "<b>{}</b>. O total <b>encolhe</b> — ele é recalculado pela leitura de agora, "
-    "e “{}” tira uma vaga da conta.".format(CALIB["FACES"][1], CALIB["ROTULO_NAO_ALCANCO"]),
+    "Encaixe o DualSense com o cabo numa entrada vazia",
     JA_CHEGA)
 
 
@@ -3130,12 +3033,7 @@ MIOLO = f'''
            que vale igual para caixa e para rádio. -->
       <input class="abre" type="radio" name="cx8-secao" id="cx8-2" checked>
       <div class="quadro-topo">
-        <label class="quadro-titulo" for="cx8-2">Gestão de controles</label>
-        <span class="ajuda">?<span class="dica">
-          Os seus controles e as entradas deles: as dicas em cima, cada uma com o seu botão,
-          e embaixo um cartão por controle com o estado dele agora e o perfil de desempenho
-          dele. Nada muda sozinho: a dica diz o que mover para onde, e o botão leva você até lá.
-        </span></span>
+        <label class="quadro-titulo" for="cx8-2" data-dica="Dicas em cima, um cartão por controle embaixo">Gestão de controles</label>
       </div>
       <div class="quadro-corpo">
         <!-- A LINHA DE VEREDITO SAIU — 26/09/2026, pedido com a janela
@@ -3276,8 +3174,7 @@ MIOLO = f'''
       <div class="quadro-corpo">
         <div class="espectro">
           <div class="espectro-cab">
-            Dispositivos conectados
-            <span class="ajuda" role="img" aria-label="{AJUDA_DO_AR}" title="{AJUDA_DO_AR}"><svg class="i" aria-hidden="true"><use href="#rd-ajuda"/></svg></span>
+            <span data-dica="{AJUDA_DO_AR}">Dispositivos conectados</span>
             {LEGENDA_DAS_FAIXAS}
           </div>
           <div class="pistas" data-campo="espectro-canais" data-hef-alvo="html">{CAMPOS_DO_RADIO["espectro-canais"]}</div>
@@ -3321,20 +3218,6 @@ MIOLO = f'''
 {SPRITE_DOS_EXTERNOS}
 {SCRIPT_DA_SECAO_DO_RADIO}
 {SCRIPT_DAS_FAIXAS}
-<script>
-/* O PERFIL DE DESEMPENHO ACENDE NO CLIQUE — 26/09/2026, SÓ NA BANCADA. No
-   produto (onde o piloto pôs `window.__hef`) quem acende é o tique, pelo que
-   o daemon gravou: um clique recusado não pode ficar aceso. */
-document.addEventListener("click", function (ev) {{
-  if (window.__hef) return;
-  var b = ev.target.closest(".gc-perfil .seg .btn");
-  if (!b) return;
-  b.parentElement.querySelectorAll(".btn").forEach(function (x) {{
-    x.classList.toggle("on", x === b);
-    x.setAttribute("aria-checked", x === b ? "true" : "false");
-  }});
-}});
-</script>
 '''
 
 LEGENDA = f'''<div class="nota">
@@ -3342,7 +3225,7 @@ LEGENDA = f'''<div class="nota">
   <ul>
     <li><b>Uma seção só</b>: as <b>dicas</b> (um cartão por ajuste, com o botão dele; as três que mais pesam, o resto em «mais N») em cima, quatro ferramentas com ícone no meio (o «Atualizar» entrou no «{EXAMINAR_PORTAS}»; o <b>{MAPEAR_ENTRADAS}</b> abre o fluxo porta a porta) e um cartão por controle embaixo.</li>
     <li><b>O cartão diz o estado de agora</b>, no molde da aba Sistema: Mic, Som, Modo de conexão, Visto como, Conexão e Bateria, com o ✓ de «tudo certo». Nada abre nem fecha.</li>
-    <li><b>O nome ao lado do «P N» é de quem joga</b>: escreva; apagado, o campo volta vazio. Embaixo, o <b>Perfil de desempenho</b> daquele controle (Perfil máximo, perfil econômico ou Personalizado), o mesmo dado da aba Sistema. O lugar sem controle fica, tracejado, só com o «P N».</li>
+    <li><b>O nome ao lado do «P N» é de quem joga</b>: escreva; apagado, o campo volta vazio. O perfil de desempenho mora na aba Sistema. O lugar sem controle fica, tracejado, com «P N • Desconectado».</li>
     <li><b>{MAPEAR_ENTRADAS}</b> abre uma tela com o que o Hefesto mediu da entrada da vez, o nome e o lugar que você dá, e a lista das que já têm nome.</li>
   </ul>
   <h2>«Rádio e adaptadores» é o desenho que você aprovou em 23/09 — e o que ficou diferente</h2>
@@ -3350,7 +3233,7 @@ LEGENDA = f'''<div class="nota">
     <li><b>A seção inteira é o <code>mapa-do-radio.html</code></b>: a folha, os ícones e esta cena de exemplo são lidos dele. No produto quem pinta é o Hefesto, com os Hz medidos, as pontes «N de {_pacote08.PONTES_POR_ADAPTADOR}» e o sino de cada adaptador.</li>
     <li><b>Os vizinhos viraram selos, e não faixas.</b> O produto não lê o canal de um teclado ou de um Wi-Fi; desenhar a faixa seria estimar (R10). O hachurado — os canais que cada adaptador evita — é medido e continua.</li>
     <li><b>Caixa e fone não mostram Hz</b>: o contador mede os controles. A vaga deles fica, com a cor e o ícone.</li>
-    <li><b>A fase em pé diz uma frase só</b>: «{ENCAIXE_CURTO}» (R9). A explicação longa foi para o «?».</li>
+    <li><b>A fase em pé diz uma frase só</b>: «{ENCAIXE_CURTO}» (R9). A explicação longa foi para o hover do título.</li>
     <li><b>A tabela dos adaptadores, a régua de turnos e as linhas «hub em comum» e «contagens do gabinete» saíram</b> com a seção velha. O nome do adaptador é o campo do cartão, e ele é o nome da ENTRADA.</li>
   </ul>
   <h2>As duas janelas do gabinete entraram na tela — e o que elas NÃO fazem</h2>
@@ -3549,9 +3432,11 @@ if __name__ == "__main__":
             "o rótulo das seções que expandem perdeu o respiro de baixo — volta a "
             "1px contra os 12 de cima, que é o que ela viu nas duas fotos")
 
+    _exigir("class=\"" + "ajuda" not in _HTML and "cd-" + "info" not in _HTML,
+            "a aba Conexões voltou a ter um «?» ou um «i»: a dica mora no hover do título")
     _FORA = [c for c in MESA if not c.get("conectado", True)]
-    _exigir("Desconectado</span>" not in _HTML,
-            "o lugar vazio da Gestão voltou a dizer «Desconectado»: o desenho de 05/10 é só o «P N»")
+    _exigir(_HTML.count('<span class="sep">•</span>Desconectado</span>') == len(_FORA),
+            "o lugar vazio da Gestão não diz «P N • Desconectado»: é o desenho de 14/10 (q4B)")
     for _c in _FORA:
         _exigir(rotulo(_c) not in _HTML,
                 f"o rótulo de mesa do Player {_c['jogador']} continua na tela — ele não está na mesa")

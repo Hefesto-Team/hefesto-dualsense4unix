@@ -1267,6 +1267,29 @@ _NAO_E_PROMESSA: dict[str, str] = {
 }
 
 _SEM_CAMINHO_HOJE: dict[str, str] = {
+    # sai com: A-ABA-SISTEMA-DO-TODO-01
+    "app/actions/config/secao_orcamento.py::perfil_do_controle": (
+        "15/10/2026 — o botão do perfil de desempenho DE CADA CONTROLE, que a aba Conexões "
+        "tinha no cartão. O caminho se perde porque o pedido dela de 13/10 (mudança 12 do todo, "
+        "A-ABA-CONEXOES-DO-TODO-01) tirou os botões do cartão, e o gesto `perfil-do-controle` "
+        "saiu com eles; a economia por controle segue no `maquina.json` "
+        "(`controles[uniq].economia`) sem tela. Fecha quando a A-ABA-SISTEMA-DO-TODO-01 decidir "
+        "se a escolha por controle volta na Sistema, ou apagar o que o cartão deixou."
+    ),
+    # sai com: A-ABA-SISTEMA-DO-TODO-01
+    "app/actions/config/secao_orcamento.py::declaracao_do_perfil": (
+        "15/10/2026 — o corpo do `machine.declare` do clique num perfil do cartão. O caminho se "
+        "perde no mesmo ponto de `perfil_do_controle`: o botão por controle saiu da aba "
+        "Conexões (A-ABA-CONEXOES-DO-TODO-01) e nenhuma outra tela o chama. Sai ou volta "
+        "junto com ele, na A-ABA-SISTEMA-DO-TODO-01."
+    ),
+    # sai com: A-ABA-SISTEMA-DO-TODO-01
+    "profiles/schema.py::origem_da_economia": (
+        "15/10/2026 — QUEM ligou a economia numa peça (a mesa ou o controle), lida pelo selo "
+        "«economia» do cartão na aba Conexões. O caminho se perde porque o cartão deixou de "
+        "ter o perfil por controle (A-ABA-CONEXOES-DO-TODO-01) e o selo saiu com ele. Fecha "
+        "junto com `perfil_do_controle`, na A-ABA-SISTEMA-DO-TODO-01."
+    ),
     # sai com: A-ABA-VIBRACAO-DO-TODO-01
     "interface/monta.py::modo_auto": (
         "13/10/2026 — o botão único do «Modo automático» (A-BASE-COMUM-DAS-ABAS-01), "

@@ -328,17 +328,18 @@ def test_o_contador_da_cerimonia_abre_com_maiuscula_no_desenho_e_no_pacote() -> 
     assert not re.search(r'class="ce-cont"[^>]*>entrada ', pagina)
 
 
-def test_o_texto_explicativo_das_telas_de_mapear_mora_no_ponto_de_interrogacao() -> None:
+def test_o_texto_explicativo_das_telas_de_mapear_mora_no_titulo_da_janela() -> None:
     """Ordem de produto (ESCOLHAS, 08/10): o explicativo de «Mapear entradas» e de
-    «Entrada a Entrada» sai do corpo e vai para o «?»."""
+    «Entrada a Entrada» sai do corpo e vai para o hover do título (o «?» saiu, 13/10)."""
     pagina = _a_pagina()
     assert 'class="ce-relogios"' not in pagina, "o texto dos dois relógios voltou ao corpo da tela"
     depois_do_fim = pagina.split('id="mapear-entrada-a-entrada-fim"')[1]
     corpo_fim = depois_do_fim.split('id="mapear-entrada-a-entrada-em-pe"')[0]
     assert re.search(r'<span class="ce-quem"[^>]*></span>', corpo_fim), "o convite voltou ao corpo"
-    assert "Falta o que está vazio" in corpo_fim and "A entrada aparece para mim" in corpo_fim
+    assert 'data-dica="Falta marcar as entradas vazias"' in corpo_fim, "a dica saiu do título"
     portas = pagina.split('id="mapear-portas"')[1].split("</script>")[0]
-    assert "Nomeie a entrada" in portas and portas.count("Nomeie a entrada") == 1
+    assert 'data-dica="Use o mesmo DualSense em todas as entradas"' in portas
+    assert "Nomeie a entrada" not in portas, "a explicação longa da porta voltou à tela"
     assert ('data-campo="mapear-diz">Conecte um DualSense em cada entrada USB do seu '
             'dispositivo.</span>') in portas
 

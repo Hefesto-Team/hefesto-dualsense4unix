@@ -26,11 +26,6 @@ from tests.unit.test_entrada_a_entrada_02_as_telas_aprovadas import (
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 
 FRASE_DELA = "Conecte um DualSense em cada entrada USB do seu dispositivo."
-#: O resto da frase de produto é explicação: desde 08/10/2026 mora no «?» da tela.
-RESTO_DA_FRASE_DELA = (
-    "Nomeie a entrada (ou deixe vazia para ela ser enumerada). Ao final, valide e, "
-    "caso necessário, faça os ajustes na entrada no botão Mapa das conexões."
-)
 
 PCI = "0000:0a:00.0"
 
@@ -119,18 +114,17 @@ def test_a_frase_da_entrada_encontrada_e_a_dela() -> None:
     assert pac.campos_do_mapear({"estado": "porta", "portas": []})["mapear-diz"] == FRASE_DELA
     bancada = (RAIZ / "mockup/08-conexoes.html").read_text(encoding="utf-8")
     assert FRASE_DELA in bancada, "a cena do desenho não traz a frase — regere a bancada"
-    assert pac.MAPEAR_DICA_DA_PORTA == RESTO_DA_FRASE_DELA
-    assert RESTO_DA_FRASE_DELA in bancada, "o resto da frase sumiu do «?» da tela"
+    assert not hasattr(pac, "MAPEAR_DICA_DA_PORTA"), "o «?» saiu (13/10): a explicação não tem dono"
 
 
 def test_a_dica_do_mapear_nao_desdiz_a_frase() -> None:
-    """A dica «?» do diálogo mandava «dê um nome e o lugar, e salve» ao lado da"""
+    """A dica do diálogo (hover do título) mandava «dê um nome e o lugar, e salve» ao lado da"""
     bancada = (RAIZ / "mockup/08-conexoes.html").read_text(encoding="utf-8")
     inicio = bancada.index('id="mapear-portas"')
     topo = bancada[inicio:bancada.index('id="mp-forma"', inicio)]
-    dica = topo[topo.index('class="dica">'):]
-    assert "opcionais" in dica, f"a dica do Mapear ainda manda dar nome e lugar: {dica[:300]}"
-    assert "Check-up" not in dica and "Gestão de controles" in dica, dica[:300]
+    dica = topo[topo.index('class="tn-tit"'):topo.index("</span>", topo.index('class="tn-tit"'))]
+    assert 'data-dica="Use o mesmo DualSense em todas as entradas"' in dica, dica[:300]
+    assert "dê nome e lugar" not in dica and "Check-up" not in dica, dica[:300]
     botao = bancada[bancada.index('href="#mapear-portas"'):]
     botao = botao[:botao.index(">")]
     assert "dê nome e lugar" not in botao and "opcionais" in botao, botao

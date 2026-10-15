@@ -438,7 +438,7 @@ def test_o_cartao_do_equilibrar_diz_sinal_fraco_com_os_dois_numeros() -> None:
     from hefesto_dualsense4unix.integrations import dicas_da_conexao as dicas
 
     dica = dicas.dica_do_movimento(movimento)
-    assert dica.titulo == "P2 com sinal fraco", (
+    assert dica.titulo == "O controle com sinal fraco", (
         f"o sinal fraco é do controle, e o título diz {dica.titulo!r}")
     assert "-78 dBm" in dica.porque and "-52 dBm" in dica.porque
     assert "dividido" not in dica.titulo and "mesa" not in dica.porque.lower()

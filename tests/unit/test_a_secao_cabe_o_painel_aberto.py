@@ -182,8 +182,19 @@ def test_mordida_sem_a_conta_a_lista_volta_a_ser_cortada(tmp_path: Path) -> None
     assert f["painel_rola"] > 0 and f["ultimo_visivel"] is False, f
 
 
-def test_a_1212_a_linha_do_5ghz_sobe_para_o_titulo_e_nao_custa_rolagem() -> None:
+#: Desde a rodada 2 do todo (mudança 9, 13/10/2026) a Rádio aberta cabe sem rolagem a 1212 por 809
+#: com a linha do 5 GHz na faixa; a troca pelo selo do título é para a janela mais baixa (790).
+BAIXA = (1212, 790)
+
+
+def test_a_1212_por_809_a_radio_aberta_cabe_com_a_linha_na_faixa() -> None:
     f = _no_webkit(MOCKUP, 0, prepara=PREPARA_O_AR, mede=MEDE_O_AR)
+    assert f["linha_visivel"] is True and f["selo_visivel"] is False, f
+    assert f["miolo_rola"] <= 0, f
+
+
+def test_a_1212_baixa_a_linha_do_5ghz_sobe_para_o_titulo_e_nao_custa_rolagem() -> None:
+    f = _no_webkit(MOCKUP, 0, prepara=PREPARA_O_AR, mede=MEDE_O_AR, tamanho=BAIXA)
     assert f["selo_visivel"] is True and f["linha_visivel"] is False, f
     assert f["selo"] == "Wi-Fi · 5 GHz · canal 161", f
     assert f["selo_altura"] <= f["titulo_altura"], "o selo engordou o título"
@@ -201,5 +212,5 @@ def test_mordida_sem_a_troca_a_linha_do_5ghz_volta_a_custar_rolagem(tmp_path: Pa
     assert pagina.count(SELO_NO_TITULO) == 1
     cega = tmp_path / "08-sem-o-selo.html"
     cega.write_text(pagina.replace(SELO_NO_TITULO, ""), encoding="utf-8")
-    f = _no_webkit(cega, 0, prepara=PREPARA_O_AR, mede=MEDE_O_AR)
+    f = _no_webkit(cega, 0, prepara=PREPARA_O_AR, mede=MEDE_O_AR, tamanho=BAIXA)
     assert f["linha_visivel"] is True and f["miolo_rola"] > f["sem_o_wifi"], f

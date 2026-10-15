@@ -210,7 +210,7 @@ def test_o_carimbo_e_a_contagem_sairam_do_canto_da_gestao():
     assert 'data-campo="examinado"' not in html
     assert 'data-campo="conta-gestao"' not in html
     for texto in (html, GERADOR.read_text(encoding="utf-8")):
-        inicio = texto.index('for="cx8-2">Gestão de controles</label>')
+        inicio = texto.index('for="cx8-2"')
         topo = texto[inicio:texto.index('class="quadro-corpo"', inicio)]
         assert 'class="conta"' not in topo, topo
     pacote = PACOTE.read_text(encoding="utf-8")

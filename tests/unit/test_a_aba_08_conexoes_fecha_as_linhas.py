@@ -131,10 +131,13 @@ def test_a_coluna_sem_a_lista_continua_sendo_so_o_card(pacote) -> None:
 
 
 def _a_dica_do_mapa(html: str) -> str:
-    """O «?» da janela «Mapear entradas», onde a frase do clique mora desde 08/10/2026."""
+    """A dica da janela «Mapear entradas»: o hover do título desde 13/10/2026 (o «?» saiu). A
+    publicada guarda o «?» velho até o `--publicar` do fecho."""
     inicio = html.index('id="mapear-entradas"')
-    achado = re.search(r'<span class="dica"[^>]*>(.*?)</span></span>', html[inicio:], re.S)
-    assert achado, "a janela «Mapear entradas» perdeu o «?» — o teste não mede mais nada"
+    achado = re.search(r'<span class="tn-tit" data-dica="([^"]*)"', html[inicio:])
+    if not achado:
+        achado = re.search(r'<span class="dica"[^>]*>(.*?)</span></span>', html[inicio:], re.S)
+    assert achado, "a janela «Mapear entradas» perdeu a dica — o teste não mede mais nada"
     return achado.group(1)
 
 
@@ -143,19 +146,17 @@ def test_o_rodape_do_mapa_nao_manda_apertar_o_aplicar() -> None:
     from hefesto_dualsense4unix.interface import onde
 
     html = onde.pagina("08-conexoes.html").read_text(encoding="utf-8")
-    assert "Tudo aqui é gravado no clique." in _a_dica_do_mapa(html), (
-        "a frase do clique saiu do «?» do Mapa — o teste não mede mais nada")
+    assert _a_dica_do_mapa(html), "a dica do Mapa saiu — o teste não mede mais nada"
     assert "clicar em Aplicar" not in html
 
 
 def test_a_frase_do_clique_e_dica_e_nao_corpo_da_tela() -> None:
     """Ordem (08/10): o texto explicativo das telas de mapear vira dica."""
-    from hefesto_dualsense4unix.interface.logica_do_mapa import EXPLICACAO, GRAVA_NO_CLIQUE
-    from hefesto_dualsense4unix.interface import onde
+    from hefesto_dualsense4unix.interface.logica_do_mapa import EXPLICACAO
+    from hefesto_dualsense4unix.interface import aba08, onde
 
     html = onde.pagina("08-conexoes.html").read_text(encoding="utf-8")
-    dica = _a_dica_do_mapa(html)
-    assert GRAVA_NO_CLIQUE in dica and EXPLICACAO in dica
+    assert _a_dica_do_mapa(html) == aba08.DICA_DO_MAPEAR, "a dica do título é a do desenho do todo"
     assert 'class="tn-frase mm-aplicar"' not in html
     assert f'<div class="tn-frase">{EXPLICACAO}</div>' not in html
 
@@ -172,7 +173,7 @@ def test_o_rodape_do_mapa_vem_do_dono() -> None:
         html = pagina.read_text(encoding="utf-8")
         if publicado and 'class="tn-frase mm-aplicar"' in html:
             continue  # a publicada só acompanha o desenho no `--publicar` do fecho
-        assert GRAVA_NO_CLIQUE in _a_dica_do_mapa(html)
+        assert _a_dica_do_mapa(html)
 
     fonte = pathlib.Path(aba08.__file__).read_text(encoding="utf-8")
     assert GRAVA_NO_CLIQUE not in fonte, (
@@ -408,12 +409,12 @@ def test_a_dica_do_ignorar_vem_do_produto() -> None:
     from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as p
 
     html = onde.pagina("08-conexoes.html").read_text(encoding="utf-8")
-    botoes = re.findall(r'<button class="btn cd-ignora"[^>]*>', html)
-    assert botoes, "a régua não achou o «Ignorar» de nenhum cartão — seletor cego é ERRO"
+    botoes = re.findall(r'<button class="cd-x"[^>]*>', html)
+    assert botoes, "a régua não achou o X de nenhum cartão — seletor cego é ERRO"
     for b in botoes:
         assert 'data-gesto="ignorar"' in b, b
-        assert f'title="{p.DICA_DO_IGNORAR}"' in b, (
-            f"o `title` de partida não é o do dono: {b}")
+        assert f'data-dica="{p.DICA_DO_IGNORAR}"' in b, (
+            f"a dica de partida não é a do dono: {b}")
     assert "sai desta lista" not in html, (
         "a frase que a 08-Q5 tornou falsa sobreviveu em algum lugar da tela — "
         "fato errado se SUBSTITUI, e sai de TODOS os lugares")

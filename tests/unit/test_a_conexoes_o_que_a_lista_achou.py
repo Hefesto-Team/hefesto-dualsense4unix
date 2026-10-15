@@ -902,13 +902,13 @@ def test_a_lampada_aparece_sem_ela_abrir_caixa_nenhuma(
 
     destino = _id(ordem.destino)
     # as caixas nascem fechadas (desenho aprovado de 05/10/2026): a proposta é o cartão
-    # «Mover P N» da Gestão, que o usuário vê sem abrir caixa nenhuma; a lâmpada continua na caixa
+    # «Mover» da Gestão, que o usuário vê sem abrir caixa nenhuma; a lâmpada continua na caixa
     assert cena["aberto"] is None
     cartao = a08.html_do_lugar(next(lug for lug in cena["lugares"] if lug["id"] == destino),
                                cena)
     assert 'class="lampada"' in cartao
     dicas = a08._html_das_dicas([], cena)
-    assert f'data-destino="{destino}"' in dicas and ">Mover P" in dicas
+    assert f'data-destino="{destino}"' in dicas and ">Mover</button>" in dicas
 
     a08.abrir_adaptador(None, {"alvo": destino}, None)
     assert _cena(a08, estado)["aberto"] == destino

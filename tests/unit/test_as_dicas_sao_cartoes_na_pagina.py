@@ -2,15 +2,17 @@
 
 AS-DICAS-SAO-CARTOES-COM-UM-GESTO-01 (04/10/2026). A caixa «Sugestão de Conexão» e o exame de
 cinco frases viraram uma fileira de cartões: no máximo três à vista, «mais N» para o resto, o
-porquê atrás do ⓘ e um botão só por cartão. Desde 05/10/2026 (conjunto «Conexões 3»), quatro à
-vista e sem «mais N».
+porquê e um botão só por cartão. Desde 05/10/2026 (conjunto «Conexões 3»), quatro à vista e sem
+«mais N». Desde 13/10/2026 (A-ABA-CONEXOES-DO-TODO-01) o ⓘ e o «Ignorar» de texto saíram: o
+porquê vai ao hover do título, e o ignorar é o X no canto do cartão.
 
 TUDO É DE MENTIRA: a bancada ``mockup/08-conexoes.html`` num WebKit fora da tela, com o pintor do
 piloto; o que a página «manda ao produto» fica numa lista, nada chega a daemon algum.
 
 AS MORDIDAS (feitas na sprint): tirar o corte de ``CARTOES_VISIVEIS`` do ``montar`` reprova a
-régua dos três à vista; tirar o ramo ``.cd-info`` do JavaScript da aba reprova a régua do ⓘ;
-tirar ``data-gesto`` do botão de mover reprova a régua do gesto.
+régua dos três à vista; tirar o ``data-gesto`` do ``.cd-x`` reprova a régua do X; tirar o
+``data-dica`` do título reprova a do porquê; tirar ``data-gesto`` do botão de mover reprova a
+régua do gesto.
 """
 
 from __future__ import annotations
@@ -153,10 +155,9 @@ _LER = r"""
     mais: mais ? mais.querySelector('summary').textContent.trim() : null,
     maisAberto: mais ? mais.open : null,
     sugestao: !!document.querySelector('.sugestao, [data-campo="ordem"]'),
-    info: (cartoes[0] && cartoes[0].querySelector('.cd-info')
-           ? cartoes[0].querySelector('.cd-info').getAttribute('aria-expanded') : null),
-    porque: (cartoes[0] && cartoes[0].querySelector('.cd-porque')
-             ? !cartoes[0].querySelector('.cd-porque').hidden : null),
+    infos: raiz ? raiz.querySelectorAll('.cd-info, .cd-porque').length : -1,
+    comX: cartoes.filter(c => c.querySelector('.cd-x[data-gesto="ignorar"]')).length,
+    semDica: cartoes.filter(c => !c.querySelector('h4[data-dica]')).length,
     certo: (raiz.querySelector('.dicas-certas') || {textContent: ''}).textContent.trim(),
   });
 })()
@@ -258,20 +259,19 @@ def test_cinco_achados_viram_quatro_cartoes_a_vista_sem_mais_n() -> None:
     assert depois["certo"] == "", depois["certo"]
 
 
-def test_o_i_abre_e_fecha_o_porque_sem_mexer_no_botao() -> None:
+def test_o_porque_mora_no_titulo_e_o_x_manda_o_ignorar() -> None:
+    """Sem ⓘ e sem corpo do porquê: o título leva a dica, e o X é o gesto de ignorar."""
     lidas, mensagens = _na_pagina([
         _pintar({"mesa": {"dicas": _html_de_cinco()}}),
         _LER,
-        _clicar(".dicas .cd-info"),
-        _LER,
-        _clicar(".dicas .cd-info"),
-        _LER,
+        _clicar(".dicas .cd-x"),
     ])
-    fechado, aberto, de_novo = lidas[1], lidas[3], lidas[5]
-    assert (fechado["info"], fechado["porque"]) == ("false", False), fechado
-    assert (aberto["info"], aberto["porque"]) == ("true", True), "o ⓘ não abriu o porquê"
-    assert (de_novo["info"], de_novo["porque"]) == ("false", False), "o ⓘ não fechou"
-    assert not [m for m in mensagens if m.get("gesto")], f"o ⓘ mandou gesto: {mensagens}"
+    pintado = lidas[1]
+    assert pintado["infos"] == 0, "voltou o ⓘ ou o corpo do porquê"
+    assert pintado["semDica"] == 0, "um cartão ficou sem a dica no título"
+    assert pintado["comX"] >= 1, "nenhum cartão tem o X de ignorar"
+    gestos = [m for m in mensagens if m.get("gesto")]
+    assert [g["gesto"] for g in gestos] == ["ignorar"], mensagens
 
 
 def test_o_botao_de_mover_chega_ao_piloto_com_o_gesto_e_os_dados() -> None:
@@ -282,15 +282,3 @@ def test_o_botao_de_mover_chega_ao_piloto_com_o_gesto_e_os_dados() -> None:
     gestos = [m for m in mensagens if m.get("gesto")]
     assert [g["gesto"] for g in gestos] == [dicas.GESTO_DE_MOVER], mensagens
     assert (gestos[0].get("alvo"), gestos[0].get("destino")) == ("ap", "L2"), gestos
-
-
-def test_pintar_o_mesmo_html_duas_vezes_nao_fecha_o_porque_aberto() -> None:
-    """O alvo ``html`` só repinta quando o HTML muda: o tique não derruba o que ela abriu."""
-    html = _html_de_cinco()
-    lidas, _ = _na_pagina([
-        _pintar({"mesa": {"dicas": html}}),
-        _clicar(".dicas .cd-info"),
-        _pintar({"mesa": {"dicas": html}}),
-        _LER,
-    ])
-    assert lidas[3]["porque"] is True, "o tique fechou o porquê que ela tinha aberto"

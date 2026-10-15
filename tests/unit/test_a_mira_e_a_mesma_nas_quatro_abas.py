@@ -1,9 +1,11 @@
-"""A Mira da Calibrar é a mesma das abas Navegação, Conexões e Perfis.
+"""A Mira da Calibrar é a mesma das abas Navegação e Perfis (a Conexões saiu em 13/10/2026).
 
 A-MIRA-DA-CALIBRAR-E-A-MESMA-DAS-OUTRAS-ABAS-01 (29/09/2026, ela: *«isso aqui tem que tá
 sincronizado com a aba Conexões, Navegação. e Perfis»*). Os quatro ajustes da Mira de cada
 controle têm UM dono (o `mira.set` e o `_merge_mira` do daemon) e UM leitor
-(`a11.resumo_da_mira`); a Calibrar é o único lugar de MUDAR, e as outras três dizem os números.
+(`a11.resumo_da_mira`); a Calibrar é o único lugar de MUDAR, e as outras dizem os números. O
+giroscópio NÃO aparece na Conexões (decisão de 13/10, a aba A-ABA-CONEXOES-DO-TODO-01): o selo
+`est-mira` saiu de lá e a régua do endereço o confere ausente.
 
 A régua roda sobre o dono de verdade: o `IpcServer` real, o perfil num lar de mentira, e os
 gestos da Calibrar chamando o `mira.set` do servidor. O esperado sai do que a régua MANDOU
@@ -12,11 +14,8 @@ gestos da Calibrar chamando o `mira.set` do servidor. O esperado sai do que a r�
 AS MORDIDAS (rodadas em 07/10/2026 e devolvidas):
 
 * a 06 lendo a mira do perfil no lugar da entrada do daemon → a régua 1 reprova no P3;
-* a 08 casando a entrada pela posição, e não pelo endereço (as entradas chegam em outra ordem
-  que a mesa) → reprova no P3;
 * uma memória no `resumo_da_mira` que ignora o argumento → reprova quando o segundo número muda;
-* o selo da 08 afirmando «✓» no Nativo, e a 06 dizendo a linha no Nativo → a régua do Nativo
-  reprova;
+* a 06 dizendo a linha no Nativo → a régua do Nativo reprova;
 * o endereço do cartão da 06 tirado do gerador → a régua 5 reprova;
 * um `definir_da_peca` por cima do mapa velho no lugar do `definir_por_peca` → a régua 6
   reprova (a peça do perfil A sobrevive à troca);
@@ -139,8 +138,7 @@ def _lado_a_lado(ctx: Contexto, uniq: str) -> dict[str, Any]:
     pref = next(m["pref"] for m in ctx.mesa if m["uniq"] == uniq)
     cal = (pacote_da_pagina(a11_calibrar_sensores.PAGINA, ctx) or {})["colunas"][pref]
     nav = (a06_navegacao.pacote(ctx))["colunas"][uniq]
-    con = (a08_conexoes.pacote(ctx))["colunas"][uniq]
-    return {"calibrar": cal, "navegacao": nav, "conexões": con}
+    return {"calibrar": cal, "navegacao": nav}
 
 
 def _a_perfis(ctx: Contexto, uniq: str) -> str:
@@ -179,16 +177,14 @@ def _confere_as_quatro(ctx: Contexto, uniq: str, anda: int, tremor: int, segurar
     # os dizem) mas a Mira não anda, e afirmá-la seria chute
     assert lido["navegacao"]["mira-resumo"] == (_curto(anda, tremor, segurar) if acesa else "")
     assert lido["navegacao"]["mira-resumo-dica"] == (inteiro if acesa else "")
-    assert f'title="{inteiro}"' in lido["conexões"]["est-mira"], lido["conexões"]["est-mira"]
     assert _a_perfis(ctx, uniq) == inteiro
 
 
 @pytest.mark.parametrize("transportes", [("usb",) * 4, ("bt",) * 4, ("usb", "bt", "bt", "usb")])
 def test_mudar_na_calibrar_e_ler_nas_outras_tres(
         perfis: Path, tmp_path: Path, transportes: tuple[str, ...]) -> None:  # noqa: F811
-    """Réguas 1 e 3. Os quatro gestos para o P3: as quatro abas dizem 9, 7, L2 e o inverter, e
-    os outros três ficam como estavam (a mira de nascença). MORDIDAS: a 06 ler a mira do perfil;
-    a 08 casar a entrada pela posição (as entradas chegam em outra ordem que a mesa)."""
+    """Réguas 1 e 3. Os quatro gestos para o P3: as abas dizem 9, 7, L2 e o inverter, e os
+    outros três ficam como estavam (a mira de nascença). MORDIDA: a 06 ler a mira do perfil."""
     servidor = _servidor_com_perfil(tmp_path)
     for uniq in UNIQS:
         _mira_set(servidor, uniq=uniq, ligada=True)
@@ -202,7 +198,7 @@ def test_mudar_na_calibrar_e_ler_nas_outras_tres(
 
 def test_cada_um_dos_quatro_lugares_diz_o_proprio(perfis: Path, tmp_path: Path) -> None:  # noqa: F811
     """Réguas 1 e 3. O gesto feito uma vez em CADA lugar, com números diferentes: nenhum
-    controle diz o do vizinho. MORDIDA: casar a 08 pela posição."""
+    controle diz o do vizinho. MORDIDA: casar a 06 pela posição."""
     servidor = _servidor_com_perfil(tmp_path)
     por_lugar = {_P1: (2, 11), _P2: (4, 13), _P3: (9, 7), _P4: (12, 40)}
     for uniq, (anda, tremor) in por_lugar.items():
@@ -226,24 +222,20 @@ def test_mudar_de_novo_chega_no_tique_seguinte_sem_reabrir(perfis: Path, tmp_pat
 
 
 def test_o_chip_apagado_nao_afirma_a_mira_nas_outras_abas(perfis: Path, tmp_path: Path) -> None:  # noqa: F811
-    """O número existe com o chip apagado (a Calibrar o mostra), mas a Navegação não diz a linha
-    e a 08 diz «Apagado»: nenhuma aba afirma uma Mira que não anda."""
+    """O número existe com o chip apagado (a Calibrar o mostra), mas a Navegação não diz a linha:
+    nenhuma aba afirma uma Mira que não anda."""
     servidor = _servidor_com_perfil(tmp_path)
     _mira_set(servidor, uniq=_P3, ligada=False, sensibilidade=9)
     ctx = _ctx(_estado(servidor))
     lido = _lado_a_lado(ctx, _P3)
     assert lido["calibrar"]["mira-sensibilidade-num"] == "9"
     assert lido["navegacao"]["mira-resumo"] == ""
-    assert "Apagado" in lido["conexões"]["est-mira"]
-    assert "✓" not in lido["conexões"]["est-mira"]
 
 
 def test_no_nativo_os_numeros_gravam_e_as_abas_dizem_o_chip_cinza(
         perfis: Path, tmp_path: Path) -> None:  # noqa: F811
-    """Régua 4. No Nativo o `mira.set` grava os ajustes, a Calibrar mostra os números, a 08 diz a
-    frase do chip cinza e a 06 não mostra a linha. MORDIDA: o selo da 08 afirmar «✓» no Nativo."""
-    from hefesto_dualsense4unix.interface.pacotes import a02_controles
-
+    """Régua 4. No Nativo o `mira.set` grava os ajustes, a Calibrar mostra os números e a 06 não
+    mostra a linha. MORDIDA: a 06 dizer a linha no Nativo."""
     servidor = _servidor_com_perfil(tmp_path)
     _mira_set(servidor, uniq=_P3, ligada=True)
     servidor.daemon._native_mode = True
@@ -253,9 +245,6 @@ def test_no_nativo_os_numeros_gravam_e_as_abas_dizem_o_chip_cinza(
     lido = _lado_a_lado(ctx, _P3)
     assert lido["calibrar"]["mira-sensibilidade-num"] == "8"
     assert lido["navegacao"]["mira-resumo"] == ""
-    assert "✓" not in lido["conexões"]["est-mira"]
-    assert "Nativo" in lido["conexões"]["est-mira"]
-    assert a02_controles.MIRA_CINZA_NO_NATIVO in lido["conexões"]["est-mira"]
 
 
 def _enderecos(pagina: str) -> set[str]:
@@ -271,14 +260,15 @@ def test_o_endereco_existe_dos_dois_lados(perfis: Path, tmp_path: Path) -> None:
     ctx = _ctx(_estado(servidor))
     lido = _lado_a_lado(ctx, _P3)
     novos = {"06-navegacao.html": set(a06_navegacao.MIRA_VAZIA),
-             "08-conexoes.html": {"est-mira"},
              "calibrar-sensores.html": {"perfil", "mira-sensibilidade-num", "mira-tremor-num"},
              "10-perfis.html": {"guarda.dica"}}
     for pagina, campos in novos.items():
         faltam = campos - _enderecos(pagina)
         assert not faltam, f"{pagina}: o pacote emite e a página não tem onde pintar: {faltam}"
     assert set(a06_navegacao.MIRA_VAZIA) <= set(lido["navegacao"])
-    assert "est-mira" in lido["conexões"]
+    # o giroscópio não mora na Conexões: nem o pacote o emite, nem a bancada tem onde pintá-lo
+    assert "est-mira" not in a08_conexoes.pacote(ctx)["colunas"][_P3]
+    assert "est-mira" not in _enderecos("08-conexoes.html")
 
 
 def _grava_perfil(nome: str, **sensibilidade_por_peca: int) -> Profile:
@@ -348,7 +338,7 @@ def test_o_nome_do_perfil_na_calibrar_e_o_perfil_que_gravou(
 
 
 def test_a_cena_dos_geradores_diz_o_mesmo_que_o_produto() -> None:
-    """A cena (06, 08 e 10) escreve o bloco de nascença da Calibrar: o número vem de
+    """A cena (06 e 10) escreve o bloco de nascença da Calibrar: o número vem de
     `calibrar.SENSIBILIDADE` e `calibrar.TREMOR`, e não digitado num gerador."""
     bloco = a11_calibrar_sensores.bloco_de_nascenca()
     assert bloco["sensibilidade"] == calibrar.SENSIBILIDADE[2]

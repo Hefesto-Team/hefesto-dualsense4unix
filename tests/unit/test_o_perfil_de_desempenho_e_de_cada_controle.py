@@ -7,18 +7,16 @@ Conexões (`D-2609-O-PERFIL-DE-DESEMPENHO-E-POR-CONTROLE`), «Eu escolho» virou
 Sistema falam o MESMO perfil, por um dono e pelo mesmo gesto do daemon
 (`D-2609-A-CONEXOES-E-A-SISTEMA-FALAM-O-MESMO-PERFIL`).
 
-O que cada seção prova, e a mordida que a derruba:
+A Conexões deixou de ter os botões (13/10/2026, mudança 12 do desenho do todo, pedido da Vitória:
+*«remove os botões do perfil econômico e perfil máximo. Isso já existe na aba sistema.»*): o gesto
+`perfil-do-controle`, o `perfil_na_linha` e o campo `perfil` do cartão saíram de lá. O que
+ficou, e a mordida que o derruba:
 
-1. o dono (`secao_orcamento`): os três rótulos, o disco de cada perfil e quem
-   vence — MORDIDA: faça `perfil_do_controle` ignorar a mesa → reprova;
-2. o clique no cartão grava só aquele controle, e recarregar acende o mesmo
-   botão — P1 a P4, cabo e rádio — MORDIDA: troque `_uniq(o)` por `UNIQS[0]`
-   no gesto → reprova no P2, P3 e P4;
-3. a aba Sistema e o cartão são o mesmo dado — MORDIDA: faça `perfil_na_linha`
-   ler só o controle (sem o teto da mesa) → reprova;
-4. o aparelho: «Aplicar» e DEPOIS a «Bateria Longa» no P<k> põe o teto nele, e
-   só nele — P1 a P4, cabo e rádio — MORDIDA: tire o `soltar(...)` de
-   `lifecycle.reaplicar_se_a_economia_mudou` → o P<k> fica a 70% e no Médio.
+1. o dono (`secao_orcamento`): os três rótulos, o disco de cada perfil e quem vence — MORDIDA:
+   faça `perfil_do_controle` ignorar a mesa → reprova;
+2. a aba Sistema segue falando o perfil, pelo mesmo dono;
+3. a Conexões não tem mais o perfil por controle — MORDIDA: devolver um botão
+   `perfil-do-controle` ao cartão do gerador → reprova.
 
 O LAR É DE MENTIRA: o `conftest` desvia o `HOME` e os `XDG_*`; o `maquina.json`
 e o perfil gravados aqui moram dentro dele.
@@ -98,92 +96,6 @@ def test_o_corpo_do_clique_e_o_do_dono_da_economia(k: int) -> None:
             f"o disco de «{orc.ROTULOS_DOS_PERFIS[perfil]}» não acende o mesmo botão")
 
 
-class _PonteDoDisco:
-    """O `machine.declare` do daemon, sem o daemon: a fusão contra o disco."""
-
-    def __init__(self) -> None:
-        self.corpos: list[dict[str, Any]] = []
-
-    def machine_declare(self, corpo: dict[str, Any]) -> tuple[bool, str]:
-        from hefesto_dualsense4unix.utils.maquina import gravar_maquina
-
-        self.corpos.append(corpo)
-        return bool(gravar_maquina(corpo)), ""
-
-
-@pytest.fixture
-def disco(monkeypatch: pytest.MonkeyPatch) -> Iterator[_PonteDoDisco]:
-    """O `maquina.json` do lar de mentira, lido pela LEITURA DA ABA (`_declaracao`)."""
-    a08 = _a08()
-    monkeypatch.setattr(a08, "_DECLARACAO", None)
-    monkeypatch.setattr(a08, "_SELO_DA_DECLARACAO", None)
-    yield _PonteDoDisco()
-
-
-def _clicar(ponte: _PonteDoDisco, k: int, perfil: str, via: str = "usb") -> None:
-    a08 = _a08()
-    a08.perfil_do_controle_gesto(None, {"uniq": UNIQS[k - 1], "valor": perfil,
-                                        "controle": f"p{k}", "via": via}, ponte)
-
-
-def _acesos() -> dict[int, str]:
-    """O botão aceso de cada cartão, pela MESMA leitura que o tique pinta."""
-    a08 = _a08()
-    dec = a08._declaracao()
-    return {n: a08.perfil_na_linha(dec, UNIQS[n - 1])["perfil"] for n in (1, 2, 3, 4)}
-
-
-@pytest.mark.parametrize("via", ["usb", "bt"])
-@pytest.mark.parametrize("k", [1, 2, 3, 4], ids=["P1", "P2", "P3", "P4"])
-def test_o_clique_grava_so_aquele_controle(disco: _PonteDoDisco, k: int, via: str) -> None:
-    orc = _orc()
-    assert _acesos() == dict.fromkeys((1, 2, 3, 4), orc.PERFIL_TUDO_LIGADO)
-    _clicar(disco, k, orc.PERFIL_BATERIA_LONGA, via)
-    esperado = dict.fromkeys((1, 2, 3, 4), orc.PERFIL_TUDO_LIGADO)
-    esperado[k] = orc.PERFIL_BATERIA_LONGA
-    assert _acesos() == esperado, "a «Bateria Longa» do cartão mexeu noutro controle"
-    _clicar(disco, k, orc.PERFIL_EU_ESCOLHO, via)
-    esperado[k] = orc.PERFIL_EU_ESCOLHO
-    assert _acesos() == esperado
-    _clicar(disco, k, orc.PERFIL_TUDO_LIGADO, via)
-    assert _acesos() == dict.fromkeys((1, 2, 3, 4), orc.PERFIL_TUDO_LIGADO)
-    assert len(disco.corpos) == 3
-
-
-def test_o_mesmo_clique_de_novo_nao_grava(disco: _PonteDoDisco) -> None:
-    orc = _orc()
-    _clicar(disco, 2, orc.PERFIL_TUDO_LIGADO)
-    assert disco.corpos == [], "clicar no botão já aceso gravou"
-
-
-def test_um_perfil_que_nao_existe_recusa_sem_gravar(disco: _PonteDoDisco) -> None:
-    with pytest.raises(ValueError):
-        _clicar(disco, 1, "eu escolho")
-    with pytest.raises(ValueError):
-        _a08().perfil_do_controle_gesto(None, {"valor": "tudo_ligado"}, disco)
-    assert disco.corpos == []
-
-
-def test_a_bateria_longa_da_sistema_acende_os_quatro_cartoes(disco: _PonteDoDisco) -> None:
-    """O clique do Perfil Global é o gesto da aba 09, e o cartão lê o mesmo disco."""
-    from hefesto_dualsense4unix.interface.pacotes import a09_sistema
-
-    orc = _orc()
-    _clicar(disco, 2, orc.PERFIL_BATERIA_LONGA)
-    _clicar(disco, 3, orc.PERFIL_EU_ESCOLHO)
-    a09_sistema.perfil_da_mesa(None, {"v": orc.PERFIL_BATERIA_LONGA}, disco)
-    assert _acesos() == dict.fromkeys((1, 2, 3, 4), orc.PERFIL_BATERIA_LONGA)
-    antes = len(disco.corpos)
-    for k in (1, 2, 3, 4):
-        with pytest.raises(RuntimeError, match="perfil global de bateria"):
-            _clicar(disco, k, orc.PERFIL_TUDO_LIGADO)
-    _clicar(disco, 2, orc.PERFIL_BATERIA_LONGA)
-    assert len(disco.corpos) == antes
-    a09_sistema.perfil_da_mesa(None, {"v": orc.PERFIL_TUDO_LIGADO}, disco)
-    assert _acesos() == {1: orc.PERFIL_TUDO_LIGADO, 2: orc.PERFIL_BATERIA_LONGA,
-                         3: orc.PERFIL_EU_ESCOLHO, 4: orc.PERFIL_TUDO_LIGADO}
-
-
 @pytest.mark.parametrize("arquivo", PAGINAS_09, ids=["bancada", "publicada"])
 def test_a_sistema_diz_personalizado_e_a_relacao_com_o_cartao(arquivo: pathlib.Path) -> None:
     html = arquivo.read_text(encoding="utf-8")
@@ -199,51 +111,20 @@ def test_a_sistema_diz_personalizado_e_a_relacao_com_o_cartao(arquivo: pathlib.P
     assert "Eu escolho" not in html
 
 
-@pytest.mark.parametrize("arquivo", PAGINAS, ids=["bancada", "publicada"])
-def test_cada_cartao_tem_os_tres_botoes_com_endereco(arquivo: pathlib.Path) -> None:
-    orc = _orc()
-    html = arquivo.read_text(encoding="utf-8")
-    for n in (1, 2, 3, 4):
-        cartao = html[html.index(f'data-controle="p{n}"'):]
-        cartao = cartao[:cartao.index('class="gc-luz"')]
-        botoes = re.findall(r'<button class="btn[^"]*" data-gesto="perfil-do-controle" '
-                            r'value="(\w+)"[^>]*data-campo="perfil" data-hef-alvo="classe" '
-                            r'data-hef-classe="on" data-hef-quando="(\w+)" '
-                            r'data-hef-atributo="aria-checked" title="([^"]*)">([^<]+)</button>',
-                            cartao)
-        assert [(v, q, r) for v, q, _t, r in botoes] == [
-            (p, p, orc.ROTULOS_DOS_PERFIS[p]) for p in orc.PERFIS], (n, botoes)
-        assert [t for _v, _q, t, _r in botoes] == [orc.DICAS_DO_CARTAO[p] for p in orc.PERFIS]
-    assert "economia-do-controle" not in html and "eco-luz" not in html
+def test_a_conexoes_nao_tem_o_perfil_por_controle() -> None:
+    """O perfil de desempenho mora só na Sistema: nem botão, nem gesto, nem campo no cartão.
 
-
-@pytest.mark.parametrize("arquivo", PAGINAS, ids=["bancada", "publicada"])
-def test_o_clique_so_acende_sozinho_na_bancada(arquivo: pathlib.Path) -> None:
-    """No produto quem acende é o tique: um clique recusado não fica aceso."""
-    html = arquivo.read_text(encoding="utf-8")
-    trecho = html[html.index('closest(".gc-perfil .seg .btn")') - 200:]
-    assert "if (window.__hef) return;" in trecho[:400]
-
-
-def test_o_pacote_pinta_o_perfil_de_cada_controle(disco: _PonteDoDisco) -> None:
-    """A carga do tique leva `perfil` a cada coluna, do disco — P1 a P4, misto."""
-    from hefesto_dualsense4unix.interface.pacotes import Contexto
-
-    orc = _orc()
-    _clicar(disco, 2, orc.PERFIL_BATERIA_LONGA)
-    _clicar(disco, 4, orc.PERFIL_EU_ESCOLHO)
-    vias = ["usb", "bt", "usb", "bt"]
-    mesa = [{"pref": f"p{n}", "uniq": UNIQS[n - 1], "jogador": n, "cor": "", "nome": "DualSense",
-             "via": vias[n - 1].upper(), "transporte": vias[n - 1], "mascara": "Xbox 360"}
-            for n in (1, 2, 3, 4)]
-    conectados = [{"uniq": UNIQS[n - 1], "transport": vias[n - 1], "connected": True,
-                   "battery_pct": 60} for n in (1, 2, 3, 4)]
-    ctx = Contexto(state={"controllers": conectados, "native_mode": False},
-                   mesa=mesa, conectados=conectados, estados={})
-    colunas = _a08().pacote(ctx)["colunas"]
-    assert {n: colunas[UNIQS[n - 1]]["perfil"] for n in (1, 2, 3, 4)} == {
-        1: orc.PERFIL_TUDO_LIGADO, 2: orc.PERFIL_BATERIA_LONGA,
-        3: orc.PERFIL_TUDO_LIGADO, 4: orc.PERFIL_EU_ESCOLHO}
+    A publicada guarda o desenho velho até o `--publicar` do fecho, e é conferida só depois dele.
+    """
+    a08 = _a08()
+    for saiu in ("perfil_do_controle_gesto", "perfil_na_linha", "economia_do_controle"):
+        assert not hasattr(a08, saiu), f"`{saiu}` voltou à Conexões"
+    html = PAGINAS[0].read_text(encoding="utf-8")
+    # `data-campo="perfil"` segue no «Perfil ativo» do cabeçalho (`pa-nome`); o cartão não o tem
+    assert html.count('data-campo="perfil"') == html.count('class="pa-nome" data-campo="perfil"')
+    for saiu in ('data-gesto="perfil-do-controle"', 'class="gc-perfil"',
+                 "economia-do-controle", "eco-luz"):
+        assert saiu not in html, f"{saiu} voltou ao cartão da Conexões"
 
 
 @pytest.fixture

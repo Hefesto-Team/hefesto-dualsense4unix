@@ -65,7 +65,7 @@ def test_quatro_cartoes_numa_fileira_sem_mais_n_e_sem_a_linha_dos_certos() -> No
 
 
 def test_o_gesto_do_cartao_tem_ate_duas_palavras() -> None:
-    m = dicas.Movimento(controle="ap", jogador=2, nome_do_controle="Roxo", de_id="L1",
+    m = dicas.Movimento(controle="ap", jogador=2, nome_do_controle="Galactic Purple", de_id="L1",
                         de_nome="Meio", para_id="L2", para_nome="Direita", controles_no_de=4)
     rotulos = [dicas.dica_do_movimento(m).acao.rotulo, dicas.ROTULO_VER_NO_MAPA,
                dicas.ROTULO_IGNORAR, dicas.ROTULO_VOLTAR_A_MOSTRAR, dicas.ROTULO_PAREAR,
@@ -75,7 +75,7 @@ def test_o_gesto_do_cartao_tem_ate_duas_palavras() -> None:
     for rotulo in rotulos:
         palavras = [w for w in rotulo.split() if w.lower() not in miudas]
         assert len(palavras) <= dicas.PALAVRAS_NO_GESTO, rotulo
-    assert rotulos[0] == "Mover P2"
+    assert rotulos[0] == dicas.ROTULO_MOVER == "Mover", "o controle vem pela cor, no título"
 
 
 def _cena_do_ar() -> dict[str, Any]:

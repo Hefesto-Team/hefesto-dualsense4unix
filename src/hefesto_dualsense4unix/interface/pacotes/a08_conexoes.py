@@ -666,7 +666,7 @@ def _o_movimento_da_central(cena: dict[str, Any] | None) -> Any:
     return dicas_da_conexao.Movimento(
         controle=str(ap["id"]),
         jogador=jogador if isinstance(jogador, int) and not isinstance(jogador, bool) else None,
-        nome_do_controle=nome_na_conexoes(ap),
+        nome_do_controle=str(ap.get("cor_nome") or ""),
         de_id=str(de["id"]), de_nome=_titulo_do_lugar(de),
         para_id=str(para["id"]), para_nome=_titulo_do_lugar(para),
         controles_no_de=sum(1 for a in aparelhos
@@ -1911,7 +1911,6 @@ def _o_pacote(ctx: Contexto, medida: _MedidaDoTique) -> dict[str, Any]:
         if modo_da_mesa is None:
             modo_da_mesa = modo_da_fileira(st)
         colunas[uniq].update(estado_do_controle(c, eu, st, declaracao, modo_da_mesa))
-        colunas[uniq].update(perfil_na_linha(declaracao, uniq))
         colunas[uniq]["dono"] = dono_na_linha(nomes, uniq, eu.get("jogador"))
     medida.somar("gestão", comeco_da_gestao)
     confissao = _confissao_do_mapa()
@@ -4709,6 +4708,18 @@ def _com_a_categoria_do_enlace(aparelhos: list[dict[str, Any]],
             ap["tipo"] = TIPO_ACESSORIO
 
 
+def _cor_declarada_de(aparelho: str) -> str:
+    """O nome do plástico que a pessoa declarou para este aparelho, ou `""`."""
+    try:
+        from hefesto_dualsense4unix.integrations.cor_do_plastico import nome_do_aparelho
+        from hefesto_dualsense4unix.interface import mesa_viva
+
+        cor = mesa_viva.cor_declarada(_so_hex(aparelho), _declaracao())
+        return nome_do_aparelho(cor) if cor is not None and cor.nome else ""
+    except Exception:
+        return ""
+
+
 def _quem_pede_para_parear(central: dict[str, Any], lugares: list[dict[str, Any]],
                            aparelhos_bz: tuple[Any, ...]) -> list[dict[str, str]]:
     """Os controles conhecidos que pedem para parear (``radio_central.pedindo``), na tela.
@@ -4731,7 +4742,8 @@ def _quem_pede_para_parear(central: dict[str, Any], lugares: list[dict[str, Any]
             nome_do_jogador.nome_dado(alias)
             if alias and not nome_do_jogador.e_nome_de_fabrica(alias)
             and not nome_do_jogador.ALIAS_QUE_E_ENDERECO.fullmatch(alias) else "")
-        saida.append({"aparelho": aparelho, "lugar": lugar, "nome": dado or CONTROLE_SEM_NOME})
+        saida.append({"aparelho": aparelho, "lugar": lugar,
+                      "nome": dado or _cor_declarada_de(aparelho) or CONTROLE_SEM_NOME})
     return saida
 
 
@@ -6093,8 +6105,6 @@ RAZAO_DO_SEM_ECO: dict[str, str] = {
     "adaptador-reordenar": "grava a ordem das caixas no `gui_preferences.json`, "
                            "que o daemon não lê",
     "dono-renomear": _NO_BLUEZ,
-    "perfil-do-controle": "grava a economia de cada controle no `maquina.json`; o "
-                          "`state_full` não a publica",
     "mapear-gravar": "grava a porta da vez no `maquina.json` pelo dono do mapa",
     "mapear-comecar": "só liga o olhar do dono, no processo da interface",
     "mapear-parar": "só desliga o olhar do dono, no processo da interface",
@@ -6191,31 +6201,7 @@ def estado_do_controle(c: dict[str, Any], eu: dict[str, Any], st: dict[str, Any]
 
     # (:func:`nome_com_a_bateria`); a queda do rádio aparece no exame e em
     # Rádio e adaptadores. (noqa-acento: citação literal)
-    return {"est-mic": mic, "est-som": som, "est-modo": modo_da_linha, "est-visto": visto,
-            "est-mira": selo_da_mira(c, st)}
-
-
-def selo_da_mira(c: dict[str, Any], st: dict[str, Any]) -> str:
-    """O selo «Analógico virtual» da linha: ✓ aceso, «Apagado», «Nativo» (chip cinza) ou «—».
-
-    A-MIRA-DA-CALIBRAR-E-A-MESMA-DAS-OUTRAS-ABAS-01. O aceso é o do chip da aba Controles
-    (`a02_controles._analogico_virtual`) e o `title` é o resumo da Calibrar (`a11.resumo_da_mira`),
-    pelo bloco `mira` do daemon. No nativo o chip fica cinza e a Mira não grava
-    (`a02_controles.MIRA_CINZA_NO_NATIVO`): o selo diz isso, não o «✓».
-    """
-    import calibrar
-
-    from .a02_controles import MIRA_CINZA_NO_NATIVO, _analogico_virtual
-    from .a11_calibrar_sensores import resumo_da_mira
-
-    rotulo = calibrar.ROTULO_DA_MIRA
-    if st.get("native_mode") is True:
-        return selo_do_estado(rotulo, MODO_NATIVO, "", MIRA_CINZA_NO_NATIVO)
-    aceso = _analogico_virtual(c)
-    if aceso is None:
-        return selo_do_estado(rotulo, TRAVESSAO_DA_LINHA, "")
-    dica = resumo_da_mira(c.get("mira")) or ""
-    return selo_do_estado(rotulo, "" if aceso else "Apagado", "ok" if aceso else "", dica)
+    return {"est-mic": mic, "est-som": som, "est-modo": modo_da_linha, "est-visto": visto}
 
 
 def nome_com_a_bateria(rotulo: str, pct: object) -> str:
@@ -6227,34 +6213,6 @@ def nome_com_a_bateria(rotulo: str, pct: object) -> str:
 
 
 TRAVESSAO_DA_LINHA = "—"
-
-
-def economia_do_controle(declaracao: Any, uniq: str) -> tuple[bool | None, str | None]:
-    """``(a escolha deste controle, o teto da mesa)``, lidos da declaração."""
-    try:
-        declarado = (declaracao.controles or {}).get(_so_hex(uniq))
-        escolha = getattr(declarado, "economia", None)
-    except Exception:
-        escolha = None
-    teto = getattr(getattr(declaracao, "orcamento", None), "teto", None)
-    return escolha, (teto if isinstance(teto, str) else None)
-
-
-def perfil_na_linha(declaracao: Any, uniq: str) -> dict[str, str]:
-    """O botão aceso do perfil de desempenho do cartão (endereço `perfil`)."""
-    from hefesto_dualsense4unix.app.actions.config import secao_orcamento
-
-    escolha, teto = economia_do_controle(declaracao, uniq)
-    return {"perfil": secao_orcamento.perfil_do_controle(teto, escolha)}
-
-
-def _recusa_da_mesa() -> str:
-    """Por que um cartão não sai da «Bateria Longa» global (vai ao diário)."""
-    from hefesto_dualsense4unix.app.actions.config import secao_orcamento as orc
-
-    longa = orc.ROTULOS_DOS_PERFIS[orc.PERFIL_BATERIA_LONGA]
-    return (f"A «{longa}» da aba Sistema vale para todos os controles; para mudar "
-            "um só, escolha outro perfil global de bateria lá.")
 
 
 # `dono_na_linha` (importada no topo) é a regra «o nome, ou o Pn», que mora em `monta` desde
@@ -6283,31 +6241,6 @@ def dono_renomear(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise RuntimeError("o Bluetooth do sistema não gravou o nome novo")
 
 
-@gesto("08-conexoes.html", "perfil-do-controle", grava="machine_declare")
-def perfil_do_controle_gesto(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """Os três botões do perfil de desempenho de UM controle."""
-    from hefesto_dualsense4unix.app.actions.config import secao_orcamento as orc
-    from hefesto_dualsense4unix.profiles import schema
-
-    uniq = _uniq(o)
-    if not uniq:
-        raise ValueError("perfil-do-controle: o clique não disse em qual controle")
-    escolhido = str(o.get("valor") or o.get("v") or "")
-    if escolhido not in orc.PERFIS:
-        raise ValueError(f"perfil-do-controle: {escolhido!r} não é um dos três perfis")
-    escolha, teto = economia_do_controle(_declaracao(), uniq)
-    if schema.origem_da_economia(escolha, schema.mesa_em_economia(teto)) == "mesa":
-        if escolhido == orc.PERFIL_BATERIA_LONGA:
-            return
-        raise RuntimeError(_recusa_da_mesa())
-    if orc.ECONOMIA_POR_PERFIL[escolhido] is escolha:
-        return
-    ok, motivo = _resposta(p.machine_declare(orc.declaracao_do_perfil(uniq, escolhido)))
-    if not ok:
-        raise RuntimeError(motivo or "não consegui gravar o que você declarou")
-    _reler_a_declaracao()
-
-
 # é o estado, e o tique a pinta. <!-- noqa-acento: citação literal -->
 MAPEAR_DIZ = {
     "parado": "Conecte o DualSense por USB numa entrada do computador.",
@@ -6315,11 +6248,6 @@ MAPEAR_DIZ = {
     "porta": "Conecte um DualSense em cada entrada USB do seu dispositivo.",
     "procurando": "Procurando…",
 }
-
-#: O resto do que a tela dizia na linha de cima: é explicação, e mora no «?» da tela.
-MAPEAR_DICA_DA_PORTA = (
-    "Nomeie a entrada (ou deixe vazia para ela ser enumerada). Ao final, valide e, "
-    "caso necessário, faça os ajustes na entrada no botão Mapa das conexões.")
 
 
 def _o_mapa() -> Any:

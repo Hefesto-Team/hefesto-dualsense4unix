@@ -147,7 +147,8 @@ def test_a_proposta_da_central_e_um_cartao_com_o_botao_de_mover(
     a08 = _a08()
     lugares = [{"id": "L1", "nome": "Esquerda"}, {"id": "L2", "nome": "Meio"},
                {"id": "L3", "entrada": "Entrada 4"}]
-    aparelhos = [{"id": "ap", "tipo": "controle", "lugar": de, "jogador": jogador},
+    aparelhos = [{"id": "ap", "tipo": "controle", "lugar": de, "jogador": jogador,
+                  "cor_nome": "Cosmic Red"},
                  {"id": "outro", "tipo": "controle", "lugar": de, "jogador": 9},
                  {"id": "caixa", "tipo": "caixa", "lugar": para}]
     cena = {"proposta": {"controle": "ap", "destino": para}, "lugares": lugares,
@@ -157,8 +158,8 @@ def test_a_proposta_da_central_e_um_cartao_com_o_botao_de_mover(
     assert len(painel.visiveis) == 1
     cartao = painel.visiveis[0]
     assert cartao.titulo == f"{nomes[de]} dividido em 2"
-    assert (cartao.de, cartao.para) == (f"P{jogador} · {nomes[de]}", nomes[para])
-    assert cartao.acao.rotulo == f"Mover P{jogador}"
+    assert (cartao.de, cartao.para) == (f"Cosmic Red · {nomes[de]}", nomes[para])
+    assert cartao.acao.rotulo == "Mover", "o controle vem nomeado pela cor, nunca por P N"
     assert cartao.para == nomes[para]
     assert cartao.acao.gesto == "aceitar-sugestao"
     assert dict(cartao.acao.dados) == {"alvo": "ap", "destino": para}

@@ -79,7 +79,7 @@ def test_os_seis_selos_saem_para_cada_controle(vias: list[str]) -> None:
     assert len(saida["colunas"]) == len(vias)
     for n, u in enumerate(UNIQS[: len(vias)], start=1):
         col = saida["colunas"][u]
-        for campo in ("est-mic", "est-som", "est-modo", "est-visto", "perfil", "dono"):
+        for campo in ("est-mic", "est-som", "est-modo", "est-visto", "dono"):
             assert campo in col, f"o controle {n} ({vias[n - 1]}) não recebeu `{campo}`"
         assert "Xbox 360" in col["est-visto"]
         assert col["nome"].endswith(f"{50 + n}%"), "a bateria mora no nome desde 26/09"
@@ -110,7 +110,7 @@ def test_conexao_e_bateria_sairam_do_cartao() -> None:
     pac = _pac()
     c = {"uniq": UNIQS[0], "transport": "bt", "battery_pct": 40, "hz_movimento": 20}
     assert set(pac.estado_do_controle(c, {}, {}, _Declaracao())) == {
-        "est-mic", "est-som", "est-modo", "est-visto", "est-mira"}
+        "est-mic", "est-som", "est-modo", "est-visto"}
     assert pac.nome_com_a_bateria("Cosmic Red", 40) == 'Cosmic Red <span class="pt">•</span> 40%'
     assert pac.nome_com_a_bateria("Cosmic Red", None) == "Cosmic Red"
 
@@ -206,19 +206,30 @@ def test_salvar_a_porta_chama_o_dono_com_a_face() -> None:
 def test_a_gestao_mora_dentro_do_check_up(arquivo: pathlib.Path) -> None:
     """MORDIDA: devolva o quadro «Gestão de controles» ao `MIOLO` → reprova."""
     html = arquivo.read_text(encoding="utf-8")
-    titulos = re.findall(r'<label class="quadro-titulo" for="([\w-]+)">Gestão de controles<', html)
+    titulos = re.findall(
+        r'<label class="quadro-titulo" for="([\w-]+)"(?: data-dica="[^"]*")?>Gestão de controles<',
+        html)
     assert titulos == ["cx8-2"], titulos
     assert ">Check-up<" not in html, "o nome velho da seção voltou"
     checkup = html[html.index('id="cx8-2"'):html.index('id="rd-secao"')]
     assert 'class="gc"' in checkup and 'class="ferramentas"' in checkup
-    for campo in ("est-mic", "est-som", "est-modo", "est-visto", "perfil", "dono",
+    for campo in ("est-mic", "est-som", "est-modo", "est-visto", "dono",
                   "mapear-diz", "mapear-porta", "mapear-conta"):
         assert f'data-campo="{campo}"' in html, f"a página não tem onde pintar `{campo}`"
     for campo in ("est-conexao", "est-bateria"):
         assert f'data-campo="{campo}"' not in html, f"`{campo}` voltou ao cartão"
-    for gesto in ("perfil-do-controle", "dono-renomear",
+    for gesto in ("dono-renomear",
                   "mapear-comecar", "mapear-gravar", "mapear-parar", "examinar-portas"):
         assert f'data-gesto="{gesto}"' in html, f"o gesto `{gesto}` não tem botão"
+    # O perfil de desempenho mora só na aba Sistema (mudança 12 do todo, 13/10): o cartão não o
+    # tem. A publicada acompanha na costura (`--publicar`), e até lá guarda o desenho velho.
+    if arquivo == BANCADA or "data-dica-id" in html:
+        for saiu in ("perfil-do-controle", "economia-do-controle", "est-mira"):
+            assert f'data-gesto="{saiu}"' not in html and f'data-campo="{saiu}"' not in html
+        # `data-campo="perfil"` segue no «Perfil ativo» do cabeçalho (`pa-nome`); o cartão não o tem
+        assert (html.count('data-campo="perfil"')
+                == html.count('class="pa-nome" data-campo="perfil"'))
+        assert 'class="gc-perfil"' not in html
     for saiu in ("economia-do-controle", "checkup-atualizar"):
         assert f'data-gesto="{saiu}"' not in html, f"o gesto `{saiu}` voltou"
 

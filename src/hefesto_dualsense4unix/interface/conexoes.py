@@ -356,37 +356,32 @@ def _o_botao_da_dica(acao: Any, classe: str) -> str:
             f'{dados}{dica}>{rotulo}</button>')
 
 
-#: O «i» do «Por quê» é um ÍCONE, desenhado, e não uma letra: o botão diz o nome dele no
-#: ``aria-label`` («Por quê: …»), e a regra de produto da primeira letra maiúscula vale para palavra
-#: escrita num botão — um «i» minúsculo como texto era palavra para quem lê e para a régua.
-_O_I_DA_DICA = ('<svg class="cd-i" viewBox="0 0 24 24" aria-hidden="true">'
-                '<path d="M12 11v7"/><circle cx="12" cy="6.5" r="1.5"/></svg>')
+def _o_x_da_dica(acao: Any) -> str:
+    """O X no canto do cartão: o mesmo gesto do «Ignorar», sem palavra, com a dica no hover."""
+    dados = "".join(f' data-{_e(k)}="{_e(v)}"' for k, v in acao.dados)
+    return (f'<button class="cd-x" type="button" data-gesto="{_e(acao.gesto)}"{dados} '
+            f'aria-label="{_e(acao.rotulo)}" data-dica="{_e(acao.titulo or acao.rotulo)}">'
+            "\u00d7</button>")
 
 
 def _o_cartao_da_dica(dica: Any, n: int, icone: Callable[[str], str]) -> str:
-    """Um cartão: título, o de→para, UM botão, e o porquê atrás do ⓘ."""
+    """Um cartão: título (o porquê no hover), o de→para, UM botão e o X que ignora no canto."""
     quem = f"dica-{n}"
     detalhe = f'<p class="cd-detalhe">{_e(dica.detalhe)}</p>' if dica.detalhe else ""
     desenho = (
         f'<p class="cd-pic" aria-label="De {_e(dica.de)} para {_e(dica.para)}">'
         f'<span>{_e(dica.de)}</span><i aria-hidden="true">→</i><span>{_e(dica.para)}</span></p>'
         if dica.de and dica.para else "")
-    ignora = (_o_botao_da_dica(dica.ignorar, "cd-ignora")
-              if dica.ignorar is not None and not dica.calada else "")
-    cura = f'<p class="cd-cura">{_e(dica.cura)}</p>' if dica.cura else ""
-    porque = (
-        f'<div class="cd-porque" id="{quem}-p" hidden><p>{_e(dica.porque)}</p>{cura}{ignora}</div>'
-        if dica.porque or cura or ignora else "")
-    info = (
-        f'<button class="cd-info" type="button" aria-expanded="false" aria-controls="{quem}-p" '
-        f'aria-label="Por quê: {_e(dica.titulo)}">{_O_I_DA_DICA}</button>' if porque else "")
+    x = _o_x_da_dica(dica.ignorar) if dica.ignorar is not None and not dica.calada else ""
+    porque = " ".join(t for t in (dica.porque, dica.cura) if t)
+    no_titulo = f' data-dica="{_e(porque)}"' if porque else ""
     return (
         f'<section class="cartao-dica nivel-{_e(dica.nivel)}{" calada" if dica.calada else ""}" '
         f'role="region" aria-label="{_e(PALAVRA_DO_NIVEL[dica.nivel])}: {_e(dica.titulo)}" '
-        f'data-dica="{_e(dica.chave)}"><div class="cd-cab"><span class="cd-ic">'
-        f'{icone(dica.icone)}</span><h4 id="{quem}-t"><span class="t">{_e(dica.titulo)}</span>'
-        f'</h4>{info}</div>'
-        f"{detalhe}{desenho}{porque}"
+        f'data-dica-id="{_e(dica.chave)}"><div class="cd-cab"><span class="cd-ic">'
+        f'{icone(dica.icone)}</span><h4 id="{quem}-t"{no_titulo}><span class="t">'
+        f'{_e(dica.titulo)}</span></h4>{x}</div>'
+        f"{detalhe}{desenho}"
         f'<div class="cd-acao">{_o_botao_da_dica(dica.acao, "cd-botao")}</div></section>')
 
 

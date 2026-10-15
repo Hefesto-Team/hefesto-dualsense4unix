@@ -64,6 +64,7 @@ GESTO_DE_PAREAR_O_PEDIDO = "parear-o-pedido"
 
 ROTULO_VER_NO_MAPA = "Ver no mapa"
 ROTULO_IGNORAR = "Ignorar"
+ROTULO_MOVER = "Mover"
 ROTULO_VOLTAR_A_MOSTRAR = "Mostrar"
 ROTULO_PAREAR = "Parear"
 
@@ -251,8 +252,8 @@ class Movimento:
 
 
 def dica_do_movimento(m: Movimento) -> Dica:
-    """«Meio sufocado», «Esquerda dividido em 4» ou «P2 com sinal fraco», com o de→para."""
-    quem = f"P{m.jogador}" if m.jogador is not None else m.nome_do_controle
+    """«Meio sufocado», «Esquerda dividido em 4» ou «Cosmic Red com sinal fraco», com o de→para."""
+    quem = m.nome_do_controle or "O controle"
     if m.pelo_sinal:
         # o sinal fraco é do CONTROLE naquele adaptador, não do adaptador: o título diz quem
         titulo, nivel = f"{quem} com sinal fraco", AJUSTE
@@ -271,7 +272,7 @@ def dica_do_movimento(m: Movimento) -> Dica:
     return Dica(
         chave=f"mover:{m.controle}", icone=ICONE_RADIO, titulo=limitar_o_titulo(titulo),
         nivel=nivel,
-        acao=Acao(MOVER, f"Mover {quem}", GESTO_DE_MOVER,
+        acao=Acao(MOVER, ROTULO_MOVER, GESTO_DE_MOVER,
                   dados=(("alvo", m.controle), ("destino", m.para_id))),
         porque=uma_frase(porque), de=f"{quem} · {m.de_nome}", para=m.para_nome)
 
