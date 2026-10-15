@@ -250,7 +250,6 @@ DO_APARELHO: dict[str, tuple[str, ...]] = {
     "modo-da-luz": ("luz.lightbar.cor", "luz.led_jogador.escrita_hefesto"),
     "lado": ("vibracao.rumble.esquerdo", "vibracao.rumble.direito"),
     "custo-mic": ("audio.microfone.mudo",),
-    "mira": ("movimento.giroscopio",),
     # O-ANALOGICO-VIRTUAL-E-UM-SO-COM-O-LADO-ESCOLHIDO-01: o chip «Inclinação» saiu da
     # 02, e o lado do Analógico Virtual leva o giro e a inclinação juntos.
     "analogico-lado": ("movimento.giroscopio", "movimento.acelerometro"),
@@ -305,7 +304,6 @@ NO_PERFIL: dict[str, tuple[str | None, str | None]] = {
     "brilho-luzes": ("leds", "leds"),
     "modo-da-luz": ("leds", "leds"),
     "lado": ("rumble", "rumble"),
-    "mira": ("movimento", "movimento"),
     "analogico-lado": ("movimento", "movimento"),
     "haptica": (None, "rumble"),
     "testar-haptica": (None, "rumble"),
