@@ -573,15 +573,28 @@ def e_bloco_nosso(bloco: str) -> bool:
     return inst.upper().startswith(MARCADOR + "&") or bool(_LEGADO_DA_PROVA.match(inst))
 
 
+def _data4_do_presente(controle: Controle, d4: bytes) -> bool:
+    """O Data4 pode ser o deste aparelho? Zero sempre pode; outro, só o `USEC` dele.
+
+    O GE-Proton11-8 (patch 0207) deixa de apagar os endpoints Sony persistidos,
+    e o par bus/dev se repete depois de um reinício: sem esta pergunta, o
+    `ContainerId` de um aparelho que já saiu manda no do que está na mesa. Sem
+    o `USEC` à mão não há como dizer que não é este, e o dono continua valendo.
+    """
+    if d4 == bytes(8) or controle.usec is None:
+        return True
+    return d4 == controle.usec.to_bytes(8, "little")
+
+
 def data4_do_dono(texto_sem_os_nossos: str, controle: Controle) -> list[bytes]:
-    """Os Data4 que o PRÓPRIO prefixo já registrou para este pid/bus/dev."""
+    """Os Data4 que o PRÓPRIO prefixo já registrou para este pid/bus/dev, e que casam com ele."""
     alvo = controle.prefixo_do_container().lower()
     achados: list[bytes] = []
     for m in _GUID_TXT.finditer(texto_sem_os_nossos):
         guid = m.group(0).lower()
         if guid.startswith(alvo):
             d4 = bytes.fromhex(m.group(4) + m.group(5))
-            if d4 not in achados:
+            if d4 not in achados and _data4_do_presente(controle, d4):
                 achados.append(d4)
     juntado = re.sub(r"\\\n\s*", "", texto_sem_os_nossos)
     for m in _BLOB_CONTAINER.finditer(juntado):
@@ -593,7 +606,7 @@ def data4_do_dono(texto_sem_os_nossos: str, controle: Controle) -> list[bytes]:
         d2 = int.from_bytes(g[4:6], "little")
         d3 = int.from_bytes(g[6:8], "little")
         guid = f"{{{d1:08x}-{d2:04x}-{d3:04x}-"
-        if guid == alvo and g[8:] not in achados:
+        if guid == alvo and g[8:] not in achados and _data4_do_presente(controle, g[8:]):
             achados.append(g[8:])
     return achados
 
@@ -671,6 +684,128 @@ def _mesmos_blocos(a: str, b: str) -> bool:
     return normal(a) == normal(b)
 
 
+# A poda (O-REGISTRO-DO-PREFIXO-PERDE-O-SOM-QUE-NAO-EXISTE-MAIS-01, 15/10/2026):
+# o Wine guarda toda saída e entrada de som que já viu, e o jogo com a biblioteca
+# da Sony varre todas. Só o caminho `MMDevices\Audio\{Render,Capture}` entra.
+_CHAVE_DO_SOM = re.compile(
+    r"^\[Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\MMDevices\\\\Audio\\\\"
+    r"(?:Render|Capture)\\\\(\{[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\})(\\\\[^\]]*)?\]$",
+    re.I,
+)
+_RAIZ_DO_SOM = "[Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\MMDevices\\\\Audio"
+_ESTADO = re.compile(r'^"DeviceState"=dword:([0-9a-f]{8})$', re.I | re.M)
+
+#: `DEVICE_STATE_NOTPRESENT`: o endpoint que o Wine já viu e que não está mais lá.
+AUSENTE = 0x4
+
+#: o mapa nó → GUID do `winepulse`, no `user.reg` (o fluxo 0 é Render, o 1 é Capture).
+_MAPA_DO_PULSE = re.compile(
+    r"^\[Software\\\\Wine\\\\Drivers\\\\winepulse\.drv\\\\devices\\\\\d+,([^\]]*)\]$", re.I
+)
+_GUID_DO_MAPA = re.compile(r'^"guid"=hex:((?:[0-9a-f]{2},){15}[0-9a-f]{2})$', re.I | re.M)
+
+#: onde o `mmdevapi` guarda a saída e a entrada padrão escolhidas.
+_CHAVES_DO_PADRAO = (
+    "[Software\\\\Wine\\\\Drivers]",
+    "[Software\\\\Wine\\\\Drivers\\\\winepulse.drv]",
+)
+_VALOR_DO_PADRAO = re.compile(r'^"(?:Default\w*|Role\w*)"=', re.I)
+
+
+def e_no_da_casa(nome: str) -> bool:
+    """O nó é do Hefesto? `hefesto_som_*` e o `…_HEFESTO…` do endpoint de háptica."""
+    return nome.startswith("hefesto_som_") or "_HEFESTO" in nome
+
+
+def nos_vivos(runner: Callable[[list[str]], str | None] = _pactl) -> set[str] | None:
+    """O nome de todo sink e source vivo; ``None`` = o servidor não respondeu."""
+    sinks = _lista_do_pactl("sinks", runner)
+    sources = _lista_do_pactl("sources", runner)
+    if sinks is None or sources is None:
+        return None
+    return {i.nome for i in (*sinks, *sources) if i.nome}
+
+
+def _guid_do_mapa(bloco: str) -> str | None:
+    """O GUID de uma entrada do mapa (`"guid"=hex:`, 16 bytes na ordem do Windows)."""
+    m = _GUID_DO_MAPA.search(re.sub(r"\\\n\s*", "", bloco))
+    if m is None:
+        return None
+    g = bytes(int(x, 16) for x in m.group(1).split(","))
+    d1 = int.from_bytes(g[0:4], "little")
+    d2 = int.from_bytes(g[4:6], "little")
+    d3 = int.from_bytes(g[6:8], "little")
+    return f"{{{d1:08X}-{d2:04X}-{d3:04X}-{g[8:10].hex().upper()}-{g[10:].hex().upper()}}}"
+
+
+def _sem_o_padrao_podado(bloco: str, podados: set[str]) -> str:
+    """O bloco sem a linha do padrão (`Default*`/`Role*`) que aponta para um GUID podado."""
+    cabecalho = _cabecalho(bloco)
+    if not (cabecalho.startswith(_RAIZ_DO_SOM) or cabecalho in _CHAVES_DO_PADRAO):
+        return bloco
+    linhas = bloco.split("\n")
+    fica = [
+        ln for ln in linhas
+        if not (_VALOR_DO_PADRAO.match(ln) and any(g in ln.upper() for g in podados))
+    ]
+    return bloco if len(fica) == len(linhas) else "\n".join(fica)
+
+
+@dataclass(frozen=True)
+class Poda:
+    sistema: str
+    usuario: str | None
+    podados: int
+
+
+def podar_o_som(sistema: str, usuario: str | None, vivos: set[str] | None) -> Poda:
+    """Os dois registros sem o som ausente e sem o nó da casa que não está vivo.
+
+    ``vivos`` é :func:`nos_vivos`; ``None`` (o servidor calado) poda só os
+    ausentes, porque não saber não é saber que morreu. A contagem é de GUIDs.
+    """
+    guids: set[str] = set()
+    for bloco in _blocos(sistema):
+        m = _CHAVE_DO_SOM.match(_cabecalho(bloco))
+        estado = _ESTADO.search(bloco) if m and not m.group(2) else None
+        if m and estado and int(estado.group(1), 16) == AUSENTE:
+            guids.add(m.group(1).upper())
+    usuario_novo = usuario
+    removidos: set[str] = set()
+    if usuario is not None and vivos is not None:
+        fica_usuario: list[str] = []
+        for bloco in _blocos(usuario):
+            m = _MAPA_DO_PULSE.match(_cabecalho(bloco))
+            guid = _guid_do_mapa(bloco) if m and e_no_da_casa(m.group(1)) else None
+            if m and guid and m.group(1) not in vivos:
+                guids.add(guid)
+                removidos.add(guid)
+                continue
+            fica_usuario.append(bloco)
+        usuario_novo = "\n".join(fica_usuario)
+    if not guids:
+        return Poda(sistema, usuario, 0)
+    fica_sistema: list[str] = []
+    for bloco in _blocos(sistema):
+        m = _CHAVE_DO_SOM.match(_cabecalho(bloco))
+        if m and m.group(1).upper() in guids:
+            removidos.add(m.group(1).upper())
+            continue
+        fica_sistema.append(_sem_o_padrao_podado(bloco, guids))
+    if usuario_novo is not None:
+        usuario_novo = "\n".join(_sem_o_padrao_podado(b, guids) for b in _blocos(usuario_novo))
+    return Poda("\n".join(fica_sistema), usuario_novo, len(removidos))
+
+
+def _gravar_com_backup(registro: Path, texto: str) -> None:
+    """Um backup rotativo só, e a troca atômica."""
+    backup = registro.with_name(registro.name + _BACKUP)
+    backup.write_bytes(registro.read_bytes())
+    tmp = registro.with_name(registro.name + _TMP)
+    tmp.write_text(texto, encoding="utf-8", errors="surrogateescape")
+    os.replace(tmp, registro)
+
+
 def wineserver_do_prefixo_vivo(pfx: Path, proc: Path = Path("/proc")) -> bool:
     """Há um `wineserver` servindo ESTE prefixo? (o `WINEPREFIX` no environ dele)"""
     alvo = os.path.normpath(str(pfx))
@@ -699,6 +834,7 @@ class Resultado:
     variantes: int = 0
     escreveu: bool = False
     motivo: str = ""
+    podados: int = 0
 
 
 def aplicar(
@@ -707,10 +843,17 @@ def aplicar(
     controles: list[Controle],
     proc: Path = Path("/proc"),
     carimbo: int | None = None,
+    podar: bool = False,
+    vivos: set[str] | None = None,
 ) -> Resultado:
-    """Refaz os nossos blocos no `system.reg` do prefixo, se algo mudou."""
+    """Refaz os nossos blocos no `system.reg` do prefixo, se algo mudou.
+
+    Com ``podar``, o som que não existe mais sai antes (:func:`podar_o_som`),
+    sob a mesma recusa e a mesma trava, e o `user.reg` também se grava.
+    """
     pfx = compatdata / "pfx"
     registro = pfx / "system.reg"
+    usuario = pfx / "user.reg"
     resultado = Resultado(controles=len(controles))
     if not registro.is_file():
         resultado.motivo = "sem-registro"
@@ -731,16 +874,20 @@ def aplicar(
                 resultado.motivo = "ocupado"
                 return resultado
         texto = registro.read_text(encoding="utf-8", errors="surrogateescape")
-        novo = texto_novo(texto, controles, carimbo if carimbo is not None else int(time.time()))
+        base, usuario_txt, usuario_novo = texto, None, None
+        if podar:
+            if usuario.is_file():
+                usuario_txt = usuario.read_text(encoding="utf-8", errors="surrogateescape")
+            poda = podar_o_som(texto, usuario_txt, vivos)
+            base, usuario_novo, resultado.podados = poda.sistema, poda.usuario, poda.podados
+        novo = texto_novo(base, controles, carimbo if carimbo is not None else int(time.time()))
         resultado.variantes = sum(1 for b in _blocos(novo) if e_bloco_nosso(b)) // 4
-        if _mesmos_blocos(novo, texto):
-            return resultado
-        backup = registro.with_name(registro.name + _BACKUP)
-        backup.write_bytes(registro.read_bytes())
-        tmp = registro.with_name(registro.name + _TMP)
-        tmp.write_text(novo, encoding="utf-8", errors="surrogateescape")
-        os.replace(tmp, registro)
-        resultado.escreveu = True
+        if not _mesmos_blocos(novo, texto):
+            _gravar_com_backup(registro, novo)
+            resultado.escreveu = True
+        if usuario_novo is not None and usuario_novo != usuario_txt:
+            _gravar_com_backup(usuario, usuario_novo)
+            resultado.escreveu = True
         return resultado
     finally:
         if trava >= 0:
@@ -799,12 +946,15 @@ def main(argv: list[str] | None = None) -> int:
             return 3
         return 0
 
+    vivos: set[str] | None = None
     if args.remover:
         controles: list[Controle] = []
     else:
         controles = controles_do_registro(Path(args.sysfs))
+        vivos = nos_vivos()
     try:
-        resultado = aplicar(Path(args.prefixo), controles=controles)
+        resultado = aplicar(Path(args.prefixo), controles=controles,
+                            podar=not args.remover, vivos=vivos)
     except OSError as erro:
         print(f"erro: {erro}", file=sys.stderr)
         return 1
@@ -812,7 +962,8 @@ def main(argv: list[str] | None = None) -> int:
         print("prefixo ocupado (wineserver vivo): o próximo lançamento refaz", file=sys.stderr)
         return 3
     if resultado.escreveu:
-        print(f"device KS: {resultado.controles} controle(s), {resultado.variantes} instância(s)")
+        print(f"device KS: {resultado.controles} controle(s), {resultado.variantes} instância(s), "
+              f"podados={resultado.podados}")
     return 0
 
 
