@@ -3,8 +3,8 @@
 O-MODULO-DO-CONTROLE-SEGUE-O-KERNEL-NOVO-E-O-DOCTOR-AVISA-QUANDO-ELE-CAI-01. O pino do
 `dkms.conf` PULA todo kernel que não conferiu, e nesse kernel o `hid_playstation` de
 fábrica não tem a guarda do áudio (patch 0003): o microfone pelo Bluetooth cai. Esta régua
-cobra a pergunta do `check_hefesto_hid_playstation_dkms` com os kernels que chegam depois do
-conferido (o 7.2.6 que o Pop já publicou, o estável 7.2.10 e o 7.3), com um
+cobra a pergunta do `check_hefesto_hid_playstation_dkms` com os kernels que chegam depois dos
+conferidos (o próximo build do Pop, o estável 7.2.10 e o 7.3), com um
 `/sys/module` de mentira: com o módulo de fábrica o aviso sai, com a cópia do Hefesto não.
 
 A MORDIDA: trocar o `warn` do kernel fora da lista por `info` (ou tirar a frase) reprova
@@ -27,9 +27,10 @@ RAIZ = Path(__file__).resolve().parents[2]
 BASELINE = RAIZ / "assets" / "dkms" / "hid-playstation" / "patch" / "BASELINE"
 DE_FABRICA = "A74F93FE20FF36683AF7614"
 
-#: O 7.2.6 do Pop (ramo `linux_noble`), o estável de 11/10 e o mainline: nenhum está no pino.
+#: O próximo build do Pop, o estável de 11/10 e o mainline: nenhum está no pino. O 7.2.6 do
+#: Pop (ramo `linux_noble`) entrou nele em 15/10/2026, com o fonte dele em `fonte-por-kernel/`.
 KERNELS_NOVOS = [
-    "7.2.6-76070206-generic",
+    "7.2.7-76070207-generic",
     "7.2.10-76070210-generic",
     "7.3.0-76070300-generic",
 ]
@@ -38,7 +39,7 @@ KERNELS_NOVOS = [
 def _validados() -> list[str]:
     for linha in BASELINE.read_text(encoding="utf-8").splitlines():
         if linha.startswith("KERNELS_VALIDADOS="):
-            return linha.split("=", 1)[1].split(",")
+            return linha.split("=", 1)[1].replace(",", " ").split()
     raise AssertionError("o BASELINE perdeu o KERNELS_VALIDADOS")
 
 
@@ -73,7 +74,9 @@ def test_o_aviso_diz_como_voltar(tmp_path: Path) -> None:
     assert "kernel dessa lista" in saida, saida
 
 
-@pytest.mark.parametrize("kernel", ["7.1.5-76070105-generic", *KERNELS_NOVOS])
+@pytest.mark.parametrize(
+    "kernel", ["7.1.5-76070105-generic", "7.2.6-76070206-generic", *KERNELS_NOVOS]
+)
 def test_com_a_copia_do_hefesto_o_aviso_some(tmp_path: Path, kernel: str) -> None:
     modulo = _sys_do_modulo(tmp_path, marca="Y")
     saida = _doctor_hidp(tmp_path, modulo=modulo, staged=True, kernel=kernel)

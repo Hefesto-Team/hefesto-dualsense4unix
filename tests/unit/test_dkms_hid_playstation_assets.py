@@ -73,6 +73,7 @@ PATCH3_PATH = (
 
 PATCH_PATHS = (PATCH_PATH, PATCH2_PATH, PATCH3_PATH)
 BASELINE_PATH = ASSET_DIR / "patch" / "BASELINE"
+ESCOLHER_PATH = ASSET_DIR / "escolher-o-fonte.sh"
 MODPROBE_CONF_PATH = REPO_ROOT / "assets" / "modprobe.d" / "hefesto-hid-playstation.conf"
 
 SOB_ANONIMO = (
@@ -208,6 +209,7 @@ class TestLayout:
             PATCH2_PATH,
             BASELINE_PATH,
             MODPROBE_CONF_PATH,
+            ESCOLHER_PATH,
         ):
             assert path.exists(), f"asset ausente: {path.relative_to(REPO_ROOT)}"
 

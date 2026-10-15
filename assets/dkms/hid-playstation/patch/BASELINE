@@ -52,19 +52,43 @@
 # daemon o reconhece por ele até o próximo boot carregar o novo (o
 # `daemon/subsystems/bt_mic.py` guarda a mesma lista, e uma régua cobra os dois).
 #
+# UM FONTE POR KERNEL (15/10/2026). O kernel cujo de fábrica não é o da raiz
+# ganha uma pasta `fonte-por-kernel/<build>/` com o `hid-playstation.c` (a
+# série aplicada sobre o de fábrica DELE), o `hid-ids.h` dele e a série
+# rebaseada em `patch/`, e uma linha POR_KERNEL abaixo, com os mesmos campos da
+# raiz. O `PRE_BUILD` do dkms.conf (`escolher-o-fonte.sh`) põe o certo no
+# lugar. A lista dos builds da raiz mora em `fonte-por-kernel/raiz.txt`, e não
+# aqui, porque o `dkms_lib.sh` apaga este `patch/` do /usr/src.
+#
+# O 7.2.6-76070206: o de fábrica é o do pop-os/linux em 8b969b992 (o ramo
+# linux_noble de 02/10/2026), sha 48a08ddd…, igual ao do stable v7.2.6, do
+# v7.2.10 e do v7.3-rc7. Ele acrescenta os quatro botões do DualSense Edge
+# (Fn e as duas pás de trás, BTN_TRIGGER_HAPPY1 a 4) e nada mais. A série
+# 0001 a 0003 aplica sobre ele com `-F0`, só com deslocamento de linha, e o
+# delta é o mesmo da raiz, linha a linha. O passo 2 rodou com os headers reais
+# do Pop (`linux-headers-7.2.6-76070206-generic` da staging, gcc-13 13.3.0, o
+# mesmo do kernel): rc=0, vermagic 7.2.6-76070206-generic, os quatro `parm`
+# no `.ko`, `mic_frames_ignored` entre eles. O hid-ids.h vai junto por kernel,
+# como no hid-nintendo, para o fonte e os IDs serem do mesmo commit.
+#
 # O RITUAL PARA ACRESCENTAR UM KERNEL ao BUILD_EXCLUSIVE_KERNEL do dkms.conf,
 # e nenhum passo é opcional:
 #   1. o hid-playstation.c de fábrica daquele kernel (o do commit do Pop que o
-#      pacote dele nomeia) tem de ser o SHA256_VANILLA_C desta base. Se NÃO
-#      for, a série é refeita sobre o stable daquele kernel e este BASELINE
-#      muda inteiro — nunca se acrescenta o kernel com o arquivo de outro;
+#      pacote dele nomeia) se mede pelo sha256. Se for o SHA256_VANILLA_C da
+#      raiz, o build entra em `fonte-por-kernel/raiz.txt`. Se for outro, a
+#      série é refeita sobre ele numa pasta `fonte-por-kernel/<build>/` nova,
+#      com a linha POR_KERNEL dela aqui. Nunca se acrescenta o kernel com o
+#      arquivo de outro;
 #   2. o patchado compila contra os headers dele, com o `parm:
 #      mic_frames_ignored` no `.ko`;
-#   3. só então o build entra na regex e em KERNELS_VALIDADOS — a mesma lista
-#      nos dois lugares, e uma régua cobra os dois sentidos.
+#   3. só então o build entra na regex e em KERNELS_VALIDADOS. A regex, a
+#      lista, o raiz.txt e as pastas dizem o mesmo, e uma régua cobra os
+#      quatro (tests/unit/test_o_hid_playstation_so_nos_kernels_conferidos.py).
+# O `scripts/conferir_o_kernel_novo.py` faz o passo 1 para um fonte de kernel
+# antes de ele chegar: confere, aplica limpa ou pede rebase à mão.
 KERNEL_BASE=v7.1.5
 KERNEL_TESTED=7.1.5-76070105-generic
-KERNELS_VALIDADOS=7.1.5-76070105
+KERNELS_VALIDADOS=7.1.5-76070105 7.2.6-76070206
 POP_LINUX_COMMIT=38a419fc95c5eae36afa2f13e459a7fc4f4a68f5
 POP_LINUX_COMMIT_HID_IDS_H=3af2f9de43174ce5063110f94b7b01226499ba13
 SHA256_VANILLA_C=9e8266ab8e5e4298d32097b3730f1fc03dbf6a9e57abdce627cd26ffc59883f0
@@ -82,3 +106,4 @@ SRCVERSION_DO_0003_SEM_A_MARCA=CFB81A3D4C7FAA41489CCBD
 PATCH=0001-HID-playstation-retry-feature-reports-that-time-out-o.patch
 PATCH=0002-HID-playstation-survive-a-DualShock4-pairing-info-rep.patch
 PATCH=0003-HID-playstation-do-not-parse-microphone-audio-frames-.patch
+POR_KERNEL=7.2.6-76070206 KERNEL_BASE=v7.2.6 POP_LINUX_COMMIT=8b969b992b134ea1103abf368be2dc3913d677a7 SHA256_VANILLA_C=48a08dddf8d276a611195311a29cd4f113a949a1f5431ecc84b0396b106ec896 SHA256_PATCHED_C=ea0233141048212c2a615bf96a0f2d00531ef6eb566d25a4d7693f63637dff2a SHA256_HID_IDS_H=330e393ecb01d5cde4ad347cc174ba6e177d822430918166a5fff06473d2293d
