@@ -125,6 +125,24 @@ def test_o_daemon_que_nao_confirma_vira_frase_curta() -> None:
     assert "não confirmou" in frase and "daemon" not in frase.lower(), frase
 
 
+def test_a_ressalva_do_giro_nao_vira_erro_no_clique_do_touchpad() -> None:
+    """Conferência de 15/10/2026: com o giro desligado e o nó de movimento sem grab, o
+    `sensor.set` devolve `status: ok` com uma `ressalva` sobre o MOVIMENTO. O clique no
+    touchpad deu certo, e o cartão não pode dizer o contrário.
+
+    MORDIDA: volte a passar o `corpo` inteiro a `frase_do_interruptor_de_sensor` e reprova."""
+    p = Ponte({"status": "ok", "touchpad": "desligado",
+               "ressalva": "o nó de movimento não ficou exclusivo (grab=released)"})
+    _gesto("touchpad")(_ctx(touchpad="ligado"), {"uniq": UNIQ}, p)
+    assert p.chamadas == [("sensor_set_detalhado", {"touchpad": "desligado", "uniq": UNIQ})]
+
+
+def test_o_daemon_que_devolve_o_touchpad_do_outro_lado_vira_erro() -> None:
+    p = Ponte({"status": "ok", "touchpad": "ligado"})
+    with pytest.raises(RuntimeError, match="seguiu ligado"):
+        _gesto("touchpad")(_ctx(touchpad="ligado"), {"uniq": UNIQ}, p)
+
+
 def test_o_pacote_pinta_o_estado_de_cada_controle() -> None:
     assert a02._toque_ligado({"sensores": {"touchpad": "ligado"}}) is True
     assert a02._toque_ligado({"sensores": {"touchpad": "desligado"}}) is False

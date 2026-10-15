@@ -2549,14 +2549,19 @@ def touchpad(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     agora = _toque_ligado(ctx.por_uniq(uniq))
     if agora is None:
         raise RuntimeError(SEM_LEITURA_DO_TOUCHPAD)
-    corpo = _corpo(p.sensor_set_detalhado(
-        touchpad="desligado" if agora else "ligado", uniq=uniq))
+    pedido = "desligado" if agora else "ligado"
+    corpo = _corpo(p.sensor_set_detalhado(touchpad=pedido, uniq=uniq))
     if corpo is None:
         raise RuntimeError(
             "o Hefesto não confirmou o touchpad: ou ele parou, ou este controle se desligou")
-    frase = frase_do_interruptor_de_sensor(corpo)
+    # A `ressalva` do `sensor.set` é do GIRO e do acelerômetro (o nó de movimento sem grab, com
+    # algum dos dois desligado): no clique do touchpad ela seria um erro falso sobre outro sensor.
+    # O que este clique confere é o `status` e o `touchpad` que o daemon devolve.
+    frase = frase_do_interruptor_de_sensor({**corpo, "ressalva": None})
     if frase:
         raise RuntimeError(frase)
+    if corpo.get("touchpad") not in (None, pedido):
+        raise RuntimeError(f"o touchpad deste controle seguiu {corpo['touchpad']}")
 
 
 SEM_LEITURA_DA_MIRA = (
