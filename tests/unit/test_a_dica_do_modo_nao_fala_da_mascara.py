@@ -1,4 +1,8 @@
-"""MODO-DE-CONEXAO-01 — o texto do modo não fala da máscara."""
+"""MODO-DE-CONEXAO-01 — o texto do modo não fala da máscara.
+
+Desde a aba Jogar do todo (15/10/2026) a página não tem «?»: a dica de cada quadro e de
+cada chip mora no `data-dica` dele.
+"""
 from __future__ import annotations
 
 import html
@@ -23,9 +27,10 @@ DA_MASCARA = (
     "Y B A X",
 )
 
-O_CARTAO_GUARDA = ("botões", "Xbox 360", "Nintendo", "△ ○ ✕ ▢", "Y B A X")
+O_CARTAO_GUARDA = ("desenho", "botões")
 
-CHIPS_DE_MODO = {"modo-dualsense", "modo-xbox", "modo-steam", "modo-navegacao", "modo-nativo"}
+CHIPS_DE_MODO = {"modo-dualsense", "modo-xbox", "modo-steam", "modo-navegacao", "modo-nativo",
+                 "modo-point-and-click"}
 
 
 def _pagina() -> str:
@@ -39,24 +44,21 @@ def _texto(trecho: str) -> str:
 
 
 def _dica_do_quadro(titulo: str) -> str:
-    """O texto do «?» do quadro cujo título é `titulo`."""
-    pagina = _pagina()
-    marca = f'<span class="quadro-titulo">{titulo}</span>'
-    inicio = pagina.find(marca)
-    assert inicio >= 0, f"o quadro {titulo!r} sumiu da página publicada"
-    achado = re.compile(r'<span class="dica"[^>]*>(.*?)</span></span>', re.S).search(
-        pagina, inicio
-    )
-    assert achado is not None, f"o quadro {titulo!r} ficou sem «?»"
-    return _texto(achado.group(1))
+    """A dica do título do quadro cujo título é `titulo`."""
+    achado = re.search(
+        rf'<span class="quadro-titulo"([^>]*)>{re.escape(titulo)}</span>', _pagina())
+    assert achado is not None, f"o quadro {titulo!r} sumiu da página publicada"
+    dica = re.search(r'data-dica="([^"]*)"', achado.group(1))
+    assert dica is not None, f"o quadro {titulo!r} ficou sem dica"
+    return _texto(dica.group(1))
 
 
 def _dicas_dos_chips_de_modo() -> dict[str, str]:
-    """`{data-gesto: title}` de cada chip de modo."""
+    """`{data-gesto: data-dica}` de cada chip de modo."""
     dicas: dict[str, str] = {}
     for tag in re.findall(r'<span[^>]*data-gesto="modo-[^"]*"[^>]*>', _pagina(), re.S):
         gesto = re.search(r'data-gesto="([^"]+)"', tag)
-        titulo = re.search(r'title="([^"]*)"', tag)
+        titulo = re.search(r'data-dica="([^"]*)"', tag)
         assert gesto is not None
         dicas[gesto.group(1)] = html.unescape(titulo.group(1)) if titulo else ""
     return dicas
@@ -80,17 +82,17 @@ def test_as_dicas_dos_chips_de_modo_nao_falam_da_mascara() -> None:
     )
 
 
-def test_o_interrogacao_do_quadro_modo_nao_fala_da_mascara() -> None:
+def test_a_dica_do_quadro_modo_nao_fala_da_mascara() -> None:
     dica = _dica_do_quadro("Modo")
-    assert "chega ao jogo" in dica, f"o «?» do Modo deixou de dizer o que é o modo: {dica!r}"
+    assert "chega ao jogo" in dica, f"a dica do Modo deixou de dizer o que é o modo: {dica!r}"
     termos = _vocabulario_da_mascara_em(dica)
-    assert not termos, f"o «?» do quadro Modo fala da máscara ({termos}): {dica!r}"
+    assert not termos, f"a dica do quadro Modo fala da máscara ({termos}): {dica!r}"
 
 
-def test_o_assunto_da_mascara_continua_no_interrogacao_dos_cartoes() -> None:
+def test_o_assunto_da_mascara_continua_na_dica_dos_cartoes() -> None:
     dica = _dica_do_quadro("O controle é visto como:")
     faltam = [termo for termo in O_CARTAO_GUARDA if termo not in dica]
     assert not faltam, (
-        f"o «?» dos cartões perdeu o vocabulário da máscara ({faltam}) — tirar "
+        f"a dica dos cartões perdeu o vocabulário da máscara ({faltam}) — tirar "
         f"o assunto do modo não pode apagá-lo da tela: {dica!r}"
     )

@@ -88,16 +88,26 @@ def test_a_faixa_final_nao_declara_lugar_de_recado(publicado: bool) -> None:
     assert 'class="recibo-do-reconectar"' not in corpo
 
 
-MEDIR = """() => {
-  const f = document.querySelector('.faixa-final');
+#: Desde a aba Jogar do todo (15/10/2026) o botão mora no canto do quadro, e não mais na
+#: `.faixa-final`: a borda é a do pai dele, e as linhas se contam só no texto (o ícone
+#: que gira é outra caixa, e não uma linha).
+ONDE_O_BOTAO_ESTA = """
   const b = document.querySelector('[data-gesto="reconectar"]');
-  if (!f || !b) return {erro: 'sem .faixa-final ou sem o botão'};
+  const f = b && b.parentElement;
+  if (!f || !b) return {erro: 'sem o botão'};
   const cf = getComputedStyle(f);
   const rf = f.getBoundingClientRect(), rb = b.getBoundingClientRect();
   const borda = rf.right - parseFloat(cf.paddingRight) - parseFloat(cf.borderRightWidth);
-  const rg = document.createRange();
-  rg.selectNodeContents(b);
-  const tops = new Set(Array.from(rg.getClientRects()).map(r => Math.round(r.top)));
+  const tops = new Set();
+  for (const no of b.childNodes) {
+    if (no.nodeType !== 3 || !no.textContent.trim()) continue;
+    const rg = document.createRange();
+    rg.selectNodeContents(no);
+    for (const r of rg.getClientRects()) tops.add(Math.round(r.top));
+  }
+"""
+
+MEDIR = "() => {" + ONDE_O_BOTAO_ESTA + """
   return {x: rb.left, y: rb.top, direita: borda - rb.right, linhas: tops.size};
 }"""
 
@@ -187,19 +197,11 @@ CENAS_DO_ESTADO: tuple[tuple[str, str], ...] = (
 
 TOLERANCIA_DO_ESTADO = 2
 
-MEDIR_O_ESTADO = """() => {
-  const f = document.querySelector('.faixa-final');
-  const b = document.querySelector('[data-gesto="reconectar"]');
+MEDIR_O_ESTADO = "() => {" + ONDE_O_BOTAO_ESTA + """
   const n = document.querySelector('.mesa-notas[data-campo="mesa-frase"]');
   const p = document.querySelector('.pecas');
-  if (!f || !b || !n || !p) return {erro: 'sem .faixa-final, botão, frase da mesa ou .pecas'};
-  const cf = getComputedStyle(f);
-  const rf = f.getBoundingClientRect(), rb = b.getBoundingClientRect();
+  if (!n || !p) return {erro: 'sem a frase da mesa ou .pecas'};
   const rn = n.getBoundingClientRect(), rp = p.getBoundingClientRect();
-  const borda = rf.right - parseFloat(cf.paddingRight) - parseFloat(cf.borderRightWidth);
-  const rg = document.createRange();
-  rg.selectNodeContents(b);
-  const tops = new Set(Array.from(rg.getClientRects()).map(r => Math.round(r.top)));
   return {x: rb.left, y: rb.top, direita: borda - rb.right, linhas: tops.size,
           frase: {altura: rn.height, meio: rn.top + rn.height / 2},
           fileira: {topo: rp.top, base: rp.bottom}};

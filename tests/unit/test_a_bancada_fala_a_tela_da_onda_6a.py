@@ -63,12 +63,16 @@ def _texto_visivel(pagina: str) -> str:
 
 
 def test_quem_manda_nao_clicar_nos_botoes_do_cartao_nomeia_todos() -> None:
-    """O aviso «não clique nos botões do alto do cartão» nomeia TODOS os botões."""
+    """O aviso «não clique nos botões do cartão» nomeia TODOS os botões.
+
+    Desde o desenho do todo (15/10/2026) o cartão tem «Giroscópio» e «Acelerômetro» no
+    alto e a «Mira virtual» embaixo de cada analógico.
+    """
     pagina = (_PAGINAS / "02-controles.html").read_text(encoding="utf-8")
     botoes = sorted(set(re.findall(
-        r'<button class="sw[^"]*" data-gesto="(?:sensor|mira)"[^>]*>'
+        r'<button class="sw[^"]*" data-gesto="(?:sensor|analogico-lado)"[^>]*>'
         r'<span class="p"></span>([^<]+)</button>', pagina)))
-    assert len(botoes) >= 3, f"a régua achou {botoes} no alto do cartão — cega"
+    assert len(botoes) >= 3, f"a régua achou {botoes} no cartão — cega"
 
     faltam = []
     for titulo, corpo in _secoes().items():
@@ -108,18 +112,19 @@ def test_as_dicas_do_giroscopio_citadas_sao_as_do_pacote() -> None:
 
 
 def test_os_ajustes_da_mira_citados_existem_na_calibrar() -> None:
-    """O que a bancada diz morar nos ajustes do «Analógico virtual» mora na Calibrar publicada.
+    """O que a bancada diz morar nos ajustes do «Giroscópio como analógico» está na Calibrar.
 
     O bloco «Mira Virtual» embaixo dos cartões virou, em 08/10/2026, os ajustes do
     «Analógico virtual» dentro do cartão de cada controle
-    (O-ANALOGICO-VIRTUAL-E-UM-SO-COM-O-LADO-ESCOLHIDO-01).
+    (O-ANALOGICO-VIRTUAL-E-UM-SO-COM-O-LADO-ESCOLHIDO-01); no desenho do todo (15/10/2026) o
+    liga se chama «Giroscópio como analógico».
     """
     tela = _texto_visivel("calibrar-sensores.html")
     frases_do_bloco = 0
     ausentes = []
     for titulo, corpo in _secoes().items():
         for frase in _frases(corpo):
-            if "ajustes do «Analógico virtual»" not in frase:
+            if "ajustes do «Giroscópio como analógico»" not in frase:
                 continue
             frases_do_bloco += 1
             for citado in _citados(frase):
