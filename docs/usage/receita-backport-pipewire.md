@@ -17,7 +17,10 @@ scripts/construir_pipewire_backport.sh
 Constrói o `1.6.9-0~hefesto24.04.1` e o `0.5.18-0~hefesto24.04.1` e entrega os
 `.deb`, com o `SHA256SUMS` e um `ORIGEM.txt`, em
 `~/.cache/hefesto-dualsense4unix/pipewire-backport/`. **Não instala nada e não
-usa sudo.** O `./install.sh` ainda não instala o PipeWire: a instalação é a de
+usa sudo.** Quem instala é o `./install.sh`, no passo 3f-bis: ele chama este
+script, confere o `SHA256SUMS`, grava o caminho de volta, fixa a prioridade do
+apt, instala só os pacotes que a máquina já tem e reinicia o som. Com a Steam
+aberta, ele recusa e manda fechá-la pelo menu. A instalação à mão é a de
 [Instalar](#instalar).
 
 ## De onde vem cada peça
@@ -48,7 +51,9 @@ O script faz os ajustes de empacotamento, cada um conferindo o alvo antes:
    (`debian/libwireplumber-0.5-0.symbols.novos`, os mesmos do Debian 0.5.18-1).
    O `dh_makeshlibs -c4` do Pop reprova símbolo novo sem linha;
 3. no WirePlumber, a linha do bash-completion do `wpctl`, que o
-   `dh_missing --fail-missing` do compat 13 exige.
+   `dh_missing --fail-missing` do compat 13 exige;
+4. no WirePlumber, o `meson-1.5` do `debian/control` do Pop vira o `meson-1.7`
+   do PipeWire: os dois conflitam no noble, e a 0.5.18 constrói com o 1.7.
 
 ## A prova sem dependência de build
 
@@ -102,8 +107,18 @@ Se faltar alguma, o script lista o que o `dpkg-checkbuilddeps` disse e sai com
 3. São muitas: o PipeWire pede, entre outras, o `meson` 1.7 ou mais novo, o
 `doxygen`, o `graphviz` e as bibliotecas de cada módulo (Bluetooth, JACK,
 GStreamer, os codecs do rádio como sbc, lc3 e ldac, webrtc-audio-processing, ffado). O WirePlumber
-pede o `meson` 1.5, o `liblua5.4-dev`, o `dh-sequence-gnome` e o sphinx.
-Instale pelos dois `debian/control` e rode de novo:
+pede o mesmo `meson` 1.7, o `liblua5.4-dev`, o `dh-sequence-gnome` e o sphinx.
+
+**Com o BlueZ da casa instalado, o `libbluetooth-dev` vem primeiro.** O
+`mk-build-deps` puxaria o do archive, e o apt rebaixaria o `libbluetooth3` da
+casa para casar com ele. O script, ao listar o que falta, dá o comando com a
+versão desta máquina; a forma é:
+
+```bash
+sudo apt install ~/.cache/hefesto-dualsense4unix/bluez-obra/libbluetooth-dev_<a versão do libbluetooth3>_amd64.deb
+```
+
+Depois, instale pelos dois `debian/control` e rode de novo:
 
 ```bash
 cd ~/.cache/hefesto-dualsense4unix/pipewire-obra
@@ -118,11 +133,14 @@ microfone por alguns segundos, e o jogo aberto pode perder a saída. Feche a
 Steam antes.
 
 1. Anote o antes: `pipewire --version`, `wpctl status` e o `doctor`.
-2. Guarde as versões de agora, que são o caminho de volta:
+2. Guarde as versões de agora, que são o caminho de volta. Entra só o que está
+   instalado (`ii`) e tem versão, e sai o `pipewire-build-deps` do
+   `mk-build-deps`: uma linha `pacote=` sem versão quebra o `apt install` da volta.
 
    ```bash
-   dpkg-query -W -f='${Package}=${Version}\n' 'libpipewire*' 'libspa-0.2*' 'pipewire*' \
-       'wireplumber*' 'libwireplumber*' 'gir1.2-wp*' 2>/dev/null \
+   dpkg-query -W -f='${db:Status-Abbrev}|${binary:Package}=${Version}\n' 'libpipewire*' \
+       'libspa-0.2*' 'pipewire*' 'wireplumber*' 'libwireplumber*' 'gir1.2-wp*' 2>/dev/null \
+       | awk -F'|' '$1 ~ /^ii/ && $2 !~ /-build-deps[:=]/ && $2 !~ /=$/ { print $2 }' \
        > ~/.cache/hefesto-dualsense4unix/pipewire-backport/VERSOES-ANTERIORES.txt
    ```
 
