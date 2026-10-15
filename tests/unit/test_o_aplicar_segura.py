@@ -136,6 +136,7 @@ def test_o_ajuste_de_aba_nao_prende_e_o_autoswitch_segue_trocando() -> None:
     autoswitch livre, e o terminal devolve o último jogo. MORDIDA: arme a trava em todo
     reaplicar (``elif reaplicacao:`` sem o ``and prender``) e o perfil fica preso em «fliperama».
     """
+    # Prova da D-1410-O-APLICAR-SEGURA.
     _manager, store, sw = _a_montagem(prender=False)
     assert not store.manual_profile_lock_active(time.monotonic()), "o ajuste armou a trava"
     _terminal(sw, 2.0, 2.0 + 13.0)
@@ -150,6 +151,7 @@ def test_depois_do_ajuste_de_aba_a_janela_com_perfil_troca() -> None:
     MORDIDA: arme a trava em todo reaplicar (``elif reaplicacao:`` sem o ``and prender``) e o
     Kodi em foco não tira o «fliperama».
     """
+    # Prova da D-1410-O-APLICAR-SEGURA.
     _manager, store, sw = _a_montagem(prender=False)
     _terminal(sw, 2.0, 6.0, JANELA_DA_NAVEGACAO)
     assert store.active_profile == "navegacao", "o Kodi em foco não trocou depois do ajuste"
@@ -191,6 +193,7 @@ class _PonteQueAnota:
 
 def test_a_ponte_so_manda_o_prender_quando_o_gesto_pede(monkeypatch: pytest.MonkeyPatch) -> None:
     """A ponte real leva ``prender: true`` no IPC só com o gesto, e o padrão não leva nada."""
+    # Prova da D-1410-O-APLICAR-SEGURA.
     from hefesto_dualsense4unix.interface.pacotes import ponte
 
     enviados: list[dict[str, Any]] = []
@@ -212,6 +215,7 @@ def test_o_aplicar_do_rodape_prende(monkeypatch: pytest.MonkeyPatch) -> None:
 
     MORDIDA: tire o ``prender=True`` do ``rodape.aplicar``.
     """
+    # Prova da D-1410-O-APLICAR-SEGURA.
     from hefesto_dualsense4unix.interface.pacotes import Contexto, perfil, rodape
 
     monkeypatch.setattr(rodape, "perfil_do_rodape", lambda _state: "Sackboy")
@@ -224,6 +228,7 @@ def test_o_aplicar_do_rodape_prende(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_o_voltar_a_de_ontem_prende(monkeypatch: pytest.MonkeyPatch) -> None:
     """O «Voltar à de ontem» segue a mesma regra do «Aplicar»: pede ``prender``."""
+    # Prova da D-1410-O-APLICAR-SEGURA.
     from hefesto_dualsense4unix.interface.pacotes import Contexto, a10_perfis
     from hefesto_dualsense4unix.profiles import loader
 
@@ -243,6 +248,7 @@ def test_o_reaplicar_do_ajuste_de_aba_nao_prende(monkeypatch: pytest.MonkeyPatch
 
     MORDIDA: ponha ``prender=True`` no ``p.profile_reaplicar`` de ``perfil.reaplicar``.
     """
+    # Prova da D-1410-O-APLICAR-SEGURA.
     from hefesto_dualsense4unix.interface.pacotes import Contexto, perfil
 
     ponte = _PonteQueAnota()
