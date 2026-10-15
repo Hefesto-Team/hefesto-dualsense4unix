@@ -595,6 +595,92 @@ def contrato_que_faltou_ao_montar() -> list[str]:
         return list(_CONTRATO_QUE_FALTOU)
 
 
+# --- a porta que não enumera (UM-GADGET-QUE-NAO-ENUMERA-NAO-CONDENA-OS-OUTROS-01) --
+#
+# A enumeração pelo ``vhci_hcd`` é um fato de cada porta e de cada vez, e não um
+# contrato do kernel: guardada em :data:`_CONTRATO_QUE_FALTOU`, a falha do P3
+# em 12/10/2026 mandou todo pad seguinte ao uhid até o daemon reiniciar. A
+# porta do ``vhci`` é a do número do jogador (o broker usa ``porta_do_serial``),
+# e é ela que se conta aqui.
+
+#: duas falhas seguidas da mesma porta a tiram do rodízio até o daemon reiniciar.
+FALHAS_ATE_A_PORTA_SAIR = 2
+_FALHAS_DA_PORTA: dict[int, int] = {}
+
+
+def anotar_falha_da_porta(porta: int) -> int:
+    """O gadget da ``porta`` não enumerou; devolve as falhas seguidas dela."""
+    with _TRAVA:
+        _FALHAS_DA_PORTA[porta] = _FALHAS_DA_PORTA.get(porta, 0) + 1
+        return _FALHAS_DA_PORTA[porta]
+
+
+def porta_enumerou(porta: int) -> None:
+    """O gadget da ``porta`` enumerou: as falhas dela deixam de ser seguidas."""
+    with _TRAVA:
+        _FALHAS_DA_PORTA.pop(porta, None)
+
+
+def porta_fora(porta: int) -> bool:
+    """A ``porta`` saiu do rodízio (falhou :data:`FALHAS_ATE_A_PORTA_SAIR` seguidas)."""
+    with _TRAVA:
+        return _FALHAS_DA_PORTA.get(porta, 0) >= FALHAS_ATE_A_PORTA_SAIR
+
+
+#: o evento do daemon que diz por que o pad do jogador ficou no uhid.
+_POR_QUE_NO_UHID = {
+    "pad_usb_nao_enumerou_fica_o_uhid": "nao_enumerou",  # (noqa-acento): chave de máquina
+    "pad_usb_caiu_fica_o_uhid": "caiu",
+    "pad_usb_porta_fora": "porta_fora",
+    "pad_usb_features_recusadas_fica_o_uhid": "features_recusadas",
+}
+_LINHA_DO_DAEMON = re.compile(
+    r"\[\s*(?:debug|info|warning|error|critical)\s*\]\s+(\w+)(.*)$"
+)
+_JOGADOR = re.compile(r"\bplayer=(\d+)\b")
+
+
+def quem_ficou_no_uhid(linhas: Iterable[str]) -> dict[int, str] | None:
+    """``{jogador: motivo}`` dos pads no uhid desde o último ``daemon_starting``.
+
+    O diário do daemon é a única testemunha da enumeração (ela só se mede
+    montando). None = o diário não tem a subida do daemon, e isso é «não sei»,
+    nunca «todos em USB». Duas linhas não dizem o jogador: o
+    ``pad_usb_sem_contrato_fica_o_uhid`` sai uma vez e vale para todo
+    ``uhid_device_created`` sem outro motivo depois dele; o
+    ``pad_usb_indisponivel_fica_o_uhid`` (o broker recusou) vale para o
+    seguinte. O ``pad_usb_enumerou`` tira o jogador da conta.
+    """
+    eventos: list[tuple[str, int | None]] = []
+    for linha in linhas:
+        achado = _LINHA_DO_DAEMON.search(linha)
+        if achado is None:
+            continue
+        campo = _JOGADOR.search(achado.group(2))
+        eventos.append((achado.group(1), int(campo.group(1)) if campo else None))
+    partidas = [i for i, (evento, _j) in enumerate(eventos) if evento == "daemon_starting"]
+    if not partidas:
+        return None
+    no_uhid: dict[int, str] = {}
+    sem_contrato = False
+    indisponivel = False
+    for evento, jogador in eventos[partidas[-1] + 1 :]:
+        if evento == "pad_usb_sem_contrato_fica_o_uhid":
+            sem_contrato = True
+        elif evento == "pad_usb_indisponivel_fica_o_uhid":
+            indisponivel = True
+        elif jogador is None:
+            continue
+        elif evento == "pad_usb_enumerou":
+            no_uhid.pop(jogador, None)
+        elif evento in _POR_QUE_NO_UHID:
+            no_uhid[jogador] = _POR_QUE_NO_UHID[evento]
+        elif evento == "uhid_device_created" and (indisponivel or sem_contrato):
+            no_uhid.setdefault(jogador, "indisponivel" if indisponivel else "sem_contrato")
+            indisponivel = False
+    return no_uhid
+
+
 def f_hid_fecha_a_resposta(
     caminho: str = MARCA_DO_F_HID,
     *,
@@ -688,6 +774,7 @@ def contrato_que_falta(
 
 __all__ = [
     "CONTRATO_DO_IOCTL",
+    "FALHAS_ATE_A_PORTA_SAIR",
     "GADGET_HID_READ_GET_REPORT_ID",
     "GADGET_HID_WRITE_GET_REPORT",
     "MARCA_DO_F_HID",
@@ -701,6 +788,7 @@ __all__ = [
     "a_mesa_saiu",
     "a_mesa_viu",
     "anotar_contrato_que_faltou",
+    "anotar_falha_da_porta",
     "anotar_gadget_a_caminho",
     "anotar_pad_a_caminho",
     "anotar_sem_porta",
@@ -725,6 +813,9 @@ __all__ = [
     "pacote_do_get_report",
     "pad_decidido",
     "porque_sem_porta",
+    "porta_enumerou",
+    "porta_fora",
+    "quem_ficou_no_uhid",
     "registrar_gadget",
     "serial_do_pad",
     "sob_o_vhci",

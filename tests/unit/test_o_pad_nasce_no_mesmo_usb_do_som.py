@@ -719,6 +719,7 @@ class BancadaDoGadget:
         monkeypatch.setattr(pad_usb, "escrever_get_report", escrever)
         monkeypatch.setattr(pad_usb, "_INTERFACE_DO_APARELHO", {})
         monkeypatch.setattr(pad_usb, "_CONTRATO_QUE_FALTOU", [])
+        monkeypatch.setattr(pad_usb, "_FALHAS_DA_PORTA", {})
         monkeypatch.setattr(uhid_gamepad, "_FILA_DA_ENUMERACAO", set())
         monkeypatch.setattr(
             uhid_gamepad, "_GADGETS_ESTACIONADOS", uhid_gamepad._GadgetsEstacionados()
@@ -866,7 +867,9 @@ class TestOVpadNasceNoGadget:
             pad.pump_ff()
             assert pad._gadget is None and pad.is_active
             assert bancada.clientes[0].desmontados == ["hefesto-pad-0"]
-            assert bancada.ug.CONTRATO_DA_ENUMERACAO in pad_usb.contrato_que_faltou_ao_montar()
+            # A falha é da porta dele, não um contrato do processo
+            # (UM-GADGET-QUE-NAO-ENUMERA-NAO-CONDENA-OS-OUTROS-01).
+            assert pad_usb.contrato_que_faltou_ao_montar() == []
         finally:
             pad.stop()
 
@@ -1075,9 +1078,7 @@ class TestOPadEmUsbNaoQuebraOResto:
             assert pad._gadget is None and pad.is_active
             assert bancada.clientes[0].desmontados == ["hefesto-pad-0"]
             assert bancada.ug._GADGETS_ESTACIONADOS.quantos() == 0
-            assert bancada.ug.CONTRATO_DA_ENUMERACAO not in (
-                pad_usb.contrato_que_faltou_ao_montar()
-            )
+            assert pad_usb.contrato_que_faltou_ao_montar() == []
         finally:
             pad.stop()
 

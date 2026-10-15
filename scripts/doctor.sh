@@ -3529,8 +3529,7 @@ PY
 # (TODO-PAD-TEM-PORTA-PROPRIA-01): a âncora emprestada saiu. A pergunta é a
 # do daemon (`system_check.contrato_do_pad_em_usb`), importada e não
 # redigitada. O `GADGET_HID_WRITE_GET_REPORT` e a enumeração pelo `vhci` só se
-# medem montando: quando faltam, o daemon diz no diário
-# (`pad_usb_features_recusadas_fica_o_uhid`, `pad_usb_nao_enumerou_fica_o_uhid`).
+# medem montando: quem os lê no diário do daemon é o `check_o_pad_no_uhid`.
 # HEFESTO_RAIZ_MODULOS e HEFESTO_LIB_MODULES existem para os testes.
 check_o_pad_em_usb() {
     local py saida
@@ -3576,6 +3575,73 @@ PY
         *)
             info "contrato do pad em USB não conferido (o pacote não está ao alcance do python ${py})" ;;
     esac
+}
+
+# UM-GADGET-QUE-NAO-ENUMERA-NAO-CONDENA-OS-OUTROS-01 (12/10/2026): com os quatro
+# pads no uhid, o `check_o_pad_em_usb` dizia «o pad virtual pode nascer em USB»,
+# porque o contrato do kernel estava todo lá: a enumeração pelo `vhci` é de cada
+# porta e de cada vez, e só o daemon a vê. Esta seção lê o diário dele desde o
+# último `daemon_starting` (a conta é do `pad_usb.quem_ficou_no_uhid`) e diz,
+# por jogador, quem ficou no uhid e por quê. O diário sem a subida é «não sei».
+check_o_pad_no_uhid() {
+    local sock py saida
+    sock="$(runtime_socket)"
+    if [[ ! -S "${sock}" ]]; then
+        info "daemon parado — não sei quais pads ficaram no uhid (suba o daemon e rode de novo)"
+        return
+    fi
+    command -v journalctl >/dev/null 2>&1 || { info "journalctl ausente — não sei quais pads ficaram no uhid"; return; }
+    py="$(_python_do_produto)"
+    [[ -n "${py}" ]] || { info "sem python — não sei quais pads ficaram no uhid"; return; }
+    saida="$(HEFESTO_SRC="${ROOT_DIR}/src" "${py}" - \
+        <(journalctl --user -b -u "${APP_ID}.service" -o short-iso-precise --no-pager 2>/dev/null \
+            | grep -E 'daemon_starting|pad_usb_|uhid_device_created') <<'PY' 2>/dev/null
+import os
+import sys
+
+src = os.environ.get("HEFESTO_SRC", "")
+if src and os.path.isdir(src):
+    sys.path.insert(0, src)
+try:
+    from hefesto_dualsense4unix.integrations.pad_usb import quem_ficou_no_uhid
+except Exception:  # noqa: BLE001 - qualquer falha de import é "não sei"
+    print("sem-produto")
+    raise SystemExit(0)
+with open(sys.argv[1], encoding="utf-8", errors="replace") as fh:
+    no_uhid = quem_ficou_no_uhid(fh.read().splitlines())
+if no_uhid is None:
+    print("sem-diario")
+elif not no_uhid:
+    print("ok")
+else:
+    for jogador, motivo in sorted(no_uhid.items()):
+        print(f"{jogador}|{motivo}")
+PY
+)" || saida=""
+    case "${saida}" in
+        sem-produto)
+            info "não sei quais pads ficaram no uhid (o pacote não está ao alcance do python ${py})"
+            return ;;
+        sem-diario|"")
+            info "o diário do daemon não tem a subida dele — não sei quais pads ficaram no uhid"
+            return ;;
+        ok)
+            pass "nenhum pad ficou no uhid desde que o daemon subiu"
+            return ;;
+    esac
+    local jogador motivo porque
+    while IFS='|' read -r jogador motivo; do
+        case "${motivo}" in
+            nao_enumerou) porque="o gadget dele não enumerou pelo vhci_hcd no prazo" ;;  # noqa-acento: chave de máquina
+            caiu) porque="o gadget dele caiu (o broker reiniciou ou o vhci soltou a porta)" ;;
+            porta_fora) porque="a porta USB dele falhou duas vezes seguidas e saiu do rodízio até o daemon reiniciar" ;;
+            features_recusadas) porque="o gadget recusou as features do probe" ;;
+            sem_contrato) porque="falta um contrato do kernel (veja a linha do pad em USB)" ;;
+            indisponivel) porque="o broker não montou o gadget" ;;
+            *) porque="${motivo}" ;;
+        esac
+        warn "o pad do jogador ${jogador} está no uhid, sem porta USB própria: ${porque}; o jogo com a biblioteca da Sony varre o áudio por este controle"
+    done <<<"${saida}"
 }
 
 # FEAT-WINDOW-DETECT-DIAG-01: diagnóstico do detector de janela do autoswitch
@@ -9323,6 +9389,7 @@ main() {
     check_o_modo_no_ar
     check_a_hora_do_pad
     check_o_pad_em_usb
+    check_o_pad_no_uhid
     hdr "broker hide-hidraw (cura de raiz do controle duplicado)"
     check_hidraw_broker
     check_quem_segura_o_fisico

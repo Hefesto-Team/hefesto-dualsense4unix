@@ -660,6 +660,10 @@ class UhidDualSense:
     _gadget_falhou: bool = False
     _gadget_caiu: bool = False
     _sem_gadget: bool = False
+    #: o pad que voltou ao uhid (não enumerou, ou o gadget caiu) tenta o gadget
+    #: UMA vez de novo, sem jogo aberto (UM-GADGET-QUE-NAO-ENUMERA-NAO-CONDENA-OS-OUTROS-01).
+    _gadget_outra_vez: bool = False
+    _gadget_outra_vez_em: float = 0.0
 
     @classmethod
     def for_flavor(
@@ -1377,6 +1381,8 @@ class UhidDualSense:
         """Drena os eventos do uhid; entrega o rumble do jogo ao `rumble_sink`."""
         if self._gadget is not None:
             return _bombear_o_gadget(self)
+        if self._gadget_outra_vez and self._fd is not None and _tentar_o_gadget_outra_vez(self):
+            return
         fd = self._fd
         if fd is None:
             return
@@ -1812,6 +1818,7 @@ class UhidDualSense:
 
     def stop(self) -> None:
         """Destrói o device e só DEPOIS devolve o MAC."""
+        self._gadget_outra_vez = False
         self._destruir_o_device()
         _MACS_DOS_VPADS_VIVOS.despir(self)
 
@@ -2270,7 +2277,8 @@ def _e_eco_puro(body: bytes) -> bool:
 # A enumeração leva segundos (~9 s na prova): o `wait_for_bind` aceita o gadget
 # montado, e o fio vigia a enumeração; se ela não vier em
 # `_GADGET_ENUMERA_S` por gadget da fila (o dele e os montados à frente, que o
-# hub enumera um por vez), o pad volta ao uhid e o contrato que faltou vai ao doctor.
+# hub enumera um por vez), o pad volta ao uhid, e a falha é da porta dele, não
+# do processo (`pad_usb.anotar_falha_da_porta`): o pad seguinte tenta o gadget.
 
 _GADGET_ENUMERA_S = 15.0
 _GADGET_VARRE_S = 5.0
@@ -2297,8 +2305,6 @@ _TRAVA_DA_FILA = threading.Lock()
 #: enumeração e o relógio da identidade nunca se cruzam com metade feita.
 _TRAVA_DA_ANCORA = threading.Lock()
 _FEATURES_DO_PROBE = (0x05, 0x09, 0x20)
-#: o contrato que só se mede montando: o gadget não enumerou pelo `vhci_hcd`.
-CONTRATO_DA_ENUMERACAO = "enumeração pelo vhci_hcd"
 
 
 @dataclass
@@ -2314,6 +2320,9 @@ class _GadgetDoPad:
     interface: str | None = None
     escrita_falhou: int = 0
     falhas_seguidas: int = 0
+    #: a rajada de leituras que falham: quantas e o último erro (uma linha por rajada).
+    leituras_falhas: int = 0
+    leitura_erro: str = ""
     #: quanto o som espera a âncora deste gadget (a fila da enumeração conta).
     a_caminho_s: float = _GADGET_A_CAMINHO_S
 
@@ -2552,6 +2561,9 @@ def _o_pad_em_usb(pad: UhidDualSense, features: dict[int, bytes]) -> bool:
     if pad._sem_gadget or pad.blueprint is None:
         return False
     gadget = _GADGETS_ESTACIONADOS.retomar(pad.identity)
+    if gadget is None and pad_usb.porta_fora(pad.player):
+        pad_usb.anotar_sem_porta(pad.identity or "", "porta_fora")
+        return False
     if gadget is None:
         faltam = CONTRATO_QUE_FALTA()
         if faltam:
@@ -2616,6 +2628,7 @@ def _vigiar_a_enumeracao(pad: UhidDualSense) -> None:
             )
         return
     _sair_da_fila(gadget.serial)
+    pad_usb.porta_enumerou(pad.player)
     with _TRAVA_DA_ANCORA:
         gadget.hidraw, gadget.interface = achado
         _registrar_a_ancora(gadget)
@@ -2657,8 +2670,13 @@ def _ancorar_o_gadget(gadget: _GadgetDoPad, identidade: str) -> bool:
     return True
 
 
-def _drenar_o_gadget(pad: UhidDualSense, fd: int, eventos: int) -> None:
-    """Atende o `/dev/hidgN`: o GET_REPORT pendente e o output do jogo."""
+def _drenar_o_gadget(pad: UhidDualSense, fd: int, eventos: int) -> bool:
+    """Atende o `/dev/hidgN`: o GET_REPORT pendente e o output do jogo.
+
+    True = a leitura falhou, e o fio espera `_GADGET_VIGIA_S` antes do `poll`
+    seguinte: o `poll` de um gadget que caiu responde na hora, e em 12/10/2026
+    o laço sem espera deu 22.155 linhas `pad_usb_leitura_falhou` em um segundo.
+    """
     import select
 
     if eventos & select.POLLPRI:
@@ -2668,18 +2686,31 @@ def _drenar_o_gadget(pad: UhidDualSense, fd: int, eventos: int) -> None:
         except (OSError, ValueError) as exc:
             logger.debug("pad_usb_get_report_falhou", err=str(exc), player=pad.player)
     if not eventos & select.POLLIN:
-        return
+        return False
+    gadget = pad._gadget
     for _ in range(_MAX_EVENTS_PER_PUMP):
         try:
             report = os.read(fd, _GADGET_LEITURA)
         except OSError as exc:
             # EAGAIN é a fila do f_hid vazia (o fim normal da drenagem); EBADF,
-            # o fd que o stop fechou. O resto é falha e vai ao diário.
-            if exc.errno not in (errno.EAGAIN, errno.EBADF):
-                logger.warning("pad_usb_leitura_falhou", err=str(exc), player=pad.player)
-            return
+            # o fd que o stop fechou. O resto é falha: conta na rajada e
+            # pergunta se o gadget ainda existe, como a escrita.
+            if exc.errno in (errno.EAGAIN, errno.EBADF) or gadget is None:
+                _fechar_a_rajada(pad, gadget)
+                return False
+            if pad._gadget_caiu:
+                # já se sabe: o bombeio do tique desmonta, e o fio só espera.
+                return True
+            gadget.leituras_falhas += 1
+            gadget.leitura_erro = str(exc)
+            if pad._started:
+                _o_gadget_caiu(pad, gadget, gadget.leituras_falhas)
+            if pad._gadget_caiu:
+                _fechar_a_rajada(pad, gadget)
+            return True
+        _fechar_a_rajada(pad, gadget)
         if not report:
-            return
+            return False
         if report[0] != _OUTPUT_REPORT_USB:
             continue
         evento = (
@@ -2689,6 +2720,16 @@ def _drenar_o_gadget(pad: UhidDualSense, fd: int, eventos: int) -> None:
         )
         with pad._a_trava_da_saida():
             pad._handle_event(evento)
+    return False
+
+
+def _fechar_a_rajada(pad: UhidDualSense, gadget: _GadgetDoPad | None) -> None:
+    """A rajada de leituras que falharam terminou: uma linha, com a contagem."""
+    if gadget is None or not gadget.leituras_falhas:
+        return
+    logger.warning("pad_usb_leitura_falhou", err=gadget.leitura_erro,
+                   vezes=gadget.leituras_falhas, player=pad.player)
+    gadget.leituras_falhas = 0
 
 
 def _fio_do_gadget(pad: UhidDualSense) -> Callable[[int, int, threading.Event], None]:
@@ -2717,11 +2758,20 @@ def _fio_do_gadget(pad: UhidDualSense) -> Callable[[int, int, threading.Event], 
                     pad._emit_if_changed(from_reader=True)
             if fd in prontos:
                 try:
-                    _drenar_o_gadget(pad, fd, prontos[fd])
+                    falhou = _drenar_o_gadget(pad, fd, prontos[fd])
                 except Exception as exc:
                     logger.warning("pad_usb_evento_falhou", err=str(exc), player=pad.player)
+                    falhou = False
+                if falhou:
+                    pare.wait(_GADGET_VIGIA_S)
 
-    return atender
+    def atender_e_fechar(fd: int, despertador: int, pare: threading.Event) -> None:
+        try:
+            atender(fd, despertador, pare)
+        finally:
+            _fechar_a_rajada(pad, pad._gadget)
+
+    return atender_e_fechar
 
 
 def _bombear_o_gadget(pad: UhidDualSense) -> None:
@@ -2729,13 +2779,19 @@ def _bombear_o_gadget(pad: UhidDualSense) -> None:
     import select
 
     if pad._gadget_caiu or pad._gadget_falhou:
+        outra_vez = True
         if pad._gadget_falhou:
             logger.warning("pad_usb_nao_enumerou_fica_o_uhid", player=pad.player,
                            prazo_s=_GADGET_ENUMERA_S)
-            pad_usb.anotar_contrato_que_faltou(CONTRATO_DA_ENUMERACAO)
+            falhas = pad_usb.anotar_falha_da_porta(pad.player)
+            if falhas >= pad_usb.FALHAS_ATE_A_PORTA_SAIR:
+                logger.warning("pad_usb_porta_fora", player=pad.player, falhas=falhas)
+                outra_vez = False
         pad._destruir_o_device()
         pad._sem_gadget = True
         pad._criar_o_device()
+        pad._gadget_outra_vez = outra_vez
+        pad._gadget_outra_vez_em = pad.time_fn() + _GADGET_VARRE_S
         return
     fd = pad._fd
     if fd is None:
@@ -2785,20 +2841,45 @@ def _enviar_pelo_gadget(pad: UhidDualSense, report: bytes) -> bool:
         return False
 
 
-def _o_gadget_caiu(pad: UhidDualSense, gadget: _GadgetDoPad) -> None:
-    """A escrita falha: o gadget ainda existe do lado do jogo?
+def _o_gadget_caiu(
+    pad: UhidDualSense, gadget: _GadgetDoPad, falhas: int | None = None
+) -> None:
+    """A escrita (ou a leitura) falha: o gadget ainda existe do lado do jogo?
 
     O broker que cai ou reinicia, ou o ``vhci`` que solta a porta, tira o
     gadget de baixo do pad com o ``_started`` ainda True: sem esta pergunta o
     pad ficaria mudo para sempre. Pergunta na primeira falha e a cada
     ``_GADGET_PERGUNTA_A_CADA`` seguidas; sumido o ``hidraw``, o bombeio do
     tique desmonta e o pad renasce no uhid (o contrato não faltou: não se anota).
+    ``falhas`` é a contagem de quem pergunta (a leitura tem a dela); sem ela,
+    vale a da escrita.
     """
-    if pad._gadget_caiu or (gadget.falhas_seguidas - 1) % _GADGET_PERGUNTA_A_CADA:
+    if falhas is None:
+        falhas = gadget.falhas_seguidas
+    if pad._gadget_caiu or (falhas - 1) % _GADGET_PERGUNTA_A_CADA:
         return
     if HIDRAW_DO_GADGET(gadget.serial) is None:
         pad._gadget_caiu = True
         logger.warning("pad_usb_caiu_fica_o_uhid", gadget=gadget.gadget, player=pad.player)
+
+
+def _tentar_o_gadget_outra_vez(pad: UhidDualSense) -> bool:
+    """O pad que voltou ao uhid tenta o gadget uma vez de novo, sem jogo aberto.
+
+    A pergunta pelo jogo sai a cada ``_GADGET_VARRE_S``: com o jogo aberto, o
+    pad não troca de pele embaixo dele. True = o device foi refeito.
+    """
+    agora = pad.time_fn()
+    if agora < pad._gadget_outra_vez_em:
+        return False
+    pad._gadget_outra_vez_em = agora + _GADGET_VARRE_S
+    if JOGO_ABERTO():
+        return False
+    pad._gadget_outra_vez = False
+    pad._destruir_o_device()
+    pad._sem_gadget = False
+    pad._criar_o_device()
+    return True
 
 
 def _report_neutro(pad: UhidDualSense) -> bytes:
@@ -2834,7 +2915,6 @@ def _soltar_o_gadget(pad: UhidDualSense) -> bool:
 
 
 __all__ = [
-    "CONTRATO_DA_ENUMERACAO",
     "UHID_NODE",
     "VPAD_HID_PHYS",
     "VPAD_MAC_PREFIXO",
