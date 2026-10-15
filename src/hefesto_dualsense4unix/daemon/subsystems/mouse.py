@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Any
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 if TYPE_CHECKING:
-    from hefesto_dualsense4unix.daemon.context import DaemonContext
     from hefesto_dualsense4unix.daemon.lifecycle import DaemonConfig
     from hefesto_dualsense4unix.daemon.protocols import DaemonProtocol
 
@@ -15,46 +14,29 @@ logger = get_logger(__name__)
 
 
 class MouseSubsystem:
-    """Subsystem que gerencia a emulação de mouse virtual."""
+    """Subsystem do mouse virtual. Não tem nó próprio: delega às funções do daemon.
+
+    O dono do nó é um só, `daemon._mouse_device` (`start_mouse_emulation` /
+    `stop_mouse_emulation`), que é o que o laço, a IPC e a exclusão com o pad usam.
+    Espelha o `GamepadSubsystem`.
+    """
 
     name = "mouse"
-    _device: Any = None
+    _daemon: Any = None
 
-    async def start(self, ctx: DaemonContext) -> None:
-        """Cria o dispositivo uinput se mouse_emulation_enabled=True."""
-        cfg = ctx.config
-        if not cfg.mouse_emulation_enabled:
+    async def start(self, ctx: Any) -> None:
+        """Sobe o nó do daemon se mouse_emulation_enabled=True. Idempotente."""
+        if not ctx.config.mouse_emulation_enabled:
             return
-        if self._device is not None:
-            return
-        try:
-            from hefesto_dualsense4unix.integrations.uinput_mouse import UinputMouseDevice
-
-            device = UinputMouseDevice(
-                mouse_speed=cfg.mouse_speed,
-                scroll_speed=cfg.mouse_scroll_speed,
-                poll_hz=cfg.poll_hz,
-            )
-        except Exception as exc:
-            logger.warning("mouse_subsystem_import_failed", err=str(exc))
-            return
-        if not device.start():
-            logger.warning("mouse_subsystem_start_failed")
-            return
-        self._device = device
-        logger.info(
-            "mouse_subsystem_started",
-            speed=cfg.mouse_speed,
-            scroll_speed=cfg.mouse_scroll_speed,
-        )
+        daemon = getattr(ctx, "daemon", ctx)
+        self._daemon = daemon
+        start_mouse_emulation(daemon)
 
     async def stop(self) -> None:
-        """Para e descarta o dispositivo virtual. Idempotente."""
-        if self._device is not None:
-            with contextlib.suppress(Exception):
-                self._device.stop()
-            self._device = None
-            logger.info("mouse_subsystem_stopped")
+        """Desce o nó do daemon sem esquecer a preferência salva. Idempotente."""
+        daemon, self._daemon = self._daemon, None
+        if daemon is not None:
+            stop_mouse_emulation(daemon, persist=False)
 
     def is_enabled(self, config: DaemonConfig) -> bool:
         return config.mouse_emulation_enabled
@@ -227,6 +209,7 @@ class TabelaNoJogo:
             if not mouse.start() or not teclado.start():
                 with contextlib.suppress(Exception):
                     mouse.stop()
+                with contextlib.suppress(Exception):
                     teclado.stop()
                 self._desistiu = True
                 logger.warning("tabela_no_jogo_sem_uinput")

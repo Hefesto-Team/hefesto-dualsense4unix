@@ -1,6 +1,8 @@
 """Testes unitários do subsystem Mouse (isolamento)."""
 from __future__ import annotations
 
+from types import SimpleNamespace
+from typing import Any, ClassVar
 from unittest.mock import MagicMock
 
 import pytest
@@ -8,8 +10,44 @@ import pytest
 from hefesto_dualsense4unix.daemon.subsystems.mouse import (
     MouseSubsystem,
     dispatch_mouse,
+    start_mouse_emulation,
     stop_mouse_emulation,
 )
+
+
+class _NoDeMentira:
+    """Um `UinputMouseDevice` de mentira que conta quantos nasceram."""
+
+    nascidos: ClassVar[list[_NoDeMentira]] = []
+
+    def __init__(self, **_: Any) -> None:
+        self.parou = 0
+        _NoDeMentira.nascidos.append(self)
+
+    def start(self) -> bool:
+        return True
+
+    def stop(self) -> None:
+        self.parou += 1
+
+
+@pytest.fixture
+def no_de_mentira(monkeypatch: pytest.MonkeyPatch) -> type[_NoDeMentira]:
+    _NoDeMentira.nascidos = []
+    monkeypatch.setattr(
+        "hefesto_dualsense4unix.integrations.uinput_mouse.UinputMouseDevice", _NoDeMentira)
+    monkeypatch.setattr(
+        "hefesto_dualsense4unix.utils.session.save_mouse_emulation", lambda *a, **k: None)
+    return _NoDeMentira
+
+
+def _ctx(enabled: bool) -> SimpleNamespace:
+    daemon = SimpleNamespace(
+        _mouse_device=None,
+        config=SimpleNamespace(
+            mouse_emulation_enabled=enabled, mouse_speed=6, mouse_scroll_speed=1, poll_hz=60),
+    )
+    return SimpleNamespace(config=daemon.config, daemon=daemon)
 
 
 class TestMouseSubsystem:
@@ -32,13 +70,81 @@ class TestMouseSubsystem:
         await subsystem.stop()
 
     @pytest.mark.asyncio
-    async def test_stop_chama_device_stop(self) -> None:
+    async def test_start_deixa_o_no_no_daemon(self, no_de_mentira: type[_NoDeMentira]) -> None:
+        ctx = _ctx(enabled=True)
+        await MouseSubsystem().start(ctx)
+        assert ctx.daemon._mouse_device is no_de_mentira.nascidos[0]
+        assert len(no_de_mentira.nascidos) == 1
+
+    @pytest.mark.asyncio
+    async def test_a_classe_nao_guarda_no_proprio(self, no_de_mentira: type[_NoDeMentira]) -> None:
         subsystem = MouseSubsystem()
-        mock_dev = MagicMock()
-        subsystem._device = mock_dev
+        await subsystem.start(_ctx(enabled=True))
+        assert getattr(subsystem, "_device", None) is None
+
+    @pytest.mark.asyncio
+    async def test_start_desligado_nao_cria_no(self, no_de_mentira: type[_NoDeMentira]) -> None:
+        ctx = _ctx(enabled=False)
+        await MouseSubsystem().start(ctx)
+        assert ctx.daemon._mouse_device is None
+        assert no_de_mentira.nascidos == []
+
+    @pytest.mark.asyncio
+    async def test_dois_starts_e_a_funcao_nao_criam_segundo_no(
+        self, no_de_mentira: type[_NoDeMentira]
+    ) -> None:
+        ctx = _ctx(enabled=True)
+        subsystem = MouseSubsystem()
+        await subsystem.start(ctx)
+        await subsystem.start(ctx)
+        assert start_mouse_emulation(ctx.daemon) is True
+        assert len(no_de_mentira.nascidos) == 1
+
+    @pytest.mark.asyncio
+    async def test_stop_zera_o_no_do_daemon(self, no_de_mentira: type[_NoDeMentira]) -> None:
+        ctx = _ctx(enabled=True)
+        subsystem = MouseSubsystem()
+        await subsystem.start(ctx)
+        no = ctx.daemon._mouse_device
         await subsystem.stop()
-        mock_dev.stop.assert_called_once()
-        assert subsystem._device is None
+        assert no.parou == 1
+        assert ctx.daemon._mouse_device is None
+        await subsystem.stop()
+        assert no.parou == 1
+
+
+class TestTabelaNoJogoFechaOsDois:
+    def test_o_stop_do_teclado_roda_mesmo_se_o_do_mouse_levanta(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from hefesto_dualsense4unix.daemon.subsystems.mouse import TabelaNoJogo
+
+        eventos: list[str] = []
+
+        class Mouse:
+            def __init__(self, **_: Any) -> None: ...
+            def start(self) -> bool:
+                return True
+            def stop(self) -> None:
+                eventos.append("mouse")
+                raise RuntimeError("falha")
+
+        class Teclado:
+            virtual_token_callback = None
+            def start(self) -> bool:
+                return False
+            def stop(self) -> None:
+                eventos.append("teclado")
+
+        monkeypatch.setattr(
+            "hefesto_dualsense4unix.integrations.uinput_mouse.UinputMouseDevice", Mouse)
+        monkeypatch.setattr(
+            "hefesto_dualsense4unix.integrations.uinput_keyboard.UinputKeyboardDevice", Teclado)
+        daemon = SimpleNamespace(
+            config=SimpleNamespace(mouse_speed=6, mouse_scroll_speed=1, poll_hz=60))
+        tabela = TabelaNoJogo({}, {}, ligada=True)
+        assert tabela._abrir(daemon) is False
+        assert eventos == ["mouse", "teclado"]
 
 
 class TestStopMouseEmulation:
