@@ -501,6 +501,7 @@ def cadeia_de_hubs(censo: Censo, no: str) -> tuple[str, ...]:
     por_no = {a.no: a for a in censo.aparelhos}
     representante = {no: h.representante for h in hubs_fisicos(censo) for no in h.nos}
     atual = por_no.get(no)
+    proprio = representante.get(no, "")
     cadeia: list[str] = []
     vistos: set[str] = set()
     while atual is not None and atual.pai and atual.pai not in vistos:
@@ -510,7 +511,7 @@ def cadeia_de_hubs(censo: Censo, no: str) -> tuple[str, ...]:
             break
         if pai.e_hub and not pai.e_raiz:
             fisico = representante.get(pai.no, pai.no)
-            if fisico not in cadeia:
+            if fisico != proprio and fisico not in cadeia:
                 cadeia.append(fisico)
         atual = pai
     return tuple(cadeia)

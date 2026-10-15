@@ -1,0 +1,319 @@
+{
+ "_sobre": "Um /sys de mentira com a forma medida em 12/10/2026: um hub de dois lados com cascata 4+4 (quatro nós, um Container ID, portas amarradas pelo peer), um aparelho que sabe SuperSpeed a 480M com o par SuperSpeed livre, um receptor sem linha na base, um adaptador Bluetooth e uma câmera que publica BOS sem SuperSpeed. Os vid:pid, o Container ID e os nomes são sintéticos; o serial do adaptador se monta no teste.",
+ "nos": {
+  "usb3": {
+   "pai": "",
+   "attrs": {
+    "idVendor": "1d6b",
+    "idProduct": "0002",
+    "bDeviceClass": "09",
+    "busnum": "3",
+    "devpath": "0",
+    "speed": "480",
+    "version": "2.00",
+    "devnum": "1",
+    "maxchild": "4",
+    "manufacturer": "Controlador de mentira",
+    "product": "Hub-raiz"
+   },
+   "interfaces": {
+    "3-0:1.0": {
+     "tripla": "090000",
+     "driver": "hub",
+     "portas": {
+      "usb3-port1": "usb4-port1"
+     }
+    }
+   }
+  },
+  "usb4": {
+   "pai": "",
+   "attrs": {
+    "idVendor": "1d6b",
+    "idProduct": "0003",
+    "bDeviceClass": "09",
+    "busnum": "4",
+    "devpath": "0",
+    "speed": "10000",
+    "version": "3.10",
+    "devnum": "1",
+    "maxchild": "4",
+    "manufacturer": "Controlador de mentira",
+    "product": "Hub-raiz"
+   },
+   "interfaces": {
+    "4-0:1.0": {
+     "tripla": "090000",
+     "driver": "hub",
+     "portas": {
+      "usb4-port1": "usb3-port1"
+     }
+    }
+   }
+  },
+  "3-1": {
+   "pai": "usb3",
+   "attrs": {
+    "idVendor": "f0e1",
+    "idProduct": "2002",
+    "bDeviceClass": "09",
+    "busnum": "3",
+    "devpath": "1",
+    "speed": "480",
+    "version": "2.10",
+    "devnum": "2",
+    "maxchild": "4",
+    "bMaxPower": "0mA",
+    "bmAttributes": "e0",
+    "manufacturer": "Fabrica Ficticia",
+    "product": "Hub USB2.1 de mentira",
+    "port/over_current_count": "0"
+   },
+   "bos": "050f2a0003071002060000000a1003000e000108be00141004000123456789abcdef0123456789abcdef",
+   "interfaces": {
+    "3-1:1.0": {
+     "tripla": "090000",
+     "driver": "hub",
+     "portas": {
+      "3-1-port1": "4-1-port1",
+      "3-1-port2": "4-1-port2",
+      "3-1-port3": "4-1-port3",
+      "3-1-port4": "4-1-port4"
+     }
+    }
+   }
+  },
+  "3-1.1": {
+   "pai": "3-1",
+   "attrs": {
+    "idVendor": "f0e1",
+    "idProduct": "2002",
+    "bDeviceClass": "09",
+    "busnum": "3",
+    "devpath": "1.1",
+    "speed": "480",
+    "version": "2.10",
+    "devnum": "3",
+    "maxchild": "4",
+    "bMaxPower": "0mA",
+    "bmAttributes": "e0",
+    "manufacturer": "Fabrica Ficticia",
+    "product": "Hub USB2.1 de mentira",
+    "port/over_current_count": "0"
+   },
+   "bos": "050f2a0003071002060000000a1003000e000108be00141004000123456789abcdef0123456789abcdef",
+   "interfaces": {
+    "3-1.1:1.0": {
+     "tripla": "090000",
+     "driver": "hub",
+     "portas": {
+      "3-1.1-port1": "4-1.1-port1",
+      "3-1.1-port2": "4-1.1-port2",
+      "3-1.1-port3": "4-1.1-port3",
+      "3-1.1-port4": "4-1.1-port4"
+     }
+    }
+   }
+  },
+  "4-1": {
+   "pai": "usb4",
+   "attrs": {
+    "idVendor": "f0e1",
+    "idProduct": "3003",
+    "bDeviceClass": "09",
+    "busnum": "4",
+    "devpath": "1",
+    "speed": "5000",
+    "version": "3.20",
+    "devnum": "2",
+    "maxchild": "4",
+    "bMaxPower": "0mA",
+    "bmAttributes": "e0",
+    "manufacturer": "Fabrica Ficticia",
+    "product": "Hub USB3.1 de mentira",
+    "port/over_current_count": "0"
+   },
+   "bos": "050f2a0003071002060000000a1003000e000108be00141004000123456789abcdef0123456789abcdef",
+   "interfaces": {
+    "4-1:1.0": {
+     "tripla": "090000",
+     "driver": "hub",
+     "portas": {
+      "4-1-port1": "3-1-port1",
+      "4-1-port2": "3-1-port2",
+      "4-1-port3": "3-1-port3",
+      "4-1-port4": "3-1-port4"
+     }
+    }
+   }
+  },
+  "4-1.1": {
+   "pai": "4-1",
+   "attrs": {
+    "idVendor": "f0e1",
+    "idProduct": "3003",
+    "bDeviceClass": "09",
+    "busnum": "4",
+    "devpath": "1.1",
+    "speed": "5000",
+    "version": "3.20",
+    "devnum": "4",
+    "maxchild": "4",
+    "bMaxPower": "0mA",
+    "bmAttributes": "e0",
+    "manufacturer": "Fabrica Ficticia",
+    "product": "Hub USB3.1 de mentira",
+    "port/over_current_count": "0"
+   },
+   "bos": "050f2a0003071002060000000a1003000e000108be00141004000123456789abcdef0123456789abcdef",
+   "interfaces": {
+    "4-1.1:1.0": {
+     "tripla": "090000",
+     "driver": "hub",
+     "portas": {
+      "4-1.1-port1": "3-1.1-port1",
+      "4-1.1-port2": "3-1.1-port2",
+      "4-1.1-port3": "3-1.1-port3",
+      "4-1.1-port4": "3-1.1-port4"
+     }
+    }
+   }
+  },
+  "3-1.4": {
+   "pai": "3-1",
+   "bos": "050f160002071002060000000a1003000e00010a1f01",
+   "attrs": {
+    "idVendor": "f0e2",
+    "idProduct": "0811",
+    "bDeviceClass": "00",
+    "busnum": "3",
+    "devpath": "1.4",
+    "speed": "480",
+    "version": "2.10",
+    "devnum": "9",
+    "bMaxPower": "500mA",
+    "bmAttributes": "80",
+    "manufacturer": "Realcom",
+    "product": "Placa de rede sem fio"
+   },
+   "interfaces": {
+    "3-1.4:1.0": {
+     "tripla": "ffffff",
+     "driver": "sem_fio_de_mentira",
+     "pendura": [
+      "ieee80211"
+     ]
+    }
+   }
+  },
+  "3-1.1.2": {
+   "pai": "3-1.1",
+   "attrs": {
+    "idVendor": "f0e3",
+    "idProduct": "0024",
+    "bDeviceClass": "00",
+    "busnum": "3",
+    "devpath": "1.1.2",
+    "speed": "12",
+    "version": "1.10",
+    "devnum": "12",
+    "bMaxPower": "100mA",
+    "bmAttributes": "a0",
+    "manufacturer": "CX",
+    "product": "2.4G Wireless Receiver"
+   },
+   "interfaces": {
+    "3-1.1.2:1.0": {
+     "tripla": "030101",
+     "driver": "usbhid"
+    },
+    "3-1.1.2:1.1": {
+     "tripla": "030102",
+     "driver": "usbhid"
+    }
+   }
+  },
+  "3-1.1.3": {
+   "pai": "3-1.1",
+   "serial_forjado": true,
+   "attrs": {
+    "idVendor": "f0e4",
+    "idProduct": "0b70",
+    "bDeviceClass": "e0",
+    "busnum": "3",
+    "devpath": "1.1.3",
+    "speed": "12",
+    "version": "1.10",
+    "devnum": "14",
+    "bMaxPower": "500mA",
+    "bmAttributes": "e0",
+    "product": "Adaptador de rádio"
+   },
+   "interfaces": {
+    "3-1.1.3:1.0": {
+     "tripla": "e00101",
+     "driver": "btusb",
+     "pendura": [
+      "bluetooth"
+     ]
+    },
+    "3-1.1.3:1.1": {
+     "tripla": "e00101",
+     "driver": "btusb"
+    }
+   }
+  },
+  "3-1.1.4": {
+   "pai": "3-1.1",
+   "bos": "050f0c000107100206000000",
+   "attrs": {
+    "idVendor": "f0e5",
+    "idProduct": "0c90",
+    "bDeviceClass": "ef",
+    "busnum": "3",
+    "devpath": "1.1.4",
+    "speed": "480",
+    "version": "2.10",
+    "devnum": "15",
+    "bMaxPower": "500mA",
+    "bmAttributes": "80",
+    "manufacturer": "Lentes",
+    "product": "Câmera de mentira"
+   },
+   "interfaces": {
+    "3-1.1.4:1.0": {
+     "tripla": "0e0100",
+     "driver": "uvcvideo",
+     "pendura": [
+      "video4linux"
+     ]
+    }
+   }
+  }
+ },
+ "base": {
+  "3-1": {
+   "ID_VENDOR_FROM_DATABASE": "Fábrica Fictícia de Hubs",
+   "ID_MODEL_FROM_DATABASE": "Hub"
+  },
+  "3-1.1": {
+   "ID_VENDOR_FROM_DATABASE": "Fábrica Fictícia de Hubs",
+   "ID_MODEL_FROM_DATABASE": "Hub"
+  },
+  "4-1": {
+   "ID_VENDOR_FROM_DATABASE": "Fábrica Fictícia de Hubs",
+   "ID_MODEL_FROM_DATABASE": "Hub"
+  },
+  "4-1.1": {
+   "ID_VENDOR_FROM_DATABASE": "Fábrica Fictícia de Hubs",
+   "ID_MODEL_FROM_DATABASE": "Hub"
+  },
+  "3-1.4": {
+   "ID_VENDOR_FROM_DATABASE": "Rádios de Mentira",
+   "ID_MODEL_FROM_DATABASE": "Placa Sem Fio Modelo X"
+  },
+  "3-1.1.3": {
+   "ID_VENDOR_FROM_DATABASE": "Rádios de Mentira"
+  }
+ }
+}
