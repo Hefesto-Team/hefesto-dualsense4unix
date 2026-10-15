@@ -27,7 +27,6 @@ import re
 import sys
 
 import pytest
-from tests.unit._mundo_da_aba_03 import SO_NA_PAGINA_ANTIGA
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
@@ -137,20 +136,6 @@ def test_o_gatilho_do_perfil_chega_traduzido(ctx_com):
 
     assert f'style="width:{round(180 / 255 * 100)}%"' in caixa_e, (
         f"a barra da Força não veio na porcentagem da FAIXA dela:\n{caixa_e}")
-
-
-@SO_NA_PAGINA_ANTIGA
-def test_a_curva_de_dez_posicoes_nao_derruba_a_aba(ctx_com):
-    """A segunda forma do disco — e ela quebrou o pacote de verdade."""
-    from pacotes import pacote_da_pagina
-
-    r = pacote_da_pagina("03-gatilhos.html", ctx_com("curva"))
-    col = next(iter(r["colunas"].values()))
-    assert col["modo-e"] == "Curva de força"
-    assert col["curva-e"] == [1, 2, 3, 4, 5, 6, 7, 8, 8, 8], (
-        "a curva não chegou achatada. `[[1], [2], ...]` é o que o disco guarda "
-        "e `[1, 2, ...]` é o que a tela desenha.")
-    assert col["curva-pct-e"][0] == round(1 / 8 * 100)
 
 
 def test_o_brilho_do_perfil_chega_em_porcentagem(ctx_com):

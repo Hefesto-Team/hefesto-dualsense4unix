@@ -7,7 +7,6 @@ import re
 import sys
 
 import pytest
-from tests.unit._mundo_da_aba_03 import SO_NA_PAGINA_ANTIGA
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
@@ -200,87 +199,7 @@ def test_o_lugar_vazio_nao_explica_modo_nenhum(a03, ctx):
     for pref in vazias:
         for sigla in ("e", "d"):
             assert fora[pref][f"dica-modo-{sigla}"] == a03.SEM_APARELHO_AQUI
-            outra = "dica-imersao-" if a03._pagina_do_todo() else "dica-pronto-"
-            assert fora[pref][f"{outra}{sigla}"] == a03.SEM_APARELHO_AQUI
-
-
-def _destinos_da_lista(a03, modo: str) -> set[str]:
-    """Para que modos as curvas que o campo OFERECE naquele modo levam."""
-    html = a03.html_das_opcoes_de_pronto(modo)
-    fora: set[str] = set()
-    for chave in re.findall(r'<option value="([^"]*)"', html):
-        if (not chave or chave in ("custom", a03.TRAVESSAO)
-                or chave.startswith(a03.PREFIXO_DO_MEU)):
-            continue
-        try:
-            fora.add(a03._curva(chave)[1])
-        except ValueError:
-            continue
-    return fora
-
-
-@pytest.mark.parametrize("modo", ["Rigid", "Off", "Machine",
-                                  "MultiPositionFeedback",
-                                  "MultiPositionVibration"])
-def test_a_dica_do_pronto_nomeia_exatamente_os_destinos_que_a_lista_abre(a03, modo):
-    """A dica nomeia os modos que um clique PODE produzir — nem mais, nem menos."""
-    dica = a03.dica_do_pronto(modo)
-    abre = _destinos_da_lista(a03, modo)
-
-    assert _rotulo(modo) in dica, (
-        f"a dica não diz que o gatilho está em {modo!r} — sem o estado de agora "
-        f"ela não é um aviso, é um manual")
-
-    nomeados = {d for d in a03.MODOS_COM_CURVA if _rotulo(d) in dica}
-    if abre == {modo}:
-        assert nomeados == {modo}, (
-            f"{modo!r} não troca de modo por esta lista, e a dica nomeia "
-            f"{sorted(nomeados)} — avisar de uma troca que não acontece ensina "
-            f"a ignorar o aviso")
-    else:
-        assert nomeados == abre, (
-            f"a lista deste campo leva a {sorted(abre)} e a dica nomeia "
-            f"{sorted(nomeados)}")
-
-
-def _esqueleto(a03, modo: str) -> str:
-    """A dica com TODOS os rótulos de modo apagados — o que sobra é a promessa."""
-    from hefesto_dualsense4unix.app.actions.trigger_specs import PRESETS
-
-    fora = a03.dica_do_pronto(modo)
-    for rotulo in sorted((p.label for p in PRESETS), key=len, reverse=True):
-        fora = fora.replace(rotulo, "MODO")
-    return fora
-
-
-def test_onde_a_curva_nao_troca_o_modo_a_dica_nao_anuncia_troca(a03):
-    """Duas promessas diferentes para dois casos diferentes — e não uma só.
-
-    Com o gatilho já em `MultiPositionFeedback`, a lista só oferece curvas
-    daquele modo: **nenhum clique troca coisa nenhuma**, e a dica tem de dizer
-    isso. Fora dali, todo clique troca, e a dica tem de dizer aquilo. Um aviso
-    de troca que não acontece ensina a ignorar o aviso — que é o custo real de
-    um alarme sem medição.
-
-    A RÉGUA APAGA OS RÓTULOS antes de comparar: sem isso ela mede o NOME do modo
-    (que muda sempre, por construção) em vez da promessa. Foi exatamente assim
-    que a primeira versão desta linha deu verde sobre a cura arrancada.
-
-    MORDIDA: fazer os 19 caírem no mesmo ramo e os dois esqueletos ficam
-    idênticos.
-    """
-    assert _esqueleto(a03, "MultiPositionFeedback") != _esqueleto(a03, "Rigid"), (
-        "a dica promete a mesma coisa nos dois casos, e eles são opostos: num "
-        "o clique troca o modo, no outro não troca nada")
-
-
-@SO_NA_PAGINA_ANTIGA
-def test_a_dica_do_pronto_acompanha_o_modo_no_tique(a03, ctx):
-    """E ela chega à tela pelo tique, com o modo daquele lado — não uma por aba."""
-    col = a03.pacote(ctx("Rigid", "MultiPositionFeedback"))["colunas"][UNIQ]
-    assert col["dica-pronto-e"] == a03.dica_do_pronto(col["modo-chave-e"])
-    assert col["dica-pronto-d"] == a03.dica_do_pronto(col["modo-chave-d"])
-    assert col["dica-pronto-e"] != col["dica-pronto-d"]
+            assert fora[pref][f"dica-imersao-{sigla}"] == a03.SEM_APARELHO_AQUI
 
 
 # Elas exercitavam `a03_gatilhos.reenviar`, que foi apagado no dia em que a
@@ -355,9 +274,8 @@ def test_o_reenvio_sai_do_pacote_quando_sair_do_produto(a03):
 
 _OS_QUE_APLICAM = [
     ("modo", {"lado": "e", "valor": "Rigid"}),
-    ("pronto", {"lado": "d", "v": "stop_hard"}),
-    ("ajuste", {"lado": "e", "i": "1", "valor": "200",
-                "forma": {"modo-chave-e": "Rigid"}}),
+    ("imersao", {"lado": "e", "valor": "rajada-que-sobe-sozinha",
+                 "forma": {"modo-chave-e": "Machine"}}),
 ]
 
 
@@ -378,9 +296,9 @@ def test_o_sucesso_pleno_nao_manda_recado(
     na `ONDA5-03-01` (`test_o_numero_da_piscada_e_o_mesmo_nos_dois_lados`).
     Trocou-se o canal, não a promessa.
 
-    **ELA COBRE OS QUATRO DE UMA VEZ DE PROPÓSITO.** A cura mora no `_aplicar`,
+    **ELA COBRE OS DOIS DE UMA VEZ DE PROPÓSITO.** A cura mora no `_aplicar`,
     que é o único lugar em que o corpo do daemon existe; escrita dentro de um
-    gesto, ela passaria em um quarto desta régua. É o defeito de forma que esta
+    gesto, ela passaria em metade desta régua. É o defeito de forma que esta
     casa pagou duas vezes em 05/09 — *quando a cura conhece a causa, ela cobre
     TODOS os chamadores*.
 
@@ -388,7 +306,7 @@ def test_o_sucesso_pleno_nao_manda_recado(
     ele o perfil `"régua"` não abre, o `recado` volta cheio pela
     `AS-DUAS-ABAS-FALAM-01`, e a régua daria verde com a cura arrancada.
 
-    MORDIDA: devolva o recibo sempre em `_aplicar` — os QUATRO reprovam juntos.
+    MORDIDA: devolva o recibo sempre em `_aplicar` — os DOIS reprovam juntos.
     Se reprovar um só, a cura entrou no gesto e não no `_aplicar`.
     """
     p = _Ponte()
@@ -417,12 +335,7 @@ def test_a_falha_de_disco_continua_falando(
     *quando o gesto só repete o que ela acabou de fazer, a tela pisca; quando
     ele tem NOTÍCIA, a tela fala.*
 
-    O `reenviar` FICA DE FORA, e não é esquecimento: ele passa `guardar=False`
-    e não escreve byte nenhum no disco do usuário — logo não tem segunda metade a
-    dizer. Quem guarda esse contrato é
-    `test_o_gatilho_aplicado_vai_para_o_perfil.py::test_o_reenviar_nao_ganhou_frase_de_disco`.
-
-    MORDIDA: faça `_aplicar` devolver `""` sempre — os três reprovam.
+    MORDIDA: faça `_aplicar` devolver `""` sempre — os dois reprovam.
     """
     fora = _clicar(a03, gesto_, ctx(), clique, _Ponte())
 
@@ -446,7 +359,7 @@ def test_o_recibo_ainda_nomeia_o_gatilho_quando_prefixa_a_noticia(
     tela não diria de QUAL dos dois gatilhos ela está falando.
 
     MORDIDA: inverta a ordem do `_E_TAMBEM.join` em `_aplicar`, ou tire o
-    `_recibo` da soma, e os três reprovam.
+    `_recibo` da soma, e os dois reprovam.
     """
     recado = (_clicar(a03, gesto_, ctx(), clique, _Ponte()) or {}).get("recado") or ""
 
@@ -454,26 +367,6 @@ def test_o_recibo_ainda_nomeia_o_gatilho_quando_prefixa_a_noticia(
         recado.startswith(a03.NOME_DO_LADO["right"])), (
         f"a frase não abre pelo gatilho: {recado!r}. A segunda metade vem "
         f"DEPOIS do recibo — a frase tem de abrir pelo que ela fez")
-
-
-def test_o_guardar_nao_ganhou_recibo(a03, ctx, disco_que_guarda):
-    """O "Guardar esse efeito" nunca devolveu `recado`, e continua sem.
-
-    ELE JÁ ESTAVA CERTO ANTES DA `03-Q4`, e é a razão de esta régua ser curta:
-    com a piscada da `ONDA5-03-01`, um `None` passou a dizer "deu certo" sem
-    palavra nenhuma — exatamente o que o usuário pediu, sem uma linha nova. O risco
-    que ela guarda é o de alguém "uniformizar" os cinco gestos acrescentando
-    recibo a este, que é a forma pela qual a palavra voltaria à tela pela porta
-    dos fundos.
-
-    MORDIDA: devolva `{"recado": …}` no `guardar` e esta régua reprova.
-    """
-    fora = _clicar(a03, "guardar", ctx(),
-                   {"forma": {"modo-chave-e": "Rigid", "modo-chave-d": "Bow"}},
-                   _Ponte())
-
-    assert not (fora or {}).get("recado"), (
-        f"o `guardar` ganhou um recibo: {(fora or {}).get('recado')!r}")
 
 
 def test_o_piloto_le_a_chave_recado_e_a_tira_da_pintura():

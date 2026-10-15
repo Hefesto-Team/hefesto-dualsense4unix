@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""A RÉGUA DO ESCOPO DO "Guardar esse efeito": ele grava, e não reaplica a mesa.
+"""A RÉGUA DO ESCOPO DA GRAVAÇÃO DO GATILHO: o clique grava, e não reaplica a mesa.
 
 O DEFEITO QUE ELA FECHA, medido em 03/09/2026 clicando o produto INSTALADO com
 um DualSense no cabo. O gesto terminava em `perfil.gravar_e_reaplicar`, que
@@ -14,20 +14,23 @@ efeito" — e a barra acende. Um botão cujo nome promete UM efeito desfazendo
 escolha viva dela em outra aba, calado.
 
 POR QUE A REAPLICAÇÃO NÃO FAZ FALTA: esta aba aplica NA HORA (decisão de
-01/09, *"clicar já aplica"*). Quando ela chega ao Guardar, `modo` e `pronto` já
-mandaram o efeito ao aparelho — o `profile_switch` reaplicava por cima um
-gatilho que já estava lá e levava junto nove seções que ninguém pediu.
+01/09, *"clicar já aplica"*): o clique já mandou o efeito ao aparelho, e o
+`profile_switch` reaplicaria por cima um gatilho que já estava lá, levando junto
+nove seções que ninguém pediu.
+
+DESDE 15/10/2026 O «Guardar esse efeito» SAIU com o desenho do todo, e a gravação
+mora no próprio clique (`modo` e `imersao`, pelo `_gravar_so_o_gatilho`). A régua
+mede o mesmo caminho de disco pelo `modo`.
 
 AS TRÊS COISAS QUE ESTA RÉGUA COBRA:
 
-1. **Grava.** É o que o botão promete, e tirar o `profile_switch` não pode ter
-   tirado a gravação junto.
+1. **Grava.** Tirar o `profile_switch` não pode ter tirado a gravação junto.
 2. **Não chama `profile_switch`.** É a cura.
 3. **Chama `launch_env.refresh`.** É a metade que tinha de sobreviver: sem ela o
    perfil novo só chega ao jogo no próximo start do daemon.
 
 A MORDIDA: devolva `perfil.gravar_e_reaplicar(novo, ctx, p)` no lugar de
-`_gravar_so_o_gatilho(novo, p)` — o caso 2 reprova dizendo que o Guardar mandou
+`_gravar_so_o_gatilho(novo, p)` — o caso 2 reprova dizendo que o clique mandou
 o daemon reaplicar o perfil inteiro.
 """
 from __future__ import annotations
@@ -59,6 +62,10 @@ class PonteDeMentira:
         self.chamadas.append(metodo)
         return True
 
+    def trigger_set_detalhado(self, *_a: Any, **_k: Any) -> tuple[bool, str, dict]:
+        self.chamadas.append("trigger_set_detalhado")
+        return (True, "", {"status": "ok", "aplicado_em": [UNIQ], "guardado_em": []})
+
 
 @pytest.fixture
 def pac():
@@ -69,8 +76,8 @@ def pac():
 
 @pytest.fixture
 def gesto(pac):
-    fn = pac.gesto_da_pagina("03-gatilhos.html", "guardar")
-    assert fn is not None, "03-gatilhos.html:guardar perdeu o dono"
+    fn = pac.gesto_da_pagina("03-gatilhos.html", "modo")
+    assert fn is not None, "03-gatilhos.html:modo perdeu o dono"
     return fn
 
 
@@ -95,34 +102,34 @@ def _ctx(pac):
                         mesa=[], conectados=[dele], estados={})
 
 
-def _forma() -> dict[str, str]:
-    """A coluna como o piloto a recolhe — um modo NOVO, para haver o que gravar."""
-    return {"modo-chave-e": "Rigid", "modo-chave-d": "Off"}
+def _clique() -> dict[str, str]:
+    """Um modo NOVO no L2, para haver o que gravar."""
+    return {"uniq": UNIQ, "lado": "e", "valor": "Rigid"}
 
 
-def test_o_guardar_grava_no_disco(pac, gesto, disco) -> None:
+def test_o_clique_grava_no_disco(pac, gesto, disco) -> None:
     """Caso 1: tirar a reaplicação não pode ter levado a gravação junto."""
     _, gravados = disco
-    gesto(_ctx(pac), {"uniq": UNIQ, "forma": _forma()}, PonteDeMentira())
+    gesto(_ctx(pac), _clique(), PonteDeMentira())
     assert len(gravados) == 1, (
-        f"o botão que promete guardar gravou {len(gravados)} vez(es)")
+        f"o clique gravou {len(gravados)} vez(es)")
 
 
-def test_o_guardar_nao_manda_reaplicar_o_perfil_inteiro(pac, gesto, disco) -> None:
+def test_o_clique_nao_manda_reaplicar_o_perfil_inteiro(pac, gesto, disco) -> None:
     """Caso 2, A CURA: `profile_switch` reaplica a barra de luz por cima dela."""
     p = PonteDeMentira()
-    gesto(_ctx(pac), {"uniq": UNIQ, "forma": _forma()}, p)
+    gesto(_ctx(pac), _clique(), p)
     assert "profile_switch" not in p.chamadas, (
-        "o 'Guardar esse efeito' mandou o daemon REAPLICAR o perfil inteiro "
+        "o clique do gatilho mandou o daemon REAPLICAR o perfil inteiro "
         f"(chamadas={p.chamadas}). Isso reacende a barra de luz que ela apagou "
         "na aba Iluminação — um botão de escopo estreito desfazendo escolha "
         "viva dela em outra aba, calado. Esta aba já aplica na hora; não há "
         "gatilho a reaplicar aqui.")
 
 
-def test_o_guardar_avisa_a_antecipacao_de_lancamento(pac, gesto, disco) -> None:
+def test_o_clique_avisa_a_antecipacao_de_lancamento(pac, gesto, disco) -> None:
     """Caso 3: sem isto o perfil novo só chega ao jogo no próximo start."""
     p = PonteDeMentira()
-    gesto(_ctx(pac), {"uniq": UNIQ, "forma": _forma()}, p)
+    gesto(_ctx(pac), _clique(), p)
     assert "launch_env.refresh" in p.chamadas, (
-        f"o Guardar gravou e não releu o que os jogos recebem (chamadas={p.chamadas})")
+        f"o clique gravou e não releu o que os jogos recebem (chamadas={p.chamadas})")

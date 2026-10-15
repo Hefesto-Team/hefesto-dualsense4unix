@@ -76,9 +76,6 @@ FATOS: dict[str, str] = {
     "o Hefesto não gravou esta barra":
         "ESTADO DO ATO, com o gesto que resolve na mesma frase (tentar de "
         "novo) — 11/09/2026",
-    "este gatilho ainda não tem modo":
-        "o sujeito é O GATILHO, e é estado do que a pessoa escolheu: sem modo "
-        "não há ajuste a fazer. A frase diz o passo que falta — 11/09/2026",
 
     "o Hefesto não respondeu":
         "ESTADO DO ATO que acabou de acontecer: o daemon não devolveu resposta, "

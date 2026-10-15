@@ -204,7 +204,7 @@ def test_a_vibracao_publicada_nao_tem_data_gesto_e_a_regua_sabe():
     texto = _texto("05-vibracao.html")
     do_html = {g.nome for g in regua._gestos_cravados(texto)}
     # `modo-da-vibracao`, `criar-efeito` e os chips (`testar`) são da página do todo
-    # (A-ABA-VIBRACAO-DO-TODO-01), que o pacote serve junto com a velha até o `--publicar 05`
+    # (A-ABA-VIBRACAO-DO-TODO-01); `aplicar`, `salvar`, `importar` e `exportar` são do rodapé.
     assert not (do_html - {"aplicar", "salvar", "importar", "exportar",
                            "lado", "haptica", "modo-da-vibracao", "criar-efeito", "testar"}), (
         f"a 05-vibracao passou a ter `data-gesto` próprio: {sorted(do_html)}. "

@@ -24,8 +24,8 @@ rascunho montado a partir do PERFIL NO DISCO"*.
 
 AS SETE COISAS QUE ESTA RÉGUA COBRA
 ------------------------------------
-1. **O clique grava.** `modo`, `pronto` e `ajuste` põem o gatilho no override
-   daquele controle, no perfil ativo — sem passar pelo "Guardar esse efeito".
+1. **O clique grava.** `modo` e `imersao` põem o gatilho no override daquele
+   controle, no perfil ativo.
 2. **SÓ O LADO QUE ELA TOCOU.** Clicar no L2 não pode escrever opinião sobre o
    R2: `profiles/manager._controllers_to_specs` lê `model_fields_set` lado a
    lado, e um `Off` implícito virado explícito SILENCIA o gatilho direito que a
@@ -181,36 +181,23 @@ def test_escolher_um_modo_grava_no_perfil(pac, disco) -> None:
     assert _triggers_gravados(gravados[0]).left.mode == "Rigid"
 
 
-def test_um_efeito_pronto_grava_a_curva(pac, disco) -> None:
-    """A curva escolhida é a que fica no disco, com o modo da TABELA dela."""
-    from pacotes.a03_gatilhos import _curva
+def test_um_efeito_de_imersao_grava_o_modo_com_os_ajustes_dele(pac, disco) -> None:
+    """A imersão escolhida é a que fica no disco, no modo do acionamento daquele lado."""
+    from pacotes.a03_gatilhos import _IMERSAO_DE_PROVA, _params_da_imersao
 
     _, gravados = disco
-    curva, modo_da_curva = _curva("stop_hard")
-    _gesto(pac, "pronto")(_ctx(pac),
-                          {"uniq": UNIQ, "lado": "d", "valor": "stop_hard"},
-                          PonteDeMentira())
-
-    assert len(gravados) == 1, "o efeito pronto não chegou ao disco"
-    direito = _triggers_gravados(gravados[0]).right
-    assert direito.mode == modo_da_curva, (
-        f"gravou o modo {direito.mode!r} para uma curva que mora em "
-        f"{modo_da_curva!r} — número certo no efeito errado")
-    assert list(direito.params)[-len(curva):] == list(curva)
-
-
-def test_arrastar_uma_barra_grava_o_ajuste(pac, disco) -> None:
-    """O `ajuste` é o terceiro caminho de escolha, e o mais fácil de esquecer."""
-    _, gravados = disco
-    _gesto(pac, "ajuste")(
+    _gesto(pac, "imersao")(
         _ctx(pac),
-        {"uniq": UNIQ, "lado": "e", "i": "0", "valor": "7",
-         "forma": {"modo-chave-e": "Rigid"}},
+        {"uniq": UNIQ, "lado": "e", "valor": _IMERSAO_DE_PROVA.chave,
+         "forma": {"modo-chave-e": "Machine"}},
         PonteDeMentira())
 
-    assert len(gravados) == 1, "arrastar a barra não chegou ao disco"
-    primeiro = next(iter(_triggers_gravados(gravados[0]).left.params))
-    assert primeiro == 7, f"a barra 0 foi ao disco como {primeiro}"
+    assert len(gravados) == 1, "o efeito de imersão não chegou ao disco"
+    esquerdo = _triggers_gravados(gravados[0]).left
+    assert esquerdo.mode == "Machine", (
+        f"gravou o modo {esquerdo.mode!r}; a imersão vale sobre o acionamento `Machine`")
+    assert list(esquerdo.params) == _params_da_imersao(_IMERSAO_DE_PROVA, "Machine", ""), (
+        "o disco guardou outros números que não os da imersão escolhida")
 
 
 def test_o_clique_num_lado_nao_da_dono_ao_outro(pac, disco) -> None:
@@ -376,25 +363,22 @@ def test_a_falha_de_abrir_o_perfil_diz_as_duas_metades(
 @pytest.mark.parametrize(
     ("gesto_", "clique"),
     [("modo", {"lado": "e", "valor": "Rigid"}),
-     ("pronto", {"lado": "d", "valor": "stop_hard"}),
-     ("ajuste", {"lado": "e", "i": "0", "valor": "7",
-                 "forma": {"modo-chave-e": "Rigid"}})])
-def test_os_tres_gestos_que_gravam_carregam_a_frase(
+     ("imersao", {"lado": "e", "valor": "rajada-que-sobe-sozinha",
+                  "forma": {"modo-chave-e": "Machine"}})])
+def test_os_gestos_que_gravam_carregam_a_frase(
         pac, perfil_que_nao_abre, gesto_, clique) -> None:
     """**É ESTA QUE PROVA O PASSO 2:** a soma mora no `_aplicar`, não no gesto.
 
-    Uma cura escrita dentro de um gesto passa em UM TERÇO desta régua — e é
+    Uma cura escrita dentro de um gesto passa em METADE desta régua — e é
     exatamente o defeito que esta casa pagou duas vezes em 05/09: *"quando a
     cura conhece a causa, ela cobre TODOS os chamadores"*. A espera pela página
     nasceu aplicada a um dos quatro chamadores do piloto, e a frente da aba 10
     teve de escrever um driver próprio por causa disso.
 
-    Os três são os que GRAVAM (a D2, 05/09): `modo`, `pronto` e `ajuste`. O
-    quarto chamador do `_aplicar` — o `reenviar` — passa `guardar=False`, e o
-    caso seguinte prova que ele continua sem frase de disco.
+    Os dois são os que GRAVAM (a D2, 05/09): `modo` e `imersao`.
 
-    A MORDIDA: arranque a soma do `_aplicar` (devolva só o recibo) e as três
-    reprovam de uma vez. Se só UMA reprovar, a cura entrou no gesto.
+    A MORDIDA: arranque a soma do `_aplicar` (devolva só o recibo) e os dois
+    reprovam de uma vez. Se só UM reprovar, a cura entrou no gesto.
     """
     gravados = perfil_que_nao_abre
     saida = _gesto(pac, gesto_)(_ctx(pac, ativo=SUMIU),
@@ -407,8 +391,8 @@ def test_os_tres_gestos_que_gravam_carregam_a_frase(
     baixo = str(saida["recado"]).lower()
     assert "aparelho" in baixo and "perfil" in baixo, (
         f"o gesto {gesto_!r} calou a segunda metade: {saida['recado']!r}. A soma "
-        f"é do `_aplicar` — se ela vive dentro de um gesto, os outros dois "
-        f"continuam mudos.")
+        f"é do `_aplicar` — se ela vive dentro de um gesto, o outro continua "
+        f"mudo.")
     assert SUMIU in str(saida["recado"]), (
         f"o gesto {gesto_!r} não nomeou o perfil: {saida['recado']!r}")
 

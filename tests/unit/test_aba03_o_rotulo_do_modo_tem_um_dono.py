@@ -79,8 +79,8 @@ def _selects(doc: str, classe: str) -> list[str]:
 
 
 def _oferecidos(a03, presets):
-    """Os modos que a lista oferece: na página do todo o «Montar do zero» (`Custom`) não é um."""
-    return [p for p in presets if not (a03._pagina_do_todo() and p.name == "Custom")]
+    """Os modos que a lista oferece: o «Montar do zero» (`Custom`) não é um."""
+    return [p for p in presets if p.name != "Custom"]
 
 
 def test_o_rotulo_de_cada_modo_no_pacote_e_o_do_produto(a03, presets):
@@ -126,67 +126,6 @@ def test_o_rotulo_de_cada_modo_na_bancada_e_o_do_produto(presets):
         + "\n  ".join(erradas))
 
 
-def test_as_curvas_de_feedback_estao_no_campo_em_qualquer_modo(a03, presets):
-    """A firmeza constante não pode exigir que ela troque o modo antes.
-
-    O campo "Efeito pronto" fica visível nos 19 modos (decisão de produto), e nos 17
-    que não são por posição ele mostra as curvas de FEEDBACK — que é o que a
-    página crava. Oferecer cinco das seis ali é um buraco arbitrário: o gesto
-    `pronto` sabe aplicar a sexta em qualquer modo, porque tira o modo da TABELA
-    em que a curva mora.
-
-    O MODO DE VIBRAÇÃO FICA DE FORA deste laço de propósito — lá o campo mostra
-    a OUTRA tabela, e há régua própria para ele
-    (`test_as_cinco_curvas_de_vibracao_existem_no_modo_delas`).
-
-    A MORDIDA: faça `_tabela_que_o_campo_mostra` devolver `_tabela_da_curva(modo)`
-    cru. Medido: **1 teste reprova**, nomeando `linear_medio` em 18 modos.
-    """
-    tp = a03._prontos()
-    devem = {c for c in tp.FEEDBACK_POSITION_LABELS if c != "custom"}
-    buracos: list[str] = []
-    for p in presets:
-        if p.name == a03.MODO_DA_VIBRACAO:
-            continue
-        tem = {v for v, _ in _OPCAO.findall(a03.html_das_opcoes_de_pronto(p.name))}
-        if devem - tem:
-            buracos.append(f"{p.label}: faltam {sorted(devem - tem)}")
-    assert not buracos, (
-        "curvas do produto fora do alcance de quem clica:\n  " + "\n  ".join(buracos))
-
-
-def test_a_bancada_oferece_as_seis_curvas_de_feedback(a03):
-    """E o desenho também: `PRONTOS` deixou de ser digitada."""
-    tp = a03._prontos()
-    devem = {c for c in tp.FEEDBACK_POSITION_LABELS if c != "custom"}
-    faltam: list[str] = []
-    listas = _selects(_bancada(), "pronto")
-    assert listas or 'class="g2-grade"' in _bancada(), "a bancada perdeu a lista de curvas"
-    for i, dentro in enumerate(listas):
-        tem = {v for v, _ in _OPCAO.findall(dentro)}
-        if devem - tem:
-            faltam.append(f"select #{i}: faltam {sorted(devem - tem)}")
-    assert not faltam, (
-        "o desenho esqueceu curva que o produto tem:\n  " + "\n  ".join(faltam))
-
-
-def test_o_rotulo_de_cada_curva_na_bancada_e_o_do_produto(a03):
-    """O nome da curva também tem dono, e é o mesmo dicionário."""
-    tp = a03._prontos()
-    do_produto = {c: r for c, r in tp.FEEDBACK_POSITION_LABELS.items()
-                  if c != "custom"}
-    erradas: list[str] = []
-    listas = _selects(_bancada(), "pronto")
-    assert listas or 'class="g2-grade"' in _bancada(), "a bancada perdeu a lista de curvas"
-    for i, dentro in enumerate(listas):
-        for valor, texto in _OPCAO.findall(dentro):
-            if valor in do_produto and texto != do_produto[valor]:
-                erradas.append(f"select #{i} · {valor}: desenho={texto!r} "
-                               f"produto={do_produto[valor]!r}")
-    assert not erradas, ("o desenho renomeia uma curva do produto:\n  "
-                         + "\n  ".join(erradas))
-
-
 def test_a_lista_de_modo_e_emitida_para_os_oito_campos(a03):
     """Um dono, oito lugares: `blocos` leva a lista a cada `select.modo`."""
     from pacotes import Contexto
@@ -200,8 +139,7 @@ def test_a_lista_de_modo_e_emitida_para_os_oito_campos(a03):
     ctx = Contexto(state={"active_profile": "régua"}, mesa=MESA,
                    conectados=[FALSO], estados={})
     blocos = a03.pacote(ctx)["blocos"]
-    classe = "g2-acion" if a03._pagina_do_todo() else "modo"
-    esperados = {f'[data-controle="p{n}"] select.{classe}[data-lado="{s}"]'
+    esperados = {f'[data-controle="p{n}"] select.g2-acion[data-lado="{s}"]'
                  for n in (1, 2, 3, 4) for s in ("e", "d")}
     faltam = sorted(esperados - set(blocos))
     assert not faltam, f"campos de modo que o produto não pinta: {faltam}"
@@ -221,56 +159,6 @@ def test_a_lista_de_modo_sai_como_o_dom_a_escreve(a03):
     assert 'disabled=""' in html, (
         "o travessão da decisão 13 dela perdeu o `disabled` — o lugar vazio "
         "passaria a ser escolhível com o rato")
-
-
-def test_a_curva_aplicada_e_nomeada_de_volta_no_campo(a03):
-    """Escolher `Linear médio` e o campo voltar a "— Nenhum —" é a tela mentindo.
-
-    ACHADO CLICANDO, 03/09/2026, no controle da mesa: apliquei `linear_medio` no
-    L2 e li o DOM — o modo virou `MultiPositionFeedback` e a caixa de ajustes
-    mostrou dez barras em 4, que é a curva certa **no aparelho**; e o campo de
-    baixo dizia `— Nenhum —`. Valia para as ONZE curvas do produto.
-
-    A CAUSA, e ela explica por que ninguém tinha visto: o disco guarda a curva
-    como dez listas de um (`[[0], [1], …]`) e o RASCUNHO guarda o que foi ao
-    daemon, que é a lista posicional PLANA. O reconhecimento só olhava a
-    primeira forma — então a tela sabia nomear a curva que veio do disco e não a
-    que ela acabou de escolher.
-
-    O CUSTO IA ALÉM DA PALAVRA: o "Guardar esse efeito" lê a coluna, e uma
-    coluna que diz "sem curva" logo depois de ela escolher uma é a mesma família
-    de defeito que o rascunho veio curar.
-
-    A MORDIDA: apague o ramo `elif nome in MODOS_COM_CURVA` de `_do_lado`.
-    Medido: **1 teste reprova**, nomeando as onze curvas.
-    """
-    tp = a03._prontos()
-    specs = a03._specs()
-    mudas: list[str] = []
-    for tabela in (tp.FEEDBACK_POSITION_PRESETS, tp.VIBRATION_POSITION_PRESETS):
-        for chave in tabela:
-            curva, modo_ = a03._curva(chave)
-            plana = a03._params_da_curva(modo_, curva)
-            visto = a03._do_lado({"mode": modo_, "params": plana}, specs)
-            if visto["pronto"] != chave:
-                mudas.append(f"{chave} ({modo_}): a tela diz {visto['pronto']!r}")
-    assert not mudas, (
-        "curvas que o produto aplicou e a tela não sabe nomear de volta:\n  "
-        + "\n  ".join(mudas))
-
-
-def test_a_curva_vinda_do_disco_continua_nomeada(a03):
-    """A cura não pode quebrar a forma ANTIGA — o disco guarda dez listas de um."""
-    tp = a03._prontos()
-    specs = a03._specs()
-    mudas: list[str] = []
-    for chave, valores in tp.FEEDBACK_POSITION_PRESETS.items():
-        aninhada = [[v] for v in valores]
-        visto = a03._do_lado({"mode": a03.MODO_DA_CURVA, "params": aninhada}, specs)
-        if visto["pronto"] != chave:
-            mudas.append(f"{chave}: a tela diz {visto['pronto']!r}")
-    assert not mudas, ("curvas gravadas no disco que a tela não nomeia:\n  "
-                       + "\n  ".join(mudas))
 
 
 def test_o_title_de_cada_modo_continua_sendo_o_desta_tela(a03, presets):

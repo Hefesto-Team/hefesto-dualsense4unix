@@ -46,19 +46,15 @@ from hefesto_dualsense4unix.interface.monta import MODO_AUTOMATICO
 from . import Contexto, jogador_de, perfil, registrar
 from .meus_efeitos import (
     PREFIXO_DO_MEU,
-    SEPARADOR_DOS_MEUS,
     TETO_DO_NOME,
     criar_efeito,
     guardar_meus_efeitos,
 )
-from .meus_efeitos import guardar_meus_efeitos as _guardar_dos_gatilhos
 from .meus_efeitos import meus_efeitos as _meus_efeitos_da
 
 SEM_DONO: dict[str, str] = {}
 
 LADOS = {"e": "left", "d": "right"}
-
-GESTO_DE_TODOS = "em-todos"
 
 NOME_DO_LADO = {"left": "Gatilho esquerdo (L2)", "right": "Gatilho direito (R2)"}
 
@@ -67,30 +63,24 @@ VAZIO = ""
 
 PAGINA = "03-gatilhos.html"
 
-_CASA = re.compile(r'data-campo="aj-nome-(?P<lado>[ed])-(?P<i>\d+)"')
-
 _LUGAR_VAZIO = re.compile(r'data-controle="(p\d+)"[^>]*data-conectado="nao"')
 
 _QUALQUER_LUGAR = re.compile(r'data-controle="(p\d+)"')
 
 _SELECT = re.compile(
-    r'<select[^>]*class="(?P<classe>modo|pronto|g2-acion|g2-imersao)"[^>]*>'
+    r'<select[^>]*class="(?P<classe>g2-acion|g2-imersao)"[^>]*>'
     r'(?P<dentro>.*?)</select>', re.S)
 
-#: a classe do campo na página → o campo que ele é; as duas famílias valem (publicada e nova)
-_CAMPO_DA_CLASSE = {"modo": "modo", "g2-acion": "modo",
-                    "pronto": "pronto", "g2-imersao": "imersao"}
+#: a classe do campo na página → o campo que ele é
+_CAMPO_DA_CLASSE = {"g2-acion": "modo", "g2-imersao": "imersao"}
 
 _COMO_O_DOM_ESCREVE = re.compile(r"\s(disabled|hidden|readonly|required)(?=[\s>])")
 
 _COMENTARIO_CSS = re.compile(r"/\*.*?\*/", re.S)
 
-_LIDO: dict[str, int] | None = None
 _ENDERECOS: frozenset[str] | None = None
 _VAZIOS: frozenset[str] | None = None
 _OFERECE: dict[str, frozenset[str]] | None = None
-_OPCOES_DO_PRONTO: str | None = None
-_CRESCE: dict[str, bool] | None = None
 
 
 def _pagina_publicada() -> str:
@@ -103,92 +93,16 @@ def _pagina_publicada() -> str:
         return ""
 
 
-def _casas_cravadas() -> dict[str, int]:
-    """`{"e": N, "d": M}` — quantas barras de ajuste a página publicada CRAVA.
-
-    NÃO É MAIS UMA INSTRUÇÃO, É UM DIAGNÓSTICO. Até 02/09/2026 este número
-    mandava no pacote: ele escrevia exatamente `N` casas, enchendo de vazio as
-    que o modo não usava. Era a cura do D3 pelo sintoma, e ela tinha um teto —
-    `Machine` pede 4 barras, `MultiPositionVibration` pede 11, e a página crava
-    4 e 2. *As que sobram não cabiam, e a tela calava sobre elas.*
-
-    Com a decisão de produto (a caixa acompanha o modo), quem manda é o MODO e a caixa
-    inteira vem em `blocos:`. O que este número diz agora é UMA coisa: quantas
-    barras o produto ainda tem de SOBRESCREVER porque a página publicada as
-    trouxe do desenho velho. Ele vai a zero no dia em que ela publicar a bancada
-    — e ali o bloco passa a pousar num lugar que já nasceu vazio.
-
-    Ele continua LIDO e nunca digitado: `4` e `2` escritos aqui seriam a segunda
-    cópia de um número que o gerador decide, e envelheceriam calados.
-    """
-    global _LIDO
-    if _LIDO is None:
-        casas = {"e": 0, "d": 0}
-        for m in _CASA.finditer(_pagina_publicada()):
-            lado, i = m.group("lado"), int(m.group("i"))
-            casas[lado] = max(casas[lado], i + 1)
-        _LIDO = casas
-    return _LIDO
-
-
 def sem_comentarios_de_css(doc: str) -> str:
     """O documento sem os `/* … */` — e sem espaço, para casar declaração."""
     return _COMENTARIO_CSS.sub(" ", doc).replace(" ", "").replace("\n", "")
-
-
-def _a_caixa_cresce() -> dict[str, bool]:
-    """`{"e": bool, "d": bool}` — a página publicada deixa a caixa crescer?
-
-    É A PERGUNTA QUE MANTÉM A CURA VÁLIDA NOS DOIS MUNDOS, e ela nasceu de um
-    estrago medido: a decisão de produto (a caixa acompanha o modo) tem DUAS metades,
-    e elas moram em lados diferentes da fronteira da publicação. A metade que
-    ENCHE a caixa é este pacote e vale hoje — um `blocos:` pousa na página
-    publicada como pousa na bancada. A metade que a faz CRESCER é o desenho, e
-    desenho só entra na tela do usuário quando ELA publica.
-
-    A METADE SOZINHA É PIOR QUE NENHUMA. Medido em 02/09/2026 no Chrome, sobre
-    o arquivo publicado, injetando o HTML que `html_dos_ajustes` emite e
-    exatamente a operação do piloto (`alvo.innerHTML = html`), com os perfis do
-    disco do usuário::
-
-        aventura  L2 `Curva de força`  10 barras em caixa de  92px → vaza  58px
-                  R2 `Curva de força`  10 barras em caixa de  46px → vaza 104px
-        corrida   R2 `Vibração por posição` 11 barras em 46px → vaza 119px
-
-    E o que vaza cai POR CIMA do `<select>` de Modo do R2 e do "Guardar esse
-    efeito" (foto: `/tmp/gat-pub-aventura.png`).
-
-    A RESPOSTA VEM DA PÁGINA, nunca de uma data ou de um interruptor: a trilha
-    de ajustes cresce quando ela é `minmax(var(--r-aj-<lado>),auto)`. Enquanto
-    a publicada trouxer a trilha FIXA, o pacote se limita ao que cabe lá; no dia
-    em que ela publicar, a mesma leitura devolve `True` e a caixa passa a ter o
-    tamanho do modo, sem ninguém lembrar de mexer aqui.
-
-    POR LADO, e não uma resposta só: as duas trilhas são declaradas separadas
-    (`--r-aj-e` e `--r-aj-d`), e um desenho que crescesse só a de cima é uma
-    página que este pacote tem de saber ler.
-    """
-    global _CRESCE
-    if _CRESCE is None:
-        css = sem_comentarios_de_css(_pagina_publicada())
-        _CRESCE = {lado: f"minmax(var(--r-aj-{lado}),auto)" in css
-                   for lado in ("e", "d")}
-    return _CRESCE
-
-
-def _cabem_no_desenho(sigla: str) -> int | None:
-    """Quantas barras a página publicada comporta naquele lado — ou `None`."""
-    if _a_caixa_cresce().get(sigla):
-        return None
-    cabem = _casas_cravadas().get(sigla, 0)
-    return cabem or None
 
 
 def _o_que_o_select_oferece() -> dict[str, frozenset[str]]:
     """Os `value` que cada campo de escolha da página publicada aceita."""
     global _OFERECE
     if _OFERECE is None:
-        fora: dict[str, set[str]] = {"modo": set(), "pronto": set(), "imersao": set()}
+        fora: dict[str, set[str]] = {"modo": set(), "imersao": set()}
         for m in _SELECT.finditer(_pagina_publicada()):
             fora[_CAMPO_DA_CLASSE[m.group("classe")]].update(
                 re.findall(r'<option[^>]*value="([^"]*)"', m.group("dentro")))
@@ -272,20 +186,6 @@ def _specs() -> Any:
     return _modulo_do_src("app.actions.trigger_specs")
 
 
-def _prontos() -> Any:
-    """As curvas prontas do produto (`profiles/trigger_presets.py`), ou `None`."""
-    return _modulo_do_src("profiles.trigger_presets")
-
-
-#: O outro é o `MODO_DA_VIBRACAO`, logo abaixo — a GUI estável repovoa o mesmo
-MODO_DA_CURVA = "MultiPositionFeedback"
-
-#: gesto mandava sempre `MultiPositionFeedback`.
-MODO_DA_VIBRACAO = "MultiPositionVibration"
-
-MODOS_COM_CURVA = (MODO_DA_CURVA, MODO_DA_VIBRACAO)
-
-
 DICA_DO_MODO = {
  "Off": "O jogo manda no gatilho; sem jogo, ele fica solto, como num controle comum.",
  "Rigid": "Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.",
@@ -311,7 +211,6 @@ DICA_DO_MODO = {
 SEM_APARELHO_AQUI = "Nenhum controle neste lugar."
 
 PREFIXO_DA_DICA_DO_MODO = "dica-modo-"
-PREFIXO_DA_DICA_DO_PRONTO = "dica-pronto-"
 
 
 def descricao_do_modo(chave: str) -> str:
@@ -354,110 +253,6 @@ def _rotulo_do_modo(chave: str) -> str:
     specs = _specs()
     spec = specs.get_spec(chave) if specs else None
     return str(getattr(spec, "label", "") or chave)
-
-
-def destinos_do_campo_de_pronto(modo_chave: str) -> list[str]:
-    """Os modos a que as curvas OFERECIDAS neste campo levam, naquele modo.
-
-    ELE É DERIVADO, NUNCA DIGITADO — e essa é a razão de ele existir em vez de
-    duas frases escritas à mão. Quem decide o que o campo oferece é
-    :func:`_tabela_que_o_campo_mostra`; quem decide para que modo cada curva
-    leva é :func:`_curva`, pela TABELA em que ela mora. Perguntar aos dois é o
-    único jeito de a dica não prometer um caminho que a lista não abre.
-    """
-    presets, _ = _tabela_que_o_campo_mostra(modo_chave)
-    fora: list[str] = []
-    for chave in presets:
-        try:
-            destino = _curva(chave)[1]
-        except (ValueError, RuntimeError):
-            continue
-        if destino not in fora:
-            fora.append(destino)
-    return fora
-
-
-def dica_do_pronto(modo_chave: str) -> str:
-    """O aviso do campo "Efeito pronto" — ANTES do clique, com o modo de AGORA.
-
-    DECISÃO [02] do PO, 04/09/2026: *"Fica como está, e a dica avisa ANTES do
-    clique. O desenho é do usuário, o atalho de um clique é real, e a única dívida
-    medida é a tela não avisar que o modo vai mudar."*
-
-    **CONFIRMADA PELO USUÁRIO EM 05/09/2026, pergunta `03-Q2`**: perguntada se uma
-    curva pronta pode trocar o modo sozinha, marcou *"Aplica na hora, com
-    aviso"* — que é este comportamento, com esta frase. **É esta linha que vale
-    daqui em diante**, e a de cima fica pela mesma razão da `03-Q1`.
-
-    **NÃO REESCREVA A FRASE À MÃO.** Ela é DERIVADA: quem diz para onde cada
-    família de curva leva é :func:`destinos_do_campo_de_pronto`, lendo a tabela
-    em que a curva mora. A primeira versão prometia dois destinos onde a lista
-    abre um, e foi a mordida que a derrubou. Uma frase digitada volta a mentir
-    no dia em que a tabela mudar.
-
-    A DIVERGÊNCIA COM A GTK É REAL E CONHECIDA (linha `Quando o campo "Efeito
-    pronto" aparece, e o que escolhê-lo faz`): lá a linha só existe nos DOIS
-    modos por posição e escolher um preset preenche os sliders **sem mexer no
-    modo**; aqui o campo aparece nos 19 e o clique já aplica — logo, fora dos
-    dois modos por posição, escolher uma curva TROCA o modo. Quem decidiu manter
-    foi o PO; o que faltava era a tela dizer isso antes.
-
-    **A PRIMEIRA VERSÃO DESTA FRASE PROMETIA DEMAIS, e quem a derrubou foi a
-    mordida.** Ela dizia *"as curvas de força vão para «Curva de força» e as de
-    vibração para «Vibração por posição»"* nos dezessete modos comuns — e é
-    FALSO: com o gatilho em `Rigid`, o campo oferece SÓ as seis curvas de
-    feedback (`_tabela_que_o_campo_mostra`, medido no DOM em 03/09), então
-    `Vibração por posição` não é alcançável dali. A tela estaria descrevendo um
-    caminho que a lista não abre — que é o alarme sem medição que esta casa bane.
-
-    **A CURA É PERGUNTAR À LISTA**, e não escolher melhor as palavras: o destino
-    sai de :func:`destinos_do_campo_de_pronto`, que lê o que o campo oferece
-    naquele modo e resolve cada curva pela tabela em que ela mora. Se um dia o
-    campo passar a oferecer as onze, a dica nomeia as duas sozinha.
-    """
-    agora = _rotulo_do_modo(modo_chave)
-    fim = "Um efeito seu volta ao modo com que foi guardado."
-    destinos = destinos_do_campo_de_pronto(modo_chave)
-    if not destinos:
-        return f"Este gatilho está em «{agora}». {fim}"
-    para = " ou ".join(f"«{_rotulo_do_modo(d)}»" for d in destinos)
-    if destinos == [modo_chave]:
-        return (f"Este gatilho está em «{agora}», e o campo mostra as curvas "
-                f"deste modo: escolher uma aplica as dez posições dela na hora, "
-                f"sem trocar o modo. {fim}")
-    return (f"Está em «{agora}». Escolher uma curva troca o modo para "
-            f"{para}, na hora. {fim}")
-
-
-def _tabela_da_curva(modo: str) -> tuple[dict[str, list[int]], dict[str, str]]:
-    """`(presets, rótulos)` do modo por posição, ou dois vazios nos outros 17.
-
-    ESTA É A REGRA DA GUI ESTÁVEL, palavra por palavra
-    (`triggers_actions._populate_preset_combo`): `MultiPositionFeedback` lê
-    `FEEDBACK_POSITION_*`, `MultiPositionVibration` lê `VIBRATION_POSITION_*`,
-    e nenhum outro modo tem curva. Escrever a escolha em dois lugares — na
-    lista que a tela mostra e no gesto que aplica — era como a tela passaria a
-    oferecer uma curva que o gesto não sabe resolver.
-    """
-    tp = _prontos()
-    if tp is None:
-        return {}, {}
-    if modo == MODO_DA_VIBRACAO:
-        return dict(tp.VIBRATION_POSITION_PRESETS), dict(tp.VIBRATION_POSITION_LABELS)
-    if modo == MODO_DA_CURVA:
-        return dict(tp.FEEDBACK_POSITION_PRESETS), dict(tp.FEEDBACK_POSITION_LABELS)
-    return {}, {}
-
-
-def _pronto_da_curva(nome: str, curva: list[int]) -> str:
-    """Qual efeito pronto é aquela curva salva, ou `custom` se não for nenhum."""
-    presets, _ = _tabela_da_curva(nome)
-    if not presets or len(curva) != 10:
-        return "custom"
-    for chave, valores in presets.items():
-        if list(valores) == list(curva):
-            return str(chave)
-    return "custom"
 
 
 # * TROCA DE PERFIL — o daemon REAPLICA o perfil no `profile.switch`, então o
@@ -635,11 +430,6 @@ def meus_efeitos() -> dict[str, Any]:
     return _meus_efeitos_da("gatilhos")
 
 
-def _guardar_meus_efeitos(todos: dict[str, Any]) -> None:
-    """Escreve a biblioteca dos gatilhos, sem apagar o resto das preferências."""
-    _guardar_dos_gatilhos(todos, "gatilhos")
-
-
 def _meia_do_efeito(efeito: Any, disco: str) -> dict[str, Any] | None:
     """A metade `left`/`right` de um efeito salvo, ou `None` se ele não a tem."""
     if not isinstance(efeito, dict):
@@ -663,216 +453,11 @@ def _meu_efeito_que_casa(disco: str, cfg: dict[str, Any]) -> str:
     return ""
 
 
-def _como_o_efeito_le(nome: str, valores: list[Any]) -> list[Any]:
-    """Os ajustes do perfil na ordem e na faixa em que a fábrica os manda.
-
-    A Metralhadora gravada antes de 08/10/2026 tem seis valores, e a quarta
-    casa era a amplitude B: lida pela posição, a barra «Frequência» dizia 3
-    com o controle batendo a 50, e mexer em qualquer barra mandava o 3.
-    """
-    if any(isinstance(v, list) for v in valores):
-        return valores
-    try:
-        perfil._com_o_src()
-        from hefesto_dualsense4unix.core.trigger_effects import ajustes_que_o_efeito_le
-
-        return ajustes_que_o_efeito_le(nome, valores)
-    except Exception:
-        return valores
-
-
 def _do_lado(cfg: dict[str, Any], specs: Any) -> dict[str, Any]:
-    """Um lado do gatilho, do perfil para a tela."""
+    """Um lado do gatilho, do perfil para a tela: o rótulo do modo e a chave dele."""
     nome = str((cfg or {}).get("mode") or "Off")
-    valores = _como_o_efeito_le(nome, list((cfg or {}).get("params") or []))
     spec = specs.get_spec(nome) if specs else None
-
-    fora: dict[str, object] = {
-        "modo": spec.label if spec else nome,
-        "modo-chave": nome,
-        "pronto": "custom",
-        "ajustes": [],
-    }
-    ajustes: list[dict[str, Any]] = []
-    fora["ajustes"] = ajustes
-
-    if spec is None:
-        return fora
-
-    #: ajuste — mas `MultiPositionFeedback` e `MultiPositionVibration` gravam
-    por_indice: dict[int, int] = {}
-    if any(isinstance(v, list) for v in valores):
-        curva_da_tela: list[int] = [
-            int(v[0]) if isinstance(v, list) and v else int(v or 0)
-            for v in valores]
-        fora["curva"] = curva_da_tela
-        fora["curva-pct"] = [round(max(0, min(100, x / 8 * 100)))
-                             for x in curva_da_tela]
-        fora["pronto"] = _pronto_da_curva(nome, curva_da_tela)
-        # `aventura` tem `MultiPositionFeedback` nos dois gatilhos e o `corrida`
-        posicoes = [i for i, q in enumerate(spec.params) if q.name.startswith("pos_")]
-        alvos = posicoes if len(posicoes) == len(curva_da_tela) else list(
-            range(len(curva_da_tela)))
-        por_indice = dict(zip(alvos, curva_da_tela, strict=False))
-    elif nome in MODOS_COM_CURVA:
-        # controle na mesa e li o DOM — modo `MultiPositionFeedback`, dez barras
-        # o MODO que voltava para o disco, aqui é o NOME DA CURVA que some. E
-        posicoes = [i for i, q in enumerate(spec.params) if q.name.startswith("pos_")]
-        deitada = [int(valores[i] or 0) for i in posicoes if i < len(valores)]
-        if posicoes and len(deitada) == len(posicoes):
-            fora["curva"] = deitada
-            fora["curva-pct"] = [round(max(0, min(100, x / 8 * 100)))
-                                 for x in deitada]
-            fora["pronto"] = _pronto_da_curva(nome, deitada)
-
-    for i, p in enumerate(spec.params):
-        if por_indice:
-            valor = por_indice.get(i, p.default)
-        else:
-            valor = valores[i] if i < len(valores) else p.default
-        largura = max(1, p.max_value - p.min_value)
-        ajustes.append({
-            "nome": p.label,
-            "valor": valor,
-            "pct": round(max(0, min(100, (valor - p.min_value) / largura * 100))),
-            "min": p.min_value, "max": p.max_value,
-        })
-    return fora
-
-
-SEM_AJUSTE = "Sem ajustes."
-
-
-def html_dos_ajustes(sigla: str, ajustes: list[dict[str, Any]],
-                     cabem: int | None = None, editavel: bool = False) -> str:
-    """A caixa de ajustes daquele lado, em HTML — a lista do MODO.
-
-    Uma linha por parâmetro do modo, com o rótulo, a barra na porcentagem da
-    FAIXA daquele parâmetro e o número. Zero parâmetros devolvem a frase, que é
-    o que as colunas vazias do desenho já diziam.
-
-    `editavel` É QUEM PODE ARRASTAR — 03/09/2026, e ele tem DOIS donos de razão,
-    não um:
-
-    * o PRODUTO passa `True` só nas colunas que têm aparelho. Um ajuste é de um
-      gatilho; arrastar num lugar vazio só pode terminar em recusa, e o botão
-      que convida para uma recusa é pior que o botão que não existe — é a mesma
-      regra que o `pointer-events:none` do CSS já aplica aos `<select>`;
-    * o DESENHO fica no padrão `False`, e isto está esperando a palavra de produto.
-      A alavanca é invisível — o desenho não muda um pixel —, mas o que o usuário
-      aprovou em 27/08 foi uma barra de LEITURA, e transformar leitura em
-      controle é decisão de produto. O gerador escreve a bancada e a bancada é
-      o que ela olha; enquanto ela não disser, o desenho segue mostrando o que
-      o usuário aprovou e o produto segue tendo a paridade com a GTK que a Lei 0
-      manda ter.
-
-    `cabem` É O TETO DA PÁGINA QUE O PRODUTO RENDERIZA HOJE, e `None` quer dizer
-    "não há teto". Ele é a metade que faltava da decisão de produto: a caixa acompanha
-    o modo, mas a trilha que a deixa CRESCER está na bancada e a bancada só
-    chega à tela quando ela publica. Sem o teto, uma caixa de 92px recebe onze
-    barras e as sete que sobram caem por cima do `<select>` de Modo do R2 e do
-    "Guardar esse efeito" — medido no Chrome sobre o arquivo PUBLICADO, com dois
-    perfis do disco do usuário (`aventura` vaza 58px à esquerda e 104 à direita;
-    `corrida` vaza 119). Ver `_a_caixa_cresce`.
-
-    COM TETO, A ÚLTIMA CASA VIRA O AVISO. Ela perde uma barra e ganha o número
-    do que não está vendo — que é a única coisa que a caixa cheia não lhe diz.
-    Calar seria repetir o defeito que esta aba existe para matar: hoje, na
-    página publicada, um `Curva de força` mostra QUATRO barras em branco sobre
-    dez intensidades gravadas, e nada na tela conta que há dez.
-
-    E O QUE NÃO COUBE CONTINUA NO DOM, invisível — `style="display:none"`, que
-    ganha da classe `.barra` por ser inline. Não é enfeite: o "Guardar esse
-    efeito" lê os `aj-val-*` DA TELA (o daemon não devolve o modo do gatilho), e
-    `_ajustes_da_coluna` cai no PADRÃO do modo para o índice que não achar.
-    Emitir só as barras visíveis faria o botão gravar os padrões por cima das
-    sete posições que ela salvou — destruir dado dela em silêncio, no clique de
-    um botão que diz "guardar".
-
-    A MARCAÇÃO É A MESMA QUE O GERADOR ESCREVIA — `data-campo` inclusive, e o
-    `data-hef-alvo="largura"` da barra. Ela não é enfeite:
-
-    * o `data-campo` é o que o "Guardar esse efeito" lê. O piloto recolhe a
-      coluna por `[data-linha],[data-campo]`, e sem endereço nenhum ali o
-      Guardar leria zero ajustes e gravaria os PADRÕES do modo por cima do que
-      ela salvou;
-    * o `data-hef-alvo="largura"` é como a régua do mockup sabe LER a barra: sem
-      ele, o valor cravado de `aj-pct-*` passa a ser o texto (vazio) em vez da
-      largura, e a régua deixa de enxergar a barra.
-
-    E NADA PINTA AQUI DENTRO: o pacote não emite `aj-*` em `colunas`, então o
-    `escrever()` do piloto nunca visita estes elementos — logo nenhum
-    `data-hef-visto` é carimbado, o `innerHTML` não diverge do emitido, e o
-    bloco é trocado UMA vez em vez de quatro por segundo. Medido: 17 tiques,
-    1 pintura.
-    """
-    if not ajustes:
-        return f'            <div class="ajustes-vazio">{SEM_AJUSTE}</div>'
-
-    a_vista = len(ajustes) if cabem is None else min(len(ajustes), cabem)
-    linhas = [_html_de_uma_barra(sigla, i, a, escondida=i >= a_vista,
-                                 editavel=editavel)
-              for i, a in enumerate(ajustes)]
-    return "\n".join(linhas)
-
-
-_ALAVANCA = ("position:absolute;left:0;top:-9px;width:100%;height:23px;"
-             "margin:0;padding:0;opacity:0;cursor:ew-resize;"
-             "-webkit-appearance:none;background:transparent")
-
-
-def _html_de_uma_barra(sigla: str, i: int, a: dict[str, Any],
-                       escondida: bool = False, editavel: bool = False) -> str:
-    """Uma linha da caixa de ajustes. `escondida` guarda o valor sem mostrá-lo.
-
-    `editavel` PÕE A ALAVANCA — 03/09/2026, e é a maior dívida desta aba.
-    Medido no `PRESETS`: 17 dos 19 modos têm ajuste, somando 71 parâmetros (Rigid 2,
-    Machine 4, MultiPositionFeedback 10, MultiPositionVibration 11). Na GTK
-    cada um é um `Gtk.Scale` que ela arrasta, com faixa e padrão vindos do
-    `trigger_specs`; no HTML **nenhum** era tocável, e escolher um modo
-    aplicava os PADRÕES dele e acabava.
-
-    O DESENHO NÃO MUDA UM PIXEL: a alavanca é um `<input type="range">`
-    transparente POR CIMA do trilho que o usuário aprovou. Quem desenha continua
-    sendo o `.cheio` que o pacote pinta; o `<input>` só recebe o arrasto. Uma
-    barra visível nova seria desenho, e desenho é do usuário.
-
-    A FAIXA É A DO PARÂMETRO, e sai do produto: `spec.params[i].min_value` e
-    `.max_value`, os mesmos números que o `Gtk.Scale` usa. Digitar `0..255`
-    aqui poria a posição do curso (0..9) numa régua trinta vezes maior.
-
-    ELE PEDE A FORMA E NÃO ENTRA NELA. `data-hef-forma="@controle"` é o que faz
-    o arrasto chegar ao Python com a coluna inteira — o modo e os outros
-    ajustes —, porque o daemon lê a lista posicional INTEIRA e um número solto
-    trocaria os vizinhos pelos padrões. Mas a alavanca não tem `data-linha` nem
-    `data-campo`, e a varredura do piloto recolhe só esses dois: quem carrega o
-    valor daquela casa continua sendo o `.num`. Dois endereços para o mesmo
-    número seriam duas verdades no mesmo clique.
-
-    E ELE NÃO FAZ O BLOCO PISCAR: o `value` viaja no ATRIBUTO, e arrastar muda
-    a *propriedade*. O `innerHTML` continua igual ao emitido enquanto ela
-    arrasta, então o piloto não troca a caixa debaixo da mão do usuário.
-    """
-    oculta = ' style="display:none"' if escondida else ""
-    alavanca = ""
-    if editavel and not escondida:
-        alavanca = (
-            f'<input type="range" min="{int(a.get("min", 0))}" '
-            f'max="{int(a.get("max", 255))}" step="1" '
-            f'value="{int(a["valor"])}" data-gesto="ajuste" '
-            f'data-lado="{sigla}" data-i="{i}" data-hef-forma="@controle" '
-            f'aria-label="{_escapar(str(a["nome"]))}" '
-            f'style="{_ALAVANCA}">')
-    return (
-        f'            <div class="barra" data-ajuste="{sigla}-{i}"{oculta}>\n'
-        f'              <span class="nome" data-campo="aj-nome-{sigla}-{i}">'
-        f'{_escapar(str(a["nome"]))}</span>\n'
-        f'              <span class="trilho"><span class="cheio" '
-        f'data-campo="aj-pct-{sigla}-{i}" data-hef-alvo="largura" '
-        f'style="width:{a["pct"]}%"></span>{alavanca}</span>\n'
-        f'              <span class="num" data-campo="aj-val-{sigla}-{i}">'
-        f'{_escapar(str(a["valor"]))}</span>\n'
-        f'            </div>')
+    return {"modo": spec.label if spec else nome, "modo-chave": nome}
 
 
 #: é o rótulo, e é só ele que `html_das_opcoes_de_modo` troca. Tudo o mais da
@@ -897,10 +482,10 @@ def _opcoes_cravadas_do_modo() -> str:
 
 
 def html_das_opcoes_de_modo(disco: str = "") -> str:
-    """As opções do campo "Modo", com o RÓTULO perguntado ao dono.
+    """As opções do «Efeito de acionamento», com o RÓTULO perguntado ao dono.
 
-    Na página do todo o campo é o «Efeito de acionamento» e leva, no fim, o grupo «Seus
-    efeitos» daquele gatilho (`disco`): os que a pessoa guardou com uma metade para ele.
+    No fim vai o grupo «Seus efeitos» daquele gatilho (`disco`): os que a pessoa guardou com
+    uma metade para ele.
     """
     return _rotuladas(_opcoes_cravadas_do_modo()) + _seus_do_acionamento(disco)
 
@@ -928,11 +513,6 @@ SEUS_EFEITOS = "Seus efeitos"
 
 #: a opção que desfaz a imersão e deixa só o efeito de acionamento
 SEM_IMERSAO = "nenhum"
-
-
-def _pagina_do_todo() -> bool:
-    """A página publicada já é a do todo (efeito de acionamento e de imersão)?"""
-    return "imersao-e" in _enderecos_da_pagina()
 
 
 def _imersoes() -> Any:
@@ -965,8 +545,8 @@ def _grupo_dos_seus(nomes: list[str]) -> str:
 
 
 def _seus_do_acionamento(disco: str) -> str:
-    """O grupo «Seus efeitos» do acionamento daquele gatilho, só na página do todo."""
-    if not disco or not _pagina_do_todo():
+    """O grupo «Seus efeitos» do acionamento daquele gatilho."""
+    if not disco:
         return ""
     return _grupo_dos_seus([n for n, e in meus_efeitos().items()
                             if _meia_do_efeito(e, disco) is not None])
@@ -1084,115 +664,6 @@ def html_das_opcoes_de_imersao(modo: str, estilo: str = "") -> str:
     return "".join(partes)
 
 
-def _opcoes_cravadas_do_pronto() -> str:
-    """As opções de "Efeito pronto" que O DESENHO oferece, lidas da página."""
-    global _OPCOES_DO_PRONTO
-    if _OPCOES_DO_PRONTO is None:
-        dentro = ""
-        for m in _SELECT.finditer(_pagina_publicada()):
-            if _CAMPO_DA_CLASSE[m.group("classe")] == "pronto":
-                dentro = m.group("dentro")
-                break
-        antes = dentro.split("<option disabled>", 1)[0].replace(" selected", "")
-        _OPCOES_DO_PRONTO = _COMO_O_DOM_ESCREVE.sub(r' \1=""', antes).rstrip()
-    return _OPCOES_DO_PRONTO
-
-
-def _valores_cravados_do_pronto() -> frozenset[str]:
-    """Os `value` que o DESENHO já oferece no campo "Efeito pronto"."""
-    return frozenset(re.findall(r'<option value="([^"]*)"',
-                                _opcoes_cravadas_do_pronto()))
-
-
-def _tabela_que_o_campo_mostra(modo: str) -> tuple[dict[str, list[int]], dict[str, str]]:
-    """A tabela que o campo "Efeito pronto" OFERECE naquele modo.
-
-    NÃO É `_tabela_da_curva`, e a diferença é uma decisão de produto. A GUI estável
-    ESCONDE a linha de preset fora dos dois modos por posição
-    (`_update_preset_row_visibility`); o desenho dela a mostra nos DEZENOVE. Nos
-    outros 17 a página crava as curvas de FEEDBACK — logo é a tabela de feedback
-    que o campo mostra ali, e o gesto `pronto` já sabe aplicá-las: ele tira o
-    modo da TABELA em que a curva mora (ver `_curva`), não do modo de agora.
-
-    O BURACO QUE ISTO TAPA, medido no DOM VIVO em 03/09/2026 com o gatilho em
-    `Desligado` e um controle na mesa: os oito campos ofereciam CINCO curvas de
-    feedback e não a sexta — `linear_medio`, a firmeza constante. As cinco vêm
-    cravadas da página; a sexta só era acrescentada quando `_tabela_da_curva`
-    devolvia a tabela de feedback, isto é, **só com o gatilho já em "Curva de
-    força"**. Oferecer cinco das seis irmãs é um buraco arbitrário: para
-    alcançar a sexta ela teria de trocar o modo antes, e nada na tela dizia.
-
-    `_tabela_da_curva` CONTINUA COMO ESTÁ, e tem de continuar: quem a chama para
-    RECONHECER uma curva salva (`_pronto_da_curva`) precisa da tabela do modo
-    gravado, e cair no feedback ali nomearia uma curva de vibração com o nome de
-    outra tabela.
-    """
-    presets, rotulos = _tabela_da_curva(modo)
-    if rotulos:
-        return presets, rotulos
-    return _tabela_da_curva(MODO_DA_CURVA)
-
-
-def _curvas_que_a_pagina_esqueceu(modo: str) -> list[str]:
-    """As curvas que o PRODUTO tem naquele modo e a página não oferece.
-
-    A DÍVIDA QUE ISTO PAGA, medida em 03/09/2026 lendo os dois lados:
-
-    * `linear_medio` ("Linear médio", `[4]` dez vezes, a firmeza constante) existe em
-      `FEEDBACK_POSITION_PRESETS` desde antes desta aba, a GUI estável a
-      oferece, e a lista `PRONTOS` do gerador — digitada à mão — a esqueceu;
-    * as CINCO de `VIBRATION_POSITION_PRESETS` (pulso crescente, machine gun,
-      galope, senoide, vibração final) nunca chegaram à tela nova: o campo só
-      carregava as de feedback.
-
-    Seis curvas do produto fora do alcance de quem clica, e nenhuma régua
-    acusava — o gerador reprova um rótulo que o produto NÃO tem, e nunca um que
-    o produto tem e a tela esqueceu.
-
-    O RÓTULO É O DO PRODUTO, letra por letra (`FEEDBACK_POSITION_LABELS` /
-    `VIBRATION_POSITION_LABELS`). Não invento texto de tela: estas palavras já
-    são as que a aba Gatilhos da GUI estável mostra a ela.
-
-    `custom` FICA DE FORA porque a página já o tem, com o nome que O usuário aprovou
-    ("— Nenhum —", contra o "Personalizar" do motor). Acrescentá-lo daria duas
-    opções para a mesma chave, com dois nomes.
-
-    A TABELA É A QUE O CAMPO MOSTRA, e não a do modo — 03/09/2026. Ver
-    `_tabela_que_o_campo_mostra`: com o gatilho em `Desligado` esta função
-    devolvia lista vazia, e a sexta curva de feedback ficava fora dos oito
-    campos até alguém trocar o modo primeiro.
-    """
-    _, rotulos = _tabela_que_o_campo_mostra(modo)
-    if not rotulos:
-        return []
-    ja_tem = _valores_cravados_do_pronto()
-    return [chave for chave in rotulos
-            if chave != "custom" and chave not in ja_tem]
-
-
-def html_das_opcoes_de_pronto(modo: str = MODO_DA_CURVA) -> str:
-    """As opções do campo "Efeito pronto": o desenho + o produto + os efeitos DO USUÁRIO."""
-    _, rotulos = _tabela_que_o_campo_mostra(modo)
-    linhas = [_opcoes_cravadas_do_pronto()]
-    if modo == MODO_DA_VIBRACAO:
-        cravadas = _opcoes_cravadas_do_pronto().split("\n")
-        de_feedback, _ = _tabela_da_curva(MODO_DA_CURVA)
-        linhas = [uma for uma in cravadas
-                  if not any(f'value="{c}"' in uma for c in de_feedback)]
-    for chave in _curvas_que_a_pagina_esqueceu(modo):
-        linhas.append(f'                <option value="{chave}">'
-                      f'{_escapar(str(rotulos[chave]))}</option>')
-    meus = meus_efeitos()
-    if meus:
-        linhas.append(f'                <option disabled>'
-                      f'{SEPARADOR_DOS_MEUS}</option>')
-        for nome in sorted(meus):
-            linhas.append(
-                f'                <option value="{PREFIXO_DO_MEU}{_escapar(nome)}">'
-                f'{_escapar(nome)}</option>')
-    return "\n".join(linhas)
-
-
 # emite o chip sem `--plastico`. Esta aba continua não dependendo disso: ela lê
 
 CLASSE_DO_CHIP = "cabeca"
@@ -1264,29 +735,8 @@ def miolo_do_chip(jogador: int, nome: str, via: str,
     return PONTO.join(pedacos)
 
 
-def a_pagina_recebe_a_cor_por_endereco() -> bool:
-    """A página PUBLICADA já tem onde receber a cor por endereço?
-
-    ELA EXISTE PARA NÃO APAGAR A BORDA NA TELA DO USUÁRIO. O desenho de hoje pôs o
-    `--plastico` no embrulho, com `data-campo="plastico"`; a página que o
-    `WebView` renderiza AGORA não o tem — ela só recebe o chip inteiro pelo alvo
-    `html`. Um pacote que escrevesse só no endereço novo deixaria as duas
-    colunas dela com a borda neutra até o `--publicar 03`, que é ato dela.
-
-    Medido em 03/09/2026, com a página publicada e um Nova Pink na mesa: a
-    borda saía `rgb(68, 71, 90)` — a queda do tema — em vez de
-    `rgb(227, 91, 140)`.
-
-    ELA SE APOSENTA SOZINHA. No dia em que a bancada virar produto, o endereço
-    passa a existir e este ramo deixa de correr. É a mesma forma de
-    `_lugares_que_o_desenho_da_por_vazios` e `_casas_cravadas`: o pacote
-    pergunta à PÁGINA o que ela sabe receber, em vez de presumir.
-    """
-    return CAMPO_DO_PLASTICO in _enderecos_da_pagina()
-
-
 def chip_do_controle(jogador: int, nome: str, via: str, plastico: str,
-                     conectado: bool = True, cor_no_chip: bool = False) -> str:
+                     conectado: bool = True) -> str:
     """O `<span>` do cabeçalho da coluna, com endereço e sem cor inventada.
 
     `plastico` é o HEX JÁ RESOLVIDO, e não o *slug*, de propósito: o gerador
@@ -1306,13 +756,6 @@ def chip_do_controle(jogador: int, nome: str, via: str, plastico: str,
     hex. A borda não some: `topo.html` declara
     `.chip.plastico{border-color:var(--plastico, var(--border-forte))}`, com a
     queda já escrita.
-
-    `cor_no_chip` É A PONTE ATÉ O `--publicar 03`, e só o PACOTE a levanta —
-    ver :func:`a_pagina_recebe_a_cor_por_endereco`. A página que ela vê hoje não
-    tem o endereço da cor; enquanto não tiver, o produto continua mandando a cor
-    dentro do chip, como sempre mandou. O DESENHO nunca a levanta: ali a cor tem
-    de estar no embrulho, ou a régua a acusa — e com razão, porque num arquivo
-    estático ninguém a reescreve.
 
     **E A DICA ACOMPANHA A COR — 03/09/2026.** Ela dizia *"a borda é a cor do
     plástico"* nos TRÊS casos, e nos dois últimos era mentira: sem hex a borda é
@@ -1347,9 +790,8 @@ def chip_do_controle(jogador: int, nome: str, via: str, plastico: str,
                 "fica neutra.")
     else:
         dica = nome
-    estilo = f' style="--plastico:{cor}"' if cor_no_chip and cor else ""
     titulo = f' title="{dica}"' if dica else ""
-    return (f'<span class="{classe}"{estilo}{titulo}>'
+    return (f'<span class="{classe}"{titulo}>'
             f"{miolo_do_chip(jogador, nome, via, conectado)}</span>")
 
 
@@ -1461,8 +903,7 @@ def _cabecalho_vivo(ctx: Contexto, c: dict[str, Any]) -> tuple[str, str]:
     queda do `topo.html` assume.
     """
     identidade = _identidade_viva(ctx, c)
-    chip = chip_do_controle(
-        *identidade, cor_no_chip=not a_pagina_recebe_a_cor_por_endereco())
+    chip = chip_do_controle(*identidade)
     return chip, cor_de_borda(identidade[3])
 
 
@@ -1473,7 +914,7 @@ def _chip_do_lugar_vazio(pref: str) -> str:
 
 @registrar("03-gatilhos.html")
 def pacote(ctx: Contexto) -> dict[str, Any]:
-    """Endereço → valor, por controle da mesa. E a caixa de ajustes, em bloco."""
+    """Endereço → valor, por controle da mesa. E as listas de acionamento e imersão, em bloco."""
     specs = _specs()
     p = perfil.ativo(ctx.state.get("active_profile"))
     tem_endereco = _enderecos_da_pagina()
@@ -1483,7 +924,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         {_chave_do_rascunho(str(c.get("uniq") or ""), "")[0] for c in ctx.conectados})
 
     pref_de = {str(m.get("uniq") or ""): str(m.get("pref") or "") for m in ctx.mesa}
-    do_todo = _pagina_do_todo()
     estilo = _estilo_do_perfil(p)
 
     colunas: dict[str, dict[str, Any]] = {}
@@ -1512,43 +952,25 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             col[f"{PREFIXO_DA_DICA_DO_MODO}{sig}"] = descricao_do_modo(
                 str(d["modo-chave"]))
             meu_nome = _meu_efeito_que_casa(LADOS[sig], cfgs[sig])
-            if not do_todo:
-                col[f"{PREFIXO_DA_DICA_DO_PRONTO}{sig}"] = dica_do_pronto(
-                    str(d["modo-chave"]))
-                col[f"pronto-{sig}"] = (f"{PREFIXO_DO_MEU}{meu_nome}" if meu_nome
-                                        else d["pronto"])
-            if do_todo:
-                if meu_nome:
-                    col[f"modo-chave-{sig}"] = f"{PREFIXO_DO_MEU}{meu_nome}"
-                feita = _imersao_que_casa(str(d["modo-chave"]),
-                                          _params_inteiros(cfgs[sig]))
-                col[f"{CAMPO_DA_IMERSAO}-{sig}"] = feita
-                col[f"{PREFIXO_DA_DICA_DA_IMERSAO}{sig}"] = dica_da_imersao(feita)
-            if d.get("curva") and not do_todo:
-                col[f"curva-{sig}"] = d["curva"]
-                col[f"curva-pct-{sig}"] = d["curva-pct"]
+            if meu_nome:
+                col[f"modo-chave-{sig}"] = f"{PREFIXO_DO_MEU}{meu_nome}"
+            feita = _imersao_que_casa(str(d["modo-chave"]), _params_inteiros(cfgs[sig]))
+            col[f"{CAMPO_DA_IMERSAO}-{sig}"] = feita
+            col[f"{PREFIXO_DA_DICA_DA_IMERSAO}{sig}"] = dica_da_imersao(feita)
         colunas[uniq] = col
         pintados += sum(1 for k in col if k in tem_endereco)
-        blocos.update(_blocos_da_coluna(pref_de.get(uniq) or uniq, deste,
-                                        editavel=True, estilo=estilo))
+        blocos.update(_blocos_da_coluna(pref_de.get(uniq) or uniq, deste, estilo=estilo))
 
     ocupados = {str(m.get("pref") or "") for m in ctx.mesa}
     sem_ninguem = _do_lado({}, specs)
     for pref in sorted(_lugares_que_o_desenho_da_por_vazios() - ocupados):
         vazia = {f"modo-chave-{sig}": _sem_nada("modo", str(sem_ninguem["modo-chave"]))
                  for sig in LADOS}
-        if not do_todo:
-            vazia.update({f"pronto-{sig}": _sem_nada("pronto", str(sem_ninguem["pronto"]))
-                          for sig in LADOS})
         vazia.update({f"{pref_}{sig}": SEM_APARELHO_AQUI
-                      for pref_ in ((PREFIXO_DA_DICA_DO_MODO,) if do_todo else
-                                    (PREFIXO_DA_DICA_DO_MODO, PREFIXO_DA_DICA_DO_PRONTO))
+                      for pref_ in (PREFIXO_DA_DICA_DO_MODO, PREFIXO_DA_DICA_DA_IMERSAO)
                       for sig in LADOS})
-        if do_todo:
-            vazia.update({f"{CAMPO_DA_IMERSAO}-{sig}": _sem_nada("imersao", SEM_IMERSAO)
-                          for sig in LADOS})
-            vazia.update({f"{PREFIXO_DA_DICA_DA_IMERSAO}{sig}": SEM_APARELHO_AQUI
-                          for sig in LADOS})
+        vazia.update({f"{CAMPO_DA_IMERSAO}-{sig}": _sem_nada("imersao", SEM_IMERSAO)
+                      for sig in LADOS})
         # colunas` do piloto, e com ela some o `data-conectado="nao"` que segura
         vazia[CAMPO_DO_CHIP] = _chip_do_lugar_vazio(pref)
         # `--plastico` do embrulho (`escrever` chama `removeProperty`), que é o
@@ -1564,8 +986,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         if CAMPO_DO_CHIP not in (colunas.get(pref) or {}):
             blocos[seletor_do_chip(pref)] = _chip_do_lugar_vazio(pref)
 
-    if do_todo:
-        blocos[SELETOR_DOS_SEUS] = html_dos_seus_efeitos()
+    blocos[SELETOR_DOS_SEUS] = html_dos_seus_efeitos()
     modo_da_aba = modo_dos_gatilhos_do_perfil(p)
     return {
         "colunas": colunas,
@@ -1581,42 +1002,28 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         "cobertura": {"pintados": pintados, "sem_dono": len(SEM_DONO),
                       "sem_endereco": sum(1 for col in colunas.values()
                                           for k in col if k not in tem_endereco),
-                      "blocos": len(blocos),
-                      # `_casas_cravadas`.
-                      "casas_cravadas": sum(_casas_cravadas().values()),
-                      "caixa_cresce": sum(_a_caixa_cresce().values())},
+                      "blocos": len(blocos)},
     }
 
 
 def _blocos_da_coluna(pref: str, deste: dict[str, dict[str, Any]],
-                      editavel: bool = False, estilo: str = "") -> dict[str, str]:
-    """Os blocos de uma coluna: as caixas de ajuste e as listas de modo e de «Efeito pronto».
+                      estilo: str = "") -> dict[str, str]:
+    """As duas listas de cada lado de uma coluna: o efeito de acionamento e o de imersão.
 
     O seletor é CSS e tem de achar UM elemento: o piloto usa `document.querySelector`, e
-    `[data-controle="p1"] .ajustes.e` é único na página. Os blocos são pintados antes dos
-    campos, então o `modo-chave-<lado>` reescolhe a opção depois da troca da lista. A de
-    «Efeito pronto» é do lado (depende do modo); a de modo é igual nos oito campos.
-    Na página do todo são duas listas por lado, acionamento e imersão (`_pagina_do_todo`).
+    `[data-controle="p1"] select.g2-acion[data-lado="e"]` é único na página. Os blocos são
+    pintados antes dos campos, então o `modo-chave-<lado>` reescolhe a opção depois da troca
+    da lista. A de imersão depende do acionamento daquele lado.
     """
     fora: dict[str, str] = {}
     if not pref:
         return fora
-    if _pagina_do_todo():
-        for sig, d in deste.items():
-            lugar = f'[data-controle="{pref}"]'
-            fora[f'{lugar} select.g2-acion[data-lado="{sig}"]'] = (
-                html_das_opcoes_de_modo(LADOS[sig]))
-            fora[f'{lugar} select.g2-imersao[data-lado="{sig}"]'] = (
-                html_das_opcoes_de_imersao(str(d.get("modo-chave") or "Off"), estilo))
-        return fora
     for sig, d in deste.items():
-        fora[f'[data-controle="{pref}"] select.modo[data-lado="{sig}"]'] = (
-            html_das_opcoes_de_modo())
-        fora[f'[data-controle="{pref}"] .ajustes.{sig}'] = html_dos_ajustes(
-            sig, list(d.get("ajustes") or []), _cabem_no_desenho(sig),
-            editavel=editavel)
-        fora[f'[data-controle="{pref}"] select.pronto[data-lado="{sig}"]'] = (
-            html_das_opcoes_de_pronto(str(d.get("modo-chave") or MODO_DA_CURVA)))
+        lugar = f'[data-controle="{pref}"]'
+        fora[f'{lugar} select.g2-acion[data-lado="{sig}"]'] = (
+            html_das_opcoes_de_modo(LADOS[sig]))
+        fora[f'{lugar} select.g2-imersao[data-lado="{sig}"]'] = (
+            html_das_opcoes_de_imersao(str(d.get("modo-chave") or "Off"), estilo))
     return fora
 
 
@@ -1779,44 +1186,6 @@ def _padroes(nome: str) -> list[int]:
     return list(specs.preset_to_positional_params(spec, {}))
 
 
-def _curva(chave: str) -> tuple[list[int], str]:
-    """`(as dez intensidades, o modo em que elas existem)` daquele efeito pronto.
-
-    O MODO SAI DA TABELA EM QUE A CURVA MORA, e não de uma constante: as duas
-    tabelas do produto não compartilham chave nenhuma
-    (`rampa_crescente`… contra `pulso_crescente`…), então saber DE ONDE a curva veio
-    é saber em que modo ela existe. Antes desta linha o gesto mandava sempre
-    `MultiPositionFeedback`, e as cinco curvas de vibração não tinham como ser
-    aplicadas nem que a lista as oferecesse.
-    """
-    tp = _prontos()
-    if tp is None:
-        raise RuntimeError(
-            "efeito pronto: não consegui ler as curvas. Nada foi mandado.")
-    for modo_, resolver in ((MODO_DA_CURVA, tp.resolve_feedback_preset),
-                            (MODO_DA_VIBRACAO, tp.resolve_vibration_preset)):
-        valores = resolver(chave)
-        if valores:
-            return list(valores), modo_
-    raise ValueError(
-        f"efeito pronto: {chave!r} não é uma curva do produto "
-        f"(`profiles/trigger_presets.FEEDBACK_POSITION_PRESETS` nem "
-        f"`VIBRATION_POSITION_PRESETS`).")
-
-
-def _params_da_curva(modo_: str, curva: list[int]) -> list[int]:
-    """As dez posições postas nos parâmetros `pos_*` do modo, o resto no padrão."""
-    specs = _specs()
-    fora = _padroes(modo_)
-    if specs is None:
-        return fora
-    spec = specs.get_spec(modo_)
-    posicoes = [i for i, q in enumerate(spec.params) if q.name.startswith("pos_")]
-    for i, valor in zip(posicoes, curva, strict=False):
-        fora[i] = int(valor)
-    return fora
-
-
 #: `reenviar`, que somava com ele os desfechos dos DOIS gatilhos da coluna, e
 #: saiu com o botão. Fica o primeiro, a D-17: o `_aplicar` soma o recibo do
 #: guardou*. A constante fica onde subiu, acima do chamador: quem lê `_aplicar`
@@ -1824,17 +1193,14 @@ _E_TAMBEM = " · "
 
 
 def _aplicar(p: Any, lado: str, modo_: str, params: list[int],
-             uniq: str, ctx: Contexto | None = None,
-             guardar: bool = True, *,
-             recebeu_em_todos: list[str] | None = None) -> tuple[bool, str, str]:
+             uniq: str, ctx: Contexto | None = None) -> tuple[bool, str, str]:
     """Manda o efeito ao daemon pela porta CERTA, e a certa depende do modo.
 
     "DESLIGADO" É `trigger.reset` (a R-19): ele grava `Off`, carimbado com a
     camada `usuaria` daquele controle, e o jogo que mandar efeito depois vence.
 
-    A FUNÇÃO EXISTE PORQUE HÁ TRÊS CHAMADORES — o `modo`, o `pronto` quando
-    aplica um efeito dela, e a régua. Escrito três vezes, o `if chave == "Off"`
-    some num deles no dia em que alguém mexer.
+    A FUNÇÃO EXISTE PORQUE HÁ MAIS DE UM CHAMADOR — o `modo`, a `imersao` e a régua.
+    Escrito em cada um, o `if chave == "Off"` some num deles no dia em que alguém mexer.
 
     E ELA É O CHOKE POINT DO RASCUNHO — 03/09/2026. Toda escrita no gatilho
     passa por aqui, então é aqui que a tela aprende o que foi aplicado. É o
@@ -1927,43 +1293,20 @@ def _aplicar(p: Any, lado: str, modo_: str, params: list[int],
     **A GUARDA É A MESMA DO RASCUNHO** — `ok and _chegou_ao_aparelho(corpo)`.
     Gravar no perfil um efeito que o aparelho recusou seria a tela prometendo
     amanhã o que não fez hoje.
-
-    ``guardar=False`` é para quem manda ao aparelho sem opinar pelo controle —
-    hoje só o :func:`em_todos`, que escreve na seção GLOBAL e não pode criar um
-    override por MAC. O sinalizador existe para que esse contrato continue
-    verdadeiro sem que o ESCRITOR se multiplique: a gravação segue morando só
-    aqui.
-
-    ``recebeu_em_todos`` É O «EM TODOS» — :func:`em_todos`, e é o único chamador. Com
-    uma lista, o pedido vai com `todos: true`, e o daemon escreve em cada
-    controle da mesa (ignorando o destino da aba Conexões) e responde em quem
-    pegou. O rascunho de cada coluna se grava pelo `aplicado_em` dessa
-    resposta, e não pela lista da mesa: a coluna de um controle que não
-    recebeu continua com o que ele tem. Quem recebeu volta na própria lista,
-    para o recado nomear. Resposta que não fala de destino (daemon antigo)
-    lembra em quem está na mesa, a mesma leitura de :func:`_chegou_ao_aparelho`.
     """
-    extra: dict[str, Any] = {"todos": True} if recebeu_em_todos is not None else {}
     if modo_ == "Off":
-        ok, motivo, corpo = _desfecho(
-            p.trigger_reset_detalhado(lado, uniq=uniq, **extra))
+        ok, motivo, corpo = _desfecho(p.trigger_reset_detalhado(lado, uniq=uniq))
         params = []
     else:
         ok, motivo, corpo = _desfecho(
-            p.trigger_set_detalhado(lado, modo_, params, uniq=uniq, **extra))
+            p.trigger_set_detalhado(lado, modo_, params, uniq=uniq))
     nao_guardou = ""
     if ok and _chegou_ao_aparelho(corpo):
-        quem_lembra = [uniq]
-        if recebeu_em_todos is not None:
-            quem_lembra = _quem_recebeu(corpo, ctx)
-            recebeu_em_todos.extend(q for q in quem_lembra if q not in recebeu_em_todos)
-        for quem in quem_lembra:
-            _lembrar_o_aplicado(
-                perfil.nome_do_ativo(ctx.state if ctx else None),
-                quem, lado, {"mode": modo_, "params": params})
-        if guardar:
-            nao_guardou = _guardar_no_perfil(ctx, p, uniq, lado,
-                                             {"mode": modo_, "params": params})
+        _lembrar_o_aplicado(
+            perfil.nome_do_ativo(ctx.state if ctx else None),
+            uniq, lado, {"mode": modo_, "params": params})
+        nao_guardou = _guardar_no_perfil(ctx, p, uniq, lado,
+                                         {"mode": modo_, "params": params})
     ok, motivo = _conferir_o_desfecho(lado, modo_, ok, motivo, corpo, ctx, uniq)
     recibo = ""
     if nao_guardou:
@@ -1971,20 +1314,6 @@ def _aplicar(p: Any, lado: str, modo_: str, params: list[int],
     if nao_guardou:
         recibo = _E_TAMBEM.join((recibo, nao_guardou))
     return ok, motivo, recibo
-
-
-def _quem_recebeu(corpo: dict[str, Any] | None, ctx: Contexto | None) -> list[str]:
-    """Os `uniq` em que o «Em todos» pegou, pelo `aplicado_em` do daemon."""
-    if _fala_de_destino(corpo):
-        try:
-            perfil._com_o_src()
-            from hefesto_dualsense4unix.app.ipc_bridge import destinos_da_aplicacao
-        except Exception:
-            return []
-        aplicado, _ = destinos_da_aplicacao(corpo)
-        return aplicado
-    na_mesa = [str(c.get("uniq") or "") for c in ((ctx.conectados if ctx else None) or [])]
-    return [u for u in na_mesa if u]
 
 
 def _guardar_no_perfil(ctx: Contexto | None, p: Any, uniq: str, disco: str,
@@ -2006,7 +1335,7 @@ def _guardar_no_perfil(ctx: Contexto | None, p: Any, uniq: str, disco: str,
     mundo — um efeito dela apagado por um clique no outro lado.
 
     **NÃO ABRIU O PERFIL, NÃO GRAVA — E NÃO LEVANTA.** São dois casos: não há
-    `active_profile` (o `guardar` já explica esse na frase dele), ou o nome que
+    `active_profile`, ou o nome que
     o daemon publica não existe para ESTE leitor. O segundo não é hipótese: as
     réguas desta aba rodam com `active_profile` de mentira, e na máquina do usuário o
     daemon pode nomear um perfil que a pasta lida aqui não tem (apagado,
@@ -2037,7 +1366,7 @@ def _guardar_no_perfil(ctx: Contexto | None, p: Any, uniq: str, disco: str,
     das réguas do outro ramo relidas uma a uma — a mesma divergência que a
     §5 da D-17 mede entre a aba 02 e a aba 06 e deixa declarada.
 
-    O CAMINHO DE DISCO É O DO `guardar` — :func:`_gravar_so_o_gatilho`, e não
+    O CAMINHO DE DISCO É :func:`_gravar_so_o_gatilho`, e não
     `perfil.gravar_e_reaplicar`. A razão está medida lá: reaplicar o perfil
     inteiro acende de volta a barra de luz que ela desligou noutra aba.
     """
@@ -2296,151 +1625,6 @@ def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     return {"recado": recibo}
 
 
-@gesto("03-gatilhos.html", "pronto", grava="_gravar_so_o_gatilho")
-def pronto(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """Escolher um efeito pronto põe aquela CURVA no gatilho, na hora.
-
-    O EFEITO PRONTO TEM DONO, e o dono é `profiles/trigger_presets.py`. São
-    ONZE curvas em DUAS tabelas: seis em `FEEDBACK_POSITION_PRESETS` (as cinco
-    do desenho mais `linear_medio`) e cinco em `VIBRATION_POSITION_PRESETS`.
-    Cada uma resolve para dez intensidades de 0 a 8.
-
-    FATO SUBSTITUÍDO — 03/09/2026. Esta docstring dizia, e a nota do
-    `MODO_DA_CURVA` repetia: *"Uma curva de dez posições SÓ existe como
-    `MultiPositionFeedback`"*. **É falso**, e o produto o desmente em duas
-    linhas: `MultiPositionVibration` tem `frequency, pos_0..pos_9` no
-    `trigger_specs`, e o `_MODES_COM_PRESET` da GUI estável lista os DOIS. Foi
-    essa afirmação que manteve as cinco curvas de vibração fora do alcance
-    desta tela — o gesto mandava sempre o modo de força. Agora o modo sai da
-    TABELA em que a curva mora (ver `_curva`).
-
-    E ELE TROCA O MODO NOS OUTROS 17 — está dito aqui porque é a única coisa
-    deste gesto que não é dedução direta do produto. Na GUI estável a linha de
-    preset nem aparece fora dos dois modos por posição
-    (`_update_preset_row_visibility`). No desenho ela aparece sempre, para os
-    19 — então escolher "Stop hard" com o modo em "Metralhadora" só pode querer
-    dizer *"põe este gatilho na curva Stop hard"*. **Isto é escolha de produto
-    e é do usuário**; está no relato para ela decidir. O que não faço é a alternativa
-    calada: aplicar dez intensidades num modo que não tem posições, que o
-    `build_from_name` recusaria e a tela não explicaria.
-
-    "— Nenhum —" NÃO APLICA NADA, e recusa dizendo. O `value` dele é `custom`,
-    que é o token do próprio produto para "os valores são os que estão aí" —
-    não há curva a mandar, e mandar o modo "de volta ao normal" seria confundir
-    este campo com o "Desligado" do campo de cima.
-
-    E OS "MEUS EFEITOS" PASSARAM A EXISTIR — decisão 17 dela, 02/09/2026. Uma
-    opção `meu:<nome>` é um efeito que ELA salvou (ver `meus_efeitos`), e o que
-    se aplica é a metade DESTE gatilho do par que ela guardou. Até hoje esta
-    função recusava dizendo *"não há onde guardar nem de onde ler um efeito com
-    nome"*; agora há, e a frase saiu junto com o defeito.
-    """
-    _nao_no_automatico(ctx)
-    uniq, lado = _exigir_controle(o, "efeito pronto"), _lado(o)
-    chave = _escolhido(o)
-    if chave.startswith(PREFIXO_DO_MEU):
-        nome = chave[len(PREFIXO_DO_MEU):]
-        modo_salvo, params = _metade_do_meu(nome, lado)
-        ok, motivo, recibo = _aplicar(p, lado, modo_salvo, params, uniq, ctx)
-        if not ok:
-            raise RuntimeError(_na_lingua_da_tela(motivo, modo_salvo)
-                               or f"o Hefesto não aplicou o efeito «{nome}»")
-        return {"recado": recibo}
-    if chave in ("", "custom", TRAVESSAO):
-        raise ValueError(
-            "efeito pronto: não há curva a aplicar. '— Nenhum —' é a ausência "
-            "de escolha, e `—` é como esta tela diz que o lugar está vazio. "
-            "Para guardar um efeito seu, dê um nome a ele e use "
-            "'Guardar esse efeito'.")
-    # aplicadas: mandá-las como `MultiPositionFeedback` poria uma curva de
-    curva, modo_da_curva = _curva(chave)
-    ok, motivo, recibo = _aplicar(p, lado, modo_da_curva,
-                                  _params_da_curva(modo_da_curva, curva), uniq, ctx)
-    if not ok:
-        raise RuntimeError(_na_lingua_da_tela(motivo, modo_da_curva)
-                           or f"o Hefesto não aplicou a curva "
-                             f"«{_tabela_da_curva(modo_da_curva)[1].get(chave, chave)}»")
-    return {"recado": recibo}
-
-
-@gesto("03-gatilhos.html", "ajuste", grava="_gravar_so_o_gatilho")
-def ajuste(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """Arrastar uma barra muda AQUELE parâmetro e reaplica o efeito na hora.
-
-    A MAIOR DÍVIDA DESTA ABA, e o nome dela já estava reservado: o `SEM_ECO`
-    listava um gesto `ajuste` que não existia. São **71 parâmetros em 17 dos 19
-    modos** (a soma do `PRESETS`) que a GTK deixa mexer e o HTML só mostrava —
-    Rigid 2, Machine 4, MultiPositionFeedback 10, MultiPositionVibration 11. Sem eles, escolher um
-    modo aplicava os PADRÕES dele e não havia como sair de lá; e "Montar do
-    zero" (`Custom`), cujos oito padrões são ZERO, era um modo que não faz nada
-    — um item de menu que responde "aplicado" com o gatilho intacto.
-
-    NADA DE LÓGICA NOVA. A ordem dos parâmetros é a do produto
-    (`preset_to_positional_params`, ver `_padroes`), quem lê a coluna é o
-    `_ajustes_da_coluna` que o "Guardar esse efeito" já usava, e quem manda ao
-    daemon é o `_aplicar`. Este gesto só troca UM número no meio da lista.
-
-    O MODO VEM DA COLUNA, e não do servidor: é a mesma `forma` que o Guardar
-    recolhe (`data-hef-forma`), e ela traz o `modo-chave-<lado>` que está na
-    tela. Perguntar ao perfil daria o modo do DISCO, e o rascunho existe
-    justamente porque os dois podem divergir.
-
-    O `click` NÃO REPETE O `change`, e a guarda é a IGUALDADE, não o nome do
-    evento. Uma alavanca dispara os dois no mesmo gesto — `change` ao soltar,
-    `click` logo depois, com o mesmo valor —, e sem guarda cada arrasto viraria
-    dois pedidos idênticos ao daemon. É o que o debounce de 300 ms da GTK
-    (`_schedule_live_preview`) resolve do outro lado; aqui não há arrasto
-    contínuo a conter, só a repetição do próprio evento.
-
-    POR QUE PELA IGUALDADE E NÃO POR `evento == "click"`, e a diferença foi
-    medida: o clique sintético desta casa (`--prova-clique`, `CLIQUE_COM_ALVO`)
-    chama `el.click()` — se o gesto recusasse todo `click`, a régua da tela
-    nunca alcançaria a alavanca e daria verde sobre um controle que ela nunca
-    tocou. É o defeito do `--prova-gesto` que dava verde sobre dois botões
-    mortos, com o sinal trocado. Comparar com o RASCUNHO cala a repetição sem
-    calar a prova: o primeiro pedido passa, o segundo é o mesmo pedido.
-    """
-    _nao_no_automatico(ctx)
-    uniq, lado = _exigir_controle(o, "ajuste"), _lado(o)
-    sigla = str(o.get("lado") or "").strip()
-    forma = o.get("forma")
-    if not isinstance(forma, dict) or not forma:
-        raise RuntimeError(
-            "não consegui ler os ajustes desta coluna, e mandar um só trocaria "
-            "os outros. Nada foi mandado.")
-    modo_ = str(forma.get(f"modo-chave-{sigla}") or "").strip()
-    if not modo_ or modo_ == TRAVESSAO:
-        raise RuntimeError(
-            "este gatilho ainda não tem modo. Escolha um modo primeiro.")
-    params = _ajustes_da_coluna(forma, sigla, modo_)
-    try:
-        i = int(str(o.get("i") or "").strip())
-    except ValueError:
-        raise ValueError(
-            "ajuste: o clique não disse QUAL barra. É o `data-i` da alavanca, "
-            "e ele é o índice do parâmetro na ordem do spec.") from None
-    if not 0 <= i < len(params):
-        raise ValueError(
-            f"ajuste: a barra {i} não existe no modo {modo_!r}, que tem "
-            f"{len(params)} ajuste(s). O índice é posicional — se a caixa e o "
-            f"modo saíram de sincronia, aplicar aqui escreveria no parâmetro "
-            f"errado.")
-    try:
-        params[i] = int(float(str(o.get("valor") or "").strip()))
-    except ValueError:
-        raise ValueError(
-            f"ajuste: a barra devolveu {o.get('valor')!r}, que não é número. "
-            f"Zero é uma medida; o que a tela não soube dizer não vira zero.") from None
-    ja = _do_rascunho(uniq, lado)
-    if ja and ja.get("mode") == modo_ and list(ja.get("params") or []) == params:
-        return None
-    ok, motivo, recibo = _aplicar(p, lado, modo_, params, uniq, ctx)
-    if not ok:
-        raise RuntimeError(_na_lingua_da_tela(motivo, modo_)
-                           or f"o Hefesto não aplicou o ajuste no modo «{_rotulo_do_modo(modo_)}»")
-    return {"recado": recibo}
-
-
 def _acionamento_da_coluna(ctx: Contexto, o: dict[str, Any], uniq: str, lado: str) -> str:
     """O efeito de acionamento em que aquele gatilho está: o da tela, senão o de agora."""
     forma = o.get("forma")
@@ -2643,268 +1827,6 @@ def sentir(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
                    list(volta.get("params") or []), uniq)
 
 
-def _o_par_da_coluna(forma: dict[str, Any]) -> dict[str, dict[str, Any]]:
-    """O par L2+R2 que está NA COLUNA, pronto para o disco. Levanta se não houver.
-
-    ELE ERA O MIOLO DO `guardar` E VIROU FUNÇÃO em 06/09/2026, quando o
-    :func:`em_todos` passou a precisar exatamente do mesmo par. Escrito duas
-    vezes, o segundo é o que esquece o `TRAVESSAO` — e `—` não é *"desligue este
-    gatilho"*, é *"não há controle neste lugar"*. Gravar um `Off` por causa dele
-    silenciaria, no perfil, um gatilho que o perfil dava a todo mundo.
-
-    O LADO SEM MODO FICA DE FORA, e é o que faz a fusão por campo funcionar: o
-    esquema lê `model_fields_set` lado a lado, e um lado ausente do pedido
-    continua *"sem opinião"*. Ver :func:`_com_os_gatilhos`.
-    """
-    dos_lados: dict[str, dict[str, Any]] = {}
-    for lado, sigla in (("left", "e"), ("right", "d")):
-        modo_ = str(forma.get(f"modo-chave-{sigla}") or "").strip()
-        if not modo_ or modo_ == TRAVESSAO:
-            continue
-        dos_lados[lado] = {"mode": modo_,
-                           "params": _ajustes_da_coluna(forma, sigla, modo_)}
-    if not dos_lados:
-        raise RuntimeError(
-            "não consegui ler o modo desta coluna. Nada foi guardado.")
-    return dos_lados
-
-
-_RECADO_DE_TODOS = (
-    "Este efeito passou a valer para todos os controles. Ele saiu do ajuste "
-    "próprio de cada um e foi para o perfil — um controle que você ligar "
-    "depois já nasce com ele.")
-_RECADO_DE_QUEM_RECEBEU = (
-    "Este efeito chegou {quem} e passou a valer para todos os controles. Ele "
-    "saiu do ajuste próprio de cada um e foi para o perfil — um controle que "
-    "você ligar depois já nasce com ele.")
-
-
-def _recado_de_todos(ctx: Contexto, recebeu: list[str]) -> str:
-    """O recado do «Em todos», com o nome de cada controle que recebeu o efeito."""
-    nomes: list[str] = []
-    for c in ctx.conectados or []:
-        if str(c.get("uniq") or "") in recebeu:
-            nomes.append(f"ao Controle {jogador_de(c) or '?'}")
-    if not nomes:
-        return _RECADO_DE_TODOS
-    quem = nomes[0] if len(nomes) == 1 else f"{', '.join(nomes[:-1])} e {nomes[-1]}"
-    return _RECADO_DE_QUEM_RECEBEU.format(quem=quem)
-
-
-@gesto("03-gatilhos.html", GESTO_DE_TODOS, grava="_gravar_so_o_gatilho")
-def em_todos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """"Em todos": o par desta coluna vai para a seção GLOBAL do perfil.
-
-    **A LINHA 110 DO CSV DA PARIDADE**, e o defeito que ela nomeia não é de
-    conforto: *"o perfil salvo pelo HTML fica com dois overrides por MAC em vez
-    de uma seção global, o que muda o que acontece quando ela liga um TERCEIRO
-    controle: ele herda a global (que o HTML nunca escreveu), não o efeito que
-    ela configurou"*. Até aqui **toda** escrita desta aba era por MAC — o `modo`,
-    o `pronto`, o `ajuste` e o `guardar` chamam `_com_os_gatilhos`, que escreve
-    em `controllers[uniq].triggers`. Não havia caminho nenhum, nesta tela, para
-    a seção global; e é ela que um aparelho novo herda.
-
-    **O GÊMEO NA GTK É `triggers_actions._persist_params_to_draft`**, no ramo em
-    que `alvo_de_edicao(self).uniq is None` — o alvo em `TODOS`. Ele faz DUAS
-    coisas, e as duas estão aqui:
-
-    1. grava o lado editado na seção global do rascunho;
-    2. `draft.with_override_fields_cleared("triggers", {side})` — LIMPA aquele
-       lado dos overrides por controle de todo mundo. Sem o passo 2 a global
-       seria escrita e continuaria perdendo: o override por MAC vence o global
-       no merge por campo do backend (`profiles/manager._controllers_to_specs`
-       lê `model_fields_set`), e os controles que já tinham opinião ficariam com
-       a de ontem. Quem faz os dois aqui é :func:`_com_os_gatilhos_de_todos`.
-
-    **O ENVIO VAI COM `todos: true`, e não pela rota sem endereço.** A rota sem
-    endereço segue o destino da aba Conexões (com o seletor num controle, ela
-    escreve só nele) e grava por uma camada que não solta o bloco do jogo. O
-    `todos` faz o daemon escrever em cada controle da mesa, gravar o padrão que
-    um controle novo herda e soltar, em cada um, o que o jogo pintou naquele
-    lado, como o gesto coluna por coluna (O-EM-TODOS-DO-GATILHO-CHEGA-A-CADA-
-    CONTROLE-DA-MESA-01, 09/10/2026). O rascunho de cada coluna e o recado saem
-    do `aplicado_em` da resposta: só lembra e só é nomeado quem recebeu.
-
-    **ESCREVER GLOBAL AQUI NÃO É O `None` QUE O `alvo_de_edicao` PROÍBE.** Aquele
-    módulo existe porque `None` carregava duas coisas — *"o usuário clicou em Todos"* e
-    *"eu não sei quem é o alvo"* —, e a segunda virava escrita global silenciosa.
-    Este gesto é a PRIMEIRA: `EstadoDoAlvo.TODOS`, escolha deliberada, com um
-    clique do usuário por trás. O que ele nunca faz é o segundo caso — sem coluna não
-    há `forma`, e sem `forma` ele recusa dizendo.
-
-    **A FONTE É A TELA, e não o disco** — pela razão do aparelho: o DualSense
-    não devolve o modo em que está, e o que ela acabou de escolher só existe na
-    coluna. O piloto recolhe a coluna pelo `data-hef-forma="@controle"`,
-    e por isso este gesto reusa o :func:`_o_par_da_coluna` do "Guardar esse
-    efeito" em vez de escrever uma segunda leitura.
-
-    **DEIXOU DE SER PROVISÓRIO — 08/09/2026.** Esta docstring dizia que o botão
-    estava na bancada e **não** na publicada, esperando o ato dela; a publicação
-    de `f1393b41` o levou, e as quatro colunas da página que o produto renderiza
-    o têm. O gesto que estava à espera passou a ser clicável, e o texto que
-    dizia o contrário atravessou dois dias — o mesmo `--publicar` cuja outra
-    metade deixou o `reenviar` sem botão. Ver a lápide dele neste arquivo.
-    """
-    _nao_no_automatico(ctx)
-    _exigir_controle(o, "em todos")
-    forma = o.get("forma")
-    if not isinstance(forma, dict) or not forma:
-        raise RuntimeError(
-            "não consegui ler o efeito desta coluna. Nada foi mandado.")
-    dos_lados = _o_par_da_coluna(forma)
-
-    recebeu: list[str] = []
-    for disco, cfg in dos_lados.items():
-        ok, motivo, _ = _aplicar(p, disco, str(cfg["mode"]), list(cfg["params"]),
-                                 "", ctx, guardar=False, recebeu_em_todos=recebeu)
-        if not ok:
-            raise RuntimeError(
-                f"{_assunto(disco, str(cfg['mode']))} — "
-                f"{_na_lingua_da_tela(motivo, str(cfg['mode'])) or 'o daemon não aplicou'}")
-
-    nome = perfil.nome_do_ativo(getattr(ctx, "state", None)).strip()
-    if not nome:
-        raise RuntimeError(
-            "o efeito foi para os controles ligados, mas sem perfil ativo ele "
-            "não vale para os próximos. Escolha um perfil na aba Perfis.")
-    loader = perfil._com_o_src()
-    try:
-        prof = loader.load_profile(nome)
-    except Exception as erro:
-        raise RuntimeError(
-            f"o efeito foi para os controles ligados, mas não entrou no perfil "
-            f"{nome}. Um controle que você ligar depois não vai pegá-lo.") from erro
-    novo = _com_os_gatilhos_de_todos(prof, dos_lados)
-    if novo is not None:
-        _gravar_so_o_gatilho(novo, p)
-    return {"recado": _recado_de_todos(ctx, recebeu)}
-
-
-def _com_os_gatilhos_de_todos(prof: Any, dos_lados: dict[str, Any]) -> Any:
-    """O perfil com o gatilho na seção GLOBAL — e o lado editado FORA de todo override.
-
-    AS DUAS METADES SÃO UMA SÓ, e separá-las seria escrever a global e continuar
-    perdendo: `profiles/manager._controllers_to_specs` monta o `OutputSpec` de
-    cada controle a partir do `model_fields_set` do override dele, e um `left`
-    escrito ali VENCE o `profile.triggers.left`. Um "em todos" que só escrevesse
-    a global mudaria a tela e não mudaria o aparelho de quem já tinha opinião.
-
-    É A REGRA DO BACKEND, e ela tem dono escrito: `draft_config`
-    `with_override_fields_cleared` — *"uma edição em 'Todos' vale para todo
-    mundo, então o campo editado sai dos overrides por-controle"*. Aquela função
-    é do `DraftConfig` (o rascunho da janela GTK) e esta escreve no `Profile`
-    direto, que é o caminho de disco desta aba; o que NÃO se reescreve é a regra
-    de quando um override some — `_override_vazio` é importado de lá.
-
-    **SEÇÃO QUE ESVAZIA VIRA `None`; ENTRADA SEM SEÇÃO SOME DO MAPA.** Um
-    `ControllerOverrides` sem nada, deixado no lugar, faz o JSON salvo carregar
-    uma chave de endereço apontando para `{}` — e a próxima leitura conclui que
-    aquele aparelho tem opinião. É a mesma disciplina, com a mesma razão, do
-    lado do rascunho.
-
-    :return: `None` quando nada mudou. Regravar um perfil idêntico troca a data
-        do arquivo e faz o daemon reaplicá-lo — e um `profile.switch` no meio de
-        uma partida não é de graça. É o mesmo contrato de :func:`_com_os_gatilhos`.
-    """
-    from hefesto_dualsense4unix.app.draft_config import _override_vazio
-    from hefesto_dualsense4unix.profiles.schema import TriggerConfig, TriggersConfig
-
-    lados_pedidos = set(dos_lados)
-    globais = prof.triggers.model_copy(
-        update={lado: TriggerConfig(**cfg) for lado, cfg in dos_lados.items()})
-    atuais: dict[str, Any] = {}
-    limpou = False
-    for chave, dele in (prof.controllers or {}).items():
-        antes = dele.triggers
-        if antes is None or not (antes.model_fields_set & lados_pedidos):
-            atuais[chave] = dele
-            continue
-        # mesma pegadinha que `_com_os_gatilhos` documenta pelo outro lado. Um
-        limpou = True
-        restantes = antes.model_fields_set - lados_pedidos
-        nova = (TriggersConfig(**{n: getattr(antes, n) for n in restantes})
-                if restantes else None)
-        depois = dele.model_copy(update={"triggers": nova})
-        if _override_vazio(depois):
-            continue
-        atuais[chave] = depois
-    if not limpou and globais == prof.triggers:
-        return None
-    return prof.model_copy(update={"triggers": globais,
-                                   "controllers": atuais or None})
-
-
-@gesto("03-gatilhos.html", "guardar", grava="_gravar_so_o_gatilho")
-def guardar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """"Guardar esse efeito": a coluna vai para o PERFIL — e, com nome, para ELA.
-
-    POR QUE ELE PRECISA EXISTIR, e é a diferença entre esta aba e as outras: os
-    dois gestos vizinhos (`modo` e `pronto`) APLICAM na hora — é a decisão
-    de 01/09, *"clicar já aplica"*. Mas aplicar não guarda: o efeito vale até a
-    próxima troca de perfil, e o disco continua com o que estava lá. Este botão
-    é o ponto de gravação, e é a única coisa nesta tela que sobrevive a um
-    `profile.switch`.
-
-    DE ONDE VEM O QUE ELE GRAVA — e a resposta não é o daemon. O DualSense **não
-    devolve** o modo em que está: gatilho é comando de ida, e o `state_full` não
-    o publica (é por isso que `modo` e `pronto` estão no `SEM_ECO` desta aba).
-    Logo o único lugar onde a escolha viva existe é a TELA, e é dela que a
-    `forma` vem — o piloto recolhe a coluna inteira quando o botão traz
-    `data-hef-forma="@controle"`.
-
-    O ALVO É O OVERRIDE DO CONTROLE, e não a seção global: `ControllerOverrides`
-    tem `triggers` desde a PERFIL-02, e a aba mostra uma coluna POR CONTROLE.
-    Gravar no global faria o "Guardar" do P2 mudar o gatilho do P1 — a mesma
-    contradição que mantém o `mic-escopo` da aba Conexões recusando.
-
-    A FUSÃO É POR CAMPO, e o esquema a escreve: *"`None` = sem opinião — o
-    controle herda a seção GLOBAL do perfil (merge POR CAMPO na aplicação,
-    PERFIL-01: override parcial nunca apaga a cor global no replug)"*. Por isso
-    este gesto só toca `triggers` do controle clicado e devolve o resto intacto.
-
-    E O NOME É O QUE FALTAVA — decisão de produto de 02/09/2026: o efeito salvo aparece com o
-    nome que o usuário deu. O campo ao lado do botão é opcional; preenchido, o par L2+R2
-    entra em "Meus efeitos" com aquele nome e passa a aparecer nas quatro
-    colunas. Vazio, este botão continua exatamente o que era.
-
-    A LEGENDA DO DESENHO JÁ DIZIA ISSO, e é de onde veio a forma do dado:
-    *"Guarda o par L2+R2 em Meus efeitos"*. A frase morreu num redesenho de
-    30/08; o comentário do CSS que a explica sobreviveu em `aba03.py`.
-    """
-    _nao_no_automatico(ctx)
-    uniq = _exigir_controle(o, "guardar")
-    forma = o.get("forma")
-    if not isinstance(forma, dict) or not forma:
-        raise RuntimeError(
-            "não consegui ler o efeito desta coluna. Nada foi guardado.")
-
-    dos_lados = _o_par_da_coluna(forma)
-
-    apelido = str(forma.get("nome-do-efeito") or "").strip()
-    if len(apelido) > 60:
-        raise ValueError(
-            "o nome do efeito passou de 60 letras. O campo de escolha em que "
-            "ele aparece tem 220px de coluna — um nome que não cabe some "
-            "cortado, e um efeito que ela não consegue ler é um efeito perdido.")
-    if apelido:
-        _salvar_o_meu(apelido, dos_lados)
-
-    nome = perfil.nome_do_ativo(ctx.state).strip()
-    if not nome:
-        if apelido:
-            return {"blocos": _blocos_do_pronto(ctx)}
-        raise RuntimeError(
-            "sem perfil ativo não há onde guardar. Escolha um perfil na aba "
-            "Perfis, ou dê um nome ao efeito para guardá-lo em Meus efeitos.")
-
-    loader = perfil._com_o_src()
-    prof = loader.load_profile(nome)
-    novo = _com_os_gatilhos(prof, uniq, dos_lados)
-    if novo is not None:
-        _gravar_so_o_gatilho(novo, p)
-    return {"blocos": _blocos_do_pronto(ctx)} if apelido else None
-
-
 def _gravar_so_o_gatilho(novo: Any, p: Any) -> None:
     """Grava o perfil no disco — e NÃO reaplica o perfil inteiro no aparelho.
 
@@ -2924,8 +1846,8 @@ def _gravar_so_o_gatilho(novo: Any, p: Any) -> None:
     OUTRA aba.
 
     E A REAPLICAÇÃO NÃO ERA NECESSÁRIA PARA NADA. Esta aba aplica NA HORA — é a
-    decisão de 01/09, *"clicar já aplica"*: quando ela chega a este botão,
-    `modo` e `pronto` já mandaram o efeito ao aparelho por `_aplicar`. O
+    decisão de 01/09, *"clicar já aplica"*: cada escolha da coluna já mandou o
+    efeito ao aparelho por `_aplicar`. O
     `profile_switch` reaplicava por cima um gatilho que já estava lá, e levava
     junto nove seções que ninguém pediu.
 
@@ -2976,52 +1898,10 @@ def modo_dos_gatilhos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
                        else "Gatilhos no modo personalizado: valem as suas escolhas.")}
 
 
-
-def _salvar_o_meu(apelido: str, dos_lados: dict[str, dict[str, Any]]) -> None:
-    """Guarda o par L2+R2 na biblioteca do usuário, com o nome que ela deixou."""
-    guardado: dict[str, Any] = {}
-    for disco, cfg in dos_lados.items():
-        _padroes(str(cfg["mode"]))
-        guardado[disco] = {"mode": str(cfg["mode"]),
-                           "params": [int(v) for v in cfg["params"]]}
-    todos = meus_efeitos()
-    todos[apelido] = guardado
-    _guardar_meus_efeitos(todos)
-
-
-def _blocos_do_pronto(ctx: Contexto) -> dict[str, str]:
-    """As listas de "Efeito pronto" das quatro colunas, com a biblioteca de agora."""
-    fora: dict[str, str] = {}
-    for m in ctx.mesa:
-        pref = str(m.get("pref") or "")
-        if not pref:
-            continue
-        uniq = str(m.get("uniq") or "")
-        for sig, disco in LADOS.items():
-            fora[f'[data-controle="{pref}"] select.pronto[data-lado="{sig}"]'] = (
-                html_das_opcoes_de_pronto(_modo_de_agora(ctx, uniq, disco)))
-    return fora
-
-
 def _modo_de_agora(ctx: Contexto, uniq: str, disco: str) -> str:
     """O modo em que aquele gatilho está, pela MESMA função que a tela pinta."""
     p = perfil.ativo(ctx.state.get("active_profile")) or {}
     return str(_o_que_o_controle_recebe(p, uniq, disco).get("mode") or "Off")
-
-
-def _ajustes_da_coluna(forma: dict[str, Any], sigla: str, modo: str) -> list[int]:
-    """Os ajustes daquele lado, na ORDEM do spec — nunca na ordem da tela."""
-    padrao = _padroes(modo)
-    fora = list(padrao)
-    for i in range(len(padrao)):
-        cru = str(forma.get(f"aj-val-{sigla}-{i}") or "").strip()
-        if not cru:
-            continue
-        try:
-            fora[i] = int(float(cru))
-        except ValueError:
-            continue
-    return fora
 
 
 def _com_os_gatilhos(prof: Any, uniq: str, dos_lados: dict[str, Any]) -> Any:
@@ -3045,9 +1925,7 @@ def _com_os_gatilhos(prof: Any, uniq: str, dos_lados: dict[str, Any]) -> Any:
 
     Agora o lado ausente do pedido só entra se o override JÁ o tinha escrito —
     a metade que ela nunca tocou continua herdando o global, que é o contrato do
-    esquema (*"`None` = sem opinião"*). O mesmo vale para o `guardar` quando a
-    coluna traz `—` num dos lados: `—` é *"não há controle neste lugar"*, não
-    uma escolha de desligar.
+    esquema (*"`None` = sem opinião"*).
     """
     from hefesto_dualsense4unix.profiles.schema import (
         ControllerOverrides,
@@ -3079,8 +1957,8 @@ PONTE = {"trigger_set_detalhado", "trigger_reset_detalhado"}
 METODOS: set[str] = set()
 
 
-#: 4 → 5 EM 04/09/2026: nasceu o `reenviar`, a decisão [03] do PO — o botão que
-#: sem ninguém escolher isso. Ver a lápide do `reenviar` acima.
+#: Os cinco gestos da aba do todo: `modo`, `imersao`, `criar-efeito`, `sentir` e o par
+#: «Modo automático | Modo personalizado» (`GESTO_DO_MODO`).
 PISO_DA_ABA = 5
 _UNIQ = "aa:bb:cc:00:00:01"
 _GUARDOU: tuple[str, list[str], dict[str, Any]] = (
@@ -3088,13 +1966,12 @@ _GUARDOU: tuple[str, list[str], dict[str, Any]] = (
 
 _IMERSAO_DE_PROVA = _imersoes().imersoes_do_acionamento("Machine")[0]
 
-_STOP_HARD, _MODO_STOP_HARD = _curva("stop_hard")
-_GALOPE, _MODO_GALOPE = _curva("galope")
-
 
 def _forma_de_prova(sigla: str, modo_: str) -> dict[str, str]:
     """A coluna que o piloto recolheria, montada pelo endereço que a pintura usa."""
     return {f"modo-chave-{sigla}": modo_}
+
+
 PROVAS = [
     # calados no dia em que ela mudasse um padrão — e a régua daria verde sobre
     {"pagina": PAGINA, "gesto": "modo", "clique": {"lado": "e",  # (noqa-acento) id
@@ -3109,23 +1986,6 @@ PROVAS = [
      "chama": [("trigger_set_detalhado", ["left", "Vibration", _padroes("Vibration")],
                 {"uniq": _UNIQ}), _GUARDOU]},
     {"pagina": PAGINA,  # (noqa-acento) chave do contrato
-     "gesto": "pronto", "clique": {"lado": "d", "v": "stop_hard"},
-     "chama": [("trigger_set_detalhado",
-                ["right", _MODO_STOP_HARD,
-                 _params_da_curva(_MODO_STOP_HARD, _STOP_HARD)],
-                {"uniq": _UNIQ}), _GUARDOU]},
-    {"pagina": PAGINA,  # (noqa-acento) chave do contrato
-     "gesto": "pronto", "clique": {"lado": "e", "v": "galope"},
-     "chama": [("trigger_set_detalhado",
-                ["left", _MODO_GALOPE, _params_da_curva(_MODO_GALOPE, _GALOPE)],
-                {"uniq": _UNIQ}), _GUARDOU]},
-    # número mexido, os outros viram padrão calados e esta linha reprova.
-    {"pagina": PAGINA,  # (noqa-acento) chave do contrato
-     "gesto": "ajuste", "clique": {"lado": "e", "i": "1", "valor": "200",
-                                   "forma": _forma_de_prova("e", "Rigid")},
-     "chama": [("trigger_set_detalhado",
-                ["left", "Rigid", [_padroes("Rigid")[0], 200]], {"uniq": _UNIQ}), _GUARDOU]},
-    {"pagina": PAGINA,  # (noqa-acento) chave do contrato
      "gesto": "imersao", "clique": {"lado": "e", "valor": _IMERSAO_DE_PROVA.chave,
                                     "forma": _forma_de_prova("e", "Machine")},
      "chama": [("trigger_set_detalhado",
@@ -3136,14 +1996,8 @@ PROVAS = [
                                     "forma": _forma_de_prova("d", "Machine")},
      "chama": [("trigger_set_detalhado", ["right", "Machine", _padroes("Machine")],
                 {"uniq": _UNIQ}), _GUARDOU]},
-    # `_com_os_gatilhos_de_todos` devolve `None` quando nada muda, de propósito:
-    {"pagina": PAGINA,  # (noqa-acento) chave do contrato
-     "gesto": GESTO_DE_TODOS,
-     "clique": {"forma": _forma_de_prova("e", "Pulse")},
-     "chama": [("trigger_set_detalhado", ["left", "Pulse", _padroes("Pulse")],
-                {"uniq": "", "todos": True}), _GUARDOU]},
 ]
 
 #: OS GESTOS QUE O DAEMON ACEITA E NÃO PUBLICA. O `state_full` não traz
 #: `triggers`: o DualSense não devolve o modo em que está — gatilho adaptativo é
-SEM_ECO = ("modo", "pronto", "ajuste")
+SEM_ECO = ("modo", "imersao")

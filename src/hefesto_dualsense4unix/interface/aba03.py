@@ -23,7 +23,6 @@ from hefesto_dualsense4unix.interface.pacotes.a03_gatilhos import (  # noqa: E40
     SEM_APARELHO_AQUI,
     SEM_IMERSAO,
     SEUS_EFEITOS,
-    SEPARADOR_DOS_MEUS,
     TRAVESSAO,
     _cabeca_do_controle,
     _escapar,
@@ -34,6 +33,7 @@ from hefesto_dualsense4unix.interface.pacotes.a03_gatilhos import (  # noqa: E40
 )
 from hefesto_dualsense4unix.interface.pacotes.meus_efeitos import (  # noqa: E402
     PREFIXO_DO_MEU,
+    SEPARADOR_DOS_MEUS,
     TETO_DO_NOME,
 )
 

@@ -680,7 +680,8 @@ def test_a_03_le_a_biblioteca_pelo_dono_novo() -> None:
     # A decisão: D-1410-OS-EFEITOS-DELA-TEM-UM-DONO.
     from hefesto_dualsense4unix.interface.pacotes import a03_gatilhos, meus_efeitos
 
-    a03_gatilhos._guardar_meus_efeitos({"Recuo": {"left": {"mode": "Rigid", "params": [1]}}})
+    meus_efeitos.guardar_meus_efeitos(
+        {"Recuo": {"left": {"mode": "Rigid", "params": [1]}}}, "gatilhos")
     assert meus_efeitos.meus_efeitos("gatilhos") == a03_gatilhos.meus_efeitos()
     assert a03_gatilhos.meus_efeitos()["Recuo"]["left"]["mode"] == "Rigid"
     fonte = (INTERFACE / "pacotes/a03_gatilhos.py").read_text(encoding="utf-8")

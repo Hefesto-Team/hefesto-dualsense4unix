@@ -118,12 +118,11 @@ def _o_que_se_le() -> str:
 
 
 @pytest.fixture
-def a03(monkeypatch):
-    """O pacote servindo a página do todo, qualquer que seja a que está publicada hoje."""
+def a03():
+    """O pacote da aba Gatilhos do todo, com o rascunho limpo."""
     import pacotes  # noqa: F401  (registra os dez)
     from pacotes import a03_gatilhos
 
-    monkeypatch.setattr(a03_gatilhos, "_pagina_do_todo", lambda: True)
     a03_gatilhos.esquecer_o_rascunho()
     yield a03_gatilhos
     a03_gatilhos.esquecer_o_rascunho()

@@ -1,34 +1,24 @@
 """A aba Gatilhos com a paridade que faltava — 03/09/2026.
 
-QUATRO DÍVIDAS MEDIDAS CONTRA A GTK, e as quatro nesta régua:
+DUAS DÍVIDAS MEDIDAS CONTRA A GTK, e as duas nesta régua:
 
 1. **A escolha não ficava na tela.** Clicar `Rígido` aplicava no aparelho — ela
    sente na mão — e, em no máximo meio segundo, o tique repintava o campo com o
    modo do PERFIL NO DISCO. Aplicar não grava, e a pintura não conhecia o que
-   foi aplicado. Isso não é tela vazia: é **tela que mente**, e contaminava o
-   "Guardar esse efeito", que lê a coluna.
+   foi aplicado. Isso não é tela vazia: é **tela que mente**.
    *Na GTK:* `_persist_params_to_draft` grava antes de todo envio e
    `_refresh_triggers_from_draft` repinta do RASCUNHO.
 
-2. **Nenhum ajuste era ajustável.** 17 dos 19 modos têm ajuste, somando **73
-   parâmetros**; a caixa do HTML era `<span>` de leitura, sem `data-gesto` e sem
-   `<input>`. Escolher um modo aplicava os padrões dele e acabou — e "Montar do
-   zero" (`Custom`), cujos oito padrões são ZERO, era um item de menu que
-   responde "aplicado" com o gatilho intacto.
-   *Na GTK:* um `Gtk.Scale` por parâmetro, com faixa e padrão do `trigger_specs`.
-
-3. **Seis curvas do produto fora do alcance.** `linear_medio` (a sexta de
-   feedback) e as CINCO de `VIBRATION_POSITION_PRESETS` existiam no motor, a GTK
-   as oferecia, e a tela nova não tinha como aplicar nenhuma.
-   *Na GTK:* `_populate_preset_combo` troca a tabela conforme o modo.
-
-4. **A tela calava sobre o desfecho.** `_desfecho` jogava o corpo do daemon
+2. **A tela calava sobre o desfecho.** `_desfecho` jogava o corpo do daemon
    fora, e três coisas diferentes viravam o mesmo silêncio de sucesso: nada
    aconteceu, ficou guardado, e a recusa que vem DENTRO de uma resposta
    bem-sucedida.
    *Na GTK:* `_toast_trigger` → `frase_do_desfecho`, lendo o corpo (ELO-MUDO-01/T3).
 
-A MORDIDA DE CADA UMA está no docstring do teste que a mede, e as quatro foram
+As barras de ajuste e o «Efeito pronto» saíram da aba com o desenho do todo (15/10/2026), e
+as réguas deles saíram junto.
+
+A MORDIDA DE CADA UMA está no docstring do teste que a mede, e as duas foram
 arrancadas de verdade antes deste arquivo entrar.
 """
 
@@ -38,7 +28,6 @@ import pathlib
 import sys
 
 import pytest
-from tests.unit._mundo_da_aba_03 import SO_NA_PAGINA_ANTIGA
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
@@ -139,21 +128,7 @@ def test_o_modo_aplicado_continua_no_campo_no_tique_seguinte(a03):
     depois = a03.pacote(ctx)["colunas"][UNIQ]["modo-chave-e"]
     assert depois == "Rigid", (
         f"o campo voltou para {depois!r} meio segundo depois do clique. É a "
-        f"queixa dela — a escolha não fica —, e ela contamina o 'Guardar esse "
-        f"efeito', que lê o que está na TELA.")
-
-
-@SO_NA_PAGINA_ANTIGA
-def test_os_ajustes_aplicados_tambem_ficam(a03):
-    """Não é só o modo: a caixa tem de mostrar os números que foram ao aparelho."""
-    ctx = _ctx(modo_no_disco="Off")
-    _clicar.ctx = ctx  # type: ignore[attr-defined]
-    _clicar("ajuste", {"lado": "e", "i": "1", "valor": "240",
-                       "forma": {"modo-chave-e": "Rigid", "aj-val-e-0": "0",
-                                 "aj-val-e-1": "180"}}, _Ponte())
-    caixa = a03.pacote(ctx)["blocos"]['[data-controle="p1"] .ajustes.e']
-    assert 'data-campo="aj-val-e-1">240<' in caixa, (
-        f"a barra arrastada não voltou com o valor aplicado:\n{caixa}")
+        f"queixa dela: a escolha não fica.")
 
 
 def test_trocar_de_perfil_esquece_o_que_foi_aplicado(a03):
@@ -200,152 +175,6 @@ def test_o_rascunho_so_recebe_o_que_o_daemon_aceitou(a03):
         _clicar("modo", {"lado": "e", "valor": "Rigid"}, _Ponte(guardado))
     assert a03.pacote(ctx)["colunas"][UNIQ]["modo-chave-e"] == "Off", (
         "o rascunho ficou com um efeito que o daemon GUARDOU sem mandar ao fio")
-
-
-@SO_NA_PAGINA_ANTIGA
-def test_a_barra_do_produto_tem_alavanca_e_a_do_desenho_nao(a03):
-    """A alavanca é invisível e é do PRODUTO; o desenho é do usuário."""
-    ctx = _ctx(modo_no_disco="Off")
-    _clicar.ctx = ctx  # type: ignore[attr-defined]
-    _clicar("modo", {"lado": "e", "valor": "Machine"}, _Ponte())
-    caixa = a03.pacote(ctx)["blocos"]['[data-controle="p1"] .ajustes.e']
-    quantas = caixa.count('type="range"')
-    assert quantas == 4, (
-        f"o modo `Machine` tem quatro ajustes (início, fim, força e "
-        f"frequência) e a caixa trouxe {quantas} alavanca(s):\n{caixa}")
-    for rotulo in ("Início do curso", "Fim do curso", "Força", "Frequência"):
-        assert rotulo in caixa, f"a caixa da Metralhadora perdeu o ajuste {rotulo!r}"
-    assert 'data-gesto="ajuste"' in caixa and 'data-hef-forma="@controle"' in caixa, (
-        "a alavanca não pede a coluna — o gesto não saberia em que modo o "
-        "gatilho está, e o daemon lê a lista de ajustes INTEIRA")
-    assert "opacity:0" in caixa, (
-        "a alavanca ficou VISÍVEL — o desenho é dela, e ela aprovou uma barra")
-
-    do_desenho = a03.html_dos_ajustes(
-        "e", [{"nome": "Força", "valor": 200, "pct": 78, "min": 0, "max": 255}])
-    assert "type=\"range\"" not in do_desenho, (
-        "o gerador passou a desenhar a alavanca na bancada. Publicar controle "
-        "novo no desenho é ato dela — o padrão de `editavel` é `False`")
-
-
-@SO_NA_PAGINA_ANTIGA
-def test_a_faixa_da_alavanca_sai_do_produto(a03):
-    """`0..9` para uma posição do curso, `0..255` para uma força. Nunca digitado."""
-    ctx = _ctx(modo_no_disco="Off")
-    _clicar.ctx = ctx  # type: ignore[attr-defined]
-    _clicar("modo", {"lado": "e", "valor": "Machine"}, _Ponte())
-    caixa = a03.pacote(ctx)["blocos"]['[data-controle="p1"] .ajustes.e']
-    spec = a03._specs().get_spec("Machine")
-    for q in spec.params:
-        assert f'min="{q.min_value}" max="{q.max_value}"' in caixa, (
-            f"a alavanca de {q.label!r} não tem a faixa do produto "
-            f"({q.min_value}..{q.max_value}):\n{caixa}")
-
-
-@SO_NA_PAGINA_ANTIGA
-def test_o_lugar_sem_aparelho_nao_ganha_alavanca(a03):
-    """Arrastar onde não há controle só pode terminar em recusa."""
-    ctx = _ctx(modo_no_disco="Rigid")
-    caixa = a03.pacote(ctx)["blocos"]['[data-controle="p3"] .ajustes.e']
-    assert 'type="range"' not in caixa, (
-        f"a coluna vazia ganhou alavanca:\n{caixa}")
-
-
-def test_o_ajuste_manda_a_lista_inteira_com_um_numero_trocado(a03):
-    """O daemon lê a lista posicional INTEIRA — mandar só o número mexido apaga"""
-    ctx = _ctx(modo_no_disco="Off")
-    _clicar.ctx = ctx  # type: ignore[attr-defined]
-    p = _Ponte()
-    _clicar("ajuste", {"lado": "e", "i": "1", "valor": "240",
-                       "forma": {"modo-chave-e": "Rigid", "aj-val-e-0": "3",
-                                 "aj-val-e-1": "180"}}, p)
-    assert p.chamadas == [("trigger_set_detalhado", ("left", "Rigid", [3, 240]),
-                           {"uniq": UNIQ})], (
-        f"o ajuste não chegou ao daemon com a coluna inteira: {p.chamadas}")
-
-
-def test_o_click_nao_repete_o_change_da_alavanca(a03):
-    """Uma alavanca dispara `change` E `click` no mesmo gesto, com o mesmo valor."""
-    ctx = _ctx(modo_no_disco="Off")
-    _clicar.ctx = ctx  # type: ignore[attr-defined]
-    forma = {"modo-chave-e": "Rigid", "aj-val-e-0": "0", "aj-val-e-1": "180"}
-    p = _Ponte()
-    _clicar("ajuste", {"lado": "e", "i": "1", "valor": "240",
-                       "evento": "change", "forma": forma}, p)
-    _clicar("ajuste", {"lado": "e", "i": "1", "valor": "240",
-                       "evento": "click", "forma": forma}, p)
-    assert len(p.chamadas) == 1, (
-        f"o `click` que segue o `change` virou um segundo pedido: {p.chamadas}")
-
-    _clicar("ajuste", {"lado": "e", "i": "1", "valor": "241",
-                       "evento": "click", "forma": forma}, p)
-    assert len(p.chamadas) == 2, (
-        "um `click` com valor NOVO foi calado — a régua da tela clica por "
-        "`el.click()`, e assim ela nunca alcançaria a alavanca")
-
-
-@SO_NA_PAGINA_ANTIGA
-def test_montar_do_zero_deixa_de_ser_um_item_de_menu_que_nao_faz_nada(a03):
-    """`Custom` = byte de modo + 7 forças, e os oito padrões são ZERO."""
-    ctx = _ctx(modo_no_disco="Off")
-    _clicar.ctx = ctx  # type: ignore[attr-defined]
-    _clicar("modo", {"lado": "d", "valor": "Custom"}, _Ponte())
-    caixa = a03.pacote(ctx)["blocos"]['[data-controle="p1"] .ajustes.d']
-    assert a03._padroes("Custom") == [0] * 8, (
-        "os padrões do `Custom` deixaram de ser oito zeros — a razão desta "
-        "régua mudou, e o texto dela precisa mudar junto")
-    assert caixa.count('type="range"') == 8, (
-        f"os oito ajustes do `Custom` não são alcançáveis:\n{caixa}")
-
-
-def test_a_sexta_curva_de_feedback_entrou(a03):
-    """`linear_medio` existe no produto desde antes desta aba, e a lista digitada"""
-    tp = a03._prontos()
-    opcoes = a03.html_das_opcoes_de_pronto()
-    for chave, rotulo in tp.FEEDBACK_POSITION_LABELS.items():
-        if chave == "custom":
-            continue
-        assert f'value="{chave}"' in opcoes, (
-            f"a curva {rotulo!r} do produto não está no campo:\n{opcoes}")
-
-
-@SO_NA_PAGINA_ANTIGA
-def test_as_cinco_curvas_de_vibracao_existem_no_modo_delas(a03):
-    """Com o gatilho em `MultiPositionVibration` o campo mostra as CINCO."""
-    tp = a03._prontos()
-    opcoes = a03.html_das_opcoes_de_pronto(a03.MODO_DA_VIBRACAO)
-    for chave, rotulo in tp.VIBRATION_POSITION_LABELS.items():
-        if chave == "custom":
-            continue
-        assert f'value="{chave}"' in opcoes, (
-            f"a curva de vibração {rotulo!r} não está no campo:\n{opcoes}")
-    for chave in tp.FEEDBACK_POSITION_PRESETS:
-        assert f'value="{chave}"' not in opcoes, (
-            f"a curva de FORÇA {chave!r} ficou oferecida num gatilho que está "
-            f"em vibração — escolhê-la aplicaria uma curva que este modo não "
-            f"sabe ler:\n{opcoes}")
-    assert 'value="custom"' in opcoes, (
-        "o '— Nenhum —' que ela aprovou saiu junto com as curvas de força")
-
-
-def test_a_curva_de_vibracao_vai_no_modo_dela_e_nas_posicoes(a03):
-    """Dez posições nos `pos_*`, a frequência no padrão do modo."""
-    ctx = _ctx(modo_no_disco="Off")
-    _clicar.ctx = ctx  # type: ignore[attr-defined]
-    p = _Ponte()
-    _clicar("pronto", {"lado": "e", "v": "galope"}, p)
-
-    tp = a03._prontos()
-    curva = list(tp.VIBRATION_POSITION_PRESETS["galope"])
-    spec = a03._specs().get_spec(a03.MODO_DA_VIBRACAO)
-    esperado = a03._padroes(a03.MODO_DA_VIBRACAO)
-    for i, q in enumerate(spec.params):
-        if q.name.startswith("pos_"):
-            esperado[i] = curva[int(q.name[4:])]
-    assert p.chamadas == [("trigger_set_detalhado",
-                           ("left", a03.MODO_DA_VIBRACAO, esperado),
-                           {"uniq": UNIQ})], (
-        f"a curva de vibração não chegou como vibração: {p.chamadas}")
 
 
 @pytest.mark.parametrize(
@@ -420,35 +249,3 @@ def test_o_ctx_nao_troca_simbolo_de_modulo() -> None:
         "a cena escrita por `_ctx()` não chega ao dublê — a troca virou pura e "
         "o caminho do dado se perdeu junto")
 
-
-@SO_NA_PAGINA_ANTIGA
-def test_a_metralhadora_do_perfil_antigo_mostra_o_que_o_controle_recebe(a03):
-    """O perfil de antes de 08/10/2026 guarda seis valores na Metralhadora.
-
-    Lida pela posição, a quarta barra («Frequência») dizia 3, que era a
-    amplitude B, com o controle batendo a 50; e mexer na Força mandava o 3.
-
-    A MORDIDA: troque o `_como_o_efeito_le(...)` do `_do_lado` pela lista crua
-    e a caixa volta a dizer 3 na Frequência.
-    """
-    ctx = _ctx(modo_no_disco="Off")
-    _PERFIL_DA_CENA["triggers"]["left"] = {
-        "mode": "Machine", "params": [0, 9, 3, 3, 50, 8]}
-    caixa = a03.pacote(ctx)["blocos"]['[data-controle="p1"] .ajustes.e']
-    for i, valor in enumerate((0, 9, 3, 50)):
-        assert f'data-campo="aj-val-e-{i}">{valor}<' in caixa, (
-            f"a barra {i} da Metralhadora antiga não diz {valor}:\n{caixa}")
-
-    ponte = _Ponte()
-    _clicar.ctx = ctx  # type: ignore[attr-defined]
-    _clicar("ajuste", {"lado": "e", "i": "2", "valor": "8",
-                       "forma": {"modo-chave-e": "Machine", "aj-val-e-0": "0",
-                                 "aj-val-e-1": "9", "aj-val-e-2": "3",
-                                 "aj-val-e-3": "50"}}, ponte)
-    _nome, (_lado, modo_, params), _k = ponte.chamadas[-1]
-    assert (modo_, list(params)) == ("Machine", [0, 9, 8, 50]), (
-        f"mexer na Força mandou {modo_} {params!r}, e devia mandar [0, 9, 8, 50]")
-    depois = a03.pacote(ctx)["blocos"]['[data-controle="p1"] .ajustes.e']
-    for i, valor in enumerate((0, 9, 8, 50)):
-        assert f'data-campo="aj-val-e-{i}">{valor}<' in depois, (
-            f"depois de mexer na Força, a barra {i} não diz {valor}:\n{depois}")

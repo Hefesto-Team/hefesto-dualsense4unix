@@ -120,11 +120,6 @@ ROTULOS_CITADOS: tuple[str, ...] = (
     "Personalizado", "Universal",
 )
 
-#: Rótulos que a página publicada de antes ainda mostra e o desenho do todo já tirou
-#: («Meus efeitos» virou «Seus efeitos»). Licenciam a citação sem exigir a página; a linha
-#: sai quando o `--publicar 03` chegar.
-ROTULOS_DA_PAGINA_ANTIGA: tuple[str, ...] = ("Meus efeitos",)
-
 #: A régua lê `+` como separador de tecla («Alt + Tab»).
 _INICIO = re.compile(r"(?:^|[.!?…:;]\s+|[«“\"(\[]\s*|\s[—–·•●|→+]\s+|/)$")
 _PALAVRA = re.compile(r"[^\W\d_][^\W_]*(?:[-'’][^\W_]+)*")
@@ -220,7 +215,7 @@ def maiusculas_no_meio(frase: str, nomes: list[str]) -> list[str]:
 def licencas(paginas: list[pathlib.Path]) -> list[str]:
     """Os nomes que podem ter maiúscula no meio, o mais longo primeiro."""
     nomes = (nomes_de_cor() | nomes_das_abas(paginas) | set(NOMES_DO_DESENHO)
-             | set(ROTULOS_CITADOS) | set(ROTULOS_DA_PAGINA_ANTIGA) | set(DIVIDA))
+             | set(ROTULOS_CITADOS) | set(DIVIDA))
     return sorted(nomes, key=len, reverse=True)
 
 

@@ -83,7 +83,7 @@ O dado mora em **[`docs/data/paridade-gtk-html.csv`](../data/paridade-gtk-html.c
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | 01-jogar | 42 | 11 | 24 | 2 | 4 | 1 | 26% |
 | 02-controles | 48 | 15 | 24 | 5 | 4 | 0 | 31% |
-| 03-gatilhos | 31 | 15 | 9 | 1 | 5 | 1 | 48% |
+| 03-gatilhos | 31 | 8 | 10 | 7 | 5 | 1 | 26% |
 | 04-iluminacao | 35 | 9 | 12 | 6 | 7 | 1 | 26% |
 | 05-vibracao | 31 | 13 | 11 | 4 | 3 | 0 | 42% |
 | 06-navegacao | 40 | 15 | 16 | 0 | 9 | 0 | 38% |
@@ -91,7 +91,7 @@ O dado mora em **[`docs/data/paridade-gtk-html.csv`](../data/paridade-gtk-html.c
 | 08-conexoes | 49 | 17 | 26 | 6 | 0 | 0 | 35% |
 | 09-sistema | 38 | 13 | 18 | 4 | 3 | 0 | 34% |
 | 10-perfis | 50 | 14 | 20 | 7 | 9 | 0 | 28% |
-| TODAS | 393 | 131 | 172 | 35 | 52 | 3 | 33% |<!-- /TABELA-DA-PARIDADE -->
+| TODAS | 393 | 124 | 173 | 41 | 52 | 3 | 32% |<!-- /TABELA-DA-PARIDADE -->
 
 A tabela é **gerada da contagem do CSV** e conferida pelo portão (regra
 `numero-publicado`): quem mexer no dado e não regerar esta seção é barrado
@@ -195,11 +195,12 @@ maior bloco é o `DIFERENTE`.
      de produto, "Grava na hora") e a linha virou `DIFERENTE`, com a diferença
      medida e o endereço dos dois lados no CSV. Ela não é decisão a preservar:
      é um fato que a medição derrubou. -->
-- **`03-gatilhos` · os 73 parâmetros.** 17 dos 19 modos têm ajuste, e na GTK
-  todos são `Gtk.Scale` que ela arrasta. No HTML são barras de leitura, sem
-  `data-gesto` e sem `<input>`. Escolher um modo aplica os padrões dele e
-  acabou — e "Montar do zero", cujos padrões são oito zeros, é um modo que não
-  faz nada.
+- **`03-gatilhos` · os números dos 71 parâmetros.** 17 dos 19 modos têm
+  ajuste, e na GTK todos são `Gtk.Scale` que ela arrasta. No desenho do todo
+  (publicado em 15/10/2026) a coluna mostra só o nome do acionamento e o da
+  imersão: os números moram no quadro «Criar efeitos novos», quatro barras
+  fixas que valem para o modo de partida. O «Montar do zero» saiu da lista, e
+  as curvas prontas por posição saíram com o campo «Efeito pronto».
 - **`10-perfis` · o botão "Salvar este perfil".** Com ele foram embora as cinco
   perguntas do Salvar e a fusão com o rascunho das outras abas.
 
@@ -692,3 +693,16 @@ foi de `DIFERENTE` para **`FALTA_NO_HTML`**: o canto da seção saiu, a pedido. 
 as duas seguem `DIFERENTE`, com o endereço novo. A tabela acima foi recontada do
 CSV: `08-conexoes` vai de `27 DIFER · 5 FALTA` para `26 · 6`, e `TODAS` de
 `173 · 35` para `172 · 36`.
+
+## Nota de verificação — 15/10/2026, a 03 do todo é publicada
+
+`--publicar 03 05`, com `D-1510-ACIONAMENTO-E-IMERSAO-EM-BIBLIOTECAS-SEPARADAS`. O desenho do todo
+tirou da coluna as alavancas por parâmetro, a caixa que crescia, o «Montar do zero», o campo «Efeito
+pronto» com as curvas por posição, o «Guardar esse efeito» e o «em todos», e o código da página antiga
+saiu junto. As linhas da 03 foram remedidas, com o endereço lido no código: **`IGUAL` → `FALTA_NO_HTML`**
+nos números de cada ajuste, na caixa que acompanha o modo, no «Montar do zero» e no rolar; **`IGUAL` →
+`DIFERENTE`** no ajustar (quatro barras no quadro de criar) e na escolha do modo (o `Custom` fora da lista); **`IGUAL` →
+`FALTA_NO_HTML`** nas curvas de força e **`DIFERENTE` → `FALTA_NO_HTML`** nas de vibração. A tabela foi
+recontada do CSV: `03-gatilhos` vai de `15 IGUAL · 9 DIFER · 1 FALTA · 48%` para `8 · 10 · 7 · 26%`, e
+`TODAS` de `131 · 172 · 35` para `124 · 173 · 41`. **A paridade desce por decisão de produto, não por
+defeito.** A soma dos parâmetros escrita no CSV e na §4 era fato errado, e passou à do `PRESETS` (71).

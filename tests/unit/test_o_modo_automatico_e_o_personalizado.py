@@ -386,13 +386,13 @@ def _pac_sem_perfil(pac: Any) -> Any:
                         estados={})
 
 
-@pytest.mark.parametrize("gesto", ["modo", "pronto", "ajuste", "em-todos", "guardar"])
+@pytest.mark.parametrize("gesto", ["modo", "imersao"])
 def test_no_automatico_escrito_os_gestos_de_efeito_recusam(
     pasta_de_perfis: pathlib.Path, pac: Any, gesto: str
 ) -> None:
     """A porta de quem fala com o gesto sem a tela também fecha, e a recusa não grava.
 
-    MORDIDA: tire ``_nao_no_automatico(ctx)`` de um dos cinco e o caso dele reprova.
+    MORDIDA: tire ``_nao_no_automatico(ctx)`` de um dos dois e o caso dele reprova.
     """
     caminho = _salvar(triggers=TriggersConfig(modo=AUTOMATICO))
     antes = pathlib.Path(caminho).read_bytes()

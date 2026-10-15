@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import pathlib
-import re
 import sys
 from collections.abc import Callable, Iterator
 from typing import Any
@@ -156,16 +155,11 @@ def _o_que_o_daemon_manda(nome: str) -> _Camadas:
     return camadas
 
 
-def _o_que_a_coluna_diz(r: dict[str, Any], uniq: str, pref: str,
+def _o_que_a_coluna_diz(r: dict[str, Any], uniq: str,
                         sig: str) -> tuple[str, str, list[int] | None]:
     """`(rótulo, modo, ajustes)` de um lado, lidos do que a página recebe."""
     col = r["colunas"][uniq]
-    caixa = r["blocos"].get(f'[data-controle="{pref}"] .ajustes.{sig}')
-    if caixa is None:
-        ajustes = _o_que_a_imersao_diz(col, sig)
-    else:
-        ajustes = [int(v) for v in re.findall(
-            rf'data-campo="aj-val-{sig}-\d+">(-?\d+)<', caixa)]
+    ajustes = _o_que_a_imersao_diz(col, sig)
     return str(col[f"modo-{sig}"]), str(col[f"modo-chave-{sig}"]), ajustes
 
 
@@ -196,12 +190,11 @@ def _conferir(nome: str, ctx: Any) -> list[str]:
     r = pacote_da_pagina(PAGINA, ctx)
     assert r is not None
     manda = _o_que_o_daemon_manda(nome)
-    pref_de = {str(m["uniq"]): str(m["pref"]) for m in ctx.mesa}
     mentiras = []
     for c in ctx.conectados:
         uniq = str(c["uniq"])
         for sig, disco in LADOS.items():
-            rotulo, modo, ajustes = _o_que_a_coluna_diz(r, uniq, pref_de[uniq], sig)
+            rotulo, modo, ajustes = _o_que_a_coluna_diz(r, uniq, sig)
             vai = manda.efetivo(uniq, disco)
             if ajustes is None:
                 diz = build_from_name(modo, a03_padroes(modo))
@@ -264,109 +257,6 @@ def test_o_efeito_pronto_le_o_mesmo_modo_da_coluna(disco: Disco) -> None:
                     f"o «Efeito pronto» monta a lista de {gesto!r}")
 
 
-class _Ponte:
-    def __init__(self) -> None:
-        self.chamadas: list[str] = []
-
-    def chamar(self, metodo: str, **_: Any) -> bool:
-        self.chamadas.append(metodo)
-        return True
-
-
-def test_o_guardar_nao_troca_o_gatilho_do_controle_por_off(disco: Disco) -> None:
-    """O «Guardar» lê a COLUNA — e a coluna que mentia gravava a mentira."""
-    from pacotes import gesto_da_pagina, pacote_da_pagina
-
-    nome = disco("jogo-sem-secao")
-    ctx = _ctx(nome)
-    r = pacote_da_pagina(PAGINA, ctx)
-    assert r is not None
-    p2 = next(c for c in ctx.conectados if c["player"] == 2)
-    uniq = str(p2["uniq"])
-    forma: dict[str, str] = {"nome-do-efeito": ""}
-    for sig in LADOS:
-        _rotulo, modo, ajustes = _o_que_a_coluna_diz(r, uniq, "p2", sig)
-        forma[f"modo-chave-{sig}"] = modo
-        forma.update({f"aj-val-{sig}-{i}": str(v) for i, v in enumerate(ajustes)})
-    antes = _o_que_o_daemon_manda(nome)
-
-    guardar = gesto_da_pagina(PAGINA, "guardar")
-    assert guardar is not None
-    guardar(ctx, {"uniq": uniq, "controle": "p2", "forma": forma}, _Ponte())
-
-    depois = _o_que_o_daemon_manda(nome)
-    for disco_ in LADOS.values():
-        assert depois.efetivo(uniq, disco_) == antes.efetivo(uniq, disco_), (
-            f"o «Guardar» do P2 trocou o {disco_} que o controle recebia "
-            f"({antes.efetivo(uniq, disco_)}) por {depois.efetivo(uniq, disco_)} — "
-            f"a coluna gravou o que dizia, e o que ela dizia era {forma}")
-
-
-class _PonteDoBroadcast(_Ponte):
-    """A ponte do «Em todos»: aceita o envio e anota o efeito de cada lado."""
-
-    def __init__(self) -> None:
-        super().__init__()
-        self.saiu: dict[str, Any] = {}
-
-    def trigger_set_detalhado(self, lado: str, modo: str, params: list[int],
-                              uniq: str | None = None, todos: bool = False) -> bool:
-        from hefesto_dualsense4unix.core.trigger_effects import build_from_name
-
-        self.saiu[lado] = build_from_name(modo, params)
-        return True
-
-    def trigger_reset_detalhado(self, lado: str, uniq: str | None = None,
-                                todos: bool = False) -> bool:
-        from hefesto_dualsense4unix.core.trigger_effects import build_from_name
-
-        self.saiu[lado] = build_from_name("Off", [])
-        return True
-
-
-def test_o_em_todos_nao_espalha_o_lado_que_ela_nao_tocou(disco: Disco) -> None:
-    """O «Em todos» também lê a COLUNA, e o alcance dele é a mesa inteira."""
-    from pacotes import gesto_da_pagina, pacote_da_pagina
-    from pacotes.a03_gatilhos import GESTO_DE_TODOS
-
-    from hefesto_dualsense4unix.profiles.schema import TriggersConfig
-
-    nome = disco("jogo-sem-secao")
-    ctx = _ctx(nome)
-    r = pacote_da_pagina(PAGINA, ctx)
-    assert r is not None
-    uniq = str(next(c for c in ctx.conectados if c["player"] == 1)["uniq"])
-    novo = "Pulse"
-    assert TriggersConfig().left.mode != novo
-    forma: dict[str, str] = {"nome-do-efeito": ""}
-    for sig in LADOS:
-        _rotulo, modo, ajustes = _o_que_a_coluna_diz(r, uniq, "p1", sig)
-        forma[f"modo-chave-{sig}"] = modo
-        forma.update({f"aj-val-{sig}-{i}": str(v) for i, v in enumerate(ajustes)})
-    forma = {k: v for k, v in forma.items() if not k.startswith("aj-val-e-")}
-    forma["modo-chave-e"] = novo
-    antes = _o_que_o_daemon_manda(nome)
-
-    em_todos = gesto_da_pagina(PAGINA, GESTO_DE_TODOS)
-    assert em_todos is not None
-    ponte = _PonteDoBroadcast()
-    em_todos(ctx, {"uniq": uniq, "controle": "p1", "forma": forma}, ponte)
-
-    depois = _o_que_o_daemon_manda(nome)
-    for c in ctx.conectados:
-        u = str(c["uniq"])
-        era = antes.efetivo(u, "right")
-        assert ponte.saiu.get("right", era) == era, (
-            f"o «Em todos» do P1 mandou ao R2 do P{c['player']} "
-            f"{ponte.saiu.get('right')} no lugar de {era} — a coluna dizia {forma}")
-        assert depois.efetivo(u, "right") == era, (
-            f"o «Em todos» do P1 gravou no perfil um R2 que tira do "
-            f"P{c['player']} o {era} que ele recebia: {depois.efetivo(u, 'right')}")
-        assert depois.efetivo(u, "left") != antes.efetivo(u, "left"), (
-            "o L2 não mudou: o gesto não gravou nada e esta régua não mediu o "
-            "lado que ela não tocou")
-
-
 def test_sem_perfil_nenhum_a_coluna_nao_inventa_o_nascimento() -> None:
     """Sem perfil valendo, nenhum perfil mandou gatilho, e a coluna não inventa um."""
     from pacotes import pacote_da_pagina
@@ -376,12 +266,11 @@ def test_sem_perfil_nenhum_a_coluna_nao_inventa_o_nascimento() -> None:
     ctx = _ctx(None)
     r = pacote_da_pagina(PAGINA, ctx)
     assert r is not None
-    pref_de = {str(m["uniq"]): str(m["pref"]) for m in ctx.mesa}
     sem_efeito = build_from_name("Off", [])
     for c in ctx.conectados:
         uniq = str(c["uniq"])
         for sig in LADOS:
-            rotulo, modo, ajustes = _o_que_a_coluna_diz(r, uniq, pref_de[uniq], sig)
+            rotulo, modo, ajustes = _o_que_a_coluna_diz(r, uniq, sig)
             assert build_from_name(modo, ajustes) == sem_efeito, (
                 f"sem perfil nenhum, a coluna do P{c['player']} diz «{rotulo}» "
                 f"{ajustes} num gatilho que perfil nenhum escreveu")

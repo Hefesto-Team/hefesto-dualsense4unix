@@ -107,8 +107,6 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "novo-hub": "abre a pergunta curta do hub na 08 — estado de tela, é da máquina",
     "novo-hub-cancelar": "idem",
     "novo-hub-gravar": "declara o hub na máquina (`machine_declare`) — é da máquina, não de um controle",
-    "guardar": "guarda o efeito no perfil — o ATO já é medido pelo gesto do efeito",
-    "em-todos": "espalha o efeito — o ATO é o mesmo do gesto do efeito",
     "guardar-definicoes": "grava no perfil — é do perfil",
     # `Profile.button_actions`. A classificação estava certa (é do perfil, não
     "guardar-ponto": "grava o que cada peça faz no Estilo Point-and-click — é "
@@ -129,7 +127,6 @@ NAO_E_DO_APARELHO: dict[str, str] = {
                       "computador) — o ATO no aparelho é o de cada linha, que já responde as quatro",
     "modo-dos-gatilhos": "o par Automático | Personalizado dos gatilhos grava `triggers.modo` "
                          "no perfil — o ATO no aparelho é o do gesto `modo` da 03",
-    "pronto": "aplica o efeito já escolhido — o ATO é o do gesto `modo` da 03",
     "modo-da-vibracao": "o par Automático | Personalizado da vibração grava `rumble.modo` no "
                         "perfil — o ATO no aparelho é o de cada ajuste da 05",
     "modo-dos-controles": "o par Automático | Personalizado dos controles grava "
@@ -260,7 +257,6 @@ DO_APARELHO: dict[str, tuple[str, ...]] = {
     "toque": ("toque.touchpad.cursor", "toque.touchpad.dedos"),
     "haptica": ("vibracao.haptics_vcm",),
     "testar-haptica": ("vibracao.haptics_vcm",),
-    "ajuste": ("gatilho.esquerdo.adaptativo", "gatilho.direito.adaptativo"),
     "imersao": ("gatilho.esquerdo.adaptativo", "gatilho.direito.adaptativo"),
     "sentir": ("gatilho.esquerdo.adaptativo", "gatilho.direito.adaptativo"),
     "forca": ("vibracao.rumble.esquerdo", "vibracao.rumble.direito"),
@@ -314,7 +310,6 @@ NO_PERFIL: dict[str, tuple[str | None, str | None]] = {
     "toque": ("movimento", "movimento"),
     "haptica": (None, "rumble"),
     "testar-haptica": (None, "rumble"),
-    "ajuste": ("triggers", "triggers"),
     "imersao": ("triggers", "triggers"),
     "sentir": (None, "triggers"),
     "forca": ("rumble", "rumble"),

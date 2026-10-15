@@ -162,27 +162,15 @@ def test_a_cor_tem_endereco_e_alvo_que_a_alcanca(a03, mapa):
         "IGUALDADE — um nome novo cai no ramo padrão, calado.")
 
 
-def test_a_ponte_ate_o_publicar_nao_apaga_a_borda_dela(a03, mapa):
-    """Enquanto a página publicada não tiver o endereço, a cor vai NO CHIP."""
+def test_a_cor_vai_pelo_endereco_e_nunca_no_chip(a03, mapa):
+    """A página publicada tem o endereço da cor, e o chip não leva cor nenhuma."""
     tinta = next(t for s, _n, t in mapa if s == "nova-pink")
-    com_ponte = a03.chip_do_controle(1, "Nova Pink", "USB", tinta,
-                                     cor_no_chip=True)
-    assert f"--plastico:{tinta}" in com_ponte, (
-        f"a ponte até o `--publicar 03` não leva a cor: {com_ponte!r}. A página "
-        f"que ela vê hoje só recebe o chip inteiro — sem a cor aqui dentro, a "
-        f"borda das colunas dela fica neutra.")
-
-    sem_ponte = a03.chip_do_controle(1, "Nova Pink", "USB", tinta)
-    assert "--plastico" not in sem_ponte, (
-        f"o chip leva a cor por padrão: {sem_ponte!r}. É o DESENHO que chama "
-        f"assim, e ali a cor tem de estar no embrulho endereçado — num arquivo "
-        f"estático ninguém a reescreve.")
-
-    assert a03.a_pagina_recebe_a_cor_por_endereco() == (
-        a03.CAMPO_DO_PLASTICO in a03._enderecos_da_pagina()), (
-        "a escolha da ponte deixou de sair da página publicada. Presumir aqui "
-        "faria o pacote apagar a borda dela, ou mandar a cor duas vezes depois "
-        "de publicar.")
+    chip = a03.chip_do_controle(1, "Nova Pink", "USB", tinta)
+    assert "--plastico" not in chip, (
+        f"o chip leva a cor: {chip!r}. A cor mora no embrulho endereçado "
+        f"(`{a03.CAMPO_DO_PLASTICO}`), e mandá-la também no chip pinta duas vezes.")
+    assert a03.CAMPO_DO_PLASTICO in a03._enderecos_da_pagina(), (
+        "a página publicada perdeu o endereço da cor: a borda das colunas fica neutra")
 
 
 def test_a_bancada_nao_crava_cor_que_o_produto_nao_alcance(a03):
