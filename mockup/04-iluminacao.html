@@ -959,9 +959,12 @@
        essa coluna. Eram 132px e 16 aqui, 138 e 12 na Gatilhos, e o texto
        acabava em x=536 numa e x=542 na outra. O usuário viu: *"tem algo que
        deixa estranho essa área da primeira coluna."* */
-    grid-template-columns:var(--larg-rot) repeat(4,1fr);
-    gap:var(--gap-col);
-    --r-des:146px;--r-nome:16px;--r-cor:46px;--r-brilho:26px;
+    /* AS QUATRO COLUNAS TÊM A MESMA LARGURA E O RESPIRO É SIMÉTRICO (desenho do todo, 14/10/2026):
+       a divisória é a borda da fatia, o vão entre colunas virou padding dos dois lados dela, a
+       coluna dos nomes leva o vão consigo e a última fatia vai até a borda do quadro. */
+    grid-template-columns:calc(var(--larg-rot) + var(--gap-col)) repeat(4,minmax(0,1fr));
+    column-gap:0;margin-right:-14px;
+    --r-des:92px;--r-nome:30px;--r-cor:66px;--r-brilho:26px;
     /* A LINHA DE RESSALVA CABE NA LINHA DOS LEDs — 04/09/2026, decisão de produto
        (D-02, e a pergunta [01] desta aba): *"Uma linha só quando há
        ressalva."* Ela nasce DEBAIXO da tira, e por isso não é uma oitava
@@ -988,7 +991,7 @@
        para 64 e `--r-acoes` de 72 para 64. OS OITO SAEM DA LINHA OPÇÕES porque
        ela sobrava: tem UM botão desde 07/09/2026, e ele mede 34px dentro dos
        72 — a coluna continua em 472 e o teto de 476 não é tocado. */
-    --r-player:52px;--r-leds:64px;--r-acoes:64px;
+    --r-player:52px;--r-leds:64px;--r-acoes:34px;
     /* O RESPIRO É O DONO, E O PASSO É O DOBRO DELE — 31/08/2026, pedido:
        *"aba iluminação tem a mesma questão do respiro vertical."* É a mesma
        construção da Vibração (30/08) e da Gatilhos (hoje), e o mesmo valor da
@@ -1002,8 +1005,11 @@
        A FOLGA DE HOJE É 2px, e não os 16 de então: a linha de ressalva de
        04/09 comeu doze — ver a nota do `--r-leds` acima —, e a linha da cor
        do dono, a 6 px em 08/10/2026, comeu dois no `--r-cor`. */
-    --r-ar:5px;--r-passo:calc(var(--r-ar) * 2);
+    --r-ar:7px;--r-passo:calc(var(--r-ar) * 2);
   }
+  /* Em janela baixa o desenho encolhe, a linha do Jogador aperta e o passo entre as linhas cai. */
+  @media (max-height:780px){.luz-grade{--r-des:54px;--r-player:40px;--r-cor:60px;--r-ar:5px}}
+  .luz-grade > .rotulos{padding-right:var(--gap-col)}
   .luz-grade > div{
     display:grid;row-gap:var(--r-passo);
     grid-template-rows:var(--r-des) var(--r-nome) var(--r-cor) var(--r-brilho)
@@ -1015,7 +1021,7 @@
      recua a célula junto: a linha parava 21px antes da divisa e voltava a
      ler como tracinho. Com o padding na célula, ela vai de ponta a ponta da
      coluna e encosta na vizinha — o respiro do conteúdo é o mesmo. */
-  .luz-grade .ctrl{border-left:1px solid var(--linha);padding:0 8px 0 12px}
+  .luz-grade .ctrl{border-left:1px solid var(--linha);padding:0 14px 0 13px}
   /* A linha da luz do jogo: uma frase curta embaixo das cores, sem botão. Texto de apoio
      (nunca vermelho), com o «Agora» em tinta cheia só quando o jogo está pintando. */
 
@@ -1171,7 +1177,7 @@
      `data-campo="brilho-pct"`; agora as duas leituras voltam a ser uma só. */
   .luz-grade .ctrl[data-conectado="nao"] .guia,
   .luz-grade .ctrl[data-conectado="nao"] .trilho,
-  .luz-grade .ctrl[data-conectado="nao"] .cel-acoes .btn{display:none}
+  .luz-grade .ctrl[data-conectado="nao"] .g4-efeito{display:none}
   /* A SÉTIMA CÉLULA É A ÚNICA QUE PRECISA DO TRAVESSÃO DE VOLTA — ver o
      `<span class="nada">` que o gerador emite em `cel-acoes`. Ele nasce
      escondido na coluna viva, para não pôr um traço debaixo de dois botões.
@@ -1254,13 +1260,14 @@
      divisória, e a tabela mede o mesmo pixel. */
   .luz-grade > div > *::before{content:'';position:absolute;
     top:calc(var(--r-ar) * -1);height:0;
-    left:-12px;right:-8px;border-top:1px solid var(--rot-linha)}
+    left:-13px;right:-14px;border-top:1px solid var(--rot-linha)}
   /* A CONTA DA MARGEM NEGATIVA: ela tem de cancelar o padding da coluna E o
      `gap` do grid, senão sobra um buraco do tamanho do vão. À direita são
      8 de padding + 16 de gap = 24; a ÚLTIMA coluna não tem vão depois
      dela, então volta a 8. A coluna de rótulos não tem padding: 0 e 16. */
-  .luz-grade > div:not(:last-child) > *::before{right:-24px}
-  .luz-grade > .rotulos > *::before{left:0;right:-16px}
+  .luz-grade > div:not(:last-child) > *::before{right:-14px}
+  .luz-grade > div:last-child > *::before{right:0}
+  .luz-grade > .rotulos > *::before{left:0;right:calc(var(--gap-col) * -1)}
   .luz-grade > div > *:first-child::before{display:none}
 
   /* a coluna dos rótulos: todo título começa no mesmo x, e cada um ocupa a
@@ -1339,10 +1346,19 @@
   .luz-grade .moldura{color:var(--linha);border:1px solid currentColor;
                       border-radius:8px;background:var(--app-bg);overflow:hidden}
   .luz-grade .moldura .ds-svg{color:var(--fg)}
+  .luz-grade .moldura{height:100%;box-sizing:border-box;display:flex;align-items:center;
+                      justify-content:center}
+  .luz-grade .moldura .ds-svg{height:100%;width:auto;max-width:100%}
   /* A linha «Modelo» leva o nome do jogador (item 9, 06/10): um nome comprido NÃO alarga a coluna do
      controle, quebra em duas linhas como a Vibração faz, e a tela continua sem rolagem. */
-  .ctrl-rot{font-size:11px;color:var(--texto-mudo);text-align:center;min-width:0;
-            overflow-wrap:anywhere;display:flex;align-items:center;justify-content:center}
+  /* O NOME DO CONTROLE É UMA CAIXA, com a largura da coluna e centrado (desenho do todo). */
+  .ctrl-rot{height:30px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;
+            border:1px solid var(--linha);border-radius:7px;font:600 12.5px 'Space Grotesk',system-ui,sans-serif;
+            color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;align-self:center;
+            width:100%;min-width:0}
+  .ctrl-rot .pt{margin:0 6px}
+  .luz-grade .ctrl.vazia[data-conectado="nao"] .ctrl-rot{color:var(--texto-mudo);
+    border:1px dashed var(--border-sutil);background:transparent}
 
   /* A LUZ É LUZ, E NÃO PLÁSTICO. Os tokens são os do mapa do controle
      (`mapa.py`), que é onde eles nasceram: a barra e as cinco lâmpadas ficam de
@@ -1406,7 +1422,6 @@
   /* O MODO AUTOMÁTICO DEIXA AS COLUNAS PARADAS — pedido de 06/10/2026: o
      desenho e o modelo continuam dizendo de quem é a coluna; a cor, o brilho, o
      número, as luzes e o «Desligar» esmaecem e não recebem clique. */
-  .quadro-topo .ajuda.esq .dica{left:auto;right:22px}
   /* O ESCOPO GLOBAL DESTA FAIXA SAIU — 07/09/2026, e a faixa voltou a ter um
      morador só: o interruptor. A ordem de produto é de hoje, sobre os três cantos
      que falavam de automático — *"Olha na real sai todos. Deixa só lá o de
@@ -1424,7 +1439,7 @@
      continuava lá. Os nomes estão no pacote, na nota datada. */
 
   /* ---------- COR: a guia dos oito tons do produto, por controle ---------- */
-  .guia{display:flex;gap:4px;align-items:center}
+  .guia{display:flex;flex-wrap:nowrap;justify-content:space-between;align-items:center}
   /* os onze botões continuam itens do flex da `.guia` — ver o gerador */
   .guia .tons{display:contents}
   /* A MOLDURA DA AMOSTRA SAIU — 31/08/2026, e é a mais pura das "bordas
@@ -1433,7 +1448,7 @@
      separava coisa nenhuma — o `gap:4px` já separa, e o conteúdo é a própria
      cor. A borda continua em `transparent`: a casa não muda de tamanho quando
      muda de estado. */
-  .guia .tom{flex:1;height:26px;border-radius:6px;border:1px solid transparent;
+  .guia .tom{flex:0 0 24px;width:24px;height:24px;border-radius:6px;border:1px solid transparent;
              cursor:pointer;padding:0;display:block;min-width:0;position:relative}
   /* A LINHA DO DONO — 29/09/2026, D-2909-A-LINHA-DA-COR-DO-DONO, pedido
      na bancada: *«talvez uma linha abaixo do quadradinho de cada cor contendo
@@ -1559,8 +1574,9 @@
      têm (Controles e Iluminação). Ele é o valor do campo Cor, e por isso mora
      debaixo da guia, na coluna do controle a que pertence. */
   .cel-cor{display:flex;flex-direction:column;gap:8px;justify-content:center}
-  .hex{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--fg);
+  .hex{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--fg);
        text-align:center;line-height:14px}
+  .hex.reenvia{display:inline-flex;align-items:center;justify-content:center;min-height:24px}
   /* A CAIXA DO HEXADECIMAL VIRA O BOTÃO — 04/09/2026, decisão de produto na pergunta
      [03] desta aba, contra as outras duas opções (deixar como está, ou um
      terceiro botão em Opções).
@@ -1604,7 +1620,7 @@
   .trilho{flex:1;height:5px;border-radius:3px;background:var(--border-forte);position:relative}
   .cheio{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--purple)}
   .num{flex:0 0 38px;text-align:right;font-family:'JetBrains Mono',monospace;
-       font-size:11.5px;color:var(--fg)}
+       font-size:12px;color:var(--fg)}
   /* O TRILHO PASSA A ACEITAR O ARRASTE — 03/09/2026, decisão de produto: perguntada
      se mexer no brilho grava o perfil na hora ou espera o "Salvar perfil", ela
      respondeu **"Grava na hora"**.
@@ -1847,9 +1863,50 @@
   .luzinhas .vao{width:4px;background:none;box-shadow:none}
 
   /* ---------- OPÇÕES ---------- */
-  .cel-acoes{display:flex;flex-direction:column;align-items:stretch;gap:4px;
-             justify-content:center;margin-top:0}
-  .cel-acoes .btn{width:100%}
+  .cel-acoes{display:flex;flex-direction:row;align-items:center;gap:8px;justify-content:center;
+             margin-top:0}
+  /* A LISTA DE EFEITOS ocupa a célula inteira, em vez de impor a largura do nome mais longo. */
+  .g4-efeito{flex:1 1 0;width:0;min-width:0;height:34px;padding:0 9px;border-radius:7px;
+    border:1px solid var(--linha);background:var(--app-bg);color:var(--fg);
+    font:500 12.5px 'Space Grotesk',system-ui,sans-serif;cursor:pointer}
+  .g4-efeito:hover{border-color:var(--comment)}
+  .quadro-topo .modo-auto{margin-left:auto}
+  /* ---------- CRIAR EFEITOS NOVOS ---------- */
+  .criar{flex:0 0 auto}
+  .criar .criar-linha{display:flex;align-items:center;gap:12px;padding:10px 16px;flex-wrap:nowrap;min-width:0}
+  .criar .quadro-titulo{flex:0 0 auto;margin-right:4px}
+  .criar .seg-criar{display:inline-flex;gap:4px;flex:0 0 auto}
+  .criar .seg-criar label,.criar .meu{height:30px;padding:0 12px;border-radius:999px;
+    font:500 12.5px/1 'Space Grotesk',system-ui,sans-serif;border:1px solid var(--linha);
+    background:var(--app-bg);color:var(--texto-mudo);cursor:pointer;white-space:nowrap;
+    display:inline-flex;align-items:center;gap:7px;box-sizing:border-box}
+  .criar .seg-criar input{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px}
+  .criar .seg-criar label:has(input:checked){border-color:var(--purple);background:var(--sel-bg);
+    color:var(--fg);font-weight:600}
+  .criar .seg-criar label:hover:not(:has(input:checked)),.criar .meu:hover{border-color:var(--comment);
+    color:var(--texto-suave)}
+  .criar .seg-criar label:has(input:focus-visible){outline:2px solid var(--cyan,#8be9fd);outline-offset:2px}
+  .criar .nome-criar{height:30px;width:136px;flex:0 0 auto;padding:0 11px;border-radius:7px;
+    border:1px solid var(--linha);background:var(--app-bg);color:var(--fg);
+    font:500 12.5px 'Space Grotesk',system-ui,sans-serif}
+  .criar .nome-criar::placeholder{color:var(--texto-mudo)}
+  .criar .btn-criar{height:30px;padding:0 14px;border-radius:7px;border:1px solid var(--purple);
+    background:rgba(189,147,249,.12);color:var(--purple);font:600 12.5px/1 'Space Grotesk',system-ui,sans-serif;
+    cursor:pointer;flex:0 0 auto}
+  .criar .btn-criar:hover{background:rgba(189,147,249,.22)}
+  .criar .meus{display:flex;gap:6px;margin-left:auto;align-items:center;min-width:0;overflow:hidden}
+  .criar .meu{color:var(--texto-suave);cursor:default}
+  .criar .meu i{width:7px;height:7px;border-radius:50%;background:var(--cor,var(--purple));flex:0 0 auto}
+  .g4-cores{display:inline-flex;gap:6px;align-items:center;flex:0 0 auto}
+  .g4-cor{width:24px;height:24px;border-radius:6px;display:block;border:0;padding:0;cursor:pointer}
+  .g4-cor:hover{outline:2px solid var(--comment)}
+  .g4-mais{width:24px;height:24px;border-radius:6px;border:1px dashed var(--linha);background:transparent;
+    color:var(--texto-mudo);font:600 14px/1 'Space Grotesk',system-ui,sans-serif;cursor:pointer;padding:0}
+  .g4-mais[hidden]{display:none}
+  .g4-vel{display:inline-flex;align-items:center;gap:8px;flex:0 0 auto;font-size:12px;font-weight:600;
+    color:var(--rot-campo)}
+  .g4-vel input{width:90px;accent-color:var(--purple);height:24px}
+  .criar:has(input[value="arco-iris"]:checked) .g4-cores{display:none}
 
   /* ---------- o antes e o depois da troca, na legenda ---------- */
   .troca{margin:8px 0 12px;font-size:11.5px}
@@ -1879,17 +1936,6 @@
      trocadilho com outra coisa. */
   .sec-rot .gl{opacity:.9;flex:0 0 auto}
 
-  .par-modo{margin-left:auto;display:inline-grid;grid-template-columns:1fr 1fr;gap:6px}
-  .par-modo button{height:22px;padding:0 10px;border-radius:6px;font-family:inherit;
-    font-size:11.5px;cursor:pointer;border:1px solid var(--linha);background:transparent;
-    color:var(--texto-suave);white-space:nowrap}
-  .par-modo button:hover:not(.on){border-color:var(--comment);color:var(--fg)}
-  .par-modo button.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);
-    font-weight:600;cursor:default}
-
-  .quadro[data-modo-da-aba="automatico"] .luz-grade .ctrl > :not(.moldura):not(.ctrl-rot){
-    opacity:.45;pointer-events:none}
-
   .luz-grade{
     --larg-rot:85px;
     --gap-col:16px;
@@ -1908,16 +1954,6 @@
   body.nativo.por-controle .modo-auto,
   body.nativo.por-controle .r-aplicar,body.nativo.por-controle .r-salvar,
   body.nativo.por-controle .r-importar{visibility:hidden}
-
-  .ajuda{width:17px;height:17px;border-radius:50%;flex:0 0 17px;border:1px solid var(--linha);
-    color:var(--texto-mudo);font-size:11px;line-height:15px;text-align:center;cursor:help;position:relative}
-  .ajuda:hover,.ajuda:focus{border-color:var(--cyan);color:var(--cyan);outline:none}
-  .ajuda:hover .dica,.ajuda:focus .dica,.ajuda:focus-within .dica{display:block}
-  .quadro-topo .par-modo + .ajuda.esq .dica{left:auto;right:22px}
-  .btn:not(.apagado) + .ajuda.porque,.seg button:not(.apagado) + .ajuda.porque{display:none}
-  .ajuda.porque:has(.dica:empty),.ajuda.porque:has(.nada){display:none}
-  .ajuda.porque{align-self:center;margin-left:-4px}
-  body.nativo.por-controle .par-modo + .ajuda{visibility:hidden}
 </style>
 <style id="base-comum">
 /* ===== Base comum das abas (rodada 2, 12/10/2026) =====
@@ -2466,113 +2502,34 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     <div class="quadro luzes" data-modo-da-aba="personalizado" data-campo="modo-da-luz"
          data-hef-alvo="atributo" data-hef-atributo="data-modo-da-aba">
       <div class="quadro-topo">
-        <span class="quadro-titulo">Iluminação</span>
-        <!-- DE 777 PARA ~230 CARACTERES — 30/08/2026, mesma regra da Vibração: o
-             parágrafo que nomeia um campo vai para o `?` daquele campo. O da cor
-             das barras foi para "Cor", o de gravar foi para o rodapé (que já tem
-             `title` nos quatro botões desde hoje). -->
-        <span class="ajuda">?<span class="dica">
-          A <b>barra de luz</b> é a faixa acesa dos dois lados do touchpad: é como
-          você sabe de quem é cada controle.<br><br>
-          O plástico pode se repetir; a <b>luz</b> nunca.
-        </span></span>
-        <span class="trava-nativo" title="Com o Hefesto desligado, o jogo manda na luz. O que está aqui volta a valer quando ligar, na aba Jogar."><svg class="cad" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M3.6 5.2V3.9a2.4 2.4 0 0 1 4.8 0v1.3" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="2.3" y="5.2" width="7.4" height="5.4" rx="1.1" fill="currentColor"/></svg>O jogo manda</span>
-        <!-- OS DOIS MODOS — pedido de 06/10/2026: o modo automático e o Modo
-             Personalizado tomam o lugar do interruptor das cores automáticas e da
-             frase da luz do jogo embaixo das colunas. -->
-        <span class="par-modo" role="group" aria-label="Modo da aba"><button data-gesto="modo-da-luz" data-modo="automatico" data-campo="modo-da-luz-automatico" data-hef-alvo="classe" data-hef-atributo="aria-pressed" aria-pressed="false">Modo automático</button><button class="on" data-gesto="modo-da-luz" data-modo="personalizado" data-campo="modo-da-luz-personalizado" data-hef-alvo="classe" data-hef-atributo="aria-pressed" aria-pressed="true">Modo personalizado</button></span>
-        <span class="ajuda esq">?<span class="dica">
-          <b>Modo automático:</b> cada controle acende a cor do seu <b>plástico</b>
-          (sem cor de plástico, ou com dois iguais, a do <b>número</b>), e os botões
-          desta aba ficam parados.<br><br>
-          <b>Modo personalizado:</b> você escolhe a cor, o brilho e as luzes de cada
-          controle. Ao passar para ele, a cor de agora fica <b>gravada no perfil</b>.<br><br>
-          Nos dois, o jogo que pinta a barra vence enquanto pinta.
-        </span></span>
+        <span class="quadro-titulo" data-dica="A luz diz de quem é cada controle">Iluminação</span>
+        <span class="trava-nativo" data-dica="Com o Hefesto desligado, o jogo manda na luz. O que está aqui volta a valer quando ligar, na aba Jogar."><svg class="cad" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M3.6 5.2V3.9a2.4 2.4 0 0 1 4.8 0v1.3" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="2.3" y="5.2" width="7.4" height="5.4" rx="1.1" fill="currentColor"/></svg>O jogo manda</span>
+        <button class="modo-auto" type="button" data-gesto="modo-da-luz" data-modo="automatico" data-campo="modo-da-luz-automatico" data-hef-alvo="classe" data-hef-classe="ligado" data-hef-atributo="aria-pressed" aria-pressed="false" data-dica="O jogo pinta a barra; o estilo do perfil ajusta" data-governa=".luz-grade .ctrl"><span class="p"></span>Modo automático</button>
       </div>
       <div class="quadro-corpo">
 
         <div class="luz-grade">
 
           <div class="rotulos">
-            <!-- A LEGENDA VIROU DICA — 30/08/2026, pedido sobre este texto
-                 exato: *"esse texto selecionado não existia no original"*.
-                 Ela não some: passa para o `?`, que é onde esta aba já põe toda
-                 explicação (o rótulo "Cor", logo abaixo, faz igual desde 28/08).
-                 Sete linhas de prosa cinza na coluna de rótulos competiam com os
-                 rótulos e ainda empurravam "COR" para longe da linha dele. -->
+            <!-- AS FRASES DOS RÓTULOS SÃO `data-dica`, texto puro: a dica aparece ao passar o mouse
+                 (base comum das abas). Nenhum «?» na tela. -->
             <div class="cel-des">
-              <div class="sec-rot">Controle
-                <span class="ajuda">?<span class="dica">
-                  A barra acende na cor do <b>número</b>; a borda da moldura é a cor do
-                  <b>plástico</b>, e as cinco luzinhas acima do touchpad dizem o número.<br><br>
-                  Cada coluna é um controle: a fita do topo não escolhe nada aqui.
-                </span></span></div>
+              <div class="sec-rot" data-dica="A barra acende na cor do número; a borda é a cor do plástico; as cinco luzinhas dizem o número">Controle</div>
             </div>
-            <!-- A LINHA DO MODELO GANHOU NOME — 30/08/2026, pedido:
-                 *"a parte do Modelo tá faltando, tá o espaço vazio ali. a primeira
-                 coluna serve como nome da linha"*. Esta célula existia vazia só para
-                 ocupar a linha `--r-nome` da grade, e uma coluna cujo trabalho é
-                 nomear linhas tinha uma linha sem nome. -->
             <div><span class="sec-rot">Modelo</span></div>
             <div>
-              <!-- O GLIFO SAIU DO RÓTULO — 30/08/2026, pedido: *"os svg do lado
-                   esquerdo dos nomes pode remover, eles tão diferentes demais"*. Eram
-                   três desenhos de origens diferentes (`lightbar`, `led-jogador`, `l2`/`r2`)
-                   ao lado de rótulos que os outros cinco não tinham — a coluna lia como
-                   duas gramáticas. O glifo continua no DESENHO do controle, que é onde
-                   ele diz de qual peça se fala. -->
-              <div class="sec-rot">Cor
-                <span class="ajuda">?<span class="dica">
-                  <!-- A DICA PAROU DE CONTAR CASAS — 11/09/2026. Ela dizia "os oito
-                       quadradinhos" e "o nono é o livre", e as duas frases já estavam
-                       velhas: a fileira tinha CATORZE desde 09/09, e hoje tem onze. Um
-                       número digitado aqui envelhece calado a cada poda — "os oito
-                       primeiros" é estrutura (`player_slot_color(1..8)`), "os demais"
-                       nunca mente. -->
-                  Sem escolha à mão, a barra fica na <b>cor do número</b> do controle.<br><br>
-                  Os <b>oito primeiros</b> quadradinhos são as cores dos jogadores 1 a 8;
-                  os demais são tons a mais.<br><br>
-                  Escolher um tom pinta a barra e <b>não muda o número</b>. O código
-                  embaixo é a cor que vai ao aparelho.
-                </span></span>
-              </div>
+              <div class="sec-rot" data-dica="Sem escolha à mão, a barra fica na cor do número do controle. Escolher um tom pinta a barra e não muda o número">Cor</div>
             </div>
             <div><div class="sec-rot">Brilho</div></div>
             <div>
-              <div class="sec-rot">Jogador
-                <span class="ajuda">?<span class="dica">
-                  <b>Dá</b> o número do jogador a este controle — o das cinco luzinhas
-                  acima do touchpad. O <b>anelzinho</b> de cada botão é a cor do plástico
-                  de quem tem aquele número hoje.<br><br>
-                  <!-- A FRASE PAROU DE NOMEAR CONTROLE — 03/09/2026, a lei de produto.
-                       Ela dizia *"pôr o Starlight Blue no 1 faz o Cosmic Red virar
-                       2"*: os dois nomes do MOCKUP, numa coluna de RÓTULOS que é
-                       uma só para as quatro colunas — não há "este controle" aqui
-                       a que endereçar, e por isso a cura não é endereço, é dizer a
-                       regra em vez do exemplo. Quem nomeia os dois de verdade é a
-                       dica de cada botão da fileira (`um_botao_de_player`), que o
-                       pacote reescreve a cada tique com a mesa viva. -->
-                  Dar um número que já é de outro faz <b>os dois trocarem</b>: ninguém
-                  repete e ninguém fica sem.<br><br>
-                  <!-- O JOGO NÃO MANDA NO NÚMERO — 24/09/2026, A-MIRA-NA-NAVEGACAO-01.
-                       Aqui estava *"Um jogo em co-op pode mandar o próprio
-                       número por cima"*, e a STEAM-NO-FISICO-01 derrubou o fato:
-                       o número que o jogo manda ao controle virtual é RECUSADO
-                       sempre (`backend_pydualsense.numeracao_do_jogo`), e o que
-                       chega por fora é reescrito pela vigia do sequestro
-                       (`escritor_cru.VigiaDoSequestro`) em até um segundo. -->
-                  O número é do Hefesto: se um jogo o trocar, ele <b>volta em até
-                  um segundo</b>.
-                </span></span>
-              </div>
+              <div class="sec-rot" data-dica="Dá o número do jogador a este controle, o das cinco luzinhas. Dar um número que já é de outro faz os dois trocarem. O número é do Hefesto: se um jogo o trocar, ele volta em até um segundo">Jogador</div>
             </div>
             <div><div class="sec-rot">LEDs</div></div>
-            <div><div class="sec-rot">Opções</div></div>
+            <div><div class="sec-rot">Efeito</div></div>
           </div>
 
         <div class="ctrl" data-controle="p1" data-conectado="sim">
-          <div class="moldura" data-campo="plastico" data-hef-alvo="cor" style="color:#ae335a" title="A borda é a cor do plástico deste controle, quando o produto a conhece. A barra acende a cor do número, e as cinco lâmpadas dizem qual é.">
+          <div class="moldura" data-campo="plastico" data-hef-alvo="cor" style="color:#ae335a" data-dica="A borda é o plástico; a barra, a cor do número">
             <?xml version="1.0" encoding="utf-8"?>
 <svg data-colorway="cosmic-red" class="ds-svg" data-campo="desenho" data-hef-alvo="atributo" data-hef-atributo="data-colorway"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
   <defs>
@@ -2883,17 +2840,14 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
           <div class="cel-cor">
             <span class="guia">
               <span class="tons" data-campo="tons" data-hef-alvo="html">
-            <button class="tom on com-dono" style="background:#7EB8D4;--dono:#ae335a" data-gesto="cor" data-hex="#0000FF" title="Cor do Player 1. Pinta a barra, não muda o número."></button>
-            <button class="tom tomado com-dono" style="background:#FF5555;--dono:#7eb8d4" aria-disabled="true" title="P2"></button>
-            <button class="tom" style="background:#50FA7B" data-gesto="cor" data-hex="#00FF00" title="Cor do Player 3. Pinta a barra, não muda o número."></button>
-            <button class="tom" style="background:#FF79C6" data-gesto="cor" data-hex="#FF0080" title="Cor do Player 4. Pinta a barra, não muda o número."></button>
-            <button class="tom" style="background:#F1FA8C" data-gesto="cor" data-hex="#FFFF00" title="Cor do Player 5. Pinta a barra, não muda o número."></button>
-            <button class="tom" style="background:#8BE9FD" data-gesto="cor" data-hex="#00FFFF" title="Cor do Player 6. Pinta a barra, não muda o número."></button>
-            <button class="tom" style="background:#FFB86C" data-gesto="cor" data-hex="#FF8000" title="Cor do Player 7. Pinta a barra, não muda o número."></button>
-            <button class="tom" style="background:#BD93F9" data-gesto="cor" data-hex="#8000FF" title="Cor do Player 8. Pinta a barra, não muda o número."></button>
-            <button class="tom" style="background:#B8F976" data-gesto="cor" data-hex="#80FF00" title="Pinta a barra, não muda o número."></button>
-            <button class="tom" style="background:#76F9B8" data-gesto="cor" data-hex="#00FF80" title="Pinta a barra, não muda o número."></button>
-            <button class="tom" style="background:#F8F8F2" data-gesto="cor" data-hex="#FFFFFF" title="Pinta a barra, não muda o número."></button>
+            <button class="tom on com-dono" style="background:#7EB8D4;--dono:#ae335a" data-gesto="cor" data-hex="#0000FF" data-dica="Cor do Player 1. Pinta a barra, não muda o número."></button>
+            <button class="tom tomado com-dono" style="background:#FF5555;--dono:#7eb8d4" aria-disabled="true" data-dica="P2"></button>
+            <button class="tom" style="background:#50FA7B" data-gesto="cor" data-hex="#00FF00" data-dica="Cor do Player 3. Pinta a barra, não muda o número."></button>
+            <button class="tom" style="background:#FF79C6" data-gesto="cor" data-hex="#FF0080" data-dica="Cor do Player 4. Pinta a barra, não muda o número."></button>
+            <button class="tom" style="background:#F1FA8C" data-gesto="cor" data-hex="#FFFF00" data-dica="Cor do Player 5. Pinta a barra, não muda o número."></button>
+            <button class="tom" style="background:#8BE9FD" data-gesto="cor" data-hex="#00FFFF" data-dica="Cor do Player 6. Pinta a barra, não muda o número."></button>
+            <button class="tom" style="background:#FFB86C" data-gesto="cor" data-hex="#FF8000" data-dica="Cor do Player 7. Pinta a barra, não muda o número."></button>
+            <button class="tom" style="background:#BD93F9" data-gesto="cor" data-hex="#8000FF" data-dica="Cor do Player 8. Pinta a barra, não muda o número."></button>
               </span>
             </span>
             <!-- E ELA REENVIA — 04/09/2026, decisão [03] dela. O `data-gesto`
@@ -2904,17 +2858,17 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                  `textContent`, e o `textContent` é o que o pacote reescreve a
                  cada tique pelo `data-campo="hex"`. -->
             <span class="hex reenvia" data-campo="hex" data-gesto="reenviar"
-                  title="Manda esta cor ao controle de novo.">#0000FF</span>
+                  data-dica="Manda esta cor de novo">#0000FF</span>
           </div>
           <div class="cel-brilho">
-            <span class="trilho"><span class="cheio" data-campo="brilho-pct" data-hef-alvo="largura" style="width:82%"></span><input class="puxador" type="range" min="0" max="100" step="1" value="82" data-gesto="brilho" data-campo="brilho-pct" data-hef-alvo="valor" aria-label="Brilho da barra de luz deste controle" title="Brilho da barra deste controle. Grava no perfil ao soltar — não espera o Salvar perfil."></span>
+            <span class="trilho"><span class="cheio" data-campo="brilho-pct" data-hef-alvo="largura" style="width:82%"></span><input class="puxador" type="range" min="0" max="100" step="1" value="82" data-gesto="brilho" data-campo="brilho-pct" data-hef-alvo="valor" aria-label="Brilho da barra de luz deste controle" data-dica="Brilho da barra deste controle. Grava no perfil ao soltar — não espera o Salvar perfil."></span>
             <span class="num" data-campo="brilho">82%</span>
           </div>
           <div class="players" data-campo="players" data-hef-alvo="html">
-            <button class="on" data-gesto="player" data-player="1" title="O Cosmic Red é o Player 1 hoje."><i class="dono" data-hef="players.dono.1" data-hef-alvo="plastico" style="--plastico:#ae335a"></i>1</button>
-            <button class="" data-gesto="player" data-player="2" title="Dar o 2 ao Cosmic Red: o Starlight Blue fica com o 1. Os dois trocam."><i class="dono" data-hef="players.dono.2" data-hef-alvo="plastico" style="--plastico:#7eb8d4"></i>2</button>
-            <button class="fora" aria-disabled="true" data-gesto="player" data-player="3" title="Player 3">3</button>
-            <button class="fora" aria-disabled="true" data-gesto="player" data-player="4" title="Player 4">4</button>
+            <button class="on" data-gesto="player" data-player="1" data-dica="O Cosmic Red é o Player 1 hoje."><i class="dono" data-hef="players.dono.1" data-hef-alvo="plastico" style="--plastico:#ae335a"></i>1</button>
+            <button class="" data-gesto="player" data-player="2" data-dica="Dar o 2 ao Cosmic Red: o Starlight Blue fica com o 1. Os dois trocam."><i class="dono" data-hef="players.dono.2" data-hef-alvo="plastico" style="--plastico:#7eb8d4"></i>2</button>
+            <button class="fora" aria-disabled="true" data-gesto="player" data-player="3" data-dica="Player 3">3</button>
+            <button class="fora" aria-disabled="true" data-gesto="player" data-player="4" data-dica="Player 4">4</button>
           </div>
           <div class="cel-leds">
             <div class="aceso" data-campo="luz" data-hef-alvo="html">
@@ -2952,25 +2906,20 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                  `test_a_04_as_lampadas_espelham_o_numero`, que cobra a
                  ausência. -->
             <div class="brilhos" data-campo="brilho-luzes" data-hef-alvo="html">
-              <button class="on" data-gesto="brilho-luzes" data-luzes="fraco" title="Luzes de número: Fraco">Fraco</button>
-              <button data-gesto="brilho-luzes" data-luzes="medio" title="Luzes de número: Médio">Médio</button>
-              <button data-gesto="brilho-luzes" data-luzes="forte" title="Luzes de número: Forte">Forte</button>
+              <button class="on" data-gesto="brilho-luzes" data-luzes="fraco" data-dica="Luzes de número: Fraco">Fraco</button>
+              <button data-gesto="brilho-luzes" data-luzes="medio" data-dica="Luzes de número: Médio">Médio</button>
+              <button data-gesto="brilho-luzes" data-luzes="forte" data-dica="Luzes de número: Forte">Forte</button>
             </div>
           </div>
           <div class="cel-acoes">
-            <button class="btn vermelho" data-gesto="apagar" title="Apaga a barra de luz deste controle.">Desligar</button>
-            <!-- O TRAVESSÃO DESTA CÉLULA NASCE AQUI, escondido na coluna viva, e
-                 é o único das sete que precisava nascer: as outras seis têm
-                 `data-campo`, e o molde do lugar sem dono já escreve o traço
-                 nelas. Esta não tem — dois botões não são um valor —, então sem
-                 este `<span>` a coluna que ESVAZIA na frente do usuário ficaria com a
-                 linha "Opções" em branco, quando a coluna que nasce vazia
-                 mostra "—". Um lugar sem controle tem uma leitura só. -->
+            <select class="g4-efeito" data-gesto="efeito-da-luz" aria-label="Efeito da barra" data-campo="efeito" data-hef-alvo="valor" data-dica="Sem efeito apaga a barra"><option value="sem-efeito">Sem efeito</option><option value="luz-fixa" selected>Luz fixa</option><optgroup label="Seus efeitos"><option value="piscar;FF0000;6">Alerta vermelho</option><option value="respirar;00FFFF;2">Respiro calmo</option></optgroup></select>
+            <!-- O TRAVESSÃO DESTA CÉLULA NASCE AQUI, escondido na coluna viva: a lista de efeitos
+                 não é um valor que o molde do lugar sem dono escreva como travessão. -->
             <span class="nada">—</span>
           </div>
         </div>
         <div class="ctrl" data-controle="p2" data-conectado="sim">
-          <div class="moldura" data-campo="plastico" data-hef-alvo="cor" style="color:#7eb8d4" title="A borda é a cor do plástico deste controle, quando o produto a conhece. A barra acende a cor do número, e as cinco lâmpadas dizem qual é.">
+          <div class="moldura" data-campo="plastico" data-hef-alvo="cor" style="color:#7eb8d4" data-dica="A borda é o plástico; a barra, a cor do número">
             <?xml version="1.0" encoding="utf-8"?>
 <svg data-colorway="starlight-blue" class="ds-svg" data-campo="desenho" data-hef-alvo="atributo" data-hef-atributo="data-colorway"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
   <defs>
@@ -3281,17 +3230,14 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
           <div class="cel-cor">
             <span class="guia">
               <span class="tons" data-campo="tons" data-hef-alvo="html">
-            <button class="tom tomado com-dono" style="background:#7EB8D4;--dono:#ae335a" aria-disabled="true" title="P1"></button>
-            <button class="tom on com-dono" style="background:#FF5555;--dono:#7eb8d4" data-gesto="cor" data-hex="#FF0000" title="Cor do Player 2. Pinta a barra, não muda o número."></button>
-            <button class="tom" style="background:#50FA7B" data-gesto="cor" data-hex="#00FF00" title="Cor do Player 3. Pinta a barra, não muda o número."></button>
-            <button class="tom" style="background:#FF79C6" data-gesto="cor" data-hex="#FF0080" title="Cor do Player 4. Pinta a barra, não muda o número."></button>
-            <button class="tom" style="background:#F1FA8C" data-gesto="cor" data-hex="#FFFF00" title="Cor do Player 5. Pinta a barra, não muda o número."></button>
-            <button class="tom" style="background:#8BE9FD" data-gesto="cor" data-hex="#00FFFF" title="Cor do Player 6. Pinta a barra, não muda o número."></button>
-            <button class="tom" style="background:#FFB86C" data-gesto="cor" data-hex="#FF8000" title="Cor do Player 7. Pinta a barra, não muda o número."></button>
-            <button class="tom" style="background:#BD93F9" data-gesto="cor" data-hex="#8000FF" title="Cor do Player 8. Pinta a barra, não muda o número."></button>
-            <button class="tom" style="background:#B8F976" data-gesto="cor" data-hex="#80FF00" title="Pinta a barra, não muda o número."></button>
-            <button class="tom" style="background:#76F9B8" data-gesto="cor" data-hex="#00FF80" title="Pinta a barra, não muda o número."></button>
-            <button class="tom" style="background:#F8F8F2" data-gesto="cor" data-hex="#FFFFFF" title="Pinta a barra, não muda o número."></button>
+            <button class="tom tomado com-dono" style="background:#7EB8D4;--dono:#ae335a" aria-disabled="true" data-dica="P1"></button>
+            <button class="tom on com-dono" style="background:#FF5555;--dono:#7eb8d4" data-gesto="cor" data-hex="#FF0000" data-dica="Cor do Player 2. Pinta a barra, não muda o número."></button>
+            <button class="tom" style="background:#50FA7B" data-gesto="cor" data-hex="#00FF00" data-dica="Cor do Player 3. Pinta a barra, não muda o número."></button>
+            <button class="tom" style="background:#FF79C6" data-gesto="cor" data-hex="#FF0080" data-dica="Cor do Player 4. Pinta a barra, não muda o número."></button>
+            <button class="tom" style="background:#F1FA8C" data-gesto="cor" data-hex="#FFFF00" data-dica="Cor do Player 5. Pinta a barra, não muda o número."></button>
+            <button class="tom" style="background:#8BE9FD" data-gesto="cor" data-hex="#00FFFF" data-dica="Cor do Player 6. Pinta a barra, não muda o número."></button>
+            <button class="tom" style="background:#FFB86C" data-gesto="cor" data-hex="#FF8000" data-dica="Cor do Player 7. Pinta a barra, não muda o número."></button>
+            <button class="tom" style="background:#BD93F9" data-gesto="cor" data-hex="#8000FF" data-dica="Cor do Player 8. Pinta a barra, não muda o número."></button>
               </span>
             </span>
             <!-- E ELA REENVIA — 04/09/2026, decisão [03] dela. O `data-gesto`
@@ -3302,17 +3248,17 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                  `textContent`, e o `textContent` é o que o pacote reescreve a
                  cada tique pelo `data-campo="hex"`. -->
             <span class="hex reenvia" data-campo="hex" data-gesto="reenviar"
-                  title="Manda esta cor ao controle de novo.">#FF0000</span>
+                  data-dica="Manda esta cor de novo">#FF0000</span>
           </div>
           <div class="cel-brilho">
-            <span class="trilho"><span class="cheio" data-campo="brilho-pct" data-hef-alvo="largura" style="width:100%"></span><input class="puxador" type="range" min="0" max="100" step="1" value="100" data-gesto="brilho" data-campo="brilho-pct" data-hef-alvo="valor" aria-label="Brilho da barra de luz deste controle" title="Brilho da barra deste controle. Grava no perfil ao soltar — não espera o Salvar perfil."></span>
+            <span class="trilho"><span class="cheio" data-campo="brilho-pct" data-hef-alvo="largura" style="width:100%"></span><input class="puxador" type="range" min="0" max="100" step="1" value="100" data-gesto="brilho" data-campo="brilho-pct" data-hef-alvo="valor" aria-label="Brilho da barra de luz deste controle" data-dica="Brilho da barra deste controle. Grava no perfil ao soltar — não espera o Salvar perfil."></span>
             <span class="num" data-campo="brilho">100%</span>
           </div>
           <div class="players" data-campo="players" data-hef-alvo="html">
-            <button class="" data-gesto="player" data-player="1" title="Dar o 1 ao Starlight Blue: o Cosmic Red fica com o 2. Os dois trocam."><i class="dono" data-hef="players.dono.1" data-hef-alvo="plastico" style="--plastico:#ae335a"></i>1</button>
-            <button class="on" data-gesto="player" data-player="2" title="O Starlight Blue é o Player 2 hoje."><i class="dono" data-hef="players.dono.2" data-hef-alvo="plastico" style="--plastico:#7eb8d4"></i>2</button>
-            <button class="fora" aria-disabled="true" data-gesto="player" data-player="3" title="Player 3">3</button>
-            <button class="fora" aria-disabled="true" data-gesto="player" data-player="4" title="Player 4">4</button>
+            <button class="" data-gesto="player" data-player="1" data-dica="Dar o 1 ao Starlight Blue: o Cosmic Red fica com o 2. Os dois trocam."><i class="dono" data-hef="players.dono.1" data-hef-alvo="plastico" style="--plastico:#ae335a"></i>1</button>
+            <button class="on" data-gesto="player" data-player="2" data-dica="O Starlight Blue é o Player 2 hoje."><i class="dono" data-hef="players.dono.2" data-hef-alvo="plastico" style="--plastico:#7eb8d4"></i>2</button>
+            <button class="fora" aria-disabled="true" data-gesto="player" data-player="3" data-dica="Player 3">3</button>
+            <button class="fora" aria-disabled="true" data-gesto="player" data-player="4" data-dica="Player 4">4</button>
           </div>
           <div class="cel-leds">
             <div class="aceso" data-campo="luz" data-hef-alvo="html">
@@ -3350,25 +3296,20 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                  `test_a_04_as_lampadas_espelham_o_numero`, que cobra a
                  ausência. -->
             <div class="brilhos" data-campo="brilho-luzes" data-hef-alvo="html">
-              <button class="on" data-gesto="brilho-luzes" data-luzes="fraco" title="Luzes de número: Fraco">Fraco</button>
-              <button data-gesto="brilho-luzes" data-luzes="medio" title="Luzes de número: Médio">Médio</button>
-              <button data-gesto="brilho-luzes" data-luzes="forte" title="Luzes de número: Forte">Forte</button>
+              <button class="on" data-gesto="brilho-luzes" data-luzes="fraco" data-dica="Luzes de número: Fraco">Fraco</button>
+              <button data-gesto="brilho-luzes" data-luzes="medio" data-dica="Luzes de número: Médio">Médio</button>
+              <button data-gesto="brilho-luzes" data-luzes="forte" data-dica="Luzes de número: Forte">Forte</button>
             </div>
           </div>
           <div class="cel-acoes">
-            <button class="btn vermelho" data-gesto="apagar" title="Apaga a barra de luz deste controle.">Desligar</button>
-            <!-- O TRAVESSÃO DESTA CÉLULA NASCE AQUI, escondido na coluna viva, e
-                 é o único das sete que precisava nascer: as outras seis têm
-                 `data-campo`, e o molde do lugar sem dono já escreve o traço
-                 nelas. Esta não tem — dois botões não são um valor —, então sem
-                 este `<span>` a coluna que ESVAZIA na frente do usuário ficaria com a
-                 linha "Opções" em branco, quando a coluna que nasce vazia
-                 mostra "—". Um lugar sem controle tem uma leitura só. -->
+            <select class="g4-efeito" data-gesto="efeito-da-luz" aria-label="Efeito da barra" data-campo="efeito" data-hef-alvo="valor" data-dica="Sem efeito apaga a barra"><option value="sem-efeito">Sem efeito</option><option value="luz-fixa" selected>Luz fixa</option><optgroup label="Seus efeitos"><option value="piscar;FF0000;6">Alerta vermelho</option><option value="respirar;00FFFF;2">Respiro calmo</option></optgroup></select>
+            <!-- O TRAVESSÃO DESTA CÉLULA NASCE AQUI, escondido na coluna viva: a lista de efeitos
+                 não é um valor que o molde do lugar sem dono escreva como travessão. -->
             <span class="nada">—</span>
           </div>
         </div>
         <div class="ctrl vazia" data-controle="p3" data-conectado="nao"
-             title="Nenhum controle neste lugar.">
+             data-dica="Nenhum controle aqui">
           <div class="moldura" data-campo="plastico" data-hef-alvo="cor">
             <?xml version="1.0" encoding="utf-8"?>
 <svg class="ds-svg" data-campo="desenho" data-hef-alvo="atributo" data-hef-atributo="data-colorway"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
@@ -3659,21 +3600,18 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     </g>
 </svg>
           </div>
-          <div class="ctrl-rot" data-campo="identidade">P3 <span class="pt">•</span> Desconectado</div>
+          <div class="ctrl-rot" data-campo="identidade"><b>P3</b> <span class="pt">•</span> Desconectado</div>
           <div class="cel-cor">
             <span class="guia">
               <span class="tons" data-campo="tons" data-hef-alvo="html">
-            <button class="tom" style="background:#7EB8D4" data-gesto="cor" data-hex="#0000FF" title="Cor do Player 1. Pinta a barra, não muda o número."></button>
-            <button class="tom" style="background:#FF5555" data-gesto="cor" data-hex="#FF0000" title="Cor do Player 2. Pinta a barra, não muda o número."></button>
-            <button class="tom" style="background:#50FA7B" data-gesto="cor" data-hex="#00FF00" title="Cor do Player 3. Pinta a barra, não muda o número."></button>
-            <button class="tom" style="background:#FF79C6" data-gesto="cor" data-hex="#FF0080" title="Cor do Player 4. Pinta a barra, não muda o número."></button>
-            <button class="tom" style="background:#F1FA8C" data-gesto="cor" data-hex="#FFFF00" title="Cor do Player 5. Pinta a barra, não muda o número."></button>
-            <button class="tom" style="background:#8BE9FD" data-gesto="cor" data-hex="#00FFFF" title="Cor do Player 6. Pinta a barra, não muda o número."></button>
-            <button class="tom" style="background:#FFB86C" data-gesto="cor" data-hex="#FF8000" title="Cor do Player 7. Pinta a barra, não muda o número."></button>
-            <button class="tom" style="background:#BD93F9" data-gesto="cor" data-hex="#8000FF" title="Cor do Player 8. Pinta a barra, não muda o número."></button>
-            <button class="tom" style="background:#B8F976" data-gesto="cor" data-hex="#80FF00" title="Pinta a barra, não muda o número."></button>
-            <button class="tom" style="background:#76F9B8" data-gesto="cor" data-hex="#00FF80" title="Pinta a barra, não muda o número."></button>
-            <button class="tom" style="background:#F8F8F2" data-gesto="cor" data-hex="#FFFFFF" title="Pinta a barra, não muda o número."></button>
+            <button class="tom" style="background:#7EB8D4" data-gesto="cor" data-hex="#0000FF" data-dica="Cor do Player 1. Pinta a barra, não muda o número."></button>
+            <button class="tom" style="background:#FF5555" data-gesto="cor" data-hex="#FF0000" data-dica="Cor do Player 2. Pinta a barra, não muda o número."></button>
+            <button class="tom" style="background:#50FA7B" data-gesto="cor" data-hex="#00FF00" data-dica="Cor do Player 3. Pinta a barra, não muda o número."></button>
+            <button class="tom" style="background:#FF79C6" data-gesto="cor" data-hex="#FF0080" data-dica="Cor do Player 4. Pinta a barra, não muda o número."></button>
+            <button class="tom" style="background:#F1FA8C" data-gesto="cor" data-hex="#FFFF00" data-dica="Cor do Player 5. Pinta a barra, não muda o número."></button>
+            <button class="tom" style="background:#8BE9FD" data-gesto="cor" data-hex="#00FFFF" data-dica="Cor do Player 6. Pinta a barra, não muda o número."></button>
+            <button class="tom" style="background:#FFB86C" data-gesto="cor" data-hex="#FF8000" data-dica="Cor do Player 7. Pinta a barra, não muda o número."></button>
+            <button class="tom" style="background:#BD93F9" data-gesto="cor" data-hex="#8000FF" data-dica="Cor do Player 8. Pinta a barra, não muda o número."></button>
               </span>
             </span>
             <!-- E ELA REENVIA — 04/09/2026, decisão [03] dela. O `data-gesto`
@@ -3684,10 +3622,10 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                  `textContent`, e o `textContent` é o que o pacote reescreve a
                  cada tique pelo `data-campo="hex"`. -->
             <span class="hex reenvia" data-campo="hex" data-gesto="reenviar"
-                  title="Manda esta cor ao controle de novo.">—</span>
+                  data-dica="Manda esta cor de novo">—</span>
           </div>
           <div class="cel-brilho">
-            <span class="trilho"><span class="cheio" data-campo="brilho-pct" data-hef-alvo="largura"></span><input class="puxador" type="range" min="0" max="100" step="1" value="0" data-gesto="brilho" data-campo="brilho-pct" data-hef-alvo="valor" aria-label="Brilho da barra de luz deste controle" title="Brilho da barra deste controle. Grava no perfil ao soltar — não espera o Salvar perfil."></span>
+            <span class="trilho"><span class="cheio" data-campo="brilho-pct" data-hef-alvo="largura"></span><input class="puxador" type="range" min="0" max="100" step="1" value="0" data-gesto="brilho" data-campo="brilho-pct" data-hef-alvo="valor" aria-label="Brilho da barra de luz deste controle" data-dica="Brilho da barra deste controle. Grava no perfil ao soltar — não espera o Salvar perfil."></span>
             <span class="num" data-campo="brilho">—</span>
           </div>
           <div class="players" data-campo="players" data-hef-alvo="html">
@@ -3731,19 +3669,14 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
             </div>
           </div>
           <div class="cel-acoes">
-            <button class="btn vermelho" data-gesto="apagar" title="Apaga a barra de luz deste controle.">Desligar</button>
-            <!-- O TRAVESSÃO DESTA CÉLULA NASCE AQUI, escondido na coluna viva, e
-                 é o único das sete que precisava nascer: as outras seis têm
-                 `data-campo`, e o molde do lugar sem dono já escreve o traço
-                 nelas. Esta não tem — dois botões não são um valor —, então sem
-                 este `<span>` a coluna que ESVAZIA na frente do usuário ficaria com a
-                 linha "Opções" em branco, quando a coluna que nasce vazia
-                 mostra "—". Um lugar sem controle tem uma leitura só. -->
+            <select class="g4-efeito" data-gesto="efeito-da-luz" aria-label="Efeito da barra" data-campo="efeito" data-hef-alvo="valor" data-dica="Sem efeito apaga a barra"><option value="sem-efeito">Sem efeito</option><option value="luz-fixa" selected>Luz fixa</option><optgroup label="Seus efeitos"><option value="piscar;FF0000;6">Alerta vermelho</option><option value="respirar;00FFFF;2">Respiro calmo</option></optgroup></select>
+            <!-- O TRAVESSÃO DESTA CÉLULA NASCE AQUI, escondido na coluna viva: a lista de efeitos
+                 não é um valor que o molde do lugar sem dono escreva como travessão. -->
             <span class="nada">—</span>
           </div>
         </div>
         <div class="ctrl vazia" data-controle="p4" data-conectado="nao"
-             title="Nenhum controle neste lugar.">
+             data-dica="Nenhum controle aqui">
           <div class="moldura" data-campo="plastico" data-hef-alvo="cor">
             <?xml version="1.0" encoding="utf-8"?>
 <svg class="ds-svg" data-campo="desenho" data-hef-alvo="atributo" data-hef-atributo="data-colorway"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
@@ -4034,21 +3967,18 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     </g>
 </svg>
           </div>
-          <div class="ctrl-rot" data-campo="identidade">P4 <span class="pt">•</span> Desconectado</div>
+          <div class="ctrl-rot" data-campo="identidade"><b>P4</b> <span class="pt">•</span> Desconectado</div>
           <div class="cel-cor">
             <span class="guia">
               <span class="tons" data-campo="tons" data-hef-alvo="html">
-            <button class="tom" style="background:#7EB8D4" data-gesto="cor" data-hex="#0000FF" title="Cor do Player 1. Pinta a barra, não muda o número."></button>
-            <button class="tom" style="background:#FF5555" data-gesto="cor" data-hex="#FF0000" title="Cor do Player 2. Pinta a barra, não muda o número."></button>
-            <button class="tom" style="background:#50FA7B" data-gesto="cor" data-hex="#00FF00" title="Cor do Player 3. Pinta a barra, não muda o número."></button>
-            <button class="tom" style="background:#FF79C6" data-gesto="cor" data-hex="#FF0080" title="Cor do Player 4. Pinta a barra, não muda o número."></button>
-            <button class="tom" style="background:#F1FA8C" data-gesto="cor" data-hex="#FFFF00" title="Cor do Player 5. Pinta a barra, não muda o número."></button>
-            <button class="tom" style="background:#8BE9FD" data-gesto="cor" data-hex="#00FFFF" title="Cor do Player 6. Pinta a barra, não muda o número."></button>
-            <button class="tom" style="background:#FFB86C" data-gesto="cor" data-hex="#FF8000" title="Cor do Player 7. Pinta a barra, não muda o número."></button>
-            <button class="tom" style="background:#BD93F9" data-gesto="cor" data-hex="#8000FF" title="Cor do Player 8. Pinta a barra, não muda o número."></button>
-            <button class="tom" style="background:#B8F976" data-gesto="cor" data-hex="#80FF00" title="Pinta a barra, não muda o número."></button>
-            <button class="tom" style="background:#76F9B8" data-gesto="cor" data-hex="#00FF80" title="Pinta a barra, não muda o número."></button>
-            <button class="tom" style="background:#F8F8F2" data-gesto="cor" data-hex="#FFFFFF" title="Pinta a barra, não muda o número."></button>
+            <button class="tom" style="background:#7EB8D4" data-gesto="cor" data-hex="#0000FF" data-dica="Cor do Player 1. Pinta a barra, não muda o número."></button>
+            <button class="tom" style="background:#FF5555" data-gesto="cor" data-hex="#FF0000" data-dica="Cor do Player 2. Pinta a barra, não muda o número."></button>
+            <button class="tom" style="background:#50FA7B" data-gesto="cor" data-hex="#00FF00" data-dica="Cor do Player 3. Pinta a barra, não muda o número."></button>
+            <button class="tom" style="background:#FF79C6" data-gesto="cor" data-hex="#FF0080" data-dica="Cor do Player 4. Pinta a barra, não muda o número."></button>
+            <button class="tom" style="background:#F1FA8C" data-gesto="cor" data-hex="#FFFF00" data-dica="Cor do Player 5. Pinta a barra, não muda o número."></button>
+            <button class="tom" style="background:#8BE9FD" data-gesto="cor" data-hex="#00FFFF" data-dica="Cor do Player 6. Pinta a barra, não muda o número."></button>
+            <button class="tom" style="background:#FFB86C" data-gesto="cor" data-hex="#FF8000" data-dica="Cor do Player 7. Pinta a barra, não muda o número."></button>
+            <button class="tom" style="background:#BD93F9" data-gesto="cor" data-hex="#8000FF" data-dica="Cor do Player 8. Pinta a barra, não muda o número."></button>
               </span>
             </span>
             <!-- E ELA REENVIA — 04/09/2026, decisão [03] dela. O `data-gesto`
@@ -4059,10 +3989,10 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                  `textContent`, e o `textContent` é o que o pacote reescreve a
                  cada tique pelo `data-campo="hex"`. -->
             <span class="hex reenvia" data-campo="hex" data-gesto="reenviar"
-                  title="Manda esta cor ao controle de novo.">—</span>
+                  data-dica="Manda esta cor de novo">—</span>
           </div>
           <div class="cel-brilho">
-            <span class="trilho"><span class="cheio" data-campo="brilho-pct" data-hef-alvo="largura"></span><input class="puxador" type="range" min="0" max="100" step="1" value="0" data-gesto="brilho" data-campo="brilho-pct" data-hef-alvo="valor" aria-label="Brilho da barra de luz deste controle" title="Brilho da barra deste controle. Grava no perfil ao soltar — não espera o Salvar perfil."></span>
+            <span class="trilho"><span class="cheio" data-campo="brilho-pct" data-hef-alvo="largura"></span><input class="puxador" type="range" min="0" max="100" step="1" value="0" data-gesto="brilho" data-campo="brilho-pct" data-hef-alvo="valor" aria-label="Brilho da barra de luz deste controle" data-dica="Brilho da barra deste controle. Grava no perfil ao soltar — não espera o Salvar perfil."></span>
             <span class="num" data-campo="brilho">—</span>
           </div>
           <div class="players" data-campo="players" data-hef-alvo="html">
@@ -4106,14 +4036,9 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
             </div>
           </div>
           <div class="cel-acoes">
-            <button class="btn vermelho" data-gesto="apagar" title="Apaga a barra de luz deste controle.">Desligar</button>
-            <!-- O TRAVESSÃO DESTA CÉLULA NASCE AQUI, escondido na coluna viva, e
-                 é o único das sete que precisava nascer: as outras seis têm
-                 `data-campo`, e o molde do lugar sem dono já escreve o traço
-                 nelas. Esta não tem — dois botões não são um valor —, então sem
-                 este `<span>` a coluna que ESVAZIA na frente do usuário ficaria com a
-                 linha "Opções" em branco, quando a coluna que nasce vazia
-                 mostra "—". Um lugar sem controle tem uma leitura só. -->
+            <select class="g4-efeito" data-gesto="efeito-da-luz" aria-label="Efeito da barra" data-campo="efeito" data-hef-alvo="valor" data-dica="Sem efeito apaga a barra"><option value="sem-efeito">Sem efeito</option><option value="luz-fixa" selected>Luz fixa</option><optgroup label="Seus efeitos"><option value="piscar;FF0000;6">Alerta vermelho</option><option value="respirar;00FFFF;2">Respiro calmo</option></optgroup></select>
+            <!-- O TRAVESSÃO DESTA CÉLULA NASCE AQUI, escondido na coluna viva: a lista de efeitos
+                 não é um valor que o molde do lugar sem dono escreva como travessão. -->
             <span class="nada">—</span>
           </div>
         </div>
@@ -4156,6 +4081,43 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 
       </div>
     </div>
+    <div class="quadro criar" id="criar-luz">
+      <div class="criar-linha">
+        <span class="quadro-titulo" data-dica="O que você criar entra na lista Efeito">Criar efeitos novos</span>
+        <span class="seg-criar" role="group" aria-label="Jeito"><label><input type="radio" name="base-criar" value="respirar" data-linha="base" checked><span>Respirar</span></label><label><input type="radio" name="base-criar" value="piscar" data-linha="base"><span>Piscar</span></label><label><input type="radio" name="base-criar" value="arco-iris" data-linha="base"><span>Arco-íris</span></label></span>
+        <span class="g4-cores" aria-label="Cores"><button type="button" class="g4-cor" data-cor="#FF0000" style="background:#FF5555" data-dica="Tirar esta cor"></button><button type="button" class="g4-cor" data-cor="#FF8000" style="background:#FFB86C" data-dica="Tirar esta cor"></button><button type="button" class="g4-mais" aria-label="Mais uma cor" data-dica="Mais uma cor">+</button></span>
+        <input type="hidden" data-linha="cores" value="#FF0000,#FF8000">
+        <label class="g4-vel" data-dica="Velocidade do efeito"><span>Ritmo</span><input type="range" min="1" max="10" value="4" data-linha="ritmo" aria-label="Ritmo do efeito"></label>
+        <input class="nome-criar" type="text" data-linha="nome" maxlength="40" placeholder="Nome do efeito" aria-label="Nome do efeito">
+        <button class="btn-criar" type="button" data-gesto="criar-efeito" data-hef-forma="criar-luz" data-dica="Guarda e põe na lista Efeito">Criar</button>
+        <span class="meus" id="seus-efeitos" aria-label="Seus efeitos"><span class="meu" data-dica="Piscar"><i style="--cor:#FF5555"></i>Alerta vermelho</span><span class="meu" data-dica="Respirar"><i style="--cor:#8BE9FD"></i>Respiro calmo</span></span>
+      </div>
+    </div>
+<script data-aba="criar">
+(function(){
+  var raiz = document.getElementById('criar-luz'); if(!raiz) return;
+  var CRUAS = ["#0000FF", "#FF0000", "#00FF00", "#FF0080", "#FFFF00", "#00FFFF", "#FF8000", "#8000FF"], TONS = ["#7EB8D4", "#FF5555", "#50FA7B", "#FF79C6", "#F1FA8C", "#8BE9FD", "#FFB86C", "#BD93F9"];
+  var caixa = raiz.querySelector('.g4-cores'), mais = caixa.querySelector('.g4-mais');
+  var oculto = raiz.querySelector('input[data-linha="cores"]');
+  function atuais(){ return [].map.call(caixa.querySelectorAll('.g4-cor'), function(b){ return b.dataset.cor; }); }
+  function sincroniza(){ var n = atuais(); oculto.value = n.join(','); mais.hidden = n.length >= CRUAS.length; }
+  caixa.addEventListener('click', function(ev){
+    var b = ev.target.closest('button'); if(!b) return;
+    if(b === mais){
+      var tem = atuais(), i = CRUAS.findIndex(function(c){ return tem.indexOf(c) < 0; });
+      if(i < 0) return;
+      var novo = document.createElement('button');
+      novo.type = 'button'; novo.className = 'g4-cor'; novo.dataset.cor = CRUAS[i];
+      novo.style.background = TONS[i]; novo.setAttribute('data-dica', 'Tirar esta cor');
+      caixa.insertBefore(novo, mais);
+    } else if(b.classList.contains('g4-cor') && atuais().length > 1){
+      b.remove();
+    }
+    sincroniza();
+  });
+  sincroniza();
+})();
+</script>
 
   </div>
 

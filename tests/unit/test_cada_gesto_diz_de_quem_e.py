@@ -88,8 +88,12 @@ def test_todo_gesto_das_dez_tem_camada() -> None:
 #: O gesto nasceu com a base comum (A-BASE-COMUM-DAS-ABAS-01) e o botão «Modo automático» que o
 #: aciona entra na página com a sprint da própria aba (A-ABA-CONTROLES-DO-TODO-01). Sai desta
 #: lista no dia em que a página o trouxer.
+#: O «Desligar» saiu do desenho da 04 (a lista Efeito tem «Sem efeito»), mas a página publicada o
+#: traz até o `--publicar 04`; no dia em que ela perder o botão, sai o gesto `apagar` do pacote, a
+#: linha dele da `CAMADA` e esta entrada (o `apagar` vira o miolo do `efeito-da-luz`).
 A_ABA_AINDA_TRAZ = {
     ("02-controles.html", "modo-dos-controles"),
+    ("04-iluminacao.html", "apagar"),
 }
 
 

@@ -619,9 +619,9 @@ def _dica_do_jogador() -> str:
     import re
 
     pagina = (_RAIZ / "mockup" / "04-iluminacao.html").read_text(encoding="utf-8")
-    bloco = pagina.split('<div class="sec-rot">Jogador', 1)[1]
-    bloco = bloco.split('<span class="dica">', 1)[1].split("</span></span>", 1)[0]
-    bloco = re.sub(r"<!--.*?-->", "", bloco, flags=re.S)
+    achado = re.search(r'<div class="sec-rot" data-dica="([^"]*)">Jogador', pagina)
+    assert achado, "o rótulo «Jogador» da 04 perdeu a dica"
+    bloco = achado.group(1)
     return " ".join(re.sub(r"<[^>]+>", " ", bloco).split())
 
 

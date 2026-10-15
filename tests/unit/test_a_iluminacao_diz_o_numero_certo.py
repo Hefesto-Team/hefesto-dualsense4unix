@@ -161,8 +161,8 @@ def test_a_barra_recebe_numero_e_a_caixa_recebe_texto():
 
 
 def _dica_do_botao(fileira: str, n: int) -> str:
-    """O `title` do botão daquele número, sem digitar a frase inteira."""
-    achado = re.search(rf'data-player="{n}" title="([^"]*)"', fileira)
+    """O `data-dica` do botão daquele número, sem digitar a frase inteira."""
+    achado = re.search(rf'data-player="{n}" data-dica="([^"]*)"', fileira)
     assert achado, f"o botão {n} não saiu na fileira: {fileira}"
     return achado.group(1)
 
@@ -221,7 +221,7 @@ def test_um_numero_acima_da_mesa_nao_se_diz_livre(colunas):
 
     fileira = colunas([DO_RADIO])[DO_RADIO["uniq"]]["players"]
     for n in (2, 3, 4):
-        assert f'data-player="{n}" title="Player {n}">' in fileira, (
+        assert f'data-player="{n}" data-dica="Player {n}">' in fileira, (
             f"o botão {n} fora da mesa não diz só o número: {fileira}")
     assert _MOTIVOS_NUMERO["numero_fora_da_mesa"] not in fileira, (
         "a frase da recusa voltou à dica do número fora — ela chegaria à tela "
@@ -795,12 +795,12 @@ def test_os_tres_tons_sairam_dos_quatro_controles():
     crus = ["#{:02X}{:02X}{:02X}".format(*rgb) for rgb in pac.tons_da_guia()]
 
     bancada = onde.pagina("04-iluminacao.html").read_text(encoding="utf-8")
-    for h in ("#0080FF", "#FF00FF", "#000000"):
+    for h in ("#0080FF", "#FF00FF", "#000000", "#80FF00", "#00FF80", "#FFFFFF"):
         assert h not in crus, f"{h} continua na guia"
         assert f'data-hex="{h}"' not in bancada, (
-            f"{h} voltou à fileira da página — ela mandou os três saírem")
+            f"{h} voltou à fileira da página — a guia é só das oito cores de jogador")
 
-    assert len(crus) == 11, crus
+    assert len(crus) == 8, crus
     assert bancada.count('class="tom') == 4 * len(crus)
 
     for n in range(1, 9):
@@ -826,7 +826,7 @@ def test_a_poda_da_guia_recusa_dizendo_o_que_nao_pode_podar():
         assert "automática" in str(automatica.value)
     finally:
         pac.FORA_DA_GUIA = antes
-    assert len(pac.tons_da_guia()) == 11
+    assert len(pac.tons_da_guia()) == 8
 
 
 class PonteMuda:
@@ -959,7 +959,7 @@ def test_a_coluna_que_esvazia_le_como_a_que_nasce_vazia():
     # A CHAVE PASSOU DE `.off` PARA `[data-conectado="nao"]` EM 07/09/2026, e a
     for peca in ('.luz-grade .ctrl[data-conectado="nao"] .guia',
                  '.luz-grade .ctrl[data-conectado="nao"] .trilho',
-                 '.luz-grade .ctrl[data-conectado="nao"] .cel-acoes .btn'):
+                 '.luz-grade .ctrl[data-conectado="nao"] .g4-efeito'):
         assert peca in doc, (
             f"{peca} voltou à tela num lugar sem controle: botões que "
             f"engolem o toque sem uma letra.")
@@ -974,7 +974,7 @@ def test_a_coluna_que_esvazia_le_como_a_que_nasce_vazia():
             r'<div class="ctrl vazia"(.*?)(?=<div class="ctrl[" ]|\Z)', grade, re.S):
         # atributos (o `data-campo="plastico"` e, dentro, o bloco dos tons),
         for peca in ('class="guia"', 'class="puxador"',
-                     'data-gesto="apagar"', 'data-gesto="reenviar"'):
+                     'data-gesto="efeito-da-luz"', 'data-gesto="reenviar"'):
             assert peca in coluna, (
                 f"o lugar que NASCE vazio perdeu {peca!r} — o controle que "
                 f"chegar ali fica sem esse gesto na tela, e só recarregar a "

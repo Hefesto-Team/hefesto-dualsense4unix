@@ -238,6 +238,57 @@ class TriggersConfig(BaseModel):
     modo: ModoDaAba | None = None
 
 
+#: As bases do efeito de luz que a pessoa cria na aba Iluminação (A-ABA-ILUMINACAO-DO-TODO-01).
+BASES_DA_LUZ = ("respirar", "piscar", "arco-iris")  # (noqa-acento) chave ASCII
+RITMO_MINIMO_DA_LUZ = 1
+RITMO_MAXIMO_DA_LUZ = 10
+RITMO_PADRAO_DA_LUZ = 4
+TETO_DE_CORES_DO_EFEITO = 8
+_COR_DO_EFEITO = re.compile(r"^[0-9A-Fa-f]{6}$")
+
+
+class EfeitoDaLuz(NamedTuple):
+    """O efeito de luz de um controle, lido do texto que o perfil guarda."""
+
+    base: str
+    cores: tuple[tuple[int, int, int], ...]
+    ritmo: int
+
+
+def escrever_o_efeito_da_luz(base: str, cores: list[str] | tuple[str, ...], ritmo: int) -> str:
+    """O texto que o perfil guarda: ``base;RRGGBB,RRGGBB;ritmo``.
+
+    O efeito viaja inteiro no perfil, sem apontar para a biblioteca da interface: o perfil
+    exportado para outro computador anima do mesmo jeito.
+    """
+    hexes = ",".join(c.lstrip("#").upper() for c in cores)
+    return f"{base};{hexes};{int(ritmo)}"
+
+
+def ler_o_efeito_da_luz(texto: object) -> EfeitoDaLuz | None:
+    """O efeito do texto do perfil, ou ``None`` quando ele não é um efeito válido."""
+    if not isinstance(texto, str):
+        return None
+    partes = texto.split(";")
+    if len(partes) != 3:
+        return None
+    base, brutas, ritmo_cru = (p.strip() for p in partes)
+    if base not in BASES_DA_LUZ:
+        return None
+    nomes = [c for c in brutas.split(",") if c] if brutas else []
+    if len(nomes) > TETO_DE_CORES_DO_EFEITO or not all(_COR_DO_EFEITO.match(c) for c in nomes):
+        return None
+    if base != "arco-iris" and not nomes:  # (noqa-acento) chave ASCII
+        return None
+    if not (ritmo_cru.isascii() and ritmo_cru.isdigit()):
+        return None
+    ritmo = int(ritmo_cru)
+    if not (RITMO_MINIMO_DA_LUZ <= ritmo <= RITMO_MAXIMO_DA_LUZ):
+        return None
+    cores = tuple((int(c[0:2], 16), int(c[2:4], 16), int(c[4:6], 16)) for c in nomes)
+    return EfeitoDaLuz(base, cores, ritmo)
+
+
 class LedsConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -253,6 +304,15 @@ class LedsConfig(BaseModel):
     player_led_brightness: Literal["fraco", "medio", "forte"] = "fraco"  # noqa-acento: chave ASCII
     #: ``None`` = ninguém escolheu o modo: vale a leitura de :func:`decidir_o_modo_da_luz`.
     modo: ModoDaAba | None = None
+    #: O efeito da barra (``base;cores;ritmo``, ver :func:`ler_o_efeito_da_luz`). ``None`` = luz
+    #: fixa, a cor de sempre. Texto que não é um efeito válido volta como ``None``: um enfeite
+    #: ilegível não derruba o perfil.
+    efeito: str | None = None
+
+    @field_validator("efeito")
+    @classmethod
+    def _efeito_legivel(cls, value: str | None) -> str | None:
+        return value if ler_o_efeito_da_luz(value) is not None else None
 
     @field_validator("lightbar")
     @classmethod

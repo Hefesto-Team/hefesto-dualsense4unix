@@ -205,14 +205,12 @@ def test_a_pagina_oferece_o_par_no_topo_da_aba():
 
     texto = onde.pagina(PAGINA).read_text(encoding="utf-8")
     topo = texto.split('<div class="quadro-topo">', 1)[-1].split("</div>", 1)[0]
-    assert 'class="par-modo"' in topo, (
-        "o par de modos não está na faixa do título — fora dela custa uma linha da grade")
-    for modo in (AUTOMATICO, "personalizado"):
-        for atributo in (f'data-gesto="{a04.GESTO_DO_MODO}"', f'data-modo="{modo}"',
-                         f'data-campo="{a04.GESTO_DO_MODO}-{modo}"',
-                         'data-hef-alvo="classe"'):
-            assert atributo in topo, f"o botão {modo} perdeu {atributo!r}"
-    assert "Modo automático" in topo and "Modo personalizado" in topo
+    assert 'class="modo-auto"' in topo and 'data-governa=".luz-grade .ctrl"' in topo, (
+        "o Modo automático não está na faixa do título, com a grade que ele governa")
+    for atributo in (f'data-gesto="{a04.GESTO_DO_MODO}"', f'data-modo="{AUTOMATICO}"',
+                     f'data-campo="{a04.GESTO_DO_MODO}-{AUTOMATICO}"', 'data-hef-alvo="classe"'):
+        assert atributo in topo, f"o botão do modo perdeu {atributo!r}"
+    assert "Modo automático" in topo and "Modo personalizado" not in topo
 
 
 def test_o_pacote_diz_o_modo_da_aba(a04, pac):

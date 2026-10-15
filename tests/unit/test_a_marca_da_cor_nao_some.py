@@ -549,7 +549,7 @@ def test_a_cor_sem_procedencia_e_fossil_pela_forma(mesa_de, rgb, fossil):
         assert mesa.fora_do_lugar(cores=cores) == [], f"P2 a {pct}%, luz assentada"
 
 
-VERDE_AGUA = (0, 255, 128)
+VERDE_AGUA = (128, 0, 255)
 
 
 @pytest.mark.parametrize("pct", [50, 0], ids=["a-50", "a-0"])
@@ -624,7 +624,7 @@ def test_sem_a_paleta_o_fossil_nao_tira_o_global_de_ninguem(mesa_de):
             f"o brilho do P3 a {pct}% tirou o P4 do global")
 
 
-_CASA_DA_GUIA = re.compile(r'<button class="(tom(?: [^"]*)?)"[^>]*?title="([^"]*)"')
+_CASA_DA_GUIA = re.compile(r'<button class="(tom(?: [^"]*)?)"[^>]*?data-dica="([^"]*)"')
 
 
 def test_o_desenho_mostra_o_x_do_vizinho_nas_fileiras_ligadas() -> None:

@@ -213,8 +213,8 @@ def test_a_faixa_do_titulo_tem_um_morador_so():
     # O publicado só troca no `--publicar` da costura: o par se mede no desenho.
     topo = onde.pagina(PAGINA).read_text(encoding="utf-8").split(
         '<div class="quadro-topo">', 1)[-1].split("</div>", 1)[0]
-    assert topo.count('data-gesto="modo-da-luz"') == 2, (
-        "o par de modos saiu da faixa do desenho — são dois botões, um por modo")
+    assert topo.count('data-gesto="modo-da-luz"') == 1 and 'class="modo-auto"' in topo, (
+        "o Modo automático saiu da faixa do desenho — é UM botão (base comum, 14/10/2026)")
     assert 'data-gesto="auto-cores"' not in topo, (
         "o interruptor `auto-cores` voltou à faixa: o par tomou o lugar dele")
 
@@ -231,10 +231,12 @@ def test_o_botao_por_controle_saiu_e_o_desligar_ficou():
             f"o botão `Automático` voltou à célula Opções em {caminho.name}")
         lugares = len(re.findall(r'<div class="ctrl(?:"| vazia")', grade))
         assert lugares >= 2, "a régua não achou as colunas — não mediria nada"
-        assert grade.count(">Desligar</button>") == lugares, (
-            f"a célula Opções de {caminho.name} não tem um `Desligar` por "
-            f"lugar ({grade.count('>Desligar</button>')} para {lugares}) — "
-            f"ela NÃO citou este botão")
+        if caminho.parent == onde.PUBLICADO:
+            continue  # o publicado só troca no `--publicar` da costura
+        assert ">Desligar</button>" not in grade, (
+            f"o `Desligar` voltou à célula Efeito de {caminho.name}: «Sem efeito» o substitui")
+        assert grade.count('class="g4-efeito"') == lugares, (
+            f"a célula Efeito de {caminho.name} não tem uma lista por lugar")
 
 
 def _grade() -> str:
@@ -322,19 +324,20 @@ def test_os_tres_gestos_da_botoeira_sairam_do_pacote(pac, a04):
             f"o gesto `{morto}` voltou ao pacote sem o widget que o oferecia — "
             f"um gesto que a tela não alcança é código morto, e ela mandou "
             f"remover a botoeira inteira em 07/09/2026")
-    assert vivos == {"cor", "apagar", "brilho", "player",
-                     "reenviar", "modo-da-luz", "brilho-luzes"}, (
+    assert vivos == {"cor", "apagar", "brilho", "player", "reenviar", "modo-da-luz",
+                     "brilho-luzes", "efeito-da-luz", "criar-efeito"}, (
         f"a poda da botoeira levou junto um gesto que FICA: {sorted(vivos)}")
 
 
 def test_o_piso_da_aba_desceu_com_a_ordem_dela(a04):
     """A ÚNICA vez em que o piso desce, e ela tem nome, razão e data."""
-    assert a04.PISO_DA_ABA == 7, (
+    assert a04.PISO_DA_ABA == 9, (
         f"o piso da aba é {a04.PISO_DA_ABA}. Ele desceu DUAS vezes em "
         f"07/09/2026, nas duas ordens dela — 11 para 8 com a botoeira das "
         f"lâmpadas, 8 para 6 com os dois botões do automático — e subiu UMA em "
         f"24/09/2026, 6 para 7, com as pílulas do brilho das luzes que ela "
-        f"decidiu. Cada degrau pede a palavra dela")
+        f"decidiu; subiu de 7 para 9 em 14/10/2026 com a lista Efeito e o criar "
+        f"efeitos do desenho dela. Cada degrau pede a palavra dela")
 
 
 def test_a_linha_de_ressalva_saiu_da_celula_de_leds():

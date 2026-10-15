@@ -15,7 +15,7 @@ PAGINA = "04-iluminacao.html"
 UNIQS = tuple(f"aa:bb:cc:00:00:0{n}" for n in (1, 2, 3, 4))
 
 AZUL, VERMELHO, VERDE = "#0000FF", "#FF0000", "#00FF00"
-AMARELO, CIANO, BRANCO = "#FFFF00", "#00FFFF", "#FFFFFF"
+AMARELO, CIANO, VIOLETA = "#FFFF00", "#00FFFF", "#8000FF"
 
 
 def _hexa(rgb: Any) -> str:
@@ -63,7 +63,7 @@ def _a_cena_da_foto() -> tuple[list[dict[str, Any]], dict[str, Any]]:
               0.08, nome="White", modelo="white"),
         _peca(3, (255, 255, 0), 1.0, nome="Starlight Blue",
               modelo="starlight-blue"),
-        _peca(4, (249, 249, 249), 0.99, nome="Galactic Purple",
+        _peca(4, (126, 0, 252), 0.99, nome="Galactic Purple",
               modelo="galactic-purple"),
     ]
     perfil = {
@@ -71,7 +71,7 @@ def _a_cena_da_foto() -> tuple[list[dict[str, Any]], dict[str, Any]]:
         "controllers": {
             _chave(UNIQS[1]): {"leds": {"lightbar": [255, 255, 0],
                                         "lightbar_para_o_numero": 1}},
-            _chave(UNIQS[3]): {"leds": {"lightbar": [252, 252, 252],
+            _chave(UNIQS[3]): {"leds": {"lightbar": [126, 0, 252],
                                         "lightbar_brightness": 0.99}},
         },
     }
@@ -119,7 +119,7 @@ def _a_cena_da_fala() -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """A mesa da fala das ~18h50 de 29/09: P1 White no BT, P2 Galactic Purple no cabo."""
     pecas = [
         _peca(1, (255, 255, 0), 1.0, nome="White", modelo="white"),
-        _peca(2, (0, 255, 128), 1.0, nome="Galactic Purple",
+        _peca(2, (128, 0, 255), 1.0, nome="Galactic Purple",
               modelo="galactic-purple", via="usb"),
     ]
     perfil = {
@@ -127,7 +127,7 @@ def _a_cena_da_fala() -> tuple[list[dict[str, Any]], dict[str, Any]]:
         "controllers": {
             _chave(UNIQS[0]): {"leds": {"lightbar": [255, 255, 0],
                                         "lightbar_para_o_numero": 1}},
-            _chave(UNIQS[1]): {"leds": {"lightbar": [0, 255, 128],
+            _chave(UNIQS[1]): {"leds": {"lightbar": [128, 0, 255],
                                         "lightbar_para_o_numero": 2}},
         },
     }
@@ -162,7 +162,7 @@ def _pintar_as_pecas(monkeypatch: pytest.MonkeyPatch, pecas: list[dict[str, Any]
 
 
 _CLASSE = re.compile(r'class="([^"]*)"')
-_TITULO = re.compile(r'title="([^"]*)"')
+_TITULO = re.compile(r'data-dica="([^"]*)"')
 
 
 def _casas(html: str) -> dict[str, dict[str, Any]]:
@@ -242,11 +242,11 @@ class TestACasaDeCadaCor:
         assert not erradas, (
             f"{len(erradas)} cores acesas na casa errada; as primeiras: {erradas[:5]}")
 
-    def test_o_branco_a_99_por_cento_e_a_casa_do_branco(self) -> None:
-        """O `#FCFCFC` do P4 da bancada de 29/09."""
+    def test_o_violeta_a_99_por_cento_e_a_casa_do_violeta(self) -> None:
+        """O `#7E00FC` do P4 da bancada de 29/09."""
         from hefesto_dualsense4unix.interface.pacotes import a04_iluminacao as a04
 
-        assert a04.a_casa_da_cor((252, 252, 252)) == BRANCO
+        assert a04.a_casa_da_cor((126, 0, 252)) == VIOLETA
 
     def test_o_tom_exato_e_a_propria_casa(self) -> None:
         from hefesto_dualsense4unix.interface.pacotes import a04_iluminacao as a04
@@ -274,36 +274,36 @@ class TestAFotoDaBancada:
         marcas = _marcas(colunas)
 
         assert {n: m["x"] for n, m in marcas.items()} == {
-            1: {AZUL, AMARELO, BRANCO},
-            2: {VERMELHO, AMARELO, BRANCO},
-            3: {AZUL, VERMELHO, BRANCO},
+            1: {AZUL, AMARELO, VIOLETA},
+            2: {VERMELHO, AMARELO, VIOLETA},
+            3: {AZUL, VERMELHO, VIOLETA},
             4: {AZUL, VERMELHO, AMARELO},
         }
         assert {n: m["on"] for n, m in marcas.items()} == {
-            1: {VERMELHO}, 2: {AZUL}, 3: {AMARELO}, 4: {BRANCO}}
+            1: {VERMELHO}, 2: {AZUL}, 3: {AMARELO}, 4: {VIOLETA}}
 
     def test_a_caixa_do_p4_diz_a_cor_pedida(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """A casa é só onde a marca pousa: a caixa diz o que está no disco."""
         _ctx, colunas = _pintar(monkeypatch, "a foto")
-        assert colunas[UNIQS[3]]["hex"] == "#FCFCFC"
+        assert colunas[UNIQS[3]]["hex"] == "#8000FF"
 
     def test_o_x_diz_de_quem_e(self, monkeypatch: pytest.MonkeyPatch) -> None:
         _ctx, colunas = _pintar(monkeypatch, "a foto")
         casas = _casas(colunas[UNIQS[0]]["tons"])
-        assert casas[BRANCO]["titulo"] == "P4 (Galactic Purple)"
+        assert casas[VIOLETA]["titulo"] == "P4 (Galactic Purple)"
         assert casas[AZUL]["titulo"] == "P2 (White)"
 
-    def test_o_p1_clicando_o_branco_e_recusado_com_o_nome_do_p4(
+    def test_o_p1_clicando_o_violeta_e_recusado_com_o_nome_do_p4(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """MORDIDA: a recusa por igualdade — o branco passa calado."""
+        """MORDIDA: a recusa por igualdade — o violeta passa calado."""
         from hefesto_dualsense4unix.interface.pacotes import a04_iluminacao as a04
 
         ctx, _colunas = _pintar(monkeypatch, "a foto")
         with pytest.raises(RuntimeError) as erro:
-            a04._sem_repetir_a_cor_do_vizinho(ctx, UNIQS[0], (255, 255, 255))
+            a04._sem_repetir_a_cor_do_vizinho(ctx, UNIQS[0], (128, 0, 255))
         assert "P4 (Galactic Purple)" in str(erro.value)
 
 
@@ -427,7 +427,7 @@ def _o_plastico_do_dono(modelo: str) -> str:
     return tom_para_a_borda(monta.cor_de_css(modelo)) if modelo else ""
 
 
-DONOS_DA_FOTO = {VERMELHO: [1], AZUL: [2], AMARELO: [3], BRANCO: [4]}
+DONOS_DA_FOTO = {VERMELHO: [1], AZUL: [2], AMARELO: [3], VIOLETA: [4]}
 DONOS_DO_TODOS = {VERDE: [1, 2, 3, 4]}
 
 
@@ -735,7 +735,7 @@ def test_a_linha_do_p2_tem_area(na_tela, vista: str) -> None:
     casas = _as_casas_na_tela(medido)
     assert set(casas) == {1, 2}, f"colunas pintadas: {sorted(casas)}"
     donos = {str(a04.a_chave_da_cor((255, 255, 0))).upper(): a02.cor_da_borda("white"),
-             str(a04.a_chave_da_cor((0, 255, 128))).upper(): a02.cor_da_borda("galactic-purple")}
+             str(a04.a_chave_da_cor((128, 0, 255))).upper(): a02.cor_da_borda("galactic-purple")}
     erradas = []
     for n, fileira in casas.items():
         for tom, tinta in donos.items():

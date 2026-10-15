@@ -48,6 +48,8 @@ CAMADA: dict[tuple[str, str], str] = {
     ("04-iluminacao.html", "brilho"): _C,
     ("04-iluminacao.html", "brilho-luzes"): _C,
     ("04-iluminacao.html", "cor"): _C,
+    ("04-iluminacao.html", "criar-efeito"): _C,
+    ("04-iluminacao.html", "efeito-da-luz"): _C,
     ("04-iluminacao.html", "modo-da-luz"): _C,
     ("04-iluminacao.html", "player"): _T,
     ("04-iluminacao.html", "reenviar"): _C,

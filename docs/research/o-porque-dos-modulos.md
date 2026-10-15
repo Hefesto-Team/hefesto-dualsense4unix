@@ -1461,3 +1461,17 @@ anunciou «vibração travada» com o motor parado (NATIVO-RUMBLE-01). O par sai
 
 Com `padrao` (15/10/2026, A-ABA-VIBRACAO-DO-TODO-01): Batida, Onda e Tranco tocam uma vez pela fila do controle
 (`padroes_de_vibracao.tocar`), e a mão volta ao jogo sozinha no fim.
+
+## luz_animada (`daemon/subsystems/luz_animada.py`)
+
+O efeito vive no perfil como texto (`base;cores;ritmo`), e não como nome da biblioteca da interface: o perfil
+exportado anima igual em outro computador, e o daemon não lê a `luz_meus_efeitos` da interface. Texto ilegível
+volta `None` (luz fixa), porque um enfeite não derruba o perfil.
+
+O quadro vai pela camada da usuária (`apply_output_for`), e não pela do jogo: a do jogo só escreve com o jogo em
+foco (`set_game_output_for` retém a luz enquanto a autoridade é `daemon`). Ao sair do efeito o laço solta só o
+`led` dessa camada (`clear_user_output_fields`) e o backend repinta a cor do perfil.
+
+A política de «quem manda» é a `tato_vivo.decidir`, perguntada como se houvesse jogo: no Modo Nativo e com o jogo
+pintando a barra o laço cala. Sem pad virtual não há efeito. O piscar tem o teto de 3 Hz da WCAG 2.3.1, o mesmo do
+pulso por tiro; o respirar e o arco-íris saem a 30 quadros por segundo no máximo, e quadro igual não sai.

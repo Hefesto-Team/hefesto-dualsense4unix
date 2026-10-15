@@ -146,7 +146,8 @@ def test_a_pagina_oferece_o_trilho_e_o_lugar_vazio_nasce_em_zero(a04):
     corpo = (onde.BANCADA / PAGINA).read_text(encoding="utf-8")
     vivas = corpo.count('data-gesto="brilho"')
     assert vivas >= 1, "a bancada não oferece o trilho de brilho a controle nenhum"
-    assert corpo.count('type="range"') == vivas, (
+    # o ritmo da área «Criar efeitos novos» é um parâmetro do formulário, não um trilho de brilho
+    assert corpo.count('type="range"') - corpo.count('data-linha="ritmo"') == vivas, (
         "há `type=\"range\"` sem `data-gesto=\"brilho\"` na página — um polegar "
         "que se arrasta e não chega a gesto nenhum")
 

@@ -654,5 +654,5 @@ def test_a_casa_tomada_diz_de_quem_e_sem_a_regra() -> None:
          "numero": 2, "plastico": "#1c1c1c"}]))
     casas = [linha for linha in html.splitlines() if "tomado" in linha]
     assert len(casas) == 1, html
-    assert 'title="P2 (DualSense)"' in casas[0], casas[0]
+    assert 'data-dica="P2 (DualSense)"' in casas[0], casas[0]
     assert "duas peças" not in html, casas[0]

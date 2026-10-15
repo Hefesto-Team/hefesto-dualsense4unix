@@ -26,7 +26,7 @@ from tests.unit.test_a_paleta_marca_a_cor_de_cada_controle import (
 )
 
 AMARELO_DO_P1 = (255, 255, 0)
-VERDE_AGUA_DO_P2 = (0, 255, 128)
+VERDE_AGUA_DO_P2 = (128, 0, 255)
 _DONO = re.compile(r"--dono:([^\";]+)")
 
 
@@ -64,14 +64,14 @@ def _o_dono_de_cada_casa(tons_html: str) -> dict[str, str]:
 
 
 def test_a_cena_da_fala_da_a_linha_roxa_ao_p2(monkeypatch: pytest.MonkeyPatch) -> None:
-    """P1 White no BT com o `#FFFF00`, P2 Galactic Purple no cabo com o `#00FF80`.
+    """P1 White no BT com o `#FFFF00`, P2 Galactic Purple no cabo com o `#8000FF`.
 
-    Nas duas colunas, a casa amarela veste a borda do White na 02 e a verde-água
+    Nas duas colunas, a casa amarela veste a borda do White na 02 e a violeta
     a do Galactic Purple, cujo matiz é roxo (entre 250° e 300°).
 
     AS MORDIDAS: o `_as_pecas_da_mesa` pondo em `plastico` a cor da barra, ou a
     `fileira_de_tons` pintando toda casa com o plástico do P1 — nas duas, a casa
-    verde-água perde o roxo.
+    violeta perde o roxo.
     """
     from hefesto_dualsense4unix.interface.pacotes import a02_controles as a02
     from hefesto_dualsense4unix.interface.pacotes import a04_iluminacao as a04
@@ -98,4 +98,4 @@ def test_a_cena_da_fala_tem_as_duas_vias() -> None:
     """A cena é a da foto dela: o P1 no rádio, o P2 no cabo."""
     pecas, _perfil = _a_cena_da_fala()
     assert [(p["n"], p["modelo"], p["via"], _hexa(p["luz"])) for p in pecas] == [
-        (1, "white", "bt", "#FFFF00"), (2, "galactic-purple", "usb", "#00FF80")]
+        (1, "white", "bt", "#FFFF00"), (2, "galactic-purple", "usb", "#8000FF")]

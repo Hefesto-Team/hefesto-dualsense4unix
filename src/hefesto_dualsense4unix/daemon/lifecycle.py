@@ -936,6 +936,8 @@ class Daemon:
             # O-TATO-VIVO-SO-FALA-ONDE-O-JOGO-CALA-01: o motor do tiro, desligado pela receita.
             from hefesto_dualsense4unix.daemon.subsystems.tato_vivo import start_tato_vivo
             await self._safe_start("tato_vivo", lambda: start_tato_vivo(self))
+            from hefesto_dualsense4unix.daemon.subsystems.luz_animada import start_luz_animada
+            await self._safe_start("luz_animada", lambda: start_luz_animada(self))
             # PATH ele tenta, falha, espera e tenta de novo, sem derrubar nada.
             #
             # AQUI E NÃO ANTES: ele não é dono de nenhum nó, só observa. Subir

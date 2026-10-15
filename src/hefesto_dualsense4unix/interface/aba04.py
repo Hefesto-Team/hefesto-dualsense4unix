@@ -1,10 +1,13 @@
-import sys, pathlib, re; sys.path.insert(0, str(pathlib.Path(__file__).parent))
+import json, sys, pathlib, re; sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import onde
 import monta as monta_
 from itertools import cycle
 from monta import (monta, trava_do_nativo, svg, CSS_GLIFO, CSS_LUZINHAS, MESA,
                    cor_da_zona, player_slot_color, tom_da_casa)
 from pacotes import a04_iluminacao as _pacote04
+from pacotes.meus_efeitos import TETO_DO_NOME
+from hefesto_dualsense4unix.profiles.schema import (
+    RITMO_MAXIMO_DA_LUZ, RITMO_MINIMO_DA_LUZ, RITMO_PADRAO_DA_LUZ)
 
 #
 
@@ -84,11 +87,6 @@ CRUS_DA_GUIA = ["#%02X%02X%02X" % rgb for rgb in _pacote04.tons_da_guia()]
 TONS = [tom_da_casa(h) for h in CRUS_DA_GUIA]
 
 
-def TITULO_DA_CASA(i: int) -> str:  # noqa: N802 - constante de molde, não classe
-    """A frase de cada casa da guia. As oito primeiras são cor de número."""
-    quem = f"Cor do Player {i}. " if i <= 8 else ""
-    return f"{quem}Pinta a barra, não muda o número."
-
 
 CSS_DA_LUZ_NO_DESENHO = "  " + _pacote04.tokens_da_luz()
 
@@ -132,9 +130,12 @@ CSS = """
        essa coluna. Eram 132px e 16 aqui, 138 e 12 na Gatilhos, e o texto
        acabava em x=536 numa e x=542 na outra. O usuário viu: *"tem algo que
        deixa estranho essa área da primeira coluna."* */
-    grid-template-columns:var(--larg-rot) repeat(4,1fr);
-    gap:var(--gap-col);
-    --r-des:146px;--r-nome:16px;--r-cor:46px;--r-brilho:26px;
+    /* AS QUATRO COLUNAS TÊM A MESMA LARGURA E O RESPIRO É SIMÉTRICO (desenho do todo, 14/10/2026):
+       a divisória é a borda da fatia, o vão entre colunas virou padding dos dois lados dela, a
+       coluna dos nomes leva o vão consigo e a última fatia vai até a borda do quadro. */
+    grid-template-columns:calc(var(--larg-rot) + var(--gap-col)) repeat(4,minmax(0,1fr));
+    column-gap:0;margin-right:-14px;
+    --r-des:92px;--r-nome:30px;--r-cor:66px;--r-brilho:26px;
     /* A LINHA DE RESSALVA CABE NA LINHA DOS LEDs — 04/09/2026, decisão de produto
        (D-02, e a pergunta [01] desta aba): *"Uma linha só quando há
        ressalva."* Ela nasce DEBAIXO da tira, e por isso não é uma oitava
@@ -161,7 +162,7 @@ CSS = """
        para 64 e `--r-acoes` de 72 para 64. OS OITO SAEM DA LINHA OPÇÕES porque
        ela sobrava: tem UM botão desde 07/09/2026, e ele mede 34px dentro dos
        72 — a coluna continua em 472 e o teto de 476 não é tocado. */
-    --r-player:52px;--r-leds:64px;--r-acoes:64px;
+    --r-player:52px;--r-leds:64px;--r-acoes:34px;
     /* O RESPIRO É O DONO, E O PASSO É O DOBRO DELE — 31/08/2026, pedido:
        *"aba iluminação tem a mesma questão do respiro vertical."* É a mesma
        construção da Vibração (30/08) e da Gatilhos (hoje), e o mesmo valor da
@@ -175,8 +176,11 @@ CSS = """
        A FOLGA DE HOJE É 2px, e não os 16 de então: a linha de ressalva de
        04/09 comeu doze — ver a nota do `--r-leds` acima —, e a linha da cor
        do dono, a 6 px em 08/10/2026, comeu dois no `--r-cor`. */
-    --r-ar:5px;--r-passo:calc(var(--r-ar) * 2);
+    --r-ar:7px;--r-passo:calc(var(--r-ar) * 2);
   }
+  /* Em janela baixa o desenho encolhe, a linha do Jogador aperta e o passo entre as linhas cai. */
+  @media (max-height:780px){.luz-grade{--r-des:54px;--r-player:40px;--r-cor:60px;--r-ar:5px}}
+  .luz-grade > .rotulos{padding-right:var(--gap-col)}
   .luz-grade > div{
     display:grid;row-gap:var(--r-passo);
     grid-template-rows:var(--r-des) var(--r-nome) var(--r-cor) var(--r-brilho)
@@ -188,7 +192,7 @@ CSS = """
      recua a célula junto: a linha parava 21px antes da divisa e voltava a
      ler como tracinho. Com o padding na célula, ela vai de ponta a ponta da
      coluna e encosta na vizinha — o respiro do conteúdo é o mesmo. */
-  .luz-grade .ctrl{border-left:1px solid var(--linha);padding:0 8px 0 12px}
+  .luz-grade .ctrl{border-left:1px solid var(--linha);padding:0 14px 0 13px}
   /* A linha da luz do jogo: uma frase curta embaixo das cores, sem botão. Texto de apoio
      (nunca vermelho), com o «Agora» em tinta cheia só quando o jogo está pintando. */
 
@@ -344,7 +348,7 @@ CSS = """
      `data-campo="brilho-pct"`; agora as duas leituras voltam a ser uma só. */
   .luz-grade .ctrl[data-conectado="nao"] .guia,
   .luz-grade .ctrl[data-conectado="nao"] .trilho,
-  .luz-grade .ctrl[data-conectado="nao"] .cel-acoes .btn{display:none}
+  .luz-grade .ctrl[data-conectado="nao"] .g4-efeito{display:none}
   /* A SÉTIMA CÉLULA É A ÚNICA QUE PRECISA DO TRAVESSÃO DE VOLTA — ver o
      `<span class="nada">` que o gerador emite em `cel-acoes`. Ele nasce
      escondido na coluna viva, para não pôr um traço debaixo de dois botões.
@@ -427,13 +431,14 @@ CSS = """
      divisória, e a tabela mede o mesmo pixel. */
   .luz-grade > div > *::before{content:'';position:absolute;
     top:calc(var(--r-ar) * -1);height:0;
-    left:-12px;right:-8px;border-top:1px solid var(--rot-linha)}
+    left:-13px;right:-14px;border-top:1px solid var(--rot-linha)}
   /* A CONTA DA MARGEM NEGATIVA: ela tem de cancelar o padding da coluna E o
      `gap` do grid, senão sobra um buraco do tamanho do vão. À direita são
      8 de padding + 16 de gap = 24; a ÚLTIMA coluna não tem vão depois
      dela, então volta a 8. A coluna de rótulos não tem padding: 0 e 16. */
-  .luz-grade > div:not(:last-child) > *::before{right:-24px}
-  .luz-grade > .rotulos > *::before{left:0;right:-16px}
+  .luz-grade > div:not(:last-child) > *::before{right:-14px}
+  .luz-grade > div:last-child > *::before{right:0}
+  .luz-grade > .rotulos > *::before{left:0;right:calc(var(--gap-col) * -1)}
   .luz-grade > div > *:first-child::before{display:none}
 
   /* a coluna dos rótulos: todo título começa no mesmo x, e cada um ocupa a
@@ -512,10 +517,19 @@ CSS = """
   .luz-grade .moldura{color:var(--linha);border:1px solid currentColor;
                       border-radius:8px;background:var(--app-bg);overflow:hidden}
   .luz-grade .moldura .ds-svg{color:var(--fg)}
+  .luz-grade .moldura{height:100%;box-sizing:border-box;display:flex;align-items:center;
+                      justify-content:center}
+  .luz-grade .moldura .ds-svg{height:100%;width:auto;max-width:100%}
   /* A linha «Modelo» leva o nome do jogador (item 9, 06/10): um nome comprido NÃO alarga a coluna do
      controle, quebra em duas linhas como a Vibração faz, e a tela continua sem rolagem. */
-  .ctrl-rot{font-size:11px;color:var(--texto-mudo);text-align:center;min-width:0;
-            overflow-wrap:anywhere;display:flex;align-items:center;justify-content:center}
+  /* O NOME DO CONTROLE É UMA CAIXA, com a largura da coluna e centrado (desenho do todo). */
+  .ctrl-rot{height:30px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;
+            border:1px solid var(--linha);border-radius:7px;font:600 12.5px 'Space Grotesk',system-ui,sans-serif;
+            color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;align-self:center;
+            width:100%;min-width:0}
+  .ctrl-rot .pt{margin:0 6px}
+  .luz-grade .ctrl.vazia[data-conectado="nao"] .ctrl-rot{color:var(--texto-mudo);
+    border:1px dashed var(--border-sutil);background:transparent}
 
   /* A LUZ É LUZ, E NÃO PLÁSTICO. Os tokens são os do mapa do controle
      (`mapa.py`), que é onde eles nasceram: a barra e as cinco lâmpadas ficam de
@@ -579,7 +593,6 @@ CSS = """
   /* O MODO AUTOMÁTICO DEIXA AS COLUNAS PARADAS — pedido de 06/10/2026: o
      desenho e o modelo continuam dizendo de quem é a coluna; a cor, o brilho, o
      número, as luzes e o «Desligar» esmaecem e não recebem clique. */
-  .quadro-topo .ajuda.esq .dica{left:auto;right:22px}
   /* O ESCOPO GLOBAL DESTA FAIXA SAIU — 07/09/2026, e a faixa voltou a ter um
      morador só: o interruptor. A ordem de produto é de hoje, sobre os três cantos
      que falavam de automático — *"Olha na real sai todos. Deixa só lá o de
@@ -597,7 +610,7 @@ CSS = """
      continuava lá. Os nomes estão no pacote, na nota datada. */
 
   /* ---------- COR: a guia dos oito tons do produto, por controle ---------- */
-  .guia{display:flex;gap:4px;align-items:center}
+  .guia{display:flex;flex-wrap:nowrap;justify-content:space-between;align-items:center}
   /* os onze botões continuam itens do flex da `.guia` — ver o gerador */
   .guia .tons{display:contents}
   /* A MOLDURA DA AMOSTRA SAIU — 31/08/2026, e é a mais pura das "bordas
@@ -606,7 +619,7 @@ CSS = """
      separava coisa nenhuma — o `gap:4px` já separa, e o conteúdo é a própria
      cor. A borda continua em `transparent`: a casa não muda de tamanho quando
      muda de estado. */
-  .guia .tom{flex:1;height:26px;border-radius:6px;border:1px solid transparent;
+  .guia .tom{flex:0 0 24px;width:24px;height:24px;border-radius:6px;border:1px solid transparent;
              cursor:pointer;padding:0;display:block;min-width:0;position:relative}
   /* A LINHA DO DONO — 29/09/2026, D-2909-A-LINHA-DA-COR-DO-DONO, pedido
      na bancada: *«talvez uma linha abaixo do quadradinho de cada cor contendo
@@ -732,8 +745,9 @@ CSS = """
      têm (Controles e Iluminação). Ele é o valor do campo Cor, e por isso mora
      debaixo da guia, na coluna do controle a que pertence. */
   .cel-cor{display:flex;flex-direction:column;gap:8px;justify-content:center}
-  .hex{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--fg);
+  .hex{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--fg);
        text-align:center;line-height:14px}
+  .hex.reenvia{display:inline-flex;align-items:center;justify-content:center;min-height:24px}
   /* A CAIXA DO HEXADECIMAL VIRA O BOTÃO — 04/09/2026, decisão de produto na pergunta
      [03] desta aba, contra as outras duas opções (deixar como está, ou um
      terceiro botão em Opções).
@@ -777,7 +791,7 @@ CSS = """
   .trilho{flex:1;height:5px;border-radius:3px;background:var(--border-forte);position:relative}
   .cheio{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--purple)}
   .num{flex:0 0 38px;text-align:right;font-family:'JetBrains Mono',monospace;
-       font-size:11.5px;color:var(--fg)}
+       font-size:12px;color:var(--fg)}
   /* O TRILHO PASSA A ACEITAR O ARRASTE — 03/09/2026, decisão de produto: perguntada
      se mexer no brilho grava o perfil na hora ou espera o "Salvar perfil", ela
      respondeu **"Grava na hora"**.
@@ -1010,9 +1024,50 @@ CSS = """
        padding-bottom:3px}
 """ + CSS_LUZINHAS.lstrip("\n") + """
   /* ---------- OPÇÕES ---------- */
-  .cel-acoes{display:flex;flex-direction:column;align-items:stretch;gap:4px;
-             justify-content:center;margin-top:0}
-  .cel-acoes .btn{width:100%}
+  .cel-acoes{display:flex;flex-direction:row;align-items:center;gap:8px;justify-content:center;
+             margin-top:0}
+  /* A LISTA DE EFEITOS ocupa a célula inteira, em vez de impor a largura do nome mais longo. */
+  .g4-efeito{flex:1 1 0;width:0;min-width:0;height:34px;padding:0 9px;border-radius:7px;
+    border:1px solid var(--linha);background:var(--app-bg);color:var(--fg);
+    font:500 12.5px 'Space Grotesk',system-ui,sans-serif;cursor:pointer}
+  .g4-efeito:hover{border-color:var(--comment)}
+  .quadro-topo .modo-auto{margin-left:auto}
+  /* ---------- CRIAR EFEITOS NOVOS ---------- */
+  .criar{flex:0 0 auto}
+  .criar .criar-linha{display:flex;align-items:center;gap:12px;padding:10px 16px;flex-wrap:nowrap;min-width:0}
+  .criar .quadro-titulo{flex:0 0 auto;margin-right:4px}
+  .criar .seg-criar{display:inline-flex;gap:4px;flex:0 0 auto}
+  .criar .seg-criar label,.criar .meu{height:30px;padding:0 12px;border-radius:999px;
+    font:500 12.5px/1 'Space Grotesk',system-ui,sans-serif;border:1px solid var(--linha);
+    background:var(--app-bg);color:var(--texto-mudo);cursor:pointer;white-space:nowrap;
+    display:inline-flex;align-items:center;gap:7px;box-sizing:border-box}
+  .criar .seg-criar input{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px}
+  .criar .seg-criar label:has(input:checked){border-color:var(--purple);background:var(--sel-bg);
+    color:var(--fg);font-weight:600}
+  .criar .seg-criar label:hover:not(:has(input:checked)),.criar .meu:hover{border-color:var(--comment);
+    color:var(--texto-suave)}
+  .criar .seg-criar label:has(input:focus-visible){outline:2px solid var(--cyan,#8be9fd);outline-offset:2px}
+  .criar .nome-criar{height:30px;width:136px;flex:0 0 auto;padding:0 11px;border-radius:7px;
+    border:1px solid var(--linha);background:var(--app-bg);color:var(--fg);
+    font:500 12.5px 'Space Grotesk',system-ui,sans-serif}
+  .criar .nome-criar::placeholder{color:var(--texto-mudo)}
+  .criar .btn-criar{height:30px;padding:0 14px;border-radius:7px;border:1px solid var(--purple);
+    background:rgba(189,147,249,.12);color:var(--purple);font:600 12.5px/1 'Space Grotesk',system-ui,sans-serif;
+    cursor:pointer;flex:0 0 auto}
+  .criar .btn-criar:hover{background:rgba(189,147,249,.22)}
+  .criar .meus{display:flex;gap:6px;margin-left:auto;align-items:center;min-width:0;overflow:hidden}
+  .criar .meu{color:var(--texto-suave);cursor:default}
+  .criar .meu i{width:7px;height:7px;border-radius:50%;background:var(--cor,var(--purple));flex:0 0 auto}
+  .g4-cores{display:inline-flex;gap:6px;align-items:center;flex:0 0 auto}
+  .g4-cor{width:24px;height:24px;border-radius:6px;display:block;border:0;padding:0;cursor:pointer}
+  .g4-cor:hover{outline:2px solid var(--comment)}
+  .g4-mais{width:24px;height:24px;border-radius:6px;border:1px dashed var(--linha);background:transparent;
+    color:var(--texto-mudo);font:600 14px/1 'Space Grotesk',system-ui,sans-serif;cursor:pointer;padding:0}
+  .g4-mais[hidden]{display:none}
+  .g4-vel{display:inline-flex;align-items:center;gap:8px;flex:0 0 auto;font-size:12px;font-weight:600;
+    color:var(--rot-campo)}
+  .g4-vel input{width:90px;accent-color:var(--purple);height:24px}
+  .criar:has(input[value="arco-iris"]:checked) .g4-cores{display:none}
 
   /* ---------- o antes e o depois da troca, na legenda ---------- */
   .troca{margin:8px 0 12px;font-size:11.5px}
@@ -1045,6 +1100,15 @@ DONOS_NA_MESA = {n: d for n, d in DONO.items() if d.get("conectado", True)}
 
 
 VAZIO = "—"
+
+#: Os dois efeitos do desenho (a biblioteca de mentira do mockup): a página viva troca a lista pela
+#: dos efeitos que a pessoa criou.
+CENA_DOS_EFEITOS = {
+    "Alerta vermelho": {"nome": "Alerta vermelho", "base": "piscar",
+                        "parametros": {"cores": "#FF0000", "ritmo": 6}},
+    "Respiro calmo": {"nome": "Respiro calmo", "base": "respirar",
+                      "parametros": {"cores": "#00FFFF", "ritmo": 2}},
+}
 
 SEM_NINGUEM_AQUI = "Desconectado"
 
@@ -1135,15 +1199,14 @@ def coluna(c):
     tons = _pacote04.fileira_de_tons(p, casas, "            ", ligado=ligado)
 
     titulo_do_lugar = "" if ligado else (
-        '\n             title="Nenhum controle neste lugar."')
+        '\n             data-dica="Nenhum controle aqui"')
     plastico_de_partida = (f' style="color:{cor_da_zona(c["cor"])}"'
                            if ligado else "")
     dica_da_moldura = (
-        ' title="A borda é a cor do plástico deste controle, quando o produto a'
-        ' conhece. A barra acende a cor do número, e as cinco lâmpadas dizem'
-        ' qual é."' if ligado else "")
+        ' data-dica="A borda é o plástico; a barra, a cor do número"'
+        if ligado else "")
     rotulo = (monta_.rotulo(c, "modelo") if ligado else
-              f'P{j} <span class="pt">•</span> {SEM_NINGUEM_AQUI}')
+              f'<b>P{j}</b> <span class="pt">•</span> {SEM_NINGUEM_AQUI}')
     # `opcoes` eram `... if ligado else ""`, e o preço foi MEDIDO nas  (noqa-acento: nome de variável)
     # DualSense do usuário na mesa e o daemon de pé, a foto ao vivo mostrava o P3 e o
     # bloco `[data-conectado="nao"]` desta folha esconde a guia, o trilho e os
@@ -1156,13 +1219,13 @@ def coluna(c):
             </span>
             '''
     reenvio = ' data-gesto="reenviar"'
-    dica_do_hex = '\n                  title="Manda esta cor ao controle de novo."'
+    dica_do_hex = '\n                  data-dica="Manda esta cor de novo"'
     largura_de_partida = f' style="width:{b}%"' if ligado else ""
     puxador = (f'<input class="puxador" type="range" min="0" max="100" step="1"'
                f' value="{b if ligado else 0}" data-gesto="brilho" data-campo="brilho-pct"'
                f' data-hef-alvo="valor"'
                f' aria-label="{_pacote04.ROTULO_DO_BRILHO}"'
-               f' title="{_pacote04.DICA_DO_BRILHO}">')
+               f' data-dica="{_pacote04.DICA_DO_BRILHO}">')
     fileira = (_pacote04.fileira_de_players(
         c["nome"], c["jogador"], DONOS_NA_MESA, "            ",
         quantos=len(monta_.CONECTADOS)) if ligado else
@@ -1177,9 +1240,15 @@ def coluna(c):
     from hefesto_dualsense4unix.core.led_control import BRILHO_DAS_LUZES_PADRAO
     brilhos = (_pacote04.fileira_de_brilhos_das_luzes(
         BRILHO_DAS_LUZES_PADRAO, "              ") if ligado else "")
-    # (`lightbar.reset`) e pintava a cor do número por cima; este escreve preto
-    opcoes = '''<button class="btn vermelho" data-gesto="apagar" title="Apaga a barra de luz deste controle.">Desligar</button>
-            '''
+    #: a lista nasce igual nos quatro lugares (a do vazio some pela folha): o pacote reescreve as
+    #: opções da coluna viva, e o valor escolhido volta pelo `data-campo`.
+    opcoes = (f'<select class="g4-efeito" data-gesto="{_pacote04.GESTO_DO_EFEITO}" '
+              f'aria-label="Efeito da barra" data-campo="{_pacote04.CAMPO_DO_EFEITO}" '
+              f'data-hef-alvo="valor" data-dica="Sem efeito apaga a barra">'
+              + _pacote04.opcoes_do_efeito(CENA_DOS_EFEITOS).replace(
+                  f'<option value="{_pacote04.LUZ_FIXA}">',
+                  f'<option value="{_pacote04.LUZ_FIXA}" selected>', 1)
+              + '</select>\n            ')
 
     # `nao` da régua de acentuação é um `#`, e dentro de uma f-string de  (noqa-acento: o próprio valor que a nota explica)
     conectado = "sim" if ligado else "nao"  # noqa-acento: valor de atributo
@@ -1243,13 +1312,8 @@ def coluna(c):
             </div>
           </div>
           <div class="cel-acoes">
-            {opcoes}<!-- O TRAVESSÃO DESTA CÉLULA NASCE AQUI, escondido na coluna viva, e
-                 é o único das sete que precisava nascer: as outras seis têm
-                 `data-campo`, e o molde do lugar sem dono já escreve o traço
-                 nelas. Esta não tem — dois botões não são um valor —, então sem
-                 este `<span>` a coluna que ESVAZIA na frente do usuário ficaria com a
-                 linha "Opções" em branco, quando a coluna que nasce vazia
-                 mostra "—". Um lugar sem controle tem uma leitura só. -->
+            {opcoes}<!-- O TRAVESSÃO DESTA CÉLULA NASCE AQUI, escondido na coluna viva: a lista de efeitos
+                 não é um valor que o molde do lugar sem dono escreva como travessão. -->
             <span class="nada">{VAZIO}</span>
           </div>
         </div>'''
@@ -1261,114 +1325,83 @@ def coluna(c):
 #: o gesto do par dos modos; o pintor (`data-modo-da-aba` do quadro) é do pacote
 GESTO_DO_MODO = "modo-da-luz"
 
+def _radios(grupo, opcoes):
+    """Os rádios em pílula da área de criar: o primeiro vem marcado."""
+    return "".join(
+        f'<label><input type="radio" name="{grupo}-criar" value="{valor}" data-linha="{grupo}"'
+        f'{" checked" if i == 0 else ""}><span>{rotulo}</span></label>'
+        for i, (valor, rotulo) in enumerate(opcoes))
+
+
+#: As cores com que a área de criar nasce: a do jogador 2 e a do 7, as que o desenho mostra.
+CORES_DE_PARTIDA = (CRUS_DA_GUIA[1], CRUS_DA_GUIA[6])
+
+
+def _cor_do_efeito(cru):
+    """Uma cor do efeito: a CRUA vai no `data-cor` (é a que o aparelho recebe), o tom da casa pinta."""
+    return (f'<button type="button" class="g4-cor" data-cor="{cru}" '
+            f'style="background:{tom_da_casa(cru)}" data-dica="Tirar esta cor"></button>')
+
+
+#: Mantém as cores do efeito: «+» põe a próxima da guia que ainda não está, a cor tirada sai (fica
+#: uma, no mínimo), e o campo escondido leva as cruas ao gesto.
+SCRIPT_DO_CRIAR = f'''<script data-aba="criar">
+(function(){{
+  var raiz = document.getElementById('criar-luz'); if(!raiz) return;
+  var CRUAS = {json.dumps(CRUS_DA_GUIA)}, TONS = {json.dumps(TONS)};
+  var caixa = raiz.querySelector('.g4-cores'), mais = caixa.querySelector('.g4-mais');
+  var oculto = raiz.querySelector('input[data-linha="cores"]');
+  function atuais(){{ return [].map.call(caixa.querySelectorAll('.g4-cor'), function(b){{ return b.dataset.cor; }}); }}
+  function sincroniza(){{ var n = atuais(); oculto.value = n.join(','); mais.hidden = n.length >= CRUAS.length; }}
+  caixa.addEventListener('click', function(ev){{
+    var b = ev.target.closest('button'); if(!b) return;
+    if(b === mais){{
+      var tem = atuais(), i = CRUAS.findIndex(function(c){{ return tem.indexOf(c) < 0; }});
+      if(i < 0) return;
+      var novo = document.createElement('button');
+      novo.type = 'button'; novo.className = 'g4-cor'; novo.dataset.cor = CRUAS[i];
+      novo.style.background = TONS[i]; novo.setAttribute('data-dica', 'Tirar esta cor');
+      caixa.insertBefore(novo, mais);
+    }} else if(b.classList.contains('g4-cor') && atuais().length > 1){{
+      b.remove();
+    }}
+    sincroniza();
+  }});
+  sincroniza();
+}})();
+</script>
+'''
+
+
 MIOLO = f'''
 {CORES_DO_MAPA}
     <div class="quadro luzes" data-modo-da-aba="{monta_.MODO_PERSONALIZADO}" data-campo="{GESTO_DO_MODO}"
          data-hef-alvo="atributo" data-hef-atributo="data-modo-da-aba">
       <div class="quadro-topo">
-        <span class="quadro-titulo">Iluminação</span>
-        <!-- DE 777 PARA ~230 CARACTERES — 30/08/2026, mesma regra da Vibração: o
-             parágrafo que nomeia um campo vai para o `?` daquele campo. O da cor
-             das barras foi para "Cor", o de gravar foi para o rodapé (que já tem
-             `title` nos quatro botões desde hoje). -->
-        <span class="ajuda">?<span class="dica">
-          A <b>barra de luz</b> é a faixa acesa dos dois lados do touchpad: é como
-          você sabe de quem é cada controle.<br><br>
-          O plástico pode se repetir; a <b>luz</b> nunca.
-        </span></span>
-        {trava_do_nativo("na luz")}
-        <!-- OS DOIS MODOS — pedido de 06/10/2026: o modo automático e o Modo
-             Personalizado tomam o lugar do interruptor das cores automáticas e da
-             frase da luz do jogo embaixo das colunas. -->
-        {monta_.par_de_modos(GESTO_DO_MODO, monta_.MODO_PERSONALIZADO)}
-        <span class="ajuda esq">?<span class="dica">
-          <b>Modo automático:</b> cada controle acende a cor do seu <b>plástico</b>
-          (sem cor de plástico, ou com dois iguais, a do <b>número</b>), e os botões
-          desta aba ficam parados.<br><br>
-          <b>Modo personalizado:</b> você escolhe a cor, o brilho e as luzes de cada
-          controle. Ao passar para ele, a cor de agora fica <b>gravada no perfil</b>.<br><br>
-          Nos dois, o jogo que pinta a barra vence enquanto pinta.
-        </span></span>
+        <span class="quadro-titulo" data-dica="A luz diz de quem é cada controle">Iluminação</span>
+        {trava_do_nativo("na luz").replace("title=", "data-dica=", 1)}
+        {monta_.modo_auto(GESTO_DO_MODO, governa=".luz-grade .ctrl", dica="O jogo pinta a barra; o estilo do perfil ajusta")}
       </div>
       <div class="quadro-corpo">
 
         <div class="luz-grade">
 
           <div class="rotulos">
-            <!-- A LEGENDA VIROU DICA — 30/08/2026, pedido sobre este texto
-                 exato: *"esse texto selecionado não existia no original"*.
-                 Ela não some: passa para o `?`, que é onde esta aba já põe toda
-                 explicação (o rótulo "Cor", logo abaixo, faz igual desde 28/08).
-                 Sete linhas de prosa cinza na coluna de rótulos competiam com os
-                 rótulos e ainda empurravam "COR" para longe da linha dele. -->
+            <!-- AS FRASES DOS RÓTULOS SÃO `data-dica`, texto puro: a dica aparece ao passar o mouse
+                 (base comum das abas). Nenhum «?» na tela. -->
             <div class="cel-des">
-              <div class="sec-rot">Controle
-                <span class="ajuda">?<span class="dica">
-                  A barra acende na cor do <b>número</b>; a borda da moldura é a cor do
-                  <b>plástico</b>, e as cinco luzinhas acima do touchpad dizem o número.<br><br>
-                  Cada coluna é um controle: a fita do topo não escolhe nada aqui.
-                </span></span></div>
+              <div class="sec-rot" data-dica="A barra acende na cor do número; a borda é a cor do plástico; as cinco luzinhas dizem o número">Controle</div>
             </div>
-            <!-- A LINHA DO MODELO GANHOU NOME — 30/08/2026, pedido:
-                 *"a parte do Modelo tá faltando, tá o espaço vazio ali. a primeira
-                 coluna serve como nome da linha"*. Esta célula existia vazia só para
-                 ocupar a linha `--r-nome` da grade, e uma coluna cujo trabalho é
-                 nomear linhas tinha uma linha sem nome. -->
             <div><span class="sec-rot">Modelo</span></div>
             <div>
-              <!-- O GLIFO SAIU DO RÓTULO — 30/08/2026, pedido: *"os svg do lado
-                   esquerdo dos nomes pode remover, eles tão diferentes demais"*. Eram
-                   três desenhos de origens diferentes (`lightbar`, `led-jogador`, `l2`/`r2`)
-                   ao lado de rótulos que os outros cinco não tinham — a coluna lia como
-                   duas gramáticas. O glifo continua no DESENHO do controle, que é onde
-                   ele diz de qual peça se fala. -->
-              <div class="sec-rot">Cor
-                <span class="ajuda">?<span class="dica">
-                  <!-- A DICA PAROU DE CONTAR CASAS — 11/09/2026. Ela dizia "os oito
-                       quadradinhos" e "o nono é o livre", e as duas frases já estavam
-                       velhas: a fileira tinha CATORZE desde 09/09, e hoje tem onze. Um
-                       número digitado aqui envelhece calado a cada poda — "os oito
-                       primeiros" é estrutura (`player_slot_color(1..8)`), "os demais"
-                       nunca mente. -->
-                  Sem escolha à mão, a barra fica na <b>cor do número</b> do controle.<br><br>
-                  Os <b>oito primeiros</b> quadradinhos são as cores dos jogadores 1 a 8;
-                  os demais são tons a mais.<br><br>
-                  Escolher um tom pinta a barra e <b>não muda o número</b>. O código
-                  embaixo é a cor que vai ao aparelho.
-                </span></span>
-              </div>
+              <div class="sec-rot" data-dica="Sem escolha à mão, a barra fica na cor do número do controle. Escolher um tom pinta a barra e não muda o número">Cor</div>
             </div>
             <div><div class="sec-rot">Brilho</div></div>
             <div>
-              <div class="sec-rot">Jogador
-                <span class="ajuda">?<span class="dica">
-                  <b>Dá</b> o número do jogador a este controle — o das cinco luzinhas
-                  acima do touchpad. O <b>anelzinho</b> de cada botão é a cor do plástico
-                  de quem tem aquele número hoje.<br><br>
-                  <!-- A FRASE PAROU DE NOMEAR CONTROLE — 03/09/2026, a lei de produto.
-                       Ela dizia *"pôr o Starlight Blue no 1 faz o Cosmic Red virar
-                       2"*: os dois nomes do MOCKUP, numa coluna de RÓTULOS que é
-                       uma só para as quatro colunas — não há "este controle" aqui
-                       a que endereçar, e por isso a cura não é endereço, é dizer a
-                       regra em vez do exemplo. Quem nomeia os dois de verdade é a
-                       dica de cada botão da fileira (`um_botao_de_player`), que o
-                       pacote reescreve a cada tique com a mesa viva. -->
-                  Dar um número que já é de outro faz <b>os dois trocarem</b>: ninguém
-                  repete e ninguém fica sem.<br><br>
-                  <!-- O JOGO NÃO MANDA NO NÚMERO — 24/09/2026, A-MIRA-NA-NAVEGACAO-01.
-                       Aqui estava *"Um jogo em co-op pode mandar o próprio
-                       número por cima"*, e a STEAM-NO-FISICO-01 derrubou o fato:
-                       o número que o jogo manda ao controle virtual é RECUSADO
-                       sempre (`backend_pydualsense.numeracao_do_jogo`), e o que
-                       chega por fora é reescrito pela vigia do sequestro
-                       (`escritor_cru.VigiaDoSequestro`) em até um segundo. -->
-                  O número é do Hefesto: se um jogo o trocar, ele <b>volta em até
-                  um segundo</b>.
-                </span></span>
-              </div>
+              <div class="sec-rot" data-dica="Dá o número do jogador a este controle, o das cinco luzinhas. Dar um número que já é de outro faz os dois trocarem. O número é do Hefesto: se um jogo o trocar, ele volta em até um segundo">Jogador</div>
             </div>
             <div><div class="sec-rot">LEDs</div></div>
-            <div><div class="sec-rot">Opções</div></div>
+            <div><div class="sec-rot">Efeito</div></div>
           </div>
 
 {chr(10).join(coluna(c) for c in MESA)}
@@ -1411,7 +1444,19 @@ MIOLO = f'''
 
       </div>
     </div>
-'''
+    <div class="quadro criar" id="criar-luz">
+      <div class="criar-linha">
+        <span class="quadro-titulo" data-dica="O que você criar entra na lista Efeito">Criar efeitos novos</span>
+        <span class="seg-criar" role="group" aria-label="Jeito">{_radios("base", [("respirar", "Respirar"), ("piscar", "Piscar"), ("arco-iris", "Arco-íris")])}</span>
+        <span class="g4-cores" aria-label="Cores">{"".join(_cor_do_efeito(h) for h in CORES_DE_PARTIDA)}<button type="button" class="g4-mais" aria-label="Mais uma cor" data-dica="Mais uma cor">+</button></span>
+        <input type="hidden" data-linha="cores" value="{",".join(CORES_DE_PARTIDA)}">
+        <label class="g4-vel" data-dica="Velocidade do efeito"><span>Ritmo</span><input type="range" min="{RITMO_MINIMO_DA_LUZ}" max="{RITMO_MAXIMO_DA_LUZ}" value="{RITMO_PADRAO_DA_LUZ}" data-linha="ritmo" aria-label="Ritmo do efeito"></label>
+        <input class="nome-criar" type="text" data-linha="nome" maxlength="{TETO_DO_NOME}" placeholder="Nome do efeito" aria-label="Nome do efeito">
+        <button class="btn-criar" type="button" data-gesto="{_pacote04.GESTO_DE_CRIAR_EFEITO}" data-hef-forma="criar-luz" data-dica="Guarda e põe na lista Efeito">Criar</button>
+        <span class="meus" id="seus-efeitos" aria-label="Seus efeitos">{_pacote04.html_dos_efeitos(CENA_DOS_EFEITOS)}</span>
+      </div>
+    </div>
+{SCRIPT_DO_CRIAR}'''
 
 LEGENDA = f'''<div class="nota">
   <div class="nota-troca" data-hef="troca">
@@ -1433,7 +1478,7 @@ _MIOLO_DO_ALVO_HTML = re.compile(
 _COBERTURA_SEM_DONO = {
     "tom": '.luz-grade .ctrl[data-conectado="nao"] .guia',
     "puxador": '.luz-grade .ctrl[data-conectado="nao"] .trilho',
-    "btn": '.luz-grade .ctrl[data-conectado="nao"] .cel-acoes .btn',
+    "g4-efeito": '.luz-grade .ctrl[data-conectado="nao"] .g4-efeito',
     "hex": '.luz-grade .ctrl[data-conectado="nao"] .cel-cor .hex.reenvia{pointer-events:none',
 }
 
@@ -1473,13 +1518,14 @@ def _conferir(doc):
            "uma coluna conectada virou vazia, ou o contrário")
 
     for c in vazios:
-        exigir(f'P{c["jogador"]} <span class="pt">•</span> Desconectado' in corpo,
+        exigir(f'<b>P{c["jogador"]}</b> <span class="pt">•</span> Desconectado' in corpo,
                f"a coluna do P{c['jogador']} não diz Desconectado")
         exigir(c["nome"] not in corpo,
                f"o nome do plástico {c['nome']!r} voltou a uma coluna vazia")
 
     #    as outras. Com os quatro DualSense do usuário na mesa, ela não conseguia
-    grade = corpo.split('<div class="luz-grade">', 1)[-1].split('<div class="rodape"', 1)[0]
+    grade = (corpo.split('<div class="luz-grade">', 1)[-1].split('<div class="rodape"', 1)[0]
+             .split('<div class="quadro criar"', 1)[0])
     #    `luzes`, `desenho-de` e `reenviar-desenho` —, e eles JÁ chegavam aos
     #    `apagar` e `reenviar` — são os do cartão, e são estes que a régua conta.
     gestos_por_lugar = {}
@@ -1572,21 +1618,21 @@ def _conferir(doc):
            "algum desenho da grade não pede o alvo do atributo — sem ele o "
            "pintor escreve o colorway como TEXTO e apaga o desenho, e o lugar "
            "que ganha controle fica com um desenho vestido de nada")
-    colunas = corpo.split('<div class="luz-grade">', 1)[-1]
+    colunas = corpo.split('<div class="luz-grade">', 1)[-1].split('<div class="quadro criar"', 1)[0]
     exigir(colunas.count("data-colorway=") == len(monta_.CONECTADOS),
            "há `data-colorway` fora das colunas conectadas — identidade do "
            "mockup parada num lugar sem aparelho")
 
-    topo = corpo.split('<div class="quadro-topo">', 1)[-1].split("</div>", 1)[0]
-    exigir(topo.count(f'data-gesto="{GESTO_DO_MODO}"') == 2,
-           "o par dos modos saiu da faixa do título — o modo automático e o "
-           "modo personalizado moram no topo da aba (pedido dela de 06/10/2026)")
+    topo = corpo.split('<div class="quadro-topo">', 1)[-1].split('<div class="quadro-corpo">', 1)[0]
+    exigir(topo.count(f'data-gesto="{GESTO_DO_MODO}"') == 1 and 'class="modo-auto"' in topo
+           and 'data-governa=".luz-grade .ctrl"' in topo,
+           "o modo automático saiu da faixa do título, ou voltou o par de botões — ele é UM botão "
+           "com `data-governa` na grade (base comum das abas, 13/10/2026)")
     exigir('class="luz-do-jogo"' not in corpo,
-           "a frase da luz do jogo voltou embaixo das colunas — o par dos modos "
-           "a substituiu (pedido dela de 06/10/2026)")
-    exigir(".quadro-topo .ajuda.esq .dica{left:auto;right:22px}" in doc,
-           "a dica do interruptor voltou a abrir para a direita — ela tem "
-           "330px e o `?` está encostado na borda do quadro")
+           "a frase da luz do jogo voltou embaixo das colunas — o botão do modo a "
+           "substituiu (pedido dela de 06/10/2026)")
+    exigir('class="ajuda' not in corpo and ">?<" not in corpo,
+           "o «?» voltou à tela — as frases moram no `data-dica` (ordem dela de 14/10/2026)")
 
     exigir('data-campo="luz-ressalva"' not in colunas,
            "a linha de ressalva voltou à célula dos LEDs — ela saiu por ordem "
@@ -1670,11 +1716,18 @@ def _conferir(doc):
     exigir(">Automático</button>" not in corpo,
            "o botão `Automático` voltou à célula Opções — ele saiu com a "
            "ordem dela de 07/09/2026, e o gesto saiu no mesmo commit")
-    exigir(corpo.count(">Desligar</button>") == len(MESA),
-           f"a célula Opções não tem um `Desligar` por lugar "
-           f"({corpo.count('>Desligar</button>')} para {len(MESA)}) — ela NÃO "
-           f"citou este botão, e apagar a barra é o único ato que só ele "
-           f"oferece nesta tela")
+    exigir(">Desligar</button>" not in corpo,
+           "o botão «Desligar» voltou — a lista Efeito tem «Sem efeito» no lugar (14/10/2026)")
+    exigir(corpo.count('class="g4-efeito"') == len(MESA)
+           and corpo.count(f'data-gesto="{_pacote04.GESTO_DO_EFEITO}"') == len(MESA),
+           "a célula Efeito não tem uma lista por lugar")
+    exigir(len(re.findall(r'<option value="sem-efeito"', corpo)) == len(MESA)
+           and len(re.findall(r'<option value="luz-fixa" selected', corpo)) == len(MESA),
+           "a lista Efeito não abre em «Luz fixa» com «Sem efeito» ao lado")
+    criar = corpo.split('<div class="quadro criar"', 1)[-1]
+    exigir(f'data-gesto="{_pacote04.GESTO_DE_CRIAR_EFEITO}"' in criar and "Criar efeitos novos" in criar
+           and 'id="seus-efeitos"' in criar,
+           "a linha «Criar efeitos novos» não está inteira (título, botão e a lista dos criados)")
 
     #     `p3: 0 (0)`, `p4: 0 (0)`. Com os quatro DualSense do usuário na mesa, o
     campos_por_lugar = {}
@@ -1707,15 +1760,15 @@ def _conferir(doc):
 
     # 15. A PODA DA FILEIRA — 11/09/2026, ordem de produto: sai o botão que abre outras cores, e saem
     #     um tom de azul, um de rosa e o preto das cores dos 4 controles.
-    os_tres_que_sairam = ("#0080FF", "#FF00FF", "#000000")
-    exigir(tuple(_pacote04.FORA_DA_GUIA) == os_tres_que_sairam,
+    fora = ("#0080FF", "#FF00FF", "#000000", "#80FF00", "#00FF80", "#FFFFFF")
+    exigir(tuple(_pacote04.FORA_DA_GUIA) == fora,
            f"a poda da guia mudou sem esta régua saber: o pacote tira "
-           f"{tuple(_pacote04.FORA_DA_GUIA)} e a ordem dela de 11/09/2026 era "
-           f"{os_tres_que_sairam} — um azul, um rosa e o preto")
-    for h in os_tres_que_sairam:
+           f"{tuple(_pacote04.FORA_DA_GUIA)} e o desenho dela de 14/10/2026 tira {fora} — a guia "
+           f"é UMA fileira com as oito cores de jogador")
+    exigir(len(CRUS_DA_GUIA) == 8, f"a guia tem {len(CRUS_DA_GUIA)} cores, e o desenho tem oito")
+    for h in fora:
         exigir(f'data-hex="{h}"' not in corpo,
-               f"o tom {h} voltou à fileira — ela mandou os três saírem de "
-               f"todos os quatro controles em 11/09/2026")
+               f"o tom {h} voltou à fileira — a guia é só das oito cores de jogador")
     exigir('<input type="color"' not in grade,
            "a casa hachurada do fim da fileira voltou — e o gesto dela morreu "
            "junto em 11/09/2026, então ela seria um clique sem resposta")
@@ -1726,12 +1779,6 @@ def _conferir(doc):
     if falhas:
         raise SystemExit("ERRO em 04-iluminacao — decisão dela desfeita:\n  "
                          + "\n  ".join(f"- {f}" for f in falhas))
-
-
-CSS += monta_.CSS_DO_PAR_DE_MODOS + f"""
-  .quadro[data-modo-da-aba="{monta_.MODO_AUTOMATICO}"] .luz-grade .ctrl > :not(.moldura):not(.ctrl-rot){{
-    opacity:.45;pointer-events:none}}
-"""
 
 
 CSS_DAS_MEDIDAS = f"""
