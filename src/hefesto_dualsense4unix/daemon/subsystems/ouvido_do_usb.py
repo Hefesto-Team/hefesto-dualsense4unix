@@ -10,13 +10,13 @@ o mesmo laço relê a cada :data:`RELEITURA_SEM_NETLINK_S`, e a reenumeração s
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import socket
 import time
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from hefesto_dualsense4unix.daemon.subsystems.identity import _read_boot_id
 from hefesto_dualsense4unix.integrations import diario_do_usb
 from hefesto_dualsense4unix.integrations.censo_do_barramento import Censo, ler_o_barramento
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -40,7 +40,8 @@ def abrir_o_netlink() -> socket.socket | None:
         sock = socket.socket(
             socket.AF_NETLINK, socket.SOCK_RAW | socket.SOCK_NONBLOCK | socket.SOCK_CLOEXEC,
             NETLINK_KOBJECT_UEVENT)
-    except (OSError, AttributeError):
+    except (OSError, AttributeError) as erro:
+        logger.info("ouvido_do_usb_sem_netlink", erro=str(erro))
         return None
     try:
         sock.bind((0, GRUPO_DO_KERNEL))
@@ -100,7 +101,7 @@ class Ouvido:
         self._ler_censo = ler_censo
         self.diario = diario or diario_do_usb.caminho_do_diario()
         self._vistos_em = diario_do_usb.caminho_dos_vistos(self.diario)
-        self.boot_id = diario_do_usb.ler_o_boot_id() if boot_id is None else boot_id
+        self.boot_id = (_read_boot_id() or "") if boot_id is None else boot_id
         self._agora = agora
         self.comparador = diario_do_usb.Comparador(
             boot_id=self.boot_id,
@@ -138,6 +139,15 @@ class Ouvido:
             self._gravar_os_vistos()
         return eventos
 
+    def passo(self, *, mudou: bool) -> None:
+        """Uma volta do laço: relê se o kernel avisou e confere os ausentes; a falha vai ao log."""
+        try:
+            if mudou:
+                self.reler()
+            self.conferir_ausentes()
+        except Exception:
+            logger.warning("ouvido_do_usb_releitura_falhou", exc_info=True)
+
     def parar(self) -> None:
         self._registrar(diario_do_usb.PAROU_DE_OUVIR, {})
 
@@ -172,17 +182,14 @@ async def ouvido_do_usb_loop(
                 if mudou:
                     await asyncio.sleep(acomodar)
                     _drenar(sock)
-            try:
-                if mudou:
-                    await asyncio.to_thread(ouvido.reler)
-                ouvido.conferir_ausentes()
-            except Exception:
-                logger.warning("ouvido_do_usb_releitura_falhou", exc_info=True)
+            await asyncio.to_thread(ouvido.passo, mudou=mudou)
     finally:
         if sock is not None:
             sock.close()
-        with contextlib.suppress(Exception):
+        try:
             ouvido.parar()
+        except Exception:
+            logger.warning("ouvido_do_usb_parar_falhou", exc_info=True)
 
 
 def start_ouvido_do_usb(daemon: Any) -> None:

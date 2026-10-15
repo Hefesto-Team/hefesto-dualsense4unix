@@ -26,7 +26,7 @@ logger = get_logger(__name__)
 NOME_DO_DIARIO = "usb-diario.jsonl"
 NOME_DOS_VISTOS = "usb-vistos.json"
 ENV_DIARIO = "HEFESTO_USB_DIARIO"
-QUEM = "usb"
+QUEM = "cadeia_usb"
 
 ENTROU = "entrou"
 SAIU = "saiu"
@@ -52,9 +52,6 @@ AUSENTE_DEPOIS_DE_S = 60.0
 #: os tipos cuja falta se diz: o que a pessoa não tira e põe a toda hora
 TIPOS_QUE_SE_ESPERAM = frozenset({"Bluetooth", "Wi-Fi", "Hub"})
 MAXIMO_DE_VISTOS = 256
-
-_BOOT_ID = "/proc/sys/kernel/random/boot_id"
-
 
 @dataclass(frozen=True)
 class Foto:
@@ -116,12 +113,8 @@ def fotos_do_censo(censo: Censo) -> dict[str, Foto]:
     return fotos
 
 
-def ler_o_boot_id(caminho: str = _BOOT_ID) -> str:
-    try:
-        with open(caminho, encoding="ascii", errors="replace") as arquivo:
-            return arquivo.read().strip()
-    except OSError:
-        return ""
+#: os campos da :class:`Foto` sem padrão; um visto sem eles não vira aviso
+_OBRIGATORIOS = frozenset({"no", "vid", "pid", "tipo"})
 
 
 def caminho_do_diario() -> Path:
@@ -282,10 +275,9 @@ class Comparador:
             if visto.get("boot_id") == self.boot_id or visto.get("avisado_no_boot") == self.boot_id:
                 continue
             campos = {k: visto[k] for k in Foto.__dataclass_fields__ if k in visto}
-            try:
-                foto = Foto(**campos)
-            except TypeError:
+            if not campos.keys() >= _OBRIGATORIOS:
                 continue
+            foto = Foto(**campos)
             visto["avisado_no_boot"] = self.boot_id
             eventos.append(self._anotar(NAO_APARECEU, foto))
         return eventos
@@ -311,6 +303,5 @@ __all__ = [
     "fotos_do_censo",
     "gravar_os_vistos",
     "ler",
-    "ler_o_boot_id",
     "registrar",
 ]
