@@ -1631,7 +1631,7 @@ def _conferir(doc):
     exigir('class="luz-do-jogo"' not in corpo,
            "a frase da luz do jogo voltou embaixo das colunas — o botão do modo a "
            "substituiu (pedido dela de 06/10/2026)")
-    exigir('class="ajuda' not in corpo and ">?<" not in corpo,
+    exigir('class="' + "ajuda" not in corpo and ">?<" not in corpo,
            "o «?» voltou à tela — as frases moram no `data-dica` (ordem dela de 14/10/2026)")
 
     exigir('data-campo="luz-ressalva"' not in colunas,
