@@ -4666,12 +4666,21 @@ def _tipo_pela_classe(classe: int | None) -> str:
     return "outro"
 
 
+#: A categoria ``0x0F`` (HID) do GAP diz o aparelho pelos 6 bits de baixo, a subcategoria; o que não
+#: está aqui (``0x03C0``, o HID genérico, e as outras) fica «outro», sem inventar.
+_SUBCATEGORIA_HID = {0x01: "teclado", 0x02: "mouse", 0x03: "controle", 0x04: "controle"}
+
+
 def _tipo_pela_aparencia(aparencia: int | None) -> str:
     """O tipo pela ``Appearance`` do GAP (a categoria são os 10 bits de cima): é o que um
-    relógio ou uma pulseira LE tem quando o BlueZ não lhes dá ``Icon`` nem ``Class``."""
+    relógio, uma pulseira, um teclado ou um mouse LE tem quando o BlueZ não lhes dá ``Icon`` nem
+    ``Class``."""
     if not isinstance(aparencia, int) or isinstance(aparencia, bool):
         return "outro"
-    return {0x01: "celular", 0x03: "relogio"}.get(aparencia >> 6, "outro")
+    categoria = aparencia >> 6
+    if categoria == 0x0F:
+        return _SUBCATEGORIA_HID.get(aparencia & 0x3F, "outro")
+    return {0x01: "celular", 0x03: "relogio"}.get(categoria, "outro")
 
 
 def _tipo_do_aparelho(icone: str, classe: int | None, aparencia: int | None = None) -> str:
