@@ -5279,7 +5279,7 @@ check_bluez_backport_version() {
             if _bluez_a_casa_leva_o_5bc6aa79 "${ver}"; then
                 pass "bluez ${ver}${origem} é o backport do Hefesto, que leva a correção 5bc6aa79 do uso-depois-de-liberado do 5.87 (a linha «Leva do upstream» do changelog dele)"
             else
-            warn "bluez ${ver}${origem} >= ${_BZ_TETO} — o 5.87 carrega um uso-depois-de-liberado em dev_disconnected (src/adapter.c: device_is_connected() chamado depois de adapter_remove_connection() liberar o device; commit 5d836f1). A correção 5bc6aa79 está um commit DEPOIS do 5.87 e nenhum lançamento a carregava até 07/08/2026 — se esta versão é o 5.88 ou mais nova, confira se ela já traz o 5bc6aa79 e suba o teto (_BZ_TETO) no doctor.sh. O backport do Hefesto é o 5.87 com o 5bc6aa79$(so_no_checkout "(./install.sh, passo 3f)")."
+                warn "bluez ${ver}${origem} >= ${_BZ_TETO} — o 5.87 carrega um uso-depois-de-liberado em dev_disconnected (src/adapter.c: device_is_connected() chamado depois de adapter_remove_connection() liberar o device; commit 5d836f1). A correção 5bc6aa79 está um commit DEPOIS do 5.87 e nenhum lançamento a carregava até 07/08/2026 — se esta versão é o 5.88 ou mais nova, confira se ela já traz o 5bc6aa79 e suba o teto (_BZ_TETO) no doctor.sh. O backport do Hefesto é o 5.87 com o 5bc6aa79$(so_no_checkout "(./install.sh, passo 3f)")."
             fi
             ;;
         old)
@@ -9265,7 +9265,6 @@ main() {
     check_cmdline_pad_virtual
     hdr "rádio e pareamento (G2)"
     check_bluez_backport_version
-    check_pipewire_cura_do_metadata
     check_bluez_curas_do_backport
     check_bt_agent_service
     check_bt_resilience
@@ -9292,6 +9291,7 @@ main() {
     check_mic_mute_persistido
     check_mic_perfil_sem_sinal
     check_mic_ganho_de_captura
+    check_pipewire_cura_do_metadata
     hdr "Steam Input"
     check_steam_input
     check_steam_input_allowlist

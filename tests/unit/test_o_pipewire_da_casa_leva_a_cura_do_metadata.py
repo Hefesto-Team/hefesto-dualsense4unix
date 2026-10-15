@@ -245,6 +245,15 @@ class TestODoctor:
         saida = _doctor(tmp_path, "", binario=texto)
         assert saida.startswith("[WARN] o PipeWire 1.6.8 não tem a cura"), saida
 
-    def test_o_check_roda_logo_depois_do_bluez(self) -> None:
-        texto = DOCTOR.read_text(encoding="utf-8")
-        assert "    check_bluez_backport_version\n    check_pipewire_cura_do_metadata\n" in texto
+    def test_o_check_roda_no_bloco_do_audio(self) -> None:
+        """A linha do PipeWire sai sob o cabeçalho do som, não sob o do rádio."""
+        linhas = DOCTOR.read_text(encoding="utf-8").splitlines()
+        alvo = "    check_pipewire_cura_do_metadata"
+        chamadas = [n for n, linha in enumerate(linhas) if linha == alvo]
+        assert len(chamadas) == 1, chamadas
+        cabecalhos = [
+            (n, linha.strip())
+            for n, linha in enumerate(linhas)
+            if linha.startswith("    hdr ") and n < chamadas[0]
+        ]
+        assert cabecalhos and cabecalhos[-1][1] == 'hdr "áudio (microfone)"', cabecalhos[-1:]
