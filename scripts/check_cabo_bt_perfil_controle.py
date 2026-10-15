@@ -84,10 +84,6 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "ignorar": "ignora um aparelho — é da máquina",
     "alvo": "escolhe o alvo do exame — é da tela",
     "luz-nao-acende": "declara que a luz não acende — é da máquina",
-    "perfil-do-controle": "declara o Perfil de Desempenho deste controle no "
-                          "`maquina.json` (`controles[uniq].economia`) — é da "
-                          "máquina; o que ele faz no aparelho responde pelas "
-                          "linhas do teto",
     "dono-renomear": "dá nome a quem joga com o controle, na memória dos controles "
                      "— é da máquina",
     "mapear-comecar": "o Mapear Entradas começa a olhar as portas — é da máquina",

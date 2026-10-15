@@ -164,7 +164,7 @@ _CODIGO = re.compile(r"^[A-Z]{1,3}[0-9]{3,5}$")
 SIGLA = frozenset({
     "USB", "BT", "PC", "TV", "ID", "LED", "FPS", "MK", "SDL", "GTK", "IPC",
     "HID", "A2DP", "HFP", "GOG", "GBA", "DKMS", "CPU", "SVG", "CSV", "JSON",
-    "HDMI", "COSMIC",
+    "HDMI", "COSMIC", "LE",
     "PS", "L1", "L2", "L3", "R1", "R2", "R3", "ZL", "ZR", "LB", "RB", "LT", "RT",
 })
 
