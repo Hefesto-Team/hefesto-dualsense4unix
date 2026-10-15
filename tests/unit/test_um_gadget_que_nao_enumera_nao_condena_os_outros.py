@@ -97,7 +97,6 @@ class TestAFalhaDeUmNaoViraAFalhaDeTodos:
         try:
             assert p3.start() and p3._gadget is not None
             mesa.nao_enumera(p3)
-            assert pad_usb.contrato_que_faltou_ao_montar() == []
             # (noqa-acento): chave de máquina
             assert pad_usb.porque_sem_porta(IDENTIDADE_P3) == "nao_enumerou"
 
@@ -106,6 +105,7 @@ class TestAFalhaDeUmNaoViraAFalhaDeTodos:
             mesa.enumerados[mesa.serial(p4)] = ("hidraw9", INTERFACE_DO_GADGET)
             assert mesa.b.esperar(lambda: p4.is_bound)
             assert mesa.eventos("pad_usb_sem_contrato_fica_o_uhid") == 0
+            assert pad_usb.contrato_que_faltou_ao_montar() == []
         finally:
             p3.stop()
             p4.stop()
