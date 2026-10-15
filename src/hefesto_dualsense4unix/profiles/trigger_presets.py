@@ -50,11 +50,6 @@ class _LidaPelosDoisNomes(dict[str, _V]):
         return super().get(NOMES_ANTIGOS_DOS_PRESETS_DE_POSICAO.get(chave, chave), padrao)
 
 
-def chave_de_agora(chave: str) -> str:
-    """O nome de agora de um preset de posição, dado o de agora ou o de antes."""
-    return NOMES_ANTIGOS_DOS_PRESETS_DE_POSICAO.get(chave, chave)
-
-
 # Presets para Feedback por posicao (MultiPositionFeedback)
 
 FEEDBACK_POSITION_PRESETS: dict[str, list[int]] = _LidaPelosDoisNomes({
@@ -122,5 +117,4 @@ __all__ = [  # noqa: RUF022
     "NOMES_ANTIGOS_DOS_PRESETS_DE_POSICAO",
     "VIBRATION_POSITION_PRESETS",
     "VibrationPositionPreset",
-    "chave_de_agora",
 ]
