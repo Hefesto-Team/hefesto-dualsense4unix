@@ -246,6 +246,25 @@ def test_o_pacote_manda_o_gesto_do_modo_e_o_bloco_dos_chips(a05) -> None:
     assert a05.SELETOR_DOS_TOQUES in (pac.get("blocos") or {})
 
 
+def test_o_chip_toca_no_controle_escolhido_na_fita_e_sem_escolha_no_primeiro(a05) -> None:
+    """De um a quatro: o chip não fica preso ao primeiro controle quando outro está escolhido."""
+    import pacotes
+
+    outro = "aa:bb:cc:00:00:02"
+    pacotes.gesto_da_pagina("05-vibracao.html", "criar-efeito")(
+        _ctx(), {"forma": {PADRAO: "batida", "motores": "ambos", "nome": "Pulso"}}, _Ponte())
+    ctx = _ctx()
+    ctx.mesa.append({"pref": "p2", "jogador": 2, "uniq": outro, "nome": "Outro", "via": "BT",
+                     "cor": "cosmic-red"})
+    ctx.conectados.append({"uniq": outro, "connected": True, "transport": "bt", "index": 1,
+                           "player": 2})
+    for escolhido, uniq in (("p2", outro), ("", UNIQ)):
+        ctx.escolhido = escolhido
+        bloco = (pacotes.pacote_da_pagina("05-vibracao.html", ctx) or {})["blocos"][
+            a05.SELETOR_DOS_TOQUES]
+        assert f'data-uniq="{uniq}"' in bloco, (escolhido, bloco)
+
+
 # ---------------------------------------------------------------- a medida, num Chrome headless
 
 

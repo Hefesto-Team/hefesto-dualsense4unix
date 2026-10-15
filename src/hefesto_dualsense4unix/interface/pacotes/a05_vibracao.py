@@ -638,7 +638,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         "colunas": colunas,
         "mesa": {},
         "blocos": {"#vib-estado": estado,
-                   SELETOR_DOS_TOQUES: html_dos_toques(_primeiro_vivo(ctx))},
+                   SELETOR_DOS_TOQUES: html_dos_toques(_controle_dos_chips(ctx))},
         # O MODO DA ABA: o botão «Modo automático» acende pelo modo do perfil.
         GESTO_DO_MODO: modo,
         f"{GESTO_DO_MODO}-automatico": "sim" if modo == MODO_AUTOMATICO else "",
@@ -658,6 +658,17 @@ def _primeiro_vivo(ctx: Contexto) -> str:
         if c.get("uniq"):
             return str(c["uniq"])
     return ""
+
+
+def _controle_dos_chips(ctx: Contexto) -> str:
+    """O `uniq` onde os chips tocam: o controle escolhido na fita, senão o primeiro ligado."""
+    vivos = {str(c.get("uniq") or "") for c in ctx.conectados} - {""}
+    for m in ctx.mesa:
+        if ctx.escolhido and str(m.get("pref") or "") == ctx.escolhido:
+            dele = str(m.get("uniq") or "")
+            if dele in vivos:
+                return dele
+    return _primeiro_vivo(ctx)
 
 
 def html_dos_toques(uniq: str, efeitos: dict[str, Any] | None = None) -> str:
