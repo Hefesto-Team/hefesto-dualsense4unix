@@ -25,6 +25,7 @@ from hefesto_dualsense4unix.profiles.schema import ProfileModeConfig
 from hefesto_dualsense4unix.utils import session
 from tests.unit.test_foco_errante_01_a_janela_da_steam_nao_tira_o_perfil import (
     CLASSE_DO_JOGO,
+    JANELA_DA_NAVEGACAO,
     JANELA_DO_JOGO,
     _bancada,
     _perfil,
@@ -33,6 +34,9 @@ from tests.unit.test_foco_errante_01_a_janela_da_steam_nao_tira_o_perfil import 
 )
 
 JANELA_DO_TERMINAL = {"wm_class": "com.system76.CosmicTerm", "wm_name": "Terminal"}
+
+#: Uma segunda janela com perfil próprio que não é jogo: o navegador.
+JANELA_DO_NAVEGADOR = {"wm_class": "firefox", "wm_name": "Mozilla Firefox"}
 
 
 def _a_montagem(*, prender: bool = True):  # type: ignore[no-untyped-def]
@@ -46,6 +50,8 @@ def _a_montagem(*, prender: bool = True):  # type: ignore[no-untyped-def]
         jogo,
         _perfil("lure", janela="steam_app_1599660", prioridade=80),
         _perfil("fliperama", janela="retroarch", prioridade=40),
+        _perfil("navegacao", janela=JANELA_DA_NAVEGACAO["wm_class"], prioridade=50),
+        _perfil("navegador", janela=JANELA_DO_NAVEGADOR["wm_class"], prioridade=45),
     ])
     session.gravar_a_escolha("lure")
     session.lembrar_o_ultimo_jogo("sackboy")
@@ -60,10 +66,12 @@ def _a_montagem(*, prender: bool = True):  # type: ignore[no-untyped-def]
     return manager, store, sw
 
 
-def _terminal(sw, de: float, ate: float) -> None:  # type: ignore[no-untyped-def]
+def _terminal(  # type: ignore[no-untyped-def]
+    sw, de: float, ate: float, janela: dict[str, str] | None = None
+) -> None:
     t = de
     while t <= ate:
-        sw._tick(dict(JANELA_DO_TERMINAL), t)
+        sw._tick(dict(janela or JANELA_DO_TERMINAL), t)
         t += 0.5
 
 
@@ -133,6 +141,35 @@ def test_o_ajuste_de_aba_nao_prende_e_o_autoswitch_segue_trocando() -> None:
     _terminal(sw, 2.0, 2.0 + 13.0)
     assert store.active_profile != "fliperama", "o ajuste de aba prendeu o autoswitch"
     assert store.active_profile in {"lure", "sackboy"}
+
+
+@pytest.mark.usefixtures("perfis_isolados")
+def test_depois_do_ajuste_de_aba_a_janela_com_perfil_troca() -> None:
+    """Parte 3: depois de um ajuste numa aba, o Kodi e o navegador em foco trocam o perfil.
+
+    MORDIDA: arme a trava em todo reaplicar (``elif reaplicacao:`` sem o ``and prender``) e o
+    Kodi em foco não tira o «fliperama».
+    """
+    _manager, store, sw = _a_montagem(prender=False)
+    _terminal(sw, 2.0, 6.0, JANELA_DA_NAVEGACAO)
+    assert store.active_profile == "navegacao", "o Kodi em foco não trocou depois do ajuste"
+    _terminal(sw, 6.5, 10.0, JANELA_DO_NAVEGADOR)
+    assert store.active_profile == "navegador", "o navegador em foco não trocou depois do ajuste"
+
+
+@pytest.mark.usefixtures("perfis_isolados")
+def test_depois_do_aplicar_a_janela_que_nao_e_jogo_nao_tira_o_perfil() -> None:
+    """D-1410-O-APLICAR-SEGURA: o «Aplicar» segura até o próximo gesto ou outro jogo.
+
+    O Kodi e o navegador têm perfil, mas não são jogo: em foco, não passam por cima do que ela
+    aplicou. É o outro lado da régua do ajuste de aba. MORDIDA: troque o
+    ``elif reaplicacao and prender`` do ``_ativar`` por ``elif False`` e o Kodi tira o «fliperama».
+    """
+    _manager, store, sw = _a_montagem(prender=True)
+    _terminal(sw, 2.0, 20.0, JANELA_DA_NAVEGACAO)
+    assert store.active_profile == "fliperama", "o Kodi passou por cima do «Aplicar»"
+    _terminal(sw, 20.5, 40.0, JANELA_DO_NAVEGADOR)
+    assert store.active_profile == "fliperama", "o navegador passou por cima do «Aplicar»"
 
 
 class _PonteQueAnota:
@@ -215,22 +252,23 @@ def test_o_reaplicar_do_ajuste_de_aba_nao_prende(monkeypatch: pytest.MonkeyPatch
 
 
 def test_so_o_rodape_e_o_voltar_a_de_ontem_pedem_a_trava() -> None:
-    """Dono único da distinção: nenhum outro chamador do ``src/`` passa ``prender=True``.
+    """Dono único da distinção: só os gestos da lista falam ``prender`` no ``src/``.
 
     Um terceiro gesto que prenda sem estar na lista é a distinção que escorre; é decisão de produto
-    quais gestos prendem (parte 3 da D-1410-O-APLICAR-SEGURA). MORDIDA: ponha ``prender=True``
-    num `profile_reaplicar` de outra aba e esta régua nomeia o arquivo.
+    quais gestos prendem (parte 3 da D-1410-O-APLICAR-SEGURA). A varredura pega o argumento
+    ``prender`` não falso em QUALQUER chamada (``profile_reaplicar``, ``chamar``, ``resultado``)
+    e a chave ``"prender"`` escrita à mão no corpo do IPC. MORDIDA: ponha ``prender=True`` num
+    `profile_reaplicar` de outra aba, ou ``p.chamar("profile.reaplicar", name=n, prender=True)``,
+    e esta régua nomeia o arquivo.
     """
     raiz = pathlib.Path(__file__).resolve().parents[2] / "src" / "hefesto_dualsense4unix"
     quem: set[str] = set()
     for arquivo in raiz.rglob("*.py"):
         arvore = ast.parse(arquivo.read_text(encoding="utf-8"))
         for no in ast.walk(arvore):
+            if isinstance(no, ast.Constant) and no.value == "prender":
+                quem.add(arquivo.relative_to(raiz).as_posix())
             if not isinstance(no, ast.Call):
-                continue
-            f = no.func
-            nome = f.attr if isinstance(f, ast.Attribute) else getattr(f, "id", "")
-            if nome not in {"profile_reaplicar", "reaplicar"}:
                 continue
             for kw in no.keywords:
                 if kw.arg == "prender" and not (
@@ -240,5 +278,7 @@ def test_so_o_rodape_e_o_voltar_a_de_ontem_pedem_a_trava() -> None:
     assert quem == {
         "interface/pacotes/rodape.py",
         "interface/pacotes/a10_perfis.py",
+        "interface/pacotes/ponte.py",
         "daemon/ipc_handlers.py",
+        "profiles/manager.py",
     }, quem
