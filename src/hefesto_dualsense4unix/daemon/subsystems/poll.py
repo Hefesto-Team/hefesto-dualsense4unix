@@ -1,6 +1,7 @@
 """Subsystem de poll loop — leitura de estado do controle e publicação de eventos."""
 from __future__ import annotations
 
+from hefesto_dualsense4unix.integrations.bluez_dbus import observar_o_gesto_da_vaga
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -72,6 +73,7 @@ def observar_os_atalhos(
     if gerente is None:
         return None
     maos = botoes_de_cada_controle(daemon, buttons_pressed)
+    observar_o_gesto_da_vaga(maos)
     resultado: str | None = None
     for quem, botoes in maos.items():
         disparou: str | None = gerente.observe(botoes, now=now, de=quem)

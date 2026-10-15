@@ -66,6 +66,32 @@ AVISO_DESLIGOU = "desligou"
 AVISO_SAIU_PAREADO = "saiu_pareado"
 Ouvinte = Callable[[str, Mapping[str, Any]], None]
 
+#: Por que o enlace caiu: o ``Device1.Disconnected(nome, mensagem)``, que o
+#: bluetoothd emite logo ANTES do ``Connected`` virar falso (``device.c``,
+#: ``device_remove_connection``, na tag 5.86). O kernel junta o «encerrado pelo
+#: outro lado», o «pouco recurso» e o «desligou» do HCI num ``Remote`` só.
+RAZAO_TIMEOUT = "org.bluez.Reason.Timeout"
+RAZAO_DAQUI = "org.bluez.Reason.Local"
+RAZAO_DO_CONTROLE = "org.bluez.Reason.Remote"
+RAZAO_SUSPENSAO = "org.bluez.Reason.Suspend"
+
+#: Como o controle saiu, no aviso :data:`AVISO_DESLIGOU` (``saida``).
+SAIDA_OUTRO_APARELHO = "foi_para_outro_aparelho"
+SAIDA_CAIU = "caiu"
+SAIDA_O_CONTROLE_ENCERROU = "o_controle_encerrou"
+SAIDA_DAQUI = "desligado_daqui"
+SAIDA_SEM_RAZAO = "sem_razao"
+
+FRASE_OUTRO_APARELHO = "O controle foi para outro aparelho"
+
+#: O DualSense guarda até quatro aparelhos (o firmware de 17/09/2025) e troca
+#: de vaga com o PS e um botão de face segurados: 3 s para trocar, 5 s para
+#: registrar um aparelho novo. 2 s segurados já separam o gesto de um atalho, e
+#: o enlace cai em até 3 s depois do último tique em que ele valia.
+BOTOES_DA_VAGA = frozenset({"cross", "circle", "square", "triangle"})
+SEGURADO_DA_VAGA_S = 2.0
+JANELA_DA_VAGA_S = 3.0
+
 #: ``apelido_do_dongle`` e ``gesto_de_reconexao`` repetiam, cada um no seu.
 ESPERA_DO_BUSCTL_S = 5.0
 
@@ -891,6 +917,7 @@ LEITURAS = (
     "conferir_os_lugares",
     "dono_do_bluez",
     "entrada",
+    "como_saiu",
 )
 CICLO = ("ligar", "fechar", "ouvir")
 
@@ -990,6 +1017,7 @@ class Sinal:
     invalidadas: tuple[str, ...] = ()
     interfaces_que_sairam: tuple[str, ...] = ()
     dono_novo: str = ""
+    razao: str = ""
 
 
 class Barramento(Protocol):
@@ -1191,6 +1219,8 @@ class BarramentoGio:
                     )
                 elif nome == "NameOwnerChanged" and valores[0] == SERVICO:
                     ao_sinal(Sinal("dono", dono_novo=valores[2]))
+                elif nome == "Disconnected":
+                    ao_sinal(Sinal("desconectou", caminho=caminho, razao=str(valores[0])))
             except Exception:
                 _registrar("bluez_sinal_nao_entendido", nivel="warning")
 
@@ -1219,6 +1249,9 @@ class BarramentoGio:
                     SERVICO,
                     nenhum,
                     chegou,
+                ),
+                conexao.signal_subscribe(
+                    SERVICO, APARELHO, "Disconnected", None, None, nenhum, chegou
                 ),
             ]
             return True
@@ -1338,6 +1371,72 @@ class BarramentoGio:
             self._fio.join(timeout=2.0)
 
 
+class VigiaDaVaga:
+    """O gesto da troca de vaga, por controle: o PS e UM botão de face segurados."""
+
+    def __init__(self, relogio: Callable[[], float] = time.monotonic) -> None:
+        self._relogio = relogio
+        self._tranca = threading.Lock()
+        self._desde: dict[str, tuple[str, float]] = {}
+        self._valeu_em: dict[str, float] = {}
+
+    @staticmethod
+    def _botao_da_vaga(botoes: object) -> str | None:
+        apertados = frozenset(botoes) if isinstance(botoes, (set, frozenset, list, tuple)) else ()
+        faces = BOTOES_DA_VAGA.intersection(apertados)
+        return next(iter(faces)) if "ps" in apertados and len(faces) == 1 else None
+
+    def observar(self, maos: Mapping[str | None, object]) -> None:
+        """Os botões deste tique, ``{endereço: botões}`` (os atalhos do PS os leem)."""
+        agora = self._relogio()
+        with self._tranca:
+            for quem, botoes in maos.items():
+                if not isinstance(quem, str) or not quem:
+                    continue
+                endereco = quem.strip().lower()
+                botao = self._botao_da_vaga(botoes)
+                if botao is None:
+                    self._desde.pop(endereco, None)
+                    continue
+                antes = self._desde.get(endereco)
+                if antes is None or antes[0] != botao:
+                    self._desde[endereco] = (botao, agora)
+                elif agora - antes[1] >= SEGURADO_DA_VAGA_S:
+                    self._valeu_em[endereco] = agora
+
+    def tomar(self, endereco: str) -> bool:
+        """O gesto valeu há pouco neste controle? Pergunta de uma vez só: ele se gasta."""
+        agora = self._relogio()
+        with self._tranca:
+            self._desde.pop(endereco, None)
+            valeu_em = self._valeu_em.pop(endereco, None)
+        return valeu_em is not None and agora - valeu_em <= JANELA_DA_VAGA_S
+
+
+_VAGA = VigiaDaVaga()
+
+
+def observar_o_gesto_da_vaga(maos: Mapping[str | None, object]) -> None:
+    """O laço do daemon entrega a cada tique os botões de cada controle. Nunca levanta."""
+    try:
+        _VAGA.observar(maos)
+    except Exception:
+        _registrar("bluez_vaga_nao_entendida", nivel="warning")
+
+
+def a_saida(razao: str, *, gesto_da_vaga: bool) -> str:
+    """Como o controle saiu, pela razão do BlueZ e pelo gesto segurado antes dela."""
+    if razao in (RAZAO_DAQUI, RAZAO_SUSPENSAO):
+        return SAIDA_DAQUI
+    if gesto_da_vaga:
+        return SAIDA_OUTRO_APARELHO
+    if razao == RAZAO_TIMEOUT:
+        return SAIDA_CAIU
+    if razao == RAZAO_DO_CONTROLE:
+        return SAIDA_O_CONTROLE_ENCERROU
+    return SAIDA_SEM_RAZAO
+
+
 class DonoVivo(LeitorDoBluez):
     """O dono de verdade: a foto do ``ObjectManager``, mantida pelos sinais."""
 
@@ -1349,8 +1448,12 @@ class DonoVivo(LeitorDoBluez):
         *,
         kernel: Callable[[], Mapping[str, str] | None] | None = None,
         lugares: Callable[[], Mapping[str, str]] | None = None,
+        vaga: VigiaDaVaga | None = None,
     ) -> None:
         self._barramento = barramento
+        self._vaga = vaga or _VAGA
+        self._razoes: dict[str, str] = {}
+        self._saidas: dict[str, str] = {}
         self.toca_o_sistema = bool(getattr(barramento, "e_do_sistema", False))
         self._kernel = kernel
         self._lugares_de = lugares
@@ -1449,7 +1552,10 @@ class DonoVivo(LeitorDoBluez):
                 objeto[interface] = dict(propriedades)
             if APARELHO in (sinal.propriedades or {}):
                 self._entradas[sinal.caminho] = self._entradas.get(sinal.caminho, 0) + 1
+        elif sinal.tipo == "desconectou":
+            self._razoes[sinal.caminho] = sinal.razao
         elif sinal.tipo == "saiu":
+            self._razoes.pop(sinal.caminho, None)
             restante = self._objetos.get(sinal.caminho)
             if restante is not None:
                 antes = dict(restante.get(APARELHO) or {})
@@ -1471,8 +1577,29 @@ class DonoVivo(LeitorDoBluez):
             if (sinal.interface == APARELHO and estava is True
                     and como_booleano(propriedades.get("Connected")) is False
                     and como_booleano(propriedades.get("Paired")) is True):
-                avisos.append((AVISO_DESLIGOU, self._de_quem(sinal.caminho)))
+                avisos.append((AVISO_DESLIGOU, self._como_saiu(sinal.caminho)))
         return avisos
+
+    def _como_saiu(self, caminho: str) -> dict[str, Any]:
+        """O aviso da queda, com a razão do BlueZ e o gesto da vaga. Com a tranca na mão."""
+        quem = self._de_quem(caminho)
+        razao = self._razoes.pop(caminho, "")
+        saida = a_saida(razao, gesto_da_vaga=self._vaga.tomar(quem["aparelho"]))
+        self._saidas[quem["aparelho"]] = saida
+        _registrar(
+            "bluez_controle_saiu",
+            saida=saida,
+            razao=razao,
+            hci=_hci_de(caminho.rsplit("/dev_", 1)[0]),
+        )
+        if saida == SAIDA_OUTRO_APARELHO:
+            return {**quem, "razao": razao, "saida": saida, "frase": FRASE_OUTRO_APARELHO}
+        return {**quem, "razao": razao, "saida": saida}
+
+    def como_saiu(self, endereco: str) -> str | None:
+        """A última saída deste controle (``SAIDA_*``); ``None`` se não saiu desde a foto."""
+        with self._tranca:
+            return self._saidas.get(endereco.strip().lower())
 
     def _de_quem(self, caminho: str) -> dict[str, Any]:
         """O aparelho e o adaptador de um caminho, pela foto. Com a tranca na mão."""
@@ -1650,6 +1777,7 @@ __all__ = [
     "ADAPTADOR",
     "AGENTE",
     "APARELHO",
+    "BOTOES_DA_VAGA",
     "CICLO",
     "ERRO_CANCELADO",
     "ERRO_JA_EXISTE",
@@ -1660,14 +1788,26 @@ __all__ = [
     "ESPERA_DO_CONNECT_S",
     "ESPERA_DO_PAIR_S",
     "FERRAMENTA",
+    "FRASE_OUTRO_APARELHO",
     "GERENTE_DE_AGENTES",
+    "JANELA_DA_VAGA_S",
     "LEITURAS",
     "METODOS_SEM_TRAVA",
     "MUDOU_DE_LUGAR",
     "QUEM_PADRAO",
     "RADIO_DE_VERDADE_NA_SUITE",
     "RAIZ_DO_BLUEZ",
+    "RAZAO_DAQUI",
+    "RAZAO_DO_CONTROLE",
+    "RAZAO_SUSPENSAO",
+    "RAZAO_TIMEOUT",
     "RECUSA_DA_SUITE",
+    "SAIDA_CAIU",
+    "SAIDA_DAQUI",
+    "SAIDA_OUTRO_APARELHO",
+    "SAIDA_O_CONTROLE_ENCERROU",
+    "SAIDA_SEM_RAZAO",
+    "SEGURADO_DA_VAGA_S",
     "SEM_AGENTE",
     "SEM_BARRAMENTO",
     "SERVICO",
@@ -1683,6 +1823,8 @@ __all__ = [
     "PeloBusctl",
     "RecusaNoBarramento",
     "Sinal",
+    "VigiaDaVaga",
+    "a_saida",
     "a_suite_esta_rodando",
     "busctl",
     "como_booleano",
@@ -1693,6 +1835,7 @@ __all__ = [
     "lugar_de",
     "lugares_dos_adaptadores",
     "na_trava",
+    "observar_o_gesto_da_vaga",
     "pela_linha_de_comando",
     "pelo_executor",
     "perceber_as_mudancas",
