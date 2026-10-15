@@ -34,21 +34,3 @@ seção daqui**: a aba deixou de estar em trabalho.
   sempre as três Entradas continuam em 2; uma Entrada que varre (teto 849) com dois controles cai para 1. A página do
   produto continua em «N/2» até publicar, e o limite do produto só segue a capacidade quando a bancada ligar o
   `radio_da_mesa.N_MAX_PELA_CAPACIDADE`.
-
-## 08-conexoes.html
-- **13/10/2026** — o aparelho de baixa energia que não diz o tipo ganha a categoria «Acessório» (glifo, palavra,
-  legenda e cor próprios), a faixa dele são os 40 canais de baixa energia «não medidos» com os três de anúncio
-  marcados, e o ponto diz o sinal em dBm sem julgar (sprint O-ACESSORIO-SEM-TIPO-GANHA-CATEGORIA-E-SINAL-NA-CONEXOES-01,
-  a opção 1 escolhida em 09/10/2026). Na cena do desenho o acessório ocupa a linha do relógio; o relógio continua na
-  legenda. As cores de cada tipo passam a tokens da raiz (`--c-<tipo>`, `--sala-<tipo>`), que um tema de cores
-  alcança (sprint O-TEMA-DE-CORES-ENTRA-PELA-FOLHA-DE-USUARIO-01), com os mesmos valores de antes. Até publicar, o
-  produto roda o pacote novo sobre a página de antes, que não define `--sala-<tipo>` nem `--c-acessorio` nem a
-  textura do «não medido»: os ícones da sala ficam sem a cor do tipo, e a linha do acessório mostra o nome e o
-  sinal, sem o glifo e com a faixa sem cor. A 08 se publica no mesmo fecho que leva o código.
-
-## calibrar-sensores.html
-- **15/10/2026** — a janela perde o liga «Giroscópio como analógico» e os lados «Esquerdo | Direito» de cada coluna
-  (sprint CADA-FEATURE-TEM-UM-DONO-SO-NA-INTERFACE-01; o desenho final de 14/10 não os tem): o analógico virtual
-  se liga e escolhe o lado só na aba Controles, e a Calibrar fica com os ajustes finos. Até publicar, o produto roda
-  o pacote novo sobre a página de antes: os botões de lá ficam sem quem os atenda e sem a cor que o pacote pintava.
-  A Calibrar se publica no mesmo fecho que leva o código.
