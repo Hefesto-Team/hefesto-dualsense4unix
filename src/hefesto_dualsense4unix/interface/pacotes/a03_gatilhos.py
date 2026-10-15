@@ -670,10 +670,6 @@ def _imersao_que_casa(
         return SEM_IMERSAO
     if cru is not None and not cru[1]:
         return SEM_IMERSAO  # sem ajuste nenhum no perfil antigo: nada que o campo afirme
-    if cru is not None and cru[0] != modo and specs.get_spec(cru[0]) is not None \
-            and cru[1] == _padroes(cru[0]):
-        # Os padrões do modo antigo (`Rigid` 5/200…) traduzidos não são números próprios.
-        return SEM_IMERSAO
     return ""
 
 

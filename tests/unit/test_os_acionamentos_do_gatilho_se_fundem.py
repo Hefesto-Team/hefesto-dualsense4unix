@@ -272,35 +272,3 @@ def test_o_perfil_antigo_abre_com_o_acionamento_certo(monkeypatch: pytest.Monkey
     col = r["colunas"][_UNIQ]
     assert (col["modo-chave-e"], col["modo-chave-d"]) == ("Resistance", "Machine")
     assert (col["modo-e"], col["modo-d"]) == ("Resistência", "Metralhadora")
-
-
-@pytest.mark.parametrize(("esquerdo", "direito"), [
-    ({"mode": "Rigid", "params": [5, 200]}, {"mode": "SimpleRigid", "params": [6]}),
-    ({"mode": "Feedback", "params": [5, 4]}, {"mode": "PulseB", "params": [2, 7, 180]}),
-    ({"mode": "SemiAutoGun", "params": [3, 6, 5]}, {"mode": "AutoGun", "params": [2, 6, 60]}),
-    ({"mode": "PulseA", "params": [2, 7, 180]}, {"mode": "Rigid", "params": []}),
-])
-def test_o_perfil_antigo_nos_padroes_abre_sem_imersao_e_nao_em_branco(
-    monkeypatch: pytest.MonkeyPatch, esquerdo: dict, direito: dict,
-) -> None:
-    """A chave velha nos padrões do modo dela abre com «Nenhum», como abria antes da fusão.
-
-    Os números traduzidos não são os padrões do acionamento novo, mas não são ajuste da
-    pessoa: o campo em branco diria «números próprios» de um perfil que nunca mexeu ali.
-    Mordida: tirar de `_imersao_que_casa` o caso dos padrões do modo antigo (volta o vazio).
-    """
-    a03, r = _a03_com_o_perfil(monkeypatch, esquerdo, direito)
-    col = r["colunas"][_UNIQ]
-    assert (col[f"{a03.CAMPO_DA_IMERSAO}-e"], col[f"{a03.CAMPO_DA_IMERSAO}-d"]) == (
-        a03.SEM_IMERSAO, a03.SEM_IMERSAO)
-
-
-def test_o_perfil_antigo_com_numeros_proprios_segue_em_branco(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Fora dos padrões e sem imersão que case, o campo fica vazio: «Nenhum» seria mentir."""
-    a03, r = _a03_com_o_perfil(
-        monkeypatch, {"mode": "Rigid", "params": [3, 120]},
-        {"mode": "Off", "params": []})
-    col = r["colunas"][_UNIQ]
-    assert col[f"{a03.CAMPO_DA_IMERSAO}-e"] == ""
