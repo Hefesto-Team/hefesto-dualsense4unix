@@ -72,8 +72,8 @@ DICA_DO_AUTOMATICO = "O jogo manda; o estilo do perfil ajusta"
 CENA = {
     "p1": {"e": ("Machine", "rajada-que-sobe-sozinha"),
            "d": ("Bow", "corda-que-treme-no-fim")},
-    "p2": {"e": ("SemiAutoGun", "ferrolho-que-volta"),
-           "d": ("Rigid", SEM_IMERSAO)},
+    "p2": {"e": ("Weapon", "ferrolho-que-volta"),
+           "d": ("Resistance", SEM_IMERSAO)},
     "p3": {"e": None, "d": None},
     "p4": {"e": None, "d": None},
 }
@@ -312,7 +312,7 @@ def _barra(chave, rotulo, de, ate, valor, unidade):
 
 def _partir():
     ops = "".join(
-        f'<option value="{p.name}"{" selected" if p.name == "Rigid" else ""}>'
+        f'<option value="{p.name}"{" selected" if p.name == "Resistance" else ""}>'
         f'{p.label}</option>'
         for p in PRESETS if p.name not in ("Off", *SEM_NA_LISTA))
     return ('<select class="g2-partir" data-linha="partir" aria-label="Partir de" '

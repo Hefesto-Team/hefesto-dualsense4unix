@@ -116,17 +116,17 @@ def test_o_modo_aplicado_continua_no_campo_no_tique_seguinte(a03):
 
     A MORDIDA: apague a linha `_do_rascunho(uniq, disco) or` do `cfgs` em
     `pacote()` — ou chame `esquecer_o_rascunho()` entre o gesto e a leitura — e
-    o campo volta a dizer `Off` sobre um gatilho que está em `Rigid`.
+    o campo volta a dizer `Off` sobre um gatilho que está em `Resistance`.
     """
     ctx = _ctx(modo_no_disco="Off")
     antes = a03.pacote(ctx)["colunas"][UNIQ]["modo-chave-e"]
     assert antes == "Off", "o cenário partiu do lugar errado"
 
     _clicar.ctx = ctx  # type: ignore[attr-defined]
-    _clicar("modo", {"lado": "e", "valor": "Rigid"}, _Ponte())
+    _clicar("modo", {"lado": "e", "valor": "Resistance"}, _Ponte())
 
     depois = a03.pacote(ctx)["colunas"][UNIQ]["modo-chave-e"]
-    assert depois == "Rigid", (
+    assert depois == "Resistance", (
         f"o campo voltou para {depois!r} meio segundo depois do clique. É a "
         f"queixa dela: a escolha não fica.")
 
@@ -142,8 +142,8 @@ def test_trocar_de_perfil_esquece_o_que_foi_aplicado(a03):
     """
     ctx = _ctx(perfil_ativo="ação", modo_no_disco="Off")
     _clicar.ctx = ctx  # type: ignore[attr-defined]
-    _clicar("modo", {"lado": "e", "valor": "Rigid"}, _Ponte())
-    assert a03.pacote(ctx)["colunas"][UNIQ]["modo-chave-e"] == "Rigid"
+    _clicar("modo", {"lado": "e", "valor": "Resistance"}, _Ponte())
+    assert a03.pacote(ctx)["colunas"][UNIQ]["modo-chave-e"] == "Resistance"
 
     outro = _ctx(perfil_ativo="corrida", modo_no_disco="Off")
     assert a03.pacote(outro)["colunas"][UNIQ]["modo-chave-e"] == "Off", (
@@ -157,7 +157,7 @@ def test_o_controle_que_sai_da_mesa_leva_o_rascunho(a03):
 
     ctx = _ctx(modo_no_disco="Off")
     _clicar.ctx = ctx  # type: ignore[attr-defined]
-    _clicar("modo", {"lado": "e", "valor": "Rigid"}, _Ponte())
+    _clicar("modo", {"lado": "e", "valor": "Resistance"}, _Ponte())
 
     a03.pacote(Contexto(state={"active_profile": "régua"}, mesa=MESA,
                         conectados=[], estados={}))
@@ -172,7 +172,7 @@ def test_o_rascunho_so_recebe_o_que_o_daemon_aceitou(a03):
     _clicar.ctx = ctx  # type: ignore[attr-defined]
     guardado = {"status": "ok", "aplicado_em": [], "guardado_em": [UNIQ]}
     with pytest.raises(RuntimeError):
-        _clicar("modo", {"lado": "e", "valor": "Rigid"}, _Ponte(guardado))
+        _clicar("modo", {"lado": "e", "valor": "Resistance"}, _Ponte(guardado))
     assert a03.pacote(ctx)["colunas"][UNIQ]["modo-chave-e"] == "Off", (
         "o rascunho ficou com um efeito que o daemon GUARDOU sem mandar ao fio")
 
@@ -204,7 +204,7 @@ def test_o_que_nao_chegou_ao_gatilho_e_dito(a03, corpo, pedaco):
     ctx = _ctx(modo_no_disco="Off")
     _clicar.ctx = ctx  # type: ignore[attr-defined]
     with pytest.raises(RuntimeError) as erro:
-        _clicar("modo", {"lado": "e", "valor": "Rigid"}, _Ponte(corpo))
+        _clicar("modo", {"lado": "e", "valor": "Resistance"}, _Ponte(corpo))
     assert pedaco in str(erro.value), (
         f"a frase não diz o que aconteceu: {erro.value!r}")
     assert a03.NOME_DO_LADO["left"] in str(erro.value), (
@@ -217,7 +217,7 @@ def test_o_que_chegou_ao_gatilho_nao_vira_recusa(a03):
     """A mordida gêmea: a cura não pode avançar longe demais."""
     ctx = _ctx(modo_no_disco="Off")
     _clicar.ctx = ctx  # type: ignore[attr-defined]
-    _clicar("modo", {"lado": "e", "valor": "Rigid"}, _Ponte())
+    _clicar("modo", {"lado": "e", "valor": "Resistance"}, _Ponte())
 
 
 def test_a_ponte_sem_corpo_continua_calada(a03):
@@ -231,7 +231,7 @@ def test_a_ponte_sem_corpo_continua_calada(a03):
 
     ctx = _ctx(modo_no_disco="Off")
     _clicar.ctx = ctx  # type: ignore[attr-defined]
-    _clicar("modo", {"lado": "e", "valor": "Rigid"}, _Muda())
+    _clicar("modo", {"lado": "e", "valor": "Resistance"}, _Muda())
 
 
 def test_o_ctx_nao_troca_simbolo_de_modulo() -> None:
@@ -239,13 +239,13 @@ def test_o_ctx_nao_troca_simbolo_de_modulo() -> None:
     from pacotes import perfil
 
     antes = perfil.ativo
-    _ctx(modo_no_disco="Rigid")
+    _ctx(modo_no_disco="Resistance")
     assert perfil.ativo is antes, (
         "`_ctx()` trocou `perfil.ativo` por atribuição crua. Foi assim que este "
         "arquivo envenenou a suíte até 05/09/2026: o dublê ficava no módulo e o "
         "casamento da aba 03 caía de 19 para 15 endereços no arquivo seguinte, "
         "acusando uma regressão que não existia.")
-    assert perfil.ativo("qualquer")["triggers"]["left"]["mode"] == "Rigid", (
+    assert perfil.ativo("qualquer")["triggers"]["left"]["mode"] == "Resistance", (
         "a cena escrita por `_ctx()` não chega ao dublê — a troca virou pura e "
         "o caminho do dado se perdeu junto")
 

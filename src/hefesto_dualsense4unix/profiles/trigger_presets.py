@@ -19,64 +19,98 @@ Uso tipico:
 """
 from __future__ import annotations
 
-from typing import Literal
+from typing import Literal, TypeVar
+
+#: Os nomes de antes de 15/10/2026 → os de agora. A chave guardada no perfil, no
+#: desenho ou numa conversa é lida pelos DOIS nomes (as tabelas abaixo respondem a
+#: ambos), e só os novos aparecem ao listar.
+NOMES_ANTIGOS_DOS_PRESETS_DE_POSICAO: dict[str, str] = {
+    "stop_hard": "parede_no_fim",
+    "stop_macio": "parede_macia",
+    "machine_gun": "vibra_em_degraus",
+    "galope": "duas_ondas_no_curso",
+    "senoide": "sobe_e_desce",
+    "vibracao_final": "vibra_no_fim",
+}
+
+_V = TypeVar("_V")
+
+
+class _LidaPelosDoisNomes(dict[str, _V]):
+    """Um `dict` que lista só os nomes de agora e responde também aos de antes."""
+
+    def __getitem__(self, chave: str) -> _V:
+        return super().__getitem__(NOMES_ANTIGOS_DOS_PRESETS_DE_POSICAO.get(chave, chave))
+
+    def __contains__(self, chave: object) -> bool:
+        return super().__contains__(
+            NOMES_ANTIGOS_DOS_PRESETS_DE_POSICAO.get(str(chave), chave))
+
+    def get(self, chave: str, padrao: _V | None = None) -> _V | None:  # type: ignore[override]
+        return super().get(NOMES_ANTIGOS_DOS_PRESETS_DE_POSICAO.get(chave, chave), padrao)
+
+
+def chave_de_agora(chave: str) -> str:
+    """O nome de agora de um preset de posição, dado o de agora ou o de antes."""
+    return NOMES_ANTIGOS_DOS_PRESETS_DE_POSICAO.get(chave, chave)
+
 
 # Presets para Feedback por posicao (MultiPositionFeedback)
 
-FEEDBACK_POSITION_PRESETS: dict[str, list[int]] = {
+FEEDBACK_POSITION_PRESETS: dict[str, list[int]] = _LidaPelosDoisNomes({
     "rampa_crescente":   [0, 1, 2, 3, 4, 5, 6, 7, 8, 8],
     "rampa_decrescente": [8, 7, 6, 5, 4, 3, 2, 1, 0, 0],
     "plateau_central":   [0, 2, 4, 6, 8, 8, 6, 4, 2, 0],
-    "stop_hard":         [0, 0, 0, 0, 0, 0, 8, 8, 8, 8],
-    "stop_macio":        [0, 1, 2, 4, 6, 7, 8, 8, 8, 8],
+    "parede_no_fim":     [0, 0, 0, 0, 0, 0, 8, 8, 8, 8],
+    "parede_macia":      [0, 1, 2, 4, 6, 7, 8, 8, 8, 8],
     "linear_medio":      [4, 4, 4, 4, 4, 4, 4, 4, 4, 4],
-}
+})
 
 
-VIBRATION_POSITION_PRESETS: dict[str, list[int]] = {
+VIBRATION_POSITION_PRESETS: dict[str, list[int]] = _LidaPelosDoisNomes({
     "pulso_crescente": [0, 0, 1, 2, 4, 5, 6, 7, 8, 8],
-    "machine_gun":     [0, 8, 0, 8, 0, 8, 0, 8, 0, 8],
-    "galope":          [0, 6, 8, 4, 0, 0, 6, 8, 4, 0],
-    "senoide":         [0, 2, 5, 7, 8, 8, 7, 5, 2, 0],
-    "vibracao_final":  [0, 0, 0, 0, 0, 0, 2, 5, 7, 8],
-}
+    "vibra_em_degraus":    [0, 8, 0, 8, 0, 8, 0, 8, 0, 8],
+    "duas_ondas_no_curso": [0, 6, 8, 4, 0, 0, 6, 8, 4, 0],
+    "sobe_e_desce":        [0, 2, 5, 7, 8, 8, 7, 5, 2, 0],
+    "vibra_no_fim":        [0, 0, 0, 0, 0, 0, 2, 5, 7, 8],
+})
 
 
-FEEDBACK_POSITION_LABELS: dict[str, str] = {
+FEEDBACK_POSITION_LABELS: dict[str, str] = _LidaPelosDoisNomes({
     "rampa_crescente":   "Endurece no fim",
     "rampa_decrescente": "Solta no fim",
     "plateau_central":   "Pico no meio",
-    "stop_hard":         "Trava seca",
-    "stop_macio":        "Trava macia",
+    "parede_no_fim":     "Parede no fim",
+    "parede_macia":      "Parede macia",
     "linear_medio":      "Peso igual",
     "custom":            "Personalizar",
-}
+})
 
-VIBRATION_POSITION_LABELS: dict[str, str] = {
-    "pulso_crescente": "Pulso crescente",
-    "machine_gun":     "Machine gun",
-    "galope":          "Galope",
-    "senoide":         "Senoide",
-    "vibracao_final":  "Vibração final",
-    "custom":          "Personalizar",
-}
+VIBRATION_POSITION_LABELS: dict[str, str] = _LidaPelosDoisNomes({
+    "pulso_crescente":     "Pulso crescente",
+    "vibra_em_degraus":    "Vibra em degraus",
+    "duas_ondas_no_curso": "Duas ondas no curso",
+    "sobe_e_desce":        "Sobe e desce",
+    "vibra_no_fim":        "Vibra no fim",
+    "custom":              "Personalizar",
+})
 
 
 FeedbackPositionPreset = Literal[
     "rampa_crescente",
     "rampa_decrescente",
     "plateau_central",
-    "stop_hard",
-    "stop_macio",
+    "parede_no_fim",
+    "parede_macia",
     "linear_medio",
 ]
 
 VibrationPositionPreset = Literal[
     "pulso_crescente",
-    "machine_gun",
-    "galope",
-    "senoide",
-    "vibracao_final",
+    "vibra_em_degraus",
+    "duas_ondas_no_curso",
+    "sobe_e_desce",
+    "vibra_no_fim",
 ]
 
 
@@ -85,6 +119,8 @@ __all__ = [  # noqa: RUF022
     "FEEDBACK_POSITION_PRESETS",
     "FeedbackPositionPreset",
     "VIBRATION_POSITION_LABELS",
+    "NOMES_ANTIGOS_DOS_PRESETS_DE_POSICAO",
     "VIBRATION_POSITION_PRESETS",
     "VibrationPositionPreset",
+    "chave_de_agora",
 ]

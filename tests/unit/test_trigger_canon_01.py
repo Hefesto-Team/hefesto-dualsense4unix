@@ -4,21 +4,34 @@ from __future__ import annotations
 
 import pytest
 
-from hefesto_dualsense4unix.app.actions.trigger_specs import PRESETS
+from hefesto_dualsense4unix.app.actions.trigger_specs import PRESETS, PRESETS_ANTIGOS
 from hefesto_dualsense4unix.core.trigger_effects import (
     MODOS_DE_DEPURACAO,
+    PRESET_FACTORIES,
     TriggerMode,
     build_from_name,
     custom,
 )
 
-_SPEC_POR_NOME = {p.name: p for p in PRESETS}
+#: as dezenove chaves: as onze da tela e as oito que saíram dela (o perfil gravado ainda as cita)
+_SPEC_POR_NOME = {p.name: p for p in (*PRESETS, *PRESETS_ANTIGOS)}
+
+#: as chaves cujo `build_from_name` já não manda os bytes da fábrica antiga (a fusão dos
+#: acionamentos as traduz para a linha nova); a sensação de 01/08 segue guardada na fábrica
+FABRICAS_DE_01_08 = frozenset({"SemiAutoGun", "AutoGun", "Pulse"})
 
 
-def _efeito_com_os_padroes(nome: str):
-    """O preset como a tela do usuário o aplica: com os defaults dos controles."""
+def _efeito_com_os_padroes(nome: str, *, pela_fabrica: bool = False):
+    """O preset como a tela do usuário o aplica: com os defaults dos controles.
+
+    `pela_fabrica` chama a função antiga direto, sem a tradução do perfil gravado: é como os
+    bytes de 01/08 seguem presos depois que a chave passou a abrir outra linha.
+    """
     spec = _SPEC_POR_NOME[nome]
-    return build_from_name(nome, [p.default for p in spec.params])
+    padroes = [p.default for p in spec.params]
+    if pela_fabrica:
+        return PRESET_FACTORIES[nome](*padroes)
+    return build_from_name(nome, padroes)
 
 
 #: A Metralhadora saiu desta tabela de 01/08 e entrou pela escolha do usuário de
@@ -39,7 +52,7 @@ SENSACAO_APROVADA: dict[str, tuple[int, tuple[int, ...]]] = {
 def test_a_sensacao_que_ela_aprovou_nao_muda_um_byte(nome: str) -> None:
     """A prova de regressão da E0-bis, e a mais importante do arquivo."""
     esperado_modo, esperado_forces = SENSACAO_APROVADA[nome]
-    efeito = _efeito_com_os_padroes(nome)
+    efeito = _efeito_com_os_padroes(nome, pela_fabrica=nome in FABRICAS_DE_01_08)
 
     assert int(efeito.mode) == esperado_modo, (
         f"{nome}: o modo mudou de 0x{esperado_modo:02X} para "

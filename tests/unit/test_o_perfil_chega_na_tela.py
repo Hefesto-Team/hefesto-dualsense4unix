@@ -16,7 +16,7 @@ cobra os valores de volta.
 
 A MORDIDA (arranque a cura e veja reprovar): apague o `_do_lado` do
 `a03_gatilhos.py`, ou faça `perfil.ativo()` devolver `{}` sempre. Os dois casos
-reprovam aqui — o primeiro com `Desligado` no lugar de `Rígido`, o segundo com
+reprovam aqui — o primeiro com `Desligado` no lugar de `Resistência`, o segundo com
 `brilho: None` no lugar de `0.7`.
 """
 from __future__ import annotations
@@ -103,18 +103,18 @@ def test_o_leitor_acha_os_perfis(com_perfis):
 
 
 def test_o_gatilho_do_perfil_chega_traduzido(ctx_com):
-    """`Rigid` no disco vira `Rígido` na tela — e os ajustes vêm junto."""
+    """`Rigid` no disco vira `Resistência` na tela (a lista de onze) — e os ajustes vêm junto."""
     from pacotes import pacote_da_pagina
 
     r = pacote_da_pagina("03-gatilhos.html", ctx_com("régua"))
     col = next(iter(r["colunas"].values()))
 
-    assert col["modo-e"] == "Rígido", (
+    assert col["modo-e"] == "Resistência", (
         f"o L2 saiu {col['modo-e']!r}. O disco diz `Rigid` e a tela fala "
         f"português — a tradução é `app/actions/trigger_specs.PRESETS`. "
         f"`Desligado` aqui é o pacote ignorando o perfil, que é o defeito "
         f"que esta régua existe para pegar.")
-    assert col["modo-e-chave" if "modo-e-chave" in col else "modo-chave-e"] == "Rigid"
+    assert col["modo-e-chave" if "modo-e-chave" in col else "modo-chave-e"] == "Resistance"
     assert col["modo-d"] == "Vibração"
 
     if "imersao-e" in col:
@@ -125,9 +125,9 @@ def test_o_gatilho_do_perfil_chega_traduzido(ctx_com):
         return
 
     caixa_e = r["blocos"]['[data-controle="p1"] .ajustes.e']
-    assert '<span class="num" data-campo="aj-val-e-1">180</span>' in caixa_e, (
-        f"a Força do L2 não chegou com o 180 que o perfil guarda. Um padrão do "
-        f"preset aqui é o pacote lendo a tabela e não o disco:\n{caixa_e}")
+    assert '<span class="num" data-campo="aj-val-e-1">6</span>' in caixa_e, (
+        f"a Força do L2 não chegou com o 6 de 8 que o 180 do perfil guarda (Resistência). "
+        f"Um padrão do preset aqui é o pacote lendo a tabela e não o disco:\n{caixa_e}")
     assert '"aj-nome-e-1">Força<' in caixa_e
     caixa_d = r["blocos"]['[data-controle="p1"] .ajustes.d']
     valores_d = re.findall(r'data-campo="aj-val-d-\d+">(\d+)<', caixa_d)

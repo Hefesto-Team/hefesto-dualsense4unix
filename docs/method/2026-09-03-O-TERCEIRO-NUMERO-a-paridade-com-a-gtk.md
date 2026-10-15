@@ -195,7 +195,7 @@ maior bloco é o `DIFERENTE`.
      de produto, "Grava na hora") e a linha virou `DIFERENTE`, com a diferença
      medida e o endereço dos dois lados no CSV. Ela não é decisão a preservar:
      é um fato que a medição derrubou. -->
-- **`03-gatilhos` · os números dos 71 parâmetros.** 17 dos 19 modos têm
+- **`03-gatilhos` · os números dos 54 parâmetros.** 10 dos 11 modos têm
   ajuste, e na GTK todos são `Gtk.Scale` que ela arrasta. No desenho do todo
   (publicado em 15/10/2026) a coluna mostra só o nome do acionamento e o da
   imersão: os números moram no quadro «Criar efeitos novos», quatro barras
@@ -252,7 +252,7 @@ neste jogo" (o HTML passa `excluir=`). **Três linhas a NÃO copiar de volta.**
 
 **Quantas são hoje: a coluna `?` da tabela da §2.**
 
-Elas precisam de bancada: se a lista de 19 modos abre no compositor dela, se o
+Elas precisam de bancada: se a lista de 11 modos abre no compositor dela, se o
 `Automático` de fato larga a luz para o jogo, se o reparo do HTML repõe a linha
 no `.vdf` dela, e se o nome do plástico chega ao cartão. **Ficam registradas como indecidíveis em vez de chutadas** — é a mesma
 disciplina do `de_onde_sei` do mapa de canais.

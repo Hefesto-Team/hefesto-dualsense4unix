@@ -216,6 +216,8 @@ def _o_daemon_aplica(prof: Any) -> _Camadas:
 
 def _a_03_mente(pintura: dict[str, Any], ctx: Any, manda: _Camadas) -> list[str]:
     """Os lados em que a coluna da 03 diz outra coisa que o controle recebe."""
+    from pacotes.a03_gatilhos import _padroes
+
     from hefesto_dualsense4unix.core.trigger_effects import build_from_name
 
     r = pintura["03-gatilhos.html"]
@@ -231,9 +233,18 @@ def _a_03_mente(pintura: dict[str, Any], ctx: Any, manda: _Camadas) -> list[str]
             else:
                 ajustes = [int(v) for v in re.findall(
                     rf'data-campo="aj-val-{sig}-\d+">(-?\d+)<', caixa)]
-            diz = build_from_name(str(col[f"modo-chave-{sig}"]), ajustes)
             vai = manda.efetivo(uniq, disco)
-            if diz != vai:
+            modo = str(col[f"modo-chave-{sig}"])
+            if ajustes is None:
+                # Campo da imersão em branco: o perfil guarda números próprios (o `Rigid` 5/200
+                # do esquema abre como Resistência 5/6). A tela não afirma número nenhum; a
+                # régua confere só o modo do efeito.
+                diz = build_from_name(modo, _padroes(modo))
+                casa = diz.mode == vai.mode
+            else:
+                diz = build_from_name(modo, ajustes)
+                casa = diz == vai
+            if not casa:
                 mentiras.append(
                     f"P{c['player']} ({c['transport'].upper()}) "
                     f"{'L2' if sig == 'e' else 'R2'}: a coluna diz "

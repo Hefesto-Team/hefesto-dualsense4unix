@@ -54,7 +54,11 @@ import gi
 gi.require_version("Gtk", "3.0")
 
 from hefesto_dualsense4unix.app.actions import triggers_actions
-from hefesto_dualsense4unix.app.actions.trigger_specs import PRESETS, TriggerParamSpec
+from hefesto_dualsense4unix.app.actions.trigger_specs import (
+    PRESETS,
+    PRESETS_ANTIGOS,
+    TriggerParamSpec,
+)
 
 
 class TestAFonteEUmaSo:
@@ -75,7 +79,9 @@ class TestOCampoMortoSaiu:
         assert not hasattr(TriggerParamSpec("x", "X", 0, 1), "help_text")
 
     def test_e_a_conta_que_o_motivou_continua_a_mesma(self) -> None:
-        """71 parâmetros (eram 73 até 08/10/2026, quando a Metralhadora passou de seis
-        ajustes a quatro — não 38, o número que a medição da sprint corrigiu)."""
-        assert sum(len(spec.params) for spec in PRESETS) == 71
+        """71 parâmetros nas dezenove chaves (eram 73 até 08/10/2026, quando a Metralhadora
+        passou de seis ajustes a quatro — não 38, o número que a medição da sprint corrigiu):
+        54 nos onze acionamentos da tela e 17 nas oito chaves que saíram dela."""
+        assert sum(len(spec.params) for spec in PRESETS) == 54
+        assert sum(len(spec.params) for spec in PRESETS_ANTIGOS) == 17
 

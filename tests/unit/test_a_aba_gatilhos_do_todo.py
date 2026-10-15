@@ -16,7 +16,7 @@ from typing import Any
 
 import pytest
 
-from hefesto_dualsense4unix.app.actions.trigger_specs import PRESETS, get_spec
+from hefesto_dualsense4unix.app.actions.trigger_specs import PRESETS, PRESETS_ANTIGOS, get_spec
 from hefesto_dualsense4unix.daemon.subsystems.tato_vivo import TETO_POR_CONTROLE
 from hefesto_dualsense4unix.profiles import efeitos_de_imersao as imersao
 from hefesto_dualsense4unix.profiles.estilos_de_jogo import POR_CHAVE
@@ -28,8 +28,11 @@ PAGINA = "03-gatilhos.html"
 UNIQ = "aa:bb:cc:00:00:01"
 CHROME = pathlib.Path("/usr/bin/google-chrome")
 
-FAIXAS = {s.name: {p.name: (p.min_value, p.max_value) for p in s.params} for s in PRESETS}
-PADROES = {s.name: {p.name: p.default for p in s.params} for s in PRESETS}
+#: As imersões de hoje ainda citam as chaves que saíram da lista de onze; os ajustes delas são
+#: lidos pelo spec antigo até a sprint das imersões de hoje trocar as chaves.
+_TODOS = (*PRESETS, *PRESETS_ANTIGOS)
+FAIXAS = {s.name: {p.name: (p.min_value, p.max_value) for p in s.params} for s in _TODOS}
+PADROES = {s.name: {p.name: p.default for p in s.params} for s in _TODOS}
 
 
 def _dentro_da_faixa(modo: str, ajustes: dict[str, int]) -> list[str]:

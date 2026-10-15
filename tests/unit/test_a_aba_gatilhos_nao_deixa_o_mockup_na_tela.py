@@ -295,7 +295,7 @@ def test_o_lugar_vazio_apaga_o_efeito_de_quem_saiu(a03):
     tres = [FALSO, FALSO_2, dict(FALSO, uniq="aa:bb:cc:00:00:03", player=3)]
 
     com_ele = _com_a_mesa(a03, mesa_de_tres, tres)["colunas"]["aa:bb:cc:00:00:03"]
-    assert com_ele["modo-chave-e"] == "Rigid"
+    assert com_ele["modo-chave-e"] == "Resistance"
 
     sem_ele = _com_a_mesa(a03, MESA_DE_DOIS, [FALSO, FALSO_2])["colunas"]["p3"]
     assert sem_ele["modo-chave-e"] != "Rigid", (

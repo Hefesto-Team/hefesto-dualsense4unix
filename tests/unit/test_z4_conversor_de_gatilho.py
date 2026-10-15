@@ -29,6 +29,7 @@ import pytest
 
 from hefesto_dualsense4unix.app.actions.trigger_specs import (
     PRESETS,
+    PRESETS_ANTIGOS,
     TriggerPresetSpec,
     preset_to_positional_params,
 )
@@ -134,7 +135,8 @@ class TestOsDezenoveModosEntramEVoltam:
     """Deriva a lista de `trigger_specs.PRESETS` em runtime — nunca à mão."""
 
     @pytest.mark.parametrize(
-        "spec", PRESETS, ids=[s.name for s in PRESETS]
+        "spec", (*PRESETS, *PRESETS_ANTIGOS),
+        ids=[s.name for s in (*PRESETS, *PRESETS_ANTIGOS)],
     )
     def test_o_modo_sobrevive_ao_ciclo_do_conversor(self, spec: TriggerPresetSpec) -> None:
         valores = {p.name: p.default for p in spec.params}
@@ -153,9 +155,12 @@ class TestOsDezenoveModosEntramEVoltam:
         )
 
     def test_a_lista_tem_dezenove_hoje(self) -> None:
-        """Sentinela: se `trigger_specs.PRESETS` crescer, a régua acima já cobre —"""
-        assert len(PRESETS) == 19, (
-            f"trigger_specs.PRESETS tem {len(PRESETS)} modos — a sprint mediu "
-            "19 em 24/08/2026; se mudou, é bom, a régua acima já se adapta "
-            "sozinha (parametrize deriva da lista, não de um número escrito)"
+        """Sentinela: onze na lista da tela e oito chaves antigas que o perfil gravado ainda cita.
+
+        Se a lista mudar, é bom: a régua acima já se adapta sozinha (parametrize deriva das
+        listas, não de um número escrito).
+        """
+        assert (len(PRESETS), len(PRESETS_ANTIGOS)) == (11, 8), (
+            f"trigger_specs tem {len(PRESETS)} modos na tela e {len(PRESETS_ANTIGOS)} chaves "
+            "antigas — a sprint dos acionamentos fixou 11 e 8"
         )

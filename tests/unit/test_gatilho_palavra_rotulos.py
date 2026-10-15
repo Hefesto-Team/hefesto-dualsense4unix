@@ -67,7 +67,7 @@ o portão roda no CI headless sem GTK nenhum.
 """
 from __future__ import annotations
 
-from hefesto_dualsense4unix.app.actions.trigger_specs import PRESETS
+from hefesto_dualsense4unix.app.actions.trigger_specs import PRESETS, PRESETS_ANTIGOS
 
 LIMITE_DE_CARACTERES = 22
 
@@ -102,8 +102,16 @@ PENDENCIA_DE_PALAVRA: frozenset[str] = frozenset()
 
 
 def test_os_dezenove_names_sao_exatamente_os_de_hoje() -> None:
-    """Contrato: renomear um `name` faz o perfil do usuário parar de abrir."""
-    assert tuple(spec.name for spec in PRESETS) == NOMES_CONTRATADOS
+    """Contrato: renomear um `name` faz o perfil do usuário parar de abrir.
+
+    A lista da tela tem onze; as oito chaves que saíram dela seguem lidas (`PRESETS_ANTIGOS`),
+    e as dezenove juntas são as que um perfil gravado pode citar.
+    """
+    assert len(PRESETS) == 11
+    antigos = tuple(spec.name for spec in PRESETS_ANTIGOS)
+    assert set(antigos).isdisjoint(spec.name for spec in PRESETS)
+    todos = (*(spec.name for spec in PRESETS), *antigos)
+    assert sorted(todos) == sorted(NOMES_CONTRATADOS)
 
 
 def test_nenhum_rotulo_passa_de_vinte_e_dois_caracteres() -> None:
@@ -128,7 +136,8 @@ def test_nenhum_rotulo_esta_dispensado_do_limite() -> None:
         f"voltou uma isenção de largura: {sorted(dispensados)}. Rótulo que não "
         "cabe é palavra a decidir com ela, não exceção a esconder no teste"
     )
-    cabem = [spec for spec in PRESETS if len(spec.label) <= LIMITE_DE_CARACTERES]
+    cabem = [spec for spec in (*PRESETS, *PRESETS_ANTIGOS)
+             if len(spec.label) <= LIMITE_DE_CARACTERES]
     assert len(cabem) == len(NOMES_CONTRATADOS), (
         "os dezenove rótulos têm de passar pelo mesmo limite"
     )

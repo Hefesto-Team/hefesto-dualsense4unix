@@ -1,4 +1,4 @@
-"""Factories dos 19 presets de trigger conforme DSX Paliverse."""
+"""Factories dos presets de trigger: os onze da tela e as chaves velhas que seguem lidas."""
 from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
@@ -411,18 +411,18 @@ def weapon(start: int, end: int, force: int) -> TriggerEffect:
 
 
 def vibration(position: int, amplitude: int, frequency: int) -> TriggerEffect:
-    return TriggerEffect(
-        mode=TriggerMode.PULSE_A,
-        forces=(
-            _pos(position, name="position"),
-            _amp(amplitude, name="amplitude"),
-            _byte(frequency, name="frequency"),
-            0,
-            0,
-            0,
-            0,
-        ),
-    )
+    """A Vibração: o gatilho treme da `position` ao fim do curso, no modo oficial
+    da vibração (`0x26`), o mesmo da Metralhadora.
+
+    Amplitude 0 ou frequência 0 apaga o gatilho. Saía no `0x22`, que é o modo do
+    Arco, e por isso a vibração pedida chegava ao controle como outro efeito.
+    """
+    _pos(position, name="position")
+    _byte(amplitude, name="amplitude", lo=0, hi=8)
+    _byte(frequency, name="frequency")
+    if amplitude <= 0 or frequency <= 0:
+        return off()
+    return machine(position, 9, amplitude, frequency)
 
 
 def slope_feedback(
@@ -636,6 +636,147 @@ def _traduzir_params_nomeados(
     return dict(params)
 
 
+#: As frequências que o relógio de 1 kHz do gatilho entrega exatas acima de
+#: 33 Hz: as que dividem 1000 [comunidade]. Até 33 Hz qualquer valor serve.
+FREQUENCIAS_LIMPAS_ACIMA_DE_33_HZ: tuple[int, ...] = (40, 50, 100, 125, 200, 250)
+
+_LIMITE_DAS_FREQUENCIAS_LIVRES = 33
+
+
+def frequencia_limpa(frequencia: int) -> int:
+    """A frequência no divisor limpo mais próximo (60 vira 50; no empate, a menor)."""
+    if frequencia <= _LIMITE_DAS_FREQUENCIAS_LIVRES:
+        return max(1, int(frequencia))
+    return min(
+        FREQUENCIAS_LIMPAS_ACIMA_DE_33_HZ,
+        key=lambda limpa: (abs(limpa - int(frequencia)), limpa),
+    )
+
+
+#: O padrão do Disparo da tela (início, fim, força em byte), para onde vai o `Pulse`.
+_DISPARO_PADRAO: tuple[int, int, int] = (2, 5, 200)
+
+#: Os nomes e os padrões dos ajustes das chaves que saíram da lista de onze, na
+#: ordem em que o perfil antigo os guardava. É o que lê um perfil gravado com
+#: ajustes nomeados.
+_AJUSTES_DAS_CHAVES_VELHAS: dict[str, tuple[tuple[str, int], ...]] = {
+    "Rigid": (("position", 5), ("force", 200)),
+    "SimpleRigid": (("strength", 6),),
+    "Feedback": (("position", 5), ("strength", 4)),
+    "Pulse": (),
+    "PulseA": (("start", 2), ("end", 7), ("force", 180)),
+    "PulseB": (("start", 2), ("end", 7), ("force", 180)),
+    "SemiAutoGun": (("start", 3), ("end", 6), ("force", 5)),
+    "AutoGun": (("start", 2), ("strength", 6), ("frequency", 60)),
+}
+
+
+def _de_rigid(p: list[int]) -> tuple[str, list[int]]:
+    """Rígido: a Resistência com início na posição, a força de byte em 0 a 8."""
+    return "Resistance", [p[0], _forca_de_byte(_byte(p[1], name="force"))]
+
+
+def _de_rigido_simples(p: list[int]) -> tuple[str, list[int]]:
+    """Rígido simples: a Resistência com início 0."""
+    return "Resistance", [0, _byte(p[0], name="strength", lo=0, hi=8)]
+
+
+def _de_ponto_duro(p: list[int]) -> tuple[str, list[int]]:
+    """Ponto duro (`Feedback`): a Resistência com início na posição."""
+    return "Resistance", [p[0], _byte(p[1], name="strength", lo=0, hi=8)]
+
+
+def _de_pulso_b(p: list[int]) -> tuple[str, list[int]]:
+    """Pulso (curva B): o Disparo, com os mesmos três ajustes."""
+    return "Weapon", [p[0], p[1], p[2]]
+
+
+def _de_semi_automatica(p: list[int]) -> tuple[str, list[int]]:
+    """Arma semi-automática: o Disparo, com a força de 0 a 8 posta em byte."""
+    inicio = _byte(p[0], name="start", lo=2, hi=7)
+    fim = _byte(p[1], name="end", lo=inicio + 1, hi=8)
+    forca = _byte(p[2], name="force", lo=0, hi=8)
+    return "Weapon", [inicio, fim, min(255, round(forca * 255 / 8))]
+
+
+def _de_automatica(p: list[int]) -> tuple[str, list[int]]:
+    """Arma automática: a Metralhadora do início ao fim do curso, na frequência limpa.
+
+    Força 0 ou frequência 0 deixavam o gatilho calado, e a tradução o deixa desligado.
+    """
+    inicio = _pos(p[0], name="start")
+    forca = _byte(p[1], name="strength", lo=0, hi=8)
+    frequencia = _byte(p[2], name="frequency")
+    if forca <= 0 or frequencia <= 0:
+        return "Off", []
+    return "Machine", [inicio, 9, forca, frequencia_limpa(frequencia)]
+
+
+def _de_pulso(p: list[int]) -> tuple[str, list[int]]:
+    """Pulso (modo legado `0x02`): o Disparo no padrão."""
+    return "Weapon", list(_DISPARO_PADRAO)
+
+
+def _de_pulso_a_para_a_tela(p: list[int]) -> tuple[str, list[int]]:
+    """Pulso (curva A) como a tela o mostra: o Arco, com a força nos dois ajustes.
+
+    SÓ PARA A TELA. O byte segue o `_arco_do_firmware` (`0x22`) até a sessão do Arco.
+    """
+    forca = _forca_de_byte(_byte(p[2], name="force"))
+    return "Bow", [
+        _encostar(p[0], 0, 8), _encostar(max(p[1], p[0] + 1), 1, 9), forca, forca,
+    ]
+
+
+#: A tabela fechada: a chave velha → o acionamento da lista de onze, com os ajustes
+#: dele. Perfil gravado com uma chave velha abre pela linha nova, nos quatro
+#: controles e nas duas conexões, porque quem monta o bloco é o `build_from_name`.
+#: `PulseA` NÃO está aqui: a chave segue dando o bloco `0x22` de hoje.
+TRADUCAO_DAS_CHAVES_VELHAS = {
+    "Rigid": _de_rigid,
+    "SimpleRigid": _de_rigido_simples,
+    "Feedback": _de_ponto_duro,
+    "PulseB": _de_pulso_b,
+    "SemiAutoGun": _de_semi_automatica,
+    "AutoGun": _de_automatica,
+    "Pulse": _de_pulso,
+}
+
+
+def traduzir_chave_velha(
+    name: str,
+    params: object,
+    *,
+    para_a_tela: bool = False,
+) -> tuple[str, list[int]] | None:
+    """A linha nova de uma chave velha: `(chave, ajustes posicionais)`, ou `None`.
+
+    `None` quando a chave não saiu da lista, ou quando os ajustes não são os
+    dela (a quantidade errada segue recusada pela fábrica velha, como sempre).
+    Os ajustes nomeados (`dict`) entram na ordem do perfil antigo. Com
+    `para_a_tela`, o `PulseA` também sobe para o Arco, só para a tela o mostrar;
+    o bloco que sai dele não muda.
+    """
+    ordem = _AJUSTES_DAS_CHAVES_VELHAS.get(name)
+    if ordem is None:
+        return None
+    if isinstance(params, dict):
+        if set(params) != {nome for nome, _ in ordem}:
+            return None
+        valores = [int(params[nome]) for nome, _ in ordem]
+    elif isinstance(params, (list, tuple)) and all(
+        isinstance(v, int) and not isinstance(v, bool) for v in params
+    ):
+        valores = [int(v) for v in params]
+    else:
+        return None
+    if len(valores) != len(ordem):
+        return None
+    if name == "PulseA":
+        return _de_pulso_a_para_a_tela(valores) if para_a_tela else None
+    return TRADUCAO_DAS_CHAVES_VELHAS[name](valores)
+
+
 def build_from_name(
     name: str,
     params: list[int] | list[list[int]] | dict[str, int],
@@ -653,9 +794,12 @@ def build_from_name(
     (`{"frequency": N, "strengths": [...]}`) ou o posicional.
     """
     from typing import Any, cast
-    factory = cast("Any", PRESET_FACTORIES.get(name))
-    if factory is None:
+    if name not in PRESET_FACTORIES:
         raise ValueError(f"preset desconhecido: {name}")
+    traduzida = traduzir_chave_velha(name, params)
+    if traduzida is not None:
+        name, params = traduzida
+    factory = cast("Any", PRESET_FACTORIES.get(name))
 
     if (
         isinstance(params, list)
@@ -696,10 +840,12 @@ def build_from_name(
 
 __all__ = [
     "AMPLITUDE_SCALE",
+    "FREQUENCIAS_LIMPAS_ACIMA_DE_33_HZ",
     "FREQUENCIA_PADRAO_DA_VIBRACAO_POR_POSICAO",
     "MULTI_POSITION_MAX_STRENGTH",
     "PRESET_FACTORIES",
     "TAMANHO_DO_BLOCO_DO_GATILHO",
+    "TRADUCAO_DAS_CHAVES_VELHAS",
     "TriggerMode",
     "auto_gun",
     "bloco_do_efeito",
@@ -708,6 +854,7 @@ __all__ = [
     "build_from_name",
     "custom",
     "feedback",
+    "frequencia_limpa",
     "galloping",
     "machine",
     "multi_position_feedback",
@@ -721,6 +868,7 @@ __all__ = [
     "semi_auto_gun",
     "simple_rigid",
     "slope_feedback",
+    "traduzir_chave_velha",
     "vibration",
     "weapon",
 ]

@@ -249,9 +249,17 @@ class TestFeedbackEVibration:
         assert zonas == 0b1111100000
 
     def test_vibration(self):
+        """A Vibração é a vibração oficial (`0x26`), a mesma da Metralhadora do início ao fim.
+
+        Ela mandava o `0x22` (o arco do firmware) com os bytes fora de ordem. Mordida: devolver
+        a `vibration()` ao `PULSE_A`.
+        """
         eff = tfx.vibration(3, 4, 40)
-        assert eff.mode == TriggerMode.PULSE_A
-        assert eff.forces == (3, 4 * AMPLITUDE_SCALE, 40, 0, 0, 0, 0)
+        assert eff.mode == TriggerMode.VIBRATION
+        assert eff == tfx.build_from_name("Machine", [3, 9, 4, 40])
+        assert eff.forces == (0xF8, 0x03, 0x00, 0xB6, 0x6D, 0x1B, 40)
+        assert tfx.vibration(3, 0, 40) == tfx.off()
+        assert tfx.vibration(3, 4, 0) == tfx.off()
 
     def test_slope_feedback(self):
         """`SlopeFeedback` não tem byte de modo próprio — é o Feedback com rampa.

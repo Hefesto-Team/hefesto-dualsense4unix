@@ -188,19 +188,11 @@ def _specs() -> Any:
 
 DICA_DO_MODO = {
  "Off": "O jogo manda no gatilho; sem jogo, ele fica solto, como num controle comum.",
- "Rigid": "Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.",
- "SimpleRigid": "Trava dura, com um só ponto de ajuste em vez de dez.",
- "Pulse": "Um solavanco num ponto do curso e depois solta — o coice de um tiro único.",
- "PulseA": "Pulso com a subida mais suave: a força cresce antes do estalo.",
- "PulseB": "Pulso com a descida mais suave: o estalo vem e a força cai devagar.",
- "Resistance": "Peso constante do começo ao fim, sem trava — remada, alavanca, arco sendo puxado.",
+ "Resistance": "Peso firme a partir do ponto escolhido, sem estalo — pedal, alavanca, remada.",
+ "Weapon": "Resiste, estala e rearma sozinho a cada aperto: um tiro por aperto.",
  "Bow": "Fica cada vez mais pesado até o fim do curso, e então solta de uma vez.",
  "Galloping": "Batidas ritmadas enquanto o gatilho está apertado — cavalo correndo, motor pegando.",
- "SemiAutoGun": "Uma trava, um estalo, e o gatilho volta. Um tiro por aperto.",
- "AutoGun": "Vibra continuamente enquanto está apertado — rajada.",
  "Machine": "Batidas rápidas e fortes enquanto apertado.",
- "Feedback": "Solto até certo ponto do curso, e daí em diante duro. O ponto é ajustável.",
- "Weapon": "Trava, solta no estalo e fica leve até o fim — espingarda.",
  "Vibration": "Treme o gatilho na frequência escolhida, sem opor força.",
  "SlopeFeedback": "A força sobe em linha reta do início ao fim do curso.",
  "MultiPositionFeedback": "A força sobe em dez degraus ao longo do curso, do solto ao máximo.",
@@ -453,11 +445,25 @@ def _meu_efeito_que_casa(disco: str, cfg: dict[str, Any]) -> str:
     return ""
 
 
+def _na_lista_da_tela(modo: str, params: list[int], specs: Any) -> tuple[str, list[int]]:
+    """O gatilho do perfil como a lista de onze o mostra (`Rigid` abre como Resistência)."""
+    if specs is None:
+        return modo, params
+    nome, ajustes = specs.na_lista_de_onze(modo, params)
+    return str(nome), [int(v) for v in ajustes]
+
+
 def _do_lado(cfg: dict[str, Any], specs: Any) -> dict[str, Any]:
-    """Um lado do gatilho, do perfil para a tela: o rótulo do modo e a chave dele."""
-    nome = str((cfg or {}).get("mode") or "Off")
+    """Um lado do gatilho, do perfil para a tela: o rótulo do modo, a chave dele e os ajustes.
+
+    Perfil antigo abre com o acionamento certo selecionado: a chave que saiu da lista de onze
+    (`Rigid`, `AutoGun`…) aparece pela linha nova, com os ajustes já postos na ordem da linha nova.
+    """
+    nome, params = _na_lista_da_tela(
+        str((cfg or {}).get("mode") or "Off"), _params_inteiros(cfg or {}), specs)
     spec = specs.get_spec(nome) if specs else None
-    return {"modo": spec.label if spec else nome, "modo-chave": nome}
+    return {"modo": spec.label if spec else nome, "modo-chave": nome, "params": params,
+            "cru": (str((cfg or {}).get("mode") or "Off"), _params_inteiros(cfg or {}))}
 
 
 #: é o rótulo, e é só ele que `html_das_opcoes_de_modo` troca. Tudo o mais da
@@ -491,19 +497,30 @@ def html_das_opcoes_de_modo(disco: str = "") -> str:
 
 
 def _rotuladas(cravadas: str) -> str:
-    """As opções cravadas do desenho, com a palavra de produto no lugar da digitada."""
+    """As opções cravadas do desenho, com a palavra de produto no lugar da digitada.
+
+    Só as onze de `trigger_specs.PRESETS` passam: o que o desenho publicado ainda traga de fora
+    da lista (as chaves que se fundiram) cai aqui, e a tela mostra a lista nova sem esperar o
+    `--publicar`.
+    """
     specs = _specs()
     if specs is None:
         return cravadas
     do_produto = {p.name: _rotulo_do_modo(p.name) for p in specs.PRESETS}
 
     def rotular(m: re.Match[str]) -> str:
-        if m.group("valor") == TRAVESSAO and "hidden" not in m.group("cabeca"):
+        if m.group("valor") == TRAVESSAO:
             # O `—` é do lugar vazio, não da lista que se abre — também numa
             # página publicada antes de o desenho o esconder.
+            if "hidden" in m.group("cabeca"):
+                return m.group(0)
             return m.group(0).replace(">", ' hidden="">', 1)
         rot = do_produto.get(m.group("valor"))
-        return m.group(0) if rot is None else f'{m.group("cabeca")}{_escapar(rot)}</option>'
+        if rot is None:
+            # Uma opção que a lista de onze não tem (a página publicada de antes da fusão
+            # ainda oferece as dezenove) não vai para a tela.
+            return ""
+        return f'{m.group("cabeca")}{_escapar(rot)}</option>'
 
     return _OPCAO.sub(rotular, cravadas)
 
@@ -622,8 +639,13 @@ def html_dos_seus_efeitos() -> str:
         + [chip(n, "--pink", "Efeito de imersão") for n in _meus_efeitos_da("imersao")])
 
 
-def _imersao_que_casa(modo: str, params: list[int]) -> str:
+def _imersao_que_casa(
+    modo: str, params: list[int], cru: tuple[str, list[int]] | None = None,
+) -> str:
     """A imersão cujos números SÃO estes (`meu:<nome>` se é uma criada).
+
+    `cru` é o gatilho como o perfil o guarda quando a chave dele saiu da lista de onze
+    (`Rigid`…): a imersão salva com os números de lá segue valendo, e o campo a mostra.
 
     `nenhum` quando são os padrões do modo; vazio (o campo fica em branco) quando o perfil
     guarda números próprios que nenhuma da lista conhece: dizer «Nenhum» seria mentir.
@@ -638,10 +660,16 @@ def _imersao_que_casa(modo: str, params: list[int]) -> str:
         return SEM_IMERSAO
     # A regra é uma só, a do motor do tato que toca os momentos (`imersao_dos_numeros`).
     achada = imer.imersao_dos_numeros(modo, params)
+    if achada is None and cru is not None and cru[0] != modo:
+        achada = imer.imersao_dos_numeros(cru[0], cru[1])
+        if achada is not None and modo not in imer.FAMILIAS.get(achada[0].familia, ()):
+            achada = None
     if achada is not None:
         return str(achada[0].chave)
     if not params or params == _padroes(modo):
         return SEM_IMERSAO
+    if cru is not None and not cru[1]:
+        return SEM_IMERSAO  # sem ajuste nenhum no perfil antigo: nada que o campo afirme
     return ""
 
 
@@ -954,7 +982,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             meu_nome = _meu_efeito_que_casa(LADOS[sig], cfgs[sig])
             if meu_nome:
                 col[f"modo-chave-{sig}"] = f"{PREFIXO_DO_MEU}{meu_nome}"
-            feita = _imersao_que_casa(str(d["modo-chave"]), _params_inteiros(cfgs[sig]))
+            feita = _imersao_que_casa(
+                str(d["modo-chave"]), list(d["params"]), d["cru"])
             col[f"{CAMPO_DA_IMERSAO}-{sig}"] = feita
             col[f"{PREFIXO_DA_DICA_DA_IMERSAO}{sig}"] = dica_da_imersao(feita)
         colunas[uniq] = col
@@ -1181,7 +1210,7 @@ def _padroes(nome: str) -> list[int]:
     spec = specs.get_spec(nome)
     if spec is None:
         raise ValueError(
-            f"modo: {nome!r} não é um dos 19 modos do produto "
+            f"modo: {nome!r} não é um dos modos do produto "
             f"(`app/actions/trigger_specs.PRESETS`).")
     return list(specs.preset_to_positional_params(spec, {}))
 
@@ -1901,7 +1930,9 @@ def modo_dos_gatilhos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
 def _modo_de_agora(ctx: Contexto, uniq: str, disco: str) -> str:
     """O modo em que aquele gatilho está, pela MESMA função que a tela pinta."""
     p = perfil.ativo(ctx.state.get("active_profile")) or {}
-    return str(_o_que_o_controle_recebe(p, uniq, disco).get("mode") or "Off")
+    cfg = _o_que_o_controle_recebe(p, uniq, disco)
+    return _na_lista_da_tela(
+        str(cfg.get("mode") or "Off"), _params_inteiros(cfg), _specs())[0]
 
 
 def _com_os_gatilhos(prof: Any, uniq: str, dos_lados: dict[str, Any]) -> Any:

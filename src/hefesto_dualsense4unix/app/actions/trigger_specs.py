@@ -1,4 +1,4 @@
-"""Metadata dos 19 presets de trigger pra UI dinâmica."""
+"""Metadata dos onze acionamentos do gatilho pra UI dinâmica e das chaves velhas lidas."""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -61,36 +61,17 @@ PRESETS: tuple[TriggerPresetSpec, ...] = (
         description="Sem resistência.",
     ),
     TriggerPresetSpec(
-        "Rigid", "Rígido",
-        params=(_pos(5), _force(0, 255, 200)),
-        description="Barreira rígida numa posição fixa.",
-    ),
-    TriggerPresetSpec(
-        "SimpleRigid", "Rígido simples",
-        params=(_strength(6),),
-        description="Atalho do Rígido, com uma só escala de 0 a 8.",
-    ),
-    TriggerPresetSpec(
-        "Pulse", "Pulso", params=(),
-        description="Pulso único.",
-    ),
-    TriggerPresetSpec(
-        "PulseA", "Pulso (curva A)",
-        params=(_start(0, 9, 2), _end(1, 9, 7), _force(0, 255, 180)),
-        description="Pulso entre duas posições (curva A).",
-    ),
-    TriggerPresetSpec(
-        "PulseB", "Pulso (curva B)",
-        params=(_start(0, 9, 2), _end(1, 9, 7), _force(0, 255, 180)),
-        description="Pulso entre duas posições (curva B).",
-    ),
-    TriggerPresetSpec(
         "Resistance", "Resistência",
         params=(_start(0, 9, 3), _force_0_8(5)),
         description="Resistência constante a partir de uma posição.",
     ),
     TriggerPresetSpec(
-        "Bow", "Arco de flecha",
+        "Weapon", "Disparo",
+        params=(_start(0, 9, 2), _end(1, 9, 5), _force(0, 255, 200)),
+        description="Disparo de arma padrão.",
+    ),
+    TriggerPresetSpec(
+        "Bow", "Arco",
         params=(
             TriggerParamSpec("start", "Início", 0, 8, 1),
             TriggerParamSpec("end", "Fim", 1, 9, 7),
@@ -111,24 +92,6 @@ PRESETS: tuple[TriggerPresetSpec, ...] = (
         description="Cadência de galope entre duas posições.",
     ),
     TriggerPresetSpec(
-        "SemiAutoGun", "Arma semi-automática",
-        params=(
-            TriggerParamSpec("start", "Início", 2, 7, 3),
-            TriggerParamSpec("end", "Fim", 3, 8, 6),
-            _force_0_8(5),
-        ),
-        description="Rebote curto de arma semi-auto.",
-    ),
-    TriggerPresetSpec(
-        "AutoGun", "Arma automática",
-        params=(
-            _start(0, 9, 2),
-            _strength(6),
-            _frequency(60),
-        ),
-        description="Vibração contínua de arma automática.",
-    ),
-    TriggerPresetSpec(
         "Machine", "Metralhadora",
         params=(
             TriggerParamSpec("start", "Início do curso", 0, 8, 2),
@@ -139,18 +102,12 @@ PRESETS: tuple[TriggerPresetSpec, ...] = (
         description="Batidas rápidas enquanto o gatilho está apertado.",
     ),
     TriggerPresetSpec(
-        "Feedback", "Ponto duro",
-        params=(_pos(5), _strength(4)),
-        description="Barreira a partir de uma posição, com força de 0 a 8.",
-    ),
-    TriggerPresetSpec(
-        "Weapon", "Disparo",
-        params=(_start(0, 9, 2), _end(1, 9, 5), _force(0, 255, 200)),
-        description="Disparo de arma padrão.",
-    ),
-    TriggerPresetSpec(
         "Vibration", "Vibração",
-        params=(_pos(3), TriggerParamSpec("amplitude", "Amplitude", 0, 8, 4), _frequency(40)),
+        params=(
+            _pos(3),
+            TriggerParamSpec("amplitude", "Amplitude", 0, 8, 4),
+            _frequency(40, lo=1),
+        ),
         description="Vibração contínua com amplitude e frequência.",
     ),
     TriggerPresetSpec(
@@ -204,12 +161,87 @@ PRESETS: tuple[TriggerPresetSpec, ...] = (
     ),
 )
 
+#: As chaves que saíram da lista de onze. Seguem LIDAS (perfil gravado, estilo de jogo, DSX e
+#: linha de comando) com os ajustes de antes; quem monta o bloco é `build_from_name`, que as
+#: traduz para a linha nova (`core/trigger_effects.TRADUCAO_DAS_CHAVES_VELHAS`). Nenhuma delas
+#: aparece na tela.
+PRESETS_ANTIGOS: tuple[TriggerPresetSpec, ...] = (
+    TriggerPresetSpec(
+        "Rigid", "Rígido",
+        params=(_pos(5), _force(0, 255, 200)),
+        description="Barreira rígida numa posição fixa.",
+    ),
+    TriggerPresetSpec(
+        "SimpleRigid", "Rígido simples",
+        params=(_strength(6),),
+        description="Atalho do Rígido, com uma só escala de 0 a 8.",
+    ),
+    TriggerPresetSpec(
+        "Pulse", "Pulso", params=(),
+        description="Pulso único.",
+    ),
+    TriggerPresetSpec(
+        "PulseA", "Pulso (curva A)",
+        params=(_start(0, 9, 2), _end(1, 9, 7), _force(0, 255, 180)),
+        description="Pulso entre duas posições (curva A).",
+    ),
+    TriggerPresetSpec(
+        "PulseB", "Pulso (curva B)",
+        params=(_start(0, 9, 2), _end(1, 9, 7), _force(0, 255, 180)),
+        description="Pulso entre duas posições (curva B).",
+    ),
+    TriggerPresetSpec(
+        "SemiAutoGun", "Arma semi-automática",
+        params=(
+            TriggerParamSpec("start", "Início", 2, 7, 3),
+            TriggerParamSpec("end", "Fim", 3, 8, 6),
+            _force_0_8(5),
+        ),
+        description="Rebote curto de arma semi-auto.",
+    ),
+    TriggerPresetSpec(
+        "AutoGun", "Arma automática",
+        params=(
+            _start(0, 9, 2),
+            _strength(6),
+            _frequency(60),
+        ),
+        description="Vibração contínua de arma automática.",
+    ),
+    TriggerPresetSpec(
+        "Feedback", "Ponto duro",
+        params=(_pos(5), _strength(4)),
+        description="Barreira a partir de uma posição, com força de 0 a 8.",
+    ),
+)
+
 
 def get_spec(name: str) -> TriggerPresetSpec | None:
-    for spec in PRESETS:
+    """O spec de um acionamento da lista de onze ou de uma chave velha que segue lida."""
+    for spec in (*PRESETS, *PRESETS_ANTIGOS):
         if spec.name == name:
             return spec
     return None
+
+
+def na_lista_de_onze(name: str, params: list[int]) -> tuple[str, list[int]]:
+    """O gatilho de um perfil como a tela o mostra: a chave da lista de onze e os ajustes dela.
+
+    Perfil antigo abre com o acionamento certo selecionado: `Rigid` aparece como Resistência,
+    `AutoGun` como Metralhadora, `PulseA` como Arco. Chave que já é da lista volta como veio.
+    """
+    from hefesto_dualsense4unix.core.trigger_effects import traduzir_chave_velha
+
+    traduzida = traduzir_chave_velha(name, params, para_a_tela=True)
+    if traduzida is None and not params:
+        # Gatilho sem ajustes no perfil (o que nasce na tela): os padrões do modo antigo.
+        spec = get_spec(name)
+        if spec is not None and spec.params:
+            padroes = [int(p.default) for p in spec.params]
+            traduzida = traduzir_chave_velha(name, padroes, para_a_tela=True)
+    if traduzida is None:
+        return name, list(params)
+    return traduzida
 
 
 def preset_to_positional_params(spec: TriggerPresetSpec, values: dict[str, int]) -> list[int]:
@@ -219,8 +251,10 @@ def preset_to_positional_params(spec: TriggerPresetSpec, values: dict[str, int])
 
 __all__ = [
     "PRESETS",
+    "PRESETS_ANTIGOS",
     "TriggerParamSpec",
     "TriggerPresetSpec",
     "get_spec",
+    "na_lista_de_onze",
     "preset_to_positional_params",
 ]
