@@ -8,6 +8,11 @@ USB.
 
 Se a janela já estiver aberta, a unidade só a traz para a frente.
 
+A janela fica aberta depois que a unidade termina. A unidade é de execução única
+(`Type=oneshot`) e termina assim que o lançador sai, e por isso leva
+`KillMode=process`: o systemd encerra só o processo principal e deixa a janela
+de pé. Com o padrão dele, a janela do início da sessão morria junto com a unidade.
+
 ## Ligar e desligar
 
 O instalador pergunta, com a resposta padrão «não». Para decidir sem a pergunta:

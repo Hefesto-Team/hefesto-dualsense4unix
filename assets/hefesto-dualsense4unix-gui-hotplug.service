@@ -8,6 +8,12 @@ Type=oneshot
 # BUG-TRAY-SINGLE-FLASH-01: guard pgrep removido — era race-prone com udev
 # ADD duplo em <200ms. O próprio launcher usa acquire_or_bring_to_front:
 # se já há GUI ativa, traz-a ao foco e sai com exit 0.
+# A janela sai do lançador com `setsid nohup … &`, e o `setsid` não a tira do
+# cgroup desta unit. Com o padrão `KillMode=control-group`, o systemd recolhia o
+# cgroup inteiro quando o lançador saía (a unit é oneshot e termina na hora) e a
+# janela do início da sessão morria junto. `process` mata só o processo
+# principal, que já saiu, e deixa a janela de pé.
+KillMode=process
 # %h expande para o HOME do usuário dono da sessão systemd --user.
 ExecStart=%h/.local/bin/hefesto-dualsense4unix-gui
 
