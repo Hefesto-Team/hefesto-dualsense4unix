@@ -113,6 +113,9 @@ BOTOES_DA_PAGINA: tuple[Botao, ...] = (
 
 POR_BOTAO: dict[str, Botao] = {x.b: x for x in BOTOES_DA_PAGINA}
 
+#: o toque no touchpad move o cursor e não se troca: a linha diz o que ele faz, como na Navegação.
+TOQUE = "tp_toque"
+
 #: o botão que a troca de botões conhece por este mesmo nome (o motor da troca só tem os 16).
 PODE_TROCAR: frozenset[str] = frozenset(
     x.b for x in BOTOES_DA_PAGINA if x.motor in remap.REMAPEAVEIS)
@@ -266,6 +269,8 @@ def _valores(ctx: Contexto, estado: dict[str, Any]) -> dict[str, tuple[str, str]
 
 def _texto_do_valor(par: tuple[str, str] | None, b: str) -> str:
     """O que a linha escreve: «—» sem valor, o destino da troca, ou a ação em palavras."""
+    if b == TOQUE:
+        return ROTULO_DA_ACAO[acoes.TOKEN_CURSOR]
     if par is None:
         return "—"
     tipo, valor = par

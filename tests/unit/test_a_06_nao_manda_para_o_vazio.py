@@ -116,7 +116,7 @@ def test_as_vinte_e_uma_linhas_saem_do_perfil(monkeypatch, tmp_path):
         "estaria mostrando o desenho no lugar da escolha dela.")
     assert mesa["acao-square"] == "Esc"
     # `core/keyboard_mappings.DEFAULT_BUTTON_BINDINGS["l3"]` é o `__TOGGLE_OSK__`.
-    assert mesa["acao-l3"] == "Abrir e fechar o teclado na tela"
+    assert mesa["acao-l3"] == "Teclado na tela"
 
 
 def test_todo_valor_emitido_existe_como_opcao_daquela_lista(aba):

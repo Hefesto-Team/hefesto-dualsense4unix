@@ -81,7 +81,7 @@ ACOES: dict[str, tuple[str, str]] = {
     "BTN_RIGHT": (GRUPO_MOUSE, "Botão direito"),
     "BTN_MIDDLE": (GRUPO_MOUSE, "Botão do meio"),
     TOKEN_CURSOR: (GRUPO_MOUSE, "Movimento do cursor"),
-    TOKEN_ROLAGEM: (GRUPO_MOUSE, "Rolagem vertical e horizontal"),
+    TOKEN_ROLAGEM: (GRUPO_MOUSE, "Rolagem"),
 
     "KEY_E": (GRUPO_TECLADO, "E"),
     "KEY_UP": (GRUPO_TECLADO, "Seta para cima"),
@@ -99,7 +99,7 @@ ACOES: dict[str, tuple[str, str]] = {
     "KEY_SYSRQ": (GRUPO_TECLADO, "PrintScreen"),
     "KEY_F11": (GRUPO_TECLADO, "F11"),
 
-    TOKEN_TOGGLE_OSK: (GRUPO_COMANDO, "Abrir e fechar o teclado na tela"),
+    TOKEN_TOGGLE_OSK: (GRUPO_COMANDO, "Teclado na tela"),
     TOKEN_OPEN_OSK: (GRUPO_COMANDO, "Abrir o teclado na tela"),
     TOKEN_CLOSE_OSK: (GRUPO_COMANDO, "Fechar o teclado na tela"),
     TOKEN_STEAM: (GRUPO_COMANDO, "Abrir a Steam"),

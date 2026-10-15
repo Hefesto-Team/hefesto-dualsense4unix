@@ -56,7 +56,8 @@ def test_o_clique_e_a_direcao_do_r3_sao_duas_linhas_do_mesmo_desenho() -> None:
     for linha in ("r3", "r3_direcao", "l3", "l3_direcao"):
         assert f'data-gesto="linha-de-botao" data-linha="{linha}"' in doc, linha
     direcao = re.search(r'data-linha="r3_direcao".*?</select>', doc, flags=re.S)
-    assert direcao and "Rolagem vertical e horizontal" in direcao.group(0)
+    assert direcao and re.search(r"<option selected>Rolagem</option>", direcao.group(0)), (
+        "a direção do R3 não diz «Rolagem», a palavra do desenho e do mapa do controle")
 
 
 def test_o_select_do_point_and_click_traz_os_moldes_do_produto() -> None:

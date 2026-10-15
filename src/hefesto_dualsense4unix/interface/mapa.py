@@ -334,7 +334,8 @@ CSS_TELA = """
   .voltar2{display:inline-flex;align-items:center;height:30px;padding:0 12px;border-radius:7px;text-decoration:none;
     border:1px solid var(--border-forte);background:var(--panel);color:var(--texto-suave);font-size:12px}
   .voltar2:hover{border-color:var(--purple);color:var(--fg)}
-  .mc-chips{margin-left:auto;display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:8px}
+  .mc-topo > .mc-rot{margin-left:auto}
+  .mc-chips{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:8px}
   .chip{height:30px;padding:0 12px;border-radius:7px;border:2px solid var(--plastico,var(--border-forte));
     background:var(--app-bg);color:var(--texto-suave);font:12px var(--f);cursor:pointer;white-space:nowrap;text-align:center}
   .chip.on{background:rgba(189,147,249,.16);color:var(--fg);font-weight:600}

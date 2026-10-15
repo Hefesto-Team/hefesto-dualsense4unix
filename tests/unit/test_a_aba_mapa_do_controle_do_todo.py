@@ -81,6 +81,24 @@ def test_o_voltar_leva_a_navegacao_e_a_tela_nao_confessa_mesa_nem_jogador() -> N
     assert 'class="ajuda"' not in doc, "o «?» saiu: a explicação mora na dica (`data-dica`)"
 
 
+#: a linha do mapa → a linha da Navegação que fala do MESMO botão, e a palavra do desenho do todo.
+O_MESMO_BOTAO = {"tp_toque": ("touchpad_toque", "Movimento do cursor"),
+                 "l3": ("l3", "Teclado na tela"),
+                 "r3_direcao": ("r3_direcao", "Rolagem")}
+
+
+def test_o_mapa_e_a_navegacao_dizem_a_mesma_palavra_para_o_mesmo_botao() -> None:
+    """O Toque, o L3 clique e a direção do R3 dizem nas duas telas o que o desenho diz."""
+    navegacao = (RAIZ / "mockup" / "06-navegacao.html").read_text(encoding="utf-8")
+    for b, (linha, palavra) in O_MESMO_BOTAO.items():
+        no_mapa = re.search(rf'data-b="{b}".*?<span class="b2-val"[^>]*>([^<]*)</span>', _doc(),
+                            flags=re.S)
+        assert no_mapa and no_mapa.group(1) == palavra, (b, no_mapa and no_mapa.group(1))
+        na_06 = re.search(rf'data-linha="{linha}".*?<option selected>([^<]*)</option>', navegacao,
+                          flags=re.S)
+        assert na_06 and na_06.group(1) == palavra, (linha, na_06 and na_06.group(1))
+
+
 def test_a_tela_cabe_sem_rolagem_vertical() -> None:
     from playwright.sync_api import sync_playwright
 
