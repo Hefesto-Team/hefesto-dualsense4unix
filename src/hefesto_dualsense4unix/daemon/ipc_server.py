@@ -4,7 +4,7 @@ NDJSON UTF-8, uma mensagem por linha. Métodos v1 + extensões:
 
     profile.switch       {name: str} -> {active_profile: str}
     profile.list         {}          -> {profiles: [{name, priority, match_type}]}
-    profile.reaplicar    {name: str} -> {active_profile, mode_aplicado, secoes}
+    profile.reaplicar    {name: str, prender?: bool} -> {active_profile, mode_aplicado, secoes}
     trigger.set    {side, mode, params, uniq?} -> {status, aplicado_em, guardado_em}
     trigger.reset  {side?, uniq?}              -> {status, aplicado_em, guardado_em}
     led.set              {rgb}                 -> {status}
