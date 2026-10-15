@@ -203,9 +203,9 @@ DICA_DO_MODO = {
  "Weapon": "Trava, solta no estalo e fica leve até o fim — espingarda.",
  "Vibration": "Treme o gatilho na frequência escolhida, sem opor força.",
  "SlopeFeedback": "A força sobe em linha reta do início ao fim do curso.",
- "MultiPositionFeedback": "Você desenha a força em dez posições do curso, uma por uma.",
- "MultiPositionVibration": "Treme só na faixa do curso que você marcar.",
- "Custom": "As dez posições em branco, para desenhar a curva do jeito que a sua mão pedir.",
+ "MultiPositionFeedback": "A força sobe em dez degraus ao longo do curso, do solto ao máximo.",
+ "MultiPositionVibration": "Treme cada vez mais forte à medida que o gatilho afunda.",
+ "Custom": "O modo e as sete forças em bytes crus, todos em zero: a base do efeito feito à mão.",
 }
 
 SEM_APARELHO_AQUI = "Nenhum controle neste lugar."
