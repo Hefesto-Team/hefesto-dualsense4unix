@@ -410,8 +410,9 @@ def test_o_automatico_da_corrida_vibra_o_freio_depois_de_800_ms(
     assert bloco == _bloco("Vibration", position=2, amplitude=3, frequency=15)
     assert 0.8 <= t - apertou <= 0.8 + FOLGA
 
-    # O FPS ainda usa a chave velha no automático: sem imersão reconhecida, fica calado.
-    assert not tv.receita_do_perfil(
+    # O FPS guarda a chave velha no estilo, e o automático acha a imersão dele pelo
+    # acionamento de hoje (a Rajada na Metralhadora): os momentos ficam ligados.
+    assert tv.receita_do_perfil(
         _perfil(estilo="fps", triggers=AUTOMATICO)).momentos_da_imersao
 
 
