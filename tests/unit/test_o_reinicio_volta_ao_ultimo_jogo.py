@@ -272,3 +272,31 @@ def test_o_jogo_que_o_lancamento_pos_fica_mesmo_sem_a_janela_dele() -> None:
         sw._tick(dict(JANELA_DO_TERMINAL), 2.0 + 0.5 * i)
     assert store.active_profile == "lure"
     assert session._ultimo_jogo_cru() == "lure"
+
+
+@pytest.mark.usefixtures("perfis_isolados")
+def test_o_gesto_dela_depois_do_boot_fica_com_a_janela_sem_perfil() -> None:
+    """O boot volta ao último jogo, ela ativa outro perfil à mão, e o terminal não devolve o jogo.
+
+    O gesto do usuário é o que tira o último jogo (D-1410-O-PERFIL-FICA-NO-ULTIMO-JOGO):
+    o ``gravar_a_escolha`` apaga o disco, e a memória do autoswitch se relê vazia.
+    Com a memória velha, o jogo voltava pela queda do «sem candidato» e, por
+    declarar o modo gamepad, ainda soltava a trava da troca à mão.
+
+    MORDIDA: tire a releitura do disco que a crença sincronizada arma no
+    ``_perfil_corrente`` e o «sackboy» volta por cima do gesto.
+    """
+    _jogou_e_fechou()
+    okular = _perfil("okular", janela="okular", prioridade=40)
+    manager, store = _bancada([*_os_perfis(), okular])
+    manager.activate(_o_nome_que_o_boot_restaura(store), origin="system")
+    sw = _switcher(manager, store, jogo_vivo=lambda: None)
+    for i in range(10):
+        sw._tick(dict(JANELA_DO_TERMINAL), 0.5 * i)
+    assert store.active_profile == "sackboy", "premissa: o boot voltou ao último jogo"
+    manager.activate("okular", origin="manual")
+    for i in range(60):
+        sw._tick(dict(JANELA_DO_TERMINAL), 10.0 + 0.5 * i)
+    assert store.active_profile == "okular", "o último jogo voltou por cima do gesto dela"
+    assert session._ultimo_jogo_cru() is None
+    assert _o_nome_que_o_boot_restaura(None) == "okular"
