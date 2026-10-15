@@ -108,6 +108,7 @@ import os
 import re
 from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, field
+from typing import NamedTuple
 
 from hefesto_dualsense4unix.integrations import receptor_sem_fio as _receptor_sem_fio
 from hefesto_dualsense4unix.utils.texto_do_sysfs import ler_texto
@@ -158,6 +159,18 @@ _DEVPATH_DO_RAIZ = "0"
 _CARGA_UNITARIA_MA = 100
 
 _BIT_AUTOALIMENTADO = 0x40
+
+#: As capacidades do BOS que só aparelho de 5 Gb/s ou mais publica (SuperSpeed e SuperSpeedPlus).
+_CAPACIDADES_SUPERSPEED = frozenset({0x03, 0x0A})
+_CAPACIDADE_CONTAINER_ID = 0x04
+_TIPO_DO_BOS = 0x0F
+_TIPO_DA_CAPACIDADE = 0x10
+#: A maior velocidade do enlace USB 2.0; o que negociou isto ou menos não está em SuperSpeed.
+_ALTA_VELOCIDADE_MBPS = 480.0
+_SUPERSPEED_MBPS = 5000.0
+
+#: A porta de um hub no ``/sys``: ``3-1-port4`` (de um hub) ou ``usb3-port1`` (do hub-raiz).
+_PORTA = re.compile(r"^(.+)-port([0-9]+)$")
 
 _CONTROLADOR_PCI = re.compile(r"0000:[0-9a-f]{2}:[0-9a-f]{2}\.[0-9a-f]")
 
@@ -242,6 +255,23 @@ class Aparelho:
     e_raiz: bool = False
     atras_de_hub: bool = False
     energia: Energia = field(default_factory=Energia)
+    #: o ``bcdUSB`` que o aparelho declara (``version``), como ``"2.10"``
+    versao_usb: str = ""
+    #: o número da enumeração; sobe a cada uma, e é por ele que a reenumeração se prova
+    devnum: int = 0
+    #: os drivers ligados nas interfaces, sem repetir, na ordem delas (``"btusb"``)
+    driver: str = ""
+    #: o nome na base do sistema (libudev), ``""`` quando a base não tem a linha
+    fabricante_da_base: str = ""
+    produto_da_base: str = ""
+    #: publica SuperSpeed no BOS? ``None`` é «não sei» (sem ``bos_descriptors``)
+    sabe_superspeed: bool | None = None
+    #: o Container ID do BOS, em hex; ``""`` quando não há
+    container_id: str = ""
+    #: as portas de um hub (``maxchild``)
+    portas: int = 0
+    #: ``(porta, hub do par, porta do par)``: as portas deste hub amarradas pelo ``peer``
+    pares: tuple[tuple[int, str, int], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -280,9 +310,17 @@ def ler_o_barramento(
     listar: Callable[[str], list[str]] = os.listdir,
     ler: Callable[[str], str] | None = None,
     real: Callable[[str], str] = os.path.realpath,
+    ler_bytes: Callable[[str], bytes] | None = None,
+    base: Callable[[str, str], str | None] | None = None,
 ) -> Censo:
-    """Uma varredura de ``/sys``, e o barramento inteiro sai dela."""
+    """Uma varredura de ``/sys``, e o barramento inteiro sai dela.
+
+    ``ler_bytes`` lê o ``bos_descriptors`` (binário); ``base`` é a base do sistema,
+    ``(syspath, propriedade) -> valor`` (a libudev por padrão).
+    """
     leitor = ler_texto if ler is None else ler
+    leitor_de_bytes = _ler_bytes if ler_bytes is None else ler_bytes
+    da_base = _da_libudev if base is None else base
     try:
         nomes = sorted(listar(raiz_usb))
     except OSError:
@@ -296,7 +334,8 @@ def ler_o_barramento(
 
     brutos = {
         nome: _ler_um(
-            nome, caminho, raiz_usb, interfaces, leitor=leitor, real=real, listar=listar
+            nome, caminho, raiz_usb, interfaces, leitor=leitor, real=real, listar=listar,
+            leitor_de_bytes=leitor_de_bytes, base=da_base,
         )
         for nome, caminho in caminhos.items()
     }
@@ -312,9 +351,155 @@ def ler_o_barramento(
     return Censo(aparelhos=aparelhos, barramentos=_barramentos(aparelhos))
 
 
+@dataclass(frozen=True)
+class HubFisico:
+    """Um hub de plástico: os nós que o kernel enumera para ele, e as entradas que ele expõe."""
+
+    representante: str
+    nos: tuple[str, ...]
+    container_id: str = ""
+    entradas: int = 0
+
+
+class EnlaceAbaixo(NamedTuple):
+    """Um aparelho que sabe SuperSpeed e negociou menos; ``caminho_era_3x`` quando a porta acima
+    tem o par SuperSpeed livre."""
+
+    no: str
+    velocidade_mbps: float
+    caminho_era_3x: bool
+
+
+def hubs_fisicos(censo: Censo) -> tuple[HubFisico, ...]:
+    """Os nós de hub agrupados por aparelho: o mesmo Container ID, ou as portas amarradas pelo
+    ``peer``; sem os dois, cada nó é um hub."""
+    hubs = sorted((a for a in censo.aparelhos if a.e_hub and not a.e_raiz), key=_ordem)
+    por_nome = {a.nome_do_kernel: a for a in hubs}
+    grupo = {a.no: a.no for a in hubs}
+
+    def raiz(no: str) -> str:
+        while grupo[no] != no:
+            grupo[no] = grupo[grupo[no]]
+            no = grupo[no]
+        return no
+
+    def juntar(um: str, outro: str) -> None:
+        a, b = raiz(um), raiz(outro)
+        if a != b:
+            grupo[max(a, b)] = min(a, b)
+
+    por_container: dict[str, str] = {}
+    for hub in hubs:
+        if hub.container_id:
+            juntar(hub.no, por_container.setdefault(hub.container_id, hub.no))
+        for _porta, nome_do_par, _porta_do_par in hub.pares:
+            par = por_nome.get(nome_do_par)
+            if par is not None:
+                juntar(hub.no, par.no)
+
+    membros: dict[str, list[Aparelho]] = {}
+    for hub in hubs:
+        membros.setdefault(raiz(hub.no), []).append(hub)
+    return tuple(
+        HubFisico(
+            representante=nos[0].no,
+            nos=tuple(a.no for a in nos),
+            container_id=next((a.container_id for a in nos if a.container_id), ""),
+            entradas=_entradas(nos),
+        )
+        for nos in sorted(membros.values(), key=lambda lista: _ordem(lista[0]))
+    )
+
+
+def hub_fisico_de(censo: Censo, no: str) -> HubFisico | None:
+    """O hub físico de que este nó faz parte, ou ``None`` quando ele não é hub."""
+    return next((h for h in hubs_fisicos(censo) if no in h.nos), None)
+
+
+def _entradas(nos: Sequence[Aparelho]) -> int:
+    """As portas dos nós, menos as que alimentam outro nó do hub; um par de ``peer`` conta uma."""
+    nomes = {a.nome_do_kernel for a in nos}
+    proprios = {a.no for a in nos}
+    alimentam = {
+        (a.nome_do_kernel, porta)
+        for a in nos
+        for porta in range(1, a.portas + 1)
+        if f"{a.no}/{_no_na_porta(a, porta)}" in proprios
+    }
+    portas = [
+        (a.nome_do_kernel, porta)
+        for a in nos
+        for porta in range(1, a.portas + 1)
+        if (a.nome_do_kernel, porta) not in alimentam
+    ]
+    pares = {
+        frozenset({(a.nome_do_kernel, porta), (nome_do_par, porta_do_par)})
+        for a in nos
+        for porta, nome_do_par, porta_do_par in a.pares
+        if nome_do_par in nomes
+    }
+    abertas = set(portas)
+    contadas = len(portas) - sum(1 for par in pares if par <= abertas)
+    if pares or len({a.busnum for a in nos}) < 2:
+        return contadas
+    # sem ``peer`` nenhum, os dois lados contariam a mesma entrada duas vezes: vale o lado maior
+    por_lado: dict[int, int] = {}
+    for nome, _porta in portas:
+        lado = next(a.busnum for a in nos if a.nome_do_kernel == nome)
+        por_lado[lado] = por_lado.get(lado, 0) + 1
+    return max(por_lado.values(), default=0)
+
+
+def enlace_abaixo(censo: Censo, aparelho: Aparelho) -> EnlaceAbaixo | None:
+    """O aparelho sabe SuperSpeed (no BOS) e negociou 480M ou menos.
+
+    Fato medido, sem causa. O lado 2.0 de um hub que tem o lado SuperSpeed no ar não conta: ele
+    é 2.0 por construção.
+    """
+    if aparelho.e_raiz or not aparelho.sabe_superspeed:
+        return None
+    if not 0 < aparelho.velocidade_mbps <= _ALTA_VELOCIDADE_MBPS:
+        return None
+    hub = hub_fisico_de(censo, aparelho.no) if aparelho.e_hub else None
+    if hub is not None and any(
+        (outro := censo.aparelho(no)) is not None and outro.velocidade_mbps >= _SUPERSPEED_MBPS
+        for no in hub.nos
+    ):
+        return None
+    return EnlaceAbaixo(
+        aparelho.no, aparelho.velocidade_mbps, _par_superspeed_livre(censo, aparelho))
+
+
+def _par_superspeed_livre(censo: Censo, aparelho: Aparelho) -> bool:
+    """A porta acima deste aparelho tem o par SuperSpeed, e nada enumerou nele."""
+    pai = censo.aparelho(aparelho.pai) if aparelho.pai else None
+    if pai is None or not aparelho.devpath:
+        return False
+    porta = _inteiro(aparelho.devpath.split(".")[-1])
+    par = next(((nome, p) for q, nome, p in pai.pares if q == porta), None)
+    if par is None:
+        return False
+    hub_do_par = next((a for a in censo.aparelhos if a.nome_do_kernel == par[0]), None)
+    if hub_do_par is None or hub_do_par.velocidade_mbps < _SUPERSPEED_MBPS:
+        return False
+    ocupada = f"{hub_do_par.no}/{_no_na_porta(hub_do_par, par[1])}"
+    return censo.aparelho(ocupada) is None
+
+
+def _no_na_porta(hub: Aparelho, porta: int) -> str:
+    """O nó que a porta enumeraria: sob o raiz ``usb4`` é ``4-1``; sob ``4-1`` é ``4-1.1``."""
+    return f"{hub.busnum}-{porta}" if hub.e_raiz else f"{hub.nome_do_kernel}.{porta}"
+
+
 def cadeia_de_hubs(censo: Censo, no: str) -> tuple[str, ...]:
-    """Os hubs acima deste aparelho, do mais perto ao mais longe."""
+    """Os hubs FÍSICOS acima deste aparelho, do mais perto ao mais longe.
+
+    Cada hub vem pelo representante do hub físico (:func:`hubs_fisicos`): os dois lados e a
+    cascata interna de um hub de plástico contam um, e dois aparelhos nos dois lados do mesmo
+    hub dão o mesmo nó.
+    """
     por_no = {a.no: a for a in censo.aparelhos}
+    representante = {no: h.representante for h in hubs_fisicos(censo) for no in h.nos}
     atual = por_no.get(no)
     cadeia: list[str] = []
     vistos: set[str] = set()
@@ -324,7 +509,9 @@ def cadeia_de_hubs(censo: Censo, no: str) -> tuple[str, ...]:
         if pai is None:
             break
         if pai.e_hub and not pai.e_raiz:
-            cadeia.append(pai.no)
+            fisico = representante.get(pai.no, pai.no)
+            if fisico not in cadeia:
+                cadeia.append(fisico)
         atual = pai
     return tuple(cadeia)
 
@@ -379,6 +566,11 @@ class _Bruto:
     ligado_como: str = ""
     interfaces: tuple[str, ...] = ()
     eventos: tuple[str, ...] = ()
+    drivers: tuple[str, ...] = ()
+    bos: bytes = b""
+    pares: tuple[tuple[int, str, int], ...] = ()
+    fabricante_da_base: str = ""
+    produto_da_base: str = ""
 
 
 def _ler_um(
@@ -390,6 +582,8 @@ def _ler_um(
     leitor: Callable[[str], str],
     real: Callable[[str], str],
     listar: Callable[[str], list[str]],
+    leitor_de_bytes: Callable[[str], bytes] = lambda _caminho: b"",
+    base: Callable[[str, str], str | None] = lambda _syspath, _nome: None,
 ) -> _Bruto:
     """Todos os atributos de um nó, mais a classe da interface 0."""
     campos = {
@@ -408,6 +602,9 @@ def _ler_um(
             "physical_location/panel",
             "power/control",
             "port/over_current_count",
+            "version",
+            "devnum",
+            "maxchild",
         )
     }
     classe, subclasse, protocolo, origem = _classe_da_interface(
@@ -428,6 +625,8 @@ def _ler_um(
     triplas, eventos = _interfaces_e_eventos(
         nome, campos["busnum"], campos["devpath"], raiz_usb, interfaces,
         leitor=leitor, real=real, listar=listar)
+    proprias = _interfaces_do_no(nome, campos["busnum"], campos["devpath"], interfaces)
+    pastas = [_real_sem_erro(real, os.path.join(raiz_usb, i)) for i in proprias]
     return _Bruto(
         nome=nome,
         caminho=caminho,
@@ -440,7 +639,109 @@ def _ler_um(
         ligado_como=ligado,
         interfaces=triplas,
         eventos=eventos,
+        drivers=_drivers(pastas, real),
+        bos=_bytes_sem_erro(leitor_de_bytes, os.path.join(caminho, "bos_descriptors")),
+        pares=_pares(pastas, real, listar) if classe == CLASSE_HUB else (),
+        fabricante_da_base=_nome_da_base(base, caminho, "ID_VENDOR_FROM_DATABASE"),
+        produto_da_base=_nome_da_base(base, caminho, "ID_MODEL_FROM_DATABASE"),
     )
+
+
+def _interfaces_do_no(nome: str, busnum: str, devpath: str, interfaces: Iterable[str]) -> list[str]:
+    """As interfaces deste nó (``3-1.4:1.0``…), em ordem."""
+    prefixo = f"{busnum}-{devpath}:" if busnum and devpath else f"{nome}:"
+    return sorted(alvo for alvo in interfaces if alvo.startswith(prefixo))
+
+
+def _drivers(pastas: Sequence[str], real: Callable[[str], str]) -> tuple[str, ...]:
+    """O driver ligado em cada interface (o alvo do link ``driver``), sem repetir."""
+    achados: list[str] = []
+    for pasta in pastas:
+        alvo = _real_sem_erro(real, os.path.join(pasta, "driver"))
+        nome = os.path.basename(alvo)
+        if alvo and nome != "driver" and nome not in achados:
+            achados.append(nome)
+    return tuple(achados)
+
+
+def _pares(
+    pastas: Sequence[str], real: Callable[[str], str], listar: Callable[[str], list[str]]
+) -> tuple[tuple[int, str, int], ...]:
+    """As portas deste hub e a do outro lado a que o ``peer`` as amarra."""
+    pares: list[tuple[int, str, int]] = []
+    for pasta in pastas:
+        for entrada in sorted(_listar_sem_erro(listar, pasta)):
+            porta = _PORTA.match(entrada)
+            if porta is None:
+                continue
+            alvo = _PORTA.match(os.path.basename(
+                _real_sem_erro(real, os.path.join(pasta, entrada, "peer"))))
+            if alvo is not None:
+                pares.append((int(porta.group(2)), alvo.group(1), int(alvo.group(2))))
+    return tuple(pares)
+
+
+def ler_o_bos(dados: bytes) -> tuple[bool | None, str]:
+    """``(sabe SuperSpeed, Container ID)`` do ``bos_descriptors``; ``(None, "")`` sem ele.
+
+    Pelo tipo de cada capacidade, nunca pela marca: ``0x03``/``0x0a`` são SuperSpeed, ``0x04`` é
+    o Container ID (16 bytes depois de quatro de cabeçalho).
+    """
+    if len(dados) < 5 or dados[1] != _TIPO_DO_BOS:
+        return None, ""
+    total = min(len(dados), int.from_bytes(dados[2:4], "little") or len(dados))
+    posicao = dados[0] or 5
+    sabe = False
+    container = ""
+    while posicao + 3 <= total:
+        tamanho = dados[posicao]
+        if tamanho < 3:
+            break
+        if dados[posicao + 1] == _TIPO_DA_CAPACIDADE:
+            tipo = dados[posicao + 2]
+            if tipo in _CAPACIDADES_SUPERSPEED:
+                sabe = True
+            elif tipo == _CAPACIDADE_CONTAINER_ID and tamanho >= 20 and posicao + 20 <= total:
+                container = dados[posicao + 4:posicao + 20].hex()
+        posicao += tamanho
+    return sabe, container
+
+
+def _ler_bytes(caminho: str) -> bytes:
+    """Um atributo binário do ``/sys``; ``b""`` em qualquer erro."""
+    try:
+        with open(caminho, "rb") as arquivo:
+            return arquivo.read()
+    except OSError:
+        return b""
+
+
+def _da_libudev(syspath: str, nome: str) -> str | None:
+    """A propriedade do dispositivo na base da libudev; ``None`` sem libudev ou sem a linha."""
+    from hefesto_dualsense4unix.core.banco_do_udev import propriedade_do_syspath
+
+    return propriedade_do_syspath(syspath, nome)
+
+
+def _nome_da_base(base: Callable[[str, str], str | None], syspath: str, nome: str) -> str:
+    try:
+        return (base(syspath, nome) or "").strip()
+    except Exception:
+        return ""
+
+
+def _bytes_sem_erro(ler: Callable[[str], bytes], caminho: str) -> bytes:
+    try:
+        return ler(caminho)
+    except (OSError, KeyError):
+        return b""
+
+
+def _real_sem_erro(real: Callable[[str], str], caminho: str) -> str:
+    try:
+        return real(caminho)
+    except (OSError, KeyError):
+        return ""
 
 
 def _montar(
@@ -468,6 +769,7 @@ def _montar(
         # fabricante…): as duas interfaces de arranque dizem o que ela não disse
         especie, grau = _receptor_sem_fio.ESPECIE, GRAU_LIDO
         origem = "as interfaces de teclado e mouse"
+    sabe_superspeed, container_id = ler_o_bos(bruto.bos)
     return Aparelho(
         no=bruto.caminho,
         nome_do_kernel=bruto.nome,
@@ -491,6 +793,15 @@ def _montar(
         receptor=receptor,
         especie=especie,
         grau=grau,
+        versao_usb=campos["version"],
+        devnum=_inteiro(campos["devnum"]),
+        driver=", ".join(bruto.drivers),
+        fabricante_da_base=bruto.fabricante_da_base,
+        produto_da_base=bruto.produto_da_base,
+        sabe_superspeed=sabe_superspeed,
+        container_id=container_id,
+        portas=_inteiro(campos["maxchild"]),
+        pares=bruto.pares,
         e_hub=bruto.classe == CLASSE_HUB,
         e_raiz=e_raiz,
         atras_de_hub=_atras_de_hub(pai),
@@ -730,7 +1041,13 @@ __all__ = [
     "Barramento",
     "Censo",
     "Energia",
+    "EnlaceAbaixo",
+    "HubFisico",
     "cadeia_de_hubs",
+    "enlace_abaixo",
     "hub_em_comum",
+    "hub_fisico_de",
+    "hubs_fisicos",
     "ler_o_barramento",
+    "ler_o_bos",
 ]
