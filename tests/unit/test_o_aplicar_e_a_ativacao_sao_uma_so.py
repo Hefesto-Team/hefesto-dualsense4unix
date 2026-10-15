@@ -209,7 +209,8 @@ def test_todo_campo_do_perfil_e_de_cada_controle_e_levado_pelo_aplicar(
 def test_o_aplicar_nao_e_escolha_nem_liga_o_freestyle() -> None:
     """O `reaplicar` não grava a sessão, o marcador nem o último jogo, e não mexe no Freestyle.
 
-    D-1410-O-APLICAR-SEGURA: ele arma a trava, mas o disco fica byte a byte como estava.
+    D-0110-O-APLICAR-NAO-E-ESCOLHA, a parte que a D-1410-O-APLICAR-SEGURA manteve: ele arma a
+    trava, mas o disco fica byte a byte como estava.
     """
     loader.save_profile(_o_perfil_inteiro(), origem="régua")
     store = StateStore()

@@ -58,7 +58,7 @@ def _terminal(sw, de: float, ate: float) -> None:  # type: ignore[no-untyped-def
 
 @pytest.mark.usefixtures("perfis_isolados")
 def test_o_aplicar_segura_aos_12_e_aos_60_segundos() -> None:
-    """O terminal em foco não devolve a escolha nem o último jogo por cima do «Aplicar».
+    """D-1410-O-APLICAR-SEGURA: o terminal não devolve a escolha nem o último jogo por cima.
 
     MORDIDA: tire o ``armar_a_trava_da_mao`` do ramo da reaplicação no ``_ativar``
     (`profiles/manager.py`) e, aos 12 s, o «lure» da escolha passa por cima.
@@ -74,7 +74,7 @@ def test_o_aplicar_segura_aos_12_e_aos_60_segundos() -> None:
 
 @pytest.mark.usefixtures("perfis_isolados")
 def test_o_jogo_com_perfil_em_foco_solta_a_trava_do_aplicar() -> None:
-    """Outro jogo com perfil entrando em foco solta a trava e entra."""
+    """D-1410-O-APLICAR-SEGURA: outro jogo com perfil entrando em foco solta a trava e entra."""
     _manager, store, sw = _a_montagem()
     _terminal(sw, 2.0, 20.0)
     sw._tick(dict(JANELA_DO_JOGO), 20.5)
@@ -85,7 +85,7 @@ def test_o_jogo_com_perfil_em_foco_solta_a_trava_do_aplicar() -> None:
 
 @pytest.mark.usefixtures("perfis_isolados")
 def test_o_ativar_de_outro_perfil_troca_depois_do_aplicar() -> None:
-    """O próximo gesto do usuário («Ativar» de outro perfil) troca, e fica."""
+    """D-1410-O-APLICAR-SEGURA: o próximo gesto («Ativar» de outro perfil) troca, e fica."""
     manager, store, sw = _a_montagem()
     _terminal(sw, 2.0, 10.0)
     manager.activate("lure", origin="manual")
