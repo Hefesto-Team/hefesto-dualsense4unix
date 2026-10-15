@@ -2418,6 +2418,9 @@ LER_CAMPOS = r"""
 
 VOLTAS_ATE_ASSENTAR = 20
 
+#: quantos estados da janela o cenário `rajada` do `--conta-tamanho` dispara, um por tique.
+RAJADA_DE_ESTADOS = 20
+
 #: que já existe (`window.__hef.pintar` devolve quantos valores escreveu) também
 OBSERVAR_MUTACOES = r"""
 (function(){
@@ -2482,6 +2485,81 @@ LER_MUTACOES = r"""
     // evitado.
     blocos_adiados: h.blocosAdiados || 0,
     linhas: linhas
+  });
+})()
+"""
+
+#: O `--conta-tamanho`: quantas vezes a caixa de cada peça da moldura MUDOU de tamanho. Um
+#: `ResizeObserver` por alvo; a chamada de abertura (a primeira, que só diz o tamanho de partida)
+#: não conta. Cada tamanho distinto sai com quantas vezes apareceu, para a pulsação se ler
+#: como «a altura foi de 809 a 777 e voltou N vezes».
+ALVOS_DO_TAMANHO = (".janela", ".miolo", ".registro")
+
+OBSERVAR_TAMANHO = r"""
+(function(){
+  window.__hef = window.__hef || {};
+  if(window.__hef.observadorDeTamanho){ window.__hef.observadorDeTamanho.disconnect(); }
+  const tabela = {};
+  window.__hef.tamanhos = tabela;
+  window.__hef.tamanhoDesde = Date.now();
+  const ausentes = [];
+  function ficha(nome){
+    if(!tabela[nome]){
+      tabela[nome] = {alvo: nome, n: 0, alturas: {}, larguras: {}, partiu: '', anterior: ''};
+    }
+    return tabela[nome];
+  }
+  function ver(nome, w, h, primeira){
+    const f = ficha(nome);
+    const caixa = w.toFixed(1) + 'x' + h.toFixed(1);
+    if(primeira){ f.partiu = caixa; f.anterior = caixa;
+      f.alturas[h.toFixed(1)] = 1; f.larguras[w.toFixed(1)] = 1; return; }
+    if(caixa === f.anterior){ return; }
+    f.anterior = caixa;
+    f.n += 1;
+    f.alturas[h.toFixed(1)] = (f.alturas[h.toFixed(1)] || 0) + 1;
+    f.larguras[w.toFixed(1)] = (f.larguras[w.toFixed(1)] || 0) + 1;
+  }
+  const vistos = new Set();
+  const obs = new ResizeObserver(function(regs){
+    for(const r of regs){
+      const nome = r.target.__hefNome;
+      const primeira = !vistos.has(nome);
+      vistos.add(nome);
+      ver(nome, r.contentRect.width, r.contentRect.height, primeira);
+    }
+  });
+  for(const sel of ALVOS){
+    const el = document.querySelector(sel);
+    if(!el){ ausentes.push(sel); continue; }
+    el.__hefNome = sel;
+    obs.observe(el);
+  }
+  // a vista (o que `100dvh` lê): o `resize` da janela do WebKit
+  ficha('(vista)');
+  let primeiraVista = true;
+  const aoVista = function(){
+    ver('(vista)', window.innerWidth, window.innerHeight, primeiraVista);
+    primeiraVista = false;
+  };
+  window.__hef.aoVista = aoVista;
+  window.addEventListener('resize', aoVista);
+  aoVista();
+  window.__hef.observadorDeTamanho = obs;
+  window.__hef.tamanhoAusentes = ausentes;
+  return 'observando';
+})()
+""".replace("ALVOS", str(list(ALVOS_DO_TAMANHO)))
+
+LER_TAMANHO = r"""
+(function(){
+  const h = window.__hef || {};
+  const fichas = [];
+  for(const k of Object.keys(h.tamanhos || {})) fichas.push(h.tamanhos[k]);
+  return JSON.stringify({
+    ms: Date.now() - (h.tamanhoDesde || Date.now()),
+    ausentes: h.tamanhoAusentes || [],
+    fichas: fichas
   });
 })()
 """
@@ -2811,6 +2889,13 @@ class Piloto:
         self._voltas_do_contador = 0
         self._mutacoes_lidas = False
         self.mutacoes: dict[str, Any] = {}
+        #: O `--conta-tamanho`: a conta de voltas, a tabela lida e o que o cenário já fez.
+        self._voltas_do_tamanho = 0
+        self._tamanho_lido = False
+        self.tamanhos: dict[str, Any] = {}
+        self._tamanho_da_janela_ao_partir = 0
+        self._mudo_de_proposito = False
+        self.estados_simulados = 0
         self._pulados_por_voo = 0
         self._pulados_por_custo = 0
         self._pintura_no_ar = False
@@ -2852,6 +2937,8 @@ class Piloto:
         self._ctx_de_agora = pacotes.Contexto(state={})
         #: O `state_full` lido FORA do laço do GTK — A-TELA-QUE-TRAVA-01. O fio
         self._estado_vivo = LeitorDoEstado()
+        if getattr(args, "cenario", "parado") == "mudo":
+            self._tornar_o_servico_mudavel()
         self.leitor = mesa_viva.LeitorDeCor(ligado=not args.sem_cor)
         #: A Navegação Interna (A-NAVEGACAO-INTERNA-…-01): os toques viram atos
         #: (`Navegador`), cada controle tem a sua seleção (`navegacao_interna.Selecoes`), e a
@@ -3560,6 +3647,9 @@ class Piloto:
                   f"mudança(s) de tamanho",
                   file=sys.stderr)
         self._contar_mutacoes()
+        contar_o_tamanho = getattr(self, "_contar_tamanho", None)
+        if contar_o_tamanho is not None:
+            contar_o_tamanho()
         return True
 
     def _contar_a_abertura(self) -> None:
@@ -3588,6 +3678,105 @@ class Piloto:
         if self._voltas_do_contador >= VOLTAS_ATE_ASSENTAR + quantos:
             self._mutacoes_lidas = True
             self.ponte.perguntar(LER_MUTACOES, self._leu_mutacoes)
+
+    def _tornar_o_servico_mudavel(self) -> None:
+        """Cenário `mudo`: a leitura do estado passa a poder vencer o prazo, de propósito.
+
+        O erro é o mesmo que o IPC real dá quando o serviço demora (`TimeoutError`), então o
+        tique percorre o caminho inteiro: estado velho, depois vazio, depois novo.
+        """
+        lida = self._estado_vivo._ler
+
+        def ler() -> dict[str, Any]:
+            if self._mudo_de_proposito:
+                raise TimeoutError("cenário: o serviço mudo de propósito")
+            return lida()
+
+        self._estado_vivo._ler = ler
+
+    def _simular_um_estado_da_janela(self, n: int) -> bool:
+        """Cenário `rajada`: um `window-state-event` de maximizar/restaurar, SEM mudar o tamanho.
+
+        Entra pelos mesmos dois ouvintes que o GTK chama (`_a_barra_se_refaz`, que repinta a
+        decoração, e `_o_tamanho_mudou`). Num X sem gerenciador de janelas ninguém maximiza de
+        verdade, então o evento é montado; o que se mede é o que a PÁGINA faz com ele.
+        """
+        import types
+
+        from gi.repository import Gdk
+
+        maximizada = int(Gdk.WindowState.MAXIMIZED) if n % 2 == 0 else 0
+        evento = types.SimpleNamespace(
+            changed_mask=int(Gdk.WindowState.MAXIMIZED), new_window_state=maximizada)
+        janela = self.tela.janela
+        self.tela._a_barra_se_refaz(janela, evento)
+        self.tela._o_tamanho_mudou(janela, evento)
+        self.estados_simulados += 1
+        return False
+
+    def _andar_o_cenario(self, volta: int, tiques: int) -> None:
+        """Um passo do cenário do `--conta-tamanho` (`parado` não faz nada)."""
+        cenario = getattr(self.args, "cenario", "parado")
+        if cenario == "mudo":
+            self._mudo_de_proposito = tiques // 3 <= volta < 2 * tiques // 3
+        elif cenario == "rajada" and volta == tiques // 4:
+            for n in range(RAJADA_DE_ESTADOS):
+                GLib.timeout_add(1 + n * TIQUE_MS, self._simular_um_estado_da_janela, n)
+
+    def _contar_tamanho(self) -> None:
+        """Um passo do `--conta-tamanho`, por tique. Fora dele, é um `if` falso."""
+        quantos = int(getattr(self.args, "conta_tamanho", 0) or 0)
+        if quantos <= 0 or self._tamanho_lido:
+            return
+        self._voltas_do_tamanho += 1
+        volta = self._voltas_do_tamanho - VOLTAS_ATE_ASSENTAR
+        if volta == 0:
+            self._tamanho_da_janela_ao_partir = int(
+                getattr(self.tela, "mudancas_de_tamanho", 0))
+            self.ponte.rodar(OBSERVAR_TAMANHO)
+            print(f"[tamanho] observando {self.pagina} por {quantos} tiques "
+                  f"(~{quantos * TIQUE_MS / 1000:.0f} s), cenário "
+                  f"{getattr(self.args, 'cenario', 'parado')}")
+        if volta >= 0:
+            self._andar_o_cenario(volta, quantos)
+        if volta >= quantos:
+            self._tamanho_lido = True
+            self._mudo_de_proposito = False
+            self.ponte.perguntar(LER_TAMANHO, self._leu_tamanho)
+
+    def _leu_tamanho(self, valor: Any, erro: Any) -> None:
+        """Imprime a tabela do `--conta-tamanho` e SAI: a medição acabou."""
+        import json
+
+        if erro is not None:
+            print(f"REPROVA: o observador de tamanho não respondeu — {erro}", file=sys.stderr)
+            self._sair("a contagem de tamanho falhou")
+            return
+        try:
+            fora = json.loads(str(valor))
+        except ValueError as e:
+            print(f"REPROVA: a tabela de tamanho não veio em JSON — {e}", file=sys.stderr)
+            self._sair("a contagem de tamanho falhou")
+            return
+        fora["janela_gtk"] = int(getattr(self.tela, "mudancas_de_tamanho", 0)) \
+            - self._tamanho_da_janela_ao_partir
+        fora["estados_simulados"] = self.estados_simulados
+        fora["cenario"] = getattr(self.args, "cenario", "parado")
+        self.tamanhos = fora
+        minutos = max(fora.get("ms", 0) / 60000.0, 1e-9)
+        print(f"\nTAMANHO em {fora.get('ms', 0) / 1000:.1f} s na {self.pagina}, "
+              f"cenário {fora['cenario']}")
+        print(f"{'alvo':14s} {'mudanças':>9s} {'por minuto':>11s}  alturas (valor x vezes)")
+        for ficha in fora.get("fichas", []):
+            alturas = ", ".join(f"{h}x{n}" for h, n in ficha["alturas"].items())
+            print(f"{ficha['alvo']:14s} {ficha['n']:9d} {ficha['n'] / minutos:11.1f}  {alturas}")
+        for ausente in fora.get("ausentes", []):
+            print(f"{ausente:14s}  (não existe nesta página)")
+        print(f"JANELA GTK: {fora['janela_gtk']} mudança(s) de tamanho · "
+              f"{fora['estados_simulados']} estado(s) simulado(s)")
+        with contextlib.suppress(SystemExit):
+            self._relatar()
+        self._sair("a contagem de tamanho acabou")
 
     def _sair(self, motivo: str) -> None:
         """Encerra o laço dizendo o porquê: o fim da janela nunca sai calado."""
@@ -4433,7 +4622,26 @@ def main() -> None:
                         "PARADA, por endereço e por tipo, e sai. O número certo "
                         "é ZERO para tudo o que não mudou de valor — o que "
                         "sobrar é a tela sambando")
+    p.add_argument("--conta-tamanho", type=int, default=0, metavar="N",
+                   help="conta, em N tiques, quantas vezes mudou a caixa de `.janela`, "
+                        "`.miolo`, `.registro` e a vista (o que `100dvh` lê), e sai. O "
+                        "número certo, sem a janela mudar de tamanho de verdade, é ZERO. "
+                        "Abre uma janela com barra: só roda no X de mentira")
+    p.add_argument("--cenario", choices=("parado", "mudo", "rajada"), default="parado",
+                   help="o que acontece durante o `--conta-tamanho`: `parado` (nada), "
+                        "`mudo` (o serviço vence o prazo no terço do meio) ou `rajada` "
+                        "(%d estados de maximizar/restaurar, sem mudar o tamanho)"
+                   % RAJADA_DE_ESTADOS)
     args = p.parse_args()
+
+    if args.conta_tamanho and os.environ.get("HEFESTO_NA_TELA") == "1" and not args.oculta:
+        print("[conta-tamanho] ligando `--oculta`: a tela é UMA e não é do instrumento.")
+        args.oculta = True
+    if args.conta_tamanho and not args.oculta:
+        # A janela tem barra e é de verdade: nasce no Xvfb próprio, nunca na sessão do usuário.
+        from hefesto_dualsense4unix.utils.tela_de_mentira import garantir_tela_de_mentira
+
+        garantir_tela_de_mentira()
 
     if args.conta_mutacoes and not args.oculta:
         print("[conta-mutações] ligando `--oculta`: ela tem UMA tela.")
