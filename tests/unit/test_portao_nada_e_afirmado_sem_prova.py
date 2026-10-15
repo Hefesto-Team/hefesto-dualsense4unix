@@ -10,7 +10,10 @@ MAPA = RAIZ / "docs/data/mapa-controles.csv"
 
 TETO_SEM_PROVA_NEM_RESSALVA = 35
 
-TETO_SEM_PROVA = 105
+#: 15/10/2026: 105 -> 107, as duas células de `luz.lightbar.efeito@dualsense` (cabo e rádio):
+#: o produto manda o quadro, com teste que morde, e ninguém viu o efeito na barra. Fecha com o olho
+#: de quem confere, como `luz.lightbar.aviso_de_modo@dualsense`.
+TETO_SEM_PROVA = 107
 
 _SIM = {"sim", "1", "true"}
 
@@ -73,7 +76,7 @@ def test_o_teto_acompanha_a_realidade_e_nunca_sobra() -> None:
 
 
 def test_a_divida_maior_das_afirmacoes_sem_prova_nao_cresce() -> None:
-    """As 105 que afirmam forte e ninguém provou — com ou sem ressalva."""
+    """As que afirmam forte e ninguém provou (o teto), com ou sem ressalva."""
     achados = _fortes_sem_prova()
 
     assert len(achados) == TETO_SEM_PROVA, (

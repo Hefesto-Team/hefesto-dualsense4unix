@@ -275,18 +275,6 @@ DO_APARELHO: dict[str, tuple[str, ...]] = {
 
 #: aplica na troca de perfil é `ProfileManager._aplicar_ganho_do_mic`. O campo
 A_DIVIDA_CONHECIDA: dict[str, tuple[str, str]] = {
-    "haptica": (  # fica: o grau sobe pela Forja (ficha Y01)
-        "2026-10-01-O-FORJA-E-O-BANCO-DE-PROVA-DO-HEFESTO-01.md",
-        "a linha `vibracao.haptics_vcm@dualsense` do mapa segue em dívida nos dois "
-        "transportes: o ganho grava e alcança a placa (cabo) e o conversor da ponte "
-        "(rádio) com régua que morde, mas o grau do aparelho só sobe com a medida "
-        "(o banco de prova, ou a mão dela nos Caminhos da Forja)",
-    ),
-    "testar-haptica": (  # fica: o grau sobe pela Forja (ficha Y01)
-        "2026-10-01-O-FORJA-E-O-BANCO-DE-PROVA-DO-HEFESTO-01.md",
-        "o teste da háptica toca pela mesma linha `vibracao.haptics_vcm@dualsense` da "
-        "`haptica`, em dívida nos dois transportes até a medida do aparelho",
-    ),
 }
 
 NO_PERFIL: dict[str, tuple[str | None, str | None]] = {

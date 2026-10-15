@@ -35,7 +35,7 @@ quatro primeiras réguas daqui são o que impede isso.
 **A MORDIDA de cada régua está escrita no docstring dela.** Nenhuma delas
 afirma que o aparelho obedeceu: o teto do que este levantamento pode dizer é
 MONTOU, e as réguas cobram exatamente isso — inclusive a que reprova se alguém
-promover o háptico a `medido` sem bancada.
+promover o háptico a `medido` sem ensaio no caderno.
 """
 
 from __future__ import annotations
@@ -49,6 +49,7 @@ import pytest
 
 RAIZ = Path(__file__).resolve().parents[2]
 MAPA = RAIZ / "docs" / "data" / "mapa-controles.csv"
+ENSAIOS = RAIZ / "docs" / "data" / "ensaios.csv"
 NINTENDO = RAIZ / "assets" / "dkms" / "hid-nintendo" / "hid-nintendo.c"
 MODPROBE = RAIZ / "assets" / "modprobe.d" / "hefesto-hid-nintendo.conf"
 BT_AUDIO = (
@@ -277,38 +278,44 @@ def test_o_mapa_do_haptico_traz_os_dois_candidatos_e_o_place_holder(
     )
 
 
-def test_o_haptico_por_radio_nao_promete_obediencia(
+def _ensaios_que_obedecem(linha_id: str, transporte: str) -> list[str]:
+    """Os ensaios do caderno daquele lado em que a feature obedeceu."""
+    with ENSAIOS.open(encoding="utf-8", newline="") as f:
+        return [
+            e["id"] for e in csv.DictReader(f)
+            if e["linha_id"] == linha_id and e["transporte"] == transporte
+            and (e["resultado_da_feature"] or e["resultado"]) == "obedece"
+        ]
+
+
+def test_o_haptico_por_radio_so_promete_obediencia_com_ensaio(
     mapa: dict[str, dict[str, str]],
 ) -> None:
     """Levantar o arranjo NÃO é medir o aparelho, e o mapa não pode confundir.
 
-    O teto do que este levantamento pode afirmar é MONTOU — nem isso, porque
-    ninguém montou um bloco 0x12. `radio_aciona` fica `não`, `radio_canal` fica
-    `outro` (a FALÁCIA DO CANAL QUE RESPONDE já foi paga uma vez nesta casa, na
-    linha irmã do alto-falante) e o grau não sobe para `medido`.
+    Leitura de fonte de terceiro diz onde o bloco mora; não diz que o motor
+    obedece. O `radio_aciona` em `sim` e o `radio_de_onde_sei` em `medido` só
+    valem com um ensaio do RÁDIO no caderno em que a háptica obedeceu.
 
-    Mordida: promover `radio_aciona` para `sim`/`parcial`, ou `radio_de_onde_sei`
-    para `medido`, sem ensaio — esta régua reprova.
+    NOTA DATADA, 29/09/2026: o `radio_canal` passou a `hidraw`, porque o bloco
+    háptico vibrou pelo rádio em 18/09/2026 na mão de quem conferiu. O canal se
+    lê no DONO: sem o bloco háptico no relatório da ponte (desde 03/10/2026 o
+    `0x36` combinado), o `hidraw` volta a ser a FALÁCIA DO CANAL QUE RESPONDE.
 
-    NOTA DATADA, 29/09/2026: o `radio_canal` passou a `hidraw`, e pela condição
-    que a ressalva desta linha do mapa escreveu — *vira `hidraw` quando alguém
-    mandar um bloco 0x12 e o motor responder* (o `0x92` é a tag `0x12` com o bit
-    alto, como o `0x91` é a `0x11`). Mandaram: o `0x91` de controle antes do
-    `0x92`, dentro do `0x32`, vibrou pelo rádio em 18/09/2026 com a mão do usuário, e é
-    o bloco que a ponte do rádio escreve pelo hidraw do broker — desde 03/10/2026
-    dentro do `0x36` combinado (O-SOM-E-A-HAPTICA-NUM-RELATORIO-SO-01). O canal se
-    lê no DONO: sem o bloco háptico no relatório da ponte, o `hidraw` volta a ser
-    a falácia. O grau NÃO sobe com ele — o ensaio não está no caderno.
-    Mordida nova: tirar o bloco háptico do relatório da bomba — reprova.
+    FATO SUBSTITUÍDO, 15/10/2026: esta régua se chamava
+    `test_o_haptico_por_radio_nao_promete_obediencia` e exigia `radio_aciona`
+    em `não`. O ensaio `a-haptica-do-0x36-obedece-ao-lado-0310` (03/10/2026, na
+    mão de quem conferiu) entrou no caderno, e o grau subiu.
+
+    Mordidas: apagar aquele ensaio do caderno reprova; tirar o bloco háptico do
+    relatório da bomba reprova; `radio_canal` fora de `hidraw` reprova.
     """
     linha = mapa["vibracao.haptics_vcm@dualsense"]
-    assert linha["radio_aciona"] == "não", (
-        "o háptico por rádio passou a `aciona` sem ninguém mandar um bloco 0x12"
-    )
-    assert linha["radio_de_onde_sei"] != "medido", (
-        "o háptico por rádio virou `medido` — leitura de fonte de terceiro não é "
-        "medição nesta bancada"
-    )
+    if linha["radio_aciona"] in ("sim", "parcial") or linha["radio_de_onde_sei"] == "medido":
+        assert _ensaios_que_obedecem("vibracao.haptics_vcm@dualsense", "radio"), (
+            "o háptico por rádio afirma `aciona`/`medido` sem nenhum ensaio do rádio "
+            "no caderno em que ele obedeceu — leitura de fonte não é medição"
+        )
     from hefesto_dualsense4unix.integrations.alto_falante_bt import (
         BombaDeSomPeloRadio,
     )
@@ -324,9 +331,6 @@ def test_o_haptico_por_radio_nao_promete_obediencia(
     assert linha["radio_canal"] == "hidraw", (
         "o háptico por rádio anda pelo hidraw (o bloco 0x12 da ponte), e o mapa "
         f"diz `{linha['radio_canal']}`"
-    )
-    assert linha["radio_por_que_nao_aciona"] == "divida", (
-        "o háptico por rádio é DÍVIDA (falta o payload), não recusa do aparelho"
     )
 
 

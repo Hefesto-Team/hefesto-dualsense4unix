@@ -63,14 +63,6 @@ A_PROVA_QUE_FALTA: dict[str, tuple[str, str, str]] = {
         "A régua dos dublês grava e relê o campo por controle; falta o jogo aberto, com o "
         "Desligado calando o toque no controle dela, que é a prova da sprint",
     ),
-    "haptica": (
-        "médio",
-        "2026-09-29-O-GANHO-DA-HAPTICA-TEM-DONO-01.md",
-        "o ganho de 0 a 200% por controle chega aos traseiros do fluxo do laço "
-        "daquele controle no cabo e ao conversor da ponte antes do int8 no rádio, com as "
-        "réguas da sprint mordendo nos dois transportes; falta o passo 0 da sprint "
-        "(o tremor pelo nível) e a mão dela nos Caminhos da Forja a 100, 150 e 200",
-    ),
     "mascara": (
         "grande",
         "2026-09-08-SENSORES-NO-JOGO-01-o-giroscopio-e-o-acelerometro-provados-ate-o-jogo.md",
@@ -181,14 +173,6 @@ A_PROVA_QUE_FALTA: dict[str, tuple[str, str, str]] = {
         "daquele controle, e `audio.microfone@dualsense` está em SAIU NO FIO nos dois "
         "transportes; falta a linha 9 do roteiro da mesa, o canal daquele controle "
         "aparecendo no sistema com a voz dela. É da MESA-DE-QUATRO-01",
-    ),
-    "testar-haptica": (
-        "médio",
-        "2026-10-01-O-FORJA-E-O-BANCO-DE-PROVA-DO-HEFESTO-01.md",
-        "o teste da háptica da 05 toca pela linha `vibracao.haptics_vcm@dualsense` da "
-        "`haptica`, sem degrau registrado no mapa nos dois transportes; falta o banco de "
-        "prova, ou a mão dela nos Caminhos da Forja. É da "
-        "O-FORJA-E-O-BANCO-DE-PROVA-DO-HEFESTO-01",
     ),
     "rota": (
         "grande",
