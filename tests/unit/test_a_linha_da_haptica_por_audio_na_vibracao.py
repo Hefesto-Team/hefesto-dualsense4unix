@@ -111,7 +111,7 @@ class TestOEndereco:
             bloco = _bloco(html, pref)
             for campo in ENDERECOS:
                 assert f'data-campo="{campo}"' in bloco, (pref, campo)
-        assert '<span class="sec-rot">Sensor háptico' in html
+        assert re.search(r'<span class="sec-rot"[^>]*>Sensor háptico', html)
 
     def test_o_teto_e_lido_do_esquema(self) -> None:
         """Régua 4: o `max` do trilho é o `HAPTICA_PCT_MAX`. MORDIDA: digitar 100."""

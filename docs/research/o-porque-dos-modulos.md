@@ -1442,3 +1442,22 @@ zera os contatos no `REGISTRO.filtrar` e o hub agarra o nó; Ligado só agarra q
 vpad (hoje: a máscara efetiva da peça é DualSense). `touchpad_alcance` é `hidraw` no Nativo e com o Steam Input
 do jogo ligado, onde só o nó do sistema (o cursor) é alcançado.
 
+## o Testar da aba Vibração (`interface/pacotes/a05_vibracao.py`, `testar`)
+
+Pedido de 07/09/2026: *«o botão Testar tem que ficar em estado de ligado e ir refletindo os slicers ao vivo
+comigo. E se eu clicar em Parar ele para de testar»*. Era um pulso de meio segundo, e o pulso não responde
+*«quanto é 40%?»*: a mão precisa estar no controle enquanto a outra arrasta a barra. O `_refrescar_o_teste`
+reenvia o par a cada mudança de barra, e a mão só volta ao jogo quando ela clica em Parar.
+
+Um teste por controle (03/10/2026, ela: *«vibração e háptico é por cada controle e precisam funcionar em
+independente. hoje se eu clico em um o outro controle para de ter o efeito»*): o pedido leva o `uniq`
+(`rumble_set_checked(..., uniq=...)`), o serviço guarda um par por controle e a aba não mira mais o seletor
+global (`controller.target.set`), que fazia o serviço inteiro seguir o último clique. O Testar de um controle só
+cala o teste da háptica DELE (os dois se excluem no mesmo controle, D-0210).
+
+A checada, e não a crua: a recusa do modo nativo vem no corpo da resposta, e foi por não a ler que a aba
+anunciou «vibração travada» com o motor parado (NATIVO-RUMBLE-01). O par sai reduzido pela barra de cada motor
+(`_par_das_barras`, para a inversão `weak`/`strong`).
+
+Com `padrao` (15/10/2026, A-ABA-VIBRACAO-DO-TODO-01): Batida, Onda e Tranco tocam uma vez pela fila do controle
+(`padroes_de_vibracao.tocar`), e a mão volta ao jogo sozinha no fim.

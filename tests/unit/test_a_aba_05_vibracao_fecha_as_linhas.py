@@ -320,7 +320,7 @@ def test_a_grade_da_vibracao_tem_sete_faixas(bancada: str) -> None:
     """A `grid-template-rows` perdeu a oitava, e a variável do piso foi junto."""
     assert "--r-estado" not in bancada, (
         "a variável do piso da faixa de estado voltou à folha da aba 05")
-    assert bancada.count("var(--r-motor) var(--r-motor) var(--r-acoes);") == 1, (
+    assert bancada.count("minmax(var(--r-motor),1fr) minmax(var(--r-acoes),1fr);") == 1, (
         "a grade da aba 05 deixou de terminar no `--r-acoes` — a oitava faixa "
         "saiu em 05/09/2026 e a `grid-template-rows` foi junto")
 
@@ -455,14 +455,15 @@ def test_a_nota_do_testar_mora_na_dica(bancada: str) -> None:
     """
     import aba05
 
-    celula = bancada.split('<span class="sec-rot">Testar agora', 1)
-    assert len(celula) == 2, (
+    # a dica é o `data-dica` do rótulo (base comum das abas: nenhum «?» na tela)
+    import re
+
+    dica = re.search(r'data-dica="([^"]*)">Testar agora</span>', bancada)
+    assert dica is not None, (
         'o rótulo "Testar agora" saiu da coluna de rótulos — sem ele não há '
         "onde a dica morar")
-    dica = celula[-1].split("</div>", 1)[0].split('<span class="dica"', 1)
-    assert len(dica) == 2, 'o `?` do "Testar agora" sumiu da célula do rótulo'
-    assert aba05.DICA_DOS_VALORES_QUE_PASSAM in dica[-1], (
-        'a nota do Testar não está no `?` do "Testar agora" — a 05-Q2 dela é '
+    assert aba05.DICA_DOS_VALORES_QUE_PASSAM in dica.group(1), (
+        'a nota do Testar não está na dica do "Testar agora" — a 05-Q2 dela é '
         '*"As duas na dica"*')
     assert 'class="vib-nota"' not in bancada, (
         "a linha permanente embaixo da grade voltou — ela saiu na 05-Q2, e a "

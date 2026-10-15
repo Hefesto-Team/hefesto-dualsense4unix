@@ -62,7 +62,7 @@ def test_a_frase_e_a_mesma_do_desenho() -> None:
     raiz = Path(__file__).resolve().parents[2]
     fonte = (raiz / "src/hefesto_dualsense4unix/interface/aba05.py").read_text(
         encoding="utf-8")
-    assert f'</span> {SEM_NINGUEM_AQUI}</div>' in fonte, (
+    assert f"</span> {SEM_NINGUEM_AQUI}'" in fonte, (
         "o gerador da aba 05 deixou de usar a mesma palavra do "
         "`SEM_NINGUEM_AQUI` — as colunas de desenho e as escritas passariam a "
         "dizer coisas diferentes sobre o mesmo estado")

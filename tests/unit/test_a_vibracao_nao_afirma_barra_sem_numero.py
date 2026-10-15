@@ -214,7 +214,11 @@ def test_o_bloco_do_estado_e_o_que_o_pacote_manda(publicado: str) -> None:
     pac = pacotes.pacote_da_pagina(PAGINA, _ctx()) or {}
     blocos = pac.get("blocos") or {}
     assert blocos, "o pacote parou de emitir a linha de estado"
+    # Até o `--publicar 05`, o pacote serve à página velha e ao desenho novo (`mockup/`): um bloco
+    # só do desenho novo (os chips de «Criar efeitos novos») ainda não está na publicada.
+    novo = (pathlib.Path(__file__).resolve().parents[2] / "mockup" / PAGINA).read_text(
+        encoding="utf-8")
     for seletor in blocos:
         assert seletor.startswith("#"), f"seletor inesperado: {seletor!r}"
-        assert f'id="{seletor[1:]}"' in publicado, (
-            f"o pacote pinta {seletor!r} e a página publicada não o tem")
+        assert f'id="{seletor[1:]}"' in publicado + novo, (
+            f"o pacote pinta {seletor!r} e nem a página publicada nem o desenho o têm")

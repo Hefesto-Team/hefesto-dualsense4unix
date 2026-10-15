@@ -50,6 +50,9 @@ _PERGUNTA_DO_RADIO = (
     "que declara `grava=`")
 
 ATOS: dict[Chave, str] = {
+    ("03-gatilhos.html", "sentir"):
+        "ato: toca o efeito da área de criar nos gatilhos do controle e devolve o que ele "
+        "recebia antes; nenhuma escolha dela muda (A-ABA-GATILHOS-DO-TODO-01)",
     ("*", "aplicar"):
         "ato: manda o perfil do disco aos controles e não muda escolha "
         "nenhuma (`D-2709-O-SALVAR-LE-O-PERFIL`)",

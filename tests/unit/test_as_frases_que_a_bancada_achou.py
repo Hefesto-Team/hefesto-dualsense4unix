@@ -44,10 +44,9 @@ def _texto(trecho: str) -> str:
 def _dica_do_testar() -> str:
     """O primeiro parágrafo do `?` do «Testar agora», como a página o mostra."""
     x = _pagina("05-vibracao.html")
-    m = re.search(r'<span class="sec-rot">Testar agora\s*<span class="ajuda"[^>]*>\?'
-                  r'<span class="dica">(.*?)<br><br>', x, flags=re.S)
-    assert m, "o `?` do «Testar agora» sumiu da 05 gerada — a régua ficou cega"
-    return _texto(m.group(1))
+    m = re.search(r'<span class="sec-rot" data-dica="([^"]*)">Testar agora</span>', x)
+    assert m, "a dica do «Testar agora» sumiu da 05 gerada — a régua ficou cega"
+    return _texto(html.unescape(m.group(1)))
 
 
 def test_a_dica_do_testar_nao_promete_duracao() -> None:

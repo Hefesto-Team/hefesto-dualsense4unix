@@ -203,8 +203,10 @@ def test_a_vibracao_publicada_nao_tem_data_gesto_e_a_regua_sabe():
     """A afirmação acima, conferida contra o ARQUIVO e não contra a memória."""
     texto = _texto("05-vibracao.html")
     do_html = {g.nome for g in regua._gestos_cravados(texto)}
+    # `modo-da-vibracao`, `criar-efeito` e os chips (`testar`) são da página do todo
+    # (A-ABA-VIBRACAO-DO-TODO-01), que o pacote serve junto com a velha até o `--publicar 05`
     assert not (do_html - {"aplicar", "salvar", "importar", "exportar",
-                           "lado", "haptica"}), (
+                           "lado", "haptica", "modo-da-vibracao", "criar-efeito", "testar"}), (
         f"a 05-vibracao passou a ter `data-gesto` próprio: {sorted(do_html)}. "
         f"Se isso é intencional, esta régua fica mais fácil — mas o teste tem "
         f"de saber, porque a união com os registrados existe por causa disto.")

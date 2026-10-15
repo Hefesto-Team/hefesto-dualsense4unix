@@ -53,7 +53,6 @@ ISENTOS: dict[str, int] = {
     "aba02.py": 6,  # sai com: A-ABA-CONTROLES-DO-TODO-01
     "aba03.py": 2,  # sai com: A-ABA-GATILHOS-DO-TODO-01
     "aba04.py": 5,  # sai com: A-ABA-ILUMINACAO-DO-TODO-01
-    "aba05.py": 7,  # sai com: A-ABA-VIBRACAO-DO-TODO-01
     "aba06.py": 2,  # sai com: A-ABA-NAVEGACAO-DO-TODO-01
     "aba07.py": 1,  # sai com: A-ABA-EXPERIMENTAL-DO-TODO-01
     "aba08.py": 3,  # sai com: A-ABA-CONEXOES-DO-TODO-01

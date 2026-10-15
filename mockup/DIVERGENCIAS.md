@@ -24,6 +24,19 @@ seção daqui**: a aba deixou de estar em trabalho.
 ## 03-gatilhos.html
 - **15/10/2026** — o desenho do todo (acionamento e imersão por gatilho, um chip por controle, «Criar efeitos novos»): espera a aprovação dela para o `--publicar 03`. Até publicar, o pacote serve à página de hoje (Efeito pronto, ajustes, curvas, Guardar e Em todos) e, quando a página do todo chega, preenche só o acionamento, a imersão e o estilo do perfil; as quatro colunas e os dois modos são os mesmos nas duas.
 
+## 05-vibracao.html
+- **15/10/2026** — o desenho do todo (Modo automático no alto do quadro, sem «?», a Força com o glifo do controle,
+  o `%` na mesma reta das três barras, o nome do controle na largura da coluna e o quadro «Criar efeitos novos» com
+  Batida, Onda e Tranco, o motor, o nome, Criar, Sentir e um chip por efeito guardado): espera a aprovação dela para
+  o `--publicar 05`. Até publicar, o pacote serve à página de hoje e, quando a do todo chega, preenche só o que ela
+  pede (o modo, a Força, os chips). O que o desenho do todo trouxe e a tela não tem: o contorno do nome na cor do
+  plástico (o endereço do plástico não chega ao nome; o contorno fica neutro), o rótulo do modelo (a decisão de
+  06/10 manda «P1 · nome · cor do plástico · via», e o desenho dizia só «cor do plástico · via»), o seletor
+  Economia, Padrão e Máximo e o trilho (a retirada deles é da sprint A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-01 e fica fora deste bloco) e o
+  «Sentir» ao lado do «Criar», que o desenho não pedia e que repete o gesto da aba Gatilhos. O quadro novo toma a
+  folga de baixo: o desenho do controle perde alguns pixels (124 para 122) e, com o aviso do gamepad virtual aceso,
+  cede o que o aviso pede.
+
 ## mapa-do-radio.html
 - **08/10/2026** — a caixa e o fone custam 366 fatias (61 pacotes x 6: o 2-DH5 ocupa 5 fatias, mais a
   resposta), e não 244; o número do desenho é demonstrativo e continua estimado (sprint

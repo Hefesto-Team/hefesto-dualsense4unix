@@ -14,9 +14,15 @@ from monta import (  # noqa: E402
     MESA, cor_da_zona, glifo, monta, svg, trava_do_nativo,
 )
 
+from hefesto_dualsense4unix.daemon.subsystems import padroes_de_vibracao as padroes  # noqa: E402
 from hefesto_dualsense4unix.daemon.subsystems.rumble import (  # noqa: E402
     RUMBLE_POLICY_MULT,
 )
+from hefesto_dualsense4unix.interface.pacotes.a05_vibracao import (  # noqa: E402
+    GESTO_DO_MODO,
+    html_dos_toques,
+)
+from hefesto_dualsense4unix.interface.pacotes.meus_efeitos import TETO_DO_NOME  # noqa: E402
 
 from hefesto_dualsense4unix.profiles.schema import (  # noqa: E402
     HAPTICA_PCT_MAX,
@@ -116,6 +122,33 @@ ESTADO = {
            "hap": (False, 0)},
 }
 
+#: o que o Modo automático esmaece: a força e os motores de cada coluna. O Testar e o Parar ficam livres.
+GOVERNA = ".vib .ctrl > :is(.forca,.motor)"
+DICA_DO_AUTOMATICO = "O jogo decide a força; o estilo do perfil ajusta"
+
+#: o glifo da linha da Força: o controle inteiro, porque ela vale para tudo o que vibra.
+GLIFO_DO_CONTROLE = (
+    '<svg class="gl gl-ctrl" width="20" height="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" '
+    'aria-hidden="true"><title>DualSense</title><path d="M8.5 7H23.5C26.6 7 28.4 8.9 29.1 12.2L30.6 22.6C31.1 '
+    '26.6 27.9 28.6 25.6 26.6L21.4 21.9Q16 19.6 10.6 21.9L6.4 26.6C4.1 28.6 0.9 26.6 1.4 22.6L2.9 12.2C3.6 8.9 '
+    '5.4 7 8.5 7Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>'
+    '<rect x="10.2" y="7" width="11.6" height="6.4" rx="1" fill="none" stroke="currentColor" stroke-width="1.6"/>'
+    '<circle cx="12.4" cy="17" r="1.7" fill="none" stroke="currentColor" stroke-width="1.5"/>'
+    '<circle cx="19.6" cy="17" r="1.7" fill="none" stroke="currentColor" stroke-width="1.5"/>'
+    '<path d="M6.6 11.4V15.4M4.6 13.4H8.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>'
+    '<circle cx="25.4" cy="11.9" r="0.9" fill="currentColor"/><circle cx="25.4" cy="14.9" r="0.9" fill="currentColor"/>'
+    '<circle cx="23.9" cy="13.4" r="0.9" fill="currentColor"/><circle cx="26.9" cy="13.4" r="0.9" fill="currentColor"/></svg>')
+BOTAO_DA_FORCA = ('<span class="lado glifo-forca on" role="img" aria-label="O controle inteiro" '
+                  'data-dica="Os dois motores e a háptica: tudo o que vibra">' + GLIFO_DO_CONTROLE + '</span>')
+
+#: os efeitos criados que o desenho mostra: nome, forma e motor.
+CENA_DOS_TOQUES = {"Coração": {"nome": "Coração", "base": "batida",
+                               "parametros": {"motores": padroes.AMBOS}}}
+
+#: os motores na língua da tela, na ordem dos rádios.
+CHAVE_DO_PADRAO = "padrao"  # (noqa-acento) chave do clique
+ROTULO_DOS_MOTORES = (("esquerdo", "Esquerdo"), ("direito", "Direito"), ("ambos", "Os dois"))
+
 CSS = """
   /* ---------- Vibração · a mesa de quatro ---------- */
   /* UMA GRADE SÓ, com uma coluna de rótulos e uma coluna por controle da MESA.
@@ -188,12 +221,21 @@ CSS = """
        essa coluna. Eram 132px e 16 aqui, 138 e 12 na Gatilhos, e o texto
        acabava em x=536 numa e x=542 na outra. O usuário viu: *"tem algo que
        deixa estranho essa área da primeira coluna."* */
-    grid-template-columns:var(--larg-rot) repeat(4,1fr);
-    gap:var(--gap-col);
-    --r-des:124px;--r-nome:17px;--r-forca:69px;--r-barra:26px;--r-motor:36px;
+    /* AS QUATRO COLUNAS TÊM A MESMA LARGURA E O RESPIRO É SIMÉTRICO — mudança 9 do desenho do
+       todo (13/10/2026). A divisória é a borda da fatia, e o vão entre colunas virou padding dos
+       dois lados dela; a coluna dos nomes leva o vão consigo e a última fatia vai até a borda. */
+    grid-template-columns:calc(var(--larg-rot) + var(--gap-col)) repeat(4,minmax(0,1fr));
+    column-gap:0;margin-right:-14px;
+    /* A GRADE ENCHE A ALTURA DO QUADRO: as faixas são frações com piso (a do desenho pesa 3), e
+       a coluna não deixa vão embaixo. O piso é o que a faixa pede para caber o conteúdo. */
+    flex:1 1 auto;min-height:0;grid-template-rows:minmax(0,1fr);
+    --r-des:96px;--r-nome:30px;--r-forca:79px;--r-barra:36px;--r-motor:36px;
     --r-acoes:34px;
     --r-ar:5px;--r-passo:calc(var(--r-ar) * 2);
   }
+  .miolo > .quadro.vib-quadro{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+  .miolo > .quadro.vib-quadro > .quadro-corpo{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+  .vib > .rotulos{padding-right:var(--gap-col)}
   /* SETE FAIXAS, E NÃO OITO — a oitava saiu em 05/09/2026 com a linha "Estado"
      (ver `SEM_A_FAIXA_DE_ESTADO`). Ela era um `minmax` de piso 20px e a única
      elástica da grade; com ela foram embora a variável do piso e um `--r-passo`
@@ -211,9 +253,44 @@ CSS = """
      a última — nenhuma linha horizontal dependia da altura dela. */
   .vib > div{
     display:grid;row-gap:var(--r-passo);
-    grid-template-rows:var(--r-des) var(--r-nome) var(--r-forca)
-                       var(--r-motor) var(--r-motor) var(--r-motor) var(--r-acoes);
+    grid-template-rows:minmax(var(--r-des),3fr) var(--r-nome) minmax(var(--r-forca),1fr)
+                       minmax(var(--r-motor),1fr) minmax(var(--r-motor),1fr)
+                       minmax(var(--r-motor),1fr) minmax(var(--r-acoes),1fr);
   }
+  .vib .acoes-col,.vib .seg{align-content:center}
+  .vib .acoes-col{align-items:center}
+  .quadro-topo .modo-auto{margin-left:auto}
+  .vib .forca > .motor{position:relative}
+  .vib .forca .teto.mx{position:absolute;top:-3px;right:68px}
+  /* criar efeitos novos */
+  .vib-criar{margin-top:0;flex:0 0 auto}
+  .criar .criar-linha{display:flex;align-items:center;gap:12px;padding:4px 16px;flex-wrap:wrap;min-width:0}
+  .criar .quadro-titulo{flex:0 0 auto;margin-right:4px}
+  .criar .seg-criar{display:inline-flex;gap:4px;flex:0 0 auto}
+  .criar .seg-criar label,.criar .meu{height:30px;padding:0 12px;border-radius:999px;
+    font:500 12.5px/1 'Space Grotesk',system-ui,sans-serif;border:1px solid var(--linha);
+    background:var(--app-bg);color:var(--texto-mudo);cursor:pointer;white-space:nowrap;
+    display:inline-flex;align-items:center;gap:7px;box-sizing:border-box}
+  .criar .seg-criar input{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px}
+  .criar .seg-criar label:has(input:checked){border-color:var(--purple);background:var(--sel-bg);
+    color:var(--fg);font-weight:600}
+  .criar .seg-criar label:hover:not(:has(input:checked)),.criar .meu:hover{border-color:var(--comment);
+    color:var(--texto-suave)}
+  .criar .seg-criar label:has(input:focus-visible){outline:2px solid var(--cyan,#8be9fd);outline-offset:2px}
+  .criar .nome-criar{height:30px;width:150px;flex:0 0 auto;padding:0 11px;border-radius:7px;
+    border:1px solid var(--linha);background:var(--app-bg);color:var(--fg);
+    font:500 12.5px 'Space Grotesk',system-ui,sans-serif}
+  .criar .nome-criar::placeholder{color:var(--texto-mudo)}
+  .criar .btn-criar{height:30px;padding:0 14px;border-radius:7px;border:1px solid var(--purple);
+    background:rgba(189,147,249,.12);color:var(--purple);font:600 12.5px/1 'Space Grotesk',system-ui,sans-serif;
+    cursor:pointer;flex:0 0 auto}
+  .criar .btn-criar:hover{background:rgba(189,147,249,.22)}
+  .criar .btn-sentir{height:30px;padding:0 14px;border-radius:7px;border:1px solid var(--pink);
+    background:rgba(255,121,198,.1);color:var(--pink);font:600 12.5px/1 'Space Grotesk',system-ui,sans-serif;
+    cursor:pointer;flex:0 0 auto}
+  .criar .btn-sentir:hover{background:rgba(255,121,198,.2)}
+  .criar .meus{display:flex;gap:6px;margin-left:auto;align-items:center;min-width:0;flex-wrap:wrap}
+  .criar .meu{color:var(--texto-suave);cursor:pointer}
   /* O DESENHO NOVO DO USUÁRIO — 02/10/2026 (A-ABA-VIBRACAO-TEM-O-SENSOR-HAPTICO-E-
      DOIS-TESTES-01, a resposta [26] de 29/09). O trilho do Personalizado sobe
      para dentro da Força (`--r-forca` 69 = 36 dos degraus, numa linha só, + 7 de vão + 26 do
@@ -273,7 +350,7 @@ CSS = """
      recua a célula junto: a linha parava 21px antes da divisa e voltava a
      ler como tracinho. Com o padding na célula, ela vai de ponta a ponta da
      coluna e encosta na vizinha — o respiro do conteúdo é o mesmo. */
-  .vib .ctrl{border-left:1px solid var(--linha);padding:0 10px 0 14px}
+  .vib .ctrl{border-left:1px solid var(--linha);padding:0 14px 0 13px}
 
   /* ---------- O LUGAR VAZIO ----------
      A mesma gramática das outras quatro abas: cor explícita e NADA de `opacity`
@@ -393,13 +470,14 @@ CSS = """
      recorta: a única com `overflow` era a moldura do desenho, e a primeira
      célula não desenha divisória nenhuma. */
   .vib > div > *::before{content:'';position:absolute;top:calc(var(--r-ar) * -1);height:0;
-    left:-14px;right:-10px;border-top:1px solid var(--rot-linha)}
+    left:-13px;right:-14px;border-top:1px solid var(--rot-linha)}
   /* A CONTA DA MARGEM NEGATIVA: ela tem de cancelar o padding da coluna E o
      `gap` do grid, senão sobra um buraco do tamanho do vão. À direita são
      10 de padding + 16 de gap = 26; a ÚLTIMA coluna não tem vão depois
      dela, então volta a 10. A coluna de rótulos não tem padding: 0 e 16. */
-  .vib > div:not(:last-child) > *::before{right:-26px}
-  .vib > .rotulos > *::before{left:0;right:-16px}
+  .vib > div:not(:last-child) > *::before{right:-14px}
+  .vib > div:last-child > *::before{right:0}
+  .vib > .rotulos > *::before{left:0;right:calc(var(--gap-col) * -1)}
   .vib > div > *:first-child::before{display:none}
   /* NÃO HÁ COLUNA DESTACADA, e é decisão de 28/08: os quatro ficam lado a
      lado, sempre visíveis, e a fita do topo fica ESMAECIDA (fora de `monta.ABAS_QUE_ESCOLHEM`).
@@ -475,8 +553,16 @@ CSS = """
   /* ALTURA e não largura: a linha tem altura fixa e o desenho tem de caber nela.
      Com `width:100%` o SVG estouraria a linha e empurraria tudo. */
   .vib .moldura .ds-svg{height:100%;width:auto;max-width:100%}
+  /* O NOME DO CONTROLE É UMA CAIXA, com a largura da coluna (mudança 7 do desenho do todo). */
   .rot-ctrl{font-size:11px;color:var(--texto-mudo);text-align:center;
             display:flex;align-items:center;justify-content:center}
+  .vib .rot-ctrl{height:30px;box-sizing:border-box;border:1px solid var(--linha);border-radius:7px;
+    font:600 12px 'Space Grotesk',system-ui,sans-serif;color:var(--fg);white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis;align-self:center;width:100%;display:block;
+    line-height:28px;padding:0 4px}
+  .vib .rot-ctrl .pt{margin:0 6px}
+  .vib .ctrl[data-conectado="nao"] .rot-ctrl{color:var(--texto-mudo);border:1px dashed var(--border-sutil);
+    background:transparent}
 
   /* OS TRÊS DEGRAUS DE FORÇA — LADO A LADO, COM A MESMA LARGURA. Pedido de
      06/10/2026 (*«Esses 3 botões tem que ficarem lado a lado na horizontal com
@@ -516,7 +602,7 @@ CSS = """
      Quatro colunas fixas: interruptor · trilho · número · sufixo. A da Força não
      tem interruptor, e a célula fica vazia de propósito: é o que faz os três
      trilhos começarem e acabarem no mesmo x, que é o refinamento que ela cobrou. */
-  .motor{display:grid;grid-template-columns:36px 1fr 36px 26px;align-items:center;
+  .motor{display:grid;grid-template-columns:36px minmax(0,1fr) 44px 8px;align-items:center;
          gap:8px;height:100%}
   .motor .trilho{height:5px;border-radius:3px;background:var(--border-forte);position:relative}
   .motor .cheio{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--purple)}
@@ -534,7 +620,10 @@ CSS = """
      coisa tocada aqui: a Vibração está FECHADA por elogio literal
      (`CORRECOES.md:39`). O irmão "/255" fica como está — barra e dígito não
      têm caixa. */
-  .motor .teto{font-size:10.5px;color:var(--comment);font-family:'JetBrains Mono',monospace}
+  .motor .teto{font-size:10.5px;color:var(--comment);font-family:'JetBrains Mono',monospace;
+    text-align:right;justify-self:end;white-space:nowrap}
+  /* O GLIFO DA FORÇA É O CONTROLE INTEIRO: tudo o que vibra (mudança 10 do desenho do todo) */
+  .glifo-forca{cursor:default;display:inline-flex;align-items:center;justify-content:center}
   /* O `Máx` SOME RESERVANDO O ESPAÇO — decisão 11 dela, 03/09/2026.
      `visibility:hidden`, nunca `display:none`: nada se mexe quando ele acende ou
      apaga, e esta aba é para olhar enquanto o jogo treme. A palavra fica SEMPRE
@@ -1224,19 +1313,20 @@ def _coluna(c, e=None, conectado=None):
              ' data-conectado="nao" title="Nenhum controle neste lugar."')
     tinta = f' style="--plastico:{plastico}"' if conectado else ""
     if conectado:
-        rotulo = monta_.rotulo(c, "modelo") + "</div>"
+        rotulo = monta_.rotulo(c, "modelo")
     else:
-        rotulo = f'P{c["jogador"]} <span class="pt">•</span> Desconectado</div>'
+        rotulo = f'P{c["jogador"]} <span class="pt">•</span> Desconectado'
     return f'''
           <div class="{classe}" data-controle="{c["pref"]}" data-uniq="{c.get("uniq", "")}"{marca}>
             <div class="moldura" data-hef="desenho" data-campo="plastico"
                  data-hef-alvo="plastico"{tinta}>{desenho}</div>
-            <div class="rot-ctrl" data-hef="identidade">{rotulo}
+            <div class="rot-ctrl" data-campo="identidade-titulo" data-hef-alvo="atributo"
+                 data-hef-atributo="title" title="{re.sub(r"<[^>]+>", "", rotulo)}"><span data-hef="identidade">{rotulo}</span></div>
             <div class="forca" data-campo="padrao" data-hef-alvo="classe"
                  data-hef-classe="padrao">
               <div class="seg" data-campo="degrau-herdado" data-hef-alvo="classe"
                    data-hef-classe="herdado">{degraus}</div>
-              {_barra(e["pct"], TETO, "", papel="", campo_num="mult",
+              {_barra(e["pct"], TETO, "", botao=BOTAO_DA_FORCA, papel="", campo_num="mult",
                       arrasta=True, campo_trilho="mult-pos",
                       sufixo_html=_teto_do_multiplicador(e["pct"] == TETO),
                       vazio=not conectado)}
@@ -1280,143 +1370,38 @@ def _coluna(c, e=None, conectado=None):
           </div>'''
 
 
+def _radios(grupo, opcoes):
+    """Os rádios em pílula da área de criar: o primeiro vem marcado."""
+    return "".join(
+        f'<label><input type="radio" name="{grupo}-criar" value="{valor}" data-linha="{grupo}"'
+        f'{" checked" if i == 0 else ""}><span>{rotulo}</span></label>'
+        for i, (valor, rotulo) in enumerate(opcoes))
+
+
 MIOLO = f'''
 {BLOCO_DA_TINTA}
-    <div class="quadro">
+    <div class="quadro vib-quadro" data-modo-da-aba="{monta_.MODO_PERSONALIZADO}" data-campo="{GESTO_DO_MODO}"
+         data-hef-alvo="atributo" data-hef-atributo="data-modo-da-aba">
       <div class="quadro-topo">
-        <span class="quadro-titulo">Vibração</span>
-        <!-- A DICA DO QUADRO ENCOLHEU DE 1000 PARA ~200 CARACTERES — 30/08/2026,
-             regra de produto: *"ao invés de estar tudo em [um só] deveria estar em cada
-             seção"*, e vale *"em todas as abas"*.
-             Ela tinha QUATRO parágrafos, e três deles nomeavam um campo que está
-             na tela, a poucos pixels: a Força, os dois motores e o Testar. Cada um
-             foi para o `?` do seu próprio rótulo. Aqui fica só o que nenhum campo
-             diz — o que a aba É, e por que a fita do topo não vale nela. -->
-        <span class="ajuda">?<span class="dica">
-          O jogo pede uma vibração, e esta aba decide quanto dela chega a cada controle.<br><br>
-          <b>Ajuste na coluna do controle</b>: a fita do topo não escolhe nada aqui.
-        </span></span>
+        <span class="quadro-titulo" data-dica="Quanto do que o jogo pede chega a cada controle. A fita do topo não escolhe nada aqui">Vibração</span>
         {trava_do_nativo("na vibração")}
+        {monta_.modo_auto(GESTO_DO_MODO, governa=GOVERNA, dica=DICA_DO_AUTOMATICO)}
       </div>
       <div class="quadro-corpo">
         <div class="vib">
 
           <div class="rotulos">
-            <!-- A LEGENDA VIROU DICA — 30/08/2026, pedido: *"'O lado que treme
-                 acende em laranja; …' isso é tool tip"*. Mesma cura da Iluminação,
-                 no mesmo dia, e pelo mesmo motivo: prosa cinza na coluna de rótulos
-                 compete com os rótulos. O texto não muda uma palavra — ele explica
-                 uma decisão medida (`D-O-SVG-VIBRA-POR-LADO`) e some seria perder. -->
+            <!-- AS FRASES DOS RÓTULOS SÃO `data-dica`, texto puro: a dica aparece ao passar o mouse
+                 (base comum das abas). Nenhum «?» na tela. -->
             <div class="cel-des">
-              <span class="sec-rot">Controle
-                <span class="ajuda">?<span class="dica">
-                  O lado que treme acende em <b>laranja</b>; o contorno na cor do
-                  <b>plástico</b> diz de quem é o controle. Apagado é lado desligado.
-                </span></span></span>
+              <span class="sec-rot" data-dica="O lado que treme acende em laranja; o contorno na cor do plástico diz de quem é o controle. Apagado é lado desligado">Controle</span>
             </div>
-            <!-- A LINHA DO MODELO GANHOU NOME — 30/08/2026, pedido:
-                 *"a parte do Modelo tá faltando, tá o espaço vazio ali. a primeira
-                 coluna serve como nome da linha"*. Esta célula existia vazia só para
-                 ocupar a linha `--r-nome` da grade, e uma coluna cujo trabalho é
-                 nomear linhas tinha uma linha sem nome. -->
             <div><span class="sec-rot">Modelo</span></div>
-            <div><span class="sec-rot">Força da vibração
-              <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
-                Quanto da vibração que o jogo pede chega ao controle.<br><br>
-                <b>Economia</b> 30% · <b>Padrão</b> 100%, o sinal como o jogo mandou ·
-                <b>Máximo</b> 150%, mais forte.<br><br>
-                No Padrão as barras do sensor e dos motores ficam verdes e
-                travadas: o sinal chega como veio, e o que você guardou volta
-                com a Economia ou o Máximo.<br><br>
-                O trilho embaixo vai de 0 a {TETO}%, e o valor que vale é o dele:
-                acende o maior degrau que ele alcança.<br><br>
-                {DICA_DO_TETO_DA_MESA}<br><br>
-                <!-- O MECANISMO DO AUTO MUDOU DE CASA — 05-Q4 dela, 06/09/2026.
-                     Ele era a segunda metade de `a05_vibracao.FRASE_DA_MESA_EM_AUTO`,
-                     de 331 caracteres, escrita para o CARTÃO — uma caixa que
-                     CRESCE. A faixa embaixo da grade reserva UMA linha e corta o
-                     resto (medido: 189 caracteres é o último que cabe), então a
-                     frase ficou com o FATO e o CONSERTO e o porquê veio para cá,
-                     que é onde há espaço para ele.
-
-                     E O PORQUÊ SAIU DAQUI EM 11/09/2026 (A4-058, aprovado
-                     pelo usuário): ele JUSTIFICAVA a regra contra uma alternativa que
-                     ninguém propôs. O fato — a escolha fica guardada e não
-                     chega ao motor — é o que ela precisa, e é o que fica. -->
-                Com a <b>força geral</b> no automático, que só um perfil antigo
-                traz, a escolha de cada coluna fica guardada e não chega ao motor.
-              </span></span></span></div>
-            <div><span class="sec-rot">Sensor háptico
-              <span class="ajuda">?<span class="dica">
-                <b>A vibração fina</b> que o jogo manda como som, no cabo e no BT.<br><br>
-                O risco no meio é 100%: o jogo como ele mandou. Acima disso ela
-                fica mais forte; em 0, ela para. A bolinha verde acende quando
-                ela está chegando ao controle.<br><br>
-                {DICA_DO_TETO_DA_MESA}<br><br>
-                Cinza quando o jogo fala direto com o controle, sem passar pelo
-                Hefesto.
-              </span></span></span></div>
-            <div><span class="sec-rot">{ESQ["rot"]}
-              <span class="ajuda">?<span class="dica">
-                <!-- O PUNHO NO LUGAR DO NOME DA PEÇA — 11/09/2026, aprovado pelo usuário.
-                      O `nome`/`apelido`/`nota` do CSV continuam donos do `title`
-                      do interruptor (`_coluna`) e do `mapa-do-controle`; aqui a
-                      frase é a que ela leu e aprovou, e ela fala do PUNHO, que é
-                      o que a mão procura. O registro do "não existe leve e forte
-                      para cada" mora na `.nota` desta página, que é onde ele
-                      deve morar. -->
-                <b>Motor do punho esquerdo</b>: contrapeso maior, som grosso.<br><br>
-                Desligue um lado e aquele punho para de tremer; o outro continua.<br><br>
-                A barra ao lado é a força desse motor no teste <b>Vibração</b>.
-              </span></span></span></div>
-            <div><span class="sec-rot">{DIR["rot"]}
-              <span class="ajuda">?<span class="dica">
-                <b>Motor do punho direito</b>: contrapeso menor, som fino.
-              </span></span></span></div>
-            <!-- A DICA DESTE `?` ABRE PARA A DIREITA, e o número é medido — 06/09/2026.
-                 Ela carregava `style="left:auto;right:22px"`, que é o arranjo das
-                 dicas que moram do lado DIREITO da página (`.at-col:last-child` na
-                 06, `.col-acao` na 09). Este `?` mora na PRIMEIRA coluna da grade,
-                 a dos rótulos: com `right:22px` a caixa de 330 px nascia em x=146
-                 numa janela que começa em x=370 — **224 px, dois terços dela,
-                 fora da janela**, medidos no Chrome a 1920x1080.
-                 Estava assim antes desta sprint e a página publicada ainda está:
-                 com as duas orações do par a caixa tinha 72 px de altura e o corte
-                 já comia o texto. A 05-Q2 dela põe a terceira frase aqui dentro,
-                 e uma dica que não se lê não cumpre *"as duas na dica"*.
-                 O padrão da casa (`.dica`, com `left:22px` no `topo.html`) abre para a
-                 direita e cabe: x=505, fim em 835, dentro de 370..1550. -->
-            <div><span class="sec-rot">Testar agora
-              <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
-                <!-- O MEIO SEGUNDO SAIU DA DICA EM 24/09/2026
-                     (AS-FRASES-QUE-A-BANCADA-ACHOU-01). Ela prometia um pulso,
-                     e o gesto deixou de ser pulso em 07/09, a pedido: o
-                     `a05_vibracao.testar` fica ligado até o Parar, segue as
-                     barras ao vivo, e o teste de cada controle é dele
-                     (`_EM_TESTE`, um por controle desde 03/10). Medido no
-                     daemon de mentira: nenhum `rumble.stop` sai sem o Parar. -->
-                <b>Vibração</b> treme os motores deste controle até o <b>Parar</b>,
-                seguindo ao vivo as barras da coluna. <b>Háptica</b> toca a vibração
-                fina pelo som, com a força do <b>Sensor háptico</b>. No mesmo controle
-                ligar um desliga o outro, e cada controle tem o seu teste. <b>Parar</b>
-                corta os dois deste controle e devolve a vibração dele ao jogo.<br><br>
-                <!-- A NOTA DOS VALORES QUE PASSAM VOLTOU PARA CÁ — 05-Q2 dela,
-                     05/09/2026: *"As duas na dica."* Ela é a única frase desta
-                     aba que explica um resultado que a PRÓPRIA TELA produz (por
-                     que um "Testar" com 220 sai fraco quando o degrau está em
-                     Economia), e por isso mora no `?` do "Testar agora", ao
-                     lado das duas orações do par.
-
-                     E ELA CONTINUA LIDA DO `gui/main.glade`, nunca redigitada
-                     (`DICA_DOS_VALORES_QUE_PASSAM`) — essa metade da razão de
-                     04/09 não caducou. Uma vez só na página: a régua 16 do
-                     gerador conta. -->
-                {DICA_DOS_VALORES_QUE_PASSAM}
-              </span></span></span></div>
-            <!-- O RÓTULO "Estado" SAIU EM 05/09/2026, com a faixa inteira —
-                 ver `SEM_A_FAIXA_DE_ESTADO`. O `?` dele terminava confessando
-                 *"Esta aba não trava — quem trava é a janela do Hefesto ou a
-                 linha de comando"*, e era a medição inteira em uma frase. -->
+            <div><span class="sec-rot" data-dica="Economia 30%, Padrão 100% (o sinal como o jogo mandou) e Máximo 150%. No Padrão as barras ficam verdes e travadas. {DICA_DO_TETO_DA_MESA}">Força da vibração</span></div>
+            <div><span class="sec-rot" data-dica="A vibração fina que o jogo manda como som, no cabo e no BT. O risco no meio é 100%: o jogo como ele mandou. {DICA_DO_TETO_DA_MESA} Cinza quando o jogo fala direto com o controle, sem passar pelo Hefesto">Sensor háptico</span></div>
+            <div><span class="sec-rot" data-dica="Motor do punho esquerdo: contrapeso maior, som grosso. Desligue um lado e aquele punho para de tremer">{ESQ["rot"]}</span></div>
+            <div><span class="sec-rot" data-dica="Motor do punho direito: contrapeso menor, som fino">{DIR["rot"]}</span></div>
+            <div><span class="sec-rot" data-dica="Vibração treme os motores deste controle até o Parar, seguindo ao vivo as barras da coluna. Háptica toca a vibração fina pelo som, com a força do Sensor háptico. No mesmo controle ligar um desliga o outro, e cada controle tem o seu teste. Parar corta os dois deste controle e devolve a vibração dele ao jogo. {DICA_DOS_VALORES_QUE_PASSAM}">Testar agora</span></div>
           </div>
 {"".join(_coluna(c) for c in MESA)}
 
@@ -1453,6 +1438,17 @@ MIOLO = f'''
              continua sendo o lugar do ESTADO, e o que ela diz vem do bloco
              logo acima. -->
         <div class="vib-estado" id="vib-estado">{html_do_estado(textos_do_estado(CENA_DO_ESTADO))}</div>
+      </div>
+    </div>
+    <div class="quadro criar vib-criar" id="criar-vibracao">
+      <div class="criar-linha">
+        <span class="quadro-titulo" data-dica="O que você criar entra aqui ao lado e toca com um clique">Criar efeitos novos</span>
+        <span class="seg-criar" role="group" aria-label="Forma">{_radios(CHAVE_DO_PADRAO, [(c, padroes.ROTULOS[c]) for c in padroes.PADROES])}</span>
+        <span class="seg-criar" role="group" aria-label="Motor">{_radios("motores", ROTULO_DOS_MOTORES)}</span>
+        <input class="nome-criar" type="text" data-linha="nome" maxlength="{TETO_DO_NOME}" placeholder="Nome do efeito" aria-label="Nome do efeito">
+        <button class="btn-criar" type="button" data-gesto="criar-efeito" data-hef-forma="criar-vibracao" data-dica="Guarda e põe ao lado">Criar</button>
+        <button class="btn-sentir" type="button" data-gesto="testar" data-hef-forma="criar-vibracao" data-dica="Toca o efeito no controle escolhido">Sentir</button>
+        <span class="meus" id="seus-toques" aria-label="Seus efeitos">{html_dos_toques("", CENA_DOS_TOQUES)}</span>
       </div>
     </div>
 '''
@@ -1619,8 +1615,9 @@ def _conferir(doc):
         exigir(frase in corpo, f"a dica perdeu a frase da janela estável: {nome}")
     # A-TELA-PERGUNTA-AO-DONO-01 (opção a, 08/10/2026): o «?» da sensor háptico também diz o teto,
     # logo depois do 100% e antes do «Cinza quando». A Força já dizia; a háptica, desde 02/10, também corta.
-    _haptica = corpo.split("Sensor háptico\n", 1)[1].split("</span></span></span>", 1)[0]
-    exigir(DICA_DO_TETO_DA_MESA in _haptica
+    _achou = _re.search(r'data-dica="([^"]*)">Sensor háptico</span>', corpo)
+    _haptica = _achou.group(1) if _achou else ""
+    exigir(_haptica and DICA_DO_TETO_DA_MESA in _haptica
            and _haptica.index("O risco no meio é 100%")
            < _haptica.index(DICA_DO_TETO_DA_MESA) < _haptica.index("Cinza quando"),
            "o «?» da sensor háptico perdeu a frase do teto do perfil de bateria (logo depois do 100%)")
@@ -1692,21 +1689,20 @@ def _conferir(doc):
            "`--r-estado` voltou à folha da aba 05 — a faixa cuja altura ele "
            "reservava saiu em 05/09/2026, e altura guardada para linha que não "
            "existe é rolagem paga por nada")
-    exigir(doc.count("var(--r-motor) var(--r-motor) var(--r-motor) var(--r-acoes);") == 1,
-           "a grade da aba 05 deixou de terminar no `--r-acoes` — a oitava "
+    exigir(doc.count("minmax(var(--r-motor),1fr) minmax(var(--r-acoes),1fr);") == 1,
+           "a grade da aba 05 deixou de terminar no `--r-acoes` em fração — a oitava "
            "faixa saiu em 05/09/2026 e a `grid-template-rows` foi junto")
-    _apos_o_rotulo = corpo.split('<span class="sec-rot">Testar agora', 1)
-    exigir(len(_apos_o_rotulo) == 2,
+    # as faixas são frações com piso: altura fixa de volta deixa vão embaixo (A-ABA-VIBRACAO-DO-TODO-01)
+    exigir("grid-template-rows:minmax(var(--r-des),3fr) var(--r-nome) minmax(var(--r-forca),1fr)" in doc
+           and "grid-template-rows:minmax(0,1fr)" in doc,
+           "as faixas da grade da aba 05 voltaram a ter altura fixa: a coluna deixa de encher o quadro")
+    _testar = _re.search(r'data-dica="([^"]*)">Testar agora</span>', corpo)
+    exigir(_testar is not None,
            'o rótulo "Testar agora" saiu da coluna de rótulos — sem ele não há '
            "onde a dica morar")
-    _celula = _apos_o_rotulo[-1].split("</div>", 1)[0]
-    _dica_do_testar = _celula.split('<span class="dica"', 1)[-1] if '<span class="dica"' in _celula else ""
-    exigir(DICA_DOS_VALORES_QUE_PASSAM in _dica_do_testar,
-           'a nota do Testar não está no `?` do "Testar agora" — a 05-Q2 dela é '
+    exigir(_testar is not None and DICA_DOS_VALORES_QUE_PASSAM in _testar.group(1),
+           'a nota do Testar não está na dica do "Testar agora" — a 05-Q2 dela é '
            '*"As duas na dica"*')
-    exigir("left:auto" not in _celula,
-           'a dica do "Testar agora" voltou a abrir para a ESQUERDA — na '
-           "primeira coluna da grade isso joga 224 px dela para fora da janela")
     exigir(corpo.count(DICA_DOS_VALORES_QUE_PASSAM) == 1,
            "a nota do Testar aparece mais de uma vez na mesma tela")
     for _rot, chave in FORCA:

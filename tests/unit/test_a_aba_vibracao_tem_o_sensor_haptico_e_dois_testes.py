@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import pathlib
+import re
 import time
 from html.parser import HTMLParser
 from types import MappingProxyType, SimpleNamespace
@@ -95,7 +96,8 @@ def _faixas_da_grade() -> list[str]:
     """As faixas do ``grid-template-rows`` das colunas, lidas da folha do gerador."""
     regra = aba05.CSS.split(".vib > div{", 1)[1].split("}", 1)[0]
     linhas = regra.split("grid-template-rows:", 1)[1].split(";", 1)[0]
-    return [p for p in linhas.split() if p.startswith("var(--r-")]
+    # cada faixa é `var(--r-x)` ou `minmax(var(--r-x),Nfr)`: vale o nome da variável do piso
+    return [f"var({v})" for v in re.findall(r"var\((--r-[\w-]+)\)", linhas)]
 
 
 class TestOTrilhoMoraNaForca:
@@ -122,9 +124,9 @@ class TestOTrilhoMoraNaForca:
     def test_a_faixa_do_personalizado_virou_a_sensor_haptico(self) -> None:
         """A quarta célula é a linha da háptica, e o rótulo dela é o dela."""
         html = MOCKUP.read_text(encoding="utf-8")
-        assert '<span class="sec-rot">Sensor háptico' in html
-        assert '<span class="sec-rot">Personalizado' not in html
-        assert '<span class="sec-rot">Háptica por áudio' not in html
+        assert re.search(r'<span class="sec-rot"[^>]*>Sensor háptico', html)
+        assert not re.search(r'<span class="sec-rot"[^>]*>Personalizado', html)
+        assert not re.search(r'<span class="sec-rot"[^>]*>Háptica por áudio', html)
         quarta = _celulas_da_coluna(aba05._coluna(aba05.MESA[0]))[3]
         assert quarta.get("data-campo") == "haptica-fora", quarta
 
@@ -506,6 +508,9 @@ MEDIDA = r"""
 """
 
 DESENHO_DE_ANTES = 124
+#: Com o aviso do gamepad virtual aceso, a linha dele toma 17 px do quadro «Criar efeitos novos»
+#: (A-ABA-VIBRACAO-DO-TODO-01), que enche a folga de baixo; o desenho cede o que o aviso pede.
+DESENHO_COM_AVISO = 110
 
 CENAS = ("quieta", "vpad-nao-subiu")
 
@@ -604,5 +609,6 @@ def test_a_aba_nao_rola_e_as_colunas_acabam_no_mesmo_y(medida: dict[str, Any]) -
 
 def test_o_desenho_nao_encolhe(medida: dict[str, Any]) -> None:
     """O desenho volta ao tamanho de antes da linha da háptica, e a fala do usuário é essa."""
-    assert medida["desenho"] >= DESENHO_DE_ANTES, (
+    piso = DESENHO_DE_ANTES if medida["cena"] == "quieta" else DESENHO_COM_AVISO
+    assert medida["desenho"] >= piso, (
         f"o desenho encolheu para {medida['desenho']} px: {medida}")

@@ -25,11 +25,11 @@ GERADOR = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "aba05.py"
 
 
 def _dica(rotulo: str) -> str:
-    """O texto do «?» de uma linha da 05: do rótulo até o fecho dos três ``span``."""
+    """A dica de uma linha da 05: o ``data-dica`` do rótulo (a tela nova não tem «?»)."""
     html = MOCKUP.read_text(encoding="utf-8")
-    achou = re.search(rf'<span class="sec-rot">{re.escape(rotulo)}\s*<span class="ajuda"[^>]*>\?'
-                      r'<span class="dica">(.*?)</span></span></span>', html, re.S)
-    assert achou, f"o «?» de {rotulo!r} não está na 05"
+    achou = re.search(
+        rf'<span class="sec-rot" data-dica="([^"]*)">{re.escape(rotulo)}</span>', html)
+    assert achou, f"a dica de {rotulo!r} não está na 05"
     return re.sub(r"\s+", " ", achou.group(1))
 
 
