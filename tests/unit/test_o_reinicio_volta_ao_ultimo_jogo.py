@@ -75,7 +75,8 @@ def test_o_boot_depois_do_jogo_restaura_o_perfil_do_jogo_e_o_modo_dele() -> None
 def test_depois_do_boot_a_janela_sem_perfil_nao_devolve_a_escolha() -> None:
     """Depois do reinício, o terminal em foco não põe a escolha por cima do jogo restaurado.
 
-    MORDIDA: tire o ``_o_boot_veio_do_ultimo_jogo`` do ``_fica_no_ultimo_jogo`` e o «lure» entra.
+    MORDIDA: troque o ``o_ultimo_jogo()`` do ``_o_ultimo_jogo_que_vale`` por ``None``
+    e o «lure» entra.
     """
     _jogou_e_fechou()
     manager, store = _bancada(_os_perfis())

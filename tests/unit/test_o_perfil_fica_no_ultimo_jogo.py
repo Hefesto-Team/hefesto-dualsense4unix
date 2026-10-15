@@ -24,6 +24,7 @@ from tests.unit.test_foco_errante_01_a_janela_da_steam_nao_tira_o_perfil import 
 )
 
 OUTRO_JOGO = "steam_app_1599660"
+JANELA_DO_TERMINAL = {"wm_class": "com.system76.CosmicTerm", "wm_name": "Terminal"}
 JANELAS_DE_LANCADOR = [
     {"wm_class": "steam", "wm_name": ""},
     {"wm_class": "com.heroicgameslauncher.hgl", "wm_name": "Heroic"},
@@ -63,7 +64,7 @@ def test_o_jogo_fecha_e_o_perfil_dele_fica(
 ) -> None:
     """D-1410-O-PERFIL-FICA-NO-ULTIMO-JOGO: o jogo fecha e o perfil dele fica.
 
-    MORDIDA: tire o ``_fica_no_ultimo_jogo`` do ``_tick`` e a escolha (o «lure») entra.
+    MORDIDA: faça o ``_o_ultimo_jogo_que_vale`` devolver ``None`` e a escolha (o «lure») entra.
     """
     _a_escolha(monkeypatch, "lure")
     sw, store, agora = _no_jogo()
@@ -86,8 +87,9 @@ def test_o_perfil_que_outro_pos_e_o_jogo_confirma_tambem_fica(
     Medido às 10h26m49 de 14/10: o Sackboy entrou com ``origin=launch``, e o
     autoswitch só sincronizou a crença; sem a confirmação do tique, o jogo
     fechava e a escolha entrava. O mesmo com o daemon reiniciado com o jogo aberto.
+    Depois da Steam vem o terminal, que não é lançador: só a memória segura o jogo.
 
-    MORDIDA: tire a confirmação do ``_perfil_do_ultimo_jogo`` no ``_tick`` e o «lure» entra.
+    MORDIDA: tire o ``_o_ultimo_jogo_passa_a(candidate)`` do ``_tick`` e o «lure» entra.
     """
     _a_escolha(monkeypatch, "lure")
     manager, store = _bancada([
@@ -104,8 +106,11 @@ def test_o_perfil_que_outro_pos_e_o_jogo_confirma_tambem_fica(
     sw._tick(dict(JANELA_DO_JOGO), 1.0)
     sw._tick(dict(JANELA_DO_JOGO), 2.0)
     assert store.active_profile == "sackboy", "premissa: o jogo em foco confirma o perfil"
-    for i in range(60):
-        sw._tick({"wm_class": "steam", "wm_name": ""}, 3.0 + 0.5 * i)
+    agora = 3.0
+    for janela in ({"wm_class": "steam", "wm_name": ""}, JANELA_DO_TERMINAL):
+        for _ in range(30):
+            agora += 0.5
+            sw._tick(dict(janela), agora)
     assert store.active_profile == "sackboy"
 
 
