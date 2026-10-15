@@ -3,14 +3,15 @@
 Cada um ajusta o modo que já está aceso, dentro das faixas do `PRESETS`, e nunca
 troca o modo; «Nenhum» volta aos padrões. `ajustes` e `variantes` (`{modo: {nome:
 valor}}`) são aplicados pela aba Gatilhos; `momentos` (o que muda com o tempo de
-aperto) é dado para o motor do tato, que ainda não os toca: a `dica` diz só o que os
-ajustes fazem. A régua `test_a_aba_gatilhos_do_todo.py` prende faixas, teto de
-escritas, unicidade e a dica sem promessa de tempo. Fontes e grau: nota de 12/10 da
-sprint `A-ABA-GATILHOS-DO-TODO-01`.
+aperto) são tocados pelo motor do tato (`tato_vivo.AtuadorDosMomentos`), onde o jogo
+cala o gatilho. A imersão se reconhece pelos números (:func:`imersao_dos_numeros`),
+a mesma regra na tela e no motor. A régua `test_a_aba_gatilhos_do_todo.py` prende
+faixas, teto de escritas, unicidade e a dica: só diz o tempo a imersão que o motor
+toca em todo modo dela. Fontes e grau: nota de 12/10 da sprint `A-ABA-GATILHOS-DO-TODO-01`.
 """
 from __future__ import annotations
 
-from collections.abc import Iterator, Mapping
+from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 
 #: acionamento (família de modos) → os modos que a compõem
@@ -79,7 +80,7 @@ IMERSOES: tuple[Imersao, ...] = (
              "Weapon": {"start": 0, "end": 1, "force": 255}},
             na_frente=("fps", "acao")),  # (noqa-acento): chave
     Imersao("pino-que-falha", "Pino que falha", "arma",
-            "O disparo fica mais fundo e mais duro, como pino emperrado.",
+            "O disparo fica fundo e duro, e emperra meio segundo a cada aperto.",
             {"SemiAutoGun": {"start": 4, "end": 6, "force": 7},
              "Weapon": {"start": 3, "end": 7, "force": 230}},
             momentos=(Momento("ao_apertar", 0, "Feedback",
@@ -115,7 +116,8 @@ IMERSOES: tuple[Imersao, ...] = (
             na_frente=("fps", "acao")),  # (noqa-acento): chave
     # --- Arco ---------------------------------------------------------------------------
     Imersao("corda-que-treme-no-fim", "Corda que treme no fim", "arco",
-            "A força sobe do começo ao fim do curso, como a corda esticando.",
+            "A força sobe do começo ao fim do curso, e pesa mais"
+            " a cada meio segundo segurando.",
             {"Bow": {"start": 0, "end": 8, "force": 7, "snap": 6}},
             {"arco": {"Bow": {"start": 0, "end": 8, "force": 6, "snap": 7}}},
             _rampa("Bow", "force", 1, 7, 500),
@@ -126,14 +128,15 @@ IMERSOES: tuple[Imersao, ...] = (
             {"arco": {"Bow": {"start": 2, "end": 8, "force": 6, "snap": 8}}},
             na_frente=("arco", "aventura")),
     Imersao("braco-cansado", "Braço cansado", "arco",
-            "A corda pesa menos e solta mais branda, por todo o curso.",
+            "A corda pesa menos e solta branda, e o braço treme depois de 3 s segurando.",
             {"Bow": {"start": 1, "end": 9, "force": 5, "snap": 5}},
             momentos=(Momento("segurando", 3000, "Vibration",
                               {"position": 6, "amplitude": 2, "frequency": 8}),),
             na_frente=("arco", "aventura")),
     # --- Resistência, Rígido, Rígido simples e Ponto duro --------------------------------
     Imersao("freio-abs-que-pulsa", "Freio que pulsa", "resistência",
-            "Resistência firme logo no começo do curso, como pedal de freio.",
+            "Resistência firme no começo do curso, e o pedal pulsa"
+            " depois de um instante segurando.",
             {"Resistance": {"start": 2, "force": 6},
              "Rigid": {"position": 2, "force": 220},
              "SimpleRigid": {"strength": 7},
@@ -166,7 +169,7 @@ IMERSOES: tuple[Imersao, ...] = (
                            "frequency": 6}},
             na_frente=("aventura",), a_validar=True),
     Imersao("motor-que-sobe", "Motor que sobe", "galope",
-            "Passadas iguais e mais rápidas, como um motor girando.",
+            "Passadas iguais que aceleram enquanto você segura, como um motor girando.",
             {"Galloping": {"start": 0, "end": 9, "first_foot": 5, "second_foot": 5,
                            "frequency": 12}},
             momentos=_rampa("Galloping", "frequency", 12, 36, 500),
@@ -178,7 +181,7 @@ IMERSOES: tuple[Imersao, ...] = (
             na_frente=("aventura", "corrida"), a_validar=True),
     # --- Pulso (curvas A e B) --------------------------------------------------------------
     Imersao("batida-do-coracao", "Batida do coração", "pulso",
-            "Um pulso de força média no meio do curso.",
+            "Um pulso médio no meio do curso, e uma batida forte quase a cada segundo.",
             {"PulseA": {"start": 2, "end": 6, "force": 150},
              "PulseB": {"start": 2, "end": 6, "force": 150}},
             momentos=(Momento("sempre", 0, "PulseB", {"force": 255}, dura_ms=120,
@@ -190,7 +193,8 @@ IMERSOES: tuple[Imersao, ...] = (
              "PulseB": {"start": 1, "end": 8, "force": 255}},
             na_frente=("terror",), a_validar=True),
     Imersao("aperto-que-trava", "Aperto que trava", "pulso",
-            "Um pulso forte da metade ao fim do curso.",
+            "Um pulso forte da metade ao fim do curso, e o gatilho trava"
+            " um instante a cada aperto.",
             {"PulseA": {"start": 3, "end": 8, "force": 230},
              "PulseB": {"start": 3, "end": 8, "force": 230}},
             momentos=(Momento("ao_apertar", 0, "Feedback",
@@ -236,3 +240,46 @@ def todos_os_ajustes() -> Iterator[tuple[Imersao, str, str, dict[str, int]]]:
                 ajustes = ajustes_da_imersao(imersao, modo, estilo)
                 if ajustes is not None:
                     yield imersao, modo, estilo, ajustes
+
+
+def momentos_no_modo(imersao: Imersao, modo: str) -> tuple[Momento, ...]:
+    """Os momentos dela que valem com o acionamento em `modo` (o `valem_em` de cada um)."""
+    return tuple(m for m in imersao.momentos if not m.valem_em or modo in m.valem_em)
+
+
+def o_tempo_vale_em_todo_modo(imersao: Imersao) -> bool:
+    """Todo modo em que ela se oferece tem momento que o motor toca: só aí a dica diz o tempo."""
+    return bool(imersao.momentos) and all(momentos_no_modo(imersao, m) for m in imersao.ajustes)
+
+
+def imersao_dos_numeros(modo: str, params: Sequence[object]) -> tuple[Imersao, str] | None:
+    """A imersão (e o estilo da variante, `""` na base) cujos números SÃO estes, ou `None`.
+
+    Os `params` são os do perfil, posicionais na ordem do modo. A régua da aba prende a
+    unicidade dos números, então o par (modo, params) diz a imersão sem campo no perfil.
+    """
+    from hefesto_dualsense4unix.app.actions.trigger_specs import (
+        get_spec,
+        preset_to_positional_params,
+    )
+
+    spec = get_spec(modo)
+    if spec is None:
+        return None
+    alvo: list[int] = []
+    for valor in params:
+        if isinstance(valor, bool) or not isinstance(valor, int):
+            return None  # o aninhado dos modos por posição não é de imersão nenhuma
+        alvo.append(valor)
+    for imersao, do_modo, estilo, ajustes in todos_os_ajustes():
+        if do_modo == modo and list(preset_to_positional_params(spec, ajustes)) == alvo:
+            return imersao, estilo
+    return None
+
+
+def a_da_frente_com_tempo(modo: str, estilo: str) -> Imersao | None:
+    """No automático: a primeira imersão que o estilo põe na frente e que tem momento no modo."""
+    for imersao in imersoes_do_acionamento(modo, estilo):
+        if estilo in imersao.na_frente and momentos_no_modo(imersao, modo):
+            return imersao
+    return None

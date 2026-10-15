@@ -2,8 +2,9 @@
 
 MORDIDAS: pôr a pane com força 9, repetir os números de duas imersões, sobrar uma família sem as
 três imersões, dar largura própria ao chip, trazer de volta o Guardar, perder o campo da imersão
-numa célula, deixar o efeito criado fora das listas, a dica prometer o que muda no tempo ou o
-«Sentir» devolver o que o perfil dizia ANTES do toque reprova.
+numa célula, deixar o efeito criado fora das listas, a dica prometer o tempo onde o motor não o
+toca em todo modo (ou calar o tempo onde toca) ou o «Sentir» devolver o que o perfil dizia ANTES
+do toque reprova.
 """
 
 from __future__ import annotations
@@ -74,16 +75,17 @@ def test_nenhum_momento_passa_do_teto_de_escritas_do_motor() -> None:
             assert m.apos_ms >= 0 and (m.dura_ms is None or m.dura_ms > 0), i.chave
 
 
-#: o que só um `momento` faria (mudar com o tempo ou com o jogo); nenhum código os toca hoje
+#: o que só um `momento` faz (mudar com o tempo de aperto), e o `tato_vivo` os toca
 _PROMESSA_DE_TEMPO = re.compile(
-    r"depois de|de vez em quando|conforme|alterna|acelera|minuto|por segundo|\bHz\b"
+    r"depois de|de vez em quando|conforme|alterna|acelera|minuto|segundo|instante|\bHz\b"
     r"|\d+(?:,\d+)? ?s\b", re.I)
 
 
-def test_a_dica_diz_so_o_que_os_ajustes_fazem() -> None:
-    """A dica vai à tela: prometer o que muda no tempo é dizer o que o aparelho não faz."""
-    promessas = {i.chave: i.dica for i in imersao.IMERSOES if _PROMESSA_DE_TEMPO.search(i.dica)}
-    assert not promessas, promessas
+def test_a_dica_diz_o_tempo_so_onde_o_motor_o_toca_em_todo_modo() -> None:
+    """A dica vai à tela: o tempo só se promete onde os momentos valem em todo modo dela."""
+    erradas = {i.chave: i.dica for i in imersao.IMERSOES
+               if bool(_PROMESSA_DE_TEMPO.search(i.dica)) != imersao.o_tempo_vale_em_todo_modo(i)}
+    assert not erradas, erradas
 
 
 def test_os_numeros_de_cada_imersao_so_se_repetem_nela_mesma() -> None:

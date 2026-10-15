@@ -636,10 +636,10 @@ def _imersao_que_casa(modo: str, params: list[int]) -> str:
     spec = specs.get_spec(modo) if specs else None
     if imer is None or spec is None:
         return SEM_IMERSAO
-    for imersao, do_modo, _estilo, ajustes in imer.todos_os_ajustes():
-        if do_modo == modo and list(
-                specs.preset_to_positional_params(spec, ajustes)) == params:
-            return str(imersao.chave)
+    # A regra é uma só, a do motor do tato que toca os momentos (`imersao_dos_numeros`).
+    achada = imer.imersao_dos_numeros(modo, params)
+    if achada is not None:
+        return str(achada[0].chave)
     if not params or params == _padroes(modo):
         return SEM_IMERSAO
     return ""
