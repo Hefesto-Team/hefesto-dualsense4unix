@@ -89,6 +89,7 @@ O_MESMO_BOTAO = {"tp_toque": ("touchpad_toque", "Movimento do cursor"),
 
 def test_o_mapa_e_a_navegacao_dizem_a_mesma_palavra_para_o_mesmo_botao() -> None:
     """O Toque, o L3 clique e a direção do R3 dizem nas duas telas o que o desenho diz."""
+    # Prova da D-1510-AS-PALAVRAS-DOS-BOTOES-SAO-AS-DO-DESENHO.
     navegacao = (RAIZ / "mockup" / "06-navegacao.html").read_text(encoding="utf-8")
     for b, (linha, palavra) in O_MESMO_BOTAO.items():
         no_mapa = re.search(rf'data-b="{b}".*?<span class="b2-val"[^>]*>([^<]*)</span>', _doc(),
@@ -131,6 +132,7 @@ def test_cada_molde_nasce_um_perfil_valido_so_manual_com_o_mouse_ligado(molde: A
 
 
 def test_o_molde_so_usa_ficha_que_o_motor_executa() -> None:
+    # Prova da D-1510-O-MAPA-SO-OFERECE-O-QUE-O-MOTOR-EXECUTA.
     from hefesto_dualsense4unix.core import acoes_de_botao as acoes
 
     for molde in loader.MOLDES_DE_PERFIL:
@@ -174,6 +176,7 @@ def mapa() -> Any:
 
 
 def test_o_molde_mais_guardar_cria_o_perfil_em_meus_perfis_e_nao_toca_o_ativo(mapa: Any) -> None:
+    # Prova da D-1510-O-MOLDE-MAIS-GUARDAR-CRIA-UMA-COPIA.
     ctx = _ctx()
     mapa.mapa_perfil(ctx, {"valor": "molde:visual_novel"}, None)
     resposta = mapa.mapa_guardar(ctx, {}, MagicMock())
@@ -185,6 +188,7 @@ def test_o_molde_mais_guardar_cria_o_perfil_em_meus_perfis_e_nao_toca_o_ativo(ma
 
 
 def test_voltar_ao_padrao_de_um_molde_devolve_o_molde_e_nao_o_esvazia(mapa: Any) -> None:
+    # Prova da D-1510-O-MOLDE-MAIS-GUARDAR-CRIA-UMA-COPIA.
     ctx = _ctx()
     mapa.mapa_perfil(ctx, {"valor": "molde:mouse"}, None)
     mapa.mapa_botao(ctx, {"b": "cross"}, None)
@@ -205,6 +209,7 @@ def test_gravar_a_tecla_na_navegacao_guarda_o_atalho_e_recusa_a_que_o_motor_nao_
 
 
 def test_a_troca_de_botao_se_confere_antes_de_valer_e_o_ps_nao_se_troca(mapa: Any) -> None:
+    # Prova da D-1510-O-MAPA-SO-OFERECE-O-QUE-O-MOTOR-EXECUTA.
     ctx = _ctx()
     mapa.mapa_botao(ctx, {"b": "cross"}, None)
     assert mapa.mapa_escolher(ctx, {"v": "troca:circle"}, None)["mesa"]["val-cross"] == "Círculo"

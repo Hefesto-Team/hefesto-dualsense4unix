@@ -290,6 +290,7 @@ class _PonteQueAnota:
 
 
 def test_8_quem_navega_liga_e_desliga_pelo_daemon() -> None:
+    # Prova da D-1510-QUEM-NAVEGA-DECIDE-O-BIG-PICTURE.
     from hefesto_dualsense4unix.interface import pacotes
     from hefesto_dualsense4unix.interface.pacotes import a06_navegacao as a06
 

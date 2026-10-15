@@ -47,6 +47,7 @@ def _cartoes(doc: str) -> list[str]:
 @pytest.mark.parametrize("arquivo", ARQUIVOS)
 def test_nenhum_ponto_de_interrogacao_nem_o_i_nos_titulos_cartoes_e_janelas(
         arquivo: pathlib.Path) -> None:
+    # Prova da D-1510-O-PORQUE-DO-CARTAO-VAI-A-DICA-DO-TITULO.
     doc = _doc(arquivo)
     assert not re.search(r'class="ajuda[ "]', doc), "voltou um «?» (span.ajuda)"
     for velho in ("cd-info", "cd-porque", "cd-ignora"):
@@ -55,6 +56,7 @@ def test_nenhum_ponto_de_interrogacao_nem_o_i_nos_titulos_cartoes_e_janelas(
 
 @pytest.mark.parametrize("arquivo", ARQUIVOS)
 def test_os_titulos_levam_a_dica_no_hover(arquivo: pathlib.Path) -> None:
+    # Prova da D-1510-O-PORQUE-DO-CARTAO-VAI-A-DICA-DO-TITULO.
     doc = _doc(arquivo)
     assert re.search(
         r'<label class="quadro-titulo"[^>]*data-dica="[^"]+"[^>]*>Gestão de controles<', doc
@@ -70,6 +72,7 @@ def test_os_titulos_levam_a_dica_no_hover(arquivo: pathlib.Path) -> None:
 
 @pytest.mark.parametrize("arquivo", ARQUIVOS)
 def test_todo_cartao_tem_o_id_e_o_que_se_ignora_tem_o_x(arquivo: pathlib.Path) -> None:
+    # Prova da D-1510-O-PORQUE-DO-CARTAO-VAI-A-DICA-DO-TITULO.
     cartoes = _cartoes(_doc(arquivo))
     assert len(cartoes) >= 3, "a régua não achou os cartões — seletor cego é ERRO"
     com_x = 0
@@ -89,6 +92,7 @@ def test_todo_cartao_tem_o_id_e_o_que_se_ignora_tem_o_x(arquivo: pathlib.Path) -
 
 @pytest.mark.parametrize("arquivo", ARQUIVOS)
 def test_o_pedido_e_o_movimento_dizem_a_cor_do_plastico(arquivo: pathlib.Path) -> None:
+    # Prova da D-1510-O-PEDIDO-E-O-MOVER-SE-DIZEM-PELA-COR.
     doc = _doc(arquivo)
     assert "Galactic Purple quer conectar" in doc
     assert "Roxo quer conectar" not in doc
@@ -99,6 +103,7 @@ def test_o_pedido_e_o_movimento_dizem_a_cor_do_plastico(arquivo: pathlib.Path) -
 
 @pytest.mark.parametrize("arquivo", ARQUIVOS)
 def test_o_cartao_do_controle_nao_tem_perfil_nem_giroscopio(arquivo: pathlib.Path) -> None:
+    # Prova da D-1510-O-CARTAO-DA-CONEXOES-NAO-TEM-PERFIL.
     doc = _doc(arquivo)
     for saiu in ("gc-perfil", "perfil-do-controle", "est-mira", "Giroscópio como analógico",
                  "Analógico virtual"):
@@ -126,6 +131,7 @@ def test_o_gerador_nao_sabe_mais_fazer_um_ponto_de_interrogacao() -> None:
 def test_o_pedido_de_pareamento_se_nomeia_pela_cor_declarada(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """Sem nome dado, o pedido diz a cor do plástico que a pessoa declarou; sem nada, «Controle»."""
+    # Prova da D-1510-O-PEDIDO-E-O-MOVER-SE-DIZEM-PELA-COR.
     from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as a08
 
     central = {"pedindo": [{"aparelho": "aa:bb:cc:00:00:01", "adaptador": "aa:bb:cc:00:00:11",

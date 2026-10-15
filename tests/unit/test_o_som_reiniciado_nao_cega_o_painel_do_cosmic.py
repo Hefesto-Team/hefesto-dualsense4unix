@@ -241,6 +241,7 @@ def test_no_cosmic_o_daemon_conferido_sai_e_volta_com_o_ambiente_da_sessao(
     bancada: Bancada,
 ) -> None:
     """MORDIDA: sem a volta do daemon no reinício, ele segue vivo e nada sobe pelo systemd-run."""
+    # Prova da D-1510-O-SOM-REINICIADO-RELIGA-O-PAINEL-DO-COSMIC.
     p = _sessao_cosmic(bancada)
     rc, painel, _ = _reiniciar(bancada)
     assert rc == "0"
@@ -335,6 +336,7 @@ def test_se_nao_volta_o_aviso_diz_o_comando(bancada: Bancada) -> None:
 
 def test_o_daemon_que_nao_le_o_pipewire_fica_quieto(bancada: Bancada) -> None:
     """MORDIDA: outra versão do COSMIC, com o daemon sem a libpipewire, não perde o daemon."""
+    # Prova da D-1510-O-SOM-REINICIADO-RELIGA-O-PAINEL-DO-COSMIC.
     p = _sessao_cosmic(bancada)
     bancada.daemon_bin.write_text("#!/bin/bash\nexit 0\n", encoding="utf-8")
     rc, painel, resto = _reiniciar(bancada)
@@ -439,6 +441,7 @@ def test_o_doctor_avisa_com_o_daemon_vivo_e_fora_dos_clientes(bancada: Bancada) 
 
 
 def test_o_doctor_avisa_com_o_daemon_morto(bancada: Bancada) -> None:
+    # Prova da D-1510-O-SOM-REINICIADO-RELIGA-O-PAINEL-DO-COSMIC.
     p = _sessao_cosmic(bancada)
     bancada.lista("cosmic-settings", str(p["janela"]))
     saida = _doctor(bancada)

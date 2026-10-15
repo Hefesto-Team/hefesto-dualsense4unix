@@ -648,6 +648,7 @@ def test_a_janela_nao_escreve_o_liga_desliga() -> None:
     MORDIDA: devolva a um gesto o `_guardar_no_perfil(ctx, mouse_enabled=novo)` e a
     régua nomeia o arquivo e a linha.
     """
+    # Prova da D-1510-A-NAVEGACAO-PERDE-O-STATUS-DO-MODO-E-O-TAMBEM-NO-JOGO.
     import ast
     from pathlib import Path
 

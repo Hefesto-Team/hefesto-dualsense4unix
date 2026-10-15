@@ -116,6 +116,7 @@ def test_a_escolha_recusa_molde_que_nao_existe_e_valor_solto() -> None:
 
 
 def test_a_velocidade_grava_o_valor_absoluto_no_computador_e_o_disco_diz_o_mesmo() -> None:
+    # Prova da D-1510-O-TECLADO-GANHA-O-SEMPRE-E-A-VELOCIDADE-E-ABSOLUTA.
     from hefesto_dualsense4unix.profiles import o_padrao_do_computador as opc
 
     pacotes, _a06 = _pacote()

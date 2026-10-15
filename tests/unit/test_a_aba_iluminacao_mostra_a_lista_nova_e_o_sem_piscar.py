@@ -81,6 +81,7 @@ def _options(html: str) -> list[tuple[str, str]]:
 # ---------------------------------------------------------------- a lista tem as oito opções
 
 def test_a_lista_tem_as_oito_opcoes_na_ordem_do_desenho() -> None:
+    # Prova da D-1510-A-LISTA-DE-EFEITOS-TEM-OITO-OPCOES.
     from pacotes import a04_iluminacao as a04
 
     html = a04.opcoes_do_efeito({})
@@ -113,6 +114,7 @@ def test_toda_base_do_motor_esta_na_lista_e_tem_a_sua_frase() -> None:
 
 
 def test_cada_frase_e_de_uma_linha_com_a_primeira_maiuscula() -> None:
+    # Prova da D-1510-A-LISTA-DE-EFEITOS-TEM-OITO-OPCOES.
     from pacotes import a04_iluminacao as a04
 
     frases = [a04.DICA_SEM_EFEITO, a04.DICA_LUZ_FIXA, a04.DICA_DO_EFEITO_CRIADO,
@@ -163,6 +165,7 @@ def test_o_desenho_tem_o_sem_piscar_uma_vez_e_desligado() -> None:
 @pytest.mark.parametrize("n", [1, 2, 3, 4])
 def test_escolher_uma_base_grava_o_texto_com_a_cor_do_controle(n: int) -> None:
     """A cor é a do controle (a mesma que a coluna mostra); o ritmo, o com que a base nasce."""
+    # Prova da D-1510-A-BASE-ANIMADA-SEGUE-A-COR-DO-CONTROLE.
     from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_computador
     from hefesto_dualsense4unix.profiles.schema import ler_o_efeito_da_luz
     from pacotes import a04_iluminacao as a04
@@ -249,6 +252,7 @@ def test_ligar_o_sem_piscar_grava_o_valor_global_e_a_leitura_devolve_ligado(
 
 
 def test_o_sem_piscar_e_um_so_para_os_controles_e_nenhum_perfil_ganha_campo() -> None:
+    # Prova da D-1510-O-SEM-PISCAR-E-DO-COMPUTADOR.
     from hefesto_dualsense4unix.profiles.schema import ControllerOverrides, LedsConfig, Profile
     from hefesto_dualsense4unix.utils.maquina import carregar_maquina
 
@@ -314,6 +318,7 @@ def test_trocar_a_cor_leva_a_base_junto_no_cabo_e_no_radio(n: int, via: str) -> 
     Sem isso a barra respirava a cor velha, a linha Cor dizia a nova e a lista pulava para «Seus
     efeitos».
     """
+    # Prova da D-1510-A-BASE-ANIMADA-SEGUE-A-COR-DO-CONTROLE.
     from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_computador
     from pacotes import a04_iluminacao as a04
 
@@ -329,6 +334,7 @@ def test_trocar_a_cor_leva_a_base_junto_no_cabo_e_no_radio(n: int, via: str) -> 
 
 
 def test_trocar_a_cor_nao_mexe_no_arco_iris_nem_no_efeito_criado() -> None:
+    # Prova da D-1510-A-BASE-ANIMADA-SEGUE-A-COR-DO-CONTROLE.
     from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_computador
     from pacotes import a04_iluminacao as a04
 

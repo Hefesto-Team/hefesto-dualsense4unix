@@ -214,6 +214,7 @@ def test_o_gesto_sempre_liga_o_teclado_e_grava_so_o_sempre(ativo: Any) -> None:
 
     MORDIDA: gravar também `teclado_so_no_jogo=True` no «Sempre» (o teclado calaria fora do jogo).
     """
+    # Prova da D-1510-O-TECLADO-GANHA-O-SEMPRE-E-A-VELOCIDADE-E-ABSOLUTA.
     from pacotes import a06_navegacao as mod
 
     ponte = _Ponte()

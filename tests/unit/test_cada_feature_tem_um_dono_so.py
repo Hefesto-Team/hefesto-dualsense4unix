@@ -170,6 +170,7 @@ def test_o_detector_ve_o_botao_e_ignora_o_selo_a_dica_e_o_estilo() -> None:
 
 def test_a_regua_reprova_o_botao_que_volta_para_a_calibrar() -> None:
     """A mordida em miniatura: a mesma conta da régua das páginas, com o botão de volta."""
+    # Prova da D-1510-O-ANALOGICO-VIRTUAL-SO-NA-ABA-CONTROLES.
     emitidos = gestos_da_pagina(
         '<button data-gesto="analogico-lado" data-lado="analogico_esquerdo">Esquerdo</button>')
     fora = {g: d for g, d in _donos_do_gesto().items()

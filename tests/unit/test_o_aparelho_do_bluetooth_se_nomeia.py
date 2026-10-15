@@ -97,6 +97,7 @@ def test_o_aparelho_com_tipo_nao_pergunta(tipo: str) -> None:
 
 
 def test_o_outro_que_ela_escolheu_nao_pergunta_de_novo() -> None:
+    # Prova da D-1510-O-TIPO-DITO-PELA-PESSOA-SE-GUARDA-PELO-ENDERECO.
     ap = {"id": ENDERECO, "tipo": "outro", "tipo_dela": True, "lugar": LUGAR, "nome": "X",
           "rotulo": "X", "esperando": False, "fixo": False}
     linha = a08.html_da_linha(ap, {"aparelhos": [ap], "lugares": [{"id": LUGAR}]})
@@ -134,6 +135,7 @@ def test_o_controle_que_a_class_ou_o_icon_dizem_nao_pergunta(icone: str,
     MORDIDA: tirar o ``e_controle`` de :func:`a08._tipo_pela_classe` (ou o ``input-gaming`` do
     ``TIPO_PELO_ICONE``) devolve o «?» a um controle que se anunciou.
     """
+    # Prova da D-1510-O-CONTROLE-QUE-A-CLASS-ANUNCIA-NAO-PERGUNTA.
     ctx = a08.Contexto(state={"controllers": []}, mesa=[], conectados=[], estados={})
     (ap,) = a08._aparelhos_da_cena(ctx, ctx.state, {}, [],
                                    (_bluez(icone=icone, classe=classe),), {ADAPTADOR: LUGAR},
@@ -147,6 +149,7 @@ def test_o_controle_que_a_class_ou_o_icon_dizem_nao_pergunta(icone: str,
 
 def test_a_escolha_se_guarda_pelo_endereco_e_vence_a_adivinhacao(
         monkeypatch: pytest.MonkeyPatch) -> None:
+    # Prova da D-1510-O-TIPO-DITO-PELA-PESSOA-SE-GUARDA-PELO-ENDERECO.
     ponte = _escolher(monkeypatch, "fone")
     assert ponte.chamadas == [{"aparelhos": {"aabbcc0000e2": {"tipo": "fone"}}}]
     ap = _conectado()
@@ -176,6 +179,7 @@ def test_o_desligado_guarda_a_escolha(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_controle_vira_o_aparelho_de_glifo_de_controle_e_nao_o_controle_do_hefesto(
         monkeypatch: pytest.MonkeyPatch) -> None:
+    # Prova da D-1510-O-CONTROLE-QUE-A-CLASS-ANUNCIA-NAO-PERGUNTA.
     _escolher(monkeypatch, "controle")
     ap = _conectado()
     assert ap["tipo"] == "gamepad"

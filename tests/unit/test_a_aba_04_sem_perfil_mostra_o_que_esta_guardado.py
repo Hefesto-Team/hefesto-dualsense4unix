@@ -58,6 +58,7 @@ def test_sem_perfil_o_brilho_guardado_aparece(a04):
 
 
 def test_sem_perfil_o_modo_guardado_aparece(a04):
+    # Prova da D-1510-SEM-PERFIL-A-ILUMINACAO-LE-O-COMPUTADOR.
     from pacotes import perfil
 
     def _automatico(prof):
@@ -125,6 +126,7 @@ def test_sem_perfil_o_efeito_e_o_brilho_nao_viram_a_aba_para_o_automatico(a04):
     apagava a grade, porque a vista do computador caía na dedução do esquema (cores automáticas
     ligadas por padrão, nenhuma cor própria).
     """
+    # Prova da D-1510-SEM-PERFIL-A-ILUMINACAO-LE-O-COMPUTADOR.
     ctx = _ctx_dos_dois()
     assert a04.pacote(ctx)[a04.GESTO_DO_MODO] == a04.MODO_PERSONALIZADO
     for uniq, via, _plastico, pct in DOIS:

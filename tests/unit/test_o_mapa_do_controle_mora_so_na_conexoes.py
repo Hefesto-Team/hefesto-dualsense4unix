@@ -78,6 +78,7 @@ def _portas() -> dict[str, list[tuple[str, set[str]]]]:
 
 
 def test_o_mapa_so_se_abre_pela_conexoes_e_pela_navegacao() -> None:
+    # Prova da D-1510-O-MAPA-DO-CONTROLE-TEM-DUAS-PORTAS.
     portas = _portas()
     pagina, classe, fileira = CASA
     fora_de_casa = sorted(set(portas) - {pagina, NAVEGACAO})
@@ -94,6 +95,7 @@ def test_o_mapa_so_se_abre_pela_conexoes_e_pela_navegacao() -> None:
 
 
 def test_o_voltar_do_mapa_tem_a_navegacao_como_reserva() -> None:
+    # Prova da D-1510-O-MAPA-DO-CONTROLE-TEM-DUAS-PORTAS.
     mapa = next(p for p in _paginas() if p.name == MAPA)
     achado = re.search(r'<a class="(?:voltar2 )?voltar" href="([^"]+)"',
                        mapa.read_text(encoding="utf-8"))

@@ -29,6 +29,7 @@ def _doc() -> str:
 
 
 def test_nao_ha_span_ajuda_nem_janela_velha() -> None:
+    # Prova da D-1510-A-NAVEGACAO-PERDE-O-STATUS-DO-MODO-E-O-TAMBEM-NO-JOGO.
     doc = _doc()
     assert "span class=\"ajuda\"" not in doc and 'class="ajuda"' not in doc
     telas = re.findall(r'<[^<>]*\bclass="tela-nova"[^<>]*>', doc)
@@ -58,6 +59,7 @@ def test_a_fila_leva_ao_mapa_e_a_acessibilidade() -> None:
 
 
 def test_a_acessibilidade_traz_o_giroscopio_e_as_opcoes_do_desenho() -> None:
+    # Prova da D-1510-A-ACESSIBILIDADE-APARECE-APAGADA-ATE-OS-DONOS.
     doc = _doc()
     tela = doc[doc.index('id="acessibilidade"'):]
     texto = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", tela))
@@ -68,6 +70,7 @@ def test_a_acessibilidade_traz_o_giroscopio_e_as_opcoes_do_desenho() -> None:
 
 
 def test_os_rotulos_do_tipo_e_do_teclado_sao_os_do_produto() -> None:
+    # Prova da D-1510-AS-PALAVRAS-DOS-BOTOES-SAO-AS-DO-DESENHO.
     doc = _doc()
     tipo = re.search(r'data-gesto="navegacao-tipo".*?</select>', doc, flags=re.S)
     assert tipo and re.findall(r"<option[^>]*>([^<]+)</option>", tipo.group(0)) == [
@@ -118,6 +121,7 @@ def test_quatro_controles_no_navega_com_cabem_numa_linha(pagina) -> None:
     MORDIDA: devolver o `flex-wrap:wrap` e tirar o `min-width:0` do chip quebra em quatro linhas,
     e as de baixo cobrem o «Perfil de point and click».
     """
+    # Prova da D-1510-O-NAVEGA-COM-ENCOLHE-O-NOME-COM-QUATRO.
     pagina.goto(MOCKUP.as_uri())
     m = pagina.evaluate("""() => {
       const nc = document.querySelector('.navega-com');
@@ -145,6 +149,7 @@ def test_o_que_ainda_nao_grava_aparece_apagado(pagina) -> None:
 
     MORDIDA: tirar a regra `.btn.apagado` deixa os dois acesos, iguais a um botão que funciona.
     """
+    # Prova da D-1510-A-ACESSIBILIDADE-APARECE-APAGADA-ATE-OS-DONOS.
     pagina.goto(MOCKUP.as_uri() + "#acessibilidade")
     opacidades = pagina.evaluate("""() => [...document.querySelectorAll(
       '#acessibilidade .apagado[aria-disabled="true"]')].map(b => getComputedStyle(b).opacity)""")
