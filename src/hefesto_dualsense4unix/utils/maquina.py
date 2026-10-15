@@ -83,6 +83,7 @@ _NUMERO_DE_ENTRADA = re.compile(r"^[0-9]{1,3}[a-z]?$")
 
 _MAXIMO_DE_FACES = 8
 _MAXIMO_DE_ENTRADAS = 64
+_MAXIMO_DE_APARELHOS = 256
 
 _NO_DE_ENTRADA = FORMA_DO_NO
 
@@ -509,6 +510,28 @@ class AdaptadorDeclarado(BaseModel):
     ordem: int | None = Field(default=None, ge=0, le=_TETO_DA_ORDEM_DOS_ADAPTADORES)
 
 
+#: O que a pessoa pode dizer que um aparelho do Bluetooth é, quando nem o ``Icon``, nem a
+#: ``Class``, nem a ``Appearance`` dele dizem (a grade «O que é este aparelho?» da Conexões).
+TIPOS_DO_APARELHO = (
+    "controle", "fone", "caixa", "teclado", "mouse", "celular", "relogio", "acessorio", "outro",
+)
+
+
+class AparelhoDeclarado(BaseModel):
+    """O que um aparelho do Bluetooth é, pela palavra da pessoa e pelo ENDEREÇO dele.
+
+    O Bluetooth nem sempre diz o tipo (``Icon``, ``Class`` e ``Appearance`` ausentes), e a linha
+    ficava com «?» para sempre. A escolha da pessoa vence a adivinhação e sobrevive à releitura.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    tipo: Literal[
+        "controle", "fone", "caixa", "teclado", "mouse", "celular", "relogio", "acessorio",
+        "outro",
+    ] | None = None
+
+
 class ControleDeclarado(BaseModel):
     """O que um controle não anuncia sobre si.
 
@@ -828,6 +851,7 @@ class MaquinaConfig(BaseModel):
     mapa: MapaDaMesa = Field(default_factory=MapaDaMesa)
     lancadores: dict[str, LancadorDeclarado] = Field(default_factory=dict)
     adaptadores: dict[str, AdaptadorDeclarado] = Field(default_factory=dict)
+    aparelhos: dict[str, AparelhoDeclarado] = Field(default_factory=dict)
     # seis gestos do controle faz, pela chave de ``core/acoes_do_gesto.GESTOS``.
     # ninguém declarou, e vale ``acoes_do_gesto.PADRAO``; ``{"gestos": {g:
     gestos: dict[str, GestoDeclarado] = Field(default_factory=dict)
@@ -888,6 +912,25 @@ class MaquinaConfig(BaseModel):
             if not isinstance(chave, str) or not _CHAVE_DE_CONTROLE.match(chave):
                 raise ValueError(
                     f"chave de adaptador {chave!r} não é endereço "
+                    "(doze hex minúsculos, sem separador)"
+                )
+        return vivos
+
+    @field_validator("aparelhos", mode="before")
+    @classmethod
+    def _chave_e_o_endereco_e_none_esquece_o_aparelho(cls, valor: Any) -> Any:
+        """A chave é o endereço em doze hex; ``{"aparelhos": {c: None}}`` esquece a escolha."""
+        if not isinstance(valor, Mapping):
+            return valor
+        vivos = {k: v for k, v in valor.items() if v is not None}
+        if len(vivos) > _MAXIMO_DE_APARELHOS:
+            raise ValueError(
+                f"{len(vivos)} aparelhos declarados, e o teto é {_MAXIMO_DE_APARELHOS}"
+            )
+        for chave in vivos:
+            if not isinstance(chave, str) or not _CHAVE_DE_CONTROLE.match(chave):
+                raise ValueError(
+                    f"chave de aparelho {chave!r} não é endereço "
                     "(doze hex minúsculos, sem separador)"
                 )
         return vivos

@@ -1652,6 +1652,7 @@ CORES_NA_REGUA = {
 CORES_NA_SALA = {
     "teclado": "#8b8fa8", "mouse": "#6d7186", "webcam": "#a8a08c", "caixa": "#8c8299",
     "fone": "#7e9aa8", "outro": "#606062", "celular": "#a89a96", "relogio": "#8a9aa8",
+    "gamepad": "#7e8fa8",
     _pacote08.TIPO_ACESSORIO: "#a8919f",
 }
 _RAIZ_DAS_CORES_DOS_TIPOS = ";".join(
@@ -1905,6 +1906,21 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
                                     grid-template-columns:auto auto 48px;column-gap:8px;
                                     justify-content:end}
   .radio .lugar-topo > .lugar-conta > .sobra{justify-self:start}
+  /* O APARELHO SEM TIPO (desenho do todo, 13/10/2026): o «?» tracejado no lugar do ícone e a grade
+     «O que é este aparelho?» com nove ícones grandes. */
+  .radio .linha .tipo-qual{width:20px;height:20px;border-radius:50%;border:1px dashed var(--orange);
+    color:var(--orange);display:inline-flex;align-items:center;justify-content:center;
+    font-size:12px;font-weight:600;text-decoration:none;flex:none}
+  .radio .linha .tipo-qual:hover{background:rgba(255,184,108,.12)}
+  .tipo-cx{width:min(620px,92vw)}
+  .tipo-grade{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .tipo-op{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+    height:104px;border-radius:10px;border:1px solid var(--border-sutil);background:var(--app-bg);
+    color:var(--texto-suave);font-family:inherit;font-size:13px;cursor:pointer}
+  .tipo-op .i{width:40px;height:40px;display:block;fill:none;stroke:currentColor;
+    stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+  .tipo-op .i.ds{width:58px;height:40px;color:var(--cyan)}
+  .tipo-op:hover{border-color:var(--purple);color:var(--fg)}
 """ + f"  :root{{{_RAIZ_DAS_CORES_DOS_TIPOS}}}\n"
 
 
@@ -2057,10 +2073,13 @@ def _cena_do_desenho() -> dict:
                       "nome": "", "rotulo": "DualSense", "desligado": True,
                       "esperando": False, "fixo": True})
     cheio["nao_conectou"] = True
-    # O celular que o BlueZ também lista no adaptador cheio (o desenho 1), e o teclado que o
-    # «Descobrir» já mediu (o mouse ainda não): as duas formas de um receptor.
-    aparelhos.append({"id": f"celular-{cheio['id']}", "tipo": "celular", "lugar": cheio["id"],
-                      "nome": "Celular", "rotulo": "Celular", "esperando": False,
+    # O aparelho do Bluetooth que nenhuma leitura nomeia, nem o enlace (O-APARELHO-DO-BLUETOOTH-SEM-
+    # TIPO-SE-NOMEIA-PELA-PESSOA-01): a linha leva o «?» e a grade «O que é este aparelho?» o nomeia.
+    # Ele ocupa a linha que era do celular do desenho 1 (uma linha a mais no adaptador cheio custa
+    # a linha do 5 GHz a 809 px); o celular continua na grade, na legenda e na régua. O teclado que
+    # o «Descobrir» já mediu (o mouse ainda não): as duas formas de um receptor.
+    aparelhos.append({"id": "aa:bb:cc:00:00:e2", "tipo": "outro", "lugar": cheio["id"],
+                      "nome": "", "rotulo": "", "pareado": True, "esperando": False,
                       "fixo": False})
     # O aparelho de baixa energia que não diz o tipo (O-ACESSORIO-SEM-TIPO-GANHA-CATEGORIA-E-
     # SINAL-NA-CONEXOES-01): chega «outro», como o BlueZ o dá, e a regra da cena o faz
@@ -2634,6 +2653,14 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
     });
     // AS DICAS (AS-DICAS-SAO-CARTOES-COM-UM-GESTO-01): o botão de mover abre a MESMA pergunta de
     // todo mover (o molde é o do balão da lâmpada). O porquê vive no hover do título.
+    // A GRADE «O QUE É ESTE APARELHO?» (O-APARELHO-DO-BLUETOOTH-SEM-TIPO-SE-NOMEIA-PELA-PESSOA-01):
+    // a janela é uma só, o «?» da linha entrega o endereço dele aos ícones, e o ícone escolhido
+    // grava o tipo para quem a abriu e fecha a janela.
+    document.addEventListener('click', function(ev){
+      var q = perto(ev, '.radio .linha .tipo-qual');
+      if(q) todos('#tipo-do-aparelho .tipo-op').forEach(function(b){ b.dataset.alvo = q.dataset.alvo || ''; });
+      if(perto(ev, '#tipo-do-aparelho .tipo-op')) location.hash = '';
+    });
     document.addEventListener('click', function(ev){
       var mover = perto(ev, '.dicas .cd-botao[data-destino]');
       if(mover) perguntar(moldeDe(mover.dataset.alvo, mover.dataset.destino));
@@ -3331,7 +3358,7 @@ if __name__ == "__main__":
     MARCA = "<!-- ===== fim da aba ===== -->"
     if MARCA not in x:
         raise SystemExit("ERRO: a marca da legenda mudou no fim.html")
-    TELAS = "\n".join(t.strip() for t in (TELA_MAPEAR, TELA_SENTADA, TELA_FIM, TELA_EM_PE,
+    TELAS = "\n".join(t.strip() for t in (TELA_MAPEAR, _pacote08.html_da_grade_de_tipos(), TELA_SENTADA, TELA_FIM, TELA_EM_PE,
                                              TELA_MAPEAR_PORTAS))
     x = x.replace(MARCA, TELAS + "\n\n" + MARCA, 1)
 

@@ -294,8 +294,10 @@ def test_a_antena_e_so_do_adaptador_em_todo_campo_que_a_secao_emite() -> None:
             assert na_cabeca or na_conta, (chave, [q.attrs for q in quem[:3]])
             permitidos += 1
     assert permitidos >= 3 + 3, "a régua ficou cega: faltam as antenas dos adaptadores"
-    # o rádio sem tipo e o aparelho `outro` (no ar e desligado) levam o «?»
-    assert campos["radio-sala"].count("#rd-ajuda") >= 2
+    # o rádio sem tipo leva o «?» da ajuda; o aparelho `outro` (no ar e desligado), o «?» que abre
+    # a grade «O que é este aparelho?» (O-APARELHO-DO-BLUETOOTH-SEM-TIPO-SE-NOMEIA-PELA-PESSOA-01)
+    assert campos["radio-sala"].count("#rd-ajuda") >= 1
+    assert campos["radio-sala"].count('class="tipo-qual"') >= 1
 
 
 def test_pintar_a_secao_nao_grava_nada(monkeypatch: pytest.MonkeyPatch) -> None:

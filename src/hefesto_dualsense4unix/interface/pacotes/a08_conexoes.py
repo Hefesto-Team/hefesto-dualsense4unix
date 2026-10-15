@@ -2396,6 +2396,38 @@ def vizinho_o_que_e(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] 
     return None
 
 
+@gesto("08-conexoes.html", "aparelho-tipo", grava="machine_declare")
+def aparelho_tipo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """«O que é este aparelho?»: a pessoa diz o tipo de um aparelho do Bluetooth sem tipo.
+
+    A chave é o endereço do aparelho que a tela tem agora (nunca um texto do clique), e o valor, uma
+    das nove palavras da grade. O que se guarda vence a adivinhação a cada leitura.
+    """
+    ap = _aparelho_na_tela(str(o.get("alvo") or ""))
+    chave = _so_hex(str(ap["id"])).lower()
+    if not chave:
+        raise ValueError("aparelho-tipo: o aparelho não tem endereço para guardar a escolha")
+    escolha = str(o.get("valor") or "").strip()
+    if not escolha:
+        return {"armou": True}
+    if escolha not in {guarda for _, guarda, _ in TIPOS_DA_GRADE}:
+        raise ValueError(
+            f"aparelho-tipo: {escolha!r} não é uma das respostas da grade "
+            f"({sorted(g for _, g, _ in TIPOS_DA_GRADE)})")
+    declaracao = {"aparelhos": {chave: {"tipo": escolha}}}
+    ok, motivo = _resposta(p.machine_declare(declaracao))
+    if not ok and not motivo:
+        # Hefesto desligado: a escolha desce ao disco, que o daemon lê ao ligar (como `_declarar`).
+        perfil._com_o_src()
+        from hefesto_dualsense4unix.integrations.lugar_declarado import declarar_a_maquina
+
+        ok = declarar_a_maquina(declaracao).gravou
+    if not ok:
+        raise RuntimeError(motivo or "não consegui gravar o que você declarou")
+    _reler_a_declaracao()
+    return None
+
+
 @gesto("08-conexoes.html", "receptor-descobrir")
 def receptor_descobrir(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """«Descobrir» a faixa de um receptor 2.4G: o único clique é o que COMEÇA.
@@ -2944,6 +2976,7 @@ GLIFO_DO_TIPO = {
     "teclado": "teclado", "mouse": "mouse", "caixa": "caixa", "caixa_de_som": "caixa",
     "fone": "fone", "webcam": "webcam", "wifi": "wifi", "celular": "celular",
     "relogio": "relogio", TIPO_ACESSORIO: CATEGORIA_ACESSORIO["glifo"],
+    "gamepad": "ds",
 }
 
 
@@ -2959,7 +2992,39 @@ TIPO_PELO_ICONE = {
 PALAVRA_DO_TIPO = {"teclado": "teclado", "mouse": "mouse", "fone": "fone",
                    "caixa": "caixa de som", "webcam": "webcam", "outro": "aparelho",
                    "celular": "celular", "relogio": "relógio",
-                   TIPO_ACESSORIO: CATEGORIA_ACESSORIO["palavra"]}
+                   TIPO_ACESSORIO: CATEGORIA_ACESSORIO["palavra"], "gamepad": "controle"}
+
+#: A grade «O que é este aparelho?» (desenho do todo, 13/10/2026): `(rótulo, guardado, glifo)`.
+#: O que se guarda é o ``AparelhoDeclarado.tipo`` do ``maquina.json``; «Controle» desenha-se na
+#: linha com o glifo do DualSense, mas o aparelho NÃO vira o controle do Hefesto (sem ponte, sem
+#: perfil): quem a pessoa diz que é controle de outra marca é só um aparelho com nome.
+TIPOS_DA_GRADE: tuple[tuple[str, str, str], ...] = (
+    ("Controle", "controle", "ds"), ("Fone", "fone", "fone"), ("Caixa de som", "caixa", "caixa"),
+    ("Teclado", "teclado", "teclado"), ("Mouse", "mouse", "mouse"),
+    ("Celular", "celular", "celular"), ("Relógio", "relogio", "relogio"),
+    ("Acessório", TIPO_ACESSORIO, "acessorio"), ("Outro", "outro", "ajuda"),
+)
+#: O que se guarda → o tipo que a linha usa (só «controle» muda de nome).
+TIPO_DA_LINHA_PELA_ESCOLHA = {"controle": "gamepad"}
+SEM_TIPO = "Sem tipo"
+SEM_TIPO_DICA = "O Bluetooth não disse o que ele é"
+SEM_NOME = "Aparelho sem nome"
+
+
+def html_da_grade_de_tipos() -> str:
+    """A janela «O que é este aparelho?»: nove ícones grandes; o alvo chega no clique do «?»."""
+    opcoes = "".join(
+        f'<button class="tipo-op" data-gesto="aparelho-tipo" data-alvo="" value="{_x(guarda)}">'
+        f'{_ic(glifo, "ds" if glifo == "ds" else "")}<span>{_x(rotulo)}</span></button>'
+        for rotulo, guarda, glifo in TIPOS_DA_GRADE)
+    return (
+        '<div class="tela-nova" id="tipo-do-aparelho">'
+        '<div class="tn-cx tipo-cx" role="dialog" aria-modal="true" '
+        'aria-label="O que é este aparelho">'
+        '<div class="tn-topo"><span class="tn-tit">O que é este aparelho?</span>'
+        '<a class="tn-x" href="#" data-dica="Fechar">\u00d7</a></div>'
+        f'<div class="tn-corpo"><div class="tipo-grade">{opcoes}</div></div>'
+        '</div></div>')
 #: ``054C``): o DualSense e o Edge seguram PS + Create; o DualShock 4, PS +
 BOTOES_DE_PAREAR = {"0ce6": "PS + Create", "0df2": "PS + Create",
                     "05c4": "PS + Share", "09cc": "PS + Share"}
@@ -2969,7 +3034,8 @@ NOME_DO_CUSTO = {"mic": "microfone", "som": "som", "haptica": "vibração"}
 #: raiz da folha da aba (`aba08.CORES_NA_SALA`), e é ali que um tema de cores o troca.
 COR_DO_TIPO = {
     tipo: f"var(--sala-{tipo})"
-    for tipo in ("teclado", "mouse", "webcam", "caixa", "fone", "outro", "celular", "relogio")
+    for tipo in ("teclado", "mouse", "webcam", "caixa", "fone", "outro", "celular", "relogio",
+                 "gamepad")
 }
 COR_DO_TIPO[TIPO_ACESSORIO] = CATEGORIA_ACESSORIO["cor"]
 ARTIGO_DO_TIPO = {"caixa": "a", "webcam": "a"}
@@ -3287,7 +3353,7 @@ def _o_menu(ap: dict[str, Any]) -> str:
     if not _tem_menu(ap):
         return ""
     nome = nome_na_conexoes(ap) or str(ap.get("rotulo") or "")
-    dica = f"Opções de {nome} neste adaptador"
+    dica = f"Opções de {nome} neste adaptador" if nome else "Opções deste aparelho neste adaptador"
     return (f'<button class="menu-da-linha" title="{_x(dica)}" aria-label="{_x(dica)}" '
             f'aria-haspopup="true" data-gesto="aparelho-menu" data-alvo="{_x(ap["id"])}" '
             f'data-lugar="{_x(ap.get("lugar") or "")}">'
@@ -3358,6 +3424,8 @@ def html_da_linha(ap: dict[str, Any], cena: dict[str, Any], com_hz: bool = False
                 f'title="Não usa rádio; só ocupa porta">{SEM_RADIO}</span></div>'
                 '<span class="conta-da-vaga zero" title="Não usa rádio">'
                 + TRACO_CURTO + '</span></div>')
+    elif ap.get("tipo") == "outro" and not ap.get("tipo_dela"):
+        return _linha_sem_tipo(ap, abre, le, nome, rotulo, aid)
     else:
         cor = _cor_de(ap)
         faixa = (f'<div class="faixa-do-aparelho" style="width:100%">'
@@ -3375,6 +3443,27 @@ def html_da_linha(ap: dict[str, Any], cena: dict[str, Any], com_hz: bool = False
               + (f"{vaga} de {PONTES_POR_ADAPTADOR}" if vaga else TRACO_CURTO) + "</span>")
     return (abre + desenho + campo + f'<div class="features">{faixa}</div>' + fatias
             + _o_menu(ap) + "</div>")
+
+
+def _linha_sem_tipo(ap: dict[str, Any], abre: str, le: str, nome: str, rotulo: str,
+                    aid: str) -> str:
+    """O aparelho do Bluetooth que nem o ``Icon``, nem a ``Class``, nem a ``Appearance`` nomeiam.
+
+    No lugar do ícone vai o «?» (desenho do todo, 13/10/2026): clicar abre a grade «O que é este
+    aparelho?», e a escolha, guardada pelo endereço, vence a adivinhação. Sem rádio de som, a conta
+    da vaga é o traço.
+    """
+    quem = _x(f"{nome or 'Aparelho'}, sem tipo")
+    abre = abre.replace(f'aria-label="{le}', f'aria-label="{quem}', 1)
+    pergunta = (f'<a class="tipo-qual" href="#tipo-do-aparelho" data-alvo="{aid}" '
+                'title="O que é este aparelho? Clique e escolha">?</a>')
+    campo = (f'<input class="nome" value="{_x(nome)}" placeholder="{_x(rotulo or SEM_NOME)}" '
+             'aria-label="Nome deste aparelho" title="Clique para renomear; arraste para mover" '
+             f'draggable="true" data-gesto="aparelho-renomear" data-alvo="{aid}">')
+    return (abre + pergunta + campo + f'<div class="features"><span class="sem-radio" '
+            f'title="{SEM_TIPO_DICA}">{SEM_TIPO}</span></div>'
+            '<span class="conta-da-vaga zero" title="Não leva som">' + TRACO_CURTO + '</span>'
+            + _o_menu(ap) + '</div>')
 
 
 def _marcas_de_onde(lug: dict[str, Any], cena: dict[str, Any]) -> str:
@@ -4691,6 +4780,18 @@ def _tipo_do_aparelho(icone: str, classe: int | None, aparencia: int | None = No
     return pela_classe if pela_classe != "outro" else _tipo_pela_aparencia(aparencia)
 
 
+def _tipo_que_ela_disse(endereco: str) -> str:
+    """O tipo que a pessoa deu a este aparelho do Bluetooth (``""`` quando não deu).
+
+    Lido do ``maquina.json`` pelo ENDEREÇO: a escolha da pessoa vence a adivinhação do ``Icon``, da
+    ``Class`` e da ``Appearance`` e sobrevive à releitura e ao reinício.
+    """
+    do_disco = getattr(_declaracao(), "aparelhos", None)
+    dado = do_disco.get(_so_hex(endereco).lower()) if isinstance(do_disco, dict) else None
+    tipo = str(getattr(dado, "tipo", "") or "")
+    return TIPO_DA_LINHA_PELA_ESCOLHA.get(tipo, tipo)
+
+
 def _com_a_categoria_do_enlace(aparelhos: list[dict[str, Any]],
                                enlaces: dict[str, dict[str, Any]]) -> None:
     """O aparelho conectado que não é controle, com enlace de baixa energia e sem tipo nos três
@@ -4701,7 +4802,7 @@ def _com_a_categoria_do_enlace(aparelhos: list[dict[str, Any]],
     encontram (:func:`_tipo_do_aparelho` não vê o enlace).
     """
     for ap in aparelhos:
-        if ap.get("tipo") != "outro":
+        if ap.get("tipo") != "outro" or ap.get("tipo_dela"):
             continue
         do_lugar = _dicionario(enlaces.get(str(ap.get("lugar") or "")))
         if _dicionario(do_lugar.get(_so_hex(str(ap.get("id") or "")))).get("le") is True:
@@ -5195,8 +5296,8 @@ def _os_desligados(aparelhos_bz: tuple[Any, ...], endereco_do_caminho: dict[str,
             rotulo = (alias if alias and not nome_do_jogador.e_nome_de_fabrica(alias)
                       else "DualSense")
         else:
-            tipo = _tipo_do_aparelho(str(getattr(a, "icone", "") or ""), a.classe,
-                                     getattr(a, "aparencia", None))
+            tipo = _tipo_que_ela_disse(a.endereco) or _tipo_do_aparelho(
+                str(getattr(a, "icone", "") or ""), a.classe, getattr(a, "aparencia", None))
             nome, rotulo = alias, alias or PALAVRA_DO_TIPO.get(tipo, "aparelho").capitalize()
         fora.append({
             "id": nome_do_jogador.mac(a.endereco), "aparelho": nome_do_jogador.mac(a.endereco),
@@ -5361,9 +5462,11 @@ def _aparelhos_da_cena(ctx: Contexto, st: dict[str, Any], governador: dict[str, 
         if (not a.conectado or not adaptador or _so_hex(endereco) in vistos
                 or "V054C" in str(getattr(a, "modalias", "")).upper()):
             continue
+        dela = _tipo_que_ela_disse(endereco)
         fora.append({"id": endereco,
-                     "tipo": _tipo_do_aparelho(getattr(a, "icone", ""), a.classe,
-                                               getattr(a, "aparencia", None)),
+                     "tipo": dela or _tipo_do_aparelho(getattr(a, "icone", ""), a.classe,
+                                                       getattr(a, "aparencia", None)),
+                     "tipo_dela": bool(dela),
                      "lugar": adaptador,
                      "nome": str(a.nome or ""), "rotulo": str(a.nome or ""),
                      "pareado": a.pareado is True,

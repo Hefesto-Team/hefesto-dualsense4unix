@@ -423,7 +423,7 @@ MEDE_O_ALVO = r"""
   };
   // o clique cai onde o dedo cai: o «⋮» tem de ser o elemento daquele ponto, não um painel
   // por cima dele (um .click() direto no botão atravessaria o painel e mentiria)
-  const m = document.querySelector('.radio .linha .menu-da-linha[data-alvo="celular-L3"]');
+  const m = document.querySelector('.radio .linha .menu-da-linha[data-alvo="aa:bb:cc:00:00:e1"]');
   m.scrollIntoView({block: 'center'});
   const q = m.getBoundingClientRect();
   const e = document.elementFromPoint(q.left + q.width / 2, q.top + q.height / 2);
@@ -467,7 +467,7 @@ def test_com_o_conectar_aberto_a_caixa_de_outro_adaptador_muda_o_alvo(tmp_path: 
     assert f["antes"] != ["L2"], f
     assert (f["aberto"], f["tipo"], f["depois"]) == (True, "conectar", ["L2"]), f
     assert f["no_ponto_do_menu"] is True, f"o «⋮» está por baixo de {f['no_ponto']!r}: {f}"
-    assert f["outra_linha"] == ["menu", "Celular"], f
+    assert f["outra_linha"] == ["menu", "Acessório"], f
 
 
 def test_mordida_com_o_painel_na_borda_o_menu_da_linha_fica_por_baixo(tmp_path: Path) -> None:

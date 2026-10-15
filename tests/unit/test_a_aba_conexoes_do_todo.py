@@ -62,8 +62,10 @@ def test_os_titulos_levam_a_dica_no_hover(arquivo: pathlib.Path) -> None:
     assert re.search(r'data-dica="[^"]+"[^>]*>Dispositivos conectados<', doc), (
         "«Dispositivos conectados» perdeu a dica do título")
     janelas = re.findall(r'<span class="tn-tit"( data-dica="[^"]+")?[^>]*>', doc)
-    assert len(janelas) == 5, f"as cinco janelas de mapear: {len(janelas)}"
-    assert all(janelas), "uma janela de mapear ficou sem a dica no título"
+    # as cinco janelas de mapear levam a dica; a sexta é a grade «O que é este aparelho?», cujo
+    # título já é a pergunta inteira (O-APARELHO-DO-BLUETOOTH-SEM-TIPO-SE-NOMEIA-PELA-PESSOA-01).
+    assert len(janelas) == 6, f"as cinco janelas de mapear e a grade de tipos: {len(janelas)}"
+    assert sum(1 for j in janelas if j) == 5, "uma janela de mapear ficou sem a dica no título"
 
 
 @pytest.mark.parametrize("arquivo", ARQUIVOS)

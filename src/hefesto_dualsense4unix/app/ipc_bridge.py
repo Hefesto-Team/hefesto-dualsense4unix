@@ -750,6 +750,7 @@ _ROTULOS_SEM_SECAO: dict[str, str] = {
     "mapa": "O desenho das entradas",
     "lancadores": "Onde estão os seus lançadores",
     "adaptadores": "O nome de cada adaptador Bluetooth",
+    "aparelhos": "O tipo de cada aparelho Bluetooth",
     "gestos": "O que cada gesto do controle faz",
     "computador": "O padrão do computador",
 }
