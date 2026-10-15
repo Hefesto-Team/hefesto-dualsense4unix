@@ -1,3 +1,28 @@
+bluez (5.87-0ubuntu0.1~hefesto24.04.5) noble; urgency=high
+
+  * A base sobe para o upstream 5.87, a estável mais nova, com o
+    empacotamento do resolute de sempre (5.85-4ubuntu0.1).
+  * Segurança, os commits do master que a 5.87 não tem:
+    - CVE-2026-80185: sdp-xml, confusão de tipo no XML de SDP (985e643d7);
+    - CVE-2026-80186: eir, estouro de pilha pelo nome remoto (381b5d0d2);
+    - CVE-2026-75032: avrcp, leitura fora dos limites no GetFolderItems
+      (bd8989620, com o 580881498);
+    - CVE-2026-85218: avrcp, leitura fora dos limites no
+      ListPlayerAttributes (b21c216d5, com o 73ccf6d83);
+    - avrcp, leitura fora dos limites das listas de atributos (f0ddbc7aa).
+    O CVE-2026-19774 (a2dp, 912f5efb0) já vem na 5.87.
+  * A regressão do cache SEP do A2DP que o 5.72-0ubuntu5.8 conserta
+    (b7d71e506).
+  * O uso depois de liberar em dev_disconnected que a 5.87 trouxe
+    (5bc6aa79e, issue #2221), e os da remoção do adaptador: 7e3212fa2,
+    eb82d81bf (portado para a 5.87) e a734b0605.
+  * hefesto-0001 reescrito sobre o BDADDR_BREDR do 756da3fa1; hefesto-0002
+    como estava.
+  * Leva do upstream: 5bc6aa79e b7d71e506 985e643d7 bd8989620 580881498 381b5d0d2 73ccf6d83 7e3212fa2 b21c216d5 f0ddbc7aa eb82d81bf a734b0605
+  * Cobre a segurança da distro até: 5.72-0ubuntu5.8
+
+ -- Hefesto DualSense4Unix Project <hefesto-dualsense4unix@users.noreply.github.com>  Thu, 15 Oct 2026 06:00:00 -0300
+
 bluez (5.86-0ubuntu0.1~hefesto24.04.4) noble; urgency=medium
 
   * hefesto-0002 (BLUETOOTHD-NAO-DERRUBA-01): o EAGAIN do socket HIDP

@@ -1,4 +1,9 @@
-"""BLUETOOTHD-NAO-DERRUBA-01 — o backport do BlueZ se reconstrói do repositório."""
+"""BLUETOOTHD-NAO-DERRUBA-01 — o backport do BlueZ se reconstrói do repositório.
+
+A revisão 5 (O-BLUEZ-DA-CASA-LEVA-AS-CORRECOES-DE-SEGURANCA-01, 15/10/2026) sobe a
+base para a 5.87; a 3 e a 4 seguem sobre a 5.86, pelas chaves ``_R<n>``.
+"""
+
 from __future__ import annotations
 
 import hashlib
@@ -15,8 +20,16 @@ import pytest
 from tests.conftest import arvore_congelada
 
 RAIZ_DO_REPO = Path(__file__).resolve().parents[2]
-FIXTURE_DEVICE_C = RAIZ_DO_REPO / "tests" / "fixtures" / "bluez-5.86" / "device.c"
-ALVO = "5.86-0ubuntu0.1~hefesto24.04.4"
+FIXTURES = RAIZ_DO_REPO / "tests" / "fixtures"
+FIXTURE_DEVICE_C = {
+    "5.86": FIXTURES / "bluez-5.86" / "device.c",
+    "5.87": FIXTURES / "bluez-5.87" / "device.c",
+}
+# Os outros arquivos que a série R5 toca, recortados em volta de cada pedaço
+# (o fonte inteiro passaria de 600 kB): a série aplica neles com fuzz zero.
+RECORTE_587 = FIXTURES / "bluez-5.87" / "recorte"
+UPSTREAM_DA_REVISAO = {"3": "5.86", "4": "5.86", "5": "5.87"}
+ALVO = "5.87-0ubuntu0.1~hefesto24.04.5"
 RECEITA = RAIZ_DO_REPO / "docs" / "usage" / "receita-backport-bluez.md"
 
 _FERRAMENTAS = ("dpkg-source", "dpkg-parsechangelog", "patch", "gcc", "tar", "xz")
@@ -80,10 +93,12 @@ def _aplicar(device_c: Path, patches: list[str]) -> Path:
     return device_c
 
 
-def _arvore_do_fixture(tmp_path: Path) -> Path:
+def _arvore_do_fixture(tmp_path: Path, upstream: str = "5.87") -> Path:
     alvo = tmp_path / "fonte" / "profiles" / "input" / "device.c"
     alvo.parent.mkdir(parents=True)
-    shutil.copyfile(FIXTURE_DEVICE_C, alvo)
+    shutil.copyfile(FIXTURE_DEVICE_C[upstream], alvo)
+    if upstream == "5.87":
+        shutil.copytree(RECORTE_587, tmp_path / "fonte", dirs_exist_ok=True)
     return alvo
 
 
@@ -107,33 +122,45 @@ def _morder(device_c: Path) -> dict[str, dict[str, str]]:
     return _cenarios(proc.stdout)
 
 
-def test_a_versao_alvo_e_a_quatro():
+def test_a_versao_alvo_e_a_cinco():
     base = _baseline()
     assert f"{base['VERSAO_BASE']}~hefesto24.04.{base['REVISAO_ULTIMA']}" == ALVO
     assert base["PATCHES_R4"].split() == [
         "hefesto-0001-input-keep-bond-on-virtual-cable-unplug.patch",
         "hefesto-0002-input-drop-report-on-eagain.patch",
     ]
-    for nome in base["PATCHES_R4"].split():
+    r5 = base["PATCHES_R5"].split()
+    assert r5[:2] == [
+        "hefesto-0001-input-keep-bond-on-virtual-cable-unplug-5.87.patch",
+        "hefesto-0002-input-drop-report-on-eagain.patch",
+    ]
+    assert [n.split("-")[1] for n in r5[2:]] == [f"{n:04d}" for n in range(3, 15)]
+    for nome in {*base["PATCHES_R4"].split(), *r5}:
         assert (_assets() / "patches" / nome).is_file(), nome
-    primeira = (_assets() / "debian" / "changelog.hefesto").read_text(
-        encoding="utf-8"
-    ).splitlines()[0]
+    primeira = (
+        (_assets() / "debian" / "changelog.hefesto").read_text(encoding="utf-8").splitlines()[0]
+    )
     assert primeira.startswith(f"bluez ({ALVO}) noble;"), (
         f"o changelog.hefesto não abre com a versão alvo: {primeira!r}"
     )
 
 
-def test_o_fixture_e_o_device_c_do_tarball():
+@pytest.mark.parametrize(("chave", "upstream"), [("", "5.87"), ("_R4", "5.86"), ("_R3", "5.86")])
+def test_o_fixture_e_o_device_c_do_tarball(chave, upstream):
     """O vanilla é o do tarball fixado; sem isto as outras réguas medem outra coisa."""
-    assert _sha(FIXTURE_DEVICE_C) == _baseline()["SHA256_DEVICE_C_VANILLA"]
+    base = _baseline()
+    assert base[f"VERSAO_UPSTREAM{chave}"] == upstream
+    assert _sha(FIXTURE_DEVICE_C[upstream]) == base[f"SHA256_DEVICE_C_VANILLA{chave}"]
 
 
 @precisa_das_ferramentas
-@pytest.mark.parametrize("numero_da_revisao", ["3", "4"])
+@pytest.mark.parametrize("numero_da_revisao", ["3", "4", "5"])
 def test_o_patch_aplica_com_fuzz_zero_e_da_o_hash_do_baseline(tmp_path, numero_da_revisao):
     base = _baseline()
-    device_c = _aplicar(_arvore_do_fixture(tmp_path), base[f"PATCHES_R{numero_da_revisao}"].split())
+    device_c = _aplicar(
+        _arvore_do_fixture(tmp_path, UPSTREAM_DA_REVISAO[numero_da_revisao]),
+        base[f"PATCHES_R{numero_da_revisao}"].split(),
+    )
     assert _sha(device_c) == base[f"SHA256_DEVICE_C_R{numero_da_revisao}"], (
         f"a série da revisão {numero_da_revisao} aplicou, mas o device.c não é o que o "
         "BASELINE fixa — o patch mudou sem o BASELINE acompanhar"
@@ -141,18 +168,23 @@ def test_o_patch_aplica_com_fuzz_zero_e_da_o_hash_do_baseline(tmp_path, numero_d
 
 
 @precisa_das_ferramentas
-def test_a_mordida_o_vanilla_destroi_no_eagain(tmp_path):
+@pytest.mark.parametrize("upstream", ["5.86", "5.87"])
+def test_a_mordida_o_vanilla_destroi_no_eagain(tmp_path, upstream):
     """Sem isto, a régua de baixo não mede o defeito: mediria um socket que não enche."""
-    cenarios = _morder(_arvore_do_fixture(tmp_path))
+    cenarios = _morder(_arvore_do_fixture(tmp_path, upstream))
     assert int(cenarios["eagain"]["destruido"]) > 0
     assert int(cenarios["set_report_eagain"]["destruido"]) > 0
     assert int(cenarios["get_report_eagain"]["destruido"]) > 0
 
 
 @precisa_das_ferramentas
-def test_a_mordida_o_patchado_fica_no_eagain(tmp_path):
+@pytest.mark.parametrize("numero_da_revisao", ["4", "5"])
+def test_a_mordida_o_patchado_fica_no_eagain(tmp_path, numero_da_revisao):
     base = _baseline()
-    device_c = _aplicar(_arvore_do_fixture(tmp_path), base["PATCHES_R4"].split())
+    device_c = _aplicar(
+        _arvore_do_fixture(tmp_path, UPSTREAM_DA_REVISAO[numero_da_revisao]),
+        base[f"PATCHES_R{numero_da_revisao}"].split(),
+    )
     cenarios = _morder(device_c)
 
     eagain = cenarios["eagain"]
@@ -168,10 +200,14 @@ def test_a_mordida_o_patchado_fica_no_eagain(tmp_path):
 
 
 @precisa_das_ferramentas
+@pytest.mark.parametrize("numero_da_revisao", ["4", "5"])
 @pytest.mark.parametrize("cenario", ["epipe", "enotconn", "sem_canal"])
-def test_a_mordida_erro_terminal_derruba_com_o_patch(tmp_path, cenario):
+def test_a_mordida_erro_terminal_derruba_com_o_patch(tmp_path, cenario, numero_da_revisao):
     base = _baseline()
-    device_c = _aplicar(_arvore_do_fixture(tmp_path), base["PATCHES_R4"].split())
+    device_c = _aplicar(
+        _arvore_do_fixture(tmp_path, UPSTREAM_DA_REVISAO[numero_da_revisao]),
+        base[f"PATCHES_R{numero_da_revisao}"].split(),
+    )
     assert _morder(device_c)[cenario]["destruido"] == "1"
 
 
@@ -196,6 +232,11 @@ Package: bluez
 Architecture: any
 Description: bancada do backport
  fonte sintetica para o teste do preparo
+
+Package: bluez-hcidump
+Architecture: any
+Description: o hcidump que a 5.87 tirou
+ fonte sintetica para o teste do preparo
 """
 
 _CHANGELOG_RESOLUTE = b"""bluez (5.85-4ubuntu0.1) resolute; urgency=medium
@@ -206,17 +247,40 @@ _CHANGELOG_RESOLUTE = b"""bluez (5.85-4ubuntu0.1) resolute; urgency=medium
 """
 
 
+def _recorte_587(raiz_up: str) -> dict[str, bytes]:
+    return {
+        f"{raiz_up}/{p.relative_to(RECORTE_587)}": p.read_bytes()
+        for p in sorted(RECORTE_587.rglob("*"))
+        if p.is_file()
+    }
+
+
 @pytest.fixture
 def bancada(tmp_path):
-    """Um cache com as duas fontes JÁ baixadas, com os nomes do BASELINE."""
+    """Um cache com as fontes JÁ baixadas (as duas do upstream e o empacotamento)."""
     base_real = (_assets() / "BASELINE").read_text(encoding="utf-8")
     base = _baseline()
     cache = tmp_path / "cache"
     fontes = cache / "bluez-fontes"
     upstream = fontes / base["FONTE_UPSTREAM_URL"].rsplit("/", 1)[1]
+    upstream_586 = fontes / base["FONTE_UPSTREAM_URL_R4"].rsplit("/", 1)[1]
     empacotamento = fontes / base["EMPACOTAMENTO_URL"].rsplit("/", 1)[1]
     raiz_up = f"bluez-{base['VERSAO_UPSTREAM']}"
-    _tar_xz(upstream, {f"{raiz_up}/profiles/input/device.c": FIXTURE_DEVICE_C.read_bytes()})
+    raiz_586 = f"bluez-{base['VERSAO_UPSTREAM_R4']}"
+    _tar_xz(
+        upstream,
+        {
+            f"{raiz_up}/profiles/input/device.c": FIXTURE_DEVICE_C["5.87"].read_bytes(),
+            **_recorte_587(raiz_up),
+        },
+    )
+    _tar_xz(
+        upstream_586,
+        {
+            f"{raiz_586}/profiles/input/device.c": FIXTURE_DEVICE_C["5.86"].read_bytes(),
+            f"{raiz_586}/tools/hcidump.c": b"/* o hcidump que a 5.86 ainda traz */\n",
+        },
+    )
     _tar_xz(
         empacotamento,
         {
@@ -231,9 +295,9 @@ def bancada(tmp_path):
     )
     baseline = tmp_path / "BASELINE"
     baseline.write_text(
-        base_real.replace(base["FONTE_UPSTREAM_SHA256"], _sha(upstream)).replace(
-            base["EMPACOTAMENTO_SHA256"], _sha(empacotamento)
-        ),
+        base_real.replace(base["FONTE_UPSTREAM_SHA256"], _sha(upstream))
+        .replace(base["FONTE_UPSTREAM_SHA256_R4"], _sha(upstream_586))
+        .replace(base["EMPACOTAMENTO_SHA256"], _sha(empacotamento)),
         encoding="utf-8",
     )
 
@@ -254,6 +318,7 @@ def bancada(tmp_path):
         "env": env,
         "marca_curl": marca_curl,
         "arvore": cache / "bluez-obra" / raiz_up,
+        "arvore_586": cache / "bluez-obra" / raiz_586,
         "saida": cache / "bluez-backport",
     }
 
@@ -294,8 +359,12 @@ def test_o_preparo_monta_a_arvore_da_versao_alvo(bancada):
     assert versao == ALVO
     series = (arvore / "debian" / "patches" / "series").read_text(encoding="utf-8").split()
     assert "0013-transport-Fix-set-volume-failure-with-invalid-device.patch" not in series
-    assert series[-2:] == _baseline()["PATCHES_R4"].split()
-    assert _sha(arvore / "profiles" / "input" / "device.c") == _baseline()["SHA256_DEVICE_C_R4"]
+    r5 = _baseline()["PATCHES_R5"].split()
+    assert series[-len(r5) :] == r5
+    assert _sha(arvore / "profiles" / "input" / "device.c") == _baseline()["SHA256_DEVICE_C_R5"]
+    controle = (arvore / "debian" / "control").read_text(encoding="utf-8")
+    assert "Package: bluez-hcidump" not in controle, "a 5.87 não tem o hcidump para empacotar"
+    assert "Package: bluez\n" in controle
     assert not (arvore / ".pc" / ".dpkg-source-unapply").exists()
 
 
@@ -318,7 +387,7 @@ def _origem(env: dict[str, str]) -> str:
         f"empacotamento={base['EMPACOTAMENTO_URL']} {base['EMPACOTAMENTO_SHA256']}",
         *(
             f"patch={nome} {_sha(_assets() / 'patches' / nome)}"
-            for nome in base["PATCHES_R4"].split()
+            for nome in base["PATCHES_R5"].split()
         ),
         "construido_por=scripts/construir_bluez_backport.sh",
     ]
@@ -443,10 +512,14 @@ def test_revisao_antiga_fora_do_cache_do_install_monta_a_arvore_da_tres(bancada)
     """O outro lado da guarda: num cache à parte, o ``.3`` se reconstrói."""
     proc = _rodar(bancada, "--revisao", "3", "--preparar")
     assert proc.returncode == 0, proc.stdout + proc.stderr
-    assert f"árvore pronta: {bancada['arvore']} (5.86-0ubuntu0.1~hefesto24.04.3)" in proc.stdout
+    arvore = bancada["arvore_586"]
+    assert f"árvore pronta: {arvore} (5.86-0ubuntu0.1~hefesto24.04.3)" in proc.stdout
     assert "sem mordida a provar" in proc.stdout
-    device_c = bancada["arvore"] / "profiles" / "input" / "device.c"
+    device_c = arvore / "profiles" / "input" / "device.c"
     assert _sha(device_c) == _baseline()["SHA256_DEVICE_C_R3"]
+    assert "Package: bluez-hcidump" in (arvore / "debian" / "control").read_text(
+        encoding="utf-8"
+    ), "na 5.86 o hcidump existe e o pacote dele fica"
 
 
 def _perdoa(tmp_path: Path, teste: str, *, aead_disponivel: bool) -> bool:
@@ -591,6 +664,6 @@ def test_o_script_nao_instala_nada():
 def test_a_receita_diz_como_construir_e_o_que_cada_patch_faz():
     texto = RECEITA.read_text(encoding="utf-8")
     assert "scripts/construir_bluez_backport.sh" in texto
-    for nome in _baseline()["PATCHES_R4"].split():
+    for nome in _baseline()["PATCHES_R5"].split():
         assert nome in texto, f"a receita não explica o {nome}"
     assert ALVO in texto

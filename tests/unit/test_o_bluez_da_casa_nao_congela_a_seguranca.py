@@ -74,6 +74,8 @@ def _ambiente(
         "PATH": f"{fake}:/usr/bin:/bin",
         "DOCTOR_SH": str(DOCTOR),
         "HEFESTO_DOCTOR_DPKG_LOG": str(alvo),
+        # sem a linha do changelog (as revisões até a 4), a base é a do dpkg.log
+        "HEFESTO_DOCTOR_BLUEZ_CHANGELOG": str(tmp_path / "sem-changelog.gz"),
     }
 
 
@@ -133,7 +135,8 @@ def test_a_distro_publicou_depois_do_backport_avisa_nomeando_as_duas_versoes(
     assert "5.72-0ubuntu5.6" in saida, "a candidata da distro"
     assert BASE in saida, "a base de onde o backport nasceu"
     assert "[ OK ]" not in saida
-    assert "reconstrua" in saida.lower()
+    assert "revisão nova" in saida
+    assert "Reconstrua" not in saida, "o aviso aponta a receita, não manda reconstruir"
 
 
 def test_a_candidata_e_a_maior_da_distro_e_nunca_a_nossa(tmp_path: Path) -> None:

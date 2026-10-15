@@ -4996,9 +4996,10 @@ check_cmdline_platform() {
 #   (`src/adapter.c`) — `device_is_connected()` chamado DEPOIS de
 #   `adapter_remove_connection()`, que pode ter liberado o device. `5d836f1` é
 #   ancestral da tag 5.87 (dentro); a correção `5bc6aa79` está UM commit depois
-#   do 5.87 e NENHUM lançamento a carrega ainda. Por isso o alvo do backport é
-#   o 5.86 (install.sh, passo 3f) e o 5.87 foi recusado em 22/07 e de novo em
-#   07/08 — com número.
+#   do 5.87 e NENHUM lançamento a carrega ainda. O 5.87 de fora fica barrado. A
+#   revisão 5 do backport (O-BLUEZ-DA-CASA-LEVA-AS-CORRECOES-DE-SEGURANCA-01,
+#   15/10/2026) é o 5.87 COM o `5bc6aa79`, e passa pelo teto porque o changelog
+#   dela diz isso na linha «Leva do upstream:» (`_bluez_a_casa_leva_o_5bc6aa79`).
 #
 # Por que o teto é WARN e não FAIL: numa máquina que já veio com bluez ≥ 5.87
 # (o caso do PC novo), nada disto é escolha do usuário, e o primeiro lançamento pós-
@@ -5099,6 +5100,39 @@ check_bluez_curas_do_backport() {
     fi
 }
 
+# Uma linha do changelog do bluez INSTALADO, só da entrada de cima (a do pacote
+# que está no disco). A revisão da casa escreve duas
+# (O-BLUEZ-DA-CASA-LEVA-AS-CORRECOES-DE-SEGURANCA-01, 15/10/2026):
+# «Cobre a segurança da distro até: <versão>» e «Leva do upstream: <commits>».
+# Sem o arquivo, ou sem a linha, a resposta é vazia.
+# HEFESTO_DOCTOR_BLUEZ_CHANGELOG desvia o arquivo (o teste e a bancada).
+_bluez_linha_do_changelog() {
+    local rotulo="$1" texto
+    local arquivo="${HEFESTO_DOCTOR_BLUEZ_CHANGELOG:-/usr/share/doc/bluez/changelog.Debian.gz}"
+    [[ -r "${arquivo}" ]] || return 1
+    if [[ "${arquivo}" == *.gz ]]; then
+        texto="$(zcat "${arquivo}" 2>/dev/null || true)"
+    else
+        texto="$(cat "${arquivo}" 2>/dev/null || true)"
+    fi
+    awk -v r="${rotulo}: " '
+        /^ -- / { exit }
+        { i = index($0, r); if (i) { print substr($0, i + length(r)); exit } }
+        ' <<<"${texto}" | sed 's/[[:space:]]*$//' | grep . || return 1
+}
+
+# O 5.87 da casa traz a correção do UAF que barra o 5.87 de fora: o pacote é o
+# backport (`~hefesto`), o upstream dele é o mesmo do daemon e o changelog diz
+# que leva o `5bc6aa79`.
+_bluez_a_casa_leva_o_5bc6aa79() {
+    local ver="$1" pacote leva
+    command -v dpkg-query >/dev/null 2>&1 || return 1
+    pacote="$(dpkg-query -W -f='${Version}' bluez 2>/dev/null || true)"
+    [[ "${pacote}" == *~hefesto* && "${pacote%%-*}" == "${ver%%-*}" ]] || return 1
+    leva="$(_bluez_linha_do_changelog "Leva do upstream" || true)"
+    [[ " ${leva} " == *" 5bc6aa79"* ]]
+}
+
 # A versão do bluez que o gerenciador de pacotes tinha ANTES do backport entrar:
 # é a linha `upgrade bluez:<arq> <velha> <backport>` do próprio dpkg, que é quem
 # sabe de onde o backport nasceu. Lê o log atual e os rotacionados (texto e .gz);
@@ -5154,8 +5188,10 @@ _bluez_candidata_da_distro() {
 }
 
 # Com o backport por cima, o `apt` nunca aplica a correção de segurança da
-# distro: a versão da casa (`5.86-…~hefesto`) é maior que a `5.72-0ubuntu5.N` do
+# distro: a versão da casa (`5.87-…~hefesto`) é maior que a `5.72-0ubuntu5.N` do
 # `noble-updates`, e nada avisava. Só a família `apt` (a que tem `apt-cache`).
+# A base é o que o changelog da revisão diz cobrir; sem a linha (as revisões até
+# a 4), é a versão de onde o dpkg.log diz que o backport nasceu.
 check_bluez_distro_depois_do_backport() {
     local pacote candidata base
     command -v dpkg-query >/dev/null 2>&1 || return 0
@@ -5163,13 +5199,14 @@ check_bluez_distro_depois_do_backport() {
     [[ "${pacote}" == *~hefesto* ]] || return 0
     candidata="$(_bluez_candidata_da_distro || true)"
     [[ -n "${candidata}" ]] || return 0
-    base="$(_bluez_base_do_backport || true)"
+    base="$(_bluez_linha_do_changelog "Cobre a segurança da distro até" || true)"
+    [[ -n "${base}" ]] || base="$(_bluez_base_do_backport || true)"
     if [[ -z "${base}" ]]; then
         info "o bluez ${pacote} é o backport do Hefesto, e não achei de que versão da distro ele nasceu (o dpkg.log não a guarda): a distro publica o bluez ${candidata}, que o apt não aplica por cima do backport"
         return 0
     fi
     if dpkg --compare-versions "${candidata}" gt "${base}" 2>/dev/null; then
-        warn "a distro publicou o bluez ${candidata} depois do backport, que nasceu sobre o ${base}; o apt não aplica a correção dela por cima do ${pacote}. Reconstrua o backport para levar a correção$(so_no_checkout "(scripts/construir_bluez_backport.sh, pela receita em docs/usage/receita-backport-bluez.md)")"
+        warn "a distro publicou o bluez ${candidata} depois do backport, que cobre a segurança dela até o ${base}; o apt não aplica a correção dela por cima do ${pacote}. A receita do backport precisa de uma revisão nova que leve a correção da distro$(so_no_checkout "(docs/usage/receita-backport-bluez.md)")"
     else
         pass "o backport do bluez (${pacote}) está em dia com a distro (a candidata dela, ${candidata}, não passa da base ${base})"
     fi
@@ -5196,7 +5233,11 @@ check_bluez_backport_version() {
             pass "bluez ${ver}${origem} >= ${_BZ_PISO} e < ${_BZ_TETO} (sem os crashes crônicos de input/HIDP do 5.72, e sem o UAF do 5.87)"
             ;;
         nova)
-            warn "bluez ${ver}${origem} >= ${_BZ_TETO} — o 5.87 carrega um uso-depois-de-liberado em dev_disconnected (src/adapter.c: device_is_connected() chamado depois de adapter_remove_connection() liberar o device; commit 5d836f1). A correção 5bc6aa79 está um commit DEPOIS do 5.87 e nenhum lançamento a carregava até 07/08/2026 — se esta versão é o 5.88 ou mais nova, confira se ela já traz o 5bc6aa79 e suba o teto (_BZ_TETO) no doctor.sh. O alvo do Hefesto é o backport 5.86$(so_no_checkout "(./install.sh, passo 3f)")."
+            if _bluez_a_casa_leva_o_5bc6aa79 "${ver}"; then
+                pass "bluez ${ver}${origem} é o backport do Hefesto, que leva a correção 5bc6aa79 do uso-depois-de-liberado do 5.87 (a linha «Leva do upstream» do changelog dele)"
+            else
+            warn "bluez ${ver}${origem} >= ${_BZ_TETO} — o 5.87 carrega um uso-depois-de-liberado em dev_disconnected (src/adapter.c: device_is_connected() chamado depois de adapter_remove_connection() liberar o device; commit 5d836f1). A correção 5bc6aa79 está um commit DEPOIS do 5.87 e nenhum lançamento a carregava até 07/08/2026 — se esta versão é o 5.88 ou mais nova, confira se ela já traz o 5bc6aa79 e suba o teto (_BZ_TETO) no doctor.sh. O backport do Hefesto é o 5.87 com o 5bc6aa79$(so_no_checkout "(./install.sh, passo 3f)")."
+            fi
             ;;
         old)
             # AVISO, não falha (O-BLUEZ-DA-CASA-NAO-CONGELA-A-SEGURANCA-01, 13/10/2026): o

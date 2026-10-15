@@ -12,7 +12,8 @@
 #   1. baixa o upstream (kernel.org) e o empacotamento do resolute
 #      (Launchpad), e confere os dois hashes — nada é usado sem conferir;
 #   2. monta a árvore: tarball + debian/, os três ajustes de empacotamento, os
-#      patches hefesto-NNNN da revisão e as entradas do changelog;
+#      patches hefesto-NNNN da revisão (os do upstream conferidos pelo commit
+#      e pelo hash da linha UPSTREAM_) e as entradas do changelog;
 #   3. aplica a série (dpkg-source) e confere o hash do device.c resultante;
 #   4. MORDE: roda assets/bluez-backport/prova/eagain.c contra o device.c
 #      vanilla (tem de destruir o aparelho no EAGAIN) e contra o patchado
@@ -106,6 +107,33 @@ ler() {
     printf '%s' "${linha#*=}"
 }
 
+# A chave da revisão pedida (`CHAVE_R<n>`) vence a comum: as revisões que
+# nasceram sobre outro upstream (a 4 e as anteriores, sobre a 5.86) guardam ali
+# o que difere delas.
+ler_da_revisao() {
+    local chave="$1"
+    if grep -q -E "^${chave}_R${REVISAO}=" "${BASELINE}"; then
+        ler "${chave}_R${REVISAO}"
+    else
+        ler "${chave}"
+    fi
+}
+
+# Um patch exportado do upstream tem a linha `UPSTREAM_hefesto-NNNN=<commit>
+# <sha256>`: o arquivo tem de ter esse SHA-256 e abrir com `From <commit>`. Os
+# da casa (sem a linha) seguem fixados pelo hash do device.c depois da série.
+conferir_patch_do_upstream() {
+    local arquivo="$1" nome a b _ linha commit sha
+    nome="${arquivo##*/}"
+    IFS=- read -r a b _ <<< "${nome}"
+    linha="$(grep -m1 -E "^UPSTREAM_${a}-${b}=" "${BASELINE}" || true)"
+    [[ -n "${linha}" ]] || return 0
+    read -r commit sha <<< "${linha#*=}"
+    conferir_sha "${arquivo}" "${sha}" "${nome}"
+    [[ "$(head -n1 "${arquivo}")" == "From ${commit} "* ]] \
+        || morra "${RC_PATCH}" "${nome} não abre com o commit do upstream ${commit}"
+}
+
 sha_de() {
     local saida
     saida="$(sha256sum "$1")"
@@ -144,14 +172,21 @@ baixar() {
     mv -f "${parcial}" "${destino}"
 }
 
-# Os três ajustes que o 5.86 pede ao empacotamento do 5.85 (medidos no build
-# de 22/07/2026). Cada um confere que achou o que devia, senão para: um ajuste
-# que não acha o alvo é sinal de que o empacotamento mudou por baixo.
+# Os ajustes que o 5.86 e o 5.87 pedem ao empacotamento do 5.85 (os três
+# primeiros medidos no build de 22/07/2026, do quarto ao sétimo em 15/10/2026).
+# Os três primeiros conferem que acharam o que deviam, senão param: um ajuste
+# que não acha o alvo é sinal de que o empacotamento mudou por baixo. Do quarto
+# em diante, cada um pergunta ao fonte se a mudança dele existe ali (a 5.86 das
+# revisões 3 e 4 não tem nenhuma).
 ajustar_empacotamento() {
     local series="${ARVORE}/debian/patches/series"
     local manpages="${ARVORE}/debian/bluez.manpages"
     local p0013="0013-transport-Fix-set-volume-failure-with-invalid-device.patch"
     local man_btmgmt="usr/share/man/man1/btmgmt.1"
+    local restart="${ARVORE}/debian/patches/ubuntu_error_restart.patch"
+    local cap_586="CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_BIND_SERVICE"
+    local cap_587="CapabilityBoundingSet=CAP_NET_RAW CAP_NET_ADMIN CAP_NET_BIND_SERVICE"
+    local p0012="0012-src-device-Fix-stored-gatt-cache-DB-Hash-value-not-u.patch"
     local nova
 
     # 1. o 0013 do resolute não liga no 5.86: a API de volume foi refeita
@@ -178,6 +213,44 @@ ajustar_empacotamento() {
         usr/share/man/man5/org.bluez.ThermometerWatcher.5; do
         grep -qxF "${nova}" "${manpages}" || printf '%s\n' "${nova}" >> "${manpages}"
     done
+
+    # 4. a partir da 5.87 (c34ed95fa) a unit pede também o CAP_NET_RAW, e a
+    #    linha de contexto do ubuntu_error_restart.patch (o Restart=on-failure
+    #    que reergue o bluetoothd depois de uma queda) deixa de casar com fuzz
+    #    zero. O contexto acompanha o fonte; o que o patch muda não.
+    if grep -qxF "${cap_587}" "${ARVORE}/src/bluetooth.service.in"; then
+        grep -qxF " ${cap_586}" "${restart}" \
+            || morra "${RC_PATCH}" "o ubuntu_error_restart.patch não traz o contexto «${cap_586}»"
+        sed -i "s/^ ${cap_586}\$/ ${cap_587}/" "${restart}"
+    fi
+
+    # 5. o 0012 do resolute é o 0fd01e98c do upstream, que a 5.87 já traz: ali
+    #    ele sai da series. A pergunta é ao fonte (o patch desfeito aplica
+    #    limpo?), não à versão; na 5.86 ele fica.
+    if grep -qxF "${p0012}" "${series}" \
+        && (cd "${ARVORE}" && patch -p1 -R -F0 --dry-run -s \
+            < "debian/patches/${p0012}") >/dev/null 2>&1; then
+        grep -vxF "${p0012}" "${series}" > "${series}.novo" || true
+        mv -f "${series}.novo" "${series}"
+    fi
+
+    # 6. a 5.87 tirou o hcidump (a035be775): sem o tools/hcidump.c no fonte, o
+    #    pacote bluez-hcidump sai do debian/control, senão o dh_install para
+    #    por falta do binário. O btmon segue no pacote bluez.
+    if [[ ! -e "${ARVORE}/tools/hcidump.c" ]] \
+        && grep -qx 'Package: bluez-hcidump' "${ARVORE}/debian/control"; then
+        awk 'BEGIN { RS = ""; ORS = "\n\n" } !/^Package: bluez-hcidump\n/' \
+            "${ARVORE}/debian/control" > "${ARVORE}/debian/control.novo"
+        mv -f "${ARVORE}/debian/control.novo" "${ARVORE}/debian/control"
+        rm -f "${ARVORE}/debian/bluez-hcidump.install" "${ARVORE}/debian/bluez-hcidump."*
+    fi
+
+    # 7. a 5.87 instala a man page do formato btsnoop (doc/btsnoop.7), que o
+    #    empacotamento do 5.85 não lista: sem a linha, o dh_missing aborta.
+    if [[ -e "${ARVORE}/doc/btsnoop.7" ]]; then
+        nova="usr/share/man/man7/btsnoop.7"
+        grep -qxF "${nova}" "${manpages}" || printf '%s\n' "${nova}" >> "${manpages}"
+    fi
 }
 
 # As entradas hefesto do changelog até a revisão pedida, por cima do do resolute.
@@ -202,11 +275,11 @@ preparar() {
 
     # Lido em atribuição, e não dentro de argumento: assim um BASELINE sem a
     # chave para o script aqui, em vez de seguir com o valor vazio.
-    url_up="$(ler FONTE_UPSTREAM_URL)"
-    sha_up="$(ler FONTE_UPSTREAM_SHA256)"
+    url_up="$(ler_da_revisao FONTE_UPSTREAM_URL)"
+    sha_up="$(ler_da_revisao FONTE_UPSTREAM_SHA256)"
     url_emp="$(ler EMPACOTAMENTO_URL)"
     sha_emp="$(ler EMPACOTAMENTO_SHA256)"
-    sha_vanilla="$(ler SHA256_DEVICE_C_VANILLA)"
+    sha_vanilla="$(ler_da_revisao SHA256_DEVICE_C_VANILLA)"
     sha_serie="$(ler "SHA256_DEVICE_C_R${REVISAO}")"
     tar_up="${FONTES}/${url_up##*/}"
     tar_emp="${FONTES}/${url_emp##*/}"
@@ -227,6 +300,7 @@ preparar() {
     ajustar_empacotamento
     for p in ${PATCHES}; do
         [[ -f "${ASSETS}/patches/${p}" ]] || morra "${RC_PATCH}" "falta assets/bluez-backport/patches/${p}"
+        conferir_patch_do_upstream "${ASSETS}/patches/${p}"
         cp -f "${ASSETS}/patches/${p}" "${ARVORE}/debian/patches/${p}"
         printf '%s\n' "${p}" >> "${ARVORE}/debian/patches/series"
     done
@@ -370,7 +444,7 @@ debs_alvo() {
 origem() {
     local p
     printf 'versao=%s\n' "${ALVO}"
-    printf 'upstream=%s %s\n' "$(ler FONTE_UPSTREAM_URL)" "$(ler FONTE_UPSTREAM_SHA256)"
+    printf 'upstream=%s %s\n' "$(ler_da_revisao FONTE_UPSTREAM_URL)" "$(ler_da_revisao FONTE_UPSTREAM_SHA256)"
     printf 'empacotamento=%s %s\n' "$(ler EMPACOTAMENTO_URL)" "$(ler EMPACOTAMENTO_SHA256)"
     for p in ${PATCHES}; do
         printf 'patch=%s %s\n' "${p}" "$(sha_de "${ASSETS}/patches/${p}")"
@@ -399,12 +473,15 @@ entregar() {
         cp -f "${OBRA}/${deb}" "${SAIDA}/${deb}"
     done < <(debs_alvo)
 
-    # A marca de cada patch tem de estar no binário que vai para o cache.
+    # A marca de cada patch da casa tem de estar no binário que vai para o
+    # cache. Os do upstream não têm linha MARCA_ (o hash deles foi conferido no
+    # preparo).
     tmp="$(mktemp -d)"
     dpkg-deb -x "${SAIDA}/bluez_${ALVO}_${ARCH}.deb" "${tmp}"
     for p in ${PATCHES}; do
         IFS=- read -r a b _ <<< "${p}"
         chave="MARCA_${a}-${b}"
+        grep -q -E "^UPSTREAM_${a}-${b}=" "${BASELINE}" && continue
         marca="$(ler "${chave}")"
         achou="$(grep -a -c -F "${marca}" "${tmp}/usr/libexec/bluetooth/bluetoothd" || true)"
         if [[ "${achou}" -eq 0 ]]; then
@@ -472,8 +549,8 @@ main() {
         morra "${RC_USO}" "a revisão ${REVISAO} não é a última (${revisao_ultima}); ela só se reconstrói com HEFESTO_BLUEZ_CACHE apontando para FORA do cache que o install lê (${SAIDA_DO_INSTALL})"
     fi
     PATCHES="$(ler "PATCHES_R${REVISAO}")"
-    ALVO="$(ler VERSAO_BASE)~hefesto24.04.${REVISAO}"
-    ARVORE="${OBRA}/bluez-$(ler VERSAO_UPSTREAM)"
+    ALVO="$(ler_da_revisao VERSAO_BASE)~hefesto24.04.${REVISAO}"
+    ARVORE="${OBRA}/bluez-$(ler_da_revisao VERSAO_UPSTREAM)"
     ARCH="$(dpkg --print-architecture)"
 
     if [[ "${modo}" == "construir" && "${forcar}" -eq 0 ]] && ja_construido; then
