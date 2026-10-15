@@ -1710,62 +1710,7 @@
     border-radius:50%;background:var(--purple);border:2px solid var(--app-bg)}
   .vol .n{flex:0 0 30px;text-align:right;font-family:'JetBrains Mono',monospace;
           font-size:10.5px;color:var(--fg)}
-  /* ---------- O TRILHO DO GANHO DE ENTRADA (O-GANHO-DO-MIC-TEM-DONO-01) -----
-     20/09/2026, decisão de produto: *"deixa o slicer 2 dele na telka"*. <!-- noqa-acento: citação literal -->
-
-     ELE MORA NA LINHA DO RÓTULO, e isso é ORÇAMENTO, não estética. Os quatro
-     arranjos foram medidos no DOM a 1120, 1180 e 1440px, e o cartão tem
-     **0,37px** de folga contra o teto de `PARA_O_CARD`:
-
-       linha nova embaixo do volume .......... +22,00px   o portão REPROVA
-       na fileira dos modos .................. +2,00px    REPROVA, e encolhe os dois
-       dividindo o trilho do volume .......... 0,00px     cabe, e o volume cai a 48px
-       na linha do rótulo (este) ............. 0,00px     cabe, e não encolhe nada
-
-     É O ÚNICO QUE NÃO COBRA DE NINGUÉM, e tem precedente aqui mesmo: os botões
-     Virtual/Nativo moravam nesta linha até 31/08 *porque ali o custo de altura
-     era ZERO*. Eles saíram por serem TRÊS. Um trilho cabe.
-
-     **CLASSE PRÓPRIA, E NUNCA UM `.vol`.** As regras do trilho são
-     `.vol .trilho`/`.vol .cheio`: fora de um `.vol` ele desenha INVISÍVEL, e
-     foi o que aconteceu na primeira tentativa desta medição. Mas a saída óbvia
-     — embrulhar num `.vol` — custa **5px**, porque `.vol` tem `height:22px`
-     FIXA e esta linha tem 17: o cartão vai de 327,63 para 332,63 e o
-     `scripts/check_a_altura_do_cartao.py` reprova. São as MESMAS declarações,
-     sem a altura fixa.
-
-     O `.n` PEDE 34px E NÃO 30: o número aqui é o dB com sinal (`+48`), que é um
-     caractere mais largo que o `80` do volume. Com 30 ele sai cortado, e o
-     mesmo portão mede corte de texto. */
-  /* O GANHO É UMA `.vol` — ele DEIXOU de morar na linha do rótulo em 20/09,
-     por ordem de produto, e com isso deixou de precisar de caixa própria: a linha
-     herda `display:flex`, `gap` e os 22px de altura da `.vol`, e o que sobra
-     aqui é só o que ele tem A MAIS — a unidade e o número de quatro caracteres.
-     O `flex:1 1 0` e o `margin-left` que ele tinha eram para disputar o vão da
-     linha do rótulo com o selo e o `?`; não há mais vão a disputar. */
   .rot-vol{flex:0 0 46px;font-size:11px;color:var(--muted);white-space:nowrap}
-  .ganho .un{flex:0 0 16px;font-size:10px;color:var(--muted);
-    font-family:'JetBrains Mono',monospace}
-  .ganho .trilho{flex:1;height:5px;border-radius:3px;background:var(--panel);position:relative}
-  .ganho .cheio{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--purple)}
-  .ganho .cheio::after{content:'';position:absolute;right:-5px;top:-4px;width:12px;height:12px;
-    border-radius:50%;background:var(--purple);border:2px solid var(--app-bg)}
-  .ganho .n{flex:0 0 30px;text-align:right;font-family:'JetBrains Mono',monospace;
-    font-size:10.5px;color:var(--fg)}
-  /* O GANHO FORA DE ALCANCE veste o MESMO cinza do «Nativo» no rádio, e pela
-     mesma razão dela: o que não alcança não some da tela — fica cinza, e o
-     porquê vai no `?` ao lado. O endereço mora no CONTAINER porque o alvo é
-     `classe`, e um campo só alimenta o cinza e a razão (ver
-     `a02_controles.ganho_fora_de_alcance`). */
-  .ganho.sem-ganho .trilho,.ganho.sem-ganho .n{opacity:.4}
-  .ganho.sem-ganho .cheio::after{display:none}
-  /* O `?` DO GANHO SÓ EXISTE NO ESTADO CINZA — as duas regras da folha comum
-     (`:has(.dica:empty)` e `:has(.nada)`) o escondem sozinhas quando não há
-     razão, e por isso ele custa ZERO largura no cabo. Estes 4px são para ele
-     não encostar no número quando aparece: `+48` e o `?` colados leem como um
-     caractere só. Sai da largura do trilho, que é `flex:1 1 0`, e não da
-     altura — medido nas três larguras. */
-  .ganho + .ajuda.porque{margin-left:4px}
   /* O 🎙 E O ♪ SÃO `<button>`, E NÃO ERAM (29/08/2026). Eram `<span>` com
      `cursor:pointer` e nada atrás: nem `data-*` para a ponte achar, nem ouvinte
      para o clique cair em algum lugar. Medido — dois cliques sintéticos neles
@@ -2088,35 +2033,10 @@
   .rota button{flex:0 0 auto;height:17px;border-radius:5px;font-size:10.5px;white-space:nowrap;font-family:inherit;
     border:1px solid var(--border-forte);background:var(--panel);color:var(--texto-mudo);cursor:pointer}
   .rota button.on,.rota .aceso-do-mic.on>button{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600}
-  /* A FILEIRA DA SAÍDA DE SOM TEM QUATRO — 24/09/2026, O-TERCEIRO-NOME-DELA-01,
-     e o preço foi medido antes de escrito (Chrome headless, cartão aberto).
-
-     QUATRO EMPILHADOS CUSTAVAM 19 PX (mais um botão de 17 e um vão de 2), e o
-     cartão tinha 1,4 px de folga: 326,6 contra os 328 de `PARA_O_CARD`. Lado a
-     lado em grade de dois os dois primeiros não cabem — o mais longo pede
-     239 px e a meia coluna dá 128 — e quebrariam em TRÊS linhas.
-
-     O QUE CABE É O ESPELHO: os dois primeiros continuam inteiros, cada um numa
-     linha, e os dois últimos dividem a de baixo (`.par`). Na janela do
-     produto (1180) e na de 1120 cada um deles quebra em duas linhas de 11 px
-     (24 com a borda); de 1440 para cima eles cabem numa linha só e a fileira
-     fica com a altura de antes. A conta, a 1180: 17 + 17 + 24 com dois vãos
-     de 1 dá 60, contra os 55 de três empilhados, e os 5 px voltam do rótulo
-     do alto-falante, que virou linha como o do microfone (4,6 px). O cartão
-     fica em 327.
-
-     O `white-space:normal` VALE PARA OS QUATRO, e é a decisão de 12/09
-     aplicada aqui: numa janela menor que o desenho o rótulo QUEBRA em vez de
-     cortar. O preço é altura, e só onde aperta.
-
-     A CLASSE `quatro` E NÃO O `data-bloco`: toda regra que casa a moldura do
-     alto-falante pelo endereço dela é a guarda do cinza (`data-apagado`), e a
-     régua da onda dois cobra exatamente isso. */
-  .rota.quatro{gap:1px}
-  .rota.quatro button{height:auto;min-height:17px;white-space:normal;
-    line-height:11px;padding:0}
-  .rota.quatro .par{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
-    gap:1px 3px}
+  /* A FILEIRA DA SAÍDA DE SOM TEM TRÊS, UMA POR LINHA — todo, 15/10/2026. O «junto» saiu da tela
+     e os nomes do alvo cabem numa linha só; o cartão perde o que o par de baixo custava. */
+  .rota.trio{gap:3px}
+  .rota.trio button{height:22px;min-height:22px;white-space:nowrap;text-align:center;padding:0 9px}
   /* O MODO DO MICROFONE CONTINUA DEITADO, e agora precisa dizê-lo — 20/09/2026.
      Enquanto as duas fileiras eram a mesma, o `.mic-modo` não tinha uma linha
      própria de estilo, e o bloco de comentário mais acima registra por quê. A
@@ -2227,18 +2147,13 @@
   }
   .sensores-peca .sw .p{width:6px;height:6px;border-radius:50%;background:var(--green);
                         box-shadow:0 0 6px var(--green)}
-  .sensores-peca .sw.off,.sensores-peca .chip-da-mira.off>.sw{border-color:var(--border-forte);background:var(--app-bg);color:var(--texto-mudo)}
-  .sensores-peca .sw.off .p,.sensores-peca .chip-da-mira.off>.sw .p{background:var(--border-forte);box-shadow:none}
+  .sensores-peca .sw.off{border-color:var(--border-forte);background:var(--app-bg);color:var(--texto-mudo)}
+  .sensores-peca .sw.off .p{background:var(--border-forte);box-shadow:none}
   /* A DICA DO GIROSCÓPIO MORA NUM INVÓLUCRO SEM CAIXA — 24/09/2026,
      A-MIRA-POR-MOVIMENTO-NA-TELA-02. `display:contents` tira o invólucro da
      grade: quem ocupa a coluna continua sendo o botão, e a largura dos três
      não muda um pixel. O `title` dele é o que muda com a Mira acesa. */
   .sensores-peca .dica-do-giro{display:contents}
-  /* O CINZA QUE O LEITOR DE TELA OUVE — A-MIRA-NA-NAVEGACAO-01, 24/09/2026. O
-     `aria-disabled` só vale no próprio botão, e um elemento aceita UM alvo: o
-     aceso da Mira desceu para este invólucro sem caixa, e o botão ficou com o
-     cinza (`mira-fora`) e o `aria-disabled` que o piloto deriva dele. */
-  .sensores-peca .chip-da-mira{display:contents}
   /* NO MODO NATIVO O CHIP DA MIRA FICA CINZA — decisão, 24/09/2026:
      *"fica cinza no Nativo, sem gravar"*. A cara é a do cinza da casa
      (`.btn.apagado`, `monta.py`): a borda sutil, o texto mudo e o cursor que
@@ -2277,31 +2192,47 @@
   .pausa-da-inclinacao{display:contents}
   .pausa-da-inclinacao.parada .chip-virtual.on>.sw{opacity:.5}
   .pausa-da-inclinacao.parada .chip-virtual.on>.sw .p{box-shadow:none}
-  /* «USAR COMO ANALÓGICO VIRTUAL» EM DUAS LINHAS — 06/10/2026, leva 1.7. A
-     coluna de cada analógico tem ~100px, e a frase em uma linha passaria dela.
-     Com o analógico virtual apagado no cabeçalho, os dois chips ficam cinza e
-     seguem clicáveis: o clique num lado acende o analógico virtual nele. */
-  .chip-virtual>.sw{white-space:normal;height:auto;min-height:17px;line-height:12px;
-    padding:2px 6px;gap:4px;font-size:10px;text-align:center;width:100%;max-width:112px}
-  .ctl:has(.chip-da-mira.off) .chip-virtual>.sw,
-  .ctl:has(.chip-da-mira.off) .chip-virtual.on>.sw{
-    border-color:var(--border-sutil);background:var(--app-bg);color:var(--texto-mudo)}
-  .ctl:has(.chip-da-mira.off) .chip-virtual>.sw .p{background:var(--border-sutil);box-shadow:none}
-  /* O «CURSOR | BOTÕES» NA SUPERFÍCIE DO TOUCHPAD — 28/09/2026. A forma é a do
-     «Virtual | Nativo» do microfone, e ele mora por cima da superfície, no pé
-     dela: a coluna não tem altura para uma fileira embaixo (ver
-     `modo_do_toque`). O ponto do dedo fica por cima dos dois botões, para o
-     dedo na zona do L2 continuar aparecendo. */
-  .rota.toque-modo{position:absolute;left:5px;right:5px;bottom:5px;margin:0;
-    flex-direction:row;gap:5px;z-index:1}
-  .rota.toque-modo .aceso-do-toque{display:contents}
-  .rota.toque-modo button{flex:1;min-width:0}
-  .rota .aceso-do-toque.on>button{border-color:var(--purple);background:var(--sel-bg);
-    color:var(--fg);font-weight:600}
-  .rota.toque-modo button.sem-mira,.rota.toque-modo button.sem-mira:hover{
-    border-color:var(--border-sutil);background:var(--panel);color:var(--texto-mudo);
-    font-weight:400;cursor:not-allowed}
+  /* «MIRA VIRTUAL» EM UMA LINHA — todo, 15/10/2026: o botão diz só isso, com a mesma largura e a
+     mesma altura, ligado ou não; o lado vai na dica. */
+  .chip-virtual>.sw{white-space:nowrap;height:26px;min-height:26px;line-height:1;font-size:12px;
+    padding:0 8px;gap:6px;width:100%;max-width:none;box-sizing:border-box}
+  /* O INTERRUPTOR DO TOUCHPAD E AS TERÇAS — todo, 15/10/2026. O rótulo diz o estado de agora
+     (Ligado/Desligado, trocados pelo `.off`); a terça acesa é onde o dedo está, sem texto. Desligado,
+     a superfície fica a 35%: o toque não chega ao jogo. */
+  .moldura.touchp .todo-sw-toque{margin-left:auto;height:17px;border-radius:6px;font-size:10.5px;
+    font-family:inherit;cursor:pointer;border:1px solid var(--green);background:rgba(80,250,123,.09);
+    color:var(--green);display:inline-flex;align-items:center;justify-content:center;gap:5px;
+    padding:0 7px;font-weight:400}
+  .moldura.touchp .todo-sw-toque .p{width:6px;height:6px;border-radius:50%;background:var(--green);
+    box-shadow:0 0 6px var(--green)}
+  .moldura.touchp .todo-sw-toque .t-des{display:none}
+  .moldura.touchp .todo-sw-toque.off .t-lig{display:none}
+  .moldura.touchp .todo-sw-toque.off .t-des{display:inline}
+  .moldura.touchp .todo-sw-toque.off{border-color:var(--border-forte);background:var(--app-bg);
+    color:var(--texto-mudo)}
+  .moldura.touchp .todo-sw-toque.off .p{background:var(--border-forte);box-shadow:none}
+  .ctl[data-conectado="nao"] .moldura.touchp .todo-sw-toque{border-color:var(--border-sutil);
+    background:transparent;color:var(--texto-mudo)}
+  .ctl[data-conectado="nao"] .moldura.touchp .todo-sw-toque .p{background:var(--border-sutil);
+    box-shadow:none}
+  .touch .todo-terca{position:absolute;top:0;bottom:0;width:33.334%;border-radius:4px}
+  .touch .todo-terca:nth-child(1){left:0}
+  .touch .todo-terca:nth-child(2){left:33.333%}
+  .touch .todo-terca:nth-child(3){left:66.666%}
+  .touch .todo-terca.on{background:var(--sel-bg);box-shadow:inset 0 0 0 1px var(--purple)}
+  .moldura.touchp:has(.todo-sw-toque.off) .touch > *{opacity:.35}
+  /* A RAZÃO DOS VOLUMES É A DICA DO INVÓLUCRO, sem caixa. */
+  .porque-dica{display:contents}
   .touch .ponto{z-index:2}
+  /* O RESPIRO E O CABEÇALHO DO TODO (15/10/2026): as molduras ganham padding de verdade, a da luz
+     respeita o de baixo, e os dois botões do canto têm a mesma altura e a mesma letra. */
+  .moldura{padding:5px 10px 7px}
+  .card-corpo > div:last-child > .moldura.leituras{padding:5px 10px 7px}
+  .moldura.luz .barra-luz{margin-bottom:2px}
+  .moldura > .sticks{column-gap:4px}
+  .sensores{align-items:center;gap:10px}
+  .sensores .btn{height:34px;border-radius:999px;padding:0 16px;box-sizing:border-box;
+                 font:600 13.5px/1 'Space Grotesk',system-ui,sans-serif}
   /* A FAMÍLIA DOS BOTÕES DE FACE — o que o usuário declarou do controle
      (`controles.botoes`, ou o modo da chave física) troca só o RÓTULO dos
      quatro da face, pela posição. Sem `data-botoes` nada muda. */
@@ -2523,28 +2454,18 @@
     border-color:var(--green);color:var(--green)}
 
 
-  body.nativo.por-controle :is([data-gesto],[data-modo],[data-hef-gesto],[data-papel],[data-forca],[data-player],[data-sensor],[data-rota],[data-mudo],[data-mic-modo],[data-v]):not(:is([data-gesto=cadeado],[data-gesto=hefesto],[data-gesto=modo-nativo],[data-gesto=modo-steam],[data-gesto=reconectar],.menu-hefesto *)){
+  body.nativo.por-controle :is([data-gesto],[data-modo],[data-hef-gesto],[data-papel],[data-forca],[data-player],[data-sensor],[data-rota],[data-mudo],[data-mic-modo],[data-v]):not(:is([data-gesto=cadeado],[data-gesto=hefesto],[data-gesto=modo-nativo],[data-gesto=modo-steam],[data-gesto=modo-navegacao],[data-gesto=reconectar],.menu-hefesto *)){
     pointer-events:none;cursor:default;-webkit-appearance:none;appearance:none;
     background:transparent!important;border-color:var(--border-sutil)!important;
     color:var(--comment)!important;font-weight:400!important;box-shadow:none!important}
   body.nativo.por-controle .nativo-nao{pointer-events:none;cursor:default;
     background:transparent!important;border-color:var(--border-sutil)!important;
     color:var(--comment)!important;font-weight:400!important;box-shadow:none!important}
-  body.nativo.por-controle :is([data-gesto=cadeado],[data-gesto=hefesto],[data-gesto=modo-nativo],[data-gesto=modo-steam],[data-gesto=reconectar]){pointer-events:auto}
+  body.nativo.por-controle :is([data-gesto=cadeado],[data-gesto=hefesto],[data-gesto=modo-nativo],[data-gesto=modo-steam],[data-gesto=modo-navegacao],[data-gesto=reconectar]){pointer-events:auto}
   body.nativo.por-controle .guardar,body.nativo.por-controle .par-modo,
   body.nativo.por-controle .modo-auto,
   body.nativo.por-controle .r-aplicar,body.nativo.por-controle .r-salvar,
   body.nativo.por-controle .r-importar{visibility:hidden}
-
-  .ajuda{width:17px;height:17px;border-radius:50%;flex:0 0 17px;border:1px solid var(--linha);
-    color:var(--texto-mudo);font-size:11px;line-height:15px;text-align:center;cursor:help;position:relative}
-  .ajuda:hover,.ajuda:focus{border-color:var(--cyan);color:var(--cyan);outline:none}
-  .ajuda:hover .dica,.ajuda:focus .dica,.ajuda:focus-within .dica{display:block}
-  .quadro-topo .par-modo + .ajuda.esq .dica{left:auto;right:22px}
-  .btn:not(.apagado) + .ajuda.porque,.seg button:not(.apagado) + .ajuda.porque{display:none}
-  .ajuda.porque:has(.dica:empty),.ajuda.porque:has(.nada){display:none}
-  .ajuda.porque{align-self:center;margin-left:-4px}
-  body.nativo.por-controle .par-modo + .ajuda{visibility:hidden}
 </style>
 <style id="base-comum">
 /* ===== Base comum das abas (rodada 2, 12/10/2026) =====
@@ -2762,14 +2683,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 
     <div class="quadro estica">
       <div class="quadro-topo">
-        <span class="quadro-titulo">Dispositivos conectados</span>
-        <span class="ajuda">?<span class="dica">
-          Os <b>controles conectados agora</b>.<br><br>
-          <b>Clique num deles para abri-lo</b> — os outros fecham; escolhê-lo na
-          <b>fita</b> lá em cima faz o mesmo.<br><br>
-          A <b>borda</b> tem a cor do controle, e o <b>fundo lilás</b> diz qual está
-          escolhido. <b>Todos</b> abre os quatro de uma vez.
-        </span></span>
+        <span class="quadro-titulo" data-dica="Clique num controle para abrir">Dispositivos conectados</span>
         <span class="trava-nativo" title="Com o Hefesto desligado, o jogo manda nestes ajustes. O que está aqui volta a valer quando ligar, na aba Jogar."><svg class="cad" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M3.6 5.2V3.9a2.4 2.4 0 0 1 4.8 0v1.3" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="2.3" y="5.2" width="7.4" height="5.4" rx="1.1" fill="currentColor"/></svg>O jogo manda</span>
         <!-- O CALIBRAR FICA NO CANTO SUPERIOR DIREITO, sozinho desde 29/09/2026.
              Em 31/08 eram dois botões aqui (*"A posição deles volta pro canto
@@ -2778,8 +2692,8 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
              controle deveria ter saído da guia de Controles e ter ficado só na
              guia conexões."* A classe `.sensores` continua a alinhá-lo à direita. -->
         <span class="sensores">
-          <a class="btn nativo-nao" href="calibrar-sensores.html"
-             title="Calibra o giroscópio e o acelerômetro de todos os controles conectados, com todos parados numa superfície plana.">Calibrar sensores de movimento</a>
+          <a class="btn nativo-nao" href="calibrar-sensores.html" data-dica="Todos parados numa superfície plana">Calibrar giroscópio</a>
+          <button class="modo-auto" type="button" data-gesto="modo-dos-controles" data-modo="automatico" data-campo="modo-dos-controles-automatico" data-hef-alvo="classe" data-hef-classe="ligado" data-hef-atributo="aria-pressed" aria-pressed="false" data-dica="O jogo decide toque e som; o estilo do jogo ajusta" data-governa=".card-corpo .moldura.touchp, .card-corpo [data-bloco=microfone], .card-corpo [data-bloco=alto-falante]"><span class="p"></span>Modo automático</button>
         </span>
       </div>
       <div class="quadro-corpo">
@@ -2883,9 +2797,8 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                 data-hef-atributo="aria-label" aria-label="Giroscópio: fluindo para o jogo (~250 Hz)"><span
                 class="no-jogo-t" data-campo="giro-no-jogo">Giroscópio: fluindo para o jogo (~250 Hz)</span></span>
           <span class="sensores-peca" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO">
-            <span class="dica-do-giro" data-campo="giro-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="Ligado: o jogo recebe o giro deste controle."><button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><span class="p"></span>Giroscópio</button></span>
-            <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
-            <span class="chip-da-mira" data-campo="mira-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="mira" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar os movimentos do controle como um analógico, para pessoas com deficiência motora. O lado se escolhe embaixo de cada analógico."><span class="p"></span>Analógico virtual</button></span>
+            <span class="dica-do-giro" data-campo="giro-dica" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="Ligado: o jogo recebe o giro deste controle."><button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><span class="p"></span>Giroscópio</button></span>
+            <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" data-dica="O jogo recebe a inclinação e o chacoalhar"><span class="p"></span>Acelerômetro</button>
           </span>
           <!-- A BATERIA GANHOU ENDEREÇO EM 01/09/2026, e até aqui ela era a
                PINTURA DO MOCKUP para sempre: o pacote da aba emite `bateria`
@@ -2909,11 +2822,11 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
         <div>
           <div class="moldura touchp">
             <div class="rot rot-linha">Touchpad
-              <span class="de-quem" data-campo="touch-estado" title="O ponto marca onde o dedo está. Sem toque, não há ponto.">1 toque</span></div>
+              <button class="sw todo-sw-toque" data-gesto="touchpad" data-campo="touchpad" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" data-dica="Toque vai ao jogo; sem suporte, move o cursor"><span class="p"></span><span class="t-lig">Ligado</span><span class="t-des">Desligado</span></button></div>
             <div class="touch">
+              <span class="todo-terca" data-campo="touch-regiao" data-hef-alvo="classe" data-hef-quando="esquerda"></span><span class="todo-terca on" data-campo="touch-regiao" data-hef-alvo="classe" data-hef-quando="meio"></span><span class="todo-terca" data-campo="touch-regiao" data-hef-alvo="classe" data-hef-quando="direita"></span>
               <span data-campo="pos-touch" data-hef-alvo="posicao" style="--hef-x:62%;--hef-y:44%"><span class="ponto ponto-1 on" data-campo="touch-ponto" data-hef-alvo="classe"></span></span>
-              <span data-campo="pos-touch-2" data-hef-alvo="posicao" style="--hef-x:38%;--hef-y:56%"><span class="ponto ponto-2" data-campo="touch-ponto-2" data-hef-alvo="classe"></span></span>
-              <span class="rota toque-modo"><span class="aceso-do-toque" data-campo="toque-modo" data-hef-alvo="classe" data-hef-quando="cursor"><button data-gesto="toque" data-toque="cursor" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar o touchpad deste controle como mouse no jogo; o clique dele é o botão esquerdo.">Cursor</button></span><span class="aceso-do-toque" data-campo="toque-modo" data-hef-alvo="classe" data-hef-quando="zonas"><button data-gesto="toque" data-toque="zonas" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar o touchpad como botões: os dois terços da esquerda são o direcional; à direita, em cima o L1 e embaixo o L2.">Botões</button></span></span></div>
+              <span data-campo="pos-touch-2" data-hef-alvo="posicao" style="--hef-x:38%;--hef-y:56%"><span class="ponto ponto-2" data-campo="touch-ponto-2" data-hef-alvo="classe"></span></span></div>
           </div>
           <!-- O TRAVESSÃO VIROU PALAVRA — decisão, 04/09/2026 [02]:
                *"palavra curta no lugar do travessão, frase inteira no hover"*,
@@ -2973,7 +2886,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
             <div class="sticks">
               <div>
                 <div class="stick-topo"><div class="stick-rot">Analógico<br>esquerdo</div>
-                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual on" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Os movimentos do controle movem o analógico esquerdo."><span class="p"></span>Usar como analógico virtual</button></span></span></div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual on" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico esquerdo"><span class="p"></span>Mira virtual</button></span></span></div>
                 <div class="stick" data-stick="l">
                   <span class="rotl" data-campo="l3">L3</span>
                   <span data-campo="pos-ana-e-jogo" data-hef-alvo="posicao" style="--hef-x:43.1%;--hef-y:78.4%"><span class="pj on" data-campo="ana-e-jogo" data-hef-alvo="classe" title="O que o jogo recebe."></span></span>
@@ -2982,7 +2895,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
               </div>
               <div>
                 <div class="stick-topo"><div class="stick-rot">Analógico<br>direito</div>
-                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Os movimentos do controle movem o analógico direito."><span class="p"></span>Usar como analógico virtual</button></span></span></div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico direito"><span class="p"></span>Mira virtual</button></span></span></div>
                 <div class="stick" data-stick="r">
                   <span class="rotl" data-campo="r3">R3</span>
                   <span data-campo="pos-ana-d-jogo" data-hef-alvo="posicao"><span class="pj" data-campo="ana-d-jogo" data-hef-alvo="classe" title="O que o jogo recebe."></span></span>
@@ -3090,20 +3003,8 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                  botão que desfaz algo que não acontece ensina errado. O
                  `mic.set {muted: null}` segue no daemon (`ipc_handlers.py`) e
                  devolve a posse ao `hid-playstation`. -->
-            <div class="rot rot-linha">Microfone
-              <span class="selo-ativo on" style="margin-left:5px" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">ATIVO</span></span>
-              <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
-                A barra mostra o som <b>entrando agora</b>. O <b>🎙</b> liga o
-                retorno: você se ouve como o jogo te ouve. Para calar o
-                microfone, use o botão do próprio controle.<br><br>
-                A luz <b>acesa</b> quer dizer que o microfone está ligado —
-                não que alguém esteja ouvindo. Ela <b>pisca</b> quando um
-                programa está gravando e entra som; a linha abaixo diz qual.
-                <br><br>
-                Os <b>dois botões abaixo</b> dizem por onde esse som chega ao PC.
-                <br><br>
-                Ganho de entrada: o quanto o aparelho amplifica o que entra no microfone, de 0 a +48 dB. É outro trilho, e não o de baixo — aquele é o volume, o quanto desse som o produto entrega ao PC.
-              </span></span>
+            <div class="rot rot-linha" data-dica="O som deste microfone chega ao PC">Microfone
+              <span class="porque-dica" data-dica="Luz acesa: microfone ligado, não que alguém esteja ouvindo"><span class="selo-ativo on" style="margin-left:5px" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">ATIVO</span></span></span>
               <!-- O MODO DO MICROFONE — pedido, 30/08: *"tá faltando o Modo do
                    Mic: Virtual, Desativado e Nativo"*.
 
@@ -3125,7 +3026,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                    f-string elas quebram o gerador. -->
             </div>
             <span class="onda-do-mudo" data-campo="mic-onda-calada" data-hef-alvo="classe" data-hef-classe="calada" data-hef-quando="sim"><span class="onda" data-campo="mic-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="mic-onda-0" data-hef-alvo="altura" style="height:22%"></i><i data-campo="mic-onda-1" data-hef-alvo="altura" style="height:48%"></i><i data-campo="mic-onda-2" data-hef-alvo="altura" style="height:72%"></i><i data-campo="mic-onda-3" data-hef-alvo="altura" style="height:95%"></i><i data-campo="mic-onda-4" data-hef-alvo="altura" style="height:64%"></i><i data-campo="mic-onda-5" data-hef-alvo="altura" style="height:38%"></i><i data-campo="mic-onda-6" data-hef-alvo="altura" style="height:52%"></i><i data-campo="mic-onda-7" data-hef-alvo="altura" style="height:80%"></i><i data-campo="mic-onda-8" data-hef-alvo="altura" style="height:44%"></i><i data-campo="mic-onda-9" data-hef-alvo="altura" style="height:26%"></i><i data-campo="mic-onda-10" data-hef-alvo="altura" style="height:58%"></i><i data-campo="mic-onda-11" data-hef-alvo="altura" style="height:88%"></i><i data-campo="mic-onda-12" data-hef-alvo="altura" style="height:40%"></i><i data-campo="mic-onda-13" data-hef-alvo="altura" style="height:20%"></i></span></span>
-            <div class="vol" data-campo="mic-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
+            <div class="porque-dica" data-campo="mic-porque" data-hef-alvo="atributo" data-hef-atributo="data-dica"><div class="vol" data-campo="mic-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
               <!-- O VOLUME DO MICROFONE GANHA ENDEREÇO, 12/09/2026: é a
                    METADE QUE FALTOU da decisão de 02/09 (item 16), que
                    endereçou o alto-falante desta mesma coluna e deixou este
@@ -3133,20 +3034,10 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                    dois alvos num endereço só: `a02_controles.volume_do_microfone`. -->
               <span class="rot-vol">Volume</span>
               <span class="trilho"><span class="cheio" data-campo="mic-barra"
-                data-hef-alvo="largura" style="width:80%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="80" data-gesto="volume" data-volume="microfone" data-campo="mic-barra" data-hef-alvo="valor" aria-label="Volume do microfone deste controle" title="Arraste para escolher quanto do microfone deste controle chega ao PC. Não é o mudo: a luz vermelha fica acesa e o botão do controle continua valendo. Grava na hora."></span>
+                data-hef-alvo="largura" style="width:80%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="80" data-gesto="volume" data-volume="microfone" data-campo="mic-barra" data-hef-alvo="valor" aria-label="Volume do microfone deste controle" data-dica="Quanto do microfone chega ao PC"></span>
               <span class="n" data-campo="mic-num">80</span>
-              <button class="mudo-i" data-gesto="mic-retorno" data-campo="mic-retorno" data-hef-alvo="atributo" data-hef-atributo="data-mic-luz" title="Liga o retorno: você se ouve enquanto ele estiver aceso, com o volume e o ganho desta coluna já aplicados — é assim que o jogo te ouve. Clique de novo para desligar. Para calar o microfone, use o botão do próprio controle." aria-pressed="false">🎙</button>
-              <span class="ajuda porque">?<span class="dica" data-campo="mic-porque" data-hef-alvo="html"><i class="nada"></i></span></span>
-            </div>
-            <div class="vol ganho" data-campo="mic-ganho-fora" data-hef-alvo="classe"
-                 data-hef-classe="sem-ganho" title="Ganho de entrada: o quanto o aparelho amplifica o que entra no microfone, de 0 a +48 dB. É outro trilho, e não o de baixo — aquele é o volume, o quanto desse som o produto entrega ao PC." role="group"
-                 aria-label="Ganho de entrada do microfone deste controle, em decibéis">
-              <span class="rot-vol">Ganho</span>
-              <span class="trilho"><span class="cheio" data-campo="mic-ganho-barra"
-                data-hef-alvo="largura" style="width:100%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="100" data-gesto="ganho-mic" data-campo="mic-ganho-barra" data-hef-alvo="valor" aria-label="Ganho de entrada do microfone deste controle, em decibéis" title="Ganho de entrada: o quanto o aparelho amplifica o que entra no microfone, de 0 a +48 dB. É outro trilho, e não o de baixo — aquele é o volume, o quanto desse som o produto entrega ao PC."></span>
-              <span class="n" data-campo="mic-ganho-num">+48</span>
-              <span class="un">dB</span><span class="ajuda porque">?<span class="dica" data-campo="mic-ganho-fora" data-hef-alvo="html"><i class="nada"></i></span></span>
-            </div>
+              <button class="mudo-i" data-gesto="mic-retorno" data-campo="mic-retorno" data-hef-alvo="atributo" data-hef-atributo="data-mic-luz" data-dica="Ouvir a própria voz como o jogo ouve" aria-pressed="false">🎙</button>
+            </div></div>
             <!-- O PAR «VIRTUAL | NATIVO» SAIU — decisão, 02/10/2026
                  (OS-NOS-DE-SOM-SEM-O-ENDERECO-NO-NOME-01): todo controle tem o
                  microfone dele, no cabo e no BT, e a entrada da máquina é o
@@ -3194,22 +3085,15 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
             <div class="rot rot-linha">Alto-falante
               <span data-campo="alto-canal-porque" data-hef-alvo="atributo" data-hef-atributo="title"><span class="selo-ativo no-rotulo on" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M17 8.5a5 5 0 0 1 0 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="alto-canal" data-hef-alvo="html">ATIVO</span></span></span>
               <span class="selo-som" data-campo="alto-selo" data-hef-alvo="html"><i class="nada"></i></span>
-              <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
-                <b>Efeitos do jogo no controle, áudio do PC no PC</b>: só o que o jogo mandar para este controle sai no alto-falante dele.
-                <b>Efeitos do jogo e áudio do PC no controle</b>: tudo o que a máquina toca cai aqui também, e continua saindo no PC.
-                <b>Tudo no PC e nada no controle</b>: o alto-falante deste controle para de tocar, e todo o som, inclusive o dele, sai no PC.
-                <b>Tudo no controle e nada no PC</b>: todo o som do PC sai só no alto-falante deste controle, e o PC fica em silêncio.
-              </span></span>
             </div>
             <span class="onda" data-campo="alto-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="alto-onda-0" data-hef-alvo="altura" style="height:100%"></i><i data-campo="alto-onda-1" data-hef-alvo="altura" style="height:88%"></i><i data-campo="alto-onda-2" data-hef-alvo="altura" style="height:64%"></i><i data-campo="alto-onda-3" data-hef-alvo="altura" style="height:92%"></i><i data-campo="alto-onda-4" data-hef-alvo="altura" style="height:76%"></i><i data-campo="alto-onda-5" data-hef-alvo="altura" style="height:54%"></i><i data-campo="alto-onda-6" data-hef-alvo="altura" style="height:82%"></i><i data-campo="alto-onda-7" data-hef-alvo="altura" style="height:96%"></i><i data-campo="alto-onda-8" data-hef-alvo="altura" style="height:70%"></i><i data-campo="alto-onda-9" data-hef-alvo="altura" style="height:48%"></i><i data-campo="alto-onda-10" data-hef-alvo="altura" style="height:86%"></i><i data-campo="alto-onda-11" data-hef-alvo="altura" style="height:60%"></i><i data-campo="alto-onda-12" data-hef-alvo="altura" style="height:74%"></i><i data-campo="alto-onda-13" data-hef-alvo="altura" style="height:90%"></i></span>
-            <div class="vol" data-campo="alto-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
-              <button class="padrao-i" type="button" data-gesto="volume-padrao" data-campo="alto-padrao" data-hef-alvo="classe" data-hef-classe="on" title="Ligado: o volume é o do jogo, sem ajuste. Desligado: você escolhe o volume deste alto-falante.">Padrão</button>
+            <div class="porque-dica" data-campo="alto-porque" data-hef-alvo="atributo" data-hef-atributo="data-dica"><div class="vol" data-campo="alto-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
+              <button class="padrao-i" type="button" data-gesto="volume-padrao" data-campo="alto-padrao" data-hef-alvo="classe" data-hef-classe="on" data-dica="Volume do jogo, sem ajuste">Padrão</button>
               <span class="trilho"><span class="cheio" data-campo="alto-barra"
-                data-hef-alvo="largura" style="width:100%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="100" data-gesto="volume" data-volume="alto-falante" data-campo="alto-barra" data-hef-alvo="valor" aria-label="Volume do alto-falante deste controle" title="Arraste para escolher o volume do alto-falante deste controle. O primeiro arrasto é o que destrava o ♪."></span>
+                data-hef-alvo="largura" style="width:100%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="100" data-gesto="volume" data-volume="alto-falante" data-campo="alto-barra" data-hef-alvo="valor" aria-label="Volume do alto-falante deste controle" data-dica="Volume do alto-falante deste controle"></span>
               <span class="n" data-campo="alto-num">100</span>
-              <button class="mudo-i" data-gesto="mudo" data-mudo="alto-falante" data-campo="alto-mudo" data-hef-alvo="atributo" data-hef-atributo="data-som" data-som="ATIVO" title="Cala o alto-falante do controle, sem perder o volume guardado. A partir daqui quem guarda esse volume é o Hefesto.">♪</button>
-              <span class="ajuda porque">?<span class="dica" data-campo="alto-porque" data-hef-alvo="html"><i class="nada"></i></span></span>
-            </div>
+              <button class="mudo-i" data-gesto="mudo" data-mudo="alto-falante" data-campo="alto-mudo" data-hef-alvo="atributo" data-hef-atributo="data-som" data-som="ATIVO" data-dica="Cala o alto-falante sem perder o volume">♪</button>
+            </div></div>
             <!-- TRÊS BOTÕES, UMA PERGUNTA — 10/09/2026 (a A3). A fileira
                  responde *"o que este controle ouve?"*, e o terceiro estado é
                  a `fonte` que o produto já obedecia sem ninguém poder
@@ -3230,13 +3114,10 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                  quebra em duas linhas; da janela de 1440 para cima cabem numa
                  só. A gramática não muda: mesmo gesto, mesmo endereço, cada
                  botão com o seu valor. -->
-            <div class="rota quatro">
-              <button class="on" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">Efeitos do jogo no controle, áudio do PC no PC</button>
-              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="O som do PC sai no alto-falante deste controle e continua saindo no PC. Serve para jogar acompanhado: cada um ouve no próprio controle.">Efeitos do jogo e áudio do PC no controle</button>
-              <span class="par">
-                <button class="" data-gesto="rota" data-rota="nada" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="nada" title="Todo o som, inclusive o deste controle, sai no PC, e o alto-falante deste controle para de tocar. O microfone e a vibração não mudam.">Tudo no PC e nada no controle</button>
-                <button data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc" title="Todo o som do PC sai só no alto-falante deste controle, e o PC fica em silêncio. Vale para um controle por vez. O microfone e a vibração não mudam.">Tudo no controle e nada no PC</button>
-              </span>
+            <div class="rota trio">
+              <button class="on" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo" data-dica="Efeitos do jogo no controle; o som do PC no PC">Canais sonoros nativos - Padrão</button>
+              <button data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc" data-dica="Todo o som sai no controle; o PC fica mudo">Canais sonoros apenas no DualSense</button>
+              <button class="" data-gesto="rota" data-rota="nada" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="nada" data-dica="Todo o som sai no PC; o controle fica mudo">Canais sonoros apenas no PC</button>
             </div>
           </div>
         </div>
@@ -3260,14 +3141,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                Os números do acelerômetro do P1 são MEDIDOS, no daemon vivo:
                {'x': 0.105, 'y': 0.976, 'z': 0.170} — |v| = 0,996 g, a gravidade. -->
           <div class="moldura leituras" data-bloco="giroscopio">
-            <div class="rot">Giroscópio
-              <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica" style="left:auto;right:22px">
-                Leitura viva do controle.<br><br>
-                O <b>giroscópio</b> mede o quanto ele gira, em graus por segundo;
-                o <b>acelerômetro</b> mede a inclinação, em g.<br><br>
-                Um traço no lugar do número quer dizer que a leitura ainda não chegou.
-              </span></span>
-            </div>
+            <div class="rot" data-dica="Leitura viva, em graus por segundo">Giroscópio</div>
             <div class="eixo" data-eixo="giro-x"><span>X</span><span data-campo="giro-x">+143.2</span>
               <span class="g" data-campo="giro-x-cor" data-hef-alvo="cor" style="color:var(--red)"><span
                 class="v neg" data-campo="giro-x-neg" data-hef-alvo="largura" style="width:0%"></span><span
@@ -3413,9 +3287,8 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                 data-hef-atributo="aria-label" aria-label="Giroscópio: fluindo para o jogo (~250 Hz)"><span
                 class="no-jogo-t" data-campo="giro-no-jogo">Giroscópio: fluindo para o jogo (~250 Hz)</span></span>
           <span class="sensores-peca" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO">
-            <span class="dica-do-giro" data-campo="giro-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="Ligado: o jogo recebe o giro deste controle."><button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><span class="p"></span>Giroscópio</button></span>
-            <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
-            <span class="chip-da-mira off" data-campo="mira-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="mira" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar os movimentos do controle como um analógico, para pessoas com deficiência motora. O lado se escolhe embaixo de cada analógico."><span class="p"></span>Analógico virtual</button></span>
+            <span class="dica-do-giro" data-campo="giro-dica" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="Ligado: o jogo recebe o giro deste controle."><button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><span class="p"></span>Giroscópio</button></span>
+            <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" data-dica="O jogo recebe a inclinação e o chacoalhar"><span class="p"></span>Acelerômetro</button>
           </span>
           <!-- A BATERIA GANHOU ENDEREÇO EM 01/09/2026, e até aqui ela era a
                PINTURA DO MOCKUP para sempre: o pacote da aba emite `bateria`
@@ -3439,11 +3312,11 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
         <div>
           <div class="moldura touchp">
             <div class="rot rot-linha">Touchpad
-              <span class="de-quem" data-campo="touch-estado" title="O ponto marca onde o dedo está. Sem toque, não há ponto.">Sem toque</span></div>
+              <button class="sw todo-sw-toque" data-gesto="touchpad" data-campo="touchpad" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" data-dica="Toque vai ao jogo; sem suporte, move o cursor"><span class="p"></span><span class="t-lig">Ligado</span><span class="t-des">Desligado</span></button></div>
             <div class="touch">
+              <span class="todo-terca" data-campo="touch-regiao" data-hef-alvo="classe" data-hef-quando="esquerda"></span><span class="todo-terca" data-campo="touch-regiao" data-hef-alvo="classe" data-hef-quando="meio"></span><span class="todo-terca" data-campo="touch-regiao" data-hef-alvo="classe" data-hef-quando="direita"></span>
               <span data-campo="pos-touch" data-hef-alvo="posicao" style="--hef-x:50%;--hef-y:50%"><span class="ponto ponto-1" data-campo="touch-ponto" data-hef-alvo="classe"></span></span>
-              <span data-campo="pos-touch-2" data-hef-alvo="posicao" style="--hef-x:50%;--hef-y:50%"><span class="ponto ponto-2" data-campo="touch-ponto-2" data-hef-alvo="classe"></span></span>
-              <span class="rota toque-modo"><span class="aceso-do-toque" data-campo="toque-modo" data-hef-alvo="classe" data-hef-quando="cursor"><button data-gesto="toque" data-toque="cursor" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar o touchpad deste controle como mouse no jogo; o clique dele é o botão esquerdo.">Cursor</button></span><span class="aceso-do-toque" data-campo="toque-modo" data-hef-alvo="classe" data-hef-quando="zonas"><button data-gesto="toque" data-toque="zonas" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar o touchpad como botões: os dois terços da esquerda são o direcional; à direita, em cima o L1 e embaixo o L2.">Botões</button></span></span></div>
+              <span data-campo="pos-touch-2" data-hef-alvo="posicao" style="--hef-x:50%;--hef-y:50%"><span class="ponto ponto-2" data-campo="touch-ponto-2" data-hef-alvo="classe"></span></span></div>
           </div>
           <!-- O TRAVESSÃO VIROU PALAVRA — decisão, 04/09/2026 [02]:
                *"palavra curta no lugar do travessão, frase inteira no hover"*,
@@ -3503,7 +3376,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
             <div class="sticks">
               <div>
                 <div class="stick-topo"><div class="stick-rot">Analógico<br>esquerdo</div>
-                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Os movimentos do controle movem o analógico esquerdo."><span class="p"></span>Usar como analógico virtual</button></span></span></div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico esquerdo"><span class="p"></span>Mira virtual</button></span></span></div>
                 <div class="stick" data-stick="l">
                   <span class="rotl" data-campo="l3">L3</span>
                   <span data-campo="pos-ana-e-jogo" data-hef-alvo="posicao"><span class="pj" data-campo="ana-e-jogo" data-hef-alvo="classe" title="O que o jogo recebe."></span></span>
@@ -3512,7 +3385,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
               </div>
               <div>
                 <div class="stick-topo"><div class="stick-rot">Analógico<br>direito</div>
-                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Os movimentos do controle movem o analógico direito."><span class="p"></span>Usar como analógico virtual</button></span></span></div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico direito"><span class="p"></span>Mira virtual</button></span></span></div>
                 <div class="stick" data-stick="r">
                   <span class="rotl" data-campo="r3">R3</span>
                   <span data-campo="pos-ana-d-jogo" data-hef-alvo="posicao"><span class="pj" data-campo="ana-d-jogo" data-hef-alvo="classe" title="O que o jogo recebe."></span></span>
@@ -3620,20 +3493,8 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                  botão que desfaz algo que não acontece ensina errado. O
                  `mic.set {muted: null}` segue no daemon (`ipc_handlers.py`) e
                  devolve a posse ao `hid-playstation`. -->
-            <div class="rot rot-linha">Microfone
-              <span class="selo-ativo" style="margin-left:5px" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo cortado" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">DESLIGADO</span></span>
-              <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
-                A barra mostra o som <b>entrando agora</b>. O <b>🎙</b> liga o
-                retorno: você se ouve como o jogo te ouve. Para calar o
-                microfone, use o botão do próprio controle.<br><br>
-                A luz <b>acesa</b> quer dizer que o microfone está ligado —
-                não que alguém esteja ouvindo. Ela <b>pisca</b> quando um
-                programa está gravando e entra som; a linha abaixo diz qual.
-                <br><br>
-                Os <b>dois botões abaixo</b> dizem por onde esse som chega ao PC.
-                <br><br>
-                Ganho de entrada: o quanto o aparelho amplifica o que entra no microfone, de 0 a +48 dB. É outro trilho, e não o de baixo — aquele é o volume, o quanto desse som o produto entrega ao PC.
-              </span></span>
+            <div class="rot rot-linha" data-dica="O som deste microfone chega ao PC">Microfone
+              <span class="porque-dica" data-dica="Luz acesa: microfone ligado, não que alguém esteja ouvindo"><span class="selo-ativo" style="margin-left:5px" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo cortado" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">DESLIGADO</span></span></span>
               <!-- O MODO DO MICROFONE — pedido, 30/08: *"tá faltando o Modo do
                    Mic: Virtual, Desativado e Nativo"*.
 
@@ -3655,7 +3516,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                    f-string elas quebram o gerador. -->
             </div>
             <span class="onda-do-mudo calada" data-campo="mic-onda-calada" data-hef-alvo="classe" data-hef-classe="calada" data-hef-quando="sim"><span class="onda" data-campo="mic-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="mic-onda-0" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-1" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-2" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-3" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-4" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-5" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-6" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-7" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-8" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-9" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-10" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-11" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-12" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-13" data-hef-alvo="altura" style="height:16%"></i></span></span>
-            <div class="vol" data-campo="mic-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
+            <div class="porque-dica" data-campo="mic-porque" data-hef-alvo="atributo" data-hef-atributo="data-dica"><div class="vol" data-campo="mic-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
               <!-- O VOLUME DO MICROFONE GANHA ENDEREÇO, 12/09/2026: é a
                    METADE QUE FALTOU da decisão de 02/09 (item 16), que
                    endereçou o alto-falante desta mesma coluna e deixou este
@@ -3663,20 +3524,10 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                    dois alvos num endereço só: `a02_controles.volume_do_microfone`. -->
               <span class="rot-vol">Volume</span>
               <span class="trilho"><span class="cheio" data-campo="mic-barra"
-                data-hef-alvo="largura" style="width:0%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="0" data-gesto="volume" data-volume="microfone" data-campo="mic-barra" data-hef-alvo="valor" aria-label="Volume do microfone deste controle" title="Arraste para escolher quanto do microfone deste controle chega ao PC. Não é o mudo: a luz vermelha fica acesa e o botão do controle continua valendo. Grava na hora."></span>
+                data-hef-alvo="largura" style="width:0%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="0" data-gesto="volume" data-volume="microfone" data-campo="mic-barra" data-hef-alvo="valor" aria-label="Volume do microfone deste controle" data-dica="Quanto do microfone chega ao PC"></span>
               <span class="n" data-campo="mic-num">0</span>
-              <button class="mudo-i" data-gesto="mic-retorno" data-campo="mic-retorno" data-hef-alvo="atributo" data-hef-atributo="data-mic-luz" title="Liga o retorno: você se ouve enquanto ele estiver aceso, com o volume e o ganho desta coluna já aplicados — é assim que o jogo te ouve. Clique de novo para desligar. Para calar o microfone, use o botão do próprio controle." aria-pressed="false">🎙</button>
-              <span class="ajuda porque">?<span class="dica" data-campo="mic-porque" data-hef-alvo="html"><i class="nada"></i></span></span>
-            </div>
-            <div class="vol ganho" data-campo="mic-ganho-fora" data-hef-alvo="classe"
-                 data-hef-classe="sem-ganho" title="Ganho de entrada: o quanto o aparelho amplifica o que entra no microfone, de 0 a +48 dB. É outro trilho, e não o de baixo — aquele é o volume, o quanto desse som o produto entrega ao PC." role="group"
-                 aria-label="Ganho de entrada do microfone deste controle, em decibéis">
-              <span class="rot-vol">Ganho</span>
-              <span class="trilho"><span class="cheio" data-campo="mic-ganho-barra"
-                data-hef-alvo="largura" style="width:100%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="100" data-gesto="ganho-mic" data-campo="mic-ganho-barra" data-hef-alvo="valor" aria-label="Ganho de entrada do microfone deste controle, em decibéis" title="Ganho de entrada: o quanto o aparelho amplifica o que entra no microfone, de 0 a +48 dB. É outro trilho, e não o de baixo — aquele é o volume, o quanto desse som o produto entrega ao PC."></span>
-              <span class="n" data-campo="mic-ganho-num">+48</span>
-              <span class="un">dB</span><span class="ajuda porque">?<span class="dica" data-campo="mic-ganho-fora" data-hef-alvo="html"><i class="nada"></i></span></span>
-            </div>
+              <button class="mudo-i" data-gesto="mic-retorno" data-campo="mic-retorno" data-hef-alvo="atributo" data-hef-atributo="data-mic-luz" data-dica="Ouvir a própria voz como o jogo ouve" aria-pressed="false">🎙</button>
+            </div></div>
             <!-- O PAR «VIRTUAL | NATIVO» SAIU — decisão, 02/10/2026
                  (OS-NOS-DE-SOM-SEM-O-ENDERECO-NO-NOME-01): todo controle tem o
                  microfone dele, no cabo e no BT, e a entrada da máquina é o
@@ -3724,22 +3575,15 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
             <div class="rot rot-linha">Alto-falante
               <span data-campo="alto-canal-porque" data-hef-alvo="atributo" data-hef-atributo="title"><span class="selo-ativo no-rotulo on" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M17 8.5a5 5 0 0 1 0 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="alto-canal" data-hef-alvo="html">ATIVO</span></span></span>
               <span class="selo-som" data-campo="alto-selo" data-hef-alvo="html"><i class="nada"></i></span>
-              <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
-                <b>Efeitos do jogo no controle, áudio do PC no PC</b>: só o que o jogo mandar para este controle sai no alto-falante dele.
-                <b>Efeitos do jogo e áudio do PC no controle</b>: tudo o que a máquina toca cai aqui também, e continua saindo no PC.
-                <b>Tudo no PC e nada no controle</b>: o alto-falante deste controle para de tocar, e todo o som, inclusive o dele, sai no PC.
-                <b>Tudo no controle e nada no PC</b>: todo o som do PC sai só no alto-falante deste controle, e o PC fica em silêncio.
-              </span></span>
             </div>
             <span class="onda" data-campo="alto-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="alto-onda-0" data-hef-alvo="altura" style="height:70%"></i><i data-campo="alto-onda-1" data-hef-alvo="altura" style="height:52%"></i><i data-campo="alto-onda-2" data-hef-alvo="altura" style="height:66%"></i><i data-campo="alto-onda-3" data-hef-alvo="altura" style="height:44%"></i><i data-campo="alto-onda-4" data-hef-alvo="altura" style="height:72%"></i><i data-campo="alto-onda-5" data-hef-alvo="altura" style="height:58%"></i><i data-campo="alto-onda-6" data-hef-alvo="altura" style="height:48%"></i><i data-campo="alto-onda-7" data-hef-alvo="altura" style="height:64%"></i><i data-campo="alto-onda-8" data-hef-alvo="altura" style="height:54%"></i><i data-campo="alto-onda-9" data-hef-alvo="altura" style="height:70%"></i><i data-campo="alto-onda-10" data-hef-alvo="altura" style="height:46%"></i><i data-campo="alto-onda-11" data-hef-alvo="altura" style="height:60%"></i><i data-campo="alto-onda-12" data-hef-alvo="altura" style="height:50%"></i><i data-campo="alto-onda-13" data-hef-alvo="altura" style="height:68%"></i></span>
-            <div class="vol" data-campo="alto-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
-              <button class="padrao-i" type="button" data-gesto="volume-padrao" data-campo="alto-padrao" data-hef-alvo="classe" data-hef-classe="on" title="Ligado: o volume é o do jogo, sem ajuste. Desligado: você escolhe o volume deste alto-falante.">Padrão</button>
+            <div class="porque-dica" data-campo="alto-porque" data-hef-alvo="atributo" data-hef-atributo="data-dica"><div class="vol" data-campo="alto-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
+              <button class="padrao-i" type="button" data-gesto="volume-padrao" data-campo="alto-padrao" data-hef-alvo="classe" data-hef-classe="on" data-dica="Volume do jogo, sem ajuste">Padrão</button>
               <span class="trilho"><span class="cheio" data-campo="alto-barra"
-                data-hef-alvo="largura" style="width:70%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="70" data-gesto="volume" data-volume="alto-falante" data-campo="alto-barra" data-hef-alvo="valor" aria-label="Volume do alto-falante deste controle" title="Arraste para escolher o volume do alto-falante deste controle. O primeiro arrasto é o que destrava o ♪."></span>
+                data-hef-alvo="largura" style="width:70%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="70" data-gesto="volume" data-volume="alto-falante" data-campo="alto-barra" data-hef-alvo="valor" aria-label="Volume do alto-falante deste controle" data-dica="Volume do alto-falante deste controle"></span>
               <span class="n" data-campo="alto-num">70</span>
-              <button class="mudo-i" data-gesto="mudo" data-mudo="alto-falante" data-campo="alto-mudo" data-hef-alvo="atributo" data-hef-atributo="data-som" data-som="ATIVO" title="Cala o alto-falante do controle, sem perder o volume guardado. A partir daqui quem guarda esse volume é o Hefesto.">♪</button>
-              <span class="ajuda porque">?<span class="dica" data-campo="alto-porque" data-hef-alvo="html"><i class="nada"></i></span></span>
-            </div>
+              <button class="mudo-i" data-gesto="mudo" data-mudo="alto-falante" data-campo="alto-mudo" data-hef-alvo="atributo" data-hef-atributo="data-som" data-som="ATIVO" data-dica="Cala o alto-falante sem perder o volume">♪</button>
+            </div></div>
             <!-- TRÊS BOTÕES, UMA PERGUNTA — 10/09/2026 (a A3). A fileira
                  responde *"o que este controle ouve?"*, e o terceiro estado é
                  a `fonte` que o produto já obedecia sem ninguém poder
@@ -3760,13 +3604,10 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                  quebra em duas linhas; da janela de 1440 para cima cabem numa
                  só. A gramática não muda: mesmo gesto, mesmo endereço, cada
                  botão com o seu valor. -->
-            <div class="rota quatro">
-              <button class="" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">Efeitos do jogo no controle, áudio do PC no PC</button>
-              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="O som do PC sai no alto-falante deste controle e continua saindo no PC. Serve para jogar acompanhado: cada um ouve no próprio controle.">Efeitos do jogo e áudio do PC no controle</button>
-              <span class="par">
-                <button class="on" data-gesto="rota" data-rota="nada" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="nada" title="Todo o som, inclusive o deste controle, sai no PC, e o alto-falante deste controle para de tocar. O microfone e a vibração não mudam.">Tudo no PC e nada no controle</button>
-                <button data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc" title="Todo o som do PC sai só no alto-falante deste controle, e o PC fica em silêncio. Vale para um controle por vez. O microfone e a vibração não mudam.">Tudo no controle e nada no PC</button>
-              </span>
+            <div class="rota trio">
+              <button class="" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo" data-dica="Efeitos do jogo no controle; o som do PC no PC">Canais sonoros nativos - Padrão</button>
+              <button data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc" data-dica="Todo o som sai no controle; o PC fica mudo">Canais sonoros apenas no DualSense</button>
+              <button class="on" data-gesto="rota" data-rota="nada" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="nada" data-dica="Todo o som sai no PC; o controle fica mudo">Canais sonoros apenas no PC</button>
             </div>
           </div>
         </div>
@@ -3790,14 +3631,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                Os números do acelerômetro do P1 são MEDIDOS, no daemon vivo:
                {'x': 0.105, 'y': 0.976, 'z': 0.170} — |v| = 0,996 g, a gravidade. -->
           <div class="moldura leituras" data-bloco="giroscopio">
-            <div class="rot">Giroscópio
-              <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica" style="left:auto;right:22px">
-                Leitura viva do controle.<br><br>
-                O <b>giroscópio</b> mede o quanto ele gira, em graus por segundo;
-                o <b>acelerômetro</b> mede a inclinação, em g.<br><br>
-                Um traço no lugar do número quer dizer que a leitura ainda não chegou.
-              </span></span>
-            </div>
+            <div class="rot" data-dica="Leitura viva, em graus por segundo">Giroscópio</div>
             <div class="eixo" data-eixo="giro-x"><span>X</span><span data-campo="giro-x">  +0.0</span>
               <span class="g" data-campo="giro-x-cor" data-hef-alvo="cor" style="color:var(--border-forte)"><span
                 class="v neg" data-campo="giro-x-neg" data-hef-alvo="largura" style="width:0%"></span><span
@@ -3943,9 +3777,8 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                 data-hef-atributo="aria-label"><span
                 class="no-jogo-t" data-campo="giro-no-jogo">—</span></span>
           <span class="sensores-peca" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO">
-            <span class="dica-do-giro" data-campo="giro-dica" data-hef-alvo="atributo" data-hef-atributo="title"><button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><span class="p"></span>Giroscópio</button></span>
-            <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
-            <span class="chip-da-mira" data-campo="mira-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="mira" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar os movimentos do controle como um analógico, para pessoas com deficiência motora. O lado se escolhe embaixo de cada analógico."><span class="p"></span>Analógico virtual</button></span>
+            <span class="dica-do-giro" data-campo="giro-dica" data-hef-alvo="atributo" data-hef-atributo="data-dica"><button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><span class="p"></span>Giroscópio</button></span>
+            <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" data-dica="O jogo recebe a inclinação e o chacoalhar"><span class="p"></span>Acelerômetro</button>
           </span>
           <!-- A BATERIA GANHOU ENDEREÇO EM 01/09/2026, e até aqui ela era a
                PINTURA DO MOCKUP para sempre: o pacote da aba emite `bateria`
@@ -3969,11 +3802,11 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
         <div>
           <div class="moldura touchp">
             <div class="rot rot-linha">Touchpad
-              <span class="de-quem" data-campo="touch-estado" title="O ponto marca onde o dedo está. Sem toque, não há ponto.">—</span></div>
+              <button class="sw todo-sw-toque" data-gesto="touchpad" data-campo="touchpad" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" data-dica="Toque vai ao jogo; sem suporte, move o cursor"><span class="p"></span><span class="t-lig">Ligado</span><span class="t-des">Desligado</span></button></div>
             <div class="touch">
+              <span class="todo-terca" data-campo="touch-regiao" data-hef-alvo="classe" data-hef-quando="esquerda"></span><span class="todo-terca" data-campo="touch-regiao" data-hef-alvo="classe" data-hef-quando="meio"></span><span class="todo-terca" data-campo="touch-regiao" data-hef-alvo="classe" data-hef-quando="direita"></span>
               <span data-campo="pos-touch" data-hef-alvo="posicao"><span class="ponto ponto-1" data-campo="touch-ponto" data-hef-alvo="classe"></span></span>
-              <span data-campo="pos-touch-2" data-hef-alvo="posicao"><span class="ponto ponto-2" data-campo="touch-ponto-2" data-hef-alvo="classe"></span></span>
-              <span class="rota toque-modo"><span class="aceso-do-toque" data-campo="toque-modo" data-hef-alvo="classe" data-hef-quando="cursor"><button data-gesto="toque" data-toque="cursor" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar o touchpad deste controle como mouse no jogo; o clique dele é o botão esquerdo.">Cursor</button></span><span class="aceso-do-toque" data-campo="toque-modo" data-hef-alvo="classe" data-hef-quando="zonas"><button data-gesto="toque" data-toque="zonas" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar o touchpad como botões: os dois terços da esquerda são o direcional; à direita, em cima o L1 e embaixo o L2.">Botões</button></span></span></div>
+              <span data-campo="pos-touch-2" data-hef-alvo="posicao"><span class="ponto ponto-2" data-campo="touch-ponto-2" data-hef-alvo="classe"></span></span></div>
           </div>
           <!-- O TRAVESSÃO VIROU PALAVRA — decisão, 04/09/2026 [02]:
                *"palavra curta no lugar do travessão, frase inteira no hover"*,
@@ -4033,7 +3866,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
             <div class="sticks">
               <div>
                 <div class="stick-topo"><div class="stick-rot">Analógico<br>esquerdo</div>
-                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Os movimentos do controle movem o analógico esquerdo."><span class="p"></span>Usar como analógico virtual</button></span></span></div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico esquerdo"><span class="p"></span>Mira virtual</button></span></span></div>
                 <div class="stick" data-stick="l">
                   <span class="rotl" data-campo="l3">—</span>
                   <span data-campo="pos-ana-e-jogo" data-hef-alvo="posicao"><span class="pj" data-campo="ana-e-jogo" data-hef-alvo="classe" title="O que o jogo recebe."></span></span>
@@ -4042,7 +3875,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
               </div>
               <div>
                 <div class="stick-topo"><div class="stick-rot">Analógico<br>direito</div>
-                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Os movimentos do controle movem o analógico direito."><span class="p"></span>Usar como analógico virtual</button></span></span></div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico direito"><span class="p"></span>Mira virtual</button></span></span></div>
                 <div class="stick" data-stick="r">
                   <span class="rotl" data-campo="r3">—</span>
                   <span data-campo="pos-ana-d-jogo" data-hef-alvo="posicao"><span class="pj" data-campo="ana-d-jogo" data-hef-alvo="classe" title="O que o jogo recebe."></span></span>
@@ -4150,20 +3983,8 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                  botão que desfaz algo que não acontece ensina errado. O
                  `mic.set {muted: null}` segue no daemon (`ipc_handlers.py`) e
                  devolve a posse ao `hid-playstation`. -->
-            <div class="rot rot-linha">Microfone
-              <span class="selo-ativo" style="margin-left:5px" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">—</span></span>
-              <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
-                A barra mostra o som <b>entrando agora</b>. O <b>🎙</b> liga o
-                retorno: você se ouve como o jogo te ouve. Para calar o
-                microfone, use o botão do próprio controle.<br><br>
-                A luz <b>acesa</b> quer dizer que o microfone está ligado —
-                não que alguém esteja ouvindo. Ela <b>pisca</b> quando um
-                programa está gravando e entra som; a linha abaixo diz qual.
-                <br><br>
-                Os <b>dois botões abaixo</b> dizem por onde esse som chega ao PC.
-                <br><br>
-                Ganho de entrada: o quanto o aparelho amplifica o que entra no microfone, de 0 a +48 dB. É outro trilho, e não o de baixo — aquele é o volume, o quanto desse som o produto entrega ao PC.
-              </span></span>
+            <div class="rot rot-linha" data-dica="O som deste microfone chega ao PC">Microfone
+              <span class="porque-dica" data-dica="Luz acesa: microfone ligado, não que alguém esteja ouvindo"><span class="selo-ativo" style="margin-left:5px" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">—</span></span></span>
               <!-- O MODO DO MICROFONE — pedido, 30/08: *"tá faltando o Modo do
                    Mic: Virtual, Desativado e Nativo"*.
 
@@ -4185,7 +4006,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                    f-string elas quebram o gerador. -->
             </div>
             <span class="onda-do-mudo" data-campo="mic-onda-calada" data-hef-alvo="classe" data-hef-classe="calada" data-hef-quando="sim"><span class="onda" data-campo="mic-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="mic-onda-0" data-hef-alvo="altura" style="height:18%"></i><i data-campo="mic-onda-1" data-hef-alvo="altura" style="height:30%"></i><i data-campo="mic-onda-2" data-hef-alvo="altura" style="height:22%"></i><i data-campo="mic-onda-3" data-hef-alvo="altura" style="height:41%"></i><i data-campo="mic-onda-4" data-hef-alvo="altura" style="height:28%"></i><i data-campo="mic-onda-5" data-hef-alvo="altura" style="height:19%"></i><i data-campo="mic-onda-6" data-hef-alvo="altura" style="height:35%"></i><i data-campo="mic-onda-7" data-hef-alvo="altura" style="height:24%"></i><i data-campo="mic-onda-8" data-hef-alvo="altura" style="height:30%"></i><i data-campo="mic-onda-9" data-hef-alvo="altura" style="height:20%"></i><i data-campo="mic-onda-10" data-hef-alvo="altura" style="height:38%"></i><i data-campo="mic-onda-11" data-hef-alvo="altura" style="height:26%"></i><i data-campo="mic-onda-12" data-hef-alvo="altura" style="height:22%"></i><i data-campo="mic-onda-13" data-hef-alvo="altura" style="height:31%"></i></span></span>
-            <div class="vol" data-campo="mic-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
+            <div class="porque-dica" data-campo="mic-porque" data-hef-alvo="atributo" data-hef-atributo="data-dica"><div class="vol" data-campo="mic-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
               <!-- O VOLUME DO MICROFONE GANHA ENDEREÇO, 12/09/2026: é a
                    METADE QUE FALTOU da decisão de 02/09 (item 16), que
                    endereçou o alto-falante desta mesma coluna e deixou este
@@ -4193,20 +4014,10 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                    dois alvos num endereço só: `a02_controles.volume_do_microfone`. -->
               <span class="rot-vol">Volume</span>
               <span class="trilho"><span class="cheio" data-campo="mic-barra"
-                data-hef-alvo="largura" style="width:60%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="60" data-gesto="volume" data-volume="microfone" data-campo="mic-barra" data-hef-alvo="valor" aria-label="Volume do microfone deste controle" title="Arraste para escolher quanto do microfone deste controle chega ao PC. Não é o mudo: a luz vermelha fica acesa e o botão do controle continua valendo. Grava na hora."></span>
+                data-hef-alvo="largura" style="width:60%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="60" data-gesto="volume" data-volume="microfone" data-campo="mic-barra" data-hef-alvo="valor" aria-label="Volume do microfone deste controle" data-dica="Quanto do microfone chega ao PC"></span>
               <span class="n" data-campo="mic-num">—</span>
-              <button class="mudo-i" data-gesto="mic-retorno" data-campo="mic-retorno" data-hef-alvo="atributo" data-hef-atributo="data-mic-luz" title="Liga o retorno: você se ouve enquanto ele estiver aceso, com o volume e o ganho desta coluna já aplicados — é assim que o jogo te ouve. Clique de novo para desligar. Para calar o microfone, use o botão do próprio controle." aria-pressed="false">🎙</button>
-              <span class="ajuda porque">?<span class="dica" data-campo="mic-porque" data-hef-alvo="html"><i class="nada"></i></span></span>
-            </div>
-            <div class="vol ganho" data-campo="mic-ganho-fora" data-hef-alvo="classe"
-                 data-hef-classe="sem-ganho" title="Ganho de entrada: o quanto o aparelho amplifica o que entra no microfone, de 0 a +48 dB. É outro trilho, e não o de baixo — aquele é o volume, o quanto desse som o produto entrega ao PC." role="group"
-                 aria-label="Ganho de entrada do microfone deste controle, em decibéis">
-              <span class="rot-vol">Ganho</span>
-              <span class="trilho"><span class="cheio" data-campo="mic-ganho-barra"
-                data-hef-alvo="largura" style="width:100%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="100" data-gesto="ganho-mic" data-campo="mic-ganho-barra" data-hef-alvo="valor" aria-label="Ganho de entrada do microfone deste controle, em decibéis" title="Ganho de entrada: o quanto o aparelho amplifica o que entra no microfone, de 0 a +48 dB. É outro trilho, e não o de baixo — aquele é o volume, o quanto desse som o produto entrega ao PC."></span>
-              <span class="n" data-campo="mic-ganho-num">—</span>
-              <span class="un">dB</span><span class="ajuda porque">?<span class="dica" data-campo="mic-ganho-fora" data-hef-alvo="html"><i class="nada"></i></span></span>
-            </div>
+              <button class="mudo-i" data-gesto="mic-retorno" data-campo="mic-retorno" data-hef-alvo="atributo" data-hef-atributo="data-mic-luz" data-dica="Ouvir a própria voz como o jogo ouve" aria-pressed="false">🎙</button>
+            </div></div>
             <!-- O PAR «VIRTUAL | NATIVO» SAIU — decisão, 02/10/2026
                  (OS-NOS-DE-SOM-SEM-O-ENDERECO-NO-NOME-01): todo controle tem o
                  microfone dele, no cabo e no BT, e a entrada da máquina é o
@@ -4254,22 +4065,15 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
             <div class="rot rot-linha">Alto-falante
               <span data-campo="alto-canal-porque" data-hef-alvo="atributo" data-hef-atributo="title"><span class="selo-ativo no-rotulo" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M17 8.5a5 5 0 0 1 0 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="alto-canal" data-hef-alvo="html"><i class="nada"></i></span></span></span>
               <span class="selo-som" data-campo="alto-selo" data-hef-alvo="html"><i class="nada"></i></span>
-              <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
-                <b>Efeitos do jogo no controle, áudio do PC no PC</b>: só o que o jogo mandar para este controle sai no alto-falante dele.
-                <b>Efeitos do jogo e áudio do PC no controle</b>: tudo o que a máquina toca cai aqui também, e continua saindo no PC.
-                <b>Tudo no PC e nada no controle</b>: o alto-falante deste controle para de tocar, e todo o som, inclusive o dele, sai no PC.
-                <b>Tudo no controle e nada no PC</b>: todo o som do PC sai só no alto-falante deste controle, e o PC fica em silêncio.
-              </span></span>
             </div>
             <span class="onda" data-campo="alto-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="alto-onda-0" data-hef-alvo="altura" style="height:55%"></i><i data-campo="alto-onda-1" data-hef-alvo="altura" style="height:40%"></i><i data-campo="alto-onda-2" data-hef-alvo="altura" style="height:62%"></i><i data-campo="alto-onda-3" data-hef-alvo="altura" style="height:48%"></i><i data-campo="alto-onda-4" data-hef-alvo="altura" style="height:58%"></i><i data-campo="alto-onda-5" data-hef-alvo="altura" style="height:36%"></i><i data-campo="alto-onda-6" data-hef-alvo="altura" style="height:50%"></i><i data-campo="alto-onda-7" data-hef-alvo="altura" style="height:44%"></i><i data-campo="alto-onda-8" data-hef-alvo="altura" style="height:60%"></i><i data-campo="alto-onda-9" data-hef-alvo="altura" style="height:38%"></i><i data-campo="alto-onda-10" data-hef-alvo="altura" style="height:52%"></i><i data-campo="alto-onda-11" data-hef-alvo="altura" style="height:46%"></i><i data-campo="alto-onda-12" data-hef-alvo="altura" style="height:42%"></i><i data-campo="alto-onda-13" data-hef-alvo="altura" style="height:56%"></i></span>
-            <div class="vol" data-campo="alto-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
-              <button class="padrao-i" type="button" data-gesto="volume-padrao" data-campo="alto-padrao" data-hef-alvo="classe" data-hef-classe="on" title="Ligado: o volume é o do jogo, sem ajuste. Desligado: você escolhe o volume deste alto-falante.">Padrão</button>
+            <div class="porque-dica" data-campo="alto-porque" data-hef-alvo="atributo" data-hef-atributo="data-dica"><div class="vol" data-campo="alto-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
+              <button class="padrao-i" type="button" data-gesto="volume-padrao" data-campo="alto-padrao" data-hef-alvo="classe" data-hef-classe="on" data-dica="Volume do jogo, sem ajuste">Padrão</button>
               <span class="trilho"><span class="cheio" data-campo="alto-barra"
-                data-hef-alvo="largura" style="width:55%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="55" data-gesto="volume" data-volume="alto-falante" data-campo="alto-barra" data-hef-alvo="valor" aria-label="Volume do alto-falante deste controle" title="Arraste para escolher o volume do alto-falante deste controle. O primeiro arrasto é o que destrava o ♪."></span>
+                data-hef-alvo="largura" style="width:55%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="55" data-gesto="volume" data-volume="alto-falante" data-campo="alto-barra" data-hef-alvo="valor" aria-label="Volume do alto-falante deste controle" data-dica="Volume do alto-falante deste controle"></span>
               <span class="n" data-campo="alto-num">—</span>
-              <button class="mudo-i" data-gesto="mudo" data-mudo="alto-falante" data-campo="alto-mudo" data-hef-alvo="atributo" data-hef-atributo="data-som" title="Cala o alto-falante do controle, sem perder o volume guardado. A partir daqui quem guarda esse volume é o Hefesto.">♪</button>
-              <span class="ajuda porque">?<span class="dica" data-campo="alto-porque" data-hef-alvo="html"><i class="nada"></i></span></span>
-            </div>
+              <button class="mudo-i" data-gesto="mudo" data-mudo="alto-falante" data-campo="alto-mudo" data-hef-alvo="atributo" data-hef-atributo="data-som" data-dica="Cala o alto-falante sem perder o volume">♪</button>
+            </div></div>
             <!-- TRÊS BOTÕES, UMA PERGUNTA — 10/09/2026 (a A3). A fileira
                  responde *"o que este controle ouve?"*, e o terceiro estado é
                  a `fonte` que o produto já obedecia sem ninguém poder
@@ -4290,13 +4094,10 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                  quebra em duas linhas; da janela de 1440 para cima cabem numa
                  só. A gramática não muda: mesmo gesto, mesmo endereço, cada
                  botão com o seu valor. -->
-            <div class="rota quatro">
-              <button class="" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">Efeitos do jogo no controle, áudio do PC no PC</button>
-              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="O som do PC sai no alto-falante deste controle e continua saindo no PC. Serve para jogar acompanhado: cada um ouve no próprio controle.">Efeitos do jogo e áudio do PC no controle</button>
-              <span class="par">
-                <button class="" data-gesto="rota" data-rota="nada" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="nada" title="Todo o som, inclusive o deste controle, sai no PC, e o alto-falante deste controle para de tocar. O microfone e a vibração não mudam.">Tudo no PC e nada no controle</button>
-                <button data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc" title="Todo o som do PC sai só no alto-falante deste controle, e o PC fica em silêncio. Vale para um controle por vez. O microfone e a vibração não mudam.">Tudo no controle e nada no PC</button>
-              </span>
+            <div class="rota trio">
+              <button class="" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo" data-dica="Efeitos do jogo no controle; o som do PC no PC">Canais sonoros nativos - Padrão</button>
+              <button data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc" data-dica="Todo o som sai no controle; o PC fica mudo">Canais sonoros apenas no DualSense</button>
+              <button class="" data-gesto="rota" data-rota="nada" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="nada" data-dica="Todo o som sai no PC; o controle fica mudo">Canais sonoros apenas no PC</button>
             </div>
           </div>
         </div>
@@ -4320,14 +4121,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                Os números do acelerômetro do P1 são MEDIDOS, no daemon vivo:
                {'x': 0.105, 'y': 0.976, 'z': 0.170} — |v| = 0,996 g, a gravidade. -->
           <div class="moldura leituras" data-bloco="giroscopio">
-            <div class="rot">Giroscópio
-              <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica" style="left:auto;right:22px">
-                Leitura viva do controle.<br><br>
-                O <b>giroscópio</b> mede o quanto ele gira, em graus por segundo;
-                o <b>acelerômetro</b> mede a inclinação, em g.<br><br>
-                Um traço no lugar do número quer dizer que a leitura ainda não chegou.
-              </span></span>
-            </div>
+            <div class="rot" data-dica="Leitura viva, em graus por segundo">Giroscópio</div>
             <div class="eixo" data-eixo="giro-x"><span>X</span><span data-campo="giro-x">—</span>
               <span class="g" data-campo="giro-x-cor" data-hef-alvo="cor" style="color:var(--cyan)"><span
                 class="v neg" data-campo="giro-x-neg" data-hef-alvo="largura" style="width:0%"></span><span
@@ -4473,9 +4267,8 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                 data-hef-atributo="aria-label"><span
                 class="no-jogo-t" data-campo="giro-no-jogo">—</span></span>
           <span class="sensores-peca" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO">
-            <span class="dica-do-giro" data-campo="giro-dica" data-hef-alvo="atributo" data-hef-atributo="title"><button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><span class="p"></span>Giroscópio</button></span>
-            <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
-            <span class="chip-da-mira" data-campo="mira-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="mira" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar os movimentos do controle como um analógico, para pessoas com deficiência motora. O lado se escolhe embaixo de cada analógico."><span class="p"></span>Analógico virtual</button></span>
+            <span class="dica-do-giro" data-campo="giro-dica" data-hef-alvo="atributo" data-hef-atributo="data-dica"><button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><span class="p"></span>Giroscópio</button></span>
+            <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" data-dica="O jogo recebe a inclinação e o chacoalhar"><span class="p"></span>Acelerômetro</button>
           </span>
           <!-- A BATERIA GANHOU ENDEREÇO EM 01/09/2026, e até aqui ela era a
                PINTURA DO MOCKUP para sempre: o pacote da aba emite `bateria`
@@ -4499,11 +4292,11 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
         <div>
           <div class="moldura touchp">
             <div class="rot rot-linha">Touchpad
-              <span class="de-quem" data-campo="touch-estado" title="O ponto marca onde o dedo está. Sem toque, não há ponto.">—</span></div>
+              <button class="sw todo-sw-toque" data-gesto="touchpad" data-campo="touchpad" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" data-dica="Toque vai ao jogo; sem suporte, move o cursor"><span class="p"></span><span class="t-lig">Ligado</span><span class="t-des">Desligado</span></button></div>
             <div class="touch">
+              <span class="todo-terca" data-campo="touch-regiao" data-hef-alvo="classe" data-hef-quando="esquerda"></span><span class="todo-terca" data-campo="touch-regiao" data-hef-alvo="classe" data-hef-quando="meio"></span><span class="todo-terca" data-campo="touch-regiao" data-hef-alvo="classe" data-hef-quando="direita"></span>
               <span data-campo="pos-touch" data-hef-alvo="posicao"><span class="ponto ponto-1" data-campo="touch-ponto" data-hef-alvo="classe"></span></span>
-              <span data-campo="pos-touch-2" data-hef-alvo="posicao"><span class="ponto ponto-2" data-campo="touch-ponto-2" data-hef-alvo="classe"></span></span>
-              <span class="rota toque-modo"><span class="aceso-do-toque" data-campo="toque-modo" data-hef-alvo="classe" data-hef-quando="cursor"><button data-gesto="toque" data-toque="cursor" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar o touchpad deste controle como mouse no jogo; o clique dele é o botão esquerdo.">Cursor</button></span><span class="aceso-do-toque" data-campo="toque-modo" data-hef-alvo="classe" data-hef-quando="zonas"><button data-gesto="toque" data-toque="zonas" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar o touchpad como botões: os dois terços da esquerda são o direcional; à direita, em cima o L1 e embaixo o L2.">Botões</button></span></span></div>
+              <span data-campo="pos-touch-2" data-hef-alvo="posicao"><span class="ponto ponto-2" data-campo="touch-ponto-2" data-hef-alvo="classe"></span></span></div>
           </div>
           <!-- O TRAVESSÃO VIROU PALAVRA — decisão, 04/09/2026 [02]:
                *"palavra curta no lugar do travessão, frase inteira no hover"*,
@@ -4563,7 +4356,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
             <div class="sticks">
               <div>
                 <div class="stick-topo"><div class="stick-rot">Analógico<br>esquerdo</div>
-                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Os movimentos do controle movem o analógico esquerdo."><span class="p"></span>Usar como analógico virtual</button></span></span></div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico esquerdo"><span class="p"></span>Mira virtual</button></span></span></div>
                 <div class="stick" data-stick="l">
                   <span class="rotl" data-campo="l3">—</span>
                   <span data-campo="pos-ana-e-jogo" data-hef-alvo="posicao"><span class="pj" data-campo="ana-e-jogo" data-hef-alvo="classe" title="O que o jogo recebe."></span></span>
@@ -4572,7 +4365,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
               </div>
               <div>
                 <div class="stick-topo"><div class="stick-rot">Analógico<br>direito</div>
-                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Os movimentos do controle movem o analógico direito."><span class="p"></span>Usar como analógico virtual</button></span></span></div>
+                  <span class="pausa-da-inclinacao" data-campo="inclinacao-parada" data-hef-alvo="classe" data-hef-classe="parada" data-hef-quando="parada"><span class="chip-virtual" data-campo="mira-lado" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="analogico-lado" data-lado="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" data-dica="Girar o controle move o analógico direito"><span class="p"></span>Mira virtual</button></span></span></div>
                 <div class="stick" data-stick="r">
                   <span class="rotl" data-campo="r3">—</span>
                   <span data-campo="pos-ana-d-jogo" data-hef-alvo="posicao"><span class="pj" data-campo="ana-d-jogo" data-hef-alvo="classe" title="O que o jogo recebe."></span></span>
@@ -4680,20 +4473,8 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                  botão que desfaz algo que não acontece ensina errado. O
                  `mic.set {muted: null}` segue no daemon (`ipc_handlers.py`) e
                  devolve a posse ao `hid-playstation`. -->
-            <div class="rot rot-linha">Microfone
-              <span class="selo-ativo" style="margin-left:5px" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">—</span></span>
-              <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
-                A barra mostra o som <b>entrando agora</b>. O <b>🎙</b> liga o
-                retorno: você se ouve como o jogo te ouve. Para calar o
-                microfone, use o botão do próprio controle.<br><br>
-                A luz <b>acesa</b> quer dizer que o microfone está ligado —
-                não que alguém esteja ouvindo. Ela <b>pisca</b> quando um
-                programa está gravando e entra som; a linha abaixo diz qual.
-                <br><br>
-                Os <b>dois botões abaixo</b> dizem por onde esse som chega ao PC.
-                <br><br>
-                Ganho de entrada: o quanto o aparelho amplifica o que entra no microfone, de 0 a +48 dB. É outro trilho, e não o de baixo — aquele é o volume, o quanto desse som o produto entrega ao PC.
-              </span></span>
+            <div class="rot rot-linha" data-dica="O som deste microfone chega ao PC">Microfone
+              <span class="porque-dica" data-dica="Luz acesa: microfone ligado, não que alguém esteja ouvindo"><span class="selo-ativo" style="margin-left:5px" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">—</span></span></span>
               <!-- O MODO DO MICROFONE — pedido, 30/08: *"tá faltando o Modo do
                    Mic: Virtual, Desativado e Nativo"*.
 
@@ -4715,7 +4496,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                    f-string elas quebram o gerador. -->
             </div>
             <span class="onda-do-mudo" data-campo="mic-onda-calada" data-hef-alvo="classe" data-hef-classe="calada" data-hef-quando="sim"><span class="onda" data-campo="mic-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="mic-onda-0" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-1" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-2" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-3" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-4" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-5" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-6" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-7" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-8" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-9" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-10" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-11" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-12" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-13" data-hef-alvo="altura" style="height:16%"></i></span></span>
-            <div class="vol" data-campo="mic-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
+            <div class="porque-dica" data-campo="mic-porque" data-hef-alvo="atributo" data-hef-atributo="data-dica"><div class="vol" data-campo="mic-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
               <!-- O VOLUME DO MICROFONE GANHA ENDEREÇO, 12/09/2026: é a
                    METADE QUE FALTOU da decisão de 02/09 (item 16), que
                    endereçou o alto-falante desta mesma coluna e deixou este
@@ -4723,20 +4504,10 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                    dois alvos num endereço só: `a02_controles.volume_do_microfone`. -->
               <span class="rot-vol">Volume</span>
               <span class="trilho"><span class="cheio" data-campo="mic-barra"
-                data-hef-alvo="largura" style="width:75%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="75" data-gesto="volume" data-volume="microfone" data-campo="mic-barra" data-hef-alvo="valor" aria-label="Volume do microfone deste controle" title="Arraste para escolher quanto do microfone deste controle chega ao PC. Não é o mudo: a luz vermelha fica acesa e o botão do controle continua valendo. Grava na hora."></span>
+                data-hef-alvo="largura" style="width:75%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="75" data-gesto="volume" data-volume="microfone" data-campo="mic-barra" data-hef-alvo="valor" aria-label="Volume do microfone deste controle" data-dica="Quanto do microfone chega ao PC"></span>
               <span class="n" data-campo="mic-num">—</span>
-              <button class="mudo-i" data-gesto="mic-retorno" data-campo="mic-retorno" data-hef-alvo="atributo" data-hef-atributo="data-mic-luz" title="Liga o retorno: você se ouve enquanto ele estiver aceso, com o volume e o ganho desta coluna já aplicados — é assim que o jogo te ouve. Clique de novo para desligar. Para calar o microfone, use o botão do próprio controle." aria-pressed="false">🎙</button>
-              <span class="ajuda porque">?<span class="dica" data-campo="mic-porque" data-hef-alvo="html"><i class="nada"></i></span></span>
-            </div>
-            <div class="vol ganho" data-campo="mic-ganho-fora" data-hef-alvo="classe"
-                 data-hef-classe="sem-ganho" title="Ganho de entrada: o quanto o aparelho amplifica o que entra no microfone, de 0 a +48 dB. É outro trilho, e não o de baixo — aquele é o volume, o quanto desse som o produto entrega ao PC." role="group"
-                 aria-label="Ganho de entrada do microfone deste controle, em decibéis">
-              <span class="rot-vol">Ganho</span>
-              <span class="trilho"><span class="cheio" data-campo="mic-ganho-barra"
-                data-hef-alvo="largura" style="width:100%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="100" data-gesto="ganho-mic" data-campo="mic-ganho-barra" data-hef-alvo="valor" aria-label="Ganho de entrada do microfone deste controle, em decibéis" title="Ganho de entrada: o quanto o aparelho amplifica o que entra no microfone, de 0 a +48 dB. É outro trilho, e não o de baixo — aquele é o volume, o quanto desse som o produto entrega ao PC."></span>
-              <span class="n" data-campo="mic-ganho-num">—</span>
-              <span class="un">dB</span><span class="ajuda porque">?<span class="dica" data-campo="mic-ganho-fora" data-hef-alvo="html"><i class="nada"></i></span></span>
-            </div>
+              <button class="mudo-i" data-gesto="mic-retorno" data-campo="mic-retorno" data-hef-alvo="atributo" data-hef-atributo="data-mic-luz" data-dica="Ouvir a própria voz como o jogo ouve" aria-pressed="false">🎙</button>
+            </div></div>
             <!-- O PAR «VIRTUAL | NATIVO» SAIU — decisão, 02/10/2026
                  (OS-NOS-DE-SOM-SEM-O-ENDERECO-NO-NOME-01): todo controle tem o
                  microfone dele, no cabo e no BT, e a entrada da máquina é o
@@ -4784,22 +4555,15 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
             <div class="rot rot-linha">Alto-falante
               <span data-campo="alto-canal-porque" data-hef-alvo="atributo" data-hef-atributo="title"><span class="selo-ativo no-rotulo" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M17 8.5a5 5 0 0 1 0 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="alto-canal" data-hef-alvo="html"><i class="nada"></i></span></span></span>
               <span class="selo-som" data-campo="alto-selo" data-hef-alvo="html"><i class="nada"></i></span>
-              <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
-                <b>Efeitos do jogo no controle, áudio do PC no PC</b>: só o que o jogo mandar para este controle sai no alto-falante dele.
-                <b>Efeitos do jogo e áudio do PC no controle</b>: tudo o que a máquina toca cai aqui também, e continua saindo no PC.
-                <b>Tudo no PC e nada no controle</b>: o alto-falante deste controle para de tocar, e todo o som, inclusive o dele, sai no PC.
-                <b>Tudo no controle e nada no PC</b>: todo o som do PC sai só no alto-falante deste controle, e o PC fica em silêncio.
-              </span></span>
             </div>
             <span class="onda" data-campo="alto-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="alto-onda-0" data-hef-alvo="altura" style="height:80%"></i><i data-campo="alto-onda-1" data-hef-alvo="altura" style="height:66%"></i><i data-campo="alto-onda-2" data-hef-alvo="altura" style="height:74%"></i><i data-campo="alto-onda-3" data-hef-alvo="altura" style="height:58%"></i><i data-campo="alto-onda-4" data-hef-alvo="altura" style="height:84%"></i><i data-campo="alto-onda-5" data-hef-alvo="altura" style="height:62%"></i><i data-campo="alto-onda-6" data-hef-alvo="altura" style="height:70%"></i><i data-campo="alto-onda-7" data-hef-alvo="altura" style="height:76%"></i><i data-campo="alto-onda-8" data-hef-alvo="altura" style="height:54%"></i><i data-campo="alto-onda-9" data-hef-alvo="altura" style="height:68%"></i><i data-campo="alto-onda-10" data-hef-alvo="altura" style="height:60%"></i><i data-campo="alto-onda-11" data-hef-alvo="altura" style="height:78%"></i><i data-campo="alto-onda-12" data-hef-alvo="altura" style="height:64%"></i><i data-campo="alto-onda-13" data-hef-alvo="altura" style="height:72%"></i></span>
-            <div class="vol" data-campo="alto-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
-              <button class="padrao-i" type="button" data-gesto="volume-padrao" data-campo="alto-padrao" data-hef-alvo="classe" data-hef-classe="on" title="Ligado: o volume é o do jogo, sem ajuste. Desligado: você escolhe o volume deste alto-falante.">Padrão</button>
+            <div class="porque-dica" data-campo="alto-porque" data-hef-alvo="atributo" data-hef-atributo="data-dica"><div class="vol" data-campo="alto-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
+              <button class="padrao-i" type="button" data-gesto="volume-padrao" data-campo="alto-padrao" data-hef-alvo="classe" data-hef-classe="on" data-dica="Volume do jogo, sem ajuste">Padrão</button>
               <span class="trilho"><span class="cheio" data-campo="alto-barra"
-                data-hef-alvo="largura" style="width:80%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="80" data-gesto="volume" data-volume="alto-falante" data-campo="alto-barra" data-hef-alvo="valor" aria-label="Volume do alto-falante deste controle" title="Arraste para escolher o volume do alto-falante deste controle. O primeiro arrasto é o que destrava o ♪."></span>
+                data-hef-alvo="largura" style="width:80%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="80" data-gesto="volume" data-volume="alto-falante" data-campo="alto-barra" data-hef-alvo="valor" aria-label="Volume do alto-falante deste controle" data-dica="Volume do alto-falante deste controle"></span>
               <span class="n" data-campo="alto-num">—</span>
-              <button class="mudo-i" data-gesto="mudo" data-mudo="alto-falante" data-campo="alto-mudo" data-hef-alvo="atributo" data-hef-atributo="data-som" title="Cala o alto-falante do controle, sem perder o volume guardado. A partir daqui quem guarda esse volume é o Hefesto.">♪</button>
-              <span class="ajuda porque">?<span class="dica" data-campo="alto-porque" data-hef-alvo="html"><i class="nada"></i></span></span>
-            </div>
+              <button class="mudo-i" data-gesto="mudo" data-mudo="alto-falante" data-campo="alto-mudo" data-hef-alvo="atributo" data-hef-atributo="data-som" data-dica="Cala o alto-falante sem perder o volume">♪</button>
+            </div></div>
             <!-- TRÊS BOTÕES, UMA PERGUNTA — 10/09/2026 (a A3). A fileira
                  responde *"o que este controle ouve?"*, e o terceiro estado é
                  a `fonte` que o produto já obedecia sem ninguém poder
@@ -4820,13 +4584,10 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                  quebra em duas linhas; da janela de 1440 para cima cabem numa
                  só. A gramática não muda: mesmo gesto, mesmo endereço, cada
                  botão com o seu valor. -->
-            <div class="rota quatro">
-              <button class="" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">Efeitos do jogo no controle, áudio do PC no PC</button>
-              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="O som do PC sai no alto-falante deste controle e continua saindo no PC. Serve para jogar acompanhado: cada um ouve no próprio controle.">Efeitos do jogo e áudio do PC no controle</button>
-              <span class="par">
-                <button class="" data-gesto="rota" data-rota="nada" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="nada" title="Todo o som, inclusive o deste controle, sai no PC, e o alto-falante deste controle para de tocar. O microfone e a vibração não mudam.">Tudo no PC e nada no controle</button>
-                <button data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc" title="Todo o som do PC sai só no alto-falante deste controle, e o PC fica em silêncio. Vale para um controle por vez. O microfone e a vibração não mudam.">Tudo no controle e nada no PC</button>
-              </span>
+            <div class="rota trio">
+              <button class="" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo" data-dica="Efeitos do jogo no controle; o som do PC no PC">Canais sonoros nativos - Padrão</button>
+              <button data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc" data-dica="Todo o som sai no controle; o PC fica mudo">Canais sonoros apenas no DualSense</button>
+              <button class="" data-gesto="rota" data-rota="nada" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="nada" data-dica="Todo o som sai no PC; o controle fica mudo">Canais sonoros apenas no PC</button>
             </div>
           </div>
         </div>
@@ -4850,14 +4611,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                Os números do acelerômetro do P1 são MEDIDOS, no daemon vivo:
                {'x': 0.105, 'y': 0.976, 'z': 0.170} — |v| = 0,996 g, a gravidade. -->
           <div class="moldura leituras" data-bloco="giroscopio">
-            <div class="rot">Giroscópio
-              <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica" style="left:auto;right:22px">
-                Leitura viva do controle.<br><br>
-                O <b>giroscópio</b> mede o quanto ele gira, em graus por segundo;
-                o <b>acelerômetro</b> mede a inclinação, em g.<br><br>
-                Um traço no lugar do número quer dizer que a leitura ainda não chegou.
-              </span></span>
-            </div>
+            <div class="rot" data-dica="Leitura viva, em graus por segundo">Giroscópio</div>
             <div class="eixo" data-eixo="giro-x"><span>X</span><span data-campo="giro-x">—</span>
               <span class="g" data-campo="giro-x-cor" data-hef-alvo="cor" style="color:var(--cyan)"><span
                 class="v neg" data-campo="giro-x-neg" data-hef-alvo="largura" style="width:2%"></span><span

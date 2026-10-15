@@ -964,7 +964,6 @@
      Desligado ○ ]`, tudo numa linha. O orçamento hoje é outro (a subida do
      interruptor DEVOLVEU 13px em vez de custar), mas a forma é do usuário. */
   .hef-linha{display:flex;align-items:center;gap:8px}
-  .hef-linha .ajuda{margin-left:2px}
   .hef-linha .linha-rot{margin-bottom:0;flex:0 0 auto;margin-right:6px}
   .hef-pos{
     height:var(--h-escolha);display:inline-flex;align-items:center;gap:9px;
@@ -1064,6 +1063,17 @@
      que lê `color` fica cega a isso. Aqui é cor explícita, borda tracejada — que
      é como esta casa já escreve "isto ainda não vale" (`.avisos.vazio`,
      `.pendente`) — e o cursor de "não clique". O porquê está no `title`. */
+  /* AS CORES DO DESLIGADO SÃO AS DA BARRA DE LUZ — A-ABA-JOGAR-DO-TODO-01, 15/10/2026: o chip
+     aceso pisca na cor em que o controle pisca (`hotkey.CORES_DO_MODO`): Nativo branco, Steam
+     Input ciano, Navegação laranja. O `rgb` de cada uma está lá; aqui é o mesmo valor em hex. */
+  .so-desligado .degrau.on[data-hef-quando="nativo"]{
+    border-color:#f8f8f2;background:rgba(248,248,242,.12);color:#fff}
+  .so-desligado .degrau.on[data-hef-quando="steam"]{
+    border-color:#8be9fd;background:rgba(139,233,253,.13);color:#d4f6fe}
+  .so-desligado .degrau.on[data-hef-quando="navegacao"]{
+    border-color:#ffb86c;background:rgba(255,184,108,.13);color:#ffd9b0}
+  /* TODO ALVO CLICÁVEL TEM NO MÍNIMO 24px (WCAG 2.5.8). */
+  [data-gesto]{min-height:24px}
   .degrau.sem-dono{border-style:dashed;color:var(--comment);cursor:not-allowed}
   .degrau.sem-dono:hover{border-color:var(--linha);color:var(--comment)}
   .degrau.sem-dono i{border-style:dashed}
@@ -1284,13 +1294,23 @@
      desce 9 px. A Jogar é a aba com mais vão vertical (109 px), e a página
      continua sem rolar — `tests/unit/test_o_modo_freestyle.py` mede as duas
      coisas no desenho. */
-  .cadeado{display:inline-flex;align-items:center;justify-content:center;gap:7px;
-           margin-left:auto;height:26px;flex:0 0 auto;white-space:nowrap;
-           border-radius:7px;padding:0 12px;font-size:12.5px;font-family:inherit;
-           cursor:pointer;
-           border:1px solid var(--border-forte);background:var(--app-bg);
+  /* O «MODO FREESTYLE» E O «RECONECTAR» TÊM A MESMA PÍLULA — A-ABA-JOGAR-DO-TODO-01, 15/10/2026,
+     rodada 4: 34px de altura, 166px de largura e a letra de 13,5px do `.modo-auto` da base
+     comum, para os dois botões de canto lerem como irmãos. Antes eram 26px e 12,5px. A
+     largura é uma variável só, para os dois nunca divergirem. */
+  .quadro-topo{--w-canto:166px}
+  .quadro-topo > .cadeado,.quadro-topo > .canto{
+    display:inline-flex;align-items:center;justify-content:center;gap:9px;flex:0 0 auto;
+    margin-left:auto;width:var(--w-canto);height:34px;padding:0 16px 0 12px;
+    box-sizing:border-box;border-radius:999px;
+    font:600 13.5px/1 'Space Grotesk',system-ui,sans-serif;white-space:nowrap;cursor:pointer}
+  .quadro-topo > .canto{border:1px solid var(--border-forte);background:transparent;
+                        color:var(--texto-suave)}
+  .quadro-topo > .canto:hover{border-color:var(--texto-suave);color:var(--fg)}
+  .quadro-topo > .canto .gira{flex:0 0 auto}
+  .cadeado{border:1px solid var(--border-forte);background:var(--app-bg);
            color:var(--texto-mudo)}
-  .cadeado .p{width:7px;height:7px;border-radius:50%;flex:0 0 auto;
+  .cadeado .p{width:11px;height:11px;border-radius:50%;flex:0 0 auto;
               background:var(--border-forte);box-shadow:none}
   .cadeado.ligada{border-color:var(--green);background:rgba(80,250,123,.09);
                   color:var(--green)}
@@ -1546,8 +1566,6 @@
      Reconectar exatamente UMA vez na página — medido na primeira corrida. */
   .faixa-final{border-top:1px solid var(--rot-linha);padding-top:6px;margin-top:8px}
   .faixa-final .pendente{flex:1 1 0;min-width:0;overflow:hidden}
-  .faixa-final > .btn{flex:none;white-space:nowrap;margin-left:auto;
-                      order:1;align-self:flex-start}
   /* A ATENÇÃO SAIU — 07/09/2026, ordem de produto: *"em jogar remover essa seção do
      atenção, nenhum aviso esse — deixar só o reconectar controles."*
      Aqui moravam as seis regras da `.col-atencao`: a faixa deitada de 30/08
@@ -1637,28 +1655,18 @@
   .faixa-final:not(.ha) .pendente{visibility:hidden}
 
 
-  body.nativo.por-controle :is([data-gesto],[data-modo],[data-hef-gesto],[data-papel],[data-forca],[data-player],[data-sensor],[data-rota],[data-mudo],[data-mic-modo],[data-v]):not(:is([data-gesto=cadeado],[data-gesto=hefesto],[data-gesto=modo-nativo],[data-gesto=modo-steam],[data-gesto=reconectar],.menu-hefesto *)){
+  body.nativo.por-controle :is([data-gesto],[data-modo],[data-hef-gesto],[data-papel],[data-forca],[data-player],[data-sensor],[data-rota],[data-mudo],[data-mic-modo],[data-v]):not(:is([data-gesto=cadeado],[data-gesto=hefesto],[data-gesto=modo-nativo],[data-gesto=modo-steam],[data-gesto=modo-navegacao],[data-gesto=reconectar],.menu-hefesto *)){
     pointer-events:none;cursor:default;-webkit-appearance:none;appearance:none;
     background:transparent!important;border-color:var(--border-sutil)!important;
     color:var(--comment)!important;font-weight:400!important;box-shadow:none!important}
   body.nativo.por-controle .nativo-nao{pointer-events:none;cursor:default;
     background:transparent!important;border-color:var(--border-sutil)!important;
     color:var(--comment)!important;font-weight:400!important;box-shadow:none!important}
-  body.nativo.por-controle :is([data-gesto=cadeado],[data-gesto=hefesto],[data-gesto=modo-nativo],[data-gesto=modo-steam],[data-gesto=reconectar]){pointer-events:auto}
+  body.nativo.por-controle :is([data-gesto=cadeado],[data-gesto=hefesto],[data-gesto=modo-nativo],[data-gesto=modo-steam],[data-gesto=modo-navegacao],[data-gesto=reconectar]){pointer-events:auto}
   body.nativo.por-controle .guardar,body.nativo.por-controle .par-modo,
   body.nativo.por-controle .modo-auto,
   body.nativo.por-controle .r-aplicar,body.nativo.por-controle .r-salvar,
   body.nativo.por-controle .r-importar{visibility:hidden}
-
-  .ajuda{width:17px;height:17px;border-radius:50%;flex:0 0 17px;border:1px solid var(--linha);
-    color:var(--texto-mudo);font-size:11px;line-height:15px;text-align:center;cursor:help;position:relative}
-  .ajuda:hover,.ajuda:focus{border-color:var(--cyan);color:var(--cyan);outline:none}
-  .ajuda:hover .dica,.ajuda:focus .dica,.ajuda:focus-within .dica{display:block}
-  .quadro-topo .par-modo + .ajuda.esq .dica{left:auto;right:22px}
-  .btn:not(.apagado) + .ajuda.porque,.seg button:not(.apagado) + .ajuda.porque{display:none}
-  .ajuda.porque:has(.dica:empty),.ajuda.porque:has(.nada){display:none}
-  .ajuda.porque{align-self:center;margin-left:-4px}
-  body.nativo.por-controle .par-modo + .ajuda{visibility:hidden}
 </style>
 <style id="base-comum">
 /* ===== Base comum das abas (rodada 2, 12/10/2026) =====
@@ -2234,15 +2242,10 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
         <span class="linha-rot">Status</span>
         <label class="hef-pos ligado" for="hef-ligado" data-gesto="hefesto" data-modo="gamepad"
                data-campo="hef-posicao" data-hef-alvo="classe" data-hef-quando="ligado"
-               title="O Hefesto acende a luz, faz o controle vibrar, numera os jogadores e escolhe como o jogo vê o controle."><span class="pino"></span>Ligado</label>
+               data-dica="Luz, vibração, gatilho e número do jogador pelo Hefesto"><span class="pino"></span>Ligado</label>
         <label class="hef-pos desligado" for="hef-desligado" data-gesto="hefesto" data-modo="native"
                data-campo="hef-posicao" data-hef-alvo="classe" data-hef-quando="desligado"
-               title="Modo nativo: o jogo fala direto com o controle, e quem conta os jogadores passa a ser o jogo."><span class="pino"></span>Desligado</label>
-        <span class="ajuda">?<span class="dica">
-          <b>Ligado</b> — o Hefesto cuida da luz, da vibração, do gatilho e do número do jogador.<br><br>
-          <b>Desligado</b> — o jogo fala direto com o controle, e quem conta os jogadores passa a ser o jogo.<br><br>
-          Isto não para o serviço: para isso, a aba <b>Sistema</b>.
-        </span></span>
+               data-dica="Nenhum jogo recebe controle do Hefesto"><span class="pino"></span>Desligado</label>
       </div>
     </div>
 
@@ -2250,16 +2253,9 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
          O que sobra aqui é o que o lançamento decide de verdade. -->
     <div class="quadro">
       <div class="quadro-topo">
-        <span class="quadro-titulo">Modo</span>
-        <!-- O `?` DOS MODOS SUBIU do rótulo "Modo" para cá em 31/08 à tarde, e é
-             consequência do interruptor ter saído: com só os modos dentro, a
-             ajuda do quadro É a ajuda dos modos, e dois `?` a três linhas um do
-             outro diriam a mesma coisa duas vezes. De quebra, os rótulos das
-             duas seções ficaram idênticos — texto puro dos dois lados. -->
-        <span class="ajuda">?<span class="dica">
-          Como o controle chega ao jogo. O Hefesto <b>tenta na ordem desta lista</b> e para no primeiro que der certo.<br><br>
-          <b>PS + R3</b> pula para o próximo.
-        </span></span>
+        <!-- SEM «?» — A-ABA-JOGAR-DO-TODO-01, 15/10/2026: a ajuda dos modos é a dica do
+             título, no mouse ou no foco. -->
+        <span class="quadro-titulo" data-dica="Como o controle chega ao jogo. PS + R3 pula">Modo</span>
         <!-- ---------- O CADEADO DA TROCA AUTOMÁTICA, NO CANTO ----------
              08/09/2026, pedido olhando a aba: *"esse não trocar de perfil.
              Pode colocar ele no canto superior direito do bloco tipo esse banco
@@ -2298,7 +2294,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
              linha de título sem quebrar o quadro na única máquina em que ela
              aparece — a que tem o detector cego. Os dois seguem no mesmo bloco,
              a um palmo um do outro. -->
-        <button class="cadeado" data-gesto="cadeado" data-campo="cadeado" data-hef-alvo="classe" data-hef-classe="ligada" data-hef-quando="LIGADO" title="O perfil ativo continua valendo mesmo quando você abre outro jogo. Desligue para o Hefesto voltar a escolher sozinho."><span class="p"></span>Modo Freestyle</button>
+        <button class="cadeado" data-gesto="cadeado" data-campo="cadeado" data-hef-alvo="classe" data-hef-classe="ligada" data-hef-quando="LIGADO" data-dica="O perfil ativo vale em qualquer jogo"><span class="p"></span>Modo Freestyle</button>
       </div>
       <div class="quadro-corpo hef">
 
@@ -2312,13 +2308,13 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
           <div class="escada">
             <span class="degrau on" data-degrau="dualsense" data-gesto="modo-dualsense"
                   data-campo="modo-aceso" data-hef-alvo="classe" data-hef-quando="dualsense"
-                  title="O Hefesto entrega o controle ao jogo pelo canal próprio do DualSense.">Sony DualSense</span>
+                  data-dica="Pelo canal próprio do DualSense">Sony DualSense</span>
             <span class="degrau" data-degrau="xbox" data-gesto="modo-xbox"
                   data-campo="modo-aceso" data-hef-alvo="classe" data-hef-quando="xbox"
-                  title="O Hefesto entrega o controle ao jogo pelo canal comum, o mesmo do controle de Xbox.">Xbox</span>
-            <span class="degrau" data-degrau="navegacao" data-gesto="modo-navegacao" data-modo="desktop"
-                  data-campo="modo-aceso" data-hef-alvo="classe" data-hef-quando="navegacao"
-                  title="O controle vira teclado e mouse do computador.">Navegação</span>
+                  data-dica="Pelo canal comum, igual ao controle de Xbox">Xbox</span>
+            <span class="degrau" data-degrau="pointclick" data-gesto="modo-point-and-click" data-modo="desktop"
+                  data-campo="modo-aceso" data-hef-alvo="classe" data-hef-quando="pointclick"
+                  data-dica="Apontar e clicar, pelo perfil da aba Navegação">Point and click</span>
           </div>
         </div>
 
@@ -2328,10 +2324,13 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
           <div class="escada">
             <span class="degrau on" data-gesto="modo-nativo"
                   data-campo="modo-aceso" data-hef-alvo="classe" data-hef-quando="nativo"
-                  title="O jogo fala direto com o controle, e a Steam fica de fora.">Nativo</span>
+                  data-dica="O jogo fala direto com o controle, sem Steam">Nativo</span>
             <span class="degrau" data-degrau="steam" data-gesto="modo-steam"
                   data-campo="steam-input-aceso" data-hef-alvo="classe" data-hef-quando="steam"
-                  title="A Steam traduz o controle para este jogo.">Steam Input</span>
+                  data-dica="A Steam traduz o controle para o jogo">Steam Input</span>
+            <span class="degrau" data-degrau="navegacao" data-gesto="modo-navegacao" data-modo="desktop"
+                  data-campo="modo-aceso" data-hef-alvo="classe" data-hef-quando="navegacao"
+                  data-dica="Vira mouse e teclado; o Hefesto segue lendo o controle">Navegação</span>
           </div>
         </div>
 
@@ -2397,17 +2396,11 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     <!-- ---------- UM BLOCO SÓ: Conectado agora | Atenção ---------- -->
     <div class="quadro">
       <div class="quadro-topo">
-        <span class="quadro-titulo">O controle é visto como:</span>
-        <!-- AS DUAS DICAS VIRARAM UMA — 31/08/2026, quando o usuário mandou o rótulo
-             "O jogo vê cada controle como:" subir para o título. Com o rótulo
-             fora, dois `?` a três linhas um do outro diriam a mesma coisa duas
-             vezes: é o mesmo movimento que o `?` dos modos já tinha feito. -->
-        <span class="ajuda">?<span class="dica">
-          A máscara é <b>por controle</b> e muda só <b>o desenho dos botões no jogo</b>.<br><br>
-          <b>DualSense</b> — △ ○ ✕ ▢. &nbsp; <b>Xbox 360</b> — Y B A X. &nbsp; <b>Nintendo Pro</b> — X A B Y, com ZL/ZR e − +.<br><br>
-          O controle na sua mão continua o mesmo.<br><br>
-          Clicar num cartão escolhe esse controle lá em cima.
-        </span></span>
+        <span class="quadro-titulo" data-dica="O desenho dos botões no jogo, por controle">O controle é visto como:</span>
+        <!-- O «RECONECTAR» SUBIU PARA O CANTO DO QUADRO — A-ABA-JOGAR-DO-TODO-01, 15/10/2026,
+             rodada 4: ele ficava embaixo, na faixa da pendência, e some do caminho do olho.
+             Mesmo tamanho e altura do «Modo Freestyle» do quadro de cima. O gesto é o mesmo. -->
+        <button class="canto" type="button" data-gesto="reconectar" data-dica="Desliga e liga de novo todos os controles"><svg class="gira" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M10 6a4 4 0 1 1-1.2-2.85" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M9.4 1.2v2.4H7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Reconectar</button>
       </div>
       <div class="quadro-corpo">
 
@@ -2737,7 +2730,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg>
-                <span class="rotulo"><span class="fabricante">Sony <span class="pt">•</span> </span><b data-campo="jogador-espera" data-hef-alvo="classe" data-hef-classe="espera" title="O jogo ainda não recebeu este controle. O número acende quando ele entrar na partida."><span data-campo="jogador">Player 1</span></b><br><span data-campo="identidade">Cosmic Red <span class="pt">•</span> USB</span><span class="e-primario" data-campo="marcador-principal" data-hef-alvo="classe" data-hef-classe="ha" title="É por este controle que o Hefesto navega o computador. Quem o escolhe é o serviço."> <span class="pt">•</span> primário</span><br><span class="bat"><svg class="gl" width="13" height="13" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+                <span class="rotulo"><span class="fabricante">Sony <span class="pt">•</span> </span><b data-campo="jogador-espera" data-hef-alvo="classe" data-hef-classe="espera" data-dica="O número acende quando o jogo receber o controle"><span data-campo="jogador">Player 1</span></b><br><span data-campo="identidade">Cosmic Red <span class="pt">•</span> USB</span><span class="e-primario" data-campo="marcador-principal" data-hef-alvo="classe" data-hef-classe="ha" data-dica="Este controle navega o computador"> <span class="pt">•</span> primário</span><br><span class="bat"><svg class="gl" width="13" height="13" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <rect x="3" y="10" width="22" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
   <path d="M27,14 v4" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
@@ -2750,7 +2743,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                   <span class="chip on" data-gesto="mascara" data-mascara="DualSense" data-campo="mascara-cartao" data-hef-alvo="classe" data-hef-quando="DualSense">DualSense</span>
                   <span class="chip" data-gesto="mascara" data-mascara="Xbox 360" data-campo="mascara-cartao" data-hef-alvo="classe" data-hef-quando="Xbox 360">Xbox 360</span>
                   <span class="chip" data-gesto="mascara" data-mascara="Nintendo Pro" data-campo="mascara-cartao" data-hef-alvo="classe" data-hef-quando="Nintendo Pro">Nintendo Pro</span>
-<span class="visto-fixo" title="Com o Hefesto desligado, o jogo vê o controle como ele é. A máscara que você escolheu volta quando ligar."><svg class="cad" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M3.6 5.2V3.9a2.4 2.4 0 0 1 4.8 0v1.3" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="2.3" y="5.2" width="7.4" height="5.4" rx="1.1" fill="currentColor"/></svg>DualSense</span><span class="visto-legenda">O jogo vê o próprio controle</span>
+<span class="visto-fixo" data-dica="Desligado: o jogo vê o controle como ele é"><svg class="cad" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M3.6 5.2V3.9a2.4 2.4 0 0 1 4.8 0v1.3" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="2.3" y="5.2" width="7.4" height="5.4" rx="1.1" fill="currentColor"/></svg>DualSense</span><span class="visto-legenda">O jogo vê o próprio controle</span>
                 </div>
               </div>
               <div class="cartao"
@@ -3045,7 +3038,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg>
-                <span class="rotulo"><span class="fabricante">Sony <span class="pt">•</span> </span><b data-campo="jogador-espera" data-hef-alvo="classe" data-hef-classe="espera" title="O jogo ainda não recebeu este controle. O número acende quando ele entrar na partida."><span data-campo="jogador">Player 2</span></b><br><span data-campo="identidade">Starlight Blue <span class="pt">•</span> BT</span><span class="e-primario" data-campo="marcador-principal" data-hef-alvo="classe" data-hef-classe="ha" title="É por este controle que o Hefesto navega o computador. Quem o escolhe é o serviço."> <span class="pt">•</span> primário</span><br><span class="bat"><svg class="gl" width="13" height="13" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+                <span class="rotulo"><span class="fabricante">Sony <span class="pt">•</span> </span><b data-campo="jogador-espera" data-hef-alvo="classe" data-hef-classe="espera" data-dica="O número acende quando o jogo receber o controle"><span data-campo="jogador">Player 2</span></b><br><span data-campo="identidade">Starlight Blue <span class="pt">•</span> BT</span><span class="e-primario" data-campo="marcador-principal" data-hef-alvo="classe" data-hef-classe="ha" data-dica="Este controle navega o computador"> <span class="pt">•</span> primário</span><br><span class="bat"><svg class="gl" width="13" height="13" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <rect x="3" y="10" width="22" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
   <path d="M27,14 v4" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
@@ -3058,12 +3051,12 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                   <span class="chip" data-gesto="mascara" data-mascara="DualSense" data-campo="mascara-cartao" data-hef-alvo="classe" data-hef-quando="DualSense">DualSense</span>
                   <span class="chip on" data-gesto="mascara" data-mascara="Xbox 360" data-campo="mascara-cartao" data-hef-alvo="classe" data-hef-quando="Xbox 360">Xbox 360</span>
                   <span class="chip" data-gesto="mascara" data-mascara="Nintendo Pro" data-campo="mascara-cartao" data-hef-alvo="classe" data-hef-quando="Nintendo Pro">Nintendo Pro</span>
-<span class="visto-fixo" title="Com o Hefesto desligado, o jogo vê o controle como ele é. A máscara que você escolheu volta quando ligar."><svg class="cad" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M3.6 5.2V3.9a2.4 2.4 0 0 1 4.8 0v1.3" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="2.3" y="5.2" width="7.4" height="5.4" rx="1.1" fill="currentColor"/></svg>DualSense</span><span class="visto-legenda">O jogo vê o próprio controle</span>
+<span class="visto-fixo" data-dica="Desligado: o jogo vê o controle como ele é"><svg class="cad" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M3.6 5.2V3.9a2.4 2.4 0 0 1 4.8 0v1.3" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="2.3" y="5.2" width="7.4" height="5.4" rx="1.1" fill="currentColor"/></svg>DualSense</span><span class="visto-legenda">O jogo vê o próprio controle</span>
                 </div>
               </div>
               <div class="cartao off"
                    data-controle="p3" data-conectado="nao"
-                   title="Lugar vazio: nenhum controle conectado aqui.">
+                   data-dica="Nenhum controle aqui">
                 <i class="pele" data-campo="plastico" data-hef-alvo="cor" style="color:#74588e"></i>
                 <div class="peca-topo">
                 <svg data-campo="desenho" data-hef-alvo="atributo" data-hef-atributo="data-colorway" data-colorway="galactic-purple" class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
@@ -3354,7 +3347,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg>
-                <span class="rotulo"><span class="fabricante">Sony <span class="pt">•</span> </span><b data-campo="jogador-espera" data-hef-alvo="classe" data-hef-classe="espera" title="O jogo ainda não recebeu este controle. O número acende quando ele entrar na partida."><span data-campo="jogador">—</span></b><br><span data-campo="identidade">—</span><span class="e-primario" data-campo="marcador-principal" data-hef-alvo="classe" data-hef-classe="ha" title="É por este controle que o Hefesto navega o computador. Quem o escolhe é o serviço."> <span class="pt">•</span> primário</span><br><span class="bat"><svg class="gl" width="13" height="13" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+                <span class="rotulo"><span class="fabricante">Sony <span class="pt">•</span> </span><b data-campo="jogador-espera" data-hef-alvo="classe" data-hef-classe="espera" data-dica="O número acende quando o jogo receber o controle"><span data-campo="jogador">—</span></b><br><span data-campo="identidade">—</span><span class="e-primario" data-campo="marcador-principal" data-hef-alvo="classe" data-hef-classe="ha" data-dica="Este controle navega o computador"> <span class="pt">•</span> primário</span><br><span class="bat"><svg class="gl" width="13" height="13" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <rect x="3" y="10" width="22" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
   <path d="M27,14 v4" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
@@ -3367,12 +3360,12 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                   <span class="chip" data-gesto="mascara" data-mascara="DualSense" data-campo="mascara-cartao" data-hef-alvo="classe" data-hef-quando="DualSense">DualSense</span>
                   <span class="chip" data-gesto="mascara" data-mascara="Xbox 360" data-campo="mascara-cartao" data-hef-alvo="classe" data-hef-quando="Xbox 360">Xbox 360</span>
                   <span class="chip" data-gesto="mascara" data-mascara="Nintendo Pro" data-campo="mascara-cartao" data-hef-alvo="classe" data-hef-quando="Nintendo Pro">Nintendo Pro</span>
-<span class="visto-fixo" title="Com o Hefesto desligado, o jogo vê o controle como ele é. A máscara que você escolheu volta quando ligar."><svg class="cad" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M3.6 5.2V3.9a2.4 2.4 0 0 1 4.8 0v1.3" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="2.3" y="5.2" width="7.4" height="5.4" rx="1.1" fill="currentColor"/></svg>DualSense</span><span class="visto-legenda">O jogo vê o próprio controle</span>
+<span class="visto-fixo" data-dica="Desligado: o jogo vê o controle como ele é"><svg class="cad" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M3.6 5.2V3.9a2.4 2.4 0 0 1 4.8 0v1.3" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="2.3" y="5.2" width="7.4" height="5.4" rx="1.1" fill="currentColor"/></svg>DualSense</span><span class="visto-legenda">O jogo vê o próprio controle</span>
                 </div>
               </div>
               <div class="cartao off"
                    data-controle="p4" data-conectado="nao"
-                   title="Lugar vazio: nenhum controle conectado aqui.">
+                   data-dica="Nenhum controle aqui">
                 <i class="pele" data-campo="plastico" data-hef-alvo="cor" style="color:#e4e0d8"></i>
                 <div class="peca-topo">
                 <svg data-campo="desenho" data-hef-alvo="atributo" data-hef-atributo="data-colorway" data-colorway="white" class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
@@ -3663,7 +3656,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg>
-                <span class="rotulo"><span class="fabricante">Sony <span class="pt">•</span> </span><b data-campo="jogador-espera" data-hef-alvo="classe" data-hef-classe="espera" title="O jogo ainda não recebeu este controle. O número acende quando ele entrar na partida."><span data-campo="jogador">—</span></b><br><span data-campo="identidade">—</span><span class="e-primario" data-campo="marcador-principal" data-hef-alvo="classe" data-hef-classe="ha" title="É por este controle que o Hefesto navega o computador. Quem o escolhe é o serviço."> <span class="pt">•</span> primário</span><br><span class="bat"><svg class="gl" width="13" height="13" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+                <span class="rotulo"><span class="fabricante">Sony <span class="pt">•</span> </span><b data-campo="jogador-espera" data-hef-alvo="classe" data-hef-classe="espera" data-dica="O número acende quando o jogo receber o controle"><span data-campo="jogador">—</span></b><br><span data-campo="identidade">—</span><span class="e-primario" data-campo="marcador-principal" data-hef-alvo="classe" data-hef-classe="ha" data-dica="Este controle navega o computador"> <span class="pt">•</span> primário</span><br><span class="bat"><svg class="gl" width="13" height="13" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <rect x="3" y="10" width="22" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
   <path d="M27,14 v4" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
@@ -3676,7 +3669,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                   <span class="chip" data-gesto="mascara" data-mascara="DualSense" data-campo="mascara-cartao" data-hef-alvo="classe" data-hef-quando="DualSense">DualSense</span>
                   <span class="chip" data-gesto="mascara" data-mascara="Xbox 360" data-campo="mascara-cartao" data-hef-alvo="classe" data-hef-quando="Xbox 360">Xbox 360</span>
                   <span class="chip" data-gesto="mascara" data-mascara="Nintendo Pro" data-campo="mascara-cartao" data-hef-alvo="classe" data-hef-quando="Nintendo Pro">Nintendo Pro</span>
-<span class="visto-fixo" title="Com o Hefesto desligado, o jogo vê o controle como ele é. A máscara que você escolheu volta quando ligar."><svg class="cad" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M3.6 5.2V3.9a2.4 2.4 0 0 1 4.8 0v1.3" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="2.3" y="5.2" width="7.4" height="5.4" rx="1.1" fill="currentColor"/></svg>DualSense</span><span class="visto-legenda">O jogo vê o próprio controle</span>
+<span class="visto-fixo" data-dica="Desligado: o jogo vê o controle como ele é"><svg class="cad" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M3.6 5.2V3.9a2.4 2.4 0 0 1 4.8 0v1.3" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="2.3" y="5.2" width="7.4" height="5.4" rx="1.1" fill="currentColor"/></svg>DualSense</span><span class="visto-legenda">O jogo vê o próprio controle</span>
                 </div>
               </div>
               <!-- OS CONTROLES QUE O HEFESTO SÓ VÊ — EXTERNOS-01, 06/09/2026, e
@@ -3730,7 +3723,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
             <span>●</span>
             <span>Vai mudar para <b data-campo="pendente-alvo">Sony DualSense</b> quando você clicar em <b>Aplicar</b></span>
           </div>
-          <button class="btn" data-gesto="reconectar">Reconectar controles</button>
           <!-- A FAIXA DO RECIBO SAIU — 13/09/2026, JOGAR-A-FAIXA-QUE-PULA-01.
                Ela nasceu na JOGAR-02 §3 (09/09) para o recibo do Reconectar
                deixar de cobrir a identidade do P1 no cartão. Medido no piloto:
