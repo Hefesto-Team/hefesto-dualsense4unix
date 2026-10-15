@@ -1345,10 +1345,24 @@ A cura: o autoswitch e o lançamento (`origin="launch"`) gravam o perfil em
 `ultimo_jogo.json` só na troca; o `_o_nome_que_o_boot_restaura` o põe depois do
 Freestyle e do jogo em cena e antes da escolha, e o primeiro pad nasce no modo
 dele (`perfil_que_o_boot_restaura`). O gesto dela (`gravar_a_escolha`) e o perfil
-apagado (`ProfileManager.delete`) tiram a memória. Depois do boot, o autoswitch
-lê o disco uma vez (`_o_boot_veio_do_ultimo_jogo`), para a primeira janela sem
-perfil próprio não devolver a escolha. O `resolve_boot_profile` continua sendo a
-escolha do usuário: a aba Perfis destaca o que ela ativou, não o do jogo.
+apagado (`ProfileManager.delete`) tiram a memória. O `resolve_boot_profile`
+continua sendo a escolha do usuário: a aba Perfis destaca o que ela ativou, não o
+do jogo.
+
+**A corrida do boot** (medida às 20h52 de 14/10/2026, com o `dev` `7b5901cca`): o
+Sackboy fechou, a Steam saiu e o serviço reiniciou com o terminal em foco. O
+primeiro tique do autoswitch chegou 1,8 s ANTES do restauro, com a crença `None`,
+e a queda do «sem candidato» foi à escolha à mão («Lure Of Passion»); o restauro
+pôs o Sackboy, e o tique seguinte pôs o «Lure» de novo. O `_activate` ainda gravou
+o «Lure» no `ultimo_jogo.json`, porque ele tem regra `steam_app_3851570` e passava
+por perfil de jogo: o disco perdeu o jogo de verdade. A cura não depende de ordem
+nem de tempo: a queda do «sem candidato» tem um dono, o
+`AutoSwitcher._o_ultimo_jogo_que_vale`, que devolve o último jogo antes da escolha
+também com a crença vazia. A memória do autoswitch é o espelho do disco, relida no
+primeiro tique e sempre que outro troca o perfil (`_perfil_corrente`: o boot, o
+lançamento, o gesto do usuário); o disco só vale quando a crença está vazia ou
+aponta o próprio jogo, para que o perfil que outro pôs por cima não volte ao jogo.
+E o perfil que entra pela escolha nunca grava nem apaga a memória do jogo.
 
 Nota datada de 01/10/2026, que morava na docstring do `_o_nome_que_o_boot_restaura`:
 ali morava a RESTORE-ESCOPO-01 (22/07), que pulava todo perfil com regra de janela,

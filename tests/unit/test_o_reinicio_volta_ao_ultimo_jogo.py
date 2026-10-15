@@ -10,13 +10,14 @@ mudança dela nem jogo novo.
 from __future__ import annotations
 
 import pytest
+import structlog
 
 from hefesto_dualsense4unix.daemon.connection import (
     _o_nome_que_o_boot_restaura,
     perfil_que_o_boot_restaura,
 )
 from hefesto_dualsense4unix.profiles.loader import NOME_DO_PADRAO
-from hefesto_dualsense4unix.profiles.schema import ProfileModeConfig
+from hefesto_dualsense4unix.profiles.schema import ProfileModeConfig, perfil_e_de_jogo
 from hefesto_dualsense4unix.utils import session
 from tests.unit.test_foco_errante_01_a_janela_da_steam_nao_tira_o_perfil import (
     CLASSE_DO_JOGO,
@@ -160,3 +161,113 @@ def test_depois_do_boot_a_janela_com_perfil_proprio_tira_a_memoria_do_disco() ->
     assert store.active_profile == "kodi", "premissa: a janela com perfil próprio entrou"
     assert session._ultimo_jogo_cru() is None, "a memória do jogo ficou no disco"
     assert _o_nome_que_o_boot_restaura(None) == "lure"
+
+
+def _espiar_o_disco(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """Anota cada gravação do `ultimo_jogo.json`, e grava de verdade."""
+    gravados: list[str] = []
+    original = session.lembrar_o_ultimo_jogo
+
+    def _grava(nome: str) -> None:
+        gravados.append(nome)
+        original(nome)
+
+    monkeypatch.setattr(session, "lembrar_o_ultimo_jogo", _grava)
+    return gravados
+
+
+@pytest.mark.usefixtures("perfis_isolados")
+def test_o_primeiro_tique_antes_do_boot_escolhe_o_ultimo_jogo(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A CORRIDA: o tique do autoswitch chega antes do restauro do boot, com a crença vazia.
+
+    Medido às 20h52 de 14/10/2026: o primeiro tique (``from_=None``, o terminal em
+    foco) pôs a escolha à mão («Lure Of Passion») 1,8 s antes de o boot restaurar
+    o Sackboy, e o tique seguinte pôs o «Lure» de novo, por cima. O último jogo
+    vale com a crença ``None``, em qualquer ordem, e o disco não se regrava.
+
+    MORDIDA: faça o ``_o_ultimo_jogo_que_vale`` devolver ``None`` e o «lure» entra.
+    """
+    _jogou_e_fechou()
+    gravados = _espiar_o_disco(monkeypatch)
+    manager, store = _bancada(_os_perfis())
+    assert store.active_profile is None, "premissa: o boot ainda não restaurou nada"
+    sw = _switcher(manager, store, jogo_vivo=lambda: None)
+    with structlog.testing.capture_logs() as diario:
+        for i in range(4):
+            sw._tick(dict(JANELA_DO_TERMINAL), 0.5 * i)
+        assert store.active_profile == "sackboy", "o primeiro tique pôs a escolha"
+        manager.activate(_o_nome_que_o_boot_restaura(store), origin="system")
+        for i in range(60):
+            sw._tick(dict(JANELA_DO_TERMINAL), 2.0 + 0.5 * i)
+    assert store.active_profile == "sackboy"
+    assert not [r for r in diario if r.get("to") == "lure"], "a escolha passou por cima"
+    assert gravados == [], "o tique regravou o disco com o que já estava lá"
+    assert session._ultimo_jogo_cru() == "sackboy"
+
+
+@pytest.mark.usefixtures("perfis_isolados")
+def test_o_boot_antes_do_primeiro_tique_tambem_fica_no_ultimo_jogo() -> None:
+    """A outra ordem da corrida: o restauro primeiro, e o tique acha o último jogo ativo."""
+    _jogou_e_fechou()
+    manager, store = _bancada(_os_perfis())
+    manager.activate(_o_nome_que_o_boot_restaura(store), origin="system")
+    sw = _switcher(manager, store, jogo_vivo=lambda: None)
+    for i in range(60):
+        sw._tick(dict(JANELA_DO_TERMINAL), 0.5 * i)
+    assert store.active_profile == "sackboy"
+    assert session._ultimo_jogo_cru() == "sackboy"
+
+
+@pytest.mark.usefixtures("perfis_isolados")
+def test_a_escolha_que_e_perfil_de_jogo_nao_vira_o_ultimo_jogo(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A MEMÓRIA CONTAMINADA: a escolha entra pelo «sem candidato» e não grava o último jogo.
+
+    Medido às 20h52 de 14/10/2026: o «Lure Of Passion» (regra ``steam_app_3851570``)
+    entrou como escolha à mão, e o ``o_ultimo_jogo_lembrado`` o gravou por cima do
+    Sackboy. O perfil que entra pela escolha nunca grava nem apaga a memória do jogo.
+
+    MORDIDA: tire o ``if not veio_da_escolha`` do ``_activate`` e o disco diz «lure».
+    """
+    gravados = _espiar_o_disco(monkeypatch)
+    manager, store = _bancada(_os_perfis())
+    _a_escolha_a_mao_e_o_lure()
+    assert perfil_e_de_jogo(manager.get("lure")), "premissa: a escolha é perfil de jogo"
+    sw = _switcher(manager, store, jogo_vivo=lambda: None)
+    for i in range(10):
+        sw._tick(dict(JANELA_DO_TERMINAL), 0.5 * i)
+    assert store.active_profile == "lure", "premissa: a escolha entrou pelo «sem candidato»"
+    assert gravados == []
+    assert session._ultimo_jogo_cru() is None
+
+
+@pytest.mark.usefixtures("perfis_isolados")
+def test_o_jogo_que_o_lancamento_pos_fica_mesmo_sem_a_janela_dele() -> None:
+    """O lançamento troca o último jogo por fora do autoswitch: a memória dele segue o disco.
+
+    O boot abriu na escolha, e o autoswitch passou a lembrar o Sackboy (ele o pôs
+    pela janela); o lançamento pôs o
+    «lure» (``origin=launch``, que grava o disco). Com o terminal em foco e a
+    janela do jogo nunca vista, a memória velha não casava com o perfil que vale,
+    e a escolha entrava.
+
+    MORDIDA: tire a releitura do disco que a crença sincronizada arma no
+    ``_perfil_corrente`` e a escolha («leitura») entra.
+    """
+    leitura = _perfil("leitura")
+    manager, store = _bancada([*_os_perfis(), leitura])
+    session.gravar_a_escolha("leitura")
+    manager.activate("leitura", origin="system")
+    sw = _switcher(manager, store, jogo_vivo=lambda: None)
+    sw._tick(dict(JANELA_DO_TERMINAL), 0.0)
+    sw._tick(dict(JANELA_DO_JOGO), 0.5)
+    sw._tick(dict(JANELA_DO_JOGO), 1.0)
+    assert store.active_profile == "sackboy", "premissa: o autoswitch entrou no jogo"
+    manager.activate("lure", origin="launch")
+    for i in range(60):
+        sw._tick(dict(JANELA_DO_TERMINAL), 2.0 + 0.5 * i)
+    assert store.active_profile == "lure"
+    assert session._ultimo_jogo_cru() == "lure"

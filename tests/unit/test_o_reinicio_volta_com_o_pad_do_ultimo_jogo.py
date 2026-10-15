@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import asyncio
 
+import pytest
+
 from hefesto_dualsense4unix.core.controller import ControllerState
 from hefesto_dualsense4unix.core.events import EventBus
 from hefesto_dualsense4unix.daemon import lifecycle
@@ -113,3 +115,46 @@ def test_sem_ultimo_jogo_o_flag_desligado_governa_o_boot(
     asyncio.run(_o_reinicio(DELA))
 
     assert _lar.count("pad") == 0, "a escolha de fora do jogo ligou o pad por cima do flag"
+
+
+def test_o_tique_que_chega_antes_do_restauro_tambem_sobe_o_pad_do_ultimo_jogo(
+    _lar: list[str],  # noqa: F811
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A CORRIDA no `Daemon` REAL: o tique do autoswitch vem antes do restauro do boot.
+
+    Medido às 20h52 de 14/10/2026: com o terminal em foco, o primeiro tique
+    (crença ``None``) pôs a escolha à mão 1,8 s antes de o restauro chegar, e o
+    pad do jogo morreu. O tique roda aqui pelo gerente do daemon (o mesmo do
+    autoswitch, com o applier do modo), logo antes do restauro de verdade.
+
+    MORDIDA: faça o ``AutoSwitcher._o_ultimo_jogo_que_vale`` devolver ``None`` e o
+    boot abre na escolha (``DO USUÁRIO``), com o disco regravado nela.
+    """
+    from hefesto_dualsense4unix.daemon import connection
+    from hefesto_dualsense4unix.profiles.autoswitch import AutoSwitcher
+    from hefesto_dualsense4unix.profiles.manager import gerente_do_daemon
+
+    _o_disco(ultimo_jogo=True)
+    restauro = connection.restore_last_profile
+    tiques: list[str | None] = []
+
+    async def _o_tique_e_depois_o_restauro(daemon: lifecycle.Daemon) -> None:
+        sw = AutoSwitcher(
+            manager=gerente_do_daemon(daemon, store=daemon.store),
+            window_reader=lambda: {},
+            store=daemon.store,
+            jogo_vivo_reader=lambda: None,
+        )
+        for i in range(4):
+            sw._tick({"wm_class": "com.system76.CosmicTerm", "wm_name": "Terminal"}, 0.5 * i)
+        tiques.append(daemon.store.active_profile)
+        await restauro(daemon)
+
+    monkeypatch.setattr(connection, "restore_last_profile", _o_tique_e_depois_o_restauro)
+
+    daemon = asyncio.run(_o_reinicio(JOGO))
+
+    assert tiques == [JOGO], f"o tique antes do restauro pôs {tiques!r}"
+    assert gp.caminho_da_sessao(daemon) == "xbox"
+    assert session._ultimo_jogo_cru() == JOGO, "o disco do último jogo foi regravado"

@@ -167,9 +167,11 @@ class AutoSwitcher:
     _freestyle_log_key: str | None = None
     _fica_log_key: str | None = None
     _lancador_log_key: str | None = None
-    #: O perfil de JOGO que a última ativação pôs (o nome), enquanto ele vale.
+    #: O perfil do último jogo (o nome), espelho do `ultimo_jogo.json` enquanto ele vale.
     _perfil_do_ultimo_jogo: str | None = None
-    _ultimo_jogo_do_boot_lido: bool = False
+    #: O espelho está em dia? Nasce falso e volta a falso quando outro troca o perfil.
+    _ultimo_jogo_lido: bool = False
+    _ultimo_jogo_perfil: Profile | None = None
     _estado_modo_jogo_padrao: str = ""
     _exclusao_em_foco: str | None = None
     _recusa_log_key: tuple[str, str] | None = None
@@ -300,6 +302,8 @@ class AutoSwitcher:
             self._current_especifico = True
             if ativo != self._entrou_pelo_jogo:
                 self._entrou_pelo_jogo = None
+            # Outro trocou o perfil (boot, lançamento, gesto do usuário): o último jogo se relê.
+            self._ultimo_jogo_lido = False
             logger.info(
                 "autoswitch_crenca_sincronizada",
                 de=anterior or "",
@@ -388,13 +392,17 @@ class AutoSwitcher:
                 do_jogo = self._perfil_do_jogo_em_cena()
                 if do_jogo is not None:
                     profile, motivo, veio_do_jogo = do_jogo, MOTIVO_SEM_CANDIDATO, True
-        if profile is None and motivo == MOTIVO_SEM_CANDIDATO and self._fica_no_ultimo_jogo(info):
-            return
+        veio_do_ultimo_jogo = veio_da_escolha = False
+        if profile is None and motivo == MOTIVO_SEM_CANDIDATO:
+            profile = self._o_ultimo_jogo_que_vale()
+            veio_do_ultimo_jogo = profile is not None
+            if profile is not None and profile.name == self._current_profile:
+                self._fica_no_ultimo_jogo(info, profile.name)
+                return
         if not sem_informacao and not veio_do_jogo and self._o_lancador_nao_ativa(info):
             return
         self._fica_log_key = None
         self._lancador_log_key = None
-        veio_da_escolha = False
         if profile is None and motivo == MOTIVO_SEM_CANDIDATO:
             profile = self._perfil_da_escolha()
             veio_da_escolha = profile is not None
@@ -436,22 +444,56 @@ class AutoSwitcher:
                 profile,
                 veio_da_escolha=veio_da_escolha,
                 veio_do_jogo=veio_do_jogo,
+                veio_do_ultimo_jogo=veio_do_ultimo_jogo,
             )
 
-    def _fica_no_ultimo_jogo(self, info: dict[str, Any]) -> bool:
-        """O perfil do último jogo FICA quando a janela não tem perfil próprio?
+    def _o_ultimo_jogo_que_vale(self) -> Profile | None:
+        """O perfil do último jogo, que vale antes da escolha quando a janela não tem perfil.
+
+        O dono da queda do «sem candidato» (D-1410-O-PERFIL-FICA-NO-ULTIMO-JOGO):
+        só sem último jogo a escolha entra, também com a crença ``None``. A memória
+        espelha o disco (`utils.session.o_ultimo_jogo`), relido no primeiro tique
+        e quando outro troca o perfil; o disco vale com a crença vazia ou quando
+        aponta o perfil que vale. Nunca levanta. O porquê está em
+        `docs/research/o-porque-dos-modulos.md` («o boot e o último jogo»).
+        """
+        if not self._ultimo_jogo_lido:
+            self._ultimo_jogo_lido = True
+            from hefesto_dualsense4unix.utils.session import o_ultimo_jogo
+
+            do_disco = o_ultimo_jogo()
+            corrente = self._current_profile
+            self._perfil_do_ultimo_jogo = (
+                do_disco if corrente is None or corrente == do_disco else None
+            )
+        nome = self._perfil_do_ultimo_jogo
+        if nome is None:
+            self._ultimo_jogo_perfil = None
+            return None
+        if self._ultimo_jogo_perfil is not None and self._ultimo_jogo_perfil.name == nome:
+            return self._ultimo_jogo_perfil
+        getter = getattr(self.manager, "get", None)
+        perfil: object = None
+        if callable(getter):
+            try:
+                perfil = getter(nome)
+            except Exception as exc:
+                logger.debug("ultimo_jogo_ilegivel", name=nome, err=str(exc))
+        if not isinstance(perfil, Profile) or e_o_freestyle(perfil.name):
+            self._perfil_do_ultimo_jogo = None
+            self._ultimo_jogo_perfil = None
+            return None
+        self._ultimo_jogo_perfil = perfil
+        return perfil
+
+    def _fica_no_ultimo_jogo(self, info: dict[str, Any], corrente: str) -> None:
+        """O perfil do último jogo, que é o que vale, FICA com a janela sem perfil próprio.
 
         OS-QUATRO-EM-HARMONIA-01, item 4 (14/10/2026): o perfil fica no último
-        jogo até ela mudar ou outro jogo iniciar. O perfil de jogo que vale agora
-        não devolve a escolha; quem o tira é ela (a crença sincroniza pelo
-        store), outro jogo (a regra dele ou o jogo em cena) ou a janela com
-        perfil próprio que não é de jogo nem de lançador.
+        jogo até ela mudar ou outro jogo iniciar. Quem o tira é ela (a crença
+        sincroniza pelo store), outro jogo (a regra dele ou o jogo em cena) ou a
+        janela com perfil próprio que não é de jogo nem de lançador.
         """
-        corrente = self._current_profile
-        if corrente is not None and corrente != self._perfil_do_ultimo_jogo:
-            self._o_boot_veio_do_ultimo_jogo(corrente)
-        if corrente is None or corrente != self._perfil_do_ultimo_jogo:
-            return False
         self._last_candidate = None
         if not self._suppression_active():
             self._suppress_log_key = None
@@ -459,7 +501,6 @@ class AutoSwitcher:
         if self._fica_log_key != chave:
             self._fica_log_key = chave
             logger.info("autoswitch_fica_no_ultimo_jogo", wm_class=chave, current=corrente)
-        return True
 
     def _o_ultimo_jogo_passa_a(self, nome: str | None) -> None:
         """O perfil do último jogo muda, e a memória do disco muda junto (só na troca).
@@ -469,7 +510,8 @@ class AutoSwitcher:
         à mão. Perfil que não é de jogo, posto por regra de janela, tira a memória,
         também a que o boot restaurou sem a crença do autoswitch saber dela.
         """
-        anterior = self._perfil_do_ultimo_jogo
+        anterior = self._perfil_do_ultimo_jogo if self._ultimo_jogo_lido else None
+        self._ultimo_jogo_lido = True
         if nome is not None and nome == anterior:
             return
         self._perfil_do_ultimo_jogo = nome
@@ -482,22 +524,6 @@ class AutoSwitcher:
             lembrar_o_ultimo_jogo(nome)
         else:
             esquecer_o_ultimo_jogo()
-
-    def _o_boot_veio_do_ultimo_jogo(self, corrente: str) -> None:
-        """O perfil que vale é o do último jogo que o boot restaurou? Então ele fica.
-
-        Lê o disco uma vez por serviço: o boot restaura o perfil do último jogo
-        (`daemon.connection._o_nome_que_o_boot_restaura`) com a crença do
-        autoswitch vazia, e a primeira janela sem perfil devolvia a escolha.
-        """
-        if self._ultimo_jogo_do_boot_lido:
-            return
-        self._ultimo_jogo_do_boot_lido = True
-        from hefesto_dualsense4unix.utils.session import o_ultimo_jogo
-
-        do_disco = o_ultimo_jogo()
-        if do_disco is not None and do_disco == corrente:
-            self._perfil_do_ultimo_jogo = corrente
 
     def _o_lancador_nao_ativa(self, info: dict[str, Any]) -> bool:
         """A janela em foco é de lançador? Então nada muda: nem perfil, nem modo.
@@ -879,6 +905,7 @@ class AutoSwitcher:
         *,
         veio_da_escolha: bool = False,
         veio_do_jogo: bool = False,
+        veio_do_ultimo_jogo: bool = False,
     ) -> None:
         self._perfil_corrente()
         if (
@@ -905,9 +932,13 @@ class AutoSwitcher:
             return
         self._current_profile = name
         self._entrou_pelo_jogo = name if veio_do_jogo else None
-        self._o_ultimo_jogo_passa_a(
-            name if veio_do_jogo or perfil_e_de_jogo(profile) else None
-        )
+        if not veio_da_escolha:
+            # A escolha nunca grava nem apaga o último jogo: ela só entra sem ele, e a
+            # escolha que é perfil de jogo apagava o jogo de verdade do disco (20h52, 14/10).
+            self._o_ultimo_jogo_passa_a(
+                name if veio_do_jogo or veio_do_ultimo_jogo or perfil_e_de_jogo(profile)
+                else None
+            )
         if profile is not None:
             self._appids_do_perfil_nome = name
             self._appids_do_perfil_valor = _appids_de_jogo_do_perfil(profile)
