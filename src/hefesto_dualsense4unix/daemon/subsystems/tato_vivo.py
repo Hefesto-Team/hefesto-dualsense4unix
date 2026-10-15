@@ -1086,7 +1086,9 @@ class AtuadorDosMomentos:
 
     Não responde a evento: a cada tique, o motor lhe dá a mesa (``relogio``). Escreve
     pelo backend por ``uniq`` quando o bloco (ou a repetição) muda, e volta ao estático
-    quando nenhum momento vale mais: o lado só, à mão; o último, pela sessão.
+    quando nenhum momento vale mais: o lado só, à mão; o último, pela sessão. Entre as
+    batidas de um «sempre» que se repete o estático também vai à mão, e a sessão fica:
+    devolvê-la a cada batida seria uma volta inteira do backend, quase uma por segundo.
     """
 
     canal = CANAL_GATILHO
@@ -1106,6 +1108,8 @@ class AtuadorDosMomentos:
         self._sempre: dict[tuple[str, str], tuple[PlanoDoGatilho, float]] = {}
         self._escrito: dict[tuple[str, str], tuple[bytes, tuple[tuple[int, int], ...]]] = {}
         self._planos: dict[tuple[str, str], PlanoDoGatilho] = {}
+        #: controles cuja sessão o momento segura entre as batidas de um «sempre»
+        self._entre_batidas: set[str] = set()
 
     def responde_a(self, evento: Evento, receita: Receita) -> bool:
         return False
@@ -1117,6 +1121,15 @@ class AtuadorDosMomentos:
         """Os lados deste controle em que um momento está escrito."""
         return [lado for lado in _LADO_DO_BACKEND if (uniq, lado) in self._escrito]
 
+    def _repete(self, uniq: str) -> bool:
+        """Algum lado deste controle tem um «sempre» que se repete: a próxima batida vem."""
+        return any(
+            u == uniq and any(m.quando == QUANDO_SEMPRE and m.a_cada_ms for m in plano.momentos)
+            for (u, _lado), (plano, _desde) in self._sempre.items())
+
+    def _na_sessao(self, uniq: str) -> bool:
+        return bool(self.segura(uniq)) or uniq in self._entre_batidas
+
     def relogio(
         self,
         motor: TatoVivo,
@@ -1127,13 +1140,13 @@ class AtuadorDosMomentos:
     ) -> int:
         planos = motor.momentos if receita.momentos_da_imersao else SEM_MOMENTOS
         escritas = 0
-        for saiu in {u for u, _lado in self._escrito} - set(uniqs):
+        for saiu in ({u for u, _lado in self._escrito} | self._entre_batidas) - set(uniqs):
             self.soltar(saiu)  # o controle saiu da mesa: não há o que devolver nele
         for uniq in uniqs:
             estado = estado_de(uniq)
             if estado is None or not decidir(CANAL_GATILHO, estado):
                 # O jogo escreve o gatilho (ou o modo cala o motor): o momento se cala.
-                if self.segura(uniq):
+                if self._na_sessao(uniq):
                     motor.contadores["soltos_ao_jogo"] += 1
                     self.soltar(uniq)
                 self._ver_o_dedo(uniq, agora)
@@ -1184,6 +1197,9 @@ class AtuadorDosMomentos:
         if a_voltar:
             self._voltar(uniq, a_voltar)
             motor.contadores["devolucoes"] += 1
+        elif uniq in self._entre_batidas and not self._repete(uniq):
+            self._voltar(uniq, ())  # a imersão saiu entre duas batidas: a sessão volta
+            motor.contadores["devolucoes"] += 1
         return escritas
 
     def _voltar(self, uniq: str, lados: Sequence[str]) -> None:
@@ -1194,10 +1210,13 @@ class AtuadorDosMomentos:
             plano = self._planos.pop((uniq, lado), None)
             if plano is not None:
                 estaticos[lado] = plano.bloco_da_volta()
-        if self.segura(uniq):
+        if self.segura(uniq) or self._repete(uniq):
             for lado, bloco in estaticos.items():
                 self._escrever(uniq, _LADO_DO_BACKEND[lado], bloco)
+            if self._repete(uniq):
+                self._entre_batidas.add(uniq)
             return
+        self._entre_batidas.discard(uniq)
         if self._devolver(uniq):
             return
         # Outro canal do motor segura a sessão: o estático vai à mão, e a sessão é dele.
@@ -1211,20 +1230,20 @@ class AtuadorDosMomentos:
         for lado in _LADO_DO_BACKEND:
             self._escrito.pop((uniq, lado), None)
             self._planos.pop((uniq, lado), None)
+        self._entre_batidas.discard(uniq)
         if self._largar is not None:
             self._largar(uniq)
 
     def devolver(self, uniq: str, agora: float) -> None:
-        lados = self.segura(uniq)
-        if lados:
-            self._voltar(uniq, lados)
+        if self._na_sessao(uniq):
+            self._voltar(uniq, self.segura(uniq))
 
     def devolver_tudo(self, agora: float) -> None:
-        """O motor parou: cada lado com momento escrito volta ao perfil."""
-        for uniq in {u for u, _lado in self._escrito}:
-            self.devolver(uniq, agora)
+        """O motor parou: cada controle em que o momento segura a sessão volta ao perfil."""
         self._aperto.clear()
-        self._sempre.clear()
+        self._sempre.clear()  # antes da volta: sem plano, nenhuma batida segura a sessão
+        for uniq in {u for u, _lado in self._escrito} | set(self._entre_batidas):
+            self.devolver(uniq, agora)
 
 
 # A-LUZ-RESPIRA-A-CADA-TIRO-01: a barra pulsa (ou troca de cor) a cada tiro e volta.

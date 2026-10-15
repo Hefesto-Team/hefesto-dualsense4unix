@@ -304,6 +304,37 @@ def test_a_imersao_de_um_controle_so_toca_nele(monkeypatch: pytest.MonkeyPatch) 
     assert [b for _t, b in mesa.backend.de(P2)] == [_bloco("Feedback", position=5, strength=8)]
 
 
+def test_a_batida_que_sai_entre_duas_batidas_devolve_a_sessao(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    perfil = _perfil(estilo="terror", triggers=AUTOMATICO)
+    mesa = _mesa(monkeypatch, perfil)
+    mesa.rodar(0.5)
+    assert mesa.backend.blocos and mesa.backend.sessoes == []
+    monkeypatch.setattr(tv, "momentos_ativos", lambda _d: tv.SEM_MOMENTOS)
+    mesa.rodar(1.5)  # a releitura da receita tira o plano entre duas batidas
+    assert sorted(u for _t, u in mesa.backend.sessoes) == [P1, P2]
+    escritos = len(mesa.backend.blocos)
+    mesa.rodar(2.0)
+    assert len(mesa.backend.blocos) == escritos, "sem a imersão, nenhuma batida mais"
+
+
+def test_a_corda_comeca_leve_no_aperto_e_pesa_a_cada_meio_segundo(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    corda = {"mode": "Bow", "params": [0, 8, 7, 6]}
+    mesa = _mesa(monkeypatch, _perfil(triggers={"right": corda}))
+    apertou = mesa.t
+    mesa.apertar(P1)
+    mesa.rodar(3.5)
+    escritas = mesa.backend.de(P1, "right")
+    forcas = list(range(1, 8))
+    assert [b for _t, b in escritas] == [
+        _bloco("Bow", start=0, end=8, force=f, snap=6) for f in forcas]
+    for i, (t, _b) in enumerate(escritas):
+        assert 0.5 * i <= t - apertou <= 0.5 * i + FOLGA, (i, t - apertou)
+
+
 def test_o_teto_segura_uma_rampa_rapida(monkeypatch: pytest.MonkeyPatch) -> None:
     mesa = _mesa(monkeypatch, _perfil(triggers={"right": PINO}))
     corda = ei.POR_CHAVE["corda-que-treme-no-fim"]
@@ -321,13 +352,18 @@ def test_o_teto_segura_uma_rampa_rapida(monkeypatch: pytest.MonkeyPatch) -> None
 
 
 def test_o_automatico_toca_o_que_o_estilo_poe_na_frente(monkeypatch: pytest.MonkeyPatch) -> None:
-    # Terror: a «Batida do coração» é sempre, nos dois gatilhos, sem apertar.
+    # Terror: a «Batida do coração» é sempre, nos dois gatilhos, sem apertar. Entre as
+    # batidas o Off vai à mão e a sessão fica: devolvê-la a cada batida seria uma volta
+    # inteira do backend (e duas linhas no diário) quase uma vez por segundo.
     mesa = _mesa(monkeypatch, _perfil(estilo="terror", triggers=AUTOMATICO))
     mesa.rodar(2.0)
     batida = _bloco("PulseB", start=2, end=6, force=255)
+    off = _bloco("Off")
     for disco in ("left", "right"):
-        assert [b for _t, b in mesa.backend.de(P1, disco)][:2] == [batida, batida], disco
-    assert len([u for _t, u in mesa.backend.sessoes if u == P1]) >= 2, "cada batida volta ao Off"
+        assert [b for _t, b in mesa.backend.de(P1, disco)][:4] == [batida, off] * 2, disco
+    assert mesa.backend.sessoes == [], "a sessão fica entre as batidas"
+    mesa.motor.parar(mesa.t)
+    assert sorted(u for _t, u in mesa.backend.sessoes) == [P1, P2], "parado, devolve as duas"
 
     # Corrida: o «Freio que pulsa» vibra depois de 800 ms segurando.
     corrida = _mesa(monkeypatch, _perfil(estilo="corrida", triggers=AUTOMATICO))

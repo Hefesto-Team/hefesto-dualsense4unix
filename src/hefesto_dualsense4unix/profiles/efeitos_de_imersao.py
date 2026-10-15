@@ -120,7 +120,8 @@ IMERSOES: tuple[Imersao, ...] = (
             " a cada meio segundo segurando.",
             {"Bow": {"start": 0, "end": 8, "force": 7, "snap": 6}},
             {"arco": {"Bow": {"start": 0, "end": 8, "force": 6, "snap": 7}}},
-            _rampa("Bow", "force", 1, 7, 500),
+            # Começa leve no aperto (a rampa só dá os degraus depois do primeiro).
+            (Momento("segurando", 0, "Bow", {"force": 1}), *_rampa("Bow", "force", 1, 7, 500)),
             na_frente=("arco", "aventura")),
     Imersao("flecha-que-escapa", "Flecha que escapa", "arco",
             "O estalo da soltura chega seco, no fim do curso.",
