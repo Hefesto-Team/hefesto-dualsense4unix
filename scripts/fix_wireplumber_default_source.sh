@@ -133,6 +133,7 @@ else
     readonly DROPIN_ACORDADO_NAME="54-hefesto-dualsense-alto-falante-nunca-dorme.conf"
 fi
 readonly WP_RAIZ_DE_USUARIO="${HOME}/.config/wireplumber"
+WP_ALTEROU=0   # 1 = um drop-in ou o state mudou nesta volta (ver restart_wireplumber_se_alterou)
 readonly DROPIN_SRC="${ROOT_DIR}/assets/wireplumber/${DROPIN_NAME}"
 readonly DROPIN_DIR="${WP_RAIZ_DE_USUARIO}/${WP_SUBPASTA}"
 readonly DROPIN_DST="${DROPIN_DIR}/${DROPIN_NAME}"
@@ -222,10 +223,39 @@ _tira_a_outra_forma() {
     local dst="$1" nome base
     nome="$(basename "${dst}")"
     base="${nome%.*}"
+    local velha
     if [[ "${WP_EXT}" == "lua" ]]; then
-        rm -f "${WP_RAIZ_DE_USUARIO}/wireplumber.conf.d/${base}.conf"
+        velha="${WP_RAIZ_DE_USUARIO}/wireplumber.conf.d/${base}.conf"
     else
-        rm -f "${WP_RAIZ_DE_USUARIO}/main.lua.d/${base}.lua"
+        velha="${WP_RAIZ_DE_USUARIO}/main.lua.d/${base}.lua"
+    fi
+    if [[ -e "${velha}" ]]; then
+        rm -f "${velha}"
+        WP_ALTEROU=1
+    fi
+}
+
+# Põe o asset `$1` em `$2` só se diferir, e levanta `WP_ALTEROU` quando escreve.
+# 0 = escreveu; 3 = já estava igual (o molde do `install_dropin_acordado`).
+_poe_o_dropin() {
+    local src="$1" dst="$2"
+    if [[ -f "${dst}" ]] && cmp -s "${src}" "${dst}"; then
+        return 3
+    fi
+    mkdir -p "$(dirname "${dst}")"
+    cp -f "${src}" "${dst}"
+    WP_ALTEROU=1
+    return 0
+}
+
+# D-1410-O-APLICAR-SEGURA, parte 3: o WirePlumber só reinicia se algo que ele lê MUDOU
+# (drop-in escrito ou tirado, state reescrito). É o único dono da pergunta: reiniciá-lo
+# recria os nós de áudio da sessão, e um `--install` repetido não tem motivo para isso.
+restart_wireplumber_se_alterou() {
+    if [[ "${WP_ALTEROU}" -eq 1 ]]; then
+        restart_wireplumber
+    else
+        log "nada a reiniciar — o WirePlumber já roda com a regra"
     fi
 }
 
@@ -447,10 +477,14 @@ install_dropin() {
         log "ERRO: asset não encontrado: ${DROPIN_SRC}"
         return 1
     fi
-    mkdir -p "${DROPIN_DIR}"
-    cp -f "${DROPIN_SRC}" "${DROPIN_DST}"
+    local rc=0
+    _poe_o_dropin "${DROPIN_SRC}" "${DROPIN_DST}" || rc=$?
     _tira_a_outra_forma "${DROPIN_DST}"
-    log "drop-in instalado: ${DROPIN_DST}"
+    if [[ "${rc}" -eq 3 ]]; then
+        log "drop-in já estava igual: ${DROPIN_DST}"
+    else
+        log "drop-in instalado: ${DROPIN_DST}"
+    fi
 }
 
 # SOM-QUE-NAO-DORME-01 — o alto-falante do controle nunca dorme.
@@ -484,8 +518,7 @@ install_dropin_acordado() {
         log "o alto-falante já está marcado para nunca dormir: ${DROPIN_ACORDADO_DST}"
         return 3
     fi
-    mkdir -p "${DROPIN_DIR}"
-    cp -f "${DROPIN_ACORDADO_SRC}" "${DROPIN_ACORDADO_DST}"
+    _poe_o_dropin "${DROPIN_ACORDADO_SRC}" "${DROPIN_ACORDADO_DST}" || true
     _tira_a_outra_forma "${DROPIN_ACORDADO_DST}"
     log "drop-in NUNCA-DORME instalado: ${DROPIN_ACORDADO_DST}"
     log "  o sink do controle para de ser suspenso; o primeiro som depois do"
@@ -498,15 +531,14 @@ install_disable_dropin() {
         log "ERRO: asset não encontrado: ${DROPIN_DISABLE_SRC}"
         return 1
     fi
-    mkdir -p "${DROPIN_DIR}"
-    cp -f "${DROPIN_DISABLE_SRC}" "${DROPIN_DISABLE_DST}"
+    _poe_o_dropin "${DROPIN_DISABLE_SRC}" "${DROPIN_DISABLE_DST}" || true
     _tira_a_outra_forma "${DROPIN_DISABLE_DST}"
     log "drop-in DISABLE instalado: ${DROPIN_DISABLE_DST}"
     # Reforço: desabilita também a SAÍDA do DualSense (53) — sem ela, o
     # '.monitor' do sink surround reaparece como default-source pós-reboot
     # (o "mic que voltou"). Best-effort.
     if [[ -f "${DROPIN_OUTPUT_SRC}" ]]; then
-        cp -f "${DROPIN_OUTPUT_SRC}" "${DROPIN_OUTPUT_DST}"
+        _poe_o_dropin "${DROPIN_OUTPUT_SRC}" "${DROPIN_OUTPUT_DST}" || true
         _tira_a_outra_forma "${DROPIN_OUTPUT_DST}"
         log "drop-in DISABLE-OUTPUT instalado: ${DROPIN_OUTPUT_DST}"
         log "AVISO: o 53 desabilita também o SINK (saida) do DualSense — o"
@@ -598,6 +630,7 @@ remove_configured_dualsense() {
         tmp="$(mktemp "${STATE_FILE}.hefesto.XXXXXX")" || return 1
         if _pilha_sem_dualsense < "${STATE_FILE}" > "${tmp}"; then
             mv -f "${tmp}" "${STATE_FILE}"
+            WP_ALTEROU=1
             log "entradas do DualSense removidas da pilha de fonte padrão, resto do histórico preservado (backup .bak)"
         else
             rm -f "${tmp}"
@@ -1204,7 +1237,7 @@ case "${MODE}" in
         _marca_do_gesto_apagar
         install_dropin
         reset_default_source
-        restart_wireplumber
+        restart_wireplumber_se_alterou
         show_status
         # BUG-WIREPLUMBER-FIX-FALSE-SUCCESS-01: validar o ATIVO, não só o configured.
         sleep 0.5
@@ -1217,7 +1250,7 @@ case "${MODE}" in
         _marca_do_gesto_apagar
         install_disable_dropin
         remove_configured_dualsense
-        restart_wireplumber
+        restart_wireplumber_se_alterou
         # após o disable o mic some; elege a onboard como default (evita cair no
         # monitor do sink do DualSense) e confirma que o ativo != mic do DualSense.
         sleep 1
