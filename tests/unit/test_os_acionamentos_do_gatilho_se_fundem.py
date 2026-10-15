@@ -80,6 +80,8 @@ def test_a_lista_da_tela_tem_onze_acionamentos() -> None:
 
 
 def test_as_chaves_que_sairam_da_lista_seguem_lidas_pelo_spec() -> None:
+    # D-1510-OS-ONZE-ACIONAMENTOS-LEEM-A-CHAVE-VELHA
+    # D-1510-AS-ARMAS-SEMI-E-AUTOMATICA-NAO-VOLTAM-COMO-IMERSAO
     saidas = {"Rigid", "SimpleRigid", "Feedback", "Pulse", "PulseA", "PulseB",
               "SemiAutoGun", "AutoGun"}
     assert {p.name for p in PRESETS_ANTIGOS} == saidas
@@ -130,6 +132,7 @@ def test_a_frequencia_vai_para_o_divisor_limpo_mais_proximo() -> None:
 
 
 def test_a_vibracao_comeca_em_0x26_e_amplitude_zero_apaga() -> None:
+    # D-1510-A-VIBRACAO-DO-GATILHO-SAI-NO-MODO-DA-METRALHADORA
     assert vibration(3, 4, 40).mode == 0x26
     assert _hex("Vibration", [3, 4, 40]) == "26f80300b66d1b00002800"
     assert _hex("Vibration", [0, 8, 10])[:2] == "26"

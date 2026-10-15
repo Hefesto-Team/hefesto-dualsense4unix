@@ -96,6 +96,7 @@ def test_as_doze_entram_pelo_nome_novo_e_so_nos_onze_acionamentos() -> None:
 
 
 def test_cada_nova_sai_com_o_bloco_da_tabela() -> None:
+    # D-1510-OS-NUMEROS-DAS-IMERSOES-DO-GATILHO
     vistas = set()
     for imersao, modo, estilo, ajustes in ei.todos_os_ajustes():
         chave = (imersao.chave, modo, estilo)

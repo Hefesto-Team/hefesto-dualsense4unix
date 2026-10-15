@@ -609,6 +609,7 @@ def test_o_perfil_de_chave_velha_por_controle_toca_em_cada_um_dos_quatro(numero:
 def test_o_automatico_toca_a_da_frente_do_estilo_no_acionamento_de_hoje(
     estilo: str, chave: str, modo: str,
 ) -> None:
+    # D-1510-CADA-ESTILO-TEM-A-SUA-IMERSAO-NO-AUTOMATICO
     """O estilo com a chave velha (FPS, Esportes, Terror) acha a da frente do CATALOGO §2.4."""
     plano = tv._plano_do_automatico(estilo)
     assert plano is not None, estilo
