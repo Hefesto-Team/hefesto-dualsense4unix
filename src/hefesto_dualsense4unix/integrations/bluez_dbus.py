@@ -1580,10 +1580,13 @@ class DonoVivo(LeitorDoBluez):
             propriedades.update(sinal.mudadas or {})
             for nome in sinal.invalidadas:
                 propriedades.pop(nome, None)
-            if (sinal.interface == APARELHO and estava is True
-                    and como_booleano(propriedades.get("Connected")) is False
+            agora = como_booleano(propriedades.get("Connected"))
+            if (sinal.interface == APARELHO and estava is True and agora is False
                     and como_booleano(propriedades.get("Paired")) is True):
                 avisos.append((AVISO_DESLIGOU, self._como_saiu(sinal.caminho)))
+            elif sinal.interface == APARELHO and estava is not True and agora is True:
+                self._razoes.pop(sinal.caminho, None)
+                self._saidas.pop(endereco_do_aparelho(sinal.caminho) or "", None)
         return avisos
 
     def _como_saiu(self, caminho: str) -> dict[str, Any]:
@@ -1603,7 +1606,7 @@ class DonoVivo(LeitorDoBluez):
         return {**quem, "razao": razao, "saida": saida}
 
     def como_saiu(self, endereco: str) -> str | None:
-        """A última saída deste controle (``SAIDA_*``); ``None`` se não saiu desde a foto."""
+        """Como este controle saiu (``SAIDA_*``); ``None`` se ele voltou ou não saiu."""
         with self._tranca:
             return self._saidas.get(endereco.strip().lower())
 

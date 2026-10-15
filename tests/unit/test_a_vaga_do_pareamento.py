@@ -149,6 +149,22 @@ def test_o_gesto_se_gasta_na_primeira_queda() -> None:
     assert mesa.cair(bd.RAZAO_TIMEOUT)["saida"] == bd.SAIDA_CAIU
 
 
+def test_o_controle_que_voltou_nao_diz_mais_como_saiu() -> None:
+    """MORDIDA: sem a limpeza no ``Connected`` verdadeiro, a volta ainda diz «outro aparelho»."""
+    mesa = _Mesa()
+    mesa.segurar({"ps", "triangle"}, 3.0)
+    mesa.cair(bd.RAZAO_DO_CONTROLE)
+    assert mesa.vivo.como_saiu(bm.CONTROLE) == bd.SAIDA_OUTRO_APARELHO
+
+    mesa.barramento.emitir(bd.Sinal("desconectou", caminho=NO, razao=bd.RAZAO_TIMEOUT))
+    mesa.barramento.emitir(
+        bd.Sinal("mudou", caminho=NO, interface=bd.APARELHO, mudadas={"Connected": True})
+    )
+
+    assert mesa.vivo.como_saiu(bm.CONTROLE) is None
+    assert mesa.cair(None)["saida"] == bd.SAIDA_SEM_RAZAO
+
+
 def test_o_desligar_daqui_ganha_do_gesto() -> None:
     """O Hefesto (ou a suspensão) encerrou o enlace: o gesto não decide."""
     mesa = _Mesa()
