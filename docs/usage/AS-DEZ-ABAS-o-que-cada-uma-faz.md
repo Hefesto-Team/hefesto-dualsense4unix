@@ -45,17 +45,18 @@ aparelho, e a traz de volta em outra porta ou pelo Bluetooth.
 
 **Dispositivos conectados**: uma linha por controle, com a borda na cor do
 plástico. Clicar numa linha abre a leitura ao vivo: giroscópio e acelerômetro
-(com um interruptor cada e o **Analógico virtual**), bateria, touchpad, barra de
-luz, analógicos, gatilhos de 0 a 255 e os botões que você aperta.
+(com um interruptor cada), bateria, touchpad (com o interruptor **Ligado ·
+Desligado**), barra de luz, analógicos (cada um com a **Mira virtual**, que faz o
+movimento do controle mover aquele analógico), gatilhos de 0 a 255 e os botões
+que você aperta.
 
-- **Microfone**: a barra mostra o som entrando agora, o botão ao lado liga o
-  retorno (você se ouve como o jogo te ouve), e **Virtual · Nativo** diz por
-  onde o som chega ao computador. O **Volume** é o quanto desse som chega ao
-  computador; o **Ganho**, de 0 a +48 dB, é o quanto o aparelho amplifica.
-  Para calar o microfone, use o botão do próprio controle.
-- **Alto-falante**: o volume e para onde vai o som. Há quatro rotas, de «só
-  o jogo no controle» até «todo o som do computador no controle».
-- **Calibrar sensores de movimento** calibra os quatro de uma vez.
+- **Microfone**: a barra mostra o som entrando agora, e o botão ao lado liga o
+  retorno (você se ouve como o jogo te ouve). O **Volume** é o quanto desse som
+  chega ao computador. Para calar o microfone, use o botão do próprio controle.
+- **Alto-falante**: o volume e para onde vai o som, em três rotas: «Canais
+  sonoros nativos - Padrão» (os efeitos do jogo no controle, o som do PC no PC),
+  «Canais sonoros apenas no DualSense» e «Canais sonoros apenas no PC».
+- **Calibrar giroscópio** calibra os quatro de uma vez.
 
 ## 3. Gatilhos
 
