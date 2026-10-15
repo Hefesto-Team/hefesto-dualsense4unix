@@ -216,7 +216,7 @@ DIVIDAS: dict[str, int] = {
     "tests/unit/test_guarda_gi_falso_precisa_de_exigir_gi_real.py::DIVIDA_GI_FALSO": 0,
     "tests/unit/test_mic_volume_01_o_slider_que_faltava.py::_SEM_MIC_HOJE": 0,
     "tests/unit/test_os_efeitos_do_gatilho_mandam_o_que_o_nome_diz.py::ISENCOES": 5,
-    "tests/unit/test_o_bluez_tem_um_dono.py::_ISENTOS_DO_CAMINHO": 1,
+    "tests/unit/test_o_bluez_tem_um_dono.py::_ISENTOS_DO_CAMINHO": 0,
     "tests/unit/test_o_pacote_cabe_na_pagina_publicada.py::EXCECOES_DATADAS": 0,
     "tests/unit/test_o_pacote_leva_os_alvos_das_regras_82_e_83.py::LACUNA_HOJE": 0,
     "tests/unit/test_os_donos_de_fato.py::EXCECOES_DATADAS": 2,

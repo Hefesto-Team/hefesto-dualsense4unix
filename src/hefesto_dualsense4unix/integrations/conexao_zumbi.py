@@ -118,9 +118,6 @@ _FORMA_HCI = re.compile(r"^hci[0-9]+$")
 
 _MAC_NA_LINHA = re.compile(r"\b([0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2}){5})\b")
 
-_NO_DO_BLUEZ = re.compile(r"^/org/bluez/(hci[0-9]+)/dev_([0-9A-Fa-f_]{17})$")
-
-
 def mac_limpo(valor: str | None) -> str | None:
     """MAC em ``aa:bb:cc:dd:ee:ff`` minúsculo, ou ``None``."""
     if not valor:
@@ -331,12 +328,10 @@ def enderecos_que_o_bluez_conhece(*, executor: object = None) -> set[tuple[str, 
     )
     achados: set[tuple[str, str]] = set()
     for caminho in leitor.caminhos() or ():
-        achado = _NO_DO_BLUEZ.match(caminho)
-        if achado is None:
-            continue
-        endereco = mac_limpo(achado.group(2).replace("_", ":"))
-        if endereco is not None:
-            achados.add((achado.group(1), endereco))
+        hci = bluez_dbus.hci_do_aparelho(caminho)
+        endereco = bluez_dbus.endereco_do_aparelho(caminho)
+        if hci is not None and endereco is not None:
+            achados.add((hci, endereco))
     return achados
 
 

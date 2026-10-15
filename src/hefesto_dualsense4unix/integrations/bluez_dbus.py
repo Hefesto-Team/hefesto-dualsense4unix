@@ -158,6 +158,12 @@ def hci_do_adaptador(caminho: str) -> str | None:
     return achado.group(1) if achado else None
 
 
+def hci_do_aparelho(caminho: str) -> str | None:
+    """O ``hciN`` de um caminho de APARELHO (``…/hci0/dev_…`` → ``hci0``); ``None`` se não é."""
+    forma = _CAMINHO_DE_APARELHO.fullmatch(caminho)
+    return hci_do_adaptador(forma.group(1)) if forma else None
+
+
 def e_caminho_de_aparelho(caminho: str) -> bool:
     """O caminho é de um APARELHO (``/org/bluez/hciN/dev_AA_BB_CC_DD_EE_FF``)?"""
     return _CAMINHO_DE_APARELHO.fullmatch(caminho) is not None
@@ -843,7 +849,7 @@ class LeitorDoBluez:
                 and escrita.erro in _PAIR_SEM_RESPOSTA
                 and not ja_vinculado and self._vinculado(caminho)):
             _registrar("bluez_pair_sem_resposta_com_bond", nivel="warning",
-                       erro=escrita.erro or None, hci=_hci_de(caminho.rsplit("/dev_", 1)[0]))
+                       erro=escrita.erro or None, hci=hci_do_aparelho(caminho) or "")
             escrita = Escrita(True, mensagem="o Pair não respondeu, e o bond está feito")
         if escrita.feita:
             self.confiar(caminho, quem=quem)
@@ -1590,7 +1596,7 @@ class DonoVivo(LeitorDoBluez):
             "bluez_controle_saiu",
             saida=saida,
             razao=razao,
-            hci=_hci_de(caminho.rsplit("/dev_", 1)[0]),
+            hci=hci_do_aparelho(caminho) or "",
         )
         if saida == SAIDA_OUTRO_APARELHO:
             return {**quem, "razao": razao, "saida": saida, "frase": FRASE_OUTRO_APARELHO}
@@ -1832,6 +1838,7 @@ __all__ = [
     "dono",
     "endereco_do_aparelho",
     "enderecos_pelo_kernel",
+    "hci_do_aparelho",
     "lugar_de",
     "lugares_dos_adaptadores",
     "na_trava",

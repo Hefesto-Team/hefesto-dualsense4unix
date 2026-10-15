@@ -764,10 +764,7 @@ def test_a_sonda_do_bluez_nao_aceita_caminho_que_so_contem_a_raiz(arvore: str | 
 
 # --- o caminho ``/org/bluez`` em código também é conhecimento do dono ---
 
-_ISENTOS_DO_CAMINHO = {
-    # sai com: O-NO-DO-APARELHO-DO-ZUMBI-SE-PERGUNTA-AO-DONO-DO-BLUEZ-01
-    "integrations/conexao_zumbi.py": "re.compile do nó do aparelho, refeito fora do dono",
-}
+_ISENTOS_DO_CAMINHO: dict[str, str] = {}
 
 
 def caminhos_do_bluez(fonte: str) -> list[tuple[int, str]]:
@@ -843,6 +840,47 @@ def test_a_tabela_de_isencao_do_caminho_morde() -> None:
 def test_o_dono_diz_o_hci_so_do_caminho_de_adaptador(caminho: str, esperado: str | None) -> None:
     """O adaptador é a ÚNICA forma que responde; o nó de aparelho, a raiz e o ``\\n`` no fim não."""
     assert bd.hci_do_adaptador(caminho) == esperado
+
+
+@pytest.mark.parametrize(
+    ("caminho", "esperado"),
+    [
+        ("/org/bluez/hci0/dev_AA_BB_CC_00_00_FF", "hci0"),
+        ("/org/bluez/hci12/dev_aa_bb_cc_00_00_ff", "hci12"),
+        ("/org/bluez/hci0/dev_AA_BB_CC_00_00_FF/sep1", None),
+        ("/org/bluez/hci0/dev_AA_BB_CC", None),
+        ("/org/bluez/hci0", None),
+        ("/x/org/bluez/hci0/dev_AA_BB_CC_00_00_FF", None),
+        ("/org/bluez/hci0/dev_AA_BB_CC_00_00_FF\n", None),
+    ],
+)
+def test_o_dono_diz_o_hci_do_caminho_de_aparelho(caminho: str, esperado: str | None) -> None:
+    """O ``conexao_zumbi`` pergunta aqui o adaptador do nó; o endpoint e o nó parcial não têm."""
+    assert bd.hci_do_aparelho(caminho) == esperado
+
+
+def test_o_zumbi_pergunta_ao_dono_o_no_do_aparelho() -> None:
+    """``enderecos_que_o_bluez_conhece`` lê só nó de aparelho, pelo dono do caminho."""
+    from hefesto_dualsense4unix.integrations import conexao_zumbi as cz
+
+    arvore = "\n".join(
+        [
+            "/org/bluez",
+            "/org/bluez/hci0",
+            "/org/bluez/hci0/dev_AA_BB_CC_00_00_FF",
+            "/org/bluez/hci0/dev_AA_BB_CC_00_00_FF/sep1",
+            "/org/bluez/hci1/dev_02_FE_00_00_00_01",
+            "/org/bluez/hci1/dev_02_FE_00",
+        ]
+    )
+
+    def executor(argv: Any) -> str:
+        return arvore if "tree" in list(argv) else ""
+
+    assert cz.enderecos_que_o_bluez_conhece(executor=executor) == {
+        ("hci0", "aa:bb:cc:00:00:ff"),
+        ("hci1", "02:fe:00:00:00:01"),
+    }
 
 
 @pytest.mark.parametrize(
