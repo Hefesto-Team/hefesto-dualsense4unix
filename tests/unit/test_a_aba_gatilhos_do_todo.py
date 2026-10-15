@@ -81,10 +81,15 @@ _PROMESSA_DE_TEMPO = re.compile(
     r"|\d+(?:,\d+)? ?s\b", re.I)
 
 
+def _o_tempo_vale_em_todo_modo(i: imersao.Imersao) -> bool:
+    """Todo modo em que ela se oferece tem momento que o motor toca."""
+    return bool(i.momentos) and all(imersao.momentos_no_modo(i, m) for m in i.ajustes)
+
+
 def test_a_dica_diz_o_tempo_so_onde_o_motor_o_toca_em_todo_modo() -> None:
     """A dica vai à tela: o tempo só se promete onde os momentos valem em todo modo dela."""
     erradas = {i.chave: i.dica for i in imersao.IMERSOES
-               if bool(_PROMESSA_DE_TEMPO.search(i.dica)) != imersao.o_tempo_vale_em_todo_modo(i)}
+               if bool(_PROMESSA_DE_TEMPO.search(i.dica)) != _o_tempo_vale_em_todo_modo(i)}
     assert not erradas, erradas
 
 

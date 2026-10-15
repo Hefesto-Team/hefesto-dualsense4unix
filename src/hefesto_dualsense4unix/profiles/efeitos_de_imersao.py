@@ -247,11 +247,6 @@ def momentos_no_modo(imersao: Imersao, modo: str) -> tuple[Momento, ...]:
     return tuple(m for m in imersao.momentos if not m.valem_em or modo in m.valem_em)
 
 
-def o_tempo_vale_em_todo_modo(imersao: Imersao) -> bool:
-    """Todo modo em que ela se oferece tem momento que o motor toca: só aí a dica diz o tempo."""
-    return bool(imersao.momentos) and all(momentos_no_modo(imersao, m) for m in imersao.ajustes)
-
-
 def imersao_dos_numeros(modo: str, params: Sequence[object]) -> tuple[Imersao, str] | None:
     """A imersão (e o estilo da variante, `""` na base) cujos números SÃO estes, ou `None`.
 
