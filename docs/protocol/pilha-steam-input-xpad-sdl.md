@@ -683,7 +683,7 @@ por appid, `#` comenta. Três leitores, e cada um faz uma coisa diferente:
 | leitor | o que a marca faz ali |
 |---|---|
 | o guard do Steam Input | **não** reverte o `UseSteamControllerConfig` daquele appid no `localconfig.vdf` — ou seja, o degrau 3 fica ligado para aquele jogo |
-| `integrations/storm_doctor.py:46` e `:303` | o diagnóstico deixa de acusar aquele appid como conflito |
+| `integrations/storm_doctor.py:46` e `:306` | o diagnóstico deixa de acusar aquele appid como conflito |
 | `daemon/launch_env.py:299-330` | decide a **sessão da exceção** e **pula o arming** da máscara para aquele appid |
 
 **O que ela NÃO muda mais, e isto é decisão de produto, datada.** Até 09/08 a marca
