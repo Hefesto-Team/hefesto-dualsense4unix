@@ -7,7 +7,7 @@ perfil de mentira e um backend que anota cada bloco e cada fim de sessão.
 
 MORDIDAS: tirar a guarda do jogo do `AtuadorDosMomentos.relogio` (o momento escreve com o
 jogo mandando) reprova `test_o_jogo_que_escreve_o_gatilho_cala_o_momento`; tirar o
-`valem_em` de `momentos_no_modo` reprova `test_a_rajada_escreve_a_cada_200_ms_so_no_machine`;
+`valem_em` de `momentos_no_modo` reprova `test_a_rajada_escreve_o_bloco_uma_vez_so_no_machine`;
 devolver a sessão a cada batida reprova `test_o_automatico_toca_o_que_o_estilo_poe_na_frente`.
 """
 from __future__ import annotations
@@ -196,16 +196,16 @@ def test_o_pino_escreve_o_feedback_ao_apertar_e_volta_em_500_ms(
     assert 0.5 <= voltou - apertou <= 0.5 + FOLGA, "a volta ao estático é aos 500 ms"
 
 
-def test_a_rajada_escreve_a_cada_200_ms_so_no_machine(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_a_rajada_escreve_o_bloco_uma_vez_so_no_machine(monkeypatch: pytest.MonkeyPatch) -> None:
     mesa = _mesa(monkeypatch, _perfil(triggers={"right": RAJADA_MACHINE}))
     apertou = mesa.t
     mesa.apertar(P1)
     mesa.rodar(0.99)
     escritas = mesa.backend.de(P1, "right")
     rajada = _bloco("Machine", start=0, end=9, strength=7, frequency=8)
-    assert [b for _t, b in escritas] == [rajada] * 5
-    for i, (t, _b) in enumerate(escritas):
-        assert 0.2 * i <= t - apertou <= 0.2 * i + FOLGA, (i, t - apertou)
+    # O mesmo bloco não sai de novo a cada volta do `a_cada_ms`: o ritmo é do firmware.
+    assert [b for _t, b in escritas] == [rajada]
+    assert 0 <= escritas[0][0] - apertou <= FOLGA
     mesa.soltar(P1)
     mesa.rodar(0.1)
     assert [u for _t, u in mesa.backend.sessoes] == [P1], "soltar devolve o estático"
@@ -272,7 +272,7 @@ def test_o_jogo_que_escreve_o_gatilho_cala_o_momento(monkeypatch: pytest.MonkeyP
     meio.apertar(P1)
     meio.rodar(0.3)
     antes = len(meio.backend.blocos)
-    assert antes == 2
+    assert antes == 1
     meio.daemon._gamepad_device.visto_ha_s = {"trigger": 0.0}
     meio.rodar(1.0)
     assert len(meio.backend.blocos) == antes
@@ -350,10 +350,14 @@ def test_a_corda_comeca_leve_no_aperto_e_pesa_a_cada_meio_segundo(
 
 def test_o_teto_segura_uma_rampa_rapida(monkeypatch: pytest.MonkeyPatch) -> None:
     mesa = _mesa(monkeypatch, _perfil(triggers={"right": PINO}))
-    corda = ei.POR_CHAVE["corda-que-treme-no-fim"]
+    corda = next(i for i in ei.IMERSOES if i.familia == "arco")
+    # Um degrau de bloco novo a cada 20 ms: 30 blocos distintos em 600 ms (o bloco repetido
+    # não se escreve de novo, então a rampa rápida precisa de blocos que mudem).
+    degraus = tuple(
+        ei.Momento("segurando", k * 20, "Bow", {"force": 1 + k % 8, "snap": k // 8})
+        for k in range(1, 31))
     rapida = tv.PlanoDoGatilho(
-        corda, "Bow", "", ei.ajustes_da_imersao(corda, "Bow") or {},
-        (ei.Momento("segurando", 0, "Bow", {"force": 8}, a_cada_ms=20),))
+        corda, "Bow", "", ei.ajustes_da_imersao(corda, "Bow") or {}, degraus)
     monkeypatch.setattr(tv, "momentos_ativos", lambda _d: tv.MapaDosMomentos({"direito": rapida}))
     mesa.rodar(1.0)  # a releitura da receita traz o plano rápido
     mesa.apertar(P1)

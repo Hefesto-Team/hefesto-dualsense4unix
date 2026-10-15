@@ -27,9 +27,26 @@ FAMILIAS: dict[str, tuple[str, ...]] = {
 Ajustes = Mapping[str, int]
 
 
+#: O-MOTOR-DOS-MOMENTOS-NAO-REESCREVE-O-BLOCO-E-LE-O-CLIQUE-01 (15/10/2026): dois `quando` além de
+#: `ao_apertar`, `segurando` e `sempre`.
+#: `passou_do_clique`: o Disparo passou do clique (o status 2 do report de entrada). Sem o status,
+#: o `apos_ms` conta do aperto: o momento nunca fica mudo.
+QUANDO_PASSOU_DO_CLIQUE = "passou_do_clique"
+#: `pronto`: toma o gatilho por pouco tempo (de `PRONTO_MIN_MS` a `PRONTO_MAX_MS`), por cima de
+#: qualquer outro momento, e devolve o bloco de antes. Conta no teto de escritas.
+QUANDO_PRONTO = "pronto"
+PRONTO_MIN_MS = 60
+PRONTO_MAX_MS = 150
+
+
 @dataclass(frozen=True)
 class Momento:
-    """Uma mudança no tempo: `quando` (ao apertar, segurando, sempre) + `apos_ms`."""
+    """Uma mudança no tempo: `quando` (ao apertar, segurando, sempre, passou do clique, pronto)
+    + `apos_ms`.
+
+    O `apos_ms` conta do aperto (do começo da imersão, no `sempre`; do clique, se o status chega,
+    no `passou_do_clique`). A repetição do `a_cada_ms` só escreve quando o bloco muda.
+    """
 
     quando: str
     apos_ms: int
@@ -39,6 +56,13 @@ class Momento:
     a_cada_ms: int | None = None
     #: os modos do acionamento em que ele vale; vazio vale em todos
     valem_em: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        if self.quando == QUANDO_PRONTO and not (
+                self.dura_ms is not None and PRONTO_MIN_MS <= self.dura_ms <= PRONTO_MAX_MS):
+            raise ValueError(
+                f"o momento «pronto» dura de {PRONTO_MIN_MS} a {PRONTO_MAX_MS} ms, "
+                f"não {self.dura_ms}")
 
 
 @dataclass(frozen=True)

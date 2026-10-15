@@ -18,6 +18,7 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import asdict, dataclass, field, fields, replace
 from typing import TYPE_CHECKING, Any, Protocol
 
+from hefesto_dualsense4unix.core.physical_report_reader import TRIGGER_ESTADO_DISPAROU
 from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 from hefesto_dualsense4unix.daemon.lifecycle import (
     MODO_DUALSENSE,
@@ -27,6 +28,8 @@ from hefesto_dualsense4unix.daemon.lifecycle import (
     o_hefesto_fala_no_modo,
 )
 from hefesto_dualsense4unix.profiles.efeitos_de_imersao import (
+    QUANDO_PASSOU_DO_CLIQUE,
+    QUANDO_PRONTO,
     Imersao,
     Momento,
     a_da_frente_com_tempo,
@@ -374,6 +377,9 @@ class TatoVivo:
         self.ouvido: Any = None
         #: as imersões com momentos de cada gatilho do perfil ativo, relidas com a receita.
         self.momentos: MapaDosMomentos = SEM_MOMENTOS
+        #: o status do Disparo de cada gatilho (0 antes, 1 dentro, 2 passou do clique), lido do
+        #: report de entrada; sem entrada é que o aparelho não o disse (o relógio vale).
+        self.disparo: dict[tuple[str, str], int] = {}
 
     def anotar(self, evento: Evento) -> None:
         """Põe um evento na fila. Chamável de qualquer thread."""
@@ -804,6 +810,7 @@ class AtuadorDoGatilho:
         apertado: Callable[[str, str], bool] | None = None,
         largar: Callable[[str], object] | None = None,
         cede: Callable[[str, str], bool] | None = None,
+        soltar_lado: Callable[[str, str, bytes], object] | None = None,
     ) -> None:
         self._escrever = escrever
         self._devolver = devolver
@@ -811,6 +818,9 @@ class AtuadorDoGatilho:
         self._largar = largar
         #: o lado em que a pessoa escolheu uma imersão com momentos é dos momentos
         self._cede = cede
+        #: devolve UM lado ao perfil, sem encerrar a sessão (que um momento pode segurar)
+        self._soltar_lado = soltar_lado
+        self._bloco_escrito: dict[tuple[str, str], bytes] = {}
         self._ultimo_tiro: dict[tuple[str, str], float] = {}
         self._desejado: dict[tuple[str, str], str] = {}
         self._escrito: dict[tuple[str, str], str] = {}
@@ -868,10 +878,10 @@ class AtuadorDoGatilho:
     def escrever(self, evento: Evento, receita: Receita, agora: float) -> float | None:
         for lado in self._a_trocar(evento.uniq):
             modo = self._desejado[(evento.uniq, lado)]
-            self._escrever(
-                evento.uniq, _LADO_DO_BACKEND[lado], bloco_do_gatilho(modo, receita)
-            )
+            bloco = bloco_do_gatilho(modo, receita)
+            self._escrever(evento.uniq, _LADO_DO_BACKEND[lado], bloco)
             self._escrito[(evento.uniq, lado)] = modo
+            self._bloco_escrito[(evento.uniq, lado)] = bloco
         self._escreveu_em[evento.uniq] = agora
         return agora + VOLTA_DO_GATILHO_S
 
@@ -886,14 +896,25 @@ class AtuadorDoGatilho:
         if self._largar is not None:
             self._largar(uniq)
 
-    def _esquecer(self, uniq: str) -> None:
-        for lado in _LADO_DO_BACKEND:
+    def _esquecer(self, uniq: str) -> dict[str, bytes]:
+        """Esquece o que o ritmo escreveu e devolve, por lado, o último bloco dele."""
+        blocos: dict[str, bytes] = {}
+        for lado, disco in _LADO_DO_BACKEND.items():
             self._escrito.pop((uniq, lado), None)
+            bloco = self._bloco_escrito.pop((uniq, lado), None)
+            if bloco is not None:
+                blocos[disco] = bloco
         self._escreveu_em.pop(uniq, None)
+        return blocos
 
     def devolver(self, uniq: str, agora: float) -> None:
-        self._esquecer(uniq)
-        self._devolver(uniq)
+        blocos = self._esquecer(uniq)
+        if self._devolver(uniq) or self._soltar_lado is None:
+            return
+        # A sessão não saiu: um momento do OUTRO lado a segura. O lado do ritmo volta ao perfil
+        # sozinho (só se ainda for o bloco do ritmo), em vez de ficar preso junto com a sessão.
+        for disco, bloco in blocos.items():
+            self._soltar_lado(uniq, disco, bloco)
 
 
 # OS-MOMENTOS-DA-IMERSAO-TOCAM-NO-GATILHO-01 (15/10/2026): o tempo do aperto.
@@ -906,6 +927,8 @@ class AtuadorDoGatilho:
 QUANDO_AO_APERTAR = "ao_apertar"
 QUANDO_SEGURANDO = "segurando"
 QUANDO_SEMPRE = "sempre"
+#: O «sempre» sem `dura_ms` não segura a sessão para sempre: passado o teto, expira e a devolve.
+TETO_DO_SEMPRE_S = 300.0
 #: a chave do momento na sessão do motor; o ritmo do tiro tem a sua, no mesmo gatilho.
 CANAL_DO_MOMENTO = "momento"
 
@@ -925,11 +948,42 @@ class PlanoDoGatilho:
     #: o Modo automático põe «Sem efeito» no aparelho: a volta à mão é o ``Off``
     automatico: bool = False
 
-    def bloco_da_volta(self) -> bytes:
-        """O gatilho estático que o perfil põe no aparelho, para a volta de um lado só."""
+    def bloco_da_volta(self, economia: bool = False) -> bytes:
+        """O gatilho estático que o perfil põe no aparelho, para a volta de um lado só.
+
+        Na Bateria longa é o bloco de economia (a mesma força que o perfil leva ao aparelho).
+        """
         if self.automatico:
             return _bloco_cru("Off", {})
+        if economia:
+            return _bloco_cru(self.modo, _ajustes_na_economia(self.modo, self.ajustes))
         return _bloco_cru(self.modo, self.ajustes)
+
+
+def _ajustes_na_economia(modo: str, ajustes: Mapping[str, int]) -> dict[str, int]:
+    """Os números do acionamento com a força da economia: a mesma conta do perfil."""
+    from hefesto_dualsense4unix.app.actions.trigger_specs import (
+        get_spec,
+        preset_to_positional_params,
+    )
+    from hefesto_dualsense4unix.profiles.schema import TriggerConfig, gatilho_na_economia
+
+    spec = get_spec(modo)
+    if spec is None:
+        return dict(ajustes)
+    cheios = {**_padroes_do_modo(modo), **ajustes}
+    try:
+        posicionais = list(preset_to_positional_params(spec, cheios))
+        reduzido = gatilho_na_economia(TriggerConfig(mode=modo, params=posicionais)).params
+    except Exception:
+        logger.debug("tato_vivo_economia_ilegivel", modo=modo, exc_info=True)
+        return dict(ajustes)
+    if len(reduzido) != len(spec.params):
+        return dict(ajustes)
+    numeros = [v for v in reduzido if isinstance(v, int)]
+    if len(numeros) != len(reduzido):
+        return dict(ajustes)
+    return {p.name: v for p, v in zip(spec.params, numeros, strict=True)}
 
 
 @dataclass(frozen=True)
@@ -1045,18 +1099,34 @@ def momentos_em_efeito(
     desde_o_aperto: float | None,
     desde_sempre: float | None,
     agora: float,
+    *,
+    desde_o_clique: float | None = None,
+    sem_status: bool = True,
 ) -> tuple[tuple[int, int], ...]:
     """``(índice, repetição)`` de cada momento que vale agora, na ordem em que se sobrepõem.
 
-    A origem do «ao apertar» e do «segurando» é o aperto (soltar acaba com eles); a do
-    «sempre», a hora em que a imersão passou a valer naquele lado.
+    A origem do «ao apertar», do «segurando» e do «pronto» é o aperto (soltar acaba com eles);
+    a do «sempre», a hora em que a imersão passou a valer naquele lado. O «passou do clique»
+    nasce do instante em que o status do Disparo chegou a 2 (``desde_o_clique``); sem o status
+    (``sem_status``), cai no relógio do aperto, e o ``apos_ms`` dele é esse relógio. O «sempre»
+    sem ``dura_ms`` expira em ``TETO_DO_SEMPRE_S``. A repetição só diz em que volta o momento
+    está: quem escreve olha o bloco, não ela.
     """
     vale: list[tuple[int, int]] = []
     for indice, momento in enumerate(momentos):
-        origem = desde_sempre if momento.quando == QUANDO_SEMPRE else desde_o_aperto
+        espera_ms = float(momento.apos_ms)
+        if momento.quando == QUANDO_SEMPRE:
+            origem = desde_sempre
+        elif momento.quando == QUANDO_PASSOU_DO_CLIQUE and not sem_status:
+            origem, espera_ms = desde_o_clique, 0.0
+        else:
+            origem = desde_o_aperto
         if origem is None:
             continue
-        passou_ms = (agora - origem) * 1000.0 - momento.apos_ms
+        if (momento.quando == QUANDO_SEMPRE and momento.dura_ms is None
+                and agora - origem >= TETO_DO_SEMPRE_S):
+            continue
+        passou_ms = (agora - origem) * 1000.0 - espera_ms
         if passou_ms < 0:
             continue
         repeticao = 0
@@ -1070,9 +1140,13 @@ def momentos_em_efeito(
 
 
 def bloco_do_momento(plano: PlanoDoGatilho, indices: Iterable[int]) -> bytes:
-    """O bloco com os momentos sobrepostos: o mesmo modo ajusta os números do perfil."""
+    """O bloco com os momentos sobrepostos: o mesmo modo ajusta os números do perfil.
+
+    O «pronto» vai por último, qualquer que seja a ordem: ele toma o gatilho por cima do resto.
+    """
     modo, valores = plano.modo, dict(plano.ajustes)
-    for indice in indices:
+    ordem = sorted(indices, key=lambda i: plano.momentos[i].quando == QUANDO_PRONTO)
+    for indice in ordem:
         momento = plano.momentos[indice]
         if momento.modo != modo:
             modo = momento.modo
@@ -1084,11 +1158,11 @@ def bloco_do_momento(plano: PlanoDoGatilho, indices: Iterable[int]) -> bytes:
 class AtuadorDosMomentos:
     """Os momentos da imersão de cada lado de cada controle, no relógio do motor.
 
-    Não responde a evento: a cada tique, o motor lhe dá a mesa (``relogio``). Escreve
-    pelo backend por ``uniq`` quando o bloco (ou a repetição) muda, e volta ao estático
-    quando nenhum momento vale mais: o lado só, à mão; o último, pela sessão. Entre as
-    batidas de um «sempre» que se repete o estático também vai à mão, e a sessão fica:
-    devolvê-la a cada batida seria uma volta inteira do backend, quase uma por segundo.
+    A cada tique o motor lhe dá a mesa (``relogio``). Escreve quando o BLOCO muda (a volta do
+    ``a_cada_ms`` não reescreve o mesmo bloco: o ritmo é do firmware) e volta ao estático
+    quando nenhum momento vale: o lado só, à mão; o último, pela sessão. Entre as batidas de
+    um «sempre» que se repete a sessão fica. Toda saída passa por ``devolver``: motor parado
+    ou calado, Bateria longa e «sempre» que expirou.
     """
 
     canal = CANAL_GATILHO
@@ -1099,14 +1173,24 @@ class AtuadorDosMomentos:
         devolver: Callable[[str], bool],
         apertado: Callable[[str, str], bool],
         largar: Callable[[str], object] | None = None,
+        na_economia: Callable[[str], bool] | None = None,
+        disparo: Callable[[str, str], int | None] | None = None,
     ) -> None:
         self._escrever = escrever
         self._devolver = devolver
         self.apertado = apertado
         self._largar = largar
+        #: a Bateria longa vale neste controle? Os momentos param e fica o bloco de economia
+        self._na_economia = na_economia
+        #: o status do Disparo (0, 1, 2) deste lado, ou ``None`` se o aparelho não o disse
+        self._disparo = disparo
         self._aperto: dict[tuple[str, str], float] = {}
+        self._clique: dict[tuple[str, str], float] = {}
         self._sempre: dict[tuple[str, str], tuple[PlanoDoGatilho, float]] = {}
-        self._escrito: dict[tuple[str, str], tuple[bytes, tuple[tuple[int, int], ...]]] = {}
+        #: o «sempre» sem fim que passou do teto: fica fora até a imersão mudar ou ser devolvida
+        self._expirou: set[tuple[str, str]] = set()
+        #: a marca do que está escrito é o BLOCO, não a volta do relógio em que ele saiu
+        self._escrito: dict[tuple[str, str], bytes] = {}
         self._planos: dict[tuple[str, str], PlanoDoGatilho] = {}
         #: controles cuja sessão o momento segura entre as batidas de um «sempre»
         self._entre_batidas: set[str] = set()
@@ -1124,11 +1208,15 @@ class AtuadorDosMomentos:
     def _repete(self, uniq: str) -> bool:
         """Algum lado deste controle tem um «sempre» que se repete: a próxima batida vem."""
         return any(
-            u == uniq and any(m.quando == QUANDO_SEMPRE and m.a_cada_ms for m in plano.momentos)
-            for (u, _lado), (plano, _desde) in self._sempre.items())
+            u == uniq and (u, lado) not in self._expirou
+            and any(m.quando == QUANDO_SEMPRE and m.a_cada_ms for m in plano.momentos)
+            for (u, lado), (plano, _desde) in self._sempre.items())
 
     def _na_sessao(self, uniq: str) -> bool:
         return bool(self.segura(uniq)) or uniq in self._entre_batidas
+
+    def _economia(self, uniq: str) -> bool:
+        return self._na_economia is not None and bool(self._na_economia(uniq))
 
     def relogio(
         self,
@@ -1145,8 +1233,12 @@ class AtuadorDosMomentos:
         for uniq in uniqs:
             estado = estado_de(uniq)
             if estado is None or not decidir(CANAL_GATILHO, estado):
-                # O jogo escreve o gatilho (ou o modo cala o motor): o momento se cala.
-                if self._na_sessao(uniq):
+                if estado is not None and _o_modo_cala_o_motor(estado):
+                    # O motor calou (sem jogo, alt-tab, modo em que o Hefesto não fala): o
+                    # bloco do momento não pode ficar no aparelho.
+                    self.devolver(uniq, agora)
+                elif self._na_sessao(uniq):
+                    # O jogo escreve o gatilho: o momento se cala e o valor é dele.
                     motor.contadores["soltos_ao_jogo"] += 1
                     self.soltar(uniq)
                 self._ver_o_dedo(uniq, agora)
@@ -1156,41 +1248,56 @@ class AtuadorDosMomentos:
 
     def _ver_o_dedo(self, uniq: str, agora: float) -> None:
         for lado in _LADO_DO_BACKEND:
+            chave = (uniq, lado)
             if self.apertado(uniq, lado):
-                self._aperto.setdefault((uniq, lado), agora)
+                self._aperto.setdefault(chave, agora)
+                status = self._disparo(uniq, lado) if self._disparo is not None else None
+                if (status is not None and status >= TRIGGER_ESTADO_DISPAROU
+                        and chave not in self._clique):
+                    self._clique[chave] = agora  # a primeira vez que o clique passou
             else:
-                self._aperto.pop((uniq, lado), None)
+                self._aperto.pop(chave, None)
+                self._clique.pop(chave, None)
 
     def _tocar(self, motor: TatoVivo, uniq: str, planos: MapaDosMomentos, agora: float) -> int:
         self._ver_o_dedo(uniq, agora)
+        economia = self._economia(uniq)
         escritas = 0
         a_voltar: list[str] = []
         for lado, disco in _LADO_DO_BACKEND.items():
             chave = (uniq, lado)
-            plano = planos.do(uniq, lado)
+            plano = None if economia else planos.do(uniq, lado)
             if plano is None:
                 self._sempre.pop(chave, None)
+                self._expirou.discard(chave)
                 if chave in self._escrito:
                     a_voltar.append(lado)
                 continue
             visto = self._sempre.get(chave)
             if visto is None or visto[0] != plano:
                 self._sempre[chave] = (plano, agora)
+                self._expirou.discard(chave)
+            desde = self._sempre[chave][1]
+            if agora - desde >= TETO_DO_SEMPRE_S and any(
+                    m.quando == QUANDO_SEMPRE and m.dura_ms is None for m in plano.momentos):
+                self._expirou.add(chave)
+            sem_status = self._disparo is None or self._disparo(uniq, lado) is None
             vale = momentos_em_efeito(
-                plano.momentos, self._aperto.get(chave), self._sempre[chave][1], agora)
+                plano.momentos, self._aperto.get(chave), desde, agora,
+                desde_o_clique=self._clique.get(chave), sem_status=sem_status)
             if not vale:
                 if chave in self._escrito:
                     a_voltar.append(lado)
                 continue
-            marca = (bloco_do_momento(plano, (i for i, _rep in vale)), vale)
-            if self._escrito.get(chave) == marca:
+            bloco = bloco_do_momento(plano, (i for i, _rep in vale))
+            if self._escrito.get(chave) == bloco:
                 continue
             if not motor.teto.cabe(uniq, agora):
                 motor.contadores["recusas_do_teto"] += 1
                 continue
             motor.teto.gastar(uniq, agora)
-            self._escrever(uniq, disco, marca[0])
-            self._escrito[chave] = marca
+            self._escrever(uniq, disco, bloco)
+            self._escrito[chave] = bloco
             self._planos[chave] = plano
             escritas += 1
             motor.contadores["escritas"] += 1
@@ -1205,11 +1312,12 @@ class AtuadorDosMomentos:
     def _voltar(self, uniq: str, lados: Sequence[str]) -> None:
         """O lado volta ao estático: à mão se o motor segura mais algo, pela sessão se não."""
         estaticos: dict[str, bytes] = {}
+        economia = self._economia(uniq)
         for lado in lados:
             self._escrito.pop((uniq, lado), None)
             plano = self._planos.pop((uniq, lado), None)
             if plano is not None:
-                estaticos[lado] = plano.bloco_da_volta()
+                estaticos[lado] = plano.bloco_da_volta(economia)
         if self.segura(uniq) or self._repete(uniq):
             for lado, bloco in estaticos.items():
                 self._escrever(uniq, _LADO_DO_BACKEND[lado], bloco)
@@ -1228,20 +1336,32 @@ class AtuadorDosMomentos:
     def soltar(self, uniq: str) -> None:
         """O jogo tomou o gatilho: o que o motor escreveu deixou de valer."""
         for lado in _LADO_DO_BACKEND:
-            self._escrito.pop((uniq, lado), None)
-            self._planos.pop((uniq, lado), None)
+            chave = (uniq, lado)
+            self._escrito.pop(chave, None)
+            self._planos.pop(chave, None)
+            self._sempre.pop(chave, None)  # o «sempre» recomeça quando o jogo largar
+            self._expirou.discard(chave)
         self._entre_batidas.discard(uniq)
         if self._largar is not None:
             self._largar(uniq)
 
     def devolver(self, uniq: str, agora: float) -> None:
+        """O ponto único de devolução: o controle volta ao perfil, sem plano que o segure.
+
+        Quem o chama (motor parado, motor calado) quer o gatilho de volta ao perfil e o «sempre»
+        recomeçando depois: por isso as batidas e o teto de 5 minutos zeram antes da volta.
+        """
+        for lado in _LADO_DO_BACKEND:
+            chave = (uniq, lado)
+            self._sempre.pop(chave, None)  # antes da volta: sem plano, nenhuma batida segura
+            self._expirou.discard(chave)
+            self._clique.pop(chave, None)
         if self._na_sessao(uniq):
             self._voltar(uniq, self.segura(uniq))
 
     def devolver_tudo(self, agora: float) -> None:
         """O motor parou: cada controle em que o momento segura a sessão volta ao perfil."""
         self._aperto.clear()
-        self._sempre.clear()  # antes da volta: sem plano, nenhuma batida segura a sessão
         for uniq in {u for u, _lado in self._escrito} | set(self._entre_batidas):
             self.devolver(uniq, agora)
 
@@ -1404,6 +1524,8 @@ class Controle:
     vpad: Any
     l2: int = 0
     r2: int = 0
+    #: o status do Disparo de ``(L2, R2)`` que o report de entrada trouxe; ``None`` se não veio
+    estado_gatilho: tuple[int, int] | None = None
 
 
 def _inteiro(valor: Any) -> int:
@@ -1411,6 +1533,17 @@ def _inteiro(valor: Any) -> int:
         return int(valor)
     except (TypeError, ValueError):
         return 0
+
+
+def _status_do_disparo(leitor: Any) -> tuple[int, int] | None:
+    """O ``(L2, R2)`` do status do Disparo que o leitor do físico viu, ou ``None``.
+
+    Só leitura do que o leitor já tem: nenhuma escrita nova no aparelho, no cabo e no rádio.
+    """
+    estado = getattr(leitor, "estado_do_gatilho", None)
+    if isinstance(estado, tuple) and len(estado) == 2:
+        return (_inteiro(estado[0]), _inteiro(estado[1]))
+    return None
 
 
 def controles_do_daemon(daemon: Any) -> list[Controle]:
@@ -1425,6 +1558,7 @@ def controles_do_daemon(daemon: Any) -> list[Controle]:
             getattr(daemon, "_gamepad_device", None),
             _inteiro(getattr(estado, "l2_raw", 0)),
             _inteiro(getattr(estado, "r2_raw", 0)),
+            _status_do_disparo(getattr(daemon, "_motion_reader", None)),
         )
     coop = getattr(daemon, "_coop_manager", None)
     jogadores = getattr(coop, "_players", None)
@@ -1438,7 +1572,9 @@ def controles_do_daemon(daemon: Any) -> list[Controle]:
                 foto = leitor.snapshot() if leitor is not None else None
                 l2 = _inteiro(getattr(foto, "l2_raw", 0))
                 r2 = _inteiro(getattr(foto, "r2_raw", 0))
-            vistos[mac] = Controle(mac, getattr(jogador, "vpad", None), l2, r2)
+            vistos[mac] = Controle(
+                mac, getattr(jogador, "vpad", None), l2, r2,
+                _status_do_disparo(getattr(jogador, "motion_reader", None)))
     return list(vistos.values())
 
 
@@ -1574,6 +1710,23 @@ def atuadores_de_producao(daemon: Any) -> list[Atuador]:
         motor = motor_do(daemon)
         return motor is not None and motor.momentos.do(uniq, lado) is not None
 
+    def soltar_lado(uniq: str, lado: str, bloco: bytes) -> object:
+        soltar = getattr(controller, "soltar_o_gatilho_do_jogo_for", None)
+        return soltar(uniq, lado, bloco) if callable(soltar) else False
+
+    def disparo(uniq: str, lado: str) -> int | None:
+        motor = motor_do(daemon)
+        return None if motor is None else motor.disparo.get((uniq, lado))
+
+    def na_economia(uniq: str) -> bool:
+        from hefesto_dualsense4unix.profiles.schema import (
+            controles_em_economia,
+            economia_da_mesa,
+            economia_vale,
+        )
+
+        return economia_vale(norm_mac(uniq) in controles_em_economia(), economia_da_mesa())
+
     def momento(uniq: str, lado: str, bloco: bytes) -> object:
         escrever = getattr(controller, "set_game_trigger_for", None)
         if not callable(escrever):
@@ -1604,12 +1757,15 @@ def atuadores_de_producao(daemon: Any) -> list[Atuador]:
             apertado,
             lambda uniq: sessao.largar(uniq, CANAL_GATILHO),
             do_momento,
+            soltar_lado,
         ),
         AtuadorDosMomentos(
             momento,
             lambda uniq: sessao.soltar(uniq, CANAL_DO_MOMENTO),
             apertado,
             lambda uniq: sessao.largar(uniq, CANAL_DO_MOMENTO),
+            na_economia,
+            disparo,
         ),
         AtuadorDaLuz(
             pintar,
@@ -1661,12 +1817,23 @@ class Passo:
         for controle in controles:
             for evento in self.dedo.ver(controle.uniq, controle.l2, controle.r2, agora):
                 self.motor.anotar(evento)
+            self._anotar_o_disparo(controle)
         self._ouvir_o_jogo(receita, controles)
         jogo = self.jogo = ha_jogo(self.daemon)
         por_uniq = {
             c.uniq: estado_do_controle(c, jogo, self._sessao_ha_s(c, agora)) for c in controles
         }
         return self.motor.tique(agora, por_uniq.get, receita, uniqs=tuple(por_uniq))
+
+    def _anotar_o_disparo(self, controle: Controle) -> None:
+        """O status do Disparo de cada lado vai ao motor; sem report, o lado não tem status."""
+        for lado, valor in zip(
+                (LADO_ESQUERDO, LADO_DIREITO), controle.estado_gatilho or (None, None),
+                strict=True):
+            if valor is None:
+                self.motor.disparo.pop((controle.uniq, lado), None)
+            else:
+                self.motor.disparo[(controle.uniq, lado)] = valor
 
     def tique_do_laco(self, agora: float) -> int:
         """O tique do laço de 60 Hz: o que falha num tique fica no log, e o seguinte vem."""
