@@ -21,6 +21,7 @@ FORMA = re.compile(
     r"ainda\s+(?:n[ãa]o|falta|estamos)"
     r"|n[ãa]o\s+(?:sabemos|conseguimos|conseguimos|temos\s+como)"
     r"|(?:Hefesto|produto|aplicativo|app)\s+(?:ainda\s+)?n[ãa]o\b"
+    r"|pr[óo]xima\s+vers[ãa]o"
     r")",
     re.IGNORECASE,
 )

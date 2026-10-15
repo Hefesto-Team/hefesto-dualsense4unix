@@ -52,7 +52,7 @@ seção daqui**: a aba deixou de estar em trabalho.
   (cursor e rolagem) e seis ações dos gestos do PS. O pacote novo roda sobre a página de antes até publicar: o
   `--publicar` leva a página no mesmo fecho que leva o código.
 - **Fica diferente do desenho, de propósito:** a Acessibilidade renderiza inteira mas todo controle sem dono sai
-  `disabled`/`inert`, e o Guardar e o Voltar ao padrão dela saem apagados com a dica «Chega com a próxima versão»
+  `disabled`/`inert`, e o Guardar e o Voltar ao padrão dela saem apagados, com a dica do que cada um faz (a tela não promete versão)
   (os donos futuros são as sprints do botão que alterna, do tremor, dos analógicos e do cursor); os chips «Navega com»
   só pintam; os rótulos do Tipo encurtam («Interna», «Mouse e teclado»); o ritmo da repetição diz «Hz» e o rótulo do
   glifo começa em maiúscula (a régua de primeira maiúscula reprovava «por s» e «cima»); a dica do Point and click

@@ -44,6 +44,8 @@ QUEM_HEFESTO = "hefesto"
 QUEM_STEAM = "steam"
 NA_STEAM_BIG_PICTURE = "big-picture"
 NA_STEAM_PADRAO = "padrao"  # (noqa-acento) valor de contrato do gesto
+#: A recusa do «Steam padrão», só no diário (a tela pisca o botão): o modo não tem quem o aplique.
+FRASE_DO_STEAM_PADRAO = "O «Steam padrão» não tem quem o aplique; a navegação segue no Big Picture."
 #: Os blocos que a página repinta por inteiro, e os prefixos dos valores do seletor de point and
 #: click (os mesmos do mapa: `molde:<chave>` e `perfil:<nome>`).
 BLOCO_NAVEGA_COM = "navega-com"
@@ -845,7 +847,7 @@ def na_steam(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """«Na Steam»: o que a Steam navega. O Big Picture tem dono; o modo padrão da Steam não tem."""
     escolhido = str(o.get("valor") or o.get("rotulo") or "").strip().lower()
     if escolhido == NA_STEAM_PADRAO:
-        raise RuntimeError("Chega com a próxima versão.")
+        raise RuntimeError(FRASE_DO_STEAM_PADRAO)
     if escolhido != NA_STEAM_BIG_PICTURE:
         raise ValueError(
             f"na-steam: não reconheci a opção escolhida ({escolhido!r}); as duas são "

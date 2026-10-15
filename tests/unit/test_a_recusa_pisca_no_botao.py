@@ -83,8 +83,6 @@ BOTOES = {
 }
 CASOS = ("04", "02", "01", "06")
 
-FRASE_DA_06 = "Chega com a próxima versão."
-
 RECUSA_DO_MIC = "o volume deste alto-falante ainda é desconhecido"
 
 PASSO_MS = 50
@@ -236,11 +234,12 @@ def medido() -> dict:
 
     import hefesto_vivo as hv
     import pacotes.a01_jogar as a01
+    import pacotes.a06_navegacao as a06
     from hefesto_dualsense4unix.app.ipc_bridge import _MOTIVOS_NUMERO
 
     armar: dict[str, str] = {}
     frases = {"04": _MOTIVOS_NUMERO["numero_fora_da_mesa"], "02": RECUSA_DO_MIC,
-              "01": a01.CADEADO_RECUSA, "06": FRASE_DA_06}
+              "01": a01.CADEADO_RECUSA, "06": a06.FRASE_DO_STEAM_PADRAO}
 
     chave_01 = (PAGINA_01, "cadeado")
     chave_02 = (PAGINA_02, "mudo")

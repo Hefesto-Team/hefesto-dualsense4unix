@@ -461,8 +461,8 @@ def _tela_da_acessibilidade():
     </div>
     <div class="tn-rod">
       <a class="btn" href="#">Cancelar</a>
-      <span class="btn btn-padrao2 apagado" aria-disabled="true" data-dica="Chega com a próxima versão">Voltar ao padrão</span>
-      <span class="btn roxo apagado" aria-disabled="true" data-dica="Chega com a próxima versão">Guardar</span>
+      <span class="btn btn-padrao2 apagado" aria-disabled="true" data-dica="Volta estes ajustes ao de fábrica">Voltar ao padrão</span>
+      <span class="btn roxo apagado" aria-disabled="true" data-dica="Guarda estes ajustes para quem joga">Guardar</span>
     </div>
   </div>
 </div>

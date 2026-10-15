@@ -3,12 +3,14 @@
 Absorve O-POINT-AND-CLICK-E-A-ACESSIBILIDADE-SE-DEFINEM-NA-NAVEGACAO-01. A fila leva ao mapa (os
 botões do point and click) e à Acessibilidade. A Acessibilidade vem renderizada como no desenho,
 mas todo controle sem dono sai `disabled`/`inert`, e o Guardar e o Voltar ao padrão da tela saem
-apagados com a dica «Chega com a próxima versão», porque nenhum campo do perfil as guarda ainda.
+apagados, porque nenhum campo do perfil as guarda ainda. A dica diz o que cada um faz,
+nunca a dívida (regra de 07/09/2026: a tela não confessa o que o produto ainda não faz).
 O «Perfil de point and click» lista os quatro moldes e os perfis do disco que configuram botão
 (`blocos`), e a escolha vale para o perfil ativo: o do jogo, ou o `maquina.json` sem jogo.
 
-MORDIDAS: tirar o `inert` de um controle da Acessibilidade, acender o Guardar dela, tirar «Meus
-perfis» do pacote ou deixar o gesto aceitar um valor sem o prefixo reprovam.
+MORDIDAS: tirar o `inert` de um controle da Acessibilidade, acender o Guardar dela, devolver a dica
+«Chega com a próxima versão», tirar «Meus perfis» do pacote ou deixar o gesto aceitar um valor sem o
+prefixo reprovam.
 """
 
 from __future__ import annotations
@@ -45,15 +47,22 @@ def test_todo_controle_da_acessibilidade_sem_dono_esta_apagado_e_inerte() -> Non
     assert "data-gesto" not in tela, "a Acessibilidade acendeu um gesto que ninguém atende"
 
 
+#: o que a dica de cada botão apagado diz: o que ele faz, não quando chega.
+DICAS_DO_RODAPE = {"Voltar ao padrão": "Volta estes ajustes ao de fábrica",
+                   "Guardar": "Guarda estes ajustes para quem joga"}
+
+
 def test_o_guardar_e_o_voltar_ao_padrao_da_acessibilidade_saem_apagados_com_a_dica() -> None:
     tela = _acessibilidade()
     rodape = tela[tela.index('class="tn-rod"'):]
-    for rotulo in ("Voltar ao padrão", "Guardar"):
+    for rotulo, dica in DICAS_DO_RODAPE.items():
         tag = re.search(rf'<span class="btn[^"]*"([^>]*)>{rotulo}</span>', rodape)
         assert tag, f"o «{rotulo}» não é um botão apagado"
         assert 'aria-disabled="true"' in tag.group(1)
-        assert 'data-dica="Chega com a próxima versão"' in tag.group(1)
+        assert f'data-dica="{dica}"' in tag.group(1)
     assert "Cancelar" in rodape
+    assert "próxima versão" not in MOCKUP.read_text(encoding="utf-8"), (
+        "a tela confessa dívida: «próxima versão» é promessa nossa, não o que o botão faz")
 
 
 def _pacotes() -> Any:
