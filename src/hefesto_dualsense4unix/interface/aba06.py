@@ -609,6 +609,7 @@ CSS = CSS_GLIFO + """
 .padrao2 { position:relative;display:block }
 .btn-padrao2 { border-color:#f1fa8c !important;color:#f1fa8c !important }
 .btn-padrao2:hover { background:rgba(241,250,140,.08) }
+.btn.apagado,.btn.apagado:hover { opacity:.4;cursor:not-allowed;background:none }
 .padrao2 .confirma { left:auto;right:0;width:420px }
 .tn-cx.ac2-cx { width:1060px }
 .ac2-grade { display:grid;grid-template-columns:1fr 1fr;gap:0 30px }
@@ -625,8 +626,9 @@ CSS = CSS_GLIFO + """
 .tab.bt2 td:last-child,.tab.ges2 td:last-child { padding-right:0 }
 .tab.bt2 .nm,.tab.bt2 .rot-gl,.tab.ges2 .nm { font-family:inherit;font-size:12px;color:var(--texto-suave);margin-left:4px }
 .nav2-duas { align-items:start }
-.navega-com { display:flex;gap:8px }
-.navega-com .chip { flex:1;justify-content:center;height:30px;padding:0 10px }
+.navega-com { display:flex;gap:8px;flex-wrap:nowrap;min-width:0 }
+.navega-com .chip { flex:1 1 0;min-width:0;justify-content:center;height:30px;padding:0 10px }
+.navega-com .chip .nm { min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap }
 .tn-rod { padding-top:6px }
 .miolo { scrollbar-gutter:auto }
 .nav2-opcoes { --rot2:140px }
@@ -640,8 +642,8 @@ CSS = CSS_GLIFO + """
 .ac2-ctl .campo-num.mini .par { flex:1 1 auto }
 .ac2-ctl .campo-num.mini .bignum { flex:1 1 auto;justify-content:space-between }
 .ac2-ctl .nj-tog { height:28px;border-radius:7px }
-@media (max-height:860px){.nav2 .tab.bt2 td{height:30px!important} .nav2 .tab.bt2 select{height:26px} .nav2 .op2{height:31px} .nav2 .op2 :is(.campo-linha,.campo-num,.seg.mini button){height:26px} .nav2 .tab.ges2 td{height:25px!important} .nav2 .tab.ges2 select{height:23px}}
-@media (max-height:780px){.nav2 .tab.bt2 td{height:26px!important} .nav2 .tab.bt2 select{height:23px} .nav2 .op2{height:27px} .nav2 .op2 :is(.campo-linha,.campo-num,.seg.mini button){height:23px} .nav2 .tab.ges2 td{height:22px!important} .nav2 .tab.ges2 select{height:20px} .nav2-botoes,.nav2-opcoes{padding-block:8px} .nav2 > .quadro-corpo{padding-block:10px}}
+@media (max-height:860px){.nav2 .tab.bt2 td{height:30px!important} .nav2 .tab.bt2 select{height:26px} .nav2 .op2{height:31px} .nav2 .op2 :is(.campo-linha,.campo-num,.seg.mini button,.navega-com .chip){height:26px} .nav2 .tab.ges2 td{height:25px!important} .nav2 .tab.ges2 select{height:23px}}
+@media (max-height:780px){.nav2 .tab.bt2 td{height:26px!important} .nav2 .tab.bt2 select{height:23px} .nav2 .op2{height:27px} .nav2 .op2 :is(.campo-linha,.campo-num,.seg.mini button,.navega-com .chip){height:23px} .nav2 .tab.ges2 td{height:22px!important} .nav2 .tab.ges2 select{height:20px} .nav2-botoes,.nav2-opcoes{padding-block:8px} .nav2 > .quadro-corpo{padding-block:10px}}
 html.alvos-24 :is(button,select,input:not([type=checkbox]):not([type=radio]):not([type=hidden]),textarea,summary,[role=button],.nj-tog,.sw,.passo,label.faixa,.nav-i,.mudo-i,.padrao-i){min-height:24px;box-sizing:border-box}
 html.alvos-24 :is(button,[role=button],.nj-tog,.passo,.nav-i,.mudo-i,.padrao-i){min-width:24px}
 html.alvos-24 :is(input[type=checkbox],input[type=radio]):not(.radio-mesa){min-width:24px;min-height:24px}

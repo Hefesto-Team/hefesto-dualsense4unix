@@ -110,3 +110,42 @@ def test_a_dica_do_seletor_acompanha_o_valor(pagina) -> None:
     depois = pagina.evaluate(
         "document.querySelector('[data-gesto=\"teclado\"]').getAttribute('title')")
     assert depois and depois != antes, (antes, depois)
+
+
+def test_quatro_controles_no_navega_com_cabem_numa_linha(pagina) -> None:
+    """Com quatro controles, os chips do «Navega com» ficam numa linha, dentro da coluna.
+
+    MORDIDA: devolver o `flex-wrap:wrap` e tirar o `min-width:0` do chip quebra em quatro linhas,
+    e as de baixo cobrem o «Perfil de point and click».
+    """
+    pagina.goto(MOCKUP.as_uri())
+    m = pagina.evaluate("""() => {
+      const nc = document.querySelector('.navega-com');
+      const modelo = nc.querySelector('.chip');
+      nc.innerHTML = '';
+      for (const nome of ['Starlight Blue', 'Galactic Purple', 'Cosmic Red', 'White']) {
+        const c = modelo.cloneNode(true);
+        (c.querySelector('.nm') || c).textContent = 'DualSense ' + nome;
+        nc.appendChild(c);
+      }
+      const op = nc.closest('.op2').getBoundingClientRect();
+      const prox = nc.closest('.op2').nextElementSibling.getBoundingClientRect();
+      const r = [...nc.querySelectorAll('.chip')].map(c => c.getBoundingClientRect());
+      return {tops: [...new Set(r.map(b => Math.round(b.top)))],
+              fundo: Math.max(...r.map(b => b.bottom)), direita: Math.max(...r.map(b => b.right)),
+              op_fundo: op.bottom, op_direita: op.right, prox_topo: prox.top};
+    }""")
+    assert len(m["tops"]) == 1, m
+    assert m["fundo"] <= min(m["op_fundo"], m["prox_topo"]) + 1, m
+    assert m["direita"] <= m["op_direita"] + 1, m
+
+
+def test_o_que_ainda_nao_grava_aparece_apagado(pagina) -> None:
+    """O «Voltar ao padrão» e o «Guardar» da Acessibilidade não gravam, e a tela os mostra apagados.
+
+    MORDIDA: tirar a regra `.btn.apagado` deixa os dois acesos, iguais a um botão que funciona.
+    """
+    pagina.goto(MOCKUP.as_uri() + "#acessibilidade")
+    opacidades = pagina.evaluate("""() => [...document.querySelectorAll(
+      '#acessibilidade .apagado[aria-disabled="true"]')].map(b => getComputedStyle(b).opacity)""")
+    assert len(opacidades) == 2 and all(float(o) <= 0.6 for o in opacidades), opacidades

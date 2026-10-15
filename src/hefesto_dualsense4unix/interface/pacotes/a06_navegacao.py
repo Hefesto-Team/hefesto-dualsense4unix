@@ -420,8 +420,11 @@ def chips_de_quem_navega(lugares: list[dict[str, Any]], *, so_o_primeiro: bool =
                    f' style="--plastico:{monta.cor_da_zona(slug)}"')
         marca = " on" if i == aceso else ""
         move = not (so_o_primeiro or i != aceso)
-        dica = ' data-dica="Só este controle move o cursor"' if move else ""
-        chips.append(f'<span class="chip plastico{marca}"{cor}{dica}>{nome}</span>')
+        # com quatro controles o nome encolhe com reticências, e a dica o diz inteiro
+        dica = (f' data-dica="{nome}: só este controle move o cursor"' if move
+                else "" if so_o_primeiro else f' data-dica="{nome}"')
+        chips.append(f'<span class="chip plastico{marca}"{cor}{dica}>'
+                     f'<span class="nm">{nome}</span></span>')
     return "".join(chips)
 
 
