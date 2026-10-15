@@ -234,6 +234,12 @@ ajustar_wireplumber() {
     if grep -q 'bash-completion/completions' "${arvore}/src/tools/meson.build"; then
         printf 'usr/share/bash-completion/completions/wpctl\n' >> "${d}/wireplumber.install"
     fi
+    # 4. o control do Pop pede o meson-1.5, o do pipewire pede o meson-1.7, e os
+    #    dois pacotes do noble conflitam: não há casa que tenha as duas build-deps.
+    #    A 0.5.18 pede meson >= 0.59.0, e o build das duas sai com o 1.7.
+    grep -q -E '^[[:space:]]+meson-1\.5,$' "${d}/control" \
+        || morra "${RC_PATCH}" "o debian/control do Pop não pede o meson-1.5"
+    sed -i -E 's/^([[:space:]]+)meson-1\.5,$/\1meson-1.7,/' "${d}/control"
 }
 
 preparar() {

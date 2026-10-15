@@ -128,6 +128,28 @@ class TestOBaseline:
         presentes = {p.name for p in (ASSETS / "patches").iterdir()}
         assert presentes == set(serie), "patch no diretório sem estar na série, ou o contrário"
 
+    def test_a_versao_e_a_do_upstream_e_nao_a_do_pop(self) -> None:
+        """D-1510-A-VERSAO-MAIS-RECENTE-DE-TUDO: o alvo é a tag do upstream, o Pop dá o debian/."""
+        v = _baseline()
+        assert v["PW_VERSAO_UPSTREAM"] != v["PW_EMPACOTAMENTO_VERSAO"].split("-")[0]
+        assert v["WP_VERSAO_UPSTREAM"] != v["WP_EMPACOTAMENTO_VERSAO"].split("-")[0]
+        assert "/archive/" in v["PW_FONTE_URL"] and "/archive/" in v["WP_FONTE_URL"]
+
+    def test_o_cve_do_debian_vai_na_serie(self) -> None:
+        """D-1510-O-PIPEWIRE-DA-CASA-LEVA-O-CVE-DO-DEBIAN: a correção que o Debian leva entra."""
+        assert "debian-0001-CVE-2026-14330.patch" in _baseline()["PW_PATCHES"].split()
+
+    def test_o_libcamera_sai_do_build_e_dos_pacotes(self) -> None:
+        """D-1510-O-PIPEWIRE-DA-CASA-SEM-LIBCAMERA: o noble tem a 0.2.0, a 1.6.9 pede a 0.6.0."""
+        texto = SCRIPT.read_text(encoding="utf-8")
+        assert "-Dlibcamera=disabled" in texto
+        assert "libspa-0\\.2-libcamera|pipewire-libcamera" in texto
+
+    def test_as_duas_obras_pedem_o_mesmo_meson(self) -> None:
+        """O meson-1.5 e o meson-1.7 do noble conflitam: o WirePlumber vai ao do PipeWire."""
+        texto = SCRIPT.read_text(encoding="utf-8")
+        assert "s/^([[:space:]]+)meson-1\\.5,$/\\1meson-1.7,/" in texto
+
     def test_os_simbolos_novos_conferem_pelo_hash(self) -> None:
         novos = ASSETS / "debian" / "libwireplumber-0.5-0.symbols.novos"
         assert _sha(novos) == _baseline()["WP_SIMBOLOS_NOVOS_SHA256"]
