@@ -99,8 +99,8 @@ def _casas_cravadas() -> dict[str, int]:
     NÃO É MAIS UMA INSTRUÇÃO, É UM DIAGNÓSTICO. Até 02/09/2026 este número
     mandava no pacote: ele escrevia exatamente `N` casas, enchendo de vazio as
     que o modo não usava. Era a cura do D3 pelo sintoma, e ela tinha um teto —
-    `Machine` pede 6 barras, `MultiPositionVibration` pede 11, e a página crava
-    4 e 2. *Os sete que sobram não cabiam, e a tela calava sobre eles.*
+    `Machine` pede 4 barras, `MultiPositionVibration` pede 11, e a página crava
+    4 e 2. *As que sobram não cabiam, e a tela calava sobre elas.*
 
     Com a decisão de produto (a caixa acompanha o modo), quem manda é o MODO e a caixa
     inteira vem em `blocos:`. O que este número diz agora é UMA coisa: quantas
@@ -819,8 +819,8 @@ def _html_de_uma_barra(sigla: str, i: int, a: dict[str, Any],
     """Uma linha da caixa de ajustes. `escondida` guarda o valor sem mostrá-lo.
 
     `editavel` PÕE A ALAVANCA — 03/09/2026, e é a maior dívida desta aba.
-    Medido: 17 dos 19 modos têm ajuste, somando 73 parâmetros (Rigid 2,
-    Machine 6, MultiPositionFeedback 10, MultiPositionVibration 11). Na GTK
+    Medido no `PRESETS`: 17 dos 19 modos têm ajuste, somando 71 parâmetros (Rigid 2,
+    Machine 4, MultiPositionFeedback 10, MultiPositionVibration 11). Na GTK
     cada um é um `Gtk.Scale` que ela arrasta, com faixa e padrão vindos do
     `trigger_specs`; no HTML **nenhum** era tocável, e escolher um modo
     aplicava os PADRÕES dele e acabava.
@@ -2167,9 +2167,9 @@ def ajuste(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """Arrastar uma barra muda AQUELE parâmetro e reaplica o efeito na hora.
 
     A MAIOR DÍVIDA DESTA ABA, e o nome dela já estava reservado: o `SEM_ECO`
-    listava um gesto `ajuste` que não existia. São **73 parâmetros em 17 dos 19
-    modos** que a GTK deixa mexer e o HTML só mostrava — Rigid 2, Machine 6,
-    MultiPositionFeedback 10, MultiPositionVibration 11. Sem eles, escolher um
+    listava um gesto `ajuste` que não existia. São **71 parâmetros em 17 dos 19
+    modos** (a soma do `PRESETS`) que a GTK deixa mexer e o HTML só mostrava —
+    Rigid 2, Machine 4, MultiPositionFeedback 10, MultiPositionVibration 11. Sem eles, escolher um
     modo aplicava os PADRÕES dele e não havia como sair de lá; e "Montar do
     zero" (`Custom`), cujos oito padrões são ZERO, era um modo que não faz nada
     — um item de menu que responde "aplicado" com o gatilho intacto.

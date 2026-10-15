@@ -3499,7 +3499,7 @@ mkdir -p "${BIN_DIR}"
 cat > "${LAUNCHER}" <<LAUNCH
 #!/usr/bin/env bash
 # O console script do mesmo nome (pyproject.toml) abre a MESMA interface, por
-# interface.hefesto_vivo:main. Este arquivo o SOBRESCREVE de propósito: ele
+# interface.abrir:entrada. Este arquivo o SOBRESCREVE de propósito: ele
 # desprende a janela do terminal (setsid+nohup) e passa pelo run.sh, que
 # cuida do XWayland e do pixbuf antes de o Python subir. HEFESTO_NA_TELA nasce
 # 1 (a janela vai para a tela de quem clicou); HEFESTO_NA_TELA=0 no ambiente
