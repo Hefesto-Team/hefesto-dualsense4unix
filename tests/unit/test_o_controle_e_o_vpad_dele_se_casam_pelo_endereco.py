@@ -24,7 +24,6 @@ from hefesto_dualsense4unix.cli.ipc_client import IpcClient
 from hefesto_dualsense4unix.daemon.ipc_server import IpcServer
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.interface import cartao_do_controle as cartao
-from hefesto_dualsense4unix.interface.pacotes import a13_mapa_do_controle as a13
 from hefesto_dualsense4unix.profiles import loader as loader_module
 from hefesto_dualsense4unix.profiles.manager import ProfileManager
 from hefesto_dualsense4unix.testing import FakeController
@@ -45,8 +44,6 @@ def test_fora_do_coop_so_o_primario_mostra_motores_e_giroscopio() -> None:
     primario = {"uniq": U1, "player": 1, "is_primary": True}
     segundo = {"uniq": U2, "player": 1, "is_primary": False}
 
-    assert a13._motores(estado, primario) == (True, True)
-    assert a13._motores(estado, segundo) == (False, False)
     assert cartao._item_do_vpad(primario, estado) is not None
     assert cartao._item_do_vpad(segundo, estado) is None
     assert cartao.texto_motion(primario, estado) == (
@@ -68,13 +65,11 @@ def test_no_coop_renumerado_cada_controle_acha_o_vpad_dele() -> None:
         assert item["player"] == numero
         assert cartao.texto_motion(entrada, estado) == (
             f"Giroscópio: fluindo para o jogo (~{100 + numero} Hz)")
-        assert a13._motores(estado, entrada) == (False, True)
 
 
 def test_controle_sem_endereco_nao_casa_com_vpad_nenhum() -> None:
     estado = {"rumble_ff": {"per_vpad": [_vpad(U1, 1)]}}
     assert cartao._item_do_vpad({"player": 1, "is_primary": True}, estado) is None
-    assert a13._motores(estado, {"player": 1, "is_primary": True}) == (False, False)
 
 
 # O serviço: o handler de verdade publica o endereço em cada item.

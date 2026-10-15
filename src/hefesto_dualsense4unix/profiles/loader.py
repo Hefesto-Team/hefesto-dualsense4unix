@@ -27,7 +27,7 @@ import sys
 import tempfile
 import threading
 import time
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from contextvars import ContextVar
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -128,6 +128,59 @@ ARQUIVOS_DOS_ESTILOS_DE_JOGO: tuple[str, ...] = (
     "navegacao.json",
     "point_and_click.json",
 )
+
+
+@dataclass(frozen=True)
+class MoldeDePerfil:
+    """Um molde de fábrica da tela «Mapa do controle»: o ponto de partida de um perfil de botões.
+
+    O molde NÃO é arquivo: não semeia nada em `~/.config`, não aparece na aba Perfis e não casa
+    com janela. Escolhê-lo na tela e guardar cria um perfil de verdade (`perfil_do_molde`), dela,
+    com o nome que ela der. Os quatro nomes são os MESMOS da lista «Perfil de point and click» da
+    aba Navegação (a régua `test_a_aba_mapa_do_controle_do_todo` confere os dois lados).
+    """
+
+    chave: str
+    nome: str
+    button_actions: Mapping[str, str]
+    velocidade: int = 8
+    rolagem: int = 1
+
+
+#: O que cada molde troca, só em fichas que o motor sabe fazer (`core/acoes_de_botao.ACOES`).
+#: O resto herda o de fábrica, como em todo `button_actions`.
+MOLDES_DE_PERFIL: tuple[MoldeDePerfil, ...] = (
+    MoldeDePerfil("point_and_click", "Point and click", {
+        "cross": "BTN_LEFT", "circle": "BTN_RIGHT", "triangle": "KEY_ESC",
+        "l3_direcao": "__CURSOR__", "r3_direcao": "__ROLAGEM__"}),
+    MoldeDePerfil("visual_novel", "Visual novel", {
+        "cross": "BTN_LEFT", "circle": "BTN_RIGHT", "square": "KEY_LEFTCTRL",
+        "triangle": "KEY_ESC", "l3_direcao": "__CURSOR__", "r3_direcao": "__ROLAGEM__"}),
+    MoldeDePerfil("mouse", "Mouse", {
+        "cross": "BTN_LEFT", "circle": "BTN_RIGHT",
+        "l3_direcao": "__CURSOR__", "r3_direcao": "__ROLAGEM__"}),
+    MoldeDePerfil("mouse_e_teclado", "Mouse e teclado", {
+        "cross": "BTN_LEFT", "circle": "KEY_ESC", "square": "KEY_SPACE",
+        "triangle": "KEY_ENTER", "dpad_up": "KEY_UP", "dpad_down": "KEY_DOWN",
+        "dpad_left": "KEY_LEFT", "dpad_right": "KEY_RIGHT", "l3_direcao": "__CURSOR__"}),
+)
+
+MOLDE_POR_CHAVE: dict[str, MoldeDePerfil] = {m.chave: m for m in MOLDES_DE_PERFIL}
+
+
+def perfil_do_molde(chave: str, nome: str, *, prioridade: int = 0) -> Profile:
+    """O perfil novo que o molde ``chave`` faz nascer, só-manual até ela dar um jogo a ele."""
+    from hefesto_dualsense4unix.profiles.schema import MatchManual, ProfileMouseConfig
+
+    molde = MOLDE_POR_CHAVE[chave]
+    return Profile(
+        name=nome,
+        match=MatchManual(),
+        priority=prioridade,
+        button_actions=dict(molde.button_actions),
+        mouse=ProfileMouseConfig(
+            enabled=True, speed=molde.velocidade, scroll_speed=molde.rolagem),
+    )
 
 ESTILOS_DE_JOGO_DIR_NAME = "estilos-de-jogo"
 
@@ -2328,10 +2381,13 @@ __all__ = [
     "HISTORICO_TETO_POR_PERFIL",
     "INTERVALO_MINIMO_DA_VARREDURA_S",
     "MARCA_DE_SEMEADURA_DE_JOGOS",
+    "MOLDES_DE_PERFIL",
+    "MOLDE_POR_CHAVE",
     "PREFIXO_DA_CHAVE_DE_JANELA",
     "PRIORIDADE_DO_PERFIL_DE_JOGO",
     "SEED_MARKER_NAME",
     "SEED_SKIP_ENV_VAR",
+    "MoldeDePerfil",
     "PerfilSemeado",
     "ResultadoDaSemeadura",
     "ResultadoDosEstilos",
@@ -2353,6 +2409,7 @@ __all__ = [
     "o_mudo_do_microfone_vai_para_o_controle",
     "o_perfil_de_fora_do_jogo",
     "o_personalizado_vira_freestyle",
+    "perfil_do_molde",
     "perfis_de_jogo_semeados",
     "perfis_para_consulta",
     "perfis_que_casam_com_o_cliente_steam",

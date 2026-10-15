@@ -1192,6 +1192,27 @@ class ControllerOverrides(BaseModel):
 _KEY_BINDING_TOKEN_RE = re.compile(r"^(KEY_[A-Z0-9_]+|__[A-Z_]+__)$")
 
 
+_TECLA_RE = re.compile(r"^KEY_[A-Z0-9_]+$")
+
+
+def _e_combinacao_de_teclas(acao: str) -> bool:
+    """`KEY_W` ou `KEY_LEFTCTRL+KEY_W`: toda parte é uma tecla que o teclado virtual digita.
+
+    É a tecla que a tela «Mapa do controle» grava num botão: a lista de `ACOES` tem as doze
+    comuns, e a pessoa pode querer qualquer outra das que o dispositivo sabe emitir
+    (`SUPPORTED_KEYS`). A tecla que ele não emite continua recusada, para o botão não gravar
+    uma ação que o motor deixaria calada.
+    """
+    partes = acao.split("+")
+    if not partes or not all(_TECLA_RE.match(x) for x in partes):
+        return False
+    try:
+        from hefesto_dualsense4unix.integrations.uinput_keyboard import SUPPORTED_KEYS
+    except Exception:
+        return True
+    return all(x in SUPPORTED_KEYS for x in partes)
+
+
 #: quem manda no default passam a morar juntos; e este módulo importa só
 #: stdlib + pydantic, o que permite `profiles/`, `app/` e o CLI lerem a faixa
 #: sem nenhum deles puxar GTK.
@@ -1318,11 +1339,15 @@ class Profile(BaseModel):
                     f"button_actions: {botao!r} não é um dos botões da tela. "
                     f"Os que existem: {', '.join(BOTOES)}"
                 )
-            if not isinstance(acao, str) or acao not in ACOES:
+            if not isinstance(acao, str) or not (
+                acao in ACOES or _e_combinacao_de_teclas(acao)
+            ):
                 raise ValueError(
                     f"button_actions[{botao!r}]: {acao!r} não é uma ação "
                     f"conhecida. As que existem estão em "
-                    f"`core/acoes_de_botao.ACOES`."
+                    f"`core/acoes_de_botao.ACOES`, fora as combinações "
+                    f"de teclas `KEY_*` que o sistema conhece (a tecla que a "
+                    f"tela «Mapa do controle» grava)."
                 )
         return value
 

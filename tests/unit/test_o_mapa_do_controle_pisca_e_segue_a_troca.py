@@ -1,4 +1,8 @@
-"""O mapa do controle pisca, segue a troca de botões e diz qual controle mostra."""
+"""O mapa do controle pisca o botão que o controle escolhido aperta, mostra a troca e diz qual
+controle mostra.
+
+MORDIDAS: pintar o pisca com o controle errado, esquecer a troca no valor da linha, tirar o
+endereço de um lado, ou soltar a peça do desenho quando a linha pisca reprovam."""
 from __future__ import annotations
 
 import csv
@@ -26,7 +30,7 @@ UNIQS = ("aa:bb:cc:00:00:01", "aa:bb:cc:00:00:02", "aa:bb:cc:00:00:03",
          "aa:bb:cc:00:00:04")
 APERTA = {1: ["cross"], 3: ["triangle", "l3"]}
 ACENDE_P1 = {"cross"}
-ACENDE_P3 = {"triangle", "stick_l"}
+ACENDE_P3 = {"triangle", "l3"}
 
 
 def _declaradas() -> set[str]:
@@ -59,9 +63,10 @@ def _contexto(escolhido: str = "") -> pacotes.Contexto:
 
 
 def _acesos(escolhido: str) -> set[str]:
+    """As linhas que piscam: o botão que o controle escolhido está apertando agora."""
     carga = pacotes.pacote_da_pagina(PAGINA, _contexto(escolhido)) or {}
-    return {k[len(a13.ACESO):] for k, v in carga["mesa"].items()
-            if k.startswith(a13.ACESO) and v == "sim"}
+    return {k[len("estado-"):] for k, v in carga["mesa"].items()
+            if k.startswith("estado-") and "pisca" in str(v).split()}
 
 
 @pytest.fixture
@@ -78,10 +83,6 @@ def test_o_pisca_e_do_controle_escolhido() -> None:
     assert _acesos("p1") == ACENDE_P1
 
 
-def test_todos_e_a_uniao() -> None:
-    assert _acesos("todos") == ACENDE_P1 | ACENDE_P3
-
-
 def test_sem_escolha_e_o_primeiro_da_mesa() -> None:
     """O contexto que não disse cai no primeiro da mesa, como a fita das abas."""
     assert _acesos("") == ACENDE_P1
@@ -93,17 +94,13 @@ def _nome_da_peca(pid: str) -> str:
     return next(p["nome"] for p in csv.DictReader(linhas) if p["id"] == pid)
 
 
-def test_a_troca_diz_o_que_a_navegacao_diz(com_troca: dict[str, Any]) -> None:
-    ctx = _contexto("p1")
-    mapa = (pacotes.pacote_da_pagina(PAGINA, ctx) or {})["mesa"]
-    nav = (pacotes.pacote_da_pagina("06-navegacao.html", ctx) or {})["mesa"]
+def test_a_troca_aparece_no_valor_da_linha_com_o_nome_da_peca(com_troca: dict[str, Any]) -> None:
+    mapa = (pacotes.pacote_da_pagina(PAGINA, _contexto("p1")) or {})["mesa"]
     destino = com_troca["remapeamento"]["triangle"]
-    assert mapa[f"{a13.TROCA}triangle"] == nav["troca-triangle"], (
-        "o mapa e a tela «Trocar os botões» dizem destinos diferentes")
-    assert mapa[f"{a13.TROCA}triangle"] == _nome_da_peca(destino)
-    assert mapa[f"{a13.TROCADA}triangle"] == "sim"
-    sem_troca = {k for k, v in mapa.items() if k.startswith(a13.TROCADA) and not v}
-    assert f"{a13.TROCADA}cross" in sem_troca and len(sem_troca) == len(a13.TROCAM) - 1
+    assert mapa["val-triangle"] == _nome_da_peca(destino), mapa["val-triangle"]
+    assert "muda" in str(mapa["estado-triangle"]).split()
+    assert mapa["atual-triangle"] == f"troca:{destino}"
+    assert "muda" not in str(mapa["estado-cross"]).split(), "a Cruz não tem troca"
 
 
 def test_o_endereco_existe_dos_dois_lados() -> None:
@@ -160,20 +157,15 @@ def test_a_escolha_feita_no_mapa_chega_ao_contexto_das_abas(escolha_limpa: Any) 
 
 MEDIDA = r"""
 (function(){
-  const vis = s => { const e = document.querySelector(s);
-                     return e ? getComputedStyle(e).display : null; };
   const fill = s => { const e = document.querySelector(s);
                       return e ? getComputedStyle(e).fill : null; };
+  const linha = b => document.querySelector('.b2[data-b="' + b + '"]');
   return JSON.stringify({
-    marca_tri: vis('.m-triangle'), marca_cruz: vis('.m-cross'),
-    linha_tri: vis('.item-triangle .troca'), linha_cruz: vis('.item-cross .troca'),
-    texto_tri: (document.querySelector('[data-campo="troca-triangle"]') || {}).textContent,
+    texto_tri: ((linha('triangle') || {}).querySelector('.b2-val') || {}).textContent,
+    estado_tri: (linha('triangle') || {}).dataset.estado,
+    estado_cruz: (linha('cross') || {}).dataset.estado,
     peca_tri: fill('#mp-triangle .peca'), peca_cruz: fill('#mp-cross .peca'),
-    leds: [1, 2, 3, 4, 5].filter(i => document.querySelector('#mp-led-jogador-' + i)
-                                     .classList.contains('led-on')),
-    luz: fill('#mp-lightbar *'), apagada: getComputedStyle(document.documentElement)
-                                         .getPropertyValue('--luz-apagada').trim(),
-    nenhum_on: !!document.querySelector('[data-bloco="controles-do-mapa"] [data-jogador="0"].on')
+    chips: document.querySelectorAll('.mc-chips .chip').length
   });
 })()
 """
@@ -256,50 +248,14 @@ def _carga(escolhido: str) -> dict[str, Any]:
                               {u: f"p{n}" for n, u in enumerate(UNIQS, start=1)})
 
 
-def test_a_troca_e_o_pisca_aparecem_no_desenho(com_troca: dict[str, Any]) -> None:
-    """3b e 5: a marca tracejada e a linha «No jogo» da peça trocada, e a peça"""
+def test_o_pisca_e_a_troca_aparecem_no_desenho(com_troca: dict[str, Any]) -> None:
+    """A linha do Triângulo diz o destino e a peça dele pinta rosa quando o P3 o aperta."""
     com_p3, com_p1 = _no_webkit([_carga("p3"), _carga("p1")])
     destino = _nome_da_peca(com_troca["remapeamento"]["triangle"])
-    assert com_p3["marca_tri"] != "none" and com_p3["linha_tri"] != "none", com_p3
     assert com_p3["texto_tri"] == destino, com_p3
-    assert com_p3["marca_cruz"] == "none" and com_p3["linha_cruz"] == "none", (
-        f"a Cruz não tem troca e ganhou a marca: {com_p3}")
+    assert "pisca" in com_p3["estado_tri"].split() and "pisca" not in com_p3["estado_cruz"].split()
     assert com_p3["peca_tri"] == ROSA and com_p3["peca_cruz"] != ROSA, com_p3
     assert com_p1["peca_tri"] != ROSA and com_p1["peca_cruz"] == ROSA, com_p1
-
-
-def _rgb(cor: str) -> str:
-    r, g, b = (int(cor.lstrip("#")[i:i + 2], 16) for i in (0, 2, 4))
-    return f"rgb({r}, {g}, {b})"
-
-
-def test_a_mesa_sem_controle_e_o_desenho_sem_controle() -> None:
-    """7: sem controle na mesa, o bloco do produto chega só com o «Nenhum», e o"""
-    ctx = pacotes.Contexto(state={"controllers": []}, mesa=[], conectados=[], estados={})
-    vazia = pacotes.normalizar(pacotes.pacote_da_pagina(PAGINA, ctx) or {}, {})
-    (medida,) = _no_webkit([vazia])
-    assert medida["leds"] == [], f"sem controle, lâmpadas acesas: {medida}"
-    assert medida["luz"] == _rgb(medida["apagada"]), f"sem controle, a barra acesa: {medida}"
-    assert medida["nenhum_on"], f"sem controle, o «Nenhum» não ficou aceso: {medida}"
-
-
-def test_o_todos_desenha_o_primeiro_da_mesa() -> None:
-    """7: o «Todos» depois de outro chip desenha o primeiro da mesa, de quem o"""
-    from hefesto_dualsense4unix.core.led_control import player_led_pattern
-
-    def acesas(n: int) -> list[int]:
-        return [i + 1 for i, on in enumerate(player_led_pattern(n)) if on]
-
-    primeiro = int(monta.MESA[0]["jogador"])
-    outro = next(c for c in monta.MESA if int(c["jogador"]) != primeiro)
-    assert acesas(int(outro["jogador"])) != acesas(primeiro), "a régua seria cega"
-    bloco = '[data-bloco="controles-do-mapa"] '
-    clicar = ("(function(){document.querySelector('%s.bt[data-pref=\"%s\"]').click();"
-              "return 1;})()")
-    no_outro, no_todos = _no_webkit([clicar % (bloco, outro["pref"]), clicar % (bloco, "todos")])
-    assert no_outro["leds"] == acesas(int(outro["jogador"])), no_outro
-    assert no_todos["leds"] == acesas(primeiro), (
-        f"o «Todos» ficou com as lâmpadas do chip anterior: {no_todos}")
 
 
 VISTAS_DO_MAPA = {"dela": (1918, 840), "ladrilhada": (1212, 809), "estreita": (860, 809)}
@@ -307,8 +263,8 @@ VISTAS_DO_MAPA = {"dela": (1918, 840), "ladrilhada": (1212, 809), "estreita": (8
 CHIPS = r"""
 (function(){
   return JSON.stringify(Array.from(
-      document.querySelectorAll('[data-bloco="controles-do-mapa"] .bt')).map(b => {
-    const r = b.getBoundingClientRect(), bloco = b.closest('.prova').getBoundingClientRect();
+      document.querySelectorAll('[data-bloco="controles-do-mapa"] .chip')).map(b => {
+    const r = b.getBoundingClientRect(), bloco = b.closest('.mc-chips').getBoundingClientRect();
     const caixa = document.querySelector('.cx').getBoundingClientRect();
     return {texto: (b.textContent || '').trim(),
             vaza: b.scrollHeight > b.clientHeight + 1 || b.scrollWidth > b.clientWidth + 1,

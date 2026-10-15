@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """O MAPA DO CONTROLE — a fonte da verdade das peças, funcional."""
-import csv, json, math, pathlib, re, sys
+import csv, math, pathlib, re, sys
 
 import sys as _sys, pathlib as _pathlib
 _sys.path.insert(0, str(_pathlib.Path(__file__).resolve().parent))
@@ -15,20 +15,9 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 sys.path.insert(0, str(R / "src"))
 import onde  # noqa: E402
 import caixa_da_janela  # noqa: E402
-from hefesto_dualsense4unix.core.led_control import (  # noqa: E402
-    player_led_pattern,
-)
 GLIFOS = R / "assets/glyphs"
 SVG = R / "src/hefesto_dualsense4unix/interface/ds_limpo.svg"
 SAIDA = onde.pagina("mapa-do-controle.html")
-
-REGIOES = [("face", "Botões da face"), ("direcional", "Direcional"),
-           ("ombros", "Ombros"), ("gatilhos", "Gatilhos"),
-           ("analogicos", "Analógicos"), ("centro", "Centro"),
-           ("sensores", "Sensores"), ("luzes", "Luzes"),
-           ("audio", "Áudio"), ("energia", "Energia"), ("vibracao", "Vibração"),
-           ("chassi", "Chassi")]
-
 
 def le_csv():
     linhas = [l for l in CSV.read_text().splitlines() if l and not l.startswith("#")]
@@ -209,7 +198,8 @@ def sobe_a_letra(svg_txt):
     return svg_txt
 
 
-def controle(pecas, trocam=()):
+
+def controle(pecas):
     """O desenho — que É o arquivo dela — com os alvos do ponteiro por cima."""
     x = sobe_a_letra(SVG.read_text())
     # O grupo do chassi chega vazio do desenho (o `corpo` é SEM_BOTAO); sobraria
@@ -283,12 +273,8 @@ def controle(pecas, trocam=()):
                 break
         saida.insert(pos, a)
 
-    marcas = []
-    for pid in trocam:
-        corpo = re.sub(r"<ellipse\b[^>]*/>", "", forma_cheia(x, pid))
-        if corpo:
-            marcas.append(f'  <g class="marca-troca m-{pid}">{corpo}</g>')
-    return x.replace("</svg>", "\n".join(marcas + [t[2] for t in saida]) + "\n</svg>", 1)
+    return x.replace("</svg>", "\n".join(t[2] for t in saida) + "\n</svg>", 1)
+
 
 def cores_do_csv():
     """Os 28 modelos do `cores-do-dualsense.csv`, agrupados por modelo."""
@@ -300,565 +286,427 @@ def cores_do_csv():
     return fora
 
 
-ZONAS_NA_PROVA = ("casca_esq", "casca_dir", "painel", "touch", "botoes_face",
-                  "simbolos", "dpad", "analogicos", "gatilhos")
-
-
-def banco_de_provas():
-    """A barra de provas: cor do plástico, o controle e a barra de luz."""
-    import monta
-    from pacotes import a13_mapa_do_controle as a13
-
-    primeiro = monta.MESA[0]
-    modelos = cores_do_csv()
-    ordem = sorted(modelos, key=lambda k: (modelos[k][0]["codigo_da_cor"], k))
-    fabrica, especiais = [], []
-    for mid in ordem:
-        ls = modelos[mid]
-        cod = ls[0]["codigo_da_cor"]
-        zonas = {x["zona"] for x in ls}
-        sem_hex = sorted({x["zona"] for x in ls if x["grau"] == "SEM-HEX"})
-        faltam = [z for z in ZONAS_NA_PROVA if z not in zonas]
-        marca = ""
-        if faltam:
-            marca = f" · sem amostragem em {len(faltam)}"
-        elif sem_hex:
-            marca = f" · {ls[0]['acabamento']} em {len(sem_hex)}"
-        rot = f"{ls[0]['nome']} · {cod}{marca}"
-        op = (f'<option value="{mid}"'
-              + (' data-parcial="1"' if (faltam or sem_hex) else "")
-              + (" selected" if mid == primeiro["cor"] else "")
-              + f">{rot}</option>")
-        (especiais if cod[0] == "Z" else fabrica).append(op)
-
-    padroes = {n: [i + 1 for i, on in enumerate(player_led_pattern(n)) if on]
-               for n in range(1, 5)}
-    chips = a13.chips_do_controle(monta.MESA, str(primeiro["pref"]), vivo=False)
-
-    barra_html = f"""  <div class="provas">
-    <div class="prova">
-      <div class="prova-rot">Cor do plástico</div>
-      <select id="cw" class="ct">
-        <optgroup label="De fábrica">{"".join(fabrica)}</optgroup>
-        <optgroup label="Edições especiais">{"".join(especiais)}</optgroup>
-      </select>
-    </div>
-    <div class="prova">
-      <div class="prova-rot">Controle<span class="papel" data-campo="{a13.PAPEL}" data-hef-alvo="html"></span></div>
-      <div class="linha" data-bloco="controles-do-mapa">{chips}</div>
-    </div>
-    <div class="prova-nota" id="nota">&nbsp;</div>
-  </div>
-"""
-
-    script = f"""  <script>
-  // O PADRÃO DAS LÂMPADAS É DO PRODUTO — `core/led_control.py`. Copiar a tabela
-  // para cá seria criar a segunda verdade que este mapa existe para matar.
-  const PADRAO = {json.dumps(padroes)};
-  const PARCIAL = "hachurado = o acabamento não cabe num hexadecimal (iridescente, "
-                + "metálico, camuflado, arte); cinza chapado = zona sem amostragem.";
-  const ds = document.querySelector("svg.ds");
-  const barra = document.querySelector("#mp-lightbar");
-  const nota = document.querySelector("#nota");
-  const cw = document.querySelector("#cw");
-  const cx = document.querySelector(".cx");
-  const chips = document.querySelector('[data-bloco="controles-do-mapa"]');
-
-  function plastico(modelo) {{
-    if (modelo) {{ ds.dataset.colorway = modelo; cw.value = modelo; }}
-    else {{ delete ds.dataset.colorway; cw.value = ""; }}
-    const op = cw.selectedOptions[0];
-    nota.textContent = op && op.dataset.parcial ? PARCIAL : "\u00a0";
-  }}
-  cw.addEventListener("change", e => plastico(e.target.value));
-
-  // A BARRA DE LUZ E O JOGADOR ANDAM JUNTOS no banco de provas (o chip do
-  // desenho leva a cor do jogador em `data-luz`), e é assim no aparelho: o PS5
-  // acende as duas coisas ao numerar um controle. No produto o chip não leva
-  // cor, e a barra fica com a do aparelho, que o tique pinta (`luz-cor`).
-  function acende(n, luz) {{
-    for (let i = 1; i <= 5; i++)
-      document.querySelector("#mp-led-jogador-" + i)
-              .classList.toggle("led-on", (PADRAO[n] || []).includes(i));
-    if (luz) {{
-      barra.style.setProperty("--luz", luz);
-    }} else if (n) {{
-      barra.style.removeProperty("--luz");
-    }} else {{
-      barra.style.setProperty("--luz", "var(--luz-apagada)");
-    }}
-  }}
-
-  // O DESENHO SEGUE O CHIP: as lâmpadas pelo número do jogador, o plástico
-  // pelo modelo. O «Nenhum» é o desenho sem controle, e com ele o pisca não
-  // acende (`.sem-controle`). O «Cor do plástico» continua livre: escolher
-  // um modelo depois de um chip vale até o próximo chip.
-  // O «Todos» não é UM controle: o desenho dele é o do primeiro da mesa, o
-  // mesmo de quem o produto pinta a barra (`luz-cor`). Sem isso, as lâmpadas e
-  // o plástico ficavam os do chip anterior.
-  function primeiro() {{
-    return chips.querySelector('.bt[data-jogador]:not([data-jogador="0"])');
-  }}
-  function desenha(b) {{
-    const d = b.hasAttribute("data-jogador") ? b : (primeiro() || b);
-    if (d.hasAttribute("data-jogador")) acende(+d.dataset.jogador, d.dataset.luz);
-    if (d.hasAttribute("data-colorway")) plastico(d.dataset.colorway);
-    cx.classList.toggle("sem-controle", d.dataset.jogador === "0");
-  }}
-  // POR DELEGAÇÃO, porque o produto troca os chips a cada mudança da mesa: um
-  // ouvinte posto em cada botão ao carregar morreria com o bloco.
-  document.addEventListener("click", e => {{
-    const b = e.target.closest('[data-bloco="controles-do-mapa"] .bt');
-    if (!b) return;
-    chips.querySelectorAll(".bt").forEach(x => x.classList.toggle("on", x === b));
-    desenha(b);
-  }});
-  // A MESA SEM CONTROLE é o «Nenhum»: o bloco do produto chega só com ele, e
-  // o desenho não pode ficar com as lâmpadas e a barra do chip da bancada.
-  function segue() {{
-    let b = chips.querySelector(".bt.on[data-jogador]") || primeiro();
-    if (!b) {{
-      b = chips.querySelector('.bt[data-jogador="0"]');
-      if (b && !chips.querySelector(".bt.on")) b.classList.add("on");
-    }}
-    if (b) desenha(b);
-  }}
-  new MutationObserver(segue).observe(chips, {{childList: true}});
-
-  // O MAPA NASCE COM LUZ: o desenho do chip aceso. Sem jogador, o lightbar e as
-  // cinco lâmpadas ficam na cor de apagado — e ela reparou na ausência antes:
-  // "faltou só os dois lightbar e os led de player". O apagado continua a um
-  // clique, no botão "Nenhum".
-  segue();
-  </script>
-"""
-    return barra_html, script
-
-
-def gestos_do_ps():
-    """Os seis gestos do PS, com o número da linha da tabela da Navegação."""
-    import aba06
-
-    linhas = []
-    for n, pecas_do_gesto, faz in aba06.COMBOS:
-        botoes = " + ".join(aba06.nome_de(x) for x in pecas_do_gesto)
-        linhas.append(f'<li><span class="n">{n}</span>{botoes} · {faz}</li>')
-    return f'<ol class="gestos">{"".join(linhas)}</ol>'
-
-
-def main():
-    from pacotes import a13_mapa_do_controle as a13
-
-    pecas = le_csv()
-    ds = controle(pecas, trocam=a13.TROCAM)
-    provas, script_provas = banco_de_provas()
-    na_navegacao = a13._acoes({})
-
-    regras = []
-    for p in pecas:
-        i = p["id"]
-        if i in SEM_BOTAO:
-            continue
-        alvo_css = f'#mp-{i} :is(.peca, rect, circle, path, ellipse)'
-        # própria) não acendia — o portão dava verde porque media o CSS computado  # (noqa-acento: verbo medir, imperfeito)
-        if i not in SO_O_GLIFO_ACENDE:
-            regras.append(f'.mapa:has(.item-{i}:hover) {alvo_css}'
-                          f'{{fill:var(--pink) !important;stroke:var(--pink) !important}}')
-        regras.append(f'.mapa:has(.item-{i}:hover) .s-{i}{{color:var(--fg) !important;opacity:1}}')
-        regras.append(f'.mapa:has(.a-{i}:hover) .item-{i}'
-                      f'{{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}}')
-        regras.append(f'.mapa:has(.a-{i}:hover) .s-{i}{{color:var(--fg) !important;opacity:1}}')
-        if i not in SO_O_GLIFO_ACENDE:
-            regras.append(f'.mapa:has(.a-{i}:hover) {alvo_css}'
-                          f'{{fill:var(--pink) !important;stroke:var(--pink) !important}}')
-        if i in a13.PISCAM:
-            if i not in SO_O_GLIFO_ACENDE:
-                regras.append(f'.cx:not(.sem-controle) .mapa:has(.item-{i}.on) {alvo_css}'
-                              f'{{fill:var(--pink) !important;stroke:var(--pink) !important}}')
-            regras.append(f'.cx:not(.sem-controle) .mapa:has(.item-{i}.on) .s-{i}'
-                          f'{{color:var(--fg) !important;opacity:1}}')
-        if i in a13.TROCAM:
-            regras.append(f'.mapa:has(.item-{i} .troca.tem) .m-{i}{{display:inline}}')
-        if i in a13.SENSORES:
-            # O SENSOR ACENDE NO DESENHO, na cor do ponteiro, no hover da linha e
-            # quando o serviço diz que ele está em uso (`.item.on`). Os `feat-*`
-            # nascem `.oculta` (opacity 0 !important), e é por isso que a regra
-            # que os mostra repete o `!important`.
-            for gatilho in (f'.mapa:has(.item-{i}:hover)', f'.mapa:has(.a-{i}:hover)',
-                            f'.cx:not(.sem-controle) .mapa:has(.item-{i}.on)'):
-                regras.append(f'{gatilho} #mp-{i}{{opacity:1 !important}}')
-                regras.append(f'{gatilho} #mp-{i} .peca'
-                              f'{{fill:var(--pink) !important;stroke:var(--pink) !important}}')
-
-    blocos = []
-    for chave, titulo in REGIOES:
-        na_regiao = [p for p in pecas if p["regiao"] == chave and p["id"] not in SEM_BOTAO]
-        if not na_regiao:
-            continue
-        itens = []
-        for p in na_regiao:
-            g = glifo(p["glifo"], tam=26) if p["glifo"] != "-" else '<span class="sem">—</span>'
-            apel = f'<span class="ap">{p["apelidos"]}</span>' if p["apelidos"] not in ("-", "") else ""
-            prop = ' <span class="prop">proposto</span>' if p["grau"] == "PROPOSTO" else ""
-            nota = f'<span class="nota-peca" title="{p["nota"]}">i</span>' if p["nota"] else ""
-            pid = p["id"]
-            aceso = (f' data-campo="{a13.ACESO}{pid}" data-hef-alvo="classe"'
-                     if pid in a13.PISCAM or pid in a13.SENSORES else "")
-            acao = (f' data-campo="{a13.ACAO}{pid}" data-hef-alvo="atributo"'
-                    f' data-hef-atributo="title" title="{na_navegacao[a13.ACAO + pid]}"'
-                    if pid in a13.NA_NAVEGACAO else "")
-            troca = (f'<span class="troca" data-campo="{a13.TROCADA}{pid}" data-hef-alvo="classe"'
-                     f' data-hef-classe="tem">No jogo: <b data-campo="{a13.TROCA}{pid}"'
-                     f' data-hef-alvo="html"></b></span>' if pid in a13.TROCAM else "")
-            gestos = gestos_do_ps() if pid == "ps" else ""
-            itens.append(
-                f'      <div class="item item-{pid}"{aceso}>'
-                f'<span class="gl">{g}</span>'
-                f'<span class="txt"{acao}><b>{p["nome"]}</b>{apel}{prop}{troca}'
-                f'<span class="id mono">{pid}</span></span>{nota}{gestos}</div>')
-        blocos.append(f'    <div class="grupo">\n      <div class="grupo-rot">{titulo}</div>\n'
-                      + "\n".join(itens) + "\n    </div>")
-
-    faltam = [p for p in pecas if p["no_svg"] == "falta" and p["id"] != HAPTICA]
-
-    html = f'''<!doctype html>
-<html lang="pt-BR">
-<head>
-<meta charset="utf-8">
-<title>Hefesto — o mapa do controle</title>
-<style>
-  :root{{
+CSS_BASE = """
+  :root{
     --app-bg:#21222c; --panel:#282a36; --elevated:#2b2d3a;
     --border-sutil:#343746; --border-forte:#44475a;
     --branco:#ffffff; --fg:#f8f8f2; --texto-suave:#c8ccda; --texto-mudo:#8b8fa8; --comment:#6272a4;
     --cyan:#8be9fd; --green:#50fa7b; --orange:#ffb86c;
     --pink:#ff79c6; --purple:#bd93f9; --red:#ff5555; --yellow:#f1fa8c;
-    /* A COR DO PLÁSTICO NÃO MORA MAIS AQUI. Ela vem do <style> gerado dentro do
-       próprio SVG (scripts/gerar_cores_do_dualsense.py), zona por zona, dos 28
-       modelos do docs/data/cores-do-dualsense.csv. O `--cosmic-red:#b11f54` que
-       ficava nesta linha era um hex digitado à mão que a amostragem de 27/08
-       derrubou — o Cosmic Red é #A51C48, distância 17. Fato errado, substituído.
-       Quem precisa de UMA cor do casco lê `var(--z-casca-solida)`. */
     --luz-apagada:#3f4350; --led-apagado:#4a4f5c; --led-aceso:#e8ecf5;
-    /* O CONTROLE SEM PLÁSTICO LIDO (pelo rádio a cor não se lê): o chip dele
-       apaga o `data-colorway`, e o casco cai neste cinza, o mesmo cru do
-       `ds_limpo.svg`, em vez do preto de uma variável sem valor. */
     --sem-plastico:#3a3f4b;
-    /* Pilha do sistema: nada de fonte web, para o arquivo abrir sem rede.
-       É a regra de scripts/paleta_da_casa.py, e vale aqui igual. */
     --f:ui-sans-serif,system-ui,"Cantarell","Segoe UI",Roboto,sans-serif;
     --m:ui-monospace,"JetBrains Mono","Fira Mono","DejaVu Sans Mono",monospace;
-  }}
-  *{{box-sizing:border-box;margin:0;padding:0}}
-  /* O RECUO DO `body` E O TAMANHO DA `.cx` VÊM DA JANELA DAS ABAS — 24/09/2026,
-     decisão de produto: o mapa segue a caixa da janela, como a Calibrar. */
-  body{{background:#11121a;color:var(--fg);font-family:var(--f);
-        display:flex;flex-direction:column;align-items:center;gap:16px}}
-  .mono{{font-family:var(--m)}}
-  /* COLUNA COMO A `.janela`: o cabeçalho fica e o `.corpo` rola por dentro
-     quando a vista encolhe. `.cx > .corpo`, e não `.corpo` solto: o desenho
-     do controle tem peças com essa classe. */
-  .cx{{background:var(--app-bg);border-radius:11px;
-       border:1px solid var(--border-sutil);overflow:hidden;
-       display:flex;flex-direction:column}}
-  .cx > .topo{{flex:0 0 auto}}
-  .cx > .corpo{{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column}}
-  .cx > .corpo > .mapa{{flex:1 0 auto}}
-{caixa_da_janela.moldura()}  .topo{{padding:15px 20px;border-bottom:1px solid var(--border-sutil)}}
-  h1{{font-size:18px;font-weight:700}}
-  h1 .p{{color:var(--pink)}}
-  .sub{{font-family:var(--m);font-size:11.5px;color:var(--comment);margin-top:3px}}
-
-  /* A LISTA GANHOU 140px E UMA TERCEIRA COLUNA — 01/09/2026, pedido:
-     *"o que eu não quero na mapa é barra de rolagem nem pra esquerda nem
-     vertical; pode ir realocando os elementos pra terem mais harmonia."*
-
-     MEDIDO ANTES: a página pedia 1042px numa janela de 800 — 242px de rolagem
-     vertical. O culpado era a LISTA, com 832px fixos, enquanto o desenho ao lado
-     encolhia com a janela (710px em 1080, 387px em 800). Duas colunas de 28
-     peças em 12 grupos não cabem em tela nenhuma abaixo de 1080.
-
-     COM TRÊS COLUNAS ELA CAI PARA 573px, e a página passa a caber inteira:
-     **zero rolagem vertical e zero lateral** em 1920x1080, 1600x900, 1440x900 e
-     1390x800 — as quatro medidas.
-
-     E OS 920px SÃO HARMONIA MEDIDA, que foi a outra metade do pedido. Com
-     os 860 que a conta da rolagem pedia, **8 dos 28 itens quebravam em duas
-     linhas** (`feat-rumble-esquerdo`, `feat-giroscopio`, `led-jogador`), e dois
-     chegavam a 61px de altura numa lista onde o padrão é 36. Com 920 são 4, e o
-     mais alto cai para 44. Testei até 1100: de 920 em diante o ganho estagna
-     (24, 24, 25, 25 itens inteiros) e o desenho é que encolhe — 920 é onde a
-     curva vira. */
-  .mapa{{display:grid;grid-template-columns:minmax(0,1fr) 920px;gap:0;align-items:stretch}}
-  .lado-ds{{padding:20px 24px;display:flex;align-items:center;justify-content:center}}
-  /* A LISTA NÃO ROLA DE LADO — 31/08/2026, pedido: *"a página de mapa do
-     dualsense tem uma barra horizontal desnecessária."*
-
-     A CAUSA eram três regras que se contradiziam: `column-width` deixa o
-     navegador criar QUANTAS colunas couberem na largura, `max-height` limita a
-     altura, e `column-fill:balance` manda encher todas por igual. Quando o
-     conteúdo não cabe na altura, ele não rola — ele CRIA colunas novas, e as
-     que não cabem na largura vão para fora. Medido: a lista recebia 719px e
-     pedia **1071** — 352px de excesso, três colunas onde cabiam duas.
-
-     A CURA É TIRAR O TETO DE ALTURA. Sem ele, o balanceamento acontece na
-     altura que a lista pede, e nenhuma coluna nasce fora. A página cresce 32px
-     e rola na vertical, que é o que uma lista faz.
-     `columns:330px 2` guarda as duas coisas: 330 é a largura ideal de cada
-     coluna e 2 é o TETO — numa tela estreita ele cai para uma sozinho, em vez
-     de espremer duas. */
-  .lado-lista{{border-left:1px solid var(--border-sutil);padding:14px 18px;
-               columns:260px 3;column-gap:20px;column-fill:balance}}
-  .grupo{{break-inside:avoid;-webkit-column-break-inside:avoid}}
-  .ds{{width:100%;height:auto;max-height:74vh}}
-  /* TUDO PREENCHIDO — decisão, 27/08: os paths deste SVG são FAIXAS e
-     ANÉIS. Traçá-los fazia cada aresta virar dois fios a 0,99 de distância:
-     era a linha dupla do casco, as várias voltas dos botões, os furos do
-     alto-falante em rosquinha e as lâmpadas ocas — tudo a mesma causa. */
-  .ds .peca,.ds .corpo{{stroke:none}}
-  /* TODA PEÇA PINTA COMO PEÇA, mesmo sem a classe. O desenho dela nem sempre
-     carrega `class="peca"` — o Options, por exemplo, ficou sem `fill` nenhum e
-     herdou o preto padrão do SVG. Aqui a folha alcança qualquer forma que viva
-     dentro de um grupo de peça e não seja glifo. */
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#11121a;color:var(--fg);font-family:var(--f);
+       display:flex;flex-direction:column;align-items:center;gap:16px}
+  .cx{background:var(--app-bg);border-radius:11px;border:1px solid var(--border-sutil);
+      overflow:hidden;display:flex;flex-direction:column}
+  .ds{width:100%;height:auto}
+  .ds .peca,.ds .corpo{stroke:none}
   .ds g[id^="mp-"]:not([id^="mp-glifo"]):not(.sobre):not(.alvo)
-    > :is(rect,path,circle,ellipse,polygon){{fill:var(--z-casca-solida, var(--sem-plastico))}}
-  /* O LIGHTBAR E O INDICADOR DE JOGADOR SÃO LUZ, e não plástico. Na cor do casco
-     eles caíam sobre a borda do touchpad e sumiam — ela: "faltou só os dois
-     lighbar e os led de player". Cor de luz, e aparecem. */
-  .ds #mp-lightbar{{color:var(--luz-apagada)}}
-  .ds #mp-lightbar *{{fill:var(--luz, currentColor)}}
-  .ds #mp-led-jogador rect{{fill:var(--led-apagado)}}
-  .ds #mp-led-jogador rect.led-on{{fill:var(--led-aceso)}}
-  /* o PS não tem anel: a peça existe só para dar caixa e alvo, e quem se vê — e
-     quem acende — é o glifo. Decisão, 27/08: "Remove o circulo e Deixa só o
-     Glifo do PS pra ser o Botão". */
-  .ds .sem-tinta{{fill:none !important;stroke:none !important}}
-  /* A PONTA DO PUNHO fechava em BICO: a borda externa e a interna do punho
-     convergem num vértice agudo, e preenchidas isso vira uma farpa. O traço
-     da mesma cor com junta redonda arredonda o vértice sem mudar o path. */
-  .ds #mp-corpo .peca,.ds #mp-corpo .corpo{{stroke:var(--z-casca-solida, var(--sem-plastico));stroke-width:.42;
-                      stroke-linejoin:round;stroke-linecap:round}}
-  /* no MAPA as features aparecem — é o mapa das peças todas, não de uma aba */
-  /* AS FEATURES SÓ APARECEM NO HOVER. Em repouso, as caixas tracejadas do
-     giroscópio, do acelerômetro e da bateria empilhavam-se no meio do corpo e
-     escondiam o alto-falante, o indicador de jogador e o microfone. */
-  .ds .oculta{{opacity:0 !important}}
-  /* e ACENDEM no hover — a regra de acender tem de vencer o !important que as
-     esconde, senão o sensor e os motores não respondem a nada. */
-  .mapa:has(.item-feat-giroscopio:hover) #mp-feat-giroscopio,
-  .mapa:has(.a-feat-giroscopio:hover) #mp-feat-giroscopio,
-  .mapa:has(.item-feat-acelerometro:hover) #mp-feat-acelerometro,
-  .mapa:has(.a-feat-acelerometro:hover) #mp-feat-acelerometro,
-  .mapa:has(.item-feat-bateria:hover) #mp-feat-bateria,
-  .mapa:has(.a-feat-bateria:hover) #mp-feat-bateria,
-  .mapa:has(.item-feat-rumble-esquerdo:hover) #mp-feat-rumble-esquerdo,
-  .mapa:has(.a-feat-rumble-esquerdo:hover) #mp-feat-rumble-esquerdo,
-  .mapa:has(.item-feat-rumble-direito:hover) #mp-feat-rumble-direito,
-  .mapa:has(.a-feat-rumble-direito:hover) #mp-feat-rumble-direito{{opacity:1 !important}}
+    > :is(rect,path,circle,ellipse,polygon){fill:var(--z-casca-solida, var(--sem-plastico))}
+  .ds #mp-lightbar{color:var(--luz-apagada)}
+  .ds #mp-lightbar *{fill:var(--luz, currentColor)}
+  .ds #mp-led-jogador rect{fill:var(--led-apagado)}
+  .ds #mp-led-jogador rect.led-on{fill:var(--led-aceso)}
+  .ds .sem-tinta{fill:none !important;stroke:none !important}
+  .ds #mp-corpo .peca,.ds #mp-corpo .corpo{stroke:var(--z-casca-solida, var(--sem-plastico));stroke-width:.42;
+                      stroke-linejoin:round;stroke-linecap:round}
+  .ds .oculta{opacity:0 !important}
+  .sobre{color:var(--branco);opacity:1;pointer-events:none;--pena:.35}
+  .sobre *:not([fill="none"]):not(title){fill:currentColor !important}
+  .sobre [stroke]:not([stroke="none"]){stroke:currentColor !important}
+  .sobre text,.sobre tspan{fill:currentColor !important}
+  .sobre svg{overflow:visible}
+  .sobre [stroke-width]{stroke-width:calc(var(--pena) * 32 / var(--lado))}
+  .alvo,.alvo *{fill:transparent;stroke:transparent;stroke-width:1.8;
+                stroke-linejoin:round;stroke-linecap:round;pointer-events:all;cursor:pointer}
+"""
 
-  /* O MARCADOR DE SENSOR É PREENCHIDO, como todo o resto do desenho.
-     FATO SUBSTITUÍDO: aqui ele era vazado e tracejado, "senão vira uma laje opaca
-     que apaga o PS, o microfone e a grade do alto-falante" — e era verdade
-     enquanto o giroscópio e o acelerômetro USAVAM O PATH DO CORPO INTEIRO. Agora
-     que cada um tem a forma da própria região, não há laje: os dois são anéis, e
-     anel é vazado por construção. O tracejado, esse, serrilhava a borda de tudo —
-     era o que ela via nos sensores e nos dois motores. */
-  .ds .oculta .peca{{stroke-width:.32;stroke-linejoin:round}}
-  /* E ACENDEM NA COR DA CASA. A `feat-bateria` veio do editor com `fill="#3a3f4b"`
-     como ATRIBUTO — cinza sobre fundo escuro: ela ficava visível e invisível ao
-     mesmo tempo, que foi o "não tá funcionando" que o usuário viu. */
-  .mapa:has(.item-feat-giroscopio:hover) #mp-feat-giroscopio .peca,
-  .mapa:has(.item-feat-acelerometro:hover) #mp-feat-acelerometro .peca,
-  .mapa:has(.item-feat-bateria:hover) #mp-feat-bateria .peca,
-  .mapa:has(.item-feat-rumble-esquerdo:hover) #mp-feat-rumble-esquerdo .peca,
-  .mapa:has(.item-feat-rumble-direito:hover) #mp-feat-rumble-direito .peca
-    {{fill:var(--pink) !important;stroke:var(--pink) !important}}
-  /* A BATERIA É O LIGHTBAR. Decisão, 27/08: "bateria pode ser usando as
-     barras da lightbar com 100% e a barra cheia e 0% ela apagada". Apontá-la sem
-     acender as duas tiras é apontar um medidor que não está ali. */
-  .mapa:has(.item-feat-bateria:hover) #mp-lightbar :is(.peca,rect,path,circle,ellipse)
-    {{fill:var(--pink) !important;stroke:var(--pink) !important}}
-  .mapa:has(.item-feat-rumble-esquerdo:hover) #mp-feat-rumble-esquerdo,
-  .mapa:has(.a-feat-rumble-esquerdo:hover) #mp-feat-rumble-esquerdo,
-  .mapa:has(.item-feat-rumble-direito:hover) #mp-feat-rumble-direito,
-  .mapa:has(.a-feat-rumble-direito:hover) #mp-feat-rumble-direito,
-  .mapa:has(.item-feat-giroscopio:hover) #mp-feat-giroscopio,
-  .mapa:has(.a-feat-giroscopio:hover) #mp-feat-giroscopio,
-  .mapa:has(.item-feat-acelerometro:hover) #mp-feat-acelerometro,
-  .mapa:has(.a-feat-acelerometro:hover) #mp-feat-acelerometro,
-  .mapa:has(.item-feat-bateria:hover) #mp-feat-bateria,
-  .mapa:has(.a-feat-bateria:hover) #mp-feat-bateria{{opacity:1}}
-  .ds #mp-corpo .peca{{stroke:var(--z-casca-solida, var(--sem-plastico))}}
-  /* os glifos POR CIMA do desenho — a mesma peça, vista de dois jeitos */
-  .sobre{{color:var(--branco);opacity:1;pointer-events:none}}
-  /* OS GLIFOS DO USUÁRIO TRAZEM COR NO `style` INLINE, e style inline vence folha: no
-     hover eles continuavam cinza-claro sobre a peça acesa e sumiam. `currentColor`
-     com !important devolve a palavra à folha, sem tocar no desenho dela. */
-  /* TODO descendente que não peça `none` pinta com a cor do grupo — inclusive o
-     que não declara `fill` nenhum. As setas do d-pad dela são exatamente assim:
-     sem atributo e sem style de cor, herdavam o preto padrão do SVG, e no hover
-     não tinham como acender. Selecionar por atributo não as alcançava. */
-  .sobre *:not([fill="none"]):not(title){{fill:currentColor !important}}
-  .sobre [stroke]:not([stroke="none"]){{stroke:currentColor !important}}
-  .sobre text,.sobre tspan{{fill:currentColor !important}}
-  /* O ALVO É A PEÇA: transparente, sem traço, e com a FORMA dela. */
-  /* O ALVO É A PEÇA — transparente, com a FORMA dela, e engordado pelo TRAÇO.
-     A forma exata sozinha deixava as peças finas (o lightbar, os furos do
-     alto-falante, as lâmpadas do indicador, a cápsula do Share) pequenas demais
-     para apontar: 6 das 29 não respondiam. O traço transparente de 1,8 acrescenta
-     0,9 de cada lado sem deslocar nem deformar nada. */
-  .alvo,.alvo *{{fill:transparent;stroke:transparent;stroke-width:1.8;
-                stroke-linejoin:round;stroke-linecap:round;
-                pointer-events:all;cursor:pointer}}
-                pointer-events:all;cursor:pointer}}
-  .sobre svg{{overflow:visible}}
-  /* a pena do glifo, em unidades da PEÇA e não do glifo: sem isto ela variava
-     com o tamanho e saía até 38% mais grossa que o traço do desenho. */
-  .sobre{{--pena:.35}}
-  .sobre [stroke-width]{{stroke-width:calc(var(--pena) * 32 / var(--lado))}}
+CSS_TELA = """
+  .mc{--tipo:var(--purple)}
+  .mc[data-tipo="pac"]{--tipo:var(--cyan)}
+  .mc[data-tipo="troca"]{--tipo:var(--orange)}
+  .mc-topo{display:flex;align-items:center;gap:16px;padding:12px 20px;border-bottom:1px solid var(--border-sutil);flex:none}
+  .mc-topo h1{font-size:17px;font-weight:700;color:var(--pink)}
+  .voltar2{display:inline-flex;align-items:center;height:30px;padding:0 12px;border-radius:7px;text-decoration:none;
+    border:1px solid var(--border-forte);background:var(--panel);color:var(--texto-suave);font-size:12px}
+  .voltar2:hover{border-color:var(--purple);color:var(--fg)}
+  .mc-chips{margin-left:auto;display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:8px}
+  .chip{height:30px;padding:0 12px;border-radius:7px;border:2px solid var(--plastico,var(--border-forte));
+    background:var(--app-bg);color:var(--texto-suave);font:12px var(--f);cursor:pointer;white-space:nowrap;text-align:center}
+  .chip.on{background:rgba(189,147,249,.16);color:var(--fg);font-weight:600}
+  .chip .pt{color:var(--comment);margin:0 2px}
+  .mc-perfil{display:grid;grid-template-columns:292px minmax(0,1fr) 292px;gap:20px;align-items:center;
+    padding:12px 20px;border-bottom:1px solid var(--border-sutil);flex:none}
+  .mc-perfil .cel{display:flex;align-items:center;gap:12px;min-width:0}
+  .mc-rot{font-size:12px;color:var(--texto-suave);white-space:nowrap}
+  .mc-rot[data-dica]{cursor:help}
+  .campo2{height:32px;border-radius:7px;border:1px solid var(--border-forte);background:var(--app-bg);color:var(--fg);
+    font:12.5px var(--f);padding:0 10px}
+  #perfil,.nome2{width:auto;flex:1 1 0;min-width:0}
+  .mc-perfil[data-fixo="sim"] .nome2{color:var(--texto-mudo)}
+  .etiqueta{height:24px;display:inline-flex;align-items:center;padding:0 10px;border-radius:12px;font-size:11.5px;
+    font-weight:600;color:var(--app-bg);background:var(--tipo)}
+  .usar-em{display:flex;gap:6px;align-items:center;margin-left:auto}
+  .usar-em .jogo{height:26px;display:inline-flex;align-items:center;padding:0 10px;border-radius:13px;font-size:11.5px;
+    border:1px solid var(--tipo);color:var(--fg);background:transparent;font-family:var(--f)}
+  .usar-em .mais{border-style:dashed;color:var(--texto-mudo);border-color:var(--border-forte);cursor:pointer}
+  .cx > .corpo{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column}
+  .mapa.mc-mapa{flex:1 0 auto;display:grid;grid-template-columns:292px minmax(0,1fr) 292px;gap:20px;
+    padding:14px 20px;align-items:stretch;align-content:center}
+  .mc-lado{display:flex;flex-direction:column;gap:7px;justify-content:space-between}
+  .b2{display:grid;grid-template-columns:24px 74px minmax(0,1fr);align-items:center;gap:8px;height:37px;padding:0 10px;
+    border-radius:8px;border:1px solid var(--border-sutil);background:var(--panel);color:var(--fg);font:12px var(--f);
+    cursor:pointer;text-align:left}
+  .b2:hover{border-color:var(--comment)}
+  .b2-gl{display:flex;align-items:center;justify-content:center;color:var(--texto-suave)}
+  .b2-gl svg{width:18px;height:18px}
+  .b2-nm{font-size:11.5px;color:var(--texto-suave);white-space:nowrap}
+  .b2-val{height:25px;display:flex;align-items:center;padding:0 9px;border-radius:6px;background:var(--app-bg);
+    color:var(--texto-mudo);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11.5px}
+  .b2[data-estado~="muda"]{border-left:1px solid var(--tipo);box-shadow:inset 2px 0 0 var(--tipo)}
+  .b2[data-estado~="muda"] .b2-val{color:var(--fg);box-shadow:inset 0 0 0 1px var(--tipo)}
+  .b2[data-estado~="pisca"]{border-color:var(--pink)}
+  .b2[data-estado~="on"]{border-color:var(--pink);background:rgba(255,121,198,.10)}
+  .b2[data-estado~="on"] .b2-gl,.b2[data-estado~="pisca"] .b2-gl{color:var(--pink)}
+  .mc-centro{position:relative;display:flex;flex-direction:column;gap:12px;min-width:0;justify-content:flex-start}
+  .mc-desenho{display:flex;justify-content:center;min-height:0}
+  .mc-desenho .ds{width:100%;height:auto;max-height:380px}
+  .mc-baixo{display:grid;grid-template-columns:1fr 1fr;gap:7px 12px}
+  .mc-baixo .b2{grid-template-columns:24px 58px minmax(0,1fr);gap:8px}
+  .mc-baixo .b2:last-child{grid-column:1 / -1;justify-self:center;width:calc(50% - 6px)}
+  .sel2{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);z-index:5;background:var(--panel);
+    border:1px solid var(--pink);border-radius:11px;box-shadow:0 18px 50px rgba(0,0,0,.55);
+    display:flex;flex-direction:column;padding:14px 16px;gap:12px}
+  .sel2[hidden]{display:none}
+  .sel2-topo{display:flex;align-items:center;gap:14px}
+  .sel2-tit{font-size:13.5px;font-weight:600;color:var(--fg)}
+  .sel2-b{color:var(--pink)}
+  .seg2{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:6px;margin-left:auto}
+  .seg2 button{height:30px;padding:0 14px;border-radius:7px;border:1px solid var(--border-forte);background:var(--app-bg);
+    color:var(--texto-suave);font:12px var(--f);cursor:pointer}
+  .seg2 button[hidden]{display:none}
+  .seg2 button.on{border-color:var(--purple);background:rgba(189,147,249,.16);color:var(--fg);font-weight:600}
+  .sel2-x{width:30px;height:30px;border-radius:7px;border:1px solid var(--border-forte);background:transparent;
+    color:var(--texto-mudo);font-size:15px;cursor:pointer}
+  .sel2-grade{flex:none;display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:42px;gap:9px;align-content:start}
+  .sel2-grade[hidden]{display:none}
+  .op3{display:flex;align-items:center;gap:9px;padding:0 12px;border-radius:8px;border:1px solid var(--border-sutil);
+    background:var(--app-bg);color:var(--fg);font:12px var(--f);cursor:pointer;text-align:left;min-width:0}
+  .op3:hover{border-color:var(--purple)}
+  .op3 svg{width:18px;height:18px;flex:none;color:var(--texto-suave)}
+  .op3.on{border-color:var(--tipo);box-shadow:inset 0 0 0 1px var(--tipo);background:rgba(255,184,108,.08)}
+  .op3.gravar{grid-column:1 / -1;justify-content:center;border-color:var(--red);color:var(--red);font-weight:600}
+  .op3.gravar .ponto{width:9px;height:9px;border-radius:50%;background:var(--red)}
+  .op3.gravar.ouvindo{background:rgba(255,85,85,.12)}
+  .sel2-rod{display:flex;justify-content:flex-end}
+  .sel2-rod .op3{height:32px}
+  .mc-cursor{display:flex;align-items:center;gap:12px;padding:10px 20px;border-top:1px solid var(--border-sutil);flex:none}
+  .mc-cursor .campo2{height:30px}
+  .mc-cursor .par2{display:flex;align-items:center;gap:12px}
+  .mc:not([data-tipo="pac"]) .mc-cursor{display:none}
+  .mc-rod{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding:12px 20px;border-top:1px solid var(--border-sutil);flex:none}
+  .btn2{height:36px;display:flex;align-items:center;justify-content:center;border-radius:7px;border:1px solid var(--border-forte);
+    background:transparent;color:var(--texto-suave);font:12.5px var(--f);cursor:pointer;text-decoration:none}
+  .btn2.amarelo{border-color:#f1fa8c;color:#f1fa8c}
+  .btn2.roxo{border-color:var(--purple);color:var(--purple)}
+"""
 
-  /* A LISTA CABE EM DUAS COLUNAS, E A PÁGINA NÃO ROLA. Medido em 27/08/2026,
-     depois de a barra de provas nascer: a lista transbordava para uma TERCEIRA
-     coluna, e a linha "Corpo" — a última — caía fora da caixa, invisível e
-     inalcançável. É a mesma cicatriz que o portão das peças já nomeia, e ela
-     voltou porque a barra roubou altura.
-     A cura é na ALTURA, encolhendo o mais alto — regra, 27/08 —, e não em
-     `space-between`: o item passa de 38 para 36 px, que é o `--h-escolha` da
-     escala desta casa, e o vão entre grupos de 13/11 para 11/9. Com isso o
-     conteúdo cai de 864 para 832 px, cabe nas duas colunas, e a página fecha
-     com ZERO de rolagem (era 12 px). */
-  .grupo + .grupo{{margin-top:11px;padding-top:9px;border-top:1px solid var(--border-sutil)}}
-  /* O TEXTO DA LISTA E OS RÓTULOS SÃO BRANCOS (ela, 03/10/2026: *«colocar essas
-     fontes com cores em branco. pra ser visível. pq a tela inteira tá meio
-     dificil de ser lida»*) (noqa-acento: citação). A cor fica no desenho;
-     o texto lê-se. */
-  .grupo-rot{{font-size:10.5px;color:var(--branco);
-              letter-spacing:.6px;margin-bottom:6px}}
-  .item{{display:flex;align-items:center;gap:11px;padding:4px 9px;border-radius:7px;
-         border:1px solid transparent;color:var(--branco);cursor:default}}
-  .item:hover{{border-color:var(--border-forte);background:rgba(255,121,198,.06);cursor:pointer}}
-  .item .gl{{flex:0 0 26px;height:26px;display:flex;align-items:center;justify-content:center}}
-  .item .sem{{color:var(--border-forte);font-size:15px}}
-  .item .txt{{display:flex;align-items:baseline;gap:8px;flex:1;min-width:0}}
-  .item .txt b{{font-size:12px;font-weight:600}}
-  .item .ap{{font-size:11px;color:var(--branco)}}
-  .item .id{{margin-left:auto;font-size:10.5px;color:var(--branco)}}
-  .item .prop{{font-size:9.5px;color:var(--orange);border:1px solid var(--orange);
-               border-radius:4px;padding:0 4px;}}
-  .nota-peca{{flex:0 0 15px;width:15px;height:15px;border-radius:50%;font-size:10px;
-              line-height:13px;text-align:center;border:1px solid var(--border-forte);
-              color:var(--texto-mudo);cursor:help;font-family:var(--m)}}
-  .nota-peca:hover{{border-color:var(--cyan);color:var(--cyan)}}
-  /* O PISCA, A TROCA E OS GESTOS — 01/10/2026, O-MAPA-DO-CONTROLE-PISCA-E-SEGUE-
-     O-REMAPEAMENTO-01. A linha acesa pelo botão apertado tem a cor do ponteiro.
-     O «No jogo» só aparece quando a troca de botões alcança a peça, e entra no
-     lugar do apelido, na MESMA linha: medido no piloto em 01/10/2026, uma linha
-     a mais embaixo do nome fazia a página rolar 18 px na janela ladrilhada
-     (1212 x 809), e o usuário pediu o mapa sem rolagem em 01/09. A marca tracejada no
-     desenho é a mesma notícia.
-     É uma CLASSE (`tem`), e não `:has(b:empty)`: medido no WebKitGTK em
-     01/10/2026, a regra com `:empty` dentro do `:has()` não se recalcula quando
-     o produto escreve o texto, e a linha ficava escondida com «Cruz» dentro. */
-  .item{{flex-wrap:wrap;row-gap:2px}}
-  .cx:not(.sem-controle) .item.on{{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}}
-  .item .troca{{font-size:11px;color:var(--orange);white-space:nowrap}}
-  .item:has(.troca.tem) .ap{{display:none}}
-  .item .troca:not(.tem){{display:none}}
-  .item .troca b{{font-weight:600}}
-  .item .gestos{{flex:0 0 100%;list-style:none;padding-left:37px;font-size:10.5px;
-                 line-height:1.4;color:var(--branco)}}
-  .item .gestos .n{{font-family:var(--m);color:var(--comment);margin-right:6px}}
-  .marca-troca{{display:none}}
-  .marca-troca *{{fill:none !important;stroke:var(--pink);stroke-width:.45;
-                 stroke-dasharray:1.1 .7;pointer-events:none}}
-  .papel .bolinha{{display:inline-block;width:6px;height:6px;border-radius:50%;
-                   background:var(--green);margin-right:4px;vertical-align:1px}}
-  .bt .pt,.papel .pt{{color:var(--comment);margin:0 1px;font-size:10px;vertical-align:1px}}
-
-  /* A BARRA DE PROVAS. A gramática é a da lista da direita — mesmo rótulo em
-     versalete, mesma família de caixa —, para a barra não parecer colada de
-     outra tela. Três blocos, e a BARRA VERTICAL entre eles: é o separador que
-     o usuário pediu em 27/08 ("uma barra vertical entre os blocos"). */
-  .provas{{display:flex;align-items:stretch;border-bottom:1px solid var(--border-sutil)}}
-  .prova{{padding:11px 18px;display:flex;flex-direction:column;gap:7px;justify-content:space-between}}
-  .prova + .prova{{border-left:1px solid var(--border-sutil)}}
-  /* O RÓTULO DOS TRÊS BLOCOS COMEÇA NO MESMO x, e os três terminam no mesmo y.
-     O vão se cura na ALTURA — os controles têm todos 28px —, nunca com
-     `space-between` entre eles: ela reprovou isso com todas as letras. */
-  .prova-rot{{font-size:10.5px;color:var(--branco);
-              letter-spacing:.6px;line-height:1}}
-  .prova .linha{{display:flex;gap:6px;align-items:center}}
-  /* Os chips levam o nome do controle: na janela estreita eles descem de linha. */
-  .prova [data-bloco="controles-do-mapa"]{{flex-wrap:wrap}}
-  .ct{{height:28px;background:var(--elevated);color:var(--fg);
-       border:1px solid var(--border-forte);border-radius:6px;
-       padding:0 8px;font-family:var(--f);font-size:12px}}
-  /* OS QUATRO NÚMEROS SÃO UMA FAMÍLIA, e família tem a mesma largura. O
-     "Nenhum" e o "Apagar" são outro papel — palavra, não número — e por isso
-     medem o que a palavra pede. */
-  .bt{{height:28px;min-width:30px;padding:0 9px;background:var(--elevated);
-       color:var(--texto-suave);border:1px solid var(--border-forte);
-       border-radius:6px;font-family:var(--f);font-size:12px;cursor:pointer;white-space:nowrap}}
-  .bt:hover{{border-color:var(--pink);color:var(--fg)}}
-  .bt.on{{border-color:var(--pink);background:rgba(255,121,198,.14);color:var(--fg)}}
-  .prova-nota{{margin-left:auto;align-self:center;padding:0 18px;max-width:460px;
-               font-size:11px;line-height:1.45;color:var(--branco)}}
-
-  /* O BOTÃO DE VOLTAR — 30/08/2026, pergunta de produto: *"ok temos um botão pra vir
-     pra cá. Mas e o botão pra voltar?"*. Não havia: `grep href` no mapa gerado
-     devolvia ZERO. Quem entrava aqui só saía pelo botão do navegador — e o
-     mockup abre como ARQUIVO, onde nem sempre há um.
-     O destino é a aba de onde ela veio (o dono é o `caixa_da_janela.voltar`). */
-  .voltar{{position:absolute;left:0;top:2px;display:inline-flex;align-items:center;gap:6px;
-           padding:5px 11px;border-radius:7px;text-decoration:none;
-           border:1px solid var(--border-forte);background:var(--panel);
-           color:var(--texto-suave);font-size:12px}}
-  .voltar:hover{{border-color:var(--purple);color:var(--fg)}}
-  .topo{{position:relative;padding-left:132px}}
+#: a regra da peça acesa: a cor do tipo quando o botão muda, rosa quando é o escolhido, quando pisca
+#: no controle ou quando o ponteiro passa. O atributo `data-estado` é escrito pelo piloto.
+_PINTA = ":is(.peca, rect, circle, path, ellipse){fill:var(--%s) !important;stroke:var(--%s) !important}"
 
 
-{chr(10).join("  " + r for r in regras)}
+def css_das_pecas(pecas):
+    regras = []
+    for i in pecas:
+        alvo = f"#mp-{i} {_PINTA % ('tipo', 'tipo')}"
+        rosa = f"#mp-{i} {_PINTA % ('pink', 'pink')}"
+        regras.append(f'.mc .mapa:has(.item-{i}[data-estado~="muda"]) {alvo}')
+        for gatilho in ('[data-estado~="on"]', '[data-estado~="pisca"]', ":hover"):
+            regras.append(f".mc .mapa:has(.item-{i}{gatilho}) {rosa}")
+    return "\n".join("  " + r for r in regras)
+
+
+JS = r"""
+(() => {
+  const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const mc = $('.mc'), pop = $('.sel2'), ds = $('svg.ds'), nome = $('#nome');
+  const captura = $('#mapa-captura'), gravar = $('.op3.gravar', pop);
+  const PADRAO = {"1": [3], "2": [2, 4], "3": [1, 3, 5], "4": [1, 2, 4, 5]};
+  const ROTULO = gravar.querySelector('span:last-child').textContent;
+  let linha = null, ouvindo = false, soModificador = null;
+
+  const mostra = aba => {
+    $$('.seg2 button', pop).forEach(x => x.classList.toggle('on', x.dataset.aba === aba));
+    $$('.sel2-grade', pop).forEach(g => g.hidden = g.dataset.aba !== aba);
+    escuta(false);
+  };
+  const abre = b => {
+    if (b.dataset.fixo === 'sim') return;
+    linha = b;
+    $('.sel2-b', pop).textContent = $('.b2-nm', b).textContent;
+    const atual = ($('.b2-atual', b) || {}).textContent || '';
+    $$('.op3', pop).forEach(o => o.classList.toggle('on', !!atual && o.dataset.v === atual));
+    const troca = b.dataset.troca === 'sim';
+    $('.seg2 [data-aba="controle"]', pop).hidden = !troca;
+    const em = aba => !!$(`.sel2-grade[data-aba="${aba}"] .op3[data-v="${atual}"]`, pop);
+    mostra(atual.startsWith('troca:') && troca ? 'controle' : em('mouse') ? 'mouse' : atual && !em('controle') ? 'teclado' : troca ? 'controle' : 'mouse');
+    pop.hidden = false;
+  };
+  const fecha = () => { escuta(false); pop.hidden = true; };
+
+  /* a captura: a tecla, o botão do mouse ou o botão do controle que a pessoa aperta */
+  const MODIFICADOR = {ControlLeft: 'LEFTCTRL', ControlRight: 'RIGHTCTRL', ShiftLeft: 'LEFTSHIFT', ShiftRight: 'RIGHTSHIFT',
+    AltLeft: 'LEFTALT', AltRight: 'RIGHTALT', MetaLeft: 'LEFTMETA', MetaRight: 'RIGHTMETA'};
+  const NOMEADA = {ArrowUp: 'UP', ArrowDown: 'DOWN', ArrowLeft: 'LEFT', ArrowRight: 'RIGHT', Space: 'SPACE', Enter: 'ENTER',
+    NumpadEnter: 'ENTER', Tab: 'TAB', Backspace: 'BACKSPACE', Delete: 'DELETE', Home: 'HOME', End: 'END', PageUp: 'PAGEUP',
+    PageDown: 'PAGEDOWN', Insert: 'INSERT', Comma: 'COMMA', Period: 'DOT', PrintScreen: 'SYSRQ'};
+  const tecla = e => {
+    const c = e.code;
+    if (/^Key[A-Z]$/.test(c)) return 'KEY_' + c.slice(3);
+    if (/^Digit[0-9]$/.test(c)) return 'KEY_' + c.slice(5);
+    if (/^F([1-9]|1[0-2])$/.test(c)) return 'KEY_' + c;
+    return NOMEADA[c] ? 'KEY_' + NOMEADA[c] : '';
+  };
+  const modificadores = e => [e.ctrlKey && 'KEY_LEFTCTRL', e.altKey && 'KEY_LEFTALT', e.shiftKey && 'KEY_LEFTSHIFT',
+    e.metaKey && 'KEY_LEFTMETA'].filter(Boolean);
+  const escuta = on => {
+    ouvindo = on; soModificador = null;
+    gravar.classList.toggle('ouvindo', on);
+    gravar.querySelector('span:last-child').textContent = on ? 'Aperte uma tecla ou um botão' : ROTULO;
+  };
+  const manda = (campo, valor) => {
+    delete captura.dataset.tecla; delete captura.dataset.troca;
+    captura.dataset[campo] = valor;
+    escuta(false); pop.hidden = true;
+    captura.click();
+  };
+  document.addEventListener('keydown', e => {
+    if (!ouvindo) return;
+    e.preventDefault(); e.stopPropagation();
+    if (e.code === 'Escape' && !modificadores(e).length) { escuta(false); return; }
+    if (MODIFICADOR[e.code]) { soModificador = 'KEY_' + MODIFICADOR[e.code]; return; }
+    const k = tecla(e);
+    if (k) { soModificador = null; manda('tecla', [...modificadores(e), k].join('+')); }
+  }, true);
+  document.addEventListener('keyup', e => {
+    if (!ouvindo || !soModificador || !MODIFICADOR[e.code]) return;
+    e.preventDefault(); manda('tecla', soModificador);
+  }, true);
+  const BOTAO_DO_MOUSE = ['BTN_LEFT', 'BTN_MIDDLE', 'BTN_RIGHT'];
+  document.addEventListener('mousedown', e => {
+    if (!ouvindo) return;
+    if (e.target.closest('.op3.gravar')) return;
+    if (e.target.closest('.sel2')) { escuta(false); return; }
+    if (BOTAO_DO_MOUSE[e.button]) { e.preventDefault(); e.stopPropagation(); manda('tecla', BOTAO_DO_MOUSE[e.button]); }
+  }, true);
+  document.addEventListener('contextmenu', e => { if (ouvindo) { e.preventDefault(); e.stopImmediatePropagation(); } }, true);
+  /* o botão do controle: a linha que ganha `pisca` enquanto a captura escuta vira a troca */
+  const olho = new MutationObserver(lista => {
+    if (!ouvindo) return;
+    for (const m of lista) {
+      const antes = (m.oldValue || '').split(' '), agora = (m.target.dataset.estado || '').split(' ');
+      if (agora.includes('pisca') && !antes.includes('pisca') && m.target.dataset.destino)
+        { manda('troca', m.target.dataset.destino); return; }
+    }
+  });
+  $$('.b2[data-destino]').forEach(b => olho.observe(b, {attributes: true, attributeFilter: ['data-estado'], attributeOldValue: true}));
+
+  $$('.b2').forEach(b => b.addEventListener('click', () => abre(b)));
+  $$('.alvo').forEach(a => a.addEventListener('click', () => {
+    const peca = [...a.classList].find(c => c.startsWith('a-'));
+    const b = peca && $(`.b2.item-${peca.slice(2)}`);
+    if (b) b.click();
+  }));
+  $('.seg2', pop).addEventListener('click', e => { const t = e.target.closest('button'); if (t) mostra(t.dataset.aba); });
+  $('.sel2-x', pop).addEventListener('click', fecha);
+  gravar.addEventListener('click', () => escuta(!ouvindo));
+  pop.addEventListener('click', e => {
+    const o = e.target.closest('.op3');
+    if (o && o !== gravar) fecha();
+  });
+
+  /* o controle escolhido pinta o casco, os cinco pontos do jogador e a barra de luz do desenho */
+  const acende = c => {
+    if (!c) return;
+    ds.dataset.colorway = c.dataset.colorway || '';
+    for (let i = 1; i <= 5; i++) {
+      const led = document.getElementById('mp-led-jogador-' + i);
+      if (led) led.classList.toggle('led-on', (PADRAO[c.dataset.jogador] || []).includes(i));
+    }
+    if (c.dataset.luz) document.getElementById('mp-lightbar').style.setProperty('--luz', c.dataset.luz);
+  };
+  const chips = $('.mc-chips');
+  new MutationObserver(() => acende($('.chip.on', chips))).observe(chips, {childList: true, subtree: true, attributes: true});
+  chips.addEventListener('click', e => {
+    const c = e.target.closest('.chip');
+    if (c) { $$('.chip', chips).forEach(x => x.classList.toggle('on', x === c)); acende(c); }
+  });
+  acende($('.chip.on', chips));
+  const bloqueia = () => { nome.readOnly = $('.mc-perfil').dataset.fixo === 'sim'; };
+  new MutationObserver(bloqueia).observe($('.mc-perfil'), {attributes: true, attributeFilter: ['data-fixo']});
+  bloqueia();
+})();
+"""
+
+
+def _chips_de_exemplo():
+    """Os quatro controles do desenho, um por cor do plástico (o produto troca por `blocos`)."""
+    exemplo = (("Cosmic Red", "cosmic-red", "USB", 1, "#0000ff", True),
+               ("Starlight Blue", "starlight-blue", "BT", 2, "#ff0000", False),
+               ("Galactic Purple", "galactic-purple", "BT", 3, "#00ff00", False),
+               ("White", "white", "USB", 4, "#ff0080", False))
+    import monta
+    return "".join(
+        f'<button class="chip plastico{" on" if ligado else ""}" '
+        f'style="--plastico:{monta.cor_da_zona(slug)}" data-colorway="{slug}" '
+        f'data-jogador="{n}" data-luz="{luz}">{nome} <span class="pt">•</span> {via}</button>'
+        for nome, slug, via, n, luz, ligado in exemplo)
+
+
+def _linha_da_tela(x, pecas, valores, escolhida):
+    """Uma linha da lista: o glifo, o nome e o valor. O piloto escreve `data-estado` e o valor."""
+    from pacotes import a13_mapa_do_controle as a13
+
+    g = glifo(pecas[x.peca]["glifo"], tam=18) if pecas[x.peca]["glifo"] != "-" else ""
+    par = valores.get(x.b)
+    palavras = (["muda"] if par else []) + (["on"] if x.b == escolhida else [])
+    fisico = x.b in a13.PODE_TROCAR
+    fixo = ' data-fixo="sim"' if x.fixo else ""
+    destino = f' data-destino="{x.motor}"' if fisico else ""
+    dica = {"ps": "Os gestos do PS ficam na aba Navegação",
+            "tp_toque": "O toque no touchpad move o cursor; não se troca aqui"}.get(x.b)
+    dica = f' data-dica="{dica}"' if dica else ""
+    return (
+        f'<button class="b2 item-{x.peca}" data-b="{x.b}" data-gesto="mapa-botao"'
+        f'{fixo}{destino}{dica} data-troca="{"sim" if fisico else "não"}"'
+        f' data-campo="estado-{x.b}" data-hef-alvo="atributo" data-hef-atributo="data-estado"'
+        f' data-estado="{" ".join(palavras)}">'
+        f'<span class="b2-gl">{g}</span><span class="b2-nm">{x.nome}</span>'
+        f'<span class="b2-val" data-campo="val-{x.b}" data-hef-alvo="texto">'
+        f'{a13._texto_do_valor(par, x.b)}</span>'
+        f'<span class="b2-atual" hidden data-campo="atual-{x.b}" data-hef-alvo="texto">'
+        f'{"" if x.fixo or not par else par[0] + ":" + par[1]}</span></button>')
+
+
+def _grade_do_seletor(pecas):
+    from pacotes import a13_mapa_do_controle as a13
+
+    controle_ = "".join(
+        f'<button class="op3" data-v="troca:{d}" data-gesto="mapa-escolher">'
+        f'{glifo(pecas[peca]["glifo"], tam=18)}<span>{rotulo}</span></button>'
+        for d, rotulo, peca in a13.OPCOES_DE_CONTROLE)
+    mouse = "".join(
+        f'<button class="op3 txt" data-v="acao:{t}" data-gesto="mapa-escolher"><span>{r}</span></button>'
+        for t, r in a13.OPCOES_DE_MOUSE)
+    teclado = "".join(
+        f'<button class="op3 txt" data-v="acao:{t}" data-gesto="mapa-escolher"><span>{r}</span></button>'
+        for t, r in a13.OPCOES_DE_TECLADO)
+    return (
+        '<div class="sel2" hidden role="dialog" aria-label="O que o botão faz">\n'
+        '        <div class="sel2-topo"><span class="sel2-tit"><span class="sel2-b">Cruz</span> vira</span>\n'
+        '          <div class="seg2" role="tablist"><button class="on" data-aba="controle">Controle</button>'
+        '<button data-aba="mouse">Mouse</button><button data-aba="teclado">Teclado</button></div>\n'
+        '          <button class="sel2-x" aria-label="Fechar">×</button></div>\n'
+        f'        <div class="sel2-grade" data-aba="controle">{controle_}</div>\n'
+        f'        <div class="sel2-grade" data-aba="mouse" hidden>{mouse}</div>\n'
+        '        <div class="sel2-grade" data-aba="teclado" hidden>'
+        '<button class="op3 gravar"><span class="ponto"></span><span>Gravar tecla</span></button>'
+        f'{teclado}</div>\n'
+        '        <div class="sel2-rod"><button class="op3 txt limpar" data-v="sem" data-gesto="mapa-escolher">'
+        '<span>Sem mudança</span></button></div>\n'
+        '      </div>')
+
+
+def main():
+    from pacotes import a13_mapa_do_controle as a13
+    import monta
+    from hefesto_dualsense4unix.core import acoes_de_botao as acoes
+    from hefesto_dualsense4unix.profiles import loader
+
+    pecas = {p["id"]: p for p in le_csv()}
+    ds = controle(list(pecas.values()))
+    valores = a13._por_botao({m: (a13.ACAO, t) for m, t in acoes.tabela_efetiva(None, None).items() if t})
+    escolhida = "cross"
+
+    def coluna(lado):
+        return "\n".join(_linha_da_tela(x, pecas, valores, escolhida)
+                         for x in a13.BOTOES_DA_PAGINA if x.lado == lado)
+
+    moldes = "".join(f'<option value="molde:{m.chave}">{m.nome}</option>' for m in loader.MOLDES_DE_PERFIL)
+    perfis = ('<optgroup label="Navegação"><option value="nav">Navegar no computador</option></optgroup>'
+              f'<optgroup label="Moldes">{moldes}</optgroup><option value="novo">+ Novo perfil…</option>')
+    doc = f'''<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Hefesto — o mapa do controle</title>
+<style>{CSS_BASE}{caixa_da_janela.moldura()}{CSS_TELA}
+{css_das_pecas(sorted({x.peca for x in a13.BOTOES_DA_PAGINA}))}
 </style>
 </head>
 <body>
-
-<div class="cx">
-  <div class="topo">
-    <!-- O VOLTAR VOLTA PARA DE ONDE VEIO. Desde 29/09/2026 só a Conexões abre
-         este mapa (a Controles e a Navegação o perderam, por ordem de produto), e por
-         isso ela é a reserva de quem abre o arquivo direto. O dono é o
-         `caixa_da_janela.voltar`, que pergunta à lista de volta do WebView. -->
-    {caixa_da_janela.voltar("08-conexoes.html")}
-    <h1><span class="p">O mapa do controle</span></h1>
-    <!-- A LINHA DE INSTRUÇÃO SAIU — decisão, 31/08/2026: *"passe o mouse
-         num glifo e a peça acende no desenho · passe na peça e o glifo acende
-         só remove isso."* O comportamento FICA: o que sai é a legenda que o
-         narrava. Quem passa o mouse descobre em meio segundo; quem não passa
-         não precisava da frase. -->
+<div class="cx mc" role="dialog" aria-modal="true" aria-label="Mapa do controle" data-tipo="nav"
+     data-campo="mc-tipo" data-hef-alvo="atributo" data-hef-atributo="data-tipo">
+  <div class="mc-topo">
+    <a class="voltar2 voltar" href="06-navegacao.html" onclick="if (history.length > 1) {{ history.back(); return false }}" data-dica="Volta para a Navegação">← Voltar</a>
+    <h1>Mapa do controle</h1>
+    <span class="mc-rot" data-dica="O mapa vale só para o controle escolhido; cada controle guarda o seu">Vale para</span><div class="mc-chips" data-bloco="controles-do-mapa">{_chips_de_exemplo()}</div>
   </div>
-
   <div class="corpo">
-{provas}
-  <div class="mapa">
-    <div class="lado-ds">
+  <div class="mc-perfil" data-fixo="sim" data-campo="mc-fixo" data-hef-alvo="atributo" data-hef-atributo="data-fixo">
+    <span class="cel">
+    <label class="mc-rot" for="perfil">Perfil</label>
+    <select id="perfil" class="campo2" data-gesto="mapa-perfil" data-campo="perfil" data-hef-alvo="valor" data-dica="Navegação, point and click e trocas de botão">{perfis}</select>
+    </span>
+    <span class="cel">
+    <span class="etiqueta" data-campo="etiqueta" data-hef-alvo="texto" data-dica="A cor do tipo marca os botões mudados">Navegação</span>
+    <label class="mc-rot" for="nome">Nome</label>
+    <input id="nome" class="campo2 nome2" data-gesto="mapa-nome" data-campo="nome" data-hef-alvo="valor" value="Navegar no computador">
+    </span>
+    <span class="cel">
+    <span class="mc-rot">Usar em</span>
+    <span class="usar-em" data-campo="usar-em" data-hef-alvo="html"><span class="jogo">Fora do jogo</span></span>
+    </span>
+  </div>
+  <div class="mapa mc-mapa">
+    <div class="mc-lado">
+{coluna("esq")}
+    </div>
+    <div class="mc-centro">
+      <div class="mc-desenho">
 {ds}
+      </div>
+      <div class="mc-baixo">
+{coluna("baixo")}
+      </div>
+      {_grade_do_seletor(pecas)}
     </div>
-    <div class="lado-lista">
-{chr(10).join(blocos)}
+    <div class="mc-lado">
+{coluna("dir")}
     </div>
   </div>
-
+  <div class="mc-cursor">
+    <span class="par2"><span class="mc-rot">Mover com</span><select class="campo2" data-gesto="mapa-mover-com" data-campo="cursor-mover" data-hef-alvo="valor"><option value="esq" selected>Analógico esquerdo</option><option value="dir">Analógico direito</option></select></span>
   </div>
+  </div>
+  <div class="mc-rod">
+    <a class="btn2" href="06-navegacao.html" data-gesto="mapa-cancelar">Cancelar</a>
+    <button class="btn2 amarelo" data-gesto="mapa-padrao">Voltar ao padrão</button>
+    <button class="btn2 roxo" data-gesto="mapa-guardar">Guardar</button>
+  </div>
+  <button id="mapa-captura" hidden tabindex="-1" aria-hidden="true" data-gesto="mapa-gravar-tecla"></button>
 </div>
-
-{script_provas}
+<script>{JS}</script>
 </body>
 </html>
 '''
-    onde.gravar(SAIDA.name, html)
-    print(f"mapa-do-controle.html: {len(pecas)} peças, {len(regras)} regras de cruzamento")
-    if faltam:
-        print("  sem desenho no SVG: " + ", ".join(p["id"] for p in faltam))
+    onde.gravar(SAIDA.name, monta.com_a_base(doc))
+    print(f"mapa-do-controle.html: {len(a13.BOTOES_DA_PAGINA)} botões, {len(pecas)} peças")
 
 
 if __name__ == "__main__":

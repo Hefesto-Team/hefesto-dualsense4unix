@@ -34,3 +34,12 @@ seção daqui**: a aba deixou de estar em trabalho.
   sempre as três Entradas continuam em 2; uma Entrada que varre (teto 849) com dois controles cai para 1. A página do
   produto continua em «N/2» até publicar, e o limite do produto só segue a capacidade quando a bancada ligar o
   `radio_da_mesa.N_MAX_PELA_CAPACIDADE`.
+
+## mapa-do-controle.html
+- **15/10/2026** — o mapa deixa de ser a página dos sensores, das luzes e do áudio e vira a tela de configurar os 23
+  botões (rodadas 3 e 4 do desenho do todo; sprint A-ABA-MAPA-DO-CONTROLE-DO-TODO-01): perfil em três grupos
+  (Navegação, Moldes, Meus perfis), quatro moldes (Point and click, Visual novel, Mouse, Mouse e teclado), cor do tipo,
+  seletor por botão com três abas (Controle, Mouse, Teclado) e a captura de tecla. O pacote novo roda sobre a página
+  de antes até publicar, que não tem a linha de perfil nem as linhas dos botões: o `--publicar` leva a página no mesmo
+  fecho que leva o código.
+

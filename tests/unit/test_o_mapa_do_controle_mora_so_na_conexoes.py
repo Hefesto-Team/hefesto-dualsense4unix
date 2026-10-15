@@ -1,4 +1,8 @@
-"""O «Mapa do controle» mora só na aba Conexões."""
+"""O «Mapa do controle» tem duas portas: a aba Conexões (29/09) e a Navegação (rodada 3, 13/10).
+
+A Navegação abre o mapa pelos botões «Trocar os botões» e «Point and click» da fila de baixo, e
+volta para ela pelo «← Voltar» (a reserva do `history.back`).
+"""
 from __future__ import annotations
 
 import html.parser
@@ -13,6 +17,7 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 MAPA = "mapa-do-controle.html"
 
 CASA = ("08-conexoes.html", "btn", "ferramentas")
+NAVEGACAO = "06-navegacao.html"
 
 _VAZIAS = frozenset({"area", "base", "br", "col", "embed", "hr", "img", "input",
                      "link", "meta", "source", "track", "wbr"})
@@ -72,12 +77,12 @@ def _portas() -> dict[str, list[tuple[str, set[str]]]]:
     return fora
 
 
-def test_o_mapa_mora_so_na_conexoes() -> None:
+def test_o_mapa_so_se_abre_pela_conexoes_e_pela_navegacao() -> None:
     portas = _portas()
     pagina, classe, fileira = CASA
-    fora_de_casa = sorted(set(portas) - {pagina})
+    fora_de_casa = sorted(set(portas) - {pagina, NAVEGACAO})
     assert not fora_de_casa, (
-        f"o Mapa do controle mora só na aba Conexões (decisão dela, 29/09) e "
+        f"o Mapa do controle se abre só pela Conexões e pela Navegação e "
         f"ainda se abre por: {fora_de_casa}")
     na_casa = portas.get(pagina, [])
     assert len(na_casa) == 1, (
@@ -88,11 +93,10 @@ def test_o_mapa_mora_so_na_conexoes() -> None:
         f"classe {classes!r}, dentro de {sorted(acima)}")
 
 
-def test_o_voltar_do_mapa_tem_a_casa_como_reserva() -> None:
-    casa = sorted(_portas())
-    assert len(casa) == 1, casa
+def test_o_voltar_do_mapa_tem_a_navegacao_como_reserva() -> None:
     mapa = next(p for p in _paginas() if p.name == MAPA)
-    achado = re.search(r'<a class="voltar" href="([^"]+)"', mapa.read_text(encoding="utf-8"))
+    achado = re.search(r'<a class="(?:voltar2 )?voltar" href="([^"]+)"',
+                       mapa.read_text(encoding="utf-8"))
     assert achado, "o mapa perdeu o «← Voltar»"
-    assert achado.group(1) == casa[0], (
-        f"a reserva do «← Voltar» é {achado.group(1)!r}, e a casa do mapa é {casa[0]!r}")
+    assert achado.group(1) == NAVEGACAO, (
+        f"a reserva do «← Voltar» é {achado.group(1)!r}, e a página que o abre é {NAVEGACAO!r}")

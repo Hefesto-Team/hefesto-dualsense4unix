@@ -46,7 +46,7 @@ def _fora_da_reserva() -> str:
 
 def _reserva() -> str:
     """O `href` do «← Voltar», lido do mapa no disco."""
-    achado = re.search(r'<a class="voltar" href="([^"]+)"',
+    achado = re.search(r'<a class="(?:voltar2 )?voltar" href="([^"]+)"',
                        (PASTA / MAPA).read_text(encoding="utf-8"))
     assert achado, f"o {MAPA} ({PASTA.name}) não tem o «← Voltar»"
     return achado.group(1)
