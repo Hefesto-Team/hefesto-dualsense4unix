@@ -1000,20 +1000,20 @@ class AltoFalanteSubsystem:
     def _aparelhos_de_pe(self, aparelho_de: Mapping[str, str]) -> dict[str, str]:
         """``{marca: uniq}`` dos endpoints que ficam de pé nesta volta.
 
-        Um por DualSense da mesa, em qualquer transporte; e o do aparelho que
-        SAIU fica enquanto um jogo toca nele: o nó que some debaixo do jogo
-        leva a háptica da partida junto (a decisão de 08/09, «nó que some
-        quebra o jogo que o escolheu»). Servidor mudo é «toca» — na dúvida, o
-        nó fica.
+        Um por DualSense da mesa, em qualquer transporte; o do aparelho que SAIU fica enquanto
+        um jogo toca nele (servidor mudo é «toca») ou o gadget dele espera o jogo fechar: o nó
+        que some sob o jogo leva a háptica junto (08/09; ``docs/research/o-porque-dos-modulos.md``).
         """
         from hefesto_dualsense4unix.integrations.alto_falante_bt import sink_esta_tocando
+        from hefesto_dualsense4unix.integrations.uhid_gamepad import gadget_estacionado
 
         de_pe = {marca: uniq for uniq, marca in aparelho_de.items()}
         for marca, endpoint in list(self._endpoints.items()):
-            if marca in de_pe:
-                continue
-            if sink_esta_tocando(str(getattr(endpoint, "nome", "") or ""), na_duvida=True):
-                de_pe[marca] = str(getattr(endpoint, "uniq", "") or "")
+            uniq, nome = (str(getattr(endpoint, k, "") or "") for k in ("uniq", "nome"))
+            if marca not in de_pe and (
+                gadget_estacionado(uniq) or sink_esta_tocando(nome, na_duvida=True)
+            ):
+                de_pe[marca] = uniq
         return de_pe
 
     def _nos_na_ordem(
