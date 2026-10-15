@@ -11,7 +11,8 @@ Modos:
   arvore [REV]            nome e conteúdo dos arquivos (padrão: a árvore de trabalho)
   diff BASE TOPO          as linhas acrescentadas e as mensagens do intervalo
   remoto REMOTO           as referências que o servidor guarda
-  texto                   o que chega pelo stdin (título e corpo de PR, nota de release)
+  texto [--conteudo]      o que chega pelo stdin (título e corpo de PR, nota de release); com
+                          --conteudo, linha de arquivo: só o nível 1, como no `diff` e na `arvore`
 
 A lista: `AUTORIA_VEDADOS` (o conteúdo, no CI) ou o arquivo que `git config autoria.vedados`
 aponta. Uma linha por termo: `1 <termo>`, `2 <Termo>` ou `1 re:<expressão>`. Sem lista,
@@ -438,7 +439,7 @@ def modo_remoto(remoto: str, lista: Lista | None) -> int:
     return _veredito(ruins, f"{n} referências em {remoto}", lista)
 
 
-def modo_texto(lista: Lista | None) -> int:
+def modo_texto(lista: Lista | None, conteudo: bool = False) -> int:
     ruins: list[str] = []
     if lista is not None:
         # Quebra só no fim de linha: o número tem de ser o mesmo que o `read` do
@@ -446,7 +447,7 @@ def modo_texto(lista: Lista | None) -> int:
         for i, linha in enumerate(sys.stdin.read().split("\n"), 1):
             if lista.vedado(linha, 1):
                 ruins.append(f"linha {i}: termo da lista (nível 1)")
-            if lista.vedado(linha, 2):
+            if not conteudo and lista.vedado(linha, 2):
                 ruins.append(f"linha {i}: termo da lista (nível 2)")
     return _veredito(ruins, "texto", lista)
 
@@ -489,6 +490,9 @@ def main(argv: list[str]) -> int:
     if modo == "remoto" and len(resto) != 1:
         print(__doc__)
         return 2
+    if modo == "texto" and resto not in ([], ["--conteudo"]):
+        print(__doc__)
+        return 2
     lista = _lista()
     if modo == "historia":
         return modo_historia(resto, lista)
@@ -500,7 +504,7 @@ def main(argv: list[str]) -> int:
         return modo_diff(resto[0], resto[1], lista)
     if modo == "remoto":
         return modo_remoto(resto[0], lista)
-    return modo_texto(lista)
+    return modo_texto(lista, conteudo=resto == ["--conteudo"])
 
 
 if __name__ == "__main__":

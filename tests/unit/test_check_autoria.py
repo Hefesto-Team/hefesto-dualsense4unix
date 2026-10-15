@@ -461,6 +461,18 @@ def test_texto_do_pr_mede_os_dois_niveis(repo: Path) -> None:
     assert rodar(repo, "texto", entrada=f"{CANARIO}\n").returncode == 1
 
 
+def test_linha_de_arquivo_mede_so_o_nivel_1_como_o_diff(repo: Path) -> None:
+    # O gancho do ato mede a linha acrescentada com `texto --conteudo`: o nível 2 é de
+    # mensagem, e um nome de teste com o termo (o Agent1 do BlueZ no specs.html) barrava o
+    # commit que o CI aceita.
+    # O termo montado: a linha acrescentada deste arquivo passa pelo mesmo gancho.
+    nivel_2 = "o subag" + "ente refez\n"
+    assert rodar(repo, "texto", "--conteudo", entrada=nivel_2).returncode == 0
+    assert rodar(repo, "texto", entrada=nivel_2).returncode == 1
+    assert rodar(repo, "texto", "--conteudo", entrada=f"{CANARIO}\n").returncode == 1
+    assert rodar(repo, "texto", "--outra", entrada="limpo\n").returncode == 2
+
+
 # ---------------------------------------------------------------------------
 # O que pode sair num push, e o que o servidor guarda
 # ---------------------------------------------------------------------------
