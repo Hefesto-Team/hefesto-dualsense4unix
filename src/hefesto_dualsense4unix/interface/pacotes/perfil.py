@@ -179,10 +179,15 @@ def ativo(nome: str | None) -> dict[str, Any]:
 
 
 def ativo_que_vale(nome: str | None) -> dict[str, Any]:
-    """O perfil ativo com o padrão do computador por baixo: o que a tela PINTA."""
+    """O perfil ativo com o padrão do computador por baixo: o que a tela PINTA.
+
+    SEM PERFIL, o que a tela pinta é o que o computador guardou (o gesto grava ali quando não há
+    perfil, `onde_grava`): modo e brilho voltam em vez do vazio. Computador sem nada declarado
+    segue `{}`, que é o travessão (15/10/2026).
+    """
     cru = ativo(nome)
     if not cru:
-        return cru
+        return _o_computador_sem_perfil()
     try:
         _com_o_src()
         from hefesto_dualsense4unix.profiles import o_padrao_do_computador as opc
@@ -204,6 +209,22 @@ def ativo_que_vale(nome: str | None) -> dict[str, Any]:
 
 
 _VISTA_LIDA: dict[str, tuple[Any, dict[str, Any]]] = {}
+
+
+def _o_computador_sem_perfil() -> dict[str, Any]:
+    """As escolhas do computador como perfil cru, ou `{}` se ele não declarou nada ou não abre."""
+    try:
+        _com_o_src()
+        from hefesto_dualsense4unix.profiles import o_padrao_do_computador as opc
+
+        computador = opc.o_computador()
+        if opc.computador_vazio(computador):
+            return {}
+        vista = opc.perfil_que_vale(opc.perfil_vazio(), computador)
+        cru = vista.model_dump(mode="json", exclude_unset=True)
+    except Exception:
+        return {}
+    return {chave: valor for chave, valor in cru.items() if chave not in ("name", "match")}
 
 
 VALIDADE_DO_ARQUIVO_S = 1.0
