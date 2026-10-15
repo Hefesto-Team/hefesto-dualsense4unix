@@ -535,17 +535,14 @@ class JanelaDaAba:
 
     def _o_monitor(self) -> str:
         """O número do monitor em que a janela está, na ordem do `Gdk.Display`, ou `?`."""
-        try:
-            gdk = self.janela.get_window()
-            tela = Gdk.Display.get_default()
-            if gdk is None or tela is None:
-                return "?"
-            atual = tela.get_monitor_at_window(gdk)
-            for n in range(tela.get_n_monitors()):
-                if tela.get_monitor(n) == atual:
-                    return str(n)
-        except Exception:
-            pass
+        gdk = self.janela.get_window()
+        tela = Gdk.Display.get_default()
+        if gdk is None or tela is None:
+            return "?"
+        atual = tela.get_monitor_at_window(gdk)
+        for n in range(tela.get_n_monitors()):
+            if tela.get_monitor(n) == atual:
+                return str(n)
         return "?"
 
     def anotar_o_tamanho(self, largura: int, altura: int) -> bool:
