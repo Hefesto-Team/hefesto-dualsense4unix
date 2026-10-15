@@ -7,8 +7,61 @@
 #   patch -R -p3 hid-nintendo.c < patch/0002-*.patch
 #   patch -R -p3 hid-nintendo.c < patch/0001-*.patch
 # deve reproduzir exatamente SHA256_VANILLA_C.
+#
+# O de fábrica da raiz é o mesmo nos dois kernels de hoje: o hid-nintendo.c do
+# pop-os/linux em 3af2f9de4 (7.0.11-76070011) e em 38a419fc9 (7.1.5-76070105)
+# tem o sha 6b71cb49…, igual ao do stable v7.1.5 (medido em 13/10/2026).
+#
+# UM FONTE POR KERNEL (15/10/2026). O kernel que não é o da raiz ganha uma
+# pasta `fonte-por-kernel/<build>/` com o `hid-nintendo.c` (a série aplicada
+# sobre o de fábrica DELE), o `hid-ids.h` dele e a série rebaseada em `patch/`.
+# O `PRE_BUILD` do dkms.conf (`escolher-o-fonte.sh`) põe o certo no lugar. Cada
+# pasta tem uma linha POR_KERNEL abaixo, com os mesmos campos da raiz, e a
+# paridade se confere igual, dentro da pasta, com a série dela.
+#
+# O hid-ids.h vai junto por kernel, e não por zelo: o de fábrica do 7.2 usa
+# USB_VENDOR_ID_HORI e USB_DEVICE_ID_HORI_WIRELESS_SWITCH_PAD, que o hid-ids.h
+# da raiz não declara. Medido em 15/10/2026: com o da raiz, o .c do 7.2.6 não
+# compila; com o do 7.2.6 (o do pop-os/linux em 8b969b992), compila.
+#
+# O 7.2.6-76070206: o de fábrica é o do pop-os/linux em 8b969b992 (o ramo
+# linux_noble de 02/10/2026), sha da55d516…, igual ao do stable v7.2.10. Sobre
+# ele, o 0002 e o 0004 aplicam sem deslocamento. O 0001 perde um pedaço por
+# contexto (o `goto err_close` virou `goto err_io_stop` no 2e0d98dc8), e o
+# pedaço foi refeito mantendo o err_io_stop. O 0003 perde o pedaço do
+# `joycon_init`, onde o HORI (`JOYCON_CTLR_TYPE_LIC_PRO`) passou a tolerar a
+# falha da IMU e da vibração; refeito por cima do ramo do LIC_PRO, que segue
+# igual, e o degradar do clone USB vem depois dele. Fora do refeito, o delta da
+# série é o mesmo da raiz, linha a linha. O passo 2 do ritual rodou com os
+# headers reais do Pop (`linux-headers-7.2.6-76070206-generic` da staging,
+# gcc-13 13.3.0, o mesmo do kernel): rc=0, vermagic 7.2.6-76070206-generic, os
+# parâmetros do 0001 ao 0004 no `.ko`.
+#
+# O 7.3 (medido no v7.3-rc7, sha 0ed50272…): o 0001 cai em três de nove
+# pedaços, porque o mainline ganhou o próprio limitador de subcomando com recuo
+# (joycon_enforce_subcmd_rate_legacy, JC_SUBCMD_RATE_MAX_FAILURES), que é o
+# problema que o 0001 resolve do nosso lado. A série do 7.3 decide, medindo no
+# aparelho, se o 0001 continua ou sai. Até lá o 7.3 fica fora do pino, e o de
+# fábrica dele assume.
+#
+# O RITUAL PARA ACRESCENTAR UM KERNEL ao BUILD_EXCLUSIVE_KERNEL do dkms.conf,
+# e nenhum passo é opcional:
+#   1. o hid-nintendo.c de fábrica daquele kernel (o do commit do Pop que o
+#      pacote dele nomeia) se mede pelo sha256. Se for o SHA256_VANILLA_C da
+#      raiz, o build entra em `fonte-por-kernel/raiz.txt`. Se for outro, a
+#      série é refeita sobre ele numa pasta `fonte-por-kernel/<build>/` nova,
+#      com a linha POR_KERNEL dela aqui. Nunca se acrescenta o kernel com o
+#      arquivo de outro;
+#   2. o patchado compila contra os headers dele, com os parâmetros no `.ko`
+#      (`modinfo -p`: bt_probe_retries, usb_probe_degrade…);
+#   3. só então o build entra na regex e em KERNELS_VALIDADOS. A regex, a
+#      lista, o raiz.txt e as pastas dizem o mesmo, e uma régua cobra os
+#      quatro (tests/unit/test_o_hid_nintendo_so_nos_kernels_conferidos.py).
+# O `scripts/conferir_o_kernel_novo.py` faz o passo 1 para um fonte de kernel
+# antes de ele chegar: confere, aplica limpa ou pede rebase à mão.
 KERNEL_BASE=v7.0.11
 KERNEL_TESTED=7.0.11-76070011-generic
+KERNELS_VALIDADOS=7.0.11-76070011 7.1.5-76070105 7.2.6-76070206
 POP_LINUX_COMMIT=3af2f9de43174ce5063110f94b7b01226499ba13
 SHA256_VANILLA_C=6b71cb4925c9eea5f98d0f02c41bba85f6bb6bda242a6ee27d57ce2b79db2975
 SHA256_PATCHED_C=8fa3ae00eed5c2a769acc5f8fe5a716e0c02e40c05c2e675db315e83d9151dae
@@ -17,3 +70,4 @@ PATCH=0001-HID-nintendo-do-not-transmit-after-rate-limit-exhaus.patch
 PATCH=0002-HID-nintendo-register-leds-even-when-initial-set-fai.patch
 PATCH=0003-HID-nintendo-pad-USB-commands-and-survive-no-dev-inf.patch
 PATCH=0004-HID-nintendo-stop-waiting-on-a-controller-that-has-g.patch
+POR_KERNEL=7.2.6-76070206 KERNEL_BASE=v7.2.6 POP_LINUX_COMMIT=8b969b992b134ea1103abf368be2dc3913d677a7 SHA256_VANILLA_C=da55d516f8f608e8ccaa43fd1646c3d43bca64962e5ef99fc4dac6fc26c74359 SHA256_PATCHED_C=062b54986a87741e4ddc095153a6872fb0135eb838606a6bf9afa39e2c1631be SHA256_HID_IDS_H=330e393ecb01d5cde4ad347cc174ba6e177d822430918166a5fff06473d2293d
