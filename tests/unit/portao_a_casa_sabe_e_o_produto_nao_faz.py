@@ -691,6 +691,14 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "`scripts/ensaios/o_dsu_chega_ao_emulador.py` não a usa, de propósito: ele não "
         "importa nada do produto. O servidor só monta pacotes; quem os lê é o emulador."
     ),
+    "interface/pacotes/a08_conexoes.py::html_da_grade_de_tipos": (
+        "15/10/2026, O-APARELHO-DO-BLUETOOTH-SEM-TIPO-SE-NOMEIA-PELA-PESSOA-01 — é do gerador "
+        "do desenho, não do produto: o `interface/aba08.py` (a chamada `_pacote08."
+        "html_da_grade_de_tipos`) escreve com ela a janela «O que é este aparelho?» no mockup, "
+        "e o produto a mostra pela página publicada; o gesto que grava a escolha é "
+        "`a08_conexoes.aparelho_tipo`, e a lista das nove respostas é a mesma "
+        "(`TIPOS_DA_GRADE`)."
+    ),
     "interface/monta.py::par_de_modos": (
         "08/10/2026, O-MODO-AUTOMATICO — é do gerador do desenho, não do produto: os geradores "
         "da 03 e da 04 (`interface/aba03.py` e `aba04.py`, a chamada `monta_.par_de_modos`) "

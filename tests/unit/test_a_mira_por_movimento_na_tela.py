@@ -831,36 +831,15 @@ def _o_gesto(pagina: str, nome: str) -> Any:
     return fn
 
 
-def test_o_chip_alterna_pelo_que_o_daemon_diz() -> None:
-    """MORDIDA: mande `ligada=True` fixo e o segundo caso reprova."""
-    for agora in (False, True):
-        p = _PonteDaMira(_OK)
-        _o_gesto("calibrar-sensores.html", "analogico-virtual")(
-            _ctx_da_aba(mira={"ligada": agora, "virtual": agora, "sensibilidade": 6}),
-            {"uniq": _P1}, p)
-        assert p.chamadas == [{"ligada": not agora, "uniq": _P1}]
+def test_a_calibrar_nao_tem_o_liga_da_mira() -> None:
+    """O liga e o lado do analógico virtual moram só na aba Controles (um dono só).
 
+    MORDIDA: devolva o gesto `analogico-virtual` ou `analogico-lado` ao pacote da Calibrar.
+    """
+    import pacotes
 
-def test_sem_leitura_o_chip_recusa_dizendo() -> None:
-    """Sem o bloco `mira`, alternar é chutar o oposto: recusa e não chama."""
-    import pacotes.a02_controles as a02
-
-    p = _PonteDaMira(_OK)
-    with pytest.raises(RuntimeError) as erro:
-        _o_gesto("calibrar-sensores.html", "analogico-virtual")(_ctx_da_aba(), {"uniq": _P1}, p)
-    assert str(erro.value) == a02.SEM_LEITURA_DA_MIRA
-    assert p.chamadas == []
-
-
-def test_o_chip_recusa_o_que_o_daemon_nao_confirma() -> None:
-    """O daemon que responde sem `ok` não vira «aplicado»: a recusa sai com a"""
-    import pacotes.a02_controles as a02
-
-    p = _PonteDaMira({"status": "sem_controle", "motivo": "texto do daemon"})
-    with pytest.raises(RuntimeError) as erro:
-        _o_gesto("calibrar-sensores.html", "analogico-virtual")(
-            _ctx_da_aba(mira={"ligada": False, "virtual": False}), {"uniq": _P1}, p)
-    assert str(erro.value) == a02.MIRA_SEM_O_CONTROLE
+    for nome in ("analogico-virtual", "analogico-lado"):
+        assert pacotes.gesto_da_pagina("calibrar-sensores.html", nome) is None, nome
 
 
 def test_os_deslizantes_mandam_um_campo_so() -> None:

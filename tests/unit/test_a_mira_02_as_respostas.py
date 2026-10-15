@@ -268,9 +268,9 @@ def test_no_nativo_o_clique_no_chip_nao_chega_ao_daemon() -> None:
 
     p = _PonteDaMira(_OK)
     with pytest.raises(RuntimeError) as erro:
-        _o_gesto("calibrar-sensores.html", "analogico-virtual")(
+        _o_gesto("02-controles.html", "analogico-lado")(
             _ctx(nativo=True, **{"aa:bb:cc:00:00:01": {"ligada": False, "virtual": False}}),
-            {"uniq": "aa:bb:cc:00:00:01"}, p)
+            {"uniq": "aa:bb:cc:00:00:01", "lado": "analogico_esquerdo"}, p)
     assert str(erro.value) == a02.MIRA_CINZA_NO_NATIVO
     assert p.chamadas == [], "o chip cinza pediu ao daemon"
 
@@ -281,11 +281,11 @@ def test_o_nativo_que_o_daemon_recusa_volta_pela_mesma_frase() -> None:
 
     p = _PonteDaMira({"status": "nativo", "uniq": "aa:bb:cc:00:00:01", "motivo": "x"})
     with pytest.raises(RuntimeError) as erro:
-        _o_gesto("calibrar-sensores.html", "analogico-virtual")(
+        _o_gesto("02-controles.html", "analogico-lado")(
             _ctx(**{"aa:bb:cc:00:00:01": {"ligada": False, "virtual": False}}),
-            {"uniq": "aa:bb:cc:00:00:01"}, p)
+            {"uniq": "aa:bb:cc:00:00:01", "lado": "analogico_esquerdo"}, p)
     assert str(erro.value) == a02.MIRA_CINZA_NO_NATIVO
-    assert p.chamadas == [{"ligada": True, "uniq": "aa:bb:cc:00:00:01"}]
+    assert p.chamadas == [{"lado": "analogico_esquerdo", "uniq": "aa:bb:cc:00:00:01"}]
 
 
 @pytest.mark.parametrize(("entrada", "jogador"), [

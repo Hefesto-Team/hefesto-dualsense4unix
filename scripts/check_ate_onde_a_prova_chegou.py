@@ -165,13 +165,6 @@ A_PROVA_QUE_FALTA: dict[str, tuple[str, str, str]] = {
         "(`movimento.giroscopio@dualsense`, MONTOU nos dois transportes); falta o jogo "
         "aberto virar a câmera para o lado que a mão dela espera. É da MESA-DE-QUATRO-01",
     ),
-    "analogico-virtual": (
-        "médio",
-        "2026-09-06-MESA-DE-QUATRO-01-quatro-dualsense-por-cabo-e-por-radio-com-ela.md",
-        "o Analógico Virtual da Calibrar leva o giro ao analógico "
-        "(`movimento.giroscopio@dualsense`, MONTOU nos dois transportes); falta o jogo "
-        "aberto andar com o controle na mão dela. É da MESA-DE-QUATRO-01",
-    ),
     "calibrar-comecar": (
         "médio",
         "2026-10-06-O-COMECAR-DA-CALIBRAR-GUARDA-O-ZERO-DE-CADA-CONTROLE-01.md",

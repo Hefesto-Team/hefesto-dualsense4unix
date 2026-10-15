@@ -2167,7 +2167,7 @@ def mic_existe(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     Não é o `mic.set`, que é o MUDO no firmware (`ipc_handlers._handle_mic_set`: acende a luz
     vermelha e o PipeWire segue publicando a fonte). Aqui a promessa é *"Desligado, nenhum programa
-    o enxerga"*, a PONTE: `ControleDeclarado.microfone` no `maquina.json` (`utils/maquina.py:522`),
+    o enxerga"*, a PONTE: `ControleDeclarado.microfone` no `maquina.json` (`utils/maquina.py:589`),
     decisão de 22/08/2026 (*"por controle"*). O clique vale AGORA: `_handle_machine_declare` relê o
     disco, rebinda `daemon._maquina` e sobe ou desce o subsystem `bt_mic` no mesmo pedido
     (`ipc_handlers.py:4871`, QUATRO-MICROFONES-01: *"o 'Aplicar' tem de VALER agora"*).

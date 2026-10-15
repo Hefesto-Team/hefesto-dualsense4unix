@@ -45,3 +45,10 @@ seção daqui**: a aba deixou de estar em trabalho.
   produto roda o pacote novo sobre a página de antes, que não define `--sala-<tipo>` nem `--c-acessorio` nem a
   textura do «não medido»: os ícones da sala ficam sem a cor do tipo, e a linha do acessório mostra o nome e o
   sinal, sem o glifo e com a faixa sem cor. A 08 se publica no mesmo fecho que leva o código.
+
+## calibrar-sensores.html
+- **15/10/2026** — a janela perde o liga «Giroscópio como analógico» e os lados «Esquerdo | Direito» de cada coluna
+  (sprint CADA-FEATURE-TEM-UM-DONO-SO-NA-INTERFACE-01; o desenho final de 14/10 não os tem): o analógico virtual
+  se liga e escolhe o lado só na aba Controles, e a Calibrar fica com os ajustes finos. Até publicar, o produto roda
+  o pacote novo sobre a página de antes: os botões de lá ficam sem quem os atenda e sem a cor que o pacote pintava.
+  A Calibrar se publica no mesmo fecho que leva o código.

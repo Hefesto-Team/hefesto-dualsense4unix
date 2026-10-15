@@ -117,7 +117,7 @@ def test_os_ajustes_da_mira_citados_existem_na_calibrar() -> None:
     O bloco «Mira Virtual» embaixo dos cartões virou, em 08/10/2026, os ajustes do
     «Analógico virtual» dentro do cartão de cada controle
     (O-ANALOGICO-VIRTUAL-E-UM-SO-COM-O-LADO-ESCOLHIDO-01); no desenho do todo (15/10/2026) o
-    liga se chama «Giroscópio como analógico».
+    liga e o lado moram só na aba Controles, e a Calibrar fica com os ajustes finos.
     """
     tela = _texto_visivel("calibrar-sensores.html")
     frases_do_bloco = 0

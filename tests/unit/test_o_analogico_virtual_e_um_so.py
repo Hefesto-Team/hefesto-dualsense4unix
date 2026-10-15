@@ -9,14 +9,14 @@ O contrato que esta régua mede:
 1. `mira.set` ganha `lado`; `ligada: true` liga no lado guardado (o direito para o perfil
    antigo), `lado` sozinho troca o lado e liga, `ligada: false` apaga os dois movimentos;
 2. o giro e a inclinação vão ao MESMO lado (a PERGUNTA 1, a recomendada);
-3. a 02 e a Calibrar pintam `mira-ligada` e `mira-lado` pelo mesmo leitor, e o gesto
-   `analogico-lado` é o mesmo nas duas;
+3. o liga e o lado moram só na 02, que pinta o `mira-lado` pelo leitor único; a Calibrar não
+   tem gesto nem campo do analógico virtual (CADA-FEATURE-TEM-UM-DONO-SO-NA-INTERFACE-01);
 4. o perfil que já existe lê como está escrito, P1 a P4 são quatro opiniões, e o Nativo
    recusa sem gravar.
 
 A MORDIDA (rodada em 08/10/2026 e devolvida): o `destino` cravado de volta no analógico
 direito no `_handle_mira_set` (`rota = rot.DESTINO_ANALOGICO_DIREITO`) reprova as réguas
-do lado, a do clique pela 02 e a da Calibrar.
+do lado e a do clique pela 02.
 
 Endereços de rádio: a faixa SINTÉTICA da casa (``aa:bb:cc``), nunca um OUI real.
 """
@@ -341,10 +341,10 @@ def _gesto(pagina: str, nome: str) -> Any:
     return fn
 
 
-def test_o_clique_no_lado_pela_02_e_pela_calibrar(
+def test_o_clique_no_lado_pela_02(
         perfis: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
         com_a_bancada: None) -> None:
-    """O «Usar como analógico virtual» da 02 e o «Esquerdo | Direito» da Calibrar: um contrato.
+    """O «Mira virtual» da 02 liga o lado; a Calibrar só mostra os ajustes finos, sem o liga.
 
     MORDIDA: o `destino` cravado no direito — o P2 lê o esquerdo e anda pelo direito.
     """
@@ -362,18 +362,13 @@ def test_o_clique_no_lado_pela_02_e_pela_calibrar(
     cards = list(a02.pacote(_ctx(_lidos(servidor)))["cards"].values())
     assert [c["mira-lado"] for c in cards] == ["nenhum", _ESQ, "nenhum", "nenhum"]
 
-    _gesto("calibrar-sensores.html", "analogico-lado")(
-        _ctx(_lidos(servidor)), {"uniq": _P2, "lado": _DIR}, ponte)
-    colunas = a11.pacote(_ctx(_lidos(servidor)))["colunas"]
-    assert (colunas["p2"]["mira-lado"], colunas["p2"]["mira-ligada"]) == (_DIR, a02.SENSOR_LIGADO)
-    assert colunas["p1"]["mira-lado"] == "nenhum"
+    # a Calibrar não liga nem escolhe lado: nem gesto, nem campo pintado
+    import pacotes
 
-    _gesto("calibrar-sensores.html", "analogico-virtual")(
-        _ctx(_lidos(servidor)), {"uniq": _P2}, ponte)
+    for nome in ("analogico-lado", "analogico-virtual"):
+        assert pacotes.gesto_da_pagina("calibrar-sensores.html", nome) is None, nome
     colunas = a11.pacote(_ctx(_lidos(servidor)))["colunas"]
-    assert (colunas["p2"]["mira-lado"], colunas["p2"]["mira-ligada"]) == (
-        "nenhum", a02.SENSOR_DESLIGADO)
-    assert _movimento(_P2).lado == _DIR, "apagar pela Calibrar esqueceu o lado"
+    assert all("mira-lado" not in c and "mira-ligada" not in c for c in colunas.values())
 
 
 def test_clicar_no_lado_aceso_da_02_desliga_a_mira(
@@ -412,9 +407,10 @@ class _Ponte:
         return self.corpo
 
 
-@pytest.mark.parametrize("tela", ["02-controles.html", "calibrar-sensores.html"])
-def test_o_gesto_do_lado_recusa_no_nativo_e_o_lado_torto(tela: str) -> None:
+def test_o_gesto_do_lado_recusa_no_nativo_e_o_lado_torto() -> None:
     import pacotes.a02_controles as a02
+
+    tela = "02-controles.html"
 
     entrada = [{"uniq": _P2, "mira": {"virtual": False, "lado": _DIR}}]
     p = _Ponte({"status": "ok"})
@@ -442,8 +438,9 @@ def test_nenhuma_pagina_emite_o_gesto_inclinacao() -> None:
     emitem = [p.name for p in paginas if 'data-gesto="inclinacao"' in p.read_text("utf-8")]
     assert emitem == [], emitem
     assert pacotes.gesto_da_pagina("02-controles.html", "inclinacao") is None
-    for pagina in ("02-controles.html", "calibrar-sensores.html"):
-        doc = (_RAIZ / "mockup" / pagina).read_text("utf-8")
-        lados = re.findall(r'data-campo="mira-lado"[^>]*>\s*<button[^>]*'
-                           r'data-gesto="analogico-lado" data-lado="([^"]+)"', doc)
-        assert lados and set(lados) == {_ESQ, _DIR}, (pagina, lados)
+    doc = (_RAIZ / "mockup" / "02-controles.html").read_text("utf-8")
+    lados = re.findall(r'data-campo="mira-lado"[^>]*>\s*<button[^>]*'
+                       r'data-gesto="analogico-lado" data-lado="([^"]+)"', doc)
+    assert lados and set(lados) == {_ESQ, _DIR}, lados
+    calibrar = (_RAIZ / "mockup" / "calibrar-sensores.html").read_text("utf-8")
+    assert "analogico-lado" not in calibrar and "analogico-virtual" not in calibrar

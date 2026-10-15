@@ -269,7 +269,6 @@ DO_APARELHO: dict[str, tuple[str, ...]] = {
     "mira-tremor": ("movimento.giroscopio",),
     "mira-segurar": ("movimento.giroscopio",),
     "mira-inverter": ("movimento.giroscopio",),
-    "analogico-virtual": ("movimento.giroscopio",),
     "calibrar-comecar": ("movimento.giroscopio",),
     "mic-existe": ("audio.microfone",),
 }
@@ -321,7 +320,6 @@ NO_PERFIL: dict[str, tuple[str | None, str | None]] = {
     "mira-tremor": ("movimento", "movimento"),
     "mira-segurar": ("movimento", "movimento"),
     "mira-inverter": ("movimento", "movimento"),
-    "analogico-virtual": ("movimento", "movimento"),
 }
 
 

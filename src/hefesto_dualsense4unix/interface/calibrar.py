@@ -84,22 +84,16 @@ FAMILIAS = (("giro", "Giroscópio"), ("accel", "Acelerômetro"))
 SEM_CONTROLE = ("Nenhum controle conectado. Ligue um pelo cabo ou pelo rádio "
                 "e ele aparece aqui.")
 
-#: «MIRA VIRTUAL» VIROU «ANALÓGICO VIRTUAL» — 06/10/2026, leva 1.7
-#: (desenho-navegacao, item 12), pedido: chamar de «Analógico virtual» e
-#: permitir escolher entre o analógico esquerdo e o direito. O cabeçalho de cada cartão liga e escolhe o lado, como o chip do
-#: cabeçalho e os chips embaixo dos analógicos da aba Controles.
-ROTULO_DA_MIRA = "Giroscópio como analógico"
 #: O NOME DA JANELA (todo, 15/10/2026): «Calibrar sensores de movimento» virou «Calibrar giroscópio»,
-#: aqui e no botão da aba Controles (`aba02.ROTULO_DO_CALIBRAR`, o mesmo texto). O selo acima é o nome
-#: novo do liga do analógico virtual (na aba Controles ele é a «Mira virtual», embaixo de cada analógico).
+#: aqui e no botão da aba Controles (`aba02.ROTULO_DO_CALIBRAR`, o mesmo texto). O liga e o lado do
+#: analógico virtual moram só na aba Controles («Mira virtual», embaixo de cada analógico): a Calibrar
+#: só ajusta (CADA-FEATURE-TEM-UM-DONO-SO-NA-INTERFACE-01).
 TITULO = "Calibrar giroscópio"
-LADOS = (("analogico_esquerdo", "Esquerdo"), ("analogico_direito", "Direito"))
 ROTULO_SENSIBILIDADE = "O quanto um gesto anda"
 ROTULO_TREMOR = "Ignorar tremor até"
 UNIDADE_DO_TREMOR = "graus/s"
 SENSIBILIDADE = (1, 12, 6)
 TREMOR = (1, 60, 3)
-DE_ONDE_VEM_A_MIRA = "Os movimentos do controle movem o analógico escolhido."
 
 #: A CALIBRAR COM POUCO TEXTO — 06/10/2026, leva 1.7 (desenho-navegacao, item
 #: 11). Pedido: menos texto, botões no mesmo padrão e a tela bonita de
@@ -170,7 +164,7 @@ def plural(quantos: int, um: str, muitos: str) -> str:
 
     POR QUE ELE EXISTE, e o defeito é medido: esta página escrevia
     ``dos {n} controles`` e caía em *"dos 1 controles"* com um controle só
-    (`calibrar.py:189`, antes de 11/09). **O plural dito com um «s» entre
+    (em `calibrar.py`, antes de 11/09). **O plural dito com um «s» entre
     parênteses não existe em língua nenhuma além da nossa** e não tem como ser
     traduzido: em inglês são duas formas, em russo são três.
 
@@ -415,28 +409,6 @@ CSS = """
      embaixo, separados como a `.leitura` se separa do topo. */
   .mira::before{content:"";position:absolute;left:12px;right:12px;top:0;
                 border-top:1px solid var(--border-sutil)}
-  .mira-topo{display:flex;align-items:center;gap:7px;font-size:12.5px;min-height:20px}
-  .mira-topo b{font-weight:600}
-  /* O LIGA E O LADO DO ANALÓGICO VIRTUAL — 06/10/2026. A pastilha é a mesma
-     dos dois «Inverter» logo abaixo; com o liga apagado o lado fica no cinza
-     da casa (`.btn.apagado`), sem `opacity`, e segue clicável: o clique num
-     lado acende o analógico virtual nele. */
-  .av{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-  .av .sw{height:24px;border-radius:6px;font-size:11px;font-family:inherit;cursor:pointer;
-    border:1px solid var(--border-forte);background:var(--app-bg);color:var(--texto-mudo);
-    display:inline-flex;align-items:center;gap:6px;padding:0 10px;white-space:nowrap}
-  .av .sw .p{width:6px;height:6px;border-radius:50%;background:var(--border-forte)}
-  .av .liga:not(.off) > .sw,.av .lado.on > .sw{border-color:var(--green);
-    background:rgba(80,250,123,.09);color:var(--green)}
-  .av .liga:not(.off) > .sw .p,.av .lado.on > .sw .p{background:var(--green);
-    box-shadow:0 0 6px var(--green)}
-  .av .liga > .sw{font-weight:600;font-size:11px;padding:0 8px;max-width:100%;box-sizing:border-box}
-  .av:has(.liga.off) .lado > .sw{border-color:var(--border-sutil);color:var(--texto-mudo);
-    background:var(--app-bg)}
-  .av:has(.liga.off) .lado > .sw .p{background:var(--border-sutil);box-shadow:none}
-  /* OS DOIS LADOS SÃO UM GRUPO: a mesma largura, lado a lado, na linha de baixo. */
-  .av .lados{order:3;flex:1 0 100%;display:grid;grid-template-columns:1fr 1fr;gap:6px}
-  .av .lado > .sw{width:100%;justify-content:center}
   /* O RÓTULO E O NÚMERO EM CIMA, O TRILHO EMBAIXO, na largura inteira da
      coluna. Lado a lado, com quatro controles numa janela de 1180px, sobravam
      ~23px de trilho por coluna; empilhado, o trilho é a coluna. */
@@ -627,33 +599,11 @@ def _inverter():
             f'<span class="inverter">{botoes}</span></div>')
 
 
-def _analogico_virtual():
-    """O liga do analógico virtual e os dois lados, nascendo apagados.
-
-    Os endereços (`mira-ligada`, `mira-lado`) são os que o pacote pinta do bloco
-    `mira` do `daemon.state_full`, pelos mesmos leitores da 02; os gestos
-    `analogico-virtual` e `analogico-lado` são os do pacote `a11_calibrar_sensores`.
-    """
-    lados = "".join(
-        f'<span class="lado" data-campo="mira-lado" data-hef-alvo="classe"'
-        f' data-hef-classe="on" data-hef-quando="{valor}">'
-        f'<button class="sw" data-gesto="analogico-lado" data-lado="{valor}">'
-        f'<span class="p"></span>{rotulo}</button></span>'
-        for valor, rotulo in LADOS)
-    return (f'<span class="liga off" data-campo="mira-ligada" data-hef-alvo="classe"'
-            f' data-hef-classe="off" data-hef-quando="DESLIGADO">'
-            f'<button class="sw" data-gesto="analogico-virtual">'
-            f'<span class="p"></span>{ROTULO_DA_MIRA}</button></span>'
-            f'<span class="lados">{lados}</span>')
-
-
 def mira(c):
     """A coluna da mira de UM controle — os dois deslizantes, o «Só enquanto eu"""
     return (f'          <div class="mira" style="--plastico:{_plastico(c)}"'
             f' data-controle="{c.get("pref") or ""}">\n'
             f'            <span class="quem" data-campo="quem-joga" data-hef-alvo="html">{_quem(c)}</span>\n'
-            f'            <div class="mira-topo av" data-dica="{DE_ONDE_VEM_A_MIRA}">'
-            f'{_analogico_virtual()}</div>\n'
             f'{_deslizante("mira-sensibilidade", ROTULO_SENSIBILIDADE, SENSIBILIDADE, "mira-sensibilidade")}\n'
             f'{_deslizante("mira-tremor", ROTULO_TREMOR, TREMOR, "mira-tremor", UNIDADE_DO_TREMOR)}\n'
             f'{_segurar()}\n'
