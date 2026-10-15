@@ -41,9 +41,6 @@ def _forma(texto: str) -> list[str]:
 
 
 FATOS: dict[str, str] = {
-    "o jogo ainda não recebeu este controle":
-        "o sujeito é O JOGO. Estado de agora, e o número fica reservado até ele "
-        "entregar — 07/09/2026",
     "a leitura ainda não chegou":
         "o sujeito é A LEITURA do aparelho. Estado de agora: o traço diz que o "
         "dado não veio ainda, não que não venha — 07/09/2026",
