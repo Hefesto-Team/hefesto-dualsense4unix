@@ -434,3 +434,30 @@ def test_o_arco_iris_do_motor_mostra_uma_cor_por_controle() -> None:
                            sem_piscar=lambda: False)
     motor.tique(50.0, plano)
     assert len(quadros) == 4 and len(set(quadros.values())) == 4
+
+
+@pytest.mark.parametrize("base", sorted(fx.BASES_DO_RELOGIO_COMUM))
+@pytest.mark.parametrize("atraso", [0.5, 2.0, 3.7])
+def test_quem_entra_depois_segue_o_relogio_da_mesa(base: str, atraso: float) -> None:
+    """O controle que entra depois (conectou, ou o jogo soltou a barra dele) não desfaz a
+    defasagem do arco-íris nem o ângulo comum da Maré: os dois contam pelo mesmo relógio.
+    """
+    texto = "arco-iris;;10" if base == "arco-iris" else "mare;FF0000,0000FF;10"  # (noqa-acento)
+    plano = luz.plano_do_perfil(
+        _perfil(texto), JOGADORES[:2], mesa_em_economia=False, em_economia=frozenset()
+    )
+    quadros: dict[str, RGB] = {}
+    motor = luz.LuzAnimada(lambda u, cor: quadros.__setitem__(u, cor), lambda _u: None,
+                           sem_piscar=lambda: False)
+    primeiro, segundo = JOGADORES[:2]
+    motor.tique(100.0, {primeiro: plano[primeiro]})
+    agora = 100.0 + atraso
+    motor.tique(agora, plano)
+    efeito = plano[primeiro].efeito
+    for uniq in (primeiro, segundo):
+        dele = plano[uniq]
+        esperado = luz.cor_com_o_brilho(
+            fx.cor_no_instante(efeito, atraso, dele.posicao, dele.semente, False, dele.amplitude),
+            dele.brilho,
+        )
+        assert quadros[uniq] == esperado, (uniq, quadros[uniq], esperado)

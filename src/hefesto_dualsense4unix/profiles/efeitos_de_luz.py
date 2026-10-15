@@ -44,6 +44,9 @@ DESLOCAMENTO_DA_MARE = 30.0 / 360.0
 VOLTA_MINIMA_DO_ARCO_IRIS_S = 8.0
 #: Defasagem do arco-íris entre dois controles vizinhos: um quarto de volta.
 DEFASAGEM_DO_ARCO_IRIS = 0.25
+#: Os efeitos cujo desenho é ENTRE os controles (a defasagem do arco-íris, o mesmo ângulo da
+#: Maré): o laço os conta num relógio só, o da mesa, e não do instante em que cada um entrou.
+BASES_DO_RELOGIO_COMUM = frozenset({"arco-iris", "mare"})  # (noqa-acento) chave ASCII
 
 _RITMO_MAXIMO = 10
 
@@ -111,7 +114,7 @@ def brilho_do_piscar(t: float, hz: float) -> float:
     """O lampejo com borda suave: cheio, desce em 150 ms, fica no piso 0,15 e sobe em 150 ms.
 
     Metade do ciclo fica no alto e metade no baixo; a borda é de 150 ms, ou de meio ciclo
-    quando o ritmo é tão alto que 150 ms não cabem (no teto de 3 Hz o ciclo é triangular).
+    quando 150 ms não cabem (no teto de 3 Hz sobram 17 ms de alto e de baixo).
     """
     periodo = 1.0 / hz
     borda = min(BORDA_DO_PISCAR_S, periodo / 2)
@@ -266,6 +269,7 @@ def cor_no_instante(
 
 
 __all__ = [
+    "BASES_DO_RELOGIO_COMUM",
     "BORDA_DO_PISCAR_S",
     "DEFASAGEM_DO_ARCO_IRIS",
     "PISO_DA_BATIDA",

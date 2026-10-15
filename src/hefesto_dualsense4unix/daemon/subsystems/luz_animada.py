@@ -28,6 +28,7 @@ from hefesto_dualsense4unix.daemon.subsystems.tato_vivo import (
     motor_do,
 )
 from hefesto_dualsense4unix.profiles.efeitos_de_luz import (
+    BASES_DO_RELOGIO_COMUM,
     TETO_DO_PISCAR_HZ,
     amplitude_da_mare,
     cor_no_instante,
@@ -185,6 +186,9 @@ class LuzAnimada:
         self._ultimo_quadro: dict[str, RGB] = {}
         self._escrito_em: dict[str, float] = {}
         self._inicio: dict[str, float] = {}
+        #: O relógio da mesa: nasce com o primeiro controle que toca e morre com o último. O
+        #: arco-íris e a Maré contam por ele, senão quem entrou depois desfaz a defasagem.
+        self._origem: float | None = None
 
     @property
     def tocando(self) -> frozenset[str]:
@@ -215,6 +219,10 @@ class LuzAnimada:
             if agora - self._escrito_em.get(uniq, float("-inf")) < self._intervalo:
                 continue
             inicio = self._inicio.setdefault(uniq, agora)
+            if self._origem is None:
+                self._origem = inicio
+            if dele.efeito.base in BASES_DO_RELOGIO_COMUM:
+                inicio = self._origem
             cor = cor_no_instante(
                 dele.efeito, agora - inicio, dele.posicao, dele.semente, sem_piscar, dele.amplitude
             )
@@ -241,6 +249,8 @@ class LuzAnimada:
             return
         self._ultimo_quadro.pop(uniq, None)
         self._escrito_em.pop(uniq, None)
+        if not self._inicio:
+            self._origem = None
         self._soltar(uniq)
 
     def parar_tudo(self) -> None:
