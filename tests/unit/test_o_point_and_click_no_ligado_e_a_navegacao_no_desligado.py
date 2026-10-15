@@ -185,6 +185,38 @@ def test_trocar_de_posicao_do_interruptor_desfaz_a_navegacao(lar_novo, monkeypat
     assert aba._navegacao_no_desligado() is False
 
 
+# 3b. A NAVEGAÇÃO SE ESCOLHE COM O HEFESTO DESLIGADO ---------------------------------------------
+# (conferência de 15/10/2026). O chip mora no lado Desligado, e é com o Nativo ligado que ela o
+# clica: o despachante guardado (`pacotes.GESTOS`, com a recusa da camada) e a folha do Nativo
+# (`monta.CSS_DO_NATIVO`) recusavam o clique com «Em modo nativo o jogo lê este controle direto».
+# MORDIDA: tire `("01-jogar.html", "modo-navegacao")` de `camada.VIVOS_NO_NATIVO` e o caso reprova.
+
+VIVO_NATIVO: dict[str, Any] = {**VIVO_DESKTOP, "native_mode": True}
+
+
+def test_com_o_hefesto_desligado_o_clique_na_navegacao_chega_ao_daemon(lar_novo,
+                                                                       monkeypatch) -> None:
+    import pacotes
+    from pacotes import camada
+
+    planos: list[Any] = []
+    monkeypatch.setattr(aba, "_aplicar", lambda p, plano: planos.append(plano) or True)
+    monkeypatch.setattr(aba, "_lembrar_do_chip", lambda *a, **k: None)
+    ctx = Contexto(state=VIVO_NATIVO, mesa=[], conectados=[], estados={})
+    assert camada.recusa_no_nativo("01-jogar.html", "modo-navegacao", VIVO_NATIVO) is None
+    pacotes.GESTOS[("01-jogar.html", "modo-navegacao")](ctx, {}, object())
+    assert planos == [aba._plano_do_chip(aba.CHIP_DA_NAVEGACAO)]
+    assert aba._navegacao_no_desligado() is True
+
+
+def test_a_folha_do_nativo_deixa_a_navegacao_clicavel() -> None:
+    from hefesto_dualsense4unix.interface import monta
+
+    vivos = re.findall(r":not\(:is\(([^)]*)\)", monta.CSS_DO_NATIVO)
+    assert vivos and "[data-gesto=modo-navegacao]" in vivos[0]
+    assert monta.CSS_DO_NATIVO.strip() in _pagina(), "a página não leva a folha do Nativo de agora"
+
+
 # 4. AS CORES E O ALVO --------------------------------------------------------------------------
 
 def _hex(rgb: tuple[int, int, int]) -> str:

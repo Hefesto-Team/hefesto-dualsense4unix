@@ -9,7 +9,7 @@ DUAS METADES, e nenhuma prova a outra:
 1. **A recusa (sem navegador).** Todo gesto registrado nas cinco abas, e o rodapé
    (Aplicar, Salvar, Importar) despachado por elas, recusa no Nativo sem uma só chamada ao
    daemon, e a recusa vem do decorador `@gesto` (`pacotes.camada`), não de um `if` na tela.
-   Ficam vivos só os cinco de `VIVOS_NO_NATIVO` e o Exportar, que só grava um arquivo.
+   Ficam vivos só os de `VIVOS_NO_NATIVO` e o Exportar, que só grava um arquivo.
 2. **A tela (Chrome de verdade).** Com `body.nativo`, o motor responde por `elementFromPoint`:
    nenhum gesto das cinco abas recebe clique fora dos vivos, a fita é uma camada muda, o
    cartão não oferece máscara (a peça fixa «DualSense» com cadeado ocupa o lugar) e o quadro
