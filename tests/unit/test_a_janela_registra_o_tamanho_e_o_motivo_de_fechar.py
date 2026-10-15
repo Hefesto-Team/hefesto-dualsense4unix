@@ -152,6 +152,7 @@ def na_janela_de_verdade(corpo: str, pagina: pathlib.Path) -> str:
 
 
 def test_o_x_da_janela_deixa_a_linha_de_fim(pagina: pathlib.Path) -> None:
+    # D-1510-O-FIM-DA-JANELA-NUNCA-SAI-CALADO
     """MORDIDA: ligar o `destroy` direto a `Gtk.main_quit` — a janela fecha calada."""
     erro = na_janela_de_verdade(
         """
@@ -303,6 +304,7 @@ SCRIPT_DO_NOHUP = textwrap.dedent(
 def test_o_sighup_que_o_nohup_ignorou_continua_ignorado(
     pagina: pathlib.Path, tmp_path: pathlib.Path
 ) -> None:
+    # D-1510-O-SIGHUP-QUE-O-NOHUP-IGNOROU-FICA-IGNORADO
     """O lançador nasce com `nohup`: o SIGHUP chega ignorado e a janela tem de seguir de pé.
 
     MORDIDA: ligar todo sinal de `SINAIS_DE_FIM` sem olhar o que o processo herdou — o

@@ -56,6 +56,7 @@ def test_a_unit_do_inicio_da_sessao_e_oneshot_e_nao_recolhe_a_janela() -> None:
 
 
 def test_o_kill_mode_e_process_e_nao_none() -> None:
+    # D-1510-A-JANELA-DO-INICIO-DA-SESSAO-NAO-MORRE-COM-A-UNIT
     """`process` mata o processo principal e só ele; é o que a unit diz, sem depender de
     `none` (que desliga a morte de qualquer processo da unit)."""
     assert _servico(UNIT.read_text(encoding="utf-8")).get("KillMode") == "process"

@@ -204,6 +204,7 @@ def test_a_rajada_de_estados_da_janela_nao_passa_de_uma_mudanca_de_altura(
 
 
 def test_o_instrumento_acusa_a_barra_que_solta_a_altura() -> None:
+    # D-1510-A-JANELA-NAO-PULSOU-E-FICA-O-INSTRUMENTO
     """MORDIDA: com um repinte que muda a altura da janela de verdade, a mesma rajada sai do zero.
 
     Sem esta prova os zeros acima valeriam também para um contador que nunca vê nada."""
