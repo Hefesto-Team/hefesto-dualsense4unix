@@ -45,8 +45,3 @@ seção daqui**: a aba deixou de estar em trabalho.
   produto roda o pacote novo sobre a página de antes, que não define `--sala-<tipo>` nem `--c-acessorio` nem a
   textura do «não medido»: os ícones da sala ficam sem a cor do tipo, e a linha do acessório mostra o nome e o
   sinal, sem o glifo e com a faixa sem cor. A 08 se publica no mesmo fecho que leva o código.
-
-## 04-iluminacao.html
-- **15/10/2026** — só a folha do Nativo, como na 03: o seletor da «Navegação» entra na lista dos vivos e nada muda na
-  tela desta aba. Até publicar, o produto roda a página de antes, sem perda; sai com o próximo
-  `--publicar 04`.
