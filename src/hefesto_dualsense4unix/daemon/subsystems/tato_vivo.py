@@ -1,29 +1,11 @@
-"""O tato vivo: o motor que reage ao tiro, e só fala onde o jogo cala.
+"""O tato vivo: reage ao tiro e toca os momentos da imersão, só onde o jogo cala.
 
-O-TATO-VIVO-SO-FALA-ONDE-O-JOGO-CALA-01 (08/10/2026). No PS5 cada sensação do
-tiro é um canal que o jogo escreve no instante do tiro. No PC, quando o jogo
-não fala DualSense (ou fala e não escreve aquele canal), ninguém escrevia nada
-por EVENTO: o daemon só tinha caminhos por ESTADO. Este módulo é o caminho por
-evento, com uma regra só para todos os canais:
-
-* **o jogo manda, o controle obedece** (ordem de 29/09): ``decidir`` é a
-  política pura sobre os carimbos do pad virtual e o relógio; o motor só
-  escreve no canal em que o jogo está calado;
-* **teto de pulsos**: 12 por segundo por controle e 40 no total;
-* **volta ao perfil**: todo valor escrito tem prazo, e o tique devolve o canal
-  quando o prazo vence (ou solta sem devolver, se o jogo passou a mandar);
-* **por controle**: cada evento leva o ``uniq`` do controle que o gerou, e os
-  atuadores escrevem só pelas APIs por ``uniq`` do backend (P1 a P4, cabo e
-  rádio pelo mesmo caminho, nunca broadcast);
-* **Modo Nativo calado**: sem pad virtual o jogo fala com o aparelho de
-  verdade, e o motor não tem o que dizer;
-* **nasce desligado**: liga só quando a receita do perfil ativo pede alguma
-  reação: a do estilo que ele guarda (``Profile.estilo``), traduzida por
-  :func:`receita_do_estilo`, com o desvio da bancada (``receita_do_tato``) por
-  cima, campo a campo.
-
-Os efeitos de cada canal são os atuadores, que entram por sprint em cima deste
-núcleo. O estado de diagnóstico (contadores) mora em ``daemon._tato_vivo``.
+Toda escrita passa por ``decidir`` (o jogo manda; Modo Nativo calado), pelo teto de 12
+pulsos por segundo por controle e 40 no total, e tem prazo: o tique devolve o canal, ou
+solta sem devolver se o jogo passou a mandar. Escreve só pelas APIs por ``uniq`` (P1 a P4,
+cabo e rádio). Nasce desligado e liga pela receita do perfil ativo (:func:`receita_do_estilo`
+ou :func:`planos_do_perfil`), com o desvio ``receita_do_tato`` por cima. A história:
+O-TATO-VIVO-SO-FALA-ONDE-O-JOGO-CALA-01 (08/10/2026).
 """
 from __future__ import annotations
 
@@ -33,15 +15,24 @@ import threading
 import time
 from collections import deque
 from collections.abc import Callable, Iterable, Mapping, Sequence
-from dataclasses import asdict, dataclass, field, fields
+from dataclasses import asdict, dataclass, field, fields, replace
 from typing import TYPE_CHECKING, Any, Protocol
 
+from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 from hefesto_dualsense4unix.daemon.lifecycle import (
     MODO_DUALSENSE,
     MODO_NATIVO,
     MODO_XBOX,
     modo_do_pad,
     o_hefesto_fala_no_modo,
+)
+from hefesto_dualsense4unix.profiles.efeitos_de_imersao import (
+    Imersao,
+    Momento,
+    a_da_frente_com_tempo,
+    ajustes_da_imersao,
+    imersao_dos_numeros,
+    momentos_no_modo,
 )
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -182,6 +173,8 @@ class Receita:
     cor_do_evento: tuple[int, int, int] | None = None
     lado_do_som: bool = False
     som_no_controle: bool = False
+    #: algum gatilho do perfil tem imersão com momentos (OS-MOMENTOS-DA-IMERSAO-TOCAM-NO-GATILHO-01)
+    momentos_da_imersao: bool = False
 
     @property
     def ligada(self) -> bool:
@@ -191,6 +184,7 @@ class Receita:
             or self.reacao_ao_tiro != "parada"
             or self.lado_do_som
             or self.som_no_controle
+            or self.momentos_da_imersao
         )
 
     @classmethod
@@ -231,6 +225,7 @@ class Receita:
             cor_do_evento=cor,
             lado_do_som=bool(campo("lado_do_som", False)),
             som_no_controle=bool(campo("som_no_controle", False)),
+            momentos_da_imersao=bool(campo("momentos_da_imersao", False)),
         )
 
 
@@ -272,25 +267,29 @@ def receita_do_estilo(estilo: Any) -> Receita:
     )
 
 
+def _ler(alvo: Any, nome: str) -> Any:
+    """Um campo do perfil, seja ele o modelo ou o JSON cru."""
+    if isinstance(alvo, Mapping):
+        return alvo.get(nome)
+    return getattr(alvo, nome, None)
+
+
 def receita_do_perfil(perfil: Any) -> Receita:
     """A receita do estilo que o perfil guarda, com o desvio dele por cima."""
     if perfil is None:
         return DESLIGADA
 
-    def ler(alvo: Any, nome: str) -> Any:
-        if isinstance(alvo, Mapping):
-            return alvo.get(nome)
-        return getattr(alvo, nome, None)
-
     base = DESLIGADA
-    chave = ler(perfil, "estilo")
+    chave = _ler(perfil, "estilo")
     if isinstance(chave, str):
         from hefesto_dualsense4unix.profiles.estilos_de_jogo import POR_CHAVE
 
         estilo = POR_CHAVE.get(chave)
         if estilo is not None:
             base = receita_do_estilo(estilo)
-    desvio = ler(perfil, CAMPO_DA_RECEITA)
+    if planos_do_perfil(perfil):
+        base = replace(base, momentos_da_imersao=True)
+    desvio = _ler(perfil, CAMPO_DA_RECEITA)
     if not isinstance(desvio, Mapping):
         return base
     try:
@@ -373,6 +372,8 @@ class TatoVivo:
         self.borda_do_dedo = BordaDoDedo()
         #: o ouvido do som do jogo (O-TIRO-VEM-DO-LADO-CERTO-01); ``None`` até a receita pedir.
         self.ouvido: Any = None
+        #: as imersões com momentos de cada gatilho do perfil ativo, relidas com a receita.
+        self.momentos: MapaDosMomentos = SEM_MOMENTOS
 
     def anotar(self, evento: Evento) -> None:
         """Põe um evento na fila. Chamável de qualquer thread."""
@@ -395,8 +396,13 @@ class TatoVivo:
         agora: float,
         estado_de: Callable[[str], EstadoDoCanal | None],
         receita: Receita,
+        uniqs: Iterable[str] = (),
     ) -> int:
-        """Devolve o que venceu, decide cada evento da fila e escreve. Retorna as escritas."""
+        """Devolve o que venceu, decide cada evento da fila e escreve. Retorna as escritas.
+
+        ``uniqs`` são os controles da mesa: o atuador que anda com o relógio (os momentos
+        da imersão) olha cada um deles a cada tique, com ou sem evento.
+        """
         with self._lock:
             eventos = list(self._fila)
             self._fila.clear()
@@ -452,6 +458,15 @@ class TatoVivo:
                     self._pendentes[chave_p] = max(
                         volta, self._pendentes.get(chave_p, volta)
                     )
+        mesa = tuple(uniqs)
+        for atuador in self.atuadores:
+            relogio = getattr(atuador, "relogio", None)
+            if not callable(relogio):
+                continue
+            try:
+                escritas += int(relogio(self, agora, mesa, estado_de, receita))
+            except Exception:
+                logger.debug("tato_vivo_relogio_falhou", canal=atuador.canal, exc_info=True)
         return escritas
 
     def _prolongar(self, evento: Evento, receita: Receita, agora: float) -> None:
@@ -484,6 +499,14 @@ class TatoVivo:
             self._fila.clear()
         for uniq, canal in list(self._pendentes):
             self._devolver(uniq, canal, instante)
+        for atuador in self.atuadores:
+            devolver_tudo = getattr(atuador, "devolver_tudo", None)
+            if callable(devolver_tudo):
+                try:
+                    devolver_tudo(instante)
+                except Exception:
+                    logger.debug("tato_vivo_devolucao_falhou", canal=atuador.canal,
+                                 exc_info=True)
 
     @property
     def pendentes(self) -> dict[tuple[str, str], float]:
@@ -743,20 +766,30 @@ _PRESET_DO_GATILHO = {
 _LADO_DO_BACKEND = {LADO_ESQUERDO: "left", LADO_DIREITO: "right"}
 
 
-def bloco_do_gatilho(modo: str, receita: Receita) -> bytes:
-    """O bloco cru de 11 bytes do preset da tela, no layout que o relatório leva."""
+def _padroes_do_modo(nome: str) -> dict[str, int]:
+    """Os números de partida de um modo da tela (`trigger_specs.PRESETS`)."""
     from hefesto_dualsense4unix.app.actions.trigger_specs import get_spec
+
+    spec = get_spec(nome)
+    return {p.name: p.default for p in spec.params} if spec is not None else {}
+
+
+def _bloco_cru(nome: str, valores: Mapping[str, int]) -> bytes:
+    """O bloco cru de 11 bytes de um modo com estes números, no layout que o relatório leva."""
     from hefesto_dualsense4unix.core.trigger_effects import build_from_name
 
-    nome = _PRESET_DO_GATILHO[modo]
-    spec = get_spec(nome)
-    valores = {p.name: p.default for p in spec.params} if spec is not None else {}
-    if modo == GATILHO_RAJADA:
-        valores["frequency"] = receita.frequencia_da_rajada_hz
-    efeito = build_from_name(nome, valores)
+    efeito = build_from_name(nome, {**_padroes_do_modo(nome), **valores})
     f = efeito.forces
     # O relatório leva o `forces[6]` no décimo byte do bloco (`common[19]` do backend).
     return bytes([efeito.mode, f[0], f[1], f[2], f[3], f[4], f[5], 0, 0, f[6], 0])
+
+
+def bloco_do_gatilho(modo: str, receita: Receita) -> bytes:
+    """O bloco cru de 11 bytes do preset da tela, no layout que o relatório leva."""
+    valores: dict[str, int] = {}
+    if modo == GATILHO_RAJADA:
+        valores["frequency"] = receita.frequencia_da_rajada_hz
+    return _bloco_cru(_PRESET_DO_GATILHO[modo], valores)
 
 
 class AtuadorDoGatilho:
@@ -770,23 +803,29 @@ class AtuadorDoGatilho:
         devolver: Callable[[str], object],
         apertado: Callable[[str, str], bool] | None = None,
         largar: Callable[[str], object] | None = None,
+        cede: Callable[[str, str], bool] | None = None,
     ) -> None:
         self._escrever = escrever
         self._devolver = devolver
         self.apertado = apertado
         self._largar = largar
+        #: o lado em que a pessoa escolheu uma imersão com momentos é dos momentos
+        self._cede = cede
         self._ultimo_tiro: dict[tuple[str, str], float] = {}
         self._desejado: dict[tuple[str, str], str] = {}
         self._escrito: dict[tuple[str, str], str] = {}
         self._escreveu_em: dict[str, float] = {}
 
     def _lados(self, evento: Evento) -> list[str]:
+        lados: list[str] = []
         if evento.tipo == TIPO_DEDO:
-            return [evento.lado] if evento.lado in _LADO_DO_BACKEND else []
-        if evento.tipo == TIPO_RUMBLE and self.apertado is not None:
+            lados = [evento.lado] if evento.lado in _LADO_DO_BACKEND else []
+        elif evento.tipo == TIPO_RUMBLE and self.apertado is not None:
             # A arma automática: um aperto só, e o jogo pede o motor a cada bala.
-            return [lado for lado in _LADO_DO_BACKEND if self.apertado(evento.uniq, lado)]
-        return []
+            lados = [lado for lado in _LADO_DO_BACKEND if self.apertado(evento.uniq, lado)]
+        if self._cede is None:
+            return lados
+        return [lado for lado in lados if not self._cede(evento.uniq, lado)]
 
     def _ritmo(self, uniq: str, lado: str, instante: float) -> None:
         chave = (uniq, lado)
@@ -855,6 +894,337 @@ class AtuadorDoGatilho:
     def devolver(self, uniq: str, agora: float) -> None:
         self._esquecer(uniq)
         self._devolver(uniq)
+
+
+# OS-MOMENTOS-DA-IMERSAO-TOCAM-NO-GATILHO-01 (15/10/2026): o tempo do aperto.
+# A imersão que a pessoa escolhe na aba Gatilhos vai ao perfil só como os números do
+# acionamento, e se reconhece por eles (`imersao_dos_numeros`, a mesma regra da tela).
+# Os `momentos` dela mudam o bloco do gatilho com o tempo: ao apertar, segurando
+# (depois de `apos_ms`, repetindo a cada `a_cada_ms`) e sempre, cada um até `dura_ms`.
+# As regras do motor valem sem exceção: o jogo que escreve o gatilho cala o momento,
+# o Modo Nativo cala, e cada escrita passa pelo teto.
+QUANDO_AO_APERTAR = "ao_apertar"
+QUANDO_SEGURANDO = "segurando"
+QUANDO_SEMPRE = "sempre"
+#: a chave do momento na sessão do motor; o ritmo do tiro tem a sua, no mesmo gatilho.
+CANAL_DO_MOMENTO = "momento"
+
+
+@dataclass(frozen=True)
+class PlanoDoGatilho:
+    """A imersão de um lado de um controle: o acionamento, os números e os momentos dele."""
+
+    imersao: Imersao
+    #: o acionamento cujos números o momento ajusta
+    modo: str
+    #: o estilo da variante que casou (``""`` na base): é a dele que vale nos outros modos
+    estilo: str
+    ajustes: Mapping[str, int]
+    #: só os que valem no `modo` (o `valem_em` de cada um)
+    momentos: tuple[Momento, ...]
+    #: o Modo automático põe «Sem efeito» no aparelho: a volta à mão é o ``Off``
+    automatico: bool = False
+
+    def bloco_da_volta(self) -> bytes:
+        """O gatilho estático que o perfil põe no aparelho, para a volta de um lado só."""
+        if self.automatico:
+            return _bloco_cru("Off", {})
+        return _bloco_cru(self.modo, self.ajustes)
+
+
+@dataclass(frozen=True)
+class MapaDosMomentos:
+    """Os planos do perfil ativo: os dos gatilhos globais e os de cada controle que os escreve."""
+
+    #: lado (`esquerdo`/`direito`) → plano
+    geral: Mapping[str, PlanoDoGatilho] = field(default_factory=dict)
+    #: controle (`norm_mac`) → lado escrito → plano, ou ``None`` se o lado dele não tem imersão
+    por_controle: Mapping[str, Mapping[str, PlanoDoGatilho | None]] = field(
+        default_factory=dict)
+
+    def do(self, uniq: str, lado: str) -> PlanoDoGatilho | None:
+        dele = self.por_controle.get(norm_mac(uniq) or "")
+        if dele is not None and lado in dele:
+            return dele[lado]
+        return self.geral.get(lado)
+
+    def __bool__(self) -> bool:
+        return bool(self.geral) or any(
+            plano is not None for dele in self.por_controle.values() for plano in dele.values())
+
+
+SEM_MOMENTOS = MapaDosMomentos()
+
+
+def _plano_do_lado(cfg: Any) -> PlanoDoGatilho | None:
+    """O plano de um gatilho do perfil, se os números dele são de uma imersão com momentos."""
+    modo, params = _ler(cfg, "mode"), _ler(cfg, "params")
+    if not isinstance(modo, str) or not isinstance(params, (list, tuple)):
+        return None
+    achada = imersao_dos_numeros(modo, params)
+    if achada is None:
+        return None
+    imersao, estilo = achada
+    momentos = momentos_no_modo(imersao, modo)
+    if not momentos:
+        return None
+    return PlanoDoGatilho(imersao, modo, estilo, ajustes_da_imersao(imersao, modo, estilo) or {},
+                          momentos)
+
+
+def _plano_do_automatico(estilo: str) -> PlanoDoGatilho | None:
+    """No Modo automático: a imersão com momentos que o estilo do jogo põe na frente."""
+    from hefesto_dualsense4unix.profiles.estilos_de_jogo import POR_CHAVE
+
+    dele = POR_CHAVE.get(estilo)
+    modo = getattr(dele, "gatilho", None)
+    if not isinstance(modo, str) or not modo:
+        return None
+    imersao = a_da_frente_com_tempo(modo, estilo)
+    if imersao is None:
+        return None
+    return PlanoDoGatilho(imersao, modo, estilo, ajustes_da_imersao(imersao, modo, estilo) or {},
+                          momentos_no_modo(imersao, modo), automatico=True)
+
+
+def _lados_escritos(gatilhos: Any) -> frozenset[str]:
+    """Os lados que um controle escreve por cima do global (`left`/`right`)."""
+    if isinstance(gatilhos, Mapping):
+        return frozenset(d for d in _LADO_DO_BACKEND.values() if gatilhos.get(d))
+    escritos = getattr(gatilhos, "model_fields_set", None) or set()
+    return frozenset(d for d in _LADO_DO_BACKEND.values() if d in escritos)
+
+
+def planos_do_perfil(perfil: Any) -> MapaDosMomentos:
+    """Os planos dos momentos de um perfil: por lado, por controle, e o do automático.
+
+    O modo da aba é o do esquema (`decidir_o_modo_dos_gatilhos`): no automático, os dois
+    lados de todo controle tocam a imersão que o estilo do perfil põe na frente, com a
+    variante dele; no personalizado, cada lado toca a imersão que os números dele dizem.
+    """
+    gatilhos = _ler(perfil, "triggers") if perfil is not None else None
+    if gatilhos is None:
+        return SEM_MOMENTOS
+    from hefesto_dualsense4unix.profiles.schema import (
+        MODO_AUTOMATICO,
+        MODO_SEM_EFEITO_DO_GATILHO,
+        decidir_o_modo_dos_gatilhos,
+    )
+
+    controles = _ler(perfil, "controllers")
+    escritos: list[tuple[str, Any, frozenset[str]]] = []
+    for chave, dele in (controles.items() if isinstance(controles, Mapping) else ()):
+        seus = _ler(dele, "triggers")
+        lados = _lados_escritos(seus) if seus is not None else frozenset()
+        if lados:
+            escritos.append((str(chave), seus, lados))
+    todos = [_ler(gatilhos, d) for d in _LADO_DO_BACKEND.values()]
+    todos += [_ler(seus, d) for _c, seus, lados in escritos for d in lados]
+    sem_efeito = all(_ler(c, "mode") == MODO_SEM_EFEITO_DO_GATILHO for c in todos)
+    escrito = _ler(gatilhos, "modo")
+    modo = decidir_o_modo_dos_gatilhos(escrito if isinstance(escrito, str) else None, sem_efeito)
+    if modo == MODO_AUTOMATICO:
+        estilo = _ler(perfil, "estilo")
+        plano = _plano_do_automatico(estilo) if isinstance(estilo, str) else None
+        if plano is None:
+            return SEM_MOMENTOS
+        return MapaDosMomentos({lado: plano for lado in _LADO_DO_BACKEND})
+    geral = {lado: plano for lado, disco in _LADO_DO_BACKEND.items()
+             if (plano := _plano_do_lado(_ler(gatilhos, disco))) is not None}
+    por_controle: dict[str, dict[str, PlanoDoGatilho | None]] = {}
+    for chave, seus, lados in escritos:
+        alvo = norm_mac(chave)
+        if alvo:
+            por_controle[alvo] = {lado: _plano_do_lado(_ler(seus, disco))
+                                  for lado, disco in _LADO_DO_BACKEND.items() if disco in lados}
+    return MapaDosMomentos(geral, por_controle)
+
+
+def momentos_em_efeito(
+    momentos: Sequence[Momento],
+    desde_o_aperto: float | None,
+    desde_sempre: float | None,
+    agora: float,
+) -> tuple[tuple[int, int], ...]:
+    """``(índice, repetição)`` de cada momento que vale agora, na ordem em que se sobrepõem.
+
+    A origem do «ao apertar» e do «segurando» é o aperto (soltar acaba com eles); a do
+    «sempre», a hora em que a imersão passou a valer naquele lado.
+    """
+    vale: list[tuple[int, int]] = []
+    for indice, momento in enumerate(momentos):
+        origem = desde_sempre if momento.quando == QUANDO_SEMPRE else desde_o_aperto
+        if origem is None:
+            continue
+        passou_ms = (agora - origem) * 1000.0 - momento.apos_ms
+        if passou_ms < 0:
+            continue
+        repeticao = 0
+        if momento.a_cada_ms:
+            repeticao = int(passou_ms // momento.a_cada_ms)
+            passou_ms -= repeticao * momento.a_cada_ms
+        if momento.dura_ms is not None and passou_ms >= momento.dura_ms:
+            continue
+        vale.append((indice, repeticao))
+    return tuple(vale)
+
+
+def bloco_do_momento(plano: PlanoDoGatilho, indices: Iterable[int]) -> bytes:
+    """O bloco com os momentos sobrepostos: o mesmo modo ajusta os números do perfil."""
+    modo, valores = plano.modo, dict(plano.ajustes)
+    for indice in indices:
+        momento = plano.momentos[indice]
+        if momento.modo != modo:
+            modo = momento.modo
+            valores = dict(ajustes_da_imersao(plano.imersao, modo, plano.estilo) or {})
+        valores.update(momento.ajustes)
+    return _bloco_cru(modo, valores)
+
+
+class AtuadorDosMomentos:
+    """Os momentos da imersão de cada lado de cada controle, no relógio do motor.
+
+    Não responde a evento: a cada tique, o motor lhe dá a mesa (``relogio``). Escreve
+    pelo backend por ``uniq`` quando o bloco (ou a repetição) muda, e volta ao estático
+    quando nenhum momento vale mais: o lado só, à mão; o último, pela sessão.
+    """
+
+    canal = CANAL_GATILHO
+
+    def __init__(
+        self,
+        escrever: Callable[[str, str, bytes], object],
+        devolver: Callable[[str], bool],
+        apertado: Callable[[str, str], bool],
+        largar: Callable[[str], object] | None = None,
+    ) -> None:
+        self._escrever = escrever
+        self._devolver = devolver
+        self.apertado = apertado
+        self._largar = largar
+        self._aperto: dict[tuple[str, str], float] = {}
+        self._sempre: dict[tuple[str, str], tuple[PlanoDoGatilho, float]] = {}
+        self._escrito: dict[tuple[str, str], tuple[bytes, tuple[tuple[int, int], ...]]] = {}
+        self._planos: dict[tuple[str, str], PlanoDoGatilho] = {}
+
+    def responde_a(self, evento: Evento, receita: Receita) -> bool:
+        return False
+
+    def escrever(self, evento: Evento, receita: Receita, agora: float) -> float | None:
+        return None
+
+    def segura(self, uniq: str) -> list[str]:
+        """Os lados deste controle em que um momento está escrito."""
+        return [lado for lado in _LADO_DO_BACKEND if (uniq, lado) in self._escrito]
+
+    def relogio(
+        self,
+        motor: TatoVivo,
+        agora: float,
+        uniqs: Sequence[str],
+        estado_de: Callable[[str], EstadoDoCanal | None],
+        receita: Receita,
+    ) -> int:
+        planos = motor.momentos if receita.momentos_da_imersao else SEM_MOMENTOS
+        escritas = 0
+        for saiu in {u for u, _lado in self._escrito} - set(uniqs):
+            self.soltar(saiu)  # o controle saiu da mesa: não há o que devolver nele
+        for uniq in uniqs:
+            estado = estado_de(uniq)
+            if estado is None or not decidir(CANAL_GATILHO, estado):
+                # O jogo escreve o gatilho (ou o modo cala o motor): o momento se cala.
+                if self.segura(uniq):
+                    motor.contadores["soltos_ao_jogo"] += 1
+                    self.soltar(uniq)
+                self._ver_o_dedo(uniq, agora)
+                continue
+            escritas += self._tocar(motor, uniq, planos, agora)
+        return escritas
+
+    def _ver_o_dedo(self, uniq: str, agora: float) -> None:
+        for lado in _LADO_DO_BACKEND:
+            if self.apertado(uniq, lado):
+                self._aperto.setdefault((uniq, lado), agora)
+            else:
+                self._aperto.pop((uniq, lado), None)
+
+    def _tocar(self, motor: TatoVivo, uniq: str, planos: MapaDosMomentos, agora: float) -> int:
+        self._ver_o_dedo(uniq, agora)
+        escritas = 0
+        a_voltar: list[str] = []
+        for lado, disco in _LADO_DO_BACKEND.items():
+            chave = (uniq, lado)
+            plano = planos.do(uniq, lado)
+            if plano is None:
+                self._sempre.pop(chave, None)
+                if chave in self._escrito:
+                    a_voltar.append(lado)
+                continue
+            visto = self._sempre.get(chave)
+            if visto is None or visto[0] != plano:
+                self._sempre[chave] = (plano, agora)
+            vale = momentos_em_efeito(
+                plano.momentos, self._aperto.get(chave), self._sempre[chave][1], agora)
+            if not vale:
+                if chave in self._escrito:
+                    a_voltar.append(lado)
+                continue
+            marca = (bloco_do_momento(plano, (i for i, _rep in vale)), vale)
+            if self._escrito.get(chave) == marca:
+                continue
+            if not motor.teto.cabe(uniq, agora):
+                motor.contadores["recusas_do_teto"] += 1
+                continue
+            motor.teto.gastar(uniq, agora)
+            self._escrever(uniq, disco, marca[0])
+            self._escrito[chave] = marca
+            self._planos[chave] = plano
+            escritas += 1
+            motor.contadores["escritas"] += 1
+        if a_voltar:
+            self._voltar(uniq, a_voltar)
+            motor.contadores["devolucoes"] += 1
+        return escritas
+
+    def _voltar(self, uniq: str, lados: Sequence[str]) -> None:
+        """O lado volta ao estático: à mão se o motor segura mais algo, pela sessão se não."""
+        estaticos: dict[str, bytes] = {}
+        for lado in lados:
+            self._escrito.pop((uniq, lado), None)
+            plano = self._planos.pop((uniq, lado), None)
+            if plano is not None:
+                estaticos[lado] = plano.bloco_da_volta()
+        if self.segura(uniq):
+            for lado, bloco in estaticos.items():
+                self._escrever(uniq, _LADO_DO_BACKEND[lado], bloco)
+            return
+        if self._devolver(uniq):
+            return
+        # Outro canal do motor segura a sessão: o estático vai à mão, e a sessão é dele.
+        for lado, bloco in estaticos.items():
+            self._escrever(uniq, _LADO_DO_BACKEND[lado], bloco)
+        if self._largar is not None:
+            self._largar(uniq)
+
+    def soltar(self, uniq: str) -> None:
+        """O jogo tomou o gatilho: o que o motor escreveu deixou de valer."""
+        for lado in _LADO_DO_BACKEND:
+            self._escrito.pop((uniq, lado), None)
+            self._planos.pop((uniq, lado), None)
+        if self._largar is not None:
+            self._largar(uniq)
+
+    def devolver(self, uniq: str, agora: float) -> None:
+        lados = self.segura(uniq)
+        if lados:
+            self._voltar(uniq, lados)
+
+    def devolver_tudo(self, agora: float) -> None:
+        """O motor parou: cada lado com momento escrito volta ao perfil."""
+        for uniq in {u for u, _lado in self._escrito}:
+            self.devolver(uniq, agora)
+        self._aperto.clear()
+        self._sempre.clear()
 
 
 # A-LUZ-RESPIRA-A-CADA-TIRO-01: a barra pulsa (ou troca de cor) a cada tiro e volta.
@@ -1085,6 +1455,9 @@ def estado_do_controle(
 #: O nome que não achou arquivo com o slug dele e a receita que o `load_profile`
 #: trouxe: o laço só volta a varrer quando o `active_profile` muda.
 _PELO_CARREGADOR: tuple[str, Receita] | None = None
+#: A vista do perfil que a última leitura da receita trouxe: os momentos saem dela,
+#: sem ler o disco de novo.
+_VISTA_LIDA: tuple[str, Any] | None = None
 
 
 def receita_ativa(daemon: Any) -> Receita:
@@ -1096,7 +1469,7 @@ def receita_ativa(daemon: Any) -> Receita:
     nome não tem arquivo com o slug dele, cai no `load_profile` UMA vez por nome
     (A-RECEITA-DO-TATO-SE-LE-SEM-SEMEAR-NEM-VARRER-01).
     """
-    global _PELO_CARREGADOR
+    global _PELO_CARREGADOR, _VISTA_LIDA
     nome = getattr(getattr(daemon, "store", None), "active_profile", None)
     if not isinstance(nome, str) or not nome:
         return DESLIGADA
@@ -1107,18 +1480,35 @@ def receita_ativa(daemon: Any) -> Receita:
         perfil = perfil_em_disco(nome)
         if perfil is not None:
             _PELO_CARREGADOR = None
-            return receita_do_perfil(o_que_vale(perfil))
+            vista = o_que_vale(perfil)
+            _VISTA_LIDA = (nome, vista)
+            return receita_do_perfil(vista)
         if _PELO_CARREGADOR is not None and _PELO_CARREGADOR[0] == nome:
             return _PELO_CARREGADOR[1]
         _PELO_CARREGADOR = (nome, DESLIGADA)
         from hefesto_dualsense4unix.profiles.loader import load_profile
 
-        receita = receita_do_perfil(o_que_vale(load_profile(nome)))
+        vista = o_que_vale(load_profile(nome))
+        _VISTA_LIDA = (nome, vista)
+        receita = receita_do_perfil(vista)
         _PELO_CARREGADOR = (nome, receita)
         return receita
     except Exception:
         logger.debug("tato_vivo_perfil_ilegivel", exc_info=True)
         return DESLIGADA
+
+
+def momentos_ativos(daemon: Any) -> MapaDosMomentos:
+    """Os planos dos momentos do perfil ativo, da vista que :func:`receita_ativa` leu."""
+    nome = getattr(getattr(daemon, "store", None), "active_profile", None)
+    lida = _VISTA_LIDA
+    if lida is None or lida[0] != nome:
+        return SEM_MOMENTOS
+    try:
+        return planos_do_perfil(lida[1])
+    except Exception:
+        logger.debug("tato_vivo_momentos_ilegiveis", exc_info=True)
+        return SEM_MOMENTOS
 
 
 def atuadores_de_producao(daemon: Any) -> list[Atuador]:
@@ -1161,6 +1551,17 @@ def atuadores_de_producao(daemon: Any) -> list[Atuador]:
         motor = motor_do(daemon)
         return motor is not None and motor.borda_do_dedo.apertado(uniq, lado)
 
+    def do_momento(uniq: str, lado: str) -> bool:
+        motor = motor_do(daemon)
+        return motor is not None and motor.momentos.do(uniq, lado) is not None
+
+    def momento(uniq: str, lado: str, bloco: bytes) -> object:
+        escrever = getattr(controller, "set_game_trigger_for", None)
+        if not callable(escrever):
+            return False
+        sessao.tomar(uniq, CANAL_DO_MOMENTO)
+        return escrever(uniq, lado, bloco)
+
     def pintar(uniq: str, cor: tuple[int, int, int]) -> object:
         escrever = getattr(controller, "set_game_output_for", None)
         if not callable(escrever):
@@ -1183,6 +1584,13 @@ def atuadores_de_producao(daemon: Any) -> list[Atuador]:
             lambda uniq: sessao.soltar(uniq, CANAL_GATILHO),
             apertado,
             lambda uniq: sessao.largar(uniq, CANAL_GATILHO),
+            do_momento,
+        ),
+        AtuadorDosMomentos(
+            momento,
+            lambda uniq: sessao.soltar(uniq, CANAL_DO_MOMENTO),
+            apertado,
+            lambda uniq: sessao.largar(uniq, CANAL_DO_MOMENTO),
         ),
         AtuadorDaLuz(
             pintar,
@@ -1215,6 +1623,9 @@ class Passo:
         if agora - self._lida_em >= RELEITURA_DA_RECEITA_S:
             self._lida_em = agora
             self.receita_vigente = receita_ativa(self.daemon)
+            self.motor.momentos = (
+                momentos_ativos(self.daemon)
+                if self.receita_vigente.momentos_da_imersao else SEM_MOMENTOS)
         return self.receita_vigente
 
     def __call__(self, agora: float) -> int:
@@ -1236,7 +1647,7 @@ class Passo:
         por_uniq = {
             c.uniq: estado_do_controle(c, jogo, self._sessao_ha_s(c, agora)) for c in controles
         }
-        return self.motor.tique(agora, por_uniq.get, receita)
+        return self.motor.tique(agora, por_uniq.get, receita, uniqs=tuple(por_uniq))
 
     def tique_do_laco(self, agora: float) -> int:
         """O tique do laço de 60 Hz: o que falha num tique fica no log, e o seguinte vem."""
@@ -1317,12 +1728,15 @@ __all__ = [
     "AtuadorDaLuz",
     "AtuadorDoGatilho",
     "AtuadorDoSom",
+    "AtuadorDosMomentos",
     "BordaDoDedo",
     "BordaDoRumble",
     "Controle",
     "EstadoDoCanal",
     "Evento",
+    "MapaDosMomentos",
     "Passo",
+    "PlanoDoGatilho",
     "Receita",
     "SessaoDoMotor",
     "TatoVivo",
@@ -1333,8 +1747,11 @@ __all__ = [
     "decidir",
     "destinos_do_som",
     "modo_do_pad",
+    "momentos_ativos",
+    "momentos_em_efeito",
     "motor_do",
     "pico_do_pulso",
+    "planos_do_perfil",
     "receita_do_estilo",
     "receita_do_perfil",
     "start_tato_vivo",
