@@ -8,7 +8,8 @@ grava quando não há perfil; quem PINTA tem de ler de lá, pela mesma vista que
 O lar é de mentira (o `conftest` desvia `HOME` e os `XDG_*`).
 
 MORDIDAS (15/10/2026): `ativo_que_vale` devolvendo o vazio sem perfil reprova quatro; a guarda dos
-gestos lendo `{}` sem perfil (`_nao_no_automatico`) reprova a recusa no Automático guardado.
+gestos lendo `{}` sem perfil (`_nao_no_automatico`) reprova a recusa no Automático guardado; tirar
+de `modo_da_luz_do_perfil` a regra da vista sem `name` reprova o efeito que virava a aba.
 """
 from __future__ import annotations
 
@@ -115,6 +116,24 @@ def test_a_aba_pinta_o_automatico_guardado_sem_perfil_e_a_guarda_recusa(a04):
             a04.efeito_da_luz(ctx, {"uniq": uniq, "valor": "base:respirar"}, None)
         with pytest.raises(RuntimeError, match="modo automático"):
             a04.cor(ctx, {"uniq": uniq, "hex": "FF8000"}, None), via
+
+
+def test_sem_perfil_o_efeito_e_o_brilho_nao_viram_a_aba_para_o_automatico(a04):
+    """«Não há perfil» não é um modo: o computador sem `leds.modo` não deduz Automático.
+
+    Medido no lar de mentira (15/10/2026): escolher Respirar sem perfil acendia «Modo automático» e
+    apagava a grade, porque a vista do computador caía na dedução do esquema (cores automáticas
+    ligadas por padrão, nenhuma cor própria).
+    """
+    ctx = _ctx_dos_dois()
+    assert a04.pacote(ctx)[a04.GESTO_DO_MODO] == a04.MODO_PERSONALIZADO
+    for uniq, via, _plastico, pct in DOIS:
+        _guardar_sem_perfil(lambda prof, u=uniq, v=pct: a04._com_o_brilho_gravado(prof, u, v),
+                            uniq=uniq)
+        a04.efeito_da_luz(_ctx_dos_dois(), {"uniq": uniq, "valor": "base:respirar"}, None)
+        pac = a04.pacote(_ctx_dos_dois())
+        assert pac[a04.GESTO_DO_MODO] == a04.MODO_PERSONALIZADO, via
+        assert pac["colunas"][uniq][a04.CAMPO_DO_EFEITO] == "base:respirar", via
 
 
 def test_um_perfil_ativo_continua_mandando_sobre_o_computador(a04):
