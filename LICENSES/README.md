@@ -19,8 +19,10 @@ arquivo (origem, patches próprios, `MODULE_LICENSE`, linha do SPDX) está no
 ### `GPL-2.0.txt`
 
 **Cobre:** `assets/dkms/hid-nintendo/` (SPDX `GPL-2.0+` e `GPL-2.0-or-later`),
-`assets/dkms/hid-playstation/` (SPDX `GPL-2.0-or-later`) e a metade GPL do
-`assets/dkms/rtw88-usb/` (SPDX `GPL-2.0 OR BSD-3-Clause`).
+`assets/dkms/hid-playstation/` (SPDX `GPL-2.0-or-later`), `assets/dkms/uhid/`
+(SPDX `GPL-2.0-or-later`), `assets/dkms/usb-f-hid/` (SPDX `GPL-2.0+` no
+`f_hid.c` e `GPL-2.0` no `u_hid.h`) e a metade GPL do `assets/dkms/rtw88-usb/`
+(SPDX `GPL-2.0 OR BSD-3-Clause`).
 
 **Procedência — MEDIDO em 07/08/2026:** cópia byte a byte de
 `/usr/share/common-licenses/GPL-2`, o texto que o pacote `base-files` do

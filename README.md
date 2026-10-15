@@ -89,7 +89,7 @@ O Hefesto mexe em partes do sistema que um programa comum não toca. Com as opç
 
 - regras udev para os controles e para os dispositivos virtuais;
 - serviços do systemd, do usuário e do sistema;
-- três módulos de kernel corrigidos, compilados via DKMS (`hid-playstation`, `hid-nintendo` e `rtw88-usb`);
+- quatro módulos de kernel corrigidos, compilados via DKMS (`hid-playstation`, `hid-nintendo`, `rtw88-usb` e `usb-f-hid`);
 - parâmetros de boot para o USB do controle;
 - ajustes no Bluetooth e, se você confirmar, uma versão corrigida do BlueZ;
 - ajustes na Steam: opções de inicialização dos jogos e uma versão fixa do Proton.
@@ -177,4 +177,4 @@ Se o Hefesto te ajuda, considere apoiar pelo [Patreon](https://www.patreon.com/H
 
 ## Licença
 
-MIT, exceto os módulos de kernel em `assets/dkms/`, que derivam do Linux e mantêm a licença do próprio cabeçalho: GPL-2.0-or-later para `hid-nintendo`, `hid-playstation` e `uhid`, e GPL-2.0 OR BSD-3-Clause para `rtw88-usb`. Eles são distribuídos como fonte e compilados na sua máquina pelo DKMS. Detalhes em [LICENSE](LICENSE) e [NOTICE](NOTICE).
+MIT, exceto os módulos de kernel em `assets/dkms/`, que derivam do Linux e mantêm a licença do próprio cabeçalho: GPL-2.0-or-later para `hid-nintendo`, `hid-playstation` e `uhid`, GPL-2.0-or-later com um cabeçalho GPL-2.0 para `usb-f-hid`, e GPL-2.0 OR BSD-3-Clause para `rtw88-usb`. Eles são distribuídos como fonte e compilados na sua máquina pelo DKMS. Detalhes em [LICENSE](LICENSE) e [NOTICE](NOTICE).

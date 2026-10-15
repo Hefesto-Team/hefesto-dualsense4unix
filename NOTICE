@@ -18,6 +18,7 @@ destino, cada um sob a licença declarada no próprio cabeçalho SPDX:
   - assets/dkms/hid-playstation/  GPL-2.0-or-later
   - assets/dkms/rtw88-usb/        GPL-2.0 OR BSD-3-Clause (licença dupla)
   - assets/dkms/uhid/             GPL-2.0-or-later
+  - assets/dkms/usb-f-hid/        GPL-2.0-or-later no f_hid.c, GPL-2.0 no u_hid.h
 
 Os cabeçalhos SPDX desses arquivos são a licença que vale para eles e
 não podem ser removidos. Os textos completos das duas licenças de terceiros
@@ -82,6 +83,13 @@ byte a byte.
       - avisar quem escreve quando a fila de saída enche, atrás de um
         parâmetro que nasce desligado.
 
+  - assets/dkms/usb-f-hid/: árvore estável do Linux, tag v7.1.5 (o mesmo
+    arquivo do pop-os/linux 38a419fc95c5eae36afa2f13e459a7fc4f4a68f5). SPDX
+    "GPL-2.0+" em f_hid.c e "GPL-2.0" em u_hid.h; MODULE_LICENSE("GPL"). O
+    u_hid.h é original, sem modificação. Patch próprio:
+      - fechar a resposta do GET_REPORT no tamanho do relatório gravado, com o
+        pacote vazio quando ele cai na fronteira do pacote.
+
 Os arquivos .patch de assets/dkms/**/patch/ não têm cabeçalho SPDX próprio:
 são diferenças sobre os fontes acima e seguem a licença do arquivo que
 modificam.
@@ -98,9 +106,9 @@ meio, e cada uma mantém a sua licença.
 Onde os fontes GPL viajam
 -------------------------
 
-  - no tarball de fonte de cada versão (os quatro módulos);
+  - no tarball de fonte de cada versão (os cinco módulos);
   - nos pacotes .deb, Flatpak, Arch e Fedora, que levam hid-nintendo,
-    hid-playstation e rtw88-usb, sempre com LICENSES/ junto.
+    hid-playstation, rtw88-usb e usb-f-hid, sempre com LICENSES/ junto.
 
 O wheel, o sdist e o AppImage não carregam fonte de assets/dkms/.
 

@@ -1530,6 +1530,35 @@ para ele, e nenhum vpad foi suspenso por Steam Input no dia.
 rumble por XInput —, então existe um estado em que os dois coexistem. Como
 pedi-lo é o que falta medir.
 
+## 6-ter. O pedido de feature de 128 bytes — o GET_REPORT do pad USB virtual (14/10/2026)
+
+**MEDIDO AQUI** em 14/10/2026, com o Sackboy no GE-Proton11-7 e 4 pads virtuais
+no gadget USB (o `hefesto-pad-*` do broker). Sonda: `bpftrace` nas chamadas lentas
+do `winedevice`. Prova direta: `HIDIOCGFEATURE` por Python no hidraw de cada pad.
+
+- **O pedido é de 128 bytes.** O `winedevice` faz `ioctl(HIDIOCGFEATURE(128))` em
+  cada hidraw de pad, e o SDL HIDAPI usa o mesmo buffer de 128 bytes. O hidraw
+  passa esse tamanho ao `wLength` do GET_REPORT. Nenhum dos dois pede o tamanho
+  do relatório.
+- **O físico responde curto e fecha.** No cabo, o DualSense responde a 0x05 com
+  41 bytes em ~200 ms e a 0x09 com 20 bytes. O pacote curto encerra a
+  transferência. Só a 0x20, de 64 bytes, pendura (`-110` aos ~5,7 s): 64 bytes
+  enchem o pacote do ep0 e não vem o pacote vazio.
+- **O pad virtual pendurava em TODA feature.** O `usb_f_hid` de fábrica (v7.1.5 e
+  o master de 14/10) responde com `min(wLength, report_length, 64)` e
+  `req->zero = 0`. Ele ignora o `length` que o Hefesto grava pelo
+  `GADGET_HID_WRITE_GET_REPORT`
+  (`pacote_do_get_report` em `src/hefesto_dualsense4unix/integrations/pad_usb.py:323`). Toda resposta sai com 64 bytes, sem o pacote vazio, e
+  todo pedido de 128 volta `-110` aos ~5,1 s. Com 4 pads e várias features por
+  pad, o `winebus` estoura o prazo de 10 s do `services.exe` (`1053`) e o jogo sobe
+  sem controle nenhum.
+- **A cura** é o `usb_f_hid` da casa (`assets/dkms/usb-f-hid/`). A resposta fecha
+  no tamanho gravado, e o pacote vazio vai quando a resposta é menor que o
+  `wLength` (`f_hidg_size_get_report` em `assets/dkms/usb-f-hid/f_hid.c:578`).
+  Medido com ele: 41, 20 e 64 bytes em 2 a 6 ms nos 4 pads, nenhum `1053`.
+  A marca dele é `/sys/module/usb_f_hid/parameters/get_report_sized`, e o
+  `doctor` dá `[FAIL]` sem ela.
+
 ## 7. O que continua em aberto por falta de medição
 
 Uma variável por linha, que é como se ataca isto.

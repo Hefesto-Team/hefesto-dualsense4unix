@@ -97,3 +97,7 @@ contrato proíbe `modprobe` e `rmmod`.
   7.1.5-76070105. Fora da lista o DKMS pula e o de fábrica assume. O ritual
   para acrescentar um kernel está no `BASELINE`, e a régua é
   `tests/unit/test_o_usb_f_hid_fecha_a_resposta.py`.
+
+- A decisão está no [ADR-023](../../../docs/adr/023-o-pad-usb-virtual-usa-o-usb-f-hid-da-casa.md),
+  e a troca a quente, o doctor e o pad se medem em
+  `tests/unit/test_o_usb_f_hid_curado_troca_a_quente.py`.
