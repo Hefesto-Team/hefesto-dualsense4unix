@@ -1599,6 +1599,45 @@ def _sem_o_ajuste_do_estilo(controllers: Any, *, gatilho: bool,
     return saida, largaram
 
 
+def _tabela_do_molde(chave: str | None) -> dict[str, str]:
+    """A tabela de botões de um molde de estilo (`estilos_de_jogo.MOLDES`); `{}` sem molde."""
+    from hefesto_dualsense4unix.profiles.estilos_de_jogo import MOLDES
+
+    return dict(MOLDES.get(str(chave or ""), {}))
+
+
+def _molde_do(estilo: Any) -> str | None:
+    invisivel = getattr(estilo, "receita_invisivel", None)
+    return getattr(invisivel, "molde", None)
+
+
+def _com_a_tabela_do_estilo(prof: Any, estilo: Any) -> dict[str, Any]:
+    """O que o estilo muda na tabela de botões do perfil: `button_actions` e `tabela_no_jogo`.
+
+    Estilo com molde (o Point and click, o Visual novel) grava as linhas do molde por cima da
+    tabela do perfil e liga a chave «Também no jogo», porque sem ela a tabela não age com o jogo
+    aberto. As linhas que o molde do estilo ANTERIOR gravou e o usuário não mexeu saem antes:
+    escolher outro estilo não deixa o PageUp do visual novel num jogo de tiro. O que o usuário
+    escreveu à mão fica. Estilo sem molde só tira as linhas do anterior; a tabela do usuário
+    não se toca.
+    """
+    anterior = _tabela_do_molde(_molde_do(_estilo_do_perfil(prof)))
+    atual = dict(getattr(prof, "button_actions", None) or {})
+    base = {b: a for b, a in atual.items() if anterior.get(b) != a}
+    novo = _tabela_do_molde(_molde_do(estilo))
+    if not novo:
+        if len(base) == len(atual):
+            return {}
+        return {"button_actions": base or None, "tabela_no_jogo": None}
+    return {"button_actions": {**base, **novo}, "tabela_no_jogo": True}
+
+
+def _estilo_do_perfil(prof: Any) -> Any:
+    from hefesto_dualsense4unix.profiles.estilos_de_jogo import POR_CHAVE
+
+    return POR_CHAVE.get(str(getattr(prof, "estilo", "") or ""))
+
+
 def _com_o_estilo(prof: Any, estilo: Any, mesa: list[dict[str, Any]]) -> tuple[Any, int]:
     """O perfil com a receita do estilo dentro, e QUANTOS controles ganharam cor.
 
@@ -1664,6 +1703,7 @@ def _com_o_estilo(prof: Any, estilo: Any, mesa: list[dict[str, Any]]) -> tuple[A
     mudou, secao = secao_do_modo_do_estilo(prof.mode, invisivel.modo if invisivel else None)
     if mudou:
         mudanca["mode"] = secao
+    mudanca.update(_com_a_tabela_do_estilo(prof, estilo))
 
     atuais, largaram = _sem_o_ajuste_do_estilo(
         prof.controllers, gatilho=bool(estilo.gatilho), vibracao=bool(estilo.vibracao))
@@ -1761,11 +1801,13 @@ def editor_estilo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
            if pintados else "e nenhum controle ligado para acender")
     invisivel = estilo.receita_invisivel
     modo = ", e o modo Navegação" if invisivel and invisivel.modo else ""
+    tabela = (" A tabela de botões do estilo entrou no perfil."
+              if invisivel and invisivel.molde else "")
     proprio = (f" {largaram} controle{'s deixaram' if largaram != 1 else ' deixou'} "
                f"o ajuste próprio de gatilho e vibração." if largaram else "")
     return _dizer(
         f"“{estilo.rotulo}” aplicado em “{prof.name}”: gatilho, vibração {luz}{modo}."
-        f"{proprio}")
+        f"{tabela}{proprio}")
 
 
 @gesto("10-perfis.html", "editor.jogo", grava="_gravar")

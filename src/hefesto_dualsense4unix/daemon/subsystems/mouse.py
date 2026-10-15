@@ -144,6 +144,39 @@ def botoes_com_os_gatilhos(botoes: frozenset[str], l2: int, r2: int) -> frozense
     return frozenset(botoes) | extra if extra else frozenset(botoes)
 
 
+#: Quanto o analógico precisa passar do centro (0 a 1) para a direção virar tecla: meia deflexão.
+LIMIAR_DO_ANALOGICO = 0.5
+CENTRO = 128
+
+
+def _deflexao(bruto: Any) -> float:
+    """O quanto o eixo (0..255) passou do centro: -1 até +1."""
+    return (int(bruto) - CENTRO) / CENTRO
+
+
+def _nome_da_direcao(eixo: str, direcao: str) -> str:
+    """O nome de botão de mentira que carrega a direção de um analógico até o teclado."""
+    return f"{eixo}:{direcao}"
+
+
+def _teclas_dos_analogicos(do_mouse: dict[str, str]) -> dict[str, str]:
+    """`{nome da direção: tecla}` das linhas de analógico que escolheram teclas."""
+    from hefesto_dualsense4unix.core.acoes_de_botao import (
+        EIXO_DIREITO,
+        EIXO_ESQUERDO,
+        TECLAS_DO_ANALOGICO,
+    )
+
+    fora: dict[str, str] = {}
+    for eixo in (EIXO_ESQUERDO, EIXO_DIREITO):
+        teclas = TECLAS_DO_ANALOGICO.get(do_mouse.get(eixo, ""))
+        if teclas is None:
+            continue
+        for direcao, tecla in zip(("esquerda", "direita", "cima", "baixo"), teclas, strict=True):
+            fora[_nome_da_direcao(eixo, direcao)] = tecla
+    return fora
+
+
 class TabelaNoJogo:
     """A tabela de botões da aba Navegação, agindo JUNTO com o jogo (a chave «Também no jogo»).
 
@@ -172,6 +205,7 @@ class TabelaNoJogo:
         self.ligada = bool(ligada)
         self._do_mouse, self._do_teclado, _sem_dono = resolver(button_actions, key_bindings)
         self._calados = botoes_calados(button_actions, key_bindings)
+        self._teclas_dos_analogicos = _teclas_dos_analogicos(self._do_mouse)
         self._mouse: Any = None
         self._teclado: Any = None
         self._desistiu = False
@@ -218,8 +252,11 @@ class TabelaNoJogo:
             # e o que o usuário escolheu): o mouse os cala, para a tecla não sair duas vezes.
             mouse.set_button_actions(
                 self._do_mouse, self._calados | frozenset(self._do_teclado))
-            teclado.set_bindings(resolve_key_bindings(
-                {b: list(t) for b, t in self._do_teclado.items()}))
+            ligacoes = resolve_key_bindings(
+                {b: list(t) for b, t in self._do_teclado.items()})
+            for nome, tecla in self._teclas_dos_analogicos.items():
+                ligacoes[nome] = (tecla,)
+            teclado.set_bindings(ligacoes)
         except Exception as exc:
             self._desistiu = True
             logger.warning("tabela_no_jogo_abrir_falhou", err=str(exc))
@@ -270,9 +307,32 @@ class TabelaNoJogo:
                 r2=r2,
                 buttons=conjunto,
             )
-            self._teclado.dispatch(conjunto)
+            self._teclado.dispatch(conjunto | self._teclas_apertadas(state))
         except Exception as exc:
             logger.warning("tabela_no_jogo_dispatch_falhou", err=str(exc))
+
+    def _teclas_apertadas(self, state: Any) -> frozenset[str]:
+        """As direções dos analógicos que viraram tecla, apertadas AGORA (só o P1)."""
+        if not self._teclas_dos_analogicos:
+            return frozenset()
+        from hefesto_dualsense4unix.core.acoes_de_botao import EIXO_DIREITO, EIXO_ESQUERDO
+
+        eixos = {
+            EIXO_ESQUERDO: (getattr(state, "raw_lx", CENTRO), getattr(state, "raw_ly", CENTRO)),
+            EIXO_DIREITO: (getattr(state, "raw_rx", CENTRO), getattr(state, "raw_ry", CENTRO)),
+        }
+        apertadas: set[str] = set()
+        for eixo, (x, y) in eixos.items():
+            for direcao, passou in (
+                ("esquerda", _deflexao(x) <= -LIMIAR_DO_ANALOGICO),
+                ("direita", _deflexao(x) >= LIMIAR_DO_ANALOGICO),
+                ("cima", _deflexao(y) <= -LIMIAR_DO_ANALOGICO),
+                ("baixo", _deflexao(y) >= LIMIAR_DO_ANALOGICO),
+            ):
+                nome = _nome_da_direcao(eixo, direcao)
+                if passou and nome in self._teclas_dos_analogicos:
+                    apertadas.add(nome)
+        return frozenset(apertadas)
 
 
 def trocar_a_tabela_no_jogo(daemon: Any, profile: Any) -> None:

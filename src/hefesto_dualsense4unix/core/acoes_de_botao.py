@@ -70,6 +70,15 @@ TOKEN_SAIR_DO_JOGO = "__SAIR_DO_JOGO__"
 TOKEN_PROGRAMA = "__PROGRAMA__"
 TOKEN_NADA = "__NADA__"
 TOKEN_SEM_TECLA = "__SEM_TECLA__"
+#: A direção de um analógico como TECLAS: o `TabelaNoJogo` as emite, com o limiar de meia
+#: deflexão e a diagonal como duas teclas. Só a linha de um analógico escolhe estes dois.
+TOKEN_WASD = "__WASD__"
+TOKEN_SETAS = "__SETAS__"
+#: o que cada token de teclas faz: `(esquerda, direita, cima, baixo)`
+TECLAS_DO_ANALOGICO: dict[str, tuple[str, str, str, str]] = {
+    TOKEN_WASD: ("KEY_A", "KEY_D", "KEY_W", "KEY_S"),
+    TOKEN_SETAS: ("KEY_LEFT", "KEY_RIGHT", "KEY_UP", "KEY_DOWN"),
+}
 
 GRUPO_MOUSE = "Mouse"
 GRUPO_TECLADO = "Função do teclado"
@@ -91,6 +100,11 @@ ACOES: dict[str, tuple[str, str]] = {
     "KEY_ENTER": (GRUPO_TECLADO, "Enter"),
     "KEY_ESC": (GRUPO_TECLADO, "Esc"),
     "KEY_SPACE": (GRUPO_TECLADO, "Espaço"),
+    "KEY_PAGEUP": (GRUPO_TECLADO, "Page Up"),
+    "KEY_PAGEDOWN": (GRUPO_TECLADO, "Page Down"),
+    "KEY_LEFTCTRL": (GRUPO_TECLADO, "Ctrl"),
+    "KEY_TAB": (GRUPO_TECLADO, "Tab"),
+    "KEY_H": (GRUPO_TECLADO, "H"),
     "KEY_BACKSPACE": (GRUPO_TECLADO, "Backspace"),
     "KEY_DELETE": (GRUPO_TECLADO, "Delete"),
     "KEY_LEFTALT+KEY_TAB": (GRUPO_TECLADO, "Alt + Tab"),
@@ -98,6 +112,8 @@ ACOES: dict[str, tuple[str, str]] = {
     "KEY_LEFTMETA": (GRUPO_TECLADO, "Super (tecla Windows)"),
     "KEY_SYSRQ": (GRUPO_TECLADO, "PrintScreen"),
     "KEY_F11": (GRUPO_TECLADO, "F11"),
+    TOKEN_WASD: (GRUPO_TECLADO, "Teclas WASD"),
+    TOKEN_SETAS: (GRUPO_TECLADO, "Setas"),
 
     TOKEN_TOGGLE_OSK: (GRUPO_COMANDO, "Teclado na tela"),
     TOKEN_OPEN_OSK: (GRUPO_COMANDO, "Abrir o teclado na tela"),
@@ -347,42 +363,12 @@ def resolver(
     escolhas: dict[str, str] | None,
     key_bindings: dict[str, list[str]] | None = None,
 ) -> tuple[dict[str, str], dict[str, tuple[str, ...]], list[str]]:
-    """As escolhas do perfil, separadas por QUEM as atende.
+    """As escolhas do perfil separadas por quem as atende: `(do_mouse, do_teclado, sem_dono)`.
 
-    Devolve três sacolas, e a terceira é a que impede o silêncio:
-
-        do_mouse    botão -> `BTN_*`, para o `UinputMouseDevice`
-        do_teclado  botão -> tupla de `KEY_*`/`__OSK__`, para o teclado virtual
-        sem_dono    os botões cuja escolha ninguém atende HOJE
-
-    O PS NÃO ESTÁ EM NENHUMA DAS TRÊS, e tem porta própria: :func:`acao_do_ps`.
-    O atendente dele não é device — é o callback do `ps_solo`. E os botões
-    CALADOS também não estão em nenhuma: quem os nomeia é :func:`botoes_calados`,
-    porque o device de mouse precisa saber quais foram calados de propósito para
-    tirá-los dos mapas do d-pad e do tap.
-
-    `escolhas=None` devolve o de fábrica — é o mesmo contrato de
-    `Profile.key_bindings`, e vale a mesma frase do esquema: `None` HERDA, `{}`
-    seria "nada em botão nenhum", que é outra coisa.
-
-    `key_bindings` É A CAMADA DO MEIO — 06/09/2026, ONDA3-MOTOR-01. Ela existe
-    porque o `apply_button_actions` reescreve o conjunto INTEIRO do teclado
-    virtual com o que sai daqui, DEPOIS de o `apply_keyboard` ter escrito o que
-    o usuário digitou na janela antiga: sem herdar, todo atalho dela morria na
-    ativação seguinte de qualquer perfil que tivesse `button_actions`. As regras
-    e a razão de o `r3` ficar fora estão em :func:`tabela_efetiva` e em
-    :data:`DOMINIO_DO_TECLADO`. Omitir o parâmetro é o contrato de antes, byte
-    a byte — os três chamadores que não o passam não mudam de resposta.
-
-    AS DUAS LINHAS DOS ANALÓGICOS são lidas pelo device: o token PRÓPRIO
-    (`__CURSOR__` na esquerda, `__ROLAGEM__` na direita) é o de fábrica e não
-    viaja; `— Nada —` desliga o eixo e chega por :func:`botoes_calados`; qualquer
-    outro token desliga e viaja em `do_mouse`, e a linha cai em `sem_dono`, porque
-    ninguém atende aquela escolha. Antes disto o cursor andava qualquer que fosse
-    a escolha, e a tela oferecia a linha sem dono.
-
-    OS DOIS GATILHOS SÃO LINHA PRÓPRIA, sem espelho no `cross` e no `triangle`:
-    `l2` e `r2` entram em `do_mouse` ou em `do_teclado` como qualquer botão.
+    `do_mouse` vai ao `UinputMouseDevice`, `do_teclado` ao teclado virtual e `sem_dono` guarda
+    os botões que ninguém atende hoje. O PS e os botões calados ficam de fora (:func:`acao_do_ps`,
+    :func:`botoes_calados`). `escolhas=None` devolve o de fábrica; `key_bindings` é a do meio.
+    As teclas do analógico (:data:`TECLAS_DO_ANALOGICO`) têm dono: a `TabelaNoJogo`.
     """
     tabela = tabela_efetiva(escolhas, key_bindings)
 
@@ -401,7 +387,8 @@ def resolver(
             # dizer isso, e a linha fica sem dono.
             if token not in (TOKEN_NADA, _TOKEN_DO_EIXO[botao]):
                 do_mouse[botao] = token
-                sem_dono.append(botao)
+                if token not in TECLAS_DO_ANALOGICO:
+                    sem_dono.append(botao)
             continue
         if token == TOKEN_NADA:
             continue
@@ -409,7 +396,7 @@ def resolver(
             sem_dono.append(botao)
         elif token.startswith("BTN_"):
             do_mouse[botao] = token
-        elif token in (TOKEN_CURSOR, TOKEN_ROLAGEM):
+        elif token in (TOKEN_CURSOR, TOKEN_ROLAGEM) or token in TECLAS_DO_ANALOGICO:
             sem_dono.append(botao)
         else:
             do_teclado[botao] = tuple(token.split("+"))
@@ -437,13 +424,16 @@ __all__ = [
     "GRUPO_TECLADO",
     "ORDEM_DOS_GRUPOS",
     "SEM_ATENDENTE",
+    "TECLAS_DO_ANALOGICO",
     "TOKEN_CURSOR",
     "TOKEN_NADA",
     "TOKEN_PROGRAMA",
     "TOKEN_ROLAGEM",
     "TOKEN_SAIR_DO_JOGO",
     "TOKEN_SEM_TECLA",
+    "TOKEN_SETAS",
     "TOKEN_STEAM",
+    "TOKEN_WASD",
     "acao_do_ps",  # (noqa-acento) nome de função
     "botoes_calados",  # (noqa-acento) nome de função
     "o_ps_aceita",

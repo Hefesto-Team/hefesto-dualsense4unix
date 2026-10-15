@@ -126,10 +126,44 @@ class Receita:
     #: o modo que o estilo liga (`ProfileModeConfig.kind`); `None` tira só o `desktop`
     #: do perfil e deixa os outros modos como estão
     modo: Literal["desktop"] | None = None
+    #: a tabela de botões que o estilo grava no perfil (`MOLDES`); `None` não toca na tabela
+    molde: Literal["visual_novel", "so_mouse", "teclado_e_mouse"] | None = None
+
+
+#: Os MOLDES da tabela de botões, para jogo de clicar: `{botão: ação}` do `Profile.button_actions`,
+#: com a ação na língua de `core/acoes_de_botao.ACOES`. Só nomeiam o que sai do de fábrica; o
+#: cursor, os cliques (Cruz e L2 = esquerdo, Triângulo e R2 = direito, R3 = meio) e a rolagem
+#: já são o de fábrica. Os ombros e o Options saem de Alt+Tab e Super, que tiram o jogo da frente.
+#: As teclas do Ren'Py: renpy.org/doc/html/keymap.html (PageUp volta o texto, Ctrl pula
+#: enquanto segura, Esc abre o menu, H esconde a caixa).
+MOLDES: dict[str, dict[str, str]] = {
+    "visual_novel": {
+        "l1": "KEY_PAGEUP",
+        "r1": "KEY_LEFTCTRL",
+        "options": "KEY_ESC",
+        "create": "KEY_H",
+    },
+    "so_mouse": {
+        "l1": "__NADA__",
+        "r1": "__NADA__",
+        "options": "__NADA__",
+        "create": "__NADA__",
+    },
+    # o analógico esquerdo anda o personagem (o cursor sai), os gatilhos clicam e interagem
+    "teclado_e_mouse": {
+        "l1": "__NADA__",
+        "r1": "__NADA__",
+        "options": "KEY_ESC",
+        "create": "__NADA__",
+        "l3_direcao": "__WASD__",
+        "r2": "KEY_E",
+        "square": "BTN_RIGHT",
+    },
+}
 
 
 #: as variáveis que o gesto do estilo aplica no perfil, por motor que já existe
-APLICADAS = ("ajustes_do_gatilho", "modo")
+APLICADAS = ("ajustes_do_gatilho", "modo", "molde")
 #: as que ficam aqui, como dado: o motor do tato lê pelo estilo guardado no perfil
 SO_DADO = ("luz", "luz_por_segundo", "duracao_da_vibracao_ms", "toque_por_tiro",
            "lado_do_som")
@@ -179,7 +213,11 @@ ESTILOS: tuple[Estilo, ...] = (
     Estilo("point_and_click", "Point-and-click", "Off", "economia", (0, 200, 210), 1.0,
            "o gatilho não é usado; vibração baixa não distrai a leitura",
            # a Navegação é escolha do usuário (ESCOLHAS de 08/10); o toque e o lado também
-           Receita(modo="desktop")),
+           Receita(modo="desktop", molde="so_mouse")),
+    Estilo("visual_novel", "Visual novel", "Off", "economia", (0, 200, 210), 0.5,
+           "o texto é longo e a luz não disputa a leitura; os ombros voltam, pulam e abrem o menu",
+           # a família do Point-and-click, parada e a meia luz; o gatilho é clique, sem efeito
+           Receita(modo="desktop", molde="visual_novel")),
     Estilo("terror", "Terror", "PulseB", "max", (215, 30, 55), 0.7,
            "o pulso irregular é o susto no dedo; a luz baixa não denuncia",
            # pisca abaixo do teto [WCAG]; a vibração dura o dobro [MDN] (escolha)

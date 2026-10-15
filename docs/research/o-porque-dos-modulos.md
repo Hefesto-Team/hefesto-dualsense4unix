@@ -1482,3 +1482,47 @@ mesmo igual ao último. Sem isso o quadro seguinte, 33 ms depois, apagava o puls
 A política de «quem manda» é a `tato_vivo.decidir`, perguntada como se houvesse jogo: no Modo Nativo e com o jogo
 pintando a barra o laço cala. Sem pad virtual não há efeito. O piscar tem o teto de 3 Hz da WCAG 2.3.1, o mesmo do
 pulso por tiro; o respirar e o arco-íris saem a 30 quadros por segundo no máximo, e quadro igual não sai.
+
+## o `resolver` das ações de botão (`core/acoes_de_botao.py`)
+
+A docstring antiga, movida para cá em 15/10/2026 (a do código ficou com o contrato):
+
+    As escolhas do perfil, separadas por QUEM as atende.
+
+        Devolve três sacolas, e a terceira é a que impede o silêncio:
+
+            do_mouse    botão -> `BTN_*`, para o `UinputMouseDevice`
+            do_teclado  botão -> tupla de `KEY_*`/`__OSK__`, para o teclado virtual
+            sem_dono    os botões cuja escolha ninguém atende HOJE
+
+        O PS NÃO ESTÁ EM NENHUMA DAS TRÊS, e tem porta própria: :func:`acao_do_ps`.
+        O atendente dele não é device — é o callback do `ps_solo`. E os botões
+        CALADOS também não estão em nenhuma: quem os nomeia é :func:`botoes_calados`,
+        porque o device de mouse precisa saber quais foram calados de propósito para
+        tirá-los dos mapas do d-pad e do tap.
+
+        `escolhas=None` devolve o de fábrica — é o mesmo contrato de
+        `Profile.key_bindings`, e vale a mesma frase do esquema: `None` HERDA, `{}`
+        seria "nada em botão nenhum", que é outra coisa.
+
+        `key_bindings` É A CAMADA DO MEIO — 06/09/2026, ONDA3-MOTOR-01. Ela existe
+        porque o `apply_button_actions` reescreve o conjunto INTEIRO do teclado
+        virtual com o que sai daqui, DEPOIS de o `apply_keyboard` ter escrito o que
+        o usuário digitou na janela antiga: sem herdar, todo atalho dela morria na
+        ativação seguinte de qualquer perfil que tivesse `button_actions`. As regras
+        e a razão de o `r3` ficar fora estão em :func:`tabela_efetiva` e em
+        :data:`DOMINIO_DO_TECLADO`. Omitir o parâmetro é o contrato de antes, byte
+        a byte — os três chamadores que não o passam não mudam de resposta.
+
+        AS DUAS LINHAS DOS ANALÓGICOS são lidas pelo device: o token PRÓPRIO
+        (`__CURSOR__` na esquerda, `__ROLAGEM__` na direita) é o de fábrica e não
+        viaja; `— Nada —` desliga o eixo e chega por :func:`botoes_calados`; qualquer
+        outro token desliga e viaja em `do_mouse`, e a linha cai em `sem_dono`, porque
+        ninguém atende aquela escolha. A exceção são as teclas do analógico
+        (:data:`TECLAS_DO_ANALOGICO`): o `TabelaNoJogo` as emite, e a linha tem dono; em
+        botão que não é analógico elas não têm dono. Antes disto o cursor andava qualquer que fosse
+        a escolha, e a tela oferecia a linha sem dono.
+
+        OS DOIS GATILHOS SÃO LINHA PRÓPRIA, sem espelho no `cross` e no `triangle`:
+        `l2` e `r2` entram em `do_mouse` ou em `do_teclado` como qualquer botão.
+
