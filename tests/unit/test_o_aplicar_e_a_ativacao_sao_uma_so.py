@@ -232,19 +232,11 @@ def test_o_aplicar_nao_e_escolha_nem_liga_o_freestyle() -> None:
     assert store.active_profile == NOME
 
 
-def test_o_profile_reaplicar_do_daemon_arma_a_trava_da_troca_a_mao() -> None:
-    """O handler do `profile.reaplicar` responde como o switch e arma a trava, sem prazo.
-
-    D-1410-O-APLICAR-SEGURA (14/10/2026): o «Aplicar» é gesto do usuário e segura até o
-    próximo gesto ou outro jogo com perfil. MORDIDA: tire o ``armar_a_trava_da_mao``
-    do ramo da reaplicação no ``_ativar`` e a trava não arma.
-    """
-    import time
-
+def _o_handler_do_reaplicar(store: StateStore) -> tuple[Any, dict[str, Any]]:
+    """O handler REAL do `profile.reaplicar`, sobre o gerente de verdade."""
     from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
 
     loader.save_profile(_o_perfil_inteiro(), origem="régua")
-    store = StateStore()
     gerente, chegou = _gerente(_ControleQueAnota(), store)
 
     class _Handlers(IpcHandlersMixin):
@@ -253,7 +245,22 @@ def test_o_profile_reaplicar_do_daemon_arma_a_trava_da_troca_a_mao() -> None:
             self.store = store
             self.profile_manager = gerente
 
-    resposta = asyncio.run(_Handlers()._handle_profile_reaplicar({"name": NOME}))
+    return _Handlers(), chegou
+
+
+def test_o_profile_reaplicar_do_gesto_arma_a_trava_da_troca_a_mao() -> None:
+    """O handler do `profile.reaplicar` com ``prender`` responde como o switch e arma a trava.
+
+    D-1410-O-APLICAR-SEGURA (14/10/2026): o «Aplicar» do rodapé e o «Voltar à de ontem» são
+    gesto do usuário e seguram, sem prazo, até o próximo gesto ou outro jogo com perfil.
+    MORDIDA: tire o ``armar_a_trava_da_mao`` do ramo da reaplicação no ``_ativar``.
+    """
+    import time
+
+    store = StateStore()
+    handlers, chegou = _o_handler_do_reaplicar(store)
+
+    resposta = asyncio.run(handlers._handle_profile_reaplicar({"name": NOME, "prender": True}))
 
     assert resposta["active_profile"] == NOME
     assert resposta["mode_aplicado"] is True and "mode" in resposta["secoes"]
@@ -262,6 +269,30 @@ def test_o_profile_reaplicar_do_daemon_arma_a_trava_da_troca_a_mao() -> None:
     (_args, kwargs), = chegou["mode_applier"]
     assert kwargs["origin"] == "manual", (
         "o «Aplicar» é gesto dela: a R-04 vale igual à da ativação")
+
+
+def test_o_profile_reaplicar_sem_o_gesto_nao_prende() -> None:
+    """D-1410-O-APLICAR-SEGURA, parte 3: o ajuste numa aba reaplica SEM armar a trava.
+
+    O padrão do IPC é sem trava, para os dois lados da régua: sem ``prender`` (e com
+    ``prender: false``) o perfil volta aos controles e o autoswitch segue livre. MORDIDA: faça
+    o ramo da reaplicação armar sem olhar o ``prender`` e esta régua reprova.
+    """
+    import time
+
+    for params in ({"name": NOME}, {"name": NOME, "prender": False}):
+        store = StateStore()
+        handlers, _chegou = _o_handler_do_reaplicar(store)
+        resposta = asyncio.run(handlers._handle_profile_reaplicar(dict(params)))
+        assert resposta["active_profile"] == NOME
+        assert not store.manual_profile_lock_active(time.monotonic()), (
+            f"o reaplicar de um ajuste prendeu o autoswitch ({params})")
+
+    store = StateStore()
+    handlers, _chegou = _o_handler_do_reaplicar(store)
+    asyncio.run(handlers._handle_profile_reaplicar({"name": NOME, "prender": "sim"}))
+    assert not store.manual_profile_lock_active(time.monotonic()), (
+        "só o booleano verdadeiro prende: o texto «sim» armou a trava")
 
 
 def test_o_applier_da_supressao_entrega_o_perfil_ao_dono_da_tabela(

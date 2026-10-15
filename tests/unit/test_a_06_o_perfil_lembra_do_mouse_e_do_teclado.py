@@ -100,7 +100,7 @@ class PonteDeMentira:
         self.chamadas.append((metodo, params))
         return True
 
-    def profile_reaplicar(self, nome: str):
+    def profile_reaplicar(self, nome: str, *, prender: bool = False):
         self.chamadas.append(("profile.reaplicar", {"nome": nome}))
         return {"status": "ok"}
 

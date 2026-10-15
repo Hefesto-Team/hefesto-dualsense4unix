@@ -1183,7 +1183,7 @@ def voltar_a_de_ontem(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
     _, versao = restaurar_do_historico(nome)
     ativo = _valendo(ctx)
     if ativo and mesmo_slug(ativo, nome):
-        p.profile_reaplicar(nome)
+        p.profile_reaplicar(nome, prender=True)
     p.chamar("launch_env.refresh")
     return _dizer(_com_a_carona(
         f"Perfil restaurado: {nome} · versão {versao.stem}"))

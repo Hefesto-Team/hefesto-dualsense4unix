@@ -81,7 +81,7 @@ class PonteLenta:
         self._anotar("haptica_testar", uniq)
         return True, {"status": "ok"}
 
-    def profile_reaplicar(self, nome: str) -> dict[str, Any]:
+    def profile_reaplicar(self, nome: str, *, prender: bool = False) -> dict[str, Any]:
         self._anotar("profile_reaplicar", nome)
         return {"active_profile": nome}
 

@@ -121,7 +121,7 @@ def aplicar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise ValueError(
             "aplicar: não há perfil ativo para mandar aos controles. "
             "Escolha um na aba Perfis.")
-    if p.profile_reaplicar(nome) is None:
+    if p.profile_reaplicar(nome, prender=True) is None:
         raise RuntimeError(sem_resposta_do_daemon())
     perfil.a_volta_do_perfil(ctx, p)
     _recado(perfil.com_a_carona())

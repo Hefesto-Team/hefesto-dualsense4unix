@@ -140,7 +140,7 @@ class PonteDeMentira:
         self.chamadas.append(f"profile_switch:{nome}")
         return True
 
-    def profile_reaplicar(self, nome: str) -> bool:
+    def profile_reaplicar(self, nome: str, *, prender: bool = False) -> bool:
         self.chamadas.append(f"profile_reaplicar:{nome}")
         return True
 

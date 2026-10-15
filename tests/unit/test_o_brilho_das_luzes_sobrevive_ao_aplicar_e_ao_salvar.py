@@ -80,8 +80,9 @@ class _PonteDaAba(viva._Ponte):
         self.mesa.rodar(self.mesa.server._handle_profile_switch({"name": nome}))
         return True
 
-    def profile_reaplicar(self, nome: str) -> bool:
-        self.mesa.rodar(self.mesa.server._handle_profile_reaplicar({"name": nome}))
+    def profile_reaplicar(self, nome: str, *, prender: bool = False) -> bool:
+        pedido = {"name": nome, "prender": prender}
+        self.mesa.rodar(self.mesa.server._handle_profile_reaplicar(pedido))
         return True
 
     def chamar(self, metodo: str, timeout: float | None = None, **params: Any) -> bool:
@@ -118,10 +119,10 @@ class _PonteDoRodape(barra._PonteDoRodape):
         super().__init__(mesa)
         self.rascunhos: list[dict[str, Any]] = []
 
-    def profile_reaplicar(self, nome: str) -> Any:
+    def profile_reaplicar(self, nome: str, *, prender: bool = False) -> Any:
         """O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01: o «Aplicar» manda o nome."""
         self.rascunhos.append(_o_perfil_que_o_daemon_le(nome))
-        return super().profile_reaplicar(nome)
+        return super().profile_reaplicar(nome, prender=prender)
 
     @property
     def luzes(self) -> list[dict[str, Any]]:

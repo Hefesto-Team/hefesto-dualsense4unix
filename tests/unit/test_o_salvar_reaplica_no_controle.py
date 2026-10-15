@@ -49,7 +49,7 @@ class _Ponte:
     def profile_switch(self, nome: str) -> None:
         self.trocou.append(nome)
 
-    def profile_reaplicar(self, nome: str) -> None:
+    def profile_reaplicar(self, nome: str, *, prender: bool = False) -> None:
         self.trocou.append(nome)
 
     def chamar(self, metodo: str, **_kw: Any) -> None:

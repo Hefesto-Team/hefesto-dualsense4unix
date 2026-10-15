@@ -552,8 +552,8 @@ def test_gravar_numa_aba_nao_muda_o_modo(semeadura_ligada: None, ligado: bool) -
         asyncio.run(h._handle_freestyle_set({"ligado": True}))
     ativo = store.active_profile
     ponte = SimpleNamespace(
-        profile_reaplicar=lambda nome: asyncio.run(
-            h._handle_profile_reaplicar({"name": nome})),
+        profile_reaplicar=lambda nome, prender=False: asyncio.run(
+            h._handle_profile_reaplicar({"name": nome, "prender": prender})),
         profile_switch=lambda nome: asyncio.run(
             h._handle_profile_switch({"name": nome})),
         chamar=lambda *a, **k: None,

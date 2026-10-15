@@ -609,15 +609,15 @@ class IpcHandlersMixin:
         """O «Aplicar»: o perfil inteiro de novo aos controles, sem virar escolha
         (O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01).
 
-        A mesma cadeia do `profile.switch` (`ProfileManager.reaplicar`), sem o que é da escolha
-        (sessão, marcador, último jogo, Freestyle); a trava da troca à mão ele arma, por ser gesto
-        (D-1410-O-APLICAR-SEGURA). Resposta na forma da do `profile.switch`.
+        A cadeia do `profile.switch` sem a escolha (sessão, marcador, último jogo, Freestyle).
+        Só o gesto prende: `prender: true` arma a trava da mão (D-1410-O-APLICAR-SEGURA).
         """
         name = params.get("name")
         if not isinstance(name, str) or not name:
             raise ValueError("profile.reaplicar exige 'name' string")
         relatorio: dict[str, str] = {}
-        profile = self.profile_manager.reaplicar(name, relatorio=relatorio)
+        prender = params.get("prender") is True
+        profile = self.profile_manager.reaplicar(name, relatorio=relatorio, prender=prender)
         if self.daemon is not None:
             with contextlib.suppress(Exception):
                 from hefesto_dualsense4unix.daemon.launch_env import (

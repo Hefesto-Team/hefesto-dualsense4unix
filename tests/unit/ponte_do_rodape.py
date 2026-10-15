@@ -31,7 +31,7 @@ class PonteDoRodape:
     def __init__(self) -> None:
         self.chamadas: list[str] = []
 
-    def profile_reaplicar(self, nome: str) -> dict[str, Any] | None:
+    def profile_reaplicar(self, nome: str, *, prender: bool = False) -> dict[str, Any] | None:
         self.chamadas.append("profile.reaplicar")
         return {"active_profile": nome, "mode_aplicado": True, "secoes": {}}
 

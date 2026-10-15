@@ -105,7 +105,7 @@ class PonteDoRodape:
     def __init__(self) -> None:
         self.reaplicados: list[str] = []
 
-    def profile_reaplicar(self, nome: str) -> dict[str, Any]:
+    def profile_reaplicar(self, nome: str, *, prender: bool = False) -> dict[str, Any]:
         """O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01: o «Aplicar» manda só o nome."""
         self.reaplicados.append(nome)
         return {"active_profile": nome, "mode_aplicado": True, "secoes": {}}

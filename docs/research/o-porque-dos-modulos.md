@@ -1414,6 +1414,9 @@ ela tinha aplicado. Agora o `reaplicar` arma a trava com o mesmo dono do «Ativa
 dela, outro jogo com perfil em foco, o lançamento de um jogo com perfil
 (`_a_trava_da_mao_segura`, `origin="launch"`). Ele continua sem gravar a escolha
 nem o último jogo, que é a parte da D-0110 que fica: o boot não aprende um perfil
-que ela não escolheu. Como o funil das abas (`interface/pacotes/perfil.
-gravar_e_reaplicar`) também passa pelo `profile.reaplicar` quando o perfil gravado
-é o que vale, um ajuste numa aba também arma a trava sobre o perfil que já valia.
+que ela não escolheu. **Só o gesto prende** (parte 3, as respostas dela, 14/10/2026: *«Só o Aplicar prende»*). O funil dos
+ajustes das abas (`interface/pacotes/perfil.gravar_e_reaplicar`) também passa pelo
+`profile.reaplicar`, mas sem o parâmetro `prender`: o ajuste numa aba não arma a trava, e o
+autoswitch segue trocando de perfil por janela depois dele (Kodi, Navegação). Quem pede `prender`
+é só o «Aplicar» do rodapé e o «Voltar à de ontem» (`ponte.profile_reaplicar(nome, prender=True)`);
+o padrão do IPC é sem trava, e `tests/unit/test_o_aplicar_segura.py` nomeia os chamadores.

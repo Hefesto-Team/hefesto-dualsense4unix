@@ -78,7 +78,7 @@ class PonteDeMentira:
         self.chamadas.append(("profile_switch", (nome,)))
         return True
 
-    def profile_reaplicar(self, nome: str) -> dict[str, Any]:
+    def profile_reaplicar(self, nome: str, *, prender: bool = False) -> dict[str, Any]:
         self.chamadas.append(("profile_reaplicar", (nome,)))
         return {"active_profile": nome}
 

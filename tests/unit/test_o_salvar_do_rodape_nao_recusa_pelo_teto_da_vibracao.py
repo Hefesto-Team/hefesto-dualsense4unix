@@ -77,7 +77,7 @@ class _Ponte:
     def profile_switch(self, nome: str) -> bool:
         return True
 
-    def profile_reaplicar(self, nome: str) -> bool:
+    def profile_reaplicar(self, nome: str, *, prender: bool = False) -> bool:
         return True
 
     def chamar(self, metodo: str, *a: Any, **kw: Any) -> Any:

@@ -149,10 +149,18 @@ def chamar_detalhado(metodo: str, **params: Any) -> tuple[bool, str | None]:
     return ok, motivo or _b._recusa_no_corpo(corpo)
 
 
-def profile_reaplicar(nome: str) -> dict[str, Any] | None:
-    """O «Aplicar» do rodapé: a resposta do `profile.reaplicar`, ou ``None``."""
+def profile_reaplicar(nome: str, *, prender: bool = False) -> dict[str, Any] | None:
+    """A resposta do `profile.reaplicar`, ou ``None``.
+
+    `prender` é só do gesto que ela fez («Aplicar» do rodapé, «Voltar à de ontem»): arma a
+    trava da troca à mão. O reaplicar de um ajuste de aba segue o padrão, sem trava
+    (D-1410-O-APLICAR-SEGURA).
+    """
+    params: dict[str, Any] = {"name": nome}
+    if prender:
+        params["prender"] = True
     ok, r = _b._safe_call(
-        "profile.reaplicar", {"name": nome}, timeout=teto("profile.reaplicar")
+        "profile.reaplicar", params, timeout=teto("profile.reaplicar")
     )
     return r if ok and isinstance(r, dict) else None
 

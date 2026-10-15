@@ -268,16 +268,18 @@ class ProfileManager:
         name: str,
         *,
         relatorio: dict[str, str] | None = None,
+        prender: bool = False,
     ) -> Profile:
         """O perfil inteiro de novo aos controles, sem virar a escolha do usuário.
 
-        A mesma cadeia da ativação, com a origem `manual` nos appliers. Por ser
-        gesto, arma a trava da troca à mão como o «Ativar» (D-1410-O-APLICAR-SEGURA);
-        não grava o `session.json`, o `active_profile.txt` nem o `ultimo_jogo.json`,
-        e não mexe no Modo Freestyle (D-0110-O-APLICAR-NAO-E-ESCOLHA). O porquê está
-        em `docs/research/o-porque-dos-modulos.md` («o Aplicar e a trava da mão»).
+        A cadeia da ativação com a origem `manual`; não grava `session.json`,
+        `active_profile.txt` nem `ultimo_jogo.json`, e não mexe no Freestyle (D-0110).
+        `prender` é do gesto («Aplicar», «Voltar à de ontem»): arma a trava da troca à mão
+        como o «Ativar»; o padrão é sem trava. Porquê: `docs/research/o-porque-dos-modulos.md`.
         """
-        return self._ativar(name, origin="manual", relatorio=relatorio, e_a_escolha=False)
+        return self._ativar(
+            name, origin="manual", relatorio=relatorio, e_a_escolha=False, prender=prender
+        )
 
     def apagar_o_freestyle(
         self,
@@ -308,6 +310,7 @@ class ProfileManager:
         relatorio: dict[str, str] | None,
         e_a_escolha: bool,
         apagando_o_freestyle: bool = False,
+        prender: bool = False,
     ) -> Profile:
         """A cadeia única da ativação e do «Aplicar». Ver :meth:`activate`."""
         manda = o_freestyle_manda(self.store)
@@ -353,7 +356,7 @@ class ProfileManager:
                 ligar_o_freestyle(self.store, False)
             gravar_a_escolha(profile.name)
             armar_a_trava_da_mao(self.store)
-        elif reaplicacao:
+        elif reaplicacao and prender:
             armar_a_trava_da_mao(self.store)
         elif origin == "launch":
             from hefesto_dualsense4unix.utils.session import lembrar_o_ultimo_jogo
