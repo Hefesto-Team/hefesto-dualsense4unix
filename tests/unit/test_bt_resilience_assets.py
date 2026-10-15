@@ -226,11 +226,12 @@ class TestSimetriaInstallUninstall:
         assert "hefesto-bt-bonds-snapshot.timer" in text
 
 
-class TestAlvoBluez586:
-    def test_install_aponta_para_o_alvo_586(self) -> None:
+class TestAlvoBluez587:
+    def test_install_aponta_para_o_alvo_587(self) -> None:
         text = texto_do_instalador()
-        assert re.search(r'_BZ_TARGET="5\.86', text), (
-            "passo 3f deve mirar o BlueZ 5.86 (sprint 2026-07-21: retry-limit 17a227b7)"
+        assert re.search(r'_BZ_TARGET="5\.87', text), (
+            "passo 3f deve mirar o BlueZ 5.87 da casa "
+            "(O-BLUEZ-DA-CASA-LEVA-AS-CORRECOES-DE-SEGURANCA-01)"
         )
         baseline = (
             Path(__file__).resolve().parents[2] / "assets" / "bluez-backport" / "BASELINE"

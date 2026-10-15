@@ -2919,17 +2919,20 @@ _bz_maior_do_archive() {
 
 if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v dpkg-query >/dev/null 2>&1 \
    && command -v dpkg >/dev/null 2>&1 && command -v sudo >/dev/null 2>&1; then
-    step "3f" "BlueZ corrigido (5.86: sem os travamentos, o laço de reconexão e a queda por buffer cheio)"
+    step "3f" "BlueZ corrigido (5.87 com as correções de segurança: sem os travamentos, o laço de reconexão e a queda por buffer cheio)"
     # Alvo do backport (sprint 2026-07-21-sprint-pesquisa-bluez-estabilidade.md):
     # 5.86 traz o retry-limit + backoff em loops de reconexão (upstream
-    # 17a227b7). 5.87 foi descartado (UAF novo em dev_disconnected, fix só em
-    # git HEAD sem release). A revisão é a ÚLTIMA do BASELINE (REVISAO_ULTIMA),
+    # 17a227b7). A .5 (15/10/2026) sobe para o 5.87 com o 5bc6aa79 (o UAF em
+    # dev_disconnected que barrava o 5.87) e os consertos de segurança do
+    # master (O-BLUEZ-DA-CASA-LEVA-AS-CORRECOES-DE-SEGURANCA-01). A revisão é a ÚLTIMA do BASELINE (REVISAO_ULTIMA),
     # que é o que o `scripts/construir_bluez_backport.sh` constrói — a régua
     # `test_bt_resilience_assets.py` confere as duas contra o BASELINE.
     #   .2 (22/07) hefesto-0001: mantém o bond no Virtual Cable Unplug;
     #   .4 (23/09) hefesto-0002: o EAGAIN do socket L2CAP deixa de derrubar a
-    #      sessão HID dos controles (BLUETOOTHD-NAO-DERRUBA-01).
-    _BZ_TARGET="5.86-0ubuntu0.1~hefesto24.04.4"
+    #      sessão HID dos controles (BLUETOOTHD-NAO-DERRUBA-01);
+    #   .5 (15/10) o 5.87 com os CVE de a2dp, avrcp, sdp-xml e eir, cobrindo a
+    #      distro até o 5.72-0ubuntu5.8.
+    _BZ_TARGET="5.87-0ubuntu0.1~hefesto24.04.5"
     _bz_baseline="${ROOT_DIR}/assets/bluez-backport/BASELINE"
     _bz_dir="${HOME}/.cache/hefesto-dualsense4unix/bluez-backport"
     # O binário que o systemd EXECUTA (o drop-in da unit pode tê-lo reapontado
@@ -3002,7 +3005,7 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v dpkg-query >/dev/null 2>&1 \
                 printf '          (os controles BT caem até reconectar; se algum não voltar,\n'
                 printf '          aperte o PS dele). Na migração 5.72 -> 5.8x os bonds antigos\n'
                 printf '          se perdiam (reparear uma vez); entre revisões do 5.86 não se\n'
-                printf '          mediu perda. É a ÚNICA exceção à regra de nunca reiniciar o\n'
+                printf '          mediu perda, e do 5.86 para o 5.87 a bancada confere. É a ÚNICA exceção à regra de nunca reiniciar o\n'
                 printf '          serviço: quem reinicia é o postinst do PRÓPRIO pacote bluez.\n\n'
                 ask_yn "aplicar o backport agora?" "${AUTO_YES}" "y"
                 if [[ "${REPLY,,}" =~ ^y ]]; then
