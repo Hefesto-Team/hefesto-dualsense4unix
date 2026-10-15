@@ -71,6 +71,7 @@ from pathlib import Path
 
 try:
     from .api_de_entrada import Evidencia, Veredito, examinar_pasta
+    from .ficha_declarada import FichaDeclarada, explicar_a_capa, fichas_dos_jogos
     from .receitas_de_ambiente import pecas_que_faltam
     from .steam_input_ponte import (
         PONTE_LIGADA,
@@ -94,6 +95,11 @@ try:
     )
 except ImportError:  # pragma: no cover - executado como script avulso
     from api_de_entrada import Evidencia, Veredito, examinar_pasta  # type: ignore[no-redef]
+    from ficha_declarada import (  # type: ignore[no-redef]
+        FichaDeclarada,
+        explicar_a_capa,
+        fichas_dos_jogos,
+    )
     from receitas_de_ambiente import pecas_que_faltam  # type: ignore[no-redef]
     from steam_input_ponte import (  # type: ignore[no-redef]
         PONTE_LIGADA,
@@ -364,6 +370,19 @@ class Prontuario:
     ponte: Ponte | None = None
     #: As peças que uma receita de ambiente pede ao lado do executável e o disco não tem.
     pecas_que_faltam: tuple[str, ...] = ()
+    #: O que a Steam e o binário dizem sobre controle. Informa; nunca entra no veredito.
+    declarado: FichaDeclarada | None = None
+
+    @property
+    def capa_da_steam(self) -> str | None:
+        """Por que a capa da Steam mostra o que mostra para o DualSense, ou `None`."""
+        if self.declarado is None:
+            return None
+        return explicar_a_capa(
+            self.declarado,
+            steam_input_ligado=self.steam_input_ligado,
+            ps_support_global=self.steam_input_global,
+        )
 
     @property
     def tem_wrapper(self) -> bool:
@@ -471,6 +490,8 @@ class Prontuario:
             "ponte": self.ponte.como_dicionario() if self.ponte else None,
             "ponte_divergente": self.ponte_divergente,
             "pecas_que_faltam": list(self.pecas_que_faltam),
+            "declarado": self.declarado.como_dicionario() if self.declarado else None,
+            "capa_da_steam": self.capa_da_steam,
             "estorvos": [
                 {"chave": e.chave, "o_que": e.o_que, "cura": e.a_cura,
                  "automatica": e.automatica}  # (noqa-acento): chave de JSON
@@ -682,13 +703,23 @@ def levantar_censo(
     carimbos = pontes if pontes is not None else pontes_confirmadas()
 
     fichas: list[Prontuario] = []
-    for appid, nome, raiz in jogos_instalados(home):
+    instalados = jogos_instalados(home)
+    evidencias: dict[str, Evidencia | None] = {}
+    for appid, nome, raiz in instalados:
         evidencia: Evidencia | None = None
         if raiz is not None and examinar:
             try:
                 evidencia = examinar_pasta(raiz)
             except OSError as exc:  # pragma: no cover - permissão no meio da varredura
                 erros.append(f"{nome}: {exc}")
+        evidencias[appid] = evidencia
+    declaradas = fichas_dos_jogos(
+        [(appid, raiz, evidencias[appid]) for appid, _nome, raiz in instalados],
+        home=home,
+        examinar=examinar,
+    )
+    for appid, nome, raiz in instalados:
+        evidencia = evidencias[appid]
         fichas.append(
             Prontuario(
                 appid=appid,
@@ -701,6 +732,7 @@ def levantar_censo(
                 na_allowlist=appid in permitidos,
                 ponte=carimbos.get(appid),
                 pecas_que_faltam=pecas_que_faltam(raiz) if examinar else (),
+                declarado=declaradas.get(appid),
             )
         )
     return Censo(jogos=fichas, erros=erros)
@@ -844,8 +876,8 @@ def _tabela(censo: Censo) -> str:
     largura = min(largura, 34)
     linhas = [
         f"{'jogo':{largura}} | {'veredito':26} | {'api':18} | wrapper | "
-        f"{'ponte confirmada':20} | Steam Input",
-        "-" * (largura + 92),
+        f"{'ponte confirmada':20} | {'Steam Input':22} | declara",
+        "-" * (largura + 124),
     ]
     for jogo in censo.jogos:
         si = jogo.steam_input_ligado
@@ -855,7 +887,8 @@ def _tabela(censo: Censo) -> str:
         linhas.append(
             f"{jogo.nome[:largura]:{largura}} | {jogo.veredito:26} | "
             f"{jogo.api.value:18} | {'sim' if jogo.tem_wrapper else 'NÃO':7} | "
-            f"{_texto_da_ponte(jogo.ponte):20} | {texto_si}"
+            f"{_texto_da_ponte(jogo.ponte):20} | {texto_si:22} | "
+            f"{jogo.declarado.veredito if jogo.declarado else '-'}"
         )
     for jogo in censo.impedidos:
         linhas.append("")
@@ -864,6 +897,19 @@ def _tabela(censo: Censo) -> str:
             marca = "o Hefesto repõe sozinho" if estorvo.automatica else "só reparo manual"
             linhas.append(f"    - {estorvo.o_que}")
             linhas.append(f"      cura: {estorvo.a_cura} ({marca})")
+    declarados = [j for j in censo.jogos if j.declarado is not None and j.declarado.fontes]
+    if declarados:
+        linhas.append("")
+        linhas.append("O que cada jogo declara sobre controle:")
+        for jogo in declarados:
+            ficha = jogo.declarado
+            if ficha is None:  # pragma: no cover - o filtro acima já garante
+                continue
+            linhas.append(f"  {jogo.nome}: {ficha.veredito}")
+            linhas.extend(f"    - {fonte}" for fonte in ficha.fontes)
+            linhas.extend(f"    - aviso: {aviso}" for aviso in ficha.avisos)
+            if jogo.capa_da_steam:
+                linhas.append(f"    - capa da Steam: {jogo.capa_da_steam}")
     linhas.append("")
     linhas.append(censo.frase())
     return "\n".join(linhas)
