@@ -3,9 +3,10 @@
 Cada um ajusta o modo que já está aceso, dentro das faixas do `PRESETS`, e nunca
 troca o modo; «Nenhum» volta aos padrões. `ajustes` e `variantes` (`{modo: {nome:
 valor}}`) são aplicados pela aba Gatilhos; `momentos` (o que muda com o tempo de
-aperto) é dado para o motor do tato. A régua `test_a_aba_gatilhos_do_todo.py` prende
-faixas, teto de escritas e unicidade. Fontes e grau: nota de 12/10 da sprint
-`A-ABA-GATILHOS-DO-TODO-01`.
+aperto) é dado para o motor do tato, que ainda não os toca: a `dica` diz só o que os
+ajustes fazem. A régua `test_a_aba_gatilhos_do_todo.py` prende faixas, teto de
+escritas, unicidade e a dica sem promessa de tempo. Fontes e grau: nota de 12/10 da
+sprint `A-ABA-GATILHOS-DO-TODO-01`.
 """
 from __future__ import annotations
 
@@ -78,7 +79,7 @@ IMERSOES: tuple[Imersao, ...] = (
              "Weapon": {"start": 0, "end": 1, "force": 255}},
             na_frente=("fps", "acao")),  # (noqa-acento): chave
     Imersao("pino-que-falha", "Pino que falha", "arma",
-            "De vez em quando o tiro prende por meio segundo e solta.",
+            "O disparo fica mais fundo e mais duro, como pino emperrado.",
             {"SemiAutoGun": {"start": 4, "end": 6, "force": 7},
              "Weapon": {"start": 3, "end": 7, "force": 230}},
             momentos=(Momento("ao_apertar", 0, "Feedback",
@@ -86,7 +87,7 @@ IMERSOES: tuple[Imersao, ...] = (
             na_frente=("terror",)),
     # --- Metralhadora: Machine, AutoGun e Vibration ---------------------------------
     Imersao("rajada-que-sobe-sozinha", "Rajada que sobe sozinha", "metralhadora",
-            "A força alterna entre dois níveis a cada 0,2 s enquanto você segura.",
+            "Batidas médias em ritmo constante enquanto você segura.",
             {"Machine": {"start": 0, "end": 9, "strength": 5, "frequency": 8},
              "AutoGun": {"start": 1, "strength": 7, "frequency": 16},
              "Vibration": {"position": 0, "amplitude": 5, "frequency": 8}},
@@ -96,7 +97,7 @@ IMERSOES: tuple[Imersao, ...] = (
                      valem_em=("Machine",)),),
             na_frente=("fps", "acao")),  # (noqa-acento): chave
     Imersao("cano-que-esquenta", "Cano que esquenta", "metralhadora",
-            "A rajada começa rápida e desacelera depois de 3 s.",
+            "Batidas rápidas e fortes enquanto você segura.",
             {"Machine": {"start": 0, "end": 9, "strength": 6, "frequency": 20},
              "AutoGun": {"start": 1, "strength": 6, "frequency": 20},
              "Vibration": {"position": 0, "amplitude": 6, "frequency": 20}},
@@ -107,10 +108,10 @@ IMERSOES: tuple[Imersao, ...] = (
             na_frente=("fps", "acao")),  # (noqa-acento): chave
     Imersao("recuo-pesado", "Recuo pesado", "metralhadora",
             "Solavancos espaçados e fortes, como arma de calibre grande.",
-            {"Machine": {"start": 0, "end": 9, "strength": 4, "frequency": 20},
-             "AutoGun": {"start": 2, "strength": 4, "frequency": 20},
-             "Vibration": {"position": 0, "amplitude": 4, "frequency": 20}},
-            {"fps": {"AutoGun": {"start": 2, "strength": 5, "frequency": 20}}},
+            {"Machine": {"start": 0, "end": 9, "strength": 8, "frequency": 6},
+             "AutoGun": {"start": 2, "strength": 8, "frequency": 6},
+             "Vibration": {"position": 0, "amplitude": 8, "frequency": 6}},
+            {"fps": {"AutoGun": {"start": 2, "strength": 8, "frequency": 10}}},
             na_frente=("fps", "acao")),  # (noqa-acento): chave
     # --- Arco ---------------------------------------------------------------------------
     Imersao("corda-que-treme-no-fim", "Corda que treme no fim", "arco",
@@ -125,14 +126,14 @@ IMERSOES: tuple[Imersao, ...] = (
             {"arco": {"Bow": {"start": 2, "end": 8, "force": 6, "snap": 8}}},
             na_frente=("arco", "aventura")),
     Imersao("braco-cansado", "Braço cansado", "arco",
-            "Depois de 3 s segurando o gatilho treme de leve, a 8 Hz.",
+            "A corda pesa menos e solta mais branda, por todo o curso.",
             {"Bow": {"start": 1, "end": 9, "force": 5, "snap": 5}},
             momentos=(Momento("segurando", 3000, "Vibration",
                               {"position": 6, "amplitude": 2, "frequency": 8}),),
             na_frente=("arco", "aventura")),
     # --- Resistência, Rígido, Rígido simples e Ponto duro --------------------------------
     Imersao("freio-abs-que-pulsa", "Freio que pulsa", "resistência",
-            "No fundo do curso o gatilho pulsa, como pedal de freio antitravamento.",
+            "Resistência firme logo no começo do curso, como pedal de freio.",
             {"Resistance": {"start": 2, "force": 6},
              "Rigid": {"position": 2, "force": 220},
              "SimpleRigid": {"strength": 7},
@@ -150,7 +151,7 @@ IMERSOES: tuple[Imersao, ...] = (
             {"simulacao": {"Resistance": {"start": 1, "force": 7}}},
             na_frente=("corrida", "simulacao")),
     Imersao("porta-emperrada", "Porta emperrada", "resistência",
-            "A força sobe um degrau a cada 5 minutos de jogo, até o teto de 6.",
+            "Resistência leve que só começa no meio do curso.",
             {"Resistance": {"start": 4, "force": 4},
              "Rigid": {"position": 4, "force": 160},
              "SimpleRigid": {"strength": 4},
@@ -165,19 +166,19 @@ IMERSOES: tuple[Imersao, ...] = (
                            "frequency": 6}},
             na_frente=("aventura",), a_validar=True),
     Imersao("motor-que-sobe", "Motor que sobe", "galope",
-            "A vibração acelera enquanto você segura, até uns 36 Hz.",
+            "Passadas iguais e mais rápidas, como um motor girando.",
             {"Galloping": {"start": 0, "end": 9, "first_foot": 5, "second_foot": 5,
                            "frequency": 12}},
             momentos=_rampa("Galloping", "frequency", 12, 36, 500),
             na_frente=("aventura", "corrida"), a_validar=True),
     Imersao("terreno-que-muda", "Terreno que muda", "galope",
-            "O passo fica mais fraco ou mais forte conforme o piso.",
+            "Passadas desiguais, uma fraca e uma forte, como piso irregular.",
             {"Galloping": {"start": 1, "end": 8, "first_foot": 4, "second_foot": 6,
                            "frequency": 16}},
             na_frente=("aventura", "corrida"), a_validar=True),
     # --- Pulso (curvas A e B) --------------------------------------------------------------
     Imersao("batida-do-coracao", "Batida do coração", "pulso",
-            "Dois pulsos curtos, mais ou menos um por segundo.",
+            "Um pulso de força média no meio do curso.",
             {"PulseA": {"start": 2, "end": 6, "force": 150},
              "PulseB": {"start": 2, "end": 6, "force": 150}},
             momentos=(Momento("sempre", 0, "PulseB", {"force": 255}, dura_ms=120,
@@ -189,7 +190,7 @@ IMERSOES: tuple[Imersao, ...] = (
              "PulseB": {"start": 1, "end": 8, "force": 255}},
             na_frente=("terror",), a_validar=True),
     Imersao("aperto-que-trava", "Aperto que trava", "pulso",
-            "No golpe o gatilho trava por 0,3 s.",
+            "Um pulso forte da metade ao fim do curso.",
             {"PulseA": {"start": 3, "end": 8, "force": 230},
              "PulseB": {"start": 3, "end": 8, "force": 230}},
             momentos=(Momento("ao_apertar", 0, "Feedback",

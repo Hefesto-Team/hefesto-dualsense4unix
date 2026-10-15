@@ -2,7 +2,8 @@
 
 MORDIDAS: pôr a pane com força 9, repetir os números de duas imersões, sobrar uma família sem as
 três imersões, dar largura própria ao chip, trazer de volta o Guardar, perder o campo da imersão
-numa célula ou deixar o efeito criado fora das listas reprova.
+numa célula, deixar o efeito criado fora das listas, a dica prometer o que muda no tempo ou o
+«Sentir» devolver o que o perfil dizia ANTES do toque reprova.
 """
 
 from __future__ import annotations
@@ -71,6 +72,18 @@ def test_nenhum_momento_passa_do_teto_de_escritas_do_motor() -> None:
             if m.a_cada_ms:
                 assert 1000 / m.a_cada_ms <= TETO_POR_CONTROLE, (i.chave, m.a_cada_ms)
             assert m.apos_ms >= 0 and (m.dura_ms is None or m.dura_ms > 0), i.chave
+
+
+#: o que só um `momento` faria (mudar com o tempo ou com o jogo); nenhum código os toca hoje
+_PROMESSA_DE_TEMPO = re.compile(
+    r"depois de|de vez em quando|conforme|alterna|acelera|minuto|por segundo|\bHz\b"
+    r"|\d+(?:,\d+)? ?s\b", re.I)
+
+
+def test_a_dica_diz_so_o_que_os_ajustes_fazem() -> None:
+    """A dica vai à tela: prometer o que muda no tempo é dizer o que o aparelho não faz."""
+    promessas = {i.chave: i.dica for i in imersao.IMERSOES if _PROMESSA_DE_TEMPO.search(i.dica)}
+    assert not promessas, promessas
 
 
 def test_os_numeros_de_cada_imersao_so_se_repetem_nela_mesma() -> None:
@@ -260,6 +273,19 @@ def test_sentir_toca_nos_dois_gatilhos_e_devolve_o_que_o_controle_recebia(a03, m
     assert [c[0] for c in voltou] == ["reset", "reset"], (
         "sem perfil o controle recebia Desligado: o que ele recebia volta como `trigger.reset`")
     assert a03.meus_efeitos() == {} and a03._meus_efeitos_da("imersao") == {}
+
+
+def test_sentir_devolve_o_que_vale_depois_do_toque_e_nao_o_de_antes(a03, monkeypatch) -> None:
+    """Uma escolha feita enquanto o efeito toca é a que fica no controle, não a de antes."""
+    escolhido: dict[str, Any] = {}
+    monkeypatch.setattr(a03.perfil, "ativo", lambda *_a, **_k: dict(escolhido))
+    monkeypatch.setattr(a03, "_segurar_o_toque", lambda: escolhido.update(
+        {"triggers": {"left": {"mode": "Rigid", "params": [5, 200]}}}))
+    ponte = _Ponte()
+    forma = {"partir": "Machine", "inicio": "2", "fim": "9", "forca": "4", "freq": "40"}
+    a03.sentir(_ctx(), {"uniq": UNIQ, "forma": forma}, ponte)
+    voltou = dict((c[1][0], c) for c in ponte.chamadas[2:])
+    assert voltou["left"][0] == "set" and voltou["left"][1][1:3] == ("Rigid", [5, 200]), voltou
 
 
 def test_as_barras_cobrem_so_o_que_o_modo_tem(a03) -> None:

@@ -2620,8 +2620,9 @@ def _segurar_o_toque() -> None:
 def sentir(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Toca o efeito da área de criar nos dois gatilhos do controle escolhido, sem guardar.
 
-    Passado o tempo, cada gatilho volta ao que o controle recebia antes (`Off` vira
-    `trigger.reset`). Não grava perfil, não mexe no rascunho e não cria efeito.
+    Passado o tempo, cada gatilho volta ao que o controle recebe AGORA (`Off` vira
+    `trigger.reset`), lido depois do toque: uma escolha feita durante ele vale. Não grava
+    perfil, não mexe no rascunho e não cria efeito.
     """
     partir, forma = _da_area_de_criar(o)
     uniq = _controle_do_sentir(ctx, o)
@@ -2630,14 +2631,14 @@ def sentir(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     specs = _specs()
     if specs is not None and ajustes:
         params = list(specs.preset_to_positional_params(specs.get_spec(partir), ajustes))
-    antes = perfil.ativo(ctx.state.get("active_profile"))
     try:
         for disco in LADOS.values():
             _tocar(p, disco, partir, params, uniq)
         _segurar_o_toque()
     finally:
+        agora = perfil.ativo(ctx.state.get("active_profile"))
         for disco in LADOS.values():
-            volta = _o_que_o_controle_recebe(antes, uniq, disco)
+            volta = _o_que_o_controle_recebe(agora, uniq, disco)
             _tocar(p, disco, str(volta.get("mode") or "Off"),
                    list(volta.get("params") or []), uniq)
 
