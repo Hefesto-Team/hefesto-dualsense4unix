@@ -48,6 +48,10 @@ CLIENTE_DO_PAINEL = (
 )
 
 
+#: O que o produto procura no programa do daemon para saber que ele é cliente do PipeWire.
+LEVA_O_PIPEWIRE = "# NEEDED libpipewire-0.3.so.0\nexit 0\n"
+
+
 def _exe(pasta: Path, nome: str, corpo: str) -> Path:
     pasta.mkdir(parents=True, exist_ok=True)
     alvo = pasta / nome
@@ -171,7 +175,8 @@ def bancada(tmp_path: Path) -> Iterator[Bancada]:
     )
     (estado / "clientes").write_text(CLIENTES_BASE, encoding="utf-8")
     (estado / "cliente-do-painel-texto").write_text(CLIENTE_DO_PAINEL, encoding="utf-8")
-    daemon_bin = _exe(tmp_path / "usr-bin", "cosmic-settings-daemon", "exit 0\n")
+    # O programa de mentira traz o nome da biblioteca, como o do COSMIC 1.10 no NEEDED do ELF.
+    daemon_bin = _exe(tmp_path / "usr-bin", "cosmic-settings-daemon", LEVA_O_PIPEWIRE)
     b = Bancada(tmp_path, fakes, estado, diario, daemon_bin)
     try:
         yield b
@@ -215,7 +220,7 @@ def _reiniciar(b: Bancada, *, dry_run: bool = False) -> tuple[str, str, str]:
     r = subprocess.run(
         [BASH, "-c", script],
         env={
-            "PATH": f"{b.fakes}:/usr/bin:/bin",
+            "PATH": f"{b.fakes}:{b.daemon_bin.parent}:/usr/bin:/bin",
             "HOME": str(b.tmp),
             "DRY_RUN": "1" if dry_run else "0",
         },
@@ -328,6 +333,16 @@ def test_se_nao_volta_o_aviso_diz_o_comando(bancada: Bancada) -> None:
     assert f"systemd-run --user --collect {bancada.daemon_bin}" in cura, cura
 
 
+def test_o_daemon_que_nao_le_o_pipewire_fica_quieto(bancada: Bancada) -> None:
+    """MORDIDA: outra versão do COSMIC, com o daemon sem a libpipewire, não perde o daemon."""
+    p = _sessao_cosmic(bancada)
+    bancada.daemon_bin.write_text("#!/bin/bash\nexit 0\n", encoding="utf-8")
+    rc, painel, resto = _reiniciar(bancada)
+    assert (rc, painel) == ("0", ""), resto
+    assert _vivo(p["daemon"])
+    assert not bancada.systemd_run()
+
+
 def test_systemctl_que_falha_devolve_1_e_nao_mexe_no_painel(bancada: Bancada) -> None:
     p = _sessao_cosmic(bancada)
     (bancada.estado / "systemctl-falha").touch()
@@ -386,7 +401,11 @@ def test_o_ensaio_do_uninstall_dubla_o_systemd_run() -> None:
 def _doctor(b: Bancada) -> str:
     r = subprocess.run(
         [BASH, "-c", 'set --; source "$DOCTOR_SH"; check_o_painel_do_cosmic_ve_o_som; true'],
-        env={"PATH": f"{b.fakes}:/usr/bin:/bin", "DOCTOR_SH": str(DOCTOR), "HOME": str(b.tmp)},
+        env={
+            "PATH": f"{b.fakes}:{b.daemon_bin.parent}:/usr/bin:/bin",
+            "DOCTOR_SH": str(DOCTOR),
+            "HOME": str(b.tmp),
+        },
         capture_output=True,
         text=True,
         timeout=30,
@@ -425,8 +444,18 @@ def test_o_doctor_avisa_com_o_daemon_morto(bancada: Bancada) -> None:
     saida = _doctor(bancada)
     assert saida.startswith("[WARN]"), saida
     assert "não está no ar" in saida
-    assert "rode: systemd-run --user --collect " in saida
+    assert f"rode: systemd-run --user --collect {bancada.daemon_bin}" in saida, saida
     assert "kill" not in saida
+
+
+@pytest.mark.parametrize("vivo", [True, False])
+def test_o_doctor_cala_com_o_daemon_que_nao_le_o_pipewire(bancada: Bancada, vivo: bool) -> None:
+    """MORDIDA: o daemon que nunca é cliente não está cego, e o aviso seria falso."""
+    p = _sessao_cosmic(bancada)
+    bancada.daemon_bin.write_text("#!/bin/bash\nexit 0\n", encoding="utf-8")
+    if not vivo:
+        bancada.lista("cosmic-settings", str(p["janela"]))
+    assert _doctor(bancada) == ""
 
 
 def test_o_doctor_fora_do_cosmic_nao_diz_nada(bancada: Bancada) -> None:

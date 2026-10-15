@@ -9285,7 +9285,7 @@ _cosmic_settings_daemon_pids() {
     local p argv0
     for p in $(pgrep -u "$(id -u)" -x cosmic-settings 2>/dev/null || true); do
         argv0=""
-        IFS= read -r -d '' argv0 < "/proc/${p}/cmdline" 2>/dev/null || true
+        IFS= read -r -d '' argv0 2>/dev/null < "/proc/${p}/cmdline" || true
         if [[ "${argv0##*/}" == cosmic-settings-daemon ]]; then
             printf '%s\n' "${p}"
         fi
@@ -9307,13 +9307,16 @@ check_o_painel_do_cosmic_ve_o_som() {
     pids="$(_cosmic_settings_daemon_pids)"
     argv0=""
     if [[ -n "${pids}" ]]; then
-        IFS= read -r -d '' argv0 < "/proc/${pids%%$'\n'*}/cmdline" 2>/dev/null || true
+        IFS= read -r -d '' argv0 2>/dev/null < "/proc/${pids%%$'\n'*}/cmdline" || true
     fi
     if [[ "${argv0}" == /* ]]; then
         programa="${argv0}"
     else
         programa="$(command -v cosmic-settings-daemon 2>/dev/null || printf '/usr/bin/cosmic-settings-daemon')"
     fi
+    # Um daemon que não leva a `libpipewire` (outra versão do COSMIC) nunca é
+    # cliente, e não está cego: o aviso seria falso.
+    LC_ALL=C grep -qa 'libpipewire-0\.3\.so' "${programa}" 2>/dev/null || return 0
     cura="systemd-run --user --collect ${programa}"
     if [[ -n "${pids}" ]]; then
         warn "o painel do COSMIC está sem o som: o cosmic-settings-daemon está vivo e fora do PipeWire (o som foi reiniciado depois dele) — rode: kill $(tr '\n' ' ' <<<"${pids}")&& ${cura}"

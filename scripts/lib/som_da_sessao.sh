@@ -20,8 +20,9 @@
 # diário: nove reinícios só do WirePlumber entre 12 e 14/10, e o servidor do
 # PipeWire com o mesmo processo de 12/10 10h31 até as 04h20 de 15/10.
 #
-# Fora do COSMIC nada muda: sem `cosmic-session` da pessoa, ou sem um
-# `cosmic-settings-daemon` dela no ar, o reinício é só o `systemctl`.
+# Fora do COSMIC nada muda: sem `cosmic-session` da pessoa, sem um
+# `cosmic-settings-daemon` dela no ar, ou com um daemon que não leva a
+# `libpipewire`, o reinício é só o `systemctl`.
 #
 # O QUE SAI DAQUI, para quem chama dizer na língua dele:
 #   rc 1                     — o `systemctl` não reiniciou o som;
@@ -40,7 +41,7 @@ _som_pids_do_cosmic_settings_daemon() {
     local p argv0
     for p in $(pgrep -u "$(id -u)" -x cosmic-settings 2>/dev/null || true); do
         argv0=""
-        IFS= read -r -d '' argv0 < "/proc/${p}/cmdline" 2>/dev/null || true
+        IFS= read -r -d '' argv0 2>/dev/null < "/proc/${p}/cmdline" || true
         if [[ "${argv0##*/}" == cosmic-settings-daemon ]]; then
             printf '%s\n' "${p}"
         fi
@@ -53,6 +54,12 @@ _som_cosmic_settings_daemon_e_cliente() {
     local clientes
     clientes="$(timeout 5 pw-cli ls Client 2>/dev/null)" || return 1
     [[ "${clientes}" == *'application.name = "cosmic-settings-daemon"'* ]]
+}
+
+#: O programa do daemon leva a `libpipewire`? O COSMIC 1.10 a leva (é o que o
+#: torna cliente do PipeWire); um daemon sem ela não fica cego no reinício.
+_som_programa_le_o_pipewire() {
+    LC_ALL=C grep -qa 'libpipewire-0\.3\.so' "$1" 2>/dev/null
 }
 
 #: O ambiente da sessão gráfica, lido do `cosmic-panel` vivo (o mesmo que o
@@ -89,12 +96,16 @@ _som_devolve_o_painel_do_cosmic() {
     pids="$(_som_pids_do_cosmic_settings_daemon)"
     [[ -n "${pids}" ]] || return 0
     argv0=""
-    IFS= read -r -d '' argv0 < "/proc/${pids%%$'\n'*}/cmdline" 2>/dev/null || true
+    IFS= read -r -d '' argv0 2>/dev/null < "/proc/${pids%%$'\n'*}/cmdline" || true
     if [[ "${argv0}" == /* && -x "${argv0}" ]]; then
         programa="${argv0}"
     else
         programa="$(command -v cosmic-settings-daemon 2>/dev/null || printf '/usr/bin/cosmic-settings-daemon')"
     fi
+    # Só fica cego o daemon que fala com o PipeWire: o que não leva a
+    # `libpipewire` (outra versão do COSMIC) não tem o que religar, e matá-lo
+    # seria tirar da pessoa um processo que o reinício nem tocou.
+    _som_programa_le_o_pipewire "${programa}" || return 0
     SOM_CURA_DO_PAINEL="systemd-run --user --collect ${programa}"
     if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
         if declare -F _faria >/dev/null; then
@@ -107,7 +118,7 @@ _som_devolve_o_painel_do_cosmic() {
     # voltou para outro processo, ninguém morre por engano.
     for p in ${pids}; do
         argv0=""
-        IFS= read -r -d '' argv0 < "/proc/${p}/cmdline" 2>/dev/null || true
+        IFS= read -r -d '' argv0 2>/dev/null < "/proc/${p}/cmdline" || true
         if [[ "${argv0##*/}" == cosmic-settings-daemon ]]; then
             kill -TERM "${p}" 2>/dev/null || true
         fi
