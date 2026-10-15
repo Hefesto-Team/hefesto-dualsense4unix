@@ -5350,6 +5350,26 @@ class PyDualSenseController(IController):
             "edge": bool(getattr(handle, "is_edge", False)),
         }
 
+    def pintar_a_barra_sem_lembrar(self, uniq: str, rgb: tuple[int, int, int]) -> bool:
+        """Pinta `rgb` na barra SÓ do controle `uniq`, SEM tocar no estado desejado.
+
+        É o quadro do efeito da luz (`luz_animada`): o desejado continua o do perfil, o do gesto
+        e o do jogo, e o `reassert_resolved_outputs` devolve a barra a ele quando o efeito para.
+        Devolve se o quadro saiu.
+        """
+        alvo = self._key_to_uniq(uniq)
+        if alvo is None:
+            return False
+        with self._io_lock:
+            key = self._key_for_uniq(alvo)
+            handle = self._handles.get(key) if key is not None else None
+            node = self._sysfs.get(key) if key is not None else None
+        if handle is None:
+            return False
+        return self._write_partial_output(
+            handle, node, _DesiredOutput(led=rgb), what="efeito_da_luz"
+        )
+
 
 #: (`battery_pct=..., battery_state=...`) e o `**self._carga(...)` no
 ESTADO_DE_CARGA: dict[int, str] = {

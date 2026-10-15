@@ -2,7 +2,9 @@
 
 MORDIDAS: devolver uma cor ao `FORA_DA_GUIA`, tirar o silêncio com o jogo pintando, tirar o teto
 de 30 quadros por segundo, tirar o `soltar` ao parar, subir o teto do piscar, deixar o Modo
-automático animar, voltar o `?` ou o «Desligar» ao desenho reprovam.
+automático animar, voltar o `?` ou o «Desligar» ao desenho reprovam. E o quadro pela camada da
+usuária, que apaga a cor do perfil daquele controle e o «Sem efeito», e o efeito que não espera o
+pulso do tiro.
 """
 
 from __future__ import annotations
@@ -123,7 +125,9 @@ def test_o_ritmo_mais_alto_anda_mais_depressa() -> None:
 
 
 def test_o_piscar_nunca_passa_de_tres_lampejos_por_segundo() -> None:
-    """WCAG 2.3.1. MORDIDA: subir o `TETO_DO_PISCAR_HZ`."""
+    """WCAG 2.3.1. MORDIDA: subir o `TETO_DO_PISCAR_HZ` (a escala do ritmo para nele, e o teto é
+    quem segura uma escala mais rápida)."""
+    assert luz.TETO_DO_PISCAR_HZ <= 3.0
     assert max(luz.frequencia_do_piscar_hz(r) for r in range(1, 11)) <= 3.0
     efeito = EfeitoDaLuz("piscar", (VERMELHO,), 10)
     amostras = [luz.cor_no_instante(efeito, i / 1000) != (0, 0, 0) for i in range(1000)]
@@ -315,25 +319,114 @@ def test_o_perfil_so_e_relido_a_cada_meio_segundo(monkeypatch: pytest.MonkeyPatc
     assert len(leituras) == 1
 
 
-def test_o_escritor_de_producao_escreve_e_solta_so_o_led() -> None:
-    chamadas: list[tuple[str, tuple[Any, ...]]] = []
+def _passo_com_o_tato(monkeypatch: pytest.MonkeyPatch, efeito: str) -> tuple[Any, Any, _Barra]:
+    from hefesto_dualsense4unix.daemon.subsystems.tato_vivo import TatoVivo
 
-    class Backend:
-        def apply_output_for(self, uniq: str, spec: Any) -> bool:
-            chamadas.append(("apply", (uniq, spec.led)))
-            return True
+    daemon = _daemon({}, jogo=False)
+    motor = TatoVivo()
+    daemon._tato_vivo = motor
+    monkeypatch.setattr(luz, "perfil_ativo", lambda _d: _perfil(efeito))
+    barra = _Barra()
+    return luz.Passo(daemon, barra.laco()), motor, barra
 
-        def clear_user_output_fields(self, uniqs: list[str], campos: list[str]) -> None:
-            chamadas.append(("clear", (tuple(uniqs), tuple(campos))))
 
-        def reassert_resolved_outputs(self) -> None:
-            chamadas.append(("reassert", ()))
+def test_o_pulso_do_tiro_segura_a_barra_e_o_efeito_espera(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """MORDIDA: tirar a pausa: o quadro seguinte apaga o pulso do tiro 33 ms depois."""
+    from hefesto_dualsense4unix.daemon.subsystems.tato_vivo import CANAL_LUZ
 
-    escrever, soltar = luz.escritor_de_producao(SimpleNamespace(controller=Backend()))
-    escrever(UNIQ, VERMELHO)
-    soltar(UNIQ)
-    assert chamadas == [("apply", (UNIQ, VERMELHO)), ("clear", ((UNIQ,), ("led",))),
-                        ("reassert", ())]
+    passo, motor, barra = _passo_com_o_tato(monkeypatch, "arco-iris;;10")  # (noqa-acento) chave
+    assert passo(10.0) == 1
+    motor._pendentes[(UNIQ, CANAL_LUZ)] = 99.0
+    assert motor.segurando(CANAL_LUZ) == {UNIQ}
+    assert passo(10.1) == 0 and barra.soltos == [], "o pulso é do tato: o efeito só espera"
+    del motor._pendentes[(UNIQ, CANAL_LUZ)]
+    assert passo(10.2) == 1
+
+
+def test_na_volta_do_pulso_o_quadro_sai_mesmo_igual_ao_ultimo(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """A volta do pulso repintou a barra com a cor do perfil: o piscar parado em aceso tem de
+    escrever de novo. MORDIDA: guardar o último quadro durante a pausa."""
+    from hefesto_dualsense4unix.daemon.subsystems.tato_vivo import CANAL_LUZ
+
+    passo, motor, _barra = _passo_com_o_tato(monkeypatch, "piscar;FF0000;1")
+    assert passo(10.0) == 1
+    motor._pendentes[(UNIQ, CANAL_LUZ)] = 99.0
+    assert passo(10.1) == 0
+    del motor._pendentes[(UNIQ, CANAL_LUZ)]
+    assert passo(10.2) == 1
+
+
+def _backend_com_o_perfil() -> tuple[Any, Any, Any]:
+    """O backend real com o P2 vermelho no perfil e o global dele em outra cor."""
+    from hefesto_dualsense4unix.daemon.state_store import StateStore
+    from hefesto_dualsense4unix.profiles.manager import ProfileManager
+    from hefesto_dualsense4unix.profiles.schema import MatchCriteria
+    from tests.unit.test_backend_multi_controller import KEY_2, UNIQ_2
+    from tests.unit.test_r20_camadas_de_saida import _backend
+
+    backend, _h1, h2 = _backend()
+    perfil = Profile(name="regua", match=MatchCriteria(window_class=["regua"]),
+                     leds=LedsConfig(lightbar=(10, 20, 30)),
+                     controllers={UNIQ_2: ControllerOverrides(leds=LedsConfig(lightbar=VERMELHO))})
+    ProfileManager(controller=backend, store=StateStore()).apply(perfil, origin="autoswitch")
+    assert h2.light.colors[-1] == VERMELHO
+    return backend, h2, (UNIQ_2, KEY_2)
+
+
+def test_o_fim_do_efeito_devolve_a_cor_do_perfil_daquele_controle(tmp_path: pathlib.Path,
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """MORDIDA: o quadro pela camada da usuária (`apply_output_for`) e o soltar que a limpa: o
+    controle volta na cor global do perfil, não na dele."""
+    from hefesto_dualsense4unix.profiles import loader
+
+    monkeypatch.setattr(loader, "profiles_dir", lambda ensure=False: tmp_path)
+    backend, h2, (uniq, key) = _backend_com_o_perfil()
+    escrever, soltar = luz.escritor_de_producao(SimpleNamespace(controller=backend))
+    escrever(uniq, (0, 200, 200))
+    assert h2.light.colors[-1] == (0, 200, 200)
+    assert backend.resolved_led_for(uniq) == VERMELHO, "o quadro não é estado desejado"
+    soltar(uniq)
+    assert h2.light.colors[-1] == VERMELHO
+    assert backend._merged_desired_for_key(key).led == VERMELHO
+
+
+def test_o_sem_efeito_fica_apagado_depois_que_o_efeito_para(tmp_path: pathlib.Path,
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """O «Sem efeito» manda o preto a 0% e grava; o laço relê o disco até meio segundo depois e
+    para. MORDIDA: o soltar que limpa o `led` da usuária reacende a barra."""
+    from hefesto_dualsense4unix.core.controller import OutputSpec
+    from hefesto_dualsense4unix.profiles import loader
+
+    monkeypatch.setattr(loader, "profiles_dir", lambda ensure=False: tmp_path)
+    backend, h2, (uniq, _key) = _backend_com_o_perfil()
+    escrever, soltar = luz.escritor_de_producao(SimpleNamespace(controller=backend))
+    escrever(uniq, (0, 200, 200))
+    backend.apply_output_for(uniq, OutputSpec(led=(0, 0, 0)), brilho_da_cor=0.0)
+    soltar(uniq)
+    assert h2.light.colors[-1] == (0, 0, 0)
+
+
+def test_o_quadro_nao_tira_a_cor_que_o_jogo_pintou(tmp_path: pathlib.Path,
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """O quadro que chega antes de o laço calar não solta a camada do jogo."""
+    from hefesto_dualsense4unix.profiles import loader
+
+    monkeypatch.setattr(loader, "profiles_dir", lambda ensure=False: tmp_path)
+    backend, _h2, (uniq, _key) = _backend_com_o_perfil()
+    backend.set_game_output_for(uniq, led=(0, 255, 0))
+    antes = backend._game_output_by_uniq.get(uniq)
+    assert antes is not None and antes.led == (0, 255, 0)
+    escrever, _soltar = luz.escritor_de_producao(SimpleNamespace(controller=backend))
+    escrever(uniq, (0, 200, 200))
+    assert backend._game_output_by_uniq.get(uniq) == antes
+
+
+def test_backend_sem_a_ponte_nao_escreve() -> None:
+    escrever, soltar = luz.escritor_de_producao(SimpleNamespace(controller=object()))
+    assert escrever(UNIQ, VERMELHO) is False
+    assert soltar(UNIQ) is None
 
 
 # ---------------------------------------------------------------- o pacote da aba

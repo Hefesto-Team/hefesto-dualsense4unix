@@ -1468,9 +1468,16 @@ O efeito vive no perfil como texto (`base;cores;ritmo`), e não como nome da bib
 exportado anima igual em outro computador, e o daemon não lê a `luz_meus_efeitos` da interface. Texto ilegível
 volta `None` (luz fixa), porque um enfeite não derruba o perfil.
 
-O quadro vai pela camada da usuária (`apply_output_for`), e não pela do jogo: a do jogo só escreve com o jogo em
-foco (`set_game_output_for` retém a luz enquanto a autoridade é `daemon`). Ao sair do efeito o laço solta só o
-`led` dessa camada (`clear_user_output_fields`) e o backend repinta a cor do perfil.
+O quadro pinta a barra sem entrar em camada nenhuma (`pintar_a_barra_sem_lembrar`), e ao sair do efeito o laço
+devolve a barra ao desejado (`reassert_resolved_outputs`). A camada do jogo só escreve com o jogo em foco
+(`set_game_output_for` retém a luz enquanto a autoridade é `daemon`). A da usuária foi a primeira escolha e caiu
+na conferência de 15/10/2026, com o backend real: o quadro tomava o lugar da cor do perfil daquele controle (o
+controle voltava na cor global do perfil depois da «Luz fixa»), soltava a cor que o jogo pintou, e o soltar
+apagava o preto do «Sem efeito» meio segundo depois do clique, reacendendo a barra.
+
+O pulso do tiro (`AtuadorDaLuz`) pinta pela camada do jogo e segura a barra até a volta; enquanto
+`TatoVivo.segurando(CANAL_LUZ)` tem o controle, o efeito espera sem escrever, e o primeiro quadro da volta sai
+mesmo igual ao último. Sem isso o quadro seguinte, 33 ms depois, apagava o pulso.
 
 A política de «quem manda» é a `tato_vivo.decidir`, perguntada como se houvesse jogo: no Modo Nativo e com o jogo
 pintando a barra o laço cala. Sem pad virtual não há efeito. O piscar tem o teto de 3 Hz da WCAG 2.3.1, o mesmo do

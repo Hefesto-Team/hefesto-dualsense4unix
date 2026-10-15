@@ -380,6 +380,10 @@ class TatoVivo:
             self._fila.append(evento)
             self.contadores["eventos"] += 1
 
+    def segurando(self, canal: str) -> frozenset[str]:
+        """Os controles em que ``canal`` ainda espera a volta ao perfil (o pulso no ar)."""
+        return frozenset(uniq for uniq, dele in self._pendentes if dele == canal)
+
     def _atuador(self, canal: str) -> Atuador | None:
         for atuador in self.atuadores:
             if atuador.canal == canal:

@@ -4,7 +4,9 @@ O perfil guarda o efeito de cada controle em ``leds.efeito`` (``base;cores;ritmo
 luz fixa e este laço não escreve nada. Quem manda na barra, em ordem: o jogo (cala quando ele
 pinta, pela política do tato vivo), o Modo Nativo, o Automático da aba e o brilho zero. No máximo
 30 quadros por segundo por controle, quadro igual ao anterior não sai, e o piscar não passa de
-3 Hz (WCAG 2.3.1). O quadro vai à camada da usuária; ao sair, só o ``led`` dela é solto.
+3 Hz (WCAG 2.3.1). O quadro pinta a barra sem entrar no estado desejado, que segue o do perfil,
+o do gesto e o do jogo; ao sair, a barra volta a ele. Enquanto o pulso do tiro do tato vivo segura a
+barra, o efeito espera.
 O porquê de cada escolha: docs/research/o-porque-dos-modulos.md, seção «luz_animada».
 """
 from __future__ import annotations
@@ -24,6 +26,7 @@ from hefesto_dualsense4unix.daemon.subsystems.tato_vivo import (
     decidir,
     estado_do_controle,
     ha_jogo,
+    motor_do,
 )
 from hefesto_dualsense4unix.profiles.schema import (
     EfeitoDaLuz,
@@ -179,13 +182,21 @@ class LuzAnimada:
         agora: float,
         plano: Mapping[str, PlanoDoControle],
         calados: frozenset[str] = frozenset(),
+        pausados: frozenset[str] = frozenset(),
     ) -> int:
-        """Escreve o quadro de cada controle que toca; devolve quantos quadros saíram."""
+        """Escreve o quadro de cada controle que toca; devolve quantos quadros saíram.
+
+        ``calados`` param e devolvem a barra; ``pausados`` só deixam de escrever (outro dono a
+        segura por um instante) e, na volta, o primeiro quadro sai mesmo igual ao último.
+        """
         for uniq in [u for u in self._inicio if u not in plano or u in calados]:
             self.parar(uniq)
         escritos = 0
         for uniq, dele in plano.items():
             if uniq in calados:
+                continue
+            if uniq in pausados:
+                self._ultimo_quadro.pop(uniq, None)
                 continue
             if agora - self._escrito_em.get(uniq, float("-inf")) < self._intervalo:
                 continue
@@ -215,21 +226,14 @@ class LuzAnimada:
 def escritor_de_producao(
     daemon: Any,
 ) -> tuple[Callable[[str, RGB], object], Callable[[str], object]]:
-    """As duas pontas do backend: escrever o quadro e soltá-lo, ambas só no ``led`` de ``uniq``."""
+    """As duas pontas do backend: pintar o quadro sem lembrá-lo e devolver a barra ao desejado."""
     controller = getattr(daemon, "controller", None)
 
     def escrever(uniq: str, cor: RGB) -> object:
-        aplicar = getattr(controller, "apply_output_for", None)
-        if not callable(aplicar):
-            return False
-        from hefesto_dualsense4unix.core.controller import OutputSpec
-
-        return aplicar(uniq, OutputSpec(led=cor))
+        pintar = getattr(controller, "pintar_a_barra_sem_lembrar", None)
+        return pintar(uniq, cor) if callable(pintar) else False
 
     def soltar(uniq: str) -> object:
-        liberar = getattr(controller, "clear_user_output_fields", None)
-        if callable(liberar):
-            liberar([uniq], ["led"])
         repintar = getattr(controller, "reassert_resolved_outputs", None)
         return repintar() if callable(repintar) else None
 
@@ -279,7 +283,12 @@ class Passo:
             for c in controles
             if c.uniq in plano and not self._o_hefesto_pode_pintar(c, jogo)
         )
-        return self.luz.tique(agora, plano, calados)
+        return self.luz.tique(agora, plano, calados, self._o_pulso_do_tiro_segura())
+
+    def _o_pulso_do_tiro_segura(self) -> frozenset[str]:
+        """Os controles em que o pulso do tiro do tato vivo ainda está na barra."""
+        motor = motor_do(self.daemon)
+        return frozenset() if motor is None else motor.segurando(CANAL_LUZ)
 
     @staticmethod
     def _o_hefesto_pode_pintar(controle: Any, jogo: bool) -> bool:
