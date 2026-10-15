@@ -506,3 +506,88 @@ def test_o_jogo_que_toma_o_gatilho_continua_sem_devolucao(
     mesa.rodar(1.0)
     assert mesa.backend.sessoes == []
     assert mesa.motor.contadores["soltos_ao_jogo"] == 1
+
+
+# O perfil salvo com a chave que saiu da lista de onze: a tela, o aparelho e o motor dizem o mesmo.
+def _linhas_de_ontem() -> list[tuple[str, str, list[int]]]:
+    linhas = []
+    for chave, velha, ajustes in ei.NUMEROS_DE_ONTEM:
+        spec = get_spec(velha)
+        assert spec is not None, velha
+        posicionais = [int(ajustes[p.name]) for p in spec.params]
+        linhas.append((chave, velha, posicionais))
+    return linhas
+
+
+def _bloco_do_perfil(velha: str, posicionais: list[int]) -> bytes:
+    """O bloco que o perfil leva ao aparelho: a fábrica, que traduz a chave velha."""
+    efeito = build_from_name(velha, list(posicionais))
+    f = efeito.forces
+    return bytes([efeito.mode, f[0], f[1], f[2], f[3], f[4], f[5], 0, 0, f[6], 0])
+
+
+@pytest.mark.parametrize(("chave", "velha", "posicionais"), _linhas_de_ontem(),
+                         ids=lambda v: str(v))
+def test_o_perfil_de_chave_velha_toca_a_imersao_que_a_tela_mostra(
+    chave: str, velha: str, posicionais: list[int],
+) -> None:
+    from hefesto_dualsense4unix.app.actions import trigger_specs
+    from hefesto_dualsense4unix.interface.pacotes import a03_gatilhos as aba
+
+    lado = aba._do_lado({"mode": velha, "params": posicionais}, trigger_specs)
+    na_tela = aba._imersao_que_casa(lado["modo-chave"], lado["params"], lado["cru"])
+    assert na_tela == chave, (velha, posicionais, na_tela)
+    imersao = ei.POR_CHAVE[chave]
+    plano = tv._plano_do_lado(SimpleNamespace(mode=velha, params=posicionais))
+    if not ei.momentos_no_modo(imersao, lado["modo-chave"]):
+        assert plano is None
+        return
+    assert plano is not None, (velha, posicionais)
+    assert plano.imersao.chave == chave
+    assert plano.modo == lado["modo-chave"]
+
+
+@pytest.mark.parametrize(("chave", "velha", "posicionais"), _linhas_de_ontem(),
+                         ids=lambda v: str(v))
+def test_a_volta_a_mao_e_o_bloco_do_perfil_e_nao_o_da_imersao(
+    chave: str, velha: str, posicionais: list[int],
+) -> None:
+    plano = tv._plano_do_lado(SimpleNamespace(mode=velha, params=posicionais))
+    if plano is None:
+        pytest.skip(f"{chave} não tem momento no acionamento de hoje")
+    assert plano.bloco_da_volta() == _bloco_do_perfil(velha, posicionais), (velha, posicionais)
+
+
+def test_os_numeros_de_hoje_continuam_voltando_ao_bloco_da_imersao() -> None:
+    """Com os números de hoje, o bloco do perfil e o da imersão são o mesmo (nada muda ali)."""
+    vistos = 0
+    for imersao, modo, estilo, ajustes in ei.todos_os_ajustes():
+        spec = get_spec(modo)
+        if spec is None or not ei.momentos_no_modo(imersao, modo):
+            continue
+        posicionais = [int(ajustes.get(p.name, p.default)) for p in spec.params]
+        if ei.imersao_dos_numeros(modo, posicionais) != (imersao, estilo):
+            continue
+        plano = tv._plano_do_lado(SimpleNamespace(mode=modo, params=posicionais))
+        assert plano is not None, (imersao.chave, modo, estilo)
+        assert plano.bloco_da_volta() == tv._bloco_cru(modo, ajustes), (imersao.chave, modo)
+        vistos += 1
+    assert vistos >= 10
+
+
+@pytest.mark.parametrize("numero", [1, 2, 3, 4])
+def test_o_perfil_de_chave_velha_por_controle_toca_em_cada_um_dos_quatro(numero: int) -> None:
+    """P1 a P4, cabo ou rádio: o lado escrito por um controle passa pela mesma tradução."""
+    uniq = f"aa:bb:cc:00:00:4{numero}"
+    perfil = _perfil(
+        triggers={"left": {"mode": "Rigid", "params": [2, 220]}},
+        controllers={uniq: {"triggers": {"right": {"mode": "SemiAutoGun", "params": [4, 6, 7]}}}},
+    )
+    mapa = tv.planos_do_perfil(perfil)
+    direito, esquerdo = mapa.do(uniq, "direito"), mapa.do(uniq, "esquerdo")
+    assert direito is not None and direito.imersao.chave == "pino-que-falha"
+    assert direito.bloco_da_volta() == _bloco_do_perfil("SemiAutoGun", [4, 6, 7])
+    assert esquerdo is not None and esquerdo.imersao.chave == "freio-abs-que-pulsa"
+    assert esquerdo.bloco_da_volta() == _bloco_do_perfil("Rigid", [2, 220])
+    outro = "aa:bb:cc:00:00:49"
+    assert mapa.do(outro, "direito") is None

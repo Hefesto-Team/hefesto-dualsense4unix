@@ -1011,10 +1011,22 @@ SEM_MOMENTOS = MapaDosMomentos()
 
 
 def _plano_do_lado(cfg: Any) -> PlanoDoGatilho | None:
-    """O plano de um gatilho do perfil, se os números dele são de uma imersão com momentos."""
+    """O plano de um gatilho do perfil, se os números dele são de uma imersão com momentos.
+
+    O perfil salvo com a chave que saiu da lista de onze (`SemiAutoGun`, `Rigid`…) passa pela
+    mesma tradução da fábrica e da tela: o aparelho recebe o bloco da chave de hoje, a tela
+    mostra a imersão dela, e o motor toca os momentos dela. A volta à mão é o bloco do PERFIL,
+    não o da imersão: com os números de ontem os dois diferem, e o aparelho fica como a tela.
+    """
+    from hefesto_dualsense4unix.app.actions.trigger_specs import get_spec
+    from hefesto_dualsense4unix.core.trigger_effects import traduzir_chave_velha
+
     modo, params = _ler(cfg, "mode"), _ler(cfg, "params")
     if not isinstance(modo, str) or not isinstance(params, (list, tuple)):
         return None
+    traduzida = traduzir_chave_velha(modo, list(params))
+    if traduzida is not None:
+        modo, params = traduzida
     achada = imersao_dos_numeros(modo, params)
     if achada is None:
         return None
@@ -1022,8 +1034,11 @@ def _plano_do_lado(cfg: Any) -> PlanoDoGatilho | None:
     momentos = momentos_no_modo(imersao, modo)
     if not momentos:
         return None
-    return PlanoDoGatilho(imersao, modo, estilo, ajustes_da_imersao(imersao, modo, estilo) or {},
-                          momentos)
+    spec = get_spec(modo)
+    ajustes = ajustes_da_imersao(imersao, modo, estilo) or {}
+    if spec is not None and len(params) == len(spec.params):
+        ajustes = {p.name: int(v) for p, v in zip(spec.params, params, strict=True)}
+    return PlanoDoGatilho(imersao, modo, estilo, ajustes, momentos)
 
 
 def _plano_do_automatico(estilo: str) -> PlanoDoGatilho | None:
