@@ -356,14 +356,6 @@ def medido() -> dict[tuple[str, str], dict[str, Any]]:
 
 
 ESPERADO_VERMELHO: dict[tuple[str, str], str] = {
-    ("06-navegacao.html", "estreita"): (
-        "DEFEITO VIVO — `.nav-rot` (interface/aba06.py:204-205) tem "
-        "`text-overflow:ellipsis` e NENHUM `title`. A 940 px o nome do controle "
-        "vira 'P2 • Starlight Bl…' e o resto não é alcançável por caminho "
-        "nenhum. CURA: o gerador (aba06.py:1069 e 1263) emitir "
-        "`title=\"{rótulo inteiro}\"` no `.nav-rot`, como a aba Sistema já faz "
-        "no `.est .val`"
-    ),
     ("09-sistema.html", "estreita"): (
         "DEFEITO VIVO — o `<span>` de dentro de `.saude .txt` "
         "(interface/aba09.py:300, emitido em `saude()` na linha 648) recorta com "

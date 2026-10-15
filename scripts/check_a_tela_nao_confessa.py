@@ -420,12 +420,6 @@ SEM_LETRA: dict[str, str] = {
     "a09_sistema.py:_systemctl ← f\"{recusa}{f': {detalhe}' if detalhe else '.'}\"":
         "a recusa do systemd mais o detalhe que ele mesmo dá — as duas metades "
         "vêm de fora, e o `f''` só as costura",
-    'a06_navegacao.py:guardar_definicoes ← " ".join(recados)':
-        "os recados juntados de várias gravações; cada um nasce no seu dono",
-    'a06_navegacao.py:guardar_ponto ← " ".join(recados)':
-        "idem, pelo Guardar do Estilo Point-and-click — os dois costuram as "
-        "mesmas três frases (o atalho que para de valer, a linha sem "
-        "atendente, o desenho congelado), e cada uma tem o seu dono",
     "__init__.py:guardado ← recusa":
         "a recusa da camada (`pacotes/camada.py:recusa_no_nativo`), levantada inteira "
         "antes de o gesto existir",

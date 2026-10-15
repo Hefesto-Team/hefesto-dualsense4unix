@@ -201,6 +201,9 @@ def _payload_pela_tupla_escrita_a_mao(profile: Profile) -> dict[str, object]:
     for secao in _SECOES_OPCIONAIS_OMITIDAS_QUANDO_NONE:
         if payload.get(secao) is None:
             payload.pop(secao, None)
+    mouse = payload.get("mouse")
+    if isinstance(mouse, dict) and mouse.get("point_and_click") is None:
+        mouse.pop("point_and_click", None)  # campo aditivo: sem escolha, o arquivo não o diz
     if not payload.get("controllers"):
         payload.pop("controllers", None)
     else:
@@ -219,6 +222,7 @@ _VALORES_DE_SECAO: dict[str, object] = {
     "key_bindings": {"cross": ["KEY_A"]},
     "teclado_emulado": True,
     "teclado_so_no_jogo": True,
+    "teclado_sempre": True,
     "tabela_no_jogo": True,
     "button_actions": {"cross": "KEY_ENTER"},
 }

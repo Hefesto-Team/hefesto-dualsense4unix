@@ -309,6 +309,7 @@ def trocar_a_tabela_no_jogo(daemon: Any, profile: Any) -> None:
         ligada=ligada,
     ) if ligada else None
     daemon._teclado_so_no_jogo = bool(getattr(profile, "teclado_so_no_jogo", None))
+    daemon._teclado_sempre = bool(getattr(profile, "teclado_sempre", None))
 
 
 def _suspenso_por_ela(daemon: Any) -> bool:
@@ -328,7 +329,7 @@ def despachar_no_jogo(
 
     * Tabela ligada: ela age (mouse e teclado privados). O teclado do desktop
       não despacha junto, para a mesma tecla não sair duas vezes.
-    * Só o teclado «Só dentro do jogo»: o teclado do desktop despacha daqui,
+    * O teclado «Só dentro do jogo» ou «Sempre»: o teclado do desktop despacha daqui,
       mesmo com a emulação suprimida pelo perfil do jogo.
     * Ao sair do jogo (ou ao largar a chave) tudo é solto.
     * «Suspender mouse e teclado» (o gesto, a interface, o IPC) cala os dois aqui
@@ -338,7 +339,9 @@ def despachar_no_jogo(
     if no_jogo and _suspenso_por_ela(daemon):
         no_jogo = False
     tabela = getattr(daemon, "_tabela_no_jogo", None)
-    so_dentro = bool(getattr(daemon, "_teclado_so_no_jogo", False))
+    # «Só dentro do jogo» e «Sempre» digitam com o jogo aberto; o laço do desktop cuida do resto.
+    so_dentro = bool(getattr(daemon, "_teclado_so_no_jogo", False)) or bool(
+        getattr(daemon, "_teclado_sempre", False))
     estava = bool(getattr(daemon, "_estava_no_jogo", False))
     daemon._estava_no_jogo = no_jogo
     teclado = getattr(daemon, "_keyboard_device", None)

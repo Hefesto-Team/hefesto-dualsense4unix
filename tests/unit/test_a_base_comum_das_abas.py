@@ -50,7 +50,6 @@ SEM_AJUDA = ("topo.html", "fim.html", "monta.py", "janela.py", "hefesto_vivo.py"
 #: que troca o «?» pelo `data-dica`. O número só diminui, e a linha sai quando o arquivo zera.
 ISENTOS: dict[str, int] = {
     "aba03.py": 2,  # sai com: A-ABA-GATILHOS-DO-TODO-01
-    "aba06.py": 2,  # sai com: A-ABA-NAVEGACAO-DO-TODO-01
     "aba07.py": 1,  # sai com: A-ABA-EXPERIMENTAL-DO-TODO-01
     "aba09.py": 8,  # sai com: A-ABA-SISTEMA-DO-TODO-01
     "aba10.py": 1,  # sai com: A-ABA-PERFIS-DO-TODO-01

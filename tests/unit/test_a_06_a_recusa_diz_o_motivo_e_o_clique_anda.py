@@ -5,8 +5,7 @@
 `ponte.chamar`, que devolve `bool` e joga fora o corpo. Um
 `{"status": "failed", "bloqueio": "sem_device"}` — que o daemon manda desde
 25/08 (`ipc_handlers._handle_mouse_emulation_set`) — voltava `True`, o gesto
-seguia adiante, e ela não via uma palavra. Pior no `modo`: com o mouse recusado,
-o gesto ainda mandava LIGAR o teclado.
+seguia adiante, e ela não via uma palavra.
 
 O produto já tinha as duas peças e ninguém as chamava:
 
@@ -18,18 +17,15 @@ FATO DERRUBADO — 03/09/2026. O próprio `_mandar` declarava que *"a ponte não
 expõe o `_call_checked_detalhado`, que é o único que entrega o corpo"*. A ponte
 entrega o corpo desde 01/09; era caminho existente que esta aba não chamava.
 
-**2. O SEGUNDO CLIQUE NO `+` NÃO ANDAVA.** O número de partida sai do `ctx`, que
-é o estado do último tique (500 ms). Dois cliques dentro do mesmo tique liam o
-MESMO número e pediam o MESMO alvo. É o defeito que quem clica rápido sente
-primeiro, e a GTK não o tem porque o `Gtk.Scale` dela lê o widget.
+**2. O NÚMERO DA BARRA É O QUE A PESSOA ARRASTOU.** Desde o desenho do todo (15/10/2026) as barras
+mandam o número absoluto (`valor`), sem o `+`/`-` e sem memória do último tique: dois arrastes
+no mesmo tique mandam os dois números, e a faixa do produto apara cada um.
 
 AS MORDIDAS:
 
 * troque `p.resultado` por `p.chamar` em `_mandar` — as recusas voltam mudas;
-* tire a memória de `_de_onde_partir` (devolva sempre `atual + passo`) — o
-  segundo clique para de andar;
-* tire a aparação de `_de_onde_partir` (o `max`/`min` com a faixa do
-  produto) — o clique fica preso no teto.
+* tire a aparação de `vel_cursor` e `vel_rolagem` (o `max`/`min` com a faixa do
+  produto) — o número passa do teto.
 """
 from __future__ import annotations
 
@@ -90,16 +86,6 @@ def _ctx(**mouse: object):
     return Contexto(state=estado, mesa=MESA, conectados=[FALSO])
 
 
-@pytest.fixture(autouse=True)
-def _memoria_limpa():
-    """A memória do último alvo é de MÓDULO — cada régua parte do zero."""
-    from pacotes import a06_navegacao as mod
-
-    mod._PEDIDO.clear()
-    yield
-    mod._PEDIDO.clear()
-
-
 @pytest.mark.parametrize("bloqueio", sorted(BLOQUEIO_DO_MOUSE_EM_PORTUGUES))
 def test_a_velocidade_recusada_diz_por_que(bloqueio: str) -> None:
     """A frase é a do produto, inteira — e ela chega ao cartão dela.
@@ -145,31 +131,6 @@ def test_o_ok_nao_reclama_de_nada() -> None:
     mod.vel_cursor(_ctx(speed=6), {"gesto": "vel-cursor", "valor": "7"}, ponte)
     assert ponte.chamadas == [
         ("mouse.emulation.set", {"speed": 7, "origin": "manual"})]
-
-
-def test_o_modo_para_quando_o_mouse_recusa() -> None:
-    """Com o mouse recusado, o gesto para e diz o motivo, numa chamada só.
-
-    Era o pior lado do defeito: o `chamar` devolvia `True` e o gesto seguia,
-    deixando o teclado ligado num modo que não é dele — que é exatamente o
-    estado que o `keyboard.emulation.set` nasceu para curar. Desde 29/09/2026
-    (O-MOUSE-SEGUE-A-NAVEGACAO-01) o gesto manda `desktop.status.set`, e quem
-    não liga o teclado depois de o mouse recusar é o daemon
-    (`Daemon.definir_o_status_da_navegacao`, provado em
-    `test_o_mouse_segue_a_navegacao.py`). O bloco `mouse_emulation` traz a
-    recusa na forma de antes.
-    """
-    from pacotes import a06_navegacao as mod
-
-    ponte = _Ponte({"status": "failed",
-                    "mouse_emulation": {"status": "failed", "bloqueio": "sem_device"},
-                    "keyboard_emulation": {"status": "nao_tentado", "enabled": False}})
-    with pytest.raises(RuntimeError) as caiu:
-        mod.modo(_ctx(enabled=False), {}, ponte)
-    assert [m for m, _ in ponte.chamadas] == ["desktop.status.set"], (
-        f"o gesto seguiu adiante depois da recusa: {ponte.chamadas}")
-    assert BLOQUEIO_DO_MOUSE_EM_PORTUGUES["sem_device"].split(" — ")[0] in str(
-        caiu.value), caiu.value
 
 
 def test_o_teclado_recusado_diz_o_estado_que_o_daemon_devolveu() -> None:

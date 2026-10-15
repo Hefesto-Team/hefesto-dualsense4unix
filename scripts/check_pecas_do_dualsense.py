@@ -55,6 +55,11 @@ with sync_playwright() as pw:
                 falhas.append(i)
             print(("  FALHA" if voltou else "  OK   ") + f" {i:22} sem linha e sem alvo (não é botão)")
             continue
+        if not pg.evaluate(f"() => !!document.querySelector('.item-{i}')"):
+            # SEM LINHA NA TELA (15/10/2026): o mapa configura os botões; os sensores, as luzes e
+            # o áudio moram nas abas Controles e Iluminação. A régua mede a AUSÊNCIA da linha.
+            print(f"  OK   {i:22} sem linha no mapa (mora em outra aba)")
+            continue
         pg.hover(f".item-{i}"); pg.wait_for_timeout(70)
         ida = pg.evaluate(f"""() => {{const e=document.querySelector('#mp-{i} {PINTAVEL}');
             const g=document.querySelector('.s-{i}');
@@ -103,6 +108,8 @@ with sync_playwright() as pw:
     somem = []
     for k in pg.evaluate("() => [...document.querySelectorAll('.sobre')]"
                          ".map(g=>[...g.classList].find(c=>c.startsWith('s-')).slice(2))"):
+        if not pg.evaluate(f"() => !!document.querySelector('.item-{k}')"):
+            continue  # sem linha no mapa: o glifo é de enfeite, e não há o que passar o ponteiro
         pg.hover(f".item-{k}"); pg.wait_for_timeout(80)
         v = pg.evaluate(f"""() => {{const g=document.querySelector('.s-{k}');
           const cores=[];

@@ -496,6 +496,20 @@ class ProfileMouseConfig(BaseModel):
     enabled: bool
     speed: int = Field(default=6, ge=1, le=12)
     scroll_speed: int = Field(default=1, ge=1, le=5)
+    # O perfil de point and click que a aba Navegação guarda: `molde:<chave>` ou `perfil:<nome>`.
+    point_and_click: str | None = None
+
+    @field_validator("point_and_click")
+    @classmethod
+    def _a_escolha_tem_a_forma_da_lista(cls, valor: str | None) -> str | None:
+        """A escolha é `molde:<chave>` ou `perfil:<nome>`: a forma da lista da tela."""
+        if valor is None:
+            return None
+        quem, _, resto = valor.partition(":")
+        if quem not in ("molde", "perfil") or not resto.strip():
+            raise ValueError(
+                f"point_and_click: {valor!r} não é `molde:<chave>` nem `perfil:<nome>`")
+        return valor
 
 
 class ProfileMicConfig(BaseModel):
@@ -1252,6 +1266,9 @@ class Profile(BaseModel):
     # teclado digita SÓ com um jogo aberto (o sinal do portão trocado). None = sem
     # opinião (o teclado digita fora do jogo, como sempre).
     teclado_so_no_jogo: bool | None = None
+    # «Sempre» da Função do teclado: com `teclado_emulado` ligado, o teclado digita fora do jogo E
+    # com um jogo aberto. None = sem opinião (vale o par de cima, como antes do «Sempre»).
+    teclado_sempre: bool | None = None
     # A chave «Também no jogo» da tabela de botões (aba Navegação): a tabela
     # inteira passa a agir JUNTO com o jogo, sem tirar o controle dele. None =
     # sem opinião (a tabela só age fora do jogo, como sempre).
@@ -2094,6 +2111,11 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
     "ProfileMouseConfig.scroll_speed": Nascimento(
         E_CONTRATO, "Ver `ProfileMouseConfig.speed`; faixa 1-5, mesmo piso."
     ),
+    "ProfileMouseConfig.point_and_click": Nascimento(
+        E_CONTRATO,
+        "Escolha dela na Navegação, e nada nasce nela: `None` é o molde Point and click. "
+        "Não liga nem desliga nada, só nomeia o perfil.",
+    ),
     "ProfileMicConfig.button_toggles_system": Nascimento(
         E_OBRIGATORIO, "Quem escreve a seção diz. O global nasce `True` no daemon."
     ),
@@ -2315,6 +2337,12 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         NASCE_NO_LEITOR,
         "`None` = o teclado digita fora do jogo, como sempre. «Só dentro do jogo» "
         "é escolha dela na Função do teclado, e nada nasce nele.",
+        dono="hefesto_dualsense4unix.daemon.subsystems.mouse:trocar_a_tabela_no_jogo",
+    ),
+    "Profile.teclado_sempre": Nascimento(
+        NASCE_NO_LEITOR,
+        "`None` = vale o par `teclado_emulado`/`teclado_so_no_jogo`, como antes do «Sempre». "
+        "«Sempre» é escolha dela na Função do teclado, e nada nasce nele.",
         dono="hefesto_dualsense4unix.daemon.subsystems.mouse:trocar_a_tabela_no_jogo",
     ),
     "Profile.tabela_no_jogo": Nascimento(

@@ -26,19 +26,17 @@ dela é DURABILIDADE — *"no dia seguinte e por diante"* —, não o gesto de s
 O QUE ESTES TESTES COBREM, cada um com a mordida escrita:
 
 1. as duas barras e a lista do teclado GRAVAM no disco, no clique, sem Salvar;
-2. o "Status do Modo" pede ao dono UMA vez e não escreve o perfil pela janela:
-   desde 29/09/2026 (O-MOUSE-SEGUE-A-NAVEGACAO-01) quem grava os DOIS lados
-   juntos é o daemon, e a prova do disco é a régua 8 de
-   `test_o_mouse_segue_a_navegacao.py`;
+2. (o «Status do Modo» saiu da tela no desenho do todo de 15/10/2026, e as réguas dele
+   saíram junto; a prova do disco do mouse segue na régua 8 de
+   `test_o_mouse_segue_a_navegacao.py`);
 3. o segundo disparo do mesmo arraste (`change` + `click`) não reescreve o
    arquivo — o guarda é a IGUALDADE, não um relógio;
 4. gravar NÃO reaplica o perfil: nenhum `profile.switch` sai destes gestos, e é
    o que impede um arraste de barra de desfazer o que o usuário mexeu em outra aba;
 5. sem perfil ativo o aparelho muda e o gesto DIZ que não guardou — pelo canal
    de aviso, nunca pela recusa: o mouse ficou mesmo mais rápido;
-6. a RESSALVA da D3 nasce só com mais de um controle ligado, e o desenho
-   publicado tem o endereço dela VAZIO;
-7. os quatro gestos estão em `hefesto_vivo.PERIGOSOS` — uma régua de clique não
+6. (a RESSALVA da D3 saiu com o desenho do todo: a tela não tem mais o «?» dos campos);
+7. os gestos que gravam estão em `hefesto_vivo.PERIGOSOS` — uma régua de clique não
    troca a velocidade do mouse do usuário para provar que sabe clicar.
 
 O LAR É DE MENTIRA. O `conftest` desvia `HOME` e os quatro `XDG_*`; estes testes
@@ -51,7 +49,6 @@ from __future__ import annotations
 
 import json
 import pathlib
-import re
 import sys
 
 import pytest
@@ -257,32 +254,6 @@ def test_so_dentro_do_jogo_grava_o_campo_e_manda_reaplicar(pac, a06):
     assert "profile.reaplicar" in volta.metodos
 
 
-def test_a_chave_tambem_no_jogo_grava_no_perfil_e_reaplica(pac, a06):
-    """O clique na chave inverte `tabela_no_jogo` no disco e manda o daemon reaplicar."""
-    from hefesto_dualsense4unix.profiles.loader import load_profile
-
-    _semear("regua")
-    ponte = PonteDeMentira()
-    a06.tabela_no_jogo(_ctx(pac), {}, ponte)
-    assert load_profile("regua").tabela_no_jogo is True
-    assert ponte.metodos == ["profile.reaplicar", "launch_env.refresh"]
-
-    a06.tabela_no_jogo(_ctx(pac), {}, PonteDeMentira())
-    assert load_profile("regua").tabela_no_jogo is False
-
-
-def test_a_chave_no_nativo_recusa_dizendo_e_nao_grava(pac, a06):
-    """No Nativo o tique congela: a chave fica apagada e o clique explica."""
-    from hefesto_dualsense4unix.profiles.loader import load_profile
-
-    _semear("regua")
-    ponte = PonteDeMentira()
-    with pytest.raises(RuntimeError, match=re.escape(a06.CHAVE_CINZA_NO_NATIVO)):
-        a06.tabela_no_jogo(_ctx(pac, native_mode=True), {}, ponte)
-    assert load_profile("regua").tabela_no_jogo is None
-    assert not ponte.chamadas
-
-
 def test_o_teclado_recusado_pelo_daemon_nao_grava(pac, a06):
     """Recusou lá, não guarda aqui: o disco não afirma o que não aconteceu."""
     _semear("regua", teclado=True)
@@ -315,75 +286,6 @@ class _DonoDoStatus(PonteDeMentira):
     def resultado(self, metodo: str, **params):
         self.chamadas.append((metodo, params))
         return self.corpo
-
-
-def test_o_interruptor_pede_ao_dono_uma_vez_e_nao_escreve_o_perfil(pac, a06):
-    """Uma chamada, `desktop.status.set`, e o disco intocado pela janela.
-
-    Quem grava `mouse.enabled` e `teclado_emulado` juntos é o daemon, depois do
-    aparelho (O-MOUSE-SEGUE-A-NAVEGACAO-01, 29/09/2026). O dublê da ponte não
-    escreve: se o disco mudar, foi a janela.
-
-    A MORDIDA: devolva ao gesto o `_guardar_no_perfil(ctx, teclado_emulado=novo)`
-    e esta linha reprova com o teclado gravado pela janela.
-    """
-    _zerar_a_memoria(a06)
-    _semear("regua", enabled=True, teclado=True)
-    ponte = _DonoDoStatus()
-    assert a06.modo(_ctx(pac), {}, ponte) is None
-    assert ponte.chamadas == [
-        ("desktop.status.set", {"enabled": False, "origin": "manual"})]
-    d = _disco()
-    assert (d["enabled"], d["teclado"]) == (True, True), (
-        "a janela voltou a escrever o liga/desliga no perfil")
-
-
-def test_o_interruptor_diz_quando_o_teclado_recusou(pac, a06):
-    """O mouse mudou e o teclado não: o gesto levanta dizendo, e o disco fica.
-
-    A MORDIDA: tire o `if … keyboard_emulation … failed` do gesto e ele volta
-    calado sobre um teclado que seguiu ligado.
-    """
-    _zerar_a_memoria(a06)
-    _semear("regua", enabled=True, teclado=True)
-    with pytest.raises(RuntimeError, match="o teclado não"):
-        a06.modo(_ctx(pac), {}, _DonoDoStatus(teclado="failed", gravado=False))
-    d = _disco()
-    assert (d["enabled"], d["teclado"]) == (True, True)
-
-
-def test_o_interruptor_recusado_no_mouse_larga_a_reserva(pac, a06):
-    """O mouse recusou: a frase é a do produto, e o próximo clique parte do tique.
-
-    A MORDIDA: tire o `_largar_a_reserva` do `except` e o segundo clique pede
-    o mesmo `enabled` que o daemon acabou de recusar, com o lado invertido.
-    """
-    _zerar_a_memoria(a06)
-    ponte = _DonoDoStatus(mouse="failed", gravado=False)
-    with pytest.raises(RuntimeError):
-        a06.modo(_ctx(pac), {}, ponte)
-    with pytest.raises(RuntimeError):
-        a06.modo(_ctx(pac), {}, ponte)
-    assert [c[1]["enabled"] for c in ponte.chamadas] == [False, False]
-
-
-def test_o_interruptor_sem_perfil_avisa_em_vez_de_recusar(pac, a06):
-    """O daemon mudou o aparelho e não achou perfil: o recado é o de sempre."""
-    _zerar_a_memoria(a06)
-    volta = a06.modo(_ctx(pac), {}, _DonoDoStatus(perfil="", gravado=False))
-    assert isinstance(volta, dict) and "perfil ativo" in volta.get("recado", "")
-
-
-def test_o_portao_de_modo_recusa_antes_de_qualquer_escrita(pac, a06):
-    """Jogando, o interruptor recusa — e o disco não é tocado."""
-    _zerar_a_memoria(a06)
-    _semear("regua", enabled=True, teclado=True)
-    ponte = PonteDeMentira()
-    jogando = _ctx(pac, gamepad_emulation={"enabled": True})
-    with pytest.raises(RuntimeError):
-        a06.modo(jogando, {}, ponte)
-    assert ponte.chamadas == []
-    assert _disco()["teclado"] is True
 
 
 def _quantos_backups(nome: str = "regua") -> int:
@@ -496,62 +398,9 @@ def test_com_perfil_ativo_o_gesto_nao_tem_nada_a_dizer(pac, a06):
     assert a06.vel_cursor(_ctx(pac), {"valor": "11"}, PonteDeMentira()) is None
 
 
-def test_a_ressalva_nasce_com_dois_controles_e_cala_com_um(pac, a06):
-    """*"Linha fixa só quando HÁ ressalva."* (D-02)"""
-    assert a06._a_ressalva_dos_globais(_ctx(pac, conectados=1)) == a06.NADA_A_DIZER
-    com_dois = a06._a_ressalva_dos_globais(_ctx(pac, conectados=2))
-    assert "todos os controles ligados" in com_dois
-
-
-def test_a_ressalva_sai_no_pacote_em_todo_tique(pac, a06):
-    """A chave é emitida sempre, cheia ou vazia."""
-    for quantos in (1, 2):
-        mesa = a06.pacote(_ctx(pac, conectados=quantos))["mesa"]
-        assert a06.ENDERECO_DA_RESSALVA in mesa
-
-
-def test_a_ressalva_nao_usa_a_palavra_que_ela_baniu(a06):
-    """*"não é pra ter mesa em nada da interface"* — ordem, 05/09/2026."""
-    assert "mesa" not in a06.RESSALVA_DOS_GLOBAIS.lower()
-
-
-def test_a_pagina_publicada_tem_o_endereco_da_ressalva_e_ele_nasce_vazio(a06):
-    """O desenho dá o LUGAR; quem escreve a frase é o pacote, ao vivo."""
-    import onde
-
-    doc = onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
-    alvo = (f'<span class="viva" data-campo="{a06.ENDERECO_DA_RESSALVA}"'
-            f' data-hef-alvo="html"><i class="nada"></i></span>')
-    assert alvo in doc, (
-        "a página publicada não tem o lugar da ressalva da D3 vazio — sem ele a "
-        "aba promete por-controle e entrega global")
-
-
-def test_a_ressalva_esta_no_ponto_de_interrogacao_dos_tres_campos(a06):
-    """Nos `?` dos três campos que ela NOMEIA, e em nenhum outro lugar."""
-    import onde
-
-    doc = onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
-    alvo = (f'<span class="viva" data-campo="{a06.ENDERECO_DA_RESSALVA}"'
-            f' data-hef-alvo="html">')
-    assert doc.count(alvo) == 3, (
-        f"a ressalva da D3 aparece em {doc.count(alvo)} dicas e devia aparecer "
-        "em 3 — as de 'Velocidade de cursor', 'Velocidade da rolagem' e "
-        "'Função do teclado'")
-
-
-def test_a_ressalva_nao_ocupa_mais_linha_no_pe_do_painel(a06):
-    """Ela saiu do pé — e nenhuma `.ressalva` solta voltou para lá."""
-    import onde
-
-    doc = onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
-    painel = doc.split("As opções de ativação", 1)[-1].split('class="tela-nova"', 1)[0]
-    assert 'class="ressalva"' not in painel, (
-        "voltou uma linha de ressalva solta ao pé do painel das opções de "
-        "ativação — é uma das três frases que ela mandou tirar em 07/09")
-
-
-@pytest.mark.parametrize("nome", ["vel-cursor", "vel-rolagem", "teclado", "modo"])
+@pytest.mark.parametrize("nome", [
+    "vel-cursor", "vel-rolagem", "teclado", "linha-de-botao", "quem-navega",
+    "point-and-click-perfil"])
 def test_o_gesto_que_grava_esta_em_perigosos(nome):
     """A régua de clique não troca a velocidade do mouse do usuário para se provar."""
     from hefesto_dualsense4unix.interface.hefesto_vivo import PERIGOSOS

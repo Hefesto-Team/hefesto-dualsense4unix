@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""A RÉGUA DA DECISÃO 5: as três palavras da "Função do teclado"."""
+"""A RÉGUA DA DECISÃO 5: as palavras da "Função do teclado" (as três de sempre e o «Sempre»)."""
 from __future__ import annotations
 
 import pathlib
@@ -80,7 +80,7 @@ def test_as_tres_palavras_dela_estao_no_desenho():
     from pacotes import a06_navegacao as mod
 
     assert aba06.OPCOES_TECLADO == [mod.TECLADO_SO_DENTRO, mod.TECLADO_SO_FORA,
-                                    mod.TECLADO_DESATIVADO], (
+                                    mod.TECLADO_SEMPRE, mod.TECLADO_DESATIVADO], (
         f"o desenho oferece {aba06.OPCOES_TECLADO} e o pacote fala outra "
         "língua — a lista pararia de ser pintada sem uma linha de erro.")
     assert aba06.TECLADO_PADRAO == mod.TECLADO_SO_FORA, (
@@ -94,7 +94,7 @@ def test_o_desenho_nasce_no_padrao_dela():
 
     doc = onde.pagina(PAGINA).read_text(encoding="utf-8")
     assert f"<option selected>{mod.TECLADO_SO_FORA}</option>" in doc
-    for opcao in (mod.TECLADO_SO_DENTRO, mod.TECLADO_DESATIVADO):
+    for opcao in (mod.TECLADO_SO_DENTRO, mod.TECLADO_SEMPRE, mod.TECLADO_DESATIVADO):
         assert f"<option>{opcao}</option>" in doc, f"{opcao!r} sumiu do desenho"
 
 

@@ -278,6 +278,17 @@ _PERNAS: dict[str, dict[str, Resposta]] = {
             "travado por `apply_profile_suppression`; nenhum lançador no caminho",
         ),
     },
+    "teclado_sempre": {
+        VOLTA: NaoSeAplica(
+            "idem `teclado_so_no_jogo`: estado do daemon, travado a cada ativação; "
+            "nada vai ao controle."
+        ),
+        RESISTE: NaoSeAplica("não é byte do aparelho."),
+        INDEPENDE: Cumprida(
+            "daemon/subsystems/mouse.py::despachar_no_jogo",
+            "lido do perfil na ativação; nenhum lançador no caminho",
+        ),
+    },
     "tabela_no_jogo": {
         VOLTA: NaoSeAplica(
             "idem `teclado_so_no_jogo`: a tabela vive nos devices virtuais "

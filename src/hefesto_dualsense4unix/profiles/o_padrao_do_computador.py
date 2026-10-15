@@ -31,6 +31,8 @@ class Secao(NamedTuple):
     por_controle: tuple[str, ...]
 
 
+_CAMPOS_DO_TECLADO = ("teclado_emulado", "teclado_so_no_jogo", "teclado_sempre", "key_bindings")
+
 SECOES: dict[str, Secao] = {
     "som": Secao("som", "02-controles.html", "Som",
                  ("speaker", "mic"), ("speaker",), ("speaker", "mic")),
@@ -44,8 +46,7 @@ SECOES: dict[str, Secao] = {
                    ("mouse", "button_actions", "tabela_no_jogo"),
                    ("mouse", "button_actions", "tabela_no_jogo"), ()),
     "teclado": Secao("teclado", "06-navegacao.html", "Teclado",
-                     ("teclado_emulado", "teclado_so_no_jogo", "key_bindings"),
-                     ("teclado_emulado", "teclado_so_no_jogo", "key_bindings"), ()),
+                     _CAMPOS_DO_TECLADO, _CAMPOS_DO_TECLADO, ()),
 }
 
 DO_JOGO: dict[str, str] = {
@@ -72,7 +73,7 @@ _DENSAS: dict[str, dict[str, Any]] = {
     "rumble": RumbleConfig().model_dump(mode="json"),
     "mouse": {
         campo: ProfileMouseConfig.model_fields[campo].default
-        for campo in ("speed", "scroll_speed")
+        for campo in ("speed", "scroll_speed", "point_and_click")
     },
 }
 
@@ -154,7 +155,7 @@ def escolhas_globais_do_jogo(perfil: Profile, secao: str) -> dict[str, Any]:
         and (fabrica is None or campo not in fabrica or dados[campo] != fabrica[campo])
     }
     if secao == "mouse":
-        escolhidos &= {"speed", "scroll_speed"}
+        escolhidos &= {"speed", "scroll_speed", "point_and_click"}
     if secao == "mic":
         escolhidos -= {"button_toggles_system"}
     return {campo: dados.get(campo) for campo in _expandir_pares(secao, escolhidos)}
@@ -235,7 +236,7 @@ def perfil_que_vale(perfil: Profile, computador: Any) -> Profile:
             else {**do_global.key_bindings, **teclas_do_jogo})
     if do_global.teclado_emulado is not None and (freestyle or perfil.teclado_emulado is None):
         cru["teclado_emulado"] = do_global.teclado_emulado
-    for escalar in ("teclado_so_no_jogo", "tabela_no_jogo"):
+    for escalar in ("teclado_so_no_jogo", "teclado_sempre", "tabela_no_jogo"):
         valor = getattr(do_global, escalar)
         if valor is not None and (freestyle or getattr(perfil, escalar) is None):
             cru[escalar] = valor
@@ -390,7 +391,8 @@ def _no_computador(campos: Mapping[str, Any], uniq: object) -> dict[str, Any]:
     return documento
 
 
-_CAMPOS_DO_GLOBAL: dict[str, tuple[str, ...]] = {"mouse": ("speed", "scroll_speed")}
+_CAMPOS_DO_GLOBAL: dict[str, tuple[str, ...]] = {
+    "mouse": ("speed", "scroll_speed", "point_and_click")}
 
 
 def _so_os_campos_do_computador(secao: str, valor: Mapping[str, Any]) -> dict[str, Any]:
@@ -640,7 +642,7 @@ SUFIXO_DA_COPIA = ".antes-do-computador"
 #: tem opinião nelas ou não tem.
 _ESCALARES_DO_COMPUTADOR: tuple[str, ...] = (
     "button_actions", "key_bindings", "teclado_emulado",
-    "teclado_so_no_jogo", "tabela_no_jogo",
+    "teclado_so_no_jogo", "teclado_sempre", "tabela_no_jogo",
 )
 
 _PS_QUE_E_DA_TABELA: frozenset[str] = frozenset({"__NADA__", "__STEAM__"})
@@ -768,13 +770,13 @@ def ceder_ao_computador(perfil: Profile, computador: Any) -> tuple[Profile, int]
         cru = perfil.model_dump(mode="json", exclude_unset=True)
         saiu = 0
         for secao in ("leds", "rumble", "speaker", "button_actions", "key_bindings",
-                      "teclado_emulado", "teclado_so_no_jogo", "tabela_no_jogo"):
+                      "teclado_emulado", "teclado_so_no_jogo", "teclado_sempre", "tabela_no_jogo"):
             saiu += secao in cru
             cru.pop(secao, None)
         if isinstance(cru.get("mouse"), dict):
-            saiu += sum(c in cru["mouse"] for c in ("speed", "scroll_speed"))
-            cru["mouse"] = {k: v for k, v in cru["mouse"].items()
-                            if k not in ("speed", "scroll_speed")}
+            do_mouse = ("speed", "scroll_speed", "point_and_click")
+            saiu += sum(c in cru["mouse"] for c in do_mouse)
+            cru["mouse"] = {k: v for k, v in cru["mouse"].items() if k not in do_mouse}
         controles = {}
         for original, entrada in dict(cru.get("controllers") or {}).items():
             resto = {s: v for s, v in dict(entrada).items() if s not in _CAMPOS_DO_CONTROLE}
@@ -813,6 +815,8 @@ def semente_do_freestyle(freestyle: Profile | None) -> dict[str, Any]:
         mouse = freestyle.mouse
         if mouse is not None:
             do_global["mouse"] = {"speed": mouse.speed, "scroll_speed": mouse.scroll_speed}
+            if mouse.point_and_click:
+                do_global["mouse"]["point_and_click"] = mouse.point_and_click
         acoes = _sem_o_ps_da_tabela(freestyle.button_actions)
         if acoes:
             do_global["button_actions"] = acoes
@@ -820,7 +824,7 @@ def semente_do_freestyle(freestyle: Profile | None) -> dict[str, Any]:
             do_global["key_bindings"] = freestyle.key_bindings
         if freestyle.teclado_emulado is not None:
             do_global["teclado_emulado"] = freestyle.teclado_emulado
-        for escalar in ("teclado_so_no_jogo", "tabela_no_jogo"):
+        for escalar in ("teclado_so_no_jogo", "teclado_sempre", "tabela_no_jogo"):
             if getattr(freestyle, escalar) is not None:
                 do_global[escalar] = getattr(freestyle, escalar)
         for original, entrada in (freestyle.controllers or {}).items():

@@ -1,4 +1,4 @@
-"""A-NAVEGACAO-INTERNA-E-UM-MODO-QUE-SE-LIGA-EM-QUALQUER-ABA-01 — as treze réguas.
+"""A-NAVEGACAO-INTERNA-E-UM-MODO-QUE-SE-LIGA-EM-QUALQUER-ABA-01 — as réguas.
 
 Com o desenho dela de 03/10/2026: a Interna liga em qualquer Modo, R1 e L1 de
 qualquer controle dão a volta entre as abas 01 a 05, cada controle anda a SUA
@@ -61,27 +61,6 @@ class _PonteQueAnota:
     def resultado(self, metodo: str, **kw: Any) -> dict[str, Any]:
         self.chamadas.append((metodo, kw))
         return {"status": "ok"}
-
-
-def test_1_o_interruptor_liga_a_interna_no_modo_sony(monkeypatch: pytest.MonkeyPatch) -> None:
-    from hefesto_dualsense4unix.interface import pacotes
-    from hefesto_dualsense4unix.interface.pacotes import a06_navegacao as a06
-
-    monkeypatch.setattr(a06, "_PEDIDO", {})
-    estado = {
-        "gamepad_emulation": {"enabled": True, "flavor": "dualsense"},
-        "mouse_emulation": {"enabled": False},
-        "navegacao": {"interna_ligada": False, "tipo": "interna", "foco": False},
-        "controllers": [],
-    }
-    ctx = pacotes.Contexto(state=estado, mesa=[], conectados=[], estados={})
-    ponte = _PonteQueAnota()
-    try:
-        a06.modo(ctx, {}, ponte)
-    except RuntimeError as erro:
-        pytest.fail(f"o interruptor no tipo Interna recusou no Modo Sony: {erro}")
-    assert ponte.chamadas == [("navegacao.interna.set", {"ligada": True, "origin": "manual"})], (
-        f"o interruptor mandou {ponte.chamadas} — a Interna não chegou ao daemon")
 
 
 # 2 ─ O foco decide o R1 (D-20) ─────────────────────────────────────────────
@@ -254,22 +233,6 @@ def test_7_a_janela_inativa_nao_anda() -> None:
 
 
 # 8 e 9 ─ O cartão não mente, e nenhuma opção sem dono ──────────────────────
-
-
-def test_8_o_cartao_nao_mente() -> None:
-    from hefesto_dualsense4unix.interface.pacotes import a06_navegacao as a06
-
-    desligada = {"mouse_emulation": {"enabled": True},
-                 "navegacao": {"interna_ligada": False, "tipo": "interna"}}
-    assert a06.PAPEL_SO_A_JANELA not in a06.linha_do_cartao("BT", False, estado=desligada)
-    sem_mouse = {"mouse_emulation": {"enabled": False},
-                 "navegacao": {"interna_ligada": False, "tipo": "interna"}}
-    linha = a06.linha_do_cartao("USB", True, estado=sem_mouse)
-    assert a06.BOLINHA not in linha and a06.PAPEL_QUE_NAVEGA not in linha, linha
-    ligada = {"mouse_emulation": {"enabled": True},
-              "navegacao": {"interna_ligada": True, "tipo": "interna"}}
-    assert a06.PAPEL_SO_A_JANELA in a06.linha_do_cartao("BT", False, estado=ligada)
-    assert a06.PAPEL_QUE_NAVEGA in a06.linha_do_cartao("USB", True, estado=ligada)
 
 
 def test_9_nenhuma_opcao_sem_dono() -> None:

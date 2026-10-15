@@ -392,6 +392,7 @@ class DraftConfig(BaseModel):
     source_button_actions: Any | None = None
     source_teclado_emulado: bool | None = None
     source_teclado_so_no_jogo: bool | None = None
+    source_teclado_sempre: bool | None = None
     source_tabela_no_jogo: bool | None = None
     source_remapeamento: dict[str, str] | None = None
     source_movimento: Any | None = None
@@ -473,6 +474,7 @@ class DraftConfig(BaseModel):
             source_button_actions=profile.button_actions,
             source_teclado_emulado=profile.teclado_emulado,
             source_teclado_so_no_jogo=profile.teclado_so_no_jogo,
+            source_teclado_sempre=profile.teclado_sempre,
             source_tabela_no_jogo=profile.tabela_no_jogo,
             source_remapeamento=profile.remapeamento,
             source_movimento=profile.movimento,
@@ -607,6 +609,7 @@ class DraftConfig(BaseModel):
             button_actions=self.source_button_actions,
             teclado_emulado=self.source_teclado_emulado,
             teclado_so_no_jogo=self.source_teclado_so_no_jogo,
+            teclado_sempre=self.source_teclado_sempre,
             tabela_no_jogo=self.source_tabela_no_jogo,
             remapeamento=self.source_remapeamento,
             movimento=self.source_movimento,

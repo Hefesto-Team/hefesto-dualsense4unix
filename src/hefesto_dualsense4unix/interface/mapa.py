@@ -428,6 +428,12 @@ def css_das_pecas(pecas):
         regras.append(f'.mc .mapa:has(.item-{i}[data-estado~="muda"]) {alvo}')
         for gatilho in ('[data-estado~="on"]', '[data-estado~="pisca"]', ":hover"):
             regras.append(f".mc .mapa:has(.item-{i}{gatilho}) {rosa}")
+        # o ponteiro na peça acende a linha dela, e o glifo fica claro nos dois sentidos
+        regras.append(f".mc .mapa:has(.a-{i}:hover) {rosa}")
+        regras.append(f".mc .mapa:has(.a-{i}:hover) .item-{i}"
+                      "{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}")
+        regras.append(f".mc .mapa:has(.item-{i}:hover) .s-{i}, .mc .mapa:has(.a-{i}:hover) .s-{i}"
+                      "{color:var(--fg) !important;opacity:1}")
     return "\n".join("  " + r for r in regras)
 
 
@@ -653,7 +659,7 @@ def main():
 <div class="cx mc" role="dialog" aria-modal="true" aria-label="Mapa do controle" data-tipo="nav"
      data-campo="mc-tipo" data-hef-alvo="atributo" data-hef-atributo="data-tipo">
   <div class="mc-topo">
-    <a class="voltar2 voltar" href="06-navegacao.html" onclick="if (history.length > 1) {{ history.back(); return false }}" data-dica="Volta para a Navegação">← Voltar</a>
+    <a class="voltar2 voltar" href="06-navegacao.html" onclick="if (history.length > 1) {{ history.back(); return false }}" title="Volta para a Navegação">← Voltar</a>
     <h1>Mapa do controle</h1>
     <span class="mc-rot" data-dica="O mapa vale só para o controle escolhido; cada controle guarda o seu">Vale para</span><div class="mc-chips" data-bloco="controles-do-mapa">{_chips_de_exemplo()}</div>
   </div>

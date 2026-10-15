@@ -521,18 +521,6 @@ def test_a_escolha_sobrevive_a_reabrir_a_aba(atendentes: dict[str, list[Any]]) -
     assert _pintar()["faz-ps"] == "— Nada —"
 
 
-def test_a_dica_diz_a_saida_que_ficou_sem_gesto() -> None:
-    assert mq.gravar_maquina({"gestos": {"ps_r3": {"faz": "nada"},
-                                         "ps_l3": {"faz": "parar_o_servico"}}})
-    dica = _pintar()["gestos-dica"]
-    assert "Próximo modo" in dica and "Suspender" not in dica
-    assert "Parar o serviço" in dica and "bandeja" in dica
-    assert mq.gravar_maquina({"gestos": {"ps_r3": None, "ps_l3": None}})
-    from pacotes.a06_navegacao import NADA_A_DIZER
-
-    assert _pintar()["gestos-dica"] == NADA_A_DIZER
-
-
 def test_a_bancada_tem_os_enderecos_da_pintura() -> None:
     """Cada lista tem `data-campo` de valor, e a opção do script tem o seu."""
     import onde
@@ -541,7 +529,6 @@ def test_a_bancada_tem_os_enderecos_da_pintura() -> None:
     for g in ag.GESTOS:
         assert f'data-campo="faz-{g}" data-hef-alvo="valor"' in doc, g
         assert f'<option data-campo="script-{g}">' in doc, g
-    assert 'data-campo="gestos-dica"' in doc
 
 
 MODOS = {

@@ -296,18 +296,26 @@ def test_a_03_diz_o_gatilho_que_o_daemon_manda(pasta: pathlib.Path, forma: str) 
 @pytest.mark.parametrize("forma", list(FORMAS))
 def test_a_04_e_a_06_dizem_o_brilho_e_os_atalhos_do_perfil_que_o_daemon_le(
         pasta: pathlib.Path, forma: str) -> None:
-    """O brilho da 04 e os atalhos da 06 são os do `Profile` do `load_profile`."""
+    """O brilho da 04 e as linhas da 06 são os do `Profile` do `load_profile`."""
     _nome, prof, _gemeo, agora = _medir(pasta, forma)
     brilho = round(float(prof.leds.lightbar_brightness) * 100)
     for uniq, col in agora["04-iluminacao.html"]["colunas"].items():
         assert col.get("brilho-pct") == brilho, (
             f"[{forma}] a 04 diz brilho {col.get('brilho-pct')!r} no {uniq} e o "
             f"perfil que o daemon lê tem {brilho}")
-    atalhos = {k: list(v) for k, v in (prof.key_bindings or {}).items()}
-    na_tela = agora["06-navegacao.html"]["mesa"].get("gestos-lista")
-    assert na_tela == atalhos, (
-        f"[{forma}] a 06 diz os atalhos {na_tela!r} e o perfil que o daemon lê "
-        f"tem {atalhos!r}")
+    from pacotes import a06_navegacao
+
+    from hefesto_dualsense4unix.core import acoes_de_botao as acoes
+
+    tabela = acoes.tabela_efetiva(prof.button_actions or None, prof.key_bindings or None)
+    mesa = agora["06-navegacao.html"]["mesa"]
+    assert prof.key_bindings, "a régua perdeu o atalho do perfil: nada a medir"
+    for botao in prof.key_bindings:
+        esperado = acoes.rotulo(str(tabela.get(botao) or ""))
+        na_tela = mesa.get(f"{a06_navegacao.PREFIXO_DA_ACAO}{botao}")
+        assert na_tela == esperado, (
+            f"[{forma}] a 06 diz {na_tela!r} no {botao} e o perfil que o daemon lê "
+            f"tem {esperado!r}")
 
 
 def test_sem_lembranca_a_tela_nao_inventa_perfil(pasta: pathlib.Path) -> None:

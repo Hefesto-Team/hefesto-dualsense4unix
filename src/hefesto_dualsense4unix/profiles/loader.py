@@ -1835,6 +1835,7 @@ _SECOES_OPCIONAIS_OMITIDAS_QUANDO_NONE: tuple[str, ...] = (
     "key_bindings",
     "teclado_emulado",
     "teclado_so_no_jogo",
+    "teclado_sempre",
     "tabela_no_jogo",
     # gravar `"button_actions": null` e um binário anterior a esta feature
     "button_actions",
@@ -2065,6 +2066,9 @@ def _payload_do_perfil(profile: Profile) -> dict[str, object]:
     payload: dict[str, object] = profile.model_dump(mode="json")
     for secao in _secoes_de_topo_omitidas_quando_none(payload):
         payload.pop(secao, None)
+    mouse = payload.get("mouse")
+    if isinstance(mouse, dict) and mouse.get("point_and_click") is None:
+        mouse.pop("point_and_click", None)  # campo aditivo: sem escolha, o arquivo não o diz
     if not payload.get("controllers"):
         payload.pop("controllers", None)
     else:

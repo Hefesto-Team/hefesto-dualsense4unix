@@ -43,6 +43,12 @@ mensagem da régua manda conferir** — que o dublê discorda de TODOS, um a um:
 saída campo a campo está no dump que gerou esta correção, e os dois casos que
 NÃO discordavam viraram o quarto controle e as quatro cores lidas.
 
+NO DESENHO DO TODO (15/10/2026) os cartões por controle, a troca, as teclas e as definições
+saíram da página: o dublê continua discordando em tudo o que a tela ainda pinta (as 22 linhas
+de botão, a Função do teclado, as duas barras, o tipo de navegação, quem navega, o perfil de
+point and click e os gestos do PS). O «Na Steam» só tem uma escolha com dono (o Big Picture),
+e por isso é o único endereço que nenhum dublê consegue mover (`SEM_VARIACAO`).
+
 A MORDIDA: faça o dublê concordar com o desenho em qualquer campo — troque
 `speed` para 6, tire o `button_actions`, ou esvazie `CORES_LIDAS` — e a régua
 nomeia o endereço que voltou a ser indecidível.
@@ -52,6 +58,7 @@ from __future__ import annotations
 import pathlib
 import re
 import sys
+from types import SimpleNamespace
 
 import pytest
 
@@ -143,19 +150,10 @@ def _button_actions() -> dict[str, str]:
     return fora
 
 
-def _remapeamento() -> dict[str, str]:
-    """Uma troca para CADA linha que a troca alcança — F1-REMAPEAR, 13/09/2026."""
-    from hefesto_dualsense4unix.core.remapeamento_de_botao import REMAPEAVEIS
+PERFIL = {"name": "Dublê da Navegação", "button_actions": _button_actions()}
 
-    return {b: REMAPEAVEIS[(i + 1) % len(REMAPEAVEIS)]
-            for i, b in enumerate(REMAPEAVEIS)}
-
-
-#: A chave «Também no jogo» LIGADA: o desenho crava «Não», e sem ela ligada o
-#: endereço `tabela-no-jogo` concordaria com o desenho sob o dublê.
-PERFIL = {"name": "Dublê da Navegação", "button_actions": _button_actions(),
-          "key_bindings": {"l1": ["KEY_F11"]}, "remapeamento": _remapeamento(),
-          "tabela_no_jogo": True}
+#: o que nenhum dublê move: a Steam só tem UMA escolha com dono (o Big Picture)
+SEM_VARIACAO = {"na-steam"}
 
 
 def _gestos_da_maquina() -> dict[str, dict[str, str]]:
@@ -166,6 +164,17 @@ def _gestos_da_maquina() -> dict[str, dict[str, str]]:
             for n, g in enumerate(GESTOS, 1)}
 
 
+class _Maquina(dict):
+    """O `maquina.json` do dublê: os gestos como dicionário e o computador como atributo."""
+
+    computador = SimpleNamespace(global_=SimpleNamespace(
+        mouse=SimpleNamespace(point_and_click="molde:visual_novel")))
+
+
+def _a_maquina_do_duble() -> _Maquina:
+    return _Maquina(gestos=_gestos_da_maquina())
+
+
 def _no_mundo_de(monkeypatch, publicado: bool):
     """`(cravados, declarados)` NA PÁGINA QUE ESTIVER CARREGADA."""
     import pacotes
@@ -174,8 +183,7 @@ def _no_mundo_de(monkeypatch, publicado: bool):
     from hefesto_dualsense4unix.interface import mesa_viva, onde, regua_do_mockup
 
     monkeypatch.setattr(perfil, "ativo", lambda nome: dict(PERFIL) if nome else {})
-    monkeypatch.setattr(a06_navegacao, "_a_maquina",
-                        lambda: {"gestos": _gestos_da_maquina()})
+    monkeypatch.setattr(a06_navegacao, "_a_maquina", _a_maquina_do_duble)
     monkeypatch.setattr(
         a06_navegacao, "_o_que_a_pagina_oferece",
         lambda: frozenset(_opcoes_da_pagina(publicado, "teclado-estado") or ()))
@@ -211,7 +219,8 @@ def test_o_duble_nao_deixa_um_campo_indecidivel(sob_o_duble):
     cravados, declarados = sob_o_duble
     vereditos = r._classificar(cravados, [c.valor for c in cravados], declarados)
     parados = [f"{v.campo.endereco} = {v.campo.valor!r}"
-               for v in vereditos if v.classe == r.INDECIDIVEL]
+               for v in vereditos
+               if v.classe == r.INDECIDIVEL and v.campo.chave not in SEM_VARIACAO]
     assert not parados, (
         "estes endereços da 06 concordam com o desenho ATÉ SOB O DUBLÊ, logo "
         "continuam indecidíveis na régua viva:\n  " + "\n  ".join(parados)
@@ -236,7 +245,8 @@ def _opcoes_da_pagina(publicado: bool, chave: str) -> set[str] | None:
     bloco = re.search(_SELECT.format(re.escape(chave)), doc, re.S)
     if not bloco:
         return None
-    return set(re.findall(r"<option[^>]*>(.*?)</option>", bloco.group(1)))
+    textos = set(re.findall(r"<option[^>]*>(.*?)</option>", bloco.group(1)))
+    return textos | set(re.findall(r'<option[^>]*\svalue="([^"]*)"', bloco.group(1)))
 
 
 _TRILHO = r'<input[^>]*type="range"[^>]*data-campo="{}"[^>]*>'
@@ -306,44 +316,20 @@ def test_todo_valor_do_duble_existe_como_opcao(monkeypatch, publicado):
             "em silêncio, e o que ficaria na tela é a `<option selected>` que o "
             "desenho crava. O campo não para: ele passa a AFIRMAR o contrário.")
         conferidos.add(campo.endereco)
-    from hefesto_dualsense4unix.core.acoes_de_botao import BOTOES, DOMINIO_DO_TECLADO
+    import onde
 
-    com_tecla = sum(1 for b in sorted(DOMINIO_DO_TECLADO)
-                    if _e_campo_de_texto(publicado, f"tecla-{b}"))
-    assert com_tecla in (0, len(DOMINIO_DO_TECLADO)), (
-        f"a página {onde_estou} tem {com_tecla} dos {len(DOMINIO_DO_TECLADO)} "
-        "campos de tecla — meia tela é pior que nenhuma: o Guardar dela grava "
-        "só o que achou e cala sobre o resto.")
-    from hefesto_dualsense4unix.core.remapeamento_de_botao import REMAPEAVEIS
+    doc = onde.pagina(PAGINA, publicado=publicado).read_text(encoding="utf-8")
+    da_pagina = (set(re.findall(r'<select[^>]*data-campo="([^"]+)"', doc))
+                 | set(re.findall(r'<input[^>]*type="range"[^>]*data-campo="([^"]+)"', doc)))
+    conferidos_chaves = {e.split("·")[-1] for e in conferidos}
+    assert da_pagina and da_pagina <= conferidos_chaves, (
+        f"a página {onde_estou} tem seletores e barras que a conferência não viu: "
+        f"{sorted(da_pagina - conferidos_chaves)} — um endereço perdeu a guarda contra lixo.")
+    from hefesto_dualsense4unix.core.acoes_de_botao import BOTOES
 
-    com_troca = sum(1 for b in REMAPEAVEIS
-                    if _opcoes_da_pagina(publicado, f"troca-{b}") is not None)
-    assert com_troca in (0, len(REMAPEAVEIS)), (
-        f"a página {onde_estou} pinta {com_troca} das {len(REMAPEAVEIS)} linhas "
-        "da troca de botões — o Guardar dela gravaria só o que achou.")
-    # (`acoes_do_gesto.GESTOS`), com a mesma trava de meia tela.
-    from hefesto_dualsense4unix.core.acoes_do_gesto import GESTOS
-
-    com_gesto = sum(1 for g in GESTOS
-                    if _opcoes_da_pagina(publicado, f"faz-{g}") is not None)
-    assert com_gesto in (0, len(GESTOS)), (
-        f"a página {onde_estou} pinta {com_gesto} das {len(GESTOS)} listas dos "
-        "gestos — meia tabela mentiria sobre a outra metade.")
-    # O «Tipo de navegação» (A-NAVEGACAO-INTERNA-…-01): uma lista, que a página
-    # publicada só ganha no `--publicar 06` desta sprint.
-    com_tipo = int(_opcoes_da_pagina(publicado, "navegacao-tipo") is not None)
-    # O «Modo Big Picture na Steam»: outra lista, publicada no `--publicar 06` da costura.
-    com_big_picture = int(_opcoes_da_pagina(publicado, "modo-big-picture") is not None)
-    esperados = (len(BOTOES) + 3 + com_tecla + com_troca + com_gesto + com_tipo
-                 + com_big_picture)
-    assert len(conferidos) == esperados, (
-        f"conferi {len(conferidos)} endereço(s) na página {onde_estou} e a aba tem "
-        f"{esperados} (as {len(BOTOES)} linhas de botão, a 'Função do teclado', "
-        f"as DUAS barras de velocidade, {com_tecla} campo(s) de tecla, "
-        f"{com_troca} linha(s) da troca de botões, {com_gesto} lista(s) dos "
-        f"gestos, {com_tipo} do tipo de navegação e {com_big_picture} do Modo "
-        "Big Picture) — se o número caiu, uma "
-        "linha perdeu o endereço e saiu da conferência sem reprovar nada.")
+    assert sum(1 for c in conferidos_chaves if c.startswith("acao-")) == len(BOTOES), (
+        f"a página {onde_estou} perdeu uma das {len(BOTOES)} linhas de botão: um seletor sem "
+        "endereço sai da conferência sem reprovar nada.")
 
 
 def test_os_sete_campos_de_texto_dizem_o_que_o_duble_diz(sob_o_duble):
@@ -373,9 +359,8 @@ def test_os_sete_campos_de_texto_dizem_o_que_o_duble_diz(sob_o_duble):
     Uma régua que perguntasse ao pacote o que esperar do pacote é a forma de
     instrumento falso que esta casa mais achou.
 
-    A MORDIDA: troque `speed` do dublê para 6, faça o pacote emitir qualquer
-    outra coisa em `vel-cursor`, ou devolva a cor do mockup ao `plastico` — esta
-    linha reprova nomeando o endereço.
+    A MORDIDA: troque `speed` do dublê para 6, ou faça o pacote emitir qualquer outra coisa em
+    `vel-cursor` — esta linha reprova nomeando o endereço.
     """
     import monta
 
@@ -411,82 +396,14 @@ def test_os_sete_campos_de_texto_dizem_o_que_o_duble_diz(sob_o_duble):
         f"o dublê manda `scroll_speed={rato['scroll_speed']}` e o campo diz "
         f"{valor['vel-rolagem']!r}")
 
-    por_uniq = {str(c["uniq"]): c for c in CONTROLES}
-    from hefesto_dualsense4unix.app.actions import home_actions
-
-    mesa = mesa_viva.mesa_do_estado(ESTADO, CORES_LIDAS)
-    conferidos = 0
-    for lugar in mesa:
-        endereco = f"{lugar['pref']}·navega"
-        if endereco not in valor:
-            continue
-        c = por_uniq[str(lugar["uniq"])]
-        via = home_actions.palavra_do_transporte(c.get("transport"))
-        papel = "Navega o PC" if c.get("is_primary") else "Só a janela"
-        linha = str(valor[endereco])
-        assert via in linha and papel in linha, (
-            f"{endereco}: o dublê pôs neste lugar um controle no {via} que "
-            f"{papel.lower()}, e a linha do cartão diz {linha!r}")
-        conferidos += 1
-
-    enderecados = sorted(e for e in valor if str(e).endswith("·navega"))
-    assert conferidos == len(enderecados), (
-        f"o desenho endereça {len(enderecados)} cartões ({enderecados}) e "
-        f"conferi {conferidos} — um lugar da mesa perdeu o endereço e saiu da "
-        "conferência sem reprovar nada.")
-    assert conferidos >= 2, (
-        f"conferi {conferidos} cartões: a varredura quebrou. O desenho teve "
-        "dois desde que nasceu e quatro desde a leva dos quatro na mesa; zero "
-        "ou um é a régua não achando endereço, não a tela encolhendo.")
-
-    modelo = {}
-    hexes = []
-    for lugar in mesa:
-        slug, nome = mesa_viva.CORES[CORES_LIDAS[str(lugar["uniq"])].codigo]
-        modelo[str(lugar["pref"])] = nome
-        hexes.append(monta.cor_da_zona(slug))
-
-    de_plastico = sorted(e for e in valor if e.endswith("plastico"))
-    assert len(de_plastico) >= 2, (
-        f"a página tem {len(de_plastico)} endereço(s) de `plastico` que o "
-        "desenho afirma, e a régua confere a cor de cada lugar por eles — se "
-        f"sumiram, a cor do aparelho deixou de ser conferida: {de_plastico}")
-    for endereco in de_plastico:
-        assert list(valor[endereco]) == hexes, (
-            f"{endereco}: o dublê lê {[c.codigo for c in CORES_LIDAS.values()]} "
-            f"nos quatro lugares, o que dá {hexes}, e o campo diz "
-            f"{valor[endereco]!r}")
-
-    for pref, nome in modelo.items():
-        endereco = f"{pref}·identidade"
-        if endereco not in valor:
-            continue
-        assert str(valor[endereco]) == nome, (
-            f"{endereco}: o aparelho daquele lugar é um {nome} e o cartão diz "
-            f"{valor[endereco]!r} — a identidade voltou a vir do desenho")
-
-    primario = [lugar for lugar in mesa
-                if por_uniq[str(lugar["uniq"])].get("is_primary")]
-    assert len(primario) == 1, f"o dublê tem {len(primario)} primários"
-    lugar = primario[0]
-    c = por_uniq[str(lugar["uniq"])]
-    dica = str(valor["quem-navega"])
-    # o «Pn» é o NÚMERO do controle (`lugar["jogador"]`), e não o assento: no dublê eles discordam
-    for pedaco in (f'P{lugar["jogador"]}', modelo[str(lugar["pref"])],
-                   home_actions.palavra_do_transporte(c.get("transport"))):
-        assert pedaco in dica, (
-            f"quem-navega: o primário do dublê é o {lugar['pref']} "
-            f"({modelo[str(lugar['pref'])]}), e a dica diz {dica!r} — falta "
-            f"{pedaco!r}")
-
     fita = str(valor["fita-chips"])
+    mesa = mesa_viva.mesa_do_estado(ESTADO, CORES_LIDAS)
     quantos = fita.count('class="chip')
     assert quantos == len(mesa) + 1, (
         f"a mesa do dublê tem {len(mesa)} controles e a fita traz {quantos} "
         f"chips (contando o 'Todos'): {fita!r}")
     for lugar in mesa:
-        assert f'P{lugar["jogador"]}' in fita, (
-            f"a fita não traz o chip do {lugar['pref']}: {fita!r}")
-        assert modelo[str(lugar["pref"])] in fita, (
-            f"a fita não nomeia o {modelo[str(lugar['pref'])]} do "
-            f"{lugar['pref']}: {fita!r}")
+        slug, nome = mesa_viva.CORES[CORES_LIDAS[str(lugar["uniq"])].codigo]
+        assert f'P{lugar["jogador"]}' in fita and nome in fita, (
+            f"a fita não traz o chip do {lugar['pref']} ({nome}): {fita!r}")
+        assert monta.cor_da_zona(slug) is not None

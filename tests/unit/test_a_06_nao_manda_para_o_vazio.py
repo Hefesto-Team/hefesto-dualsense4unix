@@ -96,48 +96,6 @@ def test_o_sem_endereco_nao_guarda_quem_ja_tem_casa(aba):
         "para essas chaves — tire-as da lista e deixe a pintura acontecer.")
 
 
-def test_a_linha_do_cartao_leva_o_transporte(aba):
-    """`navega` é a LINHA inteira, não o papel: o endereço cobre os dois."""
-    _, mod, pronto = aba
-    # O ESTADO tem o mouse DESLIGADO: o primário fica com o transporte, sem a bolinha e
-    # sem «Navega o PC» (A-NAVEGACAO-INTERNA-E-UM-MODO-QUE-SE-LIGA-EM-QUALQUER-ABA-01).
-    linha = pronto["colunas"]["p1"]["navega"]
-    assert linha == "BT", (
-        f"o cartão do primário saiu {linha!r} com o mouse desligado. O "
-        "`data-campo=\"navega\"` cobre a linha inteira do desenho — sem o transporte, "
-        "a pintura o APAGA; «Navega o PC» com o mouse desligado é a mentira da foto.")
-    ligado = {**ESTADO, "mouse_emulation": {**ESTADO["mouse_emulation"], "enabled": True}}
-    linha = mod._linha_do_cartao({"via": "BT"}, True, estado=ligado)
-    assert linha == '<span class="bolinha"></span>BT <span class="pt">•</span> Navega o PC', (
-        f"com o mouse ligado o cartão do primário saiu {linha!r}: sem a bolinha, o "
-        "primário perde o ponto verde.")
-    assert "via" not in pronto["colunas"]["p1"], (
-        "`via` voltou a ser chave própria: ela não tem endereço no desenho, e "
-        "quem a recebia era o `navega`.")
-
-
-def test_a_linha_do_cartao_nao_inventa_transporte(aba):
-    """Sem casa na mesa, sai só o papel — nunca um transporte adivinhado."""
-    _, mod, _ = aba
-    assert mod._linha_do_cartao({}, True) == '<span class="bolinha"></span>Navega o PC'
-    # A-NAVEGACAO-INTERNA-E-UM-MODO-QUE-SE-LIGA-EM-QUALQUER-ABA-01: «Só a janela» só sai com
-    # a Navegação Interna ligada; desligada, o secundário sem transporte não diz papel nenhum.
-    assert mod._linha_do_cartao({}, False) == ""
-    ligada = {"navegacao": {"interna_ligada": True, "tipo": "interna", "foco": False}}
-    assert mod._linha_do_cartao({}, False, estado=ligada) == "Só a janela"
-
-
-def test_o_gerador_e_o_pacote_desenham_a_mesma_linha(aba):
-    """UM DONO, DOIS CHAMADORES — o que a bancada mostra é o que o tique pinta."""
-    import onde
-
-    _, mod, _ = aba
-    doc = onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
-    for via, primario in (("USB", True), ("BT", False)):
-        miolo = f'data-hef-alvo="html">{mod.linha_do_cartao(via, primario)}</div>'
-        assert miolo in doc, f"a bancada e o tique divergem na linha {via!r}"
-
-
 def test_as_vinte_e_uma_linhas_saem_do_perfil(monkeypatch, tmp_path):
     """O que o perfil guarda vence o de fábrica, linha a linha.
 
@@ -179,23 +137,6 @@ def test_todo_valor_emitido_existe_como_opcao_daquela_lista(aba):
             f"{chave}: o pacote manda {valor!r} e a lista do desenho não tem "
             f"essa opção — a pintura se calaria e o campo ficaria parado para "
             f"sempre.")
-
-
-def test_a_cobertura_conta_so_o_que_tem_casa(aba):
-    """Contador que soma chave EMITIDA é o mesmo erro que produziu o "77%"."""
-    _, mod, _ = aba
-    import pacotes
-
-    ctx, _, _ = aba
-    bruto = mod.pacote(ctx)
-    pintados = bruto["cobertura"]["pintados"]
-    emitidas = len(bruto["mesa"]) + sum(len(v) for v in bruto["colunas"].values())
-    assert pintados < emitidas, (
-        f"a cobertura diz {pintados} e o pacote emite {emitidas} chaves — se os "
-        "dois números são iguais, o contador voltou a somar o que não tem "
-        "endereço.")
-    assert pintados == emitidas - len(mod.SEM_ENDERECO)
-    del pacotes
 
 
 class _PerfilDeMentira:
@@ -244,120 +185,6 @@ def _forma_de_fabrica(**trocas):
     forma = {b: acoes.rotulo(a) for b, a in acoes.padrao().items()}
     forma.update(trocas)
     return forma
-
-
-def test_o_guardar_nao_apaga_o_que_a_tela_nao_mostrou(disco):
-    """O "Guardar" com a forma toda no de fábrica e o perfil com escolhas: RECUSA.
-
-    Medido em 02/09/2026 contra a página PUBLICADA: as 21 `<select>` não tinham
-    `data-campo`, logo nunca eram pintadas, logo mostravam sempre o que o
-    gerador cravou — que é **exatamente** `acoes_de_botao.padrao()`. O gesto
-    calculava "nada mudou", gravava `button_actions = None` e APAGAVA a escolha
-    do usuário, em silêncio, com o botão dizendo "Guardar".
-
-    A mordida: tire a trava do `guardar_definicoes` — este teste reprova
-    dizendo que o perfil perdeu o `cross`.
-    """
-    import pacotes
-    from pacotes import a06_navegacao
-
-    estado, gravados = disco
-    estado["regua"] = _PerfilDeMentira("regua", button_actions={"cross": "KEY_ESC"})
-    ctx = pacotes.Contexto(state=ESTADO, mesa=MESA, conectados=[FALSO], estados={})
-
-    with pytest.raises(RuntimeError, match="não guardei"):
-        a06_navegacao.guardar_definicoes(ctx, {"forma": _forma_de_fabrica()},
-                                         _PonteMuda())
-    assert not gravados, (
-        "o gesto GRAVOU. Com a tela mostrando o de fábrica e o perfil guardando "
-        "uma escolha, gravar é apagar — e o botão diz 'Guardar'.")
-
-
-def test_o_guardar_continua_gravando_o_que_mudou(disco):
-    """A trava não pode virar um "Guardar" que nunca guarda."""
-    import pacotes
-    from pacotes import a06_navegacao
-
-    estado, gravados = disco
-    estado["regua"] = _PerfilDeMentira("regua")
-    ctx = pacotes.Contexto(state=ESTADO, mesa=MESA, conectados=[FALSO], estados={})
-
-    a06_navegacao.guardar_definicoes(ctx, {"forma": _forma_de_fabrica(square="Enter")},
-                                     _PonteMuda())
-    assert len(gravados) == 1, f"gravou {len(gravados)} vez(es), esperava uma"
-    assert gravados[0].button_actions == {"square": "KEY_ENTER"}
-
-
-def test_o_guardar_nao_grava_quando_nao_ha_o_que_gravar(disco):
-    """Nada a gravar não vira gravação — nem quando a trava não age.
-
-    Aqui `prof.button_actions` já é `None` e a forma é o de fábrica: não há
-    escolha a perder, logo a trava contra o apagador não tem o que travar. O
-    disco continua intocado — se a trava passasse a recusar em bloco, ela
-    viraria um botão que reclama do estado normal, e este caso reprova.
-    """
-    import pacotes
-    from pacotes import a06_navegacao
-
-    estado, gravados = disco
-    estado["regua"] = _PerfilDeMentira("regua")
-    ctx = pacotes.Contexto(state=ESTADO, mesa=MESA, conectados=[FALSO], estados={})
-
-    with pytest.raises(RuntimeError):
-        a06_navegacao.guardar_definicoes(ctx, {"forma": _forma_de_fabrica()},
-                                         _PonteMuda())
-    assert not gravados
-
-
-@pytest.mark.parametrize(
-    ("guardado", "a_forma", "pedaco"),
-    [
-        ({"square": "KEY_ENTER"}, {"square": "Enter"}, "1 escolha"),
-        (None, {}, "de fábrica"),
-    ],
-)
-def test_o_guardar_sem_o_que_guardar_recusa_dizendo(disco, guardado, a_forma, pedaco):
-    """O "Guardar" sem nada a gravar tem de DIZER que já está guardado."""
-    import pacotes
-    from pacotes import a06_navegacao
-
-    estado, gravados = disco
-    estado["regua"] = _PerfilDeMentira("regua", button_actions=guardado)
-    ctx = pacotes.Contexto(state=ESTADO, mesa=MESA, conectados=[FALSO], estados={})
-    ponte = _PonteMuda()
-
-    with pytest.raises(RuntimeError) as caiu:
-        a06_navegacao.guardar_definicoes(ctx, {"forma": _forma_de_fabrica(**a_forma)},
-                                         ponte)
-    frase = str(caiu.value)
-    assert "guardar" in frase.lower(), (
-        f"a recusa não diz que não havia o que guardar: {frase!r}")
-    assert pedaco in frase, (
-        f"a recusa não diz o que o perfil já tem ({pedaco!r}): {frase!r}")
-    assert not gravados, "recusou e ainda assim gravou"
-
-
-def test_a_recusa_chama_o_botao_pelo_nome_que_ela_le(disco):
-    """O "Guardar" nomeia as linhas sem dono com o rótulo do MOTOR, não o id cru."""
-    import pacotes
-    from pacotes import a06_navegacao
-
-    from hefesto_dualsense4unix.app.actions import input_actions
-
-    estado, _ = disco
-    estado["regua"] = _PerfilDeMentira("regua")
-    ctx = pacotes.Contexto(state=ESTADO, mesa=MESA, conectados=[FALSO], estados={})
-
-    with pytest.raises(RuntimeError) as caiu:
-        a06_navegacao.guardar_definicoes(
-            ctx, {"forma": _forma_de_fabrica(l2="Movimento do cursor")}, _PonteMuda())
-    frase = str(caiu.value)
-    assert input_actions.humanize_button("l2") == "L2 (gatilho esquerdo)", (
-        "o motor mudou o nome do L2; a frase abaixo cobra o que ela lê na GTK")
-    assert "L2 (gatilho esquerdo)" in frase, (
-        f"a recusa saiu {frase!r} — o nome do botão tem de ser o que ela lê.")
-    assert not re.search(r"\bl2\b", frase), (
-        f"a recusa ainda traz o id cru do kernel: {frase!r}")
 
 
 def test_o_nome_do_botao_e_o_do_motor_e_nao_uma_segunda_tabela():

@@ -128,27 +128,6 @@ def test_a_ressalva_vazia_manda_o_marcador_e_nunca_o_travessao() -> None:
     assert DIZ in cheia and monta.NADA_A_DIZER not in cheia
 
 
-def test_o_marcador_e_o_mesmo_das_duas_casas() -> None:
-    """`monta.NADA_A_DIZER` e o da `a06_navegacao` não divergem calados.
-
-    A DUPLICAÇÃO É DECLARADA, e não descuido: o marcador nasceu na
-    `pacotes/a06_navegacao.py`, que é arquivo de OUTRA frente (a da aba 06, na
-    Onda 2). A folha precisa dele para escrever a regra que o lê, e esta frente
-    não pode editar aquele arquivo — a regra da casa é relatar, nunca editar.
-
-    Enquanto as duas cópias existirem, esta régua é o que impede que uma mude
-    sem a outra: no dia em que a frente da 06 apontar a dela para cá, este caso
-    continua verde e vira redundante, que é o fim certo dele.
-    """
-    from pacotes import a06_navegacao
-
-    assert monta.NADA_A_DIZER == a06_navegacao.NADA_A_DIZER, (
-        f"o marcador divergiu: `monta` diz {monta.NADA_A_DIZER!r} e "
-        f"`a06_navegacao` diz {a06_navegacao.NADA_A_DIZER!r}. A folha esconde "
-        f"a linha por `.nada`; um marcador com outra classe deixa a linha "
-        f"visível, com um elemento vazio dentro.")
-
-
 def test_a_ressalva_sem_endereco_para_a_geracao() -> None:
     """Ausência de âncora PARA — senão a ressalva nasce congelada no desenho."""
     with pytest.raises(SystemExit):

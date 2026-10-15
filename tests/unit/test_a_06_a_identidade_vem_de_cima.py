@@ -115,58 +115,6 @@ def carga(monkeypatch):
                               {str(c["uniq"]): str(c["pref"]) for c in MESA})
 
 
-def test_os_cartoes_enderecam_o_nome_e_a_cor(miolo):
-    """Os QUATRO lugares têm endereço de cor E de nome.
-
-    A CONTA DO NOME ERA `len(conectados)` — DOIS — e ela mediu o mundo de
-    ontem (07/09/2026, O-LUGAR-VAZIO-TEM-ENDERECO). O gerador tinha dois ramos
-    para a mesma caixa, e só o CHEIO ganhou `data-campo="identidade"` em 03/09;
-    esta régua congelou a metade que existia e teria dado verde sobre o defeito
-    para sempre.
-
-    O DEFEITO QUE ELA DEIXAVA PASSAR, medido com os QUATRO DualSense do usuário na
-    mesa: o daemon publicava quatro, a carga chegava com `colunas` dos quatro,
-    e a tela mostrava DOIS — o P3 e o P4 diziam "P3 · Desconectado" com o
-    aparelho ligado na mão do usuário, porque `hefesto_vivo.achar(raiz, k)` procura
-    `data-campo` DENTRO do bloco e ali não havia nenhum.
-
-    O CONTRATO DE HOJE é `len(MESA)` nos dois: quatro lugares, quatro endereços
-    de cor, quatro de nome. O lugar vazio nasce dizendo `Desconectado` e o
-    piloto reescreve quando o controle chega.
-    """
-    import monta
-
-    assert miolo.count('data-campo="plastico" data-hef-alvo="cor"') == len(monta.MESA), (
-        "um lugar da mesa perdeu o endereço da cor — a borda dele volta a ser a "
-        "cor cravada do desenho, e nada a reescreve")
-    assert miolo.count('data-campo="identidade"') == len(monta.MESA), (
-        "um lugar da mesa perdeu o `data-campo=\"identidade\"` — no lugar cheio "
-        "o nome do plástico volta a ser o do mockup; no vazio, o controle que "
-        "chegar não tem onde se nomear e o lugar segue dizendo 'Desconectado'")
-
-
-def test_o_miolo_nao_tem_plastico_cravado(miolo):
-    """`--plastico:#hex` não tem alvo de pintura, logo não pode existir aqui.
-
-    O piloto escreve texto, valor, classe, cor, largura, fundo e `innerHTML`, e
-    **nenhum deles alcança uma variável CSS**. Um `--plastico` no `style` de um
-    elemento é, por construção, uma cor que o produto não consegue trocar.
-    """
-    assert "--plastico" not in miolo, (
-        "voltou um `--plastico` cravado ao miolo da 06 — a cor ficaria a do "
-        "mockup para sempre, porque nenhum alvo do piloto escreve variável CSS")
-
-
-def test_a_fita_e_as_duas_dicas_tem_endereco(bancada):
-    assert 'data-campo="fita-chips" data-hef-alvo="html"' in bancada, (
-        "a fita da 06 perdeu o endereço — e `hefesto_vivo._fita`, o dono "
-        "compartilhado dela, DESISTE quando um controle da mesa não tem cor "
-        "lida, que é o caso do rádio hoje")
-    assert bancada.count('data-campo="quem-navega"') == 1, (
-        "a dica da tela de Definições perdeu o endereço de quem navega, ou a "
-        "frase voltou à dica da troca de botões, onde ela é falsa")
-
-
 def test_nenhum_title_nomeia_o_controle(bancada):
     """`title` é texto que a tela mostra, e não tem alvo de pintura."""
     for nome in _nomes_do_desenho():
@@ -176,54 +124,6 @@ def test_nenhum_title_nomeia_o_controle(bancada):
     assert 'title="Player ' not in bancada, (
         "o `title` do cartão voltou: ele repete o rótulo em texto que nada "
         "reescreve")
-
-
-def test_o_pacote_escreve_os_quatro_enderecos(carga):
-    """Cada endereço da identidade recebe valor, e nenhum sai vazio por engano."""
-    mesa = carga["mesa"]
-    for chave in ("fita-chips", "plastico", "quem-navega"):
-        assert chave in mesa, f"o pacote parou de emitir {chave!r}"
-    assert mesa["quem-navega"] == "P1 White USB", mesa["quem-navega"]
-    assert [v.get("identidade") for v in carga["colunas"].values() if "identidade" in v]
-
-
-def test_o_nome_do_cartao_e_o_do_aparelho_e_nao_o_do_desenho(carga):
-    """O cartão do P1 diz `White`, que é o modelo que o daemon decodificou."""
-    nomes = {k: v.get("identidade") for k, v in carga["colunas"].items()}
-    assert nomes.get("p1") == "White", nomes
-    for nome in _nomes_do_desenho():
-        assert nome not in set(nomes.values()) - {"White"}, (
-            f"o cartão voltou a dizer {nome!r} — um nome do desenho, não da mesa")
-
-
-def test_a_cor_da_borda_sai_do_mapa(carga):
-    """O hex do plástico é LIDO de `monta.cor_da_zona`, nunca digitado."""
-    import monta
-
-    assert carga["mesa"]["plastico"][0] == monta.cor_da_zona("white")
-
-
-def test_a_folha_viva_pinta_o_casco_de_quem_tem_cor(carga):
-    """O casco do desenho é `var(--z-…)`, e quem o troca é a folha do pacote."""
-    import monta
-
-    folha = carga["blocos"]["#plastico-vivo"]
-    assert '.nav-ctl[data-controle="p1"] .ds-svg{' in folha
-    assert monta.cor_da_zona("white") in folha, (
-        "a folha viva parou de pintar o casco — o desenho do cartão fica no "
-        "colorway do mockup, que endereço nenhum alcança")
-
-
-def test_o_controle_sem_cor_lida_nao_ganha_cor_nenhuma(carga):
-    """Pelo rádio a cor não chega, e a tela tem de dizer isso calando."""
-    assert carga["mesa"]["plastico"][1] == "", (
-        "o lugar do controle sem cor lida ganhou um hex — ou o pacote inventou "
-        "uma cor, ou caiu de volta no desenho")
-    folha = carga["blocos"]["#plastico-vivo"]
-    regra = folha.split('.nav-ctl[data-controle="p2"] .ds-svg{', 1)[-1].split("}", 1)[0]
-    assert regra and "#" not in regra, (
-        "o casco do controle sem cor recebeu um hex — o neutro do CSS é a "
-        "única resposta honesta")
 
 
 def test_a_fita_cala_o_nome_que_nao_se_leu(carga):
@@ -241,18 +141,6 @@ def test_a_fita_cala_o_nome_que_nao_se_leu(carga):
         f"tela é dizer algo onde não há nada")
 
 
-def test_sem_primario_a_dica_nao_inventa_um(monkeypatch):
-    """Sem primário na mesa, `quem-navega` sai vazio — nunca a posição."""
-    import pacotes
-    from pacotes import a06_navegacao, perfil
-
-    monkeypatch.setattr(perfil, "ativo", lambda nome: {"name": "Régua"} if nome else {})
-    sem_chefe = [dict(c, is_primary=False) for c in CONTROLES]
-    ctx = pacotes.Contexto(state=dict(ESTADO, controllers=sem_chefe), mesa=MESA,
-                           conectados=sem_chefe, estados={})
-    assert a06_navegacao.pacote(ctx)["mesa"]["quem-navega"] == ""
-
-
 def test_cada_chip_pintado_da_fita_tem_endereco_proprio(carga):
     """O `--plastico` do chip mora no `style` do PRÓPRIO elemento.
 
@@ -268,12 +156,3 @@ def test_cada_chip_pintado_da_fita_tem_endereco_proprio(carga):
     assert not sem, f"chip pintado sem endereço próprio: {sem}"
 
 
-def test_a_06_publicada_nao_tem_identidade_congelada():
-    """A régua do portão, na página que o produto renderiza."""
-    sys.path.insert(0, str(RAIZ / "scripts"))
-    import check_identidade_vem_de_cima as regua
-    from hefesto_dualsense4unix.interface import onde
-
-    achados = regua.congelados_de(onde.pagina(PAGINA, publicado=True),
-                                  regua.nomes_de_colorway())
-    assert not achados, f"identidade congelada na 06 publicada: {achados}"

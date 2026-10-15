@@ -104,7 +104,6 @@ PISO_DO_MOLDE = {
     "03-gatilhos.html": 10,
     "04-iluminacao.html": 4,
     "05-vibracao.html": 4,
-    "06-navegacao.html": 0,
     "08-conexoes.html": 6,
     "calibrar-sensores.html": 12,
 }
@@ -140,12 +139,6 @@ def test_o_travessao_nao_pousa_em_marca_que_o_texto_nao_devolve(pacotes_mod):
             "travessão apagaria uma marca que o texto não sabe devolver, e ela "
             "não volta nem quando o controle volta")
 
-    alvos_06 = pacotes_mod.alvos_da_pagina("06-navegacao.html")
-    assert "navega" not in pacotes_mod.enderecos_que_o_texto_apaga("06-navegacao.html"), (
-        "o `navega` da 06 voltou a ser texto com a bolinha dentro — o travessão "
-        "e a bolinha voltam a brigar")
-    assert alvos_06.get("navega") == {"html"}, (
-        f"o `navega` da 06 perdeu o alvo `html`: {alvos_06.get('navega')}")
     onde_ha_mudo = {
         pagina: sorted(pacotes_mod.enderecos_que_o_texto_apaga(pagina))
         for pagina in sorted(pacotes_mod.PACOTES)

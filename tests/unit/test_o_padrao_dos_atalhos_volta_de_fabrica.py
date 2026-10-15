@@ -1,31 +1,19 @@
 #!/usr/bin/env python3
-"""A RÉGUA DO "Voltar ao padrão" da aba Navegação — e do que ele NÃO pode fazer.
+"""A régua do «Voltar ao padrão» da aba Navegação: o mouse e o teclado voltam UM DEGRAU.
 
-O BOTÃO promete devolver ao de fábrica as 21 linhas de *o que cada botão faz*. A
-rota é gravar `key_bindings = None` no perfil ATIVO e mandar o daemon reaplicar.
+O gesto `padrao-da-aba` (que substituiu o `padrao-definicoes` em 15/10/2026) lê e grava em disco,
+e só depois pede a releitura ao daemon; uma prova que olhasse só a ponte diria que ele funciona
+mesmo com o disco errado. Aqui o disco é o lar de mentira da suíte, e as três coisas que ele cobra:
 
-POR QUE ELE PRECISA DE RÉGUA PRÓPRIA, e não de uma linha em `PROVAS`: a régua
-dos botões passa um dublê de ponte e cobra QUAL função foi chamada. Este gesto
-não fala com o daemon primeiro — ele **lê e grava um perfil em disco**, e só
-depois pede o `profile.switch`. Uma prova que só olhasse a ponte diria que ele
-funciona mesmo se o que fosse para o disco estivesse errado.
+1. **Sem perfil ativo, o computador volta ao de fábrica**: os atalhos (`key_bindings`,
+   `button_actions`) e o teclado voltam a `None`, que é «herda o de fábrica» (`{}` calaria o
+   controle), e os gestos são declarados de volta à máquina.
+2. **Com um jogo que escolheu, volta o que o jogo escolheu, não o computador.** O degrau de baixo
+   só vale quando o perfil nada sobrepõe.
+3. **Se o daemon recusar os gestos, a tela diz por quê** em vez de calar.
 
-AS TRÊS COISAS QUE ELA COBRA, e cada uma é um jeito diferente de o botão mentir:
-
-1. **`None`, e nunca `{}`.** O esquema define os dois: `None` é *"herda
-   `DEFAULT_BUTTON_BINDINGS`"* e `{}` é *"desativa todos os bindings"*
-   (`profiles/schema.py:640-642`). Gravar `{}` devolveria um controle MUDO com o
-   botão dizendo "de fábrica" — o pior tipo de acerto aparente.
-2. **Reaplicar.** Gravar sem `profile.switch` deixa a tela dizendo uma coisa e o
-   aparelho fazendo outra até a próxima troca de perfil.
-3. **Não fazer nada quando já está de fábrica — e DIZER que não fez.** Um
-   `profile.switch` no meio de uma partida não é de graça, e regravar um perfil
-   idêntico é barulho. Mas o `return` seco que segurava esse barulho era, para
-   a régua do aparelho, indistinguível de um botão que mentiu: em 02/09/2026
-   ele passou a recusar dizendo, sem gravar e sem chamar o daemon.
-
-A MORDIDA: troque o `None` por `{}` no gesto — o caso 1 reprova dizendo que o
-teclado ficaria mudo. Tire o `gravar_e_reaplicar` — o caso 2 reprova.
+MORDIDAS: trocar o `voltar_o_computador_ao_de_fabrica` por nada reprova o caso 1; tirar o
+`voltar_ao_do_computador` reprova o caso 2; engolir o `ok` do `machine_declare` reprova o 3.
 """
 from __future__ import annotations
 
@@ -43,189 +31,84 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 class PonteDeMentira:
     """Guarda o que foi pedido ao daemon, na ordem."""
 
-    def __init__(self) -> None:
-        self.chamadas: list[tuple[str, tuple[Any, ...]]] = []
+    def __init__(self, *, aceita_os_gestos: bool = True) -> None:
+        self.chamadas: list[tuple[str, Any]] = []
+        self.aceita = aceita_os_gestos
 
-    def profile_switch(self, nome: str) -> bool:
-        self.chamadas.append(("profile_switch", (nome,)))
-        return True
+    def machine_declare(self, dados: dict[str, Any]) -> Any:
+        self.chamadas.append(("machine_declare", dados))
+        return (True, None) if self.aceita else (False, "o daemon não respondeu")
+
+    def resultado(self, metodo: str, **params: Any) -> dict[str, Any]:
+        self.chamadas.append((metodo, params))
+        return {"status": "ok"}
 
     def profile_reaplicar(self, nome: str, *, prender: bool = False) -> bool:
-        self.chamadas.append(("profile_reaplicar", (nome,)))
+        self.chamadas.append(("profile_reaplicar", nome))
         return True
 
     def chamar(self, metodo: str, **_: Any) -> bool:
-        self.chamadas.append(("chamar", (metodo,)))
+        self.chamadas.append((metodo, None))
         return True
 
 
-class PerfilDeMentira:
-    """O mínimo de um `Profile` que este gesto toca: o nome e os bindings."""
-
-    def __init__(self, nome: str, key_bindings: dict[str, list[str]] | None,
-                 button_actions: dict[str, str] | None = None) -> None:
-        self.name = nome
-        self.key_bindings = key_bindings
-        self.button_actions = button_actions
-
-    def model_copy(self, *, update: dict[str, Any]) -> PerfilDeMentira:
-        novo = PerfilDeMentira(self.name, self.key_bindings, self.button_actions)
-        for k, v in update.items():
-            setattr(novo, k, v)
-        return novo
-
-
 @pytest.fixture
-def pac():
+def gesto() -> Any:
     import pacotes
 
-    return pacotes
-
-
-@pytest.fixture
-def gesto(pac):
-    fn = pac.gesto_da_pagina("06-navegacao.html", "padrao-definicoes")
-    assert fn is not None, "06-navegacao.html:padrao-definicoes perdeu o dono"
+    fn = pacotes.gesto_da_pagina("06-navegacao.html", "padrao-da-aba")
+    assert fn is not None, "06-navegacao.html:padrao-da-aba perdeu o dono"
     return fn
 
 
-@pytest.fixture
-def disco(monkeypatch):
-    """Um disco de mentira: guarda o que o gesto mandou gravar."""
-    from hefesto_dualsense4unix.profiles import loader
+def _ctx(ativo: str) -> Any:
+    import pacotes
 
-    gravados: list[PerfilDeMentira] = []
-    estado: dict[str, PerfilDeMentira] = {}
-
-    def falso_load(nome: str) -> PerfilDeMentira:
-        return estado[nome]
-
-    def falso_save(prof: PerfilDeMentira, **_: Any) -> None:
-        gravados.append(prof)
-
-    monkeypatch.setattr(loader, "load_profile", falso_load, raising=False)
-    monkeypatch.setattr(loader, "save_profile", falso_save, raising=False)
-
-    from hefesto_dualsense4unix.profiles import o_padrao_do_computador as opc
-
-    def _pelo_gesto(_cartao: str, nome: str, muda: Any, **_k: Any) -> Any:
-        novo = muda(estado[nome])
-        if novo is not None:
-            estado[nome] = novo
-            loader.save_profile(novo)
-        return opc.JOGO, novo
-
-    monkeypatch.setattr(opc, "gravar_pelo_gesto", _pelo_gesto)
-    return estado, gravados
+    return pacotes.Contexto(state={"active_profile": ativo}, mesa=[], conectados=[], estados={})
 
 
-def _ctx(pac, ativo: str):
-    return pac.Contexto(state={"active_profile": ativo}, mesa=[], conectados=[], estados={})
-
-
-def test_grava_none_e_nunca_dicionario_vazio(pac, gesto, disco) -> None:
-    """`None` herda o de fábrica; `{}` cala o teclado. São coisas opostas."""
-    estado, gravados = disco
-    estado["Mortal Kombat"] = PerfilDeMentira("Mortal Kombat", {"r1": ["KEY_F11"]})
-    p = PonteDeMentira()
-
-    gesto(_ctx(pac, "Mortal Kombat"), {}, p)
-
-    assert len(gravados) == 1, f"gravou {len(gravados)} vez(es), esperava uma"
-    assert gravados[0].key_bindings is None, (
-        f"gravou {gravados[0].key_bindings!r}. `None` herda o "
-        f"`DEFAULT_BUTTON_BINDINGS`; `{{}}` DESLIGA todos os bindings "
-        f"(`profiles/schema.py:640-642`) — o segundo devolveria um controle "
-        f"mudo com o botão dizendo 'de fábrica'.")
-    assert gravados[0].name == "Mortal Kombat", "gravou por cima de outro perfil"
-    assert gravados[0].button_actions is None, (
-        "o `button_actions` não foi zerado junto. Os dois campos guardam o que "
-        "cada botão faz — zerar só um deixa a tabela metade de fábrica, com o "
-        "botão dizendo o contrário.")
-
-
-def test_reaplica_o_perfil_ativo_e_relê_o_ambiente(pac, gesto, disco) -> None:
-    """Gravar sem reaplicar deixa a tela e o aparelho dizendo coisas diferentes."""
-    estado, _ = disco
-    estado["Mortal Kombat"] = PerfilDeMentira("Mortal Kombat", {"r1": ["KEY_F11"]})
-    p = PonteDeMentira()
-
-    gesto(_ctx(pac, "Mortal Kombat"), {}, p)
-
-    nomes = [c[0] for c in p.chamadas]
-    # Era o `profile.switch` até 01/10/2026; reaplicar não é escolha do usuário.
-    assert "profile_reaplicar" in nomes, (
-        f"o gesto fez {nomes} e não pediu o `profile.reaplicar`. O perfil mudou no "
-        f"disco e o aparelho continua com os atalhos velhos até a próxima troca.")
-    assert ("chamar", ("launch_env.refresh",)) in p.chamadas, (
-        "o `launch_env.refresh` não foi pedido — o perfil novo só chegaria ao "
-        "jogo no próximo start do daemon.")
-
-
-def test_ja_de_fabrica_nao_mexe_em_nada_e_diz(pac, gesto, disco) -> None:
-    """Regravar um perfil idêntico é barulho — e não fazer nada CALADO também.
-
-    Regravar um perfil idêntico trocaria a data do arquivo e faria o daemon
-    reaplicar o mesmo perfil; um `profile.switch` no meio de uma partida não é
-    de graça. Isto continua valendo, e as duas primeiras linhas o cobram.
-
-    O QUE MUDOU EM 02/09/2026 (corretivo): este ramo era um `return` seco, e
-    para a régua do aparelho isso é indistinguível de um botão que mentiu — foi
-    assim que ele entrou na lista dos dezesseis "aplicados que não aplicam".
-    Agora ele RECUSA DIZENDO, que é o desfecho verdadeiro. Nada é gravado, o
-    daemon continua sem ser incomodado, e quem clicou fica sabendo por quê.
-
-    A MORDIDA: troque a recusa de volta por um `return` — esta linha reprova
-    dizendo que o botão voltou a responder calado.
-    """
-    estado, gravados = disco
-    estado["Navegacao"] = PerfilDeMentira("Navegacao", None, None)
-    p = PonteDeMentira()
-
-    with pytest.raises(RuntimeError) as erro:
-        gesto(_ctx(pac, "Navegacao"), {}, p)
-
-    assert gravados == [], "gravou um perfil que já estava de fábrica"
-    assert p.chamadas == [], (
-        f"pediu {p.chamadas} ao daemon sem ter o que mudar — um "
-        f"`profile.switch` no meio de uma partida não é de graça.")
-    frase = str(erro.value)
-    assert "de fábrica" in frase, (
-        f"a recusa não diz que o perfil já estava no de fábrica: {frase!r}")
-    assert "Navegacao" in frase, f"a recusa não nomeia o perfil: {frase!r}"
-
-
-def test_zera_tambem_quando_so_o_campo_novo_esta_preenchido(pac, gesto, disco) -> None:
-    """A metade nova sozinha. Sem este caso, `key_bindings is None` bastaria
-    para o gesto desistir — e a tabela ficaria com as escolhas do
-    `button_actions` intactas debaixo de um botão que diz "de fábrica".
-    """
-    estado, gravados = disco
-    estado["Navegacao"] = PerfilDeMentira("Navegacao", None, {"dpad_up": "BTN_LEFT"})
-    p = PonteDeMentira()
-
-    gesto(_ctx(pac, "Navegacao"), {}, p)
-
-    assert len(gravados) == 1, (
-        "o gesto desistiu porque o `key_bindings` já era `None` — e o "
-        "`button_actions` continuava com escolha dentro")
-    assert gravados[0].button_actions is None
-
-
-def test_sem_perfil_ativo_quem_volta_e_o_computador(pac, gesto) -> None:
-    """Os atalhos são do COMPUTADOR desde 01/10/2026: sem perfil, ele volta."""
+def test_sem_perfil_ativo_quem_volta_e_o_computador(gesto: Any) -> None:
+    """Os atalhos são do COMPUTADOR: sem perfil, ele volta, e os gestos são declarados."""
     from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_computador
     from hefesto_dualsense4unix.utils.maquina import gravar_o_computador
 
-    assert gravar_o_computador({"global": {"key_bindings": {"r1": ["KEY_F11"]},
-                                           "button_actions": {"cross": "KEY_ENTER"}}})
-    gesto(_ctx(pac, ""), {}, PonteDeMentira())
+    assert gravar_o_computador({"global": {
+        "key_bindings": {"r1": ["KEY_F11"]}, "button_actions": {"cross": "KEY_ENTER"},
+        "teclado_emulado": True, "teclado_sempre": True}})
+    ponte = PonteDeMentira()
+    gesto(_ctx(""), {}, ponte)
     do_global = o_computador().global_
     assert do_global.key_bindings is None and do_global.button_actions is None
+    assert do_global.teclado_emulado is None and do_global.teclado_sempre is None
+    assert any(c[0] == "machine_declare" for c in ponte.chamadas), ponte.chamadas
+    assert any(c[0] == "mouse.emulation.set" for c in ponte.chamadas), ponte.chamadas
 
+
+def test_com_jogo_que_escolheu_volta_o_do_jogo_e_o_computador_fica(gesto: Any) -> None:
+    """Degrau de cima: o jogo perde a escolha dele, e o que o computador diz continua."""
+    from hefesto_dualsense4unix.profiles import loader
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_computador
+    from hefesto_dualsense4unix.profiles.schema import MatchManual, Profile
+    from hefesto_dualsense4unix.utils.maquina import gravar_o_computador
+
+    assert gravar_o_computador({"global": {"key_bindings": {"l1": ["KEY_F5"]}}})
+    loader.save_profile(Profile(
+        name="Mortal Kombat", match=MatchManual(), key_bindings={"r1": ["KEY_F11"]},
+        teclado_emulado=True, teclado_sempre=True))
+    ponte = PonteDeMentira()
+    gesto(_ctx("Mortal Kombat"), {}, ponte)
+    depois = loader.load_profile("Mortal Kombat")
+    assert not depois.key_bindings and not depois.teclado_sempre, (
+        f"o jogo manteve a escolha dele: {depois.key_bindings} {depois.teclado_sempre}")
+    assert o_computador().global_.key_bindings == {"l1": ["KEY_F5"]}, (
+        "o degrau de baixo foi dado com o jogo escolhendo: o computador também voltou")
+
+
+def test_sem_o_daemon_a_tela_diz_por_que_os_gestos_nao_voltaram(gesto: Any) -> None:
+    """Gravou o disco e o daemon não aceitou os gestos: o clique recusa dizendo."""
     with pytest.raises(RuntimeError) as erro:
-        gesto(_ctx(pac, ""), {}, PonteDeMentira())
-    assert "o computador já está no de fábrica" in str(erro.value)
+        gesto(_ctx(""), {}, PonteDeMentira(aceita_os_gestos=False))
+    assert "os gestos não" in str(erro.value), str(erro.value)
 
 
 def test_as_nove_linhas_que_o_perfil_alcanca_sao_as_do_produto() -> None:

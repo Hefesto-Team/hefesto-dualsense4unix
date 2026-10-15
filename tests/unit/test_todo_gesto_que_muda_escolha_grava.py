@@ -33,12 +33,9 @@ GRAVAM_SEM_DECLARAR: dict[Chave, str] = {
         "janela (`_prefs`); nenhum perfil nem aparelho muda",
 }
 
-_GUARDAR_DA_06 = (
-    "rascunho da tela: a linha trocada espera o «Guardar» da mesma tela, que "
-    "declara `grava=`; gravar a cada linha salvaria meia escolha")
-_FECHAR_DA_06 = (
-    "ato: fechar ou «Cancelar» larga o que ela não guardou; guardar é o "
-    "«Guardar» da mesma tela, que declara `grava=`")
+_RASCUNHO_DO_MAPA = (
+    "rascunho da tela: a escolha espera o «Guardar» do mapa do controle, que "
+    "declara `grava=`; gravar a cada clique salvaria meia escolha")
 _LACO_DO_MAPEAR = (
     "tela do «Mapear entrada a entrada»: as fases do laço; cada resposta "
     "grava no gesto dela (`responder`, `nao_alcanco`, que declaram `grava=`)")
@@ -83,13 +80,15 @@ ATOS: dict[Chave, str] = {
     ("05-vibracao.html", "testar-haptica"):
         "sessão: o teste «Háptica» toca a vibração fina daquele controle até o "
         "«Parar» (o coração da janela o rebate), e nada vai ao perfil",
-    ("06-navegacao.html", "fechar-definicoes"): _FECHAR_DA_06,
-    ("06-navegacao.html", "fechar-ponto"): _FECHAR_DA_06,
-    ("06-navegacao.html", "fechar-teclas"): _FECHAR_DA_06,
-    ("06-navegacao.html", "fechar-troca"): _FECHAR_DA_06,
-    ("06-navegacao.html", "linha-de-botao"): _GUARDAR_DA_06,
-    ("06-navegacao.html", "linha-de-troca"): _GUARDAR_DA_06,
-    ("06-navegacao.html", "tecla-escrita"): _GUARDAR_DA_06,
+    ("mapa-do-controle.html", "mapa-botao"): _RASCUNHO_DO_MAPA,
+    ("mapa-do-controle.html", "mapa-cancelar"): _RASCUNHO_DO_MAPA,
+    ("mapa-do-controle.html", "mapa-escolher"): _RASCUNHO_DO_MAPA,
+    ("mapa-do-controle.html", "mapa-gravar-tecla"): _RASCUNHO_DO_MAPA,
+    ("mapa-do-controle.html", "mapa-mover-com"): _RASCUNHO_DO_MAPA,
+    ("mapa-do-controle.html", "mapa-nome"): _RASCUNHO_DO_MAPA,
+    ("mapa-do-controle.html", "mapa-padrao"): _RASCUNHO_DO_MAPA,
+    ("mapa-do-controle.html", "mapa-perfil"): _RASCUNHO_DO_MAPA,
+    ("mapa-do-controle.html", "mapa-usar-em"): _RASCUNHO_DO_MAPA,
     ("07-lancadores.html", "adicionar-a-exclusao"):
         "abre a escolha do jogo; quem grava é a confirmação "
         "(`confirmar-exclusao`), que declara `grava=`",

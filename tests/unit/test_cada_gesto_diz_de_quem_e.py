@@ -161,7 +161,7 @@ CLIQUES: list[tuple[str, str, dict[str, Any]]] = [
     ("05-vibracao.html", "forca", {"uniq": UM, "forca": "max"}),
     ("06-navegacao.html", "vel-cursor", {"valor": "11"}),
     ("06-navegacao.html", "vel-rolagem", {"valor": "4"}),
-    ("06-navegacao.html", "guardar-teclas", {"forma": {"tecla-r1": "KEY_LEFTCTRL+KEY_W"}}),
+    ("06-navegacao.html", "teclado", {"valor": "Sempre"}),
 ]
 
 

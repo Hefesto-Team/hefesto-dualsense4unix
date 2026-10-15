@@ -22,7 +22,7 @@ if str(_INTERFACE) not in sys.path:
 
 import monta
 import pacotes
-from pacotes import a04_iluminacao, a06_navegacao
+from pacotes import a04_iluminacao
 
 from hefesto_dualsense4unix.interface import hefesto_vivo
 
@@ -146,33 +146,6 @@ def test_os_quatro_lugares_vazios_da_04_mostram_a_mesma_coisa() -> None:
         for campo, valor in esperado.items():
             assert coluna.get(campo) == valor, (
                 f"{pref}·{campo} do lugar vazio não é o desenho apagado")
-
-
-def test_os_quatro_cartoes_vazios_da_06_sao_iguais() -> None:
-    """`P{n} • Desconectado` e `—`, nos quatro — nem `P1 • P1 • …`, nem a"""
-    carga = _o_que_chega_a_tela("06-navegacao.html", _mesa_vazia())
-    for pref in LUGARES:
-        coluna = carga["colunas"][pref]
-        assert coluna.get("identidade") == pacotes.SEM_NINGUEM_AQUI, (pref, coluna)
-        assert coluna.get("navega") == pacotes.TRAVESSAO, (pref, coluna)
-    assert carga[pacotes.MARCAS_DO_LUGAR]["navega"] == [], (
-        "com a mesa vazia algum cartão ficou com o verde de quem navega")
-    assert carga[pacotes.MARCAS_DO_LUGAR]["vazia"] == sorted(LUGARES), (
-        "com a mesa vazia algum cartão ficou sem a casca de lugar vazio")
-
-
-def test_o_verde_vai_para_o_primario() -> None:
-    """Com um controle primário, a marca é dele — e o lugar dele é o do tique."""
-    ctx = pacotes.Contexto(state={"connected": True}, mesa=MESA_DE_UM,
-                           conectados=[dict(PRIMARIO)], estados={})
-    carga = _o_que_chega_a_tela("06-navegacao.html", ctx, {UNIQ: "p1"})
-    assert carga[pacotes.MARCAS_DO_LUGAR]["navega"] == ["p1"]
-    assert carga[pacotes.MARCAS_DO_LUGAR]["vazia"] == ["p2", "p3", "p4"], (
-        "o lugar do primário ficou com a casca de vazio, ou um lugar sem dono a perdeu")
-    assert carga["colunas"]["p1"]["navega"] == a06_navegacao.linha_do_cartao("USB", True)
-    assert a06_navegacao.BOLINHA in carga["colunas"]["p1"]["navega"], (
-        "o primário voltou sem a bolinha — era o que a linha em texto fazia "
-        "depois de o controle sair e voltar")
 
 
 def _trecho(abre: str, fecha: str) -> str:

@@ -93,7 +93,6 @@ def test_o_dono_responde_o_que_o_daemon_calou(perfil_so_no_disco: str) -> None:
 
 @pytest.mark.parametrize("pacote,guarda", [
     ("a05_vibracao", "_gravar_a_forca"),
-    ("a06_navegacao", "_perfil_ativo_ou_recusa"),
 ])
 def test_a_guarda_nao_recusa_com_o_perfil_no_disco(
         pacote: str, guarda: str, perfil_so_no_disco: str,
@@ -112,12 +111,6 @@ def test_a_guarda_nao_recusa_com_o_perfil_no_disco(
                            estados={})
     alvo = getattr(mod, guarda)
     try:
-        if guarda == "_perfil_ativo_ou_recusa":
-            saiu = alvo(ctx)
-            assert saiu == PERFIL, (
-                f"a guarda de {pacote} devolveu {saiu!r} com o perfil "
-                f"{PERFIL!r} valendo no disco")
-            return
         alvo(ctx, None, "aa:bb:cc:00:00:01", "balanced", None)
     except RuntimeError as erro:
         assert "não há perfil ativo" not in str(erro), (

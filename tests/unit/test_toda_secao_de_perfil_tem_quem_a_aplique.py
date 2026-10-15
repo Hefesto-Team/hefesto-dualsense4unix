@@ -226,6 +226,15 @@ _CLASSIFICACAO: dict[str, SecaoPorApplier | SecaoDireta] = {
             "no controle."
         )
     ),
+    "teclado_sempre": SecaoDireta(
+        razao=(
+            "A-FUNCAO-DO-TECLADO-GANHA-O-SEMPRE-01 (15/10/2026). Mesma rota do "
+            "`teclado_so_no_jogo`: `apply_profile_suppression` o TRAVA no daemon "
+            "(`subsystems.mouse.trocar_a_tabela_no_jogo`) a cada ativação, e o "
+            "laço do tique faz o teclado digitar também com o jogo aberto. "
+            "Nada é escrito no controle."
+        )
+    ),
     "tabela_no_jogo": SecaoDireta(
         razao=(
             "O-GATILHO-VIRA-CLIQUE-SEM-LIGAR-O-CURSOR-01 (08/10/2026). Mesma "

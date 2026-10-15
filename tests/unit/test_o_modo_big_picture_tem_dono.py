@@ -289,22 +289,24 @@ class _PonteQueAnota:
         return {"status": "ok"}
 
 
-def test_8_a_lista_da_06_liga_e_desliga_pelo_daemon() -> None:
+def test_8_quem_navega_liga_e_desliga_pelo_daemon() -> None:
     from hefesto_dualsense4unix.interface import pacotes
     from hefesto_dualsense4unix.interface.pacotes import a06_navegacao as a06
 
-    assert "modo-steam" not in a06.SEM_GESTO
-    fn = pacotes.gesto_da_pagina("06-navegacao.html", "modo-steam")
-    assert fn is not None, "a lista «Modo Big Picture na Steam» continua sem atendente"
     ctx = pacotes.Contexto(state={}, mesa=[], conectados=[], estados={})
     ponte = _PonteQueAnota()
-    fn(ctx, {"valor": a06.BIG_PICTURE_LIGADO}, ponte)
-    fn(ctx, {"valor": a06.BIG_PICTURE_DESLIGADO}, ponte)
+    for gesto, valor in (("quem-navega", a06.QUEM_STEAM), ("quem-navega", a06.QUEM_HEFESTO),
+                         ("na-steam", a06.NA_STEAM_BIG_PICTURE)):
+        fn = pacotes.gesto_da_pagina("06-navegacao.html", gesto)
+        assert fn is not None, f"o gesto «{gesto}» da 06 continua sem atendente"
+        fn(ctx, {"valor": valor}, ponte)
     assert ponte.chamadas == [
         ("navegacao.big_picture.set", {"ligado": True, "origin": "manual"}),
-        ("navegacao.big_picture.set", {"ligado": False, "origin": "manual"})]
+        ("navegacao.big_picture.set", {"ligado": False, "origin": "manual"}),
+        ("navegacao.big_picture.set", {"ligado": True, "origin": "manual"})]
+    quem = pacotes.gesto_da_pagina("06-navegacao.html", "quem-navega")
     with pytest.raises(ValueError):
-        fn(ctx, {"valor": "Talvez"}, ponte)
+        quem(ctx, {"valor": "Talvez"}, ponte)
 
 
 def test_8_a_tela_pinta_o_que_o_daemon_diz_e_nao_afirma_sem_ele() -> None:
@@ -321,11 +323,11 @@ def test_8_a_tela_pinta_o_que_o_daemon_diz_e_nao_afirma_sem_ele() -> None:
     assert a06.big_picture_ligado({"navegacao": {"tipo": "interna"}}) is None
 
 
-def test_8_a_lista_esta_no_metodo_e_na_prova_da_aba() -> None:
+def test_8_o_big_picture_esta_no_metodo_e_na_prova_da_aba() -> None:
     from hefesto_dualsense4unix.interface.pacotes import a06_navegacao as a06
 
     assert "navegacao.big_picture.set" in a06.METODOS
-    provas = [p for p in a06.PROVAS if p["gesto"] == "modo-steam"]
+    provas = [p for p in a06.PROVAS if p["gesto"] == "quem-navega"]
     assert {p["chama"][0][2]["ligado"] for p in provas} == {True, False}
 
 

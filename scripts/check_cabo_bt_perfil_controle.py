@@ -26,13 +26,7 @@ _DO_EXTERNO = ("declara o controle externo (a cor do plástico, a chave de modo,
 
 NAO_E_DO_APARELHO: dict[str, str] = {
     "escolher-na-fita": "escolhe qual controle a aba edita — não muda o aparelho",
-    "fechar-definicoes": "fecha um painel da própria tela",
-    "fechar-ponto": "fecha um painel da própria tela",
-    "fechar-teclas": "fecha um painel da própria tela",
     "padrao-da-aba": "devolve a aba ao desenho — é da tela",
-    "padrao-da-tecla": "devolve UMA tecla ao padrão — é do mapeamento, não do aparelho",
-    "padrao-definicoes": "devolve as definições ao padrão — é do perfil",
-    "padrao-remapeamento": "devolve o remapeamento ao padrão — é do perfil",
     "vizinho-o-que-e": "abre a explicação de um vizinho de porta — é texto",
     "detectar": "detecta o jogo aberto — é leitura da máquina",
     "procurar": "reprocura os lançadores — é leitura do disco",
@@ -104,17 +98,15 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "novo-hub": "abre a pergunta curta do hub na 08 — estado de tela, é da máquina",
     "novo-hub-cancelar": "idem",
     "novo-hub-gravar": "declara o hub na máquina (`machine_declare`) — é da máquina, não de um controle",
-    "guardar-definicoes": "grava no perfil — é do perfil",
-    # `Profile.button_actions`. A classificação estava certa (é do perfil, não
-    "guardar-ponto": "grava o que cada peça faz no Estilo Point-and-click — é "
-                     "do perfil",
-    "guardar-remapeamento": "grava o remapeamento — é do perfil",
-    "guardar-teclas": "grava as teclas — é do perfil",
-    "tecla-escrita": "digita uma tecla no campo — é da tela",
-    "teclado": "abre o teclado virtual — é da tela",
-    "linha-de-botao": "escolhe o que uma linha de botão faz — é da tela",
-    "linha-de-troca": "escolhe o destino de uma linha da troca de botões — é da tela",
-    "fechar-troca": "fecha um painel da própria tela",
+    "teclado": "escolhe a Função do teclado (Sempre, Só fora do jogo, Só dentro do jogo, "
+               "Desativado) — é do perfil e do serviço, e o ATO no aparelho é o de cada linha",
+    "linha-de-botao": "grava o que uma linha de botão faz no perfil ou no computador — o ATO "
+                      "no aparelho é o de cada linha, que já responde as quatro",
+    "quem-navega": "escolhe quem navega o computador, o Hefesto ou a Steam — é do serviço "
+                   "(o mesmo Big Picture do `modo-steam`), nunca do perfil",
+    "na-steam": "escolhe o que a Steam navega (o Big Picture) — é do serviço, nunca do perfil",
+    "point-and-click-perfil": "escolhe o perfil que o point and click usa — é da máquina "
+                              "(`mouse.point_and_click` do `maquina.json`)",
     "mapa-perfil": "escolhe qual perfil o mapa do controle edita — é da tela",
     "mapa-nome": "o nome do perfil em edição no mapa — é do perfil, vale no Guardar",
     "mapa-usar-em": "o jogo a que o perfil em edição se liga — é do perfil, vale no Guardar",
@@ -130,8 +122,6 @@ NAO_E_DO_APARELHO: dict[str, str] = {
                       "máquina, nunca do perfil",
     "vel-cursor": "a velocidade do cursor — é da emulação de mouse, global (decisão dela)",
     "vel-rolagem": "idem",
-    "tabela-no-jogo": "liga as linhas da 06 também dentro do jogo (`tabela_no_jogo`, camada do "
-                      "computador) — o ATO no aparelho é o de cada linha, que já responde as quatro",
     "modo-dos-gatilhos": "o par Automático | Personalizado dos gatilhos grava `triggers.modo` "
                          "no perfil — o ATO no aparelho é o do gesto `modo` da 03",
     "modo-da-vibracao": "o par Automático | Personalizado da vibração grava `rumble.modo` no "

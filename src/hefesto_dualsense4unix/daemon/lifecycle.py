@@ -704,6 +704,7 @@ class Daemon:
     # efetivo a cada ativação (`apply_profile_suppression`), lidos pelo laço do tique.
     _tabela_no_jogo: Any = None
     _teclado_so_no_jogo: bool = False
+    _teclado_sempre: bool = False
     _estava_no_jogo: bool = False
     _suppress_manual_ts: float = field(default=float("-inf"))
     _suppress_from_profile: bool = False

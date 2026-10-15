@@ -46,7 +46,6 @@ from hefesto_dualsense4unix.interface.pacotes import a11_calibrar_sensores as a1
 from hefesto_dualsense4unix.interface.pacotes import em_fundo
 
 P02 = "02-controles.html"
-P06 = "06-navegacao.html"
 PCAL = "calibrar-sensores.html"
 UNIQS = tuple(f"aa:bb:cc:00:00:0{n}" for n in (1, 2, 3, 4))
 MAC_NORM = "AABBCC000001"
@@ -72,17 +71,7 @@ def test_o_cartao_aberto_tem_o_endereco_de_quem_joga_e_do_numero() -> None:
     assert len(re.findall(r'data-campo="jogador" data-hef-alvo="html"', html)) >= 8
 
 
-def test_a_06_tem_o_endereco_do_numero_no_cartao() -> None:
-    """MORDIDA: o `P1` digitado no `.nav-rot` — o número fica preso ao desenho."""
-    html = _bancada(P06)
-    rotulos = re.findall(r'<div class="nav-rot">(.*?)</div>', html, re.S)
-    assert rotulos, "a 06 não tem mais o `.nav-rot`"
-    for r in rotulos:
-        if r.lstrip().startswith("P"):
-            assert 'data-campo="jogador"' in r, f"número sem endereço: {r[:120]}"
-
-
-@pytest.mark.parametrize("aba", [P02, P06])
+@pytest.mark.parametrize("aba", [P02])
 def test_o_lugar_vazio_do_desenho_da_o_numero_do_assento(
         aba: str, monkeypatch: pytest.MonkeyPatch) -> None:
     """A régua 5 da sprint: o molde do lugar vazio, lido sobre a bancada, dá o número do assento.
@@ -319,14 +308,6 @@ def test_o_nome_chega_a_02_pelo_alias_que_a_08_le(
     cards = a02.pacote(_ctx((1, 2)))["cards"]
     assert cards[UNIQS[0]]["quem-joga"] == "Vitória"
     assert cards[UNIQS[1]]["quem-joga"].startswith("P<span")
-
-
-def test_a_06_manda_o_numero_vivo(monkeypatch: pytest.MonkeyPatch) -> None:
-    """MORDIDA: tirar o `cards[uniq]["jogador"]` do pacote da 06."""
-    carga = pacotes.pacote_da_pagina(P06, _ctx((1, 5)))
-    assert carga is not None
-    cards = carga["colunas"]
-    assert cards[UNIQS[1]]["jogador"] == "5"
 
 
 # ---------------------------------------------------------------- 6. a regra é uma só

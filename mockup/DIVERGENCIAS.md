@@ -43,3 +43,19 @@ seção daqui**: a aba deixou de estar em trabalho.
   de antes até publicar, que não tem a linha de perfil nem as linhas dos botões: o `--publicar` leva a página no mesmo
   fecho que leva o código.
 
+
+## 06-navegacao.html
+- **15/10/2026** — a Navegação vira a aba dos 23 botões do desenho do todo (sprint A-ABA-NAVEGACAO-DO-TODO-01, e as
+  três que ela absorve): 22 linhas de botão e o Toque desabilitado (a sprint dizia 22, o desenho tem 23 com o Toque),
+  a fila «Trocar os botões», «Point and click» e «Acessibilidade» com o «Voltar ao padrão», os selects Quem navega,
+  Tipo, Na Steam, Perfil de point and click e Função do teclado (quatro palavras, com o «Sempre»), duas barras
+  (cursor e rolagem) e seis ações dos gestos do PS. O pacote novo roda sobre a página de antes até publicar: o
+  `--publicar` leva a página no mesmo fecho que leva o código.
+- **Fica diferente do desenho, de propósito:** a Acessibilidade renderiza inteira mas todo controle sem dono sai
+  `disabled`/`inert`, e o Guardar e o Voltar ao padrão dela saem apagados com a dica «Chega com a próxima versão»
+  (os donos futuros são as sprints do botão que alterna, do tremor, dos analógicos e do cursor); os chips «Navega com»
+  só pintam; os rótulos do Tipo encurtam («Interna», «Mouse e teclado»); o ritmo da repetição diz «Hz» e o rótulo do
+  glifo começa em maiúscula (a régua de primeira maiúscula reprovava «por s» e «cima»); a dica do Point and click
+  espera o mapa ler a escolha e as âncoras `#trocar`, `#point-and-click` e `#acessibilidade`; o padrão do mockup da
+  Função do teclado é «Só fora do jogo» (o «Sempre» é escolha dela, não o padrão); o desenho trocou o «−/+» e as
+  duas colunas da sprint por barras e linhas.

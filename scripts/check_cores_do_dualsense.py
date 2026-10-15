@@ -17,7 +17,6 @@ from gerar_cores_do_dualsense import (
     GLIFOS_DA_FACE,
     NAO_MEDIDA,
     ZONAS_DA_CASCA,
-    ZONAS_DE_SUPERFICIE,
     ZONAS_SEM_ALVO,
     legivel,
 )
@@ -188,6 +187,15 @@ def para_rgb(hexa: str) -> str:
 with sync_playwright() as pw:
     b = pw.chromium.launch(executable_path="/usr/bin/google-chrome", args=["--no-sandbox"])
     pg = b.new_page(viewport={"width": 1920, "height": 1080})
+
+    def escolhe(modelo: str) -> None:
+        """O modelo no SVG, como o chip do controle o põe (o seletor `#cw` saiu em 15/10/2026)."""
+        pg.evaluate("""m => {
+          document.querySelector('svg.ds').setAttribute('data-colorway', m);
+          // a peça acesa pela ação do botão (`muda`, `on`) vence o plástico: a régua o mede sem ela
+          document.querySelectorAll('.b2[data-estado]').forEach(e => e.removeAttribute('data-estado'));
+        }""", modelo)
+
     erros: list[str] = []
     pg.on("pageerror", lambda e: erros.append(str(e)))
     pg.goto(f"file://{MAPA}")
@@ -197,7 +205,7 @@ with sync_playwright() as pw:
     diz(not erros, f"o mapa abre sem exceção de JavaScript — {erros[:3]}")
 
     for mid, porque in AMOSTRA:
-        pg.select_option("#cw", mid)
+        escolhe(mid)
         pg.wait_for_timeout(150)
         zonas = por_modelo[mid]
         erradas = []
@@ -229,7 +237,7 @@ with sync_playwright() as pw:
     pg.click('[data-jogador="2"]')
     pg.wait_for_timeout(150)
     antes = pg.evaluate("()=>getComputedStyle(document.querySelector('#mp-lightbar *')).fill")
-    pg.select_option("#cw", "white")
+    escolhe("white")
     pg.wait_for_timeout(150)
     depois = pg.evaluate("()=>getComputedStyle(document.querySelector('#mp-lightbar *')).fill")
     diz(antes == depois == para_rgb("#%02x%02x%02x" % player_slot_color(2)),
@@ -246,25 +254,8 @@ with sync_playwright() as pw:
         diz(acesos == canonico and luz == para_rgb("#%02x%02x%02x" % player_slot_color(n)),
             f"jogador {n}: lâmpadas {acesos} (canônico {canonico}) e barra {luz}")
 
-    pg.click('[data-jogador="0"]')
-    pg.wait_for_timeout(120)
-    apagou = pg.evaluate(
-        "()=>[1,2,3,4,5].every(i=>!document.querySelector('#mp-led-jogador-'+i)"
-        ".classList.contains('led-on'))")
-    diz(apagou, "o 'nenhum' apaga as cinco lâmpadas")
-
-    n_op = pg.evaluate("()=>document.querySelectorAll('#cw option').length")
-    diz(n_op == len(por_modelo), f"o dropdown lista os {len(por_modelo)} modelos — tem {n_op}")
-
-    marcados = set(pg.evaluate(
-        "()=>[...document.querySelectorAll('#cw option[data-parcial]')].map(o=>o.value)"))
-    devem = {mid for mid, z in por_modelo.items()
-             if any(x["grau"] == "SEM-HEX" for x in z.values())
-             or any(k not in z for k in
-                    [x for x in ZONAS_DE_SUPERFICIE if x != "casca"] + list(ZONAS_DA_CASCA))}
-    diz(marcados == devem,
-        f"os {len(devem)} modelos sem hex puro estão marcados na lista — "
-        f"faltam {sorted(devem - marcados)}, sobram {sorted(marcados - devem)}")
+    diz(pg.evaluate("()=>!document.querySelector('#cw')"),
+        "o seletor dos 28 modelos saiu do mapa: a cor vem do controle escolhido")
 
     b.close()
 

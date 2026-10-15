@@ -733,16 +733,17 @@ SECOES_DO_CONTROLE_NO_COMPUTADOR: tuple[str, ...] = (
 
 
 class MouseDoComputador(BaseModel):
-    """As duas velocidades do mouse emulado. O liga e desliga é do jogo."""
+    """As velocidades do mouse emulado e o perfil de point and click; o liga é do jogo."""
 
     model_config = ConfigDict(extra="forbid")
 
     speed: int | None = None
     scroll_speed: int | None = None
+    point_and_click: str | None = None
 
     @model_validator(mode="after")
     def _a_faixa_e_a_do_perfil(self) -> MouseDoComputador:
-        campos = {c: getattr(self, c) for c in ("speed", "scroll_speed")
+        campos = {c: getattr(self, c) for c in ("speed", "scroll_speed", "point_and_click")
                   if getattr(self, c) is not None}
         ProfileMouseConfig(enabled=False, **campos)
         return self
@@ -761,6 +762,7 @@ class ComputadorGlobal(BaseModel):
     key_bindings: dict[str, list[str]] | None = None
     teclado_emulado: bool | None = None
     teclado_so_no_jogo: bool | None = None
+    teclado_sempre: bool | None = None
     tabela_no_jogo: bool | None = None
 
     @model_validator(mode="after")

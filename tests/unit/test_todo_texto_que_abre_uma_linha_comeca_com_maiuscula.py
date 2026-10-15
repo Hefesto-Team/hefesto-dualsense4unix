@@ -205,8 +205,7 @@ def test_a_08_com_a_tela_aberta_por_ancora_abre_toda_linha_com_maiuscula(ancora:
 #: TODO-TEXTO-QUE-ABRE-UMA-LINHA-COMECA-COM-MAIUSCULA-01, ampliada em 08/10/2026 — «a régua abre
 #: as telas por âncora», em todas as abas.
 ANCORAS_DAS_OUTRAS = (
-    ("06-navegacao", "definicoes-mouse"), ("06-navegacao", "teclas-do-teclado"),
-    ("06-navegacao", "remapeamento"), ("06-navegacao", "point-and-click"),
+    ("06-navegacao", "acessibilidade"),
     ("07-lancadores", "novo-lancador"), ("07-lancadores", "escolher-jogo"))
 
 

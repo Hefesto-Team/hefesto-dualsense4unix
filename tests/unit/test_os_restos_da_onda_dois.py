@@ -15,7 +15,6 @@ sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 PAGINA_02 = "02-controles.html"
-PAGINA_06 = "06-navegacao.html"  # (noqa-acento) nome de arquivo
 PAGINA_09 = "09-sistema.html"
 
 UNIQ_P1 = "aa:bb:cc:00:00:3a"
@@ -128,22 +127,6 @@ def test_a_02_a_moldura_do_alto_falante_tem_endereco_proprio(publicado: bool) ->
     for tag in molduras:
         assert 'data-campo="alto-apagado"' in tag, tag
         assert 'data-hef-atributo="data-apagado"' in tag, tag
-
-
-def _tela(doc: str, ident: str) -> str:
-    return doc.split(f'id="{ident}"', 1)[-1].split('class="tela-nova"', 1)[0]
-
-
-@pytest.mark.parametrize("publicado", [False, True], ids=["bancada", "publicado"])
-def test_a_06_a_marca_sai_da_troca_e_fica_nas_definicoes(publicado: bool) -> None:
-    """MORDIDA: devolva a marca às linhas da troca — o gerador para, e o publicado"""
-    doc = _pagina(PAGINA_06, publicado)
-    for ident, com_marca in (("remapeamento", False), ("definicoes-mouse", True)):
-        celulas = [c for c in re.findall(r'<td class="b">(.*?)</td>', _tela(doc, ident), re.S)
-                   if 'class="nm">Touchpad<' in c]
-        assert len(celulas) == 3, (ident, len(celulas))
-        marcadas = ["marca-nao-dispara" in c for c in celulas]
-        assert marcadas == [com_marca] * 3, (ident, marcadas)
 
 
 DIGITO = re.compile(r"\d")

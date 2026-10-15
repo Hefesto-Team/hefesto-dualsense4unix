@@ -100,12 +100,13 @@ def test_a_troca_aparece_no_valor_da_linha_com_o_nome_da_peca(com_troca: dict[st
     assert mapa["val-triangle"] == _nome_da_peca(destino), mapa["val-triangle"]
     assert "muda" in str(mapa["estado-triangle"]).split()
     assert mapa["atual-triangle"] == f"troca:{destino}"
-    assert "muda" not in str(mapa["estado-cross"]).split(), "a Cruz não tem troca"
+    assert not str(mapa["atual-cross"]).startswith("troca:"), "a Cruz não tem troca"
 
 
 def test_o_endereco_existe_dos_dois_lados() -> None:
     texto = _a_pagina().read_text(encoding="utf-8")
-    na_pagina = set(re.findall(r'data-campo="([^"]+)"', texto))
+    sem_script = re.sub(r"<script\b[^>]*>.*?</script>", "", texto, flags=re.S)
+    na_pagina = set(re.findall(r'data-campo="([^"]+)"', sem_script))
     carga = pacotes.pacote_da_pagina(PAGINA, _contexto("p1")) or {}
     no_pacote = set(carga["mesa"])
     assert no_pacote - na_pagina == set(), (
@@ -115,7 +116,11 @@ def test_o_endereco_existe_dos_dois_lados() -> None:
         f"a página tem endereço sem dono no pacote: {sorted(na_pagina - no_pacote)}")
     for seletor in carga["blocos"]:
         nome = re.fullmatch(r'\[data-bloco="([^"]+)"\]', seletor)
-        assert nome and f'data-bloco="{nome.group(1)}"' in texto, seletor
+        if nome:
+            assert f'data-bloco="{nome.group(1)}"' in texto, seletor
+        else:
+            ident = re.fullmatch(r"#([\w-]+)", seletor)
+            assert ident and f'id="{ident.group(1)}"' in texto, seletor
 
 
 def test_o_chip_do_mapa_e_o_gesto_da_fita_das_abas() -> None:
@@ -254,7 +259,9 @@ def test_o_pisca_e_a_troca_aparecem_no_desenho(com_troca: dict[str, Any]) -> Non
     destino = _nome_da_peca(com_troca["remapeamento"]["triangle"])
     assert com_p3["texto_tri"] == destino, com_p3
     assert "pisca" in com_p3["estado_tri"].split() and "pisca" not in com_p3["estado_cruz"].split()
-    assert com_p3["peca_tri"] == ROSA and com_p3["peca_cruz"] != ROSA, com_p3
+    # a Cruz é a linha escolhida ao abrir (`on`), e a escolhida também pinta rosa: o que muda
+    # com o controle é a peça do Triângulo, que só pisca quando o P3 o aperta
+    assert com_p3["peca_tri"] == ROSA, com_p3
     assert com_p1["peca_tri"] != ROSA and com_p1["peca_cruz"] == ROSA, com_p1
 
 

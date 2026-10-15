@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Todo lugar de controle — cheio ou VAZIO — tem endereço, nas sete abas."""
+"""Todo lugar de controle — cheio ou VAZIO — tem endereço, nas seis abas."""
 
 from __future__ import annotations
 
@@ -14,9 +14,11 @@ PUBLICADO = RAIZ / "src/hefesto_dualsense4unix/interface/paginas"
 
 COM_LUGAR = (
     "01-jogar", "02-controles", "03-gatilhos", "04-iluminacao",
-    "05-vibracao", "06-navegacao", "08-conexoes",
+    "05-vibracao", "08-conexoes",
 )
-SEM_LUGAR = ("07-lancadores", "09-sistema", "10-perfis")
+#: A 06 saiu da lista em 15/10/2026: a Navegação do todo escolhe «Navega com» por chip, sem cartão
+#: por controle, e o mapa dos botões é de um controle por vez.
+SEM_LUGAR = ("06-navegacao", "07-lancadores", "09-sistema", "10-perfis")
 
 CASAS = ("p1", "p2", "p3", "p4")
 
@@ -48,7 +50,7 @@ def test_as_quatro_casas_tem_endereco(onde: str, aba: str,
 
 @pytest.mark.parametrize("aba", SEM_LUGAR)
 def test_a_lista_de_fora_continua_sem_lugar_por_controle(aba: str) -> None:
-    """E as três de fora não ganharam lugar por controle sem ninguém ver."""
+    """E as quatro de fora não ganharam lugar por controle sem ninguém ver."""
     caminho = PUBLICADO / f"{aba}.html"
     if not caminho.exists():
         pytest.skip(f"{aba} não está publicada")

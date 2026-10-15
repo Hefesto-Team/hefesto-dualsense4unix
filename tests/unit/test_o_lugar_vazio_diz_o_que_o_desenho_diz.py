@@ -29,7 +29,7 @@ from hefesto_dualsense4unix.interface import hefesto_vivo, mesa_viva, onde
 
 PILOTO = _INTERFACE / "hefesto_vivo.py"
 
-SETE = sorted(p for p in pacotes.PACOTES
+COM_CARTAO = sorted(p for p in pacotes.PACOTES
               if p[:2].isdigit() and pacotes.lugares_da_pagina(p))
 
 SIMULADOS = frozenset({"html", "cor", "atributo"})
@@ -217,15 +217,14 @@ def _o_que_diz(cravados: list[regua_do_mockup._Campo], vivos: list[str],
             if c.dono == pref and c.chave == chave]
 
 
-def test_as_sete_paginas_sao_as_sete() -> None:
+def test_as_paginas_com_cartao_sao_as_seis() -> None:
     """A parametrização abaixo não pode passar por vacuidade."""
-    assert SETE == ["01-jogar.html", "02-controles.html", "03-gatilhos.html",
-                    "04-iluminacao.html", "05-vibracao.html", "06-navegacao.html",
-                    "08-conexoes.html"], SETE
+    assert COM_CARTAO == ["01-jogar.html", "02-controles.html", "03-gatilhos.html",
+                        "04-iluminacao.html", "05-vibracao.html", "08-conexoes.html"], COM_CARTAO
 
 
-@pytest.mark.parametrize("pagina", SETE)  # (noqa-acento): nome de parâmetro
-def test_as_sete_paginas_com_a_mesa_vazia(pagina: str) -> None:
+@pytest.mark.parametrize("pagina", COM_CARTAO)  # (noqa-acento): nome de parâmetro
+def test_as_paginas_com_cartao_com_a_mesa_vazia(pagina: str) -> None:
     """Zero controles: nenhum dos quatro lugares mostra o que o desenho pôs"""
     carga = _carga(pagina, [])
     cravados, (vivos,), texto = _a_tela(pagina, [carga])
@@ -236,8 +235,8 @@ def test_as_sete_paginas_com_a_mesa_vazia(pagina: str) -> None:
         "controle — a foto dela de 23/09/2026:\n  " + "\n  ".join(vazaram))
 
 
-@pytest.mark.parametrize("pagina", SETE)  # (noqa-acento): nome de parâmetro
-def test_as_sete_paginas_com_um_controle_no_p2(pagina: str) -> None:
+@pytest.mark.parametrize("pagina", COM_CARTAO)  # (noqa-acento): nome de parâmetro
+def test_as_paginas_com_cartao_com_um_controle_no_p2(pagina: str) -> None:
     """Um controle no P2: o P1, o P3 e o P4 continuam dizendo o lugar vazio."""
     carga = _carga(pagina, [NO_P2])
     cravados, (vivos,), texto = _a_tela(pagina, [carga])
@@ -296,7 +295,7 @@ def test_o_p2_sai_e_volta_ao_lugar_vazio_no_tique_seguinte() -> None:
         cravados, sem, vazio["vazios"], texto)
 
 
-@pytest.mark.parametrize("pagina", SETE)  # (noqa-acento): nome de parâmetro
+@pytest.mark.parametrize("pagina", COM_CARTAO)  # (noqa-acento): nome de parâmetro
 def test_o_que_a_regra_escreve_no_vazio_a_aba_reescreve_no_cheio(pagina: str) -> None:
     """A trava da regra: ela só escreve onde a aba escreve."""
     vazio = _carga(pagina, [])

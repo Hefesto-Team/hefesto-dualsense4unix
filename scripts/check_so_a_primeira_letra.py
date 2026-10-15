@@ -115,7 +115,7 @@ DESIGNADORES = frozenset({"Entrada", "Canal", "Player", "Controle"})
 ROTULOS_CITADOS: tuple[str, ...] = (
     "Aplicar", "Salvar perfil", "Conectar", "Parar",
     "Padrão", "Economia", "Máximo", "Sensor háptico",
-    "Interna", "Definições controle e mouse", "Teclas do teclado", "Trocar os botões",
+    "Interna", "Trocar os botões",
     "Atrás do gabinete", "Gestão de controles", "Rádio e adaptadores", "Mapa das conexões",
     "Personalizado", "Universal",
 )

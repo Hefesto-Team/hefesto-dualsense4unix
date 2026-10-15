@@ -75,13 +75,3 @@ def test_o_que_o_evdev_nao_conhece_nao_vira_tecla() -> None:
     assert input_actions.dehumanize_binding("banana") == "banana"
     with pytest.raises(ValueError, match="BANANA"):
         parse_binding(input_actions.dehumanize_binding("banana"))
-
-
-def test_a_aba_pergunta_ao_dono_em_vez_de_traduzir_de_novo() -> None:
-    """O contorno da aba 06 virou delegação — uma tradução, um dono."""
-    from hefesto_dualsense4unix.interface.pacotes import a06_navegacao
-
-    for cru in _teclas_que_a_tela_pode_mostrar():
-        na_tela = input_actions.humanize_binding(cru)
-        assert (a06_navegacao._desfazer_o_humanize(na_tela)
-                == input_actions.dehumanize_binding(na_tela))
