@@ -253,6 +253,7 @@ class TestALeituraQueFalhaPerguntaEDorme:
             monkeypatch.setattr(os, "read", ler)
             p1.stop()
         assert p1._gadget_caiu is False
+        assert mesa.eventos("vpad_parou") == 1, "o doctor não sabe que o pad saiu"
 
     def test_a_leitura_que_falha_com_o_gadget_sumido_derruba_o_pad(
         self, mesa: Mesa, monkeypatch: pytest.MonkeyPatch
