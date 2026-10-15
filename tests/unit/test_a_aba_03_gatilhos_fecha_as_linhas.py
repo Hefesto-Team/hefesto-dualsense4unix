@@ -7,6 +7,7 @@ import re
 import sys
 
 import pytest
+from tests.unit._mundo_da_aba_03 import SO_NA_PAGINA_ANTIGA
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
@@ -199,7 +200,8 @@ def test_o_lugar_vazio_nao_explica_modo_nenhum(a03, ctx):
     for pref in vazias:
         for sigla in ("e", "d"):
             assert fora[pref][f"dica-modo-{sigla}"] == a03.SEM_APARELHO_AQUI
-            assert fora[pref][f"dica-pronto-{sigla}"] == a03.SEM_APARELHO_AQUI
+            outra = "dica-imersao-" if a03._pagina_do_todo() else "dica-pronto-"
+            assert fora[pref][f"{outra}{sigla}"] == a03.SEM_APARELHO_AQUI
 
 
 def _destinos_da_lista(a03, modo: str) -> set[str]:
@@ -272,6 +274,7 @@ def test_onde_a_curva_nao_troca_o_modo_a_dica_nao_anuncia_troca(a03):
         "o clique troca o modo, no outro não troca nada")
 
 
+@SO_NA_PAGINA_ANTIGA
 def test_a_dica_do_pronto_acompanha_o_modo_no_tique(a03, ctx):
     """E ela chega à tela pelo tique, com o modo daquele lado — não uma por aba."""
     col = a03.pacote(ctx("Rigid", "MultiPositionFeedback"))["colunas"][UNIQ]
@@ -302,7 +305,7 @@ def test_o_reenvio_saiu_do_desenho():
     gerador, e esta régua reprova junto com a 5-bis do `_conferir`.
     """
     html = BANCADA.read_text(encoding="utf-8")
-    assert html.count('<div class="ctrl"') >= 2, (
+    assert html.count('class="g2-cab"') >= 2, (
         "o desenho perdeu as colunas por controle — sem elas esta régua daria "
         "verde sobre uma página vazia")
     assert 'data-gesto="reenviar"' not in html, (

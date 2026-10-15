@@ -517,6 +517,11 @@ def test_a_folha_para_as_colunas_no_automatico() -> None:
 
     for pagina in ("03-gatilhos.html", "04-iluminacao.html"):
         texto = onde.pagina(pagina).read_text(encoding="utf-8")
+        if 'data-governa="' in texto:
+            # a base comum: o botão aponta a área (`data-governa`) e a classe que a cala
+            assert ".governado-pelo-jogo{" in texto
+            assert "pointer-events:none" in texto.split(".governado-pelo-jogo{", 1)[1][:120]
+            continue
         assert '.quadro[data-modo-da-aba="automatico"]' in texto
         assert "pointer-events:none" in texto.split(
             '.quadro[data-modo-da-aba="automatico"]', 1)[1][:300]

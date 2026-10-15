@@ -31,6 +31,7 @@ from collections.abc import Callable
 from typing import Any
 
 import pytest
+from tests.unit._mundo_da_aba_03 import SO_NA_PAGINA_ANTIGA
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
@@ -212,6 +213,7 @@ def _arrastar(i: int, v: int, *, tique: dict[str, Any] | None = None) -> str:
             f" return JSON.stringify({{erro: e, ler: window.__ler()}}); }})()")
 
 
+@SO_NA_PAGINA_ANTIGA
 def test_o_numero_e_o_valor_mandado_sao_os_da_alavanca_em_dez_voltas(a03: Any) -> None:
     """Duas barras seguidas, dez voltas alternadas: nenhum número velho chega ao aparelho."""
     from pacotes import gesto_da_pagina
@@ -322,6 +324,7 @@ def _o_voo_do_ajuste(recebido: list[str]) -> str:
     return str(voos[0])
 
 
+@SO_NA_PAGINA_ANTIGA
 def test_o_arrasto_leva_o_numero_e_a_recusa_devolve_os_dois(a03: Any) -> None:
     """Arrastando, o número e o `.cheio` seguem a mão; recusado, voltam ao que o aparelho tem.
 
@@ -353,6 +356,7 @@ def test_o_arrasto_leva_o_numero_e_a_recusa_devolve_os_dois(a03: Any) -> None:
         f"a recusa deixou a tela no 7 com o aparelho no 3: {pousou[2]}")
 
 
+@SO_NA_PAGINA_ANTIGA
 def test_a_forma_le_a_alavanca_mesmo_com_o_texto_do_numero_velho(a03: Any) -> None:
     """O gesto recolhe a coluna pela alavanca, nunca pelo texto do `.num`.
 

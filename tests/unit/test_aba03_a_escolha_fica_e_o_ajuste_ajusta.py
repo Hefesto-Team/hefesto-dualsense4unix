@@ -38,6 +38,7 @@ import pathlib
 import sys
 
 import pytest
+from tests.unit._mundo_da_aba_03 import SO_NA_PAGINA_ANTIGA
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
@@ -142,6 +143,7 @@ def test_o_modo_aplicado_continua_no_campo_no_tique_seguinte(a03):
         f"efeito', que lê o que está na TELA.")
 
 
+@SO_NA_PAGINA_ANTIGA
 def test_os_ajustes_aplicados_tambem_ficam(a03):
     """Não é só o modo: a caixa tem de mostrar os números que foram ao aparelho."""
     ctx = _ctx(modo_no_disco="Off")
@@ -200,6 +202,7 @@ def test_o_rascunho_so_recebe_o_que_o_daemon_aceitou(a03):
         "o rascunho ficou com um efeito que o daemon GUARDOU sem mandar ao fio")
 
 
+@SO_NA_PAGINA_ANTIGA
 def test_a_barra_do_produto_tem_alavanca_e_a_do_desenho_nao(a03):
     """A alavanca é invisível e é do PRODUTO; o desenho é do usuário."""
     ctx = _ctx(modo_no_disco="Off")
@@ -225,6 +228,7 @@ def test_a_barra_do_produto_tem_alavanca_e_a_do_desenho_nao(a03):
         "novo no desenho é ato dela — o padrão de `editavel` é `False`")
 
 
+@SO_NA_PAGINA_ANTIGA
 def test_a_faixa_da_alavanca_sai_do_produto(a03):
     """`0..9` para uma posição do curso, `0..255` para uma força. Nunca digitado."""
     ctx = _ctx(modo_no_disco="Off")
@@ -238,6 +242,7 @@ def test_a_faixa_da_alavanca_sai_do_produto(a03):
             f"({q.min_value}..{q.max_value}):\n{caixa}")
 
 
+@SO_NA_PAGINA_ANTIGA
 def test_o_lugar_sem_aparelho_nao_ganha_alavanca(a03):
     """Arrastar onde não há controle só pode terminar em recusa."""
     ctx = _ctx(modo_no_disco="Rigid")
@@ -279,6 +284,7 @@ def test_o_click_nao_repete_o_change_da_alavanca(a03):
         "`el.click()`, e assim ela nunca alcançaria a alavanca")
 
 
+@SO_NA_PAGINA_ANTIGA
 def test_montar_do_zero_deixa_de_ser_um_item_de_menu_que_nao_faz_nada(a03):
     """`Custom` = byte de modo + 7 forças, e os oito padrões são ZERO."""
     ctx = _ctx(modo_no_disco="Off")
@@ -303,6 +309,7 @@ def test_a_sexta_curva_de_feedback_entrou(a03):
             f"a curva {rotulo!r} do produto não está no campo:\n{opcoes}")
 
 
+@SO_NA_PAGINA_ANTIGA
 def test_as_cinco_curvas_de_vibracao_existem_no_modo_delas(a03):
     """Com o gatilho em `MultiPositionVibration` o campo mostra as CINCO."""
     tp = a03._prontos()
@@ -414,6 +421,7 @@ def test_o_ctx_nao_troca_simbolo_de_modulo() -> None:
         "o caminho do dado se perdeu junto")
 
 
+@SO_NA_PAGINA_ANTIGA
 def test_a_metralhadora_do_perfil_antigo_mostra_o_que_o_controle_recebe(a03):
     """O perfil de antes de 08/10/2026 guarda seis valores na Metralhadora.
 

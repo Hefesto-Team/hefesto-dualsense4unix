@@ -27,6 +27,7 @@ import re
 import sys
 
 import pytest
+from tests.unit._mundo_da_aba_03 import SO_NA_PAGINA_ANTIGA
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
@@ -117,6 +118,13 @@ def test_o_gatilho_do_perfil_chega_traduzido(ctx_com):
     assert col["modo-e-chave" if "modo-e-chave" in col else "modo-chave-e"] == "Rigid"
     assert col["modo-d"] == "Vibração"
 
+    if "imersao-e" in col:
+        # Números próprios do perfil: nenhuma imersão da lista é esta, e o campo fica em branco.
+        assert col["imersao-e"] == "" and col["imersao-d"] == "", (
+            f"o perfil guarda números próprios e a tela disse {col['imersao-e']!r} / "
+            f"{col['imersao-d']!r}: nenhuma imersão da lista tem os números dele")
+        return
+
     caixa_e = r["blocos"]['[data-controle="p1"] .ajustes.e']
     assert '<span class="num" data-campo="aj-val-e-1">180</span>' in caixa_e, (
         f"a Força do L2 não chegou com o 180 que o perfil guarda. Um padrão do "
@@ -131,6 +139,7 @@ def test_o_gatilho_do_perfil_chega_traduzido(ctx_com):
         f"a barra da Força não veio na porcentagem da FAIXA dela:\n{caixa_e}")
 
 
+@SO_NA_PAGINA_ANTIGA
 def test_a_curva_de_dez_posicoes_nao_derruba_a_aba(ctx_com):
     """A segunda forma do disco — e ela quebrou o pacote de verdade."""
     from pacotes import pacote_da_pagina

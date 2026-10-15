@@ -114,11 +114,16 @@ DESIGNADORES = frozenset({"Entrada", "Canal", "Player", "Controle"})
 #: alguma página: o nome que some da tela sai daqui.
 ROTULOS_CITADOS: tuple[str, ...] = (
     "Aplicar", "Salvar perfil", "Conectar", "Parar",
-    "Meus efeitos", "Padrão", "Economia", "Máximo", "Sensor háptico",
+    "Padrão", "Economia", "Máximo", "Sensor háptico",
     "Interna", "Definições controle e mouse", "Teclas do teclado", "Trocar os botões",
     "Atrás do gabinete", "Gestão de controles", "Rádio e adaptadores", "Mapa das conexões",
     "Personalizado", "Universal",
 )
+
+#: Rótulos que a página publicada de antes ainda mostra e o desenho do todo já tirou
+#: («Meus efeitos» virou «Seus efeitos»). Licenciam a citação sem exigir a página; a linha
+#: sai quando o `--publicar 03` chegar.
+ROTULOS_DA_PAGINA_ANTIGA: tuple[str, ...] = ("Meus efeitos",)
 
 #: A régua lê `+` como separador de tecla («Alt + Tab»).
 _INICIO = re.compile(r"(?:^|[.!?…:;]\s+|[«“\"(\[]\s*|\s[—–·•●|→+]\s+|/)$")
@@ -215,7 +220,7 @@ def maiusculas_no_meio(frase: str, nomes: list[str]) -> list[str]:
 def licencas(paginas: list[pathlib.Path]) -> list[str]:
     """Os nomes que podem ter maiúscula no meio, o mais longo primeiro."""
     nomes = (nomes_de_cor() | nomes_das_abas(paginas) | set(NOMES_DO_DESENHO)
-             | set(ROTULOS_CITADOS) | set(DIVIDA))
+             | set(ROTULOS_CITADOS) | set(ROTULOS_DA_PAGINA_ANTIGA) | set(DIVIDA))
     return sorted(nomes, key=len, reverse=True)
 
 

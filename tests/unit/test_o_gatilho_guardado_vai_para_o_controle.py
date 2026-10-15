@@ -29,6 +29,7 @@ A MORDIDA: faça o gesto gravar em `prof.triggers` (o global) em vez do override
 from __future__ import annotations
 
 import pathlib
+import re
 import sys
 from typing import Any
 
@@ -206,6 +207,14 @@ def test_o_botao_pede_a_forma_da_coluna() -> None:
     from hefesto_dualsense4unix.interface import onde
 
     html = (onde.PUBLICADO / "03-gatilhos.html").read_text(encoding="utf-8")
+    if 'class="g2-grade"' in html:
+        # a página do todo não tem Guardar: a imersão recolhe o acionamento da coluna e o
+        # Criar recolhe a área de criar, e sem o `data-hef-forma` os dois só sabem recusar
+        assert html.count('data-gesto="imersao"') >= 8
+        assert len(re.findall(r'data-gesto="imersao"[^>]*data-hef-forma="acion-p\d-[ed]"',
+                              html)) >= 8
+        assert 'data-gesto="criar-efeito" data-hef-forma="criar-gatilhos"' in html
+        return
     assert html.count('data-gesto="guardar" data-hef-forma="@controle"') >= 4, (
         "as quatro colunas precisam do `data-hef-forma` no Guardar — sem ele o "
         "piloto não recolhe a coluna e o botão passa a recusar")

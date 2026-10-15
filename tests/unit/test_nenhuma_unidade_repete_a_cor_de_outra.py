@@ -86,7 +86,7 @@ def test_todo_gatilho_da_receita_e_um_modo_real() -> None:
 
     pagina = (pathlib.Path(__file__).resolve().parents[2]
               / "src/hefesto_dualsense4unix/interface/paginas/03-gatilhos.html")
-    m = re.search(r'<select class="modo"[^>]*>(.*?)</select>',
+    m = re.search(r'<select class="(?:modo|g2-acion)"[^>]*>(.*?)</select>',
                   pagina.read_text(encoding="utf-8"), re.S)
     assert m, "a página Gatilhos não tem lista de modo — a régua ficaria cega"
     reais = set(re.findall(r'<option value="([^"]*)"', m.group(1)))

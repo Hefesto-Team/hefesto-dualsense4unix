@@ -157,19 +157,41 @@ def _o_que_o_daemon_manda(nome: str) -> _Camadas:
 
 
 def _o_que_a_coluna_diz(r: dict[str, Any], uniq: str, pref: str,
-                        sig: str) -> tuple[str, str, list[int]]:
+                        sig: str) -> tuple[str, str, list[int] | None]:
     """`(rótulo, modo, ajustes)` de um lado, lidos do que a página recebe."""
     col = r["colunas"][uniq]
-    caixa = r["blocos"][f'[data-controle="{pref}"] .ajustes.{sig}']
-    ajustes = [int(v) for v in re.findall(
-        rf'data-campo="aj-val-{sig}-\d+">(-?\d+)<', caixa)]
+    caixa = r["blocos"].get(f'[data-controle="{pref}"] .ajustes.{sig}')
+    if caixa is None:
+        ajustes = _o_que_a_imersao_diz(col, sig)
+    else:
+        ajustes = [int(v) for v in re.findall(
+            rf'data-campo="aj-val-{sig}-\d+">(-?\d+)<', caixa)]
     return str(col[f"modo-{sig}"]), str(col[f"modo-chave-{sig}"]), ajustes
+
+
+def _o_que_a_imersao_diz(col: dict[str, Any], sig: str) -> list[int] | None:
+    """Na página do todo os números não aparecem: quem os diz é o modo e a imersão da coluna.
+
+    Campo da imersão em branco é perfil com números próprios: a tela não afirma número nenhum, e
+    a régua confere só o modo (`None`).
+    """
+    from pacotes import a03_gatilhos
+
+    modo, imersao = str(col[f"modo-chave-{sig}"]), str(col[f"imersao-{sig}"])
+    if imersao == a03_gatilhos.SEM_IMERSAO:
+        return a03_gatilhos._padroes(modo)
+    if imersao == "":
+        return None
+    achada = a03_gatilhos._imersoes().POR_CHAVE.get(imersao)
+    assert achada is not None, f"a coluna diz a imersão {imersao!r}, que a lista não tem"
+    return a03_gatilhos._params_da_imersao(achada, modo, "") or []
 
 
 def _conferir(nome: str, ctx: Any) -> list[str]:
     """As linhas em que a coluna MENTE — lista vazia quando as oito casam."""
     from hefesto_dualsense4unix.core.trigger_effects import build_from_name
     from pacotes import pacote_da_pagina
+    from pacotes.a03_gatilhos import _padroes as a03_padroes
 
     r = pacote_da_pagina(PAGINA, ctx)
     assert r is not None
@@ -181,8 +203,13 @@ def _conferir(nome: str, ctx: Any) -> list[str]:
         for sig, disco in LADOS.items():
             rotulo, modo, ajustes = _o_que_a_coluna_diz(r, uniq, pref_de[uniq], sig)
             vai = manda.efetivo(uniq, disco)
-            diz = build_from_name(modo, ajustes)
-            if diz != vai:
+            if ajustes is None:
+                diz = build_from_name(modo, a03_padroes(modo))
+                casa = type(diz) is type(vai)
+            else:
+                diz = build_from_name(modo, ajustes)
+                casa = diz == vai
+            if not casa:
                 mentiras.append(
                     f"P{c['player']} ({c['transport'].upper()}) "
                     f"{'L2' if sig == 'e' else 'R2'}: a coluna diz «{rotulo}» "

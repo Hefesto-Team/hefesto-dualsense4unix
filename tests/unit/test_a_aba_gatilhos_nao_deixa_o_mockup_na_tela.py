@@ -37,6 +37,7 @@ import re
 import sys
 
 import pytest
+from tests.unit._mundo_da_aba_03 import SO_NA_PAGINA_ANTIGA
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
@@ -127,6 +128,7 @@ def _bloco(a03, r, pref, sigla):
     return str(r["blocos"][chave])
 
 
+@SO_NA_PAGINA_ANTIGA
 def test_o_modo_sem_ajuste_nao_deixa_barra_nenhuma(a03):
     """`Off` não tem ajuste — logo a caixa NÃO pode ter barra nenhuma."""
     r = _pacote_com(a03)
@@ -141,6 +143,7 @@ def test_o_modo_sem_ajuste_nao_deixa_barra_nenhuma(a03):
             f"sobra um buraco sem explicação")
 
 
+@SO_NA_PAGINA_ANTIGA
 def test_o_modo_com_ajuste_traz_os_dele_e_so_os_dele(a03):
     """A cura não pode ter apagado o caso que já funcionava."""
     r = _pacote_com(a03, modo_esq="Rigid", ps_esq=[0, 180])
@@ -153,6 +156,7 @@ def test_o_modo_com_ajuste_traz_os_dele_e_so_os_dele(a03):
         "lendo a tabela de padrões em vez do perfil dela")
 
 
+@SO_NA_PAGINA_ANTIGA
 def test_o_modo_grande_nao_esconde_ajuste(a03):
     """A DECISÃO 2 DO USUÁRIO numa asserção: *"a tela nunca esconde o que está
     gravado no disco"*.
@@ -188,6 +192,7 @@ def test_o_modo_grande_nao_esconde_ajuste(a03):
         f"medir")
 
 
+@SO_NA_PAGINA_ANTIGA
 def test_a_caixa_do_lugar_sem_aparelho_tambem_e_trocada(a03):
     """TODA coluna sem controle recebe a caixa — inclusive a que o desenho dá
     por CONECTADA.
@@ -207,6 +212,7 @@ def test_a_caixa_do_lugar_sem_aparelho_tambem_e_trocada(a03):
             f"aparelho continua mostrando os ajustes que o gerador desenhou")
 
 
+@SO_NA_PAGINA_ANTIGA
 def test_nenhum_endereco_da_pagina_fica_sem_dono(a03, publicada):
     """Todo `data-campo` da página tem quem o escreva. É a catraca da aba."""
     r = _pacote_com(a03, modo_esq="Rigid", modo_dir="Rigid")
@@ -264,6 +270,7 @@ def test_a_cobertura_conta_o_que_a_pagina_recebe(a03, publicada):
         "o que sai e não tem onde pousar tem de estar DITO, não escondido")
 
 
+@SO_NA_PAGINA_ANTIGA
 def test_a_barra_diz_como_quer_ser_pintada(a03):
     """A barra que o PRODUTO monta declara `largura`, e traz a largura dentro.
 
@@ -405,14 +412,16 @@ def test_o_lugar_vazio_recebe_desligado_e_nenhum(a03, publicada):
             f"coluna vazia do desenho não tem barra de ajuste nenhuma — ela traz "
             f"'Este modo não tem o que ajustar.' —, e emitir `aj-*` ali é se dar "
             f"nota por escrever no vazio.")
-        assert {"modo-chave-e", "modo-chave-d", "pronto-e", "pronto-d",
+        segunda = ("imersao-e", "imersao-d") if a03._pagina_do_todo() else ("pronto-e", "pronto-d")
+        assert {"modo-chave-e", "modo-chave-d", *segunda,
                 a03.CAMPO_DO_CHIP, a03.CAMPO_DO_PLASTICO} <= set(col), (
             f"{pref} recebeu {sorted(col)} e falta um dos seis que a coluna "
             f"vazia precisa: as quatro escolhas e os dois do cabeçalho.")
         escolhas = {k: v for k, v in col.items()
                     if k not in (a03.CAMPO_DO_CHIP, a03.CAMPO_DO_PLASTICO)
                     and not k.startswith(a03.PREFIXO_DA_DICA_DO_MODO)
-                    and not k.startswith(a03.PREFIXO_DA_DICA_DO_PRONTO)}
+                    and not k.startswith(a03.PREFIXO_DA_DICA_DO_PRONTO)
+                    and not k.startswith(a03.PREFIXO_DA_DICA_DA_IMERSAO)}
         for campo, valor in escolhas.items():
             oferece = re.search(
                 rf'data-campo="{campo}"(.*?)</select>', publicada, re.S)
@@ -558,8 +567,10 @@ def test_o_travessao_esta_no_desenho_de_hoje(a03):
     miolo = bancada.split('<div class="miolo">', 1)[-1].split('<div class="nota">', 1)[0]
     quantos = len(re.findall(
         rf'<option value="{a03.TRAVESSAO}"[^>]*\bdisabled\b', miolo))
-    assert quantos == miolo.count("<select"), (
-        f"{quantos} campos oferecem `—` e há {miolo.count('<select')} campos de "
+    # o «Partir de» da área de criar (`data-linha`) não pinta lugar nenhum: não leva `—`
+    campos = len(re.findall(r"<select(?![^>]*data-linha)", miolo))
+    assert quantos == campos, (
+        f"{quantos} campos oferecem `—` e há {campos} campos de "
         f"escolha na bancada. O que não oferece não pode receber o vazio.")
 
 
@@ -614,6 +625,7 @@ def test_o_efeito_com_nome_nasce_e_volta(a03, tmp_path, monkeypatch):
     assert a03._meu_efeito_que_casa("left", {"mode": "Rigid", "params": [0, 0]}) == ""
 
 
+@SO_NA_PAGINA_ANTIGA
 def test_a_lista_nao_promete_efeito_que_nao_existe(a03):
     """Sem efeito salvo, NÃO nasce separador de "Meus efeitos"."""
     opcoes = a03.html_das_opcoes_de_pronto()
@@ -737,6 +749,11 @@ def test_a_caixa_cresce_no_dia_em_que_ela_publicar(a03, monkeypatch):
                  "_OPCOES_DO_PRONTO", "_CRESCE"):
         monkeypatch.setattr(a03, nome, None)
 
+    if 'data-campo="aj-val-' not in bancada:
+        # o desenho do todo não tem barra de ajuste: não há trilha a crescer, e o pacote
+        # tem de reconhecer a página nova
+        assert a03._pagina_do_todo() is True, "o pacote não reconheceu a página do todo"
+        return
     assert a03._a_caixa_cresce() == {"e": True, "d": True}, (
         "a bancada não declara a trilha que cresce — a decisão 2 dela saiu do "
         "desenho, e publicar deixaria de curar o vazamento")

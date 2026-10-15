@@ -22,7 +22,7 @@ MESA = [{"pref": "p1", "jogador": 1, "uniq": UNIQ, "nome": "Régua",
 
 _OPCAO = re.compile(r'<option value="(?P<valor>[^"]*)"[^>]*>(?P<texto>[^<]*)</option>')
 _SELECT = re.compile(
-    r'<select[^>]*class="(?P<classe>modo|pronto)"[^>]*>(?P<dentro>.*?)</select>',
+    r'<select[^>]*class="(?P<classe>modo|pronto|g2-acion)"[^>]*>(?P<dentro>.*?)</select>',
     re.S)
 
 
@@ -72,8 +72,15 @@ def _bancada() -> str:
 
 
 def _selects(doc: str, classe: str) -> list[str]:
+    """As listas da classe; o campo de acionamento do todo (`g2-acion`) é o `modo` de sempre."""
     return [m.group("dentro") for m in _SELECT.finditer(doc)
-            if m.group("classe") == classe]
+            if m.group("classe") == classe
+            or (classe == "modo" and m.group("classe") == "g2-acion")]
+
+
+def _oferecidos(a03, presets):
+    """Os modos que a lista oferece: na página do todo o «Montar do zero» (`Custom`) não é um."""
+    return [p for p in presets if not (a03._pagina_do_todo() and p.name == "Custom")]
 
 
 def test_o_rotulo_de_cada_modo_no_pacote_e_o_do_produto(a03, presets):
@@ -98,7 +105,7 @@ def test_o_rotulo_de_cada_modo_no_pacote_e_o_do_produto(a03, presets):
 def test_todo_modo_do_produto_tem_opcao_no_pacote(a03, presets):
     """Nenhum dos 19 pode faltar — um modo sem opção é um modo inalcançável."""
     tem = {v for v, _ in _OPCAO.findall(a03.html_das_opcoes_de_modo())}
-    faltam = sorted({p.name for p in presets} - tem)
+    faltam = sorted({p.name for p in _oferecidos(a03, presets)} - tem)
     assert not faltam, f"modos do produto sem opção no campo: {faltam}"
 
 
@@ -106,7 +113,9 @@ def test_o_rotulo_de_cada_modo_na_bancada_e_o_do_produto(presets):
     """E o DESENHO também parou de digitar — senão sobrariam duas verdades."""
     do_produto = {p.name: _o_da_tela(p) for p in presets}
     erradas: list[str] = []
-    for i, dentro in enumerate(_selects(_bancada(), "modo")):
+    listas = _selects(_bancada(), "modo")
+    assert len(listas) == 8, f"a bancada tem {len(listas)} listas de modo, e são oito"
+    for i, dentro in enumerate(listas):
         for valor, texto in _OPCAO.findall(dentro):
             if valor in do_produto and texto != do_produto[valor]:
                 erradas.append(
@@ -151,7 +160,9 @@ def test_a_bancada_oferece_as_seis_curvas_de_feedback(a03):
     tp = a03._prontos()
     devem = {c for c in tp.FEEDBACK_POSITION_LABELS if c != "custom"}
     faltam: list[str] = []
-    for i, dentro in enumerate(_selects(_bancada(), "pronto")):
+    listas = _selects(_bancada(), "pronto")
+    assert listas or 'class="g2-grade"' in _bancada(), "a bancada perdeu a lista de curvas"
+    for i, dentro in enumerate(listas):
         tem = {v for v, _ in _OPCAO.findall(dentro)}
         if devem - tem:
             faltam.append(f"select #{i}: faltam {sorted(devem - tem)}")
@@ -165,7 +176,9 @@ def test_o_rotulo_de_cada_curva_na_bancada_e_o_do_produto(a03):
     do_produto = {c: r for c, r in tp.FEEDBACK_POSITION_LABELS.items()
                   if c != "custom"}
     erradas: list[str] = []
-    for i, dentro in enumerate(_selects(_bancada(), "pronto")):
+    listas = _selects(_bancada(), "pronto")
+    assert listas or 'class="g2-grade"' in _bancada(), "a bancada perdeu a lista de curvas"
+    for i, dentro in enumerate(listas):
         for valor, texto in _OPCAO.findall(dentro):
             if valor in do_produto and texto != do_produto[valor]:
                 erradas.append(f"select #{i} · {valor}: desenho={texto!r} "
@@ -187,7 +200,8 @@ def test_a_lista_de_modo_e_emitida_para_os_oito_campos(a03):
     ctx = Contexto(state={"active_profile": "régua"}, mesa=MESA,
                    conectados=[FALSO], estados={})
     blocos = a03.pacote(ctx)["blocos"]
-    esperados = {f'[data-controle="p{n}"] select.modo[data-lado="{s}"]'
+    classe = "g2-acion" if a03._pagina_do_todo() else "modo"
+    esperados = {f'[data-controle="p{n}"] select.{classe}[data-lado="{s}"]'
                  for n in (1, 2, 3, 4) for s in ("e", "d")}
     faltam = sorted(esperados - set(blocos))
     assert not faltam, f"campos de modo que o produto não pinta: {faltam}"
@@ -272,7 +286,7 @@ def test_o_title_de_cada_modo_continua_sendo_o_desta_tela(a03, presets):
     `title` sumiram.
     """
     html = a03.html_das_opcoes_de_modo()
-    sem_dica = [p.name for p in presets
+    sem_dica = [p.name for p in _oferecidos(a03, presets)
                 if not re.search(rf'value="{p.name}"[^>]*\stitle="[^"]+"', html)]
     assert not sem_dica, f"modos que perderam a dica desta tela: {sem_dica}"
 

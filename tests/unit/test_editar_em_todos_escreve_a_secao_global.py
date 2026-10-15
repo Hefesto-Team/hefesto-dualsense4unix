@@ -446,6 +446,12 @@ def test_a_bancada_traz_o_botao_com_o_endereco_que_o_pacote_declara() -> None:
 
     html = onde.pagina("03-gatilhos.html").read_text(encoding="utf-8")
     quantos = html.count(f'data-gesto="{GESTO_DE_TODOS}"')
+    if 'class="g2-grade"' in html:
+        # o desenho do todo tirou o botão: a seção global sai da aba (o gesto fica no pacote
+        # até a página nova ser publicada, e some com a limpeza que a sprint deixa para depois)
+        assert quantos == 0, (
+            f"o desenho do todo voltou a trazer {quantos} botões `{GESTO_DE_TODOS}`")
+        return
     colunas = html.count('<div class="ctrl"')
     assert quantos == colunas and quantos >= 2, (
         f"{quantos} botões `{GESTO_DE_TODOS}` para {colunas} colunas. É o único "

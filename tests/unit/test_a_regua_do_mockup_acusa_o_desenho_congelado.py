@@ -37,26 +37,42 @@ def test_as_dez_paginas_publicadas_tem_endereco_de_campo():
             f"casos a régua do mockup passa a medir o vácuo.")
 
 
-def test_os_quatro_numeros_congelados_da_gatilhos_estao_no_arquivo():
-    """Os valores do caso, lidos do HTML publicado — não digitados aqui."""
+#: o desenho do P1 e do P2 em cada mundo: o antigo mostra os números das barras, o do todo
+#: mostra o modo e a imersão (os números moram no `profiles/efeitos_de_imersao.py`)
+CASO_ANTIGO = {"p1·aj-nome-e-0": "Início do curso", "p1·aj-val-e-0": "2",
+               "p1·aj-nome-e-1": "Fim do curso", "p1·aj-val-e-1": "9",
+               "p1·aj-nome-e-2": "Força", "p1·aj-val-e-2": "4",
+               "p1·aj-nome-e-3": "Frequência", "p1·aj-val-e-3": "40"}
+CASO_DO_TODO = {"p1·modo-chave-e": "Machine", "p1·imersao-e": "rajada-que-sobe-sozinha",
+                "p1·modo-chave-d": "Bow", "p1·imersao-d": "corda-que-treme-no-fim",
+                "p2·modo-chave-e": "SemiAutoGun", "p2·imersao-e": "ferrolho-que-volta",
+                "p2·modo-chave-d": "Rigid", "p2·imersao-d": "nenhum"}
+
+
+def _caso(campos: dict[str, str]) -> dict[str, str]:
+    return CASO_DO_TODO if "p1·imersao-e" in campos else CASO_ANTIGO
+
+
+def test_os_valores_congelados_da_gatilhos_estao_no_arquivo():
+    """Os valores do caso, lidos do HTML publicado — não digitados aqui.
+
+    O antigo (A-METRALHADORA-BATE-ENQUANTO-O-DEDO-APERTA-01, 08/10/2026): a Metralhadora do P1
+    com o curso antes da força e da frequência. O do todo: o acionamento e a imersão de cada lado.
+    """
     campos = {c.endereco: c.valor for c in regua._campos_cravados(_texto(GATILHOS))}
-    # A-METRALHADORA-BATE-ENQUANTO-O-DEDO-APERTA-01 (08/10/2026): o desenho do P1 é a
-    # Metralhadora, com o curso antes da força e da frequência.
-    assert campos["p1·aj-nome-e-0"] == "Início do curso"
-    assert campos["p1·aj-val-e-0"] == "2"
-    assert campos["p1·aj-nome-e-1"] == "Fim do curso"
-    assert campos["p1·aj-val-e-1"] == "9"
-    assert campos["p1·aj-nome-e-2"] == "Força"
-    assert campos["p1·aj-val-e-2"] == "4"
-    assert campos["p1·aj-nome-e-3"] == "Frequência"
-    assert campos["p1·aj-val-e-3"] == "40"
+    for endereco, valor in _caso(campos).items():
+        assert campos[endereco] == valor, (endereco, campos.get(endereco))
 
 
 def test_o_mesmo_endereco_em_colunas_diferentes_nao_se_confunde():
-    """`aj-val-e-0` vale 2 na coluna do P1 e 3 na do P2 — são campos distintos."""
+    """O mesmo campo vale uma coisa na coluna do P1 e outra na do P2 — são campos distintos."""
     campos = {c.endereco: c.valor for c in regua._campos_cravados(_texto(GATILHOS))}
-    assert campos["p1·aj-val-e-0"] == "2"
-    assert campos["p2·aj-val-e-0"] == "3"
+    if "p1·imersao-e" in campos:
+        assert campos["p1·modo-chave-e"] == "Machine"
+        assert campos["p2·modo-chave-e"] == "SemiAutoGun"
+    else:
+        assert campos["p1·aj-val-e-0"] == "2"
+        assert campos["p2·aj-val-e-0"] == "3"
 
 
 def test_uma_option_sem_value_vale_o_texto_dela():
@@ -87,10 +103,11 @@ def test_a_gatilhos_congelada_e_acusada():
     assert contas[regua.MOCKUP] == len(cravados)
 
     presos = {v.campo.endereco for v in vereditos if v.classe == regua.MOCKUP}
-    for endereco in ("p1·aj-val-e-0", "p1·aj-val-e-1",
-                     "p1·aj-val-e-2", "p1·aj-val-e-3"):
+    for endereco in (e for e in _caso({c.endereco: c.valor for c in cravados})
+                     if e.endswith(("-0", "-1", "-2", "-3")) or "imersao" in e
+                     or "modo-chave" in e):
         assert endereco in presos, (
-            f"{endereco} tinha de ser acusado: é um dos quatro números que a aba "
+            f"{endereco} tinha de ser acusado: é um dos números ou das escolhas que a aba "
             f"Gatilhos mostra com o perfil dela dizendo modo='Off' params=[].")
 
 

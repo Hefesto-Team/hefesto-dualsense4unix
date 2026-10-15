@@ -61,7 +61,7 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-_SELECT = re.compile(r'<select[^>]*class="modo"[^>]*>(?P<dentro>.*?)</select>', re.S)
+_SELECT = re.compile(r'<select[^>]*class="(?:modo|g2-acion)"[^>]*>(?P<dentro>.*?)</select>', re.S)
 _OPCAO = re.compile(r"<option(?P<attrs>[^>]*)>(?P<texto>[^<]*)</option>")
 
 

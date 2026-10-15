@@ -91,6 +91,11 @@ def test_todo_gesto_das_dez_tem_camada() -> None:
 A_ABA_AINDA_TRAZ = {
     ("02-controles.html", "modo-dos-controles"),
     ("05-vibracao.html", "modo-da-vibracao"),
+    # A página publicada de antes trazia estes três; o desenho do todo tirou. A linha sai da
+    # camada no dia em que o `--publicar 03` chegar.
+    ("03-gatilhos.html", "em-todos"),
+    ("03-gatilhos.html", "guardar"),
+    ("03-gatilhos.html", "pronto"),
 }
 
 

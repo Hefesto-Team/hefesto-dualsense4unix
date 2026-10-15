@@ -71,12 +71,12 @@ IMERSOES: tuple[Imersao, ...] = (
             "O gatilho rearma sozinho a cada tiro, firme e curto.",
             {"SemiAutoGun": {"start": 3, "end": 7, "force": 6},
              "Weapon": {"start": 2, "end": 6, "force": 210}},
-            na_frente=("fps", "acao", "luta")),  # noqa-acento: chave
+            na_frente=("fps", "acao", "luta")),  # (noqa-acento): chave
     Imersao("trava-seca", "Trava seca", "arma",
             "Pouco curso e muita resistência, como arma sem munição.",
             {"SemiAutoGun": {"start": 2, "end": 3, "force": 8},
              "Weapon": {"start": 0, "end": 1, "force": 255}},
-            na_frente=("fps", "acao")),  # noqa-acento: chave
+            na_frente=("fps", "acao")),  # (noqa-acento): chave
     Imersao("pino-que-falha", "Pino que falha", "arma",
             "De vez em quando o tiro prende por meio segundo e solta.",
             {"SemiAutoGun": {"start": 4, "end": 6, "force": 7},
@@ -94,7 +94,7 @@ IMERSOES: tuple[Imersao, ...] = (
                      "Machine": {"start": 0, "end": 9, "strength": 5, "frequency": 24}}},
             (Momento("segurando", 0, "Machine", {"strength": 7}, a_cada_ms=200,
                      valem_em=("Machine",)),),
-            na_frente=("fps", "acao")),  # noqa-acento: chave
+            na_frente=("fps", "acao")),  # (noqa-acento): chave
     Imersao("cano-que-esquenta", "Cano que esquenta", "metralhadora",
             "A rajada começa rápida e desacelera depois de 3 s.",
             {"Machine": {"start": 0, "end": 9, "strength": 6, "frequency": 20},
@@ -104,14 +104,14 @@ IMERSOES: tuple[Imersao, ...] = (
                               valem_em=("Machine",)),
                       Momento("segurando", 3000, "Vibration", {"frequency": 8},
                               valem_em=("Vibration",))),
-            na_frente=("fps", "acao")),  # noqa-acento: chave
+            na_frente=("fps", "acao")),  # (noqa-acento): chave
     Imersao("recuo-pesado", "Recuo pesado", "metralhadora",
             "Solavancos espaçados e fortes, como arma de calibre grande.",
             {"Machine": {"start": 0, "end": 9, "strength": 4, "frequency": 20},
              "AutoGun": {"start": 2, "strength": 4, "frequency": 20},
              "Vibration": {"position": 0, "amplitude": 4, "frequency": 20}},
             {"fps": {"AutoGun": {"start": 2, "strength": 5, "frequency": 20}}},
-            na_frente=("fps", "acao")),  # noqa-acento: chave
+            na_frente=("fps", "acao")),  # (noqa-acento): chave
     # --- Arco ---------------------------------------------------------------------------
     Imersao("corda-que-treme-no-fim", "Corda que treme no fim", "arco",
             "A força sobe do começo ao fim do curso, como a corda esticando.",
@@ -131,8 +131,8 @@ IMERSOES: tuple[Imersao, ...] = (
                               {"position": 6, "amplitude": 2, "frequency": 8}),),
             na_frente=("arco", "aventura")),
     # --- Resistência, Rígido, Rígido simples e Ponto duro --------------------------------
-    Imersao("freio-abs-que-pulsa", "Freio ABS que pulsa", "resistência",
-            "No fundo do curso o gatilho pulsa, como pedal com ABS.",
+    Imersao("freio-abs-que-pulsa", "Freio que pulsa", "resistência",
+            "No fundo do curso o gatilho pulsa, como pedal de freio antitravamento.",
             {"Resistance": {"start": 2, "force": 6},
              "Rigid": {"position": 2, "force": 220},
              "SimpleRigid": {"strength": 7},

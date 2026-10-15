@@ -301,7 +301,7 @@ def _pintar_e_ler() -> dict[str, Any]:
       const el = document.querySelector('[data-campo="CAMPO"]');
       if(!el) return JSON.stringify({erro:'a 03-gatilhos perdeu o endereço CAMPO'});
       return JSON.stringify({
-        dica: el.getAttribute('data-hef-dica'),
+        dica: el.getAttribute('data-hef-dica') ?? el.getAttribute('data-dica'),
         title: el.getAttribute('title'),
       });
     })()""".replace("CAMPO", CAMPO_DE_DICA)

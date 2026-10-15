@@ -13,6 +13,8 @@ from typing import Any
 
 import pytest
 
+from tests.unit.test_a_aba_gatilhos_diz_o_que_vai_ao_controle import _o_que_a_imersao_diz
+
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
@@ -223,9 +225,12 @@ def _a_03_mente(pintura: dict[str, Any], ctx: Any, manda: _Camadas) -> list[str]
         uniq = str(c["uniq"])
         for sig, disco in LADOS.items():
             col = r["colunas"][uniq]
-            caixa = r["blocos"][f'[data-controle="{pref_de[uniq]}"] .ajustes.{sig}']
-            ajustes = [int(v) for v in re.findall(
-                rf'data-campo="aj-val-{sig}-\d+">(-?\d+)<', caixa)]
+            caixa = r["blocos"].get(f'[data-controle="{pref_de[uniq]}"] .ajustes.{sig}')
+            if caixa is None:
+                ajustes = _o_que_a_imersao_diz(col, sig)
+            else:
+                ajustes = [int(v) for v in re.findall(
+                    rf'data-campo="aj-val-{sig}-\d+">(-?\d+)<', caixa)]
             diz = build_from_name(str(col[f"modo-chave-{sig}"]), ajustes)
             vai = manda.efetivo(uniq, disco)
             if diz != vai:

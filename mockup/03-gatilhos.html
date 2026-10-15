@@ -926,570 +926,89 @@
   .gls{display:inline-flex;align-items:center;gap:5px}
   .gls .mais{color:var(--comment);font-size:11px;margin:0 1px}
 
-  /* ---------- Gatilhos · a mesa de quatro ----------
-     UMA GRADE SÓ: uma coluna de rótulos e UMA COLUNA POR CONTROLE da `MESA`.
-     Decisão, 28/08: "os quatro lado a lado, sempre visíveis", e a fita
-     esmaecida — cada coluna é o seu próprio alvo, e um chip que não aponta para
-     nada seria escolha falsa.
-
-     O NOME DA CLASSE É A ÂNCORA DA RÉGUA, e por isso ele fica. `regua.py` mede
-     `.duas-colunas` para "colunas irmãs acabam no mesmo y" e para "as colunas
-     somam a largura da caixa"; trocá-lo por um nome mais bonito desligaria as
-     duas medições EM SILÊNCIO, que é o defeito desta casa. Precedente:
-     `aba08.py` já usa a mesma classe: a regra `.duas-colunas` do CSS da
-     Conexões, e as duas caixas dela nos quadros 1 e 3.
-
-     O NOME DA CLASSE VAI SEM A TAG, e isto é defeito MEDIDO em 06/09/2026:
-     este bloco mora DENTRO da `CSS`, que é uma string, e o gerador conta
-     as aberturas e os fechamentos de tag para se conferir. Escrever a tag
-     por extenso aqui somou uma abertura sem par e o gerador PAROU com
-     `84 x 83 — desbalanceado`. É a quarta vez em quatro dias que o
-     comentário escrito para explicar vira o defeito que ele descreve —
-     e desta vez quem o escreveu foi quem costura.
-
-     AS ALTURAS DE LINHA SÃO COMPARTILHADAS pelas cinco colunas — é isso que faz
-     o rótulo "Ajustes" ficar na linha das quatro caixas de ajuste e as cinco
-     acabarem no MESMO y. (A cura do vão é na ALTURA, nunca `space-between`.)
-     Com a grade compartilhada a dispensa dela para esta aba — "modos diferentes
-     têm números de barra diferentes" — deixa de ser necessária: quem iguala
-     agora é a LINHA, não um preenchimento inventado dentro de cada coluna. */
-  /* AS ALTURAS DE LINHA SAEM DO PYTHON, no fim deste arquivo, e não daqui: a
-     legenda da aba cita a altura da coluna e a altura de uma barra, e um número
-     digitado no CSS mais outro digitado no texto são duas verdades que acabam
-     divergindo. Lá elas são UMA, e a conta da coluna é a soma delas. */
-  /* COLUNA COLADA, RESPIRO NA CÉLULA — 30/08/2026, mesma cura da Iluminação e da
-     Vibração. Com `column-gap:12px` a linha separadora quebrava quatro vezes e o
-     olho lia tracinhos; com o vão em zero e o padding nas células ela atravessa a
-     grade inteira, cortada só pela barra vertical de 1px entre blocos. */
-  /* `--gl` é o tamanho do glifo que titula a seção, e ele é o MESMO número que
-     o Python usa em `glifo(tam=GL)`. Escrito duas vezes, ele diverge no dia em
-     que alguém mudar um dos dois — é a cicatriz das cores do plástico. */
-  /* ---------- A GRADE É UMA SÓ, E AS COLUNAS SÃO `subgrid` ----------
-     DECISÃO, 02/09/2026: *"os ajustes viram lista e a caixa acompanha o
-     modo. A aba passa a rolar nos modos grandes, e isso é aceito. A tela nunca
-     esconde o que está gravado no disco."*
-
-     O QUE ISSO QUEBRAVA: as nove trilhas eram px FIXOS, repetidos em cada uma
-     das cinco colunas — e era a igualdade dos números que fazia as cinco
-     acabarem no mesmo y. A linha de ajustes valia 4 barras à esquerda e 2 à
-     direita. `Galloping` tem CINCO parâmetros e `MultiPositionVibration` tem ONZE:
-     numa trilha de 92px, as sete que sobram vazam para fora da célula e caem
-     por cima da linha de baixo.
-
-     A CURA É `grid-template-rows:subgrid`: as trilhas passam a ser da GRADE
-     GRANDE, e as cinco colunas as compartilham de verdade em vez de coincidirem
-     por acaso. A trilha de ajustes vira `minmax(<o que o desenho reservou>,
-     auto)` — ela cresce até o maior modo que estiver NELA, em qualquer coluna,
-     e as cinco continuam acabando no mesmo y. É a mesma regra que a legenda
-     desta aba já enunciava ("a caixa vale o maior modo que está na LINHA"), com
-     a diferença de que agora quem a calcula é o navegador, com o dado VIVO, e
-     não o Python com a cena do desenho.
-
-     `subgrid` JÁ ERA USADO AQUI (`.rotulos > *:has(.gl)`), então o motor da
-     janela o suporta — não é aposta.
-
-     A COLUNA DE CADA FILHO É EXPLÍCITA, e não por auto-posicionamento: com
-     `grid-row:1/-1` em todos, a colocação automática depende de detalhe de
-     algoritmo, e uma coluna que caia na trilha errada só aparece na foto. */
-  /* `minmax(0,1fr)` E NÃO `1fr`, e a diferença custou uma foto: `1fr` é
-     `minmax(auto,1fr)`, e esse `auto` é o MIN-CONTENT da coluna — qualquer
-     conteúdo que se recuse a encolher empurra a coluna inteira. Medido em
-     02/09/2026, quando o campo do nome do efeito entrou: as colunas foram de
-     220px para 302 e a aba nasceu com **275px de rolagem LATERAL**, com o P4
-     fora da tela. Com o mínimo em zero, quem tem de cede r é o conteúdo, e a
-     grade nunca passa da caixa. */
-  .duas-colunas{display:grid;grid-template-columns:var(--larg-rot) repeat(4,minmax(0,1fr));
-    column-gap:var(--gap-col);row-gap:var(--r-passo);
-    grid-template-rows:var(--r-nome) var(--r-modo) var(--r-pronto)
-                       var(--t-aj-e) var(--r-sep)
-                       var(--r-modo) var(--r-pronto)
-                       var(--t-aj-d) var(--r-acao)}
-
-  /* A LINHA HORIZONTAL QUE SEPARA UM CAMPO DO OUTRO — pedido, 30/08:
-     *"as linhas divisórias em todas as páginas (…) a primeira coluna serve como
-     nome da linha e a divisória entre eles tem que estar clara. pra todas as
-     abas"*. Mesmo molde da Iluminação (`aba04.py`), com a razão escrita lá.
-     A ÚLTIMA não leva: separador depois do último campo vira moldura, e a
-     moldura do quadro já existe. */
-  /* A LINHA É UM PSEUDO-ELEMENTO, e não a borda da célula — 30/08/2026.
-     Como BORDA ela parava no padding da coluna e quebrava em cinco tracinhos;
-     movendo o padding para as células a linha ficou inteira mas o desenho do
-     controle perdeu 9px (a moldura tem `overflow:hidden` e o SVG cresce com a
-     largura). O `::after` com margem negativa resolve os dois: ele sai do
-     padding pelos dois lados e atravessa a coluna inteira, sem tocar em
-     geometria nenhuma. As cinco colunas têm as mesmas alturas de linha, então
-     os cinco segmentos nascem no mesmo y e leem como uma linha só. */
-  .duas-colunas > div > *{position:relative}
-  /* A LINHA É `::before` DA CÉLULA DE BAIXO, e não `::after` da de cima.
-     Como `::after` ela era filha da moldura — e a moldura do DESENHO tem
-     `overflow:hidden` para conter o SVG, então ela cortava a própria linha
-     24px antes da divisa. A célula de baixo não recorta nada, e o traço
-     cai no mesmo lugar: entre uma linha e a outra. */
-  /* A LINHA DESCE MEIO PASSO E CAI NO MEIO DO VÃO — 31/08/2026, e é a cura que
-     a Vibração já tinha e esta aba não. Pedido: *"lá precisa de respiro em
-     tudo (…) as bordas das 3 páginas tão sobrando de um jeito feio e tão sem dar
-     respiro."*
-
-     MEDIDO ANTES DA CURA: o respiro das células desta aba era **0px/0px**, e a
-     divisória ficava em `top:0` — encostada no conteúdo de cima, com o vão
-     INTEIRO embaixo dela. O olho lê isso como linha grudada em cima e buraco
-     embaixo, que é exatamente o "sobrando e sem respiro" que o usuário viu. A hipótese
-     da lista dela estava certa: *"o problema não era só contraste — é respiro"*.
-
-     CUSTO DE ALTURA: ZERO. `top:-var(--r-ar)` só muda DE QUE LADO da linha o vão
-     está; a tabela mede o mesmo pixel. E `--r-ar` é o dono do passo (`--r-passo`
-     é o dobro dele, por construção), então nenhuma das duas pode voltar a ficar
-     torta sem que alguém mude as duas de uma vez — e elas são uma só. */
-  .duas-colunas > div > *::before{content:'';position:absolute;
-    top:calc(var(--r-ar) * -1);height:0;
-    left:-13px;right:-12px;border-top:1px solid var(--rot-linha)}
-  /* A CONTA DA MARGEM NEGATIVA: ela tem de cancelar o padding da coluna E o
-     `gap` do grid, senão sobra um buraco do tamanho do vão. À direita são
-     12 de padding + 12 de gap = 24; a ÚLTIMA coluna não tem vão depois
-     dela, então volta a 12. A coluna de rótulos não tem padding: 0 e 12. */
-  .duas-colunas > div:not(:last-child) > *::before{right:-24px}
-  .duas-colunas > .rotulos > *::before{left:0;right:-12px}
-  .duas-colunas > div > *:first-child::before,
-  .duas-colunas > div > .vao-l2-r2::before{display:none}
-  /* o `.sep-linha` (um elemento de 1px entre os blocos L2 e R2) SAIU: com a borda
-     de célula acima ele desenhava a SEGUNDA linha, 10px abaixo da primeira. */
-
-  .duas-colunas > div{display:grid;grid-row:1/-1;grid-template-rows:subgrid}
-  /* a barra vertical entre blocos irmãos — pedido. Ela mora na COLUNA do
-     controle, e não na de rótulos: é o rótulo que serve as quatro. */
-  .duas-colunas .ctrl{border-left:1px solid var(--linha);padding:0 12px 0 13px}
-  /* O RÓTULO OCUPA A ALTURA INTEIRA DA SUA LINHA, e o texto fica centrado
-     dentro dele. Sem isto o rótulo da última linha acaba acima dos botões que
-     ele nomeia, e a régua lê — com razão — um vão entre as colunas. */
-  .duas-colunas .rotulos > *{display:flex;flex-direction:column;justify-content:center}
-  /* O NOME DA LINHA ALINHA À DIREITA — 30/08/2026, pedido: *"no nome das
-     linhas deixa alinhadas à direita. Todas"*. Encostado na divisa, o rótulo fica
-     perto do que ele nomeia em vez de ficar perto da borda do quadro — é o que
-     toda tabela de formulário faz, e é o que faz a coluna deixar de ler como
-     lista solta e passar a ler como cabeçalho de linha. */
-  /* ---------- A COLUNA DE RÓTULOS TEM DUAS TRILHAS ----------
-     A da esquerda é do GLIFO que titula a seção; a da direita, dos rótulos de
-     linha. Cada célula diz onde fica (`grid-area`), e nenhuma depende da ORDEM
-     em que está no HTML — a ordem já quebrou esta grade uma vez, quando alguém
-     tirou o `.vao-l2-r2` achando que era enfeite e "Gatilho direito" caiu na
-     trilha de 1px. Com posição explícita, tirar um elemento deixa um buraco
-     visível em vez de deslocar os oito seguintes em silêncio. */
-  .duas-colunas .rotulos{grid-template-columns:var(--gl) 1fr;column-gap:var(--vao-gl)}
-  /* TODOS QUALIFICADOS COM `.rotulos`, e a primeira volta não os qualificou:
-     o `.vao-l2-r2` existe nas CINCO colunas (é ele que guarda a trilha de 1px
-     entre o bloco do L2 e o do R2), e um `grid-area:5/1/6/3` solto o mandou
-     ocupar três colunas dentro das colunas de CONTROLE — que têm uma só. A
-     grade delas cresceu para três, o conteúdo saiu de registro e a aba nasceu
-     com rolagem lateral. Pego na foto, na volta seguinte. */
-  .duas-colunas .rotulos > .rot-linha-1{grid-area:1/2}
-  .duas-colunas .rotulos > .g-l2{grid-area:2/1/5/2}
-  .duas-colunas .rotulos > .rot-l2-1{grid-area:2/2}
-  .duas-colunas .rotulos > .rot-l2-2{grid-area:3/2}
-  .duas-colunas .rotulos > .rot-l2-3{grid-area:4/2}
-  .duas-colunas .rotulos > .vao-l2-r2{grid-area:5/1/6/3}
-  .duas-colunas .rotulos > .g-r2{grid-area:6/1/9/2}
-  .duas-colunas .rotulos > .rot-r2-1{grid-area:6/2}
-  .duas-colunas .rotulos > .rot-r2-2{grid-area:7/2}
-  .duas-colunas .rotulos > .rot-r2-3{grid-area:8/2}
-  /* O GLIFO FICA NO MEIO DA SEÇÃO — decisão, 31/08/2026: *"o l2 e o r2 tem
-     que tá centralizado entre modo, efeito pronto e ajustes (verticalmente)."*
-
-     O desenho anterior prendia o glifo à primeira linha, no argumento de que
-     cabeçalho encosta no que titula. A foto mostrou o contrário: um glifo que
-     titula TRÊS linhas, preso na primeira, lê como se fosse só dela. No meio,
-     ele pertence às três. */
-  .duas-colunas .rotulos > .sec-glifo{display:flex;align-items:center;
-             justify-content:center}
-  /* O RÓTULO ALINHA À ESQUERDA — decisão, 31/08/2026: *"alinha a esquerda a
-     primeira coluna."*
-
-     E ELA REVOGA A DECISÃO DE PRODUTO MESMA de 30/08 (*"no nome das linhas deixa
-     alinhadas à direita. Todas"*). Não é contradição a resolver: é o projeto
-     vivo, e o que mudou no meio foi a própria coluna — ela encolheu de 138 para
-     o tamanho do conteúdo de cada aba, e à direita, numa coluna justa, o texto
-     passou a encostar na divisa em vez de se aproximar do que nomeia.
-
-     DE QUEBRA ISSO CURA UM DESALINHAMENTO QUE A RÉGUA ACUSAVA e que era
-     consequência aritmética do alinhamento à direita: rótulos de larguras
-     diferentes COMEÇAM em x diferentes. À esquerda, todos começam no mesmo. */
-  .duas-colunas .rotulos > *{align-items:flex-start;text-align:left}
-  .duas-colunas .rotulos .sec-rot{justify-content:flex-start}
-  .duas-colunas .rotulos > * > *{flex:1;display:flex;align-items:center}
-  /* OS DOIS GLIFOS NO MESMO x, E O ALINHAMENTO À DIREITA FICA — 31/08/2026.
-     MEDIDO ANTES DA CURA, no Chrome e no WebKit2 (o motor que a janela usa),
-     com os mesmos números: o L2 nascia em x=434,20 e o R2 em x=448,08 —
-     **13,88px** de diferença, que é exatamente o quanto "esquerdo" (54,80px) é
-     mais largo que "direito" (40,92px). Com o par glifo+palavra encostado na
-     divisa direita, quem manda no x do glifo é a largura da PALAVRA, e as duas
-     palavras não têm a mesma largura. Numa coluna de rótulos isso salta aos
-     olhos, e o usuário viu na foto.
-     A CURA NÃO DESFAZ O PEDIDO: o par glifo+palavra deixa de ser uma caixa
-     que ENCOLHE até o texto e passa a ocupar uma TRILHA da grade, larga o
-     bastante para o maior dos dois. A coluna de rótulos ganha duas trilhas —
-     [1fr elástico][o par] —, e a segunda é COMPARTILHADA pela linha do L2 e pela
-     do R2: o navegador mede o par mais largo e dá a largura dele aos dois. É por
-     isso que ninguém DIGITA "54,8px" aqui — um número desses ficaria errado
-     calado no dia em que a palavra mudasse, e o desalinho voltaria sem aviso.
-     Dentro da trilha, `space-between` prende o glifo na esquerda dela e a palavra
-     na divisa direita: o glifo nasce em x=434,20 nas duas linhas e as duas
-     palavras continuam acabando em x=532, com o resto da coluna igual.
-     O QUE SOBRA VIRA VÃO ENTRE O GLIFO E A PALAVRA — 7px no L2 e 20,88 no R2 —,
-     e isso é inevitável: palavras de larguras diferentes, encostadas à direita,
-     com o glifo no mesmo x. O que se escolhe é onde a diferença aparece, e ela
-     aparece no vão interno em vez de aparecer na coluna de glifos, que é o que
-     o usuário viu.
-     As linhas sem glifo atravessam as duas trilhas (`grid-column:1/-1`) e
-     continuam encostadas na divisa — as divisórias medem os mesmos 404→532 de
-     antes, conferido célula a célula.
-     CUSTO DE ALTURA: ZERO, e é medido. As nove trilhas de linha são px FIXOS
-     (`grid-template-rows`) e nada aqui as toca: o miolo continua com 544px de
-     caixa para 544 de conteúdo, e a grade com os mesmos 444px.
-     `display:contents` NO `.sec-rot` FOI TENTADO E DESCARTADO, e a razão é a
-     régua: sem box, `getBoundingClientRect()` devolve 0 para as duas linhas de
-     gatilho, e o "títulos de seção em x diferentes" do `regua.py` deixa de
-     enxergá-las — passaria a dar verde sobre elas mesmo desalinhadas. A cura que
-     desliga a régua em silêncio é o defeito desta casa, não a cura. Aqui o
-     `.sec-rot` continua com box, e a régua lê nele o x REAL do glifo. */
-  .duas-colunas .rotulos{grid-template-columns:1fr auto}
-  .duas-colunas .rotulos > *{grid-column:1/-1}
-  .duas-colunas .rotulos > *:has(.gl){display:grid;grid-template-columns:subgrid}
-  .duas-colunas .rotulos > *:has(.gl) > .sec-rot{grid-column:2;
-    justify-content:space-between}
-  /* A CAIXA ALTA SAIU — 30/08/2026. A regra desta casa sobre maiúscula é a
-     PRIMEIRA LETRA, e o usuário confirmou: *"a maiúscula a regra é sobre a primeira
-     letra a ser capitalizada, é o padrão do projeto"*. O `text-transform:
-     uppercase` a violava calado, e ainda cobrava o preço de legibilidade que
-     o usuário apontou (*"essa fonte tem um contraste horrível"*): caixa alta a 11px
-     é a forma mais difícil de ler que existe.
-     O `letter-spacing` sai junto — ele existia para abrir a caixa alta.
-     O texto-fonte já está em caixa de frase ("Força da vibração", "Selecione o
-     player"), então nada precisou ser reescrito. */
-  .sec-rot{font-size:12px;font-weight:600;color:var(--rot-campo);
-           gap:7px}
-  /* O RÓTULO DE UMA LISTA FICA NA LINHA DO PRIMEIRO ITEM, e não no meio da
-     caixa. Centrado, o "Ajustes" caía entre a segunda e a terceira barra do P1 e
-     ABAIXO da última barra do P3 — nomeava de baixo uma lista que começa em
-     cima. Os 5px são o que põe a linha de 11px no centro da primeira barra
-     (82px / 4 = 20,5px de altura por barra). */
-  /* O `.no-topo` SAIU — 30/08/2026, pedido: *"centraliza os nomes dentro
-     das distâncias verticais de cada linha"*. Ele prendia "Ajustes" no alto de
-     uma célula de 92px, e o nome ficava a 40px do conteúdo que nomeia. Com o
-     centro, ele cai na altura do bloco — e é a mesma regra que as outras seis
-     linhas da coluna já seguiam. */
-  /* "GATILHO / ESQUERDO" em duas linhas: com o glifo de 36px ao lado, a palavra
-     inteira numa linha só pediria 154px de coluna de rótulo, e sobrariam 218px
-     por controle — 2px a menos do que o efeito pronto mais longo precisa. */
-  .sec-rot .duas{display:block;line-height:1.25}
-  /* A LEGENDA NÃO É TÍTULO: sem isto ela herda o `text-transform:uppercase` do
-     rótulo e sai em CAIXA ALTA. */
-  /* `display:block` E NÃO A HERANÇA DO FLEX: a regra acima faz de todo filho de
-     célula um contêiner flex, e num contêiner flex o `<b>` vira um ITEM ao lado
-     do texto — a frase saía quebrada em duas colunas ("Guarda o par L2+R2 em" |
-     "Meus efeitos"). Visto no navegador, 28/08. */
-  .duas-colunas .rotulos .legenda{display:block;font-size:10.5px;line-height:1.4;
-    color:var(--comment);text-transform:none;letter-spacing:0;padding-top:2px}
-
-  /* O CHIP DO CONTROLE é o mesmo chip da fita, com a borda na cor do plástico —
-     é como ela sabe de quem é a coluna (D-A-BORDA-E-A-IDENTIDADE-DA-PECA). Ele
-     NÃO acende: aqui ele não é escolha, é cabeçalho. */
-  /* O NOME DA COLUNA FICA CENTRADO — decisão, 31/08/2026: *"temos que
-     centralizar o nome das colunas dos controles, ou então colocarmos os SVG de
-     cada controle ao lado direito do nome."*
-
-     ESCOLHI CENTRALIZAR, e a razão é orçamento: o chip mede 126px numa coluna de
-     232, então centrá-lo custa ZERO. O SVG ao lado pediria altura que a linha do
-     nome não tem — ela é `--r-nome`, 24px, e um desenho de 24px de altura é o
-     mesmo caso das lâmpadas do jogador que o usuário mandou sair dos desenhos
-     pequenos: não é desenho apagado, é desenho que não cabe. Para caber, a linha
-     iria a 40px e comeria 16 dos 24px de folga que a grade tem.
-     Se ela quiser o SVG, o preço está aqui e é dela a escolha. */
-  /* `justify-items`, e não `align-items`: a célula é uma GRADE de uma coluna,
-     e `align-items` mexe no eixo vertical — o chip continuou colado à
-     esquerda e a foto mostrou. É o eixo errado, e a diferença só aparece
-     olhando. */
-  .duas-colunas .ctrl > *:first-child{justify-items:center;text-align:center}
-  .duas-colunas .ctrl .chip{padding:0 8px;font-size:11px;height:22px;
-    display:inline-flex;align-items:center;align-self:center;white-space:nowrap}
-  /* O CHIP DO LUGAR VAZIO. A borda inteira se declara aqui, e não só a cor: o
-     `.chip.plastico` usa `var(--plastico)`, e uma `var()` sem valor invalida a
-     declaração TODA — a borda não fica cinza, ela deixa de existir. Medido na
-     aba Controles no mesmo dia, com a foto mostrando dois lugares sem caixa. */
-  .duas-colunas .ctrl .chip.vazio{border:1px solid var(--border-forte);
-    color:var(--linha);background:transparent}
-
-  /* O SELETOR DOS 19 MODOS. Era uma grade de 19 botões de 172px, e com quatro
-     controles na tela ela não existe mais: a coluna de um controle mede 220px de
-     conteúdo, e a grade pediria 19 fileiras — 566px numa coluna que tem 447px
-     inteiros. Vira o mesmo `<select>` que a Navegação usa nos campos dela
-     ("quando eu falei de drop in eu tava falando de todos os campos"), com as
-     19 descrições no `title` de cada opção: nenhum modo e nenhuma frase saiu. */
-  select.modo,select.pronto{
-    width:100%;padding:0 9px;border-radius:6px;font-size:11.5px;
-    font-family:inherit;border:1px solid var(--linha);
-    background:var(--app-bg);color:var(--texto-suave);cursor:pointer;
-    height:var(--h-escolha);
-  }
-  select.modo{color:var(--fg);font-weight:600;border-color:var(--purple);
-              background:var(--sel-bg)}
-  select.modo:hover,select.pronto:hover{border-color:var(--comment)}
-
-  /* AS BARRAS DE AJUSTE. Todas as linhas com a MESMA altura — o modo com duas
-     barras ocupa as duas primeiras, e a primeira barra de toda coluna começa no
-     mesmo y. O rótulo é o token `--rot` (92px), o mesmo de toda aba que tem
-     campo; sobram 80px de trilho, que é o que a coluna de 220px permite. */
-  /* A CAIXA CRESCE COM O MODO, e por isso as linhas dela são AUTOMÁTICAS.
-     Ela era `grid-template-rows:repeat(N,1fr)` — N trilhas iguais, com N vindo
-     da cena do desenho. Com o produto trocando a caixa inteira (o `blocos:` do
-     pacote), o número de barras é o do MODO: zero no `Desligado`, quatro na
-     Metralhadora, onze na Vibração por posição. `grid-auto-rows` dá a mesma
-     altura a cada barra e deixa a caixa medir o que ela tem.
-     O DESENHO NÃO MUDA DE PIXEL: `--r-aj-e` é `N_ESQ * --h-barra` por
-     construção, então quatro barras de `--h-barra` enchem a trilha exatamente
-     como as quatro trilhas de `1fr` enchiam. `align-content:start` é o que
-     mantém a primeira barra de toda coluna no mesmo y quando o modo tem menos
-     barras do que a linha reserva. */
-  .ajustes{display:grid;grid-auto-rows:var(--h-barra);align-content:start}
-
-  /* ---------- O ACORDEÃO DOS AJUSTES — ROLAGEM-01, 09/09/2026 ----------
-     Proposta DO USUÁRIO, 08/09, olhando o produto instalado e maximizado: *"E tava
-     pensando pra gatilhos talvez fosse interessante colocar a seção do r2 e l2
-     dentros de blocos de expansão igual fizemos na aba controles o que vc
-     acha?"*  <!-- noqa-acento: citação literal, palavra por palavra -->
-
-     A CAUSA ESTÁ MEDIDA, e não era a `.janela` (775/775 nas dez): era o
-     `DIV.miolo`, 863 contra uma caixa de 564. Com os quatro na mesa e o dado
-     VIVO, cada linha de ajustes vale 230px — o desenho reserva 92 e 46, mas o
-     `minmax(…,auto)` do subgrid a deixa crescer até o maior modo da LINHA, e
-     `MultiPositionVibration` tem onze parâmetros. O mockup nunca rolou porque
-     a cena do desenho não tem esse modo em coluna nenhuma.
-
-     O QUE DOBRA É A LINHA DE AJUSTES, e só ela: as três coisas que a §3 da
-     sprint exigia caem de graça neste desenho —
-
-       1. *a linha fechada DIZ o estado*: Modo e Efeito pronto continuam à
-          vista, vivos e editáveis. O que se dobra é o ajuste fino (posição,
-          força), que é o que ninguém precisa ler para saber o que o gatilho
-          está fazendo;
-       2. *dobra por LINHA, não por coluna*: a trilha é da GRADE, e as quatro
-          colunas a partilham por `subgrid`. Não há como dobrar o L2 de uma
-          coluna só — o desalinhamento que a §3 temia é impossível por
-          construção, não por disciplina;
-       3. *«Guardar / Em todos» fica fora*: é a trilha 9, e nenhuma das duas
-          dobras a toca.
-
-     SÓ UM ABRE POR VEZ — é a opção (A) da §6, com o número na mão: os dois
-     abertos pedem 863 (299 de sobra); um aberto pede 633 (69 de sobra); os dois
-     fechados pedem 403, e a caixa tem 564. Os 69px de um só aberto rolam no
-     instante em que ela está mexendo NAQUELE bloco, que é quando ela quer
-     vê-lo inteiro. É a mesma gramática de rádio do acordeão da `02-controles`
-     que ela já aprovou (`aba02.py:2067`, `name="mesa"`).
-
-     `height:0;overflow:hidden;visibility:hidden` E NÃO `display:none`, e a
-     razão está escrita na `02-controles`: a régua de alturas mede o corpo
-     fechado POR DENTRO, e `display:none` a cegaria. Um item de flex/grid com
-     `display:none` some do DOM medido; com altura zero ele continua lá, mudo. */
-  .duas-colunas{--t-aj-e:0px;--t-aj-d:0px}
-  body:has(#dobra-l2:checked) .duas-colunas{--t-aj-e:minmax(var(--r-aj-e),auto)}
-  body:has(#dobra-r2:checked) .duas-colunas{--t-aj-d:minmax(var(--r-aj-d),auto)}
-  /* O RÁDIO NÃO SE VÊ, e não é `display:none`: um controle de formulário
-     escondido assim sai da ordem de tabulação e o teclado perde a dobra. */
-  .dobra-estado{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
-  .ajustes,.duas-colunas .rotulos > .rot-l2-3,
-  .duas-colunas .rotulos > .rot-r2-3{overflow:hidden}
-  body:not(:has(#dobra-l2:checked)) .ajustes.e,
-  body:not(:has(#dobra-l2:checked)) .duas-colunas .rotulos > .rot-l2-3,
-  body:not(:has(#dobra-r2:checked)) .ajustes.d,
-  body:not(:has(#dobra-r2:checked)) .duas-colunas .rotulos > .rot-r2-3{
-    height:0;visibility:hidden}
-  /* A CÉLULA DOBRADA NÃO DESENHA A DIVISÓRIA: o `::before` de cada célula é a
-     linha que separa uma linha da outra, e numa trilha de 0px ela cairia em
-     cima da linha de baixo — duas divisórias no mesmo y. */
-  body:not(:has(#dobra-l2:checked)) .duas-colunas > div > .ajustes.e::before,
-  body:not(:has(#dobra-r2:checked)) .duas-colunas > div > .ajustes.d::before,
-  body:not(:has(#dobra-l2:checked)) .duas-colunas .rotulos > .rot-l2-3::before,
-  body:not(:has(#dobra-r2:checked)) .duas-colunas .rotulos > .rot-r2-3::before{display:none}
-
-  /* O GLIFO DA SEÇÃO É O QUE SE CLICA. Ele já era o cabeçalho das três linhas
-     (decisão de 31/08: *"o L2 e o R2 deveriam controlar a seção"*) — agora
-     ele controla mesmo. São DOIS `<label>` sobrepostos, e só um está visível:
-     o de abrir aponta para o rádio da seção, o de fechar aponta para o rádio
-     `#dobra-nenhum`. Com um `<label>` só não haveria como FECHAR sem abrir o
-     outro, que é o buraco da gramática de rádio pura. */
-  .duas-colunas .rotulos .sec-glifo > label{display:none;cursor:pointer;
-       align-items:center;justify-content:center;gap:4px;
-       -webkit-user-select:none;user-select:none;border-radius:6px;padding:2px}
-  .duas-colunas .rotulos .sec-glifo > label:hover{background:rgba(255,255,255,.03)}
-  .duas-colunas .rotulos > .g-l2 > .abre,
-  .duas-colunas .rotulos > .g-r2 > .abre{display:flex}
-  body:has(#dobra-l2:checked) .duas-colunas .rotulos > .g-l2 > .abre,
-  body:has(#dobra-r2:checked) .duas-colunas .rotulos > .g-r2 > .abre{display:none}
-  body:has(#dobra-l2:checked) .duas-colunas .rotulos > .g-l2 > .fecha,
-  body:has(#dobra-r2:checked) .duas-colunas .rotulos > .g-r2 > .fecha{display:flex}
-  /* A SETA DIZ O ESTADO SEM PALAVRA, e é a mesma que o resto da casa usa. Ela
-     mora no `::after` do label para não entrar no SVG do glifo, que é dado.
-
-     ELA É O CARACTERE, e não a fuga CSS — 11/09/2026, e a razão é do PYTHON,
-     não do navegador. Este CSS mora numa string Python, e ali uma barra
-     seguida de dígitos de 0 a 7 é uma fuga OCTAL: o que o gerador escrevia
-     virava o byte 0x15 mais as duas letras que sobravam, e a tela mostrava o
-     retângulo de glifo faltando ao lado do L2 e do R2 — fotografado no produto
-     publicado, com a bancada. O navegador nunca viu fuga nenhuma.
-
-     O RESTO DA CASA JÁ ESCREVIA ASSIM (`topo.html`, `aba08.py`): o caractere
-     cru atravessa Python e CSS sem quem o interprete no meio. */
-  .duas-colunas .rotulos .sec-glifo > .abre::after{content:'▾';font-size:10px;
-       color:var(--comment)}
-  .duas-colunas .rotulos .sec-glifo > .fecha::after{content:'▴';font-size:10px;
-       color:var(--comment)}
-  .barra{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--texto-mudo)}
-  .barra .trilho{flex:1;height:5px;border-radius:3px;background:var(--border-forte);
-                 position:relative}
-  .barra .cheio{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--purple)}
-  .barra .cheio::after{content:'';position:absolute;right:-5px;top:-4px;width:12px;height:12px;
-    border-radius:50%;background:var(--purple);border:2px solid var(--panel)}
-  .barra .num{flex:0 0 32px;text-align:right;font-family:'JetBrains Mono',monospace;color:var(--fg)}
-  .ajustes-vazio{grid-row:1 / span 2;font-size:11.5px;color:var(--comment);
-                 font-style:italic;display:flex;align-items:center}
-  /* O LUGAR VAZIO NÃO SE CLICA — 02/09/2026, e a régua é a foto.
-     Fotografada a aba com a bancada (dois controles), as colunas P3 e P4
-     diziam `Desconectado` no cabeçalho e traziam os dois `<select>` e o
-     "Guardar" e "Em todos" ABERTOS. Escolher `Rígido` num lugar onde não há
-     aparelho é um clique que só pode terminar em recusa — e um botão que
-     convida para uma recusa é pior que um botão que não existe.
-
-     O SELETOR É O `data-conectado`, e não a classe `off`, porque ele é o que o
-     PILOTO mantém vivo: `hefesto_vivo.py:86-93` põe `data-conectado="nao"`
-     em todo lugar que a mesa não tem, a cada tique. Assim a inércia acompanha
-     a bancada — um controle ligado no P3 devolve a coluna sem tocar em CSS —
-     em vez de congelar no estado que o gerador viu.
-
-     `pointer-events` PARA O RATO; o `disabled` teria de vir do piloto, que é de
-     outra frente. A segunda trava é do lado Python: os três gestos desta aba
-     recusam DIZENDO quando a coluna está vazia (`_exigir_controle` em
-     `pacotes/a03_gatilhos.py`), e essa alcança também o clique por JS. */
-  .duas-colunas .ctrl[data-conectado="nao"] select,
-  .duas-colunas .ctrl[data-conectado="nao"] .btn{pointer-events:none;cursor:default}
-
-  /* E ELE TAMBÉM TEM DE PARECER QUE NÃO SE CLICA — 03/09/2026. A trava acima
-     era só `pointer-events`, que é INVISÍVEL: fotografada a aba com a bancada
-     (dois controles), as colunas P3 e P4 saíam **byte a byte iguais** às duas
-     que funcionam. Medido nos pixels da foto do produto:
-
-         o texto do botão de guardar       P1 e P2  rgb(186,145,246)
-                                            P3 e P4  rgb(186,145,246)
-         a borda da caixa "Modo"            P1       rgb(189,147,249)
-                                            P3 e P4  rgb(189,147,249)
-
-     Quatro botões idênticos, e dois deles mortos. Para quem usa este produto é
-     o pior arranjo possível: *"um botão que responde às vezes é pior que um que
-     recusa sempre"* — aqui ele não responde NUNCA e não diz isso em lugar
-     nenhum. O comentário da regra acima já sabia a lei (*"um botão que convida
-     para uma recusa é pior que um botão que não existe"*) e parou no rato.
-
-     A GRAMÁTICA É A DAS OUTRAS ABAS, e nada aqui é invenção: texto em
-     `var(--linha)`, contorno em `var(--border-forte)`, fundo do quadro, e
-     **nenhum `opacity`** — a lição medida da `.fita.inerte`. É o mesmo que
-     `.nav-ctl.vazia` (06), `.luz-grade .ctrl.vazia` (04) e `.vib .ctrl.vazia`
-     (05) já fazem com um lugar sem aparelho.
-
-     E ELA ACOMPANHA A MESA porque pende do mesmo `data-conectado` que o piloto
-     reescreve a cada tique: ligar um controle no P3 devolve a coluna inteira
-     sem tocar em CSS nenhum. */
-  .duas-colunas .ctrl[data-conectado="nao"] select.modo,
-  .duas-colunas .ctrl[data-conectado="nao"] select.pronto,
-  .duas-colunas .ctrl[data-conectado="nao"] .nome-efeito,
-  .duas-colunas .ctrl[data-conectado="nao"] .btn{
-    border-color:var(--border-forte);background:var(--app-bg);color:var(--linha)}
-  .duas-colunas .ctrl[data-conectado="nao"] select.modo:hover,
-  .duas-colunas .ctrl[data-conectado="nao"] select.pronto:hover,
-  .duas-colunas .ctrl[data-conectado="nao"] .btn:hover{
-    border-color:var(--border-forte);color:var(--linha)}
-  /* A FRASE DOS AJUSTES CAI JUNTO, senão ela vira a coisa mais clara da coluna
-     morta: `--comment` (#8896c4) é mais claro que `--linha`, e apagar tudo em
-     volta a promoveria sozinha. */
-  .duas-colunas .ctrl[data-conectado="nao"] .ajustes-vazio{color:var(--linha)}
-
-  /* O BOTÃO É UM POR CONTROLE, e da MESMA largura em todas as colunas. Era um
-     só no pé do quadro, e com quatro controles um botão só não diz o que guarda:
-     é a mesma ambiguidade que o recibo tinha antes de dizer em QUAL controle
-     escreveu. Aqui ele fica na coluna de quem ele guarda. */
-  .duas-colunas .ctrl .btn{width:100%;font-size:11.5px;padding:0 6px}
-
-  /* ---------- O NOME DO EFEITO — decisão 17 dela, 02/09/2026 ----------
-     *"Isso é pra quando o user salva algum efeito. É assim que tem que
-     aparecer. O nome que o user deixar lá. Ali é só exemplo."*
-
-     "Meus efeitos" existia no campo de escolha com dois nomes de exemplo e sem
-     dono nenhum — não havia, em todo o `src/`, onde guardar um efeito com nome.
-     O que faltava era ONDE ESCREVER O NOME, e é este campo: o "Guardar esse
-     efeito" ao lado já recolhe a coluna inteira (`data-hef-forma="@controle"`),
-     então o nome viaja junto sem endereço novo.
-
-     ELE DIVIDE A LINHA DO BOTÃO, e não ganha linha própria: a grade tem 24px de
-     folga sobre o teto medido (477px) e uma linha nova custaria 48. Lado a
-     lado, custa ZERO — a linha `--r-acao` já tinha 34px de altura para um botão
-     que ocupa 34.
-
-     O CAMPO ENCOLHE E O BOTÃO NÃO, e as TRÊS declarações do campo são
-     necessárias — medido em 02/09/2026, com a foto: só `min-width:0` NÃO basta.
-     Um `<input>` tem largura intrínseca (o `size` implícito, ~147px aqui), e com
-     `flex-basis:auto` ela vira a contribuição mínima do campo: a linha pediu
-     276px numa coluna de 220 e a aba nasceu com 275px de rolagem lateral, o P4
-     fora da tela. `flex:1 1 0` mais `width:0` zeram a base; o campo passa a
-     CRESCER a partir do nada, em vez de encolher a partir do intrínseco. */
-  .duas-colunas .ctrl .guardar{display:flex;align-items:center;gap:6px;min-width:0}
-  .duas-colunas .ctrl .guardar .btn{width:auto;flex:0 0 auto;white-space:nowrap}
-  .duas-colunas .ctrl .nome-efeito{
-    flex:1 1 0;width:0;min-width:0;height:24px;padding:0 7px;border-radius:6px;
-    font-family:inherit;font-size:11px;border:1px solid var(--linha);
-    background:var(--app-bg);color:var(--fg)}
-  .duas-colunas .ctrl .nome-efeito::placeholder{color:var(--comment)}
-  .duas-colunas .ctrl .nome-efeito:focus{outline:none;border-color:var(--purple)}
-  /* O LUGAR VAZIO NÃO SE DIGITA, pela mesma razão que ele não se clica: um
-     efeito é de um aparelho, e nomear um que não está aqui só pode terminar em
-     recusa. Ver a trava dos `select` acima. */
-  .duas-colunas .ctrl[data-conectado="nao"] .nome-efeito{
-    pointer-events:none;opacity:.55}
-
-  /* O REENVIO SAIU DA FAIXA — 06/09/2026, decisão de produto. As duas regras que
-     vestiam o botão (a largura do glifo e a trava do lugar vazio) saíram com
-     ele: folha que veste um elemento que ninguém emite é peso que envelhece
-     calado. A razão da saída, e o que ainda espera o `--publicar 03`, estão no
-     comentário da faixa, junto de onde o botão era escrito.
-
-     O GLIFO NÃO SE ESCREVE AQUI, e a razão é medida: este comentário é EMITIDO
-     para dentro do `<style>` da página, e a régua que vigia o glifo o procura
-     no arquivo. Escrito aqui, ele passaria a achar esta prosa e daria verde
-     sobre um botão que não existe — o mesmo defeito que o comentário do
-     `sem_comentarios_de_css` documenta, e que já custou uma régua nesta aba. */
-
-  .par-modo{margin-left:auto;display:inline-grid;grid-template-columns:1fr 1fr;gap:6px}
-  .par-modo button{height:22px;padding:0 10px;border-radius:6px;font-family:inherit;
-    font-size:11.5px;cursor:pointer;border:1px solid var(--linha);background:transparent;
-    color:var(--texto-suave);white-space:nowrap}
-  .par-modo button:hover:not(.on){border-color:var(--comment);color:var(--fg)}
-  .par-modo button.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);
-    font-weight:600;cursor:default}
-
-  .quadro[data-modo-da-aba="automatico"] .duas-colunas .ctrl > :not(.cabeca){
-    opacity:.45;pointer-events:none}
-
-  .duas-colunas{
-    --r-nome:24px;--r-modo:36px;--r-pronto:36px;
-    --r-aj-e:92px;--r-sep:1px;--r-aj-d:46px;
-    --h-barra:23px;
-    --r-acao:34px;--r-ar:7px;--r-passo:calc(var(--r-ar) * 2);
-    /* O TAMANHO DO GLIFO E A LARGURA DA COLUNA DE RÓTULOS saem do Python, do
-       mesmo lugar que o `glifo(tam=GL)` lê. Digitados no CSS, os dois divergem
-       no dia em que alguém mudar um só — é a cicatriz das cores do plástico e a
-       do padrão das lâmpadas. */
-    --gl:36px; --larg-rot:135px; --gap-col:16px; --vao-gl:10px;
-  }
-  .duas-colunas > div:nth-child(1){grid-column:1}
-  .duas-colunas > div:nth-child(2){grid-column:2}
-  .duas-colunas > div:nth-child(3){grid-column:3}
-  .duas-colunas > div:nth-child(4){grid-column:4}
-  .duas-colunas > div:nth-child(5){grid-column:5}
+  /* ---------- Gatilhos · a grade do todo ----------
+     Uma coluna de glifos (L2, R2), uma de rótulos e UMA COLUNA POR CONTROLE da `MESA`.
+     Cada célula leva o `data-controle` do seu lugar: o piloto pinta todas as que casam, e o
+     clique chega ao pacote com o controle certo. `minmax(0,1fr)` e não `1fr`: o mínimo
+     `auto` empurraria a coluna com o conteúdo mais largo. */
+  .g2-grade{display:grid;grid-template-columns:44px 132px repeat(4,minmax(0,1fr));
+    column-gap:14px;row-gap:16px;align-items:center;padding:8px 4px 6px}
+  .g2-cab{display:flex;justify-content:center;min-height:36px}
+  /* o chip do controle tem a largura, a altura e a fonte dos campos de baixo */
+  .g2-cab > .cabeca,.g2-cab > .cabeca > span{display:flex;width:100%}
+  .g2-cab .chip{width:100%;height:36px;box-sizing:border-box;display:flex;align-items:center;
+    justify-content:center;border-radius:7px;font:600 12.5px 'Space Grotesk',system-ui,sans-serif;
+    padding:0 11px;white-space:nowrap}
+  .g2-cab .chip .pt{margin:0 6px}
+  .g2-cab[data-conectado="nao"] > .cabeca{visibility:hidden}
+  .g2-gl{grid-row:span 2;display:flex;align-items:center;justify-content:center;color:var(--fg);
+    align-self:stretch;border-right:1px solid var(--border-sutil)}
+  .g2-grade > .g2-gl.g2-ds{grid-column:1;grid-row:auto}
+  .g2-grade .g2-gl.g2-r2{margin-top:6px}
+  .sec-rot{font-size:12px;font-weight:600;color:var(--rot-campo);gap:7px}
+  .g2-rot{display:flex;align-items:center;min-height:36px}
+  .g2-rot .sec-rot{white-space:nowrap}
+  .g2-cel{min-height:36px;display:flex;align-items:center;min-width:0}
+  .g2-cel[data-conectado="nao"]{border-radius:7px;border:1px dashed var(--border-sutil);height:36px;
+    box-sizing:border-box}
+  .g2-cel[data-conectado="nao"] select{visibility:hidden;pointer-events:none}
+  .g2-env{display:block;width:100%;min-width:0}
+  .g2-acion,.g2-imersao,.g2-partir{width:100%;height:36px;padding:0 11px;border-radius:7px;
+    font:500 12.5px 'Space Grotesk',system-ui,sans-serif;border:1px solid var(--linha);
+    background:var(--app-bg);color:var(--texto-suave);cursor:pointer}
+  .g2-acion{color:var(--fg);font-weight:600;border-color:var(--purple);background:var(--sel-bg)}
+  .g2-imersao{border-color:rgba(255,121,198,.55);color:var(--fg)}
+  .g2-acion:hover,.g2-imersao:hover,.g2-partir:hover{border-color:var(--comment)}
+  .g2-sep{grid-column:1 / -1;height:1px;background:var(--border-sutil);margin:2px 0}
+  /* a célula à esquerda dos chips: «Controle» e, abaixo, o estilo de jogo do perfil (só leitura) */
+  .g2-grade > .g2-canto{grid-column:2;display:flex;flex-direction:column;align-items:flex-start;
+    justify-content:center;gap:3px;height:auto;min-width:0;align-self:stretch}
+  .g2-canto .g2-canto-rot{line-height:16px}
+  .g2-canto .g2-estilo{display:flex;flex-wrap:wrap;justify-content:space-between;column-gap:8px;
+    width:100%;font:500 12px/16px 'Space Grotesk',system-ui,sans-serif;color:var(--fg);cursor:help}
+  .g2-canto .g2-estilo > span{white-space:nowrap}
+  .g2-canto .g2-estilo-nome{color:var(--purple);font-weight:600;margin-left:auto}
+  .g2-canto .g2-estilo-nome::after{content:attr(data-estilo)}
+  /* sem estilo no perfil o pacote apaga o atributo (o piloto não escreve vazio num texto) */
+  .g2-canto .g2-estilo:not(:has(.g2-estilo-nome[data-estilo])){display:none}
+  @media (max-height:780px){.quadro .g2-grade{row-gap:8px;padding-top:4px}}
+  /* criar efeitos novos */
+  .g2-criar{margin-top:6px;flex:0 0 auto}
+  .criar .criar-linha{display:flex;align-items:center;gap:12px;padding:12px 16px;flex-wrap:wrap;min-width:0}
+  .criar .quadro-titulo{flex:0 0 auto;margin-right:4px}
+  .criar .seg-criar{display:inline-flex;gap:4px;flex:0 0 auto}
+  .criar .seg-criar label,.criar .meu{height:30px;padding:0 12px;border-radius:999px;
+    font:500 12.5px/1 'Space Grotesk',system-ui,sans-serif;border:1px solid var(--linha);
+    background:var(--app-bg);color:var(--texto-mudo);cursor:pointer;white-space:nowrap;
+    display:inline-flex;align-items:center;gap:7px;box-sizing:border-box}
+  .criar .seg-criar input{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px}
+  .criar .seg-criar label:has(input:checked){border-color:var(--purple);background:var(--sel-bg);
+    color:var(--fg);font-weight:600}
+  .criar .seg-criar label:hover:not(:has(input:checked)),.criar .meu:hover{border-color:var(--comment);
+    color:var(--texto-suave)}
+  .criar .seg-criar label:has(input:focus-visible){outline:2px solid var(--cyan,#8be9fd);outline-offset:2px}
+  .g2-criar .g2-partir{width:190px;flex:0 0 auto;height:30px}
+  .criar .nome-criar{height:30px;width:150px;flex:0 0 auto;padding:0 11px;border-radius:7px;
+    border:1px solid var(--linha);background:var(--app-bg);color:var(--fg);
+    font:500 12.5px 'Space Grotesk',system-ui,sans-serif}
+  .criar .nome-criar::placeholder{color:var(--texto-mudo)}
+  .criar .btn-criar{height:30px;padding:0 14px;border-radius:7px;border:1px solid var(--purple);
+    background:rgba(189,147,249,.12);color:var(--purple);font:600 12.5px/1 'Space Grotesk',system-ui,sans-serif;
+    cursor:pointer;flex:0 0 auto}
+  .criar .btn-criar:hover{background:rgba(189,147,249,.22)}
+  .criar .meus{display:flex;gap:6px;margin-left:auto;align-items:center;min-width:0;flex-wrap:wrap}
+  .criar .meu{color:var(--texto-suave);cursor:help}
+  .criar .meu i{width:7px;height:7px;border-radius:50%;background:var(--cor,var(--purple));flex:0 0 auto}
+  .g2-barras{display:flex;align-items:center;gap:26px;padding:4px 16px 14px}
+  .g2-barra{display:flex;align-items:center;gap:10px;flex:1 1 0;min-width:0}
+  .g2-barra .g2-bn{font-size:12px;font-weight:600;color:var(--rot-campo);white-space:nowrap}
+  .g2-barra input{flex:1;min-width:60px;accent-color:var(--purple);height:24px}
+  .g2-barra b{font:700 12px 'JetBrains Mono',monospace;color:var(--fg);min-width:40px;text-align:left}
+  .g2-sentir{height:30px;padding:0 14px;border-radius:7px;border:1px solid var(--pink);
+    background:rgba(255,121,198,.1);color:var(--pink);font:600 12.5px/1 'Space Grotesk',system-ui,sans-serif;
+    cursor:pointer;flex:0 0 auto}
+  .g2-sentir:hover{background:rgba(255,121,198,.2)}
+  .quadro-topo .modo-auto{margin-left:auto}
 
 
   body.nativo.por-controle :is([data-gesto],[data-modo],[data-hef-gesto],[data-papel],[data-forca],[data-player],[data-sensor],[data-rota],[data-mudo],[data-mic-modo],[data-v]):not(:is([data-gesto=cadeado],[data-gesto=hefesto],[data-gesto=modo-nativo],[data-gesto=modo-steam],[data-gesto=reconectar],.menu-hefesto *)){
@@ -1504,16 +1023,6 @@
   body.nativo.por-controle .modo-auto,
   body.nativo.por-controle .r-aplicar,body.nativo.por-controle .r-salvar,
   body.nativo.por-controle .r-importar{visibility:hidden}
-
-  .ajuda{width:17px;height:17px;border-radius:50%;flex:0 0 17px;border:1px solid var(--linha);
-    color:var(--texto-mudo);font-size:11px;line-height:15px;text-align:center;cursor:help;position:relative}
-  .ajuda:hover,.ajuda:focus{border-color:var(--cyan);color:var(--cyan);outline:none}
-  .ajuda:hover .dica,.ajuda:focus .dica,.ajuda:focus-within .dica{display:block}
-  .quadro-topo .par-modo + .ajuda.esq .dica{left:auto;right:22px}
-  .btn:not(.apagado) + .ajuda.porque,.seg button:not(.apagado) + .ajuda.porque{display:none}
-  .ajuda.porque:has(.dica:empty),.ajuda.porque:has(.nada){display:none}
-  .ajuda.porque{align-self:center;margin-left:-4px}
-  body.nativo.por-controle .par-modo + .ajuda{visibility:hidden}
 </style>
 <style id="base-comum">
 /* ===== Base comum das abas (rodada 2, 12/10/2026) =====
@@ -1727,626 +1236,72 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     <div class="quadro" data-modo-da-aba="personalizado" data-campo="modo-dos-gatilhos"
          data-hef-alvo="atributo" data-hef-atributo="data-modo-da-aba">
       <div class="quadro-topo">
-        <span class="quadro-titulo">Gatilhos</span>
-        <span class="ajuda">?<span class="dica">
-          O L2 e o R2 têm um motor dentro que <b>empurra a sua mão de volta</b>: é o que faz
-          um gatilho parecer freio de carro e outro, metralhadora.<br><br>
-          <b>Uma coluna por controle.</b> Escolher um modo já manda o efeito, e quem está com
-          <b>aquele</b> controle na mão sente na hora.<br><br>
-          <b>O DualSense não devolve o modo em que está:</b> o que você sente na mão é a
-          confirmação.
-        </span></span>
+        <span class="quadro-titulo" data-dica="Uma coluna por controle; vale na hora">Gatilhos</span>
         <span class="trava-nativo" title="Com o Hefesto desligado, o jogo manda nos gatilhos. O que está aqui volta a valer quando ligar, na aba Jogar."><svg class="cad" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M3.6 5.2V3.9a2.4 2.4 0 0 1 4.8 0v1.3" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="2.3" y="5.2" width="7.4" height="5.4" rx="1.1" fill="currentColor"/></svg>O jogo manda</span>
-        <span class="par-modo" role="group" aria-label="Modo da aba"><button data-gesto="modo-dos-gatilhos" data-modo="automatico" data-campo="modo-dos-gatilhos-automatico" data-hef-alvo="classe" data-hef-atributo="aria-pressed" aria-pressed="false">Modo automático</button><button class="on" data-gesto="modo-dos-gatilhos" data-modo="personalizado" data-campo="modo-dos-gatilhos-personalizado" data-hef-alvo="classe" data-hef-atributo="aria-pressed" aria-pressed="true">Modo personalizado</button></span>
-        <span class="ajuda esq">?<span class="dica">
-          <b>Modo automático:</b> o jogo decide os dois gatilhos de todos os controles, e
-          os botões desta aba ficam parados.<br><br>
-          <b>Modo personalizado:</b> você escolhe o modo de cada gatilho. Quando o jogo
-          manda o efeito dele, o do jogo vence.
-        </span></span>
+        <button class="modo-auto" type="button" data-gesto="modo-dos-gatilhos" data-modo="automatico" data-campo="modo-dos-gatilhos-automatico" data-hef-alvo="classe" data-hef-classe="ligado" data-hef-atributo="aria-pressed" aria-pressed="false" data-dica="O jogo manda; o estilo do perfil ajusta" data-governa=".g2-grade &gt; :is(.g2-gl:not(.g2-ds),.g2-rot,.g2-cel,.g2-sep:not(.g2-sep-cab))"><span class="p"></span>Modo automático</button>
       </div>
       <div class="quadro-corpo">
-        <!-- OS TRÊS ESTADOS DA DOBRA — ROLAGEM-01. `nenhum` nasce marcado: é o
-             único arranjo em que a aba CABE (403 contra 564), e é o que cura a
-             barra que ela achou em 08/09. Ver o comentário do acordeão no CSS. -->
-        <input class="dobra-estado" type="radio" name="dobra" id="dobra-nenhum" checked>
-        <input class="dobra-estado" type="radio" name="dobra" id="dobra-l2">
-        <input class="dobra-estado" type="radio" name="dobra" id="dobra-r2">
-        <div class="duas-colunas">
-        <div class="rotulos">
-          <div class="rot-linha-1"><span class="sec-rot">Controle</span></div>
-
-          <!-- O L2 E O R2 TITULAM A SEÇÃO — decisão, 31/08/2026: *"o L2 e o
-               R2 deveriam controlar a seção e não ficar do lado esquerdo de
-               gatilho esquerdo ou direito."*
-
-               ATÉ HOJE o glifo era um adorno colado no rótulo da PRIMEIRA linha
-               da seção (`[L2] Gatilho esquerdo`), e as outras duas linhas dela —
-               Efeito pronto e Ajustes — não tinham dono visível. Ele agora ocupa
-               uma trilha própria e ATRAVESSA as três (`grid-row: span 3`): é o
-               cabeçalho da seção, e as três linhas ficam claramente debaixo dele.
-
-               "GATILHO ESQUERDO" SAIU, e não é perda: o glifo L2 já diz qual
-               gatilho é — a palavra repetia o desenho. O que sobra em cada linha
-               é o que ela nomeia: Modo, Efeito pronto, Ajustes.
-
-               CUSTO DE ALTURA: ZERO. A célula ocupa trilhas que já existiam. -->
-          <div class="sec-glifo g-l2">
-            <label class="abre" for="dobra-l2" title="Abre os ajustes deste gatilho. Só um fica aberto por vez."><svg class="gl" width="36" height="36" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L2</title>
+        <div class="g2-grade">
+          <div class="g2-gl g2-ds" aria-label="DualSense"><svg class="gl" width="36" height="36" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>DualSense</title><g transform="translate(16 16.5) scale(.82) translate(-16 -16.8)" fill="none" stroke="currentColor"><path d="M8.5 7H23.5C26.6 7 28.4 8.9 29.1 12.2L30.6 22.6C31.1 26.6 27.9 28.6 25.6 26.6L21.4 21.9Q16 19.6 10.6 21.9L6.4 26.6C4.1 28.6 0.9 26.6 1.4 22.6L2.9 12.2C3.6 8.9 5.4 7 8.5 7Z" stroke-width="2.44" stroke-linejoin="round"/><rect x="10.2" y="7" width="11.6" height="6.4" rx="1" stroke-width="1.9"/><circle cx="12.4" cy="17" r="1.7" stroke-width="1.8"/><circle cx="19.6" cy="17" r="1.7" stroke-width="1.8"/><path d="M6.6 11.4V15.4M4.6 13.4H8.6" stroke-width="1.8" stroke-linecap="round"/><g fill="currentColor" stroke="none"><circle cx="25.4" cy="11.9" r="1"/><circle cx="25.4" cy="14.9" r="1"/><circle cx="23.9" cy="13.4" r="1"/><circle cx="26.9" cy="13.4" r="1"/></g></g></svg></div>
+          <div class="g2-canto" aria-label="Controle e estilo de jogo"><span class="sec-rot g2-canto-rot">Controle</span><span class="g2-estilo" data-dica="O estilo escolhido em Perfis. Só leitura"><span class="g2-estilo-rot">Estilo de jogo</span><span class="g2-estilo-nome" data-campo="estilo-do-perfil" data-hef-alvo="atributo" data-hef-atributo="data-estilo" data-estilo="FPS"></span></span></div>
+          <div class="g2-cab" data-controle="p1"><div class="cabeca" data-campo="plastico" data-hef-alvo="plastico" style="--plastico:#ae335a"><span data-campo="chip-do-controle" data-hef-alvo="html"><span class="chip plastico" title="Cosmic Red — a borda é a cor do plástico">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</span></span></div></div>
+          <div class="g2-cab" data-controle="p2"><div class="cabeca" data-campo="plastico" data-hef-alvo="plastico" style="--plastico:#7eb8d4"><span data-campo="chip-do-controle" data-hef-alvo="html"><span class="chip plastico" title="Starlight Blue — a borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</span></span></div></div>
+          <div class="g2-cab" data-controle="p3" data-conectado="nao"><div class="cabeca" data-campo="plastico" data-hef-alvo="plastico"><span data-campo="chip-do-controle" data-hef-alvo="html"><span class="chip vazio" title="Nenhum controle neste lugar.">P3 <span class="pt">•</span> Desconectado</span></span></div></div>
+          <div class="g2-cab" data-controle="p4" data-conectado="nao"><div class="cabeca" data-campo="plastico" data-hef-alvo="plastico"><span data-campo="chip-do-controle" data-hef-alvo="html"><span class="chip vazio" title="Nenhum controle neste lugar.">P4 <span class="pt">•</span> Desconectado</span></span></div></div>
+          <div class="g2-sep g2-sep-cab"></div>
+          <div class="g2-gl g2-l2" aria-label="L2"><svg class="gl" width="36" height="36" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L2</title>
 
   <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
   <text x="10" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L2</text>
   <line x1="16" y1="24" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <polyline points="12,27 16,31 20,27" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-</svg></label>
-            <label class="fecha" for="dobra-nenhum" title="Fecha os ajustes."><svg class="gl" width="36" height="36" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L2</title>
-
-  <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
-  <text x="10" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L2</text>
-  <line x1="16" y1="24" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <polyline points="12,27 16,31 20,27" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-</svg></label>
-          </div>
-          <div class="rot-l2-1"><span class="sec-rot">Modo</span></div>
-          <div class="rot-l2-2"><span class="sec-rot">Efeito pronto</span></div>
-          <div class="rot-l2-3 no-topo"><span class="sec-rot">Ajustes</span></div>
-
-<!-- ESTE ELEMENTO É CÉLULA DA GRADE, não enfeite. Ele ocupa a trilha de
-               1px que separa o bloco do L2 do bloco do R2 (`grid-template-rows`
-               em `.duas-colunas > div`). Tirei-o em 30/08 pensando que era só um
-               traço, e "Gatilho direito" caiu nessa trilha e nasceu com **1px de
-               altura** — as cinco colunas saíram de registro e as divisórias
-               passaram a cortar o conteúdo de P3 e P4 no meio. O traço VISÍVEL
-               agora vem da borda de célula (`--rot-linha`); esta célula só guarda
-               o lugar, e por isso não leva borda. -->
-          <div class="vao-l2-r2"></div>
-
-          <div class="sec-glifo g-r2">
-            <label class="abre" for="dobra-r2" title="Abre os ajustes deste gatilho. Só um fica aberto por vez."><svg class="gl" width="36" height="36" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>R2</title>
+</svg></div>
+          <div class="g2-rot"><span class="sec-rot" data-dica="Como o gatilho resiste ao dedo">Efeito de acionamento</span></div>
+          <div class="g2-cel" id="acion-p1-e" data-controle="p1"><span class="g2-env" data-campo="dica-modo-e" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="Batidas rápidas e fortes enquanto apertado."><select class="g2-acion" data-gesto="modo" data-campo="modo-chave-e" data-hef-alvo="valor" data-lado="e" aria-label="Efeito de acionamento"><option value="—" disabled hidden>—</option><option value="Off" title="O jogo manda no gatilho; sem jogo, ele fica solto, como num controle comum.">Sem efeito</option><option value="Rigid" title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option><option value="SimpleRigid" title="Trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option><option value="Pulse" title="Um solavanco num ponto do curso e depois solta — o coice de um tiro único.">Pulso</option><option value="PulseA" title="Pulso com a subida mais suave: a força cresce antes do estalo.">Pulso (curva A)</option><option value="PulseB" title="Pulso com a descida mais suave: o estalo vem e a força cai devagar.">Pulso (curva B)</option><option value="Resistance" title="Peso constante do começo ao fim, sem trava — remada, alavanca, arco sendo puxado.">Resistência</option><option value="Bow" title="Fica cada vez mais pesado até o fim do curso, e então solta de uma vez.">Arco de flecha</option><option value="Galloping" title="Batidas ritmadas enquanto o gatilho está apertado — cavalo correndo, motor pegando.">Galope</option><option value="SemiAutoGun" title="Uma trava, um estalo, e o gatilho volta. Um tiro por aperto.">Arma semi-automática</option><option value="AutoGun" title="Vibra continuamente enquanto está apertado — rajada.">Arma automática</option><option value="Machine" selected title="Batidas rápidas e fortes enquanto apertado.">Metralhadora</option><option value="Feedback" title="Solto até certo ponto do curso, e daí em diante duro. O ponto é ajustável.">Ponto duro</option><option value="Weapon" title="Trava, solta no estalo e fica leve até o fim — espingarda.">Disparo</option><option value="Vibration" title="Treme o gatilho na frequência escolhida, sem opor força.">Vibração</option><option value="SlopeFeedback" title="A força sobe em linha reta do início ao fim do curso.">Rampa de força</option><option value="MultiPositionFeedback" title="Você desenha a força em dez posições do curso, uma por uma.">Curva de força</option><option value="MultiPositionVibration" title="Treme só na faixa do curso que você marcar.">Vibração por posição</option><optgroup label="Seus efeitos"><option value="meu:Freio tardio">Freio tardio</option></optgroup></select></span></div>
+          <div class="g2-cel" id="acion-p2-e" data-controle="p2"><span class="g2-env" data-campo="dica-modo-e" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="Uma trava, um estalo, e o gatilho volta. Um tiro por aperto."><select class="g2-acion" data-gesto="modo" data-campo="modo-chave-e" data-hef-alvo="valor" data-lado="e" aria-label="Efeito de acionamento"><option value="—" disabled hidden>—</option><option value="Off" title="O jogo manda no gatilho; sem jogo, ele fica solto, como num controle comum.">Sem efeito</option><option value="Rigid" title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option><option value="SimpleRigid" title="Trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option><option value="Pulse" title="Um solavanco num ponto do curso e depois solta — o coice de um tiro único.">Pulso</option><option value="PulseA" title="Pulso com a subida mais suave: a força cresce antes do estalo.">Pulso (curva A)</option><option value="PulseB" title="Pulso com a descida mais suave: o estalo vem e a força cai devagar.">Pulso (curva B)</option><option value="Resistance" title="Peso constante do começo ao fim, sem trava — remada, alavanca, arco sendo puxado.">Resistência</option><option value="Bow" title="Fica cada vez mais pesado até o fim do curso, e então solta de uma vez.">Arco de flecha</option><option value="Galloping" title="Batidas ritmadas enquanto o gatilho está apertado — cavalo correndo, motor pegando.">Galope</option><option value="SemiAutoGun" selected title="Uma trava, um estalo, e o gatilho volta. Um tiro por aperto.">Arma semi-automática</option><option value="AutoGun" title="Vibra continuamente enquanto está apertado — rajada.">Arma automática</option><option value="Machine" title="Batidas rápidas e fortes enquanto apertado.">Metralhadora</option><option value="Feedback" title="Solto até certo ponto do curso, e daí em diante duro. O ponto é ajustável.">Ponto duro</option><option value="Weapon" title="Trava, solta no estalo e fica leve até o fim — espingarda.">Disparo</option><option value="Vibration" title="Treme o gatilho na frequência escolhida, sem opor força.">Vibração</option><option value="SlopeFeedback" title="A força sobe em linha reta do início ao fim do curso.">Rampa de força</option><option value="MultiPositionFeedback" title="Você desenha a força em dez posições do curso, uma por uma.">Curva de força</option><option value="MultiPositionVibration" title="Treme só na faixa do curso que você marcar.">Vibração por posição</option><optgroup label="Seus efeitos"><option value="meu:Freio tardio">Freio tardio</option></optgroup></select></span></div>
+          <div class="g2-cel" id="acion-p3-e" data-controle="p3" data-conectado="nao"><span class="g2-env" data-campo="dica-modo-e" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="Nenhum controle neste lugar."><select class="g2-acion" data-gesto="modo" data-campo="modo-chave-e" data-hef-alvo="valor" data-lado="e" aria-label="Efeito de acionamento"><option value="—" selected disabled hidden>—</option><option value="Off" title="O jogo manda no gatilho; sem jogo, ele fica solto, como num controle comum.">Sem efeito</option><option value="Rigid" title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option><option value="SimpleRigid" title="Trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option><option value="Pulse" title="Um solavanco num ponto do curso e depois solta — o coice de um tiro único.">Pulso</option><option value="PulseA" title="Pulso com a subida mais suave: a força cresce antes do estalo.">Pulso (curva A)</option><option value="PulseB" title="Pulso com a descida mais suave: o estalo vem e a força cai devagar.">Pulso (curva B)</option><option value="Resistance" title="Peso constante do começo ao fim, sem trava — remada, alavanca, arco sendo puxado.">Resistência</option><option value="Bow" title="Fica cada vez mais pesado até o fim do curso, e então solta de uma vez.">Arco de flecha</option><option value="Galloping" title="Batidas ritmadas enquanto o gatilho está apertado — cavalo correndo, motor pegando.">Galope</option><option value="SemiAutoGun" title="Uma trava, um estalo, e o gatilho volta. Um tiro por aperto.">Arma semi-automática</option><option value="AutoGun" title="Vibra continuamente enquanto está apertado — rajada.">Arma automática</option><option value="Machine" title="Batidas rápidas e fortes enquanto apertado.">Metralhadora</option><option value="Feedback" title="Solto até certo ponto do curso, e daí em diante duro. O ponto é ajustável.">Ponto duro</option><option value="Weapon" title="Trava, solta no estalo e fica leve até o fim — espingarda.">Disparo</option><option value="Vibration" title="Treme o gatilho na frequência escolhida, sem opor força.">Vibração</option><option value="SlopeFeedback" title="A força sobe em linha reta do início ao fim do curso.">Rampa de força</option><option value="MultiPositionFeedback" title="Você desenha a força em dez posições do curso, uma por uma.">Curva de força</option><option value="MultiPositionVibration" title="Treme só na faixa do curso que você marcar.">Vibração por posição</option><optgroup label="Seus efeitos"><option value="meu:Freio tardio">Freio tardio</option></optgroup></select></span></div>
+          <div class="g2-cel" id="acion-p4-e" data-controle="p4" data-conectado="nao"><span class="g2-env" data-campo="dica-modo-e" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="Nenhum controle neste lugar."><select class="g2-acion" data-gesto="modo" data-campo="modo-chave-e" data-hef-alvo="valor" data-lado="e" aria-label="Efeito de acionamento"><option value="—" selected disabled hidden>—</option><option value="Off" title="O jogo manda no gatilho; sem jogo, ele fica solto, como num controle comum.">Sem efeito</option><option value="Rigid" title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option><option value="SimpleRigid" title="Trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option><option value="Pulse" title="Um solavanco num ponto do curso e depois solta — o coice de um tiro único.">Pulso</option><option value="PulseA" title="Pulso com a subida mais suave: a força cresce antes do estalo.">Pulso (curva A)</option><option value="PulseB" title="Pulso com a descida mais suave: o estalo vem e a força cai devagar.">Pulso (curva B)</option><option value="Resistance" title="Peso constante do começo ao fim, sem trava — remada, alavanca, arco sendo puxado.">Resistência</option><option value="Bow" title="Fica cada vez mais pesado até o fim do curso, e então solta de uma vez.">Arco de flecha</option><option value="Galloping" title="Batidas ritmadas enquanto o gatilho está apertado — cavalo correndo, motor pegando.">Galope</option><option value="SemiAutoGun" title="Uma trava, um estalo, e o gatilho volta. Um tiro por aperto.">Arma semi-automática</option><option value="AutoGun" title="Vibra continuamente enquanto está apertado — rajada.">Arma automática</option><option value="Machine" title="Batidas rápidas e fortes enquanto apertado.">Metralhadora</option><option value="Feedback" title="Solto até certo ponto do curso, e daí em diante duro. O ponto é ajustável.">Ponto duro</option><option value="Weapon" title="Trava, solta no estalo e fica leve até o fim — espingarda.">Disparo</option><option value="Vibration" title="Treme o gatilho na frequência escolhida, sem opor força.">Vibração</option><option value="SlopeFeedback" title="A força sobe em linha reta do início ao fim do curso.">Rampa de força</option><option value="MultiPositionFeedback" title="Você desenha a força em dez posições do curso, uma por uma.">Curva de força</option><option value="MultiPositionVibration" title="Treme só na faixa do curso que você marcar.">Vibração por posição</option><optgroup label="Seus efeitos"><option value="meu:Freio tardio">Freio tardio</option></optgroup></select></span></div>
+          <div class="g2-rot"><span class="sec-rot" data-dica="O realismo que o acionamento ganha">Efeito de imersão</span></div>
+          <div class="g2-cel" data-controle="p1"><span class="g2-env" data-campo="dica-imersao-e" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="A força alterna entre dois níveis a cada 0,2 s enquanto você segura."><select class="g2-imersao" data-gesto="imersao" data-campo="imersao-e" data-hef-alvo="valor" data-lado="e" data-hef-forma="acion-p1-e" aria-label="Efeito de imersão"><option value="—" disabled hidden>—</option><option value="nenhum">Nenhum</option><optgroup label="Metralhadora"><option value="rajada-que-sobe-sozinha" selected title="A força alterna entre dois níveis a cada 0,2 s enquanto você segura.">Rajada que sobe sozinha</option><option value="cano-que-esquenta" title="A rajada começa rápida e desacelera depois de 3 s.">Cano que esquenta</option><option value="recuo-pesado" title="Solavancos espaçados e fortes, como arma de calibre grande.">Recuo pesado</option></optgroup><optgroup label="Seus efeitos"><option value="meu:Recuo do MK">Recuo do MK</option></optgroup></select></span></div>
+          <div class="g2-cel" data-controle="p2"><span class="g2-env" data-campo="dica-imersao-e" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="O gatilho rearma sozinho a cada tiro, firme e curto."><select class="g2-imersao" data-gesto="imersao" data-campo="imersao-e" data-hef-alvo="valor" data-lado="e" data-hef-forma="acion-p2-e" aria-label="Efeito de imersão"><option value="—" disabled hidden>—</option><option value="nenhum">Nenhum</option><optgroup label="Arma semi-automática"><option value="ferrolho-que-volta" selected title="O gatilho rearma sozinho a cada tiro, firme e curto.">Ferrolho que volta</option><option value="trava-seca" title="Pouco curso e muita resistência, como arma sem munição.">Trava seca</option><option value="pino-que-falha" title="De vez em quando o tiro prende por meio segundo e solta.">Pino que falha</option></optgroup><optgroup label="Seus efeitos"><option value="meu:Recuo do MK">Recuo do MK</option></optgroup></select></span></div>
+          <div class="g2-cel" data-controle="p3" data-conectado="nao"><span class="g2-env" data-campo="dica-imersao-e" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="Nenhum controle neste lugar."><select class="g2-imersao" data-gesto="imersao" data-campo="imersao-e" data-hef-alvo="valor" data-lado="e" data-hef-forma="acion-p3-e" aria-label="Efeito de imersão"><option value="—" selected disabled hidden>—</option><option value="nenhum">Nenhum</option><optgroup label="Seus efeitos"><option value="meu:Recuo do MK">Recuo do MK</option></optgroup></select></span></div>
+          <div class="g2-cel" data-controle="p4" data-conectado="nao"><span class="g2-env" data-campo="dica-imersao-e" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="Nenhum controle neste lugar."><select class="g2-imersao" data-gesto="imersao" data-campo="imersao-e" data-hef-alvo="valor" data-lado="e" data-hef-forma="acion-p4-e" aria-label="Efeito de imersão"><option value="—" selected disabled hidden>—</option><option value="nenhum">Nenhum</option><optgroup label="Seus efeitos"><option value="meu:Recuo do MK">Recuo do MK</option></optgroup></select></span></div>
+          <div class="g2-sep"></div>
+          <div class="g2-gl g2-r2" aria-label="R2"><svg class="gl" width="36" height="36" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>R2</title>
 
   <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
   <text x="9" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R2</text>
   <line x1="16" y1="24" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <polyline points="12,27 16,31 20,27" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-</svg></label>
-            <label class="fecha" for="dobra-nenhum" title="Fecha os ajustes."><svg class="gl" width="36" height="36" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>R2</title>
-
-  <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
-  <text x="9" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R2</text>
-  <line x1="16" y1="24" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <polyline points="12,27 16,31 20,27" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-</svg></label>
-          </div>
-          <div class="rot-r2-1"><span class="sec-rot">Modo</span></div>
-          <div class="rot-r2-2"><span class="sec-rot">Efeito pronto</span></div>
-          <div class="rot-r2-3 no-topo"><span class="sec-rot">Ajustes</span></div>
-        </div>
-        <div class="ctrl" data-controle="p1"
-             data-conectado="sim">
-          <div class="cabeca" data-campo="plastico" data-hef-alvo="plastico" style="--plastico:#ae335a"><span data-campo="chip-do-controle" data-hef-alvo="html"><span class="chip plastico" title="Cosmic Red — a borda é a cor do plástico">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</span></span></div>
-          <div data-campo="dica-modo-e"
-               data-hef-alvo="atributo" data-hef-atributo="title"
-               title="Batidas rápidas e fortes enquanto apertado.">
-            <select class="modo" data-gesto="modo" data-campo="modo-chave-e"
-                    data-hef-alvo="valor" data-lado="e">
-                <option value="—" disabled hidden>—</option>
-                <option value="Off" title="O jogo manda no gatilho; sem jogo, ele fica solto, como num controle comum.">Sem efeito</option>
-                <option value="Rigid" title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
-                <option value="SimpleRigid" title="Trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
-                <option value="Pulse" title="Um solavanco num ponto do curso e depois solta — o coice de um tiro único.">Pulso</option>
-                <option value="PulseA" title="Pulso com a subida mais suave: a força cresce antes do estalo.">Pulso (curva A)</option>
-                <option value="PulseB" title="Pulso com a descida mais suave: o estalo vem e a força cai devagar.">Pulso (curva B)</option>
-                <option value="Resistance" title="Peso constante do começo ao fim, sem trava — remada, alavanca, arco sendo puxado.">Resistência</option>
-                <option value="Bow" title="Fica cada vez mais pesado até o fim do curso, e então solta de uma vez.">Arco de flecha</option>
-                <option value="Galloping" title="Batidas ritmadas enquanto o gatilho está apertado — cavalo correndo, motor pegando.">Galope</option>
-                <option value="SemiAutoGun" title="Uma trava, um estalo, e o gatilho volta. Um tiro por aperto.">Arma semi-automática</option>
-                <option value="AutoGun" title="Vibra continuamente enquanto está apertado — rajada.">Arma automática</option>
-                <option value="Machine" selected title="Batidas rápidas e fortes enquanto apertado.">Metralhadora</option>
-                <option value="Feedback" title="Solto até certo ponto do curso, e daí em diante duro. O ponto é ajustável.">Ponto duro</option>
-                <option value="Weapon" title="Trava, solta no estalo e fica leve até o fim — espingarda.">Disparo</option>
-                <option value="Vibration" title="Treme o gatilho na frequência escolhida, sem opor força.">Vibração</option>
-                <option value="SlopeFeedback" title="A força sobe em linha reta do início ao fim do curso.">Rampa de força</option>
-                <option value="MultiPositionFeedback" title="Você desenha a força em dez posições do curso, uma por uma.">Curva de força</option>
-                <option value="MultiPositionVibration" title="Treme só na faixa do curso que você marcar.">Vibração por posição</option>
-                <option value="Custom" title="As dez posições em branco, para desenhar a curva do jeito que a sua mão pedir.">Montar do zero</option>
-            </select>
-          </div>
-          <div data-campo="dica-pronto-e"
-               data-hef-alvo="atributo" data-hef-atributo="title"
-               title="Está em «Metralhadora». Escolher uma curva troca o modo para «Curva de força», na hora. Um efeito seu volta ao modo com que foi guardado.">
-            <select class="pronto" data-gesto="pronto" data-campo="pronto-e"
-                    data-hef-alvo="valor" data-lado="e">
-                <option value="—" disabled hidden>—</option>
-                <option value="custom">— Nenhum —</option>
-                <option value="rampa_crescente">Endurece no fim</option>
-                <option value="rampa_decrescente">Solta no fim</option>
-                <option value="plateau_central">Pico no meio</option>
-                <option value="stop_hard">Trava seca</option>
-                <option value="stop_macio">Trava macia</option>
-                <option value="linear_medio">Peso igual</option>
-                <option disabled>Meus efeitos</option>
-                <option value="" selected>Recuo do MK — pesado no fim</option>
-                <option value="">Freio do carro — trava tardia</option>
-            </select>
-          </div>
-          <div class="ajustes e">
-            <div class="barra" data-ajuste="e-0">
-              <span class="nome" data-campo="aj-nome-e-0">Início do curso</span>
-              <span class="trilho"><span class="cheio" data-campo="aj-pct-e-0" data-hef-alvo="largura" style="width:25%"></span></span>
-              <span class="num" data-campo="aj-val-e-0">2</span>
-            </div>
-            <div class="barra" data-ajuste="e-1">
-              <span class="nome" data-campo="aj-nome-e-1">Fim do curso</span>
-              <span class="trilho"><span class="cheio" data-campo="aj-pct-e-1" data-hef-alvo="largura" style="width:100%"></span></span>
-              <span class="num" data-campo="aj-val-e-1">9</span>
-            </div>
-            <div class="barra" data-ajuste="e-2">
-              <span class="nome" data-campo="aj-nome-e-2">Força</span>
-              <span class="trilho"><span class="cheio" data-campo="aj-pct-e-2" data-hef-alvo="largura" style="width:43%"></span></span>
-              <span class="num" data-campo="aj-val-e-2">4</span>
-            </div>
-            <div class="barra" data-ajuste="e-3">
-              <span class="nome" data-campo="aj-nome-e-3">Frequência</span>
-              <span class="trilho"><span class="cheio" data-campo="aj-pct-e-3" data-hef-alvo="largura" style="width:15%"></span></span>
-              <span class="num" data-campo="aj-val-e-3">40</span>
-            </div>
-          </div>
-<!-- ESTE ELEMENTO É CÉLULA DA GRADE, não enfeite. Ele ocupa a trilha de
-               1px que separa o bloco do L2 do bloco do R2 (`grid-template-rows`
-               em `.duas-colunas > div`). Tirei-o em 30/08 pensando que era só um
-               traço, e "Gatilho direito" caiu nessa trilha e nasceu com **1px de
-               altura** — as cinco colunas saíram de registro e as divisórias
-               passaram a cortar o conteúdo de P3 e P4 no meio. O traço VISÍVEL
-               agora vem da borda de célula (`--rot-linha`); esta célula só guarda
-               o lugar, e por isso não leva borda. -->
-          <div class="vao-l2-r2"></div>
-          <div data-campo="dica-modo-d"
-               data-hef-alvo="atributo" data-hef-atributo="title"
-               title="Fica cada vez mais pesado até o fim do curso, e então solta de uma vez.">
-            <select class="modo" data-gesto="modo" data-campo="modo-chave-d"
-                    data-hef-alvo="valor" data-lado="d">
-                <option value="—" disabled hidden>—</option>
-                <option value="Off" title="O jogo manda no gatilho; sem jogo, ele fica solto, como num controle comum.">Sem efeito</option>
-                <option value="Rigid" title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
-                <option value="SimpleRigid" title="Trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
-                <option value="Pulse" title="Um solavanco num ponto do curso e depois solta — o coice de um tiro único.">Pulso</option>
-                <option value="PulseA" title="Pulso com a subida mais suave: a força cresce antes do estalo.">Pulso (curva A)</option>
-                <option value="PulseB" title="Pulso com a descida mais suave: o estalo vem e a força cai devagar.">Pulso (curva B)</option>
-                <option value="Resistance" title="Peso constante do começo ao fim, sem trava — remada, alavanca, arco sendo puxado.">Resistência</option>
-                <option value="Bow" selected title="Fica cada vez mais pesado até o fim do curso, e então solta de uma vez.">Arco de flecha</option>
-                <option value="Galloping" title="Batidas ritmadas enquanto o gatilho está apertado — cavalo correndo, motor pegando.">Galope</option>
-                <option value="SemiAutoGun" title="Uma trava, um estalo, e o gatilho volta. Um tiro por aperto.">Arma semi-automática</option>
-                <option value="AutoGun" title="Vibra continuamente enquanto está apertado — rajada.">Arma automática</option>
-                <option value="Machine" title="Batidas rápidas e fortes enquanto apertado.">Metralhadora</option>
-                <option value="Feedback" title="Solto até certo ponto do curso, e daí em diante duro. O ponto é ajustável.">Ponto duro</option>
-                <option value="Weapon" title="Trava, solta no estalo e fica leve até o fim — espingarda.">Disparo</option>
-                <option value="Vibration" title="Treme o gatilho na frequência escolhida, sem opor força.">Vibração</option>
-                <option value="SlopeFeedback" title="A força sobe em linha reta do início ao fim do curso.">Rampa de força</option>
-                <option value="MultiPositionFeedback" title="Você desenha a força em dez posições do curso, uma por uma.">Curva de força</option>
-                <option value="MultiPositionVibration" title="Treme só na faixa do curso que você marcar.">Vibração por posição</option>
-                <option value="Custom" title="As dez posições em branco, para desenhar a curva do jeito que a sua mão pedir.">Montar do zero</option>
-            </select>
-          </div>
-          <div data-campo="dica-pronto-d"
-               data-hef-alvo="atributo" data-hef-atributo="title"
-               title="Está em «Arco de flecha». Escolher uma curva troca o modo para «Curva de força», na hora. Um efeito seu volta ao modo com que foi guardado.">
-            <select class="pronto" data-gesto="pronto" data-campo="pronto-d"
-                    data-hef-alvo="valor" data-lado="d">
-                <option value="—" disabled hidden>—</option>
-                <option value="custom">— Nenhum —</option>
-                <option value="rampa_crescente">Endurece no fim</option>
-                <option value="rampa_decrescente">Solta no fim</option>
-                <option value="plateau_central">Pico no meio</option>
-                <option value="stop_hard">Trava seca</option>
-                <option value="stop_macio">Trava macia</option>
-                <option value="linear_medio">Peso igual</option>
-                <option disabled>Meus efeitos</option>
-                <option value="" selected>Recuo do MK — pesado no fim</option>
-                <option value="">Freio do carro — trava tardia</option>
-            </select>
-          </div>
-          <div class="ajustes d">
-            <div class="barra" data-ajuste="d-0">
-              <span class="nome" data-campo="aj-nome-d-0">Força no fim</span>
-              <span class="trilho"><span class="cheio" data-campo="aj-pct-d-0" data-hef-alvo="largura" style="width:66%"></span></span>
-              <span class="num" data-campo="aj-val-d-0">6</span>
-            </div>
-            <div class="barra" data-ajuste="d-1">
-              <span class="nome" data-campo="aj-nome-d-1">Início do curso</span>
-              <span class="trilho"><span class="cheio" data-campo="aj-pct-d-1" data-hef-alvo="largura" style="width:15%"></span></span>
-              <span class="num" data-campo="aj-val-d-1">15</span>
-            </div>
-          </div>
-          <div class="guardar">
-            <input class="nome-efeito" type="text" data-linha="nome-do-efeito"
-                   maxlength="60" placeholder="Nome"
-                   title="Com um nome, o par L2+R2 entra em Meus efeitos e serve a qualquer perfil. Em branco, fica só no perfil deste controle.">
-            <button class="btn roxo" data-gesto="guardar" data-hef-forma="@controle"
-                    title="Guarda o L2 e o R2 desta coluna no perfil deste controle. Com um nome ao lado, o par também entra em Meus efeitos.">Guardar</button>
-            <button class="btn roxo" data-gesto="em-todos" data-hef-forma="@controle"
-                    title="Põe o L2 e o R2 desta coluna em todos os controles, agora e nos que você ligar depois. Apaga o ajuste próprio que cada um tinha nesses dois gatilhos.">Em todos</button>
-          </div>
-        </div>
-        <div class="ctrl" data-controle="p2"
-             data-conectado="sim">
-          <div class="cabeca" data-campo="plastico" data-hef-alvo="plastico" style="--plastico:#7eb8d4"><span data-campo="chip-do-controle" data-hef-alvo="html"><span class="chip plastico" title="Starlight Blue — a borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</span></span></div>
-          <div data-campo="dica-modo-e"
-               data-hef-alvo="atributo" data-hef-atributo="title"
-               title="Uma trava, um estalo, e o gatilho volta. Um tiro por aperto.">
-            <select class="modo" data-gesto="modo" data-campo="modo-chave-e"
-                    data-hef-alvo="valor" data-lado="e">
-                <option value="—" disabled hidden>—</option>
-                <option value="Off" title="O jogo manda no gatilho; sem jogo, ele fica solto, como num controle comum.">Sem efeito</option>
-                <option value="Rigid" title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
-                <option value="SimpleRigid" title="Trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
-                <option value="Pulse" title="Um solavanco num ponto do curso e depois solta — o coice de um tiro único.">Pulso</option>
-                <option value="PulseA" title="Pulso com a subida mais suave: a força cresce antes do estalo.">Pulso (curva A)</option>
-                <option value="PulseB" title="Pulso com a descida mais suave: o estalo vem e a força cai devagar.">Pulso (curva B)</option>
-                <option value="Resistance" title="Peso constante do começo ao fim, sem trava — remada, alavanca, arco sendo puxado.">Resistência</option>
-                <option value="Bow" title="Fica cada vez mais pesado até o fim do curso, e então solta de uma vez.">Arco de flecha</option>
-                <option value="Galloping" title="Batidas ritmadas enquanto o gatilho está apertado — cavalo correndo, motor pegando.">Galope</option>
-                <option value="SemiAutoGun" selected title="Uma trava, um estalo, e o gatilho volta. Um tiro por aperto.">Arma semi-automática</option>
-                <option value="AutoGun" title="Vibra continuamente enquanto está apertado — rajada.">Arma automática</option>
-                <option value="Machine" title="Batidas rápidas e fortes enquanto apertado.">Metralhadora</option>
-                <option value="Feedback" title="Solto até certo ponto do curso, e daí em diante duro. O ponto é ajustável.">Ponto duro</option>
-                <option value="Weapon" title="Trava, solta no estalo e fica leve até o fim — espingarda.">Disparo</option>
-                <option value="Vibration" title="Treme o gatilho na frequência escolhida, sem opor força.">Vibração</option>
-                <option value="SlopeFeedback" title="A força sobe em linha reta do início ao fim do curso.">Rampa de força</option>
-                <option value="MultiPositionFeedback" title="Você desenha a força em dez posições do curso, uma por uma.">Curva de força</option>
-                <option value="MultiPositionVibration" title="Treme só na faixa do curso que você marcar.">Vibração por posição</option>
-                <option value="Custom" title="As dez posições em branco, para desenhar a curva do jeito que a sua mão pedir.">Montar do zero</option>
-            </select>
-          </div>
-          <div data-campo="dica-pronto-e"
-               data-hef-alvo="atributo" data-hef-atributo="title"
-               title="Está em «Arma semi-automática». Escolher uma curva troca o modo para «Curva de força», na hora. Um efeito seu volta ao modo com que foi guardado.">
-            <select class="pronto" data-gesto="pronto" data-campo="pronto-e"
-                    data-hef-alvo="valor" data-lado="e">
-                <option value="—" disabled hidden>—</option>
-                <option value="custom">— Nenhum —</option>
-                <option value="rampa_crescente">Endurece no fim</option>
-                <option value="rampa_decrescente">Solta no fim</option>
-                <option value="plateau_central">Pico no meio</option>
-                <option value="stop_hard" selected>Trava seca</option>
-                <option value="stop_macio">Trava macia</option>
-                <option value="linear_medio">Peso igual</option>
-                <option disabled>Meus efeitos</option>
-                <option value="">Recuo do MK — pesado no fim</option>
-                <option value="">Freio do carro — trava tardia</option>
-            </select>
-          </div>
-          <div class="ajustes e">
-            <div class="barra" data-ajuste="e-0">
-              <span class="nome" data-campo="aj-nome-e-0">Início do curso</span>
-              <span class="trilho"><span class="cheio" data-campo="aj-pct-e-0" data-hef-alvo="largura" style="width:20%"></span></span>
-              <span class="num" data-campo="aj-val-e-0">3</span>
-            </div>
-            <div class="barra" data-ajuste="e-1">
-              <span class="nome" data-campo="aj-nome-e-1">Fim do curso</span>
-              <span class="trilho"><span class="cheio" data-campo="aj-pct-e-1" data-hef-alvo="largura" style="width:60%"></span></span>
-              <span class="num" data-campo="aj-val-e-1">6</span>
-            </div>
-            <div class="barra" data-ajuste="e-2">
-              <span class="nome" data-campo="aj-nome-e-2">Força</span>
-              <span class="trilho"><span class="cheio" data-campo="aj-pct-e-2" data-hef-alvo="largura" style="width:62%"></span></span>
-              <span class="num" data-campo="aj-val-e-2">5</span>
-            </div>
-          </div>
-<!-- ESTE ELEMENTO É CÉLULA DA GRADE, não enfeite. Ele ocupa a trilha de
-               1px que separa o bloco do L2 do bloco do R2 (`grid-template-rows`
-               em `.duas-colunas > div`). Tirei-o em 30/08 pensando que era só um
-               traço, e "Gatilho direito" caiu nessa trilha e nasceu com **1px de
-               altura** — as cinco colunas saíram de registro e as divisórias
-               passaram a cortar o conteúdo de P3 e P4 no meio. O traço VISÍVEL
-               agora vem da borda de célula (`--rot-linha`); esta célula só guarda
-               o lugar, e por isso não leva borda. -->
-          <div class="vao-l2-r2"></div>
-          <div data-campo="dica-modo-d"
-               data-hef-alvo="atributo" data-hef-atributo="title"
-               title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">
-            <select class="modo" data-gesto="modo" data-campo="modo-chave-d"
-                    data-hef-alvo="valor" data-lado="d">
-                <option value="—" disabled hidden>—</option>
-                <option value="Off" title="O jogo manda no gatilho; sem jogo, ele fica solto, como num controle comum.">Sem efeito</option>
-                <option value="Rigid" selected title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
-                <option value="SimpleRigid" title="Trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
-                <option value="Pulse" title="Um solavanco num ponto do curso e depois solta — o coice de um tiro único.">Pulso</option>
-                <option value="PulseA" title="Pulso com a subida mais suave: a força cresce antes do estalo.">Pulso (curva A)</option>
-                <option value="PulseB" title="Pulso com a descida mais suave: o estalo vem e a força cai devagar.">Pulso (curva B)</option>
-                <option value="Resistance" title="Peso constante do começo ao fim, sem trava — remada, alavanca, arco sendo puxado.">Resistência</option>
-                <option value="Bow" title="Fica cada vez mais pesado até o fim do curso, e então solta de uma vez.">Arco de flecha</option>
-                <option value="Galloping" title="Batidas ritmadas enquanto o gatilho está apertado — cavalo correndo, motor pegando.">Galope</option>
-                <option value="SemiAutoGun" title="Uma trava, um estalo, e o gatilho volta. Um tiro por aperto.">Arma semi-automática</option>
-                <option value="AutoGun" title="Vibra continuamente enquanto está apertado — rajada.">Arma automática</option>
-                <option value="Machine" title="Batidas rápidas e fortes enquanto apertado.">Metralhadora</option>
-                <option value="Feedback" title="Solto até certo ponto do curso, e daí em diante duro. O ponto é ajustável.">Ponto duro</option>
-                <option value="Weapon" title="Trava, solta no estalo e fica leve até o fim — espingarda.">Disparo</option>
-                <option value="Vibration" title="Treme o gatilho na frequência escolhida, sem opor força.">Vibração</option>
-                <option value="SlopeFeedback" title="A força sobe em linha reta do início ao fim do curso.">Rampa de força</option>
-                <option value="MultiPositionFeedback" title="Você desenha a força em dez posições do curso, uma por uma.">Curva de força</option>
-                <option value="MultiPositionVibration" title="Treme só na faixa do curso que você marcar.">Vibração por posição</option>
-                <option value="Custom" title="As dez posições em branco, para desenhar a curva do jeito que a sua mão pedir.">Montar do zero</option>
-            </select>
-          </div>
-          <div data-campo="dica-pronto-d"
-               data-hef-alvo="atributo" data-hef-atributo="title"
-               title="Está em «Rígido». Escolher uma curva troca o modo para «Curva de força», na hora. Um efeito seu volta ao modo com que foi guardado.">
-            <select class="pronto" data-gesto="pronto" data-campo="pronto-d"
-                    data-hef-alvo="valor" data-lado="d">
-                <option value="—" disabled hidden>—</option>
-                <option value="custom" selected>— Nenhum —</option>
-                <option value="rampa_crescente">Endurece no fim</option>
-                <option value="rampa_decrescente">Solta no fim</option>
-                <option value="plateau_central">Pico no meio</option>
-                <option value="stop_hard">Trava seca</option>
-                <option value="stop_macio">Trava macia</option>
-                <option value="linear_medio">Peso igual</option>
-                <option disabled>Meus efeitos</option>
-                <option value="">Recuo do MK — pesado no fim</option>
-                <option value="">Freio do carro — trava tardia</option>
-            </select>
-          </div>
-          <div class="ajustes d">
-            <div class="barra" data-ajuste="d-0">
-              <span class="nome" data-campo="aj-nome-d-0">Posição</span>
-              <span class="trilho"><span class="cheio" data-campo="aj-pct-d-0" data-hef-alvo="largura" style="width:56%"></span></span>
-              <span class="num" data-campo="aj-val-d-0">5</span>
-            </div>
-            <div class="barra" data-ajuste="d-1">
-              <span class="nome" data-campo="aj-nome-d-1">Força</span>
-              <span class="trilho"><span class="cheio" data-campo="aj-pct-d-1" data-hef-alvo="largura" style="width:78%"></span></span>
-              <span class="num" data-campo="aj-val-d-1">200</span>
-            </div>
-          </div>
-          <div class="guardar">
-            <input class="nome-efeito" type="text" data-linha="nome-do-efeito"
-                   maxlength="60" placeholder="Nome"
-                   title="Com um nome, o par L2+R2 entra em Meus efeitos e serve a qualquer perfil. Em branco, fica só no perfil deste controle.">
-            <button class="btn roxo" data-gesto="guardar" data-hef-forma="@controle"
-                    title="Guarda o L2 e o R2 desta coluna no perfil deste controle. Com um nome ao lado, o par também entra em Meus efeitos.">Guardar</button>
-            <button class="btn roxo" data-gesto="em-todos" data-hef-forma="@controle"
-                    title="Põe o L2 e o R2 desta coluna em todos os controles, agora e nos que você ligar depois. Apaga o ajuste próprio que cada um tinha nesses dois gatilhos.">Em todos</button>
-          </div>
-        </div>
-        <div class="ctrl" data-controle="p3"
-             data-conectado="nao">
-          <div class="cabeca" data-campo="plastico" data-hef-alvo="plastico"><span data-campo="chip-do-controle" data-hef-alvo="html"><span class="chip vazio" title="Nenhum controle neste lugar.">P3 <span class="pt">•</span> Desconectado</span></span></div>
-          <div data-campo="dica-modo-e"
-               data-hef-alvo="atributo" data-hef-atributo="title"
-               title="Nenhum controle neste lugar.">
-            <select class="modo" data-gesto="modo" data-campo="modo-chave-e"
-                    data-hef-alvo="valor" data-lado="e">
-                <option value="—" selected disabled hidden>—</option>
-                <option value="Off" title="O jogo manda no gatilho; sem jogo, ele fica solto, como num controle comum.">Sem efeito</option>
-                <option value="Rigid" title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
-                <option value="SimpleRigid" title="Trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
-                <option value="Pulse" title="Um solavanco num ponto do curso e depois solta — o coice de um tiro único.">Pulso</option>
-                <option value="PulseA" title="Pulso com a subida mais suave: a força cresce antes do estalo.">Pulso (curva A)</option>
-                <option value="PulseB" title="Pulso com a descida mais suave: o estalo vem e a força cai devagar.">Pulso (curva B)</option>
-                <option value="Resistance" title="Peso constante do começo ao fim, sem trava — remada, alavanca, arco sendo puxado.">Resistência</option>
-                <option value="Bow" title="Fica cada vez mais pesado até o fim do curso, e então solta de uma vez.">Arco de flecha</option>
-                <option value="Galloping" title="Batidas ritmadas enquanto o gatilho está apertado — cavalo correndo, motor pegando.">Galope</option>
-                <option value="SemiAutoGun" title="Uma trava, um estalo, e o gatilho volta. Um tiro por aperto.">Arma semi-automática</option>
-                <option value="AutoGun" title="Vibra continuamente enquanto está apertado — rajada.">Arma automática</option>
-                <option value="Machine" title="Batidas rápidas e fortes enquanto apertado.">Metralhadora</option>
-                <option value="Feedback" title="Solto até certo ponto do curso, e daí em diante duro. O ponto é ajustável.">Ponto duro</option>
-                <option value="Weapon" title="Trava, solta no estalo e fica leve até o fim — espingarda.">Disparo</option>
-                <option value="Vibration" title="Treme o gatilho na frequência escolhida, sem opor força.">Vibração</option>
-                <option value="SlopeFeedback" title="A força sobe em linha reta do início ao fim do curso.">Rampa de força</option>
-                <option value="MultiPositionFeedback" title="Você desenha a força em dez posições do curso, uma por uma.">Curva de força</option>
-                <option value="MultiPositionVibration" title="Treme só na faixa do curso que você marcar.">Vibração por posição</option>
-                <option value="Custom" title="As dez posições em branco, para desenhar a curva do jeito que a sua mão pedir.">Montar do zero</option>
-            </select>
-          </div>
-          <div data-campo="dica-pronto-e"
-               data-hef-alvo="atributo" data-hef-atributo="title"
-               title="Nenhum controle neste lugar.">
-            <select class="pronto" data-gesto="pronto" data-campo="pronto-e"
-                    data-hef-alvo="valor" data-lado="e">
-                <option value="—" selected disabled hidden>—</option>
-                <option value="custom">— Nenhum —</option>
-                <option value="rampa_crescente">Endurece no fim</option>
-                <option value="rampa_decrescente">Solta no fim</option>
-                <option value="plateau_central">Pico no meio</option>
-                <option value="stop_hard">Trava seca</option>
-                <option value="stop_macio">Trava macia</option>
-                <option value="linear_medio">Peso igual</option>
-                <option disabled>Meus efeitos</option>
-                <option value="">Recuo do MK — pesado no fim</option>
-                <option value="">Freio do carro — trava tardia</option>
-            </select>
-          </div>
-          <div class="ajustes e">
-            <div class="ajustes-vazio">Sem ajustes.</div>
-          </div>
-<!-- ESTE ELEMENTO É CÉLULA DA GRADE, não enfeite. Ele ocupa a trilha de
-               1px que separa o bloco do L2 do bloco do R2 (`grid-template-rows`
-               em `.duas-colunas > div`). Tirei-o em 30/08 pensando que era só um
-               traço, e "Gatilho direito" caiu nessa trilha e nasceu com **1px de
-               altura** — as cinco colunas saíram de registro e as divisórias
-               passaram a cortar o conteúdo de P3 e P4 no meio. O traço VISÍVEL
-               agora vem da borda de célula (`--rot-linha`); esta célula só guarda
-               o lugar, e por isso não leva borda. -->
-          <div class="vao-l2-r2"></div>
-          <div data-campo="dica-modo-d"
-               data-hef-alvo="atributo" data-hef-atributo="title"
-               title="Nenhum controle neste lugar.">
-            <select class="modo" data-gesto="modo" data-campo="modo-chave-d"
-                    data-hef-alvo="valor" data-lado="d">
-                <option value="—" selected disabled hidden>—</option>
-                <option value="Off" title="O jogo manda no gatilho; sem jogo, ele fica solto, como num controle comum.">Sem efeito</option>
-                <option value="Rigid" title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
-                <option value="SimpleRigid" title="Trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
-                <option value="Pulse" title="Um solavanco num ponto do curso e depois solta — o coice de um tiro único.">Pulso</option>
-                <option value="PulseA" title="Pulso com a subida mais suave: a força cresce antes do estalo.">Pulso (curva A)</option>
-                <option value="PulseB" title="Pulso com a descida mais suave: o estalo vem e a força cai devagar.">Pulso (curva B)</option>
-                <option value="Resistance" title="Peso constante do começo ao fim, sem trava — remada, alavanca, arco sendo puxado.">Resistência</option>
-                <option value="Bow" title="Fica cada vez mais pesado até o fim do curso, e então solta de uma vez.">Arco de flecha</option>
-                <option value="Galloping" title="Batidas ritmadas enquanto o gatilho está apertado — cavalo correndo, motor pegando.">Galope</option>
-                <option value="SemiAutoGun" title="Uma trava, um estalo, e o gatilho volta. Um tiro por aperto.">Arma semi-automática</option>
-                <option value="AutoGun" title="Vibra continuamente enquanto está apertado — rajada.">Arma automática</option>
-                <option value="Machine" title="Batidas rápidas e fortes enquanto apertado.">Metralhadora</option>
-                <option value="Feedback" title="Solto até certo ponto do curso, e daí em diante duro. O ponto é ajustável.">Ponto duro</option>
-                <option value="Weapon" title="Trava, solta no estalo e fica leve até o fim — espingarda.">Disparo</option>
-                <option value="Vibration" title="Treme o gatilho na frequência escolhida, sem opor força.">Vibração</option>
-                <option value="SlopeFeedback" title="A força sobe em linha reta do início ao fim do curso.">Rampa de força</option>
-                <option value="MultiPositionFeedback" title="Você desenha a força em dez posições do curso, uma por uma.">Curva de força</option>
-                <option value="MultiPositionVibration" title="Treme só na faixa do curso que você marcar.">Vibração por posição</option>
-                <option value="Custom" title="As dez posições em branco, para desenhar a curva do jeito que a sua mão pedir.">Montar do zero</option>
-            </select>
-          </div>
-          <div data-campo="dica-pronto-d"
-               data-hef-alvo="atributo" data-hef-atributo="title"
-               title="Nenhum controle neste lugar.">
-            <select class="pronto" data-gesto="pronto" data-campo="pronto-d"
-                    data-hef-alvo="valor" data-lado="d">
-                <option value="—" selected disabled hidden>—</option>
-                <option value="custom">— Nenhum —</option>
-                <option value="rampa_crescente">Endurece no fim</option>
-                <option value="rampa_decrescente">Solta no fim</option>
-                <option value="plateau_central">Pico no meio</option>
-                <option value="stop_hard">Trava seca</option>
-                <option value="stop_macio">Trava macia</option>
-                <option value="linear_medio">Peso igual</option>
-                <option disabled>Meus efeitos</option>
-                <option value="">Recuo do MK — pesado no fim</option>
-                <option value="">Freio do carro — trava tardia</option>
-            </select>
-          </div>
-          <div class="ajustes d">
-            <div class="ajustes-vazio">Sem ajustes.</div>
-          </div>
-          <div class="guardar">
-            <input class="nome-efeito" type="text" data-linha="nome-do-efeito"
-                   maxlength="60" placeholder="Nome"
-                   title="Com um nome, o par L2+R2 entra em Meus efeitos e serve a qualquer perfil. Em branco, fica só no perfil deste controle.">
-            <button class="btn roxo" data-gesto="guardar" data-hef-forma="@controle"
-                    title="Guarda o L2 e o R2 desta coluna no perfil deste controle. Com um nome ao lado, o par também entra em Meus efeitos.">Guardar</button>
-            <button class="btn roxo" data-gesto="em-todos" data-hef-forma="@controle"
-                    title="Põe o L2 e o R2 desta coluna em todos os controles, agora e nos que você ligar depois. Apaga o ajuste próprio que cada um tinha nesses dois gatilhos.">Em todos</button>
-          </div>
-        </div>
-        <div class="ctrl" data-controle="p4"
-             data-conectado="nao">
-          <div class="cabeca" data-campo="plastico" data-hef-alvo="plastico"><span data-campo="chip-do-controle" data-hef-alvo="html"><span class="chip vazio" title="Nenhum controle neste lugar.">P4 <span class="pt">•</span> Desconectado</span></span></div>
-          <div data-campo="dica-modo-e"
-               data-hef-alvo="atributo" data-hef-atributo="title"
-               title="Nenhum controle neste lugar.">
-            <select class="modo" data-gesto="modo" data-campo="modo-chave-e"
-                    data-hef-alvo="valor" data-lado="e">
-                <option value="—" selected disabled hidden>—</option>
-                <option value="Off" title="O jogo manda no gatilho; sem jogo, ele fica solto, como num controle comum.">Sem efeito</option>
-                <option value="Rigid" title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
-                <option value="SimpleRigid" title="Trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
-                <option value="Pulse" title="Um solavanco num ponto do curso e depois solta — o coice de um tiro único.">Pulso</option>
-                <option value="PulseA" title="Pulso com a subida mais suave: a força cresce antes do estalo.">Pulso (curva A)</option>
-                <option value="PulseB" title="Pulso com a descida mais suave: o estalo vem e a força cai devagar.">Pulso (curva B)</option>
-                <option value="Resistance" title="Peso constante do começo ao fim, sem trava — remada, alavanca, arco sendo puxado.">Resistência</option>
-                <option value="Bow" title="Fica cada vez mais pesado até o fim do curso, e então solta de uma vez.">Arco de flecha</option>
-                <option value="Galloping" title="Batidas ritmadas enquanto o gatilho está apertado — cavalo correndo, motor pegando.">Galope</option>
-                <option value="SemiAutoGun" title="Uma trava, um estalo, e o gatilho volta. Um tiro por aperto.">Arma semi-automática</option>
-                <option value="AutoGun" title="Vibra continuamente enquanto está apertado — rajada.">Arma automática</option>
-                <option value="Machine" title="Batidas rápidas e fortes enquanto apertado.">Metralhadora</option>
-                <option value="Feedback" title="Solto até certo ponto do curso, e daí em diante duro. O ponto é ajustável.">Ponto duro</option>
-                <option value="Weapon" title="Trava, solta no estalo e fica leve até o fim — espingarda.">Disparo</option>
-                <option value="Vibration" title="Treme o gatilho na frequência escolhida, sem opor força.">Vibração</option>
-                <option value="SlopeFeedback" title="A força sobe em linha reta do início ao fim do curso.">Rampa de força</option>
-                <option value="MultiPositionFeedback" title="Você desenha a força em dez posições do curso, uma por uma.">Curva de força</option>
-                <option value="MultiPositionVibration" title="Treme só na faixa do curso que você marcar.">Vibração por posição</option>
-                <option value="Custom" title="As dez posições em branco, para desenhar a curva do jeito que a sua mão pedir.">Montar do zero</option>
-            </select>
-          </div>
-          <div data-campo="dica-pronto-e"
-               data-hef-alvo="atributo" data-hef-atributo="title"
-               title="Nenhum controle neste lugar.">
-            <select class="pronto" data-gesto="pronto" data-campo="pronto-e"
-                    data-hef-alvo="valor" data-lado="e">
-                <option value="—" selected disabled hidden>—</option>
-                <option value="custom">— Nenhum —</option>
-                <option value="rampa_crescente">Endurece no fim</option>
-                <option value="rampa_decrescente">Solta no fim</option>
-                <option value="plateau_central">Pico no meio</option>
-                <option value="stop_hard">Trava seca</option>
-                <option value="stop_macio">Trava macia</option>
-                <option value="linear_medio">Peso igual</option>
-                <option disabled>Meus efeitos</option>
-                <option value="">Recuo do MK — pesado no fim</option>
-                <option value="">Freio do carro — trava tardia</option>
-            </select>
-          </div>
-          <div class="ajustes e">
-            <div class="ajustes-vazio">Sem ajustes.</div>
-          </div>
-<!-- ESTE ELEMENTO É CÉLULA DA GRADE, não enfeite. Ele ocupa a trilha de
-               1px que separa o bloco do L2 do bloco do R2 (`grid-template-rows`
-               em `.duas-colunas > div`). Tirei-o em 30/08 pensando que era só um
-               traço, e "Gatilho direito" caiu nessa trilha e nasceu com **1px de
-               altura** — as cinco colunas saíram de registro e as divisórias
-               passaram a cortar o conteúdo de P3 e P4 no meio. O traço VISÍVEL
-               agora vem da borda de célula (`--rot-linha`); esta célula só guarda
-               o lugar, e por isso não leva borda. -->
-          <div class="vao-l2-r2"></div>
-          <div data-campo="dica-modo-d"
-               data-hef-alvo="atributo" data-hef-atributo="title"
-               title="Nenhum controle neste lugar.">
-            <select class="modo" data-gesto="modo" data-campo="modo-chave-d"
-                    data-hef-alvo="valor" data-lado="d">
-                <option value="—" selected disabled hidden>—</option>
-                <option value="Off" title="O jogo manda no gatilho; sem jogo, ele fica solto, como num controle comum.">Sem efeito</option>
-                <option value="Rigid" title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
-                <option value="SimpleRigid" title="Trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
-                <option value="Pulse" title="Um solavanco num ponto do curso e depois solta — o coice de um tiro único.">Pulso</option>
-                <option value="PulseA" title="Pulso com a subida mais suave: a força cresce antes do estalo.">Pulso (curva A)</option>
-                <option value="PulseB" title="Pulso com a descida mais suave: o estalo vem e a força cai devagar.">Pulso (curva B)</option>
-                <option value="Resistance" title="Peso constante do começo ao fim, sem trava — remada, alavanca, arco sendo puxado.">Resistência</option>
-                <option value="Bow" title="Fica cada vez mais pesado até o fim do curso, e então solta de uma vez.">Arco de flecha</option>
-                <option value="Galloping" title="Batidas ritmadas enquanto o gatilho está apertado — cavalo correndo, motor pegando.">Galope</option>
-                <option value="SemiAutoGun" title="Uma trava, um estalo, e o gatilho volta. Um tiro por aperto.">Arma semi-automática</option>
-                <option value="AutoGun" title="Vibra continuamente enquanto está apertado — rajada.">Arma automática</option>
-                <option value="Machine" title="Batidas rápidas e fortes enquanto apertado.">Metralhadora</option>
-                <option value="Feedback" title="Solto até certo ponto do curso, e daí em diante duro. O ponto é ajustável.">Ponto duro</option>
-                <option value="Weapon" title="Trava, solta no estalo e fica leve até o fim — espingarda.">Disparo</option>
-                <option value="Vibration" title="Treme o gatilho na frequência escolhida, sem opor força.">Vibração</option>
-                <option value="SlopeFeedback" title="A força sobe em linha reta do início ao fim do curso.">Rampa de força</option>
-                <option value="MultiPositionFeedback" title="Você desenha a força em dez posições do curso, uma por uma.">Curva de força</option>
-                <option value="MultiPositionVibration" title="Treme só na faixa do curso que você marcar.">Vibração por posição</option>
-                <option value="Custom" title="As dez posições em branco, para desenhar a curva do jeito que a sua mão pedir.">Montar do zero</option>
-            </select>
-          </div>
-          <div data-campo="dica-pronto-d"
-               data-hef-alvo="atributo" data-hef-atributo="title"
-               title="Nenhum controle neste lugar.">
-            <select class="pronto" data-gesto="pronto" data-campo="pronto-d"
-                    data-hef-alvo="valor" data-lado="d">
-                <option value="—" selected disabled hidden>—</option>
-                <option value="custom">— Nenhum —</option>
-                <option value="rampa_crescente">Endurece no fim</option>
-                <option value="rampa_decrescente">Solta no fim</option>
-                <option value="plateau_central">Pico no meio</option>
-                <option value="stop_hard">Trava seca</option>
-                <option value="stop_macio">Trava macia</option>
-                <option value="linear_medio">Peso igual</option>
-                <option disabled>Meus efeitos</option>
-                <option value="">Recuo do MK — pesado no fim</option>
-                <option value="">Freio do carro — trava tardia</option>
-            </select>
-          </div>
-          <div class="ajustes d">
-            <div class="ajustes-vazio">Sem ajustes.</div>
-          </div>
-          <div class="guardar">
-            <input class="nome-efeito" type="text" data-linha="nome-do-efeito"
-                   maxlength="60" placeholder="Nome"
-                   title="Com um nome, o par L2+R2 entra em Meus efeitos e serve a qualquer perfil. Em branco, fica só no perfil deste controle.">
-            <button class="btn roxo" data-gesto="guardar" data-hef-forma="@controle"
-                    title="Guarda o L2 e o R2 desta coluna no perfil deste controle. Com um nome ao lado, o par também entra em Meus efeitos.">Guardar</button>
-            <button class="btn roxo" data-gesto="em-todos" data-hef-forma="@controle"
-                    title="Põe o L2 e o R2 desta coluna em todos os controles, agora e nos que você ligar depois. Apaga o ajuste próprio que cada um tinha nesses dois gatilhos.">Em todos</button>
-          </div>
-        </div>
+</svg></div>
+          <div class="g2-rot"><span class="sec-rot" data-dica="Como o gatilho resiste ao dedo">Efeito de acionamento</span></div>
+          <div class="g2-cel" id="acion-p1-d" data-controle="p1"><span class="g2-env" data-campo="dica-modo-d" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="Fica cada vez mais pesado até o fim do curso, e então solta de uma vez."><select class="g2-acion" data-gesto="modo" data-campo="modo-chave-d" data-hef-alvo="valor" data-lado="d" aria-label="Efeito de acionamento"><option value="—" disabled hidden>—</option><option value="Off" title="O jogo manda no gatilho; sem jogo, ele fica solto, como num controle comum.">Sem efeito</option><option value="Rigid" title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option><option value="SimpleRigid" title="Trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option><option value="Pulse" title="Um solavanco num ponto do curso e depois solta — o coice de um tiro único.">Pulso</option><option value="PulseA" title="Pulso com a subida mais suave: a força cresce antes do estalo.">Pulso (curva A)</option><option value="PulseB" title="Pulso com a descida mais suave: o estalo vem e a força cai devagar.">Pulso (curva B)</option><option value="Resistance" title="Peso constante do começo ao fim, sem trava — remada, alavanca, arco sendo puxado.">Resistência</option><option value="Bow" selected title="Fica cada vez mais pesado até o fim do curso, e então solta de uma vez.">Arco de flecha</option><option value="Galloping" title="Batidas ritmadas enquanto o gatilho está apertado — cavalo correndo, motor pegando.">Galope</option><option value="SemiAutoGun" title="Uma trava, um estalo, e o gatilho volta. Um tiro por aperto.">Arma semi-automática</option><option value="AutoGun" title="Vibra continuamente enquanto está apertado — rajada.">Arma automática</option><option value="Machine" title="Batidas rápidas e fortes enquanto apertado.">Metralhadora</option><option value="Feedback" title="Solto até certo ponto do curso, e daí em diante duro. O ponto é ajustável.">Ponto duro</option><option value="Weapon" title="Trava, solta no estalo e fica leve até o fim — espingarda.">Disparo</option><option value="Vibration" title="Treme o gatilho na frequência escolhida, sem opor força.">Vibração</option><option value="SlopeFeedback" title="A força sobe em linha reta do início ao fim do curso.">Rampa de força</option><option value="MultiPositionFeedback" title="Você desenha a força em dez posições do curso, uma por uma.">Curva de força</option><option value="MultiPositionVibration" title="Treme só na faixa do curso que você marcar.">Vibração por posição</option><optgroup label="Seus efeitos"><option value="meu:Freio tardio">Freio tardio</option></optgroup></select></span></div>
+          <div class="g2-cel" id="acion-p2-d" data-controle="p2"><span class="g2-env" data-campo="dica-modo-d" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada."><select class="g2-acion" data-gesto="modo" data-campo="modo-chave-d" data-hef-alvo="valor" data-lado="d" aria-label="Efeito de acionamento"><option value="—" disabled hidden>—</option><option value="Off" title="O jogo manda no gatilho; sem jogo, ele fica solto, como num controle comum.">Sem efeito</option><option value="Rigid" selected title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option><option value="SimpleRigid" title="Trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option><option value="Pulse" title="Um solavanco num ponto do curso e depois solta — o coice de um tiro único.">Pulso</option><option value="PulseA" title="Pulso com a subida mais suave: a força cresce antes do estalo.">Pulso (curva A)</option><option value="PulseB" title="Pulso com a descida mais suave: o estalo vem e a força cai devagar.">Pulso (curva B)</option><option value="Resistance" title="Peso constante do começo ao fim, sem trava — remada, alavanca, arco sendo puxado.">Resistência</option><option value="Bow" title="Fica cada vez mais pesado até o fim do curso, e então solta de uma vez.">Arco de flecha</option><option value="Galloping" title="Batidas ritmadas enquanto o gatilho está apertado — cavalo correndo, motor pegando.">Galope</option><option value="SemiAutoGun" title="Uma trava, um estalo, e o gatilho volta. Um tiro por aperto.">Arma semi-automática</option><option value="AutoGun" title="Vibra continuamente enquanto está apertado — rajada.">Arma automática</option><option value="Machine" title="Batidas rápidas e fortes enquanto apertado.">Metralhadora</option><option value="Feedback" title="Solto até certo ponto do curso, e daí em diante duro. O ponto é ajustável.">Ponto duro</option><option value="Weapon" title="Trava, solta no estalo e fica leve até o fim — espingarda.">Disparo</option><option value="Vibration" title="Treme o gatilho na frequência escolhida, sem opor força.">Vibração</option><option value="SlopeFeedback" title="A força sobe em linha reta do início ao fim do curso.">Rampa de força</option><option value="MultiPositionFeedback" title="Você desenha a força em dez posições do curso, uma por uma.">Curva de força</option><option value="MultiPositionVibration" title="Treme só na faixa do curso que você marcar.">Vibração por posição</option><optgroup label="Seus efeitos"><option value="meu:Freio tardio">Freio tardio</option></optgroup></select></span></div>
+          <div class="g2-cel" id="acion-p3-d" data-controle="p3" data-conectado="nao"><span class="g2-env" data-campo="dica-modo-d" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="Nenhum controle neste lugar."><select class="g2-acion" data-gesto="modo" data-campo="modo-chave-d" data-hef-alvo="valor" data-lado="d" aria-label="Efeito de acionamento"><option value="—" selected disabled hidden>—</option><option value="Off" title="O jogo manda no gatilho; sem jogo, ele fica solto, como num controle comum.">Sem efeito</option><option value="Rigid" title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option><option value="SimpleRigid" title="Trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option><option value="Pulse" title="Um solavanco num ponto do curso e depois solta — o coice de um tiro único.">Pulso</option><option value="PulseA" title="Pulso com a subida mais suave: a força cresce antes do estalo.">Pulso (curva A)</option><option value="PulseB" title="Pulso com a descida mais suave: o estalo vem e a força cai devagar.">Pulso (curva B)</option><option value="Resistance" title="Peso constante do começo ao fim, sem trava — remada, alavanca, arco sendo puxado.">Resistência</option><option value="Bow" title="Fica cada vez mais pesado até o fim do curso, e então solta de uma vez.">Arco de flecha</option><option value="Galloping" title="Batidas ritmadas enquanto o gatilho está apertado — cavalo correndo, motor pegando.">Galope</option><option value="SemiAutoGun" title="Uma trava, um estalo, e o gatilho volta. Um tiro por aperto.">Arma semi-automática</option><option value="AutoGun" title="Vibra continuamente enquanto está apertado — rajada.">Arma automática</option><option value="Machine" title="Batidas rápidas e fortes enquanto apertado.">Metralhadora</option><option value="Feedback" title="Solto até certo ponto do curso, e daí em diante duro. O ponto é ajustável.">Ponto duro</option><option value="Weapon" title="Trava, solta no estalo e fica leve até o fim — espingarda.">Disparo</option><option value="Vibration" title="Treme o gatilho na frequência escolhida, sem opor força.">Vibração</option><option value="SlopeFeedback" title="A força sobe em linha reta do início ao fim do curso.">Rampa de força</option><option value="MultiPositionFeedback" title="Você desenha a força em dez posições do curso, uma por uma.">Curva de força</option><option value="MultiPositionVibration" title="Treme só na faixa do curso que você marcar.">Vibração por posição</option><optgroup label="Seus efeitos"><option value="meu:Freio tardio">Freio tardio</option></optgroup></select></span></div>
+          <div class="g2-cel" id="acion-p4-d" data-controle="p4" data-conectado="nao"><span class="g2-env" data-campo="dica-modo-d" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="Nenhum controle neste lugar."><select class="g2-acion" data-gesto="modo" data-campo="modo-chave-d" data-hef-alvo="valor" data-lado="d" aria-label="Efeito de acionamento"><option value="—" selected disabled hidden>—</option><option value="Off" title="O jogo manda no gatilho; sem jogo, ele fica solto, como num controle comum.">Sem efeito</option><option value="Rigid" title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option><option value="SimpleRigid" title="Trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option><option value="Pulse" title="Um solavanco num ponto do curso e depois solta — o coice de um tiro único.">Pulso</option><option value="PulseA" title="Pulso com a subida mais suave: a força cresce antes do estalo.">Pulso (curva A)</option><option value="PulseB" title="Pulso com a descida mais suave: o estalo vem e a força cai devagar.">Pulso (curva B)</option><option value="Resistance" title="Peso constante do começo ao fim, sem trava — remada, alavanca, arco sendo puxado.">Resistência</option><option value="Bow" title="Fica cada vez mais pesado até o fim do curso, e então solta de uma vez.">Arco de flecha</option><option value="Galloping" title="Batidas ritmadas enquanto o gatilho está apertado — cavalo correndo, motor pegando.">Galope</option><option value="SemiAutoGun" title="Uma trava, um estalo, e o gatilho volta. Um tiro por aperto.">Arma semi-automática</option><option value="AutoGun" title="Vibra continuamente enquanto está apertado — rajada.">Arma automática</option><option value="Machine" title="Batidas rápidas e fortes enquanto apertado.">Metralhadora</option><option value="Feedback" title="Solto até certo ponto do curso, e daí em diante duro. O ponto é ajustável.">Ponto duro</option><option value="Weapon" title="Trava, solta no estalo e fica leve até o fim — espingarda.">Disparo</option><option value="Vibration" title="Treme o gatilho na frequência escolhida, sem opor força.">Vibração</option><option value="SlopeFeedback" title="A força sobe em linha reta do início ao fim do curso.">Rampa de força</option><option value="MultiPositionFeedback" title="Você desenha a força em dez posições do curso, uma por uma.">Curva de força</option><option value="MultiPositionVibration" title="Treme só na faixa do curso que você marcar.">Vibração por posição</option><optgroup label="Seus efeitos"><option value="meu:Freio tardio">Freio tardio</option></optgroup></select></span></div>
+          <div class="g2-rot"><span class="sec-rot" data-dica="O realismo que o acionamento ganha">Efeito de imersão</span></div>
+          <div class="g2-cel" data-controle="p1"><span class="g2-env" data-campo="dica-imersao-d" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="A força sobe do começo ao fim do curso, como a corda esticando."><select class="g2-imersao" data-gesto="imersao" data-campo="imersao-d" data-hef-alvo="valor" data-lado="d" data-hef-forma="acion-p1-d" aria-label="Efeito de imersão"><option value="—" disabled hidden>—</option><option value="nenhum">Nenhum</option><optgroup label="Arco de flecha"><option value="corda-que-treme-no-fim" selected title="A força sobe do começo ao fim do curso, como a corda esticando.">Corda que treme no fim</option><option value="flecha-que-escapa" title="O estalo da soltura chega seco, no fim do curso.">Flecha que escapa</option><option value="braco-cansado" title="Depois de 3 s segurando o gatilho treme de leve, a 8 Hz.">Braço cansado</option></optgroup><optgroup label="Seus efeitos"><option value="meu:Recuo do MK">Recuo do MK</option></optgroup></select></span></div>
+          <div class="g2-cel" data-controle="p2"><span class="g2-env" data-campo="dica-imersao-d" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="O realismo que o acionamento ganha"><select class="g2-imersao" data-gesto="imersao" data-campo="imersao-d" data-hef-alvo="valor" data-lado="d" data-hef-forma="acion-p2-d" aria-label="Efeito de imersão"><option value="—" disabled hidden>—</option><option value="nenhum" selected>Nenhum</option><optgroup label="Rígido"><option value="freio-abs-que-pulsa" title="No fundo do curso o gatilho pulsa, como pedal de freio antitravamento.">Freio que pulsa</option><option value="pedal-no-fundo" title="A resistência começa cedo e fica forte, como pedal duro.">Pedal no fundo</option><option value="porta-emperrada" title="A força sobe um degrau a cada 5 minutos de jogo, até o teto de 6.">Porta emperrada</option></optgroup><optgroup label="Seus efeitos"><option value="meu:Recuo do MK">Recuo do MK</option></optgroup></select></span></div>
+          <div class="g2-cel" data-controle="p3" data-conectado="nao"><span class="g2-env" data-campo="dica-imersao-d" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="Nenhum controle neste lugar."><select class="g2-imersao" data-gesto="imersao" data-campo="imersao-d" data-hef-alvo="valor" data-lado="d" data-hef-forma="acion-p3-d" aria-label="Efeito de imersão"><option value="—" selected disabled hidden>—</option><option value="nenhum">Nenhum</option><optgroup label="Seus efeitos"><option value="meu:Recuo do MK">Recuo do MK</option></optgroup></select></span></div>
+          <div class="g2-cel" data-controle="p4" data-conectado="nao"><span class="g2-env" data-campo="dica-imersao-d" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="Nenhum controle neste lugar."><select class="g2-imersao" data-gesto="imersao" data-campo="imersao-d" data-hef-alvo="valor" data-lado="d" data-hef-forma="acion-p4-d" aria-label="Efeito de imersão"><option value="—" selected disabled hidden>—</option><option value="nenhum">Nenhum</option><optgroup label="Seus efeitos"><option value="meu:Recuo do MK">Recuo do MK</option></optgroup></select></span></div>
         </div>
       </div>
     </div>
+    <div class="quadro criar g2-criar" id="criar-gatilhos">
+      <div class="criar-linha">
+        <span class="quadro-titulo" data-dica="O que você criar entra nas listas de cima">Criar efeitos novos</span>
+        <span class="seg-criar" role="group" aria-label="Tipo"><label data-dica="Como o gatilho resiste"><input type="radio" name="tipo-criar" value="acionamento" data-linha="tipo" checked><span>Acionamento</span></label><label data-dica="O realismo por cima"><input type="radio" name="tipo-criar" value="imersao" data-linha="tipo"><span>Imersão</span></label></span>
+        <select class="g2-partir" data-linha="partir" aria-label="Partir de" data-dica="O ponto de partida"><option value="Rigid" selected>Rígido</option><option value="SimpleRigid">Rígido simples</option><option value="Pulse">Pulso</option><option value="PulseA">Pulso (curva A)</option><option value="PulseB">Pulso (curva B)</option><option value="Resistance">Resistência</option><option value="Bow">Arco de flecha</option><option value="Galloping">Galope</option><option value="SemiAutoGun">Arma semi-automática</option><option value="AutoGun">Arma automática</option><option value="Machine">Metralhadora</option><option value="Feedback">Ponto duro</option><option value="Weapon">Disparo</option><option value="Vibration">Vibração</option><option value="SlopeFeedback">Rampa de força</option><option value="MultiPositionFeedback">Curva de força</option><option value="MultiPositionVibration">Vibração por posição</option></select>
+        <input class="nome-criar" type="text" data-linha="nome" maxlength="40" placeholder="Nome do efeito" aria-label="Nome do efeito">
+        <button class="btn-criar" type="button" data-gesto="criar-efeito" data-hef-forma="criar-gatilhos" data-dica="Guarda e põe nas listas">Criar</button>
+        <span class="meus" aria-label="Seus efeitos"><span class="meu" data-dica="Efeito de acionamento"><i style="--cor:var(--purple)"></i>Freio tardio</span><span class="meu" data-dica="Efeito de imersão"><i style="--cor:var(--pink)"></i>Recuo do MK</span></span>
+      </div>
+      <div class="g2-barras">
+        <label class="g2-barra"><span class="g2-bn">Início</span><input type="range" data-linha="inicio" min="0" max="9" value="2"><b>2</b></label><label class="g2-barra"><span class="g2-bn">Fim</span><input type="range" data-linha="fim" min="0" max="9" value="9"><b>9</b></label><label class="g2-barra"><span class="g2-bn">Força</span><input type="range" data-linha="forca" min="0" max="8" value="4"><b>4</b></label><label class="g2-barra"><span class="g2-bn">Frequência</span><input type="range" data-linha="freq" min="0" max="255" value="40" data-unidade="Hz"><b>40 Hz</b></label>
+        <button class="g2-sentir" type="button" data-gesto="sentir" data-hef-forma="criar-gatilhos" data-dica="Toca o efeito no controle escolhido">Sentir</button>
+      </div>
+    </div>
+    <script>document.addEventListener('input',function(ev){var r=ev.target;if(!r||r.type!=='range'||!r.closest||!r.closest('.g2-barra'))return;var b=r.nextElementSibling;if(b)b.textContent=r.value+(r.dataset.unidade?' '+r.dataset.unidade:'');});</script>
 
   </div>
 

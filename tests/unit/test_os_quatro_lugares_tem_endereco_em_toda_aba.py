@@ -59,14 +59,18 @@ def test_a_lista_de_fora_continua_sem_lugar_por_controle(aba: str) -> None:
 
 
 def test_o_vazio_e_o_cheio_usam_o_mesmo_endereco() -> None:
-    """Um lugar não pode trocar de endereço ao esvaziar."""
+    """Um lugar não pode trocar de endereço ao esvaziar.
+
+    Numa aba que reparte o lugar em várias células (a 03 tem o chip e quatro campos por
+    controle), todos os lugares têm o MESMO número de endereços: um que sobra ou falta é um
+    lugar que o produto pinta pela metade.
+    """
     ruins = []
     for onde, aba, caminho in _paginas():
-        texto = caminho.read_text(encoding="utf-8")
-        achados = ENDERECO.findall(texto)
-        for casa in CASAS:
-            n = achados.count(casa)
-            if n != 1:
-                ruins.append(f"{onde}/{aba}.html: {casa} aparece {n}x")
+        achados = ENDERECO.findall(caminho.read_text(encoding="utf-8"))
+        contagens = {casa: achados.count(casa) for casa in CASAS}
+        if 0 in contagens.values() or len(set(contagens.values())) != 1:
+            ruins.append(f"{onde}/{aba}.html: {contagens}")
     assert not ruins, (
-        "cada lugar tem de ter UM endereço, e um só:\n  " + "\n  ".join(ruins))
+        "cada lugar tem de ter o mesmo número de endereços, e nenhum zero:\n  "
+        + "\n  ".join(ruins))
