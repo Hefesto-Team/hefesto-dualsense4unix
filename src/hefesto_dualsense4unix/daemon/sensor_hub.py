@@ -131,9 +131,18 @@ class SensorHub:
         descobrir_gamepad: Callable[[], dict[str, Any]] | None = None,
         relogio: Callable[[], float] | None = None,
         auto_manutencao: bool = True,
+        ha_jogo: Callable[[], bool] | None = None,
+        toque_proprio_do_jogo: Callable[[str], bool] | None = None,
     ) -> None:
-        """As fábricas e os descobridores são injetáveis para teste."""
+        """As fábricas e os descobridores são injetáveis para teste.
+
+        ``ha_jogo`` diz se há jogo aberto; ``toque_proprio_do_jogo(uniq)`` diz se o jogo em foco
+        tem configuração própria de toque para esta peça. Sem eles, não há jogo.
+        """
         self._relogio = relogio or time.monotonic
+        self._ha_jogo = ha_jogo
+        self._toque_proprio_do_jogo = toque_proprio_do_jogo
+        self._universo_do_toque: set[str] | None = None
         self._auto_manutencao = auto_manutencao
         self._motion_factory = motion_factory or self._motion_reader_real
         self._touch_factory = touch_factory or self._touch_reader_real
@@ -407,11 +416,23 @@ class SensorHub:
                 logger.debug("sensor_hub_reconciliacao_falhou", err=str(exc))
             self._parar.wait(self._MANUTENCAO_INTERVALO_S)
 
+    def perguntar_ao_daemon(
+        self,
+        *,
+        ha_jogo: Callable[[], bool] | None,
+        toque_proprio_do_jogo: Callable[[str], bool] | None,
+    ) -> None:
+        """Liga o hub às duas perguntas que só o daemon sabe responder (ver ``__init__``)."""
+        self._ha_jogo = ha_jogo
+        self._toque_proprio_do_jogo = toque_proprio_do_jogo
+
     def reconciliar(self) -> None:
         """Casa os readers vivos com a demanda atual. Roda FORA do event loop."""
         agora = self._relogio()
+        self._empurrar_o_jogo()
         mudou = self._input_dir_mudou()
         desligados = self._sensores_desligados(mudou)
+        do_toque = self._toque_sem_demanda(mudou)
         with self._lock:
             vivos_sensores = self._podar(self._demanda, agora)
             self._demanda = {
@@ -428,7 +449,7 @@ class SensorHub:
             }
             desejados: dict[str, set[str]] = {
                 "motion": vivos_sensores | desligados,
-                "touchpad": vivos_sensores | segurados,
+                "touchpad": vivos_sensores | segurados | do_toque,
                 "gamepad": vivos_entradas,
             }
             sobrando = [
@@ -487,6 +508,30 @@ class SensorHub:
             if not mudou:
                 self._desligados_procurados |= faltando
         return achados
+
+    def _toque_sem_demanda(self, mudou: bool) -> set[str]:
+        """Os `uniq` cujo reader do touchpad tem de ficar vivo SEM ninguém o pedindo.
+
+        O Desligado que cala o toque no jogo e o toque que o jogo recebe pelo vpad seguram o nó
+        enquanto durarem, e o reader some sozinho 5 s depois do último pedido da tela. A
+        descoberta dos nós roda só quando alguma dessas duas demandas existe.
+        """
+        from hefesto_dualsense4unix.core.virtual_motion import REGISTRO
+
+        jogo = REGISTRO.jogo_aberto()
+        interesse = bool(REGISTRO.touchpad_desligados()) or (
+            jogo and callable(self._toque_proprio_do_jogo)
+        )
+        if not interesse:
+            self._universo_do_toque = None
+            return set()
+        if mudou or self._universo_do_toque is None:
+            self._universo_do_toque = set(self._chamar_descobridor(self._descobrir_touch))
+        return {
+            uniq
+            for uniq in self._universo_do_toque
+            if self._toque_querido(uniq, 0.0, {}, {}, jogo)
+        }
 
     def _reconciliar_grabs(self, desligados: set[str]) -> None:
         """O nó "Motion Sensors" fica GRABADO enquanto houver sensor desligado."""
@@ -766,8 +811,52 @@ class SensorHub:
             clicado = bool(touch.regions_pressed())
         return estado, clicado
 
+    def _empurrar_o_jogo(self) -> bool:
+        """Pergunta se há jogo e deposita a resposta no REGISTRO, que o report lê a ~250 Hz."""
+        from hefesto_dualsense4unix.core.virtual_motion import REGISTRO
+
+        jogo = False
+        if callable(self._ha_jogo):
+            try:
+                jogo = bool(self._ha_jogo())
+            except Exception as exc:
+                logger.debug("sensor_hub_jogo_nao_respondeu", err=str(exc))
+        REGISTRO.definir_jogo(jogo)
+        return jogo
+
+    def _toque_querido(
+        self,
+        uniq: str,
+        agora: float,
+        vistos: dict[str, float],
+        segurados: dict[str, float],
+        jogo: bool,
+    ) -> bool:
+        """A UNIÃO das demandas pelo nó «Touchpad» de `uniq`; quem pede não solta o que outro pediu.
+
+        1. o toque roteado (cursor ou zonas), renovado a cada tique;
+        2. o dedo que o servidor DSU segura para o emulador;
+        3. o Desligado desta peça, com jogo aberto;
+        4. o Ligado com jogo aberto cuja configuração própria de toque recebe o dedo pelo vpad.
+        """
+        from hefesto_dualsense4unix.core.virtual_motion import REGISTRO
+
+        roteado = uniq in vistos and agora - vistos[uniq] <= self._TOQUE_ROTEADO_TTL_S
+        dsu = uniq in segurados and agora - segurados[uniq] <= self._DEDO_SEGURADO_TTL_S
+        calado = REGISTRO.toque_calado(uniq)
+        ao_jogo = False
+        if jogo and REGISTRO.touchpad_ligado(uniq) and callable(self._toque_proprio_do_jogo):
+            try:
+                ao_jogo = bool(self._toque_proprio_do_jogo(uniq))
+            except Exception as exc:
+                logger.debug("sensor_hub_toque_proprio_falhou", identity=uniq, err=str(exc))
+        return roteado or dsu or calado or ao_jogo
+
     def _reconciliar_grabs_do_toque(self, agora: float) -> None:
-        """O nó do touchpad fica GRABADO enquanto o tique leva o toque da peça."""
+        """O nó do touchpad fica GRABADO enquanto alguma demanda (`_toque_querido`) o quiser."""
+        from hefesto_dualsense4unix.core.virtual_motion import REGISTRO
+
+        jogo = REGISTRO.jogo_aberto()
         with self._lock:
             leitores = dict(self._touch)
             vistos = dict(self._demanda_do_toque)
@@ -779,11 +868,7 @@ class SensorHub:
                 u: t for u, t in segurados.items() if agora - t <= self._DEDO_SEGURADO_TTL_S
             }
         for uniq, leitor in leitores.items():
-            visto = vistos.get(uniq)
-            segurado = segurados.get(uniq)
-            querido = (
-                visto is not None and agora - visto <= self._TOQUE_ROTEADO_TTL_S
-            ) or (segurado is not None and agora - segurado <= self._DEDO_SEGURADO_TTL_S)
+            querido = self._toque_querido(uniq, agora, vistos, segurados, jogo)
             aplicar = getattr(leitor, "set_grab", None)
             if not callable(aplicar):
                 continue
@@ -794,6 +879,18 @@ class SensorHub:
                 continue
             with contextlib.suppress(Exception):
                 aplicar(querido)
+
+    def grab_do_toque(self, uniq: str) -> str:
+        """Estado do EVIOCGRAB no nó «Touchpad» de `uniq`: `off|pending|held|failed|sem_reader`."""
+        from hefesto_dualsense4unix.core.virtual_motion import chave_de_sensor
+
+        alvo = chave_de_sensor(uniq)
+        with self._lock:
+            leitor = next((r for u, r in self._touch.items() if chave_de_sensor(u) == alvo), None)
+        if leitor is None:
+            return "sem_reader"
+        estado = getattr(leitor, "grab_state", None)
+        return str(estado) if isinstance(estado, str) else "off"
 
 
 __all__ = ["AmostraDoDsu", "SensorHub"]

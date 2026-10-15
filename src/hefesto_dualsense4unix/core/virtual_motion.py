@@ -96,6 +96,10 @@ TOQUE_INATIVO = 0x80
 
 TAMANHO_DA_JANELA = 25
 
+#: O que o Desligado faz com o touchpad FORA do jogo. «cursor» deixa o nó com o sistema
+#: (o dedo move o cursor); «mudo» cala o toque também fora do jogo. A escolha espera o mockup da T1.
+DESLIGADO_FORA_DO_JOGO = "cursor"
+
 
 class EstadoDosSensores(NamedTuple):
     """O que está LIGADO para uma peça. Ausência = os dois ligados."""
@@ -149,6 +153,9 @@ class RegistroDeSensores:
         self._roteado: dict[str, bool] = {}
         self._toque_roteado_sem_chip = False
         self._toque_roteado: dict[str, bool] = {}
+        self._touchpad_desligado: set[str] = set()
+        self._jogo_aberto = False
+        self.desligado_fora_do_jogo = DESLIGADO_FORA_DO_JOGO
 
     def definir(
         self,
@@ -184,7 +191,7 @@ class RegistroDeSensores:
         """A janela como ela deve SAIR para a peça `uniq`."""
         estado = self.estado(uniq)
         giro = estado.giroscopio and not self.roteado(uniq)
-        toque = not self.toque_roteado(uniq)
+        toque = not (self.toque_roteado(uniq) or self.toque_calado(uniq))
         if giro and estado.acelerometro and toque:
             return janela
         return janela_com_sensores(
@@ -215,6 +222,48 @@ class RegistroDeSensores:
             self._toque_roteado_sem_chip = bool(toque_sem_chip)
             self._toque_roteado = toques
 
+    def definir_touchpad(self, uniq: str, *, ligado: bool) -> bool:
+        """Liga/desliga o touchpad desta peça. Devolve se ele está LIGADO depois."""
+        chave = chave_de_sensor(uniq)
+        if not chave:
+            return True
+        with self._lock:
+            if ligado:
+                self._touchpad_desligado.discard(chave)
+            else:
+                self._touchpad_desligado.add(chave)
+            return ligado
+
+    def touchpad_ligado(self, uniq: str | None) -> bool:
+        """O touchpad desta peça está Ligado? Sem entrada, sim."""
+        if not uniq:
+            return True
+        with self._lock:
+            return chave_de_sensor(uniq) not in self._touchpad_desligado
+
+    def touchpad_desligados(self) -> frozenset[str]:
+        """As peças (chave de sensor) com o touchpad Desligado."""
+        with self._lock:
+            return frozenset(self._touchpad_desligado)
+
+    def definir_jogo(self, aberto: bool) -> None:
+        """Há jogo aberto agora? Quem sabe é o hub, que empurra o sinal a cada volta."""
+        with self._lock:
+            self._jogo_aberto = bool(aberto)
+
+    def jogo_aberto(self) -> bool:
+        with self._lock:
+            return self._jogo_aberto
+
+    def toque_calado(self, uniq: str | None) -> bool:
+        """O toque desta peça está calado: Desligado com jogo aberto (ou sempre, em «mudo»)."""
+        if not uniq or not self._touchpad_desligado:
+            return False
+        with self._lock:
+            if chave_de_sensor(uniq) not in self._touchpad_desligado:
+                return False
+            return self._jogo_aberto or self.desligado_fora_do_jogo == "mudo"
+
     def toque_roteado(self, uniq: str | None) -> bool:
         """O dedo desta peça vai ao cursor ou às zonas, e não ao jogo?"""
         if not uniq:
@@ -242,6 +291,9 @@ class RegistroDeSensores:
             self._roteado = {}
             self._toque_roteado_sem_chip = False
             self._toque_roteado = {}
+            self._touchpad_desligado = set()
+            self._jogo_aberto = False
+            self.desligado_fora_do_jogo = DESLIGADO_FORA_DO_JOGO
 
 
 def chave_de_sensor(uniq: str) -> str:
@@ -254,6 +306,7 @@ REGISTRO = RegistroDeSensores()
 
 __all__ = [
     "CONTATOS_DO_TOQUE",
+    "DESLIGADO_FORA_DO_JOGO",
     "FAIXA_ACELEROMETRO",
     "FAIXA_GIROSCOPIO",
     "REGISTRO",

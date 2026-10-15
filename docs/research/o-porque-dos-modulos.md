@@ -1420,3 +1420,25 @@ ajustes das abas (`interface/pacotes/perfil.gravar_e_reaplicar`) também passa p
 autoswitch segue trocando de perfil por janela depois dele (Kodi, Navegação). Quem pede `prender`
 é só o «Aplicar» do rodapé e o «Voltar à de ontem» (`ponte.profile_reaplicar(nome, prender=True)`);
 o padrão do IPC é sem trava, e `tests/unit/test_o_aplicar_segura.py` nomeia os chamadores.
+
+## O sensor.set (`daemon/ipc_handlers.py`, `_handle_sensor_set`)
+
+Decisão de 04/09/2026: *«ele tem que funcionar de verdade. ambos independente do modo e da mascara.»* <!-- noqa-acento: citação literal -->
+
+TRÊS ESCRITAS, a ordem é o contrato:
+
+1. o registro vivo (`core/virtual_motion.REGISTRO`), que o report consulta a ~250 Hz e o jogo sente;
+2. o perfil (`ControllerOverrides.sensores`), para sobreviver ao replug e à troca de perfil;
+3. o `EVIOCGRAB` no nó «Motion Sensors» (e, desde 15/10/2026, no «Touchpad»), pelo `SensorHub`, que alcança
+   quem lê evdev direto.
+
+A resposta diz qual metade pegou (SENSORES-NO-JOGO-02, 13/09/2026, §1): o zero em Modo Virtual era da libSDL2
+2.30.0 do sistema (nos runtimes da Steam o vpad expõe os dois sensores, pareados pelo `uniq`); em Nativo o giro
+chega ao SDL pelo `hidraw` do físico, onde o daemon não está no caminho. Logo o alcance é parcial e a resposta o
+diz, em vez de um «aplicado» falso.
+
+O `touchpad` (O-TOQUE-LIGADO-OU-DESLIGADO-POR-CONTROLE-01) faz as mesmas três escritas. Desligado com jogo aberto
+zera os contatos no `REGISTRO.filtrar` e o hub agarra o nó; Ligado só agarra quando o jogo recebe o toque pelo
+vpad (hoje: a máscara efetiva da peça é DualSense). `touchpad_alcance` é `hidraw` no Nativo e com o Steam Input
+do jogo ligado, onde só o nó do sistema (o cursor) é alcançado.
+

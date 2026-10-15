@@ -1027,6 +1027,11 @@ class ProfileManager:
                 f"giro={'on' if estado.giroscopio else 'off'} "
                 f"accel={'on' if estado.acelerometro else 'off'}"
             )
+            if "touchpad" in getattr(secao, "model_fields_set", ()):
+                ligado = REGISTRO.definir_touchpad(
+                    str(uniq), ligado=getattr(secao, "touchpad", "ligado") != "desligado"
+                )
+                resultado[f"sensores:{uniq}"] += f" touchpad={'on' if ligado else 'off'}"
             logger.info(
                 "profile_sensores_por_peca",
                 profile=getattr(profile, "name", None),
@@ -1034,6 +1039,7 @@ class ProfileManager:
                 origin=origin,
                 giroscopio=estado.giroscopio,
                 acelerometro=estado.acelerometro,
+                touchpad=REGISTRO.touchpad_ligado(str(uniq)),
             )
         return resultado
 

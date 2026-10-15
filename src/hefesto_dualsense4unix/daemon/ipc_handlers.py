@@ -494,6 +494,17 @@ def _external_inventory(
     return inventory
 
 
+def _alcance_do_toque(daemon: Any) -> str:
+    """`vpad` quando o Hefesto está no caminho do toque; `hidraw` quando o jogo o lê direto.
+
+    No Modo Nativo e com o Steam Input do jogo ligado o jogo lê o hidraw do controle físico,
+    e o Hefesto só alcança o nó do sistema (o cursor), não o que o jogo recebe.
+    """
+    nativo = bool(daemon is not None and getattr(daemon, "is_native_mode", bool)())
+    steam_input = bool(getattr(daemon, "_steam_input_excecao", False))
+    return "hidraw" if nativo or steam_input else "vpad"
+
+
 class IpcHandlersMixin:
     """Mixin com os 19 métodos `_handle_*` do IpcServer; não instanciável isolado (espera
     `controller`, `store`, `profile_manager`, `daemon`)."""
@@ -2530,12 +2541,7 @@ class IpcHandlersMixin:
         inputs = entry.get("inputs")
         if uniq is None or not isinstance(inputs, dict):
             return
-        hub = self._sensor_hub
-        if hub is None:
-            from hefesto_dualsense4unix.daemon.sensor_hub import SensorHub
-
-            hub = SensorHub()
-            self._sensor_hub = hub
+        hub = self._sensor_hub or self._garantir_sensor_hub()
         leitura: Any = None
         with contextlib.suppress(Exception):
             leitura = hub.leitura(uniq)
@@ -2549,6 +2555,8 @@ class IpcHandlersMixin:
                 "giroscopio_ligado": estado.giroscopio,
                 "acelerometro_ligado": estado.acelerometro,
                 "grab_do_movimento": self._grab_do_movimento(hub, uniq),
+                "touchpad": "ligado" if REGISTRO.touchpad_ligado(uniq) else "desligado",
+                "touchpad_alcance": _alcance_do_toque(getattr(self, "daemon", None)),
             }
 
     @staticmethod
@@ -2570,8 +2578,30 @@ class IpcHandlersMixin:
             from hefesto_dualsense4unix.daemon.sensor_hub import SensorHub
 
             hub = SensorHub()
+            hub.perguntar_ao_daemon(
+                ha_jogo=self._ha_jogo_para_o_toque,
+                toque_proprio_do_jogo=self._jogo_tem_toque_proprio,
+            )
             self._sensor_hub = hub
         return hub
+
+    def _ha_jogo_para_o_toque(self) -> bool:
+        """O mesmo sinal de jogo do tato vivo: autoridade `game` ou janela de jogo em foco."""
+        from hefesto_dualsense4unix.daemon.subsystems.tato_vivo import ha_jogo
+
+        return bool(self.daemon is not None and ha_jogo(self.daemon))
+
+    def _jogo_tem_toque_proprio(self, uniq: str) -> bool:
+        """O jogo em foco recebe o toque desta peça pelo vpad: a máscara dela é a DualSense.
+
+        A ficha do jogo (``ficha_declarada``) ainda não chega ao daemon; enquanto isso vale a
+        máscara. Perfil em cursor/zonas e cliente DSU têm demanda própria no hub.
+        """
+        from hefesto_dualsense4unix.daemon.subsystems.external_mask import mascara_efetiva
+
+        cfg = getattr(self.daemon, "config", None)
+        da_sessao = str(getattr(cfg, "gamepad_flavor", "dualsense"))
+        return str(mascara_efetiva(uniq, da_sessao)) == "dualsense"
 
     def _inputs_passivos(
         self, entry: dict[str, Any], uniq: str | None, com_leitor_coop: set[str]
@@ -3733,28 +3763,13 @@ class IpcHandlersMixin:
         }
 
     async def _handle_sensor_set(self, params: dict[str, Any]) -> dict[str, Any]:
-        """`sensor.set` — desliga giroscópio e acelerômetro DE VERDADE.
+        """`sensor.set` — desliga giroscópio, acelerômetro e touchpad DE VERDADE, por controle.
 
-        Params: ``{uniq?: str, giroscopio?: bool, acelerometro?: bool}``; `uniq` omitido = o
-        primário; campo omitido = **não mexe naquele sensor**. Decisão de 04/09/2026:
-
-            *"ele tem que funcionar de verdade. ambos independente do modo e da mascara."*
-            <!-- noqa-acento: citação literal -->
-
-        TRÊS ESCRITAS, a ordem é o contrato:
-
-        1. **o registro vivo** (`core/virtual_motion.REGISTRO`), que o report consulta a ~250 Hz e o
-        jogo sente;
-        2. **o perfil** (`ControllerOverrides.sensores`), para sobreviver ao replug e à troca de
-          perfil;
-        3. **o `EVIOCGRAB`** no nó "Motion Sensors", pelo `SensorHub`, que alcança quem lê evdev
-          direto.
-
-        A RESPOSTA DIZ QUAL METADE PEGOU (SENSORES-NO-JOGO-02, 13/09/2026, §1): o zero em Modo
-        Virtual era da libSDL2 2.30.0 do sistema (nos runtimes da Steam o vpad expõe os dois
-        sensores, pareados pelo `uniq`); em **Nativo** o giro chega ao SDL pelo `hidraw` do FÍSICO,
-        onde o daemon não está no caminho. Logo o alcance é PARCIAL e a resposta o diz, em vez de um
-        "aplicado" falso.
+        Params: ``{uniq?, giroscopio?, acelerometro?, touchpad?: "ligado"|"desligado"}``;
+        campo omitido NÃO mexe naquele sensor. Três escritas, nesta ordem: o registro vivo, o perfil
+        (``ControllerOverrides.sensores``) e o pedido de grab ao ``SensorHub``. A resposta diz o
+        alcance (``alcance``, ``touchpad_alcance``): a história está em
+        docs/research/o-porque-dos-modulos.md, seção «O sensor.set».
         """
         from hefesto_dualsense4unix.core.virtual_motion import REGISTRO
         from hefesto_dualsense4unix.profiles.schema import (
@@ -3773,10 +3788,13 @@ class IpcHandlersMixin:
                     "sensor para o jogo, false o desliga"
                 )
             pedidos[campo] = valor
-        if not pedidos:
+        toque = params.get("touchpad")
+        if "touchpad" in params and toque not in ("ligado", "desligado"):
+            raise ValueError("sensor.set: 'touchpad' precisa ser 'ligado' ou 'desligado'")
+        if not pedidos and toque is None:
             raise ValueError(
-                "sensor.set exige ao menos um de 'giroscopio' ou "
-                "'acelerometro' — campo omitido NÃO mexe naquele sensor"
+                "sensor.set exige ao menos um de 'giroscopio', 'acelerometro' ou "
+                "'touchpad' — campo omitido NÃO mexe naquele sensor"
             )
         uniq = params.get("uniq")
         if uniq is not None and not isinstance(uniq, str):
@@ -3811,6 +3829,8 @@ class IpcHandlersMixin:
             giroscopio=pedidos.get("giroscopio"),
             acelerometro=pedidos.get("acelerometro"),
         )
+        if toque is not None:
+            REGISTRO.definir_touchpad(chave, ligado=toque == "ligado")
 
         from hefesto_dualsense4unix.profiles.o_padrao_do_computador import (
             chave_no_perfil,
@@ -3831,6 +3851,10 @@ class IpcHandlersMixin:
                     campos.pop(campo, None)
                 else:
                     campos[campo] = False
+            if toque == "desligado":
+                campos["touchpad"] = "desligado"
+            elif toque is not None:
+                campos.pop("touchpad", None)
             novo = ControllerSensoresOverride.model_validate(campos) if campos else None
             antes_campos = dict(antes.model_dump(exclude_unset=True)) if antes else None
             if antes_campos == (dict(campos) if campos else None):
@@ -3847,6 +3871,8 @@ class IpcHandlersMixin:
         with contextlib.suppress(Exception):
             hub.reconciliar()
         grab = self._grab_do_movimento(hub, chave)
+        pergunta_do_toque = getattr(hub, "grab_do_toque", None)
+        grab_do_toque = pergunta_do_toque(chave) if callable(pergunta_do_toque) else "desconhecido"
 
         nativo = bool(
             self.daemon is not None and getattr(self.daemon, "is_native_mode", bool)()
@@ -3892,6 +3918,9 @@ class IpcHandlersMixin:
             "acelerometro": estado.acelerometro,
             "alcance": alcance,
             "ressalva": ressalva,
+            "touchpad": "ligado" if REGISTRO.touchpad_ligado(chave) else "desligado",
+            "touchpad_alcance": _alcance_do_toque(self.daemon),
+            "touchpad_grab": grab_do_toque,
         }
 
     @staticmethod

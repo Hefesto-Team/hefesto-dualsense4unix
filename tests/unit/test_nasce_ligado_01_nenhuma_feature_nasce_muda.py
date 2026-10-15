@@ -56,6 +56,7 @@ PERGUNTE_AO_APARELHO = object()
 
 
 O_QUE_E_MUDO: dict[str, Any] = {
+    "ControllerSensoresOverride.touchpad": "desligado",
     "LedsConfig.auto_player_colors": False,
     "LedsConfig.lightbar_brightness": 0.0,
     "LedsConfig.player_led_brightness": None,

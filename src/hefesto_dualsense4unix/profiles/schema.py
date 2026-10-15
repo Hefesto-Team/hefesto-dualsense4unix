@@ -1082,6 +1082,11 @@ class ControllerSensoresOverride(BaseModel):
 
     acelerometro: bool | None = None
 
+    #: O touchpad DESTA peça. Desligado, o toque não chega ao jogo nem vira mouse do sistema
+    #: enquanto o jogo está aberto; Ligado, vai ao jogo que tem toque próprio e, nos outros, é o
+    #: cursor. Perfil velho sem o campo carrega Ligado. Quem lê é ``apply_controller_sensores``.
+    touchpad: Literal["ligado", "desligado"] = "ligado"
+
 
 class ControllerOverrides(BaseModel):
     """Overrides POR CONTROLE dentro do perfil (PERFIL-02, 2026-07-16).
@@ -2134,6 +2139,11 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         "Ver `ControllerSensoresOverride.giroscopio` — o *'ambos'* dela, cada "
         "um por si.",
         dono="hefesto_dualsense4unix.core.virtual_motion:EstadoDosSensores",
+    ),
+    "ControllerSensoresOverride.touchpad": Nascimento(
+        NASCE_NO_ESQUEMA,
+        "Ligado de padrão, por cabo ou Bluetooth e em todo estilo: nenhum estilo do "
+        "perfil escreve o toque. Perfil velho sem o campo carrega Ligado.",
     ),
     "ControllerOverrides.leds": Nascimento(
         E_CONTRATO, "Seção ausente = esta peça herda a global do perfil (PERFIL-01)."
