@@ -91,3 +91,19 @@ def test_o_ativar_de_outro_perfil_troca_depois_do_aplicar() -> None:
     manager.activate("lure", origin="manual")
     _terminal(sw, 10.5, 70.0)
     assert store.active_profile == "lure"
+
+
+@pytest.mark.usefixtures("perfis_isolados")
+def test_o_jogo_lancado_solta_a_trava_do_aplicar() -> None:
+    """D-1410-O-APLICAR-SEGURA: outro jogo lançado solta a trava, entra, e o terminal o mantém.
+
+    MORDIDA: tire o ``soltar_a_trava_da_mao`` do ramo ``origin == "launch"`` no ``_ativar``
+    (`profiles/manager.py`) e a trava do «Aplicar» sobrevive ao lançamento.
+    """
+    manager, store, sw = _a_montagem()
+    _terminal(sw, 2.0, 10.0)
+    manager.activate("lure", origin="launch")
+    assert not store.manual_profile_lock_active(time.monotonic()), "o lançamento não soltou a trava"
+    _terminal(sw, 10.5, 70.0)
+    assert store.active_profile == "lure", "o jogo lançado não ficou"
+    assert session.o_ultimo_jogo() == "lure", "o lançamento não virou o último jogo"
