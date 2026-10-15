@@ -243,14 +243,14 @@
       "data": "2026-10-15",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1103196,
+      "piso": 1108540,
       "por_item": {
-        "docs": 118347,
-        "scripts": 112540,
-        "src": 299136,
-        "tests": 573173
+        "docs": 118849,
+        "scripts": 113473,
+        "src": 299142,
+        "tests": 577076
       },
-      "razao": "tamanho: +4 linhas (1103192 -> 1103196), pagas por Origem: D-0710-O-PAD-E-UM-GADGET-SO-HID, D-1410-O-APLICAR-SEGURA, D-1410-O-PERFIL-FICA-NO-ULTIMO-JOGO, D-1410-TODO-PAD-TEM-PORTA-PROPRIA, D-2909-HAPTICA-TEM-DONO, plataforma.vpad, vibracao.haptics_vcm; registrado no fecho, topo 0a124dd08e88",
+      "razao": "tamanho: +5344 linhas (1103196 -> 1108540), pagas por Origem: D-1510-O-ENVELOPE-DIZ-O-QUE-O-CONTROLE-RECEBE-NOS-DOIS-TRANSPORTES; registrado no fecho, topo e4e19b1885e2",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -431,10 +431,16 @@
           "de": 1103192,
           "para": 1103196,
           "razao": "tamanho: +4 linhas (1103192 -> 1103196), pagas por Origem: D-0710-O-PAD-E-UM-GADGET-SO-HID, D-1410-O-APLICAR-SEGURA, D-1410-O-PERFIL-FICA-NO-ULTIMO-JOGO, D-1410-TODO-PAD-TEM-PORTA-PROPRIA, D-2909-HAPTICA-TEM-DONO, plataforma.vpad, vibracao.haptics_vcm; registrado no fecho, topo 0a124dd08e88"
+        },
+        {
+          "data": "2026-10-15",
+          "de": 1103196,
+          "para": 1108540,
+          "razao": "tamanho: +5344 linhas (1103196 -> 1108540), pagas por Origem: D-1510-O-ENVELOPE-DIZ-O-QUE-O-CONTROLE-RECEBE-NOS-DOIS-TRANSPORTES; registrado no fecho, topo e4e19b1885e2"
         }
       ],
       "unidade": "linhas",
-      "universo": 2837
+      "universo": 2863
     }
   }
 }
