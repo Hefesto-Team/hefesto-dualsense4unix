@@ -24,8 +24,8 @@
 #   6. entrega os .deb + SHA256SUMS + ORIGEM.txt em
 #      ~/.cache/hefesto-dualsense4unix/pipewire-backport/.
 #
-# NÃO INSTALA NADA. Trocar o PipeWire reinicia o som da sessão; quem instala é
-# quem coordena, com a Steam fechada, pela receita
+# NÃO INSTALA NADA. Trocar o PipeWire reinicia o som da sessão; a instalação é
+# à mão, com a Steam fechada, pela receita
 # (docs/usage/receita-backport-pipewire.md).
 #
 # Uso:
