@@ -1034,7 +1034,7 @@ CSS = """
   .quadro-topo .modo-auto{margin-left:auto}
   /* ---------- CRIAR EFEITOS NOVOS ---------- */
   .criar{flex:0 0 auto}
-  .criar .criar-linha{display:flex;align-items:center;gap:12px;padding:10px 16px;flex-wrap:nowrap;min-width:0}
+  .criar .criar-linha{display:flex;align-items:center;gap:12px;padding:9px 16px;flex-wrap:nowrap;min-width:0}
   .criar .quadro-titulo{flex:0 0 auto;margin-right:4px}
   .criar .seg-criar{display:inline-flex;gap:4px;flex:0 0 auto}
   .criar .seg-criar label,.criar .meu{height:30px;padding:0 12px;border-radius:999px;

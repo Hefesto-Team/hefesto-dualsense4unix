@@ -652,7 +652,8 @@ def test_a_aba_cabe_sem_rolar_a_guia_tem_oito_casas_e_o_nome_tem_a_largura_da_co
         pg.goto(MOCKUP.as_uri())
         m = pg.evaluate(medir)
         nav.close()
-    assert m["altura"] <= 809 and not m["lateral"], m
+    # O miolo é quem rola: medir contra 809 deixava passar um pixel de barra (619 em 618).
+    assert m["altura"] <= m["cabe"] and not m["lateral"], m
     assert m["casas"] == [8, 8, 8, 8], f"a guia é UMA fileira de oito: {m['casas']}"
     assert max(m["larguras"]) - min(m["larguras"]) <= 1, f"as quatro colunas são iguais: {m}"
     for nome, moldura in zip(m["nome"], m["moldura"], strict=True):
