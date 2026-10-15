@@ -835,7 +835,7 @@ def test_o_chip_alterna_pelo_que_o_daemon_diz() -> None:
     """MORDIDA: mande `ligada=True` fixo e o segundo caso reprova."""
     for agora in (False, True):
         p = _PonteDaMira(_OK)
-        _o_gesto("02-controles.html", "mira")(
+        _o_gesto("calibrar-sensores.html", "analogico-virtual")(
             _ctx_da_aba(mira={"ligada": agora, "virtual": agora, "sensibilidade": 6}),
             {"uniq": _P1}, p)
         assert p.chamadas == [{"ligada": not agora, "uniq": _P1}]
@@ -847,7 +847,7 @@ def test_sem_leitura_o_chip_recusa_dizendo() -> None:
 
     p = _PonteDaMira(_OK)
     with pytest.raises(RuntimeError) as erro:
-        _o_gesto("02-controles.html", "mira")(_ctx_da_aba(), {"uniq": _P1}, p)
+        _o_gesto("calibrar-sensores.html", "analogico-virtual")(_ctx_da_aba(), {"uniq": _P1}, p)
     assert str(erro.value) == a02.SEM_LEITURA_DA_MIRA
     assert p.chamadas == []
 
@@ -858,27 +858,9 @@ def test_o_chip_recusa_o_que_o_daemon_nao_confirma() -> None:
 
     p = _PonteDaMira({"status": "sem_controle", "motivo": "texto do daemon"})
     with pytest.raises(RuntimeError) as erro:
-        _o_gesto("02-controles.html", "mira")(
+        _o_gesto("calibrar-sensores.html", "analogico-virtual")(
             _ctx_da_aba(mira={"ligada": False, "virtual": False}), {"uniq": _P1}, p)
     assert str(erro.value) == a02.MIRA_SEM_O_CONTROLE
-
-
-def test_o_chip_pinta_pelo_que_o_daemon_diz(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Três estados: aceso, apagado e o travessão de quem não leu."""
-    import mesa_viva
-
-    import pacotes.a02_controles as a02
-
-    monkeypatch.setattr(a02, "_so_se_a_pagina_tiver", lambda campos: campos)
-
-    def _campo(**entrada: Any) -> Any:
-        cards = a02.pacote(_ctx_da_aba(**entrada))["cards"]
-        assert cards, "o pacote não montou card nenhum — régua cega"
-        return next(iter(cards.values()))["mira-ligada"]
-
-    assert _campo(mira={"ligada": True, "virtual": True}) == a02.SENSOR_LIGADO
-    assert _campo(mira={"ligada": False, "virtual": False}) == a02.SENSOR_DESLIGADO
-    assert _campo() == mesa_viva.SEM_LEITOR
 
 
 def test_os_deslizantes_mandam_um_campo_so() -> None:

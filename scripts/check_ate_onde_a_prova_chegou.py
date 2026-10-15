@@ -73,14 +73,6 @@ A_PROVA_QUE_FALTA: dict[str, tuple[str, str, str]] = {
         "A régua dos dublês grava e relê o campo por controle; falta o jogo aberto, com o "
         "Desligado calando o toque no controle dela, que é a prova da sprint",
     ),
-    "toque": (
-        "médio",
-        "2026-09-27-NO-MODO-XBOX-TUDO-FUNCIONA-01.md",
-        "o «Cursor | Botões» lê o touchpad, e `toque.touchpad.cursor` e "
-        "`toque.touchpad.dedos` estão em MONTOU nos dois transportes. A régua da E12b "
-        "grava e relê o arranjo por controle; falta o dedo dela mover o cursor e "
-        "apertar o direcional, o L1 e o L2 num jogo aberto, que é a prova da sprint",
-    ),
     "haptica": (
         "médio",
         "2026-09-29-O-GANHO-DA-HAPTICA-TEM-DONO-01.md",
@@ -88,18 +80,6 @@ A_PROVA_QUE_FALTA: dict[str, tuple[str, str, str]] = {
         "daquele controle no cabo e ao conversor da ponte antes do int8 no rádio, com as "
         "réguas da sprint mordendo nos dois transportes; falta o passo 0 da sprint "
         "(o tremor pelo nível) e a mão dela nos Caminhos da Forja a 100, 150 e 200",
-    ),
-    "ganho-mic": (
-        "médio",
-        "2026-09-20-O-GANHO-DO-MIC-TEM-DONO-01.md",
-        "`audio.microfone.ganho@dualsense` está em MONTOU no cabo e o rádio "
-        "não se aplica (não há placa ALSA onde o elemento exista — é o "
-        "aparelho, não dívida). O caminho de escrita existe desde 20/09 e a "
-        "suíte o sustenta; o que falta é o ARRASTO com a orelha dela, que é o "
-        "único jeito de o degrau `O APARELHO OBEDECEU` deixar de ser "
-        "inferência. **A leitura já foi medida** e é o que sustenta o MONTOU: "
-        "o `scontents` do que está no cabo responde `[100%] [48.00dB]`. É da "
-        "O-GANHO-DO-MIC-TEM-DONO-01",
     ),
     "mascara": (
         "grande",

@@ -136,7 +136,6 @@ ROTEIRO_DA_PROVA_DE_GESTO: tuple[tuple[int, str] | tuple[int, str, str], ...] = 
     (1500, ".faixa"),
     (2000, '.sw[data-sensor="giroscopio"]'),
     (2500, '.rota button[data-rota="nada"]'),
-    (2800, '.rota button[data-rota="junto"]'),
     (2950, '.rota button[data-rota="pc"]'),
     (3100, '.rota button[data-rota="jogo"]'),
     (3400, '[data-mudo="alto-falante"]'),
@@ -183,9 +182,6 @@ DONOS_DOS_GESTOS = {
     "rota:jogo": "pacotes/a02_controles.rota (grava=save_profile) — byte "
     "`OUTPUT_PATH_SEL`=2 pelo `speaker.set`, mais `app/audio_saida.RotaDeSaida`"
     " devolvendo a saída padrão do sistema (camada 1).",
-    "rota:junto": "pacotes/a02_controles.rota — o MESMO dono, com "
-    "`speaker.fonte='mix'`: o monitor da saída padrão cai TAMBÉM no sink do "
-    "controle, e a TV continua tocando. Não é uma terceira camada.",
     "rota:nada": "pacotes/a02_controles.rota — o MESMO dono: rota 0 (o "
     "alto-falante fora do caminho) mais a saída padrão devolvida ao sistema. "
     "É o ato que ela decidiu em 20/09, com o nome que ela já tinha escrito.",

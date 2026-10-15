@@ -268,7 +268,7 @@ def test_no_nativo_o_clique_no_chip_nao_chega_ao_daemon() -> None:
 
     p = _PonteDaMira(_OK)
     with pytest.raises(RuntimeError) as erro:
-        _o_gesto("02-controles.html", "mira")(
+        _o_gesto("calibrar-sensores.html", "analogico-virtual")(
             _ctx(nativo=True, **{"aa:bb:cc:00:00:01": {"ligada": False, "virtual": False}}),
             {"uniq": "aa:bb:cc:00:00:01"}, p)
     assert str(erro.value) == a02.MIRA_CINZA_NO_NATIVO
@@ -281,7 +281,7 @@ def test_o_nativo_que_o_daemon_recusa_volta_pela_mesma_frase() -> None:
 
     p = _PonteDaMira({"status": "nativo", "uniq": "aa:bb:cc:00:00:01", "motivo": "x"})
     with pytest.raises(RuntimeError) as erro:
-        _o_gesto("02-controles.html", "mira")(
+        _o_gesto("calibrar-sensores.html", "analogico-virtual")(
             _ctx(**{"aa:bb:cc:00:00:01": {"ligada": False, "virtual": False}}),
             {"uniq": "aa:bb:cc:00:00:01"}, p)
     assert str(erro.value) == a02.MIRA_CINZA_NO_NATIVO

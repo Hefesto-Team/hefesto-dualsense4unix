@@ -17,9 +17,6 @@ CHAVE_P1 = P1.replace(":", "")
 CHAVE_P2 = P2.replace(":", "")
 NOME = "Regua-Dos-Botoes-Do-Som"
 
-MARCA_DO_JUNTO = 'data-hef-quando="junto"'
-
-
 class Ponte:
     """O daemon de papel. `recusa` faz `speaker_set` dizer não, uma vez."""
 
@@ -151,196 +148,46 @@ def _pagina_publicada() -> str:
     return onde.pagina(a02.PAGINA, publicado=True).read_text(encoding="utf-8")
 
 
-class TestOGuardaDaFileira:
-    def test_o_valor_do_import_bate_com_a_pagina_publicada(self) -> None:
-        """A constante DE VERDADE, sem monkeypatch, contra o arquivo."""
-        from pacotes import a02_controles as a02
+class TestOJuntoSaiuDaTela:
+    """O «Ouvir junto» saiu da fileira com o desenho do todo (15/10/2026): três botões."""
 
-        tem = MARCA_DO_JUNTO in _pagina_publicada()
-        assert a02.A_FILEIRA_TEM_TRES is tem, (
-            f"a página publicada {'TEM' if tem else 'NÃO tem'} o «Ouvir junto» "
-            f"e o pacote acha que {a02.A_FILEIRA_TEM_TRES}")
-
-    def test_ele_pergunta_ao_publicado_e_nao_a_bancada(
-        self, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+    def test_o_gesto_recusa_o_junto(
+        self, casa: pathlib.Path, sem_maquina_dela: dict[str, list[Any]]
     ) -> None:
-        """MORDIDA: tire o `publicado=True` da leitura."""
-        from hefesto_dualsense4unix.interface import onde
+        """MORDIDA: devolva `junto` aos botões da fileira e isto reprova."""
+        p = Ponte()
+        with pytest.raises(ValueError, match="não conheço a rota"):
+            _gesto("rota")(_ctx(_dele(P1)), {"uniq": P1, "rota": "junto"}, p)
+        assert not p.chamadas, f"o «junto» recusado ainda falou com o daemon: {p.chamadas}"
+        assert not _do_controle(CHAVE_P1), "o «junto» recusado gravou no perfil"
+
+    def test_o_perfil_em_mix_acende_tudo_no_controle(self) -> None:
+        """Um perfil antigo com `fonte: mix` acende «Tudo no controle», o botão que leva o PC."""
         from pacotes import a02_controles as a02
 
-        mentira = tmp_path / "mockup"
-        mentira.mkdir()
-        (mentira / a02.PAGINA).write_text(
-            "<html><body>fileira de dois</body></html>", encoding="utf-8")
-        monkeypatch.setattr(onde, "BANCADA", mentira)
-
-        assert a02._a_pagina_tem_o_ouvir_junto() is (
-            MARCA_DO_JUNTO in _pagina_publicada()), (
-            "o guarda leu a bancada; quem o produto renderiza é o publicado")
-
-    def test_um_erro_de_programacao_nao_vira_fato_sobre_o_desenho(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """MORDIDA: alargue o `except` de volta para `Exception`."""
-        from hefesto_dualsense4unix.interface import onde
-        from pacotes import a02_controles as a02
-
-        def _explode(*_a: Any, **_k: Any) -> Any:
-            raise RuntimeError("o nome ainda não existe neste ponto do import")
-
-        monkeypatch.setattr(onde, "pagina", _explode)  # noqa-acento: atributo
-        with pytest.raises(RuntimeError):
-            a02._a_pagina_tem_o_ouvir_junto()
-
-    def test_arquivo_que_nao_abre_continua_sendo_um_nao(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """A outra metade: `OSError` É engolido, e vira `False`."""
-        from hefesto_dualsense4unix.interface import onde
-        from pacotes import a02_controles as a02
-
-        def _sem_arquivo(*_a: Any, **_k: Any) -> Any:
-            raise OSError("a página publicada não está aqui")
-
-        monkeypatch.setattr(onde, "pagina", _sem_arquivo)  # noqa-acento: atributo
-        assert a02._a_pagina_tem_o_ouvir_junto() is False
-
-
-class TestOQueATelaAcende:
-    def test_com_mix_a_fileira_acende_o_ouvir_junto(self) -> None:
-        """O produto, sem dublê de constante nenhum."""
-        from pacotes import a02_controles as a02
-
-        if MARCA_DO_JUNTO not in _pagina_publicada():
-            pytest.skip("a página publicada ainda tem dois botões")
-        assert a02.aceso_da_fileira(P1, _dele(P1, fonte="mix")) == "junto"
+        assert a02.aceso_da_fileira(P1, _dele(P1, fonte="mix")) == a02.ROTA_TUDO_NO_CONTROLE
         assert a02.aceso_da_fileira(P1, _dele(P1, fonte="sfx")) == "jogo"
-
-    def test_a_pagina_e_o_pacote_falam_do_mesmo_botao(self) -> None:
-        """O `data-hef-quando` que o pacote emite existe NA PÁGINA publicada."""
-        from pacotes import a02_controles as a02
-
-        doc = _pagina_publicada()
-        if MARCA_DO_JUNTO not in doc:
-            pytest.skip("a página publicada ainda tem dois botões")
-        assert f'data-hef-quando="{a02.ROTA_OUVIR_JUNTO}"' in doc
-
-
-class TestSairDoTodoOSomDoPC:
-    def test_o_junto_vindo_do_pc_devolve_o_byte_da_rota(
-        self, casa: pathlib.Path, sem_maquina_dela: dict[str, list[Any]]
-    ) -> None:
-        """MORDIDA: apague o ramo que reenvia `rota` no «Ouvir junto»."""
-        from pacotes import a02_controles as a02
-
-        p = Ponte()
-        _gesto("rota")(_ctx(_dele(P1, rota=a02.ROTA_DO_CANAL[a02.CANAL_TODO_O_PC])),
-                       {"uniq": P1, "rota": "junto"}, p)
-
-        pedidos = p.com_byte_de_rota()
-        assert pedidos, "o «Ouvir junto» não devolveu o byte da rota ao daemon"
-        assert pedidos[0]["rota"] == a02.ROTA_DO_CANAL[a02.CANAL_SONS_DO_JOGO]
-        assert pedidos[0]["uniq"] == P1, "o byte foi para outro controle"
-        assert sem_maquina_dela["devolveu"], "a camada 1 não foi devolvida"
-
-    def test_o_cartao_para_de_mandar_desfazer_o_clique_dela(
-        self, casa: pathlib.Path, sem_maquina_dela: dict[str, list[Any]]
-    ) -> None:
-        """A ressalva do cartão some — é ela que ela LERIA depois do clique."""
-        from hefesto_dualsense4unix.app import audio_saida
-        from pacotes import a02_controles as a02
-
-        antes = a02.ROTA_DO_CANAL[a02.CANAL_TODO_O_PC]
-        assert audio_saida.recado_da_rota(antes, "sink-do-p1", "sink-da-tv"), (
-            "a régua não reproduz o desacordo que ela veio medir")
-
-        p = Ponte()
-        _gesto("rota")(_ctx(_dele(P1, rota=antes)), {"uniq": P1, "rota": "junto"}, p)
-        depois = p.com_byte_de_rota()[0]["rota"]
-        assert audio_saida.recado_da_rota(depois, "sink-do-p1", "sink-da-tv") == ""
-
-    def test_vindo_de_sons_do_jogo_ele_continua_calado(
-        self, casa: pathlib.Path, sem_maquina_dela: dict[str, list[Any]]
-    ) -> None:
-        """MORDIDA: tire a condição e reenvie o byte sempre."""
-        from pacotes import a02_controles as a02
-
-        p = Ponte()
-        _gesto("rota")(_ctx(_dele(P1, rota=a02.ROTA_DO_CANAL[a02.CANAL_SONS_DO_JOGO])),
-                       {"uniq": P1, "rota": "junto"}, p)
-        assert not p.com_byte_de_rota(), (
-            f"o «Ouvir junto» mexeu no firmware sem precisar: {p.chamadas}")
-
-    def test_sem_byte_publicado_ele_tambem_fica_calado(
-        self, casa: pathlib.Path, sem_maquina_dela: dict[str, list[Any]]
-    ) -> None:
-        """MORDIDA: compare com `!= sons do jogo` em vez de `== todo o som`."""
-        p = Ponte()
-        _gesto("rota")(_ctx(_dele(P1, rota=None)), {"uniq": P1, "rota": "junto"}, p)
-        assert not p.com_byte_de_rota(), (
-            f"reenviou a rota sobre um byte que o daemon nunca publicou: {p.chamadas}")
-
-    def test_o_perfil_lembra_as_duas_metades_e_so_do_dono(
-        self, casa: pathlib.Path, sem_maquina_dela: dict[str, list[Any]]
-    ) -> None:
-        """MORDIDA: grave só a `fonte`, como antes."""
-        from pacotes import a02_controles as a02
-
-        _gesto("rota")(_ctx(_dele(P1, rota=a02.ROTA_DO_CANAL[a02.CANAL_TODO_O_PC]),
-                            _dele(P2)),
-                       {"uniq": P1, "rota": "junto"}, Ponte())
-
-        dele = (_do_controle(CHAVE_P1).get("speaker") or {})
-        assert dele.get("fonte") == "mix"
-        assert dele.get("rota") == a02.ROTA_DO_CANAL[a02.CANAL_SONS_DO_JOGO]
-        assert not _do_controle(CHAVE_P2), "a escolha de um chegou ao vizinho"
-
-    def test_um_daemon_que_recusa_nao_deixa_o_perfil_a_meio_caminho(
-        self, casa: pathlib.Path, sem_maquina_dela: dict[str, list[Any]]
-    ) -> None:
-        """MORDIDA: ignore o retorno de `speaker_set` no ramo do «junto»."""
-        from pacotes import a02_controles as a02
-
-        with pytest.raises(RuntimeError, match="não confirmou"):
-            _gesto("rota")(
-                _ctx(_dele(P1, rota=a02.ROTA_DO_CANAL[a02.CANAL_TODO_O_PC])),
-                {"uniq": P1, "rota": "junto"}, Ponte(recusa=True))
-        assert not _do_controle(CHAVE_P1), (
-            "o perfil guardou uma escolha que o daemon recusou")
 
 
 class TestOGestoEntregaAFonte:
     """O que o botão MANDA, e não só o que ele grava — 20/09/2026."""
 
-    def test_o_botao_do_meio_diz_mix_ao_daemon(
+    def test_sair_do_mix_diz_sfx_ao_daemon(
         self, casa: pathlib.Path, sem_maquina_dela: dict[str, list[Any]]
     ) -> None:
-        """MORDIDA: troque o `"mix"` do ramo do «junto» por `"sfx"`."""
-        p = Ponte()
-        _gesto("rota")(_ctx(_dele(P1), _dele(P2)), {"uniq": P1, "rota": "junto"}, p)
+        """Um perfil antigo em `mix` sai dele no primeiro clique.
 
-        pedidos = p.com_fonte()
-        assert pedidos, (
-            f"o «Efeitos do Jogo e Áudio da TV no Controle» não disse a camada "
-            f"1 ao daemon — só o perfil soube: {p.nomes}")
-        assert [q["fonte"] for q in pedidos] == ["mix"], (
-            f"o botão do meio mandou outra fonte ao nó: {pedidos}")
-        assert all(q.get("uniq") == P1 for q in pedidos), (
-            f"a camada 1 de um controle foi parar noutro: {pedidos}")
-
-    def test_sair_do_botao_do_meio_diz_sfx_ao_daemon(
-        self, casa: pathlib.Path, sem_maquina_dela: dict[str, list[Any]]
-    ) -> None:
-        """MORDIDA: troque o `"sfx"` do ramo de saída por `"mix"`."""
+        MORDIDA: troque o `"sfx"` do ramo de saída por `"mix"`.
+        """
         p = Ponte()
         _gesto("rota")(_ctx(_dele(P1, fonte="mix"), _dele(P2)),
                        {"uniq": P1, "rota": "jogo"}, p)
 
         pedidos = p.com_fonte()
         assert pedidos, (
-            f"sair do botão do meio não devolveu a camada 1 ao daemon: {p.nomes}")
+            f"sair do `mix` não devolveu a camada 1 ao daemon: {p.nomes}")
         assert [q["fonte"] for q in pedidos] == ["sfx"], (
-            f"a saída do «junto» mandou outra fonte ao nó: {pedidos}")
+            f"a saída do `mix` mandou outra fonte ao nó: {pedidos}")
         assert all(q.get("uniq") == P1 for q in pedidos), (
             f"a camada 1 de um controle foi parar noutro: {pedidos}")
 
@@ -361,8 +208,9 @@ class TestOGestoEntregaAFonte:
         from pacotes import a02_controles as a02
 
         p = Ponte()
-        _gesto("rota")(_ctx(_dele(P1, rota=a02.ROTA_DO_CANAL[a02.CANAL_TODO_O_PC])),
-                       {"uniq": P1, "rota": "junto"}, p)
+        _gesto("rota")(_ctx(_dele(P1, rota=a02.ROTA_DO_CANAL[a02.CANAL_SONS_DO_JOGO],
+                                  fonte="mix")),
+                       {"uniq": P1, "rota": "pc"}, p)
 
         assert p.com_fonte() and p.com_byte_de_rota(), (
             "a cena não reproduz o clique que manda as DUAS camadas")

@@ -109,12 +109,8 @@ def ctx(a02):
 
     desenho = BANCADA.read_text(encoding="utf-8")
     a02._ENDERECOS = frozenset(re.findall(r'data-campo="([^"]+)"', desenho))
-    # O Ganho saiu do desenho de 15/10/2026; o pacote só o emite enquanto a PUBLICADA o tem.
-    do_ganho = a02.A_PAGINA_TEM_O_GANHO
-    a02.A_PAGINA_TEM_O_GANHO = 'data-campo="mic-ganho-barra"' in desenho
     yield Contexto(state={}, mesa=MESA, conectados=[CABO, SEM_LEITURA], estados={})
     a02._ENDERECOS = None
-    a02.A_PAGINA_TEM_O_GANHO = do_ganho
 
 
 def test_a_bancada_tem_os_quarenta_e_seis_enderecos_da_leitura_viva():

@@ -6,6 +6,8 @@ import pathlib
 
 PACOTE = pathlib.Path(
     "src/hefesto_dualsense4unix/interface/pacotes/a02_controles.py")
+#: O ramo «Tudo na TV» termina no `return` dele; o que vem depois é dos outros dois botões.
+FIM_DO_RAMO_NADA = "\n        return\n"
 
 
 def _ramo_do_gesto() -> str:
@@ -19,7 +21,7 @@ class TestOTerceiroBotaoMandaoSomParaATV:
         """MORDIDA: tire a linha. O terceiro botão volta a calar o controle sem"""
         corpo = _ramo_do_gesto()
         i = corpo.index("if qual == ROTA_NADA_NO_CONTROLE:")
-        ramo = corpo[i : corpo.index("if qual == ROTA_OUVIR_JUNTO:", i)]
+        ramo = corpo[i : corpo.index(FIM_DO_RAMO_NADA, i)]
         assert "som_do_controle_na_tv.ligar(uniq)" in ramo, (
             "«Tudo na TV» não manda o som do controle para a TV")
 
@@ -27,7 +29,7 @@ class TestOTerceiroBotaoMandaoSomParaATV:
         """**COM OS DOIS SENTIDOS DE PÉ O SOM DÁ A VOLTA:** o `mix` leva o PC ao"""
         corpo = _ramo_do_gesto()
         i = corpo.index("if qual == ROTA_NADA_NO_CONTROLE:")
-        ramo = corpo[i : corpo.index("if qual == ROTA_OUVIR_JUNTO:", i)]
+        ramo = corpo[i : corpo.index(FIM_DO_RAMO_NADA, i)]
         assert ramo.index("devolver_o_som_do_pc(") < ramo.index(
             "som_do_controle_na_tv.ligar(uniq)"), (
             "o laço sobe antes de o caminho de volta cair — o som dá a volta")
@@ -35,11 +37,12 @@ class TestOTerceiroBotaoMandaoSomParaATV:
     def test_os_outros_dois_botoes_fecham_o_laco(self):
         """**OS TRÊS BOTÕES SÃO UM ESTADO SÓ.** Um laço que sobrevivesse à troca"""
         corpo = _ramo_do_gesto()
-        assert corpo.count("som_do_controle_na_tv.desligar(uniq)") == 2, (
-            "algum dos outros dois botões não fecha o laço da TV")
-        junto = corpo.index("if qual == ROTA_OUVIR_JUNTO:")
-        assert "som_do_controle_na_tv.desligar(uniq)" in corpo[junto:junto + 900], (
-            "«No controle e na TV» não fecha o laço do terceiro botão")
+        nada = corpo.index("if qual == ROTA_NADA_NO_CONTROLE:")
+        depois = corpo[corpo.index(FIM_DO_RAMO_NADA, nada):]
+        assert "som_do_controle_na_tv.desligar(uniq)" in depois, (
+            "«Sons do jogo» e «Tudo no controle» não fecham o laço da TV")
+        assert depois.index("som_do_controle_na_tv.desligar(uniq)") < depois.index(
+            "speaker_set("), "o laço da TV fecha depois de o byte novo ir ao controle"
 
 
 class TestOLacoLeOMonitorEEmEstereo:

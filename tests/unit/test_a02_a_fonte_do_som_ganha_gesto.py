@@ -67,14 +67,6 @@ def _o_cache_da_camada_1_comeca_vazio() -> Any:
     a02._CAMADA_1_EM_VOO[0] = em_voo
 
 
-@pytest.fixture
-def fileira_de_tres(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A página publicada COM o terceiro botão — o mundo depois do `--publicar`."""
-    from pacotes import a02_controles as a02
-
-    monkeypatch.setattr(a02, "A_FILEIRA_TEM_TRES", True)
-
-
 def _dele(uniq: str, fonte: str | None = None) -> dict[str, Any]:
     speaker: dict[str, Any] = {"volume": 100, "muted": False, "rota": 2}
     if fonte is not None:
@@ -160,83 +152,28 @@ class TestOQueATelaLe:
         assert a02.fonte_do_controle(_dele(P1, "sfx")) == "sfx"
         assert a02.fonte_do_controle(_dele(P1)) == ""
 
-    def test_todo_o_som_do_pc_vence_o_mix(
-        self, fileira_de_tres: None, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """MORDIDA: perguntar pelo `mix` ANTES de olhar a camada 1."""
+    def test_com_mix_acende_tudo_no_controle(self) -> None:
+        """Sem o «Ouvir junto» na tela (as três rotas do todo, 15/10/2026), um perfil em `mix`
+        acende o que o descreve: o som do jogo e o do PC no controle.
+
+        MORDIDA: tire o ramo do `mix` de `aceso_da_fileira`.
+        """
         from pacotes import a02_controles as a02
 
-        monkeypatch.setattr(a02, "aceso_da_rota", lambda _u, _e: "pc")
         assert a02.aceso_da_fileira(P1, _dele(P1, "mix")) == "pc"
-
-    def test_com_mix_acende_o_botao_do_meio(self, fileira_de_tres: None) -> None:
-        """MORDIDA: devolva sempre `aceso_da_rota`, ignorando a fonte."""
-        from pacotes import a02_controles as a02
-
-        assert a02.aceso_da_fileira(P1, _dele(P1, "mix")) == "junto"
         assert a02.aceso_da_fileira(P1, _dele(P1, "sfx")) == "jogo"
-
-    def test_a_pagina_de_dois_botoes_nunca_ouve_junto(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """MORDIDA: tire o `A_FILEIRA_TEM_TRES` de `aceso_da_fileira`."""
-        from pacotes import a02_controles as a02
-
-        monkeypatch.setattr(a02, "A_FILEIRA_TEM_TRES", False)
-        # Sem o «junto» na tela (as três rotas do todo, 15/10/2026), o perfil «junto» acende o
-        # que o descreve: o som do jogo e o do PC no controle (o botão «apenas no DualSense»).
-        assert a02.aceso_da_fileira(P1, _dele(P1, "mix")) == "pc"
 
 
 class TestOGesto:
-    def test_ouvir_junto_grava_mix_no_perfil_daquele_controle(
-        self, casa: pathlib.Path
-    ) -> None:
-        """MORDIDA: apague o `_lembrar_do_som(..., speaker={"fonte": "mix"})`.
+    def test_sair_do_mix_apaga_o_mix(self, casa: pathlib.Path) -> None:
+        """Um perfil antigo em `mix` grava `sfx` no primeiro clique da fileira, só no dono.
 
-        Sem ele o botão acende, o som não muda e a escolha some no recarregar
-        — os dezesseis botões que o usuário nomeou em 02/09.
+        MORDIDA: apague o ramo que grava `fonte: sfx` ao sair do `mix`.
         """
-        p = Ponte()
-        _gesto("rota")(_ctx(_dele(P1), _dele(P2)), {"uniq": P1, "rota": "junto"}, p)
-
-        assert (_do_controle(CHAVE_P1).get("speaker") or {}).get("fonte") == "mix"
+        _gesto("rota")(_ctx(_dele(P1, "mix"), _dele(P2)), {"uniq": P1, "rota": "jogo"}, Ponte())
+        assert (_do_controle(CHAVE_P1).get("speaker") or {}).get("fonte") == "sfx"
         assert (_do_controle(CHAVE_P2).get("speaker") or {}).get("fonte") is None, (
             "a escolha de um controle chegou ao perfil do vizinho")
-
-    def test_ouvir_junto_devolve_a_saida_padrao(
-        self, casa: pathlib.Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """MORDIDA: apague o `devolver_o_som_do_pc()` do ramo do «junto»."""
-        from hefesto_dualsense4unix.app import audio_saida
-        from pacotes import a02_controles as a02
-
-        devolveu: list[bool] = []
-        monkeypatch.setattr(
-            a02.audio_saida, "devolver_o_som_do_pc",
-            lambda **_k: devolveu.append(True) or audio_saida.DesfechoDaRota(True))
-
-        _gesto("rota")(_ctx(), {"uniq": P1, "rota": "junto"}, Ponte())
-        assert devolveu, "o «Ouvir junto» não devolveu a saída padrão do sistema"
-
-    def test_sair_do_junto_apaga_o_mix(self, casa: pathlib.Path) -> None:
-        """MORDIDA: apague o ramo que grava `fonte: sfx` ao sair do «junto»."""
-        p = Ponte()
-        _gesto("rota")(_ctx(), {"uniq": P1, "rota": "junto"}, p)
-        assert (_do_controle(CHAVE_P1).get("speaker") or {}).get("fonte") == "mix"
-
-        _gesto("rota")(_ctx(_dele(P1, "mix")), {"uniq": P1, "rota": "jogo"}, p)
-        assert (_do_controle(CHAVE_P1).get("speaker") or {}).get("fonte") == "sfx"
-
-    def test_o_junto_nao_manda_byte_de_rota_ao_daemon(
-        self, casa: pathlib.Path
-    ) -> None:
-        """MORDIDA: deixe o «junto» cair no `speaker_set(rota=…)` dos outros dois."""
-        p = Ponte()
-        _gesto("rota")(_ctx(), {"uniq": P1, "rota": "junto"}, p)
-        com_rota = [c for c in p.chamadas if c[0] == "speaker_set" and "rota" in c[1]]
-        assert not com_rota, (
-            f"o «Ouvir junto» mexeu no firmware: {com_rota}")
 
     def test_uma_rota_que_a_pagina_nao_manda_e_recusada(
         self, casa: pathlib.Path
@@ -244,3 +181,5 @@ class TestOGesto:
         """MORDIDA: aceite qualquer string em `rota`."""
         with pytest.raises(ValueError, match="não conheço a rota"):
             _gesto("rota")(_ctx(), {"uniq": P1, "rota": "tudo"}, Ponte())
+        with pytest.raises(ValueError, match="não conheço a rota"):
+            _gesto("rota")(_ctx(), {"uniq": P1, "rota": "junto"}, Ponte())

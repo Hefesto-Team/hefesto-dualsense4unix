@@ -134,17 +134,17 @@ TOUCHPAD_PUBLICADO = {
 
 
 def test_o_touchpad_deixou_de_ser_constante(pac, a02):
-    """"Sem toque" era literal no código: um dedo não mudava um pixel."""
-    import mesa_viva
-    from hefesto_dualsense4unix.interface.sensores import texto_toques
+    """"Sem toque" era literal no código: um dedo não mudava um pixel.
 
+    A palavra saiu do cartão com o desenho do todo (15/10/2026); o ponto é o que o dedo move.
+    """
     tocando = _card(pac, a02, {**BASE, "inputs": {
         "touchpad": {**TOUCHPAD_PUBLICADO, "touching": True}}})
     solto = _card(pac, a02, {**BASE, "inputs": {"touchpad": TOUCHPAD_PUBLICADO}})
     cego = _card(pac, a02, {**BASE, "is_primary": False, "inputs": None})
-    assert tocando["touch-estado"] == texto_toques(1) == "1 toque"
-    assert solto["touch-estado"] == texto_toques(0) == "Sem toque"
-    assert cego["touch-estado"] == mesa_viva.SEM_LEITOR
+    assert tocando["touch-ponto"]
+    assert solto["touch-ponto"] == ""
+    assert cego["touch-ponto"] == ""
 
 
 ESPERAM_A_PUBLICACAO: tuple[str, ...] = ()

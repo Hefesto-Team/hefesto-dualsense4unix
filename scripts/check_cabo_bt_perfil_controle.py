@@ -236,7 +236,6 @@ NAO_E_DO_APARELHO: dict[str, str] = {
 
 DO_APARELHO: dict[str, tuple[str, ...]] = {
     "mascara": ("plataforma.vpad",),
-    "ganho-mic": ("audio.microfone.ganho",),
     "mudo": ("audio.microfone.mudo",),
     "volume": ("audio.microfone.volume", "audio.alto_falante.volume"),
     "rota": ("audio.alto_falante.rota",),
@@ -255,7 +254,6 @@ DO_APARELHO: dict[str, tuple[str, ...]] = {
     # O-ANALOGICO-VIRTUAL-E-UM-SO-COM-O-LADO-ESCOLHIDO-01: o chip «Inclinação» saiu da
     # 02, e o lado do Analógico Virtual leva o giro e a inclinação juntos.
     "analogico-lado": ("movimento.giroscopio", "movimento.acelerometro"),
-    "toque": ("toque.touchpad.cursor", "toque.touchpad.dedos"),
     "touchpad": ("toque.touchpad.cursor", "toque.touchpad.dedos"),
     "haptica": ("vibracao.haptics_vcm",),
     "testar-haptica": ("vibracao.haptics_vcm",),
@@ -295,7 +293,6 @@ A_DIVIDA_CONHECIDA: dict[str, tuple[str, str]] = {
 NO_PERFIL: dict[str, tuple[str | None, str | None]] = {
     "mascara": ("mode", None),
     "volume": ("mic", "mic"),
-    "ganho-mic": ("mic", "mic"),
     "rota": ("speaker", "speaker"),
     "volume-padrao": ("speaker", "speaker"),
     "sensor": (None, "sensores"),
@@ -310,7 +307,6 @@ NO_PERFIL: dict[str, tuple[str | None, str | None]] = {
     "lado": ("rumble", "rumble"),
     "mira": ("movimento", "movimento"),
     "analogico-lado": ("movimento", "movimento"),
-    "toque": ("movimento", "movimento"),
     "haptica": (None, "rumble"),
     "testar-haptica": (None, "rumble"),
     "imersao": ("triggers", "triggers"),

@@ -169,11 +169,11 @@ def test_o_quarto_manda_o_som_do_pc_so_para_aquele_controle(
     assert all(acesos[u] == "jogo" for u in TRANSPORTE if u != uniq), acesos
 
 
-@pytest.mark.parametrize("volta", ["jogo", "junto", "nada"])
+@pytest.mark.parametrize("volta", ["jogo", "nada"])
 @pytest.mark.parametrize("uniq", [P1, P3], ids=["p1-usb", "p3-bt"])
 def test_sair_do_quarto_devolve_o_som_ao_pc(
         mesa: dict[str, Any], uniq: str, volta: str) -> None:
-    """Qualquer um dos outros três botões devolve a saída ao PC — é o «no PC»"""
+    """Qualquer um dos outros dois botões devolve a saída ao PC — é o «no PC»"""
     _clicar(mesa, uniq, "pc")
     _clicar(mesa, uniq, volta)
 
@@ -185,14 +185,14 @@ def test_sair_do_quarto_devolve_o_som_ao_pc(
 def test_o_botao_de_um_nao_desfaz_o_quarto_do_outro(mesa: dict[str, Any]) -> None:
     """O P1 (USB) pede a saída do PC; o P3 e o P4 (BT) trocam de botão. A"""
     _clicar(mesa, P1, "pc")
-    _clicar(mesa, P3, "junto")
+    _clicar(mesa, P3, "nada")
     _clicar(mesa, P4, "nada")
     _clicar(mesa, P2, "jogo")
 
     assert mesa["servidor"].padrao == SAIDA[P1], (
         f"o som do PC saiu do P1 sem ele pedir: está em {mesa['servidor'].padrao!r}")
     acesos = _fileira(mesa)
-    assert acesos == {P1: "pc", P2: "jogo", P3: "junto", P4: "nada"}, acesos
+    assert acesos == {P1: "pc", P2: "jogo", P3: "nada", P4: "nada"}, acesos
 
 
 def test_a_saida_passa_de_um_controle_ao_outro_e_volta_ao_pc(
@@ -214,9 +214,8 @@ def test_a_saida_passa_de_um_controle_ao_outro_e_volta_ao_pc(
 
 
 def test_o_quarto_apaga_o_mix_e_fecha_o_laco(mesa: dict[str, Any]) -> None:
-    """Vindo do «Efeitos do Jogo e Áudio do PC no Controle» (o `mix`), o"""
-    _clicar(mesa, P2, "junto")
-    assert mesa["ponte"].fonte[P2] == "mix"
+    """Vindo de um perfil antigo em `mix` (o «Ouvir junto», fora da tela desde 15/10/2026), o"""
+    mesa["ponte"].fonte[P2] = "mix"
     _clicar(mesa, P2, "pc")
     assert mesa["ponte"].fonte[P2] == "sfx", "o `mix` ficou de pé embaixo do quarto"
 

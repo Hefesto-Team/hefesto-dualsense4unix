@@ -739,7 +739,7 @@ def renovacao(monkeypatch: pytest.MonkeyPatch) -> Any:
 
 
 @pytest.mark.parametrize(("n", "nativa", "esperado"), [
-    (1, "", 4), (2, "", 4), (4, "", 4), (4, "sem-casamento", 5), (4, "casada", 7)])
+    (1, "", 3), (2, "", 3), (4, "", 3), (4, "sem-casamento", 3), (4, "casada", 3)])
 def test_r6_cada_pactl_uma_vez_por_dono(renovacao: Any, n: int, nativa: str,
                                          esperado: int) -> None:
     """Uma chamada por `argv` e por dono em cada renovação."""
@@ -753,14 +753,19 @@ def test_r6_cada_pactl_uma_vez_por_dono(renovacao: Any, n: int, nativa: str,
     assert len(set(conta.eleicao)) == len(conta.eleicao)
 
 
-def test_r6_a_eleicao_roda_pelo_dono_dela(renovacao: Any) -> None:
-    """A memória da eleição embrulha o `_rodar` DO USUÁRIO, e não o de `audio_saida`."""
+def test_r6_a_renovacao_nao_le_o_microfone(renovacao: Any) -> None:
+    """O ganho de entrada saiu da aba Controles do todo, e com ele a leitura dele no tique.
+
+    Sem a linha do Ganho na tela, a renovação não pergunta à eleição pela fonte nativa nem
+    roda o `amixer` da placa: um `amixer` a cada renovação por controle é custo sem leitor.
+
+    MORDIDA: devolva a leitura do ganho ao `_ler_a_volta` e isto reprova.
+    """
     renovacao.conta.nativa = "casada"
     conta = renovacao.renovar(4)
-    assert "pactl list sources short" in conta.eleicao, conta.eleicao
-    assert "pactl --format=json list sources" in conta.eleicao, conta.eleicao
-    assert "pactl --format=json list sources" in conta.audio, conta.audio
-    assert "amixer -c 3 scontents" in conta.audio, conta.audio
+    assert conta.eleicao == [], conta.eleicao
+    assert not [c for c in conta.audio if "source" in c or c.startswith("amixer")], (
+        conta.audio)
 
 
 def test_r6_fora_da_renovacao_nada_muda(renovacao: Any) -> None:
@@ -770,16 +775,6 @@ def test_r6_fora_da_renovacao_nada_muda(renovacao: Any) -> None:
     el.fonte_nativa_do_controle(UNIQS[0], list(UNIQS[:1]))
     el.fonte_nativa_do_controle(UNIQS[0], list(UNIQS[:1]))
     assert renovacao.conta.eleicao.count("pactl list sources short") == 2
-
-
-def test_r6_o_duble_da_funcao_publica_continua_alcancando(
-        renovacao: Any, monkeypatch: pytest.MonkeyPatch) -> None:
-    """O dublê de `fonte_nativa_do_controle` (o das réguas do ganho) é lido."""
-    el = renovacao.el
-    monkeypatch.setattr(el, "fonte_nativa_do_controle",
-                        lambda uniq, _mesa: "" if uniq == UNIQS[1] else None)
-    lido = renovacao.a02._ler_o_ganho(UNIQS[:2])
-    assert lido == {UNIQS[1]: None}, lido
 
 
 def test_r7_cem_mil_tiques_guardam_so_os_ultimos(publicado_de_hoje: pathlib.Path) -> None:

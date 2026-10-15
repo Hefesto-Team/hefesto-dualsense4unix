@@ -141,8 +141,6 @@ def test_o_pacote_diz_padrao_no_lugar_do_numero_e_enche_a_barra(
         casa: Any, monkeypatch: pytest.MonkeyPatch) -> None:  # noqa: F811
     from pacotes import a02_controles as a02
 
-    com_o_botao = frozenset({*a02._enderecos_da_pagina(), "alto-padrao"})
-    monkeypatch.setattr(a02, "_ENDERECOS", com_o_botao)
     _grava_o_perfil({"volume": volume_do_percentual(62), "muted": False, "volume_padrao": True})
     card = a02.pacote(_ctx(CEM))["cards"][P1]
     assert (card["alto-padrao"], card["alto-num"], card["alto-barra"]) == ("1", "Padrão", 100)
@@ -151,17 +149,6 @@ def test_o_pacote_diz_padrao_no_lugar_do_numero_e_enche_a_barra(
     card = a02.pacote(_ctx(volume_do_percentual(62)))["cards"][P1]
     assert card["alto-padrao"] == "" and card["alto-num"] == percentual_do_volume(
         volume_do_percentual(62))
-
-
-def test_antes_do_publicar_a_pagina_de_hoje_nao_recebe_o_botao(
-        casa: Any, monkeypatch: pytest.MonkeyPatch) -> None:  # noqa: F811
-    from pacotes import a02_controles as a02
-
-    sem_o_botao = frozenset(a02._enderecos_da_pagina() - {"alto-padrao"})
-    monkeypatch.setattr(a02, "_ENDERECOS", sem_o_botao)
-    _grava_o_perfil({"volume": volume_do_percentual(62), "muted": False, "volume_padrao": True})
-    card = a02.pacote(_ctx(CEM))["cards"][P1]
-    assert "alto-padrao" not in card and card["alto-num"] != "Padrão", card
 
 
 # --- o perfil: o disco, o «Salvar» e a ativação --------------------------------------------------

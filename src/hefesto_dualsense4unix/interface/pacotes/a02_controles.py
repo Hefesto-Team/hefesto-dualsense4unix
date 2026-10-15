@@ -81,7 +81,7 @@ from __future__ import annotations
 import contextlib
 import re
 import threading
-from collections.abc import Callable, Iterator, Sequence
+from collections.abc import Callable, Iterator
 from typing import Any
 
 from hefesto_dualsense4unix.app.actions.home_actions import (
@@ -97,10 +97,6 @@ from hefesto_dualsense4unix.core.speaker_scale import (
     percentual_do_volume,
     volume_do_percentual,
 )
-from hefesto_dualsense4unix.integrations import (
-    ganho_do_microfone as _ganho_no_aparelho,
-)
-from hefesto_dualsense4unix.integrations import porta_do_som
 from hefesto_dualsense4unix.interface.cartao_do_controle import (
     ALL_BUTTONS,
     CANAL_NADA_NO_CONTROLE,
@@ -688,133 +684,6 @@ _SONO: dict[str, str] = {}
 
 _REGRA_DO_SONO: list[bool | None] = [None]
 
-_GANHO: dict[str, tuple[int, float] | None] = {}
-
-
-#: **O GANHO MUDOU DE CASA EM 21/09/2026, e a mudança é de CAMADA.** O leitor,
-GANHO_PADRAO_PCT = _ganho_no_aparelho.GANHO_PADRAO_PCT
-_CAPACIDADE_DE_GANHO = _ganho_no_aparelho._CAPACIDADE_DE_GANHO
-_nome_do_scontrol = _ganho_no_aparelho._nome_do_scontrol
-_ganho_do_scontents = _ganho_no_aparelho.ganho_do_scontents
-_elemento_e_ganho_do_scontents = _ganho_no_aparelho.elemento_e_ganho_do_scontents
-_placa_de_cada_fonte = _ganho_no_aparelho.placa_de_cada_fonte
-placa_alsa_do_controle = _ganho_no_aparelho.placa_do_controle
-
-
-def _ler_o_ganho(na_mesa: tuple[str, ...]) -> dict[str, tuple[int, float] | None]:
-    """`{uniq: (por cento, dB) | None}` da mesa. BLOQUEANTE — roda comando.
-
-    SÃO TRÊS RESPOSTAS, e a CHAVE é a terceira: a tupla quando há elemento de
-    ganho; `None` quando *perguntei e não há onde esse ganho exista* — o do
-    rádio, que é nó da nossa ponte e não tem placa ALSA (medido em 15/08: a
-    placa segue o transporte), e a máquina sem `amixer`; e a chave **AUSENTE**
-    quando a resposta é *não sei* — o `pactl` mudo, o censo de USB que não
-    montou, a primeira volta que ainda não deu.
-
-    **ESCREVER `None` É O PONTO**, e não um detalhe de implementação: sem ele a
-    aba não distingue *"ainda não perguntei"* de *"perguntei e não há"*, e o
-    cinza do trilho acenderia nos dois segundos da primeira volta. **E NÃO
-    ESCREVER NADA É O OUTRO PONTO:** com o servidor de som mudo, escrever
-    `None` acenderia o cinza com a razão *«ligue o cabo»* sobre uma ignorância
-    nossa — dizer "não há" quando a verdade é "não consegui perguntar".
-
-    A PERGUNTA NÃO É AO `canal_fonte` DO DAEMON, e a primeira redação desta
-    função era — **medido na bancada em 20/09/2026, com um DualSense no FIO e
-    três no ar: os quatro responderam `hefesto_mic_<hex6>`**, o nó da nossa
-    ponte, que não tem placa ALSA nenhuma. O ganho ficava cinza no controle que
-    estava no cabo, com a razão mandando ligar o cabo. O `canal_fonte` é o nó
-    que o produto ELEGEU (regra 0 de `escolher_fonte`), e a pergunta daqui é
-    outra: *qual nó deste controle o KERNEL publica*. Quem responde é o dono —
-    :func:`eleicao_de_microfone.fonte_nativa_do_controle`.
-
-    O QUE ELA CUSTA, medido na mesa de quatro dela em 20/09/2026: **~70 ms**,
-    dentro de uma thread que acorda a cada :data:`CAMADA_1_S` (2 s). A leitura em JSON do
-    `pactl` é uma só para a mesa inteira (é dela que sai a placa de cada nó), e a do
-    `amixer` é POR PLACA e nunca por controle: com quatro DualSense no cabo são quatro placas
-    distintas, e a mesma placa nunca é lida duas vezes na mesma volta.
-    """
-    from hefesto_dualsense4unix.integrations import eleicao_de_microfone
-
-    mesa = [u for u in na_mesa if u]
-    if not mesa:
-        return {}
-    fora: dict[str, tuple[int, float] | None] = {}
-    alvos: dict[str, str] = {}
-    for uniq in mesa:
-        try:
-            no = eleicao_de_microfone.fonte_nativa_do_controle(uniq, mesa)
-        except Exception:
-            no = None
-        if no is None:
-            continue
-        fora[uniq] = None
-        if no:
-            alvos[uniq] = no
-    if not alvos:
-        return fora
-    try:
-        placa_da_fonte = porta_do_som.placa_de_cada_fonte(_ler_pelo_dono)
-    except Exception:
-        return {}
-    if placa_da_fonte is None:
-        # Sem o JSON do servidor é «não sei»: a chave fica AUSENTE, e não `None`.
-        for uniq in alvos:
-            fora.pop(uniq, None)
-        return fora
-    por_placa: dict[str, tuple[int, float] | None] = {}
-    for uniq, no in alvos.items():
-        placa = placa_da_fonte.get(no, "")
-        if not placa:
-            continue
-        if placa not in por_placa:
-            try:
-                por_placa[placa] = _ganho_do_scontents(
-                    _ler_pelo_dono(["amixer", "-c", placa, "scontents"]))
-            except Exception:
-                por_placa[placa] = None
-        fora[uniq] = por_placa[placa]
-    return fora
-
-
-def definir_ganho_do_microfone(
-    uniq: str, por_cento: int, na_mesa: Sequence[str]
-) -> tuple[int, float] | None:
-    """Escreve o ganho no aparelho, ATUALIZA O CACHE DA TELA e devolve o que ficou.
-
-    O corpo mora em `integrations.ganho_do_microfone.definir` desde 21/09/2026.
-    O que fica aqui é a única parte que é da INTERFACE: o cache.
-
-    **O CACHE APRENDE NA HORA.** Sem isto a tela volta ao valor velho no tique
-    seguinte — a thread da camada 1 só acorda a cada 2 s, e nesses dois segundos
-    o deslizante «pula para trás» sozinho. É o mesmo desacordo que
-    `_lembrar_do_som` cura para o volume, e é por isso que o cache não desceu
-    junto com o escritor: o `profiles/manager.py` escreve o mesmo ganho e não
-    tem tela nenhuma para manter em dia.
-    """
-    ficou = _ganho_no_aparelho.definir(uniq, por_cento, na_mesa)
-    if ficou is not None:
-        _GANHO[uniq] = ficou
-    return ficou
-
-
-def ganho_do_microfone(uniq: str) -> tuple[int, float] | None:
-    """`(por cento, dB)` do ganho de entrada deste controle, ou `None`."""
-    return _GANHO.get(uniq) if uniq else None
-
-
-RAZAO_DO_GANHO_FORA = (
-    "O ganho de entrada é do aparelho, e só o cabo alcança o controle dele: "
-    "pelo rádio o microfone chega como som já digitalizado, sem placa de som "
-    "onde esse controle exista. Ligue o cabo e ele acende."
-)
-
-
-def ganho_fora_de_alcance(uniq: str) -> str:
-    """A razão quando o ganho não alcança este controle; `""` quando alcança."""
-    if not uniq or uniq not in _GANHO:
-        return ""
-    return "" if _GANHO[uniq] is not None else RAZAO_DO_GANHO_FORA
-
 
 def _ler_o_sono(lido: dict[str, Any]) -> dict[str, str]:
     """`{uniq: acordado|dormindo}` de quem tem sink. BLOQUEANTE — roda `pactl`.
@@ -868,42 +737,37 @@ def _camada_1(entradas: tuple[tuple[str, int | None], ...],
     def renovar() -> None:
         try:
             with _uma_leitura_por_volta():
-                novo, sono, regra, ganho = _ler_a_volta()
+                novo, sono, regra = _ler_a_volta()
             if _CAMADA_1_SELO[0] != selo:
                 return
             _CAMADA_1.clear()
             _CAMADA_1.update(novo)
             _SONO.clear()
             _SONO.update(sono)
-            _GANHO.clear()
-            _GANHO.update(ganho)
             _REGRA_DO_SONO[0] = regra
         finally:
             _CAMADA_1_EM_VOO[0] = False
 
-    def _ler_a_volta() -> tuple[dict[str, Any], dict[str, str], bool | None,
-                                dict[str, tuple[int, float] | None]]:
+    def _ler_a_volta() -> tuple[dict[str, Any], dict[str, str], bool | None]:
         novo = _ler_a_camada_1(entradas, na_mesa)
         sono = _ler_o_sono(novo)
         try:
             regra = audio_saida.regra_nunca_dorme_instalada()
         except Exception:
             regra = None
-        ganho = _ler_o_ganho(na_mesa)
-        return novo, sono, regra, ganho
+        return novo, sono, regra
 
     threading.Thread(target=renovar, name="hefesto-rota-camada-1",
                      daemon=True).start()
     return _CAMADA_1
 
 
-_POR_CONTROLE: tuple[dict[str, Any], ...] = (
-    _CAMADA_1, _SONO, _GANHO)
+_POR_CONTROLE: tuple[dict[str, Any], ...] = (_CAMADA_1, _SONO)
 
 
 @poda
 def _esquecer_o_som_de_quem_saiu(na_mesa: frozenset[str]) -> None:
-    """Tira das três leituras por controle tudo o que não está mais na mesa."""
+    """Tira das duas leituras por controle tudo o que não está mais na mesa."""
     for cache in _POR_CONTROLE:
         for uniq in [u for u in cache if u not in na_mesa]:
             cache.pop(uniq, None)
@@ -1088,15 +952,12 @@ def aceso_da_rota(uniq: str, entry: Any) -> str:
     return str(lida.botao_aceso)
 
 
-ROTA_OUVIR_JUNTO = "junto"
-
 ROTA_NADA_NO_CONTROLE = "nada"
 
 #: É o `"pc"` de sempre — a rota 3
 ROTA_TUDO_NO_CONTROLE = "pc"
 
-BOTOES_DA_FILEIRA_DO_SOM = ("jogo", ROTA_OUVIR_JUNTO, ROTA_NADA_NO_CONTROLE,
-                            ROTA_TUDO_NO_CONTROLE)
+BOTOES_DA_FILEIRA_DO_SOM = ("jogo", ROTA_NADA_NO_CONTROLE, ROTA_TUDO_NO_CONTROLE)
 
 
 def fonte_do_controle(entry: Any) -> str:
@@ -1115,27 +976,14 @@ def fonte_do_controle(entry: Any) -> str:
     return str(fonte) if fonte in ("mix", "sfx") else ""
 
 
-def _a_pagina_tem_o_ouvir_junto() -> bool:
-    """A página PUBLICADA já tem o terceiro botão? Lido uma vez, do arquivo."""
-    from hefesto_dualsense4unix.interface import onde
-
-    try:
-        doc = onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
-    except (OSError, UnicodeDecodeError):  # pragma: no cover - defensivo
-        return False
-    return 'data-hef-quando="junto"' in doc
-
-
 def aceso_da_fileira(uniq: str, entry: Any) -> str:
     """Qual botão da fileira do som acende (três na tela do todo, 15/10/2026)."""
     aceso = aceso_da_rota(uniq, entry)
     if aceso in (ROTA_TUDO_NO_CONTROLE, ROTA_NADA_NO_CONTROLE):
         return aceso
-    if fonte_do_controle(entry) != "mix":
-        return aceso
-    # Sem o botão «junto» na tela (as três rotas do todo, 15/10/2026), o perfil «junto» acende o
-    # que está mais perto: o som do PC chega ao controle.
-    return ROTA_OUVIR_JUNTO if A_FILEIRA_TEM_TRES else ROTA_TUDO_NO_CONTROLE
+    # O perfil com a fonte «mix» (o «junto», que saiu da tela no todo) acende o que está mais
+    # perto: o som do PC chega ao controle.
+    return ROTA_TUDO_NO_CONTROLE if fonte_do_controle(entry) == "mix" else aceso
 
 
 # AS QUATRO FACES, e cada uma tem chave própria no `state_full.audio` desde a
@@ -1253,22 +1101,6 @@ def selo_do_som(saida_muda: bool | None) -> str:
 
 
 PAGINA = "02-controles.html"
-
-A_FILEIRA_TEM_TRES = _a_pagina_tem_o_ouvir_junto()
-
-
-def _a_pagina_tem_o_ganho() -> bool:
-    """A página PUBLICADA já tem o trilho do ganho? Lido uma vez, do arquivo."""
-    from hefesto_dualsense4unix.interface import onde
-
-    try:
-        doc = onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
-    except (OSError, UnicodeDecodeError):  # pragma: no cover - defensivo
-        return False
-    return 'data-campo="mic-ganho-barra"' in doc
-
-
-A_PAGINA_TEM_O_GANHO = _a_pagina_tem_o_ganho()
 
 
 def texto_da_bateria(pct: int | None) -> str:
@@ -1494,12 +1326,9 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         e = c.get("inputs") or {}
         a = c.get("audio") or {}
         mic_volume = volume_do_microfone(a)
-        mic_ganho = ganho_do_microfone(uniq)
         # (`controller_card.py:1121`). Medido na mesa
         sp_lido = speaker_do_entry(c)
-        # o botão «Padrão» só existe na página que o tem: antes do `--publicar`, a tela é a de hoje
-        alto_em_padrao = ("alto-padrao" in _enderecos_da_pagina()
-                          and volume_em_padrao(ctx, uniq, sp_lido))
+        alto_em_padrao = volume_em_padrao(ctx, uniq, sp_lido)
         # `# type: ignore[arg-type]` na chamada). Sem esta guarda, a primeira
         # `rotulo_lightbar` já trata.
         rotulo_da_luz, base_da_luz = rotulo_lightbar(c, getattr(ctx, "state", None) or {})
@@ -1512,7 +1341,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # do dono na GTK (`interface/cartao_do_controle.py`, `"l3" in
         apertados = set(e.get("buttons") or ())
         # dentro de `touchpad_do_inputs`, e a razão de a recusa anterior ter
-        toque_txt, dedos = dedos_do_controle(e)
+        _, dedos = dedos_do_controle(e)
         toque_ponto, onde_o_dedo = dedos[0]
         toque_ponto2, onde_o_dedo2 = dedos[1]
         posicoes = posicoes_do_controle(e, tem_leitor, onde_o_dedo, onde_o_dedo2)
@@ -1548,16 +1377,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 mic_volume if mic_volume is not None else mesa_viva.SEM_LEITOR
             ),
             "mic-barra": mic_volume if mic_volume is not None else 0,
-            **({
-                "mic-ganho-num": (
-                    f"{mic_ganho[1]:+.0f}" if mic_ganho is not None
-                    else mesa_viva.SEM_LEITOR
-                ),
-                "mic-ganho-barra": mic_ganho[0] if mic_ganho is not None else 0,
-                "mic-ganho-fora": ganho_fora_de_alcance(uniq),
-            } if A_PAGINA_TEM_O_GANHO else {}),
             **_so_se_a_pagina_tiver({
-                "touch-estado": toque_txt,
                 "touchpad": _selo_do_sensor(_toque_ligado(c)),
                 "touch-regiao": regiao_do_toque(onde_o_dedo),
             }),
@@ -1625,15 +1445,12 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                     for campo, qual_do_campo in (("giro-ligado", "giroscopio"),
                                                  ("accel-ligado", "acelerometro"))
                 },
-                # `mira` que o `daemon.state_full` publica por controle
-                "mira-ligada": _selo_do_sensor(_analogico_virtual(c)),
                 "giro-dica": dica_do_giro(c, _nativo(ctx), _na_navegacao(ctx)),
                 "mira-fora": mira_fora(_nativo(ctx)),
                 # OS CHIPS DO TOQUE E DA INCLINAÇÃO — 29/09/2026, NO-MODO-XBOX-
                 **_so_se_a_pagina_tiver({
                     "mira-lado": lado_aceso(c),
                     "inclinacao-parada": _pausa_da_inclinacao(c),
-                    "toque-modo": _chip_da_mira(c, "toque"),
                 }),
                 # dizia `#0000FF` (a cor viva do P1) e o retângulo logo abaixo
                 # return 1 }`, e o CSSOM NORMALIZA na atribuição (`#0000FF`
@@ -1807,14 +1624,6 @@ def _pausa_da_inclinacao(dele: dict[str, Any]) -> str:
     bloco = dele.get("mira")
     parada = isinstance(bloco, dict) and bloco.get("inclinacao_parada") is True
     return INCLINACAO_PARADA if parada else "segurada"
-
-
-def _chip_da_mira(dele: dict[str, Any], chave: str) -> str:
-    """O valor pintado no grupo de chips: o destino, ou o travessão sem leitura."""
-    import mesa_viva
-
-    destino = _destino_da_mira(dele, chave)
-    return destino if destino is not None else str(mesa_viva.SEM_LEITOR)
 
 
 DICA_DO_GIRO = "Ligado: o jogo recebe o giro deste controle."
@@ -2316,15 +2125,14 @@ def _dizer_a_fonte_ao_daemon(p: Any, uniq: str, fonte: str) -> None:
 
 @gesto("02-controles.html", "rota", grava="gravar_pelo_gesto")
 def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """Onde o som do controle sai — os QUATRO botões da fileira, um gesto só.
+    """Onde o som do controle sai — os TRÊS botões da fileira, um gesto só.
 
     O TÍTULO DE 04/09 DIZIA *"«Sons do jogo» tem dono; «Só no controle» não"*,
-    e os dois nomes caducaram: hoje os botões dizem «Efeitos do Jogo no
-    Controle, Áudio do PC no PC» (`jogo`), «Efeitos do Jogo e Áudio do PC no
-    Controle» (`junto`), «Tudo no PC e nada no controle» (`nada`) e «Tudo no
-    Controle e Nada no PC» (`pc`, de volta em 24/09). Os quatro têm dono, e é
-    este gesto. O resto desta docstring é o registro de 04/09, com os nomes
-    daquele dia.
+    e os dois nomes caducaram: na tela do todo (15/10/2026) os botões são
+    `jogo` (só os efeitos do jogo no controle), `nada` (nada no controle) e
+    `pc` (tudo no controle). O quarto, `junto`, saiu da tela e do gesto. Os
+    três têm dono, e é este gesto. O resto desta docstring é o registro de
+    04/09, com os nomes daquele dia.
 
     "SONS DO JOGO" É UM BYTE, e ele é o caso que ela descreveu com o Zelda —
     *"o speaker do controle faz os barulhos da espada do Link enquanto na tela
@@ -2379,7 +2187,7 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise ValueError("rota: o clique não disse em qual controle")
     if qual not in BOTOES_DA_FILEIRA_DO_SOM:
         raise ValueError(f"rota: não conheço a rota {qual!r} — a página manda "
-                         f"'jogo', 'junto', 'nada' ou 'pc'")
+                         f"'jogo', 'nada' ou 'pc'")
     # (com dois DualSense no cabo, sem a lista o `escolher_sink` não tem como),
     na_mesa = [str(c.get("uniq") or "") for c in ctx.conectados if c.get("uniq")]
 
@@ -2396,23 +2204,6 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
                 "parou, ou este controle se desligou")
         _lembrar_do_som(ctx, uniq, speaker={"fonte": "sfx",
                                             "rota": byte_calado})
-        return
-
-    if qual == ROTA_OUVIR_JUNTO:
-        audio_saida.devolver_o_som_do_pc(de=uniq, uniqs_na_mesa=na_mesa)
-        som_do_controle_na_tv.desligar(uniq)
-        _dizer_a_fonte_ao_daemon(p, uniq, "mix")
-        lembrar: dict[str, Any] = {"fonte": "mix"}
-        if _byte_da_rota(ctx.por_uniq(uniq)) == ROTA_DO_CANAL[CANAL_TODO_O_PC]:
-            de_volta = ROTA_DO_CANAL[CANAL_SONS_DO_JOGO]
-            if not p.speaker_set(rota=de_volta, uniq=uniq,
-                                 **_volume_conhecido(ctx.por_uniq(uniq))):
-                raise RuntimeError(
-                    "o Hefesto não confirmou a volta da rota do alto-falante: "
-                    "ou ele parou, ou este controle se desligou")
-            lembrar["rota"] = de_volta
-        _lembrar_do_som(ctx, uniq, speaker=lembrar)
-        _confirmar_com_som(ctx, uniq)
         return
 
     if fonte_do_controle(ctx.por_uniq(uniq)) == "mix":
@@ -2578,9 +2369,11 @@ MIRA_SEM_O_CONTROLE = (
 MIRA_CINZA_NO_NATIVO = _camada.MIRA_CINZA_NO_NATIVO  # a frase mora na camada, que é quem recusa
 
 
-@gesto("02-controles.html", "mira", grava="mira_set_detalhado")
 def mira(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """O chip «Analógico virtual» — o movimento DESTE controle vira um analógico dele.
+    """O liga do «Analógico virtual» — o movimento DESTE controle vira um analógico dele.
+
+    O corpo do gesto `analogico-virtual` da Calibrar giroscópio; a aba Controles do todo
+    (15/10/2026) não tem mais o chip, e o liga da 02 é o «Mira virtual» de cada analógico.
 
     Palavra, 23/09/2026: *"Cria um botão virtual ao lado de giroscopio e
     acelerometro chamado Mira Virtual"*.  <!-- noqa-acento: citação literal -->
@@ -2621,63 +2414,6 @@ def mira(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise RuntimeError(MIRA_CINZA_NO_NATIVO)
     if corpo.get("status") != "ok":
         raise RuntimeError(MIRA_SEM_O_CONTROLE)
-
-
-TOQUE_CINZA_NO_NATIVO = _camada.TOQUE_CINZA_NO_NATIVO
-
-SEM_LEITURA_DO_CHIP = (
-    "a leitura ainda não chegou deste controle, e o botão não sabe se apaga "
-    "ou acende."
-)
-
-CHIP_SEM_O_CONTROLE = (
-    "este controle não respondeu: conecte-o de novo e tente outra vez."
-)
-
-
-def _o_que_a_tela_oferece(todos: tuple[str, ...]) -> tuple[str, ...]:
-    """Os destinos que um chip pode pedir: os do daemon, menos o `nenhum`."""
-    from hefesto_dualsense4unix.core import roteador_de_movimento as rot
-
-    return tuple(d for d in todos if d != rot.DESTINO_NENHUM)
-
-
-def _o_clique_do_chip(o: dict[str, Any], nome: str, pedido: str,
-                      todos: tuple[str, ...]) -> str:
-    """O `uniq` do cartão clicado, depois de conferir o destino que o botão diz."""
-    uniq = _uniq(o)
-    if not uniq:
-        raise ValueError(f"{nome}: o clique não disse em qual controle")
-    if pedido not in _o_que_a_tela_oferece(todos):
-        raise ValueError(f"{nome}: não conheço o destino {pedido!r}")
-    return uniq
-
-
-def _alternar_o_chip(ctx: Contexto, p: Any, uniq: str, chave: str,
-                     pedido: str) -> str:
-    """O corpo do chip do toque: o clique no apagado acende, no aceso apaga.
-
-    `chave` é a do bloco `mira` do `state_full` e o nome do campo do `mira.set`
-    (o `toque`; o lado do analógico virtual é o `escolher_o_lado`). O grupo é um só por
-    controle: acender o Cursor com os Botões acesos troca, não soma. Devolve o `status` do daemon
-    quando ele é `ok` ou `nativo` (a recusa do Nativo tem a frase de cada chip,
-    e quem a levanta é o gesto); o resto levanta aqui.
-    """
-    from hefesto_dualsense4unix.core import roteador_de_movimento as rot
-
-    agora = _destino_da_mira(ctx.por_uniq(uniq), chave)
-    if agora is None:
-        raise RuntimeError(SEM_LEITURA_DO_CHIP)
-    novo = rot.DESTINO_NENHUM if agora == pedido else pedido
-    corpo = _corpo(p.mira_set_detalhado(**{chave: novo}, uniq=uniq))
-    if corpo is None:
-        raise RuntimeError(
-            "o Hefesto não confirmou o botão: ou ele parou, ou este controle "
-            "se desligou")
-    status = corpo.get("status")
-    if status not in ("ok", "nativo"):
-        raise RuntimeError(CHIP_SEM_O_CONTROLE)
-    return str(status)
 
 
 def escolher_o_lado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
@@ -2724,64 +2460,6 @@ def analogico_lado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             raise RuntimeError(MIRA_SEM_O_CONTROLE)
         return
     escolher_o_lado(ctx, o, p)
-
-
-@gesto("02-controles.html", "toque", grava="mira_set_detalhado")
-def toque(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """O «Cursor | Botões» do touchpad: o dedo move o cursor, ou toca em zonas."""
-    from hefesto_dualsense4unix.core import roteador_de_movimento as rot
-
-    pedido = str(o.get("toque") or "")
-    uniq = _o_clique_do_chip(o, "toque", pedido, rot.TOQUES)
-    if _alternar_o_chip(ctx, p, uniq, "toque", pedido) == "nativo":
-        raise RuntimeError(TOQUE_CINZA_NO_NATIVO)
-
-
-@gesto("02-controles.html", "ganho-mic", grava="gravar_pelo_gesto")
-def ganho_mic(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """O deslizante do ganho de entrada — **o ato que faltava ao número**.
-
-    Ordem, 20/09/2026, olhando a tela instalada:
-
-        O deslizante estava fora da posição do desenho aprovado, e além disso
-        não funcionava.
-
-    As duas metades da queixa são a mesma falta. O ganho nasceu naquela manhã
-    com leitor, barra, número, cinza e razão — e com um `<span class="cheio">`
-    no lugar do deslizante. Um `span` PINTA; ele não recebe arrasto. A barra
-    mostrava o ganho certo e não havia onde pegá-la.
-
-    **ELE NÃO PASSA PELO DAEMON, e é por desenho.** O ganho de entrada é da
-    PLACA (`Headset Capture Volume`, o elemento de captura do `amixer`), não do
-    firmware do DualSense: não há método de IPC para ele, e inventar um faria o
-    daemon virar intermediário de um valor que o `alsa-lib` já expõe. Quem
-    escreve é :func:`definir_ganho_do_microfone`, e quem confirma é a releitura.
-
-    **A RECUSA TEM RAZÃO E ELA JÁ EXISTIA:** :data:`RAZAO_DO_GANHO_FORA` é o
-    mesmo texto que pinta o trilho de cinza quando o controle está no rádio.
-    Uma segunda frase aqui faria a tela explicar o mesmo fato de duas maneiras.
-    """
-    uniq = _uniq(o)
-    if not uniq:
-        raise ValueError("ganho-mic: o clique não disse em qual controle")
-    if (str(o.get("tipo") or "").lower() == "input"
-            and str(o.get("evento") or "").lower() == "click"):
-        return
-    crua = o.get("valor")
-    if crua is None:
-        raise ValueError("ganho-mic: o deslizante não mandou valor nenhum")
-    try:
-        pedido = int(float(crua))
-    except (TypeError, ValueError):
-        raise ValueError(
-            "ganho-mic: o deslizante não mandou um número") from None
-
-    na_mesa = [str(c.get("uniq") or "") for c in ctx.conectados if c.get("uniq")]
-    ficou = definir_ganho_do_microfone(uniq, pedido, na_mesa)
-    if ficou is None:
-        raise RuntimeError(RAZAO_DO_GANHO_FORA)
-    # `_lembrar_do_som`: o perfil descreve o que FICOU DE PÉ, não a intenção.
-    _lembrar_do_som(ctx, uniq, mic={"gain": ficou[0]})
 
 
 @gesto("02-controles.html", "volume", grava="gravar_pelo_gesto")
@@ -2967,4 +2645,4 @@ PROVAS = [
                  "uniq": "aa:bb:cc:00:00:01"})]},
 ]
 
-SEM_CHAMADA = ("sensor", "touchpad", "mira", "analogico-lado", "toque")
+SEM_CHAMADA = ("sensor", "touchpad", "analogico-lado")

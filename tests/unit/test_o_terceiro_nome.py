@@ -93,7 +93,7 @@ class TestOAtoMudouParaCaberNoNome:
         """O nome tem DOIS lados e o ato faz os dois."""
         fonte = PACOTE.read_text(encoding="utf-8")
         i = fonte.index("if qual == ROTA_NADA_NO_CONTROLE:")
-        ramo = fonte[i : fonte.index("if qual == ROTA_OUVIR_JUNTO:", i)]
+        ramo = fonte[i : fonte.index("\n        return\n", i)]
         assert "devolver_o_som_do_pc(de=uniq" in ramo, "o PC não recebe de volta"
         assert "CANAL_NADA_NO_CONTROLE" in ramo, "o byte do controle não é escrito"
         assert "speaker_set(" in ramo, "o byte não chega ao aparelho"
@@ -102,14 +102,14 @@ class TestOAtoMudouParaCaberNoNome:
         """Os três são UM estado."""
         fonte = PACOTE.read_text(encoding="utf-8")
         i = fonte.index("if qual == ROTA_NADA_NO_CONTROLE:")
-        ramo = fonte[i : fonte.index("if qual == ROTA_OUVIR_JUNTO:", i)]
+        ramo = fonte[i : fonte.index("\n        return\n", i)]
         assert '"sfx"' in ramo and '"mix"' in ramo
 
     def test_ele_nao_toca_som_de_confirmacao(self) -> None:
         """Os outros dois tocam para responder *"por onde ele sai agora"*."""
         fonte = PACOTE.read_text(encoding="utf-8")
         i = fonte.index("if qual == ROTA_NADA_NO_CONTROLE:")
-        ramo = fonte[i : fonte.index("if qual == ROTA_OUVIR_JUNTO:", i)]
+        ramo = fonte[i : fonte.index("\n        return\n", i)]
         assert "_confirmar_com_som" not in ramo
 
 

@@ -61,7 +61,7 @@ def faixa(monkeypatch: pytest.MonkeyPatch) -> Iterator[list[tuple[str, ...]]]:
     """Troca as cinco leituras por um dublê lento e devolve os caches como estavam."""
     guardado: dict[str, Any] = {
         "camada1": dict(a02._CAMADA_1), "sono": dict(a02._SONO),
-        "ganho": dict(a02._GANHO), "quando": a02._CAMADA_1_QUANDO[0],
+        "quando": a02._CAMADA_1_QUANDO[0],
         "selo": a02._CAMADA_1_SELO[0], "voo": a02._CAMADA_1_EM_VOO[0],
         "lento": dict(a09._LENTO), "lento_selo": a09._LENTO_SELO[0],
         "lento_voo": a09._LENTO_EM_VOO[0], "antes": pacotes._NA_MESA_ANTES[0],
@@ -83,11 +83,10 @@ def faixa(monkeypatch: pytest.MonkeyPatch) -> Iterator[list[tuple[str, ...]]]:
     fim = time.monotonic() + TETO_DA_THREAD_S
     while a09._LENTO_EM_VOO[0] and time.monotonic() < fim:
         time.sleep(0.01)
-    for cache in (a02._CAMADA_1, a02._SONO, a02._GANHO, a09._LENTO):
+    for cache in (a02._CAMADA_1, a02._SONO, a09._LENTO):
         cache.clear()
     a02._CAMADA_1.update(guardado["camada1"])
     a02._SONO.update(guardado["sono"])
-    a02._GANHO.update(guardado["ganho"])
     a02._CAMADA_1_QUANDO[0] = guardado["quando"]
     a02._CAMADA_1_SELO[0] = guardado["selo"]
     a02._CAMADA_1_EM_VOO[0] = guardado["voo"]

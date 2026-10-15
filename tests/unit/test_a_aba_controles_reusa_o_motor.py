@@ -400,12 +400,17 @@ def test_inputs_com_leitura_e_sem_touchpad_nao_e_sem_toque(pac, a02):
     de o `state_full` ser pedido a chave ainda não existe — 24 das 60 amostras
     de 02/09/2026.
 
+    A palavra saiu do cartão com o desenho do todo (15/10/2026); ela segue no dono,
+    `dedos_do_controle`, e o ponto do cartão não acende sem leitura.
+
     MORDE: voltar ao `e.get("touchpad") or {}` reprova aqui com `'Sem toque'`.
     """
     import mesa_viva
 
-    d = _card(pac, a02, {**BASE, "inputs": {"buttons": ["cross"]}})
-    assert d["touch-estado"] == mesa_viva.SEM_LEITOR
+    sem_touchpad = {"buttons": ["cross"]}
+    assert a02.dedos_do_controle(sem_touchpad)[0] == mesa_viva.SEM_LEITOR
+    d = _card(pac, a02, {**BASE, "inputs": sem_touchpad})
+    assert d["touch-ponto"] == d["touch-ponto-2"] == ""
 
 
 def test_a_palavra_do_touchpad_e_a_do_produto(pac, a02):
@@ -425,12 +430,11 @@ def test_a_palavra_do_touchpad_e_a_do_produto(pac, a02):
     """
     from hefesto_dualsense4unix.interface.sensores import texto_toques
 
-    solto = _card(pac, a02, {**BASE, "inputs": {
-        "touchpad": TOUCHPAD_COMO_O_DAEMON_PUBLICA}})
-    tocando = _card(pac, a02, {**BASE, "inputs": {
-        "touchpad": {**TOUCHPAD_COMO_O_DAEMON_PUBLICA, "touching": True}}})
-    assert solto["touch-estado"] == texto_toques(0) == "Sem toque"
-    assert tocando["touch-estado"] == texto_toques(1) == "1 toque"
+    solto = a02.dedos_do_controle({"touchpad": TOUCHPAD_COMO_O_DAEMON_PUBLICA})[0]
+    tocando = a02.dedos_do_controle(
+        {"touchpad": {**TOUCHPAD_COMO_O_DAEMON_PUBLICA, "touching": True}})[0]
+    assert solto == texto_toques(0) == "Sem toque"
+    assert tocando == texto_toques(1) == "1 toque"
 
 
 def test_o_bloco_que_a_recusa_protegia_o_daemon_nao_publica():
@@ -643,13 +647,13 @@ def test_publicada_a_pagina_o_retangulo_da_luz_diz_o_que_o_campo_diz(
 
 def test_publicada_a_pagina_o_ponto_do_touchpad_segue_o_campo(
         pac, a02, com_a_pagina_publicada):
-    """O par completo: a palavra e o ponto saem da MESMA leitura."""
+    """O ponto do cartão segue a leitura do touchpad: apagado solto, aceso com o dedo."""
     solto = _card(pac, a02, {**BASE, "inputs": {
         "touchpad": TOUCHPAD_COMO_O_DAEMON_PUBLICA}})
     tocando = _card(pac, a02, {**BASE, "inputs": {
         "touchpad": {**TOUCHPAD_COMO_O_DAEMON_PUBLICA, "touching": True}}})
-    assert (solto["touch-estado"], solto["touch-ponto"]) == ("Sem toque", "")
-    assert tocando["touch-estado"] == "1 toque" and tocando["touch-ponto"]
+    assert solto["touch-ponto"] == ""
+    assert tocando["touch-ponto"]
 
 
 # já cobra a PALAVRA (que o `data-campo="touch-ponto"` carregue o seu

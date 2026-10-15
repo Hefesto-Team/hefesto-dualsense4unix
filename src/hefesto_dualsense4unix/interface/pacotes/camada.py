@@ -31,14 +31,11 @@ CAMADA: dict[tuple[str, str], str] = {
     ("01-jogar.html", "reconectar"): _A,
     ("02-controles.html", "analogico-lado"): _J,
     ("02-controles.html", "escolher-na-fita"): _W,
-    ("02-controles.html", "ganho-mic"): _C,
     ("02-controles.html", "mic-retorno"): _W,
-    ("02-controles.html", "mira"): _J,
     ("02-controles.html", "modo-dos-controles"): _J,
     ("02-controles.html", "mudo"): _C,
     ("02-controles.html", "rota"): _C,
     ("02-controles.html", "sensor"): _C,
-    ("02-controles.html", "toque"): _J,
     ("02-controles.html", "touchpad"): _C,
     ("02-controles.html", "volume"): _C,
     ("02-controles.html", "volume-padrao"): _C,
@@ -205,19 +202,13 @@ FRASE_NO_NATIVO = "Em modo nativo o jogo lê este controle direto, e o Hefesto n
 MIRA_CINZA_NO_NATIVO = (
     "Em modo nativo o jogo lê este controle direto, e o analógico virtual não grava."
 )
-TOQUE_CINZA_NO_NATIVO = (
-    "Em modo nativo o jogo lê este controle direto, e o Cursor e os Botões do "
-    "touchpad não gravam."
-)
 
 #: a frase própria de um gesto, quando ele nomeia o que o chip deixou de fazer. O Analógico
 #: Virtual também se liga e troca de lado na Calibrar, que não é uma das cinco abas: o gesto
 #: nomeado aqui recusa no Nativo em QUALQUER página, como recusava antes de a recusa vir
 #: para a camada.
 FRASES_NO_NATIVO: dict[tuple[str, str], str] = {
-    ("02-controles.html", "mira"): MIRA_CINZA_NO_NATIVO,
     ("02-controles.html", "analogico-lado"): MIRA_CINZA_NO_NATIVO,
-    ("02-controles.html", "toque"): TOQUE_CINZA_NO_NATIVO,
     ("calibrar-sensores.html", "analogico-virtual"): MIRA_CINZA_NO_NATIVO,
     ("calibrar-sensores.html", "analogico-lado"): MIRA_CINZA_NO_NATIVO,
 }
@@ -267,7 +258,6 @@ __all__ = [
     "JOGO",
     "MIRA_CINZA_NO_NATIVO",
     "RODAPE_VIVO_NO_NATIVO",
-    "TOQUE_CINZA_NO_NATIVO",
     "VIVOS_NO_NATIVO",
     "no_nativo",
     "recusa_no_nativo",
