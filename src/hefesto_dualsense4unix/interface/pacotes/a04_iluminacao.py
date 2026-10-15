@@ -1393,11 +1393,32 @@ def efeito_do_controle(p: dict[str, Any] | None, uniq: str) -> str | None:
     return do_perfil or None
 
 
+def perfil_da_lista_de_efeito(p: dict[str, Any] | None) -> dict[str, Any] | None:
+    """O perfil de onde a lista de efeitos lê: o ativo, ou, SEM perfil ativo, o do computador.
+
+    O efeito que a pessoa escolheu sem perfil ativo vai ao ``maquina.json`` (o padrão do
+    computador); ler o perfil vazio ali mostrava «Luz fixa» sobre um efeito guardado.
+    """
+    if p:
+        return p
+    try:
+        from hefesto_dualsense4unix.profiles.o_padrao_do_computador import (
+            o_computador,
+            perfil_que_vale,
+            perfil_vazio,
+        )
+
+        vista = perfil_que_vale(perfil_vazio(), o_computador())
+        return vista.model_dump(mode="json", exclude_unset=True)
+    except Exception:
+        return p
+
+
 def escolha_da_lista(p: dict[str, Any] | None, uniq: str, brilho: float | None) -> str:
     """O que a lista de efeitos mostra: Sem efeito (barra apagada), o efeito, ou Luz fixa."""
     if brilho is not None and brilho <= 0.0:
         return SEM_EFEITO
-    return efeito_do_controle(p, uniq) or LUZ_FIXA
+    return efeito_do_controle(perfil_da_lista_de_efeito(p), uniq) or LUZ_FIXA
 
 
 
@@ -1452,7 +1473,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         if casa.get("pref"):
             luz_do_desenho[str(casa["pref"])] = (_hex(acesa) if acesa else "", n)
             listas_de_efeito[f'[data-controle="{casa["pref"]}"] select.g4-efeito'] = (
-                opcoes_do_efeito(biblioteca, efeito_do_controle(p, uniq)))
+                opcoes_do_efeito(
+                    biblioteca, efeito_do_controle(perfil_da_lista_de_efeito(p), uniq)))
         colunas[uniq] = {
             "brilho": "—" if pct is None else f"{pct}%",
             CAMPO_DO_EFEITO: escolha_da_lista(

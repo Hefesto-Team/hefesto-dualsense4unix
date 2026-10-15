@@ -2991,6 +2991,8 @@ class PyDualSenseController(IController):
         último inteiro não sai de novo, e `forcar` ignora a memória. Modo Nativo: sem `0x31`, salvo
         `apesar_do_mudo`.
         """
+        # Dono único das repinturas: o efeito da barra (`luz_animada`) lê este contador.
+        self._repinturas_da_luz += 1
         if forcar and no is not None:
             with contextlib.suppress(Exception):
                 no.invalidate_cache()
@@ -3024,9 +3026,7 @@ class PyDualSenseController(IController):
             )
         else:
             ok = self._escrever_a_luz_no_fluxo(key, handle, desired.led, players, what=what)
-        self._levar_o_brilho_das_luzes(
-            key, handle, desired.player_led_brightness, what=what
-        )
+        self._levar_o_brilho_das_luzes(key, handle, desired.player_led_brightness, what=what)
         return ok, desired.led, players
 
     def _escrever_a_luz_no_no(
@@ -5369,6 +5369,15 @@ class PyDualSenseController(IController):
         return self._write_partial_output(
             handle, node, _DesiredOutput(led=rgb), what="efeito_da_luz"
         )
+
+    #: Quantas vezes a luz RESOLVIDA foi repintada (``_repintar_a_luz_de_um``). Default de CLASSE,
+    #: como os de cima: o dublê feito por ``__new__`` também conta.
+    _repinturas_da_luz: int = 0
+
+    @property
+    def repinturas_da_luz(self) -> int:
+        """O contador das repinturas da luz resolvida; só sobe, e o ``luz_animada`` o lê."""
+        return self._repinturas_da_luz
 
 
 #: (`battery_pct=..., battery_state=...`) e o `**self._carga(...)` no

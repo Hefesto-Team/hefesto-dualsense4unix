@@ -75,6 +75,7 @@ class _BackendMinimo:
         self._sysfs_written: dict[str, Any] = {}
         self._game_authority_provider = None
         self._pinturas_de_lightbar = 0
+        self._repinturas_da_luz = 0
 
     def _record_desired_locked(self, _alvo: str | None, _campos: dict) -> None:
         return None

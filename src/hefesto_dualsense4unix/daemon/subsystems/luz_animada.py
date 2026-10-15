@@ -2,11 +2,11 @@
 
 O perfil guarda o efeito de cada controle em ``leds.efeito`` (``base;cores;ritmo``); ``None`` é a
 luz fixa e este laço não escreve nada. Quem manda na barra, em ordem: o jogo (cala quando ele
-pinta, pela política do tato vivo), o Modo Nativo, o Automático da aba e o brilho zero. No máximo
-30 quadros por segundo por controle, quadro igual ao anterior não sai, e o piscar não passa de
-3 Hz (WCAG 2.3.1). O quadro pinta a barra sem entrar no estado desejado, que segue o do perfil,
-o do gesto e o do jogo; ao sair, a barra volta a ele. Enquanto o pulso do tiro do tato vivo segura a
-barra, o efeito espera.
+pinta, pela política do tato vivo), o Modo Nativo, o Automático da aba, o brilho zero e a «Bateria
+longa» (a barra fica fixa na cor do perfil). No máximo 30 quadros por segundo por controle, quadro
+igual ao anterior não sai, e o piscar não passa de 3 Hz (WCAG 2.3.1). O quadro pinta a barra sem
+entrar no estado desejado, que segue o do perfil, o do gesto e o do jogo; ao sair, a barra volta a
+ele. Enquanto o pulso do tiro do tato vivo segura a barra, o efeito espera.
 O porquê de cada escolha: docs/research/o-porque-dos-modulos.md, seção «luz_animada».
 """
 from __future__ import annotations
@@ -32,6 +32,9 @@ from hefesto_dualsense4unix.profiles.schema import (
     EfeitoDaLuz,
     LedsConfig,
     Profile,
+    controles_em_economia,
+    economia_da_mesa,
+    economia_vale,
     ler_o_efeito_da_luz,
 )
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -118,17 +121,39 @@ def _leds_do_controle(perfil: Profile, uniq: str) -> tuple[LedsConfig | None, se
     return leds, set(leds.model_fields_set) if leds is not None else set()
 
 
-def plano_do_perfil(perfil: Profile, uniqs: list[str]) -> dict[str, PlanoDoControle]:
+def _em_economia(
+    uniq: str, mesa: bool, em_economia: frozenset[str]
+) -> bool:
+    """A economia vale neste controle? A mesma regra que põe a economia na vista do perfil."""
+    from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+    return economia_vale(norm_mac(uniq) in em_economia, mesa)
+
+
+def plano_do_perfil(
+    perfil: Profile,
+    uniqs: list[str],
+    *,
+    mesa_em_economia: bool | None = None,
+    em_economia: frozenset[str] | None = None,
+) -> dict[str, PlanoDoControle]:
     """O plano de cada controle em ``uniqs``; quem não tem efeito (ou não pode tê-lo) fica de fora.
 
     O efeito do controle vale se ele o escreveu (``efeito`` nos campos dele, inclusive ``None`` =
     luz fixa explícita); senão herda o global. O brilho segue a regra de
     ``profiles.manager._controllers_to_specs``: o do controle se ele o escreveu, senão o global.
+    Na economia «Bateria longa» (da mesa inteira ou do controle, a mesma ``economia_vale`` da
+    vista que vai ao aparelho) o controle fica de fora: a barra segue fixa na cor do perfil, e ao
+    sair da economia o plano o devolve. Sem a economia na mão, lê a declaração viva.
     """
     if perfil.leds.modo == "automatico":  # (noqa-acento) chave do contrato
         return {}
+    mesa = economia_da_mesa() if mesa_em_economia is None else bool(mesa_em_economia)
+    ligados = controles_em_economia() if em_economia is None else em_economia
     fora: dict[str, PlanoDoControle] = {}
     for uniq in uniqs:
+        if _em_economia(uniq, mesa, ligados):
+            continue
         leds, campos = _leds_do_controle(perfil, uniq)
         texto = leds.efeito if leds is not None and "efeito" in campos else perfil.leds.efeito
         efeito = ler_o_efeito_da_luz(texto)
@@ -210,6 +235,14 @@ class LuzAnimada:
             escritos += 1
         return escritos
 
+    def repintar(self) -> None:
+        """Esquece o último quadro de todos: o corrente sai no próximo tique, mesmo igual.
+
+        Quem repintou a barra por fora (a cor base do perfil) a deixou diferente do que este laço
+        acha que está lá; sem isto a cor base ficaria até o primeiro quadro DIFERENTE do efeito.
+        """
+        self._ultimo_quadro.clear()
+
     def parar(self, uniq: str) -> None:
         """Devolve a barra de ``uniq`` ao perfil, uma vez; sem efeito tocando, não faz nada."""
         if self._inicio.pop(uniq, None) is None:
@@ -264,9 +297,21 @@ class Passo:
         self.luz = luz
         self._plano: dict[str, PlanoDoControle] = {}
         self._lido_em = float("-inf")
+        self._repinturas: int | None = None
+
+    def _houve_repintura_de_fora(self) -> bool:
+        """O backend repintou a luz resolvida desde o último tique? (o contador dele subiu)."""
+        contador = getattr(getattr(self.daemon, "controller", None), "repinturas_da_luz", None)
+        if not isinstance(contador, int):
+            return False
+        subiu = self._repinturas is not None and contador != self._repinturas
+        self._repinturas = contador
+        return subiu
 
     def __call__(self, agora: float) -> int:
         controles = controles_do_daemon(self.daemon)
+        if self._houve_repintura_de_fora():
+            self.luz.repintar()
         if agora - self._lido_em >= RELEITURA_DO_PLANO_S:
             self._lido_em = agora
             perfil = perfil_ativo(self.daemon)
