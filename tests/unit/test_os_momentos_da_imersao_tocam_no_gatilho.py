@@ -7,7 +7,8 @@ perfil de mentira e um backend que anota cada bloco e cada fim de sessão.
 
 MORDIDAS: tirar a guarda do jogo do `AtuadorDosMomentos.relogio` (o momento escreve com o
 jogo mandando) reprova `test_o_jogo_que_escreve_o_gatilho_cala_o_momento`; tirar o
-`valem_em` de `momentos_no_modo` reprova `test_a_rajada_escreve_a_cada_200_ms_so_no_machine`.
+`valem_em` de `momentos_no_modo` reprova `test_a_rajada_escreve_a_cada_200_ms_so_no_machine`;
+devolver a sessão a cada batida reprova `test_o_automatico_toca_o_que_o_estilo_poe_na_frente`.
 """
 from __future__ import annotations
 
@@ -317,6 +318,18 @@ def test_a_batida_que_sai_entre_duas_batidas_devolve_a_sessao(
     escritos = len(mesa.backend.blocos)
     mesa.rodar(2.0)
     assert len(mesa.backend.blocos) == escritos, "sem a imersão, nenhuma batida mais"
+
+
+def test_o_jogo_que_toma_o_gatilho_entre_duas_batidas_fica_com_a_sessao(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mesa = _mesa(monkeypatch, _perfil(estilo="terror", triggers=AUTOMATICO))
+    mesa.rodar(0.5)  # uma batida e o Off à mão: a sessão é do momento
+    mesa.daemon._gamepad_device.visto_ha_s = {"trigger": 0.0}
+    mesa.rodar(0.1)
+    assert mesa.motor.contadores["soltos_ao_jogo"] == 1, "o momento larga a sessão ao jogo"
+    mesa.motor.parar(mesa.t)
+    assert P1 not in [u for _t, u in mesa.backend.sessoes], "o motor não devolve o que é do jogo"
 
 
 def test_a_corda_comeca_leve_no_aperto_e_pesa_a_cada_meio_segundo(
