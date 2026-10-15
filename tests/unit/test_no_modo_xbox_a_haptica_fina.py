@@ -40,9 +40,10 @@ _QUATRO = (_P1, _P2, _P3, _P4)
 _APARELHOS = (("3-8", 28), ("3-7", 29), ("3-6", 30), ("3-5", 31))
 _MARCA = {u: eh.marca_do_aparelho(u) for u in _QUATRO}
 _CLIENTE = {eh.marca_do_aparelho(u): str(60 + n) for n, u in enumerate(_QUATRO, 1)}
-# Os motores abertos levam o ganho de fábrica em fator linear (OS-QUATRO-EM-HARMONIA-01).
-_ABERTO = ["100%", "100%", *[f"{HAPTICA_PCT_PADRAO / 100:.4f}"] * 2]
-_FECHADO = ["100%", "100%", "0%", "0%"]
+# Os quatro canais vão em fator linear (OS-QUATRO-EM-HARMONIA-01, `d592c884a`): a frente cheia e os
+# motores abertos com o ganho de fábrica.
+_ABERTO = ["1.0000", "1.0000", *[f"{HAPTICA_PCT_PADRAO / 100:.4f}"] * 2]
+_FECHADO = ["1.0000", "1.0000", "0.0000", "0.0000"]
 
 
 class _Fluxos:
