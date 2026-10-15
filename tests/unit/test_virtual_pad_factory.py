@@ -414,3 +414,30 @@ def test_a_normalizacao_sobrevive_ao_duble_do_coop() -> None:
         f"{presos} está segurando um `normalize_flavor` que não é o do dono. "
         f"Um dublê preso decide o backend do vpad pelo arquivo que rodou antes "
         f"— e o produto responde sobre outra coisa que não o produto.")
+
+
+def test_o_pad_do_aparelho_que_nasce_decide_o_gadget_estacionado(
+    backends: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A fábrica é o dono da adoção, nas duas saídas: o uhid e o uinput.
+
+    O-P3-VOLTA-INTEIRO (14/10/2026): o pad do aparelho que nasce sem retomar o
+    gadget estacionado o derruba aqui, sem relógio; o pad que não subiu não
+    decide nada, e o sem identidade não é de aparelho nenhum.
+
+    MORDIDA: em ``virtual_pad._o_pad_nasceu``, tire a chamada a
+    ``o_pad_do_aparelho_nasceu`` — a lista fica vazia.
+    """
+    from hefesto_dualsense4unix.integrations import uhid_gamepad
+
+    decididos: list[str] = []
+    monkeypatch.setattr(
+        uhid_gamepad, "o_pad_do_aparelho_nasceu", lambda i: decididos.append(i) or False
+    )
+    assert make_virtual_pad("dualsense", identity="aa:bb:cc:00:00:01") is backends["uhid"]
+    assert make_virtual_pad("xbox", identity="aa:bb:cc:00:00:02") is backends["uinput"]
+    assert decididos == ["aa:bb:cc:00:00:01", "aa:bb:cc:00:00:02"]
+    backends["uinput_start_ok"] = False
+    assert make_virtual_pad("xbox", identity="aa:bb:cc:00:00:03") is None
+    make_virtual_pad("dualsense")
+    assert decididos == ["aa:bb:cc:00:00:01", "aa:bb:cc:00:00:02"]

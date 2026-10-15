@@ -2274,7 +2274,8 @@ def _e_eco_puro(body: bytes) -> bool:
 
 _GADGET_ENUMERA_S = 15.0
 _GADGET_VARRE_S = 5.0
-#: o prazo do pad que renasce para retomar o gadget do aparelho que ficou.
+#: o prazo do estacionado cujo aparelho está AQUI e que nenhuma adoção decidiu
+#: (a emulação desligada): conta de quando o vigia o viu de volta, nunca do estacionamento.
 _GADGET_RETOMA_S = 10.0
 _GADGET_VIGIA_S = 0.25
 _GADGET_VEZ_DA_ESCRITA_MS = 8
@@ -2398,57 +2399,83 @@ APARELHO_PRESENTE: Callable[[str], bool] = pad_usb.aparelho_presente
 CONTRATO_QUE_FALTA: Callable[[], list[str]] = system_check.contrato_do_pad_em_usb
 
 
+@dataclass
+class _Estacionado:
+    """Um gadget que espera o jogo fechar, e desde quando o aparelho dele está aqui."""
+
+    gadget: _GadgetDoPad
+    #: a varredura que viu o aparelho de volta (None = ainda fora); o prazo conta daqui.
+    aqui_desde: float | None = None
+
+
 class _GadgetsEstacionados:
-    """O gadget do aparelho que caiu espera o jogo fechar (a cura 7).
+    """O gadget do aparelho que caiu espera o jogo fechar, e o aparelho que volta o retoma.
 
-    O jogo grava o device KS no lançamento com o GUID daquela hora, e o GUID
-    sai do `usb_device` (`DEVNUM`, `USEC_INITIALIZED`): remontar o gadget
-    muda o GUID e o som se perde. Por isso, com jogo aberto, o gadget do
-    aparelho que saiu fica de pé, parado no neutro, e o aparelho que volta o
-    retoma; sem jogo, ele desce. É a regra do nó de háptica.
-
-    O pad que renasce na hora (o co-op que refaz o jogador, o nó que mudou)
-    retoma o gadget no mesmo tique. Mas o aparelho que continua AQUI e não o
-    retoma em `_GADGET_RETOMA_S` trocou de máscara ou saiu da emulação: de pé,
-    o gadget seria um DualSense fantasma ao lado do pad novo ou do físico
-    devolvido, e ele desce mesmo com o jogo aberto.
+    Sem jogo, ele desce. Com jogo, o fantasma se decide pela adoção
+    (:meth:`a_adocao_decidiu`, chamada pela fábrica do pad): o pad que nasce sem
+    retomá-lo o derruba. Só o aparelho que está aqui sem adoção (a emulação
+    desligada) desce pelo prazo, contado da volta dele. O porquê está em
+    ``docs/research/o-porque-dos-modulos.md`` (o gadget estacionado).
     """
 
     def __init__(self) -> None:
         self._trava = threading.Lock()
-        self._por_aparelho: dict[str, tuple[_GadgetDoPad, float]] = {}
+        self._por_aparelho: dict[str, _Estacionado] = {}
         self._vigia: threading.Thread | None = None
 
     def estacionar(self, identidade: str, gadget: _GadgetDoPad) -> None:
         chave = pad_usb._so_hex(identidade)
         with self._trava:
-            antigo_e_hora = self._por_aparelho.pop(chave, None)
-            antigo = antigo_e_hora[0] if antigo_e_hora is not None else None
-            self._por_aparelho[chave] = (gadget, time.monotonic())
+            antigo = self._por_aparelho.pop(chave, None)
+            self._por_aparelho[chave] = _Estacionado(gadget)
             if self._vigia is None or not self._vigia.is_alive():
                 self._vigia = threading.Thread(
                     target=self._vigiar, name="hefesto-pad-usb-estacionados", daemon=True
                 )
                 self._vigia.start()
-        if antigo is not None and antigo is not gadget:
-            antigo.desmontar()
+        if antigo is not None and antigo.gadget is not gadget:
+            antigo.gadget.desmontar()
 
     def retomar(self, identidade: str | None) -> _GadgetDoPad | None:
         if not identidade:
             return None
         with self._trava:
             achado = self._por_aparelho.pop(pad_usb._so_hex(identidade), None)
-        return achado[0] if achado is not None else None
+        return achado.gadget if achado is not None else None
+
+    def tem(self, identidade: str | None) -> bool:
+        """O gadget do aparelho ``identidade`` está estacionado agora?"""
+        chave = pad_usb._so_hex(identidade or "")
+        with self._trava:
+            return bool(chave) and chave in self._por_aparelho
 
     def quantos(self) -> int:
         with self._trava:
             return len(self._por_aparelho)
 
-    def varrer(self, agora: float | None = None) -> int:
-        """Sem jogo, todo gadget estacionado desce; com jogo, só o fantasma.
+    def a_adocao_decidiu(self, identidade: str | None) -> bool:
+        """O pad do aparelho nasceu e não retomou o gadget: o estacionado é fantasma.
 
-        O fantasma é o do aparelho que está AQUI e não retomou o gadget em
-        `_GADGET_RETOMA_S`. Devolve quantos desceram.
+        True = desceu. O pad que retomou já o tirou daqui, e então nada muda.
+        """
+        chave = pad_usb._so_hex(identidade or "")
+        if not chave:
+            return False
+        with self._trava:
+            achado = self._por_aparelho.pop(chave, None)
+        if achado is None:
+            return False
+        logger.info("pad_usb_estacionado_desce", gadget=achado.gadget.gadget,
+                    motivo="a_adocao_nao_o_retomou")
+        achado.gadget.desmontar()
+        return True
+
+    def varrer(self, agora: float | None = None) -> int:
+        """Sem jogo, todo gadget estacionado desce; com jogo, só o fantasma sem adoção.
+
+        O fantasma é o do aparelho que está AQUI há `_GADGET_RETOMA_S`, contados
+        da primeira varredura que o viu de volta, sem que adoção nenhuma o
+        tenha decidido. O que sai de novo zera a conta. Devolve quantos desceram.
         """
         with self._trava:
             if not self._por_aparelho:
@@ -2456,21 +2483,24 @@ class _GadgetsEstacionados:
         if JOGO_ABERTO():
             momento = time.monotonic() if agora is None else agora
             with self._trava:
-                vencidos = [
-                    chave for chave, (_g, hora) in self._por_aparelho.items()
-                    if momento - hora >= _GADGET_RETOMA_S
-                ]
-            fantasmas = [chave for chave in vencidos if APARELHO_PRESENTE(chave)]
+                chaves = list(self._por_aparelho)
+            aqui = {chave: APARELHO_PRESENTE(chave) for chave in chaves}
+            descem = []
             with self._trava:
-                descem = [
-                    self._por_aparelho.pop(chave)[0]
-                    for chave in fantasmas
-                    if chave in self._por_aparelho
-                    and momento - self._por_aparelho[chave][1] >= _GADGET_RETOMA_S
-                ]
+                for chave, presente in aqui.items():
+                    vaga = self._por_aparelho.get(chave)
+                    if vaga is None:
+                        continue
+                    if not presente:
+                        vaga.aqui_desde = None
+                        continue
+                    if vaga.aqui_desde is None:
+                        vaga.aqui_desde = momento
+                    if momento - vaga.aqui_desde >= _GADGET_RETOMA_S:
+                        descem.append(self._por_aparelho.pop(chave).gadget)
         else:
             with self._trava:
-                descem = [gadget for gadget, _hora in self._por_aparelho.values()]
+                descem = [vaga.gadget for vaga in self._por_aparelho.values()]
                 self._por_aparelho.clear()
         for gadget in descem:
             logger.info("pad_usb_estacionado_desce", gadget=gadget.gadget)
@@ -2488,6 +2518,16 @@ class _GadgetsEstacionados:
 
 
 _GADGETS_ESTACIONADOS = _GadgetsEstacionados()
+
+
+def gadget_estacionado(identidade: str | None) -> bool:
+    """O gadget do aparelho espera o jogo fechar? Então o endpoint de háptica dele também fica."""
+    return _GADGETS_ESTACIONADOS.tem(identidade)
+
+
+def o_pad_do_aparelho_nasceu(identidade: str | None) -> bool:
+    """A adoção decidiu: o estacionado que o pad novo não retomou desce. True = desceu."""
+    return _GADGETS_ESTACIONADOS.a_adocao_decidiu(identidade)
 _CONTRATOS_JA_AVISADOS: set[tuple[str, ...]] = set()
 
 
@@ -2810,6 +2850,8 @@ __all__ = [
     "VPAD_PRODUCT",
     "UhidDualSense",
     "capture_dualsense_blueprint",
+    "gadget_estacionado",
+    "o_pad_do_aparelho_nasceu",
     "player_mac",
     "uhid_available",
     "vpad_mac",

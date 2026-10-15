@@ -171,6 +171,22 @@ def _pendurar_o_caminho(pad: object, caminho: str) -> None:
         logger.debug("vpad_sem_lugar_para_o_caminho", caminho=caminho)
 
 
+def _o_pad_nasceu(pad: object, caminho: str, identity: str | None) -> None:
+    """O pad do aparelho nasceu: o caminho fica nele, e a adoção decide o estacionado.
+
+    O-P3-VOLTA-INTEIRO (14/10/2026): esta fábrica é o ponto por onde passa todo
+    pad de aparelho, o do P1 e o do co-op, no cabo e no rádio. O uhid que
+    retomou o gadget estacionado já o tirou de lá; o pad que nasce sem retomá-lo
+    (outra máscara, o uinput, o uhid sem gadget) deixaria um DualSense fantasma
+    ao lado dele, e o estacionado desce aqui, sem relógio.
+    """
+    _pendurar_o_caminho(pad, caminho)
+    if identity:
+        from hefesto_dualsense4unix.integrations.uhid_gamepad import o_pad_do_aparelho_nasceu
+
+        o_pad_do_aparelho_nasceu(identity)
+
+
 def _vestir_o_aparelho(
     pad: object, aparelho: str, *, mascara: str, player: int, motivo: str | None = None
 ) -> None:
@@ -374,7 +390,7 @@ def make_virtual_pad(
             mic_mute_sink=mic_mute_sink,
         )
         if uhid is not None:
-            _pendurar_o_caminho(uhid, resolvido)
+            _o_pad_nasceu(uhid, resolvido, identity)
             return uhid
     else:
         motivo = "uhid_vetado_pelo_chamador"
@@ -390,7 +406,7 @@ def make_virtual_pad(
         pad.fallback_motivo = motivo
     if not pad.start():
         return None
-    _pendurar_o_caminho(pad, resolvido)
+    _o_pad_nasceu(pad, resolvido, identity)
     return pad
 
 

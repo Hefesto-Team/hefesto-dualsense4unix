@@ -945,17 +945,22 @@ class TestOPadEmUsbNaoQuebraOResto:
         # O dublê de sempre (um MagicMock morto) continua morto.
         assert vpad_vivo(MagicMock(_started=False)) is False
 
-    def test_o_estacionado_do_aparelho_que_ficou_e_fantasma_e_desce_com_o_jogo(
-        self, bancada: BancadaDoGadget
+    def test_o_estacionado_do_aparelho_que_ficou_sem_adocao_desce_pelo_prazo_da_volta(
+        self, bancada: BancadaDoGadget, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A troca de máscara com o jogo aberto não deixa um DualSense fantasma.
+        """A emulação desligada com o jogo aberto não deixa um DualSense fantasma.
 
-        O pad que renasce na hora retoma o gadget (o GUID do jogo fica); o
-        aparelho que está AQUI e não o retoma no prazo trocou de máscara ou
-        saiu da emulação, e o gadget desce. O que CAIU continua esperando.
+        Sem adoção nenhuma, o aparelho que está AQUI há `_GADGET_RETOMA_S`
+        derruba o gadget; o prazo conta de quando o vigia o viu de volta, e o
+        aparelho que sai de novo zera a conta (O-P3-VOLTA-INTEIRO, 14/10/2026).
+
+        MORDIDA: em ``_GadgetsEstacionados.varrer``, troque ``vaga.aqui_desde =
+        None`` por ``continue`` sem zerar — a conta da primeira volta derruba o
+        gadget na segunda.
         """
         import time
 
+        monkeypatch.setattr(bancada.ug, "_GADGET_VARRE_S", 3600.0)
         bancada.enumerado = ("hidraw9", INTERFACE_DO_GADGET)
         bancada.jogo_aberto = True
         bancada.aparelho_presente = True
@@ -965,15 +970,88 @@ class TestOPadEmUsbNaoQuebraOResto:
         pad.stop()
         estacionados = bancada.ug._GADGETS_ESTACIONADOS
         prazo = bancada.ug._GADGET_RETOMA_S
+        t0 = time.monotonic()
         assert estacionados.quantos() == 1
-        assert estacionados.varrer(agora=time.monotonic() + 1.0) == 0
+        assert estacionados.varrer(agora=t0 + 1.0) == 0
         bancada.aparelho_presente = False
-        assert estacionados.varrer(agora=time.monotonic() + prazo + 1.0) == 0
+        assert estacionados.varrer(agora=t0 + prazo + 1.0) == 0
         assert bancada.clientes[0].desmontados == []
         bancada.aparelho_presente = True
-        assert estacionados.varrer(agora=time.monotonic() + prazo + 1.0) == 1
+        assert estacionados.varrer(agora=t0 + prazo + 2.0) == 0, (
+            "a conta da volta anterior derrubou o gadget do aparelho que acabou de voltar"
+        )
+        assert estacionados.varrer(agora=t0 + 2 * prazo + 1.5) == 0
+        assert estacionados.varrer(agora=t0 + 2 * prazo + 2.0) == 1
         assert estacionados.quantos() == 0
         assert bancada.clientes[0].desmontados == ["hefesto-pad-0"]
+
+    def test_o_aparelho_que_demora_a_voltar_retoma_o_mesmo_gadget(
+        self, bancada: BancadaDoGadget, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """O caso do P3 de 14/10: o `hidraw` voltou 14 s depois, e o co-op o adota.
+
+        O gadget estacionado tem de estar de pé quando a adoção chega, mesmo
+        com o prazo velho (10 s do estacionamento) vencido: a volta pega o
+        MESMO gadget, sem pedido novo ao broker e sem desmontar.
+
+        MORDIDA: devolva o relógio do estacionamento — em ``estacionar``, crie
+        a vaga com ``aqui_desde=time.monotonic()``, e em ``varrer`` não a zere
+        com o aparelho fora — o gadget desce na primeira varredura da volta.
+        """
+        import time
+
+        monkeypatch.setattr(bancada.ug, "_GADGET_VARRE_S", 3600.0)
+        bancada.enumerado = ("hidraw9", INTERFACE_DO_GADGET)
+        bancada.jogo_aberto = True
+        pad = bancada.pad()
+        assert pad.start()
+        assert bancada.esperar(lambda: pad.is_bound)
+        t0 = time.monotonic()
+        pad.stop()
+        estacionados = bancada.ug._GADGETS_ESTACIONADOS
+        assert bancada.ug.gadget_estacionado(IDENTIDADE)
+        for passo in (5.0, 10.0, 14.0):
+            assert estacionados.varrer(agora=t0 + passo) == 0
+        bancada.aparelho_presente = True
+        assert estacionados.varrer(agora=t0 + 14.5) == 0, (
+            "o relógio do estacionamento derrubou o gadget antes da adoção"
+        )
+        assert bancada.clientes[0].desmontados == []
+        de_volta = bancada.pad()
+        try:
+            assert de_volta.start()
+            assert len(bancada.pedidos) == 1, "a volta pediu um gadget novo"
+            assert de_volta.is_bound
+            assert bancada.ug.gadget_estacionado(IDENTIDADE) is False
+            assert bancada.ug.o_pad_do_aparelho_nasceu(IDENTIDADE) is False
+            assert pad_usb.interface_do_aparelho(IDENTIDADE) == INTERFACE_DO_GADGET
+            assert bancada.clientes[0].desmontados == []
+        finally:
+            de_volta.stop()
+
+    def test_a_adocao_sem_o_gadget_derruba_o_estacionado_na_hora(
+        self, bancada: BancadaDoGadget, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """O pad do aparelho nasceu em outra máscara: o estacionado é fantasma, sem relógio.
+
+        MORDIDA: faça ``_GadgetsEstacionados.a_adocao_decidiu`` devolver
+        ``False`` logo na entrada — o gadget fica de pé ao lado do pad novo.
+        """
+        monkeypatch.setattr(bancada.ug, "_GADGET_VARRE_S", 3600.0)
+        bancada.enumerado = ("hidraw9", INTERFACE_DO_GADGET)
+        bancada.jogo_aberto = True
+        bancada.aparelho_presente = True
+        pad = bancada.pad()
+        assert pad.start()
+        assert bancada.esperar(lambda: pad.is_bound)
+        pad.stop()
+        assert bancada.ug.gadget_estacionado(IDENTIDADE)
+        assert bancada.ug.o_pad_do_aparelho_nasceu("aa:bb:cc:00:00:99") is False
+        assert bancada.clientes[0].desmontados == []
+        assert bancada.ug.o_pad_do_aparelho_nasceu(IDENTIDADE) is True
+        assert bancada.ug.gadget_estacionado(IDENTIDADE) is False
+        assert bancada.clientes[0].desmontados == ["hefesto-pad-0"]
+        assert pad_usb.interface_do_aparelho(IDENTIDADE) is None
 
     def test_o_gadget_que_cai_com_o_jogo_aberto_volta_ao_uhid(
         self, bancada: BancadaDoGadget

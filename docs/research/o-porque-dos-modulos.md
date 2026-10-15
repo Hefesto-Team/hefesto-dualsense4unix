@@ -1371,3 +1371,26 @@ todo perfil que não é o Freestyle: medido no diário de 28 e 29/09, seis boots
 sessão em Pro Jank Footy, e nenhum abriu no perfil que ela tinha ativado. A decisão
 de 29/09 revogou a regra para a escolha do usuário.
 
+
+## o gadget estacionado (`integrations/uhid_gamepad.py`)
+
+O jogo grava o device KS no lançamento com o GUID daquela hora, e o GUID sai do
+`usb_device` (`DEVNUM`, `USEC_INITIALIZED`): remontar o gadget muda o GUID, e o
+som da partida se perde (a cura 7 do `docs/process/estudos/2026-10-06-o-engasgo-tem-dono/REPASSE.md`).
+Por isso, com jogo aberto, o gadget do aparelho que saiu fica de pé, parado no
+neutro, e o aparelho que volta o retoma.
+
+**O fantasma se decide pela adoção** (O-P3-VOLTA-INTEIRO, medido às 21h57 de
+14/10/2026): o kernel levou 14 s para devolver o `hidraw` do P3, e o prazo de
+10 s contado do estacionamento derrubou o gadget um segundo antes de o co-op o
+retomar. O dono da decisão é a fábrica do pad (`virtual_pad.make_virtual_pad`,
+por onde passa o pad do P1 e o do co-op, no cabo e no rádio): o pad que retomou
+o gadget já o tirou da vaga, e o que nasce sem retomá-lo (outra máscara, o
+uinput) o derruba na hora. Só o aparelho que está aqui e que nenhuma adoção
+decide (a emulação desligada) desce pelo prazo, contado de quando o vigia o viu
+de volta. O endpoint de háptica do aparelho segue o gadget
+(`AltoFalanteSubsystem._aparelhos_de_pe` pergunta `gadget_estacionado`): o jogo
+ocioso não toca no nó, mas o guardou pelo contêiner do gadget. Só o laço do cabo
+e a ponte do rádio se soltam, porque o aparelho saiu da mesa. O nó de som e o
+microfone descem como antes: eles não declaram `sysfs.path`, e o jogo não os
+acha pelo contêiner.
