@@ -48,12 +48,12 @@ o ``scripts/doctor.sh`` já pega (``check_bt_connected_sem_hidraw``): lá o Blue
 CONHECE o device, e a cura é outra — o pareamento sem registro SDP (o cache sem
 ``[ServiceRecords]``), que não se resolve derrubando link nenhum.
 
-POR QUE O ``hcitool`` FICA (lido no fonte do BlueZ 5.86, 07/10/2026): o zumbi é
+POR QUE SE LÊ NO KERNEL (lido no fonte do BlueZ 5.86, 07/10/2026): o zumbi é
 um ACL SEM ``Device1``. O ``bluetoothd`` cria o objeto para todo ACL que o kernel
 anuncia (``connected_callback``, ``src/adapter.c:9558``), e o ``Adapter1`` não tem
 método que liste conexões (a tabela ``adapter_methods``, ``src/adapter.c:3945-3959``):
-o link que ficou sem objeto só se lê na camada do kernel, abaixo do D-Bus. O recado
-já nomeia o pacote quando a ferramenta falta, em vez de calar.
+o link sem objeto só se lê abaixo do D-Bus, no ``HCIGETCONNLIST`` do ``LeitorDoKernel``,
+o ioctl do ``hcitool con`` sem a ferramenta depreciada, que o Arch e o Fedora não instalam.
 
 O TEMPO É PARTE DA REGRA
 -------------------------
@@ -92,6 +92,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from hefesto_dualsense4unix.integrations.ar_do_adaptador import TIPO_ACL, LeitorDoKernel
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.repo_files import como_atualizar_esta_instalacao
 
@@ -115,8 +116,6 @@ PASTA_DA_REGRA = "/etc/sudoers.d"
 _FORMA_MAC = re.compile(r"^[0-9a-f]{2}(:[0-9a-f]{2}){5}$")
 
 _FORMA_HCI = re.compile(r"^hci[0-9]+$")
-
-_MAC_NA_LINHA = re.compile(r"\b([0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2}){5})\b")
 
 def mac_limpo(valor: str | None) -> str | None:
     """MAC em ``aa:bb:cc:dd:ee:ff`` minúsculo, ou ``None``."""
@@ -206,9 +205,9 @@ class Veredito:
 def adaptadores_na_mesa(
     raiz: str | os.PathLike[str] = RAIZ_ADAPTADORES,
     *,
-    executor: object = None,
+    leitor: LeitorDoKernel | None = None,
 ) -> dict[str, str]:
-    """``{hciN: MAC do adaptador}``, por uma escada de duas fontes."""
+    """``{hciN: MAC do adaptador}``, do sysfs e, quando ele cala, do kernel."""
     achados: dict[str, str] = {}
     try:
         entradas = sorted(Path(raiz).iterdir())
@@ -227,66 +226,41 @@ def adaptadores_na_mesa(
             achados[nome] = endereco
     if achados:
         return achados
-    correr = executor if callable(executor) else _rodar
-    if executor is None and shutil.which("hcitool") is None:
-        return achados
-    for linha in correr(["hcitool", "dev"]).splitlines():
-        partes = linha.split()
-        if len(partes) < 2 or not _FORMA_HCI.match(partes[0]):
+    kernel = leitor if leitor is not None else LeitorDoKernel()
+    for numero in kernel.adaptadores() or ():
+        leitura = kernel.ler(numero)
+        if leitura is None or not leitura.ligado:
             continue
-        endereco = mac_limpo(partes[1])
+        endereco = mac_limpo(leitura.endereco)
         if endereco is not None:
-            achados[partes[0]] = endereco
+            achados[f"hci{numero}"] = endereco
     return achados
-
-
-def _rodar(args: Sequence[str], *, segundos: float = 5.0) -> str:
-    """Executa e devolve o stdout, ou ``""``. Nunca levanta."""
-    ambiente = dict(os.environ)
-    ambiente["LC_ALL"] = "C"
-    try:
-        saida = subprocess.run(
-            list(args),
-            capture_output=True,
-            text=True,
-            timeout=segundos,
-            check=False,
-            env=ambiente,
-        )
-    except (OSError, subprocess.SubprocessError):
-        return ""
-    return saida.stdout or ""
 
 
 def links_de_pe(
     adaptadores: Mapping[str, str],
     *,
-    executor: object = None,
+    leitor: LeitorDoKernel | None = None,
 ) -> tuple[list[LinkDeRadio], list[str]]:
-    """Os ACL de pé, POR ADAPTADOR, e os impedimentos encontrados."""
+    """Os ACL de pé, POR ADAPTADOR, pelo ``HCIGETCONNLIST``, e os impedimentos encontrados."""
     if not adaptadores:
         return [], ["nenhum adaptador de Bluetooth na mesa"]
-    correr = executor if callable(executor) else _rodar
-    if executor is None and shutil.which("hcitool") is None:
-        return [], [
-            "não consigo ler as conexões de rádio: o 'hcitool' foi depreciado "
-            "pelo BlueZ e não está nesta máquina (pacote bluez-deprecated / "
-            "bluez-deprecated-tools)"
-        ]
+    kernel = leitor if leitor is not None else LeitorDoKernel()
     encontrados: list[LinkDeRadio] = []
+    impedimentos: list[str] = []
     for hci, endereco_do_adaptador in sorted(adaptadores.items()):
-        texto = correr(["hcitool", "-i", hci, "con"])
-        for linha in texto.splitlines():
-            achado = _MAC_NA_LINHA.search(linha)
-            if achado is None:
-                continue
-            controle = mac_limpo(achado.group(1))
-            if controle is None:
+        enlaces = kernel.conexoes(int(hci[3:]))
+        if enlaces is None:
+            impedimentos.append(f"o kernel não listou as conexões de rádio de {hci}")
+            continue
+        for enlace in enlaces:
+            controle = mac_limpo(enlace.endereco)
+            if enlace.tipo != TIPO_ACL or controle is None:
                 continue
             encontrados.append(
                 LinkDeRadio(hci=hci, adaptador=endereco_do_adaptador, controle=controle)
             )
-    return encontrados, []
+    return encontrados, impedimentos
 
 
 def uniqs_com_hid(raiz: str | os.PathLike[str] = RAIZ_HIDRAW) -> set[str]:
@@ -556,10 +530,12 @@ def olhar_a_mesa(
     raiz_adaptadores: str | os.PathLike[str] = RAIZ_ADAPTADORES,
     raiz_hidraw: str | os.PathLike[str] = RAIZ_HIDRAW,
     executor: object = None,
+    leitor: LeitorDoKernel | None = None,
 ) -> tuple[list[LinkDeRadio], set[str], set[tuple[str, str]], list[str]]:
     """Uma leitura completa da mesa. Não age, não decide — só olha."""
-    adaptadores = adaptadores_na_mesa(raiz_adaptadores, executor=executor)
-    links, impedimentos = links_de_pe(adaptadores, executor=executor)
+    kernel = leitor if leitor is not None else LeitorDoKernel()
+    adaptadores = adaptadores_na_mesa(raiz_adaptadores, leitor=kernel)
+    links, impedimentos = links_de_pe(adaptadores, leitor=kernel)
     com_hid = uniqs_com_hid(raiz_hidraw)
     conhecidos = enderecos_que_o_bluez_conhece(executor=executor)
     if not conhecidos and not impedimentos:

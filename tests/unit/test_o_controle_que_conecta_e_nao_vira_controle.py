@@ -49,6 +49,7 @@ from hefesto_dualsense4unix.daemon.subsystems.conexoes import (
     ConexoesSubsystem,
     ler_o_diario,
 )
+from hefesto_dualsense4unix.integrations.ar_do_adaptador import LeitorDoKernel
 from hefesto_dualsense4unix.integrations.conexao_zumbi import (
     LinkDeRadio,
     PedidoAPonte,
@@ -56,11 +57,12 @@ from hefesto_dualsense4unix.integrations.conexao_zumbi import (
     VigiaDeZumbis,
     adaptadores_na_mesa,
     enderecos_que_o_bluez_conhece,
-    links_de_pe,
     mac_limpo,
     uniqs_com_hid,
     zumbis,
 )
+
+from tests.unit.test_o_ar_do_adaptador import KernelDeMentira
 
 RAIZ = Path(__file__).resolve().parents[2]
 
@@ -205,29 +207,6 @@ def _executor(saidas: dict[tuple[str, ...], str]) -> Any:
     return correr
 
 
-def test_o_leitor_de_links_le_a_saida_do_hcitool_por_adaptador() -> None:
-    """O formato é o REAL, medido em 20/09/2026 (endereços trocados pela faixa"""
-    saidas = {
-        ("hcitool", "-i", "hci0", "con"): (
-            "Connections:\n"
-            f"\t> ACL {SAO.upper()} handle 5 state 1 lm CENTRAL AUTH ENCRYPT \n"
-        ),
-        ("hcitool", "-i", "hci1", "con"): (
-            "Connections:\n"
-            f"\t> ACL {ZUMBI.upper()} handle 7 state 1 lm PERIPHERAL AUTH ENCRYPT \n"
-        ),
-    }
-    achados, impedimentos = links_de_pe(
-        {"hci0": DONGLE_A, "hci1": DONGLE_B}, executor=_executor(saidas)
-    )
-    assert impedimentos == []
-    assert {(link.hci, link.controle) for link in achados} == {
-        ("hci0", SAO),
-        ("hci1", ZUMBI),
-    }
-    assert {link.adaptador for link in achados} == {DONGLE_A, DONGLE_B}
-
-
 def test_o_leitor_do_bluez_le_a_arvore_do_busctl() -> None:
     saida = (
         "/org/bluez/hci0\n"
@@ -240,35 +219,13 @@ def test_o_leitor_do_bluez_le_a_arvore_do_busctl() -> None:
     assert conhecidos == {("hci0", SAO)}
 
 
-def test_o_leitor_de_adaptadores_desce_para_o_hcitool_quando_o_sysfs_cala(
-    tmp_path: Path,
-) -> None:
-    """O degrau de cima NÃO EXISTE nesta máquina — medido, kernel 7.1.5."""
-    mudo = tmp_path / "bluetooth"
-    (mudo / "hci0").mkdir(parents=True)
-    (mudo / "hci0:5").mkdir()
-    saida = f"Devices:\n\thci0\t{DONGLE_A.upper()}\n\thci1\t{DONGLE_B.upper()}\n"
-    achados = adaptadores_na_mesa(mudo, executor=_executor({("hcitool", "dev"): saida}))
-    assert achados == {"hci0": DONGLE_A, "hci1": DONGLE_B}
-
-    falante = tmp_path / "bluetooth-falante"
-    (falante / "hci0").mkdir(parents=True)
-    (falante / "hci0" / "address").write_text(DONGLE_A.upper() + "\n", encoding="utf-8")
-    (falante / "hci0:5").mkdir()
-
-    def explode(*_args: Any, **_kwargs: Any) -> str:
-        msg = "o sysfs respondeu e ainda assim chamou processo"
-        raise AssertionError(msg)
-
-    assert adaptadores_na_mesa(falante, executor=explode) == {"hci0": DONGLE_A}
-
-
 def test_o_no_de_link_nao_e_confundido_com_adaptador(tmp_path: Path) -> None:
     """`hci0:5` é uma CONEXÃO, não um dongle — e o `uevent` dele não tem"""
     raiz = tmp_path / "bluetooth"
     (raiz / "hci0:5").mkdir(parents=True)
     (raiz / "hci0:5" / "address").write_text(SAO.upper(), encoding="utf-8")
-    assert adaptadores_na_mesa(raiz, executor=_executor({})) == {}
+    nenhum = KernelDeMentira()
+    assert adaptadores_na_mesa(raiz, leitor=LeitorDoKernel(ioctl=nenhum.ioctl)) == {}
 
 
 def test_uniqs_com_hid_le_o_uevent(tmp_path: Path) -> None:
