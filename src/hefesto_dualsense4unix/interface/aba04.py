@@ -162,7 +162,7 @@ CSS = """
        para 64 e `--r-acoes` de 72 para 64. OS OITO SAEM DA LINHA OPÇÕES porque
        ela sobrava: tem UM botão desde 07/09/2026, e ele mede 34px dentro dos
        72 — a coluna continua em 472 e o teto de 476 não é tocado. */
-    --r-player:52px;--r-leds:64px;--r-acoes:34px;
+    --r-player:52px;--r-leds:64px;--r-acoes:48px;
     /* O RESPIRO É O DONO, E O PASSO É O DOBRO DELE — 31/08/2026, pedido:
        *"aba iluminação tem a mesma questão do respiro vertical."* É a mesma
        construção da Vibração (30/08) e da Gatilhos (hoje), e o mesmo valor da
@@ -176,7 +176,7 @@ CSS = """
        A FOLGA DE HOJE É 2px, e não os 16 de então: a linha de ressalva de
        04/09 comeu doze — ver a nota do `--r-leds` acima —, e a linha da cor
        do dono, a 6 px em 08/10/2026, comeu dois no `--r-cor`. */
-    --r-ar:7px;--r-passo:calc(var(--r-ar) * 2);
+    --r-ar:6px;--r-passo:calc(var(--r-ar) * 2);
   }
   /* Em janela baixa o desenho encolhe, a linha do Jogador aperta e o passo entre as linhas cai. */
   @media (max-height:780px){.luz-grade{--r-des:54px;--r-player:40px;--r-cor:60px;--r-ar:5px}}
@@ -348,7 +348,8 @@ CSS = """
      `data-campo="brilho-pct"`; agora as duas leituras voltam a ser uma só. */
   .luz-grade .ctrl[data-conectado="nao"] .guia,
   .luz-grade .ctrl[data-conectado="nao"] .trilho,
-  .luz-grade .ctrl[data-conectado="nao"] .g4-efeito{display:none}
+  .luz-grade .ctrl[data-conectado="nao"] .g4-efeito,
+  .luz-grade .ctrl[data-conectado="nao"] .g4-dica-do-efeito{display:none}
   /* A SÉTIMA CÉLULA É A ÚNICA QUE PRECISA DO TRAVESSÃO DE VOLTA — ver o
      `<span class="nada">` que o gerador emite em `cel-acoes`. Ele nasce
      escondido na coluna viva, para não pôr um traço debaixo de dois botões.
@@ -1024,17 +1025,41 @@ CSS = """
        padding-bottom:3px}
 """ + CSS_LUZINHAS.lstrip("\n") + """
   /* ---------- OPÇÕES ---------- */
-  .cel-acoes{display:flex;flex-direction:row;align-items:center;gap:8px;justify-content:center;
-             margin-top:0}
-  /* A LISTA DE EFEITOS ocupa a célula inteira, em vez de impor a largura do nome mais longo. */
-  .g4-efeito{flex:1 1 0;width:0;min-width:0;height:34px;padding:0 9px;border-radius:7px;
+  .cel-acoes{display:flex;flex-direction:column;align-items:stretch;gap:2px;justify-content:center;
+             margin-top:0;min-width:0}
+  /* A LISTA DE EFEITOS ocupa a célula inteira, em vez de impor a largura do nome mais longo, e a
+     frase de UMA linha embaixo dela diz o que a opção escolhida faz (desenho A de 15/10/2026).
+     A frase não quebra e cabe inteira (até ~36 letras na coluna de 232px; as de 40 a 60 letras do
+     desenho saíam cortadas, medido na tela em 15/10): a faixa tem 48px (32 da lista, 2 de vão e
+     14 da frase), e com 62px o miolo passa de 618 e a aba rola. */
+  .g4-efeito{flex:0 0 32px;width:100%;min-width:0;height:32px;padding:0 9px;border-radius:7px;
     border:1px solid var(--linha);background:var(--app-bg);color:var(--fg);
     font:500 12.5px 'Space Grotesk',system-ui,sans-serif;cursor:pointer}
   .g4-efeito:hover{border-color:var(--comment)}
+  .g4-dica-do-efeito{flex:0 0 14px;min-width:0;font-size:11px;line-height:14px;
+    color:var(--texto-mudo,#9a9eb8);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .quadro-topo .sem-piscar{margin-left:auto}
+  .quadro-topo .sem-piscar + .modo-auto{margin-left:12px}
   .quadro-topo .modo-auto{margin-left:auto}
+  /* O interruptor «Sem piscar» (desenho A): uma pílula com a chave de 38x22, na mesma altura do
+     Modo automático. Ligado, a chave vai para a direita e acende em ciano. */
+  .sem-piscar{display:inline-flex;align-items:center;gap:9px;height:34px;padding:0 14px 0 10px;
+    border-radius:999px;border:1px solid var(--border-forte,#44475a);background:transparent;
+    color:var(--texto-suave,#c8ccda);font:600 13.5px/1 'Space Grotesk',system-ui,sans-serif;
+    cursor:pointer;transition:border-color .15s,color .15s}
+  .sem-piscar .chave{width:38px;height:22px;border-radius:11px;position:relative;flex:0 0 38px;
+    border:1px solid var(--border-forte,#44475a);background:var(--elevated,#2b2d3a);
+    transition:background .15s,border-color .15s}
+  .sem-piscar .chave::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;
+    border-radius:50%;background:var(--texto-mudo,#9a9eb8);transition:left .15s,background .15s}
+  .sem-piscar:hover{border-color:#5fd3e6;color:#fff}
+  .sem-piscar[aria-pressed="true"] .chave{background:#36406a;border-color:#5fd3e6}
+  .sem-piscar[aria-pressed="true"] .chave::after{left:18px;background:var(--cyan,#8be9fd)}
+  .sem-piscar:focus-visible{outline:2px solid var(--cyan,#8be9fd);outline-offset:2px}
+  @media (prefers-reduced-motion:reduce){.sem-piscar,.sem-piscar .chave,.sem-piscar .chave::after{transition:none}}
   /* ---------- CRIAR EFEITOS NOVOS ---------- */
   .criar{flex:0 0 auto}
-  .criar .criar-linha{display:flex;align-items:center;gap:12px;padding:9px 16px;flex-wrap:nowrap;min-width:0}
+  .criar .criar-linha{display:flex;align-items:center;gap:12px;padding:7px 16px;flex-wrap:nowrap;min-width:0}
   .criar .quadro-titulo{flex:0 0 auto;margin-right:4px}
   .criar .seg-criar{display:inline-flex;gap:4px;flex:0 0 auto}
   .criar .seg-criar label,.criar .meu{height:30px;padding:0 12px;border-radius:999px;
@@ -1248,7 +1273,9 @@ def coluna(c):
               + _pacote04.opcoes_do_efeito(CENA_DOS_EFEITOS).replace(
                   f'<option value="{_pacote04.LUZ_FIXA}">',
                   f'<option value="{_pacote04.LUZ_FIXA}" selected>', 1)
-              + '</select>\n            ')
+              + '</select>'
+              + f'<span class="g4-dica-do-efeito" data-campo="{_pacote04.CAMPO_DA_DICA_DO_EFEITO}" '
+              f'data-hef-alvo="texto">{_pacote04.DICA_LUZ_FIXA}</span>\n            ')
 
     # `nao` da régua de acentuação é um `#`, e dentro de uma f-string de  (noqa-acento: o próprio valor que a nota explica)
     conectado = "sim" if ligado else "nao"  # noqa-acento: valor de atributo
@@ -1343,6 +1370,27 @@ def _cor_do_efeito(cru):
             f'style="background:{tom_da_casa(cru)}" data-dica="Tirar esta cor"></button>')
 
 
+#: O «Sem piscar»: o `data-pedido` leva o que o PRÓXIMO clique pede (ligar quando está desligado) e
+#: acompanha o `aria-pressed`, que a pintura escreve; o clique vira o `aria-pressed` na hora, depois
+#: de o piloto ter lido o `data-pedido` (o mesmo molde do Modo automático da base comum).
+SCRIPT_DO_SEM_PISCAR = '''<script data-aba="sem-piscar">
+(function(){
+  var b = document.querySelector('.sem-piscar'); if(!b) return;
+  function sincroniza(){
+    var pedido = b.getAttribute('aria-pressed') === 'true' ? 'desligar' : 'ligar';
+    if(b.dataset.pedido !== pedido) b.dataset.pedido = pedido;
+  }
+  new MutationObserver(sincroniza).observe(b, {attributes: true, attributeFilter: ['aria-pressed']});
+  b.addEventListener('click', function(){
+    setTimeout(function(){
+      b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') === 'true' ? 'false' : 'true');
+    }, 0);
+  });
+  sincroniza();
+})();
+</script>
+'''
+
 #: Mantém as cores do efeito: «+» põe a próxima da guia que ainda não está, a cor tirada sai (fica
 #: uma, no mínimo), e o campo escondido leva as cruas ao gesto.
 SCRIPT_DO_CRIAR = f'''<script data-aba="criar">
@@ -1380,6 +1428,7 @@ MIOLO = f'''
       <div class="quadro-topo">
         <span class="quadro-titulo" data-dica="A luz diz de quem é cada controle">Iluminação</span>
         {trava_do_nativo("na luz").replace("title=", "data-dica=", 1)}
+        <button class="sem-piscar" type="button" data-gesto="{_pacote04.GESTO_DO_SEM_PISCAR}" data-pedido="ligar" data-campo="{_pacote04.CAMPO_DO_SEM_PISCAR}" data-hef-alvo="classe" data-hef-classe="ligado" data-hef-atributo="aria-pressed" aria-pressed="false" data-dica="{_pacote04.DICA_DO_SEM_PISCAR}"><span class="chave"></span>Sem piscar</button>
         {monta_.modo_auto(GESTO_DO_MODO, governa=".luz-grade .ctrl", dica="O jogo pinta a barra; o estilo do perfil ajusta")}
       </div>
       <div class="quadro-corpo">
@@ -1456,7 +1505,7 @@ MIOLO = f'''
         <span class="meus" id="seus-efeitos" aria-label="Seus efeitos">{_pacote04.html_dos_efeitos(CENA_DOS_EFEITOS)}</span>
       </div>
     </div>
-{SCRIPT_DO_CRIAR}'''
+{SCRIPT_DO_CRIAR}{SCRIPT_DO_SEM_PISCAR}'''
 
 LEGENDA = f'''<div class="nota">
   <div class="nota-troca" data-hef="troca">
@@ -1479,6 +1528,7 @@ _COBERTURA_SEM_DONO = {
     "tom": '.luz-grade .ctrl[data-conectado="nao"] .guia',
     "puxador": '.luz-grade .ctrl[data-conectado="nao"] .trilho',
     "g4-efeito": '.luz-grade .ctrl[data-conectado="nao"] .g4-efeito',
+    "g4-dica-do-efeito": '.luz-grade .ctrl[data-conectado="nao"] .g4-dica-do-efeito',
     "hex": '.luz-grade .ctrl[data-conectado="nao"] .cel-cor .hex.reenvia{pointer-events:none',
 }
 
@@ -1724,6 +1774,14 @@ def _conferir(doc):
     exigir(len(re.findall(r'<option value="sem-efeito"', corpo)) == len(MESA)
            and len(re.findall(r'<option value="luz-fixa" selected', corpo)) == len(MESA),
            "a lista Efeito não abre em «Luz fixa» com «Sem efeito» ao lado")
+    exigir(len(re.findall(r'<optgroup label="(?:Parado|Que respira|Que se move)"', corpo))
+           == 3 * len(MESA),
+           "a lista Efeito perdeu os grupos do desenho A (Parado, Que respira, Que se move)")
+    exigir(corpo.count('class="g4-dica-do-efeito"') == len(MESA),
+           "a lista Efeito não tem a frase de uma linha embaixo, uma por lugar")
+    exigir(topo.count(f'data-gesto="{_pacote04.GESTO_DO_SEM_PISCAR}"') == 1
+           and 'class="sem-piscar"' in topo and 'aria-pressed="false"' in topo,
+           "o interruptor «Sem piscar» não está na faixa do título (um só, desligado ao nascer)")
     criar = corpo.split('<div class="quadro criar"', 1)[-1]
     exigir(f'data-gesto="{_pacote04.GESTO_DE_CRIAR_EFEITO}"' in criar and "Criar efeitos novos" in criar
            and 'id="seus-efeitos"' in criar,

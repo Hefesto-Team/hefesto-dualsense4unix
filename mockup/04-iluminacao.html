@@ -991,7 +991,7 @@
        para 64 e `--r-acoes` de 72 para 64. OS OITO SAEM DA LINHA OPÇÕES porque
        ela sobrava: tem UM botão desde 07/09/2026, e ele mede 34px dentro dos
        72 — a coluna continua em 472 e o teto de 476 não é tocado. */
-    --r-player:52px;--r-leds:64px;--r-acoes:34px;
+    --r-player:52px;--r-leds:64px;--r-acoes:48px;
     /* O RESPIRO É O DONO, E O PASSO É O DOBRO DELE — 31/08/2026, pedido:
        *"aba iluminação tem a mesma questão do respiro vertical."* É a mesma
        construção da Vibração (30/08) e da Gatilhos (hoje), e o mesmo valor da
@@ -1005,7 +1005,7 @@
        A FOLGA DE HOJE É 2px, e não os 16 de então: a linha de ressalva de
        04/09 comeu doze — ver a nota do `--r-leds` acima —, e a linha da cor
        do dono, a 6 px em 08/10/2026, comeu dois no `--r-cor`. */
-    --r-ar:7px;--r-passo:calc(var(--r-ar) * 2);
+    --r-ar:6px;--r-passo:calc(var(--r-ar) * 2);
   }
   /* Em janela baixa o desenho encolhe, a linha do Jogador aperta e o passo entre as linhas cai. */
   @media (max-height:780px){.luz-grade{--r-des:54px;--r-player:40px;--r-cor:60px;--r-ar:5px}}
@@ -1177,7 +1177,8 @@
      `data-campo="brilho-pct"`; agora as duas leituras voltam a ser uma só. */
   .luz-grade .ctrl[data-conectado="nao"] .guia,
   .luz-grade .ctrl[data-conectado="nao"] .trilho,
-  .luz-grade .ctrl[data-conectado="nao"] .g4-efeito{display:none}
+  .luz-grade .ctrl[data-conectado="nao"] .g4-efeito,
+  .luz-grade .ctrl[data-conectado="nao"] .g4-dica-do-efeito{display:none}
   /* A SÉTIMA CÉLULA É A ÚNICA QUE PRECISA DO TRAVESSÃO DE VOLTA — ver o
      `<span class="nada">` que o gerador emite em `cel-acoes`. Ele nasce
      escondido na coluna viva, para não pôr um traço debaixo de dois botões.
@@ -1863,17 +1864,41 @@
   .luzinhas .vao{width:4px;background:none;box-shadow:none}
 
   /* ---------- OPÇÕES ---------- */
-  .cel-acoes{display:flex;flex-direction:row;align-items:center;gap:8px;justify-content:center;
-             margin-top:0}
-  /* A LISTA DE EFEITOS ocupa a célula inteira, em vez de impor a largura do nome mais longo. */
-  .g4-efeito{flex:1 1 0;width:0;min-width:0;height:34px;padding:0 9px;border-radius:7px;
+  .cel-acoes{display:flex;flex-direction:column;align-items:stretch;gap:2px;justify-content:center;
+             margin-top:0;min-width:0}
+  /* A LISTA DE EFEITOS ocupa a célula inteira, em vez de impor a largura do nome mais longo, e a
+     frase de UMA linha embaixo dela diz o que a opção escolhida faz (desenho A de 15/10/2026).
+     A frase não quebra e cabe inteira (até ~36 letras na coluna de 232px; as de 40 a 60 letras do
+     desenho saíam cortadas, medido na tela em 15/10): a faixa tem 48px (32 da lista, 2 de vão e
+     14 da frase), e com 62px o miolo passa de 618 e a aba rola. */
+  .g4-efeito{flex:0 0 32px;width:100%;min-width:0;height:32px;padding:0 9px;border-radius:7px;
     border:1px solid var(--linha);background:var(--app-bg);color:var(--fg);
     font:500 12.5px 'Space Grotesk',system-ui,sans-serif;cursor:pointer}
   .g4-efeito:hover{border-color:var(--comment)}
+  .g4-dica-do-efeito{flex:0 0 14px;min-width:0;font-size:11px;line-height:14px;
+    color:var(--texto-mudo,#9a9eb8);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .quadro-topo .sem-piscar{margin-left:auto}
+  .quadro-topo .sem-piscar + .modo-auto{margin-left:12px}
   .quadro-topo .modo-auto{margin-left:auto}
+  /* O interruptor «Sem piscar» (desenho A): uma pílula com a chave de 38x22, na mesma altura do
+     Modo automático. Ligado, a chave vai para a direita e acende em ciano. */
+  .sem-piscar{display:inline-flex;align-items:center;gap:9px;height:34px;padding:0 14px 0 10px;
+    border-radius:999px;border:1px solid var(--border-forte,#44475a);background:transparent;
+    color:var(--texto-suave,#c8ccda);font:600 13.5px/1 'Space Grotesk',system-ui,sans-serif;
+    cursor:pointer;transition:border-color .15s,color .15s}
+  .sem-piscar .chave{width:38px;height:22px;border-radius:11px;position:relative;flex:0 0 38px;
+    border:1px solid var(--border-forte,#44475a);background:var(--elevated,#2b2d3a);
+    transition:background .15s,border-color .15s}
+  .sem-piscar .chave::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;
+    border-radius:50%;background:var(--texto-mudo,#9a9eb8);transition:left .15s,background .15s}
+  .sem-piscar:hover{border-color:#5fd3e6;color:#fff}
+  .sem-piscar[aria-pressed="true"] .chave{background:#36406a;border-color:#5fd3e6}
+  .sem-piscar[aria-pressed="true"] .chave::after{left:18px;background:var(--cyan,#8be9fd)}
+  .sem-piscar:focus-visible{outline:2px solid var(--cyan,#8be9fd);outline-offset:2px}
+  @media (prefers-reduced-motion:reduce){.sem-piscar,.sem-piscar .chave,.sem-piscar .chave::after{transition:none}}
   /* ---------- CRIAR EFEITOS NOVOS ---------- */
   .criar{flex:0 0 auto}
-  .criar .criar-linha{display:flex;align-items:center;gap:12px;padding:9px 16px;flex-wrap:nowrap;min-width:0}
+  .criar .criar-linha{display:flex;align-items:center;gap:12px;padding:7px 16px;flex-wrap:nowrap;min-width:0}
   .criar .quadro-titulo{flex:0 0 auto;margin-right:4px}
   .criar .seg-criar{display:inline-flex;gap:4px;flex:0 0 auto}
   .criar .seg-criar label,.criar .meu{height:30px;padding:0 12px;border-radius:999px;
@@ -2504,6 +2529,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       <div class="quadro-topo">
         <span class="quadro-titulo" data-dica="A luz diz de quem é cada controle">Iluminação</span>
         <span class="trava-nativo" data-dica="Com o Hefesto desligado, o jogo manda na luz. O que está aqui volta a valer quando ligar, na aba Jogar."><svg class="cad" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M3.6 5.2V3.9a2.4 2.4 0 0 1 4.8 0v1.3" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="2.3" y="5.2" width="7.4" height="5.4" rx="1.1" fill="currentColor"/></svg>O jogo manda</span>
+        <button class="sem-piscar" type="button" data-gesto="sem-piscar" data-pedido="ligar" data-campo="sem-piscar" data-hef-alvo="classe" data-hef-classe="ligado" data-hef-atributo="aria-pressed" aria-pressed="false" data-dica="Nenhum efeito muda mais de uma vez por segundo, e toda mudança é suave. Vale para os quatro controles"><span class="chave"></span>Sem piscar</button>
         <button class="modo-auto" type="button" data-gesto="modo-da-luz" data-modo="automatico" data-campo="modo-da-luz-automatico" data-hef-alvo="classe" data-hef-classe="ligado" data-hef-atributo="aria-pressed" aria-pressed="false" data-dica="O jogo pinta a barra; o estilo do perfil ajusta" data-governa=".luz-grade .ctrl"><span class="p"></span>Modo automático</button>
       </div>
       <div class="quadro-corpo">
@@ -2912,7 +2938,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
             </div>
           </div>
           <div class="cel-acoes">
-            <select class="g4-efeito" data-gesto="efeito-da-luz" aria-label="Efeito da barra" data-campo="efeito" data-hef-alvo="valor" data-dica="Sem efeito apaga a barra"><option value="sem-efeito">Sem efeito</option><option value="luz-fixa" selected>Luz fixa</option><optgroup label="Seus efeitos"><option value="piscar;FF0000;6">Alerta vermelho</option><option value="respirar;00FFFF;2">Respiro calmo</option></optgroup></select>
+            <select class="g4-efeito" data-gesto="efeito-da-luz" aria-label="Efeito da barra" data-campo="efeito" data-hef-alvo="valor" data-dica="Sem efeito apaga a barra"><optgroup label="Parado"><option value="sem-efeito">Sem efeito</option><option value="luz-fixa" selected>Luz fixa</option></optgroup><optgroup label="Que respira"><option value="base:respirar">Respirar</option><option value="base:batimento">Batida do coração</option><option value="base:chama">Chama</option><option value="base:mare">Maré</option></optgroup><optgroup label="Que se move"><option value="base:piscar">Piscar</option><option value="base:arco-iris">Arco-íris</option></optgroup><optgroup label="Seus efeitos"><option value="piscar;FF0000;6">Alerta vermelho</option><option value="respirar;00FFFF;2">Respiro calmo</option></optgroup></select><span class="g4-dica-do-efeito" data-campo="efeito-dica" data-hef-alvo="texto">A cor do controle, parada.</span>
             <!-- O TRAVESSÃO DESTA CÉLULA NASCE AQUI, escondido na coluna viva: a lista de efeitos
                  não é um valor que o molde do lugar sem dono escreva como travessão. -->
             <span class="nada">—</span>
@@ -3302,7 +3328,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
             </div>
           </div>
           <div class="cel-acoes">
-            <select class="g4-efeito" data-gesto="efeito-da-luz" aria-label="Efeito da barra" data-campo="efeito" data-hef-alvo="valor" data-dica="Sem efeito apaga a barra"><option value="sem-efeito">Sem efeito</option><option value="luz-fixa" selected>Luz fixa</option><optgroup label="Seus efeitos"><option value="piscar;FF0000;6">Alerta vermelho</option><option value="respirar;00FFFF;2">Respiro calmo</option></optgroup></select>
+            <select class="g4-efeito" data-gesto="efeito-da-luz" aria-label="Efeito da barra" data-campo="efeito" data-hef-alvo="valor" data-dica="Sem efeito apaga a barra"><optgroup label="Parado"><option value="sem-efeito">Sem efeito</option><option value="luz-fixa" selected>Luz fixa</option></optgroup><optgroup label="Que respira"><option value="base:respirar">Respirar</option><option value="base:batimento">Batida do coração</option><option value="base:chama">Chama</option><option value="base:mare">Maré</option></optgroup><optgroup label="Que se move"><option value="base:piscar">Piscar</option><option value="base:arco-iris">Arco-íris</option></optgroup><optgroup label="Seus efeitos"><option value="piscar;FF0000;6">Alerta vermelho</option><option value="respirar;00FFFF;2">Respiro calmo</option></optgroup></select><span class="g4-dica-do-efeito" data-campo="efeito-dica" data-hef-alvo="texto">A cor do controle, parada.</span>
             <!-- O TRAVESSÃO DESTA CÉLULA NASCE AQUI, escondido na coluna viva: a lista de efeitos
                  não é um valor que o molde do lugar sem dono escreva como travessão. -->
             <span class="nada">—</span>
@@ -3669,7 +3695,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
             </div>
           </div>
           <div class="cel-acoes">
-            <select class="g4-efeito" data-gesto="efeito-da-luz" aria-label="Efeito da barra" data-campo="efeito" data-hef-alvo="valor" data-dica="Sem efeito apaga a barra"><option value="sem-efeito">Sem efeito</option><option value="luz-fixa" selected>Luz fixa</option><optgroup label="Seus efeitos"><option value="piscar;FF0000;6">Alerta vermelho</option><option value="respirar;00FFFF;2">Respiro calmo</option></optgroup></select>
+            <select class="g4-efeito" data-gesto="efeito-da-luz" aria-label="Efeito da barra" data-campo="efeito" data-hef-alvo="valor" data-dica="Sem efeito apaga a barra"><optgroup label="Parado"><option value="sem-efeito">Sem efeito</option><option value="luz-fixa" selected>Luz fixa</option></optgroup><optgroup label="Que respira"><option value="base:respirar">Respirar</option><option value="base:batimento">Batida do coração</option><option value="base:chama">Chama</option><option value="base:mare">Maré</option></optgroup><optgroup label="Que se move"><option value="base:piscar">Piscar</option><option value="base:arco-iris">Arco-íris</option></optgroup><optgroup label="Seus efeitos"><option value="piscar;FF0000;6">Alerta vermelho</option><option value="respirar;00FFFF;2">Respiro calmo</option></optgroup></select><span class="g4-dica-do-efeito" data-campo="efeito-dica" data-hef-alvo="texto">A cor do controle, parada.</span>
             <!-- O TRAVESSÃO DESTA CÉLULA NASCE AQUI, escondido na coluna viva: a lista de efeitos
                  não é um valor que o molde do lugar sem dono escreva como travessão. -->
             <span class="nada">—</span>
@@ -4036,7 +4062,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
             </div>
           </div>
           <div class="cel-acoes">
-            <select class="g4-efeito" data-gesto="efeito-da-luz" aria-label="Efeito da barra" data-campo="efeito" data-hef-alvo="valor" data-dica="Sem efeito apaga a barra"><option value="sem-efeito">Sem efeito</option><option value="luz-fixa" selected>Luz fixa</option><optgroup label="Seus efeitos"><option value="piscar;FF0000;6">Alerta vermelho</option><option value="respirar;00FFFF;2">Respiro calmo</option></optgroup></select>
+            <select class="g4-efeito" data-gesto="efeito-da-luz" aria-label="Efeito da barra" data-campo="efeito" data-hef-alvo="valor" data-dica="Sem efeito apaga a barra"><optgroup label="Parado"><option value="sem-efeito">Sem efeito</option><option value="luz-fixa" selected>Luz fixa</option></optgroup><optgroup label="Que respira"><option value="base:respirar">Respirar</option><option value="base:batimento">Batida do coração</option><option value="base:chama">Chama</option><option value="base:mare">Maré</option></optgroup><optgroup label="Que se move"><option value="base:piscar">Piscar</option><option value="base:arco-iris">Arco-íris</option></optgroup><optgroup label="Seus efeitos"><option value="piscar;FF0000;6">Alerta vermelho</option><option value="respirar;00FFFF;2">Respiro calmo</option></optgroup></select><span class="g4-dica-do-efeito" data-campo="efeito-dica" data-hef-alvo="texto">A cor do controle, parada.</span>
             <!-- O TRAVESSÃO DESTA CÉLULA NASCE AQUI, escondido na coluna viva: a lista de efeitos
                  não é um valor que o molde do lugar sem dono escreva como travessão. -->
             <span class="nada">—</span>
@@ -4114,6 +4140,22 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       b.remove();
     }
     sincroniza();
+  });
+  sincroniza();
+})();
+</script>
+<script data-aba="sem-piscar">
+(function(){
+  var b = document.querySelector('.sem-piscar'); if(!b) return;
+  function sincroniza(){
+    var pedido = b.getAttribute('aria-pressed') === 'true' ? 'desligar' : 'ligar';
+    if(b.dataset.pedido !== pedido) b.dataset.pedido = pedido;
+  }
+  new MutationObserver(sincroniza).observe(b, {attributes: true, attributeFilter: ['aria-pressed']});
+  b.addEventListener('click', function(){
+    setTimeout(function(){
+      b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') === 'true' ? 'false' : 'true');
+    }, 0);
   });
   sincroniza();
 })();

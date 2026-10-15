@@ -184,6 +184,7 @@ CLIQUES: dict[str, dict[str, Any]] = {
     "efeito-da-luz": {"valor": "luz-fixa"},
     "criar-efeito": {"forma": {"base": "respirar", "cores": "#FF0000", "ritmo": "4",
                                "nome": "Pulso"}},
+    "sem-piscar": {"pedido": "ligar"},
 }
 
 PINTADO = ("brilho", "brilho-pct", "hex", "brilho-luzes")

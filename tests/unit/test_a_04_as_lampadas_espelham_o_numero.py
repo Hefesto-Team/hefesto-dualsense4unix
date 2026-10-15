@@ -191,9 +191,10 @@ def test_o_gesto_de_escopo_global_saiu_do_pacote(pac, a04):
         assert not hasattr(a04, orfao), (
             f"`{orfao}` ficou no pacote sem chamador — ele só existia para o "
             f"gesto de escopo global, que saiu em 07/09/2026")
-    assert sorted(a04.METODOS) == ["coop.sync"], (
-        f"a declaração de métodos desta aba é {sorted(a04.METODOS)} — só o "
-        f"`coop.sync` sobrevive à poda de 07/09/2026")
+    assert sorted(a04.METODOS) == ["coop.sync", "machine.declare"], (
+        f"a declaração de métodos desta aba é {sorted(a04.METODOS)} — o `coop.sync` sobrevive à "
+        f"poda de 07/09/2026, e o `machine.declare` entrou em 15/10/2026 com o «Sem piscar», que "
+        f"mora no `maquina.json`")
 
 
 def test_a_faixa_do_titulo_tem_um_morador_so():
@@ -325,19 +326,21 @@ def test_os_tres_gestos_da_botoeira_sairam_do_pacote(pac, a04):
             f"um gesto que a tela não alcança é código morto, e ela mandou "
             f"remover a botoeira inteira em 07/09/2026")
     assert vivos == {"cor", "apagar", "brilho", "player", "reenviar", "modo-da-luz",
-                     "brilho-luzes", "efeito-da-luz", "criar-efeito"}, (
+                     "brilho-luzes", "efeito-da-luz", "criar-efeito",
+                     "sem-piscar"}, (
         f"a poda da botoeira levou junto um gesto que FICA: {sorted(vivos)}")
 
 
 def test_o_piso_da_aba_desceu_com_a_ordem_dela(a04):
     """A ÚNICA vez em que o piso desce, e ela tem nome, razão e data."""
-    assert a04.PISO_DA_ABA == 9, (
+    assert a04.PISO_DA_ABA == 10, (
         f"o piso da aba é {a04.PISO_DA_ABA}. Ele desceu DUAS vezes em "
         f"07/09/2026, nas duas ordens dela — 11 para 8 com a botoeira das "
         f"lâmpadas, 8 para 6 com os dois botões do automático — e subiu UMA em "
         f"24/09/2026, 6 para 7, com as pílulas do brilho das luzes que ela "
         f"decidiu; subiu de 7 para 9 em 14/10/2026 com a lista Efeito e o criar "
-        f"efeitos do desenho dela. Cada degrau pede a palavra dela")
+        f"efeitos do desenho dela, e de 9 para 10 em 15/10/2026 com o interruptor «Sem piscar» do "
+        f"desenho que ela aprovou em 14/10. Cada degrau pede a palavra dela")
 
 
 def test_a_linha_de_ressalva_saiu_da_celula_de_leds():

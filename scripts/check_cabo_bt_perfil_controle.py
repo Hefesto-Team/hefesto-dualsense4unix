@@ -49,6 +49,10 @@ NAO_E_DO_APARELHO: dict[str, str] = {
                    "volume e o ganho que ele reflete são dos deslizantes ao "
                    "lado, que têm as quatro respostas por conta deles "
                    "(TESTAR-O-MICROFONE-01, 20/09/2026)",
+    "sem-piscar": "liga e desliga o «Sem piscar» — uma declaração da máquina (`luz.sem_piscar` "
+                  "do `maquina.json`), uma só para os quatro controles e as duas conexões, que o "
+                  "motor da luz lê; não escreve no aparelho nem no perfil (a luz do efeito nos dois "
+                  "transportes é de `test_a_luz_do_efeito_morde_cabo_e_radio`)",
     "hefesto": "liga e desliga o MODO do produto — é do serviço",
     "parar-ou-retomar": "para, retoma ou ativa o serviço — é systemd (o "
                         "«Parar» e o «Retomar» viraram um botão só em 25/09/2026)",

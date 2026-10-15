@@ -1286,18 +1286,119 @@ ESTILO_DO_TRACO_VAZIO = ("display:flex;align-items:center;justify-content:center
                          "height:100%;width:100%;color:var(--linha)")
 
 
-#: O EFEITO DA BARRA (A-ABA-ILUMINACAO-DO-TODO-01). A lista da coluna tem duas opções fixas, «Sem
-#: efeito» (a barra apagada) e «Luz fixa» (a cor de sempre), e os efeitos que a pessoa criou. O
-#: valor de um efeito é o texto que o perfil guarda (`schema.escrever_o_efeito_da_luz`): o perfil
-#: anima sozinho, sem apontar para a biblioteca da interface.
+#: O EFEITO DA BARRA (A-ABA-ILUMINACAO-DO-TODO-01). A lista da coluna tem «Sem efeito» (a barra
+#: apagada), «Luz fixa» (a cor de sempre), as seis bases em grupos pelo que se vê (o desenho A de
+#: 15/10/2026, a escolha do usuário: «uma lista suspensa em cada escolha») e os efeitos que a pessoa
+#: criou.
+#: O valor de um efeito criado é o texto que o perfil guarda (`schema.escrever_o_efeito_da_luz`): o
+#: perfil anima sozinho, sem apontar para a biblioteca da interface. O valor de uma base da lista é
+#: um token `base:<nome>`, que o gesto resolve em `base;cor do controle;ritmo` no ato de escolher.
 GESTO_DO_EFEITO = "efeito-da-luz"
 GESTO_DE_CRIAR_EFEITO = "criar-efeito"
+GESTO_DO_SEM_PISCAR = "sem-piscar"
 CAMPO_DO_EFEITO = "efeito"
+CAMPO_DA_DICA_DO_EFEITO = "efeito-dica"
+CAMPO_DO_SEM_PISCAR = "sem-piscar"
 SEM_EFEITO = "sem-efeito"
 LUZ_FIXA = "luz-fixa"
+PREFIXO_DA_BASE = "base:"
 SELETOR_DOS_EFEITOS = "#seus-efeitos"
 ROTULO_DA_BASE = {"respirar": "Respirar", "piscar": "Piscar",
-                  "arco-iris": "Arco-íris"}  # (noqa-acento) chave ASCII
+                  "arco-iris": "Arco-íris",  # (noqa-acento) chave ASCII
+                  "batimento": "Batida do coração", "chama": "Chama", "mare": "Maré"}
+#: O ritmo com que cada base nasce na lista (o do desenho A): respirar 5 s, piscar 0,9 Hz, uma volta
+#: do arco-íris em 12 s, batida de 1 s, a chama troca de alvo a cada ~2 s, a Maré vai e volta em
+#: 8 s.
+RITMO_DA_BASE = {"respirar": 2, "piscar": 3, "arco-iris": 7,  # (noqa-acento) chave ASCII
+                 "batimento": 10, "chama": 5, "mare": 10}
+DICA_SEM_EFEITO = "A barra fica apagada."
+DICA_LUZ_FIXA = "A cor do controle, parada."
+DICA_DO_EFEITO_CRIADO = "Um efeito que você montou."
+DICA_DA_BASE = {
+    "respirar": "A cor sobe e desce devagar.",
+    "batimento": "Duas subidas e uma pausa.",
+    "chama": "O brilho oscila, sem padrão.",
+    "mare": "A cor vai e volta, devagar.",
+    "piscar": "Lampejos da cor, de borda suave.",
+    "arco-iris": "As cores giram, cada uma num ponto.",  # (noqa-acento)
+}
+#: Os grupos da lista, na ordem do desenho: o que a pessoa vê, não o nome técnico do efeito.
+GRUPOS_DA_LISTA = (
+    ("Parado", (SEM_EFEITO, LUZ_FIXA)),
+    ("Que respira", ("respirar", "batimento", "chama", "mare")),
+    ("Que se move", ("piscar", "arco-iris")),  # (noqa-acento) chave ASCII
+)
+DICA_DO_SEM_PISCAR = ("Nenhum efeito muda mais de uma vez por segundo, e toda mudança é suave. "
+                      "Vale para os quatro controles")
+
+
+def token_da_base(base: str) -> str:
+    """O valor da lista para uma base: `base:respirar`."""
+    return f"{PREFIXO_DA_BASE}{base}"
+
+
+def base_do_token(valor: str) -> str | None:
+    """A base de um valor `base:<nome>` da lista, ou `None` (não é token, ou a base é de fora)."""
+    if not valor.startswith(PREFIXO_DA_BASE):
+        return None
+    base = valor[len(PREFIXO_DA_BASE):]
+    return base if base in RITMO_DA_BASE else None
+
+
+def rotulo_da_opcao(valor: str) -> str:
+    """O rótulo da lista para `sem-efeito`, `luz-fixa` ou `base:<nome>`."""
+    if valor == SEM_EFEITO:
+        return "Sem efeito"
+    if valor == LUZ_FIXA:
+        return "Luz fixa"
+    return ROTULO_DA_BASE[base_do_token(valor) or ""]
+
+
+def dica_do_efeito(valor: str) -> str:
+    """A frase de uma linha sob a lista: a da opção escolhida; um efeito criado diz o que é."""
+    if valor == SEM_EFEITO:
+        return DICA_SEM_EFEITO
+    if valor == LUZ_FIXA or not valor:
+        return DICA_LUZ_FIXA
+    base = base_do_token(valor)
+    return DICA_DA_BASE[base] if base else DICA_DO_EFEITO_CRIADO
+
+
+def valores_da_biblioteca(biblioteca: dict[str, Any] | None = None) -> frozenset[str]:
+    """Os textos de perfil dos efeitos que a pessoa criou (o que a lista põe em «Seus efeitos»)."""
+    guardados = meus_efeitos("luz") if biblioteca is None else biblioteca
+    return frozenset(v for v in (efeito_do_item(i) for i in guardados.values()) if v is not None)
+
+
+def cor_da_base(cor: tuple[int, int, int]) -> tuple[int, int, int]:
+    """A cor com que uma base da lista nasce: a do controle; a barra preta vira branca."""
+    return cor if cor != (0, 0, 0) else (255, 255, 255)
+
+
+def valor_da_lista_para(texto: str | None, proprios: frozenset[str] = frozenset(),
+                        cor: tuple[int, int, int] | None = None) -> str:
+    """O que a lista mostra para o texto que o perfil guarda.
+
+    Um efeito que a pessoa criou aparece pelo texto dele. Um texto que não é de nenhum criado, tem o
+    ritmo com que a base nasce na lista e a cor que o controle acende agora (o arco-íris não leva
+    cor) é a própria base (`base:respirar`): a lista a escolheu. Qualquer outro texto fica como está
+    (a lista o oferece com o nome da base, em «Seus efeitos»): a barra faz o que o texto diz, não o
+    que a base diria, e a lista não mente.
+    """
+    from hefesto_dualsense4unix.profiles.schema import ler_o_efeito_da_luz
+
+    if not texto:
+        return LUZ_FIXA
+    if texto in proprios:
+        return texto
+    lido = ler_o_efeito_da_luz(texto)
+    if lido is None or RITMO_DA_BASE.get(lido.base) != lido.ritmo:
+        return texto
+    if lido.base == "arco-iris":  # (noqa-acento) chave ASCII
+        return token_da_base(lido.base) if not lido.cores else texto
+    if cor is not None and lido.cores == (cor_da_base(cor),):
+        return token_da_base(lido.base)
+    return texto
 
 
 def efeito_do_item(item: Any) -> str | None:
@@ -1322,12 +1423,13 @@ def efeito_do_item(item: Any) -> str | None:
 
 
 def opcoes_do_efeito(biblioteca: dict[str, Any] | None = None,
-                     escolhido: str | None = None) -> str:
-    """As opções da lista de efeitos: Sem efeito, Luz fixa e «Seus efeitos».
+                     escolhido: str | None = None,
+                     cor: tuple[int, int, int] | None = None) -> str:
+    """As opções da lista: os grupos «Parado», «Que respira», «Que se move» e «Seus efeitos».
 
-    `escolhido` é o efeito do perfil quando nenhum da biblioteca o diz (um perfil importado, ou um
-    efeito que a pessoa apagou da biblioteca): ele entra com o nome da base, para a lista nunca
-    ficar em branco nem mentir que a luz é fixa.
+    `escolhido` é o efeito do perfil quando nem a lista nem a biblioteca o dizem (um perfil
+    importado, ou um efeito que a pessoa apagou da biblioteca): ele entra com o nome da base, para a
+    lista nunca ficar em branco nem mentir que a luz é fixa.
     """
     import html as _html
 
@@ -1337,9 +1439,15 @@ def opcoes_do_efeito(biblioteca: dict[str, Any] | None = None,
         valor = efeito_do_item(item)
         if valor is not None:
             proprios.append((nome, valor))
-    partes = [f'<option value="{SEM_EFEITO}">Sem efeito</option>',
-              f'<option value="{LUZ_FIXA}">Luz fixa</option>']
-    if escolhido and escolhido not in {v for _, v in proprios}:
+    partes = []
+    for rotulo_do_grupo, nomes in GRUPOS_DA_LISTA:
+        itens = "".join(
+            f'<option value="{v}">{_html.escape(rotulo_da_opcao(v))}</option>'
+            for v in (n if n in (SEM_EFEITO, LUZ_FIXA) else token_da_base(n) for n in nomes))
+        partes.append(f'<optgroup label="{rotulo_do_grupo}">{itens}</optgroup>')
+    valores = frozenset(v for _, v in proprios)
+    if (escolhido and escolhido not in valores
+            and valor_da_lista_para(escolhido, valores, cor) == escolhido):
         from hefesto_dualsense4unix.profiles.schema import ler_o_efeito_da_luz
 
         lido = ler_o_efeito_da_luz(escolhido)
@@ -1414,12 +1522,14 @@ def perfil_da_lista_de_efeito(p: dict[str, Any] | None) -> dict[str, Any] | None
         return p
 
 
-def escolha_da_lista(p: dict[str, Any] | None, uniq: str, brilho: float | None) -> str:
+def escolha_da_lista(p: dict[str, Any] | None, uniq: str, brilho: float | None,
+                     proprios: frozenset[str] = frozenset(),
+                     cor: tuple[int, int, int] | None = None) -> str:
     """O que a lista de efeitos mostra: Sem efeito (barra apagada), o efeito, ou Luz fixa."""
     if brilho is not None and brilho <= 0.0:
         return SEM_EFEITO
-    return efeito_do_controle(perfil_da_lista_de_efeito(p), uniq) or LUZ_FIXA
-
+    return valor_da_lista_para(
+        efeito_do_controle(perfil_da_lista_de_efeito(p), uniq), proprios, cor)
 
 
 @registrar("04-iluminacao.html")
@@ -1451,6 +1561,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     #: e só recebe quem tem controle: `folha_da_luz` APAGA todo lugar que não
     luz_do_desenho: dict[str, tuple[str, int | None]] = {}
     biblioteca = meus_efeitos("luz")
+    criados = valores_da_biblioteca(biblioteca)
     do_efeito = perfil_da_lista_de_efeito(p)
     listas_de_efeito: dict[str, str] = {}
     for c, cor_dele in zip(ctx.conectados, cor_de, strict=True):
@@ -1474,11 +1585,13 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         if casa.get("pref"):
             luz_do_desenho[str(casa["pref"])] = (_hex(acesa) if acesa else "", n)
             listas_de_efeito[f'[data-controle="{casa["pref"]}"] select.g4-efeito'] = (
-                opcoes_do_efeito(biblioteca, efeito_do_controle(do_efeito, uniq)))
+                opcoes_do_efeito(biblioteca, efeito_do_controle(do_efeito, uniq), cor_dele))
+        na_lista = escolha_da_lista(
+            do_efeito, uniq, None if b is None else float(b), criados, cor_dele)
         colunas[uniq] = {
             "brilho": "—" if pct is None else f"{pct}%",
-            CAMPO_DO_EFEITO: escolha_da_lista(
-                do_efeito, uniq, None if b is None else float(b)),
+            CAMPO_DO_EFEITO: na_lista,
+            CAMPO_DA_DICA_DO_EFEITO: dica_do_efeito(na_lista),
             #: trazer `data-hef-alvo="largura"` — as abas 02 e 05 têm, esta não
             "brilho-pct": pct,
             #: `on` por `data-hef-quando="#0000FF"` — os oito CHEIOS. Com o
@@ -1521,6 +1634,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         f"{GESTO_DO_MODO}-{MODO_AUTOMATICO}": "sim" if modo_da_aba == MODO_AUTOMATICO else "",
         f"{GESTO_DO_MODO}-{MODO_PERSONALIZADO}":
             "sim" if modo_da_aba == MODO_PERSONALIZADO else "",
+        # O «Sem piscar» é da mesa (`maquina.json`), um só para os quatro controles.
+        CAMPO_DO_SEM_PISCAR: "sim" if o_sem_piscar_de_agora() else "",
         #: `perfil` saiu em 13/09/2026: o chip é das dez, dono `pacotes.topo()`.
         "sem_dono": {},
         "blocos": {SECAO_DA_TROCA: secao_da_troca(ctx.mesa),
@@ -1531,6 +1646,37 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         "cobertura": {"pintados": sum(len(v) for v in colunas.values()),
                       "sem_dono": len(SEM_DONO)},
     }
+
+
+_A_MAQUINA_DA_LUZ: Any = None
+_SELO_DA_MAQUINA_DA_LUZ: tuple[int, int, int] | None = None
+
+
+def _a_maquina_da_luz() -> Any:
+    """O `maquina.json` validado, RELIDO QUANDO O ARQUIVO MUDA (um `stat` por tique)."""
+    global _A_MAQUINA_DA_LUZ, _SELO_DA_MAQUINA_DA_LUZ
+    try:
+        perfil._com_o_src()
+        from hefesto_dualsense4unix.utils.maquina import caminho_da_maquina, carregar_maquina
+
+        st = caminho_da_maquina().stat()
+        selo: tuple[int, int, int] | None = (st.st_ino, st.st_mtime_ns, st.st_size)
+    except Exception:
+        selo = None
+    if _A_MAQUINA_DA_LUZ is None or selo != _SELO_DA_MAQUINA_DA_LUZ:
+        try:
+            _A_MAQUINA_DA_LUZ, _SELO_DA_MAQUINA_DA_LUZ = carregar_maquina(), selo
+        except Exception:
+            # Arquivo ilegível: larga a cópia velha, que mentiria o estado de «Sem piscar».
+            _A_MAQUINA_DA_LUZ = _SELO_DA_MAQUINA_DA_LUZ = None
+    return _A_MAQUINA_DA_LUZ
+
+
+def o_sem_piscar_de_agora() -> bool:
+    """O «Sem piscar» está ligado AGORA? Vem da mesa, e é um só para os quatro controles."""
+    from hefesto_dualsense4unix.profiles.schema import sem_piscar_da_declaracao
+
+    return sem_piscar_da_declaracao(_a_maquina_da_luz())
 
 
 from . import gesto  # noqa: E402
@@ -2489,30 +2635,47 @@ def _com_o_efeito_gravado(prof: Any, uniq: str, efeito: str | None, *,
 
 @gesto("04-iluminacao.html", GESTO_DO_EFEITO, grava="gravar_pelo_gesto")
 def efeito_da_luz(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """A lista «Efeito» da coluna: Sem efeito, Luz fixa ou um efeito que a pessoa criou.
+    """A lista «Efeito» da coluna: Sem efeito, Luz fixa, uma base da lista ou um efeito criado.
 
     O efeito é do controle da coluna e vai ao perfil (`leds.efeito` no override dele); quem anima é
     o `luz_animada` do daemon, que cala quando o jogo pinta a barra. «Sem efeito» apaga a barra
     (o 0% do «Desligar» que saiu do topo da coluna) e «Luz fixa» devolve a cor de sempre, acendendo
-    a barra se ela estava apagada. Um valor que não é nenhum dos três é recusado.
+    a barra se ela estava apagada. Uma base da lista (`base:respirar`) vira o texto
+    `base;cor do controle;ritmo` neste ato, com a cor que a barra acende agora e o ritmo com que a
+    base nasce (`RITMO_DA_BASE`); o arco-íris não leva cor. Um valor que não é nenhum dos quatro é
+    recusado.
     """
-    from hefesto_dualsense4unix.profiles.schema import ler_o_efeito_da_luz
+    from hefesto_dualsense4unix.profiles.schema import (
+        escrever_o_efeito_da_luz,
+        ler_o_efeito_da_luz,
+    )
 
     _nao_no_automatico(ctx)
     uniq = _uniq(o)
     if not uniq:
         raise ValueError(f"{GESTO_DO_EFEITO}: o clique não disse em qual controle")
     pedido = str(o.get("valor") or "").strip()
+    base = base_do_token(pedido)
+    if pedido.startswith(PREFIXO_DA_BASE) and base is None:
+        raise ValueError(f"{GESTO_DO_EFEITO}: a lista não tem a base {pedido!r}")
     efeito = None if pedido in (SEM_EFEITO, LUZ_FIXA) else pedido
-    if efeito is not None and ler_o_efeito_da_luz(efeito) is None:
+    if base is None and efeito is not None and ler_o_efeito_da_luz(efeito) is None:
         raise ValueError(
             f"{GESTO_DO_EFEITO}: o valor {pedido!r} não é um efeito. A lista oferece "
-            f"{SEM_EFEITO!r}, {LUZ_FIXA!r} ou um efeito que você criou")
+            f"{SEM_EFEITO!r}, {LUZ_FIXA!r}, uma base ou um efeito que você criou")
 
     nome = perfil.nome_do_ativo(ctx.state).strip()
     perfil._com_o_src()
     cru = perfil.ativo_que_vale(nome)
     dele = next((c for c in ctx.conectados if str(c.get("uniq") or "") == uniq), None)
+    if base is not None:
+        if dele is None:
+            raise ValueError(f"{GESTO_DO_EFEITO}: o controle da coluna não está ligado")
+        cor = _a_cor_de_agora(ctx, cru, dele)
+        r, g, b = cor_da_base(cor)
+        cores = [] if base == "arco-iris" else [  # (noqa-acento) chave ASCII
+            f"{r:02X}{g:02X}{b:02X}"]
+        efeito = escrever_o_efeito_da_luz(base, cores, RITMO_DA_BASE[base])
     atual = brilho_do_controle(cru, uniq)
     apagada = atual is not None and atual <= 0.0
     from hefesto_dualsense4unix.profiles.o_padrao_do_computador import gravar_pelo_gesto
@@ -2525,6 +2688,35 @@ def efeito_da_luz(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
         _escrever_a_cor(ctx, p, uniq, (0, 0, 0), apagando=True, brilho=0.0)
     elif pedido == LUZ_FIXA and apagada and dele is not None:
         _escrever_a_cor(ctx, p, uniq, _a_cor_de_agora(ctx, cru, dele), escolha=True)
+    return None
+
+
+@gesto("04-iluminacao.html", GESTO_DO_SEM_PISCAR, grava="machine_declare")
+def sem_piscar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """O interruptor «Sem piscar»: UM valor da mesa para os quatro controles e as duas conexões.
+
+    Nenhum perfil ganha campo: o valor mora na declaração da mesa (`luz.sem_piscar` do
+    `maquina.json`, `declaracao_do_sem_piscar`), e o `luz_animada` do daemon o lê a cada tique,
+    então o efeito muda na hora, sem reaplicar o perfil. O botão leva o que o clique PEDE em
+    `data-pedido` (`ligar` ou `desligar`, mantido pelo `aria-pressed`, como o do Modo automático):
+    pedir o que já vale não muda nada, e um clique sem pedido não vem da tela. Desligar volta a
+    «sem opinião».
+    """
+    global _A_MAQUINA_DA_LUZ
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.profiles.schema import declaracao_do_sem_piscar
+
+    pedido = str(o.get("pedido") or "")
+    if pedido not in ("ligar", "desligar"):
+        raise ValueError(
+            f"{GESTO_DO_SEM_PISCAR}: o clique não disse se liga ou desliga. O botão manda o "
+            f"`data-pedido`; um pedido sem ele não vem da tela")
+    resposta = p.machine_declare(declaracao_do_sem_piscar(pedido == "ligar"))
+    ok, motivo = (bool(resposta[0]), resposta[1]) if (
+        isinstance(resposta, tuple) and len(resposta) == 2) else (bool(resposta), None)
+    if not ok:
+        raise RuntimeError(motivo or "Não consegui guardar o «Sem piscar».")
+    _A_MAQUINA_DA_LUZ = None
     return None
 
 
@@ -2812,15 +3004,15 @@ def player(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
 #: A PORTA DA COR É A `_detalhado` DESDE 03/09/2026, e `led_set` saiu daqui: o
 PONTE = {"led_set_detalhado", "identity_number_set",
          "player_leds_set_detalhado", "player_led_brightness_set_detalhado",
-         "chamar", "profile_switch"}
-METODOS = {"coop.sync"}
+         "chamar", "profile_switch", "machine_declare"}
+METODOS = {"coop.sync", "machine.declare"}
 
 
 PAGINA = "04-iluminacao.html"
 #: (o interruptor da D-13) e o `reenviar` (a caixa do hexadecimal).
 #: o indicador virou o botão de reenvio (`reenviar-desenho`) e a faixa do título
 #: `luzes`, `desenho-de` e `reenviar-desenho` —, e saíram com o widget que os
-PISO_DA_ABA = 9
+PISO_DA_ABA = 10
 PROVAS = [
     {"pagina": PAGINA, "gesto": "cor", "clique": {"hex": "#FF8000"},  # (noqa-acento) id
      "chama": [("led_set_detalhado", [(255, 128, 0)],
@@ -2832,6 +3024,9 @@ PROVAS = [
      "clique": {"valor": SEM_EFEITO},
      "chama": [("led_set_detalhado", [(0, 0, 0)],
                 {"uniq": "aa:bb:cc:00:00:01"})]},
+    {"pagina": PAGINA, "gesto": GESTO_DO_SEM_PISCAR,  # (noqa-acento) id
+     "clique": {"pedido": "ligar"},
+     "chama": [("machine_declare", [{"luz": {"sem_piscar": True}}], {})]},
     {"pagina": PAGINA, "gesto": "reenviar", "clique": {"texto": "#12AB34"},  # (noqa-acento) id
      "chama": [("led_set_detalhado", [(18, 171, 52)],
                 {"uniq": "aa:bb:cc:00:00:01"})]},

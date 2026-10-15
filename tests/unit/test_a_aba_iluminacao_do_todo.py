@@ -440,7 +440,8 @@ def test_a_lista_de_efeitos_tem_sem_efeito_luz_fixa_e_os_seus() -> None:
 
     sozinha = a04.opcoes_do_efeito({})
     assert f'value="{a04.SEM_EFEITO}"' in sozinha and f'value="{a04.LUZ_FIXA}"' in sozinha
-    assert "optgroup" not in sozinha
+    # Desde 15/10/2026 a lista traz as bases em grupos; o grupo «Seus efeitos» só nasce com efeitos.
+    assert 'optgroup label="Seus efeitos"' not in sozinha
     biblioteca = {"Alerta": {"nome": "Alerta", "base": "piscar",
                              "parametros": {"cores": "#FF0000", "ritmo": 6}}}
     com = a04.opcoes_do_efeito(biblioteca)
@@ -596,11 +597,16 @@ def test_a_guia_tem_as_oito_cores_de_jogador_e_nenhuma_das_seis_de_fora() -> Non
 # ---------------------------------------------------------------- o desenho
 
 
-def test_o_desenho_nao_tem_interrogacao_nem_desligar_nem_sem_piscar() -> None:
-    """MORDIDA: voltar o `?`, o «Desligar» ou o «Sem piscar» ao desenho."""
+def test_o_desenho_nao_tem_interrogacao_nem_desligar() -> None:
+    """MORDIDA: voltar o `?` ou o «Desligar» ao desenho.
+
+    O «Sem piscar» VOLTOU em 15/10/2026, como interruptor global da faixa do título (o desenho
+    aprovado em 14/10, chave `r3-04-11`); ele é medido em
+    `test_a_aba_iluminacao_mostra_a_lista_nova_e_o_sem_piscar`.
+    """
     doc = _doc()
     assert 'class="ajuda' not in doc, "o `?` voltou: a dica mora no `data-dica`"
-    for fora in ("Desligar", "Sem piscar", "Opções", "mesa"):
+    for fora in ("Desligar", "Opções", "mesa"):
         assert fora not in doc, f"o desenho trouxe «{fora}»"
     for dito in ("Efeito", "Criar efeitos novos", "Sem efeito", "Luz fixa", "Respirar", "Piscar",
                  "Arco-íris", "Criar", "Modo automático"):
