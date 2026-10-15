@@ -43,13 +43,23 @@ As linhas são as da tag 1.6.8 do PipeWire e da 0.5.12 do WirePlumber.
 | o mesmo, mas o WirePlumber volta (`SIGCONT`) em vez de morrer | 15 | 0 |
 | o mesmo do primeiro, com o `metadata.c` curado (o `remove_pending` no `global_unbind`) | 15 | 0 |
 | 20 reinícios graciosos (`SIGTERM`), 12 `wpctl` espalhados em cada um | 240 | 0 |
+| 4 paradas pelo `SIGTERM` (o caminho do `systemctl restart`), alongadas a ~255 ms (`strace` atrasando cada `close`), `wpctl` a cada 20 ms durante a parada | 48 | **8** (2 por parada) |
+| 3 paradas alongadas com a mesma compilação, sem a cura | 36 | **6** |
+| 3 paradas alongadas com o `metadata.c` curado | 36 | 0 |
 | nós e laços nascendo e morrendo em rajada, sem reinício | 450 | 0 |
 
-- O pendurado da reprodução é igual ao da máquina: `wchan=poll_schedule_timeout`, e o Recv-Q do lado do servidor fica
-  diferente de zero só no socket dele.
-- O reinício gracioso não pendura no privado porque a janela é curta: o WirePlumber privado sai em ~1 ms. Na máquina,
-  a parada normal leva de 10 a 60 ms, e a do caso medido (13/10, 20:14:35) levou **665 ms**. O `wpctl` pendurado nasceu
-  nesse mesmo segundo.
+- O pendurado da reprodução é igual ao da máquina: `wchan=poll_schedule_timeout`, cliente `unrestricted` com `rwxm`, o
+  Send-Q do lado do `wpctl` cheio (5.888 bytes no privado, 213.248 na máquina) e o Recv-Q do lado do servidor parado
+  (~1 KB no privado, 34.592 bytes na máquina) só no socket dele. A diferença de tamanho não foi medida; a hipótese é o
+  grafo, com 472 objetos na máquina e uma dúzia no privado.
+- O `SIGTERM` pendura quando a parada é longa: o WirePlumber privado sai em ~1 ms, e por isso as 240 tentativas sem
+  alongar deram 0. Alongada a ~255 ms, cada parada prende 2 dos 12 `wpctl` (os que fizeram o bind depois de o laço
+  parar). Na máquina, a parada normal leva de 10 a 60 ms, e a do caso medido levou **665 ms**.
+- No caso medido, o `wpctl` nasceu às 20:14:35,01, 74 ms antes de o systemd começar a parar o WirePlumber
+  (20:14:35,084). O mesmo install tinha reiniciado o daemon do Hefesto às 20:14:32, e entre 20:14:34,89 e 20:14:34,95
+  o daemon novo tirou e republicou as fontes de microfone dos controles. Ainda falta provar que a Steam roda o `wpctl`
+  porque os nós de som mudaram. Se roda, o install pôs as duas pontas da janela a 150 ms uma da outra: o nó que muda e
+  o WirePlumber que para.
 - O módulo curado foi compilado da tag 1.6.8 contra os cabeçalhos do sistema e carregado por `PIPEWIRE_MODULE_DIR`. A
   cura testada é a mesma do `06de0ed`. A mesma compilação, sem a cura, pendura 5 em 5 (5 dos 20 da primeira linha).
 
