@@ -55,7 +55,7 @@
       "data": "2026-10-15",
       "nota": "remendos de sintoma por arquivo",
       "o_que_conta": "remendos de sintoma acima do teto de cada arquivo",
-      "piso": 1021,
+      "piso": 1019,
       "por_item": {
         "__init__.py": 1,
         "app/actions/base.py": 1,
@@ -187,7 +187,7 @@
         "interface/pacotes/__init__.py": 2,
         "interface/pacotes/a01_jogar.py": 3,
         "interface/pacotes/a02_controles.py": 5,
-        "interface/pacotes/a03_gatilhos.py": 3,
+        "interface/pacotes/a03_gatilhos.py": 1,
         "interface/pacotes/a04_iluminacao.py": 2,
         "interface/pacotes/a05_vibracao.py": 5,
         "interface/pacotes/a06_navegacao.py": 3,
@@ -237,7 +237,7 @@
         }
       ],
       "unidade": "remendos",
-      "universo": 390
+      "universo": 391
     },
     "tamanho": {
       "data": "2026-10-15",
