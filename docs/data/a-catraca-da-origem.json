@@ -240,17 +240,17 @@
       "universo": 388
     },
     "tamanho": {
-      "data": "2026-10-14",
+      "data": "2026-10-15",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1099873,
+      "piso": 1103192,
       "por_item": {
-        "docs": 118076,
-        "scripts": 112127,
-        "src": 298862,
-        "tests": 570808
+        "docs": 118343,
+        "scripts": 112540,
+        "src": 299136,
+        "tests": 573173
       },
-      "razao": "tamanho: +8 linhas (1099865 -> 1099873), pagas por Origem: D-1310-O-DIARIO-ESCREVE-O-TRACEBACK-SEM-OS-LOCAIS, D-1310-O-RUNTIME-DECLARADO-VENCE-O-PLATFORMDIRS, D-1310-O-TESTE-DO-LACO-ESPERA-PELA-CONDICAO, D-1310-O-WIFI-USB-E-O-RTW88-SO-COM-O-ADAPTADOR-PRESENTE; registrado no fecho, topo 69997ee0dd0c",
+      "razao": "tamanho: +3319 linhas (1099873 -> 1103192), pagas por Origem: D-0710-O-PAD-E-UM-GADGET-SO-HID, D-1410-O-APLICAR-SEGURA, D-1410-O-PERFIL-FICA-NO-ULTIMO-JOGO, D-2909-HAPTICA-TEM-DONO, plataforma.vpad, vibracao.haptics_vcm; registrado no fecho, topo 4057214d9426",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -419,10 +419,16 @@
           "de": 1099865,
           "para": 1099873,
           "razao": "tamanho: +8 linhas (1099865 -> 1099873), pagas por Origem: D-1310-O-DIARIO-ESCREVE-O-TRACEBACK-SEM-OS-LOCAIS, D-1310-O-RUNTIME-DECLARADO-VENCE-O-PLATFORMDIRS, D-1310-O-TESTE-DO-LACO-ESPERA-PELA-CONDICAO, D-1310-O-WIFI-USB-E-O-RTW88-SO-COM-O-ADAPTADOR-PRESENTE; registrado no fecho, topo 69997ee0dd0c"
+        },
+        {
+          "data": "2026-10-15",
+          "de": 1099873,
+          "para": 1103192,
+          "razao": "tamanho: +3319 linhas (1099873 -> 1103192), pagas por Origem: D-0710-O-PAD-E-UM-GADGET-SO-HID, D-1410-O-APLICAR-SEGURA, D-1410-O-PERFIL-FICA-NO-ULTIMO-JOGO, D-2909-HAPTICA-TEM-DONO, plataforma.vpad, vibracao.haptics_vcm; registrado no fecho, topo 4057214d9426"
         }
       ],
       "unidade": "linhas",
-      "universo": 2827
+      "universo": 2837
     }
   }
 }
