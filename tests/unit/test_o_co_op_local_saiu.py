@@ -140,7 +140,7 @@ def test_o_perfil_que_recebeu_o_coop_fica_com_os_ajustes_e_sem_estilo(
         assert leds is not None
         assert tuple(leds.lightbar) == cores[controle["jogador"] - 1]
         assert leds.lightbar_para_o_numero == controle["jogador"]
-    assert perfil == gravado
+    assert perfil.model_copy(update={"criado_em": None}) == gravado
 
 
 def test_a_volta_de_antes_do_estilo_continua_no_historico(primeira_carga: None) -> None:

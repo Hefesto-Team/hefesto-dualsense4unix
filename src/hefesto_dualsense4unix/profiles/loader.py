@@ -818,6 +818,11 @@ def migrar_generos_para_estilos_de_jogo(
 
 CHAVES_DO_PERFIL_DE_JOGO: tuple[str, ...] = ("name", "match", "priority")
 
+CHAVES_DAS_DATAS: tuple[str, ...] = ("criado_em", "modificado_em")
+
+# Quem salva por conta própria, sem ela ter pedido: não mexe na data da última mudança.
+ORIGENS_SEM_GESTO: frozenset[str] = frozenset({"lancador_agnostico", "migracao-do-computador"})
+
 _JOGOS_ENXUTOS_MARKER = ".perfis_de_jogo_so_nome_e_id"
 
 
@@ -858,7 +863,8 @@ def _e_perfil_de_jogo_intocado(dados: dict[str, object]) -> bool:
         )
     )
     resto_do_disco = {
-        k: v for k, v in dados.items() if k not in CHAVES_DO_PERFIL_DE_JOGO
+        k: v for k, v in dados.items()
+        if k not in CHAVES_DO_PERFIL_DE_JOGO and k not in CHAVES_DAS_DATAS
     }
     resto_do_molde = {
         k: v for k, v in molde.items() if k not in CHAVES_DO_PERFIL_DE_JOGO
@@ -880,7 +886,9 @@ def enxugar_perfis_de_jogo(dest_dir: Path | None = None) -> list[str]:
             dados = _dados_crus_do_perfil(path)
             if dados is None or not _e_perfil_de_jogo_intocado(dados):
                 continue
-            payload = {k: dados[k] for k in CHAVES_DO_PERFIL_DE_JOGO if k in dados}
+            payload = {
+                k: dados[k] for k in (*CHAVES_DO_PERFIL_DE_JOGO, *CHAVES_DAS_DATAS) if k in dados
+            }
             try:
                 _atomic_write_json(path, payload)
             except OSError as exc:
@@ -1289,13 +1297,50 @@ def _perfil_do_jogo(jogo: JogoLocal) -> Profile:
         name=jogo.nome,
         match=MatchCriteria(window_class=_classes_do_perfil(jogo)),
         priority=PRIORIDADE_DO_PERFIL_DE_JOGO,
+        criado_em=_agora_local(),
     )
 
 
 def _payload_do_perfil_de_jogo(profile: Profile) -> dict[str, object]:
-    """O que vai para o disco quando um perfil de JOGO nasce: nome, id, prioridade."""
+    """O que vai para o disco quando um perfil de JOGO nasce: nome, id, prioridade, datas."""
     payload = _payload_do_perfil(profile)
-    return {k: payload[k] for k in CHAVES_DO_PERFIL_DE_JOGO if k in payload}
+    return {k: payload[k] for k in (*CHAVES_DO_PERFIL_DE_JOGO, *CHAVES_DAS_DATAS) if k in payload}
+
+
+def _agora_local() -> str:
+    """A hora local em ISO 8601, ao segundo, com o fuso."""
+    return datetime.now().astimezone().isoformat(timespec="seconds")
+
+
+def _datas_do_arquivo(bruto: bytes) -> tuple[str | None, str | None]:
+    """`(criado_em, modificado_em)` que o arquivo já tem; ilegível ou ausente é None."""
+    with contextlib.suppress(ValueError, UnicodeDecodeError):
+        dados = json.loads(bruto.decode("utf-8"))
+        if isinstance(dados, dict):
+            criado, mudado = dados.get("criado_em"), dados.get("modificado_em")
+            return (criado if isinstance(criado, str) else None,
+                    mudado if isinstance(mudado, str) else None)
+    return None, None
+
+
+def _com_as_datas(
+    profile: Profile, anterior: bytes | None, origem: str | None, *, enxuto: bool
+) -> Profile:
+    """O perfil com as duas datas no que o salvar vai gravar.
+
+    Arquivo novo nasce com `criado_em`. Arquivo que já existia guarda as datas dele; a
+    `modificado_em` só vira agora no gesto do usuário e quando o conteúdo de fato muda.
+    """
+    if anterior is None:
+        return profile.model_copy(update={"criado_em": _agora_local(), "modificado_em": None})
+    criado, mudado = _datas_do_arquivo(anterior)
+    guardado = profile.model_copy(update={"criado_em": criado, "modificado_em": mudado})
+    if not gesto_de_agora.get() or origem in ORIGENS_SEM_GESTO:
+        return guardado
+    payload = _payload_do_perfil_de_jogo(guardado) if enxuto else _payload_do_perfil(guardado)
+    if _bytes_do_payload(payload) == anterior:
+        return guardado
+    return guardado.model_copy(update={"modificado_em": _agora_local()})
 
 
 def _gravar_sem_pisar(alvo: Path, payload: object) -> bool:
@@ -2198,12 +2243,13 @@ def save_profile(
     semeado): o que o perfil não diz, herda do padrão do computador.
     """
     path = _profile_path(profile)
-    payload = (
-        _payload_do_perfil_de_jogo(profile) if enxuto else _payload_do_perfil(profile)
-    )
-    novos = _bytes_do_payload(payload)
     with FileLock(str(_lock_path(path))):
         anterior = _bytes_se_existe(path)
+        profile = _com_as_datas(profile, anterior, origem, enxuto=enxuto)
+        payload = (
+            _payload_do_perfil_de_jogo(profile) if enxuto else _payload_do_perfil(profile)
+        )
+        novos = _bytes_do_payload(payload)
         igual = anterior is not None and anterior == novos
         backup = (
             _arquivar_versao(path.stem, anterior)

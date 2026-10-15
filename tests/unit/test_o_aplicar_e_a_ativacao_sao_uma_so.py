@@ -51,6 +51,8 @@ FORA: dict[str, str] = {
     "estilo": "é lido pelo motor do tato vivo a cada segundo, não pelo aplicar",
     "receita_do_tato": "é o desvio da bancada, lido pelo motor do tato vivo",
     "marcas": "são etiquetas da pessoa, lidas pela tela e pelas modificações",
+    "criado_em": "é a data em que o arquivo nasceu, lida pela lista da aba Perfis",
+    "modificado_em": "é a data da última mudança dela, lida pela lista da aba Perfis",
     "controles_modo": "é a escolha do botão «Modo automático» da aba Controles, lida pela tela",
 }
 FORA_POR_CONTROLE: dict[str, str] = {}

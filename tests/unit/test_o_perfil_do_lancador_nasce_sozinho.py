@@ -92,7 +92,7 @@ def test_o_jogo_do_heroic_ganha_perfil_com_a_classe_da_janela(
         "process_name": [],
     }
     assert dados["priority"] == loader.PRIORIDADE_DO_PERFIL_DE_JOGO == 80
-    assert list(dados) == list(loader.CHAVES_DO_PERFIL_DE_JOGO), dados
+    assert list(dados) == [*loader.CHAVES_DO_PERFIL_DE_JOGO, "criado_em"], dados
 
 
 def test_o_perfil_do_lancador_casa_com_a_janela_do_jogo(tmp_path: Path) -> None:

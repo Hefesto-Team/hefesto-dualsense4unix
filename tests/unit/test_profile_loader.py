@@ -84,7 +84,8 @@ def test_save_e_load_roundtrip(isolated_profiles_dir: Path):
     profile = _mk_profile("shooter")
     save_profile(profile)
     restored = load_profile("shooter")
-    assert restored == profile
+    assert restored.criado_em is not None, "o perfil novo nasce com a data"
+    assert restored.model_copy(update={"criado_em": None}) == profile
 
 
 def test_load_perfil_inexistente(isolated_profiles_dir: Path):

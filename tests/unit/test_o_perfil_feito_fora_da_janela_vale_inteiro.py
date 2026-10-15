@@ -45,7 +45,7 @@ class TestOPerfilDoTerminalHerdaOComputador:
         r = runner.invoke(app, ["profile", "create", "Meu Jogo", "--match-class", "meujogo"])
         assert r.exit_code == 0, r.output
         gravado = json.loads((profiles_dir() / "meu_jogo.json").read_text(encoding="utf-8"))
-        assert set(gravado) == {"name", "match", "priority"}, (
+        assert set(gravado) == {"name", "match", "priority", "criado_em"}, (
             f"o perfil do terminal nasceu com campos explícitos: {sorted(gravado)}"
         )
 
@@ -65,7 +65,7 @@ class TestOPerfilDoTerminalHerdaOComputador:
             assert r.exit_code == 0, r.output
         for arquivo in ("reserva.json", "avulso.json"):
             gravado = json.loads((profiles_dir() / arquivo).read_text(encoding="utf-8"))
-            assert set(gravado) == {"name", "match", "priority"}
+            assert set(gravado) == {"name", "match", "priority", "criado_em"}
 
     def test_a_ajuda_diz_que_herda_o_computador(self) -> None:
         r = runner.invoke(app, ["profile", "create", "--help"])

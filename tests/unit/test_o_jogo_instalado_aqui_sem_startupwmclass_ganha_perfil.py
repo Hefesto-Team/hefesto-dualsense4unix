@@ -94,7 +94,7 @@ def test_a_semeadura_le_a_terceira_origem_e_o_perfil_nasce_padrao(tmp_path: Path
     assert resultado.criados == ("forja.json",)
     dados = json.loads((destino / "forja.json").read_text(encoding="utf-8"))
     # o perfil padrão: nome, o que casa e a prioridade — e NADA mais
-    assert set(dados) <= set(loader.CHAVES_DO_PERFIL_DE_JOGO)
+    assert set(dados) <= {*loader.CHAVES_DO_PERFIL_DE_JOGO, "criado_em"}
     perfil = Profile.model_validate(dados)
     assert perfil.name == "FORJA"
     assert perfil.matches({"wm_class": "FORJA"}) is True

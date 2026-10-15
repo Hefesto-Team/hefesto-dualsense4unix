@@ -69,7 +69,7 @@ def test_o_perfil_nasce_com_nome_appid_e_prioridade_e_nada_mais(
         "process_name": [],
     }
     assert dados["priority"] == loader.PRIORIDADE_DO_PERFIL_DE_JOGO == 80
-    assert list(dados) == list(loader.CHAVES_DO_PERFIL_DE_JOGO), dados
+    assert list(dados) == [*loader.CHAVES_DO_PERFIL_DE_JOGO, "criado_em"], dados
 
     from hefesto_dualsense4unix.profiles.schema import Profile, TriggersConfig
 
@@ -627,7 +627,7 @@ def test_o_save_e_a_semeadura_gravam_o_mesmo_formato(
     salvo = json.loads(caminho.read_text(encoding="utf-8"))
 
     assert {k: salvo[k] for k in semeado} == semeado
-    assert list(semeado) == list(loader.CHAVES_DO_PERFIL_DE_JOGO)
+    assert list(semeado) == [*loader.CHAVES_DO_PERFIL_DE_JOGO, "criado_em"]
     for secao in ("mode", "mic", "speaker", "mouse", "key_bindings", "controllers"):
         assert secao not in salvo, f"o save gravou {secao} como null (quebra downgrade)"
 

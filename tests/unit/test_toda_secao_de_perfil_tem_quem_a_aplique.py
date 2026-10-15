@@ -272,6 +272,18 @@ _CLASSIFICACAO: dict[str, SecaoPorApplier | SecaoDireta] = {
             "e pelas modificações. Nada é escrito no controle."
         )
     ),
+    "criado_em": SecaoDireta(
+        razao=(
+            "O-PERFIL-GUARDA-A-DATA-EM-QUE-NASCEU-E-A-DA-ULTIMA-MUDANCA-01 (15/10/2026). "
+            "A data em que o arquivo nasceu, lida pela lista da aba Perfis. Nada chega ao controle."
+        )
+    ),
+    "modificado_em": SecaoDireta(
+        razao=(
+            "Ver `criado_em`: a data da última mudança dela, lida pela lista. "
+            "Nada chega ao controle."
+        )
+    ),
     "match": SecaoDireta(
         razao="Critério de SELEÇÃO do perfil, não estado do controle."
     ),

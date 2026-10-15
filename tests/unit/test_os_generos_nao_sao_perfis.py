@@ -216,7 +216,7 @@ def test_o_perfil_de_jogo_novo_nasce_so_com_nome_e_id(tmp_path: Path) -> None:
 
     assert resultado.criados == ("stray.json",), resultado
     gravado = json.loads((destino / "stray.json").read_text(encoding="utf-8"))
-    assert list(gravado) == list(loader.CHAVES_DO_PERFIL_DE_JOGO), gravado
+    assert list(gravado) == [*loader.CHAVES_DO_PERFIL_DE_JOGO, "criado_em"], gravado
     perfil = Profile.model_validate(gravado)
     assert perfil.name == "Stray"
     assert perfil.match.window_class == ["steam_app_1332010"]

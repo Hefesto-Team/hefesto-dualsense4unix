@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import os
 import re
+from datetime import datetime
 from typing import Any, Literal, NamedTuple
 
 from pydantic import (
@@ -1300,6 +1301,10 @@ class Profile(BaseModel):
     # um campo que nasce denso vai a todo save, e um hefesto anterior a ele recusaria
     # os perfis inteiros (QUEM-E-QUEM-02).
     marcas: list[str] | None = None
+    # Quando o arquivo do perfil nasceu e quando ela o mudou pela última vez, em hora local
+    # ISO 8601. None = perfil de antes das datas: a lista mostra «—», nunca uma data inventada.
+    criado_em: str | None = None
+    modificado_em: str | None = None
 
     @model_serializer(mode="wrap")
     def _sem_ponte_a_chave_nem_aparece(
@@ -1310,7 +1315,7 @@ class Profile(BaseModel):
         if isinstance(dados, dict):
             for opcional in (
                 "ponte", "remapeamento", "movimento", "estilo", "receita_do_tato",
-                "marcas", "controles_modo",
+                "marcas", "controles_modo", "criado_em", "modificado_em",
             ):
                 if dados.get(opcional) is None:
                     dados.pop(opcional, None)
@@ -1328,6 +1333,18 @@ class Profile(BaseModel):
             slugify(value)
         except ValueError as exc:
             raise ValueError(f"name não produz slug válido: {value!r}") from exc
+        return value
+
+    @field_validator("criado_em", "modificado_em", mode="before")
+    @classmethod
+    def _data_legivel_ou_nenhuma(cls, value: object) -> str | None:
+        """Data ilegível vira «sem data»: um carimbo estragado não derruba o perfil."""
+        if not isinstance(value, str):
+            return None
+        try:
+            datetime.fromisoformat(value)
+        except ValueError:
+            return None
         return value
 
     @field_validator("button_actions")
@@ -2398,6 +2415,17 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         E_CONTRATO,
         "`None` = a receita do estilo inteira. É o desvio campo a campo da "
         "bancada sobre a receita do estilo, e não há desvio a semear.",
+    ),
+    "Profile.criado_em": Nascimento(
+        E_CONTRATO,
+        "`None` = perfil de antes das datas. A data de nascimento é o salvar que criou o "
+        "arquivo; semear uma data no perfil antigo mostraria um dia que não foi o dele "
+        "(O-PERFIL-GUARDA-A-DATA-EM-QUE-NASCEU-E-A-DA-ULTIMA-MUDANCA-01).",
+    ),
+    "Profile.modificado_em": Nascimento(
+        E_CONTRATO,
+        "`None` = nenhuma mudança dela desde que as datas existem. Só o gesto dela a põe; o "
+        "salvar automático e a semeadura não mexem.",
     ),
     "Profile.marcas": Nascimento(
         E_CONTRATO,
