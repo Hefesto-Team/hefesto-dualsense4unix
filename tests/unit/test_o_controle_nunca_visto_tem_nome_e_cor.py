@@ -578,7 +578,6 @@ SO_O_0CE6_POR_ESCOLHA = {
     # o IGNORE antigo do jogo: o 0DF2 é o vpad, e o Edge físico sai pelo udev e pelo broker
     "integrations/steam_launch_options.py": "a assinatura do IGNORE antigo do jogo",
     "app/actions/emulation_actions.py": "marcador do quirk, que sai com os dois PIDs",
-    "integrations/storm_doctor.py": "diagnóstico do quirk, que sai com os dois PIDs",
     "integrations/vestido_de_dualsense.py": "a identidade forjada para o jogo",
 }
 
