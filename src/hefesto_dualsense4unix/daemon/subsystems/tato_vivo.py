@@ -1043,12 +1043,21 @@ def _plano_do_lado(cfg: Any) -> PlanoDoGatilho | None:
 
 def _plano_do_automatico(estilo: str) -> PlanoDoGatilho | None:
     """No Modo automático: a imersão com momentos que o estilo do jogo põe na frente."""
+    from hefesto_dualsense4unix.app.actions.trigger_specs import get_spec
+    from hefesto_dualsense4unix.core.trigger_effects import traduzir_chave_velha
     from hefesto_dualsense4unix.profiles.estilos_de_jogo import POR_CHAVE
 
     dele = POR_CHAVE.get(estilo)
     modo = getattr(dele, "gatilho", None)
     if not isinstance(modo, str) or not modo:
         return None
+    # O estilo que ainda guarda a chave que saiu da lista de onze (o FPS em `AutoGun`, o Terror
+    # em `PulseB`…) acha a imersão pelo acionamento de hoje, como a fábrica o leva ao aparelho.
+    spec = get_spec(modo)
+    padroes = [p.default for p in spec.params] if spec is not None else []
+    traduzida = traduzir_chave_velha(modo, padroes)
+    if traduzida is not None:
+        modo = traduzida[0]
     imersao = a_da_frente_com_tempo(modo, estilo)
     if imersao is None:
         return None
