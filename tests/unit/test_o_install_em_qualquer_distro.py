@@ -185,6 +185,7 @@ def test_o_ensaio_da_distro_somente_leitura_nao_planeja_pacote_nem_dkms(tmp_path
     assert "o microfone do DualSense pelo rádio fica desligado" in saida
     assert "o controle da Nintendo pode não subir pelo rádio" in saida
     assert "o dongle Wi-Fi USB não ganha a cura do fantasma USB" in saida
+    assert "módulo DKMS hefesto-usb-f-hid (distro somente leitura)" in saida
     assert "a vibração dos jogos da Sony pelo cabo depende do perfil UCM" in saida
     # e o resto segue: udev e a casa do usuário continuam no plano.
     assert "regras udev" in saida
@@ -214,6 +215,7 @@ def test_o_reconhecimento_diz_a_familia_imutavel(tmp_path: Path) -> None:
         ("install_dkms_hid_playstation_host", "o microfone do DualSense pelo rádio"),
         ("install_dkms_hid_nintendo_host", "o controle da Nintendo"),
         ("install_dkms_rtw88_usb_host", "o dongle Wi-Fi USB"),
+        ("install_dkms_usb_f_hid_host", "o usb_f_hid de fábrica segue"),
         ("install_ucm_dualsense_host", "a vibração dos jogos da Sony pelo cabo"),
     ],
 )

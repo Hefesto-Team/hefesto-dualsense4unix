@@ -69,7 +69,7 @@ def _ensaio(tmp_path: Path, **falsos: str) -> tuple[subprocess.CompletedProcess[
     return r, chamados
 
 
-def test_o_plano_tira_os_quatro_modulos(tmp_path: Path) -> None:
+def test_o_plano_tira_os_cinco_modulos(tmp_path: Path) -> None:
     r, _ = _ensaio(tmp_path, dkms=_DKMS_DE_DOIS_KERNELS)
     faria = [linha for linha in r.stdout.splitlines() if "FARIA: (root) dkms remove" in linha]
     for pacote in (
@@ -77,6 +77,7 @@ def test_o_plano_tira_os_quatro_modulos(tmp_path: Path) -> None:
         "hefesto-rtw88-usb",
         "hefesto-hid-playstation",
         "hefesto-uhid",
+        "hefesto-usb-f-hid",
     ):
         assert any(f"dkms remove {pacote}/" in linha for linha in faria), (
             f"o plano do uninstall não tira o {pacote} com o `dkms status` de duas "

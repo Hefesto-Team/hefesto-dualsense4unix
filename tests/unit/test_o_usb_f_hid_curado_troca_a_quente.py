@@ -222,6 +222,66 @@ def test_o_install_chama_a_troca_depois_do_dkms(tmp_path: Path) -> None:
     assert "nada a trocar" in r.stdout, r.stdout
 
 
+def _passo_do_install(
+    tmp_path: Path, *, no_dkms: int = 0, staged: bool = True
+) -> tuple[subprocess.CompletedProcess[str], list[str]]:
+    """O passo `install_dkms_usb_f_hid_host` com o `dkms_lib.sh` de mentira."""
+    raiz = tmp_path / "raiz"
+    (raiz / "scripts").mkdir(parents=True)
+    (raiz / "scripts" / "dkms_lib.sh").write_text(
+        "dkms_warn_secureboot_once() { :; }\n"
+        "dkms_pkg_version() { echo 1.0.0; }\n"
+        f'dkms_install_patched_module() {{ echo "dkms $*" >> "{tmp_path}/chamadas.log"; }}\n'
+        f"dkms_module_from_updates() {{ return {0 if staged else 1}; }}\n",
+        encoding="utf-8",
+    )
+    sys_module = _sys_module(tmp_path, carregado=True, marca=False, refcnt=0)
+    bin_ = _bin(tmp_path, sys_module, daemon_ativo=False)
+    script = "\n".join(
+        (
+            "set -euo pipefail",
+            f"ROOT_DIR='{RAIZ}'",
+            f"source '{CAMADA}'",
+            f"ROOT_DIR='{raiz}'",
+            f"NO_DKMS={no_dkms}",
+            'warn() { printf "WARN: %s\\n" "$*"; }',
+            "_distro_so_leitura() { return 1; }",
+            "install_dkms_usb_f_hid_host",
+        )
+    )
+    r = subprocess.run(
+        [BASH, "-c", script], capture_output=True, text=True, timeout=60, check=False,
+        env={
+            "PATH": f"{bin_}:/usr/bin:/bin",
+            "HOME": str(tmp_path),
+            "HEFESTO_SYS_MODULE": str(sys_module),
+            "HEFESTO_USB_GADGET_ROOT": str(_gadgets(tmp_path)),
+        },
+    )
+    assert r.returncode == 0, r.stderr
+    log = tmp_path / "chamadas.log"
+    return r, log.read_text(encoding="utf-8").splitlines() if log.exists() else []
+
+
+def test_no_dkms_nao_constroi_nem_troca(tmp_path: Path) -> None:
+    """A MORDIDA: tire o portão `NO_DKMS` da função e o `--no-dkms` constrói e troca."""
+    r, chamadas = _passo_do_install(tmp_path, no_dkms=1)
+    assert chamadas == [], chamadas
+    assert "pulado (--no-dkms)" in r.stdout, r.stdout
+
+
+def test_fora_do_baseline_nao_troca_o_de_fabrica(tmp_path: Path) -> None:
+    """Kernel fora do pino: o DKMS pula (rc 77), nada fica staged e o carregado fica.
+
+    A MORDIDA: tire a volta cedo do `dkms_module_from_updates` e a troca recarrega o
+    de fábrica à toa, sem cura nenhuma em `updates/dkms`.
+    """
+    r, chamadas = _passo_do_install(tmp_path, staged=False)
+    assert [c for c in chamadas if c.startswith("dkms ")], chamadas
+    assert not any("modprobe" in c for c in chamadas), chamadas
+    assert "KERNELS_VALIDADOS" in r.stdout and "patch/BASELINE" in r.stdout, r.stdout
+
+
 def _doctor(tmp_path: Path, *, carregado: bool, marca: bool, staged: bool,
             kernel: str = KERNEL_CONFERIDO) -> str:
     bin_ = tmp_path / "bin-doctor"

@@ -5861,7 +5861,6 @@ def _a_luz_do_jogo_no_controle(status: dict[str, Any], uniq: Any) -> None:
         status["luz_do_mic_do_jogo"] = int(do_jogo)
 
 
-
 def _com_a_marca_do_f_hid(result: dict[str, Any]) -> None:
     """O ``usb_f_hid`` dos pads USB virtuais é o curado? Só da memória do pad.
 
