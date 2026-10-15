@@ -24,12 +24,6 @@ def _nome_do_scontrol(crua: str) -> str:
     return f"{achado.group(1)},{achado.group(2)}" if achado else crua.strip()
 
 
-def ganho_do_scontents(texto: str) -> tuple[int, float] | None:
-    """`(por cento, dB)` do elemento de ganho de captura, ou `None`."""
-    achado = elemento_e_ganho_do_scontents(texto)
-    return None if achado is None else (achado[1], achado[2])
-
-
 def elemento_e_ganho_do_scontents(texto: str) -> tuple[str, int, float] | None:
     """`(elemento, por cento, dB)` — o NOME é o que o escritor precisa."""
     tem_ganho = False
@@ -50,15 +44,6 @@ def elemento_e_ganho_do_scontents(texto: str) -> tuple[str, int, float] | None:
             return (nome, max(0, min(100, int(achado.group(1)))),
                     float(achado.group(2)))
     return None
-
-
-def placa_de_cada_fonte(lista_de_sources: str) -> dict[str, str]:
-    """`{nome_do_no: placa_alsa}` da saída de `pactl --format=json list sources`."""
-    return {
-        no.nome: no.propriedades["alsa.card"]
-        for no in porta_do_som.nos_do_texto(lista_de_sources or "")
-        if no.nome and no.propriedades.get("alsa.card")
-    }
 
 
 def placa_do_controle(uniq: str, na_mesa: Sequence[str]) -> str:

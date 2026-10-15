@@ -41,7 +41,7 @@ def test_cada_padrao_tem_passos_de_ate_255_e_dura_menos_que_o_teto() -> None:
         assert passos, nome
         for ms, esq, dir_ in passos:
             assert ms > 0 and 0 <= esq <= 255 and 0 <= dir_ <= 255, (nome, ms, esq, dir_)
-        assert padroes.duracao_ms(nome) <= padroes.TETO_MS, nome
+        assert sum(ms for ms, _, _ in passos) <= padroes.TETO_MS, nome
         assert padroes.ROTULOS[nome], nome
         assert passos[-1][1:] == (0, 0), f"{nome} acaba com o motor ligado"
 

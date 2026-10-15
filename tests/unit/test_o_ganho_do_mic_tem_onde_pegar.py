@@ -9,7 +9,6 @@ from __future__ import annotations
 import pathlib
 
 from hefesto_dualsense4unix.integrations import ganho_do_microfone as gm
-from tests.unit import pactl_json_de_mentira as pj
 
 PUBLICADO = pathlib.Path(
     "src/hefesto_dualsense4unix/interface/paginas/02-controles.html")
@@ -62,34 +61,11 @@ class TestOElementoNaoSeDigita:
             "  Mono: Capture 101 [100%] [48.00dB] [on]\n")
         assert gm.elemento_e_ganho_do_scontents(texto) == ("Headset,0", 100, 48.0)
 
-    def test_os_dois_parsers_tem_corpo_unico(self) -> None:
-        """Dois parsers da mesma saída é como o leitor e o escritor do mesmo"""
-        texto = (
-            "Simple mixer control 'Mic',1\n"
-            "  Capabilities: cvolume\n"
-            "  Mono: Capture 40 [37%] [12.50dB] [on]\n")
-        inteiro = gm.elemento_e_ganho_do_scontents(texto)
-        assert inteiro is not None
-        assert gm.ganho_do_scontents(texto) == (inteiro[1], inteiro[2])
-
     def test_sem_elemento_de_ganho_nao_se_chuta_zero(self) -> None:
         """Chutar zero pintaria «ganho no mínimo» sobre uma placa sem ganho."""
         assert gm.elemento_e_ganho_do_scontents(
             "Simple mixer control 'PCM',0\n  Capabilities: pvolume\n") is None
-        assert gm.ganho_do_scontents("") is None
-
-
-class TestAPlacaSaiDoServidorDeSom:
-    def test_o_no_casa_com_a_placa_alsa(self) -> None:
-        lista = pj.texto(
-            pj.no(7, "alsa_input.usb-Sony-00.mono-fallback", props={"alsa.card": "3"}),
-            pj.no(9, "hefesto_mic_a0fa9c"))
-        assert gm.placa_de_cada_fonte(lista) == {
-            "alsa_input.usb-Sony-00.mono-fallback": "3"}
-
-    def test_lista_vazia_nao_inventa_placa(self) -> None:
-        assert gm.placa_de_cada_fonte("") == {}
-        assert gm.placa_de_cada_fonte("lixo\nsem nada\n") == {}
+        assert gm.elemento_e_ganho_do_scontents("") is None
 
 
 class TestOGanhoViajaNoPerfil:

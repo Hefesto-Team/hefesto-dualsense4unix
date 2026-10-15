@@ -80,16 +80,6 @@ VibrationPositionPreset = Literal[
 ]
 
 
-def resolve_feedback_preset(key: str) -> list[int] | None:
-    """Retorna lista de 10 intensidades para o preset de feedback."""
-    return FEEDBACK_POSITION_PRESETS.get(key)
-
-
-def resolve_vibration_preset(key: str) -> list[int] | None:
-    """Retorna lista de 10 intensidades para o preset de vibracao."""
-    return VIBRATION_POSITION_PRESETS.get(key)
-
-
 __all__ = [  # noqa: RUF022
     "FEEDBACK_POSITION_LABELS",
     "FEEDBACK_POSITION_PRESETS",
@@ -97,6 +87,4 @@ __all__ = [  # noqa: RUF022
     "VIBRATION_POSITION_LABELS",
     "VIBRATION_POSITION_PRESETS",
     "VibrationPositionPreset",
-    "resolve_feedback_preset",
-    "resolve_vibration_preset",
 ]

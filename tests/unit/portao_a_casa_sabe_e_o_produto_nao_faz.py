@@ -1257,6 +1257,20 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "`docs/protocol/curvas-proprias.md`, que o `NOTICE:195-199` cita. "
         "Apagá-lo quebra o gerador e a entrega da R3."
     ),
+    "interface/pacotes/a03_gatilhos.py::sem_comentarios_de_css": (
+        "15/10/2026, D-1510-ACIONAMENTO-E-IMERSAO-EM-BIBLIOTECAS-SEPARADAS — é do gerador do "
+        "desenho, não do produto: o `interface/aba03.py` (o gerador do mockup dos Gatilhos, "
+        "o import de :32 e a chamada de :488) tira com ela os `/* … */` do CSS para conferir "
+        "a grade `minmax(0,1fr)` antes de gravar o desenho; o produto só renderiza a página "
+        "publicada. O commit 6b5e2e917 tirou o outro chamador, a régua da página antiga."
+    ),
+    "profiles/efeitos_de_imersao.py::Imersao": (
+        "15/10/2026, D-ESTILO-DE-JOGO-E-UM-PRESET-UNIVERSAL — é o TIPO do dado, não uma "
+        "promessa: as instâncias vivem em `IMERSOES` (profiles/efeitos_de_imersao.py:69), e o "
+        "produto as lê por `imersoes_do_acionamento` e `todos_os_ajustes`, que a aba Gatilhos "
+        "(interface/pacotes/a03_gatilhos.py:519, `_imersoes()`, e o laço de :639) chama por "
+        "módulo e lê nos campos `chave`, `dica` e `ajustes`. Ninguém importa a classe pelo nome."
+    ),
 }
 
 _SEM_CAMINHO_HOJE: dict[str, str] = {
@@ -1342,6 +1356,15 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "uma pergunta em aberto e passou a ser o registro de uma escolha: dar "
         "chamador a esta função é REGRESSÃO até que a decisão seja revertida, "
         "e quando for, o `bt_active_mode.sh` para de costurar NO MESMO commit."
+    ),
+    "profiles/efeitos_de_imersao.py::Momento": (
+        "15/10/2026, D-1510-A-DICA-DA-IMERSAO-DIZ-SO-O-QUE-OS-AJUSTES-FAZEM — a mudança no "
+        "tempo de aperto (ao apertar, segurando, sempre) que cada imersão carrega em "
+        "`momentos` (profiles/efeitos_de_imersao.py:53). O caminho se perde porque nenhum "
+        "código lê `momentos`: o docstring do módulo (:5-8) diz que é dado para o motor do tato, "
+        "que ainda não os toca, e só `tests/unit/test_a_aba_gatilhos_do_todo.py:61` os percorre. "
+        "Fecha quando o motor do tato tocar os momentos (ainda sem sprint escrita), e a dica "
+        "da imersão pode então prometer o que muda com o tempo."
     ),
 }
 

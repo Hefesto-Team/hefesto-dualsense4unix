@@ -225,20 +225,18 @@ class TestMachine:
     def test_a_frequencia_nunca_chega_zero_ao_controle(self):
         assert tfx.machine(2, 9, 4, 0).forces[6] == 1
 
-    def test_os_ajustes_que_o_efeito_le_sao_os_que_a_fabrica_manda(self):
-        """A tela pergunta aqui o que mostrar; a resposta tem de ser o que vai
-        ao fio. Mordida: devolver os seis valores crus de `ajustes_que_o_efeito_le`."""
+    def test_os_seis_valores_antigos_da_metralhadora_mandam_o_que_os_quatro_de_hoje_mandam(self):
+        """Perfil gravado, mod do DSX e linha de comando abrem a Metralhadora com os
+        seis valores de antes de 08/10/2026; o que vai ao fio é o dos quatro de hoje."""
         for velho, lido in (
             ([0, 9, 3, 3, 50, 8], [0, 9, 3, 50]),
             ([1, 8, 200, 150, 20, 10], [1, 8, 8, 20]),
             ([2, 9, 4, 40], [2, 9, 4, 40]),
             ([9, 99, 0, 0], [8, 9, 1, 1]),
         ):
-            assert tfx.ajustes_que_o_efeito_le("Machine", velho) == lido
             assert tfx.build_from_name("Machine", lido) == tfx.build_from_name(
                 "Machine", velho
             )
-        assert tfx.ajustes_que_o_efeito_le("AutoGun", [2, 6, 60]) == [2, 6, 60]
 
 
 class TestFeedbackEVibration:

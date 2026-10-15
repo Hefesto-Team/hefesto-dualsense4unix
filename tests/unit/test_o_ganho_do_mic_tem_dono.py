@@ -169,11 +169,11 @@ class TestODonoDoNumeroPerguntaAoAparelho:
 
         bruto = (FIXTURES / "scontents-dualsense-2026-09-20.txt").read_text(
             encoding="utf-8")
-        lido = gm.ganho_do_scontents(bruto)
+        lido = gm.elemento_e_ganho_do_scontents(bruto)
         assert lido is not None, (
             "o leitor não achou elemento de ganho na gravação do aparelho"
         )
-        pct, db = lido
+        _elemento, pct, db = lido
         esperada = re.search(r"Capture \d+ \[(\d+)%\] \[(-?[\d.]+)dB\]", bruto)
         assert esperada, "a gravação do aparelho mudou de forma"
         assert (pct, db) == (int(esperada.group(1)), float(esperada.group(2)))
@@ -188,7 +188,7 @@ class TestODonoDoNumeroPerguntaAoAparelho:
 
         bruto = (FIXTURES / "scontents-sem-captura-2026-09-20.txt").read_text(
             encoding="utf-8")
-        assert gm.ganho_do_scontents(bruto) is None
+        assert gm.elemento_e_ganho_do_scontents(bruto) is None
 
     def test_o_elemento_so_de_saida_nao_vira_ganho_de_entrada(self) -> None:
         """Um `pvolume` não é ganho de captura, e a régua tem de separar.
@@ -226,7 +226,7 @@ class TestODonoDoNumeroPerguntaAoAparelho:
             "  Limits: Capture 0 - 101\n"
             "  Mono: Capture 77 [76%] [36.50dB] [on]\n"
         )
-        assert gm.ganho_do_scontents(dificil) == (76, 36.5), (
+        assert gm.elemento_e_ganho_do_scontents(dificil) == ("Headset,0", 76, 36.5), (
             "o leitor pegou o elemento de SAÍDA: a linha dele tem a palavra "
             "`Capture` e um por cento, e sem a exigência de `cvolume` ela casa"
         )
@@ -241,7 +241,7 @@ class TestODonoDoNumeroPerguntaAoAparelho:
             "o elemento de SAÍDA tem de vir ANTES na gravação; se vier depois, "
             "a régua passa mesmo com o leitor pegando o primeiro que achar"
         )
-        assert gm.ganho_do_scontents(bruto) == (100, 48.0)
+        assert gm.elemento_e_ganho_do_scontents(bruto) == ("Headset,0", 100, 48.0)
 
     def test_o_default_do_ganho_esta_escrito_e_e_o_topo_da_faixa(self) -> None:
         """§6.3: nenhum campo nasce sem opinião, e esta está justificada.

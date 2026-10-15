@@ -201,7 +201,7 @@ IMERSOES: tuple[Imersao, ...] = (
 POR_CHAVE: dict[str, Imersao] = {i.chave: i for i in IMERSOES}
 
 
-def familia_do_modo(modo: str) -> str:
+def _familia_do_modo(modo: str) -> str:
     """A família do acionamento, ou `""` quando ele não tem imersões."""
     for familia, modos in FAMILIAS.items():
         if modo in modos:
@@ -211,7 +211,7 @@ def familia_do_modo(modo: str) -> str:
 
 def imersoes_do_acionamento(modo: str, estilo: str = "") -> tuple[Imersao, ...]:
     """As três do acionamento, na ordem da tabela; com `estilo`, as dele vão na frente."""
-    familia = familia_do_modo(modo)
+    familia = _familia_do_modo(modo)
     delas = tuple(i for i in IMERSOES if i.familia == familia and modo in i.ajustes)
     if not estilo:
         return delas

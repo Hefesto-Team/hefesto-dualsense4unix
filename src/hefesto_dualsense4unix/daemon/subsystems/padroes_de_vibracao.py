@@ -47,11 +47,6 @@ def sequencia(padrao: str, motores: str = AMBOS) -> tuple[Passo, ...]:
         for ms, esq, dir_ in PADROES[padrao])
 
 
-def duracao_ms(padrao: str) -> int:
-    """A soma dos tempos do padrão."""
-    return sum(ms for ms, _, _ in PADROES[padrao])
-
-
 def tocar(
     padrao: str,
     motores: str,

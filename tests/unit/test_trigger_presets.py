@@ -4,19 +4,14 @@ Valida:
 - Todos os presets resolvíveis têm exatamente 10 posicoes.
 - Todos os valores estão no range 0-8 (limite do firmware DualSense).
 - "custom" não está nos dicts de preset resolvível (só nos labels).
-- Funções de resolucao retornam None para "custom" e lista para chaves validas.
 """
 from __future__ import annotations
-
-import pytest
 
 from hefesto_dualsense4unix.profiles.trigger_presets import (
     FEEDBACK_POSITION_LABELS,
     FEEDBACK_POSITION_PRESETS,
     VIBRATION_POSITION_LABELS,
     VIBRATION_POSITION_PRESETS,
-    resolve_feedback_preset,
-    resolve_vibration_preset,
 )
 
 
@@ -51,18 +46,6 @@ class TestFeedbackPositionPresets:
             assert chave in FEEDBACK_POSITION_LABELS, (
                 f"Preset feedback '{chave}' não tem label correspondente"
             )
-
-    @pytest.mark.parametrize("chave", list(FEEDBACK_POSITION_PRESETS.keys()))
-    def test_resolve_retorna_lista(self, chave: str) -> None:
-        resultado = resolve_feedback_preset(chave)
-        assert resultado is not None
-        assert len(resultado) == _N_POSICOES
-
-    def test_resolve_custom_retorna_none(self) -> None:
-        assert resolve_feedback_preset("custom") is None
-
-    def test_resolve_chave_inexistente_retorna_none(self) -> None:
-        assert resolve_feedback_preset("nao_existe") is None
 
     def test_rampa_crescente_valores_corretos(self) -> None:
         valores = FEEDBACK_POSITION_PRESETS["rampa_crescente"]
@@ -109,18 +92,6 @@ class TestVibrationPositionPresets:
             assert chave in VIBRATION_POSITION_LABELS, (
                 f"Preset vibracao '{chave}' não tem label correspondente"
             )
-
-    @pytest.mark.parametrize("chave", list(VIBRATION_POSITION_PRESETS.keys()))
-    def test_resolve_retorna_lista(self, chave: str) -> None:
-        resultado = resolve_vibration_preset(chave)
-        assert resultado is not None
-        assert len(resultado) == _N_POSICOES
-
-    def test_resolve_custom_retorna_none(self) -> None:
-        assert resolve_vibration_preset("custom") is None
-
-    def test_resolve_chave_inexistente_retorna_none(self) -> None:
-        assert resolve_vibration_preset("nao_existe") is None
 
     def test_machine_gun_alterna(self) -> None:
         """machine_gun deve ter padrão alternado de alta/baixa amplitude."""

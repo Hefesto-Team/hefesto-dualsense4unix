@@ -596,28 +596,6 @@ def _metralhadora_de_seis(valores: list[int]) -> list[int]:
     return [valores[0], valores[1], valores[2], valores[4]]
 
 
-def ajustes_que_o_efeito_le(name: str, params: list[int]) -> list[int]:
-    """Os ajustes posicionais de um efeito como a fábrica os lê e manda.
-
-    Só a Metralhadora muda: os seis valores de antes de 08/10/2026 viram os
-    quatro de hoje, e cada um encosta na faixa. Quem mostra um perfil (a aba
-    Gatilhos) pergunta aqui, para a barra dizer a frequência que o controle
-    recebe, e não a amplitude B que estava na quarta casa. Os outros efeitos
-    e a lista que não se entende voltam como vieram.
-    """
-    if name != "Machine":
-        return list(params)
-    try:
-        valores = [int(x) for x in params]
-    except (TypeError, ValueError):
-        return list(params)
-    if len(valores) == _SEIS_DA_METRALHADORA_ANTIGA:
-        valores = _metralhadora_de_seis(valores)
-    if len(valores) != 4:
-        return list(params)
-    return list(_metralhadora_na_faixa(*valores))
-
-
 def _traduzir_params_nomeados(
     name: str, params: dict[str, int]
 ) -> dict[str, object]:
@@ -723,7 +701,6 @@ __all__ = [
     "PRESET_FACTORIES",
     "TAMANHO_DO_BLOCO_DO_GATILHO",
     "TriggerMode",
-    "ajustes_que_o_efeito_le",
     "auto_gun",
     "bloco_do_efeito",
     "bloco_do_gatilho",
