@@ -1000,19 +1000,19 @@ class AltoFalanteSubsystem:
     def _aparelhos_de_pe(self, aparelho_de: Mapping[str, str]) -> dict[str, str]:
         """``{marca: uniq}`` dos endpoints que ficam de pé nesta volta.
 
-        Um por DualSense da mesa, em qualquer transporte; o do aparelho que SAIU fica enquanto
-        um jogo toca nele (servidor mudo é «toca») ou o gadget dele espera o jogo fechar: o nó
-        que some sob o jogo leva a háptica junto (08/09; ``docs/research/o-porque-dos-modulos.md``).
+        Um por DualSense da mesa; o do aparelho que SAIU fica enquanto um jogo toca nele (servidor
+        mudo é «toca») ou, com jogo aberto, o gadget da âncora dele segue dele (estacionado, o P1
+        à espera, a troca de transporte): ``docs/research/o-porque-dos-modulos.md``.
         """
         from hefesto_dualsense4unix.integrations.alto_falante_bt import sink_esta_tocando
-        from hefesto_dualsense4unix.integrations.uhid_gamepad import gadget_estacionado
+        from hefesto_dualsense4unix.integrations.endpoint_de_haptica import a_porta_e_dele
 
         de_pe = {marca: uniq for uniq, marca in aparelho_de.items()}
         for marca, endpoint in list(self._endpoints.items()):
-            uniq, nome = (str(getattr(endpoint, k, "") or "") for k in ("uniq", "nome"))
-            if marca not in de_pe and (
-                gadget_estacionado(uniq) or sink_esta_tocando(nome, na_duvida=True)
-            ):
+            uniq, nome, ancora = (getattr(endpoint, k, None) for k in ("uniq", "nome", "ancora"))
+            uniq, nome = str(uniq or ""), str(nome or "")
+            if marca not in de_pe and (sink_esta_tocando(nome, na_duvida=True) or (
+                ancora is not None and a_porta_e_dele(uniq, ancora) and self._ha_jogo_aberto())):
                 de_pe[marca] = uniq
         return de_pe
 

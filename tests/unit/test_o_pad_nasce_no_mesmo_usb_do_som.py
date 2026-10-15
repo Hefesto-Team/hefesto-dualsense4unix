@@ -1009,7 +1009,7 @@ class TestOPadEmUsbNaoQuebraOResto:
         t0 = time.monotonic()
         pad.stop()
         estacionados = bancada.ug._GADGETS_ESTACIONADOS
-        assert bancada.ug.gadget_estacionado(IDENTIDADE)
+        assert bancada.ug._GADGETS_ESTACIONADOS.quantos() == 1
         for passo in (5.0, 10.0, 14.0):
             assert estacionados.varrer(agora=t0 + passo) == 0
         bancada.aparelho_presente = True
@@ -1022,7 +1022,7 @@ class TestOPadEmUsbNaoQuebraOResto:
             assert de_volta.start()
             assert len(bancada.pedidos) == 1, "a volta pediu um gadget novo"
             assert de_volta.is_bound
-            assert bancada.ug.gadget_estacionado(IDENTIDADE) is False
+            assert bancada.ug._GADGETS_ESTACIONADOS.quantos() == 0
             assert bancada.ug.o_pad_do_aparelho_nasceu(IDENTIDADE) is False
             assert pad_usb.interface_do_aparelho(IDENTIDADE) == INTERFACE_DO_GADGET
             assert bancada.clientes[0].desmontados == []
@@ -1045,11 +1045,11 @@ class TestOPadEmUsbNaoQuebraOResto:
         assert pad.start()
         assert bancada.esperar(lambda: pad.is_bound)
         pad.stop()
-        assert bancada.ug.gadget_estacionado(IDENTIDADE)
+        assert bancada.ug._GADGETS_ESTACIONADOS.quantos() == 1
         assert bancada.ug.o_pad_do_aparelho_nasceu("aa:bb:cc:00:00:99") is False
         assert bancada.clientes[0].desmontados == []
         assert bancada.ug.o_pad_do_aparelho_nasceu(IDENTIDADE) is True
-        assert bancada.ug.gadget_estacionado(IDENTIDADE) is False
+        assert bancada.ug._GADGETS_ESTACIONADOS.quantos() == 0
         assert bancada.clientes[0].desmontados == ["hefesto-pad-0"]
         assert pad_usb.interface_do_aparelho(IDENTIDADE) is None
 

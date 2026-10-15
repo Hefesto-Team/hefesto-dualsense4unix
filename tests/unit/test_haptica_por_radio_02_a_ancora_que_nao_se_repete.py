@@ -206,6 +206,7 @@ def mesa(monkeypatch: pytest.MonkeyPatch) -> _Mesa:
     monkeypatch.setattr(
         mod.AltoFalanteSubsystem, "_quem_o_jogo_le", lambda self, controles: set()
     )
+    monkeypatch.setattr(mod.AltoFalanteSubsystem, "_ha_jogo_aberto", lambda self: False)
     monkeypatch.setattr(
         mod.AltoFalanteSubsystem, "_quem_mexeu_na_partida",
         lambda self, controles: {

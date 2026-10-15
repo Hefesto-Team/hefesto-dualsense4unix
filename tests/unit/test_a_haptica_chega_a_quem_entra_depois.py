@@ -348,6 +348,7 @@ def mesa(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> _Mesa:
     monkeypatch.setattr(af, "fonte_do_monitor_do_no", _fonte)
     monkeypatch.setattr(broker, "abrir_hidraw", lambda no, **_: type("N", (), {"fd": 7})())
     monkeypatch.setattr(mod.AltoFalanteSubsystem, "_quem_o_jogo_le", lambda self, c: set())
+    monkeypatch.setattr(mod.AltoFalanteSubsystem, "_ha_jogo_aberto", lambda self: False)
     monkeypatch.setattr(
         mod.AltoFalanteSubsystem, "_quem_mexeu_na_partida",
         lambda self, c: {u.lower() for u in m.jogando},
@@ -859,25 +860,40 @@ def test_o_endpoint_nosso_nunca_e_a_placa_do_laco(mesa: _Mesa) -> None:
 class _GadgetParado:
     """O gadget do aparelho que caiu, estacionado à espera do jogo fechar."""
 
-    def __init__(self, nome: str) -> None:
+    def __init__(self, nome: str, uniq: str) -> None:
         self.gadget = nome
+        self.uniq = uniq
         self.desmontado = False
 
     def desmontar(self) -> None:
         self.desmontado = True
+        porta.tirar_porta(self.uniq)  # o ``_GadgetDoPad.desmontar`` esquece a porta
+
+
+@dataclass
+class _Partida:
+    """O dono dos estacionados e o jogo aberto, um só para o pad e para o som."""
+
+    vaga: Any
+    aberto: bool = True
 
 
 @pytest.fixture
-def estacionados(mesa: _Mesa, monkeypatch: pytest.MonkeyPatch) -> Any:
-    """O dono dos estacionados, novo e sem vigia, com um jogo aberto na mesa."""
-    from hefesto_dualsense4unix.integrations import uhid_gamepad
+def partida(mesa: _Mesa, monkeypatch: pytest.MonkeyPatch) -> _Partida:
+    """Jogo aberto, estacionados novos e sem vigia, e a porta de cada pad de verdade.
 
-    vaga = uhid_gamepad._GadgetsEstacionados()
-    monkeypatch.setattr(uhid_gamepad, "_GADGETS_ESTACIONADOS", vaga)
+    O registro de portas é o do produto (um gadget que desce esquece a porta), e
+    não o de mentira em que todo aparelho perguntado ganha uma.
+    """
+    from hefesto_dualsense4unix.integrations import pad_usb, uhid_gamepad
+
+    jogo = _Partida(vaga=uhid_gamepad._GadgetsEstacionados())
+    monkeypatch.setattr(pad_usb, "_INTERFACE_DO_APARELHO", {})
+    monkeypatch.setattr(uhid_gamepad, "_GADGETS_ESTACIONADOS", jogo.vaga)
     monkeypatch.setattr(uhid_gamepad, "_GADGET_VARRE_S", 3600.0)
-    monkeypatch.setattr(uhid_gamepad, "JOGO_ABERTO", lambda: True)
-    monkeypatch.setattr(mod.AltoFalanteSubsystem, "_ha_jogo_aberto", lambda self: True)
-    return vaga
+    monkeypatch.setattr(uhid_gamepad, "JOGO_ABERTO", lambda: jogo.aberto)
+    monkeypatch.setattr(mod.AltoFalanteSubsystem, "_ha_jogo_aberto", lambda self: jogo.aberto)
+    return jogo
 
 
 def _cai_do_cabo(mesa: _Mesa, uniq: str) -> None:
@@ -887,8 +903,25 @@ def _cai_do_cabo(mesa: _Mesa, uniq: str) -> None:
     mesa.assentos.pop(uniq, None)
 
 
+def _volta_ao_cabo(mesa: _Mesa, uniq: str, lugar: int, aparelho: str, devnum: int) -> str:
+    """O aparelho volta ao cabo com outro ``DEVNUM``: a placa dele é um sink novo."""
+    nova = _PLACA.format(n=f".{lugar + 4}")
+    (mesa.sysfs / "bus" / "usb" / "devices" / aparelho / "devnum").write_text(f"{devnum}\n")
+    mesa.servidor.placa(nova, _caminho_da_placa(aparelho))
+    mesa.placas[uniq] = nova
+    mesa.assentos[uniq] = lugar
+    return nova
+
+
+def _o_laco_religou(mesa: _Mesa, uniq: str, primeira: tuple[Any, ...], nova: str) -> None:
+    ultima = [lig for lig in mesa.lacos.ligacoes if lig[0] == _chave(uniq)][-1]
+    assert ultima[2] == str(mesa.servidor.indice(nova)) != primeira[2], (
+        "o laço não religou no sink novo"
+    )
+
+
 def test_com_o_gadget_estacionado_o_endpoint_do_cabo_fica_e_so_o_laco_se_solta(
-    mesa: _Mesa, estacionados: Any
+    mesa: _Mesa, partida: _Partida
 ) -> None:
     """O P3 cai do cabo com o jogo aberto, ocioso: o endpoint fica, o laço solta e religa.
 
@@ -897,64 +930,105 @@ def test_com_o_gadget_estacionado_o_endpoint_do_cabo_fica_e_so_o_laco_se_solta(
     com o aparelho levava a háptica da partida. Quando o jogo fecha, o gadget
     desce e o endpoint vai com ele.
 
-    MORDIDA: em ``_aparelhos_de_pe``, tire o ``gadget_estacionado(uniq) or`` —
-    o endpoint cai na saída (``quedas`` não fica vazia).
+    MORDIDA: em ``_aparelhos_de_pe``, tire o ``a_porta_e_dele(...)`` — o
+    endpoint cai na saída (``quedas`` não fica vazia).
     """
-    from hefesto_dualsense4unix.integrations import uhid_gamepad
-
+    porta.dar_porta(_P3, 3)
     p3 = _no_cabo(mesa, _P3, 3, "3-6", 30)
     mesa.volta(p3)
     ancora = _ancora_do_aparelho(mesa.servidor, _P3)
     (primeira,) = [lig for lig in mesa.lacos.ligacoes if lig[0] == _chave(_P3)]
-    gadget = _GadgetParado("hefesto-pad-2")
-    estacionados.estacionar(_P3, gadget)
+    gadget = _GadgetParado("hefesto-pad-2", _P3)
+    partida.vaga.estacionar(_P3, gadget)
     _cai_do_cabo(mesa, _P3)
     mesa.volta()
     assert mesa.servidor.quedas == [], "o endpoint do aparelho que caiu desceu debaixo do jogo"
     assert mesa.servidor.nossos() == [eh.nome_do_endpoint(_P3)]
     assert _chave(_P3) not in mesa.lacos.vivos, "o laço até o físico que saiu ficou de pé"
-    assert estacionados.retomar(_P3) is gadget
-    nova = _PLACA.format(n=".7")
-    (mesa.sysfs / "bus" / "usb" / "devices" / "3-6" / "devnum").write_text("44\n")
-    mesa.servidor.placa(nova, _caminho_da_placa("3-6"))
-    mesa.placas[_P3] = nova
-    mesa.assentos[_P3] = 3
+    assert partida.vaga.retomar(_P3) is gadget
+    nova = _volta_ao_cabo(mesa, _P3, 3, "3-6", 44)
     mesa.volta(p3)
     assert mesa.servidor.quedas == []
     assert _ancora_do_aparelho(mesa.servidor, _P3) == ancora
-    ultima = [lig for lig in mesa.lacos.ligacoes if lig[0] == _chave(_P3)][-1]
-    assert ultima[2] == str(mesa.servidor.indice(nova)) != primeira[2], (
-        "o laço não religou no sink novo"
-    )
-    estacionados.estacionar(_P3, gadget)
+    _o_laco_religou(mesa, _P3, primeira, nova)
+    partida.vaga.estacionar(_P3, gadget)
     _cai_do_cabo(mesa, _P3)
     mesa.volta()
     assert mesa.servidor.quedas == []
-    uhid_gamepad.JOGO_ABERTO = lambda: False  # o monkeypatch da fixture devolve
-    assert estacionados.varrer() == 1 and gadget.desmontado
+    partida.aberto = False
+    assert partida.vaga.varrer() == 1 and gadget.desmontado
     mesa.volta()
     assert len(mesa.servidor.quedas) == 1, "o endpoint ficou de pé sem gadget e sem jogo"
     assert mesa.servidor.nossos() == []
 
 
-def test_sem_o_gadget_estacionado_o_endpoint_do_cabo_desce_como_antes(
-    mesa: _Mesa, estacionados: Any
+def test_o_p1_que_espera_o_posto_fica_com_o_endpoint_e_o_laco_religa(
+    mesa: _Mesa, partida: _Partida
 ) -> None:
-    """A guarda é do gadget, não do jogo: sem estacionado, o endpoint ocioso desce."""
+    """O P1 cai com o jogo aberto: o pad dele espera no posto, de pé, e não estaciona.
+
+    O pad do P1 só desce por ``stop_gamepad_emulation``; com o jogo, o posto
+    espera o aparelho (``coop.o_posto_do_p1_espera``) e o gadget segue registrado
+    nele. É a mesma identidade que o jogo guardou, e o endpoint fica com ela,
+    como o do estacionado: P1 a P4, sem ramo de jogador.
+
+    MORDIDA: a mesma do cabo (``a_porta_e_dele`` fora de ``_aparelhos_de_pe``).
+    """
+    porta.dar_porta(_P1, 1)
+    p1 = _no_cabo(mesa, _P1, 1, "3-8", 28)
+    mesa.volta(p1)
+    ancora = _ancora_do_aparelho(mesa.servidor, _P1)
+    (primeira,) = [lig for lig in mesa.lacos.ligacoes if lig[0] == _chave(_P1)]
+    _cai_do_cabo(mesa, _P1)
+    mesa.volta()
+    assert partida.vaga.quantos() == 0
+    assert mesa.servidor.quedas == [], "o endpoint do P1 que espera o posto desceu"
+    assert _chave(_P1) not in mesa.lacos.vivos
+    nova = _volta_ao_cabo(mesa, _P1, 1, "3-8", 45)
+    mesa.volta(p1)
+    assert mesa.servidor.quedas == []
+    assert _ancora_do_aparelho(mesa.servidor, _P1) == ancora
+    _o_laco_religou(mesa, _P1, primeira, nova)
+
+
+def test_sem_jogo_o_endpoint_do_aparelho_que_saiu_desce_mesmo_com_o_gadget_de_pe(
+    mesa: _Mesa, partida: _Partida
+) -> None:
+    """Sem jogo, nada a guardar: o endpoint ocioso do aparelho que saiu desce como antes.
+
+    MORDIDA: em ``_aparelhos_de_pe``, tire o ``self._ha_jogo_aberto()`` — o
+    endpoint do P1 sem jogo fica de pé.
+    """
+    partida.aberto = False
+    porta.dar_porta(_P1, 1)
+    mesa.volta(_no_cabo(mesa, _P1, 1, "3-8", 28))
+    _cai_do_cabo(mesa, _P1)
+    mesa.volta()
+    assert len(mesa.servidor.quedas) == 1
+    assert mesa.servidor.nossos() == []
+
+
+def test_sem_o_gadget_o_endpoint_do_cabo_desce_mesmo_com_o_jogo_aberto(
+    mesa: _Mesa, partida: _Partida
+) -> None:
+    """A guarda é do gadget: o que desceu (fantasma, outra máscara) leva o endpoint ocioso."""
+    porta.dar_porta(_P3, 3)
     mesa.volta(_no_cabo(mesa, _P3, 3, "3-6", 30))
     _cai_do_cabo(mesa, _P3)
+    porta.tirar_porta(_P3)
     mesa.volta()
     assert len(mesa.servidor.quedas) == 1
     assert mesa.servidor.nossos() == []
 
 
 def test_com_o_gadget_estacionado_o_endpoint_do_radio_fica_e_a_ponte_renasce(
-    mesa: _Mesa, estacionados: Any
+    mesa: _Mesa, partida: _Partida
 ) -> None:
     """O P4 cai do rádio com o jogo aberto: a ponte desce, o endpoint fica, a ponte renasce.
 
-    MORDIDA: a mesma do cabo (``gadget_estacionado`` fora de ``_aparelhos_de_pe``).
+    MORDIDA: a mesma do cabo (``a_porta_e_dele`` fora de ``_aparelhos_de_pe``).
     """
+    porta.dar_porta(_P4, 4)
     mesa.assentos[_P4] = 4
     mesa.jogando.add(_P4)
     no_do_p4 = eh.nome_do_endpoint(_P4)
@@ -964,14 +1038,14 @@ def test_com_o_gadget_estacionado_o_endpoint_do_radio_fica_e_a_ponte_renasce(
     mesa.volta(p4)
     ancora = _ancora_do_aparelho(mesa.servidor, _P4)
     (ponte,) = [p for p in _PonteDeMentira.criadas if p.uniq == _P4]
-    gadget = _GadgetParado("hefesto-pad-3")
-    estacionados.estacionar(_P4, gadget)
+    gadget = _GadgetParado("hefesto-pad-3", _P4)
+    partida.vaga.estacionar(_P4, gadget)
     mesa.assentos.pop(_P4)
     mesa.servidor.jogo_em.discard(no_do_p4)  # o jogo ocioso: o nó não toca
     mesa.volta()
     assert ponte.desceu, "a ponte até o físico que saiu ficou de pé"
     assert mesa.servidor.quedas == [], "o endpoint do aparelho que caiu desceu debaixo do jogo"
-    assert estacionados.retomar(_P4) is gadget
+    assert partida.vaga.retomar(_P4) is gadget
     mesa.assentos[_P4] = 4
     mesa.servidor.jogo_em.add(no_do_p4)
     mesa.volta(p4)

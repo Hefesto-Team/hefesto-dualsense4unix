@@ -2443,12 +2443,6 @@ class _GadgetsEstacionados:
             achado = self._por_aparelho.pop(pad_usb._so_hex(identidade), None)
         return achado.gadget if achado is not None else None
 
-    def tem(self, identidade: str | None) -> bool:
-        """O gadget do aparelho ``identidade`` está estacionado agora?"""
-        chave = pad_usb._so_hex(identidade or "")
-        with self._trava:
-            return bool(chave) and chave in self._por_aparelho
-
     def quantos(self) -> int:
         with self._trava:
             return len(self._por_aparelho)
@@ -2520,14 +2514,11 @@ class _GadgetsEstacionados:
 _GADGETS_ESTACIONADOS = _GadgetsEstacionados()
 
 
-def gadget_estacionado(identidade: str | None) -> bool:
-    """O gadget do aparelho espera o jogo fechar? Então o endpoint de háptica dele também fica."""
-    return _GADGETS_ESTACIONADOS.tem(identidade)
-
-
 def o_pad_do_aparelho_nasceu(identidade: str | None) -> bool:
     """A adoção decidiu: o estacionado que o pad novo não retomou desce. True = desceu."""
     return _GADGETS_ESTACIONADOS.a_adocao_decidiu(identidade)
+
+
 _CONTRATOS_JA_AVISADOS: set[tuple[str, ...]] = set()
 
 
@@ -2850,7 +2841,6 @@ __all__ = [
     "VPAD_PRODUCT",
     "UhidDualSense",
     "capture_dualsense_blueprint",
-    "gadget_estacionado",
     "o_pad_do_aparelho_nasceu",
     "player_mac",
     "uhid_available",

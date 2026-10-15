@@ -1388,9 +1388,12 @@ por onde passa o pad do P1 e o do co-op, no cabo e no rádio): o pad que retomou
 o gadget já o tirou da vaga, e o que nasce sem retomá-lo (outra máscara, o
 uinput) o derruba na hora. Só o aparelho que está aqui e que nenhuma adoção
 decide (a emulação desligada) desce pelo prazo, contado de quando o vigia o viu
-de volta. O endpoint de háptica do aparelho segue o gadget
-(`AltoFalanteSubsystem._aparelhos_de_pe` pergunta `gadget_estacionado`): o jogo
-ocioso não toca no nó, mas o guardou pelo contêiner do gadget. Só o laço do cabo
+de volta. O endpoint de háptica do aparelho segue o gadget: com jogo aberto, ele
+fica enquanto a interface em que se ancora ainda é a do gadget dele
+(`AltoFalanteSubsystem._aparelhos_de_pe` pergunta `a_porta_e_dele`). Vale para o
+estacionado, para o pad do P1 que espera o posto sem descer e para o co-op que
+segura o pad na troca de transporte. O jogo ocioso não toca no nó, mas o guardou
+pelo contêiner do gadget. Sem jogo, o endpoint desce como antes. Só o laço do cabo
 e a ponte do rádio se soltam, porque o aparelho saiu da mesa. O nó de som e o
 microfone descem como antes: eles não declaram `sysfs.path`, e o jogo não os
 acha pelo contêiner.
