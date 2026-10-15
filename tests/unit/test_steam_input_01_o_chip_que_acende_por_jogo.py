@@ -860,10 +860,10 @@ def test_com_a_ponte_de_pe_so_o_steam_input_acende(lar) -> None:
 
 @pytest.mark.parametrize(("caminho", "desktop", "quem"), [
     ("xbox", False, "xbox"),
-    ("dualsense", True, "navegacao"),
+    ("dualsense", True, "pointclick"),
 ])
 def test_fora_do_degrau_4_acende_o_chip_de_verdade(lar, caminho, desktop, quem) -> None:
-    """Com o Hefesto Ligado, sobre o Xbox ou na Navegação, o Steam Input não acende.
+    """Com o Hefesto Ligado, sobre o Xbox ou no Point and click, o Steam Input não acende.
 
     A lista dela e o vdf dizem Steam Input para o jogo, e o chip dele NÃO
     acende: desde 08/10/2026 ele é botão do Desligado. A MORDIDA: em

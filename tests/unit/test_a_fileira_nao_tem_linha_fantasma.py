@@ -6,6 +6,13 @@ desenho em 31/08/2026 por ordem de produto (*"nos mockups tira o point and click
 deixa só o navegação."*) e ficou dezessete dias viva na tabela, envenenando
 a conta dos chips sem dono, que devolvia um chip que a tela não mostra.
 
+NOTA DE 15/10/2026 (A-ABA-JOGAR-DO-TODO-01, opção A do BRIEF-T2, decidida por nós duas): a
+tela voltou a ter um chip «Point and click», agora SÓ no Ligado, e a «Navegação» passou ao
+Desligado. É o mesmo modo `desktop` dos dois lados, então a tabela segue com UMA linha para
+ele (`navegacao`) e o `pointclick` é só o nome do lado do Ligado (`CHIP_DO_POINT_AND_CLICK`):
+a pergunta 2 o aceita por essa chave, e por nenhuma outra. A decisão de 31/08 continua
+valendo para o que ela cobrava: nenhuma linha da tabela fica sem lugar na tela.
+
 SÃO DUAS PERGUNTAS, e confundi-las é o defeito inteiro:
 
     1. toda chave de `CHIPS_DA_ESCADA` tem `data-degrau` na página publicada;
@@ -64,7 +71,9 @@ def test_todo_degrau_da_fileira_esta_na_tabela() -> None:
     """A pergunta 2: nenhum chip na tela sem linha que o descreva."""
     from hefesto_dualsense4unix.app.actions.jogar import painel
 
-    da_tabela = {c.chave for c in painel.CHIPS_DA_ESCADA}
+    from hefesto_dualsense4unix.interface.pacotes.a01_jogar import CHIP_DO_POINT_AND_CLICK
+
+    da_tabela = {c.chave for c in painel.CHIPS_DA_ESCADA} | {CHIP_DO_POINT_AND_CLICK}
     orfaos = [chave for chave in _degraus_da_pagina() if chave not in da_tabela]
     assert not orfaos, (
         f"a página publica {orfaos} e a tabela não os conhece — o rótulo, o "
@@ -86,13 +95,13 @@ def test_a_regua_dos_chips_sem_dono_devolve_vazio() -> None:
     )
 
 
-def test_o_gerador_continua_recusando_o_point_and_click_na_fileira() -> None:
-    """A trava de `aba01.py` fica de pé, e ela mede OUTRA COISA."""
+def test_o_gerador_continua_recusando_o_point_and_click_na_fileira_errada() -> None:
+    """A trava de `aba01.py` fica de pé, e ela mede OUTRA COISA: cada lado com o seu."""
     fonte = (
         RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "aba01.py"
     ).read_text(encoding="utf-8")
-    assert 'o Point And Click voltou à fileira' in fonte, (
-        "a trava do gerador saiu. A ordem dela de 31/08/2026 é que o Point And "
-        "Click sai da FILEIRA, e sem a trava a próxima geração pode devolvê-lo "
-        "sem ninguém ver."
+    assert "a fileira do {lado} saiu diferente do desenho" in fonte, (
+        "a trava do gerador saiu. O Point and click é do Ligado e a Navegação é do "
+        "Desligado (15/10/2026), e sem a trava a próxima geração pode trocá-los de "
+        "lado sem ninguém ver."
     )

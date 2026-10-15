@@ -45,3 +45,11 @@ seção daqui**: a aba deixou de estar em trabalho.
   produto roda o pacote novo sobre a página de antes, que não define `--sala-<tipo>` nem `--c-acessorio` nem a
   textura do «não medido»: os ícones da sala ficam sem a cor do tipo, e a linha do acessório mostra o nome e o
   sinal, sem o glifo e com a faixa sem cor. A 08 se publica no mesmo fecho que leva o código.
+
+## 01-jogar.html
+- **15/10/2026** — a fileira do Ligado troca «Navegação» por «Point and click», e a do Desligado ganha «Navegação»
+  como terceiro chip (cores da barra de luz: Nativo branco, Steam Input ciano, Navegação laranja); as ajudas «?» e
+  os `title` viram `data-dica` curtas, de uma frase; o «Modo Freestyle» e o novo «Reconectar» são a mesma pílula de
+  34 px no canto do quadro, e o «Reconectar controles» sai da faixa final (sprint A-ABA-JOGAR-DO-TODO-01).
+  Até publicar, o produto roda o pacote novo sobre a página de antes, que tem quatro chips em `modo-aceso`, o
+  «Reconectar controles» na faixa e a ajuda com «?»; a lembrança do lado da Navegação já vale na interface.

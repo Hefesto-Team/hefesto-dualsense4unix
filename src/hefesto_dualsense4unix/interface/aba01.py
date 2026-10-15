@@ -18,12 +18,14 @@ from hefesto_dualsense4unix.interface.pacotes.a01_jogar import (  # noqa: E402
     CADEADO_DICA,
     CADEADO_ROTULO,
     CHIP_DO_NATIVO,
+    CHIP_DO_POINT_AND_CLICK,
     ESPERA_DICA,
     MARCA_DO_PRIMARIO,
     MESA_VAZIA,
     PRIMARIO_DICA,
     RESSALVA_DA_MASCARA,
     ROTULO_DO_NATIVO,
+    ROTULO_DO_POINT_AND_CLICK,
     mascaras_montaveis,
 )
 
@@ -38,12 +40,10 @@ NATIVO_E_OS_JOGADORES = "quem conta os jogadores passa a ser o jogo."
 #: tinha um quarto botão "Desligado" que era um estado INVENTADO: `mode_of_state`
 INTERRUPTOR = [
     ("ligado", "gamepad", "Ligado",
-     "O Hefesto acende a luz, faz o controle vibrar, numera os jogadores e "
-     "escolhe como o jogo vê o controle."),
+     "Luz, vibração, gatilho e número do jogador pelo Hefesto"),
     # a fecha é a bancada (dois DualSense num jogo de co-op local, no cabo
     ("desligado", "native", "Desligado",
-     "Modo nativo: o jogo fala direto com o controle, e "
-     + NATIVO_E_OS_JOGADORES),
+     "Nenhum jogo recebe controle do Hefesto"),
 ]
 HEFESTO_LIGADO = True
 #: `painel.CHIPS_DA_ESCADA` o declara com `ponte=None`, e `degrau_vivo` acende
@@ -53,15 +53,14 @@ HEFESTO_LIGADO = True
 MODOS = [
     {"chave": "dualsense", "rot": "Sony DualSense", "modo": "",
      "sem_dono": False,
-     "dica": "O Hefesto entrega o controle ao jogo pelo canal próprio do "
-             "DualSense."},
+     "dica": "Pelo canal próprio do DualSense"},
     {"chave": "xbox", "rot": "Xbox", "modo": "",
      "sem_dono": False,
-     "dica": "O Hefesto entrega o controle ao jogo pelo canal comum, o mesmo "
-             "do controle de Xbox."},
-    {"chave": "navegacao", "rot": "Navegação", "modo": "desktop",
+     "dica": "Pelo canal comum, igual ao controle de Xbox"},
+    {"chave": CHIP_DO_POINT_AND_CLICK, "rot": ROTULO_DO_POINT_AND_CLICK,
+     "modo": "desktop", "gesto": "modo-point-and-click",
      "sem_dono": False,
-     "dica": "O controle vira teclado e mouse do computador."},
+     "dica": "Apontar e clicar, pelo perfil da aba Navegação"},
 ]
 MODO_ACESO = "dualsense"
 
@@ -75,10 +74,13 @@ MODO_ACESO = "dualsense"
 DO_DESLIGADO = [
     {"chave": CHIP_DO_NATIVO, "rot": ROTULO_DO_NATIVO, "modo": "",
      "sem_dono": False,
-     "dica": "O jogo fala direto com o controle, e a Steam fica de fora."},
+     "dica": "O jogo fala direto com o controle, sem Steam"},
     {"chave": "steam", "rot": "Steam Input", "modo": "",
      "sem_dono": False,
-     "dica": "A Steam traduz o controle para este jogo."},
+     "dica": "A Steam traduz o controle para o jogo"},
+    {"chave": "navegacao", "rot": "Navegação", "modo": "desktop",
+     "sem_dono": False,
+     "dica": "Vira mouse e teclado; o Hefesto segue lendo o controle"},
 ]
 NATIVO_ACESO = CHIP_DO_NATIVO
 
@@ -132,7 +134,6 @@ CSS = """
      Desligado ○ ]`, tudo numa linha. O orçamento hoje é outro (a subida do
      interruptor DEVOLVEU 13px em vez de custar), mas a forma é do usuário. */
   .hef-linha{display:flex;align-items:center;gap:8px}
-  .hef-linha .ajuda{margin-left:2px}
   .hef-linha .linha-rot{margin-bottom:0;flex:0 0 auto;margin-right:6px}
   .hef-pos{
     height:var(--h-escolha);display:inline-flex;align-items:center;gap:9px;
@@ -232,6 +233,17 @@ CSS = """
      que lê `color` fica cega a isso. Aqui é cor explícita, borda tracejada — que
      é como esta casa já escreve "isto ainda não vale" (`.avisos.vazio`,
      `.pendente`) — e o cursor de "não clique". O porquê está no `title`. */
+  /* AS CORES DO DESLIGADO SÃO AS DA BARRA DE LUZ — A-ABA-JOGAR-DO-TODO-01, 15/10/2026: o chip
+     aceso pisca na cor em que o controle pisca (`hotkey.CORES_DO_MODO`): Nativo branco, Steam
+     Input ciano, Navegação laranja. O `rgb` de cada uma está lá; aqui é o mesmo valor em hex. */
+  .so-desligado .degrau.on[data-hef-quando="nativo"]{
+    border-color:#f8f8f2;background:rgba(248,248,242,.12);color:#fff}
+  .so-desligado .degrau.on[data-hef-quando="steam"]{
+    border-color:#8be9fd;background:rgba(139,233,253,.13);color:#d4f6fe}
+  .so-desligado .degrau.on[data-hef-quando="navegacao"]{
+    border-color:#ffb86c;background:rgba(255,184,108,.13);color:#ffd9b0}
+  /* TODO ALVO CLICÁVEL TEM NO MÍNIMO 24px (WCAG 2.5.8). */
+  [data-gesto]{min-height:24px}
   .degrau.sem-dono{border-style:dashed;color:var(--comment);cursor:not-allowed}
   .degrau.sem-dono:hover{border-color:var(--linha);color:var(--comment)}
   .degrau.sem-dono i{border-style:dashed}
@@ -452,13 +464,23 @@ CSS = """
      desce 9 px. A Jogar é a aba com mais vão vertical (109 px), e a página
      continua sem rolar — `tests/unit/test_o_modo_freestyle.py` mede as duas
      coisas no desenho. */
-  .cadeado{display:inline-flex;align-items:center;justify-content:center;gap:7px;
-           margin-left:auto;height:26px;flex:0 0 auto;white-space:nowrap;
-           border-radius:7px;padding:0 12px;font-size:12.5px;font-family:inherit;
-           cursor:pointer;
-           border:1px solid var(--border-forte);background:var(--app-bg);
+  /* O «MODO FREESTYLE» E O «RECONECTAR» TÊM A MESMA PÍLULA — A-ABA-JOGAR-DO-TODO-01, 15/10/2026,
+     rodada 4: 34px de altura, 166px de largura e a letra de 13,5px do `.modo-auto` da base
+     comum, para os dois botões de canto lerem como irmãos. Antes eram 26px e 12,5px. A
+     largura é uma variável só, para os dois nunca divergirem. */
+  .quadro-topo{--w-canto:166px}
+  .quadro-topo > .cadeado,.quadro-topo > .canto{
+    display:inline-flex;align-items:center;justify-content:center;gap:9px;flex:0 0 auto;
+    margin-left:auto;width:var(--w-canto);height:34px;padding:0 16px 0 12px;
+    box-sizing:border-box;border-radius:999px;
+    font:600 13.5px/1 'Space Grotesk',system-ui,sans-serif;white-space:nowrap;cursor:pointer}
+  .quadro-topo > .canto{border:1px solid var(--border-forte);background:transparent;
+                        color:var(--texto-suave)}
+  .quadro-topo > .canto:hover{border-color:var(--texto-suave);color:var(--fg)}
+  .quadro-topo > .canto .gira{flex:0 0 auto}
+  .cadeado{border:1px solid var(--border-forte);background:var(--app-bg);
            color:var(--texto-mudo)}
-  .cadeado .p{width:7px;height:7px;border-radius:50%;flex:0 0 auto;
+  .cadeado .p{width:11px;height:11px;border-radius:50%;flex:0 0 auto;
               background:var(--border-forte);box-shadow:none}
   .cadeado.ligada{border-color:var(--green);background:rgba(80,250,123,.09);
                   color:var(--green)}
@@ -714,8 +736,6 @@ CSS = """
      Reconectar exatamente UMA vez na página — medido na primeira corrida. */
   .faixa-final{border-top:1px solid var(--rot-linha);padding-top:6px;margin-top:8px}
   .faixa-final .pendente{flex:1 1 0;min-width:0;overflow:hidden}
-  .faixa-final > .btn{flex:none;white-space:nowrap;margin-left:auto;
-                      order:1;align-self:flex-start}
   /* A ATENÇÃO SAIU — 07/09/2026, ordem de produto: *"em jogar remover essa seção do
      atenção, nenhum aviso esse — deixar só o reconectar controles."*
      Aqui moravam as seis regras da `.col-atencao`: a faixa deitada de 30/08
@@ -862,7 +882,7 @@ def _chips_de_mascara(escolhida):
         fora.append(
             f'                  <span class="chip{" inerte" if inerte else ""}'
             f'{" on" if m == escolhida else ""}"'
-            + (f' title="{razao}"' if inerte else "")
+            + (f' data-dica="{razao}"' if inerte else "")
             + f' data-gesto="mascara" data-mascara="{m}"'
             f' data-campo="mascara-cartao" data-hef-alvo="classe"'
             f' data-hef-quando="{m}">{m}</span>')
@@ -875,8 +895,7 @@ def _chips_de_mascara(escolhida):
 # entra uma peça FIXA com cadeado, sem gesto. Nasce escondida; quem mostra é
 # `body.nativo` (topo.html).
 VISTO_NO_NATIVO = (
-    '<span class="visto-fixo" title="Com o Hefesto desligado, o jogo vê o controle '
-    'como ele é. A máscara que você escolheu volta quando ligar.">'
+    '<span class="visto-fixo" data-dica="Desligado: o jogo vê o controle como ele é">'
     '<svg class="cad" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true">'
     '<path d="M3.6 5.2V3.9a2.4 2.4 0 0 1 4.8 0v1.3" fill="none" stroke="currentColor" '
     'stroke-width="1.2"/><rect x="2.3" y="5.2" width="7.4" height="5.4" rx="1.1" '
@@ -988,7 +1007,7 @@ def cartao(c, bateria=None):
               else "cartao alvo" if c["alvo"] else "cartao")
     marca_de_conexao = "sim" if conectado else "nao"  # (noqa-acento) valores
     dica_do_lugar = "" if conectado else (
-        '\n                   title="Lugar vazio: nenhum controle conectado aqui."')
+        '\n                   data-dica="Nenhum controle aqui"')
     jogador = f'Player {c["jogador"]}' if conectado else _VAZIO
     identidade = (f'{c["nome"]} <span class="pt">•</span> {c["via"]}'
                   if conectado else _VAZIO)
@@ -1001,7 +1020,7 @@ def cartao(c, bateria=None):
                 <i class="pele" data-campo="plastico" data-hef-alvo="cor" style="color:{monta.cor_da_zona(c["cor"])}"></i>
                 <div class="peca-topo">
                 {_desenho(c)}
-                <span class="rotulo"><span class="fabricante">Sony <span class="pt">•</span> </span><b data-campo="jogador-espera" data-hef-alvo="classe" data-hef-classe="espera" title="{ESPERA_DICA}"><span data-campo="jogador">{jogador}</span></b><br><span data-campo="identidade">{identidade}</span><span class="e-primario" data-campo="marcador-principal" data-hef-alvo="classe" data-hef-classe="ha" title="{PRIMARIO_DICA}"> <span class="pt">•</span> {MARCA_DO_PRIMARIO}</span><br><span class="bat">{_BATERIA_GLIFO} <span data-campo="bateria">{carga}</span></span></span>
+                <span class="rotulo"><span class="fabricante">Sony <span class="pt">•</span> </span><b data-campo="jogador-espera" data-hef-alvo="classe" data-hef-classe="espera" data-dica="{ESPERA_DICA}"><span data-campo="jogador">{jogador}</span></b><br><span data-campo="identidade">{identidade}</span><span class="e-primario" data-campo="marcador-principal" data-hef-alvo="classe" data-hef-classe="ha" data-dica="{PRIMARIO_DICA}"> <span class="pt">•</span> {MARCA_DO_PRIMARIO}</span><br><span class="bat">{_BATERIA_GLIFO} <span data-campo="bateria">{carga}</span></span></span>
                 </div>
                 <div class="mascara">
 {_chips_de_mascara(c["mascara"] if conectado else None)}
@@ -1029,12 +1048,20 @@ def frase_das_mascaras():
 CARTOES = "\n".join(cartao(c) for c in MESA)
 
 # `gamepad_emulation.enabled false` — logo `mode_of_state` = **desktop** —, esta
+#: O ÍCONE DO «RECONECTAR»: a seta que gira, no mesmo traço do desenho do todo.
+_GIRA = (
+    '<svg class="gira" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true">'
+    '<path d="M10 6a4 4 0 1 1-1.2-2.85" fill="none" stroke="currentColor" '
+    'stroke-width="1.6" stroke-linecap="round"/>'
+    '<path d="M9.4 1.2v2.4H7" fill="none" stroke="currentColor" stroke-width="1.6" '
+    'stroke-linecap="round" stroke-linejoin="round"/></svg>')
+
 _INTERRUPTOR = "\n".join(
     f'        <label class="hef-pos {lado}" for="hef-{lado}"'
     f' data-gesto="hefesto" data-modo="{modo}"\n'
     f'               data-campo="hef-posicao" data-hef-alvo="classe"'
     f' data-hef-quando="{lado}"\n'
-    f'               title="{dica}"><span class="pino"></span>{rot}</label>'
+    f'               data-dica="{dica}"><span class="pino"></span>{rot}</label>'
     for lado, modo, rot, dica in INTERRUPTOR)
 
 
@@ -1087,11 +1114,11 @@ def _chip_do_modo(m, aceso=MODO_ACESO):
     # `data-degrau` é o endereço que só os chips de `painel.CHIPS_DA_ESCADA` têm.
     degrau = "" if m["chave"] == CHIP_DO_NATIVO else f' data-degrau="{m["chave"]}"'
     return (f'            <span class="{classe}"{degrau}'
-            f' data-gesto="modo-{m["chave"]}"{modo}\n'
+            f' data-gesto="{m.get("gesto") or "modo-" + m["chave"]}"{modo}\n'
             f'                  data-campo="{_campo_do_chip(m)}"'
             f' data-hef-alvo="classe"'
             f' data-hef-quando="{m["chave"]}"\n'
-            f'                  title="{m["dica"]}">{m["rot"]}</span>')
+            f'                  data-dica="{m["dica"]}">{m["rot"]}</span>')
 
 
 _MODOS = "\n".join(_chip_do_modo(m) for m in MODOS)
@@ -1127,11 +1154,6 @@ MIOLO = f'''
       <div class="hef-linha">
         <span class="linha-rot">Status</span>
 {_INTERRUPTOR}
-        <span class="ajuda">?<span class="dica">
-          <b>Ligado</b> — o Hefesto cuida da luz, da vibração, do gatilho e do número do jogador.<br><br>
-          <b>Desligado</b> — o jogo fala direto com o controle, e {NATIVO_E_OS_JOGADORES}<br><br>
-          Isto não para o serviço: para isso, a aba <b>Sistema</b>.
-        </span></span>
       </div>
     </div>
 
@@ -1139,16 +1161,9 @@ MIOLO = f'''
          O que sobra aqui é o que o lançamento decide de verdade. -->
     <div class="quadro">
       <div class="quadro-topo">
-        <span class="quadro-titulo">Modo</span>
-        <!-- O `?` DOS MODOS SUBIU do rótulo "Modo" para cá em 31/08 à tarde, e é
-             consequência do interruptor ter saído: com só os modos dentro, a
-             ajuda do quadro É a ajuda dos modos, e dois `?` a três linhas um do
-             outro diriam a mesma coisa duas vezes. De quebra, os rótulos das
-             duas seções ficaram idênticos — texto puro dos dois lados. -->
-        <span class="ajuda">?<span class="dica">
-          Como o controle chega ao jogo. O Hefesto <b>tenta na ordem desta lista</b> e para no primeiro que der certo.<br><br>
-          <b>PS + R3</b> pula para o próximo.
-        </span></span>
+        <!-- SEM «?» — A-ABA-JOGAR-DO-TODO-01, 15/10/2026: a ajuda dos modos é a dica do
+             título, no mouse ou no foco. -->
+        <span class="quadro-titulo" data-dica="Como o controle chega ao jogo. PS + R3 pula">Modo</span>
         <!-- ---------- O CADEADO DA TROCA AUTOMÁTICA, NO CANTO ----------
              08/09/2026, pedido olhando a aba: *"esse não trocar de perfil.
              Pode colocar ele no canto superior direito do bloco tipo esse banco
@@ -1187,7 +1202,7 @@ MIOLO = f'''
              linha de título sem quebrar o quadro na única máquina em que ela
              aparece — a que tem o detector cego. Os dois seguem no mesmo bloco,
              a um palmo um do outro. -->
-        <button class="cadeado" data-gesto="cadeado" data-campo="cadeado" data-hef-alvo="classe" data-hef-classe="ligada" data-hef-quando="LIGADO" title="{CADEADO_DICA}"><span class="p"></span>{CADEADO_ROTULO}</button>
+        <button class="cadeado" data-gesto="cadeado" data-campo="cadeado" data-hef-alvo="classe" data-hef-classe="ligada" data-hef-quando="LIGADO" data-dica="{CADEADO_DICA}"><span class="p"></span>{CADEADO_ROTULO}</button>
       </div>
       <div class="quadro-corpo hef">
 
@@ -1273,17 +1288,11 @@ MIOLO = f'''
     <!-- ---------- UM BLOCO SÓ: Conectado agora | Atenção ---------- -->
     <div class="quadro">
       <div class="quadro-topo">
-        <span class="quadro-titulo">O controle é visto como:</span>
-        <!-- AS DUAS DICAS VIRARAM UMA — 31/08/2026, quando o usuário mandou o rótulo
-             "O jogo vê cada controle como:" subir para o título. Com o rótulo
-             fora, dois `?` a três linhas um do outro diriam a mesma coisa duas
-             vezes: é o mesmo movimento que o `?` dos modos já tinha feito. -->
-        <span class="ajuda">?<span class="dica">
-          A máscara é <b>por controle</b> e muda só <b>o desenho dos botões no jogo</b>.<br><br>
-          <b>DualSense</b> — △ ○ ✕ ▢. &nbsp; <b>Xbox 360</b> — Y B A X. &nbsp; <b>Nintendo Pro</b> — X A B Y, com ZL/ZR e − +.<br><br>
-          O controle na sua mão continua o mesmo.<br><br>
-          Clicar num cartão escolhe esse controle lá em cima.
-        </span></span>
+        <span class="quadro-titulo" data-dica="O desenho dos botões no jogo, por controle">O controle é visto como:</span>
+        <!-- O «RECONECTAR» SUBIU PARA O CANTO DO QUADRO — A-ABA-JOGAR-DO-TODO-01, 15/10/2026,
+             rodada 4: ele ficava embaixo, na faixa da pendência, e some do caminho do olho.
+             Mesmo tamanho e altura do «Modo Freestyle» do quadro de cima. O gesto é o mesmo. -->
+        <button class="canto" type="button" data-gesto="reconectar" data-dica="Desliga e liga de novo todos os controles">{_GIRA}Reconectar</button>
       </div>
       <div class="quadro-corpo">
 
@@ -1373,7 +1382,6 @@ MIOLO = f'''
             <span>●</span>
             <span>Vai mudar para <b data-campo="pendente-alvo">{PENDENTE}</b> quando você clicar em <b>Aplicar</b></span>
           </div>
-          <button class="btn" data-gesto="reconectar">Reconectar controles</button>
           <!-- A FAIXA DO RECIBO SAIU — 13/09/2026, JOGAR-A-FAIXA-QUE-PULA-01.
                Ela nasceu na JOGAR-02 §3 (09/09) para o recibo do Reconectar
                deixar de cobrir a identidade do P1 no cartão. Medido no piloto:
@@ -1481,9 +1489,10 @@ LEGENDA = f'''<div class="nota">
       máscara. Não é descuido: o modo é <b>estado do processo</b> — existe um só
       (<code>app/actions/mode_transition.py</code>), e duas peças pedindo modos diferentes
       não têm resposta. Máscara é do <b>aparelho</b>; modo é da <b>máquina</b>.</li>
-    <li><b>O Point And Click é a Navegação, e a fileira tem quatro chips</b> — é a sua ordem
-      de 31/08 (<i>"nos mockups tira o point and click e deixa só o navegação"</i>), e a de
-      17/09 a completa: <i>"o modo point and click é o modo navegação e o modo que nós mesmos
+    <li><b>O Point and click é do Ligado e a Navegação é do Desligado — os dois são o mesmo modo, e cada fileira tem três chips</b>
+      — em 15/10 a opção A do desenho do todo substituiu a ordem de 31/08 (<i>"tira o point and
+      click e deixa só o navegação"</i>): o Point and click volta, só no Ligado, e a Navegação
+      passa a ser o terceiro chip do Desligado. A ordem de 17/09 segue: <i>"o modo point and click é o modo navegação e o modo que nós mesmos
       podemos usar e configurar na aba navegação. Ele ativa o modo configurado lá."</i>
       <br><b>Navegação</b> é o caso do meio, e é bom: o <b>modo</b> tem dono e funciona hoje
       (<code>apply_mode('desktop')</code>, o antigo "Controlar o PC"), e desde 17/09 ele
@@ -1506,7 +1515,7 @@ LEGENDA = f'''<div class="nota">
     <li><b>O botão do canto do bloco Modo (era "Trava o perfil ativo") mora na linha do título</b> — como o "Banco de provas" da Navegação. Embaixo dos modos ela lia como um quinto modo, e não é modo: é uma trava sobre o perfil. O rótulo é palavra dela de 11/09; o mecanismo, que era o rótulo antigo, passou para a dica no ponteiro do mouse.</li>
     <li><b>"Reconciliar jogadores" virou "Reconectar Controles"</b>.</li>
     <li><b>A área de avisos tem espaço reservado</b> e <b>conta quantos são</b>. Antes, três banners disputavam a linha e o primeiro escondia os outros. A barra vertical que a separa dos cartões agora vai até embaixo — era um toco de um terço, porque a coluna media a altura do único aviso.</li>  <!-- noqa-acento: `media` é o verbo medir -->
-    <li><b>32 frases viraram 12</b> — o resto está nos três ícones <b>?</b>. Passe o mouse neles.</li>
+    <li><b>Nenhum ícone <b>?</b> na aba</b> — cada frase é uma dica curta, no mouse ou no foco, e os alvos de clique têm 24 px.</li>
   </ul>
 
   <h2>O que eu decidi por conta, e você pode derrubar</h2>
@@ -1759,8 +1768,30 @@ def _conferir(doc):
         if not cond:
             falhas.append(oquê)
 
-    exigir('data-degrau="pointclick"' not in corpo, "o Point And Click voltou à fileira")
-    exigir(corpo.count('class="degrau') >= 4, "a fileira perdeu degrau")
+    # A FILEIRA, POR LADO — A-ABA-JOGAR-DO-TODO-01, 15/10/2026: «Point and click» é do Ligado e
+    # «Navegação» é do Desligado, e cada rótulo só mora no lado dele (os dois são o modo
+    # `desktop`; a tela os põe cada um no seu lado).
+    for lado, esperados in (("so-ligado", ["Sony DualSense", "Xbox", "Point and click"]),
+                            ("so-desligado", ["Nativo", "Steam Input", "Navegação"])):
+        secao = corpo.split(f'class="hef-modo {lado}"', 1)[-1].split("</div>\n        </div>", 1)[0]
+        achados = re.findall(r'<span class="degrau[^"]*"[^>]*>([^<]+)</span>', secao)
+        exigir(achados == esperados,
+               f"a fileira do {lado} saiu diferente do desenho: esperava {esperados}, achei {achados}")
+        for rotulo in re.findall(r'<span class="degrau[^"]*"([^>]*)>', secao):
+            exigir('data-dica="' in rotulo, f"um chip do {lado} ficou sem a dica curta")
+    exigir(corpo.count('data-gesto="modo-point-and-click" data-modo="desktop"') == 1,
+           "o Point and click não é o modo `desktop` do Ligado")
+    exigir(corpo.count('data-gesto="modo-navegacao" data-modo="desktop"') == 1,
+           "a Navegação não é o modo `desktop` do Desligado")
+    exigir(len(re.findall(r'<span class="degrau', corpo)) == 6,
+           "a fileira não tem os seis chips (três em cada lado)")
+    exigir('class="ajuda"' not in corpo and ">?<" not in corpo,
+           "voltou um «?» à aba — as ajudas são dica no mouse (`data-dica`)")
+    # O RODAPÉ É DO ESQUELETO (`_ferramentas/fim.html`, de todas as abas) e fica de fora: os
+    # quatro botões dele passam a `data-dica` quando a base comum o migrar.
+    _sem_rodape = re.sub(r"<svg.*?</svg>", "", corpo.split('<div class="rodape"', 1)[0], flags=re.S)
+    exigir(' title="' not in _sem_rodape,
+           "voltou um `title` à aba — a dica é `data-dica`, a mesma camada das outras nove")
 
     for frase in ("sem giroscópio", "só chegam ao jogo por aqui",
                   "só chegam ao jogo pelo", "sem touchpad para o jogo"):
@@ -1801,7 +1832,7 @@ def _conferir(doc):
            "não há uma pele endereçada por LUGAR da mesa — os quatro, e não só "
            "os conectados: quem chega depois entra num cartão que já existe")
     #    `<span data-campo="identidade">`, e o pacote o reescreve todo tique —
-    for dica in re.findall(r'title="([^"]*)"', fileira):
+    for dica in re.findall(r'data-dica="([^"]*)"', fileira):
         for c in monta.CONECTADOS:
             exigir(c["nome"] not in dica,
                    f"uma dica do cartão voltou a nomear o plástico: {dica!r}")
@@ -1863,8 +1894,13 @@ def _conferir(doc):
                   'data-campo="atencao-conta"', 'data-lista="avisos"'):
         exigir(morto not in corpo, f"a coluna Atenção voltou à Jogar: {morto!r}")
     exigir(corpo.count('data-gesto="reconectar"') == 1,
-           "o botão Reconectar Controles sumiu junto com a coluna Atenção — ele "
+           "o botão Reconectar sumiu junto com a coluna Atenção — ele "
            "é justamente o que ela mandou deixar")
+    _casa_do_reconectar = _ancestrais(corpo, "canto")
+    exigir(_casa_do_reconectar is not None and "quadro-topo" in _casa_do_reconectar
+           and "faixa-final" not in _casa_do_reconectar,
+           "o Reconectar saiu do canto do quadro «O controle é visto como:» e voltou à "
+           "faixa da pendência (rodada 4)")
     exigir(corpo.count('data-campo="pendente-ha" data-hef-alvo="classe"') == 1,
            "a faixa da pendência perdeu o `pendente-ha` — ela volta a mostrar um "
            "travessão solto quando não há o que anunciar")
@@ -1888,7 +1924,7 @@ def _conferir(doc):
            f"esperava {len(sem_motor) * len(MESA)} chips cinza ({sem_motor} por "
            f"{len(MESA)} lugares), achei {cinzas}")
     for pedaco in corpo.split('class="chip inerte"')[1:]:
-        exigir(pedaco.lstrip().startswith('title="'),
+        exigir(pedaco.lstrip().startswith('data-dica="'),
                "um chip cinza saiu sem a razão na dica")
 
     esmaece = corpo.count('data-campo="jogador-espera" data-hef-alvo="classe"'

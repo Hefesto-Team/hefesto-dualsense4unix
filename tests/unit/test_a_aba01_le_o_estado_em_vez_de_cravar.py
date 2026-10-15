@@ -122,7 +122,7 @@ def _mascaras_dos_cartoes(ctx: Contexto) -> list[str]:
 @pytest.mark.parametrize(
     ("state", "posicao", "chip"),
     [
-        (VIVO_NAVEGACAO, "ligado", "navegacao"),
+        (VIVO_NAVEGACAO, "ligado", "pointclick"),
         (VIVO_GAMEPAD_XBOX, "ligado", "xbox"),
         (VIVO_NATIVO, "desligado", "nativo"),
     ],

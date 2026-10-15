@@ -255,23 +255,26 @@ def test_o_selo_do_modo_esta_na_escada_da_gravidade() -> None:
     ), "a linha do modo saiu de junto do GAMEPAD, que responde à mesma pergunta"
 
 
-def test_a_dica_do_desligado_fala_de_jogadores() -> None:
-    """A herdeira do ``TEXTO_NATIVO``: o ``title`` da posição Desligado."""
+def test_a_dica_do_desligado_e_curta_e_a_conta_dos_jogadores_mora_no_aviso() -> None:
+    """A dica da posição Desligado é a frase curta do desenho do todo; a oração de quem conta
+    os jogadores (herdeira do ``TEXTO_NATIVO``) vive na frase do aviso.
+
+    MUDOU EM 15/10/2026 (A-ABA-JOGAR-DO-TODO-01, sem «?»): a aba Jogar não repete a oração —
+    ela diz «Nenhum jogo recebe controle do Hefesto» no mouse, e quem lista a conta dos
+    jogadores é o aviso do modo (``painel.FRASE_DO_MODO_NATIVO``), que a aba Sistema recebe.
+    """
     dicas = {chave: dica for chave, _modo, _rot, dica in aba01.INTERRUPTOR}
-    dica = dicas["desligado"]
-    assert "jogadores" in dica, (
-        "a dica do Modo Nativo voltou a calar sobre quantos jogadores existem "
-        f"nele: {dica!r}")
-    assert aba01.NATIVO_E_OS_JOGADORES in dica
+    assert dicas["desligado"] == "Nenhum jogo recebe controle do Hefesto", dicas["desligado"]
+    assert aba01.NATIVO_E_OS_JOGADORES in painel.FRASE_DO_MODO_NATIVO, (
+        "o aviso do Modo Nativo deixou de dizer de quem é a conta dos jogadores")
 
 
-def test_a_pagina_diz_isto_nos_dois_lugares_e_por_um_dono_so() -> None:
-    """O ``title`` da posição Desligado E o ``?`` da linha Status."""
+def test_a_pagina_nao_repete_a_oracao_e_o_aviso_e_o_dono_unico() -> None:
+    """Antes a oração estava no ``title`` do Desligado e no ``?`` do Status (duas vezes na
+    página); sem o «?» e com a dica curta, a página não a traz e o aviso é o dono único."""
     quantas = aba01.MIOLO.count(aba01.NATIVO_E_OS_JOGADORES)
-    assert quantas == 2, (
-        f"a frase do Modo Nativo aparece {quantas} vez(es) na página e tem de "
-        "aparecer nas duas — o `title` da posição Desligado e o `?` da linha "
-        "Status")
+    assert quantas == 0, (
+        f"a oração do Modo Nativo voltou à página ({quantas} vez(es)); o dono é o aviso do modo")
 
 
 def test_nenhuma_das_duas_frases_afirma_o_que_ninguem_mediu() -> None:
@@ -282,5 +285,5 @@ def test_nenhuma_das_duas_frases_afirma_o_que_ninguem_mediu() -> None:
         baixo = frase.lower()
         assert "o jogo vê dois" not in baixo, (
             f"a tela afirmou o resultado da §5, que ninguém mediu: {frase!r}")
-        assert conta in baixo, (
-            f"a frase deixou de dizer de quem é a conta: {frase!r}")
+    assert conta in painel.FRASE_DO_MODO_NATIVO.lower(), (
+        "a frase do aviso deixou de dizer de quem é a conta")

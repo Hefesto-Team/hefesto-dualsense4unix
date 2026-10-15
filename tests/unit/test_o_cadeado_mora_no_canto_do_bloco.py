@@ -78,12 +78,21 @@ DESENHO = RAIZ / "mockup" / "01-jogar.html"
 PAGINAS = {"publicada": JOGAR, "desenho": DESENHO}
 
 
+def _em_trabalho() -> bool:
+    arquivo = RAIZ / "mockup" / "DIVERGENCIAS.md"
+    if not arquivo.exists():
+        return False
+    corpo = arquivo.read_text(encoding="utf-8").split("\n---\n", 1)[-1]
+    return "\n## 01-jogar.html" in f"\n{corpo}"
+
+
 def _altura_do_desenho() -> int:
     """A altura que o gerador dá ao `.cadeado`, LIDA no dono (`aba01.py`)."""
     import re
 
     fonte = (INTERFACE / "aba01.py").read_text(encoding="utf-8")
-    achado = re.search(r"\.cadeado\{(?:[^}]*;)?height:(\d+)px", fonte)
+    achado = re.search(
+        r"\.quadro-topo > \.cadeado,\.quadro-topo > \.canto\{(?:[^}]*;)?height:(\d+)px", fonte)
     assert achado, "o `.cadeado` do gerador perdeu a altura — a régua ficaria cega"
     return int(achado.group(1))
 
@@ -133,7 +142,7 @@ O_QUE_O_MOTOR_DESENHA = """() => {
     classe_que_acende: cad.dataset.hefClasse || null,
     acende_quando: cad.dataset.hefQuando || null,
     aceso_de_nascenca: cad.classList.contains(cad.dataset.hefClasse || 'on'),
-    tem_dica: (cad.getAttribute('title') || '').length > 0,
+    tem_dica: (cad.getAttribute('data-dica') || cad.getAttribute('title') || '').length > 0,
     rotulo: (cad.textContent || '').trim(),
   };
 }"""
@@ -179,7 +188,7 @@ def medido(request: pytest.FixtureRequest) -> dict:
         finally:
             nav.close()
     assert "erro" not in saida, saida.get("erro")
-    return dict(saida)
+    return {**saida, "_pagina": request.param}
 
 
 def test_o_cadeado_esta_no_bloco_modo(medido: dict) -> None:
@@ -208,6 +217,9 @@ def test_o_cadeado_esta_encostado_na_direita(medido: dict) -> None:
 
 def test_o_cadeado_nao_empurrou_a_linha_do_titulo(medido: dict) -> None:
     """A altura do `.quadro-topo` continua sendo a do título — 17px."""
+    if medido["_pagina"] == "publicada" and _em_trabalho():
+        pytest.skip("01-jogar está à frente do publicado (`mockup/DIVERGENCIAS.md`): a pílula de "
+                    "34 px chega à publicada no `--publicar`, ato da costura")
     assert medido["altura_do_cadeado"] == _altura_do_desenho(), (
         f"o «Modo Freestyle» mede {medido['altura_do_cadeado']}px e o "
         f"gerador diz {_altura_do_desenho()}px")

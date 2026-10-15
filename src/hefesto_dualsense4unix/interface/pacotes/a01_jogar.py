@@ -100,16 +100,10 @@ RESSALVA_DA_MASCARA = (
 #: GTK dentro do pacote das dez abas, o que `_painel()` existe para evitar; **a divergência morre
 #: pela régua** `test_a_aba_01_jogar_fecha_as_linhas`, que lê o fonte da GTK (mesma escolha da
 #: `MESA_VAZIA`). PROVISÓRIO: texto de tela é palavra de produto (PROVA-DE-TELA-01).
-ESPERA_DICA = (
-    "O jogo ainda não recebeu este controle. "
-    "O número acende quando ele entrar na partida."
-)
+ESPERA_DICA = "O número acende quando o jogo receber o controle"
 
 CADEADO_ROTULO = "Modo Freestyle"
-CADEADO_DICA = (
-    "O perfil ativo continua valendo mesmo quando você abre outro jogo. "
-    "Desligue para o Hefesto voltar a escolher sozinho."
-)
+CADEADO_DICA = "O perfil ativo vale em qualquer jogo"
 
 #: e `None` quer dizer *não houve resposta* — serviço parado, socket recusado,
 #: `test_a_palavra_do_cadeado_e_a_que_ela_ja_leu` confere as TRÊS contra o fonte
@@ -136,10 +130,7 @@ MARCA_DO_PRIMARIO = "primário"
 
 #: e é dele que o daemon publica a
 #: As duas coisas são medidas, e é isso que a dica diz.
-PRIMARIO_DICA = (
-    "É por este controle que o Hefesto navega o computador. "
-    "Quem o escolhe é o serviço."
-)
+PRIMARIO_DICA = "Este controle navega o computador"
 
 
 def _e_o_primario(c: dict[str, Any]) -> str:
@@ -754,7 +745,18 @@ ROTULO_DO_NATIVO = "Nativo"
 #: Steam Input sai de Ligado. Os dois são o modo `native`; o que os separa é o jogo da vez
 #: entrar (Steam Input) ou sair (Nativo) da lista. O Steam Input continua lendo
 #: o `steam_input` da ponte dele em `painel.CHIPS_DA_ESCADA`.
-CHIPS_DO_DESLIGADO: tuple[str, ...] = (CHIP_DO_NATIVO, CHIP_DO_STEAM_INPUT)
+CHIPS_DO_DESLIGADO: tuple[str, ...] = (CHIP_DO_NATIVO, CHIP_DO_STEAM_INPUT, "navegacao")
+
+#: POINT AND CLICK NO LIGADO, NAVEGAÇÃO NO DESLIGADO — A-ABA-JOGAR-DO-TODO-01, 15/10/2026, a
+#: opção A do BRIEF-T2: os dois são o MESMO modo `desktop` do daemon (o controle vira mouse e
+#: teclado e o Hefesto segue lendo; sem gamepad virtual); o que os separa é o lado do interruptor
+#: em que a TELA os põe. `painel.CHIPS_DA_ESCADA` só conhece o chip «Navegação» (a chave dele é
+#: :data:`CHIP_DA_NAVEGACAO`), e `painel.hefesto_ligado` chama `desktop` de Ligado; por isso o
+#: lado é uma lembrança da INTERFACE (:func:`_navegacao_no_desligado`), e não um quarto valor do
+#: modo vivo, que `mode_of_state` mantém em três.
+CHIP_DO_POINT_AND_CLICK = "pointclick"
+ROTULO_DO_POINT_AND_CLICK = "Point and click"
+CHIP_DA_NAVEGACAO = "navegacao"
 
 
 class LinhaDaFileira(NamedTuple):
@@ -766,43 +768,26 @@ class LinhaDaFileira(NamedTuple):
 
 
 def o_que_o_chip_faz(chave: str) -> LinhaDaFileira:
-    """A TABELA DA FILEIRA — o dono único do que cada um dos quatro chips faz.
+    """A TABELA DA FILEIRA: o dono único do que cada um dos seis chips faz.
 
-    O-MODO-QUE-NAO-SAI-DO-STEAM-INPUT-01, 23/09/2026: qualquer modo se escolhe a qualquer momento. A
-    fileira é um grupo de rádio: clicar em qualquer chip deixa AQUELE aceso, vindo de qualquer
-    outro, e clicar no aceso REAPLICA.
-
-    | chip | modo | caminho | o jogo da vez no Steam Input |
-    | --- | --- | --- | --- |
-    | Sony DualSense | gamepad | dualsense | tira |
-    | Xbox | gamepad | xbox | tira |
-    | Navegação | desktop | — | tira |
-    | Nativo (Desligado) | native | — | tira |
-    | Steam Input (Desligado) | native | — | põe |
-
-    O Steam Input saiu do Ligado (NO-DESLIGADO-A-STEAM-NAO-SE-METE-E-O-JOGO-MANDA-01, 08/10/2026:
-    *«Desligar o hefesto = Nativo na origem. Steam Input sai de Ligado.»*): ele e o Nativo são os
-    dois botões do Desligado, ambos o modo `native` (:data:`CHIPS_DO_DESLIGADO`); o degrau 4 da
-    escada segue em `ponte_escada.ESCADA` para a escada automática, sem ser botão.
-
-    O que cada clique faz NÃO depende do chip de antes (a primeira cura perguntava de onde ela vinha
-    e a fileira ficou dependente da ordem). «Xbox» e «Navegação» tiram o jogo porque, com ele na
-    lista, a Steam pegaria o controle por baixo do chip aceso. A tabela não é digitada: cada linha
-    sai da `ponte` do chip em `painel.CHIPS_DA_ESCADA`; o caminho do Steam Input é o da ponte dele
-    (`ESCADA[3]` é `Ponte(gamepad, dualsense, steam_input=True)`, que senta SOBRE o DualSense) e
-    digitar ``"dualsense"`` aqui seria a segunda cópia. Quem traduz a máscara da ponte em caminho é
-    o dono da regra, `virtual_pad.caminho_resolvido` (*"sem escolha, o que sai da máscara"*).
+    A fileira é um grupo de rádio: qualquer chip deixa AQUELE aceso, e clicar no aceso REAPLICA.
+    Todos tiram o jogo da vez do Steam Input; só o Steam Input o põe. Nativo e Steam Input são o
+    modo `native`; Point and click e Navegação, o `desktop`. Cada linha sai da `ponte` em
+    `painel.CHIPS_DA_ESCADA`, sem digitar o caminho aqui; a máscara vira caminho em
+    `virtual_pad.caminho_resolvido`.
     """
     from hefesto_dualsense4unix.app.actions.mode_transition import MODE_NATIVE
     from hefesto_dualsense4unix.integrations.virtual_pad import caminho_resolvido
 
     if chave == CHIP_DO_NATIVO:
         return LinhaDaFileira(MODE_NATIVE, None, False)
-    chip = next((c for c in _painel().CHIPS_DA_ESCADA if c.chave == chave), None)
+    # O «Point and click» é o modo do chip «Navegação» do produto, sem segunda cópia dele.
+    achar = CHIP_DA_NAVEGACAO if chave == CHIP_DO_POINT_AND_CLICK else chave
+    chip = next((c for c in _painel().CHIPS_DA_ESCADA if c.chave == achar), None)
     if chip is None or chip.ponte is None:
         raise ValueError(f"modo: {chave!r} não é chip da fileira desta aba")
     ponte = chip.ponte
-    if chave in CHIPS_DO_DESLIGADO:
+    if chave == CHIP_DO_STEAM_INPUT:
         return LinhaDaFileira(MODE_NATIVE, None, bool(ponte.steam_input))
     if chip.modo:
         return LinhaDaFileira(str(chip.modo), None, bool(ponte.steam_input))
@@ -1027,6 +1012,48 @@ def _a_fileira_com_a_mesa(tela: dict[str, str], mesa: list[dict[str, Any]]) -> d
     return {**tela, "modo-aceso": "", "steam-input-aceso": ""}
 
 
+#: A LEMBRANÇA DO LADO EM QUE O `desktop` FICA, na preferência da janela (`gui_preferences.json`):
+#: ``True`` o último clique foi na Navegação (Desligado), ``False`` em qualquer outro botão. É da
+#: interface de propósito: o daemon só tem o modo `desktop`, e `lifecycle.py` não muda (BRIEF-T2).
+PREF_NAVEGACAO_NO_DESLIGADO = "jogar_navegacao_no_desligado"
+
+#: A pintura pergunta a cada tique (100 ms), então a leitura do disco é reaproveitada por este
+#: prazo; o clique reescreve a lembrança na hora.
+PRAZO_DA_LEMBRANCA_S = 0.5
+_LEMBRANCA_DA_NAVEGACAO: dict[str, Any] = {"onde": "", "quando": 0.0, "valor": False}
+
+
+def _onde_mora_a_lembranca() -> str:
+    from hefesto_dualsense4unix.utils import xdg_paths
+
+    return str(xdg_paths.config_dir())
+
+
+def _navegacao_no_desligado() -> bool:
+    """O último clique pôs o `desktop` na Navegação (Desligado)? ``False`` na dúvida."""
+    onde = _onde_mora_a_lembranca()
+    agora = time.monotonic()
+    memo = _LEMBRANCA_DA_NAVEGACAO
+    if memo["onde"] == onde and agora - float(memo["quando"]) < PRAZO_DA_LEMBRANCA_S:
+        return bool(memo["valor"])
+    from hefesto_dualsense4unix.app.gui_prefs import load_gui_prefs
+
+    valor = load_gui_prefs().get(PREF_NAVEGACAO_NO_DESLIGADO) is True
+    memo.update(onde=onde, quando=agora, valor=valor)
+    return valor
+
+
+def _guardar_a_navegacao_no_desligado(valor: bool) -> None:
+    """Grava a lembrança (só quando muda) e já a deixa valendo para o próximo tique."""
+    if _navegacao_no_desligado() == valor:
+        return
+    from hefesto_dualsense4unix.app.gui_prefs import set_pref
+
+    set_pref(PREF_NAVEGACAO_NO_DESLIGADO, valor)
+    _LEMBRANCA_DA_NAVEGACAO.update(
+        onde=_onde_mora_a_lembranca(), quando=time.monotonic(), valor=valor)
+
+
 def _estado_da_tela(state: dict[str, Any]) -> dict[str, str]:
     """A POSIÇÃO DO INTERRUPTOR e o CHIP ACESO — os dois lidos, nunca cravados.
 
@@ -1073,6 +1100,14 @@ def _estado_da_tela(state: dict[str, Any]) -> dict[str, str]:
     if ligado is False:
         steam = _steam_input_da_tela(state)
         aceso = "" if steam else CHIP_DO_NATIVO
+    elif aceso == CHIP_DA_NAVEGACAO:
+        # O MESMO MODO `desktop` TEM DOIS LUGARES NA TELA (:data:`CHIP_DO_POINT_AND_CLICK`): o
+        # que o último clique escolheu diz qual. «Navegação» vive do lado Desligado, e o
+        # «Point and click» do Ligado.
+        if _navegacao_no_desligado():
+            ligado = False
+        else:
+            aceso = CHIP_DO_POINT_AND_CLICK
     return {
         "hef-posicao": "" if ligado is None else ("ligado" if ligado else "desligado"),
         "modo-aceso": aceso,
@@ -1287,6 +1322,8 @@ def _rotulo_do_chip(chave: str) -> str:
     """A palavra aprovada pelo usuário para o chip, de `painel.CHIPS_DA_ESCADA`."""
     if chave == CHIP_DO_NATIVO:
         return ROTULO_DO_NATIVO
+    if chave == CHIP_DO_POINT_AND_CLICK:
+        return ROTULO_DO_POINT_AND_CLICK
     return next((str(c.rotulo) for c in _painel().CHIPS_DA_ESCADA
                  if c.chave == chave), chave)
 
@@ -1399,6 +1436,8 @@ def _hefesto_o_modo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise ValueError(
             "hefesto: o clique não disse qual posição do interruptor — o "
             "`data-modo` do rótulo não chegou")
+    # Qualquer posição do interruptor desfaz a Navegação do Desligado.
+    _guardar_a_navegacao_no_desligado(False)
     confirmou = _aplicar(p, _plano(chave))
     _lembrar("modo", chave, str(o.get("texto") or ""))
     _dizer_se_nao_confirmou(confirmou)
@@ -1469,7 +1508,15 @@ def _o_clique_da_fileira(ctx: Contexto, o: dict[str, Any], p: Any,
     if linha.steam_input and appid is None:
         raise RuntimeError(str(format_game_broken_result(status="sem_jogo")))
 
-    confirmou = _aplicar(p, _plano_do_chip(chave))
+    # A lembrança vai ANTES do plano, para a pintura do tique seguinte já achar o botão no lado
+    # certo; se o plano levanta, ela volta ao que era.
+    antes = _navegacao_no_desligado()
+    _guardar_a_navegacao_no_desligado(chave == CHIP_DA_NAVEGACAO)
+    try:
+        confirmou = _aplicar(p, _plano_do_chip(chave))
+    except BaseException:
+        _guardar_a_navegacao_no_desligado(antes)
+        raise
     _lembrar_do_chip(chave, o)
 
     recado = ""
@@ -1912,10 +1959,22 @@ def mascara_do_controle(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, A
     return {"recado": recado} if recado else None
 
 
+@gesto("01-jogar.html", "modo-point-and-click",
+       grava="liga o mouse emulado e o ponteiro anda na tela dela")
+def modo_point_and_click(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """"Point and click" (Ligado): apontar e clicar, pelo perfil da aba Navegação.
+
+    O mesmo modo `desktop` da Navegação do Desligado (:data:`CHIP_DO_POINT_AND_CLICK`), com o
+    mesmo plano: sai do gamepad virtual, liga o mouse e aplica o arranjo do perfil ativo
+    (`desktop.arranjo.apply`). O que muda é onde a tela o mostra: aceso no Ligado.
+    """
+    return _o_clique_da_fileira(ctx, o, p, CHIP_DO_POINT_AND_CLICK)
+
+
 @gesto("01-jogar.html", "modo-navegacao",
        grava="liga o mouse emulado e o ponteiro anda na tela dela")
 def modo_navegacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """"Navegação": o controle vira teclado e mouse do computador.
+    """"Navegação" (Desligado): o controle vira teclado e mouse do computador.
 
     O caso do meio (`painel` o explica): a Navegação **não é degrau da `ESCADA`** (`KIND_DESKTOP`
     existe e `indice_do_degrau` devolve -1) e **tem escritor**, `apply_mode('desktop')`; confundir
@@ -2123,6 +2182,11 @@ PROVAS = [
                ("chamar", ["gamepad.emulation.set"],
                 {**_MANUAL_ON, "caminho": "xbox"})]},
     {"pagina": PAGINA, "gesto": "modo-navegacao", "clique": {},  # (noqa-acento) chave do contrato
+     "chama": [("chamar", ["native.mode.set"], _MANUAL_OFF),
+               ("chamar", ["gamepad.emulation.set"], _MANUAL_OFF),
+               ("chamar", ["desktop.arranjo.apply"], {"origin": "manual"})]},
+    {"pagina": PAGINA, "gesto": "modo-point-and-click",  # (noqa-acento) chave do contrato
+     "clique": {},
      "chama": [("chamar", ["native.mode.set"], _MANUAL_OFF),
                ("chamar", ["gamepad.emulation.set"], _MANUAL_OFF),
                ("chamar", ["desktop.arranjo.apply"], {"origin": "manual"})]},

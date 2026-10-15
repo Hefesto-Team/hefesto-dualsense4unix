@@ -1,0 +1,238 @@
+"""A-ABA-JOGAR-DO-TODO-01 (opção A do BRIEF-T2, 15/10/2026): «Point and click» é do Ligado e
+«Navegação» é o terceiro chip do Desligado.
+
+Os dois são o MESMO modo `desktop` do daemon (o controle vira mouse e teclado e o Hefesto segue
+lendo; sem gamepad virtual). O que os separa é o lado em que a TELA os põe, e esse lado é uma
+lembrança da interface (`jogar_navegacao_no_desligado` na preferência da janela): o daemon e o
+`lifecycle.py` não mudam.
+
+Esta régua mede cinco coisas, cada uma com a sua mordida:
+
+1. os rótulos de cada fileira, nos dois lados, no gerador e na página;
+2. o modo de cada chip (`o_que_o_chip_faz`) e o `data-modo` que a página emite;
+3. o lado da tela por `_estado_da_tela` com o daemon em `desktop`, nas duas lembranças;
+4. as cores do Desligado, que são as da barra de luz (`hotkey.CORES_DO_MODO`), e o alvo de 24 px;
+5. a aba sem «?» e sem `title`: toda frase é `data-dica` curta.
+
+A MORDIDA: ponha «Navegação» de volta no Ligado em `aba01.MODOS` (no lugar do Point and click)
+e os casos 1 e 2 reprovam; apague a lembrança em `_estado_da_tela` e o caso 3 reprova.
+"""
+from __future__ import annotations
+
+import pathlib
+import re
+import sys
+from typing import Any
+
+import pytest
+
+RAIZ = pathlib.Path(__file__).resolve().parents[2]
+INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
+
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("importa `app.actions.jogar.painel`, que carrega o GTK")
+
+for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
+    if _caminho not in sys.path:
+        sys.path.insert(0, _caminho)
+
+from hefesto_dualsense4unix.daemon.subsystems import hotkey
+from hefesto_dualsense4unix.interface import aba01, onde
+from pacotes import Contexto
+from pacotes import a01_jogar as aba
+
+LIGADO = ["Sony DualSense", "Xbox", "Point and click"]
+DESLIGADO = ["Nativo", "Steam Input", "Navegação"]
+
+VIVO_DESKTOP: dict[str, Any] = {
+    "connected": True,
+    "native_mode": False,
+    "gamepad_emulation": {"enabled": False, "flavor": "dualsense",
+                          "wrapper_used": None, "mascara_divergente": None},
+    "paused": False,
+    "controllers": [{"uniq": "aa:bb:cc:00:00:01", "connected": True, "player_slot": 1}],
+}
+
+
+@pytest.fixture()
+def lar_novo(monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path) -> pathlib.Path:
+    """Um `config_dir()` só deste teste, com a lembrança zerada."""
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    aba._LEMBRANCA_DA_NAVEGACAO.update(onde="", quando=0.0, valor=False)
+    return tmp_path
+
+
+def _pagina() -> str:
+    return onde.pagina("01-jogar.html", publicado=False).read_text(encoding="utf-8")
+
+
+def _fileira(corpo: str, lado: str) -> list[tuple[str, str]]:
+    """(rótulo, atributos) dos chips de um lado da fileira, na ordem da página."""
+    secao = corpo.split(f'class="hef-modo {lado}"', 1)[-1].split("</div>\n        </div>", 1)[0]
+    return [(m.group(2).strip(), m.group(1))
+            for m in re.finditer(r'<span class="degrau[^"]*"([^>]*)>([^<]+)</span>', secao)]
+
+
+# 1. OS RÓTULOS ---------------------------------------------------------------------------------
+
+def test_os_rotulos_do_gerador_sao_os_do_desenho() -> None:
+    assert [m["rot"] for m in aba01.MODOS] == LIGADO
+    assert [m["rot"] for m in aba01.DO_DESLIGADO] == DESLIGADO
+
+
+def test_a_pagina_poe_cada_rotulo_no_seu_lado() -> None:
+    corpo = _pagina()
+    assert [r for r, _ in _fileira(corpo, "so-ligado")] == LIGADO
+    assert [r for r, _ in _fileira(corpo, "so-desligado")] == DESLIGADO
+
+
+def test_a_navegacao_nao_mora_no_ligado_nem_o_point_and_click_no_desligado() -> None:
+    corpo = _pagina()
+    assert "Navegação" not in [r for r, _ in _fileira(corpo, "so-ligado")]
+    assert "Point and click" not in [r for r, _ in _fileira(corpo, "so-desligado")]
+
+
+# 2. O MODO DE CADA CHIP ------------------------------------------------------------------------
+
+@pytest.mark.parametrize(("chip", "modo", "steam"), [
+    ("dualsense", "gamepad", False),
+    ("xbox", "gamepad", False),
+    (aba.CHIP_DO_POINT_AND_CLICK, "desktop", False),
+    (aba.CHIP_DO_NATIVO, "native", False),
+    ("steam", "native", True),
+    (aba.CHIP_DA_NAVEGACAO, "desktop", False),
+])
+def test_o_modo_de_cada_chip(chip: str, modo: str, steam: bool) -> None:
+    linha = aba.o_que_o_chip_faz(chip)
+    assert (linha.modo, linha.steam_input) == (modo, steam)
+
+
+def test_os_dois_do_desktop_fazem_a_mesma_coisa_no_daemon() -> None:
+    assert aba.o_que_o_chip_faz(aba.CHIP_DO_POINT_AND_CLICK) == aba.o_que_o_chip_faz(
+        aba.CHIP_DA_NAVEGACAO)
+    assert aba._plano_do_chip(aba.CHIP_DO_POINT_AND_CLICK) == aba._plano_do_chip(
+        aba.CHIP_DA_NAVEGACAO)
+
+
+def test_a_pagina_emite_o_gesto_e_o_modo_de_cada_chip() -> None:
+    corpo = _pagina()
+    ligado = dict(_fileira(corpo, "so-ligado"))
+    desligado = dict(_fileira(corpo, "so-desligado"))
+    assert 'data-gesto="modo-point-and-click"' in ligado["Point and click"]
+    assert 'data-modo="desktop"' in ligado["Point and click"]
+    assert 'data-gesto="modo-navegacao"' in desligado["Navegação"]
+    assert 'data-modo="desktop"' in desligado["Navegação"]
+    assert 'data-gesto="modo-navegacao"' not in "".join(ligado.values())
+
+
+def test_o_gesto_do_point_and_click_existe_e_tem_prova() -> None:
+    assert callable(aba.modo_point_and_click)
+    assert any(p["gesto"] == "modo-point-and-click" for p in aba.PROVAS)
+
+
+# 3. O LADO DA TELA -----------------------------------------------------------------------------
+
+def _tela(state: dict[str, Any]) -> dict[str, str]:
+    return aba._estado_da_tela(state)
+
+
+def test_sem_lembranca_o_desktop_acende_o_point_and_click_no_ligado(lar_novo) -> None:
+    tela = _tela(VIVO_DESKTOP)
+    assert (tela["hef-posicao"], tela["modo-aceso"]) == ("ligado", "pointclick")
+
+
+def test_com_a_lembranca_o_desktop_acende_a_navegacao_no_desligado(lar_novo) -> None:
+    aba._guardar_a_navegacao_no_desligado(True)
+    tela = _tela(VIVO_DESKTOP)
+    assert (tela["hef-posicao"], tela["modo-aceso"]) == ("desligado", "navegacao")
+    assert tela["steam-input-aceso"] == ""
+
+
+def test_a_lembranca_sobrevive_a_um_processo_novo(lar_novo) -> None:
+    aba._guardar_a_navegacao_no_desligado(True)
+    aba._LEMBRANCA_DA_NAVEGACAO.update(onde="", quando=0.0, valor=False)
+    assert aba._navegacao_no_desligado() is True
+
+
+def test_o_clique_no_point_and_click_desfaz_a_navegacao(lar_novo, monkeypatch) -> None:
+    monkeypatch.setattr(aba, "_aplicar", lambda p, plano: True)
+    monkeypatch.setattr(aba, "_lembrar_do_chip", lambda *a, **k: None)
+    ctx = Contexto(state=VIVO_DESKTOP, mesa=[], conectados=[], estados={})
+    aba.modo_navegacao(ctx, {}, object())
+    assert _tela(VIVO_DESKTOP)["modo-aceso"] == "navegacao"
+    aba.modo_point_and_click(ctx, {}, object())
+    assert _tela(VIVO_DESKTOP)["modo-aceso"] == "pointclick"
+
+
+def test_o_clique_que_falha_devolve_a_lembranca(lar_novo, monkeypatch) -> None:
+    def _cai(p, plano):
+        raise RuntimeError("daemon fora")
+
+    monkeypatch.setattr(aba, "_aplicar", _cai)
+    ctx = Contexto(state=VIVO_DESKTOP, mesa=[], conectados=[], estados={})
+    with pytest.raises(RuntimeError):
+        aba.modo_navegacao(ctx, {}, object())
+    assert aba._navegacao_no_desligado() is False
+
+
+def test_trocar_de_posicao_do_interruptor_desfaz_a_navegacao(lar_novo, monkeypatch) -> None:
+    aba._guardar_a_navegacao_no_desligado(True)
+    monkeypatch.setattr(aba, "_aplicar", lambda p, plano: True)
+    monkeypatch.setattr(aba, "_lembrar", lambda *a, **k: None)
+    ctx = Contexto(state=VIVO_DESKTOP, mesa=[], conectados=[], estados={})
+    aba._hefesto_o_modo(ctx, {"modo": "native", "texto": "Desligado"}, object())
+    assert aba._navegacao_no_desligado() is False
+
+
+# 4. AS CORES E O ALVO --------------------------------------------------------------------------
+
+def _hex(rgb: tuple[int, int, int]) -> str:
+    return "#{:02x}{:02x}{:02x}".format(*rgb)
+
+
+@pytest.mark.parametrize(("chip", "modo"), [
+    ("nativo", "nativo"), ("steam", "steam_input"), ("navegacao", "mouse_teclado"),
+])
+def test_a_cor_do_chip_do_desligado_e_a_da_barra(chip: str, modo: str) -> None:
+    cor = _hex(hotkey.CORES_DO_MODO[modo])
+    regra = re.search(
+        rf'\.so-desligado \.degrau\.on\[data-hef-quando="{chip}"\]\{{\s*'
+        r"border-color:(#[0-9a-f]{6})",
+        aba01.CSS)
+    assert regra, f"o chip {chip!r} perdeu a cor própria no Desligado"
+    assert regra.group(1) == cor, f"{chip}: a tela pinta {regra.group(1)} e a barra {cor}"
+
+
+def test_todo_alvo_clicavel_tem_24_px() -> None:
+    assert "[data-gesto]{min-height:24px}" in aba01.CSS.replace(" ", "")
+
+
+# 5. SEM «?» E SEM title ------------------------------------------------------------------------
+
+def _miolo_da_pagina() -> str:
+    """O miolo da aba, sem comentário e sem SVG: a fita e o rodapé são do esqueleto."""
+    corpo = _pagina().split('<div class="miolo">', 1)[-1].split('<div class="rodape"', 1)[0]
+    corpo = re.sub(r"<svg.*?</svg>", "", corpo, flags=re.S)
+    return re.sub(r"<!--.*?-->", "", corpo, flags=re.S)
+
+
+def test_a_aba_nao_tem_ajuda_com_interrogacao_nem_title() -> None:
+    corpo = _miolo_da_pagina()
+    assert 'class="ajuda"' not in corpo
+    assert ' title="' not in corpo
+
+
+def test_cada_chip_do_desligado_tem_uma_dica_curta() -> None:
+    for rotulo, atributos in _fileira(_pagina(), "so-desligado"):
+        dica = re.search(r'data-dica="([^"]+)"', atributos)
+        assert dica, f"o chip {rotulo!r} ficou sem dica"
+        assert len(dica.group(1).split()) <= 12, dica.group(1)
+
+
+def test_o_reconectar_mora_no_canto_do_quadro_das_mascaras() -> None:
+    corpo = _miolo_da_pagina()
+    assert corpo.count('data-gesto="reconectar"') == 1
+    antes = corpo.split('data-gesto="reconectar"', 1)[0]
+    assert antes.rfind('class="quadro-topo"') > antes.rfind('class="faixa-final"')
+    assert "Reconectar controles" not in corpo

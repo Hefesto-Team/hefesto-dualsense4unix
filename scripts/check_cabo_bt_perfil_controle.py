@@ -99,6 +99,7 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "modo-dualsense": "o modo é UM para todos — decisão dela de 08/09 "
                       "(`D-0809-O-MODO-E-UM-PARA-TODOS-OS-CONTROLES`)",
     "modo-navegacao": "idem",
+    "modo-point-and-click": "idem: é o mesmo modo `desktop` da Navegação, no lado Ligado da tela",
     "modo-steam": "idem",
     "modo-xbox": "idem",
     "modo-nativo": "idem: o Nativo tira o Hefesto do meio para todos, e a Steam do jogo da vez",

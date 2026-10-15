@@ -150,9 +150,17 @@ def test_o_botao_do_desenho_tem_letra_e_altura_maiores(
 ) -> None:
     """O pedido, em pixels: maior que hoje, e ainda um botão de canto."""
     desenho, hoje = as_duas_paginas["desenho"], as_duas_paginas["publicada"]
-    assert (desenho["fonte"], desenho["altura"]) == (hoje["fonte"], hoje["altura"]), (
-        f"a publicada diz {hoje['rotulo']!r} e não tem a letra e a altura do "
-        f"desenho: {hoje} contra {desenho}")
+    # RODADA 4 (15/10/2026, A-ABA-JOGAR-DO-TODO-01): o «Modo Freestyle» é a pílula de 34 px com a
+    # letra de 13,5 px do «Reconectar». Enquanto a 01-jogar está à frente do publicado
+    # (`mockup/DIVERGENCIAS.md`), a medida do desenho é a do alvo; depois do `--publicar`, volta
+    # a ser igual à publicada.
+    arquivo = Path(__file__).resolve().parents[2] / "mockup" / "DIVERGENCIAS.md"
+    em_trabalho = arquivo.exists() and "\n## 01-jogar.html" in (
+        "\n" + arquivo.read_text(encoding="utf-8").split("\n---\n", 1)[-1])
+    esperado = (13.5, 34) if em_trabalho else (hoje["fonte"], hoje["altura"])
+    assert (desenho["fonte"], desenho["altura"]) == esperado, (
+        f"o desenho tem {desenho['fonte']}px de letra e {desenho['altura']}px de altura, e o "
+        f"esperado é {esperado} (a publicada diz {hoje['rotulo']!r}: {hoje})")
     assert desenho["altura"] < desenho["escolha"], desenho
     assert desenho["linhas"] == 1, desenho
     assert desenho["no_topo"] and desenho["a_direita"] < 20, desenho
