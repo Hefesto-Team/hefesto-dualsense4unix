@@ -76,13 +76,16 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ## 03-gatilhos.html
 - **15/10/2026** — só a folha do Nativo: a «Navegação» da aba Jogar passou a ser um dos vivos do Nativo, e a folha
-  comum (`monta.CSS_DO_NATIVO`) entra nas cinco abas por controle. Nada muda na tela desta aba (ela não tem o chip);
+  comum (`monta.CSS_DO_NATIVO`) entra nas cinco abas por controle. Nada muda na tela desta aba (ela não tem o chip).
+  Até publicar, o produto roda a página de antes, com a folha velha do Nativo, que aqui não tem o que esconder;
   sai com o próximo `--publicar 03`.
 
 ## 04-iluminacao.html
 - **15/10/2026** — só a folha do Nativo, como na 03: o seletor da «Navegação» entra na lista dos vivos e nada muda na
-  tela desta aba; sai com o próximo `--publicar 04`.
+  tela desta aba. Até publicar, o produto roda a página de antes, sem perda; sai com o próximo
+  `--publicar 04`.
 
 ## 05-vibracao.html
 - **15/10/2026** — só a folha do Nativo, como na 03: o seletor da «Navegação» entra na lista dos vivos e nada muda na
-  tela desta aba; sai com o próximo `--publicar 05`.
+  tela desta aba. Até publicar, o produto roda a página de antes, sem perda; sai com o próximo
+  `--publicar 05`.
