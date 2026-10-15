@@ -42,6 +42,10 @@ TOPICOS_DE_LEITURA: dict[str, tuple[str, ...]] = {
         EventTopic.JOGO_VIBRACAO,
         EventTopic.JOGO_FECHOU,
     ),
+    # O que o jogo pede ao gatilho de CADA controle e a intensidade da háptica por áudio dele:
+    # permissões à parte da vibração, porque são dois sinais diferentes e a extensão escolhe.
+    "jogo.gatilho": (EventTopic.JOGO_GATILHO,),  # (noqa-acento): contrato ASCII
+    "jogo.haptica": (EventTopic.JOGO_HAPTICA,),  # (noqa-acento): contrato ASCII
     # O perfil efetivo e as marcas dele. Fica à parte do jogo: saber que o perfil tem a marca
     # «Adulto» é dado da pessoa, e quem só quer a vibração não o recebe.
     "perfil.marcas": (EventTopic.PERFIL_TROCOU,),
@@ -63,6 +67,12 @@ _O_QUE_DEIXA: dict[str, str] = {
     "ler:conexao": "Saber quando um controle entra ou sai.",  # (noqa-acento): contrato ASCII
     "ler:jogo.vibracao": (  # (noqa-acento): contrato ASCII
         "Saber a vibração que o jogo pede a cada controle e quando o jogo fecha."
+    ),
+    "ler:jogo.gatilho": (  # (noqa-acento): contrato ASCII
+        "Saber o efeito de gatilho que o jogo pede a cada controle."
+    ),
+    "ler:jogo.haptica": (  # (noqa-acento): contrato ASCII
+        "Saber a intensidade da vibração fina que o jogo manda a cada controle."
     ),
     "ler:perfil.marcas": "Saber o perfil em uso e as marcas dele.",
     "escrever:luz": "Mudar a cor da luz de um controle.",

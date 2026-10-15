@@ -51,7 +51,18 @@ class EventTopic:
     SOM_DO_SISTEMA = "som.do_sistema"
     JOGO_VIBRACAO = "jogo.vibracao"
     JOGO_FECHOU = "jogo.fechou"
+    JOGO_GATILHO = "jogo.gatilho"
+    JOGO_HAPTICA = "jogo.haptica"
     PERFIL_TROCOU = "perfil.trocou"
+
+
+#: Nomes reservados SEM fonte (momento do jogo, app que abre, hora): ninguém publica nem assina
+#: até a fonte existir; o nome fica guardado para as extensões não inventarem outro.
+TOPICOS_RESERVADOS: frozenset[str] = frozenset({
+    "jogo.momento",
+    "sistema.app_abriu",
+    "sistema.hora",
+})
 
 
 #: Os tópicos de ESTADO: o último valor publicado fica guardado e vai a quem assina depois,

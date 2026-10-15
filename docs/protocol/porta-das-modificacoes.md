@@ -41,7 +41,7 @@ Os tópicos de leitura são estes. Os quatro primeiros são do controle do posto
 - `bateria`: a carga;
 - `conexao`: o controle que entra ou sai.
 
-Os dois últimos são do jogo e do perfil, e cada um é uma permissão à parte:
+Os demais são do jogo e do perfil, e cada um é uma permissão à parte:
 
 - `jogo.vibracao` (`ler:jogo.vibracao`) entrega duas notificações. `nome: "jogo.vibracao"` é a vibração que o
   jogo pede a UM controle, de qualquer jogador (P1 a P4), com o `uniq` dele no envelope:
@@ -57,7 +57,24 @@ Os dois últimos são do jogo e do perfil, e cada um é uma permissão à parte:
 - `perfil.marcas` (`ler:perfil.marcas`) entrega `nome: "perfil.trocou"`: `{perfil, marcas: [...], t}`, a cada
   troca do perfil efetivo ou das marcas do arquivo dele (a marca posta no jogo já aberto também vale). É estado, não evento: o serviço guarda o último, e quem assina depois recebe o
   de agora logo na assinatura. As marcas são as do arquivo do perfil (`[]` sem marca), e o envelope leva o
-  `uniq` do posto.
+  `uniq` do posto;
+- `jogo.gatilho` (`ler:jogo.gatilho`) entrega `nome: "jogo.gatilho"`: o efeito que o jogo escreveu no gatilho de
+  UM controle, de P1 a P4, `{uniq, jogador, lado, modo, forca, posicao, t}`. `lado` é `esquerdo` ou `direito`;
+  `modo` é `desligado`, `resistencia`, `arco`, `galope`, `arma`, `vibracao`, `metralhadora` ou `outro`; `forca`
+  vai de 0 a 1 (o galope diz 1, porque o bloco dele carrega pés e frequência) e `posicao` é onde o efeito começa
+  no curso, de 0 a 1. Sai uma vez por mudança de bloco, no máximo 50 por segundo por lado; o que o teto atrasa
+  sai no tique seguinte e o último valor sempre chega. Quando o pad sai ou o jogo fecha, quem tinha efeito
+  recebe `desligado`. Vale para cabo e Bluetooth;
+- `jogo.haptica` (`ler:jogo.haptica`) entrega `nome: "jogo.haptica"`: o envelope da háptica por áudio de UM
+  controle, `{uniq, jogador, intensidade: [esquerdo, direito], t}`, cada lado de 0 a 1 (o RMS dos canais 3 e 4;
+  senoide de fundo de escala vale 1), em passos de 0,02, de 20 em 20 ms, no máximo 50 por segundo por controle e
+  só quando o nível muda. Enquanto não for zero o evento se repete a cada 250 ms. Sem som por meio segundo, ou
+  com o jogo fechado, o zero sai. No Bluetooth é o que o jogo manda (antes do ganho do Hefesto); no cabo é o que
+  a placa recebe (depois do ganho). Não há segundo gravador: o envelope lê o PCM que a ponte do rádio e o ouvido
+  da placa já leem.
+
+`jogo.momento`, `sistema.app_abriu` e `sistema.hora` são nomes reservados: nenhum existe como permissão nem tem
+fonte, e uma modificação que peça um deles é recusada como qualquer permissão desconhecida.
 
 As escritas valem para qualquer controle, de P1 a P4, pelo `uniq` dele.
 

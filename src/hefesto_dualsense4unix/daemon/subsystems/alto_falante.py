@@ -1564,6 +1564,7 @@ class AltoFalanteSubsystem:
     def _casar_os_ouvidos_das_placas(self, ouvir: Mapping[str, str]) -> None:
         """Um ouvido por controle no cabo, na placa dele; quem saiu ou trocou de placa desce."""
         from hefesto_dualsense4unix.integrations.alto_falante_bt import OuvidoDaPlaca
+        from hefesto_dualsense4unix.integrations.envelope_da_haptica import ouvido_da_placa
 
         vivos = dict(self._ouvidos_das_placas)
         for uniq, ouvido in list(vivos.items()):
@@ -1573,7 +1574,7 @@ class AltoFalanteSubsystem:
         for uniq, placa in ouvir.items():
             if uniq in vivos:
                 continue
-            ouvido = OuvidoDaPlaca(placa=placa, uniq=uniq)
+            ouvido = ouvido_da_placa(OuvidoDaPlaca, placa, uniq, self._daemon)
             if ouvido.subir():
                 vivos[uniq] = ouvido
             else:
@@ -1845,6 +1846,7 @@ class AltoFalanteSubsystem:
             rodar_pactl,
             sink_esta_tocando,
             sinks_com_motores,
+            taxa_da_fonte,
         )
         from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
             o_microfone_esta_no_ar,
@@ -1856,6 +1858,7 @@ class AltoFalanteSubsystem:
             endpoints_de_pe_ou_nada,
             varrer_endpoints_orfaos,
         )
+        from hefesto_dualsense4unix.integrations.envelope_da_haptica import espiar_a_haptica
         from hefesto_dualsense4unix.integrations.pad_usb import a_ancora_ou_a_espera
 
         vivos: dict[str, str] = {}
@@ -2141,6 +2144,12 @@ class AltoFalanteSubsystem:
                             vaga.soltar("a vibração não teve fonte")
                         self._descer_ponte_ociosa(uniq)
                         continue
+                else:
+                    # O-GATILHO-E-A-HAPTICA-DO-JOGO-VIRAM-EVENTOS-PARA-AS-EXTENSOES-01: o
+                    # envelope espia o PCM que a ponte já lê; não há segundo gravador.
+                    fonte_h = espiar_a_haptica(
+                        self._daemon, uniq, fonte_h, taxa=taxa_da_fonte("haptica")
+                    )
             ponte = PonteDeSomPorRadio(
                 uniq=uniq,
                 abrir_hidraw=functools.partial(self._abrir_hidraw, caminho),

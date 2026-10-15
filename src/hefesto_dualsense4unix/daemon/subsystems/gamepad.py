@@ -788,11 +788,11 @@ def apply_game_trigger(
 ) -> None:
     """Aplica no físico o trigger effect que o JOGO escreveu no vpad (REPLICA-03).
 
-    Sem broadcast de propósito (diferente do rumble): replicar um efeito de
-    gatilho em TODOS os controles pintaria o jogador errado. Sem MAC alvo ou
-    sem a API por-uniq no backend (FakeController), a réplica é descartada com
-    log — nunca degrada para broadcast.
+    Sem broadcast de propósito (rumble é diferente): um efeito de gatilho em TODOS os controles
+    pintaria o jogador errado. Sem MAC alvo ou sem a API por-uniq (FakeController), a réplica é
+    descartada com log. O que o jogo escreveu sai também como o evento ``jogo.gatilho``.
     """
+    _dizer_o_gatilho_do_jogo(daemon, target_uniq, side, block)
     fn: Any = getattr(daemon.controller, "set_game_trigger_for", None)
     if target_uniq is None or not callable(fn):
         logger.debug("game_trigger_sem_alvo_descartado", target=target_uniq)
@@ -839,13 +839,13 @@ def apply_game_player_leds(
         logger.warning("game_player_leds_failed", err=str(exc), target=target_uniq)
 
 
-def end_game_output_session(
-    daemon: DaemonProtocol, *, target_uniq: str | None = None
-) -> None:
+def end_game_output_session(daemon: DaemonProtocol, *, target_uniq: str | None = None) -> None:
     """Fim da sessão uhid do jogador: devolve perfil/paleta/co-op (REPLICA-03)."""
     _esquecer_o_numero_do_jogo(daemon, target_uniq)
     if target_uniq is not None:
         esquecer_a_vibracao(daemon, target_uniq)
+        # O gatilho e o envelope do jogo zeram com a sessão: quem ouve recebe o zero.
+        _esquecer_os_eventos_do_jogo(daemon, target_uniq)
     fn: Any = getattr(daemon.controller, "end_game_session_for", None)
     if target_uniq is None or not callable(fn):
         logger.debug("game_session_end_sem_alvo", target=target_uniq)
@@ -1971,12 +1971,52 @@ def sem_o_gesto_do_ps(
     return botoes - calados if calados else botoes
 
 
+def _dizer_o_gatilho_do_jogo(
+    daemon: Any, target_uniq: str | None, side: str, block: bytes
+) -> None:
+    from hefesto_dualsense4unix.daemon.subsystems.gatilho_do_jogo import dizer_o_gatilho
+
+    dizer_o_gatilho(daemon, target_uniq, side, block)
+
+
+def _esquecer_os_eventos_do_jogo(daemon: Any, target_uniq: str | None = None) -> None:
+    """O fim da sessão do pad (ou do jogo, sem ``target_uniq``): gatilho e envelope zeram."""
+    from hefesto_dualsense4unix.daemon.subsystems.gatilho_do_jogo import esquecer_o_gatilho
+    from hefesto_dualsense4unix.integrations.envelope_da_haptica import esquecer_o_envelope
+
+    esquecer_o_gatilho(daemon, target_uniq)
+    esquecer_o_envelope(daemon, target_uniq)
+
+
+def _bater_os_eventos_do_jogo(daemon: Any) -> None:
+    """O gatilho e a háptica do jogo no tique: o atraso do teto, a batida e o jogo que fechou.
+
+    Quando o jogo em cena sai ou troca (`appid_em_cena`, o que o autoswitch lê para o
+    `jogo.fechou`), quem tinha gatilho ou intensidade recebe o zero. Nunca levanta.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems.gatilho_do_jogo import bater_o_gatilho
+    from hefesto_dualsense4unix.integrations.envelope_da_haptica import bater_o_envelope
+
+    with contextlib.suppress(Exception):
+        bater_o_gatilho(daemon)
+        bater_o_envelope(daemon)
+        appid = getattr(daemon, "appid_em_cena", None)
+        appid = appid if isinstance(appid, int) and not isinstance(appid, bool) else None
+        anterior = getattr(daemon, "_appid_dos_eventos_do_jogo", None)
+        if appid == anterior:
+            return
+        daemon._appid_dos_eventos_do_jogo = appid
+        if anterior is not None:
+            _esquecer_os_eventos_do_jogo(daemon)
+
+
 def dispatch_gamepad(
     daemon: DaemonProtocol, state: Any, buttons_pressed: frozenset[str]
 ) -> None:
     """Repassa o estado do controle ao gamepad virtual."""
     _avisar_troca_de_modo(daemon)
     bater_a_vibracao(daemon)
+    _bater_os_eventos_do_jogo(daemon)
     device = daemon._gamepad_device
     if device is None:
         return
