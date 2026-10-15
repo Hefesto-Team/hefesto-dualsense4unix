@@ -2535,25 +2535,51 @@ def _o_servico_so_demorou(erro: BaseException) -> bool:
 
 
 class FolgaDoServicoMudo:
-    """O estado que o tique pinta quando o serviço não respondeu — RECONECTAR-SAMBA-02."""
+    """O estado que o tique pinta quando o serviço não respondeu — RECONECTAR-SAMBA-02.
 
-    def __init__(self, folga: int = MUDOS_SEGUIDOS_QUE_VOLTARAM) -> None:
+    Cada TRANSIÇÃO do que a tela mostra deixa uma linha no diário, para a foto dela se cruzar
+    com a hora: `[tela] estado velho desde <hora>` (pintando o último estado bom), `[tela] vazio`
+    (a verdade, `{}`) e `[tela] novo` (voltou a resposta). Uma linha por transição, nunca por
+    tique; o que a tela mostra não muda.
+    """
+
+    def __init__(
+        self,
+        folga: int = MUDOS_SEGUIDOS_QUE_VOLTARAM,
+        anotar: Callable[[str], None] | None = None,
+    ) -> None:
         self.folga = folga
         self.seguidos = 0
         self._ultimo_bom: dict[str, Any] | None = None
+        self._anotar = anotar or self._ao_diario
+        #: O que a tela mostra agora: None (nada ainda), "novo", "velho" ou "vazio".
+        self._mostrando: str | None = None
+
+    @staticmethod
+    def _ao_diario(linha: str) -> None:
+        print(linha, file=sys.stderr)
+
+    def _passar_a(self, estado: str, linha: str) -> None:
+        if self._mostrando != estado:
+            if estado != "novo" or self._mostrando is not None:
+                self._anotar(linha)
+            self._mostrando = estado
 
     def respondeu(self, estado: dict[str, Any]) -> None:
         """O serviço respondeu: zera a conta e guarda o estado para a folga."""
         self.seguidos = 0
         self._ultimo_bom = estado
+        self._passar_a("novo", "[tela] novo")
 
     def mudo(self, erro: BaseException) -> dict[str, Any]:
         """O estado a pintar neste tique mudo: o último bom, ou a verdade (`{}`)."""
         self.seguidos += 1
         if (self._ultimo_bom is not None and self.seguidos <= self.folga
                 and _o_servico_so_demorou(erro)):
+            self._passar_a("velho", f"[tela] estado velho desde {time.strftime('%H:%M:%S')}")
             return self._ultimo_bom
         self._ultimo_bom = None
+        self._passar_a("vazio", "[tela] vazio")
         return {}
 
 
@@ -2795,6 +2821,7 @@ class Piloto:
         self._st_de_agora: dict[str, Any] = {}
         self.custo_do_ipc: deque[float] = deque(maxlen=self.CUSTOS_GUARDADOS)
         self._escondida = False
+        self._escondida_desde = 0.0
         self._geracao_na_volta: int | None = None
         self._pintada: dict[tuple[str, ...], tuple[Any, Any]] | None = None
         self._ate_a_inteira = 0
@@ -3018,13 +3045,17 @@ class Piloto:
         _esquecer_a_pintura(self)
         if escondida:
             self._geracao_na_volta = None
+            self._escondida_desde = time.monotonic()
             self._estado_vivo.pausar()
             _soltar_as_ondas()
             print("[janela] escondida: o tique parou", file=sys.stderr)
             return
         self._geracao_na_volta = self._estado_vivo.ultimo()[2]
         self._estado_vivo.retomar()
-        print("[janela] à vista: o tique voltou", file=sys.stderr)
+        desde = getattr(self, "_escondida_desde", 0.0)
+        ficou = time.monotonic() - desde if desde else 0.0
+        self._escondida_desde = 0.0
+        print(f"[janela] à vista: o tique voltou · escondida por {ficou:.0f} s", file=sys.stderr)
 
     def _moldes_da_pagina(self) -> frozenset[str]:
         """As chaves de lista que um `data-hef-molde` conta nesta página."""
@@ -3524,7 +3555,9 @@ class Piloto:
             daemon_ms = viagem() if callable(viagem) else 0.0
             print(f"[tique lento] {self.pagina}: {custo:.0f} ms "
                   f"(pacote {t_pacote:.0f} · contexto {t_ipc:.0f} · daemon "
-                  f"{daemon_ms:.0f}) — teto {TIQUE_MS} ms, pulando o próximo",
+                  f"{daemon_ms:.0f}) — teto {TIQUE_MS} ms, pulando o próximo · janela: "
+                  f"{getattr(getattr(self, 'tela', None), 'mudancas_de_tamanho', 0)} "
+                  f"mudança(s) de tamanho",
                   file=sys.stderr)
         self._contar_mutacoes()
         return True
@@ -3556,6 +3589,11 @@ class Piloto:
             self._mutacoes_lidas = True
             self.ponte.perguntar(LER_MUTACOES, self._leu_mutacoes)
 
+    def _sair(self, motivo: str) -> None:
+        """Encerra o laço dizendo o porquê: o fim da janela nunca sai calado."""
+        self.tela.anotar_o_fim(motivo)
+        Gtk.main_quit()
+
     def _leu_mutacoes(self, valor: Any, erro: Any) -> None:
         """Imprime a tabela do observador — e SAI, porque a medição acabou."""
         import json
@@ -3563,13 +3601,13 @@ class Piloto:
         if erro is not None:
             print(f"REPROVA: o observador não respondeu — {erro}",
                   file=sys.stderr)
-            Gtk.main_quit()
+            self._sair("a contagem de mutações falhou")
             return
         try:
             fora = json.loads(str(valor))
         except ValueError as e:
             print(f"REPROVA: a tabela não veio em JSON — {e}", file=sys.stderr)
-            Gtk.main_quit()
+            self._sair("a contagem de mutações falhou")
             return
         self.mutacoes = fora
         tiques = int(getattr(self.args, "conta_mutacoes", 0) or 0)
@@ -3588,7 +3626,7 @@ class Piloto:
                   f"{fora['blocos_adiados']}")
         with contextlib.suppress(SystemExit):
             self._relatar()
-        Gtk.main_quit()
+        self._sair("a contagem de mutações acabou")
 
     def _agendar(self) -> None:
         if self.args.passear:
@@ -3604,7 +3642,7 @@ class Piloto:
             return
         def fechar() -> bool:
             self._relatar()
-            Gtk.main_quit()
+            self._sair("o tempo da medição (--segundos ou --passear) acabou")
             return False
 
         GLib.timeout_add(total, fechar)
@@ -3621,7 +3659,7 @@ class Piloto:
     def _proxima_aba(self) -> bool:
         if not self._fila_de_abas:
             self._relatar_mockup()
-            Gtk.main_quit()
+            self._sair("a prova de mockup passou pelas dez abas")
             return False
         self._voltas_da_aba = 0
         self._medindo = False
@@ -4436,7 +4474,10 @@ def main() -> None:
     if args.abre:
         _quando_a_pagina_estiver_de_pe(lambda: piloto._ir(args.abre))
     with _o_processo_da_janela():
+        piloto.tela.fechar_por_sinal()
         Gtk.main()
+        # Rede do fim: o laço terminou por um caminho que não deixou motivo.
+        piloto.tela.anotar_o_fim("o laço do GTK terminou sem motivo registrado")
 
     if piloto.tela.morreu is not None:
         print(f"\nREPROVA: a página morreu e nada foi medido — {piloto.tela.morreu}",

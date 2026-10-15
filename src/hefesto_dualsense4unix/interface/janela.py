@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import pathlib
+import signal
 import sys
 import time
 from collections.abc import Callable
@@ -144,6 +145,28 @@ CROMO_DA_JANELA = 143
 MIOLO_NO_PISO = PISO_DA_VISTA - 2 * RECUO_DO_CORPO - CROMO_DA_JANELA
 
 SEM_JANELA_NA_TELA = "HEFESTO_SEM_JANELA"
+
+#: No máximo uma linha `[janela] tamanho:` por intervalo desta duração; o que cair no meio
+#: de uma rajada (arrastar a borda dispara dezenas de `configure-event` por segundo) vira UMA
+#: linha no fim do intervalo, com o último valor, para a rajada não esconder onde ela parou.
+SEGUNDOS_ENTRE_LINHAS_DE_TAMANHO = 1.0
+
+#: Os sinais que encerram a janela por fora, e que antes a matavam sem uma linha.
+SINAIS_DE_FIM = (signal.SIGTERM, signal.SIGHUP)
+
+
+def nome_do_estado(estado: int) -> str:
+    """O estado do `Gdk.WindowState`, em uma palavra do diário."""
+    marcas = (
+        (Gdk.WindowState.FULLSCREEN, "tela cheia"),
+        (Gdk.WindowState.MAXIMIZED, "maximizada"),
+        (Gdk.WindowState.ICONIFIED, "minimizada"),
+        (Gdk.WindowState.TILED, "ladrilhada"),
+    )
+    for marca, nome in marcas:
+        if estado & int(marca):
+            return nome
+    return "normal"
 
 
 def janela_proibida_na_tela() -> bool:
@@ -400,6 +423,15 @@ class JanelaDaAba:
         self.mortes: list[str] = []
         self.recargas = 0
         self._viva_desde = time.monotonic()
+        self._nasceu = time.monotonic()
+        self._fim_dito = False
+        self._motivo_pedido: str | None = None
+        #: Quantas vezes o tamanho, o monitor, a escala ou o estado mudou. Vai ao `[tique lento]`.
+        self.mudancas_de_tamanho = 0
+        self._tamanho_visto: tuple[int, int, str, int, str] | None = None
+        self._tamanho_por_dizer: tuple[int, int, str, int, str] | None = None
+        self._tamanho_dito_em = float("-inf")
+        self._tamanho_agendado = False
 
         self.ponte = PonteDaTela(
             canal=canal, ao_receber=ao_receber, ao_recusar=ao_recusar, folha=folha,
@@ -436,7 +468,9 @@ class JanelaDaAba:
             )
             self.janela.set_titlebar(barra)
             self.janela.connect("window-state-event", self._a_barra_se_refaz)
-            self.janela.connect("destroy", Gtk.main_quit)
+            self.janela.connect("window-state-event", self._o_tamanho_mudou)
+            self.janela.connect("configure-event", self._o_tamanho_mudou)
+            self.janela.connect("destroy", self._ao_destruir)
         self.janela.add(self.view)
         self.janela.show_all()
         self.view.load_uri(arquivo.as_uri())
@@ -459,11 +493,109 @@ class JanelaDaAba:
             GLib.timeout_add(atraso, self._repintar_a_decoracao)
         return False
 
-    def fechar(self) -> None:
+    def anotar_o_fim(self, motivo: str) -> bool:
+        """A linha de fim, UMA vez por vida: o motivo e há quantos segundos a janela estava aberta.
+
+        Todo caminho que encerra o laço passa por aqui antes de `Gtk.main_quit`; quem chega
+        depois (o `destroy` que segue o `close`, o fim do laço) não repete. Devolve se escreveu.
+        """
+        if self._fim_dito:
+            return False
+        self._fim_dito = True
+        aberta = time.monotonic() - self._nasceu
+        print(f"[janela] fechou: {motivo} · aberta há {aberta:.0f} s", file=sys.stderr)
+        return True
+
+    def _ao_destruir(self, _janela: Any) -> None:
+        """A janela foi destruída: o `fechar` já deixou o motivo; sem ele, o pedido veio de fora."""
+        self.anotar_o_fim(
+            self._motivo_pedido
+            or "destroy sem pedido da própria janela (Alt+F4, compositor ou sistema)"
+        )
+        Gtk.main_quit()
+
+    def fechar_por_sinal(self, sinais: tuple[signal.Signals, ...] = SINAIS_DE_FIM) -> list[int]:
+        """Liga ao laço do GLib os sinais que encerram a janela: escreve a linha e sai pelo caminho
+        normal (o `finally` do processo devolve o que as abas seguravam). Devolve as fontes."""
+        return [
+            GLib.unix_signal_add(GLib.PRIORITY_HIGH, int(sinal), self._chegou_o_sinal, int(sinal))
+            for sinal in sinais
+        ]
+
+    def _chegou_o_sinal(self, numero: int) -> bool:
+        self.anotar_o_fim(f"sinal {signal.Signals(numero).name}")
+        Gtk.main_quit()
+        return False  # GLib.SOURCE_REMOVE: a fonte sai depois do primeiro sinal
+
+    def _o_tamanho_mudou(self, *_args: Any) -> bool:
+        """`configure-event` e `window-state-event`: lê a janela como ela está agora."""
+        largura, altura = self.janela.get_size()
+        self.anotar_o_tamanho(largura, altura)
+        return False
+
+    def _o_monitor(self) -> str:
+        """O número do monitor em que a janela está, na ordem do `Gdk.Display`, ou `?`."""
+        try:
+            gdk = self.janela.get_window()
+            tela = Gdk.Display.get_default()
+            if gdk is None or tela is None:
+                return "?"
+            atual = tela.get_monitor_at_window(gdk)
+            for n in range(tela.get_n_monitors()):
+                if tela.get_monitor(n) == atual:
+                    return str(n)
+        except Exception:
+            pass
+        return "?"
+
+    def anotar_o_tamanho(self, largura: int, altura: int) -> bool:
+        """Registra o tamanho, o monitor, a escala e o estado quando algum deles MUDA.
+
+        O deslocamento sem mudança de tamanho (`configure-event` de mover) não escreve nada.
+        No máximo uma linha por `SEGUNDOS_ENTRE_LINHAS_DE_TAMANHO`; o resto da rajada sai numa
+        linha só, no fim do intervalo. Devolve se algo mudou.
+        """
+        gdk = self.janela.get_window()
+        estado = nome_do_estado(int(gdk.get_state())) if gdk is not None else "normal"
+        visto = (largura, altura, self._o_monitor(), int(self.janela.get_scale_factor()), estado)
+        if visto == self._tamanho_visto:
+            return False
+        self._tamanho_visto = visto
+        self._tamanho_por_dizer = visto
+        self.mudancas_de_tamanho += 1
+        espera = self._tamanho_dito_em + SEGUNDOS_ENTRE_LINHAS_DE_TAMANHO - time.monotonic()
+        if espera <= 0:
+            self._dizer_o_tamanho()
+        elif not self._tamanho_agendado:
+            self._tamanho_agendado = True
+            GLib.timeout_add(int(espera * 1000) + 1, self._dizer_o_tamanho_adiado)
+        return True
+
+    def _dizer_o_tamanho_adiado(self) -> bool:
+        self._tamanho_agendado = False
+        self._dizer_o_tamanho()
+        return False
+
+    def _dizer_o_tamanho(self) -> None:
+        visto = self._tamanho_por_dizer
+        if visto is None:
+            return
+        self._tamanho_por_dizer = None
+        self._tamanho_dito_em = time.monotonic()
+        largura, altura, monitor, escala, estado = visto
+        print(
+            f"[janela] tamanho: {largura}x{altura} · monitor {monitor} · escala {escala}"
+            f" · estado {estado}",
+            file=sys.stderr,
+        )
+
+    def fechar(self, motivo: str = "Fechar da barra ou do menu do botão direito") -> None:
         """Fecha a janela e encerra o laço. É o «Fechar» do menu do botão direito e o da barra."""
         if self.oculta:
+            self.anotar_o_fim(motivo)
             Gtk.main_quit()
         else:
+            self._motivo_pedido = motivo
             self.janela.close()
 
     def _gesto_da_barra(self, _botao: Any, gesto: str) -> None:
@@ -531,6 +663,12 @@ class JanelaDaAba:
         if self.recargas >= RECARGAS_SEGUIDAS:
             print(f"[página morreu] {self.recargas} recargas seguidas sem a "
                   f"página parar de pé — não recarrego de novo.", file=sys.stderr)
+            # A janela segue aberta, sem página: não é um fim, e a linha diz isso com a idade.
+            print(
+                f"[janela] sem recarga: o processo web terminou ({nome}) · aberta há "
+                f"{time.monotonic() - self._nasceu:.0f} s",
+                file=sys.stderr,
+            )
             return
         self.recargas += 1
         self._viva_desde = time.monotonic()
@@ -562,6 +700,7 @@ class JanelaDaAba:
             self._ao_falhar(motivo)
             return
         print(f"ERRO DE CARGA: {motivo}", file=sys.stderr)
+        self.anotar_o_fim(f"a carga falhou ({motivo})")
         Gtk.main_quit()
 
     def agendar_saida(self, segundos: float, antes: Callable[[], None] | None = None) -> None:
@@ -572,6 +711,7 @@ class JanelaDaAba:
         def sair() -> bool:
             if antes is not None:
                 antes()
+            self.anotar_o_fim(f"o prazo de {segundos:g} s acabou")
             Gtk.main_quit()
             return False
 
