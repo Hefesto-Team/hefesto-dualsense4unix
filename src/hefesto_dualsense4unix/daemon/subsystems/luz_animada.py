@@ -1,21 +1,20 @@
-"""A barra de luz que se anima sozinha: respirar, piscar e arco-íris (A-ABA-ILUMINACAO-DO-TODO-01).
+"""A barra de luz que se anima sozinha (A-ABA-ILUMINACAO-DO-TODO-01).
 
 O perfil guarda o efeito de cada controle em ``leds.efeito`` (``base;cores;ritmo``); ``None`` é a
 luz fixa e este laço não escreve nada. Quem manda na barra, em ordem: o jogo (cala quando ele
 pinta, pela política do tato vivo), o Modo Nativo, o Automático da aba, o brilho zero e a «Bateria
-longa» (a barra fica fixa na cor do perfil). No máximo 30 quadros por segundo por controle, quadro
-igual ao anterior não sai, e o piscar não passa de 3 Hz (WCAG 2.3.1). O quadro pinta a barra sem
-entrar no estado desejado, que segue o do perfil, o do gesto e o do jogo; ao sair, a barra volta a
-ele. Enquanto o pulso do tiro do tato vivo segura a barra, o efeito espera.
+longa» (a barra fica fixa na cor do perfil). No máximo 30 quadros por segundo por controle e quadro
+igual ao anterior não sai; o desenho de cada efeito no tempo é de ``profiles/efeitos_de_luz`` e o
+«Sem piscar» da mesa é lido a cada tique. O quadro pinta a barra sem entrar no estado desejado;
+ao sair, a barra volta a ele. Enquanto o pulso do tiro do tato vivo segura a barra, o efeito espera.
 O porquê de cada escolha: docs/research/o-porque-dos-modulos.md, seção «luz_animada».
 """
 from __future__ import annotations
 
 import asyncio
-import colorsys
 import dataclasses
-import math
 import time
+import zlib
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import Any
@@ -28,6 +27,14 @@ from hefesto_dualsense4unix.daemon.subsystems.tato_vivo import (
     ha_jogo,
     motor_do,
 )
+from hefesto_dualsense4unix.profiles.efeitos_de_luz import (
+    TETO_DO_PISCAR_HZ,
+    amplitude_da_mare,
+    cor_no_instante,
+    frequencia_do_piscar_hz,
+    periodo_do_arco_iris_s,
+    periodo_do_respirar_s,
+)
 from hefesto_dualsense4unix.profiles.schema import (
     EfeitoDaLuz,
     LedsConfig,
@@ -36,6 +43,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     economia_da_mesa,
     economia_vale,
     ler_o_efeito_da_luz,
+    sem_piscar_da_mesa,
 )
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -50,66 +58,29 @@ INTERVALO_MINIMO = 1.0 / QUADROS_POR_SEGUNDO_MAXIMO
 INTERVALO_DO_LACO_S = INTERVALO_MINIMO
 #: De quanto em quanto tempo o laço relê o perfil ativo (só o arquivo, sem semear).
 RELEITURA_DO_PLANO_S = 0.5
-#: O fundo do respirar: a barra nunca apaga de todo, só abaixa.
-PISO_DO_RESPIRAR = 0.08
-#: Teto do piscar, em lampejos por segundo (WCAG 2.3.1).
-TETO_DO_PISCAR_HZ = 3.0
-PISO_DO_PISCAR_HZ = 0.3
-
-
-def _inteiro(valor: float) -> int:
-    return max(0, min(255, round(valor)))
-
-
-def _escalar(cor: RGB, fator: float) -> RGB:
-    return (_inteiro(cor[0] * fator), _inteiro(cor[1] * fator), _inteiro(cor[2] * fator))
-
-
-def periodo_do_respirar_s(ritmo: int) -> float:
-    """Uma respiração inteira: de 10 s no ritmo 1 a 1 s no ritmo 10."""
-    return 10.0 / max(1, ritmo)
-
-
-def frequencia_do_piscar_hz(ritmo: int) -> float:
-    """Lampejos por segundo: de 0,3 Hz no ritmo 1 a 3 Hz no ritmo 10, nunca acima do teto."""
-    hz = PISO_DO_PISCAR_HZ + (max(1, ritmo) - 1) * 0.3
-    return min(TETO_DO_PISCAR_HZ, hz)
-
-
-def periodo_do_arco_iris_s(ritmo: int) -> float:
-    """Uma volta inteira no círculo de cores: de 20 s no ritmo 1 a 2 s no ritmo 10."""
-    return 20.0 / max(1, ritmo)
-
-
-def cor_no_instante(efeito: EfeitoDaLuz, t: float) -> RGB:
-    """A cor do efeito no instante ``t`` (segundos), na intensidade cheia do perfil.
-
-    Função pura: não lê relógio nem estado. O respirar usa uma cor por respiração, em ordem; o
-    piscar, uma por lampejo; o arco-íris ignora as cores e gira o matiz.
-    """
-    if efeito.base == "arco-iris":  # (noqa-acento) chave ASCII
-        matiz = (t / periodo_do_arco_iris_s(efeito.ritmo)) % 1.0
-        r, g, b = colorsys.hsv_to_rgb(matiz, 1.0, 1.0)
-        return (_inteiro(r * 255), _inteiro(g * 255), _inteiro(b * 255))
-    cores = efeito.cores or ((255, 255, 255),)
-    if efeito.base == "piscar":
-        ciclos = t * frequencia_do_piscar_hz(efeito.ritmo)
-        cor = cores[int(ciclos) % len(cores)]
-        return cor if (ciclos % 1.0) < 0.5 else (0, 0, 0)
-    periodo = periodo_do_respirar_s(efeito.ritmo)
-    voltas = t / periodo
-    cor = cores[int(voltas) % len(cores)]
-    fase = voltas % 1.0
-    nivel = PISO_DO_RESPIRAR + (1.0 - PISO_DO_RESPIRAR) * (0.5 - 0.5 * math.cos(2 * math.pi * fase))
-    return _escalar(cor, nivel)
 
 
 @dataclass(frozen=True)
 class PlanoDoControle:
-    """O que o perfil manda tocar num controle: o efeito e o brilho da barra."""
+    """O que o perfil manda tocar num controle: o efeito, o brilho da barra, o lugar e a semente.
+
+    ``posicao`` é o lugar do controle na mesa (0 a 3): o arco-íris defasa um quarto de volta por
+    lugar. ``semente`` é do controle (do endereço dele): a chama passeia por ela. ``amplitude``
+    é a fração dos 30 graus que a Maré pode andar sem aproximar este controle dos outros.
+    """
 
     efeito: EfeitoDaLuz
     brilho: float
+    posicao: int = 0
+    semente: int = 0
+    amplitude: float = 1.0
+
+
+def _semente_do_controle(uniq: str) -> int:
+    """Um número estável por controle (o ``hash`` do Python muda a cada processo)."""
+    from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+    return zlib.crc32((norm_mac(uniq) or uniq).encode())
 
 
 def _leds_do_controle(perfil: Profile, uniq: str) -> tuple[LedsConfig | None, set[str]]:
@@ -151,7 +122,7 @@ def plano_do_perfil(
     mesa = economia_da_mesa() if mesa_em_economia is None else bool(mesa_em_economia)
     ligados = controles_em_economia() if em_economia is None else em_economia
     fora: dict[str, PlanoDoControle] = {}
-    for uniq in uniqs:
+    for posicao, uniq in enumerate(uniqs):
         if _em_economia(uniq, mesa, ligados):
             continue
         leds, campos = _leds_do_controle(perfil, uniq)
@@ -166,8 +137,23 @@ def plano_do_perfil(
         )
         if float(brilho) <= 0.0:
             continue
-        fora[uniq] = PlanoDoControle(efeito, float(brilho))
-    return fora
+        fora[uniq] = PlanoDoControle(
+            efeito, float(brilho), posicao % 4, _semente_do_controle(uniq)
+        )
+    return _com_a_amplitude_da_mare(fora)
+
+
+def _com_a_amplitude_da_mare(plano: dict[str, PlanoDoControle]) -> dict[str, PlanoDoControle]:
+    """Dá a cada controle em Maré a amplitude que o mantém longe dos outros em Maré."""
+    mares = {u: p for u, p in plano.items() if p.efeito.base == "mare"}
+    if len(mares) < 2:
+        return plano
+    bases = [(p.efeito.cores or ((255, 255, 255),))[0] for p in mares.values()]
+    amplitude = amplitude_da_mare(bases)
+    return {
+        u: dataclasses.replace(p, amplitude=amplitude) if u in mares else p
+        for u, p in plano.items()
+    }
 
 
 def cor_com_o_brilho(cor: RGB, brilho: float) -> RGB:
@@ -190,9 +176,11 @@ class LuzAnimada:
         soltar: Callable[[str], object],
         *,
         intervalo_minimo: float = INTERVALO_MINIMO,
+        sem_piscar: Callable[[], bool] = sem_piscar_da_mesa,
     ) -> None:
         self._escrever = escrever
         self._soltar = soltar
+        self._sem_piscar = sem_piscar
         self._intervalo = max(intervalo_minimo, INTERVALO_MINIMO)
         self._ultimo_quadro: dict[str, RGB] = {}
         self._escrito_em: dict[str, float] = {}
@@ -217,6 +205,7 @@ class LuzAnimada:
         for uniq in [u for u in self._inicio if u not in plano or u in calados]:
             self.parar(uniq)
         escritos = 0
+        sem_piscar = bool(self._sem_piscar())
         for uniq, dele in plano.items():
             if uniq in calados:
                 continue
@@ -226,7 +215,10 @@ class LuzAnimada:
             if agora - self._escrito_em.get(uniq, float("-inf")) < self._intervalo:
                 continue
             inicio = self._inicio.setdefault(uniq, agora)
-            quadro = cor_com_o_brilho(cor_no_instante(dele.efeito, agora - inicio), dele.brilho)
+            cor = cor_no_instante(
+                dele.efeito, agora - inicio, dele.posicao, dele.semente, sem_piscar, dele.amplitude
+            )
+            quadro = cor_com_o_brilho(cor, dele.brilho)
             self._escrito_em[uniq] = agora
             if self._ultimo_quadro.get(uniq) == quadro:
                 continue
@@ -375,12 +367,15 @@ def start_luz_animada(daemon: Any) -> None:
 
 __all__ = [
     "INTERVALO_MINIMO",
+    "TETO_DO_PISCAR_HZ",
     "LuzAnimada",
     "Passo",
     "PlanoDoControle",
     "cor_com_o_brilho",
     "cor_no_instante",
     "frequencia_do_piscar_hz",
+    "periodo_do_arco_iris_s",
+    "periodo_do_respirar_s",
     "plano_do_perfil",
     "start_luz_animada",
 ]

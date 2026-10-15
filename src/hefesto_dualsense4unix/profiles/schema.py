@@ -239,7 +239,7 @@ class TriggersConfig(BaseModel):
 
 
 #: As bases do efeito de luz que a pessoa cria na aba Iluminação (A-ABA-ILUMINACAO-DO-TODO-01).
-BASES_DA_LUZ = ("respirar", "piscar", "arco-iris")  # (noqa-acento) chave ASCII
+BASES_DA_LUZ = ("respirar", "piscar", "arco-iris", "batimento", "chama", "mare")  # (noqa-acento)
 RITMO_MINIMO_DA_LUZ = 1
 RITMO_MAXIMO_DA_LUZ = 10
 RITMO_PADRAO_DA_LUZ = 4
@@ -2579,3 +2579,18 @@ def pcts_da_haptica_dos_controles(
             continue
         fora[uniq] = pct_da_haptica(rumble)
     return fora
+
+
+def sem_piscar_da_declaracao(declaracao: Any) -> bool:
+    """O «Sem piscar» de UMA declaração; sem opinião (ou declaração ilegível) é desligado."""
+    return getattr(getattr(declaracao, "luz", None), "sem_piscar", None) is True
+
+
+def sem_piscar_da_mesa() -> bool:
+    """O «Sem piscar» está ligado AGORA? Um só para os quatro controles e as duas conexões."""
+    return sem_piscar_da_declaracao(_declaracao_viva())
+
+
+def declaracao_do_sem_piscar(ligado: bool) -> dict[str, Any]:
+    """A declaração PARCIAL que liga ou desliga o «Sem piscar» (desligar volta a «sem opinião»)."""
+    return {"luz": {"sem_piscar": True if ligado else None}}

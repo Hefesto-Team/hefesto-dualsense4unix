@@ -681,6 +681,19 @@ class OrcamentoDeclarado(BaseModel):
     teto: Literal["economia", "balanceado", "max", "auto"] | None = None
 
 
+class LuzDeclarada(BaseModel):
+    """A luz do controle que vale na mesa inteira, fora do perfil.
+
+    ``sem_piscar`` é um só para os quatro controles e as duas conexões (decidido em 13/10): ligado,
+    nenhum efeito sobe mais de uma vez por segundo e toda mudança é suave. ``None`` é «sem
+    opinião» e vale desligado.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    sem_piscar: bool | None = None
+
+
 class GestoDeclarado(BaseModel):
     """O que o usuário escolheu para UM gesto do controle (OS-GESTOS-DO-CONTROLE-01).
 
@@ -850,6 +863,7 @@ class MaquinaConfig(BaseModel):
     mesa: MesaDeclarada = Field(default_factory=MesaDeclarada)
     controles: dict[str, ControleDeclarado] = Field(default_factory=dict)
     orcamento: OrcamentoDeclarado = Field(default_factory=OrcamentoDeclarado)
+    luz: LuzDeclarada = Field(default_factory=LuzDeclarada)
     mapa: MapaDaMesa = Field(default_factory=MapaDaMesa)
     lancadores: dict[str, LancadorDeclarado] = Field(default_factory=dict)
     adaptadores: dict[str, AdaptadorDeclarado] = Field(default_factory=dict)

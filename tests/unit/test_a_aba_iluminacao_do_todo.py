@@ -103,11 +103,13 @@ def test_o_respirar_troca_de_cor_a_cada_respiracao() -> None:
     assert luz.cor_no_instante(efeito, periodo * 2.5) == VERMELHO
 
 
-def test_o_piscar_acende_e_apaga_na_cor_dele() -> None:
+def test_o_piscar_acende_e_abaixa_ate_o_piso_na_cor_dele() -> None:
+    """Sobe a cor cheia e desce ao piso, sem apagar (a onda quadrada saiu em 15/10)."""
     efeito = EfeitoDaLuz("piscar", (VERMELHO,), 4)
     meio = 0.5 / luz.frequencia_do_piscar_hz(4)
     assert luz.cor_no_instante(efeito, 0.0) == VERMELHO
-    assert luz.cor_no_instante(efeito, meio + 0.01) == (0, 0, 0)
+    baixo = luz.cor_no_instante(efeito, meio + 0.01)
+    assert 0 < baixo[0] < 60 and baixo[1] == baixo[2] == 0
 
 
 def test_o_arco_iris_gira_o_matiz_e_fecha_a_volta() -> None:
