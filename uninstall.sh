@@ -487,6 +487,10 @@ grep -qsF '# >>> hefesto JustWorksRepairing >>>' /etc/bluetooth/main.conf 2>/dev
 [[ "${KEEP_BLUEZ}" -eq 0 && -f "${HOME}/.cache/hefesto-dualsense4unix/bluez-backport/VERSOES-ANTERIORES.txt" ]] && _NEEDS_SUDO=1
 # O-UNINSTALL-DEVOLVE-O-PIPEWIRE-DE-ANTES-01: a trava do apt do PipeWire é de root.
 [[ -e /etc/apt/preferences.d/hefesto-pipewire ]] && _NEEDS_SUDO=1
+# E a devolução, que é de root mesmo sem a trava (um uninstall anterior a tirou e
+# guardou o registro): com a flag, ou com a pergunta que ela pode responder «s».
+[[ -f "${HOME}/.cache/hefesto-dualsense4unix/pipewire-backport/VERSOES-ANTERIORES.txt" ]] \
+    && [[ "${RESTORE_PIPEWIRE}" -eq 1 || ( "${AUTO_YES}" -eq 0 && -t 0 ) ]] && _NEEDS_SUDO=1
 # O-DIARIO-DO-RADIO-01 (instalado pela INSTALL-E-UNINSTALL-DO-RADIO-01): a
 # trava comum do rádio (tmpfiles.d + /run), os carimbos da ponte, do religar
 # (STORM-USB-02) e do watchdog, e o diário do root — todos de root.
@@ -1976,6 +1980,9 @@ devolver_o_pipewire() {
     if [[ -e "${PIPEWIRE_PREF}" ]]; then
         if sudo -n true 2>/dev/null && sudo rm -f "${PIPEWIRE_PREF}"; then
             log "removida a trava do apt do PipeWire (${PIPEWIRE_PREF})"
+            if [[ "${#pkgs[@]}" -gt 0 && "${devolver}" -eq 0 ]]; then
+                log "  sem ela, no Pop!_OS o próximo apt upgrade volta o PipeWire para o da distro"
+            fi
         else
             log "sudo indisponível — a trava do apt NÃO foi removida"
             log "  sudo rm -f ${PIPEWIRE_PREF}"

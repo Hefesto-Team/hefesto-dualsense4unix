@@ -1451,6 +1451,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     #: e só recebe quem tem controle: `folha_da_luz` APAGA todo lugar que não
     luz_do_desenho: dict[str, tuple[str, int | None]] = {}
     biblioteca = meus_efeitos("luz")
+    do_efeito = perfil_da_lista_de_efeito(p)
     listas_de_efeito: dict[str, str] = {}
     for c, cor_dele in zip(ctx.conectados, cor_de, strict=True):
         uniq = str(c.get("uniq") or "")
@@ -1473,12 +1474,11 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         if casa.get("pref"):
             luz_do_desenho[str(casa["pref"])] = (_hex(acesa) if acesa else "", n)
             listas_de_efeito[f'[data-controle="{casa["pref"]}"] select.g4-efeito'] = (
-                opcoes_do_efeito(
-                    biblioteca, efeito_do_controle(perfil_da_lista_de_efeito(p), uniq)))
+                opcoes_do_efeito(biblioteca, efeito_do_controle(do_efeito, uniq)))
         colunas[uniq] = {
             "brilho": "—" if pct is None else f"{pct}%",
             CAMPO_DO_EFEITO: escolha_da_lista(
-                p, uniq, None if b is None else float(b)),
+                do_efeito, uniq, None if b is None else float(b)),
             #: trazer `data-hef-alvo="largura"` — as abas 02 e 05 têm, esta não
             "brilho-pct": pct,
             #: `on` por `data-hef-quando="#0000FF"` — os oito CHEIOS. Com o

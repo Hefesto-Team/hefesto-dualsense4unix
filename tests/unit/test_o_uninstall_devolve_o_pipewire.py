@@ -253,6 +253,21 @@ def test_a_trava_do_apt_sai_nos_dois_casos_e_na_recusa(tmp_path: Path, caso: str
     assert c.chamou(f"sudo rm -f {c.pref}")
 
 
+@pytest.mark.parametrize(
+    ("parametros", "avisa"),
+    [({"auto_yes": False, "resposta": "n"}, True), ({}, True),
+     ({"flag": True, "steam_aberta": True}, True), ({"flag": True}, False)],
+    ids=["resposta-nao", "yes", "steam-aberta", "devolvendo"],
+)
+def test_preservar_sem_a_trava_diz_que_o_pop_volta_ao_da_distro(
+        tmp_path: Path, parametros: dict[str, Any], avisa: bool) -> None:
+    """Sem a trava, o Pop (fixado em 1001) rebaixa a casa no próximo upgrade: quem preserva sabe.
+    MORDIDA: tirar a fala reprova os três casos de preservar."""
+    c = _correr(tmp_path, **parametros)
+    assert c.rc == 0, c.saida
+    assert ("próximo apt upgrade volta o PipeWire" in c.saida) is avisa, c.saida
+
+
 def test_sem_sudo_a_trava_fica_e_a_fala_diz_o_comando(tmp_path: Path) -> None:
     c = _correr(tmp_path, flag=True, sudo_ok=False)
     assert c.rc == 0, c.saida
@@ -350,6 +365,11 @@ def test_a_flag_esta_no_roteiro_na_ajuda_e_no_preparo_do_sudo() -> None:
     assert re.search(
         r"\[\[ -e /etc/apt/preferences\.d/hefesto-pipewire \]\] && _NEEDS_SUDO=1", FONTE
     ), "o passo pede root: sem o preparo da credencial, ele cai em «sudo indisponível»"
+    assert re.search(
+        r'pipewire-backport/VERSOES-ANTERIORES\.txt" \]\] \\\n'
+        r'\s+&& \[\[ "\$\{RESTORE_PIPEWIRE\}" -eq 1 \|\| '
+        r'\( "\$\{AUTO_YES\}" -eq 0 && -t 0 \) \]\] && _NEEDS_SUDO=1', FONTE
+    ), "sem a trava (um uninstall anterior a tirou), a flag ainda pede a credencial"
     r = subprocess.run(
         [BASH, str(UNINSTALL), "--help"], capture_output=True, text=True, timeout=30,
         check=False, env={"PATH": PATH_DO_SISTEMA, "HOME": "/nonexistent"},
