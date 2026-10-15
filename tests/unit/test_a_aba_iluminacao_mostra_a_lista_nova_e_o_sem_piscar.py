@@ -11,7 +11,9 @@ verdade, dentro dele.
 
 MORDIDAS (feitas à mão, 15/10/2026): tirar `sem_piscar` de `LuzDeclarada` reprova a gravação;
 tirar o grupo «Que se move» ou o token `base:` da lista reprova a ordem; fazer o gesto da base
-gravar uma cor fixa reprova a cor do controle.
+gravar uma cor fixa reprova a cor do controle. Trocar a cor sem levar o efeito junto
+(`efeito=None` em `_guardar_a_cor_no_perfil`) reprova os quatro controles; dar cor ao arco-íris
+reprova o que não leva cor.
 """
 from __future__ import annotations
 
@@ -282,3 +284,66 @@ def test_o_sem_piscar_e_gesto_do_computador_e_clica_na_varredura() -> None:
     assert "machine_declare" in a04.PONTE and "machine.declare" in a04.METODOS
     provas = [p for p in a04.PROVAS if p["gesto"] == a04.GESTO_DO_SEM_PISCAR]
     assert provas and provas[0]["chama"][0][0] == "machine_declare"
+
+
+# ---------------------------------------------------------------- a base segue a cor do controle
+
+class _PonteDaCor:
+    """O `led_set_detalhado` do daemon, no que o gesto `cor` lê: aplicado neste controle."""
+
+    def __init__(self, uniq: str) -> None:
+        self.uniq = uniq
+
+    def led_set_detalhado(self, *_a: Any, **_k: Any) -> dict[str, Any]:
+        return {"aplicado_em": [self.uniq], "guardado_em": []}
+
+
+def _ctx_na_via(n: int, via: str, rgb: tuple[int, int, int] | None = None) -> Any:
+    ctx = _ctx(n)
+    ctx.conectados[0]["transport"] = via
+    ctx.mesa[0]["via"] = via.upper()
+    if rgb is not None:
+        ctx.conectados[0]["lightbar_rgb"] = list(rgb)
+    return ctx
+
+
+@pytest.mark.parametrize(("n", "via"), [(1, "usb"), (2, "bt"), (3, "usb"), (4, "bt")])
+def test_trocar_a_cor_leva_a_base_junto_no_cabo_e_no_radio(n: int, via: str) -> None:
+    """A base nasce com a cor do controle; trocar a cor depois reescreve o efeito na cor nova.
+
+    Sem isso a barra respirava a cor velha, a linha Cor dizia a nova e a lista pulava para «Seus
+    efeitos».
+    """
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_computador
+    from pacotes import a04_iluminacao as a04
+
+    uniq = JOGADORES[n - 1]
+    chave = uniq.replace(":", "")
+    _gesto("efeito-da-luz")(_ctx_na_via(n, via), {"uniq": uniq, "valor": "base:respirar"}, None)
+    a04.cor(_ctx_na_via(n, via), {"uniq": uniq, "hex": "FF8000"}, _PonteDaCor(uniq))
+    leds = o_computador().controles[chave].leds
+    assert tuple(leds.lightbar) == (255, 128, 0)
+    assert leds.efeito == f"respirar;FF8000;{a04.RITMO_DA_BASE['respirar']}", leds.efeito
+    coluna = a04.pacote(_ctx_na_via(n, via, (255, 128, 0)))["colunas"][uniq]
+    assert coluna[a04.CAMPO_DO_EFEITO] == "base:respirar", "a lista continua na base"
+
+
+def test_trocar_a_cor_nao_mexe_no_arco_iris_nem_no_efeito_criado() -> None:
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_computador
+    from pacotes import a04_iluminacao as a04
+
+    uniq, chave = JOGADORES[0], "aabbcc000001"
+    for valor, guardado in (("base:arco-iris", "arco-iris;;7"),
+                            ("respirar;00FFFF;4", "respirar;00FFFF;4")):
+        _gesto("efeito-da-luz")(_ctx(), {"uniq": uniq, "valor": valor}, None)
+        a04.cor(_ctx(), {"uniq": uniq, "hex": "FF8000"}, _PonteDaCor(uniq))
+        assert o_computador().controles[chave].leds.efeito == guardado, valor
+
+
+def test_trocar_a_cor_sem_efeito_nao_inventa_efeito() -> None:
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_computador
+    from pacotes import a04_iluminacao as a04
+
+    uniq = JOGADORES[0]
+    a04.cor(_ctx(), {"uniq": uniq, "hex": "FF8000"}, _PonteDaCor(uniq))
+    assert o_computador().controles["aabbcc000001"].leds.efeito is None

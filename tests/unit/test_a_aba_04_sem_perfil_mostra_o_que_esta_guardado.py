@@ -6,6 +6,9 @@ outro. O que fica guardado sem perfil mora no padrão do computador (`maquina.js
 grava quando não há perfil; quem PINTA tem de ler de lá, pela mesma vista que o daemon aplica.
 
 O lar é de mentira (o `conftest` desvia `HOME` e os `XDG_*`).
+
+MORDIDAS (15/10/2026): `ativo_que_vale` devolvendo o vazio sem perfil reprova quatro; a guarda dos
+gestos lendo `{}` sem perfil (`_nao_no_automatico`) reprova a recusa no Automático guardado.
 """
 from __future__ import annotations
 
@@ -65,19 +68,53 @@ def test_sem_perfil_o_modo_guardado_aparece(a04):
     assert a04.modo_da_luz_do_perfil(perfil.ativo_que_vale(None)) == a04.MODO_AUTOMATICO
 
 
-def test_a_aba_pinta_o_brilho_guardado_sem_perfil(a04):
-    """A tela inteira: a coluna do controle mostra os 40% que o computador guardou."""
+#: Dois controles, um no cabo e outro no rádio: a vista sem perfil vale para as duas conexões.
+DOIS = (("aa:bb:cc:00:00:01", "usb", "White", 40), ("aa:bb:cc:00:00:02", "bt", "Cosmic Red", 70))
+
+
+def _ctx_dos_dois():
     from pacotes import Contexto
 
-    _guardar_sem_perfil(lambda prof: a04._com_o_brilho_gravado(prof, UNIQ, 40))
-    corpo = {"uniq": UNIQ, "index": 0, "transport": "usb", "connected": True, "player": 1,
-             "player_slot": 1, "is_primary": True, "lightbar_rgb": [0, 0, 255],
-             "lightbar_on": True, "lightbar_source": "sysfs"}
-    mesa = [{"pref": "p1", "uniq": UNIQ, "jogador": 1, "cor": "white", "nome": "White",
-             "via": "USB", "transporte": "usb"}]
-    ctx = Contexto(state={"active_profile": None}, mesa=mesa, conectados=[corpo], estados={})
-    achados = repr(a04.pacote(ctx))
-    assert "40%" in achados, "a aba sem perfil não mostrou o brilho guardado"
+    corpos, mesa = [], []
+    for n, (uniq, via, plastico, _pct) in enumerate(DOIS, start=1):
+        corpos.append({"uniq": uniq, "index": n - 1, "transport": via, "connected": True,
+                       "player": n, "player_slot": n, "is_primary": n == 1,
+                       "lightbar_rgb": [0, 0, 255], "lightbar_on": True,
+                       "lightbar_source": "sysfs" if via == "usb" else "hidraw"})
+        mesa.append({"pref": f"p{n}", "uniq": uniq, "jogador": n,
+                     "cor": plastico.lower().replace(" ", "-"), "nome": plastico,
+                     "via": via.upper(), "transporte": via})
+    return Contexto(state={"active_profile": None}, mesa=mesa, conectados=corpos, estados={})
+
+
+def test_a_aba_pinta_o_brilho_de_cada_controle_sem_perfil_no_cabo_e_no_radio(a04):
+    """A tela inteira: cada coluna mostra o brilho que o computador guardou PARA ELA."""
+    for uniq, _via, _plastico, pct in DOIS:
+        _guardar_sem_perfil(lambda prof, u=uniq, v=pct: a04._com_o_brilho_gravado(prof, u, v),
+                            uniq=uniq)
+    colunas = a04.pacote(_ctx_dos_dois())["colunas"]
+    for uniq, via, _plastico, pct in DOIS:
+        assert colunas[uniq]["brilho"] == f"{pct}%", (via, colunas[uniq]["brilho"])
+
+
+def test_a_aba_pinta_o_automatico_guardado_sem_perfil_e_a_guarda_recusa(a04):
+    """O modo que a tela pinta é o que a guarda dos gestos lê: as duas leem o computador."""
+
+    def _automatico(prof):
+        leds = prof.leds.model_copy(update={
+            "modo": a04.MODO_AUTOMATICO, "auto_player_colors": True})
+        return prof.model_copy(update={"leds": leds})
+
+    _guardar_sem_perfil(_automatico, uniq=None)
+    ctx = _ctx_dos_dois()
+    pac = a04.pacote(ctx)
+    assert pac[a04.GESTO_DO_MODO] == a04.MODO_AUTOMATICO
+    assert pac[f"{a04.GESTO_DO_MODO}-{a04.MODO_AUTOMATICO}"] == "sim"
+    for uniq, via, _plastico, _pct in DOIS:
+        with pytest.raises(RuntimeError, match="modo automático"):
+            a04.efeito_da_luz(ctx, {"uniq": uniq, "valor": "base:respirar"}, None)
+        with pytest.raises(RuntimeError, match="modo automático"):
+            a04.cor(ctx, {"uniq": uniq, "hex": "FF8000"}, None), via
 
 
 def test_um_perfil_ativo_continua_mandando_sobre_o_computador(a04):

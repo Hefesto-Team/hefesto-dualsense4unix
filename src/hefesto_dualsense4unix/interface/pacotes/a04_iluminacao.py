@@ -294,7 +294,7 @@ RECADO_DO_AUTOMATICO_PARADO = (
 def _nao_no_automatico(ctx: Contexto) -> None:
     """A guarda de cada gesto que escolhe a luz de um controle (ver `_recusar_no_automatico`)."""
     nome = perfil.nome_do_ativo(ctx.state).strip()
-    _recusar_no_automatico(perfil.ativo_que_vale(nome) if nome else {})
+    _recusar_no_automatico(perfil.ativo_que_vale(nome))
 
 
 def _recusar_no_automatico(cru: dict[str, Any] | None) -> None:
@@ -1318,9 +1318,9 @@ DICA_DA_BASE = {
     "respirar": "A cor sobe e desce devagar.",
     "batimento": "Duas subidas e uma pausa.",
     "chama": "O brilho oscila, sem padrão.",
-    "mare": "A cor vai e volta, devagar.",
+    "mare": "Vai e volta para uma cor vizinha.",
     "piscar": "Lampejos da cor, de borda suave.",
-    "arco-iris": "As cores giram, cada uma num ponto.",  # (noqa-acento)
+    "arco-iris": "As cores giram em cada controle.",  # (noqa-acento)
 }
 #: Os grupos da lista, na ordem do desenho: o que a pessoa vê, não o nome técnico do efeito.
 GRUPOS_DA_LISTA = (
@@ -1981,11 +1981,35 @@ def _guardar_a_cor_no_perfil(ctx: Contexto, uniq: str,
     perfil._com_o_src()
     from hefesto_dualsense4unix.profiles.o_padrao_do_computador import gravar_pelo_gesto
 
+    efeito = _a_base_na_cor_nova(ctx, nome, dele, rgb) if dele is not None else None
     with contextlib.suppress(OSError):
         gravar_pelo_gesto(
             "luz", nome,
-            lambda prof: _com_a_cor_gravada(prof, uniq, rgb, numero, religar=religar),
+            lambda prof: _com_a_cor_gravada(prof, uniq, rgb, numero, religar=religar,
+                                            efeito=efeito),
             uniq=uniq, origem="interface-nova")
+
+
+def _a_base_na_cor_nova(ctx: Contexto, nome: str, c: dict[str, Any],
+                        rgb: tuple[int, int, int]) -> str | None:
+    """O texto da base da lista que este controle anima, reescrito na cor nova; `None` se não há.
+
+    A base nasce com a cor do controle daquele instante (`efeito_da_luz`). Trocar a cor depois sem
+    reescrever o efeito deixava a barra animando a cor velha, com a linha Cor dizendo a nova e a
+    lista mudando para «Seus efeitos». O arco-íris não leva cor, e um efeito que a pessoa criou
+    é do usuário: nenhum dos dois muda.
+    """
+    from hefesto_dualsense4unix.profiles.schema import escrever_o_efeito_da_luz
+
+    cru = perfil.ativo_que_vale(nome)
+    uniq = str(c.get("uniq") or "")
+    hoje = valor_da_lista_para(efeito_do_controle(perfil_da_lista_de_efeito(cru), uniq),
+                               valores_da_biblioteca(), _a_cor_de_agora(ctx, cru, c))
+    base = base_do_token(hoje)
+    if base is None or base == "arco-iris":  # (noqa-acento) chave ASCII
+        return None
+    r, g, b = cor_da_base(rgb)
+    return escrever_o_efeito_da_luz(base, [f"{r:02X}{g:02X}{b:02X}"], RITMO_DA_BASE[base])
 
 
 def _a_cor_guardada(cru: dict[str, Any] | None,
@@ -2494,7 +2518,8 @@ def _a_cor_de_agora(ctx: Contexto, cru: dict[str, Any],
 
 
 def _com_a_cor_gravada(prof: Any, uniq: str, rgb: tuple[int, int, int],
-                       numero: int | None = None, *, religar: bool = False) -> Any:
+                       numero: int | None = None, *, religar: bool = False,
+                       efeito: str | None = None) -> Any:
     """O perfil com a cor DESTE controle escrita no override dele.
 
     **A cor vai com procedência** (decisão de 08/09/2026): `LedsConfig.lightbar_para_o_numero` =
@@ -2523,6 +2548,8 @@ def _com_a_cor_gravada(prof: Any, uniq: str, rgb: tuple[int, int, int],
     dele = atuais.get(chave) or ControllerOverrides()
     antes = dele.leds
     campos: dict[str, Any] = {"lightbar": rgb}
+    if efeito is not None:  # a base da lista na cor nova (`_a_base_na_cor_nova`)
+        campos[CAMPO_DO_EFEITO] = efeito
     if numero is not None:
         campos["lightbar_para_o_numero"] = int(numero)
     if religar:
