@@ -3062,6 +3062,247 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v dpkg-query >/dev/null 2>&1 \
     esac
 fi
 
+# ---------------------------------------------------------------------------
+# 3f-bis. O PipeWire da casa (1.6.9 + WirePlumber 0.5.18) — DEFAULT
+# ---------------------------------------------------------------------------
+# O-PIPEWIRE-DA-CASA-LEVA-A-CURA-DO-METADATA-01 (15/10/2026). Até a 1.6.8, a do
+# Pop!_OS 24.04, o cliente que faz bind num metadata enquanto o WirePlumber sai
+# fica preso para sempre: a Steam roda `wpctl settings`, o `wpctl` não sai e a
+# Steam não fecha (docs/protocol/o-wpctl-pendurado-pelo-metadata.md). O
+# upstream curou na 1.6.9; a casa leva a estável mais nova, com o debian/ do
+# Pop, fixada por hash em assets/pipewire-backport/BASELINE.
+#
+# O molde é o do 3f, com uma diferença decidida em 15/10/2026: este passo
+# CONSTRÓI, pelo scripts/construir_pipewire_backport.sh (uns 5 minutos na
+# primeira vez, sem sudo; com a entrega já no cache e conferida, sai na hora).
+# Sem as dependências de build, o construtor lista o que falta e o passo segue
+# sem falhar o install — a instalação delas é da pessoa, pela receita
+# (docs/usage/receita-backport-pipewire.md), porque o mk-build-deps puxa ~80
+# pacotes e, numa máquina com o BlueZ da casa, rebaixaria o libbluetooth3.
+#
+# O que entra é só o que a máquina JÁ TEM (`ii` no dpkg) e está abaixo da casa:
+# a entrega traz 27 pacotes (docs, testes, -dev), e instalar um que a pessoa
+# nunca pediu é mudança que ela não pediu. E nada SAI da máquina sem estar na
+# lista sabida: o apt simula antes, e um `Remv` fora do libcamera (que a 1.6.9
+# da casa não constrói) faz o passo recusar.
+#
+# RECUSA COM A STEAM ABERTA. Trocar o PipeWire reinicia o som da sessão, e um
+# reinício do WirePlumber com a Steam aberta, sobre a 1.6.8, é exatamente o que
+# a deixa sem fechar. Os pacotes ficam construídos; fechada a Steam pelo menu,
+# o `./install.sh` de novo instala sem reconstruir.
+
+# A versão `ii` de um pacote, ou nada.
+_pw_versao_ii() {
+    dpkg-query -W -f='${db:Status-Abbrev}|${Version}\n' "$1" 2>/dev/null \
+        | awk -F'|' '$1 ~ /^ii/ { print $2; exit }' || true
+}
+
+# `curado`, `precisa` ou `sem-pipewire`. $1 e $2: as revisões da casa
+# (PW_REVISAO e WP_REVISAO do BASELINE). A versão mais nova vence, de quem for:
+# um PipeWire da distro igual ou acima da casa é `curado`.
+_pw_veredito() {
+    local alvo_pw="$1" alvo_wp="$2" pw wp
+    pw="$(_pw_versao_ii libpipewire-0.3-modules)"
+    if [[ -z "${pw}" ]]; then
+        printf 'sem-pipewire\n'
+        return 0
+    fi
+    wp="$(_pw_versao_ii wireplumber)"
+    if dpkg --compare-versions "${pw}" lt "${alvo_pw}" 2>/dev/null \
+        || { [[ -n "${wp}" ]] && dpkg --compare-versions "${wp}" lt "${alvo_wp}" 2>/dev/null; }; then
+        printf 'precisa\n'
+    else
+        printf 'curado\n'
+    fi
+}
+
+# Os .deb da entrega que ESTA máquina vai receber, um caminho por linha.
+# $1: o diretório da entrega; $2 e $3: as revisões da casa. Cada linha do
+# SHA256SUMS tem de ser de uma das duas revisões e bater o hash — senão nada é
+# usado (rc 1). Entra só o pacote que está `ii` e numa versão abaixo da do .deb:
+# nunca um pacote novo, nunca um rebaixamento.
+_pw_debs_da_maquina() {
+    local dir="$1" alvo_pw="$2" alvo_wp="$3" sha nome resto ver pkg atual
+    local entram=()
+    [[ -s "${dir}/SHA256SUMS" ]] || return 1
+    while read -r sha nome; do
+        [[ -n "${sha}" ]] || continue
+        nome="${nome#\*}"
+        nome="${nome##*/}"
+        resto="${nome#*_}"
+        ver="${resto%_*}"
+        [[ "${nome}" == *.deb && ( "${ver}" == "${alvo_pw}" || "${ver}" == "${alvo_wp}" ) ]] || return 1
+        atual="$(sha256sum "${dir}/${nome}" 2>/dev/null | awk '{ print $1 }' || true)"
+        [[ -n "${atual}" && "${atual}" == "${sha}" ]] || return 1
+        pkg="${nome%%_*}"
+        atual="$(_pw_versao_ii "${pkg}")"
+        [[ -n "${atual}" ]] || continue
+        dpkg --compare-versions "${atual}" lt "${ver}" 2>/dev/null || continue
+        entram+=("${dir}/${nome}")
+    done < "${dir}/SHA256SUMS"
+    [[ "${#entram[@]}" -eq 0 ]] || printf '%s\n' "${entram[@]}"
+}
+
+# O caminho de volta: `pacote=versão` de cada pacote que vai trocar, como a
+# máquina o tem agora. Só o que está `ii` e tem versão — o `apt install
+# $(cat …)` da volta quebra numa linha `pacote=` vazia. Uma versão nossa
+# (~hefesto) vira a maior que o archive serve, como no 3f; sem resposta do
+# archive, o pacote fica de fora.
+_pw_versoes_anteriores() {
+    local deb pkg estado nome ver
+    for deb in "$@"; do
+        pkg="${deb##*/}"
+        pkg="${pkg%%_*}"
+        while IFS='|' read -r estado nome ver; do
+            [[ "${estado}" == ii* && -n "${nome}" && -n "${ver}" ]] || continue
+            if [[ "${ver}" == *~hefesto* ]]; then
+                ver="$(_bz_maior_do_archive "${nome%%:*}")"
+                [[ -n "${ver}" ]] || continue
+            fi
+            printf '%s=%s\n' "${nome}" "${ver}"
+        done < <(dpkg-query -W -f='${db:Status-Abbrev}|${binary:Package}|${Version}\n' "${pkg}" 2>/dev/null || true)
+    done
+}
+
+# O que o apt tiraria da máquina para pôr os .deb, um pacote por linha, fora
+# os dois do libcamera, que a 1.6.9 da casa não constrói (o noble tem o
+# libcamera 0.2.0, e ela pede o 0.6.0). rc 1 quando o apt recusa a troca.
+_pw_o_que_sairia() {
+    local sim arch p
+    arch="$(dpkg --print-architecture 2>/dev/null || echo amd64)"
+    sim="$(LC_ALL=C apt-get install -s "$@" 2>&1)" || return 1
+    while read -r p; do
+        case "${p%:"${arch}"}" in
+            libspa-0.2-libcamera|pipewire-libcamera) ;;
+            *) printf '%s\n' "${p}" ;;
+        esac
+    done < <(awk '$1 == "Remv" { print $2 }' <<<"${sim}")
+}
+
+# A Steam de quem instala está aberta?
+_pw_steam_aberta() {
+    pgrep -u "$(id -u)" -x steam >/dev/null 2>&1 \
+        || pgrep -u "$(id -u)" -x steamwebhelper >/dev/null 2>&1
+}
+
+install_pipewire_da_casa() {
+    local baseline="${ROOT_DIR}/assets/pipewire-backport/BASELINE"
+    local pref="${ROOT_DIR}/assets/pipewire-backport/apt/hefesto-pipewire.pref"
+    local construtor="${ROOT_DIR}/scripts/construir_pipewire_backport.sh"
+    local cache="${HOME}/.cache/hefesto-dualsense4unix"
+    local dir="${cache}/pipewire-backport"
+    local log="${cache}/pipewire-construir.log"
+    local alvo_pw alvo_wp rc lista sairia registro
+    local debs=()
+    alvo_pw="$(sed -n 's/^PW_REVISAO=//p' "${baseline}" 2>/dev/null || true)"
+    alvo_wp="$(sed -n 's/^WP_REVISAO=//p' "${baseline}" 2>/dev/null || true)"
+    if [[ -z "${alvo_pw}" || -z "${alvo_wp}" ]]; then
+        warn "${baseline} não diz as revisões do PipeWire da casa — passo pulado (o PipeWire de agora segue)"
+        return 0
+    fi
+    case "$(_pw_veredito "${alvo_pw}" "${alvo_wp}")" in
+        curado)
+            printf '      o PipeWire desta máquina já tem a cura do metadata (o %s ou mais novo) — nada a fazer\n' "${alvo_pw}"
+            return 0
+            ;;
+        sem-pipewire)
+            printf '      o PipeWire desta máquina não é do dpkg — passo pulado (o doctor diz se ele tem a cura)\n'
+            return 0
+            ;;
+    esac
+    printf '      o PipeWire desta máquina é o %s, sem a cura do metadata; a casa tem o %s e o WirePlumber %s\n' \
+        "$(_pw_versao_ii libpipewire-0.3-modules)" "${alvo_pw}" "${alvo_wp}"
+    if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+        _faria "construir o PipeWire ${alvo_pw} e o WirePlumber ${alvo_wp} em ${dir} (scripts/construir_pipewire_backport.sh, uns 5 minutos, sem sudo)"
+        _faria "gravar ${dir}/VERSOES-ANTERIORES.txt (o caminho de volta, só com os pacotes que trocam)"
+        _faria_root "fixar a prioridade do apt em /etc/apt/preferences.d/hefesto-pipewire (o apt fica com a versão mais nova, a da casa ou a da distro)"
+        _faria_root "instalar só os pacotes do PipeWire e do WirePlumber que a máquina já tem, conferidos pelo SHA256SUMS — com a Steam aberta, o passo recusa"
+        _faria "REINICIAR o som da sessão (pipewire, pipewire-pulse e wireplumber): os controles perdem o som e o microfone por alguns segundos"
+        return 0
+    fi
+    mkdir -p "${cache}"
+    printf '      construindo pelo scripts/construir_pipewire_backport.sh (uns 5 minutos na primeira vez; o registro fica em %s)\n' "${log}"
+    rc=0
+    HEFESTO_PIPEWIRE_CACHE="${cache}" bash "${construtor}" > "${log}" 2>&1 || rc=$?
+    if [[ "${rc}" -eq 3 ]]; then
+        warn "faltam dependências de build do PipeWire da casa — o PipeWire de agora segue"
+        tail -n 15 "${log}" 2>/dev/null | sed 's/^/      /' || true
+        printf '      a ordem de instalar está na receita: docs/usage/receita-backport-pipewire.md (depois rode ./install.sh de novo)\n'
+        return 0
+    elif [[ "${rc}" -ne 0 ]]; then
+        warn "a construção do PipeWire da casa parou (código ${rc}; o registro está em ${log}) — o PipeWire de agora segue"
+        return 0
+    fi
+    if ! lista="$(_pw_debs_da_maquina "${dir}" "${alvo_pw}" "${alvo_wp}")"; then
+        warn "a entrega em ${dir} não confere pelo SHA256SUMS com as revisões ${alvo_pw} e ${alvo_wp} — nada foi instalado (o PipeWire de agora segue)"
+        return 0
+    fi
+    if [[ -z "${lista}" ]]; then
+        printf '      nenhum pacote da entrega está instalado abaixo da casa nesta máquina — nada a trocar\n'
+        return 0
+    fi
+    mapfile -t debs <<<"${lista}"
+    if _pw_steam_aberta; then
+        warn "a Steam está aberta — o PipeWire da casa NÃO foi instalado: trocar o PipeWire reinicia o som, e o reinício do WirePlumber com a Steam aberta é o que a deixa sem fechar"
+        printf '      feche a Steam pelo menu e rode ./install.sh de novo (os pacotes já estão construídos em %s)\n' "${dir}"
+        return 0
+    fi
+    if ! sudo -n true 2>/dev/null; then
+        warn "sudo recusado — passo do PipeWire da casa pulado (re-execute ./install.sh)"
+        return 0
+    fi
+    if ! sairia="$(_pw_o_que_sairia "${debs[@]}")"; then
+        warn "o apt não aceita trocar o PipeWire por estes pacotes nesta máquina — nada foi instalado; a simulação é: apt-get install -s ${debs[*]}"
+        return 0
+    fi
+    if [[ -n "${sairia}" ]]; then
+        warn "instalar o PipeWire da casa tiraria da máquina: $(tr '\n' ' ' <<<"${sairia}")— nada foi instalado (o PipeWire de agora segue)"
+        return 0
+    fi
+    printf '\n      >>> AVISO: instalar o PipeWire da casa REINICIA o som da sessão\n'
+    printf '          (os controles perdem o som e o microfone por alguns segundos, e um\n'
+    printf '          jogo aberto pode perder a saída até ser reaberto).\n\n'
+    ask_yn "instalar o PipeWire da casa agora?" "${AUTO_YES}" "y"
+    if [[ ! "${REPLY,,}" =~ ^y ]]; then
+        printf '      pulado a pedido — o PipeWire de agora segue\n'
+        return 0
+    fi
+    # O registro é gravado ANTES de trocar e uma vez só: o de uma execução
+    # anterior é o que guarda as versões da distro.
+    if [[ ! -f "${dir}/VERSOES-ANTERIORES.txt" ]]; then
+        registro="$(_pw_versoes_anteriores "${debs[@]}")" || registro=""
+        if [[ -n "${registro}" ]]; then
+            printf '%s\n' "${registro}" > "${dir}/VERSOES-ANTERIORES.txt"
+            printf '      versões anteriores gravadas em %s\n' "${dir}/VERSOES-ANTERIORES.txt"
+        else
+            warn "não consegui registrar as versões anteriores do PipeWire — a volta pela receita não vai cobrir estes pacotes"
+        fi
+    fi
+    # Sem o arquivo, o Pop (fixado por ele em 1001) rebaixaria a casa no
+    # próximo `apt upgrade`; com ele, o apt fica com a versão mais nova.
+    if ! sudo install -m 0644 "${pref}" /etc/apt/preferences.d/hefesto-pipewire 2>/dev/null; then
+        warn "não consegui gravar /etc/apt/preferences.d/hefesto-pipewire — no Pop!_OS, o próximo apt upgrade voltaria o PipeWire para o da distro"
+    fi
+    if sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" \
+            "${debs[@]}" >/dev/null 2>&1; then
+        printf '      PipeWire %s e WirePlumber %s instalados (%d pacotes)\n' "${alvo_pw}" "${alvo_wp}" "${#debs[@]}"
+        if systemctl --user restart pipewire pipewire-pulse wireplumber >/dev/null 2>&1; then
+            printf '      som reiniciado — confira o som e o microfone de cada controle\n'
+        else
+            warn "não consegui reiniciar o som — rode: systemctl --user restart pipewire pipewire-pulse wireplumber"
+        fi
+    else
+        warn "apt-get install do PipeWire da casa falhou — rode à mão com os .deb em ${dir} (a receita: docs/usage/receita-backport-pipewire.md)"
+    fi
+}
+
+if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v dpkg-query >/dev/null 2>&1 \
+   && command -v dpkg >/dev/null 2>&1 && command -v sudo >/dev/null 2>&1; then
+    step "3f-bis" "PipeWire corrigido (1.6.9 com o WirePlumber 0.5.18: a Steam fecha mesmo depois de o som reiniciar)"
+    install_pipewire_da_casa
+fi
+
 step "3g" "agente de pareamento Bluetooth sempre de pé (evita o pareamento pela metade)"
 install_bt_agent_host
 
