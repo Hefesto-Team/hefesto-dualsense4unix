@@ -1,0 +1,12 @@
+wireplumber (0.5.18-0~hefesto24.04.1) noble; urgency=medium
+
+  * O upstream 0.5.18, a estável mais nova, sobre o empacotamento do
+    Pop!_OS 24.04, para andar junto do PipeWire 1.6.9 da casa.
+  * O patch do Pop (Remove-privacy-breach-documentation) aplica sem fuzz.
+  * Os 38 símbolos novos da 0.5.13 à 0.5.16 entram no
+    libwireplumber-0.5-0.symbols (o dh_makeshlibs roda com -c4), e o
+    completar do wpctl no bash entra no wireplumber.install.
+  * Upstream: 0.5.18 81606cbb32d29df20147d1b68b662c1082654d81
+  * Empacotamento: 0.5.12-2pop1~1766191027~24.04~d4bf441
+
+ -- Hefesto DualSense4Unix Project <hefesto-dualsense4unix@users.noreply.github.com>  Thu, 15 Oct 2026 03:30:00 -0300

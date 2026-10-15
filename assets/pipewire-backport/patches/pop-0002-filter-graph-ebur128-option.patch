@@ -1,0 +1,18 @@
+Description: filter-graph: o plugin ebur128 segue a opção do meson
+ Troca o ebur128_lib.found() por get_option('ebur128').enabled(), como no
+ fonte do Pop!_OS (1.6.8-1pop1~1787688714~24.04~fdff050). Aplica sem fuzz na
+ 1.6.9.
+Origin: vendor, pipewire 1.6.8-1pop1~1787688714~24.04~fdff050 (Pop!_OS 24.04)
+Forwarded: not-needed
+
+--- a/spa/plugins/filter-graph/meson.build
++++ b/spa/plugins/filter-graph/meson.build
+@@ -105,7 +105,7 @@
+ )
+ endif
+ 
+-if ebur128_lib.found()
++if get_option('ebur128').enabled()
+ spa_filter_graph_plugin_ebur128 = shared_library('spa-filter-graph-plugin-ebur128',
+   [ 'plugin_ebur128.c' ],
+   include_directories : [configinc],

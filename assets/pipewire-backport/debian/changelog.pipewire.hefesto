@@ -1,0 +1,17 @@
+pipewire (1.6.9-0~hefesto24.04.1) noble; urgency=medium
+
+  * O upstream 1.6.9, a estável mais nova, sobre o empacotamento do
+    Pop!_OS 24.04. Leva o 06de0ed («metadata: remove pending pong on
+    unbind», issue #5445): o cliente que faz bind num metadata enquanto o
+    WirePlumber sai não fica mais preso (a Steam que não fechava).
+  * pop-0001 e pop-0002: as duas mudanças que o Pop faz no fonte da 1.6.8
+    (o round any_output_port_available do acp e o ebur128 pela opção do
+    meson), aplicadas sem fuzz na 1.6.9.
+  * debian-0001: CVE-2026-14330 (spa_alloca com teto), o patch do Debian
+    1.6.9-2, porque a 1.6.9 não o traz.
+  * O libcamera sai: a 1.6.9 pede libcamera >= 0.6.0, e o noble tem a 0.2.0.
+    Saem os pacotes libspa-0.2-libcamera e pipewire-libcamera.
+  * Upstream: 1.6.9 8fa27cabdc6c0c1350c69c026af5850ef0af1e26
+  * Empacotamento: 1.6.8-1pop1~1787688714~24.04~fdff050
+
+ -- Hefesto DualSense4Unix Project <hefesto-dualsense4unix@users.noreply.github.com>  Thu, 15 Oct 2026 03:30:00 -0300

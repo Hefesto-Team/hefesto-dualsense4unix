@@ -1,0 +1,9 @@
+# Destino: /etc/apt/preferences.d/hefesto-pipewire (docs/usage/receita-backport-pipewire.md).
+# O Pop!_OS fixa o repositório dele em 1001 (/etc/apt/preferences.d/pop-default-settings),
+# e acima de 1000 o apt REBAIXA: o próximo `apt upgrade` trocaria o PipeWire 1.6.9 da
+# casa pelo 1.6.8 do Pop. Em 500, o apt fica com a versão mais nova: a da casa enquanto
+# o Pop estiver atrás, e a do Pop quando ela passar da casa. Medido em 15/10/2026 com
+# `apt-cache -o Dir::Etc::Preferences=<este arquivo> policy pipewire wireplumber`.
+Package: src:pipewire src:wireplumber
+Pin: release o=pop-os-release
+Pin-Priority: 500

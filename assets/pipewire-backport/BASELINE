@@ -1,0 +1,53 @@
+# O PipeWire e o WirePlumber da casa, fixados por hash.
+# Quem lê: scripts/construir_pipewire_backport.sh e
+# tests/unit/test_o_pipewire_da_casa_leva_a_cura_do_metadata.py. Nada aqui é
+# usado sem a conferência do SHA-256 da linha ao lado.
+#
+# A receita (O-PIPEWIRE-DA-CASA-LEVA-A-CURA-DO-METADATA-01, 15/10/2026): a
+# estável mais nova do upstream, com o debian/ do pacote do Pop!_OS 24.04.
+# O Pop entrega os dois em formato nativo: o debian/ vem DENTRO do tarball dele,
+# e as mudanças do Pop no fonte estão no próprio fonte, sem debian/patches. As
+# do PipeWire foram medidas pelo diff contra a tag 1.6.8 e viram os pop-NNNN.
+#
+# Os tarballs do upstream vêm do arquivo do GitLab pela tag; o hash é o de dois
+# downloads iguais (15/10/2026), e o commit da tag é o que o `git
+# get-tar-commit-id` do próprio tarball diz. Os do Pop vêm do pool
+# apt.pop-os.org, e o hash é o que o .dsc dele declara.
+
+# --- PipeWire ---
+PW_VERSAO_UPSTREAM=1.6.9
+PW_TAG_COMMIT=8fa27cabdc6c0c1350c69c026af5850ef0af1e26
+PW_FONTE_URL=https://gitlab.freedesktop.org/pipewire/pipewire/-/archive/1.6.9/pipewire-1.6.9.tar.bz2
+PW_FONTE_SHA256=0cde58c124825bad462b32ab79f9aa286ee7b113cc73a5cda923a4365e752657
+PW_EMPACOTAMENTO_VERSAO=1.6.8-1pop1~1787688714~24.04~fdff050
+PW_EMPACOTAMENTO_URL=http://apt.pop-os.org/release/pool/noble/pipewire/fdff0508554867415a86414159515e92445d07c5/pipewire_1.6.8-1pop1~1787688714~24.04~fdff050.tar.xz
+PW_EMPACOTAMENTO_SHA256=5f19cae7f9ad7e6c1206ff7d7f197f71feec97e1919016a5a82eab50a82f405f
+PW_REVISAO=1.6.9-0~hefesto24.04.1
+# Na ordem. O pop-0003 do Pop (o autofoco comentado no libcamera-source.cpp)
+# não entra: a 1.6.9 pede libcamera >= 0.6.0, o noble tem a 0.2.0, e o
+# libcamera sai do build. O debian-0001 vem do debian/patches do Debian
+# 1.6.9-2 (pipewire_1.6.9-2.debian.tar.xz, SHA-256
+# 9ee24622dfd907c8f1283328632156d43d23013c7ce62b04ea8ed6991a1ae65c), porque a
+# 1.6.9 não traz o ed2c0ad4e do master.
+PW_PATCHES=pop-0001-acp-any-output-port-available.patch pop-0002-filter-graph-ebur128-option.patch debian-0001-CVE-2026-14330.patch
+PATCH_pop-0001-acp-any-output-port-available.patch=5ddad73831accea636a3e99ec35220d4a76c05779e98ae25959265dc6d414906
+PATCH_pop-0002-filter-graph-ebur128-option.patch=eb05175d6a79d26cf4b264d5ddf478c1549ddd5b0149a85e9daddacf862bd42c
+PATCH_debian-0001-CVE-2026-14330.patch=93b45411bfdcc2c839c492421875fb17d38fd76b04ad07c28870fa98ea92bc5e
+# src/modules/module-metadata/metadata.c: o da tag (a série não o toca). É o
+# global_unbind dele que chama o remove_pending (o 06de0ed, issue #5445); o da
+# 1.6.8 é f298e33db4f8ec67ac257910d51ee8cd9bc2874058db81083d2c2752151cb2ae.
+PW_SHA256_METADATA_C=e4fef60eebffe56f7e4a594176c08912958da4cf97dae595031b93e501fb1485
+
+# --- WirePlumber ---
+WP_VERSAO_UPSTREAM=0.5.18
+WP_TAG_COMMIT=81606cbb32d29df20147d1b68b662c1082654d81
+WP_FONTE_URL=https://gitlab.freedesktop.org/pipewire/wireplumber/-/archive/0.5.18/wireplumber-0.5.18.tar.bz2
+WP_FONTE_SHA256=0c2ea30a7b3bb4ecad456bb27e2c283defda59bb53d97df6917a495f12887e33
+WP_EMPACOTAMENTO_VERSAO=0.5.12-2pop1~1766191027~24.04~d4bf441
+WP_EMPACOTAMENTO_URL=http://apt.pop-os.org/release/pool/noble/wireplumber/d4bf441cb76e7d6afef31fce92c640e9b15f2039/wireplumber_0.5.12-2pop1~1766191027~24.04~d4bf441.tar.xz
+WP_EMPACOTAMENTO_SHA256=5fdff117f1dea4297383a3fe4c5441f9bba58f65990f9e5dc68d6cf39f204dc5
+WP_REVISAO=0.5.18-0~hefesto24.04.1
+# Os símbolos que a 0.5.13 à 0.5.16 acrescentam (os mesmos do
+# libwireplumber-0.5-0.symbols do Debian 0.5.18-1): o dh_makeshlibs do Pop roda
+# com -c4, que reprova símbolo novo sem linha.
+WP_SIMBOLOS_NOVOS_SHA256=01d688e7d72aeae81f02767831f905d1704dd3ded504b1cea1ac05dd3a2e4320

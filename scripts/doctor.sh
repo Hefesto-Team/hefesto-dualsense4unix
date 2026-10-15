@@ -5212,6 +5212,49 @@ check_bluez_distro_depois_do_backport() {
     fi
 }
 
+# O PipeWire até a 1.6.8 deixa preso o cliente que faz bind num metadata
+# enquanto o WirePlumber sai (issue #5445, curada no 06de0ed da 1.6.9): a Steam
+# roda `wpctl settings`, o `wpctl` não sai e a Steam não fecha
+# (docs/protocol/o-wpctl-pendurado-pelo-metadata.md). O Pop!_OS 24.04 ainda
+# entrega a 1.6.8; a casa tem a receita da 1.6.9
+# (O-PIPEWIRE-DA-CASA-LEVA-A-CURA-DO-METADATA-01, 15/10/2026).
+#
+# A comparação é pela versão do UPSTREAM (sem época e sem a revisão do pacote),
+# por `sort -V`: o `dpkg --compare-versions` põe o `1.6.9-0~hefesto24.04.1` da
+# casa ABAIXO de um `1.6.9` sem revisão, e a casa leria como sem a cura.
+_PW_COM_A_CURA="1.6.9"
+_pw_versao_do_upstream() {
+    local v="${1#*:}"
+    printf '%s' "${v%%-*}"
+}
+check_pipewire_cura_do_metadata() {
+    local pw wp up linha_wp
+    if command -v dpkg-query >/dev/null 2>&1; then
+        pw="$(dpkg-query -W -f='${Version}' libpipewire-0.3-modules 2>/dev/null || true)"
+        wp="$(dpkg-query -W -f='${Version}' wireplumber 2>/dev/null || true)"
+    fi
+    if [[ -z "${pw:-}" ]] && command -v pipewire >/dev/null 2>&1; then
+        pw="$(pipewire --version 2>/dev/null | sed -n 's/^Linked with libpipewire \([0-9][0-9.]*\).*/\1/p' | head -n1)"
+    fi
+    if [[ -z "${pw:-}" ]]; then
+        info "não achei o PipeWire (nem o pacote, nem o binário) — pulo a conferência da cura do metadata"
+        return 0
+    fi
+    up="$(_pw_versao_do_upstream "${pw}")"
+    if [[ -z "${wp:-}" ]]; then
+        linha_wp="o WirePlumber não está no dpkg"
+    elif [[ "${wp}" == *~hefesto* ]]; then
+        linha_wp="o WirePlumber é o ${wp}, o da casa"
+    else
+        linha_wp="o WirePlumber é o ${wp}, o da distro"
+    fi
+    if [[ "$(printf '%s\n%s\n' "${_PW_COM_A_CURA}" "${up}" | sort -V | head -n1)" == "${_PW_COM_A_CURA}" ]]; then
+        pass "o PipeWire ${pw} tem a cura do metadata (>= ${_PW_COM_A_CURA}, issue #5445); ${linha_wp}"
+    else
+        warn "o PipeWire ${pw} não tem a cura do metadata (chegou na ${_PW_COM_A_CURA}, issue #5445): depois de um reinício do WirePlumber, um cliente como o \`wpctl\` que a Steam roda pode ficar preso, e a Steam não fecha. ${linha_wp^}$(so_no_checkout "(a receita da 1.6.9: docs/usage/receita-backport-pipewire.md)")"
+    fi
+}
+
 check_bluez_backport_version() {
     if ! command -v dpkg >/dev/null 2>&1; then
         info "dpkg ausente (sistema não-Debian?) — pulo o check de versão do bluez"
@@ -9222,6 +9265,7 @@ main() {
     check_cmdline_pad_virtual
     hdr "rádio e pareamento (G2)"
     check_bluez_backport_version
+    check_pipewire_cura_do_metadata
     check_bluez_curas_do_backport
     check_bt_agent_service
     check_bt_resilience

@@ -72,12 +72,16 @@ sleep 1; kill -KILL "$WP"; wireplumber &                                        
 sleep 10; kill -0 $! && echo pendurado                                           # e o wpctl não sai nunca
 ```
 
-## O que fica para decidir
+## A cura da casa
 
-- **Subir o PipeWire para 1.6.9 ou mais** é a cura de qualquer usuário. O Pop!_OS ainda entrega a 1.6.8. O mapa de
-  versões do sistema é que diz «abaixo da 1.6.9, a Steam pode não fechar depois de um reinício do WirePlumber».
-- **O install reiniciar o WirePlumber só quando o drop-in muda** (o mesmo molde do `--nunca-dorme`, que já faz assim)
-  tira o Hefesto da conta de quem abre a janela. Isso muda o `--install`, que também é o botão da aba Sistema.
+- **O PipeWire 1.6.9 da casa** (15/10/2026) é a cura de qualquer usuário enquanto o Pop!_OS entrega a 1.6.8: a 1.6.9
+  do upstream com o `debian/` do Pop e o WirePlumber 0.5.18, em
+  [receita-backport-pipewire.md](../usage/receita-backport-pipewire.md). A receita acima virou
+  `assets/pipewire-backport/prova/reproduzir.sh`, e o `scripts/construir_pipewire_backport.sh --prova` a roda sobre o
+  servidor que vai ser empacotado: com a cura, 0 pendurados em 20; o mesmo servidor sem a linha do `06de0ed`, 20 em 20.
+  O doctor (`check_pipewire_cura_do_metadata`) avisa abaixo da 1.6.9 e aponta a receita.
+- **O install só reinicia o WirePlumber quando um drop-in ou o state mudou** (`a1ed1a7e5`): quem reabre a janela sem
+  mudar nada não abre a janela do defeito.
 - **Não há relato novo a fazer ao upstream:** o #5445 já cobre o defeito. Se a distribuição demorar, o pedido é ao
   pacote do Pop!_OS:
 
