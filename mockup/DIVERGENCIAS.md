@@ -42,6 +42,9 @@ seção daqui**: a aba deixou de estar em trabalho.
   seletor por botão com três abas (Controle, Mouse, Teclado) e a captura de tecla. O pacote novo roda sobre a página
   de antes até publicar, que não tem a linha de perfil nem as linhas dos botões: o `--publicar` leva a página no mesmo
   fecho que leva o código.
+- **Fica diferente do desenho, de propósito:** no perfil de Navegação o «Usar em» mostra só «Fora do jogo», sem o
+  chip tracejado «+ Jogo» (a Navegação não se liga a jogo); o «L3 clique» e o «R3 direção» do mapa e da 06 dizem a
+  mesma palavra do desenho («Teclado na tela», «Rolagem»), e o Toque diz «Movimento do cursor» nas duas.
 
 
 ## 06-navegacao.html
