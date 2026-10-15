@@ -17,6 +17,10 @@ from dataclasses import dataclass
 from typing import Any
 
 from hefesto_dualsense4unix.core.events import EventTopic
+from hefesto_dualsense4unix.core.trigger_effects import (
+    TAMANHO_DO_BLOCO_DO_GATILHO,
+    TriggerMode,
+)
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -24,7 +28,7 @@ logger = get_logger(__name__)
 #: O teto de eventos por lado de cada controle: 50 por segundo.
 INTERVALO_MINIMO_S = 1.0 / 50.0
 
-TAMANHO_DO_BLOCO = 11
+TAMANHO_DO_BLOCO = TAMANHO_DO_BLOCO_DO_GATILHO
 ZONAS_DO_CURSO = 10
 
 DESLIGADO = "desligado"
@@ -88,16 +92,17 @@ def _legado(bloco: bytes) -> Decodificado:
     return ("outro", 1.0 if any(bloco[1:]) else 0.0, 0.0)
 
 
-#: O leitor de cada modo pelo primeiro byte do bloco; o que não está aqui é ``outro``.
+#: O leitor de cada modo pelo primeiro byte do bloco (os bytes são os da ``TriggerMode``); o
+#: que não está aqui é ``outro``.
 _LEITOR_POR_BYTE: dict[int, Callable[[bytes], Decodificado]] = {
-    0x00: _desligado,
-    0x05: _desligado,
-    0x21: _leitor("resistencia", _forca_do_maior),  # (noqa-acento): contrato ASCII
-    0x22: _leitor("arco", _forca_do_byte_3),
-    0x23: _leitor("galope", _forca_do_galope),
-    0x25: _leitor("arma", _forca_do_byte_3),
-    0x26: _leitor("vibracao", _forca_do_maior),
-    0x27: _leitor("metralhadora", _forca_das_duas_amplitudes),
+    TriggerMode.OFF: _desligado,
+    TriggerMode.DESLIGADO_OFICIAL: _desligado,
+    TriggerMode.FEEDBACK: _leitor("resistencia", _forca_do_maior),  # (noqa-acento): contrato ASCII
+    TriggerMode.BOW: _leitor("arco", _forca_do_byte_3),
+    TriggerMode.GALLOPING: _leitor("galope", _forca_do_galope),
+    TriggerMode.WEAPON: _leitor("arma", _forca_do_byte_3),
+    TriggerMode.VIBRATION: _leitor("vibracao", _forca_do_maior),
+    TriggerMode.MACHINE: _leitor("metralhadora", _forca_das_duas_amplitudes),
 }
 
 
