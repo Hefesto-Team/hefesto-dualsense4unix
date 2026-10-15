@@ -243,11 +243,11 @@
       "data": "2026-10-15",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1102032,
+      "piso": 1099158,
       "por_item": {
         "docs": 118856,
         "scripts": 113520,
-        "src": 296092,
+        "src": 293218,
         "tests": 573564
       },
       "razao": "o teto desceu sozinho com o número",
