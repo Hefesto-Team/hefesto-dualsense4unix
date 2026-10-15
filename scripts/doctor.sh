@@ -8914,10 +8914,10 @@ apply_fixes() {
     else
         warn "sudo ausente — não reapliquei udev"
     fi
-    # O gancho UCM do DualSense no cabo ANTES do fix do WirePlumber logo
-    # abaixo, de propósito: o `--install` dele reinicia o WirePlumber, e é esse
-    # restart que reabre a placa pelo gancho — outro `systemctl` aqui seria o
-    # mesmo gesto duas vezes.
+    # O gancho UCM do DualSense no cabo ANTES do fix do WirePlumber logo abaixo, de
+    # propósito: o `--install` dele reinicia o WirePlumber quando o gancho é mais novo
+    # que ele (`_wp_nao_leu_o_disco`), e é esse restart que reabre a placa pelo
+    # gancho — outro `systemctl` aqui seria o mesmo gesto duas vezes.
     fix_ucm_do_dualsense
     if bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --install >/dev/null 2>&1; then
         pass "fix de áudio do WirePlumber aplicado"

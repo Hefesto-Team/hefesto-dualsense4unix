@@ -248,11 +248,44 @@ _poe_o_dropin() {
     return 0
 }
 
+# A hora (época) em que o WirePlumber vivo subiu, ou nada quando não dá para saber.
+_wp_subiu_em() {
+    command -v systemctl >/dev/null 2>&1 || return 0
+    local t
+    t="$(systemctl --user show wireplumber -p ActiveEnterTimestamp --value --timestamp=unix 2>/dev/null)" || return 0
+    t="${t#@}"
+    if [[ "${t}" =~ ^[0-9]+$ && "${t}" -gt 0 ]]; then
+        printf '%s' "${t}"
+    fi
+    return 0
+}
+
+# Um arquivo que ele lê é mais novo que o WirePlumber vivo? Os nossos drop-ins e o UCM do
+# DualSense (o gancho e o verbo, que o `install_ucm_dualsense.sh` grava antes deste script no
+# install e no `doctor --fix`): gravados depois da subida, o WirePlumber ainda não os leu.
+_wp_nao_leu_o_disco() {
+    local subiu f quando raiz="${HEFESTO_RAIZ_UCM:-/usr/share/alsa/ucm2}"
+    subiu="$(_wp_subiu_em)"
+    [[ -n "${subiu}" ]] || return 1
+    for f in "${DROPIN_DST}" "${DROPIN_DISABLE_DST}" "${DROPIN_OUTPUT_DST}" \
+             "${DROPIN_ACORDADO_DST}" "${raiz}/USB-Audio/Hefesto/DualSense-HiFi.conf" \
+             "${raiz}"/conf.d/USB-Audio/*DualSense*.conf; do
+        [[ -f "${f}" ]] || continue
+        quando="$(stat -c %Y "${f}" 2>/dev/null)" || continue
+        if [[ "${quando}" -gt "${subiu}" ]]; then
+            log "${f} é mais novo que o WirePlumber vivo"
+            return 0
+        fi
+    done
+    return 1
+}
+
 # D-1410-O-APLICAR-SEGURA, parte 3: o WirePlumber só reinicia se algo que ele lê MUDOU
-# (drop-in escrito ou tirado, state reescrito). É o único dono da pergunta: reiniciá-lo
-# recria os nós de áudio da sessão, e um `--install` repetido não tem motivo para isso.
+# (drop-in escrito ou tirado, state reescrito) ou ficou mais novo que ele (o UCM que o install
+# gravou antes). É o único dono da pergunta: reiniciá-lo recria os nós de áudio da sessão, e um
+# `--install` repetido não tem motivo para isso.
 restart_wireplumber_se_alterou() {
-    if [[ "${WP_ALTEROU}" -eq 1 ]]; then
+    if [[ "${WP_ALTEROU}" -eq 1 ]] || _wp_nao_leu_o_disco; then
         restart_wireplumber
     else
         log "nada a reiniciar — o WirePlumber já roda com a regra"

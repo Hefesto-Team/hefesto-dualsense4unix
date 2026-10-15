@@ -2,8 +2,10 @@
 
 O usuário mandou, em 14/10/2026: «Reinicia só se mudou». O `--install` do
 `scripts/fix_wireplumber_default_source.sh` reiniciava o WirePlumber a CADA volta, mesmo com
-os drop-ins já iguais; o `install.sh`, o `doctor --fix-safe` e o «Refazer os consertos» da aba
-Sistema passam todos por ele, então o dono da pergunta é um só: `restart_wireplumber_se_alterou`.
+os drop-ins já iguais; o `install.sh`, o `doctor --fix` e o `doctor --fix-safe` passam todos por
+ele, então o dono da pergunta é um só: `restart_wireplumber_se_alterou`. O «Refazer os consertos»
+da aba Sistema não chama este script (o `CONSERTOS` dela é só o `disable_steam_input.sh`): ele não
+reinicia o WirePlumber em volta nenhuma.
 Reiniciar o WirePlumber recria os nós de áudio da sessão (endpoints de háptica, laços), e
 repetir o gesto não tem motivo para isso.
 
@@ -15,6 +17,7 @@ from __future__ import annotations
 import os
 import re
 import subprocess
+import time
 from pathlib import Path
 
 import pytest
@@ -32,24 +35,58 @@ class Lar:
         self.casa = base / "casa"
         self.casa.mkdir()
         self.anotacao = base / "chamadas"
+        #: A hora em que o WirePlumber de mentira «subiu»; o reinício a reescreve.
+        self.subiu = base / "subiu"
         binario = base / "bin"
         binario.mkdir()
         for nome in ("systemctl", "pactl", "wpctl"):
             alvo = binario / nome
+            vivo = (
+                f'case "$*" in\n'
+                f'  *"restart wireplumber"*) date +%s > "{self.subiu}" ;;\n'
+                f'  *"show wireplumber"*) [[ -f "{self.subiu}" ]] && '
+                f'printf "@%s\\n" "$(cat "{self.subiu}")" ;;\n'
+                f'esac\n'
+                if nome == "systemctl" else ""
+            )
             alvo.write_text(
-                f'#!/bin/bash\nprintf "{nome} %s\\n" "$*" >> "{self.anotacao}"\nexit 0\n',
+                f'#!/bin/bash\nprintf "{nome} %s\\n" "$*" >> "{self.anotacao}"\n{vivo}exit 0\n',
                 encoding="utf-8",
             )
             alvo.chmod(0o755)
+        self.ucm = base / "ucm2"
         self.env = {
             "PATH": f"{binario}:/usr/bin:/bin",
             "HOME": str(self.casa),
             "XDG_CONFIG_HOME": str(self.casa / ".config"),
             "XDG_STATE_HOME": str(self.casa / ".local" / "state"),
             "XDG_RUNTIME_DIR": str(base / "rt"),
+            "HEFESTO_RAIZ_UCM": str(self.ucm),
         }
         (base / "rt").mkdir()
         self.dropins = self.casa / ".config" / "wireplumber" / "wireplumber.conf.d"
+
+    def wireplumber_subiu_ha(self, segundos: int) -> int:
+        """Faz o WirePlumber de mentira ter subido há ``segundos``; devolve a época."""
+        quando = int(time.time()) - segundos
+        self.subiu.write_text(f"{quando}\n", encoding="utf-8")
+        return quando
+
+    def envelhecer_os_dropins(self, segundos: int) -> None:
+        agora = time.time()
+        for f in self.dropins.glob("*.conf"):
+            os.utime(f, (agora - segundos, agora - segundos))
+
+    def gancho_ucm(self, idade: int) -> Path:
+        """O gancho UCM do DualSense que o `install_ucm_dualsense.sh` grava, com ``idade`` s."""
+        pasta = self.ucm / "conf.d" / "USB-Audio"
+        pasta.mkdir(parents=True, exist_ok=True)
+        gancho = pasta / (
+            "Sony Interactive Entertainment DualSense Wireless Controller at usb-0000:0c:00..conf")
+        gancho.write_text("# hefesto-ucm-dualsense\n", encoding="utf-8")
+        agora = time.time()
+        os.utime(gancho, (agora - idade, agora - idade))
+        return gancho
 
     def rodar(self, modo: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
@@ -69,9 +106,16 @@ def lar(tmp_path: Path) -> Lar:
     return Lar(tmp_path)
 
 
+@pytest.mark.parametrize("vivo", [False, True], ids=["sem-hora", "com-a-hora-da-subida"])
 @pytest.mark.parametrize("modo", ["--install", "--disable-source"])
-def test_a_segunda_volta_nao_reinicia(lar: Lar, modo: str) -> None:
-    """Duas voltas: a primeira escreve e reinicia; a segunda, igual, deixa o áudio quieto."""
+def test_a_segunda_volta_nao_reinicia(lar: Lar, modo: str, vivo: bool) -> None:
+    """Duas voltas: a primeira escreve e reinicia; a segunda, igual, deixa o áudio quieto.
+
+    ``com-a-hora-da-subida``: o `systemctl` de mentira sabe quando o WirePlumber subiu (o
+    reinício da primeira volta a reescreve), e o drop-in recém-gravado não é mais novo que ele.
+    """
+    if vivo:
+        lar.wireplumber_subiu_ha(3600)
     primeira = lar.rodar(modo)
     assert primeira.returncode in (0, 2), primeira.stdout + primeira.stderr
     assert lar.reinicios() == 1, (
@@ -124,6 +168,34 @@ def test_a_forma_velha_do_dropin_tirada_faz_reiniciar(lar: Lar) -> None:
 
     assert not (velha / NOME_51.replace(".conf", ".lua")).exists()
     assert lar.reinicios() == antes + 1
+
+
+@pytest.mark.parametrize("modo", ["--install", "--disable-source"])
+def test_o_ucm_gravado_depois_da_subida_faz_reiniciar(lar: Lar, modo: str) -> None:
+    """O install e o `doctor --fix` gravam o gancho UCM ANTES deste script, e contam com o reinício
+    dele para a placa do controle reabrir pelo perfil (a háptica pelo cabo). Os drop-ins iguais não
+    podem calar isso: o gancho mais novo que o WirePlumber vivo reinicia; o mais velho, não.
+
+    MORDIDA: tire o ``|| _wp_nao_leu_o_disco`` do ``restart_wireplumber_se_alterou``.
+    """
+    lar.rodar(modo)
+    lar.envelhecer_os_dropins(7200)
+    lar.wireplumber_subiu_ha(3600)
+    antes = lar.reinicios()
+
+    lar.gancho_ucm(idade=5400)
+    lar.rodar(modo)
+    assert lar.reinicios() == antes, "o gancho que o WirePlumber já leu fez reiniciar"
+
+    lar.gancho_ucm(idade=60)
+    lar.rodar(modo)
+    assert lar.reinicios() == antes + 1, (
+        "o gancho UCM gravado depois da subida não reiniciou o WirePlumber: a placa do controle "
+        "fica sem o perfil até um replug"
+    )
+
+    lar.rodar(modo)
+    assert lar.reinicios() == antes + 1, "depois do reinício, o mesmo gancho reiniciou de novo"
 
 
 def test_o_install_e_o_disable_nao_reiniciam_por_conta_propria() -> None:
