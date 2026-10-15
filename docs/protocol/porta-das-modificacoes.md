@@ -68,10 +68,10 @@ Os demais são do jogo e do perfil, e cada um é uma permissão à parte:
 - `jogo.haptica` (`ler:jogo.haptica`) entrega `nome: "jogo.haptica"`: o envelope da háptica por áudio de UM
   controle, `{uniq, jogador, intensidade: [esquerdo, direito], t}`, cada lado de 0 a 1 (o RMS dos canais 3 e 4;
   senoide de fundo de escala vale 1), em passos de 0,02, de 20 em 20 ms, no máximo 50 por segundo por controle e
-  só quando o nível muda. Enquanto não for zero o evento se repete a cada 250 ms. Sem som por meio segundo, ou
-  com o jogo fechado, o zero sai. No Bluetooth é o que o jogo manda (antes do ganho do Hefesto); no cabo é o que
-  a placa recebe (depois do ganho). Não há segundo gravador: o envelope lê o PCM que a ponte do rádio e o ouvido
-  da placa já leem.
+  só quando o nível muda. Enquanto não for zero o evento se repete a cada 250 ms. Sem som por meio segundo, com
+  a fonte seca ou com o jogo fechado, o zero sai. No cabo e no Bluetooth é o que o controle recebe: depois do
+  ganho da háptica dele, e zero quando a vibração não vai a ele. Não há segundo gravador: o envelope lê o PCM
+  que a ponte do rádio e o ouvido da placa já leem.
 
 `jogo.momento`, `sistema.app_abriu` e `sistema.hora` são nomes reservados: nenhum existe como permissão nem tem
 fonte, e uma modificação que peça um deles é recusada como qualquer permissão desconhecida.

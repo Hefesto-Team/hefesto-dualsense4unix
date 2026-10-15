@@ -1,12 +1,11 @@
 """O envelope da háptica por áudio do jogo, dito no barramento (``jogo.haptica``).
 
-O-GATILHO-E-A-HAPTICA-DO-JOGO-VIRAM-EVENTOS-PARA-AS-EXTENSOES-01. Os canais 3-4 do endpoint
-de quatro canais são os motores; o RMS deles, de 0 a 1, sai como
-``{uniq, jogador, intensidade: [esq, dir], t}`` (a escala leva uma senoide de fundo de escala a 1).
-Não há gravador novo: o envelope espia o PCM que o leitor que já existe lê (``espiar_a_haptica``).
-Janelas de 20 ms, passo de 0,02 e teto de 50 por segundo por controle; enquanto a intensidade
-não é zero o evento se repete a cada 250 ms, e o último valor, sobretudo o zero, sempre chega.
-A fonte que seca (o jogo fechou) ou o jogo que sai manda o zero que faltava.
+O-GATILHO-E-A-HAPTICA-DO-JOGO-VIRAM-EVENTOS-PARA-AS-EXTENSOES-01. O RMS dos canais 3-4 (os
+motores), de 0 a 1, sai como ``{uniq, jogador, intensidade: [esq, dir], t}``; a senoide de fundo
+de escala vale 1. Sem gravador novo: ``espiar_a_haptica`` lê o PCM do leitor que já existe. Nos
+dois transportes é o que o controle recebe: a placa do cabo já traz o ganho e o portão, e no rádio
+o envelope aplica os da ponte. Janelas de 20 ms, passo de 0,02, teto de 50 por segundo e batida
+de 250 ms enquanto não é zero; o zero sempre chega, com a fonte seca ou com o jogo que sai.
 """
 from __future__ import annotations
 
@@ -71,8 +70,12 @@ class EnvelopeDaHaptica:
         self._pendente: Nivel | None = None
         self.ultimo_pcm_em = self._relogio()
 
-    def alimentar(self, pcm: bytes | bytearray | memoryview) -> None:
-        """Um pedaço do PCM do endpoint (s16 nativo, ``canais`` intercalados). Nunca levanta."""
+    def alimentar(self, pcm: bytes | bytearray | memoryview, ganho: float = 1.0) -> None:
+        """Um pedaço do PCM do endpoint (s16 nativo, ``canais`` intercalados). Nunca levanta.
+
+        ``ganho`` é o fator de amplitude que o controle leva por cima deste PCM (o do Hefesto
+        no rádio; 1 no cabo, cuja placa já o traz).
+        """
         agora = self._relogio()
         a_dizer: list[tuple[Nivel, float]] = []
         with self._trava:
@@ -94,7 +97,10 @@ class EnvelopeDaHaptica:
                 self._n += tomar
                 pos += tomar
                 if self._n >= self._janela:
-                    nivel = (_nivel(self._soma[0], self._n), _nivel(self._soma[1], self._n))
+                    nivel = (
+                        _nivel(self._soma[0], self._n, ganho),
+                        _nivel(self._soma[1], self._n, ganho),
+                    )
                     self._soma, self._n = [0, 0], 0
                     saiu = self._decidir(nivel, agora)
                     if saiu is not None:
@@ -142,10 +148,10 @@ class EnvelopeDaHaptica:
         return ZERO
 
 
-def _nivel(soma_dos_quadrados: int, n: int) -> float:
+def _nivel(soma_dos_quadrados: int, n: int, ganho: float = 1.0) -> float:
     """O RMS da janela de 0 a 1 (senoide de fundo de escala = 1), em degraus de ``PASSO``."""
     rms = math.sqrt(soma_dos_quadrados / n)
-    bruto = min(1.0, rms * math.sqrt(2.0) / 32768.0)
+    bruto = min(1.0, max(0.0, ganho) * rms * math.sqrt(2.0) / 32768.0)
     return round(round(bruto / PASSO) * PASSO, 4)
 
 
@@ -201,8 +207,15 @@ def espiar_a_haptica(
     *,
     taxa: int,
     canais: int = CANAIS_DO_ENDPOINT,
+    ganho: Callable[[], float] | None = None,
+    vai: Callable[[], bool] | None = None,
 ) -> Callable[[int], bytes]:
-    """A mesma fonte de PCM, e cada bloco que ela entrega passa pelo envelope deste controle."""
+    """A mesma fonte de PCM, e cada bloco que ela entrega passa pelo envelope deste controle.
+
+    ``ganho`` e ``vai`` são os da ponte do rádio, que lê o PCM antes deles: o envelope diz o
+    que chega ao controle, como o do cabo. O bloco que não vai ao controle conta como zero, e
+    a fonte que seca (o leitor recebe vazio) manda o zero na hora, sem esperar o tique.
+    """
     entradas = _entradas_de(daemon, criar=True)
     if entradas is None or not uniq:
         return fonte
@@ -218,11 +231,13 @@ def espiar_a_haptica(
 
     def _ler(quantos: int) -> bytes:
         pcm = fonte(quantos)
-        if pcm:
-            try:
-                envelope.alimentar(pcm)
-            except Exception as exc:  # o som do controle não espera por quem escuta
-                logger.debug("jogo_haptica_envelope_falhou", uniq=uniq, err=str(exc))
+        try:
+            if not pcm or (vai is not None and not vai()):
+                envelope.zerar()
+            else:
+                envelope.alimentar(pcm, 1.0 if ganho is None else float(ganho()))
+        except Exception as exc:  # o som do controle não espera por quem escuta
+            logger.debug("jogo_haptica_envelope_falhou", uniq=uniq, err=str(exc))
         return pcm
 
     return _ler

@@ -213,8 +213,9 @@ def _dizer(
             linha = vista.linhas[chave] = _Linha(
                 b"", False, enviado_em=agora - 1.0, pendente=None
             )
-        if bloco == linha.bloco and linha.pendente is None:
-            return  # o jogo reescreveu o mesmo gatilho
+        if bloco == linha.bloco:
+            linha.pendente = None  # o jogo voltou ao gatilho já dito: o atrasado não vale mais
+            return
         if agora - linha.enviado_em < INTERVALO_MINIMO_S:
             linha.pendente = bloco  # o tique seguinte diz (`bater_o_gatilho`)
             return

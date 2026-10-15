@@ -2146,9 +2146,11 @@ class AltoFalanteSubsystem:
                         continue
                 else:
                     # O-GATILHO-E-A-HAPTICA-DO-JOGO-VIRAM-EVENTOS-PARA-AS-EXTENSOES-01: o
-                    # envelope espia o PCM que a ponte já lê; não há segundo gravador.
+                    # envelope espia o PCM que a ponte já lê, com o ganho e o portão dela.
                     fonte_h = espiar_a_haptica(
-                        self._daemon, uniq, fonte_h, taxa=taxa_da_fonte("haptica")
+                        self._daemon, uniq, fonte_h, taxa=taxa_da_fonte("haptica"),
+                        ganho=functools.partial(GANHO.fator, uniq),
+                        vai=functools.partial(self._a_ponte_leva_a_haptica, uniq),
                     )
             ponte = PonteDeSomPorRadio(
                 uniq=uniq,

@@ -23,7 +23,15 @@ AS MORDIDAS (executadas na implementação, com o md5 conferido na volta):
 * o ouvido do cabo sem o envelope (a classe do produto sem a subclasse) →
   ``test_o_ouvido_do_cabo_diz_o_envelope_sem_segundo_gravador`` reprova;
 * a ponte do rádio sem a fonte espiada →
-  ``test_a_ponte_do_radio_diz_o_envelope_da_fonte_que_ela_le`` reprova.
+  ``test_a_ponte_do_radio_diz_o_envelope_da_fonte_que_ela_le`` reprova;
+* a espia do rádio sem o ganho ou sem o portão da ponte →
+  ``test_no_radio_o_envelope_leva_o_ganho_e_o_portao_que_o_controle_leva`` reprova;
+* a fonte que seca sem o zero imediato (sem tique do pad do P1, como no Modo Nativo) →
+  ``test_a_fonte_que_seca_zera_sem_esperar_o_tique`` e o do ouvido do cabo reprovam;
+* o mesmo bloco que volta com um atrasado na fila (o atrasado não some) →
+  ``test_o_gatilho_que_volta_ao_dito_descarta_o_atrasado`` reprova;
+* o ``subir`` do ouvido do cabo copiado do produto, sem acompanhar o original →
+  ``test_o_ouvido_com_envelope_sobe_como_o_do_produto`` reprova.
 """
 from __future__ import annotations
 
@@ -529,9 +537,14 @@ def test_a_ponte_do_radio_diz_o_envelope_da_fonte_que_ela_le(bancada: Any, mesa:
 
     assert ponte.fonte_de_haptica(1024)  # a ponte lê a fonte dela, e o envelope espia o bloco
 
+    # O controle leva o ganho da háptica dele por cima do PCM: o envelope diz o mesmo.
+    from hefesto_dualsense4unix.daemon.ganho_da_haptica import GANHO
+
+    meia = MEIA * 2 ** 0.5 / 32768
+    nivel = round(round(min(1.0, meia * GANHO.fator(UNIQS[0])) / eh.PASSO) * eh.PASSO, 4)
     eventos = escuta.tudo()
     assert [(e["uniq"], e["jogador"], e["intensidade"]) for e in eventos] == [
-        (UNIQS[0], 1, [0.5, 0.5])
+        (UNIQS[0], 1, [nivel, nivel])
     ]
     monitores = [p for p in bancada.pedidos if p.get("canais") == 4]
     assert len(monitores) == 1, "o envelope abriu um segundo gravador no endpoint"
@@ -547,7 +560,8 @@ def test_o_ouvido_do_cabo_diz_o_envelope_sem_segundo_gravador(
     ouvido._fio.join(timeout=3)
 
     assert isinstance(ouvido, afb.OuvidoDaPlaca), "o ouvido do cabo deixou de ser o do produto"
-    assert [e["intensidade"] for e in escuta.tudo()] == [[0.5, 0.5]]
+    # A fonte de mentira seca depois de dois blocos: o zero sai sem tique nenhum.
+    assert [e["intensidade"] for e in escuta.tudo()] == [[0.5, 0.5], [0.0, 0.0]]
     assert len(bancada.pedidos) == 1, "o envelope abriu um segundo gravador na placa"
     assert bancada.pedidos[0]["no"] == "alsa_output.placa-de-mentira"
     ouvido.descer()
@@ -677,3 +691,119 @@ def test_a_tabela_do_gatilho_nasce_uma_so_com_dois_controles_juntos(mesa: _Mesa)
         f.join()
 
     assert sorted(e["uniq"] for e in escuta.tudo()) == sorted(UNIQS[:2])
+
+
+# 7. A conferência: os dois transportes dizem o mesmo, o zero não depende do tique do P1.
+
+def test_no_radio_o_envelope_leva_o_ganho_e_o_portao_que_o_controle_leva(
+    mesa: _Mesa, relogio: _Relogio
+) -> None:
+    escuta = _Escuta(mesa.daemon.bus, EventTopic.JOGO_HAPTICA)
+    estado = {"ganho": 0.6, "vai": True}
+    fonte = eh.espiar_a_haptica(
+        mesa.daemon, UNIQS[0], lambda _n: _pcm_de((2, 3), MEIA, JANELA), taxa=TAXA,
+        ganho=lambda: estado["ganho"], vai=lambda: estado["vai"],
+    )
+
+    fonte(0)
+    assert [e["intensidade"] for e in escuta.tudo()] == [[0.3, 0.3]], (
+        "no rádio o envelope ignorou o ganho que o controle leva (o cabo já o traz da placa)"
+    )
+
+    estado["vai"] = False  # o jogo largou este controle, ou a háptica dele foi a zero
+    relogio.avancar(0.05)
+    fonte(0)
+    assert [e["intensidade"] for e in escuta.tudo()] == [[0.0, 0.0]], (
+        "o controle parou e o envelope seguiu dizendo a vibração"
+    )
+
+
+def test_a_ponte_do_radio_passa_o_ganho_e_o_portao_dela_a_espia(
+    bancada: Any, mesa: _Mesa, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    escuta = _Escuta(mesa.daemon.bus, EventTopic.JOGO_HAPTICA)
+    bancada.tocando[f"endpoint::{UNIQS[0]}"] = True
+    bancada.sub._casar_as_pontes(bancada.controles)
+    ponte = _PonteDeMentira.criadas[-1]
+    monkeypatch.setattr(
+        bancada.sub, "_leva_da_ponte", {**dict(bancada.sub._leva_da_ponte), UNIQS[0]: False}
+    )
+
+    ponte.fonte_de_haptica(1024)
+
+    assert [e["intensidade"] for e in escuta.tudo()] == [], (
+        "a ponte não leva a háptica a este controle, e o envelope disse a vibração"
+    )
+
+
+def test_a_fonte_que_seca_zera_sem_esperar_o_tique(mesa: _Mesa, relogio: _Relogio) -> None:
+    escuta = _Escuta(mesa.daemon.bus, EventTopic.JOGO_HAPTICA)
+    entregues = iter([_pcm_de((2, 3), MEIA, JANELA)])
+    fonte = eh.espiar_a_haptica(mesa.daemon, UNIQS[2], lambda _n: next(entregues, b""), taxa=TAXA)
+
+    assert fonte(0)
+    relogio.avancar(0.001)  # dentro do teto: o zero não espera por ele
+    assert fonte(0) == b""
+
+    assert [e["intensidade"] for e in escuta.tudo()] == [[0.5, 0.5], [0.0, 0.0]]
+
+
+def test_o_gatilho_que_volta_ao_dito_descarta_o_atrasado(
+    mesa: _Mesa, relogio: _Relogio
+) -> None:
+    escuta = _eventos(mesa)
+    a, b = _resistencia(3, 6), _resistencia(3, 2)
+
+    gp.apply_game_trigger(mesa.daemon, "left", a, target_uniq=UNIQS[3])
+    relogio.avancar(0.005)
+    gp.apply_game_trigger(mesa.daemon, "left", b, target_uniq=UNIQS[3])  # o teto atrasa
+    relogio.avancar(0.005)
+    gp.apply_game_trigger(mesa.daemon, "left", a, target_uniq=UNIQS[3])  # e o jogo volta
+    relogio.avancar(0.05)
+    gj.bater_o_gatilho(mesa.daemon)
+
+    assert [e["forca"] for e in escuta.tudo()] == [0.75], (
+        "o gatilho que o jogo já desfez saiu, ou o já dito saiu de novo"
+    )
+
+
+def test_o_ouvido_com_envelope_sobe_como_o_do_produto() -> None:
+    """O ``subir`` do ouvido do cabo é cópia do de ``OuvidoDoNo`` com uma espia a mais.
+
+    O gancho de um ponto só (``fonte_que_ouve``) é de outro módulo; enquanto ele não
+    existe, esta régua prende a cópia ao original: mudou um, o outro tem de acompanhar.
+    """
+    import ast
+    import inspect
+    import textwrap
+
+    class _SemAEspia(ast.NodeTransformer):
+        def visit_ImportFrom(self, node: ast.ImportFrom) -> Any:
+            return None
+
+        def visit_Attribute(self, node: ast.Attribute) -> Any:
+            self.generic_visit(node)
+            if isinstance(node.value, ast.Name) and node.value.id == "afb":
+                return ast.Name(id=node.attr, ctx=node.ctx)
+            return node
+
+        def visit_Call(self, node: ast.Call) -> Any:
+            self.generic_visit(node)
+            if isinstance(node.func, ast.Name) and node.func.id == "espiar_a_haptica":
+                return node.args[2]
+            return node
+
+    def _corpo(funcao: Any) -> str:
+        definicao = ast.parse(textwrap.dedent(inspect.getsource(funcao))).body[0]
+        assert isinstance(definicao, ast.FunctionDef)
+        corpo = [
+            n for n in definicao.body
+            if not (isinstance(n, ast.Expr) and isinstance(n.value, ast.Constant))
+        ]
+        modulo = _SemAEspia().visit(ast.Module(body=corpo, type_ignores=[]))
+        return ast.dump(modulo)
+
+    copia = eh._com_envelope(afb.OuvidoDaPlaca).subir
+    assert _corpo(copia) == _corpo(afb.OuvidoDaPlaca.subir), (
+        "o subir do ouvido do cabo mudou no produto e a cópia com o envelope não acompanhou"
+    )
