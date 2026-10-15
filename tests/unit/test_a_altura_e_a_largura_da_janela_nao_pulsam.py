@@ -109,26 +109,32 @@ piloto.tela.janela.destroy()
 """
 
 
+def _ambiente_do_lar(lar: Path) -> dict[str, str]:
+    """O ambiente de um lar de mentira: sem a sessão, o barramento e o som de quem roda."""
+    env = {
+        k: v for k, v in os.environ.items()
+        if k not in {
+            "DISPLAY", "WAYLAND_DISPLAY", "DBUS_SESSION_BUS_ADDRESS", "PULSE_SERVER",
+            "PIPEWIRE_REMOTE", "HEFESTO_SEM_JANELA", "HEFESTO_NA_TELA",
+        }
+    }
+    env.update(
+        HOME=str(lar), XDG_CONFIG_HOME=str(lar / "c"), XDG_DATA_HOME=str(lar / "d"),
+        XDG_STATE_HOME=str(lar / "s"), XDG_CACHE_HOME=str(lar / "k"),
+        XDG_RUNTIME_DIR=str(lar / "r"), GDK_BACKEND="x11",
+        PYTHONPATH=str(RAIZ / "src"), PYTHONDONTWRITEBYTECODE="1",
+    )
+    for pasta in ("c", "d", "s", "k", "r"):
+        (lar / pasta).mkdir()
+    (lar / "r").chmod(0o700)
+    return env
+
+
 def _rodar(cenario: str, mordida: str = "", aba: str = PAGINA) -> tuple[dict[str, Any], str]:
     """Um cenário num processo próprio: Xvfb próprio, lar de mentira, nenhuma sessão do usuário."""
     lar = Path(tempfile.mkdtemp(prefix="vj-", dir="/tmp"))
     try:
-        env = {
-            k: v for k, v in os.environ.items()
-            if k not in {
-                "DISPLAY", "WAYLAND_DISPLAY", "DBUS_SESSION_BUS_ADDRESS", "PULSE_SERVER",
-                "PIPEWIRE_REMOTE", "HEFESTO_SEM_JANELA", "HEFESTO_NA_TELA",
-            }
-        }
-        env.update(
-            HOME=str(lar), XDG_CONFIG_HOME=str(lar / "c"), XDG_DATA_HOME=str(lar / "d"),
-            XDG_STATE_HOME=str(lar / "s"), XDG_CACHE_HOME=str(lar / "k"),
-            XDG_RUNTIME_DIR=str(lar / "r"), GDK_BACKEND="x11",
-            PYTHONPATH=str(RAIZ / "src"), PYTHONDONTWRITEBYTECODE="1",
-        )
-        for pasta in ("c", "d", "s", "k", "r"):
-            (lar / pasta).mkdir()
-        (lar / "r").chmod(0o700)
+        env = _ambiente_do_lar(lar)
         proc = subprocess.run(
             ["xvfb-run", "-a", "-s", "-screen 0 1920x1080x24", sys.executable, "-c", _AJUDANTE,
              cenario, aba, str(TIQUES), mordida,
@@ -206,3 +212,70 @@ def test_o_instrumento_acusa_a_barra_que_solta_a_altura() -> None:
     assert _mudancas(tabela, ".miolo") >= 2, (
         f"o contador não viu uma janela que muda de altura de verdade: {tabela['fichas']}")
     assert tabela["janela_gtk"] >= 2, "o GTK nem registrou a mudança que a mordida causou"
+
+
+# --- a janela com barra do instrumento nunca nasce na tela de quem chama ----------------------
+
+VIVO = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "hefesto_vivo.py"
+
+#: O `--help` sai no `parse_args`, antes de qualquer janela: o que sobra é a tela que o GTK
+#: abriu ao ser importado pelo piloto chamado como programa.
+_TELA_DO_PROGRAMA = r"""
+import os, runpy, sys
+de_fora = os.environ["DISPLAY"]
+sys.argv = [sys.argv[1], "--conta-tamanho", "5", "--help"]
+try:
+    runpy.run_path(sys.argv[0], run_name="__main__")
+except SystemExit:
+    pass
+from gi.repository import Gdk
+print("TELA", Gdk.Display.get_default().get_name(), "DE-FORA", de_fora)
+"""
+
+#: Quem importa o piloto ANTES do desvio (o GTK já abriu a tela de quem chamou) e pede o
+#: `--conta-tamanho`: o `main()` tem de recusar antes de existir janela.
+_IMPORTOU_ANTES = r"""
+import sys
+sys.path.insert(0, sys.argv[1])
+import hefesto_vivo as hv
+sys.argv = ["hefesto_vivo.py", "--conta-tamanho", "5", "--sem-cor", "--sem-ondas"]
+try:
+    hv.main()
+except SystemExit as fim:
+    print("SAIU", fim.code)
+else:
+    print("ABRIU A JANELA")
+"""
+
+
+def _sob_xvfb(codigo: str, *argumentos: str) -> str:
+    lar = Path(tempfile.mkdtemp(prefix="vj-", dir="/tmp"))
+    try:
+        proc = subprocess.run(
+            ["xvfb-run", "-a", sys.executable, "-c", codigo, *argumentos],
+            env=_ambiente_do_lar(lar), capture_output=True, text=True, timeout=180,
+            check=False,
+        )
+    finally:
+        shutil.rmtree(lar, ignore_errors=True)
+    return proc.stdout + proc.stderr
+
+
+def test_o_programa_desvia_a_tela_antes_do_gtk() -> None:
+    """O X do `xvfb-run` faz o papel da sessão de quem chama: o GTK do piloto não pode abri-lo.
+
+    MORDIDA: devolver o desvio ao `main()` (depois do `import` do GTK) — a tela aberta vira a
+    de fora, que na máquina de quem usa é a tela do usuário."""
+    saida = _sob_xvfb(_TELA_DO_PROGRAMA, str(VIVO))
+    linha = next((x for x in saida.splitlines() if x.startswith("TELA ")), "")
+    assert linha, saida[-1500:]
+    _, aberta, _, de_fora = linha.split()
+    assert aberta != de_fora, f"o GTK do piloto abriu a tela de quem chamou ({aberta}):\n{saida}"
+
+
+def test_quem_importou_o_gtk_antes_recebe_a_recusa_e_nenhuma_janela() -> None:
+    """MORDIDA: tirar `_recusar_a_tela_que_nao_foi_desviada` do `main()` — o piloto abre a
+    janela com barra na tela que já estava aberta."""
+    saida = _sob_xvfb(_IMPORTOU_ANTES, str(VIVO.parent))
+    assert "ABRIU A JANELA" not in saida, saida[-1500:]
+    assert "REPROVA: a janela do `--conta-tamanho` abriria na tela" in saida, saida[-1500:]

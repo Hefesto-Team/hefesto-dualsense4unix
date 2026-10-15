@@ -22,6 +22,20 @@ for _p in (str(AQUI), str(RAIZ / "src")):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
+
+def _pede_a_tela_de_mentira(argv: list[str], ambiente: Any) -> bool:
+    """O `--conta-tamanho` sem `--oculta` abre uma janela com barra: ela nasce num Xvfb próprio."""
+    conta = any(a == "--conta-tamanho" or a.startswith("--conta-tamanho=") for a in argv)
+    return conta and "--oculta" not in argv and ambiente.get("HEFESTO_NA_TELA") != "1"
+
+
+# O GTK abre a tela NA IMPORTAÇÃO: o desvio para o Xvfb tem de vir antes dele, ou a janela com
+# barra do `--conta-tamanho` nasce na sessão de quem chamou (o `main()` recusa esse caso).
+if __name__ == "__main__" and _pede_a_tela_de_mentira(sys.argv[1:], os.environ):
+    from hefesto_dualsense4unix.utils.tela_de_mentira import garantir_tela_de_mentira
+
+    garantir_tela_de_mentira()
+
 import gi  # noqa: E402
 
 gi.require_version("Gtk", "3.0")
@@ -4556,6 +4570,25 @@ def _o_processo_da_janela() -> Iterator[None]:
             loader.desligar_a_leitura_pela_assinatura()
 
 
+def _recusar_a_tela_que_nao_foi_desviada(desviada: str | None) -> None:
+    """Sai se a tela que o GTK abriu não é o Xvfb do desvio.
+
+    O GTK abriu a tela ao ser importado: quem importou o piloto antes do desvio (ou o chamou
+    com `--conta-tamanho` abreviado) já está falando com a sessão de quem chamou, e o desvio
+    de agora só muda o ambiente."""
+    from gi.repository import Gdk
+
+    aberta = Gdk.Display.get_default()
+    nome = aberta.get_name() if aberta is not None else "(nenhuma)"
+    if desviada is None or nome != desviada:
+        raise SystemExit(
+            f"REPROVA: a janela do `--conta-tamanho` abriria na tela {nome}, que não é o X de "
+            "mentira. Rode `hefesto_vivo.py --conta-tamanho N` direto (o desvio vem antes do "
+            "GTK), no lar de mentira, ou com `--oculta`."
+        )
+    print(f"[conta-tamanho] a janela com barra nasce no Xvfb {nome}", file=sys.stderr)
+
+
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--oculta", action="store_true",
@@ -4641,7 +4674,7 @@ def main() -> None:
         # A janela tem barra e é de verdade: nasce no Xvfb próprio, nunca na sessão do usuário.
         from hefesto_dualsense4unix.utils.tela_de_mentira import garantir_tela_de_mentira
 
-        garantir_tela_de_mentira()
+        _recusar_a_tela_que_nao_foi_desviada(garantir_tela_de_mentira(anunciar=False))
 
     if args.conta_mutacoes and not args.oculta:
         print("[conta-mutações] ligando `--oculta`: ela tem UMA tela.")

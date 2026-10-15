@@ -516,10 +516,15 @@ class JanelaDaAba:
 
     def fechar_por_sinal(self, sinais: tuple[signal.Signals, ...] = SINAIS_DE_FIM) -> list[int]:
         """Liga ao laço do GLib os sinais que encerram a janela: escreve a linha e sai pelo caminho
-        normal (o `finally` do processo devolve o que as abas seguravam). Devolve as fontes."""
+        normal (o `finally` do processo devolve o que as abas seguravam). Devolve as fontes.
+
+        O sinal que o processo já recebeu IGNORADO fica ignorado: o lançador nasce com
+        `nohup`, que pede a janela de pé quando o terminal fecha, e ligar o SIGHUP ao fim
+        desfaria esse pedido."""
         return [
             GLib.unix_signal_add(GLib.PRIORITY_HIGH, int(sinal), self._chegou_o_sinal, int(sinal))
             for sinal in sinais
+            if signal.getsignal(sinal) is not signal.SIG_IGN
         ]
 
     def _chegou_o_sinal(self, numero: int) -> bool:
