@@ -3595,7 +3595,7 @@ check_o_pad_no_uhid() {
     [[ -n "${py}" ]] || { info "sem python — não sei quais pads ficaram no uhid"; return; }
     saida="$(HEFESTO_SRC="${ROOT_DIR}/src" "${py}" - \
         <(journalctl --user -b -u "${APP_ID}.service" -o short-iso-precise --no-pager 2>/dev/null \
-            | grep -E 'daemon_starting|pad_usb_|uhid_device_created') <<'PY' 2>/dev/null
+            | grep -E 'daemon_starting|pad_usb_|uhid_device_created|vpad_parou') <<'PY' 2>/dev/null
 import os
 import sys
 

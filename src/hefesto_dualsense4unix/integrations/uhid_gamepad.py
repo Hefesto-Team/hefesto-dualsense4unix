@@ -1821,6 +1821,8 @@ class UhidDualSense:
         self._gadget_outra_vez = False
         self._destruir_o_device()
         _MACS_DOS_VPADS_VIVOS.despir(self)
+        # o doctor conta quem está no uhid pelo diário: o pad que parou sai da conta.
+        logger.info("vpad_parou", player=self.player)
 
     def ancorar_no_aparelho(self, identidade: str | None) -> bool:
         """O pad é do aparelho ``identidade`` (o MAC do físico). True = mudou.
@@ -2289,6 +2291,9 @@ _GADGET_VIGIA_S = 0.25
 _GADGET_VEZ_DA_ESCRITA_MS = 8
 _GADGET_LEITURA = 512
 _GADGET_PERGUNTA_A_CADA = 8
+#: a rajada de leituras que falham e não acaba (o gadget de pé, o ENOMEM sem
+#: fim: 15/10/2026, mais de dois minutos) diz-se a cada este tanto, e não só no fim.
+_GADGET_RAJADA_LONGA_S = 60.0
 #: quanto o som espera a âncora do gadget montado antes de emprestar uma: a
 #: enumeração e duas voltas do relógio da identidade (o P1 que monta sem dono).
 _GADGET_A_CAMINHO_S = _GADGET_ENUMERA_S + 4.0
@@ -2323,6 +2328,7 @@ class _GadgetDoPad:
     #: a rajada de leituras que falham: quantas e o último erro (uma linha por rajada).
     leituras_falhas: int = 0
     leitura_erro: str = ""
+    leitura_falhou_desde: float = 0.0
     #: quanto o som espera a âncora deste gadget (a fila da enumeração conta).
     a_caminho_s: float = _GADGET_A_CAMINHO_S
 
@@ -2563,6 +2569,8 @@ def _o_pad_em_usb(pad: UhidDualSense, features: dict[int, bytes]) -> bool:
     gadget = _GADGETS_ESTACIONADOS.retomar(pad.identity)
     if gadget is None and pad_usb.porta_fora(pad.player):
         pad_usb.anotar_sem_porta(pad.identity or "", "porta_fora")
+        logger.info("pad_usb_porta_fora", player=pad.player,
+                    falhas=pad_usb.FALHAS_ATE_A_PORTA_SAIR)
         return False
     if gadget is None:
         faltam = CONTRATO_QUE_FALTA()
@@ -2703,6 +2711,11 @@ def _drenar_o_gadget(pad: UhidDualSense, fd: int, eventos: int) -> bool:
                 return True
             gadget.leituras_falhas += 1
             gadget.leitura_erro = str(exc)
+            agora = time.monotonic()
+            if gadget.leituras_falhas == 1:
+                gadget.leitura_falhou_desde = agora
+            elif agora - gadget.leitura_falhou_desde >= _GADGET_RAJADA_LONGA_S:
+                _fechar_a_rajada(pad, gadget)
             if pad._started:
                 _o_gadget_caiu(pad, gadget, gadget.leituras_falhas)
             if pad._gadget_caiu:

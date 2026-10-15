@@ -155,6 +155,7 @@ class TestAFalhaDeUmNaoViraAFalhaDeTodos:
         try:
             assert p3.start() and p3._gadget is None
             assert pad_usb.porque_sem_porta(IDENTIDADE_P3) == "porta_fora"
+            assert mesa.eventos("pad_usb_porta_fora") == 2, "o P3 novo fica no uhid calado"
             assert p4.start() and p4._gadget is not None
             assert len(mesa.b.pedidos) == 3
         finally:
@@ -215,6 +216,42 @@ class TestALeituraQueFalhaPerguntaEDorme:
         assert mesa.eventos("pad_usb_leitura_falhou") == 1, mesa.espiao.eventos
         intervalos = [b - a for a, b in itertools.pairwise(tentativas)]
         assert min(intervalos) >= 0.04, intervalos
+        assert p1._gadget_caiu is False
+
+    def test_a_rajada_que_nao_acaba_se_diz_durante_e_nao_so_no_fim(
+        self, mesa: Mesa, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Mordida: sem a janela da rajada longa, o ENOMEM sem fim fica calado até o stop.
+
+        Medido em 15/10/2026: uma rajada de mais de dois minutos com o gadget de pé.
+        """
+        monkeypatch.setattr(
+            mesa.ug, "HIDRAW_DO_GADGET", lambda _s: ("hidraw9", INTERFACE_DO_GADGET)
+        )
+        monkeypatch.setattr(mesa.ug, "_GADGET_VIGIA_S", 0.02)
+        monkeypatch.setattr(mesa.ug, "_GADGET_RAJADA_LONGA_S", 0.15)
+        p1 = mesa.pad(1, "aa:bb:cc:00:00:11")
+        alvo: list[int] = []
+        ler = os.read
+
+        def ler_com_falha(fd: int, n: int) -> bytes:
+            if alvo and fd == alvo[0]:
+                raise OSError(errno.ENOMEM, "Cannot allocate memory")
+            return ler(fd, n)
+
+        try:
+            assert p1.start()
+            assert mesa.b.esperar(lambda: p1.is_bound)
+            assert mesa.b.jogo is not None
+            alvo.append(p1._fd)
+            monkeypatch.setattr(os, "read", ler_com_falha)
+            mesa.b.jogo.send(bytes([0x02]) + bytes(47))
+            assert mesa.b.esperar(
+                lambda: mesa.eventos("pad_usb_leitura_falhou") >= 2, segundos=4.0
+            ), "a rajada sem fim não se disse antes do stop"
+        finally:
+            monkeypatch.setattr(os, "read", ler)
+            p1.stop()
         assert p1._gadget_caiu is False
 
     def test_a_leitura_que_falha_com_o_gadget_sumido_derruba_o_pad(
@@ -282,6 +319,24 @@ class TestQuemFicouNoUhid:
             _linha("pad_usb_enumerou", "gadget=hefesto-pad-2 hidraw=hidraw9 player=3"),
         ]
         assert pad_usb.quem_ficou_no_uhid(linhas) == {}
+
+    def test_o_pad_que_parou_sai_da_conta_e_a_porta_fora_volta_com_o_novo(self) -> None:
+        linhas = [
+            SUBIDA,
+            _linha("pad_usb_nao_enumerou_fica_o_uhid", "player=3 prazo_s=15.0", "warning"),
+            _linha("uhid_device_created", "mac=02:fe:00:00:00:03 name=x player=3"),
+            _linha("pad_usb_nao_enumerou_fica_o_uhid", "player=4 prazo_s=15.0", "warning"),
+            _linha("vpad_parou", "player=3"),
+        ]
+        so_o_p4 = {4: "nao_enumerou"}  # (noqa-acento): chave de máquina
+        assert pad_usb.quem_ficou_no_uhid(linhas) == so_o_p4
+        linhas += [
+            _linha("pad_usb_porta_fora", "falhas=2 player=3"),
+            _linha("uhid_device_created", "mac=02:fe:00:00:00:03 name=x player=3"),
+        ]
+        assert pad_usb.quem_ficou_no_uhid(linhas) == {
+            3: "porta_fora", 4: "nao_enumerou",  # (noqa-acento): chave de máquina
+        }
 
     def test_sem_contrato_vale_para_quem_nasce_depois(self) -> None:
         linhas = [
@@ -354,5 +409,14 @@ class TestODoctorLeOQueODaemonViu:
         saida = _doctor(lar, [
             SUBIDA,
             _linha("pad_usb_enumerou", "gadget=hefesto-pad-0 hidraw=hidraw8 player=1"),
+        ])
+        assert "[ OK ]" in saida and "[WARN]" not in saida, saida
+
+    def test_o_pad_que_parou_nao_fica_no_uhid_do_doctor(self, lar: Path) -> None:
+        """Mordida: o filtro do diário sem o ``vpad_parou`` deixa o P3 que saiu no uhid."""
+        saida = _doctor(lar, [
+            SUBIDA,
+            _linha("pad_usb_nao_enumerou_fica_o_uhid", "player=3 prazo_s=15.0", "warning"),
+            _linha("vpad_parou", "player=3"),
         ])
         assert "[ OK ]" in saida and "[WARN]" not in saida, saida

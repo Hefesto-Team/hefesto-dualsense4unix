@@ -649,7 +649,7 @@ def quem_ficou_no_uhid(linhas: Iterable[str]) -> dict[int, str] | None:
     ``pad_usb_sem_contrato_fica_o_uhid`` sai uma vez e vale para todo
     ``uhid_device_created`` sem outro motivo depois dele; o
     ``pad_usb_indisponivel_fica_o_uhid`` (o broker recusou) vale para o
-    seguinte. O ``pad_usb_enumerou`` tira o jogador da conta.
+    seguinte. O ``pad_usb_enumerou`` e o ``vpad_parou`` tiram o jogador da conta.
     """
     eventos: list[tuple[str, int | None]] = []
     for linha in linhas:
@@ -671,7 +671,7 @@ def quem_ficou_no_uhid(linhas: Iterable[str]) -> dict[int, str] | None:
             indisponivel = True
         elif jogador is None:
             continue
-        elif evento == "pad_usb_enumerou":
+        elif evento in ("pad_usb_enumerou", "vpad_parou"):
             no_uhid.pop(jogador, None)
         elif evento in _POR_QUE_NO_UHID:
             no_uhid[jogador] = _POR_QUE_NO_UHID[evento]
