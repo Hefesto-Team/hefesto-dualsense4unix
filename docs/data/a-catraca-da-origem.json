@@ -243,14 +243,14 @@
       "data": "2026-10-15",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1108540,
+      "piso": 1102032,
       "por_item": {
-        "docs": 118849,
-        "scripts": 113473,
-        "src": 299142,
-        "tests": 577076
+        "docs": 118856,
+        "scripts": 113520,
+        "src": 296092,
+        "tests": 573564
       },
-      "razao": "tamanho: +5344 linhas (1103196 -> 1108540), pagas por Origem: D-1510-O-ENVELOPE-DIZ-O-QUE-O-CONTROLE-RECEBE-NOS-DOIS-TRANSPORTES; registrado no fecho, topo e4e19b1885e2",
+      "razao": "o teto desceu sozinho com o número",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -440,7 +440,7 @@
         }
       ],
       "unidade": "linhas",
-      "universo": 2863
+      "universo": 2857
     }
   }
 }
