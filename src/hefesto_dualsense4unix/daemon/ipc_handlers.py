@@ -2278,8 +2278,8 @@ class IpcHandlersMixin:
         if navegacao is not None:
             result["navegacao"] = navegacao
 
+        _com_a_marca_do_f_hid(result)
         return result
-
 
     def _enrich_controllers_per_controller(
         self, entries: list[dict[str, Any]], state: Any
@@ -5859,6 +5859,20 @@ def _a_luz_do_jogo_no_controle(status: dict[str, Any], uniq: Any) -> None:
     do_jogo = luz_do_mic_do_jogo(str(uniq or ""))
     if do_jogo is not None:
         status["luz_do_mic_do_jogo"] = int(do_jogo)
+
+
+
+def _com_a_marca_do_f_hid(result: dict[str, Any]) -> None:
+    """O ``usb_f_hid`` dos pads USB virtuais é o curado? Só da memória do pad.
+
+    O pad anota a marca ``get_report_sized`` ao montar o gadget; o
+    ``state_full`` não lê o sysfs. None = nenhum pad USB mediu ainda.
+    """
+    emulacao = result.get("gamepad_emulation")
+    if isinstance(emulacao, dict):
+        from hefesto_dualsense4unix.integrations import pad_usb
+
+        emulacao["get_report_sized"] = pad_usb.marca_do_f_hid_medida()
 
 
 __all__ = ["IpcHandlersMixin"]

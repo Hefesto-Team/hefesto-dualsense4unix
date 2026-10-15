@@ -91,6 +91,11 @@ MODULOS_DO_GADGET = ("libcomposite", "usb_f_hid", "usbip_vudc", "vhci_hcd")
 #: O ioctl do ``f_hid`` que pré-carrega as features 0x05, 0x09 e 0x20.
 CONTRATO_DO_IOCTL = "GADGET_HID_WRITE_GET_REPORT"
 
+#: A marca do ``usb_f_hid`` curado (``assets/dkms/usb-f-hid``). O de fábrica
+#: responde o GET_REPORT com 64 bytes e sem o pacote vazio, e o jogo no Proton
+#: espera 5 s por pedido de feature. Sem a marca o pad sobe igual, mais lento.
+MARCA_DO_F_HID = "/sys/module/usb_f_hid/parameters/get_report_sized"
+
 BUS_USB = 0x0003
 BUS_BT = 0x0005
 
@@ -374,6 +379,8 @@ _SEM_PORTA: dict[str, str] = {}
 #: o motivo de quem nunca disse nada: o pad do aparelho não pediu gadget.
 SEM_GADGET = "sem_gadget"
 _CONTRATO_QUE_FALTOU: list[str] = []
+#: a marca do ``usb_f_hid`` medida ao montar o último gadget (None = não medida).
+_MARCA_DO_F_HID: list[bool | None] = [None]
 #: ``{serial do gadget: (12 hex do aparelho ou "", prazo monotônico)}``: o gadget
 #: montado que ainda não deu a âncora. "" é o pad que montou antes de saber de
 #: quem é (o P1 do boot, com o ``primary_uniq`` ainda vazio).
@@ -588,6 +595,32 @@ def contrato_que_faltou_ao_montar() -> list[str]:
         return list(_CONTRATO_QUE_FALTOU)
 
 
+def f_hid_fecha_a_resposta(
+    caminho: str = MARCA_DO_F_HID,
+    *,
+    ler: Callable[[str], str] = _ler_atributo,
+    existe: Callable[[str], bool] = os.path.exists,
+) -> bool | None:
+    """O ``usb_f_hid`` carregado é o curado? None = o módulo não está no ar."""
+    if existe(caminho):
+        return ler(caminho).upper() in ("Y", "1")
+    modulo = os.path.dirname(os.path.dirname(caminho))
+    return False if existe(modulo) else None
+
+
+def medir_a_marca_do_f_hid(caminho: str = MARCA_DO_F_HID) -> bool | None:
+    """Lê a marca e a anota para o ``daemon.state_full`` (só da memória)."""
+    marca = f_hid_fecha_a_resposta(caminho)
+    with _TRAVA:
+        _MARCA_DO_F_HID[0] = marca
+    return marca
+
+
+def marca_do_f_hid_medida() -> bool | None:
+    with _TRAVA:
+        return _MARCA_DO_F_HID[0]
+
+
 # --- o contrato do kernel (a cura 6) ----------------------------------------
 
 
@@ -657,6 +690,7 @@ __all__ = [
     "CONTRATO_DO_IOCTL",
     "GADGET_HID_READ_GET_REPORT_ID",
     "GADGET_HID_WRITE_GET_REPORT",
+    "MARCA_DO_F_HID",
     "MAX_PADS_USB",
     "MODULOS_DO_GADGET",
     "SEM_GADGET",
@@ -680,11 +714,14 @@ __all__ = [
     "encurtar_a_caminho",
     "escrever_get_report",
     "esquecer_gadget",
+    "f_hid_fecha_a_resposta",
     "gadget_chegou",
     "hidraw_do_gadget",
     "interface_do_aparelho",
     "interface_do_gadget",
     "ler_o_id_do_get_report",
+    "marca_do_f_hid_medida",
+    "medir_a_marca_do_f_hid",
     "pacote_do_get_report",
     "pad_decidido",
     "porque_sem_porta",

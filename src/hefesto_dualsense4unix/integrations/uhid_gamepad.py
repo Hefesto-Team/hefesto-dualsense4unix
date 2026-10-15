@@ -2500,6 +2500,22 @@ def _avisar_o_contrato_que_falta(faltam: list[str]) -> None:
     logger.warning("pad_usb_sem_contrato_fica_o_uhid", contratos=list(faltam))
 
 
+def _avisar_o_f_hid_sem_marca() -> None:
+    """Uma linha só: o pad sobe no ``usb_f_hid`` de fábrica, mais lento no Proton."""
+    if _F_HID_SEM_MARCA_AVISADO:
+        return
+    _F_HID_SEM_MARCA_AVISADO.append(True)
+    logger.warning(
+        "pad_usb_f_hid_de_fabrica",
+        marca=pad_usb.MARCA_DO_F_HID,
+        efeito="o jogo no Proton espera 5 s por pedido de feature",
+        cura="./install.sh (o hefesto-usb-f-hid pelo DKMS)",
+    )
+
+
+_F_HID_SEM_MARCA_AVISADO: list[bool] = []
+
+
 def _o_pad_em_usb(pad: UhidDualSense, features: dict[int, bytes]) -> bool:
     """O pad nasce no gadget? False = segue o uhid de sempre, intacto."""
     if pad._sem_gadget or pad.blueprint is None:
@@ -2520,6 +2536,8 @@ def _o_pad_em_usb(pad: UhidDualSense, features: dict[int, bytes]) -> bool:
                                  (DUALSENSE_VENDOR, pad.product))
         if gadget is None:
             return False
+    if pad_usb.medir_a_marca_do_f_hid() is False:
+        _avisar_o_f_hid_sem_marca()
     try:
         for report_id in _FEATURES_DO_PROBE:
             if report_id in features:

@@ -8268,6 +8268,61 @@ check_hefesto_hid_playstation_dkms() {
     fi
 }
 
+# O-F-HID-FECHA-A-RESPOSTA (14/10/2026): o usb_f_hid dos pads USB virtuais. O
+# de fábrica responde o GET_REPORT sempre com 64 bytes e sem o pacote vazio; o
+# Wine e o SDL pedem 128, e cada pedido de feature espera 5 s. A marca do curado
+# é o parâmetro `get_report_sized`; nada mais no sysfs separa os dois. Sem o
+# módulo no ar (nenhum pad USB virtual) não há o que conferir. Ganchos
+# `HEFESTO_DOCTOR_KERNEL`, `HEFESTO_DOCTOR_SYS_MODULE` e o `modinfo` do PATH.
+_usb_f_hid_baseline() {
+    local c
+    for c in "${ROOT_DIR}/assets/dkms/usb-f-hid/patch/BASELINE" \
+             "/usr/share/hefesto-dualsense4unix/dkms/usb-f-hid/patch/BASELINE"; do
+        [[ -r "${c}" ]] && { printf '%s\n' "${c}"; return 0; }
+    done
+    return 1
+}
+
+check_hefesto_usb_f_hid_dkms() {
+    local kver="${HEFESTO_DOCTOR_KERNEL:-$(uname -r)}"
+    local modulo="${HEFESTO_DOCTOR_SYS_MODULE:-/sys/module}/usb_f_hid"
+    local baseline validados="" um na_lista=0 modpath staged=0 marca
+    baseline="$(_usb_f_hid_baseline || true)"
+    if [[ -n "${baseline}" ]]; then
+        validados="$(sed -n 's/^KERNELS_VALIDADOS=//p' "${baseline}" | head -1 | tr ',' ' ')"
+        for um in ${validados}; do
+            [[ "${kver}" == "${um}" || "${kver}" == "${um}"-* ]] && na_lista=1
+        done
+    fi
+    modpath="$(modinfo -k "${kver}" -F filename usb_f_hid 2>/dev/null || true)"
+    [[ "${modpath}" == */updates/dkms/* ]] && staged=1
+
+    if [[ ! -d "${modulo}" ]]; then
+        if [[ "${staged}" -eq 1 ]]; then
+            info "a função HID dos pads USB virtuais não está carregada (nenhum pad USB no ar) — a do Hefesto entra no próximo carregamento (${modpath})"
+        fi
+        return
+    fi
+    marca="$(cat "${modulo}/parameters/get_report_sized" 2>/dev/null || true)"
+    if [[ "${marca}" == "Y" || "${marca}" == "1" ]]; then
+        pass "a função HID dos pads USB virtuais é a do Hefesto: a resposta do pedido de feature fecha no tamanho certo"
+        return
+    fi
+    local efeito="a função HID dos pads USB virtuais é a de fábrica: o jogo no Proton espera 5 s por pedido de feature e perde os controles"
+    if [[ "${staged}" -eq 1 ]]; then
+        fail "${efeito} — a do Hefesto já está instalada para este kernel e não foi trocada: $(conselho_de_instalacao) (ele solta os pads e troca), ou reinicie o computador"
+    elif [[ -n "${baseline}" && "${na_lista}" -eq 0 ]]; then
+        fail "${efeito} — o kernel ${kver} não está entre os conferidos (${validados:-nenhum}); a do Hefesto só se constrói depois de o fonte deste kernel ser conferido e o kernel entrar no patch/BASELINE"
+    elif [[ -r "${ROOT_DIR}/scripts/dkms_lib.sh" ]] \
+         && ( source "${ROOT_DIR}/scripts/dkms_lib.sh"; dkms_secure_boot_ligado && ! dkms_chave_mok_inscrita ); then
+        fail "${efeito} — Secure Boot ligado e a chave do DKMS não está inscrita: $( source "${ROOT_DIR}/scripts/dkms_lib.sh"; dkms_passo_da_mok )"
+    elif ! command -v dkms >/dev/null 2>&1; then
+        fail "${efeito} — falta o dkms (e os headers do kernel) para construir a do Hefesto: instale os dois e $(conselho_de_instalacao)"
+    else
+        fail "${efeito} — a do Hefesto não está instalada para o kernel ${kver}: $(conselho_de_instalacao)"
+    fi
+}
+
 # O REINÍCIO PENDENTE — O-PRODUTO-EM-QUALQUER-MAQUINA-01, B5 (28/09/2026).
 # O módulo CARREGADO não é o que está instalado em updates/dkms: o `srcversion`
 # de `/sys/module/<m>` difere do `modinfo -F srcversion` do arquivo que o
@@ -8288,7 +8343,7 @@ _modulo_pede_reinicio() {
 
 check_reinicio_pendente() {
     local nome pendentes=()
-    for nome in hid-playstation hid-nintendo rtw88_usb uhid; do
+    for nome in hid-playstation hid-nintendo rtw88_usb uhid usb_f_hid; do
         _modulo_pede_reinicio "${nome}" && pendentes+=("${nome}")
     done
     if [[ "${#pendentes[@]}" -gt 0 ]]; then
@@ -9182,6 +9237,8 @@ main() {
     check_hefesto_hid_nintendo_dkms
     hdr "DKMS hid-playstation (a guarda do microfone pelo rádio)"
     check_hefesto_hid_playstation_dkms
+    hdr "DKMS usb_f_hid (a resposta do pedido de feature dos pads USB virtuais)"
+    check_hefesto_usb_f_hid_dkms
     hdr "DKMS rtw88_usb / WiFi (fantasma USB + powersave)"
     check_hefesto_rtw88_usb_dkms
     check_usb_fantasma
