@@ -526,7 +526,13 @@ def _tocando(monkeypatch: pytest.MonkeyPatch) -> dict[str, bool]:
     return tocando
 
 
-def test_a_ponte_do_radio_diz_o_envelope_da_fonte_que_ela_le(bancada: Any, mesa: _Mesa) -> None:
+def test_a_ponte_do_radio_diz_o_envelope_da_fonte_que_ela_le(
+    bancada: Any, mesa: _Mesa, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from hefesto_dualsense4unix.daemon.ganho_da_haptica import GANHO
+
+    # O controle leva 60 % por cima do PCM que a ponte lê: o envelope diz o mesmo.
+    monkeypatch.setattr(GANHO, "fator", lambda uniq: 0.6 if uniq == UNIQS[0] else 1.0)
     escuta = _Escuta(mesa.daemon.bus, EventTopic.JOGO_HAPTICA)
     bancada.tocando[f"endpoint::{UNIQS[0]}"] = True
 
@@ -537,14 +543,9 @@ def test_a_ponte_do_radio_diz_o_envelope_da_fonte_que_ela_le(bancada: Any, mesa:
 
     assert ponte.fonte_de_haptica(1024)  # a ponte lê a fonte dela, e o envelope espia o bloco
 
-    # O controle leva o ganho da háptica dele por cima do PCM: o envelope diz o mesmo.
-    from hefesto_dualsense4unix.daemon.ganho_da_haptica import GANHO
-
-    meia = MEIA * 2 ** 0.5 / 32768
-    nivel = round(round(min(1.0, meia * GANHO.fator(UNIQS[0])) / eh.PASSO) * eh.PASSO, 4)
     eventos = escuta.tudo()
     assert [(e["uniq"], e["jogador"], e["intensidade"]) for e in eventos] == [
-        (UNIQS[0], 1, [nivel, nivel])
+        (UNIQS[0], 1, [0.3, 0.3])
     ]
     monitores = [p for p in bancada.pedidos if p.get("canais") == 4]
     assert len(monitores) == 1, "o envelope abriu um segundo gravador no endpoint"
