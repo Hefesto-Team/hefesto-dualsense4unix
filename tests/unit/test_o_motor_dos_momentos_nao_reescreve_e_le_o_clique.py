@@ -50,7 +50,7 @@ QUATRO = (P1, P2, P3, P4)
 TIQUE = 1.0 / 60.0
 FOLGA = 2 * TIQUE + 1e-6
 
-PINO = {"mode": "SemiAutoGun", "params": [4, 6, 7]}  # só liga a receita dos momentos
+PINO = {"mode": "Weapon", "params": [3, 7, 230]}  # o Pino que falha: só liga a receita dos momentos
 FPS_MACHINE = {"mode": "Machine", "params": [0, 9, 5, 24]}
 
 

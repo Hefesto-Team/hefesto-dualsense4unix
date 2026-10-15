@@ -7,8 +7,9 @@ perfil de mentira e um backend que anota cada bloco e cada fim de sessão.
 
 MORDIDAS: tirar a guarda do jogo do `AtuadorDosMomentos.relogio` (o momento escreve com o
 jogo mandando) reprova `test_o_jogo_que_escreve_o_gatilho_cala_o_momento`; tirar o
-`valem_em` de `momentos_no_modo` reprova `test_a_rajada_escreve_o_bloco_uma_vez_so_no_machine`;
-devolver a sessão a cada batida reprova `test_o_automatico_toca_o_que_o_estilo_poe_na_frente`.
+`valem_em` de `momentos_no_modo` reprova `test_a_rajada_sobe_um_degrau_por_escrita_e_so_no_modo_\
+que_tem_o_momento`;
+devolver a sessão a cada batida reprova `test_o_automatico_toca_a_batida_entre_duas_sessoes`.
 """
 from __future__ import annotations
 
@@ -32,10 +33,10 @@ P2 = "aa:bb:cc:00:00:32"
 TIQUE = 1.0 / 60.0
 FOLGA = TIQUE + 1e-6
 
-PINO = {"mode": "SemiAutoGun", "params": [4, 6, 7]}
-RAJADA_MACHINE = {"mode": "Machine", "params": [0, 9, 5, 8]}
-RAJADA_MACHINE_FPS = {"mode": "Machine", "params": [0, 9, 5, 24]}
-RAJADA_AUTOGUN = {"mode": "AutoGun", "params": [1, 7, 16]}
+PINO = {"mode": "Weapon", "params": [3, 7, 230]}
+RAJADA_MACHINE = {"mode": "Machine", "params": [0, 9, 4, 40]}
+RAJADA_VIBRATION = {"mode": "Vibration", "params": [0, 5, 8]}
+FREIO_DA_CORRIDA = {"mode": "Resistance", "params": [2, 7]}
 CANO_MACHINE = {"mode": "Machine", "params": [0, 9, 6, 20]}
 AUTOMATICO = {"modo": "automatico"}  # (noqa-acento) chave ASCII do schema
 
@@ -160,7 +161,7 @@ def test_a_imersao_com_momentos_liga_o_motor_e_o_perfil_sem_ela_nao() -> None:
     assert sem == tv.DESLIGADA and not sem.ligada
     # A imersão sem momentos (a «Trava seca») não liga nada.
     trava = tv.receita_do_perfil(_perfil(triggers={"right": {
-        "mode": "SemiAutoGun", "params": [2, 3, 8]}}))
+        "mode": "Weapon", "params": [2, 3, 255]}}))
     assert trava == tv.DESLIGADA
     # O desvio da bancada desliga os momentos, campo a campo.
     desviada = tv.receita_do_perfil(_perfil(
@@ -175,6 +176,7 @@ def test_a_tela_e_o_motor_reconhecem_a_imersao_pela_mesma_regra() -> None:
         params = [ajustes.get(p.name, p.default) for p in spec.params]
         assert ei.imersao_dos_numeros(modo, params) == (imersao, estilo), (imersao.chave, modo)
     assert ei.imersao_dos_numeros("Machine", [2, 9, 4, 40]) is None, "o padrão não é imersão"
+    assert ei.imersao_dos_numeros("Machine", [0, 9, 4, 40])[0].chave == "rajada-que-sobe-sozinha"
     assert ei.imersao_dos_numeros("Nenhum", [1]) is None
 
 
@@ -188,7 +190,7 @@ def test_o_pino_escreve_o_feedback_ao_apertar_e_volta_em_500_ms(
     apertou = mesa.t
     mesa.apertar(P1)
     mesa.rodar(1.0)
-    assert [b for _t, b in mesa.backend.de(P1)] == [_bloco("Feedback", position=5, strength=8)]
+    assert [b for _t, b in mesa.backend.de(P1)] == [_bloco("Resistance", start=5, force=8)]
     assert mesa.backend.de(P1)[0][0] == pytest.approx(apertou)
     assert mesa.backend.de(P1, "left") == [], "o lado esquerdo não tem imersão"
     [(voltou, quem)] = mesa.backend.sessoes
@@ -196,26 +198,29 @@ def test_o_pino_escreve_o_feedback_ao_apertar_e_volta_em_500_ms(
     assert 0.5 <= voltou - apertou <= 0.5 + FOLGA, "a volta ao estático é aos 500 ms"
 
 
-def test_a_rajada_escreve_o_bloco_uma_vez_so_no_machine(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_a_rajada_sobe_um_degrau_por_escrita_e_so_no_modo_que_tem_o_momento(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     mesa = _mesa(monkeypatch, _perfil(triggers={"right": RAJADA_MACHINE}))
     apertou = mesa.t
     mesa.apertar(P1)
-    mesa.rodar(0.99)
+    mesa.rodar(1.99)
     escritas = mesa.backend.de(P1, "right")
-    rajada = _bloco("Machine", start=0, end=9, strength=7, frequency=8)
-    # O mesmo bloco não sai de novo a cada volta do `a_cada_ms`: o ritmo é do firmware.
-    assert [b for _t, b in escritas] == [rajada]
-    assert 0 <= escritas[0][0] - apertou <= FOLGA
+    # Um bloco por degrau (5, 6, 7), nenhum repetido: o ritmo da batida é do firmware.
+    assert [b for _t, b in escritas] == [
+        _bloco("Machine", start=0, end=9, strength=f, frequency=40) for f in (5, 6, 7)]
+    for i, (t, _b) in enumerate(escritas):
+        assert 0.5 * (i + 1) <= t - apertou <= 0.5 * (i + 1) + FOLGA, (i, t - apertou)
     mesa.soltar(P1)
     mesa.rodar(0.1)
     assert [u for _t, u in mesa.backend.sessoes] == [P1], "soltar devolve o estático"
 
-    # No AutoGun a rajada não tem momento (`valem_em`): nada se escreve.
-    outra = _mesa(monkeypatch, _perfil(triggers={"right": RAJADA_AUTOGUN}))
-    assert not tv.receita_do_perfil(_perfil(triggers={"right": RAJADA_AUTOGUN})).ligada
+    # Na Vibração a mesma imersão sobe a amplitude, pelos momentos que valem nela.
+    outra = _mesa(monkeypatch, _perfil(triggers={"right": RAJADA_VIBRATION}))
     outra.apertar(P1)
-    outra.rodar(1.0)
-    assert outra.backend.blocos == [] and outra.backend.sessoes == []
+    outra.rodar(1.99)
+    assert [b for _t, b in outra.backend.de(P1, "right")] == [
+        _bloco("Vibration", position=0, amplitude=a, frequency=8) for a in (6, 7, 8)]
 
 
 def test_o_cano_baixa_a_frequencia_aos_3_s(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -251,8 +256,8 @@ def test_soltar_devolve_o_estatico_e_o_lado_que_volta_sozinho_volta_a_mao(
     dois.rodar(0.3)
     dois.apertar(P1, "esquerdo")
     dois.rodar(1.0)
-    estatico = _bloco("SemiAutoGun", start=4, end=6, force=7)
-    feedback = _bloco("Feedback", position=5, strength=8)
+    estatico = _bloco("Weapon", start=3, end=7, force=230)
+    feedback = _bloco("Resistance", start=5, force=8)
     assert [b for _t, b in dois.backend.de(P1, "right")] == [feedback, estatico]
     assert [b for _t, b in dois.backend.de(P1, "left")] == [feedback]
     [(fim, _u)] = dois.backend.sessoes
@@ -270,7 +275,7 @@ def test_o_jogo_que_escreve_o_gatilho_cala_o_momento(monkeypatch: pytest.MonkeyP
     # O jogo toma o gatilho no meio da rajada: solta sem devolver (o valor é dele).
     meio = _mesa(monkeypatch, _perfil(triggers={"right": RAJADA_MACHINE}))
     meio.apertar(P1)
-    meio.rodar(0.3)
+    meio.rodar(0.6)
     antes = len(meio.backend.blocos)
     assert antes == 1
     meio.daemon._gamepad_device.visto_ha_s = {"trigger": 0.0}
@@ -302,15 +307,24 @@ def test_a_imersao_de_um_controle_so_toca_nele(monkeypatch: pytest.MonkeyPatch) 
     mesa.apertar(P2)
     mesa.rodar(1.0)
     assert mesa.backend.de(P1) == []
-    assert [b for _t, b in mesa.backend.de(P2)] == [_bloco("Feedback", position=5, strength=8)]
+    assert [b for _t, b in mesa.backend.de(P2)] == [_bloco("Resistance", start=5, force=8)]
+
+
+def _batida() -> tv.MapaDosMomentos:
+    """O plano de uma batida «sempre» nos dois gatilhos, no Modo automático (a volta é o Off)."""
+    batida = tv.PlanoDoGatilho(
+        ei.POR_CHAVE["batida-do-coracao"], "Weapon", "", {}, (
+            ei.Momento("sempre", 0, "Weapon", {"start": 2, "end": 6, "force": 255},
+                       dura_ms=120, a_cada_ms=830),), automatico=True)
+    return tv.MapaDosMomentos({"esquerdo": batida, "direito": batida})
 
 
 def test_a_batida_que_sai_entre_duas_batidas_devolve_a_sessao(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    perfil = _perfil(estilo="terror", triggers=AUTOMATICO)
-    mesa = _mesa(monkeypatch, perfil)
-    mesa.rodar(0.5)
+    mesa = _mesa(monkeypatch, _perfil(triggers={"right": PINO}))
+    monkeypatch.setattr(tv, "momentos_ativos", lambda _d: _batida())
+    mesa.rodar(1.5)
     assert mesa.backend.blocos and mesa.backend.sessoes == []
     monkeypatch.setattr(tv, "momentos_ativos", lambda _d: tv.SEM_MOMENTOS)
     mesa.rodar(1.5)  # a releitura da receita tira o plano entre duas batidas
@@ -323,8 +337,9 @@ def test_a_batida_que_sai_entre_duas_batidas_devolve_a_sessao(
 def test_o_jogo_que_toma_o_gatilho_entre_duas_batidas_fica_com_a_sessao(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    mesa = _mesa(monkeypatch, _perfil(estilo="terror", triggers=AUTOMATICO))
-    mesa.rodar(0.5)  # uma batida e o Off à mão: a sessão é do momento
+    mesa = _mesa(monkeypatch, _perfil(triggers={"right": PINO}))
+    monkeypatch.setattr(tv, "momentos_ativos", lambda _d: _batida())
+    mesa.rodar(1.0)  # uma batida e o Off à mão: a sessão é do momento
     mesa.daemon._gamepad_device.visto_ha_s = {"trigger": 0.0}
     mesa.rodar(0.1)
     assert mesa.motor.contadores["soltos_ao_jogo"] == 1, "o momento larga a sessão ao jogo"
@@ -368,13 +383,13 @@ def test_o_teto_segura_uma_rampa_rapida(monkeypatch: pytest.MonkeyPatch) -> None
     assert mesa.motor.contadores["recusas_do_teto"] > 0
 
 
-def test_o_automatico_toca_o_que_o_estilo_poe_na_frente(monkeypatch: pytest.MonkeyPatch) -> None:
-    # Terror: a «Batida do coração» é sempre, nos dois gatilhos, sem apertar. Entre as
-    # batidas o Off vai à mão e a sessão fica: devolvê-la a cada batida seria uma volta
+def test_o_automatico_toca_a_batida_entre_duas_sessoes(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Entre as batidas o Off vai à mão e a sessão fica: devolvê-la a cada batida seria uma volta
     # inteira do backend (e duas linhas no diário) quase uma vez por segundo.
-    mesa = _mesa(monkeypatch, _perfil(estilo="terror", triggers=AUTOMATICO))
+    mesa = _mesa(monkeypatch, _perfil(triggers={"right": PINO}))
+    monkeypatch.setattr(tv, "momentos_ativos", lambda _d: _batida())
     mesa.rodar(2.0)
-    batida = _bloco("PulseB", start=2, end=6, force=255)
+    batida = _bloco("Weapon", start=2, end=6, force=255)
     off = _bloco("Off")
     for disco in ("left", "right"):
         assert [b for _t, b in mesa.backend.de(P1, disco)][:4] == [batida, off] * 2, disco
@@ -382,7 +397,11 @@ def test_o_automatico_toca_o_que_o_estilo_poe_na_frente(monkeypatch: pytest.Monk
     mesa.motor.parar(mesa.t)
     assert sorted(u for _t, u in mesa.backend.sessoes) == [P1, P2], "parado, devolve as duas"
 
-    # Corrida: o «Freio que pulsa» vibra depois de 800 ms segurando.
+
+
+def test_o_automatico_da_corrida_vibra_o_freio_depois_de_800_ms(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     corrida = _mesa(monkeypatch, _perfil(estilo="corrida", triggers=AUTOMATICO))
     apertou = corrida.t
     corrida.apertar(P1)
@@ -391,40 +410,42 @@ def test_o_automatico_toca_o_que_o_estilo_poe_na_frente(monkeypatch: pytest.Monk
     assert bloco == _bloco("Vibration", position=2, amplitude=3, frequency=15)
     assert 0.8 <= t - apertou <= 0.8 + FOLGA
 
-    # O FPS não põe na frente imersão com momento no AutoGun: o automático fica calado.
+    # O FPS ainda usa a chave velha no automático: sem imersão reconhecida, fica calado.
     assert not tv.receita_do_perfil(
         _perfil(estilo="fps", triggers=AUTOMATICO)).momentos_da_imersao
 
 
-def test_a_variante_fps_vale_no_momento(monkeypatch: pytest.MonkeyPatch) -> None:
-    mesa = _mesa(monkeypatch, _perfil(triggers={"right": RAJADA_MACHINE_FPS}))
+def test_a_variante_da_corrida_vale_no_momento(monkeypatch: pytest.MonkeyPatch) -> None:
+    mesa = _mesa(monkeypatch, _perfil(triggers={"right": FREIO_DA_CORRIDA}))
+    apertou = mesa.t
     mesa.apertar(P1)
-    mesa.rodar(0.1)
-    [(_t, bloco)] = mesa.backend.de(P1)
-    assert bloco == _bloco("Machine", start=0, end=9, strength=7, frequency=24)
+    mesa.rodar(1.0)
+    [(t, bloco)] = mesa.backend.de(P1)
+    assert bloco == _bloco("Vibration", position=2, amplitude=3, frequency=15)
+    assert 0.8 <= t - apertou <= 0.8 + FOLGA
 
 
 def test_o_ritmo_do_tiro_cede_o_lado_que_tem_momento(monkeypatch: pytest.MonkeyPatch) -> None:
-    perfil = _perfil(estilo="fps", triggers={"right": RAJADA_MACHINE_FPS})
+    perfil = _perfil(estilo="fps", triggers={"right": RAJADA_MACHINE})
     mesa = _mesa(monkeypatch, perfil)
     receita = mesa.passo.receita_vigente
     assert receita.gatilho_no_ritmo and receita.momentos_da_imersao
-    for _ in range(4):
+    for _ in range(2):
         mesa.apertar(P1)
-        mesa.rodar(0.05)
+        mesa.rodar(0.6)
         mesa.soltar(P1)
-        mesa.rodar(0.05)
+        mesa.rodar(0.1)
     arma = tv.bloco_do_gatilho(tv.GATILHO_ARMA, receita)
     rajada = tv.bloco_do_gatilho(tv.GATILHO_RAJADA, receita)
     escritos = {b for _t, b in mesa.backend.de(P1, "right")}
-    assert escritos == {_bloco("Machine", start=0, end=9, strength=7, frequency=24)}
+    assert escritos == {_bloco("Machine", start=0, end=9, strength=5, frequency=40)}
     assert arma not in escritos and rajada not in escritos
 
 
 def test_o_motor_parado_devolve_o_que_o_momento_segura(monkeypatch: pytest.MonkeyPatch) -> None:
     mesa = _mesa(monkeypatch, _perfil(triggers={"right": RAJADA_MACHINE}))
     mesa.apertar(P1)
-    mesa.rodar(0.1)
+    mesa.rodar(0.6)
     assert mesa.backend.blocos and not mesa.backend.sessoes
     mesa.motor.parar(mesa.t)
     assert [u for _t, u in mesa.backend.sessoes] == [P1]

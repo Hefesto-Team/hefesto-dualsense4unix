@@ -1,7 +1,7 @@
 """A aba Gatilhos do todo: os efeitos de imersão (dado) e a tela que os oferece.
 
-MORDIDAS: pôr a pane com força 9, repetir os números de duas imersões, sobrar uma família sem as
-três imersões, dar largura própria ao chip, trazer de volta o Guardar, perder o campo da imersão
+MORDIDAS: pôr a pane com força 9, repetir os números de duas imersões, sobrar uma família sem
+imersão, dar largura própria ao chip, trazer de volta o Guardar, perder o campo da imersão
 numa célula, deixar o efeito criado fora das listas, a dica prometer o tempo onde o motor não o
 toca em todo modo (ou calar o tempo onde toca) ou o «Sentir» devolver o que o perfil dizia ANTES
 do toque reprova.
@@ -16,7 +16,7 @@ from typing import Any
 
 import pytest
 
-from hefesto_dualsense4unix.app.actions.trigger_specs import PRESETS, PRESETS_ANTIGOS, get_spec
+from hefesto_dualsense4unix.app.actions.trigger_specs import PRESETS
 from hefesto_dualsense4unix.daemon.subsystems.tato_vivo import TETO_POR_CONTROLE
 from hefesto_dualsense4unix.profiles import efeitos_de_imersao as imersao
 from hefesto_dualsense4unix.profiles.estilos_de_jogo import POR_CHAVE
@@ -28,11 +28,12 @@ PAGINA = "03-gatilhos.html"
 UNIQ = "aa:bb:cc:00:00:01"
 CHROME = pathlib.Path("/usr/bin/google-chrome")
 
-#: As imersões de hoje ainda citam as chaves que saíram da lista de onze; os ajustes delas são
-#: lidos pelo spec antigo até a sprint das imersões de hoje trocar as chaves.
-_TODOS = (*PRESETS, *PRESETS_ANTIGOS)
-FAIXAS = {s.name: {p.name: (p.min_value, p.max_value) for p in s.params} for s in _TODOS}
-PADROES = {s.name: {p.name: p.default for p in s.params} for s in _TODOS}
+FAIXAS = {s.name: {p.name: (p.min_value, p.max_value) for p in s.params} for s in PRESETS}
+PADROES = {s.name: {p.name: p.default for p in s.params} for s in PRESETS}
+
+#: quantas imersões cada acionamento oferece (as de hoje, 18, mais as que a leva trouxer)
+QUANTAS = {"Weapon": 6, "Machine": 3, "Vibration": 3, "Bow": 3, "Resistance": 2,
+           "MultiPositionFeedback": 1, "Galloping": 3}
 
 
 def _dentro_da_faixa(modo: str, ajustes: dict[str, int]) -> list[str]:
@@ -47,13 +48,14 @@ def _dentro_da_faixa(modo: str, ajustes: dict[str, int]) -> list[str]:
     return erros
 
 
-def test_cada_familia_tem_tres_imersoes_e_cada_modo_dela_as_tres() -> None:
+def test_cada_familia_tem_imersoes_e_cada_modo_dela_as_que_lhe_cabem() -> None:
     for familia, modos in imersao.FAMILIAS.items():
         delas = [i for i in imersao.IMERSOES if i.familia == familia]
-        assert len(delas) == 3, (familia, [i.chave for i in delas])
+        assert delas, familia
         for modo in modos:
-            assert get_spec(modo) is not None, f"{modo} não é modo do PRESETS"
-            assert len(imersao.imersoes_do_acionamento(modo)) == 3, (familia, modo)
+            assert modo in {s.name for s in PRESETS}, f"{modo} não é da lista de onze"
+            assert len(imersao.imersoes_do_acionamento(modo)) == QUANTAS[modo], (familia, modo)
+    assert len(imersao.IMERSOES) == 18
 
 
 def test_todo_numero_esta_dentro_da_faixa_do_presets() -> None:
@@ -108,10 +110,11 @@ def test_os_numeros_de_cada_imersao_so_se_repetem_nela_mesma() -> None:
 
 
 def test_a_ordem_com_estilo_poe_as_dele_na_frente() -> None:
-    sem = [i.chave for i in imersao.imersoes_do_acionamento("SemiAutoGun")]
-    com = [i.chave for i in imersao.imersoes_do_acionamento("SemiAutoGun", "terror")]
-    assert sem == ["ferrolho-que-volta", "trava-seca", "pino-que-falha"]
-    assert com[0] == "pino-que-falha" and sorted(com) == sorted(sem)
+    sem = [i.chave for i in imersao.imersoes_do_acionamento("Weapon")]
+    com = [i.chave for i in imersao.imersoes_do_acionamento("Weapon", "terror")]
+    assert sem[:3] == ["ferrolho-que-volta", "trava-seca", "pino-que-falha"]
+    assert com[:4] == ["pino-que-falha", "batida-do-coracao", "arma-pesada", "aperto-que-trava"]
+    assert sorted(com) == sorted(sem)
     assert imersao.imersoes_do_acionamento("Off") == ()
 
 
@@ -178,13 +181,13 @@ def test_cada_celula_conectada_tem_o_acionamento_e_a_imersao_e_a_vazia_nao() -> 
     assert doc.count('data-gesto="imersao"') == 8 and doc.count('data-gesto="modo"') == 8
 
 
-def test_cada_acionamento_com_imersao_oferece_as_tres_e_o_off_nenhuma(a03) -> None:
+def test_cada_acionamento_com_imersao_oferece_as_suas_e_o_off_nenhuma(a03) -> None:
     for familia, modos in imersao.FAMILIAS.items():
         for modo in modos:
             html = a03.html_das_opcoes_de_imersao(modo)
             chaves = re.findall(r'value="([^"]+)"', html)
             delas = [c for c in chaves if c in imersao.POR_CHAVE]
-            assert len(delas) == 3, (familia, modo, delas)
+            assert len(delas) == QUANTAS[modo], (familia, modo, delas)
             assert all(imersao.POR_CHAVE[c].familia == familia for c in delas)
     sem = a03.html_das_opcoes_de_imersao("Off")
     assert "<optgroup label=\"Desligado" not in sem
@@ -298,9 +301,9 @@ def test_sentir_devolve_o_que_vale_depois_do_toque_e_nao_o_de_antes(a03, monkeyp
 
 
 def test_as_barras_cobrem_so_o_que_o_modo_tem(a03) -> None:
-    fora = a03._ajustes_da_criacao("Rigid", {"inicio": "9", "forca": "8", "freq": "255"})
-    assert fora and all(n in FAIXAS["Rigid"] for n in fora), fora
-    assert "frequency" not in fora, "o Rígido não tem frequência: a barra não faz nada nele"
+    fora = a03._ajustes_da_criacao("Resistance", {"inicio": "9", "forca": "8", "freq": "255"})
+    assert fora and all(n in FAIXAS["Resistance"] for n in fora), fora
+    assert "frequency" not in fora, "a Resistência não tem frequência: a barra não faz nada nela"
     cheio = a03._ajustes_da_criacao("Machine", {"forca": "8", "freq": "255"})
     for nome, valor in cheio.items():
         assert valor <= FAIXAS["Machine"][nome][1], (nome, valor)

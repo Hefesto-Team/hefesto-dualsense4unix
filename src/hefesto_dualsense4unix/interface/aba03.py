@@ -71,7 +71,7 @@ DICA_DO_AUTOMATICO = "O jogo manda; o estilo do perfil ajusta"
 #: o que a cena do desenho mostra: (acionamento, imersão) por gatilho de cada controle
 CENA = {
     "p1": {"e": ("Machine", "rajada-que-sobe-sozinha"),
-           "d": ("Bow", "corda-que-treme-no-fim")},
+           "d": ("Bow", "corda-que-estica")},
     "p2": {"e": ("Weapon", "ferrolho-que-volta"),
            "d": ("Resistance", SEM_IMERSAO)},
     "p3": {"e": None, "d": None},

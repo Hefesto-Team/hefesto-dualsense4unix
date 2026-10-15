@@ -1,4 +1,4 @@
-"""Efeitos de imersão: três por acionamento, com variante por estilo de jogo.
+"""Efeitos de imersão: os de cada acionamento da lista de onze, com variante por estilo de jogo.
 
 Cada um ajusta o modo que já está aceso, dentro das faixas do `PRESETS`, e nunca
 troca o modo; «Nenhum» volta aos padrões. `ajustes` e `variantes` (`{modo: {nome:
@@ -11,17 +11,18 @@ toca em todo modo dela. Fontes e grau: nota de 12/10 da sprint `A-ABA-GATILHOS-D
 """
 from __future__ import annotations
 
+import functools
 from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 
 #: acionamento (família de modos) → os modos que a compõem
 FAMILIAS: dict[str, tuple[str, ...]] = {
-    "arma": ("SemiAutoGun", "Weapon"),
-    "metralhadora": ("Machine", "AutoGun", "Vibration"),
+    "arma": ("Weapon",),
+    "metralhadora": ("Machine", "Vibration"),
     "arco": ("Bow",),
-    "resistência": ("Resistance", "Rigid", "SimpleRigid", "Feedback"),
+    "resistência": ("Resistance",),
+    "curva": ("MultiPositionFeedback",),
     "galope": ("Galloping",),
-    "pulso": ("PulseA", "PulseB"),
 }
 
 Ajustes = Mapping[str, int]
@@ -91,40 +92,62 @@ def _rampa(modo: str, nome: str, de: int, ate: int, cada_ms: int, *,
         for i, valor in enumerate(range(de + passo, ate + passo, passo), start=1))
 
 
+def _curva(*forcas: int) -> dict[str, int]:
+    """Os dez degraus da Curva de força, `pos_0` a `pos_9`."""
+    return {f"pos_{i}": f for i, f in enumerate(forcas)}
+
+
 IMERSOES: tuple[Imersao, ...] = (
-    # --- Arma: SemiAutoGun e Weapon -------------------------------------------------
+    # --- Arma: Disparo ----------------------------------------------------------------------
     Imersao("ferrolho-que-volta", "Ferrolho que volta", "arma",
             "O gatilho rearma sozinho a cada tiro, firme e curto.",
-            {"SemiAutoGun": {"start": 3, "end": 7, "force": 6},
-             "Weapon": {"start": 2, "end": 6, "force": 210}},
+            {"Weapon": {"start": 2, "end": 6, "force": 210}},
             na_frente=("fps", "acao", "luta")),  # (noqa-acento): chave
     Imersao("trava-seca", "Trava seca", "arma",
             "Pouco curso e muita resistência, como arma sem munição.",
-            {"SemiAutoGun": {"start": 2, "end": 3, "force": 8},
-             "Weapon": {"start": 0, "end": 1, "force": 255}},
+            {"Weapon": {"start": 2, "end": 3, "force": 255}},
             na_frente=("fps", "acao")),  # (noqa-acento): chave
     Imersao("pino-que-falha", "Pino que falha", "arma",
             "O disparo fica fundo e duro, e emperra meio segundo a cada aperto.",
-            {"SemiAutoGun": {"start": 4, "end": 6, "force": 7},
-             "Weapon": {"start": 3, "end": 7, "force": 230}},
-            momentos=(Momento("ao_apertar", 0, "Feedback",
-                              {"position": 5, "strength": 8}, dura_ms=500),),
+            {"Weapon": {"start": 3, "end": 7, "force": 230}},
+            momentos=(Momento("ao_apertar", 0, "Resistance",
+                              {"start": 5, "force": 8}, dura_ms=500),),
             na_frente=("terror",)),
-    # --- Metralhadora: Machine, AutoGun e Vibration ---------------------------------
+    Imersao("batida-do-coracao", "Batida do coração", "arma",
+            "Um pulso médio no meio do curso.",
+            {"Weapon": {"start": 2, "end": 6, "force": 150}},
+            na_frente=("terror",), a_validar=True),
+    Imersao("arma-pesada", "Arma pesada", "arma",
+            "Um disparo duro e fundo a cada aperto.",
+            {"Weapon": {"start": 2, "end": 8, "force": 255}},
+            na_frente=("terror",), a_validar=True),
+    Imersao("aperto-que-trava", "Aperto que trava", "arma",
+            "O gatilho trava um instante no fundo a cada aperto.",
+            {"Weapon": {"start": 3, "end": 8, "force": 230}},
+            momentos=(Momento("ao_apertar", 0, "Resistance",
+                              {"start": 8, "force": 8}, dura_ms=300),),
+            na_frente=("terror",), a_validar=True),
+    # --- Metralhadora: Metralhadora e Vibração -------------------------------------------------
     Imersao("rajada-que-sobe-sozinha", "Rajada que sobe sozinha", "metralhadora",
-            "Batidas médias em ritmo constante enquanto você segura.",
-            {"Machine": {"start": 0, "end": 9, "strength": 5, "frequency": 8},
-             "AutoGun": {"start": 1, "strength": 7, "frequency": 16},
+            "As batidas começam médias e ficam mais fortes a cada meio segundo segurando.",
+            {"Machine": {"start": 0, "end": 9, "strength": 4, "frequency": 40},
              "Vibration": {"position": 0, "amplitude": 5, "frequency": 8}},
-            {"fps": {"AutoGun": {"start": 1, "strength": 7, "frequency": 60},
-                     "Machine": {"start": 0, "end": 9, "strength": 5, "frequency": 24}}},
-            (Momento("segurando", 0, "Machine", {"strength": 7}, a_cada_ms=200,
-                     valem_em=("Machine",)),),
+            # Uma escrita por degrau; o firmware faz o ritmo, nenhum `a_cada_ms` repete o bloco.
+            momentos=(Momento("segurando", 500, "Machine", {"strength": 5}, valem_em=("Machine",)),
+                      Momento("segurando", 1000, "Machine", {"strength": 6},
+                              valem_em=("Machine",)),
+                      Momento("segurando", 1500, "Machine", {"strength": 7},
+                              valem_em=("Machine",)),
+                      Momento("segurando", 500, "Vibration", {"amplitude": 6},
+                              valem_em=("Vibration",)),
+                      Momento("segurando", 1000, "Vibration", {"amplitude": 7},
+                              valem_em=("Vibration",)),
+                      Momento("segurando", 1500, "Vibration", {"amplitude": 8},
+                              valem_em=("Vibration",))),
             na_frente=("fps", "acao")),  # (noqa-acento): chave
     Imersao("cano-que-esquenta", "Cano que esquenta", "metralhadora",
-            "Batidas rápidas e fortes enquanto você segura.",
+            "Batidas rápidas e fortes que ficam lentas e pesadas depois de 3 s segurando.",
             {"Machine": {"start": 0, "end": 9, "strength": 6, "frequency": 20},
-             "AutoGun": {"start": 1, "strength": 6, "frequency": 20},
              "Vibration": {"position": 0, "amplitude": 6, "frequency": 20}},
             momentos=(Momento("segurando", 3000, "Machine", {"frequency": 8},
                               valem_em=("Machine",)),
@@ -134,14 +157,11 @@ IMERSOES: tuple[Imersao, ...] = (
     Imersao("recuo-pesado", "Recuo pesado", "metralhadora",
             "Solavancos espaçados e fortes, como arma de calibre grande.",
             {"Machine": {"start": 0, "end": 9, "strength": 8, "frequency": 6},
-             "AutoGun": {"start": 2, "strength": 8, "frequency": 6},
              "Vibration": {"position": 0, "amplitude": 8, "frequency": 6}},
-            {"fps": {"AutoGun": {"start": 2, "strength": 8, "frequency": 10}}},
             na_frente=("fps", "acao")),  # (noqa-acento): chave
     # --- Arco ---------------------------------------------------------------------------
-    Imersao("corda-que-treme-no-fim", "Corda que treme no fim", "arco",
-            "A força sobe do começo ao fim do curso, e pesa mais"
-            " a cada meio segundo segurando.",
+    Imersao("corda-que-estica", "Corda que estica", "arco",
+            "A corda começa leve e pesa mais a cada meio segundo segurando.",
             {"Bow": {"start": 0, "end": 8, "force": 7, "snap": 6}},
             {"arco": {"Bow": {"start": 0, "end": 8, "force": 6, "snap": 7}}},
             # Começa leve no aperto (a rampa só dá os degraus depois do primeiro).
@@ -158,35 +178,23 @@ IMERSOES: tuple[Imersao, ...] = (
             momentos=(Momento("segurando", 3000, "Vibration",
                               {"position": 6, "amplitude": 2, "frequency": 8}),),
             na_frente=("arco", "aventura")),
-    # --- Resistência, Rígido, Rígido simples e Ponto duro --------------------------------
+    # --- Resistência e Curva de força --------------------------------------------------------
     Imersao("freio-abs-que-pulsa", "Freio que pulsa", "resistência",
-            "Resistência firme no começo do curso, e o pedal pulsa"
-            " depois de um instante segurando.",
-            {"Resistance": {"start": 2, "force": 6},
-             "Rigid": {"position": 2, "force": 220},
-             "SimpleRigid": {"strength": 7},
-             "Feedback": {"position": 2, "strength": 6}},
+            "Resistência firme no começo, e o pedal pulsa depois de um instante segurando.",
+            {"Resistance": {"start": 2, "force": 6}},
             {"corrida": {"Resistance": {"start": 2, "force": 7}}},
             (Momento("segurando", 800, "Vibration",
                      {"position": 2, "amplitude": 3, "frequency": 15}),),
             na_frente=("corrida",)),
-    Imersao("pedal-no-fundo", "Pedal no fundo", "resistência",
+    Imersao("pedal-duro", "Pedal duro", "resistência",
             "A resistência começa cedo e fica forte, como pedal duro.",
-            {"Resistance": {"start": 1, "force": 8},
-             "Rigid": {"position": 1, "force": 240},
-             "SimpleRigid": {"strength": 8},
-             "Feedback": {"position": 1, "strength": 8}},
+            {"Resistance": {"start": 1, "force": 8}},
             {"simulacao": {"Resistance": {"start": 1, "force": 7}}},
             na_frente=("corrida", "simulacao")),
-    Imersao("porta-emperrada", "Porta emperrada", "resistência",
-            "Resistência leve que só começa no meio do curso.",
-            {"Resistance": {"start": 4, "force": 4},
-             "Rigid": {"position": 4, "force": 160},
-             "SimpleRigid": {"strength": 4},
-             "Feedback": {"position": 4, "strength": 4}},
-            momentos=_rampa("Resistance", "force", 4, 6, 300000, quando="sempre",
-                            valem_em=("Resistance",)),
-            na_frente=("esportes",)),
+    Imersao("porta-emperrada", "Porta emperrada", "curva",
+            "O gatilho range em degraus, como porta enferrujada.",
+            {"MultiPositionFeedback": _curva(0, 0, 0, 6, 0, 6, 0, 6, 0, 6)},
+            na_frente=("terror",)),
     # --- Galope --------------------------------------------------------------------------
     Imersao("galope-no-chao", "Galope no chão", "galope",
             "Patas lentas e baixas, só se sentem devagar.",
@@ -197,34 +205,40 @@ IMERSOES: tuple[Imersao, ...] = (
             "Passadas iguais que aceleram enquanto você segura, como um motor girando.",
             {"Galloping": {"start": 0, "end": 9, "first_foot": 5, "second_foot": 5,
                            "frequency": 12}},
-            momentos=_rampa("Galloping", "frequency", 12, 36, 500),
+            # Até 33 Hz qualquer valor é limpo; acima disso só os que dividem 1000.
+            momentos=_rampa("Galloping", "frequency", 12, 33, 500),
             na_frente=("aventura", "corrida"), a_validar=True),
     Imersao("terreno-que-muda", "Terreno que muda", "galope",
             "Passadas desiguais, uma fraca e uma forte, como piso irregular.",
             {"Galloping": {"start": 1, "end": 8, "first_foot": 4, "second_foot": 6,
                            "frequency": 16}},
             na_frente=("aventura", "corrida"), a_validar=True),
-    # --- Pulso (curvas A e B) --------------------------------------------------------------
-    Imersao("batida-do-coracao", "Batida do coração", "pulso",
-            "Um pulso médio no meio do curso, e uma batida forte quase a cada segundo.",
-            {"PulseA": {"start": 2, "end": 6, "force": 150},
-             "PulseB": {"start": 2, "end": 6, "force": 150}},
-            momentos=(Momento("sempre", 0, "PulseB", {"force": 255}, dura_ms=120,
-                              a_cada_ms=830),),
-            na_frente=("terror",), a_validar=True),
-    Imersao("arma-pesada", "Arma pesada", "pulso",
-            "Um pulso forte a cada aperto.",
-            {"PulseA": {"start": 1, "end": 8, "force": 255},
-             "PulseB": {"start": 1, "end": 8, "force": 255}},
-            na_frente=("terror",), a_validar=True),
-    Imersao("aperto-que-trava", "Aperto que trava", "pulso",
-            "Um pulso forte da metade ao fim do curso, e o gatilho trava"
-            " um instante a cada aperto.",
-            {"PulseA": {"start": 3, "end": 8, "force": 230},
-             "PulseB": {"start": 3, "end": 8, "force": 230}},
-            momentos=(Momento("ao_apertar", 0, "Feedback",
-                              {"position": 8, "strength": 8}, dura_ms=300),),
-            na_frente=("terror",), a_validar=True),
+)
+
+#: Os números de ontem de cada imersão que mudou: `(imersão, chave de ontem, ajustes de ontem)`.
+#: Um perfil salvo com eles abre com a imersão de hoje selecionada (`imersao_dos_numeros`). A
+#: chave de ontem pode ser uma que saiu da lista de onze: ela passa pela tradução do perfil.
+NUMEROS_DE_ONTEM: tuple[tuple[str, str, Mapping[str, int]], ...] = (
+    ("ferrolho-que-volta", "SemiAutoGun", {"start": 3, "end": 7, "force": 6}),
+    ("trava-seca", "SemiAutoGun", {"start": 2, "end": 3, "force": 8}),
+    ("trava-seca", "Weapon", {"start": 0, "end": 1, "force": 255}),
+    ("pino-que-falha", "SemiAutoGun", {"start": 4, "end": 6, "force": 7}),
+    ("batida-do-coracao", "PulseB", {"start": 2, "end": 6, "force": 150}),
+    ("arma-pesada", "PulseB", {"start": 1, "end": 8, "force": 255}),
+    ("aperto-que-trava", "PulseB", {"start": 3, "end": 8, "force": 230}),
+    ("rajada-que-sobe-sozinha", "Machine", {"start": 0, "end": 9, "strength": 5, "frequency": 8}),
+    ("rajada-que-sobe-sozinha", "Machine", {"start": 0, "end": 9, "strength": 5, "frequency": 24}),
+    ("rajada-que-sobe-sozinha", "AutoGun", {"start": 1, "strength": 7, "frequency": 16}),
+    ("rajada-que-sobe-sozinha", "AutoGun", {"start": 1, "strength": 7, "frequency": 60}),
+    ("cano-que-esquenta", "AutoGun", {"start": 1, "strength": 6, "frequency": 20}),
+    ("recuo-pesado", "AutoGun", {"start": 2, "strength": 8, "frequency": 6}),
+    ("recuo-pesado", "AutoGun", {"start": 2, "strength": 8, "frequency": 10}),
+    ("freio-abs-que-pulsa", "Rigid", {"position": 2, "force": 220}),
+    ("freio-abs-que-pulsa", "SimpleRigid", {"strength": 7}),
+    ("freio-abs-que-pulsa", "Feedback", {"position": 2, "strength": 6}),
+    ("pedal-duro", "Rigid", {"position": 1, "force": 240}),
+    ("pedal-duro", "SimpleRigid", {"strength": 8}),
+    ("pedal-duro", "Feedback", {"position": 1, "strength": 8}),
 )
 
 POR_CHAVE: dict[str, Imersao] = {i.chave: i for i in IMERSOES}
@@ -294,7 +308,36 @@ def imersao_dos_numeros(modo: str, params: Sequence[object]) -> tuple[Imersao, s
     for imersao, do_modo, estilo, ajustes in todos_os_ajustes():
         if do_modo == modo and list(preset_to_positional_params(spec, ajustes)) == alvo:
             return imersao, estilo
-    return None
+    achada = _numeros_de_ontem().get((modo, tuple(alvo)))
+    return None if achada is None else (achada, "")
+
+
+@functools.lru_cache(maxsize=1)
+def _numeros_de_ontem() -> dict[tuple[str, tuple[int, ...]], Imersao]:
+    """`(modo, posicionais de hoje)` → a imersão cujos números de ontem eram esses.
+
+    Cada linha de :data:`NUMEROS_DE_ONTEM` passa pela tradução do perfil (a chave que saiu da
+    lista de onze vira a de hoje). Só vale se a imersão de hoje tem aquele modo: o campo da tela
+    nunca mostra uma opção que a lista do acionamento não oferece.
+    """
+    from hefesto_dualsense4unix.app.actions.trigger_specs import (
+        get_spec,
+        preset_to_positional_params,
+    )
+    from hefesto_dualsense4unix.core.trigger_effects import traduzir_chave_velha
+
+    mapa: dict[tuple[str, tuple[int, ...]], Imersao] = {}
+    for chave, velha, ajustes in NUMEROS_DE_ONTEM:
+        spec = get_spec(velha)
+        if spec is None:
+            continue
+        posicionais = [int(v) for v in preset_to_positional_params(spec, dict(ajustes))]
+        traduzida = traduzir_chave_velha(velha, posicionais)
+        modo, params = traduzida if traduzida is not None else (velha, posicionais)
+        imersao = POR_CHAVE[chave]
+        if modo in imersao.ajustes:
+            mapa.setdefault((modo, tuple(params)), imersao)
+    return mapa
 
 
 def a_da_frente_com_tempo(modo: str, estilo: str) -> Imersao | None:
