@@ -65,3 +65,11 @@ seção daqui**: a aba deixou de estar em trabalho.
   da mira no cabeçalho e o «Cursor | Botões»: o pacote só emite o interruptor, as terças e o botão da mira por
   analógico quando a página os tem, e o perfil «junto» acende o botão «apenas no DualSense» quando o «junto» não existe.
   O passo `junto` do roteiro do piloto sai no mesmo commit do `--publicar`.
+
+## calibrar-sensores.html
+- **15/10/2026** — a janela passa a se chamar «Calibrar giroscópio» (`<title>` e título), sem «?» (a dica do título e a
+  frase de cada um dos três passos viram `data-dica`, sem `title`); o selo do liga do analógico virtual diz
+  «Giroscópio como analógico»; todo alvo clicável mede 24 px ou mais; a coluna dos nomes das seis leituras cabe
+  «Acelerômetro» e as barras começam juntas (sprint A-JANELA-CALIBRAR-GIROSCOPIO-DO-TODO-01). O selo muda de texto
+  também na linha da aba Conexões, que usa o mesmo rótulo. Até publicar, o produto abre a Calibrar publicada, com o
+  nome velho: o pacote só escreve o que a página tem.

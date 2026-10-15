@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""A página de calibração dos sensores de movimento — `mockup/calibrar-sensores.html`.
+"""A janela Calibrar giroscópio — `mockup/calibrar-sensores.html`.
 
 PEDIDO, 31/08/2026, e é o segundo botão que o usuário mandou nascer na Controles:
 
@@ -88,7 +88,11 @@ SEM_CONTROLE = ("Nenhum controle conectado. Ligue um pelo cabo ou pelo rádio "
 #: (desenho-navegacao, item 12), pedido: chamar de «Analógico virtual» e
 #: permitir escolher entre o analógico esquerdo e o direito. O cabeçalho de cada cartão liga e escolhe o lado, como o chip do
 #: cabeçalho e os chips embaixo dos analógicos da aba Controles.
-ROTULO_DA_MIRA = "Analógico virtual"
+ROTULO_DA_MIRA = "Giroscópio como analógico"
+#: O NOME DA JANELA (todo, 15/10/2026): «Calibrar sensores de movimento» virou «Calibrar giroscópio»,
+#: aqui e no botão da aba Controles (`aba02.ROTULO_DO_CALIBRAR`, o mesmo texto). O selo acima é o nome
+#: novo do liga do analógico virtual (na aba Controles ele é a «Mira virtual», embaixo de cada analógico).
+TITULO = "Calibrar giroscópio"
 LADOS = (("analogico_esquerdo", "Esquerdo"), ("analogico_direito", "Direito"))
 ROTULO_SENSIBILIDADE = "O quanto um gesto anda"
 ROTULO_TREMOR = "Ignorar tremor até"
@@ -105,14 +109,11 @@ DE_ONDE_VEM_A_MIRA = "Os movimentos do controle movem o analógico escolhido."
 #: falso: o firmware não aceita escrita de calibração por nós (a família de
 #: fábrica, sem desfazer, `dualsense-referencia-canonica.md`), e quem guarda o
 #: zero é o Hefesto, por controle.
-AJUDA_DA_PAGINA = "Mede o zero de cada controle parado; os seus ajustes não mudam."
+AJUDA_DA_PAGINA = "Mede o zero de cada controle parado"
 PASSOS = (
-    ("e-parado", "Deixe parados",
-     "Numa superfície plana, com os analógicos livres. Não precisa desconectar nada."),
-    ("e-medindo", f"Medindo {SEGUNDOS} s",
-     "Não toque neles. Encostar no controle recomeça a conta dele."),
-    ("e-pronto", "Pronto",
-     "O zero de cada controle fica guardado no Hefesto e vale para todo jogo."),
+    ("e-parado", "Deixe parados", "Numa superfície plana, sem tocar"),
+    ("e-medindo", f"Medindo {SEGUNDOS} s", "Encostar recomeça a conta"),
+    ("e-pronto", "Pronto", "O zero fica guardado e vale em todo jogo"),
 )
 #: Os lugares vazios mostram até o P4, como as abas: o desenho é para quatro.
 LUGARES = 4
@@ -342,7 +343,9 @@ CSS = """
   .leitura{border-top:1px solid var(--border-sutil);padding-top:9px;
            display:flex;flex-direction:column;gap:8px}
   .lin{display:flex;align-items:center;gap:7px;font-family:var(--m);font-size:11px}
-  .lin > .r{flex:0 0 74px;color:var(--texto-mudo)}
+  /* A COLUNA DOS NOMES CABE O MAIS LONGO (todo, rodada 3): «Acelerômetro» mede 79 px, e com 74 a
+     linha dele empurrava o número e a barra 5 px para a direita; com 82 as seis barras começam juntas. */
+  .lin > .r{flex:0 0 82px;color:var(--texto-mudo)}
   .lin > .v{flex:0 0 52px;text-align:right;color:var(--texto-suave)}
   .lin > .g{flex:1;height:4px;border-radius:2px;background:var(--border-sutil);
             position:relative;overflow:hidden;color:var(--border-forte)}
@@ -419,7 +422,7 @@ CSS = """
      da casa (`.btn.apagado`), sem `opacity`, e segue clicável: o clique num
      lado acende o analógico virtual nele. */
   .av{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-  .av .sw{height:20px;border-radius:6px;font-size:11px;font-family:inherit;cursor:pointer;
+  .av .sw{height:24px;border-radius:6px;font-size:11px;font-family:inherit;cursor:pointer;
     border:1px solid var(--border-forte);background:var(--app-bg);color:var(--texto-mudo);
     display:inline-flex;align-items:center;gap:6px;padding:0 10px;white-space:nowrap}
   .av .sw .p{width:6px;height:6px;border-radius:50%;background:var(--border-forte)}
@@ -427,7 +430,7 @@ CSS = """
     background:rgba(80,250,123,.09);color:var(--green)}
   .av .liga:not(.off) > .sw .p,.av .lado.on > .sw .p{background:var(--green);
     box-shadow:0 0 6px var(--green)}
-  .av .liga > .sw{font-weight:600;font-size:12px}
+  .av .liga > .sw{font-weight:600;font-size:11px;padding:0 8px;max-width:100%;box-sizing:border-box}
   .av:has(.liga.off) .lado > .sw{border-color:var(--border-sutil);color:var(--texto-mudo);
     background:var(--app-bg)}
   .av:has(.liga.off) .lado > .sw .p{background:var(--border-sutil);box-shadow:none}
@@ -466,7 +469,7 @@ CSS = """
      o segundo botão passava 32 px da borda do cartão a 940 px. */
   .inverter{display:grid;grid-template-columns:1fr;gap:6px}
   .inverter .sw{justify-content:center}
-  .inverter .sw{height:17px;border-radius:6px;font-size:10.5px;font-family:inherit;
+  .inverter .sw{height:24px;border-radius:6px;font-size:10.5px;font-family:inherit;
     cursor:pointer;border:1px solid var(--green);background:rgba(80,250,123,.09);
     color:var(--green);display:inline-flex;align-items:center;gap:6px;padding:0 10px;
     white-space:nowrap}
@@ -475,6 +478,9 @@ CSS = """
   .inverter .sw.off{border-color:var(--border-forte);background:var(--app-bg);
     color:var(--texto-mudo)}
   .inverter .sw.off .p{background:var(--border-forte);box-shadow:none}
+  /* TODO ALVO CLICÁVEL TEM 24 PX NO MÍNIMO (todo, 15/10/2026): o liga e os dois lados da mira
+     eram de 20 px, e os dois «Inverter», de 17. */
+  [data-gesto]{min-height:24px}
 """
 
 
@@ -664,9 +670,9 @@ def miras(quem):
 
 
 def _passos():
-    """A fita dos três passos: o número e o nome, com a frase no `title`."""
+    """A fita dos três passos: o número e o nome, com a frase curta em `data-dica`."""
     return "\n".join(
-        f'      <label class="passo" for="{rid}" title="{dica}">'
+        f'      <label class="passo" for="{rid}" data-dica="{dica}">'
         f'<span class="n">{n}</span><b>{rot}</b></label>'
         for n, (rid, rot, dica) in enumerate(PASSOS, 1))
 
@@ -677,7 +683,7 @@ def documento(quem):
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<title>Hefesto — calibrar sensores de movimento</title>
+<title>Hefesto — calibrar giroscópio</title>
 <style>{CSS}{moldura()}</style>
 </head>
 <body>
@@ -688,7 +694,7 @@ def documento(quem):
          abre o arquivo com duplo clique. O dono é o `caixa_da_janela.voltar`,
          o mesmo do mapa do controle. -->
     {caixa_da_janela.voltar("02-controles.html")}
-    <h1><span class="p" data-dica="{AJUDA_DA_PAGINA}">Calibrar sensores de movimento</span></h1>
+    <h1><span class="p" data-dica="{AJUDA_DA_PAGINA}">{TITULO}</span></h1>
     <div class="perfil-ativo"><span class="pa-rot">Perfil ativo</span><span class="pa-nome" data-campo="perfil">—</span></div>
   </div>
 
