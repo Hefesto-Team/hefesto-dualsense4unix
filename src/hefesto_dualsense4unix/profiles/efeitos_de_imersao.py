@@ -23,6 +23,8 @@ FAMILIAS: dict[str, tuple[str, ...]] = {
     "resistência": ("Resistance",),
     "curva": ("MultiPositionFeedback",),
     "galope": ("Galloping",),
+    "rampa": ("SlopeFeedback",),
+    "vibração por posição": ("MultiPositionVibration",),
 }
 
 Ajustes = Mapping[str, int]
@@ -127,6 +129,23 @@ IMERSOES: tuple[Imersao, ...] = (
             momentos=(Momento("ao_apertar", 0, "Resistance",
                               {"start": 8, "force": 8}, dura_ms=300),),
             na_frente=("terror",), a_validar=True),
+    Imersao("golpe-leve", "Golpe leve", "arma",
+            "Um clique curto e macio no meio do curso.",
+            {"Weapon": {"start": 3, "end": 5, "force": 32}},
+            na_frente=("luta", "acao")),  # (noqa-acento): chave
+    Imersao("golpe-pesado", "Golpe pesado", "arma",
+            "Parede longa e dura que estala no fundo.",
+            # Na luta o catálogo pedia 2/8/255, que é a Arma pesada: sem variante, a tela não
+            # distinguiria as duas pelos números.
+            {"Weapon": {"start": 2, "end": 8, "force": 191}},
+            na_frente=("acao", "luta")),  # (noqa-acento): chave
+    Imersao("clique-no-meio", "Clique no meio", "arma",
+            "Um clique na metade, e a resistência cresce depois dele.",
+            {"Weapon": {"start": 4, "end": 6, "force": 160}},
+            # Com o status do Disparo o momento nasce no clique; sem ele, 300 ms do aperto.
+            momentos=(Momento(QUANDO_PASSOU_DO_CLIQUE, 300, "Resistance",
+                              {"start": 7, "force": 6}),),
+            na_frente=("fps", "acao")),  # (noqa-acento): chave
     # --- Metralhadora: Metralhadora e Vibração -------------------------------------------------
     Imersao("rajada-que-sobe-sozinha", "Rajada que sobe sozinha", "metralhadora",
             "As batidas começam médias e ficam mais fortes a cada meio segundo segurando.",
@@ -191,10 +210,42 @@ IMERSOES: tuple[Imersao, ...] = (
             {"Resistance": {"start": 1, "force": 8}},
             {"simulacao": {"Resistance": {"start": 1, "force": 7}}},
             na_frente=("corrida", "simulacao")),
+    Imersao("golpe-carregado", "Golpe carregado", "resistência",
+            "Uma parede que endurece segurando, treme de pronto aos 1,5 s e some.",
+            {"Resistance": {"start": 4, "force": 3}},
+            # O pronto (150 ms de Metralhadora, por cima de tudo) e depois a parede some.
+            momentos=(Momento("segurando", 500, "Resistance", {"force": 5}),
+                      Momento("segurando", 1000, "Resistance", {"force": 7}),
+                      Momento(QUANDO_PRONTO, 1500, "Machine",
+                              {"start": 4, "end": 9, "strength": 3, "frequency": 40},
+                              dura_ms=150),
+                      Momento("segurando", 1650, "Off", {})),
+            na_frente=("acao", "luta", "esportes")),  # (noqa-acento): chave
+    Imersao("mira-firme", "Mira firme", "resistência",
+            "Peso leve e constante no gatilho da mira.",
+            {"Resistance": {"start": 2, "force": 3}},
+            na_frente=("fps", "arco")),
+    Imersao("pique-que-cansa", "Pique que cansa", "resistência",
+            "Um peso leve que vai pesando segurando a corrida: mais forte aos 2, 4 e 6 s.",
+            {"Resistance": {"start": 0, "force": 2}},
+            momentos=(Momento("segurando", 2000, "Resistance", {"force": 3}),
+                      Momento("segurando", 4000, "Resistance", {"force": 4}),
+                      Momento("segurando", 6000, "Resistance", {"force": 5})),
+            na_frente=("esportes", "plataforma")),
     Imersao("porta-emperrada", "Porta emperrada", "curva",
             "O gatilho range em degraus, como porta enferrujada.",
             {"MultiPositionFeedback": _curva(0, 0, 0, 6, 0, 6, 0, 6, 0, 6)},
             na_frente=("terror",)),
+    Imersao("escudo-que-aguenta", "Escudo que aguenta", "curva",
+            "O gatilho endurece do meio ao fim e fica mais duro depois de 2 s segurando.",
+            {"MultiPositionFeedback": _curva(0, 0, 2, 2, 3, 4, 5, 6, 7, 8)},
+            momentos=(Momento("segurando", 2000, "MultiPositionFeedback",
+                              _curva(0, 0, 3, 3, 4, 5, 6, 7, 8, 8)),),
+            na_frente=("acao", "aventura", "luta")),  # (noqa-acento): chave
+    Imersao("duas-travas", "Duas travas", "curva",
+            "Duas travas no curso, uma na entrada e outra no meio.",
+            {"MultiPositionFeedback": _curva(1, 2, 8, 0, 0, 1, 2, 8, 0, 0)},
+            na_frente=("terror", "acao")),  # (noqa-acento): chave
     # --- Galope --------------------------------------------------------------------------
     Imersao("galope-no-chao", "Galope no chão", "galope",
             "Patas lentas e baixas, só se sentem devagar.",
@@ -213,6 +264,26 @@ IMERSOES: tuple[Imersao, ...] = (
             {"Galloping": {"start": 1, "end": 8, "first_foot": 4, "second_foot": 6,
                            "frequency": 16}},
             na_frente=("aventura", "corrida"), a_validar=True),
+    # --- Rampa de força e Vibração por posição -----------------------------------------------
+    Imersao("besta", "Besta", "rampa",
+            "Rampa curta e dura, que solta seca.",
+            {"SlopeFeedback": {"start": 2, "end": 9, "start_strength": 5, "end_strength": 8}},
+            na_frente=("arco", "aventura")),
+    Imersao("agarrar", "Agarrar", "rampa",
+            "O gatilho resiste mais à medida que aperta, como apertar algo.",
+            {"SlopeFeedback": {"start": 2, "end": 8, "start_strength": 2, "end_strength": 6}},
+            na_frente=("plataforma", "aventura")),
+    Imersao("energia-que-cresce", "Energia que cresce", "vibração por posição",
+            "Vibração que fica mais forte quanto mais fundo vai o dedo, e cheia aos 1,5 s.",
+            {"MultiPositionVibration": {"frequency": 50, **_curva(0, 1, 2, 3, 4, 5, 6, 7, 8, 8)}},
+            {"corrida": {"MultiPositionVibration": {"frequency": 25}}},
+            (Momento("segurando", 1500, "Machine",
+                     {"start": 2, "end": 9, "strength": 8, "frequency": 50}),),
+            na_frente=("acao", "aventura", "plataforma")),  # (noqa-acento): chave
+    Imersao("motor-no-acelerador", "Motor no acelerador", "vibração por posição",
+            "Ronco fraco que cresce com o pedal.",
+            {"MultiPositionVibration": {"frequency": 25, **_curva(1, 1, 2, 2, 3, 3, 4, 4, 5, 5)}},
+            na_frente=("corrida", "simulacao")),
 )
 
 #: Os números de ontem de cada imersão que mudou: `(imersão, chave de ontem, ajustes de ontem)`.
