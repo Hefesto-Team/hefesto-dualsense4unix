@@ -1298,6 +1298,10 @@ acquire_sudo
 # corpos da lib e as regiões daqui, e continua cobrando o que sempre cobrou.
 # shellcheck source=scripts/lib/camada_de_maquina.sh
 source "${ROOT_DIR}/scripts/lib/camada_de_maquina.sh"
+# O reinício do som da sessão, com a volta do painel do COSMIC, é um só para o
+# install e o uninstall (O-SOM-REINICIADO-NAO-CEGA-O-PAINEL-DO-COSMIC-01).
+# shellcheck source=scripts/lib/som_da_sessao.sh
+source "${ROOT_DIR}/scripts/lib/som_da_sessao.sh"
 
 # ---------------------------------------------------------------------------
 # O ENSAIO DAS CURAS DE HOST — o que cada `*_host` escreveria
@@ -3287,8 +3291,12 @@ install_pipewire_da_casa() {
             -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" \
             "${debs[@]}" >/dev/null 2>&1; then
         printf '      PipeWire %s e WirePlumber %s instalados (%d pacotes)\n' "${alvo_pw}" "${alvo_wp}" "${#debs[@]}"
-        if systemctl --user restart pipewire pipewire-pulse wireplumber >/dev/null 2>&1; then
+        if reiniciar_o_som_da_sessao; then
             printf '      som reiniciado — confira o som e o microfone de cada controle\n'
+            case "${SOM_PAINEL_DO_COSMIC}" in
+                voltou) printf '      o painel do COSMIC voltou a mostrar o som (cosmic-settings-daemon religado)\n' ;;
+                nao-voltou) warn "o painel do COSMIC ficou sem o som — rode: ${SOM_CURA_DO_PAINEL}" ;;
+            esac
         else
             warn "não consegui reiniciar o som — rode: systemctl --user restart pipewire pipewire-pulse wireplumber"
         fi

@@ -9274,6 +9274,54 @@ check_desempenho() {
     fi
 }
 
+# O painel do COSMIC vê o som? (O-SOM-REINICIADO-NAO-CEGA-O-PAINEL-DO-COSMIC-01,
+# 15/10/2026.) No COSMIC 1.10 o applet de som e o OSD do volume leem o PipeWire
+# pelo `cosmic-settings-daemon`; um reinício do PipeWire o deixa vivo e fora dos
+# clientes, e o applet diz «Nenhum dispositivo selecionado» com o som tocando.
+# O install e o uninstall o religam (scripts/lib/som_da_sessao.sh); esta leitura
+# é a mesma pergunta, repetida aqui porque o doctor viaja sem a lib nos pacotes.
+# Só lê: `pw-cli ls Client`, `pgrep` e o argv0 em /proc. Nada de endereço sai.
+_cosmic_settings_daemon_pids() {
+    local p argv0
+    for p in $(pgrep -u "$(id -u)" -x cosmic-settings 2>/dev/null || true); do
+        argv0=""
+        IFS= read -r -d '' argv0 < "/proc/${p}/cmdline" 2>/dev/null || true
+        if [[ "${argv0##*/}" == cosmic-settings-daemon ]]; then
+            printf '%s\n' "${p}"
+        fi
+    done
+}
+check_o_painel_do_cosmic_ve_o_som() {
+    local clientes pids argv0 programa cura
+    pgrep -u "$(id -u)" -x cosmic-session >/dev/null 2>&1 || return 0
+    command -v pw-cli >/dev/null 2>&1 || return 0
+    clientes="$(timeout 5 pw-cli ls Client 2>/dev/null || true)"
+    if [[ "${clientes}" != *PipeWire:Interface:Client* ]]; then
+        info "o PipeWire não respondeu — pulo a conferência do painel de som do COSMIC"
+        return 0
+    fi
+    if [[ "${clientes}" == *'application.name = "cosmic-settings-daemon"'* ]]; then
+        pass "o painel do COSMIC vê o som (o cosmic-settings-daemon é cliente do PipeWire)"
+        return 0
+    fi
+    pids="$(_cosmic_settings_daemon_pids)"
+    argv0=""
+    if [[ -n "${pids}" ]]; then
+        IFS= read -r -d '' argv0 < "/proc/${pids%%$'\n'*}/cmdline" 2>/dev/null || true
+    fi
+    if [[ "${argv0}" == /* ]]; then
+        programa="${argv0}"
+    else
+        programa="$(command -v cosmic-settings-daemon 2>/dev/null || printf '/usr/bin/cosmic-settings-daemon')"
+    fi
+    cura="systemd-run --user --collect ${programa}"
+    if [[ -n "${pids}" ]]; then
+        warn "o painel do COSMIC está sem o som: o cosmic-settings-daemon está vivo e fora do PipeWire (o som foi reiniciado depois dele) — rode: kill $(tr '\n' ' ' <<<"${pids}")&& ${cura}"
+    else
+        warn "o painel do COSMIC está sem o som: o cosmic-settings-daemon não está no ar — rode: ${cura}"
+    fi
+}
+
 main() {
     [[ "${WATCH_DROPOUT}" -eq 1 ]] && { watch_dropout; exit 0; }
     [[ "${SUGGEST_PORT}" -eq 1 ]] && { suggest_port; exit 0; }
@@ -9374,6 +9422,7 @@ main() {
     check_mic_perfil_sem_sinal
     check_mic_ganho_de_captura
     check_pipewire_cura_do_metadata
+    check_o_painel_do_cosmic_ve_o_som
     hdr "Steam Input"
     check_steam_input
     check_steam_input_allowlist

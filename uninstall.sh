@@ -309,6 +309,11 @@ done
 
 log() { printf '[uninstall] %s\n' "$*"; }
 
+# O reinício do som da sessão, com a volta do painel do COSMIC, é um só para o
+# install e o uninstall (O-SOM-REINICIADO-NAO-CEGA-O-PAINEL-DO-COSMIC-01).
+# shellcheck source=scripts/lib/som_da_sessao.sh
+source "${ROOT_DIR}/scripts/lib/som_da_sessao.sh"
+
 # ---------------------------------------------------------------------------
 # Credencial sudo: adquirir UMA vez no início (BUG-UNINSTALL-SUDO-NONINTERACTIVE-01)
 # ---------------------------------------------------------------------------
@@ -405,7 +410,7 @@ if [[ "${DRY_RUN}" -eq 1 ]]; then
                     pkill killall pip pip3 apt-get dnf pacman kernelstub \
                     update-desktop-database gtk-update-icon-cache update-initramfs \
                     gpasswd depmod modprobe rmmod gsettings dconf gnome-extensions \
-                    bash sh; do
+                    systemd-run bash sh; do
         eval "${_ens_cmd}() { _faria \"${_ens_cmd} \$*\"; return 0; }"
     done
     unset _ens_cmd
@@ -1966,8 +1971,12 @@ devolver_o_pipewire() {
                     -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" \
                     "${pkgs[@]}"; then
                 log "  PipeWire de antes devolvido"
-                if systemctl --user restart pipewire pipewire-pulse wireplumber >/dev/null 2>&1; then
+                if reiniciar_o_som_da_sessao; then
                     log "  som reiniciado — confira o som e o microfone de cada controle"
+                    case "${SOM_PAINEL_DO_COSMIC}" in
+                        voltou) log "  o painel do COSMIC voltou a mostrar o som (cosmic-settings-daemon religado)" ;;
+                        nao-voltou) log "  o painel do COSMIC ficou sem o som — rode: ${SOM_CURA_DO_PAINEL}" ;;
+                    esac
                 else
                     log "  não consegui reiniciar o som — rode: systemctl --user restart pipewire pipewire-pulse wireplumber"
                 fi

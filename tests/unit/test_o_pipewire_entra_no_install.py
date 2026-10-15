@@ -238,6 +238,7 @@ def _correr(
         "warn() { printf '      aviso: %s\\n' \"$*\"; }\n"
         "_faria() { printf '      FARIA        %s\\n' \"$*\"; }\n"
         "_faria_root() { printf '      FARIA (root) %s\\n' \"$*\"; }\n"
+        f'source "{RAIZ}/scripts/lib/som_da_sessao.sh"\n'
         + funcoes
         + "install_pipewire_da_casa\n"
     )

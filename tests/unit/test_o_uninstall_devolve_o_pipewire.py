@@ -145,6 +145,7 @@ def _correr(
         "set -euo pipefail\n"
         "log() { printf '[uninstall] %s\\n' \"$*\"; }\n"
         f"PIPEWIRE_PREF={trava}\n"
+        f'source "{RAIZ}/scripts/lib/som_da_sessao.sh"\n'
         + _funcao("devolver_o_pipewire")
         + "devolver_o_pipewire\n"
     )
