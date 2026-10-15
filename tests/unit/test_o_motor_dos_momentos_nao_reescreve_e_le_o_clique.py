@@ -554,7 +554,12 @@ def test_a_volta_a_mao_e_o_bloco_do_perfil_e_nao_o_da_imersao(
 ) -> None:
     plano = tv._plano_do_lado(SimpleNamespace(mode=velha, params=posicionais))
     if plano is None:
-        pytest.skip(f"{chave} não tem momento no acionamento de hoje")
+        # Sem momento no acionamento de hoje, nada a devolver; pulo não seria verde.
+        from hefesto_dualsense4unix.app.actions import trigger_specs
+
+        modo, _ = trigger_specs.na_lista_de_onze(velha, posicionais)
+        assert not ei.momentos_no_modo(ei.POR_CHAVE[chave], modo), (velha, posicionais)
+        return
     assert plano.bloco_da_volta() == _bloco_do_perfil(velha, posicionais), (velha, posicionais)
 
 
