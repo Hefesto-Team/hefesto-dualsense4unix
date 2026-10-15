@@ -39,6 +39,10 @@
 #   --keep-bluez         [no-op] o backport é PRESERVADO por padrão desde
 #                        02/08/2026 (BLUEZ-PADRAO-INVERTIDO-01) — desinstalar o
 #                        Hefesto não pode piorar o Bluetooth da máquina.
+#   --restore-pipewire   DEVOLVE o PipeWire e o WirePlumber às versões de antes do
+#                        install (VERSOES-ANTERIORES.txt do cache), sem perguntar.
+#                        Sem a flag, pergunta; com --yes ou sem TTY, preserva. Recusa
+#                        com a Steam aberta. A trava do apt do Hefesto sai sempre.
 #   --yes,-y             responde 'sim' para prompts.
 #   --dry-run,-n         ENSAIO: imprime o que removeria e não remove nada (ver
 #                        «O ENSAIO», logo depois das flags).
@@ -232,6 +236,7 @@ KEEP_STEAM_INPUT=0       # desliga Steam Input PSSupport por default (FEAT-DISAB
 # recompilado para o noble. A simetria que se perde é de PACOTE; a que se
 # ganha é de EFEITO — o sistema dela sai do uninstall funcionando como entrou.
 KEEP_BLUEZ=1             # preserva o backport por default; --restore-bluez desfaz
+RESTORE_PIPEWIRE=0       # O-UNINSTALL-DEVOLVE-O-PIPEWIRE-DE-ANTES-01: 1 devolve sem perguntar
 AUTO_YES=0
 DRY_RUN=0
 
@@ -263,6 +268,9 @@ Opções:
   --restore-bluez       DEVOLVE o BlueZ original da distro (o padrão PRESERVA o
                         backport). Destrutivo: reinicia o bluetoothd e descarta
                         os bonds pareados.
+  --restore-pipewire    DEVOLVE o PipeWire de antes do install, sem perguntar (sem a
+                        flag, pergunta; com --yes ou sem TTY, preserva). Reinicia o
+                        som e recusa com a Steam aberta.
   --keep-bluez          [no-op] preservar já é o padrão desde 02/08/2026
   --yes, -y             não pergunta nada (necessário sem TTY)
   --dry-run, -n         ensaio: diz o que removeria nesta máquina e não remove
@@ -287,6 +295,7 @@ for arg in "$@"; do
         # escreveu num script ou num roteiro.
         --keep-bluez)        KEEP_BLUEZ=1 ;;
         --restore-bluez)     KEEP_BLUEZ=0 ;;
+        --restore-pipewire)  RESTORE_PIPEWIRE=1 ;;
         --yes|-y)            AUTO_YES=1 ;;
         --dry-run|-n)        DRY_RUN=1 ;;
         --help|-h)           uso; exit 0 ;;
@@ -476,6 +485,8 @@ grep -qsF '# >>> hefesto JustWorksRepairing >>>' /etc/bluetooth/main.conf 2>/dev
 [[ -e /etc/sudoers.d/49-hefesto-placa ]] && _NEEDS_SUDO=1
 [[ -e /usr/local/lib/hefesto-dualsense4unix/hefesto_placa_acordada.sh ]] && _NEEDS_SUDO=1
 [[ "${KEEP_BLUEZ}" -eq 0 && -f "${HOME}/.cache/hefesto-dualsense4unix/bluez-backport/VERSOES-ANTERIORES.txt" ]] && _NEEDS_SUDO=1
+# O-UNINSTALL-DEVOLVE-O-PIPEWIRE-DE-ANTES-01: a trava do apt do PipeWire é de root.
+[[ -e /etc/apt/preferences.d/hefesto-pipewire ]] && _NEEDS_SUDO=1
 # O-DIARIO-DO-RADIO-01 (instalado pela INSTALL-E-UNINSTALL-DO-RADIO-01): a
 # trava comum do rádio (tmpfiles.d + /run), os carimbos da ponte, do religar
 # (STORM-USB-02) e do watchdog, e o diário do root — todos de root.
@@ -1865,6 +1876,113 @@ else
         fi
     fi
 fi
+
+# O PipeWire de antes (O-UNINSTALL-DEVOLVE-O-PIPEWIRE-DE-ANTES-01, 15/10/2026;
+# D-1510-O-UNINSTALL-PERGUNTA-E-DEVOLVE-O-PIPEWIRE, «Pergunta e devolve»).
+# O passo 3f-bis do install troca o PipeWire e o WirePlumber pelos da casa, grava
+# `pacote=versão` de cada um que trocou em pipewire-backport/VERSOES-ANTERIORES.txt
+# e fixa a prioridade do apt em PIPEWIRE_PREF. Aqui o caminho de volta:
+#   - devolver: com --restore-pipewire, ou respondendo «s» à pergunta; --yes e
+#     execução sem TTY PRESERVAM (trocar o PipeWire reinicia o som, e um gesto
+#     assim não acontece por omissão), e a fala diz a flag que devolve;
+#   - com a Steam aberta, recusa, como o install: reiniciar o WirePlumber com ela
+#     aberta é o que a deixa sem fechar;
+#   - a trava do apt é do Hefesto e sai SEMPRE, devolvendo ou preservando;
+#   - sem arquivo de volta e sem trava, o install nunca trocou nada: não faz nada.
+# O ensaio herda tudo: `sudo`, `apt-get`, `rm` e `systemctl` já só dizem o que
+# fariam, e a simulação do apt (que o ensaio dublaria como se mudasse algo) fica de fora.
+PIPEWIRE_PREF=/etc/apt/preferences.d/hefesto-pipewire
+devolver_o_pipewire() {
+    local registro="${HOME}/.cache/hefesto-dualsense4unix/pipewire-backport/VERSOES-ANTERIORES.txt"
+    local devolver=0 steam=0 pacote ver atual resp sairia
+    local pkgs=()
+    if [[ ! -f "${registro}" && ! -e "${PIPEWIRE_PREF}" ]]; then
+        log "sem registro do PipeWire de antes (${registro} ausente) — nada a devolver"
+        return 0
+    fi
+    if pgrep -u "$(id -u)" -x steam >/dev/null 2>&1 \
+        || pgrep -u "$(id -u)" -x steamwebhelper >/dev/null 2>&1; then
+        steam=1
+    fi
+    if [[ ! -f "${registro}" ]]; then
+        log "sem registro do PipeWire de antes (${registro} ausente) — só a trava do apt sai"
+    else
+        while IFS='=' read -r pacote ver; do
+            [[ -n "${pacote}" && -n "${ver}" ]] || continue
+            atual="$(dpkg-query -W -f='${db:Status-Abbrev}|${Version}\n' "${pacote}" 2>/dev/null \
+                | awk -F'|' '$1 ~ /^ii/ { print $2; exit }' || true)"
+            [[ -n "${atual}" && "${atual}" != "${ver}" ]] || continue
+            pkgs+=("${pacote}=${ver}")
+        done < "${registro}"
+        if [[ "${#pkgs[@]}" -eq 0 ]]; then
+            log "o PipeWire desta máquina já está nas versões do registro — nada a devolver"
+        elif [[ "${RESTORE_PIPEWIRE}" -eq 1 ]]; then
+            devolver=1
+        elif [[ "${AUTO_YES}" -eq 1 || ! -t 0 ]]; then
+            log "PipeWire da casa preservado (o padrão sem pergunta; --restore-pipewire devolve o de antes: ${pkgs[*]})"
+        elif [[ "${steam}" -eq 1 ]]; then
+            log "a Steam está aberta — o PipeWire de antes não pode voltar agora (feche a Steam e rode ./uninstall.sh --restore-pipewire)"
+        else
+            printf '[uninstall] AVISO: devolver o PipeWire de antes (%s)\n' "${pkgs[*]}"
+            printf '[uninstall]   REINICIA o som da sessão: os controles perdem o som e o microfone por\n'
+            printf '[uninstall]   alguns segundos, e um jogo aberto pode perder a saída até ser reaberto.\n'
+            printf '[uninstall] Devolver o PipeWire de antes? [s/N] '
+            read -r resp || resp=""
+            case "${resp}" in
+                [sS]*) devolver=1 ;;
+                *)     log "PipeWire da casa preservado a pedido (rode depois: ./uninstall.sh --restore-pipewire)" ;;
+            esac
+        fi
+        if [[ "${devolver}" -eq 1 && "${steam}" -eq 1 ]]; then
+            log "a Steam está aberta — o PipeWire de antes NÃO foi devolvido: trocar o PipeWire reinicia o som, e o reinício do WirePlumber com a Steam aberta é o que a deixa sem fechar"
+            log "  feche a Steam pelo menu e rode: ./uninstall.sh --restore-pipewire"
+            devolver=0
+        fi
+        if [[ "${devolver}" -eq 1 ]] && ! sudo -n true 2>/dev/null; then
+            log "sudo indisponível — PipeWire NÃO devolvido"
+            log "  reverta à mão: sudo apt-get install --allow-downgrades ${pkgs[*]}"
+            devolver=0
+        fi
+        if [[ "${devolver}" -eq 1 && "${DRY_RUN}" -ne 1 ]]; then
+            if ! sairia="$(LC_ALL=C apt-get install -s --allow-downgrades "${pkgs[@]}" 2>&1)"; then
+                log "o apt não aceita devolver estes pacotes (a versão pode ter saído do archive) — nada foi trocado"
+                log "  a simulação é: apt-get install -s --allow-downgrades ${pkgs[*]}"
+                devolver=0
+            else
+                sairia="$(awk '$1 == "Remv" { print $2 }' <<<"${sairia}" | tr '\n' ' ')"
+                if [[ -n "${sairia}" ]]; then
+                    log "devolver o PipeWire de antes tiraria da máquina: ${sairia}— nada foi trocado"
+                    devolver=0
+                fi
+            fi
+        fi
+        if [[ "${devolver}" -eq 1 ]]; then
+            log "devolvendo o PipeWire de antes: ${pkgs[*]}"
+            if sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-downgrades \
+                    -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" \
+                    "${pkgs[@]}"; then
+                log "  PipeWire de antes devolvido"
+                if systemctl --user restart pipewire pipewire-pulse wireplumber >/dev/null 2>&1; then
+                    log "  som reiniciado — confira o som e o microfone de cada controle"
+                else
+                    log "  não consegui reiniciar o som — rode: systemctl --user restart pipewire pipewire-pulse wireplumber"
+                fi
+            else
+                log "  ERRO: apt-get install --allow-downgrades falhou — devolva à mão:"
+                log "        sudo apt-get install --allow-downgrades ${pkgs[*]}"
+            fi
+        fi
+    fi
+    if [[ -e "${PIPEWIRE_PREF}" ]]; then
+        if sudo -n true 2>/dev/null && sudo rm -f "${PIPEWIRE_PREF}"; then
+            log "removida a trava do apt do PipeWire (${PIPEWIRE_PREF})"
+        else
+            log "sudo indisponível — a trava do apt NÃO foi removida"
+            log "  sudo rm -f ${PIPEWIRE_PREF}"
+        fi
+    fi
+}
+devolver_o_pipewire
 
 # A OBRA DO BACKPORT DO BLUEZ (BLUETOOTHD-NAO-DERRUBA-01, 23/09/2026). O
 # `scripts/construir_bluez_backport.sh` deixa no cache a árvore de compilação
