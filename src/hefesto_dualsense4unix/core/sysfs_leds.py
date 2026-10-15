@@ -7,7 +7,7 @@ um LED *multicolor* (`<prefixo>:rgb:indicator`, atributo ``multi_intensity``) e 
 report — que difere entre USB e Bluetooth (no BT precisa de ``seq_tag`` monotônico
 + CRC-32). Por isso essa rota acende a cor IGUAL em USB e BT.
 
-Contraste: a escrita crua por hidraw (pydualsense) usa ``seq_tag`` fixo e disputa
+Contraste: a escrita crua por hidraw (pydualsense) carimba o ``seq_tag`` por handle e disputa
 a lightbar/player-LED com o próprio kernel (que é dono desses LED class devices),
 fazendo a cor "não colar" no BT — exatamente o sintoma de
 BUG-MULTI-CONTROLLER-BT-CRC-CONTENTION-01 (lightbar-bt). FEAT-DSX-LIGHTBAR-SYSFS-01.

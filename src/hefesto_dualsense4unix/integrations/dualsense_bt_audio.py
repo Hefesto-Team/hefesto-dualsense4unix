@@ -62,7 +62,7 @@ MIC_BYTES_POR_QUADRO = MIC_AMOSTRAS_POR_QUADRO * MIC_CANAIS * MIC_BYTES_POR_AMOS
 AUDIO_OUTPUT_REPORT_ID = 0x32
 AUDIO_OUTPUT_REPORT_LEN = 142
 
-#: 0x13/0x16 alto-falante) e para o teste que trava os valores.
+#: As tags dos blocos TLV do corpo do 0x32; aqui só o AudioControl se escreve.
 BLOCO_SET_STATE = 0x10
 BLOCO_AUDIO_CONTROL = 0x11
 BLOCO_HAPTICS = 0x12

@@ -537,13 +537,13 @@ Isto estava **só no código** desta árvore, nunca nesta página. É a forma co
 os reports acima foram montados, e é a única forma que **se sabe funcionar** por
 rádio.
 
-**A ressalva de escopo, e ela é do mesmo tamanho do achado:** o que está medido é
-que **este envelope inteiro funciona**. **Ninguém aqui removeu uma peça de cada
-vez** para ver qual delas o firmware exige — nem o tag, nem o número de
-sequência, nem o CRC. Que o tag seja obrigatório vem do **comentário do driver da
-Sony**, não de ensaio do Hefesto. E a armadilha de fazer esse ensaio já está
-nomeada logo abaixo: uma escrita malformada **"dá certo"** para quem olha o valor
-de retorno.
+**A ressalva de escopo, e ela é do mesmo tamanho do achado:** o que está medido é que **este
+envelope inteiro funciona**. **Ninguém aqui removeu uma peça de cada vez** para ver qual delas o
+firmware exige — nem o tag, nem o número de sequência, nem o CRC. Que o tag seja obrigatório vem
+do **comentário do driver da Sony**, não de ensaio do Hefesto. A armadilha desse ensaio está
+nomeada logo abaixo: uma escrita malformada **"dá certo"** para quem olha o valor de retorno. O
+ensaio do número de sequência existe desde 15/10/2026 (`scripts/ensaios/a_sequencia_do_radio.py`,
+com o CRC errado de controle negativo); a linha medida entra aqui quando ele rodar no aparelho.
 
 ```
 [0]      = report id          (0x31, 0x32, ... 0x39)

@@ -1379,9 +1379,9 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
 
         Reports 0x31 ganham o contador por handle (wrap 0-15) e CRC NUMA CÓPIA; o buffer de
         `sendReport` fica com seq 0 (o dedup depende disso). O `_write_lock` (por handle, sem chamar
-        o backend, sem ciclo com o `_io_lock`) cobre o par carimbo+entrega: duas threads com o mesmo
-        `seq` ou fora de ordem fazem o firmware descartar o quadro com o log dizendo «escrito»
-        (LACO-DE-ESCRITA-02). A entrega ao C é contada (`_no_c`); o `close()` nunca toma o
+        o backend, sem ciclo com o `_io_lock`) entrega um quadro inteiro por vez, na ordem do
+        carimbo (LACO-DE-ESCRITA-02); se o firmware aceita o número repetido, quem mede é o ensaio
+        `a_sequencia_do_radio.py`. A entrega ao C é contada (`_no_c`); o `close()` nunca toma o
         `_write_lock` (QUEDA-QUE-PENDURA-01, A-REPORT-THREAD-SAI-ANTES-DO-HANDLE-FECHAR-01).
         """
         with self._write_lock, self._no_c():

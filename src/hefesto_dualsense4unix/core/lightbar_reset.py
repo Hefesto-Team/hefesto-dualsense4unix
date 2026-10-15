@@ -69,14 +69,14 @@ def send_release_leds(handle: Any) -> bool:
     LIGHTBAR-BT-RESET-03 (22/07, regressão MEDIDA ao vivo): desde o BTREPORT-02
     (18/07) todo 0x31 nosso sai com o nibble de SEQUÊNCIA POR-HANDLE — o
     ``writeReport`` do handle carimba ``seq`` + CRC e incrementa o contador. O
-    reset, porém, escrevia DIRETO no ``device`` com ``seq=0`` fixo: depois que
-    o keepalive/réplica já rodou (seq avançado), o firmware descarta o report
-    como fora de sequência e o claim NUNCA é devolvido — a lightbar BT volta a
-    ficar apagada com todas as escritas de cor ignoradas (o sintoma pré-cura;
-    journal 22/07 14:55: ``lightbar_reset_enviado`` + cor escrita e barra
-    escura). A cura de 17/07 funcionava porque na época TODOS os reports saíam
-    com seq 0. Agora o reset passa pelo MESMO ``writeReport`` (seq/CRC
-    corretos na ordem real do fluxo); ``device`` cru continua como fallback
+    reset, porém, escrevia DIRETO no ``device`` com ``seq=0`` fixo, e depois que
+    o keepalive/réplica já tinha rodado o claim NUNCA era devolvido — a lightbar
+    BT ficava apagada com todas as escritas de cor ignoradas (journal 22/07
+    14:55: ``lightbar_reset_enviado`` + cor escrita e barra escura); a cura de
+    17/07 funcionava quando TODOS os reports saíam com seq 0. Que o firmware jogue
+    fora o número repetido foi a leitura daquele dia, não medida isolada; quem
+    mede é ``scripts/ensaios/a_sequencia_do_radio.py``. O reset passa pelo MESMO
+    ``writeReport`` (seq/CRC na ordem real do fluxo); ``device`` cru continua como fallback
     (testes/objetos sem writeReport — comportamento antigo).
 
     Best-effort: ``False`` em qualquer falha, nunca levanta (a adoção segue;
