@@ -319,12 +319,35 @@ provar() {
     [[ "${rc}" -eq 1 ]] || morra "${RC_PROVA}" "sem a cura, a prova não pendurou: ela não mede nada"
 }
 
+# Numa máquina com o BlueZ da casa (libbluetooth3 ~hefesto), o libbluetooth-dev
+# que o PipeWire pede para construir tem de ser o da casa, da mesma versão: o
+# mk-build-deps puxaria o do archive (5.72), e o apt rebaixaria o libbluetooth3
+# da casa para casar com ele. Por isso a ordem: primeiro o .deb da bluez-obra,
+# depois o mk-build-deps. $1: o que o dpkg-checkbuilddeps disse que falta.
+avisar_do_libbluetooth_dev() {
+    local falta="$1" arch ver deb
+    [[ "${falta}" == *libbluetooth-dev* ]] || return 0
+    arch="$(dpkg --print-architecture 2>/dev/null || echo amd64)"
+    ver="$(dpkg-query -W -f='${Version}' "libbluetooth3:${arch}" 2>/dev/null || true)"
+    [[ "${ver}" == *~hefesto* ]] || return 0
+    deb="${HEFESTO_BLUEZ_CACHE:-${HOME}/.cache/hefesto-dualsense4unix}/bluez-obra/libbluetooth-dev_${ver}_${arch}.deb"
+    printf '[pipewire-backport] ANTES do mk-build-deps: esta máquina tem o BlueZ da casa (%s), e o\n' "${ver}" >&2
+    printf '    libbluetooth-dev do archive o rebaixaria. Instale primeiro o da casa:\n' >&2
+    if [[ -f "${deb}" ]]; then
+        printf '    sudo apt install %s\n' "${deb}" >&2
+    else
+        printf '    ele não está em %s; reconstrua o BlueZ da casa com\n' "${deb%/*}" >&2
+        printf '    scripts/construir_bluez_backport.sh --forcar e instale o libbluetooth-dev_%s_%s.deb de lá\n' "${ver}" "${arch}" >&2
+    fi
+}
+
 checar_dependencias() {
     local arvore falta faltou=0
     command -v dpkg-buildpackage >/dev/null || morra "${RC_DEPS}" "falta o dpkg-dev (dpkg-buildpackage)"
     for arvore in "${PW_ARVORE}" "${WP_ARVORE}"; do
         if ! falta="$(cd "${arvore}" && dpkg-checkbuilddeps 2>&1)"; then
             printf '%s: %s\n' "${arvore##*/}" "${falta}" >&2
+            avisar_do_libbluetooth_dev "${falta}"
             printf '[pipewire-backport] quem tem sudo instala e roda de novo:\n' >&2
             printf '    cd %s && sudo mk-build-deps -ir debian/control\n' "${arvore}" >&2
             faltou=1
