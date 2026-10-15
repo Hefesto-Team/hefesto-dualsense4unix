@@ -957,13 +957,13 @@ class Daemon:
             # na ordem inversa o som cai antes do IPC — o mesmo motivo do
             # `bt_mic`, do outro lado do áudio.
             await self._safe_start("alto_falante", self._start_alto_falante)
-            # CONEXAO-ZUMBI-01: o vigia do link que conecta e NÃO vira controle. Sobe
-            # depois do som porque lê o sysfs e o BlueZ por conta própria, e, na ordem
-            # inversa, cai antes do IPC: o último a olhar a mesa não pode ser o primeiro
-            # a acordar. Nome ASCII, como o dos irmãos. MOVER-UM-POR-VEZ-01: a central
-            # do rádio vem logo depois, e abre o dono do BlueZ no arranque.
+            # CONEXAO-ZUMBI-01: o vigia do link que conecta e NÃO vira controle. Sobe depois
+            # do som porque lê o sysfs e o BlueZ por conta própria, e, na ordem inversa, cai
+            # antes do IPC. Nome ASCII, como o dos irmãos. Depois dele, a central do rádio
+            # (MOVER-UM-POR-VEZ-01), que abre o dono do BlueZ, e o ouvido do barramento USB.
             await self._safe_start("conexoes", self._start_conexoes)  # (noqa-acento): nome ASCII
             await self._safe_start("central_do_radio", self._start_central_do_radio)
+            await self._safe_start("ouvido_do_usb", self._start_ouvido_do_usb)
             await self._safe_start("plugins", self._start_plugins)
             # FEAT-METRICS-01: sobe o servidor de métricas Prometheus (gate
             # interno respeita metrics_enabled). Antes nunca era iniciado —
@@ -4690,6 +4690,13 @@ class Daemon:
             return None
         self._cursor_do_toque = novo
         return novo
+
+    async def _start_ouvido_do_usb(self) -> None:
+        """A-CADEIA-USB-SE-RECONHECE-EM-QUALQUER-PC-01: o que entra, sai, volta e muda de
+        velocidade no barramento vai ao ``usb-diario.jsonl``."""
+        from hefesto_dualsense4unix.daemon.subsystems.ouvido_do_usb import start_ouvido_do_usb
+
+        start_ouvido_do_usb(self)
 
 
 CAMPOS_DO_TETO_DA_ECONOMIA: Final[tuple[str, ...]] = (
