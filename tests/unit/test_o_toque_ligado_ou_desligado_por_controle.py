@@ -286,6 +286,84 @@ class TestAUniaoDasDemandas:
         assert REGISTRO.jogo_aberto() is True
 
 
+class TestOHubVigiaSemATela:
+    """O Desligado do perfil vale com a interface fechada: ninguém precisa pedir leitura ao hub."""
+
+    def test_o_arranque_do_ipc_poe_o_hub_a_vigiar(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from hefesto_dualsense4unix.daemon import ipc_server
+        from hefesto_dualsense4unix.daemon.subsystems import ipc
+        from hefesto_dualsense4unix.profiles import manager
+
+        vigias: list[int] = []
+
+        class _Servidor:
+            def __init__(self, **_: Any) -> None:
+                pass
+
+            async def start(self) -> None:
+                return None
+
+            def _garantir_sensor_hub(self) -> Any:
+                return SimpleNamespace(vigiar=lambda: vigias.append(1))
+
+        monkeypatch.setattr(ipc_server, "IpcServer", _Servidor)
+        monkeypatch.setattr(manager, "gerente_do_daemon", lambda *_a, **_k: None)
+        daemon = SimpleNamespace(controller=None, store=None)
+        monkeypatch.delenv("HEFESTO_DUALSENSE4UNIX_FAKE", raising=False)
+        asyncio.run(ipc.start_ipc(daemon))  # type: ignore[arg-type]
+        assert vigias == [1], "o daemon subiu sem o hub vigiar: o Desligado espera a tela abrir"
+        monkeypatch.setenv("HEFESTO_DUALSENSE4UNIX_FAKE", "1")
+        asyncio.run(ipc.start_ipc(daemon))  # type: ignore[arg-type]
+        assert vigias == [1], "no modo de mentira o hub abriu o /dev/input de verdade"
+
+    def test_vigiar_sobe_a_manutencao_sem_pedido_de_leitura(self) -> None:
+        cena = _Cena()
+        hub = SensorHub(
+            motion_factory=lambda uniq, node: _LeitorDoToque(),
+            touch_factory=lambda uniq, node: _LeitorDoToque(),
+            gamepad_factory=lambda uniq, node: _LeitorDoToque(),
+            descobrir_motion=dict,
+            descobrir_touch=dict,
+            descobrir_gamepad=dict,
+            ha_jogo=lambda: cena.jogo,
+        )
+        hub._watch = SimpleNamespace(poll=lambda: False)
+        try:
+            hub.vigiar()
+            assert hub._thread is not None and hub._thread.is_alive()
+        finally:
+            hub.stop_all()
+
+    def test_o_hub_do_ipc_pergunta_ao_daemon_pelo_jogo_e_pela_mascara(self) -> None:
+        from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
+
+        class _H(IpcHandlersMixin):
+            def __init__(self) -> None:
+                self.store = SimpleNamespace(window_detect_current_class="steam_app_1")
+                self.daemon = SimpleNamespace(
+                    display_authority="game",
+                    config=SimpleNamespace(gamepad_flavor="dualsense"),
+                    is_native_mode=lambda: False,
+                )
+                self._sensor_hub = None
+
+        h = _H()
+        hub = h._garantir_sensor_hub()
+        try:
+            assert hub._ha_jogo is not None and hub._ha_jogo() is True, "o hub não sabe do jogo"
+            perguntar = hub._toque_proprio_do_jogo
+            assert perguntar is not None and perguntar(_P1) is True
+            h.store.window_detect_current_class = "steam"
+            assert perguntar(_P1) is False, "a janela da Steam tomou o cursor do touchpad"
+            h.store.window_detect_current_class = "steam_app_1"
+            h.daemon.config.gamepad_flavor = "xbox"
+            assert perguntar(_P1) is False, "a máscara Xbox recebeu o toque pelo vpad"
+            h.daemon.display_authority = "desktop"
+            assert hub._ha_jogo() is False
+        finally:
+            hub.stop_all()
+
+
 class TestOPerfil:
     def test_o_perfil_velho_sem_o_campo_carrega_ligado(self) -> None:
         secao = ControllerSensoresOverride.model_validate({"giroscopio": False})

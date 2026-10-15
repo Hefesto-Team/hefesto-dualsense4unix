@@ -2601,7 +2601,7 @@ class IpcHandlersMixin:
 
         cfg = getattr(self.daemon, "config", None)
         da_sessao = str(getattr(cfg, "gamepad_flavor", "dualsense"))
-        return str(mascara_efetiva(uniq, da_sessao)) == "dualsense"
+        return str(mascara_efetiva(uniq, da_sessao)) == "dualsense" and not _na_steam(self)
 
     def _inputs_passivos(
         self, entry: dict[str, Any], uniq: str | None, com_leitor_coop: set[str]
@@ -5901,6 +5901,18 @@ def _com_a_marca_do_f_hid(result: dict[str, Any]) -> None:
         from hefesto_dualsense4unix.integrations import pad_usb
 
         emulacao["get_report_sized"] = pad_usb.marca_do_f_hid_medida()
+
+
+def _na_steam(handlers: Any) -> bool:
+    """A janela em foco é o cliente da Steam: ela conta como jogo, mas o toque fica no cursor.
+
+    O ``ha_jogo`` vê a Steam como jogo; com a máscara DualSense e o Ligado, o hub agarraria o
+    touchpad nela, e o cursor pararia na loja e na biblioteca.
+    """
+    from hefesto_dualsense4unix.profiles.steam_app import e_janela_do_cliente_steam
+
+    store = getattr(handlers, "store", None)
+    return bool(e_janela_do_cliente_steam(getattr(store, "window_detect_current_class", None)))
 
 
 __all__ = ["IpcHandlersMixin"]

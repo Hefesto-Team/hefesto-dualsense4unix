@@ -426,6 +426,10 @@ class SensorHub:
         self._ha_jogo = ha_jogo
         self._toque_proprio_do_jogo = toque_proprio_do_jogo
 
+    def vigiar(self) -> None:
+        """Sobe a manutenção sem esperar pedido: o touchpad Desligado vale com a tela fechada."""
+        self._garantir_manutencao()
+
     def reconciliar(self) -> None:
         """Casa os readers vivos com a demanda atual. Roda FORA do event loop."""
         agora = self._relogio()
