@@ -16,7 +16,7 @@ def _altura_esperada(rotulo: str) -> int:
     """A altura do «Modo Freestyle», lida no dono (`aba01.py`), nunca digitada."""
     fonte = (RAIZ / "src/hefesto_dualsense4unix/interface/aba01.py").read_text(
         encoding="utf-8")
-    achado = re.search(r"\.cadeado\{(?:[^}]*;)?height:(\d+)px", fonte)
+    achado = re.search(r"\.cadeado(?:,[^{]*)?\{(?:[^}]*;)?\s*height:(\d+)px", fonte)
     assert achado, "o `.cadeado` do gerador perdeu a altura — a régua ficaria cega"
     return int(achado.group(1))
 

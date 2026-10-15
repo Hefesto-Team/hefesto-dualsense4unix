@@ -54,19 +54,21 @@ def _secao(corpo: str, classe: str) -> str:
 
 
 def test_os_botoes_de_cada_lado_do_interruptor() -> None:
-    """Ligado: DualSense, Xbox e Navegação. Desligado: Nativo e Steam Input.
+    """Ligado: DualSense, Xbox e Point and click. Desligado: Nativo, Steam Input e Navegação.
+
+    A Navegação mudou de lado no todo de 15/10/2026 (A-ABA-JOGAR-DO-TODO-01, opção A).
 
     A MORDIDA: devolva o «Steam Input» ao `aba01.MODOS` (ou a faixa fixa do
     «Modo Nativo» ao Desligado) e a régua reprova.
     """
     corpo = onde.pagina("01-jogar.html").read_text(encoding="utf-8")
-    ligado = re.findall(r'data-gesto="(modo-[a-z]+)"', _secao(corpo, "so-ligado"))
+    ligado = re.findall(r'data-gesto="(modo-[a-z-]+)"', _secao(corpo, "so-ligado"))
     desligado = _secao(corpo, "so-desligado")
-    assert ligado == ["modo-dualsense", "modo-xbox", "modo-navegacao"], ligado
-    assert re.findall(r'data-gesto="(modo-[a-z]+)"', desligado) == [
-        "modo-nativo", "modo-steam"]
+    assert ligado == ["modo-dualsense", "modo-xbox", "modo-point-and-click"], ligado
+    assert re.findall(r'data-gesto="(modo-[a-z-]+)"', desligado) == [
+        "modo-nativo", "modo-steam", "modo-navegacao"]
     classes = re.findall(r'<span class="([^"]+)"[^>]*data-gesto="modo-', desligado)
-    assert [c.replace(" on", "") for c in classes] == ["degrau", "degrau"], (
+    assert [c.replace(" on", "") for c in classes] == ["degrau"] * 3, (
         f"os botões do Desligado não têm o estilo dos do Ligado: {classes}")
     assert "fixo" not in desligado and "Modo Nativo" not in desligado
 

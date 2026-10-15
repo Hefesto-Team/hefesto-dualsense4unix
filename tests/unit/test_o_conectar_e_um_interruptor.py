@@ -514,12 +514,20 @@ def _folha(fonte: str, prefixo: str) -> dict[str, dict[str, str]]:
 
 
 def test_a_peca_e_a_do_modo_freestyle() -> None:
-    """A folha ``.cadeado`` da seção do rádio tem os mesmos valores da aba"""
+    """A folha ``.cadeado`` da seção do rádio acende com as cores do «Modo Freestyle».
+
+    Desde o todo de 15/10/2026 (A-ABA-JOGAR-DO-TODO-01, rodada 4) a pílula da Jogar mede 34 px,
+    irmã do Reconectar ao lado, e o desenho do todo da Conexões mantém a do rádio em 26 px: o que
+    as duas seguem dividindo é a cor apagada e a acesa."""
     jogar = _folha((INTERFACE / "aba01.py").read_text(encoding="utf-8"), "")
     radio = _folha((INTERFACE / "aba08.py").read_text(encoding="utf-8"), ".radio ")
-    assert set(jogar) == {".cadeado", ".cadeado .p", ".cadeado.ligada", ".cadeado.ligada .p"}
-    assert radio == jogar
-    assert jogar[".cadeado"]["height"] == "26px"
+    quatro = {".cadeado", ".cadeado .p", ".cadeado.ligada", ".cadeado.ligada .p"}
+    assert set(jogar) == set(radio) == quatro
+    for seletor in (".cadeado.ligada", ".cadeado.ligada .p"):
+        assert radio[seletor] == jogar[seletor], seletor
+    for campo in ("border", "background", "color"):
+        assert radio[".cadeado"][campo] == jogar[".cadeado"][campo], campo
+    assert radio[".cadeado"]["height"] == "26px"
 
 
 class _JanelaQueDorme:

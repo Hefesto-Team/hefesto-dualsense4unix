@@ -2534,7 +2534,8 @@ SEM_LEITURA_DO_TOUCHPAD = (
 )
 
 
-@gesto("02-controles.html", "touchpad", grava="sensor_set_detalhado")
+@gesto("02-controles.html", "touchpad",
+       grava="grava o toque deste controle no perfil ativo, pelo daemon")
 def touchpad(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """O interruptor «Ligado | Desligado» do touchpad de UM controle (15/10/2026).
 

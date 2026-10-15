@@ -327,13 +327,17 @@ def test_o_chip_clicado_e_o_que_acende(vdf, monkeypatch, de, para, jogo_aberto,
 
 
 @pytest.mark.parametrize("para", CHIPS)
-@pytest.mark.parametrize("origem", ["xbox", "navegacao"])
+@pytest.mark.parametrize("origem", ["xbox", "navegacao", "pointclick"])
 def test_a_origem_que_a_primeira_cura_deixava(vdf, monkeypatch, origem, para) -> None:
-    """O «Xbox» ou a «Navegação» COM o jogo na lista e a ponte de pé no vdf."""
+    """O «Xbox», a «Navegação» ou o «Point and click» COM o jogo na lista e a ponte de pé.
+
+    A «Navegação» e o «Point and click» são o mesmo modo `desktop` do daemon desde o todo de
+    15/10/2026 (A-ABA-JOGAR-DO-TODO-01); quem acende um ou outro é a lembrança da tela."""
+    aba._guardar_a_navegacao_no_desligado(origem == "navegacao")
     _ponte_de_pe()
     _a_maquina(monkeypatch, jogo_aberto=True, steam_aberta=True)
     ctx = _ctx(aberto=True, caminho="xbox",
-               modo="desktop" if origem == "navegacao" else "gamepad")
+               modo="gamepad" if origem == "xbox" else "desktop")
     daemon = DaemonDeMentira(ctx.state, jogo_aberto=True)
     _parar_a_vigia(monkeypatch)
     assert _aceso(ctx) == origem
