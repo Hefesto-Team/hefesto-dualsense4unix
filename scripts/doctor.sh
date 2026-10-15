@@ -5216,8 +5216,10 @@ check_bluez_distro_depois_do_backport() {
 # enquanto o WirePlumber sai (issue #5445, curada no 06de0ed da 1.6.9): a Steam
 # roda `wpctl settings`, o `wpctl` não sai e a Steam não fecha
 # (docs/protocol/o-wpctl-pendurado-pelo-metadata.md). O Pop!_OS 24.04 ainda
-# entrega a 1.6.8; a casa tem a receita da 1.6.9
-# (O-PIPEWIRE-DA-CASA-LEVA-A-CURA-DO-METADATA-01, 15/10/2026).
+# entrega a 1.6.8; a casa leva a 1.6.9 pelo passo 3f-bis do install e pela
+# receita (O-PIPEWIRE-DA-CASA-LEVA-A-CURA-DO-METADATA-01, 15/10/2026). Fora do
+# dpkg não há receita: o Fedora e o Arch já entregam a 1.6.9, e a cura vem da
+# distro.
 #
 # A comparação é pela versão do UPSTREAM (sem época e sem a revisão do pacote),
 # por `sort -V`: o `dpkg --compare-versions` põe o `1.6.9-0~hefesto24.04.1` da
@@ -5227,13 +5229,27 @@ _pw_versao_do_upstream() {
     local v="${1#*:}"
     printf '%s' "${v%%-*}"
 }
+#: O gesto da cura, conforme quem entregou o PipeWire. `$1`: `dpkg` quando a
+#: versão veio do pacote, `fora` quando veio do `pipewire --version`.
+_pw_gesto_da_cura() {
+    if [[ "$1" == "dpkg" ]]; then
+        so_no_checkout "(./install.sh, passo 3f-bis, ou a receita: docs/usage/receita-backport-pipewire.md)"
+        return 0
+    fi
+    case "$(_dono_do_arquivo "$(command -v pipewire)")" in
+        fedora) printf ' (a cura vem da distro, que já entrega a 1.6.9: sudo dnf upgrade)' ;;
+        arch) printf ' (a cura vem da distro, que já entrega a 1.6.9: sudo pacman -Syu)' ;;
+        *) printf ' (a cura vem da distro: atualize o PipeWire para a 1.6.9 ou mais nova)' ;;
+    esac
+}
 check_pipewire_cura_do_metadata() {
-    local pw wp up linha_wp
+    local pw wp up linha_wp fonte="dpkg"
     if command -v dpkg-query >/dev/null 2>&1; then
         pw="$(dpkg-query -W -f='${Version}' libpipewire-0.3-modules 2>/dev/null || true)"
         wp="$(dpkg-query -W -f='${Version}' wireplumber 2>/dev/null || true)"
     fi
     if [[ -z "${pw:-}" ]] && command -v pipewire >/dev/null 2>&1; then
+        fonte="fora"
         pw="$(pipewire --version 2>/dev/null | sed -n 's/^Linked with libpipewire \([0-9][0-9.]*\).*/\1/p' | head -n1)"
     fi
     if [[ -z "${pw:-}" ]]; then
@@ -5251,7 +5267,7 @@ check_pipewire_cura_do_metadata() {
     if [[ "$(printf '%s\n%s\n' "${_PW_COM_A_CURA}" "${up}" | sort -V | head -n1)" == "${_PW_COM_A_CURA}" ]]; then
         pass "o PipeWire ${pw} tem a cura do metadata (>= ${_PW_COM_A_CURA}, issue #5445); ${linha_wp}"
     else
-        warn "o PipeWire ${pw} não tem a cura do metadata (chegou na ${_PW_COM_A_CURA}, issue #5445): depois de um reinício do WirePlumber, um cliente como o \`wpctl\` que a Steam roda pode ficar preso, e a Steam não fecha. ${linha_wp^}$(so_no_checkout "(a receita da 1.6.9: docs/usage/receita-backport-pipewire.md)")"
+        warn "o PipeWire ${pw} não tem a cura do metadata (chegou na ${_PW_COM_A_CURA}, issue #5445): depois de um reinício do WirePlumber, um cliente como o \`wpctl\` que a Steam roda pode ficar preso, e a Steam não fecha. ${linha_wp^}$(_pw_gesto_da_cura "${fonte}")"
     fi
 }
 

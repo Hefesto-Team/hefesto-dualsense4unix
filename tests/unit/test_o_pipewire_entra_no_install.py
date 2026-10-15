@@ -489,3 +489,45 @@ def test_o_aviso_sai_antes_do_mk_build_deps() -> None:
     corpo = texto[texto.index("checar_dependencias() {\n") :]
     corpo = corpo[: corpo.index("\n}\n")]
     assert corpo.index("avisar_do_libbluetooth_dev") < corpo.index("mk-build-deps")
+
+
+DOCTOR = RAIZ / "scripts" / "doctor.sh"
+
+
+def _doctor_fora_do_dpkg(tmp_path: Path, dono: str) -> str:
+    """O doctor numa máquina sem o PipeWire no dpkg, com o binário de `dono`."""
+    fakes = tmp_path / "fakes"
+    _exe(fakes, "pipewire", 'printf "pipewire\\nLinked with libpipewire 1.6.8\\n"\n')
+    _exe(fakes, "dpkg-query", "exit 1\n")
+    _exe(fakes, "dpkg", "exit 1\n")
+    _exe(fakes, "pacman", f"exit {0 if dono == 'arch' else 1}\n")
+    _exe(fakes, "rpm", f"exit {0 if dono == 'fedora' else 1}\n")
+    r = subprocess.run(
+        [BASH, "-c", 'set --; source "$DOCTOR_SH"; check_pipewire_cura_do_metadata; true'],
+        env={"PATH": f"{fakes}:/usr/bin:/bin", "DOCTOR_SH": str(DOCTOR), "HOME": str(tmp_path)},
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    assert r.returncode == 0, r.stderr
+    return r.stdout
+
+
+@pytest.mark.parametrize(
+    "dono,gesto",
+    [("fedora", "sudo dnf upgrade"), ("arch", "sudo pacman -Syu"), ("", "1.6.9 ou mais nova")],
+)
+def test_fora_do_dpkg_a_cura_vem_da_distro(tmp_path: Path, dono: str, gesto: str) -> None:
+    saida = _doctor_fora_do_dpkg(tmp_path, dono)
+    assert saida.startswith("[WARN] o PipeWire 1.6.8 não tem a cura"), saida
+    assert "a cura vem da distro" in saida and gesto in saida, saida
+    assert "receita" not in saida and "install.sh" not in saida, saida
+
+
+def test_no_dpkg_o_doctor_aponta_o_install_e_a_receita() -> None:
+    texto = DOCTOR.read_text(encoding="utf-8")
+    corpo = texto[texto.index("_pw_gesto_da_cura() {\n") :]
+    corpo = corpo[: corpo.index("\n}\n")]
+    assert "./install.sh, passo 3f-bis" in corpo
+    assert "docs/usage/receita-backport-pipewire.md" in corpo
