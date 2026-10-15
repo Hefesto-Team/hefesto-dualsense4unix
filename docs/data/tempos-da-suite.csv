@@ -642,7 +642,6 @@ tests/unit/test_draft_config.py,535,medido
 tests/unit/test_dropin_ambiguo_01_a_marca_do_gesto.py,563,medido
 tests/unit/test_ds_output_report.py,346,medido
 tests/unit/test_dualsense_bt_audio.py,3630,medido
-tests/unit/test_editar_em_todos_escreve_a_secao_global.py,374,medido
 tests/unit/test_emblemas_do_readme.py,356,medido
 tests/unit/test_empate01_a_coluna_diz_quem_ganha.py,399,medido
 tests/unit/test_empate01_a_cor_volta_a_ser_a_escolhida.py,337,medido
@@ -997,7 +996,6 @@ tests/unit/test_o_chip_do_alto_falante_tem_a_cara_do_chip_do_microfone.py,603,me
 tests/unit/test_o_chip_do_perfil_tem_um_dono_so.py,2481,medido
 tests/unit/test_o_chip_e_o_ps_r3_entram_no_mesmo_modo.py,342,medido
 tests/unit/test_o_ci_de_casa_e_o_do_github.py,113994,medido
-tests/unit/test_o_cinza_da_mira_e_do_mic_avisa_o_leitor.py,4070,medido
 tests/unit/test_o_circulo_mostra_o_que_o_jogo_ve.py,3020,medido
 tests/unit/test_o_clique_do_analogico_tem_dono.py,357,medido
 tests/unit/test_o_clique_leva_o_argumento_do_proprio_botao.py,456,medido
@@ -1067,7 +1065,6 @@ tests/unit/test_o_eco_da_propria_escrita_nao_e_gesto_do_usuario.py,365,medido
 tests/unit/test_o_eco_do_ato_sem_objeto.py,2589,medido
 tests/unit/test_o_editor_da_aba_perfis_so_grava_no_perfil_que_mostra.py,997,medido
 tests/unit/test_o_eleitor_do_microfone_nao_elege_o_proibido.py,366,medido
-tests/unit/test_o_em_todos_do_gatilho_chega_a_cada_controle_da_mesa.py,1403,medido
 tests/unit/test_o_endereco_do_cartao_07_nao_depende_do_estado.py,779,medido
 tests/unit/test_o_endereco_do_storm_usb.py,400,medido
 tests/unit/test_o_ensaio_do_engasgo.py,3609,medido
@@ -1111,7 +1108,6 @@ tests/unit/test_o_ganho_do_mic_tem_onde_pegar.py,340,medido
 tests/unit/test_o_gatilho_acompanha_o_ritmo_do_tiro.py,365,medido
 tests/unit/test_o_gatilho_aplicado_vai_para_o_perfil.py,333,medido
 tests/unit/test_o_gatilho_diz_quando_disparou.py,386,medido
-tests/unit/test_o_gatilho_guardado_vai_para_o_controle.py,354,medido
 tests/unit/test_o_gatilho_que_o_controle_nao_aceita_nao_derruba_o_perfil.py,333,medido
 tests/unit/test_o_gatilho_vira_clique_sem_ligar_o_cursor.py,516,medido
 tests/unit/test_o_gesto_da_ponte_e_universal.py,354,medido
@@ -1251,7 +1247,6 @@ tests/unit/test_o_nome_do_pacote_tem_um_dono_so.py,343,medido
 tests/unit/test_o_nome_do_processo_que_nao_casa.py,306,medido
 tests/unit/test_o_nome_do_produto_esta_na_tela.py,364,medido
 tests/unit/test_o_nome_do_som_renomeia_junto.py,340,medido
-tests/unit/test_o_numero_da_barra_acompanha_a_alavanca.py,4280,medido
 tests/unit/test_o_numero_do_jogador_se_reorganiza_na_hora.py,1099,medido
 tests/unit/test_o_numero_do_jogo_vira_o_do_hefesto.py,365,medido
 tests/unit/test_o_orcamento_conta_a_ponte.py,347,medido
