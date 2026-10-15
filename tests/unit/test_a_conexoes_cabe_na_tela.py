@@ -8,7 +8,7 @@ na página que o produto renderiza depois do ``--publicar`` e, enquanto ele não
 TUDO É DE MENTIRA: as páginas num WebKit fora da tela, com o pintor do piloto; nada chega a daemon.
 
 AS MORDIDAS (feitas na sprint, uma de cada vez, com a cura devolvida e o md5 conferido):
-tirar o ``position:absolute`` do ``.cd-porque`` reprova a régua do ⓘ; devolver o «Mais N» (o
+devolver o ⓘ (``.cd-info``) ao cartão reprova a régua do porquê no título; devolver o «Mais N» (o
 corte do ``html_das_dicas``) reprova a dos quatro cartões; ``LINHAS_NUMA_COLUNA`` sem limite (uma
 coluna só) reprova a das linhas do ar; tirar o ``_nao_e_sem_fio`` reprova a da webcam; devolver o
 ``emTitulo`` ao fim da pintura do Mapa reprova a das frases; devolver a bandeja esticada
@@ -39,7 +39,9 @@ CONJUNTO = "Conexões 3"
 #: o Mapa espera a publicação pelas edições da bancada; a 08, pelo desenho novo na página.
 MAPA_NA_BANCADA = any(CONJUNTO in e.porque for e in pagina_do_mapa.EDICOES_ESPERANDO_A_SESSAO_DELA)
 _PUBLICADA_08 = onde.pagina("08-conexoes.html", publicado=True)
-A_08_NA_BANCADA = 'class="ar-do"' not in _PUBLICADA_08.read_text(encoding="utf-8")
+#: o desenho do todo (A-ABA-CONEXOES-DO-TODO-01) é o primeiro com o ``data-dica-id`` no cartão
+A_08_NA_BANCADA = any(marca not in _PUBLICADA_08.read_text(encoding="utf-8")
+                      for marca in ('class="ar-do"', "data-dica-id="))
 LARGURAS = {1272: 860, 1512: 860, 1900: 1000}
 
 
@@ -162,12 +164,14 @@ def _medir() -> str:
     && e.children.length === 0 && e.textContent.trim()).map(e => e.textContent.trim().slice(0, 30));
   const alturas = [...document.querySelectorAll('.cartao-dica')].map(
     c => Math.round(c.getBoundingClientRect().height));
-  const abertos = [...document.querySelectorAll('.cd-porque')].filter(
-    p => !p.hidden && p.offsetParent);
-  const porqueFora = abertos.map(p => p.getBoundingClientRect().top + 1
-    >= p.closest('.cartao-dica').getBoundingClientRect().bottom);
+  // o porquê mora no título (a dica da casa no hover), nunca num ⓘ que abre por baixo do cartão
+  const semInfo = !document.querySelector('.cartao-dica .cd-info, .cartao-dica .cd-porque');
+  const dicaNoTitulo = [...document.querySelectorAll('.cartao-dica h4')].filter(
+    h => h.hasAttribute('data-dica') || h.hasAttribute('data-hef-dica')
+      || h.hasAttribute('title')).length;
   const aberta = [...document.querySelectorAll('.radio .sala .lugar.aberto')].length;
-  return JSON.stringify({rola: r, corta: corta, alturas: alturas, porqueFora: porqueFora,
+  return JSON.stringify({rola: r, corta: corta, alturas: alturas, semInfo: semInfo,
+                         dicaNoTitulo: dicaNoTitulo,
                          aberta: aberta});
 })()"""
 
@@ -176,6 +180,22 @@ def _clicar(seletor: str, n: int = 0) -> str:
     alvo = json.dumps(seletor)
     return (f"(function(){{const b=document.querySelectorAll({alvo})[{n}];"
             f"if(!b){{return 'sem ' + {alvo};}} b.click(); return 'clicou';}})()")
+
+
+def _pairar(seletor: str, n: int = 0) -> str:
+    alvo = json.dumps(seletor)
+    return (f"(function(){{const b=document.querySelectorAll({alvo})[{n}];"
+            f"if(!b){{return 'sem ' + {alvo};}} const r=b.getBoundingClientRect();"
+            f"b.dispatchEvent(new MouseEvent('mousemove', {{bubbles: true, "
+            f"clientX: r.left + r.width / 2, clientY: r.top + r.height / 2}}));"
+            f"return 'pairou';}})()")
+
+
+def _sair(seletor: str, n: int = 0) -> str:
+    alvo = json.dumps(seletor)
+    return (f"(function(){{const b=document.querySelectorAll({alvo})[{n}];"
+            f"if(!b){{return 'sem ' + {alvo};}} b.dispatchEvent(new MouseEvent('mouseout', "
+            f"{{bubbles: true, relatedTarget: null}})); return 'saiu';}})()")
 
 
 def _pintar_as_dicas(html: str) -> str:
@@ -252,16 +272,16 @@ _VISTAS: dict[int, dict[str, Any]] = {}
 
 
 def _vistas(largura: int) -> dict[str, Any]:
-    """As sete vistas de uma largura: Gestão, ⓘ aberto, Tudo certo, Rádio, adaptador aberto, Mapa,
-    Sugestões e Adicionar."""
+    """As sete vistas de uma largura: Gestão, o título pairado, Tudo certo, Rádio, adaptador
+    aberto, Mapa, Sugestões e Adicionar."""
     if largura not in _VISTAS:
         from hefesto_dualsense4unix.interface.conexoes import html_das_dicas
 
         tamanho = (largura, LARGURAS[largura])
         a08_pagina = onde.pagina("08-conexoes.html", publicado=not A_08_NA_BANCADA)
         lidas = _no_webkit(a08_pagina, tamanho, [
-            _medir(), _clicar(".cartao-dica .cd-info", 1), _medir(),
-            _clicar(".cartao-dica .cd-info", 1), _pintar_as_dicas(html_das_dicas(dicas.montar([]))),
+            _medir(), _pairar(".cartao-dica h4", 1), _medir(),
+            _sair(".cartao-dica h4", 1), _pintar_as_dicas(html_das_dicas(dicas.montar([]))),
             _medir(), _clicar('label[for="cx8-3"]'), _medir(),
             "(function(){const l=[...document.querySelectorAll('.lugar .abre-lugar')];"
             "if(!l.length) return 'sem caixa'; l[l.length-1].click(); return 'clicou';})()",
@@ -278,7 +298,7 @@ def _vistas(largura: int) -> dict[str, Any]:
 
 @pytest.mark.parametrize("largura", sorted(LARGURAS))
 def test_nenhuma_vista_rola_na_vertical_nem_corta_texto(largura: int) -> None:
-    """As 21 vistas do ``medir_ajustado.py`` (sete por largura e o ⓘ aberto), sem rolagem."""
+    """As 21 vistas do ``medir_ajustado.py`` (sete por largura e o título pairado), sem rolagem."""
     vistas = _vistas(largura)
     # a vista do adaptador aberto só mede alguma coisa se a caixa abriu de fato: sem isto, um
     # clique que não abre deixa medir o Rádio fechado duas vezes, e o verde não diz nada
@@ -295,9 +315,9 @@ def test_os_cartoes_tem_a_mesma_altura_e_o_porque_nao_estica_os_vizinhos(largura
     vistas = _vistas(largura)
     antes, depois = vistas["gestao"]["alturas"], vistas["porque"]["alturas"]
     assert antes and len(set(antes)) == 1, f"os cartões nascem de alturas diferentes: {antes}"
-    assert antes == depois, f"abrir o ⓘ mudou a altura dos cartões: {antes} → {depois}"
-    assert vistas["porque"]["porqueFora"] == [True], (
-        f"o porquê aberto não flutua por baixo do cartão: {vistas['porque']['porqueFora']}")
+    assert antes == depois, f"pairar no título mudou a altura dos cartões: {antes} → {depois}"
+    assert vistas["porque"]["semInfo"], "o cartão voltou a ter o ⓘ: o porquê é a dica do título"
+    assert vistas["porque"]["dicaNoTitulo"] >= 1, "nenhum título de cartão leva o porquê no hover"
     assert vistas["certo"]["alturas"] == [], "o «Tudo certo» ainda tem cartão"
 
 
