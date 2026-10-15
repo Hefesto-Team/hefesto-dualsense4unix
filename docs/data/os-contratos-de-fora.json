@@ -2,11 +2,11 @@
   "_LEIA": "O PISO DAS CATRACAS. Não se edita à mão: `--aceitar` desce, `--forcar-piso «razão»` sobe com razão e data.",
   "medidas": {
     "linhas-frageis": {
-      "data": "2026-10-14",
+      "data": "2026-10-15",
       "o_que_conta": "linhas do censo de contratos de fora com porta interna, pergunta por versão ou forma por comando",
-      "piso": 41,
+      "piso": 40,
       "por_item": {
-        "bluez": 12,
+        "bluez": 11,
         "kernel": 1,
         "lancadores": 5,
         "proton": 2,
@@ -14,7 +14,7 @@
         "sistema": 2,
         "steam": 18
       },
-      "razao": "o doctor ganha três sondas por versão ou por script interno (GE-Proton por versão, SDL por versão, Proton da Valve sem a env do som do controle); OS-CONTRATOS-DO-GE-DO-SDL-E-DO-UCM-GANHAM-REGUA-E-AVISO-01, as três vão à filha O-PROTON-NOVO-SO-ENTRA-NO-LUGAR-DO-FIXADO-SE-PASSAR-NAS-PROVAS-01",
+      "razao": "o teto desceu sozinho com o número",
       "subidas": [
         {
           "data": "2026-10-07",
@@ -36,7 +36,7 @@
         }
       ],
       "unidade": "linhas",
-      "universo": 308
+      "universo": 306
     }
   }
 }
