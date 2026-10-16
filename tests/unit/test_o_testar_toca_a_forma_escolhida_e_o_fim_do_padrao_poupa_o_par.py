@@ -58,6 +58,7 @@ def _toques(m: _Mundo, uniq: str) -> list[str]:
 def test_o_haptica_toca_a_forma_escolhida_e_so_a_daquele_controle(
     com_toque: _Mundo, monkeypatch: pytest.MonkeyPatch, escolha: str  # noqa: F811
 ) -> None:
+    # D-1610-O-TESTAR-DA-HAPTICA-TOCA-A-FORMA-ESCOLHIDA
     """Cada escolha: a forma vai ao tocador do controle do usuário, e os outros ficam quietos."""
     controles = _no_cabo_os_quatro(com_toque)
     com_toque.mesa.volta(*controles)
