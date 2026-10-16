@@ -18,6 +18,7 @@ from pydantic import (
 )
 
 from hefesto_dualsense4unix.profiles.steam_app import steam_appid_from_wm_class
+from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 MascaraDeGamepad = Literal["dualsense", "xbox", "nintendo"]
 
@@ -1355,6 +1356,7 @@ class Profile(BaseModel):
         try:
             datetime.fromisoformat(value)
         except ValueError:
+            get_logger(__name__).warning("data_do_perfil_ilegivel", valor=value)
             return None
         return value
 

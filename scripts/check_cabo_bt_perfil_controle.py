@@ -204,6 +204,10 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "editor.estilo": "aplica a receita de um Estilo de Jogo no perfil — é do perfil; o ATO "
                      "no aparelho é o de cada feature da receita",
     "editor.jogo": "o jogo que faz o perfil entrar — é do perfil",
+    "editor.ordem": "a ordem entre os perfis do mesmo jogo — é do perfil",
+    "editor.alvo": "onde o perfil se aplica, nos controles ou num evento — é do perfil",
+    "editor.quando": "o evento e o comando gravados no perfil — é do perfil; quem roda o "
+                     "comando é a sprint do motor dos eventos",
     "novo": "cria um perfil em branco — é do perfil",
     "duplicar": "copia um perfil — é do perfil",
     "remover": "apaga um perfil do disco — é do perfil",
