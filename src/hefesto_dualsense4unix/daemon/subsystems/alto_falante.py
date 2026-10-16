@@ -173,14 +173,13 @@ class ControleNaLista:
 
 
 class GerenciadorDeNosDeSom:
-    """Sobe/derruba um :class:`SinkVirtualPipeWire` por controle na lista.
+    """Sobe um nó por controle que entrou; só o ``parar`` o derruba.
 
-    **A PORTA** (O-NO-E-A-PONTE-DO-SOM-NAO-NASCEM-DEPOIS-DO-STOP-01, 10/10/2026):
-    quem cria (a volta) e quem derruba (o stop) partilham o ``_acordar``, sob
-    a ``_trava``. Fechada (:meth:`fechar`, que o :meth:`parar` também chama),
-    nenhum nó nasce, e o nó cujo ``iniciar`` termina depois dela fechar desce
-    na hora, fora de ``_nos``. Sem ela, o nó erguido pela volta que passou do
-    ``join`` ficava no servidor sem ninguém atrás. :meth:`abrir` é do ``start``.
+    O nó fica quando o controle sai (``D-0809-O-NO-DE-SOM-POR-CONTROLE-VIVE-SEMPRE``): vai a
+    rota, o ``module-null-sink`` e o id ficam, e a rota volta com o controle. **A PORTA**
+    (O-NO-E-A-PONTE-DO-SOM-NAO-NASCEM-DEPOIS-DO-STOP-01): a volta e o stop partilham o
+    ``_acordar`` sob a ``_trava``; fechada (:meth:`fechar`), nenhum nó nasce e o que termina
+    de subir depois dela desce fora de ``_nos``. :meth:`abrir` é do ``start``.
     """
 
     def __init__(
@@ -196,6 +195,8 @@ class GerenciadorDeNosDeSom:
         self._fonte_por_controle = fonte_por_controle
         self._ponte_do_radio_por_controle = ponte_do_radio_por_controle
         self._nos: dict[str, Any] = {}
+        #: o último transporte visto de cada nó: o motivo da rota sem destino o diz
+        self._transportes: dict[str, str] = {}
         self._acordar = threading.Event()
         self._trava = threading.RLock()
 
@@ -281,6 +282,8 @@ class GerenciadorDeNosDeSom:
         transporte: str,
         mesa: tuple[str, ...],
         modulos: Any = None,
+        *,
+        fora_da_lista: bool = False,
     ) -> None:
         """A rota do nó VIVO passa a ser a de agora — e o nó não sai do lugar.
 
@@ -303,23 +306,50 @@ class GerenciadorDeNosDeSom:
         if self._fabrica is not None or not callable(religar):
             return
         try:
-            rota = self._rota_de_agora(uniq, transporte, mesa)
+            rota = (
+                self._rota_do_ausente(uniq, transporte)
+                if fora_da_lista
+                else self._rota_de_agora(uniq, transporte, mesa)
+            )
         except Exception:
             logger.debug("som_rota_de_agora_ilegivel", uniq=uniq, exc_info=True)
             return
-        if not self._vale_religar(uniq, rota):
+        if not self._vale_religar(uniq, rota, fora_da_lista=fora_da_lista):
             return
         try:
             religar(rota, modulos)
         except Exception:
             logger.debug("som_religacao_falhou", uniq=uniq, exc_info=True)
 
-    def _vale_religar(self, uniq: str, rota: Any) -> bool:
-        """Esta rota nova merece encostar num nó que está tocando?"""
+    def _rota_do_ausente(self, uniq: str, transporte: str) -> Any:
+        """A rota do nó cujo controle saiu: SEM DESTINO, com o motivo que ``rota_do_no`` escreve.
+
+        Sem ``pactl``: o ``runner`` mudo faz o ``rota_do_no`` não achar placa nem
+        ponte, e o motivo sai do dono, no transporte em que o controle foi visto.
+        """
+        from hefesto_dualsense4unix.integrations.alto_falante_bt import rota_do_no
+
+        return rota_do_no(
+            uniq,
+            transporte,
+            fonte=self._fonte_do_no(uniq),
+            ponte_do_radio=lambda: False,
+            runner=lambda _argv: "",
+        )
+
+    def _vale_religar(self, uniq: str, rota: Any, *, fora_da_lista: bool = False) -> bool:
+        """Esta rota nova merece encostar num nó que está tocando?
+
+        Rota sem destino só vale quando o controle saiu da lista: é o único jeito
+        de o nó perder a rota sem perder o lugar. Com o controle na lista, rota
+        sem destino é «ainda não sei montar» e o que está de pé fica como está.
+        """
         from hefesto_dualsense4unix.integrations.alto_falante_bt import nome_do_sink
 
-        if rota is None or not getattr(rota, "tem_rota", False):
+        if rota is None:
             return False
+        if not getattr(rota, "tem_rota", False):
+            return fora_da_lista
         alvo = str(getattr(rota, "sink", "") or "")
         if alvo and alvo == nome_do_sink(uniq):
             logger.debug("som_rota_para_si_mesma", uniq=uniq, sink=alvo)
@@ -395,7 +425,7 @@ class GerenciadorDeNosDeSom:
             return FONTE_PADRAO
 
     def reconciliar(self, controles: list[Any] | None = None) -> None:
-        """Casa os nós vivos com a lista de controles recebida."""
+        """Quem está na lista ganha nó e rota; quem saiu da lista perde só a rota."""
         vistos: dict[str, str] = {}
         for item in controles or []:
             uniq = item if isinstance(item, str) else str(getattr(item, "uniq", ""))
@@ -409,14 +439,22 @@ class GerenciadorDeNosDeSom:
         mesa = tuple(alvos)
         if self._acordar.is_set():
             return
-        for uniq in list(self._nos):
-            if uniq not in alvos:
-                self._derrubar(uniq)
         modulos = self._conferir_com_o_servidor()
+        for uniq, ausente in list(self._nos.items()):
+            if uniq not in alvos:
+                self._reafinar(
+                    uniq,
+                    ausente,
+                    self._transportes.get(uniq, TRANSPORTE_CABO),
+                    mesa,
+                    modulos,
+                    fora_da_lista=True,
+                )
         for uniq in alvos:
             if self._acordar.is_set():
                 return
             transporte = vistos[uniq] or TRANSPORTE_CABO
+            self._transportes[uniq] = transporte
             vivo = self._nos.get(uniq)
             if vivo is not None and self._o_rotulo_envelheceu(uniq, vivo):
                 self._republicar(uniq, transporte, mesa)
@@ -566,6 +604,7 @@ class GerenciadorDeNosDeSom:
             saem = list(self._nos)
         for uniq in saem:
             self._derrubar(uniq)
+        self._transportes.clear()
         runner = self._pergunta_ao_servidor()
         if runner is not None:
             from hefesto_dualsense4unix.integrations.alto_falante_bt import varrer_nos_orfaos
