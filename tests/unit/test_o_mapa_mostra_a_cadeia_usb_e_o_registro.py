@@ -30,7 +30,7 @@ import pytest
 from hefesto_dualsense4unix.daemon.subsystems import ouvido_do_usb as ou
 from hefesto_dualsense4unix.integrations import diario_do_usb as du
 from hefesto_dualsense4unix.integrations.censo_do_barramento import ler_o_barramento
-from hefesto_dualsense4unix.interface import arranjo_desta_maquina, pagina_do_mapa
+from hefesto_dualsense4unix.interface import arranjo_desta_maquina, onde, pagina_do_mapa
 from hefesto_dualsense4unix.utils.maquina import (
     FaceDeclarada,
     MapaDaMesa,
@@ -330,10 +330,14 @@ def test_a_pagina_da_bancada_tem_a_cadeia_e_a_quarta_aba() -> None:
     assert "Pode ser a entrada, o hub, o cabo, o extensor ou o próprio aparelho." in texto
 
 
-def test_a_cadeia_espera_a_sessao_dela_e_nao_entra_na_copia_do_produto() -> None:
-    publicada = pagina_do_mapa.pagina(False)
-    assert 'data-modo="registro"' not in publicada
-    assert ">Conectado agora</h3>" in publicada
+def test_a_cadeia_e_o_registro_entraram_na_copia_do_produto() -> None:
+    """Publicados em 16/10/2026 (`21f604b96`): a cópia do produto tem a quarta aba e a cadeia,
+    e a lista velha não volta, nem no que o gerador escreve nem no arquivo que o produto serve."""
+    servida = (onde.PUBLICADO / "mapa-das-portas.html").read_text(encoding="utf-8")
+    for texto in (pagina_do_mapa.pagina(False), servida):
+        assert 'data-modo="registro"' in texto and 'id="registro"' in texto
+        assert ">A cadeia</h3>" in texto
+        assert "Conectado agora</h3>" not in texto, "a lista é a cadeia"
 
 
 def test_o_que_a_pagina_le_do_registro_e_o_que_o_produtor_manda(sys_usb: SysDeMentira) -> None:
