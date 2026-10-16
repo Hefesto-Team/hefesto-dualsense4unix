@@ -8,7 +8,12 @@ Mordidas:
 * tirar o agrupamento por Container ID em ``hubs_fisicos``: o hub deixa de ser um, e
   :func:`test_um_hub_de_dois_lados_com_cascata_e_um_hub_de_sete_entradas` reprova;
 * trocar o teste da capacidade ``0x03`` por ``version >= 3``: o Wi-Fi a 480M publica ``2.10`` e
-  some do enlace abaixo, e :func:`test_o_enlace_abaixo_so_no_que_publica_superspeed` reprova.
+  some do enlace abaixo, e :func:`test_o_enlace_abaixo_so_no_que_publica_superspeed` reprova;
+* tirar a exceção da câmera em ``enlace_abaixo``: a webcam a 480M que publica SuperSpeed volta a
+  receber «Sabe 5 Gb/s», e :func:`test_a_webcam_nao_recebe_o_aviso_de_superspeed_que_nao_usa`
+  reprova;
+* trocar a regra da câmera por «nenhuma espécie avisa»: o Wi-Fi a 480M deixa de avisar, e o mesmo
+  teste reprova do outro lado.
 """
 
 from __future__ import annotations
@@ -25,6 +30,11 @@ from hefesto_dualsense4unix.integrations.censo_do_barramento import (
     hubs_fisicos,
     ler_o_barramento,
     ler_o_bos,
+)
+from hefesto_dualsense4unix.interface.arranjo_desta_maquina import (
+    SABE_SUPERSPEED,
+    _a_cadeia_usb,
+    _etiquetas_do_aparelho,
 )
 from tests.fixtures.cadeia_usb.montar import SysDeMentira
 
@@ -87,6 +97,33 @@ def test_o_enlace_abaixo_so_no_que_publica_superspeed(sys_usb: SysDeMentira) -> 
     assert set(marcados) == {"3-1.4"}, marcados
     assert marcados["3-1.4"].velocidade_mbps == 480.0
     assert marcados["3-1.4"].caminho_era_3x, "o par SuperSpeed da porta acima está livre"
+
+
+def _com_uma_webcam_que_publica_superspeed(sys_usb: SysDeMentira) -> None:
+    """Uma câmera (interface de vídeo) a 480M com o BOS do Wi-Fi, que declara SuperSpeed."""
+    sys_usb.por("3-1.5", {
+        "pai": "3-1", "bos": sys_usb.nos["3-1.4"]["bos"],
+        "attrs": {"idVendor": "f0e6", "idProduct": "0002", "bDeviceClass": "ef",
+                  "busnum": "3", "devpath": "1.5", "speed": "480", "version": "2.10",
+                  "devnum": "12"},
+        "interfaces": {"3-1.5:1.0": {"tripla": "0e0100"}}})
+
+
+def test_a_webcam_nao_recebe_o_aviso_de_superspeed_que_nao_usa(sys_usb: SysDeMentira) -> None:
+    _com_uma_webcam_que_publica_superspeed(sys_usb)
+    censo = _censo(sys_usb)
+    nomes = _por_nome(censo)
+    webcam, wifi = nomes["3-1.5"], nomes["3-1.4"]
+    assert (webcam.especie, webcam.sabe_superspeed, webcam.velocidade_mbps) == (
+        "Câmera", True, 480.0), "o caso mede o que a C920 faz: câmera que declara SuperSpeed a 480M"
+    assert enlace_abaixo(censo, webcam) is None
+    assert enlace_abaixo(censo, wifi) is not None, "o Wi-Fi no mesmo caso continua avisado"
+    chips = _etiquetas_do_aparelho(webcam, censo)
+    assert "USB 2.0" in chips and not any(SABE_SUPERSPEED in c for c in chips), chips
+    assert any(SABE_SUPERSPEED in c for c in _etiquetas_do_aparelho(wifi, censo))
+    cadeia = _a_cadeia_usb(censo, {"3-1.5": "camera", "3-1.4": "wifi"})
+    assert "enlace" not in cadeia["camera"], cadeia
+    assert SABE_SUPERSPEED in cadeia["wifi"]["enlace"], cadeia
 
 
 def test_com_o_par_superspeed_ocupado_o_caminho_nao_se_afirma(sys_usb: SysDeMentira) -> None:

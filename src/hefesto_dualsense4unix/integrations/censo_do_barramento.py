@@ -117,6 +117,11 @@ GRAU_LIDO = "lido"
 GRAU_DESCONHECIDO = "desconhecido"
 
 ESPECIE_DESCONHECIDA = "Não identificado"
+ESPECIE_CAMERA = "Câmera"
+#: As espécies que NÃO usam a velocidade do enlace: a câmera comprime o vídeo e roda no mesmo
+#: 480 Mb/s em qualquer porta, então «sabe 5 Gb/s» nela seria aviso de uma perda que não existe.
+#: Entra outra espécie só quando alguém a medir.
+_ESPECIES_QUE_NAO_USAM_A_VELOCIDADE = frozenset({ESPECIE_CAMERA})
 
 #: O que o KERNEL ligou nas interfaces do aparelho (``ligado_como``), na ordem em que a palavra
 #: vale quando há mais de uma: Wi-Fi vence Bluetooth (um combo é as duas coisas, e o que
@@ -130,7 +135,7 @@ _ESPECIE_DO_QUE_O_KERNEL_LIGOU = {
     LIGADO_COMO_WIFI: "Wi-Fi",
     LIGADO_COMO_BLUETOOTH: "Bluetooth",
     LIGADO_COMO_CONTROLE: "Controle",
-    LIGADO_COMO_CAMERA: "Câmera",
+    LIGADO_COMO_CAMERA: ESPECIE_CAMERA,
     LIGADO_COMO_REDE: "Rede",
 }
 _ORDEM_DO_QUE_O_KERNEL_LIGOU = tuple(_ESPECIE_DO_QUE_O_KERNEL_LIGOU)
@@ -192,7 +197,7 @@ _ESPECIE_POR_CLASSE: dict[str, str] = {
     "0a": "Rede (dados)",
     "0b": "Cartão inteligente",
     "0d": "Segurança de conteúdo",
-    "0e": "Câmera",
+    "0e": ESPECIE_CAMERA,
     "0f": "Saúde",
     "10": "Áudio e vídeo",
     "11": "Painel de vídeo",
@@ -451,12 +456,14 @@ def _entradas(nos: Sequence[Aparelho]) -> int:
 
 
 def enlace_abaixo(censo: Censo, aparelho: Aparelho) -> EnlaceAbaixo | None:
-    """O aparelho sabe SuperSpeed (no BOS) e negociou 480M ou menos.
+    """O aparelho sabe SuperSpeed (no BOS), usa essa velocidade e negociou 480M ou menos.
 
     Fato medido, sem causa. O lado 2.0 de um hub que tem o lado SuperSpeed no ar não conta: ele
-    é 2.0 por construção.
+    é 2.0 por construção. A espécie que não usa a velocidade (a câmera) não recebe o aviso.
     """
     if aparelho.e_raiz or not aparelho.sabe_superspeed:
+        return None
+    if aparelho.especie in _ESPECIES_QUE_NAO_USAM_A_VELOCIDADE:
         return None
     if not 0 < aparelho.velocidade_mbps <= _ALTA_VELOCIDADE_MBPS:
         return None
