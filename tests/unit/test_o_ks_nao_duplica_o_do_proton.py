@@ -23,7 +23,7 @@ def _media_do_proton(controle: ks.Controle, inst: str = "5&1a2b3c4d&0&1") -> str
     return (
         f"[{chave}] 1791398341\n"
         '"Class"="MEDIA"\n'
-        '"ClassGUID"="{4d36e96c-e325-11ce-bfc1-08002be10318}"\n'
+        f'"ClassGUID"="{ks.CLASSE_MEDIA.lower()}"\n'
         f'"ContainerId"="{ks.container_id(controle, bytes(8)).lower()}"\n'
         '"FriendlyName"="DualSense Wireless Controller"\n'
     )
