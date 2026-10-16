@@ -263,7 +263,11 @@ def linha_combo(n, pecas, faz):
 
 
 def _escolha_do_gesto():
-    """«+ Gesto»: um botão por candidato, com o glifo; o usado e o proibido ficam indisponíveis."""
+    """«+ Gesto»: um botão por candidato, só com o glifo; o usado e o proibido ficam indisponíveis.
+
+    O nome da peça vai para a dica: ao lado do glifo, numa casa de 34 px, ele vazava sobre os
+    vizinhos e para fora da caixa (o «Share» por cima do «Options», o «R1» fora dela).
+    """
     botoes = []
     for b in _acoes_do_gesto.BOTOES_DA_ESCOLHA:
         livre = "sim" if b in _acoes_do_gesto.BOTOES_DO_GESTO_NOVO else "nao"  # (noqa-acento)
@@ -274,8 +278,8 @@ def _escolha_do_gesto():
                     ' data-hef-atributo="data-livre"')
         botoes.append(
             f'<button type="button" class="b-gesto" data-gesto="novo-gesto" data-b="{b}"'
-            f' data-livre="{livre}"{endereco} aria-label="PS + {PECAS[peca]["nome"]}">'
-            f'{_um(peca)}</button>')
+            f' data-livre="{livre}"{endereco} aria-label="PS + {PECAS[peca]["nome"]}"'
+            f' data-dica="{PECAS[peca]["nome"]}">{_um(peca, nm=False)}</button>')
     return ('<details class="novo-gesto"><summary class="btn roxo mais-gesto"'
             ' data-dica="Acrescenta um gesto do PS com outro botão">+ Gesto</summary>'
             f'<div class="escolha-gesto">{"".join(botoes)}</div></details>')
@@ -719,8 +723,8 @@ CSS = CSS_GLIFO + """
 .novo-gesto { position:relative }
 .novo-gesto > summary { list-style:none;height:26px;padding:0 12px;font-size:12px;display:inline-flex;align-items:center;cursor:pointer }
 .novo-gesto > summary::-webkit-details-marker { display:none }
-.escolha-gesto { position:absolute;right:0;bottom:calc(100% + 6px);z-index:8;display:grid;grid-template-columns:repeat(4,auto);gap:6px;padding:10px;background:var(--elevated);border:1px solid var(--border-forte);border-radius:8px;box-shadow:0 12px 30px rgba(0,0,0,.5) }
-.b-gesto { height:30px;padding:0 10px;border-radius:6px;border:1px solid var(--border-forte);background:var(--panel);color:var(--fg);display:inline-flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap }
+.escolha-gesto { position:absolute;right:0;bottom:calc(100% + 6px);z-index:8;display:grid;grid-template-columns:repeat(4,34px);gap:6px;padding:10px;background:var(--elevated);border:1px solid var(--border-forte);border-radius:8px;box-shadow:0 12px 30px rgba(0,0,0,.5) }
+.b-gesto { width:34px;height:30px;padding:0;justify-content:center;border-radius:6px;border:1px solid var(--border-forte);background:var(--panel);color:var(--fg);display:inline-flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap }
 .b-gesto:hover:not([disabled]) { border-color:var(--purple) }
 .b-gesto[disabled] { opacity:.3;cursor:not-allowed }
 .nav2-opcoes .sec2-gestos { margin:8px 0 6px }

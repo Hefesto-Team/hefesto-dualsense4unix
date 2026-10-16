@@ -193,6 +193,49 @@ def test_o_mapa_diz_qual_tela_e_e_nasce_sem_botao_aceso(
     assert lido["rola"] <= 0, lido
 
 
+MEDIR_ESCOLHA = r"""
+(function(){
+  const d = document.querySelector('.novo-gesto');
+  d.open = true;
+  const caixa = d.querySelector('.escolha-gesto').getBoundingClientRect();
+  const dentro = (r, c) => r.left >= c.left - 1 && r.right <= c.right + 1
+      && r.top >= c.top - 1 && r.bottom <= c.bottom + 1;
+  const fora = [];
+  const letra = [];
+  d.querySelectorAll('.b-gesto').forEach(b => {
+    const r = b.getBoundingClientRect();
+    if (!dentro(r, caixa)) fora.push([b.dataset.b, 'fora da caixa']);
+    b.querySelectorAll('*').forEach(f => {
+      if (f.closest('svg') && f.tagName !== 'svg') return;
+      const rf = f.getBoundingClientRect();
+      if (rf.width && !dentro(rf, r)) fora.push([b.dataset.b, f.tagName]);
+    });
+    const t = [...b.childNodes].filter(n => !(n.nodeType === 1 && n.tagName === 'svg'))
+      .map(n => n.textContent).join('').trim();
+    if (t) letra.push([b.dataset.b, t]);
+  });
+  const vista = caixa.left >= 0 && caixa.right <= innerWidth && caixa.top >= 0;
+  d.open = false;
+  return JSON.stringify({fora, letra, vista, n: d.querySelectorAll('.b-gesto').length});
+})()
+"""
+
+
+@pytest.mark.parametrize("tamanho", TAMANHOS)
+def test_a_escolha_do_gesto_mostra_so_o_glifo_dentro_da_casa(tamanho: tuple[int, int]) -> None:
+    """«+ Gesto» aberto: cada botão é o glifo sozinho, inteiro dentro da casa dele, e as casas
+    dentro da caixa. MORDIDA (16/10/2026): devolver o nome ao lado do glifo (`_um(peca)`) ou a
+    coluna `auto` com `padding:0 10px` faz o «Share» vazar por cima do «Options» e o «R1» sair da
+    caixa, e este teste reprova.
+    """
+    uri = onde.pagina("06-navegacao.html", publicado=False).as_uri()
+    lido = _no_webkit(uri, tamanho, [MEDIR_ESCOLHA])[0]
+    assert lido["n"] >= 10, lido
+    assert lido["letra"] == [], f"a escolha do gesto escreve texto na tela: {lido['letra']}"
+    assert lido["fora"] == [], f"o glifo vaza da casa ou a casa da caixa: {lido['fora']}"
+    assert lido["vista"], lido
+
+
 VERMELHO, VERDE, AMARELO = "rgb(255, 85, 85)", "rgb(80, 250, 123)", "rgb(241, 250, 140)"
 
 

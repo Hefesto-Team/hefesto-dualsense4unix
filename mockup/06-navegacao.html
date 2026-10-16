@@ -1115,8 +1115,8 @@
 .novo-gesto { position:relative }
 .novo-gesto > summary { list-style:none;height:26px;padding:0 12px;font-size:12px;display:inline-flex;align-items:center;cursor:pointer }
 .novo-gesto > summary::-webkit-details-marker { display:none }
-.escolha-gesto { position:absolute;right:0;bottom:calc(100% + 6px);z-index:8;display:grid;grid-template-columns:repeat(4,auto);gap:6px;padding:10px;background:var(--elevated);border:1px solid var(--border-forte);border-radius:8px;box-shadow:0 12px 30px rgba(0,0,0,.5) }
-.b-gesto { height:30px;padding:0 10px;border-radius:6px;border:1px solid var(--border-forte);background:var(--panel);color:var(--fg);display:inline-flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap }
+.escolha-gesto { position:absolute;right:0;bottom:calc(100% + 6px);z-index:8;display:grid;grid-template-columns:repeat(4,34px);gap:6px;padding:10px;background:var(--elevated);border:1px solid var(--border-forte);border-radius:8px;box-shadow:0 12px 30px rgba(0,0,0,.5) }
+.b-gesto { width:34px;height:30px;padding:0;justify-content:center;border-radius:6px;border:1px solid var(--border-forte);background:var(--panel);color:var(--fg);display:inline-flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap }
 .b-gesto:hover:not([disabled]) { border-color:var(--purple) }
 .b-gesto[disabled] { opacity:.3;cursor:not-allowed }
 .nav2-opcoes .sec2-gestos { margin:8px 0 6px }
@@ -1479,69 +1479,69 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 <div class="op2 do-hefesto"><span class="op2-rot">Velocidade da rolagem</span><div class="campo-num" data-dica="Analógico direito"><input class="trilho" type="range" min="1" max="5" step="1" value="1" data-gesto="vel-rolagem" data-campo="vel-rolagem" data-hef-alvo="valor"><span class="num" data-campo="vel-rolagem">1</span></div></div>
             </div>
             <div class="nav2-gestos">
-<div class="sec2 sec2-gestos"><span data-dica="Segure o PS e o outro juntos; vale em todo controle">Gestos do PS</span><details class="novo-gesto"><summary class="btn roxo mais-gesto" data-dica="Acrescenta um gesto do PS com outro botão">+ Gesto</summary><div class="escolha-gesto"><button type="button" class="b-gesto" data-gesto="novo-gesto" data-b="cross" data-livre="sim" data-campo="livre-cross" data-hef-alvo="atributo" data-hef-atributo="data-livre" aria-label="PS + Cruz"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Cruz</title>
+<div class="sec2 sec2-gestos"><span data-dica="Segure o PS e o outro juntos; vale em todo controle">Gestos do PS</span><details class="novo-gesto"><summary class="btn roxo mais-gesto" data-dica="Acrescenta um gesto do PS com outro botão">+ Gesto</summary><div class="escolha-gesto"><button type="button" class="b-gesto" data-gesto="novo-gesto" data-b="cross" data-livre="sim" data-campo="livre-cross" data-hef-alvo="atributo" data-hef-atributo="data-livre" aria-label="PS + Cruz" data-dica="Cruz"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Cruz</title>
 
   <line x1="8" y1="8" x2="24" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="24" y1="8" x2="8" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></button><button type="button" class="b-gesto" data-gesto="novo-gesto" data-b="circle" data-livre="sim" data-campo="livre-circle" data-hef-alvo="atributo" data-hef-atributo="data-livre" aria-label="PS + Círculo"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Círculo</title>
+</svg></button><button type="button" class="b-gesto" data-gesto="novo-gesto" data-b="circle" data-livre="sim" data-campo="livre-circle" data-hef-alvo="atributo" data-hef-atributo="data-livre" aria-label="PS + Círculo" data-dica="Círculo"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Círculo</title>
 
   <circle cx="16" cy="16" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
-</svg></button><button type="button" class="b-gesto" data-gesto="novo-gesto" data-b="square" data-livre="sim" data-campo="livre-square" data-hef-alvo="atributo" data-hef-atributo="data-livre" aria-label="PS + Quadrado"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Quadrado</title>
+</svg></button><button type="button" class="b-gesto" data-gesto="novo-gesto" data-b="square" data-livre="sim" data-campo="livre-square" data-hef-alvo="atributo" data-hef-atributo="data-livre" aria-label="PS + Quadrado" data-dica="Quadrado"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Quadrado</title>
 
   <rect x="7" y="7" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-</svg></button><button type="button" class="b-gesto" data-gesto="novo-gesto" data-b="triangle" data-livre="sim" data-campo="livre-triangle" data-hef-alvo="atributo" data-hef-atributo="data-livre" aria-label="PS + Triângulo"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Triângulo</title>
+</svg></button><button type="button" class="b-gesto" data-gesto="novo-gesto" data-b="triangle" data-livre="sim" data-campo="livre-triangle" data-hef-alvo="atributo" data-hef-atributo="data-livre" aria-label="PS + Triângulo" data-dica="Triângulo"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Triângulo</title>
 
   <polygon points="16,6 27,25 5,25" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-</svg></button><button type="button" class="b-gesto" data-gesto="novo-gesto" data-b="create" data-livre="sim" data-campo="livre-create" data-hef-alvo="atributo" data-hef-atributo="data-livre" aria-label="PS + Share"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Share</title>
+</svg></button><button type="button" class="b-gesto" data-gesto="novo-gesto" data-b="create" data-livre="sim" data-campo="livre-create" data-hef-alvo="atributo" data-hef-atributo="data-livre" aria-label="PS + Share" data-dica="Share"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Share</title>
 
   <line x1="16" y1="7" x2="16" y2="20" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
   <line x1="8"  y1="11" x2="12.5" y2="21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
   <line x1="24" y1="11" x2="19.5" y2="21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
-</svg><span class="nm">Share</span></button><button type="button" class="b-gesto" data-gesto="novo-gesto" data-b="options" data-livre="nao" data-campo="livre-options" data-hef-alvo="atributo" data-hef-atributo="data-livre" aria-label="PS + Options"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Options</title>
+</svg></button><button type="button" class="b-gesto" data-gesto="novo-gesto" data-b="options" data-livre="nao" data-campo="livre-options" data-hef-alvo="atributo" data-hef-atributo="data-livre" aria-label="PS + Options" data-dica="Options"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Options</title>
 
   <line x1="7" y1="10" x2="25" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="7" y1="16" x2="25" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="7" y1="22" x2="25" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg><span class="nm">Options</span></button><button type="button" class="b-gesto" data-gesto="novo-gesto" data-b="dpad_up" data-livre="nao" data-campo="livre-dpad_up" data-hef-alvo="atributo" data-hef-atributo="data-livre" aria-label="PS + D-pad cima"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad cima</title>
+</svg></button><button type="button" class="b-gesto" data-gesto="novo-gesto" data-b="dpad_up" data-livre="nao" data-campo="livre-dpad_up" data-hef-alvo="atributo" data-hef-atributo="data-livre" aria-label="PS + D-pad cima" data-dica="D-pad cima"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad cima</title>
 
   <polygon points="16,5 24,16 19,16 19,27 13,27 13,16 8,16" fill="currentColor"/>
-</svg></button><button type="button" class="b-gesto" data-gesto="novo-gesto" data-b="dpad_down" data-livre="nao" data-campo="livre-dpad_down" data-hef-alvo="atributo" data-hef-atributo="data-livre" aria-label="PS + D-pad baixo"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad baixo</title>
+</svg></button><button type="button" class="b-gesto" data-gesto="novo-gesto" data-b="dpad_down" data-livre="nao" data-campo="livre-dpad_down" data-hef-alvo="atributo" data-hef-atributo="data-livre" aria-label="PS + D-pad baixo" data-dica="D-pad baixo"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad baixo</title>
 
   <polygon points="16,27 8,16 13,16 13,5 19,5 19,16 24,16" fill="currentColor"/>
-</svg></button><button type="button" class="b-gesto" data-gesto="novo-gesto" data-b="r3" data-livre="nao" data-campo="livre-r3" data-hef-alvo="atributo" data-hef-atributo="data-livre" aria-label="PS + Analógico direito"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Analógico direito</title>
+</svg></button><button type="button" class="b-gesto" data-gesto="novo-gesto" data-b="r3" data-livre="nao" data-campo="livre-r3" data-hef-alvo="atributo" data-hef-atributo="data-livre" aria-label="PS + Analógico direito" data-dica="Analógico direito"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Analógico direito</title>
 
   <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
   <text x="13" y="19" font-family="monospace" font-size="7" font-weight="bold" fill="currentColor">R</text>
-</svg><span class="nm">R3</span></button><button type="button" class="b-gesto" data-gesto="novo-gesto" data-b="l3" data-livre="nao" data-campo="livre-l3" data-hef-alvo="atributo" data-hef-atributo="data-livre" aria-label="PS + Analógico esquerdo"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Analógico esquerdo</title>
+</svg></button><button type="button" class="b-gesto" data-gesto="novo-gesto" data-b="l3" data-livre="nao" data-campo="livre-l3" data-hef-alvo="atributo" data-hef-atributo="data-livre" aria-label="PS + Analógico esquerdo" data-dica="Analógico esquerdo"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Analógico esquerdo</title>
 
   <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
   <text x="13" y="19" font-family="monospace" font-size="7" font-weight="bold" fill="currentColor">L</text>
-</svg><span class="nm">L3</span></button><button type="button" class="b-gesto" data-gesto="novo-gesto" data-b="l1" data-livre="nao" aria-label="PS + L1"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L1</title>
+</svg></button><button type="button" class="b-gesto" data-gesto="novo-gesto" data-b="l1" data-livre="nao" aria-label="PS + L1" data-dica="L1"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L1</title>
 
   <rect x="4" y="10" width="24" height="14" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
   <text x="10" y="21" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L1</text>
-</svg><span class="nm">L1</span></button><button type="button" class="b-gesto" data-gesto="novo-gesto" data-b="r1" data-livre="nao" aria-label="PS + R1"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>R1</title>
+</svg></button><button type="button" class="b-gesto" data-gesto="novo-gesto" data-b="r1" data-livre="nao" aria-label="PS + R1" data-dica="R1"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>R1</title>
 
   <rect x="4" y="10" width="24" height="14" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
   <text x="9" y="21" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R1</text>
-</svg><span class="nm">R1</span></button><button type="button" class="b-gesto" data-gesto="novo-gesto" data-b="l2" data-livre="nao" aria-label="PS + L2"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L2</title>
+</svg></button><button type="button" class="b-gesto" data-gesto="novo-gesto" data-b="l2" data-livre="nao" aria-label="PS + L2" data-dica="L2"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L2</title>
 
   <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
   <text x="10" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L2</text>
   <line x1="16" y1="24" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <polyline points="12,27 16,31 20,27" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-</svg><span class="nm">L2</span></button><button type="button" class="b-gesto" data-gesto="novo-gesto" data-b="r2" data-livre="nao" aria-label="PS + R2"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>R2</title>
+</svg></button><button type="button" class="b-gesto" data-gesto="novo-gesto" data-b="r2" data-livre="nao" aria-label="PS + R2" data-dica="R2"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>R2</title>
 
   <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
   <text x="9" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R2</text>
   <line x1="16" y1="24" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <polyline points="12,27 16,31 20,27" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-</svg><span class="nm">R2</span></button><button type="button" class="b-gesto" data-gesto="novo-gesto" data-b="dpad_left" data-livre="nao" aria-label="PS + D-pad esquerda"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad esquerda</title>
+</svg></button><button type="button" class="b-gesto" data-gesto="novo-gesto" data-b="dpad_left" data-livre="nao" aria-label="PS + D-pad esquerda" data-dica="D-pad esquerda"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad esquerda</title>
 
   <polygon points="5,16 16,8 16,13 27,13 27,19 16,19 16,24" fill="currentColor"/>
-</svg></button><button type="button" class="b-gesto" data-gesto="novo-gesto" data-b="dpad_right" data-livre="nao" aria-label="PS + D-pad direita"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad direita</title>
+</svg></button><button type="button" class="b-gesto" data-gesto="novo-gesto" data-b="dpad_right" data-livre="nao" aria-label="PS + D-pad direita" data-dica="D-pad direita"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad direita</title>
 
   <polygon points="27,16 16,8 16,13 5,13 5,19 16,19 16,24" fill="currentColor"/>
 </svg></button></div></details></div>
