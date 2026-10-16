@@ -79,3 +79,19 @@ python scripts/record_hid_capture.py --transport bt --guided \
 
 `--guided` narra passo a passo o que apertar, que é o que dá a
 reprodutibilidade que a ADR atribuía ao YAML.
+
+## Nota de 16/10/2026: o analógico chega ao jogo no ritmo do controle
+
+Decisão revista, a validar pelo usuário. O tique de 60 Hz (`DEFAULT_POLL_HZ`) fica para a
+manutenção e para a tela; **a entrega ao jogo anda no ritmo do aparelho** (250 Hz no cabo; no
+rádio, as rajadas de 38 a 392 Hz medidas). Antes, só o botão acordava a entrega: o stick, o
+gatilho e o giro esperavam o tique (até 16,7 ms), e o primeiro jogador lia o `_last_state` do
+tique anterior.
+
+- O leitor evdev acorda a entrega no fim do quadro (`SYN_REPORT`) quando um eixo andou duas
+  contagens desde o último despertar: o ruído de ±1 do stick parado não acorda, e a deriva lenta
+  acorda ao somar duas. Um despertar por quadro, nunca por eixo.
+- O quadro do giro acorda só quando o arranjo manda giro ou inclinação para um analógico.
+- A volta do aperto lê o `snapshot()` do primário, como os outros jogadores já liam.
+- Custo medido: 239 voltas/s a 244 quadros/s por controle, 39 µs de CPU por volta; o intervalo
+  mínimo entre voltas (4 ms) segue valendo.
