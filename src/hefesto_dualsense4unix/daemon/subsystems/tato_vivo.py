@@ -2009,19 +2009,60 @@ _PELO_CARREGADOR: tuple[str, Receita] | None = None
 _VISTA_LIDA: tuple[str, Any] | None = None
 
 
+#: A vista do computador sem perfil nenhum: ``(o computador lido, a vista)``. O
+#: ``o_computador()`` devolve o MESMO objeto até o ``maquina.json`` mudar, então o
+#: laço de 60 Hz não valida o modelo de novo a cada leitura.
+_VISTA_DO_COMPUTADOR: tuple[Any, Any] | None = None
+
+
+def _nome_do_perfil_ativo(daemon: Any) -> str:
+    """O nome do perfil ativo, ou ``""`` quando não há (o nome que a vista do computador usa)."""
+    nome = getattr(getattr(daemon, "store", None), "active_profile", None)
+    return nome if isinstance(nome, str) else ""
+
+
+def _receita_do_computador() -> Receita:
+    """Sem perfil ativo, a vista é o computador por baixo de um perfil vazio.
+
+    O mesmo ``perfil_que_vale`` que a aba Vibração usa para mostrar e gravar ali
+    (``onde_grava``: sem perfil, grava no computador). O computador que nunca
+    escolheu nada dá a vista do perfil vazio, que não escolhe nada: continua desligado.
+    """
+    global _VISTA_LIDA, _VISTA_DO_COMPUTADOR
+    try:
+        from hefesto_dualsense4unix.profiles.o_padrao_do_computador import (
+            o_computador,
+            perfil_que_vale,
+            perfil_vazio,
+        )
+
+        computador = o_computador()
+        feita = _VISTA_DO_COMPUTADOR
+        if feita is None or feita[0] is not computador:
+            feita = (computador, perfil_que_vale(perfil_vazio(), computador))
+            _VISTA_DO_COMPUTADOR = feita
+        _VISTA_LIDA = ("", feita[1])
+        return receita_do_perfil(feita[1])
+    except Exception:
+        logger.debug("tato_vivo_computador_ilegivel", exc_info=True)
+        _VISTA_LIDA = None
+        return DESLIGADA
+
+
 def receita_ativa(daemon: Any) -> Receita:
     """A receita do perfil ativo, lida da vista (o computador por baixo do jogo).
 
-    Sem perfil, ou sem receita, desligada. Lê pelo `perfil_em_disco`, que só lê o
+    Sem perfil, vale o computador (:func:`_receita_do_computador`); sem receita,
+    desligada. Lê pelo `perfil_em_disco`, que só lê o
     arquivo (sem semear, sem varrer), como o ganho da háptica: este é o laço de
     60 Hz do daemon, e o `load_profile` semeia e reaponta perfis de jogo. Quando o
     nome não tem arquivo com o slug dele, cai no `load_profile` UMA vez por nome
     (A-RECEITA-DO-TATO-SE-LE-SEM-SEMEAR-NEM-VARRER-01).
     """
     global _PELO_CARREGADOR, _VISTA_LIDA
-    nome = getattr(getattr(daemon, "store", None), "active_profile", None)
-    if not isinstance(nome, str) or not nome:
-        return DESLIGADA
+    nome = _nome_do_perfil_ativo(daemon)
+    if not nome:
+        return _receita_do_computador()
     try:
         from hefesto_dualsense4unix.profiles.loader import perfil_em_disco
         from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_que_vale
@@ -2049,7 +2090,7 @@ def receita_ativa(daemon: Any) -> Receita:
 
 def momentos_ativos(daemon: Any) -> MapaDosMomentos:
     """Os planos dos momentos do perfil ativo, da vista que :func:`receita_ativa` leu."""
-    nome = getattr(getattr(daemon, "store", None), "active_profile", None)
+    nome = _nome_do_perfil_ativo(daemon)
     lida = _VISTA_LIDA
     if lida is None or lida[0] != nome:
         return SEM_MOMENTOS
@@ -2062,7 +2103,7 @@ def momentos_ativos(daemon: Any) -> MapaDosMomentos:
 
 def escolhas_ativas(daemon: Any) -> dict[str, str]:
     """As formas de toque do perfil ativo, da vista que :func:`receita_ativa` leu."""
-    nome = getattr(getattr(daemon, "store", None), "active_profile", None)
+    nome = _nome_do_perfil_ativo(daemon)
     lida = _VISTA_LIDA
     if lida is None or lida[0] != nome:
         return {}
@@ -2075,7 +2116,7 @@ def escolhas_ativas(daemon: Any) -> dict[str, str]:
 
 def escolhas_de_imersao_ativas(daemon: Any) -> dict[str, str]:
     """Os padrões dos motores do perfil ativo, da vista que :func:`receita_ativa` leu."""
-    nome = getattr(getattr(daemon, "store", None), "active_profile", None)
+    nome = _nome_do_perfil_ativo(daemon)
     lida = _VISTA_LIDA
     if lida is None or lida[0] != nome:
         return {}
@@ -2088,7 +2129,7 @@ def escolhas_de_imersao_ativas(daemon: Any) -> dict[str, str]:
 
 def vibracao_do_gatilho_ativa(daemon: Any) -> VibracaoDoGatilho:
     """Onde o gatilho do perfil ativo vibra, da vista que :func:`receita_ativa` leu."""
-    nome = getattr(getattr(daemon, "store", None), "active_profile", None)
+    nome = _nome_do_perfil_ativo(daemon)
     lida = _VISTA_LIDA
     if lida is None or lida[0] != nome:
         return SEM_VIBRACAO
@@ -2101,7 +2142,7 @@ def vibracao_do_gatilho_ativa(daemon: Any) -> VibracaoDoGatilho:
 
 def estilo_ativo(daemon: Any) -> str | None:
     """A chave do estilo do perfil ativo, da vista que :func:`receita_ativa` leu."""
-    nome = getattr(getattr(daemon, "store", None), "active_profile", None)
+    nome = _nome_do_perfil_ativo(daemon)
     lida = _VISTA_LIDA
     if lida is None or lida[0] != nome:
         return None
