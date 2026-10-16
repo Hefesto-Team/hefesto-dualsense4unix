@@ -249,14 +249,14 @@
       "data": "2026-10-16",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1115076,
+      "piso": 1116018,
       "por_item": {
-        "docs": 118985,
+        "docs": 119020,
         "scripts": 114042,
-        "src": 298778,
-        "tests": 583271
+        "src": 299145,
+        "tests": 583811
       },
-      "razao": "tamanho: +2724 linhas (1112352 -> 1115076), pagas por Origem: D-1610-AS-LISTAS-DE-EFEITO-POR-CONTROLE-NA-ABA-VIBRACAO, vibracao.haptics_vcm, vibracao.rumble.direito, vibracao.rumble.esquerdo; registrado no fecho, topo b7112369c7b8",
+      "razao": "tamanho: +942 linhas (1115076 -> 1116018), pagas por Origem: D-1510-O-REPOSITORIO-DA-EXTENSAO-B-E-HEFESTO-MOD-LOVENSE-REMOTE; registrado no fecho, topo e8dc7d6921fd",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -455,10 +455,16 @@
           "de": 1112352,
           "para": 1115076,
           "razao": "tamanho: +2724 linhas (1112352 -> 1115076), pagas por Origem: D-1610-AS-LISTAS-DE-EFEITO-POR-CONTROLE-NA-ABA-VIBRACAO, vibracao.haptics_vcm, vibracao.rumble.direito, vibracao.rumble.esquerdo; registrado no fecho, topo b7112369c7b8"
+        },
+        {
+          "data": "2026-10-16",
+          "de": 1115076,
+          "para": 1116018,
+          "razao": "tamanho: +942 linhas (1115076 -> 1116018), pagas por Origem: D-1510-O-REPOSITORIO-DA-EXTENSAO-B-E-HEFESTO-MOD-LOVENSE-REMOTE; registrado no fecho, topo e8dc7d6921fd"
         }
       ],
       "unidade": "linhas",
-      "universo": 2896
+      "universo": 2900
     }
   }
 }
