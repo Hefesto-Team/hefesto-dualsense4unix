@@ -24,6 +24,26 @@
     dica.classList.add('visivel');
   };
   const esconder = () => { if (alvo) descrever(alvo, false); alvo = null; if (dica) dica.classList.remove('visivel'); };
+  /* O TEXTO CORTADO PELA RETICÊNCIA GANHA A DICA COM ELE INTEIRO (16/10/2026): sem ela, o fim da
+     frase não se lê em lugar nenhum. Na passagem do ponteiro, em captura e antes de qualquer camada
+     de dica (a desta base e a da janela, que lê o `data-dica` primeiro), o elemento com
+     `text-overflow:ellipsis` mais perto do ponteiro ganha o texto todo, se corta, e perde a dica
+     que esta regra lhe deu, se deixou de cortar. A dica própria de um elemento nunca é trocada. */
+  document.addEventListener('mousemove', e => {
+    let el = e.target && e.target.nodeType === 1 ? e.target : null;
+    for (let n = 0; el && n < 4; el = el.parentElement, n++) {
+      if (getComputedStyle(el).textOverflow !== 'ellipsis') continue;
+      const daRegra = el.hasAttribute('data-dica-do-corte');
+      if (el.hasAttribute('data-dica') && !daRegra) return;
+      const texto = (el.textContent || '').replace(/\s+/g, ' ').trim();
+      if (texto && el.scrollWidth > el.clientWidth + 1) {
+        el.setAttribute('data-dica', texto); el.setAttribute('data-dica-do-corte', '');
+      } else if (daRegra) {
+        el.removeAttribute('data-dica'); el.removeAttribute('data-dica-do-corte');
+      }
+      return;
+    }
+  }, true);
   for (const [ev, f] of [['mouseover', 'in'], ['focusin', 'in'], ['mouseout', 'out'], ['focusout', 'out']])
     document.addEventListener(ev, e => {
       if (window.__hefDica) return;
