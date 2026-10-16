@@ -13,6 +13,7 @@ import asyncio
 import contextlib
 import threading
 import time
+from array import array
 from collections import deque
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import asdict, dataclass, field, fields, replace
@@ -27,6 +28,7 @@ from hefesto_dualsense4unix.daemon.lifecycle import (
     modo_do_pad,
     o_hefesto_fala_no_modo,
 )
+from hefesto_dualsense4unix.profiles import formas_de_haptica
 from hefesto_dualsense4unix.profiles.efeitos_de_imersao import (
     QUANDO_PASSOU_DO_CLIQUE,
     QUANDO_PRONTO,
@@ -72,6 +74,8 @@ TETO_TOTAL = 40
 JANELA_DO_TETO_S = 1.0
 INTERVALO_S = 1.0 / 60.0
 RELEITURA_DA_RECEITA_S = 1.0
+#: O Som no corpo guarda no máximo este tanto de pedaços entre dois tiques (o resto é mais velho)
+CORPO_MAX_PEDACOS = 16
 
 CAMPO_DA_RECEITA = "receita_do_tato"
 
@@ -178,6 +182,11 @@ class Receita:
     som_no_controle: bool = False
     #: algum gatilho do perfil tem imersão com momentos (OS-MOMENTOS-DA-IMERSAO-TOCAM-NO-GATILHO-01)
     momentos_da_imersao: bool = False
+    #: algum controle do perfil escolheu uma forma de toque (Impacto, Guarda…): o toque do tiro
+    #: dispara mesmo sem o estilo pedir (A forma é da pessoa, o disparo segue a receita.)
+    efeitos_escolhidos: bool = False
+    #: algum controle do perfil escolheu o Som no corpo (o grave do jogo, contínuo)
+    som_no_corpo_escolhido: bool = False
 
     @property
     def ligada(self) -> bool:
@@ -188,6 +197,8 @@ class Receita:
             or self.lado_do_som
             or self.som_no_controle
             or self.momentos_da_imersao
+            or self.efeitos_escolhidos
+            or self.som_no_corpo_escolhido
         )
 
     @classmethod
@@ -229,6 +240,8 @@ class Receita:
             lado_do_som=bool(campo("lado_do_som", False)),
             som_no_controle=bool(campo("som_no_controle", False)),
             momentos_da_imersao=bool(campo("momentos_da_imersao", False)),
+            efeitos_escolhidos=bool(campo("efeitos_escolhidos", False)),
+            som_no_corpo_escolhido=bool(campo("som_no_corpo_escolhido", False)),
         )
 
 
@@ -277,6 +290,28 @@ def _ler(alvo: Any, nome: str) -> Any:
     return getattr(alvo, nome, None)
 
 
+def _escolhas_do_campo(
+    perfil: Any, campo: str, valida: Callable[[object], str | None]
+) -> dict[str, str]:
+    controles = _ler(perfil, "controllers") if perfil is not None else None
+    fora: dict[str, str] = {}
+    for chave, dele in (controles.items() if isinstance(controles, Mapping) else ()):
+        alvo = norm_mac(str(chave))
+        escolha = valida(_ler(_ler(dele, "rumble"), campo))
+        if alvo and escolha is not None:
+            fora[alvo] = escolha
+    return fora
+
+
+def escolhas_do_perfil(perfil: Any) -> dict[str, str]:
+    """A forma do toque que cada controle escolheu (``rumble.efeito_haptico``), por ``norm_mac``.
+
+    Só entra quem escolheu: «Do estilo» e o perfil sem opinião ficam fora, e o controle sem
+    escolha se comporta como sempre. Escolha que não se lê também fica fora.
+    """
+    return _escolhas_do_campo(perfil, "efeito_haptico", formas_de_haptica.escolha_valida)
+
+
 def receita_do_perfil(perfil: Any) -> Receita:
     """A receita do estilo que o perfil guarda, com o desvio dele por cima."""
     if perfil is None:
@@ -292,6 +327,14 @@ def receita_do_perfil(perfil: Any) -> Receita:
             base = receita_do_estilo(estilo)
     if planos_do_perfil(perfil):
         base = replace(base, momentos_da_imersao=True)
+    escolhas = escolhas_do_perfil(perfil)
+    if escolhas:
+        base = replace(
+            base,
+            efeitos_escolhidos=any(
+                v in formas_de_haptica.FORMAS for v in escolhas.values()),
+            som_no_corpo_escolhido=formas_de_haptica.SOM_NO_CORPO in escolhas.values(),
+        )
     desvio = _ler(perfil, CAMPO_DA_RECEITA)
     if not isinstance(desvio, Mapping):
         return base
@@ -377,6 +420,8 @@ class TatoVivo:
         self.ouvido: Any = None
         #: as imersões com momentos de cada gatilho do perfil ativo, relidas com a receita.
         self.momentos: MapaDosMomentos = SEM_MOMENTOS
+        #: a forma de toque que cada controle do perfil ativo escolheu (por ``norm_mac``)
+        self.escolhas: dict[str, str] = {}
         #: o status do Disparo de cada gatilho (0 antes, 1 dentro, 2 passou do clique), lido do
         #: report de entrada; sem entrada é que o aparelho não o disse (o relógio vale).
         self.disparo: dict[tuple[str, str], int] = {}
@@ -694,33 +739,59 @@ def destinos_do_som(
 
 
 class AtuadorDaHaptica:
-    """O toque curto do tiro, no tocador do rumble do controle do evento."""
+    """O toque do tiro, na forma que o controle escolheu, no tocador do rumble dele.
+
+    Sem escolha (ou em «Do estilo») o toque é o de hoje. A escolha explícita dispara nos mesmos
+    eventos da receita; «Sem efeito» e o Som no corpo (contínuo, do laço) não respondem a evento.
+    """
 
     canal = CANAL_HAPTICA
 
     def __init__(
         self,
-        tocar: Callable[[str, float, str, int], object],
+        tocar: Callable[..., object],
         ouvindo: Callable[[], bool] | None = None,
+        escolha_de: Callable[[str], str | None] | None = None,
+        estilo_de: Callable[[], Any] | None = None,
+        na_economia: Callable[[str], bool] | None = None,
     ) -> None:
         self._tocar = tocar
         self._ouvindo = ouvindo or (lambda: False)
+        self._escolha_de = escolha_de or (lambda uniq: None)
+        self._estilo_de = estilo_de or (lambda: None)
+        self._na_economia = na_economia or (lambda uniq: False)
+
+    def _forma(self, uniq: str) -> str | None:
+        """A forma que toca neste controle agora; ``None`` quando ele não toca."""
+        return formas_de_haptica.forma_que_vale(
+            self._escolha_de(uniq), self._estilo_de(), bool(self._na_economia(uniq)))
 
     def responde_a(self, evento: Evento, receita: Receita) -> bool:
+        escolha = formas_de_haptica.escolha_valida(self._escolha_de(evento.uniq))
+        if escolha in (formas_de_haptica.SEM_EFEITO, formas_de_haptica.SOM_NO_CORPO):
+            return False
         if evento.tipo == TIPO_SOM:
             return receita.lado_do_som
-        if evento.tipo != TIPO_RUMBLE or not receita.vibracao_por_tiro:
+        quer = receita.vibracao_por_tiro or escolha is not None
+        if evento.tipo != TIPO_RUMBLE or not quer:
             return False
         # Um tiro, um toque: com o ouvido no som do jogo, o toque (e o lado) vem do estalo.
         return not (receita.lado_do_som and self._ouvindo())
 
     def escrever(self, evento: Evento, receita: Receita, agora: float) -> float | None:
-        self._tocar(
+        forma = self._forma(evento.uniq)
+        if forma is None:
+            return None
+        pedido = (
             evento.uniq,
             evento.energia * receita.forca_do_toque,
             evento.lado,
             receita.duracao_do_toque_ms,
         )
+        if forma == formas_de_haptica.TOQUE:
+            self._tocar(*pedido)
+        else:
+            self._tocar(*pedido, forma)
         # O toque acaba em silêncio por construção: não há o que devolver.
         return None
 
@@ -1690,6 +1761,40 @@ def momentos_ativos(daemon: Any) -> MapaDosMomentos:
         return SEM_MOMENTOS
 
 
+def escolhas_ativas(daemon: Any) -> dict[str, str]:
+    """As formas de toque do perfil ativo, da vista que :func:`receita_ativa` leu."""
+    nome = getattr(getattr(daemon, "store", None), "active_profile", None)
+    lida = _VISTA_LIDA
+    if lida is None or lida[0] != nome:
+        return {}
+    try:
+        return escolhas_do_perfil(lida[1])
+    except Exception:
+        logger.debug("tato_vivo_escolhas_ilegiveis", exc_info=True)
+        return {}
+
+
+def estilo_ativo(daemon: Any) -> str | None:
+    """A chave do estilo do perfil ativo, da vista que :func:`receita_ativa` leu."""
+    nome = getattr(getattr(daemon, "store", None), "active_profile", None)
+    lida = _VISTA_LIDA
+    if lida is None or lida[0] != nome:
+        return None
+    estilo = _ler(lida[1], "estilo")
+    return estilo if isinstance(estilo, str) else None
+
+
+def _controle_na_economia(uniq: str) -> bool:
+    """A Bateria longa vale neste controle? (a dele, ou a da mesa quando ele não escolheu)"""
+    from hefesto_dualsense4unix.profiles.schema import (
+        controles_em_economia,
+        economia_da_mesa,
+        economia_vale,
+    )
+
+    return economia_vale(norm_mac(uniq) in controles_em_economia(), economia_da_mesa())
+
+
 def atuadores_de_producao(daemon: Any) -> list[Atuador]:
     """Os canais que o motor sabe escrever hoje."""
 
@@ -1697,12 +1802,21 @@ def atuadores_de_producao(daemon: Any) -> list[Atuador]:
         motor = motor_do(daemon)
         return bool(motor is not None and getattr(motor.ouvido, "ouvindo", False))
 
-    def tocar(uniq: str, energia: float, lado: str, duracao_ms: int) -> object:
+    def tocar(
+        uniq: str, energia: float, lado: str, duracao_ms: int,
+        forma: str = formas_de_haptica.TOQUE,
+    ) -> object:
         alto_falante = getattr(daemon, "_alto_falante_subsystem", None)
         tocar_o_toque = getattr(alto_falante, "tocar_o_toque", None)
         if not callable(tocar_o_toque):
             return False
-        return tocar_o_toque(uniq, energia, lado, duracao_ms)
+        if forma == formas_de_haptica.TOQUE:
+            return tocar_o_toque(uniq, energia, lado, duracao_ms)
+        return tocar_o_toque(uniq, energia, lado, duracao_ms, forma)
+
+    def escolha_de(uniq: str) -> str | None:
+        motor = motor_do(daemon)
+        return None if motor is None else motor.escolhas.get(norm_mac(uniq) or "")
 
     def estalo(uniq: str, recorte: Any) -> object:
         alto_falante = getattr(daemon, "_alto_falante_subsystem", None)
@@ -1742,14 +1856,7 @@ def atuadores_de_producao(daemon: Any) -> list[Atuador]:
         motor = motor_do(daemon)
         return None if motor is None else motor.disparo.get((uniq, lado))
 
-    def na_economia(uniq: str) -> bool:
-        from hefesto_dualsense4unix.profiles.schema import (
-            controles_em_economia,
-            economia_da_mesa,
-            economia_vale,
-        )
-
-        return economia_vale(norm_mac(uniq) in controles_em_economia(), economia_da_mesa())
+    na_economia = _controle_na_economia
 
     def momento(uniq: str, lado: str, bloco: bytes) -> object:
         escrever = getattr(controller, "set_game_trigger_for", None)
@@ -1773,7 +1880,8 @@ def atuadores_de_producao(daemon: Any) -> list[Atuador]:
         return (int(cor[0]), int(cor[1]), int(cor[2]))
 
     return [
-        AtuadorDaHaptica(tocar, ouvindo),
+        AtuadorDaHaptica(
+            tocar, ouvindo, escolha_de, lambda: estilo_ativo(daemon), na_economia),
         AtuadorDoSom(estalo),
         AtuadorDoGatilho(
             gatilho,
@@ -1817,6 +1925,9 @@ class Passo:
         self._lida_em = float("-inf")
         # Quando o pad de cada controle abriu a sessão de agora (None: já estava aberta).
         self._aberta_em: dict[str, float | None] = {}
+        # O Som no corpo: o grave do jogo, filtrado na thread do ouvido e levado a cada tique.
+        self._filtro_do_corpo = formas_de_haptica.FiltroDoCorpo()
+        self._corpo: deque[Any] = deque(maxlen=CORPO_MAX_PEDACOS)
 
     def receita_de_agora(self, agora: float) -> Receita:
         if agora - self._lida_em >= RELEITURA_DA_RECEITA_S:
@@ -1825,7 +1936,45 @@ class Passo:
             self.motor.momentos = (
                 momentos_ativos(self.daemon)
                 if self.receita_vigente.momentos_da_imersao else SEM_MOMENTOS)
+            self.motor.escolhas = escolhas_ativas(self.daemon)
         return self.receita_vigente
+
+    def alimentar_o_corpo(self, pcm: bytes) -> None:
+        """Chamado na thread do ouvido: o PCM do jogo vira o grave, se alguém o escolheu."""
+        if self.receita_vigente.som_no_corpo_escolhido:
+            self._corpo.append(self._filtro_do_corpo.processar(pcm))
+
+    def _levar_o_corpo(
+        self, receita: Receita, uniqs: Sequence[str],
+        estado_de: Callable[[str], EstadoDoCanal | None],
+    ) -> None:
+        """O grave do jogo vai a cada controle que escolheu o Som no corpo e onde o jogo cala."""
+        pedacos = []
+        while self._corpo:
+            try:
+                pedacos.append(self._corpo.popleft())
+            except IndexError:  # a thread do ouvido esvaziou a fila entre o teste e a retirada
+                break
+        if not pedacos or not receita.som_no_corpo_escolhido:
+            return
+        donos = []
+        for uniq in uniqs:
+            estado = estado_de(uniq)
+            if (self.motor.escolhas.get(norm_mac(uniq) or "") == formas_de_haptica.SOM_NO_CORPO
+                    and estado is not None and decidir(CANAL_HAPTICA, estado)
+                    and not _controle_na_economia(uniq)):
+                donos.append(uniq)
+        if not donos:
+            return
+        amostras = array("f")
+        for pedaco in pedacos:
+            amostras.extend(pedaco)
+        alto_falante = getattr(self.daemon, "_alto_falante_subsystem", None)
+        levar = getattr(alto_falante, "tocar_o_corpo", None)
+        if not callable(levar):
+            return
+        for uniq in donos:
+            levar(uniq, amostras)
 
     def __call__(self, agora: float) -> int:
         receita = self.receita_de_agora(agora)
@@ -1847,7 +1996,9 @@ class Passo:
         por_uniq = {
             c.uniq: estado_do_controle(c, jogo, self._sessao_ha_s(c, agora)) for c in controles
         }
-        return self.motor.tique(agora, por_uniq.get, receita, uniqs=tuple(por_uniq))
+        escritas = self.motor.tique(agora, por_uniq.get, receita, uniqs=tuple(por_uniq))
+        self._levar_o_corpo(receita, tuple(por_uniq), por_uniq.get)
+        return escritas
 
     def _anotar_o_disparo(self, controle: Controle) -> None:
         """O status do Disparo de cada lado vai ao motor; sem report, o lado não tem status."""
@@ -1883,7 +2034,7 @@ class Passo:
         ouvido = self.motor.ouvido
         if ouvido is None:
             return
-        if receita.lado_do_som or receita.som_no_controle:
+        if receita.lado_do_som or receita.som_no_controle or receita.som_no_corpo_escolhido:
             ouvido.comecar()
         for estalo in ouvido.tirar():
             for uniq in destinos_do_som(controles, self.dedo, estalo.instante):
@@ -1901,10 +2052,12 @@ async def tato_vivo_loop(daemon: DaemonProtocol, motor: TatoVivo) -> None:
         motor.ouvido = OuvidoDoJogo(
             lambda: (
                 motor.ligado
-                and (passo.receita_vigente.lado_do_som or passo.receita_vigente.som_no_controle)
+                and (passo.receita_vigente.lado_do_som or passo.receita_vigente.som_no_controle
+                     or passo.receita_vigente.som_no_corpo_escolhido)
                 and passo.jogo
             ),
             recortar=lambda: passo.receita_vigente.som_no_controle,
+            ao_pcm=passo.alimentar_o_corpo,
         )
     try:
         while not daemon._is_stopping():
@@ -1956,6 +2109,9 @@ __all__ = [
     "controles_do_daemon",
     "decidir",
     "destinos_do_som",
+    "escolhas_ativas",
+    "escolhas_do_perfil",
+    "estilo_ativo",
     "modo_do_pad",
     "momentos_ativos",
     "momentos_em_efeito",

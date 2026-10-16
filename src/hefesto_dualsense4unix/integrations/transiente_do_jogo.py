@@ -408,8 +408,11 @@ class OuvidoDoJogo:
         relogio: Callable[[], float] = time.monotonic,
         procura_s: float = PROCURA_S,
         recortar: Callable[[], bool] | None = None,
+        ao_pcm: Callable[[bytes], object] | None = None,
     ) -> None:
         self._querer = querer
+        #: quem quer o PCM cru do jogo, pedaço a pedaço (o Som no corpo), além dos estalos
+        self._ao_pcm = ao_pcm
         self._recortar = recortar or (lambda: False)
         self._achar_o_fluxo = achar_o_fluxo or achar_o_fluxo_do_jogo
         self._montar_argv = montar_argv or montar_o_argv_do_ouvido
@@ -517,6 +520,11 @@ class OuvidoDoJogo:
                 return
             agora = self._relogio()
             self._ultimo_pcm = agora
+            if self._ao_pcm is not None:
+                try:
+                    self._ao_pcm(pedaco)
+                except Exception:
+                    logger.debug("tato_ouvido_ao_pcm_falhou", exc_info=True)
             achados = self.detector.ouvir(pedaco, agora)
             if achados:
                 with self._trava:

@@ -150,6 +150,7 @@ from hefesto_dualsense4unix.integrations.vestido_de_dualsense import (
     campos_do_nome,
     com_o_nome_da_sony,
 )
+from hefesto_dualsense4unix.profiles import formas_de_haptica as formas
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -750,8 +751,11 @@ def bloco_da_haptica(
 # A-VIBRACAO-FINA-BATE-A-CADA-TIRO-01: o toque do tiro. O seno do rumble segue
 # o NÍVEL; o toque é a BORDA, com forma própria: ataque de 3 ms, queda curta e
 # fim em silêncio, na portadora do motor fino.
-FREQUENCIA_DO_TOQUE_HZ = 160
-ATAQUE_DO_TOQUE_MS = 3
+FREQUENCIA_DO_TOQUE_HZ = formas.FORMAS[formas.TOQUE].componentes[0][0]
+ATAQUE_DO_TOQUE_MS = formas.FORMAS[formas.TOQUE].ataque_ms
+#: O que o Som no corpo guarda à espera do bloco: 100 ms. Passou disso, o mais velho cai, e o
+#: tremor não atrasa em relação ao som que o gerou.
+QUADROS_DO_CORPO_NA_FILA = _TAXA // 10
 CANAIS_DO_LADO: dict[str, tuple[int, ...]] = {
     "esquerdo": (2,),
     "direito": (3,),
@@ -759,20 +763,11 @@ CANAIS_DO_LADO: dict[str, tuple[int, ...]] = {
 }
 
 
-def forma_do_toque(energia: float, duracao_ms: int) -> array[float]:
-    """As amostras de UM toque: sobe em 3 ms, cai até zero no fim da duração."""
-    n = max(2, round(_TAXA * max(1, int(duracao_ms)) / 1000))
-    ataque = max(1, min(n - 1, round(_TAXA * ATAQUE_DO_TOQUE_MS / 1000)))
-    forca = max(0.0, min(1.0, float(energia)))
-    passo = 2.0 * math.pi * FREQUENCIA_DO_TOQUE_HZ / _TAXA
-    amostras = array("f", bytes(4 * n))
-    for i in range(n):
-        if i < ataque:
-            envelope = i / ataque
-        else:
-            envelope = ((n - 1 - i) / (n - 1 - ataque)) ** 2 if n - 1 > ataque else 0.0
-        amostras[i] = forca * envelope * math.sin(passo * i)
-    return amostras
+def forma_do_toque(
+    energia: float, duracao_ms: int, forma: str = formas.TOQUE
+) -> array[float]:
+    """As amostras de UM toque na forma pedida (o Toque seco, se nada se pede)."""
+    return formas.amostras(forma, energia, duracao_ms, _TAXA)
 
 
 def misturar_o_toque(
@@ -952,6 +947,11 @@ class TocadorDoRumble:
         self._memoria: dict[tuple[int, int, int], bytes] = {}
         self._toque: tuple[array[float], tuple[int, ...]] | None = None
         self._toque_pos = 0
+        #: a forma em curso é longa (Guarda, Aparo): nenhum toque novo a corta
+        self._toque_longo = False
+        #: o Som no corpo à espera do bloco, e os canais em que ele toca
+        self._corpo: array[float] = array("f")
+        self._corpo_canais: tuple[int, ...] = CANAIS_DO_LADO["centro"]
 
 
     @property
@@ -998,26 +998,65 @@ class TocadorDoRumble:
         self._acordar.set()
 
     def tocar_o_toque(
-        self, energia: float, lado: str, duracao_ms: int, *, sink: str, dono: str
+        self,
+        energia: float,
+        lado: str,
+        duracao_ms: int,
+        *,
+        sink: str,
+        dono: str,
+        forma: str = formas.TOQUE,
     ) -> None:
-        """Um toque curto por cima do nível de agora. Nunca espera, nunca levanta."""
-        forma = forma_do_toque(energia, duracao_ms)
+        """Um toque por cima do nível de agora. Nunca espera, nunca levanta.
+
+        Uma forma longa (Guarda, Aparo) em curso não é cortada por toque nenhum: o novo pedido
+        espera a vez dele, e a fila do rádio não ganha um segundo toque por cima do primeiro.
+        """
+        amostras = forma_do_toque(energia, duracao_ms, forma)
         canais = CANAIS_DO_LADO.get(lado, CANAIS_DO_LADO["centro"])
         with self._trava:
-            self._toque = (forma, canais)
+            if self._toque is not None and self._toque_longo:
+                return
+            self._toque = (amostras, canais)
             self._toque_pos = 0
+            self._toque_longo = forma in formas.FORMAS_LONGAS
             self._sink = str(sink or "")
             self._dono = str(dono or self._dono)
-            if not self._fim.is_set() and (self._fio is None or not self._fio.is_alive()):
-                self._fio = threading.Thread(
-                    target=self._correr, name=f"hefesto-{self.rotulo}", daemon=True
-                )
-                self._fio.start()
+            self._garantir_o_fio()
         self._acordar.set()
+
+    def levar_o_corpo(
+        self, amostras: array[float], lado: str, *, sink: str, dono: str
+    ) -> None:
+        """O pedaço do Som no corpo, atrás do que já espera. Nunca espera, nunca levanta."""
+        if not len(amostras):
+            return
+        with self._trava:
+            self._corpo.extend(amostras)
+            sobra = len(self._corpo) - QUADROS_DO_CORPO_NA_FILA
+            if sobra > 0:
+                del self._corpo[:sobra]
+            self._corpo_canais = CANAIS_DO_LADO.get(lado, CANAIS_DO_LADO["centro"])
+            self._sink = str(sink or "")
+            self._dono = str(dono or self._dono)
+            self._garantir_o_fio()
+        self._acordar.set()
+
+    def _garantir_o_fio(self) -> None:
+        """Sobe o fio do tocador se ele não está de pé. Chamado com a trava."""
+        if not self._fim.is_set() and (self._fio is None or not self._fio.is_alive()):
+            self._fio = threading.Thread(
+                target=self._correr, name=f"hefesto-{self.rotulo}", daemon=True
+            )
+            self._fio.start()
 
     @property
     def tocando_o_toque(self) -> bool:
         return self._toque is not None
+
+    @property
+    def tocando_o_corpo(self) -> bool:
+        return len(self._corpo) > 0
 
     def proximo_bloco(
         self, nivel: tuple[int, int], antes: tuple[int, int], fase: int
@@ -1029,7 +1068,13 @@ class TocadorDoRumble:
                 self._toque_pos = inicio + QUADROS_POR_BLOCO
                 if self._toque_pos >= len(toque[0]):
                     self._toque = None
+                    self._toque_longo = False
+            corpo = self._corpo[:QUADROS_POR_BLOCO]
+            del self._corpo[:QUADROS_POR_BLOCO]
+            canais_do_corpo = self._corpo_canais
         bloco = self._bloco(nivel, antes, fase)
+        if len(corpo):
+            bloco = misturar_o_toque(bloco, corpo, 0, canais_do_corpo)
         if toque is None:
             return bloco
         return misturar_o_toque(bloco, toque[0], inicio, toque[1])
@@ -1064,7 +1109,8 @@ class TocadorDoRumble:
                 return
             with self._trava:
                 nivel, sink, toque = self._nivel, self._sink, self._toque
-            if (not any(nivel) and toque is None) or not sink or (
+                corpo = len(self._corpo) > 0
+            if (not any(nivel) and toque is None and not corpo) or not sink or (
                 self._relogio() < self._recusado_ate
             ):
                 continue
@@ -1118,7 +1164,7 @@ class TocadorDoRumble:
             if proc.poll() is not None:
                 return "morreu"
             agora = self._relogio()
-            if any(nivel) or self._toque is not None:
+            if any(nivel) or self._toque is not None or self._corpo:
                 silencio_desde = None
             elif silencio_desde is None:
                 silencio_desde = agora

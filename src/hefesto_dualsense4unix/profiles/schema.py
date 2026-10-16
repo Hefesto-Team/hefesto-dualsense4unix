@@ -17,6 +17,7 @@ from pydantic import (
     model_validator,
 )
 
+from hefesto_dualsense4unix.profiles.formas_de_haptica import ESCOLHAS as FORMAS_DE_HAPTICA
 from hefesto_dualsense4unix.profiles.steam_app import steam_appid_from_wm_class
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -948,14 +949,27 @@ class ControllerRumbleOverride(BaseModel):
 
     haptica_pct: int | None = None
 
+    #: A forma do toque háptico deste controle (``profiles.formas_de_haptica.ESCOLHAS``).
+    #: ``None`` = «Do estilo»: o que o estilo pede, e o Toque de hoje quando ele não pede. Texto
+    #: que não é uma forma conhecida volta como ``None``: um enfeite ilegível não derruba o perfil.
+    efeito_haptico: str | None = None
+
+    @field_validator("efeito_haptico")
+    @classmethod
+    def _efeito_haptico_legivel(cls, value: str | None) -> str | None:
+        return value if isinstance(value, str) and value in FORMAS_DE_HAPTICA else None
+
     @model_serializer(mode="wrap")
-    def _o_ganho_da_haptica_sem_opiniao_nao_vai_ao_disco(
+    def _o_que_ninguem_escreveu_nao_vai_ao_disco(
         self, handler: SerializerFunctionWrapHandler
     ) -> Any:
-        """O ``haptica_pct`` só vai ao arquivo quando alguém o escreveu."""
+        """O ``haptica_pct`` e o ``efeito_haptico`` só vão ao arquivo quando alguém os escreveu."""
         dados = handler(self)
-        if isinstance(dados, dict) and "haptica_pct" not in self.model_fields_set:
-            dados.pop("haptica_pct", None)
+        if isinstance(dados, dict):
+            if "haptica_pct" not in self.model_fields_set:
+                dados.pop("haptica_pct", None)
+            if self.efeito_haptico is None:
+                dados.pop("efeito_haptico", None)
         return dados
 
     @model_validator(mode="before")
@@ -2252,6 +2266,12 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         "`None` vale `HAPTICA_PCT_PADRAO` (150): a háptica por áudio nasce "
         "ligada, pela palavra dela de 17/09.",
         dono="hefesto_dualsense4unix.profiles.schema:pct_da_haptica",
+    ),
+    "ControllerRumbleOverride.efeito_haptico": Nascimento(
+        NASCE_NO_LEITOR,
+        "`None` vale «Do estilo»: a forma que o estilo pede, e o Toque de hoje quando ele não "
+        "pede nenhuma. Nenhuma forma nova nasce ligada sozinha.",
+        dono="hefesto_dualsense4unix.profiles.formas_de_haptica:forma_que_vale",
     ),
     "ControllerMicOverride.muted": Nascimento(
         E_CONTRATO,

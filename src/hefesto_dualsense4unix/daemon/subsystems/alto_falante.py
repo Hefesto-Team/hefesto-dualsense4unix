@@ -117,6 +117,7 @@ from typing import TYPE_CHECKING, Any
 
 from hefesto_dualsense4unix.daemon.ganho_da_haptica import GANHO
 from hefesto_dualsense4unix.daemon.subsystems.base import numero_do_assento_na_mesa
+from hefesto_dualsense4unix.profiles import formas_de_haptica
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 if TYPE_CHECKING:
@@ -1145,27 +1146,56 @@ class AltoFalanteSubsystem:
             self._rumble_vivo = MappingProxyType(vivos)
         return retrato[2]
 
-    def tocar_o_toque(self, uniq: str, energia: float, lado: str, duracao_ms: int) -> bool:
-        """Um toque curto do tiro no tocador do aparelho de ``uniq``.
+    def tocar_o_toque(
+        self, uniq: str, energia: float, lado: str, duracao_ms: int, forma: str = "toque"
+    ) -> bool:
+        """Um toque do tiro, na forma pedida, no tocador do aparelho de ``uniq``.
 
         A-VIBRACAO-FINA-BATE-A-CADA-TIRO-01: o mesmo tocador do rumble, cabo e
-        rádio pelo mesmo caminho, e só onde a háptica fina leva.
+        rádio pelo mesmo caminho, e só onde a háptica fina leva. Uma forma longa
+        (Guarda, Aparo) pelo rádio cede quando não há fatia livre, como o estalo.
         """
         chave = self._chave_do_rumble(uniq)
         if chave is None or not self._quer_a_haptica_fina(chave):
             return False
+        if forma in formas_de_haptica.FORMAS_LONGAS and self._o_radio_cede(chave):
+            logger.debug("tato_toque_longo_cede_ao_radio", uniq=chave, forma=forma)
+            return False
+        alvo = self._o_tocador_de(chave)
+        if alvo is None:
+            return False
+        tocador, sink = alvo
+        if forma == formas_de_haptica.TOQUE:
+            tocador.tocar_o_toque(energia, lado, duracao_ms, sink=sink, dono=chave)
+        else:
+            tocador.tocar_o_toque(energia, lado, duracao_ms, sink=sink, dono=chave, forma=forma)
+        return True
+
+    def tocar_o_corpo(self, uniq: str, amostras: Any, lado: str = "centro") -> bool:
+        """Um pedaço do Som no corpo no tocador do aparelho de ``uniq``.
+
+        Contínuo: cede ao rádio sem fatia livre, e só onde a háptica fina leva.
+        """
+        chave = self._chave_do_rumble(uniq)
+        if chave is None or not self._quer_a_haptica_fina(chave) or self._o_radio_cede(chave):
+            return False
+        alvo = self._o_tocador_de(chave)
+        if alvo is None:
+            return False
+        tocador, sink = alvo
+        tocador.levar_o_corpo(amostras, lado, sink=sink, dono=chave)
+        return True
+
+    def _o_tocador_de(self, chave: str) -> tuple[Any, str] | None:
+        """O tocador do aparelho deste controle e o nó em que ele toca."""
         marca = self._aparelho_de.get(chave)
         if marca is None:
-            return False
-        endpoint = self._endpoints.get(marca)
+            return None
         tocador = self._tocador_do_aparelho(marca)
         if tocador is None:
-            return False
-        tocador.tocar_o_toque(
-            energia, lado, duracao_ms,
-            sink=str(getattr(endpoint, "nome", "") or ""), dono=chave,
-        )
-        return True
+            return None
+        endpoint = self._endpoints.get(marca)
+        return tocador, str(getattr(endpoint, "nome", "") or "")
 
     def tocar_o_estalo(self, uniq: str, recorte: Any) -> bool:
         """O estalo do tiro no alto-falante do controle de ``uniq``.
