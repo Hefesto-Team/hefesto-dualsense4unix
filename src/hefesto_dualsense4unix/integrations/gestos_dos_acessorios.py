@@ -126,6 +126,9 @@ class _Mao:
     l2_cruzou: bool = False
     segurou: dict[str, float] = field(default_factory=dict)
     parou_segurando: set[str] = field(default_factory=set)
+    #: A última pressão ``(L2, R2)`` lida deste controle: quem chama sem ela (o calar dos botões)
+    #: lê a mesma, senão o eixo sem o bit digital soltava e reapertava o membro no mesmo tique.
+    gatilhos: tuple[int, int] | None = None
 
 
 class GestosDosAcessorios:
@@ -225,6 +228,10 @@ class GestosDosAcessorios:
         mao = self._maos.get(de)
         if mao is None:
             mao = self._maos[de] = _Mao()
+        if gatilhos is None:
+            gatilhos = mao.gatilhos
+        else:
+            mao.gatilhos = gatilhos
         t = now if now is not None else self._relogio()
         t = max(t, mao.t)
         mao.t = t

@@ -205,6 +205,22 @@ def test_o_r2_um_instante_antes_do_ps_ainda_e_o_gesto() -> None:
     assert cena.gestos == ["sobe"]
 
 
+def test_o_r2_lido_pelo_eixo_nao_vira_rajada_quando_o_calar_dos_botoes_le_sem_a_pressao() -> None:
+    """O tique do pad lê o mesmo instante três vezes: o poll e o eixo com a pressão, o calar dos
+    botões sem ela. Com o R2 a meio curso e sem o bit digital, a leitura sem pressão soltava o
+    membro e a seguinte o reapertava: um «sobe» (ou um surto) a cada tique."""
+    cena = Cena()
+    cena.solta()
+    for _ in range(round(1.0 * 60)):
+        cena.relogio.t += 1 / 60
+        t = cena.relogio.t
+        cena.mgr.observe(("ps",), now=t, de=P1, gatilhos=(0, 100))
+        cena.mgr.combo_buttons_active({"ps"}, de=P1, now=t)
+        cena.mgr.eixos_do_gesto({"ps"}, (0, 100), de=P1, now=t)
+    assert set(cena.gestos) == {"sobe"}, cena.gestos
+    assert len(cena.gestos) == 3, f"o primeiro e as repetições de 0,5 s e 0,8 s: {cena.gestos}"
+
+
 def test_modificacao_desligada_nao_publica_nada_e_o_r2_chega_como_hoje() -> None:
     cena = Cena(opcoes=None)
     cena.solta()
