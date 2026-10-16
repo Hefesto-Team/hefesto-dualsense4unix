@@ -3,8 +3,11 @@
 O botão é um TOQUE por borda (teto de 12 por segundo por controle e 40 no total); o analógico,
 o gatilho e o chacoalhar são um par contínuo ``(esquerdo, direito)``. O par se junta ao pedido do
 jogo pela mistura do perfil (o maior dos dois, ou a soma limitada a 255), e só «so_meus_toques»
-tira o jogo do controle. O Modo Nativo, a háptica por áudio do jogo e o gatilho com efeito do jogo
-calam o toque que lhes toca. O relógio é injetado em cada chamada.
+tira o jogo do controle. O Modo Nativo, a háptica por áudio e o gatilho com efeito do jogo calam o
+toque que lhes toca. O relógio é injetado em cada chamada.
+
+O touchpad entra pelo mesmo par (o dedo, lido do ``SensorHub`` só escutando): o lado tocado
+vibra, a altura é a força, o deslize rápido dá um surto e o clique um acento.
 """
 
 from __future__ import annotations
@@ -42,6 +45,27 @@ LIMIAR_DO_GIRO = 150.0
 GIRO_CHEIO = 600.0
 ENTRE_ESCRITAS_S = 1.0 / 30.0
 
+TOUCHPAD_DESLIGADO = "desligado"
+TOUCHPAD_PELOS_LADOS = "pelos_lados"
+TOUCHPAD_MISTURA = "mistura"
+ALTURA_FORCA = "forca"
+ALTURA_INVERTIDA = "invertida"
+ALTURA_FIXA = "fixa"
+DEDO_VIBRA = "vibra"
+DEDO_SO_O_TOQUE = "so_o_toque"
+
+#: a faixa central do touchpad, em que os dois motores vibram (10 % da largura)
+FAIXA_CENTRAL = (0.45, 0.55)
+#: o piso da força pela altura: o dedo embaixo ainda se sente
+PISO_DA_ALTURA = 0.15
+SUAVIZACAO_S = 0.08
+SOLTAR_S = 0.15
+SURTO_S = 0.15
+ACENTO_DO_CLIQUE_S = 0.2
+VELOCIDADE_DO_SURTO = 1500.0
+MOVIMENTO_DO_DEDO = 2
+AMOSTRA_DO_DEDO_S = 0.02
+
 #: O motor esquerdo é o grosso (o ``forte`` do rumble); o direito é o fino (o ``fraco``).
 ESQUERDO = "esquerdo"
 DIREITO = "direito"
@@ -58,6 +82,21 @@ ParDoRumble = tuple[int, int]
 
 
 @dataclass(frozen=True)
+class AjusteDoTouchpad:
+    """O que o touchpad faz pelos meus toques: de fábrica, nada."""
+
+    leitura: str = TOUCHPAD_DESLIGADO
+    altura: str = ALTURA_FORCA
+    dedo_parado: str = DEDO_VIBRA
+    deslize_rapido: bool = True
+    clique: bool = True
+
+    @property
+    def liga(self) -> bool:
+        return self.leitura in (TOUCHPAD_PELOS_LADOS, TOUCHPAD_MISTURA)
+
+
+@dataclass(frozen=True)
 class Ajuste:
     """A escolha do perfil: quando os toques valem e como se juntam ao jogo."""
 
@@ -68,6 +107,7 @@ class Ajuste:
     botoes: bool = True
     gatilhos: bool = True
     chacoalhar: bool = True
+    touchpad: AjusteDoTouchpad = AjusteDoTouchpad()
 
     @property
     def liga(self) -> bool:
@@ -111,6 +151,24 @@ def ajuste_do_perfil(perfil: Any) -> Ajuste:
         botoes=_booleano(_ler(bloco, "botoes", None), True),
         gatilhos=_booleano(_ler(bloco, "gatilhos", None), True),
         chacoalhar=_booleano(_ler(bloco, "chacoalhar", None), True),
+        touchpad=_ajuste_do_touchpad(_ler(bloco, "touchpad", None)),
+    )
+
+
+def _ajuste_do_touchpad(bloco: Any) -> AjusteDoTouchpad:
+    if bloco is None:
+        return AjusteDoTouchpad()
+    return AjusteDoTouchpad(
+        leitura=_escolha(
+            _ler(bloco, "leitura", None),
+            (TOUCHPAD_DESLIGADO, TOUCHPAD_PELOS_LADOS, TOUCHPAD_MISTURA), TOUCHPAD_DESLIGADO),
+        altura=_escolha(
+            _ler(bloco, "altura", None), (ALTURA_FORCA, ALTURA_INVERTIDA, ALTURA_FIXA),
+            ALTURA_FORCA),
+        dedo_parado=_escolha(
+            _ler(bloco, "dedo_parado", None), (DEDO_VIBRA, DEDO_SO_O_TOQUE), DEDO_VIBRA),
+        deslize_rapido=_booleano(_ler(bloco, "deslize_rapido", None), True),
+        clique=_booleano(_ler(bloco, "clique", None), True),
     )
 
 
@@ -139,6 +197,16 @@ class Mistura:
     toques: Par
 
 
+@dataclass(frozen=True)
+class Toque:
+    """O dedo de um controle agora: os dedos ``(x, y)``, o tamanho do touchpad e o clique."""
+
+    dedos: tuple[tuple[int, int], ...] = ()
+    largura: int = 1920
+    altura: int = 1080
+    clicado: bool = False
+
+
 @dataclass
 class Ligacoes:
     """As pontas de fora: o que escreve e o que pergunta. Em produção, o backend e o daemon."""
@@ -155,6 +223,8 @@ class Ligacoes:
     dizer: Callable[[str, ParDoRumble, ParDoRumble, Par, Par], object]
     #: a força de cada motor, ``(mult_fraco, mult_forte)``, a mesma do pedido do jogo
     forca: Callable[[str], tuple[float, float]] = lambda uniq: (1.0, 1.0)
+    #: o dedo no touchpad deste controle; só é perguntado com a leitura do touchpad ligada
+    toque: Callable[[str], Toque | None] = lambda uniq: None
 
 
 @dataclass
@@ -168,6 +238,24 @@ class _Estado:
     escrito: ParDoRumble | None = None
     escrito_em: float = float("-inf")
     ativo: bool = False
+    acentos: list[tuple[float, float]] = field(default_factory=list)
+    dedo: _Dedo = field(default_factory=lambda: _Dedo())
+
+
+@dataclass
+class _Dedo:
+    """O que se lembra do dedo de um controle entre um tique e outro."""
+
+    visto: bool = False
+    clicado: bool = False
+    suave: tuple[float, float] | None = None
+    visto_em: float = 0.0
+    cru: tuple[int, int] | None = None
+    cru_em: float = 0.0
+    mexeu_em: float = float("-inf")
+    surto_ate: float = float("-inf")
+    ultimo: tuple[float, float] = (0.0, 0.0)
+    solto_em: float | None = None
 
 
 class MeusToques:
@@ -218,12 +306,16 @@ class MeusToques:
         if not self._ajuste.liga:
             estado.botoes = entrada.botoes
             estado.toques = (0, 0)
+            estado.acentos.clear()
+            estado.dedo = _Dedo()
             if estado.ativo:
                 self._escrever(uniq, estado, agora)
             return
         if self._l.haptica_do_jogo(uniq):
             estado.botoes = entrada.botoes
             estado.toques_de_botao.clear()
+            estado.acentos.clear()
+            estado.dedo = _Dedo()
             estado.toques, estado.ativo, estado.escrito = (0, 0), False, None
             return
         estado.toques = self._toques_de(entrada, estado, agora)
@@ -234,6 +326,8 @@ class MeusToques:
         """Sem jogo ou no Modo Nativo, nada se escreve: o que ficou marcado se esquece."""
         estado.botoes = entrada.botoes
         estado.toques_de_botao.clear()
+        estado.acentos.clear()
+        estado.dedo = _Dedo()
         estado.toques, estado.jogo, estado.ativo, estado.escrito = (0, 0), (0, 0), False, None
 
     def _toques_de(self, entrada: Entrada, estado: _Estado, agora: float) -> Par:
@@ -248,8 +342,13 @@ class MeusToques:
         if ajuste.chacoalhar:
             giro = _nivel_do_giro(entrada.giro)
             nivel_esq, nivel_dir = max(nivel_esq, giro), max(nivel_dir, giro)
+        do_dedo = self._do_touchpad(entrada.uniq, estado, agora)
+        nivel_esq, nivel_dir = max(nivel_esq, do_dedo[0]), max(nivel_dir, do_dedo[1])
         base = round(255 * ajuste.forca / 100)
         esq, dir_ = round(base * nivel_esq), round(base * nivel_dir)
+        estado.acentos = [a for a in estado.acentos if a[0] > agora]
+        for _, nivel in estado.acentos:
+            esq, dir_ = max(esq, round(base * nivel)), max(dir_, round(base * nivel))
         for lado in self._toques_de_botao(entrada, estado, agora):
             esq, dir_ = (max(esq, base), dir_) if lado == ESQUERDO else (esq, max(dir_, base))
         if not (esq or dir_):
@@ -286,6 +385,98 @@ class MeusToques:
             estado.mexeu[lado] = agora
         parado_ha = agora - estado.mexeu.get(lado, float("-inf"))
         return nivel if parado_ha < CALA_PARADO_S else 0.0
+
+    # -- o touchpad ---------------------------------------------------------------------
+
+    def _acento(self, uniq: str, estado: _Estado, agora: float, duracao: float) -> None:
+        """Um surto nos dois lados, pelo teto dos toques."""
+        if not self._teto.cabe(uniq, agora):
+            return
+        self._teto.gastar(uniq, agora)
+        estado.acentos.append((agora + duracao, 1.0))
+        self.toques_dados += 1
+
+    def _do_touchpad(self, uniq: str, estado: _Estado, agora: float) -> tuple[float, float]:
+        """Os níveis ``(esquerdo, direito)`` do dedo; o surto e o acento entram à parte."""
+        cfg = self._ajuste.touchpad
+        dedo = estado.dedo
+        if not cfg.liga:
+            if dedo.visto or dedo.clicado or dedo.solto_em is not None:
+                estado.dedo = _Dedo()
+            return (0.0, 0.0)
+        toque = self._l.toque(uniq)
+        clicado = toque is not None and toque.clicado
+        if cfg.clique and clicado and not dedo.clicado:
+            self._acento(uniq, estado, agora, ACENTO_DO_CLIQUE_S)
+        dedo.clicado = clicado
+        if toque is None or not toque.dedos:
+            return self._soltar(dedo, agora)
+        dedos = toque.dedos
+        x = sum(d[0] for d in dedos) / len(dedos)
+        y = sum(d[1] for d in dedos) / len(dedos)
+        if not dedo.visto:
+            dedo.visto, dedo.solto_em, dedo.suave = True, None, (x, y)
+            dedo.visto_em = dedo.cru_em = dedo.mexeu_em = agora
+            dedo.cru = (round(x), round(y))
+        else:
+            self._seguir_o_dedo(uniq, estado, cfg, (x, y), agora)
+        sx, sy = dedo.suave or (x, y)
+        largura, altura = max(1, toque.largura), max(1, toque.altura)
+        nivel = _nivel_da_altura(cfg.altura, sy / altura)
+        if cfg.dedo_parado == DEDO_SO_O_TOQUE and agora - dedo.mexeu_em >= CALA_PARADO_S:
+            nivel = 0.0
+        fx = max(0.0, min(1.0, sx / largura))
+        if cfg.leitura == TOUCHPAD_MISTURA:
+            lados = (nivel * min(1.0, 2.0 * (1.0 - fx)), nivel * min(1.0, 2.0 * fx))
+        elif len(dedos) >= 2 or FAIXA_CENTRAL[0] <= fx <= FAIXA_CENTRAL[1]:
+            lados = (nivel, nivel)
+        else:
+            lados = (nivel, 0.0) if fx < FAIXA_CENTRAL[0] else (0.0, nivel)
+        dedo.ultimo = lados
+        return lados
+
+    def _seguir_o_dedo(
+        self,
+        uniq: str,
+        estado: _Estado,
+        cfg: AjusteDoTouchpad,
+        onde: tuple[float, float],
+        agora: float,
+    ) -> None:
+        """Suaviza a posição em 80 ms e mede a velocidade em amostras de 20 ms ou mais."""
+        dedo = estado.dedo
+        if dedo.suave is not None:
+            alfa = 1.0 - math.exp(-max(0.0, agora - dedo.visto_em) / SUAVIZACAO_S)
+            dedo.suave = (
+                dedo.suave[0] + (onde[0] - dedo.suave[0]) * alfa,
+                dedo.suave[1] + (onde[1] - dedo.suave[1]) * alfa,
+            )
+        dedo.visto_em = agora
+        passou = agora - dedo.cru_em
+        if passou < AMOSTRA_DO_DEDO_S or dedo.cru is None:
+            return
+        andou = math.hypot(onde[0] - dedo.cru[0], onde[1] - dedo.cru[1])
+        dedo.cru, dedo.cru_em = (round(onde[0]), round(onde[1])), agora
+        if andou >= MOVIMENTO_DO_DEDO:
+            dedo.mexeu_em = agora
+        rapido = andou / passou > VELOCIDADE_DO_SURTO
+        pelos_lados = cfg.leitura == TOUCHPAD_PELOS_LADOS  # na mistura o deslize já é o balanço
+        if cfg.deslize_rapido and pelos_lados and rapido and agora >= dedo.surto_ate:
+            dedo.surto_ate = agora + SURTO_S
+            self._acento(uniq, estado, agora, SURTO_S)
+
+    @staticmethod
+    def _soltar(dedo: _Dedo, agora: float) -> tuple[float, float]:
+        """O dedo saiu: o motor desce até zero em 150 ms."""
+        if dedo.visto:
+            dedo.visto, dedo.solto_em, dedo.suave, dedo.cru = False, agora, None, None
+        if dedo.solto_em is None:
+            return (0.0, 0.0)
+        resto = 1.0 - (agora - dedo.solto_em) / SOLTAR_S
+        if resto <= 0.0:
+            dedo.solto_em, dedo.ultimo = None, (0.0, 0.0)
+            return (0.0, 0.0)
+        return (dedo.ultimo[0] * resto, dedo.ultimo[1] * resto)
 
     # -- o par que chega aos motores -----------------------------------------------------
 
@@ -350,6 +541,16 @@ def _lados(par: ParDoRumble) -> Par:
 
 def _nivel_do_gatilho(valor: int) -> float:
     return max(0.0, min(1.0, (valor - LIMIAR_DO_GATILHO) / (255 - LIMIAR_DO_GATILHO)))
+
+
+def _nivel_da_altura(modo: str, de_cima_para_baixo: float) -> float:
+    """A força pela altura do dedo (0 = em cima, 1 = embaixo): «forca» forte em cima."""
+    if modo == ALTURA_FIXA:
+        return 1.0
+    ponto = max(0.0, min(1.0, de_cima_para_baixo))
+    if modo == ALTURA_INVERTIDA:
+        return PISO_DA_ALTURA + (1.0 - PISO_DA_ALTURA) * ponto
+    return PISO_DA_ALTURA + (1.0 - PISO_DA_ALTURA) * (1.0 - ponto)
 
 
 def _nivel_do_giro(giro: float) -> float:
@@ -460,6 +661,20 @@ def meus_toques_de_producao(daemon: Any) -> MeusToques:
         except Exception:
             return (1.0, 1.0)
 
+    def toque(uniq: str) -> Toque | None:
+        garantir = getattr(daemon, "_garantir_sensor_hub", None)
+        perguntar = getattr(garantir() if callable(garantir) else None, "toque_da_peca", None)
+        leitura = perguntar(uniq) if callable(perguntar) else None
+        if leitura is None:
+            return None
+        estado, clicado = leitura
+        return Toque(
+            tuple((x, y) for _dedo, x, y in gamepad._dedos_do_toque(estado)),
+            int(getattr(estado, "largura", 0) or 1920),
+            int(getattr(estado, "altura", 0) or 1080),
+            bool(clicado),
+        )
+
     return MeusToques(Ligacoes(
         motores=motores,
         pode_falar=pode_falar,
@@ -467,15 +682,18 @@ def meus_toques_de_producao(daemon: Any) -> MeusToques:
         gatilho_do_jogo=gatilho_do_jogo,
         dizer=dizer,
         forca=forca,
+        toque=toque,
     ))
 
 
 __all__ = [
     "Ajuste",
+    "AjusteDoTouchpad",
     "Entrada",
     "Ligacoes",
     "MeusToques",
     "Mistura",
+    "Toque",
     "ajuste_do_perfil",
     "entradas_do_daemon",
     "meus_toques_de_producao",

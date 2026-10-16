@@ -601,6 +601,23 @@ class ProfileCursorConfig(BaseModel):
         return self
 
 
+class ProfileMeusToquesTouchpadConfig(BaseModel):
+    """O touchpad como fonte dos meus toques (O-TOUCHPAD-VIRA-FONTE-DE-VIBRACAO-01).
+
+    ``leitura`` «desligado» é o de fábrica; «pelos_lados» vibra o motor do lado tocado, e «mistura»
+    faz o balanço seguir o dedo. ``altura`` diz o que a altura do dedo faz (força, o contrário, ou
+    nada), ``dedo_parado`` se o dedo parado segue vibrando.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    leitura: Literal["desligado", "pelos_lados", "mistura"] = "desligado"
+    altura: Literal["forca", "invertida", "fixa"] = "forca"
+    dedo_parado: Literal["vibra", "so_o_toque"] = "vibra"
+    deslize_rapido: bool = True
+    clique: bool = True
+
+
 class ProfileMeusToquesConfig(BaseModel):
     """Os meus toques: o controle vibra a cada entrada de quem joga, além do que o jogo manda.
 
@@ -620,6 +637,8 @@ class ProfileMeusToquesConfig(BaseModel):
     botoes: bool = True
     gatilhos: bool = True
     chacoalhar: bool = True
+    touchpad: ProfileMeusToquesTouchpadConfig = Field(
+        default_factory=ProfileMeusToquesTouchpadConfig)
 
 
 class ProfileMouseConfig(BaseModel):
@@ -2707,6 +2726,24 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
     ),
     "ProfileMeusToquesConfig.chacoalhar": Nascimento(
         E_CONTRATO, "Vale com o modo ligado e só passa de um limiar de giro."
+    ),
+    "ProfileMeusToquesConfig.touchpad": Nascimento(
+        E_CONTRATO, "O touchpad nasce desligado: o dedo continua só movendo o cursor e o jogo."
+    ),
+    "ProfileMeusToquesTouchpadConfig.leitura": Nascimento(
+        E_CONTRATO, "«desligado»: o touchpad só faz o que sempre fez, nenhum dedo vibra o controle."
+    ),
+    "ProfileMeusToquesTouchpadConfig.altura": Nascimento(
+        E_CONTRATO, "Em cima é forte, como no desenho dela; vale só com a leitura ligada."
+    ),
+    "ProfileMeusToquesTouchpadConfig.dedo_parado": Nascimento(
+        E_CONTRATO, "O dedo parado segue vibrando; vale só com a leitura ligada."
+    ),
+    "ProfileMeusToquesTouchpadConfig.deslize_rapido": Nascimento(
+        E_CONTRATO, "Um deslize rápido dá um surto curto; vale só com a leitura ligada."
+    ),
+    "ProfileMeusToquesTouchpadConfig.clique": Nascimento(
+        E_CONTRATO, "O clique do touchpad dá um acento nos dois lados; vale com a leitura ligada."
     ),
     "Profile.tabela_no_jogo": Nascimento(
         NASCE_NO_LEITOR,
