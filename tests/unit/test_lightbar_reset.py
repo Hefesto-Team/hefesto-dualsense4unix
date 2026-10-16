@@ -119,18 +119,29 @@ class TestOndaLFiadaNoBackend:
         ]
         assert chamadas, "o backend deixou de chamar should_reclaim_on_wake"
 
-    def test_reclaim_de_wake_gateado_por_modo_nativo(self) -> None:
-        # O laço de reclaim NÃO pode reenviar o 0x08 em Modo Nativo (output
-        import re
+    def test_o_wake_nao_manda_o_0x08_em_modo_nenhum(self) -> None:
+        # 16/10/2026: o laço do wake deixou de olhar o `_output_mute` porque só LÊ o nó e esquece
+        # a memória; quem escreve é o reassert, que respeita o mudo. O 0x08 não sai de lá em modo
+        # nenhum (LIGHTBAR-BT-CULPADO-01); o comportamento está em TestReset02WakeSobModoNativo.
+        import ast
         from pathlib import Path
 
         fonte = Path(
             "src/hefesto_dualsense4unix/core/backend_pydualsense.py"
         ).read_text(encoding="utf-8")
-        bloco = fonte[fonte.index("reclaim_candidates") :][:600]
-        assert re.search(r"self\._output_mute", bloco), (
-            "o reclaim de wake precisa ser no-op sob _output_mute (Modo Nativo)"
+        laco = next(
+            no for no in ast.walk(ast.parse(fonte))
+            if isinstance(no, ast.FunctionDef)
+            and no.name == "_esquecer_a_luz_que_o_kernel_perdeu"
         )
+        chamados = {
+            getattr(c.func, "id", getattr(c.func, "attr", None))
+            for c in ast.walk(laco)
+            if isinstance(c, ast.Call)
+        }
+        assert "send_release_leds" not in chamados
+        assert "enviar_release_leds" not in chamados
+        assert "should_reclaim_on_wake" in chamados
 
 
 class _FakeBtHandle:

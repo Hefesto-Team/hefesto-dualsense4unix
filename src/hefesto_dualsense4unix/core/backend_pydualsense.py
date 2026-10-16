@@ -1472,6 +1472,8 @@ class PyDualSenseController(IController):
         # ficaria ilegível. Some no `end_game_session_for`, com a sessão.
         self._recusa_ao_jogo_logada: dict[str, set[str]] = {}
         self._sysfs: dict[str, Any] = {}
+        # O handle de cada nó do mapa: o mesmo no tique seguinte, o nó (e a memória) também.
+        self._sysfs_donos: dict[str, Any] = {}
         self._suprimir_player_leds = False
         self._sysfs_written: dict[str, tuple[int, int, int]] = {}
         self._output_target_key: str | None = None
@@ -2307,47 +2309,30 @@ class PyDualSenseController(IController):
         # `core/lightbar_reset.py` derruba o claim da lightbar no firmware por BT: o que caducou é
         # MANDÁ-LO, não o layout do report. LIGHTBAR-BT-CULPADO-01.
 
-        # LIGHTBAR-BT-RESET-02: o 0x08 acima só cobre handles NOVOS; um wake BT sem reabrir o
-        # handle também derruba o claim (caso medido 2026-07-20). Reenvia o 0x08 SÓ na assinatura
-        # do wake, nunca por timer (evita flicker); snapshot sob lock, I/O fora dele, best-effort.
+        # O tique só repinta a luz que o kernel perdeu (O-TIQUE-DE-30-S-SO-REPINTA-A-LUZ-QUE-O-
+        # KERNEL-PERDEU-01): o nó de quem segue no mesmo handle guarda a memória entre os tiques
+        # (`_refresh_sysfs_leds`), e a cor LIDA diferente da resolvida (o wake, que devolve o nó ao
+        # azul do kernel sem reabrir o handle, ou quem escreveu na classe por fora) faz o nó e o
+        # quadro do `0x31` esquecerem; o reassert abaixo repinta pela rota normal, sem `0x08`
+        # (LIGHTBAR-BT-CULPADO-01), e sob o mudo do Modo Nativo só pelo nó. Só leitura de sysfs.
         new_keys = {k for k, _ in new_handles}
         with self._io_lock:
-            reclaim_candidates = (
-                []
-                if self._output_mute
-                else [
-                    (
-                        key,
-                        handle,
-                        self._sysfs.get(key),
-                        self._merged_desired_for_key(key),
-                        self._detect_transport(handle),
-                    )
-                    for key, handle in self._handles.items()
-                    if key not in new_keys
-                ]
-            )
-        for key, _handle, node, desired, transport in reclaim_candidates:
+            reclaim_candidates = [
+                (
+                    key,
+                    handle,
+                    self._sysfs.get(key),
+                    self._merged_desired_for_key(key),
+                    self._detect_transport(handle),
+                )
+                for key, handle in self._handles.items()
+                if key not in new_keys
+            ]
+        for key, handle, node, desired, transport in reclaim_candidates:
             with contextlib.suppress(Exception):
-                from hefesto_dualsense4unix.core.lightbar_reset import (
-                    should_reclaim_on_wake,
+                self._esquecer_a_luz_que_o_kernel_perdeu(
+                    key, handle, node, desired.led, transport
                 )
-
-                current = node.get_rgb() if node is not None else None
-                reclamar = should_reclaim_on_wake(
-                    transport, desired.led, current, KERNEL_DEFAULT_BLUE
-                )
-                logger.debug(
-                    "lightbar_reclaim_avaliado",
-                    key=key,
-                    transport=transport,
-                    current=current,
-                    desired=desired.led,
-                    kernel_default=KERNEL_DEFAULT_BLUE,
-                    reclamar=reclamar,
-                )
-                if reclamar:
-                    logger.debug("lightbar_reclaim_gatilho_disparou_sem_acao", key=key)
 
         self._refresh_sysfs_leds()
         for key, handle in new_handles:
@@ -2357,6 +2342,41 @@ class PyDualSenseController(IController):
             self._reapply_desired(key, handle)
         # acabaram de surgir. Sintoma provado ao vivo: boot com os DualSense
         self.reassert_resolved_outputs()
+
+    def _esquecer_a_luz_que_o_kernel_perdeu(
+        self,
+        key: str,
+        handle: Any,
+        node: Any,
+        cor: tuple[int, int, int] | None,
+        transport: str,
+    ) -> bool:
+        """A cor lida no nó diverge da resolvida: o nó, o quadro do rádio e o brilho do cabo
+        esquecem, e o reassert do mesmo tique repinta. Devolve se esqueceu.
+
+        Nó ilegível ou sem cor resolvida não afirma nada. `should_reclaim_on_wake` só classifica o
+        episódio no diário: o wake (o azul do kernel no rádio) ou um escritor de fora.
+        """
+        from hefesto_dualsense4unix.core.lightbar_reset import should_reclaim_on_wake
+
+        if node is None or cor is None:
+            return False
+        lida = node.get_rgb()
+        if lida is None or tuple(lida) == tuple(cor):
+            return False
+        node.invalidate_cache()
+        with contextlib.suppress(Exception):
+            handle._quadro_da_luz = None
+            handle._brilho_do_cabo = None
+        logger.info(
+            "lightbar_perdida_repintada",
+            key=key,
+            transport=transport,
+            lida=lida,
+            resolvida=cor,
+            wake=should_reclaim_on_wake(transport, cor, lida, KERNEL_DEFAULT_BLUE),
+        )
+        return True
 
     def _aplicar_os_pisos_de_escrita_locked(self) -> None:
         """O espaçamento mínimo entre duas escritas de cada controle, por transporte, sob `_io_lock`
@@ -2522,13 +2542,14 @@ class PyDualSenseController(IController):
             keys = list(self._handles)
             handles = dict(self._handles)
             prev = self._sysfs
+            donos = getattr(self, "_sysfs_donos", {})
 
         mapping: dict[str, Any] = {}
         for key in keys:
             nk = sysfs_leds.norm_mac(key)
             node = by_mac.get(nk) if nk else None
             if node is not None and node.writable():
-                mapping[key] = node
+                mapping[key] = self._o_mesmo_no(prev.get(key), node, donos.get(key), handles[key])
 
         uncovered = sorted(k for k in keys if k not in mapping)
         if set(mapping) != set(prev) or uncovered != getattr(
@@ -2579,9 +2600,22 @@ class PyDualSenseController(IController):
 
         with self._io_lock:
             self._sysfs = mapping
+            self._sysfs_donos = {key: handles[key] for key in mapping}
             self._sysfs_written = {
                 key: rgb for key, rgb in self._sysfs_written.items() if key in mapping
             }
+
+    @staticmethod
+    def _o_mesmo_no(anterior: Any, novo: Any, dono_anterior: Any, handle: Any) -> Any:
+        """O nó do tique anterior quando o handle e os diretórios são os mesmos: a memória dele
+        (cor e número) atravessa o tique. Handle novo (a reconexão) ganha o nó novo, sem memória.
+        """
+        if anterior is None or dono_anterior is not handle:
+            return novo
+        mesmo = getattr(anterior, "indicator_dir", None) == getattr(
+            novo, "indicator_dir", None
+        ) and list(getattr(anterior, "player_dirs", ())) == list(getattr(novo, "player_dirs", ()))
+        return anterior if mesmo else novo
 
     def record_sysfs_write(self, key: str, rgb: tuple[int, int, int]) -> None:
         """Registra que NÓS escrevemos `rgb` na classe LED do controle `key`."""
@@ -2996,6 +3030,9 @@ class PyDualSenseController(IController):
         if forcar and no is not None:
             with contextlib.suppress(Exception):
                 no.invalidate_cache()
+        if forcar:
+            with contextlib.suppress(Exception):
+                handle._brilho_do_cabo = None
         players = desired.player_leds if pode_player else None
         if self._detect_transport(handle) == "bt":
             cor_do_radio = desired.led if desired.led is not None else KERNEL_DEFAULT_BLUE
@@ -3330,6 +3367,10 @@ class PyDualSenseController(IController):
         escritor = getattr(handle, "writeReport", None)
         if not callable(escritor):
             return False
+        # O degrau que este handle já levou não sai de novo; esquecem-no a cor perdida, o `forcar`
+        # e a defesa de exibição (O-TIQUE-DE-30-S-SO-REPINTA-A-LUZ-QUE-O-KERNEL-PERDEU-01).
+        if getattr(handle, "_brilho_do_cabo", None) == int(degrau):
+            return True
         from hefesto_dualsense4unix.core.lightbar_gatilho import (
             build_usb_lightbar_report,
         )
@@ -3341,6 +3382,8 @@ class PyDualSenseController(IController):
             logger.debug("brilho_das_luzes_cabo_falhou", op=what, key=key, err=str(exc))
             return False
         ok = _escrita_completa(escrito, len(report))
+        with contextlib.suppress(Exception):
+            handle._brilho_do_cabo = int(degrau) if ok else None
         logger.debug(
             "brilho_das_luzes_cabo_escrito", op=what, key=key, degrau=degrau, ok=ok
         )
@@ -4817,6 +4860,7 @@ class PyDualSenseController(IController):
         for handle in handles:
             with contextlib.suppress(Exception):
                 handle._quadro_da_luz = None
+                handle._brilho_do_cabo = None
         self.reassert_resolved_outputs(verify=True)
 
     def set_output_mute(self, muted: bool) -> None:

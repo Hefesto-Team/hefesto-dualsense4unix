@@ -107,17 +107,15 @@ def should_reclaim_on_wake(
     current_sysfs_rgb: tuple[int, int, int] | None,
     kernel_default: tuple[int, int, int],
 ) -> bool:
-    """LIGHTBAR-BT-RESET-02 (Onda L): decide reenviar o Reset 0x08 numa
-    reconciliação de hotplug SEM handle novo.
+    """LIGHTBAR-BT-RESET-02 (Onda L): a assinatura do wake BT numa reconciliação
+    de hotplug SEM handle novo.
 
-    O 0x08 da adoção (``LIGHTBAR-BT-RESET-01``) só cobre handles NOVOS. Mas o
-    claim da lightbar no firmware também cai num wake/resume BT que NÃO reabre o
-    handle (caso medido 2026-07-20 17:28): o kernel reseta a classe LED para a
-    cor default (``KERNEL_DEFAULT_BLUE``) com o mesmo ``indicator_dir`` — logo
-    não é ``new_key`` e o laço da adoção não dispara. Assinatura detectável e
-    barata: o nó sysfs voltou para a cor default do kernel enquanto o desired
-    resolvido é OUTRA cor. Devolve ``True`` SÓ nessa borda — nunca por timer,
-    para não piscar a lightbar de quem está com o claim intacto.
+    Um wake/resume BT que NÃO reabre o handle (caso medido 2026-07-20 17:28)
+    devolve a classe LED à cor default do kernel (``KERNEL_DEFAULT_BLUE``) com o
+    mesmo ``indicator_dir``, enquanto o desired resolvido é OUTRA cor. O 0x08
+    saiu (LIGHTBAR-BT-CULPADO-01): desde 16/10/2026 o backend repinta toda cor
+    lida diferente da resolvida, e esta função só CLASSIFICA o episódio no
+    diário (wake ou escritor de fora).
 
     - ``transport`` != ``bt``: USB não tem o claim → nunca.
     - ``desired_rgb`` None ou == ``kernel_default``: sem cor resolvida ou o
@@ -135,4 +133,9 @@ def should_reclaim_on_wake(
     return tuple(current_sysfs_rgb) == tuple(kernel_default)
 
 
-__all__ = ["BT_REPORT_LEN", "build_bt_release_leds_report", "send_release_leds"]
+__all__ = [
+    "BT_REPORT_LEN",
+    "build_bt_release_leds_report",
+    "send_release_leds",
+    "should_reclaim_on_wake",
+]

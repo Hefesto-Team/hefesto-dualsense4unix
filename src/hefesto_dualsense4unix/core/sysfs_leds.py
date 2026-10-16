@@ -47,6 +47,7 @@ class SysfsLedNode:
         self.indicator_dir = indicator_dir
         self.player_dirs = player_dirs
         self._last_write: tuple[tuple[int, int, int], int] | None = None
+        self._last_players: tuple[bool, ...] | None = None
         self._skip_logged = False
         self._foreign_logged = False
 
@@ -130,10 +131,10 @@ class SysfsLedNode:
         MESMA ordem — o ``brightness`` antes da cor.
 
         GUERRA-01 item 3: escrita IGUAL à última bem-sucedida desta instância é
-        pulada em silêncio (cache) — o reassert periódico do reconnect_loop
-        deixa de gerar output report quando a cor resolvida não mudou. Escrita
-        que falha NÃO cacheia (a próxima tentativa re-escreve). Posse retomada
-        de terceiros (ex.: fim de sessão de jogo) usa ``invalidate_cache()``.
+        pulada (cache); o backend guarda a instância entre os tiques do mesmo
+        handle e a esquece (``invalidate_cache()``) quando lê a cor que o kernel
+        perdeu. Escrita que falha NÃO cacheia. Posse retomada de terceiros (ex.:
+        fim de sessão de jogo) também usa ``invalidate_cache()``.
 
         NUMA-03 (``verify=True``): no cache-hit, re-lê ``get_rgb()`` (memória
         do kernel — zero subcomando HID) ANTES do skip; classe divergente do
@@ -193,18 +194,32 @@ class SysfsLedNode:
 
         Para os casos de posse retomada em que um terceiro (jogo via hidraw,
         kernel no resume) pode ter mudado a cor por fora da classe LED sem
-        recriar o nó — o cache ficaria "certo" com o hardware errado.
+        recriar o nó — o cache ficaria "certo" com o hardware errado. Esquece
+        a cor E o número.
         """
         self._last_write = None
+        self._last_players = None
+
+    def _padrao(self, bits: tuple[bool, ...]) -> tuple[bool, ...]:
+        """O padrão aceso de cada nó de player, na ordem de ``player_dirs``."""
+        return tuple(bool(i < len(bits) and bits[i]) for i in range(len(self.player_dirs)))
 
     def set_players(self, bits: tuple[bool, bool, bool, bool, bool]) -> bool:
-        """Acende/apaga os 5 LEDs de player (``bits[0]`` = LED 1, à esquerda)."""
+        """Acende/apaga os 5 LEDs de player (``bits[0]`` = LED 1, à esquerda).
+
+        O mesmo cache do ``set_rgb``: o padrão IGUAL ao último bem-sucedido
+        desta instância não escreve (cada nó é um output report do kernel), e o
+        ``invalidate_cache()`` o esquece.
+        """
         if not self.player_dirs:
             return False
+        padrao = self._padrao(bits)
+        if self._last_players == padrao:
+            return True
         ok = True
-        for i, directory in enumerate(self.player_dirs):
-            on = "1" if (i < len(bits) and bits[i]) else "0"
-            ok = self._write(os.path.join(directory, "brightness"), on) and ok
+        for directory, aceso in zip(self.player_dirs, padrao, strict=True):
+            ok = self._write(os.path.join(directory, "brightness"), "1" if aceso else "0") and ok
+        self._last_players = padrao if ok else None
         return ok
 
     def get_players(self) -> tuple[bool, ...] | None:
@@ -241,6 +256,7 @@ class SysfsLedNode:
             ok = self._write(
                 os.path.join(directory, "brightness"), "1" if want else "0"
             ) and ok
+        self._last_players = self._padrao(bits) if ok else None
         return ok
 
 

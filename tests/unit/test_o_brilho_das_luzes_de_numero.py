@@ -332,11 +332,19 @@ def test_o_gatilho_da_cor_pelo_radio_leva_o_brilho_de_cada_um(com_no: bool) -> N
 
 
 def test_o_reassert_leva_o_brilho_pelo_cabo_e_nao_gasta_quadro_no_radio() -> None:
-    """O reassert da ativação: pelo cabo, o `0x02` do brilho; pelo rádio, nada."""
+    """O reassert da ativação: pelo cabo, o `0x02` do brilho que o controle ainda não levou;
+    pelo rádio, nada.
+
+    Desde 16/10/2026 (O-TIQUE-DE-30-S-SO-REPINTA-A-LUZ-QUE-O-KERNEL-PERDEU-01) o degrau que o
+    handle do cabo já levou não sai de novo no reassert; a defesa de exibição o esquece e o leva.
+    """
     ctl, cabo = _mesa("usb", com_no=True)
     _aplicar(ctl, _perfil("medio", P3="forte"))  # noqa-acento: chave ASCII
     antes = [len(h.quadros) for h in cabo]
     ctl.reassert_resolved_outputs()
+    assert [_brilhos_novos(h, antes[n]) for n, h in enumerate(cabo)] == [[], [], [], []], (
+        "o reassert reenviou pelo cabo o degrau que o controle já tinha")
+    ctl.defend_display()
     assert [_brilhos_novos(h, antes[n]) for n, h in enumerate(cabo)] == [
         [MEDIO], [MEDIO], [FORTE], [MEDIO]]
 
