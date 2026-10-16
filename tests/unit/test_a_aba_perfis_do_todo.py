@@ -18,6 +18,8 @@ MORDIDAS (cada uma foi feita e viu reprovar):
   `test_o_clique_deixa_o_cabecalho_e_o_editor_no_mesmo_perfil`;
 * ler o `texto` no `editor_alvo` ou deixar o evento ao sair de «Eventos» -> os testes do alvo;
 * arrastar sem regravar a `priority` do grupo -> `test_arrastar_regrava_a_ordem_do_mesmo_jogo`;
+* tirar a guarda da `posNova` do `editor_ordem` ->
+  `test_o_clique_solto_num_item_da_ordem_nao_e_arrasto` (a tela dizia «não entendi para onde»);
 * devolver o seletor `[data-hef="editor.ordem"] ol` ->
   `test_todo_bloco_do_pacote_acha_um_lugar_na_pagina` (a lista do desenho ficava na tela);
 * devolver `.ev-val select{flex:0 0 150px}`, que o `.campo select.estreito` vence ->
@@ -363,6 +365,21 @@ def test_arrastar_para_onde_ja_esta_nao_grava_nada(lar: Path) -> None:
     resposta = a10_perfis.editor_ordem(
         _ctx("Souls A"), {"hefPerfil": "Souls A", "posNova": "1"}, Ponte({}))
     assert resposta is None
+    assert {p.name: p.model_dump_json() for p in loader.load_all_profiles()} == antes
+
+
+@pytest.mark.parametrize("pedido", [
+    {"hefPerfil": "Souls B"},
+    {"hefPerfil": "Souls B", "posNova": ""},
+])
+def test_o_clique_solto_num_item_da_ordem_nao_e_arrasto(lar: Path, pedido: dict[str, str]) -> None:
+    """MORDIDA: sem a guarda da `posNova`, o clique solto num item dizia na tela «não entendi para
+    onde o perfil foi arrastado» (medido no piloto em lar de mentira, 15/10/2026)."""
+    for nome, prioridade in (("Souls A", 30), ("Souls B", 20)):
+        _guardar(nome, prioridade, "steam_app_1245620")
+    _aberto("Souls A")
+    antes = {p.name: p.model_dump_json() for p in loader.load_all_profiles()}
+    assert a10_perfis.editor_ordem(_ctx("Souls A"), pedido, Ponte({})) is None
     assert {p.name: p.model_dump_json() for p in loader.load_all_profiles()} == antes
 
 

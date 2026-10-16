@@ -2103,6 +2103,10 @@ def editor_ordem(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | N
     from hefesto_dualsense4unix.profiles.schema import PRIORIDADE_MAXIMA
 
     movido = str(o.get("hefPerfil") or "").strip()
+    # O item tem `tabindex` e recebe clique solto (e o Enter do teclado): só o `dragend` põe a
+    # `posNova`, então sem ela não houve arrasto, e não há o que ordenar nem o que recusar.
+    if not str(o.get("posNova") or "").strip():
+        return None
     try:
         destino = int(str(o.get("posNova") or ""))
     except ValueError:
