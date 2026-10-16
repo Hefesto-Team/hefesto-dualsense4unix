@@ -6144,6 +6144,303 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
 
 
 
+# A CADEIA USB E O REGISTRO — 15/10/2026: a sprint
+# O-MAPA-DAS-CONEXOES-MOSTRA-A-CADEIA-USB-E-O-REGISTRO-DELA-01, no desenho do todo aprovado
+# (a quarta aba «Registro» e o hub como um só, escolha de 13/10).
+# A bancada ganha as edições abaixo; a cópia do produto só as recebe pelo `--publicar`, no fecho.
+
+#: A dica do enlace abaixo: o fato vai dito, a causa fica por apurar.
+DICA_DO_ENLACE = "Pode ser a entrada, o hub, o cabo, o extensor ou o próprio aparelho."
+
+CSS_DA_CADEIA_E_DO_REGISTRO = """\
+<style data-todo-css="cadeia-e-registro">
+  .modos { grid-template-columns: repeat(4, 8.5rem); }
+  .palco[hidden], .painel[hidden], .legenda[hidden], .registro[hidden] { display: none !important; }
+  .bandeja .chip.recuado { margin-left: 1rem; width: calc(100% - 1rem); }
+  .palco > .bandeja .lista { gap: 3px; }
+  .bandeja .chip { padding-top: 2px; padding-bottom: 2px; }
+  .por-confirmar { padding-top: 4px; padding-bottom: 4px; margin-top: 4px; }
+  .face-cab { margin-top: 6px; }
+  .bandeja .chip .txt span.enlace { color: var(--color-lacuna); }
+  .bandeja .chip.sumiu { opacity: .5; border-style: dashed; cursor: default; }
+  .registro { margin-top: 8px; border: 1px solid var(--color-rule); border-radius: var(--radius-md);
+              background: var(--color-paper-2); padding: 8px 14px; }
+  .registro-cab { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 6px; }
+  .registro-cab .ouvindo { font-size: var(--text-xs); color: var(--color-ink-faint); font-family: var(--font-dado); }
+  .registro-linhas { list-style: none; margin: 0; padding: 0; max-height: 540px; overflow-y: auto; }
+  .registro-linhas li { display: grid; grid-template-columns: 5.5rem 9.5rem minmax(0, 1fr) 11rem; align-items: center;
+                        gap: .75rem; padding: 6px 4px; border-top: 1px solid var(--color-rule); font-size: var(--text-sm); }
+  .registro-linhas li:first-child { border-top: 0; }
+  .registro-linhas time { font-family: var(--font-dado); color: var(--color-ink-faint); font-size: var(--text-xs); }
+  .registro-linhas .ev { font-weight: 600; color: var(--color-ok); }
+  .registro-linhas .ev.sai { color: var(--color-ink-quiet); }
+  .registro-linhas .ev.lento, .registro-linhas .ev.sumiu { color: var(--color-lacuna); }
+  .registro-linhas .quem { display: flex; align-items: center; gap: .5rem; min-width: 0; color: var(--color-ink-quiet); }
+  .registro-linhas .quem b { color: var(--color-ink); font-weight: 600; }
+  .registro-linhas .quem .marca { flex: none; width: .5rem; height: .5rem; border-radius: 50%; }
+  .registro-linhas .onde { color: var(--color-ink-faint); font-size: var(--text-xs); text-align: right; }
+  @media (max-width: 640px) {
+    .modos { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .registro-linhas li { grid-template-columns: 5.5rem minmax(0, 1fr); }
+    .registro-linhas .quem, .registro-linhas .onde { grid-column: 1 / -1; text-align: left; }
+  }
+</style>
+<style data-todo-css="sem-rolagem">
+  /* O corpo rolava 5 px em 1212x809 (já rolava 8 no publicado): o pé de 40 px vira 32. */
+  .pagina > .corpo { padding-bottom: 32px }
+</style>
+</head>"""  # noqa: E501
+
+HTML_DO_REGISTRO = """\
+  <section class="painel" id="painel"></section>
+
+  <section class="registro" id="registro" hidden aria-label="Registro">
+    <div class="registro-cab">
+      <span class="ouvindo" id="registro-ouvindo" data-dica="O que entra e sai das entradas USB"></span>
+      <button class="btn" id="registro-copiar" data-dica="Copia o registro para um relato">Copiar</button>
+    </div>
+    <ol class="registro-linhas" id="registro-linhas"></ol>
+  </section>
+"""  # noqa: E501
+
+#: O JavaScript da cadeia e do registro. Quem lê o arranjo aqui (`fonte.sumiram`,
+#: `fonte.registro`) entra na régua que compara o que a página lê com o que o produtor manda.
+JS_DA_CADEIA_E_DO_REGISTRO = r"""
+  /* ══ A CADEIA E O REGISTRO — 15/10/2026 (O-MAPA-DAS-CONEXOES-MOSTRA-A-CADEIA-USB-E-O-REGISTRO-DELA-01) ══
+     A lista da direita é a cadeia: o hub de plástico é UM chip («Hub USB 3 · 7 entradas») com os
+     aparelhos recuados abaixo dele, o enlace abaixo vai dito como fato e quem não apareceu neste
+     início fica esmaecido no fim. No produto quem diz tudo isso é `arranjo_desta_maquina`
+     (`hubFisico`, `parteDe`, `dentroDe`, `enlace`, `sumiram`, `registro`); no exemplo é a cena abaixo. */
+  var DICA_DO_ENLACE = __DICA_DO_ENLACE__;
+  var DA_CENA = {
+    hubFisico: { "hub": "Hub USB 3 · 7 entradas" },
+    enlace: { "hub": "480 Mb/s · Sabe 5 Gb/s" },
+    sumiram: [{ "tipo": "Bluetooth", "nome": "Asus USB-BT500", "cor": "#bd93f9" }],
+    registro: { "ouvindo": "Ouvindo desde 13:02", "linhas": [
+      { "hora": "13:41", "evento": "Ficou mais lento", "tom": "lento", "tipo": "Hub", "nome": "TP-Link UH700", "cor": "#f8f8f2", "onde": "Entrada 4" },
+      { "hora": "13:40", "evento": "Voltou", "tom": "", "tipo": "Hub", "nome": "TP-Link UH700", "cor": "#f8f8f2", "onde": "Entrada 4" },
+      { "hora": "13:40", "evento": "Saiu", "tom": "sai", "tipo": "Hub", "nome": "TP-Link UH700", "cor": "#f8f8f2", "onde": "Entrada 4" },
+      { "hora": "13:38", "evento": "Entrou", "tom": "", "tipo": "Bluetooth", "nome": "TP-Link UB500", "cor": "#bd93f9", "onde": "Sem entrada marcada" },
+      { "hora": "13:25", "evento": "Entrou", "tom": "", "tipo": "Wi-Fi", "nome": "Archer T3U", "cor": "#ff5555", "onde": "Sem entrada marcada" },
+      { "hora": "13:24", "evento": "Saiu", "tom": "sai", "tipo": "Wi-Fi", "nome": "Archer T3U", "cor": "#ff5555", "onde": "Entrada 11" },
+      { "hora": "13:10", "evento": "Entrou", "tom": "", "tipo": "Teclado", "nome": "Receptor 2,4 GHz", "cor": "#ffb86c", "onde": "Entrada 1" },
+      { "hora": "13:02", "evento": "Não apareceu", "tom": "sumiu", "tipo": "Bluetooth", "nome": "Asus USB-BT500", "cor": "#bd93f9", "onde": "—" }
+    ] }
+  };
+
+  function daCadeia() {
+    var c = { hub: {}, parte: {}, dentro: {}, enlace: {}, sumiram: [], registro: null };
+    if (!doProduto()) {
+      c.hub = DA_CENA.hubFisico; c.enlace = DA_CENA.enlace; c.sumiram = DA_CENA.sumiram;
+      c.registro = DA_CENA.registro;
+      var cam = leitura();
+      APARELHOS.forEach(function (h) {
+        if (!c.hub[h.id] || !cam[h.id]) return;
+        APARELHOS.forEach(function (a) {
+          if (a.id !== h.id && cam[a.id] && cam[a.id].indexOf(cam[h.id] + ".") === 0) c.dentro[a.id] = h.id;
+        });
+      });
+      return c;
+    }
+    APARELHOS.forEach(function (a) {
+      if (a.hubFisico) c.hub[a.id] = a.hubFisico;
+      if (a.parteDe) c.parte[a.id] = true;
+      if (a.dentroDe) c.dentro[a.id] = a.dentroDe;
+      if (a.enlace) c.enlace[a.id] = a.enlace;
+    });
+    c.sumiram = fonte.sumiram || [];
+    c.registro = fonte.registro || null;
+    return c;
+  }
+
+  function pintarACadeia(r) {
+    var c = daCadeia(), visto = {};
+    function chipDe(a, nivel) {
+      var p = modo === "ideal" ? portaDeEm(r.plano, a.id) : portaDe(a.id);
+      var hub = c.hub[a.id], enl = c.enlace[a.id];
+      /* A dica fala do que a pessoa faz, não do sistema por baixo. */
+      var dica = p ? "Na Entrada " + p + ". Clique para trocar" : "Sem entrada marcada. Clique e marque a entrada";
+      var titulo = a.nomeDeclarado || hub || rotuloDoAparelho(a);
+      var fundo = nivel > 1 ? ' style="margin-left:' + nivel + 'rem;width:calc(100% - ' + nivel + 'rem)"' : "";
+      return '<button class="chip' + (nivel ? " recuado" : "") + '" data-ap="' + a.id + '"' + (p ? ' data-alocado="1"' : "")
+        + ' data-dica="' + emAtributo(dica) + '"' + fundo
+        + (segurando === a.id ? ' data-segurando="1"' : "") + ">"
+        + '<i class="marca" style="background:' + a.cor + '"></i>'
+        + '<span class="txt"><b>' + emAtributo(titulo) + "</b>"
+        + (a.nome && a.nome !== titulo ? "<span>" + emAtributo(a.nome) + "</span>" : "")
+        + (enl ? '<span class="enlace" data-dica="' + emAtributo(DICA_DO_ENLACE) + '">' + emAtributo(enl) + "</span>" : "")
+        + "</span>"
+        + (p ? '<span class="num">' + p + "</span>" : "") + "</button>";
+    }
+    var filhos = {};
+    function ehRaiz(a) {
+      var pai = c.dentro[a.id];
+      return !c.parte[a.id] && !(pai && acha(pai) && !c.parte[pai]);
+    }
+    APARELHOS.forEach(function (a) {
+      if (c.parte[a.id] || ehRaiz(a)) return;
+      (filhos[c.dentro[a.id]] = filhos[c.dentro[a.id]] || []).push(a);
+    });
+    function ramo(a, nivel) {
+      visto[a.id] = true;
+      var abaixo = nivel < 5 ? (filhos[a.id] || []) : [];
+      return chipDe(a, nivel) + abaixo.map(function (b) { return ramo(b, nivel + 1); }).join("");
+    }
+    var raizes = APARELHOS.filter(ehRaiz);
+    var html = raizes.filter(function (a) { return c.hub[a.id]; })
+      .concat(raizes.filter(function (a) { return !c.hub[a.id]; }))
+      .map(function (a) { return ramo(a, 0); }).join("");
+    html += APARELHOS.filter(function (a) { return !visto[a.id] && !c.parte[a.id]; })
+      .map(function (a) { return ramo(a, 0); }).join("");
+    html += c.sumiram.map(function (a) {
+      return '<div class="chip sumiu" data-dica="Já esteve neste computador e não apareceu agora">'
+        + '<i class="marca" style="background:' + emAtributo(a.cor) + '"></i>'
+        + '<span class="txt"><b>' + emAtributo(a.tipo) + "</b><span>"
+        + (a.nome ? emAtributo(a.nome) + " · " : "") + "Não apareceu neste início</span></span></div>";
+    }).join("");
+    document.getElementById("bandeja").innerHTML = html;
+    pintarORegistro(c.registro);
+  }
+
+  function pintarORegistro(registro) {
+    var reg = registro || { ouvindo: "", linhas: [] };
+    document.getElementById("registro-ouvindo").textContent = reg.ouvindo || "";
+    document.getElementById("registro-linhas").innerHTML = (reg.linhas || []).map(function (l) {
+      var cor = l.cor === "#6272a4" ? "#f8f8f2" : l.cor;
+      return "<li><time>" + emAtributo(l.hora) + '</time><span class="ev' + (l.tom ? " " + l.tom : "") + '">'
+        + emAtributo(l.evento) + "</span>"
+        + '<span class="quem"><i class="marca" style="background:' + emAtributo(cor) + '"></i><b>'
+        + emAtributo(l.tipo) + "</b> " + emAtributo(l.nome) + "</span>"
+        + '<span class="onde">' + emAtributo(l.onde) + "</span></li>";
+    }).join("");
+  }
+
+  /* O «COPIAR» do registro leva o texto como está na tela, uma linha por evento. */
+  function textoDoRegistro() {
+    var reg = daCadeia().registro || {};
+    return [reg.ouvindo || ""].concat((reg.linhas || []).map(function (l) {
+      return [l.hora, l.evento, l.tipo + (l.nome ? " " + l.nome : ""), l.onde].join("  ");
+    })).filter(Boolean).join("\n");
+  }
+  document.addEventListener("click", function (ev) {
+    var botao = ev.target.closest ? ev.target.closest("#registro-copiar") : null;
+    if (!botao) return;
+    var texto = textoDoRegistro();
+    function feito() {
+      botao.textContent = "Copiado";
+      setTimeout(function () { botao.textContent = "Copiar"; }, 1500);
+    }
+    function pelaCaixa() {
+      var caixa = document.createElement("textarea");
+      caixa.value = texto; caixa.setAttribute("readonly", ""); caixa.style.position = "fixed"; caixa.style.opacity = "0";
+      document.body.appendChild(caixa); caixa.select();
+      try { if (document.execCommand("copy")) feito(); } catch (erro) { /* sem área de transferência: o texto fica na tela */ }
+      document.body.removeChild(caixa);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(texto).then(feito, pelaCaixa);
+    else pelaCaixa();
+  });
+
+""".replace("__DICA_DO_ENLACE__", json.dumps(DICA_DO_ENLACE, ensure_ascii=False))  # noqa: E501
+
+JS_DOS_MODOS = r"""        '<button class="modo" data-modo="mesa" aria-pressed="' + (modo === "mesa") + '">Atual</button>'
+      + '<button class="modo destaque" data-modo="ideal" aria-pressed="' + (modo === "ideal") + '">Sugestões</button>'
+      + '<button class="modo" data-modo="mao" aria-pressed="' + (modo === "mao") + '">Adicionar</button>' /* noqa-acento: data-modo */
+      + '<button class="modo" data-modo="registro" aria-pressed="' + (modo === "registro") + '">Registro</button>';
+    /* O REGISTRO É A QUARTA ABA: ela troca o palco, o painel e a legenda pelo registro. */
+    var noRegistro = modo === "registro";
+    document.getElementById("registro").hidden = !noRegistro;
+    document.querySelector(".palco").hidden = noRegistro;
+    document.getElementById("painel").hidden = noRegistro;
+    document.getElementById("legenda").hidden = noRegistro;
+"""  # noqa: E501
+
+JS_DA_BANDEJA = r"""    /* a bandeja é a cadeia */
+    pintarACadeia(r);
+"""
+
+JS_DO_ATALHO = r"""<script data-aba="registro">
+/* #registro abre a página já na aba «Registro». */
+if (location.hash === '#registro') { document.addEventListener('DOMContentLoaded', function () { document.querySelector('.modo[data-modo="registro"]').click(); }); }
+</script>
+</body>"""  # noqa: E501
+
+EDICOES_DA_CADEIA_E_DO_REGISTRO: tuple[Edicao, ...] = (
+    Edicao(
+        antes="</head>",
+        depois=CSS_DA_CADEIA_E_DO_REGISTRO,
+        porque=(
+            "15/10/2026, O-MAPA-DAS-CONEXOES-MOSTRA-A-CADEIA-USB-E-O-REGISTRO-DELA-01 — a folha do"
+            " desenho do todo: a quarta aba, o hub recuado, o enlace e o esmaecido de quem sumiu"
+        ),
+    ),
+    Edicao(
+        antes="<h3>Conectado agora</h3>",
+        depois='<h3 data-dica="Os hubs e o que pende deles; embaixo, o direto">A cadeia</h3>',
+        porque=(
+            "15/10/2026, mesma sprint — a lista é a cadeia USB (o hub e o que pende dele), não"
+            " mais «tudo o que está conectado»"
+        ),
+    ),
+    Edicao(
+        antes='  <section class="painel" id="painel"></section>\n',
+        depois=HTML_DO_REGISTRO,
+        porque="15/10/2026, mesma sprint — a seção do registro, escondida fora da quarta aba",
+    ),
+    Edicao(
+        antes="  function pintar() {\n",
+        depois=JS_DA_CADEIA_E_DO_REGISTRO + "  function pintar() {\n",
+        porque=(
+            "15/10/2026, mesma sprint — a cadeia (hub como um chip, enlace, quem sumiu) e o"
+            " registro, com a cena do desenho no exemplo e o arranjo no produto"
+        ),
+    ),
+    Edicao(
+        antes=(
+            """        '<button class="modo" data-modo="mesa" aria-pressed="' + """
+            """(modo === "mesa") + '">Atual</button>'\n"""
+            """      + '<button class="modo destaque" data-modo="ideal" aria-pressed="' + """
+            """(modo === "ideal") + '">Sugestões</button>'\n"""
+            """      + '<button class="modo" data-modo="mao" aria-pressed="' + """
+            """(modo === "mao") + '">Adicionar</button>';\n"""  # noqa-acento: data-modo
+        ),
+        depois=JS_DOS_MODOS,
+        porque="15/10/2026, mesma sprint — «Registro» é o quarto modo, e ele esconde o palco",
+    ),
+    Edicao(
+        antes=(
+            '    /* a bandeja */\n'
+            '    document.getElementById("bandeja").innerHTML = APARELHOS.map(function (a) {\n'
+            '      var p = modo === "ideal" ? portaDeEm(r.plano, a.id) : portaDe(a.id);\n'
+            '''      return '<button class="chip" data-ap="' + a.id + '"' + '''
+            '''(p ? ' data-alocado="1"' : "")\n'''
+            '''        + ' title="' + emAtributo(a.nome + " · " + '''
+            '''(caminhoDe(a.id) || "não está plugado")) + '"'\n'''
+            '''        + (segurando === a.id ? ' data-segurando="1"' : "") + ">"\n'''
+            '''        + '<i class="marca" style="background:' + a.cor + '"></i>'\n'''
+            '''        + '<span class="txt"><b>' + emAtributo(rotuloDoAparelho(a)) + '''
+            '''"</b></span>"\n'''
+            '''        + (p ? '<span class="num">' + p + "</span>" : "") + "</button>";\n'''
+            '    }).join("");\n'
+        ),
+        depois=JS_DA_BANDEJA,
+        porque=(
+            "15/10/2026, mesma sprint — a bandeja vira a cadeia; a dica do chip fala da entrada"
+            " (rodada 3 do todo), e o caminho do kernel deixa de ir na tela"
+        ),
+    ),
+    Edicao(
+        antes="na lista «Conectado agora» ou num aparelho sem entrada",
+        depois="na lista «A cadeia» ou num aparelho sem entrada",
+        porque="15/10/2026, mesma sprint — o comentário segue o nome novo da lista",
+    ),
+    Edicao(
+        antes="</body>",
+        depois=JS_DO_ATALHO,
+        porque="15/10/2026, mesma sprint — #registro abre a página na quarta aba (a foto da aba)",
+    ),
+)
+
 #: ══ AS EDIÇÕES QUE ESPERAM A SESSÃO DOS DESENHOS — 24/09/2026 ════════════
 #:
 #: A tela para no mockup até a aprovação do desenho (ordem de 23/09), e esta página tem DUAS
@@ -6160,7 +6457,8 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
 #: O-MAPA-DAS-CONEXOES-CABE-NA-ABA-E-FALA-MENOS-01 e as dos conjuntos «Conexões 2» e
 #: «Conexões 3» foram publicadas e entraram no fim de `EDICOES`; a da
 #: O-BLUEZ-TEM-UM-DONO-ATE-NA-SONDA-01, em 08/10.
-EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = ()
+#: Desde 15/10/2026 levam as da cadeia e do registro (a aba Mapas do todo soma as suas).
+EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = EDICOES_DA_CADEIA_E_DO_REGISTRO
 
 
 def pagina(com_as_que_esperam: bool = True) -> str:

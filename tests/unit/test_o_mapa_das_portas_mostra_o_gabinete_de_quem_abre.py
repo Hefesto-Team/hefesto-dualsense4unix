@@ -92,7 +92,9 @@ def test_o_arranjo_traz_tudo_o_que_a_pagina_le_e_nada_alem() -> None:
         carregar=lambda: documento, ler_o_barramento=lambda: censo)
     assert veio is not None
 
-    porta = _a_porta()
+    assert pagina_do_mapa.JS_DA_CADEIA_E_DO_REGISTRO in pagina_do_mapa.pagina(), (
+        "o JavaScript da cadeia e do registro não está na página gerada")
+    porta = _a_porta() + pagina_do_mapa.JS_DA_CADEIA_E_DO_REGISTRO
     lidos = set(re.findall(r"\b(?:f|fonte)\.(\w+)", porta))
     assert len(lidos) >= 5, (
         f"li {len(lidos)} campos na porta — o seletor ficou cego e a régua "
