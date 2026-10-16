@@ -21,15 +21,18 @@ O QUE ESTA RÉGUA COBRA — o §V da sprint:
 7. **o «Ver os plugins» não está em página nenhuma**;
 8. **na tela viva** (piloto oculto): as recusas do Atualizar e do Corrigir o
    modo vestem `hef-recusou` sem frase na tela, e os cliques que armam (Parar,
-   Restaurar) não piscam e põem a pergunta no painel.
+   Restaurar) não piscam e põem a pergunta no painel; o duplo clique no interruptor
+   das correções, com a Steam aberta, não fixa o Proton, não fecha a Steam e deixa
+   o recibo no painel.
 
 DESDE 16/10/2026 (a aba Sistema do todo, publicada): a página não tem mais os botões
 Refazer os consertos, Aplicar aos jogos nem Fixar Proton: o interruptor «Permitir correções
 automáticas» tomou o lugar (D-1610-UM-INTERRUPTOR-SO-PARA-AS-CORRECOES; um clique alterna,
 o duplo reaplica, e a Steam não fecha). A pergunta mora no `data-dica`, não mais no `title`.
-O roteiro na tela anda só os botões que a página tem. Os gestos que saíram da página seguem
-registrados e provados pelos testes de unidade abaixo, e o duplo clique do interruptor é do
-`test_a_aba_sistema_do_todo`.
+O roteiro na tela anda só os botões que a página tem, e dá o duplo clique no interruptor com a
+Steam aberta: é ele que cobre, na tela, o que a recusa do Fixar Proton e o recibo do Aplicar aos
+jogos cobriam (o Proton não se fixa com a Steam aberta, a Steam não fecha, e o recibo fica no
+painel). A alternância e o duplo clique sem tela são do `test_a_aba_sistema_do_todo`.
 
 NENHUM ATO REAL: o `systemctl` é o da janela de mentira, a Steam, o Proton, a
 janela da Steam, o perfil de fábrica e os scripts são dublês. O que a régua mede
@@ -407,6 +410,8 @@ ROTEIRO = (
     ("arma", "restaurar-de-fabrica"),
     ("vence", "restaurar-de-fabrica"), ("foto", "depois-a-pergunta-vencida"),
     ("rearma", "restaurar-de-fabrica"),
+    ("steam", "aberta"), ("duplo", "correcoes-automaticas"), ("steam", "fechada"),
+    ("foto", "depois-o-recibo-do-duplo-clique"),
 )
 
 PASSO_MS = 50
@@ -438,6 +443,15 @@ VIGIAR_E_CLICAR = r"""
   b.click();
   return 'cliquei';
 })(%s, %s)
+"""
+
+DUPLO_CLIQUE = r"""
+(function(sel){
+  const b = document.querySelector(sel);
+  if(!b) return 'NAO ACHEI ' + sel;
+  b.click(); b.click();
+  return 'cliquei duas vezes';
+})(%s)
 """
 
 LER_A_TRILHA = r"""
@@ -505,6 +519,8 @@ def na_tela(tmp_path_factory) -> dict:
 
     import hefesto_vivo as hv
     from hefesto_dualsense4unix.app.actions import footer_actions
+    from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
+    from hefesto_dualsense4unix.integrations import cura_por_estrada as cpe
     from hefesto_dualsense4unix.integrations import proton_pin
     from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
@@ -518,6 +534,8 @@ def na_tela(tmp_path_factory) -> dict:
     steam = {"aberta": False, "janela": "nao_fechou"}
     travou: list[object] = []
     fechou: list[object] = []
+    guardou: list[bool] = []
+    reaplicou: list[str] = []
     leitura = a9._tela.Leitura(
         status="online_systemd", autostart=True, state={"paused": False},
         achados=None, deteccao=None, ambiente=None, perfil=None)
@@ -536,6 +554,15 @@ def na_tela(tmp_path_factory) -> dict:
         (slo, "with_steam_closed"): janela_da_steam,
         (footer_actions, "_meu_perfil_asset"): lambda: asset,
         (a9._daemon, "medir_jogos_com_steam_input"): lambda: [],
+        # o interruptor das correções: nem o arquivo dela nem o systemd dela
+        (a9, "_guardar_o_interruptor"): guardou.append,
+        (a9._vigia, "interruptor_ligado"): lambda *a, **k: True,
+        (a9._vigia, "garantir"): lambda *a, **k: "escrito",
+        (a9, "_rodar_os_consertos"): lambda jogos: reaplicou.append("consertos") or {
+            "ran": 1, "missing": 0, "steam_input": None, "steam_input_jogos": jogos},
+        (cpe, "curar_todas_as_estradas"): lambda **k: reaplicou.append("estradas") or [],
+        (cv, "gravar_camadas_da_steam_fora"): lambda fora, *a, **k: reaplicou.append(
+            f"vulkan={fora}"),
         (a9, "_leitura"): lambda _ctx: leitura,
         (hv.mesa_viva, "estado_do_daemon"): lambda *a, **k: {
             "active_profile": "regua", "paused": False, "controllers": []},
@@ -562,6 +589,7 @@ def na_tela(tmp_path_factory) -> dict:
     piloto = hv.Piloto(args)
     faltou: dict[str, str] = {}
     fora: dict[str, Any] = {"faltou": faltou, "travou": travou, "fechou": fechou,
+                            "guardou": guardou, "reaplicou": reaplicou,
                             "clique_de_novo": a9.CLIQUE_DE_NOVO}
     diario = io.StringIO()
     no_ar = {"sim": True}
@@ -629,6 +657,8 @@ def na_tela(tmp_path_factory) -> dict:
             recusa(alvo, recibo=True)
         elif tipo in ("arma", "rearma"):
             arma(alvo, f"{tipo}:{alvo}")
+        elif tipo == "duplo":
+            duplo(alvo)
         else:
             vence(alvo)
 
@@ -691,6 +721,15 @@ def na_tela(tmp_path_factory) -> dict:
         clicar(gesto_, marco)
         esperar(marco, LER_A_TRILHA % js(marco), pousou_e_passou, ler_o_painel,
                 f"o {gesto_} pousar e o prazo da piscada passar")
+
+    def duplo(gesto_: str) -> None:
+        marco = f"duplo:{gesto_}"
+        piloto.ponte.perguntar(
+            DUPLO_CLIQUE % js(f'[data-gesto="{gesto_}"]'),
+            lambda v, e: fora.__setitem__(f"{marco}:clique", str(v)))
+        esperar(f"{marco}:painel", LER_O_PAINEL % js(gesto_),
+                lambda lido: lido if "Steam está aberta" in (lido.get("painel") or "")
+                else None, proximo, "o painel dizer o recibo do duplo clique")
 
     def vence(gesto_: str) -> None:
         a9._ARMADO["ate"] = 0.0
@@ -769,12 +808,33 @@ def test_na_tela_a_recusa_veste_o_botao_e_nao_escreve(na_tela: dict, gesto_: str
 
 
 def test_na_tela_nenhum_clique_fixou_o_proton_nem_fechou_a_steam(na_tela: dict) -> None:
-    """As recusas e os cliques que só armam não chegam à fixação nem à janela da Steam."""
+    """As recusas, os cliques que só armam e o duplo clique com a Steam aberta não chegam à
+    fixação nem à janela da Steam."""
     _marco(na_tela, "rearma:restaurar-de-fabrica")
-    assert na_tela["travou"] == []
+    _marco(na_tela, "duplo:correcoes-automaticas:painel")
+    assert na_tela["travou"] == [], "o Proton se fixou com a Steam aberta"
     assert na_tela["fechou"] == [], (
-        f"a janela da Steam foi pedida {len(na_tela['fechou'])} vez(es) — o "
-        "clique 1 do Parar e do Restaurar não pode fechar a Steam")
+        f"a janela da Steam foi pedida {len(na_tela['fechou'])} vez(es) — nem o clique 1 do "
+        "Parar e do Restaurar nem o duplo clique das correções fecham a Steam")
+
+
+def test_na_tela_o_duplo_clique_das_correcoes_reaplica_e_deixa_o_recibo(na_tela: dict) -> None:
+    """D-1610-UM-INTERRUPTOR-SO-PARA-AS-CORRECOES, no WebKit de verdade, com a Steam aberta.
+
+    O primeiro clique desliga, o segundo em menos de meio segundo liga e reaplica uma vez; o
+    recibo diz por que o Proton não se fixou, e fica no painel.
+
+    MORDIDA: tire o ``_relatar_o_recibo`` do duplo clique em ``correcoes_automaticas`` e o
+    painel nunca diz a Steam aberta; troque o duplo por dois cliques simples (o
+    ``SEGUNDOS_DO_DUPLO_CLIQUE`` a zero) e nada se reaplica.
+    """
+    marco = "duplo:correcoes-automaticas"
+    assert na_tela.get(f"{marco}:clique") == "cliquei duas vezes", na_tela.get(f"{marco}:clique")
+    painel = str(_marco(na_tela, f"{marco}:painel")["painel"])
+    assert "A Steam está aberta" in painel, painel
+    assert na_tela["guardou"] == [False, True], (
+        f"o duplo clique não terminou ligado: {na_tela['guardou']}")
+    assert na_tela["reaplicou"] == ["consertos", "estradas", "vulkan=True"], na_tela["reaplicou"]
 
 
 @pytest.mark.parametrize("marco", [f"arma:{g}" for g in ARMAM_NA_TELA]

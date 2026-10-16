@@ -126,8 +126,9 @@ def test_o_botao_existe_na_pagina_que_o_produto_serve() -> None:
 
     Desde a D-1610-UM-INTERRUPTOR-SO-PARA-AS-CORRECOES o endereço do Vulkan é o do interruptor
     «Permitir correções automáticas», que junta o Proton fixado e o Vulkan: o botão próprio
-    (``corrigir-vulkan``) não está mais na página, e o handler segue registrado para o interruptor
-    chamar.
+    (``corrigir-vulkan``) não está mais na página. O handler dele segue registrado, mas o
+    interruptor não o chama: o duplo clique grava a escolha do Vulkan pelo
+    ``_reaplicar_as_correcoes``.
     """
     pagina = PAGINA_SERVIDA.read_text(encoding="utf-8")
     assert f'data-gesto="{GESTO}"' not in pagina, (
