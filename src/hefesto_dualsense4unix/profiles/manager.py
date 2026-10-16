@@ -762,11 +762,15 @@ class ProfileManager:
     def apply_acessibilidade(
         self, profile: Profile, *, relatorio: dict[str, str] | None = None
     ) -> None:
-        """Deposita como o botão ativa e o filtro do botão (tremor, mínimo, trava) no `store`.
+        """Deposita no `store` como o botão ativa, o filtro do botão e a curva dos analógicos.
 
         Trocar de perfil solta todo botão que estava preso: o `definir_ativo` esquece os estados.
         """
-        from hefesto_dualsense4unix.core import ativacao_de_botao, filtro_de_botao
+        from hefesto_dualsense4unix.core import (
+            ativacao_de_botao,
+            curva_do_analogico,
+            filtro_de_botao,
+        )
 
         pecas = {
             str(uniq): cfg
@@ -781,10 +785,18 @@ class ProfileManager:
             u: filtro_de_botao.montar(profile.ativacao, c.ativacao) for u, c in pecas.items()}
         ativacao_de_botao.definir_ativo(self.store, modo, modo_por_peca)
         filtro_de_botao.definir_ativo(self.store, filtro, filtro_por_peca)
+        analogicos = profile.analogicos  # (noqa-acento)
+        curva = curva_do_analogico.montar(analogicos)
+        curva_por_peca = {
+            str(uniq): curva_do_analogico.montar(analogicos, cfg.analogicos)  # (noqa-acento)
+            for uniq, cfg in (profile.controllers or {}).items()
+            if getattr(cfg, "analogicos", None) is not None  # (noqa-acento)
+        }
+        curva_do_analogico.definir_ativo(self.store, curva, curva_por_peca)
         if relatorio is not None:
             ligado = any(
-                v is not None for v in (modo, filtro, *modo_por_peca.values(),
-                                        *filtro_por_peca.values()))
+                v is not None for v in (modo, filtro, curva, *modo_por_peca.values(),
+                                        *filtro_por_peca.values(), *curva_por_peca.values()))
             relatorio["acessibilidade"] = "aplicado" if ligado else "de_fabrica"
 
     def apply_keyboard(

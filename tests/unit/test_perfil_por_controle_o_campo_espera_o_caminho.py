@@ -96,6 +96,13 @@ _CONSUMIDOR: dict[str, ConsumidorPorUnidade] = {
             "perguntado pelo tique com o uniq de cada jogador (da_peca)"
         ),
     ),
+    "analogicos": ConsumidorPorUnidade(  # (noqa-acento)
+        funcao="apply_acessibilidade",
+        chega_em=(
+            "{uniq: Curva}, depositado no store por definir_ativo e "
+            "perguntado pelo tique com o uniq de cada jogador (da_peca)"
+        ),
+    ),
 }
 
 
@@ -134,6 +141,7 @@ def test_a_regua_sabe_recusar() -> None:
     sintetico = {"leds", "touchpad"}
     assert _campos_sem_consumidor(sintetico, _CONSUMIDOR) == ["touchpad"]
     assert _consumidores_orfaos(sintetico, _CONSUMIDOR) == [
+        "analogicos",  # (noqa-acento)
         "ativacao",  # (noqa-acento)
         "mascara",
         "mic",
@@ -343,6 +351,29 @@ def _prova_ativacao(uniq: str) -> object:
     ) or None
 
 
+def _prova_analogicos(uniq: str) -> object:
+    """A curva escrita para UMA peça vale só nela (OS-ANALOGICOS-DO-JOGO-...-01)."""
+    from hefesto_dualsense4unix.core import curva_do_analogico as curva
+    from hefesto_dualsense4unix.profiles.schema import ProfileAnalogicosConfig
+
+    store = _StoreSemTrava()
+    gerente = ProfileManager(
+        controller=object(),  # type: ignore[arg-type]
+        store=store,  # type: ignore[arg-type]
+    )
+    perfil = Profile(
+        name="uma_peca_so",
+        match=MatchAny(),
+        controllers={
+            uniq: ControllerOverrides(analogicos=ProfileAnalogicosConfig(zona_morta=20))},
+    )
+    gerente.apply_acessibilidade(perfil)
+    return (
+        curva.da_peca(store, uniq) is not None
+        and curva.da_peca(store, "aa:bb:cc:00:00:ff") is None
+    ) or None
+
+
 _PROVAS = {
     "leds": _prova_leds,
     "triggers": _prova_triggers,
@@ -353,6 +384,7 @@ _PROVAS = {
     "mascara": _prova_mascara,
     "movimento": _prova_movimento,
     "ativacao": _prova_ativacao,  # (noqa-acento)
+    "analogicos": _prova_analogicos,  # (noqa-acento)
 }
 
 

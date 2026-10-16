@@ -11,6 +11,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     ControllerSensoresOverride,
     LedsConfig,
     Profile,
+    ProfileAnalogicosConfig,  # (noqa-acento)
     ProfileAtivacaoConfig,
     ProfileMouseConfig,
     ProfileSpeakerConfig,
@@ -32,6 +33,9 @@ class Secao(NamedTuple):
     por_controle: tuple[str, ...]
 
 
+#: As seções de necessidade de quem joga: valem em todo perfil, e o jogo só as sobrepõe.
+_DA_ACESSIBILIDADE = ("ativacao", "analogicos")  # (noqa-acento)
+
 _CAMPOS_DO_TECLADO = ("teclado_emulado", "teclado_so_no_jogo", "teclado_sempre", "key_bindings")
 
 SECOES: dict[str, Secao] = {
@@ -49,7 +53,7 @@ SECOES: dict[str, Secao] = {
     "teclado": Secao("teclado", "06-navegacao.html", "Teclado",
                      _CAMPOS_DO_TECLADO, _CAMPOS_DO_TECLADO, ()),
     "acessibilidade": Secao("acessibilidade", "06-navegacao.html", "Acessibilidade",
-                            ("ativacao",), ("ativacao",), ("ativacao",)),  # (noqa-acento)
+                            _DA_ACESSIBILIDADE, _DA_ACESSIBILIDADE, _DA_ACESSIBILIDADE),
 }
 
 DO_JOGO: dict[str, str] = {
@@ -81,8 +85,13 @@ _DENSAS: dict[str, dict[str, Any]] = {
 }
 
 _MODELOS: frozenset[str] = frozenset(
-    {"leds", "rumble", "speaker", "mic", "sensores", "mouse", "ativacao"}  # (noqa-acento)
+    {"leds", "rumble", "speaker", "mic", "sensores", "mouse", *_DA_ACESSIBILIDADE}
 )
+
+_MODELO_DA_ACESSIBILIDADE: dict[str, Any] = {
+    "ativacao": ProfileAtivacaoConfig,  # (noqa-acento)
+    "analogicos": ProfileAnalogicosConfig,  # (noqa-acento)
+}
 
 _CAMPOS_DO_CONTROLE: dict[str, tuple[str, ...]] = {
     "leds": tuple(LedsConfig.model_fields),
@@ -91,6 +100,7 @@ _CAMPOS_DO_CONTROLE: dict[str, tuple[str, ...]] = {
     "rumble": tuple(ControllerRumbleOverride.model_fields),
     "sensores": tuple(ControllerSensoresOverride.model_fields),
     "ativacao": tuple(ProfileAtivacaoConfig.model_fields),  # (noqa-acento)
+    "analogicos": tuple(ProfileAnalogicosConfig.model_fields),  # (noqa-acento)
 }
 
 COMPUTADOR = "computador"
@@ -228,12 +238,15 @@ def perfil_que_vale(perfil: Profile, computador: Any) -> Profile:
                 atual[campo] = valor
         cru[secao] = atual
     freestyle = e_o_freestyle(perfil.name)
-    if do_global.ativacao is not None:
-        juntado = _ativacao_que_vale(
-            do_global.ativacao.model_dump(mode="json", exclude_unset=True),
-            cru.get("ativacao") or {}, freestyle)  # (noqa-acento)
+    for secao in _DA_ACESSIBILIDADE:
+        modelo = getattr(do_global, secao, None)
+        if modelo is None:
+            continue
+        juntado = _secao_que_vale(
+            secao, modelo.model_dump(mode="json", exclude_unset=True),
+            cru.get(secao) or {}, freestyle)
         if juntado:
-            cru["ativacao"] = juntado  # (noqa-acento)
+            cru[secao] = juntado
     if do_global.button_actions is not None:
         acoes_do_jogo = perfil.button_actions or {}
         cru["button_actions"] = (
@@ -255,18 +268,18 @@ def perfil_que_vale(perfil: Profile, computador: Any) -> Profile:
     return Profile.model_validate(cru)
 
 
-def _ativacao_que_vale(
-    do_computador: Mapping[str, Any], do_jogo: Mapping[str, Any], freestyle: bool
+def _secao_que_vale(
+    secao: str, do_computador: Mapping[str, Any], do_jogo: Mapping[str, Any], freestyle: bool
 ) -> dict[str, Any]:
     """O computador por baixo, o jogo por cima; o conflito entre os dois fica com o jogo.
 
-    Um botão tem um modo só: se a soma dos dois quebra isso, vale o que o jogo escreveu
-    (o Freestyle não sobrepõe nada: vale o computador).
+    Um botão tem um modo só e a mão decide a troca: se a soma dos dois quebra isso, vale o que o
+    jogo escreveu (o Freestyle não sobrepõe nada: vale o computador).
     """
     ordem = (do_computador, do_jogo) if not freestyle else (do_jogo, do_computador)
     juntado = {**ordem[0], **ordem[1]}
     try:
-        ProfileAtivacaoConfig.model_validate(juntado)
+        _MODELO_DA_ACESSIBILIDADE[secao].model_validate(juntado)
     except ValueError:
         return dict(do_jogo) if not freestyle else dict(do_computador)
     return juntado
@@ -297,8 +310,9 @@ def _controles_que_valem(
             for campo, valor in campos.items():
                 if campo not in escolhidos:
                     do_controle[campo] = valor
-            if secao == "ativacao":  # (noqa-acento)
-                do_controle = _ativacao_que_vale(
+            if secao in _DA_ACESSIBILIDADE:
+                do_controle = _secao_que_vale(
+                    secao,
                     {c: v for c, v in campos.items() if c not in escolhidos},
                     {c: v for c, v in do_jogo_na_peca.items() if v is not None}, freestyle)
             if do_controle:

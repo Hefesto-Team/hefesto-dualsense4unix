@@ -259,6 +259,17 @@ _PERNAS: dict[str, dict[str, Resposta]] = {
             "profiles/manager.py::apply_acessibilidade", "nenhum lançador no caminho"
         ),
     },
+    "analogicos": {  # (noqa-acento)
+        VOLTA: NaoSeAplica(
+            "é depositado no `store` do gerente e lido por tique pelos dois "
+            "laços (`dispatch_gamepad` e o co-op); o controle que cai perde o "
+            "estado dele quando o vpad morre."
+        ),
+        RESISTE: NaoSeAplica("não é byte do aparelho."),
+        INDEPENDE: Cumprida(
+            "profiles/manager.py::apply_acessibilidade", "nenhum lançador no caminho"
+        ),
+    },
     "ponte": {
         VOLTA: NaoSeAplica("memória de qual ponte funcionou; nada vai ao controle."),
         RESISTE: NaoSeAplica("nada vai ao controle."),

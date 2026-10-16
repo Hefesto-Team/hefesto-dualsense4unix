@@ -58,6 +58,7 @@ from __future__ import annotations
 import contextlib
 import time
 from collections.abc import Callable
+from dataclasses import replace
 from typing import TYPE_CHECKING, Any, Literal
 
 from hefesto_dualsense4unix.daemon.subsystems.vibracao_do_jogo import (
@@ -1814,7 +1815,11 @@ def _avisar_troca_de_modo(daemon: DaemonProtocol) -> None:
         avisar_troca_de_modo(daemon)
 
 
-from hefesto_dualsense4unix.core import ativacao_de_botao, filtro_de_botao  # noqa: E402
+from hefesto_dualsense4unix.core import (  # noqa: E402
+    ativacao_de_botao,
+    curva_do_analogico,
+    filtro_de_botao,
+)
 from hefesto_dualsense4unix.core.remapeamento_de_botao import (  # noqa: E402
     GATILHOS as GATILHOS_DO_JOGO,
 )
@@ -1870,6 +1875,11 @@ def aplicar_o_movimento(
         if peca is None:
             return lx, ly, rx, ry
         arranjo = peca
+
+        # A mão escolhida manda o giro feito analógico para o lado que sobra do olhar.
+        destino = curva_do_analogico.lado_do_giro(store, uniq, arranjo.destino)
+        if destino != arranjo.destino:
+            arranjo = replace(arranjo, destino=destino)
 
         gatilho = arranjo.gatilho
         if gatilho is not None and GATILHOS_DO_JOGO.get(gatilho, gatilho) not in botoes:
@@ -1944,6 +1954,17 @@ def filtrar_o_botao(
     entrega. Sem filtro neste controle, tudo passa intacto (o mesmo objeto).
     """
     return filtro_de_botao.traduzir(store, uniq, botoes, l2, r2, _agora(), soltos)
+
+
+def moldar_os_analogicos(
+    store: Any, uniq: str | None, lx: int, ly: int, rx: int, ry: int, l2: int, r2: int
+) -> tuple[int, int, int, int, int, int]:
+    """A curva dos analógicos e dos gatilhos do controle ``uniq``: o dono único do P1 e do co-op.
+
+    Entra depois do giro feito analógico, para que ele passe pela mesma curva. Sem curva neste
+    controle, tudo passa intacto.
+    """
+    return curva_do_analogico.aplicar(store, uniq, lx, ly, rx, ry, l2, r2)
 
 
 def soltar_a_ativacao(daemon: Any, uniq: str | None = None) -> None:
@@ -2083,6 +2104,9 @@ def dispatch_gamepad(
                 ry=ry,
                 botoes=da_mao,
             )
+        if curva_do_analogico.alguma(store):
+            lx, ly, rx, ry, l2, r2 = moldar_os_analogicos(
+                store, primary_identity(daemon), lx, ly, rx, ry, l2, r2)
         device.forward_analog(lx=lx, ly=ly, rx=rx, ry=ry, l2=l2, r2=r2)
         if com_modo:
             if tocados:

@@ -533,6 +533,39 @@ class ProfileAtivacaoConfig(BaseModel):
         return self
 
 
+class ProfileAnalogicosConfig(BaseModel):  # (noqa-acento)
+    """Zona morta, curva, sensibilidade, inversão, troca e uma mão só dos analógicos e gatilhos.
+
+    Aditiva ao schema v1 (OS-ANALOGICOS-DO-JOGO-GANHAM-ZONA-MORTA-CURVA-E-UMA-MAO-01): perfil
+    sem a seção entrega ao jogo exatamente o que o controle entrega. Os valores em ``%``;
+    ``inverter`` diz os eixos do analógico FÍSICO (``lx``, ``ly``, ``rx``, ``ry``). A mão é
+    predefinição: a direita troca os lados, e as duas mandam o giro olhar pelo lado que sobra
+    (``core/curva_do_analogico``). Sobre a peça, campo a campo.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    zona_morta: int = Field(default=0, ge=0, le=50)
+    zona_externa: int = Field(default=0, ge=0, le=30)
+    curva: Literal["linear", "precisa", "estavel", "digital"] = "linear"
+    sensibilidade: int = Field(default=100, ge=50, le=150)
+    inverter: list[Literal["lx", "ly", "rx", "ry"]] = Field(default_factory=list)
+    trocar: bool = False
+    mao: Literal["esquerda", "direita"] | None = None
+    gatilho_inicio: int = Field(default=0, ge=0, le=40)
+    gatilho_fim: int = Field(default=0, ge=0, le=40)
+
+    @model_validator(mode="after")
+    def _a_mao_decide_a_troca(self) -> ProfileAnalogicosConfig:
+        """A mão é predefinição: pedir a troca por cima dela é pedir duas coisas."""
+        from hefesto_dualsense4unix.core.curva_do_analogico import recusar
+
+        motivo = recusar(self.trocar, self.mao)
+        if motivo:
+            raise ValueError(f"analogicos: {motivo}")  # (noqa-acento)
+        return self
+
+
 class ProfileMouseConfig(BaseModel):
     """Seção opcional de emulação de mouse por perfil (FEAT-POINT-AND-CLICK-01)."""
 
@@ -1243,7 +1276,7 @@ class ControllerOverrides(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    # SÃO NOVE, e a tela oferece onze. O que falta, e o CAMINHO que cada um
+    # SÃO DEZ, e a tela oferece doze. O que falta, e o CAMINHO que cada um
     # espera antes de poder entrar, está na seção «ControllerOverrides» de
     # docs/research/o-porque-dos-modulos.md, ordenada
     # por custo. O `mic` entrou em 03/09/2026 pelo `muted`, que é o campo dele
@@ -1252,7 +1285,8 @@ class ControllerOverrides(BaseModel):
     # `mascara` entrou em 08/09/2026, por decisão de produto — e é a primeira que não
     # é uma SEÇÃO, e sim um valor só; o `movimento` entrou em 24/09/2026, com o
     # chip «Mira Virtual» que o usuário pediu no cartão de cada controle; o modo de
-    # ativação, em 16/10/2026, com o consumidor por peça já em `apply_acessibilidade`.
+    # ativação e os analógicos, em 16/10/2026, com o consumidor por peça já em
+    # `apply_acessibilidade`.
     leds: LedsConfig | None = None
     triggers: TriggersConfig | None = None
     rumble: ControllerRumbleOverride | None = None
@@ -1273,6 +1307,8 @@ class ControllerOverrides(BaseModel):
     #: Como o botão ativa NESTA peça (alternar, repetir, longo, duplo), campo a campo sobre o
     #: perfil. ``None`` = herda.
     ativacao: ProfileAtivacaoConfig | None = None
+    #: A zona morta, a curva e a mão dos analógicos NESTA peça, campo a campo sobre o perfil.
+    analogicos: ProfileAnalogicosConfig | None = None  # (noqa-acento)
 
 
 _KEY_BINDING_TOKEN_RE = re.compile(r"^(KEY_[A-Z0-9_]+|__[A-Z_]+__)$")
@@ -1330,6 +1366,7 @@ class Profile(BaseModel):
     remapeamento: dict[str, str] | None = None
     movimento: ProfileMovimentoConfig | None = None
     ativacao: ProfileAtivacaoConfig | None = None
+    analogicos: ProfileAnalogicosConfig | None = None  # (noqa-acento)
     mouse: ProfileMouseConfig | None = None
     # flag global `keyboard_emulation.flag` (utils/session.py:306), enquanto o
     # Por 24 dias foi verdade —
@@ -1393,6 +1430,7 @@ class Profile(BaseModel):
             for opcional in (
                 "ponte", "remapeamento", "movimento", "estilo", "receita_do_tato",
                 "ativacao",  # (noqa-acento)
+                "analogicos",  # (noqa-acento)
                 "marcas", "controles_modo", "criado_em", "modificado_em",
                 "alvo", "evento", "evento_comando",
             ):
@@ -2486,6 +2524,47 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         E_CONTRATO,
         "Zero = o gesto do PS pede os dois botões juntos, como sempre. 600 ms é a proposta de "
         "fábrica ao ligar, e o PS sozinho passa a esperar esse tempo para abrir a Steam.",
+    ),
+    "Profile.analogicos": Nascimento(
+        NASCE_NO_LEITOR,
+        "`None` = os analógicos e os gatilhos chegam ao jogo como o controle os entrega, que é "
+        "o estado ÍNTEGRO. Zona morta, curva e troca são necessidade de quem joga, não de "
+        "fábrica: ligadas sem pedido, o jogo ficaria com o movimento mudado.",
+        dono="hefesto_dualsense4unix.core.curva_do_analogico:montar",
+    ),
+    "ControllerOverrides.analogicos": Nascimento(
+        NASCE_NO_LEITOR,
+        "`None` = esta peça segue os analógicos do perfil, e os do perfil não existem por "
+        "padrão. Ver `Profile.analogicos`.",
+        dono="hefesto_dualsense4unix.core.curva_do_analogico:montar",
+    ),
+    "ProfileAnalogicosConfig.zona_morta": Nascimento(
+        E_CONTRATO, "Zero = nenhum curso morto no centro; o `le=50` deixa metade do curso viva."
+    ),
+    "ProfileAnalogicosConfig.zona_externa": Nascimento(
+        E_CONTRATO, "Zero = o fim do curso é o do controle; o `le=30` deixa o curso inteiro útil."
+    ),
+    "ProfileAnalogicosConfig.curva": Nascimento(
+        E_CONTRATO, "`linear` = o curso chega ao jogo como é; as outras são escolha de quem joga."
+    ),
+    "ProfileAnalogicosConfig.sensibilidade": Nascimento(
+        E_CONTRATO, "100 = o curso do controle; de 50 a 150 %, a faixa que a norma de "
+        "acessibilidade pede (XAG 107)."
+    ),
+    "ProfileAnalogicosConfig.inverter": Nascimento(
+        E_CONTRATO, "Lista vazia = nenhum eixo invertido; só existe por gesto de quem joga."
+    ),
+    "ProfileAnalogicosConfig.trocar": Nascimento(
+        E_CONTRATO, "Falso = cada analógico vai ao lado dele; só existe por gesto de quem joga."
+    ),
+    "ProfileAnalogicosConfig.mao": Nascimento(
+        E_CONTRATO, "Vazio = nenhuma predefinição de uma mão; a mão é escolha de quem joga."
+    ),
+    "ProfileAnalogicosConfig.gatilho_inicio": Nascimento(
+        E_CONTRATO, "Zero = o gatilho responde desde o começo do curso, como o controle entrega."
+    ),
+    "ProfileAnalogicosConfig.gatilho_fim": Nascimento(
+        E_CONTRATO, "Zero = o gatilho chega ao fim só no fim do curso, como o controle entrega."
     ),
     "Profile.mouse": Nascimento(
         AGUARDA_A_PALAVRA_DELA,

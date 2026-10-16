@@ -1728,6 +1728,7 @@ class CoopManager:
         troca = remapeamento_ativo(store)
         com_modo = alguma_ativacao(store)
         com_filtro = alguma_filtro(store)
+        com_curva = alguma_curva(store)
         arranjo_de_movimento = roteador_ativo(store)
         marcas = marcas_da_partida(self._daemon)
         for player in list(self._players.values()):
@@ -1791,6 +1792,10 @@ class CoopManager:
                     tocados = traduzir_remapeamento(soltos, 0, 0, troca)[0] if troca else soltos
                     botoes, l2, r2, tocados = ativar_o_botao(
                         store, player.identity, botoes, l2, r2, tocados)
+                if com_curva:
+                    # A zona morta, a curva e a mão deste jogador, pelo mesmo dono do P1.
+                    lx, ly, rx, ry, l2, r2 = moldar_os_analogicos(
+                        store, player.identity, lx, ly, rx, ry, l2, r2)
                 player.vpad.forward_analog(
                     lx=lx,
                     ly=ly,
@@ -2294,6 +2299,9 @@ class CoopManager:
 from hefesto_dualsense4unix.core.ativacao_de_botao import (  # noqa: E402
     alguma as alguma_ativacao,
 )
+from hefesto_dualsense4unix.core.curva_do_analogico import (  # noqa: E402
+    alguma as alguma_curva,
+)
 from hefesto_dualsense4unix.core.filtro_de_botao import (  # noqa: E402
     alguma as alguma_filtro,
 )
@@ -2316,6 +2324,7 @@ from hefesto_dualsense4unix.daemon.subsystems.gamepad import (  # noqa: E402
     ativar_o_botao,
     cortar_pelo_limiar,
     filtrar_o_botao,
+    moldar_os_analogicos,
     ralos_do_mic,
     sem_o_gesto_do_ps,
     soltar_a_ativacao,

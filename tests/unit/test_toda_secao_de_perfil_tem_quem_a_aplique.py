@@ -206,6 +206,18 @@ _CLASSIFICACAO: dict[str, SecaoPorApplier | SecaoDireta] = {
             "`remapeamento`: o `store` é o que TODAS as rotas de ativação passam."
         )
     ),
+    "analogicos": SecaoDireta(  # (noqa-acento)
+        razao=(
+            "OS-ANALOGICOS-DO-JOGO-GANHAM-ZONA-MORTA-CURVA-E-UMA-MAO-01 (16/10/2026). "
+            "`apply_acessibilidade` monta a curva (`core/curva_do_analogico.montar`) e a "
+            "DEPOSITA no `store` do gerente, sempre, inclusive `None`, para a curva do jogo "
+            "anterior não contagiar o seguinte. Nada é escrito no controle. Quem obedece são "
+            "os dois laços por tique (`gamepad.dispatch_gamepad` e "
+            "`coop.CoopManager.forward_all`), pelo mesmo `moldar_os_analogicos`. Não é "
+            "applier injetado pelo mesmo motivo da ativação dos botões: o `store` é o que TODAS as "
+            "rotas de ativação passam."
+        )
+    ),
     "controllers": SecaoDireta(
         razao=(
             "Mapa ADITIVO de overrides por controle físico: `apply` o resolve "
