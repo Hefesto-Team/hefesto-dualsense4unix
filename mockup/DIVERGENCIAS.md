@@ -30,3 +30,4 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ## mapa-do-controle.html
 - **16/10/2026** — a mesma base comum (a dica abre pelo foco nos títulos). Até publicar, o produto abre a dica dos títulos só com o mouse; o desenho abre também pelo foco. Espera o `--publicar` da costura.
+- **16/10/2026** — a âncora `#point-and-click` abre o mapa no perfil escolhido na aba Navegação e `#trocar` abre o perfil ativo, quando ele tem lugar no seletor (sem âncora, ou com outra, abre em Navegar). Dois marcadores invisíveis levam a chave; a tela não muda. Até publicar, o produto abre sempre em Navegar no computador; o desenho abre no perfil que a âncora pede. Espera o `--publicar` da costura.

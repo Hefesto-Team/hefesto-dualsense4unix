@@ -43,6 +43,7 @@ from hefesto_dualsense4unix.interface.cartao_do_controle import (
     ALL_BUTTONS,
     rotulo_lightbar,
 )
+from hefesto_dualsense4unix.profiles import estilos_de_jogo
 
 from . import Contexto, gesto, perfil, registrar
 from . import a02_controles as a02
@@ -184,6 +185,17 @@ def _largar() -> None:
     _EDITANDO.clear()
 
 
+def _estilo_de_clicar(cru: dict[str, Any]) -> bool:
+    """O perfil é de um estilo de jogo de clicar: a receita do catálogo liga o modo `desktop`.
+
+    Uma leitura só, a do catálogo (`profiles/estilos_de_jogo`): o Point and click e o Visual novel
+    entram, e um estilo novo de clicar também, sem lista de chaves aqui.
+    """
+    estilo = estilos_de_jogo.POR_CHAVE.get(str(cru.get("estilo") or ""))
+    receita = estilo.receita_invisivel if estilo else None
+    return bool(receita and receita.modo == "desktop")
+
+
 def _perfis_do_disco(ctx: Contexto) -> list[dict[str, Any]]:
     """Os perfis do disco que configuram botão: «Meus perfis»."""
     meus = []
@@ -193,7 +205,7 @@ def _perfis_do_disco(ctx: Contexto) -> list[dict[str, Any]]:
         if not cru:
             continue
         if (cru.get("remapeamento") or cru.get("button_actions")
-                or cru.get("estilo") == "point_and_click"
+                or _estilo_de_clicar(cru)
                 or (cru.get("mouse") or {}).get("enabled")):
             meus.append(cru)
     return meus
@@ -293,7 +305,7 @@ def _tipo_de(ctx: Contexto, estado: dict[str, Any], valores: dict[str, tuple[str
         return "pac"
     tipos = {t for t, _ in valores.values()}
     fichas = {v for t, v in valores.values() if t == ACAO}
-    if fichas & FICHAS_DO_MOUSE or _cru_da_chave(ctx, chave).get("estilo") == "point_and_click":
+    if fichas & FICHAS_DO_MOUSE or _estilo_de_clicar(_cru_da_chave(ctx, chave)):
         return "pac"
     return "troca" if "troca" in tipos else "nav"
 
@@ -410,6 +422,23 @@ def _cursor(valores: dict[str, tuple[str, str]]) -> str:
     return "esq"
 
 
+def _chave_do_point_and_click(ctx: Contexto) -> str:
+    """O perfil que a aba Navegação escolheu para o point and click, na chave do seletor.
+
+    A escolha é lida pela MESMA função da aba Navegação (`a06._o_point_and_click_de_hoje`): sem
+    segunda leitura do campo. Escolha que não existe mais (perfil apagado) abre em Navegar.
+    """
+    escolha = a06._o_point_and_click_de_hoje()
+    return escolha if _chave_valida(ctx, escolha) else NAV
+
+
+def _chave_das_trocas(ctx: Contexto) -> str:
+    """O perfil ativo, se tem lugar no seletor (troca ou ação própria de botão); senão Navegar."""
+    nome = _nome_do_ativo(ctx)
+    meus = {str(c.get("name") or "") for c in _perfis_do_disco(ctx)}
+    return PERFIL + nome if nome and nome in meus else NAV
+
+
 def _mesa_da_edicao(ctx: Contexto) -> dict[str, Any]:
     """Tudo o que a tela mostra do perfil em edição, num só dicionário."""
     estado = _estado()
@@ -424,6 +453,9 @@ def _mesa_da_edicao(ctx: Contexto) -> dict[str, Any]:
         "nome": _nome_mostrado(ctx, estado),
         "usar-em": _usar_em(ctx, estado),
         "cursor-mover": _cursor(valores),
+        # o que as âncoras `#point-and-click` e `#trocar` pedem: a página abre o seletor nelas
+        "ancora-pac": _chave_do_point_and_click(ctx),
+        "ancora-trocar": _chave_das_trocas(ctx),
     }
     return mesa
 

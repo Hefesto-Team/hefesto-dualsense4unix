@@ -557,6 +557,26 @@ JS = r"""
   const bloqueia = () => { nome.readOnly = $('.mc-perfil').dataset.fixo === 'sim'; };
   new MutationObserver(bloqueia).observe($('.mc-perfil'), {attributes: true, attributeFilter: ['data-fixo']});
   bloqueia();
+  /* A ÂNCORA DO ENDEREÇO escolhe o perfil de abertura (O-MAPA-DO-CONTROLE-ABRE-NO-PERFIL-QUE-A-ANCORA-PEDE-E-LE-A-ESCOLHA-DO-POINT-AND-CLICK-01).
+     `#point-and-click` e `#trocar` vêm da aba Navegação; o produto pinta, no `data-chave` de dois marcadores
+     que não aparecem, a chave que cada uma pede. Sem âncora, ou com outra, nada muda: abre em Navegar. */
+  const MARCADOR = {'#point-and-click': 'ancora-pac', '#trocar': 'ancora-trocar'};
+  const lista = $('#perfil');
+  let seguida = '';
+  const seguirAncora = () => {
+    const campo = MARCADOR[location.hash];
+    const marca = campo && $('[data-campo="' + campo + '"]');
+    const chave = marca ? marca.dataset.chave : '';
+    if (!chave || seguida === location.hash + chave) return;
+    if (![...lista.options].some(o => o.value === chave)) return;
+    seguida = location.hash + chave;
+    if (lista.value === chave) return;
+    lista.value = chave;
+    lista.dispatchEvent(new Event('change', {bubbles: true}));
+  };
+  addEventListener('hashchange', seguirAncora);
+  new MutationObserver(seguirAncora).observe($('.mc-perfil'), {subtree: true, childList: true, attributes: true});
+  seguirAncora();
 })();
 """
 
@@ -669,6 +689,8 @@ def main():
     <span class="cel">
     <label class="mc-rot" for="perfil">Perfil</label>
     <select id="perfil" class="campo2" data-gesto="mapa-perfil" data-campo="perfil" data-hef-alvo="valor" data-dica="Navegação, point and click e trocas de botão">{perfis}</select>
+    <i hidden data-campo="ancora-pac" data-hef-alvo="atributo" data-hef-atributo="data-chave" data-chave=""></i>
+    <i hidden data-campo="ancora-trocar" data-hef-alvo="atributo" data-hef-atributo="data-chave" data-chave=""></i>
     </span>
     <span class="cel">
     <span class="etiqueta" data-campo="etiqueta" data-hef-alvo="texto" data-dica="A cor do tipo marca os botões mudados">Navegação</span>
