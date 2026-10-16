@@ -67,6 +67,7 @@ def _pacote(entradas: list[dict], monkeypatch: pytest.MonkeyPatch) -> dict:
 
 
 def test_o_pacote_mostra_o_que_o_dono_diz(monkeypatch: pytest.MonkeyPatch) -> None:
+    # D-1610-O-ESTADO-DO-CARD-TEM-UM-DONO-SO
     """Um dono com números inconfundíveis aparece, um por um, na página."""
     import mesa_viva
 
