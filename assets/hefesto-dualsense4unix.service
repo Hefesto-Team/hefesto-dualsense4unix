@@ -14,7 +14,17 @@ StartLimitBurst=3
 OnFailure=hefesto-dualsense4unix-presenca.service
 
 [Service]
-Type=simple
+# O-LIGAR-O-SERVICO-ESPERA-ELE-FICAR-DE-PE-01: o `systemctl start` só volta quando o daemon
+# manda `READY=1`, e o pronto é o soquete do IPC escutando (`utils/sd_notify.py`). Com `simple`
+# ele voltava no `fork`, ~0,6 s antes de o soquete existir, e quem ligava e já falava recebia a
+# recusa. `NotifyAccess=main`: só o processo principal avisa, e o `NOTIFY_SOCKET` não passa aos
+# programas que o daemon lança (`integrations/fora_do_servico.py`). O `TimeoutStartSec` é o
+# prazo da subida (medida: ~1 s); existe para o daemon que trava antes do pronto não prender o
+# `start` para sempre. O `start` de quem chama (`daemon_actions`) espera mais que ele; um teste
+# confere os dois.
+Type=notify
+NotifyAccess=main
+TimeoutStartSec=30
 # AUTOSWITCH-FLOOD-FIX-01: o ambiente gráfico (DISPLAY, WAYLAND_DISPLAY e XAUTHORITY)
 # não vem pela unit: o serviço sobe em default.target, antes de a sessão exportá-lo,
 # e o `_ensure_display_env` do autoswitch o busca em `systemctl --user show-environment`

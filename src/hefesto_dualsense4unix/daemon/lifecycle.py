@@ -899,6 +899,8 @@ class Daemon:
         try:
             self._tasks = [asyncio.create_task(self._poll_loop(), name="poll_loop")]
             await subir(self)
+            if not self.config.ipc_enabled:  # sem soquete a esperar: pronto é o fim da 1ª fase
+                _dizer_pronto()
             # FEAT-CONFIG-AUDIT-BOOT-01: valida os perfis no boot e avisa se houver
             # corrompidos (em vez de só pulá-los silenciosamente no fallback).
             self._audit_config_on_boot()
@@ -919,9 +921,7 @@ class Daemon:
                 await self._run_blocking(self.controller.connect)
                 if self.controller.is_connected():
                     transport = self.controller.get_transport()
-                    self.bus.publish(
-                        EventTopic.CONTROLLER_CONNECTED, {"transport": transport}
-                    )
+                    self.bus.publish(EventTopic.CONTROLLER_CONNECTED, {"transport": transport})
                     logger.info("controller_connected", transport=transport)
                     with contextlib.suppress(Exception):
                         from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
@@ -985,7 +985,7 @@ class Daemon:
         """Sinaliza parada; idempotente."""
         if self._stop_event is not None and not self._stop_event.is_set():
             logger.info("daemon_stop_requested")
-            self._stop_event.set()
+            _dizer_parando_e_soltar(self._stop_event)
 
     def pause(self) -> None:
         """Pausa o despacho de input (FEAT-DAEMON-PAUSE-RESUME-01)."""
@@ -3360,7 +3360,7 @@ class Daemon:
     async def _start_ipc(self) -> None:
         from hefesto_dualsense4unix.daemon.subsystems.ipc import start_ipc
 
-        await start_ipc(self)
+        await _dizer_pronto_depois_de(start_ipc(self))
 
     async def _start_dsu(self) -> None:
         from hefesto_dualsense4unix.daemon.subsystems.dsu import start_dsu
@@ -5011,6 +5011,27 @@ def _o_pad_do_jogo_volta_no_boot(daemon: Any, perfil_do_boot: str | None) -> boo
     daemon.config.mouse_emulation_enabled = False
     logger.info("o_pad_do_jogo_volta_no_boot", perfil=perfil_do_boot)
     return True
+
+
+def _dizer_pronto() -> None:
+    """O `start` do `Type=notify` só volta com isto; o dono do aviso é `utils/sd_notify`."""
+    from hefesto_dualsense4unix.utils import sd_notify
+
+    if sd_notify.pronto():
+        logger.info("servico_pronto_avisado")
+
+
+async def _dizer_pronto_depois_de(partida: Awaitable[None]) -> None:
+    """O `READY=1` sai logo depois de o soquete do IPC escutar, antes do resto da lista."""
+    await partida
+    _dizer_pronto()
+
+
+def _dizer_parando_e_soltar(parada: asyncio.Event) -> None:
+    from hefesto_dualsense4unix.utils import sd_notify
+
+    sd_notify.parando()
+    parada.set()
 
 
 __all__ = [
