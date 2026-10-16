@@ -155,6 +155,7 @@ def test_o_dedo_no_centro_vibra_os_dois() -> None:
 
 
 def test_dois_dedos_vibram_os_dois_lados() -> None:
+    # D-1610-O-TOUCHPAD-VIBRA-O-LADO-TOCADO
     mesa = Mesa()
     meus = _meus(mesa)
     mesa.dedos[P1] = ((round(0.9 * L), round(0.1 * A)), (round(0.95 * L), round(0.5 * A)))

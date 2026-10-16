@@ -206,6 +206,7 @@ def test_o_r2_um_instante_antes_do_ps_ainda_e_o_gesto() -> None:
 
 
 def test_o_r2_lido_pelo_eixo_nao_vira_rajada_quando_o_calar_dos_botoes_le_sem_a_pressao() -> None:
+    # D-1610-A-PRESSAO-DO-GATILHO-FICA-NA-MAO-DO-CONTROLE
     """O tique do pad lê o mesmo instante três vezes: o poll e o eixo com a pressão, o calar dos
     botões sem ela. Com o R2 a meio curso e sem o bit digital, a leitura sem pressão soltava o
     membro e a seguinte o reapertava: um «sobe» (ou um surto) a cada tique."""

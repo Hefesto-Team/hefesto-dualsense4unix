@@ -395,6 +395,7 @@ def test_no_modo_nativo_nada_se_escreve() -> None:
 
 
 def test_o_jogo_que_sai_do_foco_com_o_toque_no_ar_devolve_o_zero_e_o_nativo_nao() -> None:
+    # D-1610-OS-MEUS-TOQUES-DEVOLVEM-O-ZERO-QUANDO-O-JOGO-SAI
     mesa = Mesa()
     meus = _meus(mesa)
     _andar(meus, mesa, _parado(lx=255), mesa.agora + 0.1)

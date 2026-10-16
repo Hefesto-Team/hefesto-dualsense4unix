@@ -254,6 +254,7 @@ def _producao_com_o_jogo(motores: tuple[int, int] | None) -> tuple[Any, _Control
 
 
 def test_em_producao_o_toque_soma_ao_jogo_e_o_zero_devolve_o_par_dele() -> None:
+    # D-1610-O-TOQUE-DO-GESTO-SOMA-AO-PAR-DO-JOGO
     volta, controle = _producao_com_o_jogo(None)
     volta._l.motores(P1, 200, 0)
     volta._l.motores(P1, 0, 0)
