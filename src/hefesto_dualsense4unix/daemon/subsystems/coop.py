@@ -150,6 +150,13 @@ class CoopManager:
 
     _fio_do_laco: int | None = None
     _ordem_pendente: bool = False
+    # O-PAD-QUE-NASCE-NAO-PARA-O-TIQUE-DOS-OUTROS-01: os pads pedidos ao fio de
+    # nascimento, em ordem (uma tupla, que só se troca inteira); um por vez no
+    # fio, e o próximo só depois do anterior instalado. `_p1_que_nasce` é o
+    # contexto do P1 reerguido no tique.
+    _fila_do_nascimento: tuple[str, ...] = ()
+    _nascendo: tuple[str, _SecondaryPlayer | None, Any] | None = None
+    _p1_que_nasce: Any = None
 
     def __init__(self, daemon: DaemonProtocol) -> None:
         self._daemon = daemon
@@ -181,8 +188,12 @@ class CoopManager:
         cfg = getattr(self._daemon, "config", None)
         if not bool(getattr(cfg, "coop_enabled", False)):
             return False
-        # co-op exige o caminho de gamepad virtual ligado (o P1 já é um vpad).
-        return getattr(self._daemon, "_gamepad_device", None) is not None
+        # co-op exige o caminho de gamepad virtual ligado (o P1 já é um vpad, ou
+        # está nascendo pelo fio).
+        return (
+            getattr(self._daemon, "_gamepad_device", None) is not None
+            or self._p1_que_nasce is not None
+        )
 
     def player_count(self) -> int:
         """Total de jogadores ativos (P1 + secundários, incluindo pendentes)."""
@@ -911,10 +922,12 @@ class CoopManager:
 
     def _promote_pending(self) -> None:
         """Promove jogadores "aguardando grab": cria o vpad quando "held"."""
-        pendentes = [i for i, p in self._players.items() if p.vpad is None]
+        pendentes = [
+            i for i, p in self._players.items() if p.vpad is None and not self._na_fila(i)
+        ]
         for identity in self._na_ordem_da_carta(pendentes):
             player = self._players.get(identity)
-            if player is None or player.vpad is not None:
+            if player is None or player.vpad is not None or self._na_fila(identity):
                 continue
             state = player.reader.grab_state
             if state == "held":
@@ -1041,10 +1054,20 @@ class CoopManager:
         return {nome: _calado_se_cedeu(nome, ralo) for nome, ralo in ralos.items()}
 
     def _promote_player(self, player: _SecondaryPlayer) -> None:
-        """Cria o vpad de um jogador com grab CONFIRMADO. Falha derruba o jogador."""
-        from hefesto_dualsense4unix.daemon.subsystems.gamepad import controller_allows_uhid
-        from hefesto_dualsense4unix.integrations.virtual_pad import make_virtual_pad
+        """Cria o vpad de um jogador com grab CONFIRMADO. Falha derruba o jogador.
 
+        Com o fio de nascimento do daemon (o laço do tique no ar) e no fio do laço,
+        o pad é PEDIDO e nasce fora dele: `_andar_a_fila` pede um por vez, na
+        ordem, e instala no tique seguinte à entrega. Sem o fio (a borda, o
+        dublê), nasce aqui, na hora.
+        """
+        from hefesto_dualsense4unix.integrations.virtual_pad import (
+            make_virtual_pad,
+            o_fio_de_nascimento,
+        )
+
+        if self._na_fila(player.identity):
+            return
         calib_pronta, calib = self._calibration_pronta(player.identity)
         if not calib_pronta:
             logger.debug(
@@ -1053,18 +1076,129 @@ class CoopManager:
                 **self._numero_e_indice(player),
             )
             return
+        if o_fio_de_nascimento(self._daemon) is not None and self._no_fio_do_laco():
+            self._fila_do_nascimento = (*self._fila_do_nascimento, player.identity)
+            self._andar_a_fila()
+            return
+        flavor, kwargs = self._pedido_do_pad(player, calib)
+        vpad = make_virtual_pad(flavor, identity=player.identity, **kwargs)
+        self._instalar_o_pad(player, vpad, None)
+
+    def _pedido_do_pad(
+        self, player: _SecondaryPlayer, calib: bytes | None
+    ) -> tuple[str | None, dict[str, Any]]:
+        """Os argumentos do `make_virtual_pad` deste jogador, de agora, fora a identidade."""
+        from hefesto_dualsense4unix.daemon.subsystems.gamepad import controller_allows_uhid
 
         # controle não-DualSense (8BitDo, Pro Controller) também ganha vpad uhid
-        vpad = make_virtual_pad(
-            self._flavor(),
-            identity=player.identity,
-            rumble_sink=self._make_player_rumble_sink(player.identity),
-            player=self.numero_para_o_nome(player.identity, player.player_index),
-            allow_uhid=controller_allows_uhid(self._daemon),
-            calibration_0x05=calib,
-            caminho=self._caminho(),
+        return self._flavor(), {
+            "rumble_sink": self._make_player_rumble_sink(player.identity),
+            "player": self.numero_para_o_nome(player.identity, player.player_index),
+            "allow_uhid": controller_allows_uhid(self._daemon),
+            "calibration_0x05": calib,
+            "caminho": self._caminho(),
             **self._make_player_replica_sinks(player.identity),
-        )
+        }
+
+    def _na_fila(self, chave: str) -> bool:
+        """O pad de `chave` foi pedido ao fio e ainda não foi instalado?"""
+        if self._nascendo is not None and self._nascendo[0] == chave:
+            return True
+        return chave in self._fila_do_nascimento
+
+    def _tirar_da_fila(self, chave: str) -> None:
+        """`chave` sai da fila do nascimento (o que já nasce no fio, não)."""
+        self._fila_do_nascimento = tuple(c for c in self._fila_do_nascimento if c != chave)
+
+    def pedir_o_p1(self, contexto: Any) -> None:
+        """O P1 reerguido no tique entra na fila do nascimento, na vez dele."""
+        self._largar_o_p1_que_nasce()
+        self._p1_que_nasce = contexto
+        self._fila_do_nascimento = (*self._fila_do_nascimento, _CHAVE_DO_P1)
+        self._andar_a_fila()
+
+    def _largar_o_p1_que_nasce(self) -> None:
+        """Ninguém espera mais o P1 que nascia: o pedido dele sai da fila e do fio."""
+        contexto, self._p1_que_nasce = self._p1_que_nasce, None
+        self._tirar_da_fila(_CHAVE_DO_P1)
+        if self._nascendo is not None and self._nascendo[0] == _CHAVE_DO_P1:
+            self._nascendo[2].descartar()
+            self._nascendo = None
+        pedido = getattr(contexto, "pedido", None)
+        if pedido is not None:
+            pedido.descartar()
+
+    def _andar_a_fila(self) -> None:
+        """Instala o pad que o fio entregou e pede o próximo: um por vez, na ordem.
+
+        O próximo pedido sai só depois que o anterior foi instalado, e é isso que
+        mantém a ordem dos nós que o jogo vê (a ordem da carta é de quem pede).
+        O pedido que acabou de sair não se instala na mesma volta.
+        """
+        if not self._no_fio_do_laco():
+            return
+        if self._nascendo is not None:
+            chave, jogador, pedido = self._nascendo
+            if not pedido.pronto:
+                return
+            self._nascendo = None
+            self._entregar(chave, jogador, pedido)
+        from hefesto_dualsense4unix.integrations.virtual_pad import o_fio_de_nascimento
+
+        while self._fila_do_nascimento:
+            fio = o_fio_de_nascimento(self._daemon)
+            chave, *resto = self._fila_do_nascimento
+            self._fila_do_nascimento = tuple(resto)
+            if chave == _CHAVE_DO_P1:
+                contexto = self._p1_que_nasce
+                if contexto is None or fio is None:
+                    self._p1_que_nasce = None
+                    continue
+                contexto.pedido = fio.pedir(
+                    contexto.key, identity=contexto.identity, **contexto.kwargs
+                )
+                self._nascendo = (chave, None, contexto.pedido)
+                return
+            jogador = self._players.get(chave)
+            if jogador is None or jogador.vpad is not None or jogador.cedido_ao_primario:
+                continue
+            if fio is None:
+                self._promote_player(jogador)
+                continue
+            flavor, kwargs = self._pedido_do_pad(
+                jogador, self._calibration_pronta(chave)[1]
+            )
+            self._nascendo = (chave, jogador, fio.pedir(flavor, identity=chave, **kwargs))
+            return
+
+    def _entregar(self, chave: str, jogador: _SecondaryPlayer | None, pedido: Any) -> None:
+        """O pad que o fio entregou vai a quem o pediu, se ele ainda o quer."""
+        if chave == _CHAVE_DO_P1:
+            contexto, self._p1_que_nasce = self._p1_que_nasce, None
+            if contexto is None or contexto.pedido is not pedido:
+                pedido.descartar()
+                return
+            from hefesto_dualsense4unix.daemon.subsystems.gamepad import instalar_o_p1
+
+            instalar_o_p1(self._daemon, pedido.pad, contexto, pedido.ms)
+            self._acompanhar_o_p1()
+            return
+        if (
+            jogador is None
+            or self._players.get(chave) is not jogador
+            or jogador.vpad is not None
+            or jogador.cedido_ao_primario
+        ):
+            pedido.descartar()
+            logger.info("coop_pad_nasceu_sem_jogador", identity=chave)
+            return
+        self._instalar_o_pad(jogador, pedido.pad, pedido.ms)
+
+    def _instalar_o_pad(
+        self, player: _SecondaryPlayer, vpad: VirtualPad | None, ms: float | None
+    ) -> None:
+        """O pad nasceu (ou não): instala no jogador, ou derruba só o jogador dele."""
+        anotar_o_nascimento(self._daemon, ms)
         from hefesto_dualsense4unix.integrations import pad_usb
 
         # Decidido: o gadget que montou já está anotado pelo serial dele.
@@ -1326,6 +1460,11 @@ class CoopManager:
         self._calib_prazo.pop(identity, None)
         self._calib_sem_leitura.discard(identity)
         self._pronto_desde.pop(identity, None)
+        self._tirar_da_fila(identity)
+        if self._nascendo is not None and self._nascendo[0] == identity:
+            # O pad que nasce para quem saiu para no fio, quando chegar.
+            self._nascendo[2].descartar()
+            self._nascendo = None
         if not player.cedido_ao_primario:
             # O nó do cedido é do P1 agora: quem o devolve é o caminho do P1.
             self._broker_restore_player(identity)
@@ -1723,6 +1862,7 @@ class CoopManager:
             if self.should_be_active():
                 self._corrigir_a_ordem()
         self._recolher_os_cedidos()
+        self._andar_a_fila()
         self._promote_pending()
         store = getattr(self._daemon, "store", None)
         troca = remapeamento_ativo(store)
@@ -2439,6 +2579,20 @@ def resolve_player_numbers(
             number if isinstance(number, int) and not isinstance(number, bool) else None
         )
     return out
+
+
+def anotar_o_nascimento(daemon: Any, ms: float | None) -> None:
+    """O tempo do nascimento que saiu do tique vai ao contador do store, para o doctor.
+
+    `ms=None` é o pad que nasceu na borda (fora do laço), que não se conta.
+    """
+    store = getattr(daemon, "store", None)
+    bump = getattr(store, "bump", None)
+    if not callable(bump) or ms is None:
+        return
+    with contextlib.suppress(Exception):
+        bump("vpad.nascimentos")
+        bump("vpad.nascimento_ms", round(ms))
 
 
 def get_coop_manager(daemon: DaemonProtocol) -> CoopManager:

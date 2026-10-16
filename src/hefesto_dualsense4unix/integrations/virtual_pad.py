@@ -39,7 +39,10 @@ DualSense Edge REAL no kernel — a Steam enxergaria um controle fantasma.
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Protocol, runtime_checkable
+import queue
+import threading
+import time
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -501,6 +504,126 @@ def _try_uhid(
     return pad, None
 
 
+class PedidoDePad:
+    """Um nascimento pedido ao fio: o laço pergunta `pronto` e leva o `pad`.
+
+    `ms` é o tempo que a fábrica levou. `descartar` vale antes e depois da
+    entrega: o pad que nasce para ninguém para no próprio fio, nunca no laço.
+    """
+
+    def __init__(self, fio: FioDeNascimento) -> None:
+        self._fio = fio
+        self._feito = threading.Event()
+        self._trava = threading.Lock()
+        self._descartado = False
+        self.pad: VirtualPad | None = None
+        self.ms: float | None = None
+
+    @property
+    def pronto(self) -> bool:
+        return self._feito.is_set()
+
+    @property
+    def descartado(self) -> bool:
+        return self._descartado
+
+    def esperar(self, prazo_s: float | None = None) -> bool:
+        """Espera a entrega. Só a borda que pede e precisa da resposta espera."""
+        return self._feito.wait(prazo_s)
+
+    def _entregar(self, pad: VirtualPad | None, ms: float) -> None:
+        with self._trava:
+            self.ms = ms
+            sobra = pad if self._descartado else None
+            if sobra is None:
+                self.pad = pad
+            self._feito.set()
+        if sobra is not None:
+            self._fio.parar_o_pad(sobra)
+
+    def descartar(self) -> None:
+        """Ninguém quer mais este pad: o que nasceu (ou nascer) para no fio."""
+        with self._trava:
+            if self._descartado:
+                return
+            self._descartado = True
+            sobra, self.pad = self.pad, None
+        if sobra is not None:
+            self._fio.parar_o_pad(sobra)
+
+
+class FioDeNascimento:
+    """O dono único do nascimento do pad fora do laço do tique.
+
+    O-PAD-QUE-NASCE-NAO-PARA-O-TIQUE-DOS-OUTROS-01 (16/10/2026): o
+    `make_virtual_pad` espera o bind do `uhid` (até `UHID_BIND_TIMEOUT_S`, e o
+    assentamento depois dele) e, no gadget USB, a ida e volta ao broker. No laço
+    do tique isso parava a entrada de todos os jogadores. Aqui ele roda numa
+    thread só, um pedido por vez, na ordem de chegada: a ordem dos nós que o
+    jogo vê é a ordem dos pedidos, e quem pede decide essa ordem.
+    """
+
+    def __init__(self) -> None:
+        self._fila: queue.Queue[tuple[str, Any, Any]] = queue.Queue()
+        self._thread: threading.Thread | None = None
+        self._trava = threading.Lock()
+
+    def pedir(self, flavor: str | None, **kwargs: Any) -> PedidoDePad:
+        """Pede um pad com os argumentos do `make_virtual_pad`. Volta na hora."""
+        pedido = PedidoDePad(self)
+        self._por("nascer", pedido, (flavor, kwargs))
+        return pedido
+
+    def parar_o_pad(self, pad: object) -> None:
+        """O `stop` de um pad que ninguém instalou, na vez dele na fila."""
+        self._por("parar", pad, None)
+
+    def parar(self) -> None:
+        """Fecha o fio depois do que já foi pedido."""
+        with self._trava:
+            thread, self._thread = self._thread, None
+        if thread is not None:
+            self._fila.put(("fim", None, None))
+
+    def _por(self, tipo: str, alvo: Any, kwargs: Any) -> None:
+        self._fila.put((tipo, alvo, kwargs))
+        with self._trava:
+            if self._thread is None:
+                self._thread = threading.Thread(
+                    target=self._rodar, name="hefesto-nascimento-do-pad", daemon=True
+                )
+                self._thread.start()
+
+    def _rodar(self) -> None:
+        while True:
+            tipo, alvo, argumentos = self._fila.get()
+            if tipo == "fim":
+                return
+            if tipo == "parar":
+                try:
+                    alvo.stop()
+                except Exception as exc:
+                    logger.warning("vpad_descartado_nao_parou", err=str(exc))
+                continue
+            if alvo.descartado:
+                alvo._entregar(None, 0.0)
+                continue
+            inicio = time.monotonic()
+            pad: VirtualPad | None = None
+            flavor, kwargs = argumentos
+            try:
+                pad = make_virtual_pad(flavor, **kwargs)
+            except Exception as exc:
+                logger.warning("vpad_nascimento_falhou", err=str(exc))
+            alvo._entregar(pad, (time.monotonic() - inicio) * 1000.0)
+
+
+def o_fio_de_nascimento(daemon: object) -> FioDeNascimento | None:
+    """O fio do daemon que roda o laço do tique, ou `None` (a borda nasce na hora)."""
+    fio = getattr(daemon, "_fio_de_nascimento", None)
+    return fio if isinstance(fio, FioDeNascimento) else None
+
+
 def o_aparelho_mudou(vpad: object, caminho: object, mascara: str) -> bool:
     """O aparelho que ESTE vpad mostra ao jogo não é o que o par pede?
 
@@ -539,6 +662,8 @@ __all__ = [
     "MOTIVO_MODO_XBOX_ESCOLHIDO",
     "MOTIVO_SEM_CANAL_PROPRIO",
     "UHID_BIND_TIMEOUT_S",
+    "FioDeNascimento",
+    "PedidoDePad",
     "VirtualPad",
     "caminho_do_vpad",
     "caminho_resolvido",
@@ -548,6 +673,7 @@ __all__ = [
     "motivo_da_troca",
     "normalizar_caminho",
     "o_aparelho_mudou",
+    "o_fio_de_nascimento",
     "o_jogo_ve_a_pro",
     "quer_uhid",
 ]

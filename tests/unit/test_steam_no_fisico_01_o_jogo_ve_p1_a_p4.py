@@ -245,7 +245,12 @@ def vpad_do_p1(
         daemon._gamepad_device = None
 
     def _start(
-        daemon: Any, flavor: Any = None, *, origin: str, caminho: str | None = None
+        daemon: Any,
+        flavor: Any = None,
+        *,
+        origin: str,
+        caminho: str | None = None,
+        no_tique: bool = False,
     ) -> str:
         eventos.append(("start", origin))
         nascimentos.append("p1")

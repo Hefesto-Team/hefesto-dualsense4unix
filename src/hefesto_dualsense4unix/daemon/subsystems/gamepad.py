@@ -58,7 +58,7 @@ from __future__ import annotations
 import contextlib
 import time
 from collections.abc import Callable
-from dataclasses import replace
+from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, Any, Literal
 
 from hefesto_dualsense4unix.daemon.subsystems.vibracao_do_jogo import (
@@ -1476,13 +1476,48 @@ def nomear_o_restart(daemon: Any, motivo: str) -> str | None:
 
 
 def reerguer_o_p1(daemon: Any, *, motivo: str, flavor: str | None = None) -> str:
-    """Recria o pad do P1 no modo da sessão e devolve o desfecho `EMU_*`."""
+    """Recria o pad do P1 no modo da sessão e devolve o desfecho `EMU_*`.
+
+    Quem reergue é o laço do tique (a ordem do coop, a máscara reconciliada):
+    com o fio de nascimento no ar, o pad novo nasce fora do tique
+    (O-PAD-QUE-NASCE-NAO-PARA-O-TIQUE-DOS-OUTROS-01).
+    """
     return start_gamepad_emulation_desfecho(
         daemon,
         flavor,
         origin="profile",
         caminho=nomear_o_restart(daemon, motivo),
+        no_tique=True,
     )
+
+
+@dataclass
+class OP1QueNasce:
+    """O pedido do pad do P1 que nasce pelo fio, com o que a instalação precisa.
+
+    `kwargs` são os argumentos do `make_virtual_pad` fora a máscara (`key`) e a
+    identidade, que vão à parte.
+    """
+
+    key: str
+    flavor: str | None
+    identity: str | None
+    mascara_do_p1: str
+    caminho: str | None
+    caminho_pedido: str | None
+    caminho_e_escolha: bool
+    origin: OrigemEmulacao
+    carta: int
+    kwargs: dict[str, Any] = field(default_factory=dict)
+    pedido: Any = None
+
+
+def _largar_o_p1_que_nasce(daemon: Any) -> None:
+    """Um pedido novo do P1 (ou o fim dele) vence o pad que ainda nascia."""
+    coop = getattr(daemon, "_coop_manager", None)
+    largar = getattr(coop, "_largar_o_p1_que_nasce", None)
+    if callable(largar):
+        largar()
 
 
 def start_gamepad_emulation(
@@ -1519,6 +1554,7 @@ def start_gamepad_emulation_desfecho(
     origin: OrigemEmulacao,
     caminho: str | None = None,
     caminho_e_escolha: bool = True,
+    no_tique: bool = False,
 ) -> str:
     """Cria o gamepad virtual com a máscara `flavor` e DIZ o que aconteceu.
 
@@ -1579,12 +1615,13 @@ def start_gamepad_emulation_desfecho(
         caminho_do_vpad,
         caminho_resolvido,
         make_virtual_pad,
-        motivo_da_degradacao,
         normalizar_caminho,
         o_aparelho_mudou,
+        o_fio_de_nascimento,
         quer_uhid,
     )
 
+    _largar_o_p1_que_nasce(daemon)
     key = normalize_flavor(
         flavor if flavor is not None else getattr(daemon.config, "gamepad_flavor", None)
     )
@@ -1639,16 +1676,76 @@ def start_gamepad_emulation_desfecho(
     # nome do pad (o uhid e o gadget em USB levam o mesmo `player`) e para a linha
     # da degradação; sem mesa, o 1 nos dois.
     carta = numero_do_nome_do_primario(daemon)
-    device: VirtualPad | None = make_virtual_pad(
-        key,
+    contexto = OP1QueNasce(
+        key=key,
+        flavor=flavor,
         identity=identity,
-        rumble_sink=make_primary_rumble_sink(daemon),
-        player=carta,
-        allow_uhid=controller_allows_uhid(daemon),
-        calibration_0x05=read_primary_calibration(daemon),
-        caminho=caminho_pedido,
-        **make_primary_replica_sinks(daemon),
+        mascara_do_p1=mascara_do_p1,
+        caminho=caminho,
+        caminho_pedido=caminho_pedido,
+        caminho_e_escolha=caminho_e_escolha,
+        origin=origin,
+        carta=carta,
+        kwargs={
+            "rumble_sink": make_primary_rumble_sink(daemon),
+            "player": carta,
+            "allow_uhid": controller_allows_uhid(daemon),
+            "calibration_0x05": read_primary_calibration(daemon),
+            "caminho": caminho_pedido,
+            **make_primary_replica_sinks(daemon),
+        },
     )
+    # `no_tique`: quem chama é o laço do tique. Com o fio de nascimento no ar, o pad
+    # é pedido na fila do coop e se instala no tique seguinte à entrega, e o
+    # desfecho é «aplicado» já no pedido. O gesto (a IPC, a janela) nasce na hora.
+    if no_tique and o_fio_de_nascimento(daemon) is not None:
+        from hefesto_dualsense4unix.daemon.subsystems.coop import get_coop_manager
+
+        coop = get_coop_manager(daemon)
+        if coop._no_fio_do_laco():
+            coop.pedir_o_p1(contexto)
+            logger.info(
+                "gamepad_emulation_pedida_ao_fio",
+                flavor=key,
+                mascara_do_p1=mascara_do_p1,
+                identity=identity,
+            )
+            return EMU_APLICADO
+    device: VirtualPad | None = make_virtual_pad(key, identity=identity, **contexto.kwargs)
+    desfecho = instalar_o_p1(daemon, device, contexto, None)
+    if desfecho != EMU_APLICADO:
+        return desfecho
+    if origin == "manual":
+        with contextlib.suppress(Exception):
+            from hefesto_dualsense4unix.utils.session import (
+                load_gamepad_preference,
+                save_gamepad_emulation,
+            )
+
+            # medido na bancada: o gesto com que o usuário diz «Sony DualSense»
+            # `gamepad.mask.set`, que grava no registro por aparelho.
+            if flavor is not None:
+                save_gamepad_emulation(True, key)
+            else:
+                _preferencia, gravada = load_gamepad_preference()
+                save_gamepad_emulation(True, gravada)
+    return desfecho
+
+
+def instalar_o_p1(
+    daemon: DaemonProtocol, device: VirtualPad | None, contexto: OP1QueNasce, ms: float | None
+) -> str:
+    """O pad do P1 nasceu (ou não): instala no daemon e devolve o desfecho `EMU_*`."""
+    from hefesto_dualsense4unix.daemon.subsystems.coop import anotar_o_nascimento
+    from hefesto_dualsense4unix.integrations.virtual_pad import (
+        caminho_resolvido,
+        motivo_da_degradacao,
+    )
+
+    anotar_o_nascimento(daemon, ms)
+    key, origin, carta = contexto.key, contexto.origin, contexto.carta
+    caminho, caminho_pedido = contexto.caminho, contexto.caminho_pedido
+    mascara_do_p1, identity = contexto.mascara_do_p1, contexto.identity
     if device is None:
         logger.warning("gamepad_emulation_start_failed", flavor=key)
         _materialize_launch_env(daemon)
@@ -1668,25 +1765,11 @@ def start_gamepad_emulation_desfecho(
     daemon.config.gamepad_flavor = key
     _guardar_o_caminho(
         daemon,
-        caminho if caminho_e_escolha else None,
+        caminho if contexto.caminho_e_escolha else None,
         origin=origin,
         da_sessao=caminho_pedido,
     )
     _set_controller_grab(daemon, True)
-    if origin == "manual":
-        with contextlib.suppress(Exception):
-            from hefesto_dualsense4unix.utils.session import (
-                load_gamepad_preference,
-                save_gamepad_emulation,
-            )
-
-            # medido na bancada: o gesto com que o usuário diz «Sony DualSense»
-            # `gamepad.mask.set`, que grava no registro por aparelho.
-            if flavor is not None:
-                save_gamepad_emulation(True, key)
-            else:
-                _preferencia, gravada = load_gamepad_preference()
-                save_gamepad_emulation(True, gravada)
     _materialize_launch_env(daemon)
     logger.info(
         "gamepad_emulation_started",
@@ -1752,6 +1835,7 @@ def stop_gamepad_emulation(
     daemon: DaemonProtocol, *, persist: bool = True, release_grab: bool = True
 ) -> None:
     """Para e descarta o gamepad virtual. Idempotente."""
+    _largar_o_p1_que_nasce(daemon)
     stop_motion_reader(daemon)
     soltar_a_ativacao(daemon)
     tinha_device = daemon._gamepad_device is not None

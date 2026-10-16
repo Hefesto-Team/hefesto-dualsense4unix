@@ -696,6 +696,7 @@ class Daemon:
     _hidraw_broker_client: Any = None
     _hidraw_broker_executor: Any = None
     _coop_manager: Any = None
+    _fio_de_nascimento: Any = None
     _hotkey_manager: Any = None
     _emulation_suppressed: bool = False
     # A tabela que age COM o jogo e o teclado «Só dentro do jogo»: travados do perfil
@@ -897,6 +898,11 @@ class Daemon:
         migrate_coop_optout()
         logger.info("daemon_starting", poll_hz=self.config.poll_hz, paused=self._paused)
         try:
+            # O-PAD-QUE-NASCE-NAO-PARA-O-TIQUE-DOS-OUTROS-01: o pad que o laço do tique
+            # pede nasce neste fio, fora do tique; sem ele (o dublê), na hora.
+            from hefesto_dualsense4unix.integrations.virtual_pad import FioDeNascimento
+
+            self._fio_de_nascimento = FioDeNascimento()
             self._tasks = [asyncio.create_task(self._poll_loop(), name="poll_loop")]
             await subir(self)
             if not self.config.ipc_enabled:  # sem soquete a esperar: pronto é o fim da 1ª fase
@@ -975,6 +981,9 @@ class Daemon:
             try:
                 await shutdown(self)
             finally:
+                fio, self._fio_de_nascimento = self._fio_de_nascimento, None
+                if fio is not None:
+                    fio.parar()
                 from hefesto_dualsense4unix.profiles.schema import (
                     registrar_declaracao_da_mesa as _soltar_a_mesa,
                 )
