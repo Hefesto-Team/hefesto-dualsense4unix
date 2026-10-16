@@ -237,14 +237,18 @@ class TestForaDoModoXboxNadaMuda:
 
     @pytest.mark.parametrize("caminho", [None, CAMINHO_DUALSENSE])
     @pytest.mark.parametrize(
-        ("mascara", "vendor"),
-        [("dualsense", SONY_VENDOR), ("xbox", XBOX360_VENDOR), ("nintendo", NINTENDO_VENDOR)],
+        ("mascara", "vendor", "no_jogo"),
+        # o DualSense sem `uhid` (aqui fora do ar) cai no Xbox 360 até o canal voltar
+        [("dualsense", XBOX360_VENDOR, "xbox"), ("xbox", XBOX360_VENDOR, "xbox"),
+         ("nintendo", NINTENDO_VENDOR, "nintendo")],
     )
-    def test_a_mascara_e_o_aparelho(self, caminho: str | None, mascara: str, vendor: int) -> None:
+    def test_a_mascara_e_o_aparelho(
+        self, caminho: str | None, mascara: str, vendor: int, no_jogo: str
+    ) -> None:
         pad = _pad(mascara, caminho)
         try:
             assert _no_de(pad).vidpid[0] == vendor, (caminho, mascara)
-            assert pad.mascara_no_jogo == mascara
+            assert pad.mascara_no_jogo == no_jogo
         finally:
             pad.stop()
 
@@ -450,13 +454,19 @@ class TestATrocaDeModoComOPadDePe:
     def test_o_cartao_dualsense_vai_ao_xbox_360_e_volta(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        # o canal próprio de pé: sem ele, o modo DualSense já é o Xbox 360
+        monkeypatch.setattr(uhid_gamepad, "uhid_available", lambda: True)
+        for nome, feito in (("start", lambda self: True), ("stop", lambda self: None),
+                            ("wait_for_bind", lambda self, timeout_s=2.0: True)):
+            monkeypatch.setattr(uhid_gamepad.UhidDualSense, nome, feito)
+        monkeypatch.setattr(gp, "controller_allows_uhid", lambda _d: True)
         registro_de_mascaras().set_mask(MACS[0], "dualsense")
         d = _daemon_do_p1(monkeypatch)
         try:
             gp.start_gamepad_emulation_desfecho(
                 d, "dualsense", origin="profile", caminho=CAMINHO_DUALSENSE
             )
-            assert _vidpid_do_p1(d)[0] == SONY_VENDOR, "premissa: o Edge (sem uhid aqui)"
+            assert d._gamepad_device.backend == "uhid", "premissa: o Edge pelo uhid"
             assert (
                 gp.start_gamepad_emulation_desfecho(
                     d, "dualsense", origin="profile", caminho=CAMINHO_XBOX
@@ -469,7 +479,7 @@ class TestATrocaDeModoComOPadDePe:
             gp.start_gamepad_emulation_desfecho(
                 d, "dualsense", origin="profile", caminho=CAMINHO_DUALSENSE
             )
-            assert _vidpid_do_p1(d)[0] == SONY_VENDOR, "a volta ao modo DualSense"
+            assert d._gamepad_device.backend == "uhid", "a volta ao modo DualSense"
         finally:
             gp.stop_gamepad_emulation(d, persist=False)
 

@@ -79,7 +79,6 @@ from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
 )
 from hefesto_dualsense4unix.integrations import virtual_pad as vp
 from hefesto_dualsense4unix.integrations.uinput_gamepad import (
-    DUALSENSE_VENDOR,
     XBOX360_VENDOR,
     UinputGamepad,
 )
@@ -131,9 +130,9 @@ def _cria(flavor: str | None, identity: str | None) -> Any:
 def test_dois_controles_com_mascaras_diferentes_nascem_com_flavors_diferentes() -> None:
     """A mordida. Mesma sessão, mesma chamada, DOIS resultados — pela escolha.
 
-    É a decisão de produto funcionando: o P2 marcado `dualsense` aparece como
-    DualSense no jogo enquanto o P1 marcado `xbox` aparece como Xbox 360, e a
-    máscara da sessão (`"xbox"`, o argumento posicional) é só o padrão herdado.
+    É a decisão de produto funcionando: o P2 marcado `dualsense` nasce com o
+    cartão DualSense enquanto o P1 marcado `xbox` nasce Xbox 360, e a máscara da
+    sessão (`"xbox"`, o argumento posicional) é só o padrão herdado.
     """
     registro_de_mascaras().set_mask(MAC_P1, "xbox")
     registro_de_mascaras().set_mask(MAC_P2, "dualsense")
@@ -147,9 +146,11 @@ def test_dois_controles_com_mascaras_diferentes_nascem_com_flavors_diferentes() 
         "dois controles com máscaras DIFERENTES gravadas nasceram com o MESMO "
         "flavor — a identidade não chegou ao `mascara_efetiva`"
     )
-    assert (pad1.vendor, pad2.vendor) == (XBOX360_VENDOR, DUALSENSE_VENDOR)
-    assert pad1.product != pad2.product
-    assert pad1.name != pad2.name
+    # sem o canal próprio (`allow_uhid=False`), o cartão DualSense veste o Xbox 360
+    # até o canal voltar (a pergunta 6 da NO-MODO-XBOX-TUDO-FUNCIONA-01)
+    assert (pad1.vendor, pad2.vendor) == (XBOX360_VENDOR, XBOX360_VENDOR)
+    assert pad2.troca_motivo == vp.MOTIVO_SEM_CANAL_PROPRIO
+    assert getattr(pad1, "troca_motivo", None) is None
 
 
 def test_arrancar_a_identidade_faz_os_dois_nascerem_iguais() -> None:

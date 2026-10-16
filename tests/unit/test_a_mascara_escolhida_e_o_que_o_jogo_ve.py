@@ -12,8 +12,8 @@ O que faltava não era mais uma combinação respeitada: era a troca dizer POR Q
 (o log e o pad só diziam «vestido»), para a tela poder explicá-la.
 
 A tabela abaixo é a régua: VID:PID literal que o kernel receberia, por
-combinação, P1 a P4, com e sem `uhid`, com e sem cartão por controle. A exceção
-única é a linha do caminho Xbox escolhido, e ela leva o motivo pendurado no pad.
+combinação, P1 a P4, com e sem `uhid`, com e sem cartão por controle. As trocas
+(o caminho Xbox escolhido; sem `uhid`, a máscara DualSense) levam o motivo no pad.
 
 MORDIDAS (cada uma reprova ao menos uma régua; devolva e confira o md5):
 tire a chamada de `_vestir_o_aparelho` da fábrica; troque `normalizar_caminho`
@@ -49,6 +49,7 @@ PRO = (0x057E, 0x2009)
 POR_MASCARA = {"dualsense": EDGE, "xbox": XBOX, "nintendo": PRO}
 JOGADORES = (1, 2, 3, 4)
 MOTIVO = "modo_xbox_escolhido"
+SEM_CANAL = "sem_canal_proprio"
 
 
 @pytest.fixture
@@ -63,8 +64,10 @@ def uhid_de_pe(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def _esperado(caminho: str | None, mascara: str) -> tuple[int, int]:
-    """A tabela, escrita à mão: só o caminho Xbox ESCOLHIDO troca a máscara."""
-    return XBOX if caminho == CAMINHO_XBOX else POR_MASCARA[mascara]
+    """A tabela sem `uhid`, escrita à mão: o caminho Xbox ESCOLHIDO troca a máscara, e
+    a máscara DualSense sem o canal próprio cai no Xbox 360 (a pergunta 6 da
+    NO-MODO-XBOX-TUDO-FUNCIONA-01, resposta de 13/10)."""
+    return XBOX if caminho == CAMINHO_XBOX or mascara == "dualsense" else POR_MASCARA[mascara]
 
 
 class TestATabelaSemUhid:
@@ -150,7 +153,7 @@ class TestATrocaDizOPorQue:
         pad = _pad(mascara, caminho)
         try:
             trocou = _no_de(pad).vidpid != POR_MASCARA[mascara]
-            esperado = MOTIVO if trocou else None
+            esperado = (MOTIVO if caminho == CAMINHO_XBOX else SEM_CANAL) if trocou else None
             assert getattr(pad, "troca_motivo", None) == esperado, (caminho, mascara)
         finally:
             pad.stop()

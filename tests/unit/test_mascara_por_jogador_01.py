@@ -202,15 +202,19 @@ def test_o_p2_que_escolheu_dualsense_numa_sessao_xbox_nasce_dualsense_edge() -> 
 
 
 @pytest.mark.usefixtures("_sem_no_de_kernel")
-def test_o_p2_que_escolheu_dualsense_sem_uhid_nasce_dualsense_edge_no_uinput() -> None:
-    """O mesmo jogador com o uhid vetado: o `uinput` veste a mesma máscara."""
+def test_o_p2_que_escolheu_dualsense_sem_uhid_guarda_o_cartao_e_veste_o_xbox_360() -> None:
+    """O mesmo jogador com o uhid vetado: o cartão fica, e o jogo vê o Xbox 360.
+
+    A pergunta 6 da NO-MODO-XBOX-TUDO-FUNCIONA-01 (13/10): o Edge no `uinput`, sem
+    hidraw, o Proton não usa; até o canal voltar, o pad é o Xbox 360.
+    """
     registro_de_mascaras().set_mask(MAC_P2, "dualsense")
 
     pad = make_virtual_pad("xbox", identity=MAC_P2, player=2, allow_uhid=False)
 
     assert isinstance(pad, UinputGamepad)
     assert pad.flavor == "dualsense"
-    assert _vid_pid_no_kernel(pad) == (DUALSENSE_VENDOR, DUALSENSE_EDGE_PRODUCT)
+    assert _vid_pid_no_kernel(pad) == (XBOX360_VENDOR, XBOX360_PRODUCT)
 
 
 @pytest.mark.usefixtures("_sem_no_de_kernel")

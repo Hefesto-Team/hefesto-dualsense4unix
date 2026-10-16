@@ -64,6 +64,11 @@ MASCARA_DO_CANAL_COMUM = "xbox"
 #: que a fábrica faz, e é este nome que o diário e o pad (`troca_motivo`) levam.
 MOTIVO_MODO_XBOX_ESCOLHIDO = "modo_xbox_escolhido"
 
+#: A outra troca, a pergunta 6 da NO-MODO-XBOX-TUDO-FUNCIONA-01 (a resposta de 13/10): o modo
+#: DualSense sem o canal próprio (o `uhid` que não sobe) cai no Xbox 360 até o
+#: canal voltar, porque o Edge no `uinput` não tem hidraw e o Proton não o usa.
+MOTIVO_SEM_CANAL_PROPRIO = "sem_canal_proprio"
+
 #: A máscara Pro Controller nasce no `uinput` em todo modo (o passo 0 da
 #: O-PRO-CONTROLLER-GANHA-O-CANAL-COM-HIDRAW-01, 16/10/2026): o winebus do Proton só dá hidraw
 #: por padrão ao DualSense, ao DualShock 4 e a volantes e manches da lista
@@ -113,33 +118,33 @@ def quer_uhid(caminho: object, mascara: object) -> bool:
     return mascara == "dualsense" and caminho_resolvido(caminho, mascara) == CAMINHO_DUALSENSE
 
 
-def mascara_no_jogo(caminho: object, mascara: str) -> str:
-    """O aparelho que o JOGO vê para este par (caminho, máscara).
+def mascara_no_jogo(caminho: object, mascara: str, *, sem_canal: bool = False) -> str:
+    """O aparelho que o JOGO vê para este par (caminho, máscara); o dono da regra.
 
-    A regra de NO-MODO-XBOX-TUDO-FUNCIONA-01, e o dono dela é este: com o modo
-    Xbox ESCOLHIDO, o jogo vê o Xbox 360 em qualquer máscara; nos outros casos,
-    vê a máscara. A combinação «modo Xbox + máscara DualSense ou Nintendo no
-    `uinput`, sem hidraw» não nasce, porque o jogo sob o Proton não a usa.
-
-    SÓ O CAMINHO ESCOLHIDO, nunca o resolvido: sem escolha, a máscara Nintendo
-    resolve para o caminho Xbox (:func:`caminho_resolvido`, o produto de antes
-    de 13/09) e continua sendo o Pro, que é o que a tela mostra com o modo de
-    fábrica aceso.
+    Com o modo Xbox ESCOLHIDO (nunca o resolvido: sem escolha, a Nintendo segue
+    o Pro), o jogo vê o Xbox 360 em qualquer máscara; com ``sem_canal`` (o par
+    pedia o `uhid` e ele não subiu), também, até o canal voltar. Nos outros
+    casos, vê a máscara. O Edge ou o Pro no `uinput`, sem hidraw, no lugar do
+    Xbox 360, não nascem: o jogo sob o Proton não os usa.
     """
     if normalizar_caminho(caminho) == CAMINHO_XBOX:
+        return MASCARA_DO_CANAL_COMUM
+    if sem_canal and quer_uhid(caminho, mascara):
         return MASCARA_DO_CANAL_COMUM
     return mascara
 
 
-def motivo_da_troca(caminho: object, mascara: str) -> str | None:
+def motivo_da_troca(caminho: object, mascara: str, *, sem_canal: bool = False) -> str | None:
     """Por que o aparelho do jogo não é a máscara do cartão — ``None`` quando é.
 
     A pergunta do :func:`mascara_no_jogo` com a resposta em palavras, para o
-    diário e a tela dizerem a troca em vez de a calarem: hoje há um motivo só, o
-    modo Xbox escolhido. Xbox em Xbox não é troca.
+    diário e a tela dizerem a troca em vez de a calarem: o modo Xbox escolhido,
+    ou o canal próprio que não subiu. Xbox em Xbox não é troca.
     """
     if mascara_no_jogo(caminho, mascara) != mascara:
         return MOTIVO_MODO_XBOX_ESCOLHIDO
+    if mascara_no_jogo(caminho, mascara, sem_canal=sem_canal) != mascara:
+        return MOTIVO_SEM_CANAL_PROPRIO
     return None
 
 
@@ -416,10 +421,12 @@ def make_virtual_pad(
         motivo = "uhid_vetado_pelo_chamador"
         logger.info("vpad_uhid_vetado_pelo_chamador_usando_uinput", player=player)
     pad = UinputGamepad.for_flavor(key, rumble_sink=rumble_sink)
-    aparelho = mascara_no_jogo(caminho, key)
+    sem_canal = motivo is not None
+    aparelho = mascara_no_jogo(caminho, key, sem_canal=sem_canal)
     if aparelho != key:
         _vestir_o_aparelho(
-            pad, aparelho, mascara=key, player=player, motivo=motivo_da_troca(caminho, key)
+            pad, aparelho, mascara=key, player=player,
+            motivo=motivo_da_troca(caminho, key, sem_canal=sem_canal),
         )
     if motivo is not None:
         # `state_full` o expõe (`gamepad_emulation.degraded_motivo`) para a
@@ -518,7 +525,9 @@ def o_aparelho_mudou(vpad: object, caminho: object, mascara: str) -> bool:
     vestido = getattr(vpad, "mascara_no_jogo", None)
     if not isinstance(vestido, str) or not vestido:
         return False
-    return vestido != mascara_no_jogo(caminho, mascara)
+    # o pad que caiu do canal próprio veste o Xbox 360 até a promoção o devolver ao `uhid`
+    sem_canal = motivo_da_degradacao(vpad) is not None
+    return vestido != mascara_no_jogo(caminho, mascara, sem_canal=sem_canal)
 
 
 __all__ = [
@@ -528,6 +537,7 @@ __all__ = [
     "LINHA_DA_PRO_NO_UINPUT",
     "MASCARA_DO_CANAL_COMUM",
     "MOTIVO_MODO_XBOX_ESCOLHIDO",
+    "MOTIVO_SEM_CANAL_PROPRIO",
     "UHID_BIND_TIMEOUT_S",
     "VirtualPad",
     "caminho_do_vpad",
