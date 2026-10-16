@@ -568,14 +568,10 @@ CSS = CSS_GLIFO + """
      um destravado: só reclamava DEPOIS do clique. O irmão é o campo do jogo —
      o Pragmata exigia também `PRAGMATA.exe` e a tela mostrava só o número.
 
-     OS DOIS SÃO `.ajuda` POR DENTRO, e isso não é economia de CSS: é o canal de
-     hover que esta página JÁ tem (`.ajuda:hover .dica{display:block}`, do
-     `topo.html`), o mesmo que o `?` do quadro usa. Inventar um segundo
-     mecanismo de dica seria a segunda gramática que esta casa persegue.
-
-     O QUE MUDA É SÓ A CARA: sem a bolinha e sem borda, na cor do alerta. O
-     `.ajuda` mede 17px e é `flex:0 0 17px` — aqui vira 13px, para caber ao lado
-     de um campo de 30px sem empurrar nada.
+     A DICA É A `.dica` QUE A PÁGINA JÁ TEM, aberta pelo hover do marcador:
+     inventar um segundo mecanismo de dica seria a segunda gramática que esta
+     casa persegue. O marcador mede 13px, para caber ao lado de um campo de 30px
+     sem empurrar nada, na cor do alerta.
 
      O CADEADO É SVG INLINE, e não um caractere: nenhuma das dez páginas usa
      emoji (medido: zero fora do latim acentuado, do travessão e do `·`), e um
@@ -1929,7 +1925,7 @@ def _conferir(html: str) -> None:
            "select já faz o perfil")
     exigir("um-so" not in html and 'class="botoes' not in html,
            "voltou o botão largo sozinho (`.um-so`) — o Ativar fica na barra de quatro")
-    exigir('<span class="ajuda">' not in html,
+    exigir(not re.search(r'\bclass="[^"]*\bajuda\b', html),
            "voltou o «?» do título da Perfis — a dica agora mora no próprio título")
 
     barra = re.search(r'<div class="barra-quatro">(.*?)</div></div>', html, re.S)
