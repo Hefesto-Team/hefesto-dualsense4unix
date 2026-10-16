@@ -185,14 +185,17 @@ class VoltaDosAcessorios:
         self, gestos: asyncio.Queue[Any], estados: asyncio.Queue[Any], agora: float
     ) -> None:
         """Trata o que as duas filas trazem, os gestos antes do estado que vem depois deles."""
-        for fila, tratar in ((gestos, self.ao_gesto), (estados, self.ao_estado)):
+        for fila, do_gesto in ((gestos, True), (estados, False)):
             while True:
                 try:
                     carga = fila.get_nowait()
                 except asyncio.QueueEmpty:
                     break
                 try:
-                    tratar(carga, agora)
+                    if do_gesto:  # chamada direta: a régua do par só enxerga quem chama
+                        self.ao_gesto(carga, agora)
+                    else:
+                        self.ao_estado(carga, agora)
                 except Exception:
                     logger.debug("volta_dos_acessorios_carga_falhou", exc_info=True)
 
