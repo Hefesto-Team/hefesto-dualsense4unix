@@ -667,6 +667,24 @@ def _nomes_de(foto: _FotoDoCatalogo | None) -> dict[str, str]:
     return foto.nomes if foto is not None else _nomes_dos_jogos()
 
 
+def _nome_no_campo(valor: str, nomes: dict[str, str]) -> str:
+    """O «Nome do jogo» mostra o nome que o catálogo conhece; o número só quando ele não sabe.
+
+    A página do todo tirou o rótulo do lado (BRIEF-T4: «Saem o número, o título do lado»), e o
+    campo com `1245620` sozinho voltava a ser o número que não diz nada (JOGO-QUE-SE-DIZ-01).
+    """
+    from hefesto_dualsense4unix.profiles.simple_match import normalize_appid
+
+    appid = normalize_appid(valor) if valor else None
+    return nomes.get(str(appid), valor) if appid is not None else valor
+
+
+def _appid_do_nome(texto: str, nomes: dict[str, str]) -> str:
+    """O caminho de volta: o nome de um jogo da Steam desta máquina vira o número dele."""
+    alvo = texto.casefold()
+    return next((appid for appid, nome in nomes.items() if nome.casefold() == alvo), texto)
+
+
 def _procedencia_do_jogo(jogo: Any) -> str:
     """De onde vem ESTE jogo — o nome que o campo «Funciona em:» mostra."""
     return str(getattr(jogo, "lancador", "") or "") or PROCEDENCIA_DA_STEAM
@@ -997,6 +1015,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     for chave in CAMPOS_DO_EDITOR_NA_PAGINA:
         if chave in editor:
             fora[f"editor.{chave.replace('_', '.')}"] = editor[chave]
+    if "jogo" in editor:
+        fora["editor.jogo"] = _nome_no_campo(str(editor["jogo"] or ""), foto.nomes)
 
     alvo_do_editor = str(editor.get("alvo") or "")
     for valor in ALVOS_DO_PERFIL:
@@ -1906,7 +1926,11 @@ def editor_jogo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
 
     if not _so_mudou(o):
         return None
-    texto = str(o.get("valor") or "").strip()
+    try:
+        nomes = _nomes_dos_jogos()
+    except Exception:
+        nomes = {}
+    texto = _appid_do_nome(str(o.get("valor") or "").strip(), nomes)
     nome = _perfil_do_editor(ctx)
     prof = _o_perfil_no_disco(nome)
     editor = _editor_de(prof)
@@ -1921,7 +1945,7 @@ def editor_jogo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     prof.match = from_simple_choice(chave, texto, regra_do_disco=prof.match)
     _gravar(prof, ctx, p)
     return _dizer(_agora_vale_em(prof, texto),
-                  **{"editor.jogo": simple_extra(prof.match) or texto})
+                  **{"editor.jogo": _nome_no_campo(simple_extra(prof.match) or texto, nomes)})
 
 
 def _classe_de_outro_app(ctx: Contexto) -> str:

@@ -23,7 +23,9 @@ MORDIDAS (cada uma foi feita e viu reprovar):
 * devolver `.ev-val select{flex:0 0 150px}`, que o `.campo select.estreito` vence ->
   `test_o_quando_divide_a_linha_com_o_comando` (o comando ficava com 22 px);
 * esconder pelo `:has(ol:empty)` ou emitir `editor.ordem.ha` sempre cheio ->
-  `test_qual_vale_primeiro_aparece_so_com_dois_perfis_do_jogo`.
+  `test_qual_vale_primeiro_aparece_so_com_dois_perfis_do_jogo`;
+* pintar o `editor.jogo` cru, ou gravar o nome como programa ->
+  `test_o_nome_do_jogo_mostra_o_nome_e_grava_o_numero`.
 """
 from __future__ import annotations
 
@@ -276,6 +278,30 @@ def test_todo_momento_do_desenho_existe_no_produto() -> None:
     bloco = bloco[:bloco.index("</select>")]
     valores = re.findall(r'<option value="([^"]*)"', bloco)
     assert [v for v in valores if v not in ("", "—")] == list(a10_perfis.EVENTOS_DO_PERFIL)
+
+
+def test_o_nome_do_jogo_mostra_o_nome_e_grava_o_numero(
+        lar: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """O rótulo do lado saiu: o campo diz «Pragmata», e escrever o nome grava o jogo da Steam.
+
+    Medido na bancada (15/10/2026): o campo «Nome do jogo» mostrava `3357650` e mais nada.
+    """
+    from hefesto_dualsense4unix.profiles.simple_match import simple_extra
+
+    monkeypatch.setattr(a10_perfis, "_nomes_dos_jogos", lambda: {"3357650": "Pragmata"})
+    monkeypatch.setattr(a10_perfis, "_ofertas_de_jogos", lambda *a, **k: [])
+    _guardar("Pragmata", 30, "steam_app_3357650")
+    _guardar("Meu jogo", 20)
+    _aberto("Pragmata")
+    ctx = _ctx("Pragmata")
+    assert a10_perfis.pacote(ctx)["editor.jogo"] == "Pragmata"
+
+    _aberto("Meu jogo")
+    resposta = a10_perfis.editor_jogo(
+        _ctx("Meu jogo"), {"valor": "pragmata", "evento": "change"}, Ponte({}))
+    assert simple_extra(loader.load_profile("Meu jogo").match) == "3357650"
+    assert resposta["mesa"]["editor.jogo"] == "Pragmata"
+    assert a10_perfis.pacote(_ctx("Meu jogo"))["editor.jogo"] == "Pragmata"
 
 
 # --- «Qual vale primeiro» -------------------------------------------------------------------------
