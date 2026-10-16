@@ -52,6 +52,7 @@ def _janelas_da_linha(cartao: desenho.SemCenso) -> list[str]:
 
 def test_o_vita3k_achado_pelo_desktop_leva_a_classe_da_janela(
         lar: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # D-1610-O-EMULADOR-ACHADO-PELO-DESKTOP-LEVA-A-JANELA-DA-TABELA
     """A linha «todos os jogos» do Vita3K casa a janela dele, no AppImage e no AUR."""
     (cartao,) = _achados(monkeypatch, {"org.vita3k.vita3k": "Vita3K"})
     assert cartao.atalhos == ("org.vita3k.vita3k",)
@@ -265,6 +266,7 @@ def test_o_serial_vem_do_hid_uniq_do_hidraw_e_do_uniq_do_evdev(tmp_path: pathlib
 
 def test_a_sonda_abre_so_o_vpad_pedido_pelo_serial_e_mede_o_aceite(
         tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # D-1610-A-SONDA-DO-JOGADOR-ESCOLHE-O-VPAD-PELO-SERIAL
     """Quatro gamepads de mesmo nome e GUID: abre o P3 pelo serial, e o laudo fecha verde."""
     medida, jogo, ensaio = _roda(tmp_path, monkeypatch, jogador=3)
     assert jogo.abertos == [103]

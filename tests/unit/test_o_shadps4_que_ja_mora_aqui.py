@@ -72,6 +72,7 @@ def test_o_cartao_do_projeto_dela_casa_o_app_id_do_run_sh(
 
 
 def test_o_launcher_qt_nao_casa(lar: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # D-1610-O-LAUNCHER-QT-DO-SHADPS4-NAO-PUXA-O-PERFIL
     """FOCO-ERRANTE-01: o launcher Qt fica vivo durante outro jogo e não pode puxar o perfil."""
     oficial, cosmic = _achados(
         monkeypatch, {_OFICIAL: "shadPS4", _COSMIC: "shadPS4 Cosmic"})
