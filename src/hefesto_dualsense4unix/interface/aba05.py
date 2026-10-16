@@ -270,16 +270,15 @@ CSS = """
                        minmax(var(--r-efeito),1fr) minmax(var(--r-acoes),1fr);
   }
   /* AS DUAS LISTAS SUSPENSAS DE CADA COLUNA (desenho A de 15/10/2026, «uma lista suspensa em cada
-     escolha»): a lista (32px), dois de vão e a frase de UMA linha da opção escolhida (14px), que não
-     quebra (até 36 letras) e some com o lugar vazio. As duas faixas pesam o mesmo que o piso; a que
-     absorve a altura que sobra continua sendo a do desenho. */
+     escolha»). A frase da opção escolhida é DICA desde 16/10/2026: mora na `data-dica` da caixa da
+     lista, pintada pelo campo da dica, e a linha não muda de altura quando a escolha muda. A caixa
+     não ocupa lugar (`display:contents`); a dica sobe a árvore até ela. */
   .efeito-lista{display:flex;flex-direction:column;justify-content:center;gap:0;min-width:0}
   .vib-efeito{flex:0 0 26px;width:100%;min-width:0;height:26px;padding:0 9px;border-radius:7px;
     border:1px solid var(--border-forte);background:var(--app-bg,var(--panel));color:var(--fg);
     font:500 12.5px 'Space Grotesk',system-ui,sans-serif;cursor:pointer}
   .vib-efeito:hover{border-color:var(--comment)}
-  .vib-dica-do-efeito{flex:0 0 12px;min-width:0;font-size:10.5px;line-height:12px;
-    color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .vib-efeito-dica{display:contents}
   .vib .acoes-col,.vib .seg{align-content:center}
   .vib .acoes-col{align-items:center}
   .quadro-topo .modo-auto{margin-left:auto}
@@ -1151,18 +1150,18 @@ def _lista_do_efeito(gesto, campo, campo_dica, nome, escolhas, rotulos, dicas):
     """Uma lista suspensa do controle: «Do estilo» primeiro, «Sem efeito» depois, as formas em seguida.
 
     O gesto do `<select>` e o campo que a pintura escreve nele têm nomes distintos: o pintor
-    acha o valor por `data-campo`, e o clique, por `data-gesto`. A frase embaixo é a da opção
-    escolhida, uma linha só.
+    acha o valor por `data-campo`, e o clique, por `data-gesto`. A frase da opção escolhida é a
+    dica da caixa em volta da lista (16/10/2026), escrita pelo campo da dica a cada tique.
     """
     opcoes = "".join(
         f'<option value="{chave}"{" selected" if i == 0 else ""}>{rotulos[chave]}</option>'
         for i, chave in enumerate(escolhas))
     return (f'<div class="efeito-lista">'
+            f'<span class="vib-efeito-dica" data-campo="{campo_dica}" data-hef-alvo="atributo" '
+            f'data-hef-atributo="data-dica" data-dica="{dicas[escolhas[0]]}">'
             f'<select class="vib-efeito" data-gesto="{gesto}" aria-label="{nome}" '
-            f'data-campo="{campo}" data-hef-alvo="valor" data-dica="{dicas[escolhas[0]]}">'
-            f'{opcoes}</select>'
-            f'<span class="vib-dica-do-efeito" data-campo="{campo_dica}" '
-            f'data-hef-alvo="texto">{dicas[escolhas[0]]}</span></div>')
+            f'data-campo="{campo}" data-hef-alvo="valor">'
+            f'{opcoes}</select></span></div>')
 
 
 def _teto_do_multiplicador(no_teto):
