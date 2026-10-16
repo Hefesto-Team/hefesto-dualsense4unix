@@ -47,7 +47,11 @@ exigir_gi_real("importa `interface.pacotes.a08_conexoes`, que carrega o GTK")
 
 from hefesto_dualsense4unix.interface import onde
 from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as a08
-from tests.unit.test_a_conexoes_cabe_na_tela import _clicar, _no_webkit
+from tests.unit.test_a_conexoes_cabe_na_tela import (  # noqa: F401 -- a fixture de módulo vem junto
+    _clicar,
+    _no_webkit,
+    um_webview_por_modulo,
+)
 from hefesto_dualsense4unix.interface.pacotes import em_fundo, nome_do_jogador
 
 TAMANHO = (1512, 860)

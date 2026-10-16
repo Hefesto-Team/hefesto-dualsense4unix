@@ -22,6 +22,7 @@ from __future__ import annotations
 import gc
 import json
 import re
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -204,19 +205,100 @@ def _pintar_as_dicas(html: str) -> str:
     return f"String(window.__hef.pintar({json.dumps({'mesa': {'dicas': html}})}))"
 
 
+#: Espera por CONDIÇÃO no lugar do relógio fixo (250 ms depois de cada passo, 300 depois de
+#: carregar): o passo seguinte sai quando o DOM parou de mudar e nenhuma animação corre, e só no
+#: teto (`TETO_DA_ESPERA_S`) se segue sem isso. Desligada (`False`) o passo seguinte sai na hora:
+#: é assim que `test_a_espera_por_condicao_...` prova que a espera existe.
+ESPERA_POR_CONDICAO = True
+QUIETO_MS = 60
+QUIETO_NA_CARGA_MS = 300
+TETO_DA_ESPERA_S = 2.0
+INTERVALO_DO_POLL_MS = 15
+#: Os WebViews abertos, um por tamanho, enquanto o módulo os reusa (`um_webview_por_modulo`).
+_ABERTOS: dict[tuple[int, int], tuple[Any, Any]] = {}
+_REUSANDO = [False]
+
+#: Pergunta ao DOM se aquietou. A primeira vez só arma o observador. Animação que não acaba
+#: (`iterations` infinito: o selo que pulsa) não conta como movimento.
+_QUIETO_JS = """(function(){
+const w = window;
+if (!w.__quieto) {
+  w.__quieto = {t: performance.now()};
+  new MutationObserver(function(){ w.__quieto.t = performance.now(); }).observe(
+    document.documentElement, {subtree: true, childList: true, attributes: true,
+                               characterData: true});
+  return 'armado';
+}
+const correndo = (document.getAnimations ? document.getAnimations() : []).filter(function(a){
+  if (a.playState !== 'running') { return false; }
+  const e = a.effect ? a.effect.getComputedTiming() : null;
+  return !(e && e.iterations === Infinity);
+}).length;
+const parado = performance.now() - w.__quieto.t;
+return (document.readyState === 'complete' && correndo === 0 && parado >= MINIMO)
+  ? 'quieto' : 'ocupado';
+})()"""
+
+
+@pytest.fixture(scope="module", autouse=True)
+def um_webview_por_modulo() -> Any:
+    """O módulo abre UM WebView por tamanho e carrega nele cada página: o processo de renderização
+    nasce uma vez, não uma por caso (~1 s cada). Quem importa só `_no_webkit` não reusa."""
+    _REUSANDO[0] = True
+    try:
+        yield
+    finally:
+        _REUSANDO[0] = False
+        _fechar_os_webviews()
+
+
+def _fechar_os_webviews() -> None:
+    abertos = list(_ABERTOS.values())
+    _ABERTOS.clear()
+    for _view, janela in abertos:
+        janela.destroy()
+    _recolher()
+
+
+def _recolher() -> None:
+    gc.collect()
+    from gi.repository import Gtk
+
+    while Gtk.events_pending():
+        Gtk.main_iteration_do(False)
+
+
 def _no_webkit(pagina: Path, tamanho: tuple[int, int], passos: list[str]) -> list[Any]:
+    if _REUSANDO[0]:
+        return _no_webkit_sem_recolher(pagina, tamanho, passos)
     try:
         return _no_webkit_sem_recolher(pagina, tamanho, passos)
     finally:
-        gc.collect()
-        from gi.repository import Gtk
+        _recolher()
 
-        while Gtk.events_pending():
-            Gtk.main_iteration_do(False)
+
+def _a_view_de(tamanho: tuple[int, int]) -> tuple[Any, Any, bool]:
+    """O WebView e a janela fora da tela deste tamanho; o terceiro valor diz se é para destruir."""
+    from gi.repository import Gtk, WebKit2
+
+    if _REUSANDO[0] and tamanho in _ABERTOS:
+        view, janela = _ABERTOS[tamanho]
+        return view, janela, False
+    view = WebKit2.WebView()
+    janela = Gtk.OffscreenWindow()
+    janela.set_default_size(*tamanho)
+    view.set_size_request(*tamanho)
+    janela.add(view)
+    janela.show_all()
+    if _REUSANDO[0]:
+        _ABERTOS[tamanho] = (view, janela)
+    return view, janela, not _REUSANDO[0]
 
 
 def _no_webkit_sem_recolher(pagina: Path, tamanho: tuple[int, int],
                             passos: list[str]) -> list[Any]:
+    import time
+
     from tests.conftest import exigir_gi_real
 
     exigir_gi_real("abre a página num WebKit")
@@ -231,13 +313,32 @@ def _no_webkit_sem_recolher(pagina: Path, tamanho: tuple[int, int],
     from hefesto_dualsense4unix.interface import hefesto_vivo
 
     respostas: list[str] = []
-    view = WebKit2.WebView()
-    janela = Gtk.OffscreenWindow()
-    janela.set_default_size(*tamanho)
-    view.set_size_request(*tamanho)
-    janela.add(view)
-    janela.show_all()
+    view, janela, destruir = _a_view_de(tamanho)
     fila = [hefesto_vivo.BOOTSTRAP, *passos]
+
+    def depois_de_aquietar(minimo_ms: int, seguir: Any) -> None:
+        """Chama `seguir` quando o DOM aquietou, ou no teto; sem a espera, na primeira folga."""
+        if not ESPERA_POR_CONDICAO:
+            GLib.idle_add(lambda: seguir() or False)
+            return
+        limite = time.monotonic() + TETO_DA_ESPERA_S
+        js = _QUIETO_JS.replace("MINIMO", str(minimo_ms))
+
+        def pergunta() -> bool:
+            def respondeu(v: Any, res: Any, _u: Any = None) -> None:
+                try:
+                    quieto = v.evaluate_javascript_finish(res).to_string() == "quieto"
+                except Exception:
+                    quieto = True
+                if quieto or time.monotonic() >= limite:
+                    seguir()
+                else:
+                    GLib.timeout_add(INTERVALO_DO_POLL_MS, pergunta)
+
+            view.evaluate_javascript(js, -1, None, None, None, respondeu, None)
+            return False
+
+        GLib.timeout_add(INTERVALO_DO_POLL_MS, pergunta)
 
     def seguinte() -> bool:
         if not fila:
@@ -249,25 +350,81 @@ def _no_webkit_sem_recolher(pagina: Path, tamanho: tuple[int, int],
                 respostas.append(v.evaluate_javascript_finish(res).to_string())
             except Exception as erro:
                 respostas.append(f"ERRO {erro}")
-            GLib.timeout_add(250, seguinte)
+            depois_de_aquietar(QUIETO_MS, seguinte)
 
         view.evaluate_javascript(fila.pop(0), -1, None, None, None, respondeu, None)
         return False
 
     def carregou(_v: Any, evento: Any) -> None:
         if evento == WebKit2.LoadEvent.FINISHED:
-            GLib.timeout_add(300, seguinte)
+            depois_de_aquietar(QUIETO_NA_CARGA_MS, seguinte)
 
-    view.connect("load-changed", carregou)
+    ligacao = view.connect("load-changed", carregou)
     view.load_uri(pagina.as_uri())
     guarda = GLib.timeout_add(60000, Gtk.main_quit)
     try:
         Gtk.main()
     finally:
         GLib.source_remove(guarda)
-        janela.destroy()
+        view.disconnect(ligacao)
+        if destruir:
+            janela.destroy()
     assert len(respostas) == len(passos) + 1, f"o WebKit parou no meio: {respostas}"
     return [json.loads(x) if x.startswith("{") else x for x in respostas[1:]]
+
+
+# ───────────────── o instrumento: a espera por condição e o WebView reusado ─────────────────
+
+_PAGINA_DA_ESPERA = (
+    '<!doctype html><meta charset="utf-8"><body><div id="e" '
+    'style="width:10px;height:10px;background:#888"></div></body>')
+#: dez mudanças de DOM a cada 30 ms (a primeira na hora): o passo seguinte só pode ler o fim
+_MEXE_O_DOM = ("(function(){let n=1; document.body.dataset.n=n; "
+               "const id=setInterval(function(){document.body.dataset.n=++n; "
+               "if(n===10){clearInterval(id);}},30); return 'mexeu';})()")
+_LE_O_DOM = "document.body.dataset.n"
+#: uma transição de 300 ms: o passo seguinte só pode ler a largura de chegada
+_ANIMA = ("(function(){const e=document.getElementById('e'); e.style.transition='width 300ms'; "
+          "void e.offsetWidth; e.style.width='200px'; return 'anima';})()")
+_LE_A_LARGURA = "getComputedStyle(document.getElementById('e')).width"
+
+
+def _a_pagina_da_espera(tmp_path: Path) -> Path:
+    pagina = tmp_path / "espera.html"
+    pagina.write_text(_PAGINA_DA_ESPERA, encoding="utf-8")
+    return pagina
+
+
+@pytest.mark.parametrize(("mexe", "le", "chegou"), [(_MEXE_O_DOM, _LE_O_DOM, "10"),
+                                                    (_ANIMA, _LE_A_LARGURA, "200px")],
+                         ids=("dom-que-muda", "transicao"))
+def test_a_espera_por_condicao_so_solta_o_passo_com_o_dom_quieto(
+        tmp_path: Path, mexe: str, le: str, chegou: str) -> None:
+    lidas = _no_webkit(_a_pagina_da_espera(tmp_path), (400, 300), [mexe, le])
+    assert lidas[1] == chegou, f"o passo seguinte leu {lidas[1]!r} no meio do movimento"
+
+
+@pytest.mark.parametrize(("mexe", "le", "chegou"), [(_MEXE_O_DOM, _LE_O_DOM, "10"),
+                                                    (_ANIMA, _LE_A_LARGURA, "200px")],
+                         ids=("dom-que-muda", "transicao"))
+def test_mordida_sem_a_espera_o_passo_seguinte_le_no_meio_do_movimento(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch, mexe: str, le: str, chegou: str) -> None:
+    """Arrancada a espera, a leitura sai na primeira folga e vê o meio: a régua de cima morde."""
+    monkeypatch.setattr(sys.modules[__name__], "ESPERA_POR_CONDICAO", False)
+    lidas = _no_webkit(_a_pagina_da_espera(tmp_path), (400, 300), [mexe, le])
+    assert lidas[1] != chegou, "a mordida não mordeu: sem a espera a leitura já chegava ao fim"
+
+
+def test_o_modulo_reusa_o_mesmo_webview_para_cada_pagina_do_mesmo_tamanho(tmp_path: Path) -> None:
+    pagina = _a_pagina_da_espera(tmp_path)
+    assert _REUSANDO[0], "a fixture de módulo não ligou o reuso"
+    _no_webkit(pagina, (410, 310), ["'um'"])
+    primeiro = _ABERTOS[(410, 310)]
+    _no_webkit(pagina, (410, 310), ["'dois'"])
+    assert _ABERTOS[(410, 310)] is primeiro and len(_ABERTOS) >= 1
+    _no_webkit(pagina, (420, 310), ["'três'"])
+    assert _ABERTOS[(410, 310)] is primeiro, "um tamanho novo não tira o que já estava aberto"
+    assert (420, 310) in _ABERTOS
 
 
 _VISTAS: dict[int, dict[str, Any]] = {}
