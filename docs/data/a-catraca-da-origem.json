@@ -52,7 +52,7 @@
       "universo": 385
     },
     "remendos-de-sintoma": {
-      "data": "2026-10-15",
+      "data": "2026-10-16",
       "nota": "remendos de sintoma por arquivo",
       "o_que_conta": "remendos de sintoma acima do teto de cada arquivo",
       "piso": 1019,
@@ -158,7 +158,7 @@
         "integrations/ondas_de_som.py": 3,
         "integrations/ponte_tentativa.py": 2,
         "integrations/prontuario_dos_jogos.py": 4,
-        "integrations/proton_pin.py": 10,
+        "integrations/proton_pin.py": 9,
         "integrations/quem_o_jogo_le.py": 3,
         "integrations/quem_ouve_o_microfone.py": 4,
         "integrations/reposicao_dos_lancadores.py": 1,
@@ -185,7 +185,7 @@
         "interface/hefesto_vivo.py": 4,
         "interface/jogar_vivo.py": 1,
         "interface/pacotes/__init__.py": 2,
-        "interface/pacotes/a01_jogar.py": 3,
+        "interface/pacotes/a01_jogar.py": 4,
         "interface/pacotes/a02_controles.py": 5,
         "interface/pacotes/a03_gatilhos.py": 1,
         "interface/pacotes/a04_iluminacao.py": 2,
@@ -215,7 +215,7 @@
         "utils/single_instance.py": 9,
         "utils/tela_de_mentira.py": 3
       },
-      "razao": "o teto desceu sozinho com o número",
+      "razao": "16/10/2026, tela-desligado-depois: a espera de até 10 s em a01_jogar._esperar_o_servico_responder é necessária enquanto a unit do serviço é Type=simple (o systemctl start volta 0,5 s antes do soquete); a cura no dono (Type=notify com READY=1 depois do ipc_server_listening) vai para a sprint O-LIGAR-O-SERVICO-ESPERA-ELE-FICAR-DE-PE-01",
       "subidas": [
         {
           "data": "2026-10-10",
@@ -234,23 +234,29 @@
           "de": 1032,
           "para": 1036,
           "razao": "A-CATRACA-DA-ORIGEM-CONTA-O-SUPPRESS-QUE-SO-ENGOLE-01, conferência de 13/10: o conjunto renasceu no topo 55e58afaf da integra/fds-2, e o código costurado depois da medida de 10/10 traz 15 suppress(Exception) que a regra nova conta (core/backend_pydualsense +3, daemon/subsystems/coop +3, daemon/subsystems/alto_falante +2, daemon/ipc_rumble_policy +2, mods/porta +2, daemon/lifecycle +1, daemon/subsystems/hotkey +1, integrations/dualsense_bt_audio +1) e 11 a menos nos cli/ e no app/ipc_bridge; nenhum arquivo do conjunto sobe; 1032 -> 1036"
+        },
+        {
+          "data": "2026-10-16",
+          "de": 1019,
+          "para": 1019,
+          "razao": "16/10/2026, tela-desligado-depois: a espera de até 10 s em a01_jogar._esperar_o_servico_responder é necessária enquanto a unit do serviço é Type=simple (o systemctl start volta 0,5 s antes do soquete); a cura no dono (Type=notify com READY=1 depois do ipc_server_listening) vai para a sprint O-LIGAR-O-SERVICO-ESPERA-ELE-FICAR-DE-PE-01"
         }
       ],
       "unidade": "remendos",
-      "universo": 391
+      "universo": 397
     },
     "tamanho": {
-      "data": "2026-10-15",
+      "data": "2026-10-16",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1099158,
+      "piso": 1112352,
       "por_item": {
-        "docs": 118856,
-        "scripts": 113520,
-        "src": 293218,
-        "tests": 573564
+        "docs": 118958,
+        "scripts": 114038,
+        "src": 297584,
+        "tests": 581772
       },
-      "razao": "o teto desceu sozinho com o número",
+      "razao": "tamanho: +13194 linhas (1099158 -> 1112352), pagas por Origem: D-1610-UM-INTERRUPTOR-SO-PARA-AS-CORRECOES; registrado no fecho, topo 6719aa29a7b7",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -437,10 +443,16 @@
           "de": 1103196,
           "para": 1108540,
           "razao": "tamanho: +5344 linhas (1103196 -> 1108540), pagas por Origem: D-1510-O-ENVELOPE-DIZ-O-QUE-O-CONTROLE-RECEBE-NOS-DOIS-TRANSPORTES; registrado no fecho, topo e4e19b1885e2"
+        },
+        {
+          "data": "2026-10-16",
+          "de": 1099158,
+          "para": 1112352,
+          "razao": "tamanho: +13194 linhas (1099158 -> 1112352), pagas por Origem: D-1610-UM-INTERRUPTOR-SO-PARA-AS-CORRECOES; registrado no fecho, topo 6719aa29a7b7"
         }
       ],
       "unidade": "linhas",
-      "universo": 2857
+      "universo": 2891
     }
   }
 }
