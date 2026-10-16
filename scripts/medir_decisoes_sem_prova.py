@@ -112,6 +112,48 @@ COLISOES_DECLARADAS = {
         "«suíte» e «partes» são palavras de processo. A colisão fica declarada "
         "porque é mais um caso do limite: o classificador lê palavra, não assunto."
     ),
+    "D-1510-O-PIPEWIRE-DA-CASA-LEVA-O-CVE-DO-DEBIAN": (
+        "É de PRODUTO: a decisão põe o patch do Debian na série do PipeWire da casa, conferido "
+        "pelo SHA-256, e `test_o_pipewire_da_casa_leva_a_cura_do_metadata.py::"
+        "test_o_cve_do_debian_vai_na_serie` mede a série. A triagem a chama de processo pela "
+        "palavra «leva» (no id e na recomendação, no sentido de «carrega»), e nenhuma palavra de "
+        "produto aparece: a decisão fala de PACOTE, não de tela. Mais um caso do limite."
+    ),
+    "D-1610-O-LIGADO-ESPERA-O-SERVICO-RESPONDER": (
+        "É de PRODUTO: o Ligado espera até 10 s o serviço responder antes de mandar o modo, e "
+        "`test_a_tela_diz_desligado_quando_o_servico_para.py::"
+        "test_o_modo_do_ligado_espera_o_servico_que_acabou_de_subir` mede a espera. A triagem a "
+        "chama de processo pela palavra «sprint» (a cura no dono vai para uma sprint própria), "
+        "dita de passagem. Se a linha do CSV um dia perder a palavra, esta declaração fica órfã "
+        "e sai."
+    ),
+    "D-1610-O-CI-TEM-PRAZO-NO-APT-E-EM-CADA-JOB": (
+        "É de PRODUTO: a decisão dá `timeout-minutes` a todo job do CI e três tentativas ao apt, "
+        "e `test_o_ci_nao_trava_no_apt.py::test_o_ci_nao_trava_no_apt_nem_espera_seis_horas` lê o "
+        "`ci.yml`. A triagem a chama de processo pela palavra «sprint» na recomendação (o vermelho "
+        "de 13/10 tem sprint própria), dita de passagem. Mais um caso do limite."
+    ),
+    "D-1610-AS-EXTENSOES-NO-UNINSTALL-FICAM-E-PARAM": (
+        "É de PRODUTO: o uninstall para as extensões vivas e guarda o código e os dados por "
+        "padrão, e `test_as_modificacoes_marcam_o_gesto_e_saem_no_uninstall.py::"
+        "test_por_padrao_o_codigo_os_dados_e_o_registro_ficam_e_o_uninstall_diz` mede o que fica. "
+        "A triagem a chama de processo pela palavra «leva» na pergunta («leva junto»), e a decisão "
+        "fala de ARQUIVOS e de PROCESSOS, não de tela. Mais um caso do limite."
+    ),
+    "D-1610-O-INSTALAR-RECUSA-SE-A-ANTERIOR-NAO-PAROU": (
+        "É de PRODUTO: o instalar de uma extensão recusa quando a anterior não parou, e "
+        "`test_as_modificacoes_marcam_o_gesto_e_saem_no_uninstall.py::"
+        "test_a_versao_anterior_que_nao_parou_recusa_e_o_codigo_antigo_fica` mede a recusa. A "
+        "triagem a chama de processo pela palavra «versão» na pergunta («a versão anterior»), que "
+        "aqui é a da extensão instalada, não a do produto. Mais um caso do limite."
+    ),
+    "D-1610-O-PROTON-NOVO-SO-ENTRA-COM-A-FICHA": (
+        "É de PRODUTO: um Proton só vira o fixado com a linha «passou» da ficha, e "
+        "`test_o_proton_novo_so_entra_se_passar.py::"
+        "test_o_pino_com_versao_sem_a_linha_passou_reprova` mede o pino. A triagem a chama de "
+        "processo pela palavra «versão» nos caminhos («troca pela versão mais nova»), e a decisão "
+        "fala de PINO e de arquivo, não de tela. Mais um caso do limite."
+    ),
 }
 
 

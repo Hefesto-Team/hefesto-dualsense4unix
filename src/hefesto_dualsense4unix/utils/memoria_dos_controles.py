@@ -449,6 +449,13 @@ CLASSIFICACAO: dict[str, tuple[str, str]] = {
     "profiles": (CONTROLES, "ajustes-por-controle (a chave controllers de cada perfil)"),
     "session.json": (CASA, "o nome do último perfil ativado; não identifica controle"),
     "active_profile.txt": (CASA, "o marcador do perfil ativo; não identifica controle"),
+    "ultimo_jogo.json": (CASA, "o nome do perfil do último jogo; não identifica controle"),
+    "usb-diario.jsonl": (
+        CASA, "o barramento da máquina: tipo, vid:pid e a porta; nunca o serial nem o endereço",
+    ),
+    "usb-vistos.json": (
+        CASA, "os aparelhos já vistos no barramento: tipo, vid:pid e a porta; nunca o serial",
+    ),
     "paused.flag": (CASA, "o daemon pausado"),
     "freestyle_ligado.flag": (CASA, "o Modo Freestyle ligado"),
     "session-antes-da-escolha.json": (
