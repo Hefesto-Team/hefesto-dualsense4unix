@@ -5633,13 +5633,15 @@ _DESLIGAR_O_RADIO = 0x02
 SEGUNDOS_DO_PS_QUE_DESLIGA: float = 10.0
 _TEMPORIZADOR_DO_PS: Callable[..., Any] = threading.Timer
 
-#: As bordas dos botões digitais da pydualsense: apertar qualquer um com o PS seguro faz do gesto
-#: um combo (os Gestos do PS da aba Navegação), e o prazo cai.
+#: As bordas dos botões da pydualsense: apertar qualquer um com o PS seguro faz do gesto um combo
+#: (os Gestos do PS da aba Navegação, e o PS com R2, L2, R1 e L1 dos acessórios, que se segura
+#: além dos 10 s), e o prazo cai. Os gatilhos contam desde o primeiro degrau; as pás do Edge só
+#: existem nele.
 _OS_OUTROS_BOTOES = (
     "triangle_pressed", "circle_pressed", "cross_pressed", "square_pressed",
-    "dpad_up", "dpad_down", "dpad_left", "dpad_right", "r1_changed", "r3_changed",
-    "l1_changed", "l3_changed", "touch_pressed", "microphone_pressed", "share_pressed",
-    "option_pressed",
+    "dpad_up", "dpad_down", "dpad_left", "dpad_right", "r1_changed", "r2_changed", "r3_changed",
+    "l1_changed", "l2_changed", "l3_changed", "touch_pressed", "microphone_pressed",
+    "share_pressed", "option_pressed", "l4_changed", "l5_changed", "r4_changed", "r5_changed",
 )
 
 

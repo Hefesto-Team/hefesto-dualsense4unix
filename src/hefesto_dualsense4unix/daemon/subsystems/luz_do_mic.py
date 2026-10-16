@@ -466,7 +466,7 @@ def _quem_ouve(uniqs: list[str], cache: dict[str, Any]) -> dict[str, Any] | None
 
 
 def _com_ouvinte(ouvintes_por_uniq: dict[str, Any] | None) -> list[str]:
-    """Os `uniq` que a PEÇA A disse ter ouvinte — e só eles vão para o medidor."""
+    """Os `uniq` que a PEÇA A disse ter ouvinte; no rádio, só eles vão ao medidor (`_a_medir`)."""
     if not ouvintes_por_uniq:
         return []
     return [
@@ -477,7 +477,7 @@ def _com_ouvinte(ouvintes_por_uniq: dict[str, Any] | None) -> list[str]:
 
 
 def _fontes_para(uniqs: list[str], mesa: list[str]) -> dict[str, str]:
-    """`{uniq: nome da fonte}` para quem tem ouvinte — com as réguas da casa.
+    """`{uniq: nome da fonte}` para quem `_a_medir` escolheu — com as réguas da casa.
 
     **Reuso, não reimplementação.** `fontes_de_captura_agora` lista as sources
     de DualSense, `casamento_usb_agora` diz quem pendura em qual dispositivo, e
@@ -520,7 +520,7 @@ def _fontes_para(uniqs: list[str], mesa: list[str]) -> dict[str, str]:
 
 
 def _medidor(cache: dict[str, Any]) -> Any:
-    """A PEÇA B, construída na PRIMEIRA vez que alguém ouve — e não antes."""
+    """A PEÇA B, construída na PRIMEIRA vez que `_a_medir` escolhe alguém — e não antes."""
     if "medidor" in cache:
         return cache["medidor"]
     classe = _da_peca(MODULO_DO_NIVEL, NOME_DO_MEDIDOR, cache)
@@ -587,10 +587,10 @@ def _escrever(backend: Any, uniq: str, valor: int | None) -> bool:
     ("apaga"), com a posse mantida. Confundir os dois é o defeito do commit
     `3d9bb7e` no byte vizinho.
 
-    A escrita **não é HID I/O**: `_PinnedPyDualSense.set_microphone_led` só
-    guarda `_mic_led_desejado` (`core/backend_pydualsense.py:1055`), e quem
-    manda o report é a thread do handle. É por isso que ela pode ser chamada
-    direto no `finally` do desligamento, quando não há executor garantido.
+    Fora do Modo Nativo a escrita não é HID I/O: `_PinnedPyDualSense.set_microphone_led`
+    só guarda `_mic_led_desejado`, e quem manda o report é a thread do handle. No Nativo o
+    backend entrega na hora o report mínimo da luz (`escrever_so_a_luz_do_mic`), um `write` só,
+    como a repintura de sempre; por isso o `finally` do desligamento a chama direto.
     """
     escrever = getattr(backend, "set_microphone_led", None)
     if not callable(escrever):

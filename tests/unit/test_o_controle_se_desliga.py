@@ -284,6 +284,31 @@ def test_o_ps_com_outro_botao_e_combo_e_nao_desliga(
     assert desligados == []
 
 
+@pytest.mark.parametrize("gatilho", ["r2_changed", "l2_changed"])
+def test_o_ps_com_o_gatilho_dos_acessorios_segurado_nao_desliga(
+    monkeypatch: pytest.MonkeyPatch,
+    prazos: list[_Prazo],
+    desligados: list[str],
+    gatilho: str,
+) -> None:
+    """**A MORDIDA.** O PS com R2 ou L2 comanda os acessórios e se segura além dos 10 s (o nível
+    ao vivo): o gatilho junto do PS é combo, e o controle segue ligado na mão de quem joga.
+
+    MORDIDA: tirar os gatilhos das bordas que cancelam o prazo reprova aqui.
+    """
+    branco = _Handle(b"/dev/hidraw-falso-5")
+    inst = _backend()
+    _connect(inst, monkeypatch, {WHITE: branco})
+
+    branco.ps_pressed(True)
+    getattr(branco, gatilho)(True)
+
+    (prazo,) = prazos
+    assert prazo.cancelado
+    prazo.vencer()
+    assert desligados == []
+
+
 def test_a_readocao_do_mesmo_handle_nao_assina_de_novo(
     monkeypatch: pytest.MonkeyPatch, prazos: list[_Prazo], desligados: list[str]
 ) -> None:
