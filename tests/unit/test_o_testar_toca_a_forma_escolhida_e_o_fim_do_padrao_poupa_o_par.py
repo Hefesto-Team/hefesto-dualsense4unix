@@ -116,6 +116,40 @@ def test_sem_escolha_e_do_estilo_tocam_o_toque_do_que_o_jogo_faria(
     assert _toques(com_toque, _QUATRO[0]) == [formas.TOQUE]
 
 
+def test_do_estilo_toca_a_forma_que_o_estilo_do_perfil_pede_como_o_tiro(
+    com_toque: _Mundo, monkeypatch: pytest.MonkeyPatch  # noqa: F811
+) -> None:
+    """«Do estilo» segue o estilo do perfil ativo pela conta do tiro, e não um Toque digitado."""
+    com_toque.mesa.volta(*_no_cabo_os_quatro(com_toque))
+    monkeypatch.setattr(formas, "POR_ESTILO", {"estilo-de-prova": formas.IMPACTO})
+    escolha = {"rumble": {"efeito_haptico": formas.DO_ESTILO}}
+    vista = {"estilo": "estilo-de-prova", "controllers": {_QUATRO[1]: escolha}}
+    monkeypatch.setattr(tato_vivo, "_VISTA_LIDA", ("prova", vista))
+    assert com_toque.sub.testar_a_haptica(_QUATRO[1], True)["forma"] == formas.IMPACTO
+    assert _toques(com_toque, _QUATRO[1]) == [formas.IMPACTO]
+
+
+def test_o_teste_le_a_escolha_do_perfil_que_esta_ativo_agora(
+    com_toque: _Mundo, monkeypatch: pytest.MonkeyPatch  # noqa: F811
+) -> None:
+    """A vista de outro perfil (a troca ainda não relida) não vale: toca o que o tiro tocaria."""
+    com_toque.mesa.volta(*_no_cabo_os_quatro(com_toque))
+    vista = {"controllers": {_QUATRO[0]: {"rumble": {"efeito_haptico": formas.SEM_EFEITO}}}}
+    monkeypatch.setattr(tato_vivo, "_VISTA_LIDA", ("outro-perfil", vista))
+    assert com_toque.sub.testar_a_haptica(_QUATRO[0], True)["forma"] == formas.TOQUE
+
+
+def test_o_clique_em_outra_grafia_do_endereco_acha_a_escolha_dele(
+    com_toque: _Mundo, monkeypatch: pytest.MonkeyPatch  # noqa: F811
+) -> None:
+    """A janela manda o endereço em maiúsculas; a escolha do perfil está em minúsculas."""
+    com_toque.mesa.volta(*_no_radio_os_quatro(com_toque))
+    _escolher(monkeypatch, {_QUATRO[3]: formas.APARO})
+    resposta = com_toque.sub.testar_a_haptica(_QUATRO[3].upper(), True)
+    assert resposta["forma"] == formas.APARO and resposta["uniq"] == _QUATRO[3]
+    assert _toques(com_toque, _QUATRO[3]) == [formas.APARO]
+
+
 def test_no_radio_a_forma_toca_pelo_tocador_do_controle_dela(
     com_toque: _Mundo, monkeypatch: pytest.MonkeyPatch  # noqa: F811
 ) -> None:

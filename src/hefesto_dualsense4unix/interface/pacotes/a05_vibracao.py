@@ -1868,7 +1868,7 @@ FRASE_SEM_HAPTICA_NESTE_CONTROLE = (
 
 @gesto("05-vibracao.html", "testar-haptica")
 def testar_haptica(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """«Háptica»: o tocador DAQUELE controle toca o par de teste até o «Parar»."""
+    """«Háptica»: o tocador DAQUELE controle toca a forma que ele escolheu até o «Parar»."""
     uniq = _uniq(o)
     if not uniq:
         raise RuntimeError(

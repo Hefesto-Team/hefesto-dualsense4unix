@@ -709,25 +709,30 @@ Controles: o que o jogo vê, ao lado do que a mão faz.
 
 ### `haptica.testar` — o botão «Háptica» da aba Vibração
 
-| Método           | Parâmetros                     | Retorno                                 |
-|------------------|--------------------------------|-----------------------------------------|
-| `haptica.testar` | `{uniq: str, ligado: bool}`    | `{status, uniq, ligado, leva, par?}`    |
+| Método           | Parâmetros                     | Retorno                                                        |
+|------------------|--------------------------------|----------------------------------------------------------------|
+| `haptica.testar` | `{uniq: str, ligado: bool}`    | `{status, uniq, ligado, leva, forma, par?, motivo_da_forma?}`  |
 
 Decisão de produto de 29/09/2026: o «Testar agora» tem dois botões, «Vibração» e
-«Háptica». Ligado, o tocador do aparelho daquele controle toca o par `(127, 127)`
-no endpoint dele (a amplitude é `nível / 255`, e com o ganho no teto, 200 %, dá
-0,996, sem cortar), com o ganho da linha «Sensor Háptico» aplicado depois (a placa
-no cabo, o conversor da ponte no rádio). É a mesma porta do rumble convertido do
-modo Xbox, com as mesmas recusas: o endpoint com fluxo de jogo, o alto-falante
-tocando pelo rádio e o ganho em 0 deixam o tocador calado, e `leva` diz se o
-caminho até o controle está de pé agora. `ligado: false` cala.
+«Háptica». Ligado, o tocador do aparelho daquele controle toca, a cada rebate, a
+forma que ele escolheu em «Efeito háptico» (`forma`), lida e tocada como o toque
+do tiro (`tato_vivo.escolhas_ativas`, `tocar_o_toque`): «Do estilo» e sem escolha
+tocam a forma do estilo (o Toque), o Som no corpo toca um grave fixo, e «Sem
+efeito» recusa com `status: "sem_efeito"` e `motivo`. O par `(127, 127)` só entra
+quando a forma não pode tocar (a longa no rádio sem fatia livre), com `par` e
+`motivo_da_forma` (a amplitude é `nível / 255`, e com o ganho no teto, 200 %, dá
+0,996, sem cortar). O ganho da linha «Sensor Háptico» vale depois (a placa no
+cabo, o conversor da ponte no rádio), com as recusas do rumble convertido do modo
+Xbox: o endpoint com fluxo de jogo, o alto-falante tocando pelo rádio e o ganho
+em 0 deixam o tocador calado, e `leva` diz se o caminho até o controle está de pé
+agora. `ligado: false` cala.
 
 **O teste que ninguém rebate solta sozinho**: a janela manda o `ligado: true` a
 cada segundo, e o daemon cala o tocador do teste que passou do teto do rumble
 fixado (`rumble.TETO_DO_RUMBLE_FIXADO_S`) sem rebate. `status` pode ser `"ok"`,
-`"sem_controle"` (o controle fora da mesa, ou sem háptica) ou `"sem_som"` (o
-subsystem do som fora do ar), os dois últimos com `motivo`. Sem `uniq` ou sem
-`ligado` booleano, o erro é de parâmetro.
+`"sem_efeito"`, `"sem_controle"` (o controle fora da mesa, ou sem háptica) ou
+`"sem_som"` (o subsystem do som fora do ar), os três últimos com `motivo`. Sem
+`uniq` ou sem `ligado` booleano, o erro é de parâmetro.
 
 ### `navegacao.interna.set` / `navegacao.foco` — a Navegação Interna
 

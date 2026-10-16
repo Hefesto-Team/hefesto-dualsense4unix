@@ -5668,15 +5668,15 @@ class IpcHandlersMixin:
         """`haptica.testar` — o botão «Háptica» da aba Vibração, num controle.
 
         A-ABA-VIBRACAO-TEM-O-SENSOR-HAPTICO-E-DOIS-TESTES-01 (02/10/2026). Params: ``{uniq: str,
-        ligado: bool}``. Ligado, o tocador do aparelho daquele controle toca o par de teste
-        (``alto_falante.PAR_DO_TESTE_DA_HAPTICA``) no endpoint dele, com o ganho da linha «Sensor
-        Háptico»; desligado, cala. A janela rebate o ligado a cada segundo e o teste que ninguém
-        rebate solta sozinho. Mora no fim da classe para nenhuma citação ``arquivo:linha`` deste
-        arquivo andar.
+        ligado: bool}``. Ligado, o tocador do aparelho daquele controle toca a forma do «Efeito
+        háptico» dele, a mesma do tiro (``alto_falante.testar_a_haptica``), com o ganho da linha
+        «Sensor Háptico»; desligado, cala. A janela rebate o ligado a cada segundo e o teste que
+        ninguém rebate solta sozinho. Mora no fim da classe para nenhuma citação ``arquivo:linha``
+        deste arquivo andar.
 
-        Responde ``{status, uniq, ligado, leva}``: ``leva`` = o caminho até o controle está de pé
-        (laço do cabo, ponte do rádio em háptica); ``sem_som`` quando o subsystem do som não está no
-        ar.
+        Responde ``{status, uniq, ligado, leva, forma}``, com ``par`` e ``motivo_da_forma`` quando
+        a forma cede ao par de teste; ``sem_efeito`` na escolha «Sem efeito» e ``sem_som`` quando o
+        subsystem do som não está no ar, os dois com ``motivo``.
         """
         uniq = params.get("uniq")
         if not isinstance(uniq, str) or not uniq.strip():
