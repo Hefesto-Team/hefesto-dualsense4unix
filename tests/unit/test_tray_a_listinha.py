@@ -214,7 +214,35 @@ def test_so_o_reconectar_nao_traz_os_radios(gtk_de_mentira: Any) -> None:
     assert _rotulos(tray) == ["———", "Reconectar controles"]
 
 
-def test_o_rotulo_do_servico_segue_o_estado(gtk_de_mentira: Any) -> None:
+@pytest.fixture
+def sincrono(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A thread worker vira chamada direta; os callbacks voltam na hora."""
+    from hefesto_dualsense4unix.app import ipc_bridge
+
+    def _run(fn: Any, ok: Any, falha: Any = None) -> None:
+        try:
+            resultado = fn()
+        except Exception as erro:
+            if falha is not None:
+                falha(erro)
+            return
+        ok(resultado)
+
+    monkeypatch.setattr(ipc_bridge, "run_in_thread", _run)
+
+
+@pytest.fixture
+def na_fila(monkeypatch: pytest.MonkeyPatch) -> list[Any]:
+    """A thread worker que NÃO roda sozinha: o que o clique mandou fica na fila."""
+    from hefesto_dualsense4unix.app import ipc_bridge
+
+    fila: list[Any] = []
+    monkeypatch.setattr(ipc_bridge, "run_in_thread",
+                        lambda fn, ok, falha=None: fila.append((fn, ok, falha)))
+    return fila
+
+
+def test_o_rotulo_do_servico_segue_o_estado(gtk_de_mentira: Any, sincrono: None) -> None:
     """Um item, dois rótulos — a forma que o usuário escolheu em 03/09/2026."""
     verbos: list[str] = []
     tray = _tray(gtk_de_mentira, on_servico=lambda v: verbos.append(v))
@@ -230,6 +258,43 @@ def test_o_rotulo_do_servico_segue_o_estado(gtk_de_mentira: Any) -> None:
     item.emitir()
 
     assert verbos == ["stop", "start"]
+
+
+def test_ligar_reiniciar_e_parar_o_servico_saem_do_fio_da_janela(
+        gtk_de_mentira: Any, na_fila: list[Any]) -> None:
+    """A unit é `Type=notify`: o `start`/`restart` só voltam com o IPC de pé (até 35 s). Chamados
+    no clique, no fio do GTK, congelariam a bandeja: vão para a thread, como o «Sair».
+    MORDIDA: volte `self.on_servico(verbo)` direto no clique e o ato roda antes da fila."""
+    verbos: list[str] = []
+    tray = _tray(gtk_de_mentira, on_servico=lambda v: verbos.append(v) or True)
+    tray._montar_os_atos_do_servico()
+    reiniciar = next(i for i in tray._menu.itens
+                     if not isinstance(i, _Separador) and i.get_label() == "Reiniciar o serviço")
+    liga_desliga = tray._menu.itens[-1]
+
+    tray._pintar_o_estado_dos_atos({"controllers": []})
+    reiniciar.emitir()
+    liga_desliga.emitir()
+    tray._pintar_o_estado_dos_atos(None)
+    liga_desliga.emitir()
+    assert verbos == [], "o systemctl rodou no fio da janela"
+    assert len(na_fila) == 3
+    for fn, _ok, _falha in na_fila:
+        fn()
+    assert verbos == ["restart", "stop", "start"]
+
+
+def test_o_servico_que_nao_pegou_vira_aviso_no_diario_e_a_bandeja_segue(
+        gtk_de_mentira: Any, sincrono: None) -> None:
+    """`False` (o `systemctl` recusou) e a exceção da thread não derrubam a bandeja."""
+    def _quebra(_v: str) -> bool:
+        raise RuntimeError("systemctl sumiu")
+
+    for ato in (lambda _v: False, _quebra):
+        tray = _tray(gtk_de_mentira, on_servico=ato)
+        tray._montar_os_atos_do_servico()
+        tray._pintar_o_estado_dos_atos(None)
+        tray._menu.itens[-1].emitir()
 
 
 def test_o_modo_desconhecido_nao_mexe_nos_radios(gtk_de_mentira: Any) -> None:

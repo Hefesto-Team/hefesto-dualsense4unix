@@ -300,7 +300,7 @@ class AppTray:
         reiniciar = Gtk.MenuItem(label=_("Reiniciar o serviço"))
         reiniciar.set_use_underline(False)
         reiniciar.connect("activate", lambda _w: self._chamar_sem_cair(
-            lambda: self.on_servico("restart")))
+            lambda: self._mexer_no_servico("restart")))
         self._menu.append(reiniciar)
 
         self._servico_item = Gtk.MenuItem(label=_("Parar o serviço"))
@@ -352,7 +352,29 @@ class AppTray:
         if self.on_servico is None:
             return
         self._chamar_sem_cair(
-            lambda: self.on_servico("stop" if self._servico_de_pe else "start"))
+            lambda: self._mexer_no_servico("stop" if self._servico_de_pe else "start"))
+
+    def _mexer_no_servico(self, verbo: str) -> None:
+        """`restart`, `start` e `stop` fora do fio da janela, como o «Sair» (`_ao_sair`).
+
+        A unit é `Type=notify`: o `start` e o `restart` só voltam com o IPC de pé (até o
+        `TimeoutStartSec` dela), e chamar na thread do GTK congelaria a bandeja nesse tempo.
+        """
+        servico = self.on_servico
+        if servico is None:
+            return
+        from hefesto_dualsense4unix.app.ipc_bridge import run_in_thread
+
+        def _terminou(deu_certo: Any) -> bool:
+            if not deu_certo:
+                logger.warning("apptray_servico_nao_pegou", verbo=verbo)
+            return False
+
+        def _nao_pegou(erro: Exception) -> bool:
+            logger.warning("apptray_servico_nao_pegou", verbo=verbo, erro=str(erro))
+            return False
+
+        run_in_thread(lambda: servico(verbo), _terminou, _nao_pegou)
 
     @staticmethod
     def _chamar_sem_cair(acao: Any) -> None:
