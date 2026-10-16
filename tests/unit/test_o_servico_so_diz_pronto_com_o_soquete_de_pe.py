@@ -230,12 +230,13 @@ async def test_ipc_essencial_que_falha_nao_diz_pronto(
 
 @pytest.mark.asyncio
 async def test_sem_notify_socket_o_daemon_sobe_e_para_calado(
-        cena: _Cena, monkeypatch: pytest.MonkeyPatch) -> None:
+        cena: _Cena, ouvinte: socket.socket, monkeypatch: pytest.MonkeyPatch) -> None:
     """O daemon avulso: nada enviado, nada levantado."""
     monkeypatch.delenv("NOTIFY_SOCKET", raising=False)
     d = _daemon(cena, ipc=True)
     await _subir_e_parar(d, cena)
     assert cena.escutava_no_aviso == [True]
+    assert _recebidas(ouvinte) == [], "sem NOTIFY_SOCKET o aviso achou um destino"
 
 
 def test_o_stop_diz_parando_uma_vez(cena: _Cena, ouvinte: socket.socket) -> None:
