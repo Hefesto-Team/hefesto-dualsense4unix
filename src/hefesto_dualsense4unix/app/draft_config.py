@@ -396,6 +396,11 @@ class DraftConfig(BaseModel):
     source_tabela_no_jogo: bool | None = None
     source_remapeamento: dict[str, str] | None = None
     source_movimento: Any | None = None
+    #: A acessibilidade do perfil (o modo do botão, a curva dos analógicos, o cursor): o draft
+    #: não as edita, só as leva de volta, para o Salvar de qualquer aba não as apagar.
+    source_ativacao: Any | None = None
+    source_analogicos: Any | None = None  # (noqa-acento)
+    source_cursor: Any | None = None
 
     source_name: str | None = None
 
@@ -478,6 +483,9 @@ class DraftConfig(BaseModel):
             source_tabela_no_jogo=profile.tabela_no_jogo,
             source_remapeamento=profile.remapeamento,
             source_movimento=profile.movimento,
+            source_ativacao=profile.ativacao,  # (noqa-acento)
+            source_analogicos=profile.analogicos,  # (noqa-acento)
+            source_cursor=profile.cursor,
             source_name=profile.name,
         )
 
@@ -613,6 +621,9 @@ class DraftConfig(BaseModel):
             tabela_no_jogo=self.source_tabela_no_jogo,
             remapeamento=self.source_remapeamento,
             movimento=self.source_movimento,
+            ativacao=self.source_ativacao,  # (noqa-acento)
+            analogicos=self.source_analogicos,  # (noqa-acento)
+            cursor=self.source_cursor,
             mouse=mouse_cfg,
             mic=mic_cfg,
             speaker=speaker_cfg,
