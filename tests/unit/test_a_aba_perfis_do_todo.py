@@ -245,6 +245,24 @@ def test_o_quando_so_aceita_os_momentos_da_lista_e_o_clique_solto_nao_grava(lar:
     assert loader.load_profile("Ao pausar").evento is None
 
 
+def test_o_relato_do_alvo_e_do_momento_diz_o_rotulo_e_nao_o_valor_gravado(lar: Path) -> None:
+    """O diário lê «Navegação» e «Controle conectado», nunca `navegacao` nem `controle_conectado`.
+
+    MORDIDA: devolver `{novo}` ou `{momento}` cru à frase reprova aqui.
+    """
+    _guardar("Ao conectar")
+    _aberto("Ao conectar")
+    ctx, ponte = _ctx("Ao conectar"), Ponte({})
+    relato = a10_perfis.editor_alvo(ctx, {"v": "navegacao"}, ponte)["relato"]
+    assert relato.endswith("· aplica em Navegação")
+    a10_perfis.editor_alvo(ctx, {"v": "eventos"}, ponte)
+    relato = a10_perfis.editor_quando(
+        ctx, {"valor": "controle_conectado", "evento": "change"}, ponte)["relato"]
+    assert relato.endswith("· quando: Controle conectado")
+    assert set(a10_perfis.ROTULO_DO_ALVO) == set(a10_perfis.ALVOS_DO_PERFIL)
+    assert set(a10_perfis.ROTULO_DO_MOMENTO) == set(a10_perfis.EVENTOS_DO_PERFIL)
+
+
 def test_todo_momento_do_desenho_existe_no_produto() -> None:
     """Os valores do `<select>` do «Quando» são os que o gesto aceita, nem um a mais."""
     html = _desenho()

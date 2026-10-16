@@ -1997,6 +1997,13 @@ def detectar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 ALVOS_DO_PERFIL = ("jogos", "navegacao", "programas", "eventos")
 EVENTOS_DO_PERFIL = ("cena", "menu", "pausa", "controle_conectado", "programa_aberto",
                      "hora_marcada", "meu_comando")
+#: O que a frase da tela diz de cada valor: o rótulo do botão e da opção, nunca o valor gravado.
+ROTULO_DO_ALVO = {"jogos": "Jogos", "navegacao": "Navegação", "programas": "Programas",
+                  "eventos": "Eventos"}
+ROTULO_DO_MOMENTO = {"cena": "Cena", "menu": "Menu", "pausa": "Pausa",
+                     "controle_conectado": "Controle conectado",
+                     "programa_aberto": "Programa aberto", "hora_marcada": "Hora marcada",
+                     "meu_comando": "Meu comando"}
 
 
 @gesto("10-perfis.html", "editor.alvo", grava="_gravar")
@@ -2018,7 +2025,7 @@ def editor_alvo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     if novo != "eventos":
         mudanca.update(evento=None, evento_comando=None)
     _gravar(prof.model_copy(update=mudanca), ctx, p)
-    return _dizer(f"{mensagem_do_salvar(prof.name)} · aplica em {novo}")
+    return _dizer(f"{mensagem_do_salvar(prof.name)} · aplica em {ROTULO_DO_ALVO[novo]}")
 
 
 @gesto("10-perfis.html", "editor.quando", grava="_gravar")
@@ -2042,7 +2049,8 @@ def editor_quando(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
         return None
     _gravar(prof.model_copy(update={"evento": momento, "evento_comando": comando or None}),
             ctx, p)
-    return _dizer(f"{mensagem_do_salvar(prof.name)} · quando: {momento or '—'}")
+    rotulo = ROTULO_DO_MOMENTO[momento] if momento else "—"
+    return _dizer(f"{mensagem_do_salvar(prof.name)} · quando: {rotulo}")
 
 
 def _valores_da_nova_ordem(atuais: list[int], teto: int) -> list[int]:
@@ -2151,8 +2159,7 @@ def _nascer(ctx: Contexto, p: Any, regra: Any, base: str) -> str:
     prioridade = ProfilesActionsMixin._prioridade_acima_dos_catch_all(so_o_cache)
     _gravar(Profile(name=nome, match=regra, priority=prioridade), ctx, p)
     _ESCOLHIDO = nome
-    return (f"Perfil criado: {nome} · preferência {prioridade}, acima dos "
-            f"que valem sempre")
+    return f"Perfil criado: {nome}"
 
 
 def criar_para_o_jogo(ctx: Contexto, p: Any, *, classes: tuple[str, ...],
