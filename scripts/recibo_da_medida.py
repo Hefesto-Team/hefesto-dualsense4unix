@@ -205,6 +205,9 @@ _GUARDA = 3
 _VALIDADE = 30 * 86400
 _SINAIS = {"@sempre", "@dia", "@head"}
 _IGNORADOS_QUE_ENTRAM = ("scripts",)
+#: o bytecode deriva do `.py` (que entra na chave) e do Python (que entra no ambiente); os próprios portões o
+#: escrevem durante a corrida, e na chave ele a fazia mudar sob o pé deles
+_BYTECODE = re.compile(r"(?:^|/)__pycache__/|\.py[co]$")
 _CHROME = "/usr/bin/google-chrome"
 
 
@@ -253,7 +256,7 @@ class Entradas:
         self._indice: dict[str, str] | None = None
 
     def _lista(self, *args: str) -> set[str]:
-        return set(_lista_z(_git(self.raiz, "ls-files", "-z", *args)))
+        return {c for c in _lista_z(_git(self.raiz, "ls-files", "-z", *args)) if not _BYTECODE.search(c)}
 
     def base(self) -> set[str]:
         if self._base is None:
