@@ -318,6 +318,20 @@ def _das_modificacoes(lugares: Any = None) -> tuple[desenho.SemCenso, ...]:
     return tuple(fora)
 
 
+#: A classe de janela que o emulador anuncia, por CHAVE DE CARTÃO achado pelo `.desktop`.
+#:
+#: O cartão que o produto acha sozinho só sabe o nome do arquivo (`org.vita3k.vita3k`), e a janela
+#: do Vita3K se anuncia pelo nome do executável (`Vita3K` no AppImage, `vita3k` no AUR): sem esta
+#: linha a «todos os jogos» do emulador não casa janela nenhuma e o perfil nunca entra. A chave é a
+#: do cartão (o `stem` em minúsculas, o ponto trocado por hífen), nunca o `stem`; a comparação do
+#: perfil ignora a caixa, então uma grafia cobre as duas. **Derivado do fonte, ainda NÃO MEDIDO na
+#: janela viva** (o `app_id` do Wayland, degrau 3b da O-VITA3K-RECEBE-O-DUALSENSE-INTEIRO-01): a
+#: bancada confirma ou troca a linha.
+_JANELAS_DO_EMULADOR_ACHADO: dict[str, tuple[str, ...]] = {
+    "org-vita3k-vita3k": ("Vita3K",),
+}
+
+
 def _achados_por_conteudo() -> tuple[desenho.SemCenso, ...]:
     """Os lançadores que a máquina DECLARA ser, e que ninguém digitou."""
     from hefesto_dualsense4unix.integrations import jogos_locais as jl
@@ -330,7 +344,9 @@ def _achados_por_conteudo() -> tuple[desenho.SemCenso, ...]:
     de_fabrica |= {atalho for atalho in desenho.A_STEAM.atalhos}
     return tuple(
         desenho.SemCenso(chave=stem.lower().replace(".", "-"), nome=nome,
-                         atalhos=(stem,), comandos=())
+                         atalhos=(stem,), comandos=(),
+                         janelas=_JANELAS_DO_EMULADOR_ACHADO.get(
+                             stem.lower().replace(".", "-"), ()))
         for stem, nome in sorted(achados.items())
         if stem not in de_fabrica
     )
