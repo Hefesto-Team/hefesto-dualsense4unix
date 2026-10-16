@@ -1961,6 +1961,14 @@ class IpcHandlersMixin:
                         result["gamepad_emulation"]["canal_sem_imu_linhas"] = list(
                             _sem_imu.chaves_fora_do_ar()
                         )
+                # A forma, o canal e as funções que chegam ao jogo (O-ESTADO-DIZ-O-QUE-O-JOGO-VE…)
+                result["gamepad_emulation"]["o_que_o_jogo_ve"] = None
+                with contextlib.suppress(Exception):
+                    result["gamepad_emulation"]["o_que_o_jogo_ve"] = self._o_que_o_jogo_ve_de(
+                        gp_dev,
+                        _as_str_or_none(getattr(self.controller, "primary_uniq", None)),
+                        result.get("transport"),
+                    )
             # nunca aqui (o state_full roda a 20 Hz — seria flood).
             with contextlib.suppress(Exception):
                 from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
@@ -2405,6 +2413,17 @@ class IpcHandlersMixin:
                 backend, motivo = vpad_by_uniq[uniq]
             entry["vpad_backend"] = backend
             entry["vpad_motivo"] = motivo
+            entry["o_que_o_jogo_ve"] = None
+            with contextlib.suppress(Exception):
+                vpad = (
+                    gp_dev
+                    if entry.get("is_primary") and gp_dev is not None
+                    else self._coop_vpad_de(uniq)
+                )
+                if vpad is not None:
+                    entry["o_que_o_jogo_ve"] = self._o_que_o_jogo_ve_de(
+                        vpad, uniq, entry.get("transport")
+                    )
 
         self._agenda_de_identidade().esquecer_ausentes(
             {
@@ -2963,6 +2982,31 @@ class IpcHandlersMixin:
         raw_backend = getattr(vpad, "backend", None)
         backend = raw_backend if isinstance(raw_backend, str) and raw_backend else None
         return backend, motivo_da_degradacao(vpad)
+
+    def _coop_vpad_de(self, uniq: str | None) -> Any:
+        """O vpad vivo do jogador secundário `uniq`, ou ``None``."""
+        coop = getattr(self.daemon, "_coop_manager", None) if self.daemon is not None else None
+        players = getattr(coop, "_players", None) if coop is not None else None
+        if not uniq or not isinstance(players, dict):
+            return None
+        return getattr(players.get(uniq), "vpad", None)
+
+    def _o_que_o_jogo_ve_de(
+        self, vpad: Any, uniq: str | None, transporte: object
+    ) -> dict[str, Any] | None:
+        """O que o jogo vê de `vpad`, com o movimento e as chaves do controle `uniq`."""
+        from hefesto_dualsense4unix.core import roteador_de_movimento as roteador
+        from hefesto_dualsense4unix.core.virtual_motion import REGISTRO
+        from hefesto_dualsense4unix.integrations.o_que_o_jogo_ve import o_que_o_jogo_ve
+
+        store = getattr(self, "store", None)
+        return o_que_o_jogo_ve(
+            vpad,
+            roteador.da_peca(store, uniq, roteador.ativo(store)),
+            transporte=transporte,
+            giro_ligado=REGISTRO.estado(uniq).giroscopio,
+            toque_ligado=REGISTRO.touchpad_ligado(uniq),
+        )
 
 
     _AUTHORITY_VALUES = ("game", "daemon", "unknown")

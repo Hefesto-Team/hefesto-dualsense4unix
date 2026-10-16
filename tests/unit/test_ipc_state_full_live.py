@@ -239,6 +239,7 @@ class TestPlayerPorControle:
              "nascimento": None,
              "brilho_da_barra": None, "brilho_das_luzes": None,
              "inputs": None, "vpad_backend": None, "vpad_motivo": None,
+             "o_que_o_jogo_ve": None,
              "adaptador": None, "hz_movimento": None, "hz_voz": None,
              "ponte_do_radio": None, "sinal_dbm": None,
              "haptica_pct": HAPTICA_PCT_PADRAO, "haptica_alcanca": True,
