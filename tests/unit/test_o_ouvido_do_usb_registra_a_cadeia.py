@@ -8,12 +8,15 @@ Mordidas:
 * tirar o ``devnum`` da comparação em ``Comparador.observar``: a volta rápida some no laço sem
   netlink, e :func:`test_sem_netlink_o_laco_acha_a_volta_pelo_devnum` reprova;
 * gravar o ``serial`` na foto: :func:`test_nenhum_serial_no_diario` reprova pelo portão de endereço
-  de rádio.
+  de rádio;
+* tirar o ``except OSError`` de ``ouvido_do_usb_loop``: o ``ENOBUFS`` de uma rajada mata o ouvido
+  para a sessão inteira, e os dois testes de ``test_o_erro_do_netlink_*`` reprovam.
 """
 
 from __future__ import annotations
 
 import asyncio
+import errno
 import importlib.util
 import inspect
 import socket
@@ -251,6 +254,55 @@ def test_com_netlink_o_remove_do_aparelho_rele_e_o_da_interface_nao(
     finally:
         kernel.close()
     assert _linhas(tmp_path)[0]["como"] == "netlink"
+
+
+def _espera_que_falha(pendentes: list[OSError]) -> Any:
+    """O ``_esperar_evento`` de mentira: levanta o erro posto na fila, senão nada chega."""
+
+    async def esperar(_sock: socket.socket, _prazo: float) -> bool:
+        if pendentes:
+            raise pendentes.pop(0)
+        await asyncio.sleep(0.01)
+        return False
+
+    return esperar
+
+
+@pytest.mark.parametrize(
+    ("falha", "como_segue"), [(errno.ENOBUFS, "netlink"), (errno.EBADF, "releitura")])
+def test_o_erro_do_netlink_rele_e_o_ouvido_segue(
+        sys_usb: SysDeMentira, tmp_path: Path, relogio: Relogio,
+        monkeypatch: pytest.MonkeyPatch, falha: int, como_segue: str) -> None:
+    """A saída cujo aviso o kernel jogou fora (``ENOBUFS``) se acha pela releitura; com o socket
+    caído (``EBADF``), o laço passa à releitura periódica e ainda acha a volta pelo ``devnum``."""
+    ouvido = _ouvido(sys_usb, tmp_path, relogio)
+    daemon = _Daemon()
+    pendentes: list[OSError] = []
+    monkeypatch.setattr(ou, "_esperar_evento", _espera_que_falha(pendentes))
+    nosso, kernel = socket.socketpair(socket.AF_UNIX, socket.SOCK_DGRAM)
+    nosso.setblocking(False)
+
+    async def cenario() -> None:
+        laco = asyncio.create_task(ou.ouvido_do_usb_loop(
+            daemon, ouvido, abrir=lambda: nosso, acomodar=0.01, intervalo=0.02, prazo=0.05))
+        await _ate(lambda: _linhas(tmp_path))
+        adaptador = dict(sys_usb.nos[ADAPTADOR])
+        sys_usb.tirar(ADAPTADOR)
+        pendentes.append(OSError(falha, "erro de mentira"))
+        await _ate(lambda: (du.SAIU, ADAPTADOR) in _eventos(tmp_path), prazo=2.0)
+        assert not laco.done(), "o erro do netlink matou o ouvido"
+        if como_segue == "releitura":
+            sys_usb.por(ADAPTADOR, adaptador)
+            await _ate(lambda: (du.VOLTOU, ADAPTADOR) in _eventos(tmp_path), prazo=2.0)
+        daemon.parar = True
+        await asyncio.wait_for(laco, 2.0)
+
+    try:
+        asyncio.run(cenario())
+    finally:
+        kernel.close()
+        nosso.close()
+    assert _eventos(tmp_path)[-1][0] == du.PAROU_DE_OUVIR
 
 
 def test_a_mensagem_do_kernel_se_le_por_campo() -> None:

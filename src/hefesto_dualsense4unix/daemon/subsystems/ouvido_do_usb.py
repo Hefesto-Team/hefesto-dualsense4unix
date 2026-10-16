@@ -10,6 +10,7 @@ o mesmo laço relê a cada :data:`RELEITURA_SEM_NETLINK_S`, e a reenumeração s
 from __future__ import annotations
 
 import asyncio
+import errno
 import socket
 import time
 from collections.abc import Callable
@@ -178,8 +179,20 @@ async def ouvido_do_usb_loop(
                 await asyncio.sleep(intervalo)
                 mudou = True
             else:
-                mudou = await _esperar_evento(sock, prazo)
-                if mudou:
+                try:
+                    mudou = await _esperar_evento(sock, prazo)
+                except OSError as erro:
+                    # ENOBUFS: a rajada estourou a fila e o kernel jogou eventos fora; o que se
+                    # perdeu só a releitura recupera. Outro erro: o socket caiu, e o laço segue
+                    # pela releitura periódica em vez de parar de ouvir.
+                    mudou = True
+                    if erro.errno == errno.ENOBUFS:
+                        logger.info("ouvido_do_usb_eventos_perdidos")
+                    else:
+                        logger.warning("ouvido_do_usb_netlink_caiu", erro=str(erro))
+                        sock.close()
+                        sock = None
+                if mudou and sock is not None:
                     await asyncio.sleep(acomodar)
                     _drenar(sock)
             await asyncio.to_thread(ouvido.passo, mudou=mudou)
