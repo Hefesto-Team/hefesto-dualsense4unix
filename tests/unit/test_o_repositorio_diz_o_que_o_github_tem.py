@@ -4,14 +4,18 @@ Três coisas se medem aqui:
 
 1. o esquema do arquivo (e que cada função que ele declara tem quem a aplique);
 2. o nome de cada check obrigatório existe como job num workflow, e o workflow roda em PR;
-3. o aplicador contra um `gh` de mentira: um executável no PATH que guarda o estado de um
-   repositório falso em JSON, grava as chamadas e recusa o que a API real recusaria.
+3. o aplicador contra um `gh` de mentira que guarda o estado de um repositório falso em JSON,
+   grava as chamadas e recusa o que a API real recusaria. Responde EM PROCESSO (o mesmo texto,
+   sem criar um processo por chamada); só `test_o_script_roda_como_comando` e as chamadas de
+   `subprocess` ao `gh` passam pelo executável no PATH.
 
 Nada daqui fala com o GitHub.
 """
 from __future__ import annotations
 
+import contextlib
 import importlib.util
+import io
 import itertools
 import json
 import os
@@ -384,6 +388,40 @@ class Mentira:
         self.log.write_text("")
 
 
+_CODIGO_DO_GH_DE_MENTIRA: Any = None
+
+
+def _gh_em_processo(
+    cmd: list[str], input: str | None = None, **_ignorado: Any
+) -> subprocess.CompletedProcess[str]:
+    """O `gh` de mentira respondendo SEM criar processo: o mesmo texto do executável.
+
+    O script é de módulo e sai por `sys.exit`; roda-se o código compilado (uma vez) num espaço de
+    nomes novo, com a entrada, a saída e os argumentos trocados, e o `SystemExit` é o código de
+    saída. O estado e o log continuam nos arquivos que o ambiente aponta, como no executável.
+    """
+    global _CODIGO_DO_GH_DE_MENTIRA
+    if _CODIGO_DO_GH_DE_MENTIRA is None:
+        corpo = GH_DE_MENTIRA.read_text(encoding="utf-8").split("\n", 1)[1]
+        _CODIGO_DO_GH_DE_MENTIRA = compile(corpo, str(GH_DE_MENTIRA), "exec")
+    saida, erro = io.StringIO(), io.StringIO()
+    argv, entrada = sys.argv, sys.stdin
+    sys.argv, sys.stdin = [cmd[0], *cmd[1:]], io.StringIO(input or "")
+    codigo = 0
+    try:
+        with contextlib.redirect_stdout(saida), contextlib.redirect_stderr(erro):
+            try:
+                exec(_CODIGO_DO_GH_DE_MENTIRA, {"__name__": "__gh_de_mentira__"})
+            except SystemExit as fim:
+                codigo = fim.code if isinstance(fim.code, int) else (0 if fim.code is None else 1)
+    finally:
+        sys.argv, sys.stdin = argv, entrada
+    # `text=True` do subprocess lê com quebra de linha universal: o `\r\n` do cabeçalho vira `\n`
+    return subprocess.CompletedProcess(
+        cmd, codigo, saida.getvalue().replace("\r\n", "\n"), erro.getvalue()
+    )
+
+
 @pytest.fixture
 def gh(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Mentira:
     pasta = tmp_path / "mentira"
@@ -417,7 +455,9 @@ def gh_aplicado(gh: Mentira) -> Mentira:
 
 
 def rodar(*args: str, arquivo: Path = ARQUIVO) -> int:
-    return int(aplicar.principal(["--repo", REPO, "--arquivo", str(arquivo), *args]))
+    em_processo = aplicar.Gh(rodar=_gh_em_processo)
+    argv = ["--repo", REPO, "--arquivo", str(arquivo), *args]
+    return int(aplicar.principal(argv, gh=em_processo))
 
 
 def test_conferir_diz_a_diferenca_e_nao_escreve(gh: Mentira, capsys: Capsys) -> None:
@@ -596,7 +636,9 @@ def test_a_guarda_recusa_conta_errada_e_nao_escreve(gh: Mentira, capsys: Capsys)
 
 def test_a_guarda_recusa_dono_de_fora(gh: Mentira, capsys: Capsys) -> None:
     gh.mudar(slug="outra-organizacao/ensaio")
-    codigo = aplicar.principal(["--repo", "outra-organizacao/ensaio", "--aplicar"])
+    codigo = aplicar.principal(
+        ["--repo", "outra-organizacao/ensaio", "--aplicar"], gh=aplicar.Gh(rodar=_gh_em_processo)
+    )
     assert codigo == 2 and "recusado" in capsys.readouterr().out
     assert gh.escritas() == []
 
@@ -643,6 +685,38 @@ def test_o_resumo_e_uma_linha_e_o_detalhe_vai_para_o_arquivo(
     linhas = detalhe.read_text().splitlines()
     assert any(x.startswith("falta: rulesets") for x in linhas)
     assert any(x.startswith("falta: seguranca.") for x in linhas)
+
+
+def test_o_gh_em_processo_responde_o_que_o_executavel_responde(gh: Mentira) -> None:
+    """O atalho só vale se for o mesmo `gh`: status, corpo e código de saída, sucesso e recusa."""
+    pedidos = [
+        (["gh", "api", "-i", "-X", "GET", f"repos/{REPO}"], None),
+        (["gh", "api", "-i", "-X", "POST", f"repos/{REPO}/rulesets", "--input", "-"],
+         json.dumps({"name": "x"})),
+        (["gh", "api", "-i", "-X", "GET", "rota/que/nao/existe"], None),
+    ]
+    for cmd, entrada in pedidos:
+        real = subprocess.run(cmd, input=entrada, capture_output=True, text=True, check=False)
+        mentida = _gh_em_processo(cmd, input=entrada)
+        assert (mentida.returncode, mentida.stdout) == (real.returncode, real.stdout), cmd
+    assert any(c["m"] == "POST" for c in gh.chamadas()), "o log tem de receber as chamadas dos dois"
+
+
+def test_o_aplicador_fala_pelo_transporte_que_recebe(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`Gh(rodar=…)` é o único caminho: sem processo nenhum quando o transporte é outro."""
+    visto: list[list[str]] = []
+
+    def transporte(cmd: list[str], **_: Any) -> subprocess.CompletedProcess[str]:
+        visto.append(cmd)
+        return subprocess.CompletedProcess(cmd, 0, "HTTP/2.0 200 OK\r\n\r\n{\"a\": 1}", "")
+
+    def proibido(*_: Any, **__: Any) -> None:
+        raise AssertionError("o transporte injetado não podia chamar o subprocess")
+
+    monkeypatch.setattr(subprocess, "run", proibido)
+    status, dados = aplicar.Gh(rodar=transporte).chamar("GET", "repos/x/y")
+    assert (status, dados) == (200, {"a": 1})
+    assert visto and visto[0][:5] == ["gh", "api", "-i", "-X", "GET"]
 
 
 def test_o_script_roda_como_comando(gh: Mentira) -> None:

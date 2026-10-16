@@ -573,7 +573,14 @@ def carregar(caminho: Path) -> dict[str, Any]:
 
 
 class Gh:
-    """Toda conversa com o GitHub passa por aqui: `gh api -i`, para ver o status."""
+    """Toda conversa com o GitHub passa por aqui: `gh api -i`, para ver o status.
+
+    O transporte é injetado: o padrão é o `subprocess.run` que chama o `gh` de verdade, e quem
+    prova o aplicador contra um servidor de mentira passa outro, que responde sem criar processo.
+    """
+
+    def __init__(self, rodar: Callable[..., Any] = subprocess.run) -> None:
+        self._rodar = rodar
 
     def chamar(
         self, metodo: str, caminho: str, corpo: Any = None, extra: list[str] | None = None
@@ -583,7 +590,7 @@ class Gh:
         if corpo is not None:
             cmd += ["--input", "-"]
             entrada = json.dumps(corpo)
-        r = subprocess.run(cmd, input=entrada, capture_output=True, text=True, check=False)
+        r = self._rodar(cmd, input=entrada, capture_output=True, text=True, check=False)
         saida = r.stdout.replace("\r\n", "\n")
         if not saida.startswith("HTTP/"):
             raise ErroDeServidor(f"{metodo} {caminho}: sem resposta ({r.stderr.strip()[:160]})")
