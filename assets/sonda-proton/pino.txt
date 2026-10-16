@@ -5,6 +5,7 @@
 # só lança um sonda.exe cujo sha256 bate com este, como o install faz com o
 # Proton. Enquanto o primeiro binário do CI não sai, o sha256 é «a-medir» e a
 # rodada só aceita o binário compilado ali mesmo, na VM, com --compilar.
+# Não vai à máquina de quem usa (nenhum instalador o leva): só a rodada o lê.
 name=sonda-proton-1
 url=https://github.com/Hefesto-Team/hefesto-dualsense4unix/releases/download/sonda-proton-1/sonda.exe
 sha256=a-medir

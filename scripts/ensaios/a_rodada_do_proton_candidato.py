@@ -190,15 +190,16 @@ def main(argv: Sequence[str] | None = None) -> int:
         print("a rodada só roda numa VM ou no CI: o vpad de prova apareceria aos jogos",
               file=sys.stderr)
         return RC_FORA_DA_VM
+    pino = (RAIZ / "assets/sonda-proton/pino.txt").read_text(encoding="utf-8")
     conf = dict(
         linha.split("=", 1)
-        for linha in (RAIZ / "assets/sonda-proton.conf").read_text(encoding="utf-8").splitlines()
+        for linha in pino.splitlines()
         if "=" in linha and not linha.lstrip().startswith("#")
     )
     if conf.get("sha256") != sha256(args.sonda) and not (
         args.compilar and conf.get("sha256") == "a-medir"
     ):
-        print("o sonda.exe não bate com assets/sonda-proton.conf", file=sys.stderr)
+        print("o sonda.exe não bate com assets/sonda-proton/pino.txt", file=sys.stderr)
         return RC_SONDA_SEM_PINO
 
     f = qp.ficha(args.proton, args.fixada)
