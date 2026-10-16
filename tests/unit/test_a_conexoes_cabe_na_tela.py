@@ -400,6 +400,7 @@ def _a_pagina_da_espera(tmp_path: Path) -> Path:
                          ids=("dom-que-muda", "transicao"))
 def test_a_espera_por_condicao_so_solta_o_passo_com_o_dom_quieto(
         tmp_path: Path, mexe: str, le: str, chegou: str) -> None:
+    # D-1610-A-REGUA-DE-TELA-ESPERA-PELO-DOM-QUIETO
     lidas = _no_webkit(_a_pagina_da_espera(tmp_path), (400, 300), [mexe, le])
     assert lidas[1] == chegou, f"o passo seguinte leu {lidas[1]!r} no meio do movimento"
 

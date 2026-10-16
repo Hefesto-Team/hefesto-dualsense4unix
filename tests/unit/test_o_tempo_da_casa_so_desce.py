@@ -235,6 +235,7 @@ def _roda(raiz: Path, casa: Path, *args: str, base: str | None = None) -> int:
 
 def test_dentro_da_folga_nada_muda(
         mundo: tuple[Path, Path], capsys: pytest.CaptureFixture[str]) -> None:
+    # D-1610-O-TEMPO-DA-CASA-SO-DESCE
     raiz, casa = mundo
     antes = (raiz / CADERNO_DO_TEMPO).read_bytes()
     _escreve_casa(casa, suite_s=2600.0, rapido_s=44, completo_s=70)  # +8% / +10% / +17%: ruído

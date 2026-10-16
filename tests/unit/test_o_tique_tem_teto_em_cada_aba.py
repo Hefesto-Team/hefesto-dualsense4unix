@@ -165,6 +165,7 @@ def _p95(valores: list[float]) -> float:
 def test_o_tique_de_cada_aba_tem_teto(
     casa: SimpleNamespace, monkeypatch: pytest.MonkeyPatch  # noqa: F811
 ) -> None:
+    # D-1610-A-JANELA-DE-TESTE-ANDA-NA-CADENCIA-ACELERADA
     """Dez abas, 40 tiques cada, a CPU do fio do GTK em cada tique: mediana até"""
     # O teto é do custo do PRODUTO: sob `--cov` a mediana da aba 10 ia de 6,5 ms
     # a 10,9 ms aqui e a 15,5 ms no CI de 13/10, acima do teto.
