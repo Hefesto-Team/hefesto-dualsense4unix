@@ -85,9 +85,7 @@ TIQUES_DEPOIS_DE_SAIR = 20
 
 def _depois_de_sair(fora: Any) -> float:
     """De onde a régua de quem saiu conta: uma leitura escondida e um batimento"""
-    import hefesto_vivo as hv
-
-    return float(fora.marcos["saiu"] + 2 * hv.LeitorDoEstado.SEGUNDOS_ENTRE_LEITURAS_ESCONDIDA)
+    return float(fora.marcos["saiu"] + 2 * fora.leitura_escondida_s)
 
 
 def _roteiro_o_controle_sai_escondido(fora: Any, piloto: Any, _t: float) -> bool:

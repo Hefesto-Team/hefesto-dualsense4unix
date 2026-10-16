@@ -43,6 +43,14 @@ ASSENTAR_S = 0.6
 
 ATRASO_NA_VOLTA_S = 0.12
 
+#: A cadência do produto (`hv.TIQUE_MS`) e a ACELERADA que as réguas de contagem usam: contar 120
+#: tiques de 100 ms eram 12 s de relógio por cenário, e a régua conta tiques, não segundos.
+#: Todo tempo absoluto do cenário (o assentar, o atraso do daemon na volta, a pergunta do roteiro)
+#: anda na mesma razão (`_razao`). Cada página guarda UM cenário no tempo de verdade
+#: (`CENARIO_NO_TEMPO_REAL`), porque a regressão de 29/08 só apareceu aos 181 s.
+TIQUE_REAL_MS = 100
+CADENCIA_ACELERADA_MS = 10
+
 
 def _estado_da_fixture(n: int) -> dict[str, Any]:
     d: dict[str, Any] = json.loads(FIXTURE.read_text(encoding="utf-8"))
@@ -150,17 +158,23 @@ def _gtk() -> Any:
     return Gtk
 
 
-def _nominal_s(quantos: int) -> float:
-    """Quanto `quantos` tiques duram na cadência do produto (`hv.TIQUE_MS`)."""
+def _nominal_s(quantos: int, fora: Any = None) -> float:
+    """Quanto `quantos` tiques duram na cadência da corrida (a do produto, `hv.TIQUE_MS`)."""
     import hefesto_vivo as hv
 
-    return float(quantos * hv.TIQUE_MS) / 1000.0
+    ms = getattr(fora, "cadencia_ms", None) or hv.TIQUE_MS
+    return float(quantos * ms) / 1000.0
+
+
+def _razao(fora: Any) -> float:
+    """Quanto a corrida anda mais depressa que o produto: 1 no tempo real, 10 na acelerada."""
+    return float(TIQUE_REAL_MS) / float(getattr(fora, "cadencia_ms", None) or TIQUE_REAL_MS)
 
 
 def _teto_da_fase_s(fora: Any, quantos: int) -> float:
     """O teto de uma fase de `quantos` tiques: `VEZES_O_NOMINAL` o nominal dela."""
     proprio = getattr(fora, "teto_da_fase_s", None)
-    return float(proprio) if proprio else VEZES_O_NOMINAL * _nominal_s(quantos)
+    return float(proprio) if proprio else VEZES_O_NOMINAL * _nominal_s(quantos, fora)
 
 
 def _maior_buraco(de: float, tiques: list[float], agora: float) -> float:
@@ -190,11 +204,12 @@ def _virgula(x: float) -> str:
     return f"{x:.1f}".replace(".", ",")
 
 
-def _o_tique_parou_com_o_laco_andando(buraco: float, laco: float | None) -> bool:
+def _o_tique_parou_com_o_laco_andando(
+        buraco: float, laco: float | None, fora: Any = None) -> bool:
     """A fome é do PRODUTO? O tique e o `passo` do roteiro rodam no mesmo laço"""
     if laco is None:
         return False
-    return buraco > 3 * max(laco, _nominal_s(1))
+    return buraco > 3 * max(laco, _nominal_s(1, fora))
 
 
 def _sem_fome(fora: Any, *nomes: str) -> None:
@@ -203,7 +218,7 @@ def _sem_fome(fora: Any, *nomes: str) -> None:
         if nome in fora.famintas:
             tiques, segundos, buraco = fora.famintas[nome]
             laco = getattr(fora, "lacos", {}).get(nome)
-            if _o_tique_parou_com_o_laco_andando(buraco, laco):
+            if _o_tique_parou_com_o_laco_andando(buraco, laco, fora):
                 causa = (f"o laço do GTK andou (maior buraco dele: {_virgula(laco or 0.0)} "
                          "s) e o tique parou: é o produto, e não a máquina")
             else:
@@ -213,10 +228,41 @@ def _sem_fome(fora: Any, *nomes: str) -> None:
                 f"{_virgula(segundos)} s (maior buraco: {_virgula(buraco)} s): {causa}")
 
 
+def _na_cadencia(mp: pytest.MonkeyPatch, hv: Any, ms: int) -> None:
+    """A cadência do piloto em `ms`: o `TIQUE_MS` do módulo e o intervalo do leitor do estado.
+
+    O `LeitorDoEstado` leva `TIQUE_MS / 1000` como padrão da DEFINIÇÃO (lido quando o módulo
+    carrega), então trocar a constante não o alcança: o `__init__` ganha o intervalo da cadência."""
+    from hefesto_dualsense4unix.interface.pacotes import a05_vibracao as a05
+
+    razao = float(TIQUE_REAL_MS) / float(ms)
+    mp.setattr(hv, "TIQUE_MS", ms)
+    # Os períodos do produto que a régua conta em tiques andam na mesma razão: sem isto, a fase
+    # escondida de 40 tiques (0,4 s) não veria o coração (1 s) nem a leitura escondida (1 s).
+    leitor = hv.LeitorDoEstado
+    for dono, nome in ((leitor, "SEGUNDOS_ENTRE_LEITURAS_ESCONDIDA"),
+                       (hv.Piloto, "SEGUNDOS_ENTRE_LEITURAS_DOS_EXTERNOS"),
+                       (a05, "SEGUNDOS_ENTRE_BATIMENTOS")):
+        mp.setattr(dono, nome, getattr(dono, nome) / razao)
+    original = hv.LeitorDoEstado.__init__
+
+    def init(self: Any, *args: Any, **kwargs: Any) -> None:
+        kwargs.setdefault("intervalo", ms / 1000.0)
+        original(self, *args, **kwargs)
+
+    mp.setattr(hv.LeitorDoEstado, "__init__", init)
+
+
 def _correr(publicado: pathlib.Path, pagina: str, n: int, roteiro: Any, *,
             anda: str = "", teto_s: float | None = None,
-            ajuste: Any = None, teto_da_fase_s: float | None = None) -> SimpleNamespace:
-    """Roda o piloto oculto na página pedida, com `n` controles, e segue o `roteiro`."""
+            ajuste: Any = None, teto_da_fase_s: float | None = None,
+            tempo_real: bool = False) -> SimpleNamespace:
+    """Roda o piloto oculto na página pedida, com `n` controles, e segue o `roteiro`.
+
+    Por padrão a corrida anda na cadência ACELERADA (`CADENCIA_ACELERADA_MS`): o `hv.TIQUE_MS` e
+    o intervalo do leitor do estado (que o guarda como padrão de definição) são trocados, e o
+    resto do tempo do cenário anda na mesma razão. `tempo_real=True` é a cadência do produto."""
+    cadencia_ms = None if tempo_real else CADENCIA_ACELERADA_MS
     gtk = _gtk()
     from gi.repository import GLib
 
@@ -232,10 +278,11 @@ def _correr(publicado: pathlib.Path, pagina: str, n: int, roteiro: Any, *,
     fora = SimpleNamespace(ticks=[], pinturas=[], marcos={}, estado=estado,
                            pactl=[], ponte=_PonteDeMentira(), mudas=False,
                            avaliados={}, piloto=None, avisos=[], acabou=False,
-                           comeco=0.0, fases={}, famintas={}, passos=[], lacos={},
-                           teto_da_fase_s=teto_da_fase_s)
+                           leitura_escondida_s=0.0, comeco=0.0, fases={}, famintas={},
+                           passos=[], lacos={},
+                           teto_da_fase_s=teto_da_fase_s, cadencia_ms=cadencia_ms)
     if teto_s is None:
-        teto_s = 8 * max(_teto_da_fase_s(fora, TIQUES_POR_FASE), _teto_da_espera_s()) + 30.0
+        teto_s = 8 * max(_teto_da_fase_s(fora, TIQUES_POR_FASE), _teto_da_espera_s(fora)) + 30.0
 
     def pactl(argv: list[str]) -> str:
         fora.pactl.append((time.monotonic(), " ".join(argv)))
@@ -255,8 +302,11 @@ def _correr(publicado: pathlib.Path, pagina: str, n: int, roteiro: Any, *,
         mp.setattr(ondas_de_som, "_LIGADO", [False])
         mp.setattr(a02, "no_do_microfone",
                    lambda c: f"mic-{c.get('uniq')}" if isinstance(c, dict) else "")
+        if cadencia_ms is not None:
+            _na_cadencia(mp, hv, cadencia_ms)
         if ajuste is not None:
             ajuste(mp, hv)
+        fora.leitura_escondida_s = hv.LeitorDoEstado.SEGUNDOS_ENTRE_LEITURAS_ESCONDIDA
         piloto = hv.Piloto(_args())
         fora.piloto = piloto
         original_perguntar = piloto.ponte.perguntar
@@ -320,7 +370,7 @@ def _correr(publicado: pathlib.Path, pagina: str, n: int, roteiro: Any, *,
             return False
 
         guarda = GLib.timeout_add(int(teto_s * 1000), gtk.main_quit)
-        GLib.timeout_add(50, passo)
+        GLib.timeout_add(max(5, int(50 / _razao(fora))), passo)
         try:
             gtk.main()
         finally:
@@ -340,9 +390,9 @@ def _inteira(carga: dict[str, Any]) -> bool:
     return "alvo" in carga and "fita" in carga
 
 
-def _teto_da_espera_s() -> float:
+def _teto_da_espera_s(fora: Any = None) -> float:
     """O teto de uma ESPERA pelo produto (o `escondeu`, o `voltou`, uma leitura)."""
-    return VEZES_O_NOMINAL * _nominal_s(TIQUES_POR_FASE)
+    return VEZES_O_NOMINAL * _nominal_s(TIQUES_POR_FASE, fora)
 
 
 def _roteiro_esconde_e_volta(fora: Any, piloto: Any, _t: float) -> bool:
@@ -360,7 +410,7 @@ def _roteiro_esconde_e_volta(fora: Any, piloto: Any, _t: float) -> bool:
         if "escondeu" not in marcos:
             if piloto._escondida:
                 marcos["escondeu"] = time.monotonic()
-            elif time.monotonic() - marcos["esconde"] < _teto_da_espera_s():
+            elif time.monotonic() - marcos["esconde"] < _teto_da_espera_s(fora):
                 return True
             else:
                 return _mostrar(fora, piloto)
@@ -370,7 +420,7 @@ def _roteiro_esconde_e_volta(fora: Any, piloto: Any, _t: float) -> bool:
         return _mostrar(fora, piloto)
     if "voltou" not in marcos:
         if piloto._escondida or "escondeu" not in marcos:
-            return bool(time.monotonic() - marcos["mostra"] < _teto_da_espera_s())
+            return bool(time.monotonic() - marcos["mostra"] < _teto_da_espera_s(fora))
         marcos["voltou"] = time.monotonic()
     return not _fase(fora, "de volta", _janela_escondida(fora)[1], quantos, teto)
 
@@ -378,7 +428,7 @@ def _roteiro_esconde_e_volta(fora: Any, piloto: Any, _t: float) -> bool:
 def _mostrar(fora: Any, piloto: Any) -> bool:
     """A volta: o daemon passa a demorar como o de verdade, e a janela reaparece."""
     fora.marcos["mostra"] = time.monotonic()
-    fora.estado.atraso_s = ATRASO_NA_VOLTA_S
+    fora.estado.atraso_s = ATRASO_NA_VOLTA_S / _razao(fora)
     piloto.tela.janela.show_all()
     return True
 
@@ -389,7 +439,7 @@ CENARIOS = [(p, n) for p in ("01-jogar.html", "02-controles.html", "08-conexoes.
 
 def _janela_escondida(fora: Any) -> tuple[float, float]:
     """A fase escondida, com UM dono: `(de, ate)`, para o roteiro contar e as"""
-    de = fora.marcos["escondeu"] + ASSENTAR_S
+    de = fora.marcos["escondeu"] + ASSENTAR_S / _razao(fora)
     ate = next((t for t, escondida, _ in fora.avisos
                 if not escondida and t >= fora.marcos["esconde"]),
                fora.marcos.get("mostra", float("inf")))
@@ -418,10 +468,8 @@ def _a_escondida_nao_trabalha(fora: Any) -> None:
     assert not pinturas, (
         f"{len(pinturas)} pintura(s) com a janela escondida em "
         f"{fora.pagina} com {fora.n} controle(s)")
-    import hefesto_vivo as hv
-
     leituras = dentro[-1].leituras - dentro[0].leituras
-    passo = hv.LeitorDoEstado.SEGUNDOS_ENTRE_LEITURAS_ESCONDIDA
+    passo = fora.leitura_escondida_s
     teto = int((dentro[-1].t - dentro[0].t) / passo) + 1
     assert leituras <= teto, (
         f"{leituras} leitura(s) do estado em {dentro[-1].t - dentro[0].t:.1f} s "
@@ -443,14 +491,17 @@ def _o_coracao_bate_escondido(fora: Any) -> None:
 
 
 def _com_carga(roteiro: Any, *, buraco_s: float = 0.0, lento_s: float = 0.0) -> Any:
-    """O roteiro com a máquina ocupada, SEM carregar a máquina do usuário."""
+    """O roteiro com a máquina ocupada, SEM carregar a máquina do usuário.
+
+    A carga é pedida em segundos DO PRODUTO e anda na razão da corrida: um buraco de 1,4 s no
+    tempo real é um buraco de 0,14 s na acelerada, os mesmos 14 tiques."""
     def com_carga(fora: Any, piloto: Any, t: float) -> bool:
         seguir = roteiro(fora, piloto, t)
         if buraco_s and "esconde" in fora.marcos and "buraco" not in fora.marcos:
             fora.marcos["buraco"] = time.monotonic()
-            time.sleep(buraco_s)
+            time.sleep(buraco_s / _razao(fora))
         if lento_s and piloto._escondida:
-            time.sleep(lento_s)
+            time.sleep(lento_s / _razao(fora))
         return bool(seguir)
 
     return com_carga
@@ -468,10 +519,16 @@ def ids_dos_cenarios(cenarios: list[tuple[str, int]]) -> list[str]:
     return [f"{p[:2]}-{n}-controles" for p, n in cenarios]
 
 
+#: Um cenário por página no TEMPO DE VERDADE (a cadência do produto): a regressão de 29/08 só
+#: apareceu aos 181 s, e a aceleração mede tiques, não o relógio. É o de um controle.
+CENARIO_NO_TEMPO_REAL = 1
+
+
 def esconde_e_volta_de(publicado: pathlib.Path, cenario: tuple[str, int]) -> SimpleNamespace:
     """O cenário: o piloto oculto na página, 40 tiques à vista, escondido e de volta."""
     pagina, n = cenario
-    fora = _correr(publicado, pagina, n, _roteiro_esconde_e_volta)
+    fora = _correr(publicado, pagina, n, _roteiro_esconde_e_volta,
+                   tempo_real=n == CENARIO_NO_TEMPO_REAL)
     fora.pagina, fora.n = pagina, n
     return fora
 

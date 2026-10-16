@@ -19,6 +19,7 @@ from tests.unit.janela_aberta_comum import (
     _args,
     _Estado,
     _gtk,
+    _na_cadencia,
     _PonteDeMentira,
 )
 from tests.unit.test_o_app_responde_na_hora import casa  # noqa: F401 (a casa da régua 1)
@@ -34,6 +35,12 @@ ASSENTAR = 3
 TETO_DA_MEDIANA_MS = 15.0
 TETO_DO_P95_MS = 40.0
 TETO_DA_ABA_S = 20.0
+
+#: A régua mede a CPU de cada tique, não o ritmo. A cadência do produto (100 ms) é trocada por esta
+#: para as dez abas passarem em ~1 s cada, não em ~4. Não é 10 ms: o tique que custa mais que o
+#: `TIQUE_MS` faz o produto pular o próximo, e a 10 ms a mediana de algumas abas (6 a 11 ms) já
+#: o faria pular quase sempre, medindo tiques que não rodaram. A 25 ms só o tique lento pula.
+CADENCIA_DA_MEDIDA_MS = 25
 
 
 @contextmanager
@@ -62,6 +69,7 @@ def _medir_as_dez(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[float]]:
     from hefesto_dualsense4unix.interface import hefesto_vivo as hv
 
     estado = _Estado(4)
+    _na_cadencia(monkeypatch, hv, CADENCIA_DA_MEDIDA_MS)
     monkeypatch.setattr(hv.mesa_viva, "estado_do_daemon", estado)
     monkeypatch.setattr(hv, "ponte", _PonteDeMentira())
     monkeypatch.setattr(audio_saida, "rodar_leitura", lambda _argv: "")
