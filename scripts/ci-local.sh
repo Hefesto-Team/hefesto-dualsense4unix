@@ -92,14 +92,16 @@ done
 #                              de novo, antes dele, o job de que ele depende); o `needs:` que sobra continua valendo
 # EM-TAG|workflow.yml|motivo   o workflow dispara em tag: o act roda o evento `push` com `ref: refs/tags/v<versão do pyproject>`
 # FORA-DE-CASA|job|motivo      não roda em casa, com o motivo medido
-linhas() {
-  cat "$JOBS_TXT" 2>/dev/null | grep -vE '^\s*(#|$)'
-}
+# A tabela e os workflows são lidos UMA vez por corrida (nem o jobs.txt nem o YAML mudam enquanto o
+# script roda): cada pergunta «o job existe? em que arquivo?» era um awk por workflow, e a
+# conferência da tabela as fazia dezenas de vezes (0,8 s só para listar).
+_LINHAS="$(grep -vE '^\s*(#|$)' "$JOBS_TXT" 2>/dev/null)"
+linhas() { [ -z "$_LINHAS" ] || printf '%s\n' "$_LINHAS"; }
 campo() { linhas | awk -F'|' -v t="$1" -v j="$2" -v n="$3" '$1==t && $2==j {print $n}'; }
 
-[ -n "$(linhas)" ] || { echo "ci-local: não há tabela de jobs ($JOBS_TXT)" >&2; exit 2; }
+[ -n "$_LINHAS" ] || { echo "ci-local: não há tabela de jobs ($JOBS_TXT)" >&2; exit 2; }
 
-jobs_do_yaml() { # "arquivo job" de cada job de cada workflow (id exato, sob `jobs:`)
+_jobs_do_yaml_lidos() { # "arquivo job" de cada job de cada workflow (id exato, sob `jobs:`)
   local f
   for f in "$RAIZ"/.github/workflows/*.yml; do
     [ -f "$f" ] || continue
@@ -109,24 +111,34 @@ jobs_do_yaml() { # "arquivo job" de cada job de cada workflow (id exato, sob `jo
       d && /^  [A-Za-z0-9_-]+:[[:space:]]*$/ {j=$1; sub(/:$/, "", j); print f, j}' "$f"
   done
 }
+_JOBS_YAML="$(_jobs_do_yaml_lidos)"
+declare -A ARQUIVO_DO_JOB=()
+while read -r _arq _job; do
+  [ -n "$_job" ] && [ -z "${ARQUIVO_DO_JOB[$_job]:-}" ] && ARQUIVO_DO_JOB[$_job]="$_arq"
+done <<< "$_JOBS_YAML"
 
-arquivo_do_job() { jobs_do_yaml | awk -v j="$1" '$2==j {print $1; exit}'; }
+jobs_do_yaml() { [ -z "$_JOBS_YAML" ] || printf '%s\n' "$_JOBS_YAML"; }
+
+arquivo_do_job() { [ -z "${ARQUIVO_DO_JOB[$1]:-}" ] || printf '%s\n' "${ARQUIVO_DO_JOB[$1]}"; }
 
 # A tabela e os workflows têm de dizer a mesma coisa: job novo sem decisão, job que sumiu
 # da tabela, passo `PULA-NO-RAPIDO` que o YAML já não tem (o `--rapido` rodaria a suíte
 # inteira sem ninguém notar) e `FORA-DE-CASA` sem motivo são recusados, rc=2.
 conferir_tabela() {
-  local erros=0 j dup t p
+  local erros=0 j dup t p n
+  declare -A na_tabela=()
+  while read -r j n; do na_tabela[$j]="$n"; done < <(
+    linhas | awk -F'|' '$1=="ROLA" || $1=="FORA-DE-CASA" {n[$2]++} END {for (j in n) print j, n[j]}')
   while read -r _ j; do
     [ -n "$j" ] || continue
-    t="$(linhas | awk -F'|' -v j="$j" '($1=="ROLA" || $1=="FORA-DE-CASA") && $2==j' | wc -l)"
+    t="${na_tabela[$j]:-0}"
     [ "$t" = 1 ] || { echo "ci-local: o job '$j' está $t vez(es) na tabela (tem de estar uma: ROLA ou FORA-DE-CASA)" >&2; erros=1; }
   done < <(jobs_do_yaml)
   dup="$(jobs_do_yaml | awk '{print $2}' | sort | uniq -d | head -1)"
   [ -z "$dup" ] || { echo "ci-local: o job '$dup' existe em mais de um workflow; a tabela o nomeia só pelo id" >&2; erros=1; }
   while IFS='|' read -r tipo j resto _; do
     [ -n "$j" ] || continue
-    [ "$tipo" = EM-TAG ] || jobs_do_yaml | awk -v j="$j" '$2==j {ok=1} END{exit !ok}' \
+    [ "$tipo" = EM-TAG ] || [ -n "${ARQUIVO_DO_JOB[$j]:-}" ] \
       || { echo "ci-local: a tabela cita o job '$j', que nenhum workflow tem" >&2; erros=1; }
     case "$tipo" in
       ROLA) case "$resto" in rapido|completo) ;; *) echo "ci-local: ROLA|$j|$resto: o modo é rapido ou completo" >&2; erros=1 ;; esac ;;

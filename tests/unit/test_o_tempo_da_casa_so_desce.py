@@ -95,3 +95,69 @@ def test_mordida_com_o_bytecode_devolvido_a_chave_a_chave_muda(
     _escreve_bytecode(arvore)
     assert _chave(arvore, ["src/**", "scripts/**"]) != antes, (
         "a mordida não mordeu: com o bytecode na chave, o `.pyc` novo tinha de mudá-la")
+
+
+# --- o ci-local lê a tabela e os workflows UMA vez ------------------------------------------------
+
+CI_LOCAL = RAIZ / "scripts" / "ci-local.sh"
+
+
+def _awks_da_corrida(tmp_path: Path, *args: str, script: Path = CI_LOCAL) -> int:
+    """Quantos `awk` o script cria numa corrida: um `awk` de mentira os conta e passa adiante."""
+    import os
+    import shutil
+
+    awk_real = shutil.which("awk")
+    assert awk_real
+    pasta = tmp_path / "shim"
+    pasta.mkdir()
+    registro = tmp_path / "awk.log"
+    registro.write_text("")
+    contador = pasta / "awk"
+    contador.write_text(f'#!/bin/bash\necho x >> "{registro}"\nexec {awk_real} "$@"\n')
+    contador.chmod(0o755)
+    env = {**os.environ, "PATH": f"{pasta}{os.pathsep}{os.environ['PATH']}"}
+    feito = subprocess.run(["bash", str(script), *args], capture_output=True, text=True,
+                           env=env, check=False, timeout=60)
+    assert feito.returncode in (0, 1), feito.stderr
+    return len(registro.read_text().splitlines())
+
+
+# A tabela da casa tem dezenas de jobs. Lida uma vez, a conferência gasta ~23 `awk` e o preço não
+# cresce com a tabela; relida a cada pergunta, eram 749 (0,8 s só para listar) e crescia com ela.
+TETO_DE_AWK = 60
+
+
+@pytest.mark.parametrize("args", (["--listar"], ["--rapido", "--conferir"]),
+                         ids=("listar", "conferir-rapido"))
+def test_o_ci_de_casa_le_a_tabela_e_os_workflows_uma_vez(tmp_path: Path, args: list[str]) -> None:
+    quantos = _awks_da_corrida(tmp_path, *args)
+    assert 0 < quantos <= TETO_DE_AWK, (
+        f"o ci-local criou {quantos} `awk` (teto {TETO_DE_AWK}): a tabela ou os workflows "
+        "voltaram a ser relidos a cada pergunta")
+
+
+def test_mordida_o_ci_de_casa_que_rele_a_cada_pergunta_estoura_o_teto(tmp_path: Path) -> None:
+    """A versão de antes da cura (cada pergunta relê os workflows) tem de passar do teto."""
+    texto = CI_LOCAL.read_text(encoding="utf-8")
+    trocas = (
+        ('jobs_do_yaml() { [ -z "$_JOBS_YAML" ] || printf \'%s\\n\' "$_JOBS_YAML"; }',
+         "jobs_do_yaml() { _jobs_do_yaml_lidos; }"),
+        ('arquivo_do_job() { [ -z "${ARQUIVO_DO_JOB[$1]:-}" ] || printf \'%s\\n\' '
+         '"${ARQUIVO_DO_JOB[$1]}"; }',
+         "arquivo_do_job() { jobs_do_yaml | awk -v j=\"$1\" '$2==j {print $1; exit}'; }"),
+        ('[ "$tipo" = EM-TAG ] || [ -n "${ARQUIVO_DO_JOB[$j]:-}" ]',
+         '[ "$tipo" = EM-TAG ] || jobs_do_yaml | awk -v j="$j" \'$2==j {ok=1} END{exit !ok}\''),
+    )
+    torto = texto
+    for antes, depois in trocas:
+        assert antes in torto, antes
+        torto = torto.replace(antes, depois)
+    raiz = tmp_path / "raiz"  # o script acha a raiz pelo próprio caminho: uma raiz de mentira
+    (raiz / "scripts").mkdir(parents=True)
+    (raiz / ".github").symlink_to(RAIZ / ".github")
+    (raiz / "scripts" / "ci-local").symlink_to(RAIZ / "scripts" / "ci-local")
+    copia = raiz / "scripts" / "ci-local.sh"
+    copia.write_text(torto, encoding="utf-8")
+    quantos = _awks_da_corrida(tmp_path, "--listar", script=copia)
+    assert quantos > TETO_DE_AWK, f"a mordida não mordeu: só {quantos} `awk` sem a cura"
