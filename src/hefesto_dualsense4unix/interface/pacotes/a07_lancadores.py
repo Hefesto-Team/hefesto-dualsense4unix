@@ -327,8 +327,16 @@ def _das_modificacoes(lugares: Any = None) -> tuple[desenho.SemCenso, ...]:
 #: perfil ignora a caixa, então uma grafia cobre as duas. **Derivado do fonte, ainda NÃO MEDIDO na
 #: janela viva** (o `app_id` do Wayland, degrau 3b da O-VITA3K-RECEBE-O-DUALSENSE-INTEIRO-01): a
 #: bancada confirma ou troca a linha.
+#:
+#: O shadPS4 vale o mesmo para as duas chaves (O-SHADPS4-QUE-JA-MORA-AQUI-01). O do projeto dela
+#: sobe com `SDL_APP_ID=net.shadps4.shadPS4` (`run.sh` do shadps4-cosmic); o AppImage oficial aberto
+#: direto cai no `SDL_GetExeName`, `shadps4`, que também é o `StartupWMClass` do `.desktop` dele
+#: (derivado do fonte, NÃO MEDIDO). A janela do launcher Qt (`shadPS4QtLauncher`) fica FORA de
+#: propósito: viva e escondida durante outro jogo, ela puxaria o perfil errado (FOCO-ERRANTE-01).
 _JANELAS_DO_EMULADOR_ACHADO: dict[str, tuple[str, ...]] = {
     "org-vita3k-vita3k": ("Vita3K",),
+    "net-shadps4-shadps4": ("shadps4",),
+    "io-github-vitoriamaria-shadps4-cosmic": ("net.shadps4.shadPS4", "shadps4"),
 }
 
 
