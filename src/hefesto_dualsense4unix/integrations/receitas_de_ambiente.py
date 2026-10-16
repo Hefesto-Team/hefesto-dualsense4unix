@@ -84,6 +84,17 @@ def _sinal_valido(sinal: str) -> bool:
     return all(parte not in ("", ".", "..") for parte in sinal.split("/"))
 
 
+def arquivos_do_sinal(raiz: Path, sinal: str) -> tuple[Path, ...]:
+    """Os arquivos da pasta que o sinal nomeia, em ordem; pasta que não se lê não tem nenhum."""
+    try:
+        if "*" not in sinal:
+            alvo = raiz / sinal
+            return (alvo,) if alvo.is_file() else ()
+        return tuple(p for p in sorted(raiz.glob(sinal)) if p.is_file())
+    except OSError:
+        return ()
+
+
 def achar_sinal(raiz: Path, sinal: str) -> Path | None:
     """O arquivo da pasta do jogo que o sinal nomeia, ou ``None``; o caminho aceita ``*``.
 
@@ -92,13 +103,7 @@ def achar_sinal(raiz: Path, sinal: str) -> Path | None:
     """
     if not _sinal_valido(sinal):
         return None
-    try:
-        if "*" not in sinal:
-            alvo = raiz / sinal
-            return alvo if alvo.is_file() else None
-        return next((p for p in sorted(raiz.glob(sinal)) if p.is_file()), None)
-    except OSError:
-        return None
+    return next(iter(arquivos_do_sinal(raiz, sinal)), None)
 
 
 def _linha_valida(linha: dict[str, str]) -> Receita | None:
@@ -220,6 +225,7 @@ __all__ = [
     "achar_sinal",
     "ambiente_do_jogo",
     "ambientes_dos_jogos",
+    "arquivos_do_sinal",
     "carregar_tabela",
     "ler_jogo",
     "override_valido",
