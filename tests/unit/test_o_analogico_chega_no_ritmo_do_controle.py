@@ -37,6 +37,9 @@ from tests.unit.test_o_aperto_acorda_o_tique import (
 
 #: O teto declarado do orçamento: uma volta por quadro do aparelho (250 Hz no cabo).
 TETO_DE_VOLTAS_POR_S = 250
+#: O teto de CPU do fio do laço com o stick girando, por segundo: 15% de um núcleo para os três
+#: controles. Medido em 16/10: 27,5 ms/s. Uma volta que custa 1 ms passa de 150 ms/s.
+TETO_DE_CPU_DO_LACO_S = 0.150
 #: A folga da chegada, medida em relógio de parede com a máquina dividida por três vagas de
 #: pytest; o defeito que a régua pega espera o tique de 1 s do laço, não 30 ms.
 CHEGADA_MAXIMA_S = 0.030
@@ -327,7 +330,9 @@ def test_orcamento_do_stick_girando_a_250_hz(monkeypatch: pytest.MonkeyPatch) ->
     )
     assert len(voltas) >= quadros // 3, f"o stick não acordou o laço ({len(voltas)} voltas)"
     assert len(voltas) <= TETO_DE_VOLTAS_POR_S * (duracao + 0.2)
-    assert cpu_do_laco < 0.5 * duracao, f"o laço gastou {cpu_do_laco:.2f} s de CPU em {duracao} s"
+    assert cpu_do_laco < TETO_DE_CPU_DO_LACO_S * duracao, (
+        f"o laço gastou {1e3 * cpu_do_laco:.0f} ms de CPU em {duracao} s"
+    )
     menor = min(b - a for a, b in itertools.pairwise(voltas))
     assert menor >= lc.INTERVALO_MINIMO_DA_VOLTA_S, f"{menor * 1000:.2f} ms"
 
