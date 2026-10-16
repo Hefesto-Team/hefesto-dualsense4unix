@@ -226,9 +226,43 @@ def test_sem_arquivo_salvo_ou_com_arquivo_ilegivel_e_nao_lido(lar: Path) -> None
         assert kit is not None and kit.veredito == kdb.NAO_LIDO, appid
 
 
+@pytest.mark.parametrize(
+    "salvo",
+    [
+        _salvo(ip=""),
+        _salvo(porta="abc"),
+        _salvo(porta="99999"),
+        {**_salvo(), "Lovense: Enabled": "talvez"},
+        {k: v for k, v in _salvo().items() if k != "Lovense: Port"},
+        {k: v for k, v in _salvo().items() if k != "Lovense: Local IP"},
+    ],
+)
+def test_a_escolha_incompleta_e_nao_lido_e_nunca_outra_maquina(
+    lar: Path, salvo: dict[str, object]
+) -> None:
+    """O «não sei» fica «não sei»: nada do que falta vira classe de endereço."""
+    kit = kdb.kit_do_jogo(_unity(lar, "720018", salvo=salvo), "720018")
+    assert kit is not None and kit.veredito == kdb.NAO_LIDO
+    sem_ip = _xml(("lovense_enabled", "true"))
+    kit = kdb.kit_do_jogo(_jj(lar, "720019", config=sem_ip), "720019")
+    assert kit is not None and kit.veredito == kdb.NAO_LIDO
+
+
+@pytest.mark.parametrize("ip", ["127.0.0.2", "::1", "[::1]"])
+def test_o_endereco_local_que_nao_e_a_ponte_e_porta_que_nada_atende(lar: Path, ip: str) -> None:
+    """A ponte só escuta em 127.0.0.1: o resto do próprio computador não é «outra máquina»."""
+    kit = kdb.kit_do_jogo(_unity(lar, "720026", salvo=_salvo(ip=ip)), "720026")
+    assert kit is not None and kit.veredito == kdb.PORTA_QUE_NADA_ATENDE
+
+
 def test_o_app_info_que_sobe_de_pasta_nao_leva_a_lugar_nenhum(lar: Path) -> None:
     raiz = _unity(lar, "720017", produto="Traicao")
     (raiz / "Traicao_Data" / "app.info").write_text("../../..\nx", encoding="utf-8")
+    # A isca: um Settings.sav válido exatamente onde o nome que sobe levaria a leitura.
+    (_prefixo(lar, "720017") / "LocalLow").mkdir(parents=True)
+    isca = _prefixo(lar, "720017").parent.parent / "x"
+    isca.mkdir(parents=True)
+    (isca / "Settings.sav").write_text(json.dumps(_salvo()), encoding="utf-8")
     kit = kdb.kit_do_jogo(raiz, "720017")
     assert kit is not None and kit.veredito == kdb.NAO_LIDO
 
