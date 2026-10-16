@@ -22,6 +22,7 @@ MORDIDAS (cada uma foi feita, vista reprovar e devolvida):
 - `parar()` presa a uma cópia da lista de import reprova (2);
 - `parar_em` de uma entrada trocado de lugar reprova (1);
 - a parada do broker sem o `finally` (o executor que falha pula o cliente) reprova (4);
+- o `parar()` sem o aviso `subsystem_parada_falhou` (a falha volta a ser calada) reprova (4);
 - um `"_stop_*"` da lista que o `Daemon` não tem (renomeado de um lado só) reprova (5).
 """
 from __future__ import annotations
@@ -35,6 +36,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+import structlog
 
 from hefesto_dualsense4unix.core.controller import ControllerState
 from hefesto_dualsense4unix.core.events import EventBus
@@ -373,9 +375,14 @@ async def test_a_parada_do_broker_com_o_executor_quebrado_ainda_solta_o_cliente(
     original = lista.SUBSYSTEM_REGISTRY
     lista.SUBSYSTEM_REGISTRY = passos  # type: ignore[assignment]
     try:
-        await lista.parar(daemon)
+        with structlog.testing.capture_logs() as registros:
+            await lista.parar(daemon)
     finally:
         lista.SUBSYSTEM_REGISTRY = original
+    avisos = [r for r in registros if r.get("event") == "subsystem_parada_falhou"]
+    assert [a.get("subsystem") for a in avisos] == ["broker"], (
+        "a parada que falhou não deixou o aviso no diário"
+    )
     assert fechou == ["cliente"], "o cliente do broker ficou aberto"
     assert daemon._hidraw_broker_executor is None
     assert daemon._hidraw_broker_client is None
