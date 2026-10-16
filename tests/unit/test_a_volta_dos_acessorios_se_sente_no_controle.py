@@ -23,11 +23,13 @@ from hefesto_dualsense4unix.core.events import EventBus, EventTopic
 from hefesto_dualsense4unix.core.led_control import player_bitmask
 from hefesto_dualsense4unix.daemon.protocolo_do_ipc import CODE_INVALID_PARAMS
 from hefesto_dualsense4unix.daemon.subsystems import tato_vivo as tv
+from hefesto_dualsense4unix.daemon.subsystems.vibracao_do_jogo import dizer_a_vibracao
 from hefesto_dualsense4unix.daemon.subsystems.volta_dos_acessorios import (
     DEGRAU_DO_MEDIDOR,
     Ligacoes,
     VoltaDosAcessorios,
     lampadas_do_nivel,
+    volta_de_producao,
 )
 from hefesto_dualsense4unix.mods.manifesto import permissao_valida
 from hefesto_dualsense4unix.mods.porta import (
@@ -53,7 +55,6 @@ class Mesa:
     barra: list[tuple[float, str, tuple[int, int, int]]] = field(default_factory=list)
     soltas: list[str] = field(default_factory=list)
     pode: bool = True
-    vibra: bool = False
     pinta: bool = False
     marcas: frozenset[str] = frozenset({"adulto"})
 
@@ -66,7 +67,6 @@ class Mesa:
             barra=lambda uniq, rgb: self.barra.append((self.agora, uniq, rgb)),
             soltar_barra=self.soltas.append,
             pode_falar=lambda uniq: self.pode,
-            o_jogo_vibra=lambda uniq: self.vibra,
             o_jogo_pinta=lambda uniq: self.pinta,
             marcas=lambda: self.marcas,
         )
@@ -228,17 +228,45 @@ def test_o_gesto_que_nao_e_de_nivel_nao_toca() -> None:
     assert mesa.motores == []
 
 
-def test_o_toque_soma_ao_jogo_e_nao_escreve_o_zero_que_o_calaria() -> None:
+def test_o_fim_do_toque_sempre_escreve_o_zero_e_o_motor_nunca_fica_preso() -> None:
     volta, mesa = _volta()
     volta.ao_estado(_estado(4), mesa.agora)
-    mesa.vibra = True
-    volta.ao_gesto(_gesto(P1, "sobe"), mesa.agora)
-    _andar(volta, mesa, mesa.agora + 0.3)
-    assert [m[2:] for m in mesa.motores] == [(200, 0)], "o jogo vibra: o quadro dele retoma"
-    mesa.vibra = False
-    volta.ao_gesto(_gesto(P1, "sobe"), mesa.agora)
-    _andar(volta, mesa, mesa.agora + 0.3)
-    assert mesa.motores[-1][2:] == (0, 0), "sem jogo vibrando, o toque devolve o zero"
+    volta.ao_gesto(_gesto(P1, "para"), mesa.agora)
+    _andar(volta, mesa, mesa.agora + 0.6)
+    assert mesa.motores[-1][2:] == (0, 0), "o fim do toque é o zero, haja jogo ou não"
+
+
+class _ControleQueVibra:
+    def __init__(self) -> None:
+        self.escritos: list[tuple[str, int, int]] = []
+
+    def set_rumble_for(self, uniq: str, fraco: int, forte: int) -> bool:
+        self.escritos.append((uniq, fraco, forte))
+        return True
+
+
+def _producao_com_o_jogo(motores: tuple[int, int] | None) -> tuple[Any, _ControleQueVibra]:
+    """A volta de produção num serviço de mentira em que o jogo vibra o P1 a ``(100, 50)``."""
+    controle = _ControleQueVibra()
+    daemon = SimpleNamespace(controller=controle, bus=None)
+    dizer_a_vibracao(daemon, "AA:BB:CC:00:00:01", (100, 50), (100, 50), agora=1.0, motores=motores)
+    return volta_de_producao(daemon), controle
+
+
+def test_em_producao_o_toque_soma_ao_jogo_e_o_zero_devolve_o_par_dele() -> None:
+    volta, controle = _producao_com_o_jogo(None)
+    volta._l.motores(P1, 200, 0)
+    volta._l.motores(P1, 0, 0)
+    assert controle.escritos == [(P1, 255, 50), (P1, 100, 50)], (
+        "soma por 40 ms ao que o jogo pede, nunca o cala"
+    )
+
+
+def test_com_a_haptica_por_audio_o_jogo_nao_esta_nos_motores_e_o_zero_e_zero() -> None:
+    volta, controle = _producao_com_o_jogo((0, 0))
+    volta._l.motores(P1, 200, 0)
+    volta._l.motores(P1, 0, 0)
+    assert controle.escritos == [(P1, 200, 0), (P1, 0, 0)], "o zero não cala a háptica fina"
 
 
 def test_no_modo_nativo_nada_se_escreve() -> None:

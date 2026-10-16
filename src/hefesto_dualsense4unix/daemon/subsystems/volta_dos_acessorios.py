@@ -56,7 +56,8 @@ Luzinhas = tuple[bool, bool, bool, bool, bool]
 class Ligacoes:
     """As pontas de fora: o que escreve e o que pergunta. Em produção, o backend e o daemon."""
 
-    #: ``motores(uniq, fraco, forte)``: o motor direito é o fraco, o esquerdo o forte
+    #: ``motores(uniq, fraco, forte)``: o motor direito é o fraco, o esquerdo o forte. Em
+    #: produção o toque soma ao par que o jogo deixou nos motores, e o zero devolve esse par.
     motores: Callable[[str, int, int], object]
     #: ``(luzinhas, degrau)`` de agora do controle, ou ``None`` se não se sabe lê-las
     ler_luzinhas: Callable[[str], tuple[Luzinhas, int] | None]
@@ -64,7 +65,6 @@ class Ligacoes:
     barra: Callable[[str, RGB], object]
     soltar_barra: Callable[[str], object]
     pode_falar: Callable[[str], bool]
-    o_jogo_vibra: Callable[[str], bool]
     o_jogo_pinta: Callable[[str], bool]
     marcas: Callable[[], frozenset[str]]
 
@@ -211,8 +211,6 @@ class VoltaDosAcessorios:
 
     def _escrever_o_par(self, uniq: str, toque: _Toque, par: tuple[int, int]) -> None:
         toque.escrito = par
-        if par == (0, 0) and self._l.o_jogo_vibra(uniq):
-            return  # o jogo vibra: o quadro dele retoma, e o zero nosso o calaria
         esquerdo, direito = par
         self._l.motores(uniq, direito, esquerdo)
         self.escritas += 1
@@ -393,6 +391,11 @@ class VoltaDosAcessorios:
                     self._escrever_o_par(uniq, toque, (0, 0))
 
 
+def somar_ao_par_do_jogo(toque: tuple[int, int], jogo: tuple[int, int]) -> tuple[int, int]:
+    """O ``(fraco, forte)`` do toque somado ao do jogo, com teto 255: o toque nunca cala o jogo."""
+    return (min(255, toque[0] + jogo[0]), min(255, toque[1] + jogo[1]))
+
+
 def volta_de_producao(daemon: Any) -> VoltaDosAcessorios:
     """A volta ligada ao serviço vivo: o backend escreve, o daemon responde às guardas."""
     from hefesto_dualsense4unix.core.controller import OutputSpec
@@ -405,6 +408,7 @@ def volta_de_producao(daemon: Any) -> VoltaDosAcessorios:
         controles_do_daemon,
         estado_do_controle,
     )
+    from hefesto_dualsense4unix.daemon.subsystems.vibracao_do_jogo import par_nos_motores
     from hefesto_dualsense4unix.mods.porta import o_jogo_escreve_no_servico
 
     controller = getattr(daemon, "controller", None)
@@ -416,7 +420,10 @@ def volta_de_producao(daemon: Any) -> VoltaDosAcessorios:
         if not callable(escrever):
             return False
         forte_pct, fraco_pct = _barras_dos_motores(daemon, uniq)
-        return escrever(uniq, _na_barra(fraco, fraco_pct), _na_barra(forte, forte_pct))
+        do_jogo = par_nos_motores(daemon, uniq)
+        return escrever(uniq, *somar_ao_par_do_jogo(
+            (_na_barra(fraco, fraco_pct), _na_barra(forte, forte_pct)), do_jogo,
+        ))
 
     def ler_luzinhas(uniq: str) -> tuple[Luzinhas, int] | None:
         ler = getattr(controller, "resolved_player_leds_for", None)
@@ -453,7 +460,6 @@ def volta_de_producao(daemon: Any) -> VoltaDosAcessorios:
         barra=barra,
         soltar_barra=soltar,
         pode_falar=pode_falar,
-        o_jogo_vibra=lambda uniq: o_jogo_escreve(uniq, "vibracao"),
         o_jogo_pinta=lambda uniq: o_jogo_escreve(uniq, "luz"),
         marcas=marcas,
     ))
@@ -472,5 +478,6 @@ __all__ = [
     "Ligacoes",
     "VoltaDosAcessorios",
     "lampadas_do_nivel",
+    "somar_ao_par_do_jogo",
     "volta_de_producao",
 ]

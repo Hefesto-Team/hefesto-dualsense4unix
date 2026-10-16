@@ -679,8 +679,8 @@ def apply_game_rumble(
         motores = chegou = mistura.motores
 
     efetivo = _entregar_o_rumble(controller, target_uniq, motores, chegou)
-    dizer_a_vibracao(
-        daemon, target_uniq, (weak, strong), efetivo,
+    dizer_a_vibracao(  # `motores`: o que ficou no HID, a que o toque do gesto soma
+        daemon, target_uniq, (weak, strong), efetivo, motores=motores if target_uniq else efetivo,
         jogo=None if mistura is None else mistura.jogo,
         toques=None if mistura is None else mistura.toques,
     )

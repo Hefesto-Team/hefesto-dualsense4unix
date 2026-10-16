@@ -58,6 +58,8 @@ class _Linha:
     #: o pedido do jogo e os meus toques, cada um como ``(esquerdo, direito)``
     jogo: Par = (0, 0)
     toques: Par = (0, 0)
+    #: o ``(fraco, forte)`` que ficou nos motores do HID (zero quando a háptica vai por áudio)
+    motores: Par = (0, 0)
 
 
 class _Vista:
@@ -153,16 +155,18 @@ def dizer_a_vibracao(
     agora: float | None = None,
     jogo: Par | None = None,
     toques: Par | None = None,
+    motores: Par | None = None,
 ) -> None:
     """Diz no barramento o que o jogo pediu a um controle e o que chegou aos motores.
 
     ``efetivo`` ``None`` é «nada foi escrito» (o par fixado venceu, a escrita foi
     recusada) e sai como ``[0, 0]``. ``jogo`` e ``toques`` são ``(esquerdo, direito)``: o que o
     jogo pôs nos motores e o que os meus toques puseram (sem ``jogo``, é o ``efetivo``).
+    ``motores`` é o ``(fraco, forte)`` que ficou nos motores do HID (sem ele, o ``efetivo``).
     Nunca levanta: o rumble do jogo não espera por quem escuta.
     """
     try:
-        _dizer(daemon, target_uniq, _par(pedido), _par(efetivo), agora, jogo, toques)
+        _dizer(daemon, target_uniq, _par(pedido), _par(efetivo), agora, jogo, toques, motores)
     except Exception as exc:
         logger.debug("jogo_vibracao_nao_dita", err=str(exc))
 
@@ -175,6 +179,7 @@ def _dizer(
     agora: float | None,
     jogo: Par | None = None,
     toques: Par | None = None,
+    motores: Par | None = None,
 ) -> None:
     uniq = _uniq_do_pedido(daemon, target_uniq)
     chave = uniq or ""
@@ -185,6 +190,7 @@ def _dizer(
     jogador = _jogador_de(daemon, uniq)
     lados = _par(jogo) if jogo is not None else (efetivo[1], efetivo[0])
     dos_toques = _par(toques) if toques is not None else (0, 0)
+    nos_motores = _par(motores) if motores is not None and efetivo != (0, 0) else efetivo
     with vista.trava:
         linha = vista.linhas.get(chave)
         if linha is None and pedido == (0, 0) and efetivo == (0, 0):
@@ -195,13 +201,13 @@ def _dizer(
             # intervalo e o primeiro evento ficava pendente).
             linha = vista.linhas[chave] = _Linha(
                 jogador, pedido, efetivo, enviado_em=agora - 1.0, pendente=True,
-                jogo=lados, toques=dos_toques,
+                jogo=lados, toques=dos_toques, motores=nos_motores,
             )
         else:
             linha.jogador, linha.pedido, linha.efetivo, linha.pendente = (
                 jogador, pedido, efetivo, True,
             )
-            linha.jogo, linha.toques = lados, dos_toques
+            linha.jogo, linha.toques, linha.motores = lados, dos_toques, nos_motores
         if agora - linha.enviado_em < INTERVALO_MINIMO_S:
             return  # o tique seguinte diz (`bater`)
         linha.enviado_em, linha.pendente = agora, False
@@ -209,6 +215,28 @@ def _dizer(
         if efetivo == (0, 0):
             del vista.linhas[chave]
     _publicar(daemon, uniq or None, a_dizer, agora)
+
+
+def par_nos_motores(daemon: Any, uniq: str) -> Par:
+    """O ``(fraco, forte)`` que o jogo deixou nos motores de ``uniq``; ``(0, 0)`` sem jogo vibrando.
+
+    Quem toca por cima do jogo (o toque do gesto dos acessórios) soma a este par e o devolve no
+    fim, em vez de calar o jogo até o quadro seguinte dele. Nunca levanta.
+    """
+    from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+    vista = _vista_do(daemon, criar=False)
+    alvo = norm_mac(uniq)
+    if vista is None or alvo is None:
+        return (0, 0)
+    try:
+        with vista.trava:
+            for chave, linha in vista.linhas.items():
+                if chave and norm_mac(chave) == alvo:
+                    return linha.motores
+    except Exception as exc:
+        logger.debug("jogo_vibracao_par_ilegivel", err=str(exc))
+    return (0, 0)
 
 
 def bater_a_vibracao(daemon: Any, agora: float | None = None) -> None:
