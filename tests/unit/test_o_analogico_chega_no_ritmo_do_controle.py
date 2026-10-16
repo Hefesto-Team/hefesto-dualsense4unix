@@ -141,6 +141,7 @@ def _daemon_do_primario(
 
 
 def test_o_eixo_que_anda_acorda_a_entrega_no_fim_do_quadro(despertares: list[float]) -> None:
+    # D-1610-A-ENTREGA-DO-EIXO-ANDA-NO-RITMO-DO-CONTROLE
     leitor = _leitor(1)
     leitor._handle_event(_Evento(ecodes.EV_ABS, ecodes.ABS_X, 168), ecodes)
     assert despertares == [], "acordou antes de o quadro fechar"
