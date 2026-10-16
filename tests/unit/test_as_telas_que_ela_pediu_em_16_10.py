@@ -80,7 +80,7 @@ def test_o_quadrante_da_direita_se_chama_opcoes_e_tem_os_tres_de_permitir() -> N
     assert botoes == ["interna", "steam", "uso-geral"], botoes
     for velho in ("Quem navega", "Tipo de navegação", "Navega com", "navegacao-tipo"):
         assert velho not in doc, f"«{velho}» voltou à 06"
-    assert "Perfil Jogo - Navegação" in op
+    assert "Perfil jogo - navegação" in op
     moldes = re.findall(r"<option[^>]*>([^<]+)</option>",
                         _pagina("mapa-do-controle.html").split('id="perfil"')[1].split("</select>")[0])
     for nome in ("Point and click", "Visual novel", "Adulto"):

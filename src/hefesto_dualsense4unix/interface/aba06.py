@@ -327,7 +327,7 @@ OPCOES = "\n".join([
          ("padrao", "Steam padrão", "")],  # (noqa-acento) valor de contrato do gesto
         "big-picture"),
         " so-steam"),
-    _op("Perfil Jogo - Navegação", _perfil_de_ponto(), " do-hefesto"),
+    _op("Perfil jogo - navegação", _perfil_de_ponto(), " do-hefesto"),
     _op("Touchpad", TOQUE_DO_TOUCHPAD, " do-hefesto"),
     _op("Função do teclado", simples(
         OPCOES_TECLADO, TECLADO_PADRAO, "teclado", "teclado-estado",

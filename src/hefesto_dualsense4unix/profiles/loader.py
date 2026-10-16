@@ -136,7 +136,7 @@ class MoldeDePerfil:
 
     O molde NÃO é arquivo: não semeia nada em `~/.config`, não aparece na aba Perfis e não casa
     com janela. Escolhê-lo na tela e guardar cria um perfil de verdade (`perfil_do_molde`), dela,
-    com o nome que ela der. Os nomes são os MESMOS da lista «Perfil Jogo - Navegação» da
+    com o nome que ela der. Os nomes são os MESMOS da lista «Perfil jogo - navegação» da
     aba Navegação (a régua `test_a_aba_mapa_do_controle_do_todo` confere os dois lados).
     """
 

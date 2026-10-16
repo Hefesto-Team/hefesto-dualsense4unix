@@ -876,7 +876,7 @@ def _big_picture(p: Any, ligado: bool) -> None:
 
 @gesto("06-navegacao.html", "point-and-click-perfil", grava="gravar_pelo_gesto")
 def point_and_click_perfil(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """O «Perfil Jogo - Navegação»: um molde ou um dos meus perfis, do computador.
+    """O «Perfil jogo - navegação»: um molde ou um dos meus perfis, do computador.
 
     O valor é `molde:<chave>` (um dos moldes de `profiles.loader`) ou `perfil:<nome>`; guarda
     em `mouse.point_and_click`, onde moram as velocidades. O mapa dos botões mostra o que o perfil

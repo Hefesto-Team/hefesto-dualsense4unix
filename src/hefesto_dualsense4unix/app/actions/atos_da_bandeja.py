@@ -97,14 +97,18 @@ def bandeja_ligada() -> bool:
     return not (achado and achado.group(0).split("=", 1)[1].strip().lower() == "false")
 
 
+def _pid_anotado() -> int:
+    """O PID que a bandeja anotou ao subir, ou 0 sem anotação legível."""
+    alvo = caminho_do_pid()
+    texto = alvo.read_text(encoding="ascii").strip() if alvo.is_file() else ""
+    return int(texto) if texto.isdigit() else 0
+
+
 def bandeja_viva() -> int | None:
     """O PID da bandeja que está de pé, ou `None`. O PID reciclado por outro processo não conta."""
-    try:
-        pid = int(caminho_do_pid().read_text(encoding="ascii").strip())
-        os.kill(pid, 0)
-        argv = Path(f"/proc/{pid}/cmdline").read_bytes().split(b"\0")
-    except (OSError, ValueError):
-        return None
+    pid = _pid_anotado()
+    linha = Path(f"/proc/{pid}/cmdline")
+    argv = linha.read_bytes().split(b"\0") if pid > 0 and linha.is_file() else []
     # Um argumento inteiro: «tray» no Python, «--tray» no `run.sh` antes do `exec`.
     return pid if {b"tray", b"--tray"} & set(argv) else None
 
@@ -118,11 +122,8 @@ def anotar_a_bandeja_viva() -> None:
 
 def esquecer_a_bandeja() -> None:
     """Chamado pela bandeja ao sair, só se o PID anotado ainda for o dela."""
-    try:
-        if int(caminho_do_pid().read_text(encoding="ascii").strip()) == os.getpid():
-            caminho_do_pid().unlink()
-    except (OSError, ValueError):
-        pass
+    if _pid_anotado() == os.getpid():
+        caminho_do_pid().unlink(missing_ok=True)
 
 
 def _linha_da_bandeja() -> list[str]:

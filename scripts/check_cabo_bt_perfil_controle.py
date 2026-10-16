@@ -70,6 +70,7 @@ NAO_E_DO_APARELHO: dict[str, str] = {
                              "novo — é da máquina, e nada muda no aparelho",
     "salvar-registro": "grava o registro técnico num arquivo — é leitura do diário",
     "tamanho-da-interface": "escolhe o tamanho da interface — é da tela",
+    "bandeja": "mostra ou esconde o ícone do Hefesto na bandeja da sessão — é do sistema",
     "examinar-portas": "examina as portas USB — é leitura do barramento",
     "escolher-aparelho": "escolhe o aparelho da aba Conexões — é da tela",
     "escolher-entrada": "escolhe a entrada — é da tela",
