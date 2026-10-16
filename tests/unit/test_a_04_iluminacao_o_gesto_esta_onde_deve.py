@@ -58,11 +58,9 @@ apareçam e os do P1 sumam no mesmo tique. É o estado da bancada, que está com
 os quatro DualSense agora. O piloto vira marca e escreve campo; ele não
 materializa widget.
 
-**A EXCEÇÃO DECLARADA É A CAIXA DO HEXADECIMAL**, e ela é de propósito: o
-``<span class="hex reenvia">`` É o travessão da célula no lugar vazio — o mesmo
-elemento que mostra ``#0000FF`` na coluna viva. Ele não pode SUMIR como a guia
-some; o que se apaga nele é o CLIQUE. A régua o cobra pelo
-``pointer-events``, e não pela caixa. Ver ``GESTOS_QUE_FICAM_A_VISTA``.
+**A EXCEÇÃO DECLARADA ERA A CAIXA DO HEXADECIMAL**, e ela saiu em 16/10/2026 com a caixa: o
+hexadecimal virou dica da célula Cor, o travessão é um ``.nada`` como nas outras células, e
+nenhum gesto fica à vista num lugar vazio. ``GESTOS_QUE_FICAM_A_VISTA`` ficou vazio.
 
 A MORDIDA, e foi feita antes de o arquivo entrar:
 
@@ -99,8 +97,8 @@ CHROME = pathlib.Path("/usr/bin/google-chrome")
 
 PAGINA = "04-iluminacao.html"
 
-#: `reenviar` — a caixa `#RRGGBB` É o travessão daquela célula (`aba04.coluna`,
-GESTOS_QUE_FICAM_A_VISTA = frozenset({"reenviar"})
+#: Vazio desde 16/10/2026: o `reenviar` (a caixa `#RRGGBB`) saiu com a caixa.
+GESTOS_QUE_FICAM_A_VISTA: frozenset[str] = frozenset()
 
 CELULA_DE_LEDS = "cel-leds"
 
@@ -258,30 +256,12 @@ def test_o_lugar_vazio_nao_oferece_gesto(medido: dict) -> None:
                 quem, g, "um lugar SEM aparelho está oferecendo este clique")
 
 
-def test_a_caixa_do_hexadecimal_fica_a_vista_e_nao_recebe_clique(
-        medido: dict) -> None:
-    """A exceção declarada, e ela é cobrada nas duas metades.
-
-    O `<span class="hex reenvia">` É o travessão da célula "Cor" no lugar sem
-    dono — o mesmo elemento que mostra `#0000FF` na coluna viva. Ele FICA à
-    vista (senão a linha nasce em branco, quando as outras seis mostram "—") e
-    NÃO recebe o clique.
-
-    A MORDIDA: tire o `pointer-events:none` da regra
-    `[data-conectado="nao"] .cel-cor .hex.reenvia` e a segunda asserção reprova.
-    """
-    for quem, dado in _lugares(medido["como_nasce"], "nao").items():  # (noqa-acento) valor
-        caixas = [g for g in dado["gestos"] if g["gesto"] == "reenviar"]
-        assert caixas, f"{quem} perdeu a caixa do hexadecimal"
-        for g in caixas:
-            assert g["caixa"], _acusar(
-                quem, g, "a caixa do hexadecimal SUMIU do lugar vazio — ela é "
-                         "o travessão daquela célula, e sem ela a linha `Cor` "
-                         "nasce em branco")
-            assert not g["oferecido"], _acusar(
-                quem, g, "a caixa do hexadecimal aceita clique num lugar sem "
-                         "controle — o gesto levantaria `o clique não disse em "
-                         "qual controle`")
+def test_a_caixa_do_hexadecimal_saiu_de_todo_lugar(medido: dict) -> None:
+    """Desde 16/10/2026 nenhum lugar, cheio ou vazio, tem o gesto `reenviar` na página."""
+    for estado in ("sim", "nao"):  # (noqa-acento) valor
+        for quem, dado in _lugares(medido["como_nasce"], estado).items():
+            caixas = [g for g in dado["gestos"] if g["gesto"] == "reenviar"]
+            assert not caixas, f"{quem} voltou a ter a caixa do hexadecimal"
 
 
 def test_o_lugar_cheio_oferece_todos_os_gestos(medido: dict) -> None:

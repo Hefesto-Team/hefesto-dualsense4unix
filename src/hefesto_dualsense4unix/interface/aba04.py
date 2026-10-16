@@ -196,204 +196,49 @@ CSS = """
   /* A linha da luz do jogo: uma frase curta embaixo das cores, sem botão. Texto de apoio
      (nunca vermelho), com o «Agora» em tinta cheia só quando o jogo está pintando. */
 
-  /* ---------- O LUGAR VAZIO ----------
-     A mesma gramática da Jogar, da Controles e da Gatilhos: cor explícita e
-     NADA de `opacity` — a lição medida da `.fita.inerte`, que a opacidade tira
-     contraste e peso do traço ao mesmo tempo.
-
-     O DESENHO FICA CINZA POR `!important` porque a cor da peça é `style=` INLINE
-     dentro do SVG: o gerador de cores a escreve lá para o arquivo abrir colorido
-     sozinho, e regra externa não vence atributo inline sem isto. `.corpo` entra
-     junto com `.peca` — foi a ampliação da foto na aba Jogar que o achou, com o
-     P3 continuando roxo e o P4 branco depois da primeira volta. */
-  /* O TRAVESSÃO PREENCHE A CÉLULA, e isto é a régua de alinhamento falando.
-     A coluna vazia tem a MESMA altura da viva (452px) e as mesmas sete linhas —
-     medido. O que acabava 26px antes era o CONTEÚDO da última célula: dois
-     botões empilhados preenchem os 74px de `--r-acoes`; um travessão centrado
-     para no meio. A régua leu isso como "o conteúdo das colunas acaba em y
-     diferentes", e leu certo.
-     `height:100%` no marcador resolve sem mexer em altura nenhuma: ele passa a
-     ocupar a célula e o texto continua centrado dentro dele. */
-  /* A MARCA ENTROU EM 07/09/2026, e é ela que faz este bloco se DESFAZER.
-     Tudo daqui para baixo é a cara do lugar sem controle — o cinza, o desenho
-     apagado, o travessão preenchendo a célula. Estava preso a `.vazia`, e
-     `.vazia` é fato de NASCIMENTO: o gerador a escreve e ninguém a tira nunca,
-     nem o piloto. Enquanto o lugar vazio não tinha `data-campo` nenhum isso não
-     aparecia — não havia dado a mostrar. Com os endereços no lugar, aparece:
-     medido nesta bancada, simulando os passos `1c` e `2` do piloto sobre o P3,
-     os dez campos POUSAM (identidade, cor, brilho, tira, ressalva, colorway) e
-     o cartão inteiro continuava pintado de cinza, com o desenho em
-     `var(--linha) !important` por cima do plástico que acabara de chegar.
-     O dado certo, vestido de desconectado.
-
-     `data-conectado` É A MARCA QUE VIRA NOS DOIS SENTIDOS — o gerador a
-     escreve, o piloto a fecha no passo `1b` e a REABRE no `1c`. É a mesma
-     escolha que a folha das dez faz para o desenho (`topo.html`:
-     `[data-conectado="nao"] .ds-svg{display:none}`), e o comentário de lá
-     explica por quê. Na página parada nada muda: todo `.vazia` nasce com
-     `data-conectado="nao"`, e o retrato antes/depois desta cura tem ZERO pixel
-     de diferença nas duas colunas conectadas. */
-  .luz-grade .ctrl.vazia[data-conectado="nao"] .nada{display:flex;align-items:center;justify-content:center;height:100%;width:100%}
-  .luz-grade .ctrl.vazia[data-conectado="nao"] .ctrl-rot,
-  .luz-grade .ctrl.vazia[data-conectado="nao"] .nada{color:var(--linha)}
-  .luz-grade .ctrl.vazia[data-conectado="nao"] .moldura{border-color:var(--border-forte)}
-  .luz-grade .ctrl.vazia[data-conectado="nao"] .ds-svg .peca,
-  .luz-grade .ctrl.vazia[data-conectado="nao"] .ds-svg .corpo,
-  .luz-grade .ctrl.vazia[data-conectado="nao"] .ds-svg .miolo *{fill:var(--linha) !important}
-  .luz-grade .ctrl.vazia[data-conectado="nao"] .ds-svg .corpo{stroke:var(--border-forte) !important}
-  /* OS DETALHES CLAROS TAMBÉM CAEM, e eles só aparecem AQUI. Na aba Jogar o
-     desenho tem 62px e estes elementos somem sozinhos; nesta aba ele tem 146 e
-     eles ficam à mostra — medido no DOM do lugar vazio: 8 `line` em branco
-     (#f8f8f2), 7 `text` em `--texto-suave` e 4 `path` em #d8d8d8, que são os
-     glifos L/R/PS e os traços dos botões.
-     Copiar a regra da Jogar não bastava: o que muda com o TAMANHO do desenho
-     tem de ser medido no tamanho em que ele é desenhado. */
-  .luz-grade .ctrl.vazia[data-conectado="nao"] .ds-svg text{fill:var(--linha) !important}
-  .luz-grade .ctrl.vazia[data-conectado="nao"] .ds-svg line{stroke:var(--linha) !important}
-  .luz-grade .ctrl.vazia[data-conectado="nao"] .ds-svg path:not(.peca):not(.corpo){fill:var(--linha) !important;
-                                                            stroke:var(--linha) !important}
-  /* O TOUCHPAD E OS BOTÕES SÃO `rect`, `circle` e `polygon`, e a ampliação foi
-     quem os achou: com `path`, `line` e `text` já apagados, o touchpad continuou
-     cinza-claro (#8a8a96) no meio de um controle inteiro em `--linha`.
-     `fill` NÃO leva `none` como valor aqui, e é de propósito: pintar um contorno
-     vazado apagaria a forma em vez de escurecê-la. Quem tem `fill:none` no
-     arquivo continua sem, porque `var(--linha)` só substitui uma cor que existe. */
-  .luz-grade .ctrl.vazia[data-conectado="nao"] .ds-svg rect:not([fill="none"]),
-  .luz-grade .ctrl.vazia[data-conectado="nao"] .ds-svg circle:not([fill="none"]),
-  .luz-grade .ctrl.vazia[data-conectado="nao"] .ds-svg polygon:not([fill="none"]),
-  .luz-grade .ctrl.vazia[data-conectado="nao"] .ds-svg ellipse:not([fill="none"]){fill:var(--linha) !important}
-  .luz-grade .ctrl.vazia[data-conectado="nao"] .ds-svg rect,
-  .luz-grade .ctrl.vazia[data-conectado="nao"] .ds-svg circle,
-  .luz-grade .ctrl.vazia[data-conectado="nao"] .ds-svg polygon,
-  .luz-grade .ctrl.vazia[data-conectado="nao"] .ds-svg ellipse{stroke:var(--border-forte) !important}
-  /* O TRAVESSÃO FICA ONDE O CONTEÚDO FICARIA — centrado na célula, para as sete
-     linhas continuarem legíveis como linhas. */
-  .luz-grade .ctrl.vazia[data-conectado="nao"] > *{display:flex;align-items:center;justify-content:center}
-  .luz-grade .ctrl.vazia[data-conectado="nao"] .moldura{display:block}
-
-  /* ---------- O LUGAR QUE ESVAZIA NA FRENTE DO USUÁRIO ---------- */
-  /* `.vazia` é o lugar que NASCE sem controle; `.off` é o mesmo lugar depois que
-     o controle SAIU — quem escreve a classe é `pacotes.apagar_os_lugares_sem_dono`.
-     São o mesmo fato, e até 03/09/2026 tinham duas leituras: esta folha não
-     tinha UMA regra `.off`, medido (zero ocorrências de `.off` em
-     `04-iluminacao.html`, contra 11 na Jogar e 10 na Controles).
-
-     O QUE ELA VIA, com UM controle no cabo e a régua do produto instalado: a
-     coluna do P2 com a moldura ainda no plástico do MOCKUP (medido:
-     `borderColor rgb(126,184,212)` = Starlight Blue, contra `rgb(68,71,90)` na
-     coluna vazia), os oito tons na mesma saturação da coluna viva
-     (`rgb(126,184,212)`, `cursor:pointer`), a barra de brilho CHEIA
-     (`width:100%`) ao lado de um "—", e "Automático"/"Desligar" acesos. A régua
-     do mockup chama os dois últimos pelo nome: `p2·plastico` e `p2·brilho-pct`,
-     **ENDEREÇO MORTO** — o travessão que o molde escreve é recusado pelo CSSOM
-     em `color:` e em `width:`, e o valor do desenho fica na tela para sempre.
-
-     E OS BOTÕES ACEITAVAM O CLIQUE. Os dez endereços dessa coluna levantam
-     `ValueError: … o clique não disse em qual controle`, e
-     `hefesto_vivo._recusou_dizendo` só levava `RuntimeError` à tela: dez botões
-     que engoliam o toque sem uma letra. Escondê-los é o que fecha isso — o que
-     não existe não pode aceitar clique, e não precisa de frase nova. (Desde
-     13/09/2026 nenhuma recusa chega à tela como frase: as duas exceções vão ao
-     diário e o botão pisca — a docstring de `_recusou_dizendo` diz por quê.)
-
-     `!important` NÃO É ÊNFASE: a cor do plástico e a largura da barra são
-     `style=` INLINE, escritos pelo gerador, e regra externa não os vence sem
-     isto — a mesma razão pela qual o bloco `.vazia` acima já o usa no SVG. */
-  .luz-grade .ctrl.off .moldura{color:var(--linha) !important;
-                                border-color:var(--border-forte) !important}
-  .luz-grade .ctrl.off .ctrl-rot{color:var(--linha)}
-  .luz-grade .ctrl.off .ds-svg .peca,
-  .luz-grade .ctrl.off .ds-svg .corpo,
-  .luz-grade .ctrl.off .ds-svg .miolo *{fill:var(--linha) !important}
-  .luz-grade .ctrl.off .ds-svg .corpo{stroke:var(--border-forte) !important}
-  .luz-grade .ctrl.off .ds-svg text{fill:var(--linha) !important}
-  .luz-grade .ctrl.off .ds-svg line{stroke:var(--linha) !important}
-  .luz-grade .ctrl.off .ds-svg path:not(.peca):not(.corpo){fill:var(--linha) !important;
-                                                           stroke:var(--linha) !important}
-  .luz-grade .ctrl.off .ds-svg rect:not([fill="none"]),
-  .luz-grade .ctrl.off .ds-svg circle:not([fill="none"]),
-  .luz-grade .ctrl.off .ds-svg polygon:not([fill="none"]),
-  .luz-grade .ctrl.off .ds-svg ellipse:not([fill="none"]){fill:var(--linha) !important}
-  .luz-grade .ctrl.off .ds-svg rect,
-  .luz-grade .ctrl.off .ds-svg circle,
-  .luz-grade .ctrl.off .ds-svg polygon,
-  .luz-grade .ctrl.off .ds-svg ellipse{stroke:var(--border-forte) !important}
-  /* OS WIDGETS SAEM, E O TRAVESSÃO FICA. Seis das sete células já têm o "—"
-     escrito pelo molde; o que sobrava ao lado dele era o widget da coluna VIVA.
-     Sem a guia e sem o trilho, `.cel-cor` e `.cel-brilho` passam a ler o que a
-     coluna vazia lê: um traço, e nada mais. */
-  /* E A CHAVE DESTE BLOCO PASSOU DE `.off` PARA `[data-conectado="nao"]` —
-     07/09/2026, e é o que sustenta a cura desta leva. `.off` só alcança o
-     lugar que ESVAZIA na frente do usuário; o lugar que NASCE vazio carrega `.vazia`
-     e nunca ganha `.off` (`hefesto_vivo`, passo `1b`). Enquanto os widgets de
-     gesto não nasciam nas colunas sem dono isso bastava — agora eles nascem
-     nas quatro, e quem cumpre a decisão de produto (*um lugar sem aparelho não
-     oferece gesto nenhum*, 31/08/2026) é ESTA regra.
-
-     A MARCA É A CERTA porque é a que o piloto VIRA nos dois sentidos: o passo
-     `1b` escreve `nao` e o `1c` escreve `sim`. O widget some quando o  (noqa-acento: valores de atributo)
-     controle
-     sai e aparece quando ele chega, no mesmo tique, sem que ninguém injete
-     HTML — que é justamente o que o piloto não sabe fazer, e a razão de o P3
-     e o P4 ficarem sem guia de cores desde que esta aba existe.
-
-     `:not(.vazia)` NÃO ENTRA AQUI, e a diferença é a razão do `:not` lá
-     embaixo: aquela regra apaga um `<span class="nada">` (o travessão que o
-     lugar vazio já tinha, e que ele precisa manter); esta esconde `button` e
-     `input`, que o lugar vazio nunca deve oferecer — nascido vazio ou
-     esvaziado. É a mesma leitura que `monta.CSS_FOLHA` faz para as dez abas.
-
-     O TRILHO ESTAVA NESTA LISTA E SAIU PARA A LINHA DE BAIXO em 07/09/2026,
-     quando ele passou a nascer no lugar vazio para dar casa ao
-     `data-campo="brilho-pct"`; agora as duas leituras voltam a ser uma só. */
+  /* ---------- O LUGAR SEM CONTROLE ----------
+     UMA marca só, `[data-conectado="nao"]`: o gerador a escreve e o piloto a vira nos dois
+     sentidos (passos `1b` e `1c`). As quatro colunas nascem do MESMO molde, e o lugar que nasce
+     vazio e o que esvazia na frente do usuário têm a mesma cara. Até 16/10/2026 havia duas
+     (`.vazia`, de nascimento, e `.off`, do piloto), e o P3 e o P4 saíam com o nome em caixa
+     tracejada e letra própria, diferentes do P2 (fotos 7 e 8 do pedido de 16/10).
+     Cor explícita e nada de `opacity`; o desenho apagado leva `!important` porque a cor da peça
+     é `style=` inline no SVG. O nome fica BRANCO: o lugar vazio se distingue pela palavra
+     «Desconectado», pela borda e pelo travessão, não por letra cinza (decisão de 16/10). */
+  .luz-grade .ctrl[data-conectado="nao"] > *{display:flex;align-items:center;justify-content:center}
+  .luz-grade .ctrl[data-conectado="nao"] .moldura{display:block;color:var(--linha) !important;
+                                                  border-color:var(--border-forte) !important}
+  .luz-grade .ctrl[data-conectado="nao"] .ctrl-rot{color:var(--fg);border-color:var(--border-forte)}
+  .luz-grade .ctrl[data-conectado="nao"] .nada{display:flex;align-items:center;justify-content:center;
+                                               height:100%;width:100%;color:var(--linha)}
+  .luz-grade .ctrl[data-conectado="nao"] .ds-svg .peca,
+  .luz-grade .ctrl[data-conectado="nao"] .ds-svg .corpo,
+  .luz-grade .ctrl[data-conectado="nao"] .ds-svg .miolo *,
+  .luz-grade .ctrl[data-conectado="nao"] .ds-svg text,
+  .luz-grade .ctrl[data-conectado="nao"] .ds-svg rect:not([fill="none"]),
+  .luz-grade .ctrl[data-conectado="nao"] .ds-svg circle:not([fill="none"]),
+  .luz-grade .ctrl[data-conectado="nao"] .ds-svg polygon:not([fill="none"]),
+  .luz-grade .ctrl[data-conectado="nao"] .ds-svg ellipse:not([fill="none"]){fill:var(--linha) !important}
+  .luz-grade .ctrl[data-conectado="nao"] .ds-svg path:not(.peca):not(.corpo){fill:var(--linha) !important;
+                                                                              stroke:var(--linha) !important}
+  .luz-grade .ctrl[data-conectado="nao"] .ds-svg line{stroke:var(--linha) !important}
+  .luz-grade .ctrl[data-conectado="nao"] .ds-svg .corpo,
+  .luz-grade .ctrl[data-conectado="nao"] .ds-svg rect,
+  .luz-grade .ctrl[data-conectado="nao"] .ds-svg circle,
+  .luz-grade .ctrl[data-conectado="nao"] .ds-svg polygon,
+  .luz-grade .ctrl[data-conectado="nao"] .ds-svg ellipse{stroke:var(--border-forte) !important}
+  /* Os widgets saem e o travessão fica: um lugar sem aparelho não oferece gesto (31/08/2026). */
   .luz-grade .ctrl[data-conectado="nao"] .guia,
   .luz-grade .ctrl[data-conectado="nao"] .trilho,
-  .luz-grade .ctrl[data-conectado="nao"] .g4-efeito,
-  .luz-grade .ctrl[data-conectado="nao"] .g4-dica-do-efeito{display:none}
-  /* A SÉTIMA CÉLULA É A ÚNICA QUE PRECISA DO TRAVESSÃO DE VOLTA — ver o
-     `<span class="nada">` que o gerador emite em `cel-acoes`. Ele nasce
-     escondido na coluna viva, para não pôr um traço debaixo de dois botões.
-     `:not(.vazia)` NÃO É ZELO: sem ele esta regra apaga o travessão que a
-     coluna NASCIDA vazia já tinha, e o P3/P4 perdem a linha "Opções". Foi o
-     que a primeira foto desta cura mostrou — a régua sou eu olhando, e ela
-     pegou a regressão que eu mesmo tinha acabado de escrever.
-
-     E O SELETOR VIROU `[data-conectado="sim"]` EM 07/09/2026, porque
-     `:not(.vazia):not(.off)` media o NASCIMENTO e o que decide é o AGORA.  (noqa-acento: verbo medir, imperfeito)
-     Medido: com os dois botões nascendo nos quatro lugares, o P3 que ganha um
-     controle sai de `.vazia` + `conectado="sim"` — nenhum dos dois `:not`
-     falha, o travessão continuava visível, e a célula Opções mostrava "—" ao
-     lado de `Automático` e `Desligar`. A marca do piloto responde pelos dois
-     estados; a classe de nascimento só responde por um. */
+  .luz-grade .ctrl[data-conectado="nao"] .g4-efeito{display:none}
+  /* O travessão da Cor e da Efeito nasce nas quatro colunas e só aparece no lugar vazio. */
+  .luz-grade .ctrl[data-conectado="sim"] .cel-cor .nada,
   .luz-grade .ctrl[data-conectado="sim"] .cel-acoes .nada{display:none}
-  .luz-grade .ctrl.off .cel-acoes .nada{display:flex;align-items:center;
-                                        justify-content:center;color:var(--linha)}
-  .luz-grade .ctrl.off .cel-cor,
-  .luz-grade .ctrl.off .cel-brilho,
-  .luz-grade .ctrl.off .cel-acoes{justify-content:center;color:var(--linha)}
-  /* O TRAVESSÃO DESTAS DUAS CÉLULAS NÃO É O `.nada` — é o `.hex` e o `.num`, os
-     mesmos elementos que mostram `#0000FF` e `100%` na coluna viva, com o traço
-     que o molde escreveu dentro. Eles trazem a fonte e a cor do DADO, e sem
-     esta regra os três lugares vazios da mesa mostravam o mesmo caractere em
-     duas tintas: medido, `rgb(248,248,242)` em JetBrains Mono na coluna que
-     esvaziou contra `rgb(83,87,111)` em Space Grotesk nas que nasceram vazias.
-     Branco é a cor do dado nesta aba — um traço branco lê-se como valor.
-     O `flex`/`text-align` do `.num` também caem: com o trilho escondido, um
-     traço encostado à direita de uma caixa de 38px não fica onde os outros
-     dois ficam. */
-  /* E OS DOIS LUGARES SEM DONO LEEM IGUAL desde 07/09/2026. A coluna que NASCE
-     vazia escrevia o traço num `<span class="nada">` sem endereço; agora ela
-     escreve nos MESMOS `.hex` e `.num` da coluna viva, que é o que dá ao
-     produto onde pousar a cor e o brilho quando o controle chega. Sem esta
-     linha os dois voltariam à fonte e à cor do DADO — que é o defeito que esta
-     regra nasceu para matar, agora do outro lado. */
-  .luz-grade .ctrl[data-conectado="nao"] .cel-cor .hex,
-  .luz-grade .ctrl[data-conectado="nao"] .cel-brilho .num{
-                                        font-family:inherit;color:var(--linha);
-                                        font-size:inherit;
-                                        flex:1;text-align:center;
-                                        display:flex;align-items:center;
-                                        justify-content:center}
+  /* O `.num` do brilho É o travessão da célula no lugar vazio: lê como os outros traços. */
+  .luz-grade .ctrl[data-conectado="nao"] .cel-brilho .num{font-family:inherit;color:var(--linha);
+                                                          font-size:inherit;flex:1;text-align:center;
+                                                          display:flex;align-items:center;
+                                                          justify-content:center}
   /* o respiro entre colunas é do CONTEÚDO, não da célula: padding na coluna
      recua os filhos e a borda deles para 16px antes da divisa, e a linha
      volta a quebrar. Aqui a célula vai até o fim e quem se afasta é o texto. */
@@ -529,8 +374,6 @@ CSS = """
             color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;align-self:center;
             width:100%;min-width:0}
   .ctrl-rot .pt{margin:0 6px}
-  .luz-grade .ctrl.vazia[data-conectado="nao"] .ctrl-rot{color:var(--fg);
-    border:1px dashed var(--border-sutil);background:transparent}
 
   /* A LUZ É LUZ, E NÃO PLÁSTICO. Os tokens são os do mapa do controle
      (`mapa.py`), que é onde eles nasceram: a barra e as cinco lâmpadas ficam de
@@ -742,50 +585,10 @@ CSS = """
      `paridade-gtk-html` procura o sinal como TEXTO no HTML, e nesta MESMA aba
      um comentário que explicava uma remoção já virou a prova de que a peça
      continuava lá. */
-  /* O HEXADECIMAL FICA NA TELA — decisão, 28/08, para as duas abas que o
-     têm (Controles e Iluminação). Ele é o valor do campo Cor, e por isso mora
-     debaixo da guia, na coluna do controle a que pertence. */
+  /* O HEXADECIMAL SAIU DA TELA — 16/10/2026, por pedido de produto: ele vira a dica da célula Cor
+     (`data-dica`, pintada pelo campo `hex`). A caixa era o botão de reenvio (04/09); a cor
+     reenvia agora no clique da amostra já acesa, que é o mesmo gesto `cor` de escolher. */
   .cel-cor{display:flex;flex-direction:column;gap:8px;justify-content:center}
-  .hex{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--fg);
-       text-align:center;line-height:14px}
-  .hex.reenvia{display:inline-flex;align-items:center;justify-content:center;min-height:24px}
-  /* A CAIXA DO HEXADECIMAL VIRA O BOTÃO — 04/09/2026, decisão de produto na pergunta
-     [03] desta aba, contra as outras duas opções (deixar como está, ou um
-     terceiro botão em Opções).
-
-     O QUE ELA FECHA: a aba manda a cor no instante do clique, e um botão da
-     guia SEMPRE dispara — clicar de novo no mesmo tom reenvia. O campo de cor
-     do fim da fileira não: ele só avisava quando o valor MUDAVA, então a cor
-     que ela escolhia à mão era justamente a única sem porta de volta. Aquele
-     campo saiu em 11/09/2026 e esta caixa FICA — o que ela reenvia agora é a
-     cor que a fileira não tem (o global do perfil, ou um tom podado que um
-     perfil antigo ainda guarda), e a confirmação de que a cor chegou depois de
-     um controle cair e voltar.
-
-     NENHUM ELEMENTO NOVO E NENHUMA LINHA, que é a razão da escolha — a fileira
-     de Opções já estava apertada. O que muda é o SINAL de que se pode clicar:
-     o cursor, e a borda no rato. Sem eles, uma caixa que se lê como texto
-     aceitaria clique sem nunca dizer que aceita.
-
-     A BORDA JÁ NASCE (transparente) para o hover não mexer no tamanho — a
-     mesma lição que a `.guia .tom` pagou nesta folha, algumas regras acima. */
-  .hex.reenvia{cursor:pointer;border:1px solid transparent;border-radius:5px;
-            padding:0 4px;align-self:center}
-  .hex.reenvia:hover{border-color:var(--purple);color:var(--purple)}
-  /* O LUGAR QUE ESVAZIA NÃO ACEITA O CLIQUE. Ali o `.hex` mostra o travessão
-     que o molde escreve, e um clique nele levantaria `o clique não disse em
-     qual controle` — que o cartão do piloto não leva à tela (só `RuntimeError`
-     chega lá). É a MESMA cura que a folha do `.off` já faz com a guia, o
-     trilho e os dois botões, três seções acima. */
-  /* E VALE PARA O LUGAR QUE NASCE VAZIO DESDE 07/09/2026, pela chave
-     `[data-conectado="nao"]`. A caixa passou a levar `data-gesto="reenviar"`
-     nos quatro lugares — sem isso o P3 que chega fica com a única maneira de
-     reenviar a cor congelada em nunca. Aqui ela não pode SUMIR como a guia
-     some: este `<span>` É o travessão da célula, o mesmo elemento que mostra
-     `#0000FF` na coluna viva. O que se apaga é o CLIQUE e a borda de botão,
-     não o elemento. */
-  .luz-grade .ctrl[data-conectado="nao"] .cel-cor .hex.reenvia{pointer-events:none;
-                                                               border-color:transparent}
 
   /* ---------- BRILHO ---------- */
   .cel-brilho{display:flex;align-items:center;gap:9px}
@@ -928,11 +731,11 @@ CSS = """
      é item de grade é ela nos quatro — a tira volta a medir 34 sozinha, pelo
      `flex:0 0 34px` que já tinha.
      O QUE SOBRA É DEVOLVER O `align-items`: a regra genérica
-     `.ctrl.vazia > *` (0,3,0) escreve `center` em todo filho direto, e num
+     `.ctrl[data-conectado="nao"] > *` (0,3,0) escreve `center` em todo filho direto, e num
      flex de coluna `center` faz a tira encolher para a largura do conteúdo —
      medido: 212px viravam a largura de um travessão. Esta linha vem DEPOIS
      dela, com a mesma especificidade, e é a que vale. */
-  .luz-grade .ctrl.vazia .cel-leds{align-items:stretch}
+  .luz-grade .ctrl[data-conectado="nao"] .cel-leds{align-items:stretch}
   /* O VÃO VOLTOU A SER 16px E UM SÓ — 07/09/2026, com a botoeira fora. A
      LUZES-01 o partira em dois grupos (`space-between` + `gap:4px`) porque as
      seis teclas de desenho pediam 212 dos 220px da coluna e não sobrava vão;
@@ -1036,27 +839,10 @@ CSS = """
     border:1px solid var(--linha);background:var(--app-bg);color:var(--fg);
     font:500 12.5px 'Space Grotesk',system-ui,sans-serif;cursor:pointer}
   .g4-efeito:hover{border-color:var(--comment)}
-  .g4-dica-do-efeito{flex:0 0 14px;min-width:0;font-size:11px;line-height:14px;
-    color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .quadro-topo .sem-piscar{margin-left:auto}
-  .quadro-topo .sem-piscar + .modo-auto{margin-left:12px}
+  /* A FRASE DO EFEITO É DICA (16/10/2026): mora na `data-dica` da caixa da lista, pintada pelo
+     campo `efeito-dica`. A caixa não ocupa lugar (`display:contents`); a dica sobe a árvore. */
+  .g4-efeito-dica{display:contents}
   .quadro-topo .modo-auto{margin-left:auto}
-  /* O interruptor «Sem piscar» (desenho A): uma pílula com a chave de 38x22, na mesma altura do
-     Modo automático. Ligado, a chave vai para a direita e acende em ciano. */
-  .sem-piscar{display:inline-flex;align-items:center;gap:9px;height:34px;padding:0 14px 0 10px;
-    border-radius:999px;border:1px solid var(--border-forte,#44475a);background:transparent;
-    color:var(--texto-suave,#c8ccda);font:600 13.5px/1 'Space Grotesk',system-ui,sans-serif;
-    cursor:pointer;transition:border-color .15s,color .15s}
-  .sem-piscar .chave{width:38px;height:22px;border-radius:11px;position:relative;flex:0 0 38px;
-    border:1px solid var(--border-forte,#44475a);background:var(--elevated,#2b2d3a);
-    transition:background .15s,border-color .15s}
-  .sem-piscar .chave::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;
-    border-radius:50%;background:var(--texto-mudo,#9a9eb8);transition:left .15s,background .15s}
-  .sem-piscar:hover{border-color:#5fd3e6;color:#fff}
-  .sem-piscar[aria-pressed="true"] .chave{background:#36406a;border-color:#5fd3e6}
-  .sem-piscar[aria-pressed="true"] .chave::after{left:18px;background:var(--cyan,#8be9fd)}
-  .sem-piscar:focus-visible{outline:2px solid var(--cyan,#8be9fd);outline-offset:2px}
-  @media (prefers-reduced-motion:reduce){.sem-piscar,.sem-piscar .chave,.sem-piscar .chave::after{transition:none}}
   /* ---------- CRIAR EFEITOS NOVOS ---------- */
   .criar{flex:0 0 auto}
   .criar .criar-linha{display:flex;align-items:center;gap:12px;padding:7px 16px;flex-wrap:nowrap;min-width:0}
@@ -1231,7 +1017,7 @@ def coluna(c):
         ' data-dica="A borda é o plástico; a barra, a cor do número"'
         if ligado else "")
     rotulo = (monta_.rotulo(c, "modelo") if ligado else
-              f'<b>P{j}</b> <span class="pt">•</span> {SEM_NINGUEM_AQUI}')
+              f'P{j} <span class="pt">•</span> {SEM_NINGUEM_AQUI}')
     # `opcoes` eram `... if ligado else ""`, e o preço foi MEDIDO nas  (noqa-acento: nome de variável)
     # DualSense do usuário na mesa e o daemon de pé, a foto ao vivo mostrava o P3 e o
     # bloco `[data-conectado="nao"]` desta folha esconde a guia, o trilho e os
@@ -1243,8 +1029,7 @@ def coluna(c):
               </span>
             </span>
             '''
-    reenvio = ' data-gesto="reenviar"'
-    dica_do_hex = '\n                  data-dica="Manda esta cor de novo"'
+    dica_do_hex = f' data-dica="{cor}"' if ligado else ""
     largura_de_partida = f' style="width:{b}%"' if ligado else ""
     puxador = (f'<input class="puxador" type="range" min="0" max="100" step="1"'
                f' value="{b if ligado else 0}" data-gesto="brilho" data-campo="brilho-pct"'
@@ -1267,32 +1052,26 @@ def coluna(c):
         BRILHO_DAS_LUZES_PADRAO, "              ") if ligado else "")
     #: a lista nasce igual nos quatro lugares (a do vazio some pela folha): o pacote reescreve as
     #: opções da coluna viva, e o valor escolhido volta pelo `data-campo`.
-    opcoes = (f'<select class="g4-efeito" data-gesto="{_pacote04.GESTO_DO_EFEITO}" '
+    opcoes = (f'<span class="g4-efeito-dica" data-campo="{_pacote04.CAMPO_DA_DICA_DO_EFEITO}" '
+              f'data-hef-alvo="atributo" data-hef-atributo="data-dica" '
+              f'data-dica="{_pacote04.DICA_LUZ_FIXA}">'
+              f'<select class="g4-efeito" data-gesto="{_pacote04.GESTO_DO_EFEITO}" '
               f'aria-label="Efeito da barra" data-campo="{_pacote04.CAMPO_DO_EFEITO}" '
-              f'data-hef-alvo="valor" data-dica="Sem efeito apaga a barra">'
+              f'data-hef-alvo="valor">'
               + _pacote04.opcoes_do_efeito(CENA_DOS_EFEITOS).replace(
                   f'<option value="{_pacote04.LUZ_FIXA}">',
                   f'<option value="{_pacote04.LUZ_FIXA}" selected>', 1)
-              + '</select>'
-              + f'<span class="g4-dica-do-efeito" data-campo="{_pacote04.CAMPO_DA_DICA_DO_EFEITO}" '
-              f'data-hef-alvo="texto">{_pacote04.DICA_LUZ_FIXA}</span>\n            ')
+              + '</select></span>\n            ')
 
     # `nao` da régua de acentuação é um `#`, e dentro de uma f-string de  (noqa-acento: o próprio valor que a nota explica)
     conectado = "sim" if ligado else "nao"  # noqa-acento: valor de atributo
-    return f'''        <div class="ctrl{"" if ligado else " vazia"}" data-controle="{c.get("uniq") or p}" data-conectado="{conectado}"{titulo_do_lugar}>
+    return f'''        <div class="ctrl" data-controle="{c.get("uniq") or p}" data-conectado="{conectado}"{titulo_do_lugar}>
           <div class="moldura" data-campo="plastico" data-hef-alvo="cor"{plastico_de_partida}{dica_da_moldura}>
             {desenho(f"il-{p}", c["cor"], ligado, **resto_do_desenho)}
           </div>
           <div class="ctrl-rot" data-campo="identidade">{rotulo}</div>
-          <div class="cel-cor">
-            {guia}<!-- E ELA REENVIA — 04/09/2026, decisão [03] dela. O `data-gesto`
-                 vai NESTA caixa e não num botão novo, e o valor que ele leva é
-                 o TEXTO dela: `data-hex` seria a cor do gerador, congelada, e
-                 mandaria ao aparelho a cor do mockup em vez da que está
-                 gravada. O `texto` do clique é o que o piloto lê do
-                 `textContent`, e o `textContent` é o que o pacote reescreve a
-                 cada tique pelo `data-campo="hex"`. -->
-            <span class="hex reenvia" data-campo="hex"{reenvio}{dica_do_hex}>{cor if ligado else VAZIO}</span>
+          <div class="cel-cor" data-campo="hex" data-hef-alvo="atributo" data-hef-atributo="data-dica"{dica_do_hex}>
+            {guia}<span class="nada">{VAZIO}</span>
           </div>
           <div class="cel-brilho">
             <span class="trilho"><span class="cheio" data-campo="brilho-pct" data-hef-alvo="largura"{largura_de_partida}></span>{puxador}</span>
@@ -1370,27 +1149,6 @@ def _cor_do_efeito(cru):
             f'style="background:{tom_da_casa(cru)}" data-dica="Tirar esta cor"></button>')
 
 
-#: O «Sem piscar»: o `data-pedido` leva o que o PRÓXIMO clique pede (ligar quando está desligado) e
-#: acompanha o `aria-pressed`, que a pintura escreve; o clique vira o `aria-pressed` na hora, depois
-#: de o piloto ter lido o `data-pedido` (o mesmo molde do Modo automático da base comum).
-SCRIPT_DO_SEM_PISCAR = '''<script data-aba="sem-piscar">
-(function(){
-  var b = document.querySelector('.sem-piscar'); if(!b) return;
-  function sincroniza(){
-    var pedido = b.getAttribute('aria-pressed') === 'true' ? 'desligar' : 'ligar';
-    if(b.dataset.pedido !== pedido) b.dataset.pedido = pedido;
-  }
-  new MutationObserver(sincroniza).observe(b, {attributes: true, attributeFilter: ['aria-pressed']});
-  b.addEventListener('click', function(){
-    setTimeout(function(){
-      b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') === 'true' ? 'false' : 'true');
-    }, 0);
-  });
-  sincroniza();
-})();
-</script>
-'''
-
 #: Mantém as cores do efeito: «+» põe a próxima da guia que ainda não está, a cor tirada sai (fica
 #: uma, no mínimo), e o campo escondido leva as cruas ao gesto.
 SCRIPT_DO_CRIAR = f'''<script data-aba="criar">
@@ -1428,7 +1186,6 @@ MIOLO = f'''
       <div class="quadro-topo">
         <span class="quadro-titulo" data-dica="A luz diz de quem é cada controle">Iluminação</span>
         {trava_do_nativo("na luz").replace("title=", "data-dica=", 1)}
-        <button class="sem-piscar" type="button" data-gesto="{_pacote04.GESTO_DO_SEM_PISCAR}" data-pedido="ligar" data-campo="{_pacote04.CAMPO_DO_SEM_PISCAR}" data-hef-alvo="classe" data-hef-classe="ligado" data-hef-atributo="aria-pressed" aria-pressed="false" data-dica="{_pacote04.DICA_DO_SEM_PISCAR}"><span class="chave"></span>Sem piscar</button>
         {monta_.modo_auto(GESTO_DO_MODO, governa=".luz-grade .ctrl", dica="O jogo pinta a barra; o estilo do perfil ajusta")}
       </div>
       <div class="quadro-corpo">
@@ -1505,7 +1262,7 @@ MIOLO = f'''
         <span class="meus" id="seus-efeitos" aria-label="Seus efeitos">{_pacote04.html_dos_efeitos(CENA_DOS_EFEITOS)}</span>
       </div>
     </div>
-{SCRIPT_DO_CRIAR}{SCRIPT_DO_SEM_PISCAR}'''
+{SCRIPT_DO_CRIAR}'''
 
 LEGENDA = f'''<div class="nota">
   <div class="nota-troca" data-hef="troca">
@@ -1528,8 +1285,6 @@ _COBERTURA_SEM_DONO = {
     "tom": '.luz-grade .ctrl[data-conectado="nao"] .guia',
     "puxador": '.luz-grade .ctrl[data-conectado="nao"] .trilho',
     "g4-efeito": '.luz-grade .ctrl[data-conectado="nao"] .g4-efeito',
-    "g4-dica-do-efeito": '.luz-grade .ctrl[data-conectado="nao"] .g4-dica-do-efeito',
-    "hex": '.luz-grade .ctrl[data-conectado="nao"] .cel-cor .hex.reenvia{pointer-events:none',
 }
 
 _SEM_CLASSE = re.compile(r"()").match("")
@@ -1539,7 +1294,8 @@ def _cada_coluna(colunas):
     """As colunas da grade, separadas em (vazias, conectadas)."""
     vazias, cheias = [], []
     for atributos, miolo in _UMA_COLUNA.findall(colunas):
-        (vazias if "vazia" in atributos else cheias).append(atributos + ">" + miolo)
+        (vazias if 'data-conectado="nao"' in atributos else cheias).append(  # noqa-acento
+            atributos + ">" + miolo)
     return vazias, cheias
 
 
@@ -1562,13 +1318,13 @@ def _conferir(doc):
            "o passo deixou de ser o dobro do ar")
 
     vazios = [c for c in MESA if not c.get("conectado", True)]
-    exigir(corpo.count('class="ctrl vazia"') == len(vazios),
+    exigir(corpo.count('class="ctrl" data-controle=') == len(MESA),
+           "as quatro colunas não nascem do mesmo molde (a classe de nascimento voltou)")
+    exigir(corpo.count('data-conectado="nao"') == len(vazios),  # noqa-acento
            f"as colunas vazias não são {len(vazios)}")
-    exigir(corpo.count('class="ctrl"') == len(MESA) - len(vazios),
-           "uma coluna conectada virou vazia, ou o contrário")
 
     for c in vazios:
-        exigir(f'<b>P{c["jogador"]}</b> <span class="pt">•</span> Desconectado' in corpo,
+        exigir(f'P{c["jogador"]} <span class="pt">•</span> Desconectado' in corpo,
                f"a coluna do P{c['jogador']} não diz Desconectado")
         exigir(c["nome"] not in corpo,
                f"o nome do plástico {c['nome']!r} voltou a uma coluna vazia")
@@ -1577,7 +1333,7 @@ def _conferir(doc):
     grade = (corpo.split('<div class="luz-grade">', 1)[-1].split('<div class="rodape"', 1)[0]
              .split('<div class="quadro criar"', 1)[0])
     #    `luzes`, `desenho-de` e `reenviar-desenho` —, e eles JÁ chegavam aos
-    #    `apagar` e `reenviar` — são os do cartão, e são estes que a régua conta.
+    #    `apagar` — são os do cartão, e são estes que a régua conta.
     gestos_por_lugar = {}
     vazias, cheias = _cada_coluna(grade)
     for coluna_html in vazias + cheias:
@@ -1731,15 +1487,11 @@ def _conferir(doc):
 
     #     deixava o P3 que GANHA um controle com a única maneira de reenviar a
     #     a borda de botão enquanto `data-conectado="nao"`, e é a §4 que cobra
-    caixas = re.findall(r'<span class="hex reenvia"[^>]*>', colunas)
-    exigir(len(caixas) == len(MESA),
-           "a caixa do hexadecimal não virou botão em todas as colunas")
-    for caixa in caixas:
-        exigir('data-gesto="reenviar"' in caixa,
-               "a caixa do hexadecimal perdeu o gesto de reenvio")
-        exigir("data-hex=" not in caixa,
-               "a caixa do hexadecimal ganhou `data-hex` — o gesto passaria a "
-               "reenviar a cor CRAVADA no desenho, e não a que está na tela")
+    exigir('class="hex' not in colunas and 'data-gesto="reenviar"' not in colunas,
+           "o hexadecimal voltou à tela: ele é a dica da célula Cor (16/10)")
+    exigir(len(re.findall(r'<div class="cel-cor" data-campo="hex" data-hef-alvo="atributo" '
+                          r'data-hef-atributo="data-dica"', colunas)) == len(MESA),
+           "a célula Cor não leva o hexadecimal na dica em todas as colunas")
 
     #     de `core/led_control.player_led_pattern` — o MESMO que o daemon
     for coluna_html in _cada_coluna(grade)[1]:
@@ -1777,11 +1529,12 @@ def _conferir(doc):
     exigir(len(re.findall(r'<optgroup label="(?:Parado|Que respira|Que se move)"', corpo))
            == 3 * len(MESA),
            "a lista Efeito perdeu os grupos do desenho A (Parado, Que respira, Que se move)")
-    exigir(corpo.count('class="g4-dica-do-efeito"') == len(MESA),
-           "a lista Efeito não tem a frase de uma linha embaixo, uma por lugar")
-    exigir(topo.count(f'data-gesto="{_pacote04.GESTO_DO_SEM_PISCAR}"') == 1
-           and 'class="sem-piscar"' in topo and 'aria-pressed="false"' in topo,
-           "o interruptor «Sem piscar» não está na faixa do título (um só, desligado ao nascer)")
+    exigir(corpo.count(f'class="g4-efeito-dica" data-campo="{_pacote04.CAMPO_DA_DICA_DO_EFEITO}" '
+                       'data-hef-alvo="atributo" data-hef-atributo="data-dica"') == len(MESA)
+           and "g4-dica-do-efeito" not in doc,
+           "a frase do efeito voltou para a tela: ela é a dica da lista (16/10), uma por lugar")
+    exigir("sem-piscar" not in doc and "Sem piscar" not in doc,
+           "o «Sem piscar» voltou à aba: ele saiu em 16/10, a «Luz fixa» já é a luz parada")
     criar = corpo.split('<div class="quadro criar"', 1)[-1]
     exigir(f'data-gesto="{_pacote04.GESTO_DE_CRIAR_EFEITO}"' in criar and "Criar efeitos novos" in criar
            and 'id="seus-efeitos"' in criar,

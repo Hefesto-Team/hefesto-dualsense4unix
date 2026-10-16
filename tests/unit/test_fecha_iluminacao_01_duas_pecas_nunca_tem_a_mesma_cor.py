@@ -663,36 +663,19 @@ class TestOGestoDaAba:
         assert "tom on" not in html
         assert "tomado" not in html
 
-    def test_o_reenviar_passa_pela_mesma_porta_que_o_cor(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """A SEGUNDA porta de escolha de cor não tinha a regra da primeira.
+    def test_a_porta_de_escolha_de_cor_e_uma_so(self) -> None:
+        """A SEGUNDA porta de escolha de cor (a caixa `#RRGGBB`, gesto `reenviar`) saiu em
+        16/10/2026 com a caixa: o hexadecimal virou dica da célula Cor e reenviar é clicar o
+        tom aceso, que passa pela guarda do vizinho como qualquer tom (`cor`).
 
-        A caixa `#RRGGBB` alcança o tom EXATO de outra coluna — é literalmente
-        o texto que a outra coluna imprime —, então era a porta mais barata
-        para pôr duas peças da mesma cor. E a docstring do `_escrever_a_cor`
-        já prometia uma porta só.
-
-        **A MORDIDA:** tire o `escolha=True` do `reenviar` e a cor pedida sai
-        no fio como veio, igual à do vizinho.
+        **A MORDIDA:** devolver o `reenviar` ao pacote reabre a porta que alcançava o tom EXATO
+        de outra coluna.
         """
         from hefesto_dualsense4unix.interface import pacotes
-        from hefesto_dualsense4unix.interface.pacotes import a04_iluminacao as a04
 
-        monkeypatch.setattr(a04.perfil, "ativo", lambda _nome: {})
-        ponte = _PonteQueAceita()
-        vizinho = _hexa(player_slot_color(2))
-
-        # que chama `a04.reenviar` direto passaria com o `data-gesto` da página
-        atende = pacotes.gesto_da_pagina("04-iluminacao.html", "reenviar")
-        assert atende is not None, "ninguém atende o `reenviar` da página 04"
-        with pytest.raises(RuntimeError) as erro:
-            atende(_CtxDeMentira(), {"uniq": UNIQS[0], "texto": vizinho}, ponte)
-
-        assert "P2" in str(erro.value)
-        assert not ponte.cores, (
-            "o reenviar escreveu no aparelho apesar da recusa — "
-            "«Nada foi mudado» tem de ser verdade")
+        assert pacotes.gesto_da_pagina("04-iluminacao.html", "reenviar") is None, (
+            "o `reenviar` voltou: a caixa que o oferecia saiu em 16/10/2026")
+        assert pacotes.gesto_da_pagina("04-iluminacao.html", "cor") is not None
 
     def test_o_tom_livre_passa_calado(self) -> None:
         """Sem colisão não há frase — recado sobre nada é ruído."""
@@ -718,7 +701,7 @@ class TestOGestoDaAba:
         assert ponte.cores[-1][0] == (0, 0, 0)
 
 
-#: `modo-da-luz`, `brilho`, `cor`, `player` e `reenviar`.
+#: `modo-da-luz`, `brilho`, `cor` e `player`.
 _BOTAO_MORTO = re.compile("autom" + "[áa]tico", re.I)
 
 

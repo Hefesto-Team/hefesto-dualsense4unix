@@ -131,7 +131,7 @@ def test_o_desenho_de_cada_coluna_conectada_pede_o_alvo_do_atributo() -> None:
     conectadas = [
         a for _t, a in elementos
         if "ctrl" in (a.get("class") or "").split()
-        and "vazia" not in (a.get("class") or "").split()
+        and a.get("data-conectado") == "sim"
     ]
     desenhos = [
         a for tag, a in elementos

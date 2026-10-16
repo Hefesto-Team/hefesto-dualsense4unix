@@ -3,7 +3,7 @@
 Nada aqui lê relógio, arquivo ou estado: a mesma entrada dá a mesma saída; o laço do daemon
 (``daemon/subsystems/luz_animada.py``) só escolhe o instante. Todo efeito modula o BRILHO da cor
 do controle (só o arco-íris gira o matiz, e a Maré o desloca até 30 graus). Nenhuma subida passa
-de 3 por segundo (WCAG 2.3.1), nem de 1 com ``sem_piscar``, sempre em transição suave; o brilho
+de 3 por segundo (WCAG 2.3.1), sempre em transição suave; o brilho
 tem piso, e o vermelho saturado nunca alterna com o apagado. O ritmo 10 é o mais rápido que a
 regra deixa: o valor da tabela da sprint é o dele, e os ritmos menores o alongam.
 """
@@ -29,12 +29,6 @@ BORDA_DO_PISCAR_S = 0.150
 #: Teto do piscar, em lampejos por segundo (WCAG 2.3.1).
 TETO_DO_PISCAR_HZ = 3.0
 PISO_DO_PISCAR_HZ = 0.3
-#: Com «Sem piscar» nada sobe mais de uma vez por segundo.
-PERIODO_MINIMO_SEM_PISCAR_S = 1.0
-#: A batida do coração sem piscar: um pico só, a cada 1,5 s.
-PERIODO_DA_BATIDA_SEM_PISCAR_S = 1.5
-#: A chama sem piscar muda de alvo a cada 3 s.
-TROCA_DA_CHAMA_SEM_PISCAR_S = 3.0
 #: A chama passeia entre estes dois brilhos.
 PISO_DA_CHAMA = 0.6
 TETO_DA_CHAMA = 1.0
@@ -87,16 +81,14 @@ def periodo_do_arco_iris_s(ritmo: int) -> float:
     return max(VOLTA_MINIMA_DO_ARCO_IRIS_S, _entre_ritmos(ritmo, 20.0, VOLTA_MINIMA_DO_ARCO_IRIS_S))
 
 
-def periodo_da_batida_s(ritmo: int, sem_piscar: bool = False) -> float:
-    """Um batimento: de 2,5 s no ritmo 1 a 1,0 s no ritmo 10; sem piscar, nunca menos de 1,5 s."""
-    periodo = _entre_ritmos(ritmo, 2.5, 1.0)
-    return max(periodo, PERIODO_DA_BATIDA_SEM_PISCAR_S) if sem_piscar else periodo
+def periodo_da_batida_s(ritmo: int) -> float:
+    """Um batimento: de 2,5 s no ritmo 1 a 1,0 s no ritmo 10."""
+    return _entre_ritmos(ritmo, 2.5, 1.0)
 
 
-def troca_da_chama_s(ritmo: int, sem_piscar: bool = False) -> float:
+def troca_da_chama_s(ritmo: int) -> float:
     """De quanto em quanto tempo a chama escolhe outro alvo: de 3 s no ritmo 1 a 1 s no 10."""
-    troca = _entre_ritmos(ritmo, 3.0, 1.0)
-    return max(troca, TROCA_DA_CHAMA_SEM_PISCAR_S) if sem_piscar else troca
+    return _entre_ritmos(ritmo, 3.0, 1.0)
 
 
 def periodo_da_mare_s(ritmo: int) -> float:
@@ -137,16 +129,10 @@ def _lombada(x: float, centro: float, meia_largura: float) -> float:
     return 0.5 + 0.5 * math.cos(math.pi * distancia / meia_largura)
 
 
-def brilho_da_batida(t: float, periodo_s: float, sem_piscar: bool = False) -> float:
-    """Duas subidas rápidas e uma pausa, como o coração; piso 0,25.
-
-    Sem piscar vira um pico só, largo, por período.
-    """
+def brilho_da_batida(t: float, periodo_s: float) -> float:
+    """Duas subidas rápidas e uma pausa, como o coração; piso 0,25."""
     x = (t / periodo_s) % 1.0
-    if sem_piscar:
-        pico = _lombada(x, 0.5, 0.5)
-    else:
-        pico = max(_lombada(x, 0.10, 0.10), 0.8 * _lombada(x, 0.34, 0.10))
+    pico = max(_lombada(x, 0.10, 0.10), 0.8 * _lombada(x, 0.34, 0.10))
     return PISO_DA_BATIDA + (1.0 - PISO_DA_BATIDA) * pico
 
 
@@ -225,16 +211,14 @@ def cor_no_instante(
     t: float,
     posicao: int = 0,
     semente: int = 0,
-    sem_piscar: bool = False,
     amplitude: float = 1.0,
 ) -> RGB:
     """A cor do efeito no instante ``t`` (segundos), na intensidade cheia do perfil.
 
     ``posicao`` é o lugar do controle na mesa (0 a 3): só o arco-íris a usa, para defasar um
-    quarto de volta por controle. ``semente`` é do controle: só a chama a usa. Com
-    ``sem_piscar`` nada passa de uma subida por segundo: o piscar vira respirar no mesmo ritmo.
-    O respirar, o piscar e a batida usam uma cor por ciclo, em ordem; a chama e a maré, a
-    primeira cor; o arco-íris ignora as cores. ``amplitude`` (0 a 1) encurta os 30 graus da
+    quarto de volta por controle. ``semente`` é do controle: só a chama a usa. O respirar, o
+    piscar e a batida usam uma cor por ciclo, em ordem; a chama e a maré, a primeira cor; o
+    arco-íris ignora as cores. ``amplitude`` (0 a 1) encurta os 30 graus da
     Maré (ver :func:`amplitude_da_mare`).
     """
     if efeito.base == "arco-iris":  # (noqa-acento) chave ASCII
@@ -242,17 +226,17 @@ def cor_no_instante(
         return (_inteiro(r * 255), _inteiro(g * 255), _inteiro(b * 255))
     cores = efeito.cores or ((255, 255, 255),)
     if efeito.base == "chama":
-        brilho = brilho_da_chama(t, troca_da_chama_s(efeito.ritmo, sem_piscar), semente)
+        brilho = brilho_da_chama(t, troca_da_chama_s(efeito.ritmo), semente)
         return _escalar(cores[0], brilho)
     if efeito.base == "mare":
         return _com_o_matiz_andado(
             cores[0], amplitude * deslocamento_da_mare(t, periodo_da_mare_s(efeito.ritmo))
         )
     if efeito.base == "batimento":  # (noqa-acento) chave ASCII
-        periodo = periodo_da_batida_s(efeito.ritmo, sem_piscar)
+        periodo = periodo_da_batida_s(efeito.ritmo)
         cor = cores[int(t / periodo) % len(cores)]
-        return _escalar(cor, brilho_da_batida(t, periodo, sem_piscar))
-    if efeito.base == "piscar" and not sem_piscar:
+        return _escalar(cor, brilho_da_batida(t, periodo))
+    if efeito.base == "piscar":
         hz = frequencia_do_piscar_hz(efeito.ritmo)
         periodo = 1.0 / hz
         borda = min(BORDA_DO_PISCAR_S, periodo / 2)
@@ -260,10 +244,7 @@ def cor_no_instante(
         meio_do_baixo = 0.75 * periodo - borda / 2
         cor = cores[max(0, math.floor((t + periodo - meio_do_baixo) / periodo)) % len(cores)]
         return _escalar(cor, brilho_do_piscar(t, hz))
-    if efeito.base == "piscar":
-        periodo = max(1.0 / frequencia_do_piscar_hz(efeito.ritmo), PERIODO_MINIMO_SEM_PISCAR_S)
-    else:
-        periodo = periodo_do_respirar_s(efeito.ritmo)
+    periodo = periodo_do_respirar_s(efeito.ritmo)
     cor = cores[int(t / periodo) % len(cores)]
     return _escalar(cor, brilho_do_respirar(t, periodo))
 

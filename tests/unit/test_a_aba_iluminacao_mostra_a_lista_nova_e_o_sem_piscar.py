@@ -2,18 +2,17 @@
 (A-ABA-ILUMINACAO-MOSTRA-A-LISTA-NOVA-E-O-SEM-PISCAR-01, 15/10/2026).
 
 A linha «Efeito» tem oito opções, em grupos pelo que se vê (o desenho A, com uma lista suspensa em
-cada controle), e uma frase de uma linha sob a lista diz o que a escolhida faz. O interruptor «Sem
-piscar» é UM valor da declaração da máquina (`maquina.json`, `luz.sem_piscar`), o mesmo para os
-quatro controles e as duas conexões: nenhum perfil ganha campo.
+cada controle), e a dica da lista diz o que a escolhida faz (desde 16/10/2026 a frase é dica, não
+texto na tela). O interruptor «Sem piscar» saiu em 16/10/2026, a pedido: a prova de que ele
+saiu e de que o `maquina.json` antigo carrega é `test_o_sem_piscar_saiu_e_o_arquivo_velho_carrega`.
 
 O lar é de mentira (o `conftest` desvia `HOME` e os `XDG_*`): o gesto grava o `maquina.json` de
 verdade, dentro dele.
 
-MORDIDAS (feitas à mão, 15/10/2026): tirar `sem_piscar` de `LuzDeclarada` reprova a gravação;
-tirar o grupo «Que se move» ou o token `base:` da lista reprova a ordem; fazer o gesto da base
-gravar uma cor fixa reprova a cor do controle. Trocar a cor sem levar o efeito junto
-(`efeito=None` em `_guardar_a_cor_no_perfil`) reprova os quatro controles; dar cor ao arco-íris
-reprova o que não leva cor.
+MORDIDAS (feitas à mão, 15/10/2026): tirar o grupo «Que se move» ou o token `base:` da lista
+reprova a ordem; fazer o gesto da base gravar uma cor fixa reprova a cor do controle. Trocar a
+cor sem levar o efeito junto (`efeito=None` em `_guardar_a_cor_no_perfil`) reprova os quatro
+controles; dar cor ao arco-íris reprova o que não leva cor.
 """
 from __future__ import annotations
 
@@ -58,20 +57,6 @@ def _gesto(nome: str) -> Any:
     gesto = pacotes.gesto_da_pagina("04-iluminacao.html", nome)
     assert gesto is not None, nome
     return gesto
-
-
-class _Ponte:
-    """O `machine_declare` do daemon, no que se mede: a declaração PARCIAL funde no disco."""
-
-    def __init__(self) -> None:
-        self.chamadas: list[dict[str, Any]] = []
-
-    def machine_declare(self, declaracao: dict[str, Any]) -> tuple[bool, str | None]:
-        from hefesto_dualsense4unix.utils.maquina import gravar_maquina_com_descartes
-
-        self.chamadas.append(declaracao)
-        gravar_maquina_com_descartes(declaracao)
-        return True, None
 
 
 def _options(html: str) -> list[tuple[str, str]]:
@@ -146,18 +131,10 @@ def test_o_desenho_tem_uma_lista_por_controle_com_as_oito_opcoes_e_a_frase() -> 
         assert re.findall(r'<optgroup label="([^"]*)"', lista)[:3] == GRUPOS_NA_ORDEM
         assert [v for v, _ in _options(lista)][:8] == VALORES_NA_ORDEM
         assert [r for _, r in _options(lista)][:8] == ROTULOS_NA_ORDEM
-    assert doc.count('class="g4-dica-do-efeito"') == 4, "a frase de uma linha, uma por controle"
-
-
-def test_o_desenho_tem_o_sem_piscar_uma_vez_e_desligado() -> None:
-    doc = _doc()
-    botoes = re.findall(r'<button class="sem-piscar"[^>]*>', doc)
-    assert len(botoes) == 1, botoes
-    botao = botoes[0]
-    assert 'data-gesto="sem-piscar"' in botao and 'aria-pressed="false"' in botao
-    assert 'data-pedido="ligar"' in botao, "desligado, o próximo clique pede ligar"
-    assert 'data-campo="sem-piscar"' in botao and 'data-hef-atributo="aria-pressed"' in botao
-    assert "Sem piscar</button>" in doc
+    caixas = re.findall(r'<span class="g4-efeito-dica" data-campo="efeito-dica" '
+                        r'data-hef-alvo="atributo" data-hef-atributo="data-dica"', doc)
+    assert len(caixas) == 4, "a frase do efeito é a dica da lista, uma por controle"
+    assert "g4-dica-do-efeito" not in doc, "a frase do efeito voltou para a tela"
 
 
 # ---------------------------------------------------------------- o gesto da lista
@@ -224,70 +201,6 @@ def test_sem_efeito_e_luz_fixa_continuam_a_valer() -> None:
     _gesto("efeito-da-luz")(_ctx(), {"uniq": JOGADORES[0], "valor": "luz-fixa"}, None)
     dele = o_computador().controles.get("aabbcc000001")
     assert dele is None or dele.leds is None or dele.leds.efeito is None
-
-
-# ---------------------------------------------------------------- o Sem piscar
-
-def test_ligar_o_sem_piscar_grava_o_valor_global_e_a_leitura_devolve_ligado(
-        monkeypatch: pytest.MonkeyPatch) -> None:
-    """O valor mora no `maquina.json`; a leitura é a do motor (`schema.sem_piscar_da_mesa`)."""
-    from hefesto_dualsense4unix.profiles import schema
-    from hefesto_dualsense4unix.utils.maquina import carregar_maquina
-    from pacotes import a04_iluminacao as a04
-
-    monkeypatch.setattr(schema, "_FONTE_DA_DECLARACAO", carregar_maquina)
-    assert schema.sem_piscar_da_mesa() is False and a04.o_sem_piscar_de_agora() is False
-    ponte = _Ponte()
-    _gesto("sem-piscar")(_ctx(), {"pedido": "ligar"}, ponte)
-    assert ponte.chamadas == [{"luz": {"sem_piscar": True}}]
-    assert carregar_maquina().luz.sem_piscar is True
-    assert schema.sem_piscar_da_mesa() is True, "o motor lê o que a tela gravou"
-    assert a04.o_sem_piscar_de_agora() is True
-    assert a04.pacote(_ctx())[a04.CAMPO_DO_SEM_PISCAR] == "sim"
-    # Desligar volta a «sem opinião», que vale desligado.
-    _gesto("sem-piscar")(_ctx(), {"pedido": "desligar"}, ponte)
-    assert carregar_maquina().luz.sem_piscar is None
-    assert schema.sem_piscar_da_mesa() is False and a04.o_sem_piscar_de_agora() is False
-    assert a04.pacote(_ctx())[a04.CAMPO_DO_SEM_PISCAR] == ""
-
-
-def test_o_sem_piscar_e_um_so_para_os_controles_e_nenhum_perfil_ganha_campo() -> None:
-    # Prova da D-1510-O-SEM-PISCAR-E-DO-COMPUTADOR.
-    from hefesto_dualsense4unix.profiles.schema import ControllerOverrides, LedsConfig, Profile
-    from hefesto_dualsense4unix.utils.maquina import carregar_maquina
-
-    _gesto("sem-piscar")(_ctx(), {"pedido": "ligar"}, _Ponte())
-    maquina = carregar_maquina()
-    assert maquina.luz.sem_piscar is True and not maquina.controles, \
-        "o valor não vira declaração de um controle"
-    for modelo in (Profile, LedsConfig, ControllerOverrides):
-        assert not [c for c in modelo.model_fields if "piscar" in c], modelo.__name__
-
-
-def test_o_sem_piscar_sem_pedido_nao_vem_da_tela() -> None:
-    with pytest.raises(ValueError, match="não disse se liga ou desliga"):
-        _gesto("sem-piscar")(_ctx(), {}, _Ponte())
-
-
-def test_o_sem_piscar_recusado_pelo_daemon_levanta() -> None:
-    class _Recusa:
-        def machine_declare(self, _declaracao: dict[str, Any]) -> tuple[bool, str | None]:
-            return False, "O Hefesto não respondeu."
-
-    with pytest.raises(RuntimeError, match="não respondeu"):
-        _gesto("sem-piscar")(_ctx(), {"pedido": "ligar"}, _Recusa())
-
-
-def test_o_sem_piscar_e_gesto_do_computador_e_clica_na_varredura() -> None:
-    import pacotes
-
-    assert pacotes.camada.CAMADA[("04-iluminacao.html", "sem-piscar")] == \
-        pacotes.camada.COMPUTADOR
-    from pacotes import a04_iluminacao as a04
-
-    assert "machine_declare" in a04.PONTE and "machine.declare" in a04.METODOS
-    provas = [p for p in a04.PROVAS if p["gesto"] == a04.GESTO_DO_SEM_PISCAR]
-    assert provas and provas[0]["chama"][0][0] == "machine_declare"
 
 
 # ---------------------------------------------------------------- a base segue a cor do controle

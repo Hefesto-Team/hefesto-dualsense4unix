@@ -84,14 +84,14 @@ O dado mora em **[`docs/data/paridade-gtk-html.csv`](../data/paridade-gtk-html.c
 | 01-jogar | 42 | 11 | 24 | 2 | 4 | 1 | 26% |
 | 02-controles | 48 | 15 | 24 | 5 | 4 | 0 | 31% |
 | 03-gatilhos | 31 | 8 | 10 | 7 | 5 | 1 | 26% |
-| 04-iluminacao | 35 | 9 | 12 | 6 | 7 | 1 | 26% |
+| 04-iluminacao | 35 | 8 | 13 | 6 | 7 | 1 | 23% |
 | 05-vibracao | 31 | 13 | 11 | 4 | 3 | 0 | 42% |
 | 06-navegacao | 40 | 7 | 14 | 10 | 9 | 0 | 18% |
 | 07-lancadores | 29 | 9 | 12 | 0 | 8 | 0 | 31% |
 | 08-conexoes | 49 | 17 | 26 | 6 | 0 | 0 | 35% |
 | 09-sistema | 38 | 13 | 18 | 4 | 3 | 0 | 34% |
 | 10-perfis | 48 | 14 | 19 | 8 | 7 | 0 | 29% |
-| TODAS | 391 | 116 | 170 | 52 | 50 | 3 | 30% |<!-- /TABELA-DA-PARIDADE -->
+| TODAS | 391 | 115 | 171 | 52 | 50 | 3 | 29% |<!-- /TABELA-DA-PARIDADE -->
 
 A tabela é **gerada da contagem do CSV** e conferida pelo portão (regra
 `numero-publicado`): quem mexer no dado e não regerar esta seção é barrado

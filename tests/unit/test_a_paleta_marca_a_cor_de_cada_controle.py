@@ -453,11 +453,8 @@ MEDIDA_DA_LINHA = r"""
   var px = function(v){ return parseFloat(v) || 0; };
   var colunas = {};
   document.querySelectorAll('[data-controle][data-conectado="sim"]').forEach(function(ctrl){
-    var hex = ctrl.querySelector('.cel-cor .hex').getBoundingClientRect();
     var cel = ctrl.querySelector('.cel-cor').getBoundingClientRect();
     colunas[ctrl.getAttribute('data-controle')] = {
-      hex_topo: hex.top,
-      hex_baixo: hex.bottom,
       faixa: [cel.top, cel.bottom],
       ar: px(getComputedStyle(ctrl).getPropertyValue('--r-ar')),
       nome_baixo: ctrl.querySelector('.ctrl-rot').getBoundingClientRect().bottom,
@@ -672,7 +669,10 @@ def test_a_linha_tem_a_cor_do_plastico_do_dono(na_tela, vista: str) -> None:
 
 @pytest.mark.parametrize("vista", ["janela", "dela"])
 def test_a_linha_mora_no_vao_entre_a_casa_e_a_caixa(na_tela, vista: str) -> None:
-    """2 px abaixo da casa, 6 px de altura, a largura da casa, e sem cruzar a caixa.
+    """2 px abaixo da casa, 6 px de altura, a largura da casa, e dentro da linha Cor.
+
+    Desde 16/10/2026 a caixa do hexadecimal não existe (o hexadecimal é dica da célula Cor):
+    a linha acaba dentro da faixa da linha Cor mais o `--r-ar`, antes do brilho.
 
     A linha a 6 px é a (b) das ESCOLHAS de 08/10/2026
     (A-LINHA-DA-COR-ESCOLHIDA-TEM-A-COR-DO-CONTROLE-01): o vão da `.cel-cor` vai a
@@ -691,9 +691,6 @@ def test_a_linha_mora_no_vao_entre_a_casa_e_a_caixa(na_tela, vista: str) -> None
         if topo_da_casa < de - ar - 0.25 or topo_da_casa < coluna["nome_baixo"]:
             erradas.append(f"{pref}: a casa começa em {topo_da_casa:.2f}, a faixa em "
                            f"{de:.2f} (ar {ar}) e o nome acaba em {coluna['nome_baixo']:.2f}")
-        if coluna["hex_baixo"] > ate + ar + 0.25 or coluna["hex_baixo"] > coluna["brilho_topo"]:
-            erradas.append(f"{pref}: a caixa acaba em {coluna['hex_baixo']:.2f}, a faixa em "
-                           f"{ate:.2f} (ar {ar}) e o brilho começa em {coluna['brilho_topo']:.2f}")
         for casa in coluna["casas"]:
             if "com-dono" not in casa["classes"]:
                 continue
@@ -705,9 +702,9 @@ def test_a_linha_mora_no_vao_entre_a_casa_e_a_caixa(na_tela, vista: str) -> None
                 erradas.append(f"{pref}: a linha tem {h:.2f} px de altura")
             if abs(w - cw) > 1 or abs(x - cx) > 1:
                 erradas.append(f"{pref}: a linha {x:.2f}+{w:.2f} e a casa {cx:.2f}+{cw:.2f}")
-            if y + h > coluna["hex_topo"] + 0.25:
-                erradas.append(f"{pref}: a linha acaba em {y + h:.2f} e a caixa começa "
-                               f"em {coluna['hex_topo']:.2f}")
+            if y + h > ate + ar + 0.25 or y + h > coluna["brilho_topo"]:
+                erradas.append(f"{pref}: a linha acaba em {y + h:.2f}, a faixa em {ate:.2f} "
+                               f"(ar {ar}) e o brilho começa em {coluna['brilho_topo']:.2f}")
     assert not erradas, "\n".join(erradas)
 
 

@@ -16,6 +16,8 @@ A fonte é o registro «O-PO-DECIDE-as-54-e-os-sete-conflitos» de 04/09/2026,
            Personalizado», gesto `modo-da-luz`, ordem de 06/10): a D-13 segue
            valendo, e onde este texto diz «interruptor» leia-se o par.
     [03] reenviar uma cor        a caixa do hexadecimal vira o botão
+         ↑ CADUCOU EM 16/10/2026, por ordem de produto: o hexadecimal sai da tela e vira
+           dica da célula Cor; reenviar é clicar a amostra acesa (gesto `cor`).
     [04] o brilho guardado       uma frase curta
 
 **A DE PESO É A [02], E ELA VEIO CONTRA A RECOMENDAÇÃO ESCRITA.** A lista desta
@@ -36,9 +38,8 @@ O QUE ESTE ARQUIVO MEDE, com a mordida escrita em cada caso:
    direções (sem isso o campo só entra em vigor na próxima troca de perfil, e o
    interruptor seria o botão que aceita o toque e não age);
 4. (caducou em 08/10/2026 com o interruptor: os botões do par só mandam `click`);
-5. o reenvio lê o TEXTO da caixa, e **ignora o `data-hex`** — que é a metade
-   que morde: o `data-hex` é escrito pelo gerador e fica congelado no que o
-   mockup sabia;
+5. (caducou em 16/10/2026 com a caixa do hexadecimal: o hexadecimal é a dica da
+   célula Cor, escrita pelo piloto, e nenhuma caixa oferece o `reenviar`);
 6. a faixa dos LEDs mantém a tira CENTRADA e a aba não rola por dentro —
    medido no Chrome, na página. (Esta linha olhava a ressalva até 07/09/2026;
    com a linha fora, o que sobra a medir é o pixel da faixa, que é o que a
@@ -63,6 +64,7 @@ from __future__ import annotations
 
 import json
 import pathlib
+import re
 import sys
 
 import pytest
@@ -191,8 +193,9 @@ def test_o_par_tem_dono(pac, a04):
         f"o pacote registra {len(vivos)} gestos e o piso declarado é "
         f"{a04.PISO_DA_ABA} — os dois têm de dizer o mesmo, e a nota datada do "
         f"`PISO_DA_ABA` é quem explica cada degrau")
-    assert {"modo-da-luz", "reenviar"} <= vivos, (
-        "o par de modos ou o reenvio do hexadecimal saíram do pacote")
+    assert "modo-da-luz" in vivos, "o par de modos saiu do pacote"
+    assert "reenviar" not in vivos, (
+        "o `reenviar` voltou ao pacote: a caixa que o oferecia saiu em 16/10/2026")
     assert "auto-cores" not in vivos, (
         "o interruptor `auto-cores` voltou: o par «Modo automático | Modo "
         "Personalizado» tomou o lugar dele em 08/10/2026")
@@ -357,8 +360,7 @@ def test_o_recado_do_par_conta_a_consequencia(pac, a04):
         f"o recado não conta a gravação da cor: {saiu['recado']!r}")
 
 
-@pytest.mark.parametrize("gesto", ["cor", "apagar", "reenviar", "brilho", "brilho-luzes",
-                                   "player"])
+@pytest.mark.parametrize("gesto", ["cor", "apagar", "brilho", "brilho-luzes", "player"])
 def test_no_automatico_escrito_os_gestos_da_coluna_recusam(pac, a04, gesto):
     """O Automático deixa PARADO o que a coluna escolhe: a porta sem a tela também fecha."""
     caminho = _semear(automatico=True)
@@ -376,49 +378,18 @@ def test_no_automatico_escrito_os_gestos_da_coluna_recusam(pac, a04, gesto):
         f"o gesto `{gesto}` recusou MAS gravou — recusa que grava é pior que nenhuma")
 
 
-def test_o_reenvio_manda_a_cor_escrita_na_caixa(pac, a04):
-    """O gesto existe, e o que ele manda é o texto que está na tela."""
-    assert pac.gesto_da_pagina(PAGINA, "reenviar") is not None
-    p = PonteDeMentira()
-    a04.reenviar(_ctx(pac), {"controle": "p1", "uniq": UM, "texto": "#12AB34"}, p)
-    assert p.chamadas and p.chamadas[0][0] == "led_set_detalhado"
-    assert p.chamadas[0][1] == ((18, 171, 52),), (
-        f"o reenvio mandou {p.chamadas[0][1]!r}")
-
-
-def test_o_reenvio_ignora_o_data_hex(pac, a04):
-    """**A metade que morde**, e ela é a razão inteira de o gesto ser novo."""
-    p = PonteDeMentira()
-    a04.reenviar(_ctx(pac),
-                 {"controle": "p1", "uniq": UM,
-                  "hex": "#FF0000", "texto": "#12AB34"}, p)
-    assert p.chamadas[0][1] == ((18, 171, 52),), (
-        f"o reenvio leu o `data-hex` congelado: {p.chamadas[0][1]!r}")
-
-
-def test_a_caixa_do_hexadecimal_nao_leva_data_hex():
-    """E a página não oferece a porta errada — a régua olha o ARQUIVO."""
+def test_o_hexadecimal_e_dica_da_celula_cor_e_nao_botao():
+    """Desde 16/10/2026 o hexadecimal não aparece: o piloto o escreve na dica da célula Cor."""
     from hefesto_dualsense4unix.interface import onde
 
     texto = onde.pagina(PAGINA).read_text(encoding="utf-8")
-    caixas = [linha for linha in texto.splitlines() if 'class="hex reenvia"' in linha]
-    assert caixas, "a caixa do hexadecimal deixou de ser botão"
-    for caixa in caixas:
-        assert 'data-gesto="reenviar"' in caixa
-        assert "data-hex=" not in caixa, (
-            "a caixa ganhou `data-hex` — o reenvio passaria a mandar a cor "
-            "cravada no desenho, e não a que está na tela")
-
-
-def test_o_travessao_de_um_lugar_vazio_nao_reenvia(pac, a04):
-    """Numa coluna que esvaziou, a caixa mostra `—`, e `—` não é cor."""
-    from pacotes import TRAVESSAO
-
-    p = PonteDeMentira()
-    with pytest.raises(ValueError, match="sem controle"):
-        a04.reenviar(_ctx(pac), {"controle": "p3", "uniq": UM,
-                                 "texto": TRAVESSAO}, p)
-    assert p.chamadas == [], "a recusa ainda assim falou com o daemon"
+    assert 'class="hex' not in texto, "a caixa do hexadecimal voltou à tela"
+    assert 'data-gesto="reenviar"' not in texto
+    celulas = re.findall(r'<div class="cel-cor"[^>]*>', texto)
+    assert len(celulas) == 4, f"a grade tem {len(celulas)} células Cor, e os lugares são 4"
+    for celula in celulas:
+        assert 'data-campo="hex"' in celula and 'data-hef-atributo="data-dica"' in celula, (
+            f"a célula Cor não leva o hexadecimal como dica: {celula}")
 
 
 CHROME = pathlib.Path("/usr/bin/google-chrome")

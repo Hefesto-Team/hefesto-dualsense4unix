@@ -1299,10 +1299,8 @@ ESTILO_DO_TRACO_VAZIO = ("display:flex;align-items:center;justify-content:center
 #: um token `base:<nome>`, que o gesto resolve em `base;cor do controle;ritmo` no ato de escolher.
 GESTO_DO_EFEITO = "efeito-da-luz"
 GESTO_DE_CRIAR_EFEITO = "criar-efeito"
-GESTO_DO_SEM_PISCAR = "sem-piscar"
 CAMPO_DO_EFEITO = "efeito"
 CAMPO_DA_DICA_DO_EFEITO = "efeito-dica"
-CAMPO_DO_SEM_PISCAR = "sem-piscar"
 SEM_EFEITO = "sem-efeito"
 LUZ_FIXA = "luz-fixa"
 PREFIXO_DA_BASE = "base:"
@@ -1332,8 +1330,6 @@ GRUPOS_DA_LISTA = (
     ("Que respira", ("respirar", "batimento", "chama", "mare")),
     ("Que se move", ("piscar", "arco-iris")),  # (noqa-acento) chave ASCII
 )
-DICA_DO_SEM_PISCAR = ("Nenhum efeito muda mais de uma vez por segundo, e toda mudança é suave. "
-                      "Vale para os quatro controles")
 
 
 def token_da_base(base: str) -> str:
@@ -1638,8 +1634,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         f"{GESTO_DO_MODO}-{MODO_AUTOMATICO}": "sim" if modo_da_aba == MODO_AUTOMATICO else "",
         f"{GESTO_DO_MODO}-{MODO_PERSONALIZADO}":
             "sim" if modo_da_aba == MODO_PERSONALIZADO else "",
-        # O «Sem piscar» é da mesa (`maquina.json`), um só para os quatro controles.
-        CAMPO_DO_SEM_PISCAR: "sim" if o_sem_piscar_de_agora() else "",
         #: `perfil` saiu em 13/09/2026: o chip é das dez, dono `pacotes.topo()`.
         "sem_dono": {},
         "blocos": {SECAO_DA_TROCA: secao_da_troca(ctx.mesa),
@@ -1650,37 +1644,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         "cobertura": {"pintados": sum(len(v) for v in colunas.values()),
                       "sem_dono": len(SEM_DONO)},
     }
-
-
-_A_MAQUINA_DA_LUZ: Any = None
-_SELO_DA_MAQUINA_DA_LUZ: tuple[int, int, int] | None = None
-
-
-def _a_maquina_da_luz() -> Any:
-    """O `maquina.json` validado, RELIDO QUANDO O ARQUIVO MUDA (um `stat` por tique)."""
-    global _A_MAQUINA_DA_LUZ, _SELO_DA_MAQUINA_DA_LUZ
-    try:
-        perfil._com_o_src()
-        from hefesto_dualsense4unix.utils.maquina import caminho_da_maquina, carregar_maquina
-
-        st = caminho_da_maquina().stat()
-        selo: tuple[int, int, int] | None = (st.st_ino, st.st_mtime_ns, st.st_size)
-    except Exception:
-        selo = None
-    if _A_MAQUINA_DA_LUZ is None or selo != _SELO_DA_MAQUINA_DA_LUZ:
-        try:
-            _A_MAQUINA_DA_LUZ, _SELO_DA_MAQUINA_DA_LUZ = carregar_maquina(), selo
-        except Exception:
-            # Arquivo ilegível: larga a cópia velha, que mentiria o estado de «Sem piscar».
-            _A_MAQUINA_DA_LUZ = _SELO_DA_MAQUINA_DA_LUZ = None
-    return _A_MAQUINA_DA_LUZ
-
-
-def o_sem_piscar_de_agora() -> bool:
-    """O «Sem piscar» está ligado AGORA? Vem da mesa, e é um só para os quatro controles."""
-    from hefesto_dualsense4unix.profiles.schema import sem_piscar_da_declaracao
-
-    return sem_piscar_da_declaracao(_a_maquina_da_luz())
 
 
 from . import gesto  # noqa: E402
@@ -1821,9 +1784,8 @@ def _escrever_a_cor(ctx: Contexto, p: Any, uniq: str,
     É o `_aplicar_cor_no_controle` da GTK (`app/actions/lightbar_actions.py`) no que esta tela pode
     ter.
 
-    **Guarda de cor única** (desde 08/09/2026, mudou para cá porque a docstring prometia uma porta
-    só e o `reenviar`, que manda a cor da caixa, passava por fora). `escolha=True` a liga, nos
-    gestos que ESCOLHEM um tom (`cor`, `reenviar`). `apagar` passa por fora (manda preto, ausência
+    **Guarda de cor única** (desde 08/09/2026). `escolha=True` a liga no gesto que ESCOLHE um tom
+    (`cor`). `apagar` passa por fora (manda preto, ausência
     de cor); `brilho` reenvia a cor que o controle JÁ TEM com outro fator, e deslocá-la trocaria a
     cor dela num arraste.
 
@@ -1961,7 +1923,7 @@ def _guardar_a_cor_no_perfil(ctx: Contexto, uniq: str,
     lê para não fossilizar a escolha, e só tinha UM chamador (desligar o automático); a escolha de
     um tom nunca passou por ele (fechado em 08/09/2026).
 
-    Quem grava a cor é quem a escolhe: um tom (`cor`, `reenviar`, `escolha=True`). O «Desligar»
+    Quem grava a cor é quem a escolhe: um tom (`cor`, `escolha=True`). O «Desligar»
     grava o brilho em 0% em `_guardar_o_apagado_no_perfil` (o preto não é cor desde 22/09) e o
     `brilho` passa por fora: gravar ali congelaria no perfil uma cor que ela não pediu. `religar` é
     a cor escolhida numa barra em 0%: o 0% do controle sai do override e ele volta ao brilho do
@@ -2133,8 +2095,9 @@ def cor(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     O desfecho se lê (02/09/2026, ver `sem_resposta_do_daemon`) e o brilho viaja junto (03/09/2026,
     ver `_escrever_a_cor`: este gesto DESFAZIA o brilho a cada clique). Duas peças nunca ficam da
     mesma cor (08/09/2026): o alvo é UM controle, então o tom do vizinho é uma escolha e não um
-    broadcast, e `_escrever_a_cor(..., escolha=True)` devolve a frase que diz DE QUEM é a cor (vale
-    também ao `reenviar`).
+    broadcast, e `_escrever_a_cor(..., escolha=True)` devolve a frase que diz DE QUEM é a cor.
+    Clicar na amostra já acesa reenvia a mesma cor: desde 16/10/2026 é este o reenvio (a caixa do
+    hexadecimal, que era o botão dele, saiu da tela).
     """
     _nao_no_automatico(ctx)
     from hefesto_dualsense4unix.core.led_control import hex_to_rgb
@@ -2213,46 +2176,6 @@ def apagar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     if not uniq:
         raise ValueError("apagar: o clique não disse em qual controle")
     _escrever_a_cor(ctx, p, uniq, (0, 0, 0), apagando=True, brilho=0.0)
-
-
-@gesto("04-iluminacao.html", "reenviar", grava="gravar_pelo_gesto")
-def reenviar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """A caixa `#RRGGBB` é o botão: a cor que está escrita vai ao controle de novo.
-
-    Decisão de 04/09/2026 (pergunta [03] desta aba, contra deixar como está e um terceiro botão em
-    Opções): *"A caixa do hexadecimal vira o botão."* Fechava o buraco do seletor de cores do
-    sistema, que só avisava no `change` (reabri-lo para confirmar a MESMA cor não mandava nada; ver
-    `_so_abriu_o_seletor`). O seletor saiu em 11/09/2026 (:data:`FORA_DA_GUIA`) e o botão FICA:
-    serve à cor que a fileira não tem (o global do perfil, um dos três tons podados que perfil
-    antigo guarda) e a quem quer conferir que a cor chegou após o controle cair e voltar.
-
-    O valor vem do `texto`, não de `data-hex`: `data-hex` é escrito pelo GERADOR e congelado no que
-    o mockup sabia (mandaria ao plástico a cor do desenho). O `textContent` é reescrito a cada tique
-    por `data-campo="hex"` com a cor PEDIDA (pré-escala; ver `cor_escolhida`), o que ela lê é o que
-    sai.
-
-    Não é um segundo caminho: passa pelo `_escrever_a_cor`, herdando o brilho do perfil, a leitura
-    do desfecho **e a guarda de cor única** (esta chegou aqui em 08/09/2026; a caixa alcança o tom
-    EXATO de outra coluna, a porta mais barata para duas peças da mesma cor). Chamada direta ao
-    `led_set` reintroduziria os defeitos que o caminho único curou.
-
-    O travessão é recusa: na coluna esvaziada o molde escreve `—` nesta caixa; a folha já lhe tira o
-    clique (`pointer-events:none`) e esta guarda é a segunda trava. `hex_to_rgb` recusaria com frase
-    sobre formato, não sobre o que aconteceu.
-    """
-    _nao_no_automatico(ctx)
-    from hefesto_dualsense4unix.core.led_control import hex_to_rgb
-
-    uniq = _uniq(o)
-    if not uniq:
-        raise ValueError("reenviar: o clique não disse em qual controle")
-    escrito = str(o.get("texto") or "").strip()
-    if not escrito or not escrito.startswith("#"):
-        raise ValueError(
-            f"reenviar: a caixa do hexadecimal não tem uma cor a reenviar "
-            f"({escrito!r}) — este lugar está sem controle.")
-    recado = _escrever_a_cor(ctx, p, uniq, hex_to_rgb(escrito), escolha=True)
-    return {"recado": recado} if recado else None
 
 
 def _pct_pedido(o: dict[str, Any]) -> int:
@@ -2722,35 +2645,6 @@ def efeito_da_luz(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
     return None
 
 
-@gesto("04-iluminacao.html", GESTO_DO_SEM_PISCAR, grava="machine_declare")
-def sem_piscar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """O interruptor «Sem piscar»: UM valor da mesa para os quatro controles e as duas conexões.
-
-    Nenhum perfil ganha campo: o valor mora na declaração da mesa (`luz.sem_piscar` do
-    `maquina.json`, `declaracao_do_sem_piscar`), e o `luz_animada` do daemon o lê a cada tique,
-    então o efeito muda na hora, sem reaplicar o perfil. O botão leva o que o clique PEDE em
-    `data-pedido` (`ligar` ou `desligar`, mantido pelo `aria-pressed`, como o do Modo automático):
-    pedir o que já vale não muda nada, e um clique sem pedido não vem da tela. Desligar volta a
-    «sem opinião».
-    """
-    global _A_MAQUINA_DA_LUZ
-    perfil._com_o_src()
-    from hefesto_dualsense4unix.profiles.schema import declaracao_do_sem_piscar
-
-    pedido = str(o.get("pedido") or "")
-    if pedido not in ("ligar", "desligar"):
-        raise ValueError(
-            f"{GESTO_DO_SEM_PISCAR}: o clique não disse se liga ou desliga. O botão manda o "
-            f"`data-pedido`; um pedido sem ele não vem da tela")
-    resposta = p.machine_declare(declaracao_do_sem_piscar(pedido == "ligar"))
-    ok, motivo = (bool(resposta[0]), resposta[1]) if (
-        isinstance(resposta, tuple) and len(resposta) == 2) else (bool(resposta), None)
-    if not ok:
-        raise RuntimeError(motivo or "Não consegui guardar o «Sem piscar».")
-    _A_MAQUINA_DA_LUZ = None
-    return None
-
-
 @gesto("04-iluminacao.html", GESTO_DE_CRIAR_EFEITO, grava="guardar_meus_efeitos")
 def criar_efeito_da_luz(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Guarda um efeito novo: a base (Respirar, Piscar ou Arco-íris), as cores, o ritmo e o nome.
@@ -3035,15 +2929,16 @@ def player(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
 #: A PORTA DA COR É A `_detalhado` DESDE 03/09/2026, e `led_set` saiu daqui: o
 PONTE = {"led_set_detalhado", "identity_number_set",
          "player_leds_set_detalhado", "player_led_brightness_set_detalhado",
-         "chamar", "profile_switch", "machine_declare"}
-METODOS = {"coop.sync", "machine.declare"}
+         "chamar", "profile_switch"}
+METODOS = {"coop.sync"}
 
 
 PAGINA = "04-iluminacao.html"
-#: (o interruptor da D-13) e o `reenviar` (a caixa do hexadecimal).
 #: o indicador virou o botão de reenvio (`reenviar-desenho`) e a faixa do título
 #: `luzes`, `desenho-de` e `reenviar-desenho` —, e saíram com o widget que os
-PISO_DA_ABA = 10
+#: Desceu de 10 para 8 em 16/10/2026, pedido: o «Sem piscar» e a caixa do hexadecimal
+#: (`reenviar`) saíram da tela, e o gesto saiu com o widget.
+PISO_DA_ABA = 8
 PROVAS = [
     {"pagina": PAGINA, "gesto": "cor", "clique": {"hex": "#FF8000"},  # (noqa-acento) id
      "chama": [("led_set_detalhado", [(255, 128, 0)],
@@ -3054,12 +2949,6 @@ PROVAS = [
     {"pagina": PAGINA, "gesto": GESTO_DO_EFEITO,  # (noqa-acento) id
      "clique": {"valor": SEM_EFEITO},
      "chama": [("led_set_detalhado", [(0, 0, 0)],
-                {"uniq": "aa:bb:cc:00:00:01"})]},
-    {"pagina": PAGINA, "gesto": GESTO_DO_SEM_PISCAR,  # (noqa-acento) id
-     "clique": {"pedido": "ligar"},
-     "chama": [("machine_declare", [{"luz": {"sem_piscar": True}}], {})]},
-    {"pagina": PAGINA, "gesto": "reenviar", "clique": {"texto": "#12AB34"},  # (noqa-acento) id
-     "chama": [("led_set_detalhado", [(18, 171, 52)],
                 {"uniq": "aa:bb:cc:00:00:01"})]},
     {"pagina": PAGINA, "gesto": "player", "clique": {"player": "2"},  # (noqa-acento) id
      "chama": [("identity_number_set", ["aa:bb:cc:00:00:01", 2], {}),

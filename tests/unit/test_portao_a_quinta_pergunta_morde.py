@@ -158,9 +158,9 @@ def _mapa_com(regua, chave: str, lado: str, degrau: str):
 def test_morde_o_degrau_que_desceu_no_mapa(regua, monkeypatch, capsys):
     """MORDIDA 6a — a cor desce a MONTOU no cabo e a régua acusa a falta nova.
 
-    `luz.lightbar.cor@dualsense` responde por CINCO gestos da tela (`cor`,
-    `brilho`, `apagar`, `reenviar` e o par `modo-da-luz`). Baixar um único
-    lado dela tem de derrubar os cinco de uma vez — e nenhum está declarado,
+    `luz.lightbar.cor@dualsense` responde por QUATRO gestos da tela (`cor`,
+    `brilho`, `apagar` e o par `modo-da-luz`; o `reenviar` saiu em 16/10/2026). Baixar um
+    único lado dela tem de derrubar os quatro de uma vez — e nenhum está declarado,
     porque hoje os cinco chegaram.
     """
     monkeypatch.setattr(
@@ -169,7 +169,7 @@ def test_morde_o_degrau_que_desceu_no_mapa(regua, monkeypatch, capsys):
     assert regua.main() == 1
     saida = capsys.readouterr().out
     assert "parou antes do destino" in saida
-    for gesto in ("cor", "brilho", "apagar", "reenviar", "modo-da-luz"):
+    for gesto in ("cor", "brilho", "apagar", "modo-da-luz"):
         assert gesto in saida, f"{gesto} desceu no mapa e a régua não o nomeou"
 
 

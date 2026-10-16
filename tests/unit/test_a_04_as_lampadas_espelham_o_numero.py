@@ -191,10 +191,10 @@ def test_o_gesto_de_escopo_global_saiu_do_pacote(pac, a04):
         assert not hasattr(a04, orfao), (
             f"`{orfao}` ficou no pacote sem chamador — ele só existia para o "
             f"gesto de escopo global, que saiu em 07/09/2026")
-    assert sorted(a04.METODOS) == ["coop.sync", "machine.declare"], (
+    assert sorted(a04.METODOS) == ["coop.sync"], (
         f"a declaração de métodos desta aba é {sorted(a04.METODOS)} — o `coop.sync` sobrevive à "
-        f"poda de 07/09/2026, e o `machine.declare` entrou em 15/10/2026 com o «Sem piscar», que "
-        f"mora no `maquina.json`")
+        f"poda de 07/09/2026; o `machine.declare` entrou em 15/10/2026 com o «Sem piscar» e saiu "
+        f"com ele em 16/10/2026")
 
 
 def test_a_faixa_do_titulo_tem_um_morador_so():
@@ -230,7 +230,7 @@ def test_o_botao_por_controle_saiu_e_o_desligar_ficou():
         grade = grade.split('<div class="rodape"', 1)[0]
         assert ">Automático</button>" not in grade, (
             f"o botão `Automático` voltou à célula Opções em {caminho.name}")
-        lugares = len(re.findall(r'<div class="ctrl(?:"| vazia")', grade))
+        lugares = len(re.findall(r'<div class="ctrl"', grade))
         assert lugares >= 2, "a régua não achou as colunas — não mediria nada"
         if caminho.parent == onde.PUBLICADO:
             continue  # o publicado só troca no `--publicar` da costura
@@ -258,7 +258,7 @@ def _celulas_de_leds(grade: str) -> list[tuple[int, str]]:
 
     fora = []
     for coluna in re.findall(
-            r'<div class="ctrl(?! vazia)"(.*?)(?=<div class="ctrl[" ]|\Z)',
+            r'<div class="ctrl" [^>]*data-conectado="sim"(.*?)(?=<div class="ctrl"|\Z)',
             grade, re.S):
         n = re.search(r'data-campo="identidade">P(\d)', coluna)
         leds = re.search(r'<div class="cel-leds">(.*?)<div class="brilhos"',
@@ -309,7 +309,7 @@ def test_nenhum_lugar_vazio_oferece_tecla_de_luz():
     import re
 
     for bloco in re.findall(
-            r'<div class="ctrl vazia"(.*?)(?=<div class="ctrl[" ]|\Z)',
+            r'<div class="ctrl" [^>]*data-conectado="nao"(.*?)(?=<div class="ctrl"|\Z)',
             _grade(), re.S):
         for gesto in ("luzes", "desenho-de", "reenviar-desenho"):
             assert f'data-gesto="{gesto}"' not in bloco, (
@@ -325,22 +325,22 @@ def test_os_tres_gestos_da_botoeira_sairam_do_pacote(pac, a04):
             f"o gesto `{morto}` voltou ao pacote sem o widget que o oferecia — "
             f"um gesto que a tela não alcança é código morto, e ela mandou "
             f"remover a botoeira inteira em 07/09/2026")
-    assert vivos == {"cor", "apagar", "brilho", "player", "reenviar", "modo-da-luz",
-                     "brilho-luzes", "efeito-da-luz", "criar-efeito",
-                     "sem-piscar"}, (
+    assert vivos == {"cor", "apagar", "brilho", "player", "modo-da-luz",
+                     "brilho-luzes", "efeito-da-luz", "criar-efeito"}, (
         f"a poda da botoeira levou junto um gesto que FICA: {sorted(vivos)}")
 
 
 def test_o_piso_da_aba_desceu_com_a_ordem_dela(a04):
     """A ÚNICA vez em que o piso desce, e ela tem nome, razão e data."""
-    assert a04.PISO_DA_ABA == 10, (
+    assert a04.PISO_DA_ABA == 8, (
         f"o piso da aba é {a04.PISO_DA_ABA}. Ele desceu DUAS vezes em "
         f"07/09/2026, nas duas ordens dela — 11 para 8 com a botoeira das "
         f"lâmpadas, 8 para 6 com os dois botões do automático — e subiu UMA em "
         f"24/09/2026, 6 para 7, com as pílulas do brilho das luzes que ela "
         f"decidiu; subiu de 7 para 9 em 14/10/2026 com a lista Efeito e o criar "
-        f"efeitos do desenho dela, e de 9 para 10 em 15/10/2026 com o interruptor «Sem piscar» do "
-        f"desenho que ela aprovou em 14/10. Cada degrau pede a palavra dela")
+        f"efeitos do desenho dela, e de 9 para 10 em 15/10/2026 com o interruptor «Sem piscar»; "
+        f"desceu de 10 para 8 em 16/10/2026, quando ela tirou o «Sem piscar» e a caixa do "
+        f"hexadecimal, que reenviava. Cada degrau pede a palavra dela")
 
 
 def test_a_linha_de_ressalva_saiu_da_celula_de_leds():

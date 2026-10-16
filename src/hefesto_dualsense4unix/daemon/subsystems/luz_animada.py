@@ -4,9 +4,9 @@ O perfil guarda o efeito de cada controle em ``leds.efeito`` (``base;cores;ritmo
 luz fixa e este laço não escreve nada. Quem manda na barra, em ordem: o jogo (cala quando ele
 pinta, pela política do tato vivo), o Modo Nativo, o Automático da aba, o brilho zero e a «Bateria
 longa» (a barra fica fixa na cor do perfil). No máximo 30 quadros por segundo por controle e quadro
-igual ao anterior não sai; o desenho de cada efeito no tempo é de ``profiles/efeitos_de_luz`` e o
-«Sem piscar» da mesa é lido a cada tique. O quadro pinta a barra sem entrar no estado desejado;
-ao sair, a barra volta a ele. Enquanto o pulso do tiro do tato vivo segura a barra, o efeito espera.
+igual ao anterior não sai; o desenho de cada efeito no tempo é de ``profiles/efeitos_de_luz``. O
+quadro pinta a barra sem entrar no estado desejado; ao sair, a barra volta a ele. Enquanto o pulso
+do tiro do tato vivo segura a barra, o efeito espera.
 O porquê de cada escolha: docs/research/o-porque-dos-modulos.md, seção «luz_animada».
 """
 from __future__ import annotations
@@ -44,7 +44,6 @@ from hefesto_dualsense4unix.profiles.schema import (
     economia_da_mesa,
     economia_vale,
     ler_o_efeito_da_luz,
-    sem_piscar_da_mesa,
 )
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -177,11 +176,9 @@ class LuzAnimada:
         soltar: Callable[[str], object],
         *,
         intervalo_minimo: float = INTERVALO_MINIMO,
-        sem_piscar: Callable[[], bool] = sem_piscar_da_mesa,
     ) -> None:
         self._escrever = escrever
         self._soltar = soltar
-        self._sem_piscar = sem_piscar
         self._intervalo = max(intervalo_minimo, INTERVALO_MINIMO)
         self._ultimo_quadro: dict[str, RGB] = {}
         self._escrito_em: dict[str, float] = {}
@@ -209,7 +206,6 @@ class LuzAnimada:
         for uniq in [u for u in self._inicio if u not in plano or u in calados]:
             self.parar(uniq)
         escritos = 0
-        sem_piscar = bool(self._sem_piscar())
         for uniq, dele in plano.items():
             if uniq in calados:
                 continue
@@ -224,7 +220,7 @@ class LuzAnimada:
             if dele.efeito.base in BASES_DO_RELOGIO_COMUM:
                 inicio = self._origem
             cor = cor_no_instante(
-                dele.efeito, agora - inicio, dele.posicao, dele.semente, sem_piscar, dele.amplitude
+                dele.efeito, agora - inicio, dele.posicao, dele.semente, dele.amplitude
             )
             quadro = cor_com_o_brilho(cor, dele.brilho)
             self._escrito_em[uniq] = agora

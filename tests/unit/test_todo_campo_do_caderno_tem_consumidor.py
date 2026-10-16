@@ -5,7 +5,6 @@ from pathlib import Path
 
 from hefesto_dualsense4unix.utils.maquina import (
     ControleDeclarado,
-    LuzDeclarada,
     MesaDeclarada,
     OrcamentoDeclarado,
 )
@@ -19,7 +18,6 @@ CONSUMIDOR_DE_PRODUCAO: dict[str, str] = {
     "controles.microfone_mudo": "profiles/manager.py:def _mudo_do_controle",
     "controles.nome": "integrations/central_do_radio.py:def cuidar_dos_nomes",
     "orcamento.teto": "core/rumble.py:def _orcamento_declarado",
-    "luz.sem_piscar": "profiles/schema.py:def sem_piscar_da_mesa",
     "mesa.altura_da_antena": "integrations/exame_da_mesa.py:def vizinhanca_das_portas",
     "mesa.linha_de_visada": "integrations/exame_da_mesa.py:def vizinhanca_das_portas",
     "mesa.radios": "interface/pacotes/a08_conexoes.py:def _radios_declarados",
@@ -42,7 +40,6 @@ def _campos_do_caderno() -> list[str]:
     campos = [f"mesa.{c}" for c in MesaDeclarada.model_fields]
     campos += [f"controles.{c}" for c in ControleDeclarado.model_fields]
     campos += [f"orcamento.{c}" for c in OrcamentoDeclarado.model_fields]
-    campos += [f"luz.{c}" for c in LuzDeclarada.model_fields]
     return campos
 
 

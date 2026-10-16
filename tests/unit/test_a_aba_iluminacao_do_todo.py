@@ -600,9 +600,8 @@ def test_a_guia_tem_as_oito_cores_de_jogador_e_nenhuma_das_seis_de_fora() -> Non
 def test_o_desenho_nao_tem_interrogacao_nem_desligar() -> None:
     """MORDIDA: voltar o `?` ou o «Desligar» ao desenho.
 
-    O «Sem piscar» VOLTOU em 15/10/2026, como interruptor global da faixa do título (o desenho
-    aprovado em 14/10, chave `r3-04-11`); ele é medido em
-    `test_a_aba_iluminacao_mostra_a_lista_nova_e_o_sem_piscar`.
+    O «Sem piscar» voltou em 15/10/2026 e saiu de novo em 16/10/2026, a pedido (a «Luz
+    fixa» já faz isso); a ausência é medida em `test_o_sem_piscar_saiu_e_o_arquivo_velho_carrega`.
     """
     doc = _doc()
     assert 'class="ajuda' not in doc, "o `?` voltou: a dica mora no `data-dica`"
@@ -634,7 +633,9 @@ def test_cada_coluna_viva_tem_a_lista_de_efeitos_e_o_gesto_dela() -> None:
 def test_a_vaga_sem_controle_diz_desconectado_e_nao_tem_gesto() -> None:
     doc = _doc()
     assert doc.count("Desconectado") == 2
-    assert re.search(r"<b>P3</b>\s*<span class=\"pt\">•</span>\s*Desconectado", doc)
+    # desde 16/10/2026 o P3 e o P4 leem como o P1 e o P2: o número sem negrito, mesmo «•»
+    assert re.search(r">P3 <span class=\"pt\">•</span> Desconectado<", doc)
+    assert "<b>P3</b>" not in doc and "<b>P4</b>" not in doc
 
 
 def test_a_aba_cabe_sem_rolar_a_guia_tem_oito_casas_e_o_nome_tem_a_largura_da_coluna() -> None:

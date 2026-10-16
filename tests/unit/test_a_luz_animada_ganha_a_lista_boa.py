@@ -1,23 +1,21 @@
 """A luz animada ganha a lista boa e cura o piscar e o arco-íris (A-LUZ-ANIMADA-GANHA-A-LISTA-BOA).
 
-Funções puras, sem relógio: nenhum efeito sobe mais de 3 vezes por segundo (1 com o «Sem piscar»
-da mesa); o piscar tem borda suave e piso; as quatro cores do arco-íris no mesmo instante ficam
-a mais de 90 uma da outra; a chama repete a curva com a mesma semente; a maré não aproxima dois
-controles; e o motor lê o valor global a cada quadro. Vale para os quatro controles, no cabo e
-no Bluetooth: o plano não pergunta pelo transporte.
+Funções puras, sem relógio: nenhum efeito sobe mais de 3 vezes por segundo; o piscar tem borda
+suave e piso; as quatro cores do arco-íris no mesmo instante ficam a mais de 90 uma da outra; a
+chama repete a curva com a mesma semente; a maré não aproxima dois controles; e o motor anima no
+laço real. Vale para os quatro controles, no cabo e no Bluetooth: o plano não pergunta pelo
+transporte.
 """
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator
+from collections.abc import Callable
 from itertools import pairwise
-from types import SimpleNamespace
-from typing import Any
 
 import pytest
 
 from hefesto_dualsense4unix.daemon.subsystems import luz_animada as luz
 from hefesto_dualsense4unix.profiles import efeitos_de_luz as fx
-from hefesto_dualsense4unix.profiles import estilos_de_jogo, schema
+from hefesto_dualsense4unix.profiles import estilos_de_jogo
 from hefesto_dualsense4unix.profiles.schema import (
     BASES_DA_LUZ,
     ControllerOverrides,
@@ -27,7 +25,6 @@ from hefesto_dualsense4unix.profiles.schema import (
     Profile,
     ler_o_efeito_da_luz,
 )
-from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
 
 RGB = tuple[int, int, int]
 VERMELHO: RGB = (255, 0, 0)
@@ -77,11 +74,11 @@ def _quando_sobe(brilhos: list[float], piso: float) -> list[float]:
     return fora
 
 
-def _curva(base: str, ritmo: int, sem_piscar: bool, semente: int = 0, segundos: float = 24.0):
+def _curva(base: str, ritmo: int, semente: int = 0, segundos: float = 24.0):
     efeito = _efeito(base, ritmo)
     n = int(segundos / PASSO_S)
     return [
-        _brilho(fx.cor_no_instante(efeito, i * PASSO_S, 0, semente, sem_piscar))
+        _brilho(fx.cor_no_instante(efeito, i * PASSO_S, 0, semente))
         for i in range(n)
     ]
 
@@ -106,53 +103,29 @@ def test_a_lista_tem_as_tres_novas_e_o_motor_sabe_desenhar_cada_uma() -> None:
 @pytest.mark.parametrize("base", sorted(PISO))
 @pytest.mark.parametrize("ritmo", RITMOS)
 def test_nenhum_efeito_passa_de_tres_subidas_por_segundo(base: str, ritmo: int) -> None:
-    subidas = _subidas(_quando_sobe(_curva(base, ritmo, False), PISO[base]))
+    subidas = _subidas(_quando_sobe(_curva(base, ritmo), PISO[base]))
     assert subidas <= 3, f"{base} no ritmo {ritmo}: {subidas} subidas em 1 s"
 
 
 @pytest.mark.parametrize("base", sorted(PISO))
-@pytest.mark.parametrize("ritmo", RITMOS)
-def test_com_o_sem_piscar_nada_passa_de_uma_subida_por_segundo(base: str, ritmo: int) -> None:
-    subidas = _subidas(_quando_sobe(_curva(base, ritmo, True), PISO[base]))
-    assert subidas <= 1, f"{base} no ritmo {ritmo}: {subidas} subidas em 1 s"
-
-
-@pytest.mark.parametrize("sem_piscar", [False, True])
-@pytest.mark.parametrize("base", sorted(PISO))
-def test_todo_efeito_tem_piso_e_nunca_apaga_a_barra(base: str, sem_piscar: bool) -> None:
+def test_todo_efeito_tem_piso_e_nunca_apaga_a_barra(base: str) -> None:
     for ritmo in RITMOS:
-        curva = _curva(base, ritmo, sem_piscar, segundos=12.0)
-        # sem piscar o piscar vira respirar, e o fundo dele é o do respirar
-        piso = fx.PISO_DO_RESPIRAR if base == "piscar" and sem_piscar else PISO[base]
+        curva = _curva(base, ritmo, segundos=12.0)
+        piso = PISO[base]
         assert min(curva) >= piso - 0.01, f"{base} no ritmo {ritmo}: {min(curva)}"
         assert max(curva) > 0.95 or base == "chama"
 
 
 def test_o_piscar_no_ritmo_mais_alto_chega_aos_tres_por_segundo_e_nao_passa() -> None:
     # Prova da D-1510-O-VALOR-DA-TABELA-E-O-DO-RITMO-10.
-    subidas = _subidas(_quando_sobe(_curva("piscar", 10, False), fx.PISO_DO_PISCAR))
+    subidas = _subidas(_quando_sobe(_curva("piscar", 10), fx.PISO_DO_PISCAR))
     assert subidas == 3
 
 
-def test_a_batida_do_coracao_tem_duas_subidas_por_segundo_e_uma_sem_piscar() -> None:
-    normal = _subidas(_quando_sobe(_curva("batimento", 10, False), fx.PISO_DA_BATIDA))
-    suave = _quando_sobe(_curva("batimento", 10, True), fx.PISO_DA_BATIDA)
+def test_a_batida_do_coracao_tem_duas_subidas_por_segundo() -> None:
+    normal = _subidas(_quando_sobe(_curva("batimento", 10), fx.PISO_DA_BATIDA))
     assert normal == 2
     assert fx.periodo_da_batida_s(10) == pytest.approx(1.0)
-    assert fx.periodo_da_batida_s(10, True) == pytest.approx(1.5)
-    assert suave[1] - suave[0] == pytest.approx(1.5, abs=0.02), "um pico a cada 1,5 s"
-
-
-def test_o_piscar_sem_piscar_e_o_respirar_no_mesmo_ritmo() -> None:
-    # Prova da D-1510-O-PISCAR-SEM-PISCAR-VIRA-RESPIRAR.
-    piscar = _efeito("piscar", 6)
-    respirar_do_ritmo = _efeito("respirar", 6)
-    periodo = max(1.0 / fx.frequencia_do_piscar_hz(6), 1.0)
-    for t in (0.0, 0.3, 0.7, 1.1, 2.9):
-        esperado = fx.cor_no_instante(
-            EfeitoDaLuz("respirar", respirar_do_ritmo.cores, round(10.0 / periodo)), t
-        )
-        assert fx.cor_no_instante(piscar, t, sem_piscar=True) == esperado
 
 
 # ---------------------------------------------------------------- o piscar curado
@@ -161,7 +134,7 @@ def test_o_piscar_sem_piscar_e_o_respirar_no_mesmo_ritmo() -> None:
 def test_o_piscar_tem_borda_suave_de_150_ms() -> None:
     """Da subida de 5% a 95% leva ao menos 100 ms: a onda quadrada levava zero."""
     for ritmo in RITMOS:
-        curva = _curva("piscar", ritmo, False, segundos=6.0)
+        curva = _curva("piscar", ritmo, segundos=6.0)
         piso, topo = min(curva), max(curva)
         dez, noventa = piso + 0.05 * (topo - piso), piso + 0.95 * (topo - piso)
         subindo: float | None = None
@@ -227,20 +200,18 @@ def test_o_arco_iris_defasa_um_quarto_de_volta_por_controle() -> None:
 
 
 def test_a_chama_com_a_mesma_semente_da_a_mesma_curva() -> None:
-    a = _curva("chama", 6, False, semente=1234, segundos=12.0)
-    b = _curva("chama", 6, False, semente=1234, segundos=12.0)
-    c = _curva("chama", 6, False, semente=999, segundos=12.0)
+    a = _curva("chama", 6, semente=1234, segundos=12.0)
+    b = _curva("chama", 6, semente=1234, segundos=12.0)
+    c = _curva("chama", 6, semente=999, segundos=12.0)
     assert a == b
     assert a != c, "outra semente passeia por outro caminho"
 
 
-@pytest.mark.parametrize("sem_piscar", [False, True])
-def test_a_chama_fica_entre_06_e_10_e_muda_no_maximo_uma_vez_por_segundo(sem_piscar: bool) -> None:
+def test_a_chama_fica_entre_06_e_10_e_muda_no_maximo_uma_vez_por_segundo() -> None:
     for ritmo in RITMOS:
-        curva = _curva("chama", ritmo, sem_piscar, semente=77, segundos=20.0)
+        curva = _curva("chama", ritmo, semente=77, segundos=20.0)
         assert min(curva) >= fx.PISO_DA_CHAMA - 0.01 and max(curva) <= 1.0
-    troca = fx.troca_da_chama_s(10, sem_piscar)
-    assert troca == (3.0 if sem_piscar else 1.0)
+    assert fx.troca_da_chama_s(10) == 1.0
 
 
 def test_a_mare_anda_ate_30_graus_e_volta_ao_fim_do_periodo() -> None:
@@ -331,42 +302,7 @@ def test_o_plano_encurta_a_mare_de_quem_se_aproximaria_dos_outros() -> None:
     assert len({p.amplitude for p in plano.values()}) == 1, "os quatro andam o mesmo ângulo"
 
 
-# ---------------------------------------------------------------- o «Sem piscar» da mesa
-
-
-@pytest.fixture
-def mesa() -> Iterator[dict[str, Any]]:
-    """Põe a declaração viva que o motor lê, e a tira no fim."""
-    atual: dict[str, Any] = {"declaracao": SimpleNamespace()}
-    schema.registrar_declaracao_da_mesa(lambda: atual["declaracao"])
-    try:
-        yield atual
-    finally:
-        schema.registrar_declaracao_da_mesa(None)
-
-
-def _liga(mesa: dict[str, Any], ligado: bool | None) -> None:
-    mesa["declaracao"] = SimpleNamespace(luz=SimpleNamespace(sem_piscar=ligado))
-
-
-def test_o_sem_piscar_nasce_desligado_e_e_um_so_fora_do_perfil(mesa: dict[str, Any]) -> None:
-    # Prova da D-1510-O-SEM-PISCAR-E-DO-COMPUTADOR.
-    assert schema.sem_piscar_da_mesa() is False
-    _liga(mesa, True)
-    assert schema.sem_piscar_da_mesa() is True
-    _liga(mesa, None)
-    assert schema.sem_piscar_da_mesa() is False
-    assert "sem_piscar" not in Profile.model_fields
-    assert "sem_piscar" not in LedsConfig.model_fields
-    assert "sem_piscar" not in ControllerOverrides.model_fields
-
-
-def test_a_declaracao_do_sem_piscar_passa_pela_maquina() -> None:
-    ligada = MaquinaConfig.model_validate(schema.declaracao_do_sem_piscar(True))
-    assert schema.sem_piscar_da_declaracao(ligada) is True
-    desligada = MaquinaConfig.model_validate(schema.declaracao_do_sem_piscar(False))
-    assert schema.sem_piscar_da_declaracao(desligada) is False
-    assert schema.sem_piscar_da_declaracao(MaquinaConfig()) is False
+# ---------------------------------------------------------------- o motor no laço real
 
 
 def _tocar(
@@ -407,30 +343,9 @@ def _quando_sobe_em_quadros(escritos: list[tuple[float, RGB]]) -> list[float]:
     return tempos
 
 
-def test_com_o_valor_global_ligado_o_motor_anima_no_modo_suave(mesa: dict[str, Any]) -> None:
-    _liga(mesa, False)
-    solto = _tocar("piscar;FF0000;10", 6.0)
-    _liga(mesa, True)
-    suave = _tocar("piscar;FF0000;10", 6.0)
-    _saltos_solto, subidas_solto = _saltos_e_subidas(solto)
-    saltos_suave, subidas_suave = _saltos_e_subidas(suave)
-    assert subidas_solto == 3, "desligado, o piscar do ritmo 10 sobe 3 vezes por segundo"
-    assert subidas_suave <= 1, "ligado, nada passa de uma subida por segundo"
-    assert saltos_suave < 0.25, "e cada quadro muda pouco em relação ao anterior"
-
-
-def test_o_motor_le_o_valor_global_a_cada_quadro_sem_ser_recriado(mesa: dict[str, Any]) -> None:
-    _liga(mesa, False)
-
-    def vira(segundo: float) -> None:
-        if segundo >= 3.0:
-            _liga(mesa, True)
-
-    escritos = _tocar("piscar;FF0000;10", 6.0, vira)
-    antes = [(t, c) for t, c in escritos if t < 1003.0]
-    depois = [(t, c) for t, c in escritos if t >= 1004.0]
-    assert _saltos_e_subidas(antes)[1] == 3
-    assert _saltos_e_subidas(depois)[1] <= 1
+def test_o_motor_anima_o_piscar_do_ritmo_10_com_tres_subidas_por_segundo() -> None:
+    _saltos, subidas = _saltos_e_subidas(_tocar("piscar;FF0000;10", 6.0))
+    assert subidas == 3, "o piscar do ritmo 10 sobe 3 vezes por segundo, o teto WCAG"
 
 
 def test_o_arco_iris_do_motor_mostra_uma_cor_por_controle() -> None:
@@ -438,8 +353,7 @@ def test_o_arco_iris_do_motor_mostra_uma_cor_por_controle() -> None:
         _perfil("arco-iris;;5"), JOGADORES, mesa_em_economia=False, em_economia=frozenset()
     )
     quadros: dict[str, RGB] = {}
-    motor = luz.LuzAnimada(lambda u, cor: quadros.__setitem__(u, cor), lambda _u: None,
-                           sem_piscar=lambda: False)
+    motor = luz.LuzAnimada(lambda u, cor: quadros.__setitem__(u, cor), lambda _u: None)
     motor.tique(50.0, plano)
     assert len(quadros) == 4 and len(set(quadros.values())) == 4
 
@@ -456,8 +370,7 @@ def test_quem_entra_depois_segue_o_relogio_da_mesa(base: str, atraso: float) -> 
         _perfil(texto), JOGADORES[:2], mesa_em_economia=False, em_economia=frozenset()
     )
     quadros: dict[str, RGB] = {}
-    motor = luz.LuzAnimada(lambda u, cor: quadros.__setitem__(u, cor), lambda _u: None,
-                           sem_piscar=lambda: False)
+    motor = luz.LuzAnimada(lambda u, cor: quadros.__setitem__(u, cor), lambda _u: None)
     primeiro, segundo = JOGADORES[:2]
     motor.tique(100.0, {primeiro: plano[primeiro]})
     agora = 100.0 + atraso
@@ -466,7 +379,7 @@ def test_quem_entra_depois_segue_o_relogio_da_mesa(base: str, atraso: float) -> 
     for uniq in (primeiro, segundo):
         dele = plano[uniq]
         esperado = luz.cor_com_o_brilho(
-            fx.cor_no_instante(efeito, atraso, dele.posicao, dele.semente, False, dele.amplitude),
+            fx.cor_no_instante(efeito, atraso, dele.posicao, dele.semente, dele.amplitude),
             dele.brilho,
         )
         assert quadros[uniq] == esperado, (uniq, quadros[uniq], esperado)

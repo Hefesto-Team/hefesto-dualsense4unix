@@ -176,7 +176,6 @@ def _gestos_que_gravam() -> list[str]:
 
 CLIQUES: dict[str, dict[str, Any]] = {
     "cor": {"hex": "8000FF"},
-    "reenviar": {"texto": "#12AB34"},
     "brilho": {"valor": "40", "tipo": "input", "evento": "change"},
     "apagar": {},
     "brilho-luzes": {"luzes": "forte"},
@@ -184,7 +183,6 @@ CLIQUES: dict[str, dict[str, Any]] = {
     "efeito-da-luz": {"valor": "luz-fixa"},
     "criar-efeito": {"forma": {"base": "respirar", "cores": "#FF0000", "ritmo": "4",
                                "nome": "Pulso"}},
-    "sem-piscar": {"pedido": "ligar"},
 }
 
 PINTADO = ("brilho", "brilho-pct", "hex", "brilho-luzes")

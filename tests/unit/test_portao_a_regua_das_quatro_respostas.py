@@ -134,8 +134,8 @@ def test_morde_o_campo_arrancado_do_esquema(regua, monkeypatch, capsys):
 def test_morde_o_transporte_rebaixado_no_mapa(regua, monkeypatch, capsys):
     """§3 da sprint: `luz.lightbar.cor@dualsense` com `radio_aciona=não`.
 
-    Quatro gestos da 04 dependem dessa linha (`cor`, `brilho`, `apagar`,
-    `reenviar`) e a régua tem de nomear os quatro, não um.
+    Três gestos da 04 dependem dessa linha (`cor`, `brilho`, `apagar`; o `reenviar` saiu em
+    16/10/2026) e a régua tem de nomear os três, não um.
     """
     real = regua._linhas_do_mapa()
     for linha in real.get("luz.lightbar.cor", []):
@@ -144,7 +144,7 @@ def test_morde_o_transporte_rebaixado_no_mapa(regua, monkeypatch, capsys):
     monkeypatch.setattr(regua, "_linhas_do_mapa", lambda: real)
     assert regua.main() == 1
     saida = capsys.readouterr().out
-    for gesto in ("cor", "brilho", "apagar", "reenviar"):
+    for gesto in ("cor", "brilho", "apagar"):
         assert f"{gesto}: rádio: {regua.NAO}" in saida
 
 

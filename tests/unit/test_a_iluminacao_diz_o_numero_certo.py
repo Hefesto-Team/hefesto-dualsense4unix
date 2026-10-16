@@ -946,14 +946,20 @@ def test_a_coluna_que_esvazia_le_como_a_que_nasce_vazia():
 
     A MORDIDA: apague o bloco `.ctrl.off` do `CSS` da `aba04.py`, regere, e as
     quatro asserções abaixo reprovam.
+
+    DESDE 16/10/2026 AS DUAS LEITURAS SÃO UMA SÓ, e não só no CSS: a coluna nasce do mesmo
+    molde nos quatro lugares, sem `.vazia`, e a única marca é `[data-conectado="nao"]`, que o
+    gerador escreve e o piloto vira nos dois sentidos (a foto 7 e a 8 do pedido de 16/10
+    mostravam o P3 e o P4 diferentes do P2). A mordida passou a ser apagar o bloco «O LUGAR SEM
+    CONTROLE» da `aba04.py`.
     """
     import onde
 
     doc = onde.pagina("04-iluminacao.html").read_text(encoding="utf-8")
-    assert ".ctrl.off" in doc, (
-        "a folha desta aba voltou a não ter regra nenhuma para o lugar que "
-        "esvazia — era o estado do defeito de 03/09/2026.")
-    assert ".luz-grade .ctrl.off .moldura{color:var(--linha) !important" in doc, (
+    assert ".ctrl.vazia" not in doc and 'class="ctrl vazia"' not in doc, (
+        "a segunda marca do lugar vazio voltou: o P3 e o P4 voltam a nascer diferentes do P2")
+    moldura = '.luz-grade .ctrl[data-conectado="nao"] .moldura{display:block;color:var(--linha)'
+    assert moldura + " !important" in doc, (
         "sem `!important` a regra não vence o `style=` INLINE do gerador, e a "
         "coluna vazia continua com a cor de um controle que não está lá.")
     # A CHAVE PASSOU DE `.off` PARA `[data-conectado="nao"]` EM 07/09/2026, e a
@@ -963,18 +969,15 @@ def test_a_coluna_que_esvazia_le_como_a_que_nasce_vazia():
         assert peca in doc, (
             f"{peca} voltou à tela num lugar sem controle: botões que "
             f"engolem o toque sem uma letra.")
-    assert ('.luz-grade .ctrl[data-conectado="nao"] .cel-cor .hex.reenvia'
-            "{pointer-events:none" in doc), (
-        "a caixa do hexadecimal voltou a aceitar clique num lugar sem "
-        "controle — ela leva `data-gesto=\"reenviar\"` nos quatro lugares "
-        "desde 07/09/2026, e sem esta regra o clique levanta `o clique não "
-        "disse em qual controle`, que o cartão do piloto não leva à tela.")
+    # A caixa do hexadecimal (e o `reenviar` dela) saiu em 16/10/2026: o hexadecimal é dica.
+    assert 'class="hex' not in doc and 'data-gesto="reenviar"' not in doc
     grade = doc.split('<div class="luz-grade">', 1)[-1].split('<div class="rodape"', 1)[0]
     for coluna in re.findall(
-            r'<div class="ctrl vazia"(.*?)(?=<div class="ctrl[" ]|\Z)', grade, re.S):
+            r'<div class="ctrl" [^>]*data-conectado="nao"(.*?)(?=<div class="ctrl"|\Z)', grade,
+            re.S):
         # atributos (o `data-campo="plastico"` e, dentro, o bloco dos tons),
         for peca in ('class="guia"', 'class="puxador"',
-                     'data-gesto="efeito-da-luz"', 'data-gesto="reenviar"'):
+                     'data-gesto="efeito-da-luz"'):
             assert peca in coluna, (
                 f"o lugar que NASCE vazio perdeu {peca!r} — o controle que "
                 f"chegar ali fica sem esse gesto na tela, e só recarregar a "
