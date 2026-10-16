@@ -39,6 +39,10 @@ from typing import Any
 
 import pytest
 
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
+
 from hefesto_dualsense4unix.integrations import storm_doctor as exame_do_dono
 from hefesto_dualsense4unix.interface import sistema as tela
 from hefesto_dualsense4unix.interface.pacotes import Contexto

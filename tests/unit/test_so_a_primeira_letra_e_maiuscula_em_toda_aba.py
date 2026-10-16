@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import importlib.util
 import pathlib
+import re
 import shutil
 import sys
 
@@ -85,13 +86,23 @@ def test_a_divida_que_nenhuma_pagina_escreve_reprova(monkeypatch: pytest.MonkeyP
     assert regua.dividas_mortas(_dez(regua.PUBLICADO)) == ["Linha Curada"]
 
 
-def test_o_valor_do_selo_da_08_e_peca_propria() -> None:
-    """«Analógico virtual <b>Apagado</b>»: o `<b>` do `.est` abre bloco (flex), e a régua
-    irmã (`test_todo_texto_que_abre_uma_linha_comeca_com_maiuscula`) exige a maiúscula."""
+def test_o_valor_do_selo_da_08_e_peca_propria(monkeypatch: pytest.MonkeyPatch) -> None:
+    """«Visto como <b>DualSense</b>»: o `<b>` do `.est` abre bloco (flex), e a régua irmã
+    (`test_todo_texto_que_abre_uma_linha_comeca_com_maiuscula`) exige a maiúscula.
+
+    O alvo é um selo que a página publicada tem hoje (o chip «Analógico virtual» saiu da 08).
+    MORDIDA: esvazie `_VALOR_DO_SELO` (`re.compile(r"(?!)")`) — o valor deixa de ser peça
+    própria, vira «Visto como DualSense» numa frase só, e este caso reprova.
+    """
     pagina = (regua.PUBLICADO / "08-conexoes.html").read_text(encoding="utf-8")
-    assert "Analógico virtual <b>Apagado</b>" in pagina
+    assert "Visto como <b>DualSense</b>" in pagina
     lidas = [f for _, f in regua.frases(pagina)]
-    assert "Apagado" in lidas, [f for f in lidas if "Apagado" in f]
+    assert "DualSense" in lidas, [f for f in lidas if "DualSense" in f]
+
+    monkeypatch.setattr(regua, "_VALOR_DO_SELO", re.compile(r"(?!)"))
+    juntas = [f for _, f in regua.frases(pagina)]
+    assert juntas.count("DualSense") < lidas.count("DualSense"), (
+        "o corte do selo não é o que separa o valor")
 
 
 def test_os_tres_mapas_entram_na_leitura(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch,

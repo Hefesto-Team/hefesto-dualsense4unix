@@ -36,7 +36,7 @@ PUBLICADAS = RAIZ / "src/hefesto_dualsense4unix/interface/paginas"
 #: quem ativa: a MESMA feature pode ter donos diferentes por papel, nunca dois donos no mesmo.
 FEATURES: dict[tuple[str, str], tuple[str, frozenset[str]]] = {
     ("point and click", "definir o estilo"): (
-        "06-navegacao.html", frozenset({"guardar-ponto", "fechar-ponto"})),
+        "06-navegacao.html", frozenset({"point-and-click-perfil"})),
     ("point and click", "escolher o estilo do perfil"): (
         "10-perfis.html", frozenset({"editor.estilo"})),
     ("point and click", "ativar"): (

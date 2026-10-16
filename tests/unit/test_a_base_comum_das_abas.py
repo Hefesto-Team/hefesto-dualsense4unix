@@ -49,12 +49,13 @@ SEM_AJUDA = ("topo.html", "fim.html", "monta.py", "janela.py", "hefesto_vivo.py"
 #: aba (`abaNN.py`) e as páginas que ela monta saem na sprint da aba (`A-ABA-<nome>-DO-TODO-01`),
 #: que troca o «?» pelo `data-dica`. O número só diminui, e a linha sai quando o arquivo zera.
 ISENTOS: dict[str, int] = {
-    "aba03.py": 2,  # sai com: A-ABA-GATILHOS-DO-TODO-01
     "aba07.py": 1,  # sai com: A-ABA-EXPERIMENTAL-DO-TODO-01
     "desenho_dos_lancadores.py": 2,  # sai com: A-ABA-EXPERIMENTAL-DO-TODO-01
 }
 
-_CLASSE_AJUDA = re.compile(r'class=["\']ajuda\b')
+#: Uma CITAÇÃO que proíbe não é um uso: o guarda do `aba03.py` escreve `'class="ajuda' not in
+#: corpo`, e aí o `ajuda` vem seguido da aspa simples que fecha a string, nunca do atributo.
+_CLASSE_AJUDA = re.compile(r'class=(?:"ajuda\b(?!\')|\'ajuda\b)')
 _CSS_AJUDA = re.compile(r"\.ajuda\b")
 #: um botão cujo texto é só «?»
 _BOTAO_DE_INTERROGACAO = re.compile(r"<button\b[^>]*>\s*(?:<[^>]+>\s*)*\?\s*<", re.IGNORECASE)
@@ -96,6 +97,19 @@ def test_o_botao_cinza_diz_a_razao_no_proprio_botao() -> None:
     assert 'data-hef-razao="sim"' in html, html
     assert 'data-dica="Já está parado."' in html, html
     assert html.count("<button") == 1, html
+
+
+def test_a_citacao_que_proibe_o_ajuda_nao_conta_como_uso() -> None:
+    """O guarda de um gerador que cita `'class="ajuda'` para proibi-lo não é um `.ajuda` escrito.
+
+    MORDIDA: troque o regex pelo antigo (`class=["\\']ajuda\\b`) e o guarda do `aba03.py` volta a
+    contar como uso — este caso reprova.
+    """
+    assert not _CLASSE_AJUDA.search("""exigir('class="ajuda' not in corpo, "x")""")
+    assert _CLASSE_AJUDA.search('<span class="ajuda porque">?</span>')
+    assert _CLASSE_AJUDA.search('<span class="ajuda">?</span>')
+    assert _CLASSE_AJUDA.search("<span class='ajuda'>?</span>")
+    assert not _CLASSE_AJUDA.findall(_fonte("aba03.py")), "o aba03.py voltou a escrever o `.ajuda`"
 
 
 def test_o_que_resta_de_ajuda_e_de_outra_sprint_e_so_diminui() -> None:

@@ -15,6 +15,10 @@ from typing import Any
 
 import pytest
 
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("importa `interface.pacotes.a08_conexoes`, que carrega o GTK")
+
 from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as a08
 
 ENDERECO = "AA:BB:CC:DD:EE:01"

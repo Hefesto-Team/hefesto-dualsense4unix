@@ -30,6 +30,10 @@ for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
     if _caminho not in sys.path:
         sys.path.insert(0, _caminho)
 
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("importa `aba02` e `calibrar`, que carregam o GTK")
+
 import aba02
 import calibrar
 
