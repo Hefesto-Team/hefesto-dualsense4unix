@@ -53,6 +53,8 @@ ENDERECOS: dict[str, str] = {
     "arquivo do interruptor, que o guarda do jogo novo e a tela leem",
     "tamanho-da-interface": "`a09_sistema.tamanho_da_interface` — a escolha guardada em "
     "`interface_escala` (100, 125 ou 150)",
+    "bandeja": "`atos_da_bandeja.bandeja_ligada` — o `X-GNOME-Autostart-enabled` do autostart "
+    "da bandeja, que a sessão lê ao entrar",
 }
 
 #: quem o aplica está escrito aqui — inclusive quando a resposta é "ninguém".
@@ -98,6 +100,8 @@ GESTOS: dict[str, str] = {
     "`vigia_do_jogo_novo`; o duplo clique liga e reaplica agora.",
     "tamanho-da-interface": "`a09_sistema.tamanho_da_interface_gesto` — grava a escolha em "
     "`interface_escala`; quem aplica o zoom nas abas é a janela.",
+    "bandeja": "`a09_sistema.bandeja` — `atos_da_bandeja.escolher_a_bandeja`: grava a escolha "
+    "no autostart e sobe a bandeja (`garantir_a_bandeja`) ou a encerra pelo PID dela.",
 }
 
 SEM_FONTE: dict[str, str] = {

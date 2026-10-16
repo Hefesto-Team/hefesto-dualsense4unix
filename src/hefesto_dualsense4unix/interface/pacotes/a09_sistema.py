@@ -52,6 +52,7 @@ from pathlib import Path
 from typing import Any
 
 from hefesto_dualsense4unix.app.actions import ambiente_na_tela as _ambiente
+from hefesto_dualsense4unix.app.actions import atos_da_bandeja as _bandeja
 from hefesto_dualsense4unix.app.actions import daemon_actions as _daemon
 from hefesto_dualsense4unix.app.actions import emulation_actions as _emulacao
 from hefesto_dualsense4unix.app.actions.config import secao_orcamento as _orcamento
@@ -115,6 +116,8 @@ MODO_A_CORRIGIR = "sim"
 #: O interruptor que junta as correções (A-ABA-SISTEMA-DO-TODO-01): o endereço da pílula e o gesto
 #: têm o mesmo nome, e quem diz se está ligado é o guarda do jogo novo, não o clique.
 CAMPO_DAS_CORRECOES = "correcoes-automaticas"
+#: A pílula «Ícone na bandeja» do canto do quadro: o campo e o gesto têm o mesmo nome.
+CAMPO_DA_BANDEJA = "bandeja"
 
 #: Os três tamanhos da interface, na ordem da tela: percentual, rótulo e dica. O gerador os lê
 #: daqui (o botão nasce deste texto), e o gesto só aceita um destes percentuais.
@@ -1198,16 +1201,18 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 CAMPO_DO_VERDE: "",
                 "exame-lista": nada,
                 CAMPO_DAS_CORRECOES: _vigia.interruptor_ligado(),
+                CAMPO_DA_BANDEJA: _bandeja.bandeja_ligada(),
                 CAMPO_DO_TAMANHO: str(tamanho_da_interface()),
                 **razoes_do_cinza(ctx),
                 "cobertura": {"pintados": 0, "sem_dono": 1}}
 
     fora: dict[str, object] = {}
     status = list(bruto.get("status") or [])
-    fora[CAMPO_DO_STATUS] = _html_do_status(
-        [linha for linha in status if linha.get("id") in LINHAS_DO_STATUS])
+    do_status = [linha for linha in status if linha.get("id") in LINHAS_DO_STATUS]
+    fora[CAMPO_DO_STATUS] = _html_do_status(do_status)
     fora["hefesto-autostart"] = bruto.get("autostart")
     fora[CAMPO_DAS_CORRECOES] = _vigia.interruptor_ligado()
+    fora[CAMPO_DA_BANDEJA] = _bandeja.bandeja_ligada()
     fora[CAMPO_DO_TAMANHO] = str(tamanho_da_interface())
     _, _, perfil_da_bateria, estado, repouso = _faixa_lenta(ctx.state or None,
                                                             ctx.mesa)
@@ -1216,8 +1221,12 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     exame = bruto.get("exame")
     # D-A-CONTAGEM-DO-EXAME-SAIU — 25/09/2026, 22h13, pedido.
     if isinstance(exame, dict):
-        fora["exame-lista"] = _html_do_exame(
-            _so_o_que_a_tela_mostra(_com_os_avisos(exame, ctx), status, ctx.state))
+        visto = _so_o_que_a_tela_mostra(_com_os_avisos(exame, ctx), status, ctx.state)
+        if visto.get("linhas"):
+            fora[CAMPO_DO_STATUS], fora["exame-lista"] = _notas_em_tercos(
+                do_status, list(visto["linhas"]))
+        else:
+            fora["exame-lista"] = _html_do_exame(visto)
     tira = _html_da_fita(ctx.mesa)
     if tira:
         fora[CAMPO_DA_FITA] = tira
@@ -1413,6 +1422,28 @@ def linha_do_status(linha: dict[str, Any]) -> str:
             f"</{fim}>")
 
 
+def em_tres_colunas(linhas: list[Any]) -> list[list[Any]]:
+    """As notas por igual nas três colunas, na ordem; a sobra vai às primeiras: 7 viram 3, 2 e 2."""
+    base, sobra = divmod(len(linhas), 3)
+    cortes = [0]
+    for i in range(3):
+        cortes.append(cortes[-1] + base + (1 if i < sobra else 0))
+    return [linhas[cortes[i]:cortes[i + 1]] for i in range(3)]
+
+
+def _notas_em_tercos(status: list[dict[str, Any]], achados: list[dict[str, Any]]
+                     ) -> tuple[str, str]:
+    """O Status e o exame como UMA lista em três colunas (S1): 8 viram 3, 3 e 2.
+
+    A primeira coluna vai ao campo do Status; as outras duas, ao `.saude-cols` do exame.
+    """
+    pecas = ([linha_do_status(linha) for linha in status]
+             + [_linha_do_exame(a) for a in achados])
+    um, dois, tres = ("".join(c) for c in em_tres_colunas(pecas))
+    return um, (f'<div class="col-lista">{dois}</div><div class="risco"></div>'
+                f'<div class="col-lista">{tres}</div>')
+
+
 def _html_do_exame(exame: dict[str, Any]) -> str:
     """As duas colunas de achados, prontas para o `innerHTML` de `.saude-cols`."""
     linhas = exame.get("linhas") or []
@@ -1507,10 +1538,12 @@ SUFIXO_DA_RAZAO = "-razao"
 #: (SISTEMA-BOTOES-01), pela decisão de produto D-OS-PLUGINS-APARECEM-ONDE-AGEM
 BOTOES_CINZAS = ("reiniciar",)
 
-#: O que o pacote escreve e o desenho (`mockup/`) tem, mas a página PUBLICADA ainda não tem. Vazia
-#: desde 16/10/2026 (o interruptor das correções e o tamanho da interface foram publicados); a régua
+#: O que o pacote escreve e o desenho (`mockup/`) tem, mas a página PUBLICADA ainda não tem; a régua
 #: `test_o_que_espera_a_publicacao_esta_declarado_nos_dois_sentidos` cobra nos dois sentidos.
-ESPERA_A_PUBLICACAO: dict[str, str] = {}
+ESPERA_A_PUBLICACAO: dict[str, str] = {
+    "bandeja": "a pílula «Ícone na bandeja» (AS-TELAS-QUE-ELA-PEDIU-EM-16-10-01, S4) está em "
+               "`mockup/09-sistema.html` e chega ao produto no `--publicar 09`.",
+}
 
 
 def razoes_do_cinza(ctx: Contexto) -> dict[str, str]:
@@ -2033,6 +2066,7 @@ def desligar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     if _de_pe(ctx) and _pausado(ctx):
         _ARMADO.clear()
         retomar(ctx, o, p)
+        _bandeja.garantir_a_bandeja()
         return {"blocos": blocos_dos_botoes(True, False)}
     if not _de_pe(ctx):
         _ARMADO.clear()
@@ -2041,6 +2075,8 @@ def desligar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
                 "Não liguei o serviço. Ou esta máquina não tem o Hefesto "
                 "instalado pelo sistema, ou já há um Hefesto rodando por fora "
                 "— e subir outro criaria um segundo.")
+        # O serviço que volta traz o ícone que o «Sair» da bandeja levou (S3).
+        _bandeja.garantir_a_bandeja()
         return {"blocos": blocos_dos_botoes(_de_pe(ctx))}
     if not _confirmado(o, DESLIGAR):
         return _so_armou(True, _para_o_painel(_pergunta_do_botao(DESLIGAR),
@@ -2782,6 +2818,21 @@ def correcoes_automaticas(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         _relatar_o_recibo(CAMPO_DAS_CORRECOES, _reaplicar_as_correcoes())
 
 
+@gesto("09-sistema.html", CAMPO_DA_BANDEJA, grava="escolher_a_bandeja")
+def bandeja(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """A pílula «Ícone na bandeja»: inverte a escolha lida do autostart e a faz valer agora.
+
+    Ligar grava `X-GNOME-Autostart-enabled=true` e sobe a bandeja se não há uma viva; desligar
+    grava `false` e encerra a viva pelo PID dela. O próximo login respeita a escolha.
+    """
+    _ARMADO.clear()
+    try:
+        _bandeja.escolher_a_bandeja(not _bandeja.bandeja_ligada())
+    except OSError as erro:
+        raise RuntimeError(
+            f"Não consegui gravar a escolha do ícone: {erro.strerror or erro}.") from erro
+
+
 @gesto("09-sistema.html", CAMPO_DO_TAMANHO,
        grava="guarda o tamanho da interface na pasta de configuração dela")
 def tamanho_da_interface_gesto(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
@@ -2844,4 +2895,4 @@ PROVAS = [
 #: `restart` derruba e sobe a mesma unit, deixando o `state_full` igual ao que
 SEM_ECO = ("atualizar", "autostart", "perfil-da-mesa", "reiniciar",
            "copiar-registro", "fixar-proton", "corrigir-vulkan",
-           CAMPO_DAS_CORRECOES, CAMPO_DO_TAMANHO, "salvar-registro")
+           CAMPO_DAS_CORRECOES, CAMPO_DO_TAMANHO, "salvar-registro", CAMPO_DA_BANDEJA)

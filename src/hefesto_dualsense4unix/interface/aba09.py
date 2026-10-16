@@ -89,7 +89,8 @@ GESTOS = _CONTRATO["GESTOS"]
 _DO_PACOTE = _constantes(
     R / "src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py",
     {"APELIDO_NA_TELA", "CAMPO_DO_MODO_AVULSO", "CAMPO_DO_STATUS", "CAMPO_DO_VERDE",
-     "CAMPO_DAS_CORRECOES", "TAMANHOS_DA_INTERFACE", "CAMPO_DO_TAMANHO"})
+     "CAMPO_DAS_CORRECOES", "TAMANHOS_DA_INTERFACE", "CAMPO_DO_TAMANHO",
+     "CAMPO_DA_BANDEJA"})
 APELIDO_NA_TELA = _DO_PACOTE["APELIDO_NA_TELA"]
 CAMPO_DO_MODO_AVULSO = _DO_PACOTE["CAMPO_DO_MODO_AVULSO"]
 CAMPO_DO_STATUS = _DO_PACOTE["CAMPO_DO_STATUS"]
@@ -97,6 +98,7 @@ CAMPO_DO_VERDE = _DO_PACOTE["CAMPO_DO_VERDE"]
 CAMPO_DAS_CORRECOES = _DO_PACOTE["CAMPO_DAS_CORRECOES"]
 TAMANHOS_DA_INTERFACE = _DO_PACOTE["TAMANHOS_DA_INTERFACE"]
 CAMPO_DO_TAMANHO = _DO_PACOTE["CAMPO_DO_TAMANHO"]
+CAMPO_DA_BANDEJA = _DO_PACOTE["CAMPO_DA_BANDEJA"]
 
 
 def _id(nome):
@@ -254,9 +256,12 @@ CSS = """
      todo tique; a regra de baixo só a deixa vencer o vermelho. */
   .btn.vermelho.verde{color:var(--green)}
   .btn.vermelho.verde:hover{border-color:var(--green);color:var(--green)}
-  /* O «Restaurar de fábrica» é o único com a borda vermelha: o clique que perde o ajuste. */
+  /* O «Parar» tem borda e letra vermelhas; no «Retomar» as duas ficam verdes (S2, 16/10). O
+     «Restaurar de fábrica» usa o amarelo do «Voltar ao padrão» (`.btn.amarelo-padrao`, topo). */
   .btn.borda-vermelha{border-color:var(--red);color:var(--red)}
   .btn.borda-vermelha:hover{background:rgba(255,85,85,.08)}
+  .btn.borda-vermelha.verde{border-color:var(--green);color:var(--green)}
+  .btn.borda-vermelha.verde:hover{background:rgba(80,250,123,.08)}
 
   /* O PERFIL GLOBAL DE BATERIA E O TAMANHO DA INTERFACE, NA VERTICAL — os três botões da aba
      Vibração (`.seg`), empilhados, na altura dos botões vizinhos. Escolha única: o aceso
@@ -288,6 +293,11 @@ CSS = """
   .cadeado.ligada{border-color:var(--green);background:rgba(80,250,123,.09);
                   color:var(--green)}
   .cadeado.ligada .p{background:var(--green);box-shadow:0 0 6px var(--green)}
+  /* «Ícone na bandeja» no canto do quadro, na medida do «Modo Freestyle» (`aba01.py`). */
+  .quadro-topo > .cadeado{flex:0 0 auto;margin-left:auto;width:auto;min-width:166px;
+    height:34px;gap:9px;padding:0 16px 0 12px;border-radius:999px;
+    font:600 13.5px/1 'Space Grotesk',system-ui,sans-serif}
+  .quadro-topo > .cadeado .p{width:11px;height:11px}
 
   /* OS DETALHES TÉCNICOS OCUPAM O QUE SOBRA — pedido: *«ganhar altura pra
      ocupar melhor esse espaço abaixo dele. e ser mais fácil de ser lido»*.
@@ -321,6 +331,11 @@ LIGAVEIS = (
     ("Iniciar com o sistema", "autostart", "hefesto-autostart", True,
      "Liga o serviço junto com o computador"),
 )
+
+
+#: A pílula do canto do quadro (S4): o molde é o «Modo Freestyle» da aba Jogar, no mesmo lugar.
+BANDEJA = ("Ícone na bandeja", CAMPO_DA_BANDEJA, CAMPO_DA_BANDEJA, True,
+           "Mostra o Hefesto na barra do sistema e o traz de volta ao entrar")
 
 
 def ligavel(rotulo, gesto, campo, ligado, dica):
@@ -419,7 +434,15 @@ ACHADOS = [
     linha("OK", "ok", "✓", "Um gamepad virtual por jogador",
           dica="Um gamepad virtual por jogador"),
 ]
-MEIO = len(ACHADOS) // 2 + len(ACHADOS) % 2
+#: AS NOTAS EM TERÇOS (AS-TELAS-QUE-ELA-PEDIU-EM-16-10-01, S1): o Status e o exame são UMA lista,
+#: na ordem, por igual, com a sobra nas primeiras: 8 viram 3, 3 e 2, e 7 viram 3, 2 e 2. O
+#: pacote (`a09_sistema.em_tres_colunas`) divide do mesmo jeito no produto.
+NOTAS = STATUS + ACHADOS
+_BASE, _SOBRA = divmod(len(NOTAS), 3)
+_CORTES = [0]
+for _i in range(3):
+    _CORTES.append(_CORTES[-1] + _BASE + (1 if _i < _SOBRA else 0))
+COLUNAS_DAS_NOTAS = [NOTAS[_CORTES[i]:_CORTES[i + 1]] for i in range(3)]
 
 #: Os rótulos de cada coluna e a dica curta de cada um (o desenho do todo): nenhum «?».
 DICA_DO_TITULO = "Esta aba é do computador, não de um controle"
@@ -440,27 +463,28 @@ MIOLO = f'''
     <div class="quadro estica">
       <div class="quadro-topo">
         <span class="quadro-titulo" data-dica="{DICA_DO_TITULO}">Sistema</span>
+{ligavel(*BANDEJA)}
       </div>
       <div class="quadro-corpo">
 
-        <!-- ---------- 1. STATUS: SEIS LINHAS, EM TRÊS COLUNAS ---------- -->
-        <!-- O Status leva as duas primeiras; o exame, as quatro seguintes, em duas colunas. O que
-             não está aqui só aparece se FALHAR, e então em vermelho até se curar. -->
+        <!-- ---------- 1. STATUS: AS NOTAS EM TERÇOS ---------- -->
+        <!-- O Status e o exame numa lista só, por igual nas três colunas. O que não está aqui só
+             aparece se FALHAR, e então em vermelho até se curar. -->
         <div class="sec-rot sr-status3">
           <span data-dica="{DICA_DO_STATUS}">Status</span>
         </div>
         <div class="status3">
           <div class="col-lista" data-id="{_id(CAMPO_DO_STATUS)}" data-campo="{_id(CAMPO_DO_STATUS)}" data-hef-alvo="html">
-{chr(10).join(STATUS)}
+{chr(10).join(COLUNAS_DAS_NOTAS[0])}
           </div>
           <div class="risco"></div>
           <div class="saude-cols" data-id="{_id("exame-lista")}" data-campo="{_id("exame-lista")}" data-hef-alvo="html">
             <div class="col-lista">
-{chr(10).join(ACHADOS[:MEIO])}
+{chr(10).join(COLUNAS_DAS_NOTAS[1])}
             </div>
             <div class="risco"></div>
             <div class="col-lista">
-{chr(10).join(ACHADOS[MEIO:])}
+{chr(10).join(COLUNAS_DAS_NOTAS[2])}
             </div>
           </div>
         </div>
@@ -475,7 +499,7 @@ MIOLO = f'''
         </div>
         <div class="avancadas">
           <div class="coluna col-servico">
-{item(ROTULO_PARAR, "Os controles viram gamepads comuns. Pergunta antes", "btn vermelho", gesto=_gesto("parar-ou-retomar"), extra=f' data-campo="{CAMPO_DO_VERDE}" data-hef-alvo="classe" data-hef-classe="verde"')}
+{item(ROTULO_PARAR, "Os controles viram gamepads comuns. Pergunta antes", "btn vermelho borda-vermelha", gesto=_gesto("parar-ou-retomar"), extra=f' data-campo="{CAMPO_DO_VERDE}" data-hef-alvo="classe" data-hef-classe="verde"')}
 {item(ROTULO_ATUALIZAR, DICA_ATUALIZAR, gesto=_gesto("atualizar"), em_voo=EM_VOO_ATUALIZAR)}
 {item_escondido("Corrigir o serviço", "Faz o serviço subir do jeito certo", "corrigir-modo", CAMPO_DO_MODO_AVULSO)}
 {item_cinza("Reiniciar", "Para e liga de novo; nenhum ajuste se perde", "reiniciar")}
@@ -491,7 +515,7 @@ MIOLO = f'''
           <div class="risco"></div>
           <div class="coluna saude-app">
 {chr(10).join(ligavel(*x) for x in LIGAVEIS)}
-{item("Restaurar de fábrica", "Volta ao padrão; seus perfis salvos ficam. Pergunta antes", "btn vermelho borda-vermelha", gesto=_gesto("restaurar-de-fabrica"))}
+{item("Restaurar de fábrica", "Volta ao padrão; seus perfis salvos ficam. Pergunta antes", "btn amarelo-padrao", gesto=_gesto("restaurar-de-fabrica"))}
           </div>
         </div>
 
@@ -566,10 +590,9 @@ for _regra in (".seg.bat-perfis button", ".cadeado"):
     if not _alt:
         raise SystemExit(f"ERRO: `{_regra}` deixou de medir `--h-acao` — a coluna "
                          "dela deixa de acabar no mesmo y das vizinhas.")
-if len(STATUS) != MEIO:
-    raise SystemExit(f"ERRO: o Status tem {len(STATUS)} linhas e cada coluna do "
-                     f"exame tem {MEIO} — as três colunas da seção 1 deixam de "
-                     "acabar no mesmo y.")
+if max(map(len, COLUNAS_DAS_NOTAS)) - min(map(len, COLUNAS_DAS_NOTAS)) > 1:
+    raise SystemExit(f"ERRO: as notas saíram {[len(c) for c in COLUNAS_DAS_NOTAS]} — as três "
+                     "colunas da seção 1 deixam de ser por igual.")
 
 _ACOES_DO_SERVICO = _entre(MIOLO, '<div class="coluna col-servico">', '<div class="risco">')
 _ROTULOS = {
@@ -602,9 +625,9 @@ if _SEM_GLIFO:
     raise SystemExit("ERRO: pílula sem glifo: " + " · ".join(repr(r) for r in _SEM_GLIFO))
 
 _PILULAS_LIGAVEIS = re.findall(r'<button class="cadeado( ligada)?"[^>]*>', MIOLO)
-if len(_PILULAS_LIGAVEIS) != len(LIGAVEIS):
-    raise SystemExit(f"ERRO: a coluna Automático tem {len(_PILULAS_LIGAVEIS)} "
-                     f"ligáveis e o desenho declara {len(LIGAVEIS)}.")
+if len(_PILULAS_LIGAVEIS) != len(LIGAVEIS) + 1:
+    raise SystemExit(f"ERRO: a página tem {len(_PILULAS_LIGAVEIS)} ligáveis e o desenho "
+                     f"declara {len(LIGAVEIS)} na coluna e a da bandeja no canto.")
 for _rot, _g, _c, _lig, _d in LIGAVEIS:
     _tag = re.search(r'<button class="cadeado[^"]*"[^>]*data-gesto="' + re.escape(_g)
                      + r'"[^>]*>', MIOLO)
@@ -703,8 +726,9 @@ if "Não muda nada" in _ATRS:
     raise SystemExit("ERRO: a dica do `daemon.reload` voltou a dizer 'Não muda nada' — "
                      "é falso: ele relê os atalhos e reescreve o ambiente da Steam.")
 
-_PARAR = re.search(r'<button class="btn vermelho"[^>]*data-gesto="parar-ou-retomar"[^>]*>',
-                   _ACOES_DO_SERVICO)
+_PARAR = re.search(
+    r'<button class="btn vermelho borda-vermelha"[^>]*data-gesto="parar-ou-retomar"[^>]*>',
+    _ACOES_DO_SERVICO)
 if not _PARAR:
     raise SystemExit("ERRO: o botão Parar/Retomar sumiu da coluna do serviço.")
 for _exigido in (f'data-campo="{CAMPO_DO_VERDE}"', 'data-hef-alvo="classe"',

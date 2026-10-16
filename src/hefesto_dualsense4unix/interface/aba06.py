@@ -352,7 +352,7 @@ FILA = '''
           <a class="btn roxo" href="#acessibilidade">Acessibilidade</a>
           <span class="padrao2">
             <input type="checkbox" id="conf-padrao" class="abre-conf">
-            <label for="conf-padrao" class="btn btn-padrao2">Voltar ao padrão</label>
+            <label for="conf-padrao" class="btn amarelo-padrao">Voltar ao padrão</label>
             <label for="conf-padrao" class="veu"></label>
             <span class="confirma"><span>Voltar ao padrão os botões, as velocidades e os gestos?</span>
               <label for="conf-padrao" class="btn-conf vermelho" data-gesto="padrao-da-aba">Confirmar</label>
@@ -525,7 +525,7 @@ def _tela_da_acessibilidade():
     </div>
     <div class="tn-rod">
       <a class="btn" href="#">Cancelar</a>
-      <span class="btn btn-padrao2 apagado" aria-disabled="true" data-dica="Volta estes ajustes ao de fábrica">Voltar ao padrão</span>
+      <span class="btn amarelo-padrao apagado" aria-disabled="true" data-dica="Volta estes ajustes ao de fábrica">Voltar ao padrão</span>
       <span class="btn roxo apagado" aria-disabled="true" data-dica="Guarda estes ajustes para quem joga">Guardar</span>
     </div>
   </div>
@@ -668,10 +668,8 @@ CSS = CSS_GLIFO + """
 .nav2[data-quem="hefesto"] .so-steam,.nav2[data-quem="steam"] .so-hefesto { display:none }
 .nav2[data-quem="steam"] .nav2-duas,.nav2[data-quem="steam"] .do-hefesto { opacity:.35;pointer-events:none }
 .fila2 { display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:12px 16px;background:var(--app-bg); border:1px solid var(--border-sutil);border-radius:9px;flex:none }
-.fila2 > .btn,.fila2 .btn-padrao2 { height:38px;width:100%;text-decoration:none;white-space:nowrap }
+.fila2 > .btn,.fila2 .amarelo-padrao { height:38px;width:100%;text-decoration:none;white-space:nowrap }
 .padrao2 { position:relative;display:block }
-.btn-padrao2 { border-color:#f1fa8c !important;color:#f1fa8c !important }
-.btn-padrao2:hover { background:rgba(241,250,140,.08) }
 .btn.apagado,.btn.apagado:hover { opacity:.4;cursor:not-allowed;background:none }
 .padrao2 .confirma { left:auto;right:0;width:420px }
 .tn-cx.ac2-cx { width:1060px }

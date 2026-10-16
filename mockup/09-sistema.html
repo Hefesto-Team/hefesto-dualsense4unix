@@ -592,6 +592,11 @@
   .btn.verde:hover{border-color:var(--green);color:var(--green)}
   .btn.vermelho:hover{border-color:var(--red);color:var(--red)}
   .btn.roxo:hover{border-color:var(--purple);color:var(--purple)}
+  /* O AMARELO DO «Voltar ao padrão» — borda e letra, nas duas abas que voltam ao de fábrica: a
+     Navegação e o «Restaurar de fábrica» da Sistema (AS-TELAS-QUE-ELA-PEDIU-EM-16-10-01, S2). */
+  .btn.amarelo-padrao{border-color:var(--yellow);color:var(--yellow)}
+  .btn.amarelo-padrao:hover{border-color:var(--yellow);color:var(--yellow);
+                            background:rgba(241,250,140,.08)}
 
   /* ---------- Conectado agora + Atenção, lado a lado ---------- */
   .dupla{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
@@ -1010,9 +1015,12 @@
      todo tique; a regra de baixo só a deixa vencer o vermelho. */
   .btn.vermelho.verde{color:var(--green)}
   .btn.vermelho.verde:hover{border-color:var(--green);color:var(--green)}
-  /* O «Restaurar de fábrica» é o único com a borda vermelha: o clique que perde o ajuste. */
+  /* O «Parar» tem borda e letra vermelhas; no «Retomar» as duas ficam verdes (S2, 16/10). O
+     «Restaurar de fábrica» usa o amarelo do «Voltar ao padrão» (`.btn.amarelo-padrao`, topo). */
   .btn.borda-vermelha{border-color:var(--red);color:var(--red)}
   .btn.borda-vermelha:hover{background:rgba(255,85,85,.08)}
+  .btn.borda-vermelha.verde{border-color:var(--green);color:var(--green)}
+  .btn.borda-vermelha.verde:hover{background:rgba(80,250,123,.08)}
 
   /* O PERFIL GLOBAL DE BATERIA E O TAMANHO DA INTERFACE, NA VERTICAL — os três botões da aba
      Vibração (`.seg`), empilhados, na altura dos botões vizinhos. Escolha única: o aceso
@@ -1044,6 +1052,11 @@
   .cadeado.ligada{border-color:var(--green);background:rgba(80,250,123,.09);
                   color:var(--green)}
   .cadeado.ligada .p{background:var(--green);box-shadow:0 0 6px var(--green)}
+  /* «Ícone na bandeja» no canto do quadro, na medida do «Modo Freestyle» (`aba01.py`). */
+  .quadro-topo > .cadeado{flex:0 0 auto;margin-left:auto;width:auto;min-width:166px;
+    height:34px;gap:9px;padding:0 16px 0 12px;border-radius:999px;
+    font:600 13.5px/1 'Space Grotesk',system-ui,sans-serif}
+  .quadro-topo > .cadeado .p{width:11px;height:11px}
 
   /* OS DETALHES TÉCNICOS OCUPAM O QUE SOBRA — pedido: *«ganhar altura pra
      ocupar melhor esse espaço abaixo dele. e ser mais fácil de ser lido»*.
@@ -1289,12 +1302,13 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     <div class="quadro estica">
       <div class="quadro-topo">
         <span class="quadro-titulo" data-dica="Esta aba é do computador, não de um controle">Sistema</span>
+            <button class="cadeado ligada" data-dica="Mostra o Hefesto na barra do sistema e o traz de volta ao entrar" data-gesto="bandeja" data-campo="bandeja" data-hef-alvo="classe" data-hef-classe="ligada"><span class="p"></span>Ícone na bandeja</button>
       </div>
       <div class="quadro-corpo">
 
-        <!-- ---------- 1. STATUS: SEIS LINHAS, EM TRÊS COLUNAS ---------- -->
-        <!-- O Status leva as duas primeiras; o exame, as quatro seguintes, em duas colunas. O que
-             não está aqui só aparece se FALHAR, e então em vermelho até se curar. -->
+        <!-- ---------- 1. STATUS: AS NOTAS EM TERÇOS ---------- -->
+        <!-- O Status e o exame numa lista só, por igual nas três colunas. O que não está aqui só
+             aparece se FALHAR, e então em vermelho até se curar. -->
         <div class="sec-rot sr-status3">
           <span data-dica="Linha que falha fica vermelha até se curar">Status</span>
         </div>
@@ -1327,7 +1341,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
         </div>
         <div class="avancadas">
           <div class="coluna col-servico">
-            <button class="btn vermelho" data-dica="Os controles viram gamepads comuns. Pergunta antes" data-gesto="parar-ou-retomar" data-campo="parar-ou-retomar-verde" data-hef-alvo="classe" data-hef-classe="verde">Parar</button>
+            <button class="btn vermelho borda-vermelha" data-dica="Os controles viram gamepads comuns. Pergunta antes" data-gesto="parar-ou-retomar" data-campo="parar-ou-retomar-verde" data-hef-alvo="classe" data-hef-classe="verde">Parar</button>
             <button class="btn" data-dica="Relê os atalhos e os arquivos da Steam" data-gesto="atualizar" data-hef-em-voo="Atualizando…">Atualizar</button>
             <button class="btn so-avulso" data-dica="Faz o serviço subir do jeito certo" data-gesto="corrigir-modo" data-campo="corrigir-modo-quando" data-hef-alvo="classe" data-hef-classe="mostra">Corrigir o serviço</button>
             <div class="acao"><button class="btn" data-campo="reiniciar-razao" data-hef-alvo="classe" data-hef-classe="apagado" data-hef-atributo="aria-disabled" data-hef-razao="sim" data-gesto="reiniciar" title="Para e liga de novo; nenhum ajuste se perde">Reiniciar</button></div>
@@ -1344,7 +1358,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
           <div class="coluna saude-app">
             <button class="cadeado ligada" data-dica="Fixa o Proton, corrige o Vulkan e prepara cada jogo novo" data-gesto="correcoes-automaticas" data-campo="correcoes-automaticas" data-hef-alvo="classe" data-hef-classe="ligada"><span class="p"></span>Permitir correções automáticas</button>
             <button class="cadeado ligada" data-dica="Liga o serviço junto com o computador" data-gesto="autostart" data-campo="hefesto-autostart" data-hef-alvo="classe" data-hef-classe="ligada"><span class="p"></span>Iniciar com o sistema</button>
-            <button class="btn vermelho borda-vermelha" data-dica="Volta ao padrão; seus perfis salvos ficam. Pergunta antes" data-gesto="restaurar-de-fabrica">Restaurar de fábrica</button>
+            <button class="btn amarelo-padrao" data-dica="Volta ao padrão; seus perfis salvos ficam. Pergunta antes" data-gesto="restaurar-de-fabrica">Restaurar de fábrica</button>
           </div>
         </div>
 

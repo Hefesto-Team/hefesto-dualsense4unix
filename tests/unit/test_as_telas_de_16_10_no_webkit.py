@@ -8,10 +8,15 @@ abre com o título da âncora e sem botão aceso.
 
 TUDO É DE MENTIRA: a página do desenho (`mockup/`) com o pintor do piloto, sem daemon.
 
+A Sistema (S1, S2 e S4): as oito notas do produto saem 3, 3 e 2 sem rolar; o «Parar» tem borda e
+letra vermelhas (verdes no «Retomar»), o «Restaurar» o amarelo do padrão; a pílula da bandeja fica
+no canto do quadro, inteira, na altura do «Modo Freestyle».
+
 MORDIDAS (feitas à mão, 16/10/2026): tirar o `justify-content:space-evenly` e o `min-height:0` do
 `.nav2-ops` (as opções param de ceder altura) reprova `test_os_dez_gestos_cabem_em_opcoes` nas
 duas larguras; devolver o `padding:0 14px` ao `.seg.mini button` do «Permitir» quebra o «Uso
-geral» em duas linhas a 1212 e reprova `test_a_navegacao_nao_rola`.
+geral» em duas linhas a 1212 e reprova `test_a_navegacao_nao_rola`; tirar a regra
+`.quadro-topo > .cadeado` da `aba09.py` reprova `test_a_sistema_tem_a_bandeja_e_as_cores`.
 """
 from __future__ import annotations
 
@@ -51,6 +56,36 @@ MEDIR_06 = r"""
                fundo: Math.round(fundo()), op: Math.round(op.getBoundingClientRect().bottom),
                fila: Math.round(fila.getBoundingClientRect().top)};
   linhas.forEach((r, i) => { r.dataset.vale = antes[i]; });
+  return JSON.stringify(visto);
+})()
+"""
+
+MEDIR_09 = r"""
+(function(){
+  const m = document.querySelector('.miolo');
+  const cor = (el) => { const c = getComputedStyle(el); return [c.borderTopColor, c.color]; };
+  const parar = document.querySelector('[data-gesto="parar-ou-retomar"]');
+  const rest = document.querySelector('[data-gesto="restaurar-de-fabrica"]');
+  const pil = document.querySelector('.quadro-topo > .cadeado');
+  const topo = pil.parentElement.getBoundingClientRect();
+  const r = pil.getBoundingClientRect();
+  const rg = document.createRange(); rg.selectNodeContents(pil.lastChild);
+  const visto = {
+    rola: [m.scrollHeight - m.clientHeight, document.scrollingElement.scrollHeight - innerHeight],
+    parar: cor(parar), restaurar: cor(rest),
+    pilula: {gesto: pil.dataset.gesto, h: Math.round(r.height), w: Math.round(r.width),
+             direita: Math.round(topo.right - r.right),
+             corta: pil.scrollWidth - pil.clientWidth,
+             linhas: new Set([...rg.getClientRects()].map(x => Math.round(x.top))).size,
+             texto: pil.textContent.trim(), fonte: getComputedStyle(pil).fontSize},
+  };
+  parar.classList.add('verde'); visto.retomar = cor(parar); parar.classList.remove('verde');
+  document.querySelector('[data-campo="status-lista"]').innerHTML = NOTAS[0];
+  document.querySelector('[data-campo="exame-lista"]').innerHTML = NOTAS[1];
+  const cols = [...document.querySelectorAll('.status3 .col-lista')];
+  visto.notas = cols.map(c => c.querySelectorAll(':scope > .saude').length);
+  visto.topos = cols.map(c => Math.round(c.getBoundingClientRect().top));
+  visto.rola_com_oito = m.scrollHeight - m.clientHeight;
   return JSON.stringify(visto);
 })()
 """
@@ -156,3 +191,36 @@ def test_o_mapa_diz_qual_tela_e_e_nasce_sem_botao_aceso(
     assert lido["h1"] == titulo and lido["titulo"] == f"Hefesto — {titulo}", lido
     assert lido["acesos"] == [], f"o mapa nasceu com botão aceso: {lido['acesos']}"
     assert lido["rola"] <= 0, lido
+
+
+VERMELHO, VERDE, AMARELO = "rgb(255, 85, 85)", "rgb(80, 250, 123)", "rgb(241, 250, 140)"
+
+
+@pytest.mark.parametrize("tamanho", TAMANHOS)
+def test_a_sistema_tem_a_bandeja_e_as_cores(tamanho: tuple[int, int]) -> None:
+    import sys
+
+    sys.path.insert(0, str(onde.pagina("09-sistema.html").parents[1]
+                           / "src/hefesto_dualsense4unix/interface"))
+    import pacotes
+    from pacotes import a09_sistema as a09
+
+    pacotes._carregar_tudo()
+    status = [{"id": f"s{i}", "selo": "LIGADO", "cls": "ok", "txt": f"Status {i}"}
+              for i in range(2)]
+    achados = [{"selo": "AVISO", "cls": "aviso", "txt": f"Aviso do exame {i}"} for i in range(6)]
+    notas = json.dumps(list(a09._notas_em_tercos(status, achados)))
+    uri = onde.pagina("09-sistema.html", publicado=False).as_uri()
+    lido = _no_webkit(uri, tamanho, [f"const NOTAS = {notas};" + MEDIR_09])[0]
+    assert lido["rola"][0] <= 0 and lido["rola"][1] <= 0, lido
+    assert lido["parar"] == [VERMELHO, VERMELHO], lido["parar"]
+    assert lido["retomar"] == [VERDE, VERDE], lido["retomar"]
+    assert lido["restaurar"] == [AMARELO, AMARELO], lido["restaurar"]
+    pil = lido["pilula"]
+    assert pil["gesto"] == "bandeja" and pil["texto"] == "Ícone na bandeja", pil
+    assert pil["h"] == 34 and 166 <= pil["w"] <= 240 and pil["direita"] <= 20, pil
+    assert pil["fonte"] == "13.5px", f"a pílula não tem a letra do «Modo Freestyle»: {pil}"
+    assert pil["corta"] <= 0 and pil["linhas"] == 1, f"a pílula da bandeja corta o nome: {pil}"
+    assert lido["notas"] == [3, 3, 2], lido["notas"]
+    assert len(set(lido["topos"])) == 1, lido["topos"]
+    assert lido["rola_com_oito"] <= 0, "as oito notas empurraram a Sistema para a rolagem"

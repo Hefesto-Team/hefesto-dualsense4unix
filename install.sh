@@ -3734,12 +3734,21 @@ command -v update-desktop-database >/dev/null 2>&1 \
 _AUTOSTART_DIR="${HOME}/.config/autostart"
 _AUTOSTART_TARGET="${_AUTOSTART_DIR}/${APP_ID}-tray.desktop"
 _AUTOSTART_FONTE="${ROOT_DIR}/packaging/${APP_ID}-tray.desktop"
+# A ESCOLHA DELA SOBREVIVE AO INSTALL (AS-TELAS-QUE-ELA-PEDIU-EM-16-10-01, S3): o «Ícone na
+# bandeja» da aba Sistema grava `X-GNOME-Autostart-enabled=false`, e reescrever o arquivo com o
+# `true` de fábrica religaria o que ela desligou.
+_AUTOSTART_LIGADO=true
+if grep -qx 'X-GNOME-Autostart-enabled=false' "${_AUTOSTART_TARGET}" 2>/dev/null; then
+    _AUTOSTART_LIGADO=false
+fi
 if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
-    _faria "escrever o autostart do tray em ${_AUTOSTART_TARGET}"
+    _faria "escrever o autostart do tray em ${_AUTOSTART_TARGET} (ligado=${_AUTOSTART_LIGADO})"
 elif [[ -r "${_AUTOSTART_FONTE}" ]]; then
     mkdir -p "${_AUTOSTART_DIR}"
-    sed -e "s|@RAIZ@|${ROOT_DIR}|g" "${_AUTOSTART_FONTE}" > "${_AUTOSTART_TARGET}"
-    printf '      autostart do tray: %s\n' "${_AUTOSTART_TARGET}"
+    sed -e "s|@RAIZ@|${ROOT_DIR}|g" \
+        -e "s|^X-GNOME-Autostart-enabled=.*|X-GNOME-Autostart-enabled=${_AUTOSTART_LIGADO}|" \
+        "${_AUTOSTART_FONTE}" > "${_AUTOSTART_TARGET}"
+    printf '      autostart do tray: %s (ligado=%s)\n' "${_AUTOSTART_TARGET}" "${_AUTOSTART_LIGADO}"
 else
     warn "packaging/${APP_ID}-tray.desktop ausente — o tray não subirá sozinho"
 fi

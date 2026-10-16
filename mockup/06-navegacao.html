@@ -592,6 +592,11 @@
   .btn.verde:hover{border-color:var(--green);color:var(--green)}
   .btn.vermelho:hover{border-color:var(--red);color:var(--red)}
   .btn.roxo:hover{border-color:var(--purple);color:var(--purple)}
+  /* O AMARELO DO «Voltar ao padrão» — borda e letra, nas duas abas que voltam ao de fábrica: a
+     Navegação e o «Restaurar de fábrica» da Sistema (AS-TELAS-QUE-ELA-PEDIU-EM-16-10-01, S2). */
+  .btn.amarelo-padrao{border-color:var(--yellow);color:var(--yellow)}
+  .btn.amarelo-padrao:hover{border-color:var(--yellow);color:var(--yellow);
+                            background:rgba(241,250,140,.08)}
 
   /* ---------- Conectado agora + Atenção, lado a lado ---------- */
   .dupla{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
@@ -1059,10 +1064,8 @@
 .nav2[data-quem="hefesto"] .so-steam,.nav2[data-quem="steam"] .so-hefesto { display:none }
 .nav2[data-quem="steam"] .nav2-duas,.nav2[data-quem="steam"] .do-hefesto { opacity:.35;pointer-events:none }
 .fila2 { display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:12px 16px;background:var(--app-bg); border:1px solid var(--border-sutil);border-radius:9px;flex:none }
-.fila2 > .btn,.fila2 .btn-padrao2 { height:38px;width:100%;text-decoration:none;white-space:nowrap }
+.fila2 > .btn,.fila2 .amarelo-padrao { height:38px;width:100%;text-decoration:none;white-space:nowrap }
 .padrao2 { position:relative;display:block }
-.btn-padrao2 { border-color:#f1fa8c !important;color:#f1fa8c !important }
-.btn-padrao2:hover { background:rgba(241,250,140,.08) }
 .btn.apagado,.btn.apagado:hover { opacity:.4;cursor:not-allowed;background:none }
 .padrao2 .confirma { left:auto;right:0;width:420px }
 .tn-cx.ac2-cx { width:1060px }
@@ -1653,7 +1656,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
           <a class="btn roxo" href="#acessibilidade">Acessibilidade</a>
           <span class="padrao2">
             <input type="checkbox" id="conf-padrao" class="abre-conf">
-            <label for="conf-padrao" class="btn btn-padrao2">Voltar ao padrão</label>
+            <label for="conf-padrao" class="btn amarelo-padrao">Voltar ao padrão</label>
             <label for="conf-padrao" class="veu"></label>
             <span class="confirma"><span>Voltar ao padrão os botões, as velocidades e os gestos?</span>
               <label for="conf-padrao" class="btn-conf vermelho" data-gesto="padrao-da-aba">Confirmar</label>
@@ -1779,7 +1782,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     </div>
     <div class="tn-rod">
       <a class="btn" href="#">Cancelar</a>
-      <span class="btn btn-padrao2 apagado" aria-disabled="true" data-dica="Volta estes ajustes ao de fábrica">Voltar ao padrão</span>
+      <span class="btn amarelo-padrao apagado" aria-disabled="true" data-dica="Volta estes ajustes ao de fábrica">Voltar ao padrão</span>
       <span class="btn roxo apagado" aria-disabled="true" data-dica="Guarda estes ajustes para quem joga">Guardar</span>
     </div>
   </div>

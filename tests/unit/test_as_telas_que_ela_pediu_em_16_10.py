@@ -143,3 +143,63 @@ def test_o_gesto_permitir_navegacao_grava_o_que_cada_botao_diz() -> None:
         vistos = [(m, p.get("ligado", p.get("tipo"))) for m, p in pedidos]
         assert vistos == quer, (valor, pedidos)
         assert all("ligada" not in p for _m, p in pedidos), "o Permitir mexeu no liga/desliga"
+
+
+# --------------------------------------------------------------------- Sistema
+
+
+def _quadro_topo_da_09() -> str:
+    return _pagina("09-sistema.html").split('<div class="quadro-topo">')[1].split("</div>")[0]
+
+
+def test_as_notas_do_status_saem_em_tercos() -> None:
+    """S1: o Status e o exame numa lista só, por igual nas três colunas, na ordem."""
+    import pacotes
+    from pacotes import a09_sistema as a09
+
+    pacotes._carregar_tudo()
+    assert [len(c) for c in a09.em_tres_colunas(list(range(8)))] == [3, 3, 2]
+    assert [len(c) for c in a09.em_tres_colunas(list(range(9)))] == [3, 3, 3]
+    assert [len(c) for c in a09.em_tres_colunas(list(range(6)))] == [2, 2, 2]
+    assert [len(c) for c in a09.em_tres_colunas(list(range(7)))] == [3, 2, 2]
+    assert [len(c) for c in a09.em_tres_colunas(list(range(4)))] == [2, 1, 1]
+    assert [x for c in a09.em_tres_colunas(list(range(7))) for x in c] == list(range(7)), "ordem"
+    status = [{"id": f"s{i}", "selo": "LIGADO", "cls": "ok", "txt": f"S{i}"} for i in range(2)]
+    achados = [{"selo": "OK", "cls": "ok", "txt": f"A{i}"} for i in range(6)]
+    um, resto = a09._notas_em_tercos(status, achados)
+    assert um.count('class="saude') == 3 and "A0" in um and "S1" in um
+    contas = [c.count('class="saude') for c in resto.split('<div class="risco"></div>')]
+    assert contas == [3, 2], contas
+    doc = _pagina("09-sistema.html")
+    faixa = doc.split('<div class="status3">')[1].split("<!-- ---------- 2.")[0]
+    por_coluna = [len(re.findall(r'class="saude[" ]', c))
+                  for c in faixa.split('class="col-lista"')[1:]]
+    assert por_coluna == [2, 2, 2], por_coluna
+
+
+def test_o_parar_e_vermelho_e_o_restaurar_e_o_amarelo_do_padrao() -> None:
+    """S2: a borda e a letra do Parar vermelhas, e o Restaurar com o amarelo da Navegação."""
+    topo = (RAIZ / "src/hefesto_dualsense4unix/interface/topo.html").read_text(encoding="utf-8")
+    assert re.search(r"\.btn\.amarelo-padrao\{border-color:var\(--yellow\);"
+                     r"color:var\(--yellow\)\}", topo)
+    doc = _pagina("09-sistema.html")
+    assert re.search(r'<button class="btn vermelho borda-vermelha"[^>]*'
+                     r'data-gesto="parar-ou-retomar"', doc)
+    assert re.search(r'<button class="btn amarelo-padrao"[^>]*>Restaurar de fábrica<', doc)
+    assert ".btn.borda-vermelha.verde{border-color:var(--green)" in doc
+    nav = _pagina("06-navegacao.html")
+    assert "btn-padrao2" not in nav and 'class="btn amarelo-padrao"' in nav
+
+
+def test_a_pilula_da_bandeja_mora_no_canto_do_quadro() -> None:
+    """S4: o «Ícone na bandeja» no `.quadro-topo` da 09, a peça do «Modo Freestyle»."""
+    topo = _quadro_topo_da_09()
+    pilula = re.search(r'<button class="cadeado[^"]*"[^>]*>', topo)
+    assert pilula, "a pílula da bandeja saiu do canto do quadro"
+    for atributo in ('data-gesto="bandeja"', 'data-campo="bandeja"', 'data-hef-classe="ligada"'):
+        assert atributo in pilula.group(0), atributo
+    assert "Ícone na bandeja" in topo
+    import pacotes
+
+    pacotes._carregar_tudo()
+    assert ("09-sistema.html", "bandeja") in pacotes.perigosos()

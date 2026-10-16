@@ -15,6 +15,10 @@ from hefesto_dualsense4unix.app.actions.atos_da_bandeja import (
     abrir_o_painel as _abrir_o_painel,
 )
 from hefesto_dualsense4unix.app.actions.atos_da_bandeja import (
+    anotar_a_bandeja_viva,
+    esquecer_a_bandeja,
+)
+from hefesto_dualsense4unix.app.actions.atos_da_bandeja import (
     mexer_no_servico as _servico,
 )
 
@@ -121,11 +125,13 @@ def tray_cmd() -> None:
         raise typer.Exit(code=3)
 
     console.print("[green]tray ativo[/] — clique no ícone para abrir o menu.")
+    anotar_a_bandeja_viva()
     try:
         Gtk.main()
     except KeyboardInterrupt:
         pass
     finally:
+        esquecer_a_bandeja()
         bandeja.stop()
 
 

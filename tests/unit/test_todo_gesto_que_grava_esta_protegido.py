@@ -129,6 +129,7 @@ ESCREVEM = {
     "_systemctl",
     "curar_todos",
     "gravar_camadas_da_steam_fora",
+    "escolher_a_bandeja",          # o autostart da bandeja e a bandeja viva (16/10/2026)
     # por feature (`jogos_sem_wrapper.txt` e a de fora do pino). O
     # já declara `machine_declare` e continua protegido do mesmo jeito.
     "adicionar",
