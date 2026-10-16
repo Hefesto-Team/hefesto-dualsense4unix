@@ -86,7 +86,7 @@ MARCAS = frozenset({
 
 TECLAS = frozenset({
     "Alt", "Tab", "Shift", "Ctrl", "Super", "Enter", "Esc",
-    "Create", "Options", "Share", "Start", "Select", "Menu",
+    "Create", "Options", "Share", "Start", "Select", "Menu", "Up", "Down",
 })
 
 UNIDADES = frozenset({"MHz", "GHz", "Hz", "kHz", "dB", "dBm", "mA", "ms"})
