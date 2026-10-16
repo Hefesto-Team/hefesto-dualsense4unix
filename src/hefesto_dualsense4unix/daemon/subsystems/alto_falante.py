@@ -153,6 +153,29 @@ RECUO_DO_OUVIDO_SEM_FONTE_S = RECONCILIA_S
 
 PAR_DO_TESTE_DA_HAPTICA: tuple[int, int] = (127, 127)
 
+#: O toque do teste da háptica: a força cheia (o Sensor háptico regula adiante), no centro, e a
+#: duração curta do Toque do estilo; as outras formas trazem a duração delas.
+ENERGIA_DO_TESTE = 1.0
+DURACAO_DO_TOQUE_DO_TESTE_MS = 40
+#: O grave fixo do Som no corpo no teste: o jogo não toca, então o trecho vem daqui.
+HZ_DO_GRAVE_DO_TESTE = 80
+MS_DO_GRAVE_DO_TESTE = 1000
+FRASE_SEM_EFEITO_NO_TESTE = (
+    "O efeito háptico deste controle está em "
+    f"«{formas_de_haptica.ROTULOS[formas_de_haptica.SEM_EFEITO]}»: "
+    f"{formas_de_haptica.DICAS[formas_de_haptica.SEM_EFEITO].lower()}.")
+
+
+@functools.lru_cache(maxsize=1)
+def _grave_do_teste() -> Any:
+    """Um trecho de grave (seno de 80 Hz, mono) no teto do Som no corpo, sempre o mesmo."""
+    import math
+    from array import array
+
+    n = formas_de_haptica.TAXA * MS_DO_GRAVE_DO_TESTE // 1000
+    passo = 2.0 * math.pi * HZ_DO_GRAVE_DO_TESTE / formas_de_haptica.TAXA
+    return array("f", [formas_de_haptica.TETO_DO_CORPO * math.sin(passo * i) for i in range(n)])
+
 _UNIQ_HEX = 12
 
 TRANSPORTE_CABO = "usb"
@@ -741,6 +764,8 @@ class AltoFalanteSubsystem:
     _aparelhos_com_jogo: frozenset[str] = frozenset()
     _sem_registro_no_jogo: frozenset[str] = frozenset()
     _teste_da_haptica: Mapping[str, float] = MappingProxyType({})
+    #: os controles cujo último rebate do teste caiu no par fixo (a forma não pôde tocar).
+    _teste_no_par: frozenset[str] = frozenset()
     _com_haptica_de_audio: frozenset[str] = frozenset()
     _trava_do_rumble = threading.Lock()
 
@@ -1302,7 +1327,14 @@ class AltoFalanteSubsystem:
             tocador.parar()
 
     def testar_a_haptica(self, uniq: str, ligado: bool) -> dict[str, Any]:
-        """O botão «Háptica» da aba Vibração: o par de teste no tocador DESTE controle."""
+        """O botão «Háptica» da aba Vibração: a forma que este controle escolheu, no tocador DELE.
+
+        A forma é a que o tiro tocaria (``tato_vivo.escolhas_ativas`` e a lista de
+        :mod:`formas_de_haptica`), pelo mesmo ``tocar_o_toque``, a cada rebate da janela até o
+        «Parar». «Do estilo» e o controle sem escolha tocam o Toque; «Sem efeito» recusa; o Som no
+        corpo toca um trecho fixo de grave. O par de teste só sobra quando a forma não pode tocar
+        (o rádio sem fatia livre para a forma longa, o tocador fora do ar), e a resposta diz.
+        """
         chave = self._chave_do_rumble(uniq)
         if chave is None:
             return {
@@ -1312,19 +1344,52 @@ class AltoFalanteSubsystem:
         if not ligado:
             self._soltar_o_teste_da_haptica(chave)
             return {"status": "ok", "uniq": chave, "ligado": False, "leva": False}
+        forma = self._a_forma_do_teste(chave)
+        if forma is None:
+            if chave in self._teste_da_haptica:
+                self._soltar_o_teste_da_haptica(chave)
+            return {
+                "status": "sem_efeito",
+                "uniq": chave,
+                "ligado": False,
+                "leva": False,
+                "motivo": FRASE_SEM_EFEITO_NO_TESTE,
+            }
         with self._trava_do_rumble:
             self._teste_da_haptica = MappingProxyType(
                 {**self._teste_da_haptica, chave: time.monotonic()}
             )
-        leva = self.levar_o_rumble(chave, *PAR_DO_TESTE_DA_HAPTICA)
+        resposta: dict[str, Any] = {"status": "ok", "uniq": chave, "ligado": True, "forma": forma}
+        if self._tocar_a_forma_do_teste(chave, forma):
+            if chave in self._teste_no_par:
+                with self._trava_do_rumble:
+                    self._teste_no_par = self._teste_no_par - {chave}
+                self.levar_o_rumble(chave, 0, 0)
+            resposta["leva"] = self._a_haptica_leva(chave)
+        else:
+            if forma in formas_de_haptica.FORMAS_LONGAS and self._o_radio_cede(chave):
+                resposta["motivo_da_forma"] = "o rádio está sem fatia livre para a forma longa"
+            with self._trava_do_rumble:
+                self._teste_no_par = self._teste_no_par | {chave}
+            resposta["leva"] = bool(self.levar_o_rumble(chave, *PAR_DO_TESTE_DA_HAPTICA))
+            resposta["par"] = list(PAR_DO_TESTE_DA_HAPTICA)
         self._acordar_a_volta()
-        return {
-            "status": "ok",
-            "uniq": chave,
-            "ligado": True,
-            "leva": bool(leva),
-            "par": list(PAR_DO_TESTE_DA_HAPTICA),
-        }
+        return resposta
+
+    def _a_forma_do_teste(self, chave: str) -> str | None:
+        """A forma que o tiro tocaria neste controle agora; ``None`` quando ele não toca."""
+        from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+        from hefesto_dualsense4unix.daemon.subsystems import tato_vivo
+
+        escolha = tato_vivo.escolhas_ativas(self._daemon).get(norm_mac(chave) or "")
+        return formas_de_haptica.forma_que_vale(escolha, tato_vivo.estilo_ativo(self._daemon))
+
+    def _tocar_a_forma_do_teste(self, chave: str, forma: str) -> bool:
+        """Um toque da forma no tocador do controle; ``False`` quando ela não pôde tocar."""
+        if forma == formas_de_haptica.SOM_NO_CORPO:
+            return self.tocar_o_corpo(chave, _grave_do_teste())
+        return self.tocar_o_toque(
+            chave, ENERGIA_DO_TESTE, "centro", DURACAO_DO_TOQUE_DO_TESTE_MS, forma)
 
     def _soltar_o_teste_da_haptica(self, chave: str) -> None:
         """O tocador deste controle cala, e o teste sai da lista."""
@@ -1332,6 +1397,7 @@ class AltoFalanteSubsystem:
             self._teste_da_haptica = MappingProxyType(
                 {u: t for u, t in self._teste_da_haptica.items() if u != chave}
             )
+            self._teste_no_par = self._teste_no_par - {chave}
         self.levar_o_rumble(chave, 0, 0)
 
     def _conferir_o_teste_da_haptica(self) -> None:

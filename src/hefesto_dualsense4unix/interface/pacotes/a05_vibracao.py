@@ -37,7 +37,7 @@ from hefesto_dualsense4unix.daemon.subsystems import padroes_de_vibracao as _pad
 from hefesto_dualsense4unix.interface.monta import MODO_AUTOMATICO, partes_do_modelo
 from hefesto_dualsense4unix.profiles import formas_de_haptica as _formas
 
-from . import Contexto, registrar
+from . import Contexto, fila_do_controle, na_fila, registrar
 from . import perfil as _perfil
 from .meus_efeitos import TETO_DO_NOME, guardar_meus_efeitos, meus_efeitos
 from .nome_do_jogador import nomes_dos_donos, o_nome_de
@@ -1752,13 +1752,39 @@ def _controle_do_toque(ctx: Contexto, o: dict[str, Any]) -> str:
 
 
 def _tocar_o_padrao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """Toca o padrão do clique no controle do clique e devolve a mão dele ao jogo."""
+    """Toca o padrão do clique no controle do clique e devolve a mão dele ao jogo.
+
+    Com o `uniq` no clique, o gesto já anda na fila desse controle (`pacotes.despachar`) e nunca
+    se cruza com um «Testar» dele. Sem `uniq` (o «Sentir» da área de criar, o chip `.meu`), o
+    controle só se resolve aqui, depois do despacho: o resto roda DENTRO da fila dele, com espera,
+    para o `finally` do padrão não cortar o par que um «Testar» do mesmo controle fixou.
+    """
     padrao, motores = _o_padrao_do_clique(o)
     if padrao not in _padroes.PADROES or motores not in _padroes.MOTORES:
         raise RuntimeError("Escolha a forma e o motor do efeito antes de sentir.")
     uniq = _controle_do_toque(ctx, o)
     if not uniq:
         raise RuntimeError("Nenhum controle ligado para sentir o efeito. Ligue um e tente de novo.")
+    if _uniq(o):
+        _padrao_neste_controle(ctx, p, uniq, padrao, motores)
+        return
+    recusa: list[Exception] = []
+
+    def na_vez_dele() -> None:
+        try:
+            _padrao_neste_controle(ctx, p, uniq, padrao, motores)
+        except Exception as erro:
+            recusa.append(erro)
+
+    na_fila([fila_do_controle(uniq)], na_vez_dele, nome="padrao-sem-uniq").join()
+    if recusa:
+        raise recusa[0]
+
+
+def _padrao_neste_controle(
+    ctx: Contexto, p: Any, uniq: str, padrao: str, motores: str
+) -> None:
+    """O padrão em `uniq`, já na vez dele: para o que estava ligado, toca e devolve ao jogo."""
     _calar_o_teste_da_haptica(p, uniq)
     parar_o_teste(uniq)
     esquerdo, direito = _pontos_das_barras(ctx, uniq)

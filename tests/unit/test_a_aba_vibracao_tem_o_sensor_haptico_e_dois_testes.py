@@ -46,6 +46,7 @@ from tests.unit.test_no_modo_xbox_a_haptica_fina import (
     _no_cabo_os_quatro,
     _no_radio_os_quatro,
     _PonteDeMentira,
+    _Tocador,
     mundo,  # noqa: F401
 )
 
@@ -379,58 +380,96 @@ def test_o_par_do_teste_no_teto_do_ganho_nao_corta() -> None:
     assert af_sub.PAR_DO_TESTE_DA_HAPTICA[0] == af_sub.PAR_DO_TESTE_DA_HAPTICA[1]
 
 
+class _TocadorComToque(_Tocador):
+    """O tocador de mentira com o toque e o corpo que o real tem: anota o pedido e fica de pé."""
+
+    def __init__(self, marca: str, **k: Any) -> None:
+        super().__init__(marca, **k)
+        self.toques: list[tuple[str, float, str, int, str, str]] = []
+        self.corpos: list[list[float]] = []
+
+    def _de_pe(self, sink: str, dono: str) -> None:
+        self._sink, self._dono = sink, dono
+        if not self._vivo and not self.parou:
+            self._vivo = True
+            if self.fluxos is not None:
+                self.fluxos.tocando[self.marca] = "69"
+            if self.ao_mudar is not None:
+                self.ao_mudar()
+
+    def tocar_o_toque(
+        self, energia: float, lado: str, duracao_ms: int, *, sink: str, dono: str,
+        forma: str = "toque",
+    ) -> None:
+        self.toques.append((forma, energia, lado, duracao_ms, sink, dono))
+        self._de_pe(sink, dono)
+
+    def levar_o_corpo(self, amostras: Any, lado: str, *, sink: str, dono: str) -> None:
+        self.corpos.append(list(amostras))
+        self._de_pe(sink, dono)
+
+
+@pytest.fixture
+def com_toque(mundo: _Mundo, monkeypatch: pytest.MonkeyPatch) -> _Mundo:  # noqa: F811
+    """A mesa do cabo e do rádio com o tocador que toca de verdade (o toque e o corpo)."""
+    monkeypatch.setattr(eh, "TocadorDoRumble", _TocadorComToque)
+    mundo.sub._daemon = SimpleNamespace(store=SimpleNamespace(active_profile="prova"))
+    return mundo
+
+
 @pytest.mark.parametrize("lugar", [1, 2, 3, 4])
-def test_no_cabo_o_teste_toca_o_par_no_tocador_dele_e_abre_so_o_laco_dele(
-    mundo: _Mundo, lugar: int  # noqa: F811
+def test_no_cabo_o_teste_toca_no_tocador_dele_e_abre_so_o_laco_dele(
+    com_toque: _Mundo, lugar: int
 ) -> None:
-    """Régua 5: o par vai ao tocador DAQUELE aparelho, e a volta abre só o laço dele."""
-    controles = _no_cabo_os_quatro(mundo)
-    mundo.mesa.volta(*controles)
+    """Régua 5: o toque vai ao tocador DAQUELE aparelho, e a volta abre só o laço dele."""
+    m = com_toque
+    controles = _no_cabo_os_quatro(m)
+    m.mesa.volta(*controles)
     uniq = _QUATRO[lugar - 1]
-    resposta = mundo.sub.testar_a_haptica(uniq, True)
+    resposta = m.sub.testar_a_haptica(uniq, True)
     assert resposta["status"] == "ok" and resposta["ligado"] is True
-    tocador = mundo.tocador(uniq)
-    assert (tocador.nivel, tocador.sink, tocador.dono) == (
-        af_sub.PAR_DO_TESTE_DA_HAPTICA, eh.nome_do_endpoint(uniq), uniq
-    )
-    assert tocador.nivel == (127, 127)
-    mundo.mesa.volta(*controles)
+    tocador = m.tocador(uniq)
+    assert (tocador.sink, tocador.dono) == (eh.nome_do_endpoint(uniq), uniq)
+    assert [t[0] for t in tocador.toques] == ["toque"]  # type: ignore[attr-defined]
+    m.mesa.volta(*controles)
     for outro in _QUATRO:
-        assert _motores(mundo, outro) == (_ABERTO if outro == uniq else _FECHADO), outro
-    assert mundo.sub.testar_a_haptica(uniq, True)["leva"] is True
-    assert mundo.sub.testar_a_haptica(uniq, False)["ligado"] is False
+        assert _motores(m, outro) == (_ABERTO if outro == uniq else _FECHADO), outro
+    assert m.sub.testar_a_haptica(uniq, True)["leva"] is True
+    assert m.sub.testar_a_haptica(uniq, False)["ligado"] is False
     assert tocador.nivel == (0, 0)
-    assert dict(mundo.sub._teste_da_haptica) == {}
+    assert dict(m.sub._teste_da_haptica) == {}
 
 
-def test_no_radio_o_teste_sobe_a_ponte_da_haptica_de_quem_testa(mundo: _Mundo) -> None:  # noqa: F811
-    controles = _no_radio_os_quatro(mundo)
-    mundo.mesa.volta(*controles)
+def test_no_radio_o_teste_sobe_a_ponte_da_haptica_de_quem_testa(com_toque: _Mundo) -> None:
+    m = com_toque
+    controles = _no_radio_os_quatro(m)
+    m.mesa.volta(*controles)
     uniq = _QUATRO[2]
-    mundo.sub.testar_a_haptica(uniq, True)
-    mundo.mesa.lidos.clear()
-    mundo.mesa.volta(*controles)
-    hapticas = [no for no, papel in mundo.mesa.lidos if papel == "haptica"]
+    m.sub.testar_a_haptica(uniq, True)
+    m.mesa.lidos.clear()
+    m.mesa.volta(*controles)
+    hapticas = [no for no, papel in m.mesa.lidos if papel == "haptica"]
     assert hapticas == [eh.nome_do_endpoint(uniq)], hapticas
     assert [p.uniq for p in _PonteDeMentira.criadas] == [uniq]
 
 
-def test_o_teste_que_ninguem_rebate_solta_sozinho(mundo: _Mundo) -> None:  # noqa: F811
-    """A janela que fecha sem o «Parar» não deixa o controle vibrando."""
+def test_o_teste_que_ninguem_rebate_solta_sozinho(com_toque: _Mundo) -> None:
+    """A janela que fecha sem o «Parar» não deixa o teste de pé."""
     from hefesto_dualsense4unix.daemon.subsystems.rumble import TETO_DO_RUMBLE_FIXADO_S
 
-    controles = _no_cabo_os_quatro(mundo)
-    mundo.mesa.volta(*controles)
+    m = com_toque
+    controles = _no_cabo_os_quatro(m)
+    m.mesa.volta(*controles)
     uniq = _QUATRO[0]
-    mundo.sub.testar_a_haptica(uniq, True)
-    mundo.mesa.volta(*controles)
-    assert mundo.tocador(uniq).nivel == (127, 127), "o rebate em dia não pode soltar"
-    mundo.sub._teste_da_haptica = MappingProxyType(
+    m.sub.testar_a_haptica(uniq, True)
+    m.mesa.volta(*controles)
+    assert uniq in dict(m.sub._teste_da_haptica), "o rebate em dia não pode soltar"
+    m.sub._teste_da_haptica = MappingProxyType(
         {uniq: time.monotonic() - TETO_DO_RUMBLE_FIXADO_S - 1}
     )
-    mundo.mesa.volta(*controles)
-    assert mundo.tocador(uniq).nivel == (0, 0)
-    assert dict(mundo.sub._teste_da_haptica) == {}
+    m.mesa.volta(*controles)
+    assert m.tocador(uniq).nivel == (0, 0)
+    assert dict(m.sub._teste_da_haptica) == {}
 
 
 def test_o_controle_fora_da_mesa_e_recusado_dizendo(mundo: _Mundo) -> None:  # noqa: F811
