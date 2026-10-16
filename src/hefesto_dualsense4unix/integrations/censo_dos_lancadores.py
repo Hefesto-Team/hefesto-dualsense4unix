@@ -707,6 +707,150 @@ def _conf_do_lutris(pasta: Path) -> dict[str, str]:
     return dict(cfg.items("lutris")) if cfg.has_section("lutris") else {}
 
 
+@dataclass(frozen=True)
+class ProtonEmUso:
+    """Que versões de Proton os lançadores de fora da Steam usam, e o que não se conseguiu ler.
+
+    O campo das versões traz os nomes como o lançador os grava (a pasta de
+    ``compatibilitytools.d`` ou o nome da ferramenta). ``duvida`` lista o que existe e não se lê:
+    com ela, quem decide apagar uma versão NÃO apaga (a pasta a mais custa disco; a que saiu a
+    menos custa um jogo).
+    """
+
+    versoes: frozenset[str] = frozenset()
+    duvida: tuple[str, ...] = ()
+
+
+def _yml_do_lutris(alvo: Path, duvida: list[str]) -> dict[str, object]:
+    """Um ``.yml`` do Lutris que EXISTE; torto, ilegível ou sem PyYAML conta como dúvida."""
+    try:
+        import yaml
+
+        dado = yaml.safe_load(alvo.read_text(encoding="utf-8"))
+    except Exception:
+        duvida.append(str(alvo))
+        return {}
+    if dado is None:
+        return {}
+    if not isinstance(dado, dict):
+        duvida.append(str(alvo))
+        return {}
+    return dado
+
+
+def _versao_do_wine(dado: dict[str, object]) -> list[str]:
+    """``wine.version`` de um ``.yml`` do Lutris, quando há."""
+    versao = _secao(dado, "wine", "version")
+    return [versao.strip()] if isinstance(versao, str) and versao.strip() else []
+
+
+def _proton_do_lutris(pasta: Path) -> tuple[list[str], list[str]]:
+    """``(versões, dúvidas)`` do Lutris desta pasta: ``runners/wine.yml`` e cada ``games/*.yml``."""
+    versoes: list[str] = []
+    duvida: list[str] = []
+    padrao = pasta / "runners" / "wine.yml"
+    if padrao.is_file():
+        versoes += _versao_do_wine(_yml_do_lutris(padrao, duvida))
+    games = pasta / "games"
+    if not os.path.lexists(games):
+        return versoes, duvida
+    try:
+        ymls = sorted(games.glob("*.yml"))
+    except OSError:
+        return versoes, [*duvida, str(games)]
+    for yml in ymls:
+        versoes += _versao_do_wine(_yml_do_lutris(yml, duvida))
+    return versoes, duvida
+
+
+def _json_do_heroic(alvo: Path, duvida: list[str]) -> object:
+    """O JSON de um arquivo do Heroic que EXISTE; ilegível conta como dúvida."""
+    try:
+        return cast("object", json.loads(alvo.read_text(encoding="utf-8")))
+    except (OSError, ValueError):
+        duvida.append(str(alvo))
+        return None
+
+
+def _versoes_da_ferramenta(ferramenta: object) -> list[str]:
+    """Do ``wineVersion`` do Heroic (``{bin, name, type}``): o nome e a pasta do ``bin``."""
+    if not isinstance(ferramenta, dict):
+        return []
+    achadas: list[str] = []
+    nome = ferramenta.get("name")
+    if isinstance(nome, str) and nome.strip():
+        achadas.append(nome.strip())
+    binario = ferramenta.get("bin")
+    if isinstance(binario, str) and binario.strip():
+        pasta = Path(binario.strip()).parent.name
+        if pasta:
+            achadas.append(pasta)
+    return achadas
+
+
+def _proton_do_heroic(pasta: Path) -> tuple[list[str], list[str]]:
+    """``(versões, dúvidas)`` do Heroic desta pasta, no formato que ele grava (medido em 16/10).
+
+    ``config.json`` traz o padrão em ``defaultSettings.wineVersion``; cada
+    ``GamesConfig/<jogo>.json``
+    traz o de um jogo em ``{<jogo>: {wineVersion: {bin, name, type}}}``.
+    """
+    versoes: list[str] = []
+    duvida: list[str] = []
+    conf = pasta / "config.json"
+    if conf.is_file():
+        bruto = _json_do_heroic(conf, duvida)
+        if bruto is not None and not isinstance(bruto, dict):
+            duvida.append(str(conf))
+        padroes = bruto.get("defaultSettings") if isinstance(bruto, dict) else None
+        versoes += _versoes_da_ferramenta(
+            padroes.get("wineVersion") if isinstance(padroes, dict) else None)
+    jogos = pasta / "GamesConfig"
+    if not os.path.lexists(jogos):
+        return versoes, duvida
+    try:
+        arquivos = sorted(jogos.glob("*.json"))
+    except OSError:
+        return versoes, [*duvida, str(jogos)]
+    for arquivo in arquivos:
+        dado = _json_do_heroic(arquivo, duvida)
+        if not isinstance(dado, dict):
+            if dado is not None:
+                duvida.append(str(arquivo))
+            continue
+        versoes += _versoes_da_ferramenta(dado.get("wineVersion"))
+        for valor in dado.values():
+            if isinstance(valor, dict):
+                versoes += _versoes_da_ferramenta(valor.get("wineVersion"))
+    return versoes, duvida
+
+
+def proton_em_uso(lar: Path | None = None, *, xdg_config: Path | None = None,
+                  xdg_data: Path | None = None) -> ProtonEmUso:
+    """Que versões de Proton o Lutris e o Heroic usam, em toda instalação (nativa e Flatpak).
+
+    O dono do saber de onde cada lançador guarda isso. Olha toda pasta de configuração que EXISTE,
+    instalado ou não: um lançador que sobrou no disco ainda aponta para o Proton. Nunca levanta; o
+    que existe e não se lê entra em ``duvida``.
+    """
+    versoes: set[str] = set()
+    duvida: list[str] = []
+    for lancador, leitor in (("Lutris", _proton_do_lutris), ("Heroic", _proton_do_heroic)):
+        try:
+            pastas = pastas_que_existem(lancador, lar, xdg_config=xdg_config, xdg_data=xdg_data)
+        except Exception:
+            duvida.append(lancador)
+            continue
+        for pasta in pastas:
+            try:
+                achadas, duvidas = leitor(pasta)
+            except Exception:
+                achadas, duvidas = [], [str(pasta)]
+            versoes.update(achadas)
+            duvida.extend(duvidas)
+    return ProtonEmUso(frozenset(versoes), tuple(duvida))
+
+
 def _retroarch(pasta: Path) -> BibliotecaDoLancador:
     """As playlists `.lpl` — uma por console, com as ROMs dentro."""
     listas = pasta / "playlists"

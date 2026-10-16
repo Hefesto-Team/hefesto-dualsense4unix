@@ -1645,7 +1645,7 @@ def versoes_que_sobram(
     *,
     pino: str | None = None,
 ) -> list[VersaoQueSobra]:
-    """As versões do Proton em `compatibilitytools.d` que ninguém usa.
+    """As versões do Proton em `compatibilitytools.d` que nenhum lançador usa.
 
     Só há sobra com o pino INSTALADO: a remoção é de vez, e sem a fixada no disco apagar as outras
     deixaria a pessoa sem Proton nenhum na pasta.
@@ -1660,6 +1660,18 @@ def versoes_que_sobram(
     except (OSError, ValueError, KeyError):
         return []
     usadas = {nome_do_pino, *mapa.values()}
+    # Steam não é o único lançador que aponta para uma pasta daqui: o Lutris e o Heroic também.
+    # Na dúvida (arquivo deles que existe e não se lê) nada sai: uma versão a mais custa disco,
+    # uma a menos custa um jogo de outro lançador.
+    try:
+        from hefesto_dualsense4unix.integrations.censo_dos_lancadores import proton_em_uso
+
+        dos_outros = proton_em_uso(home)
+    except Exception:  # leitura que falha vale «não sei»: a pasta fica
+        return []
+    if dos_outros.duvida:
+        return []
+    usadas_dos_outros = {n.casefold() for n in dos_outros.versoes}
     compat = raiz / "compatibilitytools.d"
     if not pinned_proton_installed(nome_do_pino, compat):
         return []
@@ -1673,6 +1685,8 @@ def versoes_que_sobram(
         if not all(e_da_familia_proton(n) for n in nomes):
             continue
         if usadas.intersection(nomes) or pasta.name in usadas:
+            continue
+        if usadas_dos_outros.intersection(n.casefold() for n in (*nomes, pasta.name)):
             continue
         sobras.append(VersaoQueSobra(pasta, nomes, _tamanho_da_pasta(pasta)))
     return sobras
