@@ -1,0 +1,402 @@
+"""A ficha e o recibo do Proton: a versão nova só entra no lugar da fixada se passar.
+
+A ficha é estática (o script `proton` e as strings dos binários do Wine, sem
+rodar Wine) e pergunta pelo CONTRATO, não pela versão: o que sumiu reprova, o
+que mudou de ramo contra a fixada vira linha do recibo. A rodada, dinâmica, é
+`scripts/ensaios/a_rodada_do_proton_candidato.py`, só na VM ou no CI. O recibo
+é `docs/data/proton-qualificacao.csv`; o pino sem a linha «passou» reprova.
+O contrato das strings é o medido no GE-Proton11-7 (a `PROTON_DISABLE_HIDRAW`
+mora no `winebus.sys`, em UTF-16).
+"""
+from __future__ import annotations
+
+import argparse
+import ast
+import csv
+import io
+import re
+import sys
+from collections.abc import Iterable, Sequence
+from dataclasses import dataclass, field
+from pathlib import Path
+
+#: As envs que o Hefesto pede do Proton, além da allowlist do lançamento.
+ENVS_ALEM_DA_ALLOWLIST = ("PROTON_USE_XALIA", "PROTON_SONY_AUTO_XINPUT")
+
+#: As pastas de bibliotecas do Wine, na ordem: a do GE e da Valve nova, e a
+#: da Valve antiga.
+_PASTAS_DO_WINE = ("files/lib/wine", "files/lib64/wine")
+
+#: `(componente, arquivos dentro da pasta do Wine, string)`. Um componente
+#: passa quando QUALQUER dos seus arquivos traz a string, em ASCII ou UTF-16LE
+#: (os PE do Wine guardam os nomes de env em UTF-16).
+CONTRATO_DE_STRINGS: tuple[tuple[str, tuple[str, ...], str], ...] = (
+    ("winebus", ("x86_64-unix/winebus.so", "x86_64-windows/winebus.sys"),
+     "PROTON_DISABLE_HIDRAW"),
+    ("winebus", ("x86_64-unix/winebus.so", "x86_64-windows/winebus.sys"),
+     "SDL_GAMECONTROLLER_IGNORE_DEVICES"),
+    ("winepulse", ("x86_64-unix/winepulse.so",), "Speaker__sink"),
+    ("winepulse", ("x86_64-unix/winepulse.so",), "Wireless_Controller"),
+    ("winepulse", ("x86_64-unix/winepulse.so",), "PROTON_DUALSENSE_SPLIT_AUDIO"),
+    ("mmdevapi", ("x86_64-windows/mmdevapi.dll",), "PROTON_ENABLE_MHWILDS_USB_AUDIO"),
+    ("mmdevapi", ("x86_64-windows/mmdevapi.dll",),
+     "PROTON_KEEP_SONY_AUDIO_ENDPOINT_VISIBLE"),
+    ("setupapi", ("x86_64-windows/setupapi.dll",), "PROTON_ENABLE_MHWILDS_USB_AUDIO"),
+    ("sechost", ("x86_64-windows/sechost.dll",), "PROTON_KEEP_SONY_AUDIO_ENDPOINT_VISIBLE"),
+)
+
+ACAO_ATRIBUI = "atribui"
+ACAO_APAGA = "apaga"
+ACAO_PADRAO = "padrão"
+
+VEREDITO_PASSOU = "passou"
+VEREDITO_REPROVOU = "reprovou"
+#: A rodada da versão fixada antes de o instrumento existir; a primeira rodada
+#: na VM a confirma ou a derruba.
+RODADA_HERDADA = "herdada"
+
+CAMPOS_DO_RECIBO = ("versão", "sha256", "ficha", "rodada", "veredito", "prova", "data")
+
+_VERSAO_GE_RE = re.compile(r"GE-Proton(\d+)-(\d+)", re.IGNORECASE)
+
+
+def envs_pedidas() -> tuple[str, ...]:
+    """A allowlist do lançamento mais as envs que o script do Proton decide."""
+    from hefesto_dualsense4unix.daemon.launch_env import ENV_ALLOWLIST
+
+    return (*ENV_ALLOWLIST, *ENVS_ALEM_DA_ALLOWLIST)
+
+
+@dataclass(frozen=True)
+class Toque:
+    """Um lugar do script `proton` que mexe numa env pedida."""
+
+    env: str
+    acao: str
+    ramo: tuple[str, ...]
+    linha: int
+
+    def chave(self) -> tuple[str, str, tuple[str, ...]]:
+        return (self.env, self.acao, self.ramo)
+
+    def legivel(self) -> str:
+        ramo = " > ".join(self.ramo) if self.ramo else "sempre"
+        return f"{self.env} {self.acao} em [{ramo}] (linha {self.linha})"
+
+
+def _nome_da_env(no: ast.AST, envs: frozenset[str]) -> str | None:
+    """`self.env["X"]` ou `os.environ["X"]`, com X pedida; senão `None`."""
+    if not isinstance(no, ast.Subscript):
+        return None
+    alvo = no.value
+    if not (isinstance(alvo, ast.Attribute) and alvo.attr in ("env", "environ")):
+        return None
+    chave = no.slice
+    if isinstance(chave, ast.Constant) and isinstance(chave.value, str):
+        return chave.value if chave.value in envs else None
+    return None
+
+
+class _Leitor(ast.NodeVisitor):
+    def __init__(self, envs: frozenset[str]) -> None:
+        self.envs = envs
+        self.ramo: list[str] = []
+        self.toques: list[Toque] = []
+
+    def _anota(self, env: str | None, acao: str, linha: int) -> None:
+        if env is not None:
+            self.toques.append(Toque(env, acao, tuple(self.ramo), linha))
+
+    def visit_FunctionDef(self, no: ast.FunctionDef) -> None:
+        self.ramo.append(f"def {no.name}")
+        self.generic_visit(no)
+        self.ramo.pop()
+
+    def visit_If(self, no: ast.If) -> None:
+        teste = ast.unparse(no.test)
+        self.ramo.append(teste)
+        for filho in no.body:
+            self.visit(filho)
+        self.ramo.pop()
+        if no.orelse:
+            self.ramo.append(f"not ({teste})")
+            for filho in no.orelse:
+                self.visit(filho)
+            self.ramo.pop()
+
+    def visit_Assign(self, no: ast.Assign) -> None:
+        for alvo in no.targets:
+            self._anota(_nome_da_env(alvo, self.envs), ACAO_ATRIBUI, no.lineno)
+        self.generic_visit(no)
+
+    def visit_AugAssign(self, no: ast.AugAssign) -> None:
+        self._anota(_nome_da_env(no.target, self.envs), ACAO_ATRIBUI, no.lineno)
+        self.generic_visit(no)
+
+    def visit_Delete(self, no: ast.Delete) -> None:
+        for alvo in no.targets:
+            self._anota(_nome_da_env(alvo, self.envs), ACAO_APAGA, no.lineno)
+        self.generic_visit(no)
+
+    def visit_Call(self, no: ast.Call) -> None:
+        func = no.func
+        if (
+            isinstance(func, ast.Attribute)
+            and func.attr in ("pop", "setdefault")
+            and isinstance(func.value, ast.Attribute)
+            and func.value.attr in ("env", "environ")
+            and no.args
+            and isinstance(no.args[0], ast.Constant)
+            and no.args[0].value in self.envs
+        ):
+            acao = ACAO_APAGA if func.attr == "pop" else ACAO_PADRAO
+            self._anota(str(no.args[0].value), acao, no.lineno)
+        self.generic_visit(no)
+
+
+def toques_do_script(texto: str, envs: Iterable[str]) -> list[Toque]:
+    """Cada atribuição, apagamento e padrão das `envs` no script `proton`."""
+    leitor = _Leitor(frozenset(envs))
+    leitor.visit(ast.parse(texto))
+    return leitor.toques
+
+
+def _pasta_do_wine(raiz: Path) -> Path | None:
+    for relativo in _PASTAS_DO_WINE:
+        pasta = raiz / relativo
+        if pasta.is_dir():
+            return pasta
+    return None
+
+
+def strings_que_faltam(raiz: Path) -> list[str]:
+    """As linhas do contrato das strings que a versão em `raiz` não cumpre."""
+    pasta = _pasta_do_wine(raiz)
+    if pasta is None:
+        return [f"a pasta do Wine não existe ({' nem '.join(_PASTAS_DO_WINE)})"]
+    cache: dict[str, bytes | None] = {}
+
+    def conteudo(relativo: str) -> bytes | None:
+        if relativo not in cache:
+            try:
+                cache[relativo] = (pasta / relativo).read_bytes()
+            except OSError:
+                cache[relativo] = None
+        return cache[relativo]
+
+    faltas: list[str] = []
+    for componente, arquivos, texto in CONTRATO_DE_STRINGS:
+        agulhas = (texto.encode("ascii"), texto.encode("utf-16-le"))
+        achou = False
+        for relativo in arquivos:
+            dados = conteudo(relativo)
+            if dados is not None and any(a in dados for a in agulhas):
+                achou = True
+                break
+        if not achou:
+            faltas.append(f"{componente}: sem {texto} ({', '.join(arquivos)})")
+    return faltas
+
+
+@dataclass
+class Ficha:
+    """O resultado da ficha de uma versão, contra a fixada quando há."""
+
+    versao: str
+    faltas: list[str] = field(default_factory=list)
+    mudancas: list[str] = field(default_factory=list)
+
+    @property
+    def passou(self) -> bool:
+        return not self.faltas
+
+    def resumo(self) -> str:
+        if self.faltas:
+            return "reprovou: " + "; ".join(self.faltas)
+        if self.mudancas:
+            return "passou, com mudança de ramo para a rodada: " + "; ".join(self.mudancas)
+        return VEREDITO_PASSOU
+
+
+def versao_da_pasta(raiz: Path) -> str:
+    """O nome da versão: o arquivo `version` (segunda palavra), ou a pasta."""
+    try:
+        partes = (raiz / "version").read_text(encoding="utf-8", errors="replace").split()
+    except OSError:
+        partes = []
+    return partes[1] if len(partes) >= 2 else raiz.name
+
+
+def _toques_da_pasta(raiz: Path, envs: Sequence[str]) -> list[Toque] | str:
+    try:
+        texto = (raiz / "proton").read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return "o script proton não existe"
+    try:
+        return toques_do_script(texto, envs)
+    except SyntaxError as erro:
+        return f"o script proton não se lê ({erro.msg}, linha {erro.lineno})"
+
+
+def ficha(
+    candidata: Path,
+    fixada: Path | None = None,
+    envs: Sequence[str] | None = None,
+) -> Ficha:
+    """A ficha da `candidata`, com as mudanças de ramo contra a `fixada`."""
+    pedidas = tuple(envs) if envs is not None else envs_pedidas()
+    resultado = Ficha(versao=versao_da_pasta(candidata))
+    resultado.faltas.extend(strings_que_faltam(candidata))
+    toques = _toques_da_pasta(candidata, pedidas)
+    if isinstance(toques, str):
+        resultado.faltas.append(toques)
+        return resultado
+    if fixada is None:
+        return resultado
+    da_fixada = _toques_da_pasta(fixada, pedidas)
+    if isinstance(da_fixada, str):
+        resultado.faltas.append(f"a fixada não se lê: {da_fixada}")
+        return resultado
+    # O padrão novo também marca: o lançamento vence um `setdefault`, mas só
+    # quando põe a env, e o `PROTON_SONY_AUTO_XINPUT` do 11-8 é um que não põe.
+    conhecidos = {t.chave() for t in da_fixada}
+    for toque in toques:
+        if toque.chave() not in conhecidos:
+            resultado.mudancas.append(toque.legivel())
+    return resultado
+
+
+# ── o recibo ──────────────────────────────────────────────────────────────
+
+
+def caminho_do_recibo(raiz_do_repo: Path | None = None) -> Path:
+    if raiz_do_repo is None:
+        raiz_do_repo = Path(__file__).resolve().parents[3]
+    return raiz_do_repo / "docs" / "data" / "proton-qualificacao.csv"
+
+
+def ler_recibo(texto: str) -> list[dict[str, str]]:
+    """As linhas do recibo, com os campos de `CAMPOS_DO_RECIBO`."""
+    linhas = [
+        linha for linha in texto.splitlines() if linha.strip() and not linha.startswith("#")
+    ]
+    leitor = csv.DictReader(io.StringIO("\n".join(linhas)))
+    if tuple(leitor.fieldnames or ()) != CAMPOS_DO_RECIBO:
+        raise ValueError(f"o recibo tem de ter as colunas {', '.join(CAMPOS_DO_RECIBO)}")
+    return [{k: (v or "").strip() for k, v in linha.items()} for linha in leitor]
+
+
+def _ordem_da_versao(versao: str) -> tuple[int, int]:
+    achado = _VERSAO_GE_RE.search(versao)
+    return (int(achado.group(1)), int(achado.group(2))) if achado else (10**6, 0)
+
+
+def a_minima_que_passa(recibo: Sequence[dict[str, str]]) -> str | None:
+    """Entre as versões que passaram, a mais antiga: é ela que se fixa."""
+    passaram = [linha["versão"] for linha in recibo if linha["veredito"] == VEREDITO_PASSOU]
+    return min(passaram, key=_ordem_da_versao) if passaram else None
+
+
+def o_pino_sem_recibo(pino: dict[str, str], recibo: Sequence[dict[str, str]]) -> list[str]:
+    """A régua do pino: o que falta para o `proton-pin.conf` valer.
+
+    O pino nomeia uma versão com a linha «passou» e o MESMO sha256; e é a
+    mínima entre as que passaram.
+    """
+    nome = pino.get("name", "")
+    sha = pino.get("sha256", "").lower()
+    da_versao = [linha for linha in recibo if linha["versão"] == nome]
+    if not da_versao:
+        return [f"o pino {nome} não tem linha no recibo"]
+    passou = [
+        linha for linha in da_versao
+        if linha["veredito"] == VEREDITO_PASSOU
+        and linha["ficha"].startswith(VEREDITO_PASSOU)
+        and linha["rodada"] in (VEREDITO_PASSOU, RODADA_HERDADA)
+    ]
+    if not passou:
+        return [f"o pino {nome} não tem a linha «passou» no recibo"]
+    if not any(linha["sha256"].lower() == sha for linha in passou):
+        return [f"o sha256 do pino {nome} não é o que passou no recibo"]
+    minima = a_minima_que_passa(recibo)
+    if minima != nome:
+        return [f"o pino {nome} não é a mínima que passa ({minima})"]
+    return []
+
+
+def linha_do_recibo(f: Ficha, sha256: str, rodada: str, data: str) -> str:
+    """A linha CSV de uma versão, depois da ficha e da rodada."""
+    passou = f.passou and rodada == VEREDITO_PASSOU
+    saida = io.StringIO()
+    csv.writer(saida, lineterminator="").writerow([
+        f.versao,
+        sha256,
+        f.resumo(),
+        rodada,
+        VEREDITO_PASSOU if passou else VEREDITO_REPROVOU,
+        "" if passou else ("; ".join(f.faltas) or rodada),
+        data,
+    ])
+    return saida.getvalue()
+
+
+def recibo_das_instaladas(compat_dir: Path, recibo: Sequence[dict[str, str]]) -> list[str]:
+    """Para cada Proton em `compat_dir`, o veredito do recibo e a ficha de hoje."""
+    vereditos = {linha["versão"]: linha for linha in recibo}
+    saida: list[str] = []
+    if not compat_dir.is_dir():
+        return saida
+    for pasta in sorted(p for p in compat_dir.iterdir() if (p / "proton").is_file()):
+        f = ficha(pasta)
+        linha = vereditos.get(pasta.name)
+        no_recibo = (
+            f"{linha['veredito']}" + (f" ({linha['prova']})" if linha["prova"] else "")
+            if linha
+            else "sem recibo"
+        )
+        saida.append(f"{pasta.name}: recibo {no_recibo}; ficha de hoje {f.resumo()}")
+    return saida
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        prog="qualificar_proton",
+        description="A ficha e o recibo de uma versão do Proton.",
+    )
+    sub = parser.add_subparsers(dest="cmd", required=True)
+    p_ficha = sub.add_parser("ficha", help="a ficha estática de uma pasta de Proton")
+    p_ficha.add_argument("pasta", type=Path)
+    p_ficha.add_argument("--fixada", type=Path, default=None)
+    p_rec = sub.add_parser("recibo", help="o recibo de cada Proton instalado")
+    p_rec.add_argument("--compat-dir", type=Path, default=None)
+    sub.add_parser("pino", help="a régua do pino contra o recibo")
+    args = parser.parse_args(argv)
+
+    if args.cmd == "ficha":
+        f = ficha(args.pasta, args.fixada)
+        print(f"{f.versao}: {f.resumo()}")
+        return 0 if f.passou else 1
+    recibo = ler_recibo(caminho_do_recibo().read_text(encoding="utf-8"))
+    if args.cmd == "recibo":
+        from hefesto_dualsense4unix.integrations.proton_pin import default_compat_dir
+
+        for linha in recibo_das_instaladas(args.compat_dir or default_compat_dir(), recibo):
+            print(linha)
+        return 0
+    from hefesto_dualsense4unix.integrations.proton_pin import (
+        default_pin_conf_path,
+        parse_pin_conf,
+    )
+
+    conf = default_pin_conf_path()
+    if conf is None:
+        print("o proton-pin.conf não existe", file=sys.stderr)
+        return 1
+    problemas = o_pino_sem_recibo(parse_pin_conf(conf.read_text(encoding="utf-8")), recibo)
+    for problema in problemas:
+        print(problema)
+    return 1 if problemas else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
