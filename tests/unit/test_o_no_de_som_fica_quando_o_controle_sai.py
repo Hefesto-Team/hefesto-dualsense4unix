@@ -152,6 +152,7 @@ def _id_do_no(servidor: ServidorComFluxos, uniq: str) -> str:
 def test_o_controle_sai_e_volta_pelo_radio_e_o_no_e_o_mesmo(
     servidor: ServidorComFluxos,
 ) -> None:
+    # D-0809-O-NO-DE-SOM-POR-CONTROLE-VIVE-SEMPRE
     """A troca do cabo pelo rádio passa por «fora da lista»: o id do nó não muda."""
     ger = _gerenciador()
     ger.reconciliar([_cabo(_UNIQ_P1)])
