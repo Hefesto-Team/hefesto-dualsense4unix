@@ -2538,12 +2538,12 @@ async def tato_vivo_loop(daemon: DaemonProtocol, motor: TatoVivo) -> None:
         if barramento is not None:
             barramento.unsubscribe(EventTopic.ACESSORIOS_GESTO, gestos)
             barramento.unsubscribe(EventTopic.ACESSORIOS_ESTADO, estados)
-        with contextlib.suppress(Exception):
-            if volta is not None:
-                volta.soltar_tudo(time.monotonic())
-        with contextlib.suppress(Exception):
-            if motor.meus_toques is not None:
-                motor.meus_toques.soltar_tudo(time.monotonic())
+        for quem in (volta, motor.meus_toques):
+            try:
+                if quem is not None:
+                    quem.soltar_tudo(time.monotonic())
+            except Exception:
+                logger.warning("tato_vivo_toque_nao_soltou", exc_info=True)
         motor.parar()
         with contextlib.suppress(Exception):
             await asyncio.to_thread(motor.ouvido.parar)
@@ -2555,8 +2555,10 @@ def start_tato_vivo(daemon: DaemonProtocol) -> None:
     from hefesto_dualsense4unix.daemon.subsystems.volta_dos_acessorios import volta_de_producao
 
     motor = TatoVivo(atuadores_de_producao(daemon))
-    with contextlib.suppress(Exception):
+    try:
         motor.volta = volta_de_producao(daemon)
+    except Exception:
+        logger.warning("tato_vivo_sem_a_volta_dos_acessorios", exc_info=True)
     motor.meus_toques = meus_toques_de_producao(daemon)
     daemon._meus_toques = motor.meus_toques  # type: ignore[attr-defined]
     daemon._tato_vivo = motor  # type: ignore[attr-defined]

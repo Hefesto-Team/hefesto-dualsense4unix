@@ -594,6 +594,7 @@ def entradas_do_daemon(daemon: Any) -> list[Entrada]:
             try:
                 foto = jogador.reader.snapshot()
             except Exception:
+                logger.debug("meus_toques_sem_a_foto_do_jogador", exc_info=True)
                 continue
             entradas[mac] = Entrada(
                 mac, frozenset(getattr(foto, "buttons_pressed", ()) or ()),
