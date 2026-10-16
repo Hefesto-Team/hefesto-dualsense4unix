@@ -1336,8 +1336,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # morre, o novo nasce sem leitura e a chave `audio` SOME do `state_full`.
         # o selo sem montar um `state_full` inteiro.
         pct = c.get("battery_pct")
-        # do dono na GTK (`interface/cartao_do_controle.py`, `"l3" in
-        apertados = set(e.get("buttons") or ())
+        # O clique dos analógicos (L3, R3) é botão, e o botão é do dono.
+        apertados = estado["glifos_on"]
         # dentro de `touchpad_do_inputs`, e a razão de a recusa anterior ter
         _, dedos = dedos_do_controle(e)
         toque_ponto, onde_o_dedo = dedos[0]
@@ -1413,7 +1413,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                     else mesa_viva.SEM_LEITOR
                 ),
                 "alto-mudo": mesa_viva.selo_do_mic(
-                    bool(sp_lido and sp_lido[1]),
+                    estado["alto_mudo"],
                     sp_lido is not None and sp_lido[1] is not None,
                 ),
                 "alto-num": (

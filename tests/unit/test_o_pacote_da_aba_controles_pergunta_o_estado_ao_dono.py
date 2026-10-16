@@ -78,13 +78,14 @@ def test_o_pacote_mostra_o_que_o_dono_diz(monkeypatch: pytest.MonkeyPatch) -> No
         estado = dict(real(entrada, **kw))
         estado.update(
             bat=77, mic_vol=33, alto_pct=44, l2=111, r2=222,
-            glifos_on={"triangle"}, sticks=(10, 20, 30, 40),
-            giro_lido=(1.5, -2.5, 3.5), accel_lido=(0.25, -0.5, 0.75),
+            glifos_on={"triangle", "l3"}, sticks=(10, 20, 30, 40),
+            giro_lido=(1.5, -2.5, 3.5), accel_lido=(0.25, -0.5, 0.75), alto_mudo=True,
         )
         return estado
 
     monkeypatch.setattr(mesa_viva, "estado_do_card", dono)
     cards = _pacote([dict(CABO), dict(RADIO)], monkeypatch)
+    from pacotes.a02_controles import CLICADO, ROTULO_DO_CLIQUE
 
     assert perguntas.count(UNIQ_CABO) >= 1 and perguntas.count(UNIQ_RADIO) >= 1
     for uniq in (UNIQ_CABO, UNIQ_RADIO):
@@ -100,6 +101,11 @@ def test_o_pacote_mostra_o_que_o_dono_diz(monkeypatch: pytest.MonkeyPatch) -> No
         assert "30" in card["xy-r"] and "40" in card["xy-r"]
         assert "1.5" in card["giro-x"] and "2.5" in card["giro-y"] and "3.5" in card["giro-z"]
         assert "0.25" in card["accel-x"] and "0.75" in card["accel-z"]
+        assert card["alto-mudo"] == mesa_viva.selo_do_mic(True, True)
+    # O clique do L3 e o mudo do alto-falante também são do dono: o cabo não aperta o L3
+    # nem cala o alto-falante, e só o dono diz que sim (o rádio, sem leitor, fica no travessão).
+    assert cards[UNIQ_CABO]["l3"] == CLICADO % ROTULO_DO_CLIQUE["l"]
+    assert cards[UNIQ_CABO]["r3"] == ROTULO_DO_CLIQUE["r"]
 
 
 def test_o_dono_sem_leitor_devolve_repouso_nos_dois_transportes() -> None:
