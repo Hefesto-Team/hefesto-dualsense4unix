@@ -55,7 +55,7 @@
       "data": "2026-10-16",
       "nota": "remendos de sintoma por arquivo",
       "o_que_conta": "remendos de sintoma acima do teto de cada arquivo",
-      "piso": 1016,
+      "piso": 995,
       "por_item": {
         "__init__.py": 1,
         "app/actions/base.py": 1,
@@ -88,7 +88,7 @@
         "core/sysfs_leds.py": 7,
         "core/system_check.py": 2,
         "daemon/battery_journal.py": 2,
-        "daemon/connection.py": 52,
+        "daemon/connection.py": 34,
         "daemon/ganho_da_haptica.py": 5,
         "daemon/ipc_handlers.py": 73,
         "daemon/ipc_rumble_policy.py": 2,
@@ -98,7 +98,7 @@
         "daemon/sensor_hub.py": 16,
         "daemon/service_install.py": 1,
         "daemon/subsystems/alto_falante.py": 16,
-        "daemon/subsystems/autoswitch.py": 2,
+        "daemon/subsystems/autoswitch.py": 1,
         "daemon/subsystems/base.py": 1,
         "daemon/subsystems/bt_mic.py": 10,
         "daemon/subsystems/conexoes.py": 1,
@@ -108,7 +108,6 @@
         "daemon/subsystems/gamepad.py": 40,
         "daemon/subsystems/hotkey.py": 39,
         "daemon/subsystems/identity.py": 8,
-        "daemon/subsystems/ipc.py": 1,
         "daemon/subsystems/keyboard.py": 8,
         "daemon/subsystems/luz_do_mic.py": 6,
         "daemon/subsystems/metrics.py": 1,
@@ -117,7 +116,6 @@
         "daemon/subsystems/quem_mexe.py": 1,
         "daemon/subsystems/recado_do_microfone.py": 1,
         "daemon/subsystems/tato_vivo.py": 4,
-        "daemon/subsystems/udp.py": 1,
         "daemon/subsystems/vigia_do_laco.py": 2,
         "daemon/udp_server.py": 2,
         "integrations/agente_de_pareamento.py": 1,
@@ -215,7 +213,7 @@
         "utils/single_instance.py": 9,
         "utils/tela_de_mentira.py": 3
       },
-      "razao": "o teto desceu sozinho com o número",
+      "razao": "a parada dos subsistemas deixa de calar a falha (D-1610-OS-SUBSYSTEMS-SOBEM-E-DESCEM-POR-UMA-LISTA-SO)",
       "subidas": [
         {
           "data": "2026-10-10",
@@ -249,14 +247,14 @@
       "data": "2026-10-16",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1117482,
+      "piso": 1117632,
       "por_item": {
-        "docs": 119068,
+        "docs": 119058,
         "scripts": 114042,
-        "src": 299314,
-        "tests": 585058
+        "src": 299303,
+        "tests": 585229
       },
-      "razao": "tamanho: +395 linhas (1117087 -> 1117482), pagas por Origem: D-0809-O-NO-DE-SOM-POR-CONTROLE-VIVE-SEMPRE; registrado no fecho, topo 762913d7ba64",
+      "razao": "tamanho: +150 linhas (1117482 -> 1117632), pagas por Origem: D-1610-OS-SUBSYSTEMS-SOBEM-E-DESCEM-POR-UMA-LISTA-SO; registrado no fecho, topo 74845d37bd62",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -479,10 +477,16 @@
           "de": 1117087,
           "para": 1117482,
           "razao": "tamanho: +395 linhas (1117087 -> 1117482), pagas por Origem: D-0809-O-NO-DE-SOM-POR-CONTROLE-VIVE-SEMPRE; registrado no fecho, topo 762913d7ba64"
+        },
+        {
+          "data": "2026-10-16",
+          "de": 1117482,
+          "para": 1117632,
+          "razao": "tamanho: +150 linhas (1117482 -> 1117632), pagas por Origem: D-1610-OS-SUBSYSTEMS-SOBEM-E-DESCEM-POR-UMA-LISTA-SO; registrado no fecho, topo 74845d37bd62"
         }
       ],
       "unidade": "linhas",
-      "universo": 2904
+      "universo": 2905
     }
   }
 }
