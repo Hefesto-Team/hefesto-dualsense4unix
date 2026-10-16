@@ -2095,8 +2095,16 @@ def ativar_o_servico() -> bool:
             return False
     except Exception:
         return False
-    if str(janela._is_service_active()) == "active":
+    estado = str(janela._is_service_active())
+    if estado == "active":
         return False
+    if estado == "activating":
+        # A unit é `Type=notify`: do `fork` ao `READY=1` ela está subindo, e o processo vivo é o
+        # da unit, não um avulso. O `start` se junta à subida em curso e só volta com o IPC de pé;
+        # quem chama (Jogar, «Ativar», «Corrigir») fala com o serviço logo em seguida, sem espera.
+        janela._user_stopped_daemon = False
+        _systemctl("start")
+        return True
     if janela._daemon_pid_alive():
         return False
     janela._user_stopped_daemon = False

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import pathlib
 import sys
+import types
 from typing import Any
 
 import pytest
@@ -106,29 +107,61 @@ def test_servico_de_pe_sem_controle_continua_dizendo_que_nao_ha_controle() -> No
     assert pacotes.topo(ctx)["conta-b"] == pacotes.SEM_CONTROLE_NA_MESA
 
 
-class _ServicoRecemLigado:
-    """A ponte com o serviço que acabou de subir: a unit é `Type=simple`, então o `systemctl start`
-    volta antes de o soquete existir (medido em 15/10/2026: 0,5 s até o `ipc_server_listening`).
-    Responde só a partir da `acorda_na`-ésima pergunta; antes disso todo pedido cai."""
+class _ServicoNotify:
+    """O serviço de mentira com a unit `Type=notify`: o `systemctl start` só volta com o soquete
+    de pé (o daemon diz `READY=1` quando escuta). Faz de janela antiga (o que `ativar_o_servico`
+    consulta e aciona) e de ponte (o que o Ligado pergunta e manda). `volta_pronto=False` é o
+    `Type=simple` de antes: o `start` volta antes do soquete e o modo cai."""
 
-    def __init__(self, acorda_na: int) -> None:
-        self.acorda_na = acorda_na
-        self.perguntas = 0
+    def __init__(self, estado: str = "inactive", *, volta_pronto: bool = True,
+                 rc: int = 0) -> None:
+        self.estado = estado
+        self.volta_pronto = volta_pronto
+        self.rc = rc
+        self.de_pe = estado == "active"
+        self.verbos: list[str] = []
         self.pedidos: list[tuple[str, bool]] = []
+        self._user_stopped_daemon = True
 
-    @property
-    def de_pe(self) -> bool:
-        return self.perguntas >= self.acorda_na
+    # -- a janela antiga (`a09_sistema._matriz`)
+    def _is_service_active(self) -> str:
+        return self.estado
 
+    def _daemon_pid_alive(self) -> bool:
+        # No `activating` o processo já vive: é o da unit subindo, e o portão do pid avulso
+        # o confundiria com um daemon improvisado.
+        return self.estado == "activating"
+
+    def _invoke_systemctl(self, args: list[str], **_kw: Any) -> Any:
+        self.verbos.append(args[0])
+        if args[0] == "start" and self.rc == 0:
+            self.estado = "active"
+            self.de_pe = self.volta_pronto
+        return types.SimpleNamespace(returncode=self.rc, stderr="Job failed" if self.rc else "")
+
+    # -- a ponte (`p`)
     def daemon_state_full(self) -> dict[str, Any] | None:
-        self.perguntas += 1
-        # Uma espera sem teto pergunta para sempre: aqui ela reprova em vez de travar a régua.
-        assert self.perguntas < 100, "a espera pelo serviço não tem teto"
         return dict(NO_RADIO) if self.de_pe else None
 
     def chamar(self, metodo: str, **_params: Any) -> bool:
         self.pedidos.append((metodo, self.de_pe))
         return self.de_pe
+
+
+@pytest.fixture
+def unit_instalada(monkeypatch: Any) -> Any:
+    """Põe um `_ServicoNotify` no lugar da janela antiga e uma unit instalada de mentira."""
+    from pacotes import a09_sistema
+
+    from hefesto_dualsense4unix.daemon.service_install import ServiceInstaller
+
+    def _instala(servico: _ServicoNotify) -> _ServicoNotify:
+        monkeypatch.setattr(a09_sistema, "_matriz", lambda: servico)
+        monkeypatch.setattr(ServiceInstaller, "detect_installed_unit",
+                            lambda _self: pathlib.Path("hefesto-dualsense4unix.service"))
+        return servico
+
+    return _instala
 
 
 def test_clicar_em_ligado_com_o_servico_parado_liga_o_servico(monkeypatch: Any) -> None:
@@ -139,51 +172,105 @@ def test_clicar_em_ligado_com_o_servico_parado_liga_o_servico(monkeypatch: Any) 
     monkeypatch.setattr(a09_sistema, "ativar_o_servico",
                         lambda: chamadas.append("ligou") or True)
     monkeypatch.setattr(aba, "_hefesto_o_modo", lambda ctx, o, p: None)
-    aba.hefesto(_parado(), {"modo": "gamepad"}, _ServicoRecemLigado(acorda_na=1))
+    aba.hefesto(_parado(), {"modo": "gamepad"}, _ServicoNotify())
     assert chamadas == ["ligou"], "o Ligado não ligou o serviço"
     aba.hefesto(_parado(), {"modo": "native"}, None)
     assert chamadas == ["ligou"], "o Desligado ligou o serviço"
 
 
-def test_o_modo_do_ligado_espera_o_servico_que_acabou_de_subir(monkeypatch: Any) -> None:
+def test_o_modo_do_ligado_espera_o_servico_que_acabou_de_subir(unit_instalada: Any) -> None:
     # D-1610-O-LIGADO-ESPERA-O-SERVICO-RESPONDER
-    """Sem a espera, o plano saía no meio segundo em que o soquete ainda não existe: o modo não
-    chegava ao serviço e o botão piscava a recusa sobre um clique que tinha ligado tudo."""
-    from pacotes import a09_sistema
-
-    monkeypatch.setattr(a09_sistema, "ativar_o_servico", lambda: True)
-    servico = _ServicoRecemLigado(acorda_na=3)
+    """O `start` da unit `Type=notify` só volta com o soquete de pé, então o Ligado manda o modo
+    logo depois, SEM espera própria: o modo chega ao serviço que acabou de subir.
+    MORDIDA: com o `systemctl` de mentira voltando antes do soquete (`volta_pronto=False`, o
+    `Type=simple` de antes), o modo cai e isto reprova."""
+    servico = unit_instalada(_ServicoNotify("inactive"))
     aba.hefesto(_parado(), {"modo": "gamepad"}, servico)
+    assert "start" in servico.verbos, "o Ligado não ligou o serviço"
     assert servico.pedidos, "o Ligado não mandou o modo"
     caidos = [metodo for metodo, de_pe in servico.pedidos if not de_pe]
     assert not caidos, f"o modo saiu antes de o serviço responder: {caidos}"
 
 
-def test_servico_que_nao_responde_no_prazo_recusa_dizendo(monkeypatch: Any) -> None:
-    """A espera tem teto: passado o prazo, o plano vai e a recusa é a verdadeira."""
-    from pacotes import a09_sistema
+def test_o_ligado_nao_tem_espera_propria() -> None:
+    """A espera de 10 s era o remendo de um chamador só; a cura é a unit, e ela não volta."""
+    assert not hasattr(aba, "SEGUNDOS_ATE_O_SERVICO_RESPONDER")
+    assert not hasattr(aba, "_esperar_o_servico_responder")
 
-    monkeypatch.setattr(a09_sistema, "ativar_o_servico", lambda: True)
-    monkeypatch.setattr(aba, "SEGUNDOS_ATE_O_SERVICO_RESPONDER", 0.3)
-    servico = _ServicoRecemLigado(acorda_na=10**6)
-    try:
+
+def test_o_start_que_falha_chega_a_tela_com_a_recusa_verdadeira(unit_instalada: Any) -> None:
+    """Sem o IPC de pé o `start` falha (o `READY=1` não veio): a recusa é a do systemd."""
+    servico = unit_instalada(_ServicoNotify("inactive", rc=1))
+    with pytest.raises(RuntimeError, match="Job failed"):
         aba.hefesto(_parado(), {"modo": "gamepad"}, servico)
-    except RuntimeError as recusa:
-        assert str(recusa) == aba.MODO_SEM_CONFIRMACAO
-    else:
-        raise AssertionError("o serviço não respondeu e o Ligado não disse que não confirmou")
-    assert servico.pedidos, "sem resposta no prazo, o Ligado nem tentou o modo"
+    assert not servico.pedidos, "mandou o modo sobre um serviço que não subiu"
 
 
-def test_servico_ja_de_pe_nao_espera(monkeypatch: Any) -> None:
-    """Com o serviço de pé (`ativar_o_servico` devolve False) o modo sai na hora, sem pergunta."""
+def test_servico_ja_de_pe_nao_liga_de_novo(unit_instalada: Any) -> None:
+    """Com o serviço de pé (`active`) o modo sai na hora, sem `start`."""
+    servico = unit_instalada(_ServicoNotify("active"))
+    aba.hefesto(_no_radio(), {"modo": "gamepad"}, servico)
+    assert servico.verbos == [], "o Ligado religou o serviço que já estava de pé"
+    assert servico.pedidos
+
+
+def test_servico_subindo_o_ligado_se_junta_a_subida(unit_instalada: Any) -> None:
+    """`activating` é o serviço SUBINDO: nem parado (que mandaria ligar um avulso) nem de pé.
+    O `start` se junta à subida, volta pronto, e o modo chega.
+    MORDIDA: tire o ramo `activating` de `ativar_o_servico` e o portão do pid avulso (o processo
+    já vive) o dá por de pé: nenhum `start`, e o modo cai sobre o soquete que ainda não existe."""
     from pacotes import a09_sistema
 
-    monkeypatch.setattr(a09_sistema, "ativar_o_servico", lambda: False)
-    servico = _ServicoRecemLigado(acorda_na=0)
-    aba.hefesto(_no_radio(), {"modo": "gamepad"}, servico)
-    assert servico.perguntas == 0, "o Ligado perguntou ao serviço que já estava de pé"
+    servico = unit_instalada(_ServicoNotify("activating"))
+    assert a09_sistema.ativar_o_servico() is True
+    assert servico.verbos[-1] == "start", f"não se juntou à subida: {servico.verbos}"
+    assert servico._user_stopped_daemon is False, "o desligar do usuário não foi desarmado"
+    aba.hefesto(_parado(), {"modo": "gamepad"}, servico)
     assert servico.pedidos
+    assert all(de_pe for _m, de_pe in servico.pedidos)
+
+
+# -- a janela antiga e o prazo do systemctl ---------------------------------------------
+
+
+def test_o_estado_activating_e_iniciando_com_ou_sem_processo(monkeypatch: Any) -> None:
+    """MORDIDA: tire o ramo `activating` de `_daemon_status` e o processo vivo vira
+    `online_avulso` (um daemon improvisado) e o sem processo, `offline`."""
+    from hefesto_dualsense4unix.app.actions import daemon_actions as da
+    from hefesto_dualsense4unix.utils import single_instance as si
+
+    host = da.DaemonActionsMixin()
+    monkeypatch.setattr(host, "_systemctl_oneline",
+                        lambda args: "activating" if "is-active" in args else "enabled")
+    for pid in (12345, None):
+        monkeypatch.setattr(host, "_read_daemon_pid", lambda pid=pid: pid)
+        monkeypatch.setattr(si, "is_alive", lambda _pid: True)
+        assert host._daemon_status() == "iniciando", f"pid={pid}"
+
+
+def test_o_prazo_do_start_cobre_o_da_unit(monkeypatch: Any) -> None:
+    """O `start`/`restart` bloqueiam até o `READY=1`: o prazo de quem chama passa o
+    `TimeoutStartSec` da unit; a consulta continua curta.
+    MORDIDA: devolva o `timeout=5` fixo em `_invoke_systemctl` e isto reprova."""
+    import subprocess
+
+    from hefesto_dualsense4unix.app.actions import daemon_actions as da
+    from hefesto_dualsense4unix.utils import sd_notify
+
+    prazos: dict[str, float] = {}
+
+    def _run(argv: list[str], **kw: Any) -> Any:
+        prazos[argv[2]] = kw["timeout"]
+        return subprocess.CompletedProcess(argv, 0, "", "")
+
+    monkeypatch.setattr(da.subprocess, "run", _run)
+    host = da.DaemonActionsMixin()
+    for verbo in ("start", "restart", "is-active", "stop"):
+        host._invoke_systemctl([verbo, "hefesto-dualsense4unix.service"])
+    assert prazos["start"] > sd_notify.PRAZO_DA_PARTIDA_S
+    assert prazos["restart"] > sd_notify.PRAZO_DA_PARTIDA_S
+    assert prazos["is-active"] == da.PRAZO_DA_CONSULTA_S == 5.0
+    assert prazos["stop"] == da.PRAZO_DA_CONSULTA_S
 
 
 LER_A_TELA = r"""

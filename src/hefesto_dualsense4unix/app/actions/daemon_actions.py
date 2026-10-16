@@ -20,6 +20,7 @@ from hefesto_dualsense4unix.utils.repo_files import (
     bases_de_instalacao,
     encontrar_arquivo_do_repo,
 )
+from hefesto_dualsense4unix.utils.sd_notify import PRAZO_DA_PARTIDA_S
 
 logger = get_logger(__name__)
 
@@ -32,6 +33,22 @@ MIGRAR_NAO_DEU = (
     "Não consegui corrigir o modo de execução — veja os 'Detalhes "
     "técnicos' aqui embaixo."
 )
+#: Quanto o `systemctl` de consulta espera.
+PRAZO_DA_CONSULTA_S = 5.0
+
+#: A folga do `start`/`restart` sobre o `TimeoutStartSec` da unit. A unit é `Type=notify`: o
+#: `start` só volta com o IPC de pé, então o prazo de quem chama vem do prazo da unit. Mais curto
+#: que ele, o chamador desiste de um `start` que ainda ia dar certo.
+FOLGA_DO_START_S = 5.0
+
+
+def prazo_do_systemctl(args: Sequence[str]) -> float:
+    """O prazo do `systemctl --user <args>`: o da unit mais a folga se liga; o curto se consulta."""
+    if args and args[0] in ("start", "restart"):
+        return PRAZO_DA_PARTIDA_S + FOLGA_DO_START_S
+    return PRAZO_DA_CONSULTA_S
+
+
 _SYSTEMCTL_FAIL_MSG: dict[str, str] = {
     "start": "Não consegui ligar o Hefesto",
     "stop": "Não consegui desligar o Hefesto",
@@ -761,9 +778,12 @@ class DaemonActionsMixin(WidgetAccessMixin):
           systemd active + not process_alive        → iniciando
           systemd inactive/failed + not process_alive → offline
         """
-        systemd_active = (
-            self._systemctl_oneline(["is-active", SERVICE_NORMAL]) == "active"
-        )
+        estado_da_unit = self._systemctl_oneline(["is-active", SERVICE_NORMAL])
+        if estado_da_unit == "activating":
+            # `Type=notify`: do `fork` ao `READY=1` a unit está subindo; com o processo já vivo
+            # isso NÃO é o improvisado (`online_avulso`) nem parada.
+            return "iniciando"
+        systemd_active = estado_da_unit == "active"
         pid = self._read_daemon_pid()
         process_alive: bool
         if pid is not None:
@@ -812,7 +832,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
                 capture_output=capture,
                 text=True,
                 check=check,
-                timeout=5,
+                timeout=prazo_do_systemctl(args),
             )
         except (FileNotFoundError, subprocess.SubprocessError):
             return None
