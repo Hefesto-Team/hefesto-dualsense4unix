@@ -12,6 +12,8 @@ import pathlib
 import sys
 from typing import Any
 
+import pytest
+
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
 
@@ -119,6 +121,8 @@ class _ServicoRecemLigado:
 
     def daemon_state_full(self) -> dict[str, Any] | None:
         self.perguntas += 1
+        # Uma espera sem teto pergunta para sempre: aqui ela reprova em vez de travar a régua.
+        assert self.perguntas < 100, "a espera pelo serviço não tem teto"
         return dict(NO_RADIO) if self.de_pe else None
 
     def chamar(self, metodo: str, **_params: Any) -> bool:
@@ -180,16 +184,126 @@ def test_servico_ja_de_pe_nao_espera(monkeypatch: Any) -> None:
     assert servico.pedidos
 
 
-REGRAS_DO_TOPO = (
-    '.fita-linha:has(i[data-servico="parado"]) .conectado .bolinha{display:none}',
-    '.fita-linha:has(i[data-servico="parado"]) .conectado{color:var(--orange)}',
-)
+LER_A_TELA = r"""
+(function(){
+  const vis = el => !!el && getComputedStyle(el).display !== 'none';
+  const ler = () => {
+    const con = document.querySelector('.conectado');
+    const nota = document.querySelector('.mesa-notas[data-campo="mesa-frase"]');
+    return {
+      ligado: document.querySelector('.hef-pos.ligado').classList.contains('on'),
+      desligado: document.querySelector('.hef-pos.desligado').classList.contains('on'),
+      secao_ligado: vis(document.querySelector('.hef-modo.so-ligado')),
+      secao_desligado: vis(document.querySelector('.hef-modo.so-desligado')),
+      topo: (con.innerText || '').replace(/\s+/g, ' ').trim(),
+      cor_do_topo: getComputedStyle(con).color,
+      bolinha: vis(con.querySelector('.bolinha')),
+      frase_acesa: nota.classList.contains('ha'),
+      frase: (nota.innerText || '').replace(/\s+/g, ' ').trim(),
+    };
+  };
+  const fora = {};
+  for (const [nome, carga] of CARGAS) { window.__hef.pintar(carga); fora[nome] = ler(); }
+  return JSON.stringify(fora);
+})()
+"""
 
 
-def test_o_desenho_apaga_o_ponto_verde_com_o_servico_parado() -> None:
-    """A regra mora no gerador e no desenho (mockup), as duas metades do mesmo endereço."""
-    gerador = (INTERFACE / "aba01.py").read_text(encoding="utf-8")
-    desenho = (RAIZ / "mockup" / "01-jogar.html").read_text(encoding="utf-8")
-    for nome, texto in (("aba01.py", gerador), ("mockup/01-jogar.html", desenho)):
-        for regra in REGRAS_DO_TOPO:
-            assert regra in texto, f"{nome}: o topo com o serviço parado perdeu {regra!r}"
+def _carga(ctx: Contexto) -> dict[str, Any]:
+    """A carga que o piloto pinta neste tique: a da aba, o topo e os lugares sem dono."""
+    para_pref = {str(m["uniq"]): str(m["pref"]) for m in ctx.mesa}
+    carga = pacotes.normalizar(aba.pacote(ctx), para_pref)
+    for chave, valor in pacotes.topo(ctx).items():
+        carga["mesa"].setdefault(chave, valor)
+    com_dono = [str(m["pref"]) for m in ctx.mesa]
+    return dict(pacotes.apagar_os_lugares_sem_dono(carga, com_dono, pagina="01-jogar.html"))
+
+
+def _no_webkit(roteiro: str) -> dict[str, Any]:
+    """Abre o desenho da Jogar num WebKit offscreen, com o BOOTSTRAP do piloto, e roda o roteiro."""
+    import json
+
+    gi = pytest.importorskip("gi", reason="a GUI precisa do PyGObject do sistema")
+    gi.require_version("Gtk", "3.0")
+    gi.require_version("WebKit2", "4.1")
+    from gi.repository import GLib, Gtk, WebKit2
+
+    import hefesto_vivo
+
+    if not Gtk.init_check(None)[0]:
+        pytest.skip("sem sessão gráfica — o WebKit não abre")
+    saiu: list[str] = []
+    janela = Gtk.OffscreenWindow()
+    view = WebKit2.WebView()
+    janela.add(view)
+    janela.set_default_size(1228, 900)
+    janela.show_all()
+
+    def guardou(v: Any, res: Any) -> None:
+        try:
+            saiu.append(v.evaluate_javascript_finish(res).to_string())
+        except Exception as erro:  # pragma: no cover — só quando o roteiro quebra
+            saiu.append(f"ERRO {erro}")
+        Gtk.main_quit()
+
+    def bootou(v: Any, res: Any) -> None:
+        try:
+            v.evaluate_javascript_finish(res)
+        except Exception as erro:  # pragma: no cover
+            saiu.append(f"ERRO no BOOTSTRAP: {erro}")
+            Gtk.main_quit()
+            return
+        v.evaluate_javascript(roteiro, -1, None, None, None, guardou)
+
+    def carregou(v: Any, evento: Any) -> None:
+        if evento == WebKit2.LoadEvent.FINISHED:
+            v.evaluate_javascript(hefesto_vivo.BOOTSTRAP, -1, None, None, None, bootou)
+
+    view.connect("load-changed", carregou)
+    view.load_uri((RAIZ / "mockup" / "01-jogar.html").as_uri())
+    guarda = GLib.timeout_add(30000, Gtk.main_quit)
+    try:
+        Gtk.main()
+    finally:
+        GLib.source_remove(guarda)
+        janela.destroy()
+    assert saiu, "o WebKit não respondeu em 30 s"
+    assert not saiu[0].startswith("ERRO"), saiu[0]
+    return dict(json.loads(saiu[0]))
+
+
+@pytest.fixture(scope="module")
+def na_tela() -> dict[str, Any]:
+    """O desenho da Jogar no motor dela: parado, de pé com dois no rádio, e parado de novo."""
+    import json
+
+    cargas = [["parado", _carga(_parado())], ["no_radio", _carga(_no_radio())],
+              ["parado_de_novo", _carga(_parado())]]
+    return _no_webkit(LER_A_TELA.replace("CARGAS", json.dumps(cargas)))
+
+
+def test_no_webkit_o_servico_parado_marca_desligado_e_apaga_o_ponto_verde(
+        na_tela: dict[str, Any]) -> None:
+    """O que a pessoa vê: Desligado aceso, o topo sem a bolinha e noutra cor, a frase na mesa."""
+    no_radio = na_tela["no_radio"]
+    for nome in ("parado", "parado_de_novo"):
+        fora = na_tela[nome]
+        assert fora["desligado"] and not fora["ligado"], f"{nome}: o Status não marcou Desligado"
+        assert fora["secao_desligado"] and not fora["secao_ligado"], (
+            f"{nome}: a seção do Desligado não apareceu: {fora}")
+        assert fora["topo"] == aba.SERVICO_DESLIGADO.rstrip("."), (
+            f"{nome}: o topo disse {fora['topo']!r}")
+        assert not fora["bolinha"], f"{nome}: o ponto verde ficou ao lado do desligado"
+        assert fora["cor_do_topo"] != no_radio["cor_do_topo"], (
+            f"{nome}: o topo do serviço parado tem a mesma cor ({fora['cor_do_topo']}) do de pé")
+        assert fora["frase_acesa"] and fora["frase"] == aba.SERVICO_CALADO, (
+            f"{nome}: a mesa não disse por que está vazia: {fora['frase']!r}")
+
+
+def test_no_webkit_com_dois_no_radio_volta_ao_ligado_e_ao_verde(na_tela: dict[str, Any]) -> None:
+    """A volta: o serviço respondeu e a tela desfaz o Desligado, a cor, a bolinha e a frase."""
+    fora = na_tela["no_radio"]
+    assert fora["ligado"] and not fora["desligado"], f"o Status não voltou ao Ligado: {fora}"
+    assert fora["secao_ligado"] and not fora["secao_desligado"]
+    assert fora["topo"] == "● 2 BT" and fora["bolinha"], f"o topo não voltou: {fora['topo']!r}"
+    assert not fora["frase_acesa"], f"a frase ficou acesa com o serviço de pé: {fora['frase']!r}"
