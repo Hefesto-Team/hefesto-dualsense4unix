@@ -84,7 +84,8 @@ Os métodos privados no `Daemon` são thin wrappers que delegam para as funçõe
 - Cada subsystem pode ser testado em isolamento (mockando `DaemonContext`).
 - `lifecycle.py` reduzido de 677L para ~365L (com backcompat total).
 - Adicionar novo subsystem requer apenas criar o arquivo e acrescentar uma entrada à lista.
-- A ordem de partida e a de parada moram num lugar só, e a régua reprova o que sobe sem descer.
+- A ordem de partida e a de parada moram num lugar só: a régua reprova a classe `*Subsystem` fora da
+  lista, o `_safe_start` fora dela e o `_start_*`/`_stop_*` que a lista nomeia sem o `Daemon` ter.
 
 ### Negativas
 

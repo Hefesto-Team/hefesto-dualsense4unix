@@ -279,7 +279,8 @@ def test_o_verbo_desconectar_existe_no_script_e_na_regra_do_sudoers() -> None:
 
 def test_o_subsystem_esta_na_lista_com_partida_e_parada() -> None:
     """Uma entrada só na lista: a partida sobe o vigia e a parada o derruba."""
-    [passo] = [p for p in SUBSYSTEM_REGISTRY if p.nome == "conexoes"]  # noqa-acento: nome do subsystem
+    nome = "conexoes"  # (noqa-acento): nome do subsystem
+    [passo] = [p for p in SUBSYSTEM_REGISTRY if p.nome == nome]
     assert passo.partida is not None
     assert passo.parada is not None
     ciclo = RAIZ / "src" / "hefesto_dualsense4unix" / "daemon"

@@ -27,7 +27,7 @@ import asyncio
 import inspect
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from hefesto_dualsense4unix.daemon.subsystems.alto_falante import (
     AltoFalanteSubsystem,
@@ -39,6 +39,9 @@ from hefesto_dualsense4unix.daemon.subsystems.metrics import MetricsSubsystem
 from hefesto_dualsense4unix.daemon.subsystems.plugins import PluginsSubsystem
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
+if TYPE_CHECKING:
+    from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
+
 logger = get_logger(__name__)
 
 _TETO_DA_PARADA_DO_DSU_S = 5.0
@@ -47,15 +50,19 @@ _TETO_DA_PARADA_DO_SERVIDOR_S = 2.0
 
 @dataclass(frozen=True)
 class Passo:
-    """Uma linha da lista: como o subsystem sobe, quando, e como e quando para."""
+    """Uma linha da lista: como o subsystem sobe, quando, e como e quando para.
+
+    A partida e a condição são tipadas sobre o ``Daemon`` e a ``DaemonConfig`` de
+    verdade: o mypy confere o ``d._start_*`` de cada ``lambda`` contra o ``Daemon``.
+    """
 
     nome: str
-    partida: Callable[[Any], Any] | None = None
-    quando: Callable[[Any], bool] | None = None
-    parada: Callable[[Any], Any] | None = None
+    partida: Callable[[Daemon], Any] | None = None
+    quando: Callable[[DaemonConfig], bool] | None = None
+    parada: Callable[[Daemon], Any] | None = None
     parar_em: int | None = None
     depois_do_controle: bool = False
-    essencial: Callable[[Any, Exception], Exception] | None = None
+    essencial: Callable[[Daemon, Exception], Exception] | None = None
 
 
 # -- as partidas: o ``run()`` as chama pelo ``_safe_start``, que isola a falha ---------
@@ -375,7 +382,7 @@ SUBSYSTEM_REGISTRY: tuple[Passo, ...] = (
     # O vigia do link que conecta e NÃO vira controle (CONEXAO-ZUMBI-01) lê o sysfs e o
     # BlueZ por conta própria; sem a parada, a thread chamaria ``sudo`` com o daemon morto.
     Passo(
-        "conexoes",  # noqa-acento: nome do subsystem, a chave do diário
+        "conexoes",  # (noqa-acento): nome do subsystem, a chave do diário
         partida=lambda d: d._start_conexoes(),
         parada=_parar_conexoes,
         parar_em=50,

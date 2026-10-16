@@ -11,14 +11,18 @@ O que esta régua mede, sempre pelo EFEITO:
 1. um `Daemon` de verdade sobe e para, e a sequência das partidas é a da lista e a das
    paradas é a declarada nela (som e microfone antes do IPC, controle por último);
 2. um subsystem de mentira acrescentado SÓ à lista sobe e para sem outra linha;
-3. nenhuma chamada a `_safe_start` mora fora da lista, e o `shutdown` não nomeia subsystem.
+3. nenhuma chamada a `_safe_start` mora fora da lista, e o `shutdown` não nomeia subsystem;
+4. a parada que falha não pula a seguinte (o broker solta o cliente com o executor quebrado);
+5. todo `_start_*`/`_stop_*` que a lista nomeia existe no `Daemon` (a parada por nome é
+   tolerante ao dublê, e o mypy confere as partidas pelo tipo do `Passo`).
 
 MORDIDAS (cada uma foi feita, vista reprovar e devolvida):
 - `await self._safe_start("fora", ...)` no `run()` reprova (1) e (3);
 - a parada de uma entrada arrancada (`parada=_parar_bt_mic`) reprova (1);
 - `parar()` presa a uma cópia da lista de import reprova (2);
 - `parar_em` de uma entrada trocado de lugar reprova (1);
-- a parada do broker sem o `finally` (o executor que falha pula o cliente) reprova (4).
+- a parada do broker sem o `finally` (o executor que falha pula o cliente) reprova (4);
+- um `"_stop_*"` da lista que o `Daemon` não tem (renomeado de um lado só) reprova (5).
 """
 from __future__ import annotations
 
@@ -102,6 +106,27 @@ def test_toda_classe_subsystem_do_pacote_esta_na_lista() -> None:
             ):
                 orfas.append(f"{arquivo.name}::{no.name}")
     assert not orfas, f"classe(s) Subsystem fora da lista: {orfas}"
+
+
+def test_todo_start_e_stop_que_a_lista_nomeia_existe_no_daemon() -> None:
+    """A partida `d._start_*` e a parada por nome (`"_stop_*"`) apontam para o `Daemon` real.
+
+    A parada por nome é tolerante (o dublê de teste pode não ter o método), então um
+    `_stop_*` renomeado no `Daemon` faria a lista parar de chamá-lo CALADA. Esta régua
+    fecha esse buraco pelo lado do produto.
+    """
+    arvore = ast.parse(LISTA.read_text(encoding="utf-8"))
+    nomeados: set[str] = set()
+    for no in ast.walk(arvore):
+        if isinstance(no, ast.Attribute) and re.fullmatch(r"_(?:start|stop)_\w+", no.attr):
+            nomeados.add(no.attr)
+        if isinstance(no, ast.Constant) and isinstance(no.value, str) and re.fullmatch(
+            r"_(?:start|stop)_\w+", no.value
+        ):
+            nomeados.add(no.value)
+    assert {"_start_ipc", "_stop_mods", "_stop_bt_mic"} <= nomeados, "a régua ficou cega"
+    faltam = sorted(n for n in nomeados if not callable(getattr(Daemon, n, None)))
+    assert not faltam, f"a lista nomeia o que o `Daemon` não tem: {faltam}"
 
 
 # -- (3) nenhuma chamada por nome fora da lista -----------------------------------
@@ -291,7 +316,8 @@ async def test_o_daemon_sobe_pela_ordem_da_lista_e_para_pela_ordem_declarada(
     def antes(a: str, b: str) -> None:
         assert paradas.index(a) < paradas.index(b), f"`{a}` tem de parar antes de `{b}`"
 
-    for som in ("mods", "bt_mic", "alto_falante", "conexoes", "central_do_radio", "plugins"):  # noqa-acento: nome do subsystem, a chave do diário
+    conexoes = "conexoes"  # (noqa-acento): nome do subsystem, a chave do diário
+    for som in ("mods", "bt_mic", "alto_falante", conexoes, "central_do_radio", "plugins"):
         antes(som, "ipc")
     antes("ipc", "tarefas")
     antes("tarefas", "controle")
