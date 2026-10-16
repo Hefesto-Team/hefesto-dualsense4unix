@@ -24,7 +24,6 @@ DualSense na lista de som. Hoje o ``GerenciadorDeNosDeSom.reconciliar`` guarda o
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import inspect
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -199,16 +198,22 @@ async def _parar_gamepad(daemon: Any) -> None:
 
 
 async def _parar_o_broker(daemon: Any) -> None:
+    """O executor e, DEPOIS dele, o cliente. A falha de um não pula o outro: o ``finally``
+    solta os dois, e a que sobe vira o aviso ``subsystem_parada_falhou`` do ``parar``."""
     executor = getattr(daemon, "_hidraw_broker_executor", None)
-    if executor is not None:
-        with contextlib.suppress(Exception):
-            executor.shutdown(wait=False, cancel_futures=True)
-        daemon._hidraw_broker_executor = None
     cliente = getattr(daemon, "_hidraw_broker_client", None)
-    if cliente is not None:
-        with contextlib.suppress(Exception):
-            cliente.close()
-        daemon._hidraw_broker_client = None
+    try:
+        if executor is not None:
+            try:
+                executor.shutdown(wait=False, cancel_futures=True)
+            finally:
+                daemon._hidraw_broker_executor = None
+    finally:
+        if cliente is not None:
+            try:
+                cliente.close()
+            finally:
+                daemon._hidraw_broker_client = None
 
 
 async def _parar_teclado(daemon: Any) -> None:

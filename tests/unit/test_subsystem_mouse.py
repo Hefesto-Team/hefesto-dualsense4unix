@@ -93,7 +93,7 @@ class TestPartidaEParadaDoMouse:
         assert no.parou == 1
 
     @pytest.mark.asyncio
-    async def test_a_parada_da_lista_nao_esquece_a_preferencia_salva(
+    async def test_o_stop_do_subsystem_nao_esquece_a_preferencia_salva(
         self, no_de_mentira: type[_NoDeMentira], monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         # D-1510-O-STOP-DO-MOUSE-NAO-ESQUECE-A-PREFERENCIA
