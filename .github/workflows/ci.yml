@@ -315,6 +315,11 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
+      # A sonda chama o apt por dentro (o linux-modules-extra, o usbip e o install.sh).
+      - name: Prazo do apt (três tentativas, 30 s por conexão)
+        run: |
+          sudo mkdir -p /etc/apt/apt.conf.d
+          printf 'Acquire::Retries "3";\nAcquire::http::Timeout "30";\n' | sudo tee /etc/apt/apt.conf.d/80-prazo
       - name: A sonda
         run: bash scripts/banco_de_prova/sonda.sh
       - name: Sobe o que a sonda mediu
