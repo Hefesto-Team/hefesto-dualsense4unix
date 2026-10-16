@@ -125,6 +125,12 @@ MODELOS: dict[int, str] = {
 
 MARCADOR = "HEFESTOKS"
 
+#: A classe MEDIA do Windows: a do device que o GE-Proton11-8 registra para os
+#: caminhos Sony (patch 0206), na chave `Enum\\USB\\VID_054C&PID_…`. Com o
+#: MEDIA vivo do Proton para o `ContainerId` de um controle, o dono é ele, e o
+#: nosso não se escreve (:func:`containers_do_proton`).
+CLASSE_MEDIA = "{4D36E96C-E325-11CE-BFC1-08002BE10318}"
+
 _LEGADO_DA_PROVA = re.compile(r"^\d+&[0-9A-F]{8}$", re.I)
 
 _BACKUP = ".bak.hefesto-audio-ks"
@@ -611,6 +617,53 @@ def data4_do_dono(texto_sem_os_nossos: str, controle: Controle) -> list[bytes]:
     return achados
 
 
+_ENUM_SONY = re.compile(
+    r"^\[System\\\\ControlSet001\\\\Enum\\\\USB\\\\VID_054C&PID_(?:0CE6|0DF2)"
+    r"\\\\[^\\\]]+\]$",
+    re.I,
+)
+_CONTAINER_DO_BLOCO = re.compile(r'^"ContainerId"="(\{[^}]+\})"$', re.I | re.M)
+_CLASSE_DO_BLOCO = re.compile(r'^"(?:ClassGUID|Class)"="([^"]*)"$', re.I | re.M)
+
+
+def containers_do_proton(texto_sem_os_nossos: str) -> set[str]:
+    """Os `ContainerId` dos devices MEDIA que o próprio Proton registrou num DualSense."""
+    achados: set[str] = set()
+    for bloco in _blocos(texto_sem_os_nossos):
+        if not _ENUM_SONY.match(_cabecalho(bloco)):
+            continue
+        classes = {c.upper() for c in _CLASSE_DO_BLOCO.findall(bloco)}
+        container = _CONTAINER_DO_BLOCO.search(bloco)
+        if container and classes & {CLASSE_MEDIA, "MEDIA"}:
+            achados.add(container.group(1).lower())
+    return achados
+
+
+def o_proton_ja_cria(containers: set[str], controle: Controle) -> bool:
+    """O Proton já tem um MEDIA VIVO para este aparelho? Então o dono é ele.
+
+    Vivo é o mesmo pid/bus/dev com um Data4 que pode ser o deste aparelho: o
+    0207 deixa no registro os de aparelhos que já saíram.
+    """
+    alvo = controle.prefixo_do_container().lower()
+    for guid in containers:
+        m = _GUID_TXT.fullmatch(guid)
+        if (
+            m
+            and guid.startswith(alvo)
+            and _data4_do_presente(controle, bytes.fromhex(m.group(4) + m.group(5)))
+        ):
+            return True
+    return False
+
+
+def controles_que_o_proton_cria(texto: str, controles: list[Controle]) -> list[Controle]:
+    """Os controles cujo device KS o Proton já cria, no `system.reg` de `texto`."""
+    sem_os_nossos = "\n".join(b for b in _blocos(texto) if not e_bloco_nosso(b))
+    containers = containers_do_proton(sem_os_nossos)
+    return [c for c in controles if o_proton_ja_cria(containers, c)]
+
+
 def variantes_de_data4(controle: Controle, dono: list[bytes]) -> list[bytes]:
     """A política do Data4: o dono manda; sem dono, zero e `USEC`."""
     if dono:
@@ -658,7 +711,10 @@ def texto_novo(texto: str, controles: list[Controle], carimbo: int) -> str:
     fica = [b for b in blocos if not e_bloco_nosso(b)]
     sem_os_nossos = "\n".join(fica)
     novos: list[str] = []
+    do_proton = containers_do_proton(sem_os_nossos)
     for c in controles:
+        if o_proton_ja_cria(do_proton, c):
+            continue
         variantes = variantes_de_data4(c, data4_do_dono(sem_os_nossos, c))
         novos += blocos_do_controle(c, variantes, carimbo)
     if not novos:
@@ -835,6 +891,7 @@ class Resultado:
     escreveu: bool = False
     motivo: str = ""
     podados: int = 0
+    do_proton: int = 0
 
 
 def aplicar(
@@ -881,6 +938,7 @@ def aplicar(
             poda = podar_o_som(texto, usuario_txt, vivos)
             base, usuario_novo, resultado.podados = poda.sistema, poda.usuario, poda.podados
         novo = texto_novo(base, controles, carimbo if carimbo is not None else int(time.time()))
+        resultado.do_proton = len(controles_que_o_proton_cria(base, controles))
         resultado.variantes = sum(1 for b in _blocos(novo) if e_bloco_nosso(b)) // 4
         if not _mesmos_blocos(novo, texto):
             _gravar_com_backup(registro, novo)
@@ -964,6 +1022,8 @@ def main(argv: list[str] | None = None) -> int:
     if resultado.escreveu:
         print(f"device KS: {resultado.controles} controle(s), {resultado.variantes} instância(s), "
               f"podados={resultado.podados}")
+    if resultado.do_proton:
+        print(f"o Proton já cria o device de {resultado.do_proton} controle(s)")
     return 0
 
 
