@@ -249,14 +249,14 @@
       "data": "2026-10-16",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1117087,
+      "piso": 1117482,
       "por_item": {
-        "docs": 119069,
+        "docs": 119068,
         "scripts": 114042,
-        "src": 299275,
-        "tests": 584701
+        "src": 299314,
+        "tests": 585058
       },
-      "razao": "tamanho: +864 linhas (1116223 -> 1117087), pagas por Origem: combinacao.slot_jogador.estabilidade; registrado no fecho, topo 3a814e8875da",
+      "razao": "tamanho: +395 linhas (1117087 -> 1117482), pagas por Origem: D-0809-O-NO-DE-SOM-POR-CONTROLE-VIVE-SEMPRE; registrado no fecho, topo 762913d7ba64",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -473,10 +473,16 @@
           "de": 1116223,
           "para": 1117087,
           "razao": "tamanho: +864 linhas (1116223 -> 1117087), pagas por Origem: combinacao.slot_jogador.estabilidade; registrado no fecho, topo 3a814e8875da"
+        },
+        {
+          "data": "2026-10-16",
+          "de": 1117087,
+          "para": 1117482,
+          "razao": "tamanho: +395 linhas (1117087 -> 1117482), pagas por Origem: D-0809-O-NO-DE-SOM-POR-CONTROLE-VIVE-SEMPRE; registrado no fecho, topo 762913d7ba64"
         }
       ],
       "unidade": "linhas",
-      "universo": 2903
+      "universo": 2904
     }
   }
 }
