@@ -282,7 +282,7 @@ CSS = """
            border-radius:7px;padding:0 12px;font-size:12.5px;font-family:inherit;
            cursor:pointer;
            border:1px solid var(--border-forte);background:var(--app-bg);
-           color:var(--texto-mudo)}
+           color:var(--fg)}
   .cadeado .p{width:7px;height:7px;border-radius:50%;flex:0 0 auto;
               background:var(--border-forte);box-shadow:none}
   .cadeado.ligada{border-color:var(--green);background:rgba(80,250,123,.09);

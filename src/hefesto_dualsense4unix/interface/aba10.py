@@ -287,10 +287,10 @@ CSS = CSS_GLIFO + """
            font-size:11px;border-radius:5px;min-width:0;
            transition:width .12s ease,padding .12s ease}
   .procura.on{width:150px;padding:3px 7px;border:1px solid var(--border-forte)}
-  .procura::placeholder{color:var(--comment)}
+  .procura::placeholder{color:var(--fg)}
   /* QUANTOS A LUPA ESCONDEU. Ela nasce vazia e o `ligado()` do piloto lê o
      vazio como apagado — sem filtro, nada aparece. */
-  .fora-da-busca{font-size:10.5px;color:var(--comment);font-weight:400;
+  .fora-da-busca{font-size:10.5px;color:var(--fg);font-weight:400;
                  letter-spacing:0;text-transform:none;display:none}
   .fora-da-busca.on{display:inline}
   /* A SETA DA COLUNA ORDENADA — do tamanho do ícone, e sem texto novo.
@@ -362,7 +362,7 @@ CSS = CSS_GLIFO + """
      arrastar ganha um `style` inline no mesmo `<col>`, e inline vence folha. */
   .tab td,.tab th{overflow:hidden;text-overflow:ellipsis}
   .tab tbody td{white-space:nowrap}
-  .conta-perfis{font-size:10.5px;color:var(--comment);margin-left:auto;text-transform:none;
+  .conta-perfis{font-size:10.5px;color:var(--fg);margin-left:auto;text-transform:none;
                 letter-spacing:0}
   /* os campos do editor, todos na mesma grade */
   /* os campos ficam sobre o MESMO fundo da tabela ao lado, e assim os três botões
@@ -412,7 +412,7 @@ CSS = CSS_GLIFO + """
      alcança isto — ele deixa o FLEX apertar, e aqui quem não apertava era a
      GRADE. */
   .campo{display:grid;grid-template-columns:var(--rot-p) minmax(0,1fr);align-items:center;gap:12px;
-         height:var(--h-escolha);font-size:12px;color:var(--texto-mudo);margin-bottom:4px}
+         height:var(--h-escolha);font-size:12px;color:var(--fg);margin-bottom:4px}
 
   /* AS DIVISÓRIAS SAÍRAM DESTE TRECHO — 31/08/2026, pedido olhando a aba:
      *"remove as linhas horizontais desse trecho"*.
@@ -643,7 +643,7 @@ CSS = CSS_GLIFO + """
      impede o rótulo de tomar o campo. */
   .campo .rot{display:none;flex:0 1 auto;min-width:0;max-width:45%;
               font-size:11.5px;
-              color:var(--texto-mudo);white-space:nowrap;overflow:hidden;
+              color:var(--fg);white-space:nowrap;overflow:hidden;
               text-overflow:ellipsis}
   .campo .rot.on{display:block}
   .campo .rot .al.alerta{color:var(--orange)}
@@ -848,13 +848,13 @@ CSS = CSS_GLIFO + """
      ausência. #8896c4 dá 4,89:1 e continua nitidamente mais fosco que o
      aceso (roxo #bd93f9 com o halo do `drop-shadow`), que é o que separa os
      dois. Ela: *"sobe também"*. */
-  .gr{display:inline-flex;align-items:center;gap:2px;color:var(--comment)}
+  .gr{display:inline-flex;align-items:center;gap:2px;color:var(--fg)}
   .gr.on{color:var(--purple);filter:drop-shadow(0 0 4px rgba(189,147,249,.45))}
   .gr .gl{vertical-align:-3px}
   /* MESMA CURA, MESMO DIA: o endereço de rádio mede 118px em JetBrains Mono de
      10px mais a folga, e o `112` cortava o último octeto com reticências. */
   .gd-id{width:118px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:10px;
-         color:var(--comment)}
+         color:var(--fg)}
   /* A COR DO PLÁSTICO NA BORDA DA LINHA, pela mesma razão do chip da fita: num
      desenho de 32px o modelo mal se distingue, e é a cor que identifica a peça.
      A cor vem de `cor_da_zona()` — do `<style>` que o gerador escreveu no SVG —,
@@ -893,7 +893,7 @@ CSS = CSS_GLIFO + """
      régua: aqui o fundo é `--panel`, não o `--app-bg` da Jogar, e foi por olhar
      só o token — e não o CONTRASTE contra o fundo de CADA aba — que o lugar
      vazio da Jogar saiu mais aceso que o controle na mesa, em 31/08. */
-  .tab.miuda tr.fora .gd-nome{color:var(--comment)}
+  .tab.miuda tr.fora .gd-nome{color:var(--fg)}
   /* O GLIFO SOME NO LUGAR SEM CONTROLE — 05/09/2026, palavra de produto.
      `visibility` e não `display`: a fileira guarda a altura da linha, e um
      `display:none` faria as quatro linhas da tabela mudarem de altura conforme
@@ -915,7 +915,7 @@ CSS = CSS_GLIFO + """
   .rolo .tab thead th[data-coluna]{cursor:pointer;user-select:none}
   .quadro-titulo[data-dica],.cab[data-dica]{cursor:help}
   .tab col[data-coluna="criado"],.tab col[data-coluna="modificado"]{width:104px}
-  .tab td.data{font-family:'JetBrains Mono',monospace;color:var(--texto-mudo);font-weight:400;
+  .tab td.data{font-family:'JetBrains Mono',monospace;color:var(--fg);font-weight:400;
                white-space:nowrap}
   .tab th.data{white-space:nowrap}
   .campos{gap:4px}
@@ -941,9 +941,9 @@ CSS = CSS_GLIFO + """
                  color:var(--fg);cursor:grab}
   .ordem-vale li.ativo{border-color:var(--purple)}
   .ordem-vale li.arrastando-este{opacity:.45}
-  .ordem-vale .pos{flex:0 0 18px;font-family:'JetBrains Mono',monospace;color:var(--texto-mudo);
+  .ordem-vale .pos{flex:0 0 18px;font-family:'JetBrains Mono',monospace;color:var(--fg);
                    text-align:right}
-  .ordem-vale .pega{color:var(--comment);letter-spacing:-2px}
+  .ordem-vale .pega{color:var(--fg);letter-spacing:-2px}
   /* a tabela por controle: três colunas fixas, o endereço em fonte miúda */
   .guarda table{table-layout:fixed;width:100%;min-width:0 !important}
   .guarda col[data-coluna="controle"]{width:136px}

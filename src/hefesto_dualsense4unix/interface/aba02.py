@@ -213,7 +213,7 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   .ctl[data-conectado="nao"] .vol .cheio::after{display:none}
   .ctl[data-conectado="nao"] .barra-luz{color:var(--panel) !important}
   .ctl[data-conectado="nao"] .sensores-peca .sw{
-    border-color:var(--border-forte);background:var(--app-bg);color:var(--texto-mudo)}
+    border-color:var(--border-forte);background:var(--app-bg);color:var(--fg)}
   .ctl[data-conectado="nao"] .sensores-peca .sw .p{
     background:var(--border-forte);box-shadow:none}
 
@@ -253,7 +253,7 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      dizia que "a forma COMPLETA cabe": ela cabia por 1px, e não cabe mais — o
      porquê, com o número, está em `identidade()`.
      O TEXTO SAI DE `monta.rotulo(c, "curta")` — ver `identidade()`. Aqui morava
-     `.card-nome .quem{color:var(--texto-mudo);font-weight:400}`, que esmaecia a
+     `.card-nome .quem{color:var(--fg);font-weight:400}`, que esmaecia a
      segunda metade do rótulo: ela existia porque o nome vinha PARTIDO em dois
      `<span>` montados à mão. Com o rótulo vindo inteiro de uma fonte só não há
      metade para esmaecer, e a regra virou letra morta — sai junto.
@@ -273,7 +273,7 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      grupo de botões pararia num x diferente em cada linha. Quem empurra o fim
      da linha para a direita é ele; a bateria vem colada, no passo de 9px. */
   .bat{flex:0 0 var(--larg-bateria);display:flex;align-items:center;gap:9px;
-       font-size:11.5px;color:var(--texto-mudo)}
+       font-size:11.5px;color:var(--fg)}
   .bat .trilho{flex:1;height:6px;border-radius:3px;background:var(--border-forte);position:relative}
   .bat .cheio{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--purple)}
   .bat .n{font-family:'JetBrains Mono',monospace;color:var(--fg);flex:0 0 42px;text-align:right}
@@ -302,7 +302,7 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      CAIXA, nunca o conteúdo. Card e tira não podem discordar sobre quem é o
      controle — e agora não têm como, porque são o mesmo `<label>`. */
   .faixa{display:flex;align-items:center;gap:9px;
-         font-size:11.5px;color:var(--texto-mudo);
+         font-size:11.5px;color:var(--fg);
          }
   .faixa b{color:var(--texto-suave)}
   /* todo item da faixa tem a MESMA altura de linha. O ícone "?" do aviso de
@@ -323,7 +323,7 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      o que morreu manda a próxima pessoa procurar uma pintura que não há. Agora
      é `.leia`, que é o que ela faz: diz que aquele item tem texto embaixo. */
   .faixa .leia{cursor:help}
-  .faixa .div{color:var(--texto-mudo)}   /* cor de texto, não de borda (topo.html: `.seta`) */
+  .faixa .div{color:var(--fg)}   /* cor de texto, não de borda (topo.html: `.seta`) */
   /* ---------- O GIROSCÓPIO NO JOGO — "fluindo para o jogo (~N Hz)" ----------
      CONTROLES-VERDADE-01, 06/09/2026. O dono da frase é
      `controller_card.texto_motion`, e nada dela é digitado aqui.
@@ -399,7 +399,7 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      com quatro), porque não era desenho, era resto. */
   .gat{display:flex;flex-direction:column;justify-content:space-around;flex:1}
   .gat-linha{display:grid;grid-template-columns:20px 1fr;align-items:center;gap:8px;
-             font-size:11px;color:var(--texto-mudo);margin-bottom:9px}
+             font-size:11px;color:var(--fg);margin-bottom:9px}
   .gat-linha:last-child{margin-bottom:0}
   .gat-linha .trilho{position:relative;height:8px;border-radius:4px;background:var(--panel);
                      border:1px solid var(--border-forte)}
@@ -576,14 +576,14 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      plástico. O nome da cor ("azul") continua fora, e por um motivo que não é
      gosto: ele não existe em código nenhum do produto — só num comentário —, e
      digitá-lo aqui criaria uma segunda verdade sobre a paleta. */
-  .de-quem{margin-left:auto;font-size:10.5px;color:var(--texto-mudo)}
+  .de-quem{margin-left:auto;font-size:10.5px;color:var(--fg)}
   /* O LED DO JOGADOR É CAMPO, NÃO LINHA. Ele nasceu em 28/08 como uma linha
      apertada DENTRO da moldura da Barra de luz — rótulo à esquerda, lâmpadas à
      direita — e ali ele era 13px espremidos num campo de 75. Em 29/08 virou a
      TERCEIRA moldura da coluna, com rótulo próprio: é o que come a sobra que o
      touchpad esticado escondia, e é o que faz a coluna fechar sem vão. */
-  .rot .mudo{color:var(--texto-mudo);font-weight:400}
-  .sob{font-size:10.5px;color:var(--texto-mudo);margin-top:4px}
+  .rot .mudo{color:var(--fg);font-weight:400}
+  .sob{font-size:10.5px;color:var(--fg);margin-top:4px}
   .touch{border-radius:4px;background:var(--panel);position:relative}
   /* O PONTO É POSICIONADO PELO CENTRO — ver o `translate` do `.stick .p` logo
      abaixo, que nasceu do mesmo defeito. Sem ele, `left`/`top` põem o CANTO do
@@ -822,7 +822,7 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      (`.on`), a barra do MESMO cartão fica inteira verde e travada: o `<input>` some da tela
      (`display:none` tira o arrasto E o teclado: `visibility:hidden` ainda deixava o foco entrar) e a palavra ocupa o lugar do número. */
   .padrao-i{height:16px;flex:0 0 auto;border-radius:5px;cursor:pointer;padding:0 6px;
-            border:1px solid var(--border-forte);background:var(--panel);color:var(--texto-mudo);
+            border:1px solid var(--border-forte);background:var(--panel);color:var(--fg);
             font-size:10px;line-height:14px;font-family:inherit}
   .padrao-i.on{border-color:var(--green);color:var(--green)}
   .moldura:has(.padrao-i.on) .puxa-vol{display:none}
@@ -831,7 +831,7 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   .moldura:has(.padrao-i.on) .vol .cheio::after{display:none}
   .moldura:has(.padrao-i.on) .vol .n{flex:0 0 auto;color:var(--green)}
   .mudo-i{width:16px;height:16px;flex:0 0 16px;border-radius:5px;cursor:pointer;
-          border:1px solid var(--border-forte);background:var(--panel);color:var(--texto-mudo);
+          border:1px solid var(--border-forte);background:var(--panel);color:var(--fg);
           font-size:10px;line-height:14px;text-align:center;padding:0;font-family:inherit}
   /* AS DUAS CORES DO ♪ NÃO MORAM AQUI, e a razão é que elas PERGUNTAM A PALAVRA
      ao dono: os seletores casam o que `mesa_viva.selo_do_mic` devolve, e um
@@ -878,9 +878,9 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      QUAL dos dois estados o alto-falante está (02-Q9), e um elemento aceita um
      alvo só. */
   .vol[data-porque] .mudo-i{border-color:var(--border-sutil);
-                            color:var(--texto-mudo);cursor:not-allowed}
+                            color:var(--fg);cursor:not-allowed}
   .vol[data-porque] .mudo-i:hover{border-color:var(--border-sutil);
-                                  color:var(--texto-mudo)}
+                                  color:var(--fg)}
   /* O `?` SEGUE O MESMO ATRIBUTO QUE O CINZA, e esta linha saiu da FOTO —
      04/09/2026, com o controle do usuário no cabo.
      A folha das dez esconde o `?` de três jeitos, e NENHUM alcançava este: ela
@@ -1125,7 +1125,7 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      coluna. */
   .rota{display:flex;flex-direction:column;gap:2px;margin-top:5px}
   .rota button{flex:0 0 auto;height:17px;border-radius:5px;font-size:10.5px;white-space:nowrap;font-family:inherit;
-    border:1px solid var(--border-forte);background:var(--panel);color:var(--texto-mudo);cursor:pointer}
+    border:1px solid var(--border-forte);background:var(--panel);color:var(--fg);cursor:pointer}
   .rota button.on,.rota .aceso-do-mic.on>button{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600}
   /* A FILEIRA DA SAÍDA DE SOM TEM TRÊS, UMA POR LINHA — todo, 15/10/2026. O «junto» saiu da tela
      e os nomes do alvo cabem numa linha só; o cartão perde o que o par de baixo custava. */
@@ -1170,7 +1170,7 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   .mic-modo.sem-nativo button[data-mic-modo="nativo"],
   .mic-modo.sem-nativo button[data-mic-modo="nativo"]:hover{
     border-color:var(--border-sutil);background:var(--panel);
-    color:var(--texto-mudo);font-weight:400;cursor:not-allowed}
+    color:var(--fg);font-weight:400;cursor:not-allowed}
   /* os 16 glifos: grandes, SOLTOS (sem caixa) e coloridos por identidade.
      UMA REGRA PARA OS QUATRO: `plast` é a cor do plástico (a variável do card) e
      `on` é a cor de "acendeu agora". Antes havia um par de regras por modelo
@@ -1241,7 +1241,7 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   }
   .sensores-peca .sw .p{width:6px;height:6px;border-radius:50%;background:var(--green);
                         box-shadow:0 0 6px var(--green)}
-  .sensores-peca .sw.off{border-color:var(--border-forte);background:var(--app-bg);color:var(--texto-mudo)}
+  .sensores-peca .sw.off{border-color:var(--border-forte);background:var(--app-bg);color:var(--fg)}
   .sensores-peca .sw.off .p{background:var(--border-forte);box-shadow:none}
   /* A DICA DO GIROSCÓPIO MORA NUM INVÓLUCRO SEM CAIXA — 24/09/2026,
      A-MIRA-POR-MOVIMENTO-NA-TELA-02. `display:contents` tira o invólucro da
@@ -1255,7 +1255,7 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      dos dois vale. Cor explícita, nada de `opacity`. */
   .sensores-peca.sem-mira .sw[data-gesto="mira"],
   .sensores-peca.sem-mira .sw[data-gesto="mira"]:hover{
-    border-color:var(--border-sutil);background:var(--app-bg);color:var(--texto-mudo);
+    border-color:var(--border-sutil);background:var(--app-bg);color:var(--fg);
     cursor:not-allowed}
   .sensores-peca.sem-mira .sw[data-gesto="mira"] .p{
     background:var(--border-sutil);box-shadow:none}
@@ -1271,12 +1271,12 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   .chip-virtual>.sw{height:17px;border-radius:6px;font-size:10.5px;font-family:inherit;
     cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;
     justify-content:center;gap:6px;padding:0 10px;
-    border:1px solid var(--border-forte);background:var(--app-bg);color:var(--texto-mudo)}
+    border:1px solid var(--border-forte);background:var(--app-bg);color:var(--fg)}
   .chip-virtual>.sw .p{width:6px;height:6px;border-radius:50%;background:var(--border-forte)}
   .chip-virtual.on>.sw{border-color:var(--green);background:rgba(80,250,123,.09);color:var(--green)}
   .chip-virtual.on>.sw .p{background:var(--green);box-shadow:0 0 6px var(--green)}
   .chip-virtual>.sw.sem-mira,.chip-virtual>.sw.sem-mira:hover{
-    border-color:var(--border-sutil);background:var(--app-bg);color:var(--texto-mudo);
+    border-color:var(--border-sutil);background:var(--app-bg);color:var(--fg);
     cursor:not-allowed}
   .chip-virtual>.sw.sem-mira .p{background:var(--border-sutil);box-shadow:none}
   /* A PAUSA DO CONTROLE PARADO — 29/09/2026, D-2909-O-CONTROLE-PARADO-NAO-INCLINA.
@@ -1303,10 +1303,10 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   .moldura.touchp .todo-sw-toque.off .t-lig{display:none}
   .moldura.touchp .todo-sw-toque.off .t-des{display:inline}
   .moldura.touchp .todo-sw-toque.off{border-color:var(--border-forte);background:var(--app-bg);
-    color:var(--texto-mudo)}
+    color:var(--fg)}
   .moldura.touchp .todo-sw-toque.off .p{background:var(--border-forte);box-shadow:none}
   .ctl[data-conectado="nao"] .moldura.touchp .todo-sw-toque{border-color:var(--border-sutil);
-    background:transparent;color:var(--texto-mudo)}
+    background:transparent;color:var(--fg)}
   .ctl[data-conectado="nao"] .moldura.touchp .todo-sw-toque .p{background:var(--border-sutil);
     box-shadow:none}
   .touch .todo-terca{position:absolute;top:0;bottom:0;width:33.334%;border-radius:4px}
@@ -2533,7 +2533,7 @@ CSS += f"""
      a frase presa na linha fechada, que não tem largura para ela. */
   {_aberto(" .faixa .no-jogo[aria-label]")}{{display:block;flex:1 1 0;min-width:0;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-    color:var(--texto-mudo);font-weight:400}}
+    color:var(--fg);font-weight:400}}
   /* O LUGAR VAZIO NÃO ABRE, POR REGRA — ver o bloco de `_fechado_de_vez`. As
      quatro regras desfazem, uma a uma, o que as quatro do `_aberto` fariam: a
      altura do cartão, a moldura da faixa, o corpo que apareceria e o número do
@@ -2555,7 +2555,7 @@ CSS += f"""
      lido como novidade dois dias depois de ser removido. O recuo e a cor mais
      apagada dizem "isto é registro", e a régua do gerador usa esta mesma classe
      como a única licença para nomear um termo que o desenho não escreve. */
-  .nota li.foi{{color:var(--texto-mudo);border-left:2px solid var(--border-forte);
+  .nota li.foi{{color:var(--fg);border-left:2px solid var(--border-forte);
     padding-left:9px;list-style:none;margin-left:-16px}}
   /* ---------- O ♪ EM DUAS CORES — decisão de produto, 02-Q9 ----------
      Ela marcou *"O botão de som acende"* e digitou por cima *"Com cor

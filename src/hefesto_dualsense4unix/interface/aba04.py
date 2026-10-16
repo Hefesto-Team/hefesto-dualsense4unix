@@ -486,7 +486,7 @@ CSS = """
   /* A LEGENDA NÃO É TÍTULO. Sem isto ela herda o `text-transform:uppercase` do
      rótulo e sai um parágrafo inteiro em caixa alta, que é o mais difícil de
      ler que existe. Medido no navegador em 27/08, na Vibração. */
-  .luz-grade .rotulos .legenda{font-size:10.5px;line-height:1.45;color:var(--comment);
+  .luz-grade .rotulos .legenda{font-size:10.5px;line-height:1.45;color:var(--fg);
                                text-transform:none;letter-spacing:0}
   /* e a dica abre PARA CIMA: nas linhas de baixo, aberta para baixo, a janela
      (que tem `overflow:hidden`) cortava o fim do texto. */
@@ -529,7 +529,7 @@ CSS = """
             color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;align-self:center;
             width:100%;min-width:0}
   .ctrl-rot .pt{margin:0 6px}
-  .luz-grade .ctrl.vazia[data-conectado="nao"] .ctrl-rot{color:var(--texto-mudo);
+  .luz-grade .ctrl.vazia[data-conectado="nao"] .ctrl-rot{color:var(--fg);
     border:1px dashed var(--border-sutil);background:transparent}
 
   /* A LUZ É LUZ, E NÃO PLÁSTICO. Os tokens são os do mapa do controle
@@ -842,7 +842,7 @@ CSS = """
      (`.players button{height:var(--h-escolha)}`). */
   .players button,.brilhos button{
     flex:1;border-radius:7px;gap:6px;min-width:0;
-    border:1px solid var(--linha);background:var(--app-bg);color:var(--texto-mudo);
+    border:1px solid var(--linha);background:var(--app-bg);color:var(--fg);
     cursor:pointer;font-size:13px;font-weight:600;font-family:'JetBrains Mono',monospace;
   }
   .players button.on,.brilhos button.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg)}
@@ -1037,7 +1037,7 @@ CSS = """
     font:500 12.5px 'Space Grotesk',system-ui,sans-serif;cursor:pointer}
   .g4-efeito:hover{border-color:var(--comment)}
   .g4-dica-do-efeito{flex:0 0 14px;min-width:0;font-size:11px;line-height:14px;
-    color:var(--texto-mudo,#9a9eb8);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .quadro-topo .sem-piscar{margin-left:auto}
   .quadro-topo .sem-piscar + .modo-auto{margin-left:12px}
   .quadro-topo .modo-auto{margin-left:auto}
@@ -1064,7 +1064,7 @@ CSS = """
   .criar .seg-criar{display:inline-flex;gap:4px;flex:0 0 auto}
   .criar .seg-criar label,.criar .meu{height:30px;padding:0 12px;border-radius:999px;
     font:500 12.5px/1 'Space Grotesk',system-ui,sans-serif;border:1px solid var(--linha);
-    background:var(--app-bg);color:var(--texto-mudo);cursor:pointer;white-space:nowrap;
+    background:var(--app-bg);color:var(--fg);cursor:pointer;white-space:nowrap;
     display:inline-flex;align-items:center;gap:7px;box-sizing:border-box}
   .criar .seg-criar input{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px}
   .criar .seg-criar label:has(input:checked){border-color:var(--purple);background:var(--sel-bg);
@@ -1075,7 +1075,7 @@ CSS = """
   .criar .nome-criar{height:30px;width:136px;flex:0 0 auto;padding:0 11px;border-radius:7px;
     border:1px solid var(--linha);background:var(--app-bg);color:var(--fg);
     font:500 12.5px 'Space Grotesk',system-ui,sans-serif}
-  .criar .nome-criar::placeholder{color:var(--texto-mudo)}
+  .criar .nome-criar::placeholder{color:var(--fg)}
   .criar .btn-criar{height:30px;padding:0 14px;border-radius:7px;border:1px solid var(--purple);
     background:rgba(189,147,249,.12);color:var(--purple);font:600 12.5px/1 'Space Grotesk',system-ui,sans-serif;
     cursor:pointer;flex:0 0 auto}
@@ -1087,7 +1087,7 @@ CSS = """
   .g4-cor{width:24px;height:24px;border-radius:6px;display:block;border:0;padding:0;cursor:pointer}
   .g4-cor:hover{outline:2px solid var(--comment)}
   .g4-mais{width:24px;height:24px;border-radius:6px;border:1px dashed var(--linha);background:transparent;
-    color:var(--texto-mudo);font:600 14px/1 'Space Grotesk',system-ui,sans-serif;cursor:pointer;padding:0}
+    color:var(--fg);font:600 14px/1 'Space Grotesk',system-ui,sans-serif;cursor:pointer;padding:0}
   .g4-mais[hidden]{display:none}
   .g4-vel{display:inline-flex;align-items:center;gap:8px;flex:0 0 auto;font-size:12px;font-weight:600;
     color:var(--rot-campo)}
@@ -1098,7 +1098,7 @@ CSS = """
   .troca{margin:8px 0 12px;font-size:11.5px}
   .troca-linha{display:flex;align-items:center;gap:10px;margin:5px 0;flex-wrap:wrap}
   .troca-rot{flex:0 0 52px;font-size:10.5px;
-             color:var(--comment)}
+             color:var(--fg)}
   .troca-item{display:flex;align-items:center;gap:7px;padding:4px 9px;border-radius:7px;
               border:1px solid var(--linha);background:var(--app-bg)}
   .troca-item.mexeu{border-color:var(--purple);background:var(--sel-bg)}
@@ -1107,7 +1107,7 @@ CSS = """
   /* O mesmo "não sei" da fileira de players — ver `.players .dono.incerta`. */
   .troca-item .dono.incerta{border:2px dashed var(--comment)}
   .troca-item .np{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--fg)}
-  .troca-gesto{margin:6px 0 6px 62px;color:var(--texto-mudo)}
+  .troca-gesto{margin:6px 0 6px 62px;color:var(--fg)}
 """ + CSS_GLIFO + """
   /* OS GLIFOS DOS TÍTULOS são as peças de `assets/glyphs/` — as mesmas 19 da aba
      Status. Só entram nos dois títulos que NOMEIAM uma peça: a barra de luz e o

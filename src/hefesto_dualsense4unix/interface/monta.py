@@ -617,7 +617,7 @@ CSS_GLIFO = """
      `currentColor` faz cada um herdar a cor da linha em que está. */
   .gl{display:inline-block;vertical-align:-6px;flex:0 0 auto}
   .gls{display:inline-flex;align-items:center;gap:5px}
-  .gls .mais{color:var(--comment);font-size:11px;margin:0 1px}
+  .gls .mais{color:var(--fg);font-size:11px;margin:0 1px}
 """
 
 CSS_LUZINHAS = """
@@ -675,7 +675,7 @@ CSS_POPUP = """
   .tn-topo{display:flex;align-items:center;gap:9px;padding:14px 18px 0;flex:none}
   .tn-tit{font-size:14.5px;font-weight:600;color:var(--purple)}
   .tn-x{margin-left:auto;width:26px;height:26px;border-radius:6px;text-decoration:none;
-        border:1px solid var(--border-forte);color:var(--texto-mudo);font-size:14px;
+        border:1px solid var(--border-forte);color:var(--fg);font-size:14px;
         display:flex;align-items:center;justify-content:center}
   .tn-x:hover{border-color:var(--red);color:var(--red)}
   /* `min-height:0` nos dois níveis não é enfeite: sem ele um item de flex-column
@@ -711,7 +711,7 @@ CSS_POPUP = """
   .moldura::-webkit-scrollbar{width:9px}
   .moldura::-webkit-scrollbar-track{background:var(--panel-2, #21222c);border-radius:5px}
   .moldura::-webkit-scrollbar-thumb{background:var(--border-forte);border-radius:5px}
-  .tn-frase{font-size:11.5px;color:var(--texto-mudo);line-height:1.55;margin-bottom:11px}
+  .tn-frase{font-size:11.5px;color:var(--fg);line-height:1.55;margin-bottom:11px}
   .tn-rod{display:flex;gap:var(--gap);padding:0 18px 16px;flex:none}
   .tn-rod .btn{flex:1;text-decoration:none}
   /* a confirmação do rodapé segue os botões, e não a borda da caixa: o
@@ -798,9 +798,9 @@ CSS_FOLHA = """
      PO decidiu para a aba 09, e é a única forma de dizer o porquê a quem não
      tem rato na mão. */
   .btn.apagado,.seg button.apagado{
-    border-color:var(--border-sutil);color:var(--texto-mudo);cursor:not-allowed}
+    border-color:var(--border-sutil);color:var(--fg);cursor:not-allowed}
   .btn.apagado:hover,.seg button.apagado:hover{
-    border-color:var(--border-sutil);color:var(--texto-mudo)}
+    border-color:var(--border-sutil);color:var(--fg)}
 
   /* ---- S-02 · A RESSALVA É LINHA FIXA, E SÓ QUANDO EXISTE (D-02) ----
      No repouso ela não ocupa NADA: sem `display:none` a linha vazia continua
@@ -813,7 +813,7 @@ CSS_FOLHA = """
      cobre a linha que nasce vazia e nunca é pintada; `.nada` cobre a que o
      piloto pinta a cada tique com "não há o que dizer". Faltando uma das
      duas, a linha volta a aparecer num dos dois caminhos, calada. */
-  .ressalva{font-size:11.5px;line-height:1.5;color:var(--texto-mudo);margin-top:5px}
+  .ressalva{font-size:11.5px;line-height:1.5;color:var(--fg);margin-top:5px}
   .ressalva:empty{display:none}
   .ressalva:has(.nada){display:none}
 
@@ -1034,10 +1034,10 @@ CSS_DO_NATIVO = """
   body.nativo.por-controle :is([data-gesto],[data-modo],[data-hef-gesto],[data-papel],[data-forca],[data-player],[data-sensor],[data-rota],[data-mudo],[data-mic-modo],[data-v]):not(:is([data-gesto=cadeado],[data-gesto=hefesto],[data-gesto=modo-nativo],[data-gesto=modo-steam],[data-gesto=modo-navegacao],[data-gesto=reconectar],.menu-hefesto *)){
     pointer-events:none;cursor:default;-webkit-appearance:none;appearance:none;
     background:transparent!important;border-color:var(--border-sutil)!important;
-    color:var(--comment)!important;font-weight:400!important;box-shadow:none!important}
+    color:var(--fg)!important;font-weight:400!important;box-shadow:none!important}
   body.nativo.por-controle .nativo-nao{pointer-events:none;cursor:default;
     background:transparent!important;border-color:var(--border-sutil)!important;
-    color:var(--comment)!important;font-weight:400!important;box-shadow:none!important}
+    color:var(--fg)!important;font-weight:400!important;box-shadow:none!important}
   body.nativo.por-controle :is([data-gesto=cadeado],[data-gesto=hefesto],[data-gesto=modo-nativo],[data-gesto=modo-steam],[data-gesto=modo-navegacao],[data-gesto=reconectar]){pointer-events:auto}
   body.nativo.por-controle .guardar,body.nativo.por-controle .par-modo,
   body.nativo.por-controle .modo-auto,
@@ -1053,7 +1053,7 @@ CSS_DO_NATIVO = """
 # há razão. Ela entra SÓ na página cujo miolo ainda tem o span, e sai daqui junto com o último.
 CSS_DO_AJUDA_QUE_SAI = """
   .ajuda{width:17px;height:17px;border-radius:50%;flex:0 0 17px;border:1px solid var(--linha);
-    color:var(--texto-mudo);font-size:11px;line-height:15px;text-align:center;cursor:help;position:relative}
+    color:var(--fg);font-size:11px;line-height:15px;text-align:center;cursor:help;position:relative}
   .ajuda:hover,.ajuda:focus{border-color:var(--cyan);color:var(--cyan);outline:none}
   .ajuda:hover .dica,.ajuda:focus .dica,.ajuda:focus-within .dica{display:block}
   .quadro-topo .par-modo + .ajuda.esq .dica{left:auto;right:22px}

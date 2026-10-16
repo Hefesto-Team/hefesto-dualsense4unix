@@ -489,7 +489,7 @@ window.HEF = (function(){
     if(todos) corpo.appendChild(todos);
     const d = document.createElement('div');
     d.className = 'vazio-da-mesa';
-    d.style.cssText = 'padding:26px;color:var(--texto-mudo);font-size:13px;line-height:1.7;max-width:720px';
+    d.style.cssText = 'padding:26px;color:var(--fg);font-size:13px;line-height:1.7;max-width:720px';
     d.textContent = m.texto;
     corpo.appendChild(d);
     // A FITA TAMBÉM ESVAZIA. Deixá-la com os chips de quem já saiu é a mentira

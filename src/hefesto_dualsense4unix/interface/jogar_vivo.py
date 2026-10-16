@@ -343,7 +343,7 @@ window.HEF = (function(){
       const d = document.createElement('div');
       d.className = 'vazio-da-mesa';
       d.setAttribute('data-campo','vazio');
-      d.style.cssText = 'padding:14px 2px;color:var(--texto-mudo);font-size:12px;'
+      d.style.cssText = 'padding:14px 2px;color:var(--fg);font-size:12px;'
                       + 'line-height:1.7;grid-column:1/-1';
       d.textContent = m.texto;
       pecas.appendChild(d);

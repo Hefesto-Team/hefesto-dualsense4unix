@@ -226,7 +226,7 @@ CSS = """
   .perfil-ativo{position:absolute;right:20px;top:17px;display:flex;align-items:center;gap:7px;
                 padding:5px 11px;border-radius:7px;border:1px solid var(--linha);
                 background:var(--panel)}
-  .pa-rot{font-size:10.5px;color:var(--comment)}
+  .pa-rot{font-size:12.5px;color:var(--fg)}
   .pa-nome{font-size:12.5px;color:var(--pink);font-weight:600}
   .voltar{position:absolute;left:20px;top:17px;display:inline-flex;align-items:center;
           gap:6px;padding:5px 11px;border-radius:7px;text-decoration:none;
@@ -251,7 +251,7 @@ CSS = """
          background:var(--panel);cursor:pointer}
   .passo .n{flex:0 0 20px;height:20px;border-radius:50%;display:flex;
             align-items:center;justify-content:center;font-family:var(--m);
-            font-size:11px;border:1px solid var(--border-forte);color:var(--texto-mudo)}
+            font-size:11px;border:1px solid var(--border-forte);color:var(--fg)}
   .passo b{font-size:12.5px;font-weight:600}
   /* O PASSO EM QUE ELA ESTÁ. Cor explícita, nada de `opacity` — a lição medida
      da `.fita.inerte`: a opacidade tira contraste E peso do traço ao mesmo
@@ -285,13 +285,13 @@ CSS = """
   /* SEM CONTROLE NENHUM não é cartão vazio: é uma frase. Ver `SEM_CONTROLE`. */
   .vazio{grid-column:1 / -1;padding:22px 14px;text-align:center;border-radius:9px;
          border:1px dashed var(--border-forte);background:var(--panel);
-         color:var(--texto-mudo);font-size:13px;line-height:19px}
+         color:var(--fg);font-size:13px;line-height:19px}
   .ctr{border:2px solid var(--plastico,var(--border-forte));border-bottom:0;
        border-radius:9px 9px 0 0;
        background:var(--panel);padding:11px 12px 10px;display:flex;
        flex-direction:column;gap:8px;min-width:0}
   .ctr-topo{display:flex;align-items:center;gap:9px;min-width:0}
-  .ctr .nome{font-size:12.5px;color:var(--texto-mudo);line-height:15px;white-space:nowrap;
+  .ctr .nome{font-size:12.5px;color:var(--fg);line-height:15px;white-space:nowrap;
              overflow:hidden;text-overflow:ellipsis;flex:1 1 auto;min-width:0}
   /* O SELO MORA NA LINHA DO NÚMERO (08/10/2026): ao lado do modelo e do transporte, o
      «Medindo…» e o «Calibrado» comiam o «USB» e o «BT» do cartão; na primeira linha, ao
@@ -312,7 +312,7 @@ CSS = """
      comum; esta página tem folha própria, e por isso precisa dizê-la. */
   .ds-svg{width:60px;height:auto;flex:0 0 60px}
   .selo{margin-left:auto;flex:0 0 auto;font-size:11px;line-height:13px;padding:2px 8px;border-radius:6px;
-        border:1px solid var(--border-forte);color:var(--texto-mudo);white-space:nowrap}
+        border:1px solid var(--border-forte);color:var(--fg);white-space:nowrap}
   /* O SELO É DE CADA CONTROLE (08/10/2026): o tique escreve o `data-zero` dele, e o
      cartão que mexeu diz «Mexeu» sozinho. Sem o atributo (o desenho), os rádios mandam.
      O «Mexeu» é o branco da casa, nunca vermelho: o vermelho não nasce fora do Hz e dos
@@ -339,7 +339,7 @@ CSS = """
   .lin{display:flex;align-items:center;gap:7px;font-family:var(--m);font-size:11px}
   /* A COLUNA DOS NOMES CABE O MAIS LONGO (todo, rodada 3): «Acelerômetro» mede 79 px, e com 74 a
      linha dele empurrava o número e a barra 5 px para a direita; com 82 as seis barras começam juntas. */
-  .lin > .r{flex:0 0 82px;color:var(--texto-mudo)}
+  .lin > .r{flex:0 0 82px;color:var(--fg)}
   .lin > .v{flex:0 0 52px;text-align:right;color:var(--texto-suave)}
   .lin > .g{flex:1;height:4px;border-radius:2px;background:var(--border-sutil);
             position:relative;overflow:hidden;color:var(--border-forte)}
@@ -378,7 +378,7 @@ CSS = """
      última coisa que a tela diz antes de ela apertar «Começar». Ver
      `contagem()` — com zero controles esta linha fica VAZIA, e quem fala é o
      lugar dos cartões. */
-  .quantos{font-size:12px;color:var(--texto-mudo);white-space:nowrap}
+  .quantos{font-size:12px;color:var(--fg);white-space:nowrap}
   /* OS DOIS BOTÕES DO PÉ SÃO UM GRUPO — 06/10/2026: a mesma largura e a mesma
      altura, lado a lado, e o «Começar» é o verde cheio do «Aplicar» das abas
      (`topo.html`, `.r-aplicar`). */
@@ -418,7 +418,7 @@ CSS = """
            text-overflow:ellipsis;min-width:0}
   .desl .n{grid-row:1;grid-column:2;font-family:var(--m);font-size:11px;
            color:var(--fg);white-space:nowrap}
-  .desl .un{color:var(--texto-mudo)}
+  .desl .un{color:var(--fg)}
   .desl .trilho{grid-row:2;grid-column:1 / -1;width:100%;margin:0;
                 accent-color:var(--purple)}
   /* «SÓ ENQUANTO EU SEGURAR» E «INVERTER» — 24/09/2026, A-MIRA-POR-MOVIMENTO-
@@ -448,7 +448,7 @@ CSS = """
   .inverter .sw .p{width:6px;height:6px;border-radius:50%;background:var(--green);
     box-shadow:0 0 6px var(--green)}
   .inverter .sw.off{border-color:var(--border-forte);background:var(--app-bg);
-    color:var(--texto-mudo)}
+    color:var(--fg)}
   .inverter .sw.off .p{background:var(--border-forte);box-shadow:none}
   /* TODO ALVO CLICÁVEL TEM 24 PX NO MÍNIMO (todo, 15/10/2026): o liga e os dois lados da mira
      eram de 20 px, e os dois «Inverter», de 17. */

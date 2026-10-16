@@ -478,7 +478,7 @@ CSS = CSS_GLIFO + """
 .tn-cx { width:660px;max-width:94vw;background:var(--panel);border-radius:11px; border:1px solid var(--border-forte);box-shadow:0 26px 70px rgba(0,0,0,.62); display:flex;flex-direction:column;max-height:min(717px,calc(100vh - 40px)) }
 .tn-topo { display:flex;align-items:center;gap:9px;padding:14px 18px 0;flex:none }
 .tn-tit { font-size:14.5px;font-weight:600;color:var(--purple) }
-.tn-x { margin-left:auto;width:26px;height:26px;border-radius:6px;text-decoration:none; border:1px solid var(--border-forte);color:var(--texto-mudo);font-size:14px; display:flex;align-items:center;justify-content:center }
+.tn-x { margin-left:auto;width:26px;height:26px;border-radius:6px;text-decoration:none; border:1px solid var(--border-forte);color:var(--fg);font-size:14px; display:flex;align-items:center;justify-content:center }
 .tn-x:hover { border-color:var(--red);color:var(--red) }
 .tn-corpo { padding:11px 18px 16px;display:flex;flex-direction:column;min-height:0 }
 .tn-corpo > .moldura { overflow-y:auto;min-height:0;scrollbar-gutter:stable }
@@ -497,11 +497,11 @@ CSS = CSS_GLIFO + """
 .campo-num .par { display:flex;align-items:center;gap:9px;flex:0 1 auto;min-width:0 }
 .campo-num .par:last-child { flex:1 1 auto }
 .campo-num .par:not(:first-child):last-child .bignum { margin-left:auto }
-.campo-num .sub { font-size:10.5px;color:var(--comment);white-space:nowrap; overflow:hidden;text-overflow:ellipsis }
+.campo-num .sub { font-size:10.5px;color:var(--fg);white-space:nowrap; overflow:hidden;text-overflow:ellipsis }
 .campo-num .risco { width:1px;height:18px;background:var(--border-forte);margin:0 4px 0 5px }
 .bignum { display:inline-flex;align-items:center;flex:none }
 .bignum b { font-family:'JetBrains Mono',monospace;font-size:15px;color:var(--fg); font-weight:600;min-width:22px;text-align:center }
-.passo { width:22px;height:24px;border:1px solid var(--border-forte);border-radius:5px; background:transparent;color:var(--texto-mudo);font-size:14px;font-family:inherit; cursor:pointer;line-height:1;padding:0 }
+.passo { width:22px;height:24px;border:1px solid var(--border-forte);border-radius:5px; background:transparent;color:var(--fg);font-size:14px;font-family:inherit; cursor:pointer;line-height:1;padding:0 }
 .passo:hover { border-color:var(--purple);color:var(--purple) }
 .campo-num .trilho { appearance:none;-webkit-appearance:none;flex:1 1 auto; min-width:0;height:5px;padding:0;margin:0;border:0;border-radius:3px; background:var(--border-forte);cursor:grab }
 .campo-num .trilho:active { cursor:grabbing }
@@ -520,10 +520,10 @@ CSS = CSS_GLIFO + """
 .campo-linha { width:100%;height:var(--h-escolha);border-radius:6px;font-size:11.5px;font-family:inherit; padding:0 8px;border:1px solid var(--border-forte);background:var(--panel); color:var(--fg);cursor:pointer }
 .campo-linha:hover { border-color:var(--purple) }
 .disputa .campo-linha { border-color:var(--orange);color:var(--orange) }
-.campo-linha:disabled { border-color:var(--border-sutil);color:var(--texto-mudo); cursor:not-allowed }
+.campo-linha:disabled { border-color:var(--border-sutil);color:var(--fg); cursor:not-allowed }
 .campo-linha:disabled:hover { border-color:var(--border-sutil) }
 .nm { font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--texto-suave);margin-left:3px }
-.rot-gl { font-size:10.5px;color:var(--comment);margin-left:3px }
+.rot-gl { font-size:10.5px;color:var(--fg);margin-left:3px }
 .acoes a.btn { text-decoration:none }
 .confirma { display:none;position:absolute;bottom:calc(100% + 8px);left:0;right:0;z-index:6; align-items:center;gap:8px;background:var(--elevated);border:1px solid var(--orange); border-radius:7px;padding:8px 10px;font-size:11.5px;color:var(--texto-suave) }
 .confirma span { flex:1 }
@@ -534,7 +534,7 @@ CSS = CSS_GLIFO + """
 .abre-conf:checked ~ .veu { display:block }
 .abre-conf:checked ~ .confirma { display:flex }
 .chave-rot { font-size:11.5px;color:var(--texto-suave) }
-.nj-tog { display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 9px; border:1px solid var(--border-forte);border-radius:6px;font-size:11px; color:var(--texto-mudo);cursor:pointer;user-select:none }
+.nj-tog { display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 9px; border:1px solid var(--border-forte);border-radius:6px;font-size:11px; color:var(--fg);cursor:pointer;user-select:none }
 .nj-tog .pino { width:7px;height:7px;border-radius:50%;background:var(--border-forte) }
 .nj-tog.ligado { border-color:var(--green);background:rgba(80,250,123,.1);color:var(--green) }
 .nj-tog.ligado .pino { background:var(--green);box-shadow:0 0 6px var(--green) }
@@ -557,7 +557,7 @@ CSS = CSS_GLIFO + """
 .pc-linha .seg.mini button { height:28px;padding:0 11px }
 .campo-num.mini { height:28px;padding:0 9px }
 .campo-num.mini .bignum b { font-size:13px;min-width:34px }
-.campo-num .un { font-size:10.5px;color:var(--comment);white-space:nowrap }
+.campo-num .un { font-size:10.5px;color:var(--fg);white-space:nowrap }
 .tab.pc-tab { table-layout:fixed }
 .tab.pc-tab td { height:30px;padding:0 6px 0 0;border-bottom:1px solid var(--border-sutil) }
 .tab.pc-tab tr:last-child td { border-bottom:0 }
@@ -580,7 +580,7 @@ CSS = CSS_GLIFO + """
 .nav2 { position:relative }
 .nav-topo { display:flex;align-items:center;gap:12px;padding:12px 16px 0;position:relative;min-height:36px }
 .nav-topo .quadro-titulo:focus-visible { outline:2px solid var(--cyan,#8be9fd);outline-offset:3px;border-radius:4px }
-.miolo { padding:16px 18px 16px 18px;overflow:hidden }
+.miolo { overflow:hidden }
 .nav2 > .quadro-corpo { padding:14px 16px 14px;gap:14px }
 .nav2-grade { flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1.62fr) minmax(0,1fr);gap:18px }
 .nav2-botoes,.nav2-opcoes { background:var(--app-bg);border:1px solid var(--border-sutil);border-radius:9px;padding:12px 16px;min-width:0 }
@@ -630,7 +630,6 @@ CSS = CSS_GLIFO + """
 .navega-com .chip { flex:1 1 auto;min-width:0;justify-content:center;height:30px;padding:0 10px }
 .navega-com .chip .nm { min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap }
 .tn-rod { padding-top:6px }
-.miolo { scrollbar-gutter:auto }
 .nav2-opcoes { --rot2:140px }
 .op2 { grid-template-columns:var(--rot2) minmax(0,1fr) }
 .tab.ges2 td.b { width:calc(var(--rot2) + 12px) }

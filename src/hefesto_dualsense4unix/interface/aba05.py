@@ -279,7 +279,7 @@ CSS = """
     font:500 12.5px 'Space Grotesk',system-ui,sans-serif;cursor:pointer}
   .vib-efeito:hover{border-color:var(--comment)}
   .vib-dica-do-efeito{flex:0 0 12px;min-width:0;font-size:10.5px;line-height:12px;
-    color:var(--comment);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .vib .acoes-col,.vib .seg{align-content:center}
   .vib .acoes-col{align-items:center}
   .quadro-topo .modo-auto{margin-left:auto}
@@ -292,7 +292,7 @@ CSS = """
   .criar .seg-criar{display:inline-flex;gap:4px;flex:0 0 auto}
   .criar .seg-criar label,.criar .meu{height:30px;padding:0 12px;border-radius:999px;
     font:500 12.5px/1 'Space Grotesk',system-ui,sans-serif;border:1px solid var(--linha);
-    background:var(--app-bg);color:var(--texto-mudo);cursor:pointer;white-space:nowrap;
+    background:var(--app-bg);color:var(--fg);cursor:pointer;white-space:nowrap;
     display:inline-flex;align-items:center;gap:7px;box-sizing:border-box}
   .criar .seg-criar input{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px}
   .criar .seg-criar label:has(input:checked){border-color:var(--purple);background:var(--sel-bg);
@@ -303,7 +303,7 @@ CSS = """
   .criar .nome-criar{height:30px;width:150px;flex:0 0 auto;padding:0 11px;border-radius:7px;
     border:1px solid var(--linha);background:var(--app-bg);color:var(--fg);
     font:500 12.5px 'Space Grotesk',system-ui,sans-serif}
-  .criar .nome-criar::placeholder{color:var(--texto-mudo)}
+  .criar .nome-criar::placeholder{color:var(--fg)}
   .criar .btn-criar{height:30px;padding:0 14px;border-radius:7px;border:1px solid var(--purple);
     background:rgba(189,147,249,.12);color:var(--purple);font:600 12.5px/1 'Space Grotesk',system-ui,sans-serif;
     cursor:pointer;flex:0 0 auto}
@@ -357,7 +357,7 @@ CSS = """
   .vib .forca ~ .motor .num{grid-row:1;grid-column:3;display:flex;
     justify-content:flex-end;white-space:nowrap}
   .vib .forca ~ .motor .lado:not(.on) ~ .num{grid-column:3 / span 2;
-    font-size:10.5px;font-weight:600;font-family:inherit;color:var(--comment)}
+    font-size:10.5px;font-weight:600;font-family:inherit;color:var(--fg)}
   .vib .forca ~ .motor .lado:not(.on) ~ .teto{font-size:0}
   .vib .forca.padrao ~ .motor .lado ~ .num{grid-column:3 / span 2;
     font-size:10.5px;font-weight:600;font-family:inherit;color:var(--green)}
@@ -578,14 +578,14 @@ CSS = """
      Com `width:100%` o SVG estouraria a linha e empurraria tudo. */
   .vib .moldura .ds-svg{height:100%;width:auto;max-width:100%}
   /* O NOME DO CONTROLE É UMA CAIXA, com a largura da coluna (mudança 7 do desenho do todo). */
-  .rot-ctrl{font-size:11px;color:var(--texto-mudo);text-align:center;
+  .rot-ctrl{font-size:11px;color:var(--fg);text-align:center;
             display:flex;align-items:center;justify-content:center}
   .vib .rot-ctrl{height:30px;box-sizing:border-box;border:1px solid var(--linha);border-radius:7px;
     font:600 12px 'Space Grotesk',system-ui,sans-serif;color:var(--fg);white-space:nowrap;
     overflow:hidden;text-overflow:ellipsis;align-self:center;width:100%;display:block;
     line-height:28px;padding:0 4px}
   .vib .rot-ctrl .pt{margin:0 6px}
-  .vib .ctrl[data-conectado="nao"] .rot-ctrl{color:var(--texto-mudo);border:1px dashed var(--border-sutil);
+  .vib .ctrl[data-conectado="nao"] .rot-ctrl{color:var(--fg);border:1px dashed var(--border-sutil);
     background:transparent}
 
   /* OS TRÊS DEGRAUS DE FORÇA — LADO A LADO, COM A MESMA LARGURA. Pedido de
@@ -644,7 +644,7 @@ CSS = """
      coisa tocada aqui: a Vibração está FECHADA por elogio literal
      (`CORRECOES.md:39`). O irmão "/255" fica como está — barra e dígito não
      têm caixa. */
-  .motor .teto{font-size:10.5px;color:var(--comment);font-family:'JetBrains Mono',monospace;
+  .motor .teto{font-size:10.5px;color:var(--fg);font-family:'JetBrains Mono',monospace;
     text-align:right;justify-self:end;white-space:nowrap}
   /* O GLIFO DA FORÇA É O CONTROLE INTEIRO: tudo o que vibra (mudança 10 do desenho do todo) */
   .glifo-forca{cursor:default;display:inline-flex;align-items:center;justify-content:center}
@@ -657,7 +657,7 @@ CSS = """
   .motor .teto.mx.on{visibility:visible}
   /* o lado desligado não finge que tem força: o trilho fica apagado */
   .motor.off .cheio{background:var(--border-forte)}
-  .motor.off .num{color:var(--comment)}
+  .motor.off .num{color:var(--fg)}
   /* O TRILHO ARRASTÁVEL — 03/09/2026, decisão de produto: *"0 a 200%, e grava na
      hora."* Ele é um `<input type=range>` de verdade, e não um trilho pintado:
      é o `value` dele que o piloto lê no `change`.
@@ -695,7 +695,7 @@ CSS = """
   /* o interruptor de cada lado: o GLIFO do mapa, aceso quando o lado está ligado */
   .lado{
     height:var(--h-escolha);width:36px;border-radius:7px;font-family:inherit;
-    border:1px solid var(--linha);background:var(--app-bg);color:var(--texto-mudo);
+    border:1px solid var(--linha);background:var(--app-bg);color:var(--fg);
     cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;
   }
   .lado.on{border-color:var(--orange);background:rgba(255,184,108,.1);color:var(--orange)}

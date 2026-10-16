@@ -1418,7 +1418,7 @@ def _html_do_exame(exame: dict[str, Any]) -> str:
     linhas = exame.get("linhas") or []
     if not linhas:
         vazio = html.escape(str(exame.get("vazio") or ""))
-        return ('<div class="col-lista"><div class="saude" style="color:var(--texto-mudo)">'
+        return ('<div class="col-lista"><div class="saude" style="color:var(--fg)">'
                 f'<span class="txt"><span>{vazio}</span></span></div></div>'
                 '<div class="risco"></div><div class="col-lista"></div>')
     meio = (len(linhas) + 1) // 2

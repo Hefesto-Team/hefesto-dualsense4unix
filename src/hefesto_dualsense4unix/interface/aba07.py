@@ -180,7 +180,7 @@ CSS = """
   .lanc.ausente{background:transparent}
   .lanc.ausente .lanc-nome{color:var(--texto-suave)}
   .lanc.ausente .lanc-diz,
-  .lanc.ausente .lanc-jogos{color:var(--comment)}
+  .lanc.ausente .lanc-jogos{color:var(--fg)}
   .lanc-topo{display:flex;align-items:center;gap:9px;margin-bottom:7px}
   .lanc-nome{font-size:12.5px;font-weight:600;color:var(--fg)}
   .lanc-selo{font-size:10px;padding:2px 7px;border-radius:4px;font-weight:600;
@@ -222,7 +222,7 @@ CSS = """
      fazer sobre Heroic, Lutris, RetroArch, Dolphin e mGBA — ele não tem uma
      função sequer que olhe para eles. */
   .lanc-selo.off,.lanc-selo.nao_sei{background:var(--border-forte);color:var(--texto-suave)}
-  .lanc-jogos{margin-left:auto;font-size:11px;color:var(--texto-mudo);
+  .lanc-jogos{margin-left:auto;font-size:11px;color:var(--fg);
               font-family:'JetBrains Mono',monospace}
   /* DUAS LINHAS CRAVADAS, e é `height` — não `min-height`.
      Com `min-height:32px` o corpo de uma linha dava 32px e o de duas 33,3px, e a
@@ -247,7 +247,7 @@ CSS = """
      altura, exatos, com corpos de tamanhos diferentes. O `min-height` continua
      para o caso curto, que é o que reservava a segunda linha. */
   .lanc{display:flex;flex-direction:column}
-  .lanc-diz{font-size:11.5px;color:var(--texto-mudo);min-height:2.9em;line-height:1.45}
+  .lanc-diz{font-size:11.5px;color:var(--fg);min-height:2.9em;line-height:1.45}
   .lanc-diz b{color:var(--orange)}
   .lanc-diz b.roxo-txt{color:var(--purple)}
   /* `margin-top:auto` E NÃO `8px`: é ele que empurra a fileira para o PÉ do
@@ -294,7 +294,7 @@ CSS = """
                          display:flex;flex-direction:column;gap:5px}
   .lanc-jogo{display:flex;align-items:center;gap:8px;font-size:11px}
   .lanc-jogo-nome{color:var(--fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .lanc-jogo-porque{color:var(--texto-mudo);margin-left:auto;white-space:nowrap}
+  .lanc-jogo-porque{color:var(--fg);margin-left:auto;white-space:nowrap}
   /* O `mini` é o ÚNICO botão menor da aba, e a razão é diferente da que fez o
      `.lanc .btn` ser removido: lá dois botões IGUAIS mediam diferente por
      acidente de CSS; aqui a linha de jogo é uma fileira densa, e um botão de
@@ -332,7 +332,7 @@ CSS = """
      A LINHA DE CIMA É A QUE RESPONDE «PARA QUAL?», e por isso ela é a única com
      endereço: quem abre a tela pelo botão de um cartão precisa ver de que
      cartão se trata antes de digitar. */
-  .lanc-novo-para{font-size:11.5px;color:var(--texto-mudo);margin-bottom:12px}
+  .lanc-novo-para{font-size:11.5px;color:var(--fg);margin-bottom:12px}
   /* `flex-direction:column` e não uma linha: com o rótulo à esquerda os dois
      campos ficariam com larguras diferentes (os textos têm tamanhos
      diferentes), e dois campos de texto desalinhados numa caixa de 660px é o

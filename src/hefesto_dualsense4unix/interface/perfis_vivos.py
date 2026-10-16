@@ -148,7 +148,7 @@ window.HEF = (function(){
     if(!d){
       d = document.createElement('div');
       d.className = marca;
-      d.style.cssText = 'padding:18px 6px;color:var(--comment);font-size:12px;line-height:1.7';
+      d.style.cssText = 'padding:18px 6px;color:var(--fg);font-size:12px;line-height:1.7';
       depois.parentNode.insertBefore(d, depois.nextSibling);
     }
     d.textContent = texto;

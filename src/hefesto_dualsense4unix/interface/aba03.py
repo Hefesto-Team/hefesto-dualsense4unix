@@ -114,7 +114,7 @@ CSS = CSS_GLIFO + """
     padding:0 11px;white-space:nowrap}
   .g2-cab .chip .pt{margin:0 6px}
   /* o lugar vazio mostra «Px · Desconectado», apagado, como no desenho do todo */
-  .g2-cab[data-conectado="nao"] .chip{color:var(--comment);border:1px solid var(--border-sutil)}
+  .g2-cab[data-conectado="nao"] .chip{color:var(--fg);border:1px solid var(--border-sutil)}
   .g2-gl{grid-row:span 2;display:flex;align-items:center;justify-content:center;color:var(--fg);
     align-self:stretch;border-right:1px solid var(--border-sutil)}
   .g2-grade > .g2-gl.g2-ds{grid-column:1;grid-row:auto}
@@ -153,7 +153,7 @@ CSS = CSS_GLIFO + """
   .criar .seg-criar{display:inline-flex;gap:4px;flex:0 0 auto}
   .criar .seg-criar label,.criar .meu{height:30px;padding:0 12px;border-radius:999px;
     font:500 12.5px/1 'Space Grotesk',system-ui,sans-serif;border:1px solid var(--linha);
-    background:var(--app-bg);color:var(--texto-mudo);cursor:pointer;white-space:nowrap;
+    background:var(--app-bg);color:var(--fg);cursor:pointer;white-space:nowrap;
     display:inline-flex;align-items:center;gap:7px;box-sizing:border-box}
   .criar .seg-criar input{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px}
   .criar .seg-criar label:has(input:checked){border-color:var(--purple);background:var(--sel-bg);
@@ -165,7 +165,7 @@ CSS = CSS_GLIFO + """
   .criar .nome-criar{height:30px;width:150px;flex:0 0 auto;padding:0 11px;border-radius:7px;
     border:1px solid var(--linha);background:var(--app-bg);color:var(--fg);
     font:500 12.5px 'Space Grotesk',system-ui,sans-serif}
-  .criar .nome-criar::placeholder{color:var(--texto-mudo)}
+  .criar .nome-criar::placeholder{color:var(--fg)}
   .criar .btn-criar{height:30px;padding:0 14px;border-radius:7px;border:1px solid var(--purple);
     background:rgba(189,147,249,.12);color:var(--purple);font:600 12.5px/1 'Space Grotesk',system-ui,sans-serif;
     cursor:pointer;flex:0 0 auto}

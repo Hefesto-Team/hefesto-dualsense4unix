@@ -227,7 +227,7 @@ window.HEF = (function(){
     e.linhas.forEach((a,i)=>{ cols[i<meio?0:1].appendChild(achado(a)); n++; });
     if(!e.linhas.length && e.vazio){
       const d = document.createElement('div');
-      d.className = 'saude'; d.style.cssText = 'color:var(--texto-mudo)';
+      d.className = 'saude'; d.style.cssText = 'color:var(--fg)';
       d.textContent = e.vazio; cols[0].appendChild(d); n++;
     }
     return n;

@@ -339,7 +339,7 @@ CSS = CSS_GLIFO + CSS_POPUP + """
          momento em que ele se enche, a garantia de estrutura vira o defeito.
          `pointer-events:none` é a mesma promessa, e ela se desfaz sozinha no
          tique em que o piloto tira o `off`. */
-  .gc-item.off .gc-nome{color:var(--comment)}
+  .gc-item.off .gc-nome{color:var(--fg)}
   .gc-item.off{cursor:default;border-style:dashed}
   .gc-item.off .gc-cabeca{border-bottom:0}
   .gc-item.off .gc-resumo,
@@ -348,10 +348,10 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .gc-item.off .gc-num{display:none}
   .gc-item.off .gc-nome b{color:var(--texto-suave);font-weight:600}
   .gc-item.off .gc-nome{font-weight:400}
-  .gc-item.off .gc-nome .sep{margin:0 6px;color:var(--texto-mudo)}
+  .gc-item.off .gc-nome .sep{margin:0 6px;color:var(--fg)}
   .gc-item.off .ds-mini{opacity:.3}
   .gc-item.off .gc-abre,
-  .gc-item.off .gc-num{pointer-events:none;color:var(--comment)}
+  .gc-item.off .gc-num{pointer-events:none;color:var(--fg)}
 
   /* ================= Conexões =================
      Três assuntos, três quadros, agrupados por PERGUNTA:
@@ -404,14 +404,14 @@ CSS = CSS_GLIFO + CSS_POPUP + """
      recortado de propósito é, para a régua da janela estreita, texto que a janela engoliu.
      O × ignora o conselho (o mesmo gesto do antigo «Ignorar»); o porquê vive no hover do título. */
   .cartao-dica .cd-x{flex:0 0 24px;width:24px;height:24px;margin:-4px 0 -4px 0;padding:0;
-              border:0;border-radius:5px;background:none;color:var(--texto-mudo);font-size:16px;
+              border:0;border-radius:5px;background:none;color:var(--fg);font-size:16px;
               line-height:1;display:inline-flex;align-items:center;justify-content:center;
               cursor:pointer}
   .cartao-dica .cd-x:hover{background:var(--sel-bg);color:var(--fg)}
   .cd-detalhe{margin:0;font-size:11px;font-family:'JetBrains Mono',monospace;
-              color:var(--texto-mudo)}
+              color:var(--fg)}
   .cartao-dica .cd-pic{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:0;
-             font-size:10.5px;font-family:'JetBrains Mono',monospace;color:var(--texto-mudo)}
+             font-size:10.5px;font-family:'JetBrains Mono',monospace;color:var(--fg)}
   .cartao-dica .cd-pic i{font-style:normal;color:var(--green)}
   .cd-acao{margin-top:auto;display:flex;justify-content:flex-end}
   .cartao-dica .cd-botao{display:flex;align-items:center;justify-content:center;width:auto;
@@ -467,7 +467,7 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .gc .ext-linha[data-larga]{grid-column:1/-1}
   .gc .ext-linha{display:flex;align-items:center;gap:8px;
                  min-height:28px;padding:0 12px;
-                 font-size:12px;color:var(--texto-mudo);
+                 font-size:12px;color:var(--fg);
                  border-top:1px solid var(--border-sutil);
                  border-left:3px dashed var(--border-forte)}
   .gc .ext-nome{color:var(--fg);font-weight:600;white-space:nowrap;flex:0 0 auto}
@@ -482,7 +482,7 @@ CSS = CSS_GLIFO + CSS_POPUP + """
      do desenho não escala com o quadrado (`non-scaling-stroke`): a 34 px, o traço de 2,6 unidades
      de uma arte de 100 viraria um fio de 0,9 px. */
   .gc .ext-desenho{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;
-                   width:34px;height:22px;color:var(--texto-mudo)}
+                   width:34px;height:22px;color:var(--fg)}
   .gc .ext-desenho svg{width:34px;height:22px;display:block}
   .ext-sprite symbol *{vector-effect:non-scaling-stroke;stroke-width:1.3px}
   /* as três listas do externo têm largura FIXA e moram no fim da linha: de um externo
@@ -559,7 +559,7 @@ CSS = CSS_GLIFO + CSS_POPUP + """
            border:1px solid transparent;border-radius:6px;background:transparent;
            color:var(--fg);font:inherit;font-size:12.5px;font-weight:600;
            text-overflow:ellipsis}
-  .gc-dono::placeholder{color:var(--texto-mudo);font-weight:400}
+  .gc-dono::placeholder{color:var(--fg);font-weight:400}
   .gc-dono:hover{border-color:var(--border-sutil)}
   .gc-dono:focus{border-color:var(--purple);outline:none}
   /* O APARELHO: o desenho e o nome, e é ele o alvo do clique que aponta a fita
@@ -580,7 +580,7 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .gc-resumo{display:flex;flex-direction:column;border-top:1px solid var(--border-sutil)}
   .gc-est{display:block;border-bottom:1px solid var(--border-sutil)}
   .gc-est .est{display:flex;align-items:center;gap:6px;height:25.5px;min-width:0;
-               font-size:12px;color:var(--texto-mudo);white-space:nowrap}
+               font-size:12px;color:var(--fg);white-space:nowrap}
   .gc-est .est > b{margin-left:auto;min-width:0;overflow:hidden;text-overflow:ellipsis;
                    color:var(--fg);font-weight:600}
   .gc-est .est > .certo{margin-left:auto;font-style:normal;font-weight:700;color:var(--texto-suave)}
@@ -604,13 +604,13 @@ CSS = CSS_GLIFO + CSS_POPUP + """
                   stroke-linecap:round;stroke-linejoin:round}
   .gc-corpo .ltrava{display:none}
   .gc-corpo .ltrava.on ~ .btn{opacity:.55;cursor:help}
-  .gc-corpo .ltrava.on ~ .btn:hover{color:var(--texto-mudo)}
+  .gc-corpo .ltrava.on ~ .btn:hover{color:var(--fg)}
   /* REGRA DE PRODUTO: *"sempre visível mas só
      acionável quando tiver no rádio"* — botão que SOME ensina que a tela é
      instável. */
-  .btn.apagado{border-color:var(--border-forte);color:var(--texto-mudo);
+  .btn.apagado{border-color:var(--border-forte);color:var(--fg);
                opacity:.55;cursor:help}
-  .btn.apagado:hover{border-color:var(--border-forte);color:var(--texto-mudo)}
+  .btn.apagado:hover{border-color:var(--border-forte);color:var(--fg)}
   /* o SVG real ganha a barra de luz acesa, PREENCHIDA (um contorno de 1,2 numa
      forma de 2px pinta menos de um pixel). As lâmpadas de jogador saem do
      desenho pequeno por `svg(..., lampadas=False)`, decisão de 28/08. */
@@ -654,7 +654,7 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .mp-fatos{display:grid;grid-template-columns:auto minmax(0,1fr);margin:0}
   .mp-fatos dt,.mp-fatos dd{margin:0;height:25.5px;display:flex;align-items:center;font-size:12px;
                             border-bottom:1px solid var(--border-sutil)}
-  .mp-fatos dt{color:var(--texto-mudo);padding-right:16px}
+  .mp-fatos dt{color:var(--fg);padding-right:16px}
   .mp-fatos dd{color:var(--fg);font-weight:600;min-width:0;overflow:hidden;
                text-overflow:ellipsis;white-space:nowrap}
   .mp-fatos dt:nth-last-child(2),.mp-fatos dd:last-child{border-bottom:none}
@@ -669,10 +669,10 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .mp-lista li{display:flex;align-items:center;gap:8px;height:25.5px;font-size:12px;
                border-bottom:1px solid var(--border-sutil);min-width:0}
   .mp-lista li b{color:var(--fg);font-weight:600;white-space:nowrap}
-  .mp-lista li span{margin-left:auto;color:var(--texto-mudo);white-space:nowrap;
+  .mp-lista li span{margin-left:auto;color:var(--fg);white-space:nowrap;
                     overflow:hidden;text-overflow:ellipsis}
-  .mp-lista li.vazio{color:var(--texto-mudo)}
-  .mp-conta{margin:0;font-size:11.5px;color:var(--texto-mudo)}
+  .mp-lista li.vazio{color:var(--fg)}
+  .mp-conta{margin:0;font-size:11.5px;color:var(--fg)}
   .mp-cx .tn-rod .btn.principal{border-color:var(--green);color:var(--green)}
   .mp-cx .tn-rod .btn.principal:hover{background:rgba(80,250,123,.09)}
   .acao{font-size:10.5px;color:var(--cyan);border-bottom:1px dotted var(--cyan);cursor:pointer}
@@ -684,7 +684,7 @@ CSS = CSS_GLIFO + CSS_POPUP + """
           border-bottom:1px solid var(--border-forte)}
   .tab td{padding:6px 8px 6px 0;color:var(--texto-suave);border-bottom:1px solid var(--border-sutil)}
   .tab tr:last-child td{border-bottom:none}
-  .tab .mudo{color:var(--texto-mudo)}
+  .tab .mudo{color:var(--fg)}
   /* CICATRIZ, medida em três tentativas: a `<table>` NÃO estica pela altura da
      caixa. Quem estica a linha de uma tabela é a `height` da CÉLULA, e não um
      `flex` na tabela.
@@ -696,7 +696,7 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .vizinhos{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:11px}
   .vizinhos select.pronto{width:100%}
   .viz{display:flex;flex-direction:column;gap:4px;min-width:0}
-  .viz .qual{font-size:10.5px;color:var(--texto-mudo);white-space:nowrap;overflow:hidden;
+  .viz .qual{font-size:10.5px;color:var(--fg);white-space:nowrap;overflow:hidden;
              text-overflow:ellipsis}
   /* A COLUNA "ONDE" — 04/09/2026, e ela é a que faltava para a linha do
      Check-up ter endereço na mesa. O exame diz "dois rádios da bancada estão em
@@ -718,7 +718,7 @@ CSS = CSS_GLIFO + CSS_POPUP + """
      nó, e a linha já tem o dela (o texto). É o mesmo desenho dos `<i class="est">`
      das cinco linhas do exame, e do `~` que leva a cor do irmão até elas. */
   .viz .vaviso{display:none}
-  .viz .onde{font-size:10.5px;color:var(--texto-mudo);white-space:nowrap;overflow:hidden;
+  .viz .onde{font-size:10.5px;color:var(--fg);white-space:nowrap;overflow:hidden;
              text-overflow:ellipsis}
   .viz .vaviso.on ~ .onde{color:var(--orange)}
   /* a sobra de altura das duas colunas do inventário cai ANTES da última fileira,
@@ -766,7 +766,7 @@ CSS = CSS_GLIFO + CSS_POPUP + """
          border:1px solid var(--border-forte);color:var(--texto-suave);
          font:inherit;font-size:11px;cursor:pointer;display:inline-flex;
          align-items:center;gap:4px}
-  .mm-ap code{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--texto-mudo)}
+  .mm-ap code{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--fg)}
   .mm-ap:hover{border-color:var(--comment);color:var(--fg)}
   /* o escolhido é um ToggleButton ATIVO — clicar nele de novo desescolhe. */
   .mm-ap.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600}
@@ -801,7 +801,7 @@ CSS = CSS_GLIFO + CSS_POPUP + """
            border:1px solid var(--border-forte);color:var(--fg);font:inherit;font-size:11.5px}
   .hub-nome{flex:1 1 auto;min-width:0;width:auto}
   .hub-pergunta .btn{flex:0 0 auto}
-  .mm-ligado{font-size:10px;color:var(--texto-mudo);line-height:1.4;padding-left:2px}
+  .mm-ligado{font-size:10px;color:var(--fg);line-height:1.4;padding-left:2px}
   .mm-ligado b{color:var(--texto-suave);font-weight:600}
   .mm-cel{display:flex;flex-direction:column;gap:4px}
   /* 84×56 é `botao.set_size_request(84, 56)`, que em GTK é MÍNIMO e não teto —
@@ -814,16 +814,16 @@ CSS = CSS_GLIFO + CSS_POPUP + """
          gap:1px;text-align:center;line-height:1.15;overflow:hidden}
   .mm-n{font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:700;color:var(--fg)}
   .mm-c{font-size:9px;color:var(--texto-suave);word-break:break-word}
-  .mm-c.mm-vazia{color:var(--texto-mudo);font-style:italic}
-  .mm-ext{font-size:8.5px;color:var(--comment)}
+  .mm-c.mm-vazia{color:var(--fg);font-style:italic}
+  .mm-ext{font-size:8.5px;color:var(--fg)}
   .mm-v{font-size:9px;font-weight:600}
   /* AS CINCO CORES SÃO OS CINCO ESTADOS QUE **ESTA** JANELA PRODUZ. Os três do
      modo ideal (`chega`, `sai`, `fica`) não entram: eles vêm do plano, e esta
      janela não calcula plano nenhum. */
   .mm-sq[data-v="cheia"]{opacity:.72}
-  .mm-sq[data-v="cheia"] .mm-v{color:var(--texto-mudo)}
+  .mm-sq[data-v="cheia"] .mm-v{color:var(--fg)}
   .mm-sq[data-v="serve"]{border-color:var(--comment)}
-  .mm-sq[data-v="serve"] .mm-v{color:var(--comment)}
+  .mm-sq[data-v="serve"] .mm-v{color:var(--fg)}
   .mm-sq[data-v="evite"]{border-color:var(--orange)}
   .mm-sq[data-v="evite"] .mm-v{color:var(--orange)}
   .mm-sq[data-v="melhor"]{border-color:var(--green);background:rgba(80,250,123,.07)}
@@ -887,7 +887,7 @@ CSS = CSS_GLIFO + CSS_POPUP + """
      transbordar. O `cursor:help` e o sublinhado pontilhado são o que anuncia
      que há mais ali. */
   .mm-conf-linha{margin:11px 0 0;font-size:11.5px;line-height:1.55;
-                 color:var(--texto-mudo)}
+                 color:var(--fg)}
   .mm-conf-linha b{font-weight:600;color:var(--texto-suave)}
   .mm-conf-linha span{cursor:help;border-bottom:1px dotted var(--border-forte)}
   /* A LINHA SOME QUANDO NÃO HÁ O QUE CONFESSAR — 03/09/2026, e a regra é a da
@@ -914,7 +914,7 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .mm-campo{height:var(--h-acao);width:118px;padding:0 9px;border-radius:7px;
             background:var(--app-bg);border:1px solid var(--border-forte);
             color:var(--fg);font:inherit;font-size:11.5px}
-  .mm-campo::placeholder{color:var(--texto-mudo)}
+  .mm-campo::placeholder{color:var(--fg)}
   .tn-rod.mm-rod{justify-content:flex-end}
   .tn-rod.mm-rod .btn{flex:0 0 auto;padding:0 22px}
 
@@ -927,7 +927,7 @@ CSS = CSS_GLIFO + CSS_POPUP + """
      progresso porque o total da fase em pé ENCOLHE — ela andaria para trás. */
   .ce-cont{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--purple)}
   .ce-quem{font-size:11.5px;color:var(--texto-suave);line-height:1.55}
-  .ce-quem code{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--texto-mudo)}
+  .ce-quem code{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--fg)}
   /* OS LUGARES CABEM NUMA LINHA SÓ — 31/08/2026, e o usuário mandou com a foto na mão:
      *"botões em duas linhas. deveria ser uma."*
 
@@ -961,7 +961,7 @@ _regras = [
     "  /* o destaque estático da fita perde para o do acordeão: `.fita .chip.on`",
     "     tem especificidade maior que o `.chip.on` do esqueleto, e é ele que",
     "     apaga o chip que nasceu marcado no HTML. */",
-    "  .fita .chip.on{background:var(--app-bg);color:var(--texto-mudo);font-weight:400;"
+    "  .fita .chip.on{background:var(--app-bg);color:var(--fg);font-weight:400;"
     "border-color:var(--border-forte)}",
     "  .fita .chip.plastico.on{border-color:var(--plastico,var(--border-forte))}",
     "  /* O CARTÃO QUE A FITA APONTA ganha a borda roxa da escolha, a mesma do",
@@ -988,7 +988,7 @@ CSS += "\n" + "\n".join(_regras) + "\n"
 
 CSS += """
   .porta{margin-left:auto;font-size:11px;line-height:17px;height:17px;
-    color:var(--texto-mudo);text-decoration:none;white-space:nowrap}
+    color:var(--fg);text-decoration:none;white-space:nowrap}
   .porta:hover{color:var(--cyan);text-decoration:underline}
 """
 
@@ -1671,11 +1671,11 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio .quadro-topo.cab{margin-bottom:0}
   .radio .quadro-topo.cab .conta{margin-left:4px}
   .radio .lugar:not(.aberto) > .aparelhos{display:none}
-  .radio .sala-vazia{color:var(--texto-mudo);font-size:12.5px;padding:10px 4px}
+  .radio .sala-vazia{color:var(--fg);font-size:12.5px;padding:10px 4px}
   .radio .moldes{display:none}
-  .radio .btn.apagado{cursor:not-allowed;border-color:var(--border-sutil);color:var(--texto-mudo)}
+  .radio .btn.apagado{cursor:not-allowed;border-color:var(--border-sutil);color:var(--fg)}
   .radio .historico{display:flex;flex-direction:column;gap:6px}
-  .radio .queda-desde{font-size:11px;color:var(--texto-mudo);padding:2px 4px}
+  .radio .queda-desde{font-size:11px;color:var(--fg);padding:2px 4px}
   .radio .conectar{display:flex;flex-direction:column;gap:11px;min-height:0}
   .radio .soltar.apagado,.radio .lampada.apagado{cursor:not-allowed;opacity:.5}
   .radio .linha{grid-template-columns:36px minmax(13ch,30ch) 1fr 6ch 22px;min-height:0;height:30px;
@@ -1696,7 +1696,7 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio span.vaga.haptica[data-ligada]{border-color:var(--c-haptica);color:var(--c-haptica)}
   .radio span.selo-zero[data-ligada]{border-color:var(--yellow);color:var(--yellow)}
   .radio span.vaga.vaga:not([data-ligada]):not(.fixa):hover{border-color:var(--linha);
-                                                          color:var(--texto-mudo)}
+                                                          color:var(--fg)}
   .radio .lugar{padding-top:0;padding-bottom:0;min-height:0}
   .radio .lugar-topo{min-height:26px}
   .radio .lugar-nome,.radio .abre-lugar{height:24px;padding-top:0;padding-bottom:0}
@@ -1715,7 +1715,7 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio .linha .xis,.radio .linha .menu-da-linha{width:22px;height:22px;padding:0;
                           display:inline-flex;align-items:center;
                           justify-content:center;border-radius:50%;border:1px solid transparent;
-                          background:transparent;color:var(--texto-mudo);cursor:pointer;font-size:12px}
+                          background:transparent;color:var(--fg);cursor:pointer;font-size:12px}
   .radio .linha .menu-da-linha{font-size:15px;line-height:1}
   .radio .linha .xis:hover,.radio .linha .menu-da-linha:hover{border-color:var(--orange);
                           color:var(--orange)}
@@ -1723,7 +1723,7 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
                           outline:2px solid var(--purple);outline-offset:2px}
   .radio .linha .nome-fixo{font-size:12.5px;color:var(--texto-suave);overflow:hidden;
                            text-overflow:ellipsis}
-  .radio .linha .features .desligado{color:var(--texto-mudo);font-size:11.5px}
+  .radio .linha .features .desligado{color:var(--fg);font-size:11.5px}
   .radio .linha .btn.tentar{height:22px;min-height:0;padding:0 12px;display:inline-flex;align-items:center;
                             font-size:11.5px;border-color:var(--green);color:var(--green)}
   .radio .linha.nao-conectou .features,.radio .linha.desligado .features{display:flex;
@@ -1749,7 +1749,7 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio .espectro{--vazio:#1b1c24}
   .radio .ar{display:flex;flex-direction:column;gap:7px}
   .radio .ar-grupo{display:flex;align-items:center;gap:8px;font-size:12px;
-                   color:var(--texto-mudo);margin-top:6px;padding-top:6px;
+                   color:var(--fg);margin-top:6px;padding-top:6px;
                    border-top:1px dashed var(--border-sutil)}
   .radio .ar-grupo.outros{color:var(--fg)}
   .radio .ar-grupo:first-child{margin-top:0;padding-top:0;border-top:0}
@@ -1787,7 +1787,7 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
                        var(--vazio) 1px 4px)}
   .radio .ar-faixa i.n.a{box-shadow:inset 0 3px 0 var(--cor)}
   /* a faixa sem leitura é o trilho vazio, igual ao dos outros; só o passo do «Descobrir» fala */
-  .radio .ar-faixa.sem{display:flex;align-items:center;font-size:11px;color:var(--texto-mudo);
+  .radio .ar-faixa.sem{display:flex;align-items:center;font-size:11px;color:var(--fg);
                        background:repeating-linear-gradient(90deg,var(--vazio) 0 9px,transparent 9px 11px)}
   /* 06/10/2026, item 1: a faixa por descobrir é o botão, à vista; o Wi-Fi em 5 GHz diz onde está */
   .radio button.ar-faixa.descobrir{justify-content:center;height:18px;padding:0;cursor:pointer;
@@ -1797,13 +1797,13 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio button.ar-faixa.descobrir span{background:var(--panel);padding:0 8px;border-radius:4px}
   .radio button.ar-faixa.descobrir:hover,.radio button.ar-faixa.descobrir:focus-visible{
                        border-color:var(--green);color:var(--green);outline:none}
-  .radio .ar-faixa.fora{display:flex;align-items:center;font-size:11px;color:var(--texto-mudo);
+  .radio .ar-faixa.fora{display:flex;align-items:center;font-size:11px;color:var(--fg);
                        background:linear-gradient(var(--vazio),var(--vazio)) center/100% 2px no-repeat}
   .radio .ar-faixa.fora span{background:var(--panel);padding:0 8px 0 0}
   /* 06/10/2026, pergunta 1 (A): quando a seção não cabe, a linha de quem está fora da faixa
      (o Wi-Fi em 5 GHz) sobe para o título do grupo como selo, e a tela não rola por ela */
   .radio .ar-no-titulo{display:none;align-items:center;gap:6px;margin-left:10px;font-size:11px;
-                       color:var(--texto-mudo)}
+                       color:var(--fg)}
   .radio .pistas[data-fora-no-titulo] .ar-no-titulo{display:inline-flex}
   .radio .pistas[data-fora-no-titulo] .ar-linha[data-fora-da-faixa]{display:none}
   .radio .ar-estado{display:flex;align-items:center;justify-content:center;width:12px}
@@ -1881,7 +1881,7 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
            border-radius:7px;padding:0 12px;font-size:12.5px;font-family:inherit;
            cursor:pointer;
            border:1px solid var(--border-forte);background:var(--app-bg);
-           color:var(--texto-mudo)}
+           color:var(--fg)}
   .radio .cadeado .p{width:7px;height:7px;border-radius:50%;flex:0 0 auto;
               background:var(--border-forte);box-shadow:none}
   .radio .cadeado.ligada{border-color:var(--green);background:rgba(80,250,123,.09);

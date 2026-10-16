@@ -138,7 +138,7 @@ CSS = """
   .hef-pos{
     height:var(--h-escolha);display:inline-flex;align-items:center;gap:9px;
     padding:0 18px;border-radius:7px;font-size:12.5px;
-    border:1px solid var(--linha);background:var(--app-bg);color:var(--texto-mudo);
+    border:1px solid var(--linha);background:var(--app-bg);color:var(--fg);
     cursor:pointer;user-select:none;
   }
   .hef-pos:hover{border-color:var(--comment);color:var(--texto-suave)}
@@ -248,14 +248,14 @@ CSS = """
     border-color:#ffb86c;background:rgba(255,184,108,.13);color:#ffd9b0}
   /* TODO ALVO CLICÁVEL TEM NO MÍNIMO 24px (WCAG 2.5.8). */
   [data-gesto]{min-height:24px}
-  .degrau.sem-dono{border-style:dashed;color:var(--comment);cursor:not-allowed}
-  .degrau.sem-dono:hover{border-color:var(--linha);color:var(--comment)}
+  .degrau.sem-dono{border-style:dashed;color:var(--fg);cursor:not-allowed}
+  .degrau.sem-dono:hover{border-color:var(--linha);color:var(--fg)}
   .degrau.sem-dono i{border-style:dashed}
   /* O TRAÇO NO LUGAR DO ALGARISMO. O círculo diz a ordem em que o Hefesto TENTA
      sozinho; quem não é degrau da `ponte_escada.ESCADA` não tem ordem nenhuma, e
      um número ali diria que o PS+R3 para naquele modo. É a mesma disciplina do
      `painel.SEM_LEITOR`: um traço, e não um zero. */
-  .degrau i.tr{color:var(--comment);border-style:dashed}
+  .degrau i.tr{color:var(--fg);border-style:dashed}
 
   /* OS QUATRO NUMA FILEIRA SÓ, E TODOS DA MESMA LARGURA. Era `flex`, e os dois
      cartões mediam 228.8 e 225.2 px — a largura vinha do nome do plástico. */
@@ -308,10 +308,10 @@ CSS = """
     padding:5px 8px 6px;
     border:2px dashed var(--border-forte);border-radius:7px;
     background:var(--app-bg);
-    font-size:11.5px;line-height:15px;color:var(--texto-mudo);
+    font-size:11.5px;line-height:15px;color:var(--fg);
   }
   .pecas .ext-nome{color:var(--fg);font-weight:500}
-  .pecas .ext-via{color:var(--texto-mudo)}
+  .pecas .ext-via{color:var(--fg)}
   .pecas .ext-aviso{color:var(--orange)}
 
   /* O CARTÃO VIROU COLUNA em 28/08, e o motivo é a decisão de produto: a máscara
@@ -371,7 +371,7 @@ CSS = """
      Com `1.45` o cartão media 67,5px e a coluna de avisos ao lado, 55: doze e  # (noqa-acento)  (`media` é o verbo medir)
      meio de vão. Em pixel, e não em múltiplo, porque o rótulo tem três linhas
      e cada pixel aqui vale três. */
-  .cartao .rotulo{color:var(--texto-mudo);line-height:15px;white-space:nowrap}
+  .cartao .rotulo{color:var(--fg);line-height:15px;white-space:nowrap}
   .cartao .rotulo b{color:var(--fg);font-weight:500}
   /* O "PLAYER N" ESMAECIDO — 04/09/2026, decisão [02] desta aba: *"'Player N',
      esmaecido enquanto espera."* A palavra FICA (D-04 dela, contra a minha
@@ -387,7 +387,7 @@ CSS = """
      ZERO PIXEL: só `color` e `font-weight` mudam, e o peso volta ao do rótulo.
      Nenhuma medida de caixa se move, então a cena que o usuário aprovou — os dois
      controles numerados pelo jogo — continua idêntica. */
-  .cartao .rotulo b.espera{color:var(--texto-mudo);font-weight:400}
+  .cartao .rotulo b.espera{color:var(--fg);font-weight:400}
   /* ---------- O CADEADO DA TROCA AUTOMÁTICA, NO CANTO — 08/09/2026 ----------
      A caixa que o usuário pediu em 23/07 e que voltou para esta aba pela decisão [03].
      Ela mora no quadro Modo, fora das duas seções do interruptor — a troca de
@@ -483,7 +483,7 @@ CSS = """
   .quadro-topo > .canto:hover{border-color:var(--texto-suave);color:var(--fg)}
   .quadro-topo > .canto .gira{flex:0 0 auto}
   .cadeado{border:1px solid var(--border-forte);background:var(--app-bg);
-           color:var(--texto-mudo)}
+           color:var(--fg)}
   .cadeado .p{width:11px;height:11px;border-radius:50%;flex:0 0 auto;
               background:var(--border-forte);box-shadow:none}
   .cadeado.ligada{border-color:var(--green);background:rgba(80,250,123,.09);
@@ -806,7 +806,7 @@ CSS = """
      e o travessão que o piloto escreve num valor vazio conta como desligado.
      Uma palavra que viesse do produto sumiria da página parada, e o desenho
      dela deixaria de mostrar o que o usuário aprovou. */
-  .cartao .e-primario{display:none;color:var(--texto-mudo);cursor:help}
+  .cartao .e-primario{display:none;color:var(--fg);cursor:help}
   .cartao .e-primario.ha{display:inline}
   /* ---------- A MARCA DA EMULAÇÃO DEGRADADA SAIU — 13/09/2026 ----------
      Eram duas regras: `.cartao .degradou` nascia `display:none` e
