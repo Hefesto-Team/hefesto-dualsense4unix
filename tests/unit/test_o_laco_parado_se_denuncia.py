@@ -11,11 +11,22 @@ import time
 
 import pytest
 
-COMECO = textwrap.dedent("""
+#: O relógio do vigia, na escala em que o teste corre: o limite é a quinta parte do segundo do
+#: produto e o passo também (a razão entre os dois, e a do tempo de CPU de cada tarefa para o
+#: limite, são as de antes). Em tempo curto a parada que o vigia denuncia cabe em meio segundo.
+LIMITE_S = 0.2
+PASSO_S = 0.04
+SEGUNDOS_DO_LACO_SAO = 6.0
+CPU_DA_TAREFA_S = 0.002
+
+COMECO = textwrap.dedent(f"""
     import asyncio, os, re, signal, sys, time
     from hefesto_dualsense4unix.utils.logging_config import configure_logging
     configure_logging()
     from hefesto_dualsense4unix.daemon.subsystems.vigia_do_laco import vigiado
+
+    LIMITE_S, PASSO_S = {LIMITE_S}, {PASSO_S}
+    CPU_DA_TAREFA_S, SEGUNDOS_DO_LACO_SAO = {CPU_DA_TAREFA_S}, {SEGUNDOS_DO_LACO_SAO}
 
     def marca(texto):
         os.write(2, ("@@ " + texto + "\\n").encode())
@@ -40,11 +51,11 @@ def test_o_laco_parado_sem_o_gil_diz_onde_uma_vez_e_diz_que_voltou() -> None:
     """Uma corrotina que dorme 3 s sem devolver o laço (o GIL solto): sai"""
     saida = _filho("""
         async def a_corrotina_que_dorme_no_laco():
-            await asyncio.sleep(1.5)
-            time.sleep(3)
-            await asyncio.sleep(1.5)
+            await asyncio.sleep(0.3)
+            time.sleep(0.6)
+            await asyncio.sleep(0.3)
 
-        asyncio.run(vigiado(a_corrotina_que_dorme_no_laco(), limite_s=1.0, passo_s=0.2))
+        asyncio.run(vigiado(a_corrotina_que_dorme_no_laco(), limite_s=LIMITE_S, passo_s=PASSO_S))
     """)
     assert saida.count("laco_parado") == 1, saida
     assert _pilhas(saida) == 1, saida
@@ -62,21 +73,21 @@ def test_o_laco_parado_com_o_gil_preso_ainda_deixa_a_pilha() -> None:
             return time.perf_counter() - comeco
 
         n = 16
-        while tempo_da_regex(n) < 0.2:
+        while tempo_da_regex(n) < 0.04:
             n += 1
-        while tempo_da_regex(n) < 0.4 and n < 40:
+        while tempo_da_regex(n) < 0.08 and n < 40:
             n += 1
-        # cada letra a mais dobra o tempo: daqui a ~3 s
-        n += 3
+        # cada letra a mais dobra o tempo: daqui a ~1 s, três vezes o limite
+        n += 4
 
         async def a_corrotina_que_segura_o_gil():
-            await asyncio.sleep(1.5)
+            await asyncio.sleep(0.3)
             marca("a regex começou")
             re.match(r"(a+)+$", "a" * n + "b")
             marca("a regex acabou")
-            await asyncio.sleep(1.5)
+            await asyncio.sleep(0.3)
 
-        asyncio.run(vigiado(a_corrotina_que_segura_o_gil(), limite_s=1.0, passo_s=0.2))
+        asyncio.run(vigiado(a_corrotina_que_segura_o_gil(), limite_s=LIMITE_S, passo_s=PASSO_S))
     """, prazo_s=180.0)
     assert _pilhas(saida) == 1, saida
     comeco, pilha, fim = (saida.index("@@ a regex começou"), saida.index("Timeout ("),
@@ -86,20 +97,20 @@ def test_o_laco_parado_com_o_gil_preso_ainda_deixa_a_pilha() -> None:
 
 
 def test_o_laco_sao_nao_acusa_nada() -> None:
-    """Trinta segundos de laço são, com tarefas de 10 ms de CPU: zero"""
+    """Seis segundos de laço são, com tarefas de 2 ms de CPU: zero"""
     saida = _filho("""
         async def trabalho(fim):
             while time.monotonic() < fim:
                 comeco = time.perf_counter()
-                while time.perf_counter() - comeco < 0.010:
+                while time.perf_counter() - comeco < CPU_DA_TAREFA_S:
                     pass
                 await asyncio.sleep(0)
 
         async def o_laco_sao():
-            fim = time.monotonic() + 30.0
+            fim = time.monotonic() + SEGUNDOS_DO_LACO_SAO
             await asyncio.gather(*(trabalho(fim) for _ in range(4)))
 
-        asyncio.run(vigiado(o_laco_sao(), limite_s=1.0, passo_s=0.2))
+        asyncio.run(vigiado(o_laco_sao(), limite_s=LIMITE_S, passo_s=PASSO_S))
         marca("acabou")
     """)
     assert "@@ acabou" in saida
@@ -116,7 +127,7 @@ def test_o_sigterm_continua_parando_o_servico() -> None:
             marca("pronto")
             await parar.wait()
 
-        asyncio.run(vigiado(o_servico(), limite_s=1.0, passo_s=0.2))
+        asyncio.run(vigiado(o_servico(), limite_s=LIMITE_S, passo_s=PASSO_S))
         marca("saiu")
     """)
     filho = subprocess.Popen([sys.executable, "-c", codigo], stderr=subprocess.PIPE,
@@ -130,7 +141,7 @@ def test_o_sigterm_continua_parando_o_servico() -> None:
             if not linha and filho.poll() is not None:
                 break
         assert "@@ pronto" in linha, "o serviço de mentira não subiu"
-        time.sleep(1.5)
+        time.sleep(0.3)
         comeco = time.monotonic()
         filho.send_signal(signal.SIGTERM)
         filho.wait(timeout=10)
