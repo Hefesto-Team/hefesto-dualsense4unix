@@ -116,7 +116,9 @@ MEDIDA = r"""
   // devolve. A subida para no `.janela`: acima dela é a página, não o desenho.
   function tituloAlcancavel(el){
     for (var p = el; p; p = p.parentElement){
-      var v = p.getAttribute('title');
+      // `data-dica` é o `title` da base comum (A-BASE-COMUM-DAS-ABAS-01): a dica da casa abre
+      // com o ponteiro no elemento ou em quem o contém, como o tooltip do navegador.
+      var v = p.getAttribute('title') || p.getAttribute('data-dica');
       if (v) return v;
       if (p.classList && p.classList.contains('janela')) return null;
     }
@@ -530,7 +532,8 @@ def test_a_mordida_da_afordancia_sem_o_title_o_corte_vira_sumico(tmp_path):
 
     (tmp_path / ABA_DA_MORDIDA).write_text(
         (onde.BANCADA / ABA_DA_MORDIDA).read_text(encoding="utf-8")
-        .replace(' title="', ' data-title-arrancado="'),
+        .replace(' title="', ' data-title-arrancado="')
+        .replace(' data-dica="', ' data-dica-arrancada="'),
         encoding="utf-8")
     mordida = medir(TAMANHOS[1], (ABA_DA_MORDIDA,), pasta=tmp_path)[ABA_DA_MORDIDA]
 

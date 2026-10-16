@@ -113,8 +113,10 @@ def test_as_seis_linhas_deixam_de_ser_o_travessao(a09, ctx):
     lista = p[a09.CAMPO_DO_STATUS]
     pilulas = re.findall(r'<span class="selo [a-z]+"><span class="sg">[^<]*</span>([^<]*)</span>',
                          lista)
-    assert len(pilulas) == 4, lista
-    for ident in ("hefesto-estado", "hefesto-troca-de-perfil", "hefesto-ambiente"):
+    # Desde 15/10/2026 o Status tem DUAS linhas; o Bluetooth, o Steam Input, o Áudio e o gamepad
+    # virtual são do exame (`exame-lista`), e o ambiente saiu da aba.
+    assert len(pilulas) == 2, lista
+    for ident in ("hefesto-estado", "hefesto-troca-de-perfil"):
         linha = re.search(r'data-id="' + ident + r'".*?</(?:div|a)>', lista)
         assert linha, f"o Status parou de trazer `{ident}`"
         assert '</span>—</span>' not in linha.group(0), (
@@ -327,7 +329,11 @@ def test_nenhuma_faixa_desta_aba_volta_ao_1fr_cru():
     """`.bloco2` e `.saude-cols` medem `minmax(0,1fr)`, e a régua do gerador cobra."""
     fonte = (RAIZ / "src/hefesto_dualsense4unix/interface/aba09.py").read_text(
         encoding="utf-8")
-    for faixa in (".status3", ".avancadas", ".saude-cols"):
+    # `.saude-cols` virou `display:contents` em 15/10/2026: as colunas do exame são as da grade do
+    # `.status3`, e quem mede a largura é ele.
+    assert re.search(r"\.saude-cols\{display:contents\}", fonte), (
+        "o exame saiu da grade do `.status3`")
+    for faixa in (".status3", ".avancadas"):
         regra = re.search(re.escape(faixa) + r"\{[^}]*grid-template-columns:([^;]*);",
                           fonte)
         assert regra, f"a faixa `{faixa}` sumiu do gerador — a régua ficou cega"
@@ -335,6 +341,6 @@ def test_nenhuma_faixa_desta_aba_volta_ao_1fr_cru():
             f"a faixa `{faixa}` voltou ao `1fr` cru: {regra.group(1).strip()!r}. "
             f"O piso de `1fr` é o CONTEÚDO, e com os valores REAIS desta aba "
             f"isso estoura 27px (`.bloco2`) e 253px (`.saude-cols`).")
-    assert '(".status3", ".avancadas", ".saude-cols")' in fonte, (
+    assert '(".status3", ".avancadas")' in fonte, (
         "as duas faixas internas saíram da lista da régua 5 do gerador — foi "
         "por estarem de fora dela que o `1fr` cru sobreviveu ali.")

@@ -97,13 +97,25 @@ A_ABA_AINDA_TRAZ = {
 }
 
 
+#: Os quatro botões que o interruptor «Permitir correções automáticas» juntou na aba Sistema
+#: (A-ABA-SISTEMA-DO-TODO-01, 15/10/2026). A página não os traz mais, mas os gestos seguem
+#: registrados e em uso nos ajudantes e nos testes; saem da `CAMADA` no dia em que o código sair.
+SEM_BOTAO_NA_PAGINA = {
+    ("09-sistema.html", "aplicar-aos-jogos"),
+    ("09-sistema.html", "corrigir-vulkan"),
+    ("09-sistema.html", "fixar-proton"),
+    ("09-sistema.html", "refazer-consertos"),
+}
+
+
 def test_toda_linha_da_camada_tem_gesto() -> None:
     """E toda linha tem gesto na página."""
     pac = _pacotes()
     camada = pac.camada
     vistos = _vistos()
     sobra = sorted(f"{p}·{g}" for p, g in camada.CAMADA
-                   if (p, g) not in vistos and (p, g) not in A_ABA_AINDA_TRAZ)
+                   if (p, g) not in vistos and (p, g) not in A_ABA_AINDA_TRAZ
+                   and (p, g) not in SEM_BOTAO_NA_PAGINA)
     assert not sobra, f"linha sem gesto na página: {sobra}"
     assert set(camada.CAMADA.values()) <= camada.CAMADAS
 

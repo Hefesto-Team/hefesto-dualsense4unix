@@ -309,7 +309,7 @@ class TestODesenhoCarregaAPeca:
         import re
 
         achado = re.search(
-            r'<button class="btn" title="([^"]*)"[^>]*data-gesto="atualizar"',
+            r'<button class="btn" (?:data-dica|title)="([^"]*)"[^>]*data-gesto="atualizar"',
             _html())
         assert achado, "a dica do botão do `atualizar` sumiu"
         dica = achado.group(1)
@@ -339,9 +339,9 @@ LER_A_TELA = r"""
     };
   }
   // AS COLUNAS IRMÃS DE HOJE são as das Configurações Avançadas (25/09/2026):
-  // a do Serviço, onde mora o botão que acinzenta, e a dos ligáveis, a última.
+  // a do Serviço, onde mora o botão que acinzenta, e a da Saúde do app, a última.
   const est = document.querySelector('.avancadas .col-servico');
-  const acao = document.querySelector('.avancadas .col-ligaveis');  // (noqa-acento) nome
+  const acao = document.querySelector('.avancadas .saude-app');  // (noqa-acento) nome
   const bloco = document.querySelector('.avancadas');
   const miolo = document.querySelector('.janela > .miolo') ||
                 document.querySelector('.miolo');

@@ -138,11 +138,11 @@ def test_a_09_o_title_do_parar_nao_crava_numero(publicado: bool) -> None:
     tags = [t for t in re.findall(r"<button\b[^>]*>", _pagina(PAGINA_09, publicado))
             if 'data-gesto="parar-ou-retomar"' in t]
     assert len(tags) == 1, tags
-    dica = re.search(r'title="([^"]*)"', tags[0])
+    dica = re.search(r'(?:title|data-dica)="([^"]*)"', tags[0])
     assert dica, tags[0]
     texto = html.unescape(dica.group(1))
     assert not DIGITO.search(texto), f"o `title` do Parar crava um número: {texto!r}"
-    assert "os controles" in texto, texto
+    assert "os controles" in texto.lower(), texto
 
 
 def test_a_09_a_pergunta_do_parar_nao_crava_numero() -> None:

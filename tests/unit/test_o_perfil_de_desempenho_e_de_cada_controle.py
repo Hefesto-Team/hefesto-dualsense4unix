@@ -99,15 +99,23 @@ def test_o_corpo_do_clique_e_o_do_dono_da_economia(k: int) -> None:
 @pytest.mark.parametrize("arquivo", PAGINAS_09, ids=["bancada", "publicada"])
 def test_a_sistema_diz_personalizado_e_a_relacao_com_o_cartao(arquivo: pathlib.Path) -> None:
     html = arquivo.read_text(encoding="utf-8")
-    botoes = re.findall(r'data-gesto="perfil-da-mesa" data-v="(\w+)"[^>]*title="([^"]*)">([^<]+)<',
-                        html)
+    botoes = re.findall(
+        r'data-gesto="perfil-da-mesa" data-v="(\w+)"[^>]*(?:title|data-dica)="([^"]*)">([^<]+)<',
+        html)
     orc = _orc()
     assert [(v, r) for v, _t, r in botoes] == [
         (p, orc.ROTULOS_DOS_PERFIS[p]) for p in orc.PERFIS], botoes
     dicas = {v: t for v, t, _r in botoes}
-    assert dicas["bateria_longa"].endswith("Vale para todos os controles."), dicas
-    for v in ("tudo_ligado", "eu_escolho"):
-        assert dicas[v].endswith("cada um pode ter o seu na aba Conexões."), dicas
+    if arquivo.parent.name == "mockup":
+        # O desenho do todo (A-ABA-SISTEMA-DO-TODO-01, 15/10/2026) trocou as três dicas longas
+        # pelas curtas aprovadas; a relação com o cartão da Conexões vem na terceira.
+        assert dicas == {"tudo_ligado": "Nada é limitado",
+                         "bateria_longa": "Vibração em 30% da força",
+                         "eu_escolho": "Você escolhe em cada aba"}, dicas
+    else:
+        assert dicas["bateria_longa"].endswith("Vale para todos os controles."), dicas
+        for v in ("tudo_ligado", "eu_escolho"):
+            assert dicas[v].endswith("cada um pode ter o seu na aba Conexões."), dicas
     assert "Eu escolho" not in html
 
 

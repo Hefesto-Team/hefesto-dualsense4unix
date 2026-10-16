@@ -117,13 +117,15 @@ def test_o_status_tem_endereco_na_pagina():
 
 
 def test_o_pacote_emite_o_glifo_de_cada_linha_do_status(a09, ctx):
-    """E o pacote escreve as quatro, cada uma com glifo E palavra.
+    """E o pacote escreve as duas, cada uma com glifo E palavra.
 
     **A MORDIDA:** esvazie o `g` em `aba_sistema._linha_de_status`. Reprova
     dizendo qual pílula saiu sem glifo.
     """
     pilulas = _pilulas(a09.pacote(ctx)[a09.CAMPO_DO_STATUS])
-    assert len(pilulas) == 4, pilulas
+    # Desde 15/10/2026 o Status tem DUAS linhas (Serviço e Troca de perfil); o Bluetooth e o resto
+    # vivem no exame.
+    assert len(pilulas) == 2, pilulas
     for glifo, palavra in pilulas:
         assert glifo.strip() and palavra.strip(), (
             f"a pílula {palavra!r} saiu sem glifo — quem não distingue verde de "

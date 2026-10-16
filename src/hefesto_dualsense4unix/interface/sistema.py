@@ -49,6 +49,10 @@ ENDERECOS: dict[str, str] = {
     "exame-lista": "`integrations/storm_doctor.storm_report:755`",
     "registro-texto": "`systemctl status` + a identidade de fábrica + o diário "
     "da unit (`journalctl --user`), com o endereço dos controles mascarado",
+    "correcoes-automaticas": "`integrations.vigia_do_jogo_novo.interruptor_ligado` — o "
+    "arquivo do interruptor, que o guarda do jogo novo e a tela leem",
+    "tamanho-da-interface": "`a09_sistema.tamanho_da_interface` — a escolha guardada em "
+    "`interface_escala` (100, 125 ou 150)",
 }
 
 #: quem o aplica está escrito aqui — inclusive quando a resposta é "ninguém".
@@ -87,6 +91,13 @@ GESTOS: dict[str, str] = {
     "copiar-registro": "`a09_sistema.copiar_registro` — o texto inteiro do "
     "painel na área de transferência (`Gtk.Clipboard`, o mesmo caminho de "
     "`daemon_actions.on_storm_copy_launch`).",
+    "salvar-registro": "`a09_sistema.salvar_registro` — o mesmo texto do painel, mascarado, "
+    "num arquivo que ela escolhe (`pacotes/ponte.salvar_arquivo`).",
+    "correcoes-automaticas": "`a09_sistema.correcoes_automaticas` — o interruptor que junta "
+    "o Doctor, os lançadores, o Proton fixado e a escolha do Vulkan: alterna o arquivo do "
+    "`vigia_do_jogo_novo`; o duplo clique liga e reaplica agora.",
+    "tamanho-da-interface": "`a09_sistema.tamanho_da_interface_gesto` — grava a escolha em "
+    "`interface_escala`; quem aplica o zoom nas abas é a janela.",
 }
 
 SEM_FONTE: dict[str, str] = {

@@ -18,10 +18,6 @@ from onde import RAIZ as R  # noqa: E402
 
 from hefesto_dualsense4unix.interface import janela as _ponte  # noqa: E402
 
-from hefesto_dualsense4unix.integrations.camadas_vulkan import (  # noqa: E402
-    frase_do_estado as _frase_do_vulkan,
-)
-
 N = len(CONECTADOS)
 LUGARES = len(MESA)
 USB = [c for c in CONECTADOS if c["via"] == "USB"]
@@ -92,11 +88,15 @@ GESTOS = _CONTRATO["GESTOS"]
 
 _DO_PACOTE = _constantes(
     R / "src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py",
-    {"APELIDO_NA_TELA", "CAMPO_DO_MODO_AVULSO", "CAMPO_DO_STATUS", "CAMPO_DO_VERDE"})
+    {"APELIDO_NA_TELA", "CAMPO_DO_MODO_AVULSO", "CAMPO_DO_STATUS", "CAMPO_DO_VERDE",
+     "CAMPO_DAS_CORRECOES", "TAMANHOS_DA_INTERFACE", "CAMPO_DO_TAMANHO"})
 APELIDO_NA_TELA = _DO_PACOTE["APELIDO_NA_TELA"]
 CAMPO_DO_MODO_AVULSO = _DO_PACOTE["CAMPO_DO_MODO_AVULSO"]
 CAMPO_DO_STATUS = _DO_PACOTE["CAMPO_DO_STATUS"]
 CAMPO_DO_VERDE = _DO_PACOTE["CAMPO_DO_VERDE"]
+CAMPO_DAS_CORRECOES = _DO_PACOTE["CAMPO_DAS_CORRECOES"]
+TAMANHOS_DA_INTERFACE = _DO_PACOTE["TAMANHOS_DA_INTERFACE"]
+CAMPO_DO_TAMANHO = _DO_PACOTE["CAMPO_DO_TAMANHO"]
 
 
 def _id(nome):
@@ -167,32 +167,32 @@ def impoe(perfil):
 CSS = """
   /* ---------- Sistema, em três seções (A-09-SISTEMA-EM-TRES-SECOES-01, 25/09/2026) ----------
      Pedido: *«praticamente vamos só mudar de lugar as coisas dessa aba»*.
-     1. Status (três colunas: o Status e o exame em duas);
+     1. Status (seis linhas, em três colunas);
      2. Configurações avançadas (quatro colunas de botões);
      3. os Detalhes técnicos, com a altura que sobra.
      O quadro é `estica`: a seção 3 é a única que sabe crescer, e cresce. */
 
   /* `minmax(0,1fr)` EM TODA FAIXA — a lição de 31/08 continua valendo: `1fr` tem
      por piso o CONTEÚDO, e uma frase longa do exame empurraria a coluna vizinha
-     para fora do quadro. A régua 5, lá embaixo, cobra as três. */
-  .status3{display:grid;grid-template-columns:minmax(0,1fr) 1px minmax(0,2fr);
+     para fora do quadro. A régua 5, lá embaixo, cobra as duas. */
+  .status3{display:grid;grid-template-columns:minmax(0,1fr) 1px minmax(0,1fr) 1px minmax(0,1fr);
            gap:0 20px;align-items:start}
   .avancadas{display:grid;grid-template-columns:minmax(0,1fr) 1px minmax(0,1fr) 1px
-             minmax(0,1fr) 1px minmax(0,1fr);gap:0 20px;align-items:start}
+             minmax(0,1fr) 1px minmax(0,1fr);gap:0 22px;align-items:start}
   .risco{background:var(--border-sutil);align-self:stretch}
 
   /* o rótulo de cada coluna nasce no x da coluna que ele nomeia — por isso o
      `sec-rot` repete o `grid-template-columns` da faixa que encabeça. */
   .sec-rot{font-size:12px;font-weight:600;color:var(--rot-campo);
-           margin-bottom:5px;height:17px;display:grid;gap:0 20px;align-items:center}
+           margin-bottom:8px;height:17px;display:grid;gap:0 22px;align-items:center}
   .sec-rot > span{display:flex;align-items:center;gap:8px;min-width:0;white-space:nowrap}
-  .sec-rot .ajuda{text-transform:none;letter-spacing:0}
-  .sr-status3{grid-template-columns:minmax(0,1fr) 1px minmax(0,2fr)}
+  .sr-status3{grid-template-columns:minmax(0,1fr)}
   .sr-avancadas{grid-template-columns:minmax(0,1fr) 1px minmax(0,1fr) 1px
                 minmax(0,1fr) 1px minmax(0,1fr)}
-  /* A LINHA DO TÍTULO DA SEÇÃO 3 LEVA O «Copiar», que é mais alto que os 17px
+  /* A LINHA DO TÍTULO DA SEÇÃO 3 LEVA O «Copiar» E O «Salvar», que são mais altos que os 17px
      de um rótulo: ela mede o que tem dentro, e a borda de cima fica nela. */
   .sr-log{grid-template-columns:minmax(0,1fr) auto;height:auto}
+  .sr-log > span:last-child{gap:6px}
   /* NENHUMA FAIXA ENCOLHE — o quadro é `estica` e o corpo é uma coluna flex:
      sem isto o navegador espreme os rótulos para dar altura ao registro. Quem
      cresce e encolhe é só o `.registro`. */
@@ -207,7 +207,7 @@ CSS = """
 
   /* AS LINHAS DO STATUS E DO EXAME SÃO A MESMA PEÇA — pedido: *«no MESMO
      estilo das linhas do O exame de hoje (a pílula à esquerda e o texto
-     curto)»*. 25,5px por linha, e quatro linhas em cada uma das três colunas:
+     curto)»*. 25,5px por linha, e duas linhas em cada uma das três colunas:
      elas acabam no mesmo y. */
   .saude{display:flex;align-items:center;gap:9px;height:25.5px;font-size:12px;
          color:var(--texto-suave);border-bottom:1px solid var(--border-sutil);
@@ -218,16 +218,21 @@ CSS = """
      pílula de tamanho diferente na mesma faixa seria duas peças. */
   .saude .selo{flex:0 0 76px;text-align:center}
   .selo .sg{margin-right:4px;font-weight:700}
-  .selo.ok{background:var(--green);color:var(--app-bg)}
+  /* SEM AVISO VERDE (conferência de 14/10/2026): o que está bem fica numa pílula neutra, na cor
+     do texto; o laranja pede atenção e o vermelho é a linha que FALHA, até se curar. */
+  .selo.ok{background:transparent;color:var(--texto-suave);box-shadow:inset 0 0 0 1px var(--border-forte)}
   .selo.aviso{background:var(--orange);color:var(--app-bg)}
   .selo.nt{background:var(--comment);color:var(--app-bg)}
+  .selo.falha{background:var(--red);color:var(--app-bg)}
   .saude .txt{flex:1;display:flex;align-items:center;gap:7px;min-width:0}
   .saude .txt span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   /* A LINHA QUE LEVA A OUTRO LUGAR (a do Bluetooth, para a seção do rádio da
      aba Conexões) é um `<a>` inteiro: a mão vira e a linha acende no hover. */
   a.saude.vai{cursor:pointer}
   a.saude.vai:hover .txt{color:var(--fg)}
-  .saude-cols{display:grid;grid-template-columns:minmax(0,1fr) 1px minmax(0,1fr);gap:0 18px}
+  /* O EXAME ENTRA NA GRADE DO STATUS: o produto troca o conteúdo de `.saude-cols` (duas colunas
+     e o risco entre elas) e as duas viram as colunas 2 e 3 de `.status3`, na mesma largura. */
+  .saude-cols{display:contents}
   .col-lista{display:flex;flex-direction:column;min-width:0}
 
   /* AS QUATRO COLUNAS DE BOTÕES — três itens em cada, na vertical, da mesma
@@ -249,14 +254,25 @@ CSS = """
      todo tique; a regra de baixo só a deixa vencer o vermelho. */
   .btn.vermelho.verde{color:var(--green)}
   .btn.vermelho.verde:hover{border-color:var(--green);color:var(--green)}
+  /* O «Restaurar de fábrica» é o único com a borda vermelha: o clique que perde o ajuste. */
+  .btn.borda-vermelha{border-color:var(--red);color:var(--red)}
+  .btn.borda-vermelha:hover{background:rgba(255,85,85,.08)}
 
-  /* O PERFIL GLOBAL DE BATERIA, NA VERTICAL — os três botões da aba Vibração
-     (`.seg`), empilhados, na altura dos botões vizinhos. Escolha única: o aceso
+  /* O PERFIL GLOBAL DE BATERIA E O TAMANHO DA INTERFACE, NA VERTICAL — os três botões da aba
+     Vibração (`.seg`), empilhados, na altura dos botões vizinhos. Escolha única: o aceso
      é o `on`, e o nome de cada um vem do produto. */
   .seg.bat-perfis{flex-direction:column;flex-wrap:nowrap;gap:6px}
   .seg.bat-perfis button{flex:0 0 var(--h-acao);height:var(--h-acao);min-width:0;
                          padding:0 8px;overflow:hidden;text-overflow:ellipsis;
                          white-space:nowrap}
+
+  /* A SAÚDE DO APP É UMA COLUNA DE TRÊS: os dois interruptores e o «Restaurar de fábrica», nas
+     três alturas das vizinhas. */
+  .saude-app{display:grid;grid-template-columns:minmax(0,1fr);grid-auto-flow:row;
+             grid-template-rows:repeat(3,var(--h-acao));gap:6px 8px;min-width:0}
+  .saude-app .cadeado,.saude-app .btn{width:100%;min-width:0;padding:0 10px;overflow:hidden;
+                                      text-overflow:ellipsis}
+  .saude-app .btn{justify-content:center}
 
   /* OS LIGÁVEIS SÃO A PÍLULA DO «Modo Freestyle» DA ABA JOGAR — a mesma peça
      (`aba01.py`, `.cadeado` e `.ligada`): verde e com o ponto aceso quando
@@ -278,14 +294,17 @@ CSS = """
      A seção cresce com o quadro (`estica`), e a caixa é ABSOLUTA dentro dela:
      um filho absoluto não conta para a altura do pai, então o registro vivo,
      com as suas oitenta linhas, ROLA POR DENTRO em vez de empurrar a página
-     (a cura da ROLAGEM-01, de 09/09, continua a mesma). O piso guarda que ela
-     nunca caia abaixo de seis linhas.
+     (a cura da ROLAGEM-01, de 09/09, continua a mesma).
+
+     O REGISTRO É A ÚNICA FAIXA QUE ENCOLHE, E ATÉ ZERO — 15/10/2026 (T5). Era
+     `flex:1 1 auto` com piso de 120px: em 1212x700 o fundo do registro passava 50px do quadro.
+     `flex:1 1 0` com `min-height:0` devolve ao registro só o que sobrou das outras faixas.
 
      A LINHA QUEBRA, E NÃO SAI PELA DIREITA — 25/09/2026. Era `pre`, e a linha
      do journal (uns 200 caracteres) saía cortada: para ler uma linha inteira
      era preciso rolar de lado, e o usuário pediu o painel «mais fácil de ser lido».
      `pre-wrap` guarda as quebras do texto e dobra o que não cabe. */
-  .registro{flex:1 1 auto;flex-shrink:1;min-height:120px;position:relative}
+  .registro{flex:1 1 0;min-height:0;position:relative}
   .registro > .log{position:absolute;top:0;right:0;bottom:0;left:0}
   .log{padding:10px 12px;border:1px solid var(--border-sutil);border-radius:7px;
        background:var(--app-bg);font-family:'JetBrains Mono',monospace;font-size:11px;
@@ -295,51 +314,45 @@ CSS = """
 """ + CSS_GLIFO
 
 
-#: A DICA DO «Corrigir Vulkan» DIZ O QUE ELE FAZ E O PREÇO — 28/09/2026,
+
 LIGAVEIS = (
+    ("Permitir correções automáticas", "correcoes-automaticas", CAMPO_DAS_CORRECOES, True,
+     "Fixa o Proton, corrige o Vulkan e prepara cada jogo novo"),
     ("Iniciar com o sistema", "autostart", "hefesto-autostart", True,
-     "Liga o serviço junto com o computador. Clique para trocar."),
-    ("Fixar Proton", "fixar-proton", "proton-fixado", True,
-     "Mantém os jogos na versão do Proton que faz o controle vibrar e tocar "
-     "som, e leva à lixeira as versões que nenhum jogo usa. Clique para "
-     "trocar, com a Steam fechada."),
-    ("Corrigir Vulkan", "corrigir-vulkan", "vulkan-corrigido", False,
-     "Tira dos jogos a sobreposição e o gravador de shaders da Steam. Sem "
-     "eles, o Shift+Tab da Steam some e ela não guarda os shaders do jogo. "
-     "Vale no próximo jogo que abrir."),
+     "Liga o serviço junto com o computador"),
 )
 
 
 def ligavel(rotulo, gesto, campo, ligado, dica):
     """A pílula que liga e desliga — a do «Modo Freestyle», com o endereço do produto."""
     return (f'            <button class="cadeado{" ligada" if ligado else ""}"'
-            f' title="{dica}" data-gesto="{_gesto(gesto)}"'
+            f' data-dica="{dica}" data-gesto="{_gesto(gesto)}"'
             f' data-campo="{_id(campo)}" data-hef-alvo="classe"'
             f' data-hef-classe="ligada"><span class="p"></span>{rotulo}</button>')
 
 
-def linha(selo, cls, g, txt, ident="", href="", title=""):
+def linha(selo, cls, g, txt, ident="", href="", dica=""):
     """Uma linha do Status ou do exame — a MESMA peça, na marcação do produto."""
     tag = "a" if href else "div"
     vai = " vai" if href else ""
     i = f' data-id="{ident}"' if ident else ""
     h = f' href="{href}"' if href else ""
-    t = f' title="{title}"' if title else ""
+    t = f' data-dica="{dica}"' if dica else ""
     return (f'            <{tag} class="saude{vai}"{i}{h}>'
             f'<span class="selo {cls}"><span class="sg">{g}</span>{selo}</span>'
             f'<span class="txt"{t}><span>{txt}</span></span></{tag}>')
 
 
 def item(rotulo, diz, cls="btn", gesto="", em_voo="", extra=""):
-    """Um botão com o que ele faz no `title` — pedido em 27/08."""
+    """Um botão com o que ele faz na dica curta da casa."""
     g = f' data-gesto="{gesto}"' if gesto else ""
     v = f' data-hef-em-voo="{em_voo}"' if em_voo else ""
-    return f'''            <button class="{cls}" title="{diz}"{g}{v}{extra}>{rotulo}</button>'''
+    return f'''            <button class="{cls}" data-dica="{diz}"{g}{v}{extra}>{rotulo}</button>'''
 
 
 def item_escondido(rotulo, diz, gesto, campo, cls="btn"):
     """Um botão que o desenho tem e a tela só mostra quando o produto manda."""
-    return (f'            <button class="{cls} so-avulso" title="{diz}"'
+    return (f'            <button class="{cls} so-avulso" data-dica="{diz}"'
             f' data-gesto="{_gesto(gesto)}" data-campo="{campo}"'
             f' data-hef-alvo="classe" data-hef-classe="mostra">{rotulo}</button>')
 
@@ -356,101 +369,85 @@ def item_cinza(rotulo, diz, gesto, cls=""):
             + "</div>")
 
 
+def _dica_da_bateria(p):
+    """O que o perfil impõe, curto; o perfil sem teto próprio manda escolher em cada aba."""
+    return impoe(p) if p in _COM_TETO or p == PERFIL_DA_MESA else "Você escolhe em cada aba"
+
+
 def _botoes_bateria():
     return "".join(
         f'<button class="{"on" if p == PERFIL_DA_MESA else ""}"'
         f' data-gesto="{_gesto("perfil-da-mesa")}" data-v="{p}"'
         f' data-campo="{_id("bateria-perfil")}" data-hef-alvo="classe"'
         f' data-hef-classe="on" data-hef-quando="{p}"'
-        f' title="{ROT_PERFIL[p]}: {impoe(p).lower()}. Vale para todos os controles'
-        f'{"." if p in _COM_TETO else " — cada um pode ter o seu na aba Conexões."}">'
-        f'{ROT_PERFIL[p]}</button>'
+        f' data-dica="{_dica_da_bateria(p)}">{ROT_PERFIL[p]}</button>'
         for p in ORC["PERFIS"])
+
+
+def _botoes_tamanho():
+    """Os tamanhos da interface: o aceso vem do produto, e o de hoje (100) nasce aceso."""
+    return "".join(
+        f'<button class="{"on" if v == 100 else ""}"'
+        f' data-gesto="{_gesto("tamanho-da-interface")}" data-v="{v}"'
+        f' data-campo="{_id(CAMPO_DO_TAMANHO)}" data-hef-alvo="classe"'
+        f' data-hef-classe="on" data-hef-quando="{v}"'
+        f' data-dica="{dica}">{rotulo}</button>'
+        for v, rotulo, dica in TAMANHOS_DA_INTERFACE)
 
 
 # (`interface/sistema.status_do_*`) — o teste da forma compara as duas.
 _NO_RADIO = len(BT)
 STATUS = [
     linha("LIGADO", "ok", "✓", "Serviço", ident="hefesto-estado",
-          title="Roda por trás e volta sozinho se travar."),
+          dica="Roda por trás e volta sozinho se travar."),
     linha("LIGADO", "ok", "✓", "Troca de perfil ao abrir o jogo",
           ident="hefesto-troca-de-perfil",
-          title="O perfil do jogo entra sozinho quando ele abre."),
-    linha("NOTA", "nt", "i", "Ambiente gráfico: Wayland · COSMIC",
-          ident="hefesto-ambiente",
-          title="É por ele que o Hefesto vê qual janela está na frente."),
+          dica="O perfil do jogo entra sozinho quando ele abre."),
+]
+
+#: As quatro linhas do exame que ficam à vista (o desenho do todo): o Bluetooth leva à aba
+#: Conexões. Qualquer outra linha do exame só aparece se FALHAR, e então em vermelho.
+ACHADOS = [
     linha("OK", "ok", "✓",
           f"Bluetooth: 1 adaptador · {_NO_RADIO} "
           f"{'controle' if _NO_RADIO == 1 else 'controles'}",
           ident="status-bluetooth", href="08-conexoes.html#rd-secao",
-          title="Clique para ver os adaptadores na aba Conexões."),
-]
-
-_VULKAN_ACESO = next(lig for _r, g, _c, lig, _d in LIGAVEIS if g == "corrigir-vulkan")
-FRASE_DO_VULKAN = _frase_do_vulkan(_VULKAN_ACESO)
-ACHADOS = [
-    linha("OK", "ok", "✓", "Regra de permissão dos controles instalada",
-          title="Regra de permissão dos controles instalada"),
-    linha("OK", "ok", "✓", "O serviço sobe sozinho no login",
-          title="O serviço sobe sozinho no login"),
-    linha("OK", "ok", "✓", "Steam Input desligado para o DualSense",
-          title="Steam Input desligado para o DualSense"),
-    linha("OK", "ok", "✓", f"Áudio dos {N} controles roteado",
-          title=f"Áudio dos {N} controles roteado"),
-    linha("NOTA", "nt", "i", "Um gamepad virtual por jogador",
-          title="Um gamepad virtual por jogador"),
-    linha("NOTA", "nt", "i", "Proton fixado em 9.0-4 para 3 jogos",
-          title="Proton fixado em 9.0-4 para 3 jogos"),
-    linha("NOTA", "nt", "i", "Som do sistema: sai em Controle 1",
-          title="Som do sistema: sai em Controle 1"),
-    linha("NOTA", "nt", "i", FRASE_DO_VULKAN, title=FRASE_DO_VULKAN),
+          dica="Clique para ver os adaptadores na aba Conexões."),
+    linha("OK", "ok", "✓", "Steam Input desligado",
+          dica="Steam Input desligado para o DualSense"),
+    linha("OK", "ok", "✓", "Áudio roteado", dica=f"Áudio dos {N} controles roteado"),
+    linha("OK", "ok", "✓", "Um gamepad virtual por jogador",
+          dica="Um gamepad virtual por jogador"),
 ]
 MEIO = len(ACHADOS) // 2 + len(ACHADOS) % 2
 
-D_STATUS = ('<span class="ajuda">?<span class="dica">'
-            'Como o Hefesto está agora neste computador. A pílula diz o estado.'
-            '</span></span>')
-D_SERVICO = ('<span class="ajuda">?<span class="dica">'
-             'Parar aqui não é o mesmo que desligar o Hefesto na aba Jogar: lá ele '
-             'só sai do meio do jogo.'
-             '</span></span>')
-D_BATERIA = ('<span class="ajuda">?<span class="dica">'
-             'Vale para todos os controles, e cada um pode ter o seu na aba Conexões.'
-             '</span></span>')
-D_SAUDE = ('<span class="ajuda">?<span class="dica">'
-           'Consertos que o exame já faz sozinho, para repetir quando precisar.'
-           '</span></span>')
-D_AUTOMATICO = ('<span class="ajuda">?<span class="dica">'
-                'Verde é ligado. Clique para trocar.'
-                '</span></span>')
-D_LOG = ('<span class="ajuda">?<span class="dica">'
-         'O registro do serviço, sempre à vista. Copie para relatar um problema.'
-         '</span></span>')
+#: Os rótulos de cada coluna e a dica curta de cada um (o desenho do todo): nenhum «?».
+DICA_DO_TITULO = "Esta aba é do computador, não de um controle"
+DICA_DO_STATUS = "Linha que falha fica vermelha até se curar"
+DICA_DO_FUNCIONAMENTO = "Parar desliga o serviço inteiro, não só o jogo"
+DICA_DA_INTERFACE = "O tamanho das letras e dos botões, em toda aba"
+DICA_DA_BATERIA = "Vale para todos; cada controle pode ter o seu em Conexões"
+DICA_DA_SAUDE = "Verde é ligado. Clique para trocar"
+DICA_DO_REGISTRO = "O registro do serviço; copie para relatar um problema"
 
 ROTULO_ATUALIZAR = "Atualizar"
 EM_VOO_ATUALIZAR = "Atualizando…"
-DICA_ATUALIZAR = ("Manda o serviço reler os atalhos do controle e os arquivos "
-                  "que a Steam usa para abrir os jogos. Leva alguns segundos.")
+DICA_ATUALIZAR = "Relê os atalhos e os arquivos da Steam"
 
-ROTULO_PARAR = "Parar o serviço"
+ROTULO_PARAR = "Parar"
 
 MIOLO = f'''
     <div class="quadro estica">
       <div class="quadro-topo">
-        <span class="quadro-titulo">Sistema</span>
-        <span class="ajuda">?<span class="dica">
-          Esta aba é sobre o computador, não sobre um controle. Por isso a fita de controles
-          está apagada aqui.
-        </span></span>
+        <span class="quadro-titulo" data-dica="{DICA_DO_TITULO}">Sistema</span>
       </div>
       <div class="quadro-corpo">
 
-        <!-- ---------- 1. STATUS + O EXAME ---------- -->
-        <!-- O RÓTULO DO EXAME E A CONTAGEM SAÍRAM, E O LUGAR FICA VAZIO — pedido, 25/09/2026, 22h13: «remove o exame de hoje e tooltip dele» e
-             «Remove esse 8 linhas deixa o espaço vazio». O `<span>` vazio segura
-             a terceira faixa: nada sobe, e o exame continua onde estava. -->
+        <!-- ---------- 1. STATUS: SEIS LINHAS, EM TRÊS COLUNAS ---------- -->
+        <!-- O Status leva as duas primeiras; o exame, as quatro seguintes, em duas colunas. O que
+             não está aqui só aparece se FALHAR, e então em vermelho até se curar. -->
         <div class="sec-rot sr-status3">
-          <span>Status {D_STATUS}</span><span></span><span></span>
+          <span data-dica="{DICA_DO_STATUS}">Status</span>
         </div>
         <div class="status3">
           <div class="col-lista" data-id="{_id(CAMPO_DO_STATUS)}" data-campo="{_id(CAMPO_DO_STATUS)}" data-hef-alvo="html">
@@ -471,42 +468,41 @@ MIOLO = f'''
         <!-- ---------- 2. CONFIGURAÇÕES AVANÇADAS ---------- -->
         <div class="sec-grupo"><span class="quadro-titulo">Configurações avançadas</span></div>
         <div class="sec-rot sr-avancadas">
-          <span>Serviço {D_SERVICO}</span><span></span>
-          <span>Perfil global de bateria {D_BATERIA}</span><span></span>
-          <span>Saúde do app {D_SAUDE}</span><span></span>
-          <span>Automático {D_AUTOMATICO}</span>
+          <span data-dica="{DICA_DO_FUNCIONAMENTO}">Funcionamento do app</span><span></span>
+          <span data-dica="{DICA_DA_INTERFACE}">Interface</span><span></span>
+          <span data-dica="{DICA_DA_BATERIA}">Perfil global de bateria</span><span></span>
+          <span data-dica="{DICA_DA_SAUDE}">Saúde do app</span>
         </div>
         <div class="avancadas">
           <div class="coluna col-servico">
-{item(ROTULO_PARAR, "O Hefesto deixa de rodar e os controles viram gamepads comuns. Pergunta antes.", "btn vermelho", gesto=_gesto("parar-ou-retomar"), extra=f' data-campo="{CAMPO_DO_VERDE}" data-hef-alvo="classe" data-hef-classe="verde"')}
+{item(ROTULO_PARAR, "Os controles viram gamepads comuns. Pergunta antes", "btn vermelho", gesto=_gesto("parar-ou-retomar"), extra=f' data-campo="{CAMPO_DO_VERDE}" data-hef-alvo="classe" data-hef-classe="verde"')}
 {item(ROTULO_ATUALIZAR, DICA_ATUALIZAR, gesto=_gesto("atualizar"), em_voo=EM_VOO_ATUALIZAR)}
-{item_escondido("Corrigir o serviço", "O serviço está rodando por fora do sistema, e ali reiniciar não funciona. Este botão o faz subir do jeito certo.", "corrigir-modo", CAMPO_DO_MODO_AVULSO)}
-{item_cinza("Reiniciar", "Para e liga de novo o serviço. Resolve a maioria dos travamentos, e nenhum ajuste seu se perde.", "reiniciar")}
+{item_escondido("Corrigir o serviço", "Faz o serviço subir do jeito certo", "corrigir-modo", CAMPO_DO_MODO_AVULSO)}
+{item_cinza("Reiniciar", "Para e liga de novo; nenhum ajuste se perde", "reiniciar")}
+          </div>
+          <div class="risco"></div>
+          <div class="coluna">
+            <div class="seg bat-perfis" data-id="{_id(CAMPO_DO_TAMANHO)}">{_botoes_tamanho()}</div>
           </div>
           <div class="risco"></div>
           <div class="coluna">
             <div class="seg bat-perfis" data-id="{_id("bateria-perfil")}">{_botoes_bateria()}</div>
           </div>
           <div class="risco"></div>
-          <div class="coluna">
-{item("Reaplicar correções automáticas", "Desliga o Steam Input onde ele atrapalha e leva à lixeira as versões do Proton que nenhum jogo usa. Sem senha, sem fechar nada, e com cópia de segurança.", gesto=_gesto("refazer-consertos"))}
-{item("Aplicar soluções nos lançadores", "Põe o Hefesto nos jogos da Steam e dos outros lançadores, sem perder as suas opções. Pergunta antes: fecha a Steam por uns 20 segundos.", gesto=_gesto("aplicar-aos-jogos"))}
-{item("Restaurar de fábrica", "Devolve o perfil de fábrica e o padrão do computador. Pergunta antes, e os seus perfis salvos ficam.", "btn vermelho", gesto=_gesto("restaurar-de-fabrica"))}
-          </div>
-          <div class="risco"></div>
-          <div class="coluna col-ligaveis">
+          <div class="coluna saude-app">
 {chr(10).join(ligavel(*x) for x in LIGAVEIS)}
+{item("Restaurar de fábrica", "Volta ao padrão; seus perfis salvos ficam. Pergunta antes", "btn vermelho borda-vermelha", gesto=_gesto("restaurar-de-fabrica"))}
           </div>
         </div>
 
         <!-- ---------- 3. DETALHES TÉCNICOS ---------- -->
         <div class="sec-rot sr-log sec-alta">
-          <span>Detalhes técnicos {D_LOG}</span>
-          <span>{item("Copiar", "Copia o registro inteiro para colar num relato.", "btn copiar", gesto=_gesto("copiar-registro")).strip()}</span>
+          <span data-dica="{DICA_DO_REGISTRO}">Detalhes técnicos</span>
+          <span>{item("Copiar", "Copia o registro inteiro", "btn copiar", gesto=_gesto("copiar-registro")).strip()}{item("Salvar", "Guarda o registro num arquivo", "btn copiar", gesto=_gesto("salvar-registro")).strip()}</span>
         </div>
         <div class="registro">
           <div class="log" data-id="{_id("registro-texto")}" data-campo="{_id("registro-texto")}" data-hef-rolar="fim">[23:41:02] daemon pronto · {N} controles · {N} gamepads virtuais · controle virtual ok
-[23:41:02] {" · ".join(f'p{c["jogador"]} {c["via"].lower()}' for c in CONECTADOS)} · fw 0x0356 nos {N} · cor de fábrica lida ({", ".join(f'p{c["jogador"]}' for c in CONECTADOS)})
+[23:41:02] {" · ".join(f'{c["nome"]} {c["via"].lower()}' for c in CONECTADOS)} · fw 0x0356 nos {N} · cor de fábrica lida nos {N}
 [23:41:07] exame: steam input desligado em 2 jogos · proton 9.0-4 fixado em 3
 [23:41:09] perfil "Mortal Kombat" aplicado aos {N} · gatilho L2 escrito, sem leitura de volta
 [23:41:12] rádio: 1 adaptador · {_NO_RADIO} {'controle' if _NO_RADIO == 1 else 'controles'} · sem fila
@@ -515,36 +511,6 @@ MIOLO = f'''
 
       </div>
     </div>
-'''
-
-LEGENDA = '''<div class="nota">
-  <h2>A aba Sistema em três seções — 25/09/2026</h2>
-  <ul>
-    <li><b>O pedido dela:</b> <i>"praticamente vamos só mudar de lugar as coisas dessa aba"</i>,
-      com menos texto e mais gesto. <!-- noqa-acento: citação literal --></li>
-    <li><b>1. Status</b> — o antigo <i>O serviço</i> virou <b>Status</b>, com quatro linhas na
-      forma do exame (a pílula e o texto curto): <b>Serviço</b> (LIGADO, PAUSADO ou PARADO — a
-      pausa deixou de ter linha própria), <b>Troca de perfil</b>, <b>Ambiente gráfico</b> e
-      <b>Bluetooth</b>, que leva à seção do rádio da aba Conexões. O exame fica ao lado, em duas
-      colunas, e o Bluetooth saiu dele. As frases do exame saem curtas; a inteira fica no
-      <code>title</code>. As linhas do Status não têm <code>?</code>: a frase de cada uma fica no
-      <code>title</code>, e o exame não tem rótulo nem contagem — o lugar fica vazio (os ajustes
-      dela das 22h13).</li>
-    <li><b>2. Configurações avançadas</b> — quatro colunas: <b>Serviço</b> (Parar/Retomar num botão
-      só, Atualizar, Reiniciar), <b>Perfil global de bateria</b> (as três escolhas na vertical),
-      <b>Saúde do app</b> (Reaplicar correções automáticas, Aplicar soluções nos lançadores,
-      Restaurar de fábrica) e <b>Automático</b> (Iniciar com o sistema, Fixar Proton, Corrigir
-      Vulkan — a pílula do Modo Freestyle, verde quando ligada).</li>
-    <li><b>3. Detalhes técnicos</b> — sempre à vista, com o registro do serviço, a altura que sobra
-      e um <b>Copiar</b>. O <i>Ver detalhes</i> deixou de existir.</li>
-    <li><b>Saíram</b>: a chave <i>Ligar junto com o computador</i> do topo (virou o ligável
-      <i>Iniciar com o sistema</i>) e as quatro linhas de baixo do perfil de bateria (Limite, Vale
-      para, Com limite, Sem limite).</li>
-  </ul>
-</div>
-
-</body>
-</html>
 '''
 
 def _medida(texto, regra, prop):
@@ -607,7 +573,7 @@ if len(STATUS) != MEIO:
 
 _ACOES_DO_SERVICO = _entre(MIOLO, '<div class="coluna col-servico">', '<div class="risco">')
 _ROTULOS = {
-    "a coluna": re.search(r'<div class="sec-rot sr-avancadas">\s*<span>([^<]*)<',
+    "a coluna": re.search(r'<div class="sec-rot sr-avancadas">\s*<span[^>]*>([^<]*)<',
                           MIOLO).group(1),
     "a linha do Status": re.search(
         r'data-id="hefesto-estado"[^>]*>.*?<span class="txt"[^>]*><span>([^<]*)</span>',
@@ -655,7 +621,7 @@ for _rot, _g, _c, _lig, _d in LIGAVEIS:
                          "e `LIGAVEIS` diz o contrário.")
 
 _BOTOES_BAT = re.findall(r'<button class="(on)?"[^>]*data-v="([^"]+)"[^>]*>([^<]+)</button>',
-                         _entre(MIOLO, '<div class="seg bat-perfis"', "</div>"))
+                         _entre(MIOLO, '<div class="seg bat-perfis" data-id="bateria-perfil"', "</div>"))
 if len(_BOTOES_BAT) != len(ORC["PERFIS"]):
     raise SystemExit(f"ERRO: o perfil de bateria tem {len(_BOTOES_BAT)} botões e o produto "
                      f"declara {len(ORC['PERFIS'])} perfis — a tela deixou de mostrar todos.")
@@ -666,11 +632,19 @@ for _on, _p, _rot in _BOTOES_BAT:
 if sum(1 for on, _, _ in _BOTOES_BAT if on) != 1:
     raise SystemExit("ERRO: a escolha do perfil de bateria não é única — ela pediu "
                      '"três botões lado a lado com escolha única".')
+_BOTOES_TAMANHO = re.findall(
+    r'<button class="(on)?"[^>]*data-v="([^"]+)"[^>]*>([^<]+)</button>',
+    _entre(MIOLO, f'<div class="seg bat-perfis" data-id="{CAMPO_DO_TAMANHO}"', "</div>"))
+if [(int(v), r) for _o, v, r in _BOTOES_TAMANHO] != [(v, r) for v, r, _d in TAMANHOS_DA_INTERFACE]:
+    raise SystemExit("ERRO: os botões do tamanho da interface não são os do produto "
+                     f"({_BOTOES_TAMANHO}) — o nome e o valor vêm de TAMANHOS_DA_INTERFACE.")
+if sum(1 for on, _, _ in _BOTOES_TAMANHO if on) != 1:
+    raise SystemExit("ERRO: a escolha do tamanho da interface não é única.")
 if '<span class="rot">O perfil da mesa' in MIOLO:
     raise SystemExit('ERRO: o rótulo "O perfil da mesa" voltou (ponto 7.1 dela).')
 
 
-for _faixa in (".status3", ".avancadas", ".saude-cols"):
+for _faixa in (".status3", ".avancadas"):
     _r = re.search(re.escape(_faixa) + r"\{[^}]*grid-template-columns:([^;]*);", CSS)
     if not _r:
         raise SystemExit(f"ERRO: a faixa `{_faixa}` sumiu ou deixou de declarar colunas — "
@@ -696,6 +670,19 @@ for _g in _CINZAS:
             raise SystemExit(f"ERRO: o botão de {_g!r} perdeu `{_exigido}` — a peça "
                              "da D-03 é inteira (a razão mora no `data-dica` dele).")
 
+if "ajuda" in re.findall(r'class="([^"]*)"', MIOLO):
+    raise SystemExit("ERRO: o «?» voltou: a explicação de cada rótulo é o `data-dica` dele "
+                     "(A1 do desenho do todo, 13/10/2026).")
+if MIOLO.count(f'data-gesto="{_gesto("correcoes-automaticas")}"') != 1:
+    raise SystemExit("ERRO: o interruptor das correções automáticas tem de ser UM só botão.")
+for _morto in ("refazer-consertos", "aplicar-aos-jogos", "fixar-proton", "corrigir-vulkan",
+               "doctor"):
+    if f'data-gesto="{_morto}"' in MIOLO:
+        raise SystemExit(f"ERRO: o botão `{_morto}` voltou: o interruptor das correções "
+                         "automáticas junta o Doctor, os lançadores, o Proton e o Vulkan.")
+if not re.search(r"\.registro\{[^}]*min-height:0", CSS):
+    raise SystemExit("ERRO: o registro deixou de poder encolher até zero — em 1212x700 o "
+                     "fundo dele passaria do quadro.")
 if 'class="ajuda porque"' in MIOLO:
     raise SystemExit("ERRO: o `?` da razão voltou: a razão do botão cinza é o `data-dica` dele.")
 

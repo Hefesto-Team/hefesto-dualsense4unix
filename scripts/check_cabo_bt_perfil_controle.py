@@ -70,6 +70,10 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "fixar-proton": "fixa ou solta o Proton dos jogos — é da máquina",
     "corrigir-vulkan": "tira ou devolve a sobreposição Vulkan — é da máquina",
     "perfil-da-mesa": "escolhe o perfil de energia — é do daemon",
+    "correcoes-automaticas": "liga ou desliga as correções automáticas do computador a cada jogo "
+                             "novo — é da máquina, e nada muda no aparelho",
+    "salvar-registro": "grava o registro técnico num arquivo — é leitura do diário",
+    "tamanho-da-interface": "escolhe o tamanho da interface — é da tela",
     "examinar-portas": "examina as portas USB — é leitura do barramento",
     "escolher-aparelho": "escolhe o aparelho da aba Conexões — é da tela",
     "escolher-entrada": "escolhe a entrada — é da tela",

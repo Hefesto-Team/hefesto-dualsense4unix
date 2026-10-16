@@ -539,12 +539,17 @@ def test_o_tique_escreve_o_status_e_os_tres_ligaveis(a09, ctx):
     from hefesto_dualsense4unix.interface.pacotes import normalizar
 
     mesa = normalizar(dict(a09.pacote(ctx)))["mesa"]
-    for campo in (a09.CAMPO_DO_STATUS, "hefesto-autostart", "proton-fixado",
-                  "vulkan-corrigido", a09.CAMPO_DO_VERDE):
+    # Desde 15/10/2026 a aba tem DOIS ligáveis e o interruptor das correções junta o Proton e o
+    # Vulkan: a página lida é o desenho (`mockup/`), que o `--publicar` copia para a publicada.
+    desenho = (RAIZ / "mockup/09-sistema.html").read_text(encoding="utf-8")
+    for campo in (a09.CAMPO_DO_STATUS, "hefesto-autostart", a09.CAMPO_DAS_CORRECOES,
+                  a09.CAMPO_DO_VERDE):
         assert campo in mesa, (
             f"o pacote não escreve em {campo!r}. O endereço está na página e "
             "ninguém o preenche — a tela volta a mostrar o literal do desenho.")
-        assert f'data-campo="{campo}"' in _pagina(), campo
+        assert f'data-campo="{campo}"' in desenho, campo
+    for campo in ("proton-fixado", "vulkan-corrigido"):
+        assert campo not in mesa, f"{campo!r} voltou ao pacote sem botão na página"
 
 
 def test_o_apelido_da_tela_tem_um_dono_so(a09):

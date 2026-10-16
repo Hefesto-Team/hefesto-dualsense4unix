@@ -156,13 +156,24 @@ def _as_duas_paginas() -> list[Path]:
 def test_a_dica_nao_promete_cura_de_engasgo() -> None:
     """ARRANQUE a troca da dica em `interface/aba09.py` e este teste reprova."""
     for pagina in _as_duas_paginas():
-        linha = next((ln for ln in pagina.read_text(encoding="utf-8").splitlines()
-                      if f'data-gesto="{GESTO}"' in ln), "")
-        achado = re.search(r'title="([^"]*)"', linha)
-        assert achado, f"{pagina.name}: o ligável `{GESTO}` sumiu ou perdeu a dica"
-        dica = html.unescape(achado.group(1))
-        assert "Steam" in dica and "shaders" in dica, (
-            f"{pagina.name}: a dica não diz o que o botão tira do jogo: {dica!r}")
+        linhas = pagina.read_text(encoding="utf-8").splitlines()
+        linha = next((ln for ln in linhas if f'data-gesto="{GESTO}"' in ln), "")
+        # A-ABA-SISTEMA-DO-TODO-01 (15/10/2026): no desenho do todo o botão «Corrigir Vulkan»
+        # virou parte do interruptor «Permitir correções automáticas»; a dica dele carrega o
+        # mesmo compromisso (não promete cura de engasgo) e é a que esta régua passa a ler.
+        if not linha:
+            linha = next((ln for ln in linhas if 'data-gesto="correcoes-automaticas"' in ln), "")
+            achado = re.search(r'data-dica="([^"]*)"', linha)
+            assert achado, f"{pagina.name}: nem `{GESTO}` nem o interruptor das correções têm dica"
+            dica = html.unescape(achado.group(1))
+            assert "Vulkan" in dica, (
+                f"{pagina.name}: a dica do interruptor não diz que corrige o Vulkan: {dica!r}")
+        else:
+            achado = re.search(r'title="([^"]*)"', linha)
+            assert achado, f"{pagina.name}: o ligável `{GESTO}` sumiu ou perdeu a dica"
+            dica = html.unescape(achado.group(1))
+            assert "Steam" in dica and "shaders" in dica, (
+                f"{pagina.name}: a dica não diz o que o botão tira do jogo: {dica!r}")
         for pichacao in ("engasg", "picot", "resolv", "não cura", "prefixo"):
             assert pichacao not in dica.lower(), (
                 f"{pagina.name}: a dica fala do que o botão não faz "
@@ -171,7 +182,7 @@ def test_a_dica_nao_promete_cura_de_engasgo() -> None:
 
 _LINHA_DO_EXAME = re.compile(
     r'<div class="saude"><span class="selo (?P<cls>\w+)"><span class="sg">[^<]*'
-    r'</span>(?P<selo>[^<]*)</span><span class="txt" title="(?P<frase>[^"]*)">')
+    r'</span>(?P<selo>[^<]*)</span><span class="txt" (?:title|data-dica)="(?P<frase>[^"]*)">')
 
 
 def test_o_exame_do_desenho_diz_a_frase_que_o_produto_pinta() -> None:
@@ -188,6 +199,14 @@ def test_o_exame_do_desenho_diz_a_frase_que_o_produto_pinta() -> None:
             f"picota o jogo: {frases}")
         do_vulkan = [m for m in linhas
                      if html.unescape(m.group("frase")).startswith("Sobreposição Vulkan:")]
+        botao = next((ln for ln in texto.splitlines() if f'data-gesto="{GESTO}"' in ln), "")
+        if not botao:
+            # No desenho do todo a linha da sobreposição saiu do exame e o botão virou parte do
+            # interruptor (A-ABA-SISTEMA-DO-TODO-01): sobra a frase do produto, que não picota.
+            assert not do_vulkan, f"{pagina.name}: a linha do Vulkan voltou sem o botão"
+            for ligada in (True, False):
+                assert "picot" not in cv.frase_do_estado(ligada).lower()
+            continue
         assert len(do_vulkan) == 1, (
             f"{pagina.name}: esperava UMA linha «Sobreposição Vulkan:», "
             f"achei {len(do_vulkan)}")
@@ -196,7 +215,6 @@ def test_o_exame_do_desenho_diz_a_frase_que_o_produto_pinta() -> None:
         assert (m.group("cls"), m.group("selo")) == ("nt", "NOTA"), (
             f"{pagina.name}: a linha do Vulkan tem de levar o selo NOTA do "
             f"produto, e leva {m.group('selo')!r}")
-        botao = next(ln for ln in texto.splitlines() if f'data-gesto="{GESTO}"' in ln)
         acesa = 'class="cadeado ligada"' in botao
         assert frase == cv.frase_do_estado(acesa), (
             f"{pagina.name}: a pílula está {'acesa' if acesa else 'apagada'} e o "

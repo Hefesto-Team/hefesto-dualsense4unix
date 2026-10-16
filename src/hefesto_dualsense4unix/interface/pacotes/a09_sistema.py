@@ -60,7 +60,9 @@ from hefesto_dualsense4unix.app.actions.config import secao_orcamento as _orcame
 from hefesto_dualsense4unix.app.actions.home_actions import palavra_do_transporte
 from hefesto_dualsense4unix.app.fala_do_mapa import formata_pt_br
 from hefesto_dualsense4unix.core import formas_do_endereco as _formas
+from hefesto_dualsense4unix.daemon.subsystems.rumble import sem_dono_do_rumble
 from hefesto_dualsense4unix.integrations import storm_doctor as _exame
+from hefesto_dualsense4unix.integrations import vigia_do_jogo_novo as _vigia
 from hefesto_dualsense4unix.interface import onde as _onde
 from hefesto_dualsense4unix.interface import sistema as _tela
 from hefesto_dualsense4unix.utils import maquina as _maquina
@@ -108,6 +110,55 @@ CAMPO_DO_STATUS = "status-lista"
 CAMPO_DO_VERDE = "parar-ou-retomar-verde"
 
 MODO_A_CORRIGIR = "sim"
+
+#: O interruptor que junta as correções (A-ABA-SISTEMA-DO-TODO-01): o endereço da pílula e o gesto
+#: têm o mesmo nome, e quem diz se está ligado é o guarda do jogo novo, não o clique.
+CAMPO_DAS_CORRECOES = "correcoes-automaticas"
+
+#: Os três tamanhos da interface, na ordem da tela: percentual, rótulo e dica. O gerador os lê
+#: daqui (o botão nasce deste texto), e o gesto só aceita um destes percentuais.
+TAMANHOS_DA_INTERFACE = (
+    (100, "Padrão", "O tamanho de hoje"),
+    (125, "Confortável", "Letras e botões maiores"),
+    (150, "Espaçoso", "Letras e botões maiores ainda"),
+)
+CAMPO_DO_TAMANHO = "tamanho-da-interface"
+#: O arquivo do tamanho, ao lado do interruptor das correções, na pasta de configuração.
+ARQUIVO_DO_TAMANHO = "interface_escala"
+
+
+def _arquivo_do_tamanho() -> Path:
+    """`interface_escala`, na mesma pasta de configuração do interruptor das correções."""
+    return _vigia.caminho_do_interruptor().parent / ARQUIVO_DO_TAMANHO
+
+
+def tamanho_da_interface() -> int:
+    """O percentual guardado (100, 125 ou 150). Sem arquivo, ou com outro valor: 100."""
+    padrao = TAMANHOS_DA_INTERFACE[0][0]
+    validos = {v for v, _, _ in TAMANHOS_DA_INTERFACE}
+    try:
+        texto = _arquivo_do_tamanho().read_text(encoding="utf-8")
+    except (OSError, ValueError):
+        return padrao
+    for linha in texto.splitlines():
+        palavra = linha.split("#", 1)[0].strip().rstrip("%").strip()
+        if palavra:
+            return int(palavra) if palavra.isdigit() and int(palavra) in validos else padrao
+    return padrao
+
+
+def guardar_o_tamanho(valor: int) -> None:
+    """Guarda o percentual na pasta de configuração. Levanta `RuntimeError` se não deu."""
+    destino = _arquivo_do_tamanho()
+    try:
+        destino.parent.mkdir(parents=True, exist_ok=True)
+        tmp = destino.with_name(f"{destino.name}.tmp")
+        tmp.write_text(f"{valor}\n", encoding="utf-8")
+        tmp.replace(destino)
+    except OSError as erro:
+        raise RuntimeError(
+            "Não consegui guardar o tamanho na pasta de configuração: "
+            f"{erro.strerror or erro}.") from erro
 
 #: O QUE NÃO CHEGA PELO RÁDIO É O SERIAL PUBLICADO NO `state_full` — ver
 
@@ -165,7 +216,7 @@ def _limpar_o_painel() -> None:
 
 
 #: <!-- noqa-acento: citação literal -->
-RECIBO_QUE_FICA_NA_TELA = ("corrigir-vulkan",)
+RECIBO_QUE_FICA_NA_TELA = ("corrigir-vulkan", CAMPO_DAS_CORRECOES)
 
 
 def _relatar_o_recibo(gesto_: str, frase: str) -> None:
@@ -195,7 +246,11 @@ _DICAS: dict[str, str] = {}
 
 
 def _dica_do_desenho(gesto_: str) -> str:
-    """O `title` que o DESENHO dá àquele botão — LIDO da página, como o rótulo."""
+    """A dica que o DESENHO dá àquele botão — LIDA da página, como o rótulo.
+
+    O desenho do todo fala pela dica curta (`data-dica`); o `title` ainda vale para o botão
+    que o runtime deixa cinza.
+    """
     if not _DICAS:
         for publicado in (True, False):
             try:
@@ -205,7 +260,7 @@ def _dica_do_desenho(gesto_: str) -> str:
                 continue
             for tag in re.findall(r"<button\b[^>]*>", doc):
                 nome = re.search(r'data-gesto="([^"]+)"', tag)
-                dica = re.search(r'title="([^"]*)"', tag)
+                dica = re.search(r'(?:data-dica|title)="([^"]*)"', tag)
                 if nome and dica:
                     _DICAS.setdefault(nome.group(1),
                                       html.unescape(dica.group(1)).strip())
@@ -1141,14 +1196,18 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 REGISTRO: _no_painel(None),
                 CAMPO_DO_VERDE: "",
                 "exame-lista": nada,
+                CAMPO_DAS_CORRECOES: _vigia.interruptor_ligado(),
+                CAMPO_DO_TAMANHO: str(tamanho_da_interface()),
                 **razoes_do_cinza(ctx),
                 "cobertura": {"pintados": 0, "sem_dono": 1}}
 
     fora: dict[str, object] = {}
-    fora[CAMPO_DO_STATUS] = _html_do_status(bruto.get("status") or [])
+    status = list(bruto.get("status") or [])
+    fora[CAMPO_DO_STATUS] = _html_do_status(
+        [linha for linha in status if linha.get("id") in LINHAS_DO_STATUS])
     fora["hefesto-autostart"] = bruto.get("autostart")
-    fora["proton-fixado"] = _leituras_baratas()[2]
-    fora["vulkan-corrigido"] = vulkan_corrigido()
+    fora[CAMPO_DAS_CORRECOES] = _vigia.interruptor_ligado()
+    fora[CAMPO_DO_TAMANHO] = str(tamanho_da_interface())
     _, _, perfil_da_bateria, estado, repouso = _faixa_lenta(ctx.state or None,
                                                             ctx.mesa)
     fora["bateria-perfil"] = perfil_da_bateria
@@ -1156,7 +1215,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     exame = bruto.get("exame")
     # D-A-CONTAGEM-DO-EXAME-SAIU — 25/09/2026, 22h13, pedido.
     if isinstance(exame, dict):
-        fora["exame-lista"] = _html_do_exame(_com_os_avisos(exame, ctx))
+        fora["exame-lista"] = _html_do_exame(
+            _so_o_que_a_tela_mostra(_com_os_avisos(exame, ctx), status, ctx.state))
     tira = _html_da_fita(ctx.mesa)
     if tira:
         fora[CAMPO_DA_FITA] = tira
@@ -1222,6 +1282,108 @@ def _com_os_avisos(exame: dict[str, Any], ctx: Contexto) -> dict[str, Any]:
     return {**exame, "linhas": linhas + avisos, "vazio": ""}
 
 
+#: As seis linhas à vista (A-ABA-SISTEMA-DO-TODO-01): o Status leva as duas primeiras, e o exame as
+#: quatro seguintes. Qualquer outra linha do exame só aparece se FALHAR, e então em vermelho.
+LINHAS_DO_STATUS = ("hefesto-estado", "hefesto-troca-de-perfil")
+ID_DO_BLUETOOTH = "status-bluetooth"
+ID_DO_GAMEPAD = "gamepad-por-jogador"
+LINHAS_DO_EXAME_COMPLETO = 6
+
+#: Onde, na lista do `storm_report`, mora o achado que a tela mostra de cada tema. A ordem é do
+#: dono (`storm_doctor.storm_report`) e uma régua a compara com os `check_*` dele.
+POSICAO_NO_EXAME = {"steam-input": 3, "audio": 1}
+ROTULO_DO_AUDIO_BEM = "Áudio roteado"
+
+
+def linha_do_gamepad_por_jogador(state: Any) -> dict[str, Any]:
+    """A sexta linha: cada controle ligado tem o seu gamepad virtual?
+
+    A fonte é a que o produto já lê para a vibração: os gamepads virtuais que o serviço publicou
+    (`rumble_ff.vpads`), os controles conectados, a Conexão Nativa e a emulação. Vermelho só no
+    defeito real, o de `sem_dono_do_rumble` (emulação ligada e NENHUM gamepad subiu); parte dos
+    controles sem gamepad vira nota neutra, porque o serviço pode estar subindo o resto.
+    """
+    ok = (_tela.GLIFO_OK, "OK", "ok")
+    nota = (_tela.GLIFO_INFO, "NOTA", "nt")
+    falha = (_tela.GLIFO_AVISO, "AVISO", "falha")
+
+    def linha(sinal: tuple[str, str, str], txt: str, dica: str = "") -> dict[str, Any]:
+        g, selo, cls = sinal
+        return {"id": ID_DO_GAMEPAD, "selo": selo, "cls": cls, "g": g, "txt": txt,
+                "dica": dica or txt}
+
+    ff = state.get("rumble_ff") if isinstance(state, dict) else None
+    vpads = ff.get("vpads") if isinstance(ff, dict) else None
+    bloco = state.get("gamepad_emulation") if isinstance(state, dict) else None
+    if (not isinstance(vpads, int) or isinstance(vpads, bool)
+            or not isinstance(bloco, dict) or "enabled" not in bloco):
+        return linha(nota, "Gamepads virtuais: sem leitura do serviço",
+                     "O serviço não respondeu quantos gamepads virtuais existem.")
+    native = bool(state.get("native_mode"))
+    emulacao = bool(bloco["enabled"])
+    if native:
+        return linha(nota, "Conexão nativa: o jogo fala direto com o controle",
+                     "Na Conexão Nativa (Sony) não há gamepad virtual: o jogo usa o controle.")
+    if not emulacao:
+        return linha(nota, "Gamepad virtual: emulação desligada",
+                     "Com a emulação desligada nenhum jogo recebe gamepad virtual.")
+    conectados = _tela.quantos_controles(state)
+    if not conectados:
+        return linha(nota, "Um gamepad virtual por jogador, quando houver controle")
+    if sem_dono_do_rumble(native=native, backends=("vpad",) * max(0, vpads), emulacao=emulacao):
+        return linha(falha, "Nenhum gamepad virtual subiu",
+                     "A emulação está ligada e nenhum gamepad virtual subiu: o jogo ainda vê "
+                     "o controle físico.")
+    if vpads >= conectados:
+        return linha(ok, "Um gamepad virtual por jogador")
+    return linha(nota, f"{vpads} de {conectados} controles com gamepad virtual")
+
+
+def _sem_o_prefixo_da_cura(txt: str) -> str:
+    return txt.split(_exame.PREFIXO_DA_CURA, 1)[0].rstrip()
+
+
+def _so_o_que_a_tela_mostra(exame: dict[str, Any], status: list[dict[str, Any]],
+                            state: Any) -> dict[str, Any]:
+    """As quatro linhas do exame à vista: Bluetooth, Steam Input, Áudio e o gamepad virtual.
+
+    O exame inteiro do `doctor` continua na camada do produto; aqui só ficam os quatro temas e,
+    depois deles, qualquer outra linha que FALHE (veredito de aviso), em vermelho até se curar.
+    Exame que não veio completo (menos de seis linhas) mostra o que não está bem, sem adivinhar
+    qual posição é qual.
+    """
+    linhas = list(exame.get("linhas") or [])
+    saida: list[dict[str, Any]] = []
+    bluetooth = next((dict(s) for s in status if s.get("id") == ID_DO_BLUETOOTH), None)
+    if bluetooth is not None:
+        bluetooth["curta"] = bluetooth.get("txt", "")
+        saida.append(bluetooth)
+    usadas: set[int] = set()
+    if len(linhas) >= LINHAS_DO_EXAME_COMPLETO:
+        for tema, posicao in (("steam-input", POSICAO_NO_EXAME["steam-input"]),
+                              ("audio", POSICAO_NO_EXAME["audio"])):
+            achado = dict(linhas[posicao])
+            usadas.add(posicao)
+            if achado.get("cls") == "ok" and tema == "audio":
+                achado["curta"] = ROTULO_DO_AUDIO_BEM
+            if achado.get("cls") == "aviso":
+                achado["cls"] = "falha"
+            saida.append(achado)
+    saida.append(linha_do_gamepad_por_jogador(state))
+    for i, achado in enumerate(linhas):
+        if i in usadas or achado.get("cls") != "aviso":
+            continue
+        saida.append({**achado, "cls": "falha"})
+    if len(linhas) < LINHAS_DO_EXAME_COMPLETO:
+        # Exame curto: as linhas de nota (o «exame não respondeu», por exemplo) também aparecem.
+        saida.extend(a for i, a in enumerate(linhas)
+                     if i not in usadas and a.get("cls") == "nt")
+    vazio = str(exame.get("vazio") or "")
+    if vazio and not linhas:
+        saida.append({"selo": "NOTA", "cls": "nt", "g": _tela.GLIFO_INFO, "txt": vazio})
+    return {"linhas": saida, "vazio": ""}
+
+
 def _pausado(ctx: Contexto) -> bool:
     """A pausa está ativa AGORA? O dado é `state_full["paused"]`, e só ele."""
     return bool(isinstance(ctx.state, dict) and ctx.state.get("paused"))
@@ -1237,7 +1399,7 @@ def linha_do_status(linha: dict[str, Any]) -> str:
     cls = html.escape(str(linha.get("cls") or "nt"))
     ident = html.escape(str(linha.get("id") or ""))
     dica = html.escape(str(linha.get("dica") or ""))
-    titulo = f' title="{dica}"' if dica else ""
+    titulo = f' data-dica="{dica}"' if dica else ""
     href = str(linha.get("href") or "")
     tag, fim = ("a", "a") if href else ("div", "div")
     destino = f' href="{html.escape(href)}"' if href else ""
@@ -1267,51 +1429,27 @@ def _html_do_exame(exame: dict[str, Any]) -> str:
 def _linha_do_exame(achado: dict[str, Any]) -> str:
     """Uma linha do exame. Tudo escapado: a frase vem do `doctor`, não daqui.
 
-    A FRASE INTEIRA VAI NO `title`, e é a cura de 03/09/2026. A linha do exame é
-    UMA linha e o desenho a corta: `09-sistema.html:825` diz
-    `overflow:hidden;text-overflow:ellipsis;white-space:nowrap`. Medido na bancada, na foto do
-    produto instalado, com um controle no cabo — **CINCO das
-    seis linhas cortavam**, e sem `title` não havia como ler o resto:
-
-        cura do travamento do USB ATIVA (mic e fone do co…      68 car, ~22 escondidos
-        áudio presente no único controle no cabo (mic+fon…      71 car, ~23 escondidos
-        quirk anti-storm ativo (054c:0ce6 — áudio USB esp…      55 car,  ~6 escondidos
-        WirePlumber configurado (51-hefesto-dualsense-n…        69 car, ~22 escondidos
-        regra áudio-off inativa — o mic e o fone do controle…   88 car, ~37 escondidos
-
-    **A ÚLTIMA É A QUE DECIDE, e ela não corta informação: INVERTE.** O texto
-    inteiro é *"regra áudio-off inativa — o mic e o fone do controle estão
-    liberados. O que fazer: nada."* O que sobra na tela ao lado de um selo
-    `NOTA` é *"o mic e o fone do controle…"*, que se lê como problema. As duas
-    metades escondidas são justamente **estão liberados** e **O que fazer:
-    nada** — a resposta.
-
-    E O PORTÃO NÃO PEGAVA, porque ele mede a PALAVRA e não o PIXEL:
-    `test_a_saude_do_sistema_diz_o_que_fazer.test_toda_frase_de_alarme_tem_o_que_fazer`
-    exige `"O que fazer:"` DENTRO da string, e a string sempre teve. Verde sobre
-    uma frase que a tela cortava antes do "O que fazer".
-
-    O `title` É A CURA DESTA CASA E NÃO UM DESENHO NOVO: `aba09.py` já a usa nos
-    valores que encurta (ver `APELIDO_NA_TELA` e o `inteiro=` do `est()`), e a
-    nota de lá diz o mesmo — *"a frase INTEIRA continua no `title` do valor (…)
-    é ele que segura a informação"*. Quebrar a linha em duas mudaria a altura do
-    quadro, que é desenho, e desenho é decisão de produto.
-
-    O «O QUE FAZER» NÃO CHEGA MAIS À TELA — SISTEMA-BOTOES-01, 13/09/2026. Ele é
-    instrução do `doctor`, e a linha da `WirePlumber` mandava clicar em
-    «Aplicar correções» na aba Sistema, um botão que não existe. A frase é
-    cortada no texto E no `title`, em `PREFIXO_DA_CURA` lido do dono
-    (`storm_doctor`); o que fica é o estado. A régua do doctor continua exigindo
-    o prefixo na string, que é o terminal.
+    A frase inteira vai na dica curta (`data-dica`): o desenho corta a linha com reticências, e
+    o que sobra na tela ao lado de um selo NOTA podia se ler como problema quando as metades
+    escondidas eram justamente a resposta («estão liberados», «O que fazer: nada»). O «O que
+    fazer» do `doctor` é instrução de terminal e não chega à tela: `PREFIXO_DA_CURA`, lido do
+    dono (`storm_doctor`), o corta do texto e da dica. Quebrar a linha mudaria a altura do quadro.
     """
     cls = html.escape(str(achado.get("cls") or "nt"))
-    txt = str(achado.get("txt") or "").split(_exame.PREFIXO_DA_CURA, 1)[0].rstrip()
-    return (f'<div class="saude"><span class="selo {cls}">'
+    txt = _sem_o_prefixo_da_cura(str(achado.get("txt") or ""))
+    dica = _sem_o_prefixo_da_cura(str(achado.get("dica") or "")) or txt
+    curta = str(achado.get("curta") or "") or frase_curta_do_exame(txt)
+    ident = f' data-id="{html.escape(str(achado["id"]))}"' if achado.get("id") else ""
+    href = str(achado.get("href") or "")
+    tag = "a" if href else "div"
+    destino = f' href="{html.escape(href)}"' if href else ""
+    return (f'<{tag} class="saude{" vai" if href else ""}"{ident}{destino}>'
+            f'<span class="selo {cls}">'
             f'<span class="sg">{html.escape(str(achado.get("g") or ""))}</span>'
             f'{html.escape(str(achado.get("selo") or ""))}</span>'
-            f'<span class="txt" title="{html.escape(txt, quote=True)}">'
-            f'<span>{html.escape(frase_curta_do_exame(txt))}</span>'
-            "</span></div>")
+            f'<span class="txt" data-dica="{html.escape(dica, quote=True)}">'
+            f'<span>{html.escape(curta)}</span>'
+            f"</span></{tag}>")
 
 
 CORTES_DA_CABECA = (" (", " — ", ". ")
@@ -1368,9 +1506,12 @@ SUFIXO_DA_RAZAO = "-razao"
 #: (SISTEMA-BOTOES-01), pela decisão de produto D-OS-PLUGINS-APARECEM-ONDE-AGEM
 BOTOES_CINZAS = ("reiniciar",)
 
-#: troca o RÓTULO do botão do `daemon.reload`, logo o desenho mudou um pixel e
+#: O que o pacote escreve e o desenho (`mockup/`) tem, mas a página PUBLICADA ainda não tem: a
+#: dívida do `--publicar 09`, que a costura paga e, no mesmo ato, esvazia esta declaração (a régua
+#: `test_o_que_espera_a_publicacao_esta_declarado_nos_dois_sentidos` cobra nos dois sentidos).
 ESPERA_A_PUBLICACAO: dict[str, str] = {
-    # publicar as dez abas, para os quatro DualSense aparecerem na bancada.
+    CAMPO_DAS_CORRECOES: "o interruptor «Permitir correções automáticas» (15/10/2026)",
+    CAMPO_DO_TAMANHO: "os três botões do tamanho da interface (15/10/2026)",
 }
 
 
@@ -2339,6 +2480,28 @@ def _frase_do_que_vai_mudar(jogos: list[str] | None, sobras: list[Any] | None = 
     return "\n".join(linhas)
 
 
+def _rodar_os_consertos(jogos: list[str] | None) -> dict[str, Any]:
+    """Roda os scripts de :data:`CONSERTOS` e devolve o relatório que o dono da frase lê."""
+    import subprocess
+
+    relatorio: dict[str, Any] = {"ran": 0, "missing": 0, "steam_input": None,
+                                 "steam_input_jogos": jogos}
+    for relpath, args in CONSERTOS:
+        caminho = _matriz()._find_repo_file(relpath)
+        if caminho is None:
+            relatorio["missing"] += 1
+            continue
+        with contextlib.suppress(Exception):
+            proc = subprocess.run(["bash", str(caminho), *args], check=False,
+                                  timeout=SEGUNDOS_DO_CONSERTO,
+                                  capture_output=True, text=True)
+            relatorio["ran"] += 1
+            if "disable_steam_input" in relpath:
+                relatorio["steam_input"] = (proc.returncode,
+                                            (proc.stdout or "") + (proc.stderr or ""))
+    return relatorio
+
+
 @gesto("09-sistema.html", "refazer-consertos",
        grava="roda os scripts de conserto do sistema na máquina dela")
 def refazer_consertos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
@@ -2355,8 +2518,6 @@ def refazer_consertos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
             _frase_do_que_vai_mudar(jogos, sobras), pergunta_de="refazer-consertos"))
 
     _limpar_o_painel()
-    import subprocess
-
     if "jogos" in _ANTES_DO_CONSERTO:
         jogos = _ANTES_DO_CONSERTO.pop("jogos")
     else:
@@ -2364,21 +2525,7 @@ def refazer_consertos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
             jogos = _daemon.medir_jogos_com_steam_input()
         except Exception:
             jogos = None
-    relatorio: dict[str, Any] = {"ran": 0, "missing": 0, "steam_input": None,
-                                 "steam_input_jogos": jogos}
-    for relpath, args in CONSERTOS:
-        caminho = _matriz()._find_repo_file(relpath)
-        if caminho is None:
-            relatorio["missing"] += 1
-            continue
-        with contextlib.suppress(Exception):
-            proc = subprocess.run(["bash", str(caminho), *args], check=False,
-                                  timeout=SEGUNDOS_DO_CONSERTO,
-                                  capture_output=True, text=True)
-            relatorio["ran"] += 1
-            if "disable_steam_input" in relpath:
-                relatorio["steam_input"] = (proc.returncode,
-                                            (proc.stdout or "") + (proc.stderr or ""))
+    relatorio = _rodar_os_consertos(jogos)
     vistas = {s.pasta for s in _ANTES_DO_CONSERTO.pop("sobras", [])}
     sobras = [s for s in _versoes_que_sobram() if s.pasta in vistas]
     recibo = _daemon.format_fix_safe_result(relatorio)
@@ -2546,6 +2693,127 @@ def corrigir_vulkan(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     _relatar_o_recibo("corrigir-vulkan", frase)
 
 
+#: O segundo clique que chega antes disto é o duplo clique do interruptor das correções.
+SEGUNDOS_DO_DUPLO_CLIQUE = 0.5
+_ULTIMO_CLIQUE_DAS_CORRECOES: dict[str, float] = {}
+
+
+def _relogio() -> float:
+    return time.monotonic()
+
+
+def _guardar_o_interruptor(ligado: bool) -> None:
+    """Escreve a escolha no arquivo que o guarda do jogo novo e a tela leem."""
+    caminho = _vigia.caminho_do_interruptor()
+    try:
+        caminho.parent.mkdir(parents=True, exist_ok=True)
+        caminho.write_text(f"{_vigia.LIGADO if ligado else _vigia.DESLIGADO}\n",
+                           encoding="utf-8")
+    except OSError as erro:
+        raise RuntimeError(
+            "Não consegui guardar a escolha na pasta de configuração: "
+            f"{erro.strerror or erro}.") from erro
+
+
+def _reaplicar_as_correcoes() -> str:
+    """Aplica agora o que as correções automáticas cuidam, sem fechar a Steam. Devolve o recibo.
+
+    O Steam Input (o conserto do `doctor`), os outros lançadores, a escolha do Vulkan e o Proton
+    fixado com as versões que sobram. O que mexe na Steam inteira (o atalho de cada jogo da Steam) é
+    do guarda do jogo novo, que roda com ela fechada; aqui nada fecha nada.
+    """
+    partes: list[str] = []
+    try:
+        jogos = _daemon.medir_jogos_com_steam_input()
+    except Exception:
+        jogos = None
+    partes.append(_daemon.format_fix_safe_result(_rodar_os_consertos(jogos)))
+    try:
+        from hefesto_dualsense4unix.integrations import cura_por_estrada as cpe
+
+        partes.append(cpe.frase_das_estradas(
+            cpe.curar_todas_as_estradas(espera=cpe.ESPERA_DA_JANELA_S)))
+    except Exception as erro:
+        partes.append(f"Os outros lançadores ficaram como estavam: {erro}.")
+    try:
+        from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
+
+        cv.gravar_camadas_da_steam_fora(True)
+        partes.append(cv.frase_do_ato(True))
+    except Exception as erro:
+        partes.append(f"A escolha do Vulkan ficou como estava: {erro}.")
+    pin, travar = _o_pino()
+    motivo = _porque_o_proton_nao_trava(pin, travar)
+    if motivo:
+        partes.append(motivo)
+    else:
+        if not proton_fixado():
+            partes.append(_daemon.format_proton_lock_result(travar(todos=True)))
+        if proton_fixado():
+            partes.append(_levar_as_que_sobram(_versoes_que_sobram()))
+    return " ".join(p for p in partes if p)
+
+
+@gesto("09-sistema.html", CAMPO_DAS_CORRECOES,
+       grava="liga ou desliga as correções automáticas a cada jogo novo e, no duplo clique, "
+             "reaplica agora o Steam Input, os lançadores, o Vulkan e o Proton fixado")
+def correcoes_automaticas(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """O interruptor «Permitir correções automáticas»: um clique alterna, o duplo reaplica.
+
+    Quem diz se está ligado é o arquivo do guarda do jogo novo (`vigia_do_jogo_novo`), o mesmo
+    que a tela lê a cada tique. Um clique só o inverte e deixa o guarda em dia com ele. O
+    segundo clique em menos de meio segundo é o duplo clique: liga (se o primeiro desligou) e
+    reaplica agora. Desligar não desfaz o que já foi aplicado: o caminho de volta é «Restaurar de
+    fábrica», e o interruptor só para o automático.
+    """
+    _ARMADO.clear()
+    agora = _relogio()
+    duplo = agora - _ULTIMO_CLIQUE_DAS_CORRECOES.get("t", -1e9) < SEGUNDOS_DO_DUPLO_CLIQUE
+    _ULTIMO_CLIQUE_DAS_CORRECOES["t"] = -1e9 if duplo else agora
+    _guardar_o_interruptor(True if duplo else not _vigia.interruptor_ligado())
+    _vigia.garantir()
+    _LENTO.clear()
+    _BARATO.clear()
+    if duplo:
+        _relatar_o_recibo(CAMPO_DAS_CORRECOES, _reaplicar_as_correcoes())
+
+
+@gesto("09-sistema.html", CAMPO_DO_TAMANHO,
+       grava="guarda o tamanho da interface na pasta de configuração dela")
+def tamanho_da_interface_gesto(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """Os três botões do tamanho: grava 100, 125 ou 150 em `interface_escala`.
+
+    Quem aplica o zoom nas abas é a janela, ao abrir (a sprint dos alvos e da letra); aqui só se
+    guarda a escolha, e a tela a lê de volta para acender o botão.
+    """
+    escolha = str(o.get("v") or "")
+    validos = [v for v, _, _ in TAMANHOS_DA_INTERFACE]
+    if not escolha.isdigit() or int(escolha) not in validos:
+        raise ValueError(
+            f"{CAMPO_DO_TAMANHO}: {escolha!r} não é um dos tamanhos ({validos}). O botão manda "
+            "`data-v` com o percentual.")
+    guardar_o_tamanho(int(escolha))
+
+
+@gesto("09-sistema.html", "salvar-registro",
+       grava="grava o registro num arquivo que ela escolhe")
+def salvar_registro(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """«Salvar»: o painel inteiro, com o endereço dos controles mascarado, num arquivo."""
+    texto = _no_painel(_faixa_lenta(ctx.state or None, ctx.mesa)[4])
+    if not texto or texto == _tela.NAO_DEU:
+        raise RuntimeError("O registro ainda está vazio — não há o que guardar.")
+    escolhido = p.salvar_arquivo("Onde guardar o registro",
+                                 sugestao=str(Path.home() / "hefesto-registro.txt"))
+    if not escolhido:
+        return
+    texto = _formas.mascarar(texto, _conhecidos_do_copiar(ctx))
+    try:
+        Path(escolhido).write_text(texto + "\n", encoding="utf-8")
+    except OSError as erro:
+        raise RuntimeError(
+            f"Não consegui guardar o registro: {erro.strerror or erro}.") from erro
+
+
 PONTE = {"chamar", "chamar_detalhado", "machine_declare", "profile_switch"}
 METODOS = {"daemon.resume", "daemon.reload", "launch_env.refresh",
            "machine.declare"}
@@ -2571,4 +2839,5 @@ PROVAS = [
 #: efeito deles está no SYSTEMD, não no `state_full`. O `enable` muda o que
 #: `restart` derruba e sobe a mesma unit, deixando o `state_full` igual ao que
 SEM_ECO = ("atualizar", "autostart", "perfil-da-mesa", "reiniciar",
-           "copiar-registro", "fixar-proton", "corrigir-vulkan")
+           "copiar-registro", "fixar-proton", "corrigir-vulkan",
+           CAMPO_DAS_CORRECOES, CAMPO_DO_TAMANHO, "salvar-registro")

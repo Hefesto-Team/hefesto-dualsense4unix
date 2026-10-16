@@ -135,16 +135,16 @@ def test_o_tique_acende_os_ligaveis_pelo_que_leu(
     a09, ctx, monkeypatch, tmp_path
 ) -> None:
     """A pílula mente se o pacote não escrever — e escreve o que LEU."""
-    from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
-
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
     monkeypatch.setattr(a09, "_leituras_baratas", lambda: (1, "Wayland · X", False))
-    cv.gravar_camadas_da_steam_fora(False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    a09._guardar_o_interruptor(False)
     fora = a09.pacote(ctx)
-    assert fora["proton-fixado"] is False
-    assert fora["vulkan-corrigido"] is False
-    cv.gravar_camadas_da_steam_fora(True)
-    assert a09.pacote(ctx)["vulkan-corrigido"] is True
+    assert fora[a09.CAMPO_DAS_CORRECOES] is False
+    assert "proton-fixado" not in fora and "vulkan-corrigido" not in fora, (
+        "os dois ligáveis saíram da aba em 15/10/2026: o interruptor das correções os junta")
+    a09._guardar_o_interruptor(True)
+    assert a09.pacote(ctx)[a09.CAMPO_DAS_CORRECOES] is True
 
 
 def test_desligar_o_proton_destrava_pelo_dono(a09, ctx, monkeypatch, tmp_path) -> None:
@@ -349,7 +349,8 @@ def test_as_linhas_do_status_nao_tem_o_ajuda_e_a_frase_vai_no_title(a09) -> None
     html = a09.linha_do_status(tela.status_do_servico("online_systemd",
                                                       {"paused": False}))
     assert 'class="ajuda"' not in html, html
-    assert 'title="Roda por trás e volta sozinho se travar."' in html, html
+    assert 'data-dica="Roda por trás e volta sozinho se travar."' in html, html
+    assert 'title=' not in html, html
     pagina = PUBLICADA.read_text(encoding="utf-8")
     lista = re.search(r'data-campo="status-lista"[^>]*>(.*?)\n\s*</div>\n', pagina, re.S)
     assert lista, "a lista do Status sumiu da página publicada"

@@ -418,7 +418,9 @@ def test_o_preset_ausente_recusa_na_lingua_dela(
 
 def test_o_desenho_tem_os_dois_botoes_novos() -> None:
     pagina = _html()
-    for gesto in ("corrigir-modo", "aplicar-aos-jogos"):
+    # O «Aplicar aos jogos da Steam» foi juntado, no desenho do todo, ao interruptor «Permitir
+    # correções automáticas» (A-ABA-SISTEMA-DO-TODO-01, 15/10/2026): o gesto segue no pacote.
+    for gesto in ("corrigir-modo", "correcoes-automaticas"):
         assert f'data-gesto="{gesto}"' in pagina, (
             f"o botão de {gesto!r} não está na bancada — rode "
             "`src/hefesto_dualsense4unix/interface/aba09.py`.")

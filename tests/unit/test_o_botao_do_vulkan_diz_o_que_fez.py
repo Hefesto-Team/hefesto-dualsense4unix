@@ -124,7 +124,7 @@ def test_a_lista_do_recibo_que_fica_e_curta_e_declarada() -> None:
     """A TELA-CALADA-03 continua valendo para os outros destrutivos."""
     from pacotes import a09_sistema as a09
 
-    assert a09.RECIBO_QUE_FICA_NA_TELA == ("corrigir-vulkan",)
+    assert a09.RECIBO_QUE_FICA_NA_TELA == ("corrigir-vulkan", "correcoes-automaticas")
     for gesto_ in a09.DESTRUTIVOS:
         assert gesto_ not in a09.RECIBO_QUE_FICA_NA_TELA
 

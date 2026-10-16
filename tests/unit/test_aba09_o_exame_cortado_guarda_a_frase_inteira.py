@@ -91,7 +91,7 @@ def test_o_corte_do_desenho_continua_existindo() -> None:
 
 @pytest.mark.parametrize("texto", SEIS)
 def test_toda_linha_do_exame_leva_a_frase_inteira_no_title(a09, texto: str) -> None:
-    """A MORDIDA: tire o `title=` de `_linha_do_exame`. Executada:"""
+    """A MORDIDA: tire o `data-dica=` (até 15/10, o `title=`) de `_linha_do_exame`. Executada:"""
     from hefesto_dualsense4unix.integrations.storm_doctor import PREFIXO_DA_CURA
 
     achado = {"selo": "OK", "cls": "ok", "g": GLIFO_OK, "txt": texto}
@@ -99,7 +99,7 @@ def test_toda_linha_do_exame_leva_a_frase_inteira_no_title(a09, texto: str) -> N
 
     html_da_linha = a09._linha_do_exame(achado)
 
-    assert f'title="{_escapado(inteiro)}"' in html_da_linha, (
+    assert f'data-dica="{_escapado(inteiro)}"' in html_da_linha, (
         "a linha do exame corta na tela e não guarda a frase inteira em lugar "
         f"nenhum — {texto!r} é o que o doctor devolveu, e a tela mostra só o "
         f"começo.\n\nSaiu: {html_da_linha!r}"
@@ -111,7 +111,7 @@ def test_a_metade_que_a_tela_esconde_e_a_resposta(a09) -> None:
     saiu = a09._linha_do_exame(
         {"selo": "NOTA", "cls": "nt", "g": GLIFO_INFO, "txt": A_QUE_INVERTE})
 
-    dentro_do_title = saiu.split('title="', 1)[-1].split('"', 1)[0]
+    dentro_do_title = saiu.split('data-dica="', 1)[-1].split('"', 1)[0]
     assert _escapado("estão liberados") in dentro_do_title, (
         "'estão liberados' não está alcançável: a tela para em 'o mic e o fone "
         "do controle…' e quem lê conclui o contrário do que o exame diz."

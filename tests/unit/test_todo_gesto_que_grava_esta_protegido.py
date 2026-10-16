@@ -224,6 +224,19 @@ FORA_DA_ARVORE: dict[tuple[str, str], str] = {
         "chama `travar()`, que é um `getattr(pin, \"lock_proton_for_all_games\")`, "
         "e o destravar pelo mesmo `getattr` — o nome não está no fonte como "
         "chamada, e trava ou solta o Proton de TODOS os jogos dela",
+    # 15/10/2026, A-ABA-SISTEMA-DO-TODO-01.
+    ("09-sistema.html", "correcoes-automaticas"):
+        "escreve o arquivo do interruptor do guarda do jogo novo (`_guardar_o_interruptor`, "
+        "`Path.write_text` sobre o caminho de `vigia_do_jogo_novo`) e, no duplo clique, "
+        "reaplica o Steam Input, os lançadores, o Vulkan e o Proton fixado por ajudantes que "
+        "a árvore não desce pelo nome; o perigo é o arquivo de configuração dela",
+    ("09-sistema.html", "tamanho-da-interface"):
+        "grava `interface_escala` na pasta de configuração dela por "
+        "`guardar_o_tamanho` (`Path.replace` de um temporário); o escritor é do próprio "
+        "pacote e a árvore só nomeia as portas do daemon e do perfil",
+    ("09-sistema.html", "salvar-registro"):
+        "grava o texto do painel, mascarado, no arquivo que ela escolhe pelo seletor "
+        "(`Path.write_text` sobre o caminho devolvido pela ponte); o destino é dela",
     ("09-sistema.html", "copiar-registro"):
         "põe o texto na área de transferência DELA pelo `Gtk.Clipboard`, dentro "
         "de um `GLib.idle_add` — a chamada mora numa função aninhada, e o perigo "

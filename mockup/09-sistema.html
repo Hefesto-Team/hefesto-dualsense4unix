@@ -922,32 +922,32 @@
 
   /* ---------- Sistema, em três seções (A-09-SISTEMA-EM-TRES-SECOES-01, 25/09/2026) ----------
      Pedido: *«praticamente vamos só mudar de lugar as coisas dessa aba»*.
-     1. Status (três colunas: o Status e o exame em duas);
+     1. Status (seis linhas, em três colunas);
      2. Configurações avançadas (quatro colunas de botões);
      3. os Detalhes técnicos, com a altura que sobra.
      O quadro é `estica`: a seção 3 é a única que sabe crescer, e cresce. */
 
   /* `minmax(0,1fr)` EM TODA FAIXA — a lição de 31/08 continua valendo: `1fr` tem
      por piso o CONTEÚDO, e uma frase longa do exame empurraria a coluna vizinha
-     para fora do quadro. A régua 5, lá embaixo, cobra as três. */
-  .status3{display:grid;grid-template-columns:minmax(0,1fr) 1px minmax(0,2fr);
+     para fora do quadro. A régua 5, lá embaixo, cobra as duas. */
+  .status3{display:grid;grid-template-columns:minmax(0,1fr) 1px minmax(0,1fr) 1px minmax(0,1fr);
            gap:0 20px;align-items:start}
   .avancadas{display:grid;grid-template-columns:minmax(0,1fr) 1px minmax(0,1fr) 1px
-             minmax(0,1fr) 1px minmax(0,1fr);gap:0 20px;align-items:start}
+             minmax(0,1fr) 1px minmax(0,1fr);gap:0 22px;align-items:start}
   .risco{background:var(--border-sutil);align-self:stretch}
 
   /* o rótulo de cada coluna nasce no x da coluna que ele nomeia — por isso o
      `sec-rot` repete o `grid-template-columns` da faixa que encabeça. */
   .sec-rot{font-size:12px;font-weight:600;color:var(--rot-campo);
-           margin-bottom:5px;height:17px;display:grid;gap:0 20px;align-items:center}
+           margin-bottom:8px;height:17px;display:grid;gap:0 22px;align-items:center}
   .sec-rot > span{display:flex;align-items:center;gap:8px;min-width:0;white-space:nowrap}
-  .sec-rot .ajuda{text-transform:none;letter-spacing:0}
-  .sr-status3{grid-template-columns:minmax(0,1fr) 1px minmax(0,2fr)}
+  .sr-status3{grid-template-columns:minmax(0,1fr)}
   .sr-avancadas{grid-template-columns:minmax(0,1fr) 1px minmax(0,1fr) 1px
                 minmax(0,1fr) 1px minmax(0,1fr)}
-  /* A LINHA DO TÍTULO DA SEÇÃO 3 LEVA O «Copiar», que é mais alto que os 17px
+  /* A LINHA DO TÍTULO DA SEÇÃO 3 LEVA O «Copiar» E O «Salvar», que são mais altos que os 17px
      de um rótulo: ela mede o que tem dentro, e a borda de cima fica nela. */
   .sr-log{grid-template-columns:minmax(0,1fr) auto;height:auto}
+  .sr-log > span:last-child{gap:6px}
   /* NENHUMA FAIXA ENCOLHE — o quadro é `estica` e o corpo é uma coluna flex:
      sem isto o navegador espreme os rótulos para dar altura ao registro. Quem
      cresce e encolhe é só o `.registro`. */
@@ -962,7 +962,7 @@
 
   /* AS LINHAS DO STATUS E DO EXAME SÃO A MESMA PEÇA — pedido: *«no MESMO
      estilo das linhas do O exame de hoje (a pílula à esquerda e o texto
-     curto)»*. 25,5px por linha, e quatro linhas em cada uma das três colunas:
+     curto)»*. 25,5px por linha, e duas linhas em cada uma das três colunas:
      elas acabam no mesmo y. */
   .saude{display:flex;align-items:center;gap:9px;height:25.5px;font-size:12px;
          color:var(--texto-suave);border-bottom:1px solid var(--border-sutil);
@@ -973,16 +973,21 @@
      pílula de tamanho diferente na mesma faixa seria duas peças. */
   .saude .selo{flex:0 0 76px;text-align:center}
   .selo .sg{margin-right:4px;font-weight:700}
-  .selo.ok{background:var(--green);color:var(--app-bg)}
+  /* SEM AVISO VERDE (conferência de 14/10/2026): o que está bem fica numa pílula neutra, na cor
+     do texto; o laranja pede atenção e o vermelho é a linha que FALHA, até se curar. */
+  .selo.ok{background:transparent;color:var(--texto-suave);box-shadow:inset 0 0 0 1px var(--border-forte)}
   .selo.aviso{background:var(--orange);color:var(--app-bg)}
   .selo.nt{background:var(--comment);color:var(--app-bg)}
+  .selo.falha{background:var(--red);color:var(--app-bg)}
   .saude .txt{flex:1;display:flex;align-items:center;gap:7px;min-width:0}
   .saude .txt span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   /* A LINHA QUE LEVA A OUTRO LUGAR (a do Bluetooth, para a seção do rádio da
      aba Conexões) é um `<a>` inteiro: a mão vira e a linha acende no hover. */
   a.saude.vai{cursor:pointer}
   a.saude.vai:hover .txt{color:var(--fg)}
-  .saude-cols{display:grid;grid-template-columns:minmax(0,1fr) 1px minmax(0,1fr);gap:0 18px}
+  /* O EXAME ENTRA NA GRADE DO STATUS: o produto troca o conteúdo de `.saude-cols` (duas colunas
+     e o risco entre elas) e as duas viram as colunas 2 e 3 de `.status3`, na mesma largura. */
+  .saude-cols{display:contents}
   .col-lista{display:flex;flex-direction:column;min-width:0}
 
   /* AS QUATRO COLUNAS DE BOTÕES — três itens em cada, na vertical, da mesma
@@ -1004,14 +1009,25 @@
      todo tique; a regra de baixo só a deixa vencer o vermelho. */
   .btn.vermelho.verde{color:var(--green)}
   .btn.vermelho.verde:hover{border-color:var(--green);color:var(--green)}
+  /* O «Restaurar de fábrica» é o único com a borda vermelha: o clique que perde o ajuste. */
+  .btn.borda-vermelha{border-color:var(--red);color:var(--red)}
+  .btn.borda-vermelha:hover{background:rgba(255,85,85,.08)}
 
-  /* O PERFIL GLOBAL DE BATERIA, NA VERTICAL — os três botões da aba Vibração
-     (`.seg`), empilhados, na altura dos botões vizinhos. Escolha única: o aceso
+  /* O PERFIL GLOBAL DE BATERIA E O TAMANHO DA INTERFACE, NA VERTICAL — os três botões da aba
+     Vibração (`.seg`), empilhados, na altura dos botões vizinhos. Escolha única: o aceso
      é o `on`, e o nome de cada um vem do produto. */
   .seg.bat-perfis{flex-direction:column;flex-wrap:nowrap;gap:6px}
   .seg.bat-perfis button{flex:0 0 var(--h-acao);height:var(--h-acao);min-width:0;
                          padding:0 8px;overflow:hidden;text-overflow:ellipsis;
                          white-space:nowrap}
+
+  /* A SAÚDE DO APP É UMA COLUNA DE TRÊS: os dois interruptores e o «Restaurar de fábrica», nas
+     três alturas das vizinhas. */
+  .saude-app{display:grid;grid-template-columns:minmax(0,1fr);grid-auto-flow:row;
+             grid-template-rows:repeat(3,var(--h-acao));gap:6px 8px;min-width:0}
+  .saude-app .cadeado,.saude-app .btn{width:100%;min-width:0;padding:0 10px;overflow:hidden;
+                                      text-overflow:ellipsis}
+  .saude-app .btn{justify-content:center}
 
   /* OS LIGÁVEIS SÃO A PÍLULA DO «Modo Freestyle» DA ABA JOGAR — a mesma peça
      (`aba01.py`, `.cadeado` e `.ligada`): verde e com o ponto aceso quando
@@ -1033,14 +1049,17 @@
      A seção cresce com o quadro (`estica`), e a caixa é ABSOLUTA dentro dela:
      um filho absoluto não conta para a altura do pai, então o registro vivo,
      com as suas oitenta linhas, ROLA POR DENTRO em vez de empurrar a página
-     (a cura da ROLAGEM-01, de 09/09, continua a mesma). O piso guarda que ela
-     nunca caia abaixo de seis linhas.
+     (a cura da ROLAGEM-01, de 09/09, continua a mesma).
+
+     O REGISTRO É A ÚNICA FAIXA QUE ENCOLHE, E ATÉ ZERO — 15/10/2026 (T5). Era
+     `flex:1 1 auto` com piso de 120px: em 1212x700 o fundo do registro passava 50px do quadro.
+     `flex:1 1 0` com `min-height:0` devolve ao registro só o que sobrou das outras faixas.
 
      A LINHA QUEBRA, E NÃO SAI PELA DIREITA — 25/09/2026. Era `pre`, e a linha
      do journal (uns 200 caracteres) saía cortada: para ler uma linha inteira
      era preciso rolar de lado, e o usuário pediu o painel «mais fácil de ser lido».
      `pre-wrap` guarda as quebras do texto e dobra o que não cabe. */
-  .registro{flex:1 1 auto;flex-shrink:1;min-height:120px;position:relative}
+  .registro{flex:1 1 0;min-height:0;position:relative}
   .registro > .log{position:absolute;top:0;right:0;bottom:0;left:0}
   .log{padding:10px 12px;border:1px solid var(--border-sutil);border-radius:7px;
        background:var(--app-bg);font-family:'JetBrains Mono',monospace;font-size:11px;
@@ -1054,16 +1073,6 @@
   .gls{display:inline-flex;align-items:center;gap:5px}
   .gls .mais{color:var(--comment);font-size:11px;margin:0 1px}
 
-
-  .ajuda{width:17px;height:17px;border-radius:50%;flex:0 0 17px;border:1px solid var(--linha);
-    color:var(--texto-mudo);font-size:11px;line-height:15px;text-align:center;cursor:help;position:relative}
-  .ajuda:hover,.ajuda:focus{border-color:var(--cyan);color:var(--cyan);outline:none}
-  .ajuda:hover .dica,.ajuda:focus .dica,.ajuda:focus-within .dica{display:block}
-  .quadro-topo .par-modo + .ajuda.esq .dica{left:auto;right:22px}
-  .btn:not(.apagado) + .ajuda.porque,.seg button:not(.apagado) + .ajuda.porque{display:none}
-  .ajuda.porque:has(.dica:empty),.ajuda.porque:has(.nada){display:none}
-  .ajuda.porque{align-self:center;margin-left:-4px}
-  body.nativo.por-controle .par-modo + .ajuda{visibility:hidden}
 </style>
 <style id="base-comum">
 /* ===== Base comum das abas (rodada 2, 12/10/2026) =====
@@ -1276,42 +1285,31 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 
     <div class="quadro estica">
       <div class="quadro-topo">
-        <span class="quadro-titulo">Sistema</span>
-        <span class="ajuda">?<span class="dica">
-          Esta aba é sobre o computador, não sobre um controle. Por isso a fita de controles
-          está apagada aqui.
-        </span></span>
+        <span class="quadro-titulo" data-dica="Esta aba é do computador, não de um controle">Sistema</span>
       </div>
       <div class="quadro-corpo">
 
-        <!-- ---------- 1. STATUS + O EXAME ---------- -->
-        <!-- O RÓTULO DO EXAME E A CONTAGEM SAÍRAM, E O LUGAR FICA VAZIO — pedido, 25/09/2026, 22h13: «remove o exame de hoje e tooltip dele» e
-             «Remove esse 8 linhas deixa o espaço vazio». O `<span>` vazio segura
-             a terceira faixa: nada sobe, e o exame continua onde estava. -->
+        <!-- ---------- 1. STATUS: SEIS LINHAS, EM TRÊS COLUNAS ---------- -->
+        <!-- O Status leva as duas primeiras; o exame, as quatro seguintes, em duas colunas. O que
+             não está aqui só aparece se FALHAR, e então em vermelho até se curar. -->
         <div class="sec-rot sr-status3">
-          <span>Status <span class="ajuda">?<span class="dica">Como o Hefesto está agora neste computador. A pílula diz o estado.</span></span></span><span></span><span></span>
+          <span data-dica="Linha que falha fica vermelha até se curar">Status</span>
         </div>
         <div class="status3">
           <div class="col-lista" data-id="status-lista" data-campo="status-lista" data-hef-alvo="html">
-            <div class="saude" data-id="hefesto-estado"><span class="selo ok"><span class="sg">✓</span>LIGADO</span><span class="txt" title="Roda por trás e volta sozinho se travar."><span>Serviço</span></span></div>
-            <div class="saude" data-id="hefesto-troca-de-perfil"><span class="selo ok"><span class="sg">✓</span>LIGADO</span><span class="txt" title="O perfil do jogo entra sozinho quando ele abre."><span>Troca de perfil ao abrir o jogo</span></span></div>
-            <div class="saude" data-id="hefesto-ambiente"><span class="selo nt"><span class="sg">i</span>NOTA</span><span class="txt" title="É por ele que o Hefesto vê qual janela está na frente."><span>Ambiente gráfico: Wayland · COSMIC</span></span></div>
-            <a class="saude vai" data-id="status-bluetooth" href="08-conexoes.html#rd-secao"><span class="selo ok"><span class="sg">✓</span>OK</span><span class="txt" title="Clique para ver os adaptadores na aba Conexões."><span>Bluetooth: 1 adaptador · 1 controle</span></span></a>
+            <div class="saude" data-id="hefesto-estado"><span class="selo ok"><span class="sg">✓</span>LIGADO</span><span class="txt" data-dica="Roda por trás e volta sozinho se travar."><span>Serviço</span></span></div>
+            <div class="saude" data-id="hefesto-troca-de-perfil"><span class="selo ok"><span class="sg">✓</span>LIGADO</span><span class="txt" data-dica="O perfil do jogo entra sozinho quando ele abre."><span>Troca de perfil ao abrir o jogo</span></span></div>
           </div>
           <div class="risco"></div>
           <div class="saude-cols" data-id="exame-lista" data-campo="exame-lista" data-hef-alvo="html">
             <div class="col-lista">
-            <div class="saude"><span class="selo ok"><span class="sg">✓</span>OK</span><span class="txt" title="Regra de permissão dos controles instalada"><span>Regra de permissão dos controles instalada</span></span></div>
-            <div class="saude"><span class="selo ok"><span class="sg">✓</span>OK</span><span class="txt" title="O serviço sobe sozinho no login"><span>O serviço sobe sozinho no login</span></span></div>
-            <div class="saude"><span class="selo ok"><span class="sg">✓</span>OK</span><span class="txt" title="Steam Input desligado para o DualSense"><span>Steam Input desligado para o DualSense</span></span></div>
-            <div class="saude"><span class="selo ok"><span class="sg">✓</span>OK</span><span class="txt" title="Áudio dos 2 controles roteado"><span>Áudio dos 2 controles roteado</span></span></div>
+            <a class="saude vai" data-id="status-bluetooth" href="08-conexoes.html#rd-secao"><span class="selo ok"><span class="sg">✓</span>OK</span><span class="txt" data-dica="Clique para ver os adaptadores na aba Conexões."><span>Bluetooth: 1 adaptador · 1 controle</span></span></a>
+            <div class="saude"><span class="selo ok"><span class="sg">✓</span>OK</span><span class="txt" data-dica="Steam Input desligado para o DualSense"><span>Steam Input desligado</span></span></div>
             </div>
             <div class="risco"></div>
             <div class="col-lista">
-            <div class="saude"><span class="selo nt"><span class="sg">i</span>NOTA</span><span class="txt" title="Um gamepad virtual por jogador"><span>Um gamepad virtual por jogador</span></span></div>
-            <div class="saude"><span class="selo nt"><span class="sg">i</span>NOTA</span><span class="txt" title="Proton fixado em 9.0-4 para 3 jogos"><span>Proton fixado em 9.0-4 para 3 jogos</span></span></div>
-            <div class="saude"><span class="selo nt"><span class="sg">i</span>NOTA</span><span class="txt" title="Som do sistema: sai em Controle 1"><span>Som do sistema: sai em Controle 1</span></span></div>
-            <div class="saude"><span class="selo nt"><span class="sg">i</span>NOTA</span><span class="txt" title="Sobreposição Vulkan: a Steam decide"><span>Sobreposição Vulkan: a Steam decide</span></span></div>
+            <div class="saude"><span class="selo ok"><span class="sg">✓</span>OK</span><span class="txt" data-dica="Áudio dos 2 controles roteado"><span>Áudio roteado</span></span></div>
+            <div class="saude"><span class="selo ok"><span class="sg">✓</span>OK</span><span class="txt" data-dica="Um gamepad virtual por jogador"><span>Um gamepad virtual por jogador</span></span></div>
             </div>
           </div>
         </div>
@@ -1319,44 +1317,42 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
         <!-- ---------- 2. CONFIGURAÇÕES AVANÇADAS ---------- -->
         <div class="sec-grupo"><span class="quadro-titulo">Configurações avançadas</span></div>
         <div class="sec-rot sr-avancadas">
-          <span>Serviço <span class="ajuda">?<span class="dica">Parar aqui não é o mesmo que desligar o Hefesto na aba Jogar: lá ele só sai do meio do jogo.</span></span></span><span></span>
-          <span>Perfil global de bateria <span class="ajuda">?<span class="dica">Vale para todos os controles, e cada um pode ter o seu na aba Conexões.</span></span></span><span></span>
-          <span>Saúde do app <span class="ajuda">?<span class="dica">Consertos que o exame já faz sozinho, para repetir quando precisar.</span></span></span><span></span>
-          <span>Automático <span class="ajuda">?<span class="dica">Verde é ligado. Clique para trocar.</span></span></span>
+          <span data-dica="Parar desliga o serviço inteiro, não só o jogo">Funcionamento do app</span><span></span>
+          <span data-dica="O tamanho das letras e dos botões, em toda aba">Interface</span><span></span>
+          <span data-dica="Vale para todos; cada controle pode ter o seu em Conexões">Perfil global de bateria</span><span></span>
+          <span data-dica="Verde é ligado. Clique para trocar">Saúde do app</span>
         </div>
         <div class="avancadas">
           <div class="coluna col-servico">
-            <button class="btn vermelho" title="O Hefesto deixa de rodar e os controles viram gamepads comuns. Pergunta antes." data-gesto="parar-ou-retomar" data-campo="parar-ou-retomar-verde" data-hef-alvo="classe" data-hef-classe="verde">Parar o serviço</button>
-            <button class="btn" title="Manda o serviço reler os atalhos do controle e os arquivos que a Steam usa para abrir os jogos. Leva alguns segundos." data-gesto="atualizar" data-hef-em-voo="Atualizando…">Atualizar</button>
-            <button class="btn so-avulso" title="O serviço está rodando por fora do sistema, e ali reiniciar não funciona. Este botão o faz subir do jeito certo." data-gesto="corrigir-modo" data-campo="corrigir-modo-quando" data-hef-alvo="classe" data-hef-classe="mostra">Corrigir o serviço</button>
-            <div class="acao"><button class="btn" data-campo="reiniciar-razao" data-hef-alvo="classe" data-hef-classe="apagado" data-hef-atributo="aria-disabled" data-hef-razao="sim" data-gesto="reiniciar" title="Para e liga de novo o serviço. Resolve a maioria dos travamentos, e nenhum ajuste seu se perde.">Reiniciar</button></div>
+            <button class="btn vermelho" data-dica="Os controles viram gamepads comuns. Pergunta antes" data-gesto="parar-ou-retomar" data-campo="parar-ou-retomar-verde" data-hef-alvo="classe" data-hef-classe="verde">Parar</button>
+            <button class="btn" data-dica="Relê os atalhos e os arquivos da Steam" data-gesto="atualizar" data-hef-em-voo="Atualizando…">Atualizar</button>
+            <button class="btn so-avulso" data-dica="Faz o serviço subir do jeito certo" data-gesto="corrigir-modo" data-campo="corrigir-modo-quando" data-hef-alvo="classe" data-hef-classe="mostra">Corrigir o serviço</button>
+            <div class="acao"><button class="btn" data-campo="reiniciar-razao" data-hef-alvo="classe" data-hef-classe="apagado" data-hef-atributo="aria-disabled" data-hef-razao="sim" data-gesto="reiniciar" title="Para e liga de novo; nenhum ajuste se perde">Reiniciar</button></div>
           </div>
           <div class="risco"></div>
           <div class="coluna">
-            <div class="seg bat-perfis" data-id="bateria-perfil"><button class="on" data-gesto="perfil-da-mesa" data-v="tudo_ligado" data-campo="bateria-perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="tudo_ligado" title="Perfil máximo: nada é limitado. Vale para todos os controles — cada um pode ter o seu na aba Conexões.">Perfil máximo</button><button class="" data-gesto="perfil-da-mesa" data-v="bateria_longa" data-campo="bateria-perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="bateria_longa" title="Perfil econômico: vibração em 30% da força. Vale para todos os controles.">Perfil econômico</button><button class="" data-gesto="perfil-da-mesa" data-v="eu_escolho" data-campo="bateria-perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="eu_escolho" title="Personalizado: nada é limitado. Vale para todos os controles — cada um pode ter o seu na aba Conexões.">Personalizado</button></div>
+            <div class="seg bat-perfis" data-id="tamanho-da-interface"><button class="on" data-gesto="tamanho-da-interface" data-v="100" data-campo="tamanho-da-interface" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="100" data-dica="O tamanho de hoje">Padrão</button><button class="" data-gesto="tamanho-da-interface" data-v="125" data-campo="tamanho-da-interface" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="125" data-dica="Letras e botões maiores">Confortável</button><button class="" data-gesto="tamanho-da-interface" data-v="150" data-campo="tamanho-da-interface" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="150" data-dica="Letras e botões maiores ainda">Espaçoso</button></div>
           </div>
           <div class="risco"></div>
           <div class="coluna">
-            <button class="btn" title="Desliga o Steam Input onde ele atrapalha e leva à lixeira as versões do Proton que nenhum jogo usa. Sem senha, sem fechar nada, e com cópia de segurança." data-gesto="refazer-consertos">Reaplicar correções automáticas</button>
-            <button class="btn" title="Põe o Hefesto nos jogos da Steam e dos outros lançadores, sem perder as suas opções. Pergunta antes: fecha a Steam por uns 20 segundos." data-gesto="aplicar-aos-jogos">Aplicar soluções nos lançadores</button>
-            <button class="btn vermelho" title="Devolve o perfil de fábrica e o padrão do computador. Pergunta antes, e os seus perfis salvos ficam." data-gesto="restaurar-de-fabrica">Restaurar de fábrica</button>
+            <div class="seg bat-perfis" data-id="bateria-perfil"><button class="on" data-gesto="perfil-da-mesa" data-v="tudo_ligado" data-campo="bateria-perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="tudo_ligado" data-dica="Nada é limitado">Perfil máximo</button><button class="" data-gesto="perfil-da-mesa" data-v="bateria_longa" data-campo="bateria-perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="bateria_longa" data-dica="Vibração em 30% da força">Perfil econômico</button><button class="" data-gesto="perfil-da-mesa" data-v="eu_escolho" data-campo="bateria-perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="eu_escolho" data-dica="Você escolhe em cada aba">Personalizado</button></div>
           </div>
           <div class="risco"></div>
-          <div class="coluna col-ligaveis">
-            <button class="cadeado ligada" title="Liga o serviço junto com o computador. Clique para trocar." data-gesto="autostart" data-campo="hefesto-autostart" data-hef-alvo="classe" data-hef-classe="ligada"><span class="p"></span>Iniciar com o sistema</button>
-            <button class="cadeado ligada" title="Mantém os jogos na versão do Proton que faz o controle vibrar e tocar som, e leva à lixeira as versões que nenhum jogo usa. Clique para trocar, com a Steam fechada." data-gesto="fixar-proton" data-campo="proton-fixado" data-hef-alvo="classe" data-hef-classe="ligada"><span class="p"></span>Fixar Proton</button>
-            <button class="cadeado" title="Tira dos jogos a sobreposição e o gravador de shaders da Steam. Sem eles, o Shift+Tab da Steam some e ela não guarda os shaders do jogo. Vale no próximo jogo que abrir." data-gesto="corrigir-vulkan" data-campo="vulkan-corrigido" data-hef-alvo="classe" data-hef-classe="ligada"><span class="p"></span>Corrigir Vulkan</button>
+          <div class="coluna saude-app">
+            <button class="cadeado ligada" data-dica="Fixa o Proton, corrige o Vulkan e prepara cada jogo novo" data-gesto="correcoes-automaticas" data-campo="correcoes-automaticas" data-hef-alvo="classe" data-hef-classe="ligada"><span class="p"></span>Permitir correções automáticas</button>
+            <button class="cadeado ligada" data-dica="Liga o serviço junto com o computador" data-gesto="autostart" data-campo="hefesto-autostart" data-hef-alvo="classe" data-hef-classe="ligada"><span class="p"></span>Iniciar com o sistema</button>
+            <button class="btn vermelho borda-vermelha" data-dica="Volta ao padrão; seus perfis salvos ficam. Pergunta antes" data-gesto="restaurar-de-fabrica">Restaurar de fábrica</button>
           </div>
         </div>
 
         <!-- ---------- 3. DETALHES TÉCNICOS ---------- -->
         <div class="sec-rot sr-log sec-alta">
-          <span>Detalhes técnicos <span class="ajuda">?<span class="dica">O registro do serviço, sempre à vista. Copie para relatar um problema.</span></span></span>
-          <span><button class="btn copiar" title="Copia o registro inteiro para colar num relato." data-gesto="copiar-registro">Copiar</button></span>
+          <span data-dica="O registro do serviço; copie para relatar um problema">Detalhes técnicos</span>
+          <span><button class="btn copiar" data-dica="Copia o registro inteiro" data-gesto="copiar-registro">Copiar</button><button class="btn copiar" data-dica="Guarda o registro num arquivo" data-gesto="salvar-registro">Salvar</button></span>
         </div>
         <div class="registro">
           <div class="log" data-id="registro-texto" data-campo="registro-texto" data-hef-rolar="fim">[23:41:02] daemon pronto · 2 controles · 2 gamepads virtuais · controle virtual ok
-[23:41:02] p1 usb · p2 bt · fw 0x0356 nos 2 · cor de fábrica lida (p1, p2)
+[23:41:02] Cosmic Red usb · Starlight Blue bt · fw 0x0356 nos 2 · cor de fábrica lida nos 2
 [23:41:07] exame: steam input desligado em 2 jogos · proton 9.0-4 fixado em 3
 [23:41:09] perfil "Mortal Kombat" aplicado aos 2 · gatilho L2 escrito, sem leitura de volta
 [23:41:12] rádio: 1 adaptador · 1 controle · sem fila
