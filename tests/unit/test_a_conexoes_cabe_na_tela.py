@@ -137,9 +137,9 @@ def test_o_mapa_fala_em_frase_e_sem_primeira_pessoa() -> None:
     pagina = pagina_do_mapa.pagina()
     assert 'emTitulo(document.querySelector(".pagina"))' not in pagina, (
         "a pintura voltou a pôr maiúscula em toda palavra")
-    for frase in ("Leitura de exemplo", "Conectado agora", "Já mudei", "Desfazer"):
+    for frase in ("Leitura de exemplo", "A cadeia", "Já mudei", "Desfazer"):
         assert frase in pagina, frase
-    for velha in ("Atualmente Conectado", "Não achei", "Eu acho"):
+    for velha in ("Atualmente Conectado", "Conectado agora", "Não achei", "Eu acho"):
         assert f">{velha}" not in pagina, velha
 
 
