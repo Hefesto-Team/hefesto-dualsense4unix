@@ -1368,16 +1368,6 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     #     `data-campo="peca"` + `data-campo="via"`, e `a02_controles.pacote()`
     #     os escreve com `identidade_de(c, ctx.mesa)`. Com os dois controles
     #   aba 06 — `aba06.py` deu `data-campo="identidade"` ao nome do cartão e
-    # sai com: A-TELA-PERGUNTA-AO-DONO-01
-    "interface/mesa_viva.py::estado_do_card": (
-        "O estado de UM card da mesa — mic, volume, canal, rota "
-        "(interface/mesa_viva.py:306). O único chamador é o `controles_vivos.py`, o "
-        "piloto de UMA aba, que é BANCADA e sai da conta pela poda. O piloto único "
-        "(`hefesto_vivo.py`) não a chama: o pacote `a02_controles` monta o estado "
-        "do card por outro caminho, e são duas verdades sobre o mesmo dado. Fecha "
-        "quando o pacote da aba Controles delegar a ela, como o da Sistema já "
-        "delega a `interface/sistema.pacote`. MEDIDO em 01/09/2026."
-    ),
     # `daemon.reload` que não chega ao serviço fazia a tela dizer **"Pronto."**
     # `app/textos_de_aplicacao.py::frase_do_desfecho` SAIU daqui em 25/08/2026,
     #     por ela é o DESPACHO do daemon, não a janela.

@@ -103,17 +103,14 @@ from hefesto_dualsense4unix.interface.cartao_do_controle import (
     CANAL_SONS_DO_JOGO,
     CANAL_TODO_O_PC,
     DICA_AUDIO_SEM_ENDERECO,
-    L2_R2_THRESHOLD,
     ROTA_DO_CANAL,
     TEXTO_SELO_SAIDA_MUDA,
     _markup_xy,
     acao_mic,
     acao_speaker_mudo,
-    accel_do_inputs,
     dedos_do_inputs,
     dica_do_titulo,
     frase_do_alvo_do_mic,
-    gyro_do_inputs,
     rotulo_lightbar,
     saida_muda_do_entry,
     speaker_do_entry,
@@ -348,35 +345,35 @@ def _eixos_do_sensor(
     return campos
 
 
-def leitura_viva(entrada: dict[str, Any]) -> dict[str, Any]:
+def leitura_viva(
+    entrada: dict[str, Any], estado: dict[str, Any] | None = None
+) -> dict[str, Any]:
     """Tudo o que o card LÊ do aparelho: glifos, gatilhos, analógicos, sensores.
 
-    SEM LEITOR, TUDO VOLTA AO REPOUSO — e não ao último valor nem ao desenho. É
-    o `_reset_inputs_render` da GTK (`controller_card.py:3440`), linha por
-    linha: gatilhos em `0 / 255` com a barra vazia, analógicos no centro, os
-    dezesseis glifos apagados e os sensores no travessão. Vale para METADE da
-    bancada agora: o daemon só publica `inputs` para o `is_primary`.
+    A leitura é do dono, `mesa_viva.estado_do_card`; aqui só se põem os fatos dele
+    nos endereços da página (sem `estado`, a pergunta é feita aqui). SEM LEITOR,
+    TUDO VOLTA AO REPOUSO, e não ao último valor nem ao desenho (o
+    `_reset_inputs_render` da GTK, `controller_card.py:3440`): gatilhos em
+    `0 / 255`, analógicos no centro, glifos apagados e sensores no travessão.
+    O daemon só publica `inputs` para o `is_primary`.
     """
-    lido = entrada.get("inputs")
-    e: dict[str, Any] = lido if isinstance(lido, dict) else {}
-    apertados = {str(b) for b in (e.get("buttons") or ())}
-    l2 = int(e.get("l2_raw") or 0)
-    r2 = int(e.get("r2_raw") or 0)
-    aceso = {n: n in apertados for n in ALL_BUTTONS}
-    aceso["share"] = ("share" in apertados) or ("create" in apertados)
-    aceso["l2"] = l2 > L2_R2_THRESHOLD
-    aceso["r2"] = r2 > L2_R2_THRESHOLD
+    import mesa_viva
+
+    if estado is None:
+        estado = mesa_viva.estado_do_card(entrada)
+    aceso = {n: n in estado["glifos_on"] for n in ALL_BUTTONS}
 
     campos: dict[str, Any] = {f"glifo-{n}": ("sim" if aceso[n] else "") for n in aceso}
-    for nome, cru in (("l2", l2), ("r2", r2)):
+    for nome in ("l2", "r2"):
+        cru = estado[nome]
         campos[f"{nome}-num"] = f"{cru} / 255"
         campos[f"{nome}-barra"] = cru * 100 // 255
-    for lado, (cx, cy) in (("l", ("lx", "ly")), ("r", ("rx", "ry"))):
-        x, y = e.get(cx), e.get(cy)
-        campos[f"xy-{lado}"] = texto_do_xy(128 if x is None else x, 128 if y is None else y)
-    campos.update(_eixos_do_sensor("giro", gyro_do_inputs(e), ESCALA_GYRO_GRAUS_S, texto_eixo))
+    lx, ly, rx, ry = estado["sticks"]
+    campos["xy-l"] = texto_do_xy(lx, ly)
+    campos["xy-r"] = texto_do_xy(rx, ry)
+    campos.update(_eixos_do_sensor("giro", estado["giro_lido"], ESCALA_GYRO_GRAUS_S, texto_eixo))
     campos.update(
-        _eixos_do_sensor("accel", accel_do_inputs(e), ESCALA_ACCEL_G, texto_eixo_g)
+        _eixos_do_sensor("accel", estado["accel_lido"], ESCALA_ACCEL_G, texto_eixo_g)
     )
     return campos
 
@@ -1326,6 +1323,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         e = c.get("inputs") or {}
         a = c.get("audio") or {}
         mic_volume = volume_do_microfone(a)
+        estado = mesa_viva.estado_do_card(c, mic_vol=mic_volume)
         # (`controller_card.py:1121`). Medido na mesa
         sp_lido = speaker_do_entry(c)
         alto_em_padrao = volume_em_padrao(ctx, uniq, sp_lido)
@@ -1358,8 +1356,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             # `texto_da_bateria`, que PERGUNTA à GTK as duas frases.
             "bateria": texto_da_bateria(pct),
             # `data-hef-alvo="largura"` monta `width: <t>%`, e um "95%" ali
-            "bateria-barra": int(pct) if isinstance(pct, int) and not isinstance(pct, bool)
-                             else 0,
+            "bateria-barra": estado["bat"],
             # Não é perda de dado: os três continuam a UM `.get` do `state_full`
             #
             # uhid para saída Xbox (`home_actions.mascara_viva:914`). E `uinput`
@@ -1376,7 +1373,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             "mic-num": (
                 mic_volume if mic_volume is not None else mesa_viva.SEM_LEITOR
             ),
-            "mic-barra": mic_volume if mic_volume is not None else 0,
+            "mic-barra": estado["mic_vol"],
             **_so_se_a_pagina_tiver({
                 "touchpad": _selo_do_sensor(_toque_ligado(c)),
                 "touch-regiao": regiao_do_toque(onde_o_dedo),
@@ -1421,12 +1418,12 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 ),
                 "alto-num": (
                     PALAVRA_DO_PADRAO if alto_em_padrao
-                    else percentual_do_volume(sp_lido[0]) if sp_lido is not None
+                    else estado["alto_pct"] if estado["alto_pct"] is not None
                     else mesa_viva.SEM_LEITOR
                 ),
                 "alto-barra": (
                     100 if alto_em_padrao
-                    else percentual_do_volume(sp_lido[0]) if sp_lido is not None else 0
+                    else estado["alto_pct"] if estado["alto_pct"] is not None else 0
                 ),
                 **_so_se_a_pagina_tiver({"alto-padrao": "1" if alto_em_padrao else ""}),
                 **campos_da_onda(LADO_MIC, alturas_do_no(no_do_microfone(c))),
@@ -1472,7 +1469,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 "giro-no-jogo": texto_motion(
                     c, getattr(ctx, "state", None) or {}) or "",
                 # endereço até 03/09/2026. Ver `leitura_viva`, que traz a mesa
-                **leitura_viva(c),
+                **leitura_viva(c, estado),
                 # A FAMÍLIA DOS BOTÕES DE FACE que o usuário declarou (`controles.botoes`
                 # ou o modo da chave física): vazia é o desenho do DualSense, e o
                 # alvo `atributo` apaga o `data-botoes` quando chega vazia.

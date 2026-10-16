@@ -529,14 +529,19 @@ def frase_dos_transportes(usb: int, bt: int) -> str:
 
 
 #: (`interface/sensores.ESCALA_GYRO_GRAUS_S`), lida de lá.
+from hefesto_dualsense4unix.interface.cartao_do_controle import (  # noqa: E402
+    L2_R2_THRESHOLD,
+    accel_do_inputs,
+    gyro_do_inputs,
+    speaker_do_entry,
+)
 from hefesto_dualsense4unix.interface.sensores import (  # noqa: E402
     ESCALA_GYRO_GRAUS_S,
+    texto_eixo,
 )
 
 PISO_DA_ONDA = 16
 QUADROS_DA_ONDA = 14
-
-LIMIAR_L2_R2 = 30
 
 TRADUZ_GLIFO = {"create": "share"}
 
@@ -558,12 +563,6 @@ def _barra_bipolar(valor: float | None, escala: float) -> dict[str, str]:
         "width": f"{max(largura, 0.4):.1f}%",
         "background": cor,
     }
-
-
-def _texto_do_eixo(valor: float | None) -> str:
-    if valor is None:
-        return SEM_LEITOR
-    return f"{valor:+.2f}"
 
 
 def _eixo_do_analogico(inputs: dict[str, Any], nome: str) -> int:
@@ -664,21 +663,32 @@ def estado_do_card(
     rota_nada: bool | None = None,
     onda_mic: list[int] | None = None,
 ) -> dict[str, Any]:
-    """Os kwargs que `aba02.bloco()` pede, a partir de UM `entry` do IPC."""
-    inputs = entrada.get("inputs") or {}
+    """O que o card LÊ de UM `entry` do IPC: o dono desses fatos, para as duas telas.
+
+    Bateria, botões, gatilhos, analógicos, giroscópio, acelerômetro e volume do
+    alto-falante saem daqui e de mais lugar nenhum: `pacotes/a02_controles.pacote`
+    (a tela do produto) e o piloto antigo (`controles_vivos.py`) perguntam a esta
+    função, e a leitura de cada fato é a dos leitores do cartão
+    (`cartao_do_controle`), a mesma de antes de a tela virar página. O que o
+    pacote compõe sozinho e não passa por aqui: o selo do microfone pelas quatro
+    faces, os dois dedos do touchpad e a cor.
+    """
+    lido = entrada.get("inputs")
+    inputs: dict[str, Any] = lido if isinstance(lido, dict) else {}
     transporte = str(entrada.get("transport") or "").lower()
 
     bateria = entrada.get("battery_pct")
-    bateria = bateria if isinstance(bateria, int) else None
+    bateria = bateria if isinstance(bateria, int) and not isinstance(bateria, bool) else None
 
-    apertados = set()
-    for nome in inputs.get("buttons") or []:
-        apertados.add(TRADUZ_GLIFO.get(str(nome), str(nome)))
+    apertados = {TRADUZ_GLIFO.get(str(nome), str(nome)) for nome in inputs.get("buttons") or []}
     l2 = int(inputs.get("l2_raw") or 0)
     r2 = int(inputs.get("r2_raw") or 0)
-    if l2 > LIMIAR_L2_R2:
+    # Os gatilhos acendem pelo curso, nunca pelo nome: o `l2` na lista de botões
+    # não vale mais que o número que o próprio gatilho leu.
+    apertados -= {"l2", "r2"}
+    if l2 > L2_R2_THRESHOLD:
         apertados.add("l2")
-    if r2 > LIMIAR_L2_R2:
+    if r2 > L2_R2_THRESHOLD:
         apertados.add("r2")
 
     toque = inputs.get("touchpad") or {}
@@ -690,19 +700,22 @@ def estado_do_card(
     )
     tocando = bool(toque.get("touching"))
 
-    giro = inputs.get("gyro") or {}
-    tem_giro = bool(giro) and aciona("movimento.giroscopio", transporte) != "não"
+    giro_lido = (
+        gyro_do_inputs(inputs) if aciona("movimento.giroscopio", transporte) != "não" else None
+    )
+    accel_lido = accel_do_inputs(inputs)
     giro_linhas = []
-    for eixo in ("x", "y", "z"):
-        valor = giro.get(eixo) if tem_giro else None
+    for indice, eixo in enumerate(("x", "y", "z")):
+        valor = giro_lido[indice] if giro_lido is not None else None
         estilo = _barra_bipolar(valor, ESCALA_GYRO_GRAUS_S)
         giro_linhas.append(
-            (eixo.upper(), _texto_do_eixo(valor), ";".join(f"{k}:{v}" for k, v in estilo.items()))
+            (
+                eixo.upper(),
+                texto_eixo(valor) if valor is not None else SEM_LEITOR,
+                ";".join(f"{k}:{v}" for k, v in estilo.items()),
+            )
         )
 
-    # aqui porque é ela que impede alguém de o desenhar de novo: o `state_full`
-
-    # do `state_full`.
     audio = entrada.get("audio") or {}
     mic_sabemos = isinstance(audio.get("mic_mudo"), bool)
     mic_mudo = bool(audio.get("mic_mudo"))
@@ -711,13 +724,11 @@ def estado_do_card(
     if len(onda) < QUADROS_DA_ONDA:
         onda = [PISO_DA_ONDA] * (QUADROS_DA_ONDA - len(onda)) + onda
 
-    # e pelo rádio o DualSense não publica placa de som nenhuma. Um número de
-    alto = entrada.get("speaker") or {}
-    volume_cru = alto.get("volume")
-    alto_pct = percentual_do_volume(int(volume_cru)) if isinstance(volume_cru, int) else None
+    alto = speaker_do_entry(entrada)
+    alto_pct = percentual_do_volume(alto[0]) if alto is not None else None
     if aciona("audio.alto_falante", transporte) == "não":
         alto_pct = None
-    alto_mudo = bool(alto.get("muted"))
+    alto_mudo = bool(alto and alto[1])
     alto_pode = alto_pct is not None
 
     return {
@@ -734,6 +745,8 @@ def estado_do_card(
             _eixo_do_analogico(inputs, "ry"),
         ),
         "giro": giro_linhas,
+        "giro_lido": giro_lido,
+        "accel_lido": accel_lido,
         "mic_v": onda[-QUADROS_DA_ONDA:],
         "mic_mudo": mic_mudo,
         "mic_sabemos": mic_sabemos,
@@ -743,6 +756,5 @@ def estado_do_card(
         "mic_vol": mic_vol if mic_vol is not None else 0,
         "alto_v": [alto_pct if alto_pct is not None else 0] + [PISO_DA_ONDA] * (QUADROS_DA_ONDA - 1),
         "rota_nada": bool(rota_nada),
-        # `None` = NÃO SEI, e é diferente de zero. O DualSense não devolve o
         "alto_pct": alto_pct,
     }
