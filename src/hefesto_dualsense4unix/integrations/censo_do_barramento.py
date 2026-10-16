@@ -725,10 +725,8 @@ def _da_libudev(syspath: str, nome: str) -> str | None:
 
 
 def _nome_da_base(base: Callable[[str, str], str | None], syspath: str, nome: str) -> str:
-    try:
-        return (base(syspath, nome) or "").strip()
-    except Exception:
-        return ""
+    """O nome na base do udev; o ``banco_do_udev`` devolve ``None`` e nunca levanta."""
+    return (base(syspath, nome) or "").strip()
 
 
 def _bytes_sem_erro(ler: Callable[[str], bytes], caminho: str) -> bytes:
