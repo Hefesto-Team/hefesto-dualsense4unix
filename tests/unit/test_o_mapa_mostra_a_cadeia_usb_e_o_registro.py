@@ -237,6 +237,18 @@ def test_o_apelido_vence_tambem_no_registro(
     assert {linha["nome"] for linha in linhas if linha["tipo"] == "Wi-Fi"} == {"Minha antena"}
 
 
+def test_a_entrada_com_nome_aparece_com_o_nome_dela_no_registro(
+        sys_usb: SysDeMentira, tmp_path: Path, relogio: Relogio) -> None:
+    """O nome da entrada tem um dono só (`entrada_a_entrada.rotulo_do_numero`): a entrada que ela
+    batizou aparece no registro como no resto do mapa, e não como «Entrada 5»."""
+    arquivo = _uma_noite(sys_usb, tmp_path, relogio)
+    documento = _documento()
+    documento.mapa.portas[ENTRADA_DO_WIFI] = PortaDeclarada.model_validate(
+        {"caminho": WIFI, "nome": "Atrás da TV"})
+    linhas = _arranjo(sys_usb, documento=documento, diario=du.ler(arquivo))["registro"]["linhas"]
+    assert {linha["onde"] for linha in linhas if linha["tipo"] == "Wi-Fi"} == {"Atrás da TV"}
+
+
 def test_quem_nao_apareceu_fica_esmaecido_ate_entrar(
         sys_usb: SysDeMentira, tmp_path: Path, relogio: Relogio) -> None:
     arquivo = _uma_noite(sys_usb, tmp_path, relogio)

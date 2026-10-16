@@ -89,6 +89,7 @@ def _ler_a_maquina(
         )
         from hefesto_dualsense4unix.integrations.entrada_a_entrada import (
             nome_da_entrada,
+            rotulo_do_numero,
             rotulos_das_entradas,
         )
         from hefesto_dualsense4unix.utils.maquina import carregar_maquina, entradas_do_mapa
@@ -140,7 +141,8 @@ def _ler_a_maquina(
     da_cadeia = _a_cadeia_usb(censo, {a.id: ids.get(a.id, a.id) for a in mesa.aparelhos})
     sumiram, registro = _o_diario_na_tela(
         ler_o_diario, boot_id, agora or _dt.datetime.now(), conectados,
-        dict(mesa.mapa), _apelidos(documento), tipos)
+        dict(mesa.mapa), _apelidos(documento), tipos,
+        lambda numero: rotulo_do_numero(numero, maquina=documento) or SEM_ENTRADA_MARCADA)
     return {
         "quando": QUANDO_DE_AGORA.format(quando=quando),
         "aparelhos": [
@@ -519,10 +521,13 @@ def _o_diario_na_tela(
     mapa: Mapping[str, str],
     apelidos: Mapping[str, str],
     tipos: Mapping[str, str],
+    rotulo_de: Callable[[str], str],
 ) -> tuple[list[dict[str, str]], dict[str, Any]]:
     """``(os que não apareceram neste início, o registro)``, lidos do arquivo do diário.
 
     O diário vazio dá a lista vazia: o registro diz desde quando ouve e nunca inventa linha.
+    ``rotulo_de`` é o dono do nome da entrada (`entrada_a_entrada.rotulo_do_numero`): o nome
+    que o usuário deu, ou «Entrada N».
     """
     try:
         linhas = (ler_o_diario or _ler_o_diario_do_disco)()
@@ -535,7 +540,7 @@ def _o_diario_na_tela(
     presentes = {f"{a.vid}:{a.pid}" for a in conectados}
     return (
         _os_que_sumiram(linhas, boot, presentes, apelidos, tipos),
-        _o_registro(linhas, agora, mapa, apelidos, tipos),
+        _o_registro(linhas, agora, mapa, apelidos, tipos, rotulo_de),
     )
 
 
@@ -630,6 +635,7 @@ def _o_registro(
     mapa: Mapping[str, str],
     apelidos: Mapping[str, str],
     tipos: Mapping[str, str],
+    rotulo_de: Callable[[str], str],
 ) -> dict[str, Any]:
     """O registro da quarta aba: desde quando se ouve e até 30 linhas, a mais nova em cima."""
     entrada_de: dict[str, str] = {}
@@ -669,7 +675,7 @@ def _o_registro(
             "nome": _nome_da_linha(linha, apelidos),
             "cor": _cor_do_tipo(tipo, vid_pid, tipos),
             "onde": (NAO_TEM_ENTRADA if sumiu
-                     else f"Entrada {entrada}" if entrada else SEM_ENTRADA_MARCADA),
+                     else rotulo_de(entrada) if entrada else SEM_ENTRADA_MARCADA),
         })
         if len(saida) == LIMITE_DO_REGISTRO:
             break
