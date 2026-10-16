@@ -259,6 +259,19 @@ class SysfsLedNode:
         self._last_players = self._padrao(bits) if ok else None
         return ok
 
+    def cor_perdida(self, resolvida: tuple[int, int, int]) -> tuple[int, int, int] | None:
+        """A cor lida, quando o nó perdeu a ``resolvida``; None quando não afirma perda.
+
+        Nó ilegível, cor lida igual à resolvida ou igual à última que ESTE nó escreveu (o quadro do
+        efeito da luz, pintado sem entrar no desejado) não é luz perdida.
+        """
+        lida = self.get_rgb()
+        if lida is None or lida == tuple(resolvida):
+            return None
+        if self._last_write is not None and self._last_write[0] == lida:
+            return None
+        return lida
+
 
 def discover() -> dict[str, SysfsLedNode]:
     """Descobre os nós LED de cada DualSense conectado, indexados por MAC normalizado.

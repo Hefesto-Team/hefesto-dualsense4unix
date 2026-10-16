@@ -307,3 +307,39 @@ def test_o_numero_tem_memoria_e_o_invalidate_esquece(tmp_path: Path) -> None:
     no.invalidate_cache()
     assert no.set_players((False,) * 5)
     assert len(escritas) == 15, "o invalidate_cache não fez o número escrever de novo"
+
+
+@pytest.mark.parametrize("key", [WHITE, COSMIC])
+def test_o_quadro_do_efeito_que_nos_pintamos_nao_conta_como_luz_perdida(
+    mesa: Any, key: str
+) -> None:
+    """O efeito da luz (respirar, arco-íris) pinta quadros no nó sem lembrá-los no desejado: a
+    cor lida é a do último quadro, NOSSA, e o tique não a toma por luz que o kernel perdeu.
+    O número e o brilho do cabo não saem de novo; a barra volta à cor resolvida pelo reassert.
+    """
+    inst, handles, espiao, raiz = mesa
+    _connect(inst)
+    _connect(inst)
+    uniq = inst._key_to_uniq(key)
+    assert uniq is not None
+    quadro = (10, 20, 30)
+    assert inst.pintar_a_barra_sem_lembrar(uniq, quadro)
+    assert _no_do(raiz, key).read_text() == _texto(quadro)
+    esqueceu: list[tuple[str, bool]] = []
+    original = inst._esquecer_a_luz_que_o_kernel_perdeu
+
+    def contar(k: str, *args: Any) -> bool:
+        resultado = original(k, *args)
+        esqueceu.append((k, resultado))
+        return resultado
+
+    inst._esquecer_a_luz_que_o_kernel_perdeu = contar  # type: ignore[method-assign]
+    _limpar(handles, espiao)
+    _connect(inst)
+    assert (key, True) not in esqueceu, (
+        "o quadro do efeito, escrito por nós, virou «lightbar_perdida_repintada» no tique"
+    )
+    assert espiao.do_numero(key) == [], f"o número de {key} saiu de novo sem ter sido perdido"
+    if key in DO_CABO:
+        assert handles[key].de(0x02) == [], f"o brilho do cabo saiu de novo em {key}"
+    assert espiao.da_barra(key) == [_texto(COR[key])], "a barra não voltou à cor resolvida"

@@ -2361,8 +2361,8 @@ class PyDualSenseController(IController):
 
         if node is None or cor is None:
             return False
-        lida = node.get_rgb()
-        if lida is None or tuple(lida) == tuple(cor):
+        lida = node.cor_perdida(cor)  # o quadro do efeito, nosso, não é perda
+        if lida is None:
             return False
         node.invalidate_cache()
         with contextlib.suppress(AttributeError):
