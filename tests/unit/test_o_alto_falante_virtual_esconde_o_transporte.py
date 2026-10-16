@@ -193,12 +193,14 @@ def test_o_mesmo_controle_no_cabo_e_no_radio_e_o_mesmo_no(
     ger = GerenciadorDeNosDeSom(ponte_do_radio_por_controle=_ponte_de_pe)
     ger.reconciliar([_cabo(_UNIQ_P1)])
     no_cabo = list(servidor.nos().values())
+    id_cabo = list(servidor.nos())
     rotulo_cabo = servidor.rotulo(af.nome_do_sink(_UNIQ_P1))
     ger.reconciliar([])
-    assert servidor.nos() == {}
+    assert list(servidor.nos()) == id_cabo, "o nó caiu na volta em que o controle saiu da lista"
     ger.reconciliar([_radio(_UNIQ_P1)])
     no_radio = list(servidor.nos().values())
 
+    assert list(servidor.nos()) == id_cabo, "trocar o cabo pelo rádio trocou o id do nó"
     assert no_cabo == no_radio == [af.nome_do_sink(_UNIQ_P1)]
     assert rotulo_cabo == servidor.rotulo(af.nome_do_sink(_UNIQ_P1))
     assert rotulo_cabo == "Alto-falante do Controle 1" + _SONY
@@ -346,17 +348,16 @@ def test_um_no_por_controle_no_servidor(
     )
 
 
-def test_quem_sai_da_mesa_leva_so_o_seu_no(
+def test_quem_sai_da_mesa_leva_so_a_rota_e_o_no_fica(
     servidor: ServidorDeSomDeMentira, usb_da_bancada: None
 ) -> None:
-    """Tirar um controle derruba o nó DELE — e a rota antes do nó."""
+    """Tirar um controle leva a rota DELE (os fios descem); o nó fica, e o dos outros não muda."""
     ger = GerenciadorDeNosDeSom(ponte_do_radio_por_controle=_ponte_de_pe)
     ger.reconciliar([_cabo(_UNIQ_P1), _cabo(_UNIQ_P2), _radio(_UNIQ_P3)])
+    ids = dict(servidor.nos())
     ger.reconciliar([_cabo(_UNIQ_P1), _radio(_UNIQ_P3)])
 
-    assert sorted(servidor.nos().values()) == sorted(
-        [af.nome_do_sink(_UNIQ_P1), af.nome_do_sink(_UNIQ_P3)]
-    )
+    assert servidor.nos() == ids
     assert servidor.lacos() == [(f"{af.nome_do_sink(_UNIQ_P1)}.monitor", _SINK_P1)]
     ger.parar()
     assert servidor.modulos == {}

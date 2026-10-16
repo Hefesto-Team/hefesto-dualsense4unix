@@ -354,8 +354,8 @@ class TestOEstadoEhPerguntadoAoServidor:
         assert no.estado() is None
 
 
-class TestONoViveEnquantoHaControle:
-    """A MORDIDA: tire UM controle da lista e veja o nó DELE cair, e só o dele."""
+class TestONoFicaQuandoOControleSai:
+    """A MORDIDA: devolva o ``_derrubar`` ao controle que sai da lista e veja o nó DELE cair."""
 
     def _gerenciador(self) -> tuple[GerenciadorDeNosDeSom, dict[str, af.SinkVirtualPipeWire]]:
         criados: dict[str, af.SinkVirtualPipeWire] = {}
@@ -372,19 +372,29 @@ class TestONoViveEnquantoHaControle:
         gerenciador.reconciliar([MAC_A, MAC_B])
         assert set(gerenciador.nos) == {MAC_A, MAC_B}
 
-    def test_tirar_um_da_lista_derruba_o_dele_e_deixa_o_outro_de_pe(self) -> None:
+    def test_tirar_um_da_lista_deixa_o_dele_de_pe_e_o_outro_tambem(self) -> None:
         gerenciador, criados = self._gerenciador()
         gerenciador.reconciliar([MAC_A, MAC_B])
         gerenciador.reconciliar([MAC_A])
-        assert set(gerenciador.nos) == {MAC_A}
-        assert criados[MAC_B].module_id is None
+        assert set(gerenciador.nos) == {MAC_A, MAC_B}
+        assert gerenciador.nos[MAC_B] is criados[MAC_B]
+        assert criados[MAC_B].module_id == "4242"
         assert criados[MAC_A].module_id == "4242"
 
-    def test_lista_vazia_derruba_todos(self) -> None:
-        gerenciador, _ = self._gerenciador()
+    def test_lista_vazia_deixa_todos_de_pe(self) -> None:
+        gerenciador, criados = self._gerenciador()
         gerenciador.reconciliar([MAC_A, MAC_B])
         gerenciador.reconciliar([])
+        assert set(gerenciador.nos) == {MAC_A, MAC_B}
+        assert all(no.module_id == "4242" for no in criados.values())
+
+    def test_so_o_parar_derruba_o_que_ficou(self) -> None:
+        gerenciador, criados = self._gerenciador()
+        gerenciador.reconciliar([MAC_A, MAC_B])
+        gerenciador.reconciliar([])
+        gerenciador.parar()
         assert gerenciador.nos == {}
+        assert all(no.module_id is None for no in criados.values())
 
     def test_reconciliar_de_novo_nao_recarrega_o_que_ja_esta_de_pe(self) -> None:
         gerenciador, criados = self._gerenciador()

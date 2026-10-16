@@ -267,10 +267,10 @@ def test_r2_o_teimoso_morre_por_kill(
     assert ponte.como_morreu_o_gravador.insistiu is True
 
 
-def test_r3_na_queda_o_gravador_ja_foi_colhido_quando_o_no_sai(
+def test_r3_na_queda_o_gravador_e_colhido_e_o_no_fica(
     ponte_real: None, dubles: list[subprocess.Popen[bytes]]
 ) -> None:
-    """O controle sumiu da lista: a ponte desce e o nó sai, NESTA ordem."""
+    """O controle sumiu da lista: a ponte desce e colhe o gravador; o nó FICA (08/09, 16/10)."""
     ponte, proc = _ponte_na_queda(dubles)
     saidas: list[int | None] = []
     ger = _gerenciador_com_o_no_de_pe(proc, saidas)
@@ -279,12 +279,9 @@ def test_r3_na_queda_o_gravador_ja_foi_colhido_quando_o_no_sai(
 
     sub._reconciliar(ger)
 
-    assert saidas, "o nó não saiu na queda — a régua não mediu a ordem"
-    assert saidas[0] is not None, (
-        "o nó saiu com o gravador da ponte ainda vivo — a ponte tem de descer "
-        "(e colher o gravador) antes de `gerenciador.reconciliar`"
-    )
+    assert proc.poll() is not None, "a ponte caiu e o gravador dela continua vivo"
     assert P1 not in sub._pontes
+    assert P1 in ger.nos and saidas == [], "o nó saiu com o controle: ele fica até o stop"
 
 
 @pytest.mark.parametrize("cena", ["na_queda", "tocando"])
