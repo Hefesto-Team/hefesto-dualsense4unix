@@ -1899,7 +1899,7 @@ def aplicar_o_movimento(
         if arranjo.quer_angulo:
             if angulo is None:
                 return lx, ly, rx, ry
-            if roteador.deflexao(velocidade, arranjo) == (0, 0):
+            if not roteador.passa_da_zona_morta(velocidade, arranjo):
                 return lx, ly, rx, ry
             mouse = getattr(daemon, "_mouse_device", None)
             if mouse is not None:

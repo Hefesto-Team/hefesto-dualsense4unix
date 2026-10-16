@@ -151,14 +151,33 @@ def _componentes(
     return horizontal, vertical
 
 
+def _acima_da_zona(magnitude: float, arranjo: ArranjoDeMovimento) -> bool:
+    """A regra da zona morta, num lugar só: a velocidade passa do «Ignorar tremor até»."""
+    return magnitude > max(0.0, arranjo.zona_morta_graus_s)
+
+
+def passa_da_zona_morta(
+    giro: tuple[float, float, float], arranjo: ArranjoDeMovimento
+) -> bool:
+    """O giro (graus/s) passa da zona morta, sem o arredondamento do eixo do analógico.
+
+    É o portão do cursor: o eixo do analógico tem 256 passos, o cursor carrega o resto
+    sub-pixel, e a quantização de um não decide o outro.
+    """
+    if not arranjo.ligado:
+        return False
+    horizontal, vertical = _componentes(giro, arranjo)
+    return _acima_da_zona(math.hypot(horizontal, vertical), arranjo)
+
+
 def _fator_radial(
     horizontal: float, vertical: float, arranjo: ArranjoDeMovimento
 ) -> float:
     """0.0 a 1.0: quanto do curso do eixo este movimento merece."""
     magnitude = math.hypot(horizontal, vertical)
-    zona = max(0.0, arranjo.zona_morta_graus_s)
-    if magnitude <= zona:
+    if not _acima_da_zona(magnitude, arranjo):
         return 0.0
+    zona = max(0.0, arranjo.zona_morta_graus_s)
     faixa = arranjo.teto_graus_s - zona
     if faixa <= 0.0:
         return 1.0
@@ -169,7 +188,7 @@ def deflexao(
     giro: tuple[float, float, float], arranjo: ArranjoDeMovimento
 ) -> tuple[int, int]:
     """Velocidade angular (graus/s) → deslocamento a SOMAR num analógico."""
-    if not arranjo.ligado:
+    if not passa_da_zona_morta(giro, arranjo):
         return 0, 0
     horizontal, vertical = _componentes(giro, arranjo)
     fator = _fator_radial(horizontal, vertical, arranjo)
@@ -1022,6 +1041,7 @@ __all__ = [
     "neutro_da_inclinacao",
     "para_o_cursor",
     "parametros_da_peca",
+    "passa_da_zona_morta",
     "pecas_que_miram",
     "pixels",
     "pixels_do_toque",
