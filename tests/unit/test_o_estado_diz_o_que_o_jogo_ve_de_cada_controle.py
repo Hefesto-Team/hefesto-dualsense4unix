@@ -133,6 +133,7 @@ def test_as_chaves_do_controle_calam_o_giro_e_o_toque() -> None:
 
 
 def test_no_dualsense_a_mira_e_o_cursor_tiram_o_giro_e_o_toque_do_pad() -> None:
+    # D-1610-O-ESTADO-DIZ-O-QUE-O-JOGO-VE
     """O que o filtro do pad faz (`REGISTRO.filtrar`): a rota leva o sensor ao Hefesto.
 
     MORDIDA: com o giro e o toque do DualSense lidos só das chaves, a Mira ligada e o

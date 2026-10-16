@@ -19,6 +19,7 @@ from hefesto_dualsense4unix.integrations import virtual_pad as vp
 
 @pytest.mark.parametrize("caminho", [None, "dualsense", "xbox"])
 def test_a_pro_nao_pede_o_uhid_em_modo_nenhum(caminho: str | None) -> None:
+    # D-1610-A-PRO-FICA-NO-UINPUT
     assert not vp.quer_uhid(caminho, "nintendo")
 
 

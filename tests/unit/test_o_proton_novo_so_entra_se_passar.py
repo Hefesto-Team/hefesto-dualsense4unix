@@ -118,6 +118,7 @@ def _pino(nome: str, sha: str) -> dict[str, str]:
 
 
 def test_o_pino_com_versao_sem_a_linha_passou_reprova() -> None:
+    # D-1610-O-PROTON-NOVO-SO-ENTRA-COM-A-FICHA
     recibo = qp.ler_recibo(RECIBO.format(a="a" * 64, b="b" * 64))
     assert qp.o_pino_sem_recibo(_pino("GE-Proton11-7-x86_64", "a" * 64), recibo) == []
     assert qp.o_pino_sem_recibo(_pino("GE-Proton11-8-x86_64", "b" * 64), recibo)

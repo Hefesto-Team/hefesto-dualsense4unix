@@ -40,6 +40,7 @@ def test_sem_o_media_do_proton_o_hefestoks_e_escrito_como_hoje() -> None:
 
 
 def test_com_o_media_do_proton_no_mesmo_container_o_nosso_nao_e_escrito_e_o_antigo_sai() -> None:
+    # D-1610-O-KS-NAO-DUPLICA-O-MEDIA-DO-PROTON
     """MORDIDA: tire a leitura do MEDIA, e o mesmo ContainerId fica com dois devices."""
     com_o_nosso = ks.texto_novo(CABECALHO, [CABO], 1)
     assert _nossos(com_o_nosso) > 0
