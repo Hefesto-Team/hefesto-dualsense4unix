@@ -139,24 +139,22 @@ MEDIR = r"""
 
 DICA = r"""
 (function(){
-  const a = document.querySelector('#painel .receita .ajuda');
-  if (!a) return JSON.stringify({existe: false});
-  const d = a.querySelector('.dica');
-  const regras = [];
-  for (const folha of document.styleSheets) {
-    for (const regra of folha.cssRules) {
-      if (regra.selectorText && /\.receita \.ajuda:(focus|hover) \.dica/.test(regra.selectorText)
-          && regra.style.display && regra.style.display !== 'none') regras.push(regra.selectorText);
-    }
-  }
-  const fechada = getComputedStyle(d).display;
-  d.style.display = 'flex';
-  const rd = d.getBoundingClientRect();
+  const h = document.querySelector('#painel .receita h4[data-dica]');
+  if (!h) return JSON.stringify({existe: false});
+  const razao = h.getAttribute('data-dica');
+  const li = h.closest('li');
+  h.dispatchEvent(new MouseEvent('mouseover', {bubbles: true}));
+  const caixa = document.getElementById('hef-dica');
+  const rd = caixa ? caixa.getBoundingClientRect() : null;
   const rp = document.querySelector('.pagina').getBoundingClientRect();
-  const fora = {existe: true, focavel: a.tabIndex === 0, fechada: fechada, regras: regras,
-    cabe: rd.right <= rp.right + 1 && rd.width > 0, texto: d.innerText.replace(/\s+/g, ' ')};
-  d.style.display = '';
-  return JSON.stringify(fora);
+  const aberta = !!caixa && caixa.classList.contains('visivel');
+  const texto = caixa ? caixa.textContent : '';
+  const cabe = !!rd && rd.width > 0 && rd.right <= rp.right + 1 && rd.left >= rp.left - 1;
+  h.dispatchEvent(new MouseEvent('mouseout', {bubbles: true}));
+  const fechada = !caixa || !caixa.classList.contains('visivel');
+  return JSON.stringify({existe: true, razao: razao, aberta: aberta, texto: texto, cabe: cabe,
+    fechada: fechada, sem_interrogacao: !document.querySelector('#painel .receita .ajuda'),
+    razao_na_tela: (li.innerText || '').indexOf(razao) >= 0});
 })()
 """
 
@@ -265,8 +263,8 @@ def test_na_janela_ladrilhada_sobra_no_maximo_uma_linha_de_chapa() -> None:
 @pytest.mark.parametrize("vista", ["foto-3", "dela", "ladrilhada"])
 def test_atualmente_conectado_acaba_no_fim_do_hub_e_rola(vista: str) -> None:
     atual = _medido(vista)["atual"]
-    # O desenho aprovado de 05/10 («Conexões 3») diz «Conectado agora».
-    assert atual["titulo_da_bandeja"].lower() == "conectado agora"
+    # O desenho do todo (D-1610 da cadeia USB, publicado em 16/10) diz «A cadeia».
+    assert atual["titulo_da_bandeja"].lower() == "a cadeia"
     # Desde 05/10 a bandeja não estica até o fim do hub (o desenho aprovado: ela mede o que
     # tem); o que se cobra é que ela acabe dentro da vista.
     assert atual["bandeja_bottom"] <= atual["corpo_bottom"] + 1, (
@@ -343,17 +341,24 @@ def test_o_mapa_do_sugestoes_diz_so_o_veredito() -> None:
     assert not sug["faces_null"], f"({QUAL}) o mapa do Sugestões diz «null» ou «undefined»"
 
 
-def test_a_razao_de_cada_movimento_mora_no_interrogacao() -> None:
-    """As razões com selo saem da tela e vão para o «?» do movimento, que abre"""
+def test_a_razao_de_cada_movimento_mora_na_dica_do_titulo() -> None:
+    """A razão sai da tela e mora na dica curta do título do movimento (``data-dica``).
+
+    D-1610-OS-MAPAS-FALAM-PELA-DICA-CURTA: o «?» saiu do mapa. Passar o ponteiro no título abre
+    a dica global (``#hef-dica``) com a razão; a razão não fica escrita na tela.
+
+    MORDIDA: devolva o ``<span class="ajuda">`` ao título, ou tire o ``data-dica`` do ``h4``.
+    """
     dica = _medido("dela")["dica"]
-    assert dica["existe"], f"({QUAL}) o movimento não tem o «?» das razões"
-    assert dica["focavel"], f"({QUAL}) o «?» não recebe o foco: o controle não o abre"
-    assert dica["fechada"] == "none", f"({QUAL}) a dica nasce aberta: {dica}"
-    regras = dica["regras"]
-    assert any(":focus" in r for r in regras) and any(":hover" in r for r in regras), (
-        f"({QUAL}) a folha não abre a dica no foco e sob o ponteiro: {dica['regras']}")
+    assert dica["existe"], f"({QUAL}) o título do movimento não tem a dica das razões"
+    assert dica["sem_interrogacao"], f"({QUAL}) o «?» voltou à receita"
+    assert not dica["razao_na_tela"], f"({QUAL}) a razão ficou escrita na tela: {dica['razao']}"
+    assert dica["aberta"], f"({QUAL}) a dica do título não abre sob o ponteiro: {dica}"
+    assert dica["texto"] == dica["razao"], dica
     assert dica["cabe"], f"({QUAL}) a dica aberta passa da borda da caixa"
-    assert "medido" in dica["texto"].lower() or "derivado" in dica["texto"].lower(), dica
+    assert dica["fechada"], f"({QUAL}) a dica não fecha ao tirar o ponteiro"
+    # a dica é curta (a página pede no máximo ~12 palavras) e sem marca de HTML
+    assert 0 < len(dica["razao"].split()) <= 12 and "<" not in dica["razao"], dica
 
 
 def test_o_adicionar_e_uma_linha_com_a_pergunta_dela() -> None:
