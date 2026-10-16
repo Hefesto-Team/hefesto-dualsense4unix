@@ -200,9 +200,12 @@ def _conta_a_mao(arvore: ast.AST) -> bool:
 def test_um_dono_so_para_a_pergunta() -> None:
     chamadas = _chamadas_do_predicado()
     arquivos = sorted({a for a, _ in chamadas})
-    assert arquivos == ["app/actions/rumble_actions.py", "daemon/launch_env.py"], (
-        f"o predicado mudou de chamadores: {arquivos}"
-    )
+    # A aba Sistema pergunta ao mesmo predicado na linha do gamepad virtual por jogador
+    # (A-ABA-SISTEMA-DO-TODO-01, `a09_sistema.linha_do_gamepad_por_jogador`).
+    assert arquivos == [
+        "app/actions/rumble_actions.py", "daemon/launch_env.py",
+        "interface/pacotes/a09_sistema.py",
+    ], f"o predicado mudou de chamadores: {arquivos}"
     for arquivo, no in chamadas:
         assert "emulacao" in {k.arg for k in no.keywords}, (
             f"{arquivo}:{no.lineno} chama o predicado sem `emulacao=` pelo nome"
