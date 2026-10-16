@@ -1,4 +1,4 @@
-"""Os padrões de vibração da aba Vibração: Batida, Onda e Tranco.
+"""Os padrões de vibração da aba Vibração: Tranco, Batida, Onda, Coice e Pancada do lado.
 
 Um padrão é uma sequência de passos `(ms, esquerdo, direito)`, de 0 a 255 em cada motor. Quem
 toca é a fila do controle: manda o par de cada passo, espera o tempo dele e, no fim, devolve a mão
@@ -18,7 +18,8 @@ DIREITO = "direito"
 AMBOS = "ambos"
 MOTORES: tuple[str, ...] = (ESQUERDO, DIREITO, AMBOS)
 
-#: As três formas, na ordem em que a tela as mostra. A chave é a que o clique manda.
+#: As formas, na ordem em que a tela as mostra. A chave é a que o clique manda. O Ronco (contínuo)
+#: não entra: o teto de 2000 ms e o silêncio no fim valem para todo padrão.
 PADROES: dict[str, tuple[Passo, ...]] = {
     # duas pancadas e um respiro, como um coração
     "batida": ((110, 255, 255), (90, 0, 0), (110, 190, 190), (520, 0, 0)),
@@ -27,12 +28,72 @@ PADROES: dict[str, tuple[Passo, ...]] = {
              (90, 190, 190), (90, 120, 120), (90, 60, 60), (60, 0, 0)),
     # um golpe seco, um segundo menor e o silêncio
     "tranco": ((150, 255, 255), (70, 0, 0), (90, 150, 150), (60, 0, 0)),
+    # o coice da arma: um golpe fundo que cai logo, para a soltura do tiro
+    "coice": ((60, 200, 120), (60, 0, 0)),
+    # um golpe só; no motor do lado de onde veio o som (`motores`), nos dois quando não se sabe
+    "pancada_do_lado": ((90, 255, 255), (60, 0, 0)),
 }
 
-ROTULOS: dict[str, str] = {"batida": "Batida", "onda": "Onda", "tranco": "Tranco"}
+ROTULOS: dict[str, str] = {
+    "batida": "Batida", "onda": "Onda", "tranco": "Tranco", "coice": "Coice",
+    "pancada_do_lado": "Pancada do lado",
+}
+
+#: O que o efeito imersão de um controle guarda (``rumble.efeito_imersao``): «Do estilo» é o
+#: automático (nenhum padrão até a sprint dos estilos), «Sem efeito» cala o controle.
+DO_ESTILO = "do_estilo"
+SEM_EFEITO = "sem_efeito"
+#: Os padrões na ordem da lista da tela, depois das duas escolhas de sempre.
+ESCOLHAS: tuple[str, ...] = (DO_ESTILO, SEM_EFEITO, "tranco", "batida", "onda", "coice",
+                             "pancada_do_lado")
+#: Cada padrão em uma linha, para a lista (até 36 letras).
+DICAS: dict[str, str] = {
+    DO_ESTILO: "O que o estilo pede",
+    SEM_EFEITO: "Os motores não tocam efeito",
+    "tranco": "Um golpe seco e um respiro",
+    "batida": "Duas pancadas, como um coração",
+    "onda": "Sobe e desce devagar",
+    "coice": "O recuo da arma, ao soltar",
+    "pancada_do_lado": "Um golpe do lado do som",
+}
+#: O Coice é o recuo: toca quando o dedo solta o gatilho, não quando aperta.
+NA_SOLTURA = frozenset({"coice"})
+#: A Pancada do lado olha de onde veio o som do jogo.
+DO_LADO_DO_SOM = frozenset({"pancada_do_lado"})
 
 #: Quanto um padrão pode durar: a fila do controle espera por ele.
 TETO_MS = 2000
+
+
+def escolha_valida(valor: object) -> str | None:
+    """A escolha do perfil como padrão; ``None`` quando não há escolha ou é «Do estilo»."""
+    if isinstance(valor, str) and valor in ESCOLHAS and valor != DO_ESTILO:
+        return valor
+    return None
+
+
+#: O padrão que cada estilo pede. Vazio de propósito: nenhum estilo toca padrão sozinho até a
+#: sprint dos estilos (E1), e o Ronco, contínuo, nunca entra aqui.
+POR_ESTILO: dict[str, str] = {}
+
+
+def padrao_que_vale(escolha: object, estilo: object) -> str | None:
+    """O padrão que toca de verdade, ou ``None`` quando os motores deste controle não tocam nada.
+
+    Sem escolha («Do estilo») vale o do estilo, e nenhum quando o estilo não pede; «Sem efeito»
+    cala. A Bateria longa não troca o padrão: ela só baixa a força, e quem baixa é o chamador.
+    """
+    if escolha == SEM_EFEITO:
+        return None
+    dela = escolha_valida(escolha)
+    if dela is not None:
+        return dela
+    return POR_ESTILO.get(estilo) if isinstance(estilo, str) else None
+
+
+def duracao_ms(padrao: str) -> int:
+    """Quanto o padrão dura, em ms (a soma dos passos)."""
+    return sum(ms for ms, _esq, _dir in PADROES[padrao])
 
 
 def sequencia(padrao: str, motores: str = AMBOS) -> tuple[Passo, ...]:

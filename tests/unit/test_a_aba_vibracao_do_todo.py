@@ -36,7 +36,7 @@ def _doc() -> str:
 
 
 def test_cada_padrao_tem_passos_de_ate_255_e_dura_menos_que_o_teto() -> None:
-    assert set(padroes.PADROES) == {"batida", "onda", "tranco"}
+    assert set(padroes.PADROES) == {"batida", "onda", "tranco", "coice", "pancada_do_lado"}
     for nome, passos in padroes.PADROES.items():
         assert passos, nome
         for ms, esq, dir_ in passos:
