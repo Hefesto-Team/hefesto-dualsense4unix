@@ -299,10 +299,19 @@ class ProfileManager:
             except Exception as exc:
                 logger.warning("freestyle_apagado_sem_o_perfil_que_volta",
                                name=name, err=str(exc))
-        from hefesto_dualsense4unix.core import ativacao_de_botao, filtro_de_botao
+        from hefesto_dualsense4unix.core import (
+            ativacao_de_botao,
+            curva_do_analogico,
+            filtro_de_botao,
+        )
+        from hefesto_dualsense4unix.integrations import uinput_mouse
 
+        # Sem perfil que volte, nada do Freestyle segue valendo: o modo e o filtro do botão,
+        # a curva dos analógicos e o ajuste do cursor (que solta o clique travado).
         ativacao_de_botao.definir_ativo(self.store, None)
         filtro_de_botao.definir_ativo(self.store, None)
+        curva_do_analogico.definir_ativo(self.store, None)
+        uinput_mouse.definir_ajuste_ativo(self.store, None)
         self.store.set_active_profile(None)
         ligar_o_freestyle(self.store, False)
         return None

@@ -85,10 +85,15 @@ def soltar_o_cursor(daemon: Any) -> None:
     """
     tabela = getattr(daemon, "_tabela_no_jogo", None)
     for device in (getattr(daemon, "_mouse_device", None), getattr(tabela, "_mouse", None)):
-        solta = getattr(device, "soltar_o_clique_travado", None)
-        if solta is not None:
-            with contextlib.suppress(OSError):
-                solta()
+        _soltar_o_travado(device)
+
+
+def _soltar_o_travado(device: Any) -> None:
+    """Solta o clique travado de um mouse virtual (ou de nenhum). Nunca levanta."""
+    solta = getattr(device, "soltar_o_clique_travado", None)
+    if solta is not None:
+        with contextlib.suppress(OSError):
+            solta()
 
 
 def dispatch_mouse(daemon: DaemonProtocol, state: Any, buttons_pressed: frozenset[str]) -> None:
@@ -418,6 +423,10 @@ def despachar_no_jogo(
       também: a supressão que ELA ligou vale com o jogo aberto. A do perfil do jogo
       não cala, porque o jogo aberto é justamente onde a chave e o «Só dentro» agem.
     """
+    if no_jogo:
+        # Com o pad do jogo despachando, o mouse do desktop para de andar: o clique que o
+        # travador prendeu nele não atravessa o jogo inteiro. Idempotente a cada tique.
+        _soltar_o_travado(getattr(daemon, "_mouse_device", None))
     if no_jogo and _suspenso_por_ela(daemon):
         no_jogo = False
     tabela = getattr(daemon, "_tabela_no_jogo", None)

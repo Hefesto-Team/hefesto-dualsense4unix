@@ -17,7 +17,11 @@ A MORDIDA, e cada uma foi rodada na entrega:
 - tire o `soltar_o_clique_travado` de `definir_ajuste` e
   :func:`test_o_clique_travado_solta_na_troca_de_perfil` reprova;
 - tire o `_entregar_o_ajuste` de `dispatch_mouse` e
-  :func:`test_o_dispatch_do_desktop_entrega_o_ajuste` reprova.
+  :func:`test_o_dispatch_do_desktop_entrega_o_ajuste` reprova;
+- tire o `definir_ajuste_ativo(…, None)` de `apagar_o_freestyle` e
+  :func:`test_apagar_o_freestyle_sem_perfil_que_volte_larga_toda_a_acessibilidade` reprova;
+- tire o `_soltar_o_travado` do topo de `despachar_no_jogo` e
+  :func:`test_entrar_no_jogo_solta_o_clique_travado_do_mouse_do_desktop` reprova.
 """
 from __future__ import annotations
 
@@ -426,6 +430,31 @@ def test_o_perfil_seguinte_larga_o_ajuste_do_anterior(monkeypatch: pytest.Monkey
     assert depois > epoca, "cada ativação conta uma época nova"
 
 
+def test_apagar_o_freestyle_sem_perfil_que_volte_larga_toda_a_acessibilidade() -> None:
+    """O Freestyle apagado sem perfil para voltar: nada dele segue valendo sem perfil ativo."""
+    from hefesto_dualsense4unix.core import ativacao_de_botao as ab
+    from hefesto_dualsense4unix.core import curva_do_analogico as cv
+    from hefesto_dualsense4unix.core import filtro_de_botao as fb
+    from hefesto_dualsense4unix.daemon.state_store import StateStore
+    from hefesto_dualsense4unix.profiles import manager as gerente
+
+    store = StateStore()
+    m = gerente.ProfileManager(controller=SimpleNamespace(), store=store)  # type: ignore[arg-type]
+    m.apply_acessibilidade(Profile.model_validate({
+        "name": "Freestyle", "match": {"type": "any"},
+        "ativacao": {"alternar": ["l1"], "repique_ms": 120},  # (noqa-acento)
+        "analogicos": {"zona_morta": 20},  # (noqa-acento)
+        "cursor": {"clique_travado": "triangle"}}))
+    _, epoca = um.ajuste_ativo(store)
+    assert ab.alguma(store) and fb.alguma(store) and cv.alguma(store)
+    assert um.ajuste_ativo(store)[0] is not None
+    m.apagar_o_freestyle(None)
+    assert not (ab.alguma(store) or fb.alguma(store)), "o botão do Freestyle seguiu valendo"
+    assert not cv.alguma(store), "a curva do Freestyle seguiu valendo sem perfil"
+    larga, depois = um.ajuste_ativo(store)
+    assert larga is None and depois > epoca, "o cursor do Freestyle seguiu valendo sem perfil"
+
+
 def test_o_computador_vale_por_baixo_e_o_conflito_fica_com_o_jogo() -> None:
     from hefesto_dualsense4unix.profiles.o_padrao_do_computador import perfil_que_vale
     from hefesto_dualsense4unix.utils.maquina import ComputadorDeclarado
@@ -488,3 +517,27 @@ def test_a_tabela_com_o_jogo_entrega_o_ajuste_e_solta_o_clique_travado() -> None
     assert visto and visto[-1][0] is not None and visto[-1][0].clique_travado == "l1"
     tabela.soltar()
     assert soltou, "sair do jogo tem de soltar o clique que o travador segura"
+
+
+@pytest.mark.parametrize("suspenso", [False, True], ids=["com-a-emulacao", "suspensa-por-ela"])
+def test_entrar_no_jogo_solta_o_clique_travado_do_mouse_do_desktop(
+    monkeypatch: pytest.MonkeyPatch, suspenso: bool,
+) -> None:
+    """Com o pad do jogo despachando, o laço para de despachar o mouse do desktop.
+
+    Sem esta soltura, o botão esquerdo que o travador prendeu fica apertado o jogo inteiro: a
+    soltura por silêncio do device só roda quando ele volta a ser despachado.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems import mouse
+
+    dev, no = _mouse(monkeypatch, _cursor(clique_travado="triangle"))
+    _tique(dev, 0.0, F({"triangle"}))
+    _tique(dev, 0.1)
+    daemon = SimpleNamespace(
+        _mouse_device=dev, _tabela_no_jogo=None, _emulation_suppressed=suspenso)
+    mouse.despachar_no_jogo(daemon, _estado(), F(), no_jogo=False)
+    assert no.conta("BTN_LEFT", 0) == 0, "fora do jogo o mouse do desktop segue preso"
+    mouse.despachar_no_jogo(daemon, _estado(), F(), no_jogo=True)
+    assert no.conta("BTN_LEFT", 0) == 1, "o jogo abriu com o clique do desktop preso"
+    mouse.despachar_no_jogo(daemon, _estado(), F(), no_jogo=True)
+    assert no.conta("BTN_LEFT", 0) == 1, "a soltura é uma só"
