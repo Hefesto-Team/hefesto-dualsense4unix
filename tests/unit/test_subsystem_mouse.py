@@ -113,6 +113,24 @@ class TestMouseSubsystem:
         assert no.parou == 1
 
 
+    @pytest.mark.asyncio
+    async def test_o_stop_do_subsystem_nao_esquece_a_preferencia_salva(
+        self, no_de_mentira: type[_NoDeMentira], monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Desligar o daemon desce o nó, mas o mouse ligado volta ligado no próximo início.
+
+        MORDIDA: chamar `stop_mouse_emulation(daemon)` sem `persist=False` grava o desligado.
+        """
+        gravados: list[bool] = []
+        monkeypatch.setattr("hefesto_dualsense4unix.utils.session.save_mouse_emulation",
+                            lambda ligado, *a, **k: gravados.append(ligado))
+        ctx = _ctx(enabled=True)
+        subsystem = MouseSubsystem()
+        await subsystem.start(ctx)
+        await subsystem.stop()
+        assert ctx.daemon._mouse_device is None
+        assert gravados == [], "o stop do subsystem gravou o mouse desligado na sessão"
+
 class TestTabelaNoJogoFechaOsDois:
     def test_o_stop_do_teclado_roda_mesmo_se_o_do_mouse_levanta(
         self, monkeypatch: pytest.MonkeyPatch
