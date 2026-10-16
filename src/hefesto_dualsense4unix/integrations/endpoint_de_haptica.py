@@ -1010,8 +1010,12 @@ class TocadorDoRumble:
         """Um toque por cima do nível de agora. Nunca espera, nunca levanta.
 
         Uma forma longa (Guarda, Aparo) em curso não é cortada por toque nenhum: o novo pedido
-        espera a vez dele, e a fila do rádio não ganha um segundo toque por cima do primeiro.
+        cai, e a fila do rádio não ganha um segundo toque por cima do primeiro. Ele cai antes da
+        conta das amostras, que roda no fio de quem pede.
         """
+        with self._trava:
+            if self._toque is not None and self._toque_longo:
+                return
         amostras = forma_do_toque(energia, duracao_ms, forma)
         canais = CANAIS_DO_LADO.get(lado, CANAIS_DO_LADO["centro"])
         with self._trava:

@@ -9,6 +9,7 @@ e teto) e só toca por escolha manual, nunca como padrão de estilo.
 """
 from __future__ import annotations
 
+import functools
 import math
 import sys
 from array import array
@@ -91,18 +92,30 @@ def amostras(
             f"forma de háptica desconhecida: {chave!r}. As que existem: {', '.join(FORMAS)}")
     duracao = forma.duracao_ms if forma.duracao_ms is not None else (duracao_ms or 40)
     n = max(2, round(taxa * max(1, int(duracao)) / 1000))
-    ataque = max(1, min(n - 1, round(taxa * forma.ataque_ms / 1000)))
     forca = max(0.0, min(1.0, float(energia)))
+    envelopes, ondas = _molde(chave, n, taxa)
+    pares = zip(envelopes, ondas, strict=True)
+    return array("f", [forca * envelope * onda for envelope, onda in pares])
+
+
+@functools.lru_cache(maxsize=32)
+def _molde(chave: str, n: int, taxa: int) -> tuple[array[float], array[float]]:
+    """O envelope e a onda de uma forma, sem a força: a conta dos senos, feita uma vez por duração.
+
+    O toque sai no laço do tato, no fio do daemon: a Guarda (850 ms, dois senos) custa uns 20 ms
+    de conta, e refazê-la a cada tiro seguraria a entrada dos quatro controles.
+    """
+    forma = FORMAS[chave]
+    ataque = max(1, min(n - 1, round(taxa * forma.ataque_ms / 1000)))
     passos = [(2.0 * math.pi * hz / taxa, peso) for hz, peso in forma.componentes]
-    saida = array("f", bytes(4 * n))
+    envelopes, ondas = array("d", bytes(8 * n)), array("d", bytes(8 * n))
     for i in range(n):
         if i < ataque:
-            envelope = i / ataque
+            envelopes[i] = i / ataque
         else:
-            envelope = ((n - 1 - i) / (n - 1 - ataque)) ** 2 if n - 1 > ataque else 0.0
-        onda = sum(peso * math.sin(passo * i) for passo, peso in passos)
-        saida[i] = forca * envelope * onda
-    return saida
+            envelopes[i] = ((n - 1 - i) / (n - 1 - ataque)) ** 2 if n - 1 > ataque else 0.0
+        ondas[i] = sum(peso * math.sin(passo * i) for passo, peso in passos)
+    return envelopes, ondas
 
 
 def duracao_ms_da(chave: str, pedida: int | None = None) -> int:

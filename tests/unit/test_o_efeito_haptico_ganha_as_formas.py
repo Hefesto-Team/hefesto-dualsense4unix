@@ -97,6 +97,39 @@ def test_o_toque_de_hoje_nao_mudou() -> None:
     assert list(eh.forma_do_toque(0.8, 40, fh.GUARDA)) == list(fh.amostras(fh.GUARDA, 0.8, 40))
 
 
+def test_a_conta_dos_senos_nao_se_refaz_a_cada_tiro(monkeypatch: pytest.MonkeyPatch) -> None:
+    """O toque sai no laço do tato, no fio do daemon; refazer a Guarda custava ~20 ms."""
+    primeira = fh.amostras(fh.GUARDA, 1.0)
+    contados = {"sin": 0}
+    seno = math.sin
+
+    def contar(x: float) -> float:
+        contados["sin"] += 1
+        return seno(x)
+
+    monkeypatch.setattr(fh.math, "sin", contar)
+    segunda = fh.amostras(fh.GUARDA, 0.5)
+    assert contados["sin"] == 0, "a Guarda refez os senos num tiro que só mudou a força"
+    assert all(abs(b - 0.5 * a) < 1e-6 for a, b in zip(primeira, segunda, strict=True))
+
+
+def test_o_toque_que_cai_atras_da_guarda_nem_faz_a_conta(monkeypatch: pytest.MonkeyPatch) -> None:
+    tocador = eh.TocadorDoRumble(
+        "x", argv_de=lambda _s, _r: [], conferir=lambda _r: None, folga_s=0.05
+    )
+    try:
+        tocador.tocar_o_toque(1.0, tv.LADO_CENTRO, 40, sink="", dono="p1", forma=fh.GUARDA)
+
+        def proibida(*_a: Any, **_k: Any) -> Any:
+            raise AssertionError("o toque que cai atrás da Guarda fez a conta das amostras")
+
+        monkeypatch.setattr(eh, "forma_do_toque", proibida)
+        tocador.tocar_o_toque(1.0, tv.LADO_CENTRO, 40, sink="", dono="p1", forma=fh.IMPACTO)
+        assert tocador.tocando_o_toque
+    finally:
+        tocador.parar()
+
+
 # --- A Bateria longa e o estilo ---------------------------------------------------------
 
 
