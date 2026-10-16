@@ -2095,6 +2095,33 @@ def sem_o_gesto_do_ps(
     return botoes - calados if calados else botoes
 
 
+def sem_o_eixo_do_gesto(
+    daemon: Any,
+    de: str | None,
+    botoes: frozenset[str],
+    cru: tuple[int, int],
+    l2: int,
+    r2: int,
+) -> tuple[int, int]:
+    """O ``(l2, r2)`` de `de` sem o eixo que o gesto dos acessórios segura. Nunca levanta.
+
+    O jogo lê o gatilho pelo EIXO (``ABS_Z``/``ABS_RZ``): calar só o botão ``r2_btn`` deixaria o
+    PS + R2 atirar. `botoes` são os do controle COM o PS e `cru` os eixos antes do limiar do DSX.
+    """
+    gerente = getattr(daemon, "_hotkey_manager", None)
+    eixos = getattr(gerente, "eixos_do_gesto", None)
+    if not callable(eixos):
+        return l2, r2
+    if getattr(getattr(gerente, "config", None), "passthrough_in_emulation", False):
+        return l2, r2
+    try:
+        calados = eixos(botoes, cru, de=de)
+    except Exception as exc:
+        logger.debug("gesto_dos_acessorios_sem_latch", err=str(exc))
+        return l2, r2
+    return (0 if "l2" in calados else l2, 0 if "r2" in calados else r2)
+
+
 def _dizer_o_gatilho_do_jogo(
     daemon: Any, target_uniq: str | None, side: str, block: bytes
 ) -> None:
@@ -2148,6 +2175,7 @@ def dispatch_gamepad(
         return
     buttons_pressed, soltos = _apertos_do_primario(daemon, device, buttons_pressed)
     # O gesto do PS fica com o Hefesto: o R3 do PS + R3 não chega ao jogo.
+    com_o_ps = buttons_pressed
     buttons_pressed = sem_o_gesto_do_ps(daemon, primary_identity(daemon), buttons_pressed)
     # A Navegação Interna com a janela na frente: o que navega não vai ao jogo (D-22).
     buttons_pressed, soltos = roubar_o_que_navega(daemon, buttons_pressed, soltos)
@@ -2156,6 +2184,10 @@ def dispatch_gamepad(
     store = getattr(daemon, "store", None)
     try:
         l2, r2 = cortar_pelo_limiar(store, primary_identity(daemon), state.l2_raw, state.r2_raw)
+        # O gesto dos acessórios (PS + R2 e companhia): o eixo do gatilho dele também não chega.
+        l2, r2 = sem_o_eixo_do_gesto(
+            daemon, primary_identity(daemon), com_o_ps, (state.l2_raw, state.r2_raw), l2, r2
+        )
         botoes = buttons_pressed
         arranjo = roteador_ativo(store)
         uniq = primary_identity(daemon) if arranjo is not None else None
@@ -2627,6 +2659,7 @@ __all__ = [
     "ralos_do_mic",
     "read_primary_calibration",
     "rehide_physical_hidraw",
+    "sem_o_eixo_do_gesto",
     "sem_o_gesto_do_ps",
     "soltar_o_cursor_do_toque",
     "start_gamepad_emulation",

@@ -6,7 +6,7 @@ JSON-RPC 2.0 por linha), e a tabela de métodos é pequena e fechada:
 * ``mod.ola`` — a primeira palavra, com a ficha que o supervisor passou ao
   filho (``HEFESTO_MOD_FICHA``). O ``SO_PEERCRED`` da conexão tem de ser o PID
   que o supervisor criou ou um descendente dele, do mesmo usuário;
-* ``eventos.assinar`` — cada tópico pede ``ler:<tópico>``;
+* ``eventos.assinar`` e ``acessorios.estado`` — cada tópico pede ``ler:<tópico>``;
 * ``luz.set``, ``vibracao.set``, ``gatilho.set`` — cada um pede
   ``escrever:<canal>``, sempre com o ``uniq`` do controle (escrever em todos é
   proibido, a mesma regra do BROADCAST-PROIBIDO-01) e nunca num canal que o
@@ -31,7 +31,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from hefesto_dualsense4unix.core.events import EventBus
+from hefesto_dualsense4unix.core.events import EventBus, EventTopic
 from hefesto_dualsense4unix.daemon.protocolo_do_ipc import (
     CODE_INVALID_PARAMS,
     CODE_INVALID_REQUEST,
@@ -86,6 +86,8 @@ class _Credencial:
 @dataclass(eq=False)
 class _Conexao:
     sessao: _Credencial | None = None
+    #: A modificação desta conexão devolveu o estado dos acessórios: ao cair, o estado se apaga.
+    deu_o_estado: bool = False
     assinaturas: list[tuple[str, asyncio.Queue[Any]]] = field(default_factory=list)
     tarefas: list[asyncio.Task[None]] = field(default_factory=list)
     trava: asyncio.Lock = field(default_factory=asyncio.Lock)
@@ -204,6 +206,51 @@ _ESCRITAS: dict[str, tuple[str, str, Callable[[dict[str, Any], str], dict[str, A
 _NOME_DO_CANAL = {"luz": "a luz", "vibracao": "a vibração", "gatilho": "o gatilho"}
 
 
+def estado_vazio_dos_acessorios(mod_id: str) -> dict[str, Any]:
+    """O estado de quem não tem acessório nem conexão: os gestos do PS voltam a ser os de sempre."""
+    return {
+        "mod": mod_id, "ligado": False, "nivel": 0, "perfil": None, "aparelhos": [], "ajustes": {},
+    }
+
+
+def estado_dos_acessorios(mod_id: str, params: dict[str, Any]) -> dict[str, Any]:
+    """O ``acessorios.estado`` validado: ``{mod, ligado, nivel, perfil, aparelhos, ajustes}``.
+
+    ``ajustes`` leva só o que a modificação declara e o Hefesto entende (limiar do fundo do L2,
+    acelerador, camada, lado único, gestos no Modo Nativo, toque de confirmação); o resto cai.
+    """
+    ligado = params.get("ligado", False)
+    nivel = params.get("nivel", 0)
+    perfil = params.get("perfil")
+    aparelhos = params.get("aparelhos", [])
+    opcoes = params.get("ajustes", {})
+    if not isinstance(ligado, bool):
+        raise RecusaError(CODE_INVALID_PARAMS, "acessorios.estado pede ligado verdadeiro ou falso.")
+    if isinstance(nivel, bool) or not isinstance(nivel, int) or not 0 <= nivel <= 10:
+        raise RecusaError(CODE_INVALID_PARAMS, "acessorios.estado pede o nível de 0 a 10.")
+    if perfil is not None and not isinstance(perfil, str):
+        raise RecusaError(CODE_INVALID_PARAMS, "acessorios.estado pede o perfil como texto.")
+    if not isinstance(aparelhos, list) or not isinstance(opcoes, dict):
+        raise RecusaError(
+            CODE_INVALID_PARAMS, "acessorios.estado pede aparelhos em lista e ajustes em objeto."
+        )
+    return {
+        "mod": mod_id,
+        "ligado": ligado,
+        "nivel": nivel,
+        "perfil": perfil,
+        "aparelhos": [str(a) for a in aparelhos][:32],
+        "ajustes": {k: v for k, v in opcoes.items() if k in OPCOES_DOS_GESTOS},
+    }
+
+
+#: As opções da modificação que o Hefesto lê (as que mexem nos gestos do PS e na confirmação).
+OPCOES_DOS_GESTOS = frozenset({
+    "limiar_fundo", "acelerador", "camada", "camada_s", "lado_unico", "gestos_no_nativo",
+    "toque_de_confirmacao",
+})
+
+
 class Porta:
     """O servidor da porta das modificações, dentro do laço do serviço."""
 
@@ -313,6 +360,10 @@ class Porta:
                 tarefa.cancel()
             for topico, fila in con.assinaturas:
                 self.bus.unsubscribe(topico, fila)
+            if con.deu_o_estado and con.sessao is not None:
+                self.bus.publish(
+                    EventTopic.ACESSORIOS_ESTADO, estado_vazio_dos_acessorios(con.sessao.mod_id)
+                )
             self._conexoes.discard(con)
             with contextlib.suppress(Exception):
                 writer.close()
@@ -353,6 +404,8 @@ class Porta:
                 })
             if metodo == "eventos.assinar":
                 return _resposta(req_id, self._assinar(con, writer, params))
+            if metodo == "acessorios.estado":
+                return _resposta(req_id, self._estado_dos_acessorios(con, params))
             if metodo in _ESCRITAS:
                 # Como o IPC (``ipc:<método>``): quem grava no meio da escrita sabe de
                 # onde ela veio, e a modificação deixa de escrever como «ninguém».
@@ -406,6 +459,16 @@ class Porta:
                     name=f"mods-{con.sessao.mod_id}-{topico}",
                 ))
         return {"assinados": list(topicos)}
+
+    def _estado_dos_acessorios(self, con: _Conexao, params: dict[str, Any]) -> dict[str, Any]:
+        """O estado que a modificação de acessórios devolve; vai ao barramento e liga os gestos."""
+        assert con.sessao is not None
+        if "ler:acessorios.gesto" not in con.sessao.permissoes:
+            raise RecusaError(CODE_SEM_PERMISSAO, "falta a permissão ler:acessorios.gesto")
+        estado = estado_dos_acessorios(con.sessao.mod_id, params)
+        con.deu_o_estado = True
+        self.bus.publish(EventTopic.ACESSORIOS_ESTADO, estado)
+        return {"recebido": True}
 
     async def _encaminhar(
         self,
@@ -563,6 +626,8 @@ __all__ = [
     "credencial_do_par",
     "descende_de",
     "escritor_do_servico",
+    "estado_dos_acessorios",
+    "estado_vazio_dos_acessorios",
     "o_jogo_escreve_no_servico",
     "uniq_do_posto_no_servico",
 ]

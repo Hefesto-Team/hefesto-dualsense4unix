@@ -1,26 +1,11 @@
 """Event bus async baseado em asyncio.Queue por subscriber.
 
-Modelo pubsub simples:
-  - `publish(topic, payload)` entrega para todas as filas registradas no tópico.
-  - `subscribe(topic)` devolve uma `asyncio.Queue` dedicada e não-bloqueante.
-  - Publisher nunca bloqueia: se a fila está cheia, o evento mais antigo
-    é descartado (política `drop_oldest`) e emite log.warning uma vez por
-    subscriber congestionado no ciclo.
-
-Tópicos canônicos do domínio Hefesto - DualSense4Unix (constantes em `EventTopic`):
-  - `state.update`       — novo `ControllerState` completo.
-  - `button.down` / `button.up` — mudanças de botão.
-  - `battery.change`     — bateria mudou segundo debounce (ver ADR-008).
-  - `controller.connected` / `controller.disconnected`.
-  - `trigger.set`        — trigger efetivamente aplicado.
-  - `led.set`            — led efetivamente aplicado.
-  - `jogo.vibracao`      — o par que o jogo pediu a UM controle e o que chegou aos motores.
-  - `jogo.fechou`        — o jogo em cena saiu.
-  - `perfil.trocou`      — o perfil efetivo mudou (guardado: quem assina depois recebe o de agora).
-
-Thread-safety: `publish` pode ser chamado de dentro de um executor
-(thread diferente do loop). A entrega usa `loop.call_soon_threadsafe`
-para enfileirar sem races. `subscribe` deve ser chamado do loop.
+Pubsub simples: `publish(topic, payload)` entrega a todas as filas do tópico; `subscribe(topic)`
+devolve uma `asyncio.Queue` dedicada. O publisher nunca bloqueia: com a fila cheia, o evento mais
+antigo é descartado (`drop_oldest`) e um log.warning sai uma vez por subscriber congestionado.
+Os tópicos são as constantes de `EventTopic` (o que cada um leva está em
+docs/research/o-porque-dos-modulos.md). `publish` pode vir de um executor: a entrega usa
+`loop.call_soon_threadsafe`; `subscribe` é chamado do loop.
 """
 from __future__ import annotations
 
@@ -54,6 +39,8 @@ class EventTopic:
     JOGO_GATILHO = "jogo.gatilho"
     JOGO_HAPTICA = "jogo.haptica"
     PERFIL_TROCOU = "perfil.trocou"
+    ACESSORIOS_GESTO = "acessorios.gesto"
+    ACESSORIOS_ESTADO = "acessorios.estado"
 
 
 #: Nomes reservados SEM fonte (momento do jogo, app que abre, hora): ninguém publica nem assina
@@ -68,7 +55,9 @@ TOPICOS_RESERVADOS: frozenset[str] = frozenset({
 #: Os tópicos de ESTADO: o último valor publicado fica guardado e vai a quem assina depois,
 #: porque o estado vale até a próxima troca e quem conecta com o jogo já aberto não tem
 #: de esperá-la. Evento (a vibração, o jogo que fechou) não entra aqui: repeti-lo seria mentir.
-TOPICOS_DE_ESTADO: frozenset[str] = frozenset({EventTopic.PERFIL_TROCOU})
+TOPICOS_DE_ESTADO: frozenset[str] = frozenset(
+    {EventTopic.PERFIL_TROCOU, EventTopic.ACESSORIOS_ESTADO}
+)
 
 
 @dataclass
@@ -165,6 +154,10 @@ class EventBus:
 
     def subscriber_count(self, topic: str) -> int:
         return len(self._subs.get(topic, []))
+
+    def ultimo(self, topic: str) -> Any | None:
+        """O último valor publicado de um tópico de ESTADO, ou None (síncrono, sem fila)."""
+        return self._estado.get(topic)
 
 
 __all__ = ["DEFAULT_QUEUE_MAXSIZE", "TOPICOS_DE_ESTADO", "EventBus", "EventTopic"]

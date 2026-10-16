@@ -1891,7 +1891,12 @@ class CoopManager:
                     apertados=botoes,
                 )
                 # O gesto do PS deste jogador fica com o Hefesto, no latch DELE.
+                com_o_ps = botoes
                 botoes = sem_o_gesto_do_ps(self._daemon, player.identity, botoes)
+                # E o eixo do gatilho do gesto dos acessórios (PS + R2) também não chega ao jogo.
+                l2, r2 = sem_o_eixo_do_gesto(
+                    self._daemon, player.identity, com_o_ps, (snap.l2_raw, snap.r2_raw), l2, r2
+                )
                 # A Navegação Interna com a janela na frente: o que navega não vai ao jogo (D-22).
                 botoes, soltos = roubar_o_que_navega(self._daemon, botoes, soltos)
                 # O Modo Big Picture com a Steam na frente: o que navega vira tecla (P2 a P4).
@@ -2466,6 +2471,7 @@ from hefesto_dualsense4unix.daemon.subsystems.gamepad import (  # noqa: E402
     filtrar_o_botao,
     moldar_os_analogicos,
     ralos_do_mic,
+    sem_o_eixo_do_gesto,
     sem_o_gesto_do_ps,
     soltar_a_ativacao,
 )

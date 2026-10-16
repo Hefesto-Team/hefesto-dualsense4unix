@@ -49,7 +49,11 @@ def evdev_buttons_once(daemon: object) -> frozenset[str]:
 
 
 def observar_os_atalhos(
-    daemon: object, buttons_pressed: frozenset[str], *, now: float
+    daemon: object,
+    buttons_pressed: frozenset[str],
+    *,
+    now: float,
+    gatilhos_do_posto: tuple[int, int] | None = None,
 ) -> str | None:
     """Entrega ao `HotkeyManager` os botões de CADA controle na mesa.
 
@@ -74,15 +78,43 @@ def observar_os_atalhos(
         return None
     maos = botoes_de_cada_controle(daemon, buttons_pressed)
     observar_o_gesto_da_vaga(maos)
+    gatilhos = _gatilhos_dos_gestos(daemon, gerente, maos, gatilhos_do_posto)
     resultado: str | None = None
     for quem, botoes in maos.items():
-        disparou: str | None = gerente.observe(botoes, now=now, de=quem)
+        pressao = gatilhos.get(quem)
+        if pressao is None:
+            disparou: str | None = gerente.observe(botoes, now=now, de=quem)
+        else:
+            disparou = gerente.observe(botoes, now=now, de=quem, gatilhos=pressao)
         if resultado is None:
             resultado = disparou
     soltar = getattr(gerente, "soltar_quem_saiu", None)
     if callable(soltar):
         soltar(maos)
     return resultado
+
+
+def _gatilhos_dos_gestos(
+    daemon: object,
+    gerente: object,
+    maos: dict[str | None, frozenset[str]],
+    do_posto: tuple[int, int] | None,
+) -> dict[str | None, tuple[int, int]]:
+    """A pressão `(L2, R2)` de cada controle lido, só quando há gesto dos acessórios a medir.
+
+    O primeiro controle lido é o dono do posto (a pressão vem do `state` do laço); os outros, dos
+    mesmos leitores que a tabela do jogo usa. Sem modificação de acessórios, é um dicionário vazio.
+    """
+    valem = getattr(gerente, "gestos_valem_agora", None)
+    if not callable(valem) or not valem():
+        return {}
+    saida: dict[str | None, tuple[int, int]] = {}
+    dono = _mac_ou_none(getattr(getattr(daemon, "controller", None), "primary_uniq", None))
+    if do_posto is not None:
+        saida[dono] = do_posto
+    for uniq, (_botoes, l2, r2) in gatilhos_de_cada_controle(daemon).items():
+        saida[uniq] = (l2, r2)
+    return saida
 
 
 def botoes_de_cada_controle(

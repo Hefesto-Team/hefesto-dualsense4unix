@@ -1538,3 +1538,15 @@ estado completo do daemon como `rumble_motor_pct_padrao`. O ganho da háptica (`
 O-GANHO-DA-HAPTICA-TEM-DONO-01) vai no mesmo pedido, e o padrão chega como `haptica_pct_padrao`.
 `efeito_haptico` e `efeito_imersao` (15/10/2026) são as duas listas da aba Vibração: `do_estilo` apaga
 a chave, e a resposta devolve cada uma (o valor ou `do_estilo`).
+
+## Os tópicos do barramento (`core/events.py`)
+
+Saíram da docstring do módulo em 16/10/2026 (a régua do texto enxuto), com os dois dos acessórios:
+
+- `state.update` o `ControllerState` completo; `button.down` / `button.up` a mudança de botão;
+  `battery.change` a bateria depois do debounce (ADR-008); `controller.connected` / `controller.disconnected`;
+  `trigger.set` e `led.set` o que foi aplicado de fato;
+- `jogo.vibracao` o par que o jogo pediu a UM controle e o que chegou aos motores; `jogo.fechou` o jogo em
+  cena saiu; `perfil.trocou` o perfil efetivo mudou (estado guardado: quem assina depois recebe o de agora);
+- `acessorios.gesto` o gesto do PS que a modificação de acessórios executa (`sobe`, `desce`, `para`…);
+  `acessorios.estado` o que ela devolve (ligada, nível, perfil, aparelhos), também estado guardado.

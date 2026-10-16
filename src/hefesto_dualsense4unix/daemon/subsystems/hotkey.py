@@ -7,6 +7,7 @@ import contextvars
 import os
 import subprocess as _sp
 import threading
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Final
 
@@ -724,6 +725,54 @@ def build_profile_cycle_callback(daemon: DaemonProtocol, direction: int) -> Any:
     return _cycle
 
 
+def gestos_dos_acessorios_valem(daemon: Any) -> Callable[[str | None], Any]:
+    """``valem(de)`` dos gestos do PS: as opções da modificação de acessórios, ou None.
+
+    Valem com o estado dela no barramento (``acessorios.estado``) e algum aparelho nele. No Modo
+    Nativo o tique congela antes dos atalhos, então só a opção «Gestos no Modo Nativo» os deixa.
+    """
+    from hefesto_dualsense4unix.core.events import EventTopic
+    from hefesto_dualsense4unix.integrations.gestos_dos_acessorios import Opcoes
+
+    lido: list[Any] = [None, None]  # [estado, as opções]: mudam de vez em quando, o tique não
+
+    def valem(_de: str | None) -> Opcoes | None:
+        bus = getattr(daemon, "bus", None)
+        ultimo = getattr(bus, "ultimo", None)  # (noqa-acento): nome do método
+        estado = ultimo(EventTopic.ACESSORIOS_ESTADO) if callable(ultimo) else None
+        if not isinstance(estado, dict) or not estado.get("aparelhos"):
+            return None
+        if lido[0] is not estado:
+            lido[0], lido[1] = estado, Opcoes.de(estado.get("ajustes"))
+        opcoes: Opcoes = lido[1]
+        if getattr(daemon, "_native_mode", False) and not opcoes.gestos_no_nativo:
+            return None
+        return opcoes
+
+    return valem
+
+
+def dizer_o_gesto_dos_acessorios(daemon: Any) -> Callable[[str | None, str, float], None]:
+    """``on_gesto(de, gesto, valor)``: o gesto vira o evento ``acessorios.gesto`` de ``de``.
+
+    O evento leva o ``uniq``, o número do jogador, o nome do gesto e o valor; nunca um botão cru.
+    """
+    from hefesto_dualsense4unix.core.events import EventTopic
+    from hefesto_dualsense4unix.daemon.subsystems.vibracao_do_jogo import _jogador_de
+
+    def dizer(de: str | None, gesto: str, valor: float) -> None:
+        publicar = getattr(getattr(daemon, "bus", None), "publish", None)
+        if not callable(publicar):
+            return
+        publicar(
+            EventTopic.ACESSORIOS_GESTO,
+            {"uniq": de, "jogador": _jogador_de(daemon, de), "gesto": gesto, "valor": valor},
+        )
+        logger.info("acessorio_gesto", gesto=gesto, valor=valor, **_de_quem(de))
+
+    return dizer
+
+
 def start_hotkey_manager(daemon: DaemonProtocol) -> None:
     """Instancia HotkeyManager e atribui a daemon._hotkey_manager."""
     from hefesto_dualsense4unix.integrations.hotkey_daemon import (
@@ -754,6 +803,8 @@ def start_hotkey_manager(daemon: DaemonProtocol) -> None:
         config=hotkey_config,
         ps_travado_de=lambda de: filtro_de_botao.ps_travado_ms(
             getattr(daemon, "store", None), de),
+        gestos_valem=gestos_dos_acessorios_valem(daemon),
+        on_gesto=dizer_o_gesto_dos_acessorios(daemon),
     )
     logger.info(
         "hotkey_manager_started",

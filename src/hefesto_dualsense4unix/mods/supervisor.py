@@ -13,8 +13,8 @@ modificação ligada do tipo ``processo`` vira um processo filho do serviço:
   isso numa linha;
 * reaberto com espera crescente (:data:`ESPERAS_PARA_VOLTAR`) nas três
   primeiras quedas; na quarta, fica «parou», com a última linha do diário;
-* parado com ``SIGTERM`` ao grupo e ``SIGKILL`` no fim do prazo, sempre pelo
-  PID que o supervisor criou, nunca por nome.
+* parado com ``SIGTERM`` ao grupo e ``SIGKILL`` no fim do prazo, pelo PID que o
+  supervisor criou, nunca por nome (o gesto ``para`` sem ``ligado: false`` em 300 ms também).
 
 O estado vivo de cada uma vai para ``mods-estado.json`` no diretório de
 execução, que a linha de comando e a tela leem.
@@ -35,7 +35,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
-from hefesto_dualsense4unix.core.events import EventBus
+from hefesto_dualsense4unix.core.events import EventBus, EventTopic
 from hefesto_dualsense4unix.mods import API_DAS_MODIFICACOES
 from hefesto_dualsense4unix.mods.instalador import (
     Entrada,
@@ -81,6 +81,10 @@ PRAZO_PARA_PARAR_S = 3.0
 
 #: De quanto em quanto tempo o supervisor relê o registro.
 INTERVALO_DO_REGISTRO_S = 1.0
+
+#: O PARAR dos acessórios: quanto a modificação tem para devolver ``ligado: false`` depois do gesto
+#: ``para``. Passou, o supervisor a encerra pelo PID (a vibração não pode seguir depois do freio).
+PRAZO_DO_PARAR_CURTO_S = 0.3
 
 #: Depois do ``SIGKILL``, quanto se espera o kernel recolher o grupo.
 ESPERA_DEPOIS_DO_SIGKILL_S = 2.0
@@ -286,6 +290,10 @@ class Supervisor:
         self._marca_do_registro: tuple[int, int] | None = None
         self._prctl = _prctl()
         self._gravou_o_estado = False
+        self.bus = bus
+        self.prazo_do_parar_curto_s = PRAZO_DO_PARAR_CURTO_S
+        self._ouvinte_do_parar: asyncio.Task[None] | None = None
+        self._parar_curtos: set[asyncio.Task[bool]] = set()
 
     # -- o estado ----------------------------------------------------------
 
@@ -323,13 +331,19 @@ class Supervisor:
     async def iniciar(self) -> None:
         await self.reconciliar()
         self._laco = asyncio.create_task(self._vigiar_o_registro(), name="mods-registro")
+        fila = self.bus.subscribe(EventTopic.ACESSORIOS_GESTO)
+        self._ouvinte_do_parar = asyncio.create_task(
+            self._ouvir_o_parar(fila), name="mods-parar-curto"
+        )
 
     async def parar(self) -> None:
         laco, self._laco = self._laco, None
-        if laco is not None:
-            laco.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await laco
+        ouvinte, self._ouvinte_do_parar = self._ouvinte_do_parar, None
+        for tarefa in (laco, ouvinte, *self._parar_curtos):
+            if tarefa is not None:
+                tarefa.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await tarefa
         await asyncio.gather(
             *(self._parar_uma(mod_id) for mod_id in list(self._vigiadas)),
             return_exceptions=True,
@@ -338,6 +352,40 @@ class Supervisor:
         if self._gravou_o_estado:
             with contextlib.suppress(FileNotFoundError):
                 self.lugares.estado.unlink()
+
+    async def _ouvir_o_parar(self, fila: asyncio.Queue[Any]) -> None:
+        """O gesto ``para`` abre uma conferência de :attr:`prazo_do_parar_curto_s`."""
+        try:
+            while True:
+                gesto = await fila.get()
+                if isinstance(gesto, dict) and gesto.get("gesto") == "para":
+                    tarefa = asyncio.create_task(self.conferir_o_parar(), name="mods-parar-curto-1")
+                    self._parar_curtos.add(tarefa)
+                    tarefa.add_done_callback(self._parar_curtos.discard)
+        finally:
+            self.bus.unsubscribe(EventTopic.ACESSORIOS_GESTO, fila)
+
+    async def conferir_o_parar(self) -> bool:
+        """Depois do ``para``, a modificação devolveu ``ligado: false`` a tempo? Senão, é encerrada.
+
+        Devolve ``True`` quando o supervisor a encerrou. Quem já estava desligada (``ligado: false``
+        antes do gesto) ou não tem processo do supervisor fica como está. Sempre pelo PID que o
+        supervisor criou, nunca por nome; a vigia reabre a modificação como reabre qualquer queda.
+        """
+        antes = self.bus.ultimo(EventTopic.ACESSORIOS_ESTADO)
+        if not isinstance(antes, dict) or antes.get("ligado") is False:
+            return False
+        await asyncio.sleep(self.prazo_do_parar_curto_s)
+        depois = self.bus.ultimo(EventTopic.ACESSORIOS_ESTADO)
+        if isinstance(depois, dict) and depois is not antes and depois.get("ligado") is False:
+            return False
+        vigiada = self._vigiadas.get(str(antes.get("mod", "")))
+        processo = vigiada.processo if vigiada is not None else None
+        if processo is None or processo.returncode is not None:
+            return False
+        logger.warning("mods_parar_curto", mod=antes.get("mod"), pid=processo.pid)
+        await parar_o_grupo(processo, self.prazo_para_parar_s)
+        return True
 
     async def _vigiar_o_registro(self) -> None:
         while True:
@@ -582,6 +630,7 @@ __all__ = [
     "ESPERA_DA_VIGIA_S",
     "ESPERA_DEPOIS_DO_SIGKILL_S",
     "ESTAVEL_DEPOIS_DE_S",
+    "PRAZO_DO_PARAR_CURTO_S",
     "PRAZO_PARA_PARAR_S",
     "EstadoDaModificacao",
     "Supervisor",

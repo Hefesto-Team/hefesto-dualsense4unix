@@ -39,6 +39,7 @@ from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
     ancorar_o_p1_no_aparelho,
     primary_identity,
     reconciliar_as_mascaras,
+    sem_o_eixo_do_gesto,
 )
 from hefesto_dualsense4unix.daemon.subsystems.poll import (
     BATTERY_DEBOUNCE_SEC,
@@ -4462,12 +4463,20 @@ class Daemon:
                 continue
 
             emu_buttons = buttons_pressed
+            emu_l2, emu_r2 = state.l2_raw, state.r2_raw
             if self._hotkey_manager is not None:
                 blocked = self._hotkey_manager.combo_buttons_active(
-                    buttons_pressed, de=primary_identity(self)
+                    buttons_pressed,
+                    de=primary_identity(self),
+                    gatilhos=(state.l2_raw, state.r2_raw),
                 )
                 if blocked:
                     emu_buttons = buttons_pressed - blocked
+                # O gesto dos acessórios (PS + R2): o gatilho dele não vira clique no desktop.
+                emu_l2, emu_r2 = sem_o_eixo_do_gesto(
+                    self, primary_identity(self), buttons_pressed,
+                    (state.l2_raw, state.r2_raw), emu_l2, emu_r2,
+                )
             # A Navegação Interna com a janela do Hefesto na frente: o R1 e o L1
             # andam as abas e não saem como Alt+Tab (D-20); fora dela, saem. Com o
             # mouse desligado o primário navega a Interna: o Start também fica com ela.
@@ -4485,7 +4494,7 @@ class Daemon:
 
             # Os gatilhos entram pelo NOME (`l2`/`r2`): são linhas da tabela como
             # qualquer botão, e o teclado só os conhece assim.
-            emu_buttons = botoes_com_os_gatilhos(emu_buttons, state.l2_raw, state.r2_raw)
+            emu_buttons = botoes_com_os_gatilhos(emu_buttons, emu_l2, emu_r2)
             if not gamepad_dispatched:
                 # O Modo Big Picture com a Steam na frente: o direcional, a Cruz e o
                 # Círculo viram as teclas do Big Picture e não chegam ao mouse virtual.
@@ -4511,7 +4520,10 @@ class Daemon:
             # `buttons_pressed` lá em cima, e só ele.
             from hefesto_dualsense4unix.daemon.subsystems.poll import observar_os_atalhos
 
-            observar_os_atalhos(self, buttons_pressed, now=tick_started)
+            observar_os_atalhos(
+                self, buttons_pressed, now=tick_started,
+                gatilhos_do_posto=(state.l2_raw, state.r2_raw),
+            )
 
             if self._plugins_subsystem is not None:
                 active_profile = self.store.active_profile

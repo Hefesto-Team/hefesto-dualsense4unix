@@ -36,7 +36,7 @@ Vocabulário completo dos gestos:
     PS + R3             próximo modo
     PS + Options        modo jogo
     PS segurado         desligado por padrão (disparava modo-jogo acidental)
-`dpad_left` e `dpad_right` seguem livres.
+R1, L1, R2, L2 e `dpad_left`/`dpad_right` comandam os acessórios (`gestos_dos_acessorios.py`).
 
 Todos valem em QUALQUER um dos quatro controles (`D-2709-O-PS-R3-EM-QUALQUER-
 CONTROLE`, O-MODO-XBOX-NAO-E-QUEDA-02, item 5): cada controle tem o aperto dele
@@ -57,6 +57,10 @@ from contextvars import ContextVar
 from dataclasses import dataclass, field
 from typing import Any
 
+from hefesto_dualsense4unix.integrations.gestos_dos_acessorios import (
+    GestosDosAcessorios,
+    Opcoes,
+)
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -124,6 +128,8 @@ class _Aperto:
     #: botão do gesto vir depois, sem apertar junto. ``usou`` = a janela já disparou um gesto.
     ps_virtual_ate: float | None = None
     ps_virtual_usou: bool = False
+    #: O PS sozinho que espera o 2º toque da camada: abre a Steam neste instante, salvo cancelar.
+    ps_solo_ate: float | None = None
 
 
 @dataclass
@@ -155,8 +161,24 @@ class HotkeyManager:
     #: Quanto o PS espera pelo segundo botão, em ms, no controle ``de`` (zero = desligado, o
     #: padrão): quem tem tremor ou uma mão só toca o PS e depois o outro botão.
     ps_travado_de: Callable[[str | None], int] | None = None
+    #: Os gestos que comandam os acessórios: ``gestos_valem(de)`` devolve as opções (ou None) e
+    #: ``on_gesto(de, gesto, valor)`` leva o gesto a quem o executa. Sem os dois, nada muda.
+    gestos_valem: Callable[[str | None], Opcoes | None] | None = None
+    on_gesto: Callable[[str | None, str, float], None] | None = None
+    relogio: Callable[[], float] = time.monotonic
 
     _apertos: dict[str | None, _Aperto] = field(default_factory=dict)
+    _gestos: GestosDosAcessorios | None = field(default=None, init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        if self.gestos_valem is not None and self.on_gesto is not None:
+            self._gestos = GestosDosAcessorios(
+                valem=self.gestos_valem, emitir=self.on_gesto, relogio=self.relogio
+            )
+
+    def gestos_valem_agora(self) -> bool:
+        """Há modificação de acessórios com aparelho: os gestos do PS valem (barato, por tique)."""
+        return self._gestos is not None and self._gestos.valem()
 
     def _combos_configurados(self) -> dict[str, frozenset[str]]:
         """Mapa nome→botões dos combos LIGADOS. Tupla vazia = combo desligado.
@@ -195,13 +217,18 @@ class HotkeyManager:
         *,
         now: float | None = None,
         de: str | None = None,
+        gatilhos: tuple[int, int] | None = None,
     ) -> str | None:
-        """Processa snapshot de botões. Retorna nome do evento disparado."""
-        t = now if now is not None else time.monotonic()
+        """Processa snapshot de botões. Retorna nome do evento disparado.
+
+        ``gatilhos`` = ``(L2, R2)`` de 0 a 255 do mesmo controle: sem eles os gestos dos acessórios
+        só leem o botão digital dos gatilhos.
+        """
+        t = now if now is not None else self.relogio()
         aperto = self._aperto_de(de)
         marca = _QUEM_FAZ_O_GESTO.set(de)
         try:
-            return self._observe_o_aperto(aperto, pressed, t=t, de=de)
+            return self._observe_o_aperto(aperto, pressed, t=t, de=de, gatilhos=gatilhos)
         finally:
             _QUEM_FAZ_O_GESTO.reset(marca)
 
@@ -216,18 +243,36 @@ class HotkeyManager:
         manter = set(ficam)
         for chave in [c for c in self._apertos if c not in manter]:
             del self._apertos[chave]
+        if self._gestos is not None:
+            self._gestos.soltar_quem_saiu(manter)
 
     def _observe_o_aperto(
-        self, aperto: _Aperto, pressed: Iterable[str], *, t: float, de: str | None
+        self,
+        aperto: _Aperto,
+        pressed: Iterable[str],
+        *,
+        t: float,
+        de: str | None,
+        gatilhos: tuple[int, int] | None = None,
     ) -> str | None:
         """O corpo do :meth:`observe`, sobre o aperto de um controle."""
         buttons = frozenset(str(b).lower() for b in pressed)
         ps_now = PS_BUTTON in buttons
+        reais = buttons
+
+        # O PS sozinho que esperava o segundo toque da camada: venceu o prazo, abre a Steam.
+        espera_vencida: str | None = None
+        if aperto.ps_solo_ate is not None and t >= aperto.ps_solo_ate:
+            aperto.ps_solo_ate = None
+            logger.info("ps_solo_released", camada=True, **_de(de))
+            self._fire_ps_solo()
+            espera_vencida = "ps_solo"
 
         combos = self._combos_configurados()
         virtual, da_janela = self._o_ps_travado(aperto, buttons, combos, t=t, de=de)
         if virtual:
             buttons = buttons | {PS_BUTTON}
+        self._os_gestos_dos_acessorios(aperto, reais, gatilhos, t=t, de=de, virtual=virtual)
 
         stale = [key for key in aperto.first_seen_at if not key.issubset(buttons)]
         for key in stale:
@@ -262,7 +307,44 @@ class HotkeyManager:
             aperto, ps_now=ps_now, buttons=buttons, t=t, combo_fired=combo_fired, de=de
         )
 
-        return combo_fired or ps_event or da_janela
+        return combo_fired or ps_event or da_janela or espera_vencida
+
+    def _os_gestos_dos_acessorios(
+        self,
+        aperto: _Aperto,
+        reais: frozenset[str],
+        gatilhos: tuple[int, int] | None,
+        *,
+        t: float,
+        de: str | None,
+        virtual: bool,
+    ) -> None:
+        """Roda a máquina dos gestos neste tique e acerta o PS: com gesto, ele não abre a Steam."""
+        gestos = self._gestos
+        if gestos is None:
+            return
+        if gestos.avaliar(reais, gatilhos, now=t, de=de, ps_virtual=virtual) is None:
+            aperto.ps_solo_ate = None
+            return
+        usou, virou = gestos.consumir(de)
+        if virou:
+            aperto.ps_solo_ate = None
+        if usou:
+            aperto.ps_combo_fired = True
+            if virtual:
+                aperto.ps_virtual_usou = True
+                aperto.ps_virtual_ate = t
+
+    def _pedir_o_ps_solo(self, aperto: _Aperto, *, t: float, de: str | None, **campos: Any) -> str:
+        """O PS sozinho: abre a Steam já ou, com a camada, espera 0,4 s pelo segundo toque."""
+        espera = self._gestos.ps_espera_s(de) if self._gestos is not None else 0.0
+        if espera > 0:
+            aperto.ps_solo_ate = t + espera
+            logger.info("ps_solo_espera_a_camada", espera_ms=round(espera * 1000), **_de(de))
+            return ""
+        logger.info("ps_solo_released", **campos, **_de(de))
+        self._fire_ps_solo()
+        return "ps_solo"
 
     def _ps_travado_s(self, de: str | None) -> float:
         """A espera do PS travado deste controle, em segundos; zero = desligado. Nunca levanta."""
@@ -294,6 +376,8 @@ class HotkeyManager:
         if ate is None:
             return False, None
         parceiros = {b for c in combos.values() if PS_BUTTON in c for b in c} - {PS_BUTTON}
+        if self._gestos is not None:
+            parceiros |= self._gestos.parceiros(de)
         segura = bool(parceiros & buttons)
         vencida = t >= ate and not segura
         if PS_BUTTON in buttons or vencida or self._ps_travado_s(de) <= 0:
@@ -302,9 +386,8 @@ class HotkeyManager:
             aperto.ps_virtual_usou = False
             if usou:
                 return False, None
-            logger.info("ps_solo_released", travado=True, **_de(de))
-            self._fire_ps_solo()
-            return False, "ps_solo"
+            evento = self._pedir_o_ps_solo(aperto, t=t, de=de, travado=True)
+            return False, evento or None
         return True, None
 
     def _observe_ps_solo(
@@ -383,12 +466,15 @@ class HotkeyManager:
                 held_ms=round(held_ms, 1), **_de(de))
             return None
 
-        logger.info("ps_solo_released", held_ms=round(held_ms, 1), **_de(de))
-        self._fire_ps_solo()
-        return "ps_solo"
+        return self._pedir_o_ps_solo(aperto, t=t, de=de, held_ms=round(held_ms, 1)) or None
 
     def combo_buttons_active(
-        self, pressed: Iterable[str], *, de: str | None = None
+        self,
+        pressed: Iterable[str],
+        *,
+        de: str | None = None,
+        gatilhos: tuple[int, int] | None = None,
+        now: float | None = None,
     ) -> frozenset[str]:
         """Os membros do combo PS+X que o controle `de` segura: não vão à emulação.
 
@@ -405,7 +491,36 @@ class HotkeyManager:
                     continue
                 latch |= {b for b in combo if b in buttons}
         latch &= buttons
-        return frozenset(latch)
+        gestos = self._gestos
+        if gestos is None:
+            return frozenset(latch)
+        # Os gestos dos acessórios: R2, L2, R1, L1 e o direcional que a máquina calou aqui.
+        gestos.avaliar(
+            buttons, gatilhos, now=now, de=de, ps_virtual=aperto.ps_virtual_ate is not None
+        )
+        return frozenset(latch) | gestos.botoes_calados(de)
+
+    def eixos_do_gesto(
+        self,
+        pressed: Iterable[str],
+        gatilhos: tuple[int, int],
+        *,
+        de: str | None = None,
+        now: float | None = None,
+    ) -> frozenset[str]:
+        """Os eixos de gatilho (``l2``, ``r2``) que o gesto de ``de`` cala ao jogo, por controle."""
+        gestos = self._gestos
+        if gestos is None:
+            return frozenset()
+        aperto = self._aperto_de(de)
+        gestos.avaliar(
+            frozenset(str(b).lower() for b in pressed),
+            gatilhos,
+            now=now,
+            de=de,
+            ps_virtual=aperto.ps_virtual_ate is not None,
+        )
+        return gestos.eixos_calados(de)
 
     def _callback_do_combo(self, name: str) -> tuple[bool, Any | None]:
         """Resolve o callback de um combo. Devolve (conhecido, callback).

@@ -49,6 +49,9 @@ TOPICOS_DE_LEITURA: dict[str, tuple[str, ...]] = {
     # O perfil efetivo e as marcas dele. Fica à parte do jogo: saber que o perfil tem a marca
     # «Adulto» é dado da pessoa, e quem só quer a vibração não o recebe.
     "perfil.marcas": (EventTopic.PERFIL_TROCOU,),
+    # Os gestos do PS que comandam os acessórios (sobe, desce, para, perfil…). A mesma permissão
+    # deixa a modificação devolver o estado (`acessorios.estado`), que liga e desliga os gestos.
+    "acessorios.gesto": (EventTopic.ACESSORIOS_GESTO,),  # (noqa-acento): contrato ASCII
 }
 
 #: ``escrever:<canal>``: os canais do controle que uma modificação pode pedir.
@@ -75,6 +78,9 @@ _O_QUE_DEIXA: dict[str, str] = {
         "Saber a intensidade da vibração fina que o jogo manda a cada controle."
     ),
     "ler:perfil.marcas": "Saber o perfil em uso e as marcas dele.",
+    "ler:acessorios.gesto": (  # (noqa-acento): contrato ASCII
+        "Receber os gestos do botão PS que comandam os acessórios, sem receber botão nenhum."
+    ),
     "escrever:luz": "Mudar a cor da luz de um controle.",
     "escrever:vibracao": "Fazer um controle vibrar.",
     "escrever:gatilho": "Mudar a resistência dos gatilhos de um controle.",
