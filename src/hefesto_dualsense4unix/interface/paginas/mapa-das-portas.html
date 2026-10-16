@@ -85,14 +85,13 @@
   .modo:hover { background: var(--color-rule); }
   .modo:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
   .modo[aria-pressed="true"] { border-color: var(--color-accent); background: color-mix(in srgb, var(--color-accent) 22%, var(--color-paper-3)); }
-  .modo.destaque[aria-pressed="false"] { border-color: color-mix(in srgb, var(--color-ok) 55%, transparent); color: var(--color-ok); }
-  .modo.destaque[aria-pressed="true"] { border-color: var(--color-ok); background: color-mix(in srgb, var(--color-ok) 20%, var(--color-paper-3)); color: var(--color-ink); }
+  /* «Sugestões» é um modo como os outros: sem o verde de aviso. */
 
   /* ─── o painel que muda com o modo ──────────────────────── */
   .painel { margin-top: var(--space-2xs); border: 1px solid var(--color-rule);
             border-radius: var(--radius-md); background: var(--color-paper-2); padding: var(--space-sm); }
   .painel > p.chamada { margin: 0 0 var(--space-2xs); font-size: var(--text-base); font-weight: 600; }
-  .painel > p.chamada .grande { color: var(--color-ok); }
+  .painel > p.chamada .grande { color: var(--color-ink); }
   .escolhas { display: flex; flex-wrap: wrap; gap: var(--space-2xs); }
   .escolha { font: inherit; font-size: var(--text-sm); display: inline-flex; align-items: center; gap: .4rem;
              background: var(--color-paper-3); color: var(--color-ink); border: 1px solid var(--color-rule);
@@ -146,7 +145,7 @@
   @media (max-width: 900px) { .palco { grid-template-columns: 1fr; } }
   .faces { display: flex; flex-direction: column; gap: var(--space-md); }
   .face-cab { display: flex; align-items: baseline; gap: var(--space-2xs); margin-bottom: var(--space-2xs); }
-  .face-cab h3 { margin: 0; font-size: var(--text-sm); font-weight: 600; text-transform: uppercase; letter-spacing: .07em; }
+  .face-cab h3 { margin: 0; font-size: var(--text-sm); font-weight: 600; } /* só a primeira letra é maiúscula */
   .face-cab .quantas { font-size: var(--text-xs); color: var(--color-ink-faint); font-family: var(--font-dado); }
   /* a divergência do hub: uma linha a mais, sem culpa */
   .diverge { margin: 0 0 var(--space-2xs); font-size: var(--text-xs); color: var(--color-lacuna); }
@@ -539,6 +538,81 @@
   .painel-unico .pe .dica-id { margin-right: auto; font-size: var(--text-xs); }
   .painel-unico .chave { justify-self: start; }
 </style>
+<style data-todo-css="cadeia-e-registro">
+  .modos { grid-template-columns: repeat(4, 8.5rem); }
+  .palco[hidden], .painel[hidden], .legenda[hidden], .registro[hidden] { display: none !important; }
+  .bandeja .chip.recuado { margin-left: 1rem; width: calc(100% - 1rem); }
+  .palco > .bandeja .lista { gap: 3px; }
+  .bandeja .chip { padding-top: 2px; padding-bottom: 2px; }
+  .por-confirmar { padding-top: 4px; padding-bottom: 4px; margin-top: 4px; }
+  .face-cab { margin-top: 6px; }
+  .bandeja .chip .txt span.enlace { color: var(--color-lacuna); }
+  .bandeja .chip.sumiu { opacity: .5; border-style: dashed; cursor: default; }
+  .registro { margin-top: 8px; border: 1px solid var(--color-rule); border-radius: var(--radius-md);
+              background: var(--color-paper-2); padding: 8px 14px; }
+  .registro-cab { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 6px; }
+  .registro-cab .ouvindo { font-size: var(--text-xs); color: var(--color-ink-faint); font-family: var(--font-dado); }
+  .registro-linhas { list-style: none; margin: 0; padding: 0; max-height: 540px; overflow-y: auto; }
+  .registro-linhas li { display: grid; grid-template-columns: 5.5rem 9.5rem minmax(0, 1fr) 11rem; align-items: center;
+                        gap: .75rem; padding: 6px 4px; border-top: 1px solid var(--color-rule); font-size: var(--text-sm); }
+  .registro-linhas li:first-child { border-top: 0; }
+  .registro-linhas time { font-family: var(--font-dado); color: var(--color-ink-faint); font-size: var(--text-xs); }
+  .registro-linhas .ev { font-weight: 600; color: var(--color-ok); }
+  .registro-linhas .ev.sai { color: var(--color-ink-quiet); }
+  .registro-linhas .ev.lento, .registro-linhas .ev.sumiu { color: var(--color-lacuna); }
+  .registro-linhas .quem { display: flex; align-items: center; gap: .5rem; min-width: 0; color: var(--color-ink-quiet); }
+  .registro-linhas .quem b { color: var(--color-ink); font-weight: 600; }
+  .registro-linhas .quem .marca { flex: none; width: .5rem; height: .5rem; border-radius: 50%; }
+  .registro-linhas .onde { color: var(--color-ink-faint); font-size: var(--text-xs); text-align: right; }
+  @media (max-width: 640px) {
+    .modos { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .registro-linhas li { grid-template-columns: 5.5rem minmax(0, 1fr); }
+    .registro-linhas .quem, .registro-linhas .onde { grid-column: 1 / -1; text-align: left; }
+  }
+</style>
+<style data-todo-css="sem-rolagem">
+  /* O corpo rolava 5 px em 1212x809 (já rolava 8 no publicado): o pé de 40 px vira 32. */
+  .pagina > .corpo { padding-bottom: 32px }
+</style>
+<style id="base-comum">
+/* ===== Base comum das abas (rodada 2, 12/10/2026) =====
+   Copiada IGUAL em todo mockup do todo. Três peças: a dica no hover (sem «?»), o Modo automático
+   e o menu do botão direito desenhado no visual das abas (BRIEF-T6, opção B). */
+
+/* 1. A dica: qualquer frase, botão ou área com data-dica mostra a dica ao passar o mouse ou focar.
+      Nenhum botão «?» existe mais. A dica tem no máximo ~12 palavras: show, don't tell.
+      A caixa `.da-base` é só a do desenho: na janela do produto a dona do `#hef-dica` é a camada do piloto. */
+[data-dica]{cursor:help}
+button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"][data-dica]{cursor:pointer}
+#hef-dica.da-base{position:fixed;z-index:2147483000;max-width:280px;padding:7px 11px;border-radius:8px;
+  background:#1b1c25;border:1px solid var(--border-forte,#44475a);color:var(--texto-suave,#c8ccda);
+  font:500 12.5px/1.45 'Space Grotesk',system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.45);pointer-events:none;
+  opacity:0;transform:translateY(3px);transition:opacity .12s,transform .12s}
+#hef-dica.da-base.visivel{opacity:1;transform:none}
+
+/* 2. O Modo automático: pílula com bolinha. Os dois estados têm de se distinguir num relance.
+      Desligado: contorno neutro, bolinha vazia, letra suave (vale o que está na aba).
+      Ligado: ciano cheio, bolinha branca acesa, letra branca; a área que ele governa esmaece. */
+.modo-auto{display:inline-flex;align-items:center;gap:9px;height:34px;padding:0 16px 0 12px;border-radius:999px;
+  border:1px solid var(--border-forte,#44475a);background:transparent;color:var(--texto-suave,#c8ccda);
+  font:600 13.5px/1 'Space Grotesk',system-ui,sans-serif;cursor:pointer;transition:background .15s,border-color .15s,color .15s,box-shadow .15s}
+.modo-auto .p{width:11px;height:11px;border-radius:50%;border:2px solid var(--texto-mudo,#9a9eb8);background:transparent;
+  transition:all .15s}
+.modo-auto:hover{border-color:#5fd3e6;color:#fff}
+.modo-auto[aria-pressed="true"]{background:#0e7c8c;border-color:#5fd3e6;color:#fff;box-shadow:0 0 0 3px rgba(95,211,230,.18)}
+.modo-auto[aria-pressed="true"] .p{border-color:#fff;background:#fff;box-shadow:0 0 8px #fff}
+.modo-auto:focus-visible{outline:2px solid var(--cyan,#8be9fd);outline-offset:2px}
+.governado-pelo-jogo{opacity:.42;pointer-events:none;filter:saturate(.6)}
+
+/* 3. O menu do botão direito, no visual das abas. */
+.menu-hefesto{position:fixed;z-index:2147482000;min-width:190px;padding:6px;border-radius:12px;
+  background:#252733;border:1px solid var(--border-forte,#44475a);box-shadow:0 14px 34px rgba(0,0,0,.5)}
+.menu-hefesto button{display:flex;width:100%;align-items:center;gap:10px;height:34px;padding:0 12px;border:0;
+  border-radius:8px;background:transparent;color:var(--fg,#f8f8f2);font:500 13.5px/1 'Space Grotesk',system-ui,sans-serif;text-align:left;cursor:pointer}
+.menu-hefesto button:hover{background:rgba(189,147,249,.14)}
+.menu-hefesto button[disabled]{color:var(--texto-mudo,#9a9eb8);opacity:.55;cursor:default;background:transparent}
+.menu-hefesto hr{border:0;border-top:1px solid var(--border-sutil,#343746);margin:5px 4px}
+</style>
 </head>
 <body>
 <div class="pagina">
@@ -549,25 +623,33 @@
          página. O destino não é chute: `grep -l mapa-das-portas.html` devolve UMA
          aba, a Conexões — e ela existe ao lado desta cópia, não ao lado da
          origem congelada, que tem três arquivos e nenhuma aba. -->
-    <a href="08-conexoes.html" title="Volta para a aba Conexões, que é de onde este mapa se abre."
+    <a href="08-conexoes.html" data-dica="Volta para a aba Conexões"
        style="position:absolute;left:0;top:2px;display:inline-flex;align-items:center;gap:6px;
               padding:5px 11px;border-radius:7px;text-decoration:none;
               border:1px solid var(--border-forte);background:var(--panel);
               color:var(--texto-suave);font-size:12px">← Voltar</a>
-    <h1>Mapa das <em>Conexões</em></h1>
+    <h1>Mapa das <em>conexões</em></h1>
     <p class="quando" id="de-quando">Leitura de exemplo · 24/08/2026</p>
-    <button class="btn examinar" id="reexaminar" title="Lê o computador de novo e mostra o que mudou de lugar"><span aria-hidden="true">⟳</span> Examinar</button>
+    <button class="btn examinar" id="reexaminar" data-dica="Lê de novo e mostra o que mudou de lugar"><span aria-hidden="true">⟳</span> Examinar</button>
   </header>
 
   <div class="corpo">
   <div class="modos" id="modos"></div>
   <section class="painel" id="painel"></section>
 
+  <section class="registro" id="registro" hidden aria-label="Registro">
+    <div class="registro-cab">
+      <span class="ouvindo" id="registro-ouvindo" data-dica="O que entra e sai das entradas USB"></span>
+      <button class="btn" id="registro-copiar" data-dica="Copia o registro para um relato">Copiar</button>
+    </div>
+    <ol class="registro-linhas" id="registro-linhas"></ol>
+  </section>
+
   <div class="palco">
     <div class="edita painel-unico" id="edita" hidden></div>
     <div class="faces" id="faces"></div>
     <aside class="bandeja">
-      <h3>Conectado agora</h3>
+      <h3 data-dica="Os hubs e o que pende deles; embaixo, o direto">A cadeia</h3>
       <p class="ajuda" id="ajuda-bandeja"></p>
       <div class="lista" id="bandeja"></div>
     </aside>
@@ -1639,7 +1721,7 @@
   function identificavel(quem) { return !/^054c:/.test(quem.modelo || ""); }
 
   /* ══ O PAINEL ÚNICO — 05/10/2026, o desenho aprovado ══════════════════════════════
-     Clicar na entrada, no aparelho, na lista «Conectado agora» ou num aparelho sem entrada
+     Clicar na entrada, no aparelho, na lista «A cadeia» ou num aparelho sem entrada
      abre o MESMO painel, perto do que foi clicado: o aparelho de um lado, a entrada do outro.
      O que leva `data-gesto` o produto grava e a página espera o disco; no exemplo, muda só
      na tela. Fecha no botão de fechar, no Esc ou com um clique fora. */
@@ -1896,6 +1978,142 @@
     pintar();
   });
 
+
+  /* ══ A CADEIA E O REGISTRO — 15/10/2026 (O-MAPA-DAS-CONEXOES-MOSTRA-A-CADEIA-USB-E-O-REGISTRO-DELA-01) ══
+     A lista da direita é a cadeia: o hub de plástico é UM chip («Hub USB 3 · 7 entradas») com os
+     aparelhos recuados abaixo dele, o enlace abaixo vai dito como fato e quem não apareceu neste
+     início fica esmaecido no fim. No produto quem diz tudo isso é `arranjo_desta_maquina`
+     (`hubFisico`, `parteDe`, `dentroDe`, `enlace`, `sumiram`, `registro`); no exemplo é a cena abaixo. */
+  var DICA_DO_ENLACE = "Pode ser a entrada, o hub, o cabo, o extensor ou o próprio aparelho.";
+  var DA_CENA = {
+    hubFisico: { "hub": "Hub USB 3 · 7 entradas" },
+    enlace: { "hub": "480 Mb/s · Sabe 5 Gb/s" },
+    sumiram: [{ "tipo": "Bluetooth", "nome": "Asus USB-BT500", "cor": "#bd93f9" }],
+    registro: { "ouvindo": "Ouvindo desde 13:02", "linhas": [
+      { "hora": "13:41", "evento": "Ficou mais lento", "tom": "lento", "tipo": "Hub", "nome": "TP-Link UH700", "cor": "#f8f8f2", "onde": "Entrada 4" },
+      { "hora": "13:40", "evento": "Voltou", "tom": "", "tipo": "Hub", "nome": "TP-Link UH700", "cor": "#f8f8f2", "onde": "Entrada 4" },
+      { "hora": "13:40", "evento": "Saiu", "tom": "sai", "tipo": "Hub", "nome": "TP-Link UH700", "cor": "#f8f8f2", "onde": "Entrada 4" },
+      { "hora": "13:38", "evento": "Entrou", "tom": "", "tipo": "Bluetooth", "nome": "TP-Link UB500", "cor": "#bd93f9", "onde": "Sem entrada marcada" },
+      { "hora": "13:25", "evento": "Entrou", "tom": "", "tipo": "Wi-Fi", "nome": "Archer T3U", "cor": "#ff5555", "onde": "Sem entrada marcada" },
+      { "hora": "13:24", "evento": "Saiu", "tom": "sai", "tipo": "Wi-Fi", "nome": "Archer T3U", "cor": "#ff5555", "onde": "Entrada 11" },
+      { "hora": "13:10", "evento": "Entrou", "tom": "", "tipo": "Teclado", "nome": "Receptor 2,4 GHz", "cor": "#ffb86c", "onde": "Entrada 1" },
+      { "hora": "13:02", "evento": "Não apareceu", "tom": "sumiu", "tipo": "Bluetooth", "nome": "Asus USB-BT500", "cor": "#bd93f9", "onde": "—" }
+    ] }
+  };
+
+  function daCadeia() {
+    var c = { hub: {}, parte: {}, dentro: {}, enlace: {}, sumiram: [], registro: null };
+    if (!doProduto()) {
+      c.hub = DA_CENA.hubFisico; c.enlace = DA_CENA.enlace; c.sumiram = DA_CENA.sumiram;
+      c.registro = DA_CENA.registro;
+      var cam = leitura();
+      APARELHOS.forEach(function (h) {
+        if (!c.hub[h.id] || !cam[h.id]) return;
+        APARELHOS.forEach(function (a) {
+          if (a.id !== h.id && cam[a.id] && cam[a.id].indexOf(cam[h.id] + ".") === 0) c.dentro[a.id] = h.id;
+        });
+      });
+      return c;
+    }
+    APARELHOS.forEach(function (a) {
+      if (a.hubFisico) c.hub[a.id] = a.hubFisico;
+      if (a.parteDe) c.parte[a.id] = true;
+      if (a.dentroDe) c.dentro[a.id] = a.dentroDe;
+      if (a.enlace) c.enlace[a.id] = a.enlace;
+    });
+    c.sumiram = fonte.sumiram || [];
+    c.registro = fonte.registro || null;
+    return c;
+  }
+
+  function pintarACadeia(r) {
+    var c = daCadeia(), visto = {};
+    function chipDe(a, nivel) {
+      var p = modo === "ideal" ? portaDeEm(r.plano, a.id) : portaDe(a.id);
+      var hub = c.hub[a.id], enl = c.enlace[a.id];
+      /* A dica fala do que a pessoa faz, não do sistema por baixo. */
+      var dica = p ? "Na Entrada " + p + ". Clique para trocar" : "Sem entrada marcada. Clique e marque a entrada";
+      var titulo = a.nomeDeclarado || hub || rotuloDoAparelho(a);
+      var fundo = nivel > 1 ? ' style="margin-left:' + nivel + 'rem;width:calc(100% - ' + nivel + 'rem)"' : "";
+      return '<button class="chip' + (nivel ? " recuado" : "") + '" data-ap="' + a.id + '"' + (p ? ' data-alocado="1"' : "")
+        + ' data-dica="' + emAtributo(dica) + '"' + fundo
+        + (segurando === a.id ? ' data-segurando="1"' : "") + ">"
+        + '<i class="marca" style="background:' + a.cor + '"></i>'
+        + '<span class="txt"><b>' + emAtributo(titulo) + "</b>"
+        + (a.nome && a.nome !== titulo ? "<span>" + emAtributo(a.nome) + "</span>" : "")
+        + (enl ? '<span class="enlace" data-dica="' + emAtributo(DICA_DO_ENLACE) + '">' + emAtributo(enl) + "</span>" : "")
+        + "</span>"
+        + (p ? '<span class="num">' + p + "</span>" : "") + "</button>";
+    }
+    var filhos = {};
+    function ehRaiz(a) {
+      var pai = c.dentro[a.id];
+      return !c.parte[a.id] && !(pai && acha(pai) && !c.parte[pai]);
+    }
+    APARELHOS.forEach(function (a) {
+      if (c.parte[a.id] || ehRaiz(a)) return;
+      (filhos[c.dentro[a.id]] = filhos[c.dentro[a.id]] || []).push(a);
+    });
+    function ramo(a, nivel) {
+      visto[a.id] = true;
+      var abaixo = nivel < 5 ? (filhos[a.id] || []) : [];
+      return chipDe(a, nivel) + abaixo.map(function (b) { return ramo(b, nivel + 1); }).join("");
+    }
+    var raizes = APARELHOS.filter(ehRaiz);
+    var html = raizes.filter(function (a) { return c.hub[a.id]; })
+      .concat(raizes.filter(function (a) { return !c.hub[a.id]; }))
+      .map(function (a) { return ramo(a, 0); }).join("");
+    html += APARELHOS.filter(function (a) { return !visto[a.id] && !c.parte[a.id]; })
+      .map(function (a) { return ramo(a, 0); }).join("");
+    html += c.sumiram.map(function (a) {
+      return '<div class="chip sumiu" data-dica="Já esteve neste computador e não apareceu agora">'
+        + '<i class="marca" style="background:' + emAtributo(a.cor) + '"></i>'
+        + '<span class="txt"><b>' + emAtributo(a.tipo) + "</b><span>"
+        + (a.nome ? emAtributo(a.nome) + " · " : "") + "Não apareceu neste início</span></span></div>";
+    }).join("");
+    document.getElementById("bandeja").innerHTML = html;
+    pintarORegistro(c.registro);
+  }
+
+  function pintarORegistro(registro) {
+    var reg = registro || { ouvindo: "", linhas: [] };
+    document.getElementById("registro-ouvindo").textContent = reg.ouvindo || "";
+    document.getElementById("registro-linhas").innerHTML = (reg.linhas || []).map(function (l) {
+      var cor = l.cor === "#6272a4" ? "#f8f8f2" : l.cor;
+      return "<li><time>" + emAtributo(l.hora) + '</time><span class="ev' + (l.tom ? " " + l.tom : "") + '">'
+        + emAtributo(l.evento) + "</span>"
+        + '<span class="quem"><i class="marca" style="background:' + emAtributo(cor) + '"></i><b>'
+        + emAtributo(l.tipo) + "</b> " + emAtributo(l.nome) + "</span>"
+        + '<span class="onde">' + emAtributo(l.onde) + "</span></li>";
+    }).join("");
+  }
+
+  /* O «COPIAR» do registro leva o texto como está na tela, uma linha por evento. */
+  function textoDoRegistro() {
+    var reg = daCadeia().registro || {};
+    return [reg.ouvindo || ""].concat((reg.linhas || []).map(function (l) {
+      return [l.hora, l.evento, l.tipo + (l.nome ? " " + l.nome : ""), l.onde].join("  ");
+    })).filter(Boolean).join("\n");
+  }
+  document.addEventListener("click", function (ev) {
+    var botao = ev.target.closest ? ev.target.closest("#registro-copiar") : null;
+    if (!botao) return;
+    var texto = textoDoRegistro();
+    function feito() {
+      botao.textContent = "Copiado";
+      setTimeout(function () { botao.textContent = "Copiar"; }, 1500);
+    }
+    function pelaCaixa() {
+      var caixa = document.createElement("textarea");
+      caixa.value = texto; caixa.setAttribute("readonly", ""); caixa.style.position = "fixed"; caixa.style.opacity = "0";
+      document.body.appendChild(caixa); caixa.select();
+      try { if (document.execCommand("copy")) feito(); } catch (erro) { /* sem área de transferência: o texto fica na tela */ }
+      document.body.removeChild(caixa);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(texto).then(feito, pelaCaixa);
+    else pelaCaixa();
+  });
+
   function pintar() {
     /* o hub nasce com o cinza da paleta (#6272a4), e o cinza da letra saiu */
     APARELHOS.forEach(function (a) { if (a.cor === "#6272a4") a.cor = "#f8f8f2"; });
@@ -1906,9 +2124,16 @@
 
     /* os modos */
     document.getElementById("modos").innerHTML =
-        '<button class="modo" data-modo="mesa" aria-pressed="' + (modo === "mesa") + '">Atual</button>'
-      + '<button class="modo destaque" data-modo="ideal" aria-pressed="' + (modo === "ideal") + '">Sugestões</button>'
-      + '<button class="modo" data-modo="mao" aria-pressed="' + (modo === "mao") + '">Adicionar</button>';
+        '<button class="modo" data-modo="mesa" data-dica="Onde cada aparelho está agora" aria-pressed="' + (modo === "mesa") + '">Atual</button>'
+      + '<button class="modo destaque" data-modo="ideal" data-dica="Onde cada aparelho funciona melhor" aria-pressed="' + (modo === "ideal") + '">Sugestões</button>'
+      + '<button class="modo" data-modo="mao" data-dica="A melhor entrada para um aparelho novo" aria-pressed="' + (modo === "mao") + '">Adicionar</button>' /* noqa-acento: data-modo */
+      + '<button class="modo" data-modo="registro" data-dica="O que entrou e saiu das entradas" aria-pressed="' + (modo === "registro") + '">Registro</button>';
+    /* O REGISTRO É A QUARTA ABA: ela troca o palco, o painel e a legenda pelo registro. */
+    var noRegistro = modo === "registro";
+    document.getElementById("registro").hidden = !noRegistro;
+    document.querySelector(".palco").hidden = noRegistro;
+    document.getElementById("painel").hidden = noRegistro;
+    document.getElementById("legenda").hidden = noRegistro;
 
     /* o painel */
     var painel = document.getElementById("painel"), html = "";
@@ -1938,9 +2163,7 @@
         html += '<p class="chamada"><span class="grande">' + reais.length + " troca" + (reais.length > 1 ? "s" : "") + "</span></p>"
              + '<ol class="receita">'
              + reais.map(function (m) {
-                 return "<li><div><h4>" + m.titulo + '<span class="ajuda" tabindex="0">?<span class="dica">'
-                   + m.linhas.map(function (l) { return '<span><span class="selo ' + l.s + '">' + (l.s === "espec" ? "especificação" : l.s) + "</span><span>" + l.t + "</span></span>"; }).join("")
-                   + "</span></span></h4></div></li>";
+                 return '<li><div><h4 data-dica="' + emAtributo(String(m.linhas[0] ? m.linhas[0].t : "").replace(/<[^>]+>/g, "")) + '">' + m.titulo + "</h4></div></li>";
                }).join("")
              + "</ol>";
         html += '<div class="acoes"><button class="btn forte ja-movi"' + examinaNoProduto() + '>Já mudei</button>'
@@ -2003,7 +2226,7 @@
         + Object.keys(MAPA).length + " de " + todasPortas().length + " entradas mapeadas"
         + (sem.length ? ' · <b style="color:var(--color-lacuna)">' + sem.length + " aparelho"
             + (sem.length > 1 ? "s" : "") + " fora do mapa</b>" : "")
-        + (pend ? ' · Clique em <b style="color:var(--color-ok)">Sugestões</b>' : "")
+        + (pend ? ' · Clique em <b>Sugestões</b>' : "")
         + "</span></p>";
     }
     painel.innerHTML = html;
@@ -2027,7 +2250,7 @@
           + "<b>" + pend.length + (reg === "hub" ? " no hub" : " no PC") + " sem entrada marcada</b>"
           + '<div class="pend-lista">'
           + pend.map(function (x) {
-              return '<button class="chip pend" data-ap="' + x.ap.id + '"'
+              return '<button class="chip pend" data-ap="' + x.ap.id + '"' + ' data-dica="Clique e marque a entrada onde ele está"'
                 + (segurando === x.ap.id ? ' data-segurando="1"' : "") + ">"
                 + '<i class="marca" style="background:' + x.ap.cor + '"></i>'
                 + '<span class="txt"><b>' + x.ap.tipo + "</b><span>" + x.caminho + "</span></span></button>";
@@ -2046,16 +2269,8 @@
         + faixa + "</div>";
     }).join("");
 
-    /* a bandeja */
-    document.getElementById("bandeja").innerHTML = APARELHOS.map(function (a) {
-      var p = modo === "ideal" ? portaDeEm(r.plano, a.id) : portaDe(a.id);
-      return '<button class="chip" data-ap="' + a.id + '"' + (p ? ' data-alocado="1"' : "")
-        + ' title="' + emAtributo(a.nome + " · " + (caminhoDe(a.id) || "não está plugado")) + '"'
-        + (segurando === a.id ? ' data-segurando="1"' : "") + ">"
-        + '<i class="marca" style="background:' + a.cor + '"></i>'
-        + '<span class="txt"><b>' + emAtributo(rotuloDoAparelho(a)) + "</b></span>"
-        + (p ? '<span class="num">' + p + "</span>" : "") + "</button>";
-    }).join("");
+    /* a bandeja é a cadeia */
+    pintarACadeia(r);
     /* A DICA DIZ QUE A ENTRADA ABRE UM EDITOR — 26/09/2026: nada na tela
        dizia, e ela nunca o achou. Quantos estão sem lugar já está no
        painel («fora do mapa»). */
@@ -2328,6 +2543,90 @@
   };
 
   pintar();
+})();
+</script>
+<script data-aba="registro">
+/* #registro abre a página já na aba «Registro». */
+if (location.hash === '#registro') { document.addEventListener('DOMContentLoaded', function () { document.querySelector('.modo[data-modo="registro"]').click(); }); }
+</script>
+<script id="base-comum">
+/* Base comum das abas: a dica no hover e o menu do botão direito. Uma vez por página, igual em todas. */
+(() => {
+  /* A dica: só nasce aqui quando NÃO há a camada da janela (`__hefDica`, do piloto), que é a dona
+     do `#hef-dica` no produto. Os dois nunca rodam juntos: o teste vem a cada evento, porque a
+     camada da janela chega depois da carga da página. */
+  let dica = null, alvo = null;
+  const mostrar = el => {
+    if (!dica) { dica = document.createElement('div'); dica.id = 'hef-dica'; dica.className = 'da-base'; dica.setAttribute('role', 'tooltip'); }
+    alvo = el; dica.textContent = el.dataset.dica;
+    if (!dica.isConnected) document.body.append(dica);
+    const r = el.getBoundingClientRect(), d = dica.getBoundingClientRect();
+    let x = r.left + r.width / 2 - d.width / 2, y = r.bottom + 8;
+    if (y + d.height > innerHeight - 6) y = r.top - d.height - 8;
+    dica.style.left = Math.max(6, Math.min(x, innerWidth - d.width - 6)) + 'px'; dica.style.top = y + 'px';
+    dica.classList.add('visivel');
+  };
+  const esconder = () => { alvo = null; if (dica) dica.classList.remove('visivel'); };
+  for (const [ev, f] of [['mouseover', 'in'], ['focusin', 'in'], ['mouseout', 'out'], ['focusout', 'out']])
+    document.addEventListener(ev, e => {
+      if (window.__hefDica) return;
+      const el = e.target.closest && e.target.closest('[data-dica]');
+      if (f === 'in' && el && el.dataset.dica && el !== alvo) mostrar(el);
+      if (f === 'out' && el && !el.contains(e.relatedTarget)) esconder();
+    });
+  /* O Modo automático: a área que o botão governa esmaece enquanto ele está ligado, e o `data-modo`
+     leva o que o PRÓXIMO clique pede. Tudo parte do `aria-pressed`, que o piloto também pinta;
+     o clique só vira o `aria-pressed` na hora (depois de o piloto ter lido o `data-modo`). */
+  const sincronizar = b => {
+    const on = b.getAttribute('aria-pressed') === 'true';
+    const pedido = on ? 'personalizado' : 'automatico';
+    if (b.dataset.modo !== pedido) b.dataset.modo = pedido;
+    if (b.dataset.governa)
+      document.querySelectorAll(b.dataset.governa).forEach(el => el.classList.toggle('governado-pelo-jogo', on));
+  };
+  const sincronizarTodos = () => document.querySelectorAll('.modo-auto').forEach(sincronizar);
+  sincronizarTodos();
+  new MutationObserver(ms => {
+    if (ms.some(m => m.type === 'childList' || (m.target.matches && m.target.matches('.modo-auto')))) sincronizarTodos();
+  }).observe(document.body, {subtree: true, childList: true, attributes: true, attributeFilter: ['aria-pressed']});
+  document.addEventListener('click', e => {
+    const b = e.target.closest && e.target.closest('.modo-auto');
+    if (b) setTimeout(() => b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') === 'true' ? 'false' : 'true'), 0);
+  });
+  /* O menu do botão direito: Copiar (cinza sem seleção), Atualizar, Desligar ou Ligar, Reiniciar, Fechar.
+     Cada item é um `data-gesto` comum: no produto a janela o despacha como qualquer botão. O serviço
+     parado ou pausado vira «Ligar», de um clique só; o estado vem do `data-servico` do cabeçalho. */
+  const fechar = () => document.querySelectorAll('.menu-hefesto.vivo').forEach(m => m.remove());
+  document.addEventListener('contextmenu', e => {
+    e.preventDefault(); fechar();
+    const m = document.createElement('div'); m.className = 'menu-hefesto vivo'; m.setAttribute('role', 'menu');
+    const sel = String(getSelection()).trim() !== '';
+    const servico = (document.querySelector('[data-campo="servico"]') || {dataset: {}}).dataset.servico;
+    const ligar = servico === 'parado' || servico === 'pausado';
+    const item = ligar
+      ? '<button type="button" role="menuitem" data-gesto="menu-desligar" data-dica="O Hefesto volta a cuidar dos controles">Ligar</button>'
+      : '<button type="button" role="menuitem" data-gesto="menu-desligar" data-menu="desligar" data-dica="O Hefesto sai da frente e o jogo lê o controle direto">Desligar</button>';
+    m.innerHTML = `<button type="button" role="menuitem" data-menu="copiar" ${sel ? '' : 'disabled'}>Copiar</button><hr>
+      <button type="button" role="menuitem" data-gesto="menu-atualizar">Atualizar</button>
+      ${item}
+      <button type="button" role="menuitem" data-gesto="menu-reiniciar">Reiniciar</button><hr>
+      <button type="button" role="menuitem" data-gesto="menu-fechar">Fechar</button>`;
+    document.body.append(m);
+    const r = m.getBoundingClientRect();
+    m.style.left = Math.min(e.clientX, innerWidth - r.width - 6) + 'px';
+    m.style.top = Math.min(e.clientY, innerHeight - r.height - 6) + 'px';
+  });
+  document.addEventListener('click', e => {
+    const b = e.target.closest && e.target.closest('.menu-hefesto button');
+    if (!b) { fechar(); return; }
+    if (b.disabled) return;
+    if (b.dataset.menu === 'copiar') document.execCommand('copy');
+    /* Desligar pede dois cliques, como o «Parar» da aba Sistema: o primeiro troca a palavra, o segundo age. */
+    if (b.dataset.menu === 'desligar') {
+      if (b.textContent.trim() !== 'Confirma?') { setTimeout(() => { b.textContent = 'Confirma?'; }, 0); return; }
+    }
+    setTimeout(fechar, 0);
+  });
 })();
 </script>
 </body>

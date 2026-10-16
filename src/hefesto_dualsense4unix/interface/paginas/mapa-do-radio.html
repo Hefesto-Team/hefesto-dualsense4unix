@@ -847,6 +847,57 @@
   }
   .caixa-pergunta .outro[hidden] { display: none; }
 </style>
+<style id="rodada-3-g3">
+/* Rodada 3 (conferência de desenho): as barras dos adaptadores começam e acabam na mesma reta. */
+.lugar-topo{display:grid;grid-template-columns:24px auto 116px 26px minmax(110px,1fr) auto;column-gap:8px;align-items:center}
+.lugar-topo > .abre-lugar{grid-column:1}
+.lugar-topo > .lugar-nome{grid-column:2}
+.lugar-topo > .onde{grid-column:3;min-width:0}
+.lugar-topo > .sino{grid-column:4}
+.lugar-topo > .barra-do-lugar{grid-column:5;min-width:0}
+.lugar-topo > .lugar-conta{grid-column:6;margin-left:0;display:grid;grid-template-columns:auto auto 48px;column-gap:8px;justify-content:end}
+.lugar-topo > .lugar-conta > .sobra{justify-self:start}
+.aparelhos > .linha{padding-right:6px}
+</style>
+<style id="base-comum">
+/* ===== Base comum das abas (rodada 2, 12/10/2026) =====
+   Copiada IGUAL em todo mockup do todo. Três peças: a dica no hover (sem «?»), o Modo automático
+   e o menu do botão direito desenhado no visual das abas (BRIEF-T6, opção B). */
+
+/* 1. A dica: qualquer frase, botão ou área com data-dica mostra a dica ao passar o mouse ou focar.
+      Nenhum botão «?» existe mais. A dica tem no máximo ~12 palavras: show, don't tell.
+      A caixa `.da-base` é só a do desenho: na janela do produto a dona do `#hef-dica` é a camada do piloto. */
+[data-dica]{cursor:help}
+button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"][data-dica]{cursor:pointer}
+#hef-dica.da-base{position:fixed;z-index:2147483000;max-width:280px;padding:7px 11px;border-radius:8px;
+  background:#1b1c25;border:1px solid var(--border-forte,#44475a);color:var(--texto-suave,#c8ccda);
+  font:500 12.5px/1.45 'Space Grotesk',system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.45);pointer-events:none;
+  opacity:0;transform:translateY(3px);transition:opacity .12s,transform .12s}
+#hef-dica.da-base.visivel{opacity:1;transform:none}
+
+/* 2. O Modo automático: pílula com bolinha. Os dois estados têm de se distinguir num relance.
+      Desligado: contorno neutro, bolinha vazia, letra suave (vale o que está na aba).
+      Ligado: ciano cheio, bolinha branca acesa, letra branca; a área que ele governa esmaece. */
+.modo-auto{display:inline-flex;align-items:center;gap:9px;height:34px;padding:0 16px 0 12px;border-radius:999px;
+  border:1px solid var(--border-forte,#44475a);background:transparent;color:var(--texto-suave,#c8ccda);
+  font:600 13.5px/1 'Space Grotesk',system-ui,sans-serif;cursor:pointer;transition:background .15s,border-color .15s,color .15s,box-shadow .15s}
+.modo-auto .p{width:11px;height:11px;border-radius:50%;border:2px solid var(--texto-mudo,#9a9eb8);background:transparent;
+  transition:all .15s}
+.modo-auto:hover{border-color:#5fd3e6;color:#fff}
+.modo-auto[aria-pressed="true"]{background:#0e7c8c;border-color:#5fd3e6;color:#fff;box-shadow:0 0 0 3px rgba(95,211,230,.18)}
+.modo-auto[aria-pressed="true"] .p{border-color:#fff;background:#fff;box-shadow:0 0 8px #fff}
+.modo-auto:focus-visible{outline:2px solid var(--cyan,#8be9fd);outline-offset:2px}
+.governado-pelo-jogo{opacity:.42;pointer-events:none;filter:saturate(.6)}
+
+/* 3. O menu do botão direito, no visual das abas. */
+.menu-hefesto{position:fixed;z-index:2147482000;min-width:190px;padding:6px;border-radius:12px;
+  background:#252733;border:1px solid var(--border-forte,#44475a);box-shadow:0 14px 34px rgba(0,0,0,.5)}
+.menu-hefesto button{display:flex;width:100%;align-items:center;gap:10px;height:34px;padding:0 12px;border:0;
+  border-radius:8px;background:transparent;color:var(--fg,#f8f8f2);font:500 13.5px/1 'Space Grotesk',system-ui,sans-serif;text-align:left;cursor:pointer}
+.menu-hefesto button:hover{background:rgba(189,147,249,.14)}
+.menu-hefesto button[disabled]{color:var(--texto-mudo,#9a9eb8);opacity:.55;cursor:default;background:transparent}
+.menu-hefesto hr{border:0;border-top:1px solid var(--border-sutil,#343746);margin:5px 4px}
+</style>
 </head>
 <body>
 
@@ -856,10 +907,11 @@
     <h1>Rádio e adaptadores</h1>
     <span class="conta" id="conta" data-campo="conta-de-adaptadores" data-hef-alvo="html"></span>
     <div class="direita">
-      <button class="btn principal" id="b-conectar" data-gesto="conectar-aparelho">
+      <button class="btn principal" id="b-conectar" data-gesto="conectar-aparelho"
+              data-dica="Pareia um controle ou fone novo">
         <svg class="i"><use href="#i-mais"/></svg> Conectar</button>
       <button class="btn" id="b-equilibrar" data-gesto="equilibrar-radio"
-              title="Move um controle por vez">
+              data-dica="Move um controle por vez">
         <svg class="i"><use href="#i-equilibrar"/></svg> Equilibrar</button>
     </div>
   </div>
@@ -883,11 +935,7 @@
        dois lados, e é palavra de todo mundo. -->
   <div class="espectro" data-campo="quem-esta-no-ar">
     <div class="espectro-cab">
-      Quem está no ar
-      <span class="ajuda" role="img"
-            aria-label="Wi-Fi, teclado e mouse sem fio dividem os 2,4 GHz com o Bluetooth. O hachurado são os canais que os adaptadores evitam; as faixas com nome são o vizinho provável."
-            title="Wi-Fi, teclado e mouse sem fio dividem os 2,4 GHz com o Bluetooth. O hachurado são os canais que os adaptadores evitam; as faixas com nome são o vizinho provável.">
-        <svg class="i"><use href="#i-ajuda"/></svg></span>
+      <span data-dica="Wi-Fi e mouse sem fio dividem os 2,4 GHz com o Bluetooth">Quem está no ar</span>
       <span class="fora-da-faixa" id="fora-da-faixa"
             data-campo="espectro-fora-da-faixa" data-hef-alvo="html"></span>
       <span class="no-ar" id="meus-no-ar" role="img"></span>
@@ -920,13 +968,13 @@
          acham nada, e é de propósito: o mockup mostra a FORMA do contrato,
          não reimplementa as telas. -->
     <a class="btn" id="b-mapear" href="#mapear-entradas"
-       title="Mapear entradas — desenhar o meu computador: as entradas numeradas por face, com ocupada, vazia, serve e vale evitar">
+       data-dica="Desenha as entradas do seu computador, face por face">
       <svg class="i"><use href="#i-mapa"/></svg> Mapear entradas</a>
     <a class="btn" id="b-uma-a-uma" href="#mapear-entrada-a-entrada"
-       title="Mapear entrada a entrada — um toque por aparelho: você pluga, ele aprende">
+       data-dica="Você pluga um aparelho e ele aprende a entrada">
       <svg class="i"><use href="#i-uma-a-uma"/></svg> Mapear entrada a entrada</a>
     <button class="btn" id="b-examinar" data-gesto="examinar-portas"
-            title="Examinar entradas — refaz o exame das entradas, energia e rádio, e repinta o check-up">
+            data-dica="Refaz o exame das entradas, da energia e do rádio">
       <svg class="i"><use href="#i-reexaminar"/></svg> Examinar entradas</button>
     <!-- R8, 23/09: SEM RECADO. A TELA-CALADA-01 vale aqui também: a
          confirmação de um ato é o destino que pisca, e a recusa é o botão que
@@ -936,7 +984,7 @@
          navegador"*. Um rótulo de três palavras prometia uma gaveta desta
          mesma tela; o ícone sozinho promete um lugar, e a dica diz qual. -->
     <a class="mapa so-icone" href="mapa-das-portas.html"
-       title="O mapa das entradas — abre no navegador"
+       data-dica="Abre o mapa das entradas"
        aria-label="O mapa das entradas — abre no navegador">
       <svg class="i"><use href="#i-mapa"/></svg></a>
   </div>
@@ -1094,8 +1142,10 @@
            o input cai de 260,4 para 170,5 Hz e o áudio sobe a 106,2 — o total
            mal se mexe. O mic custa +16,3 reports/s = +32,6 fatias.
     375    a ponte pelo rádio — 93,75 relatórios/s desde 29/09/2026 (antes eram
-           100/s; o diário dizia 93,75), a 4 fatias: o 0x35 tem 334 B, vai a
-           339 no ar, e o menor pacote legal é o 2-DH3 (3 fatias) mais a resposta.
+           100/s; o diário dizia 93,75), a 4 fatias: desde 03/10 o produto
+           escreve só o 0x36, de 398 B (403 no ar), que não cabe no 2-DH3
+           (367 B) e cabe no 3-DH3 (3 fatias) mais a resposta. O k = 3 é
+           provisório: a medida é da A-PONTE-SE-CONTA-EM-FATIAS-NO-AR-01.
 
   **SOM E VIBRAÇÃO PELO RÁDIO SÃO EXCLUSIVOS, e é uma fatia só para os dois.**
   `alto_falante_bt.py:537`, literal: *"pôr voz e vibração no MESMO report do
@@ -1110,8 +1160,10 @@
   tela anuncia *"caberiam mais 11 com microfone"* com o rádio em 250%.
 
   O CENÁRIO DESENHADO É O ALVO DELA: quatro DualSense com tudo ligado ao mesmo
-  tempo. 4 x (520,8+32,6+375) = 3.713,6 fatias, mais teclado e mouse, de 1.600
-  por antena. **Não cabe em duas** (116%); em três, cabe.
+  tempo. Os custos acima são DEMONSTRATIVOS do desenho: a entrada é elástica e a
+  ponte tira dela, então o que cada controle recebe sai de
+  Hz = (C_eff − custo das pontes) / 2 / n, com o custo da ponte a medir
+  (A-PONTE-SE-CONTA-EM-FATIAS-NO-AR-01). Soma de fatias não é a conta da tela.
 -->
 <script type="text/csv" id="dados">
 tabela,id,nome,a,b,c,d,e,f,g,h,i
@@ -1122,8 +1174,8 @@ aparelho,P1,Vitória,controle,#ae335a,L3,520.8,32.6,375,Cosmic Red,mic+ponte+luz
 aparelho,P2,Pedro,controle,#7eb8d4,L3,520.8,32.6,375,Starlight Blue,mic+ponte+luz,L3
 aparelho,P3,Ana,controle,#e35b8c,L3,520.8,32.6,375,Nova Pink,mic+ponte+luz,L3
 aparelho,P4,Rafa,controle,#74588e,L3,520.8,32.6,375,Galactic Purple,mic+ponte+luz,L3|L1
-aparelho,S1,Caixa de som,caixa,,L2,244,0,0,,,L2
-aparelho,F1,Fone,fone,,L2,244,0,0,,,L2
+aparelho,S1,Caixa de som,caixa,,L2,366,0,0,,,L2
+aparelho,F1,Fone,fone,,L2,366,0,0,,,L2
 aparelho,W1,Webcam,webcam,,L1,0,0,0,,fixo,
 espectro,E1,Teclado,teclado,18,34,medio,,,
 espectro,E2,Mouse,mouse,52,68,medio,,,
@@ -1312,6 +1364,8 @@ const QUEDAS = lerCsv('quedas');
    UM DONO SÓ para "quanto este lugar está usando". A tela inteira lê daqui —
    e ela conta o que SAI, que é o que falta na de hoje. */
 const CUSTO_DE_UM_CONTROLE = 520.8 + 32.6 + 375;
+/* O pacote de A2DP (2-DH5) ocupa 5 fatias, mais a da resposta. Estimado. */
+const FATIAS_DO_PACOTE_A2DP = 6;
 function custoDe(ap) {
   return ap.entrada
     + (ap.ligado.mic ? ap.mic : 0)
@@ -1352,9 +1406,10 @@ const moradoresDe = lid => APARELHOS.filter(a => a.lugar === lid);
    BARRA DE LUZ e GATILHOS ADAPTATIVOS — 0 Hz em regime: o escritor só manda
    quando a cor ou a curva MUDA (`dualsense_bt_audio.py:68`).
 
-   CAIXA e FONE — 244 fatias, e este é o único número ESTIMADO da tela: A2DP
+   CAIXA e FONE — 366 fatias, e este é o único número ESTIMADO da tela: A2DP
    SBC a 328 kbps = 41 kB/s; a ~672 B por pacote dá ~61 pacotes/s, e cada um
-   é 2-DH5 (3 fatias) mais a resposta = 4. 61 x 4 = 244. Sem medição de fio.
+   é 2-DH5 (5 fatias) mais a resposta = 6. 61 x 6 = 366, dentro das 300 a 375
+   de `docs/data/orcamento-de-ar.csv`. Sem medição de fio.
 
    WEBCAM — 0 fatias: ela é USB, não rádio. Fica na tela porque OCUPA PORTA, e
    porque uma webcam USB 3.0 joga ~20 dB de ruído em 2,4 GHz
@@ -1452,6 +1507,17 @@ const PARTE_DA_VOZ = HZ.voz / (HZ.voz + HZ.movimento_mic);
    dois números. */
 const HZ_QUE_ENGASGA = 125;
 const HZ_DO_JOGO = 250;
+/* QUANTAS PONTES CABEM EM CADA ENTRADA (A-PONTE-SE-OTIMIZA-ATE-QUATRO-NO-ULTRA-NUM-ADAPTADOR-01):
+   as que ainda deixam todo controle dela em 125 Hz ou mais, nunca acima das duas que
+   sobreviveram: piso((C_eff − 2 × 125 × controles) / 187,5). O dono é
+   `radio_da_mesa.n_max_pela_capacidade`, e a paridade trava a fórmula. */
+const FATIAS_POR_RELATORIO_DE_ENTRADA = 2;
+function pontesQueCabem(lid) {
+  const lug = LUGARES.find(l => l.id === lid);
+  const controles = moradoresDe(lid).filter(a => a.tipo === 'controle').length;
+  const sobra = lug.teto - FATIAS_POR_RELATORIO_DE_ENTRADA * HZ_QUE_ENGASGA * controles;
+  return Math.max(0, Math.min(PONTES_POR_ADAPTADOR, Math.floor(sobra / MARGINAL_DA_PONTE)));
+}
 const nivelDoMovimento = hz => (typeof hz !== 'number' || Number.isNaN(hz)) ? ''
   : hz >= HZ_DO_JOGO ? 'liso' : hz >= HZ_QUE_ENGASGA ? 'medio' : 'engasga';
 const DICA_DO_MOVIMENTO = {
@@ -1820,14 +1886,16 @@ function pintar() {
     /* R10 — «PONTES N DE 2» no lugar do «232%». O número é CONTAGEM, não
        estimativa: quantos controles recebem som ou vibração por este rádio. */
     const n = pontes.length;
+    const cabem = pontesQueCabem(lug.id);
     const q = document.createElement('span');
     q.className = 'quanto canais-do-lugar ' +
-      (n > PONTES_POR_ADAPTADOR ? 'estourou' : (n === PONTES_POR_ADAPTADOR ? 'apertado' : ''));
+      (n > cabem ? 'estourou' : (n === cabem ? 'apertado' : ''));
     q.dataset.campo = 'lugar-pontes';
+    q.dataset.cabem = String(cabem);
     q.appendChild(icone('i-som'));
-    q.append(n + '/' + PONTES_POR_ADAPTADOR);
-    q.title = 'Controles com som ou vibração: ' + n + ' de ' + PONTES_POR_ADAPTADOR +
-      (n > PONTES_POR_ADAPTADOR ? ' — o som engasga' : '');
+    q.append(n + '/' + cabem);
+    q.title = 'Controles com som ou vibração: ' + n + ' de ' + cabem +
+      (n > cabem ? ' — o som engasga' : '');
     q.setAttribute('role', 'img');
     q.setAttribute('aria-label', q.title);
     conta.appendChild(q);
@@ -1845,7 +1913,7 @@ function pintar() {
     ch.setAttribute('aria-label', ch.title);
     conta.appendChild(ch);
 
-    const livres = PONTES_POR_ADAPTADOR - n;
+    const livres = cabem - n;
     const sobra = document.createElement('span');
     sobra.className = 'sobra' + (livres < 0 ? ' passou' : (livres === 0 ? ' nao-cabe' : ''));
     if (livres >= 1) {
@@ -2404,13 +2472,13 @@ function linhaDe(ap) {
     v.appendChild(icone(ICONE_DO_APARELHO[ap.tipo] || 'i-radio'));
     const hzO = document.createElement('span');
     hzO.className = 'hz';
-    /* CADA PACOTE DE A2DP CUSTA 4 FATIAS (2-DH5 = 3, mais a resposta), então o
+    /* CADA PACOTE DE A2DP CUSTA 6 FATIAS (2-DH5 = 5, mais a resposta), então o
        hertz sai da divisão — e o zero da webcam sai como palavra, não como
        "0 Hz", que se leria como aparelho mudo em vez de aparelho sem rádio. */
     hzO.textContent = custoDe(ap) === 0 ? 'Sem rádio'
-                    : Math.round(custoDe(ap) / 4) + ' Hz';
+                    : Math.round(custoDe(ap) / FATIAS_DO_PACOTE_A2DP) + ' Hz';
     v.appendChild(hzO);
-    v.title = maiuscula(ap.nome) + ': ' + Math.round(custoDe(ap) / 4) + ' pacotes de som por segundo';
+    v.title = maiuscula(ap.nome) + ': ' + Math.round(custoDe(ap) / FATIAS_DO_PACOTE_A2DP) + ' pacotes de som por segundo';
     v.style.background = 'var(--panel)';
     v.style.borderColor = corDe(ap);
     v.style.color = corDe(ap);
@@ -2421,8 +2489,8 @@ function linhaDe(ap) {
   /* O NÚMERO QUE SOBRA NA DIREITA É «QUANTO DE UMA ANTENA», e não mais a
      contagem de fatias: *"o termo fatias é muito dificil de entender se
      tratando de bt"*.  <!-- (noqa-acento) -->
-     É o mesmo dado — 928 de 1.600 é 58% —, dito na grandeza em que a pergunta
-     é feita: cabe ou não cabe. */
+     É o mesmo dado, dito na grandeza em que a pergunta é feita: cabe ou não
+     cabe. */
   /* R10 — A COLUNA DA DIREITA DIZ QUAL VAGA DE PONTE ELE OCUPA, e não mais
      «% de uma antena»: a porcentagem era a soma que a D-CONTA-ADITIVA proíbe.
      É o que liga a linha à barra do adaptador lá em cima. */
@@ -2973,6 +3041,86 @@ for (const [bid, titulo, texto] of [
 }
 
 pintar();
+</script>
+<script id="base-comum">
+/* Base comum das abas: a dica no hover e o menu do botão direito. Uma vez por página, igual em todas. */
+(() => {
+  /* A dica: só nasce aqui quando NÃO há a camada da janela (`__hefDica`, do piloto), que é a dona
+     do `#hef-dica` no produto. Os dois nunca rodam juntos: o teste vem a cada evento, porque a
+     camada da janela chega depois da carga da página. */
+  let dica = null, alvo = null;
+  const mostrar = el => {
+    if (!dica) { dica = document.createElement('div'); dica.id = 'hef-dica'; dica.className = 'da-base'; dica.setAttribute('role', 'tooltip'); }
+    alvo = el; dica.textContent = el.dataset.dica;
+    if (!dica.isConnected) document.body.append(dica);
+    const r = el.getBoundingClientRect(), d = dica.getBoundingClientRect();
+    let x = r.left + r.width / 2 - d.width / 2, y = r.bottom + 8;
+    if (y + d.height > innerHeight - 6) y = r.top - d.height - 8;
+    dica.style.left = Math.max(6, Math.min(x, innerWidth - d.width - 6)) + 'px'; dica.style.top = y + 'px';
+    dica.classList.add('visivel');
+  };
+  const esconder = () => { alvo = null; if (dica) dica.classList.remove('visivel'); };
+  for (const [ev, f] of [['mouseover', 'in'], ['focusin', 'in'], ['mouseout', 'out'], ['focusout', 'out']])
+    document.addEventListener(ev, e => {
+      if (window.__hefDica) return;
+      const el = e.target.closest && e.target.closest('[data-dica]');
+      if (f === 'in' && el && el.dataset.dica && el !== alvo) mostrar(el);
+      if (f === 'out' && el && !el.contains(e.relatedTarget)) esconder();
+    });
+  /* O Modo automático: a área que o botão governa esmaece enquanto ele está ligado, e o `data-modo`
+     leva o que o PRÓXIMO clique pede. Tudo parte do `aria-pressed`, que o piloto também pinta;
+     o clique só vira o `aria-pressed` na hora (depois de o piloto ter lido o `data-modo`). */
+  const sincronizar = b => {
+    const on = b.getAttribute('aria-pressed') === 'true';
+    const pedido = on ? 'personalizado' : 'automatico';
+    if (b.dataset.modo !== pedido) b.dataset.modo = pedido;
+    if (b.dataset.governa)
+      document.querySelectorAll(b.dataset.governa).forEach(el => el.classList.toggle('governado-pelo-jogo', on));
+  };
+  const sincronizarTodos = () => document.querySelectorAll('.modo-auto').forEach(sincronizar);
+  sincronizarTodos();
+  new MutationObserver(ms => {
+    if (ms.some(m => m.type === 'childList' || (m.target.matches && m.target.matches('.modo-auto')))) sincronizarTodos();
+  }).observe(document.body, {subtree: true, childList: true, attributes: true, attributeFilter: ['aria-pressed']});
+  document.addEventListener('click', e => {
+    const b = e.target.closest && e.target.closest('.modo-auto');
+    if (b) setTimeout(() => b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') === 'true' ? 'false' : 'true'), 0);
+  });
+  /* O menu do botão direito: Copiar (cinza sem seleção), Atualizar, Desligar ou Ligar, Reiniciar, Fechar.
+     Cada item é um `data-gesto` comum: no produto a janela o despacha como qualquer botão. O serviço
+     parado ou pausado vira «Ligar», de um clique só; o estado vem do `data-servico` do cabeçalho. */
+  const fechar = () => document.querySelectorAll('.menu-hefesto.vivo').forEach(m => m.remove());
+  document.addEventListener('contextmenu', e => {
+    e.preventDefault(); fechar();
+    const m = document.createElement('div'); m.className = 'menu-hefesto vivo'; m.setAttribute('role', 'menu');
+    const sel = String(getSelection()).trim() !== '';
+    const servico = (document.querySelector('[data-campo="servico"]') || {dataset: {}}).dataset.servico;
+    const ligar = servico === 'parado' || servico === 'pausado';
+    const item = ligar
+      ? '<button type="button" role="menuitem" data-gesto="menu-desligar" data-dica="O Hefesto volta a cuidar dos controles">Ligar</button>'
+      : '<button type="button" role="menuitem" data-gesto="menu-desligar" data-menu="desligar" data-dica="O Hefesto sai da frente e o jogo lê o controle direto">Desligar</button>';
+    m.innerHTML = `<button type="button" role="menuitem" data-menu="copiar" ${sel ? '' : 'disabled'}>Copiar</button><hr>
+      <button type="button" role="menuitem" data-gesto="menu-atualizar">Atualizar</button>
+      ${item}
+      <button type="button" role="menuitem" data-gesto="menu-reiniciar">Reiniciar</button><hr>
+      <button type="button" role="menuitem" data-gesto="menu-fechar">Fechar</button>`;
+    document.body.append(m);
+    const r = m.getBoundingClientRect();
+    m.style.left = Math.min(e.clientX, innerWidth - r.width - 6) + 'px';
+    m.style.top = Math.min(e.clientY, innerHeight - r.height - 6) + 'px';
+  });
+  document.addEventListener('click', e => {
+    const b = e.target.closest && e.target.closest('.menu-hefesto button');
+    if (!b) { fechar(); return; }
+    if (b.disabled) return;
+    if (b.dataset.menu === 'copiar') document.execCommand('copy');
+    /* Desligar pede dois cliques, como o «Parar» da aba Sistema: o primeiro troca a palavra, o segundo age. */
+    if (b.dataset.menu === 'desligar') {
+      if (b.textContent.trim() !== 'Confirma?') { setTimeout(() => { b.textContent = 'Confirma?'; }, 0); return; }
+    }
+    setTimeout(fechar, 0);
+  });
+})();
 </script>
 </body>
 </html>
