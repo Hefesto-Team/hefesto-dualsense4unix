@@ -877,7 +877,7 @@ em `:1514`, diz que a faixa aceita parece ser `[0x3d..0x64]`.)
   medido no aparelho em 18/09/2026 (`scripts/ensaios/historico/a_haptica_pelo_radio.py`),
   e o `0x11` não é opcional. **O que o produto escreve é o `0x36` combinado**,
   de 398 B, com os quatro blocos num quadro só (`0x11`, `0x10`, `0x12` e o som
-  em `0x13`/`0x16`), desde 03/10/2026, provado na bancada:
+  em `0x13`/`0x16`), desde 03/10/2026, provado no aparelho:
   `integrations/alto_falante_bt.py:557` (`DEGRAU_COMBINADO`).
 
 > **NOTA DATADA — 11/08/2026: CONTRADIÇÃO INTERNA EM ABERTO, e não é a que
@@ -1528,7 +1528,7 @@ Os nomes `scePadSetTiltCorrectionState` (correção pela gravidade) e
 tabela de exportação da AnyPS5
 (`boykopovar/AnyPS5@d592d54e11:core/libs/prx/libScePad/Export.cpp:202-225`),
 ligáveis por jogo. Os valores do PS5 não aparecem em fonte nenhuma: o filtro que
-a AnyPS5 usa é invenção dela.
+a AnyPS5 usa é invento do próprio projeto.
 
 **Lightbar — ALTA.** `lightbar_setup` bit1 é literalmente o **fade out**
 (confirma a armadilha do keepalive da barra de luz, já conhecida no Hefesto). `led_brightness`
