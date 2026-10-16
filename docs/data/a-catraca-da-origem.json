@@ -247,14 +247,14 @@
       "data": "2026-10-16",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1117632,
+      "piso": 1118900,
       "por_item": {
-        "docs": 119058,
-        "scripts": 114042,
-        "src": 299303,
-        "tests": 585229
+        "docs": 119122,
+        "scripts": 114652,
+        "src": 299327,
+        "tests": 585799
       },
-      "razao": "tamanho: +150 linhas (1117482 -> 1117632), pagas por Origem: D-1610-OS-SUBSYSTEMS-SOBEM-E-DESCEM-POR-UMA-LISTA-SO; registrado no fecho, topo 74845d37bd62",
+      "razao": "tamanho: +1268 linhas (1117632 -> 1118900), pagas por Origem: D-1610-O-EMULADOR-ACHADO-PELO-DESKTOP-LEVA-A-JANELA-DA-TABELA; registrado no fecho, topo ab43f30788ed",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -483,10 +483,16 @@
           "de": 1117482,
           "para": 1117632,
           "razao": "tamanho: +150 linhas (1117482 -> 1117632), pagas por Origem: D-1610-OS-SUBSYSTEMS-SOBEM-E-DESCEM-POR-UMA-LISTA-SO; registrado no fecho, topo 74845d37bd62"
+        },
+        {
+          "data": "2026-10-16",
+          "de": 1117632,
+          "para": 1118900,
+          "razao": "tamanho: +1268 linhas (1117632 -> 1118900), pagas por Origem: D-1610-O-EMULADOR-ACHADO-PELO-DESKTOP-LEVA-A-JANELA-DA-TABELA; registrado no fecho, topo ab43f30788ed"
         }
       ],
       "unidade": "linhas",
-      "universo": 2905
+      "universo": 2907
     }
   }
 }
