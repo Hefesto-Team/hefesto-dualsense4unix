@@ -283,15 +283,23 @@ def test_sem_leitura_do_firmware_a_luz_e_deixada_apagada() -> None:
     assert byte == 0
 
 
-def test_no_modo_nativo_a_devolucao_nao_toca_o_hidraw() -> None:
-    """Com o Modo Nativo ligado o JOGO é o dono do hidraw — não se escreve."""
+def test_no_modo_nativo_a_devolucao_repinta_so_a_luz() -> None:
+    """No Modo Nativo o JOGO é o dono do resto do report: a devolução repinta só a luz e solta.
+
+    A luz do microfone vale em todo modo (O-MICROFONE-GANHA-O-MODO-E-A-LUZ-QUE-PULSA-01): sai o
+    report mínimo, com o bit `0x01` do flag1 e o `common[8]`, e nada mais é autorizado.
+    """
     handle = _handle(mudo=True)
     backend = _backend({_A: handle})
     backend.set_microphone_led(2, uniq=_A)
     handle._output_muted = True
 
     assert backend.set_microphone_led(None, uniq=_A) is True
-    assert handle.device.escritos == []
+    assert len(handle.device.escritos) == 1
+    relatorio = handle.device.escritos[0]
+    assert _no_fio(relatorio, 0) == 0, "nenhum bit do flag0 no report mínimo"
+    assert _no_fio(relatorio, 1) == rep.VALID_FLAG1_MIC_MUTE_LED_CONTROL_ENABLE
+    assert _no_fio(relatorio, 8) == 1, "o mudo real repinta a luz em `1`"
     assert handle._mic_led_desejado is None
 
 

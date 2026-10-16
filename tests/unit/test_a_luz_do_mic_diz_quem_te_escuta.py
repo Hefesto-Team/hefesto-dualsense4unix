@@ -167,69 +167,44 @@ async def _rodar(
 
 
 @pytest.mark.parametrize(
-    ("mudo", "ouvintes", "captando", "bateria", "esperado"),
+    ("mudo", "captando", "bateria", "esperado"),
     [
-        (True, ["chrome"], True, 5, mod.APAGADA),
-        (True, None, None, None, mod.APAGADA),
-        (False, ["chrome"], True, 29, mod.PISCANDO_LENTO),
-        (False, ["chrome"], True, 30, mod.PISCANDO),
-        (False, ["chrome"], True, 80, mod.PISCANDO),
-        (False, ["chrome"], True, None, mod.PISCANDO),
-        (False, ["chrome"], False, 10, mod.ACESA),
-        (False, ["chrome"], None, 4, mod.ACESA),
-        (False, [], False, 90, mod.ACESA),
-        (False, [], None, None, mod.ACESA),
+        (True, True, 5, mod.APAGADA),
+        (True, None, None, mod.APAGADA),
+        (False, True, 29, mod.PISCANDO_LENTO),
+        (False, True, 30, mod.PISCANDO),
+        (False, True, 80, mod.PISCANDO),
+        (False, True, None, mod.PISCANDO),
+        (False, False, 10, mod.ACESA),
+        (False, None, 4, mod.ACESA),
+        (False, False, 90, mod.ACESA),
+        (False, None, None, mod.ACESA),
     ],
 )
 def test_a_precedencia_e_a_da_sprint(
     mudo: bool | None,
-    ouvintes: list[str] | None,
     captando: bool | None,
     bateria: int | None,
     esperado: int,
 ) -> None:
-    assert (
-        mod.decidir(
-            mudo=mudo, ouvintes=ouvintes, captando=captando, bateria_pct=bateria
-        )
-        == esperado
-    )
+    """O pisca é o som captado, com ou sem quem ouça.
 
-
-@pytest.mark.parametrize(
-    ("mudo", "ouvintes"),
-    [
-        (None, ["chrome"]),
-        (None, []),
-        (None, None),
-    ],
-)
-def test_nao_sei_nao_e_zero(mudo: bool | None, ouvintes: list[str] | None) -> None:
-    """`None` é *"não escreva"*, e ele NÃO pode virar `APAGADA` por descuido."""
-    assert (
-        mod.decidir(mudo=mudo, ouvintes=ouvintes, captando=None, bateria_pct=None)
-        is None
-    )
-
-
-def test_a_lista_vazia_e_a_ausente_acendem_igual() -> None:
-    """`[]` (medi, ninguém ouve) e `None` (não medi) acendem o `1`: o botão manda.
-
-    A distinção entre as duas vive na tela (`quem_ouve_este_mic`), não na luz
-    (A-LUZ-DO-MIC-SEGUE-O-BOTAO-QUANDO-NAO-SABE-QUEM-OUVE-01).
+    O-MICROFONE-GANHA-O-MODO-E-A-LUZ-QUE-PULSA-01.
     """
-    vazia = mod.decidir(mudo=False, ouvintes=[], captando=None, bateria_pct=None)
-    ausente = mod.decidir(mudo=False, ouvintes=None, captando=None, bateria_pct=None)
-    assert vazia == mod.ACESA
-    assert ausente == mod.ACESA
+    assert mod.decidir(mudo=mudo, captando=captando, bateria_pct=bateria) == esperado
+
+
+@pytest.mark.parametrize("captando", [True, False, None])
+def test_nao_sei_nao_e_zero(captando: bool | None) -> None:
+    """`None` é *"não escreva"*, e ele NÃO pode virar `APAGADA` por descuido."""
+    assert mod.decidir(mudo=None, captando=captando, bateria_pct=None) is None
 
 
 def test_o_produto_nao_inventa_um_quinto_estado() -> None:
     """A faixa é `0..3` e `decidir` nunca sai dela (§4 da sprint)."""
     saidas = {
-        mod.decidir(mudo=m, ouvintes=o, captando=c, bateria_pct=b)
+        mod.decidir(mudo=m, captando=c, bateria_pct=b)
         for m in (True, False, None)
-        for o in (None, [], ["a"], ["a", "b"])
         for c in (True, False, None)
         for b in (None, 0, 29, 30, 100)
     }
@@ -237,19 +212,14 @@ def test_o_produto_nao_inventa_um_quinto_estado() -> None:
 
 
 def test_com_o_mic_ligado_e_ninguem_gravando_a_luz_acende() -> None:
-    """A decisão de 19/09, na menor forma possível."""
-    assert mod.decidir(
-        mudo=False, ouvintes=[], captando=False, bateria_pct=100
-    ) == mod.ACESA
+    """A decisão de 19/09, na menor forma possível: ligado e em silêncio, acesa parada."""
+    assert mod.decidir(mudo=False, captando=False, bateria_pct=100) == mod.ACESA
 
 
 def test_so_o_mudo_apaga_a_luz() -> None:
     """Varredura: nenhuma combinação SEM `mudo is True` devolve `APAGADA`."""
     acesos = {
-        (o_n, c, b): mod.decidir(
-            mudo=False, ouvintes=o, captando=c, bateria_pct=b
-        )
-        for o_n, o in (("vazia", []), ("um", ["chrome"]), ("dois", ["a", "b"]))
+        (c, b): mod.decidir(mudo=False, captando=c, bateria_pct=b)
         for c in (True, False, None)
         for b in (None, 0, 29, 30, 100)
     }
@@ -258,9 +228,7 @@ def test_so_o_mudo_apaga_a_luz() -> None:
         f"com o microfone LIGADO, estes arranjos ainda apagam a luz: "
         f"{[repr(k) for k in apagados]}"
     )
-    assert mod.decidir(
-        mudo=True, ouvintes=["chrome"], captando=True, bateria_pct=5
-    ) == mod.APAGADA
+    assert mod.decidir(mudo=True, captando=True, bateria_pct=5) == mod.APAGADA
 
 
 @pytest.mark.asyncio
@@ -437,11 +405,13 @@ async def test_o_desligamento_devolve_a_posse_de_todos_os_controles(
 async def test_quando_para_de_saber_a_luz_volta_ao_botao(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A PEÇA A cai no meio da sessão: a luz sai do `2` e volta ao `1` do botão.
+    """No RÁDIO a PEÇA A cai no meio da sessão: a luz sai do `2` e volta ao `1` do botão.
 
+    Ali só se mede quem tem ouvinte (`_a_medir`), então sem a PEÇA A o medidor larga o controle.
     Nem fica travada no piscar, nem devolve a posse ao kernel, que pintaria a
     luz apagada sobre o microfone ligado.
     """
+    monkeypatch.setattr(mod, "_transportes", lambda _b: {UM: "bt"})
     controle = _Controle(uniqs=[UM], mudo={UM: False}, bateria={UM: 90})
     estado = {"viva": True}
 
@@ -713,10 +683,15 @@ async def test_o_medidor_e_parado_no_desligamento(
 
 
 @pytest.mark.asyncio
-async def test_o_medidor_so_segue_quem_tem_ouvinte(
+async def test_no_radio_o_medidor_so_segue_quem_tem_ouvinte(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """§1.1: o `2` vive dentro do `1`, então só quem tem ouvinte é medido."""
+    """No RÁDIO só quem tem ouvinte é medido: medir abriria a ponte e o áudio pelo adaptador.
+
+    O cabo mede todo microfone ligado (O-MICROFONE-GANHA-O-MODO-E-A-LUZ-QUE-PULSA-01); a régua
+    dele mora em `test_o_microfone_ganha_o_modo_e_a_luz.py`.
+    """
+    monkeypatch.setattr(mod, "_transportes", lambda _b: {UM: "bt", OUTRO: "bt"})
     controle = _Controle(uniqs=[UM, OUTRO], mudo={UM: False, OUTRO: False}, bateria={})
     medidor = _pecas(
         monkeypatch,
@@ -745,7 +720,8 @@ async def test_o_medidor_so_segue_quem_tem_ouvinte(
 async def test_com_ninguem_ouvindo_o_medidor_nem_nasce(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Custo zero com a sala vazia: nem thread, nem `parec`, nem processo."""
+    """Custo zero com a sala vazia no RÁDIO: nem thread, nem `parec`, nem processo."""
+    monkeypatch.setattr(mod, "_transportes", lambda _b: {UM: "bt"})
     nascidos: list[Any] = []
     controle = _Controle(uniqs=[UM], mudo={UM: False}, bateria={UM: 90})
 

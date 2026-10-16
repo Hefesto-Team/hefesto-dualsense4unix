@@ -2,7 +2,7 @@
 
 Sprint A-LUZ-DO-MIC-SEGUE-O-BOTAO-QUANDO-NAO-SABE-QUEM-OUVE-01. O contrato de
 19/09 (D-O-BOTAO-DO-MIC-MANDA-NA-LUZ): aceso é o microfone LIGADO, haja ou não
-app ouvindo. A lista de ouvintes só escolhe entre o `1` e o piscar; não saber
+app ouvindo. O piscar é o som captado (O-MICROFONE-GANHA-O-MODO-E-A-LUZ-QUE-PULSA-01); não saber
 quem ouve não pode virar a luz do kernel (apagada, que ela lê «desligado»).
 
 Quatro controles, P1 e P2 no cabo e P3 e P4 no rádio, com o laço de verdade e
@@ -190,13 +190,14 @@ async def test_o_radio_sem_canal_acende_igual_ao_cabo(
 ) -> None:
     """A PEÇA A só conhece P1 e P2 (o rádio está em `sem_canal`).
 
-    Sem aperto nenhum, os quatro acendem; um ouvinte no P1 com som entrando
-    faz só o P1 piscar.
+    Sem aperto nenhum, os quatro acendem, e o som entrando faz piscar o do cabo
+    sem app ouvindo (O-MICROFONE-GANHA-O-MODO-E-A-LUZ-QUE-PULSA-01); o do rádio sem
+    ouvinte não é medido e segue aceso, e um ouvinte no P1 não muda nada.
     """
     controle = _Controle({u: False for u in OS_QUATRO})
     quem: dict[str, list[str]] = {P1: [], P2: []}
     _pecas(monkeypatch, ouvintes=lambda _u: {u: list(v) for u, v in quem.items()},
-           captando={P1: True})
+           captando={P1: True, P3: True})
     daemon = _Daemon(controle)
     vistas: dict[str, Any] = {}
 
@@ -208,8 +209,8 @@ async def test_o_radio_sem_canal_acende_igual_ao_cabo(
 
     await _rodar(daemon, voltas=300, entre=ouvinte_no_p1)
 
-    assert vistas == {u: mod.ACESA for u in OS_QUATRO}, (
-        f"antes do ouvinte, cabo e rádio divergem: {vistas!r}"
+    assert vistas == {P1: mod.PISCANDO, P2: mod.ACESA, P3: mod.ACESA, P4: mod.ACESA}, (
+        f"antes do ouvinte: {vistas!r}"
     )
     assert controle.ultima(P1) == mod.PISCANDO
     for uniq in (P2, P3, P4):
@@ -218,11 +219,11 @@ async def test_o_radio_sem_canal_acende_igual_ao_cabo(
         assert _soltas(controle, uniq) == 0
 
 
-@pytest.mark.parametrize("ouvintes", [None, [], ["chrome"]])
-def test_o_mudo_apaga_e_o_mudo_desconhecido_nao_escreve(ouvintes: list[str] | None) -> None:
-    """Mudo apaga com qualquer lista; sem o mudo dito, ninguém escreve."""
-    assert mod.decidir(mudo=True, ouvintes=ouvintes, captando=True, bateria_pct=90) == mod.APAGADA
-    assert mod.decidir(mudo=None, ouvintes=ouvintes, captando=True, bateria_pct=90) is None
+@pytest.mark.parametrize("captando", [None, False, True])
+def test_o_mudo_apaga_e_o_mudo_desconhecido_nao_escreve(captando: bool | None) -> None:
+    """Mudo apaga com qualquer som; sem o mudo dito, ninguém escreve."""
+    assert mod.decidir(mudo=True, captando=captando, bateria_pct=90) == mod.APAGADA
+    assert mod.decidir(mudo=None, captando=captando, bateria_pct=90) is None
 
 
 @pytest.mark.asyncio

@@ -187,7 +187,12 @@ def test_o_alimentador_do_canal_na_placa_nao_acende_ninguem(
 def test_o_laco_inteiro_pisca_o_a_pelo_gravador_da_placa(
     monkeypatch: pytest.MonkeyPatch, proc: Path
 ) -> None:
-    """Régua 4: `luz_do_mic_loop` com a peça A de verdade escreve PISCANDO no A, e só nele."""
+    """Régua 4: `luz_do_mic_loop` com a peça A de verdade: o A pisca e a tela diz quem o ouve.
+
+    No cabo o pisca é o som captado, com ou sem ouvinte
+    (O-MICROFONE-GANHA-O-MODO-E-A-LUZ-QUE-PULSA-01): o som entra só no A, e o gravador da placa
+    chega à tela pela peça A.
+    """
     _mesa_de_mentira(
         monkeypatch,
         NOS_DOS_DOIS,
@@ -196,7 +201,7 @@ def test_o_laco_inteiro_pisca_o_a_pelo_gravador_da_placa(
     )
     real = qom.quem_ouve_agora
     monkeypatch.setattr(qom, "quem_ouve_agora", lambda uniqs: real(uniqs, proc))
-    medidor = _MedidorFalso(lambda seguidos: dict.fromkeys(seguidos, True))
+    medidor = _MedidorFalso(lambda seguidos: {u: u == UM for u in seguidos})
     peca_b = types.ModuleType(luz.MODULO_DO_NIVEL)
     peca_b.NivelDoMicrofone = lambda: medidor  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, luz.MODULO_DO_NIVEL, peca_b)
@@ -227,6 +232,8 @@ def test_o_laco_inteiro_pisca_o_a_pelo_gravador_da_placa(
     ultima = {uniq: valor for uniq, valor in escritas}
     assert ultima[UM] == luz.PISCANDO
     assert ultima[OUTRO] == luz.ACESA
+    assert luz.quem_ouve_este_mic(UM), "o gravador da placa não chegou à tela"
+    assert luz.quem_ouve_este_mic(OUTRO) == []
 
 
 def test_no_radio_o_canal_e_o_unico_no_e_a_conta_e_a_de_sempre(

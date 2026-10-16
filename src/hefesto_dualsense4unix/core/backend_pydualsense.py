@@ -3938,14 +3938,14 @@ class PyDualSenseController(IController):
         repintado = self._repintar_antes_de_soltar(alvo, uniq) if aceso is None else None
         try:
             tomar(aceso)
+            if aceso is not None and _no_modo_nativo(self, alvo):
+                _entregar_a_luz_do_mic_no_nativo(self, alvo)  # o laço calado não a escreve
         except Exception as exc:
             logger.warning(
                 "output_handle_failed", op="set_microphone_led", err=str(exc)
             )
             return False
-        logger.info(
-            "microphone_led_set", aceso=aceso, uniq=uniq, repintado=repintado
-        )
+        logger.info("microphone_led_set", aceso=aceso, uniq=uniq, repintado=repintado)
         return True
 
     def _repintar_antes_de_soltar(self, handle: Any, uniq: str | None) -> int | None:
@@ -3953,9 +3953,9 @@ class PyDualSenseController(IController):
         if getattr(handle, "_mic_led_desejado", None) is None:
             logger.debug("microphone_led_repintura_no_op_sem_posse", uniq=uniq)
             return None
-        if getattr(handle, "_output_muted", False):
-            logger.info("microphone_led_repintura_no_op_modo_nativo", uniq=uniq)
-            return None
+        # Modo Nativo: o report inteiro passaria o resto do estado por cima do jogo, e a
+        # devolução repinta só a luz, no report mínimo dela (`escrever_so_a_luz_do_mic`).
+        nativo = _no_modo_nativo(self, handle)
         montar = getattr(handle, "prepareReport", None)
         escrever = getattr(handle, "writeReport", None)
         tomar = getattr(handle, "set_microphone_led", None)
@@ -3973,7 +3973,7 @@ class PyDualSenseController(IController):
         valor = 1 if mudo else 0
         try:
             tomar(valor)
-            escrever(montar())
+            _entregar_a_luz_do_mic_no_nativo(self, handle) if nativo else escrever(montar())
         except Exception as exc:
             logger.warning("microphone_led_repintura_falhou", uniq=uniq, err=str(exc))
             return None
@@ -5560,3 +5560,34 @@ __all__ = [
     "numero_do_desenho",
     "relogio_do_prazo",
 ]
+
+
+def escrever_so_a_luz_do_mic(handle: Any, *, radio: bool) -> bool:
+    """Escreve o report MÍNIMO da luz do botão de mudo: o bit `0x01` do flag1 e o `common[8]`.
+
+    É o caminho do Modo Nativo, em que o laço não escreve e a luz do microfone ficava presa no
+    último valor (O-MICROFONE-GANHA-O-MODO-E-A-LUZ-QUE-PULSA-01): como o `escrever_so_o_som`, o
+    resto do report sai sem autorização e o firmware conserva o que o jogo escreveu. Sem posse do
+    byte (`None`) não há o que escrever. Envelope `0x02` no cabo, `0x31` no rádio, com o seq e o
+    CRC do `writeReport` do handle.
+    """
+    nivel = getattr(handle, "_mic_led_desejado", None)
+    if nivel is None:
+        return False
+    common = bytearray(rep.COMMON_LEN)
+    common[1] = rep.VALID_FLAG1_MIC_MUTE_LED_CONTROL_ENABLE
+    common[8] = int(nivel) & 0xFF
+    report = rep.build_bt_report(common, seq=0) if radio else rep.build_usb_report(common)
+    return _escrita_completa(handle.writeReport(list(report)), len(report))
+
+
+def _no_modo_nativo(controle: Any, handle: Any) -> bool:
+    """O laço de escrita está calado neste handle (Modo Nativo, FEAT-NATIVE-OUTPUT-MUTE-01)."""
+    return bool(getattr(controle, "_output_mute", False) or getattr(handle, "_output_muted", False))
+
+
+def _entregar_a_luz_do_mic_no_nativo(controle: Any, handle: Any) -> None:
+    """Entrega a luz do microfone pelo report mínimo; levanta se o fio não a levou inteira."""
+    radio = PyDualSenseController._detect_transport(handle) == "bt"
+    if not escrever_so_a_luz_do_mic(handle, radio=radio):
+        raise RuntimeError("a luz do microfone não saiu no report mínimo do Modo Nativo")

@@ -6,9 +6,16 @@ LUZ-DO-MIC-01, PEÇA C (03/09/2026). Este módulo é o único que ESCREVE no
 **O CONTRATO, e ele é decisão de produto** (a sprint `LUZ-DO-MIC-01`, §1)::
 
     apagado (0)      = MUDO. É a ÚNICA coisa que apaga esta luz.
-    aceso fixo (1)   = o microfone está LIGADO — haja ou não app ouvindo
-    piscando (2)     = algum app de fora tem o microfone aberto E entra som AGORA
+    aceso fixo (1)   = o microfone está LIGADO e não entra som
+    piscando (2)     = o microfone está ligado E entra som AGORA
     pisca lento (3)  = idem, E a bateria deste controle < 30%
+
+O `2` não pergunta mais quem ouve (O-MICROFONE-GANHA-O-MODO-E-A-LUZ-QUE-PULSA-01, a resposta de
+13/10/2026: *«quando tiver audio sendo captado nela. ele fica piscando»*). Até ali ele exigia um
+app de fora com o microfone aberto, e com ela falando sem app nenhum a luz ficava parada. Quem
+mede é a PEÇA B, e ela segue todo microfone ligado no CABO; no RÁDIO, abrir o canal para medir
+sobe a ponte do microfone daquele controle e divide o adaptador com um áudio que ninguém pediu,
+então ali só se mede quem a PEÇA A já diz ter ouvinte (ver `_a_medir`).
 
 A precedência está em `decidir`, e ela é a §1.1 escrita em código.
 
@@ -92,9 +99,9 @@ nomes de função em cada uma, e para a PEÇA B nenhum dos quatro existia:
 **O `seguir` precisa do NOME DA FONTE, e a PEÇA A não o devolve.** Ela responde
 QUEM ouve, não POR ONDE. O nome sai das réguas que a casa já tem
 (`fontes_de_captura_agora` + `casamento_usb_agora` + `escolher_fonte`), e só
-para quem JÁ tem ouvinte: a §1.1 diz que o `2` só existe dentro do `1`, então
-com a sala vazia não se resolve fonte, não se abre `parec`, e o medidor nem
-chega a nascer — o custo é zero processo e zero por cento.
+para quem `_a_medir` escolhe: no mudo nada se mede, e com a mesa toda muda (ou
+só rádio sem ouvinte) não se resolve fonte, não se abre `parec`, e o medidor nem
+chega a nascer.
 
 **AS PEÇAS PODEM NÃO EXISTIR, e a degradação é declarada.** O laço as procura
 por `import` tolerante e, sem elas, entrega o que SABE decidir:
@@ -236,71 +243,72 @@ NOME_DO_MEDIDOR: str = "NivelDoMicrofone"
 def decidir(
     *,
     mudo: bool | None,
-    ouvintes: list[str] | None,
     captando: bool | None,
     bateria_pct: int | None,
 ) -> int | None:
-    """A §1.1 da sprint, em código. Devolve o estado, ou `None` para *"não sei"*.
+    """O estado da luz, ou `None` para *"não sei"*. Não depende do modo nem de quem ouve.
 
     A precedência, na ordem::
 
         mudo no firmware                         -> 0
         captando + bateria < 30%                 -> 3
         captando                                 -> 2
-        ninguém ouvindo, e o microfone ligado    -> 1
-        resto                                    -> 1
+        resto (o microfone ligado)               -> 1
 
-    **A LINHA DE BAIXO MUDOU EM 19/09/2026, E É DECISÃO DE PRODUTO.** Ela era
-    `não ouvintes -> 0`, e a sprint
-    `2026-09-19-A-LUZ-DO-MIC-ESPELHA-O-BOTAO-01` mediu o preço: com o
-    microfone LIGADO e nenhum app gravando — o arranjo exato da bancada
-    naquela noite —, o journal só tinha `luz_do_mic_escrita estado=0`, a luz
-    apagada lhe disse *"desligado"*, e o primeiro clique do usuário **desligou** o
-    microfone que já estava no ar.
+    **Quem apaga é só o `mudo is True`** (19/09/2026, A-LUZ-DO-MIC-ESPELHA-O-BOTAO-01): com o
+    microfone ligado e ninguém gravando, a luz apagada lhe disse *"desligado"* e o primeiro clique
+    desligou o microfone que estava no ar.
 
-    Hoje **quem apaga é só o `mudo is True`**. A luz espelha o BOTÃO: o *"tem
-    alguém te ouvindo"* não se perdeu, ele é o `2` (e a aba Controle passou a
-    dizer QUEM, por escrito, no campo `mic-ressalva`).
+    **O pisca é o som, e não mais quem ouve** (13/10/2026,
+    O-MICROFONE-GANHA-O-MODO-E-A-LUZ-QUE-PULSA-01). A lista de ouvintes segue publicada para a
+    tela (`quem_ouve_este_mic`, o campo `mic-ressalva` da aba Controle) e decide só QUEM o laço
+    mede no rádio (`_a_medir`); aqui ela não entra.
 
-    **E O FILTRO ANTI-AUTO-REFERÊNCIA CONTINUA CERTO.** A regra 3 de
-    `e_stream_do_hefesto` exclui de `ouvintes` todo gravador cujo
-    `application.name` contenha `hefesto` — e é por isso que a lista vem vazia
-    na bancada: o único gravador do canal é o `hefesto-canal-do-microfone`,
-    o medidor de nível da própria aba Controle. Contá-lo faria a luz **acender
-    sozinha porque a tela está aberta**, e o `2` passaria a dizer *"a aba está
-    medindo"* em vez de *"alguém te ouve"*. A causa do defeito não era o
-    filtro: era o `0` querer dizer duas coisas.
+    **O `None` é um valor de primeira classe, e não um buraco.** Ele sai só com `mudo is None`: o
+    controle ainda não reportou o byte de estado de áudio. Chutar `False` acenderia a luz de quem
+    acabou de chegar; chutar `True` apagaria a de quem está falando.
 
-    **O `None` é um valor de primeira classe, e não um buraco.** Ele sai só
-    com `mudo is None`: o controle ainda não reportou o byte de estado de
-    áudio. Chutar `False` acenderia a luz de quem acabou de chegar; chutar
-    `True` apagaria a de quem está falando. A resposta certa é não escrever.
+    **`captando is None` acende o `1`**: sem medida (PEÇA B ausente, rádio sem ouvinte, fluxo que
+    ainda não entregou amostra) não se inventa som.
 
-    **A LISTA SÓ ESCOLHE ENTRE O `1` E O PISCAR.** O `0`/`1` é do botão: com
-    o microfone ligado, a lista vazia (`[]`, ninguém ouve) e a desconhecida
-    (`None`: a PEÇA A não existe, o `pactl` caiu, ou o controle ainda não tem
-    canal no servidor) acendem igual. *"Não sei quem ouve"* continua separado
-    de *"ninguém ouve"* na tela (`quem_ouve_este_mic`), não na luz: devolver a
-    posse ao kernel ali o faria pintar a luz apagada sobre o microfone ligado.
-
-    **`mudo` vence tudo**, inclusive a ausência das peças irmãs.
-
-    **A bateria só modula um aviso que já existe.** `bateria_pct is None` é o
-    firmware que ainda não reportou a carga, e ausência não vira `3`: o estado
-    cai para `2`, que continua verdadeiro. E bateria baixa SEM captação não
-    acende nada — a luz é sobre quem te escuta.
+    **A bateria só modula um aviso que já existe.** `bateria_pct is None` é o firmware que ainda
+    não reportou a carga, e ausência não vira `3`. E bateria baixa SEM som não acende nada.
     """
     if mudo is True:
         return APAGADA
     if mudo is None:
         return None
-    if not ouvintes:
-        return ACESA
     if captando is True:
         if bateria_pct is not None and bateria_pct < LIMIAR_DE_BATERIA_PCT:
             return PISCANDO_LENTO
         return PISCANDO
     return ACESA
+
+
+def _a_medir(
+    mesa: list[str],
+    ouvintes_por_uniq: dict[str, Any] | None,
+    transportes: dict[str, str],
+    mudos: dict[str, bool | None],
+) -> list[str]:
+    """Os `uniq` que a PEÇA B mede: todo microfone ligado no cabo, e no rádio só quem tem ouvinte.
+
+    No CABO o canal já existe e medir abre um fluxo de pico (100 B/s, 0,1 % de um núcleo por
+    canal, medido em 03/09/2026). No RÁDIO o canal só captura com a ponte de pé, e a ponte segue o
+    estado da fonte: o nosso `parec` a deixaria `RUNNING` e o controle passaria a mandar áudio pelo
+    rádio o tempo todo, dividindo o adaptador com o botão de todos. Por isso ali se mede só quem a
+    PEÇA A já diz ter ouvinte (a ponte já está de pé por ele). No mudo nada se mede: a luz é `0` e
+    o microfone do usuário não fica aberto à toa. Transporte desconhecido é tratado como rádio: na
+    dúvida, não se abre nada.
+    """
+    com_ouvinte = set(_com_ouvinte(ouvintes_por_uniq))
+    escolhidos: list[str] = []
+    for uniq in mesa:
+        if mudos.get(uniq) is not False:
+            continue
+        if uniq in com_ouvinte or transportes.get(uniq) == "usb":
+            escolhidos.append(uniq)
+    return escolhidos
 
 
 def _posse_do_mudo(backend: Any, uniq: str) -> bool | None:
@@ -352,7 +360,7 @@ def _baterias(backend: Any) -> dict[str, int]:
     """`{uniq: battery_pct}` dos controles conectados. Só quem reportou entra.
 
     `describe_controllers` já devolve a carga por controle
-    (`core/backend_pydualsense.py:4724`) e a leitura é `getattr` no objeto que
+    (`PyDualSenseController.describe_controllers`) e a leitura é `getattr` no objeto que
     a thread de report atualiza — sem HID I/O, e já há três consumidores do
     daemon pagando esse preço por tique.
 
@@ -378,6 +386,32 @@ def _baterias(backend: Any) -> dict[str, int]:
         carga = item.get("battery_pct")
         if isinstance(uniq, str) and uniq and isinstance(carga, int):
             out[uniq] = carga
+    return out
+
+
+def _transportes(backend: Any) -> dict[str, str]:
+    """`{uniq: "usb" | "bt"}` dos controles conectados, pela mesma leitura de `_baterias`.
+
+    Quem não declarou o transporte não entra, e `_a_medir` o trata como rádio.
+    """
+    descrever = getattr(backend, "describe_controllers", None)
+    if not callable(descrever):
+        return {}
+    try:
+        itens = descrever()
+    except Exception as exc:  # pragma: no cover - defensivo
+        logger.warning("luz_do_mic_transporte_falhou", err=str(exc))
+        return {}
+    if not isinstance(itens, list):
+        return {}
+    out: dict[str, str] = {}
+    for item in itens:
+        if not isinstance(item, dict):
+            continue
+        uniq = item.get("uniq")
+        transporte = item.get("transport")
+        if isinstance(uniq, str) and uniq and isinstance(transporte, str):
+            out[uniq] = transporte
     return out
 
 
@@ -614,6 +648,7 @@ async def luz_do_mic_loop(daemon: DaemonProtocol) -> None:
     ouvintes_por_uniq: dict[str, Any] | None = None
     perguntei_em = float("-inf")
     medidor: Any = None
+    seguidos: list[str] | None = None
 
     fila: Any = None
     fila_do_jogo: Any = None
@@ -670,13 +705,17 @@ async def luz_do_mic_loop(daemon: DaemonProtocol) -> None:
                 )
                 perguntei_em = agora
                 marca_vista = marca
-                com_ouvinte = _com_ouvinte(ouvintes_por_uniq)
-                if com_ouvinte and medidor is None:
+                seguidos = None
+            mudos = {uniq: _mudo(backend, uniq) for uniq in mesa}
+            a_medir = _a_medir(mesa, ouvintes_por_uniq, _transportes(backend), mudos)
+            if a_medir != seguidos:
+                seguidos = a_medir
+                if a_medir and medidor is None:
                     medidor = _medidor(cache_das_pecas)
                 if medidor is not None:
                     _seguir(
                         medidor,
-                        await _fora_do_laco(daemon, _fontes_para, com_ouvinte, mesa),
+                        await _fora_do_laco(daemon, _fontes_para, a_medir, mesa),
                     )
             captando_por_uniq = _captando(medidor)
             baterias = _baterias(backend)
@@ -694,8 +733,7 @@ async def luz_do_mic_loop(daemon: DaemonProtocol) -> None:
                     bruto_b = captando_por_uniq.get(uniq)
                     captando = bruto_b if isinstance(bruto_b, bool) else None
                 decidido = decidir(
-                    mudo=_mudo(backend, uniq),
-                    ouvintes=ouvintes,
+                    mudo=mudos.get(uniq),
                     captando=captando,
                     bateria_pct=baterias.get(uniq),
                 )
