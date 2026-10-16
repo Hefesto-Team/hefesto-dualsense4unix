@@ -891,12 +891,25 @@ def topo(ctx: Contexto) -> dict[str, Any]:
         "nativo": "sim" if no_nativo(ctx.state) else "nao",  # noqa-acento: valor que a página lê
         # O item «Desligar»/«Ligar» do menu do botão direito lê daqui (A-BASE-COMUM-DAS-ABAS-01).
         "servico": servico_do_menu(ctx.state),  # (noqa-acento) endereço da página
-        "conta-b": conta_b or SEM_CONTROLE_NA_MESA,
+        "conta-b": conta_b or _o_que_o_topo_diz_da_mesa_vazia(ctx.state),
         "perfil": ativo or "—",
         "rodape.aplicar": _dica_do_aplicar(ctx.state),
         "rodape.salvar": _dica_do_salvar(do_rodape),
         "rodape.exportar": _dica_do_exportar(do_rodape),
     }
+
+
+def _o_que_o_topo_diz_da_mesa_vazia(state: dict[str, Any] | None) -> str:
+    """O topo com a mesa vazia: «Nenhum controle» se o serviço respondeu, senão «desligado».
+
+    Estado vazio é serviço que não respondeu (o piloto entrega `{}` depois da folga), e «Nenhum
+    controle» ao lado do ponto verde lia-se como controle ligado e tela vazia (15/10/2026).
+    """
+    if state:
+        return SEM_CONTROLE_NA_MESA
+    from hefesto_dualsense4unix.interface.pacotes.a01_jogar import SERVICO_DESLIGADO
+
+    return SERVICO_DESLIGADO.rstrip(".")
 
 
 def servico_do_menu(state: dict[str, Any] | None) -> str:

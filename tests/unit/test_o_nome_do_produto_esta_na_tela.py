@@ -87,7 +87,8 @@ def test_o_pintor_nao_emite_mais_a_primeira_metade() -> None:
     reprova; tire o `or SEM_CONTROLE_NA_MESA` e a mesa vazia volta ao
     travessão solto ao lado da bolinha.
     """
-    vazio = pacotes.topo(pacotes.Contexto(state={}, mesa=[], conectados=[], estados={}))
+    vazio = pacotes.topo(pacotes.Contexto(
+        state={"connected": True}, mesa=[], conectados=[], estados={}))
     assert "conta" not in vazio, vazio.get("conta")
     assert vazio["conta-b"] == pacotes.SEM_CONTROLE_NA_MESA
 

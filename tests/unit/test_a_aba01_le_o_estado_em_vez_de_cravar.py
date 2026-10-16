@@ -231,10 +231,12 @@ def test_o_daemon_calado_nao_acende_nada() -> None:
 
     Ele só devolve `None` para um NÃO-dicionário. Sem a guarda, um tique sem
     resposta acenderia **Ligado** e o chip **Navegação** sobre um estado que
-    ninguém leu — a tela afirmando com o Hefesto fora do ar.
+    ninguém leu — a tela afirmando com o Hefesto fora do ar. O interruptor marca
+    **Desligado** (a posição vazia caía no Ligado do gerador, 15/10/2026) e
+    nenhum chip acende.
     """
     fora = aba.pacote(_ctx({}))
-    assert fora["hef-posicao"] == ""
+    assert fora["hef-posicao"] == "desligado"
     assert fora["modo-aceso"] == ""
     assert fora["cartoes"] == {}
 

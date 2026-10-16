@@ -79,6 +79,10 @@ MESA_VAZIA = (
     "rádio: ele aparece aqui sozinho."
 )
 
+#: A posição do interruptor Status com o serviço parado (estado vazio): a que o gerador chama
+#: ``desligado``. Quem lê é :func:`_estado_da_tela`.
+POSICAO_COM_O_SERVICO_PARADO = "desligado"
+
 def lugares_da_mesa() -> int:
     """Quantos cartões a página publica. Lido de `monta.MESA`, nunca digitado."""
     return len(_monta().MESA)
@@ -459,10 +463,9 @@ def _aviso_do_servico_calado(ctx: Contexto) -> dict[str, str] | None:
     lida ao contrário. A volta é sozinha: o tique do piloto segue (`hefesto_vivo.TIQUE_MS`, 100 ms)
     e o primeiro estado que voltar apaga a linha.
 
-    **Não alcança:** hoje o piloto **não chama o pacote** quando `mesa_viva.estado_do_daemon()`
-    levanta (`hefesto_vivo._tique` imprime `[daemon mudo]` e `return True`), então a linha só acende
-    no dublê e no dia em que o piloto passar o estado vazio adiante; `interface/hefesto_vivo.py` era
-    posse da `ONDA5-P-01` e `nao_toca` da sprint, e a metade de lá é uma linha.
+    **Alcança:** depois da folga o piloto entrega `{}` ao pacote
+    (`hefesto_vivo.FolgaDoServicoMudo.mudo`), e com ele a linha acende; a mesa, o interruptor e o
+    topo dizem o mesmo.
     """
     return (None if getattr(ctx, "state", None)
             else {"selo": SELO_DO_SERVICO, "texto": SERVICO_CALADO,
@@ -591,9 +594,15 @@ def coluna_de_atencao(ctx: Contexto) -> list[dict[str, str]]:
 
 
 def _frase_da_mesa(ctx: Contexto) -> str:
-    """A linha por cima dos lugares apagados — ``""`` quando a mesa cabe na tela."""
+    """A linha por cima dos lugares apagados — ``""`` quando a mesa cabe na tela.
+
+    Com o serviço parado (estado vazio) a mesa não está vazia por falta de controle: ninguém
+    respondeu, e a linha diz isso (:data:`SERVICO_CALADO`), nunca :data:`MESA_VAZIA`, que afirmaria
+    que não há controle quando há dois ligados pelo rádio (A-TELA-DIZ-DESLIGADO-QUANDO-O-SERVICO-
+    PARA-01, 15/10/2026).
+    """
     if not ctx.state:
-        return ""
+        return SERVICO_CALADO
     quantos = len(ctx.conectados)
     if quantos == 0:
         return MESA_VAZIA
@@ -1082,12 +1091,12 @@ def _estado_da_tela(state: dict[str, Any]) -> dict[str, str]:
     a Steam aberta). Acende por :func:`_steam_input_da_tela`, em CAMPO PRÓPRIO (a razão está em
     :data:`DA_PAGINA`).
 
-    **Daemon calado não pinta nada:** `mode_of_state({})` devolve **desktop** (só ``None`` para
-    não-dicionário), então sem esta guarda acenderia **Ligado** sobre estado que ninguém leu; é a
-    guarda que `_pendencia` também tem.
+    **Serviço parado (estado vazio): Desligado, sem chip aceso.** Posição vazia cai no rádio do
+    gerador (`HEFESTO_LIGADO`) e mostrava Ligado com o serviço fora (15/10/2026).
     """
     if not state:
-        return {"hef-posicao": "", "modo-aceso": "", "steam-input-aceso": ""}
+        return {"hef-posicao": POSICAO_COM_O_SERVICO_PARADO, "modo-aceso": "",
+                "steam-input-aceso": ""}
 
     ligado = _painel().hefesto_ligado(state)
     aceso = _chip_do_caminho(state)

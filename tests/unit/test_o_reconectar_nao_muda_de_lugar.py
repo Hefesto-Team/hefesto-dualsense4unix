@@ -612,7 +612,9 @@ def test_no_webkit_o_botao_nao_anda_com_os_lugares_apagados(
     """O y do botão no repouso, com os lugares apagados e com a frase acesa."""
     amostras = tique_mudo["amostras"]
     repouso = [a["y"] for a in amostras if a["fase"] == "bom" and a["p1"] == "sim"]
-    apagados = [a for a in amostras if a["p1"] == LUGAR_VAZIO and not a["frase"]]
+    # Com o serviço parado (a fase «mudo» depois da folga) a frase também acende, com a do serviço
+    # desligado (15/10/2026): os lugares apagados se medem pela fase, não pela falta da frase.
+    apagados = [a for a in amostras if a["p1"] == LUGAR_VAZIO and a["fase"] == "mudo"]
     acesa = [a for a in amostras if a["frase"]]
     assert repouso and apagados and acesa, (
         "a régua não viu o repouso, os lugares apagados ou a frase acesa — "

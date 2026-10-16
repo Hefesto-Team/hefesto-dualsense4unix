@@ -62,11 +62,12 @@ def test_sem_daemon_a_aba_nao_afirma_que_a_mesa_esta_vazia() -> None:
     escrever "nenhum controle na mesa" sobre um tique sem resposta é a tela
     afirmando o que não leu.
 
-    A MORDIDA: apague o `if not ctx.state: return ""` e a aba passa a acusar
-    mesa vazia num engasgo de IPC.
+    Com o serviço parado a linha diz que o Hefesto está desligado (15/10/2026).
+    A MORDIDA: troque o `return SERVICO_CALADO` do `if not ctx.state` por
+    `return MESA_VAZIA` e a aba passa a acusar mesa vazia num engasgo de IPC.
     """
     vazio = Contexto(state={}, mesa=[], conectados=[], estados={})
-    assert aba.pacote(vazio)["mesa-frase"] == ""
+    assert aba.pacote(vazio)["mesa-frase"] == aba.SERVICO_CALADO != aba.MESA_VAZIA
 
 
 def test_com_cinco_controles_a_tela_conta_os_que_nao_cabem() -> None:

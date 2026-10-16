@@ -415,12 +415,13 @@ def test_o_servico_calado_diz_e_para_de_afirmar() -> None:
         "estado que ninguém leu")
     assert canal[selos.index(aba.SELO_DO_SERVICO)]["texto"] == aba.SERVICO_CALADO
 
-    assert fora["hef-posicao"] == "", "o interruptor acendeu sem estado"
+    assert fora["hef-posicao"] == "desligado", (
+        "o interruptor não disse Desligado com o serviço calado")
     assert fora["modo-aceso"] == "", "um chip da fileira acendeu sem estado"
     assert fora["cadeado"] == TRAVESSAO, "o cadeado afirmou uma escolha dela"
-    assert fora["mesa-frase"] == "", (
-        "a frase da mesa vazia apareceu — 'nenhum controle na mesa' sobre um "
-        "tique sem resposta é a tela afirmando o que não leu")
+    assert fora["mesa-frase"] == aba.SERVICO_CALADO, (
+        "a mesa vazia deveria dizer que o serviço está desligado, e não "
+        "'nenhum controle na mesa' sobre um tique sem resposta")
     assert not fora["cartoes"], "um cartão foi afirmado sem estado"
 
 

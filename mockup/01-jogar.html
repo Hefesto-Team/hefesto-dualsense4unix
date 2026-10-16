@@ -1042,6 +1042,10 @@
   .hef-topo:not(:has(.hef-pos.on)):has(#hef-desligado:checked) ~ .quadro .so-desligado{display:block}
   .hef-topo:has(.hef-pos.ligado.on) ~ .quadro .so-ligado{display:block}
   .hef-topo:has(.hef-pos.desligado.on) ~ .quadro .so-desligado{display:block}
+  /* O TOPO COM O SERVIÇO PARADO (15/10/2026): o ponto verde some e a frase toma a cor de atenção.
+     Quem diz «parado» é o campo da fita que o menu do botão direito também lê. */
+  .fita-linha:has(i[data-servico="parado"]) .conectado{color:var(--orange)}
+  .fita-linha:has(i[data-servico="parado"]) .conectado .bolinha{display:none}
   /* E ELAS ABREM NO MESMO y E FECHAM NO MESMO y — 180 contra 176 foi o que se
      mediu quando divergiram, e "muda tudo ao clicar" é a queixa de uso que fixou a
      altura única das dez abas; ela vale dentro de uma aba também.
