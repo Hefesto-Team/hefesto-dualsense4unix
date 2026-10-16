@@ -325,6 +325,30 @@ def test_a_ancora_segue_a_escolha_da_06_no_tempo(monkeypatch: pytest.MonkeyPatch
     assert lidas[9]["valor"] == "molde:mouse", lidas[9]
 
 
+def test_seguida_a_ancora_o_seletor_e_de_quem_usa(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A âncora se segue uma vez por chegada. Depois, o perfil ativo que troca no meio da edição
+    (um jogo que abre e troca o perfil) não muda o seletor nem dispara outro `change`, que no
+    Python largaria o que ainda não foi salvo.
+
+    MORDIDA: seguir de novo sempre que a chave pintada muda reprova aqui.
+    """
+    _o_disco(monkeypatch, {
+        ATIVO: {"name": ATIVO, "remapeamento": {"triangle": "cross"}},
+        "Corrida": {"name": "Corrida", "remapeamento": {"cross": "circle"}}})
+    _a_escolha_da_06(monkeypatch, "molde:visual_novel")
+    ctx = _ctx()
+    primeira = _pintar(ctx)
+    a13.mapa_perfil(ctx, {"valor": f"perfil:{ATIVO}"}, None)  # o `change` chegou ao Python
+    a13._estado()["edicoes"]["cross"] = ("troca", "square")  # e ela começou a trocar um botão
+    depois = _ctx(ativo="Corrida")
+    assert _mesa(depois)["ancora-trocar"] == "perfil:Corrida"
+    segunda = _pintar(depois)
+    lidas = _no_webkit("#trocar", [OUVIR, primeira, LER, segunda, LER])
+    assert lidas[2]["mudou"] == [f"perfil:{ATIVO}"], lidas[2]
+    assert lidas[4]["valor"] == f"perfil:{ATIVO}", f"o seletor saiu da mão dela: {lidas[4]}"
+    assert lidas[4]["mudou"] == [f"perfil:{ATIVO}"], f"um segundo `change` saiu: {lidas[4]}"
+
+
 def test_o_marcador_da_ancora_nao_aparece_nem_entra_na_tabulacao() -> None:
     """Os dois marcadores são endereço, não elemento da tela: ocultos e fora do foco."""
     ctx = _ctx()

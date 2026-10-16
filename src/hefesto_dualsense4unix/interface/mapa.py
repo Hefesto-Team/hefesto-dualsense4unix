@@ -562,19 +562,22 @@ JS = r"""
      que não aparecem, a chave que cada uma pede. Sem âncora, ou com outra, nada muda: abre em Navegar. */
   const MARCADOR = {'#point-and-click': 'ancora-pac', '#trocar': 'ancora-trocar'};
   const lista = $('#perfil');
-  let seguida = '';
+  /* A âncora se segue UMA vez por chegada (a carga ou o `hashchange`), quando a chave pintada já tem
+     lugar no seletor. Depois o seletor é de quem usa: o perfil ativo que troca no meio da edição
+     não muda a escolha feita nem larga o que não se salvou. */
+  let seguida = null;
   const seguirAncora = () => {
+    if (seguida === location.hash) return;
     const campo = MARCADOR[location.hash];
     const marca = campo && $('[data-campo="' + campo + '"]');
     const chave = marca ? marca.dataset.chave : '';
-    if (!chave || seguida === location.hash + chave) return;
-    if (![...lista.options].some(o => o.value === chave)) return;
-    seguida = location.hash + chave;
-    if (lista.value === chave) return;
+    if (campo && !(chave && [...lista.options].some(o => o.value === chave))) return;
+    seguida = location.hash;
+    if (!chave || lista.value === chave) return;
     lista.value = chave;
     lista.dispatchEvent(new Event('change', {bubbles: true}));
   };
-  addEventListener('hashchange', seguirAncora);
+  addEventListener('hashchange', () => { seguida = null; seguirAncora(); });
   new MutationObserver(seguirAncora).observe($('.mc-perfil'), {subtree: true, childList: true, attributes: true});
   seguirAncora();
 })();
