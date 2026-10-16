@@ -847,6 +847,57 @@
   }
   .caixa-pergunta .outro[hidden] { display: none; }
 </style>
+<style id="rodada-3-g3">
+/* Rodada 3 (conferência de desenho): as barras dos adaptadores começam e acabam na mesma reta. */
+.lugar-topo{display:grid;grid-template-columns:24px auto 116px 26px minmax(110px,1fr) auto;column-gap:8px;align-items:center}
+.lugar-topo > .abre-lugar{grid-column:1}
+.lugar-topo > .lugar-nome{grid-column:2}
+.lugar-topo > .onde{grid-column:3;min-width:0}
+.lugar-topo > .sino{grid-column:4}
+.lugar-topo > .barra-do-lugar{grid-column:5;min-width:0}
+.lugar-topo > .lugar-conta{grid-column:6;margin-left:0;display:grid;grid-template-columns:auto auto 48px;column-gap:8px;justify-content:end}
+.lugar-topo > .lugar-conta > .sobra{justify-self:start}
+.aparelhos > .linha{padding-right:6px}
+</style>
+<style id="base-comum">
+/* ===== Base comum das abas (rodada 2, 12/10/2026) =====
+   Copiada IGUAL em todo mockup do todo. Três peças: a dica no hover (sem «?»), o Modo automático
+   e o menu do botão direito desenhado no visual das abas (BRIEF-T6, opção B). */
+
+/* 1. A dica: qualquer frase, botão ou área com data-dica mostra a dica ao passar o mouse ou focar.
+      Nenhum botão «?» existe mais. A dica tem no máximo ~12 palavras: show, don't tell.
+      A caixa `.da-base` é só a do desenho: na janela do produto a dona do `#hef-dica` é a camada do piloto. */
+[data-dica]{cursor:help}
+button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"][data-dica]{cursor:pointer}
+#hef-dica.da-base{position:fixed;z-index:2147483000;max-width:280px;padding:7px 11px;border-radius:8px;
+  background:#1b1c25;border:1px solid var(--border-forte,#44475a);color:var(--texto-suave,#c8ccda);
+  font:500 12.5px/1.45 'Space Grotesk',system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.45);pointer-events:none;
+  opacity:0;transform:translateY(3px);transition:opacity .12s,transform .12s}
+#hef-dica.da-base.visivel{opacity:1;transform:none}
+
+/* 2. O Modo automático: pílula com bolinha. Os dois estados têm de se distinguir num relance.
+      Desligado: contorno neutro, bolinha vazia, letra suave (vale o que está na aba).
+      Ligado: ciano cheio, bolinha branca acesa, letra branca; a área que ele governa esmaece. */
+.modo-auto{display:inline-flex;align-items:center;gap:9px;height:34px;padding:0 16px 0 12px;border-radius:999px;
+  border:1px solid var(--border-forte,#44475a);background:transparent;color:var(--texto-suave,#c8ccda);
+  font:600 13.5px/1 'Space Grotesk',system-ui,sans-serif;cursor:pointer;transition:background .15s,border-color .15s,color .15s,box-shadow .15s}
+.modo-auto .p{width:11px;height:11px;border-radius:50%;border:2px solid var(--texto-mudo,#9a9eb8);background:transparent;
+  transition:all .15s}
+.modo-auto:hover{border-color:#5fd3e6;color:#fff}
+.modo-auto[aria-pressed="true"]{background:#0e7c8c;border-color:#5fd3e6;color:#fff;box-shadow:0 0 0 3px rgba(95,211,230,.18)}
+.modo-auto[aria-pressed="true"] .p{border-color:#fff;background:#fff;box-shadow:0 0 8px #fff}
+.modo-auto:focus-visible{outline:2px solid var(--cyan,#8be9fd);outline-offset:2px}
+.governado-pelo-jogo{opacity:.42;pointer-events:none;filter:saturate(.6)}
+
+/* 3. O menu do botão direito, no visual das abas. */
+.menu-hefesto{position:fixed;z-index:2147482000;min-width:190px;padding:6px;border-radius:12px;
+  background:#252733;border:1px solid var(--border-forte,#44475a);box-shadow:0 14px 34px rgba(0,0,0,.5)}
+.menu-hefesto button{display:flex;width:100%;align-items:center;gap:10px;height:34px;padding:0 12px;border:0;
+  border-radius:8px;background:transparent;color:var(--fg,#f8f8f2);font:500 13.5px/1 'Space Grotesk',system-ui,sans-serif;text-align:left;cursor:pointer}
+.menu-hefesto button:hover{background:rgba(189,147,249,.14)}
+.menu-hefesto button[disabled]{color:var(--texto-mudo,#9a9eb8);opacity:.55;cursor:default;background:transparent}
+.menu-hefesto hr{border:0;border-top:1px solid var(--border-sutil,#343746);margin:5px 4px}
+</style>
 </head>
 <body>
 
@@ -856,10 +907,11 @@
     <h1>Rádio e adaptadores</h1>
     <span class="conta" id="conta" data-campo="conta-de-adaptadores" data-hef-alvo="html"></span>
     <div class="direita">
-      <button class="btn principal" id="b-conectar" data-gesto="conectar-aparelho">
+      <button class="btn principal" id="b-conectar" data-gesto="conectar-aparelho"
+              data-dica="Pareia um controle ou fone novo">
         <svg class="i"><use href="#i-mais"/></svg> Conectar</button>
       <button class="btn" id="b-equilibrar" data-gesto="equilibrar-radio"
-              title="Move um controle por vez">
+              data-dica="Move um controle por vez">
         <svg class="i"><use href="#i-equilibrar"/></svg> Equilibrar</button>
     </div>
   </div>
@@ -883,11 +935,7 @@
        dois lados, e é palavra de todo mundo. -->
   <div class="espectro" data-campo="quem-esta-no-ar">
     <div class="espectro-cab">
-      Quem está no ar
-      <span class="ajuda" role="img"
-            aria-label="Wi-Fi, teclado e mouse sem fio dividem os 2,4 GHz com o Bluetooth. O hachurado são os canais que os adaptadores evitam; as faixas com nome são o vizinho provável."
-            title="Wi-Fi, teclado e mouse sem fio dividem os 2,4 GHz com o Bluetooth. O hachurado são os canais que os adaptadores evitam; as faixas com nome são o vizinho provável.">
-        <svg class="i"><use href="#i-ajuda"/></svg></span>
+      <span data-dica="Wi-Fi e mouse sem fio dividem os 2,4 GHz com o Bluetooth">Quem está no ar</span>
       <span class="fora-da-faixa" id="fora-da-faixa"
             data-campo="espectro-fora-da-faixa" data-hef-alvo="html"></span>
       <span class="no-ar" id="meus-no-ar" role="img"></span>
@@ -920,13 +968,13 @@
          acham nada, e é de propósito: o mockup mostra a FORMA do contrato,
          não reimplementa as telas. -->
     <a class="btn" id="b-mapear" href="#mapear-entradas"
-       title="Mapear entradas — desenhar o meu computador: as entradas numeradas por face, com ocupada, vazia, serve e vale evitar">
+       data-dica="Desenha as entradas do seu computador, face por face">
       <svg class="i"><use href="#i-mapa"/></svg> Mapear entradas</a>
     <a class="btn" id="b-uma-a-uma" href="#mapear-entrada-a-entrada"
-       title="Mapear entrada a entrada — um toque por aparelho: você pluga, ele aprende">
+       data-dica="Você pluga um aparelho e ele aprende a entrada">
       <svg class="i"><use href="#i-uma-a-uma"/></svg> Mapear entrada a entrada</a>
     <button class="btn" id="b-examinar" data-gesto="examinar-portas"
-            title="Examinar entradas — refaz o exame das entradas, energia e rádio, e repinta o check-up">
+            data-dica="Refaz o exame das entradas, da energia e do rádio">
       <svg class="i"><use href="#i-reexaminar"/></svg> Examinar entradas</button>
     <!-- R8, 23/09: SEM RECADO. A TELA-CALADA-01 vale aqui também: a
          confirmação de um ato é o destino que pisca, e a recusa é o botão que
@@ -936,7 +984,7 @@
          navegador"*. Um rótulo de três palavras prometia uma gaveta desta
          mesma tela; o ícone sozinho promete um lugar, e a dica diz qual. -->
     <a class="mapa so-icone" href="mapa-das-portas.html"
-       title="O mapa das entradas — abre no navegador"
+       data-dica="Abre o mapa das entradas"
        aria-label="O mapa das entradas — abre no navegador">
       <svg class="i"><use href="#i-mapa"/></svg></a>
   </div>
@@ -2993,6 +3041,86 @@ for (const [bid, titulo, texto] of [
 }
 
 pintar();
+</script>
+<script id="base-comum">
+/* Base comum das abas: a dica no hover e o menu do botão direito. Uma vez por página, igual em todas. */
+(() => {
+  /* A dica: só nasce aqui quando NÃO há a camada da janela (`__hefDica`, do piloto), que é a dona
+     do `#hef-dica` no produto. Os dois nunca rodam juntos: o teste vem a cada evento, porque a
+     camada da janela chega depois da carga da página. */
+  let dica = null, alvo = null;
+  const mostrar = el => {
+    if (!dica) { dica = document.createElement('div'); dica.id = 'hef-dica'; dica.className = 'da-base'; dica.setAttribute('role', 'tooltip'); }
+    alvo = el; dica.textContent = el.dataset.dica;
+    if (!dica.isConnected) document.body.append(dica);
+    const r = el.getBoundingClientRect(), d = dica.getBoundingClientRect();
+    let x = r.left + r.width / 2 - d.width / 2, y = r.bottom + 8;
+    if (y + d.height > innerHeight - 6) y = r.top - d.height - 8;
+    dica.style.left = Math.max(6, Math.min(x, innerWidth - d.width - 6)) + 'px'; dica.style.top = y + 'px';
+    dica.classList.add('visivel');
+  };
+  const esconder = () => { alvo = null; if (dica) dica.classList.remove('visivel'); };
+  for (const [ev, f] of [['mouseover', 'in'], ['focusin', 'in'], ['mouseout', 'out'], ['focusout', 'out']])
+    document.addEventListener(ev, e => {
+      if (window.__hefDica) return;
+      const el = e.target.closest && e.target.closest('[data-dica]');
+      if (f === 'in' && el && el.dataset.dica && el !== alvo) mostrar(el);
+      if (f === 'out' && el && !el.contains(e.relatedTarget)) esconder();
+    });
+  /* O Modo automático: a área que o botão governa esmaece enquanto ele está ligado, e o `data-modo`
+     leva o que o PRÓXIMO clique pede. Tudo parte do `aria-pressed`, que o piloto também pinta;
+     o clique só vira o `aria-pressed` na hora (depois de o piloto ter lido o `data-modo`). */
+  const sincronizar = b => {
+    const on = b.getAttribute('aria-pressed') === 'true';
+    const pedido = on ? 'personalizado' : 'automatico';
+    if (b.dataset.modo !== pedido) b.dataset.modo = pedido;
+    if (b.dataset.governa)
+      document.querySelectorAll(b.dataset.governa).forEach(el => el.classList.toggle('governado-pelo-jogo', on));
+  };
+  const sincronizarTodos = () => document.querySelectorAll('.modo-auto').forEach(sincronizar);
+  sincronizarTodos();
+  new MutationObserver(ms => {
+    if (ms.some(m => m.type === 'childList' || (m.target.matches && m.target.matches('.modo-auto')))) sincronizarTodos();
+  }).observe(document.body, {subtree: true, childList: true, attributes: true, attributeFilter: ['aria-pressed']});
+  document.addEventListener('click', e => {
+    const b = e.target.closest && e.target.closest('.modo-auto');
+    if (b) setTimeout(() => b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') === 'true' ? 'false' : 'true'), 0);
+  });
+  /* O menu do botão direito: Copiar (cinza sem seleção), Atualizar, Desligar ou Ligar, Reiniciar, Fechar.
+     Cada item é um `data-gesto` comum: no produto a janela o despacha como qualquer botão. O serviço
+     parado ou pausado vira «Ligar», de um clique só; o estado vem do `data-servico` do cabeçalho. */
+  const fechar = () => document.querySelectorAll('.menu-hefesto.vivo').forEach(m => m.remove());
+  document.addEventListener('contextmenu', e => {
+    e.preventDefault(); fechar();
+    const m = document.createElement('div'); m.className = 'menu-hefesto vivo'; m.setAttribute('role', 'menu');
+    const sel = String(getSelection()).trim() !== '';
+    const servico = (document.querySelector('[data-campo="servico"]') || {dataset: {}}).dataset.servico;
+    const ligar = servico === 'parado' || servico === 'pausado';
+    const item = ligar
+      ? '<button type="button" role="menuitem" data-gesto="menu-desligar" data-dica="O Hefesto volta a cuidar dos controles">Ligar</button>'
+      : '<button type="button" role="menuitem" data-gesto="menu-desligar" data-menu="desligar" data-dica="O Hefesto sai da frente e o jogo lê o controle direto">Desligar</button>';
+    m.innerHTML = `<button type="button" role="menuitem" data-menu="copiar" ${sel ? '' : 'disabled'}>Copiar</button><hr>
+      <button type="button" role="menuitem" data-gesto="menu-atualizar">Atualizar</button>
+      ${item}
+      <button type="button" role="menuitem" data-gesto="menu-reiniciar">Reiniciar</button><hr>
+      <button type="button" role="menuitem" data-gesto="menu-fechar">Fechar</button>`;
+    document.body.append(m);
+    const r = m.getBoundingClientRect();
+    m.style.left = Math.min(e.clientX, innerWidth - r.width - 6) + 'px';
+    m.style.top = Math.min(e.clientY, innerHeight - r.height - 6) + 'px';
+  });
+  document.addEventListener('click', e => {
+    const b = e.target.closest && e.target.closest('.menu-hefesto button');
+    if (!b) { fechar(); return; }
+    if (b.disabled) return;
+    if (b.dataset.menu === 'copiar') document.execCommand('copy');
+    /* Desligar pede dois cliques, como o «Parar» da aba Sistema: o primeiro troca a palavra, o segundo age. */
+    if (b.dataset.menu === 'desligar') {
+      if (b.textContent.trim() !== 'Confirma?') { setTimeout(() => { b.textContent = 'Confirma?'; }, 0); return; }
+    }
+    setTimeout(fechar, 0);
+  });
+})();
 </script>
 </body>
 </html>

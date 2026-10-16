@@ -85,14 +85,13 @@
   .modo:hover { background: var(--color-rule); }
   .modo:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
   .modo[aria-pressed="true"] { border-color: var(--color-accent); background: color-mix(in srgb, var(--color-accent) 22%, var(--color-paper-3)); }
-  .modo.destaque[aria-pressed="false"] { border-color: color-mix(in srgb, var(--color-ok) 55%, transparent); color: var(--color-ok); }
-  .modo.destaque[aria-pressed="true"] { border-color: var(--color-ok); background: color-mix(in srgb, var(--color-ok) 20%, var(--color-paper-3)); color: var(--color-ink); }
+  /* «Sugestões» é um modo como os outros: sem o verde de aviso. */
 
   /* ─── o painel que muda com o modo ──────────────────────── */
   .painel { margin-top: var(--space-2xs); border: 1px solid var(--color-rule);
             border-radius: var(--radius-md); background: var(--color-paper-2); padding: var(--space-sm); }
   .painel > p.chamada { margin: 0 0 var(--space-2xs); font-size: var(--text-base); font-weight: 600; }
-  .painel > p.chamada .grande { color: var(--color-ok); }
+  .painel > p.chamada .grande { color: var(--color-ink); }
   .escolhas { display: flex; flex-wrap: wrap; gap: var(--space-2xs); }
   .escolha { font: inherit; font-size: var(--text-sm); display: inline-flex; align-items: center; gap: .4rem;
              background: var(--color-paper-3); color: var(--color-ink); border: 1px solid var(--color-rule);
@@ -146,7 +145,7 @@
   @media (max-width: 900px) { .palco { grid-template-columns: 1fr; } }
   .faces { display: flex; flex-direction: column; gap: var(--space-md); }
   .face-cab { display: flex; align-items: baseline; gap: var(--space-2xs); margin-bottom: var(--space-2xs); }
-  .face-cab h3 { margin: 0; font-size: var(--text-sm); font-weight: 600; text-transform: uppercase; letter-spacing: .07em; }
+  .face-cab h3 { margin: 0; font-size: var(--text-sm); font-weight: 600; } /* só a primeira letra é maiúscula */
   .face-cab .quantas { font-size: var(--text-xs); color: var(--color-ink-faint); font-family: var(--font-dado); }
   /* a divergência do hub: uma linha a mais, sem culpa */
   .diverge { margin: 0 0 var(--space-2xs); font-size: var(--text-xs); color: var(--color-lacuna); }
@@ -575,6 +574,45 @@
   /* O corpo rolava 5 px em 1212x809 (já rolava 8 no publicado): o pé de 40 px vira 32. */
   .pagina > .corpo { padding-bottom: 32px }
 </style>
+<style id="base-comum">
+/* ===== Base comum das abas (rodada 2, 12/10/2026) =====
+   Copiada IGUAL em todo mockup do todo. Três peças: a dica no hover (sem «?»), o Modo automático
+   e o menu do botão direito desenhado no visual das abas (BRIEF-T6, opção B). */
+
+/* 1. A dica: qualquer frase, botão ou área com data-dica mostra a dica ao passar o mouse ou focar.
+      Nenhum botão «?» existe mais. A dica tem no máximo ~12 palavras: show, don't tell.
+      A caixa `.da-base` é só a do desenho: na janela do produto a dona do `#hef-dica` é a camada do piloto. */
+[data-dica]{cursor:help}
+button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"][data-dica]{cursor:pointer}
+#hef-dica.da-base{position:fixed;z-index:2147483000;max-width:280px;padding:7px 11px;border-radius:8px;
+  background:#1b1c25;border:1px solid var(--border-forte,#44475a);color:var(--texto-suave,#c8ccda);
+  font:500 12.5px/1.45 'Space Grotesk',system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.45);pointer-events:none;
+  opacity:0;transform:translateY(3px);transition:opacity .12s,transform .12s}
+#hef-dica.da-base.visivel{opacity:1;transform:none}
+
+/* 2. O Modo automático: pílula com bolinha. Os dois estados têm de se distinguir num relance.
+      Desligado: contorno neutro, bolinha vazia, letra suave (vale o que está na aba).
+      Ligado: ciano cheio, bolinha branca acesa, letra branca; a área que ele governa esmaece. */
+.modo-auto{display:inline-flex;align-items:center;gap:9px;height:34px;padding:0 16px 0 12px;border-radius:999px;
+  border:1px solid var(--border-forte,#44475a);background:transparent;color:var(--texto-suave,#c8ccda);
+  font:600 13.5px/1 'Space Grotesk',system-ui,sans-serif;cursor:pointer;transition:background .15s,border-color .15s,color .15s,box-shadow .15s}
+.modo-auto .p{width:11px;height:11px;border-radius:50%;border:2px solid var(--texto-mudo,#9a9eb8);background:transparent;
+  transition:all .15s}
+.modo-auto:hover{border-color:#5fd3e6;color:#fff}
+.modo-auto[aria-pressed="true"]{background:#0e7c8c;border-color:#5fd3e6;color:#fff;box-shadow:0 0 0 3px rgba(95,211,230,.18)}
+.modo-auto[aria-pressed="true"] .p{border-color:#fff;background:#fff;box-shadow:0 0 8px #fff}
+.modo-auto:focus-visible{outline:2px solid var(--cyan,#8be9fd);outline-offset:2px}
+.governado-pelo-jogo{opacity:.42;pointer-events:none;filter:saturate(.6)}
+
+/* 3. O menu do botão direito, no visual das abas. */
+.menu-hefesto{position:fixed;z-index:2147482000;min-width:190px;padding:6px;border-radius:12px;
+  background:#252733;border:1px solid var(--border-forte,#44475a);box-shadow:0 14px 34px rgba(0,0,0,.5)}
+.menu-hefesto button{display:flex;width:100%;align-items:center;gap:10px;height:34px;padding:0 12px;border:0;
+  border-radius:8px;background:transparent;color:var(--fg,#f8f8f2);font:500 13.5px/1 'Space Grotesk',system-ui,sans-serif;text-align:left;cursor:pointer}
+.menu-hefesto button:hover{background:rgba(189,147,249,.14)}
+.menu-hefesto button[disabled]{color:var(--texto-mudo,#9a9eb8);opacity:.55;cursor:default;background:transparent}
+.menu-hefesto hr{border:0;border-top:1px solid var(--border-sutil,#343746);margin:5px 4px}
+</style>
 </head>
 <body>
 <div class="pagina">
@@ -585,14 +623,14 @@
          página. O destino não é chute: `grep -l mapa-das-portas.html` devolve UMA
          aba, a Conexões — e ela existe ao lado desta cópia, não ao lado da
          origem congelada, que tem três arquivos e nenhuma aba. -->
-    <a href="08-conexoes.html" title="Volta para a aba Conexões, que é de onde este mapa se abre."
+    <a href="08-conexoes.html" data-dica="Volta para a aba Conexões"
        style="position:absolute;left:0;top:2px;display:inline-flex;align-items:center;gap:6px;
               padding:5px 11px;border-radius:7px;text-decoration:none;
               border:1px solid var(--border-forte);background:var(--panel);
               color:var(--texto-suave);font-size:12px">← Voltar</a>
-    <h1>Mapa das <em>Conexões</em></h1>
+    <h1>Mapa das <em>conexões</em></h1>
     <p class="quando" id="de-quando">Leitura de exemplo · 24/08/2026</p>
-    <button class="btn examinar" id="reexaminar" title="Lê o computador de novo e mostra o que mudou de lugar"><span aria-hidden="true">⟳</span> Examinar</button>
+    <button class="btn examinar" id="reexaminar" data-dica="Lê de novo e mostra o que mudou de lugar"><span aria-hidden="true">⟳</span> Examinar</button>
   </header>
 
   <div class="corpo">
@@ -2086,10 +2124,10 @@
 
     /* os modos */
     document.getElementById("modos").innerHTML =
-        '<button class="modo" data-modo="mesa" aria-pressed="' + (modo === "mesa") + '">Atual</button>'
-      + '<button class="modo destaque" data-modo="ideal" aria-pressed="' + (modo === "ideal") + '">Sugestões</button>'
-      + '<button class="modo" data-modo="mao" aria-pressed="' + (modo === "mao") + '">Adicionar</button>' /* noqa-acento: data-modo */
-      + '<button class="modo" data-modo="registro" aria-pressed="' + (modo === "registro") + '">Registro</button>';
+        '<button class="modo" data-modo="mesa" data-dica="Onde cada aparelho está agora" aria-pressed="' + (modo === "mesa") + '">Atual</button>'
+      + '<button class="modo destaque" data-modo="ideal" data-dica="Onde cada aparelho funciona melhor" aria-pressed="' + (modo === "ideal") + '">Sugestões</button>'
+      + '<button class="modo" data-modo="mao" data-dica="A melhor entrada para um aparelho novo" aria-pressed="' + (modo === "mao") + '">Adicionar</button>' /* noqa-acento: data-modo */
+      + '<button class="modo" data-modo="registro" data-dica="O que entrou e saiu das entradas" aria-pressed="' + (modo === "registro") + '">Registro</button>';
     /* O REGISTRO É A QUARTA ABA: ela troca o palco, o painel e a legenda pelo registro. */
     var noRegistro = modo === "registro";
     document.getElementById("registro").hidden = !noRegistro;
@@ -2125,9 +2163,7 @@
         html += '<p class="chamada"><span class="grande">' + reais.length + " troca" + (reais.length > 1 ? "s" : "") + "</span></p>"
              + '<ol class="receita">'
              + reais.map(function (m) {
-                 return "<li><div><h4>" + m.titulo + '<span class="ajuda" tabindex="0">?<span class="dica">'
-                   + m.linhas.map(function (l) { return '<span><span class="selo ' + l.s + '">' + (l.s === "espec" ? "especificação" : l.s) + "</span><span>" + l.t + "</span></span>"; }).join("")
-                   + "</span></span></h4></div></li>";
+                 return '<li><div><h4 data-dica="' + emAtributo(String(m.linhas[0] ? m.linhas[0].t : "").replace(/<[^>]+>/g, "")) + '">' + m.titulo + "</h4></div></li>";
                }).join("")
              + "</ol>";
         html += '<div class="acoes"><button class="btn forte ja-movi"' + examinaNoProduto() + '>Já mudei</button>'
@@ -2190,7 +2226,7 @@
         + Object.keys(MAPA).length + " de " + todasPortas().length + " entradas mapeadas"
         + (sem.length ? ' · <b style="color:var(--color-lacuna)">' + sem.length + " aparelho"
             + (sem.length > 1 ? "s" : "") + " fora do mapa</b>" : "")
-        + (pend ? ' · Clique em <b style="color:var(--color-ok)">Sugestões</b>' : "")
+        + (pend ? ' · Clique em <b>Sugestões</b>' : "")
         + "</span></p>";
     }
     painel.innerHTML = html;
@@ -2214,7 +2250,7 @@
           + "<b>" + pend.length + (reg === "hub" ? " no hub" : " no PC") + " sem entrada marcada</b>"
           + '<div class="pend-lista">'
           + pend.map(function (x) {
-              return '<button class="chip pend" data-ap="' + x.ap.id + '"'
+              return '<button class="chip pend" data-ap="' + x.ap.id + '"' + ' data-dica="Clique e marque a entrada onde ele está"'
                 + (segurando === x.ap.id ? ' data-segurando="1"' : "") + ">"
                 + '<i class="marca" style="background:' + x.ap.cor + '"></i>'
                 + '<span class="txt"><b>' + x.ap.tipo + "</b><span>" + x.caminho + "</span></span></button>";
@@ -2512,6 +2548,86 @@
 <script data-aba="registro">
 /* #registro abre a página já na aba «Registro». */
 if (location.hash === '#registro') { document.addEventListener('DOMContentLoaded', function () { document.querySelector('.modo[data-modo="registro"]').click(); }); }
+</script>
+<script id="base-comum">
+/* Base comum das abas: a dica no hover e o menu do botão direito. Uma vez por página, igual em todas. */
+(() => {
+  /* A dica: só nasce aqui quando NÃO há a camada da janela (`__hefDica`, do piloto), que é a dona
+     do `#hef-dica` no produto. Os dois nunca rodam juntos: o teste vem a cada evento, porque a
+     camada da janela chega depois da carga da página. */
+  let dica = null, alvo = null;
+  const mostrar = el => {
+    if (!dica) { dica = document.createElement('div'); dica.id = 'hef-dica'; dica.className = 'da-base'; dica.setAttribute('role', 'tooltip'); }
+    alvo = el; dica.textContent = el.dataset.dica;
+    if (!dica.isConnected) document.body.append(dica);
+    const r = el.getBoundingClientRect(), d = dica.getBoundingClientRect();
+    let x = r.left + r.width / 2 - d.width / 2, y = r.bottom + 8;
+    if (y + d.height > innerHeight - 6) y = r.top - d.height - 8;
+    dica.style.left = Math.max(6, Math.min(x, innerWidth - d.width - 6)) + 'px'; dica.style.top = y + 'px';
+    dica.classList.add('visivel');
+  };
+  const esconder = () => { alvo = null; if (dica) dica.classList.remove('visivel'); };
+  for (const [ev, f] of [['mouseover', 'in'], ['focusin', 'in'], ['mouseout', 'out'], ['focusout', 'out']])
+    document.addEventListener(ev, e => {
+      if (window.__hefDica) return;
+      const el = e.target.closest && e.target.closest('[data-dica]');
+      if (f === 'in' && el && el.dataset.dica && el !== alvo) mostrar(el);
+      if (f === 'out' && el && !el.contains(e.relatedTarget)) esconder();
+    });
+  /* O Modo automático: a área que o botão governa esmaece enquanto ele está ligado, e o `data-modo`
+     leva o que o PRÓXIMO clique pede. Tudo parte do `aria-pressed`, que o piloto também pinta;
+     o clique só vira o `aria-pressed` na hora (depois de o piloto ter lido o `data-modo`). */
+  const sincronizar = b => {
+    const on = b.getAttribute('aria-pressed') === 'true';
+    const pedido = on ? 'personalizado' : 'automatico';
+    if (b.dataset.modo !== pedido) b.dataset.modo = pedido;
+    if (b.dataset.governa)
+      document.querySelectorAll(b.dataset.governa).forEach(el => el.classList.toggle('governado-pelo-jogo', on));
+  };
+  const sincronizarTodos = () => document.querySelectorAll('.modo-auto').forEach(sincronizar);
+  sincronizarTodos();
+  new MutationObserver(ms => {
+    if (ms.some(m => m.type === 'childList' || (m.target.matches && m.target.matches('.modo-auto')))) sincronizarTodos();
+  }).observe(document.body, {subtree: true, childList: true, attributes: true, attributeFilter: ['aria-pressed']});
+  document.addEventListener('click', e => {
+    const b = e.target.closest && e.target.closest('.modo-auto');
+    if (b) setTimeout(() => b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') === 'true' ? 'false' : 'true'), 0);
+  });
+  /* O menu do botão direito: Copiar (cinza sem seleção), Atualizar, Desligar ou Ligar, Reiniciar, Fechar.
+     Cada item é um `data-gesto` comum: no produto a janela o despacha como qualquer botão. O serviço
+     parado ou pausado vira «Ligar», de um clique só; o estado vem do `data-servico` do cabeçalho. */
+  const fechar = () => document.querySelectorAll('.menu-hefesto.vivo').forEach(m => m.remove());
+  document.addEventListener('contextmenu', e => {
+    e.preventDefault(); fechar();
+    const m = document.createElement('div'); m.className = 'menu-hefesto vivo'; m.setAttribute('role', 'menu');
+    const sel = String(getSelection()).trim() !== '';
+    const servico = (document.querySelector('[data-campo="servico"]') || {dataset: {}}).dataset.servico;
+    const ligar = servico === 'parado' || servico === 'pausado';
+    const item = ligar
+      ? '<button type="button" role="menuitem" data-gesto="menu-desligar" data-dica="O Hefesto volta a cuidar dos controles">Ligar</button>'
+      : '<button type="button" role="menuitem" data-gesto="menu-desligar" data-menu="desligar" data-dica="O Hefesto sai da frente e o jogo lê o controle direto">Desligar</button>';
+    m.innerHTML = `<button type="button" role="menuitem" data-menu="copiar" ${sel ? '' : 'disabled'}>Copiar</button><hr>
+      <button type="button" role="menuitem" data-gesto="menu-atualizar">Atualizar</button>
+      ${item}
+      <button type="button" role="menuitem" data-gesto="menu-reiniciar">Reiniciar</button><hr>
+      <button type="button" role="menuitem" data-gesto="menu-fechar">Fechar</button>`;
+    document.body.append(m);
+    const r = m.getBoundingClientRect();
+    m.style.left = Math.min(e.clientX, innerWidth - r.width - 6) + 'px';
+    m.style.top = Math.min(e.clientY, innerHeight - r.height - 6) + 'px';
+  });
+  document.addEventListener('click', e => {
+    const b = e.target.closest && e.target.closest('.menu-hefesto button');
+    if (!b) { fechar(); return; }
+    if (b.disabled) return;
+    if (b.dataset.menu === 'copiar') document.execCommand('copy');
+    /* Desligar pede dois cliques, como o «Parar» da aba Sistema: o primeiro troca a palavra, o segundo age. */
+    if (b.dataset.menu === 'desligar') {
+      if (b.textContent.trim() !== 'Confirma?') { setTimeout(() => { b.textContent = 'Confirma?'; }, 0); return; }
+    }
+    setTimeout(fechar, 0);
+  });
+})();
 </script>
 </body>
 </html>

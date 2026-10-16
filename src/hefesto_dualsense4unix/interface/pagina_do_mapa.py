@@ -48,6 +48,7 @@ Uso::
 from __future__ import annotations
 
 import json
+import pathlib
 import sys
 from typing import Any, NamedTuple
 
@@ -443,6 +444,18 @@ def _com_os_dados(js: str) -> str:
         js = js.replace(chave, valor)
     return js
 
+
+#: O movimento do Sugestões como a página do produto o monta hoje: o título e, ao lado, o «?» que
+#: abre as razões. É o que as edições dos mapas do todo trocam pelo título com a dica (as duas
+#: casas citam a mesma peça).
+RECEITA_COM_O_QUE_AJUDA = (
+    '                 return "<li><div><h4>" + m.titulo + \'<span class="ajuda" tabindex="0">?'
+    '<span class="dica">\'\n'
+    "                   + m.linhas.map(function (l) { return '<span><span class=\"selo ' + l.s + "
+    "'\">' + (l.s === \"espec\" ? \"especificação\" : l.s) + \"</span><span>\" + l.t + "
+    "\"</span></span>\"; }).join(\"\")\n"
+    '                   + "</span></span></h4></div></li>";\n'
+)
 
 #: As edições, uma a uma. Elas citam pedaços da origem congelada, que mora em
 #: `mockup/` e não viaja no pacote: por isso se montam na HORA DO USO (o
@@ -3175,12 +3188,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             'h + " movimento" + (reais.length > 1 ? "s" : "") + "</span></p>"\n'
             '             + \'<ol class="receita">\'\n'
             '             + reais.map(function (m) {\n'
-            '                 return "<li><div><h4>" + m.titulo + \'<span class="ajuda'
-            '" tabindex="0">?<span class="dica">\'\n'
-            "                   + m.linhas.map(function (l) { return '<span><span cla"
-            'ss="selo \' + l.s + \'">\' + (l.s === "espec" ? "especificação" : l.s) + "<'
-            '/span><span>" + l.t + "</span></span>"; }).join("")\n'
-            '                   + "</span></span></h4></div></li>";\n'
+            + RECEITA_COM_O_QUE_AJUDA +
             '               }).join("")\n'
             '             + "</ol>";\n'
             '        var fim = movs.filter(function (m) { return m.semNumero; })[0];\n'
@@ -6343,10 +6351,10 @@ JS_DA_CADEIA_E_DO_REGISTRO = r"""
 
 """.replace("__DICA_DO_ENLACE__", json.dumps(DICA_DO_ENLACE, ensure_ascii=False))  # noqa: E501
 
-JS_DOS_MODOS = r"""        '<button class="modo" data-modo="mesa" aria-pressed="' + (modo === "mesa") + '">Atual</button>'
-      + '<button class="modo destaque" data-modo="ideal" aria-pressed="' + (modo === "ideal") + '">Sugestões</button>'
-      + '<button class="modo" data-modo="mao" aria-pressed="' + (modo === "mao") + '">Adicionar</button>' /* noqa-acento: data-modo */
-      + '<button class="modo" data-modo="registro" aria-pressed="' + (modo === "registro") + '">Registro</button>';
+JS_DOS_MODOS = r"""        '<button class="modo" data-modo="mesa" data-dica="Onde cada aparelho está agora" aria-pressed="' + (modo === "mesa") + '">Atual</button>'
+      + '<button class="modo destaque" data-modo="ideal" data-dica="Onde cada aparelho funciona melhor" aria-pressed="' + (modo === "ideal") + '">Sugestões</button>'
+      + '<button class="modo" data-modo="mao" data-dica="A melhor entrada para um aparelho novo" aria-pressed="' + (modo === "mao") + '">Adicionar</button>' /* noqa-acento: data-modo */
+      + '<button class="modo" data-modo="registro" data-dica="O que entrou e saiu das entradas" aria-pressed="' + (modo === "registro") + '">Registro</button>';
     /* O REGISTRO É A QUARTA ABA: ela troca o palco, o painel e a legenda pelo registro. */
     var noRegistro = modo === "registro";
     document.getElementById("registro").hidden = !noRegistro;
@@ -6441,6 +6449,94 @@ EDICOES_DA_CADEIA_E_DO_REGISTRO: tuple[Edicao, ...] = (
     ),
 )
 
+#: A base comum das abas (o menu do botão direito e a dica curta), lida dos mesmos arquivos de onde
+#: o `monta.com_a_base` a tira; a página não importa o `monta`, que carrega a casca das dez abas.
+_BASE_CSS = pathlib.Path(__file__).with_name("base-comum.css").read_text(encoding="utf-8")
+_BASE_JS = pathlib.Path(__file__).with_name("base-comum.js").read_text(encoding="utf-8")
+
+#: O movimento do Sugestões: o título carrega a primeira razão como dica, sem marcação.
+RECEITA_COM_A_DICA_NO_TITULO = (
+    '                 return \'<li><div><h4 data-dica="\' + '
+    'emAtributo(String(m.linhas[0] ? m.linhas[0].t : ""'
+    ').replace(/<[^>]+>/g, "")) + \'">\' + m.titulo + "</h4></div></li>";\n'
+)
+
+EDICOES_DOS_MAPAS_DO_TODO: tuple[Edicao, ...] = (
+    Edicao(
+        antes=(
+            '  .modo.destaque[aria-pressed="false"] { border-color:'
+            ' color-mix(in srgb, var(--color-ok) 55%, transparent); color: var(--color-ok); }\n'
+            '  .modo.destaque[aria-pressed="true"] { border-color: var(--color-ok); background:'
+            ' color-mix(in srgb, var(--color-ok) 20%, var(--color-paper-3));'
+            ' color: var(--color-ink); }\n'
+        ),
+        depois="  /* «Sugestões» é um modo como os outros: sem o verde de aviso. */\n",
+        porque=(
+            "15/10/2026, A-ABA-MAPAS-DO-RADIO-E-DAS-PORTAS-DO-TODO-01 — o desenho do todo tira o"
+            " verde do modo Sugestões: a cor é do que avisa, e ele é uma aba como as outras"
+        ),
+    ),
+    Edicao(
+        antes="  .painel > p.chamada .grande { color: var(--color-ok); }\n",
+        depois="  .painel > p.chamada .grande { color: var(--color-ink); }\n",
+        porque="15/10/2026, mesma sprint — o número grande das trocas deixa de ser verde",
+    ),
+    Edicao(
+        antes="font-weight: 600; text-transform: uppercase; letter-spacing: .07em; }\n",
+        depois="font-weight: 600; } /* só a primeira letra é maiúscula */\n",
+        porque="15/10/2026, mesma sprint — o nome da face sai da caixa alta",
+    ),
+    Edicao(
+        antes='title="Volta para a aba Conexões, que é de onde este mapa se abre."',
+        depois='data-dica="Volta para a aba Conexões"',
+        porque="15/10/2026, mesma sprint — o `title` longo do «Voltar» vira dica curta (regra A2)",
+    ),
+    Edicao(
+        antes="<h1>Mapa das <em>Conexões</em></h1>",
+        depois="<h1>Mapa das <em>conexões</em></h1>",
+        porque="15/10/2026, mesma sprint — o título do desenho do todo: só a 1ª letra é maiúscula",
+    ),
+    Edicao(
+        antes='title="Lê o computador de novo e mostra o que mudou de lugar"',
+        depois='data-dica="Lê de novo e mostra o que mudou de lugar"',
+        porque="15/10/2026, mesma sprint — o `title` do «Examinar» vira dica curta",
+    ),
+    Edicao(
+        antes=RECEITA_COM_O_QUE_AJUDA,
+        depois=RECEITA_COM_A_DICA_NO_TITULO,
+        porque=(
+            "15/10/2026, mesma sprint — o «?» de cada movimento sai e a primeira razão vira a"
+            " dica do título (regra A1 do todo: nenhum botão «?»)"
+        ),
+    ),
+    Edicao(
+        antes=""" · Clique em <b style="color:var(--color-ok)">Sugestões</b>'""",
+        depois=""" · Clique em <b>Sugestões</b>'""",
+        porque="15/10/2026, mesma sprint — o convite a clicar em Sugestões deixa de ser verde",
+    ),
+    Edicao(
+        antes="""return '<button class="chip pend" data-ap="' + x.ap.id + '"'\n""",
+        depois=(
+            """return '<button class="chip pend" data-ap="' + x.ap.id + '"'"""
+            """ + ' data-dica="Clique e marque a entrada onde ele está"'\n"""
+        ),
+        porque="15/10/2026, mesma sprint — o aparelho sem entrada diz o que o clique faz",
+    ),
+    Edicao(
+        antes="</head>",
+        depois=f'<style id="base-comum">\n{_BASE_CSS}</style>\n</head>',
+        porque=(
+            "15/10/2026, mesma sprint — a base comum das abas: a dica curta e o menu do botão"
+            " direito (o mapa não tinha menu próprio nenhum; passa a ter o da casa)"
+        ),
+    ),
+    Edicao(
+        antes="</body>",
+        depois=f'<script id="base-comum">\n{_BASE_JS}</script>\n</body>',
+        porque="15/10/2026, mesma sprint — a base comum: o `script` dela, uma vez, no fim",
+    ),
+)
+
 #: ══ AS EDIÇÕES QUE ESPERAM A SESSÃO DOS DESENHOS — 24/09/2026 ════════════
 #:
 #: A tela para no mockup até a aprovação do desenho (ordem de 23/09), e esta página tem DUAS
@@ -6458,7 +6554,8 @@ EDICOES_DA_CADEIA_E_DO_REGISTRO: tuple[Edicao, ...] = (
 #: «Conexões 3» foram publicadas e entraram no fim de `EDICOES`; a da
 #: O-BLUEZ-TEM-UM-DONO-ATE-NA-SONDA-01, em 08/10.
 #: Desde 15/10/2026 levam as da cadeia e do registro (a aba Mapas do todo soma as suas).
-EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = EDICOES_DA_CADEIA_E_DO_REGISTRO
+EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = (
+    EDICOES_DA_CADEIA_E_DO_REGISTRO + EDICOES_DOS_MAPAS_DO_TODO)
 
 
 def pagina(com_as_que_esperam: bool = True) -> str:

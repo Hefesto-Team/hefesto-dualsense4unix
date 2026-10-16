@@ -158,7 +158,7 @@ def test_o_cabecalho_diz_de_quando_e_o_que_esta_na_tela() -> None:
 
     pagina = pagina_do_mapa.pagina()
     cabecalho = pagina[pagina.index('<header class="topo"'):pagina.index("</header>")]
-    assert "<h1>Mapa das <em>Conexões</em></h1>" in cabecalho
+    assert "<h1>Mapa das <em>conexões</em></h1>" in cabecalho
     assert 'id="reexaminar"' in cabecalho, "o «Examinar» saiu do cabeçalho"
     linha = re.search(r'<p class="([^"]+)" id="de-quando">([^<]+)</p>', cabecalho)
     assert linha, "o exemplo deixou de dizer, no cabeçalho, que é exemplo"
