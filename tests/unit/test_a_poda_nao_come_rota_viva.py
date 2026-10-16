@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import ast
+import functools
 import re
 from pathlib import Path
 
@@ -72,12 +73,15 @@ def _heredocs_python(roteiro: str) -> list[str]:
     return blocos
 
 
-def _citacoes(codigo: str, nome: str, *, com_literais: bool) -> list[int]:
-    """Linhas em que ``nome`` é USADO — chamada, referência ou despacho."""
+@functools.cache
+def _arvore(codigo: str) -> ast.AST | None:
     try:
-        arvore = ast.parse(codigo)
+        return ast.parse(codigo)
     except SyntaxError:
-        return []
+        return None
+
+
+def _citacoes_na_arvore(arvore: ast.AST, nome: str, *, com_literais: bool) -> list[int]:
     linhas: list[int] = []
     for no in ast.walk(arvore):
         if isinstance(no, ast.Name) and no.id == nome:
@@ -97,12 +101,30 @@ def _citacoes(codigo: str, nome: str, *, com_literais: bool) -> list[int]:
     return sorted(set(linhas))
 
 
+def _citacoes(codigo: str, nome: str, *, com_literais: bool) -> list[int]:
+    """Linhas em que ``nome`` é USADO — chamada, referência ou despacho.
+
+    Um nome só é usado onde está escrito: o arquivo que não o tem como texto não se lê como
+    árvore. A árvore dos que o têm é lida uma vez e serve a todos os podados."""
+    if nome not in codigo:
+        return []
+    arvore = _arvore(codigo)
+    return [] if arvore is None else _citacoes_na_arvore(arvore, nome, com_literais=com_literais)
+
+
+@pytest.fixture(scope="module")
+def fontes() -> list[tuple[Path, str, bool]]:
+    """Toda a árvore lida UMA vez para o módulo: eram sete leituras de ~1500 arquivos."""
+    return _fontes_python()
+
+
 @pytest.mark.parametrize("alvo", _PODADOS, ids=lambda a: a.replace("/", "."))
-def test_todo_simbolo_podado_tinha_zero_chamadores(alvo: str) -> None:
+def test_todo_simbolo_podado_tinha_zero_chamadores(
+        alvo: str, fontes: list[tuple[Path, str, bool]]) -> None:
     """Nenhum dos podados era rota viva — e a prova é a varredura, não a palavra."""
     modulo, _, nome = alvo.partition("::")
     achados: list[str] = []
-    for caminho, codigo, e_producao in _fontes_python():
+    for caminho, codigo, e_producao in fontes:
         for linha in _citacoes(codigo, nome, com_literais=e_producao):
             rel = caminho.relative_to(_RAIZ)
             achados.append(f"{rel}:{linha}")
@@ -138,11 +160,12 @@ def test_a_lista_de_podados_nao_e_vazia() -> None:
     assert _PODADOS, "sem podados declarados, este arquivo não trava nada"
 
 
-def test_a_varredura_enxerga_o_python_dentro_do_heredoc() -> None:
+def test_a_varredura_enxerga_o_python_dentro_do_heredoc(
+        fontes: list[tuple[Path, str, bool]]) -> None:
     """A régua tem de saber ACHAR chamador, senão o verde dela não vale nada."""
     achados = [
         f"{caminho.name}:{linha}"
-        for caminho, codigo, e_producao in _fontes_python()
+        for caminho, codigo, e_producao in fontes
         if caminho.name in _ROTEIROS_DE_PRODUCAO
         for linha in _citacoes(codigo, "plan_tokens", com_literais=e_producao)
     ]
@@ -150,3 +173,25 @@ def test_a_varredura_enxerga_o_python_dentro_do_heredoc() -> None:
         "a varredura não achou `plan_tokens` em heredoc nenhum — e o install.sh "
         "o chama. Régua cega ao heredoc dá verde para poda que come produção."
     )
+
+
+def test_o_atalho_do_texto_acha_o_mesmo_que_a_arvore_inteira(
+        fontes: list[tuple[Path, str, bool]]) -> None:
+    """O atalho (nome fora do texto, árvore fora da leitura) não perde citação: em cada fonte que
+    tem o nome escrito, e em uma de cada quinze das que não têm, o resultado é o da árvore lida
+    por inteiro, para os podados e para nomes que existem."""
+    nomes = [alvo.partition("::")[2] for alvo in _PODADOS] + ["plan_tokens"]
+    sem_nome = 0
+    for caminho, codigo, e_producao in fontes:
+        escritos = [n for n in nomes if n in codigo]
+        if not escritos:
+            sem_nome += 1
+            if sem_nome % 15:
+                continue
+        for nome in nomes:
+            arvore = _arvore(codigo)
+            esperado = (
+                [] if arvore is None
+                else _citacoes_na_arvore(arvore, nome, com_literais=e_producao))
+            assert _citacoes(codigo, nome, com_literais=e_producao) == esperado, (caminho, nome)
+
