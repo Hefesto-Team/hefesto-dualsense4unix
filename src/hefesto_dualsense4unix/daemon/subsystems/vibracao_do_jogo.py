@@ -55,6 +55,9 @@ class _Linha:
     efetivo: Par
     enviado_em: float
     pendente: bool
+    #: o pedido do jogo e os meus toques, cada um como ``(esquerdo, direito)``
+    jogo: Par = (0, 0)
+    toques: Par = (0, 0)
 
 
 class _Vista:
@@ -132,6 +135,8 @@ def _publicar(daemon: Any, uniq: str | None, linha: _Linha, agora: float) -> Non
                 "jogador": linha.jogador,
                 "pedido": list(linha.pedido),
                 "efetivo": list(linha.efetivo),
+                "jogo": list(linha.jogo),
+                "toques": list(linha.toques),
                 "t": agora,
             },
         )
@@ -146,21 +151,30 @@ def dizer_a_vibracao(
     efetivo: Par | None,
     *,
     agora: float | None = None,
+    jogo: Par | None = None,
+    toques: Par | None = None,
 ) -> None:
     """Diz no barramento o que o jogo pediu a um controle e o que chegou aos motores.
 
     ``efetivo`` ``None`` é «nada foi escrito» (o par fixado venceu, a escrita foi
-    recusada) e sai como ``[0, 0]``. Nunca levanta: o rumble do jogo não espera por
-    quem escuta.
+    recusada) e sai como ``[0, 0]``. ``jogo`` e ``toques`` são ``(esquerdo, direito)``: o que o
+    jogo pôs nos motores e o que os meus toques puseram (sem ``jogo``, é o ``efetivo``).
+    Nunca levanta: o rumble do jogo não espera por quem escuta.
     """
     try:
-        _dizer(daemon, target_uniq, _par(pedido), _par(efetivo), agora)
+        _dizer(daemon, target_uniq, _par(pedido), _par(efetivo), agora, jogo, toques)
     except Exception as exc:
         logger.debug("jogo_vibracao_nao_dita", err=str(exc))
 
 
 def _dizer(
-    daemon: Any, target_uniq: str | None, pedido: Par, efetivo: Par, agora: float | None
+    daemon: Any,
+    target_uniq: str | None,
+    pedido: Par,
+    efetivo: Par,
+    agora: float | None,
+    jogo: Par | None = None,
+    toques: Par | None = None,
 ) -> None:
     uniq = _uniq_do_pedido(daemon, target_uniq)
     chave = uniq or ""
@@ -169,6 +183,8 @@ def _dizer(
     if vista is None:
         return
     jogador = _jogador_de(daemon, uniq)
+    lados = _par(jogo) if jogo is not None else (efetivo[1], efetivo[0])
+    dos_toques = _par(toques) if toques is not None else (0, 0)
     with vista.trava:
         linha = vista.linhas.get(chave)
         if linha is None and pedido == (0, 0) and efetivo == (0, 0):
@@ -178,12 +194,14 @@ def _dizer(
             # INTERVALO_MINIMO_S` a conta de ponto flutuante dava um pouco abaixo do
             # intervalo e o primeiro evento ficava pendente).
             linha = vista.linhas[chave] = _Linha(
-                jogador, pedido, efetivo, enviado_em=agora - 1.0, pendente=True
+                jogador, pedido, efetivo, enviado_em=agora - 1.0, pendente=True,
+                jogo=lados, toques=dos_toques,
             )
         else:
             linha.jogador, linha.pedido, linha.efetivo, linha.pendente = (
                 jogador, pedido, efetivo, True,
             )
+            linha.jogo, linha.toques = lados, dos_toques
         if agora - linha.enviado_em < INTERVALO_MINIMO_S:
             return  # o tique seguinte diz (`bater`)
         linha.enviado_em, linha.pendente = agora, False

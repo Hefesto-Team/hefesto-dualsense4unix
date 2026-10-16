@@ -463,6 +463,8 @@ class TatoVivo:
         self.disparo: dict[tuple[str, str], int] = {}
         #: a volta dos acessórios (toque, luzinhas e pulso da barra); anda sem receita e sem jogo
         self.volta: Any = None
+        #: os meus toques (a vibração a cada entrada de quem joga); anda sem receita
+        self.meus_toques: Any = None
 
     def anotar(self, evento: Evento) -> None:
         """Põe um evento na fila. Chamável de qualquer thread."""
@@ -2147,6 +2149,21 @@ def vibracao_do_gatilho_ativa(daemon: Any) -> VibracaoDoGatilho:
         return SEM_VIBRACAO
 
 
+def meus_toques_ativos(daemon: Any) -> Any:
+    """O ajuste dos meus toques do perfil ativo, da vista que :func:`receita_ativa` leu."""
+    from hefesto_dualsense4unix.daemon.subsystems.meus_toques import SEM_TOQUES, ajuste_do_perfil
+
+    nome = _nome_do_perfil_ativo(daemon)
+    lida = _VISTA_LIDA
+    if lida is None or lida[0] != nome:
+        return SEM_TOQUES
+    try:
+        return ajuste_do_perfil(lida[1])
+    except Exception:
+        logger.debug("tato_vivo_meus_toques_ilegiveis", exc_info=True)
+        return SEM_TOQUES
+
+
 def estilo_ativo(daemon: Any) -> str | None:
     """A chave do estilo do perfil ativo, da vista que :func:`receita_ativa` leu."""
     nome = _nome_do_perfil_ativo(daemon)
@@ -2355,6 +2372,8 @@ class Passo:
             self.motor.escolhas = escolhas_ativas(self.daemon)
             self.motor.escolhas_de_imersao = escolhas_de_imersao_ativas(self.daemon)
             self.motor.vibra_o_gatilho = vibracao_do_gatilho_ativa(self.daemon)
+            if self.motor.meus_toques is not None:
+                self.motor.meus_toques.ajustar(meus_toques_ativos(self.daemon))
         return self.receita_vigente
 
     def alimentar_o_corpo(self, pcm: bytes) -> None:
@@ -2395,10 +2414,20 @@ class Passo:
             levar(uniq, amostras)
 
     def __call__(self, agora: float) -> int:
-        """A volta dos acessórios anda a cada tique; o resto é da receita (``_da_receita``)."""
+        """A volta dos acessórios e os meus toques andam a cada tique; o resto é da receita."""
         volta = self.motor.volta
         da_volta = volta.tique(agora) if volta is not None else 0
-        return self._da_receita(agora) + da_volta
+        da_receita = self._da_receita(agora)
+        return da_receita + da_volta + self._meus_toques(agora)
+
+    def _meus_toques(self, agora: float) -> int:
+        """Os meus toques de cada controle da mesa; sem o bloco no perfil, nada se monta."""
+        meus = self.motor.meus_toques
+        if meus is None or not meus.precisa_andar():
+            return 0
+        from hefesto_dualsense4unix.daemon.subsystems.meus_toques import entradas_do_daemon
+
+        return int(meus.tique(entradas_do_daemon(self.daemon), agora))
 
     def _da_receita(self, agora: float) -> int:
         receita = self.receita_de_agora(agora)
@@ -2512,6 +2541,9 @@ async def tato_vivo_loop(daemon: DaemonProtocol, motor: TatoVivo) -> None:
         with contextlib.suppress(Exception):
             if volta is not None:
                 volta.soltar_tudo(time.monotonic())
+        with contextlib.suppress(Exception):
+            if motor.meus_toques is not None:
+                motor.meus_toques.soltar_tudo(time.monotonic())
         motor.parar()
         with contextlib.suppress(Exception):
             await asyncio.to_thread(motor.ouvido.parar)
@@ -2519,11 +2551,14 @@ async def tato_vivo_loop(daemon: DaemonProtocol, motor: TatoVivo) -> None:
 
 def start_tato_vivo(daemon: DaemonProtocol) -> None:
     """Sobe o motor do tato vivo. Desligado pela receita, o laço só lê o perfil."""
+    from hefesto_dualsense4unix.daemon.subsystems.meus_toques import meus_toques_de_producao
     from hefesto_dualsense4unix.daemon.subsystems.volta_dos_acessorios import volta_de_producao
 
     motor = TatoVivo(atuadores_de_producao(daemon))
     with contextlib.suppress(Exception):
         motor.volta = volta_de_producao(daemon)
+    motor.meus_toques = meus_toques_de_producao(daemon)
+    daemon._meus_toques = motor.meus_toques  # type: ignore[attr-defined]
     daemon._tato_vivo = motor  # type: ignore[attr-defined]
     task = asyncio.create_task(tato_vivo_loop(daemon, motor), name="tato_vivo_loop")
     daemon._tasks.append(task)
@@ -2567,6 +2602,7 @@ __all__ = [
     "escolhas_de_imersao_ativas",
     "escolhas_do_perfil",
     "estilo_ativo",
+    "meus_toques_ativos",
     "modo_do_pad",
     "momentos_ativos",
     "momentos_em_efeito",

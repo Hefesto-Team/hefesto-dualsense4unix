@@ -601,6 +601,27 @@ class ProfileCursorConfig(BaseModel):
         return self
 
 
+class ProfileMeusToquesConfig(BaseModel):
+    """Os meus toques: o controle vibra a cada entrada de quem joga, além do que o jogo manda.
+
+    Aditiva ao schema v1 (OS-MEUS-TOQUES-VIBRAM-O-CONTROLE-A-CADA-ENTRADA-01): perfil sem a
+    seção, ou com ``modo`` «so_o_jogo», vibra só pelo que o jogo pede, como sempre. ``mistura``
+    diz como o toque se junta ao jogo (o maior dos dois, ou a soma limitada), ``forca`` é o teto do
+    toque em ``%`` e ``analogicos`` diz quando os analógicos vibram (parado inclinado, só
+    «posicao» vibra).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    modo: Literal["so_o_jogo", "jogo_e_meus_toques", "so_meus_toques"] = "so_o_jogo"
+    mistura: Literal["maior", "somar"] = "maior"
+    forca: int = Field(default=30, ge=0, le=100)
+    analogicos: Literal["desligado", "movimento", "posicao"] = "movimento"
+    botoes: bool = True
+    gatilhos: bool = True
+    chacoalhar: bool = True
+
+
 class ProfileMouseConfig(BaseModel):
     """Seção opcional de emulação de mouse por perfil (FEAT-POINT-AND-CLICK-01)."""
 
@@ -1422,6 +1443,8 @@ class Profile(BaseModel):
     mic: ProfileMicConfig | None = None
     speaker: ProfileSpeakerConfig | None = None
     mode: ProfileModeConfig | None = None
+    # Os meus toques (aba 05): None = sem opinião, e o controle vibra só pelo jogo.
+    meus_toques: ProfileMeusToquesConfig | None = None
     suppress_desktop_emulation: bool = False
     # entre USB e BT no DualSense). None = perfil v1 puro, sem opinião
     controllers: dict[str, ControllerOverrides] | None = None
@@ -1467,7 +1490,7 @@ class Profile(BaseModel):
                 "ponte", "remapeamento", "movimento", "estilo", "receita_do_tato",
                 "ativacao",  # (noqa-acento)
                 "analogicos",  # (noqa-acento)
-                "cursor",
+                "cursor", "meus_toques",
                 "marcas", "controles_modo", "criado_em", "modificado_em",
                 "alvo", "evento", "evento_comando",
             ):
@@ -2654,6 +2677,36 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         "`None` = vale o par `teclado_emulado`/`teclado_so_no_jogo`, como antes do «Sempre». "
         "«Sempre» é escolha dela na Função do teclado, e nada nasce nele.",
         dono="hefesto_dualsense4unix.daemon.subsystems.mouse:trocar_a_tabela_no_jogo",
+    ),
+    "Profile.meus_toques": Nascimento(
+        NASCE_NO_LEITOR,
+        "`None` = o controle vibra só pelo que o jogo pede, como sempre. Toque a cada entrada de "
+        "quem joga é escolha dela, por perfil: ligado sem pedido, todo jogo vibraria a mais.",
+        dono="hefesto_dualsense4unix.daemon.subsystems.meus_toques:ajuste_do_perfil",
+    ),
+    "ProfileMeusToquesConfig.modo": Nascimento(
+        E_CONTRATO,
+        "«so_o_jogo» é o que o controle sempre fez; os toques só entram por escolha de quem joga.",
+    ),
+    "ProfileMeusToquesConfig.mistura": Nascimento(
+        E_CONTRATO,
+        "«maior» (o mais forte dos dois) é a mistura que nunca deixa o jogo mais fraco.",
+    ),
+    "ProfileMeusToquesConfig.forca": Nascimento(
+        E_CONTRATO, "30 % é uma vibração fina, abaixo do que um jogo pede por um golpe."
+    ),
+    "ProfileMeusToquesConfig.analogicos": Nascimento(
+        E_CONTRATO,
+        "«movimento» vibra só enquanto o analógico se mexe: parado inclinado, silencia.",
+    ),
+    "ProfileMeusToquesConfig.botoes": Nascimento(
+        E_CONTRATO, "Vale com o modo ligado: o toque do botão é a razão de ligar os meus toques."
+    ),
+    "ProfileMeusToquesConfig.gatilhos": Nascimento(
+        E_CONTRATO, "Vale com o modo ligado; o gatilho com efeito do jogo continua calado."
+    ),
+    "ProfileMeusToquesConfig.chacoalhar": Nascimento(
+        E_CONTRATO, "Vale com o modo ligado e só passa de um limiar de giro."
     ),
     "Profile.tabela_no_jogo": Nascimento(
         NASCE_NO_LEITOR,

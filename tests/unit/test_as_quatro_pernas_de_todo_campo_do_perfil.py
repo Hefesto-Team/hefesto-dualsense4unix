@@ -281,6 +281,21 @@ _PERNAS: dict[str, dict[str, Resposta]] = {
             "profiles/manager.py::apply_acessibilidade", "nenhum lançador no caminho"
         ),
     },
+    "meus_toques": {
+        VOLTA: NaoSeAplica(
+            "não há byte a reaplicar: o motor relê o bloco do perfil a cada segundo e o "
+            "estado de cada controle nasce do zero quando ele volta (`MeusToques` esquece "
+            "o que não pode falar)."
+        ),
+        RESISTE: Cumprida(
+            "daemon/subsystems/meus_toques.py::misturar_o_jogo",
+            "o pedido do jogo passa por aqui e se junta aos toques pela mistura do perfil",
+        ),
+        INDEPENDE: Cumprida(
+            "daemon/subsystems/meus_toques.py::meus_toques_de_producao",
+            "nenhum lançador no caminho",
+        ),
+    },
     "ponte": {
         VOLTA: NaoSeAplica("memória de qual ponte funcionou; nada vai ao controle."),
         RESISTE: NaoSeAplica("nada vai ao controle."),

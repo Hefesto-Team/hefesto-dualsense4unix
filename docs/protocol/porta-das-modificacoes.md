@@ -47,9 +47,12 @@ Os demais são do jogo e do perfil, e cada um é uma permissão à parte:
 
 - `jogo.vibracao` (`ler:jogo.vibracao`) entrega duas notificações. `nome: "jogo.vibracao"` é a vibração que o
   jogo pede a UM controle, de qualquer jogador (P1 a P4), com o `uniq` dele no envelope:
-  `{uniq, jogador, pedido: [fraco, forte], efetivo: [fraco, forte], t}`. `pedido` é o que o jogo mandou;
-  `efetivo` é o que chegou aos motores (`[0, 0]` quando o par fixado pela tela vence ou a escrita foi
-  recusada), e a batida segue o `efetivo`. `jogador` é o número que o controle acende agora (ou `null`); `t` é
+  `{uniq, jogador, pedido: [fraco, forte], efetivo: [fraco, forte], jogo: [esq, dir], toques: [esq, dir], t}`.
+  `pedido` é o que o jogo mandou; `efetivo` é o que chegou aos motores (`[0, 0]` quando o par fixado pela tela
+  vence ou a escrita foi recusada), e a batida segue o `efetivo`. `jogo` e `toques` dizem de quem é cada parte do
+  `efetivo`, por lado do controle (`esq` é o motor forte, `dir` o fraco; os dois ficam em `pedido`/`efetivo` na
+  ordem `[fraco, forte]`): `toques` é o que os toques do perfil (`meus_toques`) pediram, `[0, 0]` quando o modo
+  é só o jogo; nenhum dos dois traz nome de botão. `jogador` é o número que o controle acende agora (ou `null`); `t` é
   o `time.monotonic()` do serviço. Enquanto o `efetivo` não for zero o evento se repete a cada 250 ms, mesmo
   sem valor novo: quem acompanha para o aparelho dele quando a batida some. O teto é de 60 por segundo por
   controle; o que o teto atrasa sai no tique seguinte, e o último valor, sobretudo o zero, sempre chega.

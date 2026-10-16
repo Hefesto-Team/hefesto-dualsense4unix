@@ -230,6 +230,15 @@ _CLASSIFICACAO: dict[str, SecaoPorApplier | SecaoDireta] = {
             "TODAS as rotas de ativação passam."
         )
     ),
+    "meus_toques": SecaoDireta(
+        razao=(
+            "OS-MEUS-TOQUES-VIBRAM-O-CONTROLE-A-CADA-ENTRADA-01 (16/10/2026). Nada é "
+            "aplicado na ativação: o motor do tato vivo (`tato_vivo.meus_toques_ativos`) "
+            "relê o bloco do perfil a cada segundo e `meus_toques.MeusToques` escreve o "
+            "par dos motores no tique e no `apply_game_rumble`, pela mesma via do jogo. "
+            "Trocar de perfil troca o ajuste no tique seguinte."
+        )
+    ),
     "controllers": SecaoDireta(
         razao=(
             "Mapa ADITIVO de overrides por controle físico: `apply` o resolve "

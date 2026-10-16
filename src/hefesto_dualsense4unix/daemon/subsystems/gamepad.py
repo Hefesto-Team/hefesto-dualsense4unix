@@ -62,6 +62,7 @@ from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, Any, Literal
 
 from hefesto_dualsense4unix.daemon.subsystems.vibracao_do_jogo import (
+    _uniq_do_pedido,
     bater_a_vibracao,
     dizer_a_vibracao,
     esquecer_a_vibracao,
@@ -658,7 +659,7 @@ def apply_game_rumble(
     weak_eff = max(0, min(255, round(weak * mult_fraco)))
     strong_eff = max(0, min(255, round(strong * mult_forte)))
     motores = (weak_eff, strong_eff)
-    if _levar_a_haptica_fina(
+    pelo_audio = _levar_a_haptica_fina(
         daemon,
         vpad,
         target_uniq,
@@ -668,12 +669,39 @@ def apply_game_rumble(
             daemon, weak, strong, target_uniq=target_uniq, vpad=vpad
         ),
         cru=(weak, strong),
-    ):
+    )
+    if pelo_audio:
         motores = (0, 0)
+    do_jogo = (weak_eff, strong_eff)
+    chegou = do_jogo
+    mistura = _juntar_os_meus_toques(daemon, target_uniq, do_jogo, pelo_audio)
+    if mistura is not None:
+        motores = chegou = mistura.motores
 
-    efetivo = _entregar_o_rumble(controller, target_uniq, motores, (weak_eff, strong_eff))
-    dizer_a_vibracao(daemon, target_uniq, (weak, strong), efetivo)
+    efetivo = _entregar_o_rumble(controller, target_uniq, motores, chegou)
+    dizer_a_vibracao(
+        daemon, target_uniq, (weak, strong), efetivo,
+        jogo=None if mistura is None else mistura.jogo,
+        toques=None if mistura is None else mistura.toques,
+    )
     return efetivo
+
+
+def _juntar_os_meus_toques(
+    daemon: DaemonProtocol, target_uniq: str | None, jogo: tuple[int, int], pelo_audio: bool
+) -> Any:
+    """O pedido do jogo junto aos meus toques do perfil; ``None`` = o jogo manda sozinho."""
+    from hefesto_dualsense4unix.daemon.subsystems.meus_toques import MeusToques
+
+    meus = getattr(daemon, "_meus_toques", None)
+    uniq = _uniq_do_pedido(daemon, target_uniq)
+    if not isinstance(meus, MeusToques) or uniq is None:
+        return None
+    try:
+        return meus.misturar_o_jogo(uniq, jogo, pelo_audio=pelo_audio)
+    except Exception:
+        logger.debug("meus_toques_mistura_falhou", exc_info=True)
+        return None
 
 
 def _entregar_o_rumble(
