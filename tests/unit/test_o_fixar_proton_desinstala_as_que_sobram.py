@@ -47,6 +47,7 @@ def _ferramenta(compat: Path, pasta: str, nome: str | None = None) -> Path:
         '      "install_path" "."\n      "display_name" "x"\n    }\n  }\n}\n',
         encoding="utf-8")
     (alvo / "proton").write_bytes(b"x" * 1000)
+    (alvo / "version").write_text("1 x\n", encoding="utf-8")
     return alvo
 
 
@@ -117,51 +118,107 @@ def test_sem_steam_nada_sobra(tmp_path: Path) -> None:
     assert pp.versoes_que_sobram(tmp_path / "vazia", pino=PINO) == []
 
 
-def test_a_lixeira_recebe_as_sobras(steam: Path) -> None:
+def _sem_steam_aberta() -> None:
+    return None
+
+
+def test_sem_o_pino_instalado_nada_sobra(steam: Path) -> None:
+    """Apagar é de vez: sem a fixada no disco, as outras não saem (ficaria sem Proton nenhum)."""
+    import shutil
+
+    _mapa(steam, {"1": PINO})
+    shutil.rmtree(steam / ".steam" / "steam" / "compatibilitytools.d" / PINO)
+    assert pp.versoes_que_sobram(steam, pino=PINO) == []
+
+
+def test_o_jogo_fora_do_pino_e_o_desinstalado_mantem_a_versao(steam: Path) -> None:
+    """O 2 foi tirado do pino (11-3); o 3 nem está instalado (10-34): as duas ficam."""
+    _mapa(steam, {"1": PINO, "2": "GE-Proton11-3", "3": "GE-Proton10-34"})
+    assert _nomes(pp.versoes_que_sobram(steam, pino=PINO)) == {
+        "GE-Proton11-1", "GE-Proton11-6-x86_64"}
+
+
+def test_apagar_tira_do_disco_so_a_sobra_e_nao_deixa_lixeira(
+        steam: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """De vez: a pasta some, o pino, o decoy da Valve e o resto ficam, e nada vai à lixeira."""
+    raiz = steam / ".steam" / "steam"
+    valve = raiz / "steamapps" / "common" / "Proton 9.0"
+    valve.mkdir(parents=True)
+    (valve / "proton").write_bytes(b"v")
+    monkeypatch.setenv("XDG_DATA_HOME", str(steam / "dados"))
     _mapa(steam, {"1": PINO})
     sobras = pp.versoes_que_sobram(steam, pino=PINO)
-    levadas: list[Path] = []
-
-    def lixeira(pasta: Path) -> None:
-        levadas.append(pasta)
-        return None
-
     saiu, recusadas = pp.desinstalar_as_que_sobram(
-        sobras, lixeira=lixeira, em_uso=lambda _p: False)
-    assert {s.pasta.name for s in saiu} == _nomes(sobras)
-    assert recusadas == {}
-    assert PINO not in {p.name for p in levadas}
+        sobras, em_uso=lambda _p: False, steam_barra=_sem_steam_aberta)
+    assert {s.pasta.name for s in saiu} == _nomes(sobras) and recusadas == {}
+    compat = raiz / "compatibilitytools.d"
+    assert sorted(p.name for p in compat.iterdir()) == [PINO]
+    assert (valve / "proton").is_file()
+    assert not (steam / "dados" / "Trash").exists()
+
+
+def test_nada_fora_de_compatibilitytools_d_e_tocado(steam: Path) -> None:
+    """Mordida: tire o guarda do pai e a Valve em `steamapps/common` vai embora."""
+    valve = steam / ".steam" / "steam" / "steamapps" / "common" / "Proton 9.0"
+    valve.mkdir(parents=True)
+    (valve / "proton").write_bytes(b"v")
+    alheia = pp.VersaoQueSobra(valve, ("Proton 9.0",), 1)
+    saiu, recusadas = pp.desinstalar_as_que_sobram(
+        [alheia], em_uso=lambda _p: False, steam_barra=_sem_steam_aberta)
+    assert saiu == [] and "Proton 9.0" in recusadas
+    assert (valve / "proton").is_file()
+
+
+def test_a_steam_aberta_nao_apaga_nada(steam: Path) -> None:
+    """A Steam regrava o que viu ao sair: com ela aberta, ou com jogo aberto, tudo fica."""
+    _mapa(steam, {"1": PINO})
+    sobras = pp.versoes_que_sobram(steam, pino=PINO)
+    for barra, frase in (("steam_aberta", "a Steam está aberta"),
+                         ("jogo_da_steam_aberto", "há um jogo da Steam aberto")):
+        saiu, recusadas = pp.desinstalar_as_que_sobram(
+            sobras, em_uso=lambda _p: False, steam_barra=lambda b=barra: b)
+        assert saiu == []
+        assert set(recusadas.values()) == {frase}
+    assert all(s.pasta.is_dir() for s in sobras)
+
+
+def test_sem_dizer_nada_a_porta_da_steam_e_a_de_verdade(
+        steam: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """O padrão pergunta à Steam de verdade: ninguém apaga por esquecer de passar a porta."""
+    monkeypatch.setattr(pp, "steam_game_running", lambda: False)
+    monkeypatch.setattr(pp, "steam_running", lambda: True)
+    _mapa(steam, {"1": PINO})
+    sobras = pp.versoes_que_sobram(steam, pino=PINO)
+    saiu, _recusadas = pp.desinstalar_as_que_sobram(sobras, em_uso=lambda _p: False)
+    assert saiu == [] and all(s.pasta.is_dir() for s in sobras)
 
 
 def test_a_pasta_em_uso_fica(steam: Path) -> None:
     """A fila da Steam roda de dentro da pasta logo depois de ela abrir."""
     _mapa(steam, {"1": PINO})
     sobras = pp.versoes_que_sobram(steam, pino=PINO)
-    levadas: list[Path] = []
     saiu, recusadas = pp.desinstalar_as_que_sobram(
-        sobras, lixeira=lambda p: levadas.append(p),
-        em_uso=lambda p: p.name == "GE-Proton11-1")
+        sobras, em_uso=lambda p: p.name == "GE-Proton11-1", steam_barra=_sem_steam_aberta)
     assert "GE-Proton11-1" in recusadas
-    assert "GE-Proton11-1" not in {p.name for p in levadas}
+    assert (steam / ".steam" / "steam" / "compatibilitytools.d" / "GE-Proton11-1").is_dir()
     assert len(saiu) == 3
 
 
-def test_a_lixeira_que_recusa_vira_motivo(steam: Path) -> None:
+def test_o_que_o_disco_recusa_vira_motivo(steam: Path) -> None:
     _mapa(steam, {"1": PINO})
     sobras = pp.versoes_que_sobram(steam, pino=PINO)[:1]
     saiu, recusadas = pp.desinstalar_as_que_sobram(
-        sobras, lixeira=lambda _p: "sem lixeira", em_uso=lambda _p: False)
+        sobras, apagar=lambda _p: "sem permissão", em_uso=lambda _p: False,
+        steam_barra=_sem_steam_aberta)
     assert saiu == []
-    assert list(recusadas.values()) == ["sem lixeira"]
+    assert list(recusadas.values()) == ["sem permissão"]
 
 
-def test_a_lixeira_de_verdade_nunca_apaga_sem_gio(
-        steam: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Sem o `gio`, recusa. A pasta continua no disco."""
-    monkeypatch.setattr(pp.shutil, "which", lambda _n: None)
-    pasta = steam / ".steam" / "steam" / "compatibilitytools.d" / "GE-Proton11-1"
-    assert pp._para_a_lixeira(pasta) is not None
-    assert pasta.is_dir()
+def test_apagar_de_vez_devolve_o_motivo_quando_nao_da(tmp_path: Path) -> None:
+    pasta = tmp_path / "compatibilitytools.d" / "x"
+    pasta.mkdir(parents=True)
+    assert pp._apagar_de_vez(pasta) is None and not pasta.exists()
+    assert pp._apagar_de_vez(pasta) is not None
 
 
 class _Janela:
@@ -203,14 +260,13 @@ def _ctx() -> Any:
                             mesa=[], conectados=[], estados={})
 
 
-def test_o_reaplicar_mostra_antes_e_leva_so_o_que_mostrou(
+def test_o_reaplicar_apaga_as_que_sobram_sem_perguntar_por_elas(
         a09: Any, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Clique 1 mostra as duas; no clique 2 apareceu uma terceira, que fica."""
+    """O clique 1 só mostra os consertos; as versões saem no 2, e a frase não as cita."""
     import pacotes
 
-    vistas = [_sobra("GE-Proton11-1"), _sobra("GE-Proton11-3")]
-    agora = [list(vistas)]
-    monkeypatch.setattr(a09, "_versoes_que_sobram", lambda: list(agora[0]))
+    sobras = [_sobra("GE-Proton11-1"), _sobra("GE-Proton11-3")]
+    monkeypatch.setattr(a09, "_versoes_que_sobram", lambda: list(sobras))
     monkeypatch.setattr(a09._daemon, "medir_jogos_com_steam_input", lambda: [])
     monkeypatch.setattr(subprocess, "run",
                         lambda *a, **k: subprocess.CompletedProcess(a, 0, "", ""))
@@ -220,16 +276,17 @@ def test_o_reaplicar_mostra_antes_e_leva_so_o_que_mostrou(
     acao = pacotes.gesto_da_pagina("09-sistema.html", "refazer-consertos")
 
     acao(_ctx(), {"texto": a09._rotulo_do_desenho("refazer-consertos")}, None)
-    assert "GE-Proton11-1, GE-Proton11-3 (3,0 GB)" in str(a09._PAINEL[0])
-    agora[0] = [*vistas, _sobra("GE-Proton10-34")]
+    painel = str(a09._PAINEL[0])
+    assert "Proton" not in painel and "lixeira" not in painel.lower()
+    assert levadas == []
     with contextlib.redirect_stderr(io.StringIO()):
         acao(_ctx(), {"texto": a09.CONFIRMA}, None)
 
     assert levadas == ["GE-Proton11-1", "GE-Proton11-3"]
-    assert "foram para a lixeira (3,0 GB)" in a09.recibos_da_regua[-1][1]
+    assert "foram apagadas (3,0 GB)" in a09.recibos_da_regua[-1][1]
 
 
-def test_ligar_o_fixar_proton_leva_as_que_sobram(
+def test_ligar_o_fixar_proton_apaga_as_que_sobram(
         a09: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     import pacotes
 
@@ -245,4 +302,14 @@ def test_ligar_o_fixar_proton_leva_as_que_sobram(
     pacotes.gesto_da_pagina("09-sistema.html", "fixar-proton")(_ctx(), {}, None)
 
     assert a09.recibos_da_regua == [
-        ("fixar-proton", "Travei. 1 versão do Proton sem uso foi para a lixeira (1,5 GB).")]
+        ("fixar-proton", "Travei. 1 versão do Proton sem uso foi apagada (1,5 GB).")]
+
+
+def test_o_recibo_diz_quantas_e_quantos_gb_e_junta_as_que_ficaram_pelo_mesmo_motivo(
+        a09: Any) -> None:
+    tres = [_sobra(n) for n in ("GE-Proton10-34", "GE-Proton11-1", "GE-Proton11-3")]
+    assert a09._frase_do_que_saiu(tres, {}) == (
+        "3 versões do Proton sem uso foram apagadas (4,5 GB).")
+    ficou = a09._frase_do_que_saiu([], {"a": "a Steam está aberta", "b": "a Steam está aberta"})
+    assert ficou == "2 versões do Proton sem uso ficaram (a, b): a Steam está aberta."
+    assert "lixeira" not in ficou

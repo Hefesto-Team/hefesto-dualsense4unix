@@ -2417,33 +2417,31 @@ def _gb(total: int) -> str:
     return formata_pt_br(total / 1e9) + " GB"
 
 
-def _frase_das_que_vao_sair(sobras: list[Any]) -> str:
-    """O que o primeiro clique mostra, antes de agir. Vazio quando nada sobra."""
-    if not sobras:
-        return ""
-    nomes = ", ".join(s.pasta.name for s in sobras)
-    quantas = "1 versão" if len(sobras) == 1 else f"{len(sobras)} versões"
-    return (f"Vão para a lixeira {quantas} do Proton que nenhum jogo usa: "
-            f"{nomes} ({_gb(sum(s.tamanho for s in sobras))}).")
+def _versoes(quantas: int) -> str:
+    return "1 versão" if quantas == 1 else f"{quantas} versões"
 
 
 def _frase_do_que_saiu(saiu: list[Any], recusadas: dict[str, str]) -> str:
-    """O recibo: o que foi para a lixeira e o que ficou, com o motivo."""
+    """O recibo: quantas versões do Proton saíram e quantos GB voltaram, e o que ficou."""
     partes: list[str] = []
     if saiu:
-        if len(saiu) == 1:
-            quantas, verbo = "1 versão", "foi"
-        else:
-            quantas, verbo = f"{len(saiu)} versões", "foram"
-        partes.append(f"{quantas} do Proton sem uso {verbo} para a lixeira "
+        verbo = "foi apagada" if len(saiu) == 1 else "foram apagadas"
+        partes.append(f"{_versoes(len(saiu))} do Proton sem uso {verbo} "
                       f"({_gb(sum(s.tamanho for s in saiu))}).")
+    por_motivo: dict[str, list[str]] = {}
     for nome, motivo in recusadas.items():
-        partes.append(f"{nome} ficou: {motivo}.")
+        por_motivo.setdefault(motivo, []).append(nome)
+    for motivo, nomes in por_motivo.items():
+        if len(nomes) == 1:
+            partes.append(f"{nomes[0]} ficou: {motivo}.")
+        else:
+            partes.append(f"{_versoes(len(nomes))} do Proton sem uso ficaram "
+                          f"({', '.join(nomes)}): {motivo}.")
     return " ".join(partes)
 
 
 def _levar_as_que_sobram(sobras: list[Any]) -> str:
-    """Manda para a lixeira o que o primeiro clique mostrou; devolve o recibo."""
+    """Apaga de vez as versões que nenhum jogo usa; devolve o recibo. Sem pergunta antes."""
     if not sobras:
         return ""
     try:
@@ -2454,7 +2452,7 @@ def _levar_as_que_sobram(sobras: list[Any]) -> str:
         return f"As versões do Proton sem uso ficaram: {erro}."
 
 
-def _frase_do_que_vai_mudar(jogos: list[str] | None, sobras: list[Any] | None = None) -> str:
+def _frase_do_que_vai_mudar(jogos: list[str] | None) -> str:
     """O que o clique 1 escreve no painel: o que EXISTE agora, sem agir."""
     quantos = len(_consertos_no_disco())
     if quantos != len(CONSERTOS):
@@ -2474,8 +2472,6 @@ def _frase_do_que_vai_mudar(jogos: list[str] | None, sobras: list[Any] | None = 
         linhas.append(f"  Steam Input ligado em {len(jogos)} "
                       f"{_plural(len(jogos), 'jogo', 'jogos')}: "
                       + ", ".join(jogos) + ".")
-    if sobras:
-        linhas.append("  " + _frase_das_que_vao_sair(sobras))
     linhas.append(f"  {CLIQUE_DE_NOVO}")
     return "\n".join(linhas)
 
@@ -2512,10 +2508,8 @@ def refazer_consertos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
         except Exception:
             jogos = None
         _ANTES_DO_CONSERTO["jogos"] = jogos
-        sobras = _versoes_que_sobram()
-        _ANTES_DO_CONSERTO["sobras"] = sobras
         return _so_armou(_de_pe(ctx), _para_o_painel(
-            _frase_do_que_vai_mudar(jogos, sobras), pergunta_de="refazer-consertos"))
+            _frase_do_que_vai_mudar(jogos), pergunta_de="refazer-consertos"))
 
     _limpar_o_painel()
     if "jogos" in _ANTES_DO_CONSERTO:
@@ -2526,11 +2520,10 @@ def refazer_consertos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
         except Exception:
             jogos = None
     relatorio = _rodar_os_consertos(jogos)
-    vistas = {s.pasta for s in _ANTES_DO_CONSERTO.pop("sobras", [])}
-    sobras = [s for s in _versoes_que_sobram() if s.pasta in vistas]
     recibo = _daemon.format_fix_safe_result(relatorio)
-    if sobras:
-        recibo = f"{recibo} {_levar_as_que_sobram(sobras)}"
+    sobra = _levar_as_que_sobram(_versoes_que_sobram())
+    if sobra:
+        recibo = f"{recibo} {sobra}"
     _LENTO.clear()
     _relatar_o_recibo("refazer-consertos", recibo)
     return {"blocos": blocos_dos_botoes(_de_pe(ctx))}

@@ -39,7 +39,6 @@ import os
 import re
 import shutil
 import struct
-import subprocess
 import sys
 import tarfile
 import time
@@ -1646,7 +1645,11 @@ def versoes_que_sobram(
     *,
     pino: str | None = None,
 ) -> list[VersaoQueSobra]:
-    """As versões do Proton em `compatibilitytools.d` que ninguém usa."""
+    """As versões do Proton em `compatibilitytools.d` que ninguém usa.
+
+    Só há sobra com o pino INSTALADO: a remoção é de vez, e sem a fixada no disco apagar as outras
+    deixaria a pessoa sem Proton nenhum na pasta.
+    """
     raiz, _recusa = steam_root_ou_recusa(home)
     if raiz is None:
         return []
@@ -1658,6 +1661,8 @@ def versoes_que_sobram(
         return []
     usadas = {nome_do_pino, *mapa.values()}
     compat = raiz / "compatibilitytools.d"
+    if not pinned_proton_installed(nome_do_pino, compat):
+        return []
     try:
         pastas = sorted(p for p in compat.iterdir() if p.is_dir() and not p.is_symlink())
     except OSError:
@@ -1691,36 +1696,49 @@ def _em_uso(pasta: Path) -> bool:
     return False
 
 
-def _para_a_lixeira(pasta: Path) -> str | None:
-    """Manda a pasta para a lixeira do usuário. `None` deu certo; senão, o motivo."""
-    gio = shutil.which("gio")
-    if gio is None:
-        return "sem lixeira nesta máquina (falta o gio)"
-    proc = subprocess.run([gio, "trash", str(pasta)], check=False,
-                          capture_output=True, text=True, timeout=120)
-    if proc.returncode != 0:
-        return (proc.stderr or proc.stdout or f"gio rc={proc.returncode}").strip()
+def _apagar_de_vez(pasta: Path) -> str | None:
+    """Apaga a pasta do disco, sem lixeira e sem volta. `None` deu certo; senão, o motivo."""
+    try:
+        shutil.rmtree(pasta)
+    except OSError as exc:
+        return exc.strerror or str(exc) or type(exc).__name__
     return None
+
+
+_PORQUE_A_STEAM_BARRA = {
+    "steam_aberta": "a Steam está aberta",
+    "jogo_da_steam_aberto": "há um jogo da Steam aberto",
+}
 
 
 def desinstalar_as_que_sobram(
     sobras: Sequence[VersaoQueSobra],
     *,
-    lixeira: Callable[[Path], str | None] = _para_a_lixeira,
+    apagar: Callable[[Path], str | None] = _apagar_de_vez,
     em_uso: Callable[[Path], bool] = _em_uso,
+    steam_barra: Callable[[], str | None] = _steam_gate,
 ) -> tuple[list[VersaoQueSobra], dict[str, str]]:
-    """Manda cada sobra para a lixeira. Devolve as que saíram e as recusadas."""
+    """Apaga de vez cada sobra, com a Steam fechada. Devolve as que saíram e as recusadas.
+
+    A Steam lê `compatibilitytools.d` ao abrir e regrava o que viu ao sair: com ela aberta nada
+    sai. Nem a pasta de um processo vivo, nem uma que deixou de ser filha de `compatibilitytools.d`.
+    """
     saiu: list[VersaoQueSobra] = []
     recusadas: dict[str, str] = {}
+    barra = steam_barra()
+    if barra:
+        porque = _PORQUE_A_STEAM_BARRA.get(barra, barra)
+        return saiu, {s.pasta.name: porque for s in sobras}
     for sobra in sobras:
         if sobra.pasta.parent.name != "compatibilitytools.d" or not sobra.pasta.is_dir():
             recusadas[sobra.pasta.name] = "não está mais em compatibilitytools.d"
             continue
+        motivo: str | None
         try:
             if em_uso(sobra.pasta):
                 recusadas[sobra.pasta.name] = "em uso agora"
                 continue
-            motivo = lixeira(sobra.pasta)
+            motivo = apagar(sobra.pasta)
         except Exception as exc:
             motivo = str(exc) or type(exc).__name__
         if motivo is None:
