@@ -7,7 +7,7 @@ import functools
 import re
 import shutil
 import textwrap
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import pytest
@@ -1507,6 +1507,7 @@ class _Mapa:
     define: dict[str, frozenset[str]]
     reexporta: dict[str, dict[str, tuple[str, str]]]
     imports: dict[str, tuple[ast.Import | ast.ImportFrom, ...]]
+    textos: dict[str, str] = field(default_factory=dict)
 
 
 def _nome_de_modulo(alvo: Path, caminho: Path) -> str:
@@ -1540,9 +1541,12 @@ def _base_do_import(mapa: _Mapa, modulo: str, no: ast.ImportFrom) -> str:
 
 def _mapear(alvo: Path) -> _Mapa:
     modulos = {_nome_de_modulo(alvo, p): p for p in _modulos(alvo)}
-    lidos = {nome: _arvore_e_imports(p) for nome, p in modulos.items()}
+    textos = {nome: p.read_text(encoding="utf-8") for nome, p in modulos.items()}
+    lidos = {nome: _lido_do_texto(texto) for nome, texto in textos.items()}
     arvores = {nome: lido[0] for nome, lido in lidos.items()}
-    mapa = _Mapa(modulos, arvores, {}, {}, {nome: lido[1] for nome, lido in lidos.items()})
+    mapa = _Mapa(
+        modulos, arvores, {}, {}, {nome: lido[1] for nome, lido in lidos.items()}, textos
+    )
     for nome, arvore in arvores.items():
         definidos: set[str] = set()
         for no in arvore.body:
@@ -1646,10 +1650,34 @@ def _tabela_de_nomes(
     return tabela
 
 
+# A árvore externa vem do cache por conteúdo (`_fontes_externas_do_texto`) e vive o processo
+# inteiro; o que se colhe dela só depende dela, e fica guardado junto da própria árvore (a
+# referência impede o `id` de ser reaproveitado por outra).
+_GUARDADO_DA_EXTERNA: dict[int, tuple[ast.AST, _Cru, tuple[ast.Import | ast.ImportFrom, ...]]] = {}
+
+
+def _guardado_da_externa(
+    arvore: ast.AST,
+) -> tuple[_Cru, tuple[ast.Import | ast.ImportFrom, ...]]:
+    achado = _GUARDADO_DA_EXTERNA.get(id(arvore))
+    if achado is None or achado[0] is not arvore:
+        colhedor = _ColhedorCru()
+        colhedor.visit(arvore)
+        cru = _Cru(
+            frozenset(colhedor.cargas),
+            tuple(colhedor.cadeias),
+            frozenset(colhedor.constantes),
+            tuple(colhedor.de_imports),
+        )
+        achado = (arvore, cru, _nos_de_import(arvore))
+        _GUARDADO_DA_EXTERNA[id(arvore)] = achado
+    return achado[1], achado[2]
+
+
 def _raizes_de_uma_fonte_externa(mapa: _Mapa, arvore: ast.AST) -> set[str]:
     """O que um roteiro de fora do pacote importa DELE — e vira raiz do alcance."""
     raizes: set[str] = set()
-    for no in ast.walk(arvore):
+    for no in _guardado_da_externa(arvore)[1]:
         if isinstance(no, ast.Import):
             for apelido in no.names:
                 if apelido.name in mapa.modulos:
@@ -1805,6 +1833,111 @@ def _refs(no: ast.AST) -> set[str]:
     return visitante.nomes
 
 
+@dataclass(frozen=True)
+class _Cru:
+    """O que um nó de topo cita, SEM resolver nada contra o mapa.
+
+    O visitante inteiro pagava a caminhada pela árvore de cada módulo alcançado em CADA varredura
+    (trinta e uma por corrida, 3,5 s cada), mas o que ele colhe do nó só depende do texto. A
+    caminhada fica guardada por conteúdo; o que depende do mapa (a tabela de nomes, a cadeia de
+    reexportações) se resolve depois, sobre estes conjuntos pequenos.
+    """
+
+    cargas: frozenset[str]
+    cadeias: tuple[tuple[tuple[str, ...] | None, str], ...]
+    constantes: frozenset[str]
+    de_imports: tuple[ast.ImportFrom, ...]
+
+
+class _ColhedorCru(_Referencias):
+    """O mesmo percurso do `_Referencias`, anotando em vez de resolver."""
+
+    def __init__(self) -> None:
+        super().__init__(None)
+        self.cargas: set[str] = set()
+        self.cadeias: list[tuple[tuple[str, ...] | None, str]] = []
+        self.constantes: set[str] = set()
+        self.de_imports: list[ast.ImportFrom] = []
+
+    def visit_Name(self, no: ast.Name) -> None:
+        if isinstance(no.ctx, ast.Load):
+            self.cargas.add(no.id)
+
+    def visit_Attribute(self, no: ast.Attribute) -> None:
+        if isinstance(no.ctx, ast.Load):
+            partes: list[str] = []
+            atual: ast.expr = no
+            while isinstance(atual, ast.Attribute):
+                partes.append(atual.attr)
+                atual = atual.value
+            if isinstance(atual, ast.Name):
+                partes.append(atual.id)
+                partes.reverse()
+                self.cadeias.append((tuple(partes), no.attr))
+            else:
+                self.cadeias.append((None, no.attr))
+        self.generic_visit(no)
+
+    def visit_ImportFrom(self, no: ast.ImportFrom) -> None:
+        self.de_imports.append(no)
+        self.generic_visit(no)
+
+    def visit_Constant(self, no: ast.Constant) -> None:
+        if isinstance(no.value, str) and id(no) not in self._docstrings:
+            self.constantes.add(no.value.strip())
+
+
+@functools.cache
+def _crus_do_texto(texto: str) -> tuple[_Cru, ...]:
+    """Um `_Cru` por nó de topo do módulo, lido UMA vez por conteúdo."""
+    crus = []
+    for no in _lido_do_texto(texto)[0].body:
+        colhedor = _ColhedorCru()
+        colhedor.visit(no)
+        crus.append(
+            _Cru(
+                frozenset(colhedor.cargas),
+                tuple(colhedor.cadeias),
+                frozenset(colhedor.constantes),
+                tuple(colhedor.de_imports),
+            )
+        )
+    return tuple(crus)
+
+
+def _resolver_cru(
+    cru: _Cru, contexto: _Contexto
+) -> tuple[set[tuple[str, str]], set[str]]:
+    """O que o `_Referencias(contexto)` daria para o mesmo nó: as resolvidas e as planas."""
+    mapa, tabela = contexto.mapa, contexto.tabela
+    resolvidas: set[tuple[str, str]] = set()
+    planas = set(cru.constantes)
+    for nome in cru.cargas:
+        entrada = tabela.get(nome)
+        if entrada is not None and entrada[0] == "símbolo":
+            modulo, simbolo = entrada[1]  # type: ignore[misc]
+            resolvidas.add(_canonico(mapa, modulo, simbolo))
+        elif nome in contexto.definidos:
+            resolvidas.add((contexto.modulo, nome))
+    for partes, atributo in cru.cadeias:
+        entrada = tabela.get(partes[0]) if partes else None
+        if entrada is not None and entrada[0] == "módulo":
+            alvo = ".".join([str(entrada[1]), *partes[1:-1]])  # type: ignore[index]
+            if alvo in mapa.modulos:
+                resolvidas.add(_canonico(mapa, alvo, partes[-1]))  # type: ignore[index]
+                continue
+        planas.add(atributo)
+    for no in cru.de_imports:
+        base = _base_do_import(mapa, contexto.modulo, no)
+        if base not in mapa.modulos:
+            continue
+        for apelido in no.names:
+            if apelido.name == "*" or f"{base}.{apelido.name}" in mapa.modulos:
+                continue
+            resolvidas.add(_canonico(mapa, base, apelido.name))
+    return resolvidas, planas
+
+
 def _entregue_a_framework(no: ast.AST) -> bool:
     """O símbolo é decorado por algo que passa a ser o chamador dele?"""
     for decorador in getattr(no, "decorator_list", []):
@@ -1954,11 +2087,11 @@ def pontes_vivas(raiz_do_projeto: Path | None = None) -> dict[str, Path]:
             continue
         caminho = vizinhos[nome]
         try:
-            arvore = _arvore(caminho)
+            _arvore_da_ponte, imports_da_ponte = _arvore_e_imports(caminho)
         except (OSError, SyntaxError):  # pragma: no cover — piloto quebrado é dele
             continue
         achados[nome] = caminho
-        for no in ast.walk(arvore):
+        for no in imports_da_ponte:
             if isinstance(no, ast.Import):
                 fila.extend(a.name for a in no.names if a.name in vizinhos)
             elif isinstance(no, ast.ImportFrom):
@@ -1976,34 +2109,54 @@ def pontes_vivas(raiz_do_projeto: Path | None = None) -> dict[str, Path]:
 def _fontes_externas(
     raiz_do_projeto: Path, *, podar_a_bancada: bool = True
 ) -> list[tuple[str, ast.Module]]:
-    """O Python que roda de FORA do pacote: os heredocs, e a ponte da interface."""
-    saida: list[tuple[str, ast.Module]] = []
+    """O Python que roda de FORA do pacote: os heredocs, e a ponte da interface.
+
+    Os textos são lidos a cada chamada (a cópia mordida difere em UM arquivo), mas
+    a AST e a poda saem do cache por CONTEÚDO: quem consome só LÊ essas árvores.
+    """
+    textos: list[tuple[str, str, str]] = []
     for roteiro in _ROTEIROS_DE_PRODUCAO:
         caminho = raiz_do_projeto / roteiro
         if not caminho.is_file():
             continue
         for indice, trecho in enumerate(trechos_python_embutidos(caminho)):
-            try:
-                saida.append((f"{roteiro}#heredoc{indice}", ast.parse(trecho)))
-            except SyntaxError:  # pragma: no cover — heredoc quebrado é do roteiro
-                continue
+            textos.append(("heredoc", f"{roteiro}#heredoc{indice}", trecho))
     for fonte in _LANCADORES:
         caminho = raiz_do_projeto / fonte
         if not caminho.is_file():
             continue
         try:
-            saida.append((fonte, _arvore(caminho)))
-        except (OSError, SyntaxError):  # pragma: no cover — lançador quebrado é dele
+            textos.append(("lancador", fonte, caminho.read_text(encoding="utf-8")))
+        except OSError:  # pragma: no cover — lançador quebrado é dele
             continue
     for nome, caminho in sorted(pontes_vivas(raiz_do_projeto).items()):
         try:
-            arvore = _arvore(caminho, mutavel=True)
-        except (OSError, SyntaxError):  # pragma: no cover — piloto quebrado é dele
+            texto = caminho.read_text(encoding="utf-8")
+            textos.append(("ponte", f"{_PASTA_DA_PONTE}/{nome}.py", texto))
+        except OSError:  # pragma: no cover — piloto quebrado é dele
             continue
-        if podar_a_bancada:
-            arvore, _podados = _podar_a_bancada(arvore)
-        saida.append((f"{_PASTA_DA_PONTE}/{nome}.py", arvore))
-    return saida
+    return list(_fontes_externas_do_texto(tuple(textos), podar_a_bancada))
+
+
+@functools.cache
+def _fontes_externas_do_texto(
+    textos: tuple[tuple[str, str, str], ...], podar_a_bancada: bool
+) -> tuple[tuple[str, ast.Module], ...]:
+    saida: list[tuple[str, ast.Module]] = []
+    for tipo, rotulo, texto in textos:
+        try:
+            if tipo == "heredoc":
+                saida.append((rotulo, ast.parse(texto)))
+            elif tipo == "lancador":
+                saida.append((rotulo, _lido_do_texto(texto)[0]))
+            else:
+                arvore = ast.parse(texto, filename=rotulo)
+                if podar_a_bancada:
+                    arvore, _podados = _podar_a_bancada(arvore)
+                saida.append((rotulo, arvore))
+        except SyntaxError:  # pragma: no cover — fonte quebrada é do dono dela
+            continue
+    return tuple(saida)
 
 
 def modulos_alcancados(raiz: Path | None = None) -> set[str]:
@@ -2049,11 +2202,10 @@ def promessas_sem_caminho(
             _tabela_de_nomes(mapa, modulo, arvore, imports=mapa.imports[modulo]),
             mapa.define[modulo],
         )
-        for indice, no in enumerate(arvore.body):
-            visitante = _Referencias(contexto)
-            visitante.visit(no)
-            refs_por_no.append((modulo, indice, visitante.resolvidas))
-            planas |= visitante.planas
+        for indice, cru in enumerate(_crus_do_texto(mapa.textos[modulo])):
+            resolvidas, planas_do_no = _resolver_cru(cru, contexto)
+            refs_por_no.append((modulo, indice, resolvidas))
+            planas |= planas_do_no
     for rotulo, arvore in externas:
         modulo_da_ponte = ""
         if rotulo.endswith(".py") and "#heredoc" not in rotulo:
@@ -2072,10 +2224,11 @@ def promessas_sem_caminho(
                 mapa, rotulo, _tabela_de_nomes(mapa, rotulo, arvore, externo=True),
                 frozenset(),
             )
-        visitante = _Referencias(contexto)
-        visitante.visit(arvore)
-        refs_por_no.append((rotulo, -1, visitante.resolvidas))
-        planas |= visitante.planas
+        resolvidas_da_externa, planas_da_externa = _resolver_cru(
+            _guardado_da_externa(arvore)[0], contexto
+        )
+        refs_por_no.append((rotulo, -1, resolvidas_da_externa))
+        planas |= planas_da_externa
 
     ponte_viva = pontes_vivas(raiz_do_projeto)
     bancada_do_desenho: set[str] = set()
@@ -2125,14 +2278,16 @@ def _regua_plana(raiz: Path) -> set[str]:
                 continue
             relativo = caminho.relative_to(raiz).as_posix()
             candidatas.append((f"{relativo}::{no.name}", caminho, indice))
+    # Quem cita cada nome, indexado UMA vez: perguntar «algum outro nó o cita?» varrendo
+    # todos os nós a cada candidata era candidatas vezes nós (23 milhões de comparações).
+    citantes: dict[str, set[tuple[Path, int]]] = {}
+    for arquivo, posicao, refs in refs_por_no:
+        for ref in refs:
+            citantes.setdefault(ref, set()).add((arquivo, posicao))
     orfas: set[str] = set()
     for chave, caminho, indice in candidatas:
         nome = chave.split("::", 1)[1]
-        if not any(
-            nome in refs
-            for arquivo, posicao, refs in refs_por_no
-            if not (arquivo == caminho and posicao == indice)
-        ):
+        if not citantes.get(nome, set()) - {(caminho, indice)}:
             orfas.add(chave)
     return orfas
 
@@ -3255,3 +3410,84 @@ def _os_dois_registros_saem_na_acusacao(mensagem: str, regua: str) -> None:
     )
 
 
+
+
+def _o_que_o_visitante_direto_da(mapa: _Mapa, modulo: str) -> list[tuple[set, set]]:
+    contexto = _Contexto(
+        mapa,
+        modulo,
+        _tabela_de_nomes(mapa, modulo, mapa.arvores[modulo], imports=mapa.imports[modulo]),
+        mapa.define[modulo],
+    )
+    saida = []
+    for no in mapa.arvores[modulo].body:
+        visitante = _Referencias(contexto)
+        visitante.visit(no)
+        saida.append((visitante.resolvidas, visitante.planas))
+    return saida
+
+
+class TestACaminhadaGuardadaDaOMesmoVeredito:
+    """A caminhada por conteúdo (`_Cru`) tem de dar, nó a nó, o que o visitante direto dá."""
+
+    def test_cada_no_de_cada_modulo_resolve_igual_ao_visitante_direto(self) -> None:
+        mapa = _mapear(_SRC)
+        divergentes = []
+        for modulo in mapa.arvores:
+            contexto = _Contexto(
+                mapa,
+                modulo,
+                _tabela_de_nomes(
+                    mapa, modulo, mapa.arvores[modulo], imports=mapa.imports[modulo]
+                ),
+                mapa.define[modulo],
+            )
+            direto = _o_que_o_visitante_direto_da(mapa, modulo)
+            guardado = [
+                _resolver_cru(cru, contexto) for cru in _crus_do_texto(mapa.textos[modulo])
+            ]
+            if guardado != direto:
+                divergentes.append(modulo)
+        assert not divergentes, (
+            f"a caminhada guardada diverge do visitante direto em {divergentes[:5]}: "
+            "a varredura rápida deixou de ser a mesma régua"
+        )
+        assert len(mapa.arvores) > 150, "a árvore lida é pequena demais para provar algo"
+
+    def test_mordida_um_resolvedor_que_esquece_as_constantes_diverge(self) -> None:
+        """Arrancadas as constantes do `_Cru`, as planas somem e a igualdade reprova."""
+        mapa = _mapear(_SRC)
+        modulo = next(
+            m for m in mapa.arvores if any(c.constantes for c in _crus_do_texto(mapa.textos[m]))
+        )
+        contexto = _Contexto(
+            mapa,
+            modulo,
+            _tabela_de_nomes(mapa, modulo, mapa.arvores[modulo], imports=mapa.imports[modulo]),
+            mapa.define[modulo],
+        )
+        sem_constantes = [
+            _resolver_cru(
+                _Cru(cru.cargas, cru.cadeias, frozenset(), cru.de_imports), contexto
+            )
+            for cru in _crus_do_texto(mapa.textos[modulo])
+        ]
+        assert sem_constantes != _o_que_o_visitante_direto_da(mapa, modulo)
+
+    def test_cada_fonte_externa_resolve_igual_ao_visitante_direto(self) -> None:
+        mapa = _mapear(_SRC)
+        externas = _fontes_externas(_RAIZ)
+        assert len(externas) > 3, "sem fonte externa não há o que provar"
+        divergentes = []
+        for rotulo, arvore in externas:
+            contexto = _Contexto(
+                mapa, rotulo, _tabela_de_nomes(mapa, rotulo, arvore, externo=True), frozenset()
+            )
+            visitante = _Referencias(contexto)
+            visitante.visit(arvore)
+            if _resolver_cru(_guardado_da_externa(arvore)[0], contexto) != (
+                visitante.resolvidas,
+                visitante.planas,
+            ):
+                divergentes.append(rotulo)
+        assert not divergentes, f"a caminhada guardada da fonte externa diverge em {divergentes}"
