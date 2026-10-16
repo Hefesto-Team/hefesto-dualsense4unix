@@ -548,6 +548,15 @@
      aparelhos passava das faces e o corpo do Sugestões rolava 47 px (16/10/2026). */
   .bandeja .chip .txt { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: .45rem; }
   .bandeja .chip .txt span.enlace { flex-basis: 100%; }
+  /* O tipo e o nome cortam com reticências em vez de quebrar: o nome inteiro está na
+     dica do chip. A 940 px (a largura mínima da aba) o chip do extensor quebrava em
+     duas linhas. */
+  .bandeja .chip .txt > b { flex: 0 1 auto; min-width: 0; max-width: 100%; overflow: hidden;
+                            text-overflow: ellipsis; white-space: nowrap; }
+  .bandeja .chip .txt > span:not(.enlace) { flex: 1 1 0; min-width: 2.5rem; overflow: hidden;
+                            text-overflow: ellipsis; white-space: nowrap; }
+  .bandeja .chip .txt span.enlace { min-width: 0; overflow: hidden; text-overflow: ellipsis;
+                            white-space: nowrap; }
   .por-confirmar { padding-top: 4px; padding-bottom: 4px; margin-top: 4px; }
   .face-cab { margin-top: 6px; }
   .bandeja .chip .txt span.enlace { color: var(--color-lacuna); }
@@ -2040,6 +2049,8 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       /* A dica fala do que a pessoa faz, não do sistema por baixo. */
       var dica = p ? "Na Entrada " + p + ". Clique para trocar" : "Sem entrada marcada. Clique e marque a entrada";
       var titulo = a.nomeDeclarado || hub || rotuloDoAparelho(a);
+      /* O nome que o chip corta com reticências vai inteiro na dica. */
+      if (a.nome && a.nome !== titulo) dica = a.nome + ". " + dica;
       var fundo = nivel > 1 ? ' style="margin-left:' + nivel + 'rem;width:calc(100% - ' + nivel + 'rem)"' : "";
       return '<button class="chip' + (nivel ? " recuado" : "") + '" data-ap="' + a.id + '"' + (p ? ' data-alocado="1"' : "")
         + ' data-dica="' + emAtributo(dica) + '"' + fundo

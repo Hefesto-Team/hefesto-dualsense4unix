@@ -6273,6 +6273,8 @@ JS_DA_CADEIA_E_DO_REGISTRO = r"""
       /* A dica fala do que a pessoa faz, não do sistema por baixo. */
       var dica = p ? "Na Entrada " + p + ". Clique para trocar" : "Sem entrada marcada. Clique e marque a entrada";
       var titulo = a.nomeDeclarado || hub || rotuloDoAparelho(a);
+      /* O nome que o chip corta com reticências vai inteiro na dica. */
+      if (a.nome && a.nome !== titulo) dica = a.nome + ". " + dica;
       var fundo = nivel > 1 ? ' style="margin-left:' + nivel + 'rem;width:calc(100% - ' + nivel + 'rem)"' : "";
       return '<button class="chip' + (nivel ? " recuado" : "") + '" data-ap="' + a.id + '"' + (p ? ' data-alocado="1"' : "")
         + ' data-dica="' + emAtributo(dica) + '"' + fundo
@@ -6544,7 +6546,32 @@ EDICOES_DOS_MAPAS_DO_TODO: tuple[Edicao, ...] = (
 #: O-BLUEZ-TEM-UM-DONO-ATE-NA-SONDA-01, em 08/10.
 #: De novo em 16/10/2026: as da cadeia, do registro e dos mapas do todo foram publicadas e entraram
 #: no fim de `EDICOES`.
-EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = ()
+_SUGESTOES_A_940 = "O-SUGESTOES-DO-MAPA-DAS-PORTAS-NAO-ROLAM-A-940-PX-01"
+
+EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = (
+    Edicao(
+        antes="  .bandeja .chip .txt span.enlace { flex-basis: 100%; }\n",
+        depois=(
+            "  .bandeja .chip .txt span.enlace { flex-basis: 100%; }\n"
+            "  /* O tipo e o nome cortam com reticências em vez de quebrar: o nome inteiro está"
+            " na\n"
+            "     dica do chip. A 940 px (a largura mínima da aba) o chip do extensor quebrava"
+            " em\n"
+            "     duas linhas. */\n"
+            "  .bandeja .chip .txt > b { flex: 0 1 auto; min-width: 0; max-width: 100%;"
+            " overflow: hidden;\n"
+            "                            text-overflow: ellipsis; white-space: nowrap; }\n"
+            "  .bandeja .chip .txt > span:not(.enlace) { flex: 1 1 0; min-width: 2.5rem;"
+            " overflow: hidden;\n"
+            "                            text-overflow: ellipsis; white-space: nowrap; }\n"
+            "  .bandeja .chip .txt span.enlace { min-width: 0; overflow: hidden;"
+            " text-overflow: ellipsis;\n"
+            "                            white-space: nowrap; }\n"),
+        porque=(
+            f"{_SUGESTOES_A_940}: o tipo e o nome do chip cortam com reticências em vez de "
+            "quebrar a linha (o nome inteiro vai na dica)."),
+    ),
+)
 
 
 def pagina(com_as_que_esperam: bool = True) -> str:

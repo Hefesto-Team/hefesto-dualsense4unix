@@ -26,6 +26,7 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ## mapa-das-portas.html
 - **16/10/2026** — a base comum dá parada no Tab a todo título, rótulo ou frase com dica (o foco abre a dica e ganha contorno). Só o foco muda; a tela parada é a mesma. Até publicar, o produto abre a dica dos títulos só quando o mouse passa; o desenho abre também pelo foco. Espera o `--publicar` da costura.
+- **16/10/2026** — no Sugestões, o tipo e o nome de cada aparelho da cadeia cortam com reticências em vez de quebrar a linha, e o nome inteiro vai na dica do chip. Só muda quando o nome não cabe. Até publicar, o produto quebra o chip em duas linhas; o desenho corta. Espera o `--publicar` da costura.
 
 ## mapa-do-controle.html
 - **16/10/2026** — a mesma base comum (a dica abre pelo foco nos títulos). Até publicar, o produto abre a dica dos títulos só com o mouse; o desenho abre também pelo foco. Espera o `--publicar` da costura.

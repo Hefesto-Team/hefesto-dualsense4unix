@@ -24,12 +24,16 @@ from hefesto_dualsense4unix.utils.maquina import (
 )
 
 SPRINT = "O-MAPA-DAS-CONEXOES-CABE-NA-ABA-E-FALA-MENOS-01"
+SPRINT_DOS_940 = "O-SUGESTOES-DO-MAPA-DAS-PORTAS-NAO-ROLAM-A-940-PX-01"
 
-NA_BANCADA = any(SPRINT in e.porque for e in pagina_do_mapa.EDICOES_ESPERANDO_A_SESSAO_DELA)
+NA_BANCADA = any(SPRINT in e.porque or SPRINT_DOS_940 in e.porque
+                 for e in pagina_do_mapa.EDICOES_ESPERANDO_A_SESSAO_DELA)
 QUAL = "bancada" if NA_BANCADA else "publicada"
 
 VISTAS = {"foto-3": (1920, 887), "dela": (1918, 840), "ladrilhada": (1212, 809),
-          "estreita": (860, 809)}
+          "estreita": (860, 809),
+          # as três larguras do Sugestões sem rolar (16/10/2026): a mínima da aba e as duas medidas
+          "940": (940, 809), "1272": (1272, 809), "1512": (1512, 809)}
 
 SOBRA_NA_LADRILHADA = 60
 
@@ -367,3 +371,108 @@ def test_o_adicionar_e_uma_linha_com_a_pergunta_dela() -> None:
     topo_p, topo_e, fim_p, fim_e = mao["pergunta_e_escolhas"]
     assert topo_e < fim_p and topo_p < fim_e, (
         f"({QUAL}) a pergunta e as escolhas não estão na mesma linha: {mao['pergunta_e_escolhas']}")
+
+
+# ---- O Sugestões na largura mínima da aba (O-SUGESTOES-DO-MAPA-DAS-PORTAS-NAO-ROLAM-A-940-PX-01)
+
+NOME_LONGO = "Adaptador Bluetooth USB de longo alcance com antena externa"
+
+MEDIR_A_CADEIA = r"""
+(function(){
+  const q = s => document.querySelector(s);
+  const corpo = q('.pagina > .corpo');
+  const r = el => el.getBoundingClientRect();
+  const chips = [...document.querySelectorAll('#bandeja .chip[data-ap]')].map(c => {
+    const b = c.querySelector('.txt > b'), nome = c.querySelector('.txt > span:not(.enlace)');
+    return {recuado: c.classList.contains('recuado'),
+      titulo: b ? b.textContent : '', nome: nome ? nome.textContent : '',
+      mesma_linha: !!(b && nome) && Math.abs(r(b).bottom - r(nome).bottom) < 4,
+      cortado: !!nome && nome.scrollWidth > nome.clientWidth + 1,
+      dica: c.getAttribute('data-dica') || '', altura: Math.round(r(c).height),
+      fora: r(c).right > r(q('#bandeja')).right + 1};
+  });
+  return JSON.stringify({corpo: [corpo.scrollHeight, corpo.clientHeight], chips: chips,
+    bandeja_bottom: r(q('.palco > .bandeja')).bottom,
+    faces_bottom: r(q('#faces')).bottom,
+    lista: [q('#bandeja').scrollHeight, q('#bandeja').clientHeight]});
+})()
+"""
+
+_CADEIA: dict[tuple[str, str], dict[str, Any]] = {}
+
+
+def _arranjo_com_nome_longo() -> dict[str, Any]:
+    """A fixture de sempre, com o nome longo num aparelho recuado (filho do hub)."""
+    dado = _arranjo()
+    aps = dado["aparelhos"]
+    hub = aps[0]
+    # a fixture não monta a cadeia USB (o censo é de mentira): ela entra aqui, na ordem de
+    # APARELHOS, com os quatro nós de baixo do hub «9-4» recuados e o enlace no primeiro.
+    hub["hubFisico"] = "Hub USB 2 · 4 entradas"
+    for i in (1, 2, 6, 8):
+        aps[i]["dentroDe"] = hub["id"]
+    aps[1]["nome"] = NOME_LONGO
+    aps[1]["enlace"] = "Negociou 480 Mb/s onde cabe 5 Gb/s"
+    return dado
+
+
+def _cadeia(vista: str, com: str) -> dict[str, Any]:
+    """O Sugestões na vista dada: ``entregue`` (a fixture com o nome longo) ou ``exemplo`` (a
+    página sem leitura, com o extensor «15a»)."""
+    if (vista, com) not in _CADEIA:
+        passos = [_clicar('.modo[data-modo="ideal"]'), MEDIR_A_CADEIA]
+        if com == "entregue":
+            passos.insert(0, arranjo_desta_maquina.js_da_entrega(_arranjo_com_nome_longo()))
+        lidas = _no_webkit(arranjo_desta_maquina.PAGINA, VISTAS[vista], passos)
+        _CADEIA[(vista, com)] = lidas[-1]
+    return _CADEIA[(vista, com)]
+
+
+def _a_940_quem_manda_sao_as_faces(vista: str) -> Any:
+    """A 940 px o corpo do Sugestões rola 87 px (Chrome 98) por causa da coluna das faces, do painel
+    de trocas em duas linhas e da legenda em duas, e NÃO pela cadeia (medido em 16/10/2026: com a
+    cadeia em chips de uma linha a bandeja termina 110 px acima das faces, e o corpo rola igual).
+    Curar isso muda o desenho; fica para a sessão dos desenhos (DIVERGENCIAS.md)."""
+    marca = pytest.mark.xfail(
+        vista == "940", strict=True,
+        reason="a rolagem a 940 px vem das faces, do painel e da legenda, não da cadeia")
+    return pytest.param(vista, marks=marca)
+
+
+@pytest.mark.parametrize("com", ["entregue", "exemplo"])
+@pytest.mark.parametrize(
+    "vista", [_a_940_quem_manda_sao_as_faces(v) for v in ("940", "1272", "1512")])
+def test_o_sugestoes_nao_rola_nas_tres_larguras(vista: str, com: str) -> None:
+    """MORDIDA: devolva a quebra de linha do nome (tire o ``nowrap``) e a 1272 px o corpo da
+    fixture volta a rolar 44 px."""
+    rolagem, visivel = _cadeia(vista, com)["corpo"]
+    assert rolagem <= visivel + 1, (
+        f"({QUAL}) a {vista} px ({com}) o corpo do Sugestões rola {rolagem - visivel} px")
+
+
+@pytest.mark.parametrize("vista", ["940", "1272", "1512"])
+def test_o_chip_da_cadeia_e_uma_linha_e_o_nome_inteiro_vai_na_dica(vista: str) -> None:
+    """O tipo e o nome ficam na mesma linha (o enlace segue embaixo); o nome que não cabe corta com
+    reticências e vai inteiro na dica do chip. Cobre o recuado (filho do hub) e o do extensor."""
+    for com in ("entregue", "exemplo"):
+        chips = [c for c in _cadeia(vista, com)["chips"] if c["nome"] and c["titulo"]]
+        assert any(c["recuado"] for c in chips), f"({QUAL}) {com}: a cadeia perdeu o recuado"
+        for c in chips:
+            assert c["mesma_linha"], f"({QUAL}) {vista}/{com}: o nome quebrou a linha: {c}"
+            assert not c["fora"], f"({QUAL}) {vista}/{com}: o chip passa da bandeja: {c}"
+            assert c["nome"] in c["dica"], (
+                f"({QUAL}) {vista}/{com}: o nome inteiro não está na dica: {c}")
+    for com in ("entregue", "exemplo"):
+        lida = _cadeia(vista, com)
+        assert lida["lista"][0] <= lida["lista"][1] + 1, f"({QUAL}) {com}: a lista da cadeia rola"
+        assert vista != "940" or lida["bandeja_bottom"] <= lida["faces_bottom"] + 1, (
+            f"({QUAL}) {vista}/{com}: a bandeja passa das faces e passa a mandar no corpo")
+    longo = [c for c in _cadeia(vista, "entregue")["chips"] if c["nome"] == NOME_LONGO]
+    assert longo and longo[0]["recuado"], f"({QUAL}) o filho recuado de nome longo sumiu"
+    assert longo[0]["cortado"], f"({QUAL}) o nome longo não cortou: {longo[0]}"
+
+
+def test_o_extensor_15a_do_exemplo_esta_na_cadeia_a_940() -> None:
+    """Sem o «15a» na medida a 940 px a régua volta a medir só o que cabe."""
+    titulos = [c["titulo"] for c in _cadeia("940", "exemplo")["chips"]]
+    assert titulos.count("Bluetooth") >= 3, titulos
