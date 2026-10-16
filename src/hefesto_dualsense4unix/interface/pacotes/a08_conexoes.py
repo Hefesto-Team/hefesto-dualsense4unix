@@ -2282,7 +2282,7 @@ def _com_o_teto(prof: Any, chave: str, policy: str | None) -> Any:
     ``None`` evita regravar perfil idêntico (troca a data e o daemon o reaplica; `profile.switch` no
     meio da partida não é de graça), como em `_com_os_gatilhos`.
 
-    "Segue o global" apaga a seção inteira (``rumble=None``), não grava ``policy=None``:
+    "Segue o global" apaga o campo (a seção, se nada mais sobra), não grava ``policy=None``:
     `_controllers_to_rumble_scales` desvia em `cfg.rumble is None` (`profiles/manager.py:2351`) e em
     `"policy" not in model_fields_set` (`:2481`); o primeiro é o "campo não escrito = sem opinião"
     do merge por campo (`ControllerRumbleOverride`), e `custom_mult` sem `policy='custom'` a borda
@@ -2292,7 +2292,7 @@ def _com_o_teto(prof: Any, chave: str, policy: str | None) -> Any:
     """
     from hefesto_dualsense4unix.profiles.schema import (
         ControllerOverrides,
-        ControllerRumbleOverride,
+        rumble_com_a_forca,
     )
 
     global_ = getattr(getattr(prof, "rumble", None), "policy", None)
@@ -2302,14 +2302,10 @@ def _com_o_teto(prof: Any, chave: str, policy: str | None) -> Any:
     atuais = dict(prof.controllers or {})
     dele = atuais.get(chave) or ControllerOverrides()
     antes = dele.rumble
-    if policy is None:
-        if antes is None:
-            return None
-        novo = None
-    else:
-        if antes is not None and antes.policy == policy:
-            return None
-        novo = ControllerRumbleOverride.model_validate({"policy": policy})
+    if (antes.policy if antes is not None else None) == policy:
+        return None
+    # Só o teto troca: as barras e os efeitos escolhidos na aba Vibração ficam na seção.
+    novo = rumble_com_a_forca(antes, policy)
     atuais[chave] = dele.model_copy(update={"rumble": novo})
     return prof.model_copy(update={"controllers": atuais})
 

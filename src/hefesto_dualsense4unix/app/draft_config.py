@@ -650,7 +650,7 @@ class DraftConfig(BaseModel):
 
     def with_controller_rumble(self, uniq: str, rumble: RumbleDraft) -> DraftConfig:
         """Novo draft com a INTENSIDADE de ``uniq`` substituída."""
-        from hefesto_dualsense4unix.profiles.schema import ControllerRumbleOverride
+        from hefesto_dualsense4unix.profiles.schema import rumble_com_a_forca
 
         igual_ao_global = (
             rumble.policy == self.rumble.policy
@@ -660,11 +660,10 @@ class DraftConfig(BaseModel):
             return self.with_controller_fields_cleared(
                 uniq, "rumble", {"policy", "custom_mult"}
             )
-        campos: dict[str, Any] = {"policy": rumble.policy}
-        if rumble.policy == "custom":
-            campos["custom_mult"] = rumble.custom_mult
+        # Só a força troca: as barras e os efeitos escolhidos desta peça ficam na seção.
+        antes = getattr(self.controller_override(uniq), "rumble", None)
         return self._with_override_section(
-            uniq, "rumble", ControllerRumbleOverride(**campos)
+            uniq, "rumble", rumble_com_a_forca(antes, rumble.policy, rumble.custom_mult)
         )
 
     def effective_speaker_for(self, uniq: str | None) -> SpeakerDraft:

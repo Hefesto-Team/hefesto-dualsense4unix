@@ -2679,6 +2679,28 @@ def pcts_da_haptica_dos_controles(
     return fora
 
 
+def rumble_com_a_forca(
+    antes: ControllerRumbleOverride | None,
+    policy: str | None,
+    custom_mult: float | None = None,
+) -> ControllerRumbleOverride | None:
+    """A seção ``rumble`` de UMA peça com só a força trocada; ``None`` se nada mais sobra.
+
+    As barras e os dois efeitos ficam: a força é um campo, e as escolhas são outros. ``policy``
+    ``None`` apaga a força (segue o global); ``custom_mult`` só vale com ``policy='custom'``.
+    """
+    campos: dict[str, Any] = (
+        antes.model_dump(exclude_unset=True) if antes is not None else {}
+    )
+    campos.pop("policy", None)
+    campos.pop("custom_mult", None)
+    if policy is not None:
+        campos["policy"] = policy
+        if policy == "custom":
+            campos["custom_mult"] = custom_mult
+    return ControllerRumbleOverride.model_validate(campos) if campos else None
+
+
 def sem_piscar_da_declaracao(declaracao: Any) -> bool:
     """O «Sem piscar» de UMA declaração; sem opinião (ou declaração ilegível) é desligado."""
     return getattr(getattr(declaracao, "luz", None), "sem_piscar", None) is True
