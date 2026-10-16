@@ -1,0 +1,75 @@
+{
+  "_LEIA": "O PISO DO TEMPO DA CASA, em segundos. Não se edita à mão: `scripts/o-tempo-da-casa.py --casa <casa> --aceitar` desce, `--fechar` sobe o que um `Tempo: <medida> <razão>` da faixa paga. `folga` é o porcento de ruído que o piso tolera.",
+  "medidas": {
+    "completo-parede-s": {
+      "data": "2026-10-16",
+      "folga": 20,
+      "nota": "parede do último portoes.sh completo do fecho",
+      "o_que_conta": "segundos de parede do portão completo",
+      "piso": 75,
+      "por_item": {
+        "portoes-1050.out": 75
+      },
+      "razao": "piso inicial de 16/10: o que o último fecho e o rápido mediram antes das curas desta sprint; o fecho desce para o de depois",
+      "unidade": "s",
+      "universo": 1
+    },
+    "rapido-mediana-s": {
+      "data": "2026-10-16",
+      "folga": 15,
+      "nota": "mediana da parede das últimas 9 corridas do rápido",
+      "o_que_conta": "mediana, em segundos, da parede do portão rápido",
+      "piso": 58,
+      "por_item": {
+        "rapido-05137b91f-0559.log": 60,
+        "rapido-29d5f5b97-0616.log": 58,
+        "rapido-33798db6e-0619.log": 55,
+        "rapido-5af2b4798-0604.log": 57,
+        "rapido-6ed4feecf-0456.log": 53,
+        "rapido-7b39dbc54-0522.log": 122,
+        "rapido-9a1c06371-0520.log": 69,
+        "rapido-c7cf6aa18-0455.log": 54,
+        "rapido-f4bf0bcd4-0458.log": 58
+      },
+      "razao": "piso inicial de 16/10: o que o último fecho e o rápido mediram antes das curas desta sprint; o fecho desce para o de depois",
+      "unidade": "s",
+      "universo": 9
+    },
+    "suite-pytest-s": {
+      "data": "2026-10-16",
+      "folga": 10,
+      "nota": "segundos de pytest das 24 partes do último fecho da suíte",
+      "o_que_conta": "segundos de pytest da suíte inteira (24 partes)",
+      "piso": 4489,
+      "por_item": {
+        "parte-00": 155,
+        "parte-01": 290,
+        "parte-02": 292,
+        "parte-03": 191,
+        "parte-04": 247,
+        "parte-05": 168,
+        "parte-06": 172,
+        "parte-07": 161,
+        "parte-08": 179,
+        "parte-09": 176,
+        "parte-10": 172,
+        "parte-11": 171,
+        "parte-12": 179,
+        "parte-13": 183,
+        "parte-14": 198,
+        "parte-15": 173,
+        "parte-16": 182,
+        "parte-17": 195,
+        "parte-18": 167,
+        "parte-19": 180,
+        "parte-20": 162,
+        "parte-21": 177,
+        "parte-22": 159,
+        "parte-23": 161
+      },
+      "razao": "piso inicial de 16/10: o que o último fecho e o rápido mediram antes das curas desta sprint; o fecho desce para o de depois",
+      "unidade": "s",
+      "universo": 24
+    }
+  }
+}

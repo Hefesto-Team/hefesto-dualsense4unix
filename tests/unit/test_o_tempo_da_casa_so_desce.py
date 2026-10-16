@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import importlib.util
+import json
+import os
 import re
 import subprocess
 import sys
@@ -161,3 +163,224 @@ def test_mordida_o_ci_de_casa_que_rele_a_cada_pergunta_estoura_o_teto(tmp_path: 
     copia.write_text(torto, encoding="utf-8")
     quantos = _awks_da_corrida(tmp_path, "--listar", script=copia)
     assert quantos > TETO_DE_AWK, f"a mordida não mordeu: só {quantos} `awk` sem a cura"
+
+
+# --- a catraca do tempo: tempo é ruído, então o piso tem folga; sobe pago, desce sozinho -------
+
+TEMPO = _carregar("scripts/o-tempo-da-casa.py", "_o_tempo_da_casa")
+CADERNO_DO_TEMPO = TEMPO.CADERNO
+
+_QUEM = {"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t.t", "GIT_COMMITTER_NAME": "t",
+         "GIT_COMMITTER_EMAIL": "t@t.t", "GIT_CONFIG_NOSYSTEM": "1"}
+
+
+def _escreve_casa(casa: Path, suite_s: float = 2400.0, rapido_s: int = 40, completo_s: int = 60,
+                  com_rapido: bool = True) -> None:
+    """Os registros do fecho, de mentira: 24 partes que somam `suite_s`, rápidos e um completo."""
+    suite = casa / "fecho" / "suite"
+    suite.mkdir(parents=True, exist_ok=True)
+    for n in range(TEMPO.PARTES):
+        (suite / f"parte-{n:02d}.txt").write_text(
+            f"  parte-{n:02d} (3 arq): 10 passed in {suite_s / TEMPO.PARTES:.2f}s (0:01:40)\n",
+            encoding="utf-8")
+    if com_rapido:
+        for i in range(7):
+            log = casa / f"rapido-{i:04d}.log"
+            log.write_text(f"tempo: {rapido_s} s de parede; 90 s de portão somados.\n",
+                           encoding="utf-8")
+            os.utime(log, (1_000_000 + i, 1_000_000 + i))
+    (casa / "fecho" / "portoes-1.out").write_text(
+        f"portões — árvore x\n         camadas rapido completo\ntempo: {completo_s} s de parede; "
+        "400 s de portão somados; 0 lembrado(s) sem rodar.\n", encoding="utf-8")
+
+
+@pytest.fixture
+def mundo(tmp_path: Path) -> tuple[Path, Path]:
+    """`(raiz, casa)`: uma raiz git com o caderno do tempo (piso 2400/40/60) e a casa de mentira."""
+    raiz, casa = tmp_path / "raiz", tmp_path / "casa"
+    raiz.mkdir()
+    casa.mkdir()
+    _escreve_casa(casa)
+    assert TEMPO.main(["--raiz", str(raiz), "--casa", str(casa), "--aceitar"]) == 0
+    arquivo = raiz / CADERNO_DO_TEMPO
+    caderno = json.loads(arquivo.read_text(encoding="utf-8"))
+    for nome, folga in ((TEMPO.SUITE, 10), (TEMPO.RAPIDO, 15), (TEMPO.COMPLETO, 20)):
+        caderno["medidas"][nome]["folga"] = folga
+    arquivo.write_text(json.dumps(caderno, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+                       encoding="utf-8")
+    _git(raiz, "init", "-q", "-b", "dev")
+    _git(raiz, "add", ".")
+    _commit(raiz, "base")
+    return raiz, casa
+
+
+def _commit(raiz: Path, mensagem: str) -> None:
+    subprocess.run(["git", "-C", str(raiz), "commit", "-q", "--allow-empty", "-m", mensagem],
+                   check=True, capture_output=True, env={**os.environ, **_QUEM})
+
+
+def _topo(raiz: Path) -> str:
+    return subprocess.run(["git", "-C", str(raiz), "rev-parse", "HEAD"], check=True,
+                          capture_output=True, text=True).stdout.strip()
+
+
+def _piso(raiz: Path, nome: str) -> dict:
+    return json.loads((raiz / CADERNO_DO_TEMPO).read_text(encoding="utf-8"))["medidas"][nome]
+
+
+def _roda(raiz: Path, casa: Path, *args: str, base: str | None = None) -> int:
+    extra = ["--base", base] if base else []
+    return TEMPO.main(["--raiz", str(raiz), "--casa", str(casa), *extra, *args])
+
+
+def test_dentro_da_folga_nada_muda(
+        mundo: tuple[Path, Path], capsys: pytest.CaptureFixture[str]) -> None:
+    raiz, casa = mundo
+    antes = (raiz / CADERNO_DO_TEMPO).read_bytes()
+    _escreve_casa(casa, suite_s=2600.0, rapido_s=44, completo_s=70)  # +8% / +10% / +17%: ruído
+    assert _roda(raiz, casa) == 0
+    assert _roda(raiz, casa, "--fechar") == 0
+    assert (raiz / CADERNO_DO_TEMPO).read_bytes() == antes, "o ruído mexeu no piso"
+    assert "dentro da folga" in capsys.readouterr().out
+
+
+def test_subir_alem_da_folga_sem_tempo_reprova_e_diz_a_medida(
+        mundo: tuple[Path, Path], capsys: pytest.CaptureFixture[str]) -> None:
+    raiz, casa = mundo
+    _escreve_casa(casa, suite_s=2800.0)  # +16,7%, folga de 10%
+    assert _roda(raiz, casa) == 1
+    saida = capsys.readouterr().out
+    assert "suite-pytest-s" in saida and "folga de 10%" in saida
+    assert _roda(raiz, casa, "--fechar", base=_topo(raiz)) == 1
+    assert _piso(raiz, TEMPO.SUITE)["piso"] == 2400, "reprovado não sobe piso"
+
+
+def test_subir_com_tempo_na_faixa_paga_e_o_piso_sobe_com_a_razao(mundo: tuple[Path, Path]) -> None:
+    raiz, casa = mundo
+    base = _topo(raiz)
+    _commit(raiz, "chore(x): testes novos\n\nTempo: suite-pytest-s trinta testes novos da onda")
+    _escreve_casa(casa, suite_s=2800.0)
+    assert _roda(raiz, casa, "--fechar", "--conferir", base=base) == 0
+    assert _piso(raiz, TEMPO.SUITE)["piso"] == 2400, "--conferir gravou"
+    assert _roda(raiz, casa, "--fechar", base=base) == 0
+    registro = _piso(raiz, TEMPO.SUITE)
+    assert registro["piso"] == 2800
+    assert registro["razao"] == "trinta testes novos da onda"
+    assert registro["subidas"][-1]["de"] == 2400 and registro["subidas"][-1]["para"] == 2800
+    assert registro["folga"] == 10, "a subida apagou a folga do caderno"
+
+
+def test_tempo_sem_razao_ou_de_outra_medida_nao_paga(mundo: tuple[Path, Path]) -> None:
+    raiz, casa = mundo
+    base = _topo(raiz)
+    _commit(raiz, "chore(x): a\n\nTempo: suite-pytest-s")
+    _commit(raiz, "chore(x): b\n\nTempo: rapido-mediana-s razão de outra medida")
+    _escreve_casa(casa, suite_s=2800.0)
+    assert _roda(raiz, casa, "--fechar", base=base) == 1
+    assert _piso(raiz, TEMPO.SUITE)["piso"] == 2400
+
+
+def test_descer_alem_da_folga_baixa_o_piso_e_so_o_dele(mundo: tuple[Path, Path]) -> None:
+    raiz, casa = mundo
+    _escreve_casa(casa, suite_s=1800.0, rapido_s=40)  # a suíte desce 25%; o rápido não se mexe
+    antes_rapido = _piso(raiz, TEMPO.RAPIDO)
+    assert _roda(raiz, casa, "--fechar", "--conferir") == 0
+    assert _piso(raiz, TEMPO.SUITE)["piso"] == 2400, "--conferir gravou"
+    assert _roda(raiz, casa, "--fechar") == 0
+    assert _piso(raiz, TEMPO.SUITE)["piso"] == 1800
+    assert _piso(raiz, TEMPO.SUITE)["folga"] == 10
+    assert _piso(raiz, TEMPO.RAPIDO) == antes_rapido
+
+
+def test_descer_dentro_da_folga_nao_regrava(mundo: tuple[Path, Path]) -> None:
+    raiz, casa = mundo
+    antes = (raiz / CADERNO_DO_TEMPO).read_bytes()
+    _escreve_casa(casa, suite_s=2250.0)  # -6%: dentro de 10%
+    assert _roda(raiz, casa, "--fechar") == 0
+    assert (raiz / CADERNO_DO_TEMPO).read_bytes() == antes
+
+
+def test_a_mediana_ignora_uma_corrida_lenta(mundo: tuple[Path, Path]) -> None:
+    raiz, casa = mundo
+    lenta = casa / "rapido-0099.log"
+    lenta.write_text("tempo: 400 s de parede; 900 s de portão somados.\n", encoding="utf-8")
+    os.utime(lenta, (2_000_000, 2_000_000))
+    censo = TEMPO.censo_do_rapido(casa)
+    assert censo.numero == 40 and censo.universo == 8
+    assert _roda(raiz, casa) == 0
+
+
+def test_medida_sem_dado_avisa_no_fecho_e_reprova_no_modo_simples(
+        mundo: tuple[Path, Path], capsys: pytest.CaptureFixture[str]) -> None:
+    raiz, casa = mundo
+    for log in casa.glob("rapido-*.log"):
+        log.unlink()
+    assert _roda(raiz, casa, "--fechar") == 0
+    assert "AVISO rapido-mediana-s" in capsys.readouterr().out
+    assert _roda(raiz, casa) == 1, "piso numérico sobre o que não se mede é piso falso"
+    assert _piso(raiz, TEMPO.RAPIDO)["piso"] == 40
+
+
+def test_suite_com_parte_faltando_nao_vira_zero(tmp_path: Path) -> None:
+    _escreve_casa(tmp_path)
+    (tmp_path / "fecho" / "suite" / "parte-07.txt").unlink()
+    censo = TEMPO.censo_da_suite(tmp_path)
+    assert censo.numero is None and "parte-07" in (censo.indisponivel or "")
+    (tmp_path / "fecho" / "suite" / "parte-07.txt").write_text("sem sumário\n", encoding="utf-8")
+    assert TEMPO.censo_da_suite(tmp_path).numero is None
+
+
+def test_o_processo_proprio_do_webkit_entra_na_soma(tmp_path: Path) -> None:
+    _escreve_casa(tmp_path, suite_s=2400.0)
+    base = TEMPO.censo_da_suite(tmp_path).numero
+    parte = tmp_path / "fecho" / "suite" / "parte-00.txt"
+    parte.write_text(parte.read_text(encoding="utf-8")
+                     + "    test_a, em processo próprio: 14 passed in 50.00s\n", encoding="utf-8")
+    assert TEMPO.censo_da_suite(tmp_path).numero == base + 50
+
+
+def test_medida_sem_piso_e_sem_piso_nunca_verde(mundo: tuple[Path, Path]) -> None:
+    raiz, casa = mundo
+    arquivo = raiz / CADERNO_DO_TEMPO
+    caderno = json.loads(arquivo.read_text(encoding="utf-8"))
+    del caderno["medidas"][TEMPO.COMPLETO]
+    arquivo.write_text(json.dumps(caderno), encoding="utf-8")
+    assert _roda(raiz, casa) == 1
+    assert _roda(raiz, casa, "--fechar") == 1
+
+
+def test_sem_folga_no_caderno_a_catraca_recusa(mundo: tuple[Path, Path]) -> None:
+    raiz, casa = mundo
+    arquivo = raiz / CADERNO_DO_TEMPO
+    caderno = json.loads(arquivo.read_text(encoding="utf-8"))
+    del caderno["medidas"][TEMPO.SUITE]["folga"]
+    arquivo.write_text(json.dumps(caderno), encoding="utf-8")
+    assert _roda(raiz, casa) == 2
+
+
+def test_o_caderno_da_casa_tem_as_tres_medidas_com_folga_e_piso() -> None:
+    caderno = json.loads((RAIZ / CADERNO_DO_TEMPO).read_text(encoding="utf-8"))["medidas"]
+    assert set(caderno) == {TEMPO.SUITE, TEMPO.RAPIDO, TEMPO.COMPLETO}
+    for nome, registro in caderno.items():
+        assert isinstance(registro["piso"], int) and registro["piso"] > 0, nome
+        assert isinstance(registro["folga"], int) and 0 < registro["folga"] <= 30, nome
+
+
+def test_mordida_sem_a_folga_o_ruido_reprova(
+        mundo: tuple[Path, Path], monkeypatch: pytest.MonkeyPatch) -> None:
+    """Com a folga zerada, o mesmo +8% do caso «dentro da folga» reprova: o caso depende dela."""
+    raiz, casa = mundo
+    _escreve_casa(casa, suite_s=2600.0)
+    assert _roda(raiz, casa) == 0
+    monkeypatch.setattr(TEMPO.CatracaDoTempo, "folga", lambda self, nome: 0)
+    assert _roda(raiz, casa) == 1, "a mordida não mordeu: a folga não decide nada"
+
+
+def test_mordida_sem_o_pagamento_a_subida_com_tempo_reprova(
+        mundo: tuple[Path, Path], monkeypatch: pytest.MonkeyPatch) -> None:
+    raiz, casa = mundo
+    base = _topo(raiz)
+    _commit(raiz, "chore(x): a\n\nTempo: suite-pytest-s uma razão")
+    _escreve_casa(casa, suite_s=2800.0)
+    monkeypatch.setattr(TEMPO, "pagamentos_da_faixa", lambda *_a, **_k: {})
+    assert _roda(raiz, casa, "--fechar", base=base) == 1, "sem o trailer a subida não passa"
