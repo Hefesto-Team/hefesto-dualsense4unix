@@ -228,6 +228,12 @@ INVENTARIO: tuple[Lugar, ...] = (
         "a fila de números (quem é P1..P4) por endereço, DualSense e externos",
     ),
     Lugar(
+        "fila-ilegivel", "config", f"{_C}/controllers.json.ilegivel-*",
+        "daemon/subsystems/identity.py:SUFIXO_DO_ILEGIVEL",
+        USUARIO, CONTROLES, MOVER,
+        "os bytes do controllers.json que não se leram, guardados antes da escrita",
+    ),
+    Lugar(
         "mascaras-por-aparelho", "config", f"{_C}/controller_masks.json",
         "daemon/subsystems/external_mask.py:_MASKS_FILE",
         USUARIO, CONTROLES, MOVER,

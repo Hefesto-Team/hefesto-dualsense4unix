@@ -1392,15 +1392,13 @@ class ControllerIdentityRegistry:
             if self._loaded:
                 return
             self._loaded = True
-            with CONTROLLERS_FILE_LOCK:
-                try:
-                    data = json.loads(self._path().read_text(encoding="utf-8"))
-                except (FileNotFoundError, json.JSONDecodeError, OSError):
-                    return
-                except Exception as exc:
-                    logger.debug("identity_load_falhou", err=str(exc))
-                    return
-            if not isinstance(data, dict):
+            try:
+                with CONTROLLERS_FILE_LOCK:
+                    data = ler_a_fila(self._path())
+            except ArquivoDaFilaIlegivelError as exc:
+                avisar_a_fila_ilegivel(exc, "dualsense")
+                return
+            if data is None:
                 return
             if data.get("version") != CONTROLLERS_SCHEMA_VERSION:
                 # sempre, agora que nada mais expira. NUM-01 é exatamente um
@@ -1453,13 +1451,12 @@ class ControllerIdentityRegistry:
             with CONTROLLERS_FILE_LOCK:
                 path = self._path()
                 existente: Any = None
-                with contextlib.suppress(Exception):
-                    bruto = json.loads(path.read_text(encoding="utf-8"))
-                    if (
-                        isinstance(bruto, dict)
-                        and bruto.get("version") == CONTROLLERS_SCHEMA_VERSION
-                    ):
-                        existente = bruto
+                bruto = ler_a_fila_para_gravar(path)
+                if (
+                    bruto is not None
+                    and bruto.get("version") == CONTROLLERS_SCHEMA_VERSION
+                ):
+                    existente = bruto
                 payload: dict[str, Any] = {}
                 payload["version"] = CONTROLLERS_SCHEMA_VERSION
                 payload["boot_id"] = _session_anchor()
@@ -1664,6 +1661,89 @@ def relogio_do_lugar_guardado() -> float:
     return relogio_do_prazo()
 
 
+# Mora no fim do módulo porque o mapa de canais cita este arquivo por linha.
+#: O sufixo da cópia do ``controllers.json`` ilegível, guardada ao lado antes da
+#: primeira escrita sobre ele.
+SUFIXO_DO_ILEGIVEL = ".ilegivel-"
+
+
+class ArquivoDaFilaIlegivelError(ValueError):
+    """O ``controllers.json`` existe e não se lê como um objeto JSON."""
+
+    def __init__(self, caminho: Path, motivo: str) -> None:
+        super().__init__(f"{caminho}: {motivo}")
+        self.caminho = caminho
+        self.motivo = motivo
+
+
+def ler_a_fila(caminho: Path) -> dict[str, Any] | None:
+    """O JSON do ``controllers.json`` quando ele é um objeto; ``None`` sem arquivo.
+
+    O arquivo que existe e não se lê (JSON quebrado, bytes que não são texto,
+    documento que não é objeto) levanta :class:`ArquivoDaFilaIlegivelError`: ele não
+    vale como ausente, porque a escrita seguinte o apagaria. Os dois donos da fila
+    (DualSense e externos) leem por aqui, sob o ``CONTROLLERS_FILE_LOCK``.
+    """
+    try:
+        bruto = json.loads(caminho.read_text(encoding="utf-8"))
+    except (FileNotFoundError, OSError):
+        return None
+    except ValueError as exc:
+        raise ArquivoDaFilaIlegivelError(caminho, type(exc).__name__) from exc
+    except Exception as exc:
+        logger.debug("identity_load_falhou", err=str(exc))
+        return None
+    if not isinstance(bruto, dict):
+        raise ArquivoDaFilaIlegivelError(caminho, f"documento {type(bruto).__name__}")
+    return bruto
+
+
+def avisar_a_fila_ilegivel(exc: ArquivoDaFilaIlegivelError, dono: str) -> None:
+    """O aviso da carga: o ``controllers.json`` não se leu e o ``dono`` começa vazio."""
+    logger.warning(
+        "identidade_ilegivel", dono=dono, caminho=str(exc.caminho), motivo=exc.motivo
+    )
+
+
+def guardar_a_fila_ilegivel(caminho: Path) -> Path:
+    """Move o arquivo ilegível para o lado (``controllers.json.ilegivel-<data>``)."""
+    import time
+
+    base = f"{caminho.name}{SUFIXO_DO_ILEGIVEL}{time.strftime('%Y%m%d-%H%M%S')}"
+    destino = caminho.with_name(base)
+    n = 2
+    while destino.exists():
+        destino = caminho.with_name(f"{base}-{n}")
+        n += 1
+    os.replace(caminho, destino)
+    logger.warning(
+        "identidade_ilegivel_guardado", caminho=str(caminho), guardado_em=str(destino)
+    )
+    return destino
+
+
+def ler_a_fila_para_gravar(caminho: Path) -> dict[str, Any] | None:
+    """A fila do disco para o read-modify-write; o ilegível vai para o lado antes.
+
+    Devolve o documento (ou ``None`` sem arquivo legível) quando a escrita pode
+    seguir. Levanta ``OSError`` quando o arquivo ilegível não pôde ser guardado: a
+    escrita não segue, e o original fica onde estava. Sob o ``CONTROLLERS_FILE_LOCK``.
+    """
+    try:
+        return ler_a_fila(caminho)
+    except ArquivoDaFilaIlegivelError as exc:
+        try:
+            guardar_a_fila_ilegivel(exc.caminho)
+        except OSError as erro:
+            logger.warning(
+                "identidade_ilegivel_nao_guardado",
+                caminho=str(exc.caminho),
+                err=str(erro),
+            )
+            raise
+        return None
+
+
 __all__ = [
     "CONTROLLERS_FILE_LOCK",
     "CONTROLLERS_SCHEMA_VERSION",
@@ -1672,8 +1752,14 @@ __all__ = [
     "KIND_DUALSENSE",
     "KIND_EXTERNAL",
     "ORDER_FIELD",
+    "SUFIXO_DO_ILEGIVEL",
+    "ArquivoDaFilaIlegivelError",
     "ControllerIdentityRegistry",
+    "avisar_a_fila_ilegivel",
     "get_identity_registry",
+    "guardar_a_fila_ilegivel",
+    "ler_a_fila",
+    "ler_a_fila_para_gravar",
     "make_auto_output_provider",
     "merged_order_payload",
     "order_entries",

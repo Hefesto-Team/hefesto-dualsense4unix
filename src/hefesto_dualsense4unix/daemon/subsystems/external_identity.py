@@ -792,15 +792,15 @@ class ExternalIdentityRegistry:
             if self._loaded:
                 return
             self._loaded = True
-            with CONTROLLERS_FILE_LOCK:
-                try:
-                    data = json.loads(self._path().read_text(encoding="utf-8"))
-                except (FileNotFoundError, json.JSONDecodeError, OSError):
-                    return
-                except Exception as exc:
-                    logger.debug("external_identity_load_falhou", err=str(exc))
-                    return
-            if not isinstance(data, dict):
+            # O arquivo que existe e não se lê não vale como ausente: avisa e começa
+            # vazia, e a primeira escrita o guarda ao lado antes da fila nova.
+            try:
+                with CONTROLLERS_FILE_LOCK:
+                    data = ler_a_fila(self._path())
+            except ArquivoDaFilaIlegivelError as exc:
+                avisar_a_fila_ilegivel(exc, "externos")
+                return
+            if data is None:
                 return
             if data.get("version") != CONTROLLERS_SCHEMA_VERSION:
                 logger.info(
@@ -869,15 +869,15 @@ class ExternalIdentityRegistry:
                 path = self._path()
                 data: dict[str, Any] = {}
                 existente: Any = None
-                with contextlib.suppress(Exception):
-                    loaded = json.loads(path.read_text(encoding="utf-8"))
-                    # R-23 (espelho do lado DualSense): arquivo de OUTRO
-                    if (
-                        isinstance(loaded, dict)
-                        and loaded.get("version") == CONTROLLERS_SCHEMA_VERSION
-                    ):
-                        data = loaded
-                        existente = loaded
+                # O ilegível vai para o lado antes; se não puder, a escrita não segue.
+                loaded = ler_a_fila_para_gravar(path)
+                # R-23 (espelho do lado DualSense): arquivo de OUTRO
+                if (
+                    loaded is not None
+                    and loaded.get("version") == CONTROLLERS_SCHEMA_VERSION
+                ):
+                    data = loaded
+                    existente = loaded
                 # DualSense — os dois escrevem os MESMOS dois campos.
                 data["version"] = CONTROLLERS_SCHEMA_VERSION
                 data["boot_id"] = _session_anchor()
@@ -1312,6 +1312,10 @@ class ExternalLedSync:
 
 # guardado dos DualSense, que pergunta ao dono único dos prazos. O import mora
 from hefesto_dualsense4unix.daemon.subsystems.identity import (  # noqa: E402
+    ArquivoDaFilaIlegivelError,
+    avisar_a_fila_ilegivel,
+    ler_a_fila,
+    ler_a_fila_para_gravar,
     relogio_do_lugar_guardado,
 )
 
