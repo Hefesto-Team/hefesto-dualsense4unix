@@ -249,14 +249,14 @@
       "data": "2026-10-16",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1116018,
+      "piso": 1116223,
       "por_item": {
-        "docs": 119020,
+        "docs": 119065,
         "scripts": 114042,
         "src": 299145,
-        "tests": 583811
+        "tests": 583971
       },
-      "razao": "tamanho: +942 linhas (1115076 -> 1116018), pagas por Origem: D-1510-O-REPOSITORIO-DA-EXTENSAO-B-E-HEFESTO-MOD-LOVENSE-REMOTE; registrado no fecho, topo e8dc7d6921fd",
+      "razao": "tamanho: +205 linhas (1116018 -> 1116223), pagas por Origem: D-1610-O-CI-TEM-PRAZO-NO-APT-E-EM-CADA-JOB; registrado no fecho, topo 19a4fd8133d7",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -461,10 +461,16 @@
           "de": 1115076,
           "para": 1116018,
           "razao": "tamanho: +942 linhas (1115076 -> 1116018), pagas por Origem: D-1510-O-REPOSITORIO-DA-EXTENSAO-B-E-HEFESTO-MOD-LOVENSE-REMOTE; registrado no fecho, topo e8dc7d6921fd"
+        },
+        {
+          "data": "2026-10-16",
+          "de": 1116018,
+          "para": 1116223,
+          "razao": "tamanho: +205 linhas (1116018 -> 1116223), pagas por Origem: D-1610-O-CI-TEM-PRAZO-NO-APT-E-EM-CADA-JOB; registrado no fecho, topo 19a4fd8133d7"
         }
       ],
       "unidade": "linhas",
-      "universo": 2900
+      "universo": 2901
     }
   }
 }
