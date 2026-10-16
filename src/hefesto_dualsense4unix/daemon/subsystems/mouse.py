@@ -66,6 +66,31 @@ def stop_mouse_emulation(daemon: DaemonProtocol, *, persist: bool = True) -> Non
     logger.info("mouse_emulation_stopped", persist=persist)
 
 
+def _entregar_o_ajuste(daemon: Any, device: Any) -> None:
+    """Entrega ao device o ajuste do cursor que vale AGORA (e a época dele). Nunca levanta."""
+    try:
+        from hefesto_dualsense4unix.integrations.uinput_mouse import ajuste_ativo
+
+        ajuste, epoca = ajuste_ativo(getattr(daemon, "store", None))
+        device.definir_ajuste(ajuste, epoca)
+    except Exception as exc:
+        logger.warning("cursor_ajuste_falhou", err=str(exc))
+
+
+def soltar_o_cursor(daemon: Any) -> None:
+    """Solta o clique que o botão travado segura, no mouse do desktop e no da tabela.
+
+    Para quem perde o controle (queda de leitura) ou sai do jogo: o clique preso não pode
+    sobreviver a quem o prendeu. Idempotente; nunca levanta.
+    """
+    tabela = getattr(daemon, "_tabela_no_jogo", None)
+    for device in (getattr(daemon, "_mouse_device", None), getattr(tabela, "_mouse", None)):
+        solta = getattr(device, "soltar_o_clique_travado", None)
+        if solta is not None:
+            with contextlib.suppress(OSError):
+                solta()
+
+
 def dispatch_mouse(daemon: DaemonProtocol, state: Any, buttons_pressed: frozenset[str]) -> None:
     """Traduz o estado do controle em eventos de mouse+teclado virtual.
 
@@ -75,6 +100,7 @@ def dispatch_mouse(daemon: DaemonProtocol, state: Any, buttons_pressed: frozense
     device = daemon._mouse_device
     if device is None:
         return
+    _entregar_o_ajuste(daemon, device)
     try:
         device.dispatch(
             lx=state.raw_lx,
@@ -273,6 +299,10 @@ class TabelaNoJogo:
             with contextlib.suppress(Exception):
                 self._mouse.dispatch(
                     lx=128, ly=128, rx=128, ry=128, l2=0, r2=0, buttons=frozenset())
+            solta = getattr(self._mouse, "soltar_o_clique_travado", None)
+            if solta is not None:
+                with contextlib.suppress(OSError):
+                    solta()
 
     def fechar(self) -> None:
         """Solta e destrói os dois devices. Idempotente."""
@@ -305,6 +335,7 @@ class TabelaNoJogo:
             if com_modo:
                 botoes, outro_l2, outro_r2 = _com_o_modo(store, uniq, botoes, outro_l2, outro_r2)
             conjunto |= botoes_com_os_gatilhos(botoes, outro_l2, outro_r2)
+        _entregar_o_ajuste(daemon, self._mouse)
         try:
             self._mouse.dispatch(
                 lx=state.raw_lx,
@@ -503,6 +534,7 @@ def discard_touchpad_motion(daemon: DaemonProtocol) -> None:
 __all__ = [
     "discard_touchpad_motion",
     "dispatch_mouse",
+    "soltar_o_cursor",
     "start_mouse_emulation",
     "stop_mouse_emulation",
 ]

@@ -31,6 +31,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     Profile,
     ProfileAnalogicosConfig,  # (noqa-acento)
     ProfileAtivacaoConfig,
+    ProfileCursorConfig,
     ProfileMouseConfig,
     ProfileSpeakerConfig,
     RumbleConfig,
@@ -784,6 +785,8 @@ class ComputadorGlobal(BaseModel):
     ativacao: ProfileAtivacaoConfig | None = None
     #: A zona morta, a curva e a mão dos analógicos: também necessidade de quem joga.
     analogicos: ProfileAnalogicosConfig | None = None  # (noqa-acento)
+    #: O cursor do controle (precisão, permanência, clique travado): só do primeiro controle.
+    cursor: ProfileCursorConfig | None = None
 
     @model_validator(mode="after")
     def _botoes_e_teclas_pelo_dono(self) -> ComputadorGlobal:

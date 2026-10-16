@@ -218,6 +218,18 @@ _CLASSIFICACAO: dict[str, SecaoPorApplier | SecaoDireta] = {
             "rotas de ativação passam."
         )
     ),
+    "cursor": SecaoDireta(
+        razao=(
+            "O-CURSOR-GANHA-PRECISAO-PERMANENCIA-E-CLIQUE-TRAVADO-01 (16/10/2026). "
+            "`apply_acessibilidade` monta o ajuste (`uinput_mouse.montar_o_ajuste`) e o "
+            "DEPOSITA no `store` do gerente, sempre, inclusive `None`, para o ajuste do "
+            "jogo anterior não contagiar o seguinte (e o clique travado solta). Nada é "
+            "escrito no controle. Quem obedece é o mouse virtual, que recebe o ajuste do "
+            "`store` a cada tique (`subsystems.mouse.dispatch_mouse` e `TabelaNoJogo.tick`). "
+            "Não é applier injetado pelo mesmo motivo do `remapeamento`: o `store` é o que "
+            "TODAS as rotas de ativação passam."
+        )
+    ),
     "controllers": SecaoDireta(
         razao=(
             "Mapa ADITIVO de overrides por controle físico: `apply` o resolve "

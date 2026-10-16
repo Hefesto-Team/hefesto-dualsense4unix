@@ -13,6 +13,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     Profile,
     ProfileAnalogicosConfig,  # (noqa-acento)
     ProfileAtivacaoConfig,
+    ProfileCursorConfig,
     ProfileMouseConfig,
     ProfileSpeakerConfig,
     RumbleConfig,
@@ -35,6 +36,8 @@ class Secao(NamedTuple):
 
 #: As seções de necessidade de quem joga: valem em todo perfil, e o jogo só as sobrepõe.
 _DA_ACESSIBILIDADE = ("ativacao", "analogicos")  # (noqa-acento)
+#: O cursor é só do primeiro controle: vale no computador, não por controle.
+_GLOBAIS_DA_ACESSIBILIDADE = (*_DA_ACESSIBILIDADE, "cursor")
 
 _CAMPOS_DO_TECLADO = ("teclado_emulado", "teclado_so_no_jogo", "teclado_sempre", "key_bindings")
 
@@ -53,7 +56,8 @@ SECOES: dict[str, Secao] = {
     "teclado": Secao("teclado", "06-navegacao.html", "Teclado",
                      _CAMPOS_DO_TECLADO, _CAMPOS_DO_TECLADO, ()),
     "acessibilidade": Secao("acessibilidade", "06-navegacao.html", "Acessibilidade",
-                            _DA_ACESSIBILIDADE, _DA_ACESSIBILIDADE, _DA_ACESSIBILIDADE),
+                            _GLOBAIS_DA_ACESSIBILIDADE, _GLOBAIS_DA_ACESSIBILIDADE,
+                            _DA_ACESSIBILIDADE),
 }
 
 DO_JOGO: dict[str, str] = {
@@ -85,12 +89,13 @@ _DENSAS: dict[str, dict[str, Any]] = {
 }
 
 _MODELOS: frozenset[str] = frozenset(
-    {"leds", "rumble", "speaker", "mic", "sensores", "mouse", *_DA_ACESSIBILIDADE}
+    {"leds", "rumble", "speaker", "mic", "sensores", "mouse", *_GLOBAIS_DA_ACESSIBILIDADE}
 )
 
 _MODELO_DA_ACESSIBILIDADE: dict[str, Any] = {
     "ativacao": ProfileAtivacaoConfig,  # (noqa-acento)
     "analogicos": ProfileAnalogicosConfig,  # (noqa-acento)
+    "cursor": ProfileCursorConfig,
 }
 
 _CAMPOS_DO_CONTROLE: dict[str, tuple[str, ...]] = {
@@ -238,7 +243,7 @@ def perfil_que_vale(perfil: Profile, computador: Any) -> Profile:
                 atual[campo] = valor
         cru[secao] = atual
     freestyle = e_o_freestyle(perfil.name)
-    for secao in _DA_ACESSIBILIDADE:
+    for secao in _GLOBAIS_DA_ACESSIBILIDADE:
         modelo = getattr(do_global, secao, None)
         if modelo is None:
             continue

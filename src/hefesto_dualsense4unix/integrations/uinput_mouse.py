@@ -121,6 +121,66 @@ def gatilho_apertado(bruto: int) -> bool:
     return bruto >= TRIGGER_PRESS_THRESHOLD
 
 
+#: O gatilho escolhido como botão de precisão vale a partir da metade do curso.
+PRECISAO_DO_GATILHO = 127
+#: Sem notícia do controle por tanto tempo, o clique travado solta na volta (queda do controle).
+TRAVA_SEM_NOTICIA_S = 1.0
+
+_ATRIBUTO_DO_AJUSTE = "_ajuste_do_cursor_da_mesa"
+
+
+@dataclass(frozen=True, slots=True)
+class AjusteDoCursor:
+    """O que o perfil muda no cursor. O padrão é o de hoje: zona morta 20, curva 1,6, nada mais."""
+
+    zona_morta: int = MOVE_DEADZONE
+    curva: float = MOUSE_EXPO
+    precisao_botao: str | None = None
+    precisao: float = 0.3
+    permanencia_s: float = 0.0
+    clique_travado: str | None = None
+
+    @property
+    def algum(self) -> bool:
+        return (
+            self.zona_morta != MOVE_DEADZONE or self.curva != MOUSE_EXPO
+            or self.precisao_botao is not None or self.permanencia_s > 0
+            or self.clique_travado is not None
+        )
+
+
+def montar_o_ajuste(secao: Any) -> AjusteDoCursor | None:
+    """A seção `cursor` do perfil como ajuste. ``None`` = o cursor de sempre."""
+    if secao is None:
+        return None
+    padrao = AjusteDoCursor()
+    ajuste = AjusteDoCursor(
+        zona_morta=int(getattr(secao, "zona_morta", padrao.zona_morta)),
+        curva=float(getattr(secao, "curva", padrao.curva)),
+        precisao_botao=getattr(secao, "precisao_botao", None) or None,
+        precisao=int(getattr(secao, "precisao", 30)) / 100.0,  # (noqa-acento)
+        permanencia_s=int(getattr(secao, "permanencia_ms", 0) or 0) / 1000.0,
+        clique_travado=getattr(secao, "clique_travado", None) or None,
+    )
+    return ajuste if ajuste.algum else None
+
+
+def definir_ajuste_ativo(dono: Any, ajuste: AjusteDoCursor | None) -> None:
+    """Guarda o ajuste ATIVO no dono (o ``StateStore``); cada ativação de perfil conta uma época."""
+    if dono is None:
+        return
+    _, epoca = ajuste_ativo(dono)
+    setattr(dono, _ATRIBUTO_DO_AJUSTE, (ajuste, epoca + 1))
+
+
+def ajuste_ativo(dono: Any) -> tuple[AjusteDoCursor | None, int]:
+    """O ajuste que vale AGORA e a época dele (muda a cada ativação de perfil)."""
+    valor = getattr(dono, _ATRIBUTO_DO_AJUSTE, None)
+    if isinstance(valor, tuple) and len(valor) == 2:
+        return valor
+    return None, 0
+
+
 def _build_capabilities() -> list[tuple[Any, ...]]:
     """Lista de eventos que o uinput device expõe. Import lazy.
 
@@ -152,16 +212,19 @@ def _build_capabilities() -> list[tuple[Any, ...]]:
     return [*rels, *buttons, *keys]
 
 
-def _compute_move_px_per_sec(lx: int, ly: int, speed: int) -> tuple[float, float]:
+def _compute_move_px_per_sec(
+    lx: int, ly: int, speed: int,
+    zona_morta: int = MOVE_DEADZONE, expoente: float = MOUSE_EXPO,
+) -> tuple[float, float]:
     """Converte o stick esquerdo (0-255 por eixo) em velocidade-alvo (px/s)."""
     nx = (lx - STICK_CENTER) / STICK_CENTER
     ny = (ly - STICK_CENTER) / STICK_CENTER
     mag = math.hypot(nx, ny)
-    dz = MOVE_DEADZONE / STICK_CENTER
+    dz = zona_morta / STICK_CENTER
     if mag <= dz:
         return 0.0, 0.0
     m = min(1.0, (mag - dz) / (1.0 - dz))
-    curved = m ** MOUSE_EXPO
+    curved = m ** expoente
     vel = curved * (speed * MOUSE_PX_PER_SEC_STEP)
     return vel * (nx / mag), vel * (ny / mag)
 
@@ -210,6 +273,16 @@ class UinputMouseDevice:
     _giro_carry_y: float = 0.0
     _stick_carry_x: float = 0.0
     _stick_carry_y: float = 0.0
+    # O ajuste de acessibilidade do cursor (None = o de sempre) e o que ele guarda entre tiques.
+    _ajuste: AjusteDoCursor | None = None
+    _epoca: int = 0
+    _fator: float = 1.0
+    _preso: bool = False
+    _travador_antes: bool = False
+    _codigos_reais: frozenset[str] = field(default_factory=frozenset)
+    _andou: bool = False
+    _ultimo_movimento: float = -math.inf
+    _ultimo_dispatch: float = -math.inf
 
     def start(self) -> bool:
         """Cria o device. Retorna False se /dev/uinput indisponível ou módulo ausente."""
@@ -249,6 +322,11 @@ class UinputMouseDevice:
         self._giro_carry_y = 0.0
         self._stick_carry_x = 0.0
         self._stick_carry_y = 0.0
+        self._preso = False
+        self._travador_antes = False
+        self._codigos_reais = frozenset()
+        self._andou = False
+        self._fator = 1.0
 
     def is_active(self) -> bool:
         return self._device is not None
@@ -262,6 +340,33 @@ class UinputMouseDevice:
         if scroll_speed is not None:
             self.scroll_speed = max(SCROLL_SPEED_MIN, min(SCROLL_SPEED_MAX,
                                                           int(scroll_speed)))
+
+    def definir_ajuste(self, ajuste: AjusteDoCursor | None, epoca: int = 0) -> None:
+        """Troca o ajuste do cursor. Cada ativação de perfil (época nova) solta o clique travado."""
+        if ajuste == self._ajuste and epoca == self._epoca:
+            return
+        self._ajuste = ajuste
+        self._epoca = epoca
+        self._fator = 1.0
+        self._andou = False
+        self._travador_antes = False
+        self.soltar_o_clique_travado()
+
+    def soltar_o_clique_travado(self) -> None:
+        """Solta o clique que o travador prendeu (a soltura é garantida: perfil, jogo, queda)."""
+        if not self._preso:
+            return
+        self._preso = False
+        restante = self._codigos_reais
+        soltar = self._codigos_apertados - restante
+        self._codigos_apertados = restante
+        if self._device is None or self._uinput_mod is None or not soltar:
+            return
+        for codigo in sorted(soltar):
+            ev = getattr(self._uinput_mod, codigo, None)
+            if ev is not None:
+                self._device.emit(ev, 0, syn=False)
+        self._device.syn()
 
     def set_button_actions(
         self,
@@ -329,7 +434,9 @@ class UinputMouseDevice:
         """Solta os cliques e as setas que a tabela ANTERIOR mantinha: ela deixou de valer."""
         segurados = self._codigos_apertados | self._setas_apertadas
         self._codigos_apertados = frozenset()
+        self._codigos_reais = frozenset()
         self._setas_apertadas = frozenset()
+        self._preso = False
         if self._device is None or self._uinput_mod is None or not segurados:
             return
         for codigo in sorted(segurados):
@@ -368,14 +475,66 @@ class UinputMouseDevice:
             now = time.monotonic()
 
         emulated = self._resolve_emulated_set(buttons, l2, r2)
+        ajuste = self._ajuste
+        if ajuste is not None:
+            buttons, emulated = self._ajudar(ajuste, buttons, emulated, l2, r2, now)
         self._emit_buttons(emulated)
         self._emit_dpad(buttons)
         self._emit_edge_keys(buttons)
         if self._cursor_ligado:
-            self._emit_move(lx, ly)
+            self._emit_move(lx, ly, now)
         if self._rolagem_ligada:
             self._emit_scroll(rx, ry, now)
         self._prev_edge_keys = frozenset(b for b in buttons if b in self._mapa_tap)
+        if ajuste is not None and ajuste.permanencia_s > 0:
+            self._conferir_a_permanencia(ajuste, now)
+
+    def _ajudar(
+        self, ajuste: AjusteDoCursor, buttons: frozenset[str], emulated: frozenset[str],
+        l2: int, r2: int, now: float,
+    ) -> tuple[frozenset[str], frozenset[str]]:
+        """A precisão e o clique travado deste tique. Devolve os botões que SOBRAM para a tabela.
+
+        O botão da precisão e o do travador são do cursor: um botão tem um modo só, então
+        eles não clicam nem viram seta ao mesmo tempo.
+        """
+        if self._preso and (now - self._ultimo_dispatch) > TRAVA_SEM_NOTICIA_S:
+            self.soltar_o_clique_travado()
+        self._ultimo_dispatch = now
+        bruto = {"l2": l2, "r2": r2}
+        precisao = ajuste.precisao_botao
+        if precisao is None:
+            self._fator = 1.0
+        else:
+            apertado = (
+                bruto[precisao] >= PRECISAO_DO_GATILHO if precisao in bruto
+                else precisao in buttons)
+            self._fator = ajuste.precisao if apertado else 1.0
+        travador = ajuste.clique_travado
+        if travador is not None:
+            apertado = (
+                gatilho_apertado(bruto[travador]) if travador in bruto else travador in buttons)
+            if apertado and not self._travador_antes:
+                self._preso = not self._preso
+            self._travador_antes = apertado
+        consumidos = frozenset(b for b in (precisao, travador) if b is not None)
+        return buttons - consumidos, emulated - consumidos
+
+    def _notou_movimento(self, now: float) -> None:
+        """O cursor foi pedido a andar neste instante (a permanência conta daqui)."""
+        self._andou = True
+        self._ultimo_movimento = now
+
+    def _conferir_a_permanencia(self, ajuste: AjusteDoCursor, now: float) -> None:
+        """Parado por `permanencia_s` depois de andar: um clique; outro só andando de novo."""
+        if not self._andou or (now - self._ultimo_movimento) < ajuste.permanencia_s:
+            return
+        self._andou = False
+        if "BTN_LEFT" in self._codigos_apertados or self._device is None:
+            return
+        u = self._uinput_mod
+        self._device.emit(u.BTN_LEFT, 1)
+        self._device.emit(u.BTN_LEFT, 0)
 
     def _resolve_emulated_set(
         self, buttons: frozenset[str], l2: int, r2: int
@@ -395,8 +554,10 @@ class UinputMouseDevice:
     def _emit_buttons(self, emulated: frozenset[str]) -> None:
         """Edge-triggered press/release dos botões do mouse, POR CÓDIGO `BTN_*`."""
         u = self._uinput_mod
-        agora = frozenset(
+        reais = frozenset(
             self._mapa_botoes[b] for b in emulated if b in self._mapa_botoes)
+        self._codigos_reais = reais
+        agora = reais | {"BTN_LEFT"} if self._preso else reais
         antes = self._codigos_apertados
 
         newly_pressed = agora - antes
@@ -459,7 +620,7 @@ class UinputMouseDevice:
             self._device.emit(ev, 0, syn=False)
         self._device.syn()
 
-    def _emit_move(self, lx: int, ly: int) -> None:
+    def _emit_move(self, lx: int, ly: int, now: float | None = None) -> None:
         """Stick esquerdo → REL_X/REL_Y (pipeline float, FEAT-MOUSE-CURSOR-FEEL-01).
 
         Integra a velocidade-alvo (px/s de `_compute_move_px_per_sec`) pelo
@@ -468,14 +629,21 @@ class UinputMouseDevice:
         zero — simétrico para deltas negativos. Dentro da deadzone os carries
         são zerados para o resíduo não vazar como drift ao voltar a mover.
         """
-        vx, vy = _compute_move_px_per_sec(lx, ly, self.mouse_speed)
+        ajuste = self._ajuste
+        if ajuste is None:
+            vx, vy = _compute_move_px_per_sec(lx, ly, self.mouse_speed)
+        else:
+            vx, vy = _compute_move_px_per_sec(
+                lx, ly, self.mouse_speed, ajuste.zona_morta, ajuste.curva)
         if vx == 0.0 and vy == 0.0:
             self._stick_carry_x = 0.0
             self._stick_carry_y = 0.0
             return
+        if ajuste is not None:
+            self._notou_movimento(time.monotonic() if now is None else now)
         period = 1.0 / max(1, self.poll_hz)
-        self._stick_carry_x += vx * period
-        self._stick_carry_y += vy * period
+        self._stick_carry_x += vx * period * self._fator
+        self._stick_carry_y += vy * period * self._fator
         ix = int(self._stick_carry_x)
         iy = int(self._stick_carry_y)
         self._stick_carry_x -= ix
@@ -495,7 +663,7 @@ class UinputMouseDevice:
         step_h = _compute_scroll_step(rx)
         if step_v == 0 and step_h == 0:
             return
-        if (now - self._last_scroll_at) < SCROLL_RATE_LIMIT_SEC:
+        if (now - self._last_scroll_at) < SCROLL_RATE_LIMIT_SEC / self._fator:
             return
 
         u = self._uinput_mod
@@ -506,13 +674,15 @@ class UinputMouseDevice:
         self._device.syn()
         self._last_scroll_at = now
 
-    def emit_touchpad_move(self, raw_dx: int, raw_dy: int) -> None:
+    def emit_touchpad_move(self, raw_dx: int, raw_dy: int, now: float | None = None) -> None:
         """Move o cursor a partir de um delta bruto do touchpad (B4)."""
         if self._device is None or self._uinput_mod is None:
             return
         if raw_dx == 0 and raw_dy == 0:
             return
-        factor = TOUCHPAD_SENSITIVITY * (self.mouse_speed / DEFAULT_MOUSE_SPEED)
+        if self._ajuste is not None:
+            self._notou_movimento(time.monotonic() if now is None else now)
+        factor = TOUCHPAD_SENSITIVITY * (self.mouse_speed / DEFAULT_MOUSE_SPEED) * self._fator
         self._tp_carry_x += raw_dx * factor
         self._tp_carry_y += raw_dy * factor
         ix = int(self._tp_carry_x)
@@ -528,14 +698,16 @@ class UinputMouseDevice:
             self._device.emit(u.REL_Y, iy, syn=False)
         self._device.syn()
 
-    def emit_gyro_move(self, px_x: float, px_y: float) -> None:
+    def emit_gyro_move(self, px_x: float, px_y: float, now: float | None = None) -> None:
         """Move o cursor a partir de um deslocamento já em PIXELS float."""
         if self._device is None or self._uinput_mod is None:
             return
         if px_x == 0.0 and px_y == 0.0:
             return
-        self._giro_carry_x += px_x
-        self._giro_carry_y += px_y
+        if self._ajuste is not None:
+            self._notou_movimento(time.monotonic() if now is None else now)
+        self._giro_carry_x += px_x * self._fator
+        self._giro_carry_y += px_y * self._fator
         ix = int(self._giro_carry_x)
         iy = int(self._giro_carry_y)
         self._giro_carry_x -= ix
@@ -676,16 +848,22 @@ __all__ = [
     "MOUSE_PX_PER_SEC_STEP",
     "MOVE_DEADZONE",
     "NOME_DO_CURSOR_DO_TOQUE",
+    "PRECISAO_DO_GATILHO",
     "SCROLL_DEADZONE",
     "SCROLL_RATE_LIMIT_SEC",
     "TOKEN_CURSOR",
     "TOKEN_ROLAGEM",
     "TOUCHPAD_SENSITIVITY",
+    "TRAVA_SEM_NOTICIA_S",
     "TRIGGER_PRESS_THRESHOLD",
+    "AjusteDoCursor",
     "CursorDoToque",
     "UinputMouseDevice",
     "_compute_move_px_per_sec",
     "_compute_scroll_step",
+    "ajuste_ativo",
+    "definir_ajuste_ativo",
     "gatilho_apertado",
+    "montar_o_ajuste",
 ]
 

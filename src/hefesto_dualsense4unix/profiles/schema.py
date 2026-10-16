@@ -566,6 +566,41 @@ class ProfileAnalogicosConfig(BaseModel):  # (noqa-acento)
         return self
 
 
+class ProfileCursorConfig(BaseModel):
+    """O cursor do controle (O-CURSOR-GANHA-PRECISAO-PERMANENCIA-E-CLIQUE-TRAVADO-01).
+
+    Aditiva ao schema v1: perfil sem a seção anda o cursor como sempre (zona morta 20, curva 1,6).
+    ``precisao_botao`` é o botão que, apertado, reduz o cursor e a rolagem a ``precisão`` %; o
+    gatilho vale a partir da metade do curso. ``permanencia_ms`` clica sozinho depois de andar e
+    parar (zero desliga). ``clique_travado`` é o botão que prende o clique esquerdo num toque e
+    o solta no outro. Esses dois botões são do cursor: não clicam nem viram seta junto.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    zona_morta: int = Field(default=20, ge=0, le=60)
+    curva: float = Field(default=1.6, ge=1.0, le=3.0)
+    precisao_botao: str | None = None
+    precisao: int = Field(default=30, ge=10, le=100)
+    permanencia_ms: int = Field(default=0, ge=0, le=3000)
+    clique_travado: str | None = None
+
+    @model_validator(mode="after")
+    def _botoes_e_tempo(self) -> ProfileCursorConfig:
+        """Botão que o controle não tem, o mesmo botão em dois ofícios, permanência de gatilho."""
+        from hefesto_dualsense4unix.core.ativacao_de_botao import ATIVAVEIS
+
+        for campo in ("precisao_botao", "clique_travado"):
+            valor = getattr(self, campo)
+            if valor is not None and valor not in ATIVAVEIS:
+                raise ValueError(f"cursor: {campo} {valor!r} não é um botão do controle")
+        if self.precisao_botao is not None and self.precisao_botao == self.clique_travado:
+            raise ValueError("cursor: um botão tem um ofício só (precisão ou clique travado)")
+        if 0 < self.permanencia_ms < 300:
+            raise ValueError("cursor: a permanência abaixo de 300 ms clica sem querer")
+        return self
+
+
 class ProfileMouseConfig(BaseModel):
     """Seção opcional de emulação de mouse por perfil (FEAT-POINT-AND-CLICK-01)."""
 
@@ -1367,6 +1402,7 @@ class Profile(BaseModel):
     movimento: ProfileMovimentoConfig | None = None
     ativacao: ProfileAtivacaoConfig | None = None
     analogicos: ProfileAnalogicosConfig | None = None  # (noqa-acento)
+    cursor: ProfileCursorConfig | None = None
     mouse: ProfileMouseConfig | None = None
     # flag global `keyboard_emulation.flag` (utils/session.py:306), enquanto o
     # Por 24 dias foi verdade —
@@ -1431,6 +1467,7 @@ class Profile(BaseModel):
                 "ponte", "remapeamento", "movimento", "estilo", "receita_do_tato",
                 "ativacao",  # (noqa-acento)
                 "analogicos",  # (noqa-acento)
+                "cursor",
                 "marcas", "controles_modo", "criado_em", "modificado_em",
                 "alvo", "evento", "evento_comando",
             ):
@@ -2566,6 +2603,32 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
     "ProfileAnalogicosConfig.gatilho_fim": Nascimento(
         E_CONTRATO, "Zero = o gatilho chega ao fim só no fim do curso, como o controle entrega."
     ),
+    "Profile.cursor": Nascimento(
+        NASCE_NO_LEITOR,
+        "`None` = o cursor anda como sempre (zona morta 20, curva 1,6, sem precisão, sem clique "
+        "por permanência, sem clique travado). Esses ajustes são necessidade de quem joga, não "
+        "de fábrica: ligados sem pedido, o cursor ficaria diferente.",
+        dono="hefesto_dualsense4unix.integrations.uinput_mouse:montar_o_ajuste",
+    ),
+    "ProfileCursorConfig.zona_morta": Nascimento(
+        E_CONTRATO, "20 é a zona morta de sempre (de 128); zero tira o curso morto."
+    ),
+    "ProfileCursorConfig.curva": Nascimento(
+        E_CONTRATO, "1,6 é a curva de sempre; 1 é linear e 3 é a mais fechada."
+    ),
+    "ProfileCursorConfig.precisao_botao": Nascimento(
+        E_CONTRATO, "Vazio = nenhum botão de precisão; só existe por gesto de quem joga."
+    ),
+    "ProfileCursorConfig.precisao": Nascimento(
+        E_CONTRATO, "30 % é a proposta de fábrica ao escolher o botão; 100 não reduz nada."
+    ),
+    "ProfileCursorConfig.permanencia_ms": Nascimento(
+        E_CONTRATO, "Zero = nenhum clique por permanência; clicar sozinho só por gesto de "
+        "quem joga."
+    ),
+    "ProfileCursorConfig.clique_travado": Nascimento(
+        E_CONTRATO, "Vazio = nenhum botão prende o clique; só existe por gesto de quem joga."
+    ),
     "Profile.mouse": Nascimento(
         AGUARDA_A_PALAVRA_DELA,
         "A ÚNICA assimetria que sobra depois da triagem: o teclado emulado "
@@ -2795,6 +2858,7 @@ __all__ = [
     "PecaDaEconomia",
     "PonteConfirmada",
     "Profile",
+    "ProfileCursorConfig",
     "ProfileMicConfig",
     "ProfileMouseConfig",
     "ProfileSpeakerConfig",

@@ -270,6 +270,17 @@ _PERNAS: dict[str, dict[str, Resposta]] = {
             "profiles/manager.py::apply_acessibilidade", "nenhum lançador no caminho"
         ),
     },
+    "cursor": {
+        VOLTA: NaoSeAplica(
+            "é depositado no `store` do gerente e lido por tique pelo mouse virtual "
+            "(`dispatch_mouse` e a tabela com o jogo); o controle que cai solta o clique "
+            "travado pelo silêncio de um segundo."
+        ),
+        RESISTE: NaoSeAplica("não é byte do aparelho."),
+        INDEPENDE: Cumprida(
+            "profiles/manager.py::apply_acessibilidade", "nenhum lançador no caminho"
+        ),
+    },
     "ponte": {
         VOLTA: NaoSeAplica("memória de qual ponte funcionou; nada vai ao controle."),
         RESISTE: NaoSeAplica("nada vai ao controle."),

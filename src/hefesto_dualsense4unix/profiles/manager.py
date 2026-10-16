@@ -762,7 +762,7 @@ class ProfileManager:
     def apply_acessibilidade(
         self, profile: Profile, *, relatorio: dict[str, str] | None = None
     ) -> None:
-        """Deposita no `store` como o botão ativa, o filtro do botão e a curva dos analógicos.
+        """Deposita no `store` o modo e o filtro do botão, a curva dos analógicos e o cursor.
 
         Trocar de perfil solta todo botão que estava preso: o `definir_ativo` esquece os estados.
         """
@@ -793,9 +793,13 @@ class ProfileManager:
             if getattr(cfg, "analogicos", None) is not None  # (noqa-acento)
         }
         curva_do_analogico.definir_ativo(self.store, curva, curva_por_peca)
+        from hefesto_dualsense4unix.integrations import uinput_mouse
+
+        cursor = uinput_mouse.montar_o_ajuste(profile.cursor)
+        uinput_mouse.definir_ajuste_ativo(self.store, cursor)
         if relatorio is not None:
             ligado = any(
-                v is not None for v in (modo, filtro, curva, *modo_por_peca.values(),
+                v is not None for v in (modo, filtro, curva, cursor, *modo_por_peca.values(),
                                         *filtro_por_peca.values(), *curva_por_peca.values()))
             relatorio["acessibilidade"] = "aplicado" if ligado else "de_fabrica"
 
