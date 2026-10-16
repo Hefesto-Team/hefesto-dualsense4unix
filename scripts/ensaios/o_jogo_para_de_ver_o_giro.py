@@ -49,6 +49,14 @@ Uso:
     scripts/bancada.sh reservar "ensaio do sensor"                   # e só então:
     scripts/ensaios/o_jogo_para_de_ver_o_giro.py --segundos 3
 
+``--jogador P1..P4`` (O-VITA3K-RECEBE-O-DUALSENSE-INTEIRO-01, degraus 1 e 2) é a outra
+sonda: SDL3 com o HIDAPI LIGADO, como o Vita3K o tem. Abre SÓ o vpad daquele jogador, escolhido
+pelo serial (o `HID_UNIQ` do `hidraw` que o SDL dá) e conferido pelo par `(st_dev, st_ino)`,
+porque nome e GUID são IGUAIS nos quatro. Duas fases (parado, com o dedo), os contadores de
+cada vpad antes, durante e depois, e um laudo por item; rc 3 quando reprova. **Escreve no
+aparelho** (o driver PS5 do HIDAPI escreve ao abrir): exige `scripts/bancada.sh exigir`,
+`--lib` de uma libSDL3 e recusa `--so-medir`. `--hidapi 0` existe só para a mordida.
+
 ``--so-medir`` não chama o daemon, força ``SDL_JOYSTICK_HIDAPI=0`` e
 ``SDL_HIDAPI_LIBUSB=0`` — nenhuma biblioteca abre `hidraw`, e nada é escrito em
 controle nenhum (o driver PS5 do HIDAPI escreve efeitos ao abrir) — e lê o nó
@@ -130,14 +138,16 @@ import argparse
 import asyncio
 import contextlib
 import ctypes
+import itertools
 import json
 import os
 import pathlib
 import re
 import subprocess
+import struct
 import sys
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
@@ -846,10 +856,538 @@ def _algo_nao_confere(medidas: list[dict[str, Any]]) -> bool:
 def _sem_o_endereco(valor: Any) -> Any:
     """O relatório sem as chaves de junção — o que SAI não leva endereço real."""
     if isinstance(valor, dict):
-        return {k: _sem_o_endereco(v) for k, v in valor.items() if not k.startswith("_")}
+        return {k: _sem_o_endereco(v) for k, v in valor.items() if not str(k).startswith("_")}
     if isinstance(valor, list):
         return [_sem_o_endereco(v) for v in valor]
     return valor
+
+
+# ---------------------------------------------------------------------------
+# O JOGADOR (O-VITA3K-RECEBE-O-DUALSENSE-INTEIRO-01, degraus 1 e 2): o SDL3 com o HIDAPI
+# LIGADO abre UM vpad, escolhido pelo serial, e conta o que um jogo contaria.
+# ---------------------------------------------------------------------------
+JOGADORES = ("P1", "P2", "P3", "P4")
+NOME_DO_PS5 = "DualSense Edge Wireless Controller"
+
+#: Os tipos de evento do SDL3, lidos nas libs reais com um joystick VIRTUAL (3.4.14 e 3.4.16).
+EV_BOTAO_BAIXO = 0x651
+EV_BOTAO_CIMA = 0x652
+EV_TOQUE_BAIXO = 0x656
+EV_TOQUE_MOVE = 0x657
+EV_TOQUE_CIMA = 0x658
+EV_SENSOR = 0x659
+BOTAO_DO_TOUCHPAD = 20  # SDL_GAMEPAD_BUTTON_TOUCHPAD
+
+GRAVIDADE = 9.8
+GRAVIDADE_TOLERANCIA = 0.5
+SALTO_MAXIMO_NS = 100_000_000  # 0,1 s entre dois `sensor_timestamp`
+_ESCRITAS = ("output_count", "lightbar_replicas", "player_led_replicas")
+_CONTADORES = (*_ESCRITAS, "visto_ha_s", "game_open")
+
+_FORMATO_TOQUE = struct.Struct("<IIQIiifff")
+_FORMATO_SENSOR = struct.Struct("<IIQIi3f4xQ")
+_FORMATO_BOTAO = struct.Struct("<IIQIBB")
+
+
+def ler_evento(bruto: bytes) -> dict[str, Any] | None:
+    """Um `SDL_Event` do SDL3 (128 bytes, little-endian); `None` para o que não se conta."""
+    if len(bruto) < 4:
+        return None
+    tipo = struct.unpack_from("<I", bruto)[0]
+    if tipo in (EV_TOQUE_BAIXO, EV_TOQUE_MOVE, EV_TOQUE_CIMA):
+        _t, _r, _ts, quem, pad, dedo, x, y, pressao = _FORMATO_TOQUE.unpack_from(bruto)
+        return {"tipo": tipo, "which": quem, "touchpad": pad, "dedo": dedo,
+                "x": x, "y": y, "pressao": pressao}
+    if tipo == EV_SENSOR:
+        _t, _r, _ts, quem, sensor, a, b, c, carimbo = _FORMATO_SENSOR.unpack_from(bruto)
+        return {"tipo": tipo, "which": quem, "sensor": sensor, "dados": (a, b, c),
+                "carimbo_ns": carimbo}
+    if tipo in (EV_BOTAO_BAIXO, EV_BOTAO_CIMA):
+        _t, _r, _ts, quem, botao, baixo = _FORMATO_BOTAO.unpack_from(bruto)
+        return {"tipo": tipo, "which": quem, "botao": botao, "baixo": bool(baixo)}
+    return None
+
+
+def uniq_do_no_aberto(
+    caminho: str | None,
+    hidraw: pathlib.Path = pathlib.Path("/sys/class/hidraw"),
+    entrada: pathlib.Path = pathlib.Path("/sys/class/input"),
+) -> str | None:
+    """O `uniq` (o serial do SDL3) do nó aberto: `hidraw` pelo `HID_UNIQ`, evdev pelo `uniq`."""
+    if not caminho:
+        return None
+    nome = pathlib.Path(caminho).name
+    if nome.startswith("hidraw"):
+        try:
+            texto = (hidraw / nome / "device" / "uevent").read_text(errors="replace")
+        except OSError:
+            return None
+        achado = re.search(r"^HID_UNIQ=(.+)$", texto, re.MULTILINE)
+        return achado.group(1).strip() if achado else None
+    if nome.startswith("event"):
+        try:
+            return (entrada / nome / "device" / "uniq").read_text().strip() or None
+        except OSError:
+            return None
+    return None
+
+
+def _chave_do_no(caminho: str | None) -> tuple[int, int] | None:
+    """`(st_dev, st_ino)` de um caminho — `os.stat` não abre nada."""
+    if not caminho:
+        return None
+    try:
+        st = os.stat(caminho)
+    except OSError:
+        return None
+    return (st.st_dev, st.st_ino)
+
+
+def vpad_do_jogador(estado: dict[str, Any], jogador: str) -> dict[str, Any] | None:
+    """O vpad do jogador no `state_full`: `rumble_ff.per_vpad[]` casado pelo número (P1..P4)."""
+    numero = JOGADORES.index(jogador) + 1
+    lista = (estado.get("rumble_ff") or {}).get("per_vpad") or []
+    return next((v for v in lista if isinstance(v, dict) and v.get("player") == numero), None)
+
+
+def contadores_dos_vpads(estado: dict[str, Any]) -> dict[int, dict[str, Any]]:
+    """Os contadores do degrau 2, por jogador (1..4)."""
+    lista = (estado.get("rumble_ff") or {}).get("per_vpad") or []
+    return {
+        int(v["player"]): {c: v.get(c) for c in _CONTADORES}
+        for v in lista if isinstance(v, dict) and isinstance(v.get("player"), int)
+    }
+
+
+def escolher_o_id(candidatos: list[dict[str, Any]], uniq_alvo: str) -> int | None:
+    """O id do SDL cujo serial é o do vpad — NUNCA pelo nome nem pelo GUID, iguais nos quatro."""
+    alvo = uniq_alvo.casefold()
+    for c in candidatos:
+        if (c.get("uniq") or "").casefold() == alvo:
+            return int(c["id"])
+    return None
+
+
+def fds_abertos_dos_vpads(
+    nos: dict[int, str], pasta: pathlib.Path = pathlib.Path("/proc/self/fd")
+) -> dict[int, bool]:
+    """Quais `hidraw` de vpad este processo tem aberto — o `fd` casado por `(st_dev, st_ino)`."""
+    chaves = {j: _chave_do_no(no) for j, no in nos.items()}
+    abertos: set[tuple[int, int]] = set()
+    with contextlib.suppress(OSError):
+        for entrada in pasta.iterdir():
+            chave = _chave_do_no(str(entrada))
+            if chave is not None:
+                abertos.add(chave)
+    return {j: chave is not None and chave in abertos for j, chave in chaves.items()}
+
+
+@dataclass
+class Fase:
+    """O que UMA fase da medição contou (parado, ou com o dedo)."""
+
+    nome: str
+    toque_baixo: int = 0
+    toque_move: int = 0
+    toque_cima: int = 0
+    cliques: int = 0
+    carimbos_giro: list[int] = field(default_factory=list)
+    carimbos_accel: list[int] = field(default_factory=list)
+    modulos_accel: list[float] = field(default_factory=list)
+
+    def contar(self, ev: dict[str, Any]) -> None:
+        tipo = ev["tipo"]
+        if tipo == EV_TOQUE_BAIXO:
+            self.toque_baixo += 1
+        elif tipo == EV_TOQUE_MOVE:
+            self.toque_move += 1
+        elif tipo == EV_TOQUE_CIMA:
+            self.toque_cima += 1
+        elif tipo == EV_BOTAO_BAIXO and ev["botao"] == BOTAO_DO_TOUCHPAD:
+            self.cliques += 1
+        elif tipo == EV_SENSOR:
+            if ev["sensor"] == SDL_SENSOR_GYRO:
+                self.carimbos_giro.append(ev["carimbo_ns"])
+            elif ev["sensor"] == SDL_SENSOR_ACCEL:
+                self.carimbos_accel.append(ev["carimbo_ns"])
+                a, b, c = ev["dados"]
+                self.modulos_accel.append((a * a + b * b + c * c) ** 0.5)
+
+    def resumo(self) -> dict[str, Any]:
+        def maior(carimbos: list[int]) -> int | None:
+            if len(carimbos) < 2:
+                return None
+            return max(b - a for a, b in itertools.pairwise(carimbos))
+
+        modulos = self.modulos_accel
+        return {
+            "fase": self.nome,
+            "toque_baixo": self.toque_baixo,
+            "toque_move": self.toque_move,
+            "toque_cima": self.toque_cima,
+            "cliques_do_touchpad": self.cliques,
+            "giro_amostras": len(self.carimbos_giro),
+            "accel_amostras": len(self.carimbos_accel),
+            "maior_intervalo_giro_ns": maior(self.carimbos_giro),
+            "maior_intervalo_accel_ns": maior(self.carimbos_accel),
+            "modulo_medio_accel": (sum(modulos) / len(modulos)) if modulos else None,
+        }
+
+
+def _tudo_igual(valores: list[str]) -> bool:
+    return len(set(valores)) == 1
+
+
+def laudo(medida: dict[str, Any]) -> list[dict[str, Any]]:
+    """Os itens de aceite do degrau 1, puros: cada um diz `ok` e o número que o sustenta."""
+    itens: list[dict[str, Any]] = []
+
+    def item(nome: str, ok: bool, detalhe: str) -> None:
+        itens.append({"item": nome, "ok": bool(ok), "detalhe": detalhe})
+
+    vpads = medida.get("vpads") or []
+    esc = medida.get("escolhido") or {}
+    nome = esc.get("nome")
+    item("driver_ps5_no_vpad_escolhido", nome == NOME_DO_PS5,
+         f"nome SDL «{nome}», esperado «{NOME_DO_PS5}»")
+    guids = [v.get("guid") or "" for v in vpads]
+    seriais = [v.get("uniq") or "" for v in vpads]
+    mais_de_um = len(vpads) >= 2
+    item("guids_iguais_e_seriais_distintos",
+         mais_de_um and _tudo_igual(guids) and len(set(seriais)) == len(seriais)
+         and all(seriais),
+         f"{len(vpads)} vpad(s) listado(s); {len(set(guids))} GUID(s) distinto(s), "
+         f"{len(set(seriais))} serial(is) distinto(s)")
+    abertos = medida.get("fds_dos_vpads") or {}
+    item("hidraw_de_todo_vpad_aberto", bool(abertos) and all(abertos.values()),
+         f"abertos por jogador: {dict(sorted(abertos.items()))}")
+    por_vpad = medida.get("escritas_por_jogador") or {}
+    escolhido = esc.get("jogador")
+    fora = {j: n for j, n in por_vpad.items() if j != escolhido and n}
+    item("escrita_so_no_escolhido", bool(por_vpad) and not fora,
+         f"escritas observadas por jogador: {dict(sorted(por_vpad.items()))}")
+    item("serial_e_no_conferem", bool(esc.get("serial_confere")) and bool(esc.get("no_confere")),
+         f"serial confere {esc.get('serial_confere')}; nó confere {esc.get('no_confere')}")
+    item("um_touchpad_de_dois_dedos",
+         esc.get("touchpads") == 1 and esc.get("dedos") == 2,
+         f"{esc.get('touchpads')} touchpad(s), {esc.get('dedos')} dedo(s)")
+    item("giro_e_acelerometro", bool(esc.get("tem_giro")) and bool(esc.get("tem_accel")),
+         f"giro {esc.get('tem_giro')}, acelerômetro {esc.get('tem_accel')}")
+    fases = {f["fase"]: f for f in medida.get("fases") or []}
+    parado = fases.get("parado") or {}
+    modulo = parado.get("modulo_medio_accel")
+    item("gravidade_parado",
+         modulo is not None and abs(modulo - GRAVIDADE) <= GRAVIDADE_TOLERANCIA,
+         f"|acel| parado = {modulo} (esperado {GRAVIDADE} ± {GRAVIDADE_TOLERANCIA})")
+    intervalos = {
+        f"{f['fase']}/{s}": f.get(f"maior_intervalo_{s}_ns")
+        for f in fases.values() for s in ("giro", "accel")
+    }
+    item("carimbo_sem_salto",
+         bool(intervalos) and all(v is not None and v <= SALTO_MAXIMO_NS
+                                  for v in intervalos.values()),
+         f"maior intervalo (ns) por fase e sensor: {intervalos}; teto {SALTO_MAXIMO_NS}")
+    dedo = fases.get("dedo") or {}
+    toques = (dedo.get("toque_baixo") or 0) + (dedo.get("toque_move") or 0)
+    item("toque_e_clique_chegam",
+         toques > 0 and (dedo.get("cliques_do_touchpad") or 0) > 0,
+         f"toque {toques} evento(s), clique {dedo.get('cliques_do_touchpad')}")
+    return itens
+
+
+class _Guid(ctypes.Structure):
+    _fields_ = [("data", ctypes.c_uint8 * 16)]
+
+
+class _JogoSdl3:
+    """O SDL3 como um jogo o usa: enumera os gamepads, abre UM, drena os eventos."""
+
+    def __init__(self, sdl: Any) -> None:
+        self.sdl = sdl
+        p, b, u, i = ctypes.c_void_p, ctypes.c_bool, ctypes.c_uint32, ctypes.c_int
+        for nome, res, args in (
+            ("SDL_Init", b, [u]),
+            ("SDL_PumpEvents", None, []),
+            ("SDL_GetGamepads", ctypes.POINTER(u), [ctypes.POINTER(i)]),
+            ("SDL_GetGamepadNameForID", ctypes.c_char_p, [u]),
+            ("SDL_GetGamepadPathForID", ctypes.c_char_p, [u]),
+            ("SDL_GetGamepadGUIDForID", _Guid, [u]),
+            ("SDL_GUIDToString", None, [_Guid, ctypes.c_char_p, i]),
+            ("SDL_OpenGamepad", p, [u]),
+            ("SDL_GetGamepadSerial", ctypes.c_char_p, [p]),
+            ("SDL_GetGamepadPath", ctypes.c_char_p, [p]),
+            ("SDL_GetGamepadName", ctypes.c_char_p, [p]),
+            ("SDL_GetNumGamepadTouchpads", i, [p]),
+            ("SDL_GetNumGamepadTouchpadFingers", i, [p, i]),
+            ("SDL_GamepadHasSensor", b, [p, i]),
+            ("SDL_SetGamepadSensorEnabled", b, [p, i, b]),
+            ("SDL_PollEvent", b, [p]),
+            ("SDL_CloseGamepad", None, [p]),
+            ("SDL_free", None, [p]),
+            ("SDL_Quit", None, []),
+        ):
+            getattr(sdl, nome).restype = res
+            getattr(sdl, nome).argtypes = args
+
+    def subir(self) -> None:
+        if not self.sdl.SDL_Init(SDL_INIT_GAMECONTROLLER):
+            raise SystemExit(f"SDL não subiu: {self.sdl.SDL_GetError().decode()}")
+        self.sdl.SDL_PumpEvents()
+        time.sleep(0.4)
+        self.sdl.SDL_PumpEvents()
+
+    def enumerar(self) -> list[dict[str, Any]]:
+        quantos = ctypes.c_int(0)
+        ids = self.sdl.SDL_GetGamepads(ctypes.byref(quantos))
+        fora: list[dict[str, Any]] = []
+        for k in range(quantos.value):
+            identidade = ids[k]
+            texto = ctypes.create_string_buffer(64)
+            self.sdl.SDL_GUIDToString(
+                self.sdl.SDL_GetGamepadGUIDForID(identidade), texto, 64)
+            caminho = self.sdl.SDL_GetGamepadPathForID(identidade)
+            fora.append({
+                "id": int(identidade),
+                "nome": (self.sdl.SDL_GetGamepadNameForID(identidade) or b"").decode(
+                    errors="replace"),
+                "guid": texto.value.decode(),
+                "caminho": caminho.decode() if caminho else None,
+            })
+        if ids:
+            self.sdl.SDL_free(ctypes.cast(ids, ctypes.c_void_p))
+        return fora
+
+    def abrir(self, identidade: int) -> Any:
+        return self.sdl.SDL_OpenGamepad(identidade) or None
+
+    def descrever(self, h: Any) -> dict[str, Any]:
+        serial = self.sdl.SDL_GetGamepadSerial(h)
+        caminho = self.sdl.SDL_GetGamepadPath(h)
+        pads = int(self.sdl.SDL_GetNumGamepadTouchpads(h))
+        return {
+            "nome": (self.sdl.SDL_GetGamepadName(h) or b"").decode(errors="replace"),
+            "serial": serial.decode() if serial else None,
+            "caminho": caminho.decode() if caminho else None,
+            "touchpads": pads,
+            "dedos": int(self.sdl.SDL_GetNumGamepadTouchpadFingers(h, 0)) if pads else 0,
+            "tem_giro": bool(self.sdl.SDL_GamepadHasSensor(h, SDL_SENSOR_GYRO)),
+            "tem_accel": bool(self.sdl.SDL_GamepadHasSensor(h, SDL_SENSOR_ACCEL)),
+        }
+
+    def ligar_sensores(self, h: Any) -> None:
+        for tipo, _chave in _SENSORES:
+            self.sdl.SDL_SetGamepadSensorEnabled(h, tipo, True)
+
+    def eventos(self) -> list[dict[str, Any]]:
+        buf = (ctypes.c_ubyte * 128)()
+        fora: list[dict[str, Any]] = []
+        while self.sdl.SDL_PollEvent(buf):
+            ev = ler_evento(bytes(buf))
+            if ev is not None:
+                fora.append(ev)
+        return fora
+
+    def fechar(self, h: Any) -> None:
+        self.sdl.SDL_CloseGamepad(h)
+
+    def encerrar(self) -> None:
+        self.sdl.SDL_Quit()
+
+
+def sondar_o_jogador(
+    jogo: Any,
+    vpad: dict[str, Any],
+    todos: dict[int, dict[str, Any]],
+    *,
+    fotografar: Any,
+    fase_segundos: float,
+    dormir: Any = time.sleep,
+    agora: Any = time.monotonic,
+    pasta_fd: pathlib.Path = pathlib.Path("/proc/self/fd"),
+) -> dict[str, Any]:
+    """Enumera, abre SÓ o vpad pedido (pelo serial), e conta as duas fases.
+
+    ``todos`` é o `per_vpad` por jogador; ``fotografar()`` devolve os contadores dos vpads
+    naquele instante (o degrau 2), e é chamado antes de abrir, no fim de cada fase e depois de
+    fechar.
+    """
+    medida: dict[str, Any] = {"contadores": {"antes": fotografar()}}
+    candidatos = jogo.enumerar()
+    for c in candidatos:
+        c["uniq"] = uniq_do_no_aberto(c.get("caminho"))
+    medida["vpads"] = [
+        {"nome": c["nome"], "guid": c["guid"], "uniq": c["uniq"],
+         "_uniq_inteiro": c["uniq"], "caminho": c["caminho"]}
+        for c in candidatos if c["uniq"] and c["uniq"].casefold() in {
+            (v.get("vpad_uniq") or "").casefold() for v in todos.values()}
+    ]
+    identidade = escolher_o_id(candidatos, vpad["vpad_uniq"])
+    if identidade is None:
+        medida["erro"] = "o SDL não lista nenhum gamepad com o serial deste vpad"
+        medida["fds_dos_vpads"] = {}
+        medida["escolhido"] = {}
+        medida["fases"] = []
+        return medida
+    alvo = next(c for c in candidatos if c["id"] == identidade)
+    h = jogo.abrir(identidade)
+    if h is None:
+        medida["erro"] = "o SDL não abriu o vpad escolhido"
+        medida["fds_dos_vpads"] = {}
+        medida["escolhido"] = {}
+        medida["fases"] = []
+        return medida
+    abriu = jogo.descrever(h)
+    esperado = vpad.get("hidraw") if pathlib.Path(str(alvo["caminho"])).name.startswith(
+        "hidraw") else vpad.get("evdev")
+    chave_esperada = _chave_do_no(esperado)
+    medida["escolhido"] = {
+        **abriu,
+        "jogador": vpad["player"],
+        "guid": alvo["guid"],
+        "serial_confere": (abriu["serial"] or "").casefold() == vpad["vpad_uniq"].casefold(),
+        "no_confere": chave_esperada is not None
+        and _chave_do_no(abriu["caminho"]) == chave_esperada,
+        "_serial_inteiro": abriu["serial"],
+    }
+    jogo.ligar_sensores(h)
+    fases: list[Fase] = []
+    medida["contadores"]["durante"] = {}
+    for nome in ("parado", "dedo"):
+        fase = Fase(nome)
+        fim = agora() + fase_segundos
+        while agora() < fim:
+            for ev in jogo.eventos():
+                if ev["which"] == identidade:
+                    fase.contar(ev)
+            dormir(0.002)
+        fases.append(fase)
+        medida["contadores"]["durante"][nome] = fotografar()
+    medida["fases"] = [f.resumo() for f in fases]
+    medida["fds_dos_vpads"] = fds_abertos_dos_vpads(
+        {j: v["hidraw"] for j, v in todos.items() if v.get("hidraw")}, pasta_fd)
+    jogo.fechar(h)
+    dormir(0.5)
+    medida["contadores"]["depois"] = fotografar()
+    medida["escritas_por_jogador"] = _escritas_por_jogador(medida["contadores"])
+    return medida
+
+
+def _escritas_por_jogador(contadores: dict[str, Any]) -> dict[int, int]:
+    """Quanto cada vpad foi escrito entre o antes e o fim da última fase."""
+    antes = contadores.get("antes") or {}
+    fim = (contadores.get("durante") or {}).get("dedo") or {}
+    fora: dict[int, int] = {}
+    for jogador, depois in fim.items():
+        base = antes.get(jogador) or {}
+        fora[jogador] = sum(
+            max(0, int(depois.get(c) or 0) - int(base.get(c) or 0)) for c in _ESCRITAS
+        )
+    return fora
+
+
+def _ambiente_do_vpad(*, hidapi: str, dica: str) -> dict[str, str]:
+    """O ambiente da sonda do jogador: sem tela, e com o HIDAPI como um jogo o tem (ligado)."""
+    env = {k: v for k, v in os.environ.items() if k not in _SEM_TELA}
+    env.update(_SEMPRE_NO_PROCESSO)
+    env["SDL_JOYSTICK_HIDAPI"] = hidapi
+    env["SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS"] = "1"
+    env.pop("SDL_HIDAPI_LIBUSB", None)
+    if dica == "ausente":
+        env.pop(DICA_DO_ACELEROMETRO, None)
+    else:
+        env[DICA_DO_ACELEROMETRO] = dica
+    return env
+
+
+def _para_a_saida(medida: dict[str, Any]) -> dict[str, Any]:
+    """A medida que SAI: o serial dos vpads com a máscara da casa, sem chaves de junção."""
+    fora: dict[str, Any] = json.loads(json.dumps(medida, default=str))
+    for v in fora.get("vpads") or []:
+        v["uniq"] = _mascara(v.get("uniq"))
+    esc = fora.get("escolhido") or {}
+    if esc.get("serial"):
+        esc["serial"] = _mascara(esc["serial"])
+    result: dict[str, Any] = _sem_o_endereco(fora)
+    return result
+
+
+def _estado_do_daemon() -> dict[str, Any]:
+    resposta = asyncio.run(_chamar("daemon.state_full", {}))
+    return resposta if isinstance(resposta, dict) else {}
+
+
+def _processo_do_vpad(args: argparse.Namespace) -> int:
+    """O lado de DENTRO da sonda do jogador: uma biblioteca SDL3, um vpad, uma linha de JSON."""
+    os.environ.clear()
+    os.environ.update(_ambiente_do_vpad(hidapi=args.hidapi, dica=args.dica_do_acelerometro))
+    bib = descrever_biblioteca(pathlib.Path(args.lib[0]))
+    if isinstance(bib, str) or bib.api != 3 or bib.compat:
+        print(json.dumps({"erro": "a sonda do jogador mede o SDL3, nunca o sdl2-compat"},
+                         ensure_ascii=False))
+        return 2
+    sdl = _carregar(bib)
+    versao, revisao = _versao_e_revisao(sdl, bib.api)
+    estado = _estado_do_daemon()
+    vpad = vpad_do_jogador(estado, args.jogador)
+    if vpad is None or not vpad.get("vpad_uniq"):
+        print(json.dumps({"erro": f"o daemon não tem vpad do jogador {args.jogador}"},
+                         ensure_ascii=False))
+        return 2
+    todos = {int(v["player"]): v for v in (estado.get("rumble_ff") or {}).get("per_vpad") or []
+             if isinstance(v, dict) and isinstance(v.get("player"), int)}
+    jogo = _JogoSdl3(sdl)
+    jogo.subir()
+    medida = sondar_o_jogador(
+        jogo, vpad, todos,
+        fotografar=lambda: contadores_dos_vpads(_estado_do_daemon()),
+        fase_segundos=args.fase_segundos)
+    jogo.encerrar()
+    medida.update({"versao": versao, "revisao": revisao, "hidapi": args.hidapi,  # noqa-acento: chave de dado, não prosa
+                   "jogador": args.jogador})
+    medida["laudo"] = laudo(medida)
+    print(json.dumps(_para_a_saida(medida), ensure_ascii=False, default=str))
+    return 0
+
+
+def _o_jogador(args: argparse.Namespace) -> int:
+    """O lado de FORA: recusa o que não vale, toma a bancada, roda o processo e dá o laudo."""
+    if args.so_medir:
+        print("RECUSO: --jogador abre o vpad com o HIDAPI ligado e escreve no aparelho; "
+              "isto não combina com --so-medir")
+        return 2
+    if not args.lib or len(args.lib) != 1:
+        print("RECUSO: --jogador mede UMA biblioteca SDL3; passe --lib <libSDL3.so.0>")
+        return 2
+    bib = descrever_biblioteca(pathlib.Path(args.lib[0]))
+    if isinstance(bib, str) or bib.api != 3 or bib.compat:
+        print("RECUSO: --jogador mede o SDL3; a biblioteca dada não é uma libSDL3")
+        return 2
+    exigir = subprocess.run(["bash", str(RAIZ / "scripts" / "bancada.sh"), "exigir"],
+                            capture_output=True, text=True, check=False)
+    if exigir.returncode != 0:
+        print("RECUSO: a bancada está tomada por outra reserva; esperar é a resposta")
+        return 2
+    comando = [sys.executable, str(pathlib.Path(__file__).resolve()), "--processo", "vpad",
+               "--lib", args.lib[0], "--jogador", args.jogador, "--hidapi", args.hidapi,
+               "--fase-segundos", str(args.fase_segundos),
+               "--dica-do-acelerometro", args.dica_do_acelerometro]
+    feito = subprocess.run(comando, env=_ambiente_do_vpad(hidapi=args.hidapi,
+                           dica=args.dica_do_acelerometro), capture_output=True, text=True,
+                           timeout=args.fase_segundos * 2 + 90, check=False)
+    linha = next((x for x in reversed(feito.stdout.splitlines()) if x.startswith("{")), None)
+    if linha is None or feito.returncode not in (0, 2):
+        print(json.dumps({"erro": f"o processo do vpad saiu com rc={feito.returncode}",
+                          "stderr": feito.stderr.strip().splitlines()[-3:]},
+                         ensure_ascii=False, indent=2))
+        return 3
+    medida: dict[str, Any] = json.loads(linha)
+    medida.setdefault("laudo", [])
+    medida["anotar"] = ("olho no plástico: a cor e o número ANTES, DURANTE e DEPOIS; pelo fonte "
+                        "eles NÃO voltam ao fechar a sonda — anote também o que os devolve")
+    print(json.dumps(medida, ensure_ascii=False, indent=2))
+    reprovou = "erro" in medida or not medida["laudo"] or not all(
+        i["ok"] for i in medida["laudo"])
+    return 3 if reprovou else 0
 
 
 def main() -> int:
@@ -879,11 +1417,35 @@ def main() -> int:
         default=VALOR_QUE_O_JOGO_RECEBE,
         help=f"o {DICA_DO_ACELEROMETRO} de cada biblioteca (padrão: o que o jogo recebe)",
     )
-    ap.add_argument("--processo", choices=("enumerar", "controles"), help=argparse.SUPPRESS)
+    ap.add_argument(
+        "--jogador",
+        choices=JOGADORES,
+        help="abre SÓ o vpad deste jogador no SDL3, com o HIDAPI ligado (exige --lib de "
+        "uma libSDL3; recusa --so-medir)",
+    )
+    ap.add_argument(
+        "--fase-segundos",
+        type=float,
+        default=5.0,
+        help="--jogador: cada fase (parado, com o dedo) dura isto",
+    )
+    ap.add_argument(
+        "--hidapi",
+        choices=("1", "0"),
+        default="1",
+        help="--jogador: o SDL_JOYSTICK_HIDAPI da sonda; 0 só para a mordida (mede o evdev)",
+    )
+    ap.add_argument(
+        "--processo", choices=("enumerar", "controles", "vpad"), help=argparse.SUPPRESS
+    )
     args = ap.parse_args()
 
+    if args.processo == "vpad":
+        return _processo_do_vpad(args)
     if args.processo:
         return _processo_de_uma_biblioteca(args)
+    if args.jogador:
+        return _o_jogador(args)
 
     caminhos = (
         [pathlib.Path(p) for p in args.lib] if args.lib else bibliotecas_dos_runtimes()
