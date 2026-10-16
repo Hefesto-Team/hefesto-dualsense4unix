@@ -150,7 +150,7 @@ def cmd_ligar(
         console.print("Não liguei.")
         raise typer.Exit(code=1)
     try:
-        ligar(mod_id)
+        ligar(mod_id, permissoes_vistas=manifesto.permissoes)
     except InstalacaoRecusadaError as exc:
         raise _recusar(exc) from exc
     console.print(f"«{manifesto.nome}» ligada; o serviço abre em um segundo.")

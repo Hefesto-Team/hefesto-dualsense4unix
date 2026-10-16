@@ -619,6 +619,71 @@ for pat in 'hefesto-dualsense4unix daemon ' 'hefesto-dualsense4unix-gui' 'hefest
     pkill -KILL -f "$pat" 2>/dev/null || true
 done
 
+# AS MODIFICAÇÕES (AS-MODIFICACOES-MARCAM-O-GESTO-ESPERAM-PARAR-E-SAEM-NO-UNINSTALL-01).
+# O serviço para as modificações ao parar, e o `PR_SET_PDEATHSIG` mata o filho que
+# ficou sem pai; mas um serviço morto à força deixa o `mods-estado.json` com um PID
+# que ninguém conferiu. Aqui o PID só recebe o sinal se estiver vivo (zumbi não
+# conta) E o ambiente dele disser `HEFESTO_MOD_ID=<id>` com o id da mesma linha:
+# nunca por nome, e nunca o PID que o sistema reaproveitou para outro processo.
+# A pergunta que cada pessoa já responde para a configuração decide o resto:
+# o código (`<dados>/mods/`), os dados (`<estado>/mods/`) e o registro
+# (`mods.json`) ficam por padrão, e saem juntos com `--purge-config`.
+_PY_DAS_MODIFICACOES='
+import json, os, sys
+try:
+    estado = json.load(open(sys.argv[1], encoding="utf-8"))
+except (OSError, ValueError):
+    sys.exit(0)
+mods = estado.get("mods") if isinstance(estado, dict) else None
+if not isinstance(mods, dict):
+    sys.exit(0)
+def vivo(pid):
+    try:
+        for linha in open("/proc/%d/status" % pid, encoding="utf-8"):
+            if linha.startswith("State:"):
+                return linha.split()[1] != "Z"
+    except OSError:
+        pass
+    return False
+for mod_id, linha in sorted(mods.items()):
+    pid = linha.get("pid") if isinstance(linha, dict) else None
+    if not isinstance(pid, int) or isinstance(pid, bool) or pid <= 1 or not vivo(pid):
+        continue
+    try:
+        ambiente = open("/proc/%d/environ" % pid, "rb").read().split(b"\0")
+        lider = os.getpgid(pid) == pid
+    except OSError:
+        continue
+    if ("HEFESTO_MOD_ID=%s" % mod_id).encode() in ambiente:
+        print(mod_id, ("-" if lider else "") + str(pid))
+'
+
+_as_modificacoes_vivas() {
+    local arquivo="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hefesto-dualsense4unix/mods-estado.json"
+    [[ -f "${arquivo}" ]] || return 0
+    python3 -I -c "${_PY_DAS_MODIFICACOES}" "${arquivo}" || true
+}
+
+parar_as_modificacoes() {
+    local -a vivas=()
+    local linha alvo
+    mapfile -t vivas < <(_as_modificacoes_vivas)
+    [[ "${#vivas[@]}" -gt 0 ]] || return 0
+    for linha in "${vivas[@]}"; do
+        alvo="${linha#* }"
+        log "parando a extensão ${linha% *} (processo ${alvo#-})"
+        kill -TERM -- "${alvo}" 2>/dev/null || true
+    done
+    sleep 2
+    mapfile -t vivas < <(_as_modificacoes_vivas)
+    for linha in "${vivas[@]}"; do
+        alvo="${linha#* }"
+        log "a extensão ${linha% *} não parou; mandando o fim (processo ${alvo#-})"
+        kill -KILL -- "${alvo}" 2>/dev/null || true
+    done
+}
+parar_as_modificacoes
+
 # Unit user de hotplug-gui (se existir)
 if [[ -f "${HOTPLUG_UNIT_TARGET}" ]]; then
     log "desabilitando hefesto-dualsense4unix-gui-hotplug.service"
@@ -2406,6 +2471,21 @@ fi
 _cfg_do_xdg="${XDG_CONFIG_HOME:-${HOME}/.config}"
 _dados_do_xdg="${XDG_DATA_HOME:-${HOME}/.local/share}"
 _cache_do_xdg="${XDG_CACHE_HOME:-${HOME}/.cache}"
+# As modificações instaladas moram nos TRÊS lugares abaixo e seguem a pergunta da
+# configuração: ficam, ou saem juntas (o código e o registro dentro das pastas que o
+# bloco abaixo leva ao backup, os dados no varrer do estado, mais adiante).
+_mods_codigo="${_dados_do_xdg}/hefesto-dualsense4unix/mods"
+_mods_dados="${XDG_STATE_HOME:-${HOME}/.local/state}/hefesto-dualsense4unix/mods"
+_mods_registro="${_cfg_do_xdg}/hefesto-dualsense4unix/mods.json"
+for _mod_lugar in "${_mods_codigo}" "${_mods_dados}" "${_mods_registro}"; do
+    [[ -e "${_mod_lugar}" ]] || continue
+    if [[ "${KEEP_CONFIG}" -eq 0 ]]; then
+        log "as extensões saem junto, com o backup: ${_mod_lugar} (--purge-config)"
+    else
+        log "as extensões instaladas ficam: ${_mod_lugar} (apagar de vez: --purge-config)"
+    fi
+done
+unset _mod_lugar
 if [[ "${KEEP_CONFIG}" -eq 0 ]]; then
     backup_dir="${_cfg_do_xdg}/hefesto-dualsense4unix.backup-$(date +%s)"
     backed_up=0
@@ -2689,6 +2769,18 @@ for _estado in "${ESTADOS_DO_HEFESTO[@]}"; do
             case "${_sobra##*/}" in
                 proton-pin-lock.json|cmdline-owners.conf|broker-owner.conf|launch_env)
                     log "fica ${_sobra}: o desfazer dele foi adiado (a linha dele, acima, diz como terminar)"
+                    ;;
+                mods)
+                    # Os dados das extensões: o `--purge-config` os leva, como o código e o
+                    # registro, e o backup guarda (o nome do caminho, como o resto do estado).
+                    _rel_do_estado="${_estado#"${HOME}"/}"
+                    _backup_do_estado="${backup_dir:-${XDG_CONFIG_HOME:-${HOME}/.config}/hefesto-dualsense4unix.backup-$(date +%s)}/${_rel_do_estado//\//_}"
+                    mkdir -p "${_backup_do_estado}"
+                    if mv -f "${_sobra}" "${_backup_do_estado}/" 2>/dev/null; then
+                        log "guardando os dados das extensões ${_sobra} no backup (${_backup_do_estado})"
+                    else
+                        log "não consegui guardar os dados das extensões ${_sobra} no backup — ficaram"
+                    fi
                     ;;
                 *)
                     # Uma subpasta por pasta de estado, com o nome do caminho —

@@ -42,6 +42,7 @@ from hefesto_dualsense4unix.daemon.protocolo_do_ipc import (
 )
 from hefesto_dualsense4unix.mods import API_DAS_MODIFICACOES
 from hefesto_dualsense4unix.mods.manifesto import TOPICOS_DE_LEITURA
+from hefesto_dualsense4unix.profiles.loader import gesto_de_agora
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -353,7 +354,13 @@ class Porta:
             if metodo == "eventos.assinar":
                 return _resposta(req_id, self._assinar(con, writer, params))
             if metodo in _ESCRITAS:
-                return _resposta(req_id, await self._escrever(con.sessao, metodo, params))
+                # Como o IPC (``ipc:<método>``): quem grava no meio da escrita sabe de
+                # onde ela veio, e a modificação deixa de escrever como «ninguém».
+                marca_do_gesto = gesto_de_agora.set(f"mod:{con.sessao.mod_id}:{metodo}")
+                try:
+                    return _resposta(req_id, await self._escrever(con.sessao, metodo, params))
+                finally:
+                    gesto_de_agora.reset(marca_do_gesto)
             raise RecusaError(CODE_METHOD_NOT_FOUND, f"método desconhecido: {metodo}")
         except RecusaError as recusa:
             return _erro(req_id, recusa.codigo, recusa.frase)

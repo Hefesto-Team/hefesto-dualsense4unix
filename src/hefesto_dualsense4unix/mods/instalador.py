@@ -320,7 +320,14 @@ def instalar(
         seguia_ligada = anterior is not None and anterior.ligada
         if seguia_ligada:
             desligar(manifesto.id, lugares=lg)
-            esperar_parar(manifesto.id, lugares=lg)
+            if not esperar_parar(manifesto.id, lugares=lg):
+                # Trocar o código debaixo do processo vivo não é atualizar. O código
+                # antigo fica como está, e a que seguia ligada segue ligada.
+                _religar_a_que_seguia(lg, manifesto.id)
+                raise InstalacaoRecusadaError(
+                    f"A versão anterior de «{manifesto.id}» não parou; "
+                    "não troquei o código."
+                )
         _trocar_o_codigo(baixada, lg.codigo / manifesto.id)
         entrada = Entrada(
             id=manifesto.id,
@@ -340,6 +347,15 @@ def instalar(
         return Resultado(entrada, manifesto, novas)
     finally:
         shutil.rmtree(temporaria, ignore_errors=True)
+
+
+def _religar_a_que_seguia(lg: Lugares, mod_id: str) -> None:
+    """Desfaz o ``desligar`` do instalar que não chegou a trocar o código."""
+    registro = ler_registro(lg.registro)
+    entrada = registro.get(mod_id)
+    if entrada is not None and not entrada.ligada:
+        entrada.ligada = True
+        gravar_registro(lg.registro, registro)
 
 
 def _trocar_o_codigo(nova: Path, final: Path) -> None:
@@ -384,11 +400,17 @@ def manifesto_instalado(mod_id: str, *, lugares: Lugares | None = None) -> Manif
         raise InstalacaoRecusadaError(exc.frase) from exc
 
 
-def ligar(mod_id: str, *, lugares: Lugares | None = None) -> Entrada:
-    """Liga, aceitando as permissões que o manifesto instalado pede.
+def ligar(
+    mod_id: str,
+    *,
+    permissoes_vistas: Sequence[str],
+    lugares: Lugares | None = None,
+) -> Entrada:
+    """Liga, aceitando as permissões que quem chama mostrou e ouviu o «sim».
 
-    Quem chama mostrou as permissões e ouviu o «sim» antes: a linha de comando
-    pergunta, e a tela tem o mesmo gesto.
+    ``permissoes_vistas`` é a lista que a linha de comando (ou a tela) mostrou.
+    Se o manifesto do disco, relido agora, pede outra lista, recusa: o «sim» foi
+    a um manifesto, e o código trocado entre o mostrar e o ligar não herda o «sim».
     """
     lg = lugares or Lugares.do_xdg()
     registro = ler_registro(lg.registro)
@@ -399,6 +421,11 @@ def ligar(mod_id: str, *, lugares: Lugares | None = None) -> Entrada:
         manifesto = ler_manifesto(lg.codigo / mod_id)
     except ManifestoRecusadoError as exc:
         raise InstalacaoRecusadaError(exc.frase) from exc
+    if set(permissoes_vistas) != set(manifesto.permissoes):
+        raise InstalacaoRecusadaError(
+            f"«{manifesto.nome}» pede outras permissões do que as que você viu; "
+            "veja de novo antes de ligar."
+        )
     entrada.permissoes_aceitas = list(manifesto.permissoes)
     entrada.ligada = True
     entrada.ligada_em = datetime.now(timezone.utc).isoformat(timespec="microseconds")

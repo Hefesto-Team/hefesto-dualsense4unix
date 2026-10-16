@@ -35,6 +35,7 @@ from hefesto_dualsense4unix.mods.instalador import (
     ler_estado,
     ler_registro,
     ligar,
+    manifesto_instalado,
     remover,
 )
 from hefesto_dualsense4unix.mods.manifesto import (
@@ -152,6 +153,12 @@ _O_FILHO = textwrap.dedent('''
 ''')
 
 
+def _ligar_vendo(mod_id: str, lar: Lugares) -> None:
+    """O gesto da linha de comando: mostra o manifesto instalado e liga com o que mostrou."""
+    ligar(mod_id, permissoes_vistas=manifesto_instalado(mod_id, lugares=lar).permissoes,
+          lugares=lar)
+
+
 def _pasta_do_mod(base: Path, modo: str = "fica", **mais: Any) -> Path:
     pasta = base / f"fonte-{mais.get('mod_id', 'exemplo')}"
     pasta.mkdir(parents=True, exist_ok=True)
@@ -219,7 +226,7 @@ def test_a_modificacao_fora_da_api_nao_sobe_e_o_estado_diz_por_que(
 ) -> None:
     pasta = _pasta_do_mod(curto / "fontes")
     instalar(str(pasta), lugares=lar)
-    ligar("exemplo", lugares=lar)
+    _ligar_vendo("exemplo", lar)
     manifesto = lar.codigo / "exemplo" / "hefesto-mod.json"
     manifesto.write_text(json.dumps(_manifesto(api=">=7")), encoding="utf-8")
 
@@ -243,7 +250,7 @@ def test_a_atualizacao_que_pede_permissao_nova_volta_a_pedir_o_sim(
 ) -> None:
     pasta = _pasta_do_mod(curto / "fontes")
     instalar(str(pasta), lugares=lar)
-    ligar("exemplo", lugares=lar)
+    _ligar_vendo("exemplo", lar)
     assert ler_registro(lar.registro)["exemplo"].ligada
     (pasta / "hefesto-mod.json").write_text(json.dumps(_manifesto(versao="0.2.0")))
     mesma = instalar(str(pasta), lugares=lar)
@@ -487,7 +494,7 @@ def test_o_assinante_que_nao_le_nao_atrasa_o_tique(curto: Path) -> None:
 def _instalar_e_ligar(lar: Lugares, curto: Path, modo: str, **mais: Any) -> None:
     pasta = _pasta_do_mod(curto / "fontes", modo, **mais)
     instalar(str(pasta), lugares=lar)
-    ligar(mais.get("mod_id", "exemplo"), lugares=lar)
+    _ligar_vendo(mais.get("mod_id", "exemplo"), lar)
 
 
 def _relato(lar: Lugares, mod_id: str = "exemplo") -> dict[str, Any] | None:
@@ -539,7 +546,7 @@ def test_com_bwrap_a_caixa_esconde_a_casa_a_rede_e_o_socket_principal(
     manifesto["processo"]["executar"] = ["python3", "mod.py", str(principal)]
     (pasta / "hefesto-mod.json").write_text(json.dumps(manifesto), encoding="utf-8")
     instalar(str(pasta), lugares=lar)
-    ligar("exemplo", lugares=lar)
+    _ligar_vendo("exemplo", lar)
 
     async def corrida() -> dict[str, Any]:
         supervisor = _supervisor(lar)
@@ -659,7 +666,7 @@ def test_na_caixa_o_que_a_modificacao_abriu_morre_com_ela(
     manifesto["processo"]["executar"] = ["python3", "mod.py", marca]
     (pasta / "hefesto-mod.json").write_text(json.dumps(manifesto), encoding="utf-8")
     instalar(str(pasta), lugares=lar)
-    ligar("exemplo", lugares=lar)
+    _ligar_vendo("exemplo", lar)
 
     async def corrida() -> tuple[list[int], list[int]]:
         supervisor = _supervisor(lar)
@@ -700,7 +707,7 @@ def test_sem_xdg_runtime_dir_a_caixa_esconde_a_execucao_da_sessao(
     manifesto["processo"]["executar"] = ["python3", "mod.py", str(principal)]
     (pasta / "hefesto-mod.json").write_text(json.dumps(manifesto), encoding="utf-8")
     instalar(str(pasta), lugares=lar)
-    ligar("exemplo", lugares=lar)
+    _ligar_vendo("exemplo", lar)
     monkeypatch.delenv("XDG_RUNTIME_DIR")
 
     async def corrida() -> dict[str, Any]:
@@ -741,7 +748,7 @@ def test_a_que_parou_fica_parada_ate_ligar_de_novo(lar: Lugares, curto: Path) ->
             estado = supervisor.estado_de("exemplo")
             assert estado is not None and estado.estado == "parou"
             assert quedas_no_diario() == 4
-            ligar("exemplo", lugares=lar)
+            _ligar_vendo("exemplo", lar)
             await supervisor.reconciliar()
             await _ate(lambda: quedas_no_diario() == 8
                        and getattr(supervisor.estado_de("exemplo"), "estado", "") == "parou")
