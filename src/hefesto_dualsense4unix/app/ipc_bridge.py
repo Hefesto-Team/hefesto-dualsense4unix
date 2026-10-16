@@ -636,30 +636,17 @@ def rumble_motores_set(
     fraco_pct: int | None = None,
     uniq: str | None = None,
     haptica_pct: int | None = None,
+    efeito_haptico: str | None = None,
+    efeito_imersao: str | None = None,
 ) -> tuple[bool, dict[str, Any] | None]:
-    """A BARRA de cada motor, no perfil, POR PEÇA (VIBRACAO-POR-MOTOR-01).
+    """As barras de cada motor, a háptica e as duas listas de efeito, no perfil, POR PEÇA.
 
-    Decisão, 04/09/2026: a barra não manda o par `rumble.set` agora — ela
-    é POLÍTICA, e MULTIPLICA o degrau da coluna. ``efetivo(motor) = degrau x
-    barra(motor)``.
-
-    ``None`` em um dos dois = **não mexe naquela barra**; passar os dois em
-    `None` é erro (não haveria o que gravar). ``uniq`` omitido = o primário.
-
-    Devolve ``(ok, corpo)``, e o corpo é o do daemon — ele traz `status`
-    (`"ok"`, `"sem_controle"`, `"sem_endereco"`, `"sem_perfil"`), o `motivo`
-    quando recusa, o `perfil` em que gravou, se `gravado` de fato (regravar
-    perfil idêntico troca a data do arquivo e faz o daemon reaplicá-lo), e os
-    `forte_pct`/`fraco_pct` que **passaram a valer** — que é o que a tela pinta
-    de volta. Corpo `None` quer dizer daemon fora do ar.
-
-    **A tela NÃO deve digitar a faixa nem o padrão:** quem recusa fora de 0-100
-    é a borda do esquema, com a frase que explica, e o 100 do "sem opinião"
-    chega no `state_full` como `rumble_motor_pct_padrao`.
-
-    ``haptica_pct`` (0-200) é o ganho da háptica por áudio desta peça
-    (O-GANHO-DA-HAPTICA-TEM-DONO-01), no mesmo pedido e com o mesmo contrato;
-    o padrão chega no `state_full` como `haptica_pct_padrao`.
+    ``None`` em um campo = não mexe nele (todos em `None` é erro). ``uniq`` omitido = o primário.
+    ``efeito_haptico`` e ``efeito_imersao`` levam a chave da escolha; ``"do_estilo"`` volta ao
+    automático e o daemon recusa chave que não existe. Devolve ``(ok, corpo)``: o corpo é o do
+    daemon (`status`, `motivo` quando recusa, `perfil`, `gravado` e os valores que passaram a
+    valer); `None` quer dizer daemon fora do ar. A faixa 0-100 (0-200 na háptica) é da borda do
+    esquema, e o porquê está em docs/research/o-porque-dos-modulos.md.
     """
     params: dict[str, Any] = {}
     if forte_pct is not None:
@@ -668,6 +655,10 @@ def rumble_motores_set(
         params["fraco_pct"] = int(fraco_pct)
     if haptica_pct is not None:
         params["haptica_pct"] = int(haptica_pct)
+    if efeito_haptico is not None:
+        params["efeito_haptico"] = str(efeito_haptico)
+    if efeito_imersao is not None:
+        params["efeito_imersao"] = str(efeito_imersao)
     if uniq:
         params["uniq"] = uniq
     corpo = _corpo_do_daemon("rumble.motores.set", params)

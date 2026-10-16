@@ -3632,11 +3632,15 @@ class IpcHandlersMixin:
     async def _handle_rumble_motores_set(self, params: dict[str, Any]) -> dict[str, Any]:
         """`rumble.motores.set` — a barra de CADA motor, no perfil (VIBRACAO-POR-MOTOR-01)."""
         from hefesto_dualsense4unix.daemon.ganho_da_haptica import GANHO
+        from hefesto_dualsense4unix.profiles.formas_de_haptica import (
+            ESCOLHAS as FORMAS_DE_HAPTICA,
+        )
         from hefesto_dualsense4unix.profiles.o_padrao_do_computador import (
             chave_no_perfil,
             gravar_pelo_gesto,
         )
         from hefesto_dualsense4unix.profiles.schema import (
+            ESCOLHAS_DE_IMERSAO,
             HAPTICA_PCT_MAX,
             HAPTICA_PCT_PADRAO,
             MOTOR_PCT_MAX,
@@ -3659,15 +3663,29 @@ class IpcHandlersMixin:
                     f"rumble.motores.set: '{chave_ipc}' precisa ser inteiro 0-{teto}"
                 )
             pedidos[campo] = valor
-        if not pedidos:
+        escolhas: dict[str, str] = {}
+        for campo, vocabulario in (
+            ("efeito_haptico", FORMAS_DE_HAPTICA),
+            ("efeito_imersao", ESCOLHAS_DE_IMERSAO),
+        ):
+            if campo not in params:
+                continue
+            valor = params.get(campo)
+            if not isinstance(valor, str) or valor not in vocabulario:
+                raise ValueError(
+                    f"rumble.motores.set: '{campo}' precisa ser uma de {', '.join(vocabulario)}"
+                )
+            escolhas[campo] = valor
+        if not pedidos and not escolhas:
             raise ValueError(
-                "rumble.motores.set exige ao menos um de 'forte_pct', "
-                "'fraco_pct' ou 'haptica_pct' — campo omitido NÃO mexe naquela barra"
+                "rumble.motores.set exige ao menos um de 'forte_pct', 'fraco_pct', "
+                "'haptica_pct', 'efeito_haptico' ou 'efeito_imersao' — campo omitido NÃO mexe "
+                "naquela barra"
             )
         uniq = params.get("uniq")
         if uniq is not None and not isinstance(uniq, str):
             raise ValueError("rumble.motores.set: 'uniq' precisa ser string ou omitido")
-        ControllerRumbleOverride.model_validate(pedidos)
+        ControllerRumbleOverride.model_validate({**pedidos, **escolhas})
 
         alvo = uniq or self._uniq_do_primario()
         if not alvo:
@@ -3700,13 +3718,20 @@ class IpcHandlersMixin:
             original = chave_no_perfil(perfil, chave)
             dele = atuais.get(original) or ControllerOverrides()
             antes = dele.rumble
-            campos = dict(antes.model_dump(exclude_unset=True)) if antes is not None else {}
+            campos: dict[str, Any] = (
+                dict(antes.model_dump(exclude_unset=True)) if antes is not None else {}
+            )
             for campo, valor in pedidos.items():
                 padrao = HAPTICA_PCT_PADRAO if campo == "haptica_pct" else MOTOR_PCT_PADRAO
                 if valor == padrao:
                     campos.pop(campo, None)
                 else:
                     campos[campo] = valor
+            for campo, escolha in escolhas.items():
+                if escolha == "do_estilo":
+                    campos.pop(campo, None)
+                else:
+                    campos[campo] = escolha
             novo = ControllerRumbleOverride.model_validate(campos) if campos else None
             visto["novo"] = novo
             antes_campos = (
@@ -3722,6 +3747,10 @@ class IpcHandlersMixin:
                                     origem="rumble.motores.set")
         efetivos = self._pcts_efetivos(visto.get("novo"))
         haptica = pct_da_haptica(visto.get("novo"))
+        efeitos = {
+            campo: getattr(visto.get("novo"), campo, None) or "do_estilo"
+            for campo in ("efeito_haptico", "efeito_imersao")
+        }
         if not visto.get("gravado"):
             logger.info("rumble_motores_sem_mudanca", uniq=chave, perfil=nome, onde=onde)
             return {
@@ -3733,6 +3762,7 @@ class IpcHandlersMixin:
                 "forte_pct": efetivos[0],
                 "fraco_pct": efetivos[1],
                 "haptica_pct": haptica,
+                **efeitos,
             }
         # O `state_full` já paga o `__init__` que importa todos eles.
         if self.daemon is not None:
@@ -3760,6 +3790,7 @@ class IpcHandlersMixin:
             "forte_pct": efetivos[0],
             "fraco_pct": efetivos[1],
             "haptica_pct": haptica,
+            **efeitos,
         }
 
     async def _handle_sensor_set(self, params: dict[str, Any]) -> dict[str, Any]:

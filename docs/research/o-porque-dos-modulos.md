@@ -1526,3 +1526,15 @@ A docstring antiga, movida para cá em 15/10/2026 (a do código ficou com o cont
         OS DOIS GATILHOS SÃO LINHA PRÓPRIA, sem espelho no `cross` e no `triangle`:
         `l2` e `r2` entram em `do_mouse` ou em `do_teclado` como qualquer botão.
 
+## As barras e as listas por peça (`app/ipc_bridge.py`, `rumble_motores_set`)
+
+Decisão, 04/09/2026: a barra não manda o par `rumble.set` agora, ela é POLÍTICA e MULTIPLICA o
+degrau da coluna (`efetivo(motor) = degrau x barra(motor)`). O corpo traz `status` (`ok`,
+`sem_controle`, `sem_endereco`, `sem_perfil`), o `motivo` quando recusa, o `perfil` em que gravou, se
+`gravado` de fato (regravar perfil idêntico troca a data do arquivo e faz o daemon reaplicá-lo) e os
+`forte_pct`/`fraco_pct` que passaram a valer, que é o que a tela pinta de volta. A tela NÃO digita a
+faixa nem o padrão: quem recusa fora de 0-100 é a borda do esquema, e o 100 do «sem opinião» chega no
+estado completo do daemon como `rumble_motor_pct_padrao`. O ganho da háptica (`haptica_pct`, 0-200,
+O-GANHO-DA-HAPTICA-TEM-DONO-01) vai no mesmo pedido, e o padrão chega como `haptica_pct_padrao`.
+`efeito_haptico` e `efeito_imersao` (15/10/2026) são as duas listas da aba Vibração: `do_estilo` apaga
+a chave, e a resposta devolve cada uma (o valor ou `do_estilo`).

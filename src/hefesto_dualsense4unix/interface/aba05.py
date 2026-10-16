@@ -19,11 +19,18 @@ from hefesto_dualsense4unix.daemon.subsystems.rumble import (  # noqa: E402
     RUMBLE_POLICY_MULT,
 )
 from hefesto_dualsense4unix.interface.pacotes.a05_vibracao import (  # noqa: E402
+    CAMPO_DA_DICA_DA_IMERSAO,
+    CAMPO_DA_DICA_DO_HAPTICO,
+    CAMPO_DO_EFEITO_HAPTICO,
+    CAMPO_DO_EFEITO_IMERSAO,
+    GESTO_DO_EFEITO_HAPTICO,
+    GESTO_DO_EFEITO_IMERSAO,
     GESTO_DO_MODO,
     html_dos_toques,
 )
 from hefesto_dualsense4unix.interface.pacotes.meus_efeitos import TETO_DO_NOME  # noqa: E402
 
+from hefesto_dualsense4unix.profiles import formas_de_haptica as formas  # noqa: E402
 from hefesto_dualsense4unix.profiles.schema import (  # noqa: E402
     HAPTICA_PCT_MAX,
     HAPTICA_PCT_PADRAO,
@@ -214,6 +221,10 @@ CSS = """
      Se um dia ela quiser mais ar, o preço sai de `--r-des` (o desenho é a única
      faixa com conteúdo elástico): −12px ali pagam `--r-ar:6px`, e o controle
      encolhe 11%. */
+  /* 15/10/2026, AS DUAS LISTAS DE EFEITO (+2 faixas, +2 vãos): MEDIDO em 1212x809, a grade pedia
+     64px a mais do que o quadro tem. Pagaram o respiro (`--r-ar` 5 -> 2, o passo 10 -> 4: -48px),
+     as duas faixas (lista de 26px e frase de 12px, 38px cada) e o piso do desenho (96 -> 72px). O
+     desenho é a faixa elástica e ocupa o que sobra (100px na janela mínima; cresce com a janela). */
   .vib{
     display:grid;
     /* A LARGURA DA COLUNA DE RÓTULOS E O VÃO ATÉ A PRIMEIRA COLUNA DE
@@ -229,9 +240,9 @@ CSS = """
     /* A GRADE ENCHE A ALTURA DO QUADRO: as faixas são frações com piso (a do desenho pesa 3), e
        a coluna não deixa vão embaixo. O piso é o que a faixa pede para caber o conteúdo. */
     flex:1 1 auto;min-height:0;grid-template-rows:minmax(0,1fr);
-    --r-des:96px;--r-nome:30px;--r-forca:79px;--r-barra:36px;--r-motor:36px;
-    --r-acoes:34px;
-    --r-ar:5px;--r-passo:calc(var(--r-ar) * 2);
+    --r-des:72px;--r-nome:30px;--r-forca:79px;--r-barra:36px;--r-motor:36px;
+    --r-efeito:38px;--r-acoes:34px;
+    --r-ar:2px;--r-passo:calc(var(--r-ar) * 2);
   }
   .miolo > .quadro.vib-quadro{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
   .miolo > .quadro.vib-quadro > .quadro-corpo{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
@@ -254,9 +265,21 @@ CSS = """
   .vib > div{
     display:grid;row-gap:var(--r-passo);
     grid-template-rows:minmax(var(--r-des),3fr) var(--r-nome) minmax(var(--r-forca),1fr)
+                       minmax(var(--r-motor),1fr) minmax(var(--r-efeito),1fr)
                        minmax(var(--r-motor),1fr) minmax(var(--r-motor),1fr)
-                       minmax(var(--r-motor),1fr) minmax(var(--r-acoes),1fr);
+                       minmax(var(--r-efeito),1fr) minmax(var(--r-acoes),1fr);
   }
+  /* AS DUAS LISTAS SUSPENSAS DE CADA COLUNA (desenho A de 15/10/2026, «uma lista suspensa em cada
+     escolha»): a lista (32px), dois de vão e a frase de UMA linha da opção escolhida (14px), que não
+     quebra (até 36 letras) e some com o lugar vazio. As duas faixas pesam o mesmo que o piso; a que
+     absorve a altura que sobra continua sendo a do desenho. */
+  .efeito-lista{display:flex;flex-direction:column;justify-content:center;gap:0;min-width:0}
+  .vib-efeito{flex:0 0 26px;width:100%;min-width:0;height:26px;padding:0 9px;border-radius:7px;
+    border:1px solid var(--border-forte);background:var(--app-bg,var(--panel));color:var(--fg);
+    font:500 12.5px 'Space Grotesk',system-ui,sans-serif;cursor:pointer}
+  .vib-efeito:hover{border-color:var(--comment)}
+  .vib-dica-do-efeito{flex:0 0 12px;min-width:0;font-size:10.5px;line-height:12px;
+    color:var(--comment);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .vib .acoes-col,.vib .seg{align-content:center}
   .vib .acoes-col{align-items:center}
   .quadro-topo .modo-auto{margin-left:auto}
@@ -399,6 +422,7 @@ CSS = """
   .vib .ctrl[data-conectado="nao"]{border-color:var(--border-forte)}
   .vib .ctrl[data-conectado="nao"] .seg > *,
   .vib .ctrl[data-conectado="nao"] .motor > *,
+  .vib .ctrl[data-conectado="nao"] .efeito-lista > *,
   .vib .ctrl[data-conectado="nao"] .acoes-col > *{display:none}
   .vib .ctrl[data-conectado="nao"] .seg::after,
   .vib .ctrl[data-conectado="nao"] .motor::after,
@@ -1118,6 +1142,29 @@ def _linha_da_haptica(valor, ligado, vazio=False):
             f' title="Aceso: há háptica chegando a este controle agora.">%</span></div>')
 
 
+#: Os rótulos da lista dos motores: os dos padrões, mais as duas escolhas de sempre.
+_ROTULOS_DA_IMERSAO = {
+    padroes.DO_ESTILO: "Do estilo", padroes.SEM_EFEITO: "Sem efeito", **padroes.ROTULOS}
+
+
+def _lista_do_efeito(gesto, campo, campo_dica, nome, escolhas, rotulos, dicas):
+    """Uma lista suspensa do controle: «Do estilo» primeiro, «Sem efeito» depois, as formas em seguida.
+
+    O gesto do `<select>` e o campo que a pintura escreve nele têm nomes distintos: o pintor
+    acha o valor por `data-campo`, e o clique, por `data-gesto`. A frase embaixo é a da opção
+    escolhida, uma linha só.
+    """
+    opcoes = "".join(
+        f'<option value="{chave}"{" selected" if i == 0 else ""}>{rotulos[chave]}</option>'
+        for i, chave in enumerate(escolhas))
+    return (f'<div class="efeito-lista">'
+            f'<select class="vib-efeito" data-gesto="{gesto}" aria-label="{nome}" '
+            f'data-campo="{campo}" data-hef-alvo="valor" data-dica="{dicas[escolhas[0]]}">'
+            f'{opcoes}</select>'
+            f'<span class="vib-dica-do-efeito" data-campo="{campo_dica}" '
+            f'data-hef-alvo="texto">{dicas[escolhas[0]]}</span></div>')
+
+
 def _teto_do_multiplicador(no_teto):
     """A célula do `Máx` — a palavra SEMPRE no HTML, acesa por classe."""
     return (f'<span class="teto mx{" on" if no_teto else ""}"'
@@ -1332,8 +1379,14 @@ def _coluna(c, e=None, conectado=None):
                       vazio=not conectado)}
             </div>
             {_linha_da_haptica(e["hap"][1], e["hap"][0], vazio=not conectado)}
+            {_lista_do_efeito(GESTO_DO_EFEITO_HAPTICO, CAMPO_DO_EFEITO_HAPTICO,
+                              CAMPO_DA_DICA_DO_HAPTICO, "Efeito háptico", formas.ESCOLHAS,
+                              formas.ROTULOS, formas.DICAS)}
             {linhas[0]}
             {linhas[1]}
+            {_lista_do_efeito(GESTO_DO_EFEITO_IMERSAO, CAMPO_DO_EFEITO_IMERSAO,
+                              CAMPO_DA_DICA_DA_IMERSAO, "Efeito imersão", padroes.ESCOLHAS,
+                              _ROTULOS_DA_IMERSAO, padroes.DICAS)}
             <div class="acoes-col">
               <!-- "Testar", não "Testar por 500 ms" — decisão, 30/08:
                    *"ali vai ser só Testar; se o user quiser parar vai clicar em Parar"*.
@@ -1399,8 +1452,10 @@ MIOLO = f'''
             <div><span class="sec-rot">Modelo</span></div>
             <div><span class="sec-rot" data-dica="Economia 30%, Padrão 100% (o sinal como o jogo mandou) e Máximo 150%. No Padrão as barras ficam verdes e travadas. {DICA_DO_TETO_DA_MESA}">Força da vibração</span></div>
             <div><span class="sec-rot" data-dica="A vibração fina que o jogo manda como som, no cabo e no BT. O risco no meio é 100%: o jogo como ele mandou. {DICA_DO_TETO_DA_MESA} Cinza quando o jogo fala direto com o controle, sem passar pelo Hefesto">Sensor háptico</span></div>
+            <div><span class="sec-rot" data-dica="A forma do toque háptico deste controle. Do estilo segue o estilo e Sem efeito cala o toque; a força é a do Sensor háptico">Efeito háptico</span></div>
             <div><span class="sec-rot" data-dica="Motor do punho esquerdo: contrapeso maior, som grosso. Desligue um lado e aquele punho para de tremer">{ESQ["rot"]}</span></div>
             <div><span class="sec-rot" data-dica="Motor do punho direito: contrapeso menor, som fino">{DIR["rot"]}</span></div>
+            <div><span class="sec-rot" data-dica="O padrão dos motores deste controle. Do estilo segue o estilo e Sem efeito cala os motores; o Testar toca o padrão escolhido">Efeito imersão</span></div>
             <div><span class="sec-rot" data-dica="Vibração treme os motores deste controle até o Parar, seguindo ao vivo as barras da coluna. Háptica toca a vibração fina pelo som, com a força do Sensor háptico. No mesmo controle ligar um desliga o outro, e cada controle tem o seu teste. Parar corta os dois deste controle e devolve a vibração dele ao jogo. {DICA_DOS_VALORES_QUE_PASSAM}">Testar agora</span></div>
           </div>
 {"".join(_coluna(c) for c in MESA)}
@@ -1553,7 +1608,7 @@ def _conferir(doc):
                f"o lugar vazio {c['pref']} afirma uma cor de plástico — mesma "
                f"regra do `data-colorway` logo acima")
     #    medido com os quatro DualSense do usuário na mesa. Até aqui ela proibia os
-    for alvo in (".seg > *", ".motor > *", ".acoes-col > *"):
+    for alvo in (".seg > *", ".motor > *", ".efeito-lista > *", ".acoes-col > *"):
         exigir(f'.vib .ctrl[data-conectado="nao"] {alvo}' in doc,
                f"a folha deixou de esconder `{alvo}` num lugar sem controle — "
                f"os degraus, os trilhos e o `Testar` voltam a ficar clicáveis "
@@ -1689,9 +1744,31 @@ def _conferir(doc):
            "`--r-estado` voltou à folha da aba 05 — a faixa cuja altura ele "
            "reservava saiu em 05/09/2026, e altura guardada para linha que não "
            "existe é rolagem paga por nada")
-    exigir(doc.count("minmax(var(--r-motor),1fr) minmax(var(--r-acoes),1fr);") == 1,
-           "a grade da aba 05 deixou de terminar no `--r-acoes` em fração — a oitava "
-           "faixa saiu em 05/09/2026 e a `grid-template-rows` foi junto")
+    exigir(doc.count("minmax(var(--r-efeito),1fr) minmax(var(--r-acoes),1fr);") == 1,
+           "a grade da aba 05 deixou de terminar no `--r-acoes` em fração, depois da faixa do "
+           "efeito imersão — a oitava faixa saiu em 05/09/2026 e as duas listas entraram em "
+           "15/10/2026")
+    # as nove faixas, na ordem do desenho A (15/10/2026): as duas listas moram ao lado de quem elas governam
+    _ordem = _re.findall(r'<span class="sec-rot"[^>]*>([^<]+)</span>',
+                         corpo.split('<div class="rotulos">', 1)[-1].split('<div class="ctrl', 1)[0])
+    exigir(_ordem == ["Controle", "Modelo", "Força da vibração", "Sensor háptico", "Efeito háptico",
+                      ESQ["rot"], DIR["rot"], "Efeito imersão", "Testar agora"],
+           f"as faixas da aba 05 saíram da ordem do desenho A: {_ordem}")
+    for gesto, rotulos, escolhas in (
+            (GESTO_DO_EFEITO_HAPTICO, formas.ROTULOS, formas.ESCOLHAS),
+            (GESTO_DO_EFEITO_IMERSAO, _ROTULOS_DA_IMERSAO, padroes.ESCOLHAS)):
+        _listas = _re.findall(
+            r'<select class="vib-efeito" data-gesto="' + gesto + r'"[^>]*>(.*?)</select>',
+            corpo, flags=_re.S)
+        exigir(len(_listas) == len(MESA),
+               f"a lista {gesto!r} não está nas {len(MESA)} colunas (achei {len(_listas)})")
+        for opcoes in _listas:
+            _valores = _re.findall(r'<option value="([^"]+)"[^>]*>([^<]+)</option>', opcoes)
+            exigir(tuple(v for v, _r in _valores) == tuple(escolhas)
+                   and [r for _v, r in _valores] == [rotulos[c] for c in escolhas],
+                   f"as opções de {gesto!r} não são as da lista do produto, na ordem dela")
+            exigir(_valores[:2] == [("do_estilo", "Do estilo"), ("sem_efeito", "Sem efeito")],
+                   f"a lista {gesto!r} não abre com «Do estilo» e «Sem efeito»")
     # as faixas são frações com piso: altura fixa de volta deixa vão embaixo (A-ABA-VIBRACAO-DO-TODO-01)
     exigir("grid-template-rows:minmax(var(--r-des),3fr) var(--r-nome) minmax(var(--r-forca),1fr)" in doc
            and "grid-template-rows:minmax(0,1fr)" in doc,

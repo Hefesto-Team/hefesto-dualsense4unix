@@ -109,7 +109,7 @@ def test_o_criar_e_o_sentir_apontam_para_o_quadro_que_eles_leem() -> None:
                   if f'data-gesto="{gesto}"' in b and "data-hef-forma" in b]
         assert botoes, gesto
         assert all('data-hef-forma="criar-vibracao"' in b for b in botoes), (gesto, botoes)
-    assert doc.count('data-linha="padrao"') == 3, "são três formas para escolher"
+    assert doc.count('data-linha="padrao"') == len(padroes.PADROES), "uma linha por forma"
     assert doc.count('data-linha="motores"') == 3, "são três escolhas de motor"
 
 

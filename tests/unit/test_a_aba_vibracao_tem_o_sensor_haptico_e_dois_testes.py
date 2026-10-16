@@ -501,16 +501,22 @@ MEDIDA = r"""
     fundo_do_miolo: Math.round(m.getBoundingClientRect().bottom),
     folga: Math.round(m.getBoundingClientRect().bottom - vib.getBoundingClientRect().bottom),
     fundos: fundos,
+    fundo_da_grade: Math.round(vib.getBoundingClientRect().bottom),
+    criar_h: Math.round(document.getElementById('criar-vibracao').getBoundingClientRect().height),
     desenho: Math.round(mold.getBoundingClientRect().height),
     linhas: linhas,
   });
 })()
 """
 
-DESENHO_DE_ANTES = 124
+#: 15/10/2026, as duas listas de efeito (+116 px de faixas): o desenho de 124 px voltou a ceder, por
+#: pedido (desenho A, «uma lista suspensa em cada escolha»). O quadro sem pintura mede 72 px
+#: (o piso do CSS, e o «Criar» quebra em duas linhas porque ainda não leu a mesa); na janela do
+#: piloto, com a mesa pintada, mede 100 px. O que MORDE é a grade não estourar o quadro (abaixo).
+DESENHO_DE_ANTES = 72
 #: Com o aviso do gamepad virtual aceso, a linha dele toma 17 px do quadro «Criar efeitos novos»
 #: (A-ABA-VIBRACAO-DO-TODO-01), que enche a folga de baixo; o desenho cede o que o aviso pede.
-DESENHO_COM_AVISO = 110
+DESENHO_COM_AVISO = 80
 
 CENAS = ("quieta", "vpad-nao-subiu")
 
@@ -612,3 +618,16 @@ def test_o_desenho_nao_encolhe(medida: dict[str, Any]) -> None:
     piso = DESENHO_DE_ANTES if medida["cena"] == "quieta" else DESENHO_COM_AVISO
     assert medida["desenho"] >= piso, (
         f"o desenho encolheu para {medida['desenho']} px: {medida}")
+
+
+def test_a_grade_nao_estoura_o_quadro_com_a_mesa_pintada(medida: dict[str, Any]) -> None:
+    """A aba não rola e, por isso, o estouro é mudo: a última célula tem de acabar na grade.
+
+    MEDIDO em 16/10/2026: com as duas listas de efeito a grade pedia 64 px a mais do que o quadro
+    tem, as faixas se sobrepunham ao «Criar efeitos novos» e `rola` seguia 0. A cena sem pintura
+    fica de fora: o «Criar» quebra em duas linhas ali, e essa folga é do desenho sem a mesa.
+    """
+    if medida["cena"] == "quieta":
+        pytest.skip("a cena sem pintura quebra o «Criar» em duas linhas")
+    assert max(medida["fundos"]) <= medida["fundo_da_grade"], (
+        f"as faixas passam do fundo da grade: {medida}")

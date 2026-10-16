@@ -35,6 +35,7 @@ from hefesto_dualsense4unix.app.telas import vibracao as _tela
 from hefesto_dualsense4unix.core.rumble import POLITICA_PADRAO, vale_o_padrao
 from hefesto_dualsense4unix.daemon.subsystems import padroes_de_vibracao as _padroes
 from hefesto_dualsense4unix.interface.monta import MODO_AUTOMATICO, partes_do_modelo
+from hefesto_dualsense4unix.profiles import formas_de_haptica as _formas
 
 from . import Contexto, registrar
 from . import perfil as _perfil
@@ -124,6 +125,22 @@ def _no_teto(pct: dict[str, Any]) -> str:
     except ValueError:
         return ""
     return "1" if valor >= teto_da_barra() else ""
+
+
+def _escolha_da_lista(overrides: dict[str, Any], uniq: str, campo: str,
+                      lista: tuple[str, ...]) -> str:
+    """A escolha que o perfil guarda para ESTE controle numa das duas listas.
+
+    Sem escolha, ou com texto que a lista não conhece, vale «Do estilo»: nunca «Sem efeito»,
+    que cala o controle e só existe quando a pessoa o escolhe.
+    """
+    dele = overrides.get(_chave_no_perfil(uniq)) or overrides.get(uniq) or {}
+    seu = dele.get("rumble") if isinstance(dele, dict) else None
+    valor = seu.get(campo) if isinstance(seu, dict) else None
+    return valor if isinstance(valor, str) and valor in lista else _DO_ESTILO
+
+
+_DO_ESTILO = _formas.DO_ESTILO
 
 
 def _chave_no_perfil(uniq: str) -> str:
@@ -623,6 +640,13 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # chegando a ESTE controle agora, do `state_full` (`haptica_no_ar`).
         plano["haptica-no-ar"] = "1" if _haptica_no_ar(ctx.state, uniq) else ""
         plano["em-teste-h"] = "1" if uniq and uniq in em_teste_da_haptica() else ""
+        for campo, dica, lista, textos in (
+            (CAMPO_DO_EFEITO_HAPTICO, CAMPO_DA_DICA_DO_HAPTICO, _formas.ESCOLHAS, _formas.DICAS),
+            (CAMPO_DO_EFEITO_IMERSAO, CAMPO_DA_DICA_DA_IMERSAO, _padroes.ESCOLHAS, _padroes.DICAS),
+        ):
+            escolha = _escolha_da_lista(overrides, uniq, CHAVE_DO_PERFIL[campo], lista)
+            plano[campo] = escolha
+            plano[dica] = textos[escolha]
         for lado, treme in (col.get("treme") or {}).items():
             plano[f"treme-{lado}"] = "1" if treme else ""
         # sempre vai ser o jogo mandando os input pro controle e a gnt
@@ -1524,6 +1548,22 @@ BARRA_CHEIA = 100
 
 CAMPO_DA_HAPTICA = "haptica_pct"
 
+#: As duas listas suspensas de cada coluna (15/10/2026): o gesto do `<select>`, o campo que a
+#: pintura escreve nele (o valor escolhido) e o da frase de uma linha embaixo. Gesto e campo têm
+#: nomes distintos de propósito: o pintor acha o valor por `data-campo`, e o clique por
+#: `data-gesto`.
+GESTO_DO_EFEITO_HAPTICO = "efeito-haptico"
+GESTO_DO_EFEITO_IMERSAO = "efeito-imersao"
+CAMPO_DO_EFEITO_HAPTICO = "haptico-escolha"
+CAMPO_DO_EFEITO_IMERSAO = "imersao-escolha"
+CAMPO_DA_DICA_DO_HAPTICO = "haptico-dica"
+CAMPO_DA_DICA_DA_IMERSAO = "imersao-dica"
+#: O campo do perfil (`controllers.<mac>.rumble.<campo>`) que cada lista guarda.
+CHAVE_DO_PERFIL = {
+    CAMPO_DO_EFEITO_HAPTICO: "efeito_haptico",
+    CAMPO_DO_EFEITO_IMERSAO: "efeito_imersao",
+}
+
 
 @gesto("05-vibracao.html", "lado", grava="rumble_motores_set")
 def lado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
@@ -1600,6 +1640,53 @@ def haptica(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             p.haptica_testar(uniq, True)
 
 
+def _gravar_a_escolha(o: dict[str, Any], p: Any, campo: str, lista: tuple[str, ...]) -> None:
+    """Grava a escolha de uma das duas listas pelo `rumble.motores.set`, no controle do clique.
+
+    Valor que a lista não tem é recusado aqui, antes de ir ao daemon; ele recusa de novo.
+    «Do estilo» apaga a chave do perfil.
+    """
+    uniq = _uniq(o)
+    if not uniq:
+        raise RuntimeError(
+            "Use a lista dentro da coluna do controle que você quer mudar.")
+    valor = str(o.get("valor") or "").strip()
+    if valor not in lista:
+        raise RuntimeError("Escolha uma das opções da lista.")
+    ok, corpo = p.rumble_motores_set(**{campo: valor}, uniq=uniq)
+    if not ok:
+        raise RuntimeError(
+            "o Hefesto não está rodando — ligue na aba Sistema")
+    resposta = corpo if isinstance(corpo, dict) else {}
+    if str(resposta.get("status") or "") != "ok":
+        raise RuntimeError(
+            str(resposta.get("motivo")
+                or "o Hefesto recusou esta escolha. Tente de novo."))
+
+
+@gesto("05-vibracao.html", GESTO_DO_EFEITO_HAPTICO, grava="rumble_motores_set")
+def efeito_haptico(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """A lista «Efeito háptico» da coluna: a forma do toque deste controle (ou Do estilo)."""
+    _gravar_a_escolha(o, p, "efeito_haptico", _formas.ESCOLHAS)
+
+
+@gesto("05-vibracao.html", GESTO_DO_EFEITO_IMERSAO, grava="rumble_motores_set")
+def efeito_imersao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """A lista «Efeito imersão» da coluna: o padrão dos motores deste controle (ou Do estilo)."""
+    _gravar_a_escolha(o, p, "efeito_imersao", _padroes.ESCOLHAS)
+
+
+def _padrao_escolhido(ctx: Contexto, uniq: str) -> str:
+    """O padrão dos motores que este controle guarda, ou `""` quando não há um para tocar.
+
+    «Do estilo» e «Sem efeito» não são um padrão: o «Testar» faz o sustentado de sempre.
+    """
+    perfil = _perfil_ativo(ctx).get("controllers")
+    escolha = _escolha_da_lista(
+        perfil if isinstance(perfil, dict) else {}, uniq, "efeito_imersao", _padroes.ESCOLHAS)
+    return escolha if escolha in _padroes.PADROES else ""
+
+
 @gesto("05-vibracao.html", "testar")
 def testar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Testar": AQUELE controle treme até o «Parar», com o par das barras dele.
@@ -1617,6 +1704,10 @@ def testar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     if not uniq:
         raise RuntimeError(
             "Clique o botão dentro da coluna do controle que você quer sentir.")
+    escolhido = _padrao_escolhido(ctx, uniq)
+    if escolhido:
+        _tocar_o_padrao(ctx, dict(o, padrao=escolhido, motores=_padroes.AMBOS), p)
+        return
     _calar_o_teste_da_haptica(p, uniq)
     weak, strong = _par_das_barras(ctx, uniq)
     ok, motivo = _resposta(p.rumble_set_checked(weak, strong, uniq=uniq))
@@ -1696,7 +1787,8 @@ def criar_efeito_da_vibracao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise RuntimeError("não consegui ler a área de criar efeitos. Nada foi guardado.")
     padrao = str(forma.get("padrao") or "").strip()  # (noqa-acento) chave do contrato
     if padrao not in _padroes.PADROES:
-        raise RuntimeError("Escolha a forma: batida, onda ou tranco.")
+        nomes = [_padroes.ROTULOS[chave].lower() for chave in _padroes.PADROES]
+        raise RuntimeError(f"Escolha a forma: {', '.join(nomes[:-1])} ou {nomes[-1]}.")
     motores = str(forma.get("motores") or "").strip()
     if motores not in _padroes.MOTORES:
         raise RuntimeError("Escolha em qual motor o efeito toca.")
@@ -1840,4 +1932,4 @@ PROVAS = [
 #: daemon do usuário com o DualSense azul no cabo.** O interruptor de punho escreve a
 #:     daemon.state_full.rumble_motores  ->  {}
 SEM_ECO = ("testar", "parar", "forca", "intensidade", "motor", "lado",
-           "testar-haptica")
+           "testar-haptica", GESTO_DO_EFEITO_HAPTICO, GESTO_DO_EFEITO_IMERSAO)
