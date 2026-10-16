@@ -78,8 +78,11 @@ class Leitura:
 
 
 def _sinal_valido(sinal: str) -> bool:
-    """Um caminho relativo à pasta do jogo: sem subir, sem raiz, curinga só ``*`` num nome."""
-    if sinal.startswith(("/", ".")) or "\\" in sinal or "?" in sinal or "[" in sinal:
+    """Um caminho relativo à pasta do jogo: sem subir, sem raiz, curinga só ``*`` num nome.
+
+    O ``**`` fica fora: ele desceria a pasta inteira do jogo a cada censo.
+    """
+    if sinal.startswith(("/", ".")) or any(c in sinal for c in ("\\", "?", "[", "**")):
         return False
     return all(parte not in ("", ".", "..") for parte in sinal.split("/"))
 

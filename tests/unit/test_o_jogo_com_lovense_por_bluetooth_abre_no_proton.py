@@ -122,6 +122,7 @@ def test_a_linha_com_caminho_perigoso_ou_peca_com_barra_nao_entra(tmp_path: Path
         "sobe,../A.dll,WINEDLLOVERRIDES,A=d,@sinal\n"
         "sobe-no-meio,X/../A.dll,WINEDLLOVERRIDES,A=d,@sinal\n"
         "absoluto,/etc/A.dll,WINEDLLOVERRIDES,A=d,@sinal\n"
+        "desce-tudo,**/A.dll,WINEDLLOVERRIDES,A=d,@sinal\n"
         "peca-com-barra,A.dll,WINEDLLOVERRIDES,A=n,x/A.dll\n",
         encoding="utf-8",
     )
