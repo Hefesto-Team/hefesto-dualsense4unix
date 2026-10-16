@@ -37,6 +37,10 @@ for _caminho in (str(RAIZ / "src"), str(RAIZ / "scripts")):
 
 import chrome_sem_rede  # o ponto comum dos portões de página, sem a rede
 
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("importa `interface.hefesto_vivo`, que carrega o GTK")
+
 from hefesto_dualsense4unix.interface import hefesto_vivo
 
 CHROME = pathlib.Path("/usr/bin/google-chrome")
