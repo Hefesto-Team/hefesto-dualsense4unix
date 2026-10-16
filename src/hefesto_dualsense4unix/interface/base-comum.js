@@ -4,9 +4,18 @@
      do `#hef-dica` no produto. Os dois nunca rodam juntos: o teste vem a cada evento, porque a
      camada da janela chega depois da carga da página. */
   let dica = null, alvo = null;
+  /* A dica aberta é a descrição de quem a abriu, para o leitor de tela: o `id` entra no
+     `aria-describedby` enquanto ela está aberta e sai com ela, sem apagar o que já havia. */
+  const descrever = (el, liga) => {
+    const lista = (el.getAttribute('aria-describedby') || '').split(/\s+/).filter(t => t && t !== 'hef-dica');
+    if (liga) lista.push('hef-dica');
+    if (lista.length) el.setAttribute('aria-describedby', lista.join(' ')); else el.removeAttribute('aria-describedby');
+  };
   const mostrar = el => {
+    if (alvo && alvo !== el) descrever(alvo, false);
     if (!dica) { dica = document.createElement('div'); dica.id = 'hef-dica'; dica.className = 'da-base'; dica.setAttribute('role', 'tooltip'); }
     alvo = el; dica.textContent = el.dataset.dica;
+    descrever(el, true);
     if (!dica.isConnected) document.body.append(dica);
     const r = el.getBoundingClientRect(), d = dica.getBoundingClientRect();
     let x = r.left + r.width / 2 - d.width / 2, y = r.bottom + 8;
@@ -14,7 +23,7 @@
     dica.style.left = Math.max(6, Math.min(x, innerWidth - d.width - 6)) + 'px'; dica.style.top = y + 'px';
     dica.classList.add('visivel');
   };
-  const esconder = () => { alvo = null; if (dica) dica.classList.remove('visivel'); };
+  const esconder = () => { if (alvo) descrever(alvo, false); alvo = null; if (dica) dica.classList.remove('visivel'); };
   for (const [ev, f] of [['mouseover', 'in'], ['focusin', 'in'], ['mouseout', 'out'], ['focusout', 'out']])
     document.addEventListener(ev, e => {
       if (window.__hefDica) return;
@@ -88,15 +97,23 @@
   const aparece = el => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';
   const jaTemParada = el => el.hasAttribute('tabindex') || el.matches(NATIVO)
     || Array.from(el.querySelectorAll(NATIVO)).some(d => !d.disabled && aparece(d));
+  /* A dica de um título, de um rótulo ou de uma frase também tem parada: `[data-dica]` que não é
+     focável por natureza ganha o `tabindex`, e o `focusin` que a dica já escuta a abre. O papel
+     fica como está (um `h4` continua título). Quem tem um campo ou botão dentro não ganha parada
+     própria: o foco dele já abre a dica do que o contém. */
+  const PEDE_PARADA = GESTO + ',[data-dica]';
   const marcar = raiz => {
-    const todos = raiz.matches && raiz.matches(GESTO) ? [raiz] : [];
-    raiz.querySelectorAll && todos.push(...raiz.querySelectorAll(GESTO));
+    const todos = raiz.matches && raiz.matches(PEDE_PARADA) ? [raiz] : [];
+    raiz.querySelectorAll && todos.push(...raiz.querySelectorAll(PEDE_PARADA));
     for (const el of todos) if (!el.matches(SEM_PARADA) && !jaTemParada(el)) el.setAttribute('tabindex', '0');
   };
   marcar(document.body);
   new MutationObserver(ms => {
-    for (const m of ms) for (const n of m.addedNodes) if (n.nodeType === 1) marcar(n);
-  }).observe(document.body, {subtree: true, childList: true});
+    for (const m of ms) {
+      if (m.type === 'attributes') marcar(m.target);
+      else for (const n of m.addedNodes) if (n.nodeType === 1) marcar(n);
+    }
+  }).observe(document.body, {subtree: true, childList: true, attributes: true, attributeFilter: ['data-dica']});
   /* Enter e Espaço fazem o que o clique faz, em quem não é botão por natureza. */
   document.addEventListener('keydown', e => {
     if ((e.key !== 'Enter' && e.key !== ' ') || e.defaultPrevented || e.repeat) return;

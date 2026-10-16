@@ -12,6 +12,8 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   font:500 12.5px/1.45 'Space Grotesk',system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.45);pointer-events:none;
   opacity:0;transform:translateY(3px);transition:opacity .12s,transform .12s}
 #hef-dica.da-base.visivel{opacity:1;transform:none}
+/* O foco num título, rótulo ou frase com dica (o `tabindex` vem da base) aparece com o mesmo contorno do Modo automático. */
+[data-dica][tabindex]:focus-visible{outline:2px solid var(--cyan,#8be9fd);outline-offset:2px}
 
 /* 2. O Modo automático: pílula com bolinha. Os dois estados têm de se distinguir num relance.
       Desligado: contorno neutro, bolinha vazia, letra suave (vale o que está na aba).
