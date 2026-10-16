@@ -370,6 +370,7 @@ def _foco_no_webkit(tmp_path: pathlib.Path, js: str = JS_DA_BASE) -> dict[str, A
 
 
 def test_no_webkit_do_produto_o_foco_no_titulo_abre_a_dica_da_casa(tmp_path: pathlib.Path) -> None:
+    # D-1610-O-TITULO-COM-DICA-ENTRA-NO-TAB-E-ABRE-A-DICA-PELO-FOCO
     m = _foco_no_webkit(tmp_path)
     assert not m.get("erro"), m
     assert m["parada"] == 0 and m["papel"] is None, f"o título não ganhou a parada: {m}"

@@ -456,6 +456,7 @@ def test_o_sugestoes_nao_rola_nas_tres_larguras(vista: str, com: str) -> None:
 
 @pytest.mark.parametrize("vista", ["940", "1272", "1512"])
 def test_o_chip_da_cadeia_e_uma_linha_e_o_nome_inteiro_vai_na_dica(vista: str) -> None:
+    # D-1610-O-CHIP-DA-CADEIA-CORTA-NUMA-LINHA-E-O-NOME-INTEIRO-VAI-NA-DICA
     """O tipo e o nome ficam na mesma linha (o enlace segue embaixo); o nome que não cabe corta com
     reticências e vai inteiro na dica do chip. Cobre o recuado (filho do hub) e o do extensor."""
     for com in ("entregue", "exemplo"):

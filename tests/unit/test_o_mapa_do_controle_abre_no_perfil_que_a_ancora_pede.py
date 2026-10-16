@@ -326,6 +326,7 @@ def test_a_ancora_segue_a_escolha_da_06_no_tempo(monkeypatch: pytest.MonkeyPatch
 
 
 def test_seguida_a_ancora_o_seletor_e_de_quem_usa(monkeypatch: pytest.MonkeyPatch) -> None:
+    # D-1610-A-ANCORA-ABRE-O-MAPA-DO-CONTROLE-NO-PERFIL-QUE-PROMETE-UMA-VEZ-POR-CHEGADA
     """A âncora se segue uma vez por chegada. Depois, o perfil ativo que troca no meio da edição
     (um jogo que abre e troca o perfil) não muda o seletor nem dispara outro `change`, que no
     Python largaria o que ainda não foi salvo.
