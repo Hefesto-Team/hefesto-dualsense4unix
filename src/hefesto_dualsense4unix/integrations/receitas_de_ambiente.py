@@ -4,7 +4,9 @@ A tabela `docs/data/receitas-de-ambiente.csv` diz, por sinal no disco do jogo, q
 e que peça ela exige. Três regras que ela não quebra: sem appid embarcado (o jogo se reconhece
 pelo que traz na pasta); só com a peça ao lado do executável (sem ela o override quebraria o
 jogo, e o prontuário diz «falta a peça»); só o que o wrapper aceita (letra morta calada não
-entra). 100% stdlib, como o prontuário.
+entra). O sinal pode ser um caminho com curinga (`*_Data/Plugins/x86_64/X.dll`), e a peça pode ser
+o próprio sinal (`@sinal`), que é o caso de desligar uma DLL do jogo: nada a pôr ao lado do
+executável. 100% stdlib, como o prontuário.
 """
 from __future__ import annotations
 
@@ -26,9 +28,15 @@ VARIAVEIS_DO_WRAPPER = frozenset({"WINEDLLOVERRIDES"})
 
 _NOME_DE_DLL = re.compile(r"^[A-Za-z0-9_.-]+$")
 
+#: Os modos que o wrapper deixa passar: nativa, nativa-depois-da-embutida e desligada.
+MODOS_DO_OVERRIDE = ("n", "n,b", "d")
+
+#: A peça que é o próprio arquivo do sinal (a DLL que se desliga já está no disco).
+PECA_E_O_SINAL = "@sinal"
+
 
 def override_valido(valor: str) -> bool:
-    """A forma que o wrapper aceita: ``nome[,nome]=n`` ou ``=n,b``, entradas por ``;``.
+    """A forma que o wrapper aceita: ``nome[,nome]=n``, ``=n,b`` ou ``=d``, entradas por ``;``.
 
     O espelho em Python de ``override_de_dll_valido`` em ``assets/hefesto-launch.sh``; uma régua
     confere as duas pontas com o mesmo vetor.
@@ -40,7 +48,7 @@ def override_valido(valor: str) -> bool:
         return False
     for entrada in entradas:
         nomes, igual, modo = entrada.partition("=")
-        if not igual or modo not in ("n", "n,b") or not nomes:
+        if not igual or modo not in MODOS_DO_OVERRIDE or not nomes:
             return False
         for nome in nomes.split(","):
             if not _NOME_DE_DLL.match(nome):
@@ -69,6 +77,30 @@ class Leitura:
     peca_presente: bool | None
 
 
+def _sinal_valido(sinal: str) -> bool:
+    """Um caminho relativo à pasta do jogo: sem subir, sem raiz, curinga só ``*`` num nome."""
+    if sinal.startswith(("/", ".")) or "\\" in sinal or "?" in sinal or "[" in sinal:
+        return False
+    return all(parte not in ("", ".", "..") for parte in sinal.split("/"))
+
+
+def achar_sinal(raiz: Path, sinal: str) -> Path | None:
+    """O arquivo da pasta do jogo que o sinal nomeia, ou ``None``; o caminho aceita ``*``.
+
+    O leitor único do curinga da casa (a receita e o reconhecimento do kit de brinquedo usam
+    este): nunca sai de ``raiz`` (o sinal sem ``..`` nem barra inicial), nunca levanta.
+    """
+    if not _sinal_valido(sinal):
+        return None
+    try:
+        if "*" not in sinal:
+            alvo = raiz / sinal
+            return alvo if alvo.is_file() else None
+        return next((p for p in sorted(raiz.glob(sinal)) if p.is_file()), None)
+    except OSError:
+        return None
+
+
 def _linha_valida(linha: dict[str, str]) -> Receita | None:
     sinais = tuple(s.strip() for s in (linha.get("sinais") or "").split("|") if s.strip())
     variavel = (linha.get("variavel") or "").strip()
@@ -77,7 +109,7 @@ def _linha_valida(linha: dict[str, str]) -> Receita | None:
     ident = (linha.get("id") or "").strip()
     if not (ident and sinais and peca):
         return None
-    if any("/" in s or s.startswith(".") for s in sinais) or "/" in peca:
+    if not all(_sinal_valido(s) for s in sinais) or "/" in peca:
         return None
     if variavel not in VARIAVEIS_DO_WRAPPER or not override_valido(valor):
         return None
@@ -125,8 +157,14 @@ def ler_jogo(raiz: Path | None, tabela: Iterable[Receita] | None = None) -> tupl
     achadas: list[Leitura] = []
     nomes: frozenset[str] | None = None
     for receita in receitas:
-        sinal = next((s for s in receita.sinais if (raiz / s).is_file()), None)
-        if sinal is None:
+        achado = next(
+            ((s, p) for s in receita.sinais if (p := achar_sinal(raiz, s)) is not None), None
+        )
+        if achado is None:
+            continue
+        sinal, arquivo = achado
+        if receita.peca == PECA_E_O_SINAL:
+            achadas.append(Leitura(receita, sinal, arquivo.is_file()))
             continue
         if nomes is None:
             nomes = _nomes_ao_lado_do_executavel(raiz)
@@ -173,10 +211,13 @@ def ambientes_dos_jogos(home: Path | None = None) -> dict[str, dict[str, str]]:
 
 
 __all__ = [
+    "MODOS_DO_OVERRIDE",
+    "PECA_E_O_SINAL",
     "TABELA",
     "VARIAVEIS_DO_WRAPPER",
     "Leitura",
     "Receita",
+    "achar_sinal",
     "ambiente_do_jogo",
     "ambientes_dos_jogos",
     "carregar_tabela",

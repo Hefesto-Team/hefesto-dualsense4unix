@@ -44,8 +44,9 @@ set -u
 # executável e `WINEDLLOVERRIDES=xgameruntime=n`. Quem escreve a linha no
 # arquivo de ambiente é o daemon, a partir de `docs/data/receitas-de-ambiente.csv`
 # e só com a peça no disco; aqui o wrapper confere a FORMA, porque o arquivo é
-# texto e a variável vai ao ambiente do jogo: `nome[,nome]=n` ou `=n,b`, entradas
-# separadas por `;`, nomes só de DLL. Qualquer outra forma é descartada com uma
+# texto e a variável vai ao ambiente do jogo: `nome[,nome]=n`, `=n,b` ou `=d`
+# (desligar, que é o caso do kit da Lovense por Bluetooth), entradas separadas
+# por `;`, nomes só de DLL. Qualquer outra forma é descartada com uma
 # linha no diário, e o jogo abre sem ela. Quem já pôs a variável no ambiente
 # (Launch Option, shell) manda. O Proton ACRESCENTA ao `WINEDLLOVERRIDES`
 # herdado, então passar a variável não pisa no que ele põe. SÓ SHELL PURO.
@@ -60,7 +61,7 @@ override_de_dll_valido() {
         od_nomes="${od_entrada%%=*}"
         case "$od_entrada" in *=*) ;; *) return 1 ;; esac
         od_modo="${od_entrada#*=}"
-        case "$od_modo" in n|n,b) ;; *) return 1 ;; esac
+        case "$od_modo" in n|n,b|d) ;; *) return 1 ;; esac
         case "$od_nomes" in
             ''|,*|*,|*,,*|*[!A-Za-z0-9_.,-]*) return 1 ;;
         esac
@@ -73,7 +74,7 @@ receita_de_dll() {
     [ -z "${WINEDLLOVERRIDES+x}" ] || return 1
     override_de_dll_valido "$1" && return 0
     if command -v logger >/dev/null 2>&1; then
-        logger -t hefesto-launch "receita de ambiente descartada: WINEDLLOVERRIDES fora da forma nome=n" >/dev/null 2>&1 || true
+        logger -t hefesto-launch "receita de ambiente descartada: WINEDLLOVERRIDES fora da forma nome=n|n,b|d" >/dev/null 2>&1 || true
     fi
     return 1
 }

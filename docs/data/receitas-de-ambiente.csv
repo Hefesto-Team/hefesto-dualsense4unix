@@ -7,14 +7,23 @@
 #
 # Colunas
 #   id        nome da receita (único)
-#   sinais    arquivos na RAIZ da pasta do jogo, separados por `|`; basta um existir
+#   sinais    caminhos relativos à pasta do jogo, separados por `|`; basta um existir.
+#             O `*` vale num nome de pasta (`*_Data/Plugins/x86_64/X.dll`); nunca sobe (`..`)
 #   variavel  só as que o `hefesto-launch` aceita (`WINEDLLOVERRIDES`)
-#   valor     na forma `nome=n` ou `nome=n,b`; vários separados por `;`
+#   valor     na forma `nome=n`, `nome=n,b` ou `nome=d` (desligar); vários separados por `;`
 #   peca      arquivo que tem de existir AO LADO do executável do jogo; sem ele o
-#             valor quebraria o jogo, e a receita não é passada (o prontuário avisa)
+#             valor quebraria o jogo, e a receita não é passada (o prontuário avisa).
+#             `@sinal` quer dizer que a peça é o próprio arquivo do sinal (o `=d` desliga
+#             uma DLL que o jogo já traz, e não há o que pôr ao lado do executável)
 #
 # A primeira linha é a família GDK (jogos do Xbox no PC, runtime `xgameruntime`):
 # o Proton não traz essa DLL, e o jogo só abre quando a nativa, posta ao lado do
 # executável, é a que carrega.
+#
+# A segunda é o kit da Lovense por Bluetooth direto (`LovenseWinrtBleDll.dll`, o kit para Unity):
+# o WinRT de Bluetooth do Wine é parcial, e a exceção C++ da DLL derruba o jogo. Desligada, o
+# P/Invoke vira `DllNotFoundException` gerenciada, que a Unity registra e segue; o brinquedo vai
+# pelo Game Mode que o mesmo kit traz.
 id,sinais,variavel,valor,peca
 gdk-xgameruntime,MicrosoftGame.config|installscript-gamingrepair.vdf,WINEDLLOVERRIDES,xgameruntime=n,xgameruntime.dll
+lovense-ble-winrt,*_Data/Plugins/x86_64/LovenseWinrtBleDll.dll,WINEDLLOVERRIDES,LovenseWinrtBleDll=d,@sinal
