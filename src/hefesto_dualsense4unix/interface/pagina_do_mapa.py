@@ -6273,8 +6273,9 @@ JS_DA_CADEIA_E_DO_REGISTRO = r"""
       /* A dica fala do que a pessoa faz, não do sistema por baixo. */
       var dica = p ? "Na Entrada " + p + ". Clique para trocar" : "Sem entrada marcada. Clique e marque a entrada";
       var titulo = a.nomeDeclarado || hub || rotuloDoAparelho(a);
-      /* O nome que o chip corta com reticências vai inteiro na dica. */
-      if (a.nome && a.nome !== titulo) dica = a.nome + ". " + dica;
+      /* O que o chip corta com reticências vai inteiro na dica: o nome que a pessoa deu e o do aparelho. */
+      var inteiro = [a.nomeDeclarado || "", a.nome && a.nome !== titulo ? a.nome : ""].filter(Boolean).join(" · ");
+      if (inteiro) dica = inteiro + ". " + dica;
       var fundo = nivel > 1 ? ' style="margin-left:' + nivel + 'rem;width:calc(100% - ' + nivel + 'rem)"' : "";
       return '<button class="chip' + (nivel ? " recuado" : "") + '" data-ap="' + a.id + '"' + (p ? ' data-alocado="1"' : "")
         + ' data-dica="' + emAtributo(dica) + '"' + fundo
@@ -6561,6 +6562,12 @@ EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = (
             "  .bandeja .chip .txt > b { flex: 0 1 auto; min-width: 0; max-width: 100%;"
             " overflow: hidden;\n"
             "                            text-overflow: ellipsis; white-space: nowrap; }\n"
+            "  /* Com o nome do aparelho ao lado, o título deixa lugar para ele na mesma linha: sem"
+            " isto\n"
+            "     o nome que a pessoa deu, longo, toma a linha e empurra o do aparelho para baixo."
+            " */\n"
+            "  .bandeja .chip .txt > b:has(+ span:not(.enlace)) {"
+            " max-width: calc(100% - 2.95rem); }\n"
             "  .bandeja .chip .txt > span:not(.enlace) { flex: 1 1 0; min-width: 2.5rem;"
             " overflow: hidden;\n"
             "                            text-overflow: ellipsis; white-space: nowrap; }\n"

@@ -376,6 +376,8 @@ def test_o_adicionar_e_uma_linha_com_a_pergunta_dela() -> None:
 # ---- O Sugestões na largura mínima da aba (O-SUGESTOES-DO-MAPA-DAS-PORTAS-NAO-ROLAM-A-940-PX-01)
 
 NOME_LONGO = "Adaptador Bluetooth USB de longo alcance com antena externa"
+#: O nome que a pessoa dá é texto livre e vira o título do chip: ele também corta e vai na dica.
+NOME_DADO_LONGO = "Rádio da sala, o que fica atrás da televisão grande"
 
 MEDIR_A_CADEIA = r"""
 (function(){
@@ -388,6 +390,7 @@ MEDIR_A_CADEIA = r"""
       titulo: b ? b.textContent : '', nome: nome ? nome.textContent : '',
       mesma_linha: !!(b && nome) && Math.abs(r(b).bottom - r(nome).bottom) < 4,
       cortado: !!nome && nome.scrollWidth > nome.clientWidth + 1,
+      titulo_cortado: !!b && b.scrollWidth > b.clientWidth + 1,
       dica: c.getAttribute('data-dica') || '', altura: Math.round(r(c).height),
       fora: r(c).right > r(q('#bandeja')).right + 1};
   });
@@ -413,6 +416,7 @@ def _arranjo_com_nome_longo() -> dict[str, Any]:
         aps[i]["dentroDe"] = hub["id"]
     aps[1]["nome"] = NOME_LONGO
     aps[1]["enlace"] = "Negociou 480 Mb/s onde cabe 5 Gb/s"
+    aps[2]["nomeDeclarado"] = NOME_DADO_LONGO
     return dado
 
 
@@ -462,6 +466,8 @@ def test_o_chip_da_cadeia_e_uma_linha_e_o_nome_inteiro_vai_na_dica(vista: str) -
             assert not c["fora"], f"({QUAL}) {vista}/{com}: o chip passa da bandeja: {c}"
             assert c["nome"] in c["dica"], (
                 f"({QUAL}) {vista}/{com}: o nome inteiro não está na dica: {c}")
+            assert not c["titulo_cortado"] or c["titulo"] in c["dica"], (
+                f"({QUAL}) {vista}/{com}: o título cortado não está inteiro na dica: {c}")
     for com in ("entregue", "exemplo"):
         lida = _cadeia(vista, com)
         assert lida["lista"][0] <= lida["lista"][1] + 1, f"({QUAL}) {com}: a lista da cadeia rola"
@@ -470,6 +476,11 @@ def test_o_chip_da_cadeia_e_uma_linha_e_o_nome_inteiro_vai_na_dica(vista: str) -
     longo = [c for c in _cadeia(vista, "entregue")["chips"] if c["nome"] == NOME_LONGO]
     assert longo and longo[0]["recuado"], f"({QUAL}) o filho recuado de nome longo sumiu"
     assert longo[0]["cortado"], f"({QUAL}) o nome longo não cortou: {longo[0]}"
+    dado = [c for c in _cadeia(vista, "entregue")["chips"] if c["titulo"] == NOME_DADO_LONGO]
+    assert dado and dado[0]["recuado"], f"({QUAL}) o filho recuado de nome dado longo sumiu"
+    assert dado[0]["titulo_cortado"] and dado[0]["mesma_linha"], (
+        f"({QUAL}) o nome dado longo não cortou numa linha só: {dado[0]}")
+    assert NOME_DADO_LONGO in dado[0]["dica"], f"({QUAL}) o nome dado sumiu da dica: {dado[0]}"
 
 
 def test_o_extensor_15a_do_exemplo_esta_na_cadeia_a_940() -> None:
