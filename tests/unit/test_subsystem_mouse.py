@@ -129,7 +129,8 @@ class TestMouseSubsystem:
         await subsystem.start(ctx)
         await subsystem.stop()
         assert ctx.daemon._mouse_device is None
-        assert gravados == [], "o stop do subsystem gravou o mouse desligado na sessão"
+        # O start grava o ligado (é o `start_mouse_emulation` de sempre); o stop não grava nada.
+        assert gravados == [True], "o stop do subsystem gravou o mouse desligado na sessão"
 
 class TestTabelaNoJogoFechaOsDois:
     def test_o_stop_do_teclado_roda_mesmo_se_o_do_mouse_levanta(
