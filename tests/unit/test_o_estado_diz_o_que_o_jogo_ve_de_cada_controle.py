@@ -132,6 +132,37 @@ def test_as_chaves_do_controle_calam_o_giro_e_o_toque() -> None:
         pad.stop()
 
 
+def test_no_dualsense_a_mira_e_o_cursor_tiram_o_giro_e_o_toque_do_pad() -> None:
+    """O que o filtro do pad faz (`REGISTRO.filtrar`): a rota leva o sensor ao Hefesto.
+
+    MORDIDA: com o giro e o toque do DualSense lidos só das chaves, a Mira ligada e o
+    dedo no cursor saem `nativo`, e o estado diz ao jogo um giro que o pad não leva.
+    """
+    funcoes = _chega(_ve(EDGE_NO_UHID, MIRA_LIGADA))
+    assert (funcoes["giroscopio"], funcoes["touchpad"]) == (oqv.PELO_HEFESTO, oqv.NATIVO)
+    no_cursor = ArranjoDeMovimento(toque="cursor")
+    funcoes = _chega(_ve(EDGE_NO_UHID, no_cursor))
+    assert (funcoes["giroscopio"], funcoes["touchpad"]) == (oqv.NATIVO, oqv.PELO_HEFESTO)
+    calado = _chega(_ve(EDGE_NO_UHID, MIRA_LIGADA, giro_ligado=False))
+    assert calado["giroscopio"] == oqv.NAO_CHEGA
+
+
+def test_fora_do_dualsense_a_mira_anda_so_com_o_sensor_ligado() -> None:
+    """O tique (`gamepad.aplicar_o_movimento`) não move a Mira com o sensor desligado.
+
+    MORDIDA: ignore `giro_ligado` e `acel_ligado` fora do DualSense, e a Mira sem sensor
+    sai `pelo_hefesto`.
+    """
+    pad = _fabrica("dualsense", vp.CAMINHO_XBOX)
+    try:
+        assert _chega(_ve(pad, MIRA_LIGADA, giro_ligado=False))["giroscopio"] == oqv.NAO_CHEGA
+        inclinacao = ArranjoDeMovimento(acelerometro="analogico_esquerdo")
+        assert _chega(_ve(pad, inclinacao, acel_ligado=False))["giroscopio"] == oqv.NAO_CHEGA
+        assert _chega(_ve(pad, inclinacao, giro_ligado=False))["giroscopio"] == oqv.PELO_HEFESTO
+    finally:
+        pad.stop()
+
+
 @pytest.mark.parametrize("pad", [None, object(), SimpleNamespace(flavor="dualsense"),
                                  SimpleNamespace(flavor="outra", backend="uinput")])
 def test_o_pad_que_nao_sabe_dizer_e_none(pad: object) -> None:

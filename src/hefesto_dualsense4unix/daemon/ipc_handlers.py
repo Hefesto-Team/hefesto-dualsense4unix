@@ -2996,12 +2996,12 @@ class IpcHandlersMixin:
         from hefesto_dualsense4unix.core.virtual_motion import REGISTRO
         from hefesto_dualsense4unix.integrations.o_que_o_jogo_ve import o_que_o_jogo_ve
 
-        store = getattr(self, "store", None)
+        store, sensores = getattr(self, "store", None), REGISTRO.estado(uniq)
         return o_que_o_jogo_ve(
-            vpad,
-            roteador.da_peca(store, uniq, roteador.ativo(store)),
+            vpad, roteador.da_peca(store, uniq, roteador.ativo(store)),
             transporte=transporte,
-            giro_ligado=REGISTRO.estado(uniq).giroscopio,
+            giro_ligado=sensores.giroscopio,
+            acel_ligado=sensores.acelerometro,
             toque_ligado=REGISTRO.touchpad_ligado(uniq),
         )
 

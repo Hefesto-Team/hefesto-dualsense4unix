@@ -50,9 +50,28 @@ def _texto(valor: object) -> str | None:
     return valor if isinstance(valor, str) and valor else None
 
 
-def _o_movimento_anda(movimento: object) -> bool:
-    """A Mira Virtual leva o giro ou a inclinação deste controle a um analógico ou ao mouse."""
-    return bool(getattr(movimento, "ligado", False) or getattr(movimento, "inclina", False))
+def _o_giro(forma: str, movimento: object, *, giro_ligado: bool, acel_ligado: bool) -> str:
+    """O giroscópio, pelas mesmas portas do tique (`gamepad.aplicar_o_movimento`).
+
+    A Mira anda só com o sensor ligado; no DualSense, a Mira que anda tira o giro
+    do relatório do pad (`virtual_motion.REGISTRO.filtrar`), e o jogo o recebe convertido.
+    """
+    mira = bool(getattr(movimento, "ligado", False)) and giro_ligado
+    if forma == "dualsense":
+        if mira:
+            return PELO_HEFESTO
+        return NATIVO if giro_ligado else NAO_CHEGA
+    inclina = bool(getattr(movimento, "inclina", False)) and acel_ligado
+    return PELO_HEFESTO if mira or inclina else NAO_CHEGA
+
+
+def _o_toque(forma: str, movimento: object, *, toque_ligado: bool) -> str:
+    """O touchpad: o dedo que vai ao cursor ou às zonas sai do relatório do pad."""
+    if not toque_ligado:
+        return NAO_CHEGA
+    if forma == "dualsense" and not getattr(movimento, "toca", False):
+        return NATIVO
+    return PELO_HEFESTO
 
 
 def o_que_o_jogo_ve(
@@ -61,13 +80,15 @@ def o_que_o_jogo_ve(
     *,
     transporte: object = None,
     giro_ligado: bool = True,
+    acel_ligado: bool = True,
     toque_ligado: bool = True,
 ) -> dict[str, Any] | None:
     """O que o jogo vê deste pad, ou ``None`` quando o pad não sabe dizer.
 
     ``movimento`` é o arranjo de mira desta peça (`roteador_de_movimento.da_peca`);
-    ``transporte`` é o do plástico (`usb` ou `bt`); ``giro_ligado`` e
-    ``toque_ligado`` são as chaves por controle (`virtual_motion.REGISTRO`).
+    ``transporte`` é o do plástico (`usb` ou `bt`); ``giro_ligado``,
+    ``acel_ligado`` e ``toque_ligado`` são as chaves por controle
+    (`virtual_motion.REGISTRO`).
     """
     mascara = _texto(getattr(vpad, "flavor", None))
     canal = _texto(getattr(vpad, "backend", None))
@@ -81,12 +102,10 @@ def o_que_o_jogo_ve(
     if forma is None:
         return None
     funcoes = dict(_TABELA[forma])
-    if forma == "dualsense":
-        funcoes["giroscopio"] = NATIVO if giro_ligado else NAO_CHEGA
-        funcoes["touchpad"] = NATIVO if toque_ligado else NAO_CHEGA
-    else:
-        funcoes["giroscopio"] = PELO_HEFESTO if _o_movimento_anda(movimento) else NAO_CHEGA
-        funcoes["touchpad"] = PELO_HEFESTO if toque_ligado else NAO_CHEGA
+    funcoes["giroscopio"] = _o_giro(
+        forma, movimento, giro_ligado=giro_ligado, acel_ligado=acel_ligado
+    )
+    funcoes["touchpad"] = _o_toque(forma, movimento, toque_ligado=toque_ligado)
     return {
         "forma": forma,
         "canal": canal,
