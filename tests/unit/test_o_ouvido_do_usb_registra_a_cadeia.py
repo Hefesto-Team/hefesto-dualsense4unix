@@ -83,6 +83,7 @@ def test_a_primeira_leitura_so_diz_desde_quando_ouve(
 
 
 def test_entrou_saiu_e_voltou(sys_usb: SysDeMentira, tmp_path: Path, relogio: Relogio) -> None:
+    # D-1510-A-CADEIA-USB-SE-RECONHECE-PELO-TIPO-E-CADA-MUDANCA-VAI-AO-DIARIO
     ouvido = _ouvido(sys_usb, tmp_path, relogio)
     ouvido.comecar(com_netlink=True)
     adaptador = dict(sys_usb.nos[ADAPTADOR])

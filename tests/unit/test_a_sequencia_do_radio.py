@@ -203,6 +203,7 @@ def _src() -> dict[str, str]:
 
 
 def test_src_nao_afirma_o_que_o_caderno_nao_diz() -> None:
+    # D-1510-O-DESCARTE-PELO-NUMERO-NAO-SE-AFIRMA-SEM-O-ENSAIO
     veredito = veredito_do_caderno()
     assert afirmacoes_que_o_caderno_nao_sustenta(veredito, _src()) == [], veredito
 
