@@ -2336,8 +2336,8 @@ class PyDualSenseController(IController):
         for key, handle in new_handles:
             with contextlib.suppress(Exception):
                 self.assumir_volume_padrao_na_adocao(key, handle)
-            with contextlib.suppress(Exception):
-                _vigiar_o_ps_segurado(self, key, handle)  # o PS segurado por 10 s desliga
+            # O PS segurado sozinho por 10 s desliga este controle (`_vigiar_o_ps_segurado`).
+            _vigiar_o_ps_segurado(self, key, handle)
             self._conhecer_o_firmware(key, handle)
             self._reapply_desired(key, handle)
         # acabaram de surgir. Sintoma provado ao vivo: boot com os DualSense
@@ -5716,13 +5716,24 @@ class _VigiaDoPs:
 
 def _vigiar_o_ps_segurado(controle: PyDualSenseController, key: str, handle: Any) -> None:
     """Na adoção do handle: assina a borda do PS, e a dos outros botões, uma vez por handle."""
-    evento = getattr(handle, "ps_pressed", None)
-    if evento is None or getattr(handle, "_vigia_do_ps", None) is not None:
+    evento: Any = getattr(handle, "ps_pressed", None)
+    if not getattr(evento, "available", False) or getattr(handle, "_vigia_do_ps", None):
         return
     vigia = _VigiaDoPs(controle, key, handle)
     handle._vigia_do_ps = vigia
     evento += vigia.borda
     for nome in _OS_OUTROS_BOTOES:
-        outro = getattr(handle, nome, None)
-        if outro is not None:
+        outro: Any = getattr(handle, nome, None)
+        if getattr(outro, "available", False):
             outro += vigia.outro_botao
+
+
+def microfone_chega_sem_ponte(transporte: object) -> bool:
+    """O microfone deste transporte captura sem ponte: no cabo o canal já existe; no rádio ele só
+    captura com a ponte de pé, e abrir a ponte põe o áudio do controle no adaptador.
+
+    O ramo por transporte mora aqui, no dono do eixo (`docs/data/donos-de-comportamento.csv`,
+    `eixo.transporte/backend`); a luz do microfone pergunta. Transporte desconhecido conta como
+    rádio: na dúvida, não se abre nada.
+    """
+    return transporte == "usb"

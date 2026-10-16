@@ -151,13 +151,13 @@ import contextlib
 import importlib
 from typing import TYPE_CHECKING, Any
 
+from hefesto_dualsense4unix.core.backend_pydualsense import microfone_chega_sem_ponte
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 if TYPE_CHECKING:  # pragma: no cover - só para tipo
     from hefesto_dualsense4unix.daemon.protocols import DaemonProtocol
 
 logger = get_logger(__name__)
-
 APAGADA: int = 0
 ACESA: int = 1
 PISCANDO: int = 2
@@ -306,7 +306,7 @@ def _a_medir(
     for uniq in mesa:
         if mudos.get(uniq) is not False:
             continue
-        if uniq in com_ouvinte or transportes.get(uniq) == "usb":
+        if uniq in com_ouvinte or microfone_chega_sem_ponte(transportes.get(uniq)):
             escolhidos.append(uniq)
     return escolhidos
 
