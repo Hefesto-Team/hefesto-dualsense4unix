@@ -365,6 +365,62 @@ def test_na_producao_o_gatilho_que_vibra_segura_o_padrao(monkeypatch: pytest.Mon
     assert controller.rumble
 
 
+@pytest.mark.parametrize(("barras", "esperado"), [
+    ((100, 100), (255, 255)), ((50, 100), (255, 128)), ((100, 0), (0, 255)), ((0, 0), (0, 0)),
+])
+def test_na_producao_o_padrao_passa_pelas_barras_de_cada_motor(
+    monkeypatch: pytest.MonkeyPatch, barras: tuple[int, int], esperado: tuple[int, int],
+) -> None:
+    """A barra Motor esquerdo (o forte) e a direito (o fraco) valem no padrão, como no Testar.
+
+    MORDIDA: a escrita de produção sem `_barras_dos_motores` toca 255 com a barra em zero.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems import gamepad
+
+    monkeypatch.setattr(gamepad, "_pcts_dos_motores", lambda _d, _u: barras)
+    _atuador, controller, motor = _o_atuador_de_producao(monkeypatch, None, False)
+    motor.anotar(_tiro(AZUL, 0.0))
+    motor.tique(0.0, lambda _u: _LIVRE, tv.Receita(padroes_escolhidos=True), uniqs=(AZUL,))
+    assert controller.rumble[0] == (AZUL, *esperado)
+
+
+def test_no_modo_xbox_o_rumble_do_jogo_pelo_pad_uinput_cala_o_padrao(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """O pad ``uinput`` não tem ``visto_ha_s``: o rumble anotado é o que diz que o jogo vibra.
+
+    MORDIDA: sem `com_o_rumble_anotado` no passo, o padrão toca por cima do jogo no modo Xbox.
+    """
+    motor, motores = _montar({AZUL: "tranco"})
+    motor.ligado = True
+    controle = tv.Controle(uniq=AZUL, vpad=SimpleNamespace(backend="uinput"))
+    daemon = SimpleNamespace(_tato_vivo=motor)
+    passo = tv.Passo(daemon, motor)
+    receita = tv.Receita(padroes_escolhidos=True)
+    monkeypatch.setattr(passo, "receita_de_agora", lambda _agora: receita)
+    monkeypatch.setattr(tv, "controles_do_daemon", lambda _d: [controle])
+    monkeypatch.setattr(tv, "ha_jogo", lambda _d: True)
+    monkeypatch.setattr(tv, "modo_do_pad", lambda _p: tv.MODO_XBOX)
+    tv.anotar_o_rumble(daemon, AZUL.upper(), 0, 200, agora=1.0)
+    motor.anotar(_tiro(AZUL, 1.1))
+    passo(1.1)
+    assert motores.escritas == []  # o jogo vibra: o motor é dele
+    depois = 1.0 + tv.JANELA_DO_JOGO_S + 0.5
+    motor.anotar(_tiro(AZUL, depois))
+    passo(depois)
+    assert motores.escritas  # passada a janela do jogo, o padrão volta a tocar
+
+
+def test_o_rumble_anotado_vale_a_idade_menor_entre_o_pad_e_o_motor() -> None:
+    uhid = tv.EstadoDoCanal(modo=tv.MODO_DUALSENSE, ha_jogo=True, visto_ha_s={"rumble": 0.4})
+    assert tv.com_o_rumble_anotado(uhid, None, 10.0) is uhid
+    assert tv.com_o_rumble_anotado(uhid, 9.0, 10.0).visto_ha_s["rumble"] == 0.4
+    assert tv.com_o_rumble_anotado(uhid, 9.9, 10.0).visto_ha_s["rumble"] == 0.1
+    sem = tv.EstadoDoCanal(modo=tv.MODO_XBOX, ha_jogo=True)
+    assert not tv.decidir(tv.CANAL_MOTORES, tv.com_o_rumble_anotado(sem, 9.0, 10.0))
+    assert tv.decidir(tv.CANAL_MOTORES, tv.com_o_rumble_anotado(sem, 6.0, 10.0))
+
+
 # --- A soltura do dedo ------------------------------------------------------------------------
 
 

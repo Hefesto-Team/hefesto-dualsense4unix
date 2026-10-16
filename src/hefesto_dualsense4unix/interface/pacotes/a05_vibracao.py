@@ -1692,9 +1692,9 @@ def testar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Testar": AQUELE controle treme até o «Parar», com o par das barras dele.
 
     O pedido leva o `uniq` dele; a aba não mira o seletor global (`controller.target.set`).
-    Com o padrão (Batida, Onda ou Tranco), ou com a `forma` do quadro de criar, o controle toca
-    a forma uma vez e a mão volta ao jogo no fim. O porquê está em
-    docs/research/o-porque-dos-modulos.md, «o Testar da aba Vibração».
+    Com um padrão de `padroes_de_vibracao.PADROES` (o do chip, a `forma` do quadro de criar ou o
+    Efeito imersão da coluna), o controle toca a forma uma vez e a mão volta ao jogo no fim. O
+    porquê está em docs/research/o-porque-dos-modulos.md, «o Testar da aba Vibração».
     """
     # a área de criar manda a `forma`; sem ela escolhida recusa, em vez de ligar o Testar
     if _o_padrao_do_clique(o)[0] or o.get("forma"):
@@ -1777,7 +1777,7 @@ def _tocar_o_padrao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 @gesto("05-vibracao.html", "criar-efeito", grava="guardar_meus_efeitos")
 def criar_efeito_da_vibracao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """Guarda um efeito novo: a forma (Batida, Onda ou Tranco), o motor e o nome.
+    """Guarda um efeito novo: a forma (uma de `padroes_de_vibracao.PADROES`), o motor e o nome.
 
     Só a caixa de preferências da interface é gravada: nenhum perfil e nenhum aparelho. O
     efeito entra como chip em «Criar efeitos novos» e toca no clique (o `testar` do chip).

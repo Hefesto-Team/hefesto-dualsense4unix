@@ -454,6 +454,9 @@ class TatoVivo:
         self.escolhas_de_imersao: dict[str, str] = {}
         #: onde o gatilho do perfil ativo vibra (o padrão dos motores espera a soltura)
         self.vibra_o_gatilho: VibracaoDoGatilho = SEM_VIBRACAO
+        #: quando o jogo pediu rumble pelo pad ``uinput`` (por ``norm_mac``): esse pad não tem
+        #: ``visto_ha_s``, e sem isto o padrão dos motores tocaria por cima do jogo no modo Xbox.
+        self.rumble_visto_em: dict[str, float] = {}
         #: o status do Disparo de cada gatilho (0 antes, 1 dentro, 2 passou do clique), lido do
         #: report de entrada; sem entrada é que o aparelho não o disse (o relógio vale).
         self.disparo: dict[tuple[str, str], int] = {}
@@ -764,6 +767,8 @@ def anotar_o_rumble(
         return
     try:
         instante = time.monotonic() if agora is None else agora
+        # Reatribuído, nunca mutado: escreve a thread do pad e lê a do tique.
+        motor.rumble_visto_em = {**motor.rumble_visto_em, norm_mac(uniq) or uniq: instante}
         for evento in motor.borda_do_rumble.ver(uniq, fraco, forte, instante, efetivo):
             motor.anotar(evento)
     except Exception:
@@ -1977,6 +1982,25 @@ def estado_do_controle(
     )
 
 
+def com_o_rumble_anotado(
+    estado: EstadoDoCanal, visto_em: float | None, agora: float
+) -> EstadoDoCanal:
+    """O estado com o rumble que o jogo pediu pelo pad ``uinput`` (o do modo Xbox).
+
+    Só o pad ``uhid`` carimba o ``visto_ha_s``; o rumble do ``uinput`` passa por
+    :func:`anotar_o_rumble`. Vale a idade menor das duas, e ``decidir`` cala os motores
+    enquanto o jogo vibra, em todo modo.
+    """
+    if visto_em is None:
+        return estado
+    carimbo = _CARIMBO_DO_CANAL[CANAL_MOTORES]
+    idade = round(max(0.0, agora - visto_em), 1)
+    atual = estado.visto_ha_s.get(carimbo)
+    if atual is not None and atual <= idade:
+        return estado
+    return replace(estado, visto_ha_s={**estado.visto_ha_s, carimbo: idade})
+
+
 #: O nome que não achou arquivo com o slug dele e a receita que o `load_profile`
 #: trouxe: o laço só volta a varrer quando o `active_profile` muda.
 _PELO_CARREGADOR: tuple[str, Receita] | None = None
@@ -2096,6 +2120,25 @@ def _controle_na_economia(uniq: str) -> bool:
     return economia_vale(norm_mac(uniq) in controles_em_economia(), economia_da_mesa())
 
 
+def _barras_dos_motores(daemon: Any, uniq: str) -> tuple[int, int]:
+    """``(forte_pct, fraco_pct)`` das barras dos motores do controle, a pergunta do jogo.
+
+    A mesma de ``gamepad._pcts_dos_motores`` e do «Testar» da aba: no Padrão, 100 e 100.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems import gamepad
+
+    try:
+        forte, fraco = gamepad._pcts_dos_motores(daemon, uniq)
+        return int(forte), int(fraco)
+    except Exception:
+        logger.debug("tato_vivo_barras_ilegiveis", exc_info=True)
+        return (100, 100)
+
+
+def _na_barra(valor: int, pontos: int) -> int:
+    return max(0, min(255, round(valor * pontos / 100.0)))
+
+
 def atuadores_de_producao(daemon: Any) -> list[Atuador]:
     """Os canais que o motor sabe escrever hoje."""
 
@@ -2177,7 +2220,10 @@ def atuadores_de_producao(daemon: Any) -> list[Atuador]:
 
     def motores(uniq: str, fraco: int, forte: int) -> object:
         escrever = getattr(controller, "set_rumble_for", None)
-        return escrever(uniq, fraco, forte) if callable(escrever) else False
+        if not callable(escrever):
+            return False
+        forte_pct, fraco_pct = _barras_dos_motores(daemon, uniq)
+        return escrever(uniq, _na_barra(fraco, fraco_pct), _na_barra(forte, forte_pct))
 
     def momento(uniq: str, lado: str, bloco: bytes) -> object:
         escrever = getattr(controller, "set_game_trigger_for", None)
@@ -2320,7 +2366,12 @@ class Passo:
         self._ouvir_o_jogo(receita, controles)
         jogo = self.jogo = ha_jogo(self.daemon)
         por_uniq = {
-            c.uniq: estado_do_controle(c, jogo, self._sessao_ha_s(c, agora)) for c in controles
+            c.uniq: com_o_rumble_anotado(
+                estado_do_controle(c, jogo, self._sessao_ha_s(c, agora)),
+                self.motor.rumble_visto_em.get(norm_mac(c.uniq) or c.uniq),
+                agora,
+            )
+            for c in controles
         }
         escritas = self.motor.tique(agora, por_uniq.get, receita, uniqs=tuple(por_uniq))
         self._levar_o_corpo(receita, tuple(por_uniq), por_uniq.get)
