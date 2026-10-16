@@ -12,7 +12,9 @@ devolver o ⓘ (``.cd-info``) ao cartão reprova a régua do porquê no título;
 corte do ``html_das_dicas``) reprova a dos quatro cartões; ``LINHAS_NUMA_COLUNA`` sem limite (uma
 coluna só) reprova a das linhas do ar; tirar o ``_nao_e_sem_fio`` reprova a da webcam; devolver o
 ``emTitulo`` ao fim da pintura do Mapa reprova a das frases; devolver a bandeja esticada
-(``align-self:start`` fora) reprova a rolagem das Sugestões a 1272 e 1512 px.
+(``align-self:start`` fora) reprova a rolagem das Sugestões a 1272 e 1512 px; devolver o nome do
+aparelho a uma segunda linha da cadeia (o ``.bandeja .chip .txt`` em flex fora) reprova a rolagem
+das Sugestões nas três larguras (16/10/2026).
 """
 
 from __future__ import annotations
