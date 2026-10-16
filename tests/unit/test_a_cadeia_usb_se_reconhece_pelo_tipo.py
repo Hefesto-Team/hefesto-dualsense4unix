@@ -110,6 +110,7 @@ def _com_uma_webcam_que_publica_superspeed(sys_usb: SysDeMentira) -> None:
 
 
 def test_a_webcam_nao_recebe_o_aviso_de_superspeed_que_nao_usa(sys_usb: SysDeMentira) -> None:
+    # D-1610-A-WEBCAM-NAO-RECEBE-O-AVISO-DE-SUPERSPEED
     _com_uma_webcam_que_publica_superspeed(sys_usb)
     censo = _censo(sys_usb)
     nomes = _por_nome(censo)
