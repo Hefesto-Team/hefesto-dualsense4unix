@@ -19,9 +19,17 @@ O QUE ESTA RÉGUA COBRA — o §V da sprint:
 6. **os consertos rodam só o vigia da Steam** — o `--install` do WirePlumber
    saiu;
 7. **o «Ver os plugins» não está em página nenhuma**;
-8. **na tela viva** (piloto oculto): cinco recusas vestem `hef-recusou` sem
-   frase na tela, e cinco cliques que armam não piscam e põem a pergunta no
-   painel.
+8. **na tela viva** (piloto oculto): as recusas do Atualizar e do Corrigir o
+   modo vestem `hef-recusou` sem frase na tela, e os cliques que armam (Parar,
+   Restaurar) não piscam e põem a pergunta no painel.
+
+DESDE 16/10/2026 (a aba Sistema do todo, publicada): a página não tem mais os botões
+Refazer os consertos, Aplicar aos jogos nem Fixar Proton: o interruptor «Permitir correções
+automáticas» tomou o lugar (D-1610-UM-INTERRUPTOR-SO-PARA-AS-CORRECOES; um clique alterna,
+o duplo reaplica, e a Steam não fecha). A pergunta mora no `data-dica`, não mais no `title`.
+O roteiro na tela anda só os botões que a página tem. Os gestos que saíram da página seguem
+registrados e provados pelos testes de unidade abaixo, e o duplo clique do interruptor é do
+`test_a_aba_sistema_do_todo`.
 
 NENHUM ATO REAL: o `systemctl` é o da janela de mentira, a Steam, o Proton, a
 janela da Steam, o perfil de fábrica e os scripts são dublês. O que a régua mede
@@ -51,10 +59,11 @@ PUBLICADA = RAIZ / "src/hefesto_dualsense4unix/interface/paginas" / PAGINA
 
 ARMAM = ("parar-ou-retomar", "restaurar-de-fabrica",
          "refazer-consertos", "aplicar-aos-jogos")
+#: Os dois que a página ainda tem: o roteiro na tela só clica o que existe nela.
+ARMAM_NA_TELA = ("parar-ou-retomar", "restaurar-de-fabrica")
 PERGUNTA_E_O_TITLE = ("parar-ou-retomar", "restaurar-de-fabrica")
 
-RECUSAS = ("atualizar", "corrigir-modo", "fixar-proton",
-           "aplicar-aos-jogos")
+RECUSAS = ("atualizar", "corrigir-modo")
 
 REPOUSO = "repouso da régua"
 
@@ -175,10 +184,10 @@ def _gesto(nome: str) -> Any:
 
 
 def _title_publicado(nome: str) -> str:
-    """O `title` do botão na página que o PRODUTO renderiza."""
+    """A dica (`data-dica`, ou o `title`) do botão na página que o PRODUTO renderiza."""
     for tag in re.findall(r"<button\b[^>]*>", PUBLICADA.read_text(encoding="utf-8")):
         if f'data-gesto="{nome}"' in tag:
-            achado = re.search(r'title="([^"]*)"', tag)
+            achado = re.search(r'(?:data-dica|title)="([^"]*)"', tag)
             return html.unescape(achado.group(1)) if achado else ""
     return ""
 
@@ -234,9 +243,9 @@ def test_o_clique_1_arma_pergunta_e_nao_age(a09, ctx, janela, armaveis, nome):
     assert texto.rstrip().endswith(a09.CLIQUE_DE_NOVO), texto
     if nome in PERGUNTA_E_O_TITLE:
         dica = _title_publicado(nome)
-        assert dica, f"o `{nome}` perdeu o `title` na página publicada"
+        assert dica, f"o `{nome}` perdeu a dica na página publicada"
         assert _sem_quebra(dica) in _sem_quebra(texto), (
-            f"a pergunta do `{nome}` não é o `title` que o botão promete: {texto!r}")
+            f"a pergunta do `{nome}` não é a dica que o botão promete: {texto!r}")
     assert janela.atos() == [], f"o clique 1 do `{nome}` mandou {janela.atos()}"
     assert armaveis["travou"] == []
 
@@ -364,10 +373,16 @@ def test_os_consertos_so_rodam_o_vigia_da_steam(a09, ctx, monkeypatch):
     assert a09._PAINEL[0] is None
 
 
-def test_o_title_dos_consertos_nao_promete_o_que_nao_faz():
-    """Nenhum script põe a linha de inicialização, e o áudio saiu com o `--install`."""
-    dica = _title_publicado("refazer-consertos")
-    assert dica, "o botão dos consertos perdeu o `title`"
+def test_a_dica_do_interruptor_nao_promete_o_que_nao_faz():
+    """Nenhum script põe a linha de inicialização, e o áudio saiu com o `--install`.
+
+    O botão dos consertos saiu da página; quem promete agora é o interruptor das correções, e o
+    botão velho não pode voltar (a dica dele era a que esta régua conferia).
+    """
+    pagina = PUBLICADA.read_text(encoding="utf-8")
+    assert 'data-gesto="refazer-consertos"' not in pagina, "o botão dos consertos voltou"
+    dica = _title_publicado("correcoes-automaticas")
+    assert dica, "o interruptor das correções perdeu a dica"
     for promessa in ("linha de inicialização", "áudio"):
         assert promessa not in dica, dica
 
@@ -388,14 +403,10 @@ def test_o_ver_os_plugins_nao_esta_em_pagina_nenhuma(a09, publicado):
 
 ROTEIRO = (
     ("recusa", "atualizar"), ("recusa", "corrigir-modo"),
-    ("steam", "aberta"), ("recusa", "fixar-proton"), ("steam", "fechada"),
     ("arma", "parar-ou-retomar"), ("foto", "depois-a-pergunta-do-parar"),
     ("arma", "restaurar-de-fabrica"),
-    ("arma", "refazer-consertos"), ("arma", "aplicar-aos-jogos"),
-    ("vence", "aplicar-aos-jogos"), ("foto", "depois-a-pergunta-vencida"),
-    ("rearma", "aplicar-aos-jogos"), ("recusa", "aplicar-aos-jogos"),
-    ("janela", "jogo_aberto"), ("rearma", "aplicar-aos-jogos"),
-    ("recibo", "aplicar-aos-jogos"), ("foto", "depois-o-recibo-do-jogo-aberto"),
+    ("vence", "restaurar-de-fabrica"), ("foto", "depois-a-pergunta-vencida"),
+    ("rearma", "restaurar-de-fabrica"),
 )
 
 PASSO_MS = 50
@@ -757,35 +768,17 @@ def test_na_tela_a_recusa_veste_o_botao_e_nao_escreve(na_tela: dict, gesto_: str
         f"a recusa do `{gesto_}` não chegou ao diário")
 
 
-def test_na_tela_nenhuma_recusa_fixou_o_proton_nem_fechou_a_steam(na_tela: dict) -> None:
-    """A Steam aberta recusou antes da fixação; a janela da Steam só no clique 2."""
-    _marco(na_tela, "recusa:fixar-proton")
+def test_na_tela_nenhum_clique_fixou_o_proton_nem_fechou_a_steam(na_tela: dict) -> None:
+    """As recusas e os cliques que só armam não chegam à fixação nem à janela da Steam."""
+    _marco(na_tela, "rearma:restaurar-de-fabrica")
     assert na_tela["travou"] == []
-    # uma por clique 2 do roteiro: a recusa (`nao_fechou`) e o recibo (`jogo_aberto`)
-    assert len(na_tela["fechou"]) == 2, (
+    assert na_tela["fechou"] == [], (
         f"a janela da Steam foi pedida {len(na_tela['fechou'])} vez(es) — o "
-        "clique 1 do «Aplicar aos jogos» não pode fechar a Steam")
+        "clique 1 do Parar e do Restaurar não pode fechar a Steam")
 
 
-def test_na_tela_o_jogo_aberto_nao_falha_e_o_painel_diz_o_que_o_gesto_fez(
-        na_tela: dict) -> None:
-    """O-APLICAR-SOLUCOES-COM-JOGO-ABERTO-DIZ-O-QUE-FEZ-01, no WebKit de verdade."""
-    marco = "recibo:aplicar-aos-jogos"
-    assert na_tela.get(f"{marco}:clique") == "cliquei", na_tela.get(f"{marco}:clique")
-    desfecho = _marco(na_tela, f"{marco}:desfecho")
-    assert desfecho and desfecho[0] == "aplicou", desfecho
-    classes = str(_marco(na_tela, marco)["pouso"]["classes"]).split()
-    assert "hef-recusou" not in classes, classes
-    painel = _marco(na_tela, f"{marco}:painel")["painel"]
-    assert painel.endswith("A Steam fica para quando o jogo fechar."), painel
-    assert "O ambiente do Hefesto está em:" in painel or "Nenhum outro lançador" in painel
-    falhas = [linha for linha in str(na_tela["diario"]).splitlines()
-              if linha.startswith(f"[gesto falhou] {PAGINA} · aplicar-aos-jogos")]
-    assert len(falhas) == 1, f"só a recusa `nao_fechou` falha, e falhou {falhas}"
-
-
-@pytest.mark.parametrize("marco", [f"arma:{g}" for g in ARMAM]
-                         + ["rearma:aplicar-aos-jogos"])
+@pytest.mark.parametrize("marco", [f"arma:{g}" for g in ARMAM_NA_TELA]
+                         + ["rearma:restaurar-de-fabrica"])
 def test_na_tela_o_clique_que_arma_nao_pisca_e_pergunta(na_tela: dict, marco: str) -> None:
     """O estudo mediu o Parar e o Restaurar piscando verde sem uma palavra."""
     gesto_ = marco.split(":", 1)[1]
@@ -803,7 +796,7 @@ def test_na_tela_o_clique_que_arma_nao_pisca_e_pergunta(na_tela: dict, marco: st
 
 def test_na_tela_a_pergunta_vencida_sai_no_tique(na_tela: dict) -> None:
     """O painel volta ao repouso junto com o rótulo — sem clique nenhum."""
-    lido = _marco(na_tela, "vence:aplicar-aos-jogos")
+    lido = _marco(na_tela, "vence:restaurar-de-fabrica")
     assert lido["painel"] == REPOUSO
 
 

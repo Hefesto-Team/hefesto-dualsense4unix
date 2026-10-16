@@ -106,16 +106,14 @@ def test_a_sistema_diz_personalizado_e_a_relacao_com_o_cartao(arquivo: pathlib.P
     assert [(v, r) for v, _t, r in botoes] == [
         (p, orc.ROTULOS_DOS_PERFIS[p]) for p in orc.PERFIS], botoes
     dicas = {v: t for v, t, _r in botoes}
-    if arquivo.parent.name == "mockup":
-        # O desenho do todo (A-ABA-SISTEMA-DO-TODO-01, 15/10/2026) trocou as três dicas longas
-        # pelas curtas aprovadas; a relação com o cartão da Conexões vem na terceira.
-        assert dicas == {"tudo_ligado": "Nada é limitado",
-                         "bateria_longa": "Vibração em 30% da força",
-                         "eu_escolho": "Você escolhe em cada aba"}, dicas
-    else:
-        assert dicas["bateria_longa"].endswith("Vale para todos os controles."), dicas
-        for v in ("tudo_ligado", "eu_escolho"):
-            assert dicas[v].endswith("cada um pode ter o seu na aba Conexões."), dicas
+    # O desenho do todo (A-ABA-SISTEMA-DO-TODO-01, publicado em 16/10/2026) trocou as três dicas
+    # longas pelas curtas aprovadas, e o «vale para todos» passou para a dica do rótulo (a
+    # D-1610-O-PERFIL-DE-BATERIA-E-SO-O-GLOBAL-NA-SISTEMA): o mockup e a publicada dizem o mesmo.
+    assert dicas == {"tudo_ligado": "Nada é limitado",
+                     "bateria_longa": "Vibração em 30% da força",
+                     "eu_escolho": "Você escolhe em cada aba"}, dicas
+    assert ('data-dica="Vale para todos; cada controle pode ter o seu em Conexões">'
+            "Perfil global de bateria") in html
     assert "Eu escolho" not in html
 
 

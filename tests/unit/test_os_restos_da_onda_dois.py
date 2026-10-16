@@ -146,7 +146,7 @@ def test_a_09_o_title_do_parar_nao_crava_numero(publicado: bool) -> None:
 
 
 def test_a_09_a_pergunta_do_parar_nao_crava_numero() -> None:
-    """A pergunta do clique 1 é o `title` publicado: um número ali é a tela errando."""
+    """A pergunta do clique 1 é o `data-dica` publicado: um número ali é a tela errando."""
     from pacotes import a09_sistema as a09
 
     a09._DICAS.clear()
@@ -155,5 +155,5 @@ def test_a_09_a_pergunta_do_parar_nao_crava_numero() -> None:
     finally:
         a09._DICAS.clear()
     assert a09.CLIQUE_DE_NOVO in pergunta, pergunta
-    assert "os controles" in pergunta, pergunta
+    assert "Os controles viram gamepads comuns" in pergunta, pergunta
     assert not DIGITO.search(pergunta), f"a pergunta do Parar crava um número: {pergunta!r}"
