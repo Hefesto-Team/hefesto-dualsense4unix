@@ -399,7 +399,8 @@ def test_com_perfil_ativo_o_gesto_nao_tem_nada_a_dizer(pac, a06):
 
 
 @pytest.mark.parametrize("nome", [
-    "vel-cursor", "vel-rolagem", "teclado", "linha-de-botao", "quem-navega",
+    "vel-cursor", "vel-rolagem", "teclado", "linha-de-botao", "permitir-navegacao",
+    "novo-gesto", "remover-gesto",
     "point-and-click-perfil"])
 def test_o_gesto_que_grava_esta_em_perigosos(nome):
     """A régua de clique não troca a velocidade do mouse do usuário para se provar."""

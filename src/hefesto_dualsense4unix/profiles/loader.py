@@ -136,7 +136,7 @@ class MoldeDePerfil:
 
     O molde NÃO é arquivo: não semeia nada em `~/.config`, não aparece na aba Perfis e não casa
     com janela. Escolhê-lo na tela e guardar cria um perfil de verdade (`perfil_do_molde`), dela,
-    com o nome que ela der. Os quatro nomes são os MESMOS da lista «Perfil de point and click» da
+    com o nome que ela der. Os nomes são os MESMOS da lista «Perfil Jogo - Navegação» da
     aba Navegação (a régua `test_a_aba_mapa_do_controle_do_todo` confere os dois lados).
     """
 
@@ -154,6 +154,11 @@ MOLDES_DE_PERFIL: tuple[MoldeDePerfil, ...] = (
         "cross": "BTN_LEFT", "circle": "BTN_RIGHT", "triangle": "KEY_ESC",
         "l3_direcao": "__CURSOR__", "r3_direcao": "__ROLAGEM__"}),
     MoldeDePerfil("visual_novel", "Visual novel", {
+        "cross": "BTN_LEFT", "circle": "BTN_RIGHT", "square": "KEY_LEFTCTRL",
+        "triangle": "KEY_ESC", "l3_direcao": "__CURSOR__", "r3_direcao": "__ROLAGEM__"}),
+    # AS-TELAS-QUE-ELA-PEDIU-EM-16-10-01 (N6): o Adulto nasce com o mapa do Visual novel, que é
+    # o jeito de jogar dos dois (decisão por delegação, a validar pelo usuário).
+    MoldeDePerfil("adulto", "Adulto", {
         "cross": "BTN_LEFT", "circle": "BTN_RIGHT", "square": "KEY_LEFTCTRL",
         "triangle": "KEY_ESC", "l3_direcao": "__CURSOR__", "r3_direcao": "__ROLAGEM__"}),
     MoldeDePerfil("mouse", "Mouse", {

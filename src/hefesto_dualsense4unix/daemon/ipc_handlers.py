@@ -4633,7 +4633,7 @@ class IpcHandlersMixin:
     async def _handle_navegacao_interna_set(
         self, params: dict[str, Any]
     ) -> dict[str, Any]:
-        """Liga a Navegação Interna, ou troca o tipo da lista «Tipo de navegação».
+        """Liga a Navegação Interna, ou troca o tipo («Interna» ou «Uso geral» da aba 06).
 
         A-NAVEGACAO-INTERNA-E-UM-MODO-QUE-SE-LIGA-EM-QUALQUER-ABA-01. Params: ``ligada`` bool
         (opcional; o interruptor «Status da navegação» no tipo Interna), ``tipo``

@@ -43,8 +43,8 @@ NDJSON UTF-8, uma mensagem por linha. Métodos v1 + extensões:
                          `teclado_emulado` no perfil ativo, numa gravação só.
     navegacao.interna.set {ligada?: bool, tipo?: "interna"|"computador", origin?}
                          -> {status, navegacao: {interna_ligada, tipo, foco}}
-                         A Navegação Interna: o interruptor no tipo Interna e a
-                         lista «Tipo de navegação». É da máquina, não do perfil.
+                         A Navegação Interna: «Interna» e «Uso geral» em «Permitir
+                         navegação». É da máquina, não do perfil.
     navegacao.foco       {ativa: bool} -> {status, foco, toques: {uniq: {r1, l1, x, o,
                           quadrado, triangulo, cima, baixo, esquerda, direita, start}}}
                          A janela diz se está na frente (pulso e renovação; o

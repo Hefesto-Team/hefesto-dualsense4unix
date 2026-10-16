@@ -52,7 +52,7 @@ import asyncio
 import contextlib
 import os
 import time
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Mapping
 from contextvars import ContextVar
 from dataclasses import dataclass, field
 from typing import Any
@@ -165,6 +165,12 @@ class HotkeyManager:
     #: ``on_gesto(de, gesto, valor)`` leva o gesto a quem o executa. Sem os dois, nada muda.
     gestos_valem: Callable[[str | None], Opcoes | None] | None = None
     on_gesto: Callable[[str | None, str, float], None] | None = None
+    #: Os gestos do PS que valem agora, pela chave da tabela (`acoes_do_gesto.combos_ativos`):
+    #: os de fábrica não removidos e os novos que o usuário acrescentou. Sem ele, os cinco de
+    #: fábrica do `config` valem sempre, como antes de a tabela se editar.
+    combos_da_maquina: Callable[[], Mapping[str, tuple[str, ...]]] | None = None
+    #: Quem faz o gesto novo (``ps_<botão>``): recebe a chave e lê a tabela.
+    on_gesto_da_maquina: Callable[[str], Any] | None = None
     relogio: Callable[[], float] = time.monotonic
 
     _apertos: dict[str | None, _Aperto] = field(default_factory=dict)
@@ -205,11 +211,36 @@ class HotkeyManager:
             # PS-L3-MASCARA-01: default PS+L3.
             "mascara": self.config.next_mask,
         }
+        if self.combos_da_maquina is not None:
+            bruto = self._com_a_tabela_da_maquina(bruto)
         return {
             nome: frozenset(b.lower() for b in tupla)
             for nome, tupla in bruto.items()
             if tupla
         }
+
+    def _com_a_tabela_da_maquina(
+        self, bruto: dict[str, tuple[str, ...]]
+    ) -> dict[str, tuple[str, ...]]:
+        """Tira os de fábrica que o usuário removeu e acrescenta os novos, pela mesma tabela.
+
+        Um combo removido sai daqui, e por isso nem dispara nem cala o botão no jogo: o
+        `combo_buttons_active` lê a mesma lista. Tabela ilegível deixa os de fábrica valendo.
+        """
+        from hefesto_dualsense4unix.core.acoes_do_gesto import GESTOS
+
+        try:
+            ativos = dict(self.combos_da_maquina() or {}) if self.combos_da_maquina else {}
+        except Exception as exc:
+            logger.warning("hotkey_tabela_da_maquina_ilegivel", err=str(exc))
+            return bruto
+        do_gerente = {g.nome_no_gerente: c for c, g in GESTOS.items()}
+        fora = {nome: tupla for nome, tupla in bruto.items()
+                if do_gerente.get(nome) is None or do_gerente[nome] in ativos}
+        for chave, botoes in ativos.items():
+            if chave not in GESTOS:
+                fora[chave] = tuple(botoes)
+        return fora
 
     def observe(
         self,
@@ -542,9 +573,12 @@ class HotkeyManager:
             "ponte": self.on_next_bridge,
             "mascara": self.on_next_mask,
         }
-        if name not in despacho:
-            return False, None
-        return True, despacho[name]
+        if name in despacho:
+            return True, despacho[name]
+        fazer = self.on_gesto_da_maquina
+        if fazer is not None and name in self._combos_configurados():
+            return True, lambda: fazer(name)
+        return False, None
 
     def _fire(self, name: str, combo: frozenset[str], *, de: str | None = None) -> None:
         logger.info("hotkey_fired", combo=name, buttons=sorted(combo), **_de(de))

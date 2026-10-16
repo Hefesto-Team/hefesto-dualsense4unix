@@ -240,8 +240,11 @@ def test_9_nenhuma_opcao_sem_dono() -> None:
     from hefesto_dualsense4unix.interface.pacotes import a06_navegacao as a06
 
     assert "navegacao-interna" not in a06.SEM_GESTO
-    assert "navegacao-tipo" not in a06.SEM_GESTO
-    assert ("06-navegacao.html", "navegacao-tipo") in pacotes.GESTOS
+    # A lista «Tipo de navegação» virou os botões «Interna» e «Uso geral» de «Permitir navegação»
+    # (AS-TELAS-QUE-ELA-PEDIU-EM-16-10-01, N5, 16/10/2026).
+    assert "permitir-navegacao" not in a06.SEM_GESTO
+    assert ("06-navegacao.html", "permitir-navegacao") in pacotes.GESTOS
+    assert ("06-navegacao.html", "navegacao-tipo") not in pacotes.GESTOS
 
 
 # 10 ─ O contador sobe na borda ─────────────────────────────────────────────

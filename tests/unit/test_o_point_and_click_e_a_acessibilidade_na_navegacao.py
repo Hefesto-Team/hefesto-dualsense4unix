@@ -5,7 +5,7 @@ botões do point and click) e à Acessibilidade. A Acessibilidade vem renderizad
 mas todo controle sem dono sai `disabled`/`inert`, e o Guardar e o Voltar ao padrão da tela saem
 apagados, porque nenhum campo do perfil as guarda ainda. A dica diz o que cada um faz,
 nunca a dívida (regra de 07/09/2026: a tela não confessa o que o produto ainda não faz).
-O «Perfil de point and click» lista os quatro moldes e os perfis do disco que configuram botão
+O «Perfil Jogo - Navegação» lista os moldes e os perfis do disco que configuram botão
 (`blocos`), e a escolha vale para o perfil ativo: o do jogo, ou o `maquina.json` sem jogo.
 
 MORDIDAS: tirar o `inert` de um controle da Acessibilidade, acender o Guardar dela, devolver a dica

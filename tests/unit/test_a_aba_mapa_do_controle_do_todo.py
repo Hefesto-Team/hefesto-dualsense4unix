@@ -1,7 +1,7 @@
-"""O mapa do controle do todo: a tela de configurar os botões, no desenho de quatro moldes.
+"""O mapa do controle do todo: a tela de configurar os botões, no desenho dos moldes.
 
 A tela tem 23 linhas (uma por botão e peça do desenho), o seletor de perfil com três grupos
-(Navegação, Moldes e Meus perfis), os quatro moldes com os mesmos nomes da aba Navegação e o
+(Navegação, Moldes e Meus perfis), os moldes com os mesmos nomes da aba Navegação e o
 Guardar que grava onde o perfil mora. Os sensores, as luzes e o áudio moram nas abas Controles e
 Iluminação, e não voltam aqui.
 
@@ -29,7 +29,7 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 MOCKUP = RAIZ / "mockup" / "mapa-do-controle.html"
 _MATCH = {"type": "manual"}
-NOMES_DOS_MOLDES = ["Point and click", "Visual novel", "Mouse", "Mouse e teclado"]
+NOMES_DOS_MOLDES = ["Point and click", "Visual novel", "Adulto", "Mouse", "Mouse e teclado"]
 
 
 def _doc() -> str:
@@ -59,7 +59,7 @@ def test_cada_linha_tem_a_peca_dela_no_desenho() -> None:
         assert f"mp-{item}" in pecas, f"a linha {b} não tem a peça mp-{item} no desenho"
 
 
-def test_o_perfil_tem_tres_grupos_e_os_quatro_moldes_com_o_nome_da_navegacao() -> None:
+def test_o_perfil_tem_tres_grupos_e_os_moldes_com_o_nome_da_navegacao() -> None:
     doc = _doc()
     seletor = re.search(r'<select[^>]*id="perfil".*?</select>', doc, flags=re.S)
     assert seletor, "sem o seletor de perfil"

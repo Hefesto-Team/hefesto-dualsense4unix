@@ -289,14 +289,21 @@ class _PonteQueAnota:
         return {"status": "ok"}
 
 
-def test_8_quem_navega_liga_e_desliga_pelo_daemon() -> None:
+def test_8_permitir_navegacao_liga_e_desliga_pelo_daemon() -> None:
+    """«Steam» liga o Big Picture; «Interna» e «Uso geral» o desligam e gravam o tipo.
+
+    «Quem navega» e «Tipo de navegação» viraram os três botões de «Permitir navegação»
+    (AS-TELAS-QUE-ELA-PEDIU-EM-16-10-01, N5, 16/10/2026), com os mesmos donos. O interruptor do
+    topo continua dono de ligar: nenhum dos três manda `ligada`.
+    """
     # Prova da D-1510-QUEM-NAVEGA-DECIDE-O-BIG-PICTURE.
     from hefesto_dualsense4unix.interface import pacotes
     from hefesto_dualsense4unix.interface.pacotes import a06_navegacao as a06
 
     ctx = pacotes.Contexto(state={}, mesa=[], conectados=[], estados={})
     ponte = _PonteQueAnota()
-    for gesto, valor in (("quem-navega", a06.QUEM_STEAM), ("quem-navega", a06.QUEM_HEFESTO),
+    for gesto, valor in ((a06.PERMITIR, a06.PERMITIR_STEAM), (a06.PERMITIR, a06.PERMITIR_INTERNA),
+                         (a06.PERMITIR, a06.PERMITIR_USO_GERAL),
                          ("na-steam", a06.NA_STEAM_BIG_PICTURE)):
         fn = pacotes.gesto_da_pagina("06-navegacao.html", gesto)
         assert fn is not None, f"o gesto «{gesto}» da 06 continua sem atendente"
@@ -304,10 +311,26 @@ def test_8_quem_navega_liga_e_desliga_pelo_daemon() -> None:
     assert ponte.chamadas == [
         ("navegacao.big_picture.set", {"ligado": True, "origin": "manual"}),
         ("navegacao.big_picture.set", {"ligado": False, "origin": "manual"}),
+        ("navegacao.interna.set", {"tipo": "interna", "origin": "manual"}),
+        ("navegacao.big_picture.set", {"ligado": False, "origin": "manual"}),
+        ("navegacao.interna.set", {"tipo": "computador", "origin": "manual"}),
         ("navegacao.big_picture.set", {"ligado": True, "origin": "manual"})]
-    quem = pacotes.gesto_da_pagina("06-navegacao.html", "quem-navega")
+    assert pacotes.gesto_da_pagina("06-navegacao.html", "quem-navega") is None
+    permitir = pacotes.gesto_da_pagina("06-navegacao.html", a06.PERMITIR)
     with pytest.raises(ValueError):
-        quem(ctx, {"valor": "Talvez"}, ponte)
+        permitir(ctx, {"valor": "Talvez"}, ponte)
+
+
+def test_8_o_botao_aceso_vem_das_bandeiras_do_daemon() -> None:
+    """O botão aceso de «Permitir navegação» lê o Big Picture e o tipo que o daemon guarda."""
+    from hefesto_dualsense4unix.interface.pacotes import a06_navegacao as a06
+
+    def com(bp: bool, tipo: str) -> dict:
+        return {"navegacao": {"tipo": tipo, "big_picture": {"ligado": bp}}}
+
+    assert a06.permitir_de_agora(com(True, "interna")) == a06.PERMITIR_STEAM
+    assert a06.permitir_de_agora(com(False, "interna")) == a06.PERMITIR_INTERNA
+    assert a06.permitir_de_agora(com(False, "computador")) == a06.PERMITIR_USO_GERAL
 
 
 def test_8_a_tela_pinta_o_que_o_daemon_diz_e_nao_afirma_sem_ele() -> None:
@@ -328,7 +351,7 @@ def test_8_o_big_picture_esta_no_metodo_e_na_prova_da_aba() -> None:
     from hefesto_dualsense4unix.interface.pacotes import a06_navegacao as a06
 
     assert "navegacao.big_picture.set" in a06.METODOS
-    provas = [p for p in a06.PROVAS if p["gesto"] == "quem-navega"]
+    provas = [p for p in a06.PROVAS if p["gesto"] == a06.PERMITIR]
     assert {p["chama"][0][2]["ligado"] for p in provas} == {True, False}
 
 

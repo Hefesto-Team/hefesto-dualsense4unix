@@ -70,6 +70,30 @@ GESTOS: dict[str, Gesto] = {
     )
 }
 
+#: OS GESTOS QUE SE ACRESCENTAM (AS-TELAS-QUE-ELA-PEDIU-EM-16-10-01, N8, 16/10/2026): o PS com
+#: um botão que nenhum gesto de fábrica usa. A chave é `ps_<botão>`, e o gesto só existe enquanto
+#: está declarado no `maquina.json`; sem declaração, ele não dispara nem cala o botão.
+BOTOES_DO_GESTO_NOVO: tuple[str, ...] = ("cross", "circle", "square", "triangle", "create")
+_PECA_DO_BOTAO: dict[str, str] = {"create": "share"}
+
+GESTOS_NOVOS: dict[str, Gesto] = {
+    f"ps_{b}": Gesto(f"ps_{b}", 7 + i, f"ps_{b}", ("ps", b), ("ps", _PECA_DO_BOTAO.get(b, b)))
+    for i, b in enumerate(BOTOES_DO_GESTO_NOVO)
+}
+
+TODOS_OS_GESTOS: dict[str, Gesto] = {**GESTOS, **GESTOS_NOVOS}
+
+#: Os botões que o PS não pode ganhar como gesto: os seis dos gestos dos acessórios
+#: (`integrations/gestos_dos_acessorios.BOTAO_DO_MEMBRO`, que a régua compara com esta lista).
+BOTOES_PROIBIDOS: tuple[str, ...] = ("l1", "r1", "l2", "r2", "dpad_left", "dpad_right")
+
+#: Os botões da escolha «+ Gesto», na ordem da tela: os livres, os de fábrica e os proibidos.
+BOTOES_DA_ESCOLHA: tuple[str, ...] = (
+    *BOTOES_DO_GESTO_NOVO,
+    *(g.botoes[1] for g in GESTOS.values() if g.chave != GESTO_DO_PS),
+    *BOTOES_PROIBIDOS,
+)
+
 PERFIL_SEGUINTE = "perfil_seguinte"
 PERFIL_ANTERIOR = "perfil_anterior"
 SUSPENDER = "suspender_mouse_e_teclado"
@@ -158,10 +182,14 @@ def _campo(declarado: Any, nome: str) -> Any:
 
 
 def tabela(maquina: Any) -> dict[str, EscolhaDoGesto]:
-    """Gesto -> o que ele faz: o de fábrica com a declaração da máquina por cima."""
+    """Gesto -> o que ele faz: o de fábrica com a declaração da máquina por cima.
+
+    Os gestos novos entram quando declarados, e fazem «Nada» até alguém escolher.
+    """
     declarados = _declarados(maquina)
     fora: dict[str, EscolhaDoGesto] = {}
-    for chave, de_fabrica in PADRAO.items():
+    novos = {c: NADA for c in GESTOS_NOVOS if declarados.get(c) is not None}
+    for chave, de_fabrica in {**PADRAO, **novos}.items():
         declarado = declarados.get(chave)
         faz = _campo(declarado, "faz") if declarado is not None else None
         if isinstance(faz, str) and faz in ACOES:
@@ -170,6 +198,45 @@ def tabela(maquina: Any) -> dict[str, EscolhaDoGesto]:
         else:
             fora[chave] = EscolhaDoGesto(de_fabrica)
     return fora
+
+
+def removido(maquina: Any, chave: str) -> bool:
+    """O gesto de fábrica que o usuário tirou da tabela (``removido: true`` no ``maquina.json``)."""
+    declarado = _declarados(maquina).get(chave)
+    return declarado is not None and _campo(declarado, "removido") is True
+
+
+def gestos_ativos(maquina: Any) -> dict[str, Gesto]:
+    """Os gestos com combo que valem agora: os de fábrica não removidos e os novos declarados.
+
+    É a FONTE dos combos do detector (`HotkeyManager._combos_configurados`) e das linhas da
+    tabela da tela. O PS sozinho não entra: ele não é combo, e o dono dele é a linha PS de
+    «Os botões no computador».
+    """
+    declarados = _declarados(maquina)
+    fora = {c: g for c, g in GESTOS.items() if c != GESTO_DO_PS and not removido(maquina, c)}
+    fora.update({c: g for c, g in GESTOS_NOVOS.items() if declarados.get(c) is not None})
+    return fora
+
+
+def combos_ativos(maquina: Any) -> dict[str, tuple[str, ...]]:
+    """Gesto -> os botões dele, só dos que valem agora (:func:`gestos_ativos`)."""
+    return {c: g.botoes for c, g in gestos_ativos(maquina).items()}
+
+
+def botao_livre(maquina: Any, botao: str) -> bool:
+    """O botão pode virar gesto novo agora? Não se for proibido, nem se um gesto ativo o usa."""
+    if botao in BOTOES_PROIBIDOS or botao not in BOTOES_DA_ESCOLHA:
+        return False
+    return all(botao not in g.botoes for g in gestos_ativos(maquina).values())
+
+
+def gesto_do_botao(botao: str) -> str | None:
+    """A chave do gesto que o PS + ``botao`` forma: o de fábrica ou o novo; ``None`` se não há."""
+    for chave, g in TODOS_OS_GESTOS.items():
+        if g.botoes == ("ps", botao):
+            return chave
+    return None
 
 
 def rotulo(token: str) -> str:
@@ -265,16 +332,26 @@ def conferir_o_script(caminho: str, *, uid: int | None = None) -> str | None:
 
 __all__ = [
     "ACOES",
+    "BOTOES_DA_ESCOLHA",
+    "BOTOES_DO_GESTO_NOVO",
+    "BOTOES_PROIBIDOS",
     "GESTOS",
+    "GESTOS_NOVOS",
     "GESTO_DO_PS",
     "PADRAO",
     "SAIDAS_DE_EMERGENCIA",
     "TETO_DO_SCRIPT_S",
+    "TODOS_OS_GESTOS",
     "EscolhaDoGesto",
     "Gesto",
+    "botao_livre",
+    "combos_ativos",
     "conferir_o_script",
+    "gesto_do_botao",
+    "gestos_ativos",
     "nome_do_script",
     "por_grupo",
+    "removido",
     "rotulo",
     "rotulo_da_escolha",
     "saidas_sem_gesto",

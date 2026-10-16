@@ -59,6 +59,7 @@ import pathlib
 import re
 import sys
 from types import SimpleNamespace
+from typing import Any
 
 import pytest
 
@@ -156,12 +157,24 @@ PERFIL = {"name": "Dublê da Navegação", "button_actions": _button_actions()}
 SEM_VARIACAO = {"na-steam"}
 
 
-def _gestos_da_maquina() -> dict[str, dict[str, str]]:
-    """Um script para CADA um dos seis gestos — 02/10/2026, conferência final dos gestos."""
-    from hefesto_dualsense4unix.core.acoes_do_gesto import GESTOS, SCRIPT
+def _gestos_da_maquina() -> dict[str, dict[str, Any]]:
+    """Um script para CADA gesto — 02/10/2026, conferência final dos gestos.
 
-    return {g: {"faz": SCRIPT, "script": f"/opt/duble/gesto-{n}.sh"}
-            for n, g in enumerate(GESTOS, 1)}
+    Desde 16/10/2026 (AS-TELAS-QUE-ELA-PEDIU-EM-16-10-01, N8) a tabela tem também os gestos
+    novos e o botão de tirar: o dublê tira os cinco de fábrica com combo e declara os cinco
+    novos, e assim toda linha (`vale-`) e todo botão do «+ Gesto» (`livre-`) discordam do
+    desenho.
+    """
+    from hefesto_dualsense4unix.core.acoes_do_gesto import (
+        GESTO_DO_PS,
+        GESTOS,
+        SCRIPT,
+        TODOS_OS_GESTOS,
+    )
+
+    return {g: {"faz": SCRIPT, "script": f"/opt/duble/gesto-{n}.sh",
+                **({"removido": True} if g in GESTOS and g != GESTO_DO_PS else {})}
+            for n, g in enumerate(TODOS_OS_GESTOS, 1)}
 
 
 class _Maquina(dict):

@@ -699,6 +699,9 @@ class GestoDeclarado(BaseModel):
 
     faz: str
     script: str | None = None
+    #: O gesto de fábrica que o usuário tirou da tabela: não dispara nem cala o botão
+    #: (`acoes_do_gesto.gestos_ativos`). Os gestos novos saem por ``None``, que esquece a escolha.
+    removido: bool | None = None
 
     @model_validator(mode="before")
     @classmethod
@@ -950,15 +953,27 @@ class MaquinaConfig(BaseModel):
     @field_validator("gestos", mode="before")
     @classmethod
     def _gesto_conhecido_e_none_devolve_o_de_fabrica(cls, valor: Any) -> Any:
-        """A chave é um dos seis gestos; ``{"gestos": {g: None}}`` esquece a escolha."""
+        """A chave é um gesto do controle; ``{"gestos": {g: None}}`` esquece a escolha.
+
+        Os de fábrica e os novos (`acoes_do_gesto.TODOS_OS_GESTOS`). Só um gesto de fábrica com
+        combo pode ser ``removido``: o PS sozinho não é combo, e o novo sai por ``None``.
+        """
         if not isinstance(valor, Mapping):
             return valor
-        from hefesto_dualsense4unix.core.acoes_do_gesto import GESTOS
+        from hefesto_dualsense4unix.core.acoes_do_gesto import (
+            GESTO_DO_PS,
+            GESTOS,
+            TODOS_OS_GESTOS,
+        )
 
         vivos = {k: v for k, v in valor.items() if v is not None}
-        for chave in vivos:
-            if chave not in GESTOS:
+        for chave, declarado in vivos.items():
+            if chave not in TODOS_OS_GESTOS:
                 raise ValueError(f"{chave!r} não é um dos gestos do controle")
+            tirado = (declarado.get("removido") if isinstance(declarado, Mapping)
+                      else getattr(declarado, "removido", None))
+            if tirado and (chave not in GESTOS or chave == GESTO_DO_PS):
+                raise ValueError(f"{chave!r} não é um gesto de fábrica que se remove")
         return vivos
 
 

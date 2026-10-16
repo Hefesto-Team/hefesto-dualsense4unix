@@ -546,7 +546,7 @@ def load_keyboard_preference() -> bool | None:
 
 
 _NAVEGACAO_INTERNA_FLAG_FILE = "navegacao_interna.flag"
-#: Os dois tipos da lista «Tipo de navegação» da aba 06, na ordem da lista.
+#: Os dois tipos que «Permitir navegação» da aba 06 grava («Interna» e «Uso geral»).
 TIPOS_DE_NAVEGACAO = ("interna", "computador")
 
 

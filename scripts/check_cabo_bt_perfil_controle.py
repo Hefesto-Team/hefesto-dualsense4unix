@@ -106,8 +106,8 @@ NAO_E_DO_APARELHO: dict[str, str] = {
                "Desativado) — é do perfil e do serviço, e o ATO no aparelho é o de cada linha",
     "linha-de-botao": "grava o que uma linha de botão faz no perfil ou no computador — o ATO "
                       "no aparelho é o de cada linha, que já responde as quatro",
-    "quem-navega": "escolhe quem navega o computador, o Hefesto ou a Steam — é do serviço "
-                   "(o mesmo Big Picture do `modo-steam`), nunca do perfil",
+    "permitir-navegacao": "escolhe a navegação (Interna, Steam ou Uso geral) — é do serviço "
+                          "(o Big Picture do `modo-steam` e o tipo da Interna), nunca do perfil",
     "na-steam": "escolhe o que a Steam navega (o Big Picture) — é do serviço, nunca do perfil",
     "point-and-click-perfil": "escolhe o perfil que o point and click usa — é da máquina "
                               "(`mouse.point_and_click` do `maquina.json`)",
@@ -122,8 +122,8 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "mapa-cancelar": "larga o que o mapa não guardou — é da tela",
     "mapa-guardar": "grava o perfil em edição no mapa — é do perfil",
     "acao-do-gesto": "escolhe a ação de um gesto — é do perfil",
-    "navegacao-tipo": "escolhe o tipo de navegação (Interna ou O computador) — é da "
-                      "máquina, nunca do perfil",
+    "novo-gesto": "acrescenta um gesto do PS — é da máquina (`maquina.json`), nunca do perfil",
+    "remover-gesto": "tira um gesto do PS — é da máquina (`maquina.json`), nunca do perfil",
     "vel-cursor": "a velocidade do cursor — é da emulação de mouse, global (decisão dela)",
     "vel-rolagem": "idem",
     "modo-dos-gatilhos": "o par Automático | Personalizado dos gatilhos grava `triggers.modo` "

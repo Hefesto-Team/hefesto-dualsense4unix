@@ -83,7 +83,7 @@ Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e
 | `desktop.arranjo.apply` | `daemon/ipc_handlers.py:4555` (`_handle_desktop_arranjo_apply`) | Carrega no aparelho o que a aba Navegação gravou no perfil ATIVO. | sim |
 | `keyboard.emulation.set` | `daemon/ipc_handlers.py:4760` (`_handle_keyboard_emulation_set`) | Liga/desliga a emulação de TECLADO. | **não** |
 | `desktop.status.set` | `daemon/ipc_handlers.py:4585` (`_handle_desktop_status_set`) | O «Status do Modo» da aba Navegação: mouse e teclado, e o perfil. | sim |
-| `navegacao.interna.set` | `daemon/ipc_handlers.py:4633` (`_handle_navegacao_interna_set`) | Liga a Navegação Interna, ou troca o tipo da lista «Tipo de navegação». | sim |
+| `navegacao.interna.set` | `daemon/ipc_handlers.py:4633` (`_handle_navegacao_interna_set`) | Liga a Navegação Interna, ou troca o tipo («Interna» ou «Uso geral» da aba 06). | sim |
 | `navegacao.foco` | `daemon/ipc_handlers.py:4657` (`_handle_navegacao_foco`) | A janela diz se está na frente; a resposta traz os toques de cada controle. | sim |
 | `navegacao.big_picture.set` | `daemon/ipc_handlers.py:4737` (`_handle_navegacao_big_picture_set`) | Liga ou desliga o Modo Big Picture na Steam. | sim |
 | `gamepad.emulation.set` | `daemon/ipc_handlers.py:4835` (`_handle_gamepad_emulation_set`) | Liga/desliga o gamepad virtual e define a máscara. | sim |

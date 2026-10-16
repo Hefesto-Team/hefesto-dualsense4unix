@@ -502,7 +502,10 @@ JS = r"""
     mostra(atual.startsWith('troca:') && troca ? 'controle' : em('mouse') ? 'mouse' : atual && !em('controle') ? 'teclado' : troca ? 'controle' : 'mouse');
     pop.hidden = false;
   };
-  const fecha = () => { escuta(false); pop.hidden = true; };
+  /* A linha escolhida só fica acesa enquanto o seletor dela está aberto: fechar manda `mapa-botao` sem
+     botão, e o pacote apaga o `on`. O `setTimeout` deixa passar antes o clique da opção que fechou. */
+  const solta = () => setTimeout(() => $('#mapa-solta').click(), 0);
+  const fecha = () => { escuta(false); pop.hidden = true; solta(); };
 
   /* a captura: a tecla, o botão do mouse ou o botão do controle que a pessoa aperta */
   const MODIFICADOR = {ControlLeft: 'LEFTCTRL', ControlRight: 'RIGHTCTRL', ShiftLeft: 'LEFTSHIFT', ShiftRight: 'RIGHTSHIFT',
@@ -529,6 +532,7 @@ JS = r"""
     captura.dataset[campo] = valor;
     escuta(false); pop.hidden = true;
     captura.click();
+    solta();
   };
   document.addEventListener('keydown', e => {
     if (!ouvindo) return;
@@ -615,6 +619,17 @@ JS = r"""
     lista.value = chave;
     lista.dispatchEvent(new Event('change', {bubbles: true}));
   };
+  /* O TÍTULO DIZ QUAL DAS DUAS TELAS É: a Navegação abre o mesmo mapa por «Trocar os botões» e por
+     «Point and click», e o `<h1>`, o `aria-label` e o `<title>` seguem a âncora. */
+  const TITULO = {'#trocar': 'Trocar os botões', '#point-and-click': 'Point and click'};
+  const titula = () => {
+    const t = TITULO[location.hash] || 'Mapa do controle';
+    $('#mc-titulo').textContent = t;
+    mc.setAttribute('aria-label', t);
+    document.title = 'Hefesto — ' + t;
+  };
+  titula();
+  addEventListener('hashchange', titula);
   addEventListener('hashchange', () => { seguida = null; seguirAncora(); });
   new MutationObserver(seguirAncora).observe($('.mc-perfil'), {subtree: true, childList: true, attributes: true});
   seguirAncora();
@@ -699,7 +714,7 @@ def main():
     pecas = {p["id"]: p for p in le_csv()}
     ds = controle(list(pecas.values()))
     valores = a13._por_botao({m: (a13.ACAO, t) for m, t in acoes.tabela_efetiva(None, None).items() if t})
-    escolhida = "cross"
+    escolhida = None  # a edição nasce sem linha escolhida: nada aceso sem clique
 
     def coluna(lado):
         return "\n".join(_linha_da_tela(x, pecas, valores, escolhida)
@@ -722,7 +737,7 @@ def main():
      data-campo="mc-tipo" data-hef-alvo="atributo" data-hef-atributo="data-tipo">
   <div class="mc-topo">
     <a class="voltar2 voltar" href="06-navegacao.html" onclick="if (history.length > 1) {{ history.back(); return false }}" title="Volta para a Navegação">← Voltar</a>
-    <h1>Mapa do controle</h1>
+    <h1 id="mc-titulo">Mapa do controle</h1>
     <span class="mc-rot" data-dica="O mapa vale só para o controle escolhido; cada controle guarda o seu">Vale para</span><div class="mc-chips" data-bloco="controles-do-mapa">{_chips_de_exemplo()}</div>
   </div>
   <div class="corpo">
@@ -770,6 +785,7 @@ def main():
     <button class="btn2 roxo" data-gesto="mapa-guardar">Guardar</button>
   </div>
   <button id="mapa-captura" hidden tabindex="-1" aria-hidden="true" data-gesto="mapa-gravar-tecla"></button>
+  <button id="mapa-solta" hidden tabindex="-1" aria-hidden="true" data-gesto="mapa-botao" data-b=""></button>
 </div>
 <script>{JS}</script>
 </body>

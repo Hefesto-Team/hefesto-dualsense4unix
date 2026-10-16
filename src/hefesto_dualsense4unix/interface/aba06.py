@@ -29,17 +29,18 @@ from hefesto_dualsense4unix.integrations.uinput_mouse import (  # noqa: E402
 from hefesto_dualsense4unix.profiles.loader import MOLDES_DE_PERFIL  # noqa: E402
 from monta import CONECTADOS, CSS_GLIFO, DADOS_DO_REPO, MESA, glifo, monta  # noqa: E402
 from pacotes.a06_navegacao import (  # noqa: E402
+    DO_PERMITIR,
+    PERMITIR,
+    PERMITIR_INTERNA,
+    PREFIXO_DA_LIBERDADE,
+    PREFIXO_DA_VALIDADE,
     PREFIXO_DO_GESTO,
     PREFIXO_DO_SCRIPT,
-    ROTULOS_DO_TIPO,
-    TIPO_INTERNA,
     chips_da_fita,
     chips_de_quem_navega,
 )
 
-BLOCO_NAVEGA_COM = "navega-com"
 BLOCO_PARA_QUEM = "para-quem"
-QUEM_STEAM = "steam"  # o valor do gesto `quem-navega` quando a Steam navega
 BLOCO_DOS_MEUS_PERFIS = "meus-perfis"
 
 MESA_DA_FITA = CONECTADOS
@@ -174,24 +175,46 @@ COLUNA_2 = [
     ("stick_l", EIXO_ESQUERDO, True, "direção"),
     ("stick_r", "r3", True, "clique"),
     ("stick_r", EIXO_DIREITO, True, "direção"),
-    ("touchpad", "touchpad_toque", False, "Toque"),
     ("touchpad", "touchpad_left_press", False, _CLIQUES_DO_TOUCHPAD["touchpad_left_press"]),
     ("touchpad", "touchpad_middle_press", False, _CLIQUES_DO_TOUCHPAD["touchpad_middle_press"]),
     ("touchpad", "touchpad_right_press", False, _CLIQUES_DO_TOUCHPAD["touchpad_right_press"]),
 ]
 LINHAS = [linha for _, linha, _, _ in COLUNA_1 + COLUNA_2]
 
-#: O toque no touchpad move o cursor e não é um botão: o desenho o mostra, e a lista não muda.
-TOQUE_DO_TOUCHPAD = "touchpad_toque"
+#: O toque no touchpad move o cursor e não é um botão: ele mora em «Opções» (N3/N7, 16/10), numa
+#: linha só de leitura, e as duas colunas de «Os botões no computador» ficam com 11 e 11.
 DICA_DO_TOQUE = "O toque no touchpad move o cursor"
+TOQUE_DO_TOUCHPAD = (f'<select class="campo-linha" disabled data-dica="{DICA_DO_TOQUE}"'
+                     ' data-linha="touchpad_toque">'
+                     f'<option selected>{rotulo_da_acao("__CURSOR__")}</option></select>')
+
+
+def _grupos_do_ps():
+    """A lista da linha PS, o dono único do PS sozinho (N8, 16/10/2026).
+
+    O ato do computador (o que a linha «PS» dos gestos fazia) e o que o PS digita numa lista só:
+    os grupos do gesto primeiro, as teclas depois, e um «— Nada —» no fim, que cala os dois.
+    """
+    juntos = []
+    for grupo, ops in [*ACOES_GESTO, *ACOES_DO_PS]:
+        if not grupo:
+            continue
+        igual = next((x for x in juntos if x[0] == grupo), None)
+        if igual is None:
+            juntos.append((grupo, list(ops)))
+        else:
+            igual[1].extend(ops)
+    return juntos + [(g, ops) for g, ops in ACOES_GESTO if not g]
 
 
 def _celula_da_acao(linha):
-    if linha == TOQUE_DO_TOUCHPAD:
-        return (f'<select class="campo-linha" disabled data-dica="{DICA_DO_TOQUE}">'
-                f'<option selected>{rotulo_da_acao("__CURSOR__")}</option></select>')
-    grupos = ACOES_DO_PS if linha == "ps" else ACOES_UNI
-    return drop(grupos, _PADRAO_DOS_BOTOES[linha], gesto=LINHA_DE_BOTAO, linha=linha,
+    if linha == "ps":
+        lista = drop(_grupos_do_ps(), _acoes_do_gesto.rotulo(_acoes_do_gesto.PADRAO["ps"]),
+                     gesto=LINHA_DE_BOTAO, linha=linha, campo=f"acao-{linha}")
+        rotulo = _acoes_do_gesto.rotulo(_acoes_do_gesto.SCRIPT)
+        return lista.replace(f"<option>{rotulo}</option>",
+                             f'<option data-campo="{PREFIXO_DO_SCRIPT}ps">{rotulo}</option>')
+    return drop(ACOES_UNI, _PADRAO_DOS_BOTOES[linha], gesto=LINHA_DE_BOTAO, linha=linha,
                 campo=f"acao-{linha}")
 
 
@@ -207,9 +230,13 @@ def _tabela(coluna):
 
 # ---------------------------------------------------------------- os gestos do PS
 
-COMBOS = [(g.numero, g.pecas, _acoes_do_gesto.rotulo(_acoes_do_gesto.PADRAO[g.chave]))
-          for g in _acoes_do_gesto.GESTOS.values()]
-_GESTO_DA_LINHA = {g.numero: g.chave for g in _acoes_do_gesto.GESTOS.values()}
+#: Os gestos da tabela: os cinco de fábrica (o PS sozinho mora na linha PS de «Os botões») e os
+#: novos, que nascem escondidos e o pacote mostra quando declarados (`data-vale`).
+COMBOS = [(g.numero, g.pecas, _acoes_do_gesto.rotulo(_acoes_do_gesto.PADRAO.get(
+    g.chave, _acoes_do_gesto.NADA))) for g in _acoes_do_gesto.TODOS_OS_GESTOS.values()
+    if g.chave != _acoes_do_gesto.GESTO_DO_PS]
+_GESTO_DA_LINHA = {g.numero: g.chave for g in _acoes_do_gesto.TODOS_OS_GESTOS.values()}
+_PECA_DA_ESCOLHA = {"create": "share", "l3": "stick_l", "r3": "stick_r"}
 
 
 def drop_do_gesto(chave, faz):
@@ -222,10 +249,36 @@ def drop_do_gesto(chave, faz):
 
 
 def linha_combo(n, pecas, faz):
+    chave = _GESTO_DA_LINHA[n]
+    vale = "nao" if chave in _acoes_do_gesto.GESTOS_NOVOS else "sim"  # (noqa-acento) valor
     nomes = [glifo(gl_de(p), tam=18) if p == "ps" else _um(p) for p in pecas]
     combo = ' <span class="mais">+</span> '.join(nomes)
-    return (f'<tr class="g g{n}"><td class="b"><span class="gls">{combo}</span></td>'
-            f'<td>{drop_do_gesto(_GESTO_DA_LINHA[n], faz)}</td></tr>')
+    return (f'<tr class="g g{n}" data-vale="{vale}" data-campo="{PREFIXO_DA_VALIDADE}{chave}"'
+            f' data-hef-alvo="atributo" data-hef-atributo="data-vale">'
+            f'<td class="b"><span class="gls">{combo}</span></td>'
+            f'<td>{drop_do_gesto(chave, faz)}</td>'
+            f'<td class="x"><button class="tira-gesto" type="button" data-gesto="remover-gesto"'
+            f' data-linha="{chave}" aria-label="Remover o gesto" data-dica="Remover o gesto">'
+            f'×</button></td></tr>')
+
+
+def _escolha_do_gesto():
+    """«+ Gesto»: um botão por candidato, com o glifo; o usado e o proibido ficam indisponíveis."""
+    botoes = []
+    for b in _acoes_do_gesto.BOTOES_DA_ESCOLHA:
+        livre = "sim" if b in _acoes_do_gesto.BOTOES_DO_GESTO_NOVO else "nao"  # (noqa-acento)
+        peca = _PECA_DA_ESCOLHA.get(b, b)
+        # O proibido nunca fica livre: nasce desligado e sem endereço, porque nada o pinta.
+        endereco = ("" if b in _acoes_do_gesto.BOTOES_PROIBIDOS else
+                    f' data-campo="{PREFIXO_DA_LIBERDADE}{b}" data-hef-alvo="atributo"'
+                    ' data-hef-atributo="data-livre"')
+        botoes.append(
+            f'<button type="button" class="b-gesto" data-gesto="novo-gesto" data-b="{b}"'
+            f' data-livre="{livre}"{endereco} aria-label="PS + {PECAS[peca]["nome"]}">'
+            f'{_um(peca)}</button>')
+    return ('<details class="novo-gesto"><summary class="btn roxo mais-gesto"'
+            ' data-dica="Acrescenta um gesto do PS com outro botão">+ Gesto</summary>'
+            f'<div class="escolha-gesto">{"".join(botoes)}</div></details>')
 
 
 # ---------------------------------------------------------------- as opções
@@ -264,22 +317,18 @@ def _perfil_de_ponto():
 
 
 OPCOES = "\n".join([
-    _op("Quem navega", _seg(
-        "quem-navega", "quem-navega", "Quem navega",
-        [("hefesto", "Hefesto", "O Hefesto faz do controle mouse e teclado"),
-         (QUEM_STEAM, "Steam", "A Steam navega com o controle")], "hefesto", " quem")),
-    _op("Tipo de navegação", simples(
-        list(ROTULOS_DO_TIPO.values()), ROTULOS_DO_TIPO[TIPO_INTERNA], "navegacao-tipo",
-        "navegacao-tipo", "Interna: cada controle ajusta o seu nas abas"), " so-hefesto"),
+    _op("Permitir navegação", _seg(
+        PERMITIR, PERMITIR, "Permitir navegação",
+        [(valor, rotulo, dica) for valor, (rotulo, dica) in DO_PERMITIR.items()],
+        PERMITIR_INTERNA, " quem")),
     _op("Na Steam", _seg(
         "na-steam", "na-steam", "Na Steam",
         [("big-picture", "Big Picture", ""),
          ("padrao", "Steam padrão", "")],  # (noqa-acento) valor de contrato do gesto
         "big-picture"),
         " so-steam"),
-    _op("Navega com", f'<div class="ac-chips navega-com" data-bloco="{BLOCO_NAVEGA_COM}">'
-                      f'{chips_de_quem_navega(MESA_DA_FITA)}</div>'),
-    _op("Perfil de point and click", _perfil_de_ponto(), " do-hefesto"),
+    _op("Perfil Jogo - Navegação", _perfil_de_ponto(), " do-hefesto"),
+    _op("Touchpad", TOQUE_DO_TOUCHPAD, " do-hefesto"),
     _op("Função do teclado", simples(
         OPCOES_TECLADO, TECLADO_PADRAO, "teclado", "teclado-estado",
         "Quando o controle digita"), " do-hefesto"),
@@ -292,8 +341,8 @@ OPCOES = "\n".join([
 ])
 
 GESTOS_DO_PS = (
-    '<div class="sec2 sec2-gestos" data-dica="Segure o PS e o outro juntos; vale em todo controle">'
-    'Gestos do PS</div>\n<table class="tab ges2">\n'
+    '<div class="sec2 sec2-gestos"><span data-dica="Segure o PS e o outro juntos; vale em todo'
+    ' controle">Gestos do PS</span>' + _escolha_do_gesto() + '</div>\n<table class="tab ges2">\n'
     + "\n".join(linha_combo(n, p, f) for n, p, f in COMBOS) + "\n</table>")
 
 FILA = '''
@@ -315,7 +364,7 @@ MIOLO = f'''
     <div class="quadro estica nav2" data-quem="hefesto" data-campo="quem-navega"
          data-hef-alvo="atributo" data-hef-atributo="data-quem">
       <div class="nav-topo">
-        <span class="quadro-titulo" tabindex="0" data-dica="O controle vira mouse e teclado do computador. Em «Quem navega», você escolhe quem traduz.">Navegação</span>
+        <span class="quadro-titulo" tabindex="0" data-dica="O controle vira mouse e teclado do computador. Em «Permitir navegação», você escolhe quem traduz.">Navegação</span>
       </div>
       <div class="quadro-corpo">
         <div class="nav2-grade">
@@ -327,8 +376,13 @@ MIOLO = f'''
             </div>
           </section>
           <section class="nav2-opcoes">
+            <div class="sec2">Opções</div>
+            <div class="nav2-ops">
 {OPCOES}
+            </div>
+            <div class="nav2-gestos">
 {GESTOS_DO_PS}
+            </div>
           </section>
         </div>
 {FILA}
@@ -348,8 +402,18 @@ SCRIPT = """<script>/* o desenho: quem navega troca as linhas; os seletores acen
   quem.addEventListener('click', e => {
     const b = e.target.closest('button');
     if (!b) return;
-    nav.dataset.quem = b.value;
+    nav.dataset.quem = b.value === 'steam' ? 'steam' : 'hefesto';
     acende(quem, b);
+  });
+  /* «+ Gesto»: o botão usado ou proibido não se clica, sem frase; escolher fecha a escolha */
+  const escolha = nav.querySelector('.novo-gesto');
+  const trava = () => escolha.querySelectorAll('.b-gesto').forEach(b => {
+    b.disabled = b.dataset.livre !== 'sim';
+  });
+  new MutationObserver(trava).observe(escolha, {subtree: true, attributes: true, attributeFilter: ['data-livre']});
+  trava();
+  escolha.addEventListener('click', e => {
+    if (e.target.closest('.b-gesto:not([disabled])')) setTimeout(() => { escolha.open = false; }, 0);
   });
   document.querySelectorAll('.seg.mini:not(.quem)').forEach(g => g.addEventListener('click', e => {
     const b = e.target.closest('button:not([disabled])');
@@ -596,7 +660,6 @@ CSS = CSS_GLIFO + """
 .op2 .campo-linha { height:30px }
 .op2 .seg.mini button { flex:1;height:30px }
 .op2 .campo-num { height:30px }
-.navega-com .chip { cursor:pointer;padding:5px 12px }
 .sec2-gestos { margin-top:8px;cursor:help }
 .tab.ges2 { width:100%;border-collapse:collapse }
 .tab.ges2 td { height:29px }
@@ -626,9 +689,6 @@ CSS = CSS_GLIFO + """
 .tab.bt2 td:last-child,.tab.ges2 td:last-child { padding-right:0 }
 .tab.bt2 .nm,.tab.bt2 .rot-gl,.tab.ges2 .nm { font-family:inherit;font-size:12px;color:var(--texto-suave);margin-left:4px }
 .nav2-duas { align-items:start }
-.navega-com { display:flex;gap:8px;flex-wrap:nowrap;min-width:0 }
-.navega-com .chip { flex:1 1 auto;min-width:0;justify-content:center;height:30px;padding:0 10px }
-.navega-com .chip .nm { min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap }
 .tn-rod { padding-top:6px }
 .nav2-opcoes { --rot2:140px }
 .op2 { grid-template-columns:var(--rot2) minmax(0,1fr) }
@@ -641,8 +701,31 @@ CSS = CSS_GLIFO + """
 .ac2-ctl .campo-num.mini .par { flex:1 1 auto }
 .ac2-ctl .campo-num.mini .bignum { flex:1 1 auto;justify-content:space-between }
 .ac2-ctl .nj-tog { height:28px;border-radius:7px }
-@media (max-height:860px){.nav2 .tab.bt2 td{height:30px!important} .nav2 .tab.bt2 select{height:26px} .nav2 .op2{height:31px} .nav2 .op2 :is(.campo-linha,.campo-num,.seg.mini button,.navega-com .chip){height:26px} .nav2 .tab.ges2 td{height:25px!important} .nav2 .tab.ges2 select{height:23px}}
-@media (max-height:780px){.nav2 .tab.bt2 td{height:26px!important} .nav2 .tab.bt2 select{height:23px} .nav2 .op2{height:27px} .nav2 .op2 :is(.campo-linha,.campo-num,.seg.mini button,.navega-com .chip){height:23px} .nav2 .tab.ges2 td{height:22px!important} .nav2 .tab.ges2 select{height:20px} .nav2-botoes,.nav2-opcoes{padding-block:8px} .nav2 > .quadro-corpo{padding-block:10px}}
+@media (max-height:860px){.nav2 .tab.bt2 td{height:30px!important} .nav2 .tab.bt2 select{height:26px} .nav2 .op2{height:31px} .nav2 .op2 :is(.campo-linha,.campo-num,.seg.mini button){height:26px} .nav2 .tab.ges2 td{height:25px!important} .nav2 .tab.ges2 select{height:23px}}
+@media (max-height:780px){.nav2 .tab.bt2 td{height:26px!important} .nav2 .tab.bt2 select{height:23px} .nav2 .op2{height:27px} .nav2 .op2 :is(.campo-linha,.campo-num,.seg.mini button){height:23px} .nav2 .tab.ges2 td{height:22px!important} .nav2 .tab.ges2 select{height:20px} .nav2-botoes,.nav2-opcoes{padding-block:8px} .nav2 > .quadro-corpo{padding-block:10px}}
+/* AS-TELAS-QUE-ELA-PEDIU-EM-16-10-01 (16/10/2026): «Opções» com título, o touchpad nele, os gestos
+   que se acrescentam e removem, e a altura repartida (N9): as duas colunas de botões e as opções
+   esticam até a fila de baixo, com o vão saindo da sobra. */
+.nav2-botoes,.nav2-opcoes { display:flex;flex-direction:column;min-height:0 }
+.nav2-duas { flex:1 1 auto;min-height:0;align-items:stretch }
+.nav2-duas > .tab.bt2 { height:100% }
+.nav2-ops { flex:1 1 auto;min-height:0;display:flex;flex-direction:column;justify-content:space-evenly }
+.nav2-gestos { flex:none }
+.op2 .seg.mini button { white-space:nowrap;padding:0 6px;min-width:0 }
+.sec2-gestos { display:flex;align-items:center;justify-content:space-between;cursor:default }
+.sec2-gestos > span[data-dica] { cursor:help }
+.tab.ges2 td.x { width:32px;text-align:right }
+.tab.ges2 tr[data-vale="nao"] { display:none }
+.tira-gesto { width:26px;height:26px;border-radius:6px;border:1px solid var(--border-forte);background:transparent;color:var(--fg);font-size:14px;line-height:1;cursor:pointer;padding:0 }
+.tira-gesto:hover { border-color:var(--red);color:var(--red) }
+.novo-gesto { position:relative }
+.novo-gesto > summary { list-style:none;height:26px;padding:0 12px;font-size:12px;display:inline-flex;align-items:center;cursor:pointer }
+.novo-gesto > summary::-webkit-details-marker { display:none }
+.escolha-gesto { position:absolute;right:0;bottom:calc(100% + 6px);z-index:8;display:grid;grid-template-columns:repeat(4,auto);gap:6px;padding:10px;background:var(--elevated);border:1px solid var(--border-forte);border-radius:8px;box-shadow:0 12px 30px rgba(0,0,0,.5) }
+.b-gesto { height:30px;padding:0 10px;border-radius:6px;border:1px solid var(--border-forte);background:var(--panel);color:var(--fg);display:inline-flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap }
+.b-gesto:hover:not([disabled]) { border-color:var(--purple) }
+.b-gesto[disabled] { opacity:.3;cursor:not-allowed }
+.nav2-opcoes .sec2-gestos { margin:8px 0 6px }
 html.alvos-24 :is(button,select,input:not([type=checkbox]):not([type=radio]):not([type=hidden]),textarea,summary,[role=button],.nj-tog,.sw,.passo,label.faixa,.nav-i,.mudo-i,.padrao-i){min-height:24px;box-sizing:border-box}
 html.alvos-24 :is(button,[role=button],.nj-tog,.passo,.nav-i,.mudo-i,.padrao-i){min-width:24px}
 html.alvos-24 :is(input[type=checkbox],input[type=radio]):not(.radio-mesa){min-width:24px;min-height:24px}
@@ -664,8 +747,23 @@ def _conferir(doc):
         exigir(velha not in corpo, f"a janela {velha!r} voltou")
     achadas = re.findall(r'<tr data-linha="([a-z0-9_]+)"', corpo)
     exigir(achadas == LINHAS, f"as linhas da tela divergem das do desenho: {achadas}")
-    exigir(corpo.count(f'data-gesto="{LINHA_DE_BOTAO}"') == len(LINHAS) - 1,
-           "uma linha de botão ficou sem gesto (só o toque do touchpad é mudo)")
+    exigir(corpo.count(f'data-gesto="{LINHA_DE_BOTAO}"') == len(LINHAS),
+           "uma linha de botão ficou sem gesto")
+    exigir(len(COLUNA_1) == len(COLUNA_2), "as duas colunas de «Os botões» não têm o mesmo tamanho")
+    opcoes = corpo.split('<section class="nav2-opcoes">')[1].split("</section>")[0]
+    exigir(opcoes.lstrip().startswith('<div class="sec2">Opções</div>'),
+           "o quadrante da direita perdeu o título «Opções»")
+    exigir(DICA_DO_TOQUE in opcoes and DICA_DO_TOQUE not in corpo.split(
+        '<section class="nav2-opcoes">')[0], "o toque do touchpad não mora em «Opções»")
+    exigir(f'data-gesto="{PERMITIR}"' in opcoes
+           and all(f'value="{v}"' in opcoes for v in DO_PERMITIR),
+           "«Permitir navegação» perdeu um dos três botões")
+    for velha in ("Quem navega", "Tipo de navegação", "Navega com", "navegacao-tipo",
+                  "Perfil de point and click"):
+        exigir(velha not in corpo, f"{velha!r} voltou à Navegação")
+    exigir('data-gesto="novo-gesto"' in opcoes and 'data-gesto="remover-gesto"' in opcoes,
+           "os gestos do PS perderam o «+ Gesto» ou o «×»")
+    exigir('data-linha="ps"' not in opcoes, "a linha do PS sozinho voltou aos gestos")
     exigir(len(re.findall(r'<a class="btn roxo" href="[^"]+"', corpo.split('class="fila2"')[1]
                           .split("</div>")[0])) == 3, "a fila de baixo perdeu um botão")
     exigir('href="mapa-do-controle.html#trocar"' in corpo

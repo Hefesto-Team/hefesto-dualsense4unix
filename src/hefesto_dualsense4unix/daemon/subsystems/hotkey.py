@@ -791,6 +791,7 @@ def start_hotkey_manager(daemon: DaemonProtocol) -> None:
         next_bridge=DEFAULT_COMBO_PONTE,
     )
     atos = _AtosDoGesto(daemon)
+    from hefesto_dualsense4unix.core import acoes_do_gesto as ag
     from hefesto_dualsense4unix.core import filtro_de_botao
 
     daemon._hotkey_manager = HotkeyManager(
@@ -805,6 +806,8 @@ def start_hotkey_manager(daemon: DaemonProtocol) -> None:
             getattr(daemon, "store", None), de),
         gestos_valem=gestos_dos_acessorios_valem(daemon),
         on_gesto=dizer_o_gesto_dos_acessorios(daemon),
+        combos_da_maquina=lambda: ag.combos_ativos(getattr(daemon, "_maquina", None)),
+        on_gesto_da_maquina=lambda chave: atos.callback(chave)(),
     )
     logger.info(
         "hotkey_manager_started",

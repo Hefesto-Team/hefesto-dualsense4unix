@@ -3,7 +3,7 @@
 Absorve A-ABA-NAVEGACAO-TEM-OS-DOIS-POINT-AND-CLICK-E-A-VELOCIDADE-QUE-FUNCIONA-01. A página não
 diz «sem efeito hoje», não tem número de passo sem gesto fora da Acessibilidade, e os dois donos do
 R3 (o clique e a direção) são duas linhas do mesmo desenho. O «Perfil de point and click» lista os
-quatro moldes do produto e guarda a escolha no perfil ativo (sem jogo, o `maquina.json`). A barra
+moldes do produto e guarda a escolha no perfil ativo (sem jogo, o `maquina.json`). A barra
 do cursor e a da rolagem gravam o valor absoluto em `mouse.speed` e `mouse.scroll_speed`,
 lido de volta do disco.
 

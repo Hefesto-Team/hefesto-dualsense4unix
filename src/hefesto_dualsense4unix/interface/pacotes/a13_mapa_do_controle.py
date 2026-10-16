@@ -177,7 +177,7 @@ def _estado() -> dict[str, Any]:
         _EDITANDO.clear()
     if not _EDITANDO:
         _EDITANDO.update({"chave": NAV, "edicoes": {}, "nome": None,
-                          "usar_em": None, "botao": "cross"})
+                          "usar_em": None, "botao": None})
     return _EDITANDO
 
 
@@ -343,7 +343,7 @@ def _acesos(ctx: Contexto, itens: list[dict[str, Any]]) -> set[str]:
     return acesas
 
 
-def _estado_da_linha(x: Botao, valores: dict[str, tuple[str, str]], botao: str,
+def _estado_da_linha(x: Botao, valores: dict[str, tuple[str, str]], botao: str | None,
                      acesas: set[str]) -> str:
     """As palavras que a CSS lê na linha: `muda`, `on` (a escolhida) e `pisca`."""
     palavras = []
@@ -598,8 +598,14 @@ def mapa_usar_em(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 
 @gesto(PAGINA, "mapa-botao")
 def mapa_botao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """O usuário clicou numa linha: ela vira a escolhida, no desenho e na lista."""
+    """O usuário clicou numa linha: ela vira a escolhida.
+
+    Sem `b`, o seletor fechou e nada fica aceso.
+    """
     b = str(o.get("b") or "").strip()
+    if not b:
+        _estado()["botao"] = None
+        return _repinta(ctx)
     if b not in POR_BOTAO:
         raise ValueError(f"mapa-botao: o clique não disse qual botão (veio {b!r}).")
     _estado()["botao"] = b
@@ -621,6 +627,8 @@ def _tentativa_de_troca(ctx: Contexto, estado: dict[str, Any], b: str, destino: 
 def _grava_na_edicao(ctx: Contexto, tipo: str, valor: str) -> None:
     estado = _estado()
     b = estado["botao"]
+    if b is None:
+        raise RuntimeError("escolha antes, na lista, o botão que vai mudar.")
     linha = POR_BOTAO[b]
     if linha.fixo:
         raise RuntimeError(

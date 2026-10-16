@@ -48,6 +48,7 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 
 from hefesto_dualsense4unix.core import acoes_de_botao as acoes
+from hefesto_dualsense4unix.core import acoes_do_gesto as ag
 from hefesto_dualsense4unix.core.keyboard_mappings import (
     PADRAO_QUE_A_TELA_PUBLICADA_NAO_DIZ,
 )
@@ -93,6 +94,10 @@ def _padrao_fora_da_lista(caminho: pathlib.Path) -> dict[str, tuple[str, str]]:
             continue
         rotulos, aberta = lista
         rotulo = acoes.ACOES[token][1] if token in acoes.ACOES else None
+        if botao == acoes.BOTAO_PS:
+            # A linha PS junta a tecla do perfil e o ato da máquina (AS-TELAS-QUE-ELA-PEDIU-
+            # EM-16-10-01, N8): de fábrica ela não digita, e o que ela mostra é o ato do PS.
+            rotulo = ag.rotulo(ag.PADRAO[ag.GESTO_DO_PS])
         if rotulo is None or rotulo not in rotulos:
             fora[botao] = (token, str(acoes.token_do_rotulo(aberta)))
     return fora

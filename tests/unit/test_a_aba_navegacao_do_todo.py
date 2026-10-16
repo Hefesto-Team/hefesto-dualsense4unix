@@ -69,12 +69,11 @@ def test_a_acessibilidade_traz_o_giroscopio_e_as_opcoes_do_desenho() -> None:
     assert "Cancelar" in texto and "Guardar" in texto
 
 
-def test_os_rotulos_do_tipo_e_do_teclado_sao_os_do_produto() -> None:
+def test_os_rotulos_do_permitir_e_do_teclado_sao_os_do_produto() -> None:
     # Prova da D-1510-AS-PALAVRAS-DOS-BOTOES-SAO-AS-DO-DESENHO.
     doc = _doc()
-    tipo = re.search(r'data-gesto="navegacao-tipo".*?</select>', doc, flags=re.S)
-    assert tipo and re.findall(r"<option[^>]*>([^<]+)</option>", tipo.group(0)) == [
-        "Interna", "Mouse e teclado"]
+    permitir = re.findall(r'<button[^>]*data-gesto="permitir-navegacao"[^>]*>([^<]+)</button>', doc)
+    assert permitir == ["Interna", "Steam", "Uso geral"], permitir
     teclado = re.search(r'data-gesto="teclado".*?</select>', doc, flags=re.S)
     assert teclado and set(re.findall(r"<option[^>]*>([^<]+)</option>", teclado.group(0))) == {
         "Só dentro do jogo", "Só fora do jogo", "Sempre", "Desativado"}
@@ -115,32 +114,22 @@ def test_a_dica_do_seletor_acompanha_o_valor(pagina) -> None:
     assert depois and depois != antes, (antes, depois)
 
 
-def test_quatro_controles_no_navega_com_cabem_numa_linha(pagina) -> None:
-    """Com quatro controles, os chips do «Navega com» ficam numa linha, dentro da coluna.
+def test_os_tres_de_permitir_navegacao_cabem_numa_linha(pagina) -> None:
+    """«Interna», «Steam» e «Uso geral» ficam lado a lado, dentro da linha de «Opções».
 
-    MORDIDA: devolver o `flex-wrap:wrap` e tirar o `min-width:0` do chip quebra em quatro linhas,
-    e as de baixo cobrem o «Perfil de point and click».
+    O «Navega com» saiu com o pedido de 16/10 (AS-TELAS-QUE-ELA-PEDIU-EM-16-10-01, N5), e com ele a
+    linha de chips que encolhia o nome com quatro controles; os três botões são fixos.
+    MORDIDA: `flex-wrap:wrap` no `.seg.mini` com a coluna estreita quebra em duas linhas.
     """
-    # Prova da D-1510-O-NAVEGA-COM-ENCOLHE-O-NOME-COM-QUATRO.
     pagina.goto(MOCKUP.as_uri())
     m = pagina.evaluate("""() => {
-      const nc = document.querySelector('.navega-com');
-      const modelo = nc.querySelector('.chip');
-      nc.innerHTML = '';
-      for (const nome of ['Starlight Blue', 'Galactic Purple', 'Cosmic Red', 'White']) {
-        const c = modelo.cloneNode(true);
-        (c.querySelector('.nm') || c).textContent = 'DualSense ' + nome;
-        nc.appendChild(c);
-      }
-      const op = nc.closest('.op2').getBoundingClientRect();
-      const prox = nc.closest('.op2').nextElementSibling.getBoundingClientRect();
-      const r = [...nc.querySelectorAll('.chip')].map(c => c.getBoundingClientRect());
-      return {tops: [...new Set(r.map(b => Math.round(b.top)))],
-              fundo: Math.max(...r.map(b => b.bottom)), direita: Math.max(...r.map(b => b.right)),
-              op_fundo: op.bottom, op_direita: op.right, prox_topo: prox.top};
+      const seg = document.querySelector('[role=radiogroup][aria-label="Permitir navegação"]');
+      const op = seg.closest('.op2').getBoundingClientRect();
+      const r = [...seg.querySelectorAll('button')].map(c => c.getBoundingClientRect());
+      return {n: r.length, tops: [...new Set(r.map(b => Math.round(b.top)))],
+              direita: Math.max(...r.map(b => b.right)), op_direita: op.right};
     }""")
-    assert len(m["tops"]) == 1, m
-    assert m["fundo"] <= min(m["op_fundo"], m["prox_topo"]) + 1, m
+    assert m["n"] == 3 and len(m["tops"]) == 1, m
     assert m["direita"] <= m["op_direita"] + 1, m
 
 

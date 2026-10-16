@@ -1,17 +1,11 @@
 #!/usr/bin/env python3
-"""O pacote da aba `06` Navegação: quem navega, o perfil de point and click e o que cada botão faz.
+"""O pacote da aba `06` Navegação: «Permitir navegação», o perfil de point and click e os botões.
 
-O PRIMÁRIO (`is_primary`, do daemon) navega o PC. Os controles aparecem pela cor do plástico
-(`blocos`), nunca por número de jogador. Cada campo pintado tem endereço na página; o que o desenho
-não endereça não se pinta.
-
-As linhas de botão gravam na hora (`linha-de-botao`): só a diferença do de fábrica vai a
-`Profile.button_actions`, onde o cartão «Mouse» manda (perfil com escolhas próprias, senão o
-computador). A «Função do teclado» tem quatro palavras (Sempre, Só fora do jogo, Só dentro do jogo,
-Desativado), e a página CARREGADA decide a palavra (`_o_que_a_pagina_oferece`): publicar a página
-nova é o que a faz valer. O «Perfil de point and click» é do computador (`maquina.json`,
-`mouse.point_and_click`); «Quem navega» liga ou desliga o Big Picture no daemon. Os seis gestos
-(PS+Options, PS+↑…) moram no `maquina.json` (`core/acoes_do_gesto`).
+Os controles aparecem pela cor do plástico (`blocos`); o que o desenho não endereça não se pinta.
+As linhas de botão gravam só a diferença do de fábrica em `Profile.button_actions`, e a página
+CARREGADA decide as palavras da «Função do teclado» (`_o_que_a_pagina_oferece`). O «Perfil Jogo -
+Navegação» e os gestos do PS moram no `maquina.json`; «Permitir navegação» escolhe a Interna, a
+Steam (o Big Picture) ou o Uso geral. O PS sozinho é a linha PS de «Os botões no computador».
 
 Recusa na tela: `RuntimeError` e `ValueError` vão ao diário e o botão pisca `hef-recusou`.
 """
@@ -39,16 +33,32 @@ TECLADO_DESATIVADO = "Desativado"
 TECLADO_SO_DENTRO = "Só dentro do jogo"
 TECLADO_SEMPRE = "Sempre"
 
-#: «Quem navega»: os dois valores do seletor, e o que a Steam faz do lado dela.
+#: O `data-quem` do quadro (o que esmaece as linhas quando a Steam navega), e o que a Steam faz do
+#: lado dela.
 QUEM_HEFESTO = "hefesto"
 QUEM_STEAM = "steam"
+
+#: «Permitir navegação» (AS-TELAS-QUE-ELA-PEDIU-EM-16-10-01, N5, 16/10/2026): os três botões que
+#: tomaram o lugar de «Quem navega», «Tipo de navegação» e «Navega com». Cada um acende pelas
+#: bandeiras que o daemon já guarda (o Big Picture e o tipo da Interna), sem campo novo no perfil.
+PERMITIR = "permitir-navegacao"
+PERMITIR_INTERNA = "interna"
+PERMITIR_STEAM = "steam"
+PERMITIR_USO_GERAL = "uso-geral"
+DO_PERMITIR: dict[str, tuple[str, str]] = {
+    PERMITIR_INTERNA: ("Interna", "O controle navega as abas do Hefesto"),
+    PERMITIR_STEAM: ("Steam", "A Steam navega com o controle, no Big Picture"),
+    PERMITIR_USO_GERAL: ("Uso geral", "O controle vira mouse e teclado do computador"),
+}
+#: Os endereços das linhas de gesto que valem e dos botões livres do «+ Gesto».
+PREFIXO_DA_VALIDADE = "vale-"
+PREFIXO_DA_LIBERDADE = "livre-"
 NA_STEAM_BIG_PICTURE = "big-picture"
 NA_STEAM_PADRAO = "padrao"  # (noqa-acento) valor de contrato do gesto
 #: A recusa do «Steam padrão», só no diário (a tela pisca o botão): o modo não tem quem o aplique.
 FRASE_DO_STEAM_PADRAO = "O «Steam padrão» não tem quem o aplique; a navegação segue no Big Picture."
 #: Os blocos que a página repinta por inteiro, e os prefixos dos valores do seletor de point and
 #: click (os mesmos do mapa: `molde:<chave>` e `perfil:<nome>`).
-BLOCO_NAVEGA_COM = "navega-com"
 BLOCO_PARA_QUEM = "para-quem"
 BLOCO_DOS_MEUS_PERFIS = "meus-perfis"
 PREFIXO_DO_ATALHO = "atalho-"
@@ -65,9 +75,9 @@ PALAVRAS_DO_TECLADO: dict[bool, tuple[str, ...]] = {
     False: (TECLADO_DESATIVADO,),
 }
 
-#: A lista «Tipo de navegação» (A-NAVEGACAO-INTERNA-E-UM-MODO-QUE-SE-LIGA-EM-QUALQUER-ABA-01): o
-#: tipo que o daemon guarda (`navegacao.interna.set {tipo}`) e o rótulo mostrado, na ordem do pedido
-#: (Interna primeiro).
+#: O tipo que o daemon guarda (`navegacao.interna.set {tipo}`,
+#: A-NAVEGACAO-INTERNA-E-UM-MODO-QUE-SE-LIGA-EM-QUALQUER-ABA-01) e o rótulo dele; «Permitir
+#: navegação» grava a Interna pelo botão «Interna» e o computador pelo «Uso geral».
 TIPO_INTERNA = "interna"
 TIPO_COMPUTADOR = "computador"
 ROTULOS_DO_TIPO: dict[str, str] = {
@@ -92,6 +102,13 @@ def tipo_de_navegacao(estado: dict[str, Any] | None) -> str:
     """O tipo escolhido na lista. Sem o bloco do daemon, só o computador existe."""
     tipo = _navegacao(estado).get("tipo")
     return tipo if tipo in ROTULOS_DO_TIPO else TIPO_COMPUTADOR
+
+
+def permitir_de_agora(estado: dict[str, Any] | None) -> str:
+    """O botão aceso de «Permitir navegação»: a Steam com o Big Picture, senão o tipo guardado."""
+    if big_picture_ligado(estado):
+        return PERMITIR_STEAM
+    return PERMITIR_INTERNA if tipo_de_navegacao(estado) == TIPO_INTERNA else PERMITIR_USO_GERAL
 
 
 def interna_ligada(estado: dict[str, Any] | None) -> bool:
@@ -560,13 +577,12 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     mesa: dict[str, Any] = {
         "fita-chips": chips_da_fita(ctx.mesa),
         "quem-navega": QUEM_STEAM if big_picture_ligado(st) else QUEM_HEFESTO,
+        PERMITIR: permitir_de_agora(st),
         "na-steam": NA_STEAM_BIG_PICTURE,
         "vel-cursor": rato.get("speed"),
         "vel-rolagem": rato.get("scroll_speed"),
         "point-and-click-perfil": _o_point_and_click_de_hoje(),
     }
-    if _navegacao(st):
-        mesa["navegacao-tipo"] = ROTULOS_DO_TIPO[tipo_de_navegacao(st)]
     if "keyboard_emulation" in st:
         mesa["teclado-estado"] = _o_teclado_em_palavras(
             bool(tecla.get("enabled")), so_dentro=bool((p or {}).get("teclado_so_no_jogo")),
@@ -575,8 +591,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     atalhos = _os_atalhos_fora_da_lista(linhas)
     mesa.update(linhas)
     mesa.update(_o_que_os_gestos_fazem())
+    mesa[f"{PREFIXO_DA_ACAO}ps"] = _o_que_o_ps_faz(p, linhas[f"{PREFIXO_DA_ACAO}ps"])
     blocos = {
-        f'[data-bloco="{BLOCO_NAVEGA_COM}"]': chips_de_quem_navega(_quem_navega(ctx)),
         f'[data-bloco="{BLOCO_PARA_QUEM}"]': chips_de_quem_navega(
             _quem_navega(ctx), so_o_primeiro=True),
         f'[data-bloco="{BLOCO_DOS_MEUS_PERFIS}"]': _opcoes_dos_meus_perfis(ctx),
@@ -805,19 +821,24 @@ def _mandar(p: Any, **params: Any) -> None:
         raise RuntimeError(recusa)
 
 
-@gesto("06-navegacao.html", "navegacao-tipo", grava="navegacao.interna.set")
-def navegacao_tipo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """A lista «Tipo de navegação»: só grava o tipo, e o interruptor passa a mostrá-lo
-    (A-NAVEGACAO-INTERNA-E-UM-MODO-QUE-SE-LIGA-EM-QUALQUER-ABA-01). O tipo é da máquina, nunca do
-    perfil (`D-2909-A-NAVEGACAO-INTERNA-E-DA-JANELA`); trocar a lista não desliga o outro tipo, e o
-    foco decide o R1.
+@gesto("06-navegacao.html", PERMITIR, grava="navegacao.big_picture.set")
+def permitir_navegacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """«Permitir navegação»: Interna, Steam ou Uso geral (N5, 16/10/2026).
+
+    Os três botões tomaram o lugar de «Quem navega» e «Tipo de navegação», e gravam nos MESMOS
+    donos, da máquina e nunca do perfil: «Steam» liga o Big Picture; «Interna» e «Uso geral» o
+    desligam e guardam o tipo da navegação (`navegacao.interna.set`, a Interna ou o computador).
+    O interruptor do topo continua dono de ligar e desligar: nenhum dos três o toca.
     """
-    escolhido = str(o.get("valor") or o.get("rotulo") or "").strip()
-    tipo = next((t for t, rotulo in ROTULOS_DO_TIPO.items() if rotulo == escolhido), None)
-    if tipo is None:
+    escolhido = str(o.get("valor") or o.get("rotulo") or "").strip().lower()
+    if escolhido not in DO_PERMITIR:
         raise ValueError(
-            f"navegacao-tipo: não reconheci a opção escolhida ({escolhido!r}); as duas "
-            f"são as de `ROTULOS_DO_TIPO`.")
+            f"{PERMITIR}: não reconheci a opção escolhida ({escolhido!r}); as três são "
+            + ", ".join(f"«{v}»" for v in DO_PERMITIR) + ".")
+    _big_picture(p, escolhido == PERMITIR_STEAM)
+    if escolhido == PERMITIR_STEAM:
+        return None
+    tipo = TIPO_INTERNA if escolhido == PERMITIR_INTERNA else TIPO_COMPUTADOR
     try:
         resposta = p.resultado("navegacao.interna.set", tipo=tipo, origin=MANUAL)
     except RuntimeError as erro:
@@ -825,22 +846,6 @@ def navegacao_tipo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] |
             "o Hefesto não respondeu — o tipo de navegação ficou como estava") from erro
     if isinstance(resposta, dict) and resposta.get("status") != "ok":
         raise RuntimeError("o tipo de navegação ficou como estava")
-    return None
-
-
-@gesto("06-navegacao.html", "quem-navega", grava="navegacao.big_picture.set")
-def quem_navega(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """«Quem navega»: o Hefesto (a Navegação do Hefesto) ou a Steam (o Big Picture dela).
-
-    O dono é o `navegacao.big_picture.set`, da máquina e nunca do perfil: «Steam» liga o Modo Big
-    Picture, «Hefesto» o desliga.
-    """
-    escolhido = str(o.get("valor") or o.get("rotulo") or "").strip().lower()
-    if escolhido not in (QUEM_HEFESTO, QUEM_STEAM):
-        raise ValueError(
-            f"quem-navega: não reconheci a opção escolhida ({escolhido!r}); as duas são "
-            f"«{QUEM_HEFESTO}» e «{QUEM_STEAM}».")
-    _big_picture(p, escolhido == QUEM_STEAM)
     return None
 
 
@@ -871,9 +876,9 @@ def _big_picture(p: Any, ligado: bool) -> None:
 
 @gesto("06-navegacao.html", "point-and-click-perfil", grava="gravar_pelo_gesto")
 def point_and_click_perfil(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """O «Perfil de point and click»: um molde ou um dos meus perfis, do computador.
+    """O «Perfil Jogo - Navegação»: um molde ou um dos meus perfis, do computador.
 
-    O valor é `molde:<chave>` (um dos quatro moldes de `profiles.loader`) ou `perfil:<nome>`; guarda
+    O valor é `molde:<chave>` (um dos moldes de `profiles.loader`) ou `perfil:<nome>`; guarda
     em `mouse.point_and_click`, onde moram as velocidades. O mapa dos botões mostra o que o perfil
     escolhido faz.
     """
@@ -981,11 +986,23 @@ def linha_de_botao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] |
             f"linha-de-botao: o clique não disse qual botão (veio {botao!r}). O "
             "`data-linha` de cada `<select>` é o id do botão, e ele vem do gerador.")
     rotulo = str(o.get("valor") or o.get("rotulo") or "").strip()
+    if botao == "ps":
+        return _a_linha_do_ps(ctx, p, rotulo)
     token = acoes.token_do_rotulo(rotulo)
     if token is None:
         raise ValueError(
             f"{_nome_do_botao(botao)}: a opção {rotulo!r} não é do produto. A lista da tela e "
             "a do produto saem de `core/acoes_de_botao.ACOES`.")
+    _gravar_a_linha(ctx, p, botao, token)
+    _, _, sem_dono = acoes.resolver({botao: token})
+    if botao in sem_dono:
+        raise RuntimeError(
+            f"guardei, e {_nome_do_botao(botao)} fica sem quem o atenda — escolha outra ação.")
+    return {"mesa": {f"{PREFIXO_DA_ACAO}{botao}": rotulo}}
+
+
+def _gravar_a_linha(ctx: Contexto, p: Any, botao: str, token: str) -> None:
+    """Grava no perfil o que a linha faz (só a diferença do de fábrica) e reaplica."""
     nome = perfil.nome_do_ativo(ctx.state).strip()
     de_fabrica = acoes.padrao()
     perfil._com_o_src()
@@ -1008,11 +1025,37 @@ def linha_de_botao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] |
         raise RuntimeError(
             f"não consegui guardar a linha {_nome_do_botao(botao)}: {erro}") from erro
     perfil.reaplicar(nome, ctx, p)
-    _, _, sem_dono = acoes.resolver({botao: token})
-    if botao in sem_dono:
+
+
+def _a_linha_do_ps(ctx: Contexto, p: Any, rotulo: str) -> dict[str, Any] | None:
+    """A linha PS, o dono único do PS sozinho (N8, 16/10/2026).
+
+    O PS sozinho tem duas camadas no daemon: a tecla do perfil (`button_actions["ps"]`, que vale
+    quando o PS digita) e o ato da máquina (o gesto ⑥ do `maquina.json`). A lista junta as duas,
+    e cada escolha deixa UMA valendo: o ato da máquina devolve a tecla do perfil ao de fábrica
+    («sem tecla»); a tecla declara o ato «Nada»; o «— Nada —» cala as duas.
+    """
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.core import acoes_do_gesto as ag
+
+    ato = ag.token_do_rotulo(rotulo)
+    if ato is not None:
+        if not _declarar_o_gesto(ag.GESTO_DO_PS, rotulo, p):
+            return None
+        _gravar_a_linha(ctx, p, "ps", acoes.padrao()["ps"])
+        return None
+    token = acoes.token_do_rotulo(rotulo)
+    if token is None or not _o_ps_digita(token):
+        raise ValueError(
+            f"PS: a opção {rotulo!r} não é do produto. A lista junta `core/acoes_do_gesto` e "
+            "as teclas que o PS sabe digitar.")
+    _gravar_a_linha(ctx, p, "ps", token)
+    ok, motivo = _ok_e_motivo(p.machine_declare({"gestos": {ag.GESTO_DO_PS: {"faz": ag.NADA}}}))
+    if not ok:
         raise RuntimeError(
-            f"guardei, e {_nome_do_botao(botao)} fica sem quem o atenda — escolha outra ação.")
-    return {"mesa": {f"{PREFIXO_DA_ACAO}{botao}": rotulo}}
+            "guardei a tecla, e o ato do PS continua: " + (motivo or "o Hefesto não respondeu"))
+    _esquecer_a_maquina()
+    return {"mesa": {f"{PREFIXO_DA_ACAO}ps": rotulo}}
 
 
 def _nome_do_ativo_ou_nada(ctx: Contexto) -> str:
@@ -1043,11 +1086,12 @@ def padrao_da_aba(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             opc.voltar_o_computador_ao_de_fabrica(cartao)
     if not no_jogo:
         ok, motivo = _ok_e_motivo(
-            p.machine_declare({"gestos": dict.fromkeys(ag.GESTOS)}))
+            p.machine_declare({"gestos": dict.fromkeys(ag.TODOS_OS_GESTOS)}))
         if not ok:
             raise RuntimeError(
                 "o mouse e o teclado voltaram, e os gestos não: "
                 + (motivo or "o Hefesto não respondeu"))
+        _esquecer_a_maquina()
     vista = opc.carregar_o_que_vale(nome) if no_jogo else None
     mouse = vista.mouse if vista is not None else None
     speed, scroll = opc.velocidades_do_computador()
@@ -1109,13 +1153,16 @@ def _prova(nome: str, clique: dict[str, Any], chama: list[Any]) -> dict[str, Any
 _MOUSE = "mouse.emulation.set"
 _BIG_PICTURE = "navegacao.big_picture.set"
 PROVAS = [
-    _prova("navegacao-tipo", {"valor": ROTULOS_DO_TIPO[TIPO_COMPUTADOR]},
-           [("resultado", ["navegacao.interna.set"],
-             {"tipo": TIPO_COMPUTADOR, "origin": "manual"})]),
-    _prova("quem-navega", {"valor": QUEM_STEAM},
+    _prova(PERMITIR, {"valor": PERMITIR_STEAM},
            [("resultado", [_BIG_PICTURE], {"ligado": True, "origin": "manual"})]),
-    _prova("quem-navega", {"valor": QUEM_HEFESTO},
-           [("resultado", [_BIG_PICTURE], {"ligado": False, "origin": "manual"})]),
+    _prova(PERMITIR, {"valor": PERMITIR_INTERNA},
+           [("resultado", [_BIG_PICTURE], {"ligado": False, "origin": "manual"}),
+            ("resultado", ["navegacao.interna.set"],
+             {"tipo": TIPO_INTERNA, "origin": "manual"})]),
+    _prova(PERMITIR, {"valor": PERMITIR_USO_GERAL},
+           [("resultado", [_BIG_PICTURE], {"ligado": False, "origin": "manual"}),
+            ("resultado", ["navegacao.interna.set"],
+             {"tipo": TIPO_COMPUTADOR, "origin": "manual"})]),
     _prova("na-steam", {"valor": NA_STEAM_BIG_PICTURE},
            [("resultado", [_BIG_PICTURE], {"ligado": True, "origin": "manual"})]),
     _prova("vel-cursor", {"valor": "9"},
@@ -1134,6 +1181,10 @@ PROVAS = [
            [("resultado", ["keyboard.emulation.set"], {"enabled": False})]),
     _prova("acao-do-gesto", {"linha": "ps_l3", "rotulo": "— Nada —", "valor": "— Nada —"},
            [("machine_declare", [{"gestos": {"ps_l3": {"faz": "nada"}}}], {})]),
+    _prova("novo-gesto", {"b": "triangle"},
+           [("machine_declare", [{"gestos": {"ps_triangle": {"faz": "nada"}}}], {})]),
+    _prova("remover-gesto", {"linha": "ps_cross"},
+           [("machine_declare", [{"gestos": {"ps_cross": None}}], {})]),
 ]
 
 PREFIXO_DO_GESTO = "faz-"
@@ -1173,19 +1224,55 @@ def _a_maquina() -> Any:
     return _A_MAQUINA
 
 
+def _esquecer_a_maquina() -> None:
+    """A próxima pintura relê o `maquina.json` (a declaração acabou de mudá-lo)."""
+    global _A_MAQUINA
+    _A_MAQUINA = None
+
+
 def _o_que_os_gestos_fazem() -> dict[str, str]:
-    """As seis listas da tabela e a opção do script de cada uma."""
+    """As listas da tabela, a opção do script de cada uma, as linhas que valem e os botões livres.
+
+    A tabela tem uma linha por gesto com combo, os de fábrica e os novos (`TODOS_OS_GESTOS`): a
+    que não vale (o de fábrica removido, o novo não declarado) fica escondida por `vale-<chave>`.
+    O PS sozinho não tem linha: só o script dele, que mora na lista da linha PS de «Os botões».
+    """
     perfil._com_o_src()
     from hefesto_dualsense4unix.core import acoes_do_gesto as ag
 
-    escolhas = ag.tabela(_a_maquina())
+    maquina = _a_maquina()
+    escolhas = ag.tabela(maquina)
+    ativos = ag.gestos_ativos(maquina)
     fora: dict[str, str] = {}
-    for chave, escolha in escolhas.items():
+    for chave in ag.TODOS_OS_GESTOS:
+        escolha = escolhas.get(chave) or ag.EscolhaDoGesto(ag.NADA)
         fora[PREFIXO_DO_SCRIPT + chave] = (
             ag.nome_do_script(escolha.script) if escolha.faz == ag.SCRIPT and escolha.script
             else ag.rotulo(ag.SCRIPT))
+        if chave == ag.GESTO_DO_PS:
+            continue
         fora[PREFIXO_DO_GESTO + chave] = ag.rotulo_da_escolha(escolha)
+        fora[PREFIXO_DA_VALIDADE + chave] = "sim" if chave in ativos else "nao"  # (noqa-acento)
+    for botao in ag.BOTOES_DA_ESCOLHA:
+        if botao in ag.BOTOES_PROIBIDOS:
+            continue
+        fora[PREFIXO_DA_LIBERDADE + botao] = (
+            "sim" if ag.botao_livre(maquina, botao) else "nao")  # (noqa-acento) valor do atributo
     return fora
+
+
+def _o_que_o_ps_faz(p: dict[str, Any] | None, da_linha: str) -> str:
+    """O rótulo da linha PS: a tecla do perfil quando o PS digita, senão o ato da máquina."""
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.core import acoes_do_gesto as ag
+
+    perfil_ = p or {}
+    token = acoes.tabela_efetiva(
+        perfil_.get("button_actions") or None, perfil_.get("key_bindings") or None).get("ps")
+    if token and token != acoes.padrao()["ps"] and _o_ps_digita(str(token)):
+        return da_linha
+    escolha = ag.tabela(_a_maquina()).get(ag.GESTO_DO_PS) or ag.EscolhaDoGesto(ag.NADA)
+    return ag.rotulo_da_escolha(escolha)
 
 
 def _ok_e_motivo(resposta: Any) -> tuple[bool, str | None]:
@@ -1206,30 +1293,95 @@ def acao_do_gesto(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
     que era; o arquivo é conferido aqui (`conferir_o_script`) e de novo pelo daemon na hora de
     rodar. A recusa pisca na lista e a frase vai ao diário.
     """
-    global _A_MAQUINA
     perfil._com_o_src()
+    from hefesto_dualsense4unix.core import acoes_do_gesto as ag
+
+    qual = str(o.get("linha") or "").strip()
+    if qual not in ag.TODOS_OS_GESTOS:
+        raise ValueError(f"a lista não disse de qual gesto ela é ({qual!r})")
+    _declarar_o_gesto(qual, str(o.get("rotulo") or o.get("valor") or "").strip(), p)
+    return None
+
+
+def _declarar_o_gesto(qual: str, texto: str, p: Any) -> bool:
+    """Declara na máquina o que o gesto faz; ``False`` quando o seletor do script foi cancelado."""
     import os
 
     from hefesto_dualsense4unix.core import acoes_do_gesto as ag
 
-    qual = str(o.get("linha") or "").strip()
-    if qual not in ag.GESTOS:
-        raise ValueError(f"a lista não disse de qual gesto ela é ({qual!r})")
-    texto = str(o.get("rotulo") or o.get("valor") or "").strip()
+    declarado: dict[str, Any] = {}
     faz = ag.token_do_rotulo(texto)
     if faz is None or faz == ag.SCRIPT:
         caminho = p.escolher_arquivo(TITULO_DO_SELETOR_DO_SCRIPT, padrao=FILTRO_DO_SCRIPT)
         if not caminho:
-            return None
+            return False
         real = os.path.realpath(str(caminho))
         motivo = ag.conferir_o_script(real)
         if motivo is not None:
             raise RuntimeError(f"Não dá para usar {ag.nome_do_script(real)}: {motivo}.")
-        declarado: dict[str, Any] = {"faz": ag.SCRIPT, "script": real}
+        declarado = {"faz": ag.SCRIPT, "script": real}
     else:
         declarado = {"faz": faz}
+    if qual != ag.GESTO_DO_PS and ag.removido(_a_maquina(), qual):
+        declarado["removido"] = True
     ok, motivo_da_recusa = _ok_e_motivo(p.machine_declare({"gestos": {qual: declarado}}))
     if not ok:
         raise RuntimeError(motivo_da_recusa or "Não consegui guardar o que o gesto faz.")
-    _A_MAQUINA = None
+    _esquecer_a_maquina()
+    return True
+
+
+@gesto("06-navegacao.html", "novo-gesto", grava="machine_declare")
+def novo_gesto(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """«+ Gesto»: o PS com o botão escolhido vira uma linha da tabela, fazendo «Nada».
+
+    Só o botão livre se escolhe (`acoes_do_gesto.botao_livre`): o proibido e o já usado chegam
+    desligados na tela, sem texto, e a recusa aqui é a do clique que pulou a tela. O botão de um
+    gesto de fábrica removido devolve aquele gesto, com o que ele fazia.
+    """
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.core import acoes_do_gesto as ag
+
+    botao = str(o.get("b") or "").strip()
+    maquina = _a_maquina()
+    chave = ag.gesto_do_botao(botao)
+    if chave is None or not ag.botao_livre(maquina, botao):
+        raise ValueError(f"o PS + {botao!r} não está livre para virar gesto")
+    if chave in ag.GESTOS:
+        escolha = ag.tabela(maquina)[chave]
+        declarado: dict[str, Any] = {"faz": escolha.faz, "removido": False}
+        if escolha.script:
+            declarado["script"] = escolha.script
+    else:
+        declarado = {"faz": ag.NADA}
+    ok, motivo = _ok_e_motivo(p.machine_declare({"gestos": {chave: declarado}}))
+    if not ok:
+        raise RuntimeError(motivo or "Não consegui acrescentar o gesto.")
+    _esquecer_a_maquina()
+    return None
+
+
+@gesto("06-navegacao.html", "remover-gesto", grava="machine_declare")
+def remover_gesto(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """O botão de tirar da linha: o gesto sai da tabela e deixa de disparar.
+
+    O de fábrica guarda o que fazia, marcado `removido` (volta pelo «+ Gesto» com o mesmo botão);
+    o novo é esquecido. O PS sozinho não tem esse botão: o dono dele é a linha PS de «Os botões».
+    """
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.core import acoes_do_gesto as ag
+
+    chave = str(o.get("linha") or "").strip()
+    if chave not in ag.TODOS_OS_GESTOS or chave == ag.GESTO_DO_PS:
+        raise ValueError(f"o botão de tirar não disse qual gesto sai ({chave!r})")
+    declarado: dict[str, Any] | None = None
+    if chave in ag.GESTOS:
+        escolha = ag.tabela(_a_maquina())[chave]
+        declarado = {"faz": escolha.faz, "removido": True}
+        if escolha.script:
+            declarado["script"] = escolha.script
+    ok, motivo = _ok_e_motivo(p.machine_declare({"gestos": {chave: declarado}}))
+    if not ok:
+        raise RuntimeError(motivo or "Não consegui tirar o gesto.")
+    _esquecer_a_maquina()
     return None

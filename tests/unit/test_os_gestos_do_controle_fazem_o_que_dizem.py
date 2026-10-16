@@ -151,9 +151,13 @@ def _listas_da_bancada() -> dict[str, list[str]]:
 
 
 def test_a_lista_da_bancada_e_o_vocabulario_do_produto() -> None:
-    """As seis listas do mockup regerado oferecem EXATAMENTE os rótulos do dono."""
+    """As listas da tabela do mockup regerado oferecem EXATAMENTE os rótulos do dono.
+
+    Uma por gesto com combo, os de fábrica e os novos; o PS sozinho saiu da tabela e mora na
+    linha PS de «Os botões» (AS-TELAS-QUE-ELA-PEDIU-EM-16-10-01, N8, 16/10/2026).
+    """
     listas = _listas_da_bancada()
-    assert set(listas) == set(ag.GESTOS), listas.keys()
+    assert set(listas) == set(ag.TODOS_OS_GESTOS) - {ag.GESTO_DO_PS}, listas.keys()
     rotulos = [r for _g, ops in ag.por_grupo() for r in ops]
     for gesto, ops in listas.items():
         assert ops == rotulos, f"a lista do {gesto} diverge do vocabulário: {ops}"
@@ -496,6 +500,14 @@ def _pintar() -> dict[str, Any]:
     return a06_navegacao._o_que_os_gestos_fazem()
 
 
+def _o_ps_pintado() -> str:
+    """O que a linha PS de «Os botões» mostra com o perfil sem tecla no PS: o ato da máquina."""
+    from pacotes import a06_navegacao
+
+    a06_navegacao._A_MAQUINA = None
+    return a06_navegacao._o_que_o_ps_faz({}, "— Sem tecla —")
+
+
 def test_a_tela_pinta_o_que_a_maquina_diz(tmp_path: pathlib.Path) -> None:
     """Com o `maquina.json` dizendo `ps_l3: abrir_o_hefesto`, a linha 5 diz «Abrir o Hefesto»."""
     bom = _script(tmp_path)
@@ -504,7 +516,8 @@ def test_a_tela_pinta_o_que_a_maquina_diz(tmp_path: pathlib.Path) -> None:
         "ps_cima": {"faz": "script", "script": str(bom)}}})
     pintado = _pintar()
     assert pintado["faz-ps_l3"] == "Abrir o Hefesto"
-    assert pintado["faz-ps"] == "— Nada —"
+    assert "faz-ps" not in pintado, "a tabela voltou a ter a linha do PS sozinho"
+    assert _o_ps_pintado() == "— Nada —"
     assert pintado["faz-ps_options"] == "Suspender mouse e teclado"
     assert pintado["script-ps_cima"] == "limpa.sh" and pintado["faz-ps_cima"] == "limpa.sh"
     assert pintado["script-ps"] == "Escolher um script…"
@@ -517,8 +530,8 @@ def test_a_escolha_sobrevive_a_reabrir_a_aba(atendentes: dict[str, list[Any]]) -
     """O «— Nada —» escolhido na 06 continua lá depois de a aba (ou a janela) reabrir."""
     d = _daemon()
     _clicar(_PonteDoDaemon(d), "ps", "— Nada —")
-    assert _pintar()["faz-ps"] == "— Nada —"
-    assert _pintar()["faz-ps"] == "— Nada —"
+    assert _o_ps_pintado() == "— Nada —"
+    assert _o_ps_pintado() == "— Nada —"
 
 
 def test_a_bancada_tem_os_enderecos_da_pintura() -> None:
@@ -526,8 +539,9 @@ def test_a_bancada_tem_os_enderecos_da_pintura() -> None:
     import onde
 
     doc = onde.pagina(PAGINA, publicado=False).read_text(encoding="utf-8")
-    for g in ag.GESTOS:
-        assert f'data-campo="faz-{g}" data-hef-alvo="valor"' in doc, g
+    for g in ag.TODOS_OS_GESTOS:
+        if g != ag.GESTO_DO_PS:
+            assert f'data-campo="faz-{g}" data-hef-alvo="valor"' in doc, g
         assert f'<option data-campo="script-{g}">' in doc, g
 
 
