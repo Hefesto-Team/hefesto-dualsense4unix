@@ -207,7 +207,7 @@ def test_o_no_ausente_diz_que_nao_tem_para_onde_ir(servidor: ServidorComFluxos) 
     assert no_radio.rota.motivo in (af.MOTIVO_NO_SEM_PONTE_NO_RADIO, af.MOTIVO_NO_SEM_SABER_MONTAR)
 
 
-def test_o_mix_do_pc_tambem_desce_com_o_controle_e_o_nó_fica(
+def test_o_mix_do_pc_tambem_desce_com_o_controle_e_o_no_fica(
     servidor: ServidorComFluxos,
 ) -> None:
     """Em «mix» há um segundo fio (a saída padrão até o nó): ele também vai com a rota."""
@@ -301,3 +301,48 @@ def test_a_volta_sem_controle_nao_escreve_nada_no_servidor(
     escritas = [c for c in servidor.chamadas if c[1] in ("load-module", "unload-module")]
     assert escritas == []
     assert servidor.chamadas, "a volta nem perguntou ao servidor: a régua não mede nada"
+
+
+def test_o_controle_cai_do_radio_e_volta_pelo_radio_no_mesmo_no(
+    servidor: ServidorComFluxos,
+) -> None:
+    """O gesto da bancada: desligar pelo PS e religar, só no rádio, em «mix»."""
+    ger = _gerenciador(af.FONTE_MIX)
+    ger.reconciliar([_radio(_UNIQ_P3)])
+    nome = af.nome_do_sink(_UNIQ_P3)
+    id_x = _id_do_no(servidor, _UNIQ_P3)
+    servidor.abrir_o_jogo("jogo", nome)
+    assert servidor.laco_para(nome) == [(f"{_HDMI}.monitor", nome)]
+
+    ger.reconciliar([])
+    assert _id_do_no(servidor, _UNIQ_P3) == id_x
+    assert servidor.laco_para(nome) == []
+    assert servidor.no_do("jogo") == nome
+
+    ger.reconciliar([_radio(_UNIQ_P3)])
+    assert _id_do_no(servidor, _UNIQ_P3) == id_x
+    assert servidor.laco_para(nome) == [(f"{_HDMI}.monitor", nome)]
+    assert servidor.no_do("jogo") == nome
+    assert servidor.trocas_do_padrao == []
+
+
+def test_com_a_porta_fechada_no_meio_da_volta_o_ausente_nao_se_mexe(
+    servidor: ServidorComFluxos, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O stop fecha a porta enquanto a volta lê o servidor: o ausente fica para o ``parar``."""
+    ger = _gerenciador()
+    ger.reconciliar([_cabo(_UNIQ_P1)])
+    nome = af.nome_do_sink(_UNIQ_P1)
+    lendo = ServidorComFluxos.__call__
+
+    def fecha_ao_ler(self: ServidorComFluxos, argv: list[str]) -> str | None:
+        if argv[:4] == ["pactl", "list", "short", "modules"]:
+            ger.fechar()
+        return lendo(self, argv)
+
+    monkeypatch.setattr(ServidorComFluxos, "__call__", fecha_ao_ler)
+    servidor.chamadas.clear()
+    ger.reconciliar([])
+
+    assert [c for c in servidor.chamadas if c[1] == "unload-module"] == []
+    assert servidor.laco_para(nome) == [(f"{nome}.monitor", _SINK_P1)]

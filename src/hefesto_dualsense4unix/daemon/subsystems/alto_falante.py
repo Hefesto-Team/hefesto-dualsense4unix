@@ -441,7 +441,7 @@ class GerenciadorDeNosDeSom:
             return
         modulos = self._conferir_com_o_servidor()
         for uniq, ausente in list(self._nos.items()):
-            if uniq not in alvos:
+            if uniq not in alvos and not self._acordar.is_set():
                 self._reafinar(
                     uniq,
                     ausente,
@@ -2684,7 +2684,7 @@ class AltoFalanteSubsystem:
         return True
 
     def _reconciliar(self, gerenciador: Any) -> None:
-        """Uma varredura: quem está na lista ganha nó, quem saiu perde."""
+        """Uma varredura: quem está na lista ganha nó e rota, quem saiu perde só a rota."""
         from hefesto_dualsense4unix.integrations.alto_falante_bt import e_radio
 
         alvos = self.alvos(list(self._fonte()))
