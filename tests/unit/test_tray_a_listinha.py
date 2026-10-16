@@ -157,7 +157,7 @@ def test_o_que_mexe_no_jogo_vem_antes_do_que_mexe_no_servico(
 
 
 def test_o_tique_que_pinta_a_posicao_nao_manda_nada_ao_daemon(
-        gtk_de_mentira: Any) -> None:
+        gtk_de_mentira: Any, sincrono: None) -> None:
     """A PINTURA NÃO É CLIQUE."""
     pedidos: list[bool] = []
     tray = _tray(gtk_de_mentira, on_set_modo=lambda ligado: pedidos.append(ligado))
@@ -176,7 +176,7 @@ def test_o_tique_que_pinta_a_posicao_nao_manda_nada_ao_daemon(
         "modo que ele acabou de LER")
 
 
-def test_o_clique_no_radio_manda_uma_vez_so(gtk_de_mentira: Any) -> None:
+def test_o_clique_no_radio_manda_uma_vez_so(gtk_de_mentira: Any, sincrono: None) -> None:
     """Trocar de posição emite nos DOIS itens; só o que ENTROU vale."""
     pedidos: list[bool] = []
     tray = _tray(gtk_de_mentira, on_set_modo=lambda ligado: pedidos.append(ligado))
@@ -282,6 +282,26 @@ def test_ligar_reiniciar_e_parar_o_servico_saem_do_fio_da_janela(
     for fn, _ok, _falha in na_fila:
         fn()
     assert verbos == ["restart", "stop", "start"]
+
+
+def test_o_ligado_da_bandeja_sai_do_fio_da_janela(
+        gtk_de_mentira: Any, na_fila: list[Any]) -> None:
+    """O «Ligado» liga o serviço antes do modo (`cmd_tray._definir_o_modo`), e o `start` da unit
+    `Type=notify` só volta com o IPC de pé: no clique, no fio do GTK, a bandeja congelaria.
+    MORDIDA: volte `self.on_set_modo(ligado)` direto no clique e o ato roda antes da fila."""
+    pedidos: list[bool] = []
+    tray = _tray(gtk_de_mentira, on_set_modo=lambda ligado: pedidos.append(ligado) or True)
+    tray._montar_os_atos_do_jogo()
+    tray._modo_desligado_item.set_active(True)
+    pedidos.clear()
+    na_fila.clear()
+
+    tray._modo_ligado_item.set_active(True)
+    assert pedidos == [], "o modo (e o start do serviço) rodou no fio da janela"
+    assert len(na_fila) == 1
+    fn, _ok, _falha = na_fila[0]
+    fn()
+    assert pedidos == [True]
 
 
 def test_o_servico_que_nao_pegou_vira_aviso_no_diario_e_a_bandeja_segue(

@@ -312,8 +312,12 @@ class AppTray:
         """Só age no rádio que ACABOU de ser marcado, e nunca no eco da pintura."""
         if self._pintando_o_modo or not item.get_active():
             return
-        if self.on_set_modo is not None:
-            self._chamar_sem_cair(lambda: self.on_set_modo(ligado))
+        definir = self.on_set_modo
+        if definir is not None:
+            # O «Ligado» liga o serviço antes do modo (`cmd_tray._definir_o_modo`): o `start`
+            # da unit `Type=notify` só volta com o IPC de pé, então sai do fio da janela.
+            self._chamar_sem_cair(lambda: self._fora_do_fio(
+                lambda: definir(ligado), "apptray_modo_nao_pegou", ligado=ligado))
 
     def _ao_sair(self) -> None:
         """«Sair» PARA o serviço e só então fecha o ícone.
@@ -363,18 +367,23 @@ class AppTray:
         servico = self.on_servico
         if servico is None:
             return
+        self._fora_do_fio(lambda: servico(verbo), "apptray_servico_nao_pegou", verbo=verbo)
+
+    @staticmethod
+    def _fora_do_fio(ato: Any, evento: str, **campos: Any) -> None:
+        """Roda ``ato`` na thread worker; o que não pegou vira ``evento`` no diário."""
         from hefesto_dualsense4unix.app.ipc_bridge import run_in_thread
 
         def _terminou(deu_certo: Any) -> bool:
             if not deu_certo:
-                logger.warning("apptray_servico_nao_pegou", verbo=verbo)
+                logger.warning(evento, **campos)
             return False
 
         def _nao_pegou(erro: Exception) -> bool:
-            logger.warning("apptray_servico_nao_pegou", verbo=verbo, erro=str(erro))
+            logger.warning(evento, erro=str(erro), **campos)
             return False
 
-        run_in_thread(lambda: servico(verbo), _terminou, _nao_pegou)
+        run_in_thread(ato, _terminou, _nao_pegou)
 
     @staticmethod
     def _chamar_sem_cair(acao: Any) -> None:
