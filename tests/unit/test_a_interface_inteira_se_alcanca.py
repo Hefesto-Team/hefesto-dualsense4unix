@@ -10,10 +10,12 @@ Três contratos, medidos no Chrome sobre os DESENHOS (`mockup/`), em todas as p�
    R1 e o L1 e deixava a página inteira fora do alcance do controle.
 3. A TELA POR CIMA É UM DIÁLOGO. Aberta por âncora, o foco entra nela, nenhuma caixa da
    Navegação fica atrás dela, o Tab fica dentro e o Esc fecha.
+4. O TECLADO ACIONA. Enter e Espaço clicam o gesto que não é botão, e o Esc devolve o foco a
+   quem abriu a tela.
 
 MORDIDAS (cada uma tira UMA cura de uma cópia da página e a régua tem de reprovar): sem o
 contrato do alcance; sem o `tabindex` posto; sem `a[href],button` no seletor; sem o
-`presente(d)` do `aberta()`.
+`presente(d)` do `aberta()`; sem o `el.click()` do Enter; sem o `quemAbriu.focus()`.
 """
 
 from __future__ import annotations
@@ -320,3 +322,73 @@ def test_morde_sem_o_presente_do_aberta(navegador: Any, tmp_path: pathlib.Path) 
     achados = _mordida(navegador, tmp_path, "06-navegacao.html",
                        nav_js=velho.replace(" && presente(d)", ""))
     assert any("nasce com janela aberta" in a for a in achados), achados
+
+
+# ---- o teclado aciona e o foco volta: Enter e Espaço clicam, e o Esc devolve o foco -----------
+
+_JS_DO_GESTO = """() => {
+  const NATIVO = 'a[href],button,input,select,textarea,summary';
+  const el = Array.from(document.querySelectorAll('[data-gesto],[data-hef-gesto]')).find(e =>
+    !e.matches(NATIVO) && !e.closest('.tela-nova') && e.getBoundingClientRect().width > 0);
+  if (!el) return null;
+  window.__cliques = 0;
+  el.addEventListener('click', ev => {
+    window.__cliques++; ev.preventDefault(); ev.stopImmediatePropagation();
+  }, true);
+  el.focus();
+  return document.activeElement === el ? (el.dataset.gesto || el.dataset.hefGesto) : null;
+}"""
+
+
+def medir_o_teclado(
+    navegador: Any, arquivo: pathlib.Path, volta: pathlib.Path, abre: str
+) -> dict[str, Any]:
+    """Enter e Espaço num gesto que não é botão (`arquivo`), e o foco de volta a quem abriu a
+    tela `abre` (`volta`)."""
+    pg = _abrir(navegador, arquivo)
+    try:
+        gesto = pg.evaluate(_JS_DO_GESTO)
+        pg.keyboard.press("Enter")
+        pg.keyboard.press(" ")
+        cliques = pg.evaluate("() => window.__cliques")
+    finally:
+        pg.close()
+    pg = _abrir(navegador, volta)
+    try:
+        pg.focus(f'a[href="#{abre}"]')
+        pg.keyboard.press("Enter")
+        pg.wait_for_timeout(50)
+        dentro = pg.evaluate(_JS_DENTRO, abre)
+        pg.keyboard.press("Escape")
+        pg.wait_for_timeout(50)
+        voltou = pg.evaluate(
+            "(id) => document.activeElement && document.activeElement.matches"
+            "(`a[href=\"#${id}\"]`) && !document.querySelector('.tela-nova:target')", abre)
+    finally:
+        pg.close()
+    return {"gesto": gesto, "cliques": cliques, "dentro": dentro, "voltou": voltou}
+
+
+def test_enter_e_espaco_clicam_o_gesto_e_o_esc_devolve_o_foco(navegador: Any) -> None:
+    m = medir_o_teclado(
+        navegador, MOCKUP / "01-jogar.html", MOCKUP / "06-navegacao.html", "acessibilidade")
+    assert m["gesto"], "a 01 perdeu o gesto que não é botão: a régua não mede o Enter"
+    assert m["cliques"] == 2, f"Enter e Espaço não clicaram o gesto {m['gesto']}: {m}"
+    assert m["dentro"], "o Enter no link não pôs o foco dentro da tela"
+    assert m["voltou"], "o Esc fechou e o foco não voltou ao link que abriu a tela"
+
+
+def test_morde_sem_o_clique_do_enter_e_sem_o_foco_que_volta(
+    navegador: Any, tmp_path: pathlib.Path,
+) -> None:
+    for cura, chave in (("    el.click();\n", "cliques"), ("quemAbriu.focus(); ", "voltou")):
+        copias = []
+        for pagina in ("01-jogar.html", "06-navegacao.html"):
+            texto = (MOCKUP / pagina).read_text(encoding="utf-8")
+            assert texto.count(cura) == 1, (pagina, cura)
+            copia = tmp_path / f"sem-{chave}-{pagina}"
+            copia.write_text(texto.replace(cura, ""), encoding="utf-8")
+            copias.append(copia)
+        m = medir_o_teclado(navegador, copias[0], copias[1], "acessibilidade")
+        assert m["gesto"] and m[chave] in (0, False), (
+            f"sem {cura.strip()!r} a régua não reprovou: {m}")
