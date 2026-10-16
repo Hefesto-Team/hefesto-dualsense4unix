@@ -55,6 +55,7 @@ class Mesa:
     motores: list[tuple[float, str, int, int]] = field(default_factory=list)
     eventos: list[tuple[str, Par, Par, Par, Par]] = field(default_factory=list)
     pode: bool = True
+    nativo: bool = False
     haptica: bool = False
     gatilho: bool = False
     forca: tuple[float, float] = (1.0, 1.0)
@@ -69,6 +70,7 @@ class Mesa:
             dizer=lambda uniq, pedido, efetivo, jogo, toques: self.eventos.append(
                 (uniq, pedido, efetivo, jogo, toques)),
             forca=lambda uniq: self.forca,
+            pode_calar=lambda uniq: not self.nativo,
         )
 
     def de(self, uniq: str) -> list[tuple[float, int, int]]:
@@ -390,6 +392,23 @@ def test_no_modo_nativo_nada_se_escreve() -> None:
     _andar(meus, mesa, _parado(lx=255, botoes=frozenset({"cross"})), mesa.agora + 0.3)
     assert mesa.motores == []
     assert meus.misturar_o_jogo(P1, (200, 200)) is None
+
+
+def test_o_jogo_que_sai_do_foco_com_o_toque_no_ar_devolve_o_zero_e_o_nativo_nao() -> None:
+    mesa = Mesa()
+    meus = _meus(mesa)
+    _andar(meus, mesa, _parado(lx=255), mesa.agora + 0.1)
+    assert mesa.de(P1)[-1][1:] == (0, BASE)
+    mesa.pode = False
+    _andar(meus, mesa, _parado(lx=255), mesa.agora + 0.1)
+    assert mesa.de(P1)[-1][1:] == (0, 0), "sem jogo, o motor não fica no nível do toque"
+    assert len(mesa.de(P1)) == 2, "o zero sai uma vez só"
+    mesa.pode, mesa.nativo = True, False
+    _andar(meus, mesa, _parado(lx=255), mesa.agora + 0.1)
+    mesa.pode, mesa.nativo = False, True
+    escritos = len(mesa.motores)
+    _andar(meus, mesa, _parado(lx=255), mesa.agora + 0.1)
+    assert len(mesa.motores) == escritos, "no Modo Nativo o Hefesto não escreve, nem o zero"
 
 
 def test_o_toque_do_jogador_2_nao_vibra_o_jogador_1() -> None:

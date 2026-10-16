@@ -225,6 +225,8 @@ class Ligacoes:
     forca: Callable[[str], tuple[float, float]] = lambda uniq: (1.0, 1.0)
     #: o dedo no touchpad deste controle; só é perguntado com a leitura do touchpad ligada
     toque: Callable[[str], Toque | None] = lambda uniq: None
+    #: o modo deste controle deixa o Hefesto escrever (fora do Nativo), haja jogo ou não
+    pode_calar: Callable[[str], bool] = lambda uniq: False
 
 
 @dataclass
@@ -301,6 +303,8 @@ class MeusToques:
         uniq = entrada.uniq
         estado = self._por_uniq.setdefault(uniq, _Estado())
         if not self._l.pode_falar(uniq):
+            if estado.escrito not in (None, (0, 0)) and self._l.pode_calar(uniq):
+                self._l.motores(uniq, 0, 0)  # o jogo saiu do foco com o toque no ar: não fica preso
             self._esquecer(estado, entrada)
             return
         if not self._ajuste.liga:
@@ -638,6 +642,10 @@ def meus_toques_de_producao(daemon: Any) -> MeusToques:
         estado = estado_de(uniq)
         return estado is not None and estado.ha_jogo and o_hefesto_fala_no_modo(estado.modo)
 
+    def pode_calar(uniq: str) -> bool:
+        estado = estado_de(uniq)
+        return estado is not None and o_hefesto_fala_no_modo(estado.modo)
+
     def haptica_do_jogo(uniq: str) -> bool:
         estado = estado_de(uniq)
         idade = None if estado is None else estado.visto_ha_s.get("audio_do_jogo")
@@ -683,6 +691,7 @@ def meus_toques_de_producao(daemon: Any) -> MeusToques:
         dizer=dizer,
         forca=forca,
         toque=toque,
+        pode_calar=pode_calar,
     ))
 
 
