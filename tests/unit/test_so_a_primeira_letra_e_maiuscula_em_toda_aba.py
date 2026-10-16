@@ -105,6 +105,26 @@ def test_o_valor_do_selo_da_08_e_peca_propria(monkeypatch: pytest.MonkeyPatch) -
         "o corte do selo não é o que separa o valor")
 
 
+def test_o_valor_do_selo_com_maiuscula_propria_nao_e_acusado(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """O que o corte protege: um valor de selo que não é marca («Desligado») abre o bloco dele.
+
+    Os selos de hoje são marcas (`DualSense`, `Xbox 360`), que a régua já aceita no meio; o corte
+    só decide quando o valor é palavra comum, como o «Apagado» de antes. MORDIDA: sem o
+    `_VALOR_DO_SELO` a cópia da página com «Visto como <b>Desligado</b>» acusa «Desligado».
+    """
+    pagina = (regua.PUBLICADO / "08-conexoes.html").read_text(encoding="utf-8")
+    copia = pagina.replace("Visto como <b>DualSense</b>", "Visto como <b>Desligado</b>")
+    assert copia != pagina
+
+    def acusadas() -> list[str]:
+        return [p for _, f in regua.frases(copia) for p in regua.maiusculas_no_meio(f, [])]
+
+    assert "Desligado" not in acusadas()
+    monkeypatch.setattr(regua, "_VALOR_DO_SELO", re.compile(r"(?!)"))
+    assert "Desligado" in acusadas(), "sem o corte o valor do selo vira maiúscula no meio"
+
+
 def test_os_tres_mapas_entram_na_leitura(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
                                          capsys: pytest.CaptureFixture[str]) -> None:
     """«Mapear Entradas» devolvido a uma cópia do mapa do rádio reprova o `main`.
