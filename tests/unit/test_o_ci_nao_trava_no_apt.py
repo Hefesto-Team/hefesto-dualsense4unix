@@ -81,6 +81,7 @@ def lacunas(jobs: dict[str, Any]) -> list[str]:
 
 
 def test_o_ci_nao_trava_no_apt_nem_espera_seis_horas() -> None:
+    # D-1610-O-CI-TEM-PRAZO-NO-APT-E-EM-CADA-JOB
     assert lacunas(_carregar()) == []
 
 
