@@ -21,4 +21,5 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-<!-- Nenhuma aba em trabalho: o produto está igual ao desenho dela. -->
+## mapa-das-portas.html
+- **16/10/2026** — a cadeia diz o tipo e o nome numa linha só, e o Sugestões deixa de rolar 47 px a 1272 e 1512 px (20 px a 1900); espera o `--publicar` de quem coordena. Até lá, o produto continua com a cadeia em duas linhas por aparelho, e o corpo do Sugestões rola.

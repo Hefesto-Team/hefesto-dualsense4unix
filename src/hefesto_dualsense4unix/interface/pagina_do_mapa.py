@@ -6167,6 +6167,10 @@ CSS_DA_CADEIA_E_DO_REGISTRO = """\
   .bandeja .chip.recuado { margin-left: 1rem; width: calc(100% - 1rem); }
   .palco > .bandeja .lista { gap: 3px; }
   .bandeja .chip { padding-top: 2px; padding-bottom: 2px; }
+  /* O tipo e o nome numa linha só; o enlace, na de baixo. Em duas linhas, a cadeia de nove
+     aparelhos passava das faces e o corpo do Sugestões rolava 47 px (16/10/2026). */
+  .bandeja .chip .txt { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: .45rem; }
+  .bandeja .chip .txt span.enlace { flex-basis: 100%; }
   .por-confirmar { padding-top: 4px; padding-bottom: 4px; margin-top: 4px; }
   .face-cab { margin-top: 6px; }
   .bandeja .chip .txt span.enlace { color: var(--color-lacuna); }
