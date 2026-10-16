@@ -81,6 +81,9 @@ _O_QUE_DEIXA: dict[str, str] = {
     "ler:acessorios.gesto": (  # (noqa-acento): contrato ASCII
         "Receber os gestos do botão PS que comandam os acessórios, sem receber botão nenhum."
     ),
+    "pedir:luz.pulso": (  # (noqa-acento): contrato ASCII
+        "Pedir que a barra de luz de um controle pulse na cor escolhida, nos perfis «Adulto»."
+    ),
     "escrever:luz": "Mudar a cor da luz de um controle.",
     "escrever:vibracao": "Fazer um controle vibrar.",
     "escrever:gatilho": "Mudar a resistência dos gatilhos de um controle.",

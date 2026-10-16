@@ -551,7 +551,7 @@ def test_os_gestos_valem_so_com_a_modificacao_e_um_aparelho() -> None:
     assert valem(P1) is None, "sem aparelho conectado, também"
     daemon.bus.publish(EventTopic.ACESSORIOS_ESTADO, _estado())
     assert valem(P1) == Opcoes()
-    daemon.bus.publish(EventTopic.ACESSORIOS_ESTADO, _estado(opcoes={"camada": True}))
+    daemon.bus.publish(EventTopic.ACESSORIOS_ESTADO, _estado(ajustes={"camada": True}))
     assert valem(P1) == Opcoes(camada=True)
 
 
@@ -560,7 +560,7 @@ def test_no_modo_nativo_os_gestos_nascem_desligados() -> None:
     daemon.bus.publish(EventTopic.ACESSORIOS_ESTADO, _estado())
     valem = gestos_dos_acessorios_valem(daemon)
     assert valem(P1) is None
-    daemon.bus.publish(EventTopic.ACESSORIOS_ESTADO, _estado(opcoes={"gestos_no_nativo": True}))
+    daemon.bus.publish(EventTopic.ACESSORIOS_ESTADO, _estado(ajustes={"gestos_no_nativo": True}))
     assert valem(P1) is not None
 
 

@@ -34,6 +34,7 @@ desconhecida ou um processo que não foi o supervisor que abriu fecham a conexã
 | `vibracao.set` | `{uniq, fraco, forte}` (0 a 255) | `escrever:vibracao` | o resultado do `rumble.set` |
 | `gatilho.set` | `{uniq, lado: esquerdo\|direito, modo, params}` | `escrever:gatilho` | o resultado do `trigger.set` |
 | `acessorios.estado` | `{ligado, nivel (0 a 10), perfil?, aparelhos: [...], ajustes?}` | `ler:acessorios.gesto` | `{recebido}` |
+| `luz.pulso` | `{uniq, cor: [r, g, b], cor_quente?, fundo (0 a 1), periodo_s}` ou `{uniq, parar: true}` | `pedir:luz.pulso` | `{aplicado, motivo, periodo_s?}` |
 
 Os tópicos de leitura são estes. Os quatro primeiros são do controle do posto:
 
@@ -80,7 +81,7 @@ Os demais são do jogo e do perfil, e cada um é uma permissão à parte:
   `acessorios.estado`, o Hefesto guarda o último e, sem ele (ou sem aparelho, ou quando a conexão cai), PS + R2 é o
   que sempre foi. Enquanto o gesto vale, o R2, o L2, o R1, o L1 e o direcional que o comandam não chegam ao
   jogo, por controle. `ajustes` aceita `limiar_fundo` (50 a 100 %), `acelerador`, `camada`, `camada_s`,
-  `lado_unico`, `gestos_no_nativo` e `toque_de_confirmacao`; o resto cai. Um `para` sem o `ligado: false` de
+  `lado_unico`, `gestos_no_nativo`, `toque_de_confirmacao`, `pulso_da_barra` e `sem_pisca`; o resto cai. Um `para` sem o `ligado: false` de
   volta em 300 ms faz o serviço encerrar a modificação pelo PID (SIGTERM, depois SIGKILL).
 
 `jogo.momento`, `sistema.app_abriu` e `sistema.hora` são nomes reservados: nenhum existe como permissão nem tem
@@ -97,6 +98,28 @@ Cada evento chega como notificação, sem `id`:
 
 O serviço guarda até 256 eventos por assinatura. Quando a fila enche, o mais antigo sai: quem lê devagar
 perde eventos velhos, e o tique do serviço nunca espera.
+
+## A volta dos acessórios no controle
+
+Com o `acessorios.estado` e os gestos, o serviço devolve três coisas ao controle do gesto, sem a modificação
+escrever nada:
+
+- um toque de confirmação (`toque_de_confirmacao`, ligado se ausente): `sobe` no motor direito, fino; `desce`
+  no esquerdo, grosso; `para`, dois toques longos nos dois; `sobe` com o nível já em 10, toque duplo. No
+  máximo 12 por segundo por controle. Soma por 40 ms ao que o jogo pede e nunca o cala: se o jogo vibra, o
+  serviço não escreve o zero do fim;
+- as luzinhas medidor, por 2 s depois de cada gesto: `ceil(nível / 2)` lâmpadas, no brilho forte e sem o
+  esmaecer (`0x20` do byte 43), e depois o número do jogador. Na camada de uma mão ficam no medidor enquanto
+  ela vale; `para` as apaga;
+- o pulso da barra, só com o perfil marcado «Adulto», `ajustes.pulso_da_barra` ligado e a permissão
+  `pedir:luz.pulso`. O `luz.pulso` leva a cor, a `cor_quente` (a cor esquenta com o nível), o `fundo` (a fração
+  do brilho no vale, de 0 a 0,5) e o `periodo_s`, que o serviço limita a 1 a 4 s: nunca mais de um ciclo por
+  segundo, sempre em curva, no máximo 15 escritas por segundo. Com `ajustes.sem_pisca`, o brilho só acompanha
+  o nível (10 % no 1, o brilho do perfil no 10), devagar. A recusa do motor volta como `aplicado: false` e um
+  `motivo` (`sem_a_marca_adulto`, `pulso_desligado`, `modo_nativo`, `o_jogo_pinta_a_barra`); a porta recusa
+  com o código de «o jogo escreve» quando o jogo pinta a barra e com o de «sem permissão» sem a palavra.
+  `{parar: true}` solta. Cada controle tem a sua barra. O pulso e o medidor soltam quando a modificação manda
+  `ligado: false` ou a conexão cai.
 
 ## Os erros
 

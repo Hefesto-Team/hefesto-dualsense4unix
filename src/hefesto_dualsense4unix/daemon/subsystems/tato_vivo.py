@@ -19,6 +19,7 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import asdict, dataclass, field, fields, replace
 from typing import TYPE_CHECKING, Any, Protocol
 
+from hefesto_dualsense4unix.core.events import EventTopic
 from hefesto_dualsense4unix.core.physical_report_reader import TRIGGER_ESTADO_DISPAROU
 from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 from hefesto_dualsense4unix.daemon.lifecycle import (
@@ -460,6 +461,8 @@ class TatoVivo:
         #: o status do Disparo de cada gatilho (0 antes, 1 dentro, 2 passou do clique), lido do
         #: report de entrada; sem entrada é que o aparelho não o disse (o relógio vale).
         self.disparo: dict[tuple[str, str], int] = {}
+        #: a volta dos acessórios (toque, luzinhas e pulso da barra); anda sem receita e sem jogo
+        self.volta: Any = None
 
     def anotar(self, evento: Evento) -> None:
         """Põe um evento na fila. Chamável de qualquer thread."""
@@ -469,7 +472,11 @@ class TatoVivo:
 
     def segurando(self, canal: str) -> frozenset[str]:
         """Os controles em que ``canal`` ainda espera a volta ao perfil (o pulso no ar)."""
-        return frozenset(uniq for uniq, dele in self._pendentes if dele == canal)
+        seguros = frozenset(uniq for uniq, dele in self._pendentes if dele == canal)
+        if canal == CANAL_LUZ and self.volta is not None:
+            da_volta: frozenset[str] = self.volta.segurando_a_barra()
+            return seguros | da_volta
+        return seguros
 
     def _atuador(self, canal: str) -> Atuador | None:
         for atuador in self.atuadores:
@@ -2388,6 +2395,12 @@ class Passo:
             levar(uniq, amostras)
 
     def __call__(self, agora: float) -> int:
+        """A volta dos acessórios anda a cada tique; o resto é da receita (``_da_receita``)."""
+        volta = self.motor.volta
+        da_volta = volta.tique(agora) if volta is not None else 0
+        return self._da_receita(agora) + da_volta
+
+    def _da_receita(self, agora: float) -> int:
         receita = self.receita_de_agora(agora)
         ligado = receita.ligada
         if not ligado:
@@ -2479,11 +2492,26 @@ async def tato_vivo_loop(daemon: DaemonProtocol, motor: TatoVivo) -> None:
             recortar=lambda: passo.receita_vigente.som_no_controle,
             ao_pcm=passo.alimentar_o_corpo,
         )
+    volta = motor.volta
+    barramento = getattr(daemon, "bus", None) if volta is not None else None
+    gestos = estados = None
+    if barramento is not None:
+        gestos = barramento.subscribe(EventTopic.ACESSORIOS_GESTO)
+        estados = barramento.subscribe(EventTopic.ACESSORIOS_ESTADO)
     try:
         while not daemon._is_stopping():
             await asyncio.sleep(INTERVALO_S)
-            passo.tique_do_laco(time.monotonic())
+            agora = time.monotonic()
+            if gestos is not None and estados is not None:
+                volta.drenar(gestos, estados, agora)
+            passo.tique_do_laco(agora)
     finally:
+        if barramento is not None:
+            barramento.unsubscribe(EventTopic.ACESSORIOS_GESTO, gestos)
+            barramento.unsubscribe(EventTopic.ACESSORIOS_ESTADO, estados)
+        with contextlib.suppress(Exception):
+            if volta is not None:
+                volta.soltar_tudo(time.monotonic())
         motor.parar()
         with contextlib.suppress(Exception):
             await asyncio.to_thread(motor.ouvido.parar)
@@ -2491,7 +2519,11 @@ async def tato_vivo_loop(daemon: DaemonProtocol, motor: TatoVivo) -> None:
 
 def start_tato_vivo(daemon: DaemonProtocol) -> None:
     """Sobe o motor do tato vivo. Desligado pela receita, o laço só lê o perfil."""
+    from hefesto_dualsense4unix.daemon.subsystems.volta_dos_acessorios import volta_de_producao
+
     motor = TatoVivo(atuadores_de_producao(daemon))
+    with contextlib.suppress(Exception):
+        motor.volta = volta_de_producao(daemon)
     daemon._tato_vivo = motor  # type: ignore[attr-defined]
     task = asyncio.create_task(tato_vivo_loop(daemon, motor), name="tato_vivo_loop")
     daemon._tasks.append(task)

@@ -23,6 +23,7 @@ import asyncio
 import contextlib
 import dataclasses
 import json
+import math
 import os
 import socket
 import struct
@@ -63,6 +64,8 @@ PRAZO_PARA_FECHAR_S = 2.0
 Escritor = Callable[[str, dict[str, Any]], Awaitable[Any]]
 OJogoEscreve = Callable[[str, str], bool]
 UniqDoPosto = Callable[[], str | None]
+#: ``pulsador(uniq, pedido)``: o motor da luz começa, retoca ou solta o pulso da barra do controle.
+Pulsador = Callable[[str, dict[str, Any]], dict[str, Any]]
 
 
 class RecusaError(Exception):
@@ -196,6 +199,36 @@ def _pedido_do_gatilho(params: dict[str, Any], uniq: str) -> dict[str, Any]:
     }
 
 
+def _numero(valor: Any) -> bool:
+    return isinstance(valor, (int, float)) and not isinstance(valor, bool) and math.isfinite(valor)
+
+
+def _pedido_do_pulso(params: dict[str, Any]) -> dict[str, Any]:
+    """O ``luz.pulso`` validado: ``{parar}`` ou ``{cor, cor_quente?, fundo, periodo_s}``."""
+    if params.get("parar") is True:
+        return {"parar": True}
+    pedido: dict[str, Any] = {}
+    for nome in ("cor", "cor_quente"):
+        if nome not in params and nome == "cor_quente":
+            continue
+        valor = params.get(nome)
+        if not isinstance(valor, list) or len(valor) != 3 or not all(
+            _numero(c) and 0 <= c <= 255 for c in valor
+        ):
+            raise RecusaError(
+                CODE_INVALID_PARAMS, f"luz.pulso pede {nome} com três números de 0 a 255."
+            )
+        pedido[nome] = [round(c) for c in valor]
+    fundo = params.get("fundo", 0.0)
+    if not _numero(fundo) or not 0 <= fundo <= 1:
+        raise RecusaError(CODE_INVALID_PARAMS, "luz.pulso pede o fundo de 0 a 1.")
+    periodo = params.get("periodo_s", 2.0)
+    if not _numero(periodo):
+        raise RecusaError(CODE_INVALID_PARAMS, "luz.pulso pede o período em segundos.")
+    pedido["fundo"], pedido["periodo_s"] = float(fundo), float(periodo)
+    return pedido
+
+
 #: método da porta → (canal, método do serviço que aplica, tradutor do pedido)
 _ESCRITAS: dict[str, tuple[str, str, Callable[[dict[str, Any], str], dict[str, Any]]]] = {
     "luz.set": ("luz", "led.set", _pedido_da_luz),
@@ -217,7 +250,8 @@ def estado_dos_acessorios(mod_id: str, params: dict[str, Any]) -> dict[str, Any]
     """O ``acessorios.estado`` validado: ``{mod, ligado, nivel, perfil, aparelhos, ajustes}``.
 
     ``ajustes`` leva só o que a modificação declara e o Hefesto entende (limiar do fundo do L2,
-    acelerador, camada, lado único, gestos no Modo Nativo, toque de confirmação); o resto cai.
+    acelerador, camada, lado único, gestos no Modo Nativo, toque de confirmação, pulso da barra e
+    «Sem pisca»); o resto cai.
     """
     ligado = params.get("ligado", False)
     nivel = params.get("nivel", 0)
@@ -247,7 +281,7 @@ def estado_dos_acessorios(mod_id: str, params: dict[str, Any]) -> dict[str, Any]
 #: As opções da modificação que o Hefesto lê (as que mexem nos gestos do PS e na confirmação).
 OPCOES_DOS_GESTOS = frozenset({
     "limiar_fundo", "acelerador", "camada", "camada_s", "lado_unico", "gestos_no_nativo",
-    "toque_de_confirmacao",
+    "toque_de_confirmacao", "pulso_da_barra", "sem_pisca",
 })
 
 
@@ -262,9 +296,11 @@ class Porta:
         escritor: Escritor,
         o_jogo_escreve: OJogoEscreve,
         uniq_do_posto: UniqDoPosto,
+        pulsador: Pulsador | None = None,
     ) -> None:
         self.caminho = caminho
         self.bus = bus
+        self._pulsador = pulsador
         self._escritor = escritor
         self._o_jogo_escreve = o_jogo_escreve
         self._uniq_do_posto = uniq_do_posto
@@ -406,6 +442,8 @@ class Porta:
                 return _resposta(req_id, self._assinar(con, writer, params))
             if metodo == "acessorios.estado":
                 return _resposta(req_id, self._estado_dos_acessorios(con, params))
+            if metodo == "luz.pulso":
+                return _resposta(req_id, self._pulsar(con.sessao, params))
             if metodo in _ESCRITAS:
                 # Como o IPC (``ipc:<método>``): quem grava no meio da escrita sabe de
                 # onde ela veio, e a modificação deixa de escrever como «ninguém».
@@ -469,6 +507,24 @@ class Porta:
         con.deu_o_estado = True
         self.bus.publish(EventTopic.ACESSORIOS_ESTADO, estado)
         return {"recebido": True}
+
+    def _pulsar(self, sessao: _Credencial, params: dict[str, Any]) -> dict[str, Any]:
+        """O pulso da barra: a porta valida e recusa, e o motor da luz decide e escreve."""
+        if "pedir:luz.pulso" not in sessao.permissoes:
+            raise RecusaError(CODE_SEM_PERMISSAO, "falta a permissão pedir:luz.pulso")
+        uniq = _uniq_do_pedido(params, "luz.pulso")
+        pedido = _pedido_do_pulso(params)
+        if not pedido.get("parar") and self._o_jogo_escreve(uniq, "luz"):
+            raise RecusaError(
+                CODE_O_JOGO_ESCREVE, "o jogo está escrevendo a luz deste controle"
+            )
+        if self._pulsador is None:
+            raise RecusaError(CODE_NAO_ESCREVEU, "não escreveu: o motor da luz não subiu")
+        try:
+            return self._pulsador(uniq, pedido)
+        except Exception as exc:
+            logger.warning("mods_porta_pulso_falhou", err=str(exc))
+            raise RecusaError(CODE_NAO_ESCREVEU, f"não escreveu: {type(exc).__name__}") from exc
 
     async def _encaminhar(
         self,
@@ -535,6 +591,24 @@ def escritor_do_servico(daemon: Any) -> Escritor:
         return await handler(pedido)
 
     return escrever
+
+
+def pulsar_no_servico(daemon: Any) -> Pulsador:
+    """O pulso da barra vai ao motor do tato vivo, que o anda no relógio dele."""
+
+    def pulsar(uniq: str, pedido: dict[str, Any]) -> dict[str, Any]:
+        import time
+
+        from hefesto_dualsense4unix.daemon.subsystems.tato_vivo import motor_do
+
+        motor = motor_do(daemon)
+        volta = None if motor is None else motor.volta
+        if volta is None:
+            raise RuntimeError("o motor da luz não subiu")
+        resposta: dict[str, Any] = volta.pulsar(uniq, pedido, time.monotonic())
+        return resposta
+
+    return pulsar
 
 
 def _chave(uniq: object) -> str | None:
@@ -629,5 +703,6 @@ __all__ = [
     "estado_dos_acessorios",
     "estado_vazio_dos_acessorios",
     "o_jogo_escreve_no_servico",
+    "pulsar_no_servico",
     "uniq_do_posto_no_servico",
 ]

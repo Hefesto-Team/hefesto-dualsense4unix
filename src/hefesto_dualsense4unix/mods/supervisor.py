@@ -53,6 +53,7 @@ from hefesto_dualsense4unix.mods.porta import (
     Escritor,
     OJogoEscreve,
     Porta,
+    Pulsador,
     UniqDoPosto,
 )
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -262,6 +263,7 @@ class Supervisor:
         escritor: Escritor,
         o_jogo_escreve: OJogoEscreve,
         uniq_do_posto: UniqDoPosto,
+        pulsador: Pulsador | None = None,
         lugares: Lugares | None = None,
         porta: Path | None = None,
         bwrap: str | None = None,
@@ -278,6 +280,7 @@ class Supervisor:
             escritor=escritor,
             o_jogo_escreve=o_jogo_escreve,
             uniq_do_posto=uniq_do_posto,
+            pulsador=pulsador,
         )
         self.bwrap = bwrap or (shutil.which("bwrap") if procurar_bwrap else None)
         self.esperas = esperas
@@ -612,6 +615,7 @@ def supervisor_do_servico(daemon: Any) -> Supervisor | None:
     from hefesto_dualsense4unix.mods.porta import (
         escritor_do_servico,
         o_jogo_escreve_no_servico,
+        pulsar_no_servico,
         uniq_do_posto_no_servico,
     )
 
@@ -620,6 +624,7 @@ def supervisor_do_servico(daemon: Any) -> Supervisor | None:
         escritor=escritor_do_servico(daemon),
         o_jogo_escreve=o_jogo_escreve_no_servico(daemon),
         uniq_do_posto=uniq_do_posto_no_servico(daemon),
+        pulsador=pulsar_no_servico(daemon),
     )
 
 
