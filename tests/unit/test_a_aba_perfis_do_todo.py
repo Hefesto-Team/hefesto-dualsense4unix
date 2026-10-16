@@ -226,6 +226,7 @@ def test_um_alvo_que_nao_existe_recusa_sem_gravar(lar: Path) -> None:
 
 
 def test_sair_de_eventos_leva_o_momento_e_o_comando(lar: Path) -> None:
+    # D-1510-O-APLICAR-EM-E-O-QUANDO-SO-GRAVAM
     """MORDIDA: deixar o `evento` ao sair de «Eventos» guarda um momento que ninguém vê."""
     _guardar("Ao pausar")
     _aberto("Ao pausar")
@@ -338,6 +339,7 @@ def test_os_valores_da_nova_ordem_nunca_empatam_e_respeitam_o_teto() -> None:
 
 
 def test_arrastar_regrava_a_ordem_do_mesmo_jogo(lar: Path) -> None:
+    # D-1510-A-ORDEM-DOS-PERFIS-SE-ARRASTA
     """MORDIDA: sem regravar a `priority` o arrasto só mexe na tela e o manager não muda."""
     for nome, prioridade in (("Souls A", 30), ("Souls B", 20), ("Souls C", 10)):
         _guardar(nome, prioridade, "steam_app_1245620")

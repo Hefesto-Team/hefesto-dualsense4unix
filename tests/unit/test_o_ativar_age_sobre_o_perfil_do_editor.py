@@ -55,6 +55,7 @@ def _ctx(ativo: str = "Alfa", **estado: Any) -> Contexto:
 
 
 def test_o_clique_na_linha_abre_e_ativa() -> None:
+    # D-1510-CLICAR-NO-PERFIL-ATIVA-E-ABRE
     """MORDIDA: sem o `_ativar_o` no `selecionar` o daemon não recebe nada."""
     ponte = Ponte()
     resposta = a10_perfis.selecionar(_ctx(), {"hefPerfil": "Beta"}, ponte)

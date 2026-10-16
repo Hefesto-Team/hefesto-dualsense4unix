@@ -90,6 +90,7 @@ def test_o_gesto_dela_muda_so_o_modificado_em(relogio: None, dir_perfis: Path) -
 
 def test_o_salvar_automatico_nao_muda_nenhuma_data(relogio: None, dir_perfis: Path) -> None:
     """MORDIDA: tirar o `gesto_de_agora` da condição carimba o automático."""
+    # D-1510-O-PERFIL-GUARDA-AS-DUAS-DATAS
     save_profile(_perfil())
     assert gesto_de_agora.get() is None
     save_profile(load_profile("Forja").model_copy(update={"priority": 55}))
