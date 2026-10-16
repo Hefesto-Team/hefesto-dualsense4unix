@@ -17,7 +17,11 @@ MORDIDAS (cada uma foi feita e viu reprovar):
 * tirar o `_ativar_o` do `selecionar` ->
   `test_o_clique_deixa_o_cabecalho_e_o_editor_no_mesmo_perfil`;
 * ler o `texto` no `editor_alvo` ou deixar o evento ao sair de «Eventos» -> os testes do alvo;
-* arrastar sem regravar a `priority` do grupo -> `test_arrastar_regrava_a_ordem_do_mesmo_jogo`.
+* arrastar sem regravar a `priority` do grupo -> `test_arrastar_regrava_a_ordem_do_mesmo_jogo`;
+* devolver o seletor `[data-hef="editor.ordem"] ol` ->
+  `test_todo_bloco_do_pacote_acha_um_lugar_na_pagina` (a lista do desenho ficava na tela);
+* devolver `.ev-val select{flex:0 0 150px}`, que o `.campo select.estreito` vence ->
+  `test_o_quando_divide_a_linha_com_o_comando` (o comando ficava com 22 px).
 """
 from __future__ import annotations
 
@@ -418,3 +422,36 @@ def test_o_rotulo_cabe_com_todas_as_colunas_gravadas(tela: Any) -> None:
         "(function(){document.querySelector('table[data-tabela]')"
         ".setAttribute('data-larguras','');return 'ok';})()")
     assert scroll <= client, f"o rótulo pede {scroll} px numa coluna de {client}"
+
+
+def test_todo_bloco_do_pacote_acha_um_lugar_na_pagina(tela: Any) -> None:
+    """Cada seletor de `blocos` casa UM elemento da página: sem casar, a pintura cai no vazio.
+
+    Medido na bancada (15/10/2026): o «Qual vale primeiro» de um perfil sozinho no jogo seguia
+    mostrando «Mortal Kombat» e «Mortal Kombat online», os dois do desenho.
+    """
+    seletores = (a10_perfis.SELETOR_DA_LISTA, a10_perfis.SELETOR_DOS_JOGOS,
+                 a10_perfis.SELETOR_DA_ORDEM)
+    contas = json.loads(tela.executar(
+        "(function(){return JSON.stringify(" + json.dumps(list(seletores))
+        + ".map(function(s){return document.querySelectorAll(s).length;}));})()"))
+    assert contas == [1, 1, 1], dict(zip(seletores, contas, strict=True))
+
+
+def test_o_quando_divide_a_linha_com_o_comando(tela: Any) -> None:
+    """Com «Eventos», o momento e o comando ficam lado a lado, e o comando cabe a frase de ajuda.
+
+    Medido na bancada (15/10/2026): o `<select>` esticava a 100% e o campo do comando ficava com
+    22 px, sem lugar para uma letra.
+    """
+    medida = json.loads(tela.executar(r"""
+(function(){
+  var c = document.querySelector('.campo.so-eventos'); c.classList.add('on');
+  var s = c.querySelector('select').getBoundingClientRect().width;
+  var i = c.querySelector('.ev-cmd').getBoundingClientRect().width;
+  c.classList.remove('on');
+  return JSON.stringify([s, i]);
+})()"""))
+    largura_do_momento, largura_do_comando = medida
+    assert largura_do_momento == 170, medida
+    assert largura_do_comando > 180, f"o campo do comando ficou com {largura_do_comando} px"

@@ -1198,7 +1198,7 @@
      propósito: sem largura escrita ele fica com o resto, o único jeito de uma tabela `fixed` ter
      uma coluna elástica. Com os 185px que o `Nome` tinha, a soma dava menos que a tabela e o
      motor esticava as TRÊS colunas em proporção: as datas saíam com 151px, e a largura que ela
-     gravava deixava de ser a que se via (o rótulo «Criado em» media 69 num cabeçalho de 68).
+     gravava deixava de ser a que se via (o rótulo «Criado em» tinha 69 num cabeçalho de 68).
 
      O `<colgroup>` é quem carrega o número e não a `width` da `<th>`; quem
      arrastar ganha um `style` inline no mesmo `<col>`, e inline vence folha. */
@@ -1770,7 +1770,8 @@
   .campo.so-eventos{display:none}
   .campo.so-eventos.on{display:grid}
   .ev-val{display:flex;gap:10px;align-items:center;min-width:0}
-  .ev-val select{flex:0 0 150px;width:150px}
+  /* o `.estreito` de baixo estica o select a 100%; aqui ele divide a linha com o comando */
+  .campo .ev-val select.estreito{flex:0 0 170px;width:170px}
   .ev-val .ev-cmd{flex:1;min-width:0}
   .campo select.estreito{flex:1 1 auto;width:100%}
   /* «Qual vale primeiro»: só aparece com dois perfis do mesmo jogo */

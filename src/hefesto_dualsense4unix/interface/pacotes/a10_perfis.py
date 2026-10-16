@@ -441,8 +441,9 @@ SELETOR_DA_LISTA = 'tbody[data-hef="perfis.lista"]'
 SELETOR_DOS_JOGOS = 'datalist[data-hef="editor.jogo.lista"]'
 
 #: «Qual vale primeiro»: os perfis do mesmo jogo, em ordem. Número de filhos que muda com o dado,
-#: então vai por `blocos`, como a lista.
-SELETOR_DA_ORDEM = '[data-hef="editor.ordem"] ol'
+#: então vai por `blocos`, como a lista. O `data-hef` mora NO `<ol>`: um seletor de descendente
+#: (`… ol`) não acha nada, e a página ficava com os dois perfis do desenho.
+SELETOR_DA_ORDEM = 'ol[data-hef="editor.ordem"]'
 
 #: Ele virou `blocos` pela MESMA razão que a lista dos jogos: as opções são os
 SELETOR_DO_AMBIENTE = 'select[data-hef="editor.ambiente"]'

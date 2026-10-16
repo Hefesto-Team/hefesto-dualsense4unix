@@ -924,7 +924,8 @@ CSS = CSS_GLIFO + """
   .campo.so-eventos{display:none}
   .campo.so-eventos.on{display:grid}
   .ev-val{display:flex;gap:10px;align-items:center;min-width:0}
-  .ev-val select{flex:0 0 150px;width:150px}
+  /* o `.estreito` de baixo estica o select a 100%; aqui ele divide a linha com o comando */
+  .campo .ev-val select.estreito{flex:0 0 170px;width:170px}
   .ev-val .ev-cmd{flex:1;min-width:0}
   .campo select.estreito{flex:1 1 auto;width:100%}
   /* «Qual vale primeiro»: só aparece com dois perfis do mesmo jogo */
