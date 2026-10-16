@@ -48,6 +48,7 @@ def test_a_unit_e_notify_com_o_prazo_da_subida_escrito() -> None:
 
 
 def test_o_prazo_da_unit_e_o_do_codigo() -> None:
+    # D-1610-A-UNIT-DO-DAEMON-E-NOTIFY-COM-PRAZO-DE-30-S
     """O `TimeoutStartSec` da unit e `PRAZO_DA_PARTIDA_S` são o mesmo número (um dono)."""
     prazo = _campo_da_unit("TimeoutStartSec")
     assert prazo is not None and float(prazo.rstrip("s")) == sd_notify.PRAZO_DA_PARTIDA_S

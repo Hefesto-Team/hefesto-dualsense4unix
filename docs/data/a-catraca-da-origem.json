@@ -55,14 +55,14 @@
       "data": "2026-10-16",
       "nota": "remendos de sintoma por arquivo",
       "o_que_conta": "remendos de sintoma acima do teto de cada arquivo",
-      "piso": 995,
+      "piso": 993,
       "por_item": {
         "__init__.py": 1,
         "app/actions/base.py": 1,
         "app/actions/config/secao_controles.py": 2,
         "app/actions/config/secao_janela.py": 1,
         "app/actions/config/secao_orcamento.py": 2,
-        "app/actions/daemon_actions.py": 5,
+        "app/actions/daemon_actions.py": 4,
         "app/actions/home_actions.py": 2,
         "app/actions/profiles_actions.py": 2,
         "app/gui_prefs.py": 1,
@@ -183,7 +183,7 @@
         "interface/hefesto_vivo.py": 4,
         "interface/jogar_vivo.py": 1,
         "interface/pacotes/__init__.py": 2,
-        "interface/pacotes/a01_jogar.py": 4,
+        "interface/pacotes/a01_jogar.py": 3,
         "interface/pacotes/a02_controles.py": 5,
         "interface/pacotes/a03_gatilhos.py": 1,
         "interface/pacotes/a04_iluminacao.py": 2,
@@ -213,7 +213,7 @@
         "utils/single_instance.py": 9,
         "utils/tela_de_mentira.py": 3
       },
-      "razao": "a parada dos subsistemas deixa de calar a falha (D-1610-OS-SUBSYSTEMS-SOBEM-E-DESCEM-POR-UMA-LISTA-SO)",
+      "razao": "o teto desceu sozinho com o número",
       "subidas": [
         {
           "data": "2026-10-10",
@@ -238,10 +238,16 @@
           "de": 1019,
           "para": 1019,
           "razao": "16/10/2026, tela-desligado-depois: a espera de até 10 s em a01_jogar._esperar_o_servico_responder é necessária enquanto a unit do serviço é Type=simple (o systemctl start volta 0,5 s antes do soquete); a cura no dono (Type=notify com READY=1 depois do ipc_server_listening) vai para a sprint O-LIGAR-O-SERVICO-ESPERA-ELE-FICAR-DE-PE-01"
+        },
+        {
+          "data": "2026-10-16",
+          "de": 995,
+          "para": 993,
+          "razao": "16/10/2026, servico-depois: a unit é Type=notify e o start só volta com o IPC de pé; saem a espera de 10 s da a01_jogar e a espera própria do daemon_actions"
         }
       ],
       "unidade": "remendos",
-      "universo": 399
+      "universo": 402
     },
     "tamanho": {
       "data": "2026-10-16",

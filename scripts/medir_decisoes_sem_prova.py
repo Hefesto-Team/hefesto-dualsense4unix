@@ -119,14 +119,6 @@ COLISOES_DECLARADAS = {
         "palavra «leva» (no id e na recomendação, no sentido de «carrega»), e nenhuma palavra de "
         "produto aparece: a decisão fala de PACOTE, não de tela. Mais um caso do limite."
     ),
-    "D-1610-O-LIGADO-ESPERA-O-SERVICO-RESPONDER": (
-        "É de PRODUTO: o Ligado espera até 10 s o serviço responder antes de mandar o modo, e "
-        "`test_a_tela_diz_desligado_quando_o_servico_para.py::"
-        "test_o_modo_do_ligado_espera_o_servico_que_acabou_de_subir` mede a espera. A triagem a "
-        "chama de processo pela palavra «sprint» (a cura no dono vai para uma sprint própria), "
-        "dita de passagem. Se a linha do CSV um dia perder a palavra, esta declaração fica órfã "
-        "e sai."
-    ),
     "D-1610-O-CI-TEM-PRAZO-NO-APT-E-EM-CADA-JOB": (
         "É de PRODUTO: a decisão dá `timeout-minutes` a todo job do CI e três tentativas ao apt, "
         "e `test_o_ci_nao_trava_no_apt.py::test_o_ci_nao_trava_no_apt_nem_espera_seis_horas` lê o "
