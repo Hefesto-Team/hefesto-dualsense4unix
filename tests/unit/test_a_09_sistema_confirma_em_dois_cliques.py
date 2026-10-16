@@ -114,9 +114,18 @@ def test_o_botao_armado_veste_a_palavra_dela(a09, ctx):
     carga = a09.desligar(ctx, _clique("Parar o serviço"), None)
 
     assert carga["blocos"]['[data-gesto="parar-ou-retomar"]'] == a09.CONFIRMA
-    for nome in a09.DESTRUTIVOS:
+    # Os botões que o interruptor das correções juntou (D-1610-UM-INTERRUPTOR-SO-PARA-AS-CORRECOES)
+    # não estão mais na página: o `blocos:` só veste os que ela tem.
+    na_pagina = {nome for nome in a09.DESTRUTIVOS
+                 if f'data-gesto="{nome}"' in PAGINA.read_text(encoding="utf-8")}
+    assert na_pagina == {a09.DESLIGAR, "restaurar-de-fabrica"}
+    assert set(carga["blocos"]) >= {f'[data-gesto="{nome}"]' for nome in na_pagina}
+    for nome in na_pagina:
         if nome != a09.DESLIGAR:
             assert carga["blocos"][f'[data-gesto="{nome}"]'] != a09.CONFIRMA
+    for nome in set(a09.DESTRUTIVOS) - na_pagina:
+        assert f'[data-gesto="{nome}"]' not in carga["blocos"], (
+            f"o `blocos:` mira o botão `{nome}`, que a página não tem mais")
 
 
 def test_o_seletor_do_blocos_existe_na_pagina_publicada(a09, ctx):
@@ -222,11 +231,19 @@ def test_armar_o_segundo_repoe_o_primeiro(a09, ctx, monkeypatch):
 def test_os_rotulos_saem_da_pagina_e_nao_de_uma_lista_aqui(a09):
     """O rótulo tem dono — o gerador —, e esta régua confere que ele foi LIDO."""
     doc = PAGINA.read_text(encoding="utf-8")
+    com_botao = 0
     for nome in a09.DESTRUTIVOS:
         achado = re.search(
             r'data-gesto="' + re.escape(nome) + r'"[^>]*>([^<]*)</button>', doc)
-        assert achado, f"a página publicada não tem mais o botão `{nome}`"
-        assert a09._rotulo_do_desenho(nome) == achado.group(1).strip()
+        if achado:
+            com_botao += 1
+            assert a09._rotulo_do_desenho(nome) == achado.group(1).strip()
+        else:
+            # O interruptor das correções juntou estes botões (D-1610-UM-INTERRUPTOR-SO-PARA-AS-
+            # CORRECOES): sem botão na página, o dono do rótulo não inventa um.
+            assert f'data-gesto="{nome}"' not in doc
+            assert a09._rotulo_do_desenho(nome) == ""
+    assert com_botao == 2, "a página tem de manter os botões de parar e de restaurar"
 
 
 def test_com_o_servico_parado_o_botao_oferece_ligar(a09, ctx_parado, janela):

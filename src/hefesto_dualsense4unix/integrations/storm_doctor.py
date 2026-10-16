@@ -58,7 +58,7 @@ def rotulos_de_reserva() -> dict[str, str]:
 
 
 _NA_TELA_VIVA: dict[str, tuple[str, str]] = {
-    "btn_storm_fix_safe": ("09-sistema.html", "refazer-consertos"),
+    "btn_storm_fix_safe": ("09-sistema.html", "correcoes-automaticas"),
 }
 
 
@@ -77,7 +77,7 @@ def _rotulo_na_tela_viva(widget_id: str) -> str | None:
     except Exception:  # pragma: no cover — empacotamento sem a interface nova
         return None
     achado = _re.search(
-        rf'data-gesto="{_re.escape(gesto)}"[^>]*>([^<]*)</button>', doc)
+        rf'data-gesto="{_re.escape(gesto)}"[^>]*>(?:<span[^>]*></span>)?([^<]*)</button>', doc)
     if not achado:
         return None
     import html as _html
@@ -438,8 +438,8 @@ def check_steam_input(home: Path | None = None) -> tuple[str, str]:
         if global_ligado:
             partes.append(
                 "Steam Input LIGADO no ajuste GLOBAL da Steam (vale para todo "
-                f"jogo, não é escolha por jogo). {PREFIXO_DA_CURA}clique "
-                f"'{rotulo_do_botao('btn_storm_fix_safe', 'Refazer os consertos automáticos')}' "
+                f"jogo, não é escolha por jogo). {PREFIXO_DA_CURA}dê dois cliques em "
+                f"'{rotulo_do_botao('btn_storm_fix_safe', 'Permitir correções automáticas')}' "
                 "na aba Sistema para desligar."
             )
         return WARN, " ".join(partes)
@@ -524,8 +524,8 @@ def check_snd_quirk(
         WARN,
         f"cura do travamento do USB AUSENTE — sem ela os controles podem "
         f"desconectar no meio do jogo. {PREFIXO_DA_CURA}{gesto_de_atualizar()} "
-        f"e reconecte os controles (o botão "
-        f"'{rotulo_do_botao('btn_storm_fix_safe', 'Refazer os consertos automáticos')}' "
+        f"e reconecte os controles (o interruptor "
+        f"'{rotulo_do_botao('btn_storm_fix_safe', 'Permitir correções automáticas')}' "
         "não instala esta cura).",
     )
 

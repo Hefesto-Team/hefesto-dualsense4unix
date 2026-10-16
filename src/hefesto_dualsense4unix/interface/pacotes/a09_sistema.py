@@ -1507,13 +1507,10 @@ SUFIXO_DA_RAZAO = "-razao"
 #: (SISTEMA-BOTOES-01), pela decisão de produto D-OS-PLUGINS-APARECEM-ONDE-AGEM
 BOTOES_CINZAS = ("reiniciar",)
 
-#: O que o pacote escreve e o desenho (`mockup/`) tem, mas a página PUBLICADA ainda não tem: a
-#: dívida do `--publicar 09`, que a costura paga e, no mesmo ato, esvazia esta declaração (a régua
-#: `test_o_que_espera_a_publicacao_esta_declarado_nos_dois_sentidos` cobra nos dois sentidos).
-ESPERA_A_PUBLICACAO: dict[str, str] = {
-    CAMPO_DAS_CORRECOES: "o interruptor «Permitir correções automáticas» (15/10/2026)",
-    CAMPO_DO_TAMANHO: "os três botões do tamanho da interface (15/10/2026)",
-}
+#: O que o pacote escreve e o desenho (`mockup/`) tem, mas a página PUBLICADA ainda não tem. Vazia
+#: desde 16/10/2026 (o interruptor das correções e o tamanho da interface foram publicados); a régua
+#: `test_o_que_espera_a_publicacao_esta_declarado_nos_dois_sentidos` cobra nos dois sentidos.
+ESPERA_A_PUBLICACAO: dict[str, str] = {}
 
 
 def razoes_do_cinza(ctx: Contexto) -> dict[str, str]:
@@ -1907,7 +1904,7 @@ def _rotulo_do_desenho(gesto: str) -> str:
             except Exception:  # pragma: no cover - página fora do disco
                 continue
             for achado in re.finditer(
-                    r'data-gesto="([^"]+)"[^>]*>([^<]*)</button>', doc):
+                    r'data-gesto="([^"]+)"[^>]*>(?:<span[^>]*></span>)?([^<]*)</button>', doc):
                 _ROTULOS.setdefault(
                     achado.group(1),
                     html.unescape(achado.group(2)).strip())

@@ -22,9 +22,10 @@ isso: **defeito de VOCABULÁRIO é invisível para quem só mede pixel.**
 
 ELE OLHA SÓ PARA ONDE O RÓTULO DIZ "SERVIÇO", E É DE PROPÓSITO
 ---------------------------------------------------------------
-É a mesma disciplina do portão do gerador. O ``title`` do botão vermelho
-**precisa** dizer "Hefesto" — *"não é o interruptor Hefesto da aba Jogar"* —, e
-é justamente essa frase que explica a diferença. Onde "Hefesto" é o PROGRAMA
+É a mesma disciplina do portão do gerador. A explicação da diferença entre parar o
+serviço e o interruptor da aba Jogar mora no ``data-dica`` do botão vermelho e no do rótulo da
+seção (desde o desenho do todo, 16/10/2026; antes era o ``title``, que citava
+"Hefesto"). Onde "Hefesto" é o PROGRAMA
 (quem enxerga a janela, quem escreve nos controles, de quem é a saída crua) a
 palavra fica: trocá-la seria o defeito ao contrário, a tela dizendo que quem
 enxerga janela é uma unidade do systemd. Uma régua que varresse a aba inteira
@@ -184,17 +185,25 @@ class TestOQueONomeDaLinhaObriga:
             "  " + "\n  ".join(recaidas)
         )
 
-    def test_o_titulo_do_botao_pode_dizer_hefesto(self) -> None:
-        """O ``title`` explica a DIFERENÇA — e para isso precisa da palavra."""
-        titulos = re.findall(
-            r'<button[^>]*title="([^"]*)"[^>]*data-gesto="parar-ou-retomar"', _html())
-        assert titulos, "o botão de parar o serviço perdeu o `title` que explica a diferença"
-        assert any(PALAVRA in t for t in titulos), (
-            "o `title` do botão que para o serviço deixou de citar o Hefesto. "
-            "É lá — e só lá — que a diferença entre parar o SERVIÇO e desligar "
-            "o HEFESTO na aba Jogar se explica. Um portão de palavra que varre "
-            f"tudo apaga esta frase junto com o defeito. Títulos: {titulos}"
-        )
+    def test_a_dica_do_botao_explica_a_diferenca_para_o_jogar(self) -> None:
+        """A dica do botão e a do rótulo da seção explicam a DIFERENÇA, sem o «?» nem o `title`.
+
+        No desenho do todo (A1: a explicação mora no ``data-dica``) a frase longa que citava o
+        Hefesto saiu: o botão diz o que acontece com os controles e o rótulo da seção diz que
+        parar derruba o serviço inteiro, e não só o jogo — que é o que o interruptor da aba Jogar
+        não faz.
+        """
+        pagina = _html()
+        botao = re.search(r'<button[^>]*\bdata-dica="([^"]*)"[^>]*data-gesto="parar-ou-retomar"',
+                          pagina)
+        assert botao and botao.group(1).strip(), (
+            "o botão de parar o serviço perdeu a dica que explica a diferença")
+        assert "controles viram gamepads comuns" in botao.group(1), botao.group(1)
+        assert ' title="' not in botao.group(0)
+        rotulo = re.search(r'<span data-dica="([^"]*)">Funcionamento do app</span>', pagina)
+        assert rotulo and "serviço inteiro, não só o jogo" in rotulo.group(1), (
+            "o rótulo da seção deixou de dizer que parar derruba o serviço inteiro, "
+            "e não só o jogo")
 
 
 class TestOQueFicaComOHefesto:

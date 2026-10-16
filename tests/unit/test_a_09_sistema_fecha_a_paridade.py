@@ -585,7 +585,7 @@ def test_os_dois_leitores_do_rotulo_nao_divergem(a09):
     sd._ROTULOS_EM_CACHE.clear()
     do_doutor = sd._rotulo_na_tela_viva("btn_storm_fix_safe")
     a09._ROTULOS.clear()
-    do_pacote = a09._rotulo_do_desenho("refazer-consertos")
+    do_pacote = a09._rotulo_do_desenho("correcoes-automaticas")
     assert do_doutor == do_pacote, (
         f"os dois leitores do mesmo botão discordam: o `storm_doctor` lê "
         f"{do_doutor!r} e o pacote lê {do_pacote!r}. Eles apontam para o mesmo "

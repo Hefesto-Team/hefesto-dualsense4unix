@@ -17,6 +17,7 @@ import pytest
 RAIZ = Path(__file__).resolve().parents[2]
 
 ROTULO = "Corrigir Vulkan"
+ROTULO_DO_INTERRUPTOR = "Permitir correções automáticas"
 
 
 def _install_gi_stubs() -> None:
@@ -121,19 +122,28 @@ def _registros_de_gesto(fonte: Path) -> dict[tuple[str, str], str]:
 
 
 def test_o_botao_existe_na_pagina_que_o_produto_serve() -> None:
-    """O primeiro elo: sem o endereço na página, não há clique a entregar."""
+    """O primeiro elo: sem o endereço na página, não há clique a entregar.
+
+    Desde a D-1610-UM-INTERRUPTOR-SO-PARA-AS-CORRECOES o endereço do Vulkan é o do interruptor
+    «Permitir correções automáticas», que junta o Proton fixado e o Vulkan: o botão próprio
+    (``corrigir-vulkan``) não está mais na página, e o handler segue registrado para o interruptor
+    chamar.
+    """
     pagina = PAGINA_SERVIDA.read_text(encoding="utf-8")
-    linhas = [ln for ln in pagina.splitlines() if f'data-gesto="{GESTO}"' in ln]
+    assert f'data-gesto="{GESTO}"' not in pagina, (
+        f"o botão `{GESTO}` voltou à página: o interruptor das correções o juntou")
+    linhas = [ln for ln in pagina.splitlines() if 'data-gesto="correcoes-automaticas"' in ln]
     assert linhas, (
-        f"a página {PAGINA} não tem nenhum elemento com "
-        f'`data-gesto="{GESTO}"` — o botão sumiu da tela e o handler abaixo '
-        "ficou sem quem o acione.")
-    assert any(ROTULO in ln for ln in linhas), (
-        f"o botão de `{GESTO}` não diz mais {ROTULO!r} — se o rótulo mudou, "
+        f"a página {PAGINA} não tem o interruptor das correções — o Vulkan ficou sem quem o "
+        "acione na tela.")
+    assert any(ROTULO_DO_INTERRUPTOR in ln for ln in linhas), (
+        f"o interruptor não diz mais {ROTULO_DO_INTERRUPTOR!r} — se o rótulo mudou, "
         "quem decide é ela, e a palavra nova entra aqui e no gerador juntas.")
-    assert any('title="' in ln for ln in linhas), (
-        "o botão perdeu a dica. Ela é o que separa 'tirei o quê?' de um clique "
-        "às cegas num ajuste que mexe no prefixo do jogo.")
+    dicas = [html.unescape(achado.group(1)) for ln in linhas
+             if (achado := re.search(r'data-dica="([^"]*)"', ln))]
+    assert any("Vulkan" in dica for dica in dicas), (
+        "o interruptor perdeu a dica que diz que ele corrige o Vulkan. Ela é o que separa "
+        "'tirei o quê?' de um clique às cegas num ajuste que mexe no prefixo do jogo.")
 
 
 def _as_duas_paginas() -> list[Path]:

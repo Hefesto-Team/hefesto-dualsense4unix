@@ -94,16 +94,21 @@ def test_o_status_publicado_e_um_link_na_linha_do_bluetooth(a09) -> None:
     assert html.startswith('<a class="saude vai"') and 'href="08-conexoes.html#rd-secao"' in html
 
 
-def test_os_tres_ligaveis_tem_o_endereco_do_produto_na_pagina() -> None:
+def test_os_ligaveis_tem_o_endereco_do_produto_na_pagina() -> None:
     """Cada pílula leva gesto, `data-campo` e o alvo `classe` com `ligada`.
+
+    São duas desde a D-1610-UM-INTERRUPTOR-SO-PARA-AS-CORRECOES: o «Iniciar com o sistema» e o
+    interruptor das correções, que juntou o Proton fixado e o Vulkan.
 
     MORDIDA: tire o `data-hef-alvo="classe"` da `ligavel()` no gerador e
     publique — o gerador recusa antes (régua 2), e esta reprova na publicada.
     """
     pagina = PUBLICADA.read_text(encoding="utf-8")
+    for gesto in ("fixar-proton", "corrigir-vulkan"):
+        assert f'data-gesto="{gesto}"' not in pagina, (
+            f"o ligável `{gesto}` voltou à página: o interruptor das correções o juntou")
     for gesto, campo in (("autostart", "hefesto-autostart"),
-                         ("fixar-proton", "proton-fixado"),
-                         ("corrigir-vulkan", "vulkan-corrigido")):
+                         ("correcoes-automaticas", "correcoes-automaticas")):
         tag = re.search(r'<button class="cadeado[^"]*"[^>]*data-gesto="'
                         + gesto + r'"[^>]*>', pagina)
         assert tag, f"o ligável `{gesto}` sumiu da página publicada"
@@ -324,7 +329,8 @@ def test_a_dica_da_bateria_nao_conta_os_controles_da_cena() -> None:
     """A dica é estática na página publicada: ela não pode contar controles."""
     pagina = PUBLICADA.read_text(encoding="utf-8")
     assert not re.search(r"Vale para os \d+ controles", pagina)
-    assert "Vale para todos os controles" in pagina
+    assert ('<span data-dica="Vale para todos; cada controle pode ter o seu em Conexões">'
+            "Perfil global de bateria</span>") in pagina
 
 
 def _faixa_do_status(pagina: str) -> str:
@@ -339,9 +345,10 @@ def test_o_exame_nao_tem_rotulo_nem_contagem_e_o_lugar_fica_vazio() -> None:
     faixa = _faixa_do_status(pagina)
     assert "O exame de hoje" not in faixa and "<span>O exame" not in pagina
     assert "exame-contagem" not in pagina and "linhas <span" not in faixa
-    assert faixa.strip().endswith("<span></span><span></span>"), faixa
-    assert faixa.count('class="ajuda"') == 1, (
-        f"a faixa da seção 1 tem de ter só o `?` do Status: {faixa!r}")
+    assert faixa.strip() == (
+        '<span data-dica="Linha que falha fica vermelha até se curar">Status</span>'), faixa
+    assert 'class="ajuda"' not in faixa, (
+        f"a faixa da seção 1 não tem «?» (a dica mora no `data-dica`): {faixa!r}")
 
 
 def test_as_linhas_do_status_nao_tem_o_ajuda_e_a_frase_vai_no_title(a09) -> None:
@@ -354,26 +361,34 @@ def test_as_linhas_do_status_nao_tem_o_ajuda_e_a_frase_vai_no_title(a09) -> None
     pagina = PUBLICADA.read_text(encoding="utf-8")
     lista = re.search(r'data-campo="status-lista"[^>]*>(.*?)\n\s*</div>\n', pagina, re.S)
     assert lista, "a lista do Status sumiu da página publicada"
-    assert lista.group(1).count('class="saude') == 4, lista.group(1)
+    # O Status leva só as duas primeiras linhas; o resto mora no exame e só sobe se falhar.
+    assert lista.group(1).count('class="saude') == 2, lista.group(1)
     assert 'class="ajuda"' not in lista.group(1), lista.group(1)
-    assert lista.group(1).count(' title="') == 4, lista.group(1)
+    assert lista.group(1).count(' data-dica="') == 2, lista.group(1)
+    assert ' title="' not in lista.group(1), lista.group(1)
 
 
 def test_configuracoes_avancadas_tem_a_letra_do_titulo_sistema() -> None:
     """*«Configurações avançadas — Escreve com a mesma cor e tamanho de Sistema»*."""
     pagina = PUBLICADA.read_text(encoding="utf-8")
-    assert '<span class="quadro-titulo">Sistema</span>' in pagina
+    assert ('<span class="quadro-titulo" data-dica="Esta aba é do computador, não de um '
+            'controle">Sistema</span>') in pagina
     assert ('<div class="sec-grupo"><span class="quadro-titulo">'
             "Configurações avançadas</span></div>") in pagina
 
 
 def test_o_registro_de_exemplo_cita_so_os_controles_da_cena() -> None:
-    """O registro do desenho citava p3 e p4 numa cena com 2 controles."""
+    """O registro do desenho citava p3 e p4 numa cena com 2 controles.
+
+    Desde 12/10 o registro fala pela cor do plástico, não por P1 a P4: a linha cita cada controle
+    pela cor e pelo transporte, e o «nos N» e o «lida nos N»
+    são o número de controles citados.
+    """
     pagina = PUBLICADA.read_text(encoding="utf-8")
-    linha = re.search(r"\[23:41:02\] (p\d.*?) · fw 0x0356 nos (\d+) · "
-                      r"cor de fábrica lida \(([^)]*)\)", pagina)
+    linha = re.search(r"\[23:41:02\] (.*?) · fw 0x0356 nos (\d+) · "
+                      r"cor de fábrica lida nos (\d+)", pagina)
     assert linha, "a segunda linha do registro de exemplo mudou de forma"
-    citados = re.findall(r"p(\d) (?:usb|bt)", linha.group(1))
-    lidos = re.findall(r"p(\d)", linha.group(3))
-    assert len(citados) == int(linha.group(2)), linha.group(0)
-    assert citados == lidos, linha.group(0)
+    citados = re.findall(r"(?:^| · )([^·]+?) (?:usb|bt)\b", linha.group(1))
+    assert not re.search(r"\bp\d\b", linha.group(0)), linha.group(0)
+    assert len(citados) == len(set(citados)) == int(linha.group(2)), linha.group(0)
+    assert int(linha.group(3)) == len(citados), linha.group(0)
