@@ -162,6 +162,7 @@ DESCARTE = (
     re.compile(r"fazem o firmware descartar"),
     re.compile(r"firmware descarta o (?:report|quadro|segundo)"),
     re.compile(r"o que o firmware joga fora"),
+    re.compile(r"descartad[oa] pelo firmware"),
 )
 #: a casa afirma que o número não importa ao firmware
 NAO_IMPORTA = (
@@ -213,6 +214,8 @@ def test_src_nao_afirma_o_que_o_caderno_nao_diz() -> None:
     ("não obedece", "#: o SDL manda 0 fixo desde sempre e o controle aceita", True),
     ("não obedece", "o firmware aceita 0 fixo (comportamento do SDL)", True),
     ("não obedece", "o firmware descarta o report fora de ordem", False),
+    (None, "um 0x31 com ``seq`` fora do fluxo do handle é\n    descartado pelo firmware", True),
+    ("não obedece", "um 0x31 com ``seq`` repetido é descartado pelo firmware", False),
 ])
 def test_a_regua_le_o_veredito(veredito: str | None, texto: str, reprova: bool) -> None:
     assert bool(afirmacoes_que_o_caderno_nao_sustenta(veredito, {"x.py": texto})) is reprova

@@ -171,10 +171,10 @@ def build_bt_lightbar_report(
       janela pós-conexão.
 
     ``seq`` fica em 0 aqui de propósito: quem carimba o contador por handle (e
-    recalcula o CRC) é o ``writeReport`` do handle, e essa ordem é a lição do
-    ``LIGHTBAR-BT-RESET-03`` — um 0x31 com ``seq`` fora do fluxo do handle é
-    descartado pelo firmware, e o sintoma é o pior de todos: o log diz
-    "escrito" e a barra não muda.
+    recalcula o CRC) é o ``writeReport`` do handle, a ordem do
+    ``LIGHTBAR-BT-RESET-03``. Se um ``seq`` fora do fluxo do handle pesa no
+    firmware, quem diz é ``scripts/ensaios/a_sequencia_do_radio.py``; o sintoma
+    suspeito é o log dizer "escrito" e a barra não mudar.
     """
     common = common_das_luzes(rgb, player_leds, brilho_das_luzes=brilho_das_luzes)
     return bytes(build_bt_report(common, seq=seq))
