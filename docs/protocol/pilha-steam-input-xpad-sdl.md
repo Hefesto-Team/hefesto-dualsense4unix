@@ -929,7 +929,9 @@ nos dois. **O SDL3 não dá o serial pelo id**: `SDL_GetGamepadSerial` só exist
 aberto, e num virtual devolve vazio. Por isso a sonda escolhe ANTES de abrir: pega
 `SDL_GetGamepadPathForID`, lê o `HID_UNIQ` do `hidraw` em `/sys/class/hidraw` e abre o id cujo
 `UNIQ` é o do vpad pedido; depois da abertura confere o serial e o par `(st_dev, st_ino)` do
-`SDL_GetGamepadPath` contra o nó do vpad no estado completo do daemon.
+`SDL_GetGamepadPath` contra o nó do vpad no estado completo do daemon. O serial se compara pelos
+dígitos: o driver PS5 o reescreve com o feature 0x09 no formato `02-fe-…`, com hífen
+(`HIDAPI_DriverPS5_InitDevice`, `release-3.4.16`), e o `UNIQ` vem com dois-pontos.
 
 **Pelo FONTE (grau ALTA, lido no `libsdl-org/SDL`, ainda sem medida no aparelho):**
 

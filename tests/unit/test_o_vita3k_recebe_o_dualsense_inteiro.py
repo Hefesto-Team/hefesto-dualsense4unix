@@ -156,7 +156,9 @@ class _JogoDeMentira:
 
     def descrever(self, h: int) -> dict[str, Any]:
         v = self.estado["rumble_ff"]["per_vpad"][h - 101]
-        return {"nome": _NOME, "serial": v["vpad_uniq"], "caminho": v["hidraw"],
+        # Como o driver PS5 do SDL3 o devolve: o feature 0x09 reescrito com hífen.
+        serial = v["vpad_uniq"].replace(":", "-") if self.hidapi else v["vpad_uniq"]
+        return {"nome": _NOME, "serial": serial, "caminho": v["hidraw"],
                 "touchpads": 1 if self.hidapi else 0, "dedos": 2 if self.hidapi else 0,
                 "tem_giro": True, "tem_accel": True}
 
@@ -183,7 +185,7 @@ class _JogoDeMentira:
 
 def _roda(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch, *, jogador: int = 3,
           hidapi: bool = True, salto_ns: int = 0, escrita_em: int | None = None,
-          escolha: Any = None,
+          escolha: Any = None, avisos: list[str] | None = None,
           accel: float = 9.8) -> tuple[dict[str, Any], _JogoDeMentira, ModuleType]:
     ensaio = _ensaio()
     estado = _estado(tmp_path)
@@ -214,7 +216,9 @@ def _roda(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch, *, jogador: i
 
     medida = ensaio.sondar_o_jogador(
         jogo, vpad, todos, fotografar=fotografar, fase_segundos=1.0,
-        dormir=relogio.dormir, agora=relogio.agora, pasta_fd=pasta_fd)
+        dormir=relogio.dormir, agora=relogio.agora, pasta_fd=pasta_fd,
+        avisar=lambda fase: (avisos if avisos is not None else []).append(
+            f"{fase}@{relogio.t:.3f}"))
     return medida, jogo, ensaio
 
 
@@ -382,3 +386,69 @@ def test_a_saida_leva_o_serial_mascarado_e_sem_chaves_de_juncao(
     medida, _jogo, ensaio = _roda(tmp_path, monkeypatch, jogador=1)
     fora = json.dumps(ensaio._para_a_saida(medida))
     assert "_uniq_inteiro" not in fora and "_serial_inteiro" not in fora
+
+
+def test_o_serial_do_sdl3_com_hifen_e_o_mesmo_do_uniq_com_dois_pontos() -> None:
+    """O driver PS5 do SDL3 devolve o serial `02-fe-…`; o `vpad_uniq` do daemon é `02:fe:…`."""
+    ensaio = _ensaio()
+    assert ensaio.mesmo_serial("02-fe-00-00-00-03", "02:FE:00:00:00:03")
+    assert not ensaio.mesmo_serial("02-fe-00-00-00-03", "02:fe:00:00:00:01")
+    assert not ensaio.mesmo_serial("", "")
+    assert not ensaio.mesmo_serial(None, "02:fe:00:00:00:01")
+
+
+def test_mordida_o_serial_comparado_como_texto_reprova_o_vpad_certo(
+        tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """MORDIDA: comparar o texto cru dá «não confere» no vpad certo, porque o SDL3 usa hífen."""
+    ensaio_cru = _ensaio()
+    monkeypatch.setattr(ensaio_cru, "mesmo_serial",
+                        lambda a, b: (a or "").casefold() == (b or "").casefold())
+    monkeypatch.setattr(sys.modules[__name__], "_ensaio", lambda: ensaio_cru)
+    medida, jogo, ensaio = _roda(tmp_path, monkeypatch, jogador=3)
+    assert jogo.abertos == [103]
+    assert "serial_e_no_conferem" in _reprovados(ensaio, medida)
+
+
+def test_quem_esta_na_bancada_e_avisado_no_comeco_de_cada_fase(
+        tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Sem o aviso, ninguém sabe quando soltar o controle e quando pôr o dedo."""
+    avisos: list[str] = []
+    _roda(tmp_path, monkeypatch, jogador=2, avisos=avisos)
+    assert [a.split("@")[0] for a in avisos] == ["parado", "dedo"]
+    assert float(avisos[1].split("@")[1]) >= 1.0
+
+
+def test_a_sonda_que_passa_do_prazo_reprova_e_leva_a_pilha(
+        tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str]) -> None:
+    """Sonda que trava junto com o alvo nunca reprova: o prazo vence, e a pilha vai no laudo."""
+    ensaio = _ensaio()
+    lib3 = tmp_path / "libSDL3.so.0"
+    lib3.write_bytes(b"")
+    monkeypatch.setattr(ensaio.subprocess, "run",
+                        lambda *_a, **_k: SimpleNamespace(returncode=0, stdout="", stderr=""))
+    mortos: list[str] = []
+
+    class _Travado:
+        pid = 4242
+        returncode = None
+
+        def __init__(self, *_a: Any, **_k: Any) -> None:
+            self.vezes = 0
+
+        def communicate(self, timeout: float | None = None) -> tuple[str, None]:
+            self.vezes += 1
+            if self.vezes == 1:
+                raise ensaio.subprocess.TimeoutExpired("sonda", timeout or 0)
+            return "", None
+
+        def kill(self) -> None:
+            mortos.append("kill")
+
+    monkeypatch.setattr(ensaio.subprocess, "Popen", _Travado)
+    monkeypatch.setattr(ensaio, "_pilha_do_processo", lambda pid: [f"#0 travado em {pid}"])
+    monkeypatch.setattr(sys, "argv", ["x", "--jogador", "P1", "--lib", str(lib3)])
+    assert ensaio.main() == 3
+    saida = capsys.readouterr().out
+    assert "prazo" in saida and "travado em 4242" in saida
+    assert mortos == ["kill"]

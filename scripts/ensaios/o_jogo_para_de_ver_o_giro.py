@@ -143,6 +143,7 @@ import json
 import os
 import pathlib
 import re
+import shutil
 import subprocess
 import struct
 import sys
@@ -959,11 +960,20 @@ def contadores_dos_vpads(estado: dict[str, Any]) -> dict[int, dict[str, Any]]:
     }
 
 
+def mesmo_serial(a: str | None, b: str | None) -> bool:
+    """Os dois seriais são o mesmo endereço, pelos dígitos e sem a caixa.
+
+    O driver PS5 do SDL3 reescreve o serial do aparelho aberto com o feature 0x09 no formato
+    `%.2x-%.2x-…` (hífen), e o `HID_UNIQ` e o `vpad_uniq` do daemon vêm com dois-pontos.
+    """
+    so_a = re.sub(r"[^0-9a-f]", "", (a or "").casefold())
+    return bool(so_a) and so_a == re.sub(r"[^0-9a-f]", "", (b or "").casefold())
+
+
 def escolher_o_id(candidatos: list[dict[str, Any]], uniq_alvo: str) -> int | None:
     """O id do SDL cujo serial é o do vpad — NUNCA pelo nome nem pelo GUID, iguais nos quatro."""
-    alvo = uniq_alvo.casefold()
     for c in candidatos:
-        if (c.get("uniq") or "").casefold() == alvo:
+        if mesmo_serial(c.get("uniq"), uniq_alvo):
             return int(c["id"])
     return None
 
@@ -1204,12 +1214,14 @@ def sondar_o_jogador(
     dormir: Any = time.sleep,
     agora: Any = time.monotonic,
     pasta_fd: pathlib.Path = pathlib.Path("/proc/self/fd"),
+    avisar: Any = lambda _fase: None,
 ) -> dict[str, Any]:
     """Enumera, abre SÓ o vpad pedido (pelo serial), e conta as duas fases.
 
     ``todos`` é o `per_vpad` por jogador; ``fotografar()`` devolve os contadores dos vpads
     naquele instante (o degrau 2), e é chamado antes de abrir, no fim de cada fase e depois de
-    fechar.
+    fechar. ``avisar(fase)`` chama quem está na bancada no começo de cada fase: sem ele, ninguém
+    sabe quando soltar o controle e quando pôr o dedo.
     """
     medida: dict[str, Any] = {"contadores": {"antes": fotografar()}}
     candidatos = jogo.enumerar()
@@ -1244,7 +1256,7 @@ def sondar_o_jogador(
         **abriu,
         "jogador": vpad["player"],
         "guid": alvo["guid"],
-        "serial_confere": (abriu["serial"] or "").casefold() == vpad["vpad_uniq"].casefold(),
+        "serial_confere": mesmo_serial(abriu["serial"], vpad["vpad_uniq"]),
         "no_confere": chave_esperada is not None
         and _chave_do_no(abriu["caminho"]) == chave_esperada,
         "_serial_inteiro": abriu["serial"],
@@ -1254,6 +1266,7 @@ def sondar_o_jogador(
     medida["contadores"]["durante"] = {}
     for nome in ("parado", "dedo"):
         fase = Fase(nome)
+        avisar(nome)
         fim = agora() + fase_segundos
         while agora() < fim:
             for ev in jogo.eventos():
@@ -1340,13 +1353,37 @@ def _processo_do_vpad(args: argparse.Namespace) -> int:
     medida = sondar_o_jogador(
         jogo, vpad, todos,
         fotografar=lambda: contadores_dos_vpads(_estado_do_daemon()),
-        fase_segundos=args.fase_segundos)
+        fase_segundos=args.fase_segundos, avisar=_avisar_a_fase)
     jogo.encerrar()
     medida.update({"versao": versao, "revisao": revisao, "hidapi": args.hidapi,  # noqa-acento: chave de dado, não prosa
                    "jogador": args.jogador})
     medida["laudo"] = laudo(medida)
     print(json.dumps(_para_a_saida(medida), ensure_ascii=False, default=str))
     return 0
+
+
+_O_QUE_FAZER_NA_FASE = {
+    "parado": "o controle PARADO na mesa, sem tocar em nada",
+    "dedo": "o dedo no touchpad, na frente e atrás, com cliques",
+}
+
+
+def _avisar_a_fase(fase: str) -> None:
+    """O aviso de cada fase vai ao stderr, que o lado de fora deixa passar até o terminal."""
+    print(f"AGORA, {_O_QUE_FAZER_NA_FASE.get(fase, fase)}", file=sys.stderr, flush=True)
+
+
+def _pilha_do_processo(pid: int) -> list[str]:
+    """A pilha de um processo que passou do prazo, pelo `eu-stack` (só lê)."""
+    eu_stack = shutil.which("eu-stack")
+    if eu_stack is None:
+        return ["eu-stack ausente nesta máquina"]
+    try:
+        feito = subprocess.run([eu_stack, "-p", str(pid)], capture_output=True, text=True,
+                               timeout=30, check=False)
+    except (OSError, subprocess.TimeoutExpired) as erro:
+        return [f"eu-stack falhou: {erro}"]
+    return (feito.stdout or feito.stderr).splitlines()[:120]
 
 
 def _o_jogador(args: argparse.Namespace) -> int:
@@ -1371,13 +1408,24 @@ def _o_jogador(args: argparse.Namespace) -> int:
                "--lib", args.lib[0], "--jogador", args.jogador, "--hidapi", args.hidapi,
                "--fase-segundos", str(args.fase_segundos),
                "--dica-do-acelerometro", args.dica_do_acelerometro]
-    feito = subprocess.run(comando, env=_ambiente_do_vpad(hidapi=args.hidapi,
-                           dica=args.dica_do_acelerometro), capture_output=True, text=True,
-                           timeout=args.fase_segundos * 2 + 90, check=False)
-    linha = next((x for x in reversed(feito.stdout.splitlines()) if x.startswith("{")), None)
-    if linha is None or feito.returncode not in (0, 2):
-        print(json.dumps({"erro": f"o processo do vpad saiu com rc={feito.returncode}",
-                          "stderr": feito.stderr.strip().splitlines()[-3:]},
+    prazo = args.fase_segundos * 2 + 90
+    # O stderr passa direto ao terminal: é por ele que chega o aviso de cada fase.
+    processo = subprocess.Popen(comando, env=_ambiente_do_vpad(
+        hidapi=args.hidapi, dica=args.dica_do_acelerometro), stdout=subprocess.PIPE, text=True)
+    try:
+        saida, _ = processo.communicate(timeout=prazo)
+    except subprocess.TimeoutExpired:
+        # A sonda que trava junto com o alvo reprova, e leva a pilha de onde travou.
+        pilha = _pilha_do_processo(processo.pid)
+        processo.kill()
+        processo.communicate()
+        print(json.dumps({"erro": f"o processo do vpad passou do prazo de {prazo:.0f} s",
+                          "pilha": pilha}, ensure_ascii=False, indent=2))
+        return 3
+    linha = next((x for x in reversed((saida or "").splitlines()) if x.startswith("{")), None)
+    if linha is None or processo.returncode not in (0, 2):
+        print(json.dumps({"erro": f"o processo do vpad saiu com rc={processo.returncode}; "
+                          "o que ele escreveu está logo acima"},
                          ensure_ascii=False, indent=2))
         return 3
     medida: dict[str, Any] = json.loads(linha)
