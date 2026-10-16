@@ -303,11 +303,17 @@ def test_orcamento_do_stick_girando_a_250_hz(monkeypatch: pytest.MonkeyPatch) ->
             quadros += 1
             time.sleep(0.004)
 
+    cpu_do_laco = 0.0
+
     async def cenario() -> None:
+        nonlocal cpu_do_laco
         await asyncio.sleep(0.05)
+        # O fio do laço inteiro: a volta, a espera que acorda e o agendamento que a volta não vê.
+        inicio = time.thread_time()
         fio = _numa_thread(girar)
         while fio.is_alive():
             await asyncio.sleep(0.02)
+        cpu_do_laco = time.thread_time() - inicio
         await asyncio.sleep(0.05)
 
     asyncio.run(daemon.rodar(cenario))
@@ -315,10 +321,13 @@ def test_orcamento_do_stick_girando_a_250_hz(monkeypatch: pytest.MonkeyPatch) ->
     media_us = 1e6 * sum(cpu) / max(1, len(cpu))
     print(
         f"[orcamento] {quadros} quadros por controle em {duracao:.1f} s, "
-        f"{por_s:.0f} voltas/s, {media_us:.0f} us de CPU por volta"
+        f"{por_s:.0f} voltas/s, {media_us:.0f} us de CPU por volta, "
+        f"{1e3 * cpu_do_laco / duracao:.1f} ms/s de CPU no fio do laço "
+        f"({1e6 * cpu_do_laco / max(1, len(voltas)):.0f} us por volta com a espera)"
     )
     assert len(voltas) >= quadros // 3, f"o stick não acordou o laço ({len(voltas)} voltas)"
     assert len(voltas) <= TETO_DE_VOLTAS_POR_S * (duracao + 0.2)
+    assert cpu_do_laco < 0.5 * duracao, f"o laço gastou {cpu_do_laco:.2f} s de CPU em {duracao} s"
     menor = min(b - a for a, b in itertools.pairwise(voltas))
     assert menor >= lc.INTERVALO_MINIMO_DA_VOLTA_S, f"{menor * 1000:.2f} ms"
 

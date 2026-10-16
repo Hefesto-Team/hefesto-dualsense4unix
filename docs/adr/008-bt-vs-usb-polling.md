@@ -93,5 +93,7 @@ tique anterior.
   acorda ao somar duas. Um despertar por quadro, nunca por eixo.
 - O quadro do giro acorda só quando o arranjo manda giro ou inclinação para um analógico.
 - A volta do aperto lê o `snapshot()` do primário, como os outros jogadores já liam.
-- Custo medido: 239 voltas/s a 244 quadros/s por controle, 39 µs de CPU por volta; o intervalo
-  mínimo entre voltas (4 ms) segue valendo.
+- Custo medido, com pads de mentira: 237 voltas/s a 244 quadros/s por controle; o fio do laço
+  gasta 27,5 ms de CPU por segundo (cerca de 116 µs por volta, contando a espera que acorda; a
+  volta sozinha, 38 µs). O intervalo mínimo entre voltas (4 ms) segue valendo, e o custo com o pad
+  de verdade se mede na bancada.
