@@ -118,13 +118,11 @@ if [ "$LIGAR_DAEMON" = 1 ] && command -v systemctl >/dev/null 2>&1; then
   elif systemctl --user cat "$UNIT" >/dev/null 2>&1; then
     printf 'daemon:  %s — ligando (%s)\n' "${ESTADO:-desconhecido}" "$UNIT"
     if systemctl --user start "$UNIT" 2>/dev/null; then
-      # ELE NÃO NASCE PRONTO: o socket aparece depois do processo. Sem esta
-      # espera a página sobe, pergunta cedo demais, cai no kernel e mostra a
-      # LÂMPADA velha — que é exatamente o defeito que ligar o daemon cura.
-      for _ in $(seq 1 40); do
-        [ "$(systemctl --user is-active "$UNIT" 2>/dev/null || true)" = "active" ] && break
-        sleep 0.25
-      done
+      # A unit é `Type=notify`: o `start` só volta com o IPC de pé (o daemon diz
+      # `READY=1` quando o soquete escuta), então a página já pergunta a um daemon
+      # pronto. Sem isso ela cairia no kernel e mostraria a LÂMPADA velha — o
+      # defeito que ligar o daemon cura. `activating` (subindo) cai neste ramo
+      # também: o `start` se junta à subida em curso e volta quando ela termina.
       printf 'daemon:  %s\n' "$(systemctl --user is-active "$UNIT" 2>/dev/null || echo '?')"
     else
       printf 'daemon:  NÃO subiu. A página vai ler o kernel e dizer isso.\n' >&2
