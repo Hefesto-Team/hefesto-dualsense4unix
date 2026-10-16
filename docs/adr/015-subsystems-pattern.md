@@ -24,29 +24,33 @@ daemon/
   context.py            (DaemonContext dataclass)
   state_store.py        (permanece inalterado)
   subsystems/
-    __init__.py         (SUBSYSTEM_REGISTRY + reexportações)
+    __init__.py         (SUBSYSTEM_REGISTRY: a lista única; subir e parar)
     base.py             (Protocol Subsystem: start/stop/is_enabled)
-    poll.py             (BatteryDebouncer + evdev_buttons_once + PollSubsystem)
-    ipc.py              (IpcSubsystem + start_ipc)
-    udp.py              (UdpSubsystem + start_udp)
-    autoswitch.py       (AutoswitchSubsystem + start_autoswitch)
-    mouse.py            (MouseSubsystem + start/stop/dispatch_mouse)
-    rumble.py           (RumbleSubsystem + reassert_rumble + _effective_mult_inline)
+    poll.py             (BatteryDebouncer + evdev_buttons_once)
+    ipc.py              (start_ipc)
+    udp.py              (start_udp)
+    autoswitch.py       (start_autoswitch)
+    mouse.py            (start/stop/dispatch_mouse)
+    rumble.py           (reassert_rumble + _effective_mult_inline)
     hotkey.py           (start/stop_hotkey_manager + mic_button_loop)
     connection.py       (reconnect_loop + restore_last_profile + shutdown)
 ```
 
-### Protocol Subsystem
+### A lista única (nota de 16/10/2026)
 
-```python
-class Subsystem(Protocol):
-    name: str
-    async def start(self, ctx: DaemonContext) -> None: ...
-    async def stop(self) -> None: ...
-    def is_enabled(self, config: DaemonConfig) -> bool: ...
-```
+O desenho de abril previa uma classe por subsystem, todas sobre o protocolo `Subsystem`. Só cinco
+delas (`BtMic`, `AltoFalante`, `Conexoes`, `Plugins`, `Metrics`) foram construídas; as outras oito
+(`Poll`, `Ipc`, `Udp`, `Dsu`, `Autoswitch`, `Mouse`, `Gamepad`, `Rumble`) ficavam na lista sem que o
+`Daemon` as usasse, e o `run()` e o `shutdown()` mantinham, cada um, a sua lista escrita à mão.
+Esquecer uma das duas era o defeito: o `BtMic` e o `AltoFalante` nasceram órfãos assim.
 
-Cada subsystem implementa o protocolo. A ordem de start é definida por `SUBSYSTEM_REGISTRY` em `subsystems/__init__.py`.
+Hoje `SUBSYSTEM_REGISTRY` é uma tupla de `Passo(nome, partida, quando, parada, parar_em, ...)`.
+`Daemon.run()` chama `subir(self)` (e `subir(self, depois_do_controle=True)` para as extensões), e
+`connection.shutdown` chama `parar(self)`, que percorre a lista pela posição `parar_em` de cada entrada.
+A ordem de parada não é a de partida, e fica declarada na própria entrada: o som e o microfone caem antes
+do IPC, e o controle é a última coisa a ir. A parada que falha vira o aviso `subsystem_parada_falhou`
+no diário e não impede as seguintes. A régua é
+`tests/unit/test_o_subsystem_sobe_e_desce_por_uma_lista_so.py`.
 
 ### DaemonContext
 
@@ -65,29 +69,13 @@ Os métodos privados no `Daemon` são thin wrappers que delegam para as funçõe
 
 ## Como adicionar um novo subsystem
 
-1. Criar `src/hefesto_dualsense4unix/daemon/subsystems/<nome>.py` implementando o protocolo `Subsystem`.
-2. Adicionar o subsystem ao `SUBSYSTEM_REGISTRY` em `subsystems/__init__.py`.
-3. Adicionar a chamada condicional em `Daemon.run()` se o subsystem precisar de controle de habilitação via config.
-4. Criar testes unitários em `tests/unit/test_subsystem_<nome>.py` mockando `DaemonContext`.
-
-Exemplo mínimo:
-
-```python
-# src/hefesto_dualsense4unix/daemon/subsystems/metrics.py
-class MetricsSubsystem:
-    name = "metrics"
-
-    async def start(self, ctx: DaemonContext) -> None:
-        self._collector = MetricsCollector(bus=ctx.bus, store=ctx.store)
-        await self._collector.start()
-
-    async def stop(self) -> None:
-        if self._collector:
-            await self._collector.stop()
-
-    def is_enabled(self, config: DaemonConfig) -> bool:
-        return config.metrics_enabled
-```
+1. Escrever o subsystem em `src/hefesto_dualsense4unix/daemon/subsystems/<nome>.py`.
+2. Acrescentar **uma entrada** `Passo(...)` ao `SUBSYSTEM_REGISTRY` em `subsystems/__init__.py`, com a partida,
+   a condição `quando` (se depende da config), a parada e a posição `parar_em` entre as vizinhas.
+3. Não tocar em `Daemon.run()` nem em `connection.shutdown`: eles só percorrem a lista. A régua
+   (`tests/unit/test_o_subsystem_sobe_e_desce_por_uma_lista_so.py`) reprova a classe `*Subsystem` que
+   ficar fora da lista e o `_safe_start` escrito fora dela.
+4. Criar o teste do gate e da parada em `tests/unit/test_subsystem_<nome>.py`.
 
 ## Consequências
 
@@ -95,8 +83,8 @@ class MetricsSubsystem:
 
 - Cada subsystem pode ser testado em isolamento (mockando `DaemonContext`).
 - `lifecycle.py` reduzido de 677L para ~365L (com backcompat total).
-- Adicionar novo subsystem requer apenas criar um arquivo e registrá-lo.
-- Separação de responsabilidades clara: poll != ipc != udp != rumble.
+- Adicionar novo subsystem requer apenas criar o arquivo e acrescentar uma entrada à lista.
+- A ordem de partida e a de parada moram num lugar só, e a régua reprova o que sobe sem descer.
 
 ### Negativas
 
