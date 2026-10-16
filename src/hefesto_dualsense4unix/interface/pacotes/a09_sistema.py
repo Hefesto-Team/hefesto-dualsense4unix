@@ -72,6 +72,7 @@ from . import (
     Contexto,
     identidade_de,
     jogador_de,
+    na_fila,
     perfil,
     poda,
     registrar,
@@ -2690,6 +2691,11 @@ def corrigir_vulkan(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 SEGUNDOS_DO_DUPLO_CLIQUE = 0.5
 _ULTIMO_CLIQUE_DAS_CORRECOES: dict[str, float] = {}
 
+#: A fila do guarda do jogo novo, fora da de quem grava: o `garantir` recarrega o systemd, e o
+#: segundo clique do duplo esperaria esse recarregar na fila de quem grava antes de medir o
+#: relógio, virando dois cliques simples.
+FILA_DO_VIGIA = "vigia do jogo novo"
+
 
 def _relogio() -> float:
     return time.monotonic()
@@ -2764,7 +2770,7 @@ def correcoes_automaticas(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     duplo = agora - _ULTIMO_CLIQUE_DAS_CORRECOES.get("t", -1e9) < SEGUNDOS_DO_DUPLO_CLIQUE
     _ULTIMO_CLIQUE_DAS_CORRECOES["t"] = -1e9 if duplo else agora
     _guardar_o_interruptor(True if duplo else not _vigia.interruptor_ligado())
-    _vigia.garantir()
+    na_fila([FILA_DO_VIGIA], _vigia.garantir, nome=FILA_DO_VIGIA)
     _LENTO.clear()
     _BARATO.clear()
     if duplo:

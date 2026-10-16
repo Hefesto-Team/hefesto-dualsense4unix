@@ -23,6 +23,9 @@ Mordidas (cada uma arrancada, vista reprovar e devolvida; as vistas estão no re
   :func:`test_a_linha_do_gamepad_virtual`;
 * o interruptor que não grava o arquivo, ou que não reaplica no duplo clique:
   :func:`test_o_interruptor_alterna_e_o_duplo_clique_reaplica`;
+* o ``garantir`` do guarda de volta ao fio do gesto, onde o recarregar do systemd atrasa o
+  segundo clique além do meio segundo:
+  :func:`test_o_duplo_clique_nao_espera_o_systemd_do_primeiro`;
 * o tamanho que aceita valor de fora da lista: :func:`test_o_tamanho_so_aceita_os_tres_da_lista`.
 """
 
@@ -31,6 +34,7 @@ from __future__ import annotations
 import json
 import pathlib
 import re
+import threading
 from typing import Any
 
 import pytest
@@ -354,6 +358,46 @@ def test_o_interruptor_alterna_e_o_duplo_clique_reaplica(
     a09.correcoes_automaticas(_ctx(), {}, None)
     assert a09._vigia.interruptor_ligado() is False, "o terceiro clique seguido volta a alternar"
     assert reaplicou == ["sim"]
+
+
+def test_o_duplo_clique_nao_espera_o_systemd_do_primeiro(
+        monkeypatch: pytest.MonkeyPatch, casa: pathlib.Path) -> None:
+    """O gesto grava o interruptor e volta; o guarda se põe em dia na fila dele.
+
+    A fila de quem grava só solta o segundo clique quando o primeiro termina, e é ali que o
+    relógio do duplo clique é lido. Com o recarregar do systemd no fio do gesto, um primeiro
+    clique que leva mais de meio segundo fazia do duplo dois cliques simples.
+    """
+    relogio = [100.0]
+    monkeypatch.setattr(a09, "_relogio", lambda: relogio[0])
+    reaplicou: list[str] = []
+    monkeypatch.setattr(a09, "_reaplicar_as_correcoes",
+                        lambda: reaplicou.append("sim") or "Reaplicado.")
+    solta = threading.Event()
+    vistos: list[bool] = []
+
+    def garantir_lento() -> str:
+        solta.wait(5)
+        vistos.append(a09._vigia.interruptor_ligado())
+        return "escrito"
+
+    monkeypatch.setattr(a09._vigia, "garantir", garantir_lento)
+    primeiro = threading.Thread(target=a09.correcoes_automaticas, args=(_ctx(), {}, None))
+    primeiro.start()
+    primeiro.join(1.0)
+    voltou = not primeiro.is_alive()
+    relogio[0] += 0.2
+    if voltou:
+        a09.correcoes_automaticas(_ctx(), {}, None)
+    solta.set()
+    primeiro.join(5)
+    for _ in range(50):
+        if len(vistos) >= 2:
+            break
+        threading.Event().wait(0.05)
+    assert voltou, "o clique esperou o guarda (o systemd) antes de voltar"
+    assert reaplicou == ["sim"], "o segundo clique em 0,2 s é o duplo e reaplica"
+    assert vistos == [True, True], "o guarda roda uma vez por clique, depois de gravado"
 
 
 def test_reaplicar_roda_o_doctor_os_lancadores_o_vulkan_e_o_proton(
