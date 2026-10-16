@@ -322,6 +322,7 @@ def test_o_endereco_do_jogo_nao_sai_no_veredito_no_repr_no_json_nem_no_log(
 
 
 def test_o_prontuario_traz_o_campo_kit_e_o_veredito_do_controle_nao_muda(lar: Path) -> None:
+    # D-1610-O-KIT-DE-BRINQUEDO-SE-RECONHECE-PELA-PASTA
     """O jogo com o kit e o jogo sem ele, iguais no resto, têm o mesmo veredito e estorvos."""
     _unity(lar, "720040", produto="Com Kit", salvo=_salvo())
     _unity(lar, "720041", produto="Sem Kit", com_o_kit=False)

@@ -81,6 +81,7 @@ def test_a_tabela_traz_a_receita_do_kit_sem_appid_embarcado() -> None:
 def test_o_jogo_com_a_dll_do_kit_recebe_o_override_mesmo_com_o_nome_da_pasta_diferente(
     lar: Path,
 ) -> None:
+    # D-1610-A-DLL-DO-KIT-DA-LOVENSE-SE-DESLIGA-PELA-PASTA
     raiz = _jogo_unity(lar, "710001", produto="Third Crisis Neon Nights")
     assert rda.ambiente_do_jogo(raiz) == {"WINEDLLOVERRIDES": _ESPERADO}
     assert rda.pecas_que_faltam(raiz) == (), "a DLL do sinal é a própria peça: nada falta"
