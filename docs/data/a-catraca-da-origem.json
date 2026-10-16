@@ -249,14 +249,14 @@
       "data": "2026-10-16",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1112352,
+      "piso": 1115076,
       "por_item": {
-        "docs": 118958,
-        "scripts": 114038,
-        "src": 297584,
-        "tests": 581772
+        "docs": 118985,
+        "scripts": 114042,
+        "src": 298778,
+        "tests": 583271
       },
-      "razao": "tamanho: +13194 linhas (1099158 -> 1112352), pagas por Origem: D-1610-UM-INTERRUPTOR-SO-PARA-AS-CORRECOES; registrado no fecho, topo 6719aa29a7b7",
+      "razao": "tamanho: +2724 linhas (1112352 -> 1115076), pagas por Origem: D-1610-AS-LISTAS-DE-EFEITO-POR-CONTROLE-NA-ABA-VIBRACAO, vibracao.haptics_vcm, vibracao.rumble.direito, vibracao.rumble.esquerdo; registrado no fecho, topo b7112369c7b8",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -449,10 +449,16 @@
           "de": 1099158,
           "para": 1112352,
           "razao": "tamanho: +13194 linhas (1099158 -> 1112352), pagas por Origem: D-1610-UM-INTERRUPTOR-SO-PARA-AS-CORRECOES; registrado no fecho, topo 6719aa29a7b7"
+        },
+        {
+          "data": "2026-10-16",
+          "de": 1112352,
+          "para": 1115076,
+          "razao": "tamanho: +2724 linhas (1112352 -> 1115076), pagas por Origem: D-1610-AS-LISTAS-DE-EFEITO-POR-CONTROLE-NA-ABA-VIBRACAO, vibracao.haptics_vcm, vibracao.rumble.direito, vibracao.rumble.esquerdo; registrado no fecho, topo b7112369c7b8"
         }
       ],
       "unidade": "linhas",
-      "universo": 2891
+      "universo": 2896
     }
   }
 }
