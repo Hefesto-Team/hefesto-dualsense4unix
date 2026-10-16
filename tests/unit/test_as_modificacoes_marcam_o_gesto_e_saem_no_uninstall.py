@@ -199,6 +199,7 @@ def test_a_marca_chega_ao_loader_de_verdade(
 def test_a_versao_anterior_que_nao_parou_recusa_e_o_codigo_antigo_fica(
     lar: Lugares, curto: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    # D-1610-O-INSTALAR-RECUSA-SE-A-ANTERIOR-NAO-PAROU
     pasta = _pasta_do_mod(curto / "fontes")
     instalar(str(pasta), lugares=lar)
     _ligar_vendo("exemplo", lar)
@@ -243,6 +244,7 @@ def _trocar_o_pedido_no_disco(lar: Lugares, permissoes: list[str]) -> None:
 def test_o_ligar_recusa_se_o_manifesto_do_disco_pede_outra_lista(
     lar: Lugares, curto: Path
 ) -> None:
+    # D-1610-O-LIGAR-PEDE-O-QUE-FOI-VISTO
     instalar(str(_pasta_do_mod(curto / "fontes")), lugares=lar)
     vistas = list(manifesto_instalado("exemplo", lugares=lar).permissoes)
     _trocar_o_pedido_no_disco(lar, [*vistas, "rede:internet"])
@@ -439,6 +441,7 @@ def test_o_ensaio_diz_o_que_faria_e_nao_mata(
 def test_por_padrao_o_codigo_os_dados_e_o_registro_ficam_e_o_uninstall_diz(
     tmp_path: Path, casa: tuple[Any, Path, list[subprocess.Popen[bytes]]]
 ) -> None:
+    # D-1610-AS-EXTENSOES-NO-UNINSTALL-FICAM-E-PARAM
     lugares = _instalar_de_mentira(casa[0], casa[2])
     fora = _rodar(casa, tmp_path, "--yes")
     assert all(p.exists() for p in lugares.values()), lugares

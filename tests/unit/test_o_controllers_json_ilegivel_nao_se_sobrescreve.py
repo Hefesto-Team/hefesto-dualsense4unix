@@ -117,6 +117,7 @@ def _a_escrita_seguinte(
 def test_o_arquivo_truncado_avisa_e_o_original_fica_guardado_ao_lado(
     casa: Path, dono: tuple[str, Callable[[str], Any], str, str, str]
 ) -> None:
+    # D-1610-O-CONTROLLERS-JSON-ILEGIVEL-VAI-PARA-O-LADO
     rotulo, grava, kind, primeiro, segundo = dono
     grava(primeiro)
     inteiro = _arquivo(casa).read_text(encoding="utf-8")
