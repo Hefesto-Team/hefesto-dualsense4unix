@@ -448,7 +448,7 @@ class _Ponte:
 
 def test_salvar_o_registro_grava_o_painel_mascarado(
         monkeypatch: pytest.MonkeyPatch, casa: pathlib.Path) -> None:
-    mac = "02:fe:11:22:33:44"
+    mac = "aa:bb:cc:12:34:44"
     estado = _estado()
     estado["controllers"][0]["uniq"] = mac
     a09._para_o_painel(f"controle {mac} ligado")
