@@ -17,7 +17,8 @@ MORDIDAS (cada uma foi feita, vista reprovar e devolvida):
 - `await self._safe_start("fora", ...)` no `run()` reprova (1) e (3);
 - a parada de uma entrada arrancada (`parada=_parar_bt_mic`) reprova (1);
 - `parar()` presa a uma cópia da lista de import reprova (2);
-- `parar_em` de uma entrada trocado de lugar reprova (1).
+- `parar_em` de uma entrada trocado de lugar reprova (1);
+- a parada do broker sem o `finally` (o executor que falha pula o cliente) reprova (4).
 """
 from __future__ import annotations
 
@@ -314,3 +315,42 @@ async def test_um_subsystem_de_mentira_acrescentado_so_a_lista_sobe_e_para(
     )
     assert paradas[-1] == "controle"
     assert daemon._failed_subsystems == {}
+
+
+# -- a parada que falha não pula a seguinte, e deixa rastro ----------------------
+
+
+@pytest.mark.asyncio
+async def test_a_parada_do_broker_com_o_executor_quebrado_ainda_solta_o_cliente() -> None:
+    """O executor que levanta não pode deixar o cliente aberto; a falha chega ao `parar`,
+    que a escreve no diário e segue para o passo seguinte."""
+    fechou: list[str] = []
+
+    class _Executor:
+        def shutdown(self, **_: Any) -> None:
+            raise RuntimeError("executor quebrado")
+
+    class _Cliente:
+        def close(self) -> None:
+            fechou.append("cliente")
+
+    daemon = type("D", (), {})()
+    daemon._hidraw_broker_executor = _Executor()
+    daemon._hidraw_broker_client = _Cliente()
+    broker = next(p for p in SUBSYSTEM_REGISTRY if p.nome == "broker")
+    outro: list[str] = []
+    passos = (
+        broker,
+        Passo("depois", parada=lambda d: outro.append("seguiu"),
+              parar_em=(broker.parar_em or 0) + 1),
+    )
+    original = lista.SUBSYSTEM_REGISTRY
+    lista.SUBSYSTEM_REGISTRY = passos  # type: ignore[assignment]
+    try:
+        await lista.parar(daemon)
+    finally:
+        lista.SUBSYSTEM_REGISTRY = original
+    assert fechou == ["cliente"], "o cliente do broker ficou aberto"
+    assert daemon._hidraw_broker_executor is None
+    assert daemon._hidraw_broker_client is None
+    assert outro == ["seguiu"], "a parada seguinte não rodou"
