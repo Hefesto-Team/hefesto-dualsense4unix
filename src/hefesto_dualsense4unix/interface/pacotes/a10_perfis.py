@@ -1001,6 +1001,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     alvo_do_editor = str(editor.get("alvo") or "")
     for valor in ALVOS_DO_PERFIL:
         fora[f"editor.alvo.{valor}"] = "sim" if valor == alvo_do_editor else ""
+    # «Qual vale primeiro» só aparece com dois perfis do mesmo jogo (a lista vem em `blocos`).
+    fora["editor.ordem.ha"] = "sim" if len(editor.get("ordem") or []) >= 2 else ""
 
     exigencia = _exigencia_para_esta_tela(getattr(alvo, "match", None))
     fora["editor.jogo.exigencia"] = exigencia

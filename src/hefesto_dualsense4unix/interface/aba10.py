@@ -929,8 +929,9 @@ CSS = CSS_GLIFO + """
   .ev-val .ev-cmd{flex:1;min-width:0}
   .campo select.estreito{flex:1 1 auto;width:100%}
   /* «Qual vale primeiro»: só aparece com dois perfis do mesmo jogo */
-  .ordem-vale{margin:4px 0 8px}
-  .ordem-vale:has(ol:empty){display:none}
+  .ordem-vale{margin:4px 0 8px;display:none}
+  /* a classe vem do pacote: o `:has(ol:empty)` não se recalcula no WebKitGTK quando o `<ol>` enche */
+  .ordem-vale.on{display:block}
   .ordem-vale .cab{font-size:11.5px;font-weight:700;color:var(--fg);margin:0 0 4px}
   .ordem-vale ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
   .ordem-vale li{display:flex;align-items:center;gap:8px;height:28px;padding:0 10px;font-size:12px;
@@ -1533,7 +1534,7 @@ MIOLO = f'''
 {opts(ESTILOS, "", vazio=True)}
                 </select></span>
               </div>
-              <div class="ordem-vale">
+              <div class="ordem-vale on" data-hef="editor.ordem.ha" data-hef-alvo="classe" data-hef-classe="on">
                 <div class="cab" data-dica="Arraste: o de cima vale quando os dois servem">Qual vale primeiro</div>
                 <ol data-hef="editor.ordem">
 {chr(10).join(item_da_ordem(n, i, n == PERFIL_DO_EDITOR) for i, n in enumerate(ORDEM_DO_DESENHO, 1))}
@@ -1943,9 +1944,9 @@ def _conferir(html: str) -> None:
     exigir('class="campo so-eventos"' in html and 'hidden' not in
            re.search(r'<div class="campo so-eventos"[^>]*>', html).group(0),
            "o «Quando» perdeu a classe `so-eventos` ou ganhou `hidden` (quem esconde é o CSS)")
-    exigir('data-hef="editor.ordem"' in html and 'class="ordem-vale"' in html,
+    exigir('data-hef="editor.ordem"' in html and 'class="ordem-vale on"' in html,
            "o bloco «Qual vale primeiro» sumiu")
-    exigir(".ordem-vale:has(ol:empty){display:none}" in html,
+    exigir(".ordem-vale.on{display:block}" in html and 'data-hef="editor.ordem.ha"' in html,
            "«Qual vale primeiro» deixou de sumir com menos de dois perfis no jogo")
 
     exigir("--rot-p:86px" in html,

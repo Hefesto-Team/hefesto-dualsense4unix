@@ -21,7 +21,9 @@ MORDIDAS (cada uma foi feita e viu reprovar):
 * devolver o seletor `[data-hef="editor.ordem"] ol` ->
   `test_todo_bloco_do_pacote_acha_um_lugar_na_pagina` (a lista do desenho ficava na tela);
 * devolver `.ev-val select{flex:0 0 150px}`, que o `.campo select.estreito` vence ->
-  `test_o_quando_divide_a_linha_com_o_comando` (o comando ficava com 22 px).
+  `test_o_quando_divide_a_linha_com_o_comando` (o comando ficava com 22 px);
+* esconder pelo `:has(ol:empty)` ou emitir `editor.ordem.ha` sempre cheio ->
+  `test_qual_vale_primeiro_aparece_so_com_dois_perfis_do_jogo`.
 """
 from __future__ import annotations
 
@@ -277,6 +279,24 @@ def test_todo_momento_do_desenho_existe_no_produto() -> None:
 
 
 # --- «Qual vale primeiro» -------------------------------------------------------------------------
+
+
+def test_qual_vale_primeiro_aparece_so_com_dois_perfis_do_jogo(lar: Path) -> None:
+    """A classe `on` vem do pacote; o `:has(ol:empty)` não se recalcula no WebKitGTK.
+
+    Medido na bancada (15/10/2026): com «Pragmata» e «Pragmata online», os dois `<li>` chegavam ao
+    `<ol>` e o bloco seguia `display:none`, pois o `:has` ficou com a leitura do `<ol>` vazio.
+    """
+    _guardar("Pragmata", 30, "steam_app_3357650")
+    _guardar("Navegar", 0)
+    _aberto("Pragmata")
+    ctx = _ctx("Pragmata")
+    assert a10_perfis.pacote(ctx)["editor.ordem.ha"] == ""
+    _guardar("Pragmata online", 20, "steam_app_3357650")
+    fora = a10_perfis.pacote(ctx)
+    assert fora["editor.ordem.ha"] == "sim"
+    assert fora["blocos"][a10_perfis.SELETOR_DA_ORDEM].count("<li") == 2
+    assert ":has(ol:empty)" not in _desenho()
 
 
 def test_os_valores_da_nova_ordem_nunca_empatam_e_respeitam_o_teto() -> None:
