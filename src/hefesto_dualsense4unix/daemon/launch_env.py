@@ -1072,6 +1072,13 @@ def compose_env(
     # O `SDL_GAMECONTROLLER_IGNORE_DEVICES` esconde o DualSense físico do SDL
     # passava trivialmente sobre uma lista incompleta. Com 2 DualSense físicos
     tem_cobertura = cobertura_total(backends=backends, fisicos=fisicos)
+    # O script `proton` do GE apaga o IGNORE no ramo Wayland com o Steam Input
+    # desligado (11-7 `:2640-2641`), e o físico segue escondido sem ele: o winebus
+    # do GE ignora todo Sony no barramento SDL (patches 0014 e 0177, «ignoring SDL
+    # Sony controller»), o udev adia o evdev, e o `PROTON_DISABLE_HIDRAW` que o
+    # ramo não toca fecha o hidraw (A-MASCARA-DUALSENSE-SOBREVIVE-AO-SCRIPT-DO-GE-…).
+    # O `PROTON_SONY_AUTO_XINPUT` do 11-8 (`setdefault`) não se compõe aqui: a
+    # opção por jogo chega depois destas envs no `exec env` do wrapper.
     if not native_mode and emulation_enabled and backends:
         if flavor in _MASCARAS_SO_EVDEV:
             env["SDL_JOYSTICK_HIDAPI"] = "0"

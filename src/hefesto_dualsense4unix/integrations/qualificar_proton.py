@@ -35,6 +35,9 @@ CONTRATO_DE_STRINGS: tuple[tuple[str, tuple[str, ...], str], ...] = (
      "PROTON_DISABLE_HIDRAW"),
     ("winebus", ("x86_64-unix/winebus.so", "x86_64-windows/winebus.sys"),
      "SDL_GAMECONTROLLER_IGNORE_DEVICES"),
+    # o barramento SDL ignora o Sony (patches 0014 e 0177 do GE): sem o IGNORE,
+    # que o ramo Wayland apaga, é isto que esconde o físico do jogo
+    ("winebus", ("x86_64-unix/winebus.so",), "hidraw handles native reports"),
     ("winepulse", ("x86_64-unix/winepulse.so",), "Speaker__sink"),
     ("winepulse", ("x86_64-unix/winepulse.so",), "Wireless_Controller"),
     ("winepulse", ("x86_64-unix/winepulse.so",), "PROTON_DUALSENSE_SPLIT_AUDIO"),
