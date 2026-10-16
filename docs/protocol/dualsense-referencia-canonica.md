@@ -666,7 +666,7 @@ a concordância entre elas não prova independência, por isso não sobe o grau)
 | porta do alto-falante do controle | `PADSPK = 4` | **MÉDIA** (fontes que concordam, origem não declarada) | `boykopovar/AnyPS5@d592d54e11:core/libs/prx/libSceAudioOut/src/AudioOut.cpp:24`; `shadps4/shadPS4@e0a46675:audioout.h:52` (API do PS4); `KytyPS5@df5b9b92:src/libs/audio.cpp:25-32` |
 | porta da vibração | `VIBRATION = 10` | **MÉDIA**, idem | `boykopovar/AnyPS5@d592d54e11:core/libs/prx/libSceAudioOut/src/AudioOut.cpp:25`; `KytyPS5@df5b9b92:src/libs/audio.cpp:25-32` |
 | API nova do PS5 (`AudioOut2`): alto-falante e vibração | `0x3` e `0x6` | **BAIXA** (fonte única) | `boykopovar/AnyPS5@d592d54e11:core/libs/prx/libSceAudioOut/src/AudioOut2PadMix.hpp:6-7` |
-| canais de cada uma dessas portas | 1 **ou 2** | **BAIXA**: o fonte aceita os dois; que o PS5 aceite estéreo é SUPOSTO | `boykopovar/AnyPS5@d592d54e11:core/libs/prx/libSceAudioOut/src/AudioOut2PadMix.cpp:43-44` |
+| canais de cada uma dessas portas | 1 **ou 2** | **BAIXA**: o fonte aceita os dois; que o PS5 aceite estéreo é SUPOSTO | `boykopovar/AnyPS5@d592d54e11:core/libs/prx/libSceAudioOut/src/AudioOut2PadMix.cpp:9-10` |
 | volume padrão do alto-falante | 11626 de 32768 (−9 dB), ajustável por `sceAudioOutSetMixLevelPadSpk` | **MÉDIA** no PS4 (`shadps4/shadPS4@e0a46675:audioout.h:23`, comentário «default -9db»), **BAIXA** no PS5 (a AnyPS5 é a única) | `boykopovar/AnyPS5@d592d54e11:core/libs/prx/libSceAudioOut/src/AudioOut.cpp:31` |
 
 O Hefesto não usa nenhum desses números: sob Proton o jogo acha o alto-falante
@@ -870,8 +870,8 @@ em `:1514`, diz que a faixa aceita parece ser `[0x3d..0x64]`.)
   SDL o liga em **todo rumble**, com o comentário `// Disable audio haptics`.
   Quem asserta esse bit troca os VCM de "PCM do jogo" para "rumble emulado".
 - **Por Bluetooth não é áudio, é HID** — palavras do autor do driver:
-  *"special HID packets using Bluetooth"*. Corpo TLV, o bloco `0x12` (o `0x92`
-  no fio) para a háptica (64 bytes), CRC-32 semente `0xA2`. PCM de 3000 Hz, 2
+  *"special HID packets using Bluetooth"*. Corpo TLV, o bloco `0x12` (a tag `0x92`
+  no report) para a háptica (64 bytes), CRC-32 semente `0xA2`. PCM de 3000 Hz, 2
   canais, 8 bits com sinal. **O `0x32` só toca com o bloco `0x11` (o `0x91`,
   AudioControl) ANTES do `0x12`: sem ele o voice-coil não vibra** — **ALTA**,
   medido no aparelho em 18/09/2026 (`scripts/ensaios/historico/a_haptica_pelo_radio.py`),
