@@ -59,6 +59,10 @@ def test_sem_perfil_a_forma_e_o_padrao_do_computador_chegam_ao_tato() -> None:
     assert tv.escolhas_ativas(daemon) == {
         tv.norm_mac(STARLIGHT): "impacto", tv.norm_mac(BRANCO): "estalo"}
     assert tv.escolhas_de_imersao_ativas(daemon) == {tv.norm_mac(STARLIGHT): "batida"}
+    # O computador não guarda gatilho: a vista do perfil vazio não acorda momento nem vibração
+    # do gatilho que ninguém escolheu.
+    assert tv.momentos_ativos(daemon) == tv.SEM_MOMENTOS
+    assert tv.vibracao_do_gatilho_ativa(daemon) == tv.SEM_VIBRACAO
 
 
 def test_nome_vazio_e_nome_ausente_valem_o_mesmo() -> None:
@@ -97,6 +101,7 @@ def test_o_computador_vazio_continua_desligado() -> None:
     assert tv.escolhas_ativas(daemon) == {}
     assert tv.escolhas_de_imersao_ativas(daemon) == {}
     assert tv.momentos_ativos(daemon) == tv.SEM_MOMENTOS
+    assert tv.vibracao_do_gatilho_ativa(daemon) == tv.SEM_VIBRACAO
     assert tv.estilo_ativo(daemon) is None
 
 
