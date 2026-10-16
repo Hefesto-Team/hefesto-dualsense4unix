@@ -113,6 +113,7 @@ def test_a_caixa_da_letra_nao_decide(steam: Path) -> None:
 
 
 def test_os_tres_lancadores_juntos_so_um_sai(steam: Path) -> None:
+    # D-1610-O-PROTON-QUE-SOBRA-CONTA-O-USO-DE-TODO-LANCADOR
     """Um usado só pelo Lutris, outro só pelo Heroic, um pela Steam: o sem uso nenhum é o único."""
     _jogo_do_lutris(steam, "GE-Proton11-1")
     _jogo_do_heroic(steam, "GE-Proton10-34")

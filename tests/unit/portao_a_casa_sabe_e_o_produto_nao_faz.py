@@ -691,6 +691,11 @@ _RODADA_DO_PROTON = (
 )
 
 _NAO_E_PROMESSA: dict[str, str] = {
+    "integrations/pad_usb.py::quem_ficou_no_uhid": (
+        "16/10/2026 — FERRAMENTA DE DIAGNÓSTICO. Quem chama é o `scripts/doctor.sh`, num "
+        "heredoc Python, para dizer que pad ficou no uhid desde o último `daemon_starting`; "
+        "o daemon não precisa da conta, porque é ele quem decide o canal."
+    ),
     "integrations/qualificar_proton.py::Ficha": _RODADA_DO_PROTON,
     "integrations/qualificar_proton.py::a_minima_que_passa": _RODADA_DO_PROTON,
     "integrations/qualificar_proton.py::caminho_do_recibo": _RODADA_DO_PROTON,
@@ -717,6 +722,12 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "e o produto a mostra pela página publicada; o gesto que grava a escolha é "
         "`a08_conexoes.aparelho_tipo`, e a lista das nove respostas é a mesma "
         "(`TIPOS_DA_GRADE`)."
+    ),
+    "interface/monta.py::modo_auto": (
+        "16/10/2026 — é do gerador do desenho, não do produto, como o `par_de_modos`: os "
+        "geradores da 02 à 05 (`interface/aba02.py` a `aba05.py`, a chamada "
+        "`monta_.modo_auto`) escrevem com ela o botão único do «Modo automático»; o "
+        "produto o acende pelo `aria-pressed` da base comum."
     ),
     "interface/monta.py::par_de_modos": (
         "08/10/2026, O-MODO-AUTOMATICO — é do gerador do desenho, não do produto: os geradores "
@@ -1316,15 +1327,6 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "«economia» do cartão na aba Conexões. O caminho se perde porque o cartão deixou de "
         "ter o perfil por controle (A-ABA-CONEXOES-DO-TODO-01) e o selo saiu com ele. Fecha "
         "junto com `perfil_do_controle`, na A-ABA-SISTEMA-DO-TODO-01."
-    ),
-    # sai com: A-ABA-VIBRACAO-DO-TODO-01
-    "interface/monta.py::modo_auto": (
-        "13/10/2026 — o botão único do «Modo automático» (A-BASE-COMUM-DAS-ABAS-01), "
-        "que a base comum já pinta pelo `aria-pressed` e os gestos `modo-da-vibracao` e "
-        "`modo-dos-controles` já gravam. O caminho se perde porque nenhum gerador de aba "
-        "o chama ainda: os pares antigos seguem nas abas 02 a 05. Fecha quando a "
-        "A-ABA-VIBRACAO-DO-TODO-01 trocar o par da 05 por `monta.modo_auto` (o passo 3 "
-        "dela); a 02, a 03 e a 04 seguem nas sprints «do todo» de cada uma."
     ),
     # sai com: AS-MARCAS-VIRAM-OS-ESTILOS-VISUAL-NOVEL-E-ADULTO-01
     "profiles/marcas_do_jogo.py::molde_dos_botoes": (

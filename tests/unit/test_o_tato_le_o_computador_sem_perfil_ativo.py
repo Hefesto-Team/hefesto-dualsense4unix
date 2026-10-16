@@ -48,6 +48,7 @@ def _escolhe(uniq: str, haptico: str | None = None, imersao: str | None = None) 
 
 
 def test_sem_perfil_a_forma_e_o_padrao_do_computador_chegam_ao_tato() -> None:
+    # D-1610-O-TATO-LE-O-COMPUTADOR-SEM-PERFIL-ATIVO
     _escolhe(STARLIGHT, "impacto", "batida")
     _escolhe(BRANCO, "estalo")
     daemon = _daemon(None)

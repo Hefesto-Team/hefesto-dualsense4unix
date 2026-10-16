@@ -282,6 +282,7 @@ def nomes_que_o_codigo_grava() -> dict[str, str]:
 
 
 def test_todo_arquivo_que_o_produto_grava_esta_classificado() -> None:
+    # D-1610-A-MEMORIA-DOS-CONTROLES-CLASSIFICA-O-ULTIMO-JOGO-E-O-DIARIO-DO-USB-COMO-CASA
     faltando = {n: onde for n, onde in nomes_que_o_codigo_grava().items()
                 if n not in m.CLASSIFICACAO}
     assert not faltando, (
