@@ -1119,19 +1119,24 @@ class Daemon:
         return self._native_mode
 
     def _release_controller_to_game(self) -> None:
-        """Neutraliza a saída do hefesto no controle (FEAT-NATIVE-MODE-01)."""
-        from hefesto_dualsense4unix.core.trigger_effects import build_from_name
+        """Neutraliza a saída do hefesto no controle (FEAT-NATIVE-MODE-01).
 
-        with contextlib.suppress(Exception):
-            off = build_from_name("Off", [])
-            self.controller.set_trigger("left", off)
-            self.controller.set_trigger("right", off)
+        O gatilho de todos sai pelo dono do backend depois da queda do vpad (que devolve o efeito
+        do perfil) e antes do mudo, que cala a volta de escrita
+        (QUEM-SOLTA-O-CONTROLE-SOLTA-O-GATILHO-DE-TODOS-01).
+        """
         self.config.rumble_active = None
         self.config.rumble_active_uniq = None
         with contextlib.suppress(Exception):
             self.set_mouse_emulation(False, origin="profile")
         with contextlib.suppress(Exception):
             self.set_gamepad_emulation(False, origin="profile")
+        soltar = getattr(self.controller, "soltar_os_gatilhos", None)
+        if callable(soltar):
+            try:
+                soltar()
+            except Exception as exc:
+                logger.warning("gatilhos_nao_soltos_no_nativo", err=str(exc))
         mute = getattr(self.controller, "set_output_mute", None)
         if callable(mute):
             with contextlib.suppress(Exception):

@@ -3483,6 +3483,60 @@ class PyDualSenseController(IController):
                 palavras[uniq] = palavra
         return palavras
 
+    @staticmethod
+    def _quadro_que_solta_os_gatilhos(desligado: TriggerEffect, *, radio: bool) -> bytearray:
+        """O report que só solta os dois gatilhos: `flag0` `0x04|0x08` e os dois blocos em Off; o
+        resto sai sem autorização, e o firmware conserva a luz, o som e a vibração que tinha."""
+        common = bytearray(rep.COMMON_LEN)
+        common[0] = rep.VALID_FLAG0_RIGHT_TRIGGER_FFB | rep.VALID_FLAG0_LEFT_TRIGGER_FFB
+        bloco = bloco_do_gatilho(int(desligado.mode), desligado.forces)
+        common[10 : 10 + GAME_TRIGGER_BLOCK_LEN] = bloco
+        common[21 : 21 + GAME_TRIGGER_BLOCK_LEN] = bloco
+        return rep.build_bt_report(common, seq=0) if radio else rep.build_usb_report(common)
+
+    def soltar_os_gatilhos(self) -> dict[str, bool]:
+        """Quem solta o controle solta o gatilho de TODOS
+        (QUEM-SOLTA-O-CONTROLE-SOLTA-O-GATILHO-DE-TODOS-01).
+
+        Em cada handle aberto, sem olhar o destino da aba Conexões: tira o bloco cru do jogo, arma
+        Off nos dois lados e escreve na hora o report só dos gatilhos pelo escritor do próprio
+        handle (o `writeReport` carimba o `seq` e o CRC do rádio). Não grava desejo nem override:
+        soltar não é escolha de ninguém. Sob o mudo do Modo Nativo não escreve: o jogo é o dono.
+        Devolve `{key: o quadro saiu inteiro}`.
+        """
+        from hefesto_dualsense4unix.core.trigger_effects import build_from_name
+
+        desligado = build_from_name("Off", [])
+        with self._io_lock:
+            if self._output_mute:
+                logger.info("gatilhos_nao_soltos_sob_o_mudo", controles=len(self._handles))
+                return {}
+            alvos = list(self._handles.items())
+        resultado: dict[str, bool] = {}
+        for key, handle in alvos:
+            ok = False
+            try:
+                handle._raw_trigger_left = None
+                handle._raw_trigger_right = None
+                self._apply_trigger(handle, "left", desligado)
+                self._apply_trigger(handle, "right", desligado)
+                quadro = self._quadro_que_solta_os_gatilhos(
+                    desligado, radio=self._detect_transport(handle) == "bt"
+                )
+                escritor = getattr(handle, "writeReport", None)
+                if callable(escritor):
+                    escrito = escritor(list(quadro))
+                else:
+                    escrito = getattr(handle, "device", handle).write(bytes(quadro))
+                ok = _escrita_completa(escrito, len(quadro))
+            except Exception as exc:
+                logger.warning("gatilho_solto_falhou", key=key, err=str(exc))
+            resultado[key] = ok
+        logger.info(
+            "gatilhos_soltos", controles=len(resultado), escritos=sum(resultado.values())
+        )
+        return resultado
+
     def set_led(self, color: tuple[int, int, int]) -> None:
         r, g, b = color
         self._for_each_led(

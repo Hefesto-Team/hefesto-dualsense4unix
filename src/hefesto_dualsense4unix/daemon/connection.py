@@ -1325,7 +1325,19 @@ async def parar_as_tarefas(daemon: DaemonProtocol) -> None:
 
 
 async def soltar_o_controle(daemon: DaemonProtocol) -> None:
-    """O último passo da parada: desconecta o controle e fecha os executores."""
+    """O último passo da parada: solta o gatilho de todos, desconecta o controle e fecha os
+    executores.
+
+    O Off sai depois da queda do vpad e do servidor DSX (passos anteriores da lista) e antes do
+    `disconnect`, fora do Modo Nativo, onde o jogo é o dono do gatilho
+    (QUEM-SOLTA-O-CONTROLE-SOLTA-O-GATILHO-DE-TODOS-01).
+    """
+    soltar = getattr(daemon.controller, "soltar_os_gatilhos", None)
+    if callable(soltar) and not _modo_nativo(daemon):
+        try:
+            await daemon._run_blocking(soltar)
+        except Exception as exc:
+            logger.warning("gatilhos_nao_soltos_na_parada", err=str(exc))
     try:
         await daemon._run_blocking(daemon.controller.disconnect)
     except Exception as exc:
