@@ -101,6 +101,27 @@ def _linha_do_tique(counters: Any) -> tuple[str, str] | None:
     )
 
 
+def _linha_da_mascara_pro(estado: Any) -> tuple[str, str] | None:
+    """O que a máscara Pro Controller entrega, quando algum controle a mostra ao jogo agora."""
+    from hefesto_dualsense4unix.integrations.virtual_pad import (
+        LINHA_DA_PRO_NO_UINPUT,
+        o_jogo_ve_a_pro,
+    )
+
+    emulacao = estado.get("gamepad_emulation") if isinstance(estado, dict) else None
+    if not isinstance(emulacao, dict) or not emulacao.get("enabled"):
+        return None
+    # a de cada controle conectado; sem nenhum, a da sessão (a que o próximo veste)
+    por_aparelho = emulacao.get("por_aparelho")
+    if isinstance(por_aparelho, dict) and por_aparelho:
+        mascaras = list(por_aparelho.values())
+    else:
+        mascaras = [emulacao.get("flavor")]
+    if not o_jogo_ve_a_pro(emulacao.get("caminho"), mascaras):
+        return None
+    return ("[INFO]", LINHA_DA_PRO_NO_UINPUT)
+
+
 _ROTULO_DO_TRANSPORTE = {"usb": "cabo", "bt": "rádio"}
 
 
@@ -171,6 +192,9 @@ async def _daemon_checks() -> list[tuple[str, str]]:
             )
             if linha_do_tique is not None:
                 rows.append(linha_do_tique)
+            linha_da_pro = _linha_da_mascara_pro(estado)
+            if linha_da_pro is not None:
+                rows.append(linha_da_pro)
             try:
                 controles = await client.call("controller.list")
             except IpcError:

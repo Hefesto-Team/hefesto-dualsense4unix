@@ -64,6 +64,26 @@ MASCARA_DO_CANAL_COMUM = "xbox"
 #: que a fábrica faz, e é este nome que o diário e o pad (`troca_motivo`) levam.
 MOTIVO_MODO_XBOX_ESCOLHIDO = "modo_xbox_escolhido"
 
+#: A máscara Pro Controller nasce no `uinput` em todo modo (o passo 0 da
+#: O-PRO-CONTROLLER-GANHA-O-CANAL-COM-HIDRAW-01, 16/10/2026): o winebus do Proton só dá hidraw
+#: por padrão ao DualSense, ao DualShock 4 e a volantes e manches da lista
+#: (`dlls/winebus.sys/main.c`, `is_hidraw_enabled`, :543-667); a Pro só o ganharia pela
+#: `PROTON_ENABLE_HIDRAW`, que não se liga sem a prova no aparelho. É a linha do doctor.
+LINHA_DA_PRO_NO_UINPUT = (
+    "a máscara Pro Controller vai ao jogo pelo uinput: os botões, os analógicos e a vibração, "
+    "sem o giroscópio e as luzes de jogador, porque o Proton só dá hidraw ao DualSense e ao "
+    "DualShock 4"
+)
+
+
+def o_jogo_ve_a_pro(caminho: object, mascaras: object) -> bool:
+    """Algum controle mostra a Pro ao jogo? ``mascaras``: as de cada aparelho, ou a da sessão."""
+    if isinstance(mascaras, str) or not isinstance(mascaras, (list, tuple, set, frozenset)):
+        return False
+    return any(
+        isinstance(m, str) and mascara_no_jogo(caminho, m) == "nintendo" for m in mascaras
+    )
+
 
 def normalizar_caminho(valor: object) -> str | None:
     """O caminho reconhecido, ou ``None`` — e ``None`` é *"ninguém escolheu"*."""
@@ -505,6 +525,7 @@ __all__ = [
     "CAMINHOS",
     "CAMINHO_DUALSENSE",
     "CAMINHO_XBOX",
+    "LINHA_DA_PRO_NO_UINPUT",
     "MASCARA_DO_CANAL_COMUM",
     "MOTIVO_MODO_XBOX_ESCOLHIDO",
     "UHID_BIND_TIMEOUT_S",
@@ -517,5 +538,6 @@ __all__ = [
     "motivo_da_troca",
     "normalizar_caminho",
     "o_aparelho_mudou",
+    "o_jogo_ve_a_pro",
     "quer_uhid",
 ]
