@@ -2330,14 +2330,14 @@ class PyDualSenseController(IController):
             ]
         for key, handle, node, desired, transport in reclaim_candidates:
             with contextlib.suppress(Exception):
-                self._esquecer_a_luz_que_o_kernel_perdeu(
-                    key, handle, node, desired.led, transport
-                )
+                self._esquecer_a_luz_que_o_kernel_perdeu(key, handle, node, desired.led, transport)
 
         self._refresh_sysfs_leds()
         for key, handle in new_handles:
             with contextlib.suppress(Exception):
                 self.assumir_volume_padrao_na_adocao(key, handle)
+            with contextlib.suppress(Exception):
+                _vigiar_o_ps_segurado(self, key, handle)  # o PS segurado por 10 s desliga
             self._conhecer_o_firmware(key, handle)
             self._reapply_desired(key, handle)
         # acabaram de surgir. Sintoma provado ao vivo: boot com os DualSense
@@ -5477,6 +5477,36 @@ class PyDualSenseController(IController):
         """O contador das repinturas da luz resolvida; só sobe, e o ``luz_animada`` o lê."""
         return self._repinturas_da_luz
 
+    def desligar_o_controle(self, uniq: str) -> bool:
+        """Desliga UM controle, pelo endereço dele, sem tocar nos outros do mesmo adaptador.
+
+        O-CONTROLE-SE-DESLIGA-PELO-BOTAO-PELO-GESTO-E-PELA-OCIOSIDADE-01: o SET_FEATURE `0x08`
+        («Set Bluetooth Control», 47 B, `buf[1] = 2`) sai no hidraw DESTE controle, assinado com a
+        semente de escrita `0x53`. Só pelo rádio: no cabo a energia vem do fio e o efeito do `0x08`
+        não foi medido, então o verbo recusa sem escrever. Devolve se o pedido saiu inteiro.
+        """
+        mascarado = _endereco_mascarado(uniq)
+        with self._io_lock:
+            key = self._key_for_uniq(uniq)
+            handle = self._handles.get(key) if key is not None else None
+            caminho = getattr(handle, "_pinned_path", None)
+            if handle is None or not isinstance(caminho, bytes):
+                logger.info("controle_desligar_recusado", uniq=mascarado, motivo="sem_controle")
+                return False
+            if self._detect_transport(handle) != "bt":
+                logger.info("controle_desligar_recusado", uniq=mascarado, motivo="cabo")
+                return False
+            pedido = pedido_de_desligar()
+            try:
+                escritos = _write_feature_via_hidraw(
+                    caminho.decode("utf-8", "replace"), pedido, opener=self._feature_opener
+                )
+            except OSError as exc:
+                logger.warning("controle_desligar_falhou", uniq=mascarado, err=str(exc))
+                return False
+        logger.info("controle_desligado", uniq=mascarado, escritos=escritos)
+        return escritos == len(pedido)
+
 
 #: (`battery_pct=..., battery_state=...`) e o `**self._carga(...)` no
 ESTADO_DE_CARGA: dict[int, str] = {
@@ -5591,3 +5621,108 @@ def _entregar_a_luz_do_mic_no_nativo(controle: Any, handle: Any) -> None:
     radio = PyDualSenseController._detect_transport(handle) == "bt"
     if not escrever_so_a_luz_do_mic(handle, radio=radio):
         raise RuntimeError("a luz do microfone não saiu no report mínimo do Modo Nativo")
+
+
+#: O SET_FEATURE «Set Bluetooth Control» do DualSense: 47 B, `buf[1] = 2` desliga
+#: (`docs/protocol/dualsense-plataforma-e-identidade.md`, a tabela das features).
+_FEATURE_DO_RADIO_ID = 0x08
+_FEATURE_DO_RADIO_TAMANHO = 47
+_DESLIGAR_O_RADIO = 0x02
+
+#: Quanto tempo o PS segurado desliga o controle (ordem de 13/10/2026), e o relógio do prazo.
+SEGUNDOS_DO_PS_QUE_DESLIGA: float = 10.0
+_TEMPORIZADOR_DO_PS: Callable[..., Any] = threading.Timer
+
+#: As bordas dos botões digitais da pydualsense: apertar qualquer um com o PS seguro faz do gesto
+#: um combo (os Gestos do PS da aba Navegação), e o prazo cai.
+_OS_OUTROS_BOTOES = (
+    "triangle_pressed", "circle_pressed", "cross_pressed", "square_pressed",
+    "dpad_up", "dpad_down", "dpad_left", "dpad_right", "r1_changed", "r3_changed",
+    "l1_changed", "l3_changed", "touch_pressed", "microphone_pressed", "share_pressed",
+    "option_pressed",
+)
+
+
+def pedido_de_desligar() -> bytes:
+    """O `0x08` com `buf[1] = 2`, assinado para o rádio pelo dono da assinatura de escrita."""
+    from hefesto_dualsense4unix.integrations.cor_do_plastico import envelope_de_radio
+
+    pedido = bytearray(_FEATURE_DO_RADIO_TAMANHO)
+    pedido[0] = _FEATURE_DO_RADIO_ID
+    pedido[1] = _DESLIGAR_O_RADIO
+    return envelope_de_radio(bytes(pedido))
+
+
+def _write_feature_via_hidraw(
+    path: str, data: bytes, opener: Callable[[str], int] | None = None
+) -> int:
+    """SET_REPORT de feature (HIDIOCSFEATURE) num fd efêmero; irmã de `_read_feature_via_hidraw`."""
+    fd = opener(path) if opener is not None else os.open(path, os.O_RDWR)
+    try:
+        buf = bytearray(data)
+        request = (3 << 30) | (len(buf) << 16) | (ord("H") << 8) | 0x06
+        return int(fcntl.ioctl(fd, request, buf, True))
+    finally:
+        os.close(fd)
+
+
+class _VigiaDoPs:
+    """Segurar o PS SOZINHO por 10 s desliga ESTE controle; soltar antes, ou apertar outro botão
+    junto, cancela.
+
+    Assina a borda `ps_pressed` da pydualsense, que dispara no `readInput` de todo handle, em todo
+    modo e nos dois transportes. O prazo corre num `threading.Timer` próprio, fora da thread de
+    report; ao vencer, só desliga se o handle ainda é o do controle (o controle que caiu e voltou
+    no meio não herda o gesto).
+    """
+
+    def __init__(self, controle: PyDualSenseController, key: str, handle: Any) -> None:
+        self._controle = controle
+        self._key = key
+        self._handle = handle
+        self._lock = threading.Lock()
+        self._prazo: Any = None
+
+    def borda(self, apertado: object) -> None:
+        with self._lock:
+            if self._prazo is not None:
+                self._prazo.cancel()
+                self._prazo = None
+            if apertado:
+                prazo = _TEMPORIZADOR_DO_PS(SEGUNDOS_DO_PS_QUE_DESLIGA, self._disparar)
+                prazo.daemon = True
+                prazo.start()
+                self._prazo = prazo
+
+    def outro_botao(self, apertado: object) -> None:
+        if apertado:
+            with self._lock:
+                if self._prazo is not None:
+                    self._prazo.cancel()
+                    self._prazo = None
+
+    def _disparar(self) -> None:
+        with self._lock:
+            self._prazo = None
+        uniq = PyDualSenseController._key_to_uniq(self._key)
+        with self._controle._io_lock:
+            vivo = self._controle._handles.get(self._key) is self._handle
+        if not vivo or uniq is None:
+            logger.info("controle_desligar_pelo_ps_sem_alvo", vivo=vivo)
+            return
+        logger.info("controle_desligar_pelo_ps", uniq=_endereco_mascarado(uniq))
+        self._controle.desligar_o_controle(uniq)
+
+
+def _vigiar_o_ps_segurado(controle: PyDualSenseController, key: str, handle: Any) -> None:
+    """Na adoção do handle: assina a borda do PS, e a dos outros botões, uma vez por handle."""
+    evento = getattr(handle, "ps_pressed", None)
+    if evento is None or getattr(handle, "_vigia_do_ps", None) is not None:
+        return
+    vigia = _VigiaDoPs(controle, key, handle)
+    handle._vigia_do_ps = vigia
+    evento += vigia.borda
+    for nome in _OS_OUTROS_BOTOES:
+        outro = getattr(handle, nome, None)
+        if outro is not None:
+            outro += vigia.outro_botao
