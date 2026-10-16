@@ -11,7 +11,7 @@ import threading
 import time
 from collections.abc import Awaitable, Callable
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Final, Literal, cast, get_args
 
@@ -4863,12 +4863,28 @@ async def _corpo_do_sinal_de_jogo(daemon: Any) -> None:
         logger.warning("game_signal_tique_falhou", err=str(exc))
 
 
+def _o_movimento_vai_ao_stick(daemon: Any, uniq: str | None) -> bool:
+    """O quadro de movimento da peça ``uniq`` chega ao stick do jogo? Nunca levanta.
+
+    Sim quando o arranjo que vale para ela (o da peça, ou o da mesa) mistura o giro ou a
+    inclinação num analógico (``virtual_aceso``): o stick e o giro saem do mesmo instante.
+    O giro no cursor não conta, e sem arranjo o movimento segue só a manutenção.
+    """
+    from hefesto_dualsense4unix.core import roteador_de_movimento as roteador
+
+    store = getattr(daemon, "store", None)
+    if store is None:
+        return False
+    arranjo = roteador.da_peca(store, uniq, roteador.ativo(store))
+    return arranjo is not None and roteador.virtual_aceso(arranjo)
+
+
 class _OAperto:
     """O evento do aperto de UM laço, e a hora da última volta do jogo."""
 
     __slots__ = ("evento", "laco", "ultima_volta")
 
-    def __init__(self, laco: asyncio.AbstractEventLoop) -> None:
+    def __init__(self, laco: asyncio.AbstractEventLoop, daemon: Any = None) -> None:
         from hefesto_dualsense4unix.core.evdev_reader import definir_o_despertador
 
         self.laco = laco
@@ -4877,10 +4893,11 @@ class _OAperto:
         evento = self.evento
 
         def acordar() -> None:
-            if not laco.is_closed():
+            # Evento já armado: a volta ainda não o comeu, e outra chamada ao laço não muda nada.
+            if not evento.is_set() and not laco.is_closed():
                 laco.call_soon_threadsafe(evento.set)
 
-        definir_o_despertador(acordar)
+        definir_o_despertador(acordar, lambda uniq: _o_movimento_vai_ao_stick(daemon, uniq))
 
 
 def _o_aperto_do_laco(daemon: Any) -> _OAperto:
@@ -4888,7 +4905,7 @@ def _o_aperto_do_laco(daemon: Any) -> _OAperto:
     laco = asyncio.get_running_loop()
     aperto = getattr(daemon, "_o_aperto_do_laco", None)
     if not isinstance(aperto, _OAperto) or aperto.laco is not laco:
-        aperto = _OAperto(laco)
+        aperto = _OAperto(laco, daemon)
         daemon._o_aperto_do_laco = aperto
     return aperto
 
@@ -4930,6 +4947,30 @@ async def _esperar_o_tique(daemon: Any, stop_event: asyncio.Event, timeout: floa
         parada.cancel()
 
 
+def _o_primario_agora(daemon: Any, estado: Any) -> tuple[Any, frozenset[str]]:
+    """O estado do primário com os eixos e os botões do snapshot do leitor de AGORA.
+
+    O ``_last_state`` é o do último tique: os botões o leitor atualiza na hora, os eixos
+    ficariam até 16,7 ms atrás. Os outros jogadores já saem do ``snapshot()`` do leitor
+    (``forward_all``); o primário sai do mesmo lugar, e o ``_last_state`` fica para o estado
+    completo do IPC. Sem leitor disponível, o estado do tique e os botões de sempre.
+    """
+    leitor = getattr(daemon.controller, "_evdev", None)
+    if leitor is None or not leitor.is_available():
+        return estado, daemon._evdev_buttons_once()
+    snap = leitor.snapshot()
+    fresco = replace(
+        estado,
+        l2_raw=snap.l2_raw,
+        r2_raw=snap.r2_raw,
+        raw_lx=snap.lx,
+        raw_ly=snap.ly,
+        raw_rx=snap.rx,
+        raw_ry=snap.ry,
+    )
+    return fresco, frozenset(snap.buttons_pressed)
+
+
 def _volta_do_aperto(daemon: Any) -> None:
     """A volta que o aperto acorda: SÓ o caminho do jogo. Nunca levanta."""
     try:
@@ -4945,7 +4986,8 @@ def _volta_do_aperto(daemon: Any) -> None:
             and estado is not None
             and daemon.controller.is_connected()
         ):
-            daemon._dispatch_gamepad_emulation(estado, daemon._evdev_buttons_once())
+            estado, botoes = _o_primario_agora(daemon, estado)
+            daemon._dispatch_gamepad_emulation(estado, botoes)
     except Exception as exc:
         logger.debug("volta_do_aperto_falhou", err=str(exc))
 

@@ -1484,6 +1484,8 @@ class EvdevReader(_EvdevReconnectLoop):
         # DualSense — lá o eixo existe, e sobrescrevê-lo mataria o analógico.
         self._sintetizar_l2: bool = False
         self._sintetizar_r2: bool = False
+        # Os seis eixos como estavam no último despertar: a âncora do `EV_SYN`.
+        self._ancora: tuple[int, ...] = self._eixos_do_quadro()
 
     def retarget(self, uniq: str | None) -> None:
         """Re-aponta o reader para o controle de MAC `uniq` (normalizado)."""
@@ -1613,6 +1615,7 @@ class EvdevReader(_EvdevReconnectLoop):
             mudancas[campo] = normalizar_eixo(cru, faixa)
         if mudancas:
             self._snapshot = self._with(**mudancas)
+            self._ancora = self._eixos_do_quadro()
             logger.debug("evdev_posicao_semeada", **mudancas)
 
     def _o_kernel_discorda(
@@ -1694,6 +1697,7 @@ class EvdevReader(_EvdevReconnectLoop):
             self._eixos = {}
             self._sintetizar_l2 = False
             self._sintetizar_r2 = False
+            self._ancora = self._eixos_do_quadro()
         self._grab_volta_a_pendente()
 
     _reset_buttons_on_disconnect = _reset_on_disconnect
@@ -1704,9 +1708,38 @@ class EvdevReader(_EvdevReconnectLoop):
             self._handle_abs(event.code, event.value, ecodes)
         elif event.type == ecodes.EV_KEY:
             self._handle_key(event.code, event.value, ecodes)
+        elif (
+            event.type == ecodes.EV_SYN
+            and event.code == ecodes.SYN_REPORT
+            and self._o_quadro_andou()
+        ):
+            _acordar_quem_entrega_ao_jogo()
         depois = self._snapshot.buttons_pressed
         if depois is not antes and depois != antes:
             _acordar_quem_entrega_ao_jogo()
+
+    #: Quantas contagens um eixo anda desde o último despertar para acordar a entrega: o ruído de
+    #: ±1 do stick parado fica abaixo, o movimento da mão fica acima.
+    _CONTAGENS_QUE_ACORDAM: ClassVar[int] = 2
+
+    def _eixos_do_quadro(self) -> tuple[int, ...]:
+        """Os seis eixos do snapshot (sticks e gatilhos), na escala canônica."""
+        s = self._snapshot
+        return (s.lx, s.ly, s.rx, s.ry, s.l2_raw, s.r2_raw)
+
+    def _o_quadro_andou(self) -> bool:
+        """O quadro que o `EV_SYN` fecha move algum eixo `_CONTAGENS_QUE_ACORDAM` ou mais?
+
+        Compara com os eixos do último despertar, não com o quadro anterior: o ±1 do stick
+        parado nunca soma duas contagens, e uma deriva lenta acorda quando soma. Um quadro,
+        um despertar, qualquer que seja o número de eixos que andaram.
+        """
+        agora = self._eixos_do_quadro()
+        limiar = self._CONTAGENS_QUE_ACORDAM
+        if all(abs(a - b) < limiar for a, b in zip(agora, self._ancora, strict=True)):
+            return False
+        self._ancora = agora
+        return True
 
     def _handle_abs(self, code: int, value: int, ecodes: Any) -> None:
         with self._lock:
@@ -2502,6 +2535,7 @@ class MotionSensorReader(_EvdevReconnectLoop):
                 carimbo = float(event.sec) + float(event.usec) / 1e6
                 self._contar_o_pacote(carimbo)
                 self._integrar_o_angulo(carimbo)
+                _acordar_pelo_movimento(self._target_uniq)
             elif event.code == getattr(ecodes, "SYN_DROPPED", 3):
                 self._taxa_perdeu = True
             return
@@ -2631,12 +2665,21 @@ def _esperar_o_aviso(leitor: _EvdevReconnectLoop, aviso: Any) -> bool:
 from collections.abc import Callable  # noqa: E402
 
 _despertador: Callable[[], None] | None = None
+_pergunta_do_movimento: Callable[[str | None], bool] | None = None
 
 
-def definir_o_despertador(acordar: Callable[[], None] | None) -> None:
-    """Liga (ou desliga, com ``None``) quem o leitor acorda num aperto."""
-    global _despertador
+def definir_o_despertador(
+    acordar: Callable[[], None] | None,
+    pergunta_do_movimento: Callable[[str | None], bool] | None = None,
+) -> None:
+    """Liga (ou desliga, com ``None``) quem o leitor acorda num aperto ou num eixo que andou.
+
+    ``pergunta_do_movimento(uniq)`` diz se o quadro de movimento da peça ``uniq`` entra no
+    analógico do jogo (o giro ou a inclinação misturados no stick): só então o quadro acorda.
+    """
+    global _despertador, _pergunta_do_movimento
     _despertador = acordar
+    _pergunta_do_movimento = pergunta_do_movimento
 
 
 def _acordar_quem_entrega_ao_jogo() -> None:
@@ -2648,6 +2691,20 @@ def _acordar_quem_entrega_ao_jogo() -> None:
         acordar()
     except Exception as exc:
         logger.debug("despertador_falhou", err=str(exc))
+
+
+def _acordar_pelo_movimento(uniq: str | None) -> None:
+    """Fechou um quadro de movimento: acorda a entrega se ele chega ao stick. Nunca levanta."""
+    pergunta = _pergunta_do_movimento
+    if pergunta is None:
+        return
+    try:
+        entra = pergunta(uniq)
+    except Exception as exc:
+        logger.debug("pergunta_do_movimento_falhou", err=str(exc))
+        return
+    if entra:
+        _acordar_quem_entrega_ao_jogo()
 
 
 __all__ = [
