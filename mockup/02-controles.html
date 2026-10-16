@@ -4800,6 +4800,87 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     setTimeout(fechar, 0);
   });
 })();
+/* O alcance pelo teclado e pelo controle (A-INTERFACE-INTEIRA-SE-ALCANCA-PELO-CONTROLE-E-PELO-TECLADO-01).
+   Dois contratos, para toda página e para as telas que vierem depois:
+   1. o que o mouse aciona (`data-gesto`, `data-hef-gesto`) tem parada no Tab e responde a Enter e Espaço;
+   2. a tela que abre por cima (`.tela-nova`, por `:target`) é um diálogo: o foco entra nela, o Tab fica
+      nela, Esc a fecha e o foco volta a quem a abriu. */
+(() => {
+  const NATIVO = 'a[href],button,input:not([type=hidden]),select,textarea,summary,[contenteditable=""],[contenteditable="true"]';
+  const GESTO = '[data-gesto],[data-hef-gesto]';
+  const SEM_PARADA = 'option,optgroup,html,body';
+  const aparece = el => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';
+  const jaTemParada = el => el.hasAttribute('tabindex') || el.matches(NATIVO)
+    || Array.from(el.querySelectorAll(NATIVO)).some(d => !d.disabled && aparece(d));
+  const marcar = raiz => {
+    const todos = raiz.matches && raiz.matches(GESTO) ? [raiz] : [];
+    raiz.querySelectorAll && todos.push(...raiz.querySelectorAll(GESTO));
+    for (const el of todos) if (!el.matches(SEM_PARADA) && !jaTemParada(el)) el.setAttribute('tabindex', '0');
+  };
+  marcar(document.body);
+  new MutationObserver(ms => {
+    for (const m of ms) for (const n of m.addedNodes) if (n.nodeType === 1) marcar(n);
+  }).observe(document.body, {subtree: true, childList: true});
+  /* Enter e Espaço fazem o que o clique faz, em quem não é botão por natureza. */
+  document.addEventListener('keydown', e => {
+    if ((e.key !== 'Enter' && e.key !== ' ') || e.defaultPrevented || e.repeat) return;
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    const el = e.target;
+    if (!el || !el.matches || !el.matches(GESTO) || el.matches(NATIVO)) return;
+    e.preventDefault();
+    el.click();
+  });
+  /* A tela por cima. A caixa dela é o diálogo; o nome vem do título quando a página não deu um. */
+  const caixaDe = tela => tela.querySelector('.tn-cx') || tela.firstElementChild;
+  const prepararTelas = () => document.querySelectorAll('.tela-nova').forEach(tela => {
+    const caixa = caixaDe(tela);
+    if (!caixa) return;
+    if (!caixa.hasAttribute('role')) caixa.setAttribute('role', 'dialog');
+    if (!caixa.hasAttribute('aria-modal')) caixa.setAttribute('aria-modal', 'true');
+    const tit = tela.querySelector('.tn-tit');
+    if (tit && !caixa.hasAttribute('aria-label') && !caixa.hasAttribute('aria-labelledby'))
+      caixa.setAttribute('aria-label', tit.textContent.replace(/\s+/g, ' ').trim());
+  });
+  prepararTelas();
+  const PARADAS = 'a[href],button:not([disabled]),input:not([type=hidden]):not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+  const paradasDe = caixa => Array.from(caixa.querySelectorAll(PARADAS)).filter(aparece);
+  const aberta = () => document.querySelector('.tela-nova:target');
+  let quemAbriu = null, ultimo = null, estavaAberta = false;
+  document.addEventListener('focusin', e => { if (!e.target.closest || !e.target.closest('.tela-nova')) ultimo = e.target; });
+  const aoMudar = () => {
+    const tela = aberta();
+    if (tela && !estavaAberta) {
+      quemAbriu = ultimo;
+      const caixa = caixaDe(tela);
+      const alvo = caixa && (caixa.querySelector('[autofocus]') || paradasDe(caixa)[0]);
+      if (alvo) alvo.focus();
+      else if (caixa) { caixa.setAttribute('tabindex', '-1'); caixa.focus(); }
+    } else if (!tela && estavaAberta && quemAbriu && quemAbriu.isConnected) {
+      quemAbriu.focus(); quemAbriu = null;
+    }
+    estavaAberta = !!tela;
+  };
+  /* A âncora do endereço só vira `:target` com a página já lida: o foco entra na volta também. */
+  addEventListener('hashchange', aoMudar);
+  addEventListener('DOMContentLoaded', aoMudar);
+  addEventListener('load', aoMudar);
+  aoMudar();
+  document.addEventListener('keydown', e => {
+    const tela = aberta();
+    if (!tela || e.defaultPrevented) return;
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      const x = tela.querySelector('a.tn-x,.fechar,[data-fechar]');
+      if (x) x.click(); else location.hash = '';
+    } else if (e.key === 'Tab') {
+      const caixa = caixaDe(tela), lista = caixa ? paradasDe(caixa) : [];
+      if (!lista.length) { e.preventDefault(); return; }
+      const dentro = caixa.contains(document.activeElement);
+      const fim = e.shiftKey ? lista[0] : lista[lista.length - 1];
+      if (!dentro || document.activeElement === fim) { e.preventDefault(); (e.shiftKey ? lista[lista.length - 1] : lista[0]).focus(); }
+    }
+  });
+})();
 </script>
 </body>
 </html>

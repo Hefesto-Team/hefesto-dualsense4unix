@@ -2236,12 +2236,17 @@ NAV_INSTALAR = r"""
   if(window.__hefNav) return;
   const SEL = '[data-gesto],[data-modo],[data-hef-gesto],[data-papel],[data-forca],' +
     '[data-player],[data-sensor],[data-rota],[data-mudo],[data-mic-modo],[data-v],' +
-    '.r-aplicar,.r-salvar,.r-importar,.r-exportar';
+    '.r-aplicar,.r-salvar,.r-importar,.r-exportar,a[href],button';
   function aberta(){
-    for(const d of document.querySelectorAll('[role="dialog"]')){
-      if(d.getAttribute('aria-hidden') !== 'true' && !d.hasAttribute('inert')) return d;
+    // Só conta a janela que a pessoa VÊ: a tela por âncora (`.tela-nova`) mora no DOM fechada
+    // (`display:none`), e uma janela escondida não pode prender a seleção de uma página inteira.
+    for(const d of document.querySelectorAll('[role="dialog"],.tela-nova')){
+      if(d.getAttribute('aria-hidden') !== 'true' && !d.hasAttribute('inert') && presente(d)) return d;
     }
     return null;
+  }
+  function presente(el){
+    return el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';
   }
   function visivel(el){
     if(el.closest('[aria-hidden="true"],[inert],[hidden]')) return false;
@@ -2260,8 +2265,10 @@ NAV_INSTALAR = r"""
   function nome(el){
     const d = el.dataset;
     const r = Array.from(el.classList).find(function(k){ return k.indexOf('r-') === 0; }) || '';
+    // O link e o botão sem gesto próprio (a barra das abas, o «Voltar») se chamam pelo destino ou pelo texto.
+    const sem = el.getAttribute('href') || el.id || (el.textContent || '').trim().slice(0, 24);
     return [dono(el), d.gesto || d.hefGesto || d.papel || d.modo || d.forca || d.player ||
-            d.sensor || d.rota || d.mudo || d.micModo || r, d.campo || '', d.v || ''].join('|');
+            d.sensor || d.rota || d.mudo || d.micModo || r || sem, d.campo || '', d.v || ''].join('|');
   }
   function lista(){
     const raiz = aberta() || document;

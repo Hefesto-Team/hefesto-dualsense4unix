@@ -1345,6 +1345,22 @@ ROTEIRO = """
       document.body.classList.remove('arrastando');
       pux.click();
     }, false);
+    // O TECLADO ANDA A DIVISA (A-INTERFACE-INTEIRA-SE-ALCANCA-…-01): a alça tem parada no Tab
+    // (a base comum põe o `tabindex` em todo `data-hef-gesto`), e ← e → mudam a largura 8 px por
+    // vez, com o mesmo piso e teto do arraste. O gesto vai ao Python pelo mesmo `.click()`.
+    document.addEventListener('keydown', function(ev){
+      if(ev.key !== 'ArrowLeft' && ev.key !== 'ArrowRight') return;
+      var pux = ev.target.closest ? ev.target.closest('.puxador') : null;
+      if(!pux) return;
+      var alvo = colDe(pux);
+      var th = pux.closest('th');
+      if(!alvo.col || !th) return;
+      var px = Math.round(th.getBoundingClientRect().width) + (ev.key === 'ArrowRight' ? 8 : -8);
+      px = caber(th, alvo.col, Math.max(PISO, Math.min(TETO, px)));
+      pux.dataset.px = String(px);
+      ev.preventDefault();
+      pux.click();
+    }, false);
 
     // ---- as larguras que voltam do disco ----------------------------------
     // O FORMATO É `coluna:px` separado por `·`, e o travessão é o VAZIO — o
