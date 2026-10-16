@@ -51,6 +51,7 @@ def _forca_da_aba_05(prof: Any, policy: str | None) -> dict[str, Any] | None:
 
 
 def test_economia_na_aba_vibracao_guarda_as_escolhas() -> None:
+    # D-1610-A-FORCA-NAO-APAGA-O-EFEITO-ESCOLHIDO
     """MORDIDA: volte o ``ControllerRumbleOverride(**campos)`` em ``with_controller_rumble``."""
     depois = _forca_da_aba_05(_perfil(**ESCOLHAS), "economia")
     assert depois == {**ESCOLHAS, "policy": "economia"}

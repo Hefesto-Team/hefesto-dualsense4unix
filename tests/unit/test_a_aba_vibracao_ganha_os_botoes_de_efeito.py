@@ -105,6 +105,7 @@ def _rumble_do_disco() -> ControllerRumbleOverride | None:
 
 class TestAsLinhas:
     def test_as_nove_faixas_na_ordem_do_desenho_a(self) -> None:
+        # D-1610-AS-LISTAS-DE-EFEITO-POR-CONTROLE-NA-ABA-VIBRACAO
         """Controle, Modelo, Força, Sensor háptico, Efeito háptico, motores, Efeito imersão, Testar.
 
         MORDIDA: trocar a ordem das duas linhas no gerador reprova.
@@ -221,6 +222,7 @@ class TestOGesto:
     @pytest.mark.parametrize("campo", sorted(GESTOS))
     def test_do_estilo_apaga_a_chave_e_nao_vira_sem_efeito(
             self, perfis: Path, campo: str) -> None:
+        # D-1610-DO-ESTILO-APAGA-A-CHAVE-E-SEM-EFEITO-CALA
         """MORDIDA: gravar o texto `do_estilo` em vez de apagar a chave reprova."""
         save_profile(Profile(
             name="Bancada", match=MatchAny(),
@@ -307,6 +309,7 @@ class TestOTestar:
         a05.parar_o_teste()
 
     def test_com_um_padrao_escolhido_o_testar_toca_o_padrao(self, perfis: Path) -> None:
+        # D-1610-O-TESTAR-TOCA-O-PADRAO-ESCOLHIDO
         """MORDIDA: tirar o desvio do `testar` volta ao sustentado e reprova."""
         save_profile(Profile(
             name="Bancada", match=MatchAny(),

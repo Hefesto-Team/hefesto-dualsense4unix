@@ -134,6 +134,7 @@ def test_o_toque_que_cai_atras_da_guarda_nem_faz_a_conta(monkeypatch: pytest.Mon
 
 
 def test_a_bateria_longa_troca_as_longas_por_toque_e_cala_o_som_no_corpo() -> None:
+    # D-1610-A-BATERIA-LONGA-ENCURTA-AS-FORMAS-DO-TOQUE
     assert fh.forma_que_vale(fh.GUARDA, None, economia=True) == fh.TOQUE
     assert fh.forma_que_vale(fh.APARO, None, economia=True) == fh.TOQUE
     assert fh.forma_que_vale(fh.SOM_NO_CORPO, None, economia=True) is None
@@ -154,6 +155,7 @@ def test_sem_escolha_vale_o_estilo_e_o_toque_quando_ele_nao_pede(
 
 
 def test_o_continuo_nunca_e_forma_do_estilo() -> None:
+    # D-1610-O-CONTINUO-SO-TOCA-POR-ESCOLHA-MANUAL
     assert fh.SOM_NO_CORPO not in fh.POR_ESTILO.values()
     assert fh.SOM_NO_CORPO not in fh.FORMAS
 

@@ -189,6 +189,7 @@ def test_os_quatro_controles_tocam_cada_um_o_seu_pelo_cabo_e_pelo_radio(
 
 
 def test_o_jogo_que_vibra_o_motor_vence_e_o_padrao_cala() -> None:
+    # D-1610-O-PADRAO-DOS-MOTORES-CALA-ONDE-O-JOGO-VIBRA
     motor, motores = _montar({AZUL: "tranco"})
     motor.anotar(_tiro(AZUL, 0.0))
     _correr(motor, motores, (AZUL,), 0.5, estado=_JOGO_VIBRA)
@@ -256,6 +257,7 @@ def test_o_coice_toca_na_soltura_e_nunca_no_aperto() -> None:
 
 
 def test_o_coice_toca_no_maximo_tres_por_segundo() -> None:
+    # D-1610-O-COICE-E-A-PANCADA-DO-LADO
     motor, motores = _montar({AZUL: "coice"})
     for i in range(8):  # oito soltas em um segundo, mais de uma a cada 130 ms
         motor.anotar(_tiro(AZUL, i * 0.125, tv.TIPO_SOLTA))
