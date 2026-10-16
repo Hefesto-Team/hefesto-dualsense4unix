@@ -655,10 +655,33 @@ nossa própria vontade de ter achado mais do que achamos.
 Ela deu o exemplo: *"Zelda Skyward Sword: o speaker do controle faz os barulhos
 da espada enquanto na tela tem o som normal do jogo"*.
 
-**No PS5** o jogo abre uma **porta de áudio dedicada** ao alto-falante do pad —
-mono, 48 kHz, paralela à saída principal. Não é mixagem: são portas diferentes.
-A API é NDA (o identificador exato não foi encontrado em fonte pública, e **não
-deve ser inventado**).
+**No PS5** o jogo abre uma **porta de áudio dedicada** ao alto-falante do pad,
+paralela à saída principal. Não é mixagem: são portas diferentes. O SDK é fechado
+(NDA), mas três reimplementações abertas da `sceAudioOut` concordam no
+identificador (lidas em 12/10/2026; nenhuma declara de onde tirou os números, e
+a concordância entre elas não prova independência, por isso não sobe o grau):
+
+| o quê | valor | grau | fonte |
+|---|---|---|---|
+| porta do alto-falante do controle | `PADSPK = 4` | **MÉDIA** (fontes que concordam, origem não declarada) | `boykopovar/AnyPS5@d592d54e11:core/libs/prx/libSceAudioOut/src/AudioOut.cpp:24`; `shadps4/shadPS4@e0a46675:audioout.h:52` (API do PS4); `KytyPS5@df5b9b92:src/libs/audio.cpp:25-32` |
+| porta da vibração | `VIBRATION = 10` | **MÉDIA**, idem | `boykopovar/AnyPS5@d592d54e11:core/libs/prx/libSceAudioOut/src/AudioOut.cpp:25`; `KytyPS5@df5b9b92:src/libs/audio.cpp:25-32` |
+| API nova do PS5 (`AudioOut2`): alto-falante e vibração | `0x3` e `0x6` | **BAIXA** (fonte única) | `boykopovar/AnyPS5@d592d54e11:core/libs/prx/libSceAudioOut/src/AudioOut2PadMix.hpp:6-7` |
+| canais de cada uma dessas portas | 1 **ou 2** | **BAIXA**: o fonte aceita os dois; que o PS5 aceite estéreo é SUPOSTO | `boykopovar/AnyPS5@d592d54e11:core/libs/prx/libSceAudioOut/src/AudioOut2PadMix.cpp:43-44` |
+| volume padrão do alto-falante | 11626 de 32768 (−9 dB), ajustável por `sceAudioOutSetMixLevelPadSpk` | **MÉDIA** no PS4 (`shadps4/shadPS4@e0a46675:audioout.h:23`, comentário «default -9db»), **BAIXA** no PS5 (a AnyPS5 é a única) | `boykopovar/AnyPS5@d592d54e11:core/libs/prx/libSceAudioOut/src/AudioOut.cpp:31` |
+
+O Hefesto não usa nenhum desses números: sob Proton o jogo acha o alto-falante
+pelo dispositivo de áudio do controle (seção «Como um jogo endereça esse
+canal»), e o `0x3` do `OUTPUT_PATH_SEL` abaixo é outra coisa, um campo do report.
+
+**Com o microfone do controle aberto, o PS5 enfraquece a vibração e o gatilho.**
+**MÉDIA.** O nome da função `scePadSetVibrationTriggerEffectWeakWhileEmbeddedMicInUse`
+está na tabela de exportação da AnyPS5
+(`boykopovar/AnyPS5@d592d54e11:core/libs/prx/libScePad/Export.cpp:260-263`, um
+stub que não faz nada), e a imprensa descreve o comportamento: ligado o
+microfone, o sistema força «Fraco» na vibração e no gatilho
+(<https://www.laptopmag.com/news/ps5-dualsense-mic-weakens-adaptive-triggers-heres-how-to-turn-it-off>).
+Nenhum documento da Sony. **Se o Hefesto deve imitar isso NÃO está decidido**;
+pesa porque o único microfone de quem joga no PC pode ser o do DualSense.
 
 **No hardware, a rota é um campo do report**, e está documentada — ALTA:
 
@@ -707,7 +730,7 @@ canal do arquivo daquela passada.
 
 ### Como um jogo endereça esse canal — no PS5 e sob Proton
 
-No PS5 a porta é dedicada e a API é NDA (acima). **No PC o mecanismo é outro, é
+No PS5 a porta é dedicada e o SDK é fechado (acima). **No PC o mecanismo é outro, é
 público, e não é mixagem: o jogo abre o controle como um SEGUNDO dispositivo de
 áudio**, além da saída principal. `ValveSoftware/Proton#5900` (a issue de
 compatibilidade das features avançadas do DualSense) lista as três formas com
@@ -847,9 +870,15 @@ em `:1514`, diz que a faixa aceita parece ser `[0x3d..0x64]`.)
   SDL o liga em **todo rumble**, com o comentário `// Disable audio haptics`.
   Quem asserta esse bit troca os VCM de "PCM do jogo" para "rumble emulado".
 - **Por Bluetooth não é áudio, é HID** — palavras do autor do driver:
-  *"special HID packets using Bluetooth"*. Report `0x32`, corpo TLV, `pid 0x12`
-  para áudio (64 bytes), CRC-32 semente `0xA2`. PCM de 3000 Hz, 2 canais, 8
-  bits com sinal.
+  *"special HID packets using Bluetooth"*. Corpo TLV, o bloco `0x12` (o `0x92`
+  no fio) para a háptica (64 bytes), CRC-32 semente `0xA2`. PCM de 3000 Hz, 2
+  canais, 8 bits com sinal. **O `0x32` só toca com o bloco `0x11` (o `0x91`,
+  AudioControl) ANTES do `0x12`: sem ele o voice-coil não vibra** — **ALTA**,
+  medido no aparelho em 18/09/2026 (`scripts/ensaios/historico/a_haptica_pelo_radio.py`),
+  e o `0x11` não é opcional. **O que o produto escreve é o `0x36` combinado**,
+  de 398 B, com os quatro blocos num quadro só (`0x11`, `0x10`, `0x12` e o som
+  em `0x13`/`0x16`), desde 03/10/2026, provado na bancada:
+  `integrations/alto_falante_bt.py:557` (`DEGRAU_COMBINADO`).
 
 > **NOTA DATADA — 11/08/2026: CONTRADIÇÃO INTERNA EM ABERTO, e não é a que
 > parece.**
@@ -1485,6 +1514,21 @@ O lado do **aparelho** está medido acima; o lado do **SDL** não.
 **Touchpad — ALTA.** 1920×1080, **2 pontos**, cada um com id e flag de contato
 **invertida** (`0x80` = sem dedo). Clique é botão. Confirma o que está em
 `core/physical_report_reader.py`.
+
+**O touchpad que a biblioteca do PS5 declara ao jogo não é o do fio — BAIXA.**
+A API devolve outra faixa: 1920×943 na AnyPS5
+(`boykopovar/AnyPS5@d592d54e11:core/libs/prx/libScePad/Export.cpp:78-80`) ou
+1920×950 no shadPS4 (`shadps4/shadPS4@e0a46675:pad.cpp:144-146`, API do PS4). As
+duas discordam e nenhuma diz de onde veio. O 1920×1080 do HID acima continua
+certo, e o pad virtual do Hefesto é HID: não muda.
+
+**A biblioteca entrega a orientação pronta, e o jogo liga a correção — BAIXA.**
+Os nomes `scePadSetTiltCorrectionState` (correção pela gravidade) e
+`scePadSetAngularVelocityDeadbandState` (zona morta do giroscópio) estão na
+tabela de exportação da AnyPS5
+(`boykopovar/AnyPS5@d592d54e11:core/libs/prx/libScePad/Export.cpp:202-225`),
+ligáveis por jogo. Os valores do PS5 não aparecem em fonte nenhuma: o filtro que
+a AnyPS5 usa é invenção dela.
 
 **Lightbar — ALTA.** `lightbar_setup` bit1 é literalmente o **fade out**
 (confirma a armadilha do keepalive da barra de luz, já conhecida no Hefesto). `led_brightness`
