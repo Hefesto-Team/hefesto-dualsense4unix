@@ -245,3 +245,14 @@ configuração, e `daemon/main.py` o lê na subida
 `HEFESTO_DUALSENSE4UNIX_METRICS_PORT` segue como variável, porque é parâmetro e
 não interruptor. A segunda metade continua de pé: ligar exige reiniciar o daemon.
 A régua é `tests/unit/test_as_metricas_ligam_pela_mao.py`.
+
+## Nota de verificação — 2026-10-16
+
+**A contagem de 01/08 caiu de seis para cinco parâmetros.** O `auto_reconnect` saiu
+do `DaemonConfig` e de `run_daemon` junto com `reconnect_backoff_sec`: nenhum código
+lia os dois campos desde que o `reconnect_loop` virou o dono único da reconexão. Hoje
+o `DaemonConfig` é construído em `daemon/main.py` com cinco parâmetros: `poll_hz`,
+`ps_long_press_ms`, `keyboard_emulation_enabled`, `plugins_enabled` e
+`metrics_enabled`. A nota de 01/08 fica como estava, porque o número era esse naquele
+dia; a régua é a mesma
+(`tests/unit/test_doc_verdade_02_contagens_derivadas.py`).

@@ -21,7 +21,7 @@ def _state() -> ControllerState:
 
 def _config(**over: object) -> DaemonConfig:
     base: dict[str, object] = dict(
-        poll_hz=200, auto_reconnect=False, udp_enabled=False, autoswitch_enabled=False,
+        poll_hz=200, udp_enabled=False, autoswitch_enabled=False,
         mouse_emulation_enabled=False, keyboard_emulation_enabled=False,
         ps_button_action="none", mic_button_toggles_system=False,
     )

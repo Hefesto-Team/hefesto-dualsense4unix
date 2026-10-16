@@ -179,7 +179,6 @@ async def test_poll_loop_de_verdade_sobrevive_ao_tick_de_externos_pendurado(
         controller=FakeController(transport="usb", states=states),
         config=DaemonConfig(
             poll_hz=200,
-            auto_reconnect=False,
             ipc_enabled=False,
             udp_enabled=False,
             autoswitch_enabled=False,
@@ -255,7 +254,6 @@ async def test_dois_timeouts_consecutivos_do_tick_nao_penduram_read_state(
         controller=FakeController(transport="usb", states=states),
         config=DaemonConfig(
             poll_hz=200,
-            auto_reconnect=False,
             ipc_enabled=False,
             udp_enabled=False,
             autoswitch_enabled=False,

@@ -2,7 +2,7 @@
 
 Subcomandos implementados em W1.3:
   - `hefesto-dualsense4unix version`
-  - `hefesto-dualsense4unix daemon start [--poll-hz N] [--foreground] [--headless] [--no-reconnect]`
+  - `hefesto-dualsense4unix daemon start [--poll-hz N] [--foreground] [--headless]`
   - `hefesto-dualsense4unix daemon {install-service,uninstall-service,start,stop,restart,status}`
 
 A flag `--headless` de `daemon start` apenas seta `HEFESTO_DUALSENSE4UNIX_NO_WINDOW_DETECT=1`
@@ -341,17 +341,26 @@ def daemon_start(
     headless: bool = typer.Option(
         False, "--headless", help="Desliga auto-switch X11 (set HEFESTO_DUALSENSE4UNIX_NO_WINDOW_DETECT=1)."  # noqa: E501
     ),
-    reconnect: bool = typer.Option(
-        True, "--reconnect/--no-reconnect", help="Tenta reconectar se o controle cair."
+    reconnect: bool | None = typer.Option(
+        None, "--reconnect/--no-reconnect", hidden=True
     ),
 ) -> None:
     """Inicia o daemon no processo atual."""
+    if reconnect is not None:
+        # A opção saiu: o daemon sempre reconecta (o `reconnect_loop` é o único dono da
+        # reconexão). Ela segue ACEITA, fora da ajuda e sem efeito, para que uma unit,
+        # um script ou um atalho antigo com `--no-reconnect` não deixe o daemon sem subir.
+        typer.echo(
+            "aviso: --reconnect/--no-reconnect saiu e foi ignorada; "
+            "o daemon sempre reconecta o controle que cai.",
+            err=True,
+        )
     if headless:
         os.environ["HEFESTO_DUALSENSE4UNIX_NO_WINDOW_DETECT"] = "1"
 
     from hefesto_dualsense4unix.daemon.main import run_daemon
 
-    exit_code = run_daemon(poll_hz=poll_hz, auto_reconnect=reconnect)
+    exit_code = run_daemon(poll_hz=poll_hz)
     raise typer.Exit(code=exit_code)
 
 

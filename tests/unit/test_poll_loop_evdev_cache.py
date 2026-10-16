@@ -70,7 +70,6 @@ async def test_snapshot_chamado_exatamente_uma_vez_por_tick_sem_consumidores():
         controller=fc,
         config=DaemonConfig(
             poll_hz=200,
-            auto_reconnect=False,
             ipc_enabled=False,
             udp_enabled=False,
             autoswitch_enabled=False,
@@ -110,7 +109,6 @@ async def test_snapshot_chamado_exatamente_uma_vez_por_tick_com_hotkey_e_mouse(
         controller=fc,
         config=DaemonConfig(
             poll_hz=200,
-            auto_reconnect=False,
             ipc_enabled=False,
             udp_enabled=False,
             autoswitch_enabled=False,
@@ -159,7 +157,6 @@ async def test_snapshot_nao_chamado_quando_evdev_indisponivel():
         controller=fc,
         config=DaemonConfig(
             poll_hz=200,
-            auto_reconnect=False,
             ipc_enabled=False,
             udp_enabled=False,
             autoswitch_enabled=False,
@@ -192,7 +189,6 @@ async def test_snapshot_excecao_retorna_frozenset_vazio():
         controller=fc,
         config=DaemonConfig(
             poll_hz=200,
-            auto_reconnect=False,
             ipc_enabled=False,
             udp_enabled=False,
             autoswitch_enabled=False,
@@ -248,7 +244,6 @@ async def test_botoes_passados_ao_hotkey_manager_e_ao_mouse(
         controller=fc,
         config=DaemonConfig(
             poll_hz=200,
-            auto_reconnect=False,
             ipc_enabled=False,
             udp_enabled=False,
             autoswitch_enabled=False,

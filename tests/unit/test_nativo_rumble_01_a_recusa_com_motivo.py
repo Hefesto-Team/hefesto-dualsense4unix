@@ -36,7 +36,6 @@ async def servidor(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
         ipc_enabled=False,
         udp_enabled=False,
         autoswitch_enabled=False,
-        auto_reconnect=False,
     )
     daemon = Daemon(controller=fc, store=store, config=cfg)
     monkeypatch.setattr(daemon, "_reapply_last_profile", lambda: None)

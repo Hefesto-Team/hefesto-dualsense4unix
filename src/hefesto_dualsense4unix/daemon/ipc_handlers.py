@@ -4016,7 +4016,7 @@ class IpcHandlersMixin:
 
         from hefesto_dualsense4unix.daemon.lifecycle import DaemonConfig
 
-        overrides = params.get("config_overrides", {})
+        overrides = _sem_os_campos_aposentados(params.get("config_overrides", {}))
         if not isinstance(overrides, dict):
             raise ValueError("daemon.reload: 'config_overrides' deve ser objeto")
 
@@ -5985,6 +5985,26 @@ def _na_steam(handlers: Any) -> bool:
 
     store = getattr(handlers, "store", None)
     return bool(e_janela_do_cliente_steam(getattr(store, "window_detect_current_class", None)))
+
+
+def _sem_os_campos_aposentados(overrides: Any) -> Any:
+    """Tira do `config_overrides` as chaves de `CAMPOS_APOSENTADOS`, avisando uma vez por chave.
+
+    Valor que não é objeto passa como veio: quem o recusa é o handler.
+    """
+    if not isinstance(overrides, dict):
+        return overrides
+    for aposentado in sorted(CAMPOS_APOSENTADOS & set(overrides)):
+        if aposentado not in _APOSENTADOS_AVISADOS:
+            _APOSENTADOS_AVISADOS.add(aposentado)
+            logger.warning("daemon.reload.campo_aposentado", campo=aposentado)
+    return {k: v for k, v in overrides.items() if k not in CAMPOS_APOSENTADOS}
+
+
+# Chaves que o `daemon.reload` já aceitou e que o `DaemonConfig` não tem mais: quem as manda (um
+# cliente ou um script antigo) não leva erro; a chave sai do `overrides`, com um aviso no diário.
+CAMPOS_APOSENTADOS = frozenset({"auto_reconnect", "reconnect_backoff_sec"})
+_APOSENTADOS_AVISADOS: set[str] = set()
 
 
 __all__ = ["IpcHandlersMixin"]

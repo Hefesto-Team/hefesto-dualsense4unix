@@ -53,7 +53,7 @@ def single_instance_name() -> str:
     return "daemon-" + sock.removesuffix(".sock")
 
 
-def run_daemon(poll_hz: int | None = None, auto_reconnect: bool = True) -> int:
+def run_daemon(poll_hz: int | None = None) -> int:
     configure_logging()
     logger = get_logger(__name__)
 
@@ -99,7 +99,6 @@ def run_daemon(poll_hz: int | None = None, auto_reconnect: bool = True) -> int:
     servidor_dsu = servidor_dsu_declarado()
     config = DaemonConfig(
         poll_hz=poll_hz or int(os.getenv("HEFESTO_DUALSENSE4UNIX_POLL_HZ", "60")),
-        auto_reconnect=auto_reconnect,
         ps_long_press_ms=int(
             os.getenv("HEFESTO_DUALSENSE4UNIX_PS_LONG_PRESS_MS", "0")
         ),

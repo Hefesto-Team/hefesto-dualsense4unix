@@ -453,7 +453,6 @@ class TestFiacao:
             controller=FakeController(transport="bt", states=estados),
             config=DaemonConfig(
                 poll_hz=200,
-                auto_reconnect=False,
                 ipc_enabled=False,
                 udp_enabled=False,
                 autoswitch_enabled=False,
@@ -508,7 +507,6 @@ class TestFiacao:
             controller=_LeituraQueMorre(),
             config=DaemonConfig(
                 poll_hz=200,
-                auto_reconnect=False,
                 ipc_enabled=False,
                 udp_enabled=False,
                 autoswitch_enabled=False,

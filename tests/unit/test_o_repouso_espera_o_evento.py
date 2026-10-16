@@ -303,8 +303,6 @@ class _DaemonDeBancada:
         self.controller = controller
         self.bus = EventBus()
         self.config = SimpleNamespace(
-            reconnect_backoff_sec=0.01,
-            auto_reconnect=True,
             gamepad_emulation_enabled=False,
         )
         self._stop_event: asyncio.Event | None = None
@@ -1121,7 +1119,7 @@ class _DaemonDoRepouso:
         self.controller = controller
         self.bus = EventBus()
         self.config = SimpleNamespace(
-            reconnect_backoff_sec=0.01, auto_reconnect=True, gamepad_emulation_enabled=True
+            gamepad_emulation_enabled=True
         )
         self._stop_event: asyncio.Event | None = None
         self._nativo = nativo

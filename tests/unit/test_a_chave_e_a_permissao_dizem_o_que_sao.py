@@ -133,7 +133,7 @@ def _daemon_de_teste() -> Daemon:
     return Daemon(
         controller=FakeController(transport="usb"),
         config=DaemonConfig(
-            poll_hz=60, auto_reconnect=False, ipc_enabled=True,
+            poll_hz=60, ipc_enabled=True,
             udp_enabled=False, autoswitch_enabled=False,
         ),
     )

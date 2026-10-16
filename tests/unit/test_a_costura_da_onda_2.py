@@ -72,7 +72,6 @@ def _daemon_de_mentira() -> Any:
         bus=EventBus(),
         config=DaemonConfig(
             poll_hz=120,
-            auto_reconnect=False,
             ipc_enabled=False,
             udp_enabled=False,
             autoswitch_enabled=False,

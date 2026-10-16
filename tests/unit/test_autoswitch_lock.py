@@ -298,7 +298,6 @@ class TestPersistencia:
         )
         config = DaemonConfig(
             poll_hz=200,
-            auto_reconnect=False,
             ipc_enabled=False,
             udp_enabled=False,
             autoswitch_enabled=False,

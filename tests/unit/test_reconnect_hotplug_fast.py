@@ -52,7 +52,7 @@ class _StubDaemon:
     def __init__(self, controller: _CountingController) -> None:
         self.controller = controller
         self.bus = EventBus()
-        self.config = SimpleNamespace(reconnect_backoff_sec=0.01, auto_reconnect=True)
+        self.config = SimpleNamespace()
         self._stop_event = asyncio.Event()
 
     def _is_stopping(self) -> bool:

@@ -18,8 +18,8 @@ servidor de métricas. `hefesto-dualsense4unix metrics desligar` desfaz.
 inválido não derruba o serviço: ele fica na porta padrão e registra o motivo no
 diário. Essa variável é lida quando o serviço sobe.
 
-O serviço constrói o `DaemonConfig` com seis parâmetros (`poll_hz`,
-`auto_reconnect`, `ps_long_press_ms`, `keyboard_emulation_enabled`,
+O serviço constrói o `DaemonConfig` com cinco parâmetros (`poll_hz`,
+`ps_long_press_ms`, `keyboard_emulation_enabled`,
 `plugins_enabled` e `metrics_enabled`), e os dois últimos vêm dos arquivos que
 `plugin ligar` e `metrics ligar` gravam.
 

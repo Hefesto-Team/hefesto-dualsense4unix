@@ -29,7 +29,6 @@ def _mk_daemon(*, ipc_enabled: bool = True) -> Daemon:
         bus=EventBus(),
         config=DaemonConfig(
             poll_hz=120,
-            auto_reconnect=False,
             ipc_enabled=ipc_enabled,
             udp_enabled=False,
             autoswitch_enabled=False,

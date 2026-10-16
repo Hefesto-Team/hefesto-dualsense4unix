@@ -137,7 +137,6 @@ def _daemon(controles: int) -> Daemon:
         controller=_ControleComInventario(controles),
         config=DaemonConfig(
             poll_hz=200,
-            auto_reconnect=False,
             ipc_enabled=False,
             udp_enabled=False,
             autoswitch_enabled=False,

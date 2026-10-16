@@ -66,7 +66,6 @@ class _EleitorDublado:
 def _config(**extra: Any) -> DaemonConfig:
     return DaemonConfig(  # type: ignore[arg-type]
         poll_hz=200,
-        auto_reconnect=False,
         ipc_enabled=False,
         udp_enabled=False,
         autoswitch_enabled=False,

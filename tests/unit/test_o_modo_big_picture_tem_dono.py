@@ -459,7 +459,7 @@ def test_10_a_parada_do_daemon_fecha_o_teclado_do_dono(transporte: str) -> None:
     d = Daemon(
         controller=FakeController(transport=transporte),
         config=DaemonConfig(
-            poll_hz=200, auto_reconnect=False, ipc_enabled=False, udp_enabled=False,
+            poll_hz=200, ipc_enabled=False, udp_enabled=False,
             autoswitch_enabled=False, mouse_emulation_enabled=False,
             keyboard_emulation_enabled=False,
         ),

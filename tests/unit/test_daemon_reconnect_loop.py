@@ -80,7 +80,6 @@ async def test_run_inicia_ipc_antes_de_conectar(
         bus=bus,
         config=DaemonConfig(
             poll_hz=120,
-            auto_reconnect=False,
             ipc_enabled=True,
             udp_enabled=False,
             autoswitch_enabled=False,
@@ -125,7 +124,6 @@ async def test_reconnect_loop_publica_controller_connected_em_transicao(
         bus=bus,
         config=DaemonConfig(
             poll_hz=120,
-            auto_reconnect=False,
             ipc_enabled=False,
             udp_enabled=False,
             autoswitch_enabled=False,
@@ -166,7 +164,6 @@ def _config() -> DaemonConfig:
     """Config hermética padrão destes testes (sem IPC/UDP/autoswitch)."""
     return DaemonConfig(
         poll_hz=120,
-        auto_reconnect=False,
         ipc_enabled=False,
         udp_enabled=False,
         autoswitch_enabled=False,
@@ -322,7 +319,6 @@ async def test_reconnect_loop_respeita_stop_event(
         bus=bus,
         config=DaemonConfig(
             poll_hz=120,
-            auto_reconnect=False,
             ipc_enabled=False,
             udp_enabled=False,
             autoswitch_enabled=False,

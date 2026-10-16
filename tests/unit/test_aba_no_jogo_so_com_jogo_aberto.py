@@ -133,7 +133,7 @@ class _DaemonDeLaco(_DaemonDeSonda):
 
     def __init__(self, resposta: Any, *, ticks: int = 4) -> None:
         super().__init__(resposta)
-        self.config = SimpleNamespace(poll_hz=200, auto_reconnect=False)
+        self.config = SimpleNamespace(poll_hz=200)
         self.controller = SimpleNamespace(is_connected=lambda: False)
         self.bus = SimpleNamespace(publish=lambda *a, **k: None)
         self._stop_event: Any = None

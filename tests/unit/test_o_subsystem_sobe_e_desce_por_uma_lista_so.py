@@ -201,7 +201,7 @@ def _estado() -> ControllerState:
 def _config() -> DaemonConfig:
     """Tudo o que tem condição de config, ligado: a lista inteira passa a querer subir."""
     return DaemonConfig(
-        poll_hz=120, auto_reconnect=False, ipc_enabled=True, udp_enabled=True,
+        poll_hz=120, ipc_enabled=True, udp_enabled=True,
         dsu_enabled=True, autoswitch_enabled=True, mouse_emulation_enabled=True,
         gamepad_emulation_enabled=True, keyboard_emulation_enabled=True,
         mic_button_toggles_system=True,

@@ -199,7 +199,6 @@ async def _boot_com_preferencia(
         controller=FakeController(transport="usb", states=_mk_states(40)),
         config=DaemonConfig(
             poll_hz=200,
-            auto_reconnect=False,
             ipc_enabled=False,
             udp_enabled=False,
             autoswitch_enabled=False,
@@ -377,7 +376,6 @@ async def _um_tique_com_r1(monkeypatch: pytest.MonkeyPatch) -> list[frozenset[st
         controller=fc,
         config=DaemonConfig(
             poll_hz=200,
-            auto_reconnect=False,
             ipc_enabled=False,
             udp_enabled=False,
             autoswitch_enabled=False,

@@ -415,7 +415,7 @@ def _lar_do_boot(monkeypatch: pytest.MonkeyPatch, _lar: Any) -> Iterator[list[An
 
 def _config_do_boot() -> lifecycle.DaemonConfig:
     return lifecycle.DaemonConfig(  # type: ignore[arg-type]
-        poll_hz=200, auto_reconnect=False, ipc_enabled=False, udp_enabled=False,
+        poll_hz=200, ipc_enabled=False, udp_enabled=False,
         autoswitch_enabled=False, mouse_emulation_enabled=False,
         keyboard_emulation_enabled=False, ps_button_action="none",
         mic_button_toggles_system=False,

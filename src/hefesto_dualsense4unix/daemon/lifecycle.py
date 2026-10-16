@@ -356,8 +356,6 @@ class IpcIndisponivel(RuntimeError):  # noqa: N818 — o projeto é em portuguê
 @dataclass
 class DaemonConfig:
     poll_hz: int = DEFAULT_POLL_HZ
-    auto_reconnect: bool = True
-    reconnect_backoff_sec: float = 2.0
     ipc_enabled: bool = True
     udp_enabled: bool = True
     udp_host: str = "127.0.0.1"
@@ -4340,8 +4338,8 @@ class Daemon:
                 # O `read_state` real não faz E/S (lê o que as threads mantêm): uma
                 # leitura que levanta é defeito de código, e nenhum handle sai da
                 # mesa por isso. A borda é uma por episódio; a volta espera o
-                # próximo tique, com ou sem `auto_reconnect` (a queda de verdade
-                # entra pelo `reconnect_loop`). O assentamento não recomeça: nenhum
+                # próximo tique (a queda de verdade entra pelo `reconnect_loop`, que
+                # reconecta sempre). O assentamento não recomeça: nenhum
                 # handle foi reaberto, e o co-op (`forward_all`) segue andando.
                 if passos.falhou("leitura", exc):
                     registrar_queda_da_bateria(self, "poll_read_failed", tick_started)

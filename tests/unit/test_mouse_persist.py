@@ -94,7 +94,6 @@ def test_os_involucros_legados_nao_existem_mais(tmp_config: Path) -> None:
 def _boot_config() -> DaemonConfig:
     return DaemonConfig(
         poll_hz=200,
-        auto_reconnect=False,
         ipc_enabled=False,
         udp_enabled=False,
         autoswitch_enabled=False,

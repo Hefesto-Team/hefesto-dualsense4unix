@@ -336,7 +336,7 @@ async def test_o_laco_real_chama_a_tabela_com_o_vpad_despachando(
     daemon = Daemon(
         controller=fc,
         config=DaemonConfig(
-            poll_hz=200, auto_reconnect=False, ipc_enabled=False, udp_enabled=False,
+            poll_hz=200, ipc_enabled=False, udp_enabled=False,
             autoswitch_enabled=False, mouse_emulation_enabled=False,
             keyboard_emulation_enabled=False,
         ),
@@ -549,7 +549,7 @@ async def test_o_laco_solta_a_tabela_na_parada(
     daemon = Daemon(
         controller=fc,
         config=DaemonConfig(
-            poll_hz=200, auto_reconnect=False, ipc_enabled=False, udp_enabled=False,
+            poll_hz=200, ipc_enabled=False, udp_enabled=False,
             autoswitch_enabled=False, mouse_emulation_enabled=False,
             keyboard_emulation_enabled=False,
         ),
@@ -597,7 +597,7 @@ async def test_no_nativo_a_tabela_nao_age(monkeypatch: pytest.MonkeyPatch) -> No
     daemon = Daemon(
         controller=fc,
         config=DaemonConfig(
-            poll_hz=200, auto_reconnect=False, ipc_enabled=False, udp_enabled=False,
+            poll_hz=200, ipc_enabled=False, udp_enabled=False,
             autoswitch_enabled=False, mouse_emulation_enabled=False,
             keyboard_emulation_enabled=False,
         ),

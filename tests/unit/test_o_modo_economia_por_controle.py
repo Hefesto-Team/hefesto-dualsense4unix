@@ -517,7 +517,7 @@ async def test_o_daemon_registra_a_declaracao_no_boot_e_solta_ao_parar(
         controller=FakeController(transport="usb", states=[estado]),
         bus=EventBus(), store=store,
         config=DaemonConfig(
-            poll_hz=200, auto_reconnect=False, ipc_enabled=False, udp_enabled=False,
+            poll_hz=200, ipc_enabled=False, udp_enabled=False,
             autoswitch_enabled=False, mouse_emulation_enabled=False,
             keyboard_emulation_enabled=False, ps_button_action="none",
             mic_button_toggles_system=False,

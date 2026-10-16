@@ -31,7 +31,6 @@ async def server_with_daemon(tmp_path: Path):
         ipc_enabled=False,
         udp_enabled=False,
         autoswitch_enabled=False,
-        auto_reconnect=False,
     )
     daemon = Daemon(controller=fc, store=store, config=cfg)
     manager = ProfileManager(controller=fc, store=store)
@@ -88,7 +87,6 @@ async def test_poll_loop_reafirma_rumble() -> None:
         ipc_enabled=False,
         udp_enabled=False,
         autoswitch_enabled=False,
-        auto_reconnect=False,
     )
     daemon = Daemon(controller=fc, store=store, config=cfg)
     daemon.config.rumble_active = (80, 150)
@@ -142,7 +140,6 @@ async def test_rumble_passthrough_zera_active_e_poll_nao_reafirma() -> None:
         ipc_enabled=False,
         udp_enabled=False,
         autoswitch_enabled=False,
-        auto_reconnect=False,
     )
     daemon = Daemon(controller=fc, store=store, config=cfg)
     manager = ProfileManager(controller=fc, store=store)

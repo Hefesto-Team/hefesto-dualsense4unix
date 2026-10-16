@@ -51,7 +51,7 @@ async def test_poll_loop_gera_state_update_e_para_no_stop():
         bus=bus,
         store=store,
         config=DaemonConfig(
-            poll_hz=120, auto_reconnect=False,
+            poll_hz=120,
             ipc_enabled=False, udp_enabled=False, autoswitch_enabled=False,
         ),
     )
@@ -74,7 +74,7 @@ async def test_connected_event_publicado_no_start():
     daemon = Daemon(
         controller=fc, bus=bus,
         config=DaemonConfig(
-            poll_hz=60, auto_reconnect=False,
+            poll_hz=60,
             ipc_enabled=False, udp_enabled=False, autoswitch_enabled=False,
         ),
     )
@@ -101,7 +101,7 @@ async def test_battery_debounce_dispara_no_primeiro_read():
     bus = EventBus()
     store = StateStore()
     cfg = DaemonConfig(
-        poll_hz=120, auto_reconnect=False,
+        poll_hz=120,
         ipc_enabled=False, udp_enabled=False, autoswitch_enabled=False,
     )
     daemon = Daemon(controller=fc, bus=bus, store=store, config=cfg)
@@ -132,7 +132,7 @@ async def test_battery_dispara_quando_delta_pct():
     bus = EventBus()
     store = StateStore()
     cfg = DaemonConfig(
-        poll_hz=60, auto_reconnect=False,
+        poll_hz=60,
         ipc_enabled=False, udp_enabled=False, autoswitch_enabled=False,
     )
     daemon = Daemon(controller=fc, bus=bus, store=store, config=cfg)
@@ -156,7 +156,7 @@ async def test_stop_idempotente():
     daemon = Daemon(
         controller=fc,
         config=DaemonConfig(
-            poll_hz=60, auto_reconnect=False,
+            poll_hz=60,
             ipc_enabled=False, udp_enabled=False, autoswitch_enabled=False,
         ),
     )
@@ -173,7 +173,7 @@ async def test_daemon_desconecta_no_shutdown():
     daemon = Daemon(
         controller=fc,
         config=DaemonConfig(
-            poll_hz=60, auto_reconnect=False,
+            poll_hz=60,
             ipc_enabled=False, udp_enabled=False, autoswitch_enabled=False,
         ),
     )
@@ -250,7 +250,7 @@ async def test_borda_de_queda_limpa_o_estado_publicado():
     daemon = Daemon(
         controller=fc, bus=bus, store=store,
         config=DaemonConfig(
-            poll_hz=200, auto_reconnect=False,
+            poll_hz=200,
             ipc_enabled=False, udp_enabled=False, autoswitch_enabled=False,
         ),
     )
@@ -279,17 +279,14 @@ async def test_borda_de_queda_limpa_o_estado_publicado():
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("auto_reconnect", [False, True])
-async def test_a_queda_pela_leitura_tambem_limpa_o_estado_publicado(
-    auto_reconnect: bool,
-) -> None:
+async def test_a_queda_pela_leitura_tambem_limpa_o_estado_publicado() -> None:
     """A MESMA BORDA, PELA OUTRA PORTA (27/09/2026)."""
     fc = _ControleQueSomeNaLeitura(leituras=20)
     store = StateStore()
     daemon = Daemon(
         controller=fc, bus=EventBus(), store=store,
         config=DaemonConfig(
-            poll_hz=200, auto_reconnect=auto_reconnect, reconnect_backoff_sec=0.01,
+            poll_hz=200,
             ipc_enabled=False, udp_enabled=False, autoswitch_enabled=False,
         ),
     )
@@ -346,7 +343,7 @@ async def test_poll_loop_emits_button_down_up_on_diff(monkeypatch):
     bus = EventBus()
     store = StateStore()
     cfg = DaemonConfig(
-        poll_hz=120, auto_reconnect=False,
+        poll_hz=120,
         ipc_enabled=False, udp_enabled=False, autoswitch_enabled=False,
     )
     daemon = Daemon(controller=fc, bus=bus, store=store, config=cfg)
@@ -403,7 +400,7 @@ async def test_poll_loop_emits_mic_btn_down_up(monkeypatch):
     bus = EventBus()
     store = StateStore()
     cfg = DaemonConfig(
-        poll_hz=120, auto_reconnect=False,
+        poll_hz=120,
         ipc_enabled=False, udp_enabled=False, autoswitch_enabled=False,
     )
     daemon = Daemon(controller=fc, bus=bus, store=store, config=cfg)
@@ -450,7 +447,7 @@ async def test_poll_loop_no_event_when_buttons_unchanged(monkeypatch):
     bus = EventBus()
     store = StateStore()
     cfg = DaemonConfig(
-        poll_hz=120, auto_reconnect=False,
+        poll_hz=120,
         ipc_enabled=False, udp_enabled=False, autoswitch_enabled=False,
     )
     daemon = Daemon(controller=fc, bus=bus, store=store, config=cfg)
@@ -491,7 +488,7 @@ async def test_metrics_sobe_quando_metrics_enabled():
     daemon = Daemon(
         controller=fc,
         config=DaemonConfig(
-            poll_hz=120, auto_reconnect=False,
+            poll_hz=120,
             ipc_enabled=False, udp_enabled=False, autoswitch_enabled=False,
             metrics_enabled=True, metrics_port=port,
         ),

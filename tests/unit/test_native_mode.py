@@ -140,7 +140,7 @@ async def test_boot_em_modo_nativo_nao_restaura_emulacao(
     monkeypatch.setattr(Daemon, "_start_mouse_emulation", lambda self: True)
 
     cfg = DaemonConfig(
-        poll_hz=200, auto_reconnect=False, ipc_enabled=False, udp_enabled=False,
+        poll_hz=200, ipc_enabled=False, udp_enabled=False,
         autoswitch_enabled=False, keyboard_emulation_enabled=False,
         ps_button_action="none", mic_button_toggles_system=False,
     )

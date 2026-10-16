@@ -89,7 +89,7 @@ async def test_as_tres_rotas_concordam_depois_da_queda_real(
     daemon = Daemon(
         controller=fc, bus=bus, store=store,
         config=DaemonConfig(
-            poll_hz=200, auto_reconnect=False,
+            poll_hz=200,
             ipc_enabled=False, udp_enabled=False, autoswitch_enabled=False,
         ),
     )

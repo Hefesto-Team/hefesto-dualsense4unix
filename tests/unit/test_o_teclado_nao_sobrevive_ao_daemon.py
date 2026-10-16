@@ -120,7 +120,7 @@ async def test_o_shutdown_do_daemon_fecha_o_teclado_na_tela(
         ),
         bus=EventBus(),
         config=DaemonConfig(
-            auto_reconnect=False, ipc_enabled=False, udp_enabled=False,
+            ipc_enabled=False, udp_enabled=False,
             autoswitch_enabled=False, mouse_emulation_enabled=False,
             keyboard_emulation_enabled=False, plugins_enabled=False,
         ),

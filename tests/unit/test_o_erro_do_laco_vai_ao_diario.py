@@ -79,8 +79,6 @@ def _daemon(fc: FakeController, **over: Any) -> tuple[Daemon, StateStore, EventB
     bus = EventBus()
     base: dict[str, Any] = dict(
         poll_hz=200,
-        auto_reconnect=True,
-        reconnect_backoff_sec=0.4,
         ipc_enabled=False,
         udp_enabled=False,
         autoswitch_enabled=False,
@@ -111,11 +109,10 @@ def _espiar_o_coop(daemon: Daemon) -> list[float]:
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("auto_reconnect", [True, False])
-async def test_a_leitura_que_levanta_tres_vezes_e_volta(auto_reconnect: bool) -> None:
+async def test_a_leitura_que_levanta_tres_vezes_e_volta() -> None:
     """(1) e (2): três leituras que levantam e a quarta volta."""
     fc = _QuatroControles(levantar=3)
-    daemon, store, bus = _daemon(fc, auto_reconnect=auto_reconnect)
+    daemon, store, bus = _daemon(fc)
     horas = _espiar_o_coop(daemon)
     quedas = bus.subscribe(EventTopic.CONTROLLER_DISCONNECTED)
 
@@ -141,13 +138,10 @@ async def test_a_leitura_que_levanta_tres_vezes_e_volta(auto_reconnect: bool) ->
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("auto_reconnect", [True, False])
-async def test_os_quatro_handles_ficam_abertos_enquanto_a_leitura_levanta(
-    auto_reconnect: bool,
-) -> None:
+async def test_os_quatro_handles_ficam_abertos_enquanto_a_leitura_levanta() -> None:
     """(1): durante o erro, nenhum `disconnect` e P2 a P4 seguem abertos."""
     fc = _QuatroControles(levantar=10_000)
-    daemon, store, _bus = _daemon(fc, auto_reconnect=auto_reconnect)
+    daemon, store, _bus = _daemon(fc)
     horas = _espiar_o_coop(daemon)
 
     run_task = asyncio.create_task(daemon.run())

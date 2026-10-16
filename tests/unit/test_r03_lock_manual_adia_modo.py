@@ -484,7 +484,6 @@ async def test_poll_loop_drena_a_pendencia() -> None:
         controller=FakeController(transport="usb", states=estados),
         config=DaemonConfig(
             poll_hz=200,
-            auto_reconnect=False,
             ipc_enabled=False,
             udp_enabled=False,
             autoswitch_enabled=False,

@@ -59,7 +59,7 @@ class _DaemonDeLaco:
         estado = ControllerState(
             battery_pct=80, l2_raw=0, r2_raw=0, connected=True, transport="usb"
         )
-        self.config = SimpleNamespace(poll_hz=poll_hz, auto_reconnect=False)
+        self.config = SimpleNamespace(poll_hz=poll_hz)
         self.controller: Any = SimpleNamespace(
             is_connected=lambda: True, read_state=lambda: estado
         )

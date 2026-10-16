@@ -87,7 +87,6 @@ async def test_run_inicia_keyboard_quando_habilitado(
         controller=fc,
         config=DaemonConfig(
             poll_hz=200,
-            auto_reconnect=False,
             ipc_enabled=False,
             udp_enabled=False,
             autoswitch_enabled=False,
@@ -127,7 +126,6 @@ async def test_run_nao_inicia_keyboard_quando_desabilitado(
         controller=fc,
         config=DaemonConfig(
             poll_hz=200,
-            auto_reconnect=False,
             ipc_enabled=False,
             udp_enabled=False,
             autoswitch_enabled=False,
@@ -163,7 +161,6 @@ async def test_poll_loop_chama_dispatch_keyboard_com_buttons_pressed(
         controller=fc,
         config=DaemonConfig(
             poll_hz=200,
-            auto_reconnect=False,
             ipc_enabled=False,
             udp_enabled=False,
             autoswitch_enabled=False,
@@ -207,7 +204,6 @@ async def test_poll_loop_nao_chama_dispatch_sem_device() -> None:
         controller=fc,
         config=DaemonConfig(
             poll_hz=200,
-            auto_reconnect=False,
             ipc_enabled=False,
             udp_enabled=False,
             autoswitch_enabled=False,
@@ -253,7 +249,6 @@ async def test_shutdown_para_keyboard_device(
         controller=fc,
         config=DaemonConfig(
             poll_hz=200,
-            auto_reconnect=False,
             ipc_enabled=False,
             udp_enabled=False,
             autoswitch_enabled=False,
@@ -305,7 +300,6 @@ def test_reload_config_liga_keyboard(
         controller=fc,
         config=DaemonConfig(
             poll_hz=200,
-            auto_reconnect=False,
             ipc_enabled=False,
             udp_enabled=False,
             autoswitch_enabled=False,
@@ -317,7 +311,6 @@ def test_reload_config_liga_keyboard(
 
     new_cfg = DaemonConfig(
         poll_hz=200,
-        auto_reconnect=False,
         ipc_enabled=False,
         udp_enabled=False,
         autoswitch_enabled=False,
@@ -330,7 +323,6 @@ def test_reload_config_liga_keyboard(
 
     new_cfg_off = DaemonConfig(
         poll_hz=200,
-        auto_reconnect=False,
         ipc_enabled=False,
         udp_enabled=False,
         autoswitch_enabled=False,

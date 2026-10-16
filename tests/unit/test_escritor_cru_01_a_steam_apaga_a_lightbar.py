@@ -198,7 +198,7 @@ class _StubDaemon:
     def __init__(self, controller: _Controller, *, nativo: bool = False) -> None:
         self.controller = controller
         self.bus = EventBus()
-        self.config = SimpleNamespace(reconnect_backoff_sec=0.01, auto_reconnect=True)
+        self.config = SimpleNamespace()
         self._stop_event = asyncio.Event()
         self._registro_de_gatilhos: Any = None
         self._sentinela_de_escritor_cru: Any = None

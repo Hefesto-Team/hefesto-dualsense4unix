@@ -127,7 +127,7 @@ async def _teclas_do_laco(
     daemon = Daemon(
         controller=fc,
         config=DaemonConfig(
-            poll_hz=200, auto_reconnect=False, ipc_enabled=False, udp_enabled=False,
+            poll_hz=200, ipc_enabled=False, udp_enabled=False,
             autoswitch_enabled=False, mouse_emulation_enabled=False,
             keyboard_emulation_enabled=False,
         ),
