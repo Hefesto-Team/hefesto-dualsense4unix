@@ -2365,7 +2365,7 @@ class PyDualSenseController(IController):
         if lida is None or tuple(lida) == tuple(cor):
             return False
         node.invalidate_cache()
-        with contextlib.suppress(Exception):
+        with contextlib.suppress(AttributeError):
             handle._quadro_da_luz = None
             handle._brilho_do_cabo = None
         logger.info(
@@ -3031,7 +3031,7 @@ class PyDualSenseController(IController):
             with contextlib.suppress(Exception):
                 no.invalidate_cache()
         if forcar:
-            with contextlib.suppress(Exception):
+            with contextlib.suppress(AttributeError):
                 handle._brilho_do_cabo = None
         players = desired.player_leds if pode_player else None
         if self._detect_transport(handle) == "bt":
@@ -3382,7 +3382,7 @@ class PyDualSenseController(IController):
             logger.debug("brilho_das_luzes_cabo_falhou", op=what, key=key, err=str(exc))
             return False
         ok = _escrita_completa(escrito, len(report))
-        with contextlib.suppress(Exception):
+        with contextlib.suppress(AttributeError):
             handle._brilho_do_cabo = int(degrau) if ok else None
         logger.debug(
             "brilho_das_luzes_cabo_escrito", op=what, key=key, degrau=degrau, ok=ok

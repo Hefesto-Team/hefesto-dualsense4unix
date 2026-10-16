@@ -2590,9 +2590,11 @@ def anotar_o_nascimento(daemon: Any, ms: float | None) -> None:
     bump = getattr(store, "bump", None)
     if not callable(bump) or ms is None:
         return
-    with contextlib.suppress(Exception):
+    try:
         bump("vpad.nascimentos")
         bump("vpad.nascimento_ms", round(ms))
+    except Exception as exc:
+        logger.debug("vpad_nascimento_nao_contado", err=str(exc))
 
 
 def get_coop_manager(daemon: DaemonProtocol) -> CoopManager:
