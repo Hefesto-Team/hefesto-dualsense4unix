@@ -82,6 +82,7 @@ def _bancada(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_a_luz_e_zero_no_mudo_um_no_silencio_e_dois_com_som(
     mudo: bool | None, captando: bool | None, bateria: int | None, esperado: int | None
 ) -> None:
+    # D-1610-A-LUZ-DO-MIC-PISCA-COM-O-SOM
     """A régua da sprint: 0 no mudo, 1 no silêncio, 2 com som; ninguém pergunta quem ouve."""
     assert mod.decidir(mudo=mudo, captando=captando, bateria_pct=bateria) == esperado
 

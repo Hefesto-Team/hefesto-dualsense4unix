@@ -229,6 +229,7 @@ def _connect(
 def test_segurar_o_ps_por_10_s_desliga_so_aquele_controle(
     monkeypatch: pytest.MonkeyPatch, prazos: list[_Prazo], desligados: list[str]
 ) -> None:
+    # D-1610-O-PS-SEGURADO-10-S-DESLIGA-AQUELE-CONTROLE
     """**A MORDIDA.** O `connect()` adota os dois; o PS segurado do White desliga só o White.
 
     MORDIDA: tirar a assinatura do laço de `new_handles` (ou o prazo) reprova aqui.
