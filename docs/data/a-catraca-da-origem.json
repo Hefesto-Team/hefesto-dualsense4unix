@@ -55,7 +55,7 @@
       "data": "2026-10-16",
       "nota": "remendos de sintoma por arquivo",
       "o_que_conta": "remendos de sintoma acima do teto de cada arquivo",
-      "piso": 1019,
+      "piso": 1016,
       "por_item": {
         "__init__.py": 1,
         "app/actions/base.py": 1,
@@ -103,11 +103,11 @@
         "daemon/subsystems/bt_mic.py": 10,
         "daemon/subsystems/conexoes.py": 1,
         "daemon/subsystems/coop.py": 25,
-        "daemon/subsystems/external_identity.py": 19,
+        "daemon/subsystems/external_identity.py": 17,
         "daemon/subsystems/external_mask.py": 1,
         "daemon/subsystems/gamepad.py": 40,
         "daemon/subsystems/hotkey.py": 39,
-        "daemon/subsystems/identity.py": 9,
+        "daemon/subsystems/identity.py": 8,
         "daemon/subsystems/ipc.py": 1,
         "daemon/subsystems/keyboard.py": 8,
         "daemon/subsystems/luz_do_mic.py": 6,
@@ -215,7 +215,7 @@
         "utils/single_instance.py": 9,
         "utils/tela_de_mentira.py": 3
       },
-      "razao": "16/10/2026, tela-desligado-depois: a espera de até 10 s em a01_jogar._esperar_o_servico_responder é necessária enquanto a unit do serviço é Type=simple (o systemctl start volta 0,5 s antes do soquete); a cura no dono (Type=notify com READY=1 depois do ipc_server_listening) vai para a sprint O-LIGAR-O-SERVICO-ESPERA-ELE-FICAR-DE-PE-01",
+      "razao": "o teto desceu sozinho com o número",
       "subidas": [
         {
           "data": "2026-10-10",
@@ -243,20 +243,20 @@
         }
       ],
       "unidade": "remendos",
-      "universo": 397
+      "universo": 399
     },
     "tamanho": {
       "data": "2026-10-16",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1116223,
+      "piso": 1117087,
       "por_item": {
-        "docs": 119065,
+        "docs": 119069,
         "scripts": 114042,
-        "src": 299145,
-        "tests": 583971
+        "src": 299275,
+        "tests": 584701
       },
-      "razao": "tamanho: +205 linhas (1116018 -> 1116223), pagas por Origem: D-1610-O-CI-TEM-PRAZO-NO-APT-E-EM-CADA-JOB; registrado no fecho, topo 19a4fd8133d7",
+      "razao": "tamanho: +864 linhas (1116223 -> 1117087), pagas por Origem: combinacao.slot_jogador.estabilidade; registrado no fecho, topo 3a814e8875da",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -467,10 +467,16 @@
           "de": 1116018,
           "para": 1116223,
           "razao": "tamanho: +205 linhas (1116018 -> 1116223), pagas por Origem: D-1610-O-CI-TEM-PRAZO-NO-APT-E-EM-CADA-JOB; registrado no fecho, topo 19a4fd8133d7"
+        },
+        {
+          "data": "2026-10-16",
+          "de": 1116223,
+          "para": 1117087,
+          "razao": "tamanho: +864 linhas (1116223 -> 1117087), pagas por Origem: combinacao.slot_jogador.estabilidade; registrado no fecho, topo 3a814e8875da"
         }
       ],
       "unidade": "linhas",
-      "universo": 2901
+      "universo": 2903
     }
   }
 }
