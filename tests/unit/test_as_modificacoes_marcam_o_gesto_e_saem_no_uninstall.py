@@ -24,6 +24,7 @@ import os
 import shutil
 import signal
 import subprocess
+import sys
 import tempfile
 from collections.abc import Iterator
 from pathlib import Path
@@ -372,6 +373,38 @@ def test_o_uninstall_para_o_processo_vivo_da_modificacao(
     fora = _rodar(casa, tmp_path, "--yes")
     assert casa[2][0].poll() is not None, "a extensão seguia de pé depois do uninstall"
     assert "parando a extensão exemplo" in fora
+
+
+def test_a_extensao_que_ignora_o_term_sai_pelo_kill(
+    tmp_path: Path, casa: tuple[Any, Path, list[subprocess.Popen[bytes]]]
+) -> None:
+    """O TERM ignorado não deixa a extensão de pé: depois do prazo, o KILL ao grupo."""
+    r, _repo, vivos = casa
+    _instalar_de_mentira(r, vivos)
+    os.killpg(vivos[0].pid, signal.SIGKILL)
+    vivos[0].wait()
+    ambiente = {**os.environ, "HEFESTO_MOD_ID": "exemplo"}
+    teimosa = subprocess.Popen(
+        [sys.executable, "-c",
+         "import signal, sys, time\n"
+         "signal.signal(signal.SIGTERM, signal.SIG_IGN)\n"
+         "print('pronta', flush=True)\n"
+         "time.sleep(120)\n"],
+        env=ambiente, start_new_session=True,
+        stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    vivos.append(teimosa)
+    assert teimosa.stdout is not None and teimosa.stdout.readline().strip() == b"pronta"
+    teimosa.stdout.close()
+    estado = r.execucao / "hefesto-dualsense4unix" / "mods-estado.json"
+    estado.write_text(
+        json.dumps({"mods": {"exemplo": {"pid": teimosa.pid, "estado": "rodando"}}}),
+        encoding="utf-8")
+
+    fora = _rodar(casa, tmp_path, "--yes")
+
+    assert teimosa.poll() is not None, "a extensão que ignora o TERM seguia de pé"
+    assert teimosa.returncode == -signal.SIGKILL, teimosa.returncode
+    assert "a extensão exemplo não parou; mandando o fim" in fora
 
 
 def test_a_mordida_sem_o_passo_das_modificacoes_o_processo_segue_de_pe(
