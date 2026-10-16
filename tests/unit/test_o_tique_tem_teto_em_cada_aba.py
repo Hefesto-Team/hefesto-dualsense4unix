@@ -39,7 +39,8 @@ TETO_DA_ABA_S = 20.0
 #: A régua mede a CPU de cada tique, não o ritmo. A cadência do produto (100 ms) é trocada por esta
 #: para as dez abas passarem em ~1 s cada, não em ~4. Não é 10 ms: o tique que custa mais que o
 #: `TIQUE_MS` faz o produto pular o próximo, e a 10 ms a mediana de algumas abas (6 a 11 ms) já
-#: o faria pular quase sempre, medindo tiques que não rodaram. A 25 ms só o tique lento pula.
+#: o faria pular quase sempre, medindo tiques que não rodaram. A 25 ms só o tique lento pula, e o
+#: tique pulado fica fora da conta: o custo dele (~0 ms) baixaria a mediana do tique lento à metade.
 CADENCIA_DA_MEDIDA_MS = 25
 
 
@@ -86,12 +87,14 @@ def _medir_as_dez(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[float]]:
         def tique() -> bool:
             if roteiro.acabou:
                 return False
+            pulos = piloto._pulados_por_voo + piloto._pulados_por_custo
             with _sem_o_rastreador():
                 t0 = time.thread_time()
                 volta = tique_original()
                 custo = (time.thread_time() - t0) * 1000
+            rodou = piloto._pulados_por_voo + piloto._pulados_por_custo == pulos
             aba = ABAS[roteiro.i] if roteiro.i < len(ABAS) else ""
-            if aba and piloto.pagina == aba and piloto.pronto and piloto.tela.na_aba:
+            if rodou and aba and piloto.pagina == aba and piloto.pronto and piloto.tela.na_aba:
                 roteiro.chegou += 1
                 if roteiro.chegou > ASSENTAR:
                     custos[aba].append(custo)
