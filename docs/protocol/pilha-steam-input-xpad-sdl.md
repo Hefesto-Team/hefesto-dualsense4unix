@@ -882,8 +882,8 @@ MEDIDO**.
 
 ### 5-bis.5 O que isto NÃO mede
 
-- o HIDAPI **ligado** no SDL3 e no sdl2-compat, que abre o `hidraw` do vpad pelo
-  driver PS5 e escreve efeitos ao abrir;
+- o HIDAPI **ligado** no sdl2-compat, que abre o `hidraw` do vpad pelo driver PS5 e
+  escreve efeitos ao abrir (no SDL3, a §5-bis.6);
 - o contêiner do Steam Linux Runtime por dentro, onde o SDL enumera por outro
   caminho;
 - o vpad que nasce com o jogo já aberto (co-op, troca de máscara, reconexão) na
@@ -895,6 +895,65 @@ MEDIDO**.
   2.30.x.
 
 **GRAU: NÃO MEDIDO** nas quatro. É a linha 10 da seção 7.
+
+### 5-bis.6 O HIDAPI ligado no SDL3 — o que o Vita3K e o shadPS4 recebem (16/10/2026)
+
+**Acrescentada em 16/10/2026.** A 5-bis.1 mediu o SDL3 LISTANDO o vpad com o HIDAPI
+desligado. Os emuladores que embutem o SDL3 (Vita3K, shadPS4) o têm LIGADO, e é outro
+caminho: o driver PS5 do HIDAPI abre o `hidraw` do vpad. O instrumento é
+`scripts/ensaios/o_jogo_para_de_ver_o_giro.py --jogador P1..P4 --lib <libSDL3>`; esta seção
+diz o que dele já está medido, o que é fonte e o que só a bancada fecha.
+
+| biblioteca | revisão | quem a carrega | grau |
+|---|---|---|---|
+| SDL3 3.4.14, sniper (`var/tmp` do runtime) | `SDL-release-3.4.14-0-g147a8ee32 (SteamRT 3.4.14+ds-1+steamrt3.1+bsrt3.1)` | jogo no sniper | MEDIDO AQUI (eventos e API, joystick virtual) |
+| SDL3 3.4.16, soldier (`var/tmp` do runtime) | `SDL-release-3.4.16-0-gfa2c02bb6 (SteamRT 3.4.16+ds-1+steamrt2.1+bsrt2.1)` | jogo no soldier | MEDIDO AQUI (idem) |
+| SDL3 3.4.16, `files/lib` dos runtimes 3 e 4 | `SDL-release-3.4.16-0-gfa2c02bb6` (`steamrt3.1+bsrt3.1` e `steamrt4.1+bsrt4.1`) | jogo nesses runtimes | MEDIDO AQUI: a classe da sonda enumerou, abriu, ligou os sensores e leu os três eventos |
+| SDL3 3.4.16 **estática** no Vita3K | `external/sdl` em `fa2c02bb` | o Vita3K | ALTA (fonte); o AppImage não foi medido |
+| SDL3 3.5.0-dev no shadPS4 | `d5af35e3` | o shadPS4 | ALTA (fonte); layouts do 3.5.0 NÃO MEDIDOS |
+
+**MEDIDO AQUI, 16/10/2026, com um joystick VIRTUAL do próprio SDL (nenhum aparelho, nenhum
+`hidraw`, `SDL_VIDEODRIVER=dummy`, sem `DISPLAY`).** O `SDL_Event` do SDL3 tem 128 bytes,
+little-endian, e os layouts que a sonda lê são estes:
+
+| evento | tipo | layout (`struct`) |
+|---|---|---|
+| botão baixo / cima | `0x651` / `0x652` | `<IIQIBB`: tipo, reservado, carimbo, `which`, botão, baixo |
+| toque baixo / move / cima | `0x656` / `0x657` / `0x658` | `<IIQIiifff`: …, `which`, touchpad, dedo, x, y, pressão |
+| sensor | `0x659` | `<IIQIi3f4xQ`: …, `which`, sensor, dado[3], 4 de enchimento, **`sensor_timestamp` em ns no deslocamento 40** (lido 123456789 exato) |
+
+O clique do touchpad é `SDL_GAMEPAD_BUTTON_TOUCHPAD = 20` (`SDL_GetGamepadStringForButton(20)`
+dá `touchpad`). Um virtual com um touchpad de dois dedos, giro e acelerômetro responde
+`SDL_GetNumGamepadTouchpads = 1`, `SDL_GetNumGamepadTouchpadFingers = 2` e `HasSensor` verdadeiro
+nos dois. **O SDL3 não dá o serial pelo id**: `SDL_GetGamepadSerial` só existe com o gamepad
+aberto, e num virtual devolve vazio. Por isso a sonda escolhe ANTES de abrir: pega
+`SDL_GetGamepadPathForID`, lê o `HID_UNIQ` do `hidraw` em `/sys/class/hidraw` e abre o id cujo
+`UNIQ` é o do vpad pedido; depois da abertura confere o serial e o par `(st_dev, st_ino)` do
+`SDL_GetGamepadPath` contra o nó do vpad no estado completo do daemon.
+
+**Pelo FONTE (grau ALTA, lido no `libsdl-org/SDL`, ainda sem medida no aparelho):**
+
+- O driver PS5 do HIDAPI renomeia todo Sony `0df2` para «DualSense Edge Wireless Controller»
+  e regrava o CRC do GUID com o CRC desse nome. Barramento, VID, PID e versão saem iguais:
+  **os quatro vpads têm o MESMO nome e o MESMO GUID**; só o serial (o `UNIQ`) e o caminho
+  diferem. Quem guarda controle por GUID (o Vita3K) abre o primeiro da enumeração e ignora os
+  outros três; a ordem é a da enumeração do hidapi, e um vpad recriado vai para o fim.
+- Ao enumerar, o SDL3 abre o `hidraw` de TODO aparelho que tem driver e o mantém aberto,
+  descartando os relatórios de quem não tem gamepad aberto. A escrita (modo estendido, cor da
+  barra pelo índice de jogador, luzes de número) só vai ao vpad aberto.
+- Ao fechar o gamepad, a cor e o número NÃO voltam: o `hid_playstation` abre o `hidraw` no
+  probe, então o `UHID_OPEN` chega uma vez, no nascimento do vpad, e o `UHID_CLOSE` só na
+  remoção; abrir e fechar o `hidraw` não gera evento no `uhid`.
+
+**O que a sonda mede e a bancada fecha (NÃO MEDIDO ainda):** a identidade (nome e GUID iguais,
+serial distinto), os `hidraw` dos quatro abertos pelo processo (`/proc/<pid>/fd` casado por
+inode), a escrita só no escolhido (`output_count`, `lightbar_replicas` e `player_led_replicas`
+de cada vpad antes, durante e depois), um touchpad de dois dedos, giro e acelerômetro, `|acel|`
+parado em 9,8 ± 0,5 m/s², nenhum intervalo de `sensor_timestamp` acima de 0,1 s (o teto em que
+o Vita3K descarta a amostra) e, com o dedo, eventos de toque e o clique. Ela abre o vpad com o
+HIDAPI ligado, o que ESCREVE no aparelho: roda com `scripts/bancada.sh exigir`, e com
+`--hidapi 0` (só para a mordida) o laudo reprova, porque sem HIDAPI o vpad é evdev e não há
+touchpad.
 
 ---
 
@@ -1573,7 +1632,7 @@ Uma variável por linha, que é como se ataca isto.
 | 9 | a **volta** do ensaio da lightbar: subir os controles com a Steam viva na probe, **de propósito**, e ver o defeito voltar | o mesmo desenho de 6-bis.2, com o braço sujo provocado | 6-bis |
 | 11 | o que a **classe própria do Edge** muda no motor do jogo — o consumidor do `ebx` da cadeia de `cmp` | desmontar o ramo, ou abrir o jogo com `PROTON_LOG=+hid` | 5-ter.4 |
 | 12 | o `winebus` enumera os nós **evdev** do físico quando o `hidraw` dele está negado/inacessível? | `PROTON_LOG=+hid` com o jogo aberto, contando `udev_add_device` por nó | 5-ter.9 |
-| 10 | o giroscópio do vpad **no jogo**, com a biblioteca que o jogo carrega: HIDAPI ligado no SDL3 e no sdl2-compat, o contêiner do sniper por dentro, o vpad que nasce com o jogo aberto na 2.32.10, e qual SDL cada jogo carrega (`/proc/<pid>/maps`) | o ensaio com os quatro controles, com o jogo aberto | 5-bis |
+| 10 | o giroscópio do vpad **no jogo**, com a biblioteca que o jogo carrega: HIDAPI ligado no sdl2-compat (no SDL3, a 5-bis.6), o contêiner do sniper por dentro, o vpad que nasce com o jogo aberto na 2.32.10, e qual SDL cada jogo carrega (`/proc/<pid>/maps`) | o ensaio com os quatro controles, com o jogo aberto | 5-bis |
 
 Os itens 1, 2 e 6 saem **do mesmo comando**, custam trinta segundos e fecham
 três linhas de uma vez. É o melhor negócio desta tabela.
