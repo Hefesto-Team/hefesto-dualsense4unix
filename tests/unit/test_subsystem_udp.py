@@ -1,46 +1,43 @@
-"""Testes unitários do subsystem UDP (isolamento)."""
+"""Testes unitários do UDP na lista de subsystems (isolamento)."""
 from __future__ import annotations
 
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from hefesto_dualsense4unix.daemon.subsystems import SUBSYSTEM_REGISTRY
 from hefesto_dualsense4unix.daemon.subsystems import udp as modulo
-from hefesto_dualsense4unix.daemon.subsystems.udp import UdpSubsystem
+
+_PASSO = next(p for p in SUBSYSTEM_REGISTRY if p.nome == "udp")
 
 
-class TestUdpSubsystem:
-    def _make_config(self, udp_enabled: bool) -> MagicMock:
-        cfg = MagicMock()
-        cfg.udp_enabled = udp_enabled
-        return cfg
-
-    def test_is_enabled_true(self) -> None:
-        subsystem = UdpSubsystem()
-        assert subsystem.is_enabled(self._make_config(udp_enabled=True)) is True
-
-    def test_is_enabled_false(self) -> None:
-        subsystem = UdpSubsystem()
-        assert subsystem.is_enabled(self._make_config(udp_enabled=False)) is False
+class TestUdpNaLista:
+    def test_o_gate_da_lista_segue_a_config(self) -> None:
+        assert _PASSO.quando is not None
+        assert _PASSO.quando(SimpleNamespace(udp_enabled=True)) is True
+        assert _PASSO.quando(SimpleNamespace(udp_enabled=False)) is False
 
     @pytest.mark.asyncio
-    async def test_stop_idempotente_sem_server(self) -> None:
-        subsystem = UdpSubsystem()
-        await subsystem.stop()
+    async def test_parada_idempotente_sem_server(self) -> None:
+        assert _PASSO.parada is not None
+        daemon = SimpleNamespace(_udp_server=None)
+        await _PASSO.parada(daemon)
+        assert daemon._udp_server is None
 
     @pytest.mark.asyncio
-    async def test_stop_chama_server_stop(self) -> None:
-        subsystem = UdpSubsystem()
-        mock_server = MagicMock()
-        mock_server.stop = AsyncMock()
-        subsystem._server = mock_server
-        await subsystem.stop()
-        mock_server.stop.assert_called_once()
-        assert subsystem._server is None
+    async def test_parada_chama_server_stop_e_zera(self) -> None:
+        assert _PASSO.parada is not None
+        servidor = MagicMock()
+        servidor.stop = AsyncMock()
+        daemon = SimpleNamespace(_udp_server=servidor)
+        await _PASSO.parada(daemon)
+        servidor.stop.assert_called_once()
+        assert daemon._udp_server is None
 
 
 class TestODesligarTemUmDonoSo:
-    """O `shutdown` de `daemon/connection.py` derruba `_udp_server` em linha."""
+    """A parada de `_udp_server` mora na lista (`SUBSYSTEM_REGISTRY`), não em função do módulo."""
 
     def test_a_utilitaria_de_desligar_nao_volta(self) -> None:
         assert not hasattr(modulo, "stop_udp")

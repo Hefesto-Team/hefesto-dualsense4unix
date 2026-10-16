@@ -315,5 +315,9 @@ def test_a_mensagem_do_kernel_se_le_por_campo() -> None:
     assert not ou.interessa(b"libudev\0qualquer coisa")
 
 
-def test_o_daemon_liga_o_ouvido_pelo_safe_start() -> None:
-    assert '_safe_start("ouvido_do_usb"' in inspect.getsource(Daemon.run)
+def test_o_daemon_liga_o_ouvido_pela_lista() -> None:
+    from hefesto_dualsense4unix.daemon.subsystems import SUBSYSTEM_REGISTRY
+
+    [passo] = [p for p in SUBSYSTEM_REGISTRY if p.nome == "ouvido_do_usb"]
+    assert passo.partida is not None
+    assert "subir" in inspect.getsource(Daemon.run)

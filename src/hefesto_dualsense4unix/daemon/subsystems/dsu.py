@@ -21,8 +21,6 @@ from hefesto_dualsense4unix.daemon.servidor_dsu import ServidorDsu, SlotDsu
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 if TYPE_CHECKING:
-    from hefesto_dualsense4unix.daemon.context import DaemonContext
-    from hefesto_dualsense4unix.daemon.lifecycle import DaemonConfig
     from hefesto_dualsense4unix.daemon.protocols import DaemonProtocol
 
 logger = get_logger(__name__)
@@ -122,31 +120,7 @@ async def stop_dsu(daemon: DaemonProtocol) -> None:
             logger.warning("dsu_parar_falhou", err=str(exc))
 
 
-class DsuSubsystem:
-    """Subsystem que gerencia o servidor DSU do daemon."""
-
-    name = "dsu"
-    _daemon: Any = None
-
-    async def start(self, ctx: DaemonContext) -> None:
-        daemon = getattr(ctx, "daemon", None)
-        if daemon is None:
-            logger.warning("dsu_subsystem_sem_daemon")
-            return
-        self._daemon = daemon
-        await start_dsu(daemon)
-
-    async def stop(self) -> None:
-        if self._daemon is not None:
-            await stop_dsu(self._daemon)
-            self._daemon = None
-
-    def is_enabled(self, config: DaemonConfig) -> bool:
-        return bool(config.dsu_enabled)
-
-
 __all__ = [
-    "DsuSubsystem",
     "hub_do_laco",
     "montar_a_tabela",
     "start_dsu",

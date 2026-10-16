@@ -7,8 +7,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from hefesto_dualsense4unix.daemon.subsystems import SUBSYSTEM_REGISTRY
 from hefesto_dualsense4unix.daemon.subsystems.mouse import (
-    MouseSubsystem,
     dispatch_mouse,
     start_mouse_emulation,
     stop_mouse_emulation,
@@ -50,88 +50,70 @@ def _ctx(enabled: bool) -> SimpleNamespace:
     return SimpleNamespace(config=daemon.config, daemon=daemon)
 
 
-class TestMouseSubsystem:
-    def _make_config(self, enabled: bool) -> MagicMock:
-        cfg = MagicMock()
-        cfg.mouse_emulation_enabled = enabled
-        return cfg
+class TestPartidaEParadaDoMouse:
+    """A partida é `start_mouse_emulation`; a parada mora na lista (`SUBSYSTEM_REGISTRY`)."""
 
-    def test_is_enabled_true(self) -> None:
-        subsystem = MouseSubsystem()
-        assert subsystem.is_enabled(self._make_config(enabled=True)) is True
-
-    def test_is_enabled_false(self) -> None:
-        subsystem = MouseSubsystem()
-        assert subsystem.is_enabled(self._make_config(enabled=False)) is False
-
-    @pytest.mark.asyncio
-    async def test_stop_idempotente_sem_device(self) -> None:
-        subsystem = MouseSubsystem()
-        await subsystem.stop()
-
-    @pytest.mark.asyncio
-    async def test_start_deixa_o_no_no_daemon(self, no_de_mentira: type[_NoDeMentira]) -> None:
-        ctx = _ctx(enabled=True)
-        await MouseSubsystem().start(ctx)
-        assert ctx.daemon._mouse_device is no_de_mentira.nascidos[0]
+    def test_start_deixa_o_no_no_daemon(self, no_de_mentira: type[_NoDeMentira]) -> None:
+        daemon = _ctx(enabled=True).daemon
+        assert start_mouse_emulation(daemon) is True
+        assert daemon._mouse_device is no_de_mentira.nascidos[0]
         assert len(no_de_mentira.nascidos) == 1
 
-    @pytest.mark.asyncio
-    async def test_a_classe_nao_guarda_no_proprio(self, no_de_mentira: type[_NoDeMentira]) -> None:
-        subsystem = MouseSubsystem()
-        await subsystem.start(_ctx(enabled=True))
-        assert getattr(subsystem, "_device", None) is None
+    def test_dois_starts_nao_criam_segundo_no(self, no_de_mentira: type[_NoDeMentira]) -> None:
+        daemon = _ctx(enabled=True).daemon
+        assert start_mouse_emulation(daemon) is True
+        assert start_mouse_emulation(daemon) is True
+        assert len(no_de_mentira.nascidos) == 1
+
+    def test_o_gate_da_lista_pergunta_a_config(self) -> None:
+        passo = next(p for p in SUBSYSTEM_REGISTRY if p.nome == "mouse")
+        assert passo.quando is not None
+        assert passo.quando(_ctx(enabled=True).config) is True
+        assert passo.quando(_ctx(enabled=False).config) is False
 
     @pytest.mark.asyncio
-    async def test_start_desligado_nao_cria_no(self, no_de_mentira: type[_NoDeMentira]) -> None:
-        ctx = _ctx(enabled=False)
-        await MouseSubsystem().start(ctx)
-        assert ctx.daemon._mouse_device is None
-        assert no_de_mentira.nascidos == []
+    async def test_a_parada_da_lista_sem_no_e_idempotente(self) -> None:
+        passo = next(p for p in SUBSYSTEM_REGISTRY if p.nome == "mouse")
+        assert passo.parada is not None
+        await passo.parada(_ctx(enabled=True).daemon)
 
     @pytest.mark.asyncio
-    async def test_dois_starts_e_a_funcao_nao_criam_segundo_no(
+    async def test_a_parada_da_lista_zera_o_no_do_daemon(
         self, no_de_mentira: type[_NoDeMentira]
     ) -> None:
-        ctx = _ctx(enabled=True)
-        subsystem = MouseSubsystem()
-        await subsystem.start(ctx)
-        await subsystem.start(ctx)
-        assert start_mouse_emulation(ctx.daemon) is True
-        assert len(no_de_mentira.nascidos) == 1
-
-    @pytest.mark.asyncio
-    async def test_stop_zera_o_no_do_daemon(self, no_de_mentira: type[_NoDeMentira]) -> None:
-        ctx = _ctx(enabled=True)
-        subsystem = MouseSubsystem()
-        await subsystem.start(ctx)
-        no = ctx.daemon._mouse_device
-        await subsystem.stop()
+        passo = next(p for p in SUBSYSTEM_REGISTRY if p.nome == "mouse")
+        assert passo.parada is not None
+        daemon = _ctx(enabled=True).daemon
+        start_mouse_emulation(daemon)
+        no = daemon._mouse_device
+        await passo.parada(daemon)
         assert no.parou == 1
-        assert ctx.daemon._mouse_device is None
-        await subsystem.stop()
+        assert daemon._mouse_device is None
+        await passo.parada(daemon)
         assert no.parou == 1
 
-
     @pytest.mark.asyncio
-    async def test_o_stop_do_subsystem_nao_esquece_a_preferencia_salva(
+    async def test_a_parada_da_lista_nao_esquece_a_preferencia_salva(
         self, no_de_mentira: type[_NoDeMentira], monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         # D-1510-O-STOP-DO-MOUSE-NAO-ESQUECE-A-PREFERENCIA
         """Desligar o daemon desce o nó, mas o mouse ligado volta ligado no próximo início.
 
-        MORDIDA: chamar `stop_mouse_emulation(daemon)` sem `persist=False` grava o desligado.
+        MORDIDA: trocar a parada por `stop_mouse_emulation(daemon)` sem `persist=False`
+        grava o desligado.
         """
         gravados: list[bool] = []
         monkeypatch.setattr("hefesto_dualsense4unix.utils.session.save_mouse_emulation",
                             lambda ligado, *a, **k: gravados.append(ligado))
-        ctx = _ctx(enabled=True)
-        subsystem = MouseSubsystem()
-        await subsystem.start(ctx)
-        await subsystem.stop()
-        assert ctx.daemon._mouse_device is None
-        # O start grava o ligado (é o `start_mouse_emulation` de sempre); o stop não grava nada.
-        assert gravados == [True], "o stop do subsystem gravou o mouse desligado na sessão"
+        passo = next(p for p in SUBSYSTEM_REGISTRY if p.nome == "mouse")
+        assert passo.parada is not None
+        daemon = _ctx(enabled=True).daemon
+        start_mouse_emulation(daemon)
+        await passo.parada(daemon)
+        assert daemon._mouse_device is None
+        # O start grava o ligado (é o `start_mouse_emulation` de sempre); a parada não grava nada.
+        assert gravados == [True], "a parada da lista gravou o mouse desligado na sessão"
+
 
 class TestTabelaNoJogoFechaOsDois:
     def test_o_stop_do_teclado_roda_mesmo_se_o_do_mouse_levanta(

@@ -8,7 +8,6 @@ dublês que anotam o que receberiam.
 from __future__ import annotations
 
 import random
-from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
@@ -418,10 +417,10 @@ def test_o_dedo_tem_histerese() -> None:
 
 
 def test_o_daemon_sobe_o_motor_logo_depois_da_luz_do_mic() -> None:
-    fonte = (Path(tv.__file__).parent.parent / "lifecycle.py").read_text(encoding="utf-8")
-    luz = fonte.index('self._safe_start("luz_do_mic"')
-    tato = fonte.index('self._safe_start("tato_vivo"')
-    assert luz < tato < fonte.index('self._safe_start("alto_falante"')
+    from hefesto_dualsense4unix.daemon.subsystems import SUBSYSTEM_REGISTRY
+
+    nomes = [p.nome for p in SUBSYSTEM_REGISTRY]
+    assert nomes.index("luz_do_mic") < nomes.index("tato_vivo") < nomes.index("alto_falante")
 
 
 def test_o_tique_que_falha_nao_derruba_o_laco(monkeypatch: pytest.MonkeyPatch) -> None:

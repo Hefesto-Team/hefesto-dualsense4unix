@@ -3,12 +3,10 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-import pytest
 
 from hefesto_dualsense4unix.daemon.subsystems.poll import (
     BATTERY_DEBOUNCE_SEC,
     BatteryDebouncer,
-    PollSubsystem,
     evdev_buttons_once,
 )
 
@@ -84,21 +82,3 @@ class TestEvdevButtonsOnce:
         d.controller._evdev = evdev
         result = evdev_buttons_once(d)
         assert result == frozenset()
-
-
-class TestPollSubsystem:
-    def test_is_enabled_sempre_true(self) -> None:
-        subsystem = PollSubsystem()
-        cfg = MagicMock()
-        assert subsystem.is_enabled(cfg) is True
-
-    @pytest.mark.asyncio
-    async def test_start_noop(self) -> None:
-        subsystem = PollSubsystem()
-        ctx = MagicMock()
-        await subsystem.start(ctx)
-
-    @pytest.mark.asyncio
-    async def test_stop_noop(self) -> None:
-        subsystem = PollSubsystem()
-        await subsystem.stop()

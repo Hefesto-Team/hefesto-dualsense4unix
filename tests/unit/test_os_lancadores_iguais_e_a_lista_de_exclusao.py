@@ -602,10 +602,8 @@ def test_fora_da_lista_nada_muda(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     assert espiao.aplicadas == [] and espiao.revertidas == 0
 
 
-@pytest.mark.parametrize("rota", ["subsistema", "utilitaria"])
-def test_as_duas_rotas_de_subida_ligam_os_tres_fios(
-        rota: str, monkeypatch: pytest.MonkeyPatch) -> None:
-    """ARRANQUE um dos três fios de uma das rotas e este teste reprova: o"""
+def test_a_subida_liga_os_tres_fios(monkeypatch: pytest.MonkeyPatch) -> None:
+    """ARRANQUE um dos três fios da partida e este teste reprova: o"""
     from hefesto_dualsense4unix.daemon.subsystems import autoswitch as sub
     from hefesto_dualsense4unix.profiles import autoswitch as perfis
     from hefesto_dualsense4unix.profiles import manager as gerente
@@ -628,11 +626,7 @@ def test_as_duas_rotas_de_subida_ligam_os_tres_fios(
         aplicar_a_exclusao=lambda **_: "aplicado",
         reverter_a_exclusao=lambda: "aplicado",
     )
-    if rota == "subsistema":
-        ctx = SimpleNamespace(daemon=daemon, controller=None, store=daemon.store)
-        asyncio.run(sub.AutoswitchSubsystem().start(ctx))  # type: ignore[arg-type]
-    else:
-        asyncio.run(sub.start_autoswitch(daemon))  # type: ignore[arg-type]
+    asyncio.run(sub.start_autoswitch(daemon))  # type: ignore[arg-type]
     assert capturado["exclusao_applier"] is daemon.aplicar_a_exclusao
     assert capturado["exclusao_reverter"] is daemon.reverter_a_exclusao
     assert capturado["exclusao_reader"] is lx.contem

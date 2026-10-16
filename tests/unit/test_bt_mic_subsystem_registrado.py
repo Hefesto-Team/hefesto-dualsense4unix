@@ -9,7 +9,7 @@ from hefesto_dualsense4unix.core.controller import ControllerState
 from hefesto_dualsense4unix.core.events import EventBus
 from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
 from hefesto_dualsense4unix.daemon.state_store import StateStore
-from hefesto_dualsense4unix.daemon.subsystems import SUBSYSTEM_REGISTRY
+from hefesto_dualsense4unix.daemon.subsystems import SUBSYSTEM_REGISTRY, Passo
 from hefesto_dualsense4unix.daemon.subsystems.bt_mic import BtMicSubsystem
 from hefesto_dualsense4unix.testing import FakeController
 
@@ -42,20 +42,26 @@ async def _roda_ate_o_1o_tick(daemon: Daemon, store: StateStore) -> None:
     await run_task
 
 
-def test_bt_mic_esta_no_registry() -> None:
-    """A metade declarativa: a classe consta da lista canônica."""
-    assert BtMicSubsystem in SUBSYSTEM_REGISTRY
+def _passo(nome: str) -> Passo:
+    return next(p for p in SUBSYSTEM_REGISTRY if p.nome == nome)
 
 
-def test_bt_mic_sobe_antes_dos_plugins_no_registry() -> None:
+def test_bt_mic_esta_na_lista() -> None:
+    """A metade declarativa: a entrada consta da lista canônica, com partida e parada."""
+    passo = _passo("bt_mic")
+    assert passo.partida is not None
+    assert passo.parada is not None
+
+
+def test_bt_mic_sobe_antes_dos_plugins_na_lista() -> None:
     """Ordem de start: bt_mic antes de plugins (código de usuário por último)."""
-    from hefesto_dualsense4unix.daemon.subsystems import (
-        MetricsSubsystem,
-        PluginsSubsystem,
-    )
+    nomes = [p.nome for p in SUBSYSTEM_REGISTRY]
+    assert nomes.index("bt_mic") < nomes.index("plugins") < nomes.index("metrics")
 
-    idx = SUBSYSTEM_REGISTRY.index
-    assert idx(BtMicSubsystem) < idx(PluginsSubsystem) < idx(MetricsSubsystem)
+
+def test_bt_mic_para_antes_do_ipc() -> None:
+    """Ordem de parada: o microfone cai antes do servidor do IPC."""
+    assert _passo("bt_mic").parar_em < _passo("ipc").parar_em  # type: ignore[operator]
 
 
 @pytest.mark.asyncio

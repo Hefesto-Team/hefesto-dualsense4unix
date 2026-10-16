@@ -1,7 +1,6 @@
 """Subsystem Autoswitch — gerencia troca automática de perfis por janela ativa."""
 from __future__ import annotations
 
-import contextlib
 import os
 import time
 from typing import TYPE_CHECKING, Any
@@ -13,8 +12,6 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from hefesto_dualsense4unix.core.events import EventBus
-    from hefesto_dualsense4unix.daemon.context import DaemonContext
-    from hefesto_dualsense4unix.daemon.lifecycle import DaemonConfig
     from hefesto_dualsense4unix.daemon.protocols import DaemonProtocol
     from hefesto_dualsense4unix.daemon.state_store import StateStore
 
@@ -240,57 +237,6 @@ def _build_diag_window_reader(store: StateStore) -> Callable[[], dict[str, Any]]
     return _read
 
 
-class AutoswitchSubsystem:
-    """Subsystem que gerencia o AutoSwitcher de perfis."""
-
-    name = "autoswitch"
-    _autoswitch: Any = None
-
-    async def start(self, ctx: DaemonContext) -> None:
-        """Inicia o AutoSwitcher com as dependências do DaemonContext."""
-        from hefesto_dualsense4unix.integrations import lista_de_exclusao
-        from hefesto_dualsense4unix.profiles.autoswitch import AutoSwitcher
-        from hefesto_dualsense4unix.profiles.manager import gerente_do_daemon
-
-        _ensure_display_env()
-        daemon = getattr(ctx, "daemon", None)
-        manager = gerente_do_daemon(daemon, controller=ctx.controller, store=ctx.store)
-        self._autoswitch = AutoSwitcher(
-            manager=manager,
-            window_reader=_anunciando(
-                _build_diag_window_reader(ctx.store),
-                _anunciador_do(getattr(ctx, "bus", None), ctx.store, daemon),
-            ),
-            store=ctx.store,
-            modo_jogo_padrao_applier=getattr(
-                daemon, "aplicar_modo_jogo_padrao", None
-            ),
-            modo_jogo_padrao_reverter=getattr(
-                daemon, "reverter_modo_jogo_padrao", None
-            ),
-            exclusao_applier=getattr(daemon, "aplicar_a_exclusao", None),
-            exclusao_reverter=getattr(daemon, "reverter_a_exclusao", None),
-            exclusao_reader=lista_de_exclusao.contem,
-            jogo_em_cena_reader=_o_jogo_em_cena_do_servico(daemon),
-        )
-        if not self._autoswitch.disabled():
-            self._autoswitch.start()
-            logger.info("autoswitch_subsystem_started")
-        else:
-            logger.info("autoswitch_subsystem_disabled_by_config")
-
-    async def stop(self) -> None:
-        """Para o AutoSwitcher de forma limpa. Idempotente."""
-        if self._autoswitch is not None:
-            with contextlib.suppress(Exception):
-                self._autoswitch.stop()
-            self._autoswitch = None
-            logger.info("autoswitch_subsystem_stopped")
-
-    def is_enabled(self, config: DaemonConfig) -> bool:
-        return config.autoswitch_enabled
-
-
 async def start_autoswitch(daemon: DaemonProtocol) -> None:
     """Função utilitária: inicia o AutoSwitcher usando o Daemon diretamente."""
     from hefesto_dualsense4unix.integrations import lista_de_exclusao
@@ -317,4 +263,4 @@ async def start_autoswitch(daemon: DaemonProtocol) -> None:
         daemon._autoswitch.start()
 
 
-__all__ = ["AnunciadorDoJogo", "AutoswitchSubsystem", "start_autoswitch"]
+__all__ = ["AnunciadorDoJogo", "start_autoswitch"]

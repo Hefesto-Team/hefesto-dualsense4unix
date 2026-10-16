@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Any
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 if TYPE_CHECKING:
-    from hefesto_dualsense4unix.daemon.context import DaemonContext
     from hefesto_dualsense4unix.daemon.protocols import DaemonProtocol
 
 logger = get_logger(__name__)
@@ -480,23 +479,6 @@ def modo_nativo_manda_nos_motores(daemon: Any) -> bool:
         return False
 
 
-class RumbleSubsystem:
-    """Subsystem sentinela para o registry — lógica real está em reassert_rumble()."""
-
-    name = "rumble"
-
-    async def start(self, ctx: DaemonContext) -> None:
-        """Noop: re-asserção é integrada ao poll loop."""
-        logger.debug("rumble_subsystem_start")
-
-    async def stop(self) -> None:
-        """Noop: não há recurso externo para liberar."""
-        logger.debug("rumble_subsystem_stop")
-
-    def is_enabled(self, config: Any) -> bool:
-        return True
-
-
 __all__ = [
     "AUTO_DEBOUNCE_SEC",
     "MOTIVO_ALVO_FORA_DA_MESA",
@@ -508,7 +490,6 @@ __all__ = [
     "RUMBLE_RECUSADO_ALVO_AUSENTE",
     "RUMBLE_RECUSADO_MODO_NATIVO",
     "RUMBLE_SOLTO_NO_MODO_NATIVO",
-    "RumbleSubsystem",
     "escrever_com_a_forca",
     "escrever_rumble_no_dono",
     "fixar_par",

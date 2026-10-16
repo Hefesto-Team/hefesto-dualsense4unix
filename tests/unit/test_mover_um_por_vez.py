@@ -754,7 +754,6 @@ async def test_o_daemon_abre_o_dono_no_arranque_fora_do_laco(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """O dono do BlueZ abre no arranque, num fio — nunca no laço, nunca na tela."""
-    import inspect
 
     from hefesto_dualsense4unix.daemon.lifecycle import Daemon
     from hefesto_dualsense4unix.testing import FakeController
@@ -770,7 +769,10 @@ async def test_o_daemon_abre_o_dono_no_arranque_fora_do_laco(
 
     assert isinstance(daemon._central_do_radio, cr.CentralDoRadio)
     assert fios and fios[0] != threading.main_thread().name
-    assert '"central_do_radio", self._start_central_do_radio' in inspect.getsource(Daemon.run)
+    from hefesto_dualsense4unix.daemon.subsystems import SUBSYSTEM_REGISTRY
+
+    [passo] = [p for p in SUBSYSTEM_REGISTRY if p.nome == "central_do_radio"]
+    assert passo.partida is not None and passo.parada is not None
 
     monkeypatch.setenv("HEFESTO_DUALSENSE4UNIX_FAKE", "1")
     falso = Daemon(controller=FakeController(transport="bt"))

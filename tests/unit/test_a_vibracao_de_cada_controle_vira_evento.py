@@ -445,11 +445,10 @@ def test_so_o_estado_e_guardado_o_evento_nao_se_repete(mesa: _Mesa) -> None:
     assert _Escuta(bus, EventTopic.JOGO_FECHOU).tudo() == []
 
 
-@pytest.mark.parametrize("rota", ["subsistema", "utilitaria"])
-def test_as_duas_rotas_de_subida_ligam_o_anunciador(
-    rota: str, mesa: _Mesa, monkeypatch: pytest.MonkeyPatch
+def test_a_subida_liga_o_anunciador(
+    mesa: _Mesa, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O leitor que o AutoSwitcher recebe, em qualquer rota, deixa o anunciador olhar o serviço."""
+    """O leitor que o AutoSwitcher recebe da partida da lista deixa o anunciador olhar o serviço."""
     from hefesto_dualsense4unix.daemon.subsystems import autoswitch as sub
     from hefesto_dualsense4unix.profiles import autoswitch as perfis
     from hefesto_dualsense4unix.profiles import manager as gerente
@@ -472,11 +471,7 @@ def test_as_duas_rotas_de_subida_ligam_o_anunciador(
     daemon.aplicar_a_exclusao = lambda **_: "aplicado"
     daemon.reverter_a_exclusao = lambda: "aplicado"
     escuta = _Escuta(daemon.bus, EventTopic.PERFIL_TROCOU)
-    if rota == "subsistema":
-        ctx = SimpleNamespace(daemon=daemon, controller=None, store=daemon.store, bus=daemon.bus)
-        asyncio.run(sub.AutoswitchSubsystem().start(ctx))  # type: ignore[arg-type]
-    else:
-        asyncio.run(sub.start_autoswitch(daemon))
+    asyncio.run(sub.start_autoswitch(daemon))
 
     assert capturado["window_reader"]() == {"wm_class": "x"}
 

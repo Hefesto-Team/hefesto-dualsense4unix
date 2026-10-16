@@ -7,39 +7,9 @@ from typing import TYPE_CHECKING, Any
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 if TYPE_CHECKING:
-    from hefesto_dualsense4unix.daemon.lifecycle import DaemonConfig
     from hefesto_dualsense4unix.daemon.protocols import DaemonProtocol
 
 logger = get_logger(__name__)
-
-
-class MouseSubsystem:
-    """Subsystem do mouse virtual. Não tem nó próprio: delega às funções do daemon.
-
-    O dono do nó é um só, `daemon._mouse_device` (`start_mouse_emulation` /
-    `stop_mouse_emulation`), que é o que o laço, a IPC e a exclusão com o pad usam.
-    Espelha o `GamepadSubsystem`.
-    """
-
-    name = "mouse"
-    _daemon: Any = None
-
-    async def start(self, ctx: Any) -> None:
-        """Sobe o nó do daemon se mouse_emulation_enabled=True. Idempotente."""
-        if not ctx.config.mouse_emulation_enabled:
-            return
-        daemon = getattr(ctx, "daemon", ctx)
-        self._daemon = daemon
-        start_mouse_emulation(daemon)
-
-    async def stop(self) -> None:
-        """Desce o nó do daemon sem esquecer a preferência salva. Idempotente."""
-        daemon, self._daemon = self._daemon, None
-        if daemon is not None:
-            stop_mouse_emulation(daemon, persist=False)
-
-    def is_enabled(self, config: DaemonConfig) -> bool:
-        return config.mouse_emulation_enabled
 
 
 def start_mouse_emulation(daemon: DaemonProtocol) -> bool:
@@ -493,7 +463,6 @@ def discard_touchpad_motion(daemon: DaemonProtocol) -> None:
 
 
 __all__ = [
-    "MouseSubsystem",
     "discard_touchpad_motion",
     "dispatch_mouse",
     "start_mouse_emulation",

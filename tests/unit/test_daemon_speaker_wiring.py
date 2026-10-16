@@ -13,7 +13,6 @@ from hefesto_dualsense4unix.daemon.connection import (
     reapply_speaker_after_connect,
     restore_last_profile,
 )
-from hefesto_dualsense4unix.daemon.context import DaemonContext
 from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.daemon.subsystems import autoswitch as autoswitch_mod
@@ -318,31 +317,6 @@ class _DaemonEnxuto:
 
 class TestPontosDeInjecao:
     @pytest.mark.asyncio
-    async def test_ipc_subsystem_injeta_o_applier(
-        self, isolated_profiles_dir: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        save_profile(_perfil("som", speaker={"volume": 180}))
-        _espionar_manager(monkeypatch)
-        monkeypatch.setattr(
-            "hefesto_dualsense4unix.daemon.ipc_server.IpcServer", _IpcServerFalso
-        )
-        backend = _BackendComAudio()
-        backend.connect()
-        daemon = _DaemonEnxuto(backend)
-        ctx = DaemonContext(
-            controller=backend,
-            bus=daemon.real.bus,
-            store=daemon.store,
-            config=DaemonConfig(),
-        )
-        ctx.daemon = daemon  # type: ignore[attr-defined]
-
-        await ipc_mod.IpcSubsystem().start(ctx)
-        _ativar_pelo_manager_do_callsite("som")
-
-        assert [e["volume"] for e in backend.escritas_de_audio] == [180]
-
-    @pytest.mark.asyncio
     async def test_start_ipc_injeta_o_applier(
         self, isolated_profiles_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -356,33 +330,6 @@ class TestPontosDeInjecao:
         daemon = _DaemonEnxuto(backend)
 
         await ipc_mod.start_ipc(daemon)  # type: ignore[arg-type]
-        _ativar_pelo_manager_do_callsite("som")
-
-        assert [e["volume"] for e in backend.escritas_de_audio] == [180]
-
-    @pytest.mark.asyncio
-    async def test_autoswitch_subsystem_injeta_o_applier(
-        self, isolated_profiles_dir: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        save_profile(_perfil("som", speaker={"volume": 180}))
-        _espionar_manager(monkeypatch)
-        monkeypatch.setattr(autoswitch_mod, "_ensure_display_env", lambda: None)
-        monkeypatch.setattr(
-            "hefesto_dualsense4unix.profiles.autoswitch.AutoSwitcher",
-            _AutoSwitcherFalso,
-        )
-        backend = _BackendComAudio()
-        backend.connect()
-        daemon = _DaemonEnxuto(backend)
-        ctx = DaemonContext(
-            controller=backend,
-            bus=daemon.real.bus,
-            store=daemon.store,
-            config=DaemonConfig(),
-        )
-        ctx.daemon = daemon  # type: ignore[attr-defined]
-
-        await autoswitch_mod.AutoswitchSubsystem().start(ctx)
         _ativar_pelo_manager_do_callsite("som")
 
         assert [e["volume"] for e in backend.escritas_de_audio] == [180]

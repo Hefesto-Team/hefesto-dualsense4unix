@@ -437,47 +437,8 @@ def _confere(gerente: Any, daemon: _DaemonEspiao, rota: str) -> None:
     )
 
 
-def test_rota_ipc_subsystem_recebe_os_sete(monkeypatch: pytest.MonkeyPatch) -> None:
-    """`IpcSubsystem.start` — a rota do `profile.switch` pela janela.
-
-    PREÇO DESTE CASO, MEDIDO em 22/08/2026 e declarado aqui porque instrumento
-    que finge ver o que não vê é pior que instrumento nenhum: o `ctx` daqui tem
-    um atributo `daemon`, e o `DaemonContext` de produção NÃO tem (os campos
-    são `controller`, `bus`, `store`, `config`, `executor`). Com um
-    `DaemonContext` de verdade, esta rota nasce com os SETE em `None` — antes e
-    depois desta leva, porque a lista à mão também fazia `getattr` sobre `None`.
-    Isto não é o caminho de boot: `Daemon.run` sobe o IPC por `start_ipc(self)`,
-    e é lá que os appliers chegam. O que este caso guarda é a fábrica dentro
-    desta rota, para o dia em que ela ganhar um daemon.
-
-    Mordida: trocar a chamada à fábrica por `ProfileManager(...)` sem um
-    applier — ver a saída colada no relatório.
-    """
-    from hefesto_dualsense4unix.daemon import ipc_server as ipc_server_mod
-    from hefesto_dualsense4unix.daemon.subsystems.ipc import IpcSubsystem
-
-    capturado: list[Any] = []
-
-    class _ServidorFalso:
-        def __init__(self, **kw: Any) -> None:
-            capturado.append(kw["profile_manager"])
-
-        async def start(self) -> None:
-            return None
-
-    monkeypatch.setattr(ipc_server_mod, "IpcServer", _ServidorFalso)
-    daemon = _DaemonEspiao()
-    ctx = SimpleNamespace(
-        controller=daemon.controller, store=daemon.store, daemon=daemon
-    )
-    asyncio.run(IpcSubsystem().start(ctx))  # type: ignore[arg-type]
-
-    assert capturado, "a rota não construiu gerente nenhum"
-    _confere(capturado[0], daemon, "IpcSubsystem.start")
-
-
 def test_rota_start_ipc_recebe_os_sete(monkeypatch: pytest.MonkeyPatch) -> None:
-    """`start_ipc` — a irmã utilitária, a que o `Daemon` usa direto."""
+    """`start_ipc` — a rota do `profile.switch` pela janela; a partida da lista do `Daemon`."""
     from hefesto_dualsense4unix.daemon import ipc_server as ipc_server_mod
     from hefesto_dualsense4unix.daemon.subsystems.ipc import start_ipc
 
@@ -498,38 +459,10 @@ def test_rota_start_ipc_recebe_os_sete(monkeypatch: pytest.MonkeyPatch) -> None:
     _confere(capturado[0], daemon, "start_ipc")
 
 
-def test_rota_autoswitch_subsystem_recebe_os_sete(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """`AutoswitchSubsystem.start` — a troca de perfil pela janela em foco."""
-    from hefesto_dualsense4unix.daemon.subsystems.autoswitch import AutoswitchSubsystem
-    from hefesto_dualsense4unix.profiles import autoswitch as autoswitch_mod
-
-    _sem_ambiente_grafico(monkeypatch)
-    capturado: list[Any] = []
-
-    class _TrocadorFalso:
-        def __init__(self, **kw: Any) -> None:
-            capturado.append(kw["manager"])
-
-        def disabled(self) -> bool:
-            return True
-
-    monkeypatch.setattr(autoswitch_mod, "AutoSwitcher", _TrocadorFalso)
-    daemon = _DaemonEspiao()
-    ctx = SimpleNamespace(
-        controller=daemon.controller, store=daemon.store, daemon=daemon
-    )
-    asyncio.run(AutoswitchSubsystem().start(ctx))  # type: ignore[arg-type]
-
-    assert capturado, "a rota não construiu gerente nenhum"
-    _confere(capturado[0], daemon, "AutoswitchSubsystem.start")
-
-
 def test_rota_start_autoswitch_recebe_os_sete(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """`start_autoswitch` — a irmã utilitária do autoswitch."""
+    """`start_autoswitch` — a troca de perfil pela janela em foco; a partida da lista."""
     from hefesto_dualsense4unix.daemon.subsystems.autoswitch import start_autoswitch
     from hefesto_dualsense4unix.profiles import autoswitch as autoswitch_mod
 

@@ -69,7 +69,6 @@ from hefesto_dualsense4unix.profiles.schema import MOTOR_PCT_PADRAO
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 if TYPE_CHECKING:
-    from hefesto_dualsense4unix.daemon.lifecycle import DaemonConfig
     from hefesto_dualsense4unix.daemon.protocols import DaemonProtocol
     from hefesto_dualsense4unix.integrations.virtual_pad import VirtualPad
 
@@ -102,32 +101,6 @@ ORIGENS_QUE_PASSAM_COM_O_JOGO: dict[str, str] = {
 }
 
 OrigemEmulacao = Literal["manual", "profile", "gesto_de_perfil"]
-
-
-class GamepadSubsystem:
-    """Subsystem que gerencia o gamepad virtual. Espelha MouseSubsystem."""
-
-    name = "gamepad"
-
-    async def start(self, ctx: Any) -> None:
-        """Cria o device virtual se gamepad_emulation_enabled=True."""
-        cfg = ctx.config
-        daemon = getattr(ctx, "daemon", ctx)
-        if not getattr(cfg, "gamepad_emulation_enabled", False):
-            _materialize_launch_env(daemon)
-            return
-        start_gamepad_emulation(
-            daemon,
-            flavor=getattr(cfg, "gamepad_flavor", None),
-            origin="profile",
-            caminho=getattr(daemon, "_caminho_do_boot", None),
-        )
-
-    async def stop(self) -> None:  # pragma: no cover - simetria de protocolo
-        return
-
-    def is_enabled(self, config: DaemonConfig) -> bool:
-        return bool(getattr(config, "gamepad_emulation_enabled", False))
 
 
 def _materialize_launch_env(daemon: DaemonProtocol) -> None:
@@ -2470,7 +2443,6 @@ __all__ = [
     "ORIGENS_GESTO_DELA",
     "ORIGENS_QUE_PASSAM_COM_O_JOGO",
     "REBACKEND_COOLDOWN_SEC",
-    "GamepadSubsystem",
     "anotar_rumble_no_vpad",
     "aplicar_o_toque",
     "apply_game_lightbar",

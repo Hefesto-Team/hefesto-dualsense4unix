@@ -774,15 +774,7 @@ class Daemon:
             reconnect_loop,
             shutdown,
         )
-        from hefesto_dualsense4unix.daemon.subsystems.hotkey import (
-            start_hotkey_manager,
-            start_mic_do_jogo,
-            start_mic_hotkey,
-        )
-        from hefesto_dualsense4unix.daemon.subsystems.luz_do_mic import start_luz_do_mic
-        from hefesto_dualsense4unix.daemon.subsystems.ouvinte_do_som import (
-            start_ouvinte_do_som,
-        )
+        from hefesto_dualsense4unix.daemon.subsystems import subir
 
         loop = asyncio.get_running_loop()
         self.bus.bind_loop(loop)
@@ -908,67 +900,7 @@ class Daemon:
         logger.info("daemon_starting", poll_hz=self.config.poll_hz, paused=self._paused)
         try:
             self._tasks = [asyncio.create_task(self._poll_loop(), name="poll_loop")]
-            if self.config.ipc_enabled:
-                # O IPC é essencial: sem socket a janela, a bandeja e a CLI dizem
-                # «offline» com o processo no ar. A falha encerra o `run()`; o
-                # systemd tenta de novo e, no limite, o `OnFailure=` devolve o controle.
-                await self._safe_start(
-                    "ipc",
-                    self._start_ipc,
-                    essencial=lambda exc: IpcIndisponivel(self._caminho_do_socket(), exc),
-                )
-            if self.config.dsu_enabled:
-                await self._safe_start("dsu", self._start_dsu)
-            if self.config.udp_enabled:
-                await self._safe_start("udp", self._start_udp)
-            if self.config.autoswitch_enabled:
-                await self._safe_start("autoswitch", self._start_autoswitch)
-            if self.config.mouse_emulation_enabled:
-                await self._safe_start("mouse", self._start_mouse_emulation)
-            if self.config.gamepad_emulation_enabled:
-                await self._safe_start("gamepad", self._start_gamepad_emulation)
-            if self.config.keyboard_emulation_enabled:
-                await self._safe_start("keyboard", self._start_keyboard_emulation)
-            await self._safe_start("hotkey", lambda: start_hotkey_manager(self))
-            await self._safe_start("mic_do_jogo", lambda: start_mic_do_jogo(self))
-            if self.config.mic_button_toggles_system:
-                await self._safe_start("mic_hotkey", lambda: start_mic_hotkey(self))
-            await self._safe_start("luz_do_mic", lambda: start_luz_do_mic(self))
-            # O-TATO-VIVO-SO-FALA-ONDE-O-JOGO-CALA-01: o motor do tiro, desligado pela receita.
-            from hefesto_dualsense4unix.daemon.subsystems.tato_vivo import start_tato_vivo
-            await self._safe_start("tato_vivo", lambda: start_tato_vivo(self))
-            from hefesto_dualsense4unix.daemon.subsystems.luz_animada import start_luz_animada
-            await self._safe_start("luz_animada", lambda: start_luz_animada(self))
-            # PATH ele tenta, falha, espera e tenta de novo, sem derrubar nada.
-            #
-            # AQUI E NÃO ANTES: ele não é dono de nenhum nó, só observa. Subir
-            # cedo faria a primeira leitura pegar o servidor de som antes de o
-            # `bt_mic` e o `alto_falante` publicarem os nós deles, e a primeira
-            # resposta da tela seria um mundo sem o controle do usuário.
-            await self._safe_start(
-                "ouvinte_do_som", lambda: start_ouvinte_do_som(self))
-            # BT-MIC-REGISTRY-01: ponte de microfone por Bluetooth. O gate de
-            # opt-in vive DENTRO do starter (`is_enabled`) — desligado, ele
-            # devolve sem instanciar nada. Sobe aqui, ao lado do resto do
-            # mundo de microfone e antes dos plugins (código de usuário).
-            await self._safe_start("bt_mic", self._start_bt_mic)
-            # SOM-FIADO-01: o nó de som por controle. Sobe LOGO DEPOIS do
-            # microfone porque as duas metades leem a mesma lista de sysfs, e
-            # na ordem inversa o som cai antes do IPC — o mesmo motivo do
-            # `bt_mic`, do outro lado do áudio.
-            await self._safe_start("alto_falante", self._start_alto_falante)
-            # CONEXAO-ZUMBI-01: o vigia do link que conecta e NÃO vira controle. Sobe depois
-            # do som porque lê o sysfs e o BlueZ por conta própria, e, na ordem inversa, cai
-            # antes do IPC. Nome ASCII, como o dos irmãos. Depois dele, a central do rádio
-            # (MOVER-UM-POR-VEZ-01), que abre o dono do BlueZ, e o ouvido do barramento USB.
-            await self._safe_start("conexoes", self._start_conexoes)  # (noqa-acento): nome ASCII
-            await self._safe_start("central_do_radio", self._start_central_do_radio)
-            await self._safe_start("ouvido_do_usb", self._start_ouvido_do_usb)
-            await self._safe_start("plugins", self._start_plugins)
-            # FEAT-METRICS-01: sobe o servidor de métricas Prometheus (gate
-            # interno respeita metrics_enabled). Antes nunca era iniciado —
-            # metrics_enabled/metrics_port eram config morta.
-            await self._safe_start("metrics", self._start_metrics)
+            await subir(self)
             # FEAT-CONFIG-AUDIT-BOOT-01: valida os perfis no boot e avisa se houver
             # corrompidos (em vez de só pulá-los silenciosamente no fallback).
             self._audit_config_on_boot()
@@ -1021,10 +953,8 @@ class Daemon:
                 )
 
                 materialize_launch_env(self)
-            # ADR-021: as modificações rodam FORA do serviço, como processos
-            # filhos, e sobem DEPOIS do controle: o supervisor nunca atrasa a
-            # primeira conexão. Ele só abre a porta própria quando alguma está ligada.
-            await self._safe_start("mods", self._start_mods)
+            # As modificações sobem DEPOIS do controle (a fase `depois_do_controle` da lista).
+            await subir(self, depois_do_controle=True)
             self._reconnect_task = asyncio.create_task(
                 reconnect_loop(self), name="reconnect_loop"
             )
@@ -1044,9 +974,6 @@ class Daemon:
             if big_picture is not None:
                 with contextlib.suppress(Exception):
                     big_picture.parar()
-            # As modificações param antes do resto: o processo filho de cada
-            # uma recebe o SIGTERM pelo PID criado, e a porta própria fecha.
-            await self._stop_mods()
             try:
                 await shutdown(self)
             finally:

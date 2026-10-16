@@ -645,13 +645,13 @@ async def test_o_starter_pendura_a_task_no_daemon() -> None:
 
 def test_o_ciclo_de_vida_sobe_a_luz_do_mic() -> None:
     """O laço tem de estar LIGADO — um subsistema que ninguém sobe não existe."""
-    from pathlib import Path
+    import inspect
 
-    import hefesto_dualsense4unix.daemon.lifecycle as ciclo
+    import hefesto_dualsense4unix.daemon.subsystems as lista
 
-    fonte = Path(ciclo.__file__).read_text(encoding="utf-8")
-    assert "start_luz_do_mic" in fonte
-    assert 'self._safe_start("luz_do_mic"' in fonte
+    [passo] = [p for p in lista.SUBSYSTEM_REGISTRY if p.nome == "luz_do_mic"]
+    assert passo.partida is not None
+    assert "start_luz_do_mic" in inspect.getsource(lista._luz_do_mic)
 
 
 def test_a_junta_com_as_pecas_irmas_existe_de_verdade() -> None:

@@ -1,45 +1,42 @@
-"""Testes unitários do subsystem Autoswitch (isolamento)."""
+"""Testes unitários do Autoswitch na lista de subsystems (isolamento)."""
 from __future__ import annotations
 
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
 
+from hefesto_dualsense4unix.daemon.subsystems import SUBSYSTEM_REGISTRY
 from hefesto_dualsense4unix.daemon.subsystems import autoswitch as modulo
-from hefesto_dualsense4unix.daemon.subsystems.autoswitch import AutoswitchSubsystem
+
+_PASSO = next(p for p in SUBSYSTEM_REGISTRY if p.nome == "autoswitch")
 
 
-class TestAutoswitchSubsystem:
-    def _make_config(self, autoswitch_enabled: bool) -> MagicMock:
-        cfg = MagicMock()
-        cfg.autoswitch_enabled = autoswitch_enabled
-        return cfg
-
-    def test_is_enabled_true(self) -> None:
-        subsystem = AutoswitchSubsystem()
-        assert subsystem.is_enabled(self._make_config(autoswitch_enabled=True)) is True
-
-    def test_is_enabled_false(self) -> None:
-        subsystem = AutoswitchSubsystem()
-        assert subsystem.is_enabled(self._make_config(autoswitch_enabled=False)) is False
+class TestAutoswitchNaLista:
+    def test_o_gate_da_lista_segue_a_config(self) -> None:
+        assert _PASSO.quando is not None
+        assert _PASSO.quando(SimpleNamespace(autoswitch_enabled=True)) is True
+        assert _PASSO.quando(SimpleNamespace(autoswitch_enabled=False)) is False
 
     @pytest.mark.asyncio
-    async def test_stop_idempotente_sem_autoswitch(self) -> None:
-        subsystem = AutoswitchSubsystem()
-        await subsystem.stop()
+    async def test_parada_idempotente_sem_autoswitch(self) -> None:
+        assert _PASSO.parada is not None
+        daemon = SimpleNamespace(_autoswitch=None)
+        await _PASSO.parada(daemon)
+        assert daemon._autoswitch is None
 
     @pytest.mark.asyncio
-    async def test_stop_chama_autoswitch_stop(self) -> None:
-        subsystem = AutoswitchSubsystem()
-        mock_sw = MagicMock()
-        subsystem._autoswitch = mock_sw
-        await subsystem.stop()
-        mock_sw.stop.assert_called_once()
-        assert subsystem._autoswitch is None
+    async def test_parada_chama_autoswitch_stop_e_zera(self) -> None:
+        assert _PASSO.parada is not None
+        trocador = MagicMock()
+        daemon = SimpleNamespace(_autoswitch=trocador)
+        await _PASSO.parada(daemon)
+        trocador.stop.assert_called_once()
+        assert daemon._autoswitch is None
 
 
 class TestODesligarTemUmDonoSo:
-    """O `shutdown` de `daemon/connection.py` derruba `_autoswitch` em linha."""
+    """A parada de `_autoswitch` mora na lista (`SUBSYSTEM_REGISTRY`), não em função do módulo."""
 
     def test_a_utilitaria_de_desligar_nao_volta(self) -> None:
         assert not hasattr(modulo, "stop_autoswitch")

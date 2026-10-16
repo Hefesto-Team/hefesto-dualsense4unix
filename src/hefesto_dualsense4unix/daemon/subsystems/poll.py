@@ -328,29 +328,11 @@ def _o_proximo_da_fila(daemon: object) -> str | None:
         return None
 
 
-class PollSubsystem:
-    """Subsystem que encapsula o poll loop do daemon."""
-
-    name = "poll"
-
-    async def start(self, ctx: object) -> None:
-        """Noop: loop é criado como Task pelo Daemon."""
-        logger.debug("poll_subsystem_start")
-
-    async def stop(self) -> None:
-        """Noop: loop para via stop_event do Daemon."""
-        logger.debug("poll_subsystem_stop")
-
-    def is_enabled(self, config: object) -> bool:
-        return True
-
-
 __all__ = [
     "BATTERY_DEBOUNCE_SEC",
     "BATTERY_DELTA_THRESHOLD_PCT",
     "BATTERY_MIN_INTERVAL_SEC",
     "BatteryDebouncer",
-    "PollSubsystem",
     "botoes_de_cada_controle",
     "evdev_buttons_once",
     "gatilhos_de_cada_controle",

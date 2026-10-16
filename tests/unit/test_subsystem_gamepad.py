@@ -213,27 +213,13 @@ class TestDispatchGamepad:
         gp.dispatch_gamepad(daemon, self._state(), frozenset())
 
 
-class TestGamepadSubsystem:
-    def test_is_enabled_segue_config(self) -> None:
-        sub = gp.GamepadSubsystem()
+class TestGamepadNaLista:
+    def test_o_gate_da_lista_segue_a_config(self) -> None:
+        from hefesto_dualsense4unix.daemon.subsystems import SUBSYSTEM_REGISTRY
+
+        passo = next(p for p in SUBSYSTEM_REGISTRY if p.nome == "gamepad")
+        assert passo.quando is not None
         cfg = DaemonConfig()
-        assert sub.is_enabled(cfg) is False
+        assert passo.quando(cfg) is False
         cfg.gamepad_emulation_enabled = True
-        assert sub.is_enabled(cfg) is True
-
-    @pytest.mark.asyncio
-    async def test_start_noop_quando_desligado(
-        self, monkeypatch: pytest.MonkeyPatch, no_persist: None
-    ) -> None:
-        created = _patch_for_flavor(monkeypatch)
-        sub = gp.GamepadSubsystem()
-        daemon = _FakeDaemon()
-
-        class _Ctx:
-            config = daemon.config
-            daemon_ref = daemon
-
-        ctx = _Ctx()
-        ctx.daemon = daemon  # type: ignore[attr-defined]
-        await sub.start(ctx)
-        assert created == []
+        assert passo.quando(cfg) is True

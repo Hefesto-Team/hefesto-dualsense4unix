@@ -231,11 +231,11 @@ def test_o_servico_entrega_o_jogo_em_cena_ao_autoswitch(
 
     monkeypatch.setattr(sub, "_ensure_display_env", lambda: None)
     monkeypatch.setenv("HEFESTO_DUALSENSE4UNIX_NO_WINDOW_DETECT", "1")
-    daemon = SimpleNamespace(appid_em_cena=APPID)
-    ctx = SimpleNamespace(daemon=daemon, controller=FakeController(), store=StateStore())
-    subsistema = sub.AutoswitchSubsystem()
-    asyncio.run(subsistema.start(ctx))  # type: ignore[arg-type]
-    leitor = subsistema._autoswitch.jogo_em_cena_reader
+    daemon = SimpleNamespace(
+        appid_em_cena=APPID, controller=FakeController(), store=StateStore()
+    )
+    asyncio.run(sub.start_autoswitch(daemon))  # type: ignore[arg-type]
+    leitor = daemon._autoswitch.jogo_em_cena_reader
     assert leitor is not None
     assert leitor() == APPID
     daemon.appid_em_cena = None

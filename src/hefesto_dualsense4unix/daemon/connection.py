@@ -1314,100 +1314,18 @@ async def _esperar_a_tarefa_cair(task: asyncio.Future[Any]) -> None:
             task.exception()
 
 
-async def shutdown(daemon: DaemonProtocol) -> None:
-    """Encerra todos os recursos do daemon de forma limpa."""
-    logger.info("daemon_shutting_down")
-    parar_bt_mic = getattr(daemon, "_stop_bt_mic", None)
-    if getattr(daemon, "_bt_mic_subsystem", None) is not None and callable(parar_bt_mic):
-        with contextlib.suppress(Exception):
-            await parar_bt_mic()
-    parar_som = getattr(daemon, "_stop_alto_falante", None)
-    if getattr(daemon, "_alto_falante_subsystem", None) is not None and callable(
-        parar_som
-    ):
-        with contextlib.suppress(Exception):
-            await parar_som()
-    central = getattr(daemon, "_central_do_radio", None)
-    if central is not None:
-        with contextlib.suppress(Exception):
-            await asyncio.to_thread(central.fechar)
-    parar_conexoes = getattr(daemon, "_stop_conexoes", None)
-    if getattr(daemon, "_conexoes_subsystem", None) is not None and callable(
-        parar_conexoes
-    ):
-        with contextlib.suppress(Exception):
-            await parar_conexoes()
-    if daemon._plugins_subsystem is not None:
-        with contextlib.suppress(Exception):
-            await daemon._plugins_subsystem.stop()
-        daemon._plugins_subsystem = None
-    parar_metrics = getattr(daemon, "_stop_metrics", None)
-    if getattr(daemon, "_metrics_subsystem", None) is not None and callable(parar_metrics):
-        with contextlib.suppress(Exception):
-            await parar_metrics()
-    daemon._hotkey_manager = None
-    daemon._audio = None
-    if getattr(daemon, "_coop_manager", None) is not None:
-        with contextlib.suppress(Exception):
-            daemon._coop_manager.stop_all()
-        daemon._coop_manager = None
-    if daemon._mouse_device is not None:
-        with contextlib.suppress(Exception):
-            daemon._mouse_device.stop()
-        daemon._mouse_device = None
-    if getattr(daemon, "_gamepad_device", None) is not None:
-        with contextlib.suppress(Exception):
-            from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
-                stop_gamepad_emulation,
-            )
-
-            stop_gamepad_emulation(daemon, persist=False)
-    broker_executor = getattr(daemon, "_hidraw_broker_executor", None)
-    if broker_executor is not None:
-        with contextlib.suppress(Exception):
-            broker_executor.shutdown(wait=False, cancel_futures=True)
-        daemon._hidraw_broker_executor = None
-    client = getattr(daemon, "_hidraw_broker_client", None)
-    if client is not None:
-        with contextlib.suppress(Exception):
-            client.close()
-        daemon._hidraw_broker_client = None
-    if getattr(daemon, "_keyboard_device", None) is not None:
-        with contextlib.suppress(Exception):
-            daemon._keyboard_device.stop()
-        daemon._keyboard_device = None
-    # `osk.close()` DIRETO, e não `stop_keyboard_emulation`: aquele derruba
-    # limpeza quebrada nunca derruba a parada. Vem DEPOIS do device: o
-    # `virtual_token_callback` do device aponta para `osk.dispatch_token`, e
-    osk = getattr(daemon, "_osk_controller", None)
-    if osk is not None:
-        with contextlib.suppress(Exception):
-            osk.close()
-        daemon._osk_controller = None
-    parar_dsu = getattr(daemon, "_stop_dsu", None)
-    if getattr(daemon, "_servidor_dsu", None) is not None and callable(parar_dsu):
-        try:
-            await asyncio.wait_for(parar_dsu(), timeout=_TETO_DA_TAREFA_S)
-        except Exception as exc:
-            logger.warning("dsu_stop_falhou", err=str(exc))
-    if daemon._ipc_server is not None:
-        with contextlib.suppress(Exception):
-            await asyncio.wait_for(daemon._ipc_server.stop(), timeout=2.0)
-        daemon._ipc_server = None
-    if daemon._udp_server is not None:
-        with contextlib.suppress(Exception):
-            await asyncio.wait_for(daemon._udp_server.stop(), timeout=2.0)
-        daemon._udp_server = None
-    if daemon._autoswitch is not None:
-        with contextlib.suppress(Exception):
-            daemon._autoswitch.stop()
-        daemon._autoswitch = None
+async def parar_as_tarefas(daemon: DaemonProtocol) -> None:
+    """Cancela o laço, a reconexão e as demais tarefas, e espera cada uma cair."""
     daemon._last_state = None
     for task in daemon._tasks:
         task.cancel()
     for task in daemon._tasks:
         await _esperar_a_tarefa_cair(task)
     daemon._reconnect_task = None
+
+
+async def soltar_o_controle(daemon: DaemonProtocol) -> None:
+    """O último passo da parada: desconecta o controle e fecha os executores."""
     try:
         await daemon._run_blocking(daemon.controller.disconnect)
     except Exception as exc:
@@ -1419,6 +1337,18 @@ async def shutdown(daemon: DaemonProtocol) -> None:
         daemon._external_executor.shutdown(wait=False, cancel_futures=True)
         daemon._external_executor = None
     daemon._tasks.clear()
+
+
+async def shutdown(daemon: DaemonProtocol) -> None:
+    """Encerra todos os recursos do daemon de forma limpa.
+
+    A ordem é a da lista de ``daemon/subsystems/__init__.py`` (``parar_em`` de cada
+    entrada); este corpo não nomeia subsystem nenhum.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems import parar
+
+    logger.info("daemon_shutting_down")
+    await parar(daemon)
     logger.info("daemon_stopped")
 
 
@@ -1465,6 +1395,7 @@ __all__ = [
     "armar_gatilho_da_cor_por_numeracao",
     "disparar_gatilhos_devidos",
     "o_jogo_que_o_boot_restaura",
+    "parar_as_tarefas",
     "reaplicar_som_de_quem_trocou_de_transporte",
     "reapply_mic_after_connect",
     "reapply_speaker_after_connect",
@@ -1475,6 +1406,7 @@ __all__ = [
     "restore_last_profile",
     "sentinela_de_escritor_cru_de",
     "shutdown",
+    "soltar_o_controle",
     "transportes_dos_alvos_de",
     "trocas_de_transporte_pendentes",
     "vigia_do_cabo_de",

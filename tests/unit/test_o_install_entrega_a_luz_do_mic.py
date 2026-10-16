@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import inspect
 import os
 import re
 import shutil
@@ -33,7 +34,7 @@ NOMES_DE_PACOTE = {
 }
 FAMILIAS = tuple(NOMES_DE_PACOTE)
 
-LIFECYCLE = "src/hefesto_dualsense4unix/daemon/lifecycle.py"
+LIFECYCLE = "src/hefesto_dualsense4unix/daemon/subsystems/__init__.py"
 
 SUBSISTEMA_DA_LUZ = "luz_do_mic"
 SUBSISTEMA_GATEADO = "mic_hotkey"
@@ -524,35 +525,14 @@ def test_familia_sem_tratamento_ainda_diz_o_nome_do_pacote() -> None:
 
 
 def _gates_dos_subsistemas() -> dict[str, list[str]]:
-    """Para cada ``self._safe_start("<nome>", …)``, as condições que o cercam."""
-    caminho = RAIZ / LIFECYCLE
-    arvore = ast.parse(caminho.read_text(encoding="utf-8"), filename=str(caminho))
-    achados: dict[str, list[str]] = {}
+    """Para cada subsystem que SOBE na lista, a condição (``quando``) que o cerca."""
+    from hefesto_dualsense4unix.daemon.subsystems import SUBSYSTEM_REGISTRY
 
-    def visita(no: ast.AST, cercas: list[str]) -> None:
-        if isinstance(no, ast.Call):
-            alvo = no.func
-            if (
-                isinstance(alvo, ast.Attribute)
-                and alvo.attr == "_safe_start"
-                and no.args
-                and isinstance(no.args[0], ast.Constant)
-                and isinstance(no.args[0].value, str)
-            ):
-                achados[no.args[0].value] = list(cercas)
-        if isinstance(no, ast.If):
-            dentro = [*cercas, ast.unparse(no.test)]
-            fora = [*cercas, f"não ({ast.unparse(no.test)})"]
-            for filho in no.body:
-                visita(filho, dentro)
-            for filho in no.orelse:
-                visita(filho, fora)
-            return
-        for descendente in ast.iter_child_nodes(no):
-            visita(descendente, cercas)
-
-    visita(arvore, [])
-    return achados
+    return {
+        passo.nome: [inspect.getsource(passo.quando).strip()] if passo.quando else []
+        for passo in SUBSYSTEM_REGISTRY
+        if passo.partida is not None
+    }
 
 
 def test_a_regua_de_gate_enxerga_um_subsistema_que_e_gateado() -> None:

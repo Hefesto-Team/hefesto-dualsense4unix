@@ -26,15 +26,15 @@ import pytest
 
 from hefesto_dualsense4unix.core.controller import ControllerState
 from hefesto_dualsense4unix.core.events import EventBus
-from hefesto_dualsense4unix.daemon import connection, main as daemon_main
+from hefesto_dualsense4unix.daemon import main as daemon_main
 from hefesto_dualsense4unix.daemon import sensor_hub as sensor_hub_module
 from hefesto_dualsense4unix.daemon.ipc_server import IpcServer
 from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
 from hefesto_dualsense4unix.daemon.sensor_hub import SensorHub
 from hefesto_dualsense4unix.daemon.state_store import StateStore
-from hefesto_dualsense4unix.daemon.subsystems import SUBSYSTEM_REGISTRY, UdpSubsystem
+from hefesto_dualsense4unix.daemon.subsystems import SUBSYSTEM_REGISTRY
 from hefesto_dualsense4unix.daemon.subsystems import coop as coop_module
-from hefesto_dualsense4unix.daemon.subsystems.dsu import DsuSubsystem, montar_a_tabela
+from hefesto_dualsense4unix.daemon.subsystems.dsu import montar_a_tabela
 from hefesto_dualsense4unix.integrations.uhid_gamepad import vpad_mac
 from hefesto_dualsense4unix.profiles.manager import ProfileManager
 from hefesto_dualsense4unix.testing import FakeController
@@ -253,18 +253,19 @@ async def test_o_hub_criado_pelo_servidor_e_o_do_ipc(
     await tarefa
 
 
-# -- 5 · a lista e o run() andam juntos --------
+# -- 5 · a lista sobe e para o dsu --------
 
 
-def test_a_lista_o_run_e_o_shutdown_andam_juntos() -> None:
-    assert DsuSubsystem in SUBSYSTEM_REGISTRY
-    assert SUBSYSTEM_REGISTRY.index(DsuSubsystem) == SUBSYSTEM_REGISTRY.index(UdpSubsystem) + 1
-    run = inspect.getsource(Daemon.run)
-    assert 'self._safe_start("dsu", self._start_dsu)' in run
-    assert run.index('"ipc"') < run.index('"dsu"'), "o dsu sobe DEPOIS do ipc"
-    assert "_stop_dsu" in inspect.getsource(connection)
-    assert DsuSubsystem().is_enabled(_config()) is True
-    assert DsuSubsystem().is_enabled(DaemonConfig()) is False
+def test_a_lista_sobe_e_para_o_dsu() -> None:
+    nomes = [p.nome for p in SUBSYSTEM_REGISTRY]
+    assert nomes.index("ipc") < nomes.index("dsu"), "o dsu sobe DEPOIS do ipc"
+    [passo] = [p for p in SUBSYSTEM_REGISTRY if p.nome == "dsu"]
+    assert passo.partida is not None and passo.parada is not None
+    assert "_start_dsu" in inspect.getsource(Daemon)
+    assert "_stop_dsu" in inspect.getsource(Daemon)
+    assert passo.quando is not None
+    assert passo.quando(_config()) is True
+    assert passo.quando(DaemonConfig()) is False
 
 
 def test_o_daemon_config_nasce_com_o_dsu_desligado() -> None:

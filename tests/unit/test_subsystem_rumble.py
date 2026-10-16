@@ -5,7 +5,6 @@ Prova que:
   - reassert_rumble chama controller.set_rumble com valores escalados.
   - reassert_rumble é noop quando rumble_active is None.
   - reassert_rumble aplica clamp [0, 255].
-  - RumbleSubsystem.is_enabled é sempre True.
 """
 from __future__ import annotations
 
@@ -16,7 +15,6 @@ import pytest
 from hefesto_dualsense4unix.core.rumble import _effective_mult
 from hefesto_dualsense4unix.daemon.subsystems.rumble import (
     RUMBLE_POLICY_MULT,
-    RumbleSubsystem,
     reassert_rumble,
 )
 
@@ -109,19 +107,3 @@ class TestReassertRumble:
         daemon = self._make_daemon(rumble_active=(100, 200), policy="max")
         daemon.controller.set_rumble.side_effect = RuntimeError("falha HID")
         reassert_rumble(daemon, 1.0)
-
-
-class TestRumbleSubsystem:
-    def test_is_enabled_sempre_true(self) -> None:
-        subsystem = RumbleSubsystem()
-        assert subsystem.is_enabled(MagicMock()) is True
-
-    @pytest.mark.asyncio
-    async def test_start_noop(self) -> None:
-        subsystem = RumbleSubsystem()
-        await subsystem.start(MagicMock())
-
-    @pytest.mark.asyncio
-    async def test_stop_noop(self) -> None:
-        subsystem = RumbleSubsystem()
-        await subsystem.stop()

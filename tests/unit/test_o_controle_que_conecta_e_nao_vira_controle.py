@@ -277,16 +277,15 @@ def test_o_verbo_desconectar_existe_no_script_e_na_regra_do_sudoers() -> None:
     assert "desconectar)" in texto
 
 
-def test_o_subsystem_esta_nas_tres_pontas() -> None:
-    """Lista + `_safe_start` no `run()` + `_stop_*` no `shutdown()`."""
-    assert ConexoesSubsystem in SUBSYSTEM_REGISTRY
+def test_o_subsystem_esta_na_lista_com_partida_e_parada() -> None:
+    """Uma entrada só na lista: a partida sobe o vigia e a parada o derruba."""
+    [passo] = [p for p in SUBSYSTEM_REGISTRY if p.nome == "conexoes"]  # noqa-acento: nome do subsystem
+    assert passo.partida is not None
+    assert passo.parada is not None
     ciclo = RAIZ / "src" / "hefesto_dualsense4unix" / "daemon"
     vida = (ciclo / "lifecycle.py").read_text(encoding="utf-8")
-    assert '_safe_start("conexoes"' in vida  # (noqa-acento): nome do subsystem
     assert "async def _start_conexoes" in vida
     assert "async def _stop_conexoes" in vida
-    queda = (ciclo / "connection.py").read_text(encoding="utf-8")
-    assert "_stop_conexoes" in queda
 
 
 def test_o_vigia_nasce_ligado_e_a_chave_desliga(monkeypatch: Any) -> None:
