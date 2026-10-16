@@ -227,6 +227,7 @@ def test_cada_secao_guardada_acende_a_sua_celula_e_so_a_dela(
         "sensores": {},
         "movimento": {},
         "ativacao": {"alternar": ["l1"]},  # (noqa-acento)
+    "analogicos": {"zona_morta": 20},  # (noqa-acento)
     }
     faltando = set(perfis_web.SECOES_POR_CONTROLE) - set(menor_corpo)
     assert not faltando, (

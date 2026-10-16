@@ -31,6 +31,7 @@ SECOES = [
     ("mascara", ("ps",)),
     ("movimento", ("stick_r",)),
     ("ativacao", ("cross",)),  # (noqa-acento)
+    ("analogicos", ("stick_l",)),  # (noqa-acento)
 ]
 
 NOME_DA_SECAO = {
@@ -43,6 +44,7 @@ NOME_DA_SECAO = {
     "mascara": "máscara",
     "movimento": "comandos virtuais",
     "ativacao": "ativação dos botões",  # (noqa-acento)
+    "analogicos": "curva dos analógicos",  # (noqa-acento)
 }
 
 
@@ -825,7 +827,9 @@ CSS = CSS_GLIFO + """
      glifos era CORTADA — fotografado. O valor agora é o que a tela
      media.  (noqa-acento: verbo medir, imperfeito) */
   .gd-pecas{width:255px}
-  .gd-pecas .gls{gap:6px}
+  /* 16/10/2026: com a ativação dos botões e a curva dos analógicos são DEZ seções, e com 6px a
+     última passava 3px da célula. O vão entre seções desceu a 5px (o de dentro segue 2px). */
+  .gd-pecas .gls{gap:5px}
   /* O GLIFO DIZ O CONTROLE AGORA, E O PONTO EMBAIXO DIZ O DISCO — 02/10/2026,
      decidido pelo usuário em 29/09 («Ponto embaixo»): aceso = ligado agora neste
      controle · apagado = desligado · tracejado = o controle não diz · o ponto
