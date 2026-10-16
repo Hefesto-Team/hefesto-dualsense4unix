@@ -1,4 +1,4 @@
-"""A linha inteira abre o perfil, e a coluna se chama «Preferência»."""
+"""A linha inteira abre o perfil, e a palavra velha «prioridade» não chega à tela."""
 from __future__ import annotations
 
 import json
@@ -91,15 +91,15 @@ def disco(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(a10_perfis, "_PROCURA", "", raising=False)
 
 
-def _ctx() -> Contexto:
-    return Contexto(state={"active_profile": "Desktop", "controllers": []},
+def _ctx(**estado: Any) -> Contexto:
+    return Contexto(state={"active_profile": "Desktop", "controllers": [], **estado},
                     mesa=[], conectados=[], estados={})
 
 
 def test_o_gesto_escolhe_pelo_nome_da_linha(monkeypatch: pytest.MonkeyPatch) -> None:
     """O clique na `<tr>` traz o nome no `hefPerfil`; o `texto` é a linha colada."""
     monkeypatch.setattr(a10_perfis, "_ESCOLHIDO", "", raising=False)
-    a10_perfis.selecionar(_ctx(), {"hefPerfil": "Pragmata",
+    a10_perfis.selecionar(_ctx(freestyle_ligado=True), {"hefPerfil": "Pragmata",
                                    "texto": "Pragmata80Steam · Pragmata · 3357650"}, None)
     assert a10_perfis._ESCOLHIDO == "Pragmata", (
         f"o gesto abriu {a10_perfis._ESCOLHIDO!r}, e a linha é a do Pragmata")
@@ -108,7 +108,7 @@ def test_o_gesto_escolhe_pelo_nome_da_linha(monkeypatch: pytest.MonkeyPatch) -> 
 def test_o_texto_segue_valendo_sem_o_atributo(monkeypatch: pytest.MonkeyPatch) -> None:
     """As réguas antigas chamam o gesto com `{"texto": nome}`: elas seguem valendo."""
     monkeypatch.setattr(a10_perfis, "_ESCOLHIDO", "", raising=False)
-    a10_perfis.selecionar(_ctx(), {"texto": "Mortal Kombat"}, None)
+    a10_perfis.selecionar(_ctx(freestyle_ligado=True), {"texto": "Mortal Kombat"}, None)
     assert a10_perfis._ESCOLHIDO == "Mortal Kombat"
 
 
@@ -147,7 +147,7 @@ def test_os_desfechos_dizem_preferencia(
     frases.append(str(a10_perfis.novo(_ctx(), {}, PonteDoRodape())))
     anotadas: list[str] = []
     monkeypatch.setattr(a10_perfis, "_anotar", anotadas.append)
-    a10_perfis.ordenar(_ctx(), {"coluna": "prioridade"}, None)
+    a10_perfis.ordenar(_ctx(), {"coluna": "criado"}, None)
     frases += anotadas
     assert all(frases), frases
     velhas = [f for f in frases if VELHA.search(f)]
@@ -196,7 +196,7 @@ LER_AS_CELULAS = r"""
 
 LER_O_CABECALHO = r"""
 (function(){
-  var th = document.querySelector('th[data-coluna="prioridade"]');
+  var th = document.querySelector('th[data-coluna="criado"]');
   return JSON.stringify({texto: th ? th.firstChild.textContent : null,
                          scroll: th ? th.scrollWidth : null,
                          client: th ? th.clientWidth : null});
@@ -269,13 +269,13 @@ def test_toda_celula_do_pacote_leva_ao_perfil_da_linha(tela: Any) -> None:
 
 
 def test_o_rotulo_cabe_na_largura_que_ela_gravou(tela: Any) -> None:
-    """`prioridade:48`, a forma que o pacote escreve: o cabeçalho sai inteiro."""
+    """`criado:48`, a forma que o pacote escreve: o cabeçalho sai inteiro."""
     tela.executar(
         "(function(){var t=document.querySelector('table[data-tabela]');"
-        "t.setAttribute('data-larguras','nome:380·prioridade:48');return 'ok';})()")
+        "t.setAttribute('data-larguras','criado:48');return 'ok';})()")
     tela.avancar(0.3)
     medida = json.loads(tela.executar(LER_O_CABECALHO))
-    assert medida["texto"] == "Preferência", medida
+    assert medida["texto"] == "Criado em", medida
     assert medida["scroll"] <= medida["client"], (
         f"o rótulo foi cortado: pede {medida['scroll']} px numa coluna de "
         f"{medida['client']}")
@@ -284,7 +284,7 @@ def test_o_rotulo_cabe_na_largura_que_ela_gravou(tela: Any) -> None:
 ARRASTAR_ATE_O_PISO = r"""
 (function(){
   var t = document.querySelector('table[data-tabela]');
-  var pux = t.querySelector('.puxador[data-coluna="prioridade"]');
+  var pux = t.querySelector('.puxador[data-coluna="criado"]');
   var x = pux.getBoundingClientRect().left + 1;
   pux.dispatchEvent(new MouseEvent('mousedown', {bubbles: true, clientX: x}));
   document.dispatchEvent(new MouseEvent('mousemove', {bubbles: true, clientX: x - 600}));
@@ -299,12 +299,12 @@ def test_o_rotulo_cabe_no_arraste_ate_o_piso(tela: Any) -> None:
     """O piso por rótulo vale no ARRASTE também (o item 4 da cura)."""
     tela.executar(
         "(function(){document.querySelector('table[data-tabela]')"
-        ".setAttribute('data-larguras','nome:380·prioridade:200');return 'ok';})()")
+        ".setAttribute('data-larguras','criado:200');return 'ok';})()")
     tela.avancar(0.2)
     arrasto = json.loads(tela.executar(ARRASTAR_ATE_O_PISO))
     tela.avancar(0.2)
     medida = json.loads(tela.executar(LER_O_CABECALHO))
-    assert medida["texto"] == "Preferência", medida
+    assert medida["texto"] == "Criado em", medida
     assert medida["scroll"] <= medida["client"], (
         f"o arraste cortou o rótulo: pede {medida['scroll']} px numa coluna de "
         f"{medida['client']}")
@@ -317,15 +317,15 @@ def test_o_rotulo_cabe_com_a_seta_da_ordem(tela: Any) -> None:
     """A seta da ordem alarga o rótulo, e a coluna estreita cabe de novo."""
     tela.executar(
         "(function(){document.querySelector('table[data-tabela]')"
-        ".setAttribute('data-larguras','nome:380·prioridade:48');return 'ok';})()")
+        ".setAttribute('data-larguras','criado:48');return 'ok';})()")
     tela.avancar(0.2)
     tela.executar(
-        "(function(){document.querySelector('.ordena[data-coluna=\"prioridade\"]')"
+        "(function(){document.querySelector('.ordena[data-coluna=\"criado\"]')"
         ".setAttribute('data-ordem','↓');return 'ok';})()")
     tela.avancar(0.3)
     medida = json.loads(tela.executar(LER_O_CABECALHO))
     tela.executar(
-        "(function(){document.querySelector('.ordena[data-coluna=\"prioridade\"]')"
+        "(function(){document.querySelector('.ordena[data-coluna=\"criado\"]')"
         ".removeAttribute('data-ordem');return 'ok';})()")
     assert medida["scroll"] <= medida["client"], (
         f"com a seta, o rótulo foi cortado: pede {medida['scroll']} px numa "

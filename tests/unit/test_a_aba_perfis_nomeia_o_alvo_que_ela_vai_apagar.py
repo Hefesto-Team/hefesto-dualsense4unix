@@ -48,6 +48,7 @@ mais discordar do ``mesmo_slug``.
 """
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any
 
@@ -85,6 +86,12 @@ class PonteDeMentira:
     def chamar(self, metodo: str, *a: Any, **kw: Any) -> Any:
         self.chamadas.append((metodo, a))
         return True
+
+    def resultado(self, metodo: str, *a: Any, **kw: Any) -> Any:
+        """O clique na linha ativa o perfil (15/10/2026): a troca chega aqui."""
+        if metodo == "profile.switch":
+            self.chamadas.append(("profile_switch", (kw.get("name"),)))
+        return {}
 
 
 @pytest.fixture(autouse=True)
@@ -127,6 +134,13 @@ def _ctx() -> Contexto:
     """O daemon CALADO — ``active_profile: null`` é o estado da máquina do usuário."""
     return Contexto(state={"active_profile": None}, mesa=list(MESA),
                     conectados=list(MESA), estados={})
+
+
+def _aberto_no_editor(fora: dict[str, Any]) -> list[str]:
+    """O perfil que o editor mostra: a linha marcada como escolhida (a aba não tem mais o Nome)."""
+    html = (fora.get("blocos") or {}).get(a10_perfis.SELETOR_DA_LISTA, "")
+    return [x.split('data-hef-perfil="')[1].split('"')[0]
+            for x in html.splitlines() if 'aria-selected="true"' in x]
 
 
 def _realcadas(fora: dict[str, Any]) -> list[str]:
@@ -203,7 +217,7 @@ def test_o_marcador_orfao_nao_vira_alvo_de_gesto(
     # e não mais uma recusa: o órfão segue fora, e o gesto mira o que está na tela.
     alvo = a10_perfis._perfil_do_editor(ctx)
     assert alvo != "Perfil Que Ela Apagou", "o marcador órfão virou alvo de gesto"
-    assert alvo == a10_perfis.pacote(ctx)["editor.nome"], (
+    assert [alvo] == _aberto_no_editor(a10_perfis.pacote(ctx)), (
         f"o gesto mira {alvo!r} e o editor mostra outro perfil")
 
 
@@ -327,11 +341,11 @@ def test_o_pacote_nao_escreve_no_estilo_de_jogo(
 
 
 def test_a_bancada_abre_o_estilo_de_jogo_no_travessao() -> None:
-    """A primeira opção do ``<select>``: ``value=""``, texto ``—``, marcada."""
+    """A primeira opção do ``<select>``: ``value=""``, texto ``—``, marcada e sem escolha."""
     html = onde.pagina("10-perfis.html").read_text(encoding="utf-8")
     trecho = html.split('data-hef="editor.estilo"', 1)[1].split("</select>", 1)[0]
-    opcoes = [x.strip() for x in trecho.splitlines() if "<option" in x]
-    assert opcoes[0] == '<option value="" selected>—</option>', (
+    opcoes = re.findall(r"<option[^>]*>[^<]*</option>", trecho)
+    assert opcoes[0] == '<option value="" disabled selected>—</option>', (
         f"a primeira opção do Estilo de Jogo é {opcoes[0]!r}")
     assert not [o for o in opcoes[1:] if "selected" in o], (
         "outra opção nasce marcada — o campo voltaria a afirmar um estilo")

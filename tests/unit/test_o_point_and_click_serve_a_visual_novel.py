@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """O-POINT-AND-CLICK-SERVE-A-VISUAL-NOVEL-01 — o estilo traz a tabela de botões do jogo de clicar.
 
-Medido antes de curar (15/10/2026): aplicar o estilo Point-and-click gravava só o modo
+Medido antes de curar (15/10/2026): aplicar o estilo Point and click gravava só o modo
 (`Receita(modo="desktop")`), e o perfil ficava sem tabela. No de fábrica os ombros são Alt+Shift+Tab
 e Alt+Tab e o Options é Super, e num jogo em tela cheia um toque no ombro tira o jogo da frente. A
 lista de ações não tinha PageUp, PageDown, Ctrl, Tab nem H, e o analógico só escolhia o cursor ou a
@@ -131,7 +131,7 @@ def test_a_lista_de_acoes_ganha_as_teclas_do_jogo_de_clicar() -> None:
 # -- aplicar o estilo grava a tabela -----------------------------------------------------
 
 
-@pytest.mark.parametrize("rotulo", ["Point-and-click", "Visual novel"])
+@pytest.mark.parametrize("rotulo", ["Point and click", "Visual novel"])
 def test_aplicar_o_estilo_grava_a_tabela_e_liga_o_tambem_no_jogo(
     disco: dict[str, Any], rotulo: str,
 ) -> None:
@@ -144,7 +144,7 @@ def test_aplicar_o_estilo_grava_a_tabela_e_liga_o_tambem_no_jogo(
     assert prof.mode is not None and prof.mode.kind == "desktop"
 
 
-@pytest.mark.parametrize("rotulo", ["Point-and-click", "Visual novel"])
+@pytest.mark.parametrize("rotulo", ["Point and click", "Visual novel"])
 def test_nenhuma_linha_leva_alt_tab_nem_super(disco: dict[str, Any], rotulo: str) -> None:
     """Nem com a tabela antiga (`key_bindings`) do perfil de partida."""
     disco["perfil"] = disco["perfil"].model_copy(update={"key_bindings": {
@@ -167,7 +167,7 @@ def test_o_visual_novel_chega_ao_teclado_como_tecla_segurada(disco: dict[str, An
 
 
 def test_o_so_mouse_cala_os_ombros_e_deixa_os_cliques(disco: dict[str, Any]) -> None:
-    _aplicar("Point-and-click")
+    _aplicar("Point and click")
     tabela = _efetiva(disco["perfil"])
     assert tabela["l1"] == tabela["r1"] == tabela["options"] == acoes.TOKEN_NADA
     assert tabela["cross"] == tabela["l2"] == "BTN_LEFT"
@@ -193,7 +193,7 @@ def test_outro_estilo_sem_tabela_nao_inventa_uma(disco: dict[str, Any]) -> None:
 
 
 def test_visual_novel_depois_de_point_and_click_troca_o_molde(disco: dict[str, Any]) -> None:
-    _aplicar("Point-and-click")
+    _aplicar("Point and click")
     _aplicar("Visual novel")
     assert disco["perfil"].button_actions == ej.MOLDES["visual_novel"]
 

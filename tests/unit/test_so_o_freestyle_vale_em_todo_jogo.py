@@ -200,9 +200,9 @@ def test_a_pagina_velha_que_manda_qualquer_jogo_e_recusada(editor, clique) -> No
 def test_o_perfil_novo_escolhe_de_onde_o_jogo_vem(editor) -> None:
     """O perfil novo nasce `any`: o campo vem no travessão, destravado, e aceita a escolha."""
     a10_perfis._ESCOLHIDO = "Novo perfil"
-    pintado = a10_perfis.pacote(_ctx())
-    assert pintado["editor.ambiente"] == ""
-    assert pintado["editor.ambiente.travado"] is False
+    # a página nova não manda mais `editor.ambiente`: o campo mora no editor do produto
+    pintado = a10_perfis._editor_de(Profile(name="Novo perfil", match=MatchAny()))
+    assert pintado["ambiente_travado"] is False
 
     a10_perfis.editor_ambiente(
         _ctx(), _escolher(sm.PROCEDENCIA_DA_NAVEGACAO), _PonteDeMentira())

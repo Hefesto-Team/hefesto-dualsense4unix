@@ -101,13 +101,15 @@ def test_a_prioridade_tem_gesto() -> None:
     assert pacotes.gesto_da_pagina(PAGINA, "editor.prioridade") is not None
 
 
-def test_a_faixa_do_slider_e_a_do_esquema() -> None:
-    """A régua PERGUNTA ao dono do teto, e não digita ``0..200``."""
+def test_a_prioridade_saiu_da_pagina_e_a_faixa_segue_do_esquema() -> None:
+    """A página não tem mais o trilho da Prioridade (a ordem é a da lista), e o teto é do esquema.
+
+    MORDIDA: devolva o `<input type="range">` ao gerador e isto reprova.
+    """
     html = _bancada()
-    assert f'min="{PRIORIDADE_MINIMA}"' in html and f'max="{PRIORIDADE_MAXIMA}"' in html, (
-        "a faixa do `<input type=range>` da Prioridade não é a do esquema")
-    assert '<input type="range" class="desliza"' in html, (
-        "a Prioridade voltou a ser uma barra que não se arrasta")
+    assert 'type="range"' not in html and "editor.prioridade" not in html, (
+        "a Prioridade voltou à página: quem manda é a ordem arrastada (`editor.ordem`)")
+    assert (PRIORIDADE_MINIMA, PRIORIDADE_MAXIMA) == (0, 200)
 
 
 def test_arrastar_grava_a_prioridade(disco: dict[str, Any]) -> None:
@@ -164,21 +166,13 @@ def test_o_mesmo_numero_nao_regrava(disco: dict[str, Any]) -> None:
     assert not disco["salvos"]
 
 
-def test_o_punho_se_pinta_uma_vez_por_perfil() -> None:
-    """``editor.prioridade.escolha`` tem de estar em ``CAMPOS_QUE_ELA_DIGITA``.
+def test_so_os_campos_de_texto_ficam_fora_do_tique() -> None:
+    """O que ela DIGITA não se repinta a cada 500 ms (apagaria a frase no meio da escrita).
 
-    A MEDIÇÃO: com ``data-hef-alvo="valor"`` a pintura faz ``el.value = t`` a
-    cada 500 ms. Num ``<input type=range>``, isso devolve o punho ao número do
-    disco NO MEIO do arrasto — o slider ficaria intocável, do mesmo jeito que os
-    dois ``<input>`` de texto ficariam.
-
-    E O NÚMERO AO LADO NÃO PODE ENTRAR: ele é leitura, e congelá-lo faria a
-    legenda mostrar o valor velho depois de a gravação acontecer.
-
-    MORDIDA: tire o nome de ``CAMPOS_QUE_ELA_DIGITA`` e isto reprova.
+    Com o trilho da Prioridade fora da página só restam os dois campos de texto.
+    MORDIDA: tire ``editor.jogo`` de ``CAMPOS_QUE_ELA_DIGITA`` e isto reprova.
     """
-    assert "editor.prioridade.escolha" in a10_perfis.CAMPOS_QUE_ELA_DIGITA
-    assert "editor.prioridade.n" not in a10_perfis.CAMPOS_QUE_ELA_DIGITA
+    assert set(a10_perfis.CAMPOS_QUE_ELA_DIGITA) == {"editor.jogo", "editor.evento.comando"}
 
 
 def test_o_select_oferece_o_que_o_motor_sabe_aplicar() -> None:
@@ -225,7 +219,7 @@ def test_o_gatilho_sai_do_dono_dos_parametros(disco: dict[str, Any]) -> None:
     """Os números do gatilho são PERGUNTADOS, nunca digitados."""
     sem_params = []
     for estilo in estilos_de_jogo.ESTILOS:
-        if estilo.chave == "personalizado":
+        if estilo.chave in estilos_de_jogo.SEM_COR:
             continue
         disco["perfil"] = Profile(name="Pragmata", match=MatchAny(), priority=40)
         a10_perfis.editor_estilo(_ctx(), {"valor": estilo.rotulo},
@@ -318,14 +312,17 @@ def test_o_estilo_saiu_da_lista_de_travados() -> None:
     assert "editor.estilo" in a10_perfis.NAO_PINTAVEIS
 
 
-def test_o_pacote_manda_o_numero_cru_para_o_punho(
+def test_o_pacote_nao_manda_mais_a_prioridade_para_a_pagina(
     monkeypatch: pytest.MonkeyPatch, disco: dict[str, Any],
 ) -> None:
-    """``editor.prioridade.escolha`` é o número CRU — nunca a porcentagem."""
+    """A página não tem o trilho; mandar o número seria endereço sem lugar.
+
+    MORDIDA: faça o pacote emitir ``editor.prioridade.escolha`` de novo e isto reprova.
+    """
     disco["perfil"] = Profile(name="Pragmata", match=MatchAny(), priority=137)
     fora = a10_perfis.pacote(_ctx())
-    assert fora["editor.prioridade.escolha"] == "137"
-    assert fora["editor.prioridade"] == str(round(137 * 100 / PRIORIDADE_MAXIMA))
+    assert not [k for k in fora if k.startswith("editor.prioridade")], (
+        "o pacote voltou a mandar a Prioridade, que a página nova não desenha")
 
 
 def test_sem_perfil_o_punho_nao_recebe_travessao(

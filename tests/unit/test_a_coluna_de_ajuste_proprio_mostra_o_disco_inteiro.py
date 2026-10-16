@@ -176,18 +176,21 @@ def test_uma_secao_guardada_acende_uma_celula_so_e_na_linha_dela(
         f"casando célula com vizinha.")
 
 
-def test_o_cabecalho_e_a_dica_da_linha_contam_o_mesmo_numero() -> None:
-    """Dois números para o mesmo fato, na mesma tela, é a divergência que o usuário viu."""
+def test_a_contagem_vem_do_esquema_e_a_pagina_nao_crava_numero(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """Dois números para o mesmo fato, na mesma tela, é a divergência que o usuário viu.
+
+    A dica do cabeçalho deixou de listar as seções (a Perfis do todo diz «Um ajuste por controle»);
+    o número mora só na linha do controle e vem do esquema. MORDIDA: crave «São oito:» na página, ou
+    troque o `total` da linha por um número digitado, e isto reprova.
+    """
     html = onde.pagina("10-perfis.html", publicado=True).read_text(encoding="utf-8")
-    extenso = {1: "um", 2: "dois", 3: "três", 4: "quatro", 5: "cinco",
-               6: "seis", 7: "sete", 8: "oito"}
+    assert not re.search(r"São (um|dois|três|quatro|cinco|seis|sete|oito|\d+):", html), (
+        "a página crava a contagem de ajustes por controle; o número é do esquema")
     quantas = len(perfis_web.SECOES_NA_TELA)
-    esperado = extenso.get(quantas, str(quantas))
-    assert f"São {esperado}:" in html, (
-        f"o esquema guarda {quantas} seções por controle e a dica do cabeçalho "
-        f"não diz `{esperado}` — a linha ao lado já conta o número do esquema "
-        f"(`{quantas} de {quantas} ajustes só deste controle`), e as duas frases "
-        f"ficam na mesma tela discordando.")
+    alvo = _perfil(str(MESA[0]["uniq"]), **MENOR_CORPO)
+    linhas = perfis_web._linhas_da_guarda(list(MESA), alvo)
+    assert f"{quantas} de {quantas} ajustes só deste controle" in linhas[0]["dica"], linhas[0]
 
 
 def test_a_linha_sem_controle_nao_mostra_glifo_nenhum(

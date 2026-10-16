@@ -67,6 +67,7 @@ from __future__ import annotations
 import sys
 import time
 from collections.abc import Callable
+from datetime import datetime
 from typing import Any, NamedTuple
 
 # `portao_a_casa_sabe_e_o_produto_nao_faz` segue o fecho de IMPORT a partir do
@@ -80,12 +81,9 @@ from hefesto_dualsense4unix.profiles.simple_match import (
     PROCEDENCIA_DA_STEAM,
     PROCEDENCIA_DE_QUALQUER_JOGO,
     SEPARADOR_DA_PROCEDENCIA,
-    oferta_do_funciona_em,
 )
 
 from . import (
-    PONTO_DO_ROTULO,
-    SEM_NINGUEM_AQUI,
     TODOS_OS_LUGARES,
     TRAVESSAO,
     Contexto,
@@ -141,10 +139,12 @@ TABELA_DA_LISTA = "10-perfis.lista"
 
 TABELA_DA_GUARDA = "10-perfis.guarda"
 
-COLUNAS_DA_LISTA = ("nome", "prioridade", "quando")
+COLUNAS_DA_LISTA = ("nome", "criado", "modificado")
 
-_NOME_DA_COLUNA = {"nome": "Nome", "prioridade": "Preferência",
-                   "quando": "Funciona em"}
+_NOME_DA_COLUNA = {"nome": "Nome", "criado": "Criado em", "modificado": "Modificado em"}
+
+#: as colunas de data: «mais novo primeiro» é o sentido `asc`, e o perfil sem data fica embaixo.
+COLUNAS_DE_DATA = ("criado", "modificado")
 
 
 def _sem_acento(texto: str) -> str:
@@ -158,8 +158,7 @@ def _sem_acento(texto: str) -> str:
 
 def _casa(linha: dict[str, Any], termo: str) -> bool:
     """Aquela linha responde à busca?"""
-    alvo = " ".join(str(linha.get(c) or "") for c in
-                    ("nome", "prioridade", "quando", "dica"))
+    alvo = " ".join(str(linha.get(c) or "") for c in ("nome", "quando", "dica"))
     return termo in _sem_acento(alvo)
 
 
@@ -172,14 +171,15 @@ def _filtrada(lista: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def _chave_da_ordem(coluna: str) -> Callable[[dict[str, Any]], Any]:
-    """Como cada coluna se compara."""
-    if coluna == "prioridade":
-        def por_numero(x: dict[str, Any]) -> tuple[int, float, str]:
+    """Como cada coluna se compara. A data compara pelo ISO, e o mais novo vem antes no `asc`."""
+    if coluna in COLUNAS_DE_DATA:
+        def por_data(x: dict[str, Any]) -> tuple[int, float, str]:
             try:
-                return (0, float(str(x.get("prioridade") or "")), "")
+                quando = datetime.fromisoformat(str(x.get(f"{coluna}_iso") or ""))
             except ValueError:
-                return (1, 0.0, _sem_acento(str(x.get("prioridade") or "")))
-        return por_numero
+                return (1, 0.0, "")
+            return (0, -quando.timestamp(), "")
+        return por_data
 
     def por_texto(x: dict[str, Any]) -> tuple[int, float, str]:
         return (0, 0.0, _sem_acento(str(x.get(coluna) or "")))
@@ -205,7 +205,9 @@ def _ordenada(lista: list[dict[str, Any]]) -> list[dict[str, Any]]:
     coluna, sentido = _prefs.ordem_da_tabela(TABELA_DA_LISTA)
     if coluna not in COLUNAS_DA_LISTA:
         return list(lista)
-    return sorted(lista, key=_chave_da_ordem(coluna), reverse=(sentido == "desc"))
+    sem_data = [x for x in lista if coluna in COLUNAS_DE_DATA and not x.get(f"{coluna}_iso")]
+    com_data = [x for x in lista if x not in sem_data]
+    return sorted(com_data, key=_chave_da_ordem(coluna), reverse=(sentido == "desc")) + sem_data
 
 
 SEGUNDOS_PARA_CONFIRMAR = 8.0
@@ -289,25 +291,17 @@ def _desfecho_para_a_tela() -> str:
 #: `data-hef-alvo="largura"` estaria.
 #:                       desta frente; está no relatório.
 #: `data-hef-alvo="classe"`, e o produto passou a acender e apagar cada uma.
-NAO_PINTAVEIS = ("guarda.linhas", "editor.prioridade.dica",
-                 "editor.estilo")
+NAO_PINTAVEIS = ("guarda.linhas", "editor.estilo")
+
+#: Os escalares do editor que a página tem onde pôr (15/10/2026: a página perdeu o Nome, a
+#: Preferência, o Funciona em e o rótulo do jogo; o produto deixou de emiti-los).
+CAMPOS_DO_EDITOR_NA_PAGINA = ("jogo", "evento", "evento_comando")
 
 #: os valores que a página NÃO TEM — eles caem no vazio, sem estrago e sem
 SEM_ENDERECO = {
     # a `classe` acendendo em `editor.ambiente.travado` e a frase no hover, por
-    "editor.estilo.travado": "o campo GRAVA desde 03/09 (`estilo_travado` é "
-                             "sempre `False`) — uma marca de travado aqui "
-                             "nunca acenderia",
-    "editor.estilo.recado": "a frase sobre o que o perfil guarda do estilo "
-                            "(`perfis_web.ESTILO_APLICA_E_SAI`) diz "
-                            "o mesmo que o `title` do rótulo, no mesmo hover — "
-                            "um segundo canal para o mesmo fato",
-    "quantos": "a contagem que a tela mostra é `perfis.conta`, e essa tem endereço",
+    "quantos": "a tela nova não desenha contagem de perfis",
     "travado": "a trava da troca automática não é desenhada nesta aba",
-    "editor.modo": "o quadro «Modo» saiu do editor por ordem dela em "
-                   "11/09/2026 — a aba onde o modo se escolhe é a Jogar; "
-                   "`Profile.mode` continua no disco e o `ativar` continua "
-                   "o aplicando",
 }
 
 #: baixa. As datas: `perfis.desfecho` (03/09) · `editor.prioridade.escolha`
@@ -345,8 +339,7 @@ _ARMADO: tuple[str, float] | None = None
 _PINTADO_PARA: str = ""
 _ULTIMO_TIQUE: float = 0.0
 
-CAMPOS_QUE_ELA_DIGITA = ("editor.nome", "editor.jogo",
-                         "editor.prioridade.escolha")
+CAMPOS_QUE_ELA_DIGITA = ("editor.jogo", "editor.evento.comando")
 
 
 def _uma_vez_so(alvo: str) -> tuple[str, ...]:
@@ -365,14 +358,27 @@ SEPARADOR_EM_TEXTO = " • "
 
 
 def _rotulo_curto(controle: dict[str, Any]) -> str:
-    """`P1 • Cosmic Red • USB` — a forma `curta` do `monta.rotulo`, sem marcação, juntando os três
-    campos de `mesa_viva.mesa_do_estado` (`jogador`, `nome`, `via`).
+    """`Cosmic Red • USB`: a cor do plástico e a via, sem marcação e sem número de jogador.
+
+    Fala pela cor do plástico, nunca P1 a P4 (A-ABA-PERFIS-DO-TODO-01); vem de `mesa_do_estado`.
     """
     return SEPARADOR_EM_TEXTO.join([
-        f"P{controle.get('jogador') or '—'}",
         str(controle.get("nome") or "—"),
         str(controle.get("via") or "—"),
     ])
+
+
+#: as quatro cores do plástico, na ordem em que o desenho as oferece nos lugares vazios.
+CORES_DO_PLASTICO = (("cosmic-red", "Cosmic Red"), ("starlight-blue", "Starlight Blue"),
+                     ("galactic-purple", "Galactic Purple"), ("white", "White"))
+
+
+def _lugar_vazio(n: int, presentes: list[str]) -> tuple[str, str]:
+    """`(nome, cor)` do lugar vazio de número `n`: uma cor do plástico que ninguém na mesa usa."""
+    livres = [(slug, nome) for slug, nome in CORES_DO_PLASTICO
+              if not any(nome in dado for dado in presentes)] or list(CORES_DO_PLASTICO)
+    slug, nome = livres[(n - 1 - len(presentes)) % len(livres)]
+    return nome, _plastico({"cor": slug})
 
 
 def _plastico(controle: dict[str, Any]) -> str:
@@ -434,6 +440,10 @@ SELETOR_DA_LISTA = 'tbody[data-hef="perfis.lista"]'
 
 SELETOR_DOS_JOGOS = 'datalist[data-hef="editor.jogo.lista"]'
 
+#: «Qual vale primeiro»: os perfis do mesmo jogo, em ordem. Número de filhos que muda com o dado,
+#: então vai por `blocos`, como a lista.
+SELETOR_DA_ORDEM = '[data-hef="editor.ordem"] ol'
+
 #: Ele virou `blocos` pela MESMA razão que a lista dos jogos: as opções são os
 SELETOR_DO_AMBIENTE = 'select[data-hef="editor.ambiente"]'
 
@@ -471,7 +481,7 @@ def _atr(v: Any) -> str:
     return s.replace("&", "&amp;").replace('"', "&quot;").replace("\xa0", "&nbsp;")
 
 
-def _linha_da_lista(nome: str, prioridade: str, quando: str,
+def _linha_da_lista(nome: str, criado: str, modificado: str,
                     ativo: bool, dica: str = "", escolhido: bool = False) -> str:
     """Uma linha da lista de perfis — a MESMA forma que o desenho crava.
 
@@ -490,16 +500,13 @@ def _linha_da_lista(nome: str, prioridade: str, quando: str,
     e `class="ativo escolhido"` a some (régua verde sobre linha que ela não acha mais). O estado vai
     em `aria-selected`, que o papel `row` já define para seleção.
     """
-    return (f'{_RECUO}<tr class="{"ativo" if ativo else ""}" '
+    return (f'{_RECUO}<tr tabindex="0" data-dica="Clique: ativa e abre no editor" '
+            f'class="{"ativo" if ativo else ""}" '
             f'data-hef-perfil="{_atr(nome)}" data-hef-gesto="selecionar" '
-            f'aria-selected="{"true" if escolhido else "false"}" title="{_atr(dica)}">'
-            f'<td data-hef="perfis.linha.nome">'
-            f'{_texto(nome)}</td>'
-            f'<td class="pri" data-hef="perfis.linha.prioridade">'
-            f'{_texto(prioridade)}</td>'
-            f'<td class="quando" data-hef="perfis.linha.quando" '
-            f'title="{_atr(quando)}">'
-            f'{_texto(quando)}</td></tr>')
+            f'aria-selected="{"true" if escolhido else "false"}">'
+            f'<td data-hef="perfis.linha.nome">{_texto(nome)}</td>'
+            f'<td class="data" data-hef="perfis.linha.criado">{_texto(criado)}</td>'
+            f'<td class="data" data-hef="perfis.linha.modificado">{_texto(modificado)}</td></tr>')
 
 
 def _html_da_lista(lista: list[dict[str, Any]], vazia: str,
@@ -549,12 +556,22 @@ def _html_da_lista(lista: list[dict[str, Any]], vazia: str,
         return (f'{_RECUO}<tr class="vazia"><td colspan="3">'
                 f'{_texto(vazia)}</td></tr>')
     return "\n".join(
-        _linha_da_lista(str(x.get("nome") or ""), str(x.get("prioridade") or ""),
-                        str(x.get("quando") or ""), bool(x.get("ativo")),
-                        str(x.get("dica") or ""),
+        _linha_da_lista(str(x.get("nome") or ""), str(x.get("criado") or TRAVESSAO),
+                        str(x.get("modificado") or TRAVESSAO), bool(x.get("ativo")),
+                        "",
                         escolhido=bool(escolhido)
                         and str(x.get("nome") or "") == escolhido)
         for x in lista)
+
+
+def _html_da_ordem(ordem: list[dict[str, Any]]) -> str:
+    """Os `<li>` arrastáveis de «Qual vale primeiro». Vazio com menos de dois perfis no jogo."""
+    return "\n".join(
+        f'{_RECUO}<li class="{"ativo" if x.get("ativo") else ""}" draggable="true" tabindex="0" '
+        f'data-hef-gesto="editor.ordem" data-hef-perfil="{_atr(x.get("perfil"))}">'
+        f'<span class="pos">{int(x.get("pos") or 0)}</span><span class="pega">⋮⋮</span>'
+        f'{_texto(x.get("perfil"))}</li>'
+        for x in ordem)
 
 
 def _html_dos_jogos(procedencia: str = "", foto: _FotoDoCatalogo | None = None) -> str:
@@ -960,11 +977,9 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     lista = _ordenada(_filtrada(_com_a_procedencia(bruto.get("lista") or [], todos, foto)))
     editor = bruto.get("editor") or {}
     fora = {
-        "perfis.conta": bruto.get("conta", "—"),
-        "perfis.com-ajuste": bruto.get("com_ajuste", ""),
         "perfis.linha.nome": [x.get("nome", "") for x in lista],
-        "perfis.linha.prioridade": [x.get("prioridade", "") for x in lista],
-        "perfis.linha.quando": [x.get("quando", "") for x in lista],
+        "perfis.linha.criado": [x.get("criado", "") for x in lista],
+        "perfis.linha.modificado": [x.get("modificado", "") for x in lista],
         "perfis.procura": _PROCURA,
         "perfis.procura.conta": (f"{len(bruto.get('lista') or []) - len(lista)} "
                                  f"fora da busca" if _PROCURA.strip() else ""),
@@ -976,28 +991,19 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         "travado": bool(ctx.state.get("freestyle_ligado")),
         "sem_dono": {},
     }
-    for chave in ("nome", "jogo", "estilo", "ambiente"):
+    for chave in ("jogo", "estilo"):
         fora.setdefault(f"editor.{chave}", "—")
-    fora.setdefault("editor.prioridade.n", "—")
-    fora.setdefault("editor.prioridade.dica", "")
-    for chave, valor in editor.items():
-        if not isinstance(valor, (dict, list)):
-            fora[f"editor.{chave.replace('_', '.')}"] = valor
-    fora["editor.prioridade"] = str(editor.get("prioridade") or "0").rstrip("%")
+    for chave in CAMPOS_DO_EDITOR_NA_PAGINA:
+        if chave in editor:
+            fora[f"editor.{chave.replace('_', '.')}"] = editor[chave]
 
-    # Estilo faz com a opção vazia dela.
-    if editor:
-        fora["editor.prioridade.escolha"] = str(editor.get("prioridade_n") or "0")
+    alvo_do_editor = str(editor.get("alvo") or "")
+    for valor in ALVOS_DO_PERFIL:
+        fora[f"editor.alvo.{valor}"] = "sim" if valor == alvo_do_editor else ""
 
     exigencia = _exigencia_para_esta_tela(getattr(alvo, "match", None))
     fora["editor.jogo.exigencia"] = exigencia
     fora["editor.jogo.exige"] = "sim" if exigencia else ""
-
-    # o campo seria ler a tela — e a tela é justamente o que este rótulo explica.
-    # ELE NÃO ENTRA EM `CAMPOS_QUE_ELA_DIGITA`: ninguém digita dentro de um
-    rotulo, alerta = _jogo_reconhecido(str(editor.get("jogo") or ""), foto)
-    fora["editor.jogo.rotulo"] = rotulo
-    fora["editor.jogo.alerta"] = "sim" if alerta else ""
 
     for chave in _uma_vez_so(str(getattr(alvo, "name", ""))):
         fora.pop(chave, None)
@@ -1011,15 +1017,15 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # ela decide as duas metades de uma vez: o pacote passa a mandar as
         nomes_da_mesa = [g.get("nome", "") for g in guarda]
         fora["guarda.nome"] = _com_os_lugares_vazios(
-            nomes_da_mesa,
-            lambda n: f"P{n} {PONTO_DO_ROTULO} {SEM_NINGUEM_AQUI}")
+            nomes_da_mesa, lambda n: _lugar_vazio(n, nomes_da_mesa)[0])
         fora["guarda.vazio"] = _com_os_lugares_vazios(
             ["" for _ in guarda], lambda _n: "sim")
         fora["guarda.id"] = _com_os_lugares_vazios(
             [g.get("id", "") for g in guarda], lambda _n: "")
         # barra de 3px que diz de quem é a linha, e ela era o `--plastico` do
         fora["guarda.plastico"] = _com_os_lugares_vazios(
-            [g.get("plastico", "") for g in guarda], lambda _n: "")
+            [g.get("plastico", "") for g in guarda],
+            lambda n: _lugar_vazio(n, nomes_da_mesa)[1])
         # FATO DERRUBADO, e ele estava aqui: a linha era
         # **dicionário** (`perfis_web._secoes_do_controle` devolve
         estado = getattr(ctx, "state", None) or {}
@@ -1052,22 +1058,17 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     escolhido_na_lista = str(getattr(alvo, "name", "") or escolhido)
 
     # e é uma sobrescrita de propósito: `perfis_web` continua servindo o
-    procedencia, recado = _procedencia_e_recado(
+    procedencia, _recado = _procedencia_e_recado(
         getattr(alvo, "match", None), editor.get("ambiente_recado"), foto)
     sem_jogo = procedencia == PROCEDENCIA_DE_QUALQUER_JOGO
     if sem_jogo:
         procedencia = ""
-    fora["editor.ambiente"] = procedencia
-    fora["editor.ambiente.travado"] = not procedencia and not sem_jogo
-    fora["editor.ambiente.recado"] = recado
 
     fora["blocos"] = {
         SELETOR_DA_LISTA: _html_da_lista(
             lista, str(bruto.get("lista_vazia") or ""), escolhido_na_lista),
-        SELETOR_DO_AMBIENTE: _html_do_ambiente(
-            oferta_do_funciona_em(_procedencias_da_maquina(foto), procedencia),
-            procedencia),
         SELETOR_DOS_JOGOS: _html_dos_jogos(procedencia, foto),
+        SELETOR_DA_ORDEM: _html_da_ordem(list(editor.get("ordem") or [])),
     }
     fora["cobertura"] = {"pintados": len(fora) + len(lista) * 3, "sem_dono": 0}
     return fora
@@ -1077,70 +1078,65 @@ from . import gesto  # noqa: E402
 
 
 @gesto("10-perfis.html", "selecionar")
-def selecionar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """Abrir um perfil no editor. É o clique em QUALQUER CÉLULA da linha.
+def selecionar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """O clique na linha: abre o perfil no editor E o ativa (`profile.switch`).
 
-    Não fala com o daemon, o único desta aba: escolher linha não muda o aparelho, muda o ALVO dos
-    botões ao lado (como `on_profile_selection_changed` da estável, `profiles_actions.py`); ligar ao
-    `profile.switch` faria passar o mouse pela lista trocar o perfil que vale. O editor repinta no
-    tique seguinte com a preferência do perfil (`editor.prioridade.n`); o campo Nome ainda não
-    acompanha (é `<input>` e a pintura escreve `textContent`, que não aparece).
-
-    O nome vem da linha desde 02/10/2026 (A-LINHA-INTEIRA-ABRE-O-PERFIL-01): o gesto mora na `<tr>`
-    e o ouvinte do piloto manda o `dataset` inteiro do alvo (`Object.assign({}, d)`), com o
-    `data-hef-perfil` como `hefPerfil` (o nome vivo de `_linha_da_lista`); o `texto` da linha seriam
-    as três células coladas («Pragmata80Steam · …») e fica como volta para `{"texto": nome}`.
+    O Perfil ativo do cabeçalho e o editor mostram sempre o mesmo nome (A-ABA-PERFIS-DO-TODO-01).
+    O nome vem da linha (`data-hef-perfil` → `hefPerfil`), com `texto` de volta. Perfil que já vale
+    só abre, sem chamar o daemon; com o Modo Freestyle ligado só abre, pois o Freestyle manda.
     """
     global _ESCOLHIDO
     nome = str(o.get("hefPerfil") or o.get("texto") or "").strip()
     if not nome:
         raise ValueError("selecionar: o clique não trouxe o nome do perfil")
     _ESCOLHIDO = nome
+    if ctx.state.get("freestyle_ligado"):
+        return None
+    from hefesto_dualsense4unix.profiles.slug import mesmo_slug
+
+    ativo = _valendo(ctx)
+    if ativo and mesmo_slug(ativo, nome):
+        return None
+    return _ativar_o(nome, p)
+
+
+def _ativar_o(nome: str, p: Any) -> dict[str, Any]:
+    """`profile.switch` do perfil `nome`: o corpo único do clique na linha e do botão Ativar.
+
+    A recusa do daemon NÃO some (ATIVAR-NAO-MENTE-01): `resultado` levanta e o gesto diz. A frase é
+    do produto (`mensagem_de_ativacao`), e a carona do `launch_env.refresh` vai junto.
+    """
+    try:
+        corpo = p.resultado("profile.switch", name=nome)
+    except RuntimeError as erro:
+        raise RuntimeError(
+            f"o Hefesto não confirmou a troca para {nome!r}") from erro
+    from hefesto_dualsense4unix.app.actions.profiles_actions import (
+        mensagem_de_ativacao,
+    )
+
+    return _dizer(_com_a_carona(mensagem_de_ativacao(nome, corpo)))
 
 
 @gesto("10-perfis.html", "ativar")
 def ativar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """Ativar o perfil selecionado na tabela. `profile.switch`.
+    """Ativar o perfil que o editor mostra (`profile.switch`).
 
-    O nome vem do texto da linha, não de um `data-` novo: a tabela já mostra o nome que o
-    `profile.switch` quer, e um segundo endereço com o mesmo valor seria a segunda verdade. Duas
-    curas de 01/09/2026, o mesmo defeito (botão dizendo "aplicado" sem ter aplicado):
-
-    1. **A linha não era clicável.** O ouvinte do piloto casa `[data-gesto],[data-hef-gesto],…` e a
-    `<tr>` só trazia `data-hef-perfil`; quem clicava no BOTÃO mandava `texto="Ativar"` e o gesto
-    pedia ao daemon um perfil chamado "Ativar". Hoje a célula do nome marca `selecionar` e o botão
-    age sobre o escolhido: `_ESCOLHIDO` primeiro, `texto` como último recurso (é o que a prova
-    declarada exercita).
-    2. **A recusa do daemon sumia.** `profile_switch` devolve `False` quando não confirmou
-      (ATIVAR-NAO-MENTE-01) e o retorno era descartado; levantar aqui faz o botão recusar dizendo.
+    O alvo é o do EDITOR (`_perfil_do_editor`) e não o texto do botão: o `texto` que o botão manda
+    foi o «Ativar» pedido ao daemon como nome de perfil (01/09/2026), e a lista e o editor
+    divergindo foi o defeito de 12/10. Sem perfil aberto recusa sem chamar o daemon; reativar o que
+    já vale recusa dizendo, pois «aplicado» seria mentira.
     """
-    nome = _ESCOLHIDO or str(o.get("texto") or "").strip()
-    if not nome:
-        raise RuntimeError("ativar: escolha um perfil na lista primeiro")
-    # `mesmo_slug` e não `==`: com "Navegação" no disco e "Navegacao" no daemon
+    nome = _perfil_do_editor(ctx)
     from hefesto_dualsense4unix.profiles.slug import mesmo_slug
 
     ativo = _valendo(ctx)
     if ativo and mesmo_slug(ativo, nome):
         raise RuntimeError(
             f"“{nome}” já é o perfil que está valendo. Escolha outro na lista "
-            f"da esquerda e clique em Ativar — reativar o mesmo não muda nada, "
+            f"e clique em Ativar — reativar o mesmo não muda nada, "
             f"e dizer “aplicado” seria mentira.")
-    # esse corpo desde sempre — `mensagem_de_ativacao(name, result)`
-    # (`ponte.TETOS["profile.switch"]` == `ipc_bridge.PROFILE_SWITCH_TIMEOUT_S`,
-    try:
-        corpo = p.resultado("profile.switch", name=nome)
-    except RuntimeError as erro:
-        raise RuntimeError(
-            f"o Hefesto não confirmou a troca para {nome!r}") from erro
-    # A FRASE É DO PRODUTO. `mensagem_de_ativacao` cai na frase de sempre
-    from hefesto_dualsense4unix.app.actions.profiles_actions import (
-        mensagem_de_ativacao,
-    )
-
-    frase = mensagem_de_ativacao(nome, corpo)
-    # (`profiles_actions.py`). Sem ela, o `launch_env.refresh` que esta aba
-    return _dizer(_com_a_carona(frase))
+    return _ativar_o(nome, p)
 
 
 @gesto("10-perfis.html", "voltar-a-de-ontem", grava="restaurar_do_historico")
@@ -1661,7 +1657,7 @@ def _com_o_estilo(prof: Any, estilo: Any, mesa: list[dict[str, Any]]) -> tuple[A
 
     A receita invisível (08/10/2026, O-ESTILO-DO-JOGO-LIGA-A-IMERSAO-INTEIRA-EM-TODO-MODO-01) entra
     pelos motores existentes: `ajustes_do_gatilho` nos parâmetros do modo e o `modo` na seção `mode`
-    (o Point-and-click liga a Navegação), que nasce em `manager.secao_do_modo_do_estilo`. O resto
+    (o Point and click liga a Navegação), que nasce em `manager.secao_do_modo_do_estilo`. O resto
     (`estilos_de_jogo.SO_DADO`) não se escreve aqui: o perfil guarda a CHAVE (`Profile.estilo`,
     O-ESTILO-DO-PERFIL-LIGA-O-MOTOR-DO-TATO-01) e o motor do tato lê a receita por ela.
 
@@ -1733,7 +1729,52 @@ def _com_o_estilo(prof: Any, estilo: Any, mesa: list[dict[str, Any]]) -> tuple[A
         pintados += 1
     if pintados or largaram:
         mudanca["controllers"] = atuais
+    _sai_do_nativo(prof, mudanca)
     return prof.model_copy(update=mudanca), pintados
+
+
+def _sai_do_nativo(prof: Any, mudanca: dict[str, Any]) -> None:
+    """Quem sai do Nativo volta os três modos e o da aba Controles ao Personalizado.
+
+    Sem isso o Automático que o Nativo pôs seguiria neutralizando o gatilho, a luz e a vibração
+    do estilo seguinte (ou os ajustes à mão do Personalizado).
+    """
+    if getattr(prof, "estilo", None) != "nativo":
+        return
+    for campo in ("triggers", "leds", "rumble"):
+        atual = mudanca.get(campo, getattr(prof, campo))
+        mudanca[campo] = atual.model_copy(update={"modo": "personalizado"})
+    mudanca["controles_modo"] = "personalizado"
+
+
+def _com_o_nativo(prof: Any, estilo: Any) -> tuple[Any, int]:
+    """O perfil no Nativo, e QUANTOS controles largaram o ajuste próprio de gatilho e vibração.
+
+    Gatilho, luz e vibração ficam em Automático (`schema.perfil_no_modo` neutraliza a escolha, que
+    segue no disco e volta no Personalizado), a vibração do perfil e a do controle perdem o degrau,
+    a receita do tato sai e a tabela do molde anterior também. O Nativo não pinta controle.
+    """
+    from hefesto_dualsense4unix.profiles.manager import secao_do_modo_do_estilo
+    from hefesto_dualsense4unix.profiles.schema import MODO_AUTOMATICO, RumbleConfig
+
+    mudanca: dict[str, Any] = {
+        "estilo": estilo.chave,
+        "triggers": prof.triggers.model_copy(update={"modo": MODO_AUTOMATICO}),
+        "leds": prof.leds.model_copy(update={"modo": MODO_AUTOMATICO}),
+        "rumble": RumbleConfig(
+            passthrough=bool(getattr(prof.rumble, "passthrough", True)),
+            policy=None, modo="automatico"),  # (noqa-acento) chave ASCII
+        "controles_modo": MODO_AUTOMATICO,
+        "receita_do_tato": None,
+    }
+    mudou, secao = secao_do_modo_do_estilo(prof.mode, None)
+    if mudou:
+        mudanca["mode"] = secao
+    mudanca.update(_com_a_tabela_do_estilo(prof, estilo))
+    atuais, largaram = _sem_o_ajuste_do_estilo(prof.controllers, gatilho=True, vibracao=True)
+    if atuais != dict(prof.controllers or {}):
+        mudanca["controllers"] = atuais
+    return prof.model_copy(update=mudanca), largaram
 
 
 @gesto("10-perfis.html", "editor.estilo", grava="_gravar")
@@ -1787,12 +1828,22 @@ def editor_estilo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
     if estilo.chave == "personalizado":
         era = receitas.POR_CHAVE.get(str(getattr(prof, "estilo", "") or ""))
         if era is not estilo:
-            _gravar(prof.model_copy(update={"estilo": estilo.chave}), ctx, p)
+            mudanca: dict[str, Any] = {"estilo": estilo.chave}
+            _sai_do_nativo(prof, mudanca)
+            _gravar(prof.model_copy(update=mudanca), ctx, p)
         desligou = (f"a receita de “{era.rotulo}” foi desligada, e "
                     if era is not None and era is not estilo else "")
         return _dizer(
             f"“{estilo.rotulo}” em “{prof.name}”: {desligou}o que vale é o que "
             f"está nas abas.")
+    if estilo.chave == "nativo":
+        novo, largaram = _com_o_nativo(prof, estilo)
+        _gravar(novo, ctx, p)
+        proprio = (f" {largaram} controle{'s deixaram' if largaram != 1 else ' deixou'} "
+                   f"o ajuste próprio de gatilho e vibração." if largaram else "")
+        return _dizer(
+            f"“{estilo.rotulo}” em “{prof.name}”: o jogo decide o gatilho, a vibração, a luz "
+            f"e o toque.{proprio}")
     _, largaram = _sem_o_ajuste_do_estilo(
         prof.controllers, gatilho=bool(estilo.gatilho), vibracao=bool(estilo.vibracao))
     novo, pintados = _com_o_estilo(prof, estilo, ctx.mesa)
@@ -1941,6 +1992,105 @@ def detectar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     _gravar(prof, ctx, p)
     return _dizer(_agora_vale_em(prof, classe),
                   **{"editor.jogo": simple_extra(prof.match) or classe})
+
+
+ALVOS_DO_PERFIL = ("jogos", "navegacao", "programas", "eventos")
+EVENTOS_DO_PERFIL = ("cena", "menu", "pausa", "controle_conectado", "programa_aberto",
+                     "hora_marcada", "meu_comando")
+
+
+@gesto("10-perfis.html", "editor.alvo", grava="_gravar")
+def editor_alvo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """«Aplicar em»: onde o perfil vale (jogos, navegação, programas, eventos). SÓ GRAVA.
+
+    Grava `Profile.alvo`; nenhum motor o lê ainda (o `match` segue mandando). Sair de «Eventos»
+    leva junto o momento e o comando, que só fazem sentido lá.
+    """
+    from hefesto_dualsense4unix.app.actions.profiles_actions import mensagem_do_salvar
+
+    novo = str(o.get("v") or o.get("valor") or "").strip()
+    if novo not in ALVOS_DO_PERFIL:
+        raise RuntimeError(f"“{novo}” não é um lugar onde o perfil vale. Nada foi salvo.")
+    prof = _o_perfil_no_disco(_perfil_do_editor(ctx))
+    if prof.alvo == novo:
+        return None
+    mudanca: dict[str, Any] = {"alvo": novo}
+    if novo != "eventos":
+        mudanca.update(evento=None, evento_comando=None)
+    _gravar(prof.model_copy(update=mudanca), ctx, p)
+    return _dizer(f"{mensagem_do_salvar(prof.name)} · aplica em {novo}")
+
+
+@gesto("10-perfis.html", "editor.quando", grava="_gravar")
+def editor_quando(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """«Quando», do alvo Eventos: o momento (`evento`) e o comando (`evento_comando`). SÓ GRAVA.
+
+    Os dois campos mandam o gesto; `data-que="comando"` marca o do comando, o outro é o momento.
+    """
+    from hefesto_dualsense4unix.app.actions.profiles_actions import mensagem_do_salvar
+
+    if not _so_mudou(o):
+        return None
+    prof = _o_perfil_no_disco(_perfil_do_editor(ctx))
+    valor = str(o.get("valor") or "").strip()
+    por_comando = str(o.get("que") or "") == "comando"
+    momento = prof.evento if por_comando else (valor or None)
+    comando = valor if por_comando else (prof.evento_comando or "")
+    if momento is not None and momento not in EVENTOS_DO_PERFIL:
+        raise RuntimeError(f"“{momento}” não é um momento que o perfil conhece. Nada foi salvo.")
+    if (momento, comando or None) == (prof.evento, prof.evento_comando):
+        return None
+    _gravar(prof.model_copy(update={"evento": momento, "evento_comando": comando or None}),
+            ctx, p)
+    return _dizer(f"{mensagem_do_salvar(prof.name)} · quando: {momento or '—'}")
+
+
+def _valores_da_nova_ordem(atuais: list[int], teto: int) -> list[int]:
+    """Os valores de `priority` do grupo, do que vale primeiro ao último, sem empate.
+
+    Reaproveita os que o grupo já tem (decrescentes). Empate: o de cima sobe um acima do de baixo,
+    e o teto (`PRIORIDADE_MAXIMA`) puxa de volta sem repetir.
+    """
+    novos = sorted(atuais, reverse=True)
+    for k in range(len(novos) - 2, -1, -1):
+        novos[k] = max(novos[k], novos[k + 1] + 1)
+    return [max(0, min(v, teto - k)) for k, v in enumerate(novos)]
+
+
+@gesto("10-perfis.html", "editor.ordem", grava="_gravar")
+def editor_ordem(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """«Qual vale primeiro»: arrastar um perfil do mesmo jogo regrava a `priority` do grupo.
+
+    Sem campo novo: a ordem é a `priority`, e é ela que o manager já lê. O grupo é o dos perfis
+    com o mesmo jogo do aberto no editor (`perfis_web._ordem_do_jogo`).
+    """
+    from hefesto_dualsense4unix.profiles.loader import load_all_profiles
+    from hefesto_dualsense4unix.profiles.schema import PRIORIDADE_MAXIMA
+
+    movido = str(o.get("hefPerfil") or "").strip()
+    try:
+        destino = int(str(o.get("posNova") or ""))
+    except ValueError:
+        raise RuntimeError(
+            "não entendi para onde o perfil foi arrastado. Nada foi salvo.") from None
+    aberto = _o_perfil_no_disco(_perfil_do_editor(ctx))
+    grupo = _tela._ordem_do_jogo(aberto, load_all_profiles(), None)
+    nomes = [x["perfil"] for x in grupo]
+    if movido not in nomes or not 1 <= destino <= len(nomes):
+        raise RuntimeError("esse perfil não está na lista deste jogo. Nada foi salvo.")
+    atuais = {n: int(_o_perfil_no_disco(n).priority or 0) for n in nomes}
+    nomes.remove(movido)
+    nomes.insert(destino - 1, movido)
+    valores = _valores_da_nova_ordem(list(atuais.values()), PRIORIDADE_MAXIMA)
+    mexeu = False
+    for nome, valor in zip(nomes, valores, strict=True):
+        if atuais[nome] != valor:
+            prof = _o_perfil_no_disco(nome)
+            _gravar(prof.model_copy(update={"priority": valor}), ctx, p)
+            mexeu = True
+    if not mexeu:
+        return None
+    return _dizer(f"Ordem salva · {nomes[0]} vale primeiro")
 
 
 @gesto("10-perfis.html", "novo", grava="_gravar")
@@ -2148,6 +2298,11 @@ def procurar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     return {}
 
 
+#: a frase do primeiro e a do segundo duplo clique: texto (de A a Z) e data (do mais novo).
+_SENTIDO_DA_FRASE = {False: ("de A a Z", "de Z a A"),
+                     True: ("do mais novo ao mais antigo", "do mais antigo ao mais novo")}
+
+
 @gesto("10-perfis.html", "ordenar")
 def ordenar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """O duplo clique no nome da coluna: ordena por ela; de novo, inverte."""
@@ -2159,10 +2314,12 @@ def ordenar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     atual, sentido = _prefs.ordem_da_tabela(TABELA_DA_LISTA)
     if atual != coluna:
         _prefs.guardar_ordem_da_tabela(TABELA_DA_LISTA, coluna, "asc")
-        frase = f"Ordenado por {_NOME_DA_COLUNA[coluna]}, do menor para o maior"
+        sentidos = _SENTIDO_DA_FRASE[coluna in COLUNAS_DE_DATA]
+        frase = f"Ordenado por {_NOME_DA_COLUNA[coluna]}, {sentidos[0]}"
     elif sentido == "asc":
         _prefs.guardar_ordem_da_tabela(TABELA_DA_LISTA, coluna, "desc")
-        frase = f"Ordenado por {_NOME_DA_COLUNA[coluna]}, do maior para o menor"
+        sentidos = _SENTIDO_DA_FRASE[coluna in COLUNAS_DE_DATA]
+        frase = f"Ordenado por {_NOME_DA_COLUNA[coluna]}, {sentidos[1]}"
     else:
         _prefs.guardar_ordem_da_tabela(TABELA_DA_LISTA, "", "")
         frase = "Ordem de sempre: o perfil que está valendo em primeiro"
@@ -2211,16 +2368,20 @@ METODOS = {"launch_env.refresh", "profile.switch"}
 
 
 PAGINA = "10-perfis.html"
-PISO_DA_ABA = 16
+PISO_DA_ABA = 19
 #: mentira que o `conftest.py` monta", `load_all_profiles()` devolve **9
 PROVAS: list[dict[str, Any]] = [
-    {"pagina": PAGINA, "gesto": "ativar", "clique": {"texto": "Ação"},  # (noqa-acento) id
-     "chama": [("resultado", ["profile.switch"], {"name": "Ação"})]},
+    # O clique na linha ATIVA o perfil e o abre; o botão «Ativar» lê o editor e tem teste próprio
+    # (`test_o_ativar_age_sobre_o_perfil_do_editor`), pois a régua não abre uma linha antes.
+    {"pagina": PAGINA, "gesto": "selecionar",  # (noqa-acento) id
+     "clique": {"hefPerfil": "Bancada"},
+     "chama": [("resultado", ["profile.switch"], {"name": "Bancada"})]},
 ]
 
 #: O QUE NÃO ECOA NO `state_full`, e são DOZE dos treze. A razão é uma só e está
-SEM_ECO = ("selecionar", "editor.nome", "editor.ambiente", "editor.jogo",
+SEM_ECO = ("editor.nome", "editor.ambiente", "editor.jogo",
            "editor.prioridade", "editor.estilo",
+           "editor.alvo", "editor.quando", "editor.ordem",
            "detectar", "novo", "duplicar", "remover", "voltar-a-de-ontem",
            "recarregar",
            # `state_full` muda quando o usuário arrasta uma divisa.
@@ -2231,8 +2392,8 @@ AGORA_NAO_DIZ = TRAVESSAO
 
 #: A dica da célula neutra, e a da máscara que não é a DualSense (decisão de produto
 #: de 29/09, pergunta [40]: «Aceso no DualSense», com a dica dizendo qual).
-DICA_DO_NAO_DIZ = "O controle não diz."
-DICA_DA_MASCARA = "Máscara: {mascara}."
+DICA_DO_NAO_DIZ = "O controle não diz"
+DICA_DA_MASCARA = "Máscara: {mascara}"
 
 
 def _luz_agora(entrada: dict[str, Any], state: dict[str, Any], _linha: dict[str, Any]

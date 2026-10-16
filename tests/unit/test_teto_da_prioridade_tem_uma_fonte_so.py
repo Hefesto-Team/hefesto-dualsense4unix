@@ -43,45 +43,49 @@ def _constante_por_ast(arquivo: Path, nome: str) -> int:
     pytest.fail(f"{arquivo.name}: `{nome}` sumiu do módulo")
 
 
-_TRILHO_DA_PRIORIDADE = re.compile(
-    r'<input[^>]*type="range"[^>]*data-hef="editor\.prioridade\.escolha"[^>]*>'
-)
-
-
-def _atributo_do_trilho(nome: str) -> int:
-    """`max`/`min` do trilho da Prioridade, lido da TELA QUE ELA USA."""
-    pagina = _PAGINA_PERFIS.read_text(encoding="utf-8")
-    trilho = _TRILHO_DA_PRIORIDADE.search(pagina)
-    assert trilho is not None, (
-        "o trilho `editor.prioridade.escolha` sumiu de `10-perfis.html` — o "
-        "editor perdeu a escala, ou esta régua ficou cega"
-    )
-    achado = re.search(rf'{nome}="(\d+)"', trilho.group(0))
-    assert achado is not None, f"o trilho da Prioridade perdeu o atributo {nome}"
-    return int(achado.group(1))
+_A_ABA_PERFIS = _PACOTE / "interface" / "pacotes" / "a10_perfis.py"
 
 
 class TestUmTetoSo:
+    """Desde 15/10/2026 a página não tem o trilho da Prioridade (a ordem é arrastada na lista).
+
+    O terceiro lugar que repetia o teto era o `max` do trilho; hoje é a ordem do editor, que recebe
+    o teto de `schema.PRIORIDADE_MAXIMA`.
+    """
+
     def test_o_verificador_semantico_usa_a_faixa_da_janela(self) -> None:
         """`sanidade` e a aba Perfis têm de dizer o MESMO teto."""
         da_aba = _constante_por_ast(_PROFILES_ACTIONS, "PRIORIDADE_MAXIMA")
         assert da_aba == sanidade.PRIORIDADE_MAXIMA
 
-    def test_a_tela_acompanha_o_verificador(self) -> None:
-        """O terceiro lado do triângulo, fechado pela página publicada."""
-        assert _atributo_do_trilho("max") == sanidade.PRIORIDADE_MAXIMA
+    def test_a_tela_nao_cravou_o_teto_de_volta(self) -> None:
+        """MORDIDA: devolva um `<input type="range" max="200">` ao gerador e isto reprova."""
+        pagina = _PAGINA_PERFIS.read_text(encoding="utf-8")
+        assert 'type="range"' not in pagina and "editor.prioridade" not in pagina, (
+            "a página voltou a ter um trilho de Prioridade com o teto escrito nela")
 
-    def test_os_tres_lugares_dizem_o_mesmo_numero(self) -> None:
-        """A asserção da dona, escrita como o usuário pediu, numa linha só."""
-        assert (
-            sanidade.PRIORIDADE_MAXIMA
-            == _constante_por_ast(_PROFILES_ACTIONS, "PRIORIDADE_MAXIMA")
-            == _atributo_do_trilho("max")
-        )
+    def test_a_ordem_do_editor_usa_o_teto_do_schema(self) -> None:
+        """O teto vem de `schema`, por nome, e o empate no topo não passa dele.
 
-    def test_o_piso_da_escala_tambem_bate_com_a_tela(self) -> None:
-        """`PRIORIDADE_MINIMA` é o `min` do mesmo trilho."""
-        assert _atributo_do_trilho("min") == sanidade.PRIORIDADE_MINIMA
+        MORDIDA: troque o `teto` do `editor_ordem` por 100 e a ordem de baixo deixa de caber em 200.
+        """
+        from hefesto_dualsense4unix.interface.pacotes import a10_perfis
+
+        fonte = _A_ABA_PERFIS.read_text(encoding="utf-8")
+        assert "from hefesto_dualsense4unix.profiles.schema import PRIORIDADE_MAXIMA" in fonte
+        assert not re.search(r"^\s*PRIORIDADE_MAXIMA\s*=\s*\d+", fonte, re.M), (
+            "a aba Perfis escreveu o teto na mão")
+        teto = sanidade.PRIORIDADE_MAXIMA
+        assert a10_perfis._valores_da_nova_ordem([teto, teto, teto], teto) == [
+            teto, teto - 1, teto - 2]
+
+    def test_o_piso_da_ordem_e_o_da_escala(self) -> None:
+        """`PRIORIDADE_MINIMA` é o chão: uma ordem comprida não vai abaixo dele."""
+        from hefesto_dualsense4unix.interface.pacotes import a10_perfis
+
+        piso = sanidade.PRIORIDADE_MINIMA
+        valores = a10_perfis._valores_da_nova_ordem([piso] * 3, sanidade.PRIORIDADE_MAXIMA)
+        assert min(valores) >= piso
 
 
 class TestAFonteEDaCamadaMaisBaixa:

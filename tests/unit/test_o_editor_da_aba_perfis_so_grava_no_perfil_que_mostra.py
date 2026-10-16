@@ -9,6 +9,9 @@ Freestyle. Medido antes da cura, com «Freestyle» e «Corrida» no disco:
     editor_nome(valor="Corrida 2")    -> "Perfil renomeado: Freestyle → Corrida 2",
                                          e o freestyle.json some do disco
 
+Desde 15/10 o `pacote()` não manda mais o `editor.nome` (a tela nova não tem o campo Nome): o perfil
+que o editor mostra é a linha MARCADA da lista (`aria-selected`), e a régua lê dali.
+
 A régua junta o que nenhuma outra juntava: `freestyle_ligado` com os gestos do
 editor. Para cada gesto, o perfil que ele LÊ do disco é o que o `pacote()` pinta, e o
 `freestyle.json` sai byte a byte igual.
@@ -67,7 +70,7 @@ def _memoria_limpa(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(a10_perfis, "_ESCOLHIDO", "", raising=False)
     monkeypatch.setattr(a10_perfis, "_ARMADO", None, raising=False)
     monkeypatch.setattr(a10_perfis, "_PROCURA", "", raising=False)
-    # o «pinta uma vez» (`_uma_vez_so`) omite o `editor.nome` do mesmo alvo por 2 s
+    # o «pinta uma vez» (`_uma_vez_so`) omite os campos digitados do mesmo alvo por 2 s
     monkeypatch.setattr(a10_perfis, "_PINTADO_PARA", "", raising=False)
     monkeypatch.setattr(a10_perfis, "_ULTIMO_TIQUE", 0.0, raising=False)
 
@@ -95,7 +98,16 @@ def _ctx() -> Contexto:
 
 
 def _estilo_que_grava() -> str:
-    return next(e.rotulo for e in estilos_de_jogo.ESTILOS if e.chave != "personalizado")
+    return next(e.rotulo for e in estilos_de_jogo.ESTILOS if e.chave not in estilos_de_jogo.SEM_COR)
+
+
+def _aberto_no_editor() -> str:
+    """O perfil que o editor mostra: a linha marcada da lista que o `pacote()` pinta."""
+    html = a10_perfis.pacote(_ctx())["blocos"].get(a10_perfis.SELETOR_DA_LISTA, "")
+    marcadas = [x.split('data-hef-perfil="')[1].split('"')[0]
+                for x in html.splitlines() if 'aria-selected="true"' in x]
+    assert len(marcadas) == 1, f"o editor deve abrir numa linha só: {marcadas!r}"
+    return marcadas[0]
 
 
 #: Os gestos do editor e o que cada um recebe da tela. O `remover` fica fora: a
@@ -133,10 +145,10 @@ def alvos(monkeypatch: pytest.MonkeyPatch) -> list[str]:
 
 @pytest.mark.parametrize("gesto", list(GESTOS))
 def test_o_gesto_mira_o_perfil_que_o_editor_pinta(gesto: str, alvos: list[str]) -> None:
-    """O alvo de cada gesto é o `editor.nome` do `pacote()`, e o Freestyle não muda."""
+    """O alvo de cada gesto é o perfil que o editor mostra, e o Freestyle não muda."""
     arquivo = _o_disco()
     antes = arquivo.read_bytes()
-    pintado = a10_perfis.pacote(_ctx())["editor.nome"]
+    pintado = _aberto_no_editor()
     assert pintado == CORRIDA, f"o editor abriu em {pintado!r}, e a lista só tem a Corrida"
 
     funcao, o = GESTOS[gesto]
@@ -173,7 +185,7 @@ def test_a_linha_clicada_continua_sendo_o_alvo(alvos: list[str]) -> None:
                         origem="régua")
     a10_perfis.selecionar(_ctx(), {"hefPerfil": AVATAR}, PonteDeMentira())
 
-    assert a10_perfis.pacote(_ctx())["editor.nome"] == AVATAR
+    assert _aberto_no_editor() == AVATAR
     alvos.clear()
     a10_perfis.editor_prioridade(_ctx(), {"valor": "91"}, PonteDeMentira())
     assert alvos == [AVATAR]

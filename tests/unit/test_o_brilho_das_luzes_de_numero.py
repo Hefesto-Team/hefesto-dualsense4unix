@@ -524,11 +524,11 @@ def test_o_estilo_de_jogo_nao_apaga_o_brilho_das_luzes() -> None:
     """Aplicar um Estilo de Jogo na aba Perfis troca a cor, e não o brilho."""
     from pacotes import a10_perfis as a10
 
-    from hefesto_dualsense4unix.profiles.estilos_de_jogo import ESTILOS
+    from hefesto_dualsense4unix.profiles.estilos_de_jogo import POR_CHAVE
 
     perfil = _perfil("medio", P3="forte")  # noqa-acento: chave ASCII
     mesa = [{"uniq": MACS[0], "jogador": 1}, {"uniq": MACS[2], "jogador": 3}]
-    novo, pintados = a10._com_o_estilo(perfil, ESTILOS[0], mesa)
+    novo, pintados = a10._com_o_estilo(perfil, POR_CHAVE["fps"], mesa)
     assert pintados == 2
     p3 = novo.controllers[UNIQS[2]].leds
     assert p3.player_led_brightness == "forte" and (

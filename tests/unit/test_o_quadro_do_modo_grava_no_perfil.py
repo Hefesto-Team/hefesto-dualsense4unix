@@ -154,15 +154,12 @@ def test_a_aba_perfis_nao_tem_mais_gesto_de_modo() -> None:
         f"folga nele apaga exatamente isso")
 
 
-def test_a_chave_do_modo_esta_declarada_sem_endereco() -> None:
-    """O dono do DADO continua publicando; a tela é que deixou de ter onde pôr."""
-    assert "editor.modo" in a10_perfis.SEM_ENDERECO, (
-        "`editor.modo` deixou de ser declarado em `SEM_ENDERECO` — ou ele "
-        "voltou a ter endereço (e aí a decisão dela mudou), ou a chave passou a "
-        "cair no vazio sem ninguém saber")
-    razao = a10_perfis.SEM_ENDERECO["editor.modo"]
-    assert "Jogar" in razao and "11/09" in razao, (
-        f"a razão declarada não diz para onde o quadro foi nem quando: {razao!r}")
+def test_o_modo_nao_chega_a_pagina() -> None:
+    """O dono do DADO (`perfis_web`) publica o `modo`; a tela deixou de ter onde pôr, e o pacote
+    da aba já não o emite (15/10/2026: antes caía no vazio, declarado em `SEM_ENDERECO`)."""
+    assert "editor.modo" not in a10_perfis.SEM_ENDERECO
+    fora = a10_perfis.pacote(_ctx())
+    assert "editor.modo" not in fora, "o pacote voltou a emitir `editor.modo` para o vazio"
 
 
 def _renomear(ctx: Contexto, ponte: Any) -> None:

@@ -284,6 +284,18 @@ _CLASSIFICACAO: dict[str, SecaoPorApplier | SecaoDireta] = {
             "Nada chega ao controle."
         )
     ),
+    "alvo": SecaoDireta(
+        razao=(
+            "A-ABA-PERFIS-DO-TODO-01 (15/10/2026). Onde o perfil vale (jogos, navegação, "
+            "programas, eventos), lido pela aba Perfis. Só grava; nada chega ao controle."
+        )
+    ),
+    "evento": SecaoDireta(
+        razao="Ver `alvo`: o momento que chama o perfil. Só grava; nada chega ao controle."
+    ),
+    "evento_comando": SecaoDireta(
+        razao="Ver `evento`: o comando do «Meu comando». Só grava; nada chega ao controle."
+    ),
     "match": SecaoDireta(
         razao="Critério de SELEÇÃO do perfil, não estado do controle."
     ),

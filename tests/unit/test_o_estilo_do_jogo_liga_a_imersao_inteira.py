@@ -4,7 +4,7 @@
 A escolha de 08/10/2026 (`ESCOLHAS.md`): nenhum cartão novo; o «Estilo de Jogo» é
 o veículo, o «Arco» vira estilo próprio, e cada estilo leva uma receita que a
 tela não mostra (`profiles/estilos_de_jogo.Receita`). O gesto aplica o que tem
-motor (o ritmo e a frequência do gatilho, e o modo do Point-and-click) e guarda o
+motor (o ritmo e a frequência do gatilho, e o modo do Point and click) e guarda o
 resto como dado. Vale em todo modo, de P1 a P4, no cabo e no rádio.
 """
 from __future__ import annotations
@@ -76,9 +76,9 @@ def _aplicar(rotulo: str, mesa: list[dict[str, Any]] | None = None) -> dict[str,
     return a10_perfis.editor_estilo(ctx, {"valor": rotulo}, _Ponte())
 
 
-def test_todo_estilo_de_fabrica_tem_receita_e_o_personalizado_nao() -> None:
+def test_todo_estilo_de_fabrica_tem_receita_e_so_o_nativo_e_o_personalizado_nao() -> None:
     sem = [e.rotulo for e in ej.DE_FABRICA if e.receita_invisivel is None]
-    assert not sem, f"estilos de fábrica sem receita: {sem}"
+    assert sem == ["Nativo"], f"estilos de fábrica sem receita: {sem}"
     assert ej.POR_CHAVE["personalizado"].receita_invisivel is None
 
 
@@ -132,7 +132,7 @@ def test_os_ajustes_da_receita_chegam_ao_gatilho(
 
 @pytest.mark.parametrize("modo", [None, "gamepad", "native"])
 def test_o_point_and_click_liga_a_navegacao(disco: dict[str, Any], modo: str | None) -> None:
-    """De qualquer modo de partida, o Point-and-click grava a Navegação.
+    """De qualquer modo de partida, o Point and click grava a Navegação.
 
     A MORDIDA: tire o ramo `if receita and receita.modo` e o perfil fica no modo
     que tinha.
@@ -140,7 +140,7 @@ def test_o_point_and_click_liga_a_navegacao(disco: dict[str, Any], modo: str | N
     if modo:
         disco["perfil"] = disco["perfil"].model_copy(
             update={"mode": ProfileModeConfig(kind=modo)})
-    _aplicar("Point-and-click")
+    _aplicar("Point and click")
     assert disco["perfil"].mode is not None
     assert disco["perfil"].mode.kind == "desktop"
 
@@ -149,7 +149,7 @@ def test_outro_estilo_tira_a_navegacao_que_o_point_and_click_deixou(
     disco: dict[str, Any],
 ) -> None:
     """A MORDIDA: tire o `elif ... == "desktop"` e o FPS fica na Navegação."""
-    _aplicar("Point-and-click")
+    _aplicar("Point and click")
     _aplicar("FPS")
     assert disco["perfil"].mode is None
 
@@ -188,7 +188,7 @@ def test_o_fps_nao_mexe_no_movimento(disco: dict[str, Any]) -> None:
     assert disco["perfil"].movimento == mov
 
 
-@pytest.mark.parametrize("rotulo", [e.rotulo for e in ej.DE_FABRICA])
+@pytest.mark.parametrize("rotulo", [e.rotulo for e in ej.DE_FABRICA if e.chave not in ej.SEM_COR])
 def test_p1_a_p4_no_cabo_e_no_radio_tem_cores_distintas(
     disco: dict[str, Any], rotulo: str,
 ) -> None:

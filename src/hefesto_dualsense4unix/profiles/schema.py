@@ -228,6 +228,11 @@ def _gatilho_de_nascimento() -> TriggerConfig:
 MODO_AUTOMATICO = "automatico"  # (noqa-acento) chave ASCII
 MODO_PERSONALIZADO = "personalizado"
 ModoDaAba = Literal["automatico", "personalizado"]  # (noqa-acento) chave ASCII
+#: Onde o perfil vale (o «Aplicar em» da aba Perfis) e, nos «eventos», o momento que o chama.
+AlvoDoPerfil = Literal["jogos", "navegacao", "programas", "eventos"]  # (noqa-acento) chaves ASCII
+EventoDoPerfil = Literal[  # (noqa-acento) chaves ASCII
+    "cena", "menu", "pausa", "controle_conectado", "programa_aberto", "hora_marcada", "meu_comando",
+]
 
 
 class TriggersConfig(BaseModel):
@@ -1305,6 +1310,11 @@ class Profile(BaseModel):
     # ISO 8601. None = perfil de antes das datas: a lista mostra «—», nunca uma data inventada.
     criado_em: str | None = None
     modificado_em: str | None = None
+    # O «Aplicar em» e o «Quando» da aba Perfis. SÓ GRAVAM: nenhum motor os lê ainda, e a tela
+    # nunca diz que funcionam. None = o alvo que o `match` já dizia.
+    alvo: AlvoDoPerfil | None = None
+    evento: EventoDoPerfil | None = None
+    evento_comando: str | None = None
 
     @model_serializer(mode="wrap")
     def _sem_ponte_a_chave_nem_aparece(
@@ -1316,6 +1326,7 @@ class Profile(BaseModel):
             for opcional in (
                 "ponte", "remapeamento", "movimento", "estilo", "receita_do_tato",
                 "marcas", "controles_modo", "criado_em", "modificado_em",
+                "alvo", "evento", "evento_comando",
             ):
                 if dados.get(opcional) is None:
                     dados.pop(opcional, None)
@@ -2426,6 +2437,22 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         E_CONTRATO,
         "`None` = nenhuma mudança dela desde que as datas existem. Só o gesto dela a põe; o "
         "salvar automático e a semeadura não mexem.",
+    ),
+    "Profile.alvo": Nascimento(
+        E_CONTRATO,
+        "`None` = vale o que o `match` já dizia. O alvo é escolha dela por perfil, e semear um "
+        "mandaria o perfil antigo para um lugar que ela não escolheu "
+        "(A-ABA-PERFIS-DO-TODO-01).",
+    ),
+    "Profile.evento": Nascimento(
+        E_CONTRATO,
+        "`None` = nenhum momento escolhido. Só tem sentido com o alvo «eventos» e hoje só grava: "
+        "nenhum motor o chama.",
+    ),
+    "Profile.evento_comando": Nascimento(
+        E_CONTRATO,
+        "`None` = nenhum comando. É o texto que ela digita para o «Meu comando»; semear um "
+        "comando seria mandar rodar algo que ela não escreveu.",
     ),
     "Profile.marcas": Nascimento(
         E_CONTRATO,

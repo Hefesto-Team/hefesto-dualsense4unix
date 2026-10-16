@@ -227,8 +227,7 @@ def test_a_lista_emitida_tem_um_bloco_por_controle_da_mesa() -> None:
 
 @pytest.mark.parametrize(
     ("classe", "estado", "frase"),
-    [("trava", "editor.ambiente.travado", "editor.ambiente.recado"),
-     ("exige", "editor.jogo.exige", "editor.jogo.exigencia")])
+    [("exige", "editor.jogo.exige", "editor.jogo.exigencia")])
 def test_a_marca_e_a_frase_moram_na_bancada(classe: str, estado: str,
                                             frase: str) -> None:
     """As duas metades de cada marca existem no desenho, e a dica nasce VAZIA."""
@@ -257,8 +256,7 @@ def test_a_marca_acende_exatamente_quando_a_frase_existe() -> None:
     }
     for nome, prof in casos.items():
         fora = _emitido(prof)
-        for marca, frase in (("editor.ambiente.travado", "editor.ambiente.recado"),
-                             ("editor.jogo.exige", "editor.jogo.exigencia")):
+        for marca, frase in (("editor.jogo.exige", "editor.jogo.exigencia"),):
             acesa = bool(fora[marca]) and str(fora[marca]).lower() not in (
                 "false", "", "0")
             tem_frase = bool(str(fora[frase] or "").strip())
@@ -275,23 +273,13 @@ def test_o_seletor_travado_tem_onde_pousar_o_travessao(gerador: Any) -> None:
 
     fora = _emitido(Profile(name="por título",
                             match=MatchCriteria(window_title_regex="^Elden")))
-    assert not fora["editor.ambiente"], (
-        "o produto passou a nomear um ambiente para o perfil de regra fina — "
-        "releia `perfis_web._ambiente_do_perfil` antes de mudar esta régua")
-
-    seletor = re.search(
-        r'<select data-hef="editor\.ambiente".*?</select>',
-        _pagina(publicado=False), re.S)
-    assert seletor is not None, "o seletor 'Funciona em' sumiu do desenho"
-    alvo = f'<option value="{gerador.TRAVESSAO}" disabled>'
-    assert alvo in seletor.group(0), (
-        f"o 'Funciona em' não oferece o `{gerador.TRAVESSAO}` que o "
-        f"`escrever()` manda quando não há regra a mostrar — o campo fica com "
-        f"a opção que o desenho cravou")
-    assert 'value=""' not in seletor.group(0), (
-        "a opção do travessão voltou a `value=\"\"` — `el.value = '—'` deixa de "
-        "casar, o campo renderiza em branco e o contador de pinturas soma +1 "
-        "por tique, para sempre")
+    html = _pagina(publicado=False)
+    assert 'data-hef="editor.ambiente"' not in html, (
+        "o «Funciona em» voltou ao desenho; a aba nova escolhe pelo «Nome do jogo» e pelo "
+        "«Aplicar em», e o produto não manda mais `editor.ambiente`")
+    assert "editor.ambiente" not in fora, (
+        "o produto voltou a mandar `editor.ambiente`, que a página não tem onde pôr")
+    assert gerador.TRAVESSAO == "—"
 
 
 def test_a_exigencia_do_pragmata_chega_a_esta_tela() -> None:
@@ -393,12 +381,9 @@ def test_a_frase_da_prioridade_do_desenho_e_a_que_ela_aprovou(
         f"    produto {do_produto!r}")
 
     html = _pagina(publicado=False)
-    dica = re.search(r'data-hef="editor\.prioridade\.dica" title="([^"]*)"', html)
-    assert dica is not None, "a dica da Prioridade perdeu o `title` do desenho"
-    assert dica.group(1) == gerador.DICA_DA_PRIORIDADE
-    assert dica.group(1).startswith(do_produto), (
-        "a frase DELA deixou de vir primeiro — a explicação do Universal "
-        "responde a pergunta que a dela deixa aberta, e não a substitui")
+    assert "editor.prioridade" not in html, (
+        "a Preferência (o trilho e a dica) voltou ao desenho; a ordem entre perfis do mesmo "
+        "jogo agora é arrastar, e quem a grava é `editor.ordem`")
 
 
 def test_o_produto_continua_sem_tentar_pintar_a_dica_da_prioridade() -> None:
@@ -545,15 +530,8 @@ def test_o_detectar_cumpre_o_que_o_title_promete(
     from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
     from hefesto_dualsense4unix.profiles.simple_match import detect_simple_preset
 
-    html = _pagina(publicado=False)
-    botao = re.search(r'<button[^>]*data-hef-gesto="detectar"[^>]*>', html)
-    assert botao is not None, "o botão Detectar sumiu do desenho"
-    titulo = re.search(r'title="([^"]*)"', botao.group(0))
-    assert titulo is not None, "o Detectar perdeu a dica que explica o que ele faz"
-    assert "qualquer lugar" in titulo.group(1), (
-        f"o `title` deixou de prometer jogo de qualquer lugar: "
-        f"{titulo.group(1)!r} — se a promessa saiu, revise a decisão 10-Q2 "
-        f"antes de mexer nesta régua")
+    assert 'data-hef-gesto="detectar"' not in _pagina(publicado=False), (
+        "o botão Detectar voltou ao desenho; o gesto segue no pacote, mas a aba nova não o pede")
 
     prof = Profile(name="Grim", match=MatchAny())
     monkeypatch.setattr(loader, "load_all_profiles", lambda *a, **k: [prof])
@@ -679,8 +657,12 @@ def test_o_rotulo_do_jogo_separa_a_rotina_do_erro(
 
 
 @pytest.mark.parametrize("publicado", [False, True], ids=["bancada", "publicada"])
-def test_o_rotulo_do_jogo_tem_onde_pousar(publicado: bool) -> None:
-    """Os dois sentidos: endereço emitido sem lugar, e lugar sem quem escreva."""
+def test_o_rotulo_do_jogo_saiu_da_pagina_e_do_pacote(publicado: bool) -> None:
+    """15/10/2026: o rótulo e o alerta do jogo saíram da aba; o pacote para de pintá-los no vazio.
+
+    MORDIDA: devolver `fora["editor.jogo.rotulo"]` ao `pacote()` reprova aqui e na régua dos
+    endereços que existem.
+    """
     from hefesto_dualsense4unix.profiles.schema import MatchCriteria, Profile
 
     html = _pagina(publicado)
@@ -688,35 +670,8 @@ def test_o_rotulo_do_jogo_tem_onde_pousar(publicado: bool) -> None:
         window_class=["steam_app_1245620"])))
 
     for endereco in ("editor.jogo.rotulo", "editor.jogo.alerta"):
-        assert endereco in fora, (
-            f"o produto parou de emitir `{endereco}` — o `<span>` do desenho "
-            f"fica com o que o mockup cravou, para sempre")
-        tem_lugar = f'data-hef="{endereco}"' in html
-        declarado = endereco in a10_perfis.ESPERANDO_A_PUBLICACAO
-        assert tem_lugar or declarado, (
-            f"`{endereco}` sai do pacote e a página "
-            f"{'publicada' if publicado else 'da bancada'} não tem onde pô-lo — "
-            f"e ele não está declarado em `ESPERANDO_A_PUBLICACAO`")
-        if publicado and tem_lugar:
-            assert not declarado, (
-                f"`{endereco}` já chegou à página publicada e continua na lista "
-                f"de espera — a declaração envelheceu, e uma lista que descreve "
-                f"o passado é a régua se desligando sozinha. Tire no mesmo commit")
-
-    if not publicado:
-        assert html.count('data-hef="editor.jogo.rotulo"') == 2, (
-            "o rótulo do jogo perdeu um dos dois endereços na bancada — sem o "
-            "`classe` ele acende sempre, sem o `<span>` ele nunca escreve")
-        assert ('<span class="rot" data-hef="editor.jogo.rotulo"'
-                ' data-hef-alvo="classe">') in html, (
-            "o `<span>` de fora do rótulo perdeu o alvo `classe`")
-        assert ('data-hef="editor.jogo.alerta" data-hef-alvo="classe"'
-                ' data-hef-classe="alerta"') in html, (
-            "o rótulo perdeu a tinta do alerta — «não reconheci este endereço» "
-            "sairia com a cara de «não instalado aqui»")
-        assert '<span data-hef="editor.jogo.rotulo"></span>' in html, (
-            "o rótulo não nasce VAZIO no desenho — um exemplo aqui é a tela "
-            "afirmando um jogo que o perfil dela não tem")
+        assert endereco not in fora, f"o produto voltou a emitir `{endereco}`"
+        assert f'data-hef="{endereco}"' not in html, f"`{endereco}` voltou à página"
 
 
 def test_a_tira_diz_a_metade_curta(monkeypatch: pytest.MonkeyPatch) -> None:

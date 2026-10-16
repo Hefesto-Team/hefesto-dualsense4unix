@@ -62,14 +62,21 @@ _LIDO = {"um": 1, "dois": 2, "três": 3, "quatro": 4, "cinco": 5, "seis": 6,
          "dezessete": 17, "dezoito": 18, "dezenove": 19, "vinte": 20}
 
 
-def test_a_dica_da_aba_perfis_conta_pelo_dono() -> None:
-    """A dica do «Estilo de Jogo» diz quantos de fábrica o MOTOR tem."""
+def test_a_aba_perfis_nao_digita_a_conta_dos_estilos() -> None:
+    """A Perfis do todo não diz quantos estilos são de fábrica, e o gerador não a digita.
+
+    Até 14/10 a dica do «Estilo de Jogo» dizia «Os N de fábrica não se editam», contada pelo motor.
+    O editor novo não a tem; se voltar, a conta tem de vir do dono (`estilos_de_jogo.DE_FABRICA`).
+    MORDIDA: cravar «Os dezessete de fábrica» no gerador reprova.
+    """
     bancada = onde.pagina("10-perfis.html").read_text(encoding="utf-8")
     achado = re.search(r"Os (\w+) de fábrica não se editam", bancada)
-    assert achado, "a dica do Estilo de Jogo não diz mais quantos são de fábrica"
-    assert _LIDO.get(achado.group(1)) == len(estilos_de_jogo.DE_FABRICA), (
-        f"a bancada diz «{achado.group(1)}» de fábrica e o motor tem "
-        f"{len(estilos_de_jogo.DE_FABRICA)}")
+    if achado:
+        assert _LIDO.get(achado.group(1)) == len(estilos_de_jogo.DE_FABRICA), (
+            f"a bancada diz «{achado.group(1)}» de fábrica e o motor tem "
+            f"{len(estilos_de_jogo.DE_FABRICA)}")
+    assert len(estilos_de_jogo.DE_FABRICA) == len(estilos_de_jogo.ESTILOS) - 1, (
+        "o Personalizado é o único estilo que não é de fábrica")
     fonte = (RAIZ / "src/hefesto_dualsense4unix/interface/aba10.py").read_text(
         encoding="utf-8")
     digitada = re.search(rf"Os ({'|'.join(_LIDO)}) de fábrica", fonte)

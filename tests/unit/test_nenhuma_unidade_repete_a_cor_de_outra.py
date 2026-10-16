@@ -15,7 +15,7 @@ def _pior(cores) -> int:
                for i in range(len(cores)) for j in range(i + 1, len(cores)))
 
 
-@pytest.mark.parametrize("estilo", [e for e in estilos.ESTILOS if e.chave != "personalizado"],
+@pytest.mark.parametrize("estilo", [e for e in estilos.ESTILOS if e.chave not in estilos.SEM_COR],
                          ids=lambda e: e.chave)
 def test_as_quatro_saem_distintas_em_todo_estilo(estilo) -> None:
     """As quatro unidades daquele estilo, e nenhuma igual a outra."""
@@ -30,7 +30,7 @@ def test_toda_receita_rende_quatro_sem_levantar() -> None:
     """Nenhuma família da tabela pode ser escura ou branca demais."""
     ruins = []
     for e in estilos.ESTILOS:
-        if e.chave == "personalizado":
+        if e.chave in estilos.SEM_COR:
             continue
         try:
             estilos.as_quatro(e)
@@ -45,7 +45,7 @@ def test_as_quatro_variam_em_matiz_e_nao_so_em_luz() -> None:
 
     ruins = []
     for e in estilos.ESTILOS:
-        if e.chave == "personalizado":
+        if e.chave in estilos.SEM_COR:
             continue
         matizes = [colorsys.rgb_to_hls(*(c / 255 for c in cor))[0]
                    for cor in estilos.as_quatro(e)]
@@ -66,10 +66,11 @@ def test_uma_familia_que_nao_rende_levanta() -> None:
         estilos.as_quatro(branco)
 
 
-def test_o_personalizado_recusa_dizendo_por_que() -> None:
-    """`Personalizado` não escolhe cor, e perguntar a dele é erro de quem chama."""
+@pytest.mark.parametrize("chave", sorted(estilos.SEM_COR))
+def test_o_personalizado_e_o_nativo_recusam_dizendo_por_que(chave: str) -> None:
+    """`Personalizado` e `Nativo` não escolhem cor, e perguntar a deles é erro de quem chama."""
     with pytest.raises(ValueError, match="não escolhe cor"):
-        estilos.as_quatro("personalizado")
+        estilos.as_quatro(chave)
 
 
 @pytest.mark.parametrize("fora", [0, 5, -1])

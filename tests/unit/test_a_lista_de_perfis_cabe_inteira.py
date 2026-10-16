@@ -179,25 +179,16 @@ def test_sem_perfil_ativo_ninguem_se_realca() -> None:
     assert not [x for x in linhas if 'class="ativo"' in x]
 
 
-def test_o_title_da_linha_traz_a_explicacao_da_disputa(
+def test_a_dica_da_linha_e_fixa_e_a_disputa_nao_a_troca(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O ``title=""`` do desenho passa a carregar o que o produto já calculava.
+    """A dica da linha é «Clique: ativa e abre no editor», no `data-dica` do molde.
 
-    ``explicacao_da_disputa`` roda a cada tique dentro de
-    ``perfis_web._linhas_da_lista`` desde 30/08 e o valor morria no dicionário —
-    o desenho nasce com ``title=""`` *"porque a dica é a DISPUTA, e disputa é
-    dado; o mockup não tem nenhum"* (palavras do gerador). O dado existe; o que
-    faltava era a porta.
+    ``explicacao_da_disputa`` devolve ``""`` desde 01/10/2026 (o `match any` saiu da seleção
+    automática, e não há disputa entre os «Sempre»); em 15/10/2026 a linha passou a ter uma dica
+    sua, a do clique, e a frase da disputa (se um dia voltar) não a substitui.
 
-    NOTA DATADA — 01/10/2026 (O-HEFESTO-ABRE-NO-ULTIMO-PERFIL-E-O-FREESTYLE-DIZ-
-    A-VERDADE-01): o `match any` saiu da seleção automática, e não há mais
-    disputa entre os «Sempre» — o produto responde ``""``, e a linha sai sem
-    dica. A régua passa a medir a PORTA com uma frase posta por ela: a porta
-    fica, e a frase do produto é a que ele calcular.
-
-    MORDIDA: emita ``""`` no lugar do ``dica`` em ``_html_da_lista`` e este
-    teste reprova.
+    MORDIDA: pôr o ``dica`` do `_html_da_lista` no lugar da frase fixa reprova aqui.
     """
     from hefesto_dualsense4unix.app.actions import perfis_web
     from hefesto_dualsense4unix.app.actions.profiles_actions import (
@@ -207,15 +198,13 @@ def test_o_title_da_linha_traz_a_explicacao_da_disputa(
     perfis = _perfis("Um", "Dois")
     assert explicacao_da_disputa(perfis[0], perfis, None) == "", (
         "o produto voltou a explicar uma disputa que não existe desde 01/10/2026")
-    esperado = "Primeiro parágrafo da régua.\n\nSegundo & último."
-    monkeypatch.setattr(perfis_web, "explicacao_da_disputa", lambda *_a, **_k: esperado)
+    monkeypatch.setattr(perfis_web, "explicacao_da_disputa",
+                        lambda *_a, **_k: "Primeiro parágrafo da régua.")
 
     linhas = _linhas(_pacote(["Um", "Dois"]))
-    titulos = [re.search(r'title="((?:[^"])*)"', x, re.S) for x in linhas]
-    vivos = [m.group(1) for m in titulos if m and m.group(1)]
-    assert len(vivos) == len(linhas), "toda linha leva a explicação que o produto calcula"
-    assert vivos[0] == esperado.replace("&", "&amp;"), (
-        "o title da linha não é a frase que o produto calcula")
+    dicas = [re.search(r'data-dica="([^"]*)"', x) for x in linhas]
+    assert [m.group(1) for m in dicas if m] == ["Clique: ativa e abre no editor"] * 2
+    assert not any("title=" in x for x in linhas), "a linha voltou a usar o `title`"
 
 
 CRUS_EM_ATRIBUTO = ("'", "\n", "<", ">")
@@ -245,33 +234,3 @@ def test_um_nome_de_perfil_com_aspas_nao_derrama_marcacao() -> None:
     assert linhas[0].count("<td") == 3, (
         "a linha tem três células; um <td> a mais é marcação derramada pelo "
         "nome, que é exatamente o que o `_atr` existe para impedir")
-
-
-def test_a_barra_da_prioridade_vai_em_numero_puro() -> None:
-    """``editor.prioridade`` é LARGURA, e o pintor põe o ``%`` sozinho."""
-    valor = _pacote(["Um"])["editor.prioridade"]
-    assert not str(valor).endswith("%"), (
-        f"a largura saiu com o sinal: {valor!r} — o pintor faria {valor}%")
-    assert 0 <= float(valor) <= 100
-
-
-def test_a_pagina_publicada_aceita_largura_no_trilho() -> None:
-    """O ``data-hef-alvo="largura"`` do trilho JÁ ESTÁ PUBLICADO.
-
-    FATO DERRUBADO em 02/09/2026: a nota em ``a10_perfis`` dizia que o atributo
-    estava *"já escrito na BANCADA, esperando o ato de publicar DO USUÁRIO"*. Ela já
-    publicou — o commit ``6f289554`` levou a aba inteira, o atributo está nas
-    DUAS páginas, e ``mockup/DIVERGENCIAS.md`` não tem seção da aba 10. Enquanto
-    a nota ficou de pé, a barra seguiu nos 90% do desenho com o conserto no
-    disco há um commit.
-
-    MORDIDA: esta régua olha a página PUBLICADA. Se alguém republicar a aba sem
-    o atributo, ela reprova antes de a barra voltar a mentir.
-    """
-    texto = onde.pagina("10-perfis.html", publicado=True).read_text(encoding="utf-8")
-    trilho = re.search(r'<span[^>]*data-hef="editor\.prioridade"[^>]*>', texto)
-    assert trilho, "o trilho da prioridade sumiu da página publicada"
-    assert 'data-hef-alvo="largura"' in trilho.group(0), (
-        "o trilho voltou a receber TEXTO: o pintor escreveria o número dentro "
-        "de uma barra de 5px e a largura ficaria no 90% do desenho")
-    assert "editor.prioridade" not in a10_perfis.NAO_PINTAVEIS

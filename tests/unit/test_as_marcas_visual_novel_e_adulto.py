@@ -81,11 +81,11 @@ def test_o_perfil_sem_marca_grava_igual_ao_de_antes() -> None:
 
 
 def test_o_editor_mostra_o_estilo_guardado_e_as_marcas() -> None:
-    """`perfis_web` devolve «Point-and-click» e as marcas, e não o travessão."""
+    """`perfis_web` devolve «Point and click» e as marcas, e não o travessão."""
     perfil = _perfil(marcas=["adulto", "visual_novel"])
     editor = perfis_web.pacote_da_aba([perfil], editado=perfil)["editor"]
 
-    assert editor["estilo"] == "Point-and-click", (
+    assert editor["estilo"] == "Point and click", (
         f"o editor esconde o estilo que o perfil guarda: {editor['estilo']!r}")
     assert editor["marcas"] == ["Visual novel", "Adulto"]
     assert "travessão" not in editor["estilo_recado"], editor["estilo_recado"]
@@ -132,7 +132,7 @@ def test_a_marca_adulto_nao_muda_o_controle() -> None:
 
 
 def test_a_visual_novel_so_escolhe_molde_no_point_and_click() -> None:
-    """Com Point-and-click, o molde «Visual novel»; com outro estilo, o do jogo."""
+    """Com Point and click, o molde «Visual novel»; com outro estilo, o do jogo."""
     vn = [marcas_do_jogo.VISUAL_NOVEL.chave]
     assert marcas_do_jogo.molde_dos_botoes("point_and_click", vn) == "visual_novel"
     assert marcas_do_jogo.molde_dos_botoes("fps", vn) is None

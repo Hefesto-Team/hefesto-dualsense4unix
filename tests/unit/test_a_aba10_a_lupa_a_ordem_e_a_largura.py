@@ -71,14 +71,32 @@ def test_o_campo_vazio_devolve_as_linhas_todas(
         assert len(a10_perfis._filtrada(LISTA)) == 3, f"o termo {termo!r} filtrou"
 
 
-def test_a_prioridade_ordena_como_numero_e_nao_como_texto(
+DATAS = [
+    {"nome": "Velho", "criado_iso": "2026-09-30T09:00:00-03:00", "modificado_iso": ""},
+    {"nome": "Sem data", "criado_iso": "", "modificado_iso": ""},
+    {"nome": "Novo", "criado_iso": "2026-10-12T09:00:00-03:00",
+     "modificado_iso": "2026-10-14T09:00:00-03:00"},
+    {"nome": "Meio", "criado_iso": "2026-10-02T09:00:00-03:00",
+     "modificado_iso": "2026-10-03T09:00:00-03:00"},
+]
+
+
+def test_a_data_ordena_como_data_e_o_perfil_sem_data_fica_embaixo(
         monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """`90` vem depois de `9` — ordenar como texto é o defeito clássico."""
+    """Ordenar a data como texto (ou pôr o «—» no topo) é o defeito clássico.
+
+    MORDIDA: tirar o `sem_data` do fim de `_ordenada` põe o «—» no meio da lista.
+    """
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
-    gui_prefs.guardar_ordem_da_tabela(TABELA, "prioridade", "asc")
-    assert [x["prioridade"] for x in a10_perfis._ordenada(LISTA)] == ["9", "85", "90"]
-    gui_prefs.guardar_ordem_da_tabela(TABELA, "prioridade", "desc")
-    assert [x["prioridade"] for x in a10_perfis._ordenada(LISTA)] == ["90", "85", "9"]
+    gui_prefs.guardar_ordem_da_tabela(TABELA, "criado", "asc")
+    assert [x["nome"] for x in a10_perfis._ordenada(DATAS)] == [
+        "Novo", "Meio", "Velho", "Sem data"]
+    gui_prefs.guardar_ordem_da_tabela(TABELA, "criado", "desc")
+    assert [x["nome"] for x in a10_perfis._ordenada(DATAS)] == [
+        "Velho", "Meio", "Novo", "Sem data"], "o «—» fica embaixo nos dois sentidos"
+    gui_prefs.guardar_ordem_da_tabela(TABELA, "modificado", "asc")
+    assert [x["nome"] for x in a10_perfis._ordenada(DATAS)] == [
+        "Novo", "Meio", "Velho", "Sem data"], "quem nunca foi modificado desce"
 
 
 def test_o_ciclo_do_duplo_clique_tem_tres_estados(
@@ -115,10 +133,10 @@ def test_a_seta_acende_so_na_coluna_escolhida(
         monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """Uma seta acesa por vez, e o valor dela diz o SENTIDO."""
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
-    gui_prefs.guardar_ordem_da_tabela(TABELA, "quando", "desc")
-    assert a10_perfis._seta_da_coluna("quando") == "↓"
+    gui_prefs.guardar_ordem_da_tabela(TABELA, "modificado", "desc")
+    assert a10_perfis._seta_da_coluna("modificado") == "↓"
     assert a10_perfis._seta_da_coluna("nome") == ""
-    assert a10_perfis._seta_da_coluna("prioridade") == ""
+    assert a10_perfis._seta_da_coluna("criado") == ""
 
 
 def test_a_largura_volta_depois_de_fechar_e_reabrir(

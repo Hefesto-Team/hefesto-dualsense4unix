@@ -20,6 +20,7 @@ from hefesto_dualsense4unix.core.trigger_effects import build_from_name
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.profiles.loader import (
     delete_profile,
+    e_perfil_de_jogo_automatico,
     load_all_profiles,
     load_profile,
     perfis_para_consulta,
@@ -1422,9 +1423,13 @@ class ProfileManager:
         return escolhido.model_copy(deep=True), MOTIVO_SELECIONADO
 
     @staticmethod
-    def _chave_de_selecao(profile: Profile) -> tuple[bool, int]:
-        """Chave HISTÓRICA da escolha: especificidade e, só depois, prioridade."""
-        return (not profile.e_catch_all, profile.priority)
+    def _chave_de_selecao(profile: Profile) -> tuple[bool, int, bool]:
+        """A escolha: especificidade, prioridade e, no empate, o perfil de jogo automático."""
+        return (
+            not profile.e_catch_all,
+            profile.priority,
+            e_perfil_de_jogo_automatico(profile),
+        )
 
     def _nome_do_incumbente(self) -> str | None:
         """Nome do perfil que JÁ ESTÁ ATIVO, ou None quando não há."""
@@ -1755,7 +1760,7 @@ def secao_do_modo_do_estilo(
 ) -> tuple[bool, ProfileModeConfig | None]:
     """A seção `mode` que um estilo de jogo deixa no perfil: ``(mudou, seção)``.
 
-    O estilo com modo (a Navegação do Point-and-click) passa pelo escritor único,
+    O estilo com modo (a Navegação do Point and click) passa pelo escritor único,
     :func:`secao_do_modo_com_o_caminho`. O estilo sem modo tira só o `desktop`
     (estilo de jogo não deixa o controle como teclado e mouse) e deixa os outros
     modos, a máscara e o caminho como estão. A janela pede; a seção nasce aqui.

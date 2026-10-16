@@ -250,7 +250,7 @@ def test_a_mare_anda_ate_30_graus_e_volta_ao_fim_do_periodo() -> None:
     assert fx.periodo_da_mare_s(10) == 8.0
 
 
-@pytest.mark.parametrize("chave", sorted(set(estilos_de_jogo.POR_CHAVE) - {"personalizado"}))
+@pytest.mark.parametrize("chave", sorted(set(estilos_de_jogo.POR_CHAVE) - estilos_de_jogo.SEM_COR))
 def test_a_mare_nao_aproxima_dois_controles_alem_da_distancia_minima(chave: str) -> None:
     base = estilos_de_jogo.as_quatro(chave)
     piso = min(
@@ -272,7 +272,7 @@ def test_a_mare_nao_aproxima_dois_controles_alem_da_distancia_minima(chave: str)
 def test_a_mare_inteira_aproximaria_os_controles_de_algum_estilo() -> None:
     """A régua acima não é vazia: sem a amplitude, ao menos um estilo cai da distância mínima."""
     quedas = 0
-    for chave in set(estilos_de_jogo.POR_CHAVE) - {"personalizado"}:
+    for chave in set(estilos_de_jogo.POR_CHAVE) - estilos_de_jogo.SEM_COR:
         base = estilos_de_jogo.as_quatro(chave)
         chao = min(
             estilos_de_jogo.DISTANCIA_MINIMA,

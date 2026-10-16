@@ -336,6 +336,10 @@ _PERNAS: dict[str, dict[str, Resposta]] = {
         )
         for p in PERNAS
     },
+    **{
+        campo: {p: NaoSeAplica(_NAO_CHEGA) for p in PERNAS}
+        for campo in ("criado_em", "modificado_em", "alvo", "evento", "evento_comando")
+    },
     "controles_modo": {
         p: NaoSeAplica(
             "não chega ao controle: é o modo da aba Controles (Automático ou Personalizado), "

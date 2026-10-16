@@ -73,6 +73,17 @@ class PonteDeMentira:
 
 
 @pytest.fixture(autouse=True)
+def _perfis_no_disco(monkeypatch: pytest.MonkeyPatch) -> None:
+    """O Ativar age sobre o perfil do EDITOR (15/10/2026): o nome tem de ser uma linha da lista."""
+    from hefesto_dualsense4unix.profiles import loader
+    from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
+
+    todos = [Profile(name=n, match=MatchAny(), priority=10 - i)
+             for i, n in enumerate(("meu_perfil", "Ação", "Navegação"))]
+    monkeypatch.setattr(loader, "load_all_profiles", lambda *a, **k: todos)
+
+
+@pytest.fixture(autouse=True)
 def _sem_escolha_herdada(monkeypatch: pytest.MonkeyPatch) -> None:
     """`_ESCOLHIDO` é estado de MÓDULO — um teste não pode herdar o do outro."""
     monkeypatch.setattr(a10_perfis, "_ESCOLHIDO", "", raising=False)

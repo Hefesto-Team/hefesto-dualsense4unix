@@ -132,7 +132,9 @@ def _o_disco_tem(monkeypatch: pytest.MonkeyPatch, *nomes: str) -> list[Any]:
 
 def _ctx(ativo: str | None = None, classe: str = "") -> Contexto:
     return Contexto(
-        state={"active_profile": ativo, "window_detect_last_class": classe},
+        # `freestyle_ligado`: o clique na linha só ABRE o perfil, sem ativá-lo (o gesto agora ativa)
+        state={"active_profile": ativo, "window_detect_last_class": classe,
+               "freestyle_ligado": True},
         mesa=list(MESA), conectados=list(MESA), estados={})
 
 

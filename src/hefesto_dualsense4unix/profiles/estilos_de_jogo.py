@@ -69,7 +69,7 @@ apertar o botão da arma de fogo (...) o dualsense vibra mais alto por default e
 por tempo x.»* <!-- noqa-acento: citação literal -->
 Duas variáveis o gesto aplica no perfil (:data:`APLICADAS`): o ritmo e a
 frequência do gatilho (os parâmetros de `trigger_specs.PRESETS`) e o modo (o
-Point-and-click liga a Navegação, pela seção `mode` do perfil). As outras
+Point and click liga a Navegação, pela seção `mode` do perfil). As outras
 (:data:`SO_DADO`) não se escrevem no perfil: desde 09/10
 (O-ESTILO-DO-PERFIL-LIGA-O-MOTOR-DO-TATO-01) o perfil guarda a CHAVE do estilo
 (`Profile.estilo`), e o motor do tato vivo lê o toque, o lado e a luz daqui,
@@ -189,6 +189,10 @@ class Estilo:
 
 
 ESTILOS: tuple[Estilo, ...] = (
+    # O Nativo é o estilo em que o jogo decide: sem gatilho, vibração, luz nem toque do Hefesto
+    # (receita invisível ausente = o motor do tato não age). Não é o Modo Nativo, que é outro eixo.
+    Estilo("nativo", "Nativo", None, "", (0, 0, 0), 0.0,
+           "o jogo decide o gatilho, a vibração, a luz e o toque; o Hefesto não escolhe nada"),
     Estilo("fps", "FPS", "AutoGun", "max", (255, 40, 40), 1.0,
            "o gatilho estala em rajada, que é o gesto do gênero",
            # frequência: o padrão do produto, na faixa de 0 a 255 Hz [SONY]
@@ -210,14 +214,19 @@ ESTILOS: tuple[Estilo, ...] = (
     Estilo("esportes", "Esportes", "SimpleRigid", "balanceado", (40, 120, 255), 1.0,
            "curso curto e previsível; o gatilho não conta história",
            Receita()),
-    Estilo("point_and_click", "Point-and-click", "Off", "economia", (0, 200, 210), 1.0,
+    Estilo("point_and_click", "Point and click", "Off", "economia", (0, 200, 210), 1.0,
            "o gatilho não é usado; vibração baixa não distrai a leitura",
            # a Navegação é escolha do usuário (ESCOLHAS de 08/10); o toque e o lado também
            Receita(modo="desktop", molde="so_mouse")),
     Estilo("visual_novel", "Visual novel", "Off", "economia", (0, 200, 210), 0.5,
            "o texto é longo e a luz não disputa a leitura; os ombros voltam, pulam e abrem o menu",
-           # a família do Point-and-click, parada e a meia luz; o gatilho é clique, sem efeito
+           # a família do Point and click, parada e a meia luz; o gatilho é clique, sem efeito
            Receita(modo="desktop", molde="visual_novel")),
+    # O Adulto não mexe no gatilho (o jogo decide) e sobe a vibração; a luz fica parada e sem reação
+    # a tiro. A família é o rosa-salmão que o usuário aprovou em 13/10/2026, longe das outras.
+    Estilo("adulto", "Adulto", "Off", "max", (250, 128, 114), 1.0,
+           "o gatilho é do jogo; a vibração sobe e a luz fica parada, sem reação a tiro",
+           Receita()),
     Estilo("terror", "Terror", "PulseB", "max", (215, 30, 55), 0.7,
            "o pulso irregular é o susto no dedo; a luz baixa não denuncia",
            # pisca abaixo do teto [WCAG]; a vibração dura o dobro [MDN] (escolha)
@@ -250,6 +259,9 @@ ESTILOS: tuple[Estilo, ...] = (
 POR_CHAVE = {e.chave: e for e in ESTILOS}
 POR_ROTULO = {e.rotulo: e for e in ESTILOS}
 
+#: Os estilos que não pintam o controle: o Personalizado (a mão do usuário) e o Nativo (o jogo).
+SEM_COR = frozenset({"personalizado", "nativo"})
+
 DE_FABRICA: tuple[Estilo, ...] = tuple(e for e in ESTILOS if e.chave != "personalizado")
 
 
@@ -275,11 +287,10 @@ ESCALA_MAXIMA = 2.6
 def as_quatro(estilo: str | Estilo) -> tuple[RGB, RGB, RGB, RGB]:
     """As quatro cores daquele estilo, uma por unidade — e nunca duas iguais."""
     e = estilo if isinstance(estilo, Estilo) else POR_CHAVE[str(estilo)]
-    if e.chave == "personalizado":
+    if e.chave in SEM_COR:
         raise ValueError(
-            "estilo 'Personalizado' não escolhe cor — ele existe para dizer "
-            "'eu ajusto na mão'. Perguntar a cor dele é perguntar o que ela "
-            "não delegou.")
+            f"o estilo {e.rotulo!r} não escolhe cor: o Personalizado diz 'eu ajusto na mão' e o "
+            "Nativo deixa a luz com o jogo. Perguntar a cor dele é perguntar o que não delegou.")
     escala = 1.0
     while escala <= ESCALA_MAXIMA:
         cores = tuple(_variar(e.familia, i, escala) for i in range(4))

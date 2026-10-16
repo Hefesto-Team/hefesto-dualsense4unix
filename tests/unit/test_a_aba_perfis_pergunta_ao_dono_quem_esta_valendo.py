@@ -71,6 +71,17 @@ class PonteDeMentira:
 
 
 @pytest.fixture(autouse=True)
+def _perfis_no_disco(monkeypatch: pytest.MonkeyPatch) -> None:
+    """O Ativar age sobre o perfil do EDITOR (15/10/2026): o nome tem de ser uma linha da lista."""
+    from hefesto_dualsense4unix.profiles import loader
+    from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
+
+    todos = [Profile(name=n, match=MatchAny(), priority=10 - i)
+             for i, n in enumerate(("meu_perfil", "Ação", "Navegação"))]
+    monkeypatch.setattr(loader, "load_all_profiles", lambda *a, **k: todos)
+
+
+@pytest.fixture(autouse=True)
 def _memoria_limpa(monkeypatch: pytest.MonkeyPatch) -> None:
     """`_ESCOLHIDO` e `_ARMADO` são estado de MÓDULO — nenhum teste herda o do"""
     monkeypatch.setattr(a10_perfis, "_ESCOLHIDO", "", raising=False)
@@ -112,7 +123,7 @@ def test_o_daemon_vence_o_disco_quando_os_dois_falam(
     _o_disco_diz(monkeypatch, "meu_perfil")
     a10_perfis._ESCOLHIDO = "meu_perfil"
     ponte = PonteDeMentira()
-    a10_perfis.ativar(Contexto(state={"active_profile": "Ação"}),  # noqa-acento: id
+    a10_perfis.ativar(Contexto(state={"active_profile": "Ação"}),
                       {"texto": "Ativar"}, ponte)
     assert ponte.chamadas == [("profile.switch", ("meu_perfil",))]
 
@@ -194,12 +205,12 @@ def test_remover_outro_perfil_continua_perguntando_e_apagando(
 
     monkeypatch.setattr(loader, "delete_profile", lambda n: apagados.append(n))
 
-    _, primeiro = _remover("Ação", {})  # noqa-acento: id
+    _, primeiro = _remover("Ação", {})
     assert isinstance(primeiro, RuntimeError)
     assert "Apagar “Ação”" in str(primeiro)
     assert apagados == [], "o primeiro clique apagou sem perguntar"
 
-    ponte, segundo = _remover("Ação", {})  # noqa-acento: id
+    ponte, segundo = _remover("Ação", {})
     assert segundo is None, f"o segundo clique foi recusado: {segundo}"
     assert apagados == ["Ação"]
     assert ("launch_env.refresh", ()) in ponte.chamadas

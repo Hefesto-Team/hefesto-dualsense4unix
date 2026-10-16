@@ -109,7 +109,7 @@ VAZIOS = [c["pref"] for c in monta.MESA if not c.get("conectado", True)]
 def test_a_linha_de_controle_na_mesa_nao_tem_dica() -> None:
     """MORDIDA: devolva o `title=` ao `<tr>` em `aba10.linha_do_controle`."""
     com_dica = [t for c, t in zip(monta.MESA, _linhas(_bancada()), strict=True)
-                if c.get("conectado", True) and "title=" in t]
+                if c.get("conectado", True) and "data-dica=" in t]
     assert not com_dica, (
         f"{len(com_dica)} linha(s) de controle NA MESA voltaram a ter dica. "
         f"Atributo nenhum desta página é pintado: o nome do modelo ali fica "
@@ -122,7 +122,7 @@ ESPERA_A_PUBLICACAO = False
 def test_a_publicada_nao_fica_curada_em_silencio() -> None:
     """Curar a bancada e deixar a publicada é a correção pela metade que esta"""
     ainda = [t for c, t in zip(monta.MESA, _linhas(_publicada()), strict=True)
-             if c.get("conectado", True) and "title=" in t]
+             if c.get("conectado", True) and "data-dica=" in t]
     assert bool(ainda) == ESPERA_A_PUBLICACAO, (
         f"a publicada tem {len(ainda)} linha(s) com a dica do desenho e a "
         f"declaração diz `ESPERA_A_PUBLICACAO = {ESPERA_A_PUBLICACAO}`. As duas "
@@ -133,8 +133,9 @@ def test_a_publicada_nao_fica_curada_em_silencio() -> None:
 def test_o_lugar_vazio_continua_com_a_dica() -> None:
     """`P3` é um LUGAR, não uma peça: aquela frase não afirma nada sobre"""
     assert VAZIOS, "o desenho não tem lugar vazio — esta régua perdeu o objeto"
+    # 15/10/2026: o canal da dica é o `data-dica` do molde, não mais o `title`.
     sem_dica = [c["pref"] for c, t in zip(monta.MESA, _linhas(_bancada()), strict=True)
-                if not c.get("conectado", True) and "title=" not in t]
+                if not c.get("conectado", True) and "data-dica=" not in t]
     assert not sem_dica, (
         f"o lugar vazio {sem_dica} perdeu a dica que explica por que ele "
         f"continua na tabela. Ela não fala de aparelho nenhum: não envelhece.")
@@ -146,7 +147,7 @@ def test_nenhuma_dica_da_tabela_nomeia_um_modelo_do_mapa() -> None:
     assert len(modelos) >= 28, (
         f"o mapa das cores encolheu para {len(modelos)} modelos — esta régua "
         f"mede contra `docs/data/cores-do-dualsense.csv`, e ele é o dono")
-    dicas = re.findall(r'title="([^"]*)"', _tabela(_bancada()))
+    dicas = re.findall(r'data-dica="([^"]*)"', _tabela(_bancada()))
     culpadas = [(d, m) for d in dicas for m in modelos if m in d]
     assert not culpadas, (
         f"{len(culpadas)} dica(s) da tabela por controle nomeiam um modelo: "

@@ -872,6 +872,11 @@ def _e_perfil_de_jogo_intocado(dados: dict[str, object]) -> bool:
     return resto_do_disco == resto_do_molde
 
 
+def e_perfil_de_jogo_automatico(profile: Profile) -> bool:
+    """True para o perfil de jogo que a semeadura fez e ela nunca mexeu; a prioridade não conta."""
+    return _e_perfil_de_jogo_intocado(_payload_do_perfil(profile))
+
+
 def enxugar_perfis_de_jogo(dest_dir: Path | None = None) -> list[str]:
     """One-shot: o perfil de jogo intocado fica só com nome, id e prioridade."""
     directory = dest_dir if dest_dir is not None else profiles_dir(ensure=True)
@@ -2446,6 +2451,7 @@ __all__ = [
     "classes_do_perfil_do_jogo",
     "classes_do_perfil_do_jogo_de_lancador",
     "delete_profile",
+    "e_perfil_de_jogo_automatico",
     "enxugar_perfis_de_jogo",
     "gesto_de_agora",
     "historico_dir",

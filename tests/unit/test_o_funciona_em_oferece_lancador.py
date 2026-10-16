@@ -161,6 +161,12 @@ def _escolher(rotulo: str) -> dict[str, Any]:
             "tipo": "select"}
 
 
+def _o_campo_da_maquina() -> str:
+    """O `<select>` que o gesto `editor.ambiente` ainda sabe montar (a página não o tem mais)."""
+    return a10._html_do_ambiente(
+        sm.oferta_do_funciona_em(a10._procedencias_da_maquina()), "")
+
+
 def _opcoes(html: str) -> list[str]:
     """Os textos das `<option>` de um bloco, na ordem — sem o `—` desabilitado."""
     import re
@@ -178,10 +184,12 @@ def test_o_campo_oferece_de_onde_o_jogo_vem(
                          match=MatchCriteria(window_class=[CHAVE_DO_GOTG])))
 
     blocos = a10.pacote(_ctx())["blocos"]
+    campo = _o_campo_da_maquina()
 
-    assert _opcoes(blocos[a10.SELETOR_DO_AMBIENTE]) == [
-        "Navegação", "Steam", "Heroic"]
-    assert "Lutris" not in blocos[a10.SELETOR_DO_AMBIENTE]
+    assert a10.SELETOR_DO_AMBIENTE not in blocos, (
+        "a página nova não tem o «Funciona em»; o pacote voltou a pintá-lo no vazio")
+    assert _opcoes(campo) == ["Navegação", "Steam", "Heroic"]
+    assert "Lutris" not in campo
 
 
 def test_a_maquina_sem_lancador_nenhum_sai_com_a_navegacao(
@@ -192,12 +200,12 @@ def test_a_maquina_sem_lancador_nenhum_sai_com_a_navegacao(
                                       match=MatchAny()))
 
     blocos = a10.pacote(_ctx())["blocos"]
+    campo = _o_campo_da_maquina()
 
-    assert _opcoes(blocos[a10.SELETOR_DO_AMBIENTE]) == ["Navegação"]
-    assert _opcoes(blocos[a10.SELETOR_DO_AMBIENTE]) == sm.oferta_do_funciona_em([])
+    assert _opcoes(campo) == ["Navegação"]
+    assert _opcoes(campo) == sm.oferta_do_funciona_em([])
     assert blocos[a10.SELETOR_DOS_JOGOS] == ""
-    assert (f'<option value="{a10.TRAVESSAO}" disabled>'
-            in blocos[a10.SELETOR_DO_AMBIENTE])
+    assert f'<option value="{a10.TRAVESSAO}" disabled>' in campo
 
 
 def test_a_procedencia_do_perfil_entra_mesmo_desinstalado(
@@ -245,11 +253,14 @@ def test_a_regra_que_a_tela_nao_sabe_mostrar_continua_travando(
                          process_name=["eldenring.exe"])
     _o_disco_tem(monkeypatch, Profile(name="Fino", priority=90, match=fino))
 
-    fora = a10.pacote(_ctx())
+    # a página nova não tem o «Funciona em» (o pacote não manda mais `editor.ambiente*`); a válvula
+    # mora no editor do produto, que os gestos de gravar ainda consultam
+    editor = a10._editor_de(Profile(name="Fino", priority=90, match=fino))
 
-    assert fora["editor.ambiente"] == ""
-    assert fora["editor.ambiente.travado"] is True
-    assert "título de janela" in fora["editor.ambiente.recado"]
+    assert editor["ambiente"] is None
+    assert editor["ambiente_travado"] is True
+    assert "título de janela" in editor["ambiente_recado"]
+    assert "editor.ambiente" not in a10.pacote(_ctx())
 
 
 def test_a_lista_de_baixo_segue_o_campo_de_cima(
@@ -382,22 +393,20 @@ def test_a_navegacao_grava_o_preset_dos_navegadores(
                                     "src/hefesto_dualsense4unix/interface/"
                                     "paginas/10-perfis.html"])
 def test_o_jargao_saiu_das_duas_telas(caminho: str) -> None:
-    """O desenho e a página publicada dizem a MESMA coisa — ou nenhuma das duas."""
+    """O desenho e a página publicada dizem a MESMA coisa — ou nenhuma das duas.
+
+    15/10/2026: o «Funciona em:» saiu da aba (o «Aplicar em» e o «Nome do jogo» ocupam o lugar), e
+    com ele o jargão. MORDIDA: devolver o `<select data-hef="editor.ambiente">` à página reprova.
+    """
     html = (RAIZ / caminho).read_text(encoding="utf-8")
-    campo = html.split('data-hef="editor.ambiente"', 1)[1].split("</select>", 1)[0]
 
+    assert 'data-hef="editor.ambiente"' not in html, (
+        f"o «Funciona em:» voltou a `{caminho}`; o editor novo escolhe pelo «Nome do jogo» "
+        f"e pelo «Aplicar em»")
     for jargao in ("Jogo da Steam", "Jogo (pela janela)", ">Jogo<"):
-        assert jargao not in campo, (
-            f"“{jargao}” voltou ao «Funciona em:» de `{caminho}` — é o jargão "
-            f"de implementação que ela mandou tirar em 11/09/2026")
-    assert f">{sm.PROCEDENCIA_DA_NAVEGACAO}<" in campo, (
-        f"“{sm.PROCEDENCIA_DA_NAVEGACAO}” saiu do «Funciona em:» de `{caminho}` — "
-        f"é a fixa que sobra numa máquina sem lançador nenhum")
-    if caminho.startswith("mockup/"):
-        # SO-O-FREESTYLE-VALE-EM-TODO-JOGO-01: o desenho já não oferece «Qualquer
-        # jogo»; a página publicada deixa de oferecer no `--publicar 10` do fecho.
-        assert f">{sm.PROCEDENCIA_DE_QUALQUER_JOGO}<" not in campo
-
+        assert jargao not in html, (
+            f"“{jargao}” voltou a `{caminho}` — é o jargão de implementação que ela mandou "
+            f"tirar em 11/09/2026")
     assert 'data-hef="editor.estilo"' in html
     assert ">Estilo de jogo:</span>" in html
 
@@ -431,25 +440,24 @@ def test_a_coluna_nao_engole_a_disputa_nem_a_frase_do_produto(
     assert a10._quando_usar(fino, "Só neste programa") == "Só neste programa"
 
 
-def test_a_coluna_traduzida_chega_as_duas_portas_da_lista(
+def test_a_coluna_traduzida_chega_a_lupa_e_a_lista_so_mostra_nome_e_datas(
     maquina_dela: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O `blocos` e a lista `perfis.linha.quando` saem da MESMA tradução."""
+    """A lista da tela é Nome, Criado em e Modificado em; o «Quando usar» vive só para a lupa."""
     _o_disco_tem(monkeypatch,
                  Profile(name="GOTG", priority=90,
                          match=MatchCriteria(window_class=[CHAVE_DO_GOTG])),
                  Profile(name="Elden Ring", priority=85,
                          match=MatchCriteria(
                              window_class=["steam_app_1245620"])))
+    monkeypatch.setattr(a10, "_PROCURA", "heroic · marvel", raising=False)
 
     fora = a10.pacote(_ctx())
 
-    assert fora["perfis.linha.quando"] == [
-        "Heroic · Marvel's Guardians of the Galaxy",
-        "Steam · ELDEN RING · 1245620"]
-    corpo = fora["blocos"][a10.SELETOR_DA_LISTA]
-    for frase in fora["perfis.linha.quando"]:
-        assert f'title="{frase}">{frase}</td>' in corpo
+    assert "perfis.linha.quando" not in fora, "a coluna «Quando usar» saiu da tela"
+    assert fora["perfis.linha.nome"] == ["GOTG"], "a lupa mede a frase traduzida"
+    assert fora["perfis.linha.criado"] == fora["perfis.linha.modificado"] == ["—"]
+    assert "<td" in fora["blocos"][a10.SELETOR_DA_LISTA]
 
 
 def test_a_lupa_acha_o_jogo_pelo_nome_que_a_coluna_passou_a_mostrar(
@@ -479,9 +487,11 @@ def test_o_clique_no_campo_arrasta_a_coluna_junto(
     monkeypatch.setattr(a10, "_editor_de",
                         lambda _p: {"jogo": CHAVE_DO_GOTG, "ambiente_recado": ""})
 
-    antes = a10.pacote(_ctx())["perfis.linha.quando"]
-    a10.editor_ambiente(_ctx(), _escolher("Heroic"), PonteDeMentira())
-    depois = a10.pacote(_ctx())["perfis.linha.quando"]
+    monkeypatch.setattr(a10, "_PROCURA", "heroic", raising=False)
 
-    assert antes == ["Só quando eu escolher"]
-    assert depois == ["Heroic · Marvel's Guardians of the Galaxy"]
+    antes = a10.pacote(_ctx())["perfis.linha.nome"]
+    a10.editor_ambiente(_ctx(), _escolher("Heroic"), PonteDeMentira())
+    depois = a10.pacote(_ctx())["perfis.linha.nome"]
+
+    assert antes == []
+    assert depois == ["Guardioes"]

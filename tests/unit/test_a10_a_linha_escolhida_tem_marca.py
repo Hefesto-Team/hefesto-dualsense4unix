@@ -61,8 +61,12 @@ def _marcada(linhas: list[str]) -> list[str]:
 
 
 def _clicar(nome: str) -> None:
-    """O gesto de verdade, pelo caminho de verdade — o clique na célula do nome."""
-    a10_perfis.selecionar(Contexto(state={}), {"texto": nome}, None)
+    """O gesto de verdade, pelo caminho de verdade — o clique na célula do nome.
+
+    Com o Freestyle ligado o clique só abre (15/10/2026: fora dele o clique também ativa), o que
+    mantém a linha ABERTA separada da que VALE, que é o que este arquivo mede.
+    """
+    a10_perfis.selecionar(Contexto(state={"freestyle_ligado": True}), {"texto": nome}, None)
 
 
 def _gerador() -> Any:
@@ -193,7 +197,7 @@ def test_o_desenho_marca_a_linha_que_o_editor_abriu() -> None:
     """No mockup, a linha marcada é a que o editor ao lado está mostrando."""
     aba10 = _gerador()
     html = onde.pagina("10-perfis.html").read_text(encoding="utf-8")
-    linhas = re.findall(r'<tr class="[^"]*" data-hef-perfil=.*?</tr>', html, re.S)
+    linhas = re.findall(r'<tr\b[^>]*data-hef-perfil=.*?</tr>', html, re.S)
 
     marcadas = _marcada(linhas)
     assert marcadas == [aba10.PERFIL_DO_EDITOR], (

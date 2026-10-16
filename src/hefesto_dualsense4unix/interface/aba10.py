@@ -6,22 +6,14 @@ from monta import monta, glifo, cor_da_zona, rotulo, CSS_GLIFO, MESA, SEPARADOR,
 
 sys.path.insert(0, str(R.parents[1]))
 from hefesto_dualsense4unix.profiles.estilos_de_jogo import (  # noqa: E402
-    DE_FABRICA as ESTILOS_DE_FABRICA,
-)
-from hefesto_dualsense4unix.profiles.estilos_de_jogo import (  # noqa: E402
     ESTILOS as ESTILOS_DO_MOTOR,
 )
-from hefesto_dualsense4unix.profiles.schema import (  # noqa: E402
-    PRIORIDADE_MAXIMA,
-    PRIORIDADE_MINIMA,
-)
+from hefesto_dualsense4unix.profiles.schema import PRIORIDADE_MAXIMA  # noqa: E402
 from hefesto_dualsense4unix.integrations.jogos_locais import (  # noqa: E402
     LANCADOR_DIRETO,
 )
 from hefesto_dualsense4unix.profiles.simple_match import (  # noqa: E402
-    PROCEDENCIA_DA_NAVEGACAO,
     PROCEDENCIA_DA_STEAM,
-    PROCEDENCIA_DE_QUALQUER_JOGO,
     ROTULO_SO_QUANDO_ESCOLHER,
     SEPARADOR_DA_PROCEDENCIA,
     oferta_do_funciona_em,
@@ -63,8 +55,6 @@ _EXTENSO = {1: "um", 2: "dois", 3: "três", 4: "quatro", 5: "cinco", 6: "seis",
             13: "treze", 14: "catorze", 15: "quinze", 16: "dezesseis",
             17: "dezessete", 18: "dezoito", 19: "dezenove", 20: "vinte"}
 QUANTAS_SECOES = _EXTENSO[len(SECOES)]
-QUANTOS_ESTILOS_DE_FABRICA = _EXTENSO.get(len(ESTILOS_DE_FABRICA),
-                                          str(len(ESTILOS_DE_FABRICA)))
 
 GUARDA = {
     "p1": {"leds", "triggers", "rumble", "mic", "movimento"},
@@ -80,11 +70,10 @@ AGORA = {
     "p3": {"triggers": NAO_DIZ},
     "p4": {"triggers": NAO_DIZ},
 }
-DICA_DO_NAO_DIZ = "O controle não diz."
-DICA_DA_MASCARA = "Máscara: {mascara}."
+DICA_DO_NAO_DIZ = "O controle não diz"
+DICA_DA_MASCARA = "Máscara: {mascara}"
 MASCARA_QUE_ACENDE = "DualSense"
-DICA_DO_STATUS = ("Aceso: ligado agora neste controle. O ponto embaixo: o perfil "
-                  "aberto guarda este ajuste só para ele.")
+DICA_DO_STATUS = "Aceso: ligado agora; o ponto: só deste controle"
 
 # DualSense — medido nesta casa e escrito no esquema (`:1002`).
 ID_DA_PECA = {"p1": "AA:BB:CC:00:00:01", "p2": "AA:BB:CC:00:00:02",
@@ -263,13 +252,6 @@ CSS = CSS_GLIFO + """
      entrava em regra de `:hover` nenhuma e ficava morta sob o cursor. */
   .tab tbody tr.ativo:hover:not([aria-selected="true"]) td{
           background:rgba(255,255,255,.06)}
-  /* `Pri.` VIROU `Priorização` — 31/08/2026, pedido. Os 46px do valor
-     antigo JÁ NÃO ERAM VERDADE: `table-layout` é `auto`, então `width` é
-     sugestão, e o Chrome media 86px para caber o cabeçalho. O número aqui passa  # (noqa-acento) id
-     a ser o medido; escrever 46 embaixo de uma coluna de 86 é deixar no CSS uma
-     afirmação que a tela desmente. */
-  .tab .pri{font-family:'JetBrains Mono',monospace;width:96px;text-align:right}
-  .tab .quando{color:var(--texto-mudo);font-weight:400}
   /* ------------------------------------------------------------------
      A LUPA, OS DOIS ÍCONES, A SETA E A DIVISA — PERFIS-LIMPA-01, 11/09/2026.
 
@@ -365,55 +347,19 @@ CSS = CSS_GLIFO + """
      `blocos` do piloto (que só troca o `<tbody>`), e um `<col>` por coluna dá
      ao roteiro um lugar só para escrever. */
   .tab{table-layout:fixed}
-  /* AS LARGURAS DE PARTIDA, e as duas foram REMEDIDAS no motor certo em
-     11/09/2026. Elas nasceram de uma medição feita no CHROME, e o produto
-     renderiza no `WebKit2.WebView`: medido nos dois motores, o `Nome` de 255px
-     tirava 69px do `Quando usar` numa janela de 1280px (ontem, com `auto`:
-     185·86·294; com os 255 cravados: 255·86·225). **O `Quando usar` é onde mora
-     o nome do jogo, e foi ele que o usuário pediu para achar rápido** — então quem
-     devolve o espaço é o `Nome`, não ele.
-
-     `Nome` 255 → 185: é o que o `auto` dava a 1280. `Priorização` 86 → 96: é a
-     largura do rótulo MAIS a seta da ordem (6,2px de glifo + 4px de margem) —
-     sem os 10px o cabeçalho da coluna ORDENADA media  (noqa-acento: verbo medir,
-     imperfeito) 96 num espaço de 86 e
-     saía «Priorizaçã…», que é o defeito que a conferência fotografou. Uma
-     coluna que se ordena tem de caber no próprio rótulo com a marca de ordem.
-
-     E O `QUANDO USAR` NÃO GANHA `<col>` DE PROPÓSITO: sem largura escrita ele
-     fica com o resto, que é o único jeito de uma tabela `fixed` ter uma coluna
-     elástica. A 1600px isso lhe dá 444px, mais que os 392 de ontem.
+  /* AS LARGURAS DE PARTIDA. As duas datas levam 104px (o rótulo mais a seta da ordem: uma coluna
+     que se ordena tem de caber no próprio rótulo com a marca) e o `Nome` NÃO ganha `<col>` de
+     propósito: sem largura escrita ele fica com o resto, o único jeito de uma tabela `fixed` ter
+     uma coluna elástica. Com os 185px que o `Nome` tinha, a soma dava menos que a tabela e o
+     motor esticava as TRÊS colunas em proporção: as datas saíam com 151px, e a largura que ela
+     gravava deixava de ser a que se via (o rótulo «Criado em» tinha 69 num cabeçalho de 68).
 
      O `<colgroup>` é quem carrega o número e não a `width` da `<th>`; quem
      arrastar ganha um `style` inline no mesmo `<col>`, e inline vence folha. */
-  .tab col[data-coluna="nome"]{width:185px}
-  .tab col[data-coluna="prioridade"]{width:96px}
   .tab td,.tab th{overflow:hidden;text-overflow:ellipsis}
-  .tab .quando{white-space:nowrap}
   .tab tbody td{white-space:nowrap}
   .conta-perfis{font-size:10.5px;color:var(--comment);margin-left:auto;text-transform:none;
                 letter-spacing:0}
-  /* 3 botões e 3 botões, todos da mesma largura */
-  .botoes{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:auto;padding-top:12px}
-  .botoes .btn{width:100%;justify-content:center;padding:0 8px;font-size:11.5px}
-  /* UM BOTÃO SÓ, e a grade de três o deixaria com um terço da largura e dois
-     vãos vazios ao lado — que é mais sujo do que os três eram. 11/09/2026. */
-  .botoes.um-so{grid-template-columns:1fr}
-  /* O «Ativar» É SÓLIDO COMO O «Aplicar» — ordem, 11/09/2026: *"deixa esse
-     botão verde do ativar igual o do aplicar"*.  (noqa-acento) citação literal
-     O `.btn.verde` da casa pinta só o TEXTO de verde, e é assim que o `Ativar`
-     nasceu na fileira da esquerda, ao lado de dois irmãos de contorno. Sozinho
-     no canto largo ele é a ação PRINCIPAL desta aba, e ela o leu como tal: a
-     mesma forma do `r-aplicar` do rodapé (fundo verde, texto na cor do fundo
-     da janela), que é o único outro botão desta tela que faz alguma coisa
-     acontecer nos controles agora.
-     O SELETOR É LOCAL DE PROPÓSITO — `.botoes.um-so` e não `.btn.verde`: a casa
-     tem outros botões verdes de contorno, e trocá-los todos por causa deste
-     mudaria nove telas que ela não olhou. */
-  .botoes.um-so .btn.verde{background:var(--green);color:var(--app-bg);
-                           border-color:var(--green)}
-  .botoes.um-so .btn.verde:hover{background:var(--green);color:var(--app-bg);
-                                 border-color:var(--green)}
   /* os campos do editor, todos na mesma grade */
   /* os campos ficam sobre o MESMO fundo da tabela ao lado, e assim os três botões
      de baixo nascem na mesma base nos dois blocos. */
@@ -951,6 +897,70 @@ CSS = CSS_GLIFO + """
      `display:none` faria as quatro linhas da tabela mudarem de altura conforme
      a mesa — a tabela inteira pulando quando um controle entra ou sai. */
   .tab.miuda tr.fora .gr,.tab.miuda tr.fora .gp{visibility:hidden}
+
+  /* ---------- A Perfis do todo (15/10/2026) ---------- */
+  /* Os quatro botões ficam NO FIM DO QUADRO, sob as duas colunas, todos da mesma largura. */
+  .barra-quatro{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:14px 0 2px}
+  .barra-quatro .btn{width:100%;height:36px;justify-content:center;font-size:12.5px}
+  /* O «Ativar» é a ação principal: sólido, como o «Aplicar» do rodapé. */
+  .barra-quatro .btn.verde,.barra-quatro .btn.verde:hover{background:var(--green);
+      color:var(--app-bg);border-color:var(--green);font-weight:700}
+  .perfis > div{padding:12px 16px}
+  .perfis > div:first-child{padding-right:8px}
+  .perfis > div:last-child{padding-left:8px}
+  .rolo{overflow:hidden}
+  .rolo .tab tbody td{height:26px;padding-top:0;padding-bottom:0}
+  .rolo .tab thead th[data-coluna]{cursor:pointer;user-select:none}
+  .quadro-titulo[data-dica],.cab[data-dica]{cursor:help}
+  .tab col[data-coluna="criado"],.tab col[data-coluna="modificado"]{width:104px}
+  .tab td.data{font-family:'JetBrains Mono',monospace;color:var(--texto-mudo);font-weight:400;
+               white-space:nowrap}
+  .tab th.data{white-space:nowrap}
+  .campos{gap:4px}
+  /* «Aplicar em»: quatro botões de escolha na largura do campo */
+  .campo .seg.alvos{flex-wrap:nowrap;gap:6px;flex:1;min-width:0}
+  .campo .seg.alvos button{flex:1 1 0;min-width:0;height:var(--h-escolha);padding:0 8px}
+  /* «Quando» só existe com «Eventos»; a classe `on` vem do botão (pintura) ou do roteiro (desenho) */
+  .campo.so-eventos{display:none}
+  .campo.so-eventos.on{display:grid}
+  .ev-val{display:flex;gap:10px;align-items:center;min-width:0}
+  .ev-val select{flex:0 0 150px;width:150px}
+  .ev-val .ev-cmd{flex:1;min-width:0}
+  .campo select.estreito{flex:1 1 auto;width:100%}
+  /* «Qual vale primeiro»: só aparece com dois perfis do mesmo jogo */
+  .ordem-vale{margin:4px 0 8px}
+  .ordem-vale:has(ol:empty){display:none}
+  .ordem-vale .cab{font-size:11.5px;font-weight:700;color:var(--fg);margin:0 0 4px}
+  .ordem-vale ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+  .ordem-vale li{display:flex;align-items:center;gap:8px;height:28px;padding:0 10px;font-size:12px;
+                 border:1px solid var(--linha);border-radius:7px;background:var(--app-bg);
+                 color:var(--fg);cursor:grab}
+  .ordem-vale li.ativo{border-color:var(--purple)}
+  .ordem-vale li.arrastando-este{opacity:.45}
+  .ordem-vale .pos{flex:0 0 18px;font-family:'JetBrains Mono',monospace;color:var(--texto-mudo);
+                   text-align:right}
+  .ordem-vale .pega{color:var(--comment);letter-spacing:-2px}
+  /* a tabela por controle: três colunas fixas, o endereço em fonte miúda */
+  .guarda table{table-layout:fixed;width:100%;min-width:0 !important}
+  .guarda col[data-coluna="controle"]{width:136px}
+  .guarda col[data-coluna="id"]{width:114px}
+  .guarda td.gd-id,.guarda th.gd-id{font-size:10px;letter-spacing:-.2px;padding-left:6px;
+                                    padding-right:6px}
+  @media (max-height:860px){
+    .campo{height:32px}
+    .campo input,.campo select,.campo .seg button{height:32px !important;min-height:0}
+    .ordem-vale li{height:26px}
+    .ordem-vale{margin:0 0 6px}
+  }
+  @media (max-height:780px){
+    .campos{padding:8px 12px}
+    .campo{height:28px;margin-bottom:3px}
+    .campo input,.campo select,.campo .seg button{height:28px !important}
+    .ordem-vale li{height:24px}
+    .ordem-vale ol{gap:3px}
+    .ordem-vale .cab{margin-bottom:3px}
+    .tab.miuda thead th{padding:3px 8px}
+  }
 """
 
 CABEM_NA_TIRA = 413
@@ -982,17 +992,17 @@ RECARREGA = ('<svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"
 #     "e o botao atualizar tá aparecendo duplicado na interface"  # (noqa-acento) citação literal
 
 
-def icone_do_rotulo(gesto: str, desenho: str, dica: str) -> str:
-    """Um ícone clicável no título de um bloco — o invólucro novo de um botão."""
+def icone_do_rotulo(gesto: str, desenho: str, dica: str, aria: str = "") -> str:
+    """Um ícone clicável no título de um bloco; a dica é `data-dica`, o `aria` é a frase longa."""
     return (f'<button type="button" class="icone-rot" '
-            f'data-hef-gesto="{gesto}" title="{dica}" '
-            f'aria-label="{dica}">{desenho}</button>')
+            f'data-hef-gesto="{gesto}" data-dica="{dica}" '
+            f'aria-label="{aria or dica}">{desenho}</button>')
 
 
 def icone_da_lupa() -> str:
     """A lupa do título da tabela dos perfis. Ela ABRE o campo, e nada mais."""
     return ('<button type="button" class="icone-rot lupa" '
-            'title="Procura pelo nome, pela preferência ou pelo jogo." '
+            'data-dica="Procura pelo nome ou pelo jogo" '
             f'aria-label="Procurar um perfil">{LUPA}</button>')
 
 
@@ -1011,11 +1021,10 @@ def puxador(coluna: str, tabela: str) -> str:
 
 
 def cabeca(coluna: str, rotulo_visivel: str, tabela: str, classe: str = "",
-           divisa: bool = True) -> str:
+           divisa: bool = True, dica: str = "Duplo clique ordena") -> str:
     """Um `<th>` da lista de perfis: o nome, a seta da ordem e a divisa."""
     cls = f' class="{classe}"' if classe else ""
-    return (f'<th{cls} data-coluna="{coluna}" '
-            f'title="Duplo clique ordena por esta coluna; de novo, inverte.">'
+    return (f'<th{cls} data-coluna="{coluna}" data-dica="{dica}">'
             f'{rotulo_visivel}'
             f'<span class="ordena" data-hef="perfis.ordem.{coluna}" '
             f'data-hef-alvo="atributo" data-hef-atributo="data-ordem" '
@@ -1055,6 +1064,7 @@ AMBIENTES = oferta_do_funciona_em(LANCADORES_DO_DESENHO)
 ESTILOS = [e.rotulo for e in ESTILOS_DO_MOTOR]
 #: (foto 9): aparece o nome e o código, não só o código, e não aparece o nome do programa.
 PERFIS = [("Mortal Kombat", 90, "Steam · Mortal Kombat 1 · 1971870", True),
+          ("Mortal Kombat online", 88, "Steam · Mortal Kombat 1 · 1971870", False),
           ("Elden Ring", 85, "Steam · Elden Ring · 1245620", False),
           ("Orpheus", 82, "RetroArch · Orpheus: To Hell and Back", False),
           ("Pragmata", 80, "Steam · Pragmata · 1358160", False),
@@ -1071,6 +1081,35 @@ PERFIS = [("Mortal Kombat", 90, "Steam · Mortal Kombat 1 · 1971870", True),
 
 PROCEDENCIA_DO_DESENHO = PERFIS[0][2].split(SEPARADOR_DA_PROCEDENCIA)[0]
 
+# As datas do desenho: (criado, modificado). Perfil de antes das datas mostra «—» nas duas.
+SEM_DATA = ("—", "—")
+DATAS_DO_DESENHO = {
+    "Mortal Kombat": ("03/09/2026", "11/10/2026"),
+    "Mortal Kombat online": ("10/10/2026", "10/10/2026"),
+    "Elden Ring": ("21/08/2026", "02/10/2026"),
+    "Orpheus": ("14/09/2026", "14/09/2026"),
+    "Pragmata": ("18/09/2026", "07/10/2026"),
+    "Faith": ("26/09/2026", "01/10/2026"),
+    "Duskfade": ("30/09/2026", "30/09/2026"),
+    "Mina the Hollower": ("02/10/2026", "09/10/2026"),
+}
+ORDEM_DO_DESENHO = ["Mortal Kombat", "Mortal Kombat online"]
+
+# «Aplicar em» e «Quando»: os valores são os do esquema (`AlvoDoPerfil`, `EventoDoPerfil`).
+ALVOS_DO_DESENHO = [
+    ("jogos", "Jogos", "Vale quando o jogo abre"),
+    ("navegacao", "Navegação", "Vale fora do jogo, no computador"),
+    ("programas", "Programas", "Vale com o programa na frente"),
+    ("eventos", "Eventos", "Um momento do jogo, do sistema ou o seu comando"),
+]
+MOMENTOS_DO_DESENHO = [
+    ("No jogo", [("cena", "Cena"), ("menu", "Menu"), ("pausa", "Pausa")]),
+    ("No sistema", [("controle_conectado", "Controle conectado"),
+                    ("programa_aberto", "Programa aberto"), ("hora_marcada", "Hora marcada")]),
+    ("Meu", [("meu_comando", "Meu comando")]),
+]
+DICAS_DOS_ESTILOS = {"Nativo": "O jogo decide"}
+
 PRI_DO_DESENHO = PERFIS[0][1]
 PERFIL_DO_EDITOR = PERFIS[0][0]
 PCT_DO_DESENHO = round(PRI_DO_DESENHO * 100 / PRIORIDADE_MAXIMA)
@@ -1082,11 +1121,12 @@ def opts(lista, escolhido, vazio=False, travessao=False):
     """As opções de um `<select>` do desenho."""
     linhas = []
     if vazio:
-        linhas.append('                <option value="" selected>—</option>')
+        linhas.append('                <option value="" disabled selected>—</option>')
     if travessao:
         linhas.append(f'                <option value="{TRAVESSAO}" disabled>'
                       f'{TRAVESSAO}</option>')
-    linhas += [f'                <option{" selected" if (o == escolhido and not vazio) else ""}>{o}</option>'
+    linhas += [f'                <option{" selected" if (o == escolhido and not vazio) else ""}'
+               f'{f" data-dica={chr(34)}{DICAS_DOS_ESTILOS[o]}{chr(34)}" if o in DICAS_DOS_ESTILOS else ""}>{o}</option>'
                for o in lista]
     return "\n".join(linhas)
 
@@ -1130,10 +1170,10 @@ def linha_do_controle(c, tem=None, id_da_peca=None, uniq=None, agora=None):
     for campo, pecas in SECOES:
         on, nao_diz, dica_da_celula = _celula_de_agora(c, campo, agora)
         gs = "".join(glifo(p, ativo=on, tam=15) for p in pecas)
-        titulo = f' title="{dica_da_celula}"' if dica_da_celula else ""
+        titulo = f' data-dica="{dica_da_celula}"' if dica_da_celula else ""
         grupos.append(
             f'<span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo"'
-            f' data-hef-atributo="title"{titulo}>'
+            f' data-hef-atributo="data-dica"{titulo}>'
             f'<span class="gr{" on" if on else ""}" data-hef="guarda.secao"'
             f' data-hef-alvo="classe" data-hef-secao="{campo}">'
             f'<span class="gq{" nd" if nao_diz else ""}" data-hef="guarda.incerto"'
@@ -1141,12 +1181,11 @@ def linha_do_controle(c, tem=None, id_da_peca=None, uniq=None, agora=None):
             f'<span class="gp{" on" if campo in tem else ""}" data-hef="guarda.proprio"'
             f' data-hef-alvo="classe"></span></span>')
     # (IDENTIDADE-VEM-DE-CIMA): o `--plastico` estava no `<tr>`, sem endereço, e
-    nome = rotulo(c, "curta") if na_mesa else f'P{c["jogador"]}{SEPARADOR}Desconectado'
-    plastico = cor_da_zona(c['cor']) if na_mesa else "transparent"
+    # a cor do plástico fala no lugar de «P3»: o vazio traz a cor do controle que ficou guardado
+    nome = SEPARADOR.join([c["nome"], c["via"]]) if na_mesa else c["nome"]
+    plastico = cor_da_zona(c['cor'])
     dica = ("" if na_mesa else
-            '\n                      title="Este lugar está vazio. O que você '
-            'ajusta fica guardado com o controle: quando ele voltar, encontra '
-            'o que você deixou."')
+            '\n                      data-dica="Quando ele voltar, encontra o que você deixou"')
     return f'''                  <tr data-hef-uniq="{endereco}" data-hef="guarda.vazio" data-hef-alvo="classe" data-hef-classe="fora"{'' if na_mesa else ' class="fora"'}{dica}>
                     <td class="gd-nome">
                       <span class="pl" data-hef="guarda.plastico" data-hef-alvo="cor"
@@ -1158,52 +1197,49 @@ def linha_do_controle(c, tem=None, id_da_peca=None, uniq=None, agora=None):
                   </tr>'''
 
 
-def linha_do_perfil(nome, prioridade, quando, ativo, dica="", escolhido=False):
-    """Uma linha da lista de perfis salvos — a MESMA para o mockup e para a viva.
+def linha_do_perfil(nome, criado, modificado, ativo, dica="", escolhido=False):
+    """Uma linha da lista de perfis salvos, a MESMA para o mockup e para a viva.
 
-    Ela era uma compreensão de lista embutida no `MIOLO`; virou função pelo mesmo
-    motivo da `linha_do_controle`: a aba viva precisa do desenho, não de uma
-    cópia dele. O `title` nasce vazio no mockup porque a dica é a DISPUTA, e
-    disputa é dado — o mockup não tem nenhum, e um texto inventado aqui viraria
-    a tela afirmando uma disputa que não existe.
-
-    O ENDEREÇO DO CLIQUE É A LINHA INTEIRA — 02/10/2026,
-    A-LINHA-INTEIRA-ABRE-O-PERFIL-01. Pedido de 29/09: clicar em qualquer
-    campo da linha abre aquele perfil no editor. O gesto morava no `<td>` do
-    nome, e da «Preferência» e do «Funciona em» o `closest` do ouvinte do
-    piloto não achava nada, com o cursor de mão na linha inteira. Na `<tr>`,
-    toda célula sobe até ele.
-
-    O NOME VIAJA NO `data-hef-perfil` da linha, e não no texto: o ouvinte manda
-    o `dataset` inteiro do alvo (`hefesto_vivo.py`, `Object.assign({}, d)`),
-    então o gesto recebe `hefPerfil` com o nome vivo (`_linha_da_lista`, no
-    pacote, emite o atributo com o nome do disco, e o `blocos` troca o
-    `<tbody>` inteiro). O `texto` da linha seria as três células coladas.
-    O fato que caiu: aqui se lia que o atributo era do MOCKUP e a pintura nunca
-    o reescrevia; deixou de valer em 02/09, quando a lista passou ao `blocos`.
-
-    `data-hef-gesto` e não `data-gesto`: esta aba já tem 77 endereços nesse
-    vocabulário, e o despachante aceita os três — inventar um quarto aqui seria
-    a segunda verdade que esta casa persegue.
-
-    `escolhido` É A LINHA ABERTA NO EDITOR, e não o perfil que está valendo —
-    04/09/2026, queixa de uso: *"quando clica em algum nome do perfis salvos nada
-    indica que tal coisa tá selecionado"*. Ele sai em `aria-selected` e não numa
-    segunda classe; a razão inteira está no CSS, junto das três regras que o
-    leem.
-
-    ELE É SEMPRE EMITIDO, `true` ou `false`, e não só quando é verdade: o
-    `blocos` do piloto compara a string do gerador com a serialização que o navegador
-    devolve, e um atributo que aparece e desaparece muda o comprimento da linha
-    a cada clique. Um valor constante no lugar constante é o que deixa o
-    `<tbody>` assentar.
+    O dono da forma é este gerador; a linha viva (`a10_perfis._linha_da_lista`) a repete e uma
+    régua compara as duas caractere a caractere. O clique em QUALQUER célula sobe até a `<tr>`
+    (`data-hef-gesto="selecionar"`), que ativa o perfil e o abre no editor. O nome viaja no
+    `data-hef-perfil`, não no texto. `escolhido` é a linha aberta no editor e sai sempre em
+    `aria-selected` (`true` ou `false`), para o `<tbody>` assentar a cada tique. O parâmetro
+    `dica` fica por compatibilidade: a dica da linha é fixa e nasce em `data-dica`.
     """
-    return (f'                <tr class="{"ativo" if ativo else ""}" '
+    return (f'                <tr tabindex="0" data-dica="Clique: ativa e abre no editor" '
+            f'class="{"ativo" if ativo else ""}" '
             f'data-hef-perfil="{nome}" data-hef-gesto="selecionar" '
-            f'aria-selected="{"true" if escolhido else "false"}" title="{dica}">'
+            f'aria-selected="{"true" if escolhido else "false"}">'
             f'<td data-hef="perfis.linha.nome">{nome}</td>'
-            f'<td class="pri" data-hef="perfis.linha.prioridade">{prioridade}</td>'
-            f'<td class="quando" data-hef="perfis.linha.quando" title="{quando}">{quando}</td></tr>')
+            f'<td class="data" data-hef="perfis.linha.criado">{criado}</td>'
+            f'<td class="data" data-hef="perfis.linha.modificado">{modificado}</td></tr>')
+
+
+def botao_do_alvo(valor, rotulo_visivel, dica):
+    """Um dos quatro botões de «Aplicar em»; só o do jogo nasce aceso (a classe `on`)."""
+    ligado = ' class="on"' if valor == "jogos" else ""
+    return (f'                  <button{ligado} '
+            f'data-hef="editor.alvo.{valor}" data-hef-alvo="classe" data-hef-classe="on" '
+            f'data-hef-gesto="editor.alvo" data-v="{valor}" data-dica="{dica}">'
+            f'{rotulo_visivel}</button>')
+
+
+def opcoes_do_quando():
+    """O `<select>` de «Quando»: o travessão (sem momento) e os sete momentos, em três grupos."""
+    grupos = [f'                  <option value="{TRAVESSAO}" disabled selected>{TRAVESSAO}</option>']
+    for nome_do_grupo, itens in MOMENTOS_DO_DESENHO:
+        grupos.append(f'                  <optgroup label="{nome_do_grupo}">'
+                      + "".join(f'<option value="{v}">{r}</option>' for v, r in itens)
+                      + "</optgroup>")
+    return "\n".join(grupos)
+
+
+def item_da_ordem(nome, posicao, ativo):
+    """Um `<li>` de «Qual vale primeiro»: o mesmo que `a10_perfis._html_da_ordem` escreve."""
+    return (f'                  <li class="{"ativo" if ativo else ""}" draggable="true" tabindex="0" '
+            f'data-hef-gesto="editor.ordem" data-hef-perfil="{nome}">'
+            f'<span class="pos">{posicao}</span><span class="pega">⋮⋮</span>{nome}</li>')
 
 
 ROTEIRO = """
@@ -1263,10 +1299,17 @@ ROTEIRO = """
     // pedia 80. O piso passa a ser o maior entre o `PISO` e o próprio rótulo
     // (o `scrollWidth` do `<th>`: o texto, a seta da ordem e o preenchimento),
     // medido no motor que pinta. O disco não muda; quem sobe é a tela.
+    // Mede de novo depois de cada acréscimo: a tabela é `width:100%` em layout fixo, então a soma
+    // das colunas menor que a tela as estica em proporção, e o `<th>` rende mais que o `<col>`.
+    // Uma medida só deixava o rótulo «Criado em» 1 px curto (69 num cabeçalho de 68).
     function caber(th, col, px){
       col.style.width = px + 'px';
-      var falta = th ? th.scrollWidth - th.clientWidth : 0;
-      if(falta > 0){ px = px + falta; col.style.width = px + 'px'; }
+      for(var i = 0; th && i < 8; i++){
+        var falta = th.scrollWidth - th.clientWidth;
+        if(falta <= 0) break;
+        px = px + falta;
+        col.style.width = px + 'px';
+      }
       return px;
     }
     function ajustar(tab){
@@ -1356,6 +1399,58 @@ ROTEIRO = """
       if(cabeca) new MutationObserver(function(){ ajustar(t); }).observe(
         cabeca, {attributes: true, subtree: true, attributeFilter: ['data-ordem']});
     });
+    // ---- «Aplicar em»: só o quarto lugar abre o «Quando» ------------------
+    // No produto quem acende os botões e a linha é a pintura (`editor.alvo.<lugar>`); aqui o
+    // desenho faz o mesmo no clique, e a pintura seguinte diz a mesma coisa (idempotente).
+    document.addEventListener('click', function(ev){
+      var b = ev.target.closest ? ev.target.closest('.seg.alvos button') : null;
+      if(!b) return;
+      b.parentNode.querySelectorAll('button').forEach(function(o){
+        o.classList.toggle('on', o === b);
+      });
+      var quando = document.querySelector('.so-eventos');
+      if(quando) quando.classList.toggle('on', b.dataset.v === 'eventos');
+    }, false);
+
+    // ---- «Qual vale primeiro»: arrastar um perfil acima ou abaixo do outro -----
+    // O roteiro só MEXE NO DOM e avisa: ao soltar, a posição nova (de 1) vai em `posNova` e o
+    // `click` leva o gesto `editor.ordem` ao Python, que regrava as preferências. O `<ol>` é
+    // reescrito pelo `blocos` só quando o texto do Python muda, então a ordem arrastada fica
+    // até a gravação confirmar.
+    var puxado = null;
+    document.addEventListener('dragstart', function(ev){
+      var li = ev.target.closest ? ev.target.closest('.ordem-vale li') : null;
+      if(!li) return;
+      puxado = li;
+      li.classList.add('arrastando-este');
+      if(ev.dataTransfer){
+        ev.dataTransfer.effectAllowed = 'move';
+        try { ev.dataTransfer.setData('text/plain', li.getAttribute('data-hef-perfil') || ''); }
+        catch(e) { /* o WebKit antigo recusa dado vazio */ }
+      }
+    }, false);
+    document.addEventListener('dragover', function(ev){
+      if(!puxado) return;
+      var alvo = ev.target.closest ? ev.target.closest('.ordem-vale li') : null;
+      if(!alvo || alvo === puxado || alvo.parentNode !== puxado.parentNode) return;
+      ev.preventDefault();
+      var r = alvo.getBoundingClientRect();
+      alvo.parentNode.insertBefore(puxado, ev.clientY < r.top + r.height / 2 ? alvo : alvo.nextSibling);
+    }, false);
+    document.addEventListener('dragend', function(){
+      if(!puxado) return;
+      var li = puxado;
+      puxado = null;
+      li.classList.remove('arrastando-este');
+      var itens = Array.prototype.slice.call(li.parentNode.children);
+      itens.forEach(function(x, i){
+        var pos = x.querySelector('.pos');
+        if(pos) pos.textContent = String(i + 1);
+      });
+      li.dataset.posNova = String(itens.indexOf(li) + 1);
+      li.click();
+    }, false);
+
     if(document.readyState === 'loading'){
       document.addEventListener('DOMContentLoaded', assentar);
     } else { assentar(); }
@@ -1364,38 +1459,14 @@ ROTEIRO = """
 """
 
 
-COM_AJUSTE = sum(1 for c in MESA if GUARDA[c["pref"]])
-
 MIOLO = f'''
     <div class="quadro estica">
       <div class="quadro-topo">
-        <span class="quadro-titulo">Perfis</span>
-        <!-- A DICA DO QUADRO ENCOLHEU — 30/08/2026, pedido: *"olha esse tooltip
-             quilométrico. ao invés de estar tudo em Perfis deveria estar em cada
-             seção"*. Ela estava certa por dois motivos: o bloco tinha quatro
-             parágrafos e cobria meia tela ao abrir, e cada assunto dele JÁ tinha
-             dono na tela — Prioridade, estilo de jogo e a tabela por controle têm
-             `title` próprio, a poucos pixels de onde a pessoa está olhando.
-             Aqui fica só o que nenhum campo diz: o que É um perfil. -->
-        <span class="ajuda">?<span class="dica">
-          Um perfil guarda <b>tudo</b> o que você ajustou nas outras abas — gatilho, luz,
-          vibração, som, sensores e máscara — e o traz de volta quando aquele jogo abre.
-        </span></span>
-        <span class="conta"><span data-hef="perfis.conta">{len(PERFIS)} perfis</span> <span class="sep">·</span>
-          <span data-hef="perfis.com-ajuste">{COM_AJUSTE} de {len(MESA)} controles com ajuste próprio</span></span>
+        <span class="quadro-titulo" data-dica="Um perfil guarda tudo que você ajustou nas abas">Perfis</span>
       </div>
-      <!-- O DESFECHO DO ÚLTIMO GESTO — ver `.desfecho` no CSS para a razão.
-           SÃO DOIS ENDEREÇOS PARA UM VALOR, e não é redundância: a CAIXA usa o
-           alvo `classe` (acende a tira quando há notícia — o `ligado()` do
-           piloto lê o travessão do campo vazio como APAGADO) e o TEXTO de
-           dentro escreve a frase. É o mesmo par que a coluna "Ajuste próprio"
-           já usa, e é o que faz a tira sumir sozinha quando o desfecho vence os
-           trinta segundos, em vez de deixar um "—" pendurado na tela do usuário.
-
-           E NÃO SE ESCREVE A TAG DE CAIXA POR EXTENSO NESTE COMENTÁRIO: o
-           balanço do `monta` conta SUBSTRING no documento inteiro, comentário
-           incluído, e uma abertura solta aqui derruba o gerador com
-           "desbalanceado". Custou duas execuções; fica escrito. -->
+      <!-- O DESFECHO DO ÚLTIMO GESTO — ver `.desfecho` no CSS. A caixa usa o alvo `classe` (acende
+           a tira quando há notícia) e o texto de dentro escreve a frase. NÃO se escreve a tag de
+           caixa por extenso em comentário: o balanço do `monta` conta SUBSTRING no documento. -->
       <div class="desfecho" data-hef="perfis.desfecho" data-hef-alvo="classe"><span data-hef="perfis.desfecho"></span></div>
       <div class="quadro-corpo">
         <div class="perfis">
@@ -1403,161 +1474,69 @@ MIOLO = f'''
           <div>
             <div class="moldura">
               <div class="sec-rot">Perfis salvos{icone_da_lupa()}{campo_da_lupa()}{icone_do_rotulo(
-                  "recarregar", RECARREGA,
+                  "recarregar", RECARREGA, "Relê a lista",
                   "Relê a lista de perfis. Não mexe no editor ao lado.")}<span class="fora-da-busca" data-hef="perfis.procura.conta" data-hef-alvo="classe"><span data-hef="perfis.procura.conta"></span></span></div>
               <div class="lista">
               <div class="rolo">
               <table class="tab" data-hef="perfis.larguras" data-hef-alvo="atributo"
                      data-hef-atributo="data-larguras" data-tabela="10-perfis.lista"
                      data-larguras="">
-                <colgroup><col data-coluna="nome"><col data-coluna="prioridade"><col data-coluna="quando"></colgroup>
-                <thead><tr>{cabeca("nome", "Nome", "10-perfis.lista")}{cabeca(
-                    "prioridade", "Preferência", "10-perfis.lista", classe="pri")}{cabeca(
-                    "quando", "Funciona em", "10-perfis.lista", divisa=False)}</tr></thead>
+                <colgroup><col data-coluna="nome"><col data-coluna="criado"><col data-coluna="modificado"></colgroup>
+                <thead><tr>{cabeca("nome", "Nome", "10-perfis.lista", dica="Duplo clique ordena")}{cabeca(
+                    "criado", "Criado em", "10-perfis.lista", classe="data", dica="Quando o perfil nasceu")}{cabeca(
+                    "modificado", "Modificado em", "10-perfis.lista", classe="data",
+                    divisa=False, dica="A última vez que você salvou")}</tr></thead>
                 <tbody data-hef="perfis.lista">
-{chr(10).join(linha_do_perfil(n, p, q, a, escolhido=n == PERFIL_DO_EDITOR) for n,p,q,a in PERFIS)}
+{chr(10).join(linha_do_perfil(n, *DATAS_DO_DESENHO.get(n, SEM_DATA), a, escolhido=n == PERFIL_DO_EDITOR) for n,_p,_q,a in PERFIS)}
                 </tbody>
               </table>
               </div>
-              </div>
-              <div class="botoes">
-                <button class="btn" data-hef-gesto="duplicar" title="Copia o perfil inteiro para o editor, com &quot;(cópia)&quot; no nome.">Duplicar</button>
-                <button class="btn" data-hef-gesto="novo" title="Perfil em branco. Com um jogo da Steam aberto, ele nasce valendo só para esse jogo; sem isso, vale para tudo.">Novo</button>
-                <button class="btn vermelho" data-hef-gesto="remover" data-hef="perfis.remover" title="Apaga o perfil. Pergunta antes.">Remover</button>
               </div>
             </div>
           </div>
 
           <div>
             <div class="moldura">
-              <!-- OS QUATRO CAMPOS DESTE BLOCO PEDEM `data-hef-alvo="valor"`, e sem ele
-                   o editor era a única parte da tela que MENTIA sozinha. Medido em
-                   01/09/2026, num Chrome de verdade, injetando o `BOOTSTRAP` do piloto
-                   sobre o `src/hefesto_dualsense4unix/interface/paginas/10-perfis.html` publicado (`hefesto_vivo.py:46-61`):
-
-                     editor.ambiente   5 opções → 0     `select.textContent = "Jogo da
-                     editor.estilo    15 opções → 0      Steam"` APAGA a lista inteira
-                     editor.nome      value fica "Mortal Kombat"   ← o do MOCKUP
-                     editor.jogo      value fica "Mortal Kombat 1" ← o do MOCKUP
-
-                   Nos dois `<select>` o estrago é destrutivo: a primeira pintura
-                   esvazia o campo de escolha e ele não volta. Nos dois `<input>` é
-                   invisível: `textContent` num campo de texto não aparece, então a
-                   tela seguia mostrando o jogo do desenho qualquer que fosse o perfil.
-                   É a mesma cura que a aba Gatilhos já tinha aplicado nos seus cinco
-                   `<select>` (`aba03.py:718`).
-
-                   E É O QUE TORNA OS GESTOS HONESTOS: sem isto, ligar o campo Nome
-                   faria ela renomear um perfil olhando para o nome de outro. -->
+              <!-- OS CAMPOS PEDEM `data-hef-alvo="valor"`: sem ele o `textContent` apagaria as
+                   opções de um `select` e não apareceria num `input` (medido em 01/09/2026). -->
               <div class="sec-rot">Editar</div>
               <div class="campos">
 
               <div class="campo">
-                <span>Nome:</span>
-                <span class="val"><input type="text" data-hef="editor.nome" data-hef-gesto="editor.nome"
-                       data-hef-alvo="valor" value="Mortal Kombat"></span>
-              </div>
-              <div class="campo">
-                <span>Preferência:</span>
-                <span class="val" data-hef="editor.prioridade.dica" title="{DICA_DA_PRIORIDADE}">
-                  <!-- `data-hef-alvo="largura"` — 02/09/2026, e sem ele a barra
-                       MENTIA de duas formas ao mesmo tempo. O pintor cai no
-                       ramo padrão (`el.textContent = t`, `hefesto_vivo.py:70`)
-                       quando o alvo não é declarado: o `"0%"` que o pacote
-                       manda vira TEXTO dentro de uma barra de 5px, e a
-                       LARGURA fica nos 90% do desenho — uma barra quase cheia
-                       para um perfil que está em 1 de 200.
-                       É a mesma cura que os quatro campos do editor logo
-                       abaixo já tinham recebido com `alvo="valor"`.
-                       FATO SUBSTITUÍDO — 02/09/2026. Aqui estava escrito que,
-                       "enquanto esta página não for PUBLICADA por ela",
-                       `a10_perfis.NAO_PINTAVEIS` segurava a emissão do
-                       `editor.prioridade`. As duas metades caíram: a página FOI
-                       publicada (commit `6f289554`) e `editor.prioridade` saiu
-                       de `NAO_PINTAVEIS` no `a7b8410a`. A barra recebe a
-                       largura; o número ao lado (`editor.prioridade.n`) é um
-                       `<span>` sem filhos e recebe o valor pelo mesmo tique. -->
-                  <!-- O `<input type=range>` — 03/09/2026, e é o que fez este
-                       campo deixar de ser leitura. Ele fica DENTRO do trilho,
-                       absoluto e transparente: o desenho que o usuário aprovou
-                       continua sendo o trilho + o cheio, e o range só empresta
-                       o punho e o arrasto.
-                       `min`/`max` SAEM DO ESQUEMA (`PRIORIDADE_MINIMA`/`MAXIMA`)
-                       — ver o comentário do import. `step="1"` porque
-                       `Profile.priority` é `int`: um slider que oferecesse
-                       meio número faria a tela prometer o que o esquema recusa.
-                       O ENDEREÇO É PRÓPRIO (`editor.prioridade.escolha`) e não
-                       o `.n` do vizinho: o pacote pinta este UMA VEZ por perfil
-                       escolhido (ver `a10_perfis.CAMPOS_QUE_ELA_DIGITA`) para
-                       não devolver o punho ao valor do disco no meio do arrasto
-                       dela, enquanto o número ao lado continua repintando a
-                       cada tique. -->
-                  <span class="trilho"><span class="cheio" data-hef="editor.prioridade" data-hef-alvo="largura" style="width:{PCT_DO_DESENHO}%"></span><input type="range" class="desliza" min="{PRIORIDADE_MINIMA}" max="{PRIORIDADE_MAXIMA}" step="1" value="{PRI_DO_DESENHO}" aria-label="Preferência" data-hef="editor.prioridade.escolha" data-hef-alvo="valor" data-hef-gesto="editor.prioridade"></span>
-                  <span class="n" data-hef="editor.prioridade.n">{PRI_DO_DESENHO}</span>
-                </span>
-              </div>
-              <!-- O CADEADO — decisão [01] do PO, 04/09/2026: *"Cadeado no
-                   campo, frase no hover."* Sete dos nove perfis de fábrica
-                   casam por uma regra que este seletor não sabe descrever, e
-                   até aqui ele ficava IDÊNTICO a um destravado: a marca de
-                   travado e a frase que a explica já saíam do produto
-                   (`perfis_web._ambiente_do_perfil`) e caíam no vazio, porque
-                   endereço para elas não existia nesta página. Só depois do
-                   clique é que a tela reclamava. -->
-              <div class="campo">
-                <span>Funciona em:</span>
-                <span class="val"><select data-hef="editor.ambiente" data-hef-gesto="editor.ambiente" data-hef-alvo="valor">
-{opts(AMBIENTES, PROCEDENCIA_DO_DESENHO, travessao=True)}
-                </select>{marca_com_dica("trava", "editor.ambiente.travado",
-                                        "editor.ambiente.recado", CADEADO)}</span>
-              </div>
-              <!-- O PONTO DE ALERTA — a outra metade da mesma decisão. O caso
-                   é o do Pragmata: o editor mostrava "Jogo da Steam · 3357650"
-                   e o arquivo exigia TAMBÉM `PRAGMATA.exe`; o `matches` é AND,
-                   o campo invisível era o que decidia, e o perfil não entrava
-                   sozinho — medido seis vezes em dois minutos com ela jogando.
-                   A frase que conta isso já existia
-                   (`simple_match.exigencia_invisivel`) e nunca tinha chegado a
-                   esta tela. -->
-              <div class="campo">
                 <span>Nome do jogo:</span>
                 <span class="val">
-                  <!-- A LISTA DOS JOGOS DESTA MÁQUINA — PERFIL-MODO-01, Passo 3
-                       (06/09/2026). A janela GTK tem `Gtk.EntryCompletion` sobre
-                       este mesmo campo (`profiles_actions._instalar_lista_de_
-                       jogos_do_pc`), alimentada por `integrations/jogos_locais.
-                       catalogo_de_jogos()`; aqui o campo era texto LIVRE, e
-                       criar um perfil de jogo exigia saber o appid de cor.
-
-                       `<datalist>` E NÃO UM `<select>`, e a escolha é a do
-                       enunciado dela: *"uma lista que recusa o que ela sabe que
-                       existe é pior que campo livre"*. O `<datalist>` OFERECE
-                       sem fechar — o `<input>` continua aceitando qualquer
-                       texto, inclusive o appid de um jogo que ela ainda vai
-                       comprar (`MSG_FORA_DA_MAQUINA` existe para esse caso).
-
-                       ELE NASCE VAZIO NO DESENHO, e é a mesma disciplina do
-                       `title=""` da linha da lista e da `.dica` do cadeado: o
-                       conteúdo é a biblioteca do usuário, e um exemplo cravado aqui
-                       seria a tela afirmando que ela tem um jogo que talvez não
-                       tenha. Quem o enche é `a10_perfis`, pelo `blocos` — o
-                       mesmo caminho da lista de perfis, e pelo mesmo motivo: um
-                       bloco cujo número de filhos muda com o dado não tem
-                       endereço para o filho que ainda não existe. -->
                   <input type="text" data-hef="editor.jogo" data-hef-gesto="editor.jogo"
                          data-hef-alvo="valor" list="jogos-desta-maquina"
+                         data-dica="Escolha um jogo desta máquina; o perfil leva o nome dele"
                          value="Mortal Kombat 1">{marca_com_dica(
                            "exige", "editor.jogo.exige", "editor.jogo.exigencia")}
                   <datalist id="jogos-desta-maquina" data-hef="editor.jogo.lista"></datalist>
-                  {rotulo_do_jogo()}
-                  <button class="btn roxo" data-hef-gesto="detectar" title="Usa o jogo que está aberto agora e monta a regra — de qualquer lugar, não só da Steam.">Detectar</button>
                 </span>
               </div>
               <div class="campo">
-                <span title="Pré-aplica de uma vez o gatilho, a vibração e a cor da luz. Os {QUANTOS_ESTILOS_DE_FABRICA} de fábrica não se editam; o Personalizado usa o que você ajustou nas abas.">Estilo de jogo:</span>
-                <span class="val"><select class="destaque" data-hef="editor.estilo" data-hef-gesto="editor.estilo" data-hef-alvo="valor">
+                <span>Aplicar em:</span>
+                <span class="val"><span class="seg alvos">
+{chr(10).join(botao_do_alvo(v, r, d) for v, r, d in ALVOS_DO_DESENHO)}
+                </span></span>
+              </div>
+              <div class="campo so-eventos" data-hef="editor.alvo.eventos" data-hef-alvo="classe">
+                <span data-dica="Quando o perfil entra">Quando:</span>
+                <span class="val ev-val"><select class="estreito" data-hef="editor.evento" data-hef-gesto="editor.quando" data-hef-alvo="valor" aria-label="Quando o perfil entra">
+{opcoes_do_quando()}
+                </select><input type="text" class="ev-cmd" data-hef="editor.evento.comando" data-hef-gesto="editor.quando" data-que="comando" data-hef-alvo="valor" aria-label="Comando ou arquivo .sh" placeholder="Comando ou arquivo .sh"
+                  data-dica="Um comando de terminal ou um arquivo .sh" value=""></span>
+              </div>
+              <div class="campo">
+                <span data-dica="O estilo decide o automático: gatilho, vibração e luz">Estilo de jogo:</span>
+                <span class="val"><select class="destaque estreito" data-hef="editor.estilo" data-hef-gesto="editor.estilo" data-hef-alvo="valor">
 {opts(ESTILOS, "", vazio=True)}
                 </select></span>
+              </div>
+              <div class="ordem-vale">
+                <div class="cab" data-dica="Arraste: o de cima vale quando os dois servem">Qual vale primeiro</div>
+                <ol data-hef="editor.ordem">
+{chr(10).join(item_da_ordem(n, i, n == PERFIL_DO_EDITOR) for i, n in enumerate(ORDEM_DO_DESENHO, 1))}
+                </ol>
               </div>
               <div class="guarda">
                 <table class="tab miuda" data-hef="guarda.larguras" data-hef-alvo="atributo"
@@ -1565,9 +1544,9 @@ MIOLO = f'''
                        data-larguras="">
                   <colgroup><col data-coluna="controle"><col data-coluna="status"><col data-coluna="id"></colgroup>
                   <thead><tr>
-                    <th title="O perfil guarda um ajuste por controle. Aqui você vê quais são só deste controle e quais vêm do perfil.">Controle{puxador("controle", "10-perfis.guarda")}</th>
-                    <th class="gd-pecas" title="{DICA_DO_STATUS} São {QUANTAS_SECOES}: {_lista_das_secoes()}.">Status{puxador("status", "10-perfis.guarda")}</th>
-                    <th class="gd-id" title="O endereço de rádio do controle: é por ele que o perfil o reconhece, no cabo e no rádio.">ID da peça</th>
+                    <th data-dica="Um ajuste por controle, guardado no perfil">Controle{puxador("controle", "10-perfis.guarda")}</th>
+                    <th class="gd-pecas" data-dica="{DICA_DO_STATUS}">Status{puxador("status", "10-perfis.guarda")}</th>
+                    <th class="gd-id" data-dica="Por este endereço o perfil reconhece o controle">ID da peça</th>
                   </tr></thead>
                   <tbody data-hef="guarda.linhas">
 {chr(10).join(linha_do_controle(c) for c in MESA)}
@@ -1576,85 +1555,44 @@ MIOLO = f'''
               </div>
 
               </div>
-              <!-- OS TRÊS VIRARAM UM — 11/09/2026, ordem de produto. O `Recarregar` foi
-                   para o rótulo `Perfis salvos` (ele relê a LISTA, e a lista é a
-                   tabela da esquerda) e o `Voltar à de ontem` para o rótulo
-                   `Editar` — *"tem que arrumar outro canto pra deixar ele ao  (noqa-acento) citação
-                   invés de botão como os demais"*. Sobrou UM botão neste canto, e  (noqa-acento) citação
-                   a classe `um-so` o faz ocupar a largura inteira em vez de um
-                   terço com dois vãos vazios ao lado.
-
-                   QUEM FICA NELE É O `Ativar`, E FOI ELA QUEM TROCOU — 11/09,
-                   depois de ver: *"trocar o botão do novo Duplicar que ficou  (noqa-acento) citação
-                   gigante pelo ativar e deixar ele verde"*. O `Duplicar` desceu  (noqa-acento) citação
-                   para a fileira da esquerda, no lugar que o `Ativar` deixou —
-                   os quatro gestos continuam na tela, nenhum se perdeu na troca.
-
-                   E A TROCA TEM RAZÃO DE PRODUTO, não só de tamanho: o botão
-                   largo é o da AÇÃO PRINCIPAL desta aba, e a ação principal de
-                   um perfil é passar a usá-lo. Duplicar é o gesto raro; ele
-                   cabe na fileira com o `Novo` e o `Remover`, que são os outros
-                   dois que mexem na LISTA da esquerda. O `Ativar` fica verde
-                   (`btn verde`) — a mesma classe que ele já tinha à esquerda,
-                   para a cor não mudar de significado ao mudar de lugar. -->
-              <div class="botoes um-so">
-                <button class="btn verde" data-hef-gesto="ativar" title="Passa a usar este perfil agora, em todas as abas.">Ativar</button>
-              </div>
             </div>
           </div>
 
         </div>
+        <div class="barra-quatro-onde"><div class="barra-quatro">
+          <button class="btn" data-hef-gesto="duplicar" data-dica="Copia o perfil, com «(cópia)» no nome">Duplicar</button>
+          <button class="btn" data-hef-gesto="novo" data-dica="Perfil em branco; com jogo aberto, nasce para ele">Novo</button>
+          <button class="btn vermelho" data-hef-gesto="remover" data-hef="perfis.remover" data-dica="Apaga o perfil; pergunta antes">Remover</button>
+          <button class="btn verde" data-hef-gesto="ativar" data-dica="Passa a usar este perfil agora">Ativar</button>
+        </div></div>
       </div>
     </div>
 {ROTEIRO}
 '''
 
 # máscara existe e o perfil a guarda — com TRÊS opções (DualSense · Xbox 360 ·
-LEGENDA = f'''<div class="nota">
-  <h2>O que mudou com quatro controles ligados</h2>
+LEGENDA = '''<div class="nota">
+  <h2>O que mudou na Perfis do todo (15/10/2026)</h2>
   <ul>
-    <li><b>O editor mostrava cinco campos e gravava vinte.</b> A tabela de baixo mostra o
-      resto: <span class="marca">"cada controle guarda a sua configuração aqui dentro, pelo
-      ID da peça"</span> era uma promessa que só existia na dica do <b>Perfil ativo</b>. Agora
-      ela está desenhada, e são <b>{len(MESA)} configurações dentro do mesmo perfil</b>.</li>
-    <li><b>Os {QUANTAS_SECOES} ajustes da linha não são escolha minha.</b> São os campos de
-      <code>ControllerOverrides</code> — {_lista_das_secoes()} —, nem um a mais.
-      O <b>microfone</b> entrou por decisão dela em 03/09 e os <b>sensores</b> em 04/09,
-      quando o giroscópio e o acelerômetro passaram a desligar de verdade por peça
-      (<code>manager.apply_controller_sensores</code>). A lista da tela sai da mesma
-      ordem do esquema: um campo novo lá aparece aqui, em vez de ficar guardado no
-      disco e invisível na tabela. Modo, mouse e teclado continuam sendo do
-      perfil inteiro, e a classe escreve o motivo de cada um.</li>
-    <li><b>O glifo diz o controle agora; o ponto embaixo diz o perfil.</b> Aceso é ligado
-      agora naquele controle, apagado é desligado, e o tracejado é o que o controle não
-      diz (o gatilho, hoje). O <b>ponto</b> é o que o perfil aberto no editor guarda só
-      para aquele controle; sem ponto, ele usa a seção global do perfil, e isso não é
-      falta, é herança, e é o caso mais comum.</li>
-    <li><b>O desenho do controle saiu da linha, e a cor ficou.</b> Ele tinha 32px e
-      <span class="marca">os quatro liam como quatro cinzas</span>: medido no 1x desta tela,
-      o par de cores mais próximo se distinguia em <b>33 pixels de
-      736</b>. A cor do plástico aqui é um traço fino, e a 32px o traço vale um terço de
-      pixel. Crescer não cabia: no tamanho em que a cor se lê, as quatro linhas pedem 209px
-      de altura e a tabela tem 132px. Quem diz de quem é a linha agora é a <b>barra de 3px
-      na cor do plástico</b> e o <b>rótulo curto</b> do controle — os dois já estavam lá.
-      A cor continua saindo do <code>&lt;style&gt;</code> que o
-      <code>gerar_cores_do_dualsense.py</code> escreveu, por <code>cor_da_zona()</code>:
-      <b>nenhum hexadecimal digitado aqui</b>. Os glifos são os mesmos
-      <code>assets/glyphs/</code> das outras abas.</li>
-    <li><b>A barra e o rótulo dizem o controle DELA, não o do desenho.</b> A barra virou um
-      elemento endereçado (<code>guarda.plastico</code>) e quem escreve a cor é
-      <code>a10_perfis</code>, com o que leu dos controles — a mesma leitura da fita do topo.
-      Sem cor lida, a barra <b>some</b>: campo sem informação não mostra nada.</li>
-    <li><b>O cabeçalho conta os controles</b>: {len(PERFIS)} perfis e
-      {COM_AJUSTE} de {len(MESA)} controles com ajuste próprio.</li>
-    <li><b>A linha diz DUAS coisas, e elas não são a mesma.</b> A <b>cor verde e a barra
-      verde</b> dizem <b>está valendo agora</b>; o <b>fundo roxo e a barra roxa</b> dizem
-      <b>é esta que o editor ao lado está mostrando</b> — a que os nove botões vão mexer.
-      Quando são a mesma linha, a barra vem <b>dupla</b>: verde e roxa, lado a lado. É o
-      estado desenhado aqui, porque é o estado em que a aba abre.
-      <span class="marca">Antes disto, clicar num nome não mudava um pixel</span> — palavra
-      sua: "quando clica em algum nome do perfis salvos nada indica que tal coisa tá
-      selecionado".</li>
+    <li><b>A lista conta quando o perfil nasceu e quando você o mudou.</b> Colunas
+      <b>Nome</b>, <b>Criado em</b> e <b>Modificado em</b>; perfil de antes das datas mostra
+      <b>—</b>. O duplo clique no cabeçalho ordena (datas: o mais novo primeiro; o <b>—</b> fica
+      sempre embaixo). Um clique na linha <b>ativa e abre</b> o perfil, e o <b>Perfil ativo</b>
+      do topo e o editor mostram o mesmo nome.</li>
+    <li><b>O editor procura o perfil pelo nome do jogo.</b> <b>Nome do jogo</b> (a lista é a dos jogos
+      desta máquina), <b>Aplicar em</b> (Jogos, Navegação, Programas, Eventos) e, só em
+      Eventos, o <b>Quando</b> (um momento do jogo, do sistema ou o seu comando). Saíram o
+      Nome, a Preferência (o controle deslizante), o Funciona em e o Detectar.</li>
+    <li><b>Qual vale primeiro.</b> Com dois perfis do mesmo jogo, arrastar um acima do outro
+      decide qual entra quando os dois servem. O perfil que o Hefesto criou sozinho cede a vez
+      ao seu.</li>
+    <li><b>O estilo ganhou três.</b> <b>Nativo</b> (o jogo decide: gatilho, vibração e luz em
+      Automático), <b>Visual novel</b> e <b>Adulto</b>; o <b>Point and click</b> trouxe a tabela
+      de botões do jogo de clicar. O seletor abre em <b>—</b>.</li>
+    <li><b>Quatro botões embaixo</b>, do mesmo tamanho: Duplicar, Novo, Remover e Ativar (verde).
+      O botão largo sozinho saiu.</li>
+    <li><b>A tabela por controle fala pela cor do plástico</b> (<b>Galactic Purple</b>, <b>White</b>),
+      também nos lugares vazios, e as dicas viram <code>data-dica</code>.</li>
   </ul>
 
   <h2>O que você mandou tirar, e continua fora</h2>
@@ -1674,7 +1612,6 @@ LEGENDA = f'''<div class="nota">
       16/07 e gravava calado: nenhuma tela dizia quais controles têm ajuste próprio.
       Era a pergunta <b>4</b> do contrato desta aba, e a tabela é a resposta.</li>
     <li><b>"Voltar à de ontem"</b> — cada gravação já guarda a anterior e nenhuma tela oferecia isso (<code>profiles/loader.py:1864</code>).</li>
-    <li><b>"Detectar"</b> — abra o jogo de onde for, volte e clique; o perfil nasce com a regra certa.</li>
   </ul>
 
   <h2>Ainda é sua a palavra</h2>
@@ -1735,24 +1672,33 @@ def _conferir(html: str) -> None:
         exigir(f'class="sec-rot">{titulo}<' in html,
                f"o título de bloco '{titulo}' não está na tela")
 
-    for rot in ("Nome:", "Preferência:", "Funciona em:", "Nome do jogo:", "Estilo de jogo:"):
+    for rot in ("Nome do jogo:", "Aplicar em:", "Quando:", "Estilo de jogo:"):
         exigir(f">{rot}</span>" in html, f"o rótulo '{rot}' não está na tela")
-    th_pri = re.search(r'<th class="pri"[^>]*>([^<]*)', html)
-    exigir(th_pri is not None, "o cabeçalho da Preferência sumiu da tabela")
-    if th_pri:
-        exigir(th_pri.group(1).strip() == "Preferência",
-               f"o cabeçalho voltou a ser abreviado: {th_pri.group(1)!r}")
+    for velho in ("Nome:", "Preferência:", "Funciona em:"):
+        exigir(f">{velho}</span>" not in html,
+               f"o rótulo '{velho}' voltou — o editor da Perfis do todo não o tem")
+    for coluna, rot in (("nome", "Nome"), ("criado", "Criado em"), ("modificado", "Modificado em")):
+        th = re.search(rf'<th[^>]*data-coluna="{coluna}"[^>]*>{rot}<', html)
+        exigir(th is not None, f"o cabeçalho '{rot}' sumiu da lista de perfis")
+    exigir('data-coluna="prioridade"' not in html and 'data-coluna="quando"' not in html,
+           "a lista voltou às colunas Preferência e Funciona em — a Perfis do todo mostra "
+           "Nome, Criado em e Modificado em")
 
     fundos = re.findall(r"\.tab thead th:nth-child\(\d\)\{background-image:([^}]*)\}", html)
     exigir(len(fundos) == 3, f"não são 3 fundos de coluna no CSS, e sim {len(fundos)}")
     exigir(len(set(fundos)) == 3, "os fundos das três colunas não são cores diferentes")
 
     fora = [c for c in MESA if not c.get("conectado", True)]
-    exigir(html.count("Desconectado</span>") == len(fora),
-           f"não são {len(fora)} lugares 'Desconectado' na tabela por controle")
-    for c in fora:
+    exigir("Desconectado</span>" not in html,
+           "voltou o «Desconectado» ao lugar vazio — ele fala pela cor do plástico (sem P3)")
+    for c in MESA:
+        esperado = (SEPARADOR.join([c["nome"], c["via"]]) if c.get("conectado", True)
+                    else c["nome"])
+        exigir(f'<span data-hef="guarda.nome">{esperado}</span>' in html,
+               f"o nome do lugar de {c['nome']} não é «{esperado}»")
         exigir(rotulo(c, "curta") not in html,
-               f"o rótulo de mesa do P{c['jogador']} continua na tela — ele não está na mesa")
+               f"o rótulo de mesa «Pn • …» de {c['nome']} continua na tela — a cor do plástico "
+               f"fala no lugar do número do jogador")
     exigir(html.count('class="fora"') == len(fora),
            "os lugares desconectados perderam a classe que os apaga")
 
@@ -1768,13 +1714,13 @@ def _conferir(html: str) -> None:
     exigir(len(linhas) == len(MESA),
            f"não são {len(MESA)} linhas na tabela por controle, e sim {len(linhas)}")
     na_mesa_com_dica = [t for c, t in zip(MESA, linhas, strict=True)
-                        if c.get("conectado", True) and "title=" in t]
+                        if c.get("conectado", True) and "data-dica=" in t]
     exigir(not na_mesa_com_dica,
            f"{len(na_mesa_com_dica)} linha(s) de controle NA MESA voltaram a ter "
            f"dica — ela congela o nome do modelo do desenho por cima de um "
            f"aparelho que é outro")
     fora_sem_dica = [c["pref"] for c, t in zip(MESA, linhas, strict=True)
-                     if not c.get("conectado", True) and "title=" not in t]
+                     if not c.get("conectado", True) and "data-dica=" not in t]
     exigir(not fora_sem_dica,
            f"o lugar vazio {fora_sem_dica} perdeu a dica que explica por que ele "
            f"continua na tabela — ela não fala de aparelho nenhum")
@@ -1807,7 +1753,7 @@ def _conferir(html: str) -> None:
     exigir(len(celulas) == len(MESA) * len(SECOES),
            f"não são {len(MESA) * len(SECOES)} células de `guarda.secao` "
            f"({len(MESA)} controles x {len(SECOES)} seções), e sim {len(celulas)}")
-    com_dica = [c for c in celulas if "title=" in c]
+    com_dica = [c for c in celulas if "data-dica=" in c]
     exigir(not com_dica,
            f"{len(com_dica)} célula(s) de `Ajuste próprio` voltaram a ter dica — "
            f'ela mandou as oito saírem: "Auto falante é auto falante, gatilho é gatilho"')
@@ -1818,7 +1764,7 @@ def _conferir(html: str) -> None:
                f"não são {len(MESA) * len(SECOES)} células de `{endereco}`, e sim "
                f"{quantas}")
     dicas_das_celulas = re.findall(
-        r'<span class="gc" data-hef="guarda\.dica"[^>]*?title="([^"]*)"', html)
+        r'<span class="gc" data-hef="guarda\.dica"[^>]*?data-dica="([^"]*)"', html)
     estranhas = [d for d in dicas_das_celulas
                  if d not in (DICA_DO_NAO_DIZ, _RESUMO_DA_MIRA_NA_CENA)
                  and not re.fullmatch(re.escape(DICA_DA_MASCARA).replace(
@@ -1834,17 +1780,10 @@ def _conferir(html: str) -> None:
 
     exigir('data-hef-secao="mic"' in html,
            "a coluna do microfone sumiu da linha `Ajuste próprio` (decisão nº20)")
-    exigir(f"São {QUANTAS_SECOES}:" in html,
-           f"a dica do cabeçalho não diz mais `{QUANTAS_SECOES}` por controle")
     sem_nome = [campo for campo, _ in SECOES if campo not in NOME_DA_SECAO]
     exigir(not sem_nome,
            f"a(s) seção(ões) {sem_nome} não têm nome em `NOME_DA_SECAO` — a dica "
            f"do cabeçalho não saberia como chamá-la na tela")
-    fora_da_dica = [NOME_DA_SECAO[campo] for campo, _ in SECOES
-                    if NOME_DA_SECAO[campo] not in html]
-    exigir(not fora_da_dica,
-           f"a dica do cabeçalho não nomeia {fora_da_dica} — a coluna existe na "
-           f"tabela e a frase que a explica não a menciona")
 
     exigir(html.count('data-hef="perfis.desfecho"') == 2,
            "a tira do desfecho perdeu um dos dois endereços — sem o `classe` "
@@ -1878,8 +1817,7 @@ def _conferir(html: str) -> None:
                "só, e as duas linhas reservadas viram espaço morto")
 
     for classe, estado, frase in (
-            ("trava", "editor.ambiente.travado", "editor.ambiente.recado"),
-            ("exige", "editor.jogo.exige", "editor.jogo.exigencia")):
+            ("exige", "editor.jogo.exige", "editor.jogo.exigencia"),):
         marca = re.search(rf'<span class="{classe}"[^>]*>', html)
         exigir(marca is not None,
                f"a marca `{classe}` sumiu do editor — o campo volta a ficar "
@@ -1896,38 +1834,12 @@ def _conferir(html: str) -> None:
                f"o endereço sumiu, ou o mockup passou a cravar uma frase que é "
                f"dado do perfil dela")
 
-    exigir(html.count('data-hef="editor.jogo.rotulo"') == 2,
-           "o rótulo do jogo perdeu um dos dois endereços — sem o `classe` ele "
-           "fica aceso com um travessão solto ao lado do campo; sem o `<span>` "
-           "ele nunca escreve o nome do jogo")
-    exigir('<span class="rot" data-hef="editor.jogo.rotulo"'
-           ' data-hef-alvo="classe">' in html,
-           "o rótulo do jogo perdeu o alvo `classe` — ele apareceria em todo "
-           "perfil, inclusive nos que não têm jogo nenhum a nomear")
-    exigir('data-hef="editor.jogo.alerta" data-hef-alvo="classe"'
-           ' data-hef-classe="alerta"' in html,
-           "o rótulo do jogo perdeu a tinta do alerta — «não reconheci este "
-           "endereço» sairia da mesma cor de «não instalado aqui», e o erro "
-           "ficaria com a cara da rotina")
-    exigir('<span data-hef="editor.jogo.rotulo"></span>' in html,
-           "o rótulo do jogo não nasce VAZIO no desenho — um exemplo aqui é a "
-           "tela afirmando um jogo que o perfil dela não tem")
-    regra_rot = re.search(r"\.campo \.rot\{[^}]*\}", html)
-    exigir(regra_rot is not None, "a regra do rótulo do jogo sumiu do CSS")
-    if regra_rot:
-        corpo_rot = regra_rot.group(0)
-        for peca in ("white-space:nowrap", "overflow:hidden",
-                     "text-overflow:ellipsis", "display:none", "min-width:0",
-                     "max-width:45%"):
-            exigir(peca in corpo_rot,
-                   f"o rótulo do jogo perdeu `{peca}` — nome de jogo é dado "
-                   f"dela e pode ser longo; sem as seis peças o rótulo empurra "
-                   f"o `Detectar` para fora do quadro, come o campo, ou nasce "
-                   f"visível")
+    exigir('data-hef="editor.jogo.rotulo"' not in html and "gesto=\"detectar\"" not in html,
+           "o rótulo do jogo ou o Detectar voltou ao editor — o campo «Nome do jogo» é o único "
+           "caminho, e o perfil leva o nome do jogo escolhido")
     exigir("grid-template-columns:var(--rot-p) minmax(0,1fr)" in html,
            "a fileira do campo voltou a `1fr` — uma pista de grade cresce com o "
-           "MIN-CONTENT, e o rótulo do jogo é texto: a segunda coluna estoura a "
-           "página e leva o `Detectar` junto")
+           "MIN-CONTENT e estoura a página")
 
     exigir('<div class="campo modo">' not in html,
            "o quadro Modo voltou ao editor de Perfis — ele sai por ordem dela "
@@ -1985,67 +1897,55 @@ def _conferir(html: str) -> None:
                "nenhum campo a consulta, que é o silêncio que esta casa lê "
                "como sucesso")
 
-    dica = re.search(r'data-hef="editor\.prioridade\.dica" title="([^"]*)"', html)
-    exigir(dica is not None, "a dica da Prioridade perdeu o `title` do desenho")
-    if dica:
-        exigir(dica.group(1) == DICA_DA_PRIORIDADE,
-               f"a dica da Prioridade não é a frase decidida:\n"
-               f"    tem  {dica.group(1)!r}\n"
-               f"    quer {DICA_DA_PRIORIDADE!r}")
-        exigir(dica.group(1).startswith(FRASE_DA_PRIORIDADE_DELA),
-               "a frase DELA deixou de vir primeiro na dica da Prioridade")
-
-    faixa = re.search(r'<input type="range" class="desliza"[^>]*>', html)
-    exigir(faixa is not None,
-           "a Prioridade voltou a ser uma barra que não se arrasta — era o "
-           "único campo do editor sem caminho de escrita")
-    if faixa:
-        campo = faixa.group(0)
-        exigir(f'min="{PRIORIDADE_MINIMA}"' in campo
-               and f'max="{PRIORIDADE_MAXIMA}"' in campo,
-               f"a faixa do slider não é a do esquema "
-               f"({PRIORIDADE_MINIMA}..{PRIORIDADE_MAXIMA}) — ela passou a ser "
-               f"digitada, e envelhece no dia em que o teto mudar")
-        exigir('data-hef-gesto="editor.prioridade"' in campo,
-               "o slider da Prioridade perdeu o gesto — arrastar volta a ser "
-               "silêncio no stdout de quem lançou a janela")
-        exigir(f'value="{PRI_DO_DESENHO}"' in campo,
-               f"o slider abre num número que não é o do desenho "
-               f"({PRI_DO_DESENHO}) — o punho e a legenda discordariam")
-    exigir(f'data-hef-alvo="largura" style="width:{PCT_DO_DESENHO}%"' in html,
-           f"a barra do cheio não mostra {PCT_DO_DESENHO}% — a largura do "
-           f"desenho voltou a ser digitada em vez de sair do teto do esquema")
+    exigir("editor.prioridade" not in html and 'class="trilho"' not in html,
+           "a Preferência (o slider) voltou à tela — a ordem entre perfis do mesmo jogo agora se "
+           "arrasta em «Qual vale primeiro»")
+    exigir("editor.ambiente" not in html and "editor.nome\"" not in html,
+           "o «Funciona em» ou o «Nome:» voltou à tela — «Aplicar em» e «Nome do jogo» os "
+           "substituem")
 
     for e in ESTILOS_DO_MOTOR:
         exigir(f">{e.rotulo}</option>" in html,
                f"o estilo '{e.rotulo}' está no motor e não está no `<select>` "
                f"— o gesto saberia aplicá-lo e ela não teria como pedir")
-    exigir('<option value="" selected>—</option>' in html,
+    exigir('<option value="" disabled selected>—</option>' in html,
            "a opção vazia do estilo de jogo saiu — o campo voltaria a abrir "
            "afirmando um estilo que perfil nenhum guarda")
-    exigir(f"Os {QUANTOS_ESTILOS_DE_FABRICA} de fábrica não se editam" in html,
-           f"a dica do estilo de jogo não diz os {QUANTOS_ESTILOS_DE_FABRICA} "
-           f"de fábrica que o motor tem — a conta voltou a ser digitada")
+    exigir('data-dica="O estilo decide o automático: gatilho, vibração e luz">Estilo de jogo:' in html,
+           "a dica do estilo de jogo mudou — ela é a frase curta do desenho")
+    opcoes = re.search(r'<select class="destaque estreito"[^>]*>(.*?)</select>', html, re.S)
+    exigir(opcoes is not None, "o select do estilo sumiu")
+    if opcoes:
+        rotulos = re.findall(r">([^<]+)</option>", opcoes.group(1))
+        exigir(rotulos[:2] == ["—", "Nativo"] and rotulos[-1] == "Personalizado",
+               f"o estilo abre em «—», depois «Nativo», e fecha em «Personalizado»: {rotulos}")
+        exigir('<option data-dica="O jogo decide">Nativo</option>' in opcoes.group(1),
+               "o Nativo perdeu a dica «O jogo decide»")
+    exigir("Criar perfil de point and click" not in html and "Criar perfil de point-and-click"
+           not in html,
+           "voltou o botão «Criar perfil de point and click» — o estilo Point and click do "
+           "select já faz o perfil")
+    exigir("um-so" not in html and 'class="botoes' not in html,
+           "voltou o botão largo sozinho (`.um-so`) — o Ativar fica na barra de quatro")
+    exigir('<span class="ajuda">' not in html,
+           "voltou o «?» do título da Perfis — a dica agora mora no próprio título")
 
-    exigir(f'<option value="{TRAVESSAO}" disabled>{TRAVESSAO}</option>' in html,
-           "a opção `—` do 'Funciona em' saiu — o perfil de regra fina volta a "
-           "mostrar a opção que o DESENHO trazia")
-
-    for jargao in ("Jogo da Steam", "Jogo (pela janela)"):
-        exigir(f">{jargao}</option>" not in html,
-               f"“{jargao}” voltou ao 'Funciona em' — é o jargão de "
-               f"implementação que ela mandou tirar em 11/09/2026, e ele pede "
-               f"dela a chave pela qual o jogo é reconhecível")
-    exigir(">Jogo</option>" not in html,
-           "“Jogo” voltou ao 'Funciona em' — a opção que pedia dela a "
-           "diferença entre `process_name` e `wm_class`")
-    exigir(f">{PROCEDENCIA_DA_NAVEGACAO}</option>" in html,
-           f"“{PROCEDENCIA_DA_NAVEGACAO}” saiu do 'Funciona em' — é a fixa que "
-           f"sobra numa máquina sem lançador nenhum, e sem ela o campo nasce "
-           f"vazio em quem acabou de instalar")
-    exigir(f">{PROCEDENCIA_DE_QUALQUER_JOGO}</option>" not in html,
-           f"“{PROCEDENCIA_DE_QUALQUER_JOGO}” voltou ao 'Funciona em' — o `any` "
-           f"nunca entra sozinho, e a opção gravaria um «{ROTULO_SO_QUANDO_ESCOLHER}»")
+    barra = re.search(r'<div class="barra-quatro">(.*?)</div></div>', html, re.S)
+    exigir(barra is not None, "a barra dos quatro botões sumiu")
+    if barra:
+        gestos = re.findall(r'data-hef-gesto="([^"]+)"', barra.group(1))
+        exigir(gestos == ["duplicar", "novo", "remover", "ativar"],
+               f"a barra de baixo não é Duplicar, Novo, Remover, Ativar: {gestos}")
+    alvos = re.findall(r'data-hef-gesto="editor\.alvo" data-v="([^"]+)"', html)
+    exigir(alvos == ["jogos", "navegacao", "programas", "eventos"],
+           f"«Aplicar em» não tem os quatro lugares na ordem: {alvos}")
+    exigir('class="campo so-eventos"' in html and 'hidden' not in
+           re.search(r'<div class="campo so-eventos"[^>]*>', html).group(0),
+           "o «Quando» perdeu a classe `so-eventos` ou ganhou `hidden` (quem esconde é o CSS)")
+    exigir('data-hef="editor.ordem"' in html and 'class="ordem-vale"' in html,
+           "o bloco «Qual vale primeiro» sumiu")
+    exigir(".ordem-vale:has(ol:empty){display:none}" in html,
+           "«Qual vale primeiro» deixou de sumir com menos de dois perfis no jogo")
 
     exigir("--rot-p:86px" in html,
            "a coluna do rótulo não é mais a medida do rótulo mais largo (86px)")
@@ -2087,7 +1987,7 @@ def _conferir(html: str) -> None:
                "SIMPLES no cabeçalho passa a ordenar. Ela pediu DUPLO clique, "
                "e a razão está na regra: o cabeçalho é `sticky` a um pixel da "
                "célula que troca o perfil aberto no editor")
-    for coluna in ("nome", "prioridade", "quando"):
+    for coluna in ("nome", "criado", "modificado"):
         seta = re.search(rf'<span class="ordena" data-hef="perfis\.ordem\.{coluna}"[^>]*>',
                          html)
         exigir(seta is not None,
@@ -2114,20 +2014,8 @@ def _conferir(html: str) -> None:
            "palavra inteira no HTML. A margem mora em `.ordena[data-ordem]`")
     exigir(re.search(r"\.ordena\[data-ordem\]\{[^}]*margin-left", html) is not None,
            "a seta ORDENADA perdeu a margem — ela encosta no rótulo da coluna")
-    larg_col = re.search(r'\.tab col\[data-coluna="prioridade"\]\{width:(\d+)px\}', html)
-    larg_cel = re.search(r"\.tab \.pri\{[^}]*width:(\d+)px", html)
-    exigir(larg_col is not None and larg_cel is not None,
-           "sumiu uma das duas larguras da coluna `Priorização` — a da célula "
-           "ou a do `<col>`")
-    if larg_col and larg_cel:
-        exigir(larg_col.group(1) == larg_cel.group(1),
-               f"as duas larguras da `Priorização` discordam: `<col>` diz "
-               f"{larg_col.group(1)}px e `.pri` diz {larg_cel.group(1)}px")
-        exigir(int(larg_col.group(1)) >= 96,
-               f"a coluna `Priorização` voltou a {larg_col.group(1)}px — o "
-               f"rótulo mede 86px e a seta da ordem custa 10 (6,2 de glifo + 4 "
-               f"de margem). Abaixo de 96 o cabeçalho da coluna ORDENADA sai "
-               f"abreviado na tela, com a palavra inteira no HTML")
+    exigir('.tab col[data-coluna="criado"],.tab col[data-coluna="modificado"]{width:104px}' in html,
+           "as colunas de data perderam a largura que cabe «dd/mm/aaaa» com a seta da ordem")
 
     for seta_glifo in ("↑", "↓"):
         exigir(f'.ordena[data-ordem="{seta_glifo}"]::after{{content:"{seta_glifo}"}}' in html,
@@ -2137,8 +2025,7 @@ def _conferir(html: str) -> None:
                f"qual coluna ordena")
 
     for gesto_, canto, dica_ in (
-            ("recarregar", "Perfis salvos",
-             "Relê a lista de perfis. Não mexe no editor ao lado."),):
+            ("recarregar", "Perfis salvos", "Relê a lista"),):
         icone = re.search(rf'<button type="button" class="icone-rot" '
                           rf'data-hef-gesto="{gesto_}"[^>]*>', html)
         exigir(icone is not None,
@@ -2146,7 +2033,7 @@ def _conferir(html: str) -> None:
                f"por ordem dela em 11/09/2026, e o nome do gesto não muda por "
                f"troca de invólucro")
         if icone:
-            exigir(f'title="{dica_}"' in icone.group(0),
+            exigir(f'data-dica="{dica_}"' in icone.group(0),
                    f"o ícone de `{gesto_}` perdeu a dica, palavra por palavra. "
                    f"Um ícone sem dica é uma função que ninguém acha — é o "
                    f"custo inteiro de trocar palavra por desenho")
@@ -2177,9 +2064,8 @@ def _conferir(html: str) -> None:
         exigir(th_status.group(1).strip() == "Status",
                f"o rótulo da coluna não é `Status`: {th_status.group(1)!r}. "
                f"Ela mandou trocar o nome em 11/09/2026, e SÓ o nome")
-    exigir("controles com ajuste próprio" in html,
-           "o contador do cabeçalho virou `status` — a troca é do RÓTULO da "
-           "coluna, e a prosa continua nomeando a coisa")
+    exigir("controles com ajuste próprio" not in html,
+           "o contador «controles com ajuste próprio» voltou ao título — a Perfis do todo não o tem")
     exigir(DICA_DO_STATUS in html,
            "a dica do `<th>` não diz as duas camadas — ela é quem explica o que "
            "o glifo aceso e o ponto embaixo querem dizer, e encurtar o rótulo só "
@@ -2257,4 +2143,4 @@ if __name__ == "__main__":
     ROT_P = re.search(r"--rot-p:(\d+)px", CSS).group(1)
     FORA = sum(1 for c in MESA if not c.get("conectado", True))
     print(f"10-perfis: OK, {n} divs · rótulo à esquerda com dois pontos, coluna de {ROT_P}px, "
-          f"zero divisórias no editor · Perfis salvos e Editar · {FORA} lugar(es) Desconectado")
+          f"zero divisórias no editor · Perfis salvos e Editar · {FORA} lugar(es) vazio(s)")

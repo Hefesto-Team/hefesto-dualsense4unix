@@ -1,13 +1,16 @@
 """perfis_web — o que a aba Perfis PINTA, como DADO e nunca como HTML."""
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 
 from hefesto_dualsense4unix.core import formas_do_endereco as _formas
+from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 from hefesto_dualsense4unix.profiles import estilos_de_jogo, marcas_do_jogo
 from hefesto_dualsense4unix.profiles.schema import (
     PRIORIDADE_MAXIMA,
     ControllerOverrides,
+    MatchAny,
     MatchCriteria,
 )
 
@@ -17,6 +20,7 @@ from hefesto_dualsense4unix.app.actions.profiles_actions import (  # isort:skip
     ordem_de_exibicao,
     rotulo_quando_usar,
 )
+from hefesto_dualsense4unix.profiles.loader import e_perfil_de_jogo_automatico  # isort:skip
 from hefesto_dualsense4unix.profiles.simple_match import (  # isort:skip
     detect_simple_preset,
     simple_extra,
@@ -25,9 +29,18 @@ from hefesto_dualsense4unix.profiles.simple_match import (  # isort:skip
 DONOS_DOS_GESTOS: dict[str, str] = {
     "linha": "profiles_actions.on_profile_selection_changed:2984 → "
     "_ha_trabalho_no_editor:1909 → _populate_editor:3952. O portão do meio é "
-    "que impede o editor de ser repintado por cima de trabalho não salvo.",
+    "que impede o editor de ser repintado por cima de trabalho não salvo. Na página nova o clique "
+    "na linha também ATIVA o perfil (`profile.switch`), para o Perfil ativo e o editor mostrarem "
+    "sempre o mesmo nome.",
     "ativar": "profiles_actions.on_profile_activate:3202 — grava fato em disco "
     "(session.json e active_profile.txt), os dois manual-only desde o PERFIL-03.",
+    "editor.alvo": "SÓ NO HTML: o «Aplicar em» (jogos, navegação, programas, eventos) é "
+    "`profiles/schema.Profile.alvo`. SÓ GRAVA: nenhum motor o lê ainda.",
+    "editor.quando": "SÓ NO HTML: o «Quando» do alvo Eventos é `Profile.evento` e "
+    "`Profile.evento_comando`. SÓ GRAVAM: nenhum motor os lê ainda.",
+    "editor.ordem": "SÓ NO HTML: arrastar na lista «Qual vale primeiro» regrava a `priority` dos "
+    "perfis do mesmo jogo, reaproveitando os valores que eles já têm; o desempate do manager é "
+    "`manager._chave_de_selecao`.",
     "novo": "profiles_actions.on_profile_new:3025 → _aplicar_nascimento_com_jogo:3097.",
     "remover": "profiles_actions.on_profile_remove:3162 — PERGUNTA ANTES, e a "
     "caixa é GTK. Ela continua GTK até ela dizer o contrário: caixa em HTML é "
@@ -211,8 +224,47 @@ def _rotulo_do_estilo(chave: object) -> str | None:
     return estilo.rotulo if estilo is not None else None
 
 
-def _pacote_do_editor(profile: Any) -> dict[str, Any]:
-    """Os cinco campos do editor, do ``Profile`` — e nenhum deles inventado."""
+def _alvo_do_perfil(profile: Any) -> str:
+    """O «Aplicar em» do perfil: o que ele guarda, ou o que a regra de casamento já diz."""
+    guardado = getattr(profile, "alvo", None)
+    if guardado:
+        return str(guardado)
+    return "navegacao" if isinstance(getattr(profile, "match", None), MatchAny) else "jogos"
+
+
+def _assinatura_do_jogo(profile: Any) -> frozenset[str]:
+    """O jogo que o perfil casa (classes e programas, sem caixa); vazio = não é de um jogo."""
+    match = getattr(profile, "match", None)
+    if not isinstance(match, MatchCriteria):
+        return frozenset()
+    return frozenset(x.lower() for x in (*match.window_class, *match.process_name))
+
+
+def _ordem_do_jogo(
+    profile: Any, perfis: list[Any], ativo: str | None
+) -> list[dict[str, Any]]:
+    """Os perfis do MESMO jogo, do que vale primeiro ao que vale por último.
+
+    A ordem é a do manager: prioridade maior primeiro, e em empate o perfil automático (o que
+    ela não editou). Menos de dois perfis não têm o que ordenar, e a lista vem vazia.
+    """
+    assinatura = _assinatura_do_jogo(profile)
+    if not assinatura:
+        return []
+    do_jogo = [p for p in perfis if _assinatura_do_jogo(p) == assinatura]
+    if len(do_jogo) < 2:
+        return []
+    do_jogo.sort(key=lambda p: (-int(getattr(p, "priority", 0) or 0),
+                                not e_perfil_de_jogo_automatico(p)))
+    return [{"perfil": str(getattr(p, "name", "") or ""), "pos": i,
+             "ativo": bool(ativo) and str(getattr(p, "name", "")) == ativo}
+            for i, p in enumerate(do_jogo, 1)]
+
+
+def _pacote_do_editor(
+    profile: Any, perfis: list[Any] | None = None, ativo: str | None = None
+) -> dict[str, Any]:
+    """Os campos do editor, do ``Profile`` — e nenhum deles inventado."""
     ambiente, recado = _ambiente_do_perfil(profile)
     prioridade = int(getattr(profile, "priority", 0) or 0)
     match = getattr(profile, "match", None)
@@ -236,10 +288,24 @@ def _pacote_do_editor(profile: Any) -> dict[str, Any]:
         "marcas": marcas_do_jogo.rotulos(getattr(profile, "marcas", None)),
         "estilo_travado": False,
         "estilo_recado": ESTILO_APLICA_E_SAI,
+        "alvo": _alvo_do_perfil(profile),
+        "evento": str(getattr(profile, "evento", None) or ""),
+        "evento_comando": str(getattr(profile, "evento_comando", None) or ""),
+        "ordem": _ordem_do_jogo(profile, perfis or [], ativo),
         # SEM SEÇÃO É "none", E ISSO NÃO É UM DEFAULT: um perfil sem `mode` NÃO
         "modo": str(getattr(getattr(profile, "mode", None), "kind", "")
                     or MODO_SEM_OPINIAO),
     }
+
+
+def _data_da_lista(iso: object) -> tuple[str, str]:
+    """``("14/10/2026", "2026-10-14T…")``, ou ``("—", "")`` quando o perfil não tem a data."""
+    if not isinstance(iso, str) or not iso:
+        return ("—", "")
+    try:
+        return (datetime.fromisoformat(iso).strftime("%d/%m/%Y"), iso)
+    except ValueError:
+        return ("—", "")
 
 
 def _linhas_da_lista(
@@ -251,6 +317,10 @@ def _linhas_da_lista(
             "perfil": str(getattr(p, "name", "") or ""),
             "nome": str(getattr(p, "name", "") or ""),
             "prioridade": str(int(getattr(p, "priority", 0) or 0)),
+            "criado": _data_da_lista(getattr(p, "criado_em", None))[0],
+            "criado_iso": _data_da_lista(getattr(p, "criado_em", None))[1],
+            "modificado": _data_da_lista(getattr(p, "modificado_em", None))[0],
+            "modificado_iso": _data_da_lista(getattr(p, "modificado_em", None))[1],
             "quando": rotulo_quando_usar(p, perfis, incumbente),
             "ativo": bool(ativo) and str(getattr(p, "name", "")) == ativo,
             "dica": explicacao_da_disputa(p, perfis, incumbente),
@@ -290,7 +360,8 @@ def _linhas_da_guarda(mesa: list[dict[str, Any]], profile: Any) -> list[dict[str
     linhas = []
     for controle in mesa:
         uniq = str(controle.get("uniq") or "")
-        secoes = _secoes_do_controle(controllers.get(uniq))
+        dele = controllers.get(norm_mac(uniq) or uniq) or controllers.get(uniq)
+        secoes = _secoes_do_controle(dele)
         quantos = sum(1 for secao in SECOES_NA_TELA if secoes.get(secao))
         total = len(SECOES_NA_TELA)
         quanto = (
@@ -372,7 +443,7 @@ def pacote_da_aba(
         "com_ajuste": _texto_do_ajuste(com_ajuste, len(mesa_de_agora)),
         "lista": linhas,
         "lista_vazia": "" if linhas else LISTA_VAZIA,
-        "editor": _pacote_do_editor(alvo) if alvo is not None else None,
+        "editor": _pacote_do_editor(alvo, perfis, ativo) if alvo is not None else None,
         "guarda": guarda,
         "guarda_vazia": guarda_vazia,
         "travados": dict(GESTOS_SEM_MOTOR),
