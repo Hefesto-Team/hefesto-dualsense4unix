@@ -251,7 +251,8 @@ def test_o_lugar_vazio_recebe_desligado_e_nenhum(a03, publicada):
         escolhas = {k: v for k, v in col.items()
                     if k not in (a03.CAMPO_DO_CHIP, a03.CAMPO_DO_PLASTICO)
                     and not k.startswith(a03.PREFIXO_DA_DICA_DO_MODO)
-                    and not k.startswith(a03.PREFIXO_DA_DICA_DA_IMERSAO)}
+                    and not k.startswith(a03.PREFIXO_DA_DICA_DA_IMERSAO)
+                    and k not in a03.CAMPO_DA_FORCA.values()}
         for campo, valor in escolhas.items():
             oferece = re.search(
                 rf'data-campo="{campo}"(.*?)</select>', publicada, re.S)

@@ -169,7 +169,7 @@ def test_o_criar_e_o_sentir_apontam_para_o_quadro_que_eles_leem() -> None:
 
 def test_cada_celula_conectada_tem_o_acionamento_e_a_imersao_e_a_vazia_nao() -> None:
     doc = _desenho()
-    celulas = doc.split('<div class="g2-cel"')[1:]
+    celulas = re.split(r'<div class="g2-cel(?: off)?"', doc)[1:]
     assert len(celulas) == 16, f"são 4 lugares x 2 gatilhos x 2 campos: {len(celulas)} células"
     for c in celulas:
         vazia = 'data-conectado="nao"' in c.split(">", 1)[0]

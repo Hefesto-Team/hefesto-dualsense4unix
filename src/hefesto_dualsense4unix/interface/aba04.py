@@ -973,7 +973,7 @@ def coluna(c):
        e os dois botões de Opções (eram quatro até 11/09/2026: o campo de cor
        do fim da fileira saiu com a poda de `FORA_DA_GUIA`). Estes são a
        exceção, e ela é decisão de produto: *um lugar sem aparelho não oferece gesto
-       nenhum* (a régua §4 abaixo, e a razão medida está no bloco `.ctrl.off`
+       nenhum* (a régua §4 abaixo, e a razão medida está no bloco `.ctrl[data-conectado="nao"]`
        do CSS — os dez endereços dessa coluna levantam `o clique não disse em
        qual controle`, e a tela só recebe `RuntimeError`).
 
@@ -985,7 +985,7 @@ def coluna(c):
     `html` que o pacote reescreve), mas a guia de cores, o trilho e os dois
     botões só aparecem no recarregar. Fechar isso é decisão de tela — dela — e
     pede ou o piloto sabendo materializar widget, ou o lugar vazio nascendo com
-    eles escondidos por CSS, que é o que o bloco `.ctrl.off` já faz para a
+    eles escondidos por CSS, que é o que o bloco `.ctrl[data-conectado="nao"]` já faz para a
     coluna que ESVAZIA.
 
     E O `luz-incerta` NÃO É CAMPO DO CARTÃO: ele nasce nas duas `.tira-luz`,
@@ -1065,7 +1065,11 @@ def coluna(c):
 
     # `nao` da régua de acentuação é um `#`, e dentro de uma f-string de  (noqa-acento: o próprio valor que a nota explica)
     conectado = "sim" if ligado else "nao"  # noqa-acento: valor de atributo
-    return f'''        <div class="ctrl" data-controle="{c.get("uniq") or p}" data-conectado="{conectado}"{titulo_do_lugar}>
+    #: `off` acompanha o `data-conectado="nao"` porque é o par que o piloto escreve no lugar que esvazia
+    #: (passo `1b`): o P2 que sai na frente do usuário e o P3 que nasce vazio ficam com a MESMA classe.
+    #: A folha lê só o `data-conectado`.
+    classe = "ctrl" if ligado else "ctrl off"
+    return f'''        <div class="{classe}" data-controle="{c.get("uniq") or p}" data-conectado="{conectado}"{titulo_do_lugar}>
           <div class="moldura" data-campo="plastico" data-hef-alvo="cor"{plastico_de_partida}{dica_da_moldura}>
             {desenho(f"il-{p}", c["cor"], ligado, **resto_do_desenho)}
           </div>
@@ -1318,8 +1322,11 @@ def _conferir(doc):
            "o passo deixou de ser o dobro do ar")
 
     vazios = [c for c in MESA if not c.get("conectado", True)]
-    exigir(corpo.count('class="ctrl" data-controle=') == len(MESA),
-           "as quatro colunas não nascem do mesmo molde (a classe de nascimento voltou)")
+    exigir(corpo.count('class="ctrl" data-controle=') == len(MESA) - len(vazios)
+           and corpo.count('class="ctrl off" data-controle=') == len(vazios),
+           "a classe do lugar vazio não é a que o piloto escreve (`ctrl off`)")
+    exigir(not re.search(r"\.ctrl\.(?:off|vazia)\b", doc),
+           "a folha voltou a ler uma segunda marca do lugar vazio")
     exigir(corpo.count('data-conectado="nao"') == len(vazios),  # noqa-acento
            f"as colunas vazias não são {len(vazios)}")
 

@@ -36,6 +36,44 @@ def glifo(nome, tam=30, ativo=False):
     return x.replace("<svg ", f'<svg width="{tam}" height="{tam}" ', 1).strip()
 
 
+#: O que a silhueta deixa de fora: o que não se desenha (as features), as letras e as luzes.
+_FORA_DA_SILHUETA = ("grupo-invisiveis", "grupo-glifos", "grupo-luzes", "glifo-stick_r")
+
+
+def _sem_o_grupo(x, gid):
+    """O desenho sem o `<g id=gid>` inteiro, com os `<g>` de dentro contados."""
+    ini = x.find(f'<g id="{gid}"')
+    if ini < 0:
+        raise SystemExit(f"ERRO: o grupo {gid!r} sumiu do ds_limpo.svg")
+    fundo = 0
+    for m in re.finditer(r"<g\b|</g>", x[ini:]):
+        fundo += 1 if m.group(0) == "<g" else -1
+        if fundo == 0:
+            return x[:ini] + x[ini + m.end():]
+    raise SystemExit(f"ERRO: o grupo {gid!r} do ds_limpo.svg não fecha")
+
+
+def silhueta_do_dualsense(tam=40, traco=0.9):
+    """O DualSense do mapa (o MESMO `ds_limpo.svg`) como ícone de uma cor só, `currentColor`.
+
+    Sem `id` nenhum, para não colidir com outro desenho na página, e sem as cores, as features,
+    as letras e as luzes. O `traco` engrossa o contorno, que no tamanho de ícone some.
+    """
+    x = re.sub(r"<\?xml[^>]*\?>\s*", "", SVG.read_text())
+    x = re.sub(r"<!--.*?-->", "", x, flags=re.S)
+    x = re.sub(r"<defs\b.*?</defs>", "", x, flags=re.S)
+    for gid in _FORA_DA_SILHUETA:
+        x = _sem_o_grupo(x, gid)
+    x = re.sub(r"<title>[^<]*</title>|<text\b.*?</text>", "", x, flags=re.S)
+    x = re.sub(r'\s(?:id|class|filter|style|data-[a-z-]+|xmlns:bx|bx:[a-z]+)="[^"]*"', "", x)
+    x = re.sub(r'(fill|stroke)="(?:#[0-9a-fA-F]{3,8}|rgb[^"]*|url\([^"]*\))"',
+               r'\1="currentColor"', x)
+    x = re.sub(r'\swidth="[^"]*"\s+height="[^"]*"', "", x, count=1)
+    x = x.replace("<svg ", f'<svg width="{tam}" height="{tam}" aria-hidden="true" '
+                  f'stroke="currentColor" stroke-width="{traco}" stroke-linejoin="round" ', 1)
+    return re.sub(r">\s+<", "><", x).strip()
+
+
 CAIXAS_PROPRIAS = {
     "lightbar": [(38.9, 30.0, 45.1, 52.0), (82.9, 30.0, 89.3, 52.0)],
 }

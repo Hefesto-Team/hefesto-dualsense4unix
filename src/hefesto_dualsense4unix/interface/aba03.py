@@ -4,6 +4,7 @@ import sys
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import re  # noqa: E402
 import onde  # noqa: E402
+import mapa as _mapa  # noqa: E402  a silhueta do DualSense
 import monta as monta_  # noqa: E402  o MÓDULO, para ler CONECTADOS
 from monta import CSS_GLIFO, MESA, R, cor_da_zona, glifo, monta, trava_do_nativo  # noqa: E402
 
@@ -12,10 +13,12 @@ from hefesto_dualsense4unix.app.actions.trigger_specs import PRESETS  # noqa: E4
 
 from hefesto_dualsense4unix.interface.pacotes.a03_gatilhos import (  # noqa: E402
     ALVO_DO_PLASTICO,
+    CAMPO_DA_FORCA,
     CAMPO_DO_CHIP,
     CAMPO_DO_ESTILO,
     CAMPO_DO_PLASTICO,
     CLASSE_DO_CHIP,
+    DEGRAUS_DA_FORCA,
     DICA_DO_MODO,
     PREFIXO_DA_DICA_DA_IMERSAO,
     PREFIXO_DA_DICA_DO_MODO,
@@ -29,6 +32,7 @@ from hefesto_dualsense4unix.interface.pacotes.a03_gatilhos import (  # noqa: E40
     dica_da_imersao,
     descricao_do_modo,
     html_das_opcoes_de_imersao,
+    nivel_da_forca,
     sem_comentarios_de_css,
 )
 from hefesto_dualsense4unix.interface.pacotes.meus_efeitos import (  # noqa: E402
@@ -85,18 +89,11 @@ MEU_IMERSAO = "Recuo do MK"
 BARRAS = [("inicio", "Início", 0, 9, 2, ""), ("fim", "Fim", 0, 9, 9, ""),
           ("forca", "Força", 0, 8, 4, ""), ("freq", "Frequência", 0, 255, 40, "Hz")]
 
-GLIFO_DO_DUALSENSE = (
-    '<svg class="gl" width="36" height="36" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">'
-    '<title>DualSense</title><g transform="translate(16 16.5) scale(.82) translate(-16 -16.8)" '
-    'fill="none" stroke="currentColor"><path d="M8.5 7H23.5C26.6 7 28.4 8.9 29.1 12.2L30.6 22.6'
-    'C31.1 26.6 27.9 28.6 25.6 26.6L21.4 21.9Q16 19.6 10.6 21.9L6.4 26.6C4.1 28.6 0.9 26.6 1.4 22.6'
-    'L2.9 12.2C3.6 8.9 5.4 7 8.5 7Z" stroke-width="2.44" stroke-linejoin="round"/>'
-    '<rect x="10.2" y="7" width="11.6" height="6.4" rx="1" stroke-width="1.9"/>'
-    '<circle cx="12.4" cy="17" r="1.7" stroke-width="1.8"/><circle cx="19.6" cy="17" r="1.7" '
-    'stroke-width="1.8"/><path d="M6.6 11.4V15.4M4.6 13.4H8.6" stroke-width="1.8" '
-    'stroke-linecap="round"/><g fill="currentColor" stroke="none"><circle cx="25.4" cy="11.9" r="1"/>'
-    '<circle cx="25.4" cy="14.9" r="1"/><circle cx="23.9" cy="13.4" r="1"/>'
-    '<circle cx="26.9" cy="13.4" r="1"/></g></g></svg>')
+#: O ícone ao lado de «Controle» é o DualSense do mapa (16/10/2026): um arquivo de desenho manda.
+GLIFO_DO_DUALSENSE = _mapa.silhueta_do_dualsense(40)
+
+#: A força do aperto que o desenho mostra (o cru de 0 a 255); o produto escreve a leitura viva.
+FORCA_DA_CENA = {"p1": {"l2": 96, "r2": 200}, "p2": {"l2": 0, "r2": 0}}
 
 CSS = CSS_GLIFO + """
   /* ---------- Gatilhos · a grade do todo ----------
@@ -107,6 +104,18 @@ CSS = CSS_GLIFO + """
   .g2-grade{display:grid;grid-template-columns:44px 132px repeat(N_COLS,minmax(0,1fr));
     column-gap:14px;row-gap:16px;align-items:center;padding:8px 4px 6px}
   .g2-cab{display:flex;justify-content:center;min-height:36px}
+  /* A FORÇA DO APERTO (16/10/2026): uma escada de degraus crescentes por gatilho, acima de
+     «Controle». O pacote escreve o nível (0 a 8) em `data-nivel`; a folha acende os degraus
+     até ele. O lugar sem controle apaga a escada pela marca do lugar, seja qual for o nível. */
+  .g2-forca{display:flex;justify-content:center;align-items:flex-end;gap:22px;height:58px;
+    box-sizing:border-box;padding:4px 0 2px;border-radius:7px;border:1px solid transparent}
+  .g2-forca .escada{display:flex;flex-direction:column;align-items:center;gap:3px}
+  .g2-forca .degraus{display:flex;align-items:flex-end;gap:3px;height:36px}
+  .g2-forca .degraus i{display:block;width:6px;border-radius:2px;background:var(--border-forte)}
+  .g2-forca .escada b{font:600 11px/13px 'Space Grotesk',system-ui,sans-serif;color:var(--fg)}
+  .g2-forca[data-conectado="nao"]{border:1px dashed var(--border-sutil)}
+  .g2-forca[data-conectado="nao"] .degraus i{background:var(--border-sutil)}
+  .g2-gl.g2-forca-gl{grid-row:auto;border-right:0}
   /* o chip do controle tem a largura, a altura e a fonte dos campos de baixo */
   .g2-cab > .cabeca,.g2-cab > .cabeca > span{display:flex;width:100%}
   .g2-cab .chip{width:100%;height:36px;box-sizing:border-box;display:flex;align-items:center;
@@ -185,6 +194,13 @@ CSS = CSS_GLIFO + """
   .quadro-topo .modo-auto{margin-left:auto}
 """
 CSS = CSS.replace("repeat(N_COLS,", f"repeat({len(MESA)},")
+CSS += "".join(
+    f"\n  .g2-forca .degraus i:nth-child({n}){{height:{round(36 * n / DEGRAUS_DA_FORCA)}px}}"
+    for n in range(1, DEGRAUS_DA_FORCA + 1))
+CSS += "".join(
+    f'\n  .g2-forca:not([data-conectado="nao"]) .escada[data-nivel="{n}"] '  # (noqa-acento) valor
+    f"i:nth-child(-n+{n}){{background:var(--purple)}}"
+    for n in range(1, DEGRAUS_DA_FORCA + 1)) + "\n"
 
 
 def _op_vazio(escolhido):
@@ -231,7 +247,7 @@ def _celula_do_acionamento(pref, sig, vazio):
     """A célula do acionamento de um gatilho num controle: o campo com a dica que muda com ele."""
     modo = CENA[pref][sig][0] if not vazio else TRAVESSAO
     dica = SEM_APARELHO_AQUI if vazio else descricao_do_modo(modo)
-    return (f'<div class="g2-cel" id="acion-{pref}-{sig}" data-controle="{pref}"{_marca(vazio)}>'
+    return (f'<div class="g2-cel{_off(vazio)}" id="acion-{pref}-{sig}" data-controle="{pref}"{_marca(vazio)}>'
             f'<span class="g2-env" data-campo="{PREFIXO_DA_DICA_DO_MODO}{sig}" data-hef-alvo="atributo" '
             f'data-hef-atributo="data-dica" data-dica="{_escapar(dica)}">'
             f'<select class="g2-acion" data-gesto="modo" data-campo="modo-chave-{sig}" '
@@ -243,7 +259,7 @@ def _celula_da_imersao(pref, sig, vazio):
     """A célula da imersão: a escolha é do acionamento da coluna, que o clique leva junto."""
     modo, imersao = CENA[pref][sig] if not vazio else (TRAVESSAO, TRAVESSAO)
     dica = SEM_APARELHO_AQUI if vazio else dica_da_imersao(imersao)
-    return (f'<div class="g2-cel" data-controle="{pref}"{_marca(vazio)}>'
+    return (f'<div class="g2-cel{_off(vazio)}" data-controle="{pref}"{_marca(vazio)}>'
             f'<span class="g2-env" data-campo="{PREFIXO_DA_DICA_DA_IMERSAO}{sig}" data-hef-alvo="atributo" '
             f'data-hef-atributo="data-dica" data-dica="{_escapar(dica)}">'
             f'<select class="g2-imersao" data-gesto="imersao" data-campo="imersao-{sig}" '
@@ -253,6 +269,12 @@ def _celula_da_imersao(pref, sig, vazio):
 
 def _marca(vazio):
     return ' data-conectado="nao"' if vazio else ""  # (noqa-acento) valor
+
+
+def _off(vazio):
+    """A classe que o piloto põe no lugar que esvazia (passo `1b`): nascer com ela deixa o P2 que sai
+    e o P3 que nasce vazio com a mesma classe. A folha lê só o `data-conectado`."""
+    return " off" if vazio else ""
 
 
 def _chip(c):
@@ -270,8 +292,29 @@ def _chip(c):
 
 def _chips():
     return "\n".join(
-        f'          <div class="g2-cab" data-controle="{c["pref"]}"{_marca(not c.get("conectado", True))}>'
+        f'          <div class="g2-cab{_off(not c.get("conectado", True))}" data-controle="{c["pref"]}"{_marca(not c.get("conectado", True))}>'
         f'{_chip(c)}</div>' for c in MESA)
+
+
+def _escada(c, gatilho):
+    """Os degraus de UM gatilho: o nível nasce da cena, e o pacote o reescreve a cada tique."""
+    vivo = c.get("conectado", True)
+    nivel = nivel_da_forca(FORCA_DA_CENA.get(c["pref"], {}).get(gatilho, 0)) if vivo else 0
+    degraus = "<i></i>" * DEGRAUS_DA_FORCA
+    return (f'<span class="escada" data-campo="{CAMPO_DA_FORCA[gatilho]}" data-hef-alvo="atributo" '
+            f'data-hef-atributo="data-nivel" data-nivel="{nivel}">'
+            f'<span class="degraus">{degraus}</span><b>{gatilho.upper()}</b></span>')
+
+
+def _forcas():
+    """A linha da força do aperto: o L2 e o R2 de cada lugar da `MESA`."""
+    celulas = "\n".join(
+        f'          <div class="g2-forca{_off(not c.get("conectado", True))}" data-controle="{c["pref"]}"'
+        f'{_marca(not c.get("conectado", True))}>{_escada(c, "l2")}{_escada(c, "r2")}</div>'
+        for c in MESA)
+    return ('          <div class="g2-gl g2-forca-gl" aria-hidden="true"></div>\n'
+            '          <div class="g2-rot"><span class="sec-rot" data-dica="O quanto cada gatilho '
+            'está apertado agora">Força do aperto</span></div>\n' + celulas)
 
 
 def _linha(glifo_html, classe, rotulo, dica, fabrica, lado):
@@ -334,6 +377,7 @@ MIOLO = f'''
       </div>
       <div class="quadro-corpo">
         <div class="g2-grade">
+{_forcas()}
           <div class="g2-gl g2-ds" aria-label="DualSense">{GLIFO_DO_DUALSENSE}</div>
           <div class="g2-canto" aria-label="Controle e estilo de jogo"><span class="sec-rot g2-canto-rot">Controle</span><span class="g2-estilo" data-dica="O estilo escolhido em Perfis. Só leitura"><span class="g2-estilo-rot">Estilo de jogo</span><span class="g2-estilo-nome" data-campo="{CAMPO_DO_ESTILO}" data-hef-alvo="atributo" data-hef-atributo="data-estilo" data-estilo="{ESTILO_DA_CENA}"></span></span></div>
 {_chips()}
@@ -471,6 +515,19 @@ def _conferir(doc):
                    f"o modo {_spec.name} perdeu o `value` — o clique iria sem contrato")
     exigir('value="Custom"' not in corpo, "o «Montar do zero» voltou à lista do acionamento")
     exigir(f'data-campo="{CAMPO_DO_ESTILO}"' in corpo, "o estilo do perfil perdeu o endereço")
+    for _campo in CAMPO_DA_FORCA.values():
+        exigir(corpo.count(f'data-campo="{_campo}"') == n,
+               f"a escada {_campo!r} não está em todos os {n} lugares")
+    exigir(len(re.findall(r'class="g2-forca(?: off)?"', corpo)) == n,
+           "a linha da força do aperto perdeu um lugar")
+    for classe in ("g2-cab", "g2-cel", "g2-forca"):
+        marcas = re.findall(rf'class="{classe}( off)?"[^>]*?(data-conectado="nao")?>', corpo)  # noqa-acento
+        exigir(bool(vazios) and all(bool(off) == bool(vazio) for off, vazio in marcas),
+               f"o `{classe}` vazio não tem a classe `off` que o piloto escreve, ou o cheio tem")
+    exigir(corpo.index('class="g2-forca') < corpo.index('class="g2-cab'),
+           "a força do aperto deixou de ficar acima de «Controle»")
+    exigir(' id="' not in GLIFO_DO_DUALSENSE and "<title>" not in GLIFO_DO_DUALSENSE,
+           "o ícone do DualSense voltou a ter `id` e colidiria com outro desenho")
 
     for chave in ("tipo", "partir", "nome", "inicio", "fim", "forca", "freq"):
         exigir(f'data-linha="{chave}"' in corpo, f"a área de criar perdeu o campo {chave!r}")

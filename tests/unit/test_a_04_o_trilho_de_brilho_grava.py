@@ -152,8 +152,9 @@ def test_a_pagina_oferece_o_trilho_e_o_lugar_vazio_nasce_em_zero(a04):
         "que se arrasta e não chega a gesto nenhum")
 
     grade = corpo.split('<div class="luz-grade">', 1)[-1].split('<div class="rodape"', 1)[0]
-    vazias = re.findall(r'<div class="ctrl" [^>]*data-conectado="nao"(.*?)(?=<div class="ctrl"|\Z)',
-                        grade, re.S)
+    vazias = re.findall(
+        r'<div class="ctrl(?: off)?" [^>]*data-conectado="nao"(.*?)(?=<div class="ctrl[ "]|\Z)',
+        grade, re.S)
     assert vazias, "a página não tem lugar vazio — a régua não mediria nada"
     # media o  # noqa-acento: verbo medir
     for bloco in vazias:

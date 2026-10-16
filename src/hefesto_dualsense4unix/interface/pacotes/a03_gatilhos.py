@@ -60,6 +60,17 @@ NOME_DO_LADO = {"left": "Gatilho esquerdo (L2)", "right": "Gatilho direito (R2)"
 
 VAZIO = ""
 
+#: A escada da força do aperto (16/10/2026): quantos degraus, e o endereço de cada gatilho.
+DEGRAUS_DA_FORCA = 8
+CAMPO_DA_FORCA = {"l2": "forca-l2", "r2": "forca-r2"}
+
+
+def nivel_da_forca(cru: Any) -> int:
+    """Quantos degraus o aperto acende: `0..255` vira `0..8`; sem leitura é o repouso."""
+    if not isinstance(cru, int) or isinstance(cru, bool):
+        return 0
+    return max(0, min(cru, 255)) * DEGRAUS_DA_FORCA // 255
+
 
 PAGINA = "03-gatilhos.html"
 
@@ -973,6 +984,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             "l2-raw": l2, "r2-raw": r2,
             "l2-pct": round((l2 or 0) / 255 * 100),
             "r2-pct": round((r2 or 0) / 255 * 100),
+            CAMPO_DA_FORCA["l2"]: nivel_da_forca(l2),
+            CAMPO_DA_FORCA["r2"]: nivel_da_forca(r2),
         }
         for sig, d in deste.items():
             col[f"modo-{sig}"] = d["modo"]
@@ -1004,6 +1017,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         vazia[CAMPO_DO_CHIP] = _chip_do_lugar_vazio(pref)
         # `--plastico` do embrulho (`escrever` chama `removeProperty`), que é o
         vazia[CAMPO_DO_PLASTICO] = ""
+        vazia.update(dict.fromkeys(CAMPO_DA_FORCA.values(), 0))
         colunas[pref] = vazia
         pintados += sum(1 for k in vazia if k in tem_endereco)
 

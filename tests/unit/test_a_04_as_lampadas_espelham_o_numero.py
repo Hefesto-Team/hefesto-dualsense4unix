@@ -230,7 +230,7 @@ def test_o_botao_por_controle_saiu_e_o_desligar_ficou():
         grade = grade.split('<div class="rodape"', 1)[0]
         assert ">Automático</button>" not in grade, (
             f"o botão `Automático` voltou à célula Opções em {caminho.name}")
-        lugares = len(re.findall(r'<div class="ctrl"', grade))
+        lugares = len(re.findall(r'<div class="ctrl(?: off)?"', grade))
         assert lugares >= 2, "a régua não achou as colunas — não mediria nada"
         if caminho.parent == onde.PUBLICADO:
             continue  # o publicado só troca no `--publicar` da costura
