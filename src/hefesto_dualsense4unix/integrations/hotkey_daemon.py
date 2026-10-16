@@ -52,7 +52,7 @@ import asyncio
 import contextlib
 import os
 import time
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from contextvars import ContextVar
 from dataclasses import dataclass, field
 from typing import Any
@@ -120,6 +120,10 @@ class _Aperto:
     ps_long_press_fired: bool = False
     #: Os membros do combo do PS que este controle segura: calados até soltar.
     latch: set[str] = field(default_factory=set)
+    #: O PS travado: o toque curto do PS vira um PS «virtual» até este instante, para o segundo
+    #: botão do gesto vir depois, sem apertar junto. ``usou`` = a janela já disparou um gesto.
+    ps_virtual_ate: float | None = None
+    ps_virtual_usou: bool = False
 
 
 @dataclass
@@ -148,6 +152,9 @@ class HotkeyManager:
     on_next_bridge: Any | None = None
     on_next_mask: Any | None = None
     config: HotkeyConfig = field(default_factory=HotkeyConfig)
+    #: Quanto o PS espera pelo segundo botão, em ms, no controle ``de`` (zero = desligado, o
+    #: padrão): quem tem tremor ou uma mão só toca o PS e depois o outro botão.
+    ps_travado_de: Callable[[str | None], int] | None = None
 
     _apertos: dict[str | None, _Aperto] = field(default_factory=dict)
 
@@ -218,6 +225,9 @@ class HotkeyManager:
         ps_now = PS_BUTTON in buttons
 
         combos = self._combos_configurados()
+        virtual, da_janela = self._o_ps_travado(aperto, buttons, combos, t=t, de=de)
+        if virtual:
+            buttons = buttons | {PS_BUTTON}
 
         stale = [key for key in aperto.first_seen_at if not key.issubset(buttons)]
         for key in stale:
@@ -231,7 +241,7 @@ class HotkeyManager:
                 continue
             aperto.first_seen_at.setdefault(combo, t)
             held_for = (t - aperto.first_seen_at[combo]) * 1000
-            if held_for < self.config.buffer_ms:
+            if held_for < (0 if virtual else self.config.buffer_ms):
                 continue
             if aperto.last_fired is not None:
                 continue
@@ -242,12 +252,60 @@ class HotkeyManager:
 
         if combo_fired is not None and PS_BUTTON in combos[combo_fired]:
             aperto.ps_combo_fired = True
+            if virtual:
+                # O gesto saiu pela janela do PS travado: ela vale só enquanto o outro botão
+                # estiver segurado, e o toque do PS não vira PS sozinho depois.
+                aperto.ps_virtual_usou = True
+                aperto.ps_virtual_ate = t
 
         ps_event = self._observe_ps_solo(
             aperto, ps_now=ps_now, buttons=buttons, t=t, combo_fired=combo_fired, de=de
         )
 
-        return combo_fired or ps_event
+        return combo_fired or ps_event or da_janela
+
+    def _ps_travado_s(self, de: str | None) -> float:
+        """A espera do PS travado deste controle, em segundos; zero = desligado. Nunca levanta."""
+        pergunta = self.ps_travado_de
+        if pergunta is None:
+            return 0.0
+        try:
+            return max(0, int(pergunta(de))) / 1000
+        except Exception as exc:
+            logger.debug("ps_travado_sem_resposta", err=str(exc))
+            return 0.0
+
+    def _o_ps_travado(
+        self,
+        aperto: _Aperto,
+        buttons: frozenset[str],
+        combos: dict[str, frozenset[str]],
+        *,
+        t: float,
+        de: str | None,
+    ) -> tuple[bool, str | None]:
+        """A janela do PS travado deste tique: ``(o PS vale como apertado, evento da janela)``.
+
+        Aberta pelo toque curto do PS (ver :meth:`_observe_ps_solo`). Dura a espera escolhida e
+        se estende enquanto um parceiro do gesto estiver segurado. Fecha sem gesto: o toque do PS
+        era um PS sozinho, e ele dispara agora (ou o PS apertado de verdade tomou o lugar dele).
+        """
+        ate = aperto.ps_virtual_ate
+        if ate is None:
+            return False, None
+        parceiros = {b for c in combos.values() if PS_BUTTON in c for b in c} - {PS_BUTTON}
+        segura = bool(parceiros & buttons)
+        vencida = t >= ate and not segura
+        if PS_BUTTON in buttons or vencida or self._ps_travado_s(de) <= 0:
+            usou = aperto.ps_virtual_usou
+            aperto.ps_virtual_ate = None
+            aperto.ps_virtual_usou = False
+            if usou:
+                return False, None
+            logger.info("ps_solo_released", travado=True, **_de(de))
+            self._fire_ps_solo()
+            return False, "ps_solo"
+        return True, None
 
     def _observe_ps_solo(
         self,
@@ -314,6 +372,17 @@ class HotkeyManager:
             )
             return None
 
+        espera = self._ps_travado_s(de)
+        if espera > 0:
+            # O PS travado: o toque espera o segundo botão do gesto (O-TREMOR-E-O-APERTO-JUNTO-
+            # NAO-DECIDEM-O-BOTAO-01). Sem ele na janela, vale como PS sozinho.
+            aperto.ps_virtual_ate = t + espera
+            aperto.ps_virtual_usou = False
+            logger.info(
+                "ps_travado_aberto", espera_ms=round(espera * 1000),
+                held_ms=round(held_ms, 1), **_de(de))
+            return None
+
         logger.info("ps_solo_released", held_ms=round(held_ms, 1), **_de(de))
         self._fire_ps_solo()
         return "ps_solo"
@@ -328,8 +397,9 @@ class HotkeyManager:
         com o PS e sai quando o próprio botão solta, mesmo que o PS solte antes.
         """
         buttons = frozenset(str(b).lower() for b in pressed)
-        latch = self._aperto_de(de).latch
-        if PS_BUTTON in buttons:
+        aperto = self._aperto_de(de)
+        latch = aperto.latch
+        if PS_BUTTON in buttons or aperto.ps_virtual_ate is not None:
             for combo in self._combos_configurados().values():
                 if PS_BUTTON not in combo:
                     continue

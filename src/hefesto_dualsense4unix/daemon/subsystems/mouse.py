@@ -2,8 +2,10 @@
 from __future__ import annotations
 
 import contextlib
+import time
 from typing import TYPE_CHECKING, Any
 
+from hefesto_dualsense4unix.core import ativacao_de_botao, filtro_de_botao
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 if TYPE_CHECKING:
@@ -147,6 +149,30 @@ def _teclas_dos_analogicos(do_mouse: dict[str, str]) -> dict[str, str]:
     return fora
 
 
+ESPACO_DA_TABELA = "tabela"
+
+
+def _agora() -> float:
+    """O relógio do laço da tabela (um nome só para os testes trocarem)."""
+    return time.monotonic()
+
+
+def _com_o_modo(
+    store: Any, uniq: str | None, botoes: frozenset[str], l2: int, r2: int
+) -> tuple[frozenset[str], int, int]:
+    """O filtro e o modo (alternar, repetir, longo, duplo) deste controle, ANTES de a tabela somar.
+
+    A tabela lê os botões como o controle os aperta (sem a troca de botões), então guarda
+    o estado dela à parte do pad virtual: o filtro primeiro, como no pad, e o modo depois.
+    """
+    agora = _agora()
+    botoes, l2, r2, _ = filtro_de_botao.traduzir(
+        store, uniq, botoes, l2, r2, agora, espaco=ESPACO_DA_TABELA)
+    botoes, l2, r2, _ = ativacao_de_botao.traduzir(
+        store, uniq, botoes, l2, r2, agora, espaco=ESPACO_DA_TABELA)
+    return botoes, l2, r2
+
+
 class TabelaNoJogo:
     """A tabela de botões da aba Navegação, agindo JUNTO com o jogo (a chave «Também no jogo»).
 
@@ -179,6 +205,7 @@ class TabelaNoJogo:
         self._mouse: Any = None
         self._teclado: Any = None
         self._desistiu = False
+        self._store: Any = None
 
     # -- ciclo de vida ---------------------------------------------------
 
@@ -237,6 +264,8 @@ class TabelaNoJogo:
 
     def soltar(self) -> None:
         """Solta tudo o que a tabela mantém apertado. Idempotente; nunca levanta."""
+        ativacao_de_botao.esquecer(self._store, espaco=ESPACO_DA_TABELA)
+        filtro_de_botao.esquecer(self._store, espaco=ESPACO_DA_TABELA)
         if self._teclado is not None:
             with contextlib.suppress(Exception):
                 self._teclado.dispatch(frozenset())
@@ -264,8 +293,17 @@ class TabelaNoJogo:
         from hefesto_dualsense4unix.daemon.subsystems.poll import gatilhos_de_cada_controle
         l2 = int(getattr(state, "l2_raw", 0) or 0)
         r2 = int(getattr(state, "r2_raw", 0) or 0)
+        store = self._store = getattr(daemon, "store", None)
+        com_modo = ativacao_de_botao.alguma(store) or filtro_de_botao.alguma(store)
+        if com_modo:
+            from hefesto_dualsense4unix.daemon.subsystems.gamepad import primary_identity
+
+            botoes_do_p1, l2, r2 = _com_o_modo(
+                store, primary_identity(daemon), botoes_do_p1, l2, r2)
         conjunto = botoes_com_os_gatilhos(botoes_do_p1, l2, r2)
-        for botoes, outro_l2, outro_r2 in gatilhos_de_cada_controle(daemon).values():
+        for uniq, (botoes, outro_l2, outro_r2) in gatilhos_de_cada_controle(daemon).items():
+            if com_modo:
+                botoes, outro_l2, outro_r2 = _com_o_modo(store, uniq, botoes, outro_l2, outro_r2)
             conjunto |= botoes_com_os_gatilhos(botoes, outro_l2, outro_r2)
         try:
             self._mouse.dispatch(

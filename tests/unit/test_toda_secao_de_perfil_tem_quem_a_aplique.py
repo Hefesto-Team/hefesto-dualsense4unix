@@ -194,6 +194,18 @@ _CLASSIFICACAO: dict[str, SecaoPorApplier | SecaoDireta] = {
             "de ativação passam, inclusive a do boot."
         )
     ),
+    "ativacao": SecaoDireta(  # (noqa-acento)
+        razao=(
+            "O-BOTAO-ALTERNA-REPETE-E-ENTENDE-TOQUE-LONGO-E-DUPLO-01 (16/10/2026). "
+            "`apply_acessibilidade` monta o modo (`core/ativacao_de_botao.montar`) e o "
+            "DEPOSITA no `store` do gerente, sempre, inclusive `None`, para o modo do "
+            "jogo anterior não contagiar o seguinte (e o botão preso solta). Nada é "
+            "escrito no controle. Quem obedece são os dois laços por tique "
+            "(`gamepad.dispatch_gamepad` e `coop.CoopManager.forward_all`) e a tabela "
+            "de teclas com o jogo. Não é applier injetado pelo mesmo motivo do "
+            "`remapeamento`: o `store` é o que TODAS as rotas de ativação passam."
+        )
+    ),
     "controllers": SecaoDireta(
         razao=(
             "Mapa ADITIVO de overrides por controle físico: `apply` o resolve "

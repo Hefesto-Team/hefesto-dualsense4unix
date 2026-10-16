@@ -11,6 +11,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     ControllerSensoresOverride,
     LedsConfig,
     Profile,
+    ProfileAtivacaoConfig,
     ProfileMouseConfig,
     ProfileSpeakerConfig,
     RumbleConfig,
@@ -47,6 +48,8 @@ SECOES: dict[str, Secao] = {
                    ("mouse", "button_actions", "tabela_no_jogo"), ()),
     "teclado": Secao("teclado", "06-navegacao.html", "Teclado",
                      _CAMPOS_DO_TECLADO, _CAMPOS_DO_TECLADO, ()),
+    "acessibilidade": Secao("acessibilidade", "06-navegacao.html", "Acessibilidade",
+                            ("ativacao",), ("ativacao",), ("ativacao",)),  # (noqa-acento)
 }
 
 DO_JOGO: dict[str, str] = {
@@ -78,7 +81,7 @@ _DENSAS: dict[str, dict[str, Any]] = {
 }
 
 _MODELOS: frozenset[str] = frozenset(
-    {"leds", "rumble", "speaker", "mic", "sensores", "mouse"}
+    {"leds", "rumble", "speaker", "mic", "sensores", "mouse", "ativacao"}  # (noqa-acento)
 )
 
 _CAMPOS_DO_CONTROLE: dict[str, tuple[str, ...]] = {
@@ -87,6 +90,7 @@ _CAMPOS_DO_CONTROLE: dict[str, tuple[str, ...]] = {
     "mic": tuple(ControllerMicOverride.model_fields),
     "rumble": tuple(ControllerRumbleOverride.model_fields),
     "sensores": tuple(ControllerSensoresOverride.model_fields),
+    "ativacao": tuple(ProfileAtivacaoConfig.model_fields),  # (noqa-acento)
 }
 
 COMPUTADOR = "computador"
@@ -224,6 +228,12 @@ def perfil_que_vale(perfil: Profile, computador: Any) -> Profile:
                 atual[campo] = valor
         cru[secao] = atual
     freestyle = e_o_freestyle(perfil.name)
+    if do_global.ativacao is not None:
+        juntado = _ativacao_que_vale(
+            do_global.ativacao.model_dump(mode="json", exclude_unset=True),
+            cru.get("ativacao") or {}, freestyle)  # (noqa-acento)
+        if juntado:
+            cru["ativacao"] = juntado  # (noqa-acento)
     if do_global.button_actions is not None:
         acoes_do_jogo = perfil.button_actions or {}
         cru["button_actions"] = (
@@ -245,6 +255,23 @@ def perfil_que_vale(perfil: Profile, computador: Any) -> Profile:
     return Profile.model_validate(cru)
 
 
+def _ativacao_que_vale(
+    do_computador: Mapping[str, Any], do_jogo: Mapping[str, Any], freestyle: bool
+) -> dict[str, Any]:
+    """O computador por baixo, o jogo por cima; o conflito entre os dois fica com o jogo.
+
+    Um botão tem um modo só: se a soma dos dois quebra isso, vale o que o jogo escreveu
+    (o Freestyle não sobrepõe nada: vale o computador).
+    """
+    ordem = (do_computador, do_jogo) if not freestyle else (do_jogo, do_computador)
+    juntado = {**ordem[0], **ordem[1]}
+    try:
+        ProfileAtivacaoConfig.model_validate(juntado)
+    except ValueError:
+        return dict(do_jogo) if not freestyle else dict(do_computador)
+    return juntado
+
+
 def _controles_que_valem(
     perfil: Profile, do_jogo: Mapping[str, Any] | None, computador: Any
 ) -> dict[str, Any]:
@@ -263,12 +290,17 @@ def _controles_que_valem(
             if secao not in _CAMPOS_DO_CONTROLE or not isinstance(campos, Mapping):
                 continue
             do_controle = dict(entrada.get(secao) or {})
+            do_jogo_na_peca = dict(do_controle)
             escritos = set() if freestyle else {
                 c for c, v in do_controle.items() if v is not None}
             escolhidos = _expandir_pares(secao, escritos | globais.get(secao, set()))
             for campo, valor in campos.items():
                 if campo not in escolhidos:
                     do_controle[campo] = valor
+            if secao == "ativacao":  # (noqa-acento)
+                do_controle = _ativacao_que_vale(
+                    {c: v for c, v in campos.items() if c not in escolhidos},
+                    {c: v for c, v in do_jogo_na_peca.items() if v is not None}, freestyle)
             if do_controle:
                 entrada[secao] = do_controle
         if entrada:

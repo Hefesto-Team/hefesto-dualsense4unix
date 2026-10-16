@@ -742,6 +742,8 @@ def start_hotkey_manager(daemon: DaemonProtocol) -> None:
         next_bridge=DEFAULT_COMBO_PONTE,
     )
     atos = _AtosDoGesto(daemon)
+    from hefesto_dualsense4unix.core import filtro_de_botao
+
     daemon._hotkey_manager = HotkeyManager(
         on_ps_solo=build_ps_solo_callback(daemon, atos),
         on_ps_long_press=atos.callback("ps_options"),
@@ -750,6 +752,8 @@ def start_hotkey_manager(daemon: DaemonProtocol) -> None:
         on_next_bridge=atos.callback("ps_r3"),
         on_next_mask=atos.callback("ps_l3"),
         config=hotkey_config,
+        ps_travado_de=lambda de: filtro_de_botao.ps_travado_ms(
+            getattr(daemon, "store", None), de),
     )
     logger.info(
         "hotkey_manager_started",

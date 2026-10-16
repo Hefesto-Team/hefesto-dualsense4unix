@@ -299,6 +299,10 @@ class ProfileManager:
             except Exception as exc:
                 logger.warning("freestyle_apagado_sem_o_perfil_que_volta",
                                name=name, err=str(exc))
+        from hefesto_dualsense4unix.core import ativacao_de_botao, filtro_de_botao
+
+        ativacao_de_botao.definir_ativo(self.store, None)
+        filtro_de_botao.definir_ativo(self.store, None)
         self.store.set_active_profile(None)
         ligar_o_freestyle(self.store, False)
         return None
@@ -335,6 +339,7 @@ class ProfileManager:
         self.apply_button_actions(profile, relatorio=relatorio)
         self.apply_remapeamento(profile, relatorio=relatorio)
         self.apply_movimento(profile, relatorio=relatorio)
+        self.apply_acessibilidade(profile, relatorio=relatorio)
         self.apply_emulation(profile, origin=origin, relatorio=relatorio)
         if e_a_escolha and e_o_freestyle(profile.name):
             ligar_o_freestyle(self.store, True)
@@ -753,6 +758,34 @@ class ProfileManager:
                 destino=arranjo.destino,
                 gatilho=arranjo.gatilho or "sempre",
             )
+
+    def apply_acessibilidade(
+        self, profile: Profile, *, relatorio: dict[str, str] | None = None
+    ) -> None:
+        """Deposita como o botão ativa e o filtro do botão (tremor, mínimo, trava) no `store`.
+
+        Trocar de perfil solta todo botão que estava preso: o `definir_ativo` esquece os estados.
+        """
+        from hefesto_dualsense4unix.core import ativacao_de_botao, filtro_de_botao
+
+        pecas = {
+            str(uniq): cfg
+            for uniq, cfg in (profile.controllers or {}).items()
+            if getattr(cfg, "ativacao", None) is not None  # (noqa-acento)
+        }
+        modo = ativacao_de_botao.montar(profile.ativacao)
+        modo_por_peca = {
+            u: ativacao_de_botao.montar(profile.ativacao, c.ativacao) for u, c in pecas.items()}
+        filtro = filtro_de_botao.montar(profile.ativacao)
+        filtro_por_peca = {
+            u: filtro_de_botao.montar(profile.ativacao, c.ativacao) for u, c in pecas.items()}
+        ativacao_de_botao.definir_ativo(self.store, modo, modo_por_peca)
+        filtro_de_botao.definir_ativo(self.store, filtro, filtro_por_peca)
+        if relatorio is not None:
+            ligado = any(
+                v is not None for v in (modo, filtro, *modo_por_peca.values(),
+                                        *filtro_por_peca.values()))
+            relatorio["acessibilidade"] = "aplicado" if ligado else "de_fabrica"
 
     def apply_keyboard(
         self, profile: Profile, *, relatorio: dict[str, str] | None = None

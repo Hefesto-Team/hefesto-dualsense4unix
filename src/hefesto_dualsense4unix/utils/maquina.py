@@ -29,6 +29,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     ControllerOverrides,
     LedsConfig,
     Profile,
+    ProfileAtivacaoConfig,
     ProfileMouseConfig,
     ProfileSpeakerConfig,
     RumbleConfig,
@@ -741,7 +742,7 @@ class GestoDeclarado(BaseModel):
 
 
 SECOES_DO_CONTROLE_NO_COMPUTADOR: tuple[str, ...] = (
-    "leds", "speaker", "mic", "rumble", "sensores",
+    "leds", "speaker", "mic", "rumble", "sensores", "ativacao",  # (noqa-acento)
 )
 
 
@@ -777,6 +778,9 @@ class ComputadorGlobal(BaseModel):
     teclado_so_no_jogo: bool | None = None
     teclado_sempre: bool | None = None
     tabela_no_jogo: bool | None = None
+    #: Como o botão ativa (alternar, repetir, longo, duplo): a necessidade é de quem joga,
+    #: não do jogo, e vale em todo perfil; o perfil só sobrepõe.
+    ativacao: ProfileAtivacaoConfig | None = None
 
     @model_validator(mode="after")
     def _botoes_e_teclas_pelo_dono(self) -> ComputadorGlobal:

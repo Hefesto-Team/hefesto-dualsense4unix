@@ -89,6 +89,13 @@ _CONSUMIDOR: dict[str, ConsumidorPorUnidade] = {
             "perguntado pelo tique com o uniq de cada jogador (da_peca)"
         ),
     ),
+    "ativacao": ConsumidorPorUnidade(  # (noqa-acento)
+        funcao="apply_acessibilidade",
+        chega_em=(
+            "{uniq: Ativacao}, depositado no store por definir_ativo e "  # (noqa-acento)
+            "perguntado pelo tique com o uniq de cada jogador (da_peca)"
+        ),
+    ),
 }
 
 
@@ -127,6 +134,7 @@ def test_a_regua_sabe_recusar() -> None:
     sintetico = {"leds", "touchpad"}
     assert _campos_sem_consumidor(sintetico, _CONSUMIDOR) == ["touchpad"]
     assert _consumidores_orfaos(sintetico, _CONSUMIDOR) == [
+        "ativacao",  # (noqa-acento)
         "mascara",
         "mic",
         "movimento",
@@ -313,6 +321,28 @@ def _prova_movimento(uniq: str) -> object:
         REGISTRO.limpar()
 
 
+def _prova_ativacao(uniq: str) -> object:
+    """O modo escrito para UMA peça vale só nela (O-BOTAO-ALTERNA-REPETE-...-01)."""
+    from hefesto_dualsense4unix.core import ativacao_de_botao as ativacao
+    from hefesto_dualsense4unix.profiles.schema import ProfileAtivacaoConfig
+
+    store = _StoreSemTrava()
+    gerente = ProfileManager(
+        controller=object(),  # type: ignore[arg-type]
+        store=store,  # type: ignore[arg-type]
+    )
+    perfil = Profile(
+        name="uma_peca_so",
+        match=MatchAny(),
+        controllers={uniq: ControllerOverrides(ativacao=ProfileAtivacaoConfig(alternar=["l1"]))},
+    )
+    gerente.apply_acessibilidade(perfil)
+    return (
+        ativacao.da_peca(store, uniq) is not None
+        and ativacao.da_peca(store, "aa:bb:cc:00:00:ff") is None
+    ) or None
+
+
 _PROVAS = {
     "leds": _prova_leds,
     "triggers": _prova_triggers,
@@ -322,6 +352,7 @@ _PROVAS = {
     "sensores": _prova_sensores,
     "mascara": _prova_mascara,
     "movimento": _prova_movimento,
+    "ativacao": _prova_ativacao,  # (noqa-acento)
 }
 
 

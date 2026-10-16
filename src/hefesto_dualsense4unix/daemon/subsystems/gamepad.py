@@ -816,6 +816,7 @@ def end_game_output_session(daemon: DaemonProtocol, *, target_uniq: str | None =
     """Fim da sessão uhid do jogador: devolve perfil/paleta/co-op (REPLICA-03)."""
     _esquecer_o_numero_do_jogo(daemon, target_uniq)
     if target_uniq is not None:
+        soltar_a_ativacao(daemon, target_uniq)
         esquecer_a_vibracao(daemon, target_uniq)
         # O gatilho e o envelope do jogo zeram com a sessão: quem ouve recebe o zero.
         _esquecer_os_eventos_do_jogo(daemon, target_uniq)
@@ -1751,6 +1752,7 @@ def stop_gamepad_emulation(
 ) -> None:
     """Para e descarta o gamepad virtual. Idempotente."""
     stop_motion_reader(daemon)
+    soltar_a_ativacao(daemon)
     tinha_device = daemon._gamepad_device is not None
     if tinha_device:
         with contextlib.suppress(Exception):
@@ -1812,6 +1814,7 @@ def _avisar_troca_de_modo(daemon: DaemonProtocol) -> None:
         avisar_troca_de_modo(daemon)
 
 
+from hefesto_dualsense4unix.core import ativacao_de_botao, filtro_de_botao  # noqa: E402
 from hefesto_dualsense4unix.core.remapeamento_de_botao import (  # noqa: E402
     GATILHOS as GATILHOS_DO_JOGO,
 )
@@ -1905,6 +1908,49 @@ def aplicar_o_movimento(
     except Exception as exc:
         logger.warning("roteador_de_movimento_falhou", err=str(exc))
         return lx, ly, rx, ry
+
+
+def _agora() -> float:
+    """O relógio do laço do botão (um nome só para os testes trocarem)."""
+    return time.monotonic()
+
+
+def ativar_o_botao(
+    store: Any,
+    uniq: str | None,
+    botoes: frozenset[str],
+    l2: int,
+    r2: int,
+    soltos: frozenset[str],
+) -> tuple[frozenset[str], int, int, frozenset[str]]:
+    """Alternar, repetir, toque longo e duplo do controle ``uniq``: o dono único do P1 e do co-op.
+
+    Sem modo neste controle, tudo passa intacto (o mesmo objeto).
+    """
+    return ativacao_de_botao.traduzir(store, uniq, botoes, l2, r2, _agora(), soltos)
+
+
+def filtrar_o_botao(
+    store: Any,
+    uniq: str | None,
+    botoes: frozenset[str],
+    l2: int,
+    r2: int,
+    soltos: frozenset[str],
+) -> tuple[frozenset[str], int, int, frozenset[str]]:
+    """O tremor, o aperto mínimo e a trava do controle ``uniq``: o dono único do P1 e do co-op.
+
+    Roda ANTES da troca de botões: o filtro mede o botão que a mão apertou, não o que a troca
+    entrega. Sem filtro neste controle, tudo passa intacto (o mesmo objeto).
+    """
+    return filtro_de_botao.traduzir(store, uniq, botoes, l2, r2, _agora(), soltos)
+
+
+def soltar_a_ativacao(daemon: Any, uniq: str | None = None) -> None:
+    """Solta o botão que o modo ou a trava segurava (de ``uniq`` ou de todos). Idempotente."""
+    store = getattr(daemon, "store", None)
+    ativacao_de_botao.esquecer(store, uniq)
+    filtro_de_botao.esquecer(store, uniq)
 
 
 def cortar_pelo_limiar(store: Any, uniq: str | None, l2: int, r2: int) -> tuple[int, int]:
@@ -2012,10 +2058,18 @@ def dispatch_gamepad(
             botoes, l2 = aplicar_o_toque(daemon, arranjo, uniq=uniq, botoes=botoes, l2=l2)
         if getattr(daemon, "_cursor_do_toque", None):
             _conferir_o_cursor_do_toque(daemon, store)
+        if filtro_de_botao.alguma(store):
+            botoes, l2, r2, soltos = filtrar_o_botao(
+                store, primary_identity(daemon), botoes, l2, r2, soltos)
         da_mao = botoes
         troca = remapeamento_ativo(store)
         if troca:
             botoes, l2, r2 = traduzir_remapeamento(botoes, l2, r2, troca)
+        com_modo = ativacao_de_botao.alguma(store)
+        if com_modo:
+            tocados = traduzir_remapeamento(soltos, 0, 0, troca)[0] if troca else soltos
+            botoes, l2, r2, tocados = ativar_o_botao(
+                store, primary_identity(daemon), botoes, l2, r2, tocados)
         lx, ly = state.raw_lx, state.raw_ly
         rx, ry = state.raw_rx, state.raw_ry
         if arranjo is not None:
@@ -2030,7 +2084,10 @@ def dispatch_gamepad(
                 botoes=da_mao,
             )
         device.forward_analog(lx=lx, ly=ly, rx=rx, ry=ry, l2=l2, r2=r2)
-        if soltos:
+        if com_modo:
+            if tocados:
+                device.forward_buttons(botoes | tocados)
+        elif soltos:
             com_soltos = da_mao | soltos
             if troca:
                 com_soltos = traduzir_remapeamento(com_soltos, l2, r2, troca)[0]

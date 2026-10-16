@@ -1726,6 +1726,8 @@ class CoopManager:
         self._promote_pending()
         store = getattr(self._daemon, "store", None)
         troca = remapeamento_ativo(store)
+        com_modo = alguma_ativacao(store)
+        com_filtro = alguma_filtro(store)
         arranjo_de_movimento = roteador_ativo(store)
         marcas = marcas_da_partida(self._daemon)
         for player in list(self._players.values()):
@@ -1767,6 +1769,11 @@ class CoopManager:
                         botoes=botoes,
                         l2=l2,
                     )
+                if com_filtro:
+                    # O tremor, o aperto mínimo e a trava deste jogador, pelo mesmo dono do P1.
+                    botoes, l2, r2, soltos = filtrar_o_botao(
+                        store, player.identity, botoes, l2, r2, soltos)
+                if arranjo_de_movimento is not None:
                     lx, ly, rx, ry = aplicar_o_movimento(
                         self._daemon,
                         arranjo_de_movimento,
@@ -1780,6 +1787,10 @@ class CoopManager:
                 da_mao = botoes
                 if troca:
                     botoes, l2, r2 = traduzir_remapeamento(botoes, l2, r2, troca)
+                if com_modo:
+                    tocados = traduzir_remapeamento(soltos, 0, 0, troca)[0] if troca else soltos
+                    botoes, l2, r2, tocados = ativar_o_botao(
+                        store, player.identity, botoes, l2, r2, tocados)
                 player.vpad.forward_analog(
                     lx=lx,
                     ly=ly,
@@ -1788,7 +1799,10 @@ class CoopManager:
                     l2=l2,
                     r2=r2,
                 )
-                if soltos:
+                if com_modo:
+                    if tocados:
+                        player.vpad.forward_buttons(botoes | tocados)
+                elif soltos:
                     com_soltos = da_mao | soltos
                     if troca:
                         com_soltos = traduzir_remapeamento(com_soltos, l2, r2, troca)[0]
@@ -1851,6 +1865,9 @@ class CoopManager:
             if quem == chave:
                 del self._mesa_do_jogo[lugar]
         self._nascido_em.pop(chave, None)
+        if chave != _CHAVE_DO_P1:
+            # O vpad morreu: o botão que o modo segurava para ele solta com ele.
+            soltar_a_ativacao(self._daemon, chave)
 
     def _compactar(self) -> None:
         """Sem jogo aberto, o lugar de cada vpad é a ordem em que ele nasceu."""
@@ -2274,6 +2291,12 @@ class CoopManager:
         return vistos
 
 
+from hefesto_dualsense4unix.core.ativacao_de_botao import (  # noqa: E402
+    alguma as alguma_ativacao,
+)
+from hefesto_dualsense4unix.core.filtro_de_botao import (  # noqa: E402
+    alguma as alguma_filtro,
+)
 from hefesto_dualsense4unix.core.remapeamento_de_botao import (  # noqa: E402
     ativo as remapeamento_ativo,
 )
@@ -2290,9 +2313,12 @@ from hefesto_dualsense4unix.daemon.subsystems.gamepad import (  # noqa: E402
     ApertosVistos,
     aplicar_o_movimento,
     aplicar_o_toque,
+    ativar_o_botao,
     cortar_pelo_limiar,
+    filtrar_o_botao,
     ralos_do_mic,
     sem_o_gesto_do_ps,
+    soltar_a_ativacao,
 )
 from hefesto_dualsense4unix.daemon.subsystems.navegacao_interna import (  # noqa: E402
     roubar_o_que_navega,

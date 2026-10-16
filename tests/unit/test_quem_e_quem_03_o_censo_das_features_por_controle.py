@@ -21,7 +21,7 @@ NIVEIS = ("por-controle", "global", "ausente")
 
 @dataclass(frozen=True)
 class LinhaDoCenso:
-    """Uma das dez features que a tela oferece por controle."""
+    """Uma das onze features que a tela oferece por controle."""
 
     feature: str
     nivel: str
@@ -158,6 +158,22 @@ CENSO: tuple[LinhaDoCenso, ...] = (
         mora_em="",
     ),
     LinhaDoCenso(
+        feature="o botão ativa",
+        nivel="por-controle",
+        campo="ativacao",  # (noqa-acento)
+        subcampo=None,
+        sem_opiniao="esta peça segue a ativação do perfil, que por padrão não existe",
+        quem_responde=(
+            "a seção global `Profile.ativacao`, campo a campo "
+            "(`ativacao_de_botao.montar`); sem ela todo botão passa como o "
+            "controle o aperta — alternar, repetir e esperar o toque longo são "
+            "arranjo de quem joga, e arranjo nasce desligado"
+        ),
+        dono="O-BOTAO-ALTERNA-REPETE-E-ENTENDE-TOQUE-LONGO-E-DUPLO-01",
+        chave_do_mapa="plataforma.vpad",
+        mora_em="",
+    ),
+    LinhaDoCenso(
         feature="touchpad",
         nivel="ausente",
         campo=None,
@@ -178,7 +194,7 @@ CENSO: tuple[LinhaDoCenso, ...] = (
 
 FEATURE_SEM_DONO = "touchpad"
 
-FEATURES_NA_TELA = 10
+FEATURES_NA_TELA = 11
 
 
 def campos_declarados_por_controle(censo: tuple[LinhaDoCenso, ...]) -> set[str]:
@@ -248,7 +264,7 @@ def test_o_censo_cobre_o_esquema_nos_dois_sentidos() -> None:
 
 
 def test_o_censo_tem_uma_linha_por_feature_e_nenhuma_repetida() -> None:
-    """A tela oferece dez, e o censo conta dez."""
+    """A tela oferece onze, e o censo conta onze."""
     assert len(CENSO) == FEATURES_NA_TELA, (
         f"o censo tem {len(CENSO)} linhas e a tela oferece {FEATURES_NA_TELA}. "
         "Se a tela passou a oferecer outro número, mude FEATURES_NA_TELA e o "
@@ -298,6 +314,7 @@ _NUMERAIS = {
     "OITO": 8,
     "NOVE": 9,
     "DEZ": 10,
+    "ONZE": 11,
 }
 
 _FORMA_DA_CONTA = re.compile(

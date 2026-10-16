@@ -496,6 +496,43 @@ class ProfileMovimentoConfig(BaseModel):
         return value
 
 
+class ProfileAtivacaoConfig(BaseModel):
+    """Como o botão ativa, por perfil (O-BOTAO-ALTERNA-REPETE-E-ENTENDE-TOQUE-LONGO-E-DUPLO-01).
+
+    Aditiva ao schema v1: perfil sem a seção não tem opinião, e todo botão passa como o
+    controle o aperta. Um botão tem UM modo: ``alternar`` (um toque segura, outro solta),
+    ``repetir`` (segurado, aperta e solta sozinho) ou um gesto, ``longo``/``duplo``, que
+    dispara OUTRO botão (o toque curto continua o dele). Os tempos são de quem usa; a faixa
+    é a mesma que o motor aplica (``core/ativacao_de_botao``). Sobre a peça, campo a campo.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    alternar: list[str] = Field(default_factory=list)
+    repetir: list[str] = Field(default_factory=list)
+    longo: dict[str, str] = Field(default_factory=dict)
+    duplo: dict[str, str] = Field(default_factory=dict)
+    longo_ms: int = Field(default=500, ge=150, le=3000)
+    duplo_ms: int = Field(default=300, ge=100, le=1000)
+    repete_apos_ms: int = Field(default=500, ge=100, le=3000)
+    repete_por_segundo: int = Field(default=6, ge=1, le=20)
+    # O tremor e o aperto junto (O-TREMOR-E-O-APERTO-JUNTO-NAO-DECIDEM-O-BOTAO-01): zero desliga.
+    repique_ms: int = Field(default=0, ge=0, le=1000)
+    aperto_minimo_ms: int = Field(default=0, ge=0, le=500)
+    travar: list[str] = Field(default_factory=list)
+    ps_travado_ms: int = Field(default=0, ge=0, le=3000)
+
+    @model_validator(mode="after")
+    def _um_botao_um_modo(self) -> ProfileAtivacaoConfig:
+        """Botão que o jogo não conhece, dois modos num botão, gesto que dispara o próprio botão."""
+        from hefesto_dualsense4unix.core.ativacao_de_botao import recusar
+
+        motivo = recusar(self.alternar, self.repetir, self.longo, self.duplo, self.travar)
+        if motivo:
+            raise ValueError(f"ativacao: {motivo}")  # (noqa-acento)
+        return self
+
+
 class ProfileMouseConfig(BaseModel):
     """Seção opcional de emulação de mouse por perfil (FEAT-POINT-AND-CLICK-01)."""
 
@@ -1206,7 +1243,7 @@ class ControllerOverrides(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    # SÃO OITO, e a tela oferece dez. O que falta, e o CAMINHO que cada um
+    # SÃO NOVE, e a tela oferece onze. O que falta, e o CAMINHO que cada um
     # espera antes de poder entrar, está na seção «ControllerOverrides» de
     # docs/research/o-porque-dos-modulos.md, ordenada
     # por custo. O `mic` entrou em 03/09/2026 pelo `muted`, que é o campo dele
@@ -1214,7 +1251,8 @@ class ControllerOverrides(BaseModel):
     # 04/09/2026, quando o interruptor que ele prometia passou a existir; a
     # `mascara` entrou em 08/09/2026, por decisão de produto — e é a primeira que não
     # é uma SEÇÃO, e sim um valor só; o `movimento` entrou em 24/09/2026, com o
-    # chip «Mira Virtual» que o usuário pediu no cartão de cada controle.
+    # chip «Mira Virtual» que o usuário pediu no cartão de cada controle; o modo de
+    # ativação, em 16/10/2026, com o consumidor por peça já em `apply_acessibilidade`.
     leds: LedsConfig | None = None
     triggers: TriggersConfig | None = None
     rumble: ControllerRumbleOverride | None = None
@@ -1232,6 +1270,9 @@ class ControllerOverrides(BaseModel):
     #: não declara. A régua da ordem mede o comportamento dos três degraus, não
     mascara: MascaraDeGamepad | None = None
     movimento: ProfileMovimentoConfig | None = None
+    #: Como o botão ativa NESTA peça (alternar, repetir, longo, duplo), campo a campo sobre o
+    #: perfil. ``None`` = herda.
+    ativacao: ProfileAtivacaoConfig | None = None
 
 
 _KEY_BINDING_TOKEN_RE = re.compile(r"^(KEY_[A-Z0-9_]+|__[A-Z_]+__)$")
@@ -1288,6 +1329,7 @@ class Profile(BaseModel):
     # POR QUE NÃO É O `button_actions` ACIMA: aquele fala a língua de TECLA e
     remapeamento: dict[str, str] | None = None
     movimento: ProfileMovimentoConfig | None = None
+    ativacao: ProfileAtivacaoConfig | None = None
     mouse: ProfileMouseConfig | None = None
     # flag global `keyboard_emulation.flag` (utils/session.py:306), enquanto o
     # Por 24 dias foi verdade —
@@ -1350,6 +1392,7 @@ class Profile(BaseModel):
         if isinstance(dados, dict):
             for opcional in (
                 "ponte", "remapeamento", "movimento", "estilo", "receita_do_tato",
+                "ativacao",  # (noqa-acento)
                 "marcas", "controles_modo", "criado_em", "modificado_em",
                 "alvo", "evento", "evento_comando",
             ):
@@ -2384,6 +2427,65 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         "`None` = todos os botões passam intactos, que é o estado ÍNTEGRO da "
         "feature. Trocar botão de fábrica seria o oposto do pedido dela.",
         dono="hefesto_dualsense4unix.core.remapeamento_de_botao:resolver",
+    ),
+    "Profile.ativacao": Nascimento(
+        NASCE_NO_LEITOR,
+        "`None` = todo botão passa como o controle o aperta, que é o estado ÍNTEGRO. "
+        "Alternar, repetir ou esperar o toque longo é necessidade de quem joga, não de fábrica: "
+        "ligado sem pedido, o botão ficaria preso ou demoraria a responder.",
+        dono="hefesto_dualsense4unix.core.ativacao_de_botao:montar",
+    ),
+    "ControllerOverrides.ativacao": Nascimento(
+        NASCE_NO_LEITOR,
+        "`None` = esta peça segue a ativação do perfil, e a do perfil não existe por padrão. "
+        "Ver `Profile.ativacao`.",
+        dono="hefesto_dualsense4unix.core.ativacao_de_botao:montar",
+    ),
+    "ProfileAtivacaoConfig.alternar": Nascimento(
+        E_CONTRATO, "Lista vazia = nenhum botão alterna; só existe por gesto de quem joga."
+    ),
+    "ProfileAtivacaoConfig.repetir": Nascimento(
+        E_CONTRATO, "Lista vazia = nenhum botão repete; ver `ProfileAtivacaoConfig.alternar`."
+    ),
+    "ProfileAtivacaoConfig.longo": Nascimento(
+        E_CONTRATO, "Mapa vazio = nenhum toque longo dispara outro botão."
+    ),
+    "ProfileAtivacaoConfig.duplo": Nascimento(
+        E_CONTRATO, "Mapa vazio = nenhum toque duplo dispara outro botão."
+    ),
+    "ProfileAtivacaoConfig.longo_ms": Nascimento(
+        E_CONTRATO,
+        "Quanto segurar para valer como longo. 500 ms é a proposta de fábrica; o `ge=150` "
+        "impede um tempo que confunde com o toque curto.",
+    ),
+    "ProfileAtivacaoConfig.duplo_ms": Nascimento(
+        E_CONTRATO,
+        "A janela do segundo toque. 300 ms é a proposta de fábrica; o `ge=100` impede um "
+        "tempo que ninguém alcança.",
+    ),
+    "ProfileAtivacaoConfig.repete_apos_ms": Nascimento(
+        E_CONTRATO, "Quanto segurar antes de repetir. 500 ms é a proposta de fábrica."
+    ),
+    "ProfileAtivacaoConfig.repete_por_segundo": Nascimento(
+        E_CONTRATO, "A cadência da repetição. 6 por segundo é a proposta de fábrica."
+    ),
+    "ProfileAtivacaoConfig.repique_ms": Nascimento(
+        E_CONTRATO,
+        "Zero = não ignora aperto nenhum, que é o estado ÍNTEGRO: o filtro de tremor atrasa ou "
+        "come aperto de quem não tem tremor. 120 ms é a proposta de fábrica ao ligar.",
+    ),
+    "ProfileAtivacaoConfig.aperto_minimo_ms": Nascimento(
+        E_CONTRATO,
+        "Zero = todo aperto conta. 50 ms é a proposta de fábrica ao ligar; o filtro soma a "
+        "espera a cada aperto, então só existe por gesto de quem joga.",
+    ),
+    "ProfileAtivacaoConfig.travar": Nascimento(
+        E_CONTRATO, "Lista vazia = nenhum botão trava; ver `ProfileAtivacaoConfig.alternar`."
+    ),
+    "ProfileAtivacaoConfig.ps_travado_ms": Nascimento(
+        E_CONTRATO,
+        "Zero = o gesto do PS pede os dois botões juntos, como sempre. 600 ms é a proposta de "
+        "fábrica ao ligar, e o PS sozinho passa a esperar esse tempo para abrir a Steam.",
     ),
     "Profile.mouse": Nascimento(
         AGUARDA_A_PALAVRA_DELA,
