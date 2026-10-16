@@ -89,6 +89,7 @@ def test_o_detector_do_interrogacao_reconhece_o_que_a_sprint_cura() -> None:
 
 @pytest.mark.parametrize("nome", list(PAGINAS))
 def test_nenhum_dos_dois_mapas_tem_o_interrogacao(nome: str) -> None:
+    # D-1610-OS-MAPAS-FALAM-PELA-DICA-CURTA
     """MORDIDA: devolva o ``<span class="ajuda">`` ao espectro (rádio) ou à receita (portas)."""
     achados = O_INTERROGACAO.findall(PAGINAS[nome])
     assert not achados, f"{nome}: ainda monta o «?» ({len(achados)} vez(es))"

@@ -61,6 +61,7 @@ def _de_pe_sem_controle() -> Contexto:
 
 
 def test_o_status_marca_desligado_com_o_servico_parado() -> None:
+    # D-1610-A-JOGAR-DIZ-DESLIGADO-COM-O-SERVICO-PARADO
     """Posição vazia caía no rádio que o gerador marcou (Ligado): o interruptor mentia."""
     fora = aba.pacote(_parado())
     assert fora["hef-posicao"] == aba.POSICAO_COM_O_SERVICO_PARADO == "desligado", (
@@ -145,6 +146,7 @@ def test_clicar_em_ligado_com_o_servico_parado_liga_o_servico(monkeypatch: Any) 
 
 
 def test_o_modo_do_ligado_espera_o_servico_que_acabou_de_subir(monkeypatch: Any) -> None:
+    # D-1610-O-LIGADO-ESPERA-O-SERVICO-RESPONDER
     """Sem a espera, o plano saía no meio segundo em que o soquete ainda não existe: o modo não
     chegava ao serviço e o botão piscava a recusa sobre um clique que tinha ligado tudo."""
     from pacotes import a09_sistema

@@ -116,6 +116,7 @@ def _hora(carimbo: float) -> str:
 
 
 def test_o_hub_de_dois_lados_e_um_chip_de_sete_entradas(sys_usb: SysDeMentira) -> None:
+    # D-1610-A-CADEIA-USB-MOSTRA-O-HUB-COMO-UM-CHIP
     dado = _arranjo(sys_usb)
     hubs = [a for a in dado["aparelhos"] if a["classe"] == "hub"]
     assert len(hubs) == 4, "o /sys de mentira enumera quatro nós para o hub de plástico"
@@ -209,6 +210,7 @@ def _uma_noite(sys_usb: SysDeMentira, tmp_path: Path, relogio: Relogio) -> Path:
 
 def test_o_registro_tem_as_seis_formas_de_evento_a_mais_nova_em_cima(
         sys_usb: SysDeMentira, tmp_path: Path, relogio: Relogio) -> None:
+    # D-1610-O-REGISTRO-DO-USB-E-A-QUARTA-ABA-DO-MAPA
     arquivo = _uma_noite(sys_usb, tmp_path, relogio)
     dado = _arranjo(sys_usb, diario=du.ler(arquivo), agora=BASE_DO_RELOGIO + 100)
 

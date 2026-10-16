@@ -140,6 +140,7 @@ def test_o_jogo_fora_do_pino_e_o_desinstalado_mantem_a_versao(steam: Path) -> No
 
 def test_apagar_tira_do_disco_so_a_sobra_e_nao_deixa_lixeira(
         steam: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # D-1610-O-FIXAR-PROTON-APAGA-DE-VEZ-AS-SOBRAS
     """De vez: a pasta some, o pino, o decoy da Valve e o resto ficam, e nada vai à lixeira."""
     raiz = steam / ".steam" / "steam"
     valve = raiz / "steamapps" / "common" / "Proton 9.0"

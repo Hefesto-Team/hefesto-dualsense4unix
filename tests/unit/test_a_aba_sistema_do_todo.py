@@ -74,6 +74,7 @@ def test_o_status_tem_seis_linhas_em_tres_colunas() -> None:
 
 
 def test_as_quatro_colunas_estao_na_ordem_dela() -> None:
+    # D-1610-O-PERFIL-DE-BATERIA-E-SO-O-GLOBAL-NA-SISTEMA
     """Funcionamento do app, Interface, Perfil global de bateria e Saúde do app."""
     doc = _desenho()
     rotulos = re.findall(r"<span[^>]*>([^<]+)</span>",
@@ -329,6 +330,7 @@ def test_o_pacote_pinta_duas_linhas_de_status_quatro_de_exame_e_os_dois_campos_n
 
 def test_o_interruptor_alterna_e_o_duplo_clique_reaplica(
         monkeypatch: pytest.MonkeyPatch, casa: pathlib.Path) -> None:
+    # D-1610-UM-INTERRUPTOR-SO-PARA-AS-CORRECOES
     relogio = [100.0]
     monkeypatch.setattr(a09, "_relogio", lambda: relogio[0])
     reaplicou: list[str] = []
@@ -421,6 +423,7 @@ def test_reaplicar_roda_o_doctor_os_lancadores_o_vulkan_e_o_proton(
 
 
 def test_o_tamanho_so_aceita_os_tres_da_lista(casa: pathlib.Path) -> None:
+    # D-1610-O-TAMANHO-DA-INTERFACE-SE-GRAVA-EM-INTERFACE-ESCALA
     assert a09.tamanho_da_interface() == 100, "sem arquivo, o tamanho é o de hoje"
     for v in (125, 150, 100):
         a09.tamanho_da_interface_gesto(_ctx(), {"v": str(v)}, None)
