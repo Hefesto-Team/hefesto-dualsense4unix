@@ -670,7 +670,7 @@ for _g in _CINZAS:
             raise SystemExit(f"ERRO: o botão de {_g!r} perdeu `{_exigido}` — a peça "
                              "da D-03 é inteira (a razão mora no `data-dica` dele).")
 
-if "ajuda" in re.findall(r'class="([^"]*)"', MIOLO):
+if any("ajuda" in _classes.split() for _classes in re.findall(r'class="([^"]*)"', MIOLO)):
     raise SystemExit("ERRO: o «?» voltou: a explicação de cada rótulo é o `data-dica` dele "
                      "(A1 do desenho do todo, 13/10/2026).")
 if MIOLO.count(f'data-gesto="{_gesto("correcoes-automaticas")}"') != 1:
@@ -683,8 +683,6 @@ for _morto in ("refazer-consertos", "aplicar-aos-jogos", "fixar-proton", "corrig
 if not re.search(r"\.registro\{[^}]*min-height:0", CSS):
     raise SystemExit("ERRO: o registro deixou de poder encolher até zero — em 1212x700 o "
                      "fundo dele passaria do quadro.")
-if 'class="ajuda porque"' in MIOLO:
-    raise SystemExit("ERRO: o `?` da razão voltou: a razão do botão cinza é o `data-dica` dele.")
 
 # 9. O BOTÃO DO `daemon.reload` SE CHAMA "ATUALIZAR" PORQUE O USUÁRIO MANDOU (09-Q1),
 _RELOAD = re.search(r'<button class="btn"([^>]*)>([^<]*)</button>', "".join(

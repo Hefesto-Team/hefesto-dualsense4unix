@@ -1,8 +1,8 @@
 """Os mapas do rádio e das portas perdem o «?» e ganham a base comum.
 
-A-ABA-MAPAS-DO-RADIO-E-DAS-PORTAS-DO-TODO-01. Os dois desenhos andam até o mockup e param ali (o
-``--publicar`` é do fecho): a régua lê os dois arquivos de ``mockup/`` e a página que o gerador das
-portas monta na bancada (``pagina_do_mapa.pagina()``), nunca a cópia publicada.
+A-ABA-MAPAS-DO-RADIO-E-DAS-PORTAS-DO-TODO-01. Os dois desenhos foram publicados em 16/10/2026: a
+régua lê os dois arquivos de ``mockup/``, a página que o gerador das portas monta
+(``pagina_do_mapa.pagina()``) e a cópia que o produto serve.
 
 Mordidas (cada uma arrancada, vista reprovar e devolvida):
 
@@ -54,6 +54,12 @@ DICAS["mapa-das-portas.html"] = DICAS["pagina_do_mapa.pagina()"] = {
     "reexaminar": "Lê de novo e mostra o que mudou de lugar",
 }
 
+#: A peça do movimento do Sugestões como era antes do desenho do todo: o título e, ao lado, o «?».
+RECEITA_COM_O_INTERROGACAO = (
+    '                 return "<li><div><h4>" + m.titulo + \'<span class="ajuda" tabindex="0">?'
+    '<span class="dica">\'\n'
+)
+
 
 def _paginas() -> dict[str, str]:
     """Os dois desenhos como estão no mockup, mais a página das portas como o gerador a monta."""
@@ -83,8 +89,9 @@ def test_o_detector_do_interrogacao_reconhece_o_que_a_sprint_cura() -> None:
     assert O_INTERROGACAO.search('<span class="ajuda" role="img" title="x">')
     assert O_INTERROGACAO.search("""'<span class="ajuda" tabindex="0">?<span class="dica">'""")
     assert not O_INTERROGACAO.search('<p class="ajuda" id="ajuda-bandeja"></p>')
-    assert O_INTERROGACAO.search(pagina_do_mapa.RECEITA_COM_O_QUE_AJUDA), (
-        "a peça que a edição troca já não é a que carrega o «?»")
+    assert O_INTERROGACAO.search(RECEITA_COM_O_INTERROGACAO), (
+        "a peça de antes da edição já não é a que carrega o «?»")
+    assert not O_INTERROGACAO.search(pagina_do_mapa.RECEITA_COM_A_DICA_NO_TITULO)
 
 
 @pytest.mark.parametrize("nome", list(PAGINAS))
@@ -168,19 +175,25 @@ def test_no_sugestoes_o_titulo_do_movimento_carrega_a_razao() -> None:
     """
     doc = PAGINAS["pagina_do_mapa.pagina()"]
     assert pagina_do_mapa.RECEITA_COM_A_DICA_NO_TITULO in doc
-    assert pagina_do_mapa.RECEITA_COM_O_QUE_AJUDA not in doc
+    assert RECEITA_COM_O_INTERROGACAO not in doc
     assert '<h4 data-dica="' in pagina_do_mapa.RECEITA_COM_A_DICA_NO_TITULO
     assert 'data-dica="Clique e marque a entrada onde ele está"' in doc
 
 
-def test_as_edicoes_dos_mapas_esperam_o_publicar_e_a_copia_do_produto_nao_muda() -> None:
-    """As edições são da bancada: a cópia que o produto tem hoje continua com a receita antiga."""
-    publicada = pagina_do_mapa.pagina(False)
-    assert pagina_do_mapa.RECEITA_COM_O_QUE_AJUDA in publicada
-    assert 'id="base-comum"' not in publicada
+def test_as_edicoes_dos_mapas_estao_publicadas_e_a_copia_do_produto_e_a_pagina() -> None:
+    """As edições entraram em ``EDICOES`` e a cópia que o produto serve já tem o desenho do todo.
+
+    MORDIDA: ponha uma edição dos mapas de volta em ``EDICOES_ESPERANDO_A_SESSAO_DELA``, ou a
+    receita antiga na cópia publicada, e a régua reprova.
+    """
+    assert pagina_do_mapa.EDICOES_ESPERANDO_A_SESSAO_DELA == ()
     for edicao in pagina_do_mapa.EDICOES_DOS_MAPAS_DO_TODO:
-        assert edicao in pagina_do_mapa.EDICOES_ESPERANDO_A_SESSAO_DELA
-        assert edicao not in pagina_do_mapa.EDICOES
+        assert edicao in pagina_do_mapa.EDICOES
+    publicada = (INTERFACE / "paginas/mapa-das-portas.html").read_text(encoding="utf-8")
+    assert publicada == pagina_do_mapa.pagina(False)
+    assert pagina_do_mapa.RECEITA_COM_A_DICA_NO_TITULO in publicada
+    assert RECEITA_COM_O_INTERROGACAO not in publicada
+    assert publicada.count('<style id="base-comum">') == 1
 
 
 def _no_webkit_da_bancada(passos: list[str], bancada: pathlib.Path) -> list[object]:

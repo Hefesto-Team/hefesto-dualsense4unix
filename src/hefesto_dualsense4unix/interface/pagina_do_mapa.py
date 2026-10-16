@@ -445,16 +445,12 @@ def _com_os_dados(js: str) -> str:
     return js
 
 
-#: O movimento do Sugestões como a página do produto o monta hoje: o título e, ao lado, o «?» que
-#: abre as razões. É o que as edições dos mapas do todo trocam pelo título com a dica (as duas
-#: casas citam a mesma peça).
-RECEITA_COM_O_QUE_AJUDA = (
-    '                 return "<li><div><h4>" + m.titulo + \'<span class="ajuda" tabindex="0">?'
-    '<span class="dica">\'\n'
-    "                   + m.linhas.map(function (l) { return '<span><span class=\"selo ' + l.s + "
-    "'\">' + (l.s === \"espec\" ? \"especificação\" : l.s) + \"</span><span>\" + l.t + "
-    "\"</span></span>\"; }).join(\"\")\n"
-    '                   + "</span></span></h4></div></li>";\n'
+#: O movimento do Sugestões: o título carrega a primeira razão como dica, sem marcação (a dica curta
+#: da base comum no lugar do «?»; regra A1 do desenho do todo, nenhum botão «?»).
+RECEITA_COM_A_DICA_NO_TITULO = (
+    '                 return \'<li><div><h4 data-dica="\' + '
+    'emAtributo(String(m.linhas[0] ? m.linhas[0].t : ""'
+    ').replace(/<[^>]+>/g, "")) + \'">\' + m.titulo + "</h4></div></li>";\n'
 )
 
 #: As edições, uma a uma. Elas citam pedaços da origem congelada, que mora em
@@ -3188,7 +3184,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             'h + " movimento" + (reais.length > 1 ? "s" : "") + "</span></p>"\n'
             '             + \'<ol class="receita">\'\n'
             '             + reais.map(function (m) {\n'
-            + RECEITA_COM_O_QUE_AJUDA +
+            + RECEITA_COM_A_DICA_NO_TITULO +
             '               }).join("")\n'
             '             + "</ol>";\n'
             '        var fim = movs.filter(function (m) { return m.semNumero; })[0];\n'
@@ -3207,7 +3203,9 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             's fala menos: sem a chamada, a descrição e os subtítulos das variantes, '
             'cada movimento numa linha com as razões no «?», a linha do ganho não med'
             'ido curta e sem o parágrafo do «Já movi», que deixa de repetir o id do «'
-            'Examinar» (pedido f e item 4).'
+            'Examinar» (pedido f e item 4). 15/10/2026, A-ABA-MAPAS-DO-RADIO-E-DAS-PORTAS-DO-'
+            'TODO-01 — o «?» de cada movimento sai e a primeira razão vira a dica do título '
+            '(regra A1 do todo: nenhum botão «?»).'
         ),
     ),
     Edicao(
@@ -6148,6 +6146,8 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             " [ServiceRecords] do cache (device.c do BlueZ 5.86), então não há cache a apagar"
         ),
     ),
+    *EDICOES_DA_CADEIA_E_DO_REGISTRO,
+    *EDICOES_DOS_MAPAS_DO_TODO,
 )
 
 
@@ -6454,13 +6454,6 @@ EDICOES_DA_CADEIA_E_DO_REGISTRO: tuple[Edicao, ...] = (
 _BASE_CSS = pathlib.Path(__file__).with_name("base-comum.css").read_text(encoding="utf-8")
 _BASE_JS = pathlib.Path(__file__).with_name("base-comum.js").read_text(encoding="utf-8")
 
-#: O movimento do Sugestões: o título carrega a primeira razão como dica, sem marcação.
-RECEITA_COM_A_DICA_NO_TITULO = (
-    '                 return \'<li><div><h4 data-dica="\' + '
-    'emAtributo(String(m.linhas[0] ? m.linhas[0].t : ""'
-    ').replace(/<[^>]+>/g, "")) + \'">\' + m.titulo + "</h4></div></li>";\n'
-)
-
 EDICOES_DOS_MAPAS_DO_TODO: tuple[Edicao, ...] = (
     Edicao(
         antes=(
@@ -6500,14 +6493,6 @@ EDICOES_DOS_MAPAS_DO_TODO: tuple[Edicao, ...] = (
         antes='title="Lê o computador de novo e mostra o que mudou de lugar"',
         depois='data-dica="Lê de novo e mostra o que mudou de lugar"',
         porque="15/10/2026, mesma sprint — o `title` do «Examinar» vira dica curta",
-    ),
-    Edicao(
-        antes=RECEITA_COM_O_QUE_AJUDA,
-        depois=RECEITA_COM_A_DICA_NO_TITULO,
-        porque=(
-            "15/10/2026, mesma sprint — o «?» de cada movimento sai e a primeira razão vira a"
-            " dica do título (regra A1 do todo: nenhum botão «?»)"
-        ),
     ),
     Edicao(
         antes=""" · Clique em <b style="color:var(--color-ok)">Sugestões</b>'""",
@@ -6553,9 +6538,9 @@ EDICOES_DOS_MAPAS_DO_TODO: tuple[Edicao, ...] = (
 #: O-MAPA-DAS-CONEXOES-CABE-NA-ABA-E-FALA-MENOS-01 e as dos conjuntos «Conexões 2» e
 #: «Conexões 3» foram publicadas e entraram no fim de `EDICOES`; a da
 #: O-BLUEZ-TEM-UM-DONO-ATE-NA-SONDA-01, em 08/10.
-#: Desde 15/10/2026 levam as da cadeia e do registro (a aba Mapas do todo soma as suas).
-EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = (
-    EDICOES_DA_CADEIA_E_DO_REGISTRO + EDICOES_DOS_MAPAS_DO_TODO)
+#: De novo em 16/10/2026: as da cadeia, do registro e dos mapas do todo foram publicadas e entraram
+#: no fim de `EDICOES`.
+EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = ()
 
 
 def pagina(com_as_que_esperam: bool = True) -> str:
