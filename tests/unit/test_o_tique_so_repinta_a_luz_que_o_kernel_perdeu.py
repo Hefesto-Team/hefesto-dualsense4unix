@@ -167,6 +167,7 @@ def test_o_primeiro_tique_pinta_os_quatro(mesa: Any) -> None:
 
 
 def test_o_segundo_tique_sem_mudanca_nao_escreve_nada(mesa: Any) -> None:
+    # D-1610-O-TIQUE-DE-30-S-SO-REPINTA-A-LUZ-PERDIDA
     """Dois `connect()` seguidos sem mudança: o segundo não manda um report sequer."""
     inst, handles, espiao, _raiz = mesa
     _connect(inst)

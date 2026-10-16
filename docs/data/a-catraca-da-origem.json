@@ -55,7 +55,7 @@
       "data": "2026-10-16",
       "nota": "remendos de sintoma por arquivo",
       "o_que_conta": "remendos de sintoma acima do teto de cada arquivo",
-      "piso": 993,
+      "piso": 992,
       "por_item": {
         "__init__.py": 1,
         "app/actions/base.py": 1,
@@ -94,7 +94,7 @@
         "daemon/ipc_rumble_policy.py": 2,
         "daemon/ipc_server.py": 4,
         "daemon/launch_env.py": 15,
-        "daemon/lifecycle.py": 42,
+        "daemon/lifecycle.py": 41,
         "daemon/sensor_hub.py": 16,
         "daemon/service_install.py": 1,
         "daemon/subsystems/alto_falante.py": 16,
@@ -247,7 +247,7 @@
         }
       ],
       "unidade": "remendos",
-      "universo": 402
+      "universo": 405
     },
     "tamanho": {
       "data": "2026-10-16",

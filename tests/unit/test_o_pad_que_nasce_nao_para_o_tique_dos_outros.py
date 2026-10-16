@@ -176,6 +176,7 @@ def _maior_intervalo(tempos: list[float]) -> float:
 def test_o_p1_recebe_a_entrada_a_cada_tique_enquanto_o_white_nasce(
     mesa: SimpleNamespace,
 ) -> None:
+    # D-1610-O-PAD-VIRTUAL-NASCE-NUM-FIO-PROPRIO
     """Sem intervalo acima de dois tiques na entrada do P1, e o pad do White nasce."""
     for _ in range(3):
         _tique(mesa)

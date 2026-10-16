@@ -213,6 +213,7 @@ class TestAParada:
         assert a_ordem_de_parada()[-1].nome == "controle"
 
     def test_a_parada_solta_os_quatro_antes_do_disconnect(self) -> None:
+        # D-1610-QUEM-SOLTA-O-CONTROLE-SOLTA-OS-GATILHOS-DOS-QUATRO
         from hefesto_dualsense4unix.daemon.connection import soltar_o_controle
 
         diario = _Diario()
