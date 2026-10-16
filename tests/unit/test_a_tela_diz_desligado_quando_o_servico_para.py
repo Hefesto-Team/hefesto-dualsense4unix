@@ -103,6 +103,29 @@ def test_servico_de_pe_sem_controle_continua_dizendo_que_nao_ha_controle() -> No
     assert pacotes.topo(ctx)["conta-b"] == pacotes.SEM_CONTROLE_NA_MESA
 
 
+class _ServicoRecemLigado:
+    """A ponte com o serviço que acabou de subir: a unit é `Type=simple`, então o `systemctl start`
+    volta antes de o soquete existir (medido em 15/10/2026: 0,5 s até o `ipc_server_listening`).
+    Responde só a partir da `acorda_na`-ésima pergunta; antes disso todo pedido cai."""
+
+    def __init__(self, acorda_na: int) -> None:
+        self.acorda_na = acorda_na
+        self.perguntas = 0
+        self.pedidos: list[tuple[str, bool]] = []
+
+    @property
+    def de_pe(self) -> bool:
+        return self.perguntas >= self.acorda_na
+
+    def daemon_state_full(self) -> dict[str, Any] | None:
+        self.perguntas += 1
+        return dict(NO_RADIO) if self.de_pe else None
+
+    def chamar(self, metodo: str, **_params: Any) -> bool:
+        self.pedidos.append((metodo, self.de_pe))
+        return self.de_pe
+
+
 def test_clicar_em_ligado_com_o_servico_parado_liga_o_servico(monkeypatch: Any) -> None:
     """O mesmo ato da aba Sistema; e o «Desligado» nunca liga o serviço."""
     from pacotes import a09_sistema
@@ -111,10 +134,50 @@ def test_clicar_em_ligado_com_o_servico_parado_liga_o_servico(monkeypatch: Any) 
     monkeypatch.setattr(a09_sistema, "ativar_o_servico",
                         lambda: chamadas.append("ligou") or True)
     monkeypatch.setattr(aba, "_hefesto_o_modo", lambda ctx, o, p: None)
-    aba.hefesto(_parado(), {"modo": "gamepad"}, None)
+    aba.hefesto(_parado(), {"modo": "gamepad"}, _ServicoRecemLigado(acorda_na=1))
     assert chamadas == ["ligou"], "o Ligado não ligou o serviço"
     aba.hefesto(_parado(), {"modo": "native"}, None)
     assert chamadas == ["ligou"], "o Desligado ligou o serviço"
+
+
+def test_o_modo_do_ligado_espera_o_servico_que_acabou_de_subir(monkeypatch: Any) -> None:
+    """Sem a espera, o plano saía no meio segundo em que o soquete ainda não existe: o modo não
+    chegava ao serviço e o botão piscava a recusa sobre um clique que tinha ligado tudo."""
+    from pacotes import a09_sistema
+
+    monkeypatch.setattr(a09_sistema, "ativar_o_servico", lambda: True)
+    servico = _ServicoRecemLigado(acorda_na=3)
+    aba.hefesto(_parado(), {"modo": "gamepad"}, servico)
+    assert servico.pedidos, "o Ligado não mandou o modo"
+    caidos = [metodo for metodo, de_pe in servico.pedidos if not de_pe]
+    assert not caidos, f"o modo saiu antes de o serviço responder: {caidos}"
+
+
+def test_servico_que_nao_responde_no_prazo_recusa_dizendo(monkeypatch: Any) -> None:
+    """A espera tem teto: passado o prazo, o plano vai e a recusa é a verdadeira."""
+    from pacotes import a09_sistema
+
+    monkeypatch.setattr(a09_sistema, "ativar_o_servico", lambda: True)
+    monkeypatch.setattr(aba, "SEGUNDOS_ATE_O_SERVICO_RESPONDER", 0.3)
+    servico = _ServicoRecemLigado(acorda_na=10**6)
+    try:
+        aba.hefesto(_parado(), {"modo": "gamepad"}, servico)
+    except RuntimeError as recusa:
+        assert str(recusa) == aba.MODO_SEM_CONFIRMACAO
+    else:
+        raise AssertionError("o serviço não respondeu e o Ligado não disse que não confirmou")
+    assert servico.pedidos, "sem resposta no prazo, o Ligado nem tentou o modo"
+
+
+def test_servico_ja_de_pe_nao_espera(monkeypatch: Any) -> None:
+    """Com o serviço de pé (`ativar_o_servico` devolve False) o modo sai na hora, sem pergunta."""
+    from pacotes import a09_sistema
+
+    monkeypatch.setattr(a09_sistema, "ativar_o_servico", lambda: False)
+    servico = _ServicoRecemLigado(acorda_na=0)
+    aba.hefesto(_no_radio(), {"modo": "gamepad"}, servico)
+    assert servico.perguntas == 0, "o Ligado perguntou ao serviço que já estava de pé"
+    assert servico.pedidos
 
 
 REGRAS_DO_TOPO = (

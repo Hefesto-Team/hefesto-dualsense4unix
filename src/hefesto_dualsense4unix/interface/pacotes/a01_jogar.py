@@ -83,6 +83,7 @@ MESA_VAZIA = (
 #: ``desligado``. Quem lê é :func:`_estado_da_tela`.
 POSICAO_COM_O_SERVICO_PARADO = "desligado"
 
+
 def lugares_da_mesa() -> int:
     """Quantos cartões a página publica. Lido de `monta.MESA`, nunca digitado."""
     return len(_monta().MESA)
@@ -1434,8 +1435,27 @@ def hefesto(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     if str(o.get("modo") or "") in _painel().MODOS_LIGADOS:
         from . import a09_sistema
 
-        a09_sistema.ativar_o_servico()
+        if a09_sistema.ativar_o_servico():
+            _esperar_o_servico_responder(p)
     return _hefesto_o_modo(ctx, o, p)
+
+
+#: Quanto o Ligado espera o serviço que ele acabou de ligar responder antes de mandar o modo. A
+#: unit é `Type=simple`: `ativar_o_servico` volta antes de o soquete existir (medido em
+#: 15/10/2026, 0,5 s entre o «Started» e o `ipc_server_listening`); o resto é folga de computador
+#: lento. Passado o prazo, o modo vai mesmo assim e a recusa é a verdadeira.
+SEGUNDOS_ATE_O_SERVICO_RESPONDER = 10.0
+
+
+def _esperar_o_servico_responder(p: Any) -> bool:
+    """Pergunta o estado até o serviço recém-ligado responder, ou até o prazo."""
+    limite = time.monotonic() + SEGUNDOS_ATE_O_SERVICO_RESPONDER
+    while True:
+        if p.daemon_state_full() is not None:
+            return True
+        if time.monotonic() >= limite:
+            return False
+        time.sleep(0.1)
 
 
 def _hefesto_o_modo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:

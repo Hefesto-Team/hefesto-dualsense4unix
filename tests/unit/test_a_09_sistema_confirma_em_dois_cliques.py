@@ -320,7 +320,9 @@ def test_o_interruptor_da_jogar_liga_o_servico_so_no_ligado(monkeypatch, modo, l
                         lambda *_a, **_k: (ordem.append("plano"), [])[1])
     monkeypatch.setattr(a01_jogar, "_lembrar", lambda *_a, **_k: None)
 
-    a01_jogar.hefesto(None, {"modo": modo, "texto": "x"}, None)
+    # O serviço que acabou de subir responde de cara: o Ligado espera a resposta antes do plano.
+    responde = type("Ponte", (), {"daemon_state_full": staticmethod(lambda: {"connected": True})})
+    a01_jogar.hefesto(None, {"modo": modo, "texto": "x"}, responde)
 
     assert ("ligou" in ordem) is liga, (
         f"a posição {modo!r} {'não ' if liga else ''}ligou o serviço")
