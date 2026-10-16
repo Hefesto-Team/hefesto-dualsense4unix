@@ -30,6 +30,7 @@ SECOES = [
     ("sensores", ("giroscopio", "acelerometro")),
     ("mascara", ("ps",)),
     ("movimento", ("stick_r",)),
+    ("ativacao", ("cross",)),  # (noqa-acento)
 ]
 
 NOME_DA_SECAO = {
@@ -41,6 +42,7 @@ NOME_DA_SECAO = {
     "sensores": "sensores",
     "mascara": "máscara",
     "movimento": "comandos virtuais",
+    "ativacao": "ativação dos botões",  # (noqa-acento)
 }
 
 

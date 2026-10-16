@@ -329,7 +329,7 @@ def _linhas_da_lista(
     ]
 
 
-SECOES_ESPERANDO_A_SESSAO_DELA: frozenset[str] = frozenset()
+SECOES_ESPERANDO_A_SESSAO_DELA: frozenset[str] = frozenset({"ativacao"})  # (noqa-acento)
 
 SECOES_NA_TELA: tuple[str, ...] = tuple(
     s for s in SECOES_POR_CONTROLE if s not in SECOES_ESPERANDO_A_SESSAO_DELA

@@ -37,6 +37,7 @@ MESA = [
 MENOR_CORPO: dict[str, Any] = {
     "leds": {}, "triggers": {}, "rumble": {}, "speaker": {"volume": 40},
     "mic": {}, "sensores": {}, "mascara": "xbox", "movimento": {},
+    "ativacao": {"alternar": ["l1"]},  # (noqa-acento)
 }
 
 LER_OS_PONTOS = """

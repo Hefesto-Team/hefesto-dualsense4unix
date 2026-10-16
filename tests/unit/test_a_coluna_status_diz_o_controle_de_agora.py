@@ -74,6 +74,7 @@ UNIQS = ["aabbcc000011", "aabbcc000012", "aabbcc000013", "aabbcc000014"]
 MENOR_CORPO: dict[str, Any] = {
     "leds": {}, "triggers": {}, "rumble": {}, "speaker": {"volume": 40},
     "mic": {}, "sensores": {}, "mascara": "xbox", "movimento": {},
+    "ativacao": {"alternar": ["l1"]},  # (noqa-acento)
 }
 
 
@@ -281,7 +282,14 @@ def test_o_motor_sem_mapa_nao_vira_o_padrao(monkeypatch: pytest.MonkeyPatch) -> 
     assert {linha["rumble"] for linha in _por_linha(fora["guarda.secao"])} == {TRAVESSAO}
 
 
-@pytest.mark.parametrize("secao", list(ControllerOverrides.model_fields))
+#: A seção que o esquema guarda e o desenho já mostra, mas a página publicada ainda não tem: o
+#: pacote não a distribui (a distribuição é posicional e a página publicada tem uma célula a
+#: menos), e a régua da coluna passa a cobri-la no dia do `--publicar`.
+ESPERANDO = perfis_web.SECOES_ESPERANDO_A_SESSAO_DELA
+
+
+@pytest.mark.parametrize(
+    "secao", [s for s in ControllerOverrides.model_fields if s not in ESPERANDO])
 def test_o_ponto_acende_a_secao_guardada_e_so_ela(
         monkeypatch: pytest.MonkeyPatch, secao: str) -> None:
     """Toda seção de `ControllerOverrides` tem célula e acende só a sua."""
@@ -370,10 +378,23 @@ LER_A_COLUNA = r"""
 """
 
 
+def _com_a_celula_que_espera(lista: list[Any]) -> list[Any]:
+    """Cada linha ganha, no lugar do desenho, uma célula vazia por seção que espera a página."""
+    if not ESPERANDO:
+        return lista
+    largura = len(a10_perfis.SECOES_DA_COLUNA)
+    ordem = [campo for campo, _pecas in _gerador().SECOES]
+    saida: list[Any] = []
+    for i in range(0, len(lista), largura):
+        dela = dict(zip(a10_perfis.SECOES_DA_COLUNA, lista[i:i + largura], strict=True))
+        saida.extend(dela.get(campo, "") for campo in ordem)
+    return saida
+
+
 def _pintar(tela: Any, fora: dict[str, Any]) -> list[dict[str, Any]]:
-    carga = {"mesa": {k: fora[k] for k in (
-        "guarda.secao", "guarda.incerto", "guarda.dica", "guarda.proprio",
-        "guarda.nome", "guarda.vazio")}}
+    posicionais = ("guarda.secao", "guarda.incerto", "guarda.dica", "guarda.proprio")
+    carga = {"mesa": {k: (_com_a_celula_que_espera(fora[k]) if k in posicionais else fora[k])
+                      for k in (*posicionais, "guarda.nome", "guarda.vazio")}}
     tela.executar(f"(function(){{window.__hef.pintar({json.dumps(carga)});return 'ok';}})()")
     tela.avancar(0.2)
     return list(json.loads(tela.executar(LER_A_COLUNA)))
@@ -393,6 +414,8 @@ def test_o_ponto_e_o_glifo_aceso_sao_coisas_diferentes_na_tela(
     for n, linha in enumerate(linhas[:len(UNIQS)]):
         for c in linha["celulas"]:
             secao = c["secao"]
+            if secao in ESPERANDO:
+                continue
             quer_ponto = bool(pontos[n][secao])
             visivel = c["ponto_visivel"] == "visible" and c["ponto"]["w"] > 0
             if visivel != quer_ponto:
