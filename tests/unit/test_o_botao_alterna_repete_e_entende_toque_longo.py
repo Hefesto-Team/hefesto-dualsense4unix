@@ -268,6 +268,7 @@ def _foto(botoes: set[str], l2: int = 0) -> Any:
 
 
 def test_o_segundo_jogador_alterna_sem_mexer_no_primeiro(monkeypatch: pytest.MonkeyPatch) -> None:
+    # D-1610-O-BOTAO-ALTERNA-REPETE-LONGO-E-DUPLO-COM-OS-NUMEROS-DE-FABRICA
     from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp
 
     store = SimpleNamespace(udp_trigger_thresholds=(0, 0))

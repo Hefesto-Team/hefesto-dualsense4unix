@@ -44,6 +44,7 @@ def _curva(**campos: Any) -> cv.Curva:
 
 
 def test_o_padrao_e_a_identidade_byte_a_byte() -> None:
+    # D-1610-OS-ANALOGICOS-DO-JOGO-GANHAM-ZONA-MORTA-CURVA-E-UMA-MAO
     """Sem ajuste não há curva, e o que há de neutro devolve cada byte de 0 a 255."""
     assert cv.montar(None) is None
     assert cv.montar(SimpleNamespace()) is None

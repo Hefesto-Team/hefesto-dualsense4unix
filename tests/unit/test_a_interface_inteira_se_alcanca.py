@@ -374,6 +374,7 @@ def medir_o_teclado(
 
 
 def test_enter_e_espaco_clicam_o_gesto_e_o_esc_devolve_o_foco(navegador: Any) -> None:
+    # D-1610-A-INTERFACE-SE-ALCANCA-PELO-TECLADO-E-PELO-CONTROLE
     m = medir_o_teclado(
         navegador, MOCKUP / "01-jogar.html", MOCKUP / "06-navegacao.html", "acessibilidade")
     assert m["gesto"], "a 01 perdeu o gesto que não é botão: a régua não mede o Enter"

@@ -340,6 +340,7 @@ def test_o_clique_travado_solta_ao_trocar_a_tabela_e_ao_parar(
 def test_o_clique_travado_solta_apos_silencio_do_controle(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    # D-1610-O-CURSOR-GANHA-PRECISAO-PERMANENCIA-E-CLIQUE-TRAVADO
     dev, no = _mouse(monkeypatch, _cursor(clique_travado="triangle"))
     _tique(dev, 0.0, F({"triangle"}))
     _tique(dev, 0.5)

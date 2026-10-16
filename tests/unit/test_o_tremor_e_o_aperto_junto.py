@@ -359,6 +359,7 @@ def _toque_no_ps(gerente: HotkeyManager, de: str | None = None, t: float = 0.0) 
 
 
 def test_o_ps_depois_o_outro_botao_dispara_o_gesto() -> None:
+    # D-1610-O-TREMOR-E-O-APERTO-JUNTO-NAO-DECIDEM-O-BOTAO
     gerente, visto = _gestos({None: 600})
     solto = _toque_no_ps(gerente)
     assert gerente.observe({"dpad_up"}, now=solto + 0.25) == "next"
