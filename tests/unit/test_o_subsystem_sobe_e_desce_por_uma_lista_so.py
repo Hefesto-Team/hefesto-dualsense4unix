@@ -331,6 +331,7 @@ async def test_o_daemon_sobe_pela_ordem_da_lista_e_para_pela_ordem_declarada(
 async def test_um_subsystem_de_mentira_acrescentado_so_a_lista_sobe_e_para(
     monkeypatch: pytest.MonkeyPatch, tmp_path_factory: pytest.TempPathFactory,
 ) -> None:
+    # D-1610-OS-SUBSYSTEMS-SOBEM-E-DESCEM-POR-UMA-LISTA-SO
     """A entrada nova não pede outra linha no `run()` nem no `shutdown()`."""
     daemon, pedidos, partidas, paradas = await _sobe_e_para(
         monkeypatch, tmp_path_factory, mais=True
