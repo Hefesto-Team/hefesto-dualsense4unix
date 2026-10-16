@@ -57,7 +57,23 @@ _MEDIR = r"""() => {
                      cabe: Math.round(dentro * 10) / 10});
     }
   }
-  return {cartoes, cortados};
+  // A ONDA DO MICROFONE (16/10/2026): o maior vão vazio que sobra embaixo do último filho
+  // visível da moldura, nos cartões abertos. A sobra é da onda.
+  let vao = 0, onda = 0;
+  for (const m of document.querySelectorAll('.ctl.card:not(.off) .moldura[data-bloco="microfone"]')) {
+    if (getComputedStyle(m).visibility === 'hidden' || !m.getBoundingClientRect().height) continue;
+    const fundo = m.getBoundingClientRect().bottom - parseFloat(getComputedStyle(m).paddingBottom)
+                  - parseFloat(getComputedStyle(m).borderBottomWidth);
+    let baixo = 0;
+    for (const el of m.querySelectorAll('*')) {
+      const b = el.getBoundingClientRect();
+      if (b.height > 0 && getComputedStyle(el).visibility !== 'hidden') baixo = Math.max(baixo, b.bottom);
+    }
+    vao = Math.max(vao, Math.round((fundo - baixo) * 100) / 100);
+    const o = m.querySelector('.onda');
+    if (o) onda = Math.max(onda, Math.round(o.getBoundingClientRect().height * 100) / 100);
+  }
+  return {cartoes, cortados, vao, onda};
 }"""
 
 
@@ -116,6 +132,12 @@ def main(argv: list[str]) -> int:
                 f"{larg}px: o cartão {alto['id']} mede {alto['h']}px e a caixa "
                 f"reserva {teto} (`aba02.PARA_O_CARD`) — a aba passa a rolar "
                 f"por dentro e o último controle sai da tela")
+        vao = visto.get("vao", 0)
+        print(f"      a onda do microfone mede {visto.get('onda', 0)}px; vão embaixo: {vao}px")
+        if vao > _aba02.VAO_DO_MIC_MAXIMO:
+            falhas.append(
+                f"{larg}px: a moldura do microfone sobra {vao}px vazios embaixo do volume, e a "
+                f"sobra é da onda (no máximo {_aba02.VAO_DO_MIC_MAXIMO}, `aba02.VAO_DO_MIC_MAXIMO`)")
         for c in visto["cortados"]:
             falhas.append(
                 f"{larg}px: o texto {c['texto']!r} ({c['onde']}) pede "
@@ -128,7 +150,7 @@ def main(argv: list[str]) -> int:
         print("\n  O teto tem dono: `interface/aba02.PARA_O_CARD`. Se a caixa\n"
               "  mudou de tamanho, o número muda LÁ e esta régua o segue.")
         return 1
-    print("OK — o cartão cabe nas três larguras e nenhum rótulo sai cortado.")
+    print("OK — o cartão cabe nas três larguras, nenhum rótulo sai cortado e a onda do microfone ocupa o vão.")
     return 0
 
 

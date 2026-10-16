@@ -1618,6 +1618,13 @@
   .onda{height:18px;display:flex;align-items:flex-end;gap:2px;margin-bottom:5px}
   .onda i{flex:1;background:var(--cyan);border-radius:1px;display:block;opacity:.85}
   .onda.mudo i{background:var(--border-forte);opacity:.5}
+  /* A ONDA DO MICROFONE CRESCE PARA O VÃO — 16/10/2026 (AS-TELAS-QUE-ELA-PEDIU-EM-16-10-01, C1).
+     A moldura do microfone estica com a coluna do som, e a sobra ficava vazia embaixo do volume
+     (foto dela: «aumenta o espaço pras ondas»). A moldura reparte a altura na vertical: o rótulo
+     em cima, a onda ocupa o que sobra e o volume fecha embaixo. O cartão NÃO cresce: a onda só
+     come o vão que já existia, e `check_a_altura_do_cartao.py` cobra os dois números
+     (o teto de `PARA_O_CARD` e nenhum vão vazio abaixo do volume, `VAO_DO_MIC_MAXIMO`). */
+  .moldura[data-bloco="microfone"] .onda{flex:1 1 18px;height:auto;min-height:18px;margin-bottom:0}
   /* O CINZA DO MUDO TEM ENDEREÇO — 29/09/2026, A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01.
      O gerador cravava `mudo` na `.onda` do p2 e do p4 a partir da cena, e o
      produto não tinha como desfazê-lo: a barra do P2 mexia CINZA com o
