@@ -162,6 +162,23 @@ async def _esperar_evento(sock: socket.socket, prazo: float) -> bool:
     return interessa(dado)
 
 
+async def _ouvir(sock: socket.socket, prazo: float) -> tuple[bool, socket.socket | None]:
+    """``(mudou, o socket que segue)``. O erro do netlink nunca para o ouvido.
+
+    ``ENOBUFS``: a rajada estourou a fila e o kernel jogou eventos fora; o que se perdeu só a
+    releitura recupera. Outro erro: o socket caiu, e o laço segue pela releitura periódica.
+    """
+    try:
+        return await _esperar_evento(sock, prazo), sock
+    except OSError as erro:
+        if erro.errno == errno.ENOBUFS:
+            logger.info("ouvido_do_usb_eventos_perdidos")
+            return True, sock
+        logger.warning("ouvido_do_usb_netlink_caiu", erro=str(erro))
+        sock.close()
+        return True, None
+
+
 async def ouvido_do_usb_loop(
     daemon: Any,
     ouvido: Ouvido,
@@ -179,19 +196,7 @@ async def ouvido_do_usb_loop(
                 await asyncio.sleep(intervalo)
                 mudou = True
             else:
-                try:
-                    mudou = await _esperar_evento(sock, prazo)
-                except OSError as erro:
-                    # ENOBUFS: a rajada estourou a fila e o kernel jogou eventos fora; o que se
-                    # perdeu só a releitura recupera. Outro erro: o socket caiu, e o laço segue
-                    # pela releitura periódica em vez de parar de ouvir.
-                    mudou = True
-                    if erro.errno == errno.ENOBUFS:
-                        logger.info("ouvido_do_usb_eventos_perdidos")
-                    else:
-                        logger.warning("ouvido_do_usb_netlink_caiu", erro=str(erro))
-                        sock.close()
-                        sock = None
+                mudou, sock = await _ouvir(sock, prazo)
                 if mudou and sock is not None:
                     await asyncio.sleep(acomodar)
                     _drenar(sock)

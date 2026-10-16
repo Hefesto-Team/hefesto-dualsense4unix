@@ -9,7 +9,7 @@ Mordidas:
   netlink, e :func:`test_sem_netlink_o_laco_acha_a_volta_pelo_devnum` reprova;
 * gravar o ``serial`` na foto: :func:`test_nenhum_serial_no_diario` reprova pelo portão de endereço
   de rádio;
-* tirar o ``except OSError`` de ``ouvido_do_usb_loop``: o ``ENOBUFS`` de uma rajada mata o ouvido
+* tirar o ``except OSError`` de ``_ouvir``: o ``ENOBUFS`` de uma rajada mata o ouvido
   para a sessão inteira, e os dois testes de ``test_o_erro_do_netlink_*`` reprovam.
 """
 
