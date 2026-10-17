@@ -4,8 +4,9 @@ O de fábrica responde todo pedido de feature com 64 bytes e sem o pacote vazio;
 o Wine e o SDL pedem 128, e cada pedido volta ETIMEDOUT aos ~5 s. O fonte em
 `assets/dkms/usb-f-hid/` é o stable v7.1.5 com um patch, e esta régua cobra a
 proveniência dele: o pino do `dkms.conf` só aceita os kernels conferidos, o `.c`
-da pasta é o do BASELINE, o patch desfeito devolve o de fábrica e a marca
-`get_report_sized` está no fonte.
+da pasta é o do BASELINE, o patch desfeito devolve o de fábrica, a marca
+`get_report_sized` está no fonte e todo kernel de OUTRA versão que o pino aceita
+(o 7.2.6) tem o de fábrica dele medido igual ao da base.
 
 A MORDIDA: trocar um byte do `f_hid.c`, tirar a marca, abrir o pino para
 `^7\\.1\\.` ou mandar o módulo para `/kernel` em vez de `/updates/dkms` reprova
@@ -58,11 +59,44 @@ def test_cada_kernel_validado_casa_o_pino() -> None:
 
 
 @pytest.mark.parametrize(
-    "build", ["7.2.6-76070206", "7.1.6-76070106", "7.1.5-1", "7.3.0-76070300", "6.17.9-76061709"]
+    "build", ["7.2.7-76070207", "7.1.6-76070106", "7.1.5-1", "7.3.0-76070300", "6.17.9-76061709"]
 )
 def test_o_pino_nao_aceita_kernel_que_ninguem_conferiu(build: str) -> None:
     assert build not in _baseline()["KERNELS_VALIDADOS"].split(",")
     assert not _pino().match(f"{build}-generic"), f"o pino deixa passar {build}"
+
+
+def test_o_pino_aceita_o_7_2_6_que_o_sistema_trouxe() -> None:
+    """O 7.2.6-76070206 foi conferido: sem ele o DKMS pula e o Wine espera 5 s por pedido."""
+    validados = _baseline()["KERNELS_VALIDADOS"].split(",")
+    assert "7.2.6-76070206" in validados
+    assert _pino().match("7.2.6-76070206-generic")
+    assert not _pino().match("7.2.6-76070207-generic"), "o pino é pelo build exato"
+
+
+def test_todo_kernel_de_outra_versao_tem_o_fabrica_medido_igual_a_base() -> None:
+    """O passo 1 do ritual: o `f_hid.c` e o `u_hid.h` de fábrica dele SÃO os da base.
+
+    Kernel de outra versão que a base entra sem fonte por kernel só se o de fábrica
+    dele foi medido e deu o mesmo sha256 — nunca se acrescenta o kernel com o arquivo
+    de outro.
+    """
+    base = _baseline()
+    versao_da_base = base["KERNEL_BASE"].removeprefix("v")
+    for build in base["KERNELS_VALIDADOS"].split(","):
+        if build.split("-", 1)[0] == versao_da_base:
+            continue
+        sufixo = build.replace(".", "_").replace("-", "_")
+        assert base.get(f"SHA256_FABRICA_C_{sufixo}") == base["SHA256_VANILLA_C"], (
+            f"{build} entra sobre a base {base['KERNEL_BASE']} sem o `f_hid.c` de fábrica "
+            "dele medido igual ao da base: o patch teria de ser refeito sobre o stable dele"
+        )
+        assert base.get(f"SHA256_FABRICA_U_HID_H_{sufixo}") == base["SHA256_U_HID_H"], (
+            f"{build}: o `u_hid.h` de fábrica dele não foi medido igual ao da base"
+        )
+        assert re.fullmatch(r"[0-9a-f]{40}", base.get(f"POP_LINUX_COMMIT_{sufixo}", "")), (
+            f"{build}: o commit do pop-os/linux que o pacote nomeia não está gravado"
+        )
 
 
 def test_o_modulo_vai_para_updates_dkms_com_o_nome_de_fabrica() -> None:
@@ -122,8 +156,9 @@ def test_o_patch_traz_a_marca() -> None:
 
 def test_a_regex_do_pino_e_os_conferidos_dizem_o_mesmo() -> None:
     """O ritual do BASELINE: o build entra na regex e em KERNELS_VALIDADOS juntos."""
-    alternativas = _conf("BUILD_EXCLUSIVE_KERNEL").removeprefix("^(").removeprefix("^")
-    alternativas = alternativas.removesuffix("-").removesuffix(")-")
+    casou = re.fullmatch(r"\^\(?(.+?)\)?-", _conf("BUILD_EXCLUSIVE_KERNEL"))
+    assert casou, "o pino perdeu a forma `^(build|build)-`"
+    alternativas = casou.group(1)
     na_regex = {a.replace("\\.", ".") for a in alternativas.split("|")}
     validados = {v.strip() for v in _baseline()["KERNELS_VALIDADOS"].split(",")}
     assert na_regex == validados

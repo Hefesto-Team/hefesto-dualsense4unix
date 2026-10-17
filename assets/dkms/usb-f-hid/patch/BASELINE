@@ -25,6 +25,15 @@
 # /sys/module/usb_f_hid/parameters/get_report_sized. Nada mais no sysfs separa
 # este módulo do de fábrica, e o daemon e o doctor leem por ela.
 #
+# O 7.2.6-76070206 (17/10/2026): o f_hid.c e o u_hid.h de fábrica dele são
+# BYTE A BYTE os do v7.1.5 (os mesmos SHA256_VANILLA_C e SHA256_U_HID_H), no
+# pop-os/linux em cb46eb86 (o commit que o pacote nomeia: a versão instalada
+# termina em `~cb46eb8`; o 8b969b992 dá os mesmos arquivos) e no stable v7.2.6.
+# O in-tree do 7.2.6 tem o mesmo srcversion do do 7.1.5 (2517788801D7F858316B340).
+# Por isso o 7.2.6 só entra na regex e em KERNELS_VALIDADOS, sem fonte por
+# kernel. O patchado compila contra os headers reais dele (gcc-13 13.3.0): rc=0,
+# vermagic 7.2.6-76070206-generic, `parm: get_report_sized` no `.ko`.
+#
 # O RITUAL PARA ACRESCENTAR UM KERNEL ao BUILD_EXCLUSIVE_KERNEL do dkms.conf,
 # e nenhum passo é opcional:
 #   1. o f_hid.c e o u_hid.h de fábrica daquele kernel (o do commit do Pop que
@@ -39,9 +48,14 @@
 #      nos dois lugares, e uma régua cobra os dois sentidos.
 KERNEL_BASE=v7.1.5
 KERNEL_TESTED=7.1.5-76070105-generic
-KERNELS_VALIDADOS=7.1.5-76070105
+KERNEL_TESTED_2=7.2.6-76070206-generic
+KERNELS_VALIDADOS=7.1.5-76070105,7.2.6-76070206
 POP_LINUX_COMMIT=38a419fc95c5eae36afa2f13e459a7fc4f4a68f5
 SHA256_VANILLA_C=cfa52338bd467506d4fd3786de67fd556124226733ea1a7f8d9730165282e036
 SHA256_PATCHED_C=e293200fc7789b66b45a2d7e6dbd9377bd33d93eab953b4e23b46c93ca252f99
 SHA256_U_HID_H=5a0d6537a7f78e5ad4593889f8df07be6375c03a3f6a37ea8c7e546800dce595
 PATCH=0001-usb-gadget-f_hid-size-GET_REPORT-responses-to-the-s.patch
+# O de fábrica do 7.2.6-76070206, medido em 17/10/2026 (o passo 1 do ritual):
+POP_LINUX_COMMIT_7_2_6_76070206=cb46eb86556705fcc040e436bab75eef1e71518e
+SHA256_FABRICA_C_7_2_6_76070206=cfa52338bd467506d4fd3786de67fd556124226733ea1a7f8d9730165282e036
+SHA256_FABRICA_U_HID_H_7_2_6_76070206=5a0d6537a7f78e5ad4593889f8df07be6375c03a3f6a37ea8c7e546800dce595

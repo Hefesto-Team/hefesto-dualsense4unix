@@ -328,7 +328,7 @@ def test_o_doctor_com_o_curado_staged_diz_que_falta_trocar(tmp_path: Path) -> No
 
 def test_o_doctor_em_kernel_nao_conferido_aponta_o_baseline(tmp_path: Path) -> None:
     saida = _doctor(tmp_path, carregado=True, marca=False, staged=False,
-                    kernel="7.2.6-76070206-generic")
+                    kernel="7.3.0-76070300-generic")
     assert "[FAIL]" in saida and "patch/BASELINE" in saida, saida
     assert "7.1.5-76070105" in saida, saida
 
