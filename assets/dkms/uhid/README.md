@@ -122,8 +122,9 @@ echo 0 | sudo tee /sys/module/uhid/parameters/backpressure   # desliga
   do subsistema HID, visando o upstream.
 
 - **Só nos kernels conferidos** (`BUILD_EXCLUSIVE_KERNEL` do `dkms.conf`, a
-  mesma lista do `KERNELS_VALIDADOS` do `patch/BASELINE`): hoje, só o
-  7.1.5-76070105. Este `uhid.c` substitui o de fábrica; contra um kernel cujo
+  mesma lista do `KERNELS_VALIDADOS` do `patch/BASELINE`): hoje, o
+  7.1.5-76070105 e o 7.2.6-76070206 (o `uhid.c` de fábrica dos dois é o mesmo
+  byte a byte, e o `srcversion` do `.ko` de fábrica também). Este `uhid.c` substitui o de fábrica; contra um kernel cujo
   `uhid.c` é outro, ele compilaria limpo e devolveria o arquivo errado. Fora da
   lista o DKMS pula e o de fábrica assume — o 7.0.11-76070011 inclusive, cujo
   de fábrica é o do v7.1. O ritual para acrescentar um kernel está no

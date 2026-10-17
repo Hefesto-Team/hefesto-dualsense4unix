@@ -29,6 +29,15 @@
 # E o patchado (este uhid.c) compila contra os headers do 7.1.5-76070105, com o
 # `parm: backpressure` no `.ko`.
 #
+# O 7.2.6-76070206 (17/10/2026): o uhid.c de fábrica dele é BYTE A BYTE o do
+# v7.1.5 (o mesmo SHA256_VANILLA_C), no pop-os/linux em cb46eb86 (o commit que
+# o pacote nomeia: a versão instalada termina em `~cb46eb8`; o 8b969b992 dá o
+# mesmo arquivo) e no stable v7.2.6. O passo 1 do ritual, com os headers reais
+# dele (gcc-13 13.3.0): o uhid.c sem patch dá o srcversion 4873D04A5BF04EDF44E1C53,
+# o MESMO do uhid.ko de fábrica do 7.2.6; o patchado compila (rc=0, vermagic
+# 7.2.6-76070206-generic, `parm: backpressure`). Por isso o 7.2.6 só entra na
+# regex, em KERNELS_VALIDADOS e em SRCVERSION_DE_FABRICA.
+#
 # O RITUAL PARA ACRESCENTAR UM KERNEL ao BUILD_EXCLUSIVE_KERNEL do dkms.conf,
 # e nenhum passo é opcional:
 #   1. o `uhid.c` sem patch (o `patch -R` deste) compilado contra os headers
@@ -41,8 +50,11 @@
 #      SRCVERSION_DE_FABRICA — a mesma lista nos três lugares.
 KERNEL_BASE=v7.1.5
 KERNEL_TESTED=7.1.5-76070105-generic
-KERNELS_VALIDADOS=7.1.5-76070105
-SRCVERSION_DE_FABRICA=7.1.5-76070105:4873D04A5BF04EDF44E1C53
+KERNELS_VALIDADOS=7.1.5-76070105 7.2.6-76070206
+SRCVERSION_DE_FABRICA=7.1.5-76070105:4873D04A5BF04EDF44E1C53 7.2.6-76070206:4873D04A5BF04EDF44E1C53
 SHA256_VANILLA_C=07eb905e156af79fec3bbda79110909114d1e288a107500f23de84a0c7f08cf7
 SHA256_PATCHED_C=7c23f821fde9ce7ec5efe67f53dd376f690d6b640f8af67aa55de6e60c922ddd
 PATCH=0001-HID-uhid-optionally-report-EAGAIN-when-the-output-que.patch
+# O de fábrica do 7.2.6-76070206, medido em 17/10/2026 (o passo 1 do ritual):
+POP_LINUX_COMMIT_7_2_6_76070206=cb46eb86556705fcc040e436bab75eef1e71518e
+SHA256_FABRICA_C_7_2_6_76070206=07eb905e156af79fec3bbda79110909114d1e288a107500f23de84a0c7f08cf7

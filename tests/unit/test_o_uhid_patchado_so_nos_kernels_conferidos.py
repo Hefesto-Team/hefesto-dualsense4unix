@@ -48,6 +48,18 @@ def test_cada_kernel_validado_casa_o_pino() -> None:
         )
 
 
+def test_a_regex_do_pino_e_os_conferidos_dizem_o_mesmo() -> None:
+    """Os dois sentidos: build na regex e fora de KERNELS_VALIDADOS é kernel que ninguém mediu."""
+    casou = re.search(
+        r'^BUILD_EXCLUSIVE_KERNEL="([^"]+)"$', DKMS_CONF.read_text(encoding="utf-8"), re.M
+    )
+    assert casou, "o dkms.conf do uhid perdeu o BUILD_EXCLUSIVE_KERNEL"
+    forma = re.fullmatch(r"\^\(?(.+?)\)?-", casou.group(1))
+    assert forma, "o pino perdeu a forma `^(build|build)-`"
+    na_regex = {alt.replace("\\.", ".") for alt in forma.group(1).split("|")}
+    assert na_regex == set(_baseline()["KERNELS_VALIDADOS"].split())
+
+
 def test_o_pino_nao_aceita_kernel_que_ninguem_conferiu() -> None:
     validados = set(_baseline()["KERNELS_VALIDADOS"].split())
     pino = _pino()
@@ -84,14 +96,32 @@ def test_o_patch_desfeito_devolve_o_de_fabrica(tmp_path: Path) -> None:
 
 
 def test_a_base_e_o_stable_de_cada_kernel_pinado() -> None:
-    """O `uhid.c` de base é o da versão EXATA de cada kernel pinado."""
+    """O `uhid.c` de base é o de fábrica de cada kernel pinado.
+
+    Kernel da versão da base: o stable daquela versão. Kernel de OUTRA versão (o
+    7.2.6): só com o `uhid.c` de fábrica dele medido e igual ao da base.
+    """
     base = _baseline()
     versao_da_base = base["KERNEL_BASE"].removeprefix("v")
     for build in base["KERNELS_VALIDADOS"].split():
-        assert build.split("-", 1)[0] == versao_da_base, (
-            f"{build} está pinado sobre a base {base['KERNEL_BASE']}: o `uhid.c` "
-            "de fábrica dele é o do stable daquela versão, não o desta base"
+        if build.split("-", 1)[0] == versao_da_base:
+            continue
+        sufixo = build.replace(".", "_").replace("-", "_")
+        assert base.get(f"SHA256_FABRICA_C_{sufixo}") == base["SHA256_VANILLA_C"], (
+            f"{build} está pinado sobre a base {base['KERNEL_BASE']} sem o `uhid.c` de "
+            "fábrica dele medido igual ao da base: o patch teria de ser refeito sobre "
+            "o stable daquele kernel"
         )
+        assert re.fullmatch(r"[0-9a-f]{40}", base.get(f"POP_LINUX_COMMIT_{sufixo}", "")), (
+            f"{build}: o commit do pop-os/linux que o pacote nomeia não está gravado"
+        )
+
+
+def test_o_pino_aceita_o_7_2_6_que_o_sistema_trouxe() -> None:
+    validados = _baseline()["KERNELS_VALIDADOS"].split()
+    assert "7.2.6-76070206" in validados
+    assert _pino().match("7.2.6-76070206-generic")
+    assert not _pino().match("7.2.6-76070207-generic"), "o pino é pelo build exato"
 
 
 def test_cada_kernel_pinado_tem_o_srcversion_de_fabrica_medido() -> None:
