@@ -12,11 +12,14 @@ O que se mede, num lar de mentira (`XDG_CONFIG_HOME` e `XDG_RUNTIME_DIR` em `tmp
 2. `garantir_a_bandeja` não sobe uma segunda com a viva de pé, e sobe com o PID morto;
 3. o «Retomar» e o «Ativar» da Sistema e o «start» da bandeja chamam `garantir_a_bandeja`;
 4. o bloco do autostart do `install.sh`, rodado de verdade, preserva o `false` e o ensaio diz.
+5. o bloco seguinte do `install.sh`, depois do restart do serviço, devolve a bandeja quando a
+   escolha está ligada (17/10/2026).
 
 MORDIDAS (feitas à mão, 16/10/2026): tirar o `bandeja_viva() is not None` de `garantir_a_bandeja`
 reprova 2, e casar «tray» como pedaço da linha em `bandeja_viva` também; tirar a chamada a
 `garantir_a_bandeja` do ramo do «Retomar» em `a09_sistema.desligar` reprova 3; tirar o
-`-e "s|^X-GNOME-Autostart-enabled=…"` do `sed` do `install.sh` reprova 4.
+`-e "s|^X-GNOME-Autostart-enabled=…"` do `sed` do `install.sh` reprova 4; trocar o
+`garantir_a_bandeja()` do bloco da volta por `sys.exit(1)` reprova 5.
 """
 from __future__ import annotations
 
@@ -25,6 +28,7 @@ import pathlib
 import shutil
 import subprocess
 import sys
+import time
 from typing import Any
 
 import pytest
@@ -200,3 +204,61 @@ def test_o_install_preserva_a_escolha(tmp_path: pathlib.Path, antes: str | None)
     linhas = alvo.read_text(encoding="utf-8").splitlines()
     assert f"X-GNOME-Autostart-enabled={esperado}" in linhas, linhas
     assert f"Exec={RAIZ}/run.sh --tray" in linhas
+
+
+def _bloco_da_volta() -> str:
+    texto = (RAIZ / "install.sh").read_text(encoding="utf-8")
+    inicio = texto.index("# A BANDEJA VOLTA DEPOIS DO SERVIÇO")
+    fim = texto.index("# ----", inicio)
+    return texto[inicio:fim]
+
+
+@pytest.mark.parametrize(
+    ("escolha", "grafica", "ensaio", "sobe"),
+    [("true", True, False, True), ("false", True, False, False),
+     ("true", False, False, False), ("true", True, True, False)],
+    ids=["ligada", "desligada", "sem-sessao-grafica", "ensaio"],
+)
+def test_o_install_devolve_a_bandeja_depois_do_restart(
+    tmp_path: pathlib.Path, escolha: str, grafica: bool, ensaio: bool, sobe: bool,
+) -> None:
+    """O bloco do `install.sh`, rodado de verdade: o `garantir_a_bandeja` do venv sobe a bandeja.
+
+    A bandeja é um roteiro de mentira (o `Exec=` do autostart) que só deixa a marca e sai.
+    A MORDIDA: tire o bloco «A BANDEJA VOLTA DEPOIS DO SERVIÇO» do `install.sh` e o caso
+    «ligada» reprova.
+    """
+    marca = tmp_path / "subiu"
+    bandeja = tmp_path / "bandeja-de-mentira.sh"
+    bandeja.write_text(f"#!/bin/sh\necho \"$@\" > {marca}\n", encoding="utf-8")
+    bandeja.chmod(0o755)
+    autostart = tmp_path / "config/autostart/hefesto-dualsense4unix-tray.desktop"
+    autostart.parent.mkdir(parents=True)
+    autostart.write_text(f"[Desktop Entry]\nExec={bandeja} --tray\n"
+                         f"X-GNOME-Autostart-enabled={escolha}\n", encoding="utf-8")
+    venv = tmp_path / "venv"
+    (venv / "bin").mkdir(parents=True)
+    (venv / "bin/python").write_text(f"#!/bin/sh\nexec {sys.executable} \"$@\"\n",
+                                     encoding="utf-8")
+    (venv / "bin/python").chmod(0o755)
+    ambiente = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": str(tmp_path),
+                "XDG_CONFIG_HOME": str(tmp_path / "config"),
+                "XDG_RUNTIME_DIR": str(tmp_path / "run"),
+                "PYTHONPATH": os.pathsep.join(p for p in sys.path if p),
+                "VENV_DIR": str(venv), "DRY_RUN": "1" if ensaio else "0"}
+    if grafica:
+        ambiente["WAYLAND_DISPLAY"] = "wayland-de-mentira"
+    roteiro = "_faria(){ echo \"FARIA $*\"; }\n" + _bloco_da_volta()
+    feito = subprocess.run([BASH, "-c", roteiro], env=ambiente, capture_output=True,
+                           text=True, timeout=30, check=True)
+    if sobe:
+        for _ in range(100):
+            if marca.exists():
+                break
+            time.sleep(0.05)
+        assert "subiu" in feito.stdout, feito.stdout + feito.stderr
+        assert marca.read_text(encoding="utf-8").split() == ["--tray"]
+    else:
+        assert not marca.exists(), feito.stdout
+    if ensaio:
+        assert "FARIA subir o ícone na bandeja" in feito.stdout, feito.stdout

@@ -4217,6 +4217,25 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# A BANDEJA VOLTA DEPOIS DO SERVIÇO (17/10/2026): o restart acima derruba a bandeja viva, e só a
+# janela, o Retomar/Ativar e a pílula a subiam de volta. O dono decide, como nos outros caminhos:
+# `garantir_a_bandeja` sobe só com a escolha «Ícone na bandeja» ligada e nenhuma de pé. Sem
+# sessão gráfica (install por ssh) não há onde o ícone morar, e o login a sobe pelo autostart.
+if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+    _faria "subir o ícone na bandeja, se a escolha está ligada e nenhum está de pé"
+elif [[ -z "${WAYLAND_DISPLAY:-}${DISPLAY:-}" ]]; then
+    printf '      sem sessão gráfica: a bandeja sobe no próximo login\n'
+elif [[ -x "${VENV_DIR}/bin/python" ]]; then
+    if "${VENV_DIR}/bin/python" -c 'import sys
+from hefesto_dualsense4unix.app.actions.atos_da_bandeja import garantir_a_bandeja
+sys.exit(0 if garantir_a_bandeja() else 1)' >/dev/null 2>&1; then
+        printf '      ícone na bandeja: subiu\n'
+    else
+        printf '      ícone na bandeja: já de pé, ou desligado pela escolha\n'
+    fi
+fi
+
+# ---------------------------------------------------------------------------
 # 7a'. A PRESENÇA (O-CONTROLE-VOLTA-AO-LINUX-QUANDO-O-HEFESTO-NAO-SOBE-01): o
 #     broker entrega o controle físico ao sistema 30 s depois que o último
 #     cliente sai, e o Hefesto que nunca sobe (o daemon desabilitado, ou em
