@@ -226,8 +226,9 @@ CSS = """
   .perfil-ativo{position:absolute;right:20px;top:17px;display:flex;align-items:center;gap:7px;
                 padding:5px 11px;border-radius:7px;border:1px solid var(--linha);
                 background:var(--panel)}
-  .pa-rot{font-size:12.5px;color:var(--fg)}
-  .pa-nome{font-size:12.5px;color:var(--pink);font-weight:600}
+  .pa-rot{font-size:12.5px;color:var(--fg);white-space:nowrap}
+  .pa-nome{font-size:12.5px;color:var(--pink);font-weight:600;white-space:nowrap;max-width:360px;
+           overflow:hidden;text-overflow:ellipsis}
   .voltar{position:absolute;left:20px;top:17px;display:inline-flex;align-items:center;
           gap:6px;padding:5px 11px;border-radius:7px;text-decoration:none;
           border:1px solid var(--border-forte);background:var(--panel);

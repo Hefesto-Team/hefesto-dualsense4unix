@@ -43,3 +43,40 @@ def test_a_nota_cortada_do_status_ganha_a_dica() -> None:
     assert lido["cortada"] == [True, LONGA], f"a nota cortada ficou sem a dica inteira: {lido}"
     assert lido["curta"] is False, f"a nota que cabe guardou a dica do corte: {lido}"
     assert lido["dona"] == "Própria", f"a regra do corte trocou a dica própria: {lido}"
+
+
+TOPO = r"""
+(function(NOME){
+  const f = document.querySelector('.fita');
+  const modelo = f.querySelector('.chip.plastico');
+  f.querySelectorAll('.chip.plastico').forEach(c => c.remove());
+  ['USB', 'BT', 'USB', 'BT'].forEach((v, i) => { const c = modelo.cloneNode(true);
+    const pt = ' <span class="pt">•</span> ';
+    c.innerHTML = 'P' + (i + 1) + pt + 'DualSense' + pt + v;
+    f.appendChild(c); });
+  const caixa = document.querySelector('.perfil-ativo');
+  const nome = document.querySelector('.pa-nome');
+  const linhas = el => { const r = document.createRange(); r.selectNodeContents(el);
+    return new Set([...r.getClientRects()].map(x => Math.round(x.top))).size; };
+  nome.textContent = '—';
+  const vazio = Math.round(caixa.getBoundingClientRect().height);
+  nome.textContent = NOME;
+  nome.dispatchEvent(new MouseEvent('mousemove', {bubbles: true}));
+  return JSON.stringify({vazio, h: Math.round(caixa.getBoundingClientRect().height),
+    rotulo: linhas(document.querySelector('.pa-rot')), nome: linhas(nome),
+    corta: nome.scrollWidth > nome.clientWidth, dica: nome.getAttribute('data-dica')});
+})(%s)
+"""
+
+
+def test_o_perfil_ativo_fica_numa_linha_com_quatro_controles_e_nome_longo() -> None:
+    """MORDIDA (16/10/2026): tirar o `white-space:nowrap` do `.pa-rot` e do `.pa-nome` no
+    `topo.html` e regerar a 01 quebra o «Perfil ativo» em duas linhas e estica o topo."""
+    import json
+
+    nome = "The Legend of Heroes: Trails through Daybreak"
+    uri = onde.pagina("01-jogar.html", publicado=False).as_uri()
+    lido = _no_webkit(uri, (1212, 809), [TOPO % json.dumps(nome)])[0]
+    assert lido["rotulo"] == 1 and lido["nome"] == 1, f"o «Perfil ativo» quebrou: {lido}"
+    assert lido["h"] == lido["vazio"], f"o nome do perfil esticou o topo: {lido}"
+    assert lido["corta"] and lido["dica"] == nome, f"o nome cortado ficou sem a dica: {lido}"
