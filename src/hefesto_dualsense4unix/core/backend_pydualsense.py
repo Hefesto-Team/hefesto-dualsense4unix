@@ -5414,17 +5414,14 @@ class PyDualSenseController(IController):
         consulta = getattr(self._auto_output_provider, "numeros_ao_sentar", None)
         if not callable(consulta):
             return {}
-        with contextlib.suppress(Exception):
-            bruto = consulta([u for u in uniqs.values() if u is not None])
-            if isinstance(bruto, dict):
-                return {
-                    k: n
-                    for k, u in uniqs.items()
-                    if u is not None
-                    and isinstance(n := bruto.get(u), int)
-                    and not isinstance(n, bool)
-                }
-        return {}
+        bruto = consulta([u for u in uniqs.values() if u is not None])
+        if not isinstance(bruto, dict):
+            return {}
+        return {
+            k: n
+            for k, u in uniqs.items()
+            if u is not None and isinstance(n := bruto.get(u), int) and not isinstance(n, bool)
+        }
 
     @staticmethod
     def _depois_das_acesas(
