@@ -1006,8 +1006,9 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     ocupados = {str(m.get("pref") or "") for m in ctx.mesa}
     sem_ninguem = _do_lado({}, specs)
     for pref in sorted(_lugares_que_o_desenho_da_por_vazios() - ocupados):
-        vazia = {f"modo-chave-{sig}": _sem_nada("modo", str(sem_ninguem["modo-chave"]))
-                 for sig in LADOS}
+        modo_vazio = str(sem_ninguem["modo-chave"])
+        vazia: dict[str, Any] = {f"modo-chave-{sig}": _sem_nada("modo", modo_vazio)
+                                 for sig in LADOS}
         vazia.update({f"{pref_}{sig}": SEM_APARELHO_AQUI
                       for pref_ in (PREFIXO_DA_DICA_DO_MODO, PREFIXO_DA_DICA_DA_IMERSAO)
                       for sig in LADOS})

@@ -1592,7 +1592,7 @@ def _teto_do_controle(
     A chave é o `uniq` NORMALIZADO: doze hexa minúsculos sem separador, pelo :func:`_so_hex` deste
     arquivo (a cópia que morava aqui perdera o `.strip()` e um `uniq` com espaço gravava numa chave
     e a pintura procurava outra). É o que `Profile._validate_controllers_keys` canoniza ao carregar
-    (`profiles/schema.py:1320`) e está no disco; `aa:bb:…` não acharia nada e a tela mostraria
+    (`profiles/schema.py:1641`) e está no disco; `aa:bb:…` não acharia nada e a tela mostraria
     "Segue o global" para sempre. O `uniq` cru é a segunda chave porque `perfil.ativo` lê o JSON
     **sem** o pydantic (de propósito, para seção nova não congelar a aba) e arquivo editado à mão
     pode trazer dois-pontos.
@@ -2170,7 +2170,7 @@ def mic_existe(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     o enxerga"*, a PONTE: `ControleDeclarado.microfone` no `maquina.json` (`utils/maquina.py:589`),
     decisão de 22/08/2026 (*"por controle"*). O clique vale AGORA: `_handle_machine_declare` relê o
     disco, rebinda `daemon._maquina` e sobe ou desce o subsystem `bt_mic` no mesmo pedido
-    (`ipc_handlers.py:4871`, QUATRO-MICROFONES-01: *"o 'Aplicar' tem de VALER agora"*).
+    (`ipc_handlers.py:4972`, QUATRO-MICROFONES-01: *"o 'Aplicar' tem de VALER agora"*).
 
     **Desligar grava `False`** (18/09/2026, a inversão): gravava `None` enquanto o default era
     silêncio, mas com a ordem *"todos os controles tem que nascer com tudo mic, giroscopio e afins"*
@@ -2283,12 +2283,12 @@ def _com_o_teto(prof: Any, chave: str, policy: str | None) -> Any:
     meio da partida não é de graça), como em `_com_os_gatilhos`.
 
     "Segue o global" apaga o campo (a seção, se nada mais sobra), não grava ``policy=None``:
-    `_controllers_to_rumble_scales` desvia em `cfg.rumble is None` (`profiles/manager.py:2351`) e em
+    `_controllers_to_rumble_scales` desvia em `cfg.rumble is None` (`profiles/manager.py:2420`) e em
     `"policy" not in model_fields_set` (`:2481`); o primeiro é o "campo não escrito = sem opinião"
     do merge por campo (`ControllerRumbleOverride`), e `custom_mult` sem `policy='custom'` a borda
     já recusa. Igual ao global também apaga (`app/draft_config.with_controller_rumble:1193-1223`):
     `_controllers_to_rumble_scales` calcula `mult / base` e DESCARTA o fator 1,0
-    (`profiles/manager.py:2298-2331`), então o override seria opinião que o motor ignora.
+    (`profiles/manager.py:2367-2400`), então o override seria opinião que o motor ignora.
     """
     from hefesto_dualsense4unix.profiles.schema import (
         ControllerOverrides,
@@ -2672,7 +2672,7 @@ def ignorar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 # deduzido: as chaves de topo do `state_full` do daemon vivo são 47, e nenhuma
 # delas é `mapa` nem `maquina`. O caminho é `machine_declare` →
-# `_handle_machine_declare` (`daemon/ipc_handlers.py:4871`) → `maquina.json`, e
+# `_handle_machine_declare` (`daemon/ipc_handlers.py:4972`) → `maquina.json`, e
 
 
 def _gravar_o_mapa(p: Any) -> None:

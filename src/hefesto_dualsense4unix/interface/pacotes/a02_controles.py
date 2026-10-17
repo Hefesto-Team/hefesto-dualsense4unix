@@ -1741,7 +1741,7 @@ def _fora_do_voo(fn: Callable[[], None]) -> None:
     """Roda `fn` numa linha própria, sem segurar o botão que está em voo.
 
     **O GESTO JÁ NÃO RODA NO TIQUE** — medido em 06/09/2026 no piloto: ele
-    despacha cada gesto numa thread (`interface/hefesto_vivo.py:3069`), porque
+    despacha cada gesto numa thread (`interface/hefesto_vivo.py:3144`), porque
     *"`daemon.reload` leva 9,5 segundos"*. Logo a tela não congela nem se o som
     for chamado direto, e o `TIQUE_MS` de 100 ms segue livre.
 
@@ -1880,7 +1880,7 @@ def _lembrar_do_som(
     daemon confirmou. O perfil é o REGISTRO do que já está de pé.
 
     E o disco não fica para trás: `ProfileManager.activate` faz
-    `load_profile(name)` a CADA ativação (`profiles/manager.py:219`) — não há
+    `load_profile(name)` a CADA ativação (`profiles/manager.py:220`) — não há
     cópia do `Profile` em memória atravessando ativações, então a próxima
     (hotplug, troca de jogo, boot) lê o que esta função escreveu.
 
@@ -2026,7 +2026,7 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     ALTERNAR EXIGE LER O ESTADO, e ele vem do daemon, nunca de memória nossa:
     `audio.mic_mudo` é LEITURA do byte que vem em todo report de input, e
     `speaker.muted` é o que nós mandamos (o aparelho não devolve). Guardar o
-    valor enviado como se fosse leitura é o hábito que o `ipc_bridge.py:950-951`
+    valor enviado como se fosse leitura é o hábito que o `ipc_bridge.py:941-942`
     nomeia como o que *"fez a tela parecer mentirosa quando ela nunca mentiu"*.
 
     `mic_set(False)` NÃO devolve a posse ao `hid-playstation` — isso é

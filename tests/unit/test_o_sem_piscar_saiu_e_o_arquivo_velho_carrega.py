@@ -18,6 +18,10 @@ parâmetro `sem_piscar` a `cor_no_instante` reprova `test_o_motor_nao_tem_mais_o
 
 from __future__ import annotations
 
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("os pacotes da interface carregam o GTK")
+
 import inspect
 import json
 import pathlib

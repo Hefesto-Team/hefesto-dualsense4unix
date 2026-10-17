@@ -118,12 +118,6 @@ def _molde(chave: str, n: int, taxa: int) -> tuple[array[float], array[float]]:
     return envelopes, ondas
 
 
-def duracao_ms_da(chave: str, pedida: int | None = None) -> int:
-    """A duração da forma em ms: a dela, ou a pedida quando ela segue o pedido (o Toque)."""
-    forma = FORMAS[chave]
-    return forma.duracao_ms if forma.duracao_ms is not None else int(pedida or 40)
-
-
 def escolha_valida(valor: object) -> str | None:
     """A escolha do perfil como chave conhecida; ``None`` quando não há escolha ou não se lê.
 
@@ -233,7 +227,6 @@ __all__ = [
     "FiltroDoCorpo",
     "Forma",
     "amostras",
-    "duracao_ms_da",
     "escolha_valida",
     "forma_do_estilo",
     "forma_que_vale",

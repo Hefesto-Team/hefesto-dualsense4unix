@@ -360,6 +360,12 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
         "gancho, e a ponte o APAGA sob sudo junto com os outros ganchos: nenhum "
         "fluxo dela passa por aqui, e o produto instalado não o escreve."
     ),
+    "HEFESTO_USB_DIARIO": (
+        "16/10/2026 — desvia o diário das portas USB de quem roda como ela "
+        "(`integrations/diario_do_usb.caminho_do_diario`), o irmão do HEFESTO_RADIO_DIARIO. "
+        "É o gancho da régua e de quem mede à mão; o produto instalado não o escreve, e sem "
+        "ele o diário mora em ~/.local/state. Ligá-lo não abre feature nenhuma."
+    ),
     "HEFESTO_MEMORIA_ENSAIO": (
         "25/09/2026, ESQUECER-OS-CONTROLES-01 — a GUARDA do lar de mentira "
         "(`utils/memoria_dos_controles.conferir_o_ensaio`): ligada, qualquer "
@@ -1302,6 +1308,17 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "a grade `minmax(0,1fr)` antes de gravar o desenho; o produto só renderiza a página "
         "publicada. O commit 6b5e2e917 tirou o outro chamador, a régua da página antiga."
     ),
+    "core/ativacao_de_botao.py::preso": (
+        "16/10/2026 — INSTRUMENTO DE TESTE. Pergunta se um controle ficou com botão alternado, "
+        "repetindo ou esperando; quem chama são os testes do toque longo, que provam que o "
+        "perfil seguinte e a tabela que sai soltam o botão. O produto solta pelo "
+        "`soltar_a_ativacao`, sem precisar perguntar antes."
+    ),
+    "core/filtro_de_botao.py::preso": (
+        "16/10/2026 — INSTRUMENTO DE TESTE, o par do `ativacao_de_botao.preso`: pergunta se um "
+        "controle tem aperto esperando o mínimo. O produto não precisa da pergunta, porque o "
+        "filtro solta o que segura no próprio tique."
+    ),
 }
 
 _SEM_CAMINHO_HOJE: dict[str, str] = {
@@ -1418,6 +1435,22 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "perde porque os gestos do PS da 06 do todo (A-ABA-NAVEGACAO-DO-TODO-01) não trazem o "
         "aviso. Fecha quando a O-QUE-A-NAVEGACAO-VELHA-DEIXOU-SEM-CHAMADOR-01 o fiar nos gestos "
         "do PS ou o apagar."
+    ),
+    # sai com: AS-PROMESSAS-DE-16-10-SEM-CHAMADOR-01
+    "daemon/subsystems/mouse.py::soltar_o_cursor": (
+        "16/10/2026 — solta o clique que o botão travado segura, «para quem perde o controle ou "
+        "sai do jogo» (a docstring). Nasceu sem chamador com O-CURSOR-GANHA-PRECISAO-PERMANENCIA-"
+        "E-CLIQUE-TRAVADO-01: a queda de leitura e a saída do jogo não a chamam, e o clique "
+        "travado sobrevive a quem o prendeu. Fecha quando a AS-PROMESSAS-DE-16-10-SEM-CHAMADOR-01 "
+        "a ligar nesses dois caminhos."
+    ),
+    # sai com: AS-PROMESSAS-DE-16-10-SEM-CHAMADOR-01
+    "profiles/simple_match.py::oferta_do_funciona_em": (
+        "16/10/2026 — oferecia, no «Funciona em», os lançadores que a máquina tem. A aba Perfis "
+        "do todo (5faca7e8a, 15/10) tirou a chamada viva do `aba10`; sobram o gerador do desenho "
+        "(`AMBIENTES`, na construção da página) e o piloto `perfis_vivos`. Fecha quando a "
+        "AS-PROMESSAS-DE-16-10-SEM-CHAMADOR-01 decidir se o «Funciona em» volta a ler a máquina "
+        "ou se a oferta fica só no desenho."
     ),
 }
 

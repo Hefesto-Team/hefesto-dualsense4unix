@@ -2531,7 +2531,7 @@ def _numeros_sem_vpad(
 
     **POR QUE ESTE PARÁGRAFO MORA AQUI e não lá em cima**, que é onde ele
     seria lido primeiro: ``docs/data/mapa-controles.csv`` cita
-    ``coop.py:486-496``, ``:865`` e ``:880`` por FAIXA, e uma linha
+    o ``coop.py`` por FAIXA de linha, e uma linha
     acrescentada antes delas apodrece as seis citações no portão
     ``citacoes-de-linha``. O mapa é da SPECS-A-PROCEDENCIA-01 e não se edita
     daqui — logo o topo deste arquivo está congelado para quem não o possui.

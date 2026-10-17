@@ -14,6 +14,10 @@ o Visual novel; esquecer o `hashchange` reprova a troca de âncora com a página
 
 from __future__ import annotations
 
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("o pacote do mapa do controle carrega o GTK")
+
 import json
 import pathlib
 import types
