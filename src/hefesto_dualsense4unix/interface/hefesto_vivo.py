@@ -1619,7 +1619,7 @@ DICA_DA_CASA = r"""
   document.body.appendChild(caixa);
 
   var E = {alvo: null, texto: '', tempo: 0, x: 0, y: 0, aberta: false, abriu: 0,
-           peloFoco: false};
+           peloFoco: false, descrito: null};
 
   // O NOME ACESSÍVEL — F7, 11/09/2026, e ele é a DÍVIDA QUE A COLHEITA CRIOU.
   //
@@ -1641,10 +1641,9 @@ DICA_DA_CASA = r"""
   // leitor de tela ler duas vezes — é pior do que não fazer nada, e é por isso
   // que `tem_nome()` abaixo é tão detalhado quanto a conta do HTML-AAM.
   //
-  // E A DESCRIÇÃO FICOU DE FORA, declarada: nos 388 que já têm nome o `title`
-  // era a DESCRIÇÃO, e ela não volta aqui. A dica da casa continua mostrando a
-  // frase a quem vê; devolvê-la a quem não vê pede `aria-description`, que é
-  // outra sprint e outro suporte de motor.
+  // E A DESCRIÇÃO: nos 388 que já têm nome o `title` era a DESCRIÇÃO. Ela volta
+  // pela dica aberta (`descrever`, abaixo): enquanto a caixa está na tela, o
+  // elemento a aponta pelo `aria-describedby`, como na `base-comum.js`.
   var PAPEL_SEM_NOME = {presentation: 1, none: 1, generic: 1};
   //: Quem aceita um nome acessível SEM papel declarado. A lista é a do
   //: HTML-AAM, podada ao que existe nestas dez abas — `div` e `span` ficam de
@@ -1912,10 +1911,22 @@ DICA_DA_CASA = r"""
     }
     return null;
   }
+  // A DICA ABERTA É A DESCRIÇÃO DE QUEM A ABRIU, para o leitor de tela: o `id` entra no
+  // `aria-describedby` enquanto ela está aberta e sai com ela, sem apagar o que já havia (a
+  // mesma conta da `base-comum.js`, que sai cedo quando esta camada está de pé).
+  function descrever(el, liga){
+    if(!el || !el.getAttribute) return;
+    var lista = String(el.getAttribute('aria-describedby') || '').split(/\s+/)
+      .filter(function(t){ return t && t !== 'hef-dica'; });
+    if(liga) lista.push('hef-dica');
+    if(lista.length) el.setAttribute('aria-describedby', lista.join(' '));
+    else el.removeAttribute('aria-describedby');
+  }
   function esconder(){
     if(E.tempo){ clearTimeout(E.tempo); E.tempo = 0; }
     caixa.style.display = 'none';
     E.aberta = false;
+    if(E.descrito){ descrever(E.descrito, false); E.descrito = null; }
   }
   function limpar(){
     esconder();
@@ -1928,6 +1939,9 @@ DICA_DA_CASA = r"""
     caixa.style.display = 'block';
     E.aberta = true;
     E.abriu += 1;
+    if(E.descrito && E.descrito !== E.alvo.el) descrever(E.descrito, false);
+    E.descrito = E.alvo.el;
+    descrever(E.descrito, true);
     // POSICIONA DEPOIS DE MEDIR, e dentro da janela: uma dica que nasce fora da
     // borda é uma dica que não abriu. A `05-vibracao` já mediu essa regra do
     // lado do desenho (`tests/unit/test_moldura_a_dica_nao_atravessa_a_janela.py`);

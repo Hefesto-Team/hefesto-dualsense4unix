@@ -66,6 +66,9 @@ _JS_ESTADO = """(function(){
                && r.right <= window.innerWidth && r.bottom <= window.innerHeight),
     // A COLHEITA É O QUE CALA O POPUP DO SISTEMA: nenhum `title` no DOM vivo.
     sobrou_title: document.querySelectorAll('[title]').length,
+    // A DESCRIÇÃO: quem aponta a caixa aberta pelo `aria-describedby`.
+    descritos: Array.from(document.querySelectorAll('[aria-describedby~="hef-dica"]'))
+      .map(e => String(e.getAttribute('data-hef-dica') || '').trim()),
   });
 })()"""
 
@@ -236,6 +239,20 @@ def test_a_dica_mostra_o_texto_do_elemento(com_a_mao_parada: dict[str, Any]) -> 
     assert visto == esperado, (
         f"a dica abriu com OUTRO texto (ou vazia):\n  esperado {esperado!r}\n"
         f"  visto    {visto!r}")
+
+
+def test_a_dica_aberta_descreve_o_elemento_para_o_leitor_de_tela(
+    com_a_mao_parada: dict[str, Any],
+) -> None:
+    """O leitor de tela ouve a dica: o elemento aponta a caixa aberta, e só ele.
+
+    A MORDIDA: sem o `descrever(E.descrito, true)` do `mostrar()` da `DICA_DA_CASA`, a lista
+    fica vazia e esta régua reprova."""
+    m = com_a_mao_parada
+    assert not m["erro"], m["erro"]
+    assert m["estado"]["aberta"], m["estado"]
+    assert m["estado"]["descritos"] == [m["alvo"]["texto"]], (
+        f"a dica aberta não descreve o elemento dela: {m['estado']['descritos']}")
 
 
 def test_a_dica_nao_atravessa_a_janela(com_a_mao_parada: dict[str, Any]) -> None:
