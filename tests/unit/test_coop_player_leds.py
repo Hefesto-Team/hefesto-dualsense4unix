@@ -25,6 +25,7 @@ from typing import Any, ClassVar
 import pytest
 
 from hefesto_dualsense4unix.core.controller import OutputSpec
+from hefesto_dualsense4unix.core.evdev_reader import EvdevReader
 from hefesto_dualsense4unix.daemon.subsystems.coop import CoopManager, player_led_pattern
 
 KEY1 = "AA:BB:CC:00:00:01"
@@ -40,6 +41,8 @@ class _FakeReader:
     """Reader evdev falso (mesmo contrato do usado em test_subsystem_coop)."""
 
     grab_ok: bool = True
+    #: O `uinput_gamepad` lê a tabela do leitor ao ser importado; o falso a herda do real.
+    BUTTON_MAP: ClassVar[Any] = EvdevReader.BUTTON_MAP
 
     def __init__(self, device_path: Any = None, target_uniq: str | None = None) -> None:
         self.device_path = device_path
