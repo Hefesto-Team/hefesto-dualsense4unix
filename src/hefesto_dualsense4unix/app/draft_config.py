@@ -358,6 +358,16 @@ def _triggers_draft_to_config(triggers: TriggersDraft) -> Any:
     )
 
 
+#: Os campos do perfil que nenhuma aba edita pelo rascunho (o estilo e as marcas do jogo, os meus
+#: toques, a receita do tato, o alvo e o evento da aba Perfis): o draft só os devolve, e sem isto
+#: todo Salvar do rodapé, da Vibração e da Controles os apagava do disco. A régua
+#: `test_o_salvar_devolve_todo_campo_do_perfil` exige que todo campo novo do `Profile` caia aqui
+#: ou num argumento do `to_profile`.
+CAMPOS_QUE_O_RASCUNHO_SO_DEVOLVE = (
+    "meus_toques", "estilo", "marcas", "receita_do_tato", "alvo", "evento", "evento_comando",
+)
+
+
 class DraftConfig(BaseModel):
     """Estado central imutavel da GUI — snapshot de tudo que o daemon pode aplicar."""
 
@@ -401,6 +411,8 @@ class DraftConfig(BaseModel):
     source_ativacao: Any | None = None
     source_analogicos: Any | None = None  # (noqa-acento)
     source_cursor: Any | None = None
+    #: Os de :data:`CAMPOS_QUE_O_RASCUNHO_SO_DEVOLVE` que o perfil de origem tinha.
+    source_so_devolve: dict[str, Any] = Field(default_factory=dict)
 
     source_name: str | None = None
 
@@ -486,6 +498,11 @@ class DraftConfig(BaseModel):
             source_ativacao=profile.ativacao,  # (noqa-acento)
             source_analogicos=profile.analogicos,  # (noqa-acento)
             source_cursor=profile.cursor,
+            source_so_devolve={
+                campo: getattr(profile, campo)
+                for campo in CAMPOS_QUE_O_RASCUNHO_SO_DEVOLVE
+                if getattr(profile, campo, None) is not None
+            },
             source_name=profile.name,
         )
 
@@ -629,6 +646,7 @@ class DraftConfig(BaseModel):
             speaker=speaker_cfg,
             controllers=self.source_controllers,
             ponte=self.source_ponte if mesmo_perfil else None,
+            **self.source_so_devolve,
         )
         payload = profile.model_dump(mode="python")
         payload["controllers"] = profile.controllers
