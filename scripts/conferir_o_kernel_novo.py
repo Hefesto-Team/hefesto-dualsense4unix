@@ -290,13 +290,16 @@ def conferir(pacote: str, fonte: Path, *, so_a_raiz: bool = False) -> Resposta:
     # `rx.h` do 7.2.6 mudou a assinatura que o `usb.c` chama, e a série da raiz aplica limpa em cima.
     lidos = [c for c, chaves in PACOTES[pacote].items() if not chaves]
     conhecidas = dict(bases)
-    melhor: tuple[int, Serie, dict[str, str], list[str]] | None = None
+    # Em empate de pedaços, a série da base mais perto do fonte (mais arquivos com o sha dela) é o
+    # ponto de partida do rebase: num 7.2.6 com o `rx.h` mexido, a da pasta, e não a da raiz.
+    melhor: tuple[tuple[int, int], Serie, dict[str, str], list[str]] | None = None
     series = _series(pacote)[:1] if so_a_raiz else _series(pacote)
     for serie in series:
         estados = _experimenta(serie, fonte, arquivos)
         ruins = sum(1 for e in estados.values() if e not in ("entra", "já está no kernel"))
         base = conhecidas[serie.base]
         mudou = [c for c in lidos if shas[c] not in base.get(c, set())]
+        casam = sum(1 for c in arquivos if shas[c] in base.get(c, set()))
         if ruins == 0 and not mudou:
             resposta.veredito, resposta.serie, resposta.por_patch = (
                 APLICA_LIMPA,
@@ -304,8 +307,9 @@ def conferir(pacote: str, fonte: Path, *, so_a_raiz: bool = False) -> Resposta:
                 estados,
             )
             return resposta
-        if melhor is None or ruins + len(mudou) < melhor[0]:
-            melhor = (ruins + len(mudou), serie, estados, mudou)
+        nota = (ruins + len(mudou), -casam)
+        if melhor is None or nota < melhor[0]:
+            melhor = (nota, serie, estados, mudou)
     assert melhor is not None
     _, serie, estados, mudou = melhor
     resposta.veredito, resposta.serie, resposta.por_patch = PEDE_REBASE, serie.nome, estados

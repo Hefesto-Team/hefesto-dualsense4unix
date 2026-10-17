@@ -249,12 +249,14 @@ def test_rx_h_mudado_pede_rebase_mesmo_com_a_serie_limpa(
 
 
 def test_rx_h_mudado_no_7_2_6_tambem_pede_rebase(tmp_path: Path) -> None:
+    """As duas séries empatam no `rx.h`; a linha aponta a da pasta, a base mais perto."""
     fonte = _fonte_do_rtw88(tmp_path / "linux", PASTA_7_2_6)
     rx = fonte / RTW88 / "rx.h"
     rx.write_bytes(rx.read_bytes() + b"/* mais uma mudanca */\n")
     resposta = ck.conferir("rtw88-usb", fonte)
     assert resposta.veredito == ck.PEDE_REBASE, resposta
     assert resposta.mudou == [f"{RTW88}/rx.h"]
+    assert resposta.serie == f"de fonte-por-kernel/{PASTA_7_2_6}", resposta
 
 
 def test_pasta_por_kernel_so_com_o_0002_nao_levanta_excecao(tmp_path: Path) -> None:
