@@ -706,6 +706,19 @@ def test_o_emulador_nao_promete_exclusao_por_rom(_aba07) -> None:
     assert "com.libretro.RetroArch" in janelas[jogos[0].chave]
 
 
+def test_a_linha_do_emulador_nao_diz_que_foi_a_ultima_aberta(_aba07) -> None:
+    """A linha única do emulador nasce marcada, sem o «o último que você abriu»."""
+    desenho, a07 = _aba07
+    for modo in (desenho.CRIAR_PERFIL, desenho.EXCLUIR):
+        jogos, _janelas, emulador = a07._jogos_para_escolher("retroarch", "RetroArch", None)
+        miolo = desenho.miolo_da_escolha_html(modo, "RetroArch", jogos, emulador=emulador)
+        assert " checked" in miolo
+        assert desenho.O_ULTIMO_QUE_ABRIU not in miolo
+    steam = [desenho.JogoParaEscolher(chave="steam_app_1", nome="Wo Long", marcado=True)]
+    assert desenho.O_ULTIMO_QUE_ABRIU in desenho.miolo_da_escolha_html(
+        desenho.EXCLUIR, "Steam", steam)
+
+
 def test_a_exclusao_do_emulador_casa_pela_janela_medida(_aba07) -> None:
     """A janela do RetroArch diz `com.libretro.RetroArch`, e o flatpak é `org.`"""
     _desenho, a07 = _aba07

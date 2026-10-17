@@ -1374,7 +1374,8 @@ def miolo_da_escolha_html(modo: str, nome_do_lancador: str,
     for jogo in jogos:
         marca = " checked" if jogo.marcado else ""
         tags = ""
-        if jogo.marcado:
+        # A linha do emulador nasce marcada por ser a única, não por ter sido aberta.
+        if jogo.marcado and not emulador:
             tags += f' <span class="excl-tag ok">{_e(O_ULTIMO_QUE_ABRIU)}</span>'
         if not jogo.instalado:
             tags += ' <span class="excl-tag">não instalado</span>'
