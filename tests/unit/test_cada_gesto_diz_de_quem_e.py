@@ -100,7 +100,15 @@ A_ABA_AINDA_TRAZ = {
 #: Os quatro botões que o interruptor «Permitir correções automáticas» juntou na aba Sistema
 #: (A-ABA-SISTEMA-DO-TODO-01, 15/10/2026). A página não os traz mais, mas os gestos seguem
 #: registrados e em uso nos ajudantes e nos testes; saem da `CAMADA` no dia em que o código sair.
+#: Os quatro que a Perfis do todo tirou de propósito (A-ABA-PERFIS-DO-TODO-01, `5faca7e8a`; o
+#: `aba10.py` exige que não voltem): «Nome do jogo» e «Aplicar em» substituem o Nome, o Funciona em
+#: e o Detectar, e a ordem se arrasta em «Qual vale primeiro». Saem com
+#: OS-GESTOS-QUE-A-PERFIS-DO-TODO-DEIXOU-SEM-BOTAO-SAEM-01.
 SEM_BOTAO_NA_PAGINA = {
+    ("10-perfis.html", "detectar"),
+    ("10-perfis.html", "editor.ambiente"),
+    ("10-perfis.html", "editor.nome"),
+    ("10-perfis.html", "editor.prioridade"),
     ("09-sistema.html", "aplicar-aos-jogos"),
     ("09-sistema.html", "corrigir-vulkan"),
     ("09-sistema.html", "fixar-proton"),
