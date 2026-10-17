@@ -55,8 +55,9 @@ def _docstring_de(linhas: int, recuo: str = "") -> str:
     return "\n".join(recuo + ln for ln in ['"""Resumo.', *miolo, '"""']) + "\n"
 
 
+# A base da leva que o fecho exporta aponta para um commit que o repositório de mentira não tem.
 AMBIENTE = {
-    **os.environ,
+    **{k: v for k, v in os.environ.items() if k != "HEFESTO_BASE_DA_LEVA"},
     "GIT_CONFIG_GLOBAL": "/dev/null",
     "GIT_CONFIG_NOSYSTEM": "1",
     "GIT_AUTHOR_NAME": "t",
