@@ -88,3 +88,39 @@ def test_a_baseline_e_o_dkms_conf_concordam(build: str) -> None:
         f"o doctor vai dizer 'validado' sobre um kernel para o qual o dkms PULA "
         f"o build"
     )
+
+
+_DKMS = RAIZ / "assets" / "dkms"
+_PACOTES = ("hid-nintendo", "usb-f-hid", "uhid", "rtw88-usb")
+
+
+def _validados_de(pacote: str) -> set[str]:
+    texto = (_DKMS / pacote / "patch" / "BASELINE").read_text(encoding="utf-8")
+    linha = re.search(r"^KERNELS_VALIDADOS=(.+)$", texto, re.M)
+    assert linha, f"KERNELS_VALIDADOS sumiu da BASELINE do {pacote}"
+    return set(linha.group(1).replace(",", " ").split())
+
+
+def _pino_de(pacote: str) -> re.Pattern[str]:
+    texto = (_DKMS / pacote / "dkms.conf").read_text(encoding="utf-8")
+    casou = re.search(r'^BUILD_EXCLUSIVE_KERNEL="(.+)"$', texto, re.M)
+    assert casou, f"BUILD_EXCLUSIVE_KERNEL sumiu do dkms.conf do {pacote}"
+    return re.compile(casou.group(1))
+
+
+@pytest.mark.parametrize("pacote", _PACOTES)
+def test_os_modulos_acompanham_o_kernel_que_o_hid_playstation_ja_valida(pacote: str) -> None:
+    """Um módulo que fica para trás no kernel novo some calado: o de fábrica assume.
+
+    O `hid-playstation` é o molde de cada kernel que o sistema trouxe. Os outros
+    quatro módulos DKMS têm de validar os mesmos builds que ele valida (cada um
+    com o fonte de fábrica DELE medido), e a lista da BASELINE, o doctor e o pino do
+    `dkms.conf` têm de dizer o mesmo.
+    """
+    molde = _validados_de("hid-playstation")
+    assert "7.2.6-76070206" in molde
+    faltam = {b for b in molde if b not in _validados_de(pacote)}
+    assert not faltam, f"{pacote} não valida {sorted(faltam)}, que o hid-playstation valida"
+    pino = _pino_de(pacote)
+    for build in _validados_de(pacote):
+        assert pino.match(f"{build}-generic"), f"{pacote}: o pino não constrói {build}"

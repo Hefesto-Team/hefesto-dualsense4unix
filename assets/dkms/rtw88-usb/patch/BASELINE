@@ -1,6 +1,7 @@
 # Baseline do módulo DKMS hefesto-rtw88-usb (Onda W)
 #
-# DOIS KERNELS VALIDADOS desde 01/09/2026, e o achado que permitiu o segundo:
+# TRÊS KERNELS VALIDADOS (o terceiro, o 7.2.6, desde 17/10/2026: ver «O 7.2.6»
+# mais abaixo). Os dois primeiros desde 01/09/2026, e o achado que permitiu o segundo:
 # o `usb.c` e o `usb.h` PATCHADOS dos dois são BYTE A BYTE IDÊNTICOS. O
 # `patch/0001` (backport do memleak, CVE-2026-63821) já entrou no vanilla a
 # partir do 7.1.3, então no 7.1.5 só o nosso `0002` é aplicado — e o resultado
@@ -18,7 +19,9 @@
 # `escolher-o-main.sh` (PRE_BUILD do dkms.conf) põe o certo no lugar. Uma cópia
 # versionada seria uma segunda verdade sobre qual ABI é a nossa.
 #
-# Paridade verificável do usb.c/usb.h (na raiz do asset, caminhos -p6):
+# Paridade verificável do usb.c/usb.h (na raiz do asset, caminhos -p6; o do
+# 7.2.6 está em `fonte-por-kernel/7.2.6-76070206/`: `patch -R -p6 -i
+# patch/0002-*.patch` ali reproduz SHA256_VANILLA_C_7_2_6 e o SHA256_VANILLA_H):
 #   7.0.11: patch -R -p6 -i patch/0002-*.patch ; patch -R -p6 -i patch/0001-*.patch
 #           reproduz SHA256_VANILLA_C_7_0_11 / SHA256_VANILLA_H
 #   7.1.5:  patch -R -p6 -i patch/0002-*.patch
@@ -26,6 +29,31 @@
 # NÃO passe usb.c/usb.h como argumento posicional: patch(1) trata o 2o arquivo
 # como o ARQUIVO DE PATCH ("Only garbage was found in the patch input"); os
 # patches são multi-arquivo e o patch descobre os alvos pelos cabeçalhos.
+#
+# O 7.2.6-76070206 (17/10/2026): o de fábrica é o do pop-os/linux em cb46eb86
+# (o commit que o pacote nomeia: a versão instalada termina em `~cb46eb8`;
+# o 8b969b992 do hid-playstation dá os mesmos arquivos), igual ao do stable
+# v7.2.6. Dos arquivos
+# que este pacote traz, DOIS mudaram em relação ao 7.1.5: o `usb.c` e o
+# `rx.h`. O `rtw_rx_query_rx_desc` passou a devolver `int` (o `rx.h` o declara)
+# e o `rtw_usb_rx_handler` testa o retorno e sai do laço. O `usb.c` da raiz,
+# construído ali, desfaria isso em silêncio. Por isso o 7.2.6 ganha
+# `fonte-por-kernel/7.2.6-76070206/` com o `usb.c` (o `patch/0002` rebaseado
+# sobre o de fábrica dele: aplica com -F0, só com deslocamento de linha, e o
+# delta é o mesmo, linha a linha) e o `rx.h` dele; o `patch/0001` não entra,
+# porque o vanilla já o traz. O `usb.h` (vanilla e patchado) e os outros OITO
+# headers são byte a byte os da raiz, e o `main.h` do 7.2.6 é byte a byte o do
+# 7.1.5 (mesmo assim ganha o seu `main-por-kernel/main-7.2.6-76070206.h`: um
+# por build, ABI que alguém mediu). A lista dos builds que a raiz serve mora em
+# `fonte-por-kernel/raiz.txt` (o `dkms_lib.sh` apaga o `patch/` do /usr/src, e
+# a BASELINE não chega ao `escolher-o-main.sh`), e uma régua cobra que ela, as
+# pastas, o `main-por-kernel/`, o `KERNELS_VALIDADOS` e a regex digam o mesmo.
+# Compilado em 17/10/2026 com os headers reais (`linux-headers-7.2.6-76070206`,
+# gcc-13 13.3.0): rc=0, vermagic 7.2.6-76070206-generic, `parm: hang_reset` e
+# `switch_usb_mode` no `.ko`. Os CRCs dos exports MUDARAM no 7.2.6
+# (CRC_RTW_USB_PROBE_7_2_6 / CRC_RTW_USB_DISCONNECT_7_2_6, iguais aos do
+# Module.symvers do linux-headers dele), então os dois do 7.0.11 e 7.1.5 são
+# só desses dois.
 #
 # Os outros NOVE headers (debug.h, mac.h, reg.h, tx.h, rx.h, fw.h, ps.h,
 # util.h, hci.h) são vanilla INTOCADOS e IDÊNTICOS nos dois kernels — só
@@ -45,10 +73,16 @@
 #      linux-headers alvo. Se divergirem, PARE: o `rtw88_8822bu` in-tree não
 #      vai carregar contra o nosso módulo.
 #   7. escreva os sha novos aqui.
+# Se o de fábrica do kernel novo NÃO for o da raiz (o 7.2.6 não foi), os
+# passos 2 e 3 viram a pasta `fonte-por-kernel/<build>/` (o `usb.c` rebaseado,
+# o `rx.h` e a série em `patch/`), com a linha POR_KERNEL abaixo; se for, o
+# build entra em `fonte-por-kernel/raiz.txt`. Nos dois casos o `main.h` dele
+# entra em `main-por-kernel/`.
 KERNEL_BASE=v7.0.11
-KERNELS_VALIDADOS=7.0.11-76070011 7.1.5-76070105
+KERNELS_VALIDADOS=7.0.11-76070011 7.1.5-76070105 7.2.6-76070206
 KERNEL_TESTED=7.0.11-76070011-generic
 KERNEL_TESTED_2=7.1.5-76070105-generic
+KERNEL_TESTED_3=7.2.6-76070206-generic
 POP_LINUX_COMMIT=3af2f9de43174ce5063110f94b7b01226499ba13
 SHA256_VANILLA_C=969ce8bc2518ae87c203707c43315c25eefa999a3ae9e684487ef8d0305768de
 SHA256_VANILLA_C_7_0_11=969ce8bc2518ae87c203707c43315c25eefa999a3ae9e684487ef8d0305768de
@@ -59,11 +93,12 @@ SHA256_PATCHED_H=492505146c1475f9abe106be0dbdad9fa7b8a8b5902251e588300d612d56160
 # O main.h de cada kernel validado (derivado — ver main-por-kernel/).
 SHA256_MAIN_7_0_11_76070011=f7681400b4762612a5382a762f1200def7312da3c45dc2000bd9d0cac7d709a4
 SHA256_MAIN_7_1_5_76070105=313a4522a87ef4797e65de177ff23dd08f02f33e51ce9636604a5c43015c7f6e
+SHA256_MAIN_7_2_6_76070206=313a4522a87ef4797e65de177ff23dd08f02f33e51ce9636604a5c43015c7f6e
 # sha256 de: sha256sum debug.h mac.h reg.h tx.h rx.h fw.h ps.h util.h hci.h | sha256sum
 # (os NOVE invariantes — o main.h saiu do bundle em 01/09/2026, porque passou a
 #  ser por kernel)
 SHA256_HEADERS_BUNDLE=5d493851bd3bb583141cab7b1021fca8d6b532744387944e1cfa6fea4ab79622
-# CRCs dos exports, conferidos contra o Module.symvers do linux-headers alvo.
+# CRCs dos exports do 7.0.11 e do 7.1.5, conferidos contra o Module.symvers do linux-headers alvo.
 # Iguais nos dois kernels — e é POR ISSO que o modversions não protege nada
 # aqui: com o main.h errado eles saem idênticos do mesmo jeito.
 CRC_RTW_USB_PROBE=0x2a20bc53
@@ -72,3 +107,11 @@ PATCH_1=0001-wifi-rtw88-usb-fix-memory-leaks-on-USB-write-failures.patch
 PATCH_2=0002-wifi-rtw88-usb-detect-device-gone-and-queue-port-reset.patch
 UPSTREAM_0001=6b964941bbfe6e0f18b1a5e008486dbb62df440a
 MODELO_0002=rtw89 2135c28be6a8 (RTW89_FLAG_UNPLUGGED + continual_io_error>4)
+# O 7.2.6-76070206 (17/10/2026): as chaves de `fonte-por-kernel/7.2.6-76070206/`.
+POP_LINUX_COMMIT_7_2_6=cb46eb86556705fcc040e436bab75eef1e71518e
+SHA256_VANILLA_C_7_2_6=64d44452d287386bdb0de219c6a53ab288aec7762983df6929e798b2bc610a3b
+SHA256_PATCHED_C_7_2_6=bcf968d7b0054e493eecd882fc657bb9c033d7f068652b975cf9c7604914d1e5
+SHA256_RX_H_7_2_6=def008a6081b860a8d1a5e17d7fb72ce6d19a528320cedef7c3184676791afa4
+SHA256_HEADERS_BUNDLE_7_2_6=c48cc77db85d8c294607ac5880ea09817b84774a65122c08ec7762d5b13b76f0
+CRC_RTW_USB_PROBE_7_2_6=0x4862a96f
+CRC_RTW_USB_DISCONNECT_7_2_6=0x082171fd

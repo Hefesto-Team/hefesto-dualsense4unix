@@ -144,10 +144,19 @@ class TestDkmsConf:
                 f"o build validado {build} não está no BUILD_EXCLUSIVE_KERNEL — "
                 f"o dkms vai PULAR um kernel que a BASELINE diz ter sido medido"
             )
-        assert "76070011" in pino.group(1) and "76070105" in pino.group(1), (
+        assert all(b in pino.group(1) for b in ("76070011", "76070105", "76070206")), (
             "o pino tem de casar o BUILD exato; só a versão nominal deixa um "
             "respin da mesma versão corromper memória silenciosamente"
         )
+
+    def test_a_regex_do_pino_e_a_baseline_dizem_o_mesmo(self) -> None:
+        """Os dois sentidos: build na regex sem estar em KERNELS_VALIDADOS ninguém mediu."""
+        pino = re.search(r'^BUILD_EXCLUSIVE_KERNEL="(.+)"$', DKMS_CONF, re.MULTILINE)
+        assert pino is not None, "BUILD_EXCLUSIVE_KERNEL ausente"
+        forma = re.fullmatch(r"\^\(?(.+?)\)?-", pino.group(1))
+        assert forma, "o pino perdeu a forma `^(build|build)-`"
+        na_regex = {alt.replace("\\.", ".") for alt in forma.group(1).split("|")}
+        assert na_regex == set(_baseline()["KERNELS_VALIDADOS"].split())
 
     def test_o_pre_build_escolhe_o_main_do_kernel_alvo(self) -> None:
         """Sem ele, o `main.h` do build ANTERIOR fica — e é a corrupção."""
@@ -365,8 +374,9 @@ class TestBaselineEParidadeDosPatches:
         assert dados.get("KERNEL_BASE") == "v7.0.11"
         assert dados.get("KERNEL_TESTED") == "7.0.11-76070011-generic"
         assert dados.get("KERNEL_TESTED_2") == "7.1.5-76070105-generic"
+        assert dados.get("KERNEL_TESTED_3") == "7.2.6-76070206-generic"
         assert dados.get("KERNELS_VALIDADOS", "").split() == [
-            "7.0.11-76070011", "7.1.5-76070105",
+            "7.0.11-76070011", "7.1.5-76070105", "7.2.6-76070206",
         ]
         assert re.fullmatch(r"[0-9a-f]{40}", dados.get("POP_LINUX_COMMIT", "")), (
             "POP_LINUX_COMMIT precisa ser o sha do repo pop-os/linux"
@@ -381,8 +391,16 @@ class TestBaselineEParidadeDosPatches:
             "SHA256_VANILLA_C_7_1_5",
             "SHA256_MAIN_7_0_11_76070011",
             "SHA256_MAIN_7_1_5_76070105",
+            "SHA256_MAIN_7_2_6_76070206",
+            "SHA256_VANILLA_C_7_2_6",
+            "SHA256_PATCHED_C_7_2_6",
+            "SHA256_RX_H_7_2_6",
+            "SHA256_HEADERS_BUNDLE_7_2_6",
         ):
             assert re.fullmatch(r"[0-9a-f]{64}", dados.get(chave, "")), f"{chave} inválido"
+        assert re.fullmatch(r"[0-9a-f]{40}", dados.get("POP_LINUX_COMMIT_7_2_6", ""))
+        for chave in ("CRC_RTW_USB_PROBE_7_2_6", "CRC_RTW_USB_DISCONNECT_7_2_6"):
+            assert re.fullmatch(r"0x[0-9a-f]{8}", dados.get(chave, "")), f"{chave} inválido"
         assert dados.get("PATCH_1") == PATCH1_PATH.name
         assert dados.get("PATCH_2") == PATCH2_PATH.name
 
@@ -469,3 +487,121 @@ class TestFormatoDoPatch0002Upstream:
             "o .patch precisa carregar o gate junto com o .c (invariante de rebase)"
         )
         assert "usb_queue_reset_device" in PATCH2
+
+
+KERNEL_726 = "7.2.6-76070206"
+POR_KERNEL = ASSET_DIR / "fonte-por-kernel"
+PASTA_726 = POR_KERNEL / KERNEL_726
+PATCH2_726_PATH = PASTA_726 / "patch" / PATCH2_PATH.name
+
+
+def _copia_do_pacote(destino: Path) -> Path:
+    """O pacote como o DKMS o entrega ao build: a pasta inteira, sem o `main.h` derivado."""
+    alvo = destino / "pacote"
+    shutil.copytree(ASSET_DIR, alvo)
+    (alvo / "main.h").unlink(missing_ok=True)
+    return alvo
+
+
+def _escolhe(pacote: Path, kernelver: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["bash", str(pacote / "escolher-o-main.sh"), kernelver],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=30,
+    )
+
+
+class TestOFontePorKernel:
+    """O 7.2.6 mudou o `usb.c` e o `rx.h` de fábrica: cada kernel recebe o fonte DELE."""
+
+    def test_a_raiz_as_pastas_e_a_baseline_dizem_o_mesmo(self) -> None:
+        validados = set(_baseline()["KERNELS_VALIDADOS"].split())
+        da_raiz = set(_read(POR_KERNEL / "raiz.txt").split())
+        em_pastas = {p.name for p in POR_KERNEL.iterdir() if p.is_dir()}
+        assert not da_raiz & em_pastas, "um build não serve da raiz e de uma pasta ao mesmo tempo"
+        assert da_raiz | em_pastas == validados, (
+            f"a BASELINE declara {sorted(validados)}; `raiz.txt` + pastas dizem "
+            f"{sorted(da_raiz | em_pastas)} — kernel sem fonte faz o PRE_BUILD recusar, "
+            "e fonte sem declaração é ABI que ninguém mediu"
+        )
+
+    def test_o_fonte_do_7_2_6_e_o_patchado_do_baseline(self) -> None:
+        dados = _baseline()
+        assert _sha256(PASTA_726 / "usb.c") == dados["SHA256_PATCHED_C_7_2_6"]
+        assert _sha256(PASTA_726 / "rx.h") == dados["SHA256_RX_H_7_2_6"]
+        assert _sha256(PASTA_726 / "rx.h") != _sha256(ASSET_DIR / "rx.h"), (
+            "o `rx.h` do 7.2.6 é o mesmo da raiz: a pasta por kernel não teria razão de ser"
+        )
+
+    def test_os_outros_oito_headers_do_7_2_6_sao_os_da_raiz(self) -> None:
+        """O bundle do 7.2.6 = os oito invariantes da raiz + o `rx.h` dele."""
+        arvore = {nome: ASSET_DIR / nome for nome in HEADERS_VANILLA}
+        arvore["rx.h"] = PASTA_726 / "rx.h"
+        resumo = "".join(f"{_sha256(arvore[n])}  {n}\n" for n in HEADERS_VANILLA)
+        assert hashlib.sha256(resumo.encode()).hexdigest() == (
+            _baseline()["SHA256_HEADERS_BUNDLE_7_2_6"]
+        ), "um header do 7.2.6 divergiu: mudança neles é rebase, não edição"
+
+    def test_o_patch_do_7_2_6_desfeito_devolve_o_de_fabrica(self, tmp_path: Path) -> None:
+        trabalho = tmp_path / "rtw88"
+        trabalho.mkdir()
+        shutil.copy2(PASTA_726 / "usb.c", trabalho / "usb.c")
+        shutil.copy2(H_PATH, trabalho / "usb.h")
+        _aplica_patch(trabalho, PATCH2_726_PATH, reverso=True)
+        dados = _baseline()
+        assert _sha256(trabalho / "usb.c") == dados["SHA256_VANILLA_C_7_2_6"], (
+            "reverter o 0002 do 7.2.6 não reproduz o usb.c de fábrica dele"
+        )
+        assert _sha256(trabalho / "usb.h") == dados["SHA256_VANILLA_H"]
+        _aplica_patch(trabalho, PATCH2_726_PATH, reverso=False)
+        assert _sha256(trabalho / "usb.c") == dados["SHA256_PATCHED_C_7_2_6"]
+        assert _sha256(trabalho / "usb.h") == dados["SHA256_PATCHED_H"]
+
+    def test_o_7_2_6_nao_traz_o_0001_que_o_de_fabrica_ja_tem(self) -> None:
+        assert sorted(p.name for p in (PASTA_726 / "patch").iterdir()) == [PATCH2_PATH.name]
+
+    def test_o_patch_do_7_2_6_tem_o_formato_do_0002(self) -> None:
+        texto = PATCH2_726_PATH.read_text(encoding="utf-8")
+        assert texto.startswith("From ")
+        assert "Subject: [PATCH 2/2] wifi: rtw88: usb: detect device gone" in texto
+        assert SOB_ANONIMO in texto
+        assert "+module_param_named(hang_reset, rtw_usb_hang_reset, bool, 0644);" in texto
+
+    def test_o_usb_c_do_7_2_6_consome_o_retorno_novo_do_rx(self) -> None:
+        """A razão da pasta: o de fábrica do 7.2.6 testa o `int` de `rtw_rx_query_rx_desc`."""
+        c = (PASTA_726 / "usb.c").read_text(encoding="utf-8")
+        rx = (PASTA_726 / "rx.h").read_text(encoding="utf-8")
+        assert "ret = rtw_rx_query_rx_desc(" in c
+        assert "int rtw_rx_query_rx_desc(" in rx
+        assert "void rtw_rx_query_rx_desc(" in (ASSET_DIR / "rx.h").read_text(encoding="utf-8")
+
+    def test_o_escolhedor_poe_o_fonte_de_cada_kernel_validado(self, tmp_path: Path) -> None:
+        dados = _baseline()
+        da_raiz = set(_read(POR_KERNEL / "raiz.txt").split())
+        for build in dados["KERNELS_VALIDADOS"].split():
+            pacote = _copia_do_pacote(tmp_path / build)
+            resultado = _escolhe(pacote, f"{build}-generic")
+            assert resultado.returncode == 0, resultado.stderr
+            sufixo = build.replace(".", "_").replace("-", "_")
+            assert _sha256(pacote / "main.h") == dados[f"SHA256_MAIN_{sufixo}"]
+            if build in da_raiz:
+                assert _sha256(pacote / "usb.c") == dados["SHA256_PATCHED_C"], build
+                assert _sha256(pacote / "rx.h") == _sha256(ASSET_DIR / "rx.h"), build
+            else:
+                assert _sha256(pacote / "usb.c") == dados["SHA256_PATCHED_C_7_2_6"], build
+                assert _sha256(pacote / "rx.h") == dados["SHA256_RX_H_7_2_6"], build
+
+    def test_o_escolhedor_recusa_kernel_sem_fonte_conferido(self, tmp_path: Path) -> None:
+        pacote = _copia_do_pacote(tmp_path)
+        resultado = _escolhe(pacote, "7.2.7-76070207-generic")
+        assert resultado.returncode != 0
+        # com o `main.h` presente mas sem fonte, também recusa: os dois trincos são independentes
+        shutil.copy2(
+            ASSET_DIR / "main-por-kernel" / f"main-{KERNEL_726}.h",
+            pacote / "main-por-kernel" / "main-7.2.7-76070207.h",
+        )
+        resultado = _escolhe(pacote, "7.2.7-76070207-generic")
+        assert resultado.returncode != 0, "kernel com main.h e sem fonte conferido compilou"
+        assert "fonte conferido" in resultado.stderr

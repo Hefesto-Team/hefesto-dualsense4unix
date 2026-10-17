@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# escolher-o-main.sh — põe no lugar o `main.h` do kernel que está sendo compilado.
+# escolher-o-main.sh — põe no lugar o `main.h` do kernel que está sendo compilado
+# e, quando o fonte de fábrica dele não é o da raiz, o `usb.c` e o `rx.h` dele.
 #
 # POR QUE ISTO EXISTE, e é a coisa mais perigosa deste módulo (01/09/2026).
 #
@@ -27,6 +28,17 @@
 # `dkms.conf` o barra antes, e o in-tree assume sozinho (fail-safe: nunca ficar
 # sem WiFi).
 #
+# O `usb.c` E O `rx.h` POR KERNEL (17/10/2026). O 7.2.6 mudou o de fábrica: o
+# `rtw_rx_query_rx_desc` passou a devolver `int` (o `rx.h` o declara) e o
+# `rtw_usb_rx_handler` testa o retorno. O `usb.c` da raiz, construído ali,
+# desfaria a mudança em silêncio. Por isso o kernel cujo de fábrica não é o da
+# raiz ganha `fonte-por-kernel/<build>/` com o `usb.c` (a série aplicada sobre
+# o de fábrica DELE), o `rx.h` dele e a série rebaseada em `patch/`; os builds
+# que a raiz serve moram em `fonte-por-kernel/raiz.txt`, porque o
+# `dkms_lib.sh` apaga o `patch/` do /usr/src e a BASELINE não chega aqui. A
+# cada build o DKMS refaz a pasta de build do zero (`rm -rf` em `prepare_build`),
+# então o arquivo trocado não vaza para o build seguinte.
+#
 # COMO ACRESCENTAR UM KERNEL, o ritual inteiro está em `patch/BASELINE`.
 set -euo pipefail
 
@@ -42,6 +54,21 @@ ALVO="${AQUI}/main-por-kernel/main-${BUILD}.h"
 if [[ ! -f "${ALVO}" ]]; then
     echo "hefesto-rtw88-usb: não tenho main.h validado para ${BUILD}." >&2
     echo "  validados: $(cd "${AQUI}/main-por-kernel" && ls main-*.h | sed 's/^main-//;s/\.h$//' | tr '\n' ' ')" >&2
+    echo "  o ritual de rebase está em patch/BASELINE" >&2
+    exit 1
+fi
+
+POR_KERNEL="${AQUI}/fonte-por-kernel"
+if [[ -d "${POR_KERNEL}/${BUILD}" ]]; then
+    for arquivo in "${POR_KERNEL}/${BUILD}"/*; do
+        [[ -f "${arquivo}" ]] && cp -f "${arquivo}" "${AQUI}/$(basename "${arquivo}")"
+    done
+    echo "hefesto-rtw88-usb: o fonte de ${BUILD} no lugar"
+elif grep -qxF "${BUILD}" "${POR_KERNEL}/raiz.txt" 2>/dev/null; then
+    echo "hefesto-rtw88-usb: o fonte da raiz serve a ${BUILD}"
+else
+    echo "hefesto-rtw88-usb: não tenho fonte conferido para ${BUILD}." >&2
+    echo "  conferidos: $(tr '\n' ' ' < "${POR_KERNEL}/raiz.txt" 2>/dev/null)$(cd "${POR_KERNEL}" && ls -d */ 2>/dev/null | tr -d / | tr '\n' ' ')" >&2
     echo "  o ritual de rebase está em patch/BASELINE" >&2
     exit 1
 fi
