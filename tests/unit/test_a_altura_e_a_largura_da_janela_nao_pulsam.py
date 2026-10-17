@@ -39,6 +39,12 @@ from typing import Any
 
 import pytest
 
+from tests.conftest import exigir_gi_real
+
+# O filho (`sys.executable -c _AJUDANTE`) importa o GTK e o WebKit2 de verdade: sem o PyGObject
+# real o módulo pula, e sob `HEFESTO_EXIGE_GTK_REAL=1` reprova.
+exigir_gi_real("o filho importa `gi` com o GTK 3 e o WebKit2 4.1 de verdade")
+
 RAIZ = Path(__file__).resolve().parents[2]
 TIQUES = 100
 PAGINA = "09-sistema.html"
