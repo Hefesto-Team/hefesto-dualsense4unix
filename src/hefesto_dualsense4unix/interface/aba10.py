@@ -905,7 +905,9 @@ CSS = CSS_GLIFO + """
   .perfis > div{padding:12px 16px}
   .perfis > div:first-child{padding-right:8px}
   .perfis > div:last-child{padding-left:8px}
-  .rolo{overflow:hidden}
+  /* A LISTA ROLA DENTRO DO `.rolo`, com a barra de verdade lá de cima: na janela baixa as linhas de
+     baixo descem para fora do quadro, e um corte as sumia sem barra nenhuma
+     (D-1710-A-JANELA-ESTREITA-NAO-ENGOLE-O-DESENHO). No tamanho do desenho a lista cabe e a barra não nasce. */
   .rolo .tab tbody td{height:26px;padding-top:0;padding-bottom:0}
   .rolo .tab thead th[data-coluna]{cursor:pointer;user-select:none}
   .quadro-titulo[data-dica],.cab[data-dica]{cursor:help}
