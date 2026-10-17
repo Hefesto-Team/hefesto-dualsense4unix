@@ -5,7 +5,7 @@
       "data": "2026-10-17",
       "nota": "5973 linhas de comentário e 45686 de docstring, em src/hefesto_dualsense4unix/",
       "o_que_conta": "linhas de comentário e de docstring em src/hefesto_dualsense4unix/",
-      "piso": 53084,
+      "piso": 53099,
       "por_item": {
         "app/actions/carona_do_wrapper.py": 174,
         "app/actions/config/secao_controles.py": 83,
@@ -88,7 +88,7 @@
         "daemon/subsystems/gatilho_do_jogo.py": 40,
         "daemon/subsystems/governador_do_radio.py": 278,
         "daemon/subsystems/hotkey.py": 670,
-        "daemon/subsystems/identity.py": 618,
+        "daemon/subsystems/identity.py": 632,
         "daemon/subsystems/keyboard.py": 106,
         "daemon/subsystems/luz_animada.py": 56,
         "daemon/subsystems/luz_do_mic.py": 289,
@@ -211,7 +211,7 @@
         "interface/pacotes/a03_gatilhos.py": 810,
         "interface/pacotes/a04_iluminacao.py": 1166,
         "interface/pacotes/a05_vibracao.py": 883,
-        "interface/pacotes/a06_navegacao.py": 361,
+        "interface/pacotes/a06_navegacao.py": 362,
         "interface/pacotes/a07_lancadores.py": 683,
         "interface/pacotes/a08_conexoes.py": 1287,
         "interface/pacotes/a09_sistema.py": 1126,
@@ -251,7 +251,7 @@
         "utils/single_instance.py": 50,
         "utils/xdg_paths.py": 65
       },
-      "razao": "texto-em-src: +31 linhas (53053 -> 53084), pagas por Origem: D-1610-A-BANDEJA-TEM-INTERRUPTOR-E-VOLTA-COM-O-SERVICO, D-1610-O-CURSOR-GANHA-PRECISAO-PERMANENCIA-E-CLIQUE-TRAVADO, D-1610-O-ESTADO-DO-CARD-TEM-UM-DONO-SO, D-1610-O-PAD-VIRTUAL-NASCE-NUM-FIO-PROPRIO, D-1610-O-PS-SEGURADO-10-S-DESLIGA-AQUELE-CONTROLE, D-1610-O-TOQUE-DO-GESTO-SOMA-AO-PAR-DO-JOGO, energia.desligar, entrada.combo.ponte, luz.led_microfone; registrado no fecho, topo 1b1db1f251fd",
+      "razao": "texto-em-src: +15 linhas (53084 -> 53099), pagas por Origem: D-1610-A-BANDEJA-TEM-INTERRUPTOR-E-VOLTA-COM-O-SERVICO, D-1610-O-CURSOR-GANHA-PRECISAO-PERMANENCIA-E-CLIQUE-TRAVADO, D-1610-O-ESTADO-DO-CARD-TEM-UM-DONO-SO, D-1610-O-PAD-VIRTUAL-NASCE-NUM-FIO-PROPRIO, D-1610-O-PS-SEGURADO-10-S-DESLIGA-AQUELE-CONTROLE, D-1610-O-TOQUE-DO-GESTO-SOMA-AO-PAR-DO-JOGO, D-2309-O-PRIMARIO-ESPERA-A-CARTA-1, energia.desligar, entrada.combo.ponte, luz.led_microfone; registrado no fecho, topo 66505ac198ea",
       "subidas": [
         {
           "data": "2026-10-13",
@@ -288,6 +288,12 @@
           "de": 53053,
           "para": 53084,
           "razao": "texto-em-src: +31 linhas (53053 -> 53084), pagas por Origem: D-1610-A-BANDEJA-TEM-INTERRUPTOR-E-VOLTA-COM-O-SERVICO, D-1610-O-CURSOR-GANHA-PRECISAO-PERMANENCIA-E-CLIQUE-TRAVADO, D-1610-O-ESTADO-DO-CARD-TEM-UM-DONO-SO, D-1610-O-PAD-VIRTUAL-NASCE-NUM-FIO-PROPRIO, D-1610-O-PS-SEGURADO-10-S-DESLIGA-AQUELE-CONTROLE, D-1610-O-TOQUE-DO-GESTO-SOMA-AO-PAR-DO-JOGO, energia.desligar, entrada.combo.ponte, luz.led_microfone; registrado no fecho, topo 1b1db1f251fd"
+        },
+        {
+          "data": "2026-10-17",
+          "de": 53084,
+          "para": 53099,
+          "razao": "texto-em-src: +15 linhas (53084 -> 53099), pagas por Origem: D-1610-A-BANDEJA-TEM-INTERRUPTOR-E-VOLTA-COM-O-SERVICO, D-1610-O-CURSOR-GANHA-PRECISAO-PERMANENCIA-E-CLIQUE-TRAVADO, D-1610-O-ESTADO-DO-CARD-TEM-UM-DONO-SO, D-1610-O-PAD-VIRTUAL-NASCE-NUM-FIO-PROPRIO, D-1610-O-PS-SEGURADO-10-S-DESLIGA-AQUELE-CONTROLE, D-1610-O-TOQUE-DO-GESTO-SOMA-AO-PAR-DO-JOGO, D-2309-O-PRIMARIO-ESPERA-A-CARTA-1, energia.desligar, entrada.combo.ponte, luz.led_microfone; registrado no fecho, topo 66505ac198ea"
         }
       ],
       "unidade": "linhas",
