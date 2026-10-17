@@ -6,11 +6,11 @@
       "folga": 20,
       "nota": "parede do último portoes.sh completo do fecho",
       "o_que_conta": "segundos de parede do portão completo",
-      "piso": 69,
+      "piso": 52,
       "por_item": {
-        "portoes-0440.out": 69
+        "portoes-0515.out": 52
       },
-      "razao": "dentro do fecho, com as vagas presas, o completo mede 69 s; sozinho, 50 s",
+      "razao": "o tempo desceu: 69 -> 52 s",
       "subidas": [
         {
           "data": "2026-10-17",
