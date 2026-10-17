@@ -902,7 +902,7 @@ MEDIDO**.
 desligado. Os emuladores que embutem o SDL3 (Vita3K, shadPS4) o têm LIGADO, e é outro
 caminho: o driver PS5 do HIDAPI abre o `hidraw` do vpad. O instrumento é
 `scripts/ensaios/o_jogo_para_de_ver_o_giro.py --jogador P1..P4 --lib <libSDL3>`; esta seção
-diz o que dele já está medido, o que é fonte e o que só a bancada fecha.
+diz o que dele já está medido, o que é fonte e o que só o ensaio no aparelho fecha.
 
 | biblioteca | revisão | quem a carrega | grau |
 |---|---|---|---|
@@ -947,13 +947,13 @@ dígitos: o driver PS5 o reescreve com o feature 0x09 no formato `02-fe-…`, co
   probe, então o `UHID_OPEN` chega uma vez, no nascimento do vpad, e o `UHID_CLOSE` só na
   remoção; abrir e fechar o `hidraw` não gera evento no `uhid`.
 
-**O que a sonda mede e a bancada fecha (NÃO MEDIDO ainda):** a identidade (nome e GUID iguais,
+**O que a sonda mede e o ensaio no aparelho fecha (NÃO MEDIDO ainda):** a identidade (nome e GUID iguais,
 serial distinto), os `hidraw` dos quatro abertos pelo processo (`/proc/<pid>/fd` casado por
 inode), a escrita só no escolhido (`output_count`, `lightbar_replicas` e `player_led_replicas`
 de cada vpad antes, durante e depois), um touchpad de dois dedos, giro e acelerômetro, `|acel|`
 parado em 9,8 ± 0,5 m/s², nenhum intervalo de `sensor_timestamp` acima de 0,1 s (o teto em que
 o Vita3K descarta a amostra) e, com o dedo, eventos de toque e o clique. Ela abre o vpad com o
-HIDAPI ligado, o que ESCREVE no aparelho: roda com `scripts/bancada.sh exigir`, e com
+HIDAPI ligado, o que ESCREVE no aparelho: roda só com o aparelho liberado para escrita, e com
 `--hidapi 0` (só para a mordida) o laudo reprova, porque sem HIDAPI o vpad é evdev e não há
 touchpad.
 
