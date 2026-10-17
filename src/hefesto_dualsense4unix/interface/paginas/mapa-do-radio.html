@@ -3207,6 +3207,11 @@ pintar();
   const aberta = () => document.querySelector('.tela-nova:target');
   let quemAbriu = null, ultimo = null, estavaAberta = false;
   document.addEventListener('focusin', e => { if (!e.target.closest || !e.target.closest('.tela-nova')) ultimo = e.target; });
+  /* O X do controle clica sem dar foco: o link do clique é quem abriu, e o O devolve o foco a ele. */
+  document.addEventListener('click', e => {
+    const a = e.target.closest && e.target.closest('a[href^="#"]');
+    if (a && !a.closest('.tela-nova')) ultimo = a;
+  }, true);
   const aoMudar = () => {
     const tela = aberta();
     if (tela && !estavaAberta) {

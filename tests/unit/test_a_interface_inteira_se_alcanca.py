@@ -11,11 +11,12 @@ Três contratos, medidos no Chrome sobre os DESENHOS (`mockup/`), em todas as p�
 3. A TELA POR CIMA É UM DIÁLOGO. Aberta por âncora, o foco entra nela, nenhuma caixa da
    Navegação fica atrás dela, o Tab fica dentro e o Esc fecha.
 4. O TECLADO ACIONA. Enter e Espaço clicam o gesto que não é botão, e o Esc devolve o foco a
-   quem abriu a tela.
+   quem abriu a tela; o O do controle, que fecha pela navegação, também.
 
 MORDIDAS (cada uma tira UMA cura de uma cópia da página e a régua tem de reprovar): sem o
 contrato do alcance; sem o `tabindex` posto; sem `a[href],button` no seletor; sem o
-`presente(d)` do `aberta()`; sem o `el.click()` do Enter; sem o `quemAbriu.focus()`.
+`presente(d)` do `aberta()`; sem o `el.click()` do Enter; sem o `quemAbriu.focus()`; sem o
+clique que lembra quem abriu.
 """
 
 from __future__ import annotations
@@ -397,3 +398,47 @@ def test_morde_sem_o_clique_do_enter_e_sem_o_foco_que_volta(
         m = medir_o_teclado(navegador, copias[0], copias[1], "acessibilidade")
         assert m["gesto"] and m[chave] in (0, False), (
             f"sem {cura.strip()!r} a régua não reprovou: {m}")
+
+
+def medir_o_controle(navegador: Any, arquivo: pathlib.Path, abre: str) -> dict[str, Any]:
+    """O X do controle abre a tela `abre` pelo link e o O a fecha, pela navegação DE VERDADE
+    (`NAV_INSTALAR`), que clica sem dar foco: o foco tem de voltar ao link, como no Esc."""
+    pg = _abrir(navegador, arquivo)
+    try:
+        pg.evaluate(hefesto_vivo.NAV_INSTALAR)
+        lei = json.loads(pg.evaluate("window.__hefNav.ler()"))
+        endereco = next(
+            (c["endereco"] for c in lei["caixas"] if f"|#{abre}|" in c["endereco"]), None)
+        if endereco is None:
+            return {"achou": False, "voltou": False}
+        pg.evaluate("(e) => window.__hefNav.aplicar([{op: 'clicar', endereco: e}], [])", endereco)
+        pg.wait_for_timeout(50)
+        aberta = pg.evaluate(f"() => !!document.querySelector('#{abre}:target')")
+        pg.evaluate("() => window.__hefNav.aplicar([{op: 'fechar'}], [])")
+        pg.wait_for_timeout(50)
+        voltou = pg.evaluate(
+            "(id) => document.activeElement && document.activeElement.matches"
+            "(`a[href=\"#${id}\"]`) && !document.querySelector('.tela-nova:target')", abre)
+    finally:
+        pg.close()
+    return {"achou": True, "aberta": aberta, "voltou": voltou}
+
+
+def test_o_o_do_controle_devolve_o_foco_a_quem_abriu(navegador: Any) -> None:
+    m = medir_o_controle(navegador, MOCKUP / "06-navegacao.html", "acessibilidade")
+    assert m["achou"] and m["aberta"], f"o X não abriu a tela pelo link: {m}"
+    assert m["voltou"], "o O fechou a tela e o foco caiu fora do link que a abriu"
+
+
+def test_morde_sem_o_clique_que_lembra_quem_abriu(
+    navegador: Any, tmp_path: pathlib.Path,
+) -> None:
+    cura = "if (a && !a.closest('.tela-nova'))"
+    texto = (MOCKUP / "06-navegacao.html").read_text(encoding="utf-8")
+    assert texto.count(cura) == 1
+    copia = tmp_path / "sem-o-clique-06-navegacao.html"
+    copia.write_text(texto.replace(cura, "if (false)"), encoding="utf-8")
+    m = medir_o_controle(navegador, copia, "acessibilidade")
+    assert m["achou"] and m["aberta"] and not m["voltou"], (
+        f"sem o clique que lembra quem abriu a régua não reprovou: {m}")
+
