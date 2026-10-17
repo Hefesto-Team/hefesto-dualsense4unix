@@ -36,15 +36,15 @@
       "universo": 9
     },
     "suite-pytest-s": {
-      "data": "2026-10-16",
+      "data": "2026-10-17",
       "folga": 10,
       "nota": "segundos de pytest das 24 partes do último fecho da suíte",
       "o_que_conta": "segundos de pytest da suíte inteira (24 partes)",
-      "piso": 4489,
+      "piso": 3950,
       "por_item": {
-        "parte-00": 155,
-        "parte-01": 290,
-        "parte-02": 292,
+        "parte-00": 21,
+        "parte-01": 64,
+        "parte-02": 114,
         "parte-03": 191,
         "parte-04": 247,
         "parte-05": 168,
@@ -67,7 +67,7 @@
         "parte-22": 159,
         "parte-23": 161
       },
-      "razao": "piso inicial de 16/10: o que o último fecho e o rápido mediram antes das curas desta sprint; o fecho desce para o de depois",
+      "razao": "o tempo desceu: 4489 -> 3950 s",
       "unidade": "s",
       "universo": 24
     }
