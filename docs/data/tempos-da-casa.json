@@ -2,15 +2,23 @@
   "_LEIA": "O PISO DO TEMPO DA CASA, em segundos. Não se edita à mão: `scripts/o-tempo-da-casa.py --casa <casa> --aceitar` desce, `--fechar` sobe o que um `Tempo: <medida> <razão>` da faixa paga. `folga` é o porcento de ruído que o piso tolera.",
   "medidas": {
     "completo-parede-s": {
-      "data": "2026-10-16",
+      "data": "2026-10-17",
       "folga": 20,
       "nota": "parede do último portoes.sh completo do fecho",
       "o_que_conta": "segundos de parede do portão completo",
-      "piso": 53,
+      "piso": 69,
       "por_item": {
-        "portoes-2342.out": 53
+        "portoes-0440.out": 69
       },
-      "razao": "o tempo desceu: 75 -> 53 s",
+      "razao": "dentro do fecho, com as vagas presas, o completo mede 69 s; sozinho, 50 s",
+      "subidas": [
+        {
+          "data": "2026-10-17",
+          "de": 53,
+          "para": 69,
+          "razao": "dentro do fecho, com as vagas presas, o completo mede 69 s; sozinho, 50 s"
+        }
+      ],
       "unidade": "s",
       "universo": 1
     },
