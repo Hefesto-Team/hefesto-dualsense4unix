@@ -1,6 +1,8 @@
-/* Local Gaming Services stand-in for Proton.
- * Implements the xgameruntime exports and the XAsync/XTaskQueue ABI that
- * Minecraft Dungeons II calls. Does not mint Xbox Live tokens. */
+/* A peça GDK do Hefesto: o xgameruntime que o Wine carrega como builtin para todo jogo GDK.
+ * Implementa as exportações do xgameruntime e a ABI do XAsync/XTaskQueue pelo contrato do
+ * libHttpClient. O título (TitleId, MSAAppId, Identity) sai do MicrosoftGame.config do jogo.
+ * Não fabrica token do Xbox Live: o login é do ajudante que o usuário instalou.
+ * Deriva de uma fonte MIT; a nota da licença está em LICENCA-DA-ORIGEM.txt. */
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -21,7 +23,8 @@
 #define E_INSUFFICIENT_ ((HRESULT)0x8007007A)
 #define E_NO_TASK_QUEUE_ ((HRESULT)0x800701AB)
 
-#define TITLE_ID 0x6B9DE498u
+#define PECA_GDK_ID "hefesto-peca-gdk-1"
+#define LOG_TETO_BYTES (16u * 1024u * 1024u)
 #define ASYNC_MAGIC 0x31524758u /* XRG1 */
 #define ASYNC_DONE  0x32454758u /* XGE2 */
 #define MODE_MANUAL 0
@@ -138,7 +141,129 @@ static int g_inited;
 static char g_pls_parent[MAX_PATH];
 static char g_pls_path[MAX_PATH];
 
-/* The prefix's own user directory: steamuser under Proton, crossover under CrossOver. */
+/* O título, lido do MicrosoftGame.config do jogo (title_read). */
+static int g_title_lido;
+static int g_title_tem_id;
+static UINT32 g_title_id;
+static char g_title_identity[128];   /* Identity Name, só [A-Za-z0-9._-] */
+static char g_title_nome[160];       /* ShellVisuals DefaultDisplayName, UTF-8 */
+static char g_title_msa[32];         /* MSAAppId: só vai ao log; o client id é do ajudante */
+static char g_title_config[MAX_PATH];
+
+static void xlog(const char *fmt, ...);
+
+/* O valor de `attr="..."` dentro da primeira tag `<tag` do texto. */
+static int xml_attr(const char *txt, const char *tag, const char *attr, char *out, size_t cap)
+{
+    const char *t = strstr(txt, tag), *end, *a;
+    char pat[64];
+    size_t n;
+    if (!t || cap == 0) return 0;
+    end = strchr(t, '>');
+    if (!end) return 0;
+    snprintf(pat, sizeof pat, " %s=\"", attr);
+    a = strstr(t, pat);
+    if (!a || a > end) {
+        snprintf(pat, sizeof pat, "\t%s=\"", attr);
+        a = strstr(t, pat);
+        if (!a || a > end) return 0;
+    }
+    a += strlen(pat);
+    for (n = 0; a[n] && a[n] != '"' && n + 1 < cap; n++) out[n] = a[n];
+    out[n] = 0;
+    return n > 0;
+}
+
+/* O texto entre `<tag>` e `</tag>`, sem espaço em volta. */
+static int xml_text(const char *txt, const char *tag, char *out, size_t cap)
+{
+    char open_[48], close_[48];
+    const char *a, *b;
+    size_t n = 0;
+    snprintf(open_, sizeof open_, "<%s>", tag);
+    snprintf(close_, sizeof close_, "</%s>", tag);
+    a = strstr(txt, open_);
+    if (!a || cap == 0) return 0;
+    a += strlen(open_);
+    b = strstr(a, close_);
+    if (!b) return 0;
+    while (a < b && (*a == ' ' || *a == '\t' || *a == '\r' || *a == '\n')) a++;
+    while (b > a && (b[-1] == ' ' || b[-1] == '\t' || b[-1] == '\r' || b[-1] == '\n')) b--;
+    for (; a < b && n + 1 < cap; a++) out[n++] = *a;
+    out[n] = 0;
+    return n > 0;
+}
+
+/* O MicrosoftGame.config fica na raiz do jogo; o exe pode estar algumas pastas abaixo
+ * (Dungeons\Binaries\WinGDK). Sobe até seis níveis a partir do exe. */
+static void title_read(void)
+{
+    char dir[MAX_PATH], path[MAX_PATH + 32], hex[32], *cut;
+    char *txt;
+    FILE *f = NULL;
+    size_t n;
+    int nivel, i, j;
+    if (g_title_lido) return;
+    g_title_lido = 1;
+    if (!GetModuleFileNameA(NULL, dir, sizeof dir)) return;
+    for (nivel = 0; nivel <= 6 && !f; nivel++) {
+        cut = strrchr(dir, '\\');
+        if (!cut) break;
+        *cut = 0;
+        snprintf(path, sizeof path, "%s\\MicrosoftGame.config", dir);
+        f = fopen(path, "rb");
+    }
+    if (!f) {
+        xlog("título: MicrosoftGame.config não achado acima do exe");
+        return;
+    }
+    snprintf(g_title_config, sizeof g_title_config, "%s", path);
+    txt = malloc(512 * 1024 + 1);
+    if (!txt) { fclose(f); return; }
+    n = fread(txt, 1, 512 * 1024, f);
+    fclose(f);
+    txt[n] = 0;
+    if (xml_text(txt, "TitleId", hex, sizeof hex)) {
+        char *fim = NULL;
+        unsigned long v = strtoul(hex, &fim, 16);
+        if (fim && *fim == 0 && v) { g_title_id = (UINT32)v; g_title_tem_id = 1; }
+    }
+    xml_text(txt, "MSAAppId", g_title_msa, sizeof g_title_msa);
+    if (xml_attr(txt, "<Identity", "Name", path, sizeof path)) {
+        for (i = j = 0; path[i] && j + 1 < (int)sizeof g_title_identity; i++) {
+            char c = path[i];
+            if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') ||
+                c == '.' || c == '_' || c == '-')
+                g_title_identity[j++] = c;
+        }
+        g_title_identity[j] = 0;
+    }
+    xml_attr(txt, "<ShellVisuals", "DefaultDisplayName", g_title_nome, sizeof g_title_nome);
+    free(txt);
+    xlog("título: config=%s titleid=%08lX identity=%s msaappid=%s nome=%s", g_title_config,
+         (unsigned long)g_title_id, g_title_identity[0] ? g_title_identity : "-",
+         g_title_msa[0] ? g_title_msa : "-", g_title_nome[0] ? g_title_nome : "-");
+}
+
+/* O nome da pasta do título no LOCALAPPDATA: a Identity do config; sem ela, o nome do exe. */
+static const char *title_pasta(void)
+{
+    static char exe[MAX_PATH];
+    char *p, *dot;
+    title_read();
+    if (g_title_identity[0]) return g_title_identity;
+    if (!exe[0]) {
+        if (!GetModuleFileNameA(NULL, exe, sizeof exe)) snprintf(exe, sizeof exe, "jogo");
+        p = strrchr(exe, '\\');
+        if (p) memmove(exe, p + 1, strlen(p + 1) + 1);
+        dot = strrchr(exe, '.');
+        if (dot) *dot = 0;
+        if (!exe[0]) snprintf(exe, sizeof exe, "jogo");
+    }
+    return exe;
+}
+
+/* O diretório do usuário do próprio prefixo: steamuser no Proton, crossover no CrossOver. */
 static const char *pls_path_str(void)
 {
     char base[MAX_PATH];
@@ -146,30 +271,48 @@ static const char *pls_path_str(void)
     if (g_pls_path[0]) return g_pls_path;
     n = GetEnvironmentVariableA("LOCALAPPDATA", base, sizeof base);
     if (!n || n >= sizeof base) snprintf(base, sizeof base, "C:\\users\\steamuser\\AppData\\Local");
-    snprintf(g_pls_parent, sizeof g_pls_parent, "%s\\Dungeons2", base);
+    snprintf(g_pls_parent, sizeof g_pls_parent, "%s\\%s", base, title_pasta());
     snprintf(g_pls_path, sizeof g_pls_path, "%s\\PLS", g_pls_parent);
     return g_pls_path;
 }
 
+/* Cada linha leva a hora e a thread. O limite é de tamanho, não de linhas: passando de
+ * LOG_TETO_BYTES, o log vira xgr.log.1 e recomeça. */
 static void xlog(const char *fmt, ...)
 {
-    char buf[640];
+    char buf[768];
     va_list ap;
     DWORD wrote;
     HANDLE h;
-    int n;
+    LARGE_INTEGER size;
+    SYSTEMTIME t;
+    int n, k;
 
+    GetLocalTime(&t);
+    k = snprintf(buf, sizeof buf, "%04u-%02u-%02u %02u:%02u:%02u.%03u [%lu] ",
+                 t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute, t.wSecond, t.wMilliseconds,
+                 (unsigned long)GetCurrentThreadId());
+    if (k < 0 || k >= (int)sizeof(buf) - 2) k = 0;
     va_start(ap, fmt);
-    n = vsnprintf(buf, sizeof(buf) - 2, fmt, ap);
+    n = vsnprintf(buf + k, sizeof(buf) - 2 - (size_t)k, fmt, ap);
     va_end(ap);
     if (n < 0) return;
+    n += k;
     if (n > (int)sizeof(buf) - 2) n = (int)sizeof(buf) - 2;
     if (n == 0 || buf[n - 1] != '\n') buf[n++] = '\n';
     buf[n] = 0;
     h = CreateFileA("C:\\xgr.log", FILE_APPEND_DATA,
-                    FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_ALWAYS,
+                    FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_ALWAYS,
                     FILE_ATTRIBUTE_NORMAL, NULL);
     if (h == INVALID_HANDLE_VALUE) return;
+    if (GetFileSizeEx(h, &size) && size.QuadPart > (LONGLONG)LOG_TETO_BYTES) {
+        CloseHandle(h);
+        MoveFileExA("C:\\xgr.log", "C:\\xgr.log.1", MOVEFILE_REPLACE_EXISTING);
+        h = CreateFileA("C:\\xgr.log", FILE_APPEND_DATA,
+                        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_ALWAYS,
+                        FILE_ATTRIBUTE_NORMAL, NULL);
+        if (h == INVALID_HANDLE_VALUE) return;
+    }
     WriteFile(h, buf, (DWORD)n, &wrote, NULL);
     CloseHandle(h);
 }
@@ -1350,8 +1493,14 @@ static HRESULT WINAPI game_title(void *self, UINT32 *titleId)
 {
     (void)self;
     if (!titleId) return E_POINTER_;
-    *titleId = TITLE_ID;
+    title_read();
     log_once("XGameGetXboxTitleId");
+    if (!g_title_tem_id) {
+        *titleId = 0;
+        log_once("XGameGetXboxTitleId sem TitleId no MicrosoftGame.config");
+        return E_FAIL_;
+    }
+    *titleId = g_title_id;
     return S_OK;
 }
 static void WINAPI game_launch(void *self, const char *exe, const char *args, void *user)
@@ -1576,6 +1725,7 @@ static char g_token_z[420];
 static char g_code_z[420];
 static char g_err_z[420];
 static char g_xauth_unix[420];
+static char g_xauth_z[420];
 
 static void compat_paths(void)
 {
@@ -1608,16 +1758,20 @@ static void compat_paths(void)
     snprintf(g_code_z, sizeof g_code_z, "%s\\login-code.txt", wine);
     snprintf(g_err_z, sizeof g_err_z, "%s\\login-error.txt", wine);
     snprintf(g_xauth_unix, sizeof g_xauth_unix, "%s/xauth.py", g_compat_unix);
+    snprintf(g_xauth_z, sizeof g_xauth_z, "%s\\xauth.py", wine);
 }
 
 static int auth_read_file(void)
 {
     const char *paths[2];
+    char local[MAX_PATH + 16];
     FILE *f = NULL;
     char line[16000];
     int i;
     compat_paths();
-    paths[0] = "C:\\users\\steamuser\\AppData\\Local\\Dungeons2\\tokens.txt";
+    pls_path_str();
+    snprintf(local, sizeof local, "%s\\tokens.txt", g_pls_parent);
+    paths[0] = local;
     paths[1] = g_token_z;
     for (i = 0; i < 2 && !f; i++) f = fopen(paths[i], "r");
     if (!f) {
@@ -1643,7 +1797,8 @@ static int auth_read_file(void)
 static DWORD WINAPI auth_prompt(void *unused)
 {
     FILE *f;
-    char url[256], code[64], msg[400];
+    char url[256], code[64], msg[400], titulo[240];
+    WCHAR wmsg[400], wtitulo[240];
     (void)unused;
     compat_paths();
     f = fopen(g_code_z, "r");
@@ -1653,9 +1808,14 @@ static DWORD WINAPI auth_prompt(void *unused)
         fgets(code, sizeof code, f);
         fclose(f);
     }
-    snprintf(msg, sizeof msg, "Sign in with your Microsoft account.\n\n%s\nCode: %s", url, code);
+    snprintf(msg, sizeof msg, "Entre com a sua conta Microsoft.\n\n%s\nCódigo: %s", url, code);
     xlog("microsoft login code %s", code);
-    MessageBoxA(NULL, msg, "Minecraft Dungeons II sign-in", MB_OK | MB_SETFOREGROUND);
+    title_read();
+    snprintf(titulo, sizeof titulo, "%s: entrar com a conta Microsoft",
+             g_title_nome[0] ? g_title_nome : "Jogo");
+    MultiByteToWideChar(CP_UTF8, 0, msg, -1, wmsg, (int)(sizeof wmsg / sizeof wmsg[0]));
+    MultiByteToWideChar(CP_UTF8, 0, titulo, -1, wtitulo, (int)(sizeof wtitulo / sizeof wtitulo[0]));
+    MessageBoxW(NULL, wmsg, wtitulo, MB_OK | MB_SETFOREGROUND);
     return 0;
 }
 
@@ -1667,6 +1827,10 @@ static int auth_ensure(void)
     int i, prompted = 0;
     compat_paths();
     if (auth_read_file()) return 1;
+    if (GetFileAttributesA(g_xauth_z) == INVALID_FILE_ATTRIBUTES) {
+        log_once("login: o ajudante não está instalado; sem conta, o jogo segue local");
+        return 0;
+    }
     DeleteFileA(g_err_z);
     DeleteFileA(g_code_z);
     xlog("starting Microsoft sign-in");
@@ -2616,12 +2780,20 @@ __declspec(dllexport) HRESULT WINAPI InitializeApiImplEx2(UINT64 gdk, UINT64 gs,
         g_inited = 1;
         fix_vtbls();
         process_queue();
+        title_read();
         GetModuleFileNameA(NULL, exe, sizeof(exe));
         xlog("init gdk=%llx gs=%llx mode=%lu exe=%s",
              (unsigned long long)gdk, (unsigned long long)gs, (unsigned long)mode, exe);
     }
     (void)options;
     return S_OK;
+}
+
+/* A identidade da peça: a prova do módulo (e a bancada) confere que o processo carregou esta,
+ * e não uma DLL ao lado do exe. */
+__declspec(dllexport) const char *WINAPI HefestoPecaGdk(void)
+{
+    return PECA_GDK_ID;
 }
 
 __declspec(dllexport) HRESULT WINAPI InitializeApiImplEx(UINT64 gdk, UINT64 gs, UINT32 mode)
