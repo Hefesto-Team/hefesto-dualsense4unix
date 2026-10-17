@@ -19,6 +19,7 @@
 #define E_PENDING_      ((HRESULT)0x8000000A)
 #define E_INVALIDARG_   ((HRESULT)0x80070057)
 #define E_INSUFFICIENT_ ((HRESULT)0x8007007A)
+#define E_NO_TASK_QUEUE_ ((HRESULT)0x800701AB)
 
 #define TITLE_ID 0x6B9DE498u
 #define ASYNC_MAGIC 0x31524758u /* XRG1 */
@@ -72,6 +73,10 @@ typedef struct port_obj {
 } port_obj;
 
 #define QUEUE_MAGIC 0x51554555u
+#define QUEUE_DEAD  0x44414544u
+#define QUEUE_DEPTH 16
+#define QUEUE_HELD  16
+#define TERM_WAIT_MS 60000u
 
 struct queue_obj {
     UINT32 magic;
@@ -82,8 +87,9 @@ struct queue_obj {
     int terminated;
     int closing;
     int composite;
-    queue_obj *work_delegate;
-    queue_obj *comp_delegate;
+    LONG suspends; /* operações em voo que passam por esta fila: o término as espera */
+    port_obj *work_delegate;
+    port_obj *comp_delegate;
     task_item *work_head, *work_tail;
     task_item *comp_head, *comp_tail;
     port_obj work_port;
@@ -113,11 +119,19 @@ typedef struct async_state {
     int completion_queued;
     void *payload;
     char name[48];
+    XAsyncBlock prov;              /* a cópia que o provedor recebe, com .queue resolvida */
+    queue_obj *queue;              /* a fila resolvida no begin */
+    queue_obj *held[QUEUE_HELD];   /* as filas do caminho, com o término suspenso */
+    int nheld;
+    int holding;
+    int in_callback;
 } async_state;
 
 static CRITICAL_SECTION g_lock;
 static int g_lock_ready;
 static queue_obj *g_process_queue;
+static queue_obj *g_default_queue;
+static int g_process_queue_off;
 static DWORD g_tls = TLS_OUT_OF_INDEXES;
 static int g_inited;
 
@@ -248,6 +262,7 @@ static HRESULT WINAPI stub_notimpl(void *self)
 
 /* ---------- async / task queue ---------- */
 
+/* O bloco do chamador e a CÓPIA que o provedor recebe apontam para o mesmo estado. */
 static async_state *state_of(XAsyncBlock *b)
 {
     async_state *s;
@@ -255,8 +270,8 @@ static async_state *state_of(XAsyncBlock *b)
     if (!b) return NULL;
     memcpy(&s, b->internal, sizeof(s));
     memcpy(&magic, b->internal + sizeof(s), sizeof(magic));
-    if (magic != ASYNC_MAGIC || !s || s->magic != ASYNC_MAGIC || s->block != b)
-        return NULL;
+    if (magic != ASYNC_MAGIC || !s || s->magic != ASYNC_MAGIC) return NULL;
+    if (s->block != b && &s->prov != b) return NULL;
     return s;
 }
 
@@ -293,19 +308,33 @@ static int read_done(XAsyncBlock *b, HRESULT *hr, SIZE_T *required)
     return 1;
 }
 
-static queue_obj *target_queue(queue_obj *q, int port)
+static int queue_live(queue_obj *q)
 {
-    if (!q) return NULL;
-    if (port == PORT_WORK && q->work_delegate) return q->work_delegate;
-    if (port == PORT_COMP && q->comp_delegate) return q->comp_delegate;
+    return q && q->magic == QUEUE_MAGIC;
+}
+
+/* A fila base e a porta que atendem a porta `port` de `q`. O composto delega pela porta que
+ * recebeu no CreateComposite (a de trabalho dele pode ser a de término de outra fila), e o
+ * composto de composto desce até a fila que tem thread. NULL quando o caminho morreu. */
+static queue_obj *resolve_port(queue_obj *q, int port, int *out_port)
+{
+    int depth = 0;
+    while (q && q->composite) {
+        port_obj *d = (port == PORT_WORK) ? q->work_delegate : q->comp_delegate;
+        if (!d || ++depth > QUEUE_DEPTH) return NULL;
+        port = d->which;
+        q = d->q;
+    }
+    if (out_port) *out_port = port;
     return q;
 }
 
 static int mode_of(queue_obj *q, int port)
 {
-    queue_obj *t = target_queue(q, port);
+    int p;
+    queue_obj *t = resolve_port(q, port, &p);
     if (!t) return MODE_THREADPOOL;
-    return port == PORT_WORK ? t->work_mode : t->comp_mode;
+    return p == PORT_WORK ? t->work_mode : t->comp_mode;
 }
 
 static task_item *pop_ready(task_item **head, task_item **tail)
@@ -324,6 +353,60 @@ static task_item *pop_ready(task_item **head, task_item **tail)
         it = it->next;
     }
     return NULL;
+}
+
+static void WINAPI thr_Close(void *self, queue_obj *q);
+
+/* As filas do caminho de `q` (ele, os compostos do meio e as bases), sem repetir. Sob g_lock. */
+static int queue_chain(queue_obj *q, queue_obj **out, int cap)
+{
+    int n = 0, port, i, depth;
+    for (port = PORT_WORK; port <= PORT_COMP; port++) {
+        queue_obj *cur = q;
+        int p = port;
+        depth = 0;
+        while (cur && depth++ <= QUEUE_DEPTH) {
+            for (i = 0; i < n && out[i] != cur; i++)
+                ;
+            if (i == n && n < cap) out[n++] = cur;
+            if (!cur->composite) break;
+            {
+                port_obj *d = (p == PORT_WORK) ? cur->work_delegate : cur->comp_delegate;
+                if (!d) break;
+                p = d->which;
+                cur = d->q;
+            }
+        }
+    }
+    return n;
+}
+
+/* A operação segura a fila até a conclusão ser entregue: uma referência na alça (ela não morre
+ * no meio) e uma suspensão do término em cada fila do caminho (o XTaskQueueTerminate espera). */
+static int queue_hold_locked(async_state *st, queue_obj *q)
+{
+    int i;
+    if (!queue_live(q)) return 0;
+    InterlockedIncrement(&q->refs);
+    st->queue = q;
+    st->nheld = queue_chain(q, st->held, QUEUE_HELD);
+    for (i = 0; i < st->nheld; i++) InterlockedIncrement(&st->held[i]->suspends);
+    st->holding = 1;
+    return 1;
+}
+
+static void queue_release(async_state *st)
+{
+    int i;
+    queue_obj *q;
+    if (!st || !g_lock_ready) return;
+    EnterCriticalSection(&g_lock);
+    if (!st->holding) { LeaveCriticalSection(&g_lock); return; }
+    st->holding = 0;
+    for (i = 0; i < st->nheld; i++) InterlockedDecrement(&st->held[i]->suspends);
+    q = st->queue;
+    LeaveCriticalSection(&g_lock);
+    thr_Close(NULL, q);
 }
 
 static void cleanup_state(async_state *st)
@@ -348,10 +431,14 @@ static void cleanup_state(async_state *st)
 
     if (provider) {
         memset(&data, 0, sizeof(data));
-        data.async = block;
+        data.async = &st->prov;
         data.context = context;
         provider(OP_CLEANUP, &data);
     }
+    queue_release(st);
+    /* Dentro do callback de conclusão (que costuma chamar o GetResult), quem libera é o
+     * run_completion, depois que o callback volta. */
+    if (st->in_callback) return;
     st->magic = 0;
     free(st);
 }
@@ -361,7 +448,7 @@ static void run_dowork(async_state *st)
     XAsyncProviderData data;
     if (!st || st->cleaned || st->canceled || st->complete || !st->provider) return;
     memset(&data, 0, sizeof(data));
-    data.async = st->block;
+    data.async = &st->prov;
     data.context = st->context;
     st->provider(OP_DOWORK, &data);
 }
@@ -371,7 +458,15 @@ static void run_completion(async_state *st)
     XAsyncBlock *block;
     if (!st || st->cleaned) return;
     block = st->block;
+    st->in_callback = 1;
     if (block && block->callback) block->callback(block);
+    st->in_callback = 0;
+    queue_release(st);
+    if (st->cleaned) {
+        st->magic = 0;
+        free(st);
+        return;
+    }
     cleanup_state(st);
 }
 
@@ -391,10 +486,11 @@ static int dispatch_one(queue_obj *q, int port)
 {
     task_item *it;
     task_item **head, **tail;
-    q = target_queue(q, port);
-    if (!q) return 0;
+    int p;
+    q = resolve_port(q, port, &p);
+    if (!queue_live(q)) return 0;
     EnterCriticalSection(&q->lock);
-    if (port == PORT_WORK) { head = &q->work_head; tail = &q->work_tail; }
+    if (p == PORT_WORK) { head = &q->work_head; tail = &q->work_tail; }
     else { head = &q->comp_head; tail = &q->comp_tail; }
     it = pop_ready(head, tail);
     LeaveCriticalSection(&q->lock);
@@ -429,15 +525,6 @@ static DWORD WINAPI queue_thread(LPVOID param)
     }
     return 0;
 }
-
-static int queue_live(queue_obj *q)
-{
-    return q && q->magic == QUEUE_MAGIC;
-}
-
-static queue_obj *process_queue(void);
-
-static void WINAPI thr_Close(void *self, queue_obj *q);
 
 static queue_obj *queue_new(int work_mode, int comp_mode)
 {
@@ -474,56 +561,70 @@ static void fire_monitors(queue_obj *q, unsigned port)
     for (i = 0; i < n; i++) if (cbs[i]) cbs[i](ctxs[i], q, port);
 }
 
-static void enqueue(queue_obj *q, int port, task_item *it)
+/* Põe o item na porta que atende `port` de `q`. 0 quando a fila morreu: o item já foi liberado,
+ * e quem chamou decide (a conclusão roda na hora, o agendamento devolve E_ABORT). */
+static int enqueue(queue_obj *q, int port, task_item *it)
 {
     HANDLE ev;
-    queue_obj *orig = q;
-    int manual;
-    if (!g_lock_ready) { free(it); return; }
+    queue_obj *orig = q, *t;
+    int p, manual;
+    if (!g_lock_ready) { free(it); return 0; }
     EnterCriticalSection(&g_lock);
-    q = target_queue(q, port);
-    if (!queue_live(q)) {
-        q = process_queue();
-        orig = q;
-    }
-    if (!queue_live(q)) {
+    t = resolve_port(q, port, &p);
+    if (!queue_live(t)) {
         LeaveCriticalSection(&g_lock);
         free(it);
-        return;
+        return 0;
     }
-    EnterCriticalSection(&q->lock);
+    EnterCriticalSection(&t->lock);
     LeaveCriticalSection(&g_lock);
-    if (q->terminated) {
-        LeaveCriticalSection(&q->lock);
+    if (t->terminated) {
+        LeaveCriticalSection(&t->lock);
         free(it);
-        return;
+        return 0;
     }
     it->next = NULL;
-    if (port == PORT_WORK) {
-        if (q->work_tail) q->work_tail->next = it;
-        else q->work_head = it;
-        q->work_tail = it;
-        ev = q->work_event;
+    if (p == PORT_WORK) {
+        if (t->work_tail) t->work_tail->next = it;
+        else t->work_head = it;
+        t->work_tail = it;
+        ev = t->work_event;
+        manual = t->work_mode == MODE_MANUAL;
     } else {
-        if (q->comp_tail) q->comp_tail->next = it;
-        else q->comp_head = it;
-        q->comp_tail = it;
-        ev = q->comp_event;
+        if (t->comp_tail) t->comp_tail->next = it;
+        else t->comp_head = it;
+        t->comp_tail = it;
+        ev = t->comp_event;
+        manual = t->comp_mode == MODE_MANUAL;
     }
-    manual = (port == PORT_WORK) ? q->work_mode == MODE_MANUAL : q->comp_mode == MODE_MANUAL;
     if (ev) SetEvent(ev);
-    LeaveCriticalSection(&q->lock);
+    LeaveCriticalSection(&t->lock);
     if (manual) {
-        fire_monitors(q, (unsigned)port);
-        if (orig && orig != q) fire_monitors(orig, (unsigned)port);
+        fire_monitors(t, (unsigned)p);
+        if (orig && orig != t) fire_monitors(orig, (unsigned)port);
     }
+    return 1;
+}
+
+/* A fila do processo: a padrão nasce na primeira vez; depois de um SetCurrentProcessTaskQueue(NULL)
+ * não há fila, e quem pede recebe NULL (o XAsyncBegin devolve E_NO_TASK_QUEUE). Sob g_lock. */
+static queue_obj *process_queue_locked(void)
+{
+    if (g_process_queue) return g_process_queue;
+    if (g_process_queue_off) return NULL;
+    if (!g_default_queue) g_default_queue = queue_new(MODE_THREADPOOL, MODE_THREADPOOL);
+    g_process_queue = g_default_queue;
+    return g_process_queue;
 }
 
 static queue_obj *process_queue(void)
 {
-    if (!g_process_queue)
-        g_process_queue = queue_new(MODE_THREADPOOL, MODE_THREADPOOL);
-    return g_process_queue;
+    queue_obj *q;
+    if (!g_lock_ready) return NULL;
+    EnterCriticalSection(&g_lock);
+    q = process_queue_locked();
+    LeaveCriticalSection(&g_lock);
+    return q;
 }
 
 static void complete_async(XAsyncBlock *block, HRESULT result, SIZE_T required)
@@ -532,7 +633,6 @@ static void complete_async(XAsyncBlock *block, HRESULT result, SIZE_T required)
     queue_obj *q;
     int mode;
     task_item *it;
-    static int logs;
 
     if (!st || st->cleaned) return;
     EnterCriticalSection(&g_lock);
@@ -541,10 +641,14 @@ static void complete_async(XAsyncBlock *block, HRESULT result, SIZE_T required)
     st->result = result;
     st->required = required;
     LeaveCriticalSection(&g_lock);
-    if (logs++ < 48) xlog("complete %s hr=%08lX", st->name, (unsigned long)result);
+    xlog("complete %s hr=%08lX", st->name, (unsigned long)result);
 
-    if (!block->callback) return;
-    q = block->queue ? block->queue : process_queue();
+    if (!st->block->callback) {
+        /* Sem callback, a conclusão está entregue: quem espera lê pelo GetStatus. */
+        queue_release(st);
+        return;
+    }
+    q = st->queue;
     mode = mode_of(q, PORT_COMP);
     EnterCriticalSection(&g_lock);
     if (st->completion_queued || st->cleaned) { LeaveCriticalSection(&g_lock); return; }
@@ -560,7 +664,7 @@ static void complete_async(XAsyncBlock *block, HRESULT result, SIZE_T required)
     it->kind = 2;
     it->state = st;
     it->ready = GetTickCount64();
-    enqueue(q, PORT_COMP, it);
+    if (!enqueue(q, PORT_COMP, it)) run_completion(st);
 }
 
 static HRESULT schedule_async(XAsyncBlock *block, UINT32 delay)
@@ -569,13 +673,12 @@ static HRESULT schedule_async(XAsyncBlock *block, UINT32 delay)
     queue_obj *q;
     int mode;
     task_item *it;
-    static int logs;
 
     if (!st || st->cleaned) return E_INVALIDARG_;
     if (st->complete) return S_OK;
-    q = block->queue ? block->queue : process_queue();
+    q = st->queue;
     mode = mode_of(q, PORT_WORK);
-    if (logs++ < 48) xlog("schedule %s delay=%lu mode=%d", st->name, (unsigned long)delay, mode);
+    xlog("schedule %s delay=%lu mode=%d", st->name, (unsigned long)delay, mode);
     if (mode == MODE_IMMEDIATE && delay == 0) {
         run_dowork(st);
         return S_OK;
@@ -585,7 +688,58 @@ static HRESULT schedule_async(XAsyncBlock *block, UINT32 delay)
     it->kind = 1;
     it->state = st;
     it->ready = GetTickCount64() + delay;
-    enqueue(q, PORT_WORK, it);
+    return enqueue(q, PORT_WORK, it) ? S_OK : E_ABORT_;
+}
+
+/* O XAsyncBegin do contrato (AsyncLib.cpp): a fila nula vira a fila do processo; sem fila do
+ * processo, E_NO_TASK_QUEUE e o provedor nem é chamado; a operação segura a fila; e o provedor
+ * recebe uma CÓPIA do bloco com `.queue` resolvida, nunca o bloco do chamador. */
+static HRESULT async_begin(XAsyncBlock *async, void *context, const void *identity,
+                           const char *name, XAsyncProvider provider, void *payload)
+{
+    async_state *st;
+    queue_obj *q;
+    XAsyncProviderData data;
+    HRESULT hr;
+    if (!async || !provider || !g_lock_ready) return E_INVALIDARG_;
+    if (state_of(async)) return E_INVALIDARG_;
+    st = calloc(1, sizeof(*st));
+    if (!st) return E_FAIL_;
+    EnterCriticalSection(&g_lock);
+    q = async->queue ? async->queue : process_queue_locked();
+    if (!q) {
+        LeaveCriticalSection(&g_lock);
+        free(st);
+        xlog("begin sem fila do processo %s", name ? name : "?");
+        return E_NO_TASK_QUEUE_;
+    }
+    if (!queue_hold_locked(st, q)) {
+        LeaveCriticalSection(&g_lock);
+        free(st);
+        xlog("begin com fila morta %s q=%p", name ? name : "?", (void *)q);
+        return E_INVALIDARG_;
+    }
+    LeaveCriticalSection(&g_lock);
+    st->magic = ASYNC_MAGIC;
+    st->block = async;
+    st->context = context;
+    st->identity = identity;
+    st->provider = provider;
+    st->payload = payload;
+    snprintf(st->name, sizeof(st->name), "%s", name ? name : "?");
+    st->prov = *async;
+    st->prov.queue = q;
+    state_bind(async, st);
+    state_bind(&st->prov, st);
+    memset(&data, 0, sizeof(data));
+    data.async = &st->prov;
+    data.context = context;
+    hr = provider(OP_BEGIN, &data);
+    if (FAILED(hr)) {
+        xlog("begin failed %s %08lX", st->name, (unsigned long)hr);
+        cleanup_state(st);
+        return hr;
+    }
     return S_OK;
 }
 
@@ -602,10 +756,7 @@ static HRESULT WINAPI run_provider(UINT32 op, const XAsyncProviderData *data)
 
 static HRESULT WINAPI user_add_provider(UINT32 op, const XAsyncProviderData *data)
 {
-    async_state *st;
     if (op != OP_DOWORK) return S_OK;
-    st = state_of(data->async);
-    if (st) st->payload = (void*)(uintptr_t)1; /* filled by caller via global user */
     complete_async(data->async, S_OK, sizeof(void *));
     return S_OK;
 }
@@ -629,13 +780,8 @@ static HRESULT WINAPI thr_GetStatus(void *self, XAsyncBlock *async, BOOLEAN wait
         }
         if (st->complete) return st->result;
         if (!wait) return E_PENDING_;
-        if (async->queue) {
-            dispatch_one(async->queue, PORT_WORK);
-            dispatch_one(async->queue, PORT_COMP);
-        } else if (g_process_queue) {
-            dispatch_one(g_process_queue, PORT_WORK);
-            dispatch_one(g_process_queue, PORT_COMP);
-        }
+        dispatch_one(st->queue, PORT_WORK);
+        dispatch_one(st->queue, PORT_COMP);
         if (++spins > 4000) {
             st = state_of(async);
             hr = (st && st->complete) ? st->result : E_PENDING_;
@@ -670,11 +816,11 @@ static void WINAPI thr_Cancel(void *self, XAsyncBlock *async)
     st->canceled = 1;
     if (st->provider) {
         memset(&data, 0, sizeof(data));
-        data.async = async;
+        data.async = &st->prov;
         data.context = st->context;
         st->provider(OP_CANCEL, &data);
     }
-    complete_async(async, E_ABORT_, 0);
+    complete_async(&st->prov, E_ABORT_, 0);
 }
 
 static HRESULT WINAPI thr_Run(void *self, XAsyncBlock *async, XAsyncWork work)
@@ -682,55 +828,17 @@ static HRESULT WINAPI thr_Run(void *self, XAsyncBlock *async, XAsyncWork work)
     HRESULT hr;
     (void)self;
     if (!async || !work) return E_INVALIDARG_;
-    hr = 0;
-    {
-        async_state *st = calloc(1, sizeof(*st));
-        XAsyncProviderData data;
-        if (!st) return E_FAIL_;
-        st->magic = ASYNC_MAGIC;
-        st->block = async;
-        st->context = (void *)work;
-        st->provider = run_provider;
-        snprintf(st->name, sizeof(st->name), "XAsyncRun");
-        state_bind(async, st);
-        memset(&data, 0, sizeof(data));
-        data.async = async;
-        data.context = (void *)work;
-        hr = run_provider(OP_BEGIN, &data);
-        if (FAILED(hr)) { cleanup_state(st); return hr; }
-    }
+    hr = async_begin(async, (void *)work, NULL, "XAsyncRun", run_provider, NULL);
+    if (FAILED(hr)) return hr;
     return schedule_async(async, 0);
 }
 
 static HRESULT WINAPI thr_Begin(void *self, XAsyncBlock *async, void *context, const void *identity,
                                 const char *identityName, XAsyncProvider provider)
 {
-    async_state *st;
-    XAsyncProviderData data;
-    HRESULT hr;
     (void)self;
-    if (!async || !provider) return E_INVALIDARG_;
-    if (state_of(async)) return E_INVALIDARG_;
-    st = calloc(1, sizeof(*st));
-    if (!st) return E_FAIL_;
-    st->magic = ASYNC_MAGIC;
-    st->block = async;
-    st->context = context;
-    st->identity = identity;
-    st->provider = provider;
-    snprintf(st->name, sizeof(st->name), "%s", identityName ? identityName : "?");
-    state_bind(async, st);
     log_once(identityName ? identityName : "XAsyncBegin");
-    memset(&data, 0, sizeof(data));
-    data.async = async;
-    data.context = context;
-    hr = provider(OP_BEGIN, &data);
-    if (FAILED(hr)) {
-        xlog("begin failed %s %08lX", st->name, (unsigned long)hr);
-        cleanup_state(st);
-        return hr;
-    }
-    return S_OK;
+    return async_begin(async, context, identity, identityName, provider, NULL);
 }
 
 static HRESULT WINAPI thr_Pad(void *self)
@@ -764,7 +872,7 @@ static HRESULT WINAPI thr_GetResult(void *self, XAsyncBlock *async, const void *
     if (identity && st->identity && identity != st->identity) return E_INVALIDARG_;
     if (bufferSize < st->required) return E_INSUFFICIENT_;
     memset(&data, 0, sizeof(data));
-    data.async = async;
+    data.async = &st->prov;
     data.bufferSize = bufferSize;
     data.buffer = buffer;
     data.context = st->context;
@@ -783,19 +891,24 @@ static HRESULT WINAPI thr_QueueCreate(void *self, UINT32 workMode, UINT32 compMo
     return *out ? S_OK : E_FAIL_;
 }
 
+static int port_valid(port_obj *p)
+{
+    return p && queue_live(p->q) && (p == &p->q->work_port || p == &p->q->comp_port);
+}
+
 static HRESULT WINAPI thr_QueueCreateComposite(void *self, port_obj *work, port_obj *comp, queue_obj **out)
 {
     queue_obj *q;
     (void)self;
     log_once("QueueCreateComposite");
-    if (!out || !work || !comp || !work->q || !comp->q) return E_INVALIDARG_;
+    if (!out || !work || !comp || !g_lock_ready) return E_INVALIDARG_;
     q = calloc(1, sizeof(*q));
     if (!q) return E_FAIL_;
-    if (!g_lock_ready) { free(q); return E_FAIL_; }
     EnterCriticalSection(&g_lock);
-    if (!queue_live(work->q) || !queue_live(comp->q)) {
+    if (!port_valid(work) || !port_valid(comp)) {
         LeaveCriticalSection(&g_lock);
         free(q);
+        xlog("QueueCreateComposite com porta morta");
         return E_INVALIDARG_;
     }
     InterlockedIncrement(&work->q->refs);
@@ -803,10 +916,8 @@ static HRESULT WINAPI thr_QueueCreateComposite(void *self, port_obj *work, port_
     LeaveCriticalSection(&g_lock);
     q->refs = 1;
     q->composite = 1;
-    q->work_delegate = work->q;
-    q->comp_delegate = comp->q;
-    q->work_mode = work->q->work_mode;
-    q->comp_mode = comp->q->comp_mode;
+    q->work_delegate = work;
+    q->comp_delegate = comp;
     q->work_port.q = q;
     q->work_port.which = PORT_WORK;
     q->comp_port.q = q;
@@ -819,19 +930,32 @@ static HRESULT WINAPI thr_QueueCreateComposite(void *self, port_obj *work, port_
 
 static HRESULT WINAPI thr_GetPort(void *self, queue_obj *q, UINT32 port, port_obj **out)
 {
+    HRESULT hr = S_OK;
     (void)self;
-    if (!q || !out) return E_INVALIDARG_;
-    *out = (port == PORT_COMP) ? &q->comp_port : &q->work_port;
-    return S_OK;
+    if (!out) return E_INVALIDARG_;
+    *out = NULL;
+    if (!q || (port != PORT_WORK && port != PORT_COMP) || !g_lock_ready) return E_INVALIDARG_;
+    EnterCriticalSection(&g_lock);
+    if (queue_live(q)) *out = (port == PORT_COMP) ? &q->comp_port : &q->work_port;
+    else hr = E_INVALIDARG_;
+    LeaveCriticalSection(&g_lock);
+    return hr;
 }
 
 static HRESULT WINAPI thr_Duplicate(void *self, queue_obj *q, queue_obj **out)
 {
+    HRESULT hr = S_OK;
     (void)self;
-    if (!q || !out) return E_INVALIDARG_;
-    if (!q->composite) InterlockedIncrement(&q->refs);
-    *out = q;
-    return S_OK;
+    if (!q || !out || !g_lock_ready) return E_INVALIDARG_;
+    EnterCriticalSection(&g_lock);
+    if (queue_live(q)) {
+        InterlockedIncrement(&q->refs);
+        *out = q;
+    } else {
+        hr = E_INVALIDARG_;
+    }
+    LeaveCriticalSection(&g_lock);
+    return hr;
 }
 
 static BOOLEAN WINAPI thr_Dispatch(void *self, queue_obj *q, UINT32 port, UINT32 timeout)
@@ -859,14 +983,15 @@ static BOOLEAN WINAPI thr_Dispatch(void *self, queue_obj *q, UINT32 port, UINT32
         if (timeout == 0) break;
         if (timeout != 0xFFFFFFFFu && GetTickCount64() - start >= timeout) break;
         {
-            queue_obj *t = target_queue(q, (int)port);
+            int p;
+            queue_obj *t = resolve_port(q, (int)port, &p);
             DWORD slice = 15;
             if (timeout != 0xFFFFFFFFu) {
                 ULONGLONG left = timeout - (GetTickCount64() - start);
                 if (left < slice) slice = (DWORD)left;
             }
-            if (t && queue_live(t)) {
-                HANDLE ev = ((int)port == PORT_COMP) ? t->comp_event : t->work_event;
+            if (queue_live(t)) {
+                HANDLE ev = (p == PORT_COMP) ? t->comp_event : t->work_event;
                 if (ev) WaitForSingleObject(ev, slice);
                 else Sleep(slice);
             } else Sleep(slice);
@@ -876,6 +1001,8 @@ static BOOLEAN WINAPI thr_Dispatch(void *self, queue_obj *q, UINT32 port, UINT32
     return hit;
 }
 
+/* A fila morta guarda a memória, a trava e os eventos: um ponteiro velho do jogo cai numa fila
+ * morta (o magic diz), nunca em memória liberada. */
 static void queue_destroy(queue_obj *q)
 {
     queue_obj *w = NULL, *c = NULL;
@@ -883,21 +1010,20 @@ static void queue_destroy(queue_obj *q)
     task_item *it;
     if (!q || !g_lock_ready) return;
     EnterCriticalSection(&g_lock);
-    if (q->magic != QUEUE_MAGIC) {
+    if (q->magic != QUEUE_MAGIC || q == g_default_queue) {
         LeaveCriticalSection(&g_lock);
         return;
     }
     composite = q->composite;
-    q->magic = 0;
+    q->magic = QUEUE_DEAD;
     q->terminated = 1;
     if (composite) {
-        w = q->work_delegate;
-        c = q->comp_delegate;
+        w = q->work_delegate ? q->work_delegate->q : NULL;
+        c = q->comp_delegate ? q->comp_delegate->q : NULL;
         q->work_delegate = q->comp_delegate = NULL;
     }
     LeaveCriticalSection(&g_lock);
     if (composite) {
-        free(q);
         if (w) thr_Close(NULL, w);
         if (c) thr_Close(NULL, c);
         return;
@@ -913,12 +1039,7 @@ static void queue_destroy(queue_obj *q)
     while ((it = q->work_head)) { q->work_head = it->next; free(it); }
     while ((it = q->comp_head)) { q->comp_head = it->next; free(it); }
     q->work_head = q->work_tail = q->comp_head = q->comp_tail = NULL;
-    if (q->work_event) CloseHandle(q->work_event);
-    if (q->comp_event) CloseHandle(q->comp_event);
-    q->work_event = q->comp_event = NULL;
     LeaveCriticalSection(&q->lock);
-    DeleteCriticalSection(&q->lock);
-    free(q);
 }
 
 static void WINAPI thr_Close(void *self, queue_obj *q)
@@ -927,17 +1048,20 @@ static void WINAPI thr_Close(void *self, queue_obj *q)
     (void)self;
     if (!q || !g_lock_ready) return;
     EnterCriticalSection(&g_lock);
-    if (q->magic != QUEUE_MAGIC) {
-        LeaveCriticalSection(&g_lock);
-        return;
-    }
-    if (q == g_process_queue) {
+    if (q->magic != QUEUE_MAGIC || q == g_default_queue) {
         LeaveCriticalSection(&g_lock);
         return;
     }
     left = InterlockedDecrement(&q->refs);
     LeaveCriticalSection(&g_lock);
     if (left <= 0) queue_destroy(q);
+}
+
+/* A fila (ou a base que atende a porta) está em término: o que se submete de fora é recusado. */
+static int queue_closing(queue_obj *q, int port)
+{
+    queue_obj *t = resolve_port(q, port, NULL);
+    return q->closing || (t && t->closing);
 }
 
 static HRESULT WINAPI thr_Submit(void *self, queue_obj *q, UINT32 port, void *context, XTaskQueueCallback cb)
@@ -947,7 +1071,9 @@ static HRESULT WINAPI thr_Submit(void *self, queue_obj *q, UINT32 port, void *co
     (void)self;
     if (!cb) return E_INVALIDARG_;
     if (!q) q = process_queue();
-    if (q->closing) return E_ABORT_;
+    if (!q) return E_NO_TASK_QUEUE_;
+    if (!queue_live(q)) return E_INVALIDARG_;
+    if (queue_closing(q, (int)port)) return E_ABORT_;
     mode = mode_of(q, (int)port);
     if (mode == MODE_IMMEDIATE) { cb(context, FALSE); return S_OK; }
     it = calloc(1, sizeof(*it));
@@ -956,8 +1082,7 @@ static HRESULT WINAPI thr_Submit(void *self, queue_obj *q, UINT32 port, void *co
     it->context = context;
     it->callback = cb;
     it->ready = GetTickCount64();
-    enqueue(q, (int)port, it);
-    return S_OK;
+    return enqueue(q, (int)port, it) ? S_OK : E_ABORT_;
 }
 
 static HRESULT WINAPI thr_SubmitDelayed(void *self, queue_obj *q, UINT32 port, UINT32 delay, void *context, XTaskQueueCallback cb)
@@ -966,7 +1091,9 @@ static HRESULT WINAPI thr_SubmitDelayed(void *self, queue_obj *q, UINT32 port, U
     (void)self;
     if (!cb) return E_INVALIDARG_;
     if (!q) q = process_queue();
-    if (q->closing) return E_ABORT_;
+    if (!q) return E_NO_TASK_QUEUE_;
+    if (!queue_live(q)) return E_INVALIDARG_;
+    if (queue_closing(q, (int)port)) return E_ABORT_;
     if (delay == 0 && mode_of(q, (int)port) == MODE_IMMEDIATE) { cb(context, FALSE); return S_OK; }
     it = calloc(1, sizeof(*it));
     if (!it) return E_FAIL_;
@@ -974,8 +1101,7 @@ static HRESULT WINAPI thr_SubmitDelayed(void *self, queue_obj *q, UINT32 port, U
     it->context = context;
     it->callback = cb;
     it->ready = GetTickCount64() + delay;
-    enqueue(q, (int)port, it);
-    return S_OK;
+    return enqueue(q, (int)port, it) ? S_OK : E_ABORT_;
 }
 
 static HRESULT WINAPI thr_RegWaiter(void *self, queue_obj *q, UINT32 port, HANDLE h, void *ctx, XTaskQueueCallback cb, void *token)
@@ -988,7 +1114,7 @@ static void WINAPI thr_UnregWaiter(void *self, queue_obj *q, UINT64 token)
 {
     (void)self; (void)q; (void)token;
 }
-struct term_note { void (__stdcall *cb)(void *); void *ctx; };
+struct term_note { void (__stdcall *cb)(void *); void *ctx; queue_obj *q; };
 static void __stdcall term_marker(void *ctx, BOOLEAN canceled)
 {
     struct term_note *n = ctx;
@@ -997,11 +1123,51 @@ static void __stdcall term_marker(void *ctx, BOOLEAN canceled)
     free(n);
 }
 
+/* O término espera as operações em voo: cada XAsyncBegin suspendeu o término de toda fila do
+ * caminho, e a suspensão só sai quando a conclusão é entregue. As portas manuais andam aqui. */
+static void term_wait_ops(queue_obj *q)
+{
+    ULONGLONG start = GetTickCount64();
+    for (;;) {
+        int did = dispatch_one(q, PORT_WORK) | dispatch_one(q, PORT_COMP);
+        if (!did && q->suspends <= 0) return;
+        if (GetTickCount64() - start > TERM_WAIT_MS) {
+            xlog("XTaskQueueTerminate q=%p: %ld operações seguem em voo depois de %u ms",
+                 (void *)q, (long)q->suspends, (unsigned)TERM_WAIT_MS);
+            return;
+        }
+        if (!did) Sleep(1);
+    }
+}
+
+static void term_signal(struct term_note *n)
+{
+    task_item *it = calloc(1, sizeof(*it));
+    /* A marca entra na porta de término: quem dorme num Dispatch dela vê o término. */
+    if (it) {
+        it->kind = 0;
+        it->callback = term_marker;
+        it->context = n;
+        it->ready = GetTickCount64();
+        if (enqueue(n->q, PORT_COMP, it)) return;
+    }
+    term_marker(n, FALSE);
+}
+
+static DWORD WINAPI term_thread(LPVOID param)
+{
+    struct term_note *n = param;
+    queue_obj *q = n->q;
+    term_wait_ops(q);
+    term_signal(n);
+    thr_Close(NULL, q);
+    return 0;
+}
+
 static HRESULT WINAPI thr_Terminate(void *self, queue_obj *q, BOOLEAN wait, void *ctx, void (__stdcall *cb)(void *))
 {
-    int guard = 0;
     struct term_note *n;
-    task_item *it;
+    queue_obj *tw, *tc;
     (void)self;
     xlog("XTaskQueueTerminate q=%p wait=%u", (void *)q, (unsigned)wait);
     if (!q || !g_lock_ready) {
@@ -1015,38 +1181,35 @@ static HRESULT WINAPI thr_Terminate(void *self, queue_obj *q, BOOLEAN wait, void
         return S_OK;
     }
     InterlockedIncrement(&q->refs);
+    /* Só esta alça entra em término: o composto que o XSAPI deriva e termina não fecha a fila
+     * de quem o criou. */
+    q->closing = 1;
+    tw = resolve_port(q, PORT_WORK, NULL);
+    tc = resolve_port(q, PORT_COMP, NULL);
     LeaveCriticalSection(&g_lock);
-    if (wait && q) {
-        while (guard++ < 1000 && (dispatch_one(q, PORT_WORK) || dispatch_one(q, PORT_COMP)))
-            ;
+    if (queue_live(tw) && tw->work_event) SetEvent(tw->work_event);
+    if (queue_live(tc) && tc->comp_event) SetEvent(tc->comp_event);
+    if (wait) {
+        term_wait_ops(q);
         if (cb) cb(ctx);
-    } else if (q) {
-        /* Let a thread blocked in Dispatch(completion) observe termination. */
+    } else {
         n = calloc(1, sizeof(*n));
-        it = n ? calloc(1, sizeof(*it)) : NULL;
-        if (n && it) {
+        if (!n) {
+            if (cb) cb(ctx);
+        } else {
             n->cb = cb;
             n->ctx = ctx;
-            it->kind = 0;
-            it->callback = term_marker;
-            it->context = n;
-            it->ready = GetTickCount64();
-            enqueue(q, PORT_COMP, it);
-        } else if (cb) {
-            cb(ctx);
+            n->q = q;
+            if (q->suspends <= 0) {
+                term_signal(n);
+            } else {
+                HANDLE th;
+                InterlockedIncrement(&q->refs);
+                th = CreateThread(NULL, 0, term_thread, n, 0, NULL);
+                if (th) CloseHandle(th);
+                else { term_wait_ops(q); term_signal(n); thr_Close(NULL, q); }
+            }
         }
-    } else if (cb) {
-        cb(ctx);
-    }
-    if (q) {
-        queue_obj *tw = target_queue(q, PORT_WORK);
-        queue_obj *tc = target_queue(q, PORT_COMP);
-        q->closing = 1;
-        if (tw && tw != q) tw->closing = 1;
-        if (tc && tc != q && tc != tw) tc->closing = 1;
-        if (tw && tw->work_event) SetEvent(tw->work_event);
-        if (tw && tw->comp_event) SetEvent(tw->comp_event);
-        if (tc && tc != tw && tc->comp_event) SetEvent(tc->comp_event);
     }
     thr_Close(NULL, q);
     xlog("XTaskQueueTerminate done");
@@ -1088,18 +1251,39 @@ static void WINAPI thr_UnregMon(void *self, queue_obj *q, UINT64 token)
     }
     LeaveCriticalSection(&g_lock);
 }
+/* A alça devolvida é do chamador, que a fecha com XTaskQueueCloseHandle. */
 static BOOLEAN WINAPI thr_GetProcessQueue(void *self, queue_obj **out)
 {
+    queue_obj *q;
     (void)self;
-    if (!out) return FALSE;
-    *out = process_queue();
-    return *out ? TRUE : FALSE;
+    if (!out || !g_lock_ready) return FALSE;
+    EnterCriticalSection(&g_lock);
+    q = process_queue_locked();
+    if (q) InterlockedIncrement(&q->refs);
+    LeaveCriticalSection(&g_lock);
+    *out = q;
+    return q ? TRUE : FALSE;
 }
+/* O nulo vale (TaskQueue.cpp): o processo fica sem fila, e o XAsyncBegin de fila nula devolve
+ * E_NO_TASK_QUEUE até alguém pôr uma fila de novo. A fila posta ganha uma referência. */
 static void WINAPI thr_SetProcessQueue(void *self, queue_obj *q)
 {
+    queue_obj *old;
     (void)self;
-    log_once("SetProcessQueue");
-    if (q) g_process_queue = q;
+    if (!g_lock_ready) return;
+    EnterCriticalSection(&g_lock);
+    if (q && !queue_live(q)) {
+        LeaveCriticalSection(&g_lock);
+        xlog("SetCurrentProcessTaskQueue com fila morta %p", (void *)q);
+        return;
+    }
+    old = g_process_queue;
+    if (q) InterlockedIncrement(&q->refs);
+    g_process_queue = q;
+    g_process_queue_off = (q == NULL);
+    LeaveCriticalSection(&g_lock);
+    xlog("SetCurrentProcessTaskQueue %p", (void *)q);
+    if (old) thr_Close(NULL, old);
 }
 static HRESULT WINAPI thr_SetTimeSens(void *self, BOOLEAN on)
 {
@@ -1573,24 +1757,12 @@ static HRESULT WINAPI user_max(void *self, UINT32 *max)
 }
 static HRESULT WINAPI user_add_async(void *self, UINT32 options, XAsyncBlock *async)
 {
-    async_state *st;
-    XAsyncProviderData data;
     HRESULT hr;
     (void)self;
     xlog("XUserAddAsync opts=%lu", (unsigned long)options);
     if (!async) return E_INVALIDARG_;
-    st = calloc(1, sizeof(*st));
-    if (!st) return E_FAIL_;
-    st->magic = ASYNC_MAGIC;
-    st->block = async;
-    st->provider = user_add_provider;
-    st->payload = &user_obj;
-    snprintf(st->name, sizeof(st->name), "XUserAdd");
-    state_bind(async, st);
-    memset(&data, 0, sizeof(data));
-    data.async = async;
-    hr = user_add_provider(OP_BEGIN, &data);
-    if (FAILED(hr)) { cleanup_state(st); return hr; }
+    hr = async_begin(async, NULL, NULL, "XUserAdd", user_add_provider, &user_obj);
+    if (FAILED(hr)) return hr;
     return schedule_async(async, 0);
 }
 static HRESULT WINAPI user_add_result(void *self, XAsyncBlock *async, void **newUser)
@@ -1749,23 +1921,13 @@ static HRESULT WINAPI token_provider(UINT32 op, const XAsyncProviderData *data)
 
 static HRESULT start_token_async(XAsyncBlock *async, const char *url, const char *name)
 {
-    async_state *st;
-    XAsyncProviderData data;
+    char *ctx;
     HRESULT hr;
     if (!async) return E_INVALIDARG_;
-    st = calloc(1, sizeof(*st));
-    if (!st) return E_FAIL_;
-    st->magic = ASYNC_MAGIC;
-    st->block = async;
-    st->context = (url && url[0]) ? strdup(url) : NULL;
-    st->provider = token_provider;
-    snprintf(st->name, sizeof st->name, "%s", name);
-    state_bind(async, st);
-    memset(&data, 0, sizeof data);
-    data.async = async;
-    data.context = st->context;
-    hr = token_provider(OP_BEGIN, &data);
-    if (FAILED(hr)) { cleanup_state(st); return hr; }
+    ctx = (url && url[0]) ? strdup(url) : NULL;
+    hr = async_begin(async, ctx, NULL, name, token_provider, NULL);
+    /* O OP_BEGIN do token não falha: a falha é anterior ao estado, e o contexto é nosso. */
+    if (FAILED(hr)) { free(ctx); return hr; }
     return schedule_async(async, 0);
 }
 
@@ -1901,23 +2063,12 @@ static HRESULT WINAPI msa_provider(UINT32 op, const XAsyncProviderData *data)
 }
 static HRESULT WINAPI user_msa_async(void *self, void *user, UINT32 opts, const char *scope, XAsyncBlock *async)
 {
-    async_state *st;
-    XAsyncProviderData data;
     HRESULT hr;
     (void)self; (void)user; (void)opts;
     xlog("msa token %s", scope ? scope : "");
     if (!async) return E_INVALIDARG_;
-    st = calloc(1, sizeof(*st));
-    if (!st) return E_FAIL_;
-    st->magic = ASYNC_MAGIC;
-    st->block = async;
-    st->provider = msa_provider;
-    snprintf(st->name, sizeof st->name, "XUserMsa");
-    state_bind(async, st);
-    memset(&data, 0, sizeof data);
-    data.async = async;
-    hr = msa_provider(OP_BEGIN, &data);
-    if (FAILED(hr)) { cleanup_state(st); return hr; }
+    hr = async_begin(async, NULL, NULL, "XUserMsa", msa_provider, NULL);
+    if (FAILED(hr)) return hr;
     return schedule_async(async, 0);
 }
 static HRESULT WINAPI user_msa_result(void *self, XAsyncBlock *async, SIZE_T cap, char *tok, SIZE_T *used)
@@ -2284,23 +2435,12 @@ static HRESULT WINAPI sec_provider(UINT32 op, const XAsyncProviderData *data)
 }
 static HRESULT start_sec_async(XAsyncBlock *async, const char *url)
 {
-    async_state *st;
-    XAsyncProviderData data;
     HRESULT hr;
     xlog("security for %s", url ? url : "");
     hook_xcurl_winhttp();
     if (!async) return E_INVALIDARG_;
-    st = calloc(1, sizeof(*st));
-    if (!st) return E_FAIL_;
-    st->magic = ASYNC_MAGIC;
-    st->block = async;
-    st->provider = sec_provider;
-    snprintf(st->name, sizeof st->name, "XNetSecurity");
-    state_bind(async, st);
-    memset(&data, 0, sizeof data);
-    data.async = async;
-    hr = sec_provider(OP_BEGIN, &data);
-    if (FAILED(hr)) { cleanup_state(st); return hr; }
+    hr = async_begin(async, NULL, NULL, "XNetSecurity", sec_provider, NULL);
+    if (FAILED(hr)) return hr;
     return schedule_async(async, 0);
 }
 static HRESULT WINAPI net_sec_async(void *self, const char *url, XAsyncBlock *async)
