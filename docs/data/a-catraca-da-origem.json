@@ -253,14 +253,14 @@
       "data": "2026-10-17",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1142102,
+      "piso": 1142155,
       "por_item": {
-        "docs": 119393,
+        "docs": 119446,
         "scripts": 115218,
         "src": 308013,
         "tests": 599478
       },
-      "razao": "tamanho: +332 linhas (1141770 -> 1142102), pagas por Origem: D-1610-A-BANDEJA-TEM-INTERRUPTOR-E-VOLTA-COM-O-SERVICO, D-1610-O-CURSOR-GANHA-PRECISAO-PERMANENCIA-E-CLIQUE-TRAVADO, D-1610-O-ESTADO-DO-CARD-TEM-UM-DONO-SO, D-1610-O-PAD-VIRTUAL-NASCE-NUM-FIO-PROPRIO, D-1610-O-PS-SEGURADO-10-S-DESLIGA-AQUELE-CONTROLE, D-1610-O-TOQUE-DO-GESTO-SOMA-AO-PAR-DO-JOGO, D-2309-O-PRIMARIO-ESPERA-A-CARTA-1, energia.desligar, entrada.combo.ponte, luz.led_microfone; registrado no fecho, topo 11640ff5bd6f",
+      "razao": "tamanho: +53 linhas (1142102 -> 1142155), pagas por Origem: D-1610-A-BANDEJA-TEM-INTERRUPTOR-E-VOLTA-COM-O-SERVICO, D-1610-O-CURSOR-GANHA-PRECISAO-PERMANENCIA-E-CLIQUE-TRAVADO, D-1610-O-ESTADO-DO-CARD-TEM-UM-DONO-SO, D-1610-O-PAD-VIRTUAL-NASCE-NUM-FIO-PROPRIO, D-1610-O-PS-SEGURADO-10-S-DESLIGA-AQUELE-CONTROLE, D-1610-O-TOQUE-DO-GESTO-SOMA-AO-PAR-DO-JOGO, D-2309-O-PRIMARIO-ESPERA-A-CARTA-1, energia.desligar, entrada.combo.ponte, luz.led_microfone; registrado no fecho, topo e3cbdd7cdd51",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -537,6 +537,12 @@
           "de": 1141770,
           "para": 1142102,
           "razao": "tamanho: +332 linhas (1141770 -> 1142102), pagas por Origem: D-1610-A-BANDEJA-TEM-INTERRUPTOR-E-VOLTA-COM-O-SERVICO, D-1610-O-CURSOR-GANHA-PRECISAO-PERMANENCIA-E-CLIQUE-TRAVADO, D-1610-O-ESTADO-DO-CARD-TEM-UM-DONO-SO, D-1610-O-PAD-VIRTUAL-NASCE-NUM-FIO-PROPRIO, D-1610-O-PS-SEGURADO-10-S-DESLIGA-AQUELE-CONTROLE, D-1610-O-TOQUE-DO-GESTO-SOMA-AO-PAR-DO-JOGO, D-2309-O-PRIMARIO-ESPERA-A-CARTA-1, energia.desligar, entrada.combo.ponte, luz.led_microfone; registrado no fecho, topo 11640ff5bd6f"
+        },
+        {
+          "data": "2026-10-17",
+          "de": 1142102,
+          "para": 1142155,
+          "razao": "tamanho: +53 linhas (1142102 -> 1142155), pagas por Origem: D-1610-A-BANDEJA-TEM-INTERRUPTOR-E-VOLTA-COM-O-SERVICO, D-1610-O-CURSOR-GANHA-PRECISAO-PERMANENCIA-E-CLIQUE-TRAVADO, D-1610-O-ESTADO-DO-CARD-TEM-UM-DONO-SO, D-1610-O-PAD-VIRTUAL-NASCE-NUM-FIO-PROPRIO, D-1610-O-PS-SEGURADO-10-S-DESLIGA-AQUELE-CONTROLE, D-1610-O-TOQUE-DO-GESTO-SOMA-AO-PAR-DO-JOGO, D-2309-O-PRIMARIO-ESPERA-A-CARTA-1, energia.desligar, entrada.combo.ponte, luz.led_microfone; registrado no fecho, topo e3cbdd7cdd51"
         }
       ],
       "unidade": "linhas",
