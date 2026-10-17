@@ -253,14 +253,14 @@
       "data": "2026-10-16",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1140962,
+      "piso": 1140969,
       "por_item": {
-        "docs": 119337,
+        "docs": 119344,
         "scripts": 115218,
         "src": 307802,
         "tests": 598605
       },
-      "razao": "tamanho: +20700 linhas (1120262 -> 1140962), pagas por Origem: D-1610-A-BANDEJA-TEM-INTERRUPTOR-E-VOLTA-COM-O-SERVICO, D-1610-O-ESTADO-DO-CARD-TEM-UM-DONO-SO, D-1610-O-PS-SEGURADO-10-S-DESLIGA-AQUELE-CONTROLE, D-1610-O-TOQUE-DO-GESTO-SOMA-AO-PAR-DO-JOGO, energia.desligar, entrada.combo.ponte, luz.led_microfone; registrado no fecho, topo 02abdf9818d1",
+      "razao": "tamanho: +7 linhas (1140962 -> 1140969), pagas por Origem: D-1610-A-BANDEJA-TEM-INTERRUPTOR-E-VOLTA-COM-O-SERVICO, D-1610-O-ESTADO-DO-CARD-TEM-UM-DONO-SO, D-1610-O-PS-SEGURADO-10-S-DESLIGA-AQUELE-CONTROLE, D-1610-O-TOQUE-DO-GESTO-SOMA-AO-PAR-DO-JOGO, energia.desligar, entrada.combo.ponte, luz.led_microfone; registrado no fecho, topo 600efbe7ec26",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -507,6 +507,12 @@
           "de": 1120262,
           "para": 1140962,
           "razao": "tamanho: +20700 linhas (1120262 -> 1140962), pagas por Origem: D-1610-A-BANDEJA-TEM-INTERRUPTOR-E-VOLTA-COM-O-SERVICO, D-1610-O-ESTADO-DO-CARD-TEM-UM-DONO-SO, D-1610-O-PS-SEGURADO-10-S-DESLIGA-AQUELE-CONTROLE, D-1610-O-TOQUE-DO-GESTO-SOMA-AO-PAR-DO-JOGO, energia.desligar, entrada.combo.ponte, luz.led_microfone; registrado no fecho, topo 02abdf9818d1"
+        },
+        {
+          "data": "2026-10-16",
+          "de": 1140962,
+          "para": 1140969,
+          "razao": "tamanho: +7 linhas (1140962 -> 1140969), pagas por Origem: D-1610-A-BANDEJA-TEM-INTERRUPTOR-E-VOLTA-COM-O-SERVICO, D-1610-O-ESTADO-DO-CARD-TEM-UM-DONO-SO, D-1610-O-PS-SEGURADO-10-S-DESLIGA-AQUELE-CONTROLE, D-1610-O-TOQUE-DO-GESTO-SOMA-AO-PAR-DO-JOGO, energia.desligar, entrada.combo.ponte, luz.led_microfone; registrado no fecho, topo 600efbe7ec26"
         }
       ],
       "unidade": "linhas",
