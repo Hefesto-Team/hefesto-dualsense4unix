@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, Any
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable
+    from collections.abc import Callable, Iterable, Mapping
 
     from hefesto_dualsense4unix.core.backend_pydualsense import _DesiredOutput
 
@@ -546,22 +546,31 @@ class ControllerIdentityRegistry:
         self._mesa_mudou_em = self._clock()
         self._mesa_congelada = False
 
+    def _onda_de_quem_chega_locked(self) -> int:
+        """A onda em que quem chega AGORA é carimbado (sob o lock). Leitura pura."""
+        aberta = self._onda_aberta_em
+        if aberta is None or self._clock() - aberta >= JANELA_DE_ONDA_SEC:
+            return self._onda + 1
+        return self._onda
+
     def _marcar_chegada_locked(self, key: str) -> None:
         """Carimba a ONDA de chegada de ``key`` NESTA sessão (já sob o lock)."""
         if key in self._chegada:
             return
-        agora = self._clock()
-        aberta = self._onda_aberta_em
-        if aberta is None or agora - aberta >= JANELA_DE_ONDA_SEC:
-            self._onda += 1
-            self._onda_aberta_em = agora
+        onda = self._onda_de_quem_chega_locked()
+        if onda != self._onda:
+            self._onda = onda
+            self._onda_aberta_em = self._clock()
         self._chegada[key] = self._onda
 
-    def _ordem_do_momento_locked(self, presentes: list[str]) -> list[str]:
+    def _ordem_do_momento_locked(
+        self, presentes: list[str], chegada: Mapping[str, int] | None = None
+    ) -> list[str]:
         """``presentes`` ordenados pela FILA DO MOMENTO (já sob o lock)."""
+        ondas = self._chegada if chegada is None else chegada
         return sorted(
             presentes,
-            key=lambda k: (self._chegada.get(k, 0), self._ordem.get(k, 0), k),
+            key=lambda k: (ondas.get(k, 0), self._ordem.get(k, 0), k),
         )
 
     def _avaliar_mesa_locked(self) -> bool:
@@ -760,17 +769,26 @@ class ControllerIdentityRegistry:
             if chave in self._connected
         }
 
-    def _assentos_locked(self) -> dict[str, int]:
-        """O número de cada ASSENTO da mesa — os presentes e os guardados."""
-        na_mesa = [k for k in self._connected if k in self._ordem]
-        na_mesa += self._guardados_locked()
+    def _assentos_locked(
+        self,
+        na_mesa: list[str] | None = None,
+        chegada: Mapping[str, int] | None = None,
+    ) -> dict[str, int]:
+        """O número de cada ASSENTO da mesa — os presentes e os guardados.
+
+        ``na_mesa`` e ``chegada`` trocam a mesa de agora pela que vai sentar
+        (:meth:`numeros_ao_sentar`); a conta é a mesma.
+        """
+        if na_mesa is None:
+            na_mesa = [k for k in self._connected if k in self._ordem]
+            na_mesa += self._guardados_locked()
         if not na_mesa:
             return {}
         postos = sorted(self._ordem[k] for k in na_mesa)
         externos = self._external_present_ranks_locked()
         numeros: dict[str, int] = {}
         for posicao, (chave, posto) in enumerate(
-            zip(self._ordem_do_momento_locked(na_mesa), postos, strict=True)
+            zip(self._ordem_do_momento_locked(na_mesa, chegada), postos, strict=True)
         ):
             numeros[chave] = posicao + sum(1 for r in externos if r < posto) + 1
         return numeros
@@ -1495,6 +1513,37 @@ class ControllerIdentityRegistry:
                 return False
             return key in self._connected or key in self._guardados_locked()
 
+    def numeros_ao_sentar(self, uniqs: Iterable[str]) -> dict[str, int]:
+        """O número de cada um de ``uniqs`` quando todos estiverem na mesa. Leitura pura.
+
+        É a resposta do próximo ``sync_connected``, com a mesma conta: quem
+        volta na sessão traz a onda de chegada dele, quem estreia vem na onda
+        nova, e gente nova solta os lugares guardados salvo com o jogo
+        segurando os prazos. Fica de fora quem não tem lugar na fila ou é o
+        MAC de um vpad. O porquê: docs/research/o-porque-dos-modulos.md.
+        """
+        chaves: dict[str, str] = {}
+        for uniq in uniqs:
+            if not uniq or not isinstance(uniq, str):
+                continue
+            key, persistable = self._chave(uniq)
+            if key and not (persistable and key.startswith(_VPAD_MAC_PREFIX)):
+                chaves.setdefault(key, uniq)
+        with self._lock:
+            sentam = [k for k in chaves if k in self._ordem]
+            chegam = [k for k in sentam if k not in self._connected]
+            guardados = self._guardados_locked()
+            gente_nova = any(k not in guardados for k in chegam)
+            if gente_nova and self._prazos_seguros_desde is None:
+                guardados = []
+            na_mesa = [k for k in self._connected if k in self._ordem]
+            na_mesa += [k for k in guardados if k not in chegam]
+            na_mesa += chegam
+            onda = self._onda_de_quem_chega_locked()
+            chegada = {**{k: onda for k in chegam}, **self._chegada}
+            numeros = self._assentos_locked(na_mesa, chegada)
+        return {chaves[k]: numeros[k] for k in sentam if k in numeros}
+
     def posto_na_fila(self, uniq: str | None) -> int | None:
         """O lugar GRAVADO de ``uniq`` na fila — ou None. Leitura pura."""
         if not uniq or not isinstance(uniq, str):
@@ -1620,6 +1669,7 @@ def make_auto_output_provider(
     )
     provider.cor_do_numero = cor_do_numero  # type: ignore[attr-defined]
     provider.posto_na_fila = registry.posto_na_fila  # type: ignore[attr-defined]
+    provider.numeros_ao_sentar = registry.numeros_ao_sentar  # type: ignore[attr-defined]
     return provider
 
 

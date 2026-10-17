@@ -5374,19 +5374,21 @@ class PyDualSenseController(IController):
     def _cartas_locked(self, chaves: list[str]) -> dict[str, int]:
         """A carta de cada key de `chaves` — vazio quando a mesa não tem carta.
 
-        A lâmpada acesa é a carta; a fila gravada só decide quando NINGUÉM tem
-        lâmpada. OS-QUATRO-EM-HARMONIA-01, item 2 (medido 14/10/2026, 10h42m09):
-        com um recém-chegado ainda sem lâmpada, a carta de TODOS caía para a
-        fila gravada, a escala de outra sessão, e o P1 sentado na lâmpada 1
-        passava a ser o 3º da fila. O posto pulou três vezes em 3 s, e o co-op
-        recriou os pads com o jogo aberto. Quem não tem lâmpada fica DEPOIS de
-        quem tem, na ordem da fila entre eles.
+        Com lâmpada acesa para todos, a lâmpada é a carta. Sem ela para todos,
+        a carta de TODOS é a mesa que vai sentar (``numeros_ao_sentar`` do
+        registro, o dono do número que a lâmpada acende no tique seguinte);
+        sem a resposta dele, quem não tem lâmpada fica DEPOIS de quem tem, na
+        ordem da fila. O porquê (OS-QUATRO-EM-HARMONIA-01 e a MAC-DA-VOLTA):
+        docs/research/o-porque-dos-modulos.md, «A carta de quem não tem lâmpada».
         """
         uniqs = {k: self._key_to_uniq(k) for k in chaves}
         lampadas = {k: self._numero_do_slot(u) for k, u in uniqs.items()}
         acesas = {k: n for k, n in lampadas.items() if n is not None}
         if chaves and len(acesas) == len(chaves):
             return acesas
+        vai_sentar = self._mesa_que_vai_sentar(uniqs)
+        if chaves and len(vai_sentar) == len(chaves):
+            return vai_sentar
         consulta = getattr(self._auto_output_provider, "posto_na_fila", None)
         if not callable(consulta):
             return self._depois_das_acesas(chaves, acesas, {})
@@ -5406,6 +5408,23 @@ class PyDualSenseController(IController):
             return {}
         fim = max(conhecidos) + 1
         return {k: (p if p is not None else fim) for k, p in postos.items()}
+
+    def _mesa_que_vai_sentar(self, uniqs: dict[str, str | None]) -> dict[str, int]:
+        """Key -> o número de quando todos estiverem na mesa; vazio sem a resposta do registro."""
+        consulta = getattr(self._auto_output_provider, "numeros_ao_sentar", None)
+        if not callable(consulta):
+            return {}
+        with contextlib.suppress(Exception):
+            bruto = consulta([u for u in uniqs.values() if u is not None])
+            if isinstance(bruto, dict):
+                return {
+                    k: n
+                    for k, u in uniqs.items()
+                    if u is not None
+                    and isinstance(n := bruto.get(u), int)
+                    and not isinstance(n, bool)
+                }
+        return {}
 
     @staticmethod
     def _depois_das_acesas(

@@ -1552,3 +1552,25 @@ Saíram da docstring do módulo em 16/10/2026 (a régua do texto enxuto), com os
   cena saiu; `perfil.trocou` o perfil efetivo mudou (estado guardado: quem assina depois recebe o de agora);
 - `acessorios.gesto` o gesto do PS que a modificação de acessórios executa (`sobe`, `desce`, `para`…);
   `acessorios.estado` o que ela devolve (ligada, nível, perfil, aparelhos), também estado guardado.
+
+## A carta de quem não tem lâmpada (`core/backend_pydualsense.py`, `_cartas_locked`; `identity.py`, `numeros_ao_sentar`)
+
+OS-QUATRO-EM-HARMONIA-01, item 2 (medido 14/10/2026, 10h42m09): com um recém-chegado ainda sem
+lâmpada, a carta de TODOS caía para a fila gravada, a escala de outra sessão, e o P1 sentado na
+lâmpada 1 passava a ser o 3º da fila. O posto pulou três vezes em 3 s, e o co-op recriou os pads com
+o jogo aberto. A cura (`b9dbede00`) pôs quem não tem lâmpada DEPOIS de quem tem.
+
+A MAC-DA-VOLTA (17/10/2026): o backend escolhe o primário no hotplug, ANTES de o `sync_connected` pôr
+na mesa quem chegou. Quem volta depois do prazo do lugar guardado não tem lâmpada ainda, e o «depois
+das acesas» dava a ele uma carta provisória que virava no tique seguinte, quando a lâmpada dele
+acendia com o número de antes. Nesse meio tique o co-op recriava os pads para a carta provisória, o
+pad do P1 seguia vestindo quem passou a secundário, e esse controle ganhava também um secundário: dois
+pads vivos para um aparelho (101 casos em `test_a_entrada_de_cada_jogador_chega_inteira.py`). Antes de
+`b9dbede00` funcionava porque a fila gravada, valendo para todos, coincidia com a ordem da volta.
+
+A cura pergunta ao registro a mesa que vai sentar (`numeros_ao_sentar`), com a mesma conta do
+`sync_connected`: a onda de chegada que quem volta conserva (D-30), a onda nova para quem estreia na
+sessão, e os lugares guardados soltos por gente nova salvo com o jogo segurando os prazos (D-3009).
+Quem volta é o 1 já no hotplug, e a carta não troca quando a lâmpada acende; quem estreia continua
+depois de quem está, que é o caso de 14/10. A régua da bancada (`MesaDoJogo.conferir_invariantes`)
+reprova um aparelho com dois pads vivos fora da autoridade do jogo.

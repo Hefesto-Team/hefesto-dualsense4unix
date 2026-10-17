@@ -107,3 +107,154 @@ def test_a_lampada_menor_que_chega_leva_o_posto() -> None:
     ctl = _backend(chaves, mesa)
     with ctl._io_lock:
         assert ctl._a_carta_menor_locked(chaves[0]) == chaves[1]
+
+
+# A MAC-DA-VOLTA (17/10/2026): as mesmas perguntas, ao registro de verdade. A
+# carta de quem ainda não tem lâmpada é a mesa que vai sentar, e ela não troca
+# quando a lâmpada acende: o tique da volta e o seguinte dizem a mesma carta.
+
+from hefesto_dualsense4unix.daemon.subsystems.identity import (
+    ControllerIdentityRegistry,
+    make_auto_output_provider,
+    prazo_do_lugar_guardado,
+)
+from tests.unit.test_o_jogo_espera_a_carta_do_lugar_guardado import (
+    Relogio,
+    config_isolado,  # noqa: F401 — o lar de mentira: a fila nunca toca o disco do usuário
+)
+
+#: Key do handle (a forma do hidraw) -> o uniq que o registro conhece.
+_KEY = {
+    u: ":".join(u[i : i + 2] for i in range(0, 12, 2)).upper() for u in (UM, DOIS, TRES, QUATRO)
+}
+
+
+def _sessao_anterior(fila: tuple[str, ...]) -> None:
+    """A fila de outra sessão no disco do lar de mentira, na ordem de ``fila``."""
+    ControllerIdentityRegistry(clock=Relogio()).sync_connected(list(fila))
+
+
+def _o_backend_do_registro(
+    relogio: Relogio,
+) -> tuple[PyDualSenseController, ControllerIdentityRegistry]:
+    reg = ControllerIdentityRegistry(clock=relogio)
+    reg.load()
+    ctl = PyDualSenseController()
+    ctl.set_auto_output_provider(make_auto_output_provider(reg))
+    return ctl, reg
+
+
+def _cartas(ctl: PyDualSenseController) -> dict[str, int]:
+    with ctl._io_lock:
+        return {
+            k.replace(":", "").lower(): n for k, n in ctl._cartas_locked(list(ctl._handles)).items()
+        }
+
+
+def _sentar(ctl: PyDualSenseController, uniq: str) -> None:
+    ctl._handles[_KEY[uniq]] = object()
+
+
+def _levantar(ctl: PyDualSenseController, uniq: str) -> None:
+    del ctl._handles[_KEY[uniq]]
+
+
+def _no_tique(ctl: PyDualSenseController, reg: ControllerIdentityRegistry) -> None:
+    """O ``sync_connected`` do tique lento, com quem o backend tem na mão."""
+    reg.sync_connected([k.replace(":", "").lower() for k in ctl._handles])
+
+
+@pytest.mark.usefixtures("config_isolado")
+@pytest.mark.parametrize("quantos", [2, 3, 4])
+def test_quem_volta_depois_do_prazo_e_a_carta_dele_ja_no_hotplug(quantos: int) -> None:
+    """A carta 1 sai, o prazo passa, ela volta: a carta não muda quando a lâmpada acende.
+
+    MORDIDA: tire a ``_mesa_que_vai_sentar`` de ``_cartas_locked`` e, no
+    hotplug, a carta põe quem voltou depois das acesas (o 2 vira o 1), e um
+    tique depois inverte.
+    """
+    relogio = Relogio()
+    mesa = (UM, DOIS, TRES, QUATRO)[:quantos]
+    _sessao_anterior(mesa)
+    ctl, reg = _o_backend_do_registro(relogio)
+    for uniq in mesa:
+        _sentar(ctl, uniq)
+    _no_tique(ctl, reg)
+    cheia = {u: n for n, u in enumerate(mesa, start=1)}
+    assert _cartas(ctl) == cheia, "premissa: a mesa nasce na ordem da fila"
+
+    _levantar(ctl, UM)
+    _no_tique(ctl, reg)
+    relogio.avancar(prazo_do_lugar_guardado() + 1.0)
+    _no_tique(ctl, reg)
+    assert _cartas(ctl) == {u: n for n, u in enumerate(mesa[1:], start=1)}, (
+        "premissa: passado o prazo, quem ficou anda"
+    )
+
+    relogio.avancar(2.0)
+    _sentar(ctl, UM)
+    no_hotplug = _cartas(ctl)
+    _no_tique(ctl, reg)
+    assert no_hotplug == _cartas(ctl) == cheia, (
+        f"a carta da volta mudou quando a lâmpada acendeu: {no_hotplug} -> {_cartas(ctl)}"
+    )
+    with ctl._io_lock:
+        assert ctl._a_carta_menor_locked(_KEY[DOIS]) == _KEY[UM]
+
+
+@pytest.mark.usefixtures("config_isolado")
+@pytest.mark.parametrize("ordem", list(itertools.permutations([UM, DOIS, TRES, QUATRO])))
+def test_quem_estreia_na_sessao_vem_depois_mesmo_com_a_fila_velha_contra(
+    ordem: tuple[str, ...],
+) -> None:
+    """O caso de 14/10 ao registro de verdade: a fila velha diz o contrário da lâmpada.
+
+    O sentado é o último da fila de outra sessão, e cada um que entra tem lugar
+    melhor que todos os da mesa. A lâmpada 1 fica, no hotplug e no tique.
+    """
+    relogio = Relogio()
+    _sessao_anterior(tuple(reversed(ordem)))
+    ctl, reg = _o_backend_do_registro(relogio)
+    sentado = ordem[0]
+    _sentar(ctl, sentado)
+    _no_tique(ctl, reg)
+    for n, uniq in enumerate(ordem[1:], start=2):
+        relogio.avancar(2.0)
+        _sentar(ctl, uniq)
+        no_hotplug = _cartas(ctl)
+        _no_tique(ctl, reg)
+        assert no_hotplug == _cartas(ctl), (
+            f"o {n}º a entrar trocou a carta quando a lâmpada acendeu: "
+            f"{no_hotplug} -> {_cartas(ctl)}"
+        )
+        assert no_hotplug[sentado] == 1 and no_hotplug[uniq] == n
+        with ctl._io_lock:
+            assert ctl._a_carta_menor_locked(_KEY[sentado]) == _KEY[sentado]
+
+
+@pytest.mark.usefixtures("config_isolado")
+@pytest.mark.parametrize("jogo", [False, True], ids=["sem-jogo", "com-jogo"])
+@pytest.mark.parametrize("volta", [False, True], ids=["gente-nova", "o-dono-do-lugar"])
+def test_a_mesa_que_vai_sentar_e_a_do_tique_seguinte(jogo: bool, volta: bool) -> None:
+    """Com um lugar guardado no prazo: quem chega solta ou não, e a carta acerta.
+
+    Gente nova solta o lugar guardado sem jogo e não o solta com o jogo
+    segurando (D-3009); o dono do lugar o retoma. A carta do hotplug é a mesa
+    depois do tique. A gente nova é o ``QUATRO``, com lugar na fila de outra
+    sessão e sem lâmpada no hotplug, como quem volta.
+    """
+    relogio = Relogio()
+    _sessao_anterior((UM, DOIS, TRES, QUATRO))
+    ctl, reg = _o_backend_do_registro(relogio)
+    for uniq in (UM, DOIS, TRES):
+        _sentar(ctl, uniq)
+    _no_tique(ctl, reg)
+    reg.segurar_os_prazos(jogo)
+    _levantar(ctl, UM)
+    _no_tique(ctl, reg)
+    relogio.avancar(2.0)
+    chega = UM if volta else QUATRO
+    _sentar(ctl, chega)
+    previsto = _cartas(ctl)
+    _no_tique(ctl, reg)
+    assert previsto == reg.numeros_da_mesa() == _cartas(ctl)
