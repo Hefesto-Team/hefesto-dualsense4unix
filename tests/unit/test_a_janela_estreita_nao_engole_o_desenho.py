@@ -464,6 +464,7 @@ def test_no_tamanho_do_desenho_nada_e_cortado(medido, aba):
 @pytest.mark.parametrize(("aba", "rotulo"), CASOS)
 def test_nada_some_sem_afordancia(medido, aba, rotulo):
     """O CORAÇÃO DA RÉGUA. Rolar é aceitável; reticências com `title` também."""
+    # D-1710-A-JANELA-ESTREITA-NAO-ENGOLE-O-DESENHO
     lido = medido[(aba, rotulo)]
     fora = engolidos(lido)
     tamanho = next(t for t in TAMANHOS if t.rotulo == rotulo)
