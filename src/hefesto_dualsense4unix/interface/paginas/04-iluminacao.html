@@ -1207,9 +1207,13 @@
   .luz-grade .moldura .ds-svg{height:100%;width:auto;max-width:100%}
   /* A linha «Modelo» leva o nome do jogador (item 9, 06/10): um nome comprido NÃO alarga a coluna do
      controle, quebra em duas linhas como a Vibração faz, e a tela continua sem rolagem. */
-  /* O NOME DO CONTROLE É UMA CAIXA, com a largura da coluna e centrado (desenho do todo). */
-  .ctrl-rot{height:30px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;
-            border:1px solid var(--linha);border-radius:7px;font:600 12.5px 'Space Grotesk',system-ui,sans-serif;
+  /* O NOME DO CONTROLE É UMA CAIXA, com a largura da coluna e centrado (desenho do todo). Na
+     janela estreita a caixa corta com reticência, e o nome inteiro vive na dica dela, pintada pelo
+     campo `identidade-dica` (D-1710-A-JANELA-ESTREITA-NAO-ENGOLE-O-DESENHO). `display:block` e não
+     `flex`: a reticência não se desenha num texto que é item de flex. */
+  .ctrl-rot{height:30px;box-sizing:border-box;display:block;text-align:center;
+            padding:0 4px;border:1px solid var(--linha);border-radius:7px;
+            font:600 12.5px/28px 'Space Grotesk',system-ui,sans-serif;
             color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;align-self:center;
             width:100%;min-width:0}
   .ctrl-rot .pt{margin:0 6px}
@@ -1696,7 +1700,11 @@
   .quadro-topo .modo-auto{margin-left:auto}
   /* ---------- CRIAR EFEITOS NOVOS ---------- */
   .criar{flex:0 0 auto}
-  .criar .criar-linha{display:flex;align-items:center;gap:12px;padding:7px 16px;flex-wrap:nowrap;min-width:0}
+  /* A LINHA QUEBRA, como a da 03 e a da 05: na janela estreita «Seus efeitos» desce para uma
+     segunda linha do quadro em vez de sumir atrás de um corte (D-1710-A-JANELA-ESTREITA-NAO-ENGOLE-O-DESENHO).
+     O vão de 10px deixa folga maior que a barra do miolo (15px) no tamanho do desenho: com 12, a
+     linha cabia por 11px, e uma barra nascida na carga a quebrava e se sustentava sozinha. */
+  .criar .criar-linha{display:flex;align-items:center;gap:8px 10px;padding:7px 16px;flex-wrap:wrap;min-width:0}
   .criar .quadro-titulo{flex:0 0 auto;margin-right:4px}
   .criar .seg-criar{display:inline-flex;gap:4px;flex:0 0 auto}
   .criar .seg-criar label,.criar .meu{height:30px;padding:0 12px;border-radius:999px;
@@ -1717,7 +1725,8 @@
     background:rgba(189,147,249,.12);color:var(--purple);font:600 12.5px/1 'Space Grotesk',system-ui,sans-serif;
     cursor:pointer;flex:0 0 auto}
   .criar .btn-criar:hover{background:rgba(189,147,249,.22)}
-  .criar .meus{display:flex;gap:6px;margin-left:auto;align-items:center;min-width:0;overflow:hidden}
+  .criar .meus{display:flex;gap:6px;margin-left:auto;align-items:center;min-width:0;flex-wrap:wrap;
+    justify-content:flex-end}
   .criar .meu{color:var(--texto-suave);cursor:default}
   .criar .meu i{width:7px;height:7px;border-radius:50%;background:var(--cor,var(--purple));flex:0 0 auto}
   .g4-cores{display:inline-flex;gap:6px;align-items:center;flex:0 0 auto}
@@ -2661,7 +2670,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     </g>
 </svg>
           </div>
-          <div class="ctrl-rot" data-campo="identidade">P1 <span class="pt">•</span> Vitória <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</div>
+          <div class="ctrl-rot" data-campo="identidade-dica" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="P1 • Vitória • Cosmic Red • USB"><span data-campo="identidade">P1 <span class="pt">•</span> Vitória <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</span></div>
           <div class="cel-cor" data-campo="hex" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="#0000FF">
             <span class="guia">
               <span class="tons" data-campo="tons" data-hef-alvo="html">
@@ -3043,7 +3052,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     </g>
 </svg>
           </div>
-          <div class="ctrl-rot" data-campo="identidade">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</div>
+          <div class="ctrl-rot" data-campo="identidade-dica" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="P2 • Starlight Blue • BT"><span data-campo="identidade">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</span></div>
           <div class="cel-cor" data-campo="hex" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="#FF0000">
             <span class="guia">
               <span class="tons" data-campo="tons" data-hef-alvo="html">
@@ -3409,7 +3418,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     </g>
 </svg>
           </div>
-          <div class="ctrl-rot" data-campo="identidade">P3 <span class="pt">•</span> Desconectado</div>
+          <div class="ctrl-rot" data-campo="identidade-dica" data-hef-alvo="atributo" data-hef-atributo="data-dica"><span data-campo="identidade">P3 <span class="pt">•</span> Desconectado</span></div>
           <div class="cel-cor" data-campo="hex" data-hef-alvo="atributo" data-hef-atributo="data-dica">
             <span class="guia">
               <span class="tons" data-campo="tons" data-hef-alvo="html">
@@ -3768,7 +3777,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     </g>
 </svg>
           </div>
-          <div class="ctrl-rot" data-campo="identidade">P4 <span class="pt">•</span> Desconectado</div>
+          <div class="ctrl-rot" data-campo="identidade-dica" data-hef-alvo="atributo" data-hef-atributo="data-dica"><span data-campo="identidade">P4 <span class="pt">•</span> Desconectado</span></div>
           <div class="cel-cor" data-campo="hex" data-hef-alvo="atributo" data-hef-atributo="data-dica">
             <span class="guia">
               <span class="tons" data-campo="tons" data-hef-alvo="html">

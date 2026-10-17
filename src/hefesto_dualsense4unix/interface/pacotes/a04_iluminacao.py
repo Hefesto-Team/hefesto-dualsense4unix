@@ -1301,6 +1301,8 @@ GESTO_DO_EFEITO = "efeito-da-luz"
 GESTO_DE_CRIAR_EFEITO = "criar-efeito"
 CAMPO_DO_EFEITO = "efeito"
 CAMPO_DA_DICA_DO_EFEITO = "efeito-dica"
+#: O nome do controle inteiro, na dica da caixa: a janela estreita o corta com reticência.
+CAMPO_DA_DICA_DA_IDENTIDADE = "identidade-dica"
 SEM_EFEITO = "sem-efeito"
 LUZ_FIXA = "luz-fixa"
 PREFIXO_DA_BASE = "base:"
@@ -1588,6 +1590,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 opcoes_do_efeito(biblioteca, efeito_do_controle(do_efeito, uniq), cor_dele))
         na_lista = escolha_da_lista(
             do_efeito, uniq, None if b is None else float(b), criados, cor_dele)
+        identidade = " • ".join(partes_do_modelo(
+            {"jogador": n, "dono": o_nome_de(nomes_dela, uniq), "nome": nome, "via": via}))
         colunas[uniq] = {
             "brilho": "—" if pct is None else f"{pct}%",
             CAMPO_DO_EFEITO: na_lista,
@@ -1610,8 +1614,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                                   dica_da_luz(nome, via, recado or ""),
                                   estado=estado),
             ENDERECO_DA_INCERTA: "sim" if estado == INCERTA else "",
-            "identidade": " • ".join(partes_do_modelo(
-                {"jogador": n, "dono": o_nome_de(nomes_dela, uniq), "nome": nome, "via": via})),
+            "identidade": identidade,
+            CAMPO_DA_DICA_DA_IDENTIDADE: identidade,
             #: recusar — ver `um_botao_de_player`. Não é `len(donos)`: quem não
             "players": fileira_de_players(nome, n, donos,
                                           quantos=len(ctx.conectados)),

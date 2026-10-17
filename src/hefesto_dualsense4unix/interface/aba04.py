@@ -368,9 +368,13 @@ CSS = """
   .luz-grade .moldura .ds-svg{height:100%;width:auto;max-width:100%}
   /* A linha «Modelo» leva o nome do jogador (item 9, 06/10): um nome comprido NÃO alarga a coluna do
      controle, quebra em duas linhas como a Vibração faz, e a tela continua sem rolagem. */
-  /* O NOME DO CONTROLE É UMA CAIXA, com a largura da coluna e centrado (desenho do todo). */
-  .ctrl-rot{height:30px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;
-            border:1px solid var(--linha);border-radius:7px;font:600 12.5px 'Space Grotesk',system-ui,sans-serif;
+  /* O NOME DO CONTROLE É UMA CAIXA, com a largura da coluna e centrado (desenho do todo). Na
+     janela estreita a caixa corta com reticência, e o nome inteiro vive na dica dela, pintada pelo
+     campo `identidade-dica` (D-1710-A-JANELA-ESTREITA-NAO-ENGOLE-O-DESENHO). `display:block` e não
+     `flex`: a reticência não se desenha num texto que é item de flex. */
+  .ctrl-rot{height:30px;box-sizing:border-box;display:block;text-align:center;
+            padding:0 4px;border:1px solid var(--linha);border-radius:7px;
+            font:600 12.5px/28px 'Space Grotesk',system-ui,sans-serif;
             color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;align-self:center;
             width:100%;min-width:0}
   .ctrl-rot .pt{margin:0 6px}
@@ -847,7 +851,11 @@ CSS = """
   .quadro-topo .modo-auto{margin-left:auto}
   /* ---------- CRIAR EFEITOS NOVOS ---------- */
   .criar{flex:0 0 auto}
-  .criar .criar-linha{display:flex;align-items:center;gap:12px;padding:7px 16px;flex-wrap:nowrap;min-width:0}
+  /* A LINHA QUEBRA, como a da 03 e a da 05: na janela estreita «Seus efeitos» desce para uma
+     segunda linha do quadro em vez de sumir atrás de um corte (D-1710-A-JANELA-ESTREITA-NAO-ENGOLE-O-DESENHO).
+     O vão de 10px deixa folga maior que a barra do miolo (15px) no tamanho do desenho: com 12, a
+     linha cabia por 11px, e uma barra nascida na carga a quebrava e se sustentava sozinha. */
+  .criar .criar-linha{display:flex;align-items:center;gap:8px 10px;padding:7px 16px;flex-wrap:wrap;min-width:0}
   .criar .quadro-titulo{flex:0 0 auto;margin-right:4px}
   .criar .seg-criar{display:inline-flex;gap:4px;flex:0 0 auto}
   .criar .seg-criar label,.criar .meu{height:30px;padding:0 12px;border-radius:999px;
@@ -868,7 +876,8 @@ CSS = """
     background:rgba(189,147,249,.12);color:var(--purple);font:600 12.5px/1 'Space Grotesk',system-ui,sans-serif;
     cursor:pointer;flex:0 0 auto}
   .criar .btn-criar:hover{background:rgba(189,147,249,.22)}
-  .criar .meus{display:flex;gap:6px;margin-left:auto;align-items:center;min-width:0;overflow:hidden}
+  .criar .meus{display:flex;gap:6px;margin-left:auto;align-items:center;min-width:0;flex-wrap:wrap;
+    justify-content:flex-end}
   .criar .meu{color:var(--texto-suave);cursor:default}
   .criar .meu i{width:7px;height:7px;border-radius:50%;background:var(--cor,var(--purple));flex:0 0 auto}
   .g4-cores{display:inline-flex;gap:6px;align-items:center;flex:0 0 auto}
@@ -1020,6 +1029,8 @@ def coluna(c):
         if ligado else "")
     rotulo = (monta_.rotulo(c, "modelo") if ligado else
               f'P{j} <span class="pt">•</span> {SEM_NINGUEM_AQUI}')
+    #: o nome inteiro na dica, para a janela estreita que o corta; o lugar vazio fica com a do lugar
+    dica_do_nome = f' data-dica="{re.sub(r"<[^>]+>", "", rotulo)}"' if ligado else ""
     # `opcoes` eram `... if ligado else ""`, e o preço foi MEDIDO nas  (noqa-acento: nome de variável)
     # DualSense do usuário na mesa e o daemon de pé, a foto ao vivo mostrava o P3 e o
     # bloco `[data-conectado="nao"]` desta folha esconde a guia, o trilho e os
@@ -1075,7 +1086,7 @@ def coluna(c):
           <div class="moldura" data-campo="plastico" data-hef-alvo="cor"{plastico_de_partida}{dica_da_moldura}>
             {desenho(f"il-{p}", c["cor"], ligado, **resto_do_desenho)}
           </div>
-          <div class="ctrl-rot" data-campo="identidade">{rotulo}</div>
+          <div class="ctrl-rot" data-campo="{_pacote04.CAMPO_DA_DICA_DA_IDENTIDADE}" data-hef-alvo="atributo" data-hef-atributo="data-dica"{dica_do_nome}><span data-campo="identidade">{rotulo}</span></div>
           <div class="cel-cor" data-campo="hex" data-hef-alvo="atributo" data-hef-atributo="data-dica"{dica_do_hex}>
             {guia}<span class="nada">{VAZIO}</span>
           </div>

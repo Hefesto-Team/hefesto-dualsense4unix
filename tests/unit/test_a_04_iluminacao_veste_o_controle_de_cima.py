@@ -156,6 +156,22 @@ def test_o_pacote_manda_a_cor_da_casca_do_controle_da_mesa(carga):
         "o rótulo e a cor da moldura têm de falar do MESMO controle.")
 
 
+def test_o_nome_inteiro_vai_a_dica_da_caixa_que_o_corta(carga, bancada):
+    """A janela estreita corta o nome com reticência; a dica viva o devolve inteiro (D-1710)."""
+    from pacotes import a04_iluminacao as a04
+
+    campo = a04.CAMPO_DA_DICA_DA_IDENTIDADE
+    for uniq in (NO_CABO["uniq"], NO_RADIO["uniq"]):
+        col = carga()["colunas"][uniq]
+        assert col.get(campo) == col["identidade"], (
+            f"a dica da caixa do nome diz {col.get(campo)!r} e a caixa diz "
+            f"{col['identidade']!r}: na janela estreita o fim do nome some sem volta")
+    caixas = re.findall(r'<div class="ctrl-rot"[^>]*>', _miolo(bancada))
+    assert caixas and all(f'data-campo="{campo}" data-hef-alvo="atributo" '
+                          'data-hef-atributo="data-dica"' in c for c in caixas), (
+        f"a caixa do nome perdeu o endereço da dica viva: {caixas}")
+
+
 def test_sem_cor_lida_o_pacote_manda_vazio_e_nunca_a_do_mockup(carga):
     """Campo sem informação não mostra nada — a regra é de produto."""
     col = carga()["colunas"][NO_RADIO["uniq"]]
