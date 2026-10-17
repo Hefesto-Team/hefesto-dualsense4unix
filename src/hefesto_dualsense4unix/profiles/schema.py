@@ -2265,6 +2265,12 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         "escolhida), não uma feature. `None` = sem procedência, tratado como "
         "LEGADO pelo resolvedor.",
     ),
+    "LedsConfig.efeito": Nascimento(
+        E_CONTRATO,
+        "É a escolha do efeito da aba Iluminação, não uma feature que nasce muda. "
+        "`None` = luz fixa: a barra continua acesa na cor de sempre, e nenhum efeito "
+        "nasce ligado sozinho.",
+    ),
     "RumbleConfig.passthrough": Nascimento(
         NASCE_NO_ESQUEMA, "`True`: a vibração que o jogo manda passa para o motor."
     ),
