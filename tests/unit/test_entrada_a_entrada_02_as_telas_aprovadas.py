@@ -828,9 +828,10 @@ def test_as_quatro_faces_sao_as_do_produto_e_da_tela_aprovada() -> None:
         r for r in _botoes(telas[ee.TELAS[ee.SENTADA]]) if GESTO_DO_BOTAO[r][0] == "responder"
     ]
     assert tuple(faces_da_tela) == ee.FACES
-    dica = re.search(r'<span class="dica">(.*?)</span></span>', telas[ee.TELAS[ee.EM_PE]], re.S)
-    assert dica is not None
-    assert f"gravada em {ee.FACE_EM_PE}" in _texto(dica.group(1)), dica.group(1)
+    # De pé a face não se pergunta (toda entrada vai a `FACE_EM_PE`): a tela não tem botão de
+    # face. O «?» que dizia isso saiu com a Conexões do todo (15/10/2026).
+    em_pe = [r for r in _botoes(telas[ee.TELAS[ee.EM_PE]]) if r in GESTO_DO_BOTAO]
+    assert em_pe and not [r for r in em_pe if GESTO_DO_BOTAO[r][0] == "responder"], em_pe
     assert "Traseira" not in ee.FACES
     with pytest.raises(ValueError):
         ee.LacoDaEntrada().responder("Traseira")
