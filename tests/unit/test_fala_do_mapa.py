@@ -133,6 +133,11 @@ _COPIAS_DECLARADAS: dict[str, str] = {
         "número. Fica declarada em vez de curada — e é a diferença entre "
         "cópia da regra e outra regra que só usa a mesma vírgula."
     ),
+    "interface/arranjo_desta_maquina.py": (
+        "17/10/2026 — NÃO É A MESMA CONTA. `_mbps` escreve a velocidade do enlace "
+        "USB pelo `:g` (`480 Mb/s`, `1,5 Mb/s`), sem casa fixa; `formata_pt_br` "
+        "é de uma casa e diria `480,0 Mb/s` no mapa das Conexões."
+    ),
     "mods/tema.py": (
         "13/10/2026 — NÃO É A MESMA CONTA. `_numero` escreve o contraste WCAG com "
         "DUAS casas e o sufixo `:1` (`4,50:1`), que é a forma do critério; "
