@@ -59,7 +59,7 @@ def _sha256_do_pino(pino: Path | None = None) -> str | None:
     try:
         texto = (pino if pino is not None else PINO_DA_PECA).read_text(encoding="utf-8")
     except OSError:
-        return None
+        texto = ""  # sem pino, nenhuma peça bate: o jogo GDK abre como sempre abriu
     for linha in texto.splitlines():
         chave, igual, valor = linha.partition("=")
         if igual and chave.strip() == "sha256" and re.fullmatch(r"[0-9a-f]{64}", valor.strip()):
