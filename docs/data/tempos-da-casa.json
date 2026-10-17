@@ -6,11 +6,11 @@
       "folga": 20,
       "nota": "parede do último portoes.sh completo do fecho",
       "o_que_conta": "segundos de parede do portão completo",
-      "piso": 75,
+      "piso": 53,
       "por_item": {
-        "portoes-1050.out": 75
+        "portoes-2342.out": 53
       },
-      "razao": "piso inicial de 16/10: o que o último fecho e o rápido mediram antes das curas desta sprint; o fecho desce para o de depois",
+      "razao": "o tempo desceu: 75 -> 53 s",
       "unidade": "s",
       "universo": 1
     },
