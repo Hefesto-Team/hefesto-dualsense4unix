@@ -70,6 +70,7 @@ def test_a_acessibilidade_traz_o_giroscopio_e_as_opcoes_do_desenho() -> None:
 
 
 def test_os_rotulos_do_permitir_e_do_teclado_sao_os_do_produto() -> None:
+    # D-1510-AS-PALAVRAS-DOS-BOTOES-SAO-AS-DO-DESENHO
     # Prova da D-1510-AS-PALAVRAS-DOS-BOTOES-SAO-AS-DO-DESENHO.
     doc = _doc()
     permitir = re.findall(r'<button[^>]*data-gesto="permitir-navegacao"[^>]*>([^<]+)</button>', doc)
@@ -121,6 +122,7 @@ def test_os_tres_de_permitir_navegacao_cabem_numa_linha(pagina) -> None:
     linha de chips que encolhia o nome com quatro controles; os três botões são fixos.
     MORDIDA: `flex-wrap:wrap` no `.seg.mini` com a coluna estreita quebra em duas linhas.
     """
+    # D-1510-O-NAVEGA-COM-ENCOLHE-O-NOME-COM-QUATRO
     pagina.goto(MOCKUP.as_uri())
     m = pagina.evaluate("""() => {
       const seg = document.querySelector('[role=radiogroup][aria-label="Permitir navegação"]');

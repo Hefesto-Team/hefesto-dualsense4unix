@@ -261,7 +261,7 @@
   .conectado .bolinha{color:var(--green)}
   .fita{
     display:flex;align-items:center;gap:8px;
-    font-size:12px;color:var(--texto-mudo);
+    font-size:12px;color:var(--fg);
   }
   .marca-nome{font-size:14px;line-height:1.15;font-weight:700;letter-spacing:-.01em;
               white-space:nowrap;color:var(--fg);margin-right:6px}
@@ -276,10 +276,14 @@
   .perfil-ativo{
     display:flex;align-items:center;gap:7px;
     padding:5px 11px;border-radius:7px;
-    border:1px solid var(--linha);background:var(--panel);
+    border:1px solid var(--linha);background:var(--panel);min-width:0;
   }
-  .pa-rot{font-size:10.5px;color:var(--comment);}
-  .pa-nome{font-size:12.5px;color:var(--pink);font-weight:600}
+  /* UMA LINHA SÓ (16/10/2026): no tamanho do nome, o «Perfil ativo» quebrava em duas assim que um
+     perfil tinha nome, e o nome longo de um jogo esticava o topo; o rótulo não quebra, e o nome
+     cede com reticência (a base comum dá a dica com ele inteiro). */
+  .pa-rot{font-size:12.5px;color:var(--fg);white-space:nowrap}
+  .pa-nome{font-size:12.5px;color:var(--pink);font-weight:600;white-space:nowrap;
+           overflow:hidden;text-overflow:ellipsis;min-width:0}
   /* A FITA QUE NÃO ESCOLHE TEM OS CHIPS ACESOS COMO QUALQUER OUTRA — 09/10/2026
      (O-SELECIONAR-ACENDE-QUEM-ESTA-ESCOLHIDO-01, pedido de 29/09: *"a cor de
      todos os botões do Selecionar deveriam estar acesas e com as bordas
@@ -288,7 +292,7 @@
      o chip (FITA-01, 08/09, e o cinza de 30/08) saíram. Só o rótulo
      `Selecionar:` segue na cor de comentário: não é botão. O `opacity` não
      volta: escondia o texto do contraste (2,18:1) sem a régua ver. */
-  .fita.inerte{color:var(--comment)}
+  .fita.inerte{color:var(--fg)}
   /* ---------- O MODO NATIVO: A FITA FICA CINZA E MUDA — 09/10/2026 ----------
      DESLIGAR-O-HEFESTO-DEVOLVE-O-CONTROLE-AO-LINUX-01, opção a. Com o Hefesto
      desligado quem manda é o jogo, e a fita só mostra quem está conectado: a
@@ -299,24 +303,24 @@
   .fita{position:relative}
   .so-no-nativo{display:none}
   body.nativo .fita .so-no-nativo{display:block;position:absolute;inset:0;z-index:2;cursor:default}
-  body.nativo .fita{color:var(--comment)}
+  body.nativo .fita{color:var(--fg)}
   body.nativo .fita .chip,body.nativo .fita .chip.on,body.nativo .fita .chip.plastico{
-    border-color:var(--border-sutil);background:transparent;color:var(--comment);
+    border-color:var(--border-sutil);background:transparent;color:var(--fg);
     font-weight:400;--borda-do-chip:1px}
   /* a peça fixa do cartão e a trava do quadro nascem escondidas */
   .visto-fixo,.visto-legenda,.trava-nativo{display:none}
   body.nativo .visto-fixo{grid-column:1/-1;display:flex;align-items:center;justify-content:center;
     gap:7px;height:28px;border:1px solid var(--border-sutil);border-radius:7px;
     background:transparent;color:var(--texto-suave);font-size:12px;font-weight:600;cursor:default}
-  body.nativo .visto-fixo .cad{color:var(--comment)}
+  body.nativo .visto-fixo .cad{color:var(--fg)}
   body.nativo .visto-legenda{grid-column:1/-1;height:28px;display:flex;align-items:center;
-    justify-content:center;color:var(--comment);font-size:11.5px}
+    justify-content:center;color:var(--fg);font-size:11.5px}
   body.nativo .cartao.off .visto-fixo,body.nativo .cartao.off .visto-legenda{display:none}
   body.nativo .mascara .chip{display:none}
   body.nativo .cartao.alvo{background:var(--app-bg)}
   body.nativo .trava-nativo{display:inline-flex;align-items:center;gap:6px;margin-left:auto;
-    margin-right:10px;color:var(--comment);font-size:12px;cursor:default}
-  body.nativo .trava-nativo .cad{color:var(--comment)}
+    margin-right:10px;color:var(--fg);font-size:12px;cursor:default}
+  body.nativo .trava-nativo .cad{color:var(--fg)}
   /* AQUI MORAVA A CAIXA ALTA DA VIA, e ela SAIU — ESQUELETO-C2, 11/09/2026.
      Era a TELA-TRES-01 §3, pedido de 08/09: "cabo e rádio coloca
      maiúsculo." O que ela leu três dias depois, na MESMA tela:
@@ -345,7 +349,7 @@
   .chip{
     --borda-do-chip:1px;
     padding:5px 12px;border-radius:6px;font-size:12px;
-    border:var(--borda-do-chip) solid var(--linha);background:var(--app-bg);color:var(--texto-mudo);
+    border:var(--borda-do-chip) solid var(--linha);background:var(--app-bg);color:var(--fg);
     cursor:default;
   }
   .chip.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600}
@@ -394,7 +398,7 @@
   /* ---------- a tira de abas ---------- */
   .tira{display:flex;gap:2px;padding:0 12px;border-bottom:1px solid var(--linha)}
   .aba{
-    padding:11px 13px;font-size:13px;color:var(--texto-mudo);
+    padding:11px 13px;font-size:13px;color:var(--fg);
     border-bottom:2px solid transparent;white-space:nowrap;cursor:default;
   }
   a.aba{text-decoration:none;cursor:pointer}
@@ -403,12 +407,13 @@
   .aba.ativa{color:var(--fg);border-bottom-color:var(--pink);font-weight:600}
 
   /* ---------- o miolo ---------- */
-  /* padding-right 3 e não 18: o `scrollbar-gutter:stable` reserva 15px à
-     direita SEMPRE — com 18 de padding a margem direita ficava 33 contra 18 da
-     esquerda, visível em toda aba. 3 + 15 = os mesmos 18, e a caixa de
-     conteúdo tem a mesma largura de antes da barra existir. */
-  .miolo{padding:16px 3px 18px 18px;display:flex;flex-direction:column;gap:14px;
-         flex:1;min-height:0;overflow-y:auto;scrollbar-gutter:stable}
+  /* O RESPIRO É 18 DOS DOIS LADOS — 16/10/2026 (AS-TELAS-QUE-ELA-PEDIU-EM-16-10-01, T1).
+     A conta velha (3 de padding + 15 do `scrollbar-gutter:stable`) supunha uma barra que
+     ocupa lugar; no WebKitGTK a barra é de sobrepor (`offsetWidth-clientWidth` = 0) e o
+     quadro ficava a 3 px da borda direita em nove abas. Sem rolagem vertical em tela
+     nenhuma, não há barra a reservar. */
+  .miolo{padding:16px 18px 18px 18px;display:flex;flex-direction:column;gap:14px;
+         flex:1;min-height:0;overflow-y:auto;scrollbar-gutter:auto}
   /* O QUADRO NÃO ESTICA POR PADRÃO. Ele já esticou: com a altura da janela fixa,
      o último quadro de toda aba encostava no rodapé, e nas abas curtas isso virou
      um quadro cinza gigante e vazio. Ela, 27/08: "nessa aba encurtar verticalmente
@@ -457,7 +462,7 @@
      nascem no mesmo x. */
   .quadro > input.abre{position:absolute;width:0;height:0;opacity:0;pointer-events:none}
   label.quadro-titulo{cursor:pointer;display:inline-flex;align-items:center;gap:6px}
-  label.quadro-titulo::before{content:"▾";font-size:10px;color:var(--texto-mudo);width:9px}
+  label.quadro-titulo::before{content:"▾";font-size:10px;color:var(--fg);width:9px}
   .quadro:has(> input.abre:not(:checked)) label.quadro-titulo::before{content:"▸"}
   .quadro:has(> input.abre:not(:checked)) > .quadro-corpo{display:none}
   /* fechada, ela não estica: senão o quadro fechado tomaria a altura toda */
@@ -477,7 +482,7 @@
   .seg button{
     flex:1;min-width:150px;padding:9px 10px;border-radius:7px;font-size:12.5px;
     font-family:inherit;border:1px solid var(--linha);
-    background:var(--app-bg);color:var(--texto-mudo);cursor:pointer;
+    background:var(--app-bg);color:var(--fg);cursor:pointer;
   }
   .seg button.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600}
   .seg button:hover:not(.on){border-color:var(--comment);color:var(--texto-suave)}
@@ -485,13 +490,13 @@
      `disabled` de verdade (medido: zero gestos ao clicar), e nada na tela
      dizia isso. Sem `opacity`, que é a lição medida da `.fita.inerte`: a
      opacidade mora no ancestral e cega toda régua que lê `color`. */
-  .seg button:disabled{border-color:var(--border-sutil);color:var(--texto-mudo);cursor:not-allowed}
-  .seg button:disabled:hover{border-color:var(--border-sutil);color:var(--texto-mudo)}
+  .seg button:disabled{border-color:var(--border-sutil);color:var(--fg);cursor:not-allowed}
+  .seg button:disabled:hover{border-color:var(--border-sutil);color:var(--fg)}
 
   /* a linha de estado: o que VALE agora */
   .estado{
     display:flex;align-items:center;gap:7px;margin-top:9px;
-    font-size:12px;color:var(--texto-mudo);
+    font-size:12px;color:var(--fg);
   }
   .estado .valor{color:var(--fg);font-weight:600}
   .estado .verde{color:var(--green)}
@@ -509,12 +514,12 @@
     flex:1;display:flex;align-items:center;justify-content:center;gap:7px;
     padding:9px 10px;border-radius:7px;
     font-size:12.5px;border:1px solid var(--linha);
-    background:var(--app-bg);color:var(--texto-mudo);cursor:pointer;white-space:nowrap;
+    background:var(--app-bg);color:var(--fg);cursor:pointer;white-space:nowrap;
   }
   .degrau i{
     font-style:normal;font-family:'JetBrains Mono',monospace;font-size:10px;
     width:15px;height:15px;line-height:14px;text-align:center;border-radius:50%;
-    border:1px solid var(--linha);color:var(--comment);
+    border:1px solid var(--linha);color:var(--fg);
   }
   .degrau:hover:not(.on){border-color:var(--comment);color:var(--texto-suave)}
   .degrau.on{
@@ -524,7 +529,7 @@
   /* O SEPARADOR TEM COR DE TEXTO, NÃO DE BORDA (30/08). `--border-forte` é
      #44475a: 1,73:1 sobre o fundo — um traço que existe no DOM e não na tela.
      `--texto-mudo` o põe em 4,96:1 e ele continua recuando diante do texto. */
-  .seta{color:var(--texto-mudo);font-size:13px}
+  .seta{color:var(--fg);font-size:13px}
 
   /* a prova de que o Aplicar ainda deve (D-APLICAR-NAO-SALVA) */
   .pendente{
@@ -539,13 +544,13 @@
     background:var(--panel);padding:9px 14px;display:flex;align-items:center;gap:9px;
     font-size:12px;
   }
-  .avisos.vazio{color:var(--comment);border-style:dashed}
+  .avisos.vazio{color:var(--fg);border-style:dashed}
   .selo{
     font-size:10.5px;padding:2px 7px;border-radius:4px;font-weight:600;
     font-family:'JetBrains Mono',monospace;
   }
   .selo.alerta{background:var(--orange);color:var(--app-bg)}
-  .conta{margin-left:auto;font-size:11px;color:var(--texto-mudo)}
+  .conta{margin-left:auto;font-size:11px;color:var(--fg)}
   .link{color:var(--cyan);text-decoration:none;border-bottom:1px dotted var(--cyan);cursor:pointer}
 
   /* ---------- controles: SÓ a contagem e a ponte (decisão de produto) ---------- */
@@ -564,7 +569,7 @@
      vinte e seis. A cor vem de `--plastico`, escrita pelo gerador a partir do
      desenho — o mesmo mecanismo do chip da fita. Zero usos nos dez HTML. */
   .cartao .pl{font-family:'JetBrains Mono',monospace;color:var(--fg);font-weight:500}
-  .cartao .via{color:var(--texto-mudo);font-size:11px}
+  .cartao .via{color:var(--fg);font-size:11px}
   .cartao .bat{color:var(--green);font-family:'JetBrains Mono',monospace;font-size:11px}
 
   .acoes{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}
@@ -591,13 +596,18 @@
   .btn.verde:hover{border-color:var(--green);color:var(--green)}
   .btn.vermelho:hover{border-color:var(--red);color:var(--red)}
   .btn.roxo:hover{border-color:var(--purple);color:var(--purple)}
+  /* O AMARELO DO «Voltar ao padrão» — borda e letra, nas duas abas que voltam ao de fábrica: a
+     Navegação e o «Restaurar de fábrica» da Sistema (AS-TELAS-QUE-ELA-PEDIU-EM-16-10-01, S2). */
+  .btn.amarelo-padrao{border-color:var(--yellow);color:var(--yellow)}
+  .btn.amarelo-padrao:hover{border-color:var(--yellow);color:var(--yellow);
+                            background:rgba(241,250,140,.08)}
 
   /* ---------- Conectado agora + Atenção, lado a lado ---------- */
   .dupla{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
-  .conta-avisos{margin-left:auto;font-size:11px;color:var(--texto-mudo)}
+  .conta-avisos{margin-left:auto;font-size:11px;color:var(--fg)}
   .aviso-item{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--texto-suave)}
   .sub-secao{margin-top:14px;padding-top:12px;border-top:1px solid var(--linha)}
-  .sep{color:var(--texto-mudo);margin:0 3px}   /* idem — ver `.seta` acima */
+  .sep{color:var(--fg);margin:0 3px}   /* idem — ver `.seta` acima */
 
   .faixa-final{display:flex;align-items:center;gap:12px;margin-top:12px}
   .faixa-final .pendente{flex:1;margin-top:0}
@@ -632,7 +642,7 @@
   .r-aplicar{background:var(--green);color:var(--app-bg)}
   .r-salvar{border-color:var(--purple)!important;color:var(--purple);background:transparent}
   .r-importar{border-color:var(--orange)!important;color:var(--orange);background:transparent}
-  .r-exportar{border-color:var(--comment)!important;color:var(--texto-mudo);background:transparent}
+  .r-exportar{border-color:var(--comment)!important;color:var(--fg);background:transparent}
 
   .marca{color:var(--orange)}
 
@@ -812,7 +822,7 @@
      "P1  Cosmic Red  USB" enquanto o P2 lia "P2 · Starlight Blue · BT".
      `var(--comment)` põe os dois casos acima de 3:1 — o piso de traço — sem
      competir com o texto. Medido em 27/08/2026. */
-  .pt{color:var(--comment);margin:0 1px;font-size:10px;vertical-align:1px}
+  .pt{color:var(--fg);margin:0 1px;font-size:10px;vertical-align:1px}
 
   /* ======== A FOLHA DA D-02 E DA D-03 — as duas peças das dez abas ======== */
 
@@ -885,9 +895,9 @@
      PO decidiu para a aba 09, e é a única forma de dizer o porquê a quem não
      tem rato na mão. */
   .btn.apagado,.seg button.apagado{
-    border-color:var(--border-sutil);color:var(--texto-mudo);cursor:not-allowed}
+    border-color:var(--border-sutil);color:var(--fg);cursor:not-allowed}
   .btn.apagado:hover,.seg button.apagado:hover{
-    border-color:var(--border-sutil);color:var(--texto-mudo)}
+    border-color:var(--border-sutil);color:var(--fg)}
 
   /* ---- S-02 · A RESSALVA É LINHA FIXA, E SÓ QUANDO EXISTE (D-02) ----
      No repouso ela não ocupa NADA: sem `display:none` a linha vazia continua
@@ -900,7 +910,7 @@
      cobre a linha que nasce vazia e nunca é pintada; `.nada` cobre a que o
      piloto pinta a cada tique com "não há o que dizer". Faltando uma das
      duas, a linha volta a aparecer num dos dois caminhos, calada. */
-  .ressalva{font-size:11.5px;line-height:1.5;color:var(--texto-mudo);margin-top:5px}
+  .ressalva{font-size:11.5px;line-height:1.5;color:var(--fg);margin-top:5px}
   .ressalva:empty{display:none}
   .ressalva:has(.nada){display:none}
 
@@ -924,7 +934,7 @@
      `currentColor` faz cada um herdar a cor da linha em que está. */
   .gl{display:inline-block;vertical-align:-6px;flex:0 0 auto}
   .gls{display:inline-flex;align-items:center;gap:5px}
-  .gls .mais{color:var(--comment);font-size:11px;margin:0 1px}
+  .gls .mais{color:var(--fg);font-size:11px;margin:0 1px}
 
   /* ---- AS TELAS NOVAS (:target, sem script) ---- */
   .tela-nova{display:none;position:fixed;inset:0;z-index:60;
@@ -955,7 +965,7 @@
   .tn-topo{display:flex;align-items:center;gap:9px;padding:14px 18px 0;flex:none}
   .tn-tit{font-size:14.5px;font-weight:600;color:var(--purple)}
   .tn-x{margin-left:auto;width:26px;height:26px;border-radius:6px;text-decoration:none;
-        border:1px solid var(--border-forte);color:var(--texto-mudo);font-size:14px;
+        border:1px solid var(--border-forte);color:var(--fg);font-size:14px;
         display:flex;align-items:center;justify-content:center}
   .tn-x:hover{border-color:var(--red);color:var(--red)}
   /* `min-height:0` nos dois níveis não é enfeite: sem ele um item de flex-column
@@ -991,7 +1001,7 @@
   .moldura::-webkit-scrollbar{width:9px}
   .moldura::-webkit-scrollbar-track{background:var(--panel-2, #21222c);border-radius:5px}
   .moldura::-webkit-scrollbar-thumb{background:var(--border-forte);border-radius:5px}
-  .tn-frase{font-size:11.5px;color:var(--texto-mudo);line-height:1.55;margin-bottom:11px}
+  .tn-frase{font-size:11.5px;color:var(--fg);line-height:1.55;margin-bottom:11px}
   .tn-rod{display:flex;gap:var(--gap);padding:0 18px 16px;flex:none}
   .tn-rod .btn{flex:1;text-decoration:none}
   /* a confirmação do rodapé segue os botões, e não a borda da caixa: o
@@ -1070,7 +1080,7 @@
          momento em que ele se enche, a garantia de estrutura vira o defeito.
          `pointer-events:none` é a mesma promessa, e ela se desfaz sozinha no
          tique em que o piloto tira o `off`. */
-  .gc-item.off .gc-nome{color:var(--comment)}
+  .gc-item.off .gc-nome{color:var(--fg)}
   .gc-item.off{cursor:default;border-style:dashed}
   .gc-item.off .gc-cabeca{border-bottom:0}
   .gc-item.off .gc-resumo,
@@ -1079,10 +1089,10 @@
   .gc-item.off .gc-num{display:none}
   .gc-item.off .gc-nome b{color:var(--texto-suave);font-weight:600}
   .gc-item.off .gc-nome{font-weight:400}
-  .gc-item.off .gc-nome .sep{margin:0 6px;color:var(--texto-mudo)}
+  .gc-item.off .gc-nome .sep{margin:0 6px;color:var(--fg)}
   .gc-item.off .ds-mini{opacity:.3}
   .gc-item.off .gc-abre,
-  .gc-item.off .gc-num{pointer-events:none;color:var(--comment)}
+  .gc-item.off .gc-num{pointer-events:none;color:var(--fg)}
 
   /* ================= Conexões =================
      Três assuntos, três quadros, agrupados por PERGUNTA:
@@ -1135,14 +1145,14 @@
      recortado de propósito é, para a régua da janela estreita, texto que a janela engoliu.
      O × ignora o conselho (o mesmo gesto do antigo «Ignorar»); o porquê vive no hover do título. */
   .cartao-dica .cd-x{flex:0 0 24px;width:24px;height:24px;margin:-4px 0 -4px 0;padding:0;
-              border:0;border-radius:5px;background:none;color:var(--texto-mudo);font-size:16px;
+              border:0;border-radius:5px;background:none;color:var(--fg);font-size:16px;
               line-height:1;display:inline-flex;align-items:center;justify-content:center;
               cursor:pointer}
   .cartao-dica .cd-x:hover{background:var(--sel-bg);color:var(--fg)}
   .cd-detalhe{margin:0;font-size:11px;font-family:'JetBrains Mono',monospace;
-              color:var(--texto-mudo)}
+              color:var(--fg)}
   .cartao-dica .cd-pic{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:0;
-             font-size:10.5px;font-family:'JetBrains Mono',monospace;color:var(--texto-mudo)}
+             font-size:10.5px;font-family:'JetBrains Mono',monospace;color:var(--fg)}
   .cartao-dica .cd-pic i{font-style:normal;color:var(--green)}
   .cd-acao{margin-top:auto;display:flex;justify-content:flex-end}
   .cartao-dica .cd-botao{display:flex;align-items:center;justify-content:center;width:auto;
@@ -1198,7 +1208,7 @@
   .gc .ext-linha[data-larga]{grid-column:1/-1}
   .gc .ext-linha{display:flex;align-items:center;gap:8px;
                  min-height:28px;padding:0 12px;
-                 font-size:12px;color:var(--texto-mudo);
+                 font-size:12px;color:var(--fg);
                  border-top:1px solid var(--border-sutil);
                  border-left:3px dashed var(--border-forte)}
   .gc .ext-nome{color:var(--fg);font-weight:600;white-space:nowrap;flex:0 0 auto}
@@ -1213,7 +1223,7 @@
      do desenho não escala com o quadrado (`non-scaling-stroke`): a 34 px, o traço de 2,6 unidades
      de uma arte de 100 viraria um fio de 0,9 px. */
   .gc .ext-desenho{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;
-                   width:34px;height:22px;color:var(--texto-mudo)}
+                   width:34px;height:22px;color:var(--fg)}
   .gc .ext-desenho svg{width:34px;height:22px;display:block}
   .ext-sprite symbol *{vector-effect:non-scaling-stroke;stroke-width:1.3px}
   /* as três listas do externo têm largura FIXA e moram no fim da linha: de um externo
@@ -1290,7 +1300,7 @@
            border:1px solid transparent;border-radius:6px;background:transparent;
            color:var(--fg);font:inherit;font-size:12.5px;font-weight:600;
            text-overflow:ellipsis}
-  .gc-dono::placeholder{color:var(--texto-mudo);font-weight:400}
+  .gc-dono::placeholder{color:var(--fg);font-weight:400}
   .gc-dono:hover{border-color:var(--border-sutil)}
   .gc-dono:focus{border-color:var(--purple);outline:none}
   /* O APARELHO: o desenho e o nome, e é ele o alvo do clique que aponta a fita
@@ -1311,7 +1321,7 @@
   .gc-resumo{display:flex;flex-direction:column;border-top:1px solid var(--border-sutil)}
   .gc-est{display:block;border-bottom:1px solid var(--border-sutil)}
   .gc-est .est{display:flex;align-items:center;gap:6px;height:25.5px;min-width:0;
-               font-size:12px;color:var(--texto-mudo);white-space:nowrap}
+               font-size:12px;color:var(--fg);white-space:nowrap}
   .gc-est .est > b{margin-left:auto;min-width:0;overflow:hidden;text-overflow:ellipsis;
                    color:var(--fg);font-weight:600}
   .gc-est .est > .certo{margin-left:auto;font-style:normal;font-weight:700;color:var(--texto-suave)}
@@ -1335,13 +1345,13 @@
                   stroke-linecap:round;stroke-linejoin:round}
   .gc-corpo .ltrava{display:none}
   .gc-corpo .ltrava.on ~ .btn{opacity:.55;cursor:help}
-  .gc-corpo .ltrava.on ~ .btn:hover{color:var(--texto-mudo)}
+  .gc-corpo .ltrava.on ~ .btn:hover{color:var(--fg)}
   /* REGRA DE PRODUTO: *"sempre visível mas só
      acionável quando tiver no rádio"* — botão que SOME ensina que a tela é
      instável. */
-  .btn.apagado{border-color:var(--border-forte);color:var(--texto-mudo);
+  .btn.apagado{border-color:var(--border-forte);color:var(--fg);
                opacity:.55;cursor:help}
-  .btn.apagado:hover{border-color:var(--border-forte);color:var(--texto-mudo)}
+  .btn.apagado:hover{border-color:var(--border-forte);color:var(--fg)}
   /* o SVG real ganha a barra de luz acesa, PREENCHIDA (um contorno de 1,2 numa
      forma de 2px pinta menos de um pixel). As lâmpadas de jogador saem do
      desenho pequeno por `svg(..., lampadas=False)`, decisão de 28/08. */
@@ -1385,7 +1395,7 @@
   .mp-fatos{display:grid;grid-template-columns:auto minmax(0,1fr);margin:0}
   .mp-fatos dt,.mp-fatos dd{margin:0;height:25.5px;display:flex;align-items:center;font-size:12px;
                             border-bottom:1px solid var(--border-sutil)}
-  .mp-fatos dt{color:var(--texto-mudo);padding-right:16px}
+  .mp-fatos dt{color:var(--fg);padding-right:16px}
   .mp-fatos dd{color:var(--fg);font-weight:600;min-width:0;overflow:hidden;
                text-overflow:ellipsis;white-space:nowrap}
   .mp-fatos dt:nth-last-child(2),.mp-fatos dd:last-child{border-bottom:none}
@@ -1400,10 +1410,10 @@
   .mp-lista li{display:flex;align-items:center;gap:8px;height:25.5px;font-size:12px;
                border-bottom:1px solid var(--border-sutil);min-width:0}
   .mp-lista li b{color:var(--fg);font-weight:600;white-space:nowrap}
-  .mp-lista li span{margin-left:auto;color:var(--texto-mudo);white-space:nowrap;
+  .mp-lista li span{margin-left:auto;color:var(--fg);white-space:nowrap;
                     overflow:hidden;text-overflow:ellipsis}
-  .mp-lista li.vazio{color:var(--texto-mudo)}
-  .mp-conta{margin:0;font-size:11.5px;color:var(--texto-mudo)}
+  .mp-lista li.vazio{color:var(--fg)}
+  .mp-conta{margin:0;font-size:11.5px;color:var(--fg)}
   .mp-cx .tn-rod .btn.principal{border-color:var(--green);color:var(--green)}
   .mp-cx .tn-rod .btn.principal:hover{background:rgba(80,250,123,.09)}
   .acao{font-size:10.5px;color:var(--cyan);border-bottom:1px dotted var(--cyan);cursor:pointer}
@@ -1415,7 +1425,7 @@
           border-bottom:1px solid var(--border-forte)}
   .tab td{padding:6px 8px 6px 0;color:var(--texto-suave);border-bottom:1px solid var(--border-sutil)}
   .tab tr:last-child td{border-bottom:none}
-  .tab .mudo{color:var(--texto-mudo)}
+  .tab .mudo{color:var(--fg)}
   /* CICATRIZ, medida em três tentativas: a `<table>` NÃO estica pela altura da
      caixa. Quem estica a linha de uma tabela é a `height` da CÉLULA, e não um
      `flex` na tabela.
@@ -1427,7 +1437,7 @@
   .vizinhos{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:11px}
   .vizinhos select.pronto{width:100%}
   .viz{display:flex;flex-direction:column;gap:4px;min-width:0}
-  .viz .qual{font-size:10.5px;color:var(--texto-mudo);white-space:nowrap;overflow:hidden;
+  .viz .qual{font-size:10.5px;color:var(--fg);white-space:nowrap;overflow:hidden;
              text-overflow:ellipsis}
   /* A COLUNA "ONDE" — 04/09/2026, e ela é a que faltava para a linha do
      Check-up ter endereço na mesa. O exame diz "dois rádios da bancada estão em
@@ -1449,7 +1459,7 @@
      nó, e a linha já tem o dela (o texto). É o mesmo desenho dos `<i class="est">`
      das cinco linhas do exame, e do `~` que leva a cor do irmão até elas. */
   .viz .vaviso{display:none}
-  .viz .onde{font-size:10.5px;color:var(--texto-mudo);white-space:nowrap;overflow:hidden;
+  .viz .onde{font-size:10.5px;color:var(--fg);white-space:nowrap;overflow:hidden;
              text-overflow:ellipsis}
   .viz .vaviso.on ~ .onde{color:var(--orange)}
   /* a sobra de altura das duas colunas do inventário cai ANTES da última fileira,
@@ -1497,7 +1507,7 @@
          border:1px solid var(--border-forte);color:var(--texto-suave);
          font:inherit;font-size:11px;cursor:pointer;display:inline-flex;
          align-items:center;gap:4px}
-  .mm-ap code{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--texto-mudo)}
+  .mm-ap code{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--fg)}
   .mm-ap:hover{border-color:var(--comment);color:var(--fg)}
   /* o escolhido é um ToggleButton ATIVO — clicar nele de novo desescolhe. */
   .mm-ap.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600}
@@ -1532,7 +1542,7 @@
            border:1px solid var(--border-forte);color:var(--fg);font:inherit;font-size:11.5px}
   .hub-nome{flex:1 1 auto;min-width:0;width:auto}
   .hub-pergunta .btn{flex:0 0 auto}
-  .mm-ligado{font-size:10px;color:var(--texto-mudo);line-height:1.4;padding-left:2px}
+  .mm-ligado{font-size:10px;color:var(--fg);line-height:1.4;padding-left:2px}
   .mm-ligado b{color:var(--texto-suave);font-weight:600}
   .mm-cel{display:flex;flex-direction:column;gap:4px}
   /* 84×56 é `botao.set_size_request(84, 56)`, que em GTK é MÍNIMO e não teto —
@@ -1545,16 +1555,16 @@
          gap:1px;text-align:center;line-height:1.15;overflow:hidden}
   .mm-n{font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:700;color:var(--fg)}
   .mm-c{font-size:9px;color:var(--texto-suave);word-break:break-word}
-  .mm-c.mm-vazia{color:var(--texto-mudo);font-style:italic}
-  .mm-ext{font-size:8.5px;color:var(--comment)}
+  .mm-c.mm-vazia{color:var(--fg);font-style:italic}
+  .mm-ext{font-size:8.5px;color:var(--fg)}
   .mm-v{font-size:9px;font-weight:600}
   /* AS CINCO CORES SÃO OS CINCO ESTADOS QUE **ESTA** JANELA PRODUZ. Os três do
      modo ideal (`chega`, `sai`, `fica`) não entram: eles vêm do plano, e esta
      janela não calcula plano nenhum. */
   .mm-sq[data-v="cheia"]{opacity:.72}
-  .mm-sq[data-v="cheia"] .mm-v{color:var(--texto-mudo)}
+  .mm-sq[data-v="cheia"] .mm-v{color:var(--fg)}
   .mm-sq[data-v="serve"]{border-color:var(--comment)}
-  .mm-sq[data-v="serve"] .mm-v{color:var(--comment)}
+  .mm-sq[data-v="serve"] .mm-v{color:var(--fg)}
   .mm-sq[data-v="evite"]{border-color:var(--orange)}
   .mm-sq[data-v="evite"] .mm-v{color:var(--orange)}
   .mm-sq[data-v="melhor"]{border-color:var(--green);background:rgba(80,250,123,.07)}
@@ -1618,7 +1628,7 @@
      transbordar. O `cursor:help` e o sublinhado pontilhado são o que anuncia
      que há mais ali. */
   .mm-conf-linha{margin:11px 0 0;font-size:11.5px;line-height:1.55;
-                 color:var(--texto-mudo)}
+                 color:var(--fg)}
   .mm-conf-linha b{font-weight:600;color:var(--texto-suave)}
   .mm-conf-linha span{cursor:help;border-bottom:1px dotted var(--border-forte)}
   /* A LINHA SOME QUANDO NÃO HÁ O QUE CONFESSAR — 03/09/2026, e a regra é a da
@@ -1645,7 +1655,7 @@
   .mm-campo{height:var(--h-acao);width:118px;padding:0 9px;border-radius:7px;
             background:var(--app-bg);border:1px solid var(--border-forte);
             color:var(--fg);font:inherit;font-size:11.5px}
-  .mm-campo::placeholder{color:var(--texto-mudo)}
+  .mm-campo::placeholder{color:var(--fg)}
   .tn-rod.mm-rod{justify-content:flex-end}
   .tn-rod.mm-rod .btn{flex:0 0 auto;padding:0 22px}
 
@@ -1658,7 +1668,7 @@
      progresso porque o total da fase em pé ENCOLHE — ela andaria para trás. */
   .ce-cont{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--purple)}
   .ce-quem{font-size:11.5px;color:var(--texto-suave);line-height:1.55}
-  .ce-quem code{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--texto-mudo)}
+  .ce-quem code{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--fg)}
   /* OS LUGARES CABEM NUMA LINHA SÓ — 31/08/2026, e o usuário mandou com a foto na mão:
      *"botões em duas linhas. deveria ser uma."*
 
@@ -1686,7 +1696,7 @@
   /* o destaque estático da fita perde para o do acordeão: `.fita .chip.on`
      tem especificidade maior que o `.chip.on` do esqueleto, e é ele que
      apaga o chip que nasceu marcado no HTML. */
-  .fita .chip.on{background:var(--app-bg);color:var(--texto-mudo);font-weight:400;border-color:var(--border-forte)}
+  .fita .chip.on{background:var(--app-bg);color:var(--fg);font-weight:400;border-color:var(--border-forte)}
   .fita .chip.plastico.on{border-color:var(--plastico,var(--border-forte))}
   /* O CARTÃO QUE A FITA APONTA ganha a borda roxa da escolha, a mesma do
      chip. Em «Todos» nenhum cartão se destaca: todos são o alvo. */
@@ -1706,7 +1716,7 @@
   .quadro-corpo:has(#gc-p4:checked) .gc-p4{border-color:var(--purple);box-shadow:0 0 0 1px var(--purple)}
 
   .porta{margin-left:auto;font-size:11px;line-height:17px;height:17px;
-    color:var(--texto-mudo);text-decoration:none;white-space:nowrap}
+    color:var(--fg);text-decoration:none;white-space:nowrap}
   .porta:hover{color:var(--cyan);text-decoration:underline}
 .radio{--font-corpo:'Space Grotesk', system-ui, sans-serif;--font-dado:'JetBrains Mono', ui-monospace, monospace;--ease:cubic-bezier(.22,.61,.36,1);--c-entrada:var(--cyan);--c-mic:var(--pink);--c-som:var(--orange);--c-haptica:var(--purple);--c-entrada-veu:rgba(139,233,253,.32);--c-som-veu:rgba(255,184,108,.32);--c-haptica-veu:rgba(189,147,249,.32)}
   .radio, .radio *{box-sizing: border-box;}
@@ -1717,7 +1727,7 @@
   .radio .cab{display: flex; align-items: center; gap: 9px; margin-bottom: 12px;}
   .radio .cab .seta{color: var(--purple); font-size: 10px;}
   .radio .cab h1{font-size: 13.5px; font-weight: 600; margin: 0; color: var(--purple);}
-  .radio .cab .conta{font-family: var(--font-dado); font-size: 11px; color: var(--texto-mudo); margin-left: 4px;}
+  .radio .cab .conta{font-family: var(--font-dado); font-size: 11px; color: var(--fg); margin-left: 4px;}
   .radio .cab .direita{margin-left: auto; display: flex; gap: 6px; align-items: center;}
   .radio .btn{display: inline-flex; align-items: center; gap: 6px; padding: 7px 13px; border-radius: 7px; min-height: 32px; background: transparent; border: 1px solid var(--linha); color: var(--texto-suave); font: inherit; font-size: 12.5px; cursor: pointer; text-decoration: none; transition: background var(--ease) 120ms, border-color var(--ease) 120ms, color var(--ease) 120ms;}
   .radio .btn:hover{border-color: var(--texto-suave); color: var(--fg);}
@@ -1738,7 +1748,7 @@
   @media (prefers-reduced-motion: reduce){.radio .lugar.rd-recebeu{animation: none}}
   .radio .lugar.cheio{border-color: var(--orange);}
   .radio .lugar-topo{display: flex; align-items: center; gap: 8px; min-height: 28px;}
-  .radio .abre-lugar{width: 24px; height: 24px; padding: 0; flex: none; border-radius: 5px; display: inline-flex; align-items: center; justify-content: center; background: transparent; border: 1px solid transparent; color: var(--texto-mudo); cursor: pointer; font-size: 10px; transition: transform var(--ease) 140ms;}
+  .radio .abre-lugar{width: 24px; height: 24px; padding: 0; flex: none; border-radius: 5px; display: inline-flex; align-items: center; justify-content: center; background: transparent; border: 1px solid transparent; color: var(--fg); cursor: pointer; font-size: 10px; transition: transform var(--ease) 140ms;}
   .radio .abre-lugar:hover{border-color: var(--linha); color: var(--fg);}
   .radio .abre-lugar:focus-visible{outline: 2px solid var(--purple); outline-offset: 2px;}
   .radio .abre-lugar[aria-expanded="true"]{transform: rotate(90deg);}
@@ -1750,7 +1760,7 @@
   .radio .sino{width: 26px; height: 26px; padding: 0; flex: none; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid rgba(255,184,108,.5); background: transparent; color: var(--orange); cursor: pointer; font-size: 14px;}
   .radio .sino:hover{background: rgba(255,184,108,.14);}
   .radio .sino:focus-visible{outline: 2px solid var(--purple); outline-offset: 2px;}
-  .radio .onde{display: flex; align-items: center; gap: 6px; font-family: var(--font-dado); font-size: 11px; color: var(--texto-mudo);}
+  .radio .onde{display: flex; align-items: center; gap: 6px; font-family: var(--font-dado); font-size: 11px; color: var(--fg);}
   .radio .onde .marca{display: inline-flex; align-items: center; font-size: 15px; color: var(--texto-suave); cursor: help;}
   .radio .onde .marca.hub{color: var(--orange);}
   .radio .onde .marca.junto{color: var(--orange);}
@@ -1759,14 +1769,14 @@
   .radio .ensina:hover{background: var(--sel-bg);}
   .radio .ensina:focus-visible{outline: 2px solid var(--purple); outline-offset: 2px;}
   .radio .ensina .i{font-size: 13px;}
-  .radio .lugar-conta{display: flex; align-items: center; gap: 8px; margin-left: auto; font-family: var(--font-dado); font-size: 11.5px; color: var(--texto-mudo);}
+  .radio .lugar-conta{display: flex; align-items: center; gap: 8px; margin-left: auto; font-family: var(--font-dado); font-size: 11.5px; color: var(--fg);}
   .radio .lugar-conta .quanto.apertado{color: var(--orange);}
   .radio .lugar-conta .quanto.estourou{color: var(--orange); font-weight: 600;}
   .radio .lugar-conta .sobra{display: flex; align-items: center; gap: 3px; cursor: help;}
   .radio .lugar-conta .sobra.nao-cabe{color: var(--texto-suave);}
   .radio .lugar-conta .sobra.passou{color: var(--orange);}
   .radio .lugar-conta .sobra .i{font-size: 14px;}
-  .radio .canais-do-lugar{display: flex; align-items: center; gap: 4px; cursor: help; font-size: 11px; color: var(--texto-mudo);}
+  .radio .canais-do-lugar{display: flex; align-items: center; gap: 4px; cursor: help; font-size: 11px; color: var(--fg);}
   .radio .canais-do-lugar .i{font-size: 14px;}
   .radio .canais-do-lugar.apertado{color: var(--orange);}
   .radio .canais-do-lugar[data-nivel="liso"]{color: var(--green);}
@@ -1795,14 +1805,14 @@
   .radio .fluxo.manda .seta{color: var(--c-entrada);}
   .radio .fluxo.recebe .seta{color: var(--c-som);}
   .radio .fluxo + .fluxo{margin-left: 7px; padding-left: 7px; border-left: 1px solid var(--border-forte);}
-  .radio .sem-radio{font-family: var(--font-dado); font-size: 10.5px; color: var(--texto-mudo); opacity: .7; cursor: help; align-self: center;}
+  .radio .sem-radio{font-family: var(--font-dado); font-size: 10.5px; color: var(--fg); opacity: .7; cursor: help; align-self: center;}
   .radio .conta-da-vaga.zero{opacity: .45;}
-  .radio .vaga{position: relative; display: flex; align-items: center; gap: 5px; height: 24px; border-radius: 6px; padding: 0 7px; border: 1px dashed var(--linha); background: transparent; color: var(--texto-mudo); font: inherit; font-size: 11px; cursor: pointer; overflow: hidden; transition: all var(--ease) 140ms;}
+  .radio .vaga{position: relative; display: flex; align-items: center; gap: 5px; height: 24px; border-radius: 6px; padding: 0 7px; border: 1px dashed var(--linha); background: transparent; color: var(--fg); font: inherit; font-size: 11px; cursor: pointer; overflow: hidden; transition: all var(--ease) 140ms;}
   .radio .vaga .i{font-size: 15px; flex: none;}
   .radio .hz{font-family: var(--font-dado); font-size: 10px; opacity: .8; white-space: nowrap; margin-left: 3px;}
   .radio .parte{display: flex; align-items: center; gap: 2px; min-width: 0; height: 24px; border-radius: 6px; padding: 0 6px; overflow: hidden; border: 1px solid transparent; font: inherit; font-size: 11px; transition: flex-grow var(--ease) 200ms;}
   .radio .parte.movimento{color: var(--c-entrada); border-color: var(--c-entrada); background: var(--panel);}
-  .radio .parte.voz{color: var(--texto-mudo); border-style: dashed; border-color: var(--linha); cursor: pointer; justify-content: center;}
+  .radio .parte.voz{color: var(--fg); border-style: dashed; border-color: var(--linha); cursor: pointer; justify-content: center;}
   .radio .parte.voz[aria-pressed="true"]{color: var(--c-mic); border-style: solid; border-color: var(--c-mic); background: rgba(255,121,198,.08);}
   .radio .parte.voz:focus-visible{outline: 2px solid var(--purple); outline-offset: 1px;}
   .radio .vaga.entrada.fixa.partida{gap: 3px; padding: 0; border: none; background: none; height: 24px; overflow: visible;}
@@ -1817,14 +1827,14 @@
   .radio .vaga.haptica[aria-pressed="true"]{border-color: var(--c-haptica); color: var(--c-haptica);}
   .radio .vaga:not([aria-pressed="true"]):not(.fixa):hover{border-color: var(--texto-suave); color: var(--texto-suave);}
   .radio .vaga:not([aria-pressed="true"]):not(.fixa):hover{border-color: var(--texto-suave); color: var(--texto-suave);}
-  .radio .selo-zero{width: 26px; height: 24px; border-radius: 6px; padding: 0; flex: none; margin-left: 5px; display: inline-flex; align-items: center; justify-content: center; border: 1px dashed var(--linha); background: transparent; color: var(--texto-mudo); cursor: pointer; font-size: 15px;}
+  .radio .selo-zero{width: 26px; height: 24px; border-radius: 6px; padding: 0; flex: none; margin-left: 5px; display: inline-flex; align-items: center; justify-content: center; border: 1px dashed var(--linha); background: transparent; color: var(--fg); cursor: pointer; font-size: 15px;}
   .radio .selo-zero[aria-pressed="true"]{border-style: solid; border-color: var(--yellow); color: var(--yellow);}
   .radio .selo-zero:focus-visible{outline: 2px solid var(--purple); outline-offset: 2px;}
   .radio .selo-mic{padding: 0 5px;}
   .radio .ponte{display: flex; gap: 3px; flex: 1 1 auto; min-width: 88px;}
-  .radio .conta-da-vaga{font-family: var(--font-dado); font-size: 10.5px; color: var(--texto-mudo); text-align: right; cursor: help;}
+  .radio .conta-da-vaga{font-family: var(--font-dado); font-size: 10.5px; color: var(--fg); text-align: right; cursor: help;}
   .radio .soltar-fila{display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 3px;}
-  .radio .soltar{display: flex; align-items: center; justify-content: center; gap: 7px; flex: 1 1 auto; min-height: 28px; border: 1px dashed var(--linha); border-radius: 7px; background: transparent; font: inherit; color: var(--texto-mudo); font-size: 11.5px; cursor: pointer;}
+  .radio .soltar{display: flex; align-items: center; justify-content: center; gap: 7px; flex: 1 1 auto; min-height: 28px; border: 1px dashed var(--linha); border-radius: 7px; background: transparent; font: inherit; color: var(--fg); font-size: 11.5px; cursor: pointer;}
   .radio .soltar:hover{border-color: var(--texto-suave); color: var(--texto-suave);}
   .radio .soltar:focus-visible{outline: 2px solid var(--purple); outline-offset: 2px;}
   .radio .lugar.alvo .soltar{border-color: var(--green); color: var(--green);}
@@ -1834,7 +1844,7 @@
   .radio .lampada .i{font-size: 14px;}
   .radio .balao{display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 8px; background: rgba(80,250,123,.09); border: 1px solid rgba(80,250,123,.35); font-size: 12.5px; color: var(--texto-suave);}
   .radio .balao .ds{width: 28px; height: 20px; flex: none;}
-  .radio .balao .como{font-size: 11px; color: var(--texto-mudo);}
+  .radio .balao .como{font-size: 11px; color: var(--fg);}
   .radio .balao .ok{margin-left: auto; padding: 5px 14px; border-radius: 6px; min-height: 28px; background: var(--green); border: none; color: var(--app-bg); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;}
   .radio .balao .ok:focus-visible{outline: 2px solid var(--fg); outline-offset: 2px;}
   .radio .sugestao{display: flex; align-items: center; gap: 8px; margin-top: 10px; padding: 7px 10px; border-radius: 9px; background: rgba(80,250,123,.07); border: 1px solid rgba(80,250,123,.3); font-size: 12.5px; color: var(--texto-suave);}
@@ -1846,14 +1856,14 @@
   .radio .sugestao .ok:focus-visible{outline: 2px solid var(--fg); outline-offset: 2px;}
   .radio .espectro{margin-bottom: 11px;}
   .radio .espectro-cab{display: flex; align-items: center; gap: 7px; margin-bottom: 6px; font-size: 12.5px; font-weight: 600; color: var(--green);}
-  .radio .espectro-cab .ajuda{width: 20px; height: 20px; padding: 0; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--linha); background: transparent; color: var(--texto-mudo); cursor: help; font-size: 13px;}
-  .radio .espectro-cab .conta{font-weight: 400; font-size: 11px; color: var(--texto-mudo); font-family: var(--font-dado);}
-  .radio .selo-fora{display: inline-flex; align-items: center; gap: 4px; margin-left: auto; padding: 1px 7px; border-radius: 999px; cursor: help; border: 1px dashed var(--border-forte); color: var(--texto-mudo); font-family: var(--font-dado); font-size: 10px;}
+  .radio .espectro-cab .ajuda{width: 20px; height: 20px; padding: 0; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--linha); background: transparent; color: var(--fg); cursor: help; font-size: 13px;}
+  .radio .espectro-cab .conta{font-weight: 400; font-size: 11px; color: var(--fg); font-family: var(--font-dado);}
+  .radio .selo-fora{display: inline-flex; align-items: center; gap: 4px; margin-left: auto; padding: 1px 7px; border-radius: 999px; cursor: help; border: 1px dashed var(--border-forte); color: var(--fg); font-family: var(--font-dado); font-size: 10px;}
   .radio .selo-fora .i{font-size: 13px;}
   .radio .selo-fora + .no-ar{margin-left: 9px;}
   .radio .portas{display: flex; gap: 14px; margin-top: 6px; flex-wrap: wrap;}
   .radio .grupo-de-portas{display: flex; gap: 3px; padding: 3px; border-radius: 7px; border: 1px dashed var(--border-sutil); cursor: help;}
-  .radio .porta{width: 26px; height: 26px; border-radius: 5px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--linha); background: var(--app-bg); color: var(--texto-mudo); cursor: pointer; transition: all var(--ease) 130ms;}
+  .radio .porta{width: 26px; height: 26px; border-radius: 5px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--linha); background: var(--app-bg); color: var(--fg); cursor: pointer; transition: all var(--ease) 130ms;}
   .radio .porta .i{font-size: 14px;}
   .radio .porta .ds{width: 18px; height: 13px;}
   .radio .porta.bom{border-color: rgba(80,250,123,.45);}
@@ -1869,18 +1879,18 @@
   .radio .canais.duas-pistas .faixa.pista-0{top: 4px; bottom: auto; height: 24px;}
   .radio .canais.duas-pistas .faixa.pista-1{top: 30px; bottom: auto; height: 24px;}
   .radio .faixa{position: absolute; top: 6px; bottom: 6px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 15px; overflow: hidden; border: 1px solid transparent; padding: 0; background: none;}
-  .radio .faixa{background: var(--panel); border-color: var(--linha); color: var(--texto-mudo);}
+  .radio .faixa{background: var(--panel); border-color: var(--linha); color: var(--fg);}
   .radio .faixa.forte{border-color: var(--orange); color: var(--orange);}
   .radio .faixa.medio{border-color: var(--yellow); color: var(--yellow);}
-  .radio .faixa.fraco{border-color: var(--comment); color: var(--comment);}
-  .radio .faixa.fora{border-style: dashed; border-color: var(--border-forte); color: var(--texto-mudo); opacity: .55;}
+  .radio .faixa.fraco{border-color: var(--comment); color: var(--fg);}
+  .radio .faixa.fora{border-style: dashed; border-color: var(--border-forte); color: var(--fg); opacity: .55;}
   .radio .faixa.custa{background: rgba(255,184,108,.10);}
   .radio .faixa.provavel{border-style: dashed;}
   .radio .faixa.sem-nome{border-color: var(--purple); color: var(--purple); background: var(--sel-bg); cursor: pointer;}
   .radio .faixa.sem-nome:focus-visible{outline: 2px solid var(--purple); outline-offset: 1px;}
   .radio .faixa .ch{font-family: var(--font-dado); font-size: 9.5px; opacity: .9; margin-left: 4px;}
   .radio .salto{position: absolute; top: 0; bottom: 0; pointer-events: none; background: repeating-linear-gradient(90deg, rgba(139,233,253,.13) 0 1px, transparent 1px 7px);}
-  .radio .no-ar{display: flex; align-items: center; gap: 5px; margin-left: auto; padding-right: 10px; margin-right: 6px; border-right: 1px solid var(--linha); font-size: 11px; color: var(--texto-mudo); cursor: help;}
+  .radio .no-ar{display: flex; align-items: center; gap: 5px; margin-left: auto; padding-right: 10px; margin-right: 6px; border-right: 1px solid var(--linha); font-size: 11px; color: var(--fg); cursor: help;}
   .radio .no-ar .i{font-size: 15px;}
   .radio .no-ar .ds{width: 20px; height: 14px;}
   .radio .entradas{display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 10px; padding-top: 9px; border-top: 1px solid var(--linha);}
@@ -1920,18 +1930,18 @@
   @media (prefers-reduced-motion: reduce){.radio .pulso{animation: none}.radio .pedaco, .radio .painel, .radio .veu, .radio .btn, .radio .custo{transition: none}}
   .radio .painel-cab .fechar{margin-left: auto;}
   .radio .escolha-lugar{display: flex; gap: 5px; flex-wrap: wrap;}
-  .radio .op{padding: 5px 10px; border-radius: 20px; font-size: 11.5px; min-height: 28px; border: 1px solid var(--linha); background: var(--app-bg); color: var(--texto-mudo); cursor: pointer; font-family: inherit;}
+  .radio .op{padding: 5px 10px; border-radius: 20px; font-size: 11.5px; min-height: 28px; border: 1px solid var(--linha); background: var(--app-bg); color: var(--fg); cursor: pointer; font-family: inherit;}
   .radio .op[aria-pressed="true"]{border-color: var(--green); color: var(--green); background: rgba(80,250,123,.1);}
   .radio .op:focus-visible{outline: 2px solid var(--purple); outline-offset: 2px;}
   .radio .achados{display: flex; flex-direction: column; gap: 5px; overflow-y: auto;}
   .radio .achado{display: flex; align-items: center; gap: 8px; padding: 6px 9px; border-radius: 9px; background: var(--app-bg); border: 1px solid var(--linha);}
   .radio .achado .ds{width: 26px; height: 18px; flex: none; color: var(--cyan);}
-  .radio .achado .ico{font-size: 17px; color: var(--texto-mudo); flex: none;}
+  .radio .achado .ico{font-size: 17px; color: var(--fg); flex: none;}
   .radio .achado .nome{font-size: 12.5px;}
-  .radio .achado .forca{margin-left: auto; font-family: var(--font-dado); font-size: 10.5px; color: var(--texto-mudo);}
+  .radio .achado .forca{margin-left: auto; font-family: var(--font-dado); font-size: 10.5px; color: var(--fg);}
   .radio .achado .btn{padding: 4px 10px; font-size: 11.5px; min-height: 26px;}
   .radio .queda{display: flex; align-items: center; gap: 8px; padding: 6px 9px; border-radius: 9px; background: var(--app-bg); border: 1px solid var(--linha); font-size: 12px;}
-  .radio .queda .quando{font-family: var(--font-dado); font-size: 10.5px; color: var(--texto-mudo); margin-left: auto;}
+  .radio .queda .quando{font-family: var(--font-dado); font-size: 10.5px; color: var(--fg); margin-left: auto;}
   .radio .painel .escolha{display: flex; flex-direction: column; gap: 7px;}
   .radio .trilho.vagas{height: 14px; overflow: visible; opacity: 1; gap: 3px; background: transparent; border: 0;}
   .radio .vaga-ponte{flex: 1 1 0; height: 100%; border-radius: 4px; cursor: help; border: 1px dashed var(--linha); display: flex; align-items: center; justify-content: center; color: var(--fg);}
@@ -1940,7 +1950,7 @@
   .radio .vaga-ponte.alem{border: 1px solid var(--orange);}
   .radio .vaga-ponte.reservada{animation: rd-pisca 1.4s var(--ease) infinite;}
   .radio .parte.movimento .nivel{display: inline-flex; align-items: center;}
-  .radio .parte.movimento .hz{opacity: 1; color: var(--texto-mudo);}
+  .radio .parte.movimento .hz{opacity: 1; color: var(--fg);}
   .radio .parte.movimento[data-nivel="liso"] .hz{color: var(--green);}
   .radio .parte.movimento[data-nivel="medio"] .hz{color: var(--fg);}
   .radio .parte.movimento[data-nivel="engasga"]{border-color: var(--red);}
@@ -1970,11 +1980,11 @@
   .radio .quadro-topo.cab{margin-bottom:0}
   .radio .quadro-topo.cab .conta{margin-left:4px}
   .radio .lugar:not(.aberto) > .aparelhos{display:none}
-  .radio .sala-vazia{color:var(--texto-mudo);font-size:12.5px;padding:10px 4px}
+  .radio .sala-vazia{color:var(--fg);font-size:12.5px;padding:10px 4px}
   .radio .moldes{display:none}
-  .radio .btn.apagado{cursor:not-allowed;border-color:var(--border-sutil);color:var(--texto-mudo)}
+  .radio .btn.apagado{cursor:not-allowed;border-color:var(--border-sutil);color:var(--fg)}
   .radio .historico{display:flex;flex-direction:column;gap:6px}
-  .radio .queda-desde{font-size:11px;color:var(--texto-mudo);padding:2px 4px}
+  .radio .queda-desde{font-size:11px;color:var(--fg);padding:2px 4px}
   .radio .conectar{display:flex;flex-direction:column;gap:11px;min-height:0}
   .radio .soltar.apagado,.radio .lampada.apagado{cursor:not-allowed;opacity:.5}
   .radio .linha{grid-template-columns:36px minmax(13ch,30ch) 1fr 6ch 22px;min-height:0;height:30px;
@@ -1995,7 +2005,7 @@
   .radio span.vaga.haptica[data-ligada]{border-color:var(--c-haptica);color:var(--c-haptica)}
   .radio span.selo-zero[data-ligada]{border-color:var(--yellow);color:var(--yellow)}
   .radio span.vaga.vaga:not([data-ligada]):not(.fixa):hover{border-color:var(--linha);
-                                                          color:var(--texto-mudo)}
+                                                          color:var(--fg)}
   .radio .lugar{padding-top:0;padding-bottom:0;min-height:0}
   .radio .lugar-topo{min-height:26px}
   .radio .lugar-nome,.radio .abre-lugar{height:24px;padding-top:0;padding-bottom:0}
@@ -2014,7 +2024,7 @@
   .radio .linha .xis,.radio .linha .menu-da-linha{width:22px;height:22px;padding:0;
                           display:inline-flex;align-items:center;
                           justify-content:center;border-radius:50%;border:1px solid transparent;
-                          background:transparent;color:var(--texto-mudo);cursor:pointer;font-size:12px}
+                          background:transparent;color:var(--fg);cursor:pointer;font-size:12px}
   .radio .linha .menu-da-linha{font-size:15px;line-height:1}
   .radio .linha .xis:hover,.radio .linha .menu-da-linha:hover{border-color:var(--orange);
                           color:var(--orange)}
@@ -2022,7 +2032,7 @@
                           outline:2px solid var(--purple);outline-offset:2px}
   .radio .linha .nome-fixo{font-size:12.5px;color:var(--texto-suave);overflow:hidden;
                            text-overflow:ellipsis}
-  .radio .linha .features .desligado{color:var(--texto-mudo);font-size:11.5px}
+  .radio .linha .features .desligado{color:var(--fg);font-size:11.5px}
   .radio .linha .btn.tentar{height:22px;min-height:0;padding:0 12px;display:inline-flex;align-items:center;
                             font-size:11.5px;border-color:var(--green);color:var(--green)}
   .radio .linha.nao-conectou .features,.radio .linha.desligado .features{display:flex;
@@ -2048,7 +2058,7 @@
   .radio .espectro{--vazio:#1b1c24}
   .radio .ar{display:flex;flex-direction:column;gap:7px}
   .radio .ar-grupo{display:flex;align-items:center;gap:8px;font-size:12px;
-                   color:var(--texto-mudo);margin-top:6px;padding-top:6px;
+                   color:var(--fg);margin-top:6px;padding-top:6px;
                    border-top:1px dashed var(--border-sutil)}
   .radio .ar-grupo.outros{color:var(--fg)}
   .radio .ar-grupo:first-child{margin-top:0;padding-top:0;border-top:0}
@@ -2086,7 +2096,7 @@
                        var(--vazio) 1px 4px)}
   .radio .ar-faixa i.n.a{box-shadow:inset 0 3px 0 var(--cor)}
   /* a faixa sem leitura é o trilho vazio, igual ao dos outros; só o passo do «Descobrir» fala */
-  .radio .ar-faixa.sem{display:flex;align-items:center;font-size:11px;color:var(--texto-mudo);
+  .radio .ar-faixa.sem{display:flex;align-items:center;font-size:11px;color:var(--fg);
                        background:repeating-linear-gradient(90deg,var(--vazio) 0 9px,transparent 9px 11px)}
   /* 06/10/2026, item 1: a faixa por descobrir é o botão, à vista; o Wi-Fi em 5 GHz diz onde está */
   .radio button.ar-faixa.descobrir{justify-content:center;height:18px;padding:0;cursor:pointer;
@@ -2096,13 +2106,13 @@
   .radio button.ar-faixa.descobrir span{background:var(--panel);padding:0 8px;border-radius:4px}
   .radio button.ar-faixa.descobrir:hover,.radio button.ar-faixa.descobrir:focus-visible{
                        border-color:var(--green);color:var(--green);outline:none}
-  .radio .ar-faixa.fora{display:flex;align-items:center;font-size:11px;color:var(--texto-mudo);
+  .radio .ar-faixa.fora{display:flex;align-items:center;font-size:11px;color:var(--fg);
                        background:linear-gradient(var(--vazio),var(--vazio)) center/100% 2px no-repeat}
   .radio .ar-faixa.fora span{background:var(--panel);padding:0 8px 0 0}
   /* 06/10/2026, pergunta 1 (A): quando a seção não cabe, a linha de quem está fora da faixa
      (o Wi-Fi em 5 GHz) sobe para o título do grupo como selo, e a tela não rola por ela */
   .radio .ar-no-titulo{display:none;align-items:center;gap:6px;margin-left:10px;font-size:11px;
-                       color:var(--texto-mudo)}
+                       color:var(--fg)}
   .radio .pistas[data-fora-no-titulo] .ar-no-titulo{display:inline-flex}
   .radio .pistas[data-fora-no-titulo] .ar-linha[data-fora-da-faixa]{display:none}
   .radio .ar-estado{display:flex;align-items:center;justify-content:center;width:12px}
@@ -2180,7 +2190,7 @@
            border-radius:7px;padding:0 12px;font-size:12.5px;font-family:inherit;
            cursor:pointer;
            border:1px solid var(--border-forte);background:var(--app-bg);
-           color:var(--texto-mudo)}
+           color:var(--fg)}
   .radio .cadeado .p{width:7px;height:7px;border-radius:50%;flex:0 0 auto;
               background:var(--border-forte);box-shadow:none}
   .radio .cadeado.ligada{border-color:var(--green);background:rgba(80,250,123,.09);
@@ -2238,6 +2248,8 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   font:500 12.5px/1.45 'Space Grotesk',system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.45);pointer-events:none;
   opacity:0;transform:translateY(3px);transition:opacity .12s,transform .12s}
 #hef-dica.da-base.visivel{opacity:1;transform:none}
+/* O foco num título, rótulo ou frase com dica (o `tabindex` vem da base) aparece com o mesmo contorno do Modo automático. */
+[data-dica][tabindex]:focus-visible{outline:2px solid var(--cyan,#8be9fd);outline-offset:2px}
 
 /* 2. O Modo automático: pílula com bolinha. Os dois estados têm de se distinguir num relance.
       Desligado: contorno neutro, bolinha vazia, letra suave (vale o que está na aba).
@@ -2259,7 +2271,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 .menu-hefesto button{display:flex;width:100%;align-items:center;gap:10px;height:34px;padding:0 12px;border:0;
   border-radius:8px;background:transparent;color:var(--fg,#f8f8f2);font:500 13.5px/1 'Space Grotesk',system-ui,sans-serif;text-align:left;cursor:pointer}
 .menu-hefesto button:hover{background:rgba(189,147,249,.14)}
-.menu-hefesto button[disabled]{color:var(--texto-mudo,#9a9eb8);opacity:.55;cursor:default;background:transparent}
+.menu-hefesto button[disabled]{color:var(--fg,#f8f8f2);opacity:.55;cursor:default;background:transparent}
 .menu-hefesto hr{border:0;border-top:1px solid var(--border-sutil,#343746);margin:5px 4px}
 </style>
 </head>
@@ -5264,9 +5276,18 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
      do `#hef-dica` no produto. Os dois nunca rodam juntos: o teste vem a cada evento, porque a
      camada da janela chega depois da carga da página. */
   let dica = null, alvo = null;
+  /* A dica aberta é a descrição de quem a abriu, para o leitor de tela: o `id` entra no
+     `aria-describedby` enquanto ela está aberta e sai com ela, sem apagar o que já havia. */
+  const descrever = (el, liga) => {
+    const lista = (el.getAttribute('aria-describedby') || '').split(/\s+/).filter(t => t && t !== 'hef-dica');
+    if (liga) lista.push('hef-dica');
+    if (lista.length) el.setAttribute('aria-describedby', lista.join(' ')); else el.removeAttribute('aria-describedby');
+  };
   const mostrar = el => {
+    if (alvo && alvo !== el) descrever(alvo, false);
     if (!dica) { dica = document.createElement('div'); dica.id = 'hef-dica'; dica.className = 'da-base'; dica.setAttribute('role', 'tooltip'); }
     alvo = el; dica.textContent = el.dataset.dica;
+    descrever(el, true);
     if (!dica.isConnected) document.body.append(dica);
     const r = el.getBoundingClientRect(), d = dica.getBoundingClientRect();
     let x = r.left + r.width / 2 - d.width / 2, y = r.bottom + 8;
@@ -5274,7 +5295,27 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     dica.style.left = Math.max(6, Math.min(x, innerWidth - d.width - 6)) + 'px'; dica.style.top = y + 'px';
     dica.classList.add('visivel');
   };
-  const esconder = () => { alvo = null; if (dica) dica.classList.remove('visivel'); };
+  const esconder = () => { if (alvo) descrever(alvo, false); alvo = null; if (dica) dica.classList.remove('visivel'); };
+  /* O TEXTO CORTADO PELA RETICÊNCIA GANHA A DICA COM ELE INTEIRO (16/10/2026): sem ela, o fim da
+     frase não se lê em lugar nenhum. Na passagem do ponteiro, em captura e antes de qualquer camada
+     de dica (a desta base e a da janela, que lê o `data-dica` primeiro), o elemento com
+     `text-overflow:ellipsis` mais perto do ponteiro ganha o texto todo, se corta, e perde a dica
+     que esta regra lhe deu, se deixou de cortar. A dica própria de um elemento nunca é trocada. */
+  document.addEventListener('mousemove', e => {
+    let el = e.target && e.target.nodeType === 1 ? e.target : null;
+    for (let n = 0; el && n < 4; el = el.parentElement, n++) {
+      if (getComputedStyle(el).textOverflow !== 'ellipsis') continue;
+      const daRegra = el.hasAttribute('data-dica-do-corte');
+      if (el.hasAttribute('data-dica') && !daRegra) return;
+      const texto = (el.textContent || '').replace(/\s+/g, ' ').trim();
+      if (texto && el.scrollWidth > el.clientWidth + 1) {
+        el.setAttribute('data-dica', texto); el.setAttribute('data-dica-do-corte', '');
+      } else if (daRegra) {
+        el.removeAttribute('data-dica'); el.removeAttribute('data-dica-do-corte');
+      }
+      return;
+    }
+  }, true);
   for (const [ev, f] of [['mouseover', 'in'], ['focusin', 'in'], ['mouseout', 'out'], ['focusout', 'out']])
     document.addEventListener(ev, e => {
       if (window.__hefDica) return;
@@ -5348,15 +5389,23 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   const aparece = el => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';
   const jaTemParada = el => el.hasAttribute('tabindex') || el.matches(NATIVO)
     || Array.from(el.querySelectorAll(NATIVO)).some(d => !d.disabled && aparece(d));
+  /* A dica de um título, de um rótulo ou de uma frase também tem parada: `[data-dica]` que não é
+     focável por natureza ganha o `tabindex`, e o `focusin` que a dica já escuta a abre. O papel
+     fica como está (um `h4` continua título). Quem tem um campo ou botão dentro não ganha parada
+     própria: o foco dele já abre a dica do que o contém. */
+  const PEDE_PARADA = GESTO + ',[data-dica]';
   const marcar = raiz => {
-    const todos = raiz.matches && raiz.matches(GESTO) ? [raiz] : [];
-    raiz.querySelectorAll && todos.push(...raiz.querySelectorAll(GESTO));
+    const todos = raiz.matches && raiz.matches(PEDE_PARADA) ? [raiz] : [];
+    raiz.querySelectorAll && todos.push(...raiz.querySelectorAll(PEDE_PARADA));
     for (const el of todos) if (!el.matches(SEM_PARADA) && !jaTemParada(el)) el.setAttribute('tabindex', '0');
   };
   marcar(document.body);
   new MutationObserver(ms => {
-    for (const m of ms) for (const n of m.addedNodes) if (n.nodeType === 1) marcar(n);
-  }).observe(document.body, {subtree: true, childList: true});
+    for (const m of ms) {
+      if (m.type === 'attributes') marcar(m.target);
+      else for (const n of m.addedNodes) if (n.nodeType === 1) marcar(n);
+    }
+  }).observe(document.body, {subtree: true, childList: true, attributes: true, attributeFilter: ['data-dica']});
   /* Enter e Espaço fazem o que o clique faz, em quem não é botão por natureza. */
   document.addEventListener('keydown', e => {
     if ((e.key !== 'Enter' && e.key !== ' ') || e.defaultPrevented || e.repeat) return;

@@ -380,6 +380,7 @@ def test_no_automatico_escrito_os_gestos_da_coluna_recusam(pac, a04, gesto):
 
 def test_o_hexadecimal_e_dica_da_celula_cor_e_nao_botao():
     """Desde 16/10/2026 o hexadecimal não aparece: o piloto o escreve na dica da célula Cor."""
+    # D-1610-A-EXPLICACAO-DO-CAMPO-E-DICA
     from hefesto_dualsense4unix.interface import onde
 
     texto = onde.pagina(PAGINA).read_text(encoding="utf-8")

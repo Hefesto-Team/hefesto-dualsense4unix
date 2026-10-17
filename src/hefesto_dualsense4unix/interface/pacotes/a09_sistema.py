@@ -1540,10 +1540,7 @@ BOTOES_CINZAS = ("reiniciar",)
 
 #: O que o pacote escreve e o desenho (`mockup/`) tem, mas a página PUBLICADA ainda não tem; a régua
 #: `test_o_que_espera_a_publicacao_esta_declarado_nos_dois_sentidos` cobra nos dois sentidos.
-ESPERA_A_PUBLICACAO: dict[str, str] = {
-    "bandeja": "a pílula «Ícone na bandeja» (AS-TELAS-QUE-ELA-PEDIU-EM-16-10-01, S4) está em "
-               "`mockup/09-sistema.html` e chega ao produto no `--publicar 09`.",
-}
+ESPERA_A_PUBLICACAO: dict[str, str] = {}
 
 
 def razoes_do_cinza(ctx: Contexto) -> dict[str, str]:

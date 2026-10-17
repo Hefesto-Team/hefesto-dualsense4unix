@@ -261,7 +261,7 @@
   .conectado .bolinha{color:var(--green)}
   .fita{
     display:flex;align-items:center;gap:8px;
-    font-size:12px;color:var(--texto-mudo);
+    font-size:12px;color:var(--fg);
   }
   .marca-nome{font-size:14px;line-height:1.15;font-weight:700;letter-spacing:-.01em;
               white-space:nowrap;color:var(--fg);margin-right:6px}
@@ -276,10 +276,14 @@
   .perfil-ativo{
     display:flex;align-items:center;gap:7px;
     padding:5px 11px;border-radius:7px;
-    border:1px solid var(--linha);background:var(--panel);
+    border:1px solid var(--linha);background:var(--panel);min-width:0;
   }
-  .pa-rot{font-size:10.5px;color:var(--comment);}
-  .pa-nome{font-size:12.5px;color:var(--pink);font-weight:600}
+  /* UMA LINHA SÓ (16/10/2026): no tamanho do nome, o «Perfil ativo» quebrava em duas assim que um
+     perfil tinha nome, e o nome longo de um jogo esticava o topo; o rótulo não quebra, e o nome
+     cede com reticência (a base comum dá a dica com ele inteiro). */
+  .pa-rot{font-size:12.5px;color:var(--fg);white-space:nowrap}
+  .pa-nome{font-size:12.5px;color:var(--pink);font-weight:600;white-space:nowrap;
+           overflow:hidden;text-overflow:ellipsis;min-width:0}
   /* A FITA QUE NÃO ESCOLHE TEM OS CHIPS ACESOS COMO QUALQUER OUTRA — 09/10/2026
      (O-SELECIONAR-ACENDE-QUEM-ESTA-ESCOLHIDO-01, pedido de 29/09: *"a cor de
      todos os botões do Selecionar deveriam estar acesas e com as bordas
@@ -288,7 +292,7 @@
      o chip (FITA-01, 08/09, e o cinza de 30/08) saíram. Só o rótulo
      `Selecionar:` segue na cor de comentário: não é botão. O `opacity` não
      volta: escondia o texto do contraste (2,18:1) sem a régua ver. */
-  .fita.inerte{color:var(--comment)}
+  .fita.inerte{color:var(--fg)}
   /* ---------- O MODO NATIVO: A FITA FICA CINZA E MUDA — 09/10/2026 ----------
      DESLIGAR-O-HEFESTO-DEVOLVE-O-CONTROLE-AO-LINUX-01, opção a. Com o Hefesto
      desligado quem manda é o jogo, e a fita só mostra quem está conectado: a
@@ -299,24 +303,24 @@
   .fita{position:relative}
   .so-no-nativo{display:none}
   body.nativo .fita .so-no-nativo{display:block;position:absolute;inset:0;z-index:2;cursor:default}
-  body.nativo .fita{color:var(--comment)}
+  body.nativo .fita{color:var(--fg)}
   body.nativo .fita .chip,body.nativo .fita .chip.on,body.nativo .fita .chip.plastico{
-    border-color:var(--border-sutil);background:transparent;color:var(--comment);
+    border-color:var(--border-sutil);background:transparent;color:var(--fg);
     font-weight:400;--borda-do-chip:1px}
   /* a peça fixa do cartão e a trava do quadro nascem escondidas */
   .visto-fixo,.visto-legenda,.trava-nativo{display:none}
   body.nativo .visto-fixo{grid-column:1/-1;display:flex;align-items:center;justify-content:center;
     gap:7px;height:28px;border:1px solid var(--border-sutil);border-radius:7px;
     background:transparent;color:var(--texto-suave);font-size:12px;font-weight:600;cursor:default}
-  body.nativo .visto-fixo .cad{color:var(--comment)}
+  body.nativo .visto-fixo .cad{color:var(--fg)}
   body.nativo .visto-legenda{grid-column:1/-1;height:28px;display:flex;align-items:center;
-    justify-content:center;color:var(--comment);font-size:11.5px}
+    justify-content:center;color:var(--fg);font-size:11.5px}
   body.nativo .cartao.off .visto-fixo,body.nativo .cartao.off .visto-legenda{display:none}
   body.nativo .mascara .chip{display:none}
   body.nativo .cartao.alvo{background:var(--app-bg)}
   body.nativo .trava-nativo{display:inline-flex;align-items:center;gap:6px;margin-left:auto;
-    margin-right:10px;color:var(--comment);font-size:12px;cursor:default}
-  body.nativo .trava-nativo .cad{color:var(--comment)}
+    margin-right:10px;color:var(--fg);font-size:12px;cursor:default}
+  body.nativo .trava-nativo .cad{color:var(--fg)}
   /* AQUI MORAVA A CAIXA ALTA DA VIA, e ela SAIU — ESQUELETO-C2, 11/09/2026.
      Era a TELA-TRES-01 §3, pedido de 08/09: "cabo e rádio coloca
      maiúsculo." O que ela leu três dias depois, na MESMA tela:
@@ -345,7 +349,7 @@
   .chip{
     --borda-do-chip:1px;
     padding:5px 12px;border-radius:6px;font-size:12px;
-    border:var(--borda-do-chip) solid var(--linha);background:var(--app-bg);color:var(--texto-mudo);
+    border:var(--borda-do-chip) solid var(--linha);background:var(--app-bg);color:var(--fg);
     cursor:default;
   }
   .chip.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600}
@@ -394,7 +398,7 @@
   /* ---------- a tira de abas ---------- */
   .tira{display:flex;gap:2px;padding:0 12px;border-bottom:1px solid var(--linha)}
   .aba{
-    padding:11px 13px;font-size:13px;color:var(--texto-mudo);
+    padding:11px 13px;font-size:13px;color:var(--fg);
     border-bottom:2px solid transparent;white-space:nowrap;cursor:default;
   }
   a.aba{text-decoration:none;cursor:pointer}
@@ -403,12 +407,13 @@
   .aba.ativa{color:var(--fg);border-bottom-color:var(--pink);font-weight:600}
 
   /* ---------- o miolo ---------- */
-  /* padding-right 3 e não 18: o `scrollbar-gutter:stable` reserva 15px à
-     direita SEMPRE — com 18 de padding a margem direita ficava 33 contra 18 da
-     esquerda, visível em toda aba. 3 + 15 = os mesmos 18, e a caixa de
-     conteúdo tem a mesma largura de antes da barra existir. */
-  .miolo{padding:16px 3px 18px 18px;display:flex;flex-direction:column;gap:14px;
-         flex:1;min-height:0;overflow-y:auto;scrollbar-gutter:stable}
+  /* O RESPIRO É 18 DOS DOIS LADOS — 16/10/2026 (AS-TELAS-QUE-ELA-PEDIU-EM-16-10-01, T1).
+     A conta velha (3 de padding + 15 do `scrollbar-gutter:stable`) supunha uma barra que
+     ocupa lugar; no WebKitGTK a barra é de sobrepor (`offsetWidth-clientWidth` = 0) e o
+     quadro ficava a 3 px da borda direita em nove abas. Sem rolagem vertical em tela
+     nenhuma, não há barra a reservar. */
+  .miolo{padding:16px 18px 18px 18px;display:flex;flex-direction:column;gap:14px;
+         flex:1;min-height:0;overflow-y:auto;scrollbar-gutter:auto}
   /* O QUADRO NÃO ESTICA POR PADRÃO. Ele já esticou: com a altura da janela fixa,
      o último quadro de toda aba encostava no rodapé, e nas abas curtas isso virou
      um quadro cinza gigante e vazio. Ela, 27/08: "nessa aba encurtar verticalmente
@@ -457,7 +462,7 @@
      nascem no mesmo x. */
   .quadro > input.abre{position:absolute;width:0;height:0;opacity:0;pointer-events:none}
   label.quadro-titulo{cursor:pointer;display:inline-flex;align-items:center;gap:6px}
-  label.quadro-titulo::before{content:"▾";font-size:10px;color:var(--texto-mudo);width:9px}
+  label.quadro-titulo::before{content:"▾";font-size:10px;color:var(--fg);width:9px}
   .quadro:has(> input.abre:not(:checked)) label.quadro-titulo::before{content:"▸"}
   .quadro:has(> input.abre:not(:checked)) > .quadro-corpo{display:none}
   /* fechada, ela não estica: senão o quadro fechado tomaria a altura toda */
@@ -477,7 +482,7 @@
   .seg button{
     flex:1;min-width:150px;padding:9px 10px;border-radius:7px;font-size:12.5px;
     font-family:inherit;border:1px solid var(--linha);
-    background:var(--app-bg);color:var(--texto-mudo);cursor:pointer;
+    background:var(--app-bg);color:var(--fg);cursor:pointer;
   }
   .seg button.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600}
   .seg button:hover:not(.on){border-color:var(--comment);color:var(--texto-suave)}
@@ -485,13 +490,13 @@
      `disabled` de verdade (medido: zero gestos ao clicar), e nada na tela
      dizia isso. Sem `opacity`, que é a lição medida da `.fita.inerte`: a
      opacidade mora no ancestral e cega toda régua que lê `color`. */
-  .seg button:disabled{border-color:var(--border-sutil);color:var(--texto-mudo);cursor:not-allowed}
-  .seg button:disabled:hover{border-color:var(--border-sutil);color:var(--texto-mudo)}
+  .seg button:disabled{border-color:var(--border-sutil);color:var(--fg);cursor:not-allowed}
+  .seg button:disabled:hover{border-color:var(--border-sutil);color:var(--fg)}
 
   /* a linha de estado: o que VALE agora */
   .estado{
     display:flex;align-items:center;gap:7px;margin-top:9px;
-    font-size:12px;color:var(--texto-mudo);
+    font-size:12px;color:var(--fg);
   }
   .estado .valor{color:var(--fg);font-weight:600}
   .estado .verde{color:var(--green)}
@@ -509,12 +514,12 @@
     flex:1;display:flex;align-items:center;justify-content:center;gap:7px;
     padding:9px 10px;border-radius:7px;
     font-size:12.5px;border:1px solid var(--linha);
-    background:var(--app-bg);color:var(--texto-mudo);cursor:pointer;white-space:nowrap;
+    background:var(--app-bg);color:var(--fg);cursor:pointer;white-space:nowrap;
   }
   .degrau i{
     font-style:normal;font-family:'JetBrains Mono',monospace;font-size:10px;
     width:15px;height:15px;line-height:14px;text-align:center;border-radius:50%;
-    border:1px solid var(--linha);color:var(--comment);
+    border:1px solid var(--linha);color:var(--fg);
   }
   .degrau:hover:not(.on){border-color:var(--comment);color:var(--texto-suave)}
   .degrau.on{
@@ -524,7 +529,7 @@
   /* O SEPARADOR TEM COR DE TEXTO, NÃO DE BORDA (30/08). `--border-forte` é
      #44475a: 1,73:1 sobre o fundo — um traço que existe no DOM e não na tela.
      `--texto-mudo` o põe em 4,96:1 e ele continua recuando diante do texto. */
-  .seta{color:var(--texto-mudo);font-size:13px}
+  .seta{color:var(--fg);font-size:13px}
 
   /* a prova de que o Aplicar ainda deve (D-APLICAR-NAO-SALVA) */
   .pendente{
@@ -539,13 +544,13 @@
     background:var(--panel);padding:9px 14px;display:flex;align-items:center;gap:9px;
     font-size:12px;
   }
-  .avisos.vazio{color:var(--comment);border-style:dashed}
+  .avisos.vazio{color:var(--fg);border-style:dashed}
   .selo{
     font-size:10.5px;padding:2px 7px;border-radius:4px;font-weight:600;
     font-family:'JetBrains Mono',monospace;
   }
   .selo.alerta{background:var(--orange);color:var(--app-bg)}
-  .conta{margin-left:auto;font-size:11px;color:var(--texto-mudo)}
+  .conta{margin-left:auto;font-size:11px;color:var(--fg)}
   .link{color:var(--cyan);text-decoration:none;border-bottom:1px dotted var(--cyan);cursor:pointer}
 
   /* ---------- controles: SÓ a contagem e a ponte (decisão de produto) ---------- */
@@ -564,7 +569,7 @@
      vinte e seis. A cor vem de `--plastico`, escrita pelo gerador a partir do
      desenho — o mesmo mecanismo do chip da fita. Zero usos nos dez HTML. */
   .cartao .pl{font-family:'JetBrains Mono',monospace;color:var(--fg);font-weight:500}
-  .cartao .via{color:var(--texto-mudo);font-size:11px}
+  .cartao .via{color:var(--fg);font-size:11px}
   .cartao .bat{color:var(--green);font-family:'JetBrains Mono',monospace;font-size:11px}
 
   .acoes{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}
@@ -591,13 +596,18 @@
   .btn.verde:hover{border-color:var(--green);color:var(--green)}
   .btn.vermelho:hover{border-color:var(--red);color:var(--red)}
   .btn.roxo:hover{border-color:var(--purple);color:var(--purple)}
+  /* O AMARELO DO «Voltar ao padrão» — borda e letra, nas duas abas que voltam ao de fábrica: a
+     Navegação e o «Restaurar de fábrica» da Sistema (AS-TELAS-QUE-ELA-PEDIU-EM-16-10-01, S2). */
+  .btn.amarelo-padrao{border-color:var(--yellow);color:var(--yellow)}
+  .btn.amarelo-padrao:hover{border-color:var(--yellow);color:var(--yellow);
+                            background:rgba(241,250,140,.08)}
 
   /* ---------- Conectado agora + Atenção, lado a lado ---------- */
   .dupla{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
-  .conta-avisos{margin-left:auto;font-size:11px;color:var(--texto-mudo)}
+  .conta-avisos{margin-left:auto;font-size:11px;color:var(--fg)}
   .aviso-item{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--texto-suave)}
   .sub-secao{margin-top:14px;padding-top:12px;border-top:1px solid var(--linha)}
-  .sep{color:var(--texto-mudo);margin:0 3px}   /* idem — ver `.seta` acima */
+  .sep{color:var(--fg);margin:0 3px}   /* idem — ver `.seta` acima */
 
   .faixa-final{display:flex;align-items:center;gap:12px;margin-top:12px}
   .faixa-final .pendente{flex:1;margin-top:0}
@@ -632,7 +642,7 @@
   .r-aplicar{background:var(--green);color:var(--app-bg)}
   .r-salvar{border-color:var(--purple)!important;color:var(--purple);background:transparent}
   .r-importar{border-color:var(--orange)!important;color:var(--orange);background:transparent}
-  .r-exportar{border-color:var(--comment)!important;color:var(--texto-mudo);background:transparent}
+  .r-exportar{border-color:var(--comment)!important;color:var(--fg);background:transparent}
 
   .marca{color:var(--orange)}
 
@@ -812,7 +822,7 @@
      "P1  Cosmic Red  USB" enquanto o P2 lia "P2 · Starlight Blue · BT".
      `var(--comment)` põe os dois casos acima de 3:1 — o piso de traço — sem
      competir com o texto. Medido em 27/08/2026. */
-  .pt{color:var(--comment);margin:0 1px;font-size:10px;vertical-align:1px}
+  .pt{color:var(--fg);margin:0 1px;font-size:10px;vertical-align:1px}
 
   /* ======== A FOLHA DA D-02 E DA D-03 — as duas peças das dez abas ======== */
 
@@ -885,9 +895,9 @@
      PO decidiu para a aba 09, e é a única forma de dizer o porquê a quem não
      tem rato na mão. */
   .btn.apagado,.seg button.apagado{
-    border-color:var(--border-sutil);color:var(--texto-mudo);cursor:not-allowed}
+    border-color:var(--border-sutil);color:var(--fg);cursor:not-allowed}
   .btn.apagado:hover,.seg button.apagado:hover{
-    border-color:var(--border-sutil);color:var(--texto-mudo)}
+    border-color:var(--border-sutil);color:var(--fg)}
 
   /* ---- S-02 · A RESSALVA É LINHA FIXA, E SÓ QUANDO EXISTE (D-02) ----
      No repouso ela não ocupa NADA: sem `display:none` a linha vazia continua
@@ -900,7 +910,7 @@
      cobre a linha que nasce vazia e nunca é pintada; `.nada` cobre a que o
      piloto pinta a cada tique com "não há o que dizer". Faltando uma das
      duas, a linha volta a aparecer num dos dois caminhos, calada. */
-  .ressalva{font-size:11.5px;line-height:1.5;color:var(--texto-mudo);margin-top:5px}
+  .ressalva{font-size:11.5px;line-height:1.5;color:var(--fg);margin-top:5px}
   .ressalva:empty{display:none}
   .ressalva:has(.nada){display:none}
 
@@ -1009,9 +1019,12 @@
      todo tique; a regra de baixo só a deixa vencer o vermelho. */
   .btn.vermelho.verde{color:var(--green)}
   .btn.vermelho.verde:hover{border-color:var(--green);color:var(--green)}
-  /* O «Restaurar de fábrica» é o único com a borda vermelha: o clique que perde o ajuste. */
+  /* O «Parar» tem borda e letra vermelhas; no «Retomar» as duas ficam verdes (S2, 16/10). O
+     «Restaurar de fábrica» usa o amarelo do «Voltar ao padrão» (`.btn.amarelo-padrao`, topo). */
   .btn.borda-vermelha{border-color:var(--red);color:var(--red)}
   .btn.borda-vermelha:hover{background:rgba(255,85,85,.08)}
+  .btn.borda-vermelha.verde{border-color:var(--green);color:var(--green)}
+  .btn.borda-vermelha.verde:hover{background:rgba(80,250,123,.08)}
 
   /* O PERFIL GLOBAL DE BATERIA E O TAMANHO DA INTERFACE, NA VERTICAL — os três botões da aba
      Vibração (`.seg`), empilhados, na altura dos botões vizinhos. Escolha única: o aceso
@@ -1037,12 +1050,17 @@
            border-radius:7px;padding:0 12px;font-size:12.5px;font-family:inherit;
            cursor:pointer;
            border:1px solid var(--border-forte);background:var(--app-bg);
-           color:var(--texto-mudo)}
+           color:var(--fg)}
   .cadeado .p{width:7px;height:7px;border-radius:50%;flex:0 0 auto;
               background:var(--border-forte);box-shadow:none}
   .cadeado.ligada{border-color:var(--green);background:rgba(80,250,123,.09);
                   color:var(--green)}
   .cadeado.ligada .p{background:var(--green);box-shadow:0 0 6px var(--green)}
+  /* «Ícone na bandeja» no canto do quadro, na medida do «Modo Freestyle» (`aba01.py`). */
+  .quadro-topo > .cadeado{flex:0 0 auto;margin-left:auto;width:auto;min-width:166px;
+    height:34px;gap:9px;padding:0 16px 0 12px;border-radius:999px;
+    font:600 13.5px/1 'Space Grotesk',system-ui,sans-serif}
+  .quadro-topo > .cadeado .p{width:11px;height:11px}
 
   /* OS DETALHES TÉCNICOS OCUPAM O QUE SOBRA — pedido: *«ganhar altura pra
      ocupar melhor esse espaço abaixo dele. e ser mais fácil de ser lido»*.
@@ -1071,7 +1089,7 @@
      `currentColor` faz cada um herdar a cor da linha em que está. */
   .gl{display:inline-block;vertical-align:-6px;flex:0 0 auto}
   .gls{display:inline-flex;align-items:center;gap:5px}
-  .gls .mais{color:var(--comment);font-size:11px;margin:0 1px}
+  .gls .mais{color:var(--fg);font-size:11px;margin:0 1px}
 
 </style>
 <style id="base-comum">
@@ -1089,6 +1107,8 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   font:500 12.5px/1.45 'Space Grotesk',system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.45);pointer-events:none;
   opacity:0;transform:translateY(3px);transition:opacity .12s,transform .12s}
 #hef-dica.da-base.visivel{opacity:1;transform:none}
+/* O foco num título, rótulo ou frase com dica (o `tabindex` vem da base) aparece com o mesmo contorno do Modo automático. */
+[data-dica][tabindex]:focus-visible{outline:2px solid var(--cyan,#8be9fd);outline-offset:2px}
 
 /* 2. O Modo automático: pílula com bolinha. Os dois estados têm de se distinguir num relance.
       Desligado: contorno neutro, bolinha vazia, letra suave (vale o que está na aba).
@@ -1110,7 +1130,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 .menu-hefesto button{display:flex;width:100%;align-items:center;gap:10px;height:34px;padding:0 12px;border:0;
   border-radius:8px;background:transparent;color:var(--fg,#f8f8f2);font:500 13.5px/1 'Space Grotesk',system-ui,sans-serif;text-align:left;cursor:pointer}
 .menu-hefesto button:hover{background:rgba(189,147,249,.14)}
-.menu-hefesto button[disabled]{color:var(--texto-mudo,#9a9eb8);opacity:.55;cursor:default;background:transparent}
+.menu-hefesto button[disabled]{color:var(--fg,#f8f8f2);opacity:.55;cursor:default;background:transparent}
 .menu-hefesto hr{border:0;border-top:1px solid var(--border-sutil,#343746);margin:5px 4px}
 </style>
 </head>
@@ -1286,12 +1306,13 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     <div class="quadro estica">
       <div class="quadro-topo">
         <span class="quadro-titulo" data-dica="Esta aba é do computador, não de um controle">Sistema</span>
+            <button class="cadeado ligada" data-dica="Mostra o Hefesto na barra do sistema e o traz de volta ao entrar" data-gesto="bandeja" data-campo="bandeja" data-hef-alvo="classe" data-hef-classe="ligada"><span class="p"></span>Ícone na bandeja</button>
       </div>
       <div class="quadro-corpo">
 
-        <!-- ---------- 1. STATUS: SEIS LINHAS, EM TRÊS COLUNAS ---------- -->
-        <!-- O Status leva as duas primeiras; o exame, as quatro seguintes, em duas colunas. O que
-             não está aqui só aparece se FALHAR, e então em vermelho até se curar. -->
+        <!-- ---------- 1. STATUS: AS NOTAS EM TERÇOS ---------- -->
+        <!-- O Status e o exame numa lista só, por igual nas três colunas. O que não está aqui só
+             aparece se FALHAR, e então em vermelho até se curar. -->
         <div class="sec-rot sr-status3">
           <span data-dica="Linha que falha fica vermelha até se curar">Status</span>
         </div>
@@ -1324,7 +1345,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
         </div>
         <div class="avancadas">
           <div class="coluna col-servico">
-            <button class="btn vermelho" data-dica="Os controles viram gamepads comuns. Pergunta antes" data-gesto="parar-ou-retomar" data-campo="parar-ou-retomar-verde" data-hef-alvo="classe" data-hef-classe="verde">Parar</button>
+            <button class="btn vermelho borda-vermelha" data-dica="Os controles viram gamepads comuns. Pergunta antes" data-gesto="parar-ou-retomar" data-campo="parar-ou-retomar-verde" data-hef-alvo="classe" data-hef-classe="verde">Parar</button>
             <button class="btn" data-dica="Relê os atalhos e os arquivos da Steam" data-gesto="atualizar" data-hef-em-voo="Atualizando…">Atualizar</button>
             <button class="btn so-avulso" data-dica="Faz o serviço subir do jeito certo" data-gesto="corrigir-modo" data-campo="corrigir-modo-quando" data-hef-alvo="classe" data-hef-classe="mostra">Corrigir o serviço</button>
             <div class="acao"><button class="btn" data-campo="reiniciar-razao" data-hef-alvo="classe" data-hef-classe="apagado" data-hef-atributo="aria-disabled" data-hef-razao="sim" data-gesto="reiniciar" title="Para e liga de novo; nenhum ajuste se perde">Reiniciar</button></div>
@@ -1341,7 +1362,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
           <div class="coluna saude-app">
             <button class="cadeado ligada" data-dica="Fixa o Proton, corrige o Vulkan e prepara cada jogo novo" data-gesto="correcoes-automaticas" data-campo="correcoes-automaticas" data-hef-alvo="classe" data-hef-classe="ligada"><span class="p"></span>Permitir correções automáticas</button>
             <button class="cadeado ligada" data-dica="Liga o serviço junto com o computador" data-gesto="autostart" data-campo="hefesto-autostart" data-hef-alvo="classe" data-hef-classe="ligada"><span class="p"></span>Iniciar com o sistema</button>
-            <button class="btn vermelho borda-vermelha" data-dica="Volta ao padrão; seus perfis salvos ficam. Pergunta antes" data-gesto="restaurar-de-fabrica">Restaurar de fábrica</button>
+            <button class="btn amarelo-padrao" data-dica="Volta ao padrão; seus perfis salvos ficam. Pergunta antes" data-gesto="restaurar-de-fabrica">Restaurar de fábrica</button>
           </div>
         </div>
 
@@ -1429,9 +1450,18 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
      do `#hef-dica` no produto. Os dois nunca rodam juntos: o teste vem a cada evento, porque a
      camada da janela chega depois da carga da página. */
   let dica = null, alvo = null;
+  /* A dica aberta é a descrição de quem a abriu, para o leitor de tela: o `id` entra no
+     `aria-describedby` enquanto ela está aberta e sai com ela, sem apagar o que já havia. */
+  const descrever = (el, liga) => {
+    const lista = (el.getAttribute('aria-describedby') || '').split(/\s+/).filter(t => t && t !== 'hef-dica');
+    if (liga) lista.push('hef-dica');
+    if (lista.length) el.setAttribute('aria-describedby', lista.join(' ')); else el.removeAttribute('aria-describedby');
+  };
   const mostrar = el => {
+    if (alvo && alvo !== el) descrever(alvo, false);
     if (!dica) { dica = document.createElement('div'); dica.id = 'hef-dica'; dica.className = 'da-base'; dica.setAttribute('role', 'tooltip'); }
     alvo = el; dica.textContent = el.dataset.dica;
+    descrever(el, true);
     if (!dica.isConnected) document.body.append(dica);
     const r = el.getBoundingClientRect(), d = dica.getBoundingClientRect();
     let x = r.left + r.width / 2 - d.width / 2, y = r.bottom + 8;
@@ -1439,7 +1469,27 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     dica.style.left = Math.max(6, Math.min(x, innerWidth - d.width - 6)) + 'px'; dica.style.top = y + 'px';
     dica.classList.add('visivel');
   };
-  const esconder = () => { alvo = null; if (dica) dica.classList.remove('visivel'); };
+  const esconder = () => { if (alvo) descrever(alvo, false); alvo = null; if (dica) dica.classList.remove('visivel'); };
+  /* O TEXTO CORTADO PELA RETICÊNCIA GANHA A DICA COM ELE INTEIRO (16/10/2026): sem ela, o fim da
+     frase não se lê em lugar nenhum. Na passagem do ponteiro, em captura e antes de qualquer camada
+     de dica (a desta base e a da janela, que lê o `data-dica` primeiro), o elemento com
+     `text-overflow:ellipsis` mais perto do ponteiro ganha o texto todo, se corta, e perde a dica
+     que esta regra lhe deu, se deixou de cortar. A dica própria de um elemento nunca é trocada. */
+  document.addEventListener('mousemove', e => {
+    let el = e.target && e.target.nodeType === 1 ? e.target : null;
+    for (let n = 0; el && n < 4; el = el.parentElement, n++) {
+      if (getComputedStyle(el).textOverflow !== 'ellipsis') continue;
+      const daRegra = el.hasAttribute('data-dica-do-corte');
+      if (el.hasAttribute('data-dica') && !daRegra) return;
+      const texto = (el.textContent || '').replace(/\s+/g, ' ').trim();
+      if (texto && el.scrollWidth > el.clientWidth + 1) {
+        el.setAttribute('data-dica', texto); el.setAttribute('data-dica-do-corte', '');
+      } else if (daRegra) {
+        el.removeAttribute('data-dica'); el.removeAttribute('data-dica-do-corte');
+      }
+      return;
+    }
+  }, true);
   for (const [ev, f] of [['mouseover', 'in'], ['focusin', 'in'], ['mouseout', 'out'], ['focusout', 'out']])
     document.addEventListener(ev, e => {
       if (window.__hefDica) return;
@@ -1513,15 +1563,23 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   const aparece = el => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';
   const jaTemParada = el => el.hasAttribute('tabindex') || el.matches(NATIVO)
     || Array.from(el.querySelectorAll(NATIVO)).some(d => !d.disabled && aparece(d));
+  /* A dica de um título, de um rótulo ou de uma frase também tem parada: `[data-dica]` que não é
+     focável por natureza ganha o `tabindex`, e o `focusin` que a dica já escuta a abre. O papel
+     fica como está (um `h4` continua título). Quem tem um campo ou botão dentro não ganha parada
+     própria: o foco dele já abre a dica do que o contém. */
+  const PEDE_PARADA = GESTO + ',[data-dica]';
   const marcar = raiz => {
-    const todos = raiz.matches && raiz.matches(GESTO) ? [raiz] : [];
-    raiz.querySelectorAll && todos.push(...raiz.querySelectorAll(GESTO));
+    const todos = raiz.matches && raiz.matches(PEDE_PARADA) ? [raiz] : [];
+    raiz.querySelectorAll && todos.push(...raiz.querySelectorAll(PEDE_PARADA));
     for (const el of todos) if (!el.matches(SEM_PARADA) && !jaTemParada(el)) el.setAttribute('tabindex', '0');
   };
   marcar(document.body);
   new MutationObserver(ms => {
-    for (const m of ms) for (const n of m.addedNodes) if (n.nodeType === 1) marcar(n);
-  }).observe(document.body, {subtree: true, childList: true});
+    for (const m of ms) {
+      if (m.type === 'attributes') marcar(m.target);
+      else for (const n of m.addedNodes) if (n.nodeType === 1) marcar(n);
+    }
+  }).observe(document.body, {subtree: true, childList: true, attributes: true, attributeFilter: ['data-dica']});
   /* Enter e Espaço fazem o que o clique faz, em quem não é botão por natureza. */
   document.addEventListener('keydown', e => {
     if ((e.key !== 'Enter' && e.key !== ' ') || e.defaultPrevented || e.repeat) return;

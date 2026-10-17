@@ -298,6 +298,7 @@ def test_o_cadeado_continua_na_tela_com_o_hefesto_desligado() -> None:
     posição Desligado. Tirar o `.cartao .rotulo b.espera` da `aba01.py` reprova o
     esmaecido; devolver a ele `color:var(--texto-mudo)` reprova o cinza (16/10/2026).
     """
+    # D-1610-O-CINZA-SAI-DA-LETRA
     playwright = pytest.importorskip("playwright.sync_api")
 
     alvo = onde.pagina("01-jogar.html")

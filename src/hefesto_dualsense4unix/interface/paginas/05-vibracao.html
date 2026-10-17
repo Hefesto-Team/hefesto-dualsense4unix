@@ -261,7 +261,7 @@
   .conectado .bolinha{color:var(--green)}
   .fita{
     display:flex;align-items:center;gap:8px;
-    font-size:12px;color:var(--texto-mudo);
+    font-size:12px;color:var(--fg);
   }
   .marca-nome{font-size:14px;line-height:1.15;font-weight:700;letter-spacing:-.01em;
               white-space:nowrap;color:var(--fg);margin-right:6px}
@@ -276,10 +276,14 @@
   .perfil-ativo{
     display:flex;align-items:center;gap:7px;
     padding:5px 11px;border-radius:7px;
-    border:1px solid var(--linha);background:var(--panel);
+    border:1px solid var(--linha);background:var(--panel);min-width:0;
   }
-  .pa-rot{font-size:10.5px;color:var(--comment);}
-  .pa-nome{font-size:12.5px;color:var(--pink);font-weight:600}
+  /* UMA LINHA SÓ (16/10/2026): no tamanho do nome, o «Perfil ativo» quebrava em duas assim que um
+     perfil tinha nome, e o nome longo de um jogo esticava o topo; o rótulo não quebra, e o nome
+     cede com reticência (a base comum dá a dica com ele inteiro). */
+  .pa-rot{font-size:12.5px;color:var(--fg);white-space:nowrap}
+  .pa-nome{font-size:12.5px;color:var(--pink);font-weight:600;white-space:nowrap;
+           overflow:hidden;text-overflow:ellipsis;min-width:0}
   /* A FITA QUE NÃO ESCOLHE TEM OS CHIPS ACESOS COMO QUALQUER OUTRA — 09/10/2026
      (O-SELECIONAR-ACENDE-QUEM-ESTA-ESCOLHIDO-01, pedido de 29/09: *"a cor de
      todos os botões do Selecionar deveriam estar acesas e com as bordas
@@ -288,7 +292,7 @@
      o chip (FITA-01, 08/09, e o cinza de 30/08) saíram. Só o rótulo
      `Selecionar:` segue na cor de comentário: não é botão. O `opacity` não
      volta: escondia o texto do contraste (2,18:1) sem a régua ver. */
-  .fita.inerte{color:var(--comment)}
+  .fita.inerte{color:var(--fg)}
   /* ---------- O MODO NATIVO: A FITA FICA CINZA E MUDA — 09/10/2026 ----------
      DESLIGAR-O-HEFESTO-DEVOLVE-O-CONTROLE-AO-LINUX-01, opção a. Com o Hefesto
      desligado quem manda é o jogo, e a fita só mostra quem está conectado: a
@@ -299,24 +303,24 @@
   .fita{position:relative}
   .so-no-nativo{display:none}
   body.nativo .fita .so-no-nativo{display:block;position:absolute;inset:0;z-index:2;cursor:default}
-  body.nativo .fita{color:var(--comment)}
+  body.nativo .fita{color:var(--fg)}
   body.nativo .fita .chip,body.nativo .fita .chip.on,body.nativo .fita .chip.plastico{
-    border-color:var(--border-sutil);background:transparent;color:var(--comment);
+    border-color:var(--border-sutil);background:transparent;color:var(--fg);
     font-weight:400;--borda-do-chip:1px}
   /* a peça fixa do cartão e a trava do quadro nascem escondidas */
   .visto-fixo,.visto-legenda,.trava-nativo{display:none}
   body.nativo .visto-fixo{grid-column:1/-1;display:flex;align-items:center;justify-content:center;
     gap:7px;height:28px;border:1px solid var(--border-sutil);border-radius:7px;
     background:transparent;color:var(--texto-suave);font-size:12px;font-weight:600;cursor:default}
-  body.nativo .visto-fixo .cad{color:var(--comment)}
+  body.nativo .visto-fixo .cad{color:var(--fg)}
   body.nativo .visto-legenda{grid-column:1/-1;height:28px;display:flex;align-items:center;
-    justify-content:center;color:var(--comment);font-size:11.5px}
+    justify-content:center;color:var(--fg);font-size:11.5px}
   body.nativo .cartao.off .visto-fixo,body.nativo .cartao.off .visto-legenda{display:none}
   body.nativo .mascara .chip{display:none}
   body.nativo .cartao.alvo{background:var(--app-bg)}
   body.nativo .trava-nativo{display:inline-flex;align-items:center;gap:6px;margin-left:auto;
-    margin-right:10px;color:var(--comment);font-size:12px;cursor:default}
-  body.nativo .trava-nativo .cad{color:var(--comment)}
+    margin-right:10px;color:var(--fg);font-size:12px;cursor:default}
+  body.nativo .trava-nativo .cad{color:var(--fg)}
   /* AQUI MORAVA A CAIXA ALTA DA VIA, e ela SAIU — ESQUELETO-C2, 11/09/2026.
      Era a TELA-TRES-01 §3, pedido de 08/09: "cabo e rádio coloca
      maiúsculo." O que ela leu três dias depois, na MESMA tela:
@@ -345,7 +349,7 @@
   .chip{
     --borda-do-chip:1px;
     padding:5px 12px;border-radius:6px;font-size:12px;
-    border:var(--borda-do-chip) solid var(--linha);background:var(--app-bg);color:var(--texto-mudo);
+    border:var(--borda-do-chip) solid var(--linha);background:var(--app-bg);color:var(--fg);
     cursor:default;
   }
   .chip.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600}
@@ -394,7 +398,7 @@
   /* ---------- a tira de abas ---------- */
   .tira{display:flex;gap:2px;padding:0 12px;border-bottom:1px solid var(--linha)}
   .aba{
-    padding:11px 13px;font-size:13px;color:var(--texto-mudo);
+    padding:11px 13px;font-size:13px;color:var(--fg);
     border-bottom:2px solid transparent;white-space:nowrap;cursor:default;
   }
   a.aba{text-decoration:none;cursor:pointer}
@@ -403,12 +407,13 @@
   .aba.ativa{color:var(--fg);border-bottom-color:var(--pink);font-weight:600}
 
   /* ---------- o miolo ---------- */
-  /* padding-right 3 e não 18: o `scrollbar-gutter:stable` reserva 15px à
-     direita SEMPRE — com 18 de padding a margem direita ficava 33 contra 18 da
-     esquerda, visível em toda aba. 3 + 15 = os mesmos 18, e a caixa de
-     conteúdo tem a mesma largura de antes da barra existir. */
-  .miolo{padding:16px 3px 18px 18px;display:flex;flex-direction:column;gap:14px;
-         flex:1;min-height:0;overflow-y:auto;scrollbar-gutter:stable}
+  /* O RESPIRO É 18 DOS DOIS LADOS — 16/10/2026 (AS-TELAS-QUE-ELA-PEDIU-EM-16-10-01, T1).
+     A conta velha (3 de padding + 15 do `scrollbar-gutter:stable`) supunha uma barra que
+     ocupa lugar; no WebKitGTK a barra é de sobrepor (`offsetWidth-clientWidth` = 0) e o
+     quadro ficava a 3 px da borda direita em nove abas. Sem rolagem vertical em tela
+     nenhuma, não há barra a reservar. */
+  .miolo{padding:16px 18px 18px 18px;display:flex;flex-direction:column;gap:14px;
+         flex:1;min-height:0;overflow-y:auto;scrollbar-gutter:auto}
   /* O QUADRO NÃO ESTICA POR PADRÃO. Ele já esticou: com a altura da janela fixa,
      o último quadro de toda aba encostava no rodapé, e nas abas curtas isso virou
      um quadro cinza gigante e vazio. Ela, 27/08: "nessa aba encurtar verticalmente
@@ -457,7 +462,7 @@
      nascem no mesmo x. */
   .quadro > input.abre{position:absolute;width:0;height:0;opacity:0;pointer-events:none}
   label.quadro-titulo{cursor:pointer;display:inline-flex;align-items:center;gap:6px}
-  label.quadro-titulo::before{content:"▾";font-size:10px;color:var(--texto-mudo);width:9px}
+  label.quadro-titulo::before{content:"▾";font-size:10px;color:var(--fg);width:9px}
   .quadro:has(> input.abre:not(:checked)) label.quadro-titulo::before{content:"▸"}
   .quadro:has(> input.abre:not(:checked)) > .quadro-corpo{display:none}
   /* fechada, ela não estica: senão o quadro fechado tomaria a altura toda */
@@ -477,7 +482,7 @@
   .seg button{
     flex:1;min-width:150px;padding:9px 10px;border-radius:7px;font-size:12.5px;
     font-family:inherit;border:1px solid var(--linha);
-    background:var(--app-bg);color:var(--texto-mudo);cursor:pointer;
+    background:var(--app-bg);color:var(--fg);cursor:pointer;
   }
   .seg button.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600}
   .seg button:hover:not(.on){border-color:var(--comment);color:var(--texto-suave)}
@@ -485,13 +490,13 @@
      `disabled` de verdade (medido: zero gestos ao clicar), e nada na tela
      dizia isso. Sem `opacity`, que é a lição medida da `.fita.inerte`: a
      opacidade mora no ancestral e cega toda régua que lê `color`. */
-  .seg button:disabled{border-color:var(--border-sutil);color:var(--texto-mudo);cursor:not-allowed}
-  .seg button:disabled:hover{border-color:var(--border-sutil);color:var(--texto-mudo)}
+  .seg button:disabled{border-color:var(--border-sutil);color:var(--fg);cursor:not-allowed}
+  .seg button:disabled:hover{border-color:var(--border-sutil);color:var(--fg)}
 
   /* a linha de estado: o que VALE agora */
   .estado{
     display:flex;align-items:center;gap:7px;margin-top:9px;
-    font-size:12px;color:var(--texto-mudo);
+    font-size:12px;color:var(--fg);
   }
   .estado .valor{color:var(--fg);font-weight:600}
   .estado .verde{color:var(--green)}
@@ -509,12 +514,12 @@
     flex:1;display:flex;align-items:center;justify-content:center;gap:7px;
     padding:9px 10px;border-radius:7px;
     font-size:12.5px;border:1px solid var(--linha);
-    background:var(--app-bg);color:var(--texto-mudo);cursor:pointer;white-space:nowrap;
+    background:var(--app-bg);color:var(--fg);cursor:pointer;white-space:nowrap;
   }
   .degrau i{
     font-style:normal;font-family:'JetBrains Mono',monospace;font-size:10px;
     width:15px;height:15px;line-height:14px;text-align:center;border-radius:50%;
-    border:1px solid var(--linha);color:var(--comment);
+    border:1px solid var(--linha);color:var(--fg);
   }
   .degrau:hover:not(.on){border-color:var(--comment);color:var(--texto-suave)}
   .degrau.on{
@@ -524,7 +529,7 @@
   /* O SEPARADOR TEM COR DE TEXTO, NÃO DE BORDA (30/08). `--border-forte` é
      #44475a: 1,73:1 sobre o fundo — um traço que existe no DOM e não na tela.
      `--texto-mudo` o põe em 4,96:1 e ele continua recuando diante do texto. */
-  .seta{color:var(--texto-mudo);font-size:13px}
+  .seta{color:var(--fg);font-size:13px}
 
   /* a prova de que o Aplicar ainda deve (D-APLICAR-NAO-SALVA) */
   .pendente{
@@ -539,13 +544,13 @@
     background:var(--panel);padding:9px 14px;display:flex;align-items:center;gap:9px;
     font-size:12px;
   }
-  .avisos.vazio{color:var(--comment);border-style:dashed}
+  .avisos.vazio{color:var(--fg);border-style:dashed}
   .selo{
     font-size:10.5px;padding:2px 7px;border-radius:4px;font-weight:600;
     font-family:'JetBrains Mono',monospace;
   }
   .selo.alerta{background:var(--orange);color:var(--app-bg)}
-  .conta{margin-left:auto;font-size:11px;color:var(--texto-mudo)}
+  .conta{margin-left:auto;font-size:11px;color:var(--fg)}
   .link{color:var(--cyan);text-decoration:none;border-bottom:1px dotted var(--cyan);cursor:pointer}
 
   /* ---------- controles: SÓ a contagem e a ponte (decisão de produto) ---------- */
@@ -564,7 +569,7 @@
      vinte e seis. A cor vem de `--plastico`, escrita pelo gerador a partir do
      desenho — o mesmo mecanismo do chip da fita. Zero usos nos dez HTML. */
   .cartao .pl{font-family:'JetBrains Mono',monospace;color:var(--fg);font-weight:500}
-  .cartao .via{color:var(--texto-mudo);font-size:11px}
+  .cartao .via{color:var(--fg);font-size:11px}
   .cartao .bat{color:var(--green);font-family:'JetBrains Mono',monospace;font-size:11px}
 
   .acoes{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}
@@ -591,13 +596,18 @@
   .btn.verde:hover{border-color:var(--green);color:var(--green)}
   .btn.vermelho:hover{border-color:var(--red);color:var(--red)}
   .btn.roxo:hover{border-color:var(--purple);color:var(--purple)}
+  /* O AMARELO DO «Voltar ao padrão» — borda e letra, nas duas abas que voltam ao de fábrica: a
+     Navegação e o «Restaurar de fábrica» da Sistema (AS-TELAS-QUE-ELA-PEDIU-EM-16-10-01, S2). */
+  .btn.amarelo-padrao{border-color:var(--yellow);color:var(--yellow)}
+  .btn.amarelo-padrao:hover{border-color:var(--yellow);color:var(--yellow);
+                            background:rgba(241,250,140,.08)}
 
   /* ---------- Conectado agora + Atenção, lado a lado ---------- */
   .dupla{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
-  .conta-avisos{margin-left:auto;font-size:11px;color:var(--texto-mudo)}
+  .conta-avisos{margin-left:auto;font-size:11px;color:var(--fg)}
   .aviso-item{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--texto-suave)}
   .sub-secao{margin-top:14px;padding-top:12px;border-top:1px solid var(--linha)}
-  .sep{color:var(--texto-mudo);margin:0 3px}   /* idem — ver `.seta` acima */
+  .sep{color:var(--fg);margin:0 3px}   /* idem — ver `.seta` acima */
 
   .faixa-final{display:flex;align-items:center;gap:12px;margin-top:12px}
   .faixa-final .pendente{flex:1;margin-top:0}
@@ -632,7 +642,7 @@
   .r-aplicar{background:var(--green);color:var(--app-bg)}
   .r-salvar{border-color:var(--purple)!important;color:var(--purple);background:transparent}
   .r-importar{border-color:var(--orange)!important;color:var(--orange);background:transparent}
-  .r-exportar{border-color:var(--comment)!important;color:var(--texto-mudo);background:transparent}
+  .r-exportar{border-color:var(--comment)!important;color:var(--fg);background:transparent}
 
   .marca{color:var(--orange)}
 
@@ -812,7 +822,7 @@
      "P1  Cosmic Red  USB" enquanto o P2 lia "P2 · Starlight Blue · BT".
      `var(--comment)` põe os dois casos acima de 3:1 — o piso de traço — sem
      competir com o texto. Medido em 27/08/2026. */
-  .pt{color:var(--comment);margin:0 1px;font-size:10px;vertical-align:1px}
+  .pt{color:var(--fg);margin:0 1px;font-size:10px;vertical-align:1px}
 
   /* ======== A FOLHA DA D-02 E DA D-03 — as duas peças das dez abas ======== */
 
@@ -885,9 +895,9 @@
      PO decidiu para a aba 09, e é a única forma de dizer o porquê a quem não
      tem rato na mão. */
   .btn.apagado,.seg button.apagado{
-    border-color:var(--border-sutil);color:var(--texto-mudo);cursor:not-allowed}
+    border-color:var(--border-sutil);color:var(--fg);cursor:not-allowed}
   .btn.apagado:hover,.seg button.apagado:hover{
-    border-color:var(--border-sutil);color:var(--texto-mudo)}
+    border-color:var(--border-sutil);color:var(--fg)}
 
   /* ---- S-02 · A RESSALVA É LINHA FIXA, E SÓ QUANDO EXISTE (D-02) ----
      No repouso ela não ocupa NADA: sem `display:none` a linha vazia continua
@@ -900,7 +910,7 @@
      cobre a linha que nasce vazia e nunca é pintada; `.nada` cobre a que o
      piloto pinta a cada tique com "não há o que dizer". Faltando uma das
      duas, a linha volta a aparecer num dos dois caminhos, calada. */
-  .ressalva{font-size:11.5px;line-height:1.5;color:var(--texto-mudo);margin-top:5px}
+  .ressalva{font-size:11.5px;line-height:1.5;color:var(--fg);margin-top:5px}
   .ressalva:empty{display:none}
   .ressalva:has(.nada){display:none}
 
@@ -1033,16 +1043,15 @@
                        minmax(var(--r-efeito),1fr) minmax(var(--r-acoes),1fr);
   }
   /* AS DUAS LISTAS SUSPENSAS DE CADA COLUNA (desenho A de 15/10/2026, «uma lista suspensa em cada
-     escolha»): a lista (32px), dois de vão e a frase de UMA linha da opção escolhida (14px), que não
-     quebra (até 36 letras) e some com o lugar vazio. As duas faixas pesam o mesmo que o piso; a que
-     absorve a altura que sobra continua sendo a do desenho. */
+     escolha»). A frase da opção escolhida é DICA desde 16/10/2026: mora na `data-dica` da caixa da
+     lista, pintada pelo campo da dica, e a linha não muda de altura quando a escolha muda. A caixa
+     não ocupa lugar (`display:contents`); a dica sobe a árvore até ela. */
   .efeito-lista{display:flex;flex-direction:column;justify-content:center;gap:0;min-width:0}
   .vib-efeito{flex:0 0 26px;width:100%;min-width:0;height:26px;padding:0 9px;border-radius:7px;
     border:1px solid var(--border-forte);background:var(--app-bg,var(--panel));color:var(--fg);
     font:500 12.5px 'Space Grotesk',system-ui,sans-serif;cursor:pointer}
   .vib-efeito:hover{border-color:var(--comment)}
-  .vib-dica-do-efeito{flex:0 0 12px;min-width:0;font-size:10.5px;line-height:12px;
-    color:var(--comment);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .vib-efeito-dica{display:contents}
   .vib .acoes-col,.vib .seg{align-content:center}
   .vib .acoes-col{align-items:center}
   .quadro-topo .modo-auto{margin-left:auto}
@@ -1055,7 +1064,7 @@
   .criar .seg-criar{display:inline-flex;gap:4px;flex:0 0 auto}
   .criar .seg-criar label,.criar .meu{height:30px;padding:0 12px;border-radius:999px;
     font:500 12.5px/1 'Space Grotesk',system-ui,sans-serif;border:1px solid var(--linha);
-    background:var(--app-bg);color:var(--texto-mudo);cursor:pointer;white-space:nowrap;
+    background:var(--app-bg);color:var(--fg);cursor:pointer;white-space:nowrap;
     display:inline-flex;align-items:center;gap:7px;box-sizing:border-box}
   .criar .seg-criar input{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px}
   .criar .seg-criar label:has(input:checked){border-color:var(--purple);background:var(--sel-bg);
@@ -1066,7 +1075,7 @@
   .criar .nome-criar{height:30px;width:150px;flex:0 0 auto;padding:0 11px;border-radius:7px;
     border:1px solid var(--linha);background:var(--app-bg);color:var(--fg);
     font:500 12.5px 'Space Grotesk',system-ui,sans-serif}
-  .criar .nome-criar::placeholder{color:var(--texto-mudo)}
+  .criar .nome-criar::placeholder{color:var(--fg)}
   .criar .btn-criar{height:30px;padding:0 14px;border-radius:7px;border:1px solid var(--purple);
     background:rgba(189,147,249,.12);color:var(--purple);font:600 12.5px/1 'Space Grotesk',system-ui,sans-serif;
     cursor:pointer;flex:0 0 auto}
@@ -1120,7 +1129,7 @@
   .vib .forca ~ .motor .num{grid-row:1;grid-column:3;display:flex;
     justify-content:flex-end;white-space:nowrap}
   .vib .forca ~ .motor .lado:not(.on) ~ .num{grid-column:3 / span 2;
-    font-size:10.5px;font-weight:600;font-family:inherit;color:var(--comment)}
+    font-size:10.5px;font-weight:600;font-family:inherit;color:var(--fg)}
   .vib .forca ~ .motor .lado:not(.on) ~ .teto{font-size:0}
   .vib .forca.padrao ~ .motor .lado ~ .num{grid-column:3 / span 2;
     font-size:10.5px;font-weight:600;font-family:inherit;color:var(--green)}
@@ -1213,7 +1222,7 @@
   /* A MOLDURA E O NOME acompanham — senão o desenho do controle fica colorido
      em cima de uma coluna apagada. */
   .vib .ctrl[data-conectado="nao"] .moldura{border-color:var(--border-forte)}
-  .vib .ctrl[data-conectado="nao"] .rot-ctrl{color:var(--linha)}
+  .vib .ctrl[data-conectado="nao"] .rot-ctrl{color:var(--fg)}
   /* O DESENHO DO LUGAR VAZIO NÃO SE PINTA AQUI — 07/09/2026, e a razão é que
      ele tem DONO. Havia catorze linhas nesta folha pintando o `<svg>` de
      `var(--linha)` (`.ctrl.vazia .ds-svg rect`, `circle`, `polygon`, `ellipse`,
@@ -1341,14 +1350,14 @@
      Com `width:100%` o SVG estouraria a linha e empurraria tudo. */
   .vib .moldura .ds-svg{height:100%;width:auto;max-width:100%}
   /* O NOME DO CONTROLE É UMA CAIXA, com a largura da coluna (mudança 7 do desenho do todo). */
-  .rot-ctrl{font-size:11px;color:var(--texto-mudo);text-align:center;
+  .rot-ctrl{font-size:11px;color:var(--fg);text-align:center;
             display:flex;align-items:center;justify-content:center}
   .vib .rot-ctrl{height:30px;box-sizing:border-box;border:1px solid var(--linha);border-radius:7px;
     font:600 12px 'Space Grotesk',system-ui,sans-serif;color:var(--fg);white-space:nowrap;
     overflow:hidden;text-overflow:ellipsis;align-self:center;width:100%;display:block;
     line-height:28px;padding:0 4px}
   .vib .rot-ctrl .pt{margin:0 6px}
-  .vib .ctrl[data-conectado="nao"] .rot-ctrl{color:var(--texto-mudo);border:1px dashed var(--border-sutil);
+  .vib .ctrl[data-conectado="nao"] .rot-ctrl{color:var(--fg);border:1px dashed var(--border-sutil);
     background:transparent}
 
   /* OS TRÊS DEGRAUS DE FORÇA — LADO A LADO, COM A MESMA LARGURA. Pedido de
@@ -1407,7 +1416,7 @@
      coisa tocada aqui: a Vibração está FECHADA por elogio literal
      (`CORRECOES.md:39`). O irmão "/255" fica como está — barra e dígito não
      têm caixa. */
-  .motor .teto{font-size:10.5px;color:var(--comment);font-family:'JetBrains Mono',monospace;
+  .motor .teto{font-size:10.5px;color:var(--fg);font-family:'JetBrains Mono',monospace;
     text-align:right;justify-self:end;white-space:nowrap}
   /* O GLIFO DA FORÇA É O CONTROLE INTEIRO: tudo o que vibra (mudança 10 do desenho do todo) */
   .glifo-forca{cursor:default;display:inline-flex;align-items:center;justify-content:center}
@@ -1420,7 +1429,7 @@
   .motor .teto.mx.on{visibility:visible}
   /* o lado desligado não finge que tem força: o trilho fica apagado */
   .motor.off .cheio{background:var(--border-forte)}
-  .motor.off .num{color:var(--comment)}
+  .motor.off .num{color:var(--fg)}
   /* O TRILHO ARRASTÁVEL — 03/09/2026, decisão de produto: *"0 a 200%, e grava na
      hora."* Ele é um `<input type=range>` de verdade, e não um trilho pintado:
      é o `value` dele que o piloto lê no `change`.
@@ -1458,7 +1467,7 @@
   /* o interruptor de cada lado: o GLIFO do mapa, aceso quando o lado está ligado */
   .lado{
     height:var(--h-escolha);width:36px;border-radius:7px;font-family:inherit;
-    border:1px solid var(--linha);background:var(--app-bg);color:var(--texto-mudo);
+    border:1px solid var(--linha);background:var(--app-bg);color:var(--fg);
     cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;
   }
   .lado.on{border-color:var(--orange);background:rgba(255,184,108,.1);color:var(--orange)}
@@ -1979,10 +1988,10 @@
   body.nativo.por-controle :is([data-gesto],[data-modo],[data-hef-gesto],[data-papel],[data-forca],[data-player],[data-sensor],[data-rota],[data-mudo],[data-mic-modo],[data-v]):not(:is([data-gesto=cadeado],[data-gesto=hefesto],[data-gesto=modo-nativo],[data-gesto=modo-steam],[data-gesto=modo-navegacao],[data-gesto=reconectar],.menu-hefesto *)){
     pointer-events:none;cursor:default;-webkit-appearance:none;appearance:none;
     background:transparent!important;border-color:var(--border-sutil)!important;
-    color:var(--comment)!important;font-weight:400!important;box-shadow:none!important}
+    color:var(--fg)!important;font-weight:400!important;box-shadow:none!important}
   body.nativo.por-controle .nativo-nao{pointer-events:none;cursor:default;
     background:transparent!important;border-color:var(--border-sutil)!important;
-    color:var(--comment)!important;font-weight:400!important;box-shadow:none!important}
+    color:var(--fg)!important;font-weight:400!important;box-shadow:none!important}
   body.nativo.por-controle :is([data-gesto=cadeado],[data-gesto=hefesto],[data-gesto=modo-nativo],[data-gesto=modo-steam],[data-gesto=modo-navegacao],[data-gesto=reconectar]){pointer-events:auto}
   body.nativo.por-controle .guardar,body.nativo.por-controle .par-modo,
   body.nativo.por-controle .modo-auto,
@@ -2004,6 +2013,8 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   font:500 12.5px/1.45 'Space Grotesk',system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.45);pointer-events:none;
   opacity:0;transform:translateY(3px);transition:opacity .12s,transform .12s}
 #hef-dica.da-base.visivel{opacity:1;transform:none}
+/* O foco num título, rótulo ou frase com dica (o `tabindex` vem da base) aparece com o mesmo contorno do Modo automático. */
+[data-dica][tabindex]:focus-visible{outline:2px solid var(--cyan,#8be9fd);outline-offset:2px}
 
 /* 2. O Modo automático: pílula com bolinha. Os dois estados têm de se distinguir num relance.
       Desligado: contorno neutro, bolinha vazia, letra suave (vale o que está na aba).
@@ -2025,7 +2036,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 .menu-hefesto button{display:flex;width:100%;align-items:center;gap:10px;height:34px;padding:0 12px;border:0;
   border-radius:8px;background:transparent;color:var(--fg,#f8f8f2);font:500 13.5px/1 'Space Grotesk',system-ui,sans-serif;text-align:left;cursor:pointer}
 .menu-hefesto button:hover{background:rgba(189,147,249,.14)}
-.menu-hefesto button[disabled]{color:var(--texto-mudo,#9a9eb8);opacity:.55;cursor:default;background:transparent}
+.menu-hefesto button[disabled]{color:var(--fg,#f8f8f2);opacity:.55;cursor:default;background:transparent}
 .menu-hefesto hr{border:0;border-top:1px solid var(--border-sutil,#343746);margin:5px 4px}
 </style>
 </head>
@@ -2560,7 +2571,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   <path d="M8 9 q2 -3 4 0 t4 0 t4 0 t4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M11 4 q1.5 -2.5 3 0 t3 0 t3 0 t3 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
 </svg></button><input class="trilho arrasta" type="range" min="0" max="200" step="1" value="150" data-papel="haptica" data-campo="barra-h" data-hef-alvo="valor" title="A força da háptica por áudio neste controle — 0 a 200%. 100% é o jogo como ele mandou. Grava na hora, só para ele."><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-h-pct">150</span><span class="teto no-ar" data-campo="haptica-no-ar" data-hef-alvo="classe" title="Aceso: há háptica chegando a este controle agora.">%</span></div>
-            <div class="efeito-lista"><select class="vib-efeito" data-gesto="efeito-haptico" aria-label="Efeito háptico" data-campo="haptico-escolha" data-hef-alvo="valor" data-dica="O que o estilo pede"><option value="do_estilo" selected>Do estilo</option><option value="sem_efeito">Sem efeito</option><option value="toque">Toque</option><option value="impacto">Impacto</option><option value="estalo">Estalo</option><option value="guarda">Guarda</option><option value="aparo">Aparo</option><option value="som_no_corpo">Som no corpo</option></select><span class="vib-dica-do-efeito" data-campo="haptico-dica" data-hef-alvo="texto">O que o estilo pede</span></div>
+            <div class="efeito-lista"><span class="vib-efeito-dica" data-campo="haptico-dica" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="O que o estilo pede"><select class="vib-efeito" data-gesto="efeito-haptico" aria-label="Efeito háptico" data-campo="haptico-escolha" data-hef-alvo="valor"><option value="do_estilo" selected>Do estilo</option><option value="sem_efeito">Sem efeito</option><option value="toque">Toque</option><option value="impacto">Impacto</option><option value="estalo">Estalo</option><option value="guarda">Guarda</option><option value="aparo">Aparo</option><option value="som_no_corpo">Som no corpo</option></select></span></div>
             <div class="motor mult" data-campo="motor-e-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado on" data-gesto="lado" data-lado="e" data-campo="lado-e" data-hef-alvo="classe" data-hef-quando="1" title="Motor de vibração esquerdo — Contrapeso maior — soa grosso."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
 
   <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
@@ -2575,7 +2586,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   <path d="M7,10 q-3,6 0,12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M3,7 q-4,9 0,18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
 </svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="100" data-papel="motor" data-campo="barra-d" data-hef-alvo="valor" data-lado="d" title="Quanto da vibração chega a este punho — 0 a 100% do degrau da coluna. Em 0, este motor fica mudo. Grava na hora, só para este controle."><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-d-pct">100</span><span class="teto">%</span></div>
-            <div class="efeito-lista"><select class="vib-efeito" data-gesto="efeito-imersao" aria-label="Efeito imersão" data-campo="imersao-escolha" data-hef-alvo="valor" data-dica="O que o estilo pede"><option value="do_estilo" selected>Do estilo</option><option value="sem_efeito">Sem efeito</option><option value="tranco">Tranco</option><option value="batida">Batida</option><option value="onda">Onda</option><option value="coice">Coice</option><option value="pancada_do_lado">Pancada do lado</option></select><span class="vib-dica-do-efeito" data-campo="imersao-dica" data-hef-alvo="texto">O que o estilo pede</span></div>
+            <div class="efeito-lista"><span class="vib-efeito-dica" data-campo="imersao-dica" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="O que o estilo pede"><select class="vib-efeito" data-gesto="efeito-imersao" aria-label="Efeito imersão" data-campo="imersao-escolha" data-hef-alvo="valor"><option value="do_estilo" selected>Do estilo</option><option value="sem_efeito">Sem efeito</option><option value="tranco">Tranco</option><option value="batida">Batida</option><option value="onda">Onda</option><option value="coice">Coice</option><option value="pancada_do_lado">Pancada do lado</option></select></span></div>
             <div class="acoes-col">
               <!-- "Testar", não "Testar por 500 ms" — decisão, 30/08:
                    *"ali vai ser só Testar; se o user quiser parar vai clicar em Parar"*.
@@ -2929,7 +2940,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   <path d="M8 9 q2 -3 4 0 t4 0 t4 0 t4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M11 4 q1.5 -2.5 3 0 t3 0 t3 0 t3 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
 </svg></button><input class="trilho arrasta" type="range" min="0" max="200" step="1" value="180" data-papel="haptica" data-campo="barra-h" data-hef-alvo="valor" title="A força da háptica por áudio neste controle — 0 a 200%. 100% é o jogo como ele mandou. Grava na hora, só para ele."><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-h-pct">180</span><span class="teto no-ar" data-campo="haptica-no-ar" data-hef-alvo="classe" title="Aceso: há háptica chegando a este controle agora.">%</span></div>
-            <div class="efeito-lista"><select class="vib-efeito" data-gesto="efeito-haptico" aria-label="Efeito háptico" data-campo="haptico-escolha" data-hef-alvo="valor" data-dica="O que o estilo pede"><option value="do_estilo" selected>Do estilo</option><option value="sem_efeito">Sem efeito</option><option value="toque">Toque</option><option value="impacto">Impacto</option><option value="estalo">Estalo</option><option value="guarda">Guarda</option><option value="aparo">Aparo</option><option value="som_no_corpo">Som no corpo</option></select><span class="vib-dica-do-efeito" data-campo="haptico-dica" data-hef-alvo="texto">O que o estilo pede</span></div>
+            <div class="efeito-lista"><span class="vib-efeito-dica" data-campo="haptico-dica" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="O que o estilo pede"><select class="vib-efeito" data-gesto="efeito-haptico" aria-label="Efeito háptico" data-campo="haptico-escolha" data-hef-alvo="valor"><option value="do_estilo" selected>Do estilo</option><option value="sem_efeito">Sem efeito</option><option value="toque">Toque</option><option value="impacto">Impacto</option><option value="estalo">Estalo</option><option value="guarda">Guarda</option><option value="aparo">Aparo</option><option value="som_no_corpo">Som no corpo</option></select></span></div>
             <div class="motor mult off" data-campo="motor-e-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado" data-gesto="lado" data-lado="e" data-campo="lado-e" data-hef-alvo="classe" data-hef-quando="1" title="Motor de vibração esquerdo — Contrapeso maior — soa grosso."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
 
   <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
@@ -2944,7 +2955,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   <path d="M7,10 q-3,6 0,12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M3,7 q-4,9 0,18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
 </svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="100" data-papel="motor" data-campo="barra-d" data-hef-alvo="valor" data-lado="d" title="Quanto da vibração chega a este punho — 0 a 100% do degrau da coluna. Em 0, este motor fica mudo. Grava na hora, só para este controle."><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-d-pct">100</span><span class="teto">%</span></div>
-            <div class="efeito-lista"><select class="vib-efeito" data-gesto="efeito-imersao" aria-label="Efeito imersão" data-campo="imersao-escolha" data-hef-alvo="valor" data-dica="O que o estilo pede"><option value="do_estilo" selected>Do estilo</option><option value="sem_efeito">Sem efeito</option><option value="tranco">Tranco</option><option value="batida">Batida</option><option value="onda">Onda</option><option value="coice">Coice</option><option value="pancada_do_lado">Pancada do lado</option></select><span class="vib-dica-do-efeito" data-campo="imersao-dica" data-hef-alvo="texto">O que o estilo pede</span></div>
+            <div class="efeito-lista"><span class="vib-efeito-dica" data-campo="imersao-dica" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="O que o estilo pede"><select class="vib-efeito" data-gesto="efeito-imersao" aria-label="Efeito imersão" data-campo="imersao-escolha" data-hef-alvo="valor"><option value="do_estilo" selected>Do estilo</option><option value="sem_efeito">Sem efeito</option><option value="tranco">Tranco</option><option value="batida">Batida</option><option value="onda">Onda</option><option value="coice">Coice</option><option value="pancada_do_lado">Pancada do lado</option></select></span></div>
             <div class="acoes-col">
               <!-- "Testar", não "Testar por 500 ms" — decisão, 30/08:
                    *"ali vai ser só Testar; se o user quiser parar vai clicar em Parar"*.
@@ -3298,7 +3309,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   <path d="M8 9 q2 -3 4 0 t4 0 t4 0 t4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M11 4 q1.5 -2.5 3 0 t3 0 t3 0 t3 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
 </svg></button><input class="trilho arrasta" type="range" min="0" max="200" step="1" value="0" data-papel="haptica" data-campo="barra-h" data-hef-alvo="valor" title="A força da háptica por áudio neste controle — 0 a 200%. 100% é o jogo como ele mandou. Grava na hora, só para ele."><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-h-pct">—</span><span class="teto no-ar" data-campo="haptica-no-ar" data-hef-alvo="classe" title="Aceso: há háptica chegando a este controle agora.">%</span></div>
-            <div class="efeito-lista"><select class="vib-efeito" data-gesto="efeito-haptico" aria-label="Efeito háptico" data-campo="haptico-escolha" data-hef-alvo="valor" data-dica="O que o estilo pede"><option value="do_estilo" selected>Do estilo</option><option value="sem_efeito">Sem efeito</option><option value="toque">Toque</option><option value="impacto">Impacto</option><option value="estalo">Estalo</option><option value="guarda">Guarda</option><option value="aparo">Aparo</option><option value="som_no_corpo">Som no corpo</option></select><span class="vib-dica-do-efeito" data-campo="haptico-dica" data-hef-alvo="texto">O que o estilo pede</span></div>
+            <div class="efeito-lista"><span class="vib-efeito-dica" data-campo="haptico-dica" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="O que o estilo pede"><select class="vib-efeito" data-gesto="efeito-haptico" aria-label="Efeito háptico" data-campo="haptico-escolha" data-hef-alvo="valor"><option value="do_estilo" selected>Do estilo</option><option value="sem_efeito">Sem efeito</option><option value="toque">Toque</option><option value="impacto">Impacto</option><option value="estalo">Estalo</option><option value="guarda">Guarda</option><option value="aparo">Aparo</option><option value="som_no_corpo">Som no corpo</option></select></span></div>
             <div class="motor mult off" data-campo="motor-e-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado" data-gesto="lado" data-lado="e" data-campo="lado-e" data-hef-alvo="classe" data-hef-quando="1" title="Motor de vibração esquerdo — Contrapeso maior — soa grosso."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
 
   <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
@@ -3313,7 +3324,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   <path d="M7,10 q-3,6 0,12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M3,7 q-4,9 0,18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
 </svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="0" data-papel="motor" data-campo="barra-d" data-hef-alvo="valor" data-lado="d" title="Quanto da vibração chega a este punho — 0 a 100% do degrau da coluna. Em 0, este motor fica mudo. Grava na hora, só para este controle."><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-d-pct">—</span><span class="teto">%</span></div>
-            <div class="efeito-lista"><select class="vib-efeito" data-gesto="efeito-imersao" aria-label="Efeito imersão" data-campo="imersao-escolha" data-hef-alvo="valor" data-dica="O que o estilo pede"><option value="do_estilo" selected>Do estilo</option><option value="sem_efeito">Sem efeito</option><option value="tranco">Tranco</option><option value="batida">Batida</option><option value="onda">Onda</option><option value="coice">Coice</option><option value="pancada_do_lado">Pancada do lado</option></select><span class="vib-dica-do-efeito" data-campo="imersao-dica" data-hef-alvo="texto">O que o estilo pede</span></div>
+            <div class="efeito-lista"><span class="vib-efeito-dica" data-campo="imersao-dica" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="O que o estilo pede"><select class="vib-efeito" data-gesto="efeito-imersao" aria-label="Efeito imersão" data-campo="imersao-escolha" data-hef-alvo="valor"><option value="do_estilo" selected>Do estilo</option><option value="sem_efeito">Sem efeito</option><option value="tranco">Tranco</option><option value="batida">Batida</option><option value="onda">Onda</option><option value="coice">Coice</option><option value="pancada_do_lado">Pancada do lado</option></select></span></div>
             <div class="acoes-col">
               <!-- "Testar", não "Testar por 500 ms" — decisão, 30/08:
                    *"ali vai ser só Testar; se o user quiser parar vai clicar em Parar"*.
@@ -3667,7 +3678,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   <path d="M8 9 q2 -3 4 0 t4 0 t4 0 t4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M11 4 q1.5 -2.5 3 0 t3 0 t3 0 t3 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
 </svg></button><input class="trilho arrasta" type="range" min="0" max="200" step="1" value="0" data-papel="haptica" data-campo="barra-h" data-hef-alvo="valor" title="A força da háptica por áudio neste controle — 0 a 200%. 100% é o jogo como ele mandou. Grava na hora, só para ele."><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-h-pct">—</span><span class="teto no-ar" data-campo="haptica-no-ar" data-hef-alvo="classe" title="Aceso: há háptica chegando a este controle agora.">%</span></div>
-            <div class="efeito-lista"><select class="vib-efeito" data-gesto="efeito-haptico" aria-label="Efeito háptico" data-campo="haptico-escolha" data-hef-alvo="valor" data-dica="O que o estilo pede"><option value="do_estilo" selected>Do estilo</option><option value="sem_efeito">Sem efeito</option><option value="toque">Toque</option><option value="impacto">Impacto</option><option value="estalo">Estalo</option><option value="guarda">Guarda</option><option value="aparo">Aparo</option><option value="som_no_corpo">Som no corpo</option></select><span class="vib-dica-do-efeito" data-campo="haptico-dica" data-hef-alvo="texto">O que o estilo pede</span></div>
+            <div class="efeito-lista"><span class="vib-efeito-dica" data-campo="haptico-dica" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="O que o estilo pede"><select class="vib-efeito" data-gesto="efeito-haptico" aria-label="Efeito háptico" data-campo="haptico-escolha" data-hef-alvo="valor"><option value="do_estilo" selected>Do estilo</option><option value="sem_efeito">Sem efeito</option><option value="toque">Toque</option><option value="impacto">Impacto</option><option value="estalo">Estalo</option><option value="guarda">Guarda</option><option value="aparo">Aparo</option><option value="som_no_corpo">Som no corpo</option></select></span></div>
             <div class="motor mult off" data-campo="motor-e-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado" data-gesto="lado" data-lado="e" data-campo="lado-e" data-hef-alvo="classe" data-hef-quando="1" title="Motor de vibração esquerdo — Contrapeso maior — soa grosso."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
 
   <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
@@ -3682,7 +3693,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   <path d="M7,10 q-3,6 0,12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M3,7 q-4,9 0,18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
 </svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="0" data-papel="motor" data-campo="barra-d" data-hef-alvo="valor" data-lado="d" title="Quanto da vibração chega a este punho — 0 a 100% do degrau da coluna. Em 0, este motor fica mudo. Grava na hora, só para este controle."><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-d-pct">—</span><span class="teto">%</span></div>
-            <div class="efeito-lista"><select class="vib-efeito" data-gesto="efeito-imersao" aria-label="Efeito imersão" data-campo="imersao-escolha" data-hef-alvo="valor" data-dica="O que o estilo pede"><option value="do_estilo" selected>Do estilo</option><option value="sem_efeito">Sem efeito</option><option value="tranco">Tranco</option><option value="batida">Batida</option><option value="onda">Onda</option><option value="coice">Coice</option><option value="pancada_do_lado">Pancada do lado</option></select><span class="vib-dica-do-efeito" data-campo="imersao-dica" data-hef-alvo="texto">O que o estilo pede</span></div>
+            <div class="efeito-lista"><span class="vib-efeito-dica" data-campo="imersao-dica" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="O que o estilo pede"><select class="vib-efeito" data-gesto="efeito-imersao" aria-label="Efeito imersão" data-campo="imersao-escolha" data-hef-alvo="valor"><option value="do_estilo" selected>Do estilo</option><option value="sem_efeito">Sem efeito</option><option value="tranco">Tranco</option><option value="batida">Batida</option><option value="onda">Onda</option><option value="coice">Coice</option><option value="pancada_do_lado">Pancada do lado</option></select></span></div>
             <div class="acoes-col">
               <!-- "Testar", não "Testar por 500 ms" — decisão, 30/08:
                    *"ali vai ser só Testar; se o user quiser parar vai clicar em Parar"*.
@@ -3832,9 +3843,18 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
      do `#hef-dica` no produto. Os dois nunca rodam juntos: o teste vem a cada evento, porque a
      camada da janela chega depois da carga da página. */
   let dica = null, alvo = null;
+  /* A dica aberta é a descrição de quem a abriu, para o leitor de tela: o `id` entra no
+     `aria-describedby` enquanto ela está aberta e sai com ela, sem apagar o que já havia. */
+  const descrever = (el, liga) => {
+    const lista = (el.getAttribute('aria-describedby') || '').split(/\s+/).filter(t => t && t !== 'hef-dica');
+    if (liga) lista.push('hef-dica');
+    if (lista.length) el.setAttribute('aria-describedby', lista.join(' ')); else el.removeAttribute('aria-describedby');
+  };
   const mostrar = el => {
+    if (alvo && alvo !== el) descrever(alvo, false);
     if (!dica) { dica = document.createElement('div'); dica.id = 'hef-dica'; dica.className = 'da-base'; dica.setAttribute('role', 'tooltip'); }
     alvo = el; dica.textContent = el.dataset.dica;
+    descrever(el, true);
     if (!dica.isConnected) document.body.append(dica);
     const r = el.getBoundingClientRect(), d = dica.getBoundingClientRect();
     let x = r.left + r.width / 2 - d.width / 2, y = r.bottom + 8;
@@ -3842,7 +3862,27 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     dica.style.left = Math.max(6, Math.min(x, innerWidth - d.width - 6)) + 'px'; dica.style.top = y + 'px';
     dica.classList.add('visivel');
   };
-  const esconder = () => { alvo = null; if (dica) dica.classList.remove('visivel'); };
+  const esconder = () => { if (alvo) descrever(alvo, false); alvo = null; if (dica) dica.classList.remove('visivel'); };
+  /* O TEXTO CORTADO PELA RETICÊNCIA GANHA A DICA COM ELE INTEIRO (16/10/2026): sem ela, o fim da
+     frase não se lê em lugar nenhum. Na passagem do ponteiro, em captura e antes de qualquer camada
+     de dica (a desta base e a da janela, que lê o `data-dica` primeiro), o elemento com
+     `text-overflow:ellipsis` mais perto do ponteiro ganha o texto todo, se corta, e perde a dica
+     que esta regra lhe deu, se deixou de cortar. A dica própria de um elemento nunca é trocada. */
+  document.addEventListener('mousemove', e => {
+    let el = e.target && e.target.nodeType === 1 ? e.target : null;
+    for (let n = 0; el && n < 4; el = el.parentElement, n++) {
+      if (getComputedStyle(el).textOverflow !== 'ellipsis') continue;
+      const daRegra = el.hasAttribute('data-dica-do-corte');
+      if (el.hasAttribute('data-dica') && !daRegra) return;
+      const texto = (el.textContent || '').replace(/\s+/g, ' ').trim();
+      if (texto && el.scrollWidth > el.clientWidth + 1) {
+        el.setAttribute('data-dica', texto); el.setAttribute('data-dica-do-corte', '');
+      } else if (daRegra) {
+        el.removeAttribute('data-dica'); el.removeAttribute('data-dica-do-corte');
+      }
+      return;
+    }
+  }, true);
   for (const [ev, f] of [['mouseover', 'in'], ['focusin', 'in'], ['mouseout', 'out'], ['focusout', 'out']])
     document.addEventListener(ev, e => {
       if (window.__hefDica) return;
@@ -3916,15 +3956,23 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   const aparece = el => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';
   const jaTemParada = el => el.hasAttribute('tabindex') || el.matches(NATIVO)
     || Array.from(el.querySelectorAll(NATIVO)).some(d => !d.disabled && aparece(d));
+  /* A dica de um título, de um rótulo ou de uma frase também tem parada: `[data-dica]` que não é
+     focável por natureza ganha o `tabindex`, e o `focusin` que a dica já escuta a abre. O papel
+     fica como está (um `h4` continua título). Quem tem um campo ou botão dentro não ganha parada
+     própria: o foco dele já abre a dica do que o contém. */
+  const PEDE_PARADA = GESTO + ',[data-dica]';
   const marcar = raiz => {
-    const todos = raiz.matches && raiz.matches(GESTO) ? [raiz] : [];
-    raiz.querySelectorAll && todos.push(...raiz.querySelectorAll(GESTO));
+    const todos = raiz.matches && raiz.matches(PEDE_PARADA) ? [raiz] : [];
+    raiz.querySelectorAll && todos.push(...raiz.querySelectorAll(PEDE_PARADA));
     for (const el of todos) if (!el.matches(SEM_PARADA) && !jaTemParada(el)) el.setAttribute('tabindex', '0');
   };
   marcar(document.body);
   new MutationObserver(ms => {
-    for (const m of ms) for (const n of m.addedNodes) if (n.nodeType === 1) marcar(n);
-  }).observe(document.body, {subtree: true, childList: true});
+    for (const m of ms) {
+      if (m.type === 'attributes') marcar(m.target);
+      else for (const n of m.addedNodes) if (n.nodeType === 1) marcar(n);
+    }
+  }).observe(document.body, {subtree: true, childList: true, attributes: true, attributeFilter: ['data-dica']});
   /* Enter e Espaço fazem o que o clique faz, em quem não é botão por natureza. */
   document.addEventListener('keydown', e => {
     if ((e.key !== 'Enter' && e.key !== ' ') || e.defaultPrevented || e.repeat) return;

@@ -79,6 +79,7 @@ def _gesto_da_bandeja() -> Any:
 
 
 def test_a_pilula_liga_e_desliga_a_bandeja(lar: pathlib.Path, subidas: Any) -> None:
+    # D-1610-A-BANDEJA-TEM-INTERRUPTOR-E-VOLTA-COM-O-SERVICO
     feitas, filhos = subidas
     clicar = _gesto_da_bandeja()
     assert not ab.bandeja_ligada()
@@ -131,6 +132,7 @@ def test_com_a_escolha_desligada_nada_sobe(lar: pathlib.Path, subidas: Any) -> N
 
 def test_o_retomar_o_ativar_e_o_start_trazem_a_bandeja(
         lar: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # D-1610-A-BANDEJA-TEM-INTERRUPTOR-E-VOLTA-COM-O-SERVICO
     import pacotes
     from pacotes import a09_sistema as a09
 

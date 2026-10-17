@@ -173,6 +173,7 @@ def test_sem_declaracao_o_triangulo_e_do_jogo(chamou: list[tuple[str, Any]]) -> 
 
 def test_o_de_fabrica_removido_nao_dispara_nem_cala(
         chamou: list[tuple[str, Any]]) -> None:
+    # D-1610-OS-GESTOS-DO-PS-SE-ACRESCENTAM
     d = _daemon()
     hotkey.start_hotkey_manager(d)
     ponte = _Ponte(d)
@@ -193,6 +194,7 @@ def test_o_de_fabrica_removido_nao_dispara_nem_cala(
 
 
 def test_a_tela_e_o_validador_recusam_o_repetido_o_proibido_e_o_ps_sozinho() -> None:
+    # D-1610-OS-GESTOS-DO-PS-SE-ACRESCENTAM
     d = _daemon()
     ponte = _Ponte(d)
     for b in ("options", "dpad_up", "l1", "r2", "dpad_left", "ps", "touchpad"):

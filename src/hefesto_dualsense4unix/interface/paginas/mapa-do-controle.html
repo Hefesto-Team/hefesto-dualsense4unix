@@ -57,7 +57,7 @@
   .chip{height:30px;padding:0 12px;border-radius:7px;border:2px solid var(--plastico,var(--border-forte));
     background:var(--app-bg);color:var(--texto-suave);font:12px var(--f);cursor:pointer;white-space:nowrap;text-align:center}
   .chip.on{background:rgba(189,147,249,.16);color:var(--fg);font-weight:600}
-  .chip .pt{color:var(--comment);margin:0 2px}
+  .chip .pt{color:var(--fg);margin:0 2px}
   .mc-perfil{display:grid;grid-template-columns:292px minmax(0,1fr) 292px;gap:20px;align-items:center;
     padding:12px 20px;border-bottom:1px solid var(--border-sutil);flex:none}
   .mc-perfil .cel{display:flex;align-items:center;gap:12px;min-width:0}
@@ -66,13 +66,13 @@
   .campo2{height:32px;border-radius:7px;border:1px solid var(--border-forte);background:var(--app-bg);color:var(--fg);
     font:12.5px var(--f);padding:0 10px}
   #perfil,.nome2{width:auto;flex:1 1 0;min-width:0}
-  .mc-perfil[data-fixo="sim"] .nome2{color:var(--texto-mudo)}
+  .mc-perfil[data-fixo="sim"] .nome2{color:var(--fg)}
   .etiqueta{height:24px;display:inline-flex;align-items:center;padding:0 10px;border-radius:12px;font-size:11.5px;
     font-weight:600;color:var(--app-bg);background:var(--tipo)}
   .usar-em{display:flex;gap:6px;align-items:center;margin-left:auto}
   .usar-em .jogo{height:26px;display:inline-flex;align-items:center;padding:0 10px;border-radius:13px;font-size:11.5px;
     border:1px solid var(--tipo);color:var(--fg);background:transparent;font-family:var(--f)}
-  .usar-em .mais{border-style:dashed;color:var(--texto-mudo);border-color:var(--border-forte);cursor:pointer}
+  .usar-em .mais{border-style:dashed;color:var(--fg);border-color:var(--border-forte);cursor:pointer}
   .cx > .corpo{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column}
   .mapa.mc-mapa{flex:1 0 auto;display:grid;grid-template-columns:292px minmax(0,1fr) 292px;gap:20px;
     padding:14px 20px;align-items:stretch;align-content:center}
@@ -85,7 +85,7 @@
   .b2-gl svg{width:18px;height:18px}
   .b2-nm{font-size:11.5px;color:var(--texto-suave);white-space:nowrap}
   .b2-val{height:25px;display:flex;align-items:center;padding:0 9px;border-radius:6px;background:var(--app-bg);
-    color:var(--texto-mudo);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11.5px}
+    color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11.5px}
   .b2[data-estado~="muda"]{border-left:1px solid var(--tipo);box-shadow:inset 2px 0 0 var(--tipo)}
   .b2[data-estado~="muda"] .b2-val{color:var(--fg);box-shadow:inset 0 0 0 1px var(--tipo)}
   .b2[data-estado~="pisca"]{border-color:var(--pink)}
@@ -110,7 +110,7 @@
   .seg2 button[hidden]{display:none}
   .seg2 button.on{border-color:var(--purple);background:rgba(189,147,249,.16);color:var(--fg);font-weight:600}
   .sel2-x{width:30px;height:30px;border-radius:7px;border:1px solid var(--border-forte);background:transparent;
-    color:var(--texto-mudo);font-size:15px;cursor:pointer}
+    color:var(--fg);font-size:15px;cursor:pointer}
   .sel2-grade{flex:none;display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:42px;gap:9px;align-content:start}
   .sel2-grade[hidden]{display:none}
   .op3{display:flex;align-items:center;gap:9px;padding:0 12px;border-radius:8px;border:1px solid var(--border-sutil);
@@ -298,7 +298,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 .menu-hefesto button{display:flex;width:100%;align-items:center;gap:10px;height:34px;padding:0 12px;border:0;
   border-radius:8px;background:transparent;color:var(--fg,#f8f8f2);font:500 13.5px/1 'Space Grotesk',system-ui,sans-serif;text-align:left;cursor:pointer}
 .menu-hefesto button:hover{background:rgba(189,147,249,.14)}
-.menu-hefesto button[disabled]{color:var(--texto-mudo,#9a9eb8);opacity:.55;cursor:default;background:transparent}
+.menu-hefesto button[disabled]{color:var(--fg,#f8f8f2);opacity:.55;cursor:default;background:transparent}
 .menu-hefesto hr{border:0;border-top:1px solid var(--border-sutil,#343746);margin:5px 4px}
 </style>
 </head>
@@ -307,14 +307,14 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
      data-campo="mc-tipo" data-hef-alvo="atributo" data-hef-atributo="data-tipo">
   <div class="mc-topo">
     <a class="voltar2 voltar" href="06-navegacao.html" onclick="if (history.length > 1) { history.back(); return false }" title="Volta para a Navegação">← Voltar</a>
-    <h1>Mapa do controle</h1>
+    <h1 id="mc-titulo">Mapa do controle</h1>
     <span class="mc-rot" data-dica="O mapa vale só para o controle escolhido; cada controle guarda o seu">Vale para</span><div class="mc-chips" data-bloco="controles-do-mapa"><button class="chip plastico on" style="--plastico:#ae335a" data-colorway="cosmic-red" data-jogador="1" data-luz="#0000ff">Cosmic Red <span class="pt">•</span> USB</button><button class="chip plastico" style="--plastico:#7eb8d4" data-colorway="starlight-blue" data-jogador="2" data-luz="#ff0000">Starlight Blue <span class="pt">•</span> BT</button><button class="chip plastico" style="--plastico:#74588e" data-colorway="galactic-purple" data-jogador="3" data-luz="#00ff00">Galactic Purple <span class="pt">•</span> BT</button><button class="chip plastico" style="--plastico:#e4e0d8" data-colorway="white" data-jogador="4" data-luz="#ff0080">White <span class="pt">•</span> USB</button></div>
   </div>
   <div class="corpo">
   <div class="mc-perfil" data-fixo="sim" data-campo="mc-fixo" data-hef-alvo="atributo" data-hef-atributo="data-fixo">
     <span class="cel">
     <label class="mc-rot" for="perfil">Perfil</label>
-    <select id="perfil" class="campo2" data-gesto="mapa-perfil" data-campo="perfil" data-hef-alvo="valor" data-dica="Navegação, point and click e trocas de botão"><optgroup label="Navegação"><option value="nav">Navegar no computador</option></optgroup><optgroup label="Moldes"><option value="molde:point_and_click">Point and click</option><option value="molde:visual_novel">Visual novel</option><option value="molde:mouse">Mouse</option><option value="molde:mouse_e_teclado">Mouse e teclado</option></optgroup><option value="novo">+ Novo perfil…</option></select>
+    <select id="perfil" class="campo2" data-gesto="mapa-perfil" data-campo="perfil" data-hef-alvo="valor" data-dica="Navegação, point and click e trocas de botão"><optgroup label="Navegação"><option value="nav">Navegar no computador</option></optgroup><optgroup label="Moldes"><option value="molde:point_and_click">Point and click</option><option value="molde:visual_novel">Visual novel</option><option value="molde:adulto">Adulto</option><option value="molde:mouse">Mouse</option><option value="molde:mouse_e_teclado">Mouse e teclado</option></optgroup><option value="novo">+ Novo perfil…</option></select>
     <i hidden data-campo="ancora-pac" data-hef-alvo="atributo" data-hef-atributo="data-chave" data-chave=""></i>
     <i hidden data-campo="ancora-trocar" data-hef-alvo="atributo" data-hef-atributo="data-chave" data-chave=""></i>
     </span>
@@ -1169,7 +1169,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 
   <circle cx="16" cy="16" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
 </svg></span><span class="b2-nm">Círculo</span><span class="b2-val" data-campo="val-circle" data-hef-alvo="texto">Enter</span><span class="b2-atual" hidden data-campo="atual-circle" data-hef-alvo="texto">acao:KEY_ENTER</span></button>
-<button class="b2 item-cross" data-b="cross" data-gesto="mapa-botao" data-destino="cross" data-troca="sim" data-campo="estado-cross" data-hef-alvo="atributo" data-hef-atributo="data-estado" data-estado="muda on"><span class="b2-gl"><svg width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+<button class="b2 item-cross" data-b="cross" data-gesto="mapa-botao" data-destino="cross" data-troca="sim" data-campo="estado-cross" data-hef-alvo="atributo" data-hef-atributo="data-estado" data-estado="muda"><span class="b2-gl"><svg width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <line x1="8" y1="8" x2="24" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="24" y1="8" x2="8" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -1208,6 +1208,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     <button class="btn2 roxo" data-gesto="mapa-guardar">Guardar</button>
   </div>
   <button id="mapa-captura" hidden tabindex="-1" aria-hidden="true" data-gesto="mapa-gravar-tecla"></button>
+  <button id="mapa-solta" hidden tabindex="-1" aria-hidden="true" data-gesto="mapa-botao" data-b=""></button>
 </div>
 <script>
 (() => {
@@ -1235,7 +1236,10 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     mostra(atual.startsWith('troca:') && troca ? 'controle' : em('mouse') ? 'mouse' : atual && !em('controle') ? 'teclado' : troca ? 'controle' : 'mouse');
     pop.hidden = false;
   };
-  const fecha = () => { escuta(false); pop.hidden = true; };
+  /* A linha escolhida só fica acesa enquanto o seletor dela está aberto: fechar manda `mapa-botao` sem
+     botão, e o pacote apaga o `on`. O `setTimeout` deixa passar antes o clique da opção que fechou. */
+  const solta = () => setTimeout(() => $('#mapa-solta').click(), 0);
+  const fecha = () => { escuta(false); pop.hidden = true; solta(); };
 
   /* a captura: a tecla, o botão do mouse ou o botão do controle que a pessoa aperta */
   const MODIFICADOR = {ControlLeft: 'LEFTCTRL', ControlRight: 'RIGHTCTRL', ShiftLeft: 'LEFTSHIFT', ShiftRight: 'RIGHTSHIFT',
@@ -1262,6 +1266,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     captura.dataset[campo] = valor;
     escuta(false); pop.hidden = true;
     captura.click();
+    solta();
   };
   document.addEventListener('keydown', e => {
     if (!ouvindo) return;
@@ -1348,6 +1353,17 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     lista.value = chave;
     lista.dispatchEvent(new Event('change', {bubbles: true}));
   };
+  /* O TÍTULO DIZ QUAL DAS DUAS TELAS É: a Navegação abre o mesmo mapa por «Trocar os botões» e por
+     «Point and click», e o `<h1>`, o `aria-label` e o `<title>` seguem a âncora. */
+  const TITULO = {'#trocar': 'Trocar os botões', '#point-and-click': 'Point and click'};
+  const titula = () => {
+    const t = TITULO[location.hash] || 'Mapa do controle';
+    $('#mc-titulo').textContent = t;
+    mc.setAttribute('aria-label', t);
+    document.title = 'Hefesto — ' + t;
+  };
+  titula();
+  addEventListener('hashchange', titula);
   addEventListener('hashchange', () => { seguida = null; seguirAncora(); });
   new MutationObserver(seguirAncora).observe($('.mc-perfil'), {subtree: true, childList: true, attributes: true});
   seguirAncora();
@@ -1380,6 +1396,26 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     dica.classList.add('visivel');
   };
   const esconder = () => { if (alvo) descrever(alvo, false); alvo = null; if (dica) dica.classList.remove('visivel'); };
+  /* O TEXTO CORTADO PELA RETICÊNCIA GANHA A DICA COM ELE INTEIRO (16/10/2026): sem ela, o fim da
+     frase não se lê em lugar nenhum. Na passagem do ponteiro, em captura e antes de qualquer camada
+     de dica (a desta base e a da janela, que lê o `data-dica` primeiro), o elemento com
+     `text-overflow:ellipsis` mais perto do ponteiro ganha o texto todo, se corta, e perde a dica
+     que esta regra lhe deu, se deixou de cortar. A dica própria de um elemento nunca é trocada. */
+  document.addEventListener('mousemove', e => {
+    let el = e.target && e.target.nodeType === 1 ? e.target : null;
+    for (let n = 0; el && n < 4; el = el.parentElement, n++) {
+      if (getComputedStyle(el).textOverflow !== 'ellipsis') continue;
+      const daRegra = el.hasAttribute('data-dica-do-corte');
+      if (el.hasAttribute('data-dica') && !daRegra) return;
+      const texto = (el.textContent || '').replace(/\s+/g, ' ').trim();
+      if (texto && el.scrollWidth > el.clientWidth + 1) {
+        el.setAttribute('data-dica', texto); el.setAttribute('data-dica-do-corte', '');
+      } else if (daRegra) {
+        el.removeAttribute('data-dica'); el.removeAttribute('data-dica-do-corte');
+      }
+      return;
+    }
+  }, true);
   for (const [ev, f] of [['mouseover', 'in'], ['focusin', 'in'], ['mouseout', 'out'], ['focusout', 'out']])
     document.addEventListener(ev, e => {
       if (window.__hefDica) return;

@@ -99,11 +99,13 @@ def _ler(aba: str) -> dict[str, Any]:
 
 @pytest.mark.parametrize("aba", PAGINAS)
 def test_nenhuma_letra_e_cinza(aba: str) -> None:
+    # D-1610-O-CINZA-SAI-DA-LETRA
     assert _ler(aba)["cinzas"] == []
 
 
 @pytest.mark.parametrize("aba", [p for p in PAGINAS if p[:2].isdigit()])
 def test_o_quadro_respira_igual_dos_dois_lados(aba: str) -> None:
+    # D-1610-O-RESPIRO-E-18-DOS-DOIS-LADOS
     respiro = _ler(aba)["respiro"]
     assert respiro is not None, "a página perdeu o .miolo ou o .quadro"
     esquerda, direita = respiro
@@ -112,6 +114,7 @@ def test_o_quadro_respira_igual_dos_dois_lados(aba: str) -> None:
 
 @pytest.mark.parametrize("aba", ["01-jogar.html", "06-navegacao.html", "09-sistema.html"])
 def test_o_perfil_ativo_tem_o_tamanho_do_nome_e_e_branco(aba: str) -> None:
+    # D-1610-O-PERFIL-ATIVO-NUMA-LINHA-DO-TAMANHO-DO-NOME
     perfil = _ler(aba)["perfil"]
     assert perfil is not None
     rotulo, nome, cor = perfil

@@ -38,6 +38,7 @@ def _opcoes(doc: str) -> str:
 
 def test_o_titulo_do_mapa_diz_qual_das_duas_telas_e() -> None:
     """N1: o mesmo desenho, com o título da âncora por que se entrou."""
+    # D-1610-O-TITULO-DO-MAPA-DIZ-A-TELA
     doc = _pagina("mapa-do-controle.html")
     titulos = re.search(r"const TITULO = (\{[^}]*\})", doc)
     assert titulos, "o mapa perdeu o título que segue a âncora"
@@ -50,6 +51,7 @@ def test_o_titulo_do_mapa_diz_qual_das_duas_telas_e() -> None:
 
 def test_o_mapa_nasce_sem_botao_aceso() -> None:
     """N2: ninguém apertou nada, nenhuma linha acende (a Cruz nascia escolhida)."""
+    # D-1610-O-TITULO-DO-MAPA-DIZ-A-TELA
     assert not re.search(r'class="b2[^"]*"[^>]*data-estado="[^"]*\bon\b',
                          _pagina("mapa-do-controle.html"))
     from pacotes import a13_mapa_do_controle as mapa
@@ -73,6 +75,7 @@ def test_o_toque_mora_em_opcoes_e_as_duas_colunas_sao_pares() -> None:
 
 def test_o_quadrante_da_direita_se_chama_opcoes_e_tem_os_tres_de_permitir() -> None:
     """N4, N5 e N6."""
+    # D-1610-PERMITIR-NAVEGACAO-EM-TRES
     doc = _pagina("06-navegacao.html")
     op = _opcoes(doc)
     assert op.lstrip().startswith('<div class="sec2">Opções</div>')
@@ -112,6 +115,7 @@ def test_os_gestos_do_ps_se_acrescentam_e_tiram_sem_frase_e_sem_o_ps_sozinho() -
 
 def test_o_gesto_permitir_navegacao_grava_o_que_cada_botao_diz() -> None:
     """N5 pelo gesto: Steam liga o Big Picture; Interna e Uso geral o desligam e escolhem o tipo."""
+    # D-1610-PERMITIR-NAVEGACAO-EM-TRES
     import pacotes
     from pacotes import a06_navegacao as a06
 
@@ -154,6 +158,7 @@ def _quadro_topo_da_09() -> str:
 
 def test_as_notas_do_status_saem_em_tercos() -> None:
     """S1: o Status e o exame numa lista só, por igual nas três colunas, na ordem."""
+    # D-1610-AS-NOTAS-DO-STATUS-EM-TERCOS
     import pacotes
     from pacotes import a09_sistema as a09
 
@@ -179,6 +184,7 @@ def test_as_notas_do_status_saem_em_tercos() -> None:
 
 def test_o_parar_e_vermelho_e_o_restaurar_e_o_amarelo_do_padrao() -> None:
     """S2: a borda e a letra do Parar vermelhas, e o Restaurar com o amarelo da Navegação."""
+    # D-1610-O-RESTAURAR-AMARELO-E-O-PARAR-VERMELHO
     topo = (RAIZ / "src/hefesto_dualsense4unix/interface/topo.html").read_text(encoding="utf-8")
     assert re.search(r"\.btn\.amarelo-padrao\{border-color:var\(--yellow\);"
                      r"color:var\(--yellow\)\}", topo)

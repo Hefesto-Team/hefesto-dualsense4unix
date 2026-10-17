@@ -60,6 +60,7 @@ def test_cada_linha_tem_a_peca_dela_no_desenho() -> None:
 
 
 def test_o_perfil_tem_tres_grupos_e_os_moldes_com_o_nome_da_navegacao() -> None:
+    # D-1610-O-PERFIL-JOGO-NAVEGACAO-E-O-ADULTO
     doc = _doc()
     seletor = re.search(r'<select[^>]*id="perfil".*?</select>', doc, flags=re.S)
     assert seletor, "sem o seletor de perfil"
@@ -89,6 +90,7 @@ O_MESMO_BOTAO = {"tp_toque": ("touchpad_toque", "Movimento do cursor"),
 
 def test_o_mapa_e_a_navegacao_dizem_a_mesma_palavra_para_o_mesmo_botao() -> None:
     """O Toque, o L3 clique e a direção do R3 dizem nas duas telas o que o desenho diz."""
+    # D-1510-AS-PALAVRAS-DOS-BOTOES-SAO-AS-DO-DESENHO
     # Prova da D-1510-AS-PALAVRAS-DOS-BOTOES-SAO-AS-DO-DESENHO.
     navegacao = (RAIZ / "mockup" / "06-navegacao.html").read_text(encoding="utf-8")
     for b, (linha, palavra) in O_MESMO_BOTAO.items():

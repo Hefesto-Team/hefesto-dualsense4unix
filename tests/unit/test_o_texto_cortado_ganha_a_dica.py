@@ -36,6 +36,7 @@ MEDIR = r"""
 
 
 def test_a_nota_cortada_do_status_ganha_a_dica() -> None:
+    # D-1610-O-TEXTO-CORTADO-GANHA-DICA
     import json
 
     uri = onde.pagina("09-sistema.html", publicado=False).as_uri()
@@ -72,6 +73,7 @@ TOPO = r"""
 def test_o_perfil_ativo_fica_numa_linha_com_quatro_controles_e_nome_longo() -> None:
     """MORDIDA (16/10/2026): tirar o `white-space:nowrap` do `.pa-rot` e do `.pa-nome` no
     `topo.html` e regerar a 01 quebra o «Perfil ativo» em duas linhas e estica o topo."""
+    # D-1610-O-PERFIL-ATIVO-NUMA-LINHA-DO-TAMANHO-DO-NOME
     import json
 
     nome = "The Legend of Heroes: Trails through Daybreak"

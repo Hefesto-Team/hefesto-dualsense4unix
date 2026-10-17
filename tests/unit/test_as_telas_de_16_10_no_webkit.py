@@ -228,6 +228,7 @@ def test_a_escolha_do_gesto_mostra_so_o_glifo_dentro_da_casa(tamanho: tuple[int,
     coluna `auto` com `padding:0 10px` faz o «Share» vazar por cima do «Options» e o «R1» sair da
     caixa, e este teste reprova.
     """
+    # D-1610-O-GESTO-SE-ESCOLHE-PELO-GLIFO
     uri = onde.pagina("06-navegacao.html", publicado=False).as_uri()
     lido = _no_webkit(uri, tamanho, [MEDIR_ESCOLHA])[0]
     assert lido["n"] >= 10, lido

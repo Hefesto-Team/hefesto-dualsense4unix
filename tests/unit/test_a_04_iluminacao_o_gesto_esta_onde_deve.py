@@ -258,6 +258,7 @@ def test_o_lugar_vazio_nao_oferece_gesto(medido: dict) -> None:
 
 def test_a_caixa_do_hexadecimal_saiu_de_todo_lugar(medido: dict) -> None:
     """Desde 16/10/2026 nenhum lugar, cheio ou vazio, tem o gesto `reenviar` na página."""
+    # D-1610-A-EXPLICACAO-DO-CAMPO-E-DICA
     for estado in ("sim", "nao"):  # (noqa-acento) valor
         for quem, dado in _lugares(medido["como_nasce"], estado).items():
             caixas = [g for g in dado["gestos"] if g["gesto"] == "reenviar"]

@@ -296,6 +296,7 @@ def test_8_permitir_navegacao_liga_e_desliga_pelo_daemon() -> None:
     (AS-TELAS-QUE-ELA-PEDIU-EM-16-10-01, N5, 16/10/2026), com os mesmos donos. O interruptor do
     topo continua dono de ligar: nenhum dos três manda `ligada`.
     """
+    # D-1510-QUEM-NAVEGA-DECIDE-O-BIG-PICTURE
     # Prova da D-1510-QUEM-NAVEGA-DECIDE-O-BIG-PICTURE.
     from hefesto_dualsense4unix.interface import pacotes
     from hefesto_dualsense4unix.interface.pacotes import a06_navegacao as a06
