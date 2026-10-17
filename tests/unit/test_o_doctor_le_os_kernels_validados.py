@@ -124,3 +124,60 @@ def test_os_modulos_acompanham_o_kernel_que_o_hid_playstation_ja_valida(pacote: 
     pino = _pino_de(pacote)
     for build in _validados_de(pacote):
         assert pino.match(f"{build}-generic"), f"{pacote}: o pino não constrói {build}"
+
+
+def _doctor_em(tmp_path: pathlib.Path, checagem: str, kernel: str) -> str:
+    """Roda uma checagem do doctor com o kernel dado, sem tocar no da máquina."""
+    bin_ = tmp_path / "bin"
+    bin_.mkdir()
+    em_fabrica = "/lib/modules/k/kernel/drivers/usb/gadget/function/usb_f_hid.ko.zst"
+    (bin_ / "modinfo").write_text(f'#!/bin/sh\necho "{em_fabrica}"\n', encoding="utf-8")
+    (bin_ / "dkms").write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    for nome in ("modinfo", "dkms"):
+        (bin_ / nome).chmod(0o755)
+    (tmp_path / "sys-module" / "usb_f_hid" / "parameters").mkdir(parents=True)
+    (tmp_path / "efivars-vazia").mkdir()
+    pedido = tmp_path / "hefesto-uhid.conf"
+    pedido.write_text("options uhid backpressure=1\n", encoding="utf-8")
+    r = subprocess.run(
+        ["bash", "-c", f'source "{DOCTOR}"; {checagem}'],
+        env={
+            "PATH": f"{bin_}:/usr/bin:/bin",
+            "HOME": str(tmp_path),
+            "HEFESTO_DOCTOR_KERNEL": kernel,
+            "HEFESTO_DOCTOR_SYS_MODULE": str(tmp_path / "sys-module"),
+            "HEFESTO_EFIVARS_ROOT": str(tmp_path / "efivars-vazia"),
+            "HEFESTO_DOCTOR_UHID_CONF": str(pedido),
+            "HEFESTO_DOCTOR_UHID_PARAM": str(tmp_path / "sem-o-parametro"),
+        },
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    return r.stdout + r.stderr
+
+
+@pytest.mark.parametrize(
+    ("pacote", "checagem"),
+    [("usb-f-hid", "check_hefesto_usb_f_hid_dkms"), ("uhid", "check_uhid_contrapressao")],
+)
+def test_o_doctor_chama_de_conferido_cada_kernel_da_baseline(
+    tmp_path: pathlib.Path, pacote: str, checagem: str
+) -> None:
+    """A prova de COMPORTAMENTO dos dois: o doctor lê a lista, com vírgula ou espaço.
+
+    Com o de fábrica carregado num kernel da BASELINE, o doctor manda instalar
+    (usb-f-hid) ou espera o próximo boot (uhid); nunca diz «não está entre os
+    conferidos», que é a frase do kernel que ninguém mediu.
+    """
+    for build in sorted(_validados_de(pacote)):
+        kernel = f"{build}-generic"
+        (tmp_path / build).mkdir()
+        saida = _doctor_em(tmp_path / build, checagem, kernel)
+        assert "não está entre os conferidos" not in saida, f"{pacote} em {kernel}:\n{saida}"
+        esperado = (
+            f"não está instalada para o kernel {kernel}" if pacote == "usb-f-hid"
+            else "PRÓXIMO BOOT"
+        )
+        assert esperado in saida, f"{pacote} em {kernel}:\n{saida}"

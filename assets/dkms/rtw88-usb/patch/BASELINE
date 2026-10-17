@@ -75,8 +75,9 @@
 #   7. escreva os sha novos aqui.
 # Se o de fábrica do kernel novo NÃO for o da raiz (o 7.2.6 não foi), os
 # passos 2 e 3 viram a pasta `fonte-por-kernel/<build>/` (o `usb.c` rebaseado,
-# o `rx.h` e a série em `patch/`), com a linha POR_KERNEL abaixo; se for, o
-# build entra em `fonte-por-kernel/raiz.txt`. Nos dois casos o `main.h` dele
+# o `rx.h` e a série em `patch/`), com as chaves `*_<versão>` dele no fim
+# deste arquivo, como as do 7.2.6; se for, o build entra em
+# `fonte-por-kernel/raiz.txt`. Nos dois casos o `main.h` dele
 # entra em `main-por-kernel/`.
 KERNEL_BASE=v7.0.11
 KERNELS_VALIDADOS=7.0.11-76070011 7.1.5-76070105 7.2.6-76070206
