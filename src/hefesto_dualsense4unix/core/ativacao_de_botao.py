@@ -391,8 +391,11 @@ def esquecer(dono: object, uniq: object = None, espaco: str | None = None) -> No
     if not isinstance(estados, dict):
         return
     alvo = None if uniq is None else chave(uniq)
-    for par in [p for p in estados if (alvo is None or p[1] == alvo) and espaco in (None, p[0])]:
-        del estados[par]
+    # O laço do controle cria estado enquanto o IPC esquece: a lista é uma fotografia e o
+    # `pop` tolera quem já saiu.
+    for par in list(estados):
+        if (alvo is None or par[1] == alvo) and espaco in (None, par[0]):
+            estados.pop(par, None)
 
 
 def preso(dono: object, uniq: object) -> bool:

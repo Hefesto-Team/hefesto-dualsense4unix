@@ -1437,14 +1437,6 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "do PS ou o apagar."
     ),
     # sai com: AS-PROMESSAS-DE-16-10-SEM-CHAMADOR-01
-    "daemon/subsystems/mouse.py::soltar_o_cursor": (
-        "16/10/2026 — solta o clique que o botão travado segura, «para quem perde o controle ou "
-        "sai do jogo» (a docstring). Nasceu sem chamador com O-CURSOR-GANHA-PRECISAO-PERMANENCIA-"
-        "E-CLIQUE-TRAVADO-01: a queda de leitura e a saída do jogo não a chamam, e o clique "
-        "travado sobrevive a quem o prendeu. Fecha quando a AS-PROMESSAS-DE-16-10-SEM-CHAMADOR-01 "
-        "a ligar nesses dois caminhos."
-    ),
-    # sai com: AS-PROMESSAS-DE-16-10-SEM-CHAMADOR-01
     "profiles/simple_match.py::oferta_do_funciona_em": (
         "16/10/2026 — oferecia, no «Funciona em», os lançadores que a máquina tem. A aba Perfis "
         "do todo (5faca7e8a, 15/10) tirou a chamada viva do `aba10`; sobram o gerador do desenho "

@@ -40,6 +40,7 @@ from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
     primary_identity,
     reconciliar_as_mascaras,
     sem_o_eixo_do_gesto,
+    soltar_o_que_o_controle_segurava,
 )
 from hefesto_dualsense4unix.daemon.subsystems.poll import (
     BATTERY_DEBOUNCE_SEC,
@@ -4336,6 +4337,7 @@ class Daemon:
                 # três handlers de estado (`daemon.status`, `state_full`,
                 if was_connected:
                     esquecer_a_leitura_publicada()
+                    soltar_o_que_o_controle_segurava(self)
                 was_connected = False
                 previous_buttons = frozenset()
                 # Sem o controle, a tecla do Big Picture que ele segurava se solta.
@@ -4360,6 +4362,7 @@ class Daemon:
                     registrar_queda_da_bateria(self, "poll_read_failed", tick_started)
                     if was_connected:
                         esquecer_a_leitura_publicada()
+                    soltar_o_que_o_controle_segurava(self, primary_identity(self))
                     self.bus.publish(
                         EventTopic.CONTROLLER_DISCONNECTED, {"reason": str(exc)}
                     )
@@ -4433,8 +4436,11 @@ class Daemon:
                 from hefesto_dualsense4unix.daemon.subsystems.mouse import (
                     despachar_no_jogo as _largar_a_tabela,
                 )
+                from hefesto_dualsense4unix.daemon.subsystems.mouse import soltar_o_cursor
 
                 _largar_a_tabela(self, state, frozenset(), no_jogo=False)
+                # A pausa e o Modo Nativo não despacham o mouse: o clique travado se solta.
+                soltar_o_cursor(self)
                 if self._touchpad_reader is not None:
                     from hefesto_dualsense4unix.daemon.subsystems.mouse import (
                         discard_touchpad_motion,
@@ -4501,12 +4507,16 @@ class Daemon:
                 emu_buttons = levar_o_big_picture(self, None, emu_buttons)[0]
                 if self._mouse_device is not None and emu_active:
                     self._dispatch_mouse_emulation(state, emu_buttons)
-                elif self._touchpad_reader is not None:
+                else:
                     from hefesto_dualsense4unix.daemon.subsystems.mouse import (
                         discard_touchpad_motion,
+                        soltar_o_cursor,
                     )
 
-                    discard_touchpad_motion(self)
+                    # A emulação suspensa não despacha o mouse: o clique travado se solta.
+                    soltar_o_cursor(self)
+                    if self._touchpad_reader is not None:
+                        discard_touchpad_motion(self)
 
                 if self._keyboard_device is not None and emu_active:
                     if self._teclado_so_no_jogo:

@@ -846,6 +846,10 @@ def end_game_output_session(daemon: DaemonProtocol, *, target_uniq: str | None =
     _esquecer_o_numero_do_jogo(daemon, target_uniq)
     if target_uniq is not None:
         soltar_a_ativacao(daemon, target_uniq)
+        # O clique travado não sobrevive ao jogo que fechou.
+        from hefesto_dualsense4unix.daemon.subsystems.mouse import soltar_o_cursor
+
+        soltar_o_cursor(daemon)
         esquecer_a_vibracao(daemon, target_uniq)
         # O gatilho e o envelope do jogo zeram com a sessão: quem ouve recebe o zero.
         _esquecer_os_eventos_do_jogo(daemon, target_uniq)
@@ -2086,6 +2090,27 @@ def soltar_a_ativacao(daemon: Any, uniq: str | None = None) -> None:
     filtro_de_botao.esquecer(store, uniq)
 
 
+def soltar_o_que_o_controle_segurava(daemon: Any, uniq: str | None = None) -> None:
+    """Quem perdeu o controle solta tudo o que ele segurava. Idempotente; nunca levanta.
+
+    O botão alternado, a repetição e a trava (de ``uniq``, ou de todos), o clique travado
+    dos dois mouses e o pad do P1 em repouso: nenhum botão nem gatilho fica apertado no
+    jogo depois da queda de leitura.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems.mouse import soltar_o_cursor
+
+    soltar_a_ativacao(daemon, uniq)
+    soltar_o_cursor(daemon)
+    device = getattr(daemon, "_gamepad_device", None)
+    if device is None:
+        return
+    try:
+        device.forward_analog(lx=128, ly=128, rx=128, ry=128, l2=0, r2=0)
+        device.forward_buttons(frozenset())
+    except Exception as exc:
+        logger.warning("pad_do_p1_soltar_falhou", err=str(exc))
+
+
 def cortar_pelo_limiar(store: Any, uniq: str | None, l2: int, r2: int) -> tuple[int, int]:
     """O `TriggerThreshold` do DSX no gatilho de `uniq`: abaixo do limiar dele, zero.
 
@@ -2690,6 +2715,7 @@ __all__ = [
     "sem_o_eixo_do_gesto",
     "sem_o_gesto_do_ps",
     "soltar_o_cursor_do_toque",
+    "soltar_o_que_o_controle_segurava",
     "start_gamepad_emulation",
     "start_gamepad_emulation_desfecho",
     "start_motion_reader",
