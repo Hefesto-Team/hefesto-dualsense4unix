@@ -567,6 +567,7 @@ class FioDeNascimento:
         self._fila: queue.Queue[tuple[str, Any, Any]] = queue.Queue()
         self._thread: threading.Thread | None = None
         self._trava = threading.Lock()
+        self._fechado = False
 
     def pedir(self, flavor: str | None, **kwargs: Any) -> PedidoDePad:
         """Pede um pad com os argumentos do `make_virtual_pad`. Volta na hora."""
@@ -579,20 +580,37 @@ class FioDeNascimento:
         self._por("parar", pad, None)
 
     def parar(self) -> None:
-        """Fecha o fio depois do que já foi pedido."""
+        """Fecha o fio depois do que já foi pedido; o que chega depois não abre fio novo."""
         with self._trava:
+            self._fechado = True
             thread, self._thread = self._thread, None
         if thread is not None:
             self._fila.put(("fim", None, None))
 
     def _por(self, tipo: str, alvo: Any, kwargs: Any) -> None:
-        self._fila.put((tipo, alvo, kwargs))
         with self._trava:
-            if self._thread is None:
-                self._thread = threading.Thread(
-                    target=self._rodar, name="hefesto-nascimento-do-pad", daemon=True
-                )
-                self._thread.start()
+            fechado = self._fechado
+            if not fechado:
+                self._fila.put((tipo, alvo, kwargs))
+                if self._thread is None:
+                    self._thread = threading.Thread(
+                        target=self._rodar, name="hefesto-nascimento-do-pad", daemon=True
+                    )
+                    self._thread.start()
+        if not fechado:
+            return
+        # Fio fechado: o pad tardio para aqui mesmo, e o pedido tardio sai sem pad.
+        if tipo == "parar":
+            self._parar_agora(alvo)
+        else:
+            alvo._entregar(None, 0.0)
+
+    @staticmethod
+    def _parar_agora(pad: Any) -> None:
+        try:
+            pad.stop()
+        except Exception as exc:
+            logger.warning("vpad_descartado_nao_parou", err=str(exc))
 
     def _rodar(self) -> None:
         while True:
@@ -600,10 +618,7 @@ class FioDeNascimento:
             if tipo == "fim":
                 return
             if tipo == "parar":
-                try:
-                    alvo.stop()
-                except Exception as exc:
-                    logger.warning("vpad_descartado_nao_parou", err=str(exc))
+                self._parar_agora(alvo)
                 continue
             if alvo.descartado:
                 alvo._entregar(None, 0.0)

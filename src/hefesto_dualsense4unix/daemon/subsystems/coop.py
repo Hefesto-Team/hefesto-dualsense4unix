@@ -2590,6 +2590,7 @@ def resolve_player_numbers(
 def anotar_o_nascimento(daemon: Any, ms: float | None) -> None:
     """O tempo do nascimento que saiu do tique vai ao contador do store, para o doctor.
 
+    `vpad.nascimento_ms_total` SOMA os nascimentos (a média é ele sobre `vpad.nascimentos`).
     `ms=None` é o pad que nasceu na borda (fora do laço), que não se conta.
     """
     store = getattr(daemon, "store", None)
@@ -2598,7 +2599,7 @@ def anotar_o_nascimento(daemon: Any, ms: float | None) -> None:
         return
     try:
         bump("vpad.nascimentos")
-        bump("vpad.nascimento_ms", round(ms))
+        bump("vpad.nascimento_ms_total", round(ms))
     except Exception as exc:
         logger.debug("vpad_nascimento_nao_contado", err=str(exc))
 

@@ -59,6 +59,26 @@ def _avisar_ausente(relpath: str, consequencia: str) -> None:
 _PREFIXO_DO_RELOGIO = "poll.tique.relogio."
 
 
+def _linha_do_nascimento(counters: Any) -> tuple[str, str] | None:
+    """Os pads que nasceram fora do tique e a média do nascimento, dos contadores do store.
+
+    O `vpad.nascimento_ms_total` é a SOMA dos nascimentos, não a última medida.
+    ``None`` enquanto nenhum pad nasceu pelo fio.
+    """
+    if not isinstance(counters, dict):
+        return None
+    nascidos = counters.get("vpad.nascimentos")
+    total = counters.get("vpad.nascimento_ms_total", 0)
+    if not isinstance(nascidos, int) or isinstance(nascidos, bool) or nascidos <= 0:
+        return None
+    if not isinstance(total, int) or isinstance(total, bool):
+        return None
+    return (
+        "[ OK ]",
+        f"nascimento do pad fora do tique: {nascidos}, média {formata_pt_br(total / nascidos)} ms",
+    )
+
+
 def _linha_do_tique(counters: Any) -> tuple[str, str] | None:
     """O tique do daemon em uma linha, dos contadores do ``state_full``.
 
@@ -192,6 +212,11 @@ async def _daemon_checks() -> list[tuple[str, str]]:
             )
             if linha_do_tique is not None:
                 rows.append(linha_do_tique)
+            linha_do_nascimento = _linha_do_nascimento(
+                estado.get("counters") if isinstance(estado, dict) else None
+            )
+            if linha_do_nascimento is not None:
+                rows.append(linha_do_nascimento)
             linha_da_pro = _linha_da_mascara_pro(estado)
             if linha_da_pro is not None:
                 rows.append(linha_da_pro)

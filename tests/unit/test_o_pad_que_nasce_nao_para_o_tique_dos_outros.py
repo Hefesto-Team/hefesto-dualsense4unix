@@ -190,7 +190,7 @@ def test_o_p1_recebe_a_entrada_a_cada_tique_enquanto_o_white_nasce(
     assert mesa.pedidos and mesa.pedidos[0][1] != threading.current_thread().name, (
         "o pad nasceu no fio do laço")
     assert mesa.daemon.store.counter("vpad.nascimentos") == 1
-    assert mesa.daemon.store.counter("vpad.nascimento_ms") >= int(_NASCIMENTO_S * 1000)
+    assert mesa.daemon.store.counter("vpad.nascimento_ms_total") >= int(_NASCIMENTO_S * 1000)
 
 
 def test_o_pad_pronto_entra_no_tique_seguinte_a_entrega(mesa: SimpleNamespace) -> None:
