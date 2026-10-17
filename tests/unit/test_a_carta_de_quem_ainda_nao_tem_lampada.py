@@ -173,6 +173,7 @@ def test_quem_volta_depois_do_prazo_e_a_carta_dele_ja_no_hotplug(quantos: int) -
     hotplug, a carta põe quem voltou depois das acesas (o 2 vira o 1), e um
     tique depois inverte.
     """
+    # D-1710-A-CARTA-SEM-LAMPADA-E-A-MESA-QUE-VAI-SENTAR
     relogio = Relogio()
     mesa = (UM, DOIS, TRES, QUATRO)[:quantos]
     _sessao_anterior(mesa)
@@ -243,6 +244,7 @@ def test_a_mesa_que_vai_sentar_e_a_do_tique_seguinte(jogo: bool, volta: bool) ->
     depois do tique. A gente nova é o ``QUATRO``, com lugar na fila de outra
     sessão e sem lâmpada no hotplug, como quem volta.
     """
+    # D-1710-A-CARTA-SEM-LAMPADA-E-A-MESA-QUE-VAI-SENTAR
     relogio = Relogio()
     _sessao_anterior((UM, DOIS, TRES, QUATRO))
     ctl, reg = _o_backend_do_registro(relogio)
