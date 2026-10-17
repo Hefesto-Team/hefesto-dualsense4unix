@@ -12,8 +12,8 @@ A Conexões deixou de ter os botões (13/10/2026, mudança 12 do desenho do todo
 `perfil-do-controle`, o `perfil_na_linha` e o campo `perfil` do cartão saíram de lá. O que
 ficou, e a mordida que o derruba:
 
-1. o dono (`secao_orcamento`): os três rótulos, o disco de cada perfil e quem vence — MORDIDA:
-   faça `perfil_do_controle` ignorar a mesa → reprova;
+1. o dono (`secao_orcamento`): os três rótulos (o botão por controle, o disco dele e quem vencia
+   saíram com o cartão em 17/10/2026, porque nenhuma tela os chamava);
 2. a aba Sistema segue falando o perfil, pelo mesmo dono;
 3. a Conexões não tem mais o perfil por controle — MORDIDA: devolver um botão
    `perfil-do-controle` ao cartão do gerador → reprova.
@@ -64,36 +64,6 @@ def test_os_rotulos_sao_os_do_desenho_e_personalizado_e_o_terceiro() -> None:
     orc = _orc()
     assert [orc.ROTULOS_DOS_PERFIS[p] for p in orc.PERFIS] == [
         "Perfil máximo", "Perfil econômico", "Personalizado"]
-    assert orc.DICAS_DO_CARTAO[orc.PERFIL_EU_ESCOLHO].endswith("neste controle.")
-    assert orc.DICAS_DO_CARTAO[orc.PERFIL_BATERIA_LONGA] == orc.DICAS[orc.PERFIL_BATERIA_LONGA]
-
-
-@pytest.mark.parametrize("teto", [None, "balanceado", "max", "auto", "economia"])
-@pytest.mark.parametrize("escolha", [None, True, False])
-def test_quem_vence_e_a_regra_do_esquema(teto: str | None, escolha: bool | None) -> None:
-    """A «Bateria Longa» global vale para todos; fora dela, cada controle tem o seu."""
-    orc = _orc()
-    aceso = orc.perfil_do_controle(teto, escolha)
-    if teto == "economia" or escolha is True:
-        assert aceso == orc.PERFIL_BATERIA_LONGA
-    elif escolha is False:
-        assert aceso == orc.PERFIL_EU_ESCOLHO
-    else:
-        assert aceso == orc.PERFIL_TUDO_LIGADO, "todo controle nasce com tudo ligado"
-
-
-@pytest.mark.parametrize("k", [1, 2, 3, 4], ids=["P1", "P2", "P3", "P4"])
-def test_o_corpo_do_clique_e_o_do_dono_da_economia(k: int) -> None:
-    """O corpo é o do `machine.declare` que a economia já usa, com o valor do perfil."""
-    from hefesto_dualsense4unix.profiles.schema import declaracao_da_economia
-
-    orc = _orc()
-    chave = next(iter(declaracao_da_economia(UNIQS[k - 1], True)["controles"]))
-    for perfil, valor in orc.ECONOMIA_POR_PERFIL.items():
-        assert orc.declaracao_do_perfil(UNIQS[k - 1], perfil) == {
-            "controles": {chave: {"economia": valor}}}
-        assert orc.perfil_do_controle(None, valor) == perfil, (
-            f"o disco de «{orc.ROTULOS_DOS_PERFIS[perfil]}» não acende o mesmo botão")
 
 
 @pytest.mark.parametrize("arquivo", PAGINAS_09, ids=["bancada", "publicada"])

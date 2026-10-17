@@ -182,41 +182,6 @@ DICAS: dict[str, str] = {
     ),
 }
 
-DICAS_DO_CARTAO: dict[str, str] = {
-    **DICAS,
-    PERFIL_EU_ESCOLHO: "Nenhum teto: os ajustes de cada aba mandam neste controle.",
-}
-
-ECONOMIA_POR_PERFIL: dict[str, bool | None] = {
-    PERFIL_TUDO_LIGADO: None,
-    PERFIL_BATERIA_LONGA: True,
-    PERFIL_EU_ESCOLHO: False,
-}
-
-
-def perfil_do_controle(teto_da_mesa: str | None, escolha: bool | None) -> str:
-    """O botão aceso no cartão de um controle: a mesa, e depois o controle."""
-    from hefesto_dualsense4unix.profiles.schema import economia_vale, mesa_em_economia
-
-    if economia_vale(escolha, mesa_em_economia(teto_da_mesa)):
-        return PERFIL_BATERIA_LONGA
-    return PERFIL_EU_ESCOLHO if escolha is False else PERFIL_TUDO_LIGADO
-
-
-def declaracao_do_perfil(uniq: str, perfil: str) -> dict[str, Any]:
-    """O corpo do `machine.declare` do clique num perfil do cartão.
-
-    A chave do controle e a validação são as do dono da economia
-    (`schema.declaracao_da_economia`); aqui só se troca o valor pelo do perfil.
-    `KeyError` num perfil que não existe, e `ValueError` num `uniq` sem chave.
-    """
-    from hefesto_dualsense4unix.profiles.schema import declaracao_da_economia
-
-    valor = ECONOMIA_POR_PERFIL[perfil]
-    corpo = declaracao_da_economia(uniq, True)
-    return {"controles": {chave: {"economia": valor} for chave in corpo["controles"]}}
-
-
 COLUNAS: tuple[str, ...] = ("O que", "Vem de", *(ROTULOS_DOS_PERFIS[p] for p in PERFIS))
 
 

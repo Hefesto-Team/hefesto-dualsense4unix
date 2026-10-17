@@ -123,12 +123,11 @@ class PonteDoRodape:
 @pytest.fixture(autouse=True)
 def _o_disco(monkeypatch: pytest.MonkeyPatch) -> None:
     """O perfil no disco hermético da suíte, gravado pelo próprio produto."""
-    from hefesto_dualsense4unix.profiles.schema import declaracao_da_economia
     from hefesto_dualsense4unix.utils.maquina import gravar_maquina
 
     monkeypatch.setattr(a10_perfis, "_ESCOLHIDO", NOME, raising=False)
     loader.save_profile(Profile.model_validate(PERFIL), origem="teste")
-    assert gravar_maquina(declaracao_da_economia(P2, True))
+    assert gravar_maquina({"controles": {P2: {"economia": True}}})
 
 
 def _ctx() -> Contexto:

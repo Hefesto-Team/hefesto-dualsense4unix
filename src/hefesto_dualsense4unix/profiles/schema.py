@@ -1858,17 +1858,6 @@ def economia_vale(escolha_do_controle: bool | None, mesa_em_economia: bool) -> b
     return bool(mesa_em_economia) or escolha_do_controle is True
 
 
-def origem_da_economia(
-    escolha_do_controle: bool | None, mesa_em_economia: bool
-) -> Literal["mesa", "controle"] | None:
-    """QUEM ligou a economia nesta peça: a mesa, o controle, ou ninguém."""
-    if mesa_em_economia:
-        return "mesa"
-    if escolha_do_controle is True:
-        return "controle"
-    return None
-
-
 def mesa_em_economia(teto_da_mesa: str | None) -> bool:
     """A chave do Perfil Global de Bateria liga a economia na mesa inteira?"""
     from hefesto_dualsense4unix.core.rumble import teto_do_orcamento
@@ -1920,23 +1909,6 @@ def economia_da_mesa() -> bool:
 def controles_em_economia() -> frozenset[str]:
     """Os ``uniq`` (doze hexa) cujo controle LIGOU a sua economia, AGORA."""
     return economia_da_declaracao(_declaracao_viva())[1]
-
-
-def declaracao_da_economia(uniq: str, ligada: bool) -> dict[str, Any]:
-    """A declaração PARCIAL que liga ou desliga a economia de um controle."""
-    from pydantic import ValidationError
-
-    from hefesto_dualsense4unix.profiles.manager import chave_de_peca_que_grava
-    from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
-
-    chave = chave_de_peca_que_grava(str(uniq or ""))
-    if chave is None:
-        raise ValueError(f"economia: {uniq!r} não é o endereço de um controle")
-    try:
-        MaquinaConfig.model_validate({"controles": {chave: {"economia": True}}})
-    except ValidationError as exc:
-        raise ValueError(f"economia: {uniq!r} não é chave de controle: {exc}") from exc
-    return {"controles": {chave: {"economia": True if ligada else None}}}
 
 
 def _escritos(modelo: BaseModel) -> dict[str, Any]:
@@ -2960,7 +2932,6 @@ __all__ = [
     "controles_em_economia",
     "decidir_o_modo_da_luz",
     "decidir_o_modo_dos_gatilhos",
-    "declaracao_da_economia",
     "e_endereco_de_jogo",
     "economia_da_declaracao",
     "economia_da_mesa",
@@ -2972,7 +2943,6 @@ __all__ = [
     "leds_na_economia",
     "mesa_em_economia",
     "normalizar_gamepad_flavor",
-    "origem_da_economia",
     "perfil_declara_modo_de_jogo",
     "perfil_e_de_jogo",
     "perfil_e_regra_de_jogo",

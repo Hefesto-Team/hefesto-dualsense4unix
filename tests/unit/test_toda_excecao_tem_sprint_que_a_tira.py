@@ -208,7 +208,7 @@ DIVIDAS: dict[str, int] = {
     "scripts/validar-palavra-de-tela.py::DIVIDA_DA_PALAVRA_01": 0,
     "scripts/validar-palavra-de-tela.py::DIVIDA_DA_PALAVRA_01_PY": 0,
     "scripts/validar-palavra-de-tela.py::DIVIDA_DO_RECIBO": 0,
-    "tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py::_SEM_CAMINHO_HOJE": 11,
+    "tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py::_SEM_CAMINHO_HOJE": 8,
     "tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py::_SEM_MAO_HOJE": 0,
     "tests/unit/test_a_base_comum_das_abas.py::ISENTOS": 2,
     "tests/unit/test_a_costura_da_onda_2.py::_OS_QUE_PODEM": 8,
@@ -338,6 +338,9 @@ NAO_SAO_DIVIDA: dict[str, str] = {
         "a ponte privilegiada é o único lugar que apaga o cache da origem em disco, dentro do "
         "`_apagar` que recusa tudo fora da forma esperada: é o que o BlueZ não expõe, não um "
         "conselho ao usuário"),
+    "tests/unit/test_o_reconnect_da_linha_de_comando_saiu.py::APOSENTADOS": (
+        "os dois campos que saíram do `DaemonConfig` com a opção --reconnect: a régua exige que "
+        "eles NÃO existam, não isenta caso nenhum"),
     "tests/unit/test_t07_a_frase_que_ela_derrubou_nao_volta.py::ARQUIVOS_ISENTOS": (
         "a nota datada que registra a morte da frase"),
     "tests/unit/test_todo_gesto_que_grava_esta_protegido.py::ISENTOS": (

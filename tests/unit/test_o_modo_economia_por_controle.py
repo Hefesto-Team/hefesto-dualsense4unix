@@ -30,11 +30,9 @@ from hefesto_dualsense4unix.profiles.schema import (
     TriggerConfig,
     TriggersConfig,
     controles_em_economia,
-    declaracao_da_economia,
     economia_vale,
     gatilho_na_economia,
     leds_na_economia,
-    origem_da_economia,
     registrar_declaracao_da_mesa,
     vibracao_na_economia,
 )
@@ -78,6 +76,11 @@ def _mesa_sem_registro() -> Iterator[None]:
     registrar_declaracao_da_mesa(None)
     yield
     registrar_declaracao_da_mesa(None)
+
+
+def _economia(chave: str, ligada: bool) -> dict[str, Any]:
+    """A declaração parcial que liga (``true``) ou desliga (``null``) a economia de um controle."""
+    return {"controles": {chave: {"economia": True if ligada else None}}}
 
 
 def _declarar(teto: str | None = None, economia: tuple[str, ...] = ()) -> MaquinaConfig:
@@ -371,9 +374,6 @@ def test_a_regra_entre_a_mesa_e_o_controle() -> None:
     assert economia_vale(True, False) is True
     assert economia_vale(None, True) is True
     assert economia_vale(False, True) is True
-    assert origem_da_economia(True, True) == "mesa"
-    assert origem_da_economia(True, False) == "controle"
-    assert origem_da_economia(None, False) is None
 
 
 def test_a_mesa_em_bateria_longa_liga_a_economia_em_todos() -> None:
@@ -444,7 +444,7 @@ def test_o_escritor_liga_desliga_e_nao_apaga_o_resto_do_controle() -> None:
     disco = MaquinaConfig(
         controles={UNIQS[1]: ControleDeclarado(microfone=False, cor="Cobalt Blue")}
     ).model_dump()
-    ligado = fundir_declaracao(disco, declaracao_da_economia("AA:BB:CC:00:00:02", True))
+    ligado = fundir_declaracao(disco, _economia(UNIQS[1], True))
     maquina = MaquinaConfig.model_validate(ligado)
     assert maquina.controles[UNIQS[1]].economia is True
     assert maquina.controles[UNIQS[1]].microfone is False
@@ -453,15 +453,12 @@ def test_o_escritor_liga_desliga_e_nao_apaga_o_resto_do_controle() -> None:
     assert controles_em_economia() == frozenset({UNIQS[1]})
 
     desligado = MaquinaConfig.model_validate(
-        fundir_declaracao(ligado, declaracao_da_economia(UNIQS[1], False))
+        fundir_declaracao(ligado, _economia(UNIQS[1], False))
     )
     assert desligado.controles[UNIQS[1]].economia is None
     assert desligado.controles[UNIQS[1]].microfone is False
     registrar_declaracao_da_mesa(lambda: desligado)
     assert controles_em_economia() == frozenset()
-
-    with pytest.raises(ValueError):
-        declaracao_da_economia("nao-e-endereco", True)
 
 
 def test_a_economia_atravessa_o_disco() -> None:
@@ -479,7 +476,7 @@ def test_a_economia_atravessa_o_disco() -> None:
         "a suíte ia escrever no maquina.json do usuário que roda"
     )
     resultado = maquina_mod.gravar_maquina_com_descartes(
-        declaracao_da_economia(UNIQS[3], True)
+        _economia(UNIQS[3], True)
     )
     assert resultado.gravou
     lida = maquina_mod.carregar_maquina()
@@ -568,31 +565,3 @@ def test_o_daemon_reaplica_o_perfil_so_quando_a_economia_muda(
     daemon._native_mode = True
     assert daemon.reaplicar_se_a_economia_mudou(antes) is False
     assert chamadas == [1], "em Modo Nativo o controle está com o jogo"
-
-
-@pytest.mark.parametrize(
-    "alvo",
-    [
-        "02:fe:00:00:00:01",
-        "path:/dev/input/event9",
-        "usb-0000:00:14.0-3",
-        "",
-    ],
-)
-def test_o_escritor_recusa_a_chave_em_que_nao_e_seguro_gravar(alvo: str) -> None:
-    """A chave de peça que grava e o que o disco aceita são perguntas aos DONOS."""
-    with pytest.raises(ValueError):
-        declaracao_da_economia(alvo, True)
-
-
-def test_o_escritor_pergunta_ao_disco_o_que_ele_aceita(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """A segunda pergunta é ao ``MaquinaConfig``: o endereço forjado (``02…``)."""
-    from hefesto_dualsense4unix.profiles import manager
-
-    monkeypatch.setattr(
-        manager, "chave_de_peca_que_grava", lambda alvo: alvo.replace(":", "").lower()
-    )
-    with pytest.raises(ValueError):
-        declaracao_da_economia("02:fe:00:00:00:02", True)
