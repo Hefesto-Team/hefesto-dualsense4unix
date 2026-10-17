@@ -6148,6 +6148,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
     ),
     *EDICOES_DA_CADEIA_E_DO_REGISTRO,
     *EDICOES_DOS_MAPAS_DO_TODO,
+    *EDICOES_DO_CHIP_A_940,
 )
 
 
@@ -6271,7 +6272,7 @@ JS_DA_CADEIA_E_DO_REGISTRO = r"""
       var p = modo === "ideal" ? portaDeEm(r.plano, a.id) : portaDe(a.id);
       var hub = c.hub[a.id], enl = c.enlace[a.id];
       /* A dica fala do que a pessoa faz, não do sistema por baixo. */
-      var dica = p ? "Na Entrada " + p + ". Clique para trocar" : "Sem entrada marcada. Clique e marque a entrada";
+      var dica = p ? "Na " + naFraseDe(p) + ". Clique para trocar" : "Sem entrada marcada. Clique e marque a entrada";
       var titulo = a.nomeDeclarado || hub || rotuloDoAparelho(a);
       /* O que o chip corta com reticências vai inteiro na dica: o nome que a pessoa deu e o do aparelho. */
       var inteiro = [a.nomeDeclarado || "", a.nome && a.nome !== titulo ? a.nome : ""].filter(Boolean).join(" · ");
@@ -6546,10 +6547,10 @@ EDICOES_DOS_MAPAS_DO_TODO: tuple[Edicao, ...] = (
 #: «Conexões 3» foram publicadas e entraram no fim de `EDICOES`; a da
 #: O-BLUEZ-TEM-UM-DONO-ATE-NA-SONDA-01, em 08/10.
 #: De novo em 16/10/2026: as da cadeia, do registro e dos mapas do todo foram publicadas e entraram
-#: no fim de `EDICOES`.
+#: no fim de `EDICOES`; a do chip a 940 px foi publicada no mesmo dia e entrou lá em 17/10.
 _SUGESTOES_A_940 = "O-SUGESTOES-DO-MAPA-DAS-PORTAS-NAO-ROLAM-A-940-PX-01"
 
-EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = (
+EDICOES_DO_CHIP_A_940: tuple[Edicao, ...] = (
     Edicao(
         antes="  .bandeja .chip .txt span.enlace { flex-basis: 100%; }\n",
         depois=(
@@ -6575,10 +6576,12 @@ EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = (
             " text-overflow: ellipsis;\n"
             "                            white-space: nowrap; }\n"),
         porque=(
-            f"{_SUGESTOES_A_940}: o tipo e o nome do chip cortam com reticências em vez de "
-            "quebrar a linha (o nome inteiro vai na dica)."),
+            f"16/10/2026, {_SUGESTOES_A_940}: o tipo e o nome do chip cortam com reticências "
+            "em vez de quebrar a linha (o nome inteiro vai na dica)."),
     ),
 )
+
+EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = ()
 
 
 def pagina(com_as_que_esperam: bool = True) -> str:
