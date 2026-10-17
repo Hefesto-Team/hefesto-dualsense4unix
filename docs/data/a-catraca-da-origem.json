@@ -253,14 +253,14 @@
       "data": "2026-10-17",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1141005,
+      "piso": 1141770,
       "por_item": {
-        "docs": 119344,
+        "docs": 119347,
         "scripts": 115218,
-        "src": 307796,
-        "tests": 598647
+        "src": 307936,
+        "tests": 599269
       },
-      "razao": "tamanho: +1 linhas (1141004 -> 1141005), pagas por Origem: D-1610-A-BANDEJA-TEM-INTERRUPTOR-E-VOLTA-COM-O-SERVICO, D-1610-O-ESTADO-DO-CARD-TEM-UM-DONO-SO, D-1610-O-PS-SEGURADO-10-S-DESLIGA-AQUELE-CONTROLE, D-1610-O-TOQUE-DO-GESTO-SOMA-AO-PAR-DO-JOGO, energia.desligar, entrada.combo.ponte, luz.led_microfone; registrado no fecho, topo 770f28e6659e",
+      "razao": "tamanho: +765 linhas (1141005 -> 1141770), pagas por Origem: D-1610-A-BANDEJA-TEM-INTERRUPTOR-E-VOLTA-COM-O-SERVICO, D-1610-O-CURSOR-GANHA-PRECISAO-PERMANENCIA-E-CLIQUE-TRAVADO, D-1610-O-ESTADO-DO-CARD-TEM-UM-DONO-SO, D-1610-O-PAD-VIRTUAL-NASCE-NUM-FIO-PROPRIO, D-1610-O-PS-SEGURADO-10-S-DESLIGA-AQUELE-CONTROLE, D-1610-O-TOQUE-DO-GESTO-SOMA-AO-PAR-DO-JOGO, energia.desligar, entrada.combo.ponte, luz.led_microfone; registrado no fecho, topo d7e4b199600c",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -525,10 +525,16 @@
           "de": 1141004,
           "para": 1141005,
           "razao": "tamanho: +1 linhas (1141004 -> 1141005), pagas por Origem: D-1610-A-BANDEJA-TEM-INTERRUPTOR-E-VOLTA-COM-O-SERVICO, D-1610-O-ESTADO-DO-CARD-TEM-UM-DONO-SO, D-1610-O-PS-SEGURADO-10-S-DESLIGA-AQUELE-CONTROLE, D-1610-O-TOQUE-DO-GESTO-SOMA-AO-PAR-DO-JOGO, energia.desligar, entrada.combo.ponte, luz.led_microfone; registrado no fecho, topo 770f28e6659e"
+        },
+        {
+          "data": "2026-10-17",
+          "de": 1141005,
+          "para": 1141770,
+          "razao": "tamanho: +765 linhas (1141005 -> 1141770), pagas por Origem: D-1610-A-BANDEJA-TEM-INTERRUPTOR-E-VOLTA-COM-O-SERVICO, D-1610-O-CURSOR-GANHA-PRECISAO-PERMANENCIA-E-CLIQUE-TRAVADO, D-1610-O-ESTADO-DO-CARD-TEM-UM-DONO-SO, D-1610-O-PAD-VIRTUAL-NASCE-NUM-FIO-PROPRIO, D-1610-O-PS-SEGURADO-10-S-DESLIGA-AQUELE-CONTROLE, D-1610-O-TOQUE-DO-GESTO-SOMA-AO-PAR-DO-JOGO, energia.desligar, entrada.combo.ponte, luz.led_microfone; registrado no fecho, topo d7e4b199600c"
         }
       ],
       "unidade": "linhas",
-      "universo": 2959
+      "universo": 2963
     }
   }
 }
