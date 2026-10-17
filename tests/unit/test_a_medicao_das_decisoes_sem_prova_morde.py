@@ -477,12 +477,14 @@ def test_a_medicao_de_hoje_bate_com_o_csv_de_hoje(mi):
     # Dez desde 08/10/2026: as quatro do chip «Só neste jogo / Voltar ao do PC»
     # caducaram com a D-0610-O-ESCOPO-SAI-DAS-ABAS. Treze desde 15/10/2026, com a
     # D-1510-A-CALIBRAR-GUARDA-O-SELO-DA-MIRA e a D-0110-O-STATUS-DO-MODO-GRAVA-SO-O-LIGA-NO-JOGO;
-    # a conta de dez já estava atrás do CSV, que tinha onze.
+    # a conta de dez já estava atrás do CSV, que tinha onze. Dezessete desde 16/10/2026: a
+    # D-0609-UM-NO-DE-SOM-POR-CONTROLE-CONECTADO, e as três que a D-1610-O-SEM-PISCAR-SAI e a
+    # D-1610-PERMITIR-NAVEGACAO-EM-TRES fizeram caducar (o estado delas chegou em 17/10).
     estados = [linha["estado"] for linha in mi._linhas()]
     adiante = sum(estado in ("implementada", "feita", "no ar") for estado in estados)
-    assert estados.count("caduca") == 13, (
-        "o CSV tem treze linhas `caduca`; se isso mudou, o laudo tem de dizer")
-    assert medida["decididas"] == medida["linhas"] - 13 - adiante
+    assert estados.count("caduca") == 17, (
+        "o CSV tem dezessete linhas `caduca`; se isso mudou, o laudo tem de dizer")
+    assert medida["decididas"] == medida["linhas"] - 17 - adiante
     assert medida["decididas"] > 0
     assert len(medida["com_regua_dentro_de_teste"]) <= medida["decididas"]
     assert set(medida["com_regua_dentro_de_teste"]).isdisjoint(
