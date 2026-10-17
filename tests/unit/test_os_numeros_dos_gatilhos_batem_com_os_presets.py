@@ -16,8 +16,12 @@ MORDIDAS: devolver «73 parâmetros», «Machine pede 6 barras» ou
 from __future__ import annotations
 
 import re
-import tomllib
 from pathlib import Path
+
+try:
+    import tomllib
+except ImportError:  # pragma: no cover — 3.10
+    import tomli as tomllib  # type: ignore[no-redef]
 
 from hefesto_dualsense4unix.app.actions.trigger_specs import PRESETS
 

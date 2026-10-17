@@ -1750,15 +1750,19 @@ def _nenhuma_ordem_do_mic_atravessa() -> Iterator[None]:
 
     As duas tabelas do `luz_do_mic` são do módulo: uma ordem gravada no relógio de agora
     (`time.monotonic`) por um caso fazia o `o_jogo_pede_o_mudo` do caso seguinte, com
-    `em=1.0`, achar a ordem mais nova e não mutar (parte 20 da suíte, 17/10/2026).
+    `em=1.0`, achar a ordem mais nova e não mutar (parte 20 da suíte, 17/10/2026). Módulo
+    que ninguém importou não tem tabela a limpar, e importá-lo aqui puxaria o `structlog` para
+    os jobs do CI que rodam sem as dependências do produto.
     """
-    from hefesto_dualsense4unix.daemon.subsystems import luz_do_mic
-
-    luz_do_mic._A_PESSOA_MANDOU_EM.clear()
-    luz_do_mic._LUZ_DO_JOGO.clear()
+    luz_do_mic = sys.modules.get("hefesto_dualsense4unix.daemon.subsystems.luz_do_mic")
+    if luz_do_mic is not None:
+        luz_do_mic._A_PESSOA_MANDOU_EM.clear()
+        luz_do_mic._LUZ_DO_JOGO.clear()
     yield
-    luz_do_mic._A_PESSOA_MANDOU_EM.clear()
-    luz_do_mic._LUZ_DO_JOGO.clear()
+    luz_do_mic = sys.modules.get("hefesto_dualsense4unix.daemon.subsystems.luz_do_mic")
+    if luz_do_mic is not None:
+        luz_do_mic._A_PESSOA_MANDOU_EM.clear()
+        luz_do_mic._LUZ_DO_JOGO.clear()
 
 
 _EXCECOES_DO_FILHO: dict[str, type[BaseException]] = {
