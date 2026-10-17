@@ -275,7 +275,8 @@ def _os_remendos_na_08_que_saiu() -> list[str]:
         for no in ast.walk(arvore):
             ruim = ""
             if isinstance(no, ast.Attribute) and no.attr in SAIRAM_DA_08:
-                if isinstance(no.value, ast.Name) and no.value.id not in OS_DONOS:
+                # `self._mac` é atributo da classe do próprio teste, não nome de outro módulo
+                if isinstance(no.value, ast.Name) and no.value.id not in OS_DONOS | {"self"}:
                     ruim = f"{no.value.id}.{no.attr}"
             elif (isinstance(no, ast.Call) and len(no.args) >= 2
                   and isinstance(no.func, ast.Attribute) and no.func.attr == "setattr"

@@ -92,8 +92,11 @@ def test_todo_gatilho_da_receita_e_um_modo_real() -> None:
     assert m, "a página Gatilhos não tem lista de modo — a régua ficaria cega"
     reais = set(re.findall(r'<option value="([^"]*)"', m.group(1)))
 
+    # A receita com a chave que saiu da lista de onze vale pelo acionamento que a tela mostra.
+    from hefesto_dualsense4unix.app.actions.trigger_specs import na_lista_de_onze
+
     ruins = [f"{e.rotulo} -> {e.gatilho!r}" for e in estilos.ESTILOS
-             if e.gatilho is not None and e.gatilho not in reais]
+             if e.gatilho is not None and na_lista_de_onze(e.gatilho, [])[0] not in reais]
     assert not ruins, (
         "receita(s) apontando para modo de gatilho que não existe:\n  "
         + "\n  ".join(ruins) + f"\nos reais: {sorted(reais)}")

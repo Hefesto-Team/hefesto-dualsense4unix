@@ -108,6 +108,10 @@ def bancada(tmp_path: Path) -> tuple[Path, Path, Path]:
     home.mkdir()
     fakes.mkdir()
     _fake(fakes, "sudo", 'printf "SUDO: %s\\n" "$*"\nexit 0\n')
+    # O PATH do sandbox traz o /usr/bin da máquina: sem estes dois de mentira, o `btmgmt` de verdade
+    # acha o adaptador de quem roda a suíte. O caso que precisa de um o reescreve.
+    _fake(fakes, "btmgmt", "exit 1\n")
+    _fake(fakes, "bluetoothctl", "exit 1\n")
     return fakes, sysfs, home
 
 

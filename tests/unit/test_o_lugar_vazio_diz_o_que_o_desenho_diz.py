@@ -246,9 +246,11 @@ def test_as_paginas_com_cartao_com_um_controle_no_p2(pagina: str) -> None:
 
 
 PONTO = pacotes.PONTO_DO_ROTULO
-#: O desenho aprovado de 05/10: o lugar vazio mostra só o número («P3»), sem
-#: «Player N • Desconectado» — o nome fica em branco e o número é o `gc-num`.
-VAZIO_DA_08 = ""
+
+
+def vazio_da_08(n: int) -> str:
+    """O nome do lugar vazio da 08: «P3 • Desconectado», o desenho de 14/10 (q4B)."""
+    return f"P{n}{PONTO}{pacotes.SEM_NINGUEM_AQUI}"
 
 
 def _o_numero_do_lugar(texto: str, n: int) -> str:
@@ -259,8 +261,8 @@ def _o_numero_do_lugar(texto: str, n: int) -> str:
     return achado.group(1).strip() if achado else ""
 
 
-def test_os_quatro_cartoes_da_08_dizem_so_o_numero() -> None:
-    """Só «PN» nos quatro, o nome em branco e nenhuma barra acesa."""
+def test_os_quatro_cartoes_da_08_dizem_o_lugar_desconectado() -> None:
+    """«PN» no número, «PN • Desconectado» no nome e nenhuma barra acesa."""
     pagina = "08-conexoes.html"
     carga = _carga(pagina, [])
     cravados, (vivos,), texto = _a_tela(pagina, [carga])
@@ -269,7 +271,7 @@ def test_os_quatro_cartoes_da_08_dizem_so_o_numero() -> None:
         assert _o_numero_do_lugar(texto, n) == f"P{n}", (
             f"{pref}: o lugar vazio perdeu o número, a única coisa que ele diz")
         assert _o_que_diz(cravados, vivos, pref, "nome") == [
-            VAZIO_DA_08], pref
+            vazio_da_08(n)], pref
         assert _o_que_diz(cravados, vivos, pref, "plastico") == [""], (
             f"{pref}: a barra ficou acesa com zero controles na mesa")
 
@@ -281,13 +283,13 @@ def test_o_p2_sai_e_volta_ao_lugar_vazio_no_tique_seguinte() -> None:
     cravados, (com, sem), texto = _a_tela(pagina, [cheio, vazio])
     assert cheio["vazios"] == ["p1", "p3", "p4"], cheio["vazios"]
     nome_cheio = _o_que_diz(cravados, com, "p2", "nome")
-    assert nome_cheio and nome_cheio[0] != VAZIO_DA_08, nome_cheio
+    assert nome_cheio and nome_cheio[0] != vazio_da_08(2), nome_cheio
     for n in (1, 3, 4):
         assert _o_que_diz(cravados, com, f"p{n}", "nome") == [
-            VAZIO_DA_08]
+            vazio_da_08(n)]
     assert vazio["vazios"] == ["p1", "p2", "p3", "p4"]
     assert _o_que_diz(cravados, sem, "p2", "nome") == [
-        VAZIO_DA_08], (
+        vazio_da_08(2)], (
         "o controle saiu e o cartão do P2 continuou dizendo o nome dele — o "
         "«cache» que ela fotografou")
     assert _o_que_diz(cravados, sem, "p2", "plastico") == [""]
@@ -488,7 +490,7 @@ def test_o_tique_do_piloto_leva_a_pagina_ao_apagador(
     pagina = "08-conexoes.html"
     cargas = _tiques_do_piloto(pagina, [[], [NO_P2], []], monkeypatch)
     cravados, telas, texto = _a_tela(pagina, cargas)
-    esperado_vazio = [VAZIO_DA_08 for n in range(1, 5)]
+    esperado_vazio = [vazio_da_08(n) for n in range(1, 5)]
     for rotulo, vivos, carga in zip(("vazia", "P2", "P2 saiu"), telas, cargas, strict=True):
         vazaram = hefesto_vivo._o_desenho_cheio_no_lugar_vazio(
             cravados, vivos, carga["vazios"], texto)

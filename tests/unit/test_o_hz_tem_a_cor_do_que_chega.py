@@ -319,8 +319,9 @@ def test_a_cor_de_cada_nivel_na_tela(a08: Any) -> None:
     medido = _rodar_no_webkit(sala)
     tokens = {k: _rgb(v) for k, v in medido["tokens"].items()}
     painel = tokens["--panel"]
+    # sem medida, o número fica na cor do texto (D-1610-O-CINZA-SAI-DA-LETRA); a dica o separa
     por_nivel = {"liso": ("--green", ["1", "1"]), MEDIO: ("--fg", ["1", "0"]),
-                 "engasga": ("--red", ["0", "0"]), None: ("--texto-mudo", ["1", "0"])}
+                 "engasga": ("--red", ["0", "0"]), None: ("--fg", ["1", "0"])}
     vistos = set()
     for parte in medido["partes"]:
         if parte["alvo"] not in U:

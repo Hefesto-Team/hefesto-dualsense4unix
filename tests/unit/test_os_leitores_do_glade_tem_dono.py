@@ -23,7 +23,7 @@ NO_GLADE = {
 }
 
 BOTAO = "btn_storm_fix_safe"
-RESERVA_DO_BOTAO = "Refazer os consertos automáticos"
+RESERVA_DO_BOTAO = "Permitir correções automáticas"
 
 
 def _sem_fonte_nenhuma(doutor, monkeypatch, tmp_path) -> None:

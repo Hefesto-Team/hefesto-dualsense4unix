@@ -112,7 +112,7 @@ def test_as_dicas_do_giroscopio_citadas_sao_as_do_pacote() -> None:
 
 
 def test_os_ajustes_da_mira_citados_existem_na_calibrar() -> None:
-    """O que a bancada diz morar nos ajustes do «Giroscópio como analógico» está na Calibrar.
+    """O que a bancada diz morar nos ajustes do analógico virtual está na Calibrar.
 
     O bloco «Mira Virtual» embaixo dos cartões virou, em 08/10/2026, os ajustes do
     «Analógico virtual» dentro do cartão de cada controle
@@ -124,7 +124,7 @@ def test_os_ajustes_da_mira_citados_existem_na_calibrar() -> None:
     ausentes = []
     for titulo, corpo in _secoes().items():
         for frase in _frases(corpo):
-            if "ajustes do «Giroscópio como analógico»" not in frase:
+            if "ajustes do analógico virtual" not in frase:
                 continue
             frases_do_bloco += 1
             for citado in _citados(frase):

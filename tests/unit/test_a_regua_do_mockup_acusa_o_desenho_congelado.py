@@ -44,9 +44,9 @@ CASO_ANTIGO = {"p1·aj-nome-e-0": "Início do curso", "p1·aj-val-e-0": "2",
                "p1·aj-nome-e-2": "Força", "p1·aj-val-e-2": "4",
                "p1·aj-nome-e-3": "Frequência", "p1·aj-val-e-3": "40"}
 CASO_DO_TODO = {"p1·modo-chave-e": "Machine", "p1·imersao-e": "rajada-que-sobe-sozinha",
-                "p1·modo-chave-d": "Bow", "p1·imersao-d": "corda-que-treme-no-fim",
-                "p2·modo-chave-e": "SemiAutoGun", "p2·imersao-e": "ferrolho-que-volta",
-                "p2·modo-chave-d": "Rigid", "p2·imersao-d": "nenhum"}
+                "p1·modo-chave-d": "Bow", "p1·imersao-d": "corda-que-estica",
+                "p2·modo-chave-e": "Weapon", "p2·imersao-e": "ferrolho-que-volta",
+                "p2·modo-chave-d": "Resistance", "p2·imersao-d": "nenhum"}
 
 
 def _caso(campos: dict[str, str]) -> dict[str, str]:
@@ -69,7 +69,7 @@ def test_o_mesmo_endereco_em_colunas_diferentes_nao_se_confunde():
     campos = {c.endereco: c.valor for c in regua._campos_cravados(_texto(GATILHOS))}
     if "p1·imersao-e" in campos:
         assert campos["p1·modo-chave-e"] == "Machine"
-        assert campos["p2·modo-chave-e"] == "SemiAutoGun"
+        assert campos["p2·modo-chave-e"] == "Weapon"
     else:
         assert campos["p1·aj-val-e-0"] == "2"
         assert campos["p2·aj-val-e-0"] == "3"
@@ -204,9 +204,11 @@ def test_a_vibracao_publicada_nao_tem_data_gesto_e_a_regua_sabe():
     texto = _texto("05-vibracao.html")
     do_html = {g.nome for g in regua._gestos_cravados(texto)}
     # `modo-da-vibracao`, `criar-efeito` e os chips (`testar`) são da página do todo
-    # (A-ABA-VIBRACAO-DO-TODO-01); `aplicar`, `salvar`, `importar` e `exportar` são do rodapé.
+    # (A-ABA-VIBRACAO-DO-TODO-01), as listas `efeito-haptico` e `efeito-imersao` da publicação de
+    # 16/10 (`b7112369c`); `aplicar`, `salvar`, `importar` e `exportar` são do rodapé.
     assert not (do_html - {"aplicar", "salvar", "importar", "exportar",
-                           "lado", "haptica", "modo-da-vibracao", "criar-efeito", "testar"}), (
+                           "lado", "haptica", "modo-da-vibracao", "criar-efeito", "testar",
+                           "efeito-haptico", "efeito-imersao"}), (
         f"a 05-vibracao passou a ter `data-gesto` próprio: {sorted(do_html)}. "
         f"Se isso é intencional, esta régua fica mais fácil — mas o teste tem "
         f"de saber, porque a união com os registrados existe por causa disto.")
