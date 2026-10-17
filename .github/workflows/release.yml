@@ -386,10 +386,36 @@ jobs:
   # que não o tem, o passo é pulado e o resto roda de verdade, sobre os arquivos que o `act` consegue montar.
   # O atestado de repositório público vai para o registro público de transparência (Sigstore) e não se
   # apaga: ele espera o `guarda-ci` como todo job que entrega para fora.
+  # A peça GDK (xgameruntime.dll) e a sonda dela, do fonte em assets/gdk-runtime/. O Ubuntu é o 24.04 fixo:
+  # o pino.txt grava o sha256 do binário, e só o mesmo compilador dá o mesmo binário. O `--conferir` reprova a
+  # release se o fonte mudou sem o pino acompanhar.
+  peca-gdk:
+    name: A peça GDK, compilada e conferida com o pino
+    runs-on: ubuntu-24.04
+    needs: build
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+      - name: Compilador mingw-w64
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-mingw-w64-x86-64-posix
+      - name: Compilar, marcar como builtin do Wine e conferir com o pino
+        run: bash assets/gdk-runtime/construir.sh dist/peca-gdk --conferir
+      - name: Upload da peça GDK
+        uses: actions/upload-artifact@v7
+        with:
+          name: peca-gdk-${{ needs.build.outputs.version }}
+          path: |
+            dist/peca-gdk/xgameruntime.dll
+            dist/peca-gdk/sonda-gdk.exe
+          if-no-files-found: error
+
   integridade:
     name: SHA256SUMS e atestado de procedência
     runs-on: ubuntu-latest
-    needs: [build, appimage, deb, flatpak, guarda-ci]
+    needs: [build, appimage, deb, flatpak, guarda-ci, peca-gdk]
     permissions:
       contents: read
       id-token: write
@@ -425,7 +451,7 @@ jobs:
   # no instante em que ela é pública, e apagar e recriar a versão (o que este job fazia a cada re-execução) o
   # GitHub recusa. `scripts/release/publicar.py` faz os passos e recusa o que não confere.
   github-release:
-    needs: [build, appimage, deb, deb-install-smoke, flatpak, guarda-ci, integridade]
+    needs: [build, appimage, deb, deb-install-smoke, flatpak, guarda-ci, integridade, peca-gdk]
     runs-on: ubuntu-latest
     environment: release
     permissions:
@@ -442,7 +468,7 @@ jobs:
           path: dist/tudo/
           merge-multiple: true
       - name: Conferir os arquivos com o SHA256SUMS
-        run: python3 scripts/release/sums.py conferir dist/tudo --exigir '*.whl' '*.tar.gz' '*.AppImage' '*.deb' '*.flatpak'
+        run: python3 scripts/release/sums.py conferir dist/tudo --exigir '*.whl' '*.tar.gz' '*.AppImage' '*.deb' '*.flatpak' 'xgameruntime.dll' 'sonda-gdk.exe'
       - name: Notas da release (a seção do CHANGELOG e como conferir)
         env:
           VERSION: ${{ needs.build.outputs.version }}

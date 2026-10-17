@@ -2609,6 +2609,13 @@ if [[ -L "${HOME}/.local/bin/hefesto-launch" || -e "${HOME}/.local/bin/hefesto-l
     rm -f "${HOME}/.local/bin/hefesto-launch"
 fi
 rmdir "${HOME}/.local/share/hefesto-dualsense4unix/bin" 2>/dev/null || true
+# A peça GDK (simetria com o passo 4b-5 do install.sh): sai só a pasta do Hefesto.
+# A DLL que o usuário pôs ao lado do exe de um jogo não é nossa e fica.
+readonly PECA_GDK_PASTA="${HOME}/.local/share/hefesto-dualsense4unix/wine"
+if [[ -d "${PECA_GDK_PASTA}" ]]; then
+    log "removendo a peça GDK ${PECA_GDK_PASTA}"
+    rm -rf "${PECA_GDK_PASTA}"
+fi
 # Nas duas pastas de estado: o daemon materializa pelo XDG_STATE_HOME, e o
 # install cria a do lar. O REGISTRO DAS ESTRADAS (`estradas.json`) mora aqui e
 # FICA quando o desfazer dos lançadores foi adiado (lá em cima): sem ele, o
