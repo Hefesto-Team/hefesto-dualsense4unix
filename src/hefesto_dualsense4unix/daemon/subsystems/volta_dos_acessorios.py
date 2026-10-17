@@ -250,6 +250,13 @@ class VoltaDosAcessorios:
             medidor.camada = True
         self._andar_o_medidor(uniq, agora)
 
+    def _devolver_as_luzinhas(self, uniq: str, medidor: _Medidor) -> None:
+        """O medidor fecha: volta o número de AGORA (o medidor não o grava, e a troca automática
+        pode tê-lo mudado no meio); o lido na abertura só vale se a leitura falhar."""
+        lido = self._l.ler_luzinhas(uniq) or (medidor.luzinhas0, medidor.degrau0)
+        self._l.luzinhas(uniq, *lido)
+        self.escritas += 1
+
     def _andar_o_medidor(self, uniq: str, agora: float) -> None:
         medidor = self._medidores.get(uniq)
         if medidor is None:
@@ -259,8 +266,7 @@ class VoltaDosAcessorios:
             return
         if agora >= medidor.ate and not medidor.camada:
             del self._medidores[uniq]
-            self._l.luzinhas(uniq, medidor.luzinhas0, medidor.degrau0)
-            self.escritas += 1
+            self._devolver_as_luzinhas(uniq, medidor)
             return
         alvo = (_luzinhas(lampadas_do_nivel(self._nivel)), DEGRAU_DO_MEDIDOR)
         if medidor.escrito != alvo:
@@ -386,8 +392,7 @@ class VoltaDosAcessorios:
             for uniq, medidor in list(self._medidores.items()):
                 del self._medidores[uniq]
                 if self._l.pode_falar(uniq):
-                    self._l.luzinhas(uniq, medidor.luzinhas0, medidor.degrau0)
-                    self.escritas += 1
+                    self._devolver_as_luzinhas(uniq, medidor)
             for uniq, toque in list(self._toques.items()):
                 del self._toques[uniq]
                 if toque.escrito not in (None, (0, 0)):
@@ -401,7 +406,6 @@ def somar_ao_par_do_jogo(toque: tuple[int, int], jogo: tuple[int, int]) -> tuple
 
 def volta_de_producao(daemon: Any) -> VoltaDosAcessorios:
     """A volta ligada ao serviço vivo: o backend escreve, o daemon responde às guardas."""
-    from hefesto_dualsense4unix.core.controller import OutputSpec
     from hefesto_dualsense4unix.core.events import EventTopic
     from hefesto_dualsense4unix.daemon.lifecycle import o_hefesto_fala_no_modo
     from hefesto_dualsense4unix.daemon.subsystems.luz_animada import escritor_de_producao
@@ -430,7 +434,8 @@ def volta_de_producao(daemon: Any) -> VoltaDosAcessorios:
 
     def ler_luzinhas(uniq: str) -> tuple[Luzinhas, int] | None:
         ler = getattr(controller, "resolved_player_leds_for", None)
-        luzes = ler(uniq) if callable(ler) else None
+        # Com a camada do co-op: é o número que o controle mostra, e é ele que volta.
+        luzes = ler(uniq, incluir_coop=True) if callable(ler) else None
         if not isinstance(luzes, tuple) or len(luzes) != LAMPADAS:
             return None
         brilho = getattr(controller, "brilho_das_luzes_para", None)
@@ -438,10 +443,10 @@ def volta_de_producao(daemon: Any) -> VoltaDosAcessorios:
         return (luzes, degrau if isinstance(degrau, int) else DEGRAU_DO_MEDIDOR)
 
     def luzinhas(uniq: str, acesas: Luzinhas, degrau: int) -> object:
-        escrever = getattr(controller, "apply_output_for", None)
-        if not callable(escrever):
-            return False
-        return escrever(uniq, OutputSpec(player_leds=acesas, player_led_brightness=degrau))
+        # Sem lembrar: o `apply_output_for` gravava o medidor na camada usuária, e o número do
+        # jogador da troca automática sumia daquele controle até o próximo aplicar de perfil.
+        pintar = getattr(controller, "pintar_as_luzinhas_sem_lembrar", None)
+        return pintar(uniq, acesas, degrau) if callable(pintar) else False
 
     def pode_falar(uniq: str) -> bool:
         for controle in controles_do_daemon(daemon):

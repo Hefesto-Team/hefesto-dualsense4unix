@@ -42,6 +42,7 @@ from hefesto_dualsense4unix.mods.porta import (
 P1 = "aabbcc000001"
 P2 = "aabbcc000002"
 ORIGINAL = (False, False, True, False, False)  # o número do jogador que o controle acende
+COOP = (False, True, False, True, False)  # o número que a camada do co-op põe por cima
 VERMELHO = [122, 0, 16]
 
 
@@ -56,13 +57,14 @@ class Mesa:
     soltas: list[str] = field(default_factory=list)
     pode: bool = True
     pinta: bool = False
+    numero: tuple[bool, ...] = ORIGINAL  # o número que o controle mostra AGORA
     marcas: frozenset[str] = frozenset({"adulto"})
 
     def ligacoes(self) -> Ligacoes:
         return Ligacoes(
             motores=lambda uniq, fraco, forte: self.motores.append(
                 (self.agora, uniq, fraco, forte)),
-            ler_luzinhas=lambda uniq: (ORIGINAL, 1),
+            ler_luzinhas=lambda uniq: (self.numero, 1),
             luzinhas=lambda uniq, acesas, degrau: self.luzinhas.append((uniq, acesas, degrau)),
             barra=lambda uniq, rgb: self.barra.append((self.agora, uniq, rgb)),
             soltar_barra=self.soltas.append,
@@ -158,6 +160,16 @@ def test_na_camada_de_uma_mao_o_medidor_fica_enquanto_ela_vale() -> None:
     volta.ao_gesto(_gesto(P1, "camada", 0), mesa.agora)
     _andar(volta, mesa, mesa.agora + 2.05)
     assert mesa.luzinhas[-1] == (P1, ORIGINAL, 1), "desligada a camada, volta ao número"
+
+
+def test_o_medidor_que_fecha_devolve_o_numero_de_agora_e_nao_o_da_abertura() -> None:
+    # A troca automática renumera o controle no meio do medidor: a volta é o número novo.
+    volta, mesa = _volta()
+    volta.ao_estado(_estado(4), mesa.agora)
+    volta.ao_gesto(_gesto(P1, "sobe"), mesa.agora)
+    mesa.numero = (False, True, False, True, False)
+    _andar(volta, mesa, mesa.agora + 2.1)
+    assert mesa.luzinhas[-1] == (P1, mesa.numero, 1), "voltou o número lido na abertura"
 
 
 def test_o_medidor_so_mexe_nas_luzinhas_do_controle_do_gesto() -> None:
@@ -268,6 +280,75 @@ def test_com_a_haptica_por_audio_o_jogo_nao_esta_nos_motores_e_o_zero_e_zero() -
     volta._l.motores(P1, 200, 0)
     volta._l.motores(P1, 0, 0)
     assert controle.escritos == [(P1, 200, 0), (P1, 0, 0)], "o zero não cala a háptica fina"
+
+
+class _ControleQueNumera:
+    """O backend de mentira: o número com e sem o co-op, e quem escreveu as luzinhas por onde."""
+
+    def __init__(self) -> None:
+        self.pintadas: list[tuple[str, tuple[bool, ...], int]] = []
+        self.lembradas: list[Any] = []
+
+    def resolved_player_leds_for(
+        self, uniq: str, *, incluir_coop: bool = False
+    ) -> tuple[bool, ...]:
+        return COOP if incluir_coop else ORIGINAL
+
+    def brilho_das_luzes_para(self, uniq: str) -> int:
+        return 2
+
+    def pintar_as_luzinhas_sem_lembrar(
+        self, uniq: str, bits: tuple[bool, ...], degrau: int
+    ) -> bool:
+        self.pintadas.append((uniq, bits, degrau))
+        return True
+
+    def apply_output_for(self, uniq: str, spec: Any) -> bool:
+        self.lembradas.append((uniq, spec))
+        return True
+
+
+def test_em_producao_as_luzinhas_do_medidor_nao_entram_no_desejado() -> None:
+    controle = _ControleQueNumera()
+    volta = volta_de_producao(SimpleNamespace(controller=controle, bus=None))
+    acesas = (True, True, False, False, False)
+    volta._l.luzinhas(P1, acesas, DEGRAU_DO_MEDIDOR)
+    assert controle.lembradas == [], "o medidor gravou o número na camada usuária"
+    assert controle.pintadas == [(P1, acesas, DEGRAU_DO_MEDIDOR)]
+
+
+def test_em_producao_o_medidor_le_o_numero_com_o_co_op() -> None:
+    controle = _ControleQueNumera()
+    volta = volta_de_producao(SimpleNamespace(controller=controle, bus=None))
+    assert volta._l.ler_luzinhas(P1) == (COOP, 2), "o número que volta é o que o controle mostra"
+
+
+def test_no_backend_as_luzinhas_sem_lembrar_chegam_ao_no_e_o_desejado_fica_vazio() -> None:
+    from pydualsense.pydualsense import DSAudio, DSLight, DSTrigger
+
+    from hefesto_dualsense4unix.core import backend_pydualsense as bp
+    from hefesto_dualsense4unix.core.controller import OutputSpec
+
+    mac = "AA:BB:CC:00:00:01"
+    acesas = (True, True, True, False, False)
+    no = SimpleNamespace(players=[], indicator_dir="/sys/class/leds/x")
+    no.set_players = lambda bits: no.players.append(tuple(bits)) or True
+    no.set_rgb = lambda *a, **k: True
+    handle = SimpleNamespace(
+        conType=SimpleNamespace(name="USB_01"), triggerL=DSTrigger(), triggerR=DSTrigger(),
+        light=DSLight(), audio=DSAudio(), _raw_trigger_left=None, _raw_trigger_right=None,
+        _output_muted=False, writeReport=lambda report: len(report))
+    ctl = bp.PyDualSenseController()
+    ctl._handles = {mac: handle}
+    ctl._sysfs = {mac: no}
+    ctl.set_coop_outputs({mac: OutputSpec(player_leds=COOP)}, escrever=False)
+    assert ctl.resolved_player_leds_for(mac, incluir_coop=True) == COOP
+    assert ctl.resolved_player_leds_for(mac) != COOP, "sem o pedido, a leitura segue sem o co-op"
+
+    assert ctl.pintar_as_luzinhas_sem_lembrar(mac, acesas, DEGRAU_DO_MEDIDOR) is True
+    assert no.players == [acesas], "o quadro do medidor não chegou ao nó"
+    assert not ctl._desired_by_uniq, "o medidor ficou no desejado"
+    assert ctl.resolved_player_leds_for(mac, incluir_coop=True) == COOP
 
 
 def test_no_modo_nativo_nada_se_escreve() -> None:

@@ -175,9 +175,10 @@ class IController(ABC):
         return
 
     def resolved_player_leds_for(
-        self, uniq: str
+        self, uniq: str, *, incluir_coop: bool = False
     ) -> tuple[bool, bool, bool, bool, bool] | None:
-        """Padrão de player-LED RESOLVIDO do controle `uniq` (leitura pura)."""
+        """Padrão de player-LED RESOLVIDO do controle `uniq` (leitura pura); `incluir_coop` soma
+        a camada do co-op."""
         return None
 
 

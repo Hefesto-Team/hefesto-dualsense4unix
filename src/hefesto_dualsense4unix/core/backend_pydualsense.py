@@ -4749,11 +4749,15 @@ class PyDualSenseController(IController):
         _acordar_a_volta_de(handle)
 
     def resolved_player_leds_for(
-        self, uniq: str
+        self, uniq: str, *, incluir_coop: bool = False
     ) -> tuple[bool, bool, bool, bool, bool] | None:
-        """Padrão de player-LED RESOLVIDO do controle `uniq` (leitura pura)."""
+        """Padrão de player-LED RESOLVIDO do controle `uniq` (leitura pura).
+
+        `incluir_coop` soma a camada do co-op: é o que o controle MOSTRA, e o que o medidor do
+        gesto devolve quando fecha.
+        """
         with self._io_lock:
-            return self._merged_desired_for_key(uniq, incluir_coop=False).player_leds
+            return self._merged_desired_for_key(uniq, incluir_coop=incluir_coop).player_leds
 
     def resolved_led_for(self, uniq: str) -> tuple[int, int, int] | None:
         """Cor de lightbar RESOLVIDA do controle `uniq` (leitura pura; None = ninguém setou cor
@@ -5466,6 +5470,30 @@ class PyDualSenseController(IController):
             return False
         return self._write_partial_output(
             handle, node, _DesiredOutput(led=rgb), what="efeito_da_luz"
+        )
+
+    def pintar_as_luzinhas_sem_lembrar(
+        self, uniq: str, bits: tuple[bool, bool, bool, bool, bool], degrau: int
+    ) -> bool:
+        """Acende `bits` nas luzinhas de número SÓ do controle `uniq`, SEM tocar no desejado.
+
+        É o quadro do medidor do gesto (`volta_dos_acessorios`), irmão de
+        `pintar_a_barra_sem_lembrar`: o número do jogador (o do perfil, o da troca automática e o
+        do co-op) continua no desejado, e o próximo aplicar o devolve. Devolve se o quadro saiu.
+        """
+        alvo = self._key_to_uniq(uniq)
+        if alvo is None:
+            return False
+        with self._io_lock:
+            key = self._key_for_uniq(alvo)
+            handle = self._handles.get(key) if key is not None else None
+            node = self._sysfs.get(key) if key is not None else None
+        if handle is None:
+            return False
+        return self._write_partial_output(
+            handle, node,
+            _DesiredOutput(player_leds=tuple(bits), player_led_brightness=degrau),  # type: ignore[arg-type]
+            what="medidor_das_luzinhas",
         )
 
     #: Quantas vezes a luz RESOLVIDA foi repintada (``_repintar_a_luz_de_um``). Default de CLASSE,
