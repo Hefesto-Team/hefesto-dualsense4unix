@@ -1744,6 +1744,23 @@ def _nenhuma_supervisora_do_mic_atravessa() -> Iterator[None]:
                 monitor.stop()
 
 
+@pytest.fixture(autouse=True)
+def _nenhuma_ordem_do_mic_atravessa() -> Iterator[None]:
+    """A ordem da pessoa e a luz do jogo no microfone, que um caso gravou, o caso seguinte não lê.
+
+    As duas tabelas do `luz_do_mic` são do módulo: uma ordem gravada no relógio de agora
+    (`time.monotonic`) por um caso fazia o `o_jogo_pede_o_mudo` do caso seguinte, com
+    `em=1.0`, achar a ordem mais nova e não mutar (parte 20 da suíte, 17/10/2026).
+    """
+    from hefesto_dualsense4unix.daemon.subsystems import luz_do_mic
+
+    luz_do_mic._A_PESSOA_MANDOU_EM.clear()
+    luz_do_mic._LUZ_DO_JOGO.clear()
+    yield
+    luz_do_mic._A_PESSOA_MANDOU_EM.clear()
+    luz_do_mic._LUZ_DO_JOGO.clear()
+
+
 _EXCECOES_DO_FILHO: dict[str, type[BaseException]] = {
     "ModuleNotFoundError": ModuleNotFoundError,
     "ImportError": ImportError,
