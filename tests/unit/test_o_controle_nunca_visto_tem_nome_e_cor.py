@@ -428,6 +428,11 @@ def test_o_edge_fisico_nasce_escondido_do_jogo_pela_topologia() -> None:
                and 'TAG-="uaccess"' in ln for ln in linhas)
 
 
+#: O `cor_do_plastico` também é o dono da assinatura do que sai pelo rádio; quem leva só ela
+#: (o desligar pelo rádio, 16/10) não lê a cor.
+SO_A_ASSINATURA_DO_RADIO = frozenset({"envelope_de_radio"})
+
+
 def test_nenhuma_funcao_do_controle_depende_da_cor() -> None:
     """Número, barra, microfone, som, vibração e giroscópio não leem a cor."""
     raiz = RAIZ / "src" / "hefesto_dualsense4unix"
@@ -435,7 +440,8 @@ def test_nenhuma_funcao_do_controle_depende_da_cor() -> None:
     def importa_a_cor(arq: pathlib.Path) -> bool:
         for no in ast.walk(ast.parse(arq.read_text(encoding="utf-8"))):
             if isinstance(no, ast.ImportFrom) and (
-                (no.module or "").endswith("cor_do_plastico")
+                ((no.module or "").endswith("cor_do_plastico")
+                 and not {a.name for a in no.names} <= SO_A_ASSINATURA_DO_RADIO)
                 or any(a.name == "cor_do_plastico" for a in no.names)
             ):
                 return True

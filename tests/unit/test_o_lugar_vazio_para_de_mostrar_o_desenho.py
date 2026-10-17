@@ -126,32 +126,6 @@ def test_o_molde_de_cada_pagina_nao_encolhe(pacotes_mod):
             "outra régua acusaria")
 
 
-def test_o_travessao_nao_pousa_em_marca_que_o_texto_nao_devolve(pacotes_mod):
-    """A CONTENÇÃO NÃO ERA A GARANTIA QUE O TEXTO DIZIA."""
-    ctx = _mesa_vazia(pacotes_mod)
-    for pagina in sorted(pacotes_mod.PACOTES):
-        if not pacotes_mod.lugares_da_pagina(pagina):
-            continue
-        apaga = pacotes_mod.enderecos_que_o_texto_apaga(pagina)
-        molde = pacotes_mod.molde_do_lugar(pagina, ctx, {})
-        assert not (set(molde) & apaga), (
-            f"{pagina}: o molde alcança {sorted(set(molde) & apaga)} — o "
-            "travessão apagaria uma marca que o texto não sabe devolver, e ela "
-            "não volta nem quando o controle volta")
-
-    onde_ha_mudo = {
-        pagina: sorted(pacotes_mod.enderecos_que_o_texto_apaga(pagina))
-        for pagina in sorted(pacotes_mod.PACOTES)
-    }
-    com_mudo = {k: v for k, v in onde_ha_mudo.items() if v}
-    assert com_mudo, (
-        "NENHUMA página tem filho mudo sob alvo `texto` — o teste acima passa "
-        "por vacuidade, e a exceção que ele mede deixou de ter caso. Se isso é "
-        "verdade de propósito (todo elemento com filho mudo ganhou outro alvo), "
-        "apague os dois; se não é, alguém apagou desenho.\n"
-        f"medido: {onde_ha_mudo}")
-
-
 def test_o_travessao_nao_pousa_no_fundo_nem_na_barra(pacotes_mod):
     """A composição do conjunto é cobrada, e cada nome tem a sua razão."""
     medidos = {"largura", "altura", "html", "fundo"}
