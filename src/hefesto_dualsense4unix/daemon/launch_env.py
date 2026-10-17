@@ -1054,9 +1054,9 @@ def compose_env(
       saía sem IGNORE nenhum: o jogo veria o DualSense físico E o vpad, e o
       sintoma seria "controle dobrado" com a máscara nova no meio.
     - DualSense, em uhid ou em uinput: DISABLE do físico + IGNORE — dedup no
-      layout PS. O vpad é o Edge 0df2 nos dois canais (VPAD-06), que o IGNORE
-      do 0ce6 não alcança, e o uhid segue com hidraw pleno (NUNCA 0x0DF2 no
-      DISABLE). NOTA DATADA — PS-L3-MASCARA-01, 14/09/2026, com a história
+      layout PS. O vpad é o Edge 0df2 no uhid, com hidraw pleno (NUNCA 0x0DF2 no DISABLE);
+      sem o uhid, o Xbox 360 (045e, `MOTIVO_SEM_CANAL_PROPRIO`). O IGNORE do 0ce6 não
+      alcança os dois. NOTA DATADA — PS-L3-MASCARA-01, 14/09/2026, com a história
       corrigida na conferência do mesmo dia: o uinput ficava de fora por ser
       tratado como DEGRADAÇÃO (o `all(b == "uhid")` de 03/08, escrito quando o
       pior caso era mapeamento menos validado), e não por causa do PID. Desde o
