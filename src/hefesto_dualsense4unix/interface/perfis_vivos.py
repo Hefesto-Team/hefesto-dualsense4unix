@@ -67,9 +67,7 @@ from gi.repository import GLib, Gtk  # noqa: E402
 
 from hefesto_dualsense4unix.app.actions import perfis_web  # noqa: E402
 
-from hefesto_dualsense4unix.interface import pacotes  # noqa: E402
 from hefesto_dualsense4unix.interface.pacotes import a10_perfis  # noqa: E402
-from hefesto_dualsense4unix.profiles import simple_match  # noqa: E402
 
 AQUI = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(AQUI))
@@ -279,37 +277,8 @@ window.HEF = (function(){
     }
   }
 
-  // O CAMPO «FUNCIONA EM:» — C4-FUNCIONA-EM, 11/09/2026, e ele TEM de ser
-  // remontado. Ele deixou de oferecer as seis formas técnicas e passou a
-  // oferecer DE ONDE O JOGO VEM: «Navegação», os lançadores que ESTA máquina
-  // tem, e «Qualquer jogo». Num `<select>` escrever um valor que nenhuma
-  // `<option>` oferece deixa o campo EM BRANCO — foi assim que esta bancada
-  // ficou com o «Funciona em:» vazio no primeiro retrato depois da mudança.
-  //
-  // NADA DE `innerHTML` COM TEXTO, e a disciplina deste arquivo continua de
-  // pé: cada opção nasce por `createElement` + `textContent`. Os nomes dos
-  // lançadores vêm do disco do usuário (o censo), e um deles com `<` seria marcação.
-  function remontaAmbiente(m){
-    const amb = q('[data-hef="editor.ambiente"]');
-    if(!amb) return 'sem-campo';
-    while(amb.firstChild) amb.removeChild(amb.firstChild);
-    // O TRAVESSÃO PRIMEIRO E DESABILITADO: é onde a pintura pousa o `—` de um
-    // perfil cuja regra a tela não sabe mostrar. Sem ele o valor não casa
-    // nada e o campo volta a ficar em branco, que é o defeito acima.
-    const tr = document.createElement('option');
-    tr.value = m.travessao; tr.textContent = m.travessao; tr.disabled = true;
-    amb.appendChild(tr);
-    for(const nome of (m.ambientes || [])){
-      const o = document.createElement('option');
-      o.textContent = nome;
-      amb.appendChild(o);
-    }
-    return 'ok';
-  }
-
   ligarGestos();
   return {pinta:pinta, remonta:remonta, remontaGuarda:remontaGuarda, eco:eco,
-          remontaAmbiente:remontaAmbiente,
           quem:function(){ return document.title + '|' + qa('[data-hef-perfil]').length; }};
 })();
 'HEF-PRONTO'
@@ -347,7 +316,6 @@ class Janela:
         self.pronto = False
         self.chaves: tuple = ()
         self.chaves_da_guarda: tuple = ()
-        self.ambientes: tuple = ()
         self.custos: list[float] = []
         self.custos_disco: list[float] = []
         self.custos_tela: list[float] = []
@@ -488,15 +456,6 @@ class Janela:
             editor["ambiente_travado"] = not procedencia
             editor["ambiente_recado"] = recado
             pacote["editor"] = editor
-        ambientes = simple_match.oferta_do_funciona_em(
-            a10_perfis._procedencias_da_maquina(),
-            str(editor.get("ambiente") or ""))
-        if tuple(ambientes) != self.ambientes:
-            self.ponte.dizer("HEF.remontaAmbiente",
-                             {"ambientes": ambientes,
-                              "travessao": pacotes.TRAVESSAO})
-            self.ambientes = tuple(ambientes)
-            print(f"[remonta funciona-em] {' · '.join(ambientes)}")
 
         t1 = time.perf_counter()
         chaves = tuple(linha["perfil"] for linha in pacote["lista"])

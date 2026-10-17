@@ -134,16 +134,6 @@ def test_o_balao_do_aplicar_tem_onde_cair_nas_paginas() -> None:
         assert not sem, f"`{chave}` sem endereço nas páginas publicadas: {sem}"
 
 
-def test_a_oferta_nao_traz_qualquer_jogo() -> None:
-    """Numa máquina sem lançador, só «Navegação»; com lançadores, nunca «Qualquer jogo».
-
-    A MORDIDA: devolva o `append` do «Qualquer jogo» e a régua reprova.
-    """
-    assert sm.oferta_do_funciona_em([]) == [sm.PROCEDENCIA_DA_NAVEGACAO]
-    assert sm.PROCEDENCIA_DE_QUALQUER_JOGO not in sm.oferta_do_funciona_em(
-        ["Steam", "Heroic"], sm.PROCEDENCIA_DE_QUALQUER_JOGO)
-
-
 class _PonteDeMentira:
     def __init__(self) -> None:
         self.chamadas: list[tuple[str, tuple[Any, ...]]] = []

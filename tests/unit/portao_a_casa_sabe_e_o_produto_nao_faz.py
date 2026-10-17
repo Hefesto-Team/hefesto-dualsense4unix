@@ -1436,14 +1436,6 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "aviso. Fecha quando a O-QUE-A-NAVEGACAO-VELHA-DEIXOU-SEM-CHAMADOR-01 o fiar nos gestos "
         "do PS ou o apagar."
     ),
-    # sai com: AS-PROMESSAS-DE-16-10-SEM-CHAMADOR-01
-    "profiles/simple_match.py::oferta_do_funciona_em": (
-        "16/10/2026 — oferecia, no «Funciona em», os lançadores que a máquina tem. A aba Perfis "
-        "do todo (5faca7e8a, 15/10) tirou a chamada viva do `aba10`; sobram o gerador do desenho "
-        "(`AMBIENTES`, na construção da página) e o piloto `perfis_vivos`. Fecha quando a "
-        "AS-PROMESSAS-DE-16-10-SEM-CHAMADOR-01 decidir se o «Funciona em» volta a ler a máquina "
-        "ou se a oferta fica só no desenho."
-    ),
 }
 
 #: execução — `app/ipc_bridge.py::machine_declare` e

@@ -697,17 +697,6 @@ def _linha_do_jogo(jogo: Any) -> str:
     return f"{nome} · {appid}" if appid else nome
 
 
-ORDEM_DOS_LANCADORES = (PROCEDENCIA_DA_STEAM, "Heroic", "Lutris", "RetroArch",
-                        "Dolphin", "mGBA")
-
-
-def _procedencias_da_maquina(foto: _FotoDoCatalogo | None = None) -> list[str]:
-    """Os lançadores que ESTA máquina tem — a lista que o campo oferece."""
-    achadas = {_procedencia_do_jogo(j) for j in _ofertas_de(foto)}
-    conhecidas = [n for n in ORDEM_DOS_LANCADORES if n in achadas]
-    return conhecidas + sorted(achadas - set(ORDEM_DOS_LANCADORES))
-
-
 def _lancador_da_chave(chave: str, foto: _FotoDoCatalogo | None = None) -> str:
     """De qual lançador vem o jogo com ESTA `wm_class` (ou nome de programa).
 
@@ -835,23 +824,6 @@ def _procedencia_e_recado(match: Any, recado_do_produto: Any = "",
     if procedencia:
         return (procedencia, "")
     return ("", str(recado_do_produto or ""))
-
-
-def _html_do_ambiente(opcoes: list[str], atual: str) -> str:
-    """As `<option>` do «Funciona em:» — a lista desta máquina, pronta.
-
-    Viaja pelo `blocos` pela razão de `_html_da_lista` (bloco cujo número de filhos muda com o dado
-    não tem endereço para o filho que ainda não existe; o desenho tem os lançadores de uma máquina
-    de exemplo). O travessão vem junto e DESABILITADO, como no desenho: é onde o `escrever()` pousa
-    o `—` de perfil cuja regra a tela não sabe mostrar; sem ele `el.value = '—'` não casa, o campo
-    fica com a opção do MOCKUP (a tela afirmando regra que não é) e o contador de pinturas soma +1
-    por tique (medido no DOM vivo em 04/09/2026).
-    """
-    linhas = [f'<option value="{_atr(TRAVESSAO)}" disabled>{_texto(TRAVESSAO)}'
-              f'</option>']
-    linhas += [f'<option{" selected" if o == atual else ""}>{_texto(o)}</option>'
-               for o in opcoes]
-    return "".join(linhas)
 
 
 def _valendo(ctx: Contexto, todos: list[Any] | None = None) -> str:

@@ -9,14 +9,9 @@ from hefesto_dualsense4unix.profiles.estilos_de_jogo import (  # noqa: E402
     ESTILOS as ESTILOS_DO_MOTOR,
 )
 from hefesto_dualsense4unix.profiles.schema import PRIORIDADE_MAXIMA  # noqa: E402
-from hefesto_dualsense4unix.integrations.jogos_locais import (  # noqa: E402
-    LANCADOR_DIRETO,
-)
 from hefesto_dualsense4unix.profiles.simple_match import (  # noqa: E402
-    PROCEDENCIA_DA_STEAM,
     ROTULO_SO_QUANDO_ESCOLHER,
     SEPARADOR_DA_PROCEDENCIA,
-    oferta_do_funciona_em,
 )
 
 
@@ -1059,11 +1054,6 @@ FRASE_DA_PRIORIDADE_DELA = (
 FRASE_DO_UNIVERSAL = (
     "O Universal fica em zero: ele só entra quando nenhum outro serve.")
 DICA_DA_PRIORIDADE = f"{FRASE_DA_PRIORIDADE_DELA} {FRASE_DO_UNIVERSAL}"
-
-LANCADORES_DO_DESENHO = [PROCEDENCIA_DA_STEAM, "Heroic", "Lutris", "RetroArch",
-                         LANCADOR_DIRETO]
-
-AMBIENTES = oferta_do_funciona_em(LANCADORES_DO_DESENHO)
 
 ESTILOS = [e.rotulo for e in ESTILOS_DO_MOTOR]
 #: (foto 9): aparece o nome e o código, não só o código, e não aparece o nome do programa.

@@ -18,9 +18,6 @@ if str(RAIZ / "src") not in sys.path:  # pragma: no cover - trava de caminho
     sys.path.insert(0, str(RAIZ / "src"))
 
 from hefesto_dualsense4unix.integrations import jogos_locais as jl
-from hefesto_dualsense4unix.integrations.censo_dos_lancadores import (
-    sabe_ler,
-)
 from hefesto_dualsense4unix.integrations.identidade_de_janela import (
     classe_do_umu_id,
 )
@@ -161,70 +158,25 @@ def _escolher(rotulo: str) -> dict[str, Any]:
             "tipo": "select"}
 
 
-def _o_campo_da_maquina() -> str:
-    """O `<select>` que o gesto `editor.ambiente` ainda sabe montar (a página não o tem mais)."""
-    return a10._html_do_ambiente(
-        sm.oferta_do_funciona_em(a10._procedencias_da_maquina()), "")
-
-
-def _opcoes(html: str) -> list[str]:
-    """Os textos das `<option>` de um bloco, na ordem — sem o `—` desabilitado."""
-    import re
-
-    return [t for t in re.findall(r"<option[^>]*>([^<]*)</option>", html)
-            if t != a10.TRAVESSAO]
-
-
-def test_o_campo_oferece_de_onde_o_jogo_vem(
+def test_a_pagina_nova_nao_pinta_o_funciona_em(
     maquina_dela: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """«Navegação» · os lançadores que a máquina tem (sem «Qualquer jogo» desde 08/10)."""
+    """A aba Perfis do todo tirou o «Funciona em» (5faca7e8a): o pacote não o pinta no vazio."""
     _o_disco_tem(monkeypatch,
                  Profile(name="GOTG", priority=80,
                          match=MatchCriteria(window_class=[CHAVE_DO_GOTG])))
 
-    blocos = a10.pacote(_ctx())["blocos"]
-    campo = _o_campo_da_maquina()
-
-    assert a10.SELETOR_DO_AMBIENTE not in blocos, (
-        "a página nova não tem o «Funciona em»; o pacote voltou a pintá-lo no vazio")
-    assert _opcoes(campo) == ["Navegação", "Steam", "Heroic"]
-    assert "Lutris" not in campo
+    assert a10.SELETOR_DO_AMBIENTE not in a10.pacote(_ctx())["blocos"]
 
 
-def test_a_maquina_sem_lancador_nenhum_sai_com_a_navegacao(
+def test_a_maquina_sem_lancador_nenhum_nao_oferece_jogo(
     maquina_pelada: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """**A ORDEM DE PRODUTO:** o produto é para qualquer pessoa, não para esta bancada."""
     _o_disco_tem(monkeypatch, Profile(name="Universal", priority=0,
                                       match=MatchAny()))
 
-    blocos = a10.pacote(_ctx())["blocos"]
-    campo = _o_campo_da_maquina()
-
-    assert _opcoes(campo) == ["Navegação"]
-    assert _opcoes(campo) == sm.oferta_do_funciona_em([])
-    assert blocos[a10.SELETOR_DOS_JOGOS] == ""
-    assert f'<option value="{a10.TRAVESSAO}" disabled>' in campo
-
-
-def test_a_procedencia_do_perfil_entra_mesmo_desinstalado(
-    maquina_pelada: pathlib.Path,
-) -> None:
-    """Ela desinstalou o Heroic; o perfil do jogo dele continua no disco."""
-    assert sm.oferta_do_funciona_em([], "Heroic") == [
-        "Navegação", "Heroic"]
-    assert sm.oferta_do_funciona_em(["Steam"], "Steam") == [
-        "Navegação", "Steam"]
-
-
-def test_os_lancadores_que_a_tela_ordena_o_censo_sabe_ler() -> None:
-    """A ordem declarada não pode citar um lançador que não existe."""
-    for nome in a10.ORDEM_DOS_LANCADORES:
-        assert nome == sm.PROCEDENCIA_DA_STEAM or sabe_ler(nome), (
-            f"“{nome}” está na ordem do campo «Funciona em:» e o censo não "
-            f"sabe ler a biblioteca dele — ou ele mudou de nome, ou ele nunca "
-            f"foi um lançador")
+    assert a10.pacote(_ctx())["blocos"][a10.SELETOR_DOS_JOGOS] == ""
 
 
 def test_o_perfil_que_ja_existe_diz_de_onde_ele_vem(

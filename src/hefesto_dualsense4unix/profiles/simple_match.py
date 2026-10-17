@@ -12,7 +12,7 @@ do launch_env. Daí a opção "steam_game".
 """
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable
+from collections.abc import Callable
 
 from hefesto_dualsense4unix.profiles.schema import Match, MatchAny, MatchCriteria
 from hefesto_dualsense4unix.profiles.steam_app import (
@@ -527,19 +527,3 @@ def procedencia_do_match(
         return lancador_da_chave(simple_extra(match)) or None
     return None
 
-
-def oferta_do_funciona_em(
-    lancadores_da_maquina: Iterable[str],
-    atual: str = "",
-) -> list[str]:
-    """O que o campo «Funciona em:» oferece NESTA máquina, na ordem da tela.
-
-    «Qualquer jogo» não é oferta desde 08/10/2026: o `any` nunca entra sozinho
-    (o gerente, desde 01/10), e escolhê-lo gravaria um «Só quando eu escolher».
-    """
-    fora = [PROCEDENCIA_DA_NAVEGACAO]
-    for nome in list(lancadores_da_maquina) + ([atual] if atual else []):
-        limpo = str(nome or "").strip()
-        if limpo and limpo not in fora and limpo != PROCEDENCIA_DE_QUALQUER_JOGO:
-            fora.append(limpo)
-    return fora
