@@ -19,9 +19,10 @@ dos três cinzas reprova.
 
 MORDIDA (16/10/2026): devolver `color:var(--linha)` ao `.cartao.off .rotulo` da `aba01.py` e
 regerar a 01 reprova `test_nenhuma_letra_e_cinza[01-jogar.html]`; o mesmo no `.ctl.off .leia` da
-`aba02.py` reprova `[02-controles.html]`. Trocar o `.miolo` do `topo.html` para
-`padding:16px 3px 18px 18px` reprova o respiro, e o `.pa-rot` para `11px` em `--comment` reprova o
-«Perfil ativo».
+`aba02.py` reprova `[02-controles.html]`; tirar o `_letra_sem_cinza` da entrada da folha do
+rádio (`aba08._css_do_radio`) e regerar a 08 reprova `[08-conexoes.html]`. Trocar o `.miolo` do
+`topo.html` para `padding:16px 3px 18px 18px` reprova o respiro, e o `.pa-rot` para `11px` em
+`--comment` reprova o «Perfil ativo».
 """
 from __future__ import annotations
 
@@ -51,7 +52,9 @@ PREPARO = {"01-jogar.html": (
     "document.querySelectorAll('.cartao').forEach(c => { c.classList.add('off');"
     " c.querySelectorAll('[data-campo]')"
     ".forEach(e => { if (!e.children.length) e.textContent = '—'; });"
-    " });")}
+    " });"),
+    # Na Conexões, o «Rádio e adaptadores» nasce fechado: a régua o abre, como o clique no título.
+    "08-conexoes.html": "document.getElementById('cx8-3').checked = true;"}
 
 MEDIR = r"""
 (function(CINZAS){

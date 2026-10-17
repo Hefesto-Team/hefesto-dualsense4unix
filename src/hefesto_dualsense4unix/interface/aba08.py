@@ -1594,6 +1594,23 @@ def _sem_os_tokens_da_casa(miolo: str) -> str:
     return ";".join(fica)
 
 
+#: Os dois cinzas de letra da casa (`--comment` e `--texto-mudo`) como cor de TEXTO numa regra:
+#: `color:` sem prefixo, logo nem `border-color` nem `background-color`.
+_LETRA_CINZA = re.compile(r"(?<![\w-])color:\s*var\(--(?:texto-mudo|comment)\)")
+
+
+def _letra_sem_cinza(declaracoes: str) -> str:
+    """A letra cinza do desenho do rádio vira `--fg` (16/10/2026).
+
+    *«Esse cinza some da interface se tratando de fonte. Não usamos ele»*: as dez abas trocaram os
+    dois cinzas de letra por `--fg` nos geradores, mas o desenho aprovado do rádio
+    (`mockup/mapa-do-radio.html`) é congelado e entra aqui pela folha dele, com 25 regras de letra
+    em `--texto-mudo` e uma em `--comment`. Medido na conferência, com a seção aberta e quatro
+    controles: «Dentro da máquina» e «0/2» do adaptador saíam em #9a9eb8. A troca é na entrada da
+    folha, e não no arquivo do desenho; a borda e o fundo continuam com os tokens dele."""
+    return _LETRA_CINZA.sub("color: var(--fg)", declaracoes)
+
+
 def _css_do_radio() -> str:
     """A folha do desenho aprovado, com escopo `.radio` e sem o que é da página."""
     corpo = re.search(r"<style>(.*?)</style>", _DESENHO_DO_RADIO_TXT, re.S).group(1)
@@ -1625,7 +1642,7 @@ def _css_do_radio() -> str:
         elif cabeca.startswith("@media"):
             dentro = []
             for sel, decl in re.findall(r"([^{}]+)\{([^{}]*)\}", miolo):
-                dentro.append(f"{_escopo(sel)}{{{decl.strip()}}}")
+                dentro.append(f"{_escopo(sel)}{{{_letra_sem_cinza(decl.strip())}}}")
             saida.append(f"{cabeca}{{{''.join(dentro)}}}")
         elif cabeca == "body":
             continue
@@ -1634,7 +1651,7 @@ def _css_do_radio() -> str:
         elif cabeca == ":root":
             saida.append(f"{_escopo(cabeca)}{{{_sem_os_tokens_da_casa(miolo)}}}")
         else:
-            saida.append(f"{_escopo(cabeca)}{{{' '.join(miolo.split())}}}")
+            saida.append(f"{_escopo(cabeca)}{{{_letra_sem_cinza(' '.join(miolo.split()))}}}")
     return "\n  ".join(saida)
 
 
