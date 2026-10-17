@@ -6310,10 +6310,13 @@ JS_DA_CADEIA_E_DO_REGISTRO = r"""
     html += APARELHOS.filter(function (a) { return !visto[a.id] && !c.parte[a.id]; })
       .map(function (a) { return ramo(a, 0); }).join("");
     html += c.sumiram.map(function (a) {
-      return '<div class="chip sumiu" data-dica="Já esteve neste computador e não apareceu agora">'
+      /* A frase que a reticência corta vai inteira na dica, como no chip da cadeia. */
+      var frase = (a.nome ? a.nome + " · " : "") + "Não apareceu neste início";
+      return '<div class="chip sumiu" data-dica="'
+        + emAtributo(frase + ". Já esteve neste computador e não apareceu agora") + '">'
         + '<i class="marca" style="background:' + emAtributo(a.cor) + '"></i>'
         + '<span class="txt"><b>' + emAtributo(a.tipo) + "</b><span>"
-        + (a.nome ? emAtributo(a.nome) + " · " : "") + "Não apareceu neste início</span></span></div>";
+        + emAtributo(frase) + "</span></span></div>";
     }).join("");
     document.getElementById("bandeja").innerHTML = html;
     pintarORegistro(c.registro);

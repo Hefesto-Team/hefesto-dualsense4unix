@@ -161,10 +161,18 @@ def _medir() -> str:
   }
   const d = document.documentElement;
   if (d.scrollHeight > innerHeight + 2) r.push('página: ' + (d.scrollHeight - innerHeight));
+  function inteiroNaDica(e) {
+    const dono = e.closest('[data-dica],[data-hef-dica],[title]');
+    const dica = dono ? (dono.getAttribute('data-dica') || dono.getAttribute('data-hef-dica')
+                         || dono.getAttribute('title') || '') : '';
+    return dica.includes(e.textContent.trim());
+  }
   const corta = [...document.querySelectorAll('button,span,b,label,a,h3,h4,p')].filter(e =>
     e.offsetParent && e.scrollWidth > e.clientWidth + 1
     && getComputedStyle(e).overflow !== 'visible'
-    && e.children.length === 0 && e.textContent.trim()).map(e => e.textContent.trim().slice(0, 30));
+    && e.children.length === 0 && e.textContent.trim()
+    // a reticência vale quando a dica de quem a contém traz o texto inteiro (16/10, o chip do mapa)
+    && !inteiroNaDica(e)).map(e => e.textContent.trim().slice(0, 30));
   const alturas = [...document.querySelectorAll('.cartao-dica')].map(
     c => Math.round(c.getBoundingClientRect().height));
   // o porquê mora no título (a dica da casa no hover), nunca num ⓘ que abre por baixo do cartão
@@ -323,6 +331,9 @@ def _no_webkit_sem_recolher(pagina: Path, tamanho: tuple[int, int],
             return
         limite = time.monotonic() + TETO_DA_ESPERA_S
         js = _QUIETO_JS.replace("MINIMO", str(minimo_ms))
+        # duas respostas «quieto» seguidas: a transição que acaba de terminar ainda pinta o
+        # último quadro, e a primeira resposta soltava a leitura em 199,86 px dos 200
+        seguidas = [0]
 
         def pergunta() -> bool:
             def respondeu(v: Any, res: Any, _u: Any = None) -> None:
@@ -330,7 +341,8 @@ def _no_webkit_sem_recolher(pagina: Path, tamanho: tuple[int, int],
                     quieto = v.evaluate_javascript_finish(res).to_string() == "quieto"
                 except Exception:
                     quieto = True
-                if quieto or time.monotonic() >= limite:
+                seguidas[0] = seguidas[0] + 1 if quieto else 0
+                if seguidas[0] >= 2 or time.monotonic() >= limite:
                     seguir()
                 else:
                     GLib.timeout_add(INTERVALO_DO_POLL_MS, pergunta)
