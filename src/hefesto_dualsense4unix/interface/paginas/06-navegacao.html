@@ -1700,7 +1700,8 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   }));
   document.documentElement.classList.add('alvos-24');
   const piso = () => document.querySelectorAll('body *').forEach(e => {
-    if (e.closest('svg') || ['SCRIPT', 'STYLE'].includes(e.tagName)) return;
+    /* a fita é da base comum e mede igual nas dez abas: o piso não a toca */
+    if (e.closest('svg, .fita') || ['SCRIPT', 'STYLE'].includes(e.tagName)) return;
     const texto = ['INPUT', 'SELECT', 'TEXTAREA'].includes(e.tagName)
       || [...e.childNodes].some(n => n.nodeType === 3 && n.nodeValue.trim());
     if (texto && parseFloat(getComputedStyle(e).fontSize) < 12) e.style.setProperty('font-size', '12px', 'important');

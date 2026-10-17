@@ -270,7 +270,7 @@ def _escolha_do_gesto():
     """
     botoes = []
     for b in _acoes_do_gesto.BOTOES_DA_ESCOLHA:
-        livre = "sim" if b in _acoes_do_gesto.BOTOES_DO_GESTO_NOVO else "nao"  # (noqa-acento)
+        livre = "sim" if b in _acoes_do_gesto.BOTOES_DO_GESTO_NOVO else "nao"  # (noqa-acento) identificador ASCII
         peca = _PECA_DA_ESCOLHA.get(b, b)
         # O proibido nunca fica livre: nasce desligado e sem endereço, porque nada o pinta.
         endereco = ("" if b in _acoes_do_gesto.BOTOES_PROIBIDOS else
@@ -425,7 +425,8 @@ SCRIPT = """<script>/* o desenho: quem navega troca as linhas; os seletores acen
   }));
   document.documentElement.classList.add('alvos-24');
   const piso = () => document.querySelectorAll('body *').forEach(e => {
-    if (e.closest('svg') || ['SCRIPT', 'STYLE'].includes(e.tagName)) return;
+    /* a fita é da base comum e mede igual nas dez abas: o piso não a toca */
+    if (e.closest('svg, .fita') || ['SCRIPT', 'STYLE'].includes(e.tagName)) return;
     const texto = ['INPUT', 'SELECT', 'TEXTAREA'].includes(e.tagName)
       || [...e.childNodes].some(n => n.nodeType === 3 && n.nodeValue.trim());
     if (texto && parseFloat(getComputedStyle(e).fontSize) < 12) e.style.setProperty('font-size', '12px', 'important');

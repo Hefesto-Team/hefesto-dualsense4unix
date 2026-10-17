@@ -1175,8 +1175,11 @@ PROVAS = [
            [("resultado", [_MOUSE], {"scroll_speed": SCROLL_SPEED_MIN, "origin": "manual"})]),
     _prova("teclado", {"valor": TECLADO_SO_FORA},
            [("resultado", ["keyboard.emulation.set"], {"enabled": True})]),
+    # «Sempre» troca o portão do perfil, e o daemon só o lê ao ativar: reaplica.
     _prova("teclado", {"valor": TECLADO_SEMPRE},
-           [("resultado", ["keyboard.emulation.set"], {"enabled": True})]),
+           [("resultado", ["keyboard.emulation.set"], {"enabled": True}),
+            ("profile_reaplicar", ["regua"], {}),
+            ("chamar", ["launch_env.refresh"], {})]),
     _prova("teclado", {"valor": TECLADO_DESATIVADO},
            [("resultado", ["keyboard.emulation.set"], {"enabled": False})]),
     _prova("acao-do-gesto", {"linha": "ps_l3", "rotulo": "— Nada —", "valor": "— Nada —"},
@@ -1252,7 +1255,7 @@ def _o_que_os_gestos_fazem() -> dict[str, str]:
         if chave == ag.GESTO_DO_PS:
             continue
         fora[PREFIXO_DO_GESTO + chave] = ag.rotulo_da_escolha(escolha)
-        fora[PREFIXO_DA_VALIDADE + chave] = "sim" if chave in ativos else "nao"  # (noqa-acento)
+        fora[PREFIXO_DA_VALIDADE + chave] = "sim" if chave in ativos else "nao"  # noqa-acento: chave ASCII
     for botao in ag.BOTOES_DA_ESCOLHA:
         if botao in ag.BOTOES_PROIBIDOS:
             continue
