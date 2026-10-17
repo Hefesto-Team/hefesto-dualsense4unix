@@ -555,7 +555,7 @@ def test_criar_efeito_guarda_so_na_biblioteca_da_luz() -> None:
 def test_o_arco_iris_criado_nao_guarda_cor() -> None:
     from pacotes import a04_iluminacao as a04
 
-    _criar({"base": "arco-iris", "cores": "#ff0000", "ritmo": "3", "nome": "Giro"})  # (noqa-acento)
+    _criar({"base": "arco-iris", "cores": "#ff0000", "ritmo": "3", "nome": "Giro"})  # noqa-acento: chave ASCII
     assert a04.meus_efeitos("luz")["Giro"]["parametros"]["cores"] == ""
 
 

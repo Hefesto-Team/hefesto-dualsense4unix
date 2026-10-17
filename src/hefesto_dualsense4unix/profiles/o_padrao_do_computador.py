@@ -11,7 +11,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     ControllerSensoresOverride,
     LedsConfig,
     Profile,
-    ProfileAnalogicosConfig,  # (noqa-acento)
+    ProfileAnalogicosConfig,  # (noqa-acento) identificador ASCII
     ProfileAtivacaoConfig,
     ProfileCursorConfig,
     ProfileMouseConfig,
@@ -35,7 +35,7 @@ class Secao(NamedTuple):
 
 
 #: As seções de necessidade de quem joga: valem em todo perfil, e o jogo só as sobrepõe.
-_DA_ACESSIBILIDADE = ("ativacao", "analogicos")  # (noqa-acento)
+_DA_ACESSIBILIDADE = ("ativacao", "analogicos")  # (noqa-acento) identificador ASCII
 #: O cursor é só do primeiro controle: vale no computador, não por controle.
 _GLOBAIS_DA_ACESSIBILIDADE = (*_DA_ACESSIBILIDADE, "cursor")
 
@@ -93,8 +93,8 @@ _MODELOS: frozenset[str] = frozenset(
 )
 
 _MODELO_DA_ACESSIBILIDADE: dict[str, Any] = {
-    "ativacao": ProfileAtivacaoConfig,  # (noqa-acento)
-    "analogicos": ProfileAnalogicosConfig,  # (noqa-acento)
+    "ativacao": ProfileAtivacaoConfig,  # (noqa-acento) identificador ASCII
+    "analogicos": ProfileAnalogicosConfig,  # (noqa-acento) identificador ASCII
     "cursor": ProfileCursorConfig,
 }
 
@@ -104,8 +104,8 @@ _CAMPOS_DO_CONTROLE: dict[str, tuple[str, ...]] = {
     "mic": tuple(ControllerMicOverride.model_fields),
     "rumble": tuple(ControllerRumbleOverride.model_fields),
     "sensores": tuple(ControllerSensoresOverride.model_fields),
-    "ativacao": tuple(ProfileAtivacaoConfig.model_fields),  # (noqa-acento)
-    "analogicos": tuple(ProfileAnalogicosConfig.model_fields),  # (noqa-acento)
+    "ativacao": tuple(ProfileAtivacaoConfig.model_fields),  # (noqa-acento) identificador ASCII
+    "analogicos": tuple(ProfileAnalogicosConfig.model_fields),  # (noqa-acento) identificador ASCII
 }
 
 COMPUTADOR = "computador"

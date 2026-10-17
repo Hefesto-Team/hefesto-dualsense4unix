@@ -89,14 +89,14 @@ _CONSUMIDOR: dict[str, ConsumidorPorUnidade] = {
             "perguntado pelo tique com o uniq de cada jogador (da_peca)"
         ),
     ),
-    "ativacao": ConsumidorPorUnidade(  # (noqa-acento)
+    "ativacao": ConsumidorPorUnidade(  # (noqa-acento) identificador ASCII
         funcao="apply_acessibilidade",
         chega_em=(
-            "{uniq: Ativacao}, depositado no store por definir_ativo e "  # (noqa-acento)
+            "{uniq: Ativacao}, depositado no store por definir_ativo e "  # noqa-acento: chave ASCII
             "perguntado pelo tique com o uniq de cada jogador (da_peca)"
         ),
     ),
-    "analogicos": ConsumidorPorUnidade(  # (noqa-acento)
+    "analogicos": ConsumidorPorUnidade(  # (noqa-acento) identificador ASCII
         funcao="apply_acessibilidade",
         chega_em=(
             "{uniq: Curva}, depositado no store por definir_ativo e "
@@ -141,8 +141,8 @@ def test_a_regua_sabe_recusar() -> None:
     sintetico = {"leds", "touchpad"}
     assert _campos_sem_consumidor(sintetico, _CONSUMIDOR) == ["touchpad"]
     assert _consumidores_orfaos(sintetico, _CONSUMIDOR) == [
-        "analogicos",  # (noqa-acento)
-        "ativacao",  # (noqa-acento)
+        "analogicos",  # (noqa-acento) identificador ASCII
+        "ativacao",  # (noqa-acento) identificador ASCII
         "mascara",
         "mic",
         "movimento",
@@ -383,8 +383,8 @@ _PROVAS = {
     "sensores": _prova_sensores,
     "mascara": _prova_mascara,
     "movimento": _prova_movimento,
-    "ativacao": _prova_ativacao,  # (noqa-acento)
-    "analogicos": _prova_analogicos,  # (noqa-acento)
+    "ativacao": _prova_ativacao,  # (noqa-acento) identificador ASCII
+    "analogicos": _prova_analogicos,  # (noqa-acento) identificador ASCII
 }
 
 

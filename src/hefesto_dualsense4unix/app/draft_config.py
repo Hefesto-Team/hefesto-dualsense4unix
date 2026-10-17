@@ -409,7 +409,7 @@ class DraftConfig(BaseModel):
     #: A acessibilidade do perfil (o modo do botão, a curva dos analógicos, o cursor): o draft
     #: não as edita, só as leva de volta, para o Salvar de qualquer aba não as apagar.
     source_ativacao: Any | None = None
-    source_analogicos: Any | None = None  # (noqa-acento)
+    source_analogicos: Any | None = None  # (noqa-acento) identificador ASCII
     source_cursor: Any | None = None
     #: Os de :data:`CAMPOS_QUE_O_RASCUNHO_SO_DEVOLVE` que o perfil de origem tinha.
     source_so_devolve: dict[str, Any] = Field(default_factory=dict)
@@ -495,8 +495,8 @@ class DraftConfig(BaseModel):
             source_tabela_no_jogo=profile.tabela_no_jogo,
             source_remapeamento=profile.remapeamento,
             source_movimento=profile.movimento,
-            source_ativacao=profile.ativacao,  # (noqa-acento)
-            source_analogicos=profile.analogicos,  # (noqa-acento)
+            source_ativacao=profile.ativacao,  # (noqa-acento) identificador ASCII
+            source_analogicos=profile.analogicos,  # (noqa-acento) identificador ASCII
             source_cursor=profile.cursor,
             source_so_devolve={
                 campo: getattr(profile, campo)
@@ -638,8 +638,8 @@ class DraftConfig(BaseModel):
             tabela_no_jogo=self.source_tabela_no_jogo,
             remapeamento=self.source_remapeamento,
             movimento=self.source_movimento,
-            ativacao=self.source_ativacao,  # (noqa-acento)
-            analogicos=self.source_analogicos,  # (noqa-acento)
+            ativacao=self.source_ativacao,  # (noqa-acento) identificador ASCII
+            analogicos=self.source_analogicos,  # (noqa-acento) identificador ASCII
             cursor=self.source_cursor,
             mouse=mouse_cfg,
             mic=mic_cfg,

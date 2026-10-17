@@ -1300,7 +1300,7 @@ def _cada_coluna(colunas):
     """As colunas da grade, separadas em (vazias, conectadas)."""
     vazias, cheias = [], []
     for atributos, miolo in _UMA_COLUNA.findall(colunas):
-        (vazias if 'data-conectado="nao"' in atributos else cheias).append(  # noqa-acento
+        (vazias if 'data-conectado="nao"' in atributos else cheias).append(  # (noqa-acento) identificador ASCII
             atributos + ">" + miolo)
     return vazias, cheias
 
@@ -1329,7 +1329,7 @@ def _conferir(doc):
            "a classe do lugar vazio não é a que o piloto escreve (`ctrl off`)")
     exigir(not re.search(r"\.ctrl\.(?:off|vazia)\b", doc),
            "a folha voltou a ler uma segunda marca do lugar vazio")
-    exigir(corpo.count('data-conectado="nao"') == len(vazios),  # noqa-acento
+    exigir(corpo.count('data-conectado="nao"') == len(vazios),  # (noqa-acento) identificador ASCII
            f"as colunas vazias não são {len(vazios)}")
 
     for c in vazios:

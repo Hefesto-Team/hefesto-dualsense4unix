@@ -248,7 +248,7 @@ _PERNAS: dict[str, dict[str, Resposta]] = {
             "profiles/manager.py::apply_movimento", "nenhum lançador no caminho"
         ),
     },
-    "ativacao": {  # (noqa-acento)
+    "ativacao": {  # (noqa-acento) identificador ASCII
         VOLTA: NaoSeAplica(
             "é depositado no `store` do gerente e lido por tique pelos dois "
             "laços (`dispatch_gamepad` e o co-op) e pela tabela com o jogo; o "
@@ -259,7 +259,7 @@ _PERNAS: dict[str, dict[str, Resposta]] = {
             "profiles/manager.py::apply_acessibilidade", "nenhum lançador no caminho"
         ),
     },
-    "analogicos": {  # (noqa-acento)
+    "analogicos": {  # (noqa-acento) identificador ASCII
         VOLTA: NaoSeAplica(
             "é depositado no `store` do gerente e lido por tique pelos dois "
             "laços (`dispatch_gamepad` e o co-op); o controle que cai perde o "

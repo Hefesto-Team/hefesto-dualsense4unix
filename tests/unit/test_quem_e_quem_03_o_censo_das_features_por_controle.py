@@ -160,7 +160,7 @@ CENSO: tuple[LinhaDoCenso, ...] = (
     LinhaDoCenso(
         feature="o botão ativa",
         nivel="por-controle",
-        campo="ativacao",  # (noqa-acento)
+        campo="ativacao",  # (noqa-acento) identificador ASCII
         subcampo=None,
         sem_opiniao="esta peça segue a ativação do perfil, que por padrão não existe",
         quem_responde=(
@@ -176,7 +176,7 @@ CENSO: tuple[LinhaDoCenso, ...] = (
     LinhaDoCenso(
         feature="os analógicos do jogo",
         nivel="por-controle",
-        campo="analogicos",  # (noqa-acento)
+        campo="analogicos",  # (noqa-acento) identificador ASCII
         subcampo=None,
         sem_opiniao="esta peça segue os analógicos do perfil, que por padrão não existem",
         quem_responde=(

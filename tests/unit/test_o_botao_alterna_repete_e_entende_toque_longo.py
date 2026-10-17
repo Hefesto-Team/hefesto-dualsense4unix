@@ -309,7 +309,7 @@ def test_o_perfil_seguinte_solta_o_botao_preso(monkeypatch: pytest.MonkeyPatch) 
         monkeypatch.setattr(m, nome_do_metodo, lambda *a, **k: None)
     com = Profile.model_validate({
         "name": "Com Alternar", "match": {"type": "any"},
-        "ativacao": {"alternar": ["l1"]}})  # (noqa-acento)
+        "ativacao": {"alternar": ["l1"]}})  # (noqa-acento) identificador ASCII
     sem = Profile.model_validate({"name": "Sem Alternar", "match": {"type": "any"}})
     monkeypatch.setattr(gerente, "load_profile", lambda nome: com)
     relatorio: dict[str, str] = {}
@@ -385,11 +385,11 @@ def test_perfil_sem_a_secao_nao_grava_a_chave_e_com_ela_volta_igual() -> None:
     from hefesto_dualsense4unix.profiles.schema import Profile
 
     vazio = Profile.model_validate({"name": "Vazio", "match": {"type": "any"}})
-    assert "ativacao" not in vazio.model_dump(mode="json")  # (noqa-acento)
+    assert "ativacao" not in vazio.model_dump(mode="json")  # (noqa-acento) identificador ASCII
     cheio = Profile.model_validate({
         "name": "Cheio", "match": {"type": "any"},
-        "ativacao": {"longo": {"cross": "circle"}, "longo_ms": 800},  # (noqa-acento)
-        "controllers": {P2: {"ativacao": {"repetir": ["l1"]}}}})  # (noqa-acento)
+        "ativacao": {"longo": {"cross": "circle"}, "longo_ms": 800},  # noqa-acento: chave ASCII
+        "controllers": {P2: {"ativacao": {"repetir": ["l1"]}}}})  # noqa-acento: chave ASCII
     volta = Profile.model_validate(cheio.model_dump(mode="json"))
     assert volta.ativacao is not None and volta.ativacao.longo_ms == 800
     assert volta.controllers is not None and volta.controllers[P2].ativacao is not None
@@ -411,4 +411,4 @@ def test_o_perfil_recusa_a_ativacao_que_o_motor_recusa(secao: dict[str, Any]) ->
     with pytest.raises(ValidationError):
         Profile.model_validate({
             "name": "X", "match": {"type": "any"},
-            "ativacao": secao})  # (noqa-acento)
+            "ativacao": secao})  # (noqa-acento) identificador ASCII

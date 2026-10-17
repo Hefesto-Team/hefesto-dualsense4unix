@@ -158,7 +158,7 @@ def montar_o_ajuste(secao: Any) -> AjusteDoCursor | None:
         zona_morta=int(getattr(secao, "zona_morta", padrao.zona_morta)),
         curva=float(getattr(secao, "curva", padrao.curva)),
         precisao_botao=getattr(secao, "precisao_botao", None) or None,
-        precisao=int(getattr(secao, "precisao", 30)) / 100.0,  # (noqa-acento)
+        precisao=int(getattr(secao, "precisao", 30)) / 100.0,  # (noqa-acento) identificador ASCII
         permanencia_s=int(getattr(secao, "permanencia_ms", 0) or 0) / 1000.0,
         clique_travado=getattr(secao, "clique_travado", None) or None,
     )

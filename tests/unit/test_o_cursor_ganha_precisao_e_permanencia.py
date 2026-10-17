@@ -373,7 +373,7 @@ def test_o_esquema_aceita_a_faixa_e_recusa_o_resto() -> None:
     _cursor(permanencia_ms=300)
     for ruim in (
         {"zona_morta": 61}, {"zona_morta": -1}, {"curva": 0.9}, {"curva": 3.1},
-        {"precisao": 9}, {"precisao": 101},  # (noqa-acento)
+        {"precisao": 9}, {"precisao": 101},  # (noqa-acento) identificador ASCII
         {"permanencia_ms": 100},
         {"permanencia_ms": 3001}, {"nao_existe": 1},
     ):
@@ -443,8 +443,8 @@ def test_apagar_o_freestyle_sem_perfil_que_volte_larga_toda_a_acessibilidade() -
     m = gerente.ProfileManager(controller=SimpleNamespace(), store=store)  # type: ignore[arg-type]
     m.apply_acessibilidade(Profile.model_validate({
         "name": "Freestyle", "match": {"type": "any"},
-        "ativacao": {"alternar": ["l1"], "repique_ms": 120},  # (noqa-acento)
-        "analogicos": {"zona_morta": 20},  # (noqa-acento)
+        "ativacao": {"alternar": ["l1"], "repique_ms": 120},  # (noqa-acento) identificador ASCII
+        "analogicos": {"zona_morta": 20},  # (noqa-acento) identificador ASCII
         "cursor": {"clique_travado": "triangle"}}))
     _, epoca = um.ajuste_ativo(store)
     assert ab.alguma(store) and fb.alguma(store) and cv.alguma(store)

@@ -142,7 +142,7 @@ def test_a_peca_sobrepoe_o_perfil_campo_a_campo() -> None:
 def test_a_mao_e_a_troca_nao_se_pedem_juntas() -> None:
     with pytest.raises(ValidationError):
         ProfileAnalogicosConfig(mao="direita", trocar=True)
-    perfil = SimpleNamespace(mao="direita", model_fields_set={"mao"})  # (noqa-acento)
+    perfil = SimpleNamespace(mao="direita", model_fields_set={"mao"})  # noqa-acento: chave ASCII
     peca = SimpleNamespace(trocar=True, model_fields_set={"trocar"})
     junta = cv.montar(perfil, peca)
     assert junta is not None and junta.mao is None and junta.trocar, (
@@ -356,8 +356,8 @@ def test_o_perfil_seguinte_larga_a_curva_do_anterior(monkeypatch: pytest.MonkeyP
         monkeypatch.setattr(m, nome_do_metodo, lambda *a, **k: None)
     com = Profile.model_validate({
         "name": "Com Curva", "match": {"type": "any"},
-        "analogicos": {"zona_morta": 20, "mao": "direita"},  # (noqa-acento)
-        "controllers": {P2: {"analogicos": {"zona_morta": 5}}},  # (noqa-acento)
+        "analogicos": {"zona_morta": 20, "mao": "direita"},  # (noqa-acento) identificador ASCII
+        "controllers": {P2: {"analogicos": {"zona_morta": 5}}},  # (noqa-acento) identificador ASCII
     })
     sem = Profile.model_validate({"name": "Sem Curva", "match": {"type": "any"}})
     monkeypatch.setattr(gerente, "load_profile", lambda nome: com)
@@ -382,15 +382,15 @@ def test_o_computador_vale_por_baixo_e_o_conflito_fica_com_o_jogo() -> None:
     from hefesto_dualsense4unix.utils.maquina import ComputadorDeclarado
 
     computador = ComputadorDeclarado.model_validate({
-        "global": {"analogicos": {"zona_morta": 15, "mao": "direita"}}})  # (noqa-acento)
+        "global": {"analogicos": {"zona_morta": 15, "mao": "direita"}}})  # noqa-acento: chave ASCII
     sem_nada = Profile.model_validate({"name": "Jogo", "match": {"type": "any"}})
     vale = perfil_que_vale(sem_nada, computador)
-    assert vale.analogicos is not None  # (noqa-acento)
-    assert (vale.analogicos.zona_morta, vale.analogicos.mao) == (15, "direita")  # (noqa-acento)
+    assert vale.analogicos is not None  # (noqa-acento) identificador ASCII
+    assert (vale.analogicos.zona_morta, vale.analogicos.mao) == (15, "direita")  # noqa-acento: chave ASCII
     do_jogo = Profile.model_validate({
         "name": "Jogo", "match": {"type": "any"},
-        "analogicos": {"zona_morta": 30, "trocar": True}})  # (noqa-acento)
+        "analogicos": {"zona_morta": 30, "trocar": True}})  # (noqa-acento) identificador ASCII
     vale = perfil_que_vale(do_jogo, computador)
-    assert vale.analogicos is not None  # (noqa-acento)
-    assert vale.analogicos.zona_morta == 30 and vale.analogicos.trocar  # (noqa-acento)
-    assert vale.analogicos.mao is None, "a mão do computador quebra a troca e cai"  # (noqa-acento)
+    assert vale.analogicos is not None  # (noqa-acento) identificador ASCII
+    assert vale.analogicos.zona_morta == 30 and vale.analogicos.trocar  # noqa-acento: chave ASCII
+    assert vale.analogicos.mao is None, "a mão do computador quebra a troca e cai"  # noqa-acento: chave ASCII

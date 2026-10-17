@@ -784,7 +784,7 @@ class ProfileManager:
         pecas = {
             str(uniq): cfg
             for uniq, cfg in (profile.controllers or {}).items()
-            if getattr(cfg, "ativacao", None) is not None  # (noqa-acento)
+            if getattr(cfg, "ativacao", None) is not None  # (noqa-acento) identificador ASCII
         }
         modo = ativacao_de_botao.montar(profile.ativacao)
         modo_por_peca = {
@@ -794,12 +794,12 @@ class ProfileManager:
             u: filtro_de_botao.montar(profile.ativacao, c.ativacao) for u, c in pecas.items()}
         ativacao_de_botao.definir_ativo(self.store, modo, modo_por_peca)
         filtro_de_botao.definir_ativo(self.store, filtro, filtro_por_peca)
-        analogicos = profile.analogicos  # (noqa-acento)
+        analogicos = profile.analogicos  # (noqa-acento) identificador ASCII
         curva = curva_do_analogico.montar(analogicos)
         curva_por_peca = {
-            str(uniq): curva_do_analogico.montar(analogicos, cfg.analogicos)  # (noqa-acento)
+            str(uniq): curva_do_analogico.montar(analogicos, cfg.analogicos)  # (noqa-acento) chave
             for uniq, cfg in (profile.controllers or {}).items()
-            if getattr(cfg, "analogicos", None) is not None  # (noqa-acento)
+            if getattr(cfg, "analogicos", None) is not None  # (noqa-acento) identificador ASCII
         }
         curva_do_analogico.definir_ativo(self.store, curva, curva_por_peca)
         from hefesto_dualsense4unix.integrations import uinput_mouse

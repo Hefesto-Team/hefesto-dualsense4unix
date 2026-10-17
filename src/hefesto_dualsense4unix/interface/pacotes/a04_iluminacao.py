@@ -1322,7 +1322,7 @@ DICA_DA_BASE = {
     "chama": "O brilho oscila, sem padrão.",
     "mare": "Vai e volta para uma cor vizinha.",
     "piscar": "Lampejos da cor, de borda suave.",
-    "arco-iris": "As cores giram em cada controle.",  # (noqa-acento)
+    "arco-iris": "As cores giram em cada controle.",  # (noqa-acento) identificador ASCII
 }
 #: Os grupos da lista, na ordem do desenho: o que a pessoa vê, não o nome técnico do efeito.
 GRUPOS_DA_LISTA = (

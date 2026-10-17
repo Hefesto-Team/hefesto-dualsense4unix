@@ -521,7 +521,7 @@ def _conferir(doc):
     exigir(len(re.findall(r'class="g2-forca(?: off)?"', corpo)) == n,
            "a linha da força do aperto perdeu um lugar")
     for classe in ("g2-cab", "g2-cel", "g2-forca"):
-        marcas = re.findall(rf'class="{classe}( off)?"[^>]*?(data-conectado="nao")?>', corpo)  # noqa-acento
+        marcas = re.findall(rf'class="{classe}( off)?"[^>]*?(data-conectado="nao")?>', corpo)  # (noqa-acento) identificador ASCII
         exigir(bool(vazios) and all(bool(off) == bool(vazio) for off, vazio in marcas),
                f"o `{classe}` vazio não tem a classe `off` que o piloto escreve, ou o cheio tem")
     exigir(corpo.index('class="g2-forca') < corpo.index('class="g2-cab'),

@@ -135,7 +135,7 @@ def test_o_arco_iris_defasa_cada_controle_e_cada_um_leva_o_seu_quadro() -> None:
     """Quatro quadros diferentes no mesmo instante: o rádio não repete o do vizinho."""
     ctl, handles, nos = _mesa()
     quadros = _pintar_a_mesa(ctl, 2.0)
-    cores_do_arco = [_quadro_do_efeito("arco-iris;;7", 2.0, p) for p in range(4)]  # (noqa-acento)
+    cores_do_arco = [_quadro_do_efeito("arco-iris;;7", 2.0, p) for p in range(4)]  # noqa-acento: chave ASCII
     assert len(set(cores_do_arco)) == 4, "o arco-íris devia defasar os quatro controles"
     _confere_a_mesa(handles, nos, quadros)
 

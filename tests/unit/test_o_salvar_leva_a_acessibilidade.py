@@ -20,14 +20,14 @@ from hefesto_dualsense4unix.app.draft_config import DraftConfig
 from hefesto_dualsense4unix.profiles.schema import (
     MatchAny,
     Profile,
-    ProfileAnalogicosConfig,  # (noqa-acento)
+    ProfileAnalogicosConfig,  # (noqa-acento) identificador ASCII
     ProfileAtivacaoConfig,
     ProfileCursorConfig,
 )
 
 _SECOES = {
-    "ativacao": ProfileAtivacaoConfig(alternar=["l1"], repique_ms=40),  # (noqa-acento)
-    "analogicos": ProfileAnalogicosConfig(zona_morta=12, curva="precisa"),  # (noqa-acento)
+    "ativacao": ProfileAtivacaoConfig(alternar=["l1"], repique_ms=40),  # noqa-acento: chave ASCII
+    "analogicos": ProfileAnalogicosConfig(zona_morta=12, curva="precisa"),  # noqa-acento: chave ASCII
     "cursor": ProfileCursorConfig(precisao_botao="r1", clique_travado="l3", permanencia_ms=800),
 }
 

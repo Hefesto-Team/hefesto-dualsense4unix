@@ -25,8 +25,8 @@ SECOES = [
     ("sensores", ("giroscopio", "acelerometro")),
     ("mascara", ("ps",)),
     ("movimento", ("stick_r",)),
-    ("ativacao", ("cross",)),  # (noqa-acento)
-    ("analogicos", ("stick_l",)),  # (noqa-acento)
+    ("ativacao", ("cross",)),  # (noqa-acento) identificador ASCII
+    ("analogicos", ("stick_l",)),  # (noqa-acento) identificador ASCII
 ]
 
 NOME_DA_SECAO = {
@@ -38,8 +38,8 @@ NOME_DA_SECAO = {
     "sensores": "sensores",
     "mascara": "máscara",
     "movimento": "comandos virtuais",
-    "ativacao": "ativação dos botões",  # (noqa-acento)
-    "analogicos": "curva dos analógicos",  # (noqa-acento)
+    "ativacao": "ativação dos botões",  # (noqa-acento) identificador ASCII
+    "analogicos": "curva dos analógicos",  # (noqa-acento) identificador ASCII
 }
 
 

@@ -284,7 +284,7 @@ def test_o_perfil_seguinte_solta_a_trava(monkeypatch: pytest.MonkeyPatch) -> Non
         monkeypatch.setattr(m, nome_do_metodo, lambda *a, **k: None)
     com = Profile.model_validate({
         "name": "Com Trava", "match": {"type": "any"},
-        "ativacao": {"travar": ["l1"], "repique_ms": 120}})  # (noqa-acento)
+        "ativacao": {"travar": ["l1"], "repique_ms": 120}})  # (noqa-acento) identificador ASCII
     sem = Profile.model_validate({"name": "Sem Trava", "match": {"type": "any"}})
     monkeypatch.setattr(gerente, "load_profile", lambda nome: com)
     relatorio: dict[str, str] = {}
@@ -498,19 +498,19 @@ def test_o_perfil_recusa_o_filtro_que_o_motor_recusa(secao: dict[str, Any]) -> N
     with pytest.raises(ValidationError):
         Profile.model_validate({
             "name": "X", "match": {"type": "any"},
-            "ativacao": secao})  # (noqa-acento)
+            "ativacao": secao})  # (noqa-acento) identificador ASCII
 
 
 def test_o_perfil_sem_os_campos_nao_grava_a_chave_e_com_eles_volta_igual() -> None:
     from hefesto_dualsense4unix.profiles.schema import Profile
 
     vazio = Profile.model_validate({"name": "Vazio", "match": {"type": "any"}})
-    assert "ativacao" not in vazio.model_dump(mode="json")  # (noqa-acento)
+    assert "ativacao" not in vazio.model_dump(mode="json")  # (noqa-acento) identificador ASCII
     cheio = Profile.model_validate({
         "name": "Cheio", "match": {"type": "any"},
-        "ativacao": {"repique_ms": 120, "aperto_minimo_ms": 50,  # (noqa-acento)
+        "ativacao": {"repique_ms": 120, "aperto_minimo_ms": 50,  # (noqa-acento) identificador ASCII
                      "travar": ["l1", "r1"], "ps_travado_ms": 600},
-        "controllers": {P2: {"ativacao": {"repique_ms": 200}}}})  # (noqa-acento)
+        "controllers": {P2: {"ativacao": {"repique_ms": 200}}}})  # noqa-acento: chave ASCII
     volta = Profile.model_validate(cheio.model_dump(mode="json"))
     assert volta.ativacao is not None and volta.ativacao.travar == ["l1", "r1"]
     assert volta.controllers is not None

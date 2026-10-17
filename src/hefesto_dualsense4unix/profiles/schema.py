@@ -247,7 +247,7 @@ class TriggersConfig(BaseModel):
 
 
 #: As bases do efeito de luz que a pessoa cria na aba Iluminação (A-ABA-ILUMINACAO-DO-TODO-01).
-BASES_DA_LUZ = ("respirar", "piscar", "arco-iris", "batimento", "chama", "mare")  # (noqa-acento)
+BASES_DA_LUZ = ("respirar", "piscar", "arco-iris", "batimento", "chama", "mare")  # noqa-acento: chave ASCII
 RITMO_MINIMO_DA_LUZ = 1
 RITMO_MAXIMO_DA_LUZ = 10
 RITMO_PADRAO_DA_LUZ = 4
@@ -529,11 +529,11 @@ class ProfileAtivacaoConfig(BaseModel):
 
         motivo = recusar(self.alternar, self.repetir, self.longo, self.duplo, self.travar)
         if motivo:
-            raise ValueError(f"ativacao: {motivo}")  # (noqa-acento)
+            raise ValueError(f"ativacao: {motivo}")  # (noqa-acento) identificador ASCII
         return self
 
 
-class ProfileAnalogicosConfig(BaseModel):  # (noqa-acento)
+class ProfileAnalogicosConfig(BaseModel):  # (noqa-acento) identificador ASCII
     """Zona morta, curva, sensibilidade, inversão, troca e uma mão só dos analógicos e gatilhos.
 
     Aditiva ao schema v1 (OS-ANALOGICOS-DO-JOGO-GANHAM-ZONA-MORTA-CURVA-E-UMA-MAO-01): perfil
@@ -562,7 +562,7 @@ class ProfileAnalogicosConfig(BaseModel):  # (noqa-acento)
 
         motivo = recusar(self.trocar, self.mao)
         if motivo:
-            raise ValueError(f"analogicos: {motivo}")  # (noqa-acento)
+            raise ValueError(f"analogicos: {motivo}")  # (noqa-acento) identificador ASCII
         return self
 
 
@@ -1383,7 +1383,7 @@ class ControllerOverrides(BaseModel):
     #: perfil. ``None`` = herda.
     ativacao: ProfileAtivacaoConfig | None = None
     #: A zona morta, a curva e a mão dos analógicos NESTA peça, campo a campo sobre o perfil.
-    analogicos: ProfileAnalogicosConfig | None = None  # (noqa-acento)
+    analogicos: ProfileAnalogicosConfig | None = None  # (noqa-acento) identificador ASCII
 
 
 _KEY_BINDING_TOKEN_RE = re.compile(r"^(KEY_[A-Z0-9_]+|__[A-Z_]+__)$")
@@ -1441,7 +1441,7 @@ class Profile(BaseModel):
     remapeamento: dict[str, str] | None = None
     movimento: ProfileMovimentoConfig | None = None
     ativacao: ProfileAtivacaoConfig | None = None
-    analogicos: ProfileAnalogicosConfig | None = None  # (noqa-acento)
+    analogicos: ProfileAnalogicosConfig | None = None  # (noqa-acento) identificador ASCII
     cursor: ProfileCursorConfig | None = None
     mouse: ProfileMouseConfig | None = None
     # flag global `keyboard_emulation.flag` (utils/session.py:306), enquanto o
@@ -1507,8 +1507,8 @@ class Profile(BaseModel):
         if isinstance(dados, dict):
             for opcional in (
                 "ponte", "remapeamento", "movimento", "estilo", "receita_do_tato",
-                "ativacao",  # (noqa-acento)
-                "analogicos",  # (noqa-acento)
+                "ativacao",  # (noqa-acento) identificador ASCII
+                "analogicos",  # (noqa-acento) identificador ASCII
                 "cursor", "meus_toques",
                 "marcas", "controles_modo", "criado_em", "modificado_em",
                 "alvo", "evento", "evento_comando",

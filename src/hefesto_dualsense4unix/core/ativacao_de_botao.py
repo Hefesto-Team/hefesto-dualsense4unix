@@ -415,7 +415,7 @@ __all__ = [
     "PULSO_S",
     "REPETE_APOS_S",
     "REPETE_POR_SEGUNDO",
-    "Ativacao",  # (noqa-acento)
+    "Ativacao",  # (noqa-acento) identificador ASCII
     "AtivacaoDoControle",
     "alguma",
     "campos_juntos",

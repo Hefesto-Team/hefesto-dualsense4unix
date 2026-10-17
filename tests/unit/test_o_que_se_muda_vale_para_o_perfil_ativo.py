@@ -43,9 +43,9 @@ def _campo_do_cartao(cartao: str, uniq: str) -> dict[str, Any]:
         "sensores": {"sensores": {"giroscopio": False}},
         "mouse": {"mouse": {"enabled": False, "speed": 9, "scroll_speed": 3}},
         "teclado": {"teclado_emulado": True},
-        "acessibilidade": {  # (noqa-acento)
-            "ativacao": {"alternar": ["l1"], "repique_ms": 120},  # (noqa-acento)
-            "analogicos": {"zona_morta": 20, "curva": "precisa"},  # (noqa-acento)
+        "acessibilidade": {  # (noqa-acento) identificador ASCII
+            "ativacao": {"alternar": ["l1"], "repique_ms": 120},  # noqa-acento: chave ASCII
+            "analogicos": {"zona_morta": 20, "curva": "precisa"},  # noqa-acento: chave ASCII
         },
     }
     return campos[cartao]
