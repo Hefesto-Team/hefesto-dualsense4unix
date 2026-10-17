@@ -168,6 +168,7 @@ def test_install_wrapper_e_tabela_nomeiam_a_mesma_pasta_da_peca() -> None:
 
 
 def test_o_install_so_aceita_a_peca_com_o_sha256_do_pino() -> None:
+    # D-1710-A-PECA-GDK-DO-HEFESTO-VAI-PELO-PAR-B-E-WINEDLLPATH
     install = (_RAIZ / "install.sh").read_text(encoding="utf-8")
     bloco = install.split("# 4b-5. A peça GDK", 1)[1].split("# 4c.", 1)[0]
     assert bloco.count('== "${_peca_sha_pino}"') >= 3, "um caminho do install não confere o pino"
