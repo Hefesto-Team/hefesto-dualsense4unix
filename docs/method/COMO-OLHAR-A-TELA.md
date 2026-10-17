@@ -141,6 +141,12 @@ Seja honesto sobre isto ao usá-la:
   INICIAL da página; o que nasce do gesto só aparece com o piloto ou com uma
   régua que clica (`tests/unit/test_a_palavra_de_tela_da_interface_nova.py` é o
   molde);
+- **não vê o anel do foco.** No piloto oculto (`Gtk.OffscreenWindow`) o
+  `document.hasFocus()` é falso e o `:focus-visible` nunca casa: o anel que
+  «não aparece» ali não prova defeito. O `document.activeElement` vale (é ele que
+  diz para onde o foco voltou); o anel se prova numa `Gtk.Window` real sob Xvfb,
+  ou no Chrome pelo Playwright. E o `_ir` (R1/L1) e o `--abre` carregam a página
+  sem o fragmento, enquanto o clique num `<a href="…#trocar">` o mantém;
 - **não substitui o olho de quem confere.** A regra da casa
   (PROVA-DE-TELA-01)
   continua valendo: interface só fecha com ela olhando.
