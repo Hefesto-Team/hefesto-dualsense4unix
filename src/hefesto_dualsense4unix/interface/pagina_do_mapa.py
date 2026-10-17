@@ -6149,6 +6149,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
     *EDICOES_DA_CADEIA_E_DO_REGISTRO,
     *EDICOES_DOS_MAPAS_DO_TODO,
     *EDICOES_DO_CHIP_A_940,
+    *EDICOES_DA_CONTA_DO_RADIO,
 )
 
 
@@ -6578,6 +6579,24 @@ EDICOES_DO_CHIP_A_940: tuple[Edicao, ...] = (
         porque=(
             f"16/10/2026, {_SUGESTOES_A_940}: o tipo e o nome do chip cortam com reticências "
             "em vez de quebrar a linha (o nome inteiro vai na dica)."),
+    ),
+)
+
+EDICOES_DA_CONTA_DO_RADIO: tuple[Edicao, ...] = (
+    Edicao(
+        antes=(
+            "     Gatilho, vibração, barra de luz, giroscópio e touch andam no MESMO canal\n"
+            "     HID — eles não somam pacote. **Só o microfone muda a conta.**            */"
+        ),
+        depois=(
+            "     Gatilho, rumble clássico, barra de luz, giroscópio e touch andam no MESMO\n"
+            "     relatório HID e não somam pacote. O microfone soma, e a háptica pelo rádio\n"
+            "     (0x32) e o alto-falante (0x35) também: vão em relatórios próprios.        */"
+        ),
+        porque=(
+            "17/10/2026 — fato errado num comentário do JavaScript: só o rumble clássico "
+            "viaja dentro do 0x31; a háptica e o som pelo rádio têm relatório próprio."
+        ),
     ),
 )
 

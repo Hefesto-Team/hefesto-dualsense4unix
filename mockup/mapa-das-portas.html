@@ -1344,8 +1344,9 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
      A CONTA, medida (`integrations/dualsense_bt_audio.py:76-78`, A/B de 25/07/2026):
        sem microfone .. 260,4 relatórios por segundo
        com microfone .. 276,7  (o áudio NÃO abre canal novo: divide a fila)
-     Gatilho, vibração, barra de luz, giroscópio e touch andam no MESMO canal
-     HID — eles não somam pacote. **Só o microfone muda a conta.**            */
+     Gatilho, rumble clássico, barra de luz, giroscópio e touch andam no MESMO
+     relatório HID e não somam pacote. O microfone soma, e a háptica pelo rádio
+     (0x32) e o alto-falante (0x35) também: vão em relatórios próprios.        */
   /* O NÚMERO TEM UM DONO SÓ, e aí é `integrations/radio_da_mesa.py`, que tem
      portão contra `docs/data/mapa-controles.csv`. Estas três linhas guardavam
      260 / 277 / 1600 — a MESMA medição, arredondada. Agora são os números
