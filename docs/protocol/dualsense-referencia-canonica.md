@@ -1485,7 +1485,7 @@ A medição completa, com as cinco janelas e as medianas, está em
 **O que isto NÃO fecha, e é a divergência que continua aberta:** o SDL
 **declara** DualSense por USB 250 Hz, por Bluetooth 1000 Hz, e **Edge por USB
 1000 Hz**. O gamepad virtual deste projeto se declara **Edge** (`VPAD_PRODUCT =
-0x0DF2`, `integrations/uhid_gamepad.py:106`) e entrega os 250 Hz do físico. Um
+0x0DF2`, `integrations/uhid_gamepad.py:107`) e entrega os 250 Hz do físico. Um
 jogo que integre velocidade angular pela taxa declarada teria escala 4× errada.
 O lado do **aparelho** está medido acima; o lado do **SDL** não.
 
@@ -1705,8 +1705,8 @@ ATENÇÃO: **O gamepad virtual deste projeto nunca escreve o byte 53** — ele s
 > |---|---|---|
 > | lê o byte 53 do report cru do físico | `core/physical_report_reader.py:437` (`extract_jack_status`), offset (`JACK_STATUS_OFFSET`) em `:176` | **ALTA** — lido no código |
 > | entrega ao vpad na borda | `core/physical_report_reader.py:941-976` (`_observe_jack`) | **ALTA** |
-> | o vpad espelha, mascarado nos três bits conhecidos | `integrations/uhid_gamepad.py:1290` (`forward_jack`), com `_STATUS1_BITS_CONHECIDOS = 0x07` em `:337` | **ALTA** |
-> | o byte sai no report do vpad | `integrations/uhid_gamepad.py:1277`, offset `_STATUS1_OFFSET = 53` em `:331` | **ALTA** |
+> | o vpad espelha, mascarado nos três bits conhecidos | `integrations/uhid_gamepad.py:1291` (`forward_jack`), com `_STATUS1_BITS_CONHECIDOS = 0x07` em `:338` | **ALTA** |
+> | o byte sai no report do vpad | `integrations/uhid_gamepad.py:1278`, offset `_STATUS1_OFFSET = 53` em `:332` | **ALTA** |
 >
 > **(2) A conclusão estava INVERTIDA — e este é o erro mais perigoso dos
 > dois**, porque sobreviveria mesmo se a cura nunca tivesse sido feita. Os bits
@@ -1744,7 +1744,7 @@ ATENÇÃO: **O gamepad virtual deste projeto nunca escreve o byte 53** — ele s
 >
 > A escala **não é percentual**: são **11 níveis** (5, 15, ..., 95, 100) num
 > nibble. E este byte também é espelhado ao vpad desde 09/08
-> (`integrations/uhid_gamepad.py:1301` `forward_battery`, saindo em `:1726`,
+> (`integrations/uhid_gamepad.py:1302` `forward_battery`, saindo em `:1726`,
 > offset `_STATUS_OFFSET = 52` em `:504`) — a mesma leva do byte 53.
 >
 > **Grau: FONTE DESTA MÁQUINA** — o `switch` de `charging_status` dentro de

@@ -605,7 +605,7 @@ ambiente, não hardware.
 ### 3.5 A escolha do PID `0x0DF2` — os efeitos colaterais que EXISTEM
 
 O vpad se declara **DualSense Edge** (`VPAD_PRODUCT = 0x0DF2`,
-`integrations/uhid_gamepad.py:106`) para se distinguir do físico `0x0CE6` e
+`integrations/uhid_gamepad.py:107`) para se distinguir do físico `0x0CE6` e
 poder ser separado por VID/PID. A pergunta é: **o SDL trata o Edge diferente do
 DualSense comum?**
 
@@ -630,7 +630,7 @@ entrada, e ela é de Bluetooth**:
 
 enquanto o DualSense comum tem cinco (`030000004c050000e60c...` para USB e
 `050000004c050000e60c...` para BT). O vpad nasce `BUS_USB`
-(`integrations/uhid_gamepad.py:95`), então **não casa com entrada nenhuma do
+(`integrations/uhid_gamepad.py:96`), então **não casa com entrada nenhuma do
 banco**. Isso não é defeito enquanto o caminho for HIDAPI (o driver PS5
 sintetiza o mapeamento), mas passa a importar se algum dia o vpad DualSense for
 lido pelo caminho evdev — que é o que `SDL_JOYSTICK_HIDAPI=0` faz, e é o que
@@ -1376,7 +1376,7 @@ que ele espera (`0x01`) nunca vem?*
     )
 ```
 
-`integrations/uhid_gamepad.py:531-560` (`_fala_de_vibracao`). O report do SDL
+`integrations/uhid_gamepad.py:532-561` (`_fala_de_vibracao`). O report do SDL
 Edge liga `0x02` no `valid_flag0` — passa pelo **primeiro** teste — e ainda
 ligaria `0x04` no `valid_flag2`, que é o segundo. **Passa duas vezes.**
 

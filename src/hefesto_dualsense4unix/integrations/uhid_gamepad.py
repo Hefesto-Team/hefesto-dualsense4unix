@@ -69,6 +69,7 @@ from hefesto_dualsense4unix.core.rumble import pedido_mais_forte
 from hefesto_dualsense4unix.integrations import pad_usb
 from hefesto_dualsense4unix.utils.espera import prontos_para_ler
 from hefesto_dualsense4unix.utils.logging_config import get_logger
+from hefesto_dualsense4unix.utils.repo_files import como_atualizar_esta_instalacao
 
 logger = get_logger(__name__)
 
@@ -2555,7 +2556,7 @@ def _avisar_o_f_hid_sem_marca() -> None:
         "pad_usb_f_hid_de_fabrica",
         marca=pad_usb.MARCA_DO_F_HID,
         efeito="o jogo no Proton espera 5 s por pedido de feature",
-        cura="./install.sh (o hefesto-usb-f-hid pelo DKMS)",
+        cura=f"{como_atualizar_esta_instalacao()} (o hefesto-usb-f-hid pelo DKMS)",
     )
 
 
