@@ -345,8 +345,25 @@ class MesaDoJogo:
         self.conferir_invariantes()
 
     def conferir_invariantes(self) -> None:
-        """As duas da bancada de queda, em TODO instante: sem EBUSY, sem MAC repetido."""
+        """Em TODO instante: sem EBUSY, nenhum aparelho com dois pads, sem MAC repetido.
+
+        O aparelho de um pad é a identidade com que ele nasceu (o MAC do
+        produto sai dela). A MAC-DA-VOLTA (17/10/2026): a volta sem lâmpada
+        deixava o pad do P1 vestindo quem o co-op promovia a secundário. Com
+        o jogo segurando, o pad do posto não renasce (D-3009) e segue vestindo
+        quem era o primário quando nasceu; o MAC é a O-VPAD-DO-P1-NAO-REPETE-
+        O-MAC-01. MORDIDA: devolva ``_cartas_locked`` sem a
+        ``_mesa_que_vai_sentar`` e a volta da carta 1 reprova aqui.
+        """
         assert not self.mesa.ebusy, "; ".join(self.mesa.ebusy)
+        if not self.coop._jogo_com_a_autoridade():
+            vestidos = [
+                ident
+                for v in self.vpads
+                if v.vivo and (ident := getattr(v, "identidade", None))
+            ]
+            repetidos = sorted({i for i in vestidos if vestidos.count(i) > 1})
+            assert not repetidos, f"um aparelho com dois pads vivos: {repetidos}"
         macs = [v.mac for v in self.vpads if v.vivo]
         assert len(macs) == len(set(macs)), f"dois vpads vivos com o mesmo MAC: {macs}"
         if not self.coop.should_be_active():
