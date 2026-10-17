@@ -101,7 +101,7 @@ def test_sendreport_throttla_e_escreve_so_quando_muda(
 
     inst.device = _FakeDev()
 
-    def _count_write(_r: object) -> None:
+    def _count_write(_r: object, **_geracao: object) -> None:
         calls["write"] += 1
 
     monkeypatch.setattr(inst, "readInput", lambda _r: None)
@@ -135,7 +135,7 @@ def test_sendreport_keepalive_reescreve_report_identico(
     inst.device = _DevComFila()
     monkeypatch.setattr(inst, "readInput", lambda _r: None)
     monkeypatch.setattr(inst, "prepareReport", lambda: [0] * 64)
-    def _count_write(_r: object) -> None:
+    def _count_write(_r: object, **_geracao: object) -> None:
         calls["write"] += 1
 
     monkeypatch.setattr(inst, "writeReport", _count_write)
@@ -168,7 +168,7 @@ def test_sendreport_mutado_nao_escreve_nem_keepalive(
     monkeypatch.setattr(inst, "readInput", lambda _r: None)
     monkeypatch.setattr(inst, "prepareReport", lambda: [0] * 64)
 
-    def _count_write(_r: object) -> None:
+    def _count_write(_r: object, **_geracao: object) -> None:
         calls["write"] += 1
 
     monkeypatch.setattr(inst, "writeReport", _count_write)

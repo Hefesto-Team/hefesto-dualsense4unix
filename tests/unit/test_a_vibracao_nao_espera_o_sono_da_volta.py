@@ -143,7 +143,7 @@ class _Bancada:
         monkeypatch.setattr(time, "sleep", self.relogio.sleep)
         self.inst = inst
 
-    def _escrever(self, out: Any) -> None:
+    def _escrever(self, out: Any, **_geracao: Any) -> None:
         self.escritas.append((self.relogio.t, int(out[0])))
 
     def mexer_o_motor_em(self, quando: float, valor: int) -> None:

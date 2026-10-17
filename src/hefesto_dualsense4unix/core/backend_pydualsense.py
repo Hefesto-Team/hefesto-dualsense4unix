@@ -593,6 +593,12 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
     #: estado de agora.
     _saida_adiada_pelo_silencio: bool = False
 
+    #: Sobe a cada quadro escrito de fora da volta que a volta não pode desfazer (o Off do
+    #: `soltar_os_gatilhos`). O report que a volta montou antes dele leva a geração velha, e o
+    #: `writeReport` o descarta: sem isso, o Rígido montado um instante antes saía DEPOIS do Off, e
+    #: com o mudo do Nativo ou o `disconnect` logo em seguida ficava no firmware.
+    _geracao_da_saida: int = 0
+
     #: BATERIA-QUE-PULA-01: quantos reports este handle ACEITOU.
     _reports_aceitos: int = 0
     _reports_recusados: int = 0
@@ -781,6 +787,7 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
                     self._registrar_leitura_vazia()
                 if not self._output_muted:
                     dono_do_rumble = self._rumble_active or self._rumble_stop_pending
+                    geracao = self._geracao_da_saida
                     out = self.prepareReport()
                     now = time.monotonic()
                     mudou = out != self._last_out_report
@@ -807,7 +814,7 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
                     # volta (`_dormir_a_volta`): quem acorda a espera dorme só o
                     # que falta do piso, e nunca começa a próxima passada antes.
                     if deve_escrever:
-                        self.writeReport(out)
+                        self.writeReport(out, geracao=geracao)
                         self._last_out_report = out
                         self._last_write_at = now
                 self._dormir_a_volta(acordar, lidos=bool(lidos))
@@ -1373,7 +1380,9 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
             fallback: list[int] = super().prepareReport()
             return fallback
 
-    def writeReport(self, outReport: list[int]) -> int | None:  # noqa: N802,N803 - upstream
+    def writeReport(  # noqa: N802 - upstream
+        self, outReport: list[int], geracao: int | None = None  # noqa: N803 - upstream
+    ) -> int | None:
         """Write com carimbo de sequência BT (BTREPORT-02), SERIALIZADO; devolve quantos bytes
         saíram (`None` = o fio não disse).
 
@@ -1385,6 +1394,10 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         `_write_lock` (QUEDA-QUE-PENDURA-01, A-REPORT-THREAD-SAI-ANTES-DO-HANDLE-FECHAR-01).
         """
         with self._write_lock, self._no_c():
+            # A volta passa a `_geracao_da_saida` lida antes de montar o report: velha, o quadro
+            # não sai, e a volta seguinte monta o estado de agora.
+            if geracao is not None and geracao != self._geracao_da_saida:
+                return 0
             if len(outReport) == 78 and outReport[0] == 0x31:
                 from hefesto_dualsense4unix.core import ds_output_report as rep
 
@@ -3520,6 +3533,8 @@ class PyDualSenseController(IController):
                 handle._raw_trigger_right = None
                 self._apply_trigger(handle, "left", desligado)
                 self._apply_trigger(handle, "right", desligado)
+                # Depois do Off armado: o report que a volta montou antes não sai mais.
+                handle._geracao_da_saida = getattr(handle, "_geracao_da_saida", 0) + 1
                 quadro = self._quadro_que_solta_os_gatilhos(
                     desligado, radio=self._detect_transport(handle) == "bt"
                 )

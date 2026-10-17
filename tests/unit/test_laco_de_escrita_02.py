@@ -232,7 +232,7 @@ def test_leitura_vazia_nao_mata_a_thread_e_a_saida_continua(
         inst, "prepareReport", lambda: [contas["sleep"] & 0xFF] + [0] * 63
     )
 
-    def _conta_write(_r: object) -> None:
+    def _conta_write(_r: object, **_geracao: object) -> None:
         contas["write"] += 1
 
     monkeypatch.setattr(inst, "writeReport", _conta_write)
@@ -278,7 +278,7 @@ def test_o_silencio_da_entrada_deixa_rastro_no_journal(
     inst.device = _DispositivoDeMentira()
     monkeypatch.setattr(inst, "readInput", _read_input_do_upstream)
     monkeypatch.setattr(inst, "prepareReport", lambda: [0] * 64)
-    monkeypatch.setattr(inst, "writeReport", lambda _r: None)
+    monkeypatch.setattr(inst, "writeReport", lambda _r, **_geracao: None)
     monkeypatch.setattr(bp.time, "monotonic", lambda: relogio["t"])
 
     def _sono_de_mentira(_secs: float) -> None:
@@ -322,7 +322,7 @@ def test_silencio_curto_nao_polui_o_journal(monkeypatch: pytest.MonkeyPatch) -> 
     inst.device = _DispositivoDeMentira()
     monkeypatch.setattr(inst, "readInput", _read_input_do_upstream)
     monkeypatch.setattr(inst, "prepareReport", lambda: [0] * 64)
-    monkeypatch.setattr(inst, "writeReport", lambda _r: None)
+    monkeypatch.setattr(inst, "writeReport", lambda _r, **_geracao: None)
     monkeypatch.setattr(bp.time, "monotonic", lambda: relogio["t"])
 
     def _sono_de_mentira(_secs: float) -> None:
@@ -369,7 +369,7 @@ def test_no_radio_a_saida_espera_a_entrada_que_parou(
     monkeypatch.setattr(inst, "readInput", lambda _r: None)
     monkeypatch.setattr(inst, "prepareReport", lambda: [1, 2, 3])
 
-    def _conta_write(_r: object) -> None:
+    def _conta_write(_r: object, **_geracao: object) -> None:
         contas["write"] += 1
 
     monkeypatch.setattr(inst, "writeReport", _conta_write)
