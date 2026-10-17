@@ -276,6 +276,39 @@ def _pares_de_pe(cfg: Any) -> list[tuple[str | None, tuple[int, int], float | No
     return pares
 
 
+def par_fixado_nos_motores(
+    daemon: Any, uniq: str, agora: float | None = None
+) -> tuple[int, int] | None:
+    """O ``(fraco, forte)`` que o par fixado deixa nos motores de ``uniq``, com a força dele.
+
+    É o que o reassert escreve ali: o par do próprio controle, senão o da mesa inteira. ``None``
+    sem par que valha para ele (o jogo dirige os motores). Quem toca por cima e devolve (o toque do
+    gesto dos acessórios) devolve isto, porque o par fixado vence o FF do jogo. Leitura pura.
+    """
+    from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+    from hefesto_dualsense4unix.daemon.ipc_rumble_policy import forca_para
+
+    cfg = getattr(daemon, "config", None)
+    if getattr(cfg, "rumble_active", None) is None:
+        return None
+    alvo = norm_mac(uniq) or uniq
+    do_controle: tuple[int, int] | None = None
+    da_mesa: tuple[int, int] | None = None
+    for dono, par, _em in _pares_de_pe(cfg):
+        if dono is None:
+            da_mesa = par
+        elif (norm_mac(dono) or dono) == alvo:
+            do_controle = par
+    escolhido = do_controle if do_controle is not None else da_mesa
+    if escolhido is None:
+        return None
+    mult = forca_para(daemon, uniq, agora)
+    return (
+        max(0, min(255, round(escolhido[0] * mult))),
+        max(0, min(255, round(escolhido[1] * mult))),
+    )
+
+
 def _lembrar_dono_vibrando(cfg: Any, uniq: str | None) -> None:
     """Anota quem está vibrando por nossa conta — ou apaga a anotação."""
     try:

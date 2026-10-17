@@ -409,6 +409,7 @@ def volta_de_producao(daemon: Any) -> VoltaDosAcessorios:
     from hefesto_dualsense4unix.core.events import EventTopic
     from hefesto_dualsense4unix.daemon.lifecycle import o_hefesto_fala_no_modo
     from hefesto_dualsense4unix.daemon.subsystems.luz_animada import escritor_de_producao
+    from hefesto_dualsense4unix.daemon.subsystems.rumble import par_fixado_nos_motores
     from hefesto_dualsense4unix.daemon.subsystems.tato_vivo import (
         _barras_dos_motores,
         _na_barra,
@@ -427,9 +428,10 @@ def volta_de_producao(daemon: Any) -> VoltaDosAcessorios:
         if not callable(escrever):
             return False
         forte_pct, fraco_pct = _barras_dos_motores(daemon, uniq)
-        do_jogo = par_nos_motores(daemon, uniq)
+        # O par fixado pela tela vence o FF do jogo: é ele que está nos motores, e é ele que volta.
+        por_baixo = par_fixado_nos_motores(daemon, uniq) or par_nos_motores(daemon, uniq)
         return escrever(uniq, *somar_ao_par_do_jogo(
-            (_na_barra(fraco, fraco_pct), _na_barra(forte, forte_pct)), do_jogo,
+            (_na_barra(fraco, fraco_pct), _na_barra(forte, forte_pct)), por_baixo,
         ))
 
     def ler_luzinhas(uniq: str) -> tuple[Luzinhas, int] | None:

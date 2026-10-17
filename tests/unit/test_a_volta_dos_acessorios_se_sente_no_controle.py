@@ -275,6 +275,24 @@ def test_em_producao_o_toque_soma_ao_jogo_e_o_zero_devolve_o_par_dele() -> None:
     )
 
 
+@pytest.mark.parametrize("dono", ["AA:BB:CC:00:00:01", None], ids=["do-controle", "da-mesa"])
+def test_com_o_par_fixado_pela_tela_o_toque_soma_a_ele_e_o_zero_o_devolve(
+    dono: str | None,
+) -> None:
+    # O par fixado vence o FF do jogo: é ele que está nos motores, e é ele que o zero devolve.
+    from hefesto_dualsense4unix.daemon.lifecycle import DaemonConfig
+    from hefesto_dualsense4unix.daemon.subsystems.rumble import fixar_par
+
+    controle = _ControleQueVibra()
+    daemon = SimpleNamespace(controller=controle, bus=None, config=DaemonConfig())
+    fixar_par(daemon.config, dono, 60, 30, None, so_este=dono is not None)
+    dizer_a_vibracao(daemon, "AA:BB:CC:00:00:01", (100, 50), (100, 50), agora=1.0)
+    volta = volta_de_producao(daemon)
+    volta._l.motores(P1, 200, 0)
+    volta._l.motores(P1, 0, 0)
+    assert controle.escritos == [(P1, 255, 30), (P1, 60, 30)], "o zero devolveu o par do jogo"
+
+
 def test_com_a_haptica_por_audio_o_jogo_nao_esta_nos_motores_e_o_zero_e_zero() -> None:
     volta, controle = _producao_com_o_jogo((0, 0))
     volta._l.motores(P1, 200, 0)
