@@ -295,7 +295,8 @@ def test_o_cadeado_continua_na_tela_com_o_hefesto_desligado() -> None:
 
     A MORDIDA: mova o `<button class="cadeado">` para dentro do
     `<div class="hef-modo so-ligado">`, gere de novo e esta régua reprova na
-    posição Desligado.
+    posição Desligado. Tirar o `.cartao .rotulo b.espera` da `aba01.py` reprova o
+    esmaecido; devolver a ele `color:var(--texto-mudo)` reprova o cinza (16/10/2026).
     """
     playwright = pytest.importorskip("playwright.sync_api")
 
@@ -325,10 +326,12 @@ def test_o_cadeado_continua_na_tela_com_o_hefesto_desligado() -> None:
             '[data-controle="p1"] b[data-campo="jogador-espera"]');
           const p2 = document.querySelector(
             '[data-controle="p2"] b[data-campo="jogador-espera"]');
-          const cor = {p1: getComputedStyle(p1).color,
-                       antes: getComputedStyle(p2).color};
+          const ler_b = (el) => getComputedStyle(el).color + ' '
+                                + getComputedStyle(el).fontWeight;
+          const cor = {p1: ler_b(p1), antes: ler_b(p2)};
           p2.classList.add('espera');
-          cor.depois = getComputedStyle(p2).color;
+          cor.depois = ler_b(p2);
+          cor.letra = getComputedStyle(p2).color;
           cor.texto = p2.querySelector('[data-campo="jogador"]').textContent;
           fora.cor = cor;
           return fora;
@@ -352,8 +355,13 @@ def test_o_cadeado_continua_na_tela_com_o_hefesto_desligado() -> None:
         "os dois cartões já nascem com cores diferentes — a régua está medindo "
         "outra coisa")
     assert medido["cor"]["depois"] != medido["cor"]["antes"], (
-        f"o número do jogador ficou na mesma cor com a classe `espera` acesa "
+        f"o número do jogador ficou igual com a classe `espera` acesa "
         f"({medido['cor']['depois']}) — a classe pinta e a folha não responde")
+    # Desde 16/10 (T3, sem cinza de letra), o esmaecido é pelo peso, na cor do rótulo.
+    assert medido["cor"]["letra"] not in (
+        "rgb(136, 150, 196)", "rgb(154, 158, 184)", "rgb(83, 87, 111)"), (
+        f"o número que espera voltou ao cinza ({medido['cor']['letra']}): o "
+        f"pedido de 16/10 tirou o cinza da letra, e o esmaecido é pelo peso")
     assert medido["cor"]["texto"] == "Player 2", (
         f"a pintura trocou a PALAVRA para {medido['cor']['texto']!r}. A D-04 "
         f"dela é 'Player N, como está hoje' — o esmaecido só muda a cor")
