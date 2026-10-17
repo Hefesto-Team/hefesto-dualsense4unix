@@ -9,21 +9,29 @@
 #   id        nome da receita (único)
 #   sinais    caminhos relativos à pasta do jogo, separados por `|`; basta um existir.
 #             O `*` vale num nome de pasta (`*_Data/Plugins/x86_64/X.dll`); nunca sobe (`..`)
-#   variavel  só as que o `hefesto-launch` aceita (`WINEDLLOVERRIDES`)
-#   valor     na forma `nome=n`, `nome=n,b` ou `nome=d` (desligar); vários separados por `;`
+#   variavel  só as que o `hefesto-launch` aceita (`WINEDLLOVERRIDES`, `WINEDLLPATH`)
+#   valor     `WINEDLLOVERRIDES` na forma `nome=n`, `nome=n,b`, `nome=b` (só a embutida) ou
+#             `nome=d` (desligar), vários separados por `;`; `WINEDLLPATH` só `@hefesto-wine`,
+#             que o wrapper troca pela pasta da peça do Hefesto
 #   peca      arquivo que tem de existir AO LADO do executável do jogo; sem ele o
 #             valor quebraria o jogo, e a receita não é passada (o prontuário avisa).
 #             `@sinal` quer dizer que a peça é o próprio arquivo do sinal (o `=d` desliga
-#             uma DLL que o jogo já traz, e não há o que pôr ao lado do executável)
+#             uma DLL que o jogo já traz, e não há o que pôr ao lado do executável).
+#             `@hefesto` é a peça GDK do Hefesto, que o install põe em
+#             `~/.local/share/hefesto-dualsense4unix/wine/x86_64-windows/` e que só conta
+#             com o sha256 do `assets/gdk-runtime/pino.txt`
 #
-# A primeira linha é a família GDK (jogos do Xbox no PC, runtime `xgameruntime`):
-# o Proton não traz essa DLL, e o jogo só abre quando a nativa, posta ao lado do
-# executável, é a que carrega.
+# As duas primeiras linhas são a família GDK (jogos do Xbox no PC, runtime `xgameruntime`):
+# o Proton não traz essa DLL, e o jogo recebe a peça do Hefesto (fonte em `assets/gdk-runtime/`)
+# como embutida pelo par `xgameruntime=b` + `WINEDLLPATH`. O par vai inteiro ou nada: o `=b`
+# sem a pasta deixaria o Wine sem DLL nenhuma. A DLL que o usuário pôs ao lado do executável
+# não se toca e não carrega.
 #
 # A segunda é o kit da Lovense por Bluetooth direto (`LovenseWinrtBleDll.dll`, o kit para Unity):
 # o WinRT de Bluetooth do Wine é parcial, e a exceção C++ da DLL derruba o jogo. Desligada, o
 # P/Invoke vira `DllNotFoundException` gerenciada, que a Unity registra e segue; o brinquedo vai
 # pelo Game Mode que o mesmo kit traz.
 id,sinais,variavel,valor,peca
-gdk-xgameruntime,MicrosoftGame.config|installscript-gamingrepair.vdf,WINEDLLOVERRIDES,xgameruntime=n,xgameruntime.dll
+gdk-xgameruntime,MicrosoftGame.config|installscript-gamingrepair.vdf,WINEDLLOVERRIDES,xgameruntime=b,@hefesto
+gdk-xgameruntime-pasta,MicrosoftGame.config|installscript-gamingrepair.vdf,WINEDLLPATH,@hefesto-wine,@hefesto
 lovense-ble-winrt,*_Data/Plugins/x86_64/LovenseWinrtBleDll.dll,WINEDLLOVERRIDES,LovenseWinrtBleDll=d,@sinal

@@ -2,15 +2,17 @@
 
 A tabela `docs/data/receitas-de-ambiente.csv` diz, por sinal no disco do jogo, qual variável vale
 e que peça ela exige. Três regras que ela não quebra: sem appid embarcado (o jogo se reconhece
-pelo que traz na pasta); só com a peça ao lado do executável (sem ela o override quebraria o
-jogo, e o prontuário diz «falta a peça»); só o que o wrapper aceita (letra morta calada não
-entra). O sinal pode ser um caminho com curinga (`*_Data/Plugins/x86_64/X.dll`), e a peça pode ser
-o próprio sinal (`@sinal`), que é o caso de desligar uma DLL do jogo: nada a pôr ao lado do
-executável. 100% stdlib, como o prontuário.
+pelo que traz na pasta); só com a peça no lugar (sem ela o override quebraria o jogo, e o
+prontuário diz «falta a peça»); só o que o wrapper aceita (letra morta calada não entra). O sinal
+pode ser um caminho com curinga (`*_Data/Plugins/x86_64/X.dll`). A peça é um arquivo ao lado do
+executável, o próprio sinal (`@sinal`, o caso de desligar uma DLL do jogo) ou a peça do Hefesto
+(`@hefesto`, a `xgameruntime.dll` que o install põe na pasta da peça e que só conta se o sha256
+bate com o `assets/gdk-runtime/pino.txt`). 100% stdlib, como o prontuário.
 """
 from __future__ import annotations
 
 import csv
+import hashlib
 import re
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -21,22 +23,73 @@ try:
 except ImportError:  # pragma: no cover - executado como script avulso
     from api_de_entrada import escolher_executavel  # type: ignore[no-redef]
 
-TABELA = Path(__file__).resolve().parents[3] / "docs" / "data" / "receitas-de-ambiente.csv"
+_RAIZ = Path(__file__).resolve().parents[3]
+TABELA = _RAIZ / "docs" / "data" / "receitas-de-ambiente.csv"
+PINO_DA_PECA = _RAIZ / "assets" / "gdk-runtime" / "pino.txt"
 
-#: As variáveis que o wrapper deixa passar com forma conferida. Espelho de `decide_envs`.
-VARIAVEIS_DO_WRAPPER = frozenset({"WINEDLLOVERRIDES"})
+#: As variáveis que o wrapper deixa passar com forma conferida. Espelho de `receita_do_jogo`.
+VARIAVEIS_DO_WRAPPER = frozenset({"WINEDLLOVERRIDES", "WINEDLLPATH"})
 
 _NOME_DE_DLL = re.compile(r"^[A-Za-z0-9_.-]+$")
 
-#: Os modos que o wrapper deixa passar: nativa, nativa-depois-da-embutida e desligada.
-MODOS_DO_OVERRIDE = ("n", "n,b", "d")
+#: Os modos que o wrapper deixa passar: nativa, nativa-depois-da-embutida, só a embutida e
+#: desligada.
+MODOS_DO_OVERRIDE = ("n", "n,b", "b", "d")
 
 #: A peça que é o próprio arquivo do sinal (a DLL que se desliga já está no disco).
 PECA_E_O_SINAL = "@sinal"
 
+#: A peça GDK do Hefesto, na pasta que o install escreve; conta só com o sha256 do pino.
+PECA_DO_HEFESTO = "@hefesto"
+
+#: O único `WINEDLLPATH` que a tabela escreve: o wrapper o troca pela pasta da peça.
+PASTA_DA_PECA = "@hefesto-wine"
+
+#: O nome que o prontuário mostra quando a peça do Hefesto falta.
+NOME_DA_PECA_DO_HEFESTO = "a peça GDK do Hefesto (xgameruntime.dll)"
+
+
+def pasta_da_peca(home: Path | None = None) -> Path:
+    """A pasta que o `WINEDLLPATH=@hefesto-wine` nomeia (a mesma do install e do wrapper)."""
+    base = home if home is not None else Path.home()
+    return base / ".local" / "share" / "hefesto-dualsense4unix" / "wine"
+
+
+def _sha256_do_pino(pino: Path | None = None) -> str | None:
+    try:
+        texto = (pino if pino is not None else PINO_DA_PECA).read_text(encoding="utf-8")
+    except OSError:
+        return None
+    for linha in texto.splitlines():
+        chave, igual, valor = linha.partition("=")
+        if igual and chave.strip() == "sha256" and re.fullmatch(r"[0-9a-f]{64}", valor.strip()):
+            return valor.strip()
+    return None
+
+
+def peca_do_hefesto_instalada(home: Path | None = None, pino: Path | None = None) -> bool:
+    """A `xgameruntime.dll` da pasta da peça existe e o sha256 dela é o do pino."""
+    esperado = _sha256_do_pino(pino)
+    if esperado is None:
+        return False
+    dll = pasta_da_peca(home) / "x86_64-windows" / "xgameruntime.dll"
+    try:
+        return hashlib.sha256(dll.read_bytes()).hexdigest() == esperado
+    except OSError:
+        return False
+
+
+def valor_valido(variavel: str, valor: str) -> bool:
+    """A forma que o wrapper aceita para cada variável da tabela."""
+    if variavel == "WINEDLLOVERRIDES":
+        return override_valido(valor)
+    if variavel == "WINEDLLPATH":
+        return valor == PASTA_DA_PECA
+    return False
+
 
 def override_valido(valor: str) -> bool:
-    """A forma que o wrapper aceita: ``nome[,nome]=n``, ``=n,b`` ou ``=d``, entradas por ``;``.
+    """A forma que o wrapper aceita: ``nome[,nome]=n``, ``=n,b``, ``=b`` ou ``=d``, por ``;``.
 
     O espelho em Python de ``override_de_dll_valido`` em ``assets/hefesto-launch.sh``; uma régua
     confere as duas pontas com o mesmo vetor.
@@ -119,7 +172,9 @@ def _linha_valida(linha: dict[str, str]) -> Receita | None:
         return None
     if not all(_sinal_valido(s) for s in sinais) or "/" in peca:
         return None
-    if variavel not in VARIAVEIS_DO_WRAPPER or not override_valido(valor):
+    if variavel not in VARIAVEIS_DO_WRAPPER or not valor_valido(variavel, valor):
+        return None
+    if variavel == "WINEDLLPATH" and peca != PECA_DO_HEFESTO:
         return None
     return Receita(ident, sinais, variavel, valor, peca)
 
@@ -157,13 +212,16 @@ def _nomes_ao_lado_do_executavel(raiz: Path) -> frozenset[str]:
         return frozenset()
 
 
-def ler_jogo(raiz: Path | None, tabela: Iterable[Receita] | None = None) -> tuple[Leitura, ...]:
+def ler_jogo(
+    raiz: Path | None, tabela: Iterable[Receita] | None = None, home: Path | None = None
+) -> tuple[Leitura, ...]:
     """As receitas que o disco do jogo liga, cada uma com o veredito da peça."""
     if raiz is None:
         return ()
     receitas = carregar_tabela() if tabela is None else tuple(tabela)
     achadas: list[Leitura] = []
     nomes: frozenset[str] | None = None
+    instalada: bool | None = None
     for receita in receitas:
         achado = next(
             ((s, p) for s in receita.sinais if (p := achar_sinal(raiz, s)) is not None), None
@@ -174,6 +232,11 @@ def ler_jogo(raiz: Path | None, tabela: Iterable[Receita] | None = None) -> tupl
         if receita.peca == PECA_E_O_SINAL:
             achadas.append(Leitura(receita, sinal, arquivo.is_file()))
             continue
+        if receita.peca == PECA_DO_HEFESTO:
+            if instalada is None:
+                instalada = peca_do_hefesto_instalada(home)
+            achadas.append(Leitura(receita, sinal, instalada))
+            continue
         if nomes is None:
             nomes = _nomes_ao_lado_do_executavel(raiz)
         presente = receita.peca.lower() in nomes if nomes else None
@@ -181,10 +244,12 @@ def ler_jogo(raiz: Path | None, tabela: Iterable[Receita] | None = None) -> tupl
     return tuple(achadas)
 
 
-def ambiente_do_jogo(raiz: Path | None, tabela: Iterable[Receita] | None = None) -> dict[str, str]:
-    """As variáveis que valem: só as receitas com a peça confirmada ao lado do executável."""
+def ambiente_do_jogo(
+    raiz: Path | None, tabela: Iterable[Receita] | None = None, home: Path | None = None
+) -> dict[str, str]:
+    """As variáveis que valem: só as receitas com a peça confirmada no lugar."""
     env: dict[str, str] = {}
-    for leitura in ler_jogo(raiz, tabela):
+    for leitura in ler_jogo(raiz, tabela, home):
         if leitura.peca_presente is not True:
             continue
         r = leitura.receita
@@ -192,13 +257,20 @@ def ambiente_do_jogo(raiz: Path | None, tabela: Iterable[Receita] | None = None)
     return env
 
 
-def pecas_que_faltam(raiz: Path | None, tabela: Iterable[Receita] | None = None) -> tuple[str, ...]:
-    """Os nomes das peças que o sinal pede e o disco não tem (executável lido, peça ausente)."""
-    return tuple(
-        leitura.receita.peca
-        for leitura in ler_jogo(raiz, tabela)
-        if leitura.peca_presente is False
-    )
+def pecas_que_faltam(
+    raiz: Path | None, tabela: Iterable[Receita] | None = None, home: Path | None = None
+) -> tuple[str, ...]:
+    """Os nomes das peças que o sinal pede e o disco não tem, sem repetir (o par da peça do
+    Hefesto são duas linhas e uma peça só)."""
+    faltam: list[str] = []
+    for leitura in ler_jogo(raiz, tabela, home):
+        if leitura.peca_presente is not False:
+            continue
+        peca = leitura.receita.peca
+        nome = NOME_DA_PECA_DO_HEFESTO if peca == PECA_DO_HEFESTO else peca
+        if nome not in faltam:
+            faltam.append(nome)
+    return tuple(faltam)
 
 
 def ambientes_dos_jogos(home: Path | None = None) -> dict[str, dict[str, str]]:
@@ -212,7 +284,7 @@ def ambientes_dos_jogos(home: Path | None = None) -> dict[str, dict[str, str]]:
         from prontuario_dos_jogos import jogos_instalados  # type: ignore[no-redef]
     fora: dict[str, dict[str, str]] = {}
     for appid, _nome, raiz in jogos_instalados(home):
-        env = ambiente_do_jogo(raiz, tabela)
+        env = ambiente_do_jogo(raiz, tabela, home)
         if env:
             fora[appid] = env
     return fora
@@ -220,7 +292,11 @@ def ambientes_dos_jogos(home: Path | None = None) -> dict[str, dict[str, str]]:
 
 __all__ = [
     "MODOS_DO_OVERRIDE",
+    "NOME_DA_PECA_DO_HEFESTO",
+    "PASTA_DA_PECA",
+    "PECA_DO_HEFESTO",
     "PECA_E_O_SINAL",
+    "PINO_DA_PECA",
     "TABELA",
     "VARIAVEIS_DO_WRAPPER",
     "Leitura",
@@ -232,5 +308,8 @@ __all__ = [
     "carregar_tabela",
     "ler_jogo",
     "override_valido",
+    "pasta_da_peca",
+    "peca_do_hefesto_instalada",
     "pecas_que_faltam",
+    "valor_valido",
 ]

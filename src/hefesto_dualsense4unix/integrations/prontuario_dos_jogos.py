@@ -172,10 +172,12 @@ _ESTORVOS: dict[str, tuple[str, str, bool]] = {
     ),
     FALTA_A_PECA: (
         "O jogo traz no disco o sinal de que precisa de uma variável de ambiente para "
-        "abrir, mas a peça que ela exige não está ao lado do executável. Sem a peça, "
-        "passar a variável quebraria o jogo, e o Hefesto não a passa.",
-        "Ponha a peça ao lado do executável do jogo. Com ela no lugar, o Hefesto passa "
-        "a variável sozinho ao abrir o jogo.",
+        "abrir, mas a peça que ela exige não está no lugar. Sem a peça, passar a "
+        "variável quebraria o jogo, e o Hefesto não a passa.",
+        "Se a peça é a do Hefesto (a peça GDK), rode o instalador do Hefesto de novo: "
+        "ele a baixa ou a compila, e só a aceita se bate com a versão conferida. Se é "
+        "um arquivo do jogo, ponha-o ao lado do executável. Com a peça no lugar, o "
+        "Hefesto passa a variável sozinho ao abrir o jogo.",
         False,
     ),
     PONTE_DIVERGENTE: (

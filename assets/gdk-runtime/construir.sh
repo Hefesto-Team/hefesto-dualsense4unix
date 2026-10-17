@@ -43,7 +43,7 @@ conferir="${2:-}"
 mkdir -p "$saida"
 
 # Sem data, sem caminho da máquina e sem símbolos: o mesmo fonte dá o mesmo binário.
-flags=(-O2 -s -Wall -Wl,--no-insert-timestamp -Wl,--disable-auto-image-base -ffile-prefix-map="$aqui"=. -fno-ident)
+flags=(-O2 -s -Wall "-Wl,--no-insert-timestamp" "-Wl,--disable-auto-image-base" "-ffile-prefix-map=$aqui=." -fno-ident)
 ( cd "$aqui" && "$CC" -shared "${flags[@]}" -o "$saida/xgameruntime.dll" xgameruntime.c )
 ( cd "$aqui" && "$CC" "${flags[@]}" -o "$saida/sonda-gdk.exe" sonda-gdk.c )
 marcar "$saida/xgameruntime.dll"

@@ -40,16 +40,21 @@
 set -u
 
 # --- A receita de ambiente do jogo (O-JOGO-QUE-PEDE-RECEITA-DE-AMBIENTE-A-RECEBE-PELO-WRAPPER-01)
-# O jogo da família GDK só abre no Proton com a `xgameruntime.dll` ao lado do
-# executável e `WINEDLLOVERRIDES=xgameruntime=n`. Quem escreve a linha no
-# arquivo de ambiente é o daemon, a partir de `docs/data/receitas-de-ambiente.csv`
-# e só com a peça no disco; aqui o wrapper confere a FORMA, porque o arquivo é
-# texto e a variável vai ao ambiente do jogo: `nome[,nome]=n`, `=n,b` ou `=d`
-# (desligar, que é o caso do kit da Lovense por Bluetooth), entradas separadas
-# por `;`, nomes só de DLL. Qualquer outra forma é descartada com uma
-# linha no diário, e o jogo abre sem ela. Quem já pôs a variável no ambiente
-# (Launch Option, shell) manda. O Proton ACRESCENTA ao `WINEDLLOVERRIDES`
-# herdado, então passar a variável não pisa no que ele põe. SÓ SHELL PURO.
+# O jogo da família GDK recebe a peça GDK do Hefesto pelo par
+# `WINEDLLOVERRIDES=xgameruntime=b` + `WINEDLLPATH=@hefesto-wine`
+# (A-PECA-GDK-DO-HEFESTO-CUMPRE-O-CONTRATO-DO-XASYNC-01). Quem escreve as linhas
+# no arquivo de ambiente é o daemon, a partir de `docs/data/receitas-de-ambiente.csv`
+# e só com a peça instalada; aqui o wrapper confere a FORMA, porque o arquivo é
+# texto e a variável vai ao ambiente do jogo: `nome[,nome]=n`, `=n,b`, `=b` ou
+# `=d` (desligar, que é o caso do kit da Lovense por Bluetooth), entradas
+# separadas por `;`, nomes só de DLL. O `WINEDLLPATH` só aceita o literal
+# `@hefesto-wine`, que vira a pasta fixa da peça; caminho livre se descarta.
+# O par vai inteiro ou nada: o `=b` sem a pasta faria o Wine recusar a DLL e o
+# jogo não abriria. Qualquer descarte deixa uma linha no diário, e o jogo abre
+# sem a receita. Quem já pôs `WINEDLLOVERRIDES` ou `WINEDLLPATH` (Launch Option,
+# shell) manda, e a receita sai inteira. O Proton ACRESCENTA ao
+# `WINEDLLOVERRIDES` herdado e põe o `WINEDLLPATH` herdado depois do dele, então
+# passar o par não pisa no que ele põe. SÓ SHELL PURO.
 override_de_dll_valido() {
     od_resto="$1;"
     [ -n "$1" ] || return 1
@@ -61,7 +66,7 @@ override_de_dll_valido() {
         od_nomes="${od_entrada%%=*}"
         case "$od_entrada" in *=*) ;; *) return 1 ;; esac
         od_modo="${od_entrada#*=}"
-        case "$od_modo" in n|n,b|d) ;; *) return 1 ;; esac
+        case "$od_modo" in n|n,b|b|d) ;; *) return 1 ;; esac
         case "$od_nomes" in
             ''|,*|*,|*,,*|*[!A-Za-z0-9_.,-]*) return 1 ;;
         esac
@@ -70,26 +75,77 @@ override_de_dll_valido() {
     [ "$od_viu" = 1 ]
 }
 
-receita_de_dll() {
-    [ -z "${WINEDLLOVERRIDES+x}" ] || return 1
-    override_de_dll_valido "$1" && return 0
+receita_descartada() {
     if command -v logger >/dev/null 2>&1; then
-        logger -t hefesto-launch "receita de ambiente descartada: WINEDLLOVERRIDES fora da forma nome=n|n,b|d" >/dev/null 2>&1 || true
+        logger -t hefesto-launch "receita de ambiente descartada: $1" >/dev/null 2>&1 || true
     fi
+}
+
+receita_de_dll() {
+    override_de_dll_valido "$1" && return 0
+    receita_descartada "WINEDLLOVERRIDES fora da forma nome=n|n,b|b|d"
+    return 1
+}
+
+# O `=b` (só a embutida) pede a pasta da peça no `WINEDLLPATH`.
+override_pede_embutida() {
+    case ";$1;" in *=b\;*) return 0 ;; esac
+    return 1
+}
+
+# O `WINEDLLPATH` da receita: só o literal `@hefesto-wine`, que vira a pasta em
+# que o install põe a peça (com uma DLL dentro, senão não há o que carregar).
+pasta_da_receita() {
+    case "$1" in
+        @hefesto-wine) ;;
+        *) receita_descartada "WINEDLLPATH fora do literal @hefesto-wine"; return 1 ;;
+    esac
+    [ -n "${HOME:-}" ] || return 1
+    pr_pasta="$HOME/.local/share/hefesto-dualsense4unix/wine"
+    for pr_dll in "$pr_pasta"/x86_64-windows/*.dll; do
+        [ -f "$pr_dll" ] && { printf '%s\n' "$pr_pasta"; return 0; }
+    done
+    receita_descartada "a peça do Hefesto não está em $pr_pasta"
     return 1
 }
 
 # A receita é um canal PRÓPRIO, fora da allowlist de `decide_envs`: aquela é a
 # lista do que o Hefesto escreve em todo lançador (e o uninstall devolve), e o
-# `WINEDLLOVERRIDES` é variável que o usuário também escreve. Aqui só a linha
-# do arquivo do jogo (`steam_app_<id>.env`), nunca a do `default.env`.
+# `WINEDLLOVERRIDES` é variável que o usuário também escreve. Aqui só as linhas
+# do arquivo do jogo (`steam_app_<id>.env`), nunca as do `default.env`.
 receita_do_jogo() {
     case "$1" in */steam_app_*.env) ;; *) return 0 ;; esac
+    rj_dll=""
+    rj_pasta=""
+    rj_quebrou=0
     while IFS= read -r rj_linha; do
         case "$rj_linha" in
-            WINEDLLOVERRIDES=*) receita_de_dll "${rj_linha#*=}" && printf '%s\n' "$rj_linha" ;;
+            WINEDLLOVERRIDES=*)
+                if receita_de_dll "${rj_linha#*=}"; then rj_dll="$rj_linha"; else rj_quebrou=1; fi ;;
+            WINEDLLPATH=*)
+                if rj_p="$(pasta_da_receita "${rj_linha#*=}")"; then
+                    rj_pasta="WINEDLLPATH=$rj_p"
+                else
+                    rj_quebrou=1
+                fi ;;
         esac
     done < "$1"
+    [ -n "$rj_dll$rj_pasta" ] || [ "$rj_quebrou" = 1 ] || return 0
+    if [ "${usuario_pos_dll:-0}" = 1 ] || [ -n "${WINEDLLOVERRIDES+x}" ] || [ -n "${WINEDLLPATH+x}" ]; then
+        receita_descartada "o WINEDLLOVERRIDES ou o WINEDLLPATH já vem de quem lançou; o que ele pôs manda"
+        return 0
+    fi
+    [ "$rj_quebrou" = 0 ] || return 0
+    if [ -n "$rj_pasta" ] && [ -z "$rj_dll" ]; then
+        receita_descartada "WINEDLLPATH sem o WINEDLLOVERRIDES do par"
+        return 0
+    fi
+    if override_pede_embutida "${rj_dll#*=}" && [ -z "$rj_pasta" ]; then
+        receita_descartada "=b sem a pasta da peça no WINEDLLPATH"
+        return 0
+    fi
+    printf '%s\n' "$rj_dll"
+    [ -z "$rj_pasta" ] || printf '%s\n' "$rj_pasta"
     return 0
 }
 
@@ -817,6 +873,18 @@ if jogo_excluido; then
 fi
 
 record_last_run || true
+
+# O WINEDLLOVERRIDES/WINEDLLPATH que o usuário pôs na Launch Option no formato
+# `VAR=VAL %command%` chega aqui como os primeiros argumentos (o `env` final os
+# aplica). Visto aqui, antes do `decide_envs`, a receita do jogo sai inteira.
+usuario_pos_dll=0
+for ud_arg in "$@"; do
+    case "$ud_arg" in
+        WINEDLLOVERRIDES=*|WINEDLLPATH=*) usuario_pos_dll=1; break ;;
+        *=*) continue ;;
+        *) break ;;
+    esac
+done
 
 hefesto_envs="$(decide_envs)" || hefesto_envs=""
 
