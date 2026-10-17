@@ -232,8 +232,8 @@ cache de shader da NVIDIA em todo jogo, sem medida.
 ## 6. A matriz de adaptação (eixo 03)
 
 **O alto (hipótese):** a háptica por áudio só chega a quem estava na mesa
-quando o jogo abriu. `integrations/audio_ks_dualsense.py:432-449` reescreve os
-blocos KS só com os presentes, e `:584-600` recusa com o wineserver vivo. Quem
+quando o jogo abriu. `integrations/audio_ks_dualsense.py:708-726` reescreve os
+blocos KS só com os presentes, e `:918-920` recusa com o wineserver vivo. Quem
 entra depois, volta de um -71 ou troca USB↔BT fica sem háptica, e nada avisa;
 a primeira sessão de todo jogo novo também. Proposta:
 `A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01`, com identidade por lugar (P1–P4) e
