@@ -449,7 +449,7 @@ CSS = """
   /* A MOLDURA E O NOME acompanham — senão o desenho do controle fica colorido
      em cima de uma coluna apagada. */
   .vib .ctrl[data-conectado="nao"] .moldura{border-color:var(--border-forte)}
-  .vib .ctrl[data-conectado="nao"] .rot-ctrl{color:var(--linha)}
+  .vib .ctrl[data-conectado="nao"] .rot-ctrl{color:var(--fg)}
   /* O DESENHO DO LUGAR VAZIO NÃO SE PINTA AQUI — 07/09/2026, e a razão é que
      ele tem DONO. Havia catorze linhas nesta folha pintando o `<svg>` de
      `var(--linha)` (`.ctrl.vazia .ds-svg rect`, `circle`, `polygon`, `ellipse`,

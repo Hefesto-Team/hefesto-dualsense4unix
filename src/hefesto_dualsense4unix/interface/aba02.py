@@ -168,12 +168,14 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      (#282a36) e sumiria de novo. Copiar a gramática é copiar o CONTRASTE, não o
      token. */
   .ctl.off{height:24px;border:1px solid var(--border-forte);background:transparent}
-  .ctl.off > .faixa{cursor:default;color:var(--linha)}
+  /* A letra do lugar vazio é `--fg` desde 16/10/2026: o cinza saiu da fonte, e a linha se
+     distingue pela borda, pela altura de 24 px e pelos travessões. */
+  .ctl.off > .faixa{cursor:default;color:var(--fg)}
   .ctl.off:hover{background:transparent}
   .ctl.off .card-nome,
   .ctl.off .div,
   .ctl.off .leia,
-  .ctl.off .bat{color:var(--linha)}
+  .ctl.off .bat{color:var(--fg)}
 
   /* ---------- UM LUGAR SEM CONTROLE NÃO TEM BATERIA, NEM LUZ, NEM SENSOR ----
      03/09/2026, medido clicando no produto instalado com UM controle no cabo.

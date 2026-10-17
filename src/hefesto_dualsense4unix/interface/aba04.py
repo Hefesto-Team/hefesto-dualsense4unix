@@ -664,8 +664,10 @@ CSS = """
      clicável de propósito — quem insistir vê o botão piscar a recusa em vez de
      nada; a frase do daemon vai ao diário, e não à tela (13/09/2026, a
      docstring de `hefesto_vivo._recusou_dizendo`). */
-  .players button.fora{border-color:var(--border-forte);color:var(--linha);
-                       cursor:default}
+  /* A letra do botão de fora é `--fg` desde 16/10/2026 (o cinza saiu da fonte): ele se distingue
+     pela borda tracejada e pelo peso 400, a gramática do `.degrau.sem-dono` da Jogar. */
+  .players button.fora{border-color:var(--border-forte);border-style:dashed;color:var(--fg);
+                       font-weight:400;cursor:default}
   /* O ANEL É O DONO DO NÚMERO, na cor do plástico dele — e é ele que diz com
      QUEM a troca acontece. Ele é o mesmo em todas as colunas, porque o dono de
      um número é um só; o que muda de coluna para coluna é qual botão está `on`.

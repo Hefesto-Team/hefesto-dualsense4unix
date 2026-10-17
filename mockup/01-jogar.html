@@ -1425,7 +1425,11 @@
      `--comment` é mais SATURADO. `--linha` dá **2,23:1** — e aqui isso é certo,
      não descuido: o que está escrito é um travessão, um marcador de ausência.
      Não há texto a ler num lugar onde não há controle. */
-  .cartao.off .rotulo,
+  /* A LETRA SAIU DO CINZA EM 16/10/2026 (*«Esse cinza some da interface se tratando de fonte»*):
+     o rótulo do lugar vazio é `--fg`, como o da Iluminação e o da Vibração no mesmo estado, e o
+     lugar se distingue pela palavra «Desconectado», pela borda e pelo travessão. A bateria
+     fica na cor da linha: ali só há o ícone e o travessão, marcas de ausência e não letra. */
+  .cartao.off .rotulo{color:var(--fg)}
   .cartao.off .bat{color:var(--linha)}
   /* ---------- O QUE O ESCURO APAGA AGORA QUE A ESTRUTURA É UMA SÓ ----------
      07/09/2026. O lugar vazio deixou de ser um segundo HTML e passou a ser o
@@ -1455,7 +1459,7 @@
         por herança — o travessão do lugar vazio sairia CLARO e semi-negrito
         dentro de um cartão apagado. O peso volta a 400, que é o do rótulo. */
   .cartao.off .fabricante{display:none}
-  .cartao.off .rotulo b{color:var(--linha);font-weight:400}
+  .cartao.off .rotulo b{color:var(--fg);font-weight:400}
   /* O DESENHO CINZA PRECISA DE `!important` porque a cor da peça é `style=`
      INLINE dentro do SVG (o gerador de cores a escreve lá, para o arquivo abrir
      colorido sozinho). Regra externa não vence atributo inline sem isto — e o
