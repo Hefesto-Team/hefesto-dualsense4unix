@@ -378,11 +378,13 @@ O custo NÃO cresce quatro vezes — o marginal do 2º ao 4º canal é pequeno,
 porque os quatro compartilham o mesmo servidor de som e o mesmo ``epoll``.
 
 **O DEGRAU MENOR VEIO COMO DESENHO, não como recuo.** Este módulo só abre
-fluxo para os ``uniq`` que :meth:`NivelDoMicrofone.seguir` receber — e o
-chamador (PEÇA C) passa só os controles que a PEÇA A já disse ter ouvinte. É a
-precedência da §1.1 da sprint escrita em código: o estado 2 (piscando) só pode
-existir dentro do estado 1 (aceso). Na bancada, com ninguém ouvindo, o custo
-desta peça é **zero processo e zero por cento** — nada é aberto.
+fluxo para os ``uniq`` que :meth:`NivelDoMicrofone.seguir` receber, e o
+chamador (PEÇA C, ``luz_do_mic._a_medir``) escolhe por transporte: no CABO, todo
+microfone ligado (o canal já existe, e o fluxo de pico custa o 0,1 % medido
+acima); no RÁDIO, só quem a PEÇA A já disse ter ouvinte, porque o nosso
+``parec`` deixaria a ponte ``RUNNING`` e o controle mandaria áudio pelo rádio o
+tempo todo. No mudo nada se mede. Na bancada, pelo rádio e com ninguém ouvindo,
+o custo desta peça é **zero processo e zero por cento** — nada é aberto.
 
 Amostrar por JANELAS curtas foi medido e REJEITADO: a partida é barata (45 a
 280 ms), mas abrir e fechar a 0,2 Hz faz o nó piscar entre ``RUNNING`` e
