@@ -46,6 +46,7 @@ TABELA: list[tuple[int | str | None, int | str | None, str]] = [
     (None, "torto", "aparência que não se lê"),
     (0x002508, "torto", "classe boa e aparência torta"),
     ("torto", 0x03C4, "classe torta e aparência de controle"),
+    ("09480", None, "decimal com zero à esquerda, que o int(…, 0) recusa"),
 ]
 
 

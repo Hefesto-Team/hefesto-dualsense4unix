@@ -372,14 +372,15 @@ fi
 # valor que não se lê) a resposta é «não é controle»: o vigia não age no que não
 # sabe o que é.
 #: Texto -> inteiro em decimal, ou nada (rc 1). Aceita `0x...` e decimal puro
-#: (o `busctl` devolve decimal); zero à esquerda não vira octal.
+#: (o `busctl` devolve decimal); decimal com zero à esquerda é recusado, como no
+#: `int(…, 0)` do produto, e nunca vira octal.
 _inteiro_ou_nada() {
     local v="${1:-}"
     if [[ "${v}" =~ ^0[xX][0-9a-fA-F]{1,16}$ ]]; then
         printf '%d' "$((v))"
         return 0
     fi
-    if [[ "${v}" =~ ^[0-9]{1,18}$ ]]; then
+    if [[ "${v}" =~ ^(0+|[1-9][0-9]{0,17})$ ]]; then
         printf '%d' "$((10#${v}))"
         return 0
     fi
