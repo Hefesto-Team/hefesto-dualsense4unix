@@ -38,9 +38,6 @@ elemento e conclui sobre quatro é a forma de defeito que esta casa mais paga.
 
 A MORDIDA, colada no relato desta frente:
 
-* apague o `if not _confirmado(o, "aplicar-aos-jogos")` do gesto e
-  `test_o_aplicar_aos_jogos_nao_fecha_a_steam_no_primeiro_clique` reprova
-  dizendo que a Steam fechou sem consentimento;
 * apague a linha `fora[CAMPO_DO_MODO_AVULSO] = …` do `pacote()` e
   `test_o_campo_do_modo_improvisado_sai_em_todo_tique` reprova nos dois
   estados — inclusive no VAZIO, que é o que faz o botão SUMIR de volta;

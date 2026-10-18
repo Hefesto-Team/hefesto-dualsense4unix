@@ -632,18 +632,6 @@ class DaemonActionsMixin(WidgetAccessMixin):
         return encontrar_arquivo_do_repo(relpath, bases=BASES_DE_INSTALACAO)
 
 
-    _STEAM_APPLY_CORPO = (
-        "O Hefesto entra nos jogos da Steam, do Heroic, do Lutris e dos emuladores. "
-        "As opções que você já tem nos jogos são preservadas: na Steam fica um "
-        "backup ao lado de cada arquivo, e nos outros eu anoto o que pus, para "
-        "tirar quando o Hefesto for desinstalado.\n\n"
-        "Nos outros lançadores eu escrevo na hora, sem fechar nada, e vale na "
-        "próxima vez que cada um abrir. A Steam só aceita fechada: se ela estiver "
-        "aberta eu peço a sua permissão antes de fechá-la por uns 20 segundos e "
-        "abro de novo em seguida. Com um jogo aberto, a Steam fica para depois."
-    )
-
-
     # --- Modo simples: dois botões que escondem os conceitos --------------
     # continuam existindo; o que sai da tela é a ESCOLHA entre eles.
     #                               (e só ela — ver `format_game_broken_result`).
