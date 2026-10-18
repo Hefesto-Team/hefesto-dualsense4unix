@@ -156,3 +156,35 @@ def test_a_03_e_a_05_nao_rolam_na_vertical_nas_quatro_vistas() -> None:
                 pg.close()
         nav.close()
     assert not achados, f"há rolagem: {achados}"
+
+
+@pytest.mark.skipif(not CHROME.exists(), reason="sem o Chrome do sistema: a régua não tem motor")
+def test_a_linha_da_03_tem_a_altura_e_as_colunas_da_linha_da_forca_da_05() -> None:
+    """O pedido é «no mesmo formato, altura e colunas» do trilho da 05: mede-se a geometria.
+
+    MORDIDA: troque, no `aba03.CSS`, o `grid-template-columns` da `.g2-int` (o 44px do número
+    por 60px) ou a altura de 36 por 30, regere o desenho, e esta régua reprova.
+    """
+    from playwright.sync_api import sync_playwright
+
+    medir = """s => {
+      const t = document.querySelector(s), l = t.parentElement, cs = getComputedStyle(l);
+      const cols = cs.gridTemplateColumns.split(' ');
+      return {altura: Math.round(l.getBoundingClientRect().height),
+              fixas: [cols[0], cols[2], cols[3]], vao: cs.columnGap,
+              trilho: Math.round(t.getBoundingClientRect().height)};
+    }"""
+    medidas = {}
+    with sync_playwright() as pw:
+        nav = pw.chromium.launch(executable_path=str(CHROME), args=["--no-sandbox"])
+        for pagina, seletor in (("03-gatilhos.html", '.g2-int:not(.off) input.trilho'),
+                                ("05-vibracao.html", 'input.trilho[data-papel="intensidade"]')):
+            pg = nav.new_page(viewport={"width": 1272, "height": 860})
+            pg.goto((RAIZ / "mockup" / pagina).as_uri())
+            pg.wait_for_load_state("networkidle")
+            medidas[pagina] = pg.evaluate(medir, seletor)
+            pg.close()
+        nav.close()
+    m03, m05 = medidas["03-gatilhos.html"], medidas["05-vibracao.html"]
+    assert m03 == m05, f"a linha da 03 não tem o formato da Força da 05: {m03} ≠ {m05}"
+    assert m03["altura"] == 36 and m03["fixas"] == ["36px", "44px", "8px"], m03
