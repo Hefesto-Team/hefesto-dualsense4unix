@@ -253,14 +253,14 @@
       "data": "2026-10-17",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1143972,
+      "piso": 1143954,
       "por_item": {
-        "docs": 119551,
-        "scripts": 115521,
-        "src": 308122,
-        "tests": 600778
+        "docs": 119550,
+        "scripts": 114837,
+        "src": 308322,
+        "tests": 601245
       },
-      "razao": "tamanho: +65 linhas (1143907 -> 1143972), pagas por Origem: D-A-REGUA-E-QUALQUER-MESA-NAO-A-DELA; registrado no fecho, topo 387285e26f76",
+      "razao": "o teto desceu sozinho com o número",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -594,7 +594,7 @@
         }
       ],
       "unidade": "linhas",
-      "universo": 2966
+      "universo": 2965
     }
   }
 }

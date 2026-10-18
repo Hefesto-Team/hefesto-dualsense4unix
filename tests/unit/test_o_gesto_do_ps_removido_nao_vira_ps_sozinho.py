@@ -81,6 +81,7 @@ def _steam_abriu(mgr: HotkeyManager, pedidos: list[str], antes: int) -> int:
 @pytest.mark.parametrize("mac,via", CONTROLES)
 def test_o_ps_com_o_dpad_removido_nao_abre_a_steam(
         sem_steam: list[str], mac: str, via: str) -> None:  # noqa: F811
+    # D-1710-O-PS-COM-OUTRO-BOTAO-NAO-E-PS-SOZINHO
     mgr = _gerente(sem_ps_dpad=True)
     _toque(mgr, [["ps"], ["ps", "dpad_up"], ["ps", "dpad_up"], ["ps"]], mac)
     _toque(mgr, [["ps"], ["ps", "dpad_down"], ["ps"]], mac, t0=1.0)

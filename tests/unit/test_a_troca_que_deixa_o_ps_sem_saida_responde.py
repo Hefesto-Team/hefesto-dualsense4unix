@@ -66,6 +66,7 @@ def _guardado(ponte: _Ponte, gesto: str) -> str:
 
 @pytest.mark.parametrize("primeiro,restante", [("ps_options", "ps_r3"), ("ps_r3", "ps_options")])
 def test_tirar_a_ultima_saida_responde_e_a_penultima_nao(primeiro: str, restante: str) -> None:
+    # D-1710-A-SAIDA-DE-EMERGENCIA-DO-PS-AVISA-NA-LINHA
     ponte = _ponte()
     _trocar(ponte, primeiro, NADA)
     with pytest.raises(RuntimeError) as caiu:

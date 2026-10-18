@@ -52,6 +52,7 @@ def _tokens(botao: str | None = None) -> set[str]:
 
 @pytest.mark.parametrize("linha", [b for b in LINHAS_DE_BOTAO if b != acoes.BOTAO_PS])
 def test_a_linha_de_botao_nao_oferece_wasd_nem_setas(linha: str) -> None:
+    # D-1710-OS-ANALOGICOS-OFERECEM-TECLAS-SO-NA-LINHA-DELES
     oferecidos = _tokens(linha)
     assert not oferecidos & TECLAS, f"a linha {linha} oferece o que é de analógico"
     assert oferecidos, f"a linha {linha} ficou sem lista"
