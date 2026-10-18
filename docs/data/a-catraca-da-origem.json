@@ -250,17 +250,17 @@
       "universo": 405
     },
     "tamanho": {
-      "data": "2026-10-17",
+      "data": "2026-10-18",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1146281,
+      "piso": 1146648,
       "por_item": {
         "docs": 119565,
         "scripts": 114902,
-        "src": 308909,
-        "tests": 602905
+        "src": 308924,
+        "tests": 603257
       },
-      "razao": "tamanho: +515 linhas (1145766 -> 1146281), pagas por Origem: D-1710-A-PECA-GDK-DO-HEFESTO-VAI-PELO-PAR-B-E-WINEDLLPATH, D-1710-A-PECA-GDK-SO-ACEITA-A-FILA-QUE-CRIOU; registrado no fecho, topo 682ed782b1d0",
+      "razao": "tamanho: +367 linhas (1146281 -> 1146648), pagas por Origem: D-1710-OS-ANALOGICOS-OFERECEM-TECLAS-SO-NA-LINHA-DELES; registrado no fecho, topo a9f4cbee775c",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -609,10 +609,16 @@
           "de": 1145766,
           "para": 1146281,
           "razao": "tamanho: +515 linhas (1145766 -> 1146281), pagas por Origem: D-1710-A-PECA-GDK-DO-HEFESTO-VAI-PELO-PAR-B-E-WINEDLLPATH, D-1710-A-PECA-GDK-SO-ACEITA-A-FILA-QUE-CRIOU; registrado no fecho, topo 682ed782b1d0"
+        },
+        {
+          "data": "2026-10-18",
+          "de": 1146281,
+          "para": 1146648,
+          "razao": "tamanho: +367 linhas (1146281 -> 1146648), pagas por Origem: D-1710-OS-ANALOGICOS-OFERECEM-TECLAS-SO-NA-LINHA-DELES; registrado no fecho, topo a9f4cbee775c"
         }
       ],
       "unidade": "linhas",
-      "universo": 2976
+      "universo": 2978
     }
   }
 }
