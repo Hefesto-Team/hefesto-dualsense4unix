@@ -253,14 +253,14 @@
       "data": "2026-10-18",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1150404,
+      "piso": 1149071,
       "por_item": {
-        "docs": 119651,
-        "scripts": 114967,
-        "src": 310541,
-        "tests": 605245
+        "docs": 119659,
+        "scripts": 114956,
+        "src": 310561,
+        "tests": 603895
       },
-      "razao": "tamanho: +2952 linhas (1147452 -> 1150404), pagas por Origem: D-1810-UMA-EXTENSAO-PUBLICA-O-PEDIDO-DO-JOGO-AO-BRINQUEDO-PELA-PORTA; registrado no fecho, topo fe7fd278c079",
+      "razao": "o teto desceu sozinho com o número",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -648,7 +648,7 @@
         }
       ],
       "unidade": "linhas",
-      "universo": 3005
+      "universo": 3004
     }
   }
 }
