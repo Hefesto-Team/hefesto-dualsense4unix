@@ -148,7 +148,11 @@ def test_o_selo_do_mic_tem_tres_estados_e_um_dono_so() -> None:
 
 
 def test_os_dois_pintores_chamam_o_mesmo_dono_do_selo() -> None:
-    """Nenhum dos dois pode voltar a escrever o ternário por conta própria."""
+    """Nenhum dos dois pode voltar a escrever o ternário por conta própria.
+
+    O dono do selo do microfone é `a02_controles.selo_composto` (as quatro faces): o pacote da
+    aba e o piloto antigo o chamam, e nenhum dos dois decide `ATIVO` sozinho.
+    """
     from hefesto_dualsense4unix.interface import controles_vivos
     from hefesto_dualsense4unix.interface.pacotes import a02_controles
 
@@ -157,28 +161,80 @@ def test_os_dois_pintores_chamam_o_mesmo_dono_do_selo() -> None:
         (controles_vivos.Janela._pacote_do_card, "interface/controles_vivos.py"),
     ):
         codigo = alvo.__code__
-        nomes = set(codigo.co_names)
         constantes = {c for c in codigo.co_consts if isinstance(c, str)}
         constantes.discard(alvo.__doc__)
 
-        assert "selo_do_mic" in nomes, f"{nome} não chama o dono do selo"
+        assert "selo_composto" in set(codigo.co_names), f"{nome} não chama o dono do selo"
         assert "ATIVO" not in constantes, (
             f"{nome} voltou a decidir o selo por conta própria — duas versões "
             "vivas do mesmo ternário é o defeito que a casa mata"
         )
 
 
-def test_o_default_de_mic_sabemos_no_piloto_e_nao_sei() -> None:
-    """A ausência da chave não pode virar ATIVO — nem por default."""
-    import inspect
+class _JanelaFalsa:
+    """O mínimo de `Janela` que `_pacote_do_card` toca: os ecos dos cliques, vazios."""
 
-    from hefesto_dualsense4unix.interface import controles_vivos
+    eco_mudo: ClassVar[dict[str, Any]] = {}
+    eco_rota: ClassVar[dict[str, Any]] = {}
+    eco_sensor: ClassVar[dict[str, Any]] = {}
 
-    fonte = inspect.getsource(controles_vivos.Janela._pacote_do_card)
-    assert 'e.get("mic_sabemos", False)' in fonte, (
-        "o default de `mic_sabemos` no piloto voltou a ser `True` — a ausência "
-        "de leitura passaria a pintar ATIVO de novo"
-    )
+
+def _card_do_piloto(entrada: dict[str, Any]) -> dict[str, Any]:
+    from hefesto_dualsense4unix.interface import controles_vivos, mesa_viva
+
+    c = {"uniq": entrada["uniq"], "mascara": "DualSense"}
+    estado = mesa_viva.estado_do_card(entrada)
+    return controles_vivos.Janela._pacote_do_card(_JanelaFalsa(), c, entrada, estado)  # type: ignore[arg-type]
+
+
+def _entrada(audio: dict[str, Any] | None, toques: list[dict[str, int]] | None = None) -> dict:
+    from hefesto_dualsense4unix.interface import casamento
+
+    entrada = {**casamento.FALSO}
+    if audio is None:
+        entrada.pop("audio")
+    else:
+        entrada["audio"] = audio
+    entrada["inputs"] = {**entrada["inputs"], "touchpad": {
+        "width": 1920, "height": 1080, "x": 0, "y": 0, "touching": bool(toques),
+        "pontos": toques or []}}
+    return entrada
+
+
+def test_o_piloto_diz_calado_quando_o_canal_esta_inativo_e_o_firmware_vivo() -> None:
+    """O-PILOTO-ANTIGO-DA-02-PERGUNTA-O-SELO-AO-PACOTE-01: as quatro faces, não o byte só.
+
+    Firmware vivo (`mic_mudo` falso) com o canal do PipeWire inativo é CALADO no pacote da aba, e
+    o piloto lia só o byte e dizia ATIVO.
+    """
+    from hefesto_dualsense4unix.interface import mesa_viva
+
+    audio = {"mic_mudo": False, "mic_mudo_desejado": None, "canal_ativo": False,
+             "canal_mudo": False}
+    mic = _card_do_piloto(_entrada(audio))["mic"]
+    assert mic["selo"] == mesa_viva.DESLIGADO and mic["off"] is True, mic
+    vivo = {**audio, "canal_ativo": True}
+    mic = _card_do_piloto(_entrada(vivo))["mic"]
+    assert mic["selo"] == "ATIVO" and mic["off"] is False, mic
+
+
+def test_o_piloto_diz_nao_sei_sem_a_chave_audio() -> None:
+    """A ausência da leitura não vira ATIVO, nem pelo piloto."""
+    mic = _card_do_piloto(_entrada(None))["mic"]
+    assert mic["selo"] == "—" and mic["off"] is False, mic
+
+
+def test_o_piloto_pinta_os_dois_dedos_como_o_pacote() -> None:
+    """Os dois pontos do touchpad vêm de `dedos_do_controle`: sem dedo, o ponto apaga."""
+    pontos = [{"x": 480, "y": 270}, {"x": 1440, "y": 810}]
+    dois = _card_do_piloto(_entrada({"mic_mudo": False}, pontos))
+    assert [t["on"] for t in dois["touch"]] == [True, True]
+    assert (dois["touch"][0]["x"], dois["touch"][0]["y"]) == ("25.0%", "25.0%")
+    assert (dois["touch"][1]["x"], dois["touch"][1]["y"]) == ("75.0%", "75.0%")
+    um = _card_do_piloto(_entrada({"mic_mudo": False}, [{"x": 480, "y": 270}]))
+    assert [t["on"] for t in um["touch"]] == [True, False]
+    nenhum = _card_do_piloto(_entrada({"mic_mudo": False}))
+    assert [t["on"] for t in nenhum["touch"]] == [False, False]
 
 
 def test_mesa_viva_publica_o_terceiro_estado() -> None:
@@ -440,3 +496,13 @@ async def test_sem_ninguem_eleito_o_mudo_nao_reelege_a_melhor_fonte() -> None:
     assert backend.leds == {_J2: True}, (
         "só a luz de quem apertou, e ACESA: ele acabou de entrar no ar"
     )
+
+
+def test_o_js_do_piloto_pinta_os_dedos_pelos_enderecos_da_pagina() -> None:
+    """O JS escreve `--hef-x/--hef-y` em `pos-touch` e liga `on` em `touch-ponto` (os dois)."""
+    from pathlib import Path
+
+    fonte = (Path(__file__).resolve().parents[2] / "src" / "hefesto_dualsense4unix"
+             / "interface" / ("controles_" + "vivos.py")).read_text(encoding="utf-8")
+    assert "data-campo=\"pos-touch'+sufixo" in fonte and "touch-ponto'+sufixo" in fonte
+    assert "'.touch .ponto'" not in fonte, "o piloto voltou ao endereço que a página não tem"

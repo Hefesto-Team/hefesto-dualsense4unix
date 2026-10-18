@@ -313,8 +313,19 @@ window.HEF = (function(){
     const c = card(uniq); if(!c) return 0; let n=0;
     n += txt(q('[data-campo="mascara"]', c), d.mascara);
     n += est(q('.bat .cheio', c), {width:d.bat.w}) + txt(q('.bat .n', c), d.bat.n);
-    n += est(q('.touch .ponto', c),
-             {left:d.touch.left, top:d.touch.top, opacity:d.touch.vis?'1':'0'});
+    // OS DOIS DEDOS, PELOS ENDEREÇOS DA PÁGINA (`pos-touch`, `touch-ponto` e os do segundo): a
+    // posição vai nas variáveis `--hef-x`/`--hef-y` do invólucro e o ponto acende pela classe `on`,
+    // como o produto pinta. O ponto sem dedo apaga e a posição não é escrita.
+    d.touch.forEach((t,i)=>{
+      const sufixo = i ? '-2' : '';
+      const pos = q('[data-campo="pos-touch'+sufixo+'"]', c);
+      if(pos && t.on){
+        if(pos.style.getPropertyValue('--hef-x') !== t.x) pos.style.setProperty('--hef-x', t.x);
+        if(pos.style.getPropertyValue('--hef-y') !== t.y) pos.style.setProperty('--hef-y', t.y);
+        n++;
+      }
+      n += cls(q('[data-campo="touch-ponto'+sufixo+'"]', c), 'on', t.on);
+    });
     for(const lado of ['l','r']){
       const s = d.sticks[lado];
       n += est(q('.stick[data-stick="'+lado+'"] .p', c), {left:s.left, top:s.top});
@@ -1083,9 +1094,14 @@ class Janela:
             )
         alto_pct = e["alto_pct"]
         eco = self.eco_mudo.get(c["uniq"], {})
-        eco_mic_mudo = (eco["microfone"] == "on") if "microfone" in eco else e["mic_mudo"]
-        # `mic_sabemos` é falso quando o `state_full` não trouxe a chave `audio`
-        mic_sabemos = ("microfone" in eco) or e.get("mic_sabemos", False)
+        # O SELO É DO PACOTE DA ABA: as quatro faces (firmware, desejado, canal ativo e mudo do
+        # canal), e não o byte do firmware sozinho. O eco do clique ainda manda até o daemon
+        # confirmar; sem ele, quem diz é `selo_composto`.
+        from hefesto_dualsense4unix.interface.pacotes import a02_controles as a02
+
+        selo_do_mic = (mesa_viva.selo_do_mic(eco["microfone"] == "on", True)
+                       if "microfone" in eco else a02.selo_composto(entrada.get("audio") or {}))
+        _, dedos = a02.dedos_do_controle(entrada.get("inputs") or {})
         eco_alto_mudo = (eco["alto-falante"] == "on") if "alto-falante" in eco else e["alto_mudo"]
         eixos = {}
         for eixo, texto, estilo in e["giro"]:
@@ -1097,11 +1113,11 @@ class Janela:
                 "w": f"{bat}%" if isinstance(bat, int) else "0%",
                 "n": f"{bat}%" if isinstance(bat, int) else "— %",
             },
-            "touch": {
-                "left": f'{e["touch"][0]}%',
-                "top": f'{e["touch"][1]}%',
-                "vis": e["tocando"],
-            },
+            "touch": [
+                {"on": ponto == "sim" and onde is not None,
+                 "x": f"{onde[0]}%" if onde else "", "y": f"{onde[1]}%" if onde else ""}
+                for ponto, onde in dedos
+            ],
             "sticks": {
                 "l": {
                     "left": f"{aba02.pos(lx)}%",
@@ -1128,8 +1144,8 @@ class Janela:
                 "title": recado,
             },
             "mic": {
-                "selo": mesa_viva.selo_do_mic(eco_mic_mudo, mic_sabemos),
-                "off": eco_mic_mudo and mic_sabemos,
+                "selo": selo_do_mic,
+                "off": selo_do_mic == mesa_viva.selo_do_mic(True, True),
                 "onda": e["mic_v"],
                 "vol_w": f'{e["mic_vol"]}%',
                 "vol_n": str(e["mic_vol"]),
