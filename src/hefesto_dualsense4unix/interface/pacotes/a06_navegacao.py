@@ -1043,6 +1043,7 @@ def _a_linha_do_ps(ctx: Contexto, p: Any, rotulo: str) -> dict[str, Any] | None:
         if not _declarar_o_gesto(ag.GESTO_DO_PS, rotulo, p):
             return None
         _gravar_a_linha(ctx, p, "ps", acoes.padrao()["ps"])
+        _avisar_se_sem_saida_de_emergencia()
         return None
     token = acoes.token_do_rotulo(rotulo)
     if token is None or not _o_ps_digita(token):
@@ -1055,6 +1056,7 @@ def _a_linha_do_ps(ctx: Contexto, p: Any, rotulo: str) -> dict[str, Any] | None:
         raise RuntimeError(
             "guardei a tecla, e o ato do PS continua: " + (motivo or "o Hefesto não respondeu"))
     _esquecer_a_maquina()
+    _avisar_se_sem_saida_de_emergencia()
     return {"mesa": {f"{PREFIXO_DA_ACAO}ps": rotulo}}
 
 
@@ -1285,6 +1287,27 @@ def _ok_e_motivo(resposta: Any) -> tuple[bool, str | None]:
     return bool(resposta), None
 
 
+def _avisar_se_sem_saida_de_emergencia() -> None:
+    """Depois de guardar, diz quando nenhum gesto que vale faz a saída de emergência do PS.
+
+    Suspender mouse e teclado e Próximo modo tiram o computador das mãos do controle; a troca que
+    deixa as duas sem gesto é guardada e responde, no desfecho que a linha já tem. O de fábrica
+    removido não conta: guarda o que fazia, mas não dispara. O PS sozinho conta.
+    """
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.core import acoes_do_gesto as ag
+
+    maquina = _a_maquina()
+    ativos = ag.gestos_ativos(maquina)
+    valem = {c: e for c, e in ag.tabela(maquina).items() if c == ag.GESTO_DO_PS or c in ativos}
+    faltam = ag.saidas_sem_gesto(valem)
+    if len(faltam) == len(ag.SAIDAS_DE_EMERGENCIA):
+        nomes = " nem ".join(ag.rotulo(t) for t in faltam)
+        raise RuntimeError(
+            f"guardei, e nenhum gesto do PS faz {nomes}, a saída de emergência — "
+            "escolha um deles em algum gesto.")
+
+
 @gesto("06-navegacao.html", "acao-do-gesto", grava="machine_declare")
 def acao_do_gesto(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """Uma das seis listas da tabela: grava na MÁQUINA o que o gesto faz.
@@ -1302,7 +1325,8 @@ def acao_do_gesto(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
     qual = str(o.get("linha") or "").strip()
     if qual not in ag.TODOS_OS_GESTOS:
         raise ValueError(f"a lista não disse de qual gesto ela é ({qual!r})")
-    _declarar_o_gesto(qual, str(o.get("rotulo") or o.get("valor") or "").strip(), p)
+    if _declarar_o_gesto(qual, str(o.get("rotulo") or o.get("valor") or "").strip(), p):
+        _avisar_se_sem_saida_de_emergencia()
     return None
 
 
@@ -1387,4 +1411,5 @@ def remover_gesto(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
     if not ok:
         raise RuntimeError(motivo or "Não consegui tirar o gesto.")
     _esquecer_a_maquina()
+    _avisar_se_sem_saida_de_emergencia()
     return None
