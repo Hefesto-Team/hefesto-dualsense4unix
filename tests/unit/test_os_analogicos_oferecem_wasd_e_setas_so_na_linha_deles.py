@@ -10,8 +10,9 @@ Duas curas, cada uma com a sua régua:
   MESMA função que a `TabelaNoJogo` usa com o jogo (`acoes_de_botao.direcoes_apertadas`), e a
   tecla é a união dos controles.
 
-MORDIDAS (arrancadas e devolvidas): devolver o token à lista geral reprova a primeira; tirar a
-chamada de `teclas_do_analogico_no_desktop` do laço reprova as do desktop; tirar o
+MORDIDAS (arrancadas e devolvidas): devolver o token à lista geral reprova a primeira; esvaziar
+`TeclasDoAnalogicoNoDesktop.tick` reprova as do desktop (a chamada dele no laço morde em
+`test_o_wasd_do_analogico_age_sem_a_emulacao_de_mouse.py`, não aqui); tirar o
 `soltar_as_teclas_do_analogico` do `soltar_o_cursor` ou da troca de perfil deixa a tecla presa
 e reprova as de soltura; tirar a condição do `_keyboard_device` reprova a do «Desativado»; ler
 pelo hub quem o co-op numera reprova a do vpad que renasce.

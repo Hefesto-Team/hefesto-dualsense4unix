@@ -81,8 +81,7 @@ def test_a_lista_e_o_resolver_dizem_o_mesmo(linha: str) -> None:
 @pytest.mark.parametrize(
     "token", ["KEY_E", "BTN_LEFT", "KEY_LEFTALT+KEY_TAB", "__TOGGLE_OSK__"])
 def test_o_que_o_eixo_nao_emite_cai_em_sem_dono(linha: str, token: str) -> None:
-    if token not in acoes.ACOES:
-        pytest.skip("token de comando sem esse nome nesta versão")
+    assert token in acoes.ACOES, f"{token} saiu do vocabulário: a régua mede o vazio"
     assert token not in _tokens(linha)
     assert linha in acoes.resolver({linha: token})[2]
 
