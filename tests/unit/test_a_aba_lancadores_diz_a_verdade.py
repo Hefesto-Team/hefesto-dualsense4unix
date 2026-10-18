@@ -71,27 +71,44 @@ def ctx():
                             conectados=[], estados={})
 
 
-def _bancada() -> str:
-    """A página que o PRODUTO renderiza (a publicada).
-
-    17/10/2026: o desenho da 07 virou a aba Experimental do todo (filas e janelas) e anda à
-    frente do pacote, que ainda pinta os cartões. Até o `--publicar` da segunda passagem trazer o
-    desenho ao produto, esta régua mede o par que existe: o pacote e a página que ele pinta.
-    Quando o pacote passar a pintar a fila, `publicado=True` sai daqui e a régua volta ao desenho.
-    """
+def _pagina(publicado: bool) -> str:
     from hefesto_dualsense4unix.interface import onde
 
-    caminho = onde.pagina(PAGINA, publicado=True)
+    caminho = onde.pagina(PAGINA, publicado=publicado)
     if not caminho.exists():
         pytest.fail(f"{caminho} não existe — a régua mediria o vazio.")
     return caminho.read_text(encoding="utf-8")
+
+
+def _bancada() -> str:
+    """O DESENHO da 07 (o mockup): o pacote pinta a fila, as extensões e as janelas dele.
+
+    18/10/2026: o pacote passou a pintar o que o desenho da aba Experimental do todo tem, e a régua
+    volta a medir o desenho.
+    """
+    return _pagina(publicado=False)
+
+
+def _pagina_velha() -> str:
+    """O publicado, que ainda é o DOM dos cartões até o `--publicar` da costura.
+
+    O pacote pinta os DOIS DOMs (o piloto ignora o seletor ausente), e as réguas dos cartões
+    medem este enquanto ele for o que o produto renderiza.
+    """
+    return _pagina(publicado=True)
+
+
+# Os dois endereços da janela do servidor do Hefesto: quem os pinta é a sprint
+# O-HEFESTO-E-SERVIDOR-BUTTPLUG-DO-PROPRIO-DUALSENSE-01, que não é desta leva.
+SEM_PINTOR_AINDA = frozenset({"controle-1", "controle-2"})
 
 
 def test_todo_endereco_da_pagina_tem_quem_o_pinte(a07, ctx):
     """Zero vazios e zero órfãos — nos DOIS sentidos."""
     fora = a07.pacote(ctx)
     da_grade = "".join(str(v) for v in (fora.get("blocos") or {}).values())
-    da_pagina = set(CAMPO.findall(_bancada() + da_grade)) - _do_topo()
+    da_pagina = (set(CAMPO.findall(_bancada() + _pagina_velha() + da_grade))
+                 - _do_topo() - SEM_PINTOR_AINDA)
     emite = {k for k in fora
              if k not in ("sem_dono", "cobertura", "blocos")}
     assert da_pagina, "a página não tem um endereço sequer — a régua ficou cega"
@@ -108,7 +125,7 @@ def test_todo_gesto_do_html_tem_dono_ou_esta_declarado_sem_dono(a07):
     """Um botão com endereço e sem quem o atenda some no clique."""
     import pacotes
 
-    no_html = set(GESTO.findall(_bancada()))
+    no_html = set(GESTO.findall(_bancada() + _pagina_velha()))
     com_dono = {n for (p, n) in pacotes.GESTOS if p == PAGINA}
     # O menu do botão direito é da casa, com um dono só em `hefesto_vivo` (régua em
     # `test_a_base_comum_das_abas.py`): a página o traz, mas o gesto não é do usuário.
@@ -191,7 +208,7 @@ def test_os_cinco_lancadores_ganharam_leitor_de_biblioteca():
 
 def test_nenhum_cartao_promete_um_numero_de_controles(desenho):
     """A recaída da régua velha do gerador, cobrada também aqui."""
-    grade = _bancada().split('<div class="lancadores">', 1)[-1].split("</div>\n\n")[0]
+    grade = _pagina_velha().split('<div class="lancadores">', 1)[-1].split("</div>\n\n")[0]
     assert 'data-lancador="steam"' in grade, (
         "a régua não achou a grade de cartões — seletor que casa ZERO é erro, "
         "não silêncio")
@@ -644,7 +661,7 @@ def test_a_lista_da_steam_nunca_vira_travessao_em_estado_nenhum(desenho):
 def test_a_moldura_do_cartao_segue_o_selo_que_o_produto_mediu(a07, ctx, desenho,
                                                               monkeypatch):
     """A borda do cartão e o selo dentro dele não podem discordar."""
-    assert f'class="{desenho.CLASSE_DA_GRADE}"' in _bancada(), (
+    assert f'class="{desenho.CLASSE_DA_GRADE}"' in _pagina_velha(), (
         f"a página não tem a grade `{desenho.SELETOR_DA_GRADE}` — o `blocos` "
         f"cairia no chão, e `querySelector` devolve `null` sem uma linha de erro")
 
@@ -1057,7 +1074,7 @@ _O_QUADRO = re.compile(
 
 
 def _dica_da_pagina() -> str:
-    achado = _O_QUADRO.search(_bancada())
+    achado = _O_QUADRO.search(_pagina_velha())
     assert achado, (
         'a régua não achou o `?` do quadro "De onde os seus jogos vêm" — '
         "seletor que casa ZERO é erro, não silêncio")
@@ -1744,7 +1761,7 @@ _REGRA_DE_SELO = re.compile(r"(?P<seletores>[^{}]+)\{(?P<corpo>[^{}]*)\}")
 
 def _folha_da_aba() -> str:
     """O `<style>` da página da bancada, com a prosa decepada."""
-    return re.sub(r"/\*.*?\*/", " ", _bancada(), flags=re.S)
+    return re.sub(r"/\*.*?\*/", " ", _pagina_velha(), flags=re.S)
 
 
 def _corpo_da_regra_do_selo(folha: str, chave: str) -> str | None:

@@ -210,7 +210,7 @@ DIVIDAS: dict[str, int] = {
     "scripts/validar-palavra-de-tela.py::DIVIDA_DO_RECIBO": 0,
     "tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py::_SEM_CAMINHO_HOJE": 4,
     "tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py::_SEM_MAO_HOJE": 0,
-    "tests/unit/test_a_base_comum_das_abas.py::ISENTOS": 1,
+    "tests/unit/test_a_base_comum_das_abas.py::ISENTOS": 0,
     "tests/unit/test_a_costura_da_onda_2.py::_OS_QUE_PODEM": 8,
     "tests/unit/test_a_janela_estreita_nao_engole_o_desenho.py::CORTE_CONHECIDO_NO_DESENHO": 0,
     "tests/unit/test_guarda_gi_falso_precisa_de_exigir_gi_real.py::DIVIDA_GI_FALSO": 0,

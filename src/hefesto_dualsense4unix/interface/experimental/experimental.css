@@ -10,6 +10,8 @@
 .lanc-novo-linha a.btn { white-space:nowrap;flex:none;text-decoration:none; display:inline-flex;align-items:center;justify-content:center }
 .tn-x { margin-left:auto;width:26px;height:26px;border-radius:6px;text-decoration:none; border:1px solid var(--border-forte);color:var(--fg);font-size:14px; display:flex;align-items:center;justify-content:center }
 .lanc-selo.oficial { background:rgba(189,147,249,.18);color:var(--purple);border:1px solid rgba(189,147,249,.45) }
+.lanc-selo.comunidade { background:rgba(139,233,253,.14);color:var(--cyan);border:1px solid rgba(139,233,253,.4) }
+.lanc-selo.local { background:rgba(255,184,108,.14);color:var(--orange);border:1px solid rgba(255,184,108,.4) }
 .ext-ico { width:28px;height:28px;flex:0 0 28px;border-radius:7px;display:inline-flex;align-items:center;justify-content:center; background:var(--elevated);border:1px solid var(--border-sutil) }
 .ext-lista { display:flex;flex-direction:column }
 .ext { display:grid;grid-template-columns:28px minmax(150px,1.05fr) minmax(0,2.4fr) 96px 112px auto 26px; align-items:center;gap:12px;padding:10px 4px;border-bottom:1px solid var(--border-sutil) }
@@ -417,3 +419,9 @@
   .ja-roda-nome b { white-space:nowrap;overflow:hidden;text-overflow:ellipsis }
   .ja-roda-l .btn.mini { padding:0 7px }
 }
+.ext-vazia { padding:14px 2px;font-size:11.5px;color:var(--texto-suave) }
+.ext-menu { grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:6px 0 2px }
+.ext-menu:empty { display:none }
+.ext-menu .btn.mini { height:26px;padding:0 10px;font-size:11px;text-decoration:none }
+.ext-menu .ext-perm { flex:1 0 100%;display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--texto-suave) }
+.ext-num { width:84px;height:24px;border-radius:6px;padding:0 8px;border:1px solid var(--border-forte);background:var(--app-bg);color:var(--fg);font-family:inherit;font-size:11px }

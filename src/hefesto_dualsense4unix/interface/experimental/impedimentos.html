@@ -1,16 +1,5 @@
 <div class="tela-nova" id="impedimentos">
-  <div class="tn-cx imp-cx" role="dialog" aria-modal="true" aria-label="Os jogos com impedimento">
-    <div class="tn-topo">
-      <span class="tn-tit">Steam · 2 jogos com impedimento</span>
-      <a class="tn-x" href="#" data-dica="Fechar">×</a>
-    </div>
-    <div class="tn-corpo">
-      <div class="lc-linha"><span>Sackboy: A Big Adventure</span><span class="lc-val"><small>O Steam Input está ligado: o jogo vê um controle de Xbox</small><a class="btn mini" href="#impedimentos" data-gesto="resolver-impedimento" data-v="sackboy">Desligar o Steam Input</a></span></div>
-      <div class="lc-linha"><span>Resident Evil Village</span><span class="lc-val"><small>Fora do Proton fixado: a vibração e os gatilhos não chegam</small><a class="btn mini" href="#impedimentos" data-gesto="resolver-impedimento" data-v="re-village">Usar o Proton fixado</a></span></div>
-    </div>
-    <div class="tn-rod">
-      <a class="btn" href="#">Fechar</a>
-      <a class="btn roxo" href="#impedimentos" data-gesto="resolver-todos-os-impedimentos">Resolver os dois</a>
-    </div>
+  <div class="tn-cx imp-cx" id="imp-janela" role="dialog" aria-modal="true" aria-label="Os jogos com impedimento">
+{{IMPEDIMENTOS}}
   </div>
 </div>

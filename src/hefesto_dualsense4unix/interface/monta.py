@@ -1046,25 +1046,6 @@ CSS_DO_NATIVO = """
 """
 
 
-# O «?» QUE AINDA MORA NAS ABAS (conferência da A-BASE-COMUM-DAS-ABAS-01, 13/10/2026). A base
-# tirou a folha dele do `topo.html` e do `CSS_FOLHA`, mas os geradores das abas ainda emitem o
-# span (`ISENTOS` de `test_a_base_comum_das_abas.py`, cada um com a sprint da aba como dona): sem
-# esta folha, a próxima regeneração deixaria cada «?» cru, sem abrir a dica e sem sumir quando não
-# há razão. Ela entra SÓ na página cujo miolo ainda tem o span, e sai daqui junto com o último.
-CSS_DO_AJUDA_QUE_SAI = """
-  .ajuda{width:17px;height:17px;border-radius:50%;flex:0 0 17px;border:1px solid var(--linha);
-    color:var(--fg);font-size:11px;line-height:15px;text-align:center;cursor:help;position:relative}
-  .ajuda:hover,.ajuda:focus{border-color:var(--cyan);color:var(--cyan);outline:none}
-  .ajuda:hover .dica,.ajuda:focus .dica,.ajuda:focus-within .dica{display:block}
-  .quadro-topo .par-modo + .ajuda.esq .dica{left:auto;right:22px}
-  .btn:not(.apagado) + .ajuda.porque,.seg button:not(.apagado) + .ajuda.porque{display:none}
-  .ajuda.porque:has(.dica:empty),.ajuda.porque:has(.nada){display:none}
-  .ajuda.porque{align-self:center;margin-left:-4px}
-  body.nativo.por-controle .par-modo + .ajuda{visibility:hidden}
-"""
-_AINDA_TEM_O_SPAN = re.compile(r'class=["\']ajuda\b')
-
-
 def trava_do_nativo(o_que: str) -> str:
     """A peça «O jogo manda» do cabeçalho de um quadro, com cadeado, nascida
     escondida e mostrada por `body.nativo`. `o_que`: sobre o que o jogo manda
@@ -1105,8 +1086,6 @@ def monta(arq: str, titulo_aba: str, miolo: str, css_extra: str = "",
         t = t.replace("</style>", css_extra + "\n</style>", 1)
     if '<body class="por-controle"' in corpo_da_pagina(arq):
         t = t.replace("</style>", CSS_DO_NATIVO + "</style>", 1)
-    if _AINDA_TEM_O_SPAN.search(miolo):
-        t = t.replace("</style>", CSS_DO_AJUDA_QUE_SAI + "</style>", 1)
     for nome, colorway in PLASTICOS_DO_ESQUELETO.items():
         t = re.sub(rf"--{nome}:#[0-9a-fA-F]{{6}}",
                    f"--{nome}:{cor_da_zona(colorway)}", t, count=1)

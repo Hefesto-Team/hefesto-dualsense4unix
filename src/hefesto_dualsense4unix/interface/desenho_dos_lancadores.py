@@ -417,6 +417,12 @@ NOVO_SEM_ALVO = "Um lançador ou emulador que você usa"
 NOVO_PARA_O_CARTAO = "{nome} — onde ele está nesta máquina"
 
 
+#: A dica do título da caixa «novo lançador» (era o «?»): o que vale no campo.
+DICA_DO_NOVO = (
+    "Diga o comando, o caminho do programa (é assim que entra um AppImage solto) ou o nome do "
+    "atalho — os três exemplos estão no campo. Confiro no disco antes de guardar.")
+
+
 def tela_do_registro_html(para_quem: str = NOVO_SEM_ALVO) -> str:
     """A pop-up em que ela diz onde o lançador está. Sem uma linha de script.
 
@@ -450,12 +456,7 @@ def tela_do_registro_html(para_quem: str = NOVO_SEM_ALVO) -> str:
     return f'''<div class="tela-nova" id="{TELA_DO_NOVO}">
   <div class="tn-cx">
     <div class="tn-topo">
-      <span class="tn-tit">{_e(TELA_DO_NOVO_TITULO)}</span>
-      <span class="ajuda">?<span class="dica">
-        Diga o comando, o caminho do programa (é assim que entra um AppImage
-        solto) ou o nome do atalho — os três exemplos estão no campo. Confiro no
-        disco antes de guardar.
-      </span></span>
+      <span class="tn-tit" data-dica="{_a(DICA_DO_NOVO)}">{_e(TELA_DO_NOVO_TITULO)}</span>
       <a class="tn-x" href="#" title="Fechar">&times;</a>
     </div>
     <div class="tn-corpo">
@@ -1395,9 +1396,8 @@ def miolo_da_escolha_html(modo: str, nome_do_lancador: str,
         corpo = f'<div class="excl-nota">{_e(NENHUM_JOGO_PARA_ESCOLHER)}</div>'
         confirmar = ""
     return f"""<div class="tn-topo">
-      <span class="tn-tit">{_e(titulo)}</span>
-      <span class="ajuda">?<span class="dica">{_e(DICA_EXCLUIR if excluir else
-        "Um gravador só: o perfil é criado pela aba Perfis.")}</span></span>
+      <span class="tn-tit" data-dica="{_a(DICA_EXCLUIR if excluir else
+        "Um gravador só: o perfil é criado pela aba Perfis.")}">{_e(titulo)}</span>
       <a class="tn-x" href="#" title="Fechar">&times;</a>
     </div>
     <div class="tn-corpo">

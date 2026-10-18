@@ -215,7 +215,9 @@ ANCORAS_DAS_OUTRAS = (
     # 17/10/2026, acessorios-07-depois: as janelas que a aba Experimental do todo ganhou
     ("07-lancadores", "lovense"), ("07-lancadores", "impedimentos"),
     ("07-lancadores", "lanc-conf"), ("07-lancadores", "kyty"),
-    ("07-lancadores", "buttplug"), ("07-lancadores", "acessorios"))
+    ("07-lancadores", "buttplug"), ("07-lancadores", "acessorios"),
+    # 18/10/2026, acessorios-07-depois-2: a janela genérica das opções de uma extensão
+    ("07-lancadores", "modificacao"))  # (noqa-acento): contrato ASCII
 
 
 @pytest.mark.parametrize(("aba", "ancora"), ANCORAS_DAS_OUTRAS)

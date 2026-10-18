@@ -48,9 +48,7 @@ SEM_AJUDA = ("topo.html", "fim.html", "monta.py", "janela.py", "hefesto_vivo.py"
 #: O que ainda tem `.ajuda` e é de OUTRA sprint: `arquivo → quantos`. Cada gerador de
 #: aba (`abaNN.py`) e as páginas que ela monta saem na sprint da aba (`A-ABA-<nome>-DO-TODO-01`),
 #: que troca o «?» pelo `data-dica`. O número só diminui, e a linha sai quando o arquivo zera.
-ISENTOS: dict[str, int] = {
-    "desenho_dos_lancadores.py": 2,  # sai com: A-ABA-EXPERIMENTAL-DO-TODO-01
-}
+ISENTOS: dict[str, int] = {}
 
 #: Uma CITAÇÃO que proíbe não é um uso: o guarda do `aba03.py` escreve `'class="ajuda' not in
 #: corpo`, e aí o `ajuda` vem seguido da aspa simples que fecha a string, nunca do atributo.
@@ -73,11 +71,8 @@ def _arquivos_da_interface() -> list[pathlib.Path]:
 
 @pytest.mark.parametrize("nome", SEM_AJUDA)
 def test_a_posse_da_base_nao_tem_ajuda(nome: str) -> None:
-    """Nenhum `class="ajuda`, nenhum seletor `.ajuda` e nenhum botão de «?» na posse da base.
-
-    A única folha que sobra é a `monta.CSS_DO_AJUDA_QUE_SAI`, e só enquanto há `ISENTOS`.
-    """
-    fonte = _fonte(nome).replace(getattr(monta, "CSS_DO_AJUDA_QUE_SAI", "\0"), "")
+    """Nenhum `class="ajuda`, nenhum seletor `.ajuda` e nenhum botão de «?» na posse da base."""
+    fonte = _fonte(nome)
     assert not _CLASSE_AJUDA.search(fonte), f"{nome}: ainda escreve um `class=\"ajuda\"`"
     assert not _BOTAO_DE_INTERROGACAO.search(fonte), f"{nome}: tem botão cujo texto é «?»"
     achou = [m for m in _CSS_AJUDA.finditer(fonte)]
@@ -177,36 +172,15 @@ def paginas_geradas(tmp_path_factory: pytest.TempPathFactory) -> dict[str, str]:
     return paginas
 
 
-def test_a_folha_do_ajuda_que_sai_vive_so_enquanto_ha_isentos() -> None:
-    """Zerou o último «?» das abas: a folha de transição sai do `monta.py` junto."""
-    if not ISENTOS:
-        assert not hasattr(monta, "CSS_DO_AJUDA_QUE_SAI"), "ISENTOS zerou; tire a folha do monta"
-        return
-    assert ".ajuda:hover .dica" in monta.CSS_DO_AJUDA_QUE_SAI
-    assert ".ajuda.porque:has(.nada)" in monta.CSS_DO_AJUDA_QUE_SAI
+def test_a_folha_do_ajuda_que_sai_saiu_do_monta(
+        paginas_geradas: dict[str, str]) -> None:
+    """Zerou o último «?» das abas (18/10/2026): a folha de transição saiu do `monta.py`.
 
-
-def test_a_pagina_com_o_span_leva_a_folha_e_a_sem_span_nao(
-        paginas_geradas: dict[str, str], tmp_path: pathlib.Path,
-        monkeypatch: pytest.MonkeyPatch) -> None:
-    """O «?» que ainda sai de uma aba abre a dica e some sem razão; página sem ele não leva a folha.
-
-    MORDIDA: tirar a injeção do `monta.monta` reprova as páginas que ainda têm o span.
+    MORDIDA: devolver `CSS_DO_AJUDA_QUE_SAI` ao `monta.py` reprova.
     """
-    folha = monta.CSS_DO_AJUDA_QUE_SAI
-    sem_folha = sorted(n for n, doc in paginas_geradas.items()
-                       if _CLASSE_AJUDA.search(doc) and folha not in doc)
-    assert not sem_folha, f"página(s) com o «?» e sem a folha dele: {sem_folha}"
-    sobrando = sorted(n for n, doc in paginas_geradas.items()
-                      if not _CLASSE_AJUDA.search(doc) and folha in doc)
-    assert not sobrando, f"página(s) sem nenhum «?» e com a folha dele: {sobrando}"
-    # 17/10/2026: com a 07 sem o «?», nenhuma aba gerada o traz mais; a injeção se prova numa
-    # página de mentira montada pelo mesmo `monta.monta`, que é o que a mordida de cima arranca.
-    if not any(_CLASSE_AJUDA.search(doc) for doc in paginas_geradas.values()):
-        monkeypatch.setenv("HEFESTO_BANCADA", str(tmp_path))
-        monta.monta("07-lancadores", "Prova", '<div><span class="ajuda">?</span></div>')
-        feita = (tmp_path / "07-lancadores.html").read_text(encoding="utf-8")
-        assert folha in feita, "a folha não entra numa página que ainda tem o span"
+    assert not hasattr(monta, "CSS_DO_AJUDA_QUE_SAI"), "ISENTOS zerou; tire a folha do monta"
+    com_span = sorted(n for n, doc in paginas_geradas.items() if _CLASSE_AJUDA.search(doc))
+    assert not com_span, f"página(s) gerada(s) com o «?»: {com_span}"
 
 
 def test_toda_pagina_tem_a_base_uma_vez_e_identica_ao_arquivo(

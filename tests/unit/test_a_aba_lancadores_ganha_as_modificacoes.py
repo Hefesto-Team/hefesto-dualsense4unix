@@ -175,3 +175,401 @@ def test_o_contador_da_lovense_acompanha_as_chaves(navegador) -> None:
         assert "ligado" not in chave, chave
     finally:
         pg.close()
+
+
+# -- O produto: o pacote liga a aba ao registro das modificações ---------------------------------
+#
+# Tudo em ``tmp_path``: o registro, o código, os dados e a pasta de origem são de mentira, e a Steam
+# é um dublê da sondagem. Nada toca o ``~/.config`` nem o ``~/.local`` dela.
+
+import json
+import shutil
+
+
+def _a07():
+    sys.path.insert(0, str(INTERFACE))
+    from hefesto_dualsense4unix.interface.pacotes import a07_lancadores
+
+    return a07_lancadores
+
+
+@pytest.fixture
+def lar(tmp_path, monkeypatch):
+    """O lar de mentira das modificações, e o pacote com o cache e as janelas zerados."""
+    from hefesto_dualsense4unix.mods.instalador import Lugares
+
+    lg = Lugares(codigo=tmp_path / "codigo", dados=tmp_path / "dados",  # noqa-acento: campo
+                 registro=tmp_path / "config" / "mods.json",
+                 estado=tmp_path / "run" / "mods-estado.json")
+    monkeypatch.setattr(Lugares, "do_xdg", classmethod(lambda cls: lg))
+    a07 = _a07()
+    monkeypatch.setattr(a07.VIGIA, "_disparar", lambda: None)
+    a07.REGISTRO.esquecer()
+    a07._MEXIDA.limpar()
+    a07._ESCOLHA.limpar()
+    yield lg
+    a07.REGISTRO.esquecer()
+    a07._MEXIDA.limpar()
+    a07._ESCOLHA.limpar()
+
+
+@pytest.fixture
+def ctx():
+    sys.path.insert(0, str(INTERFACE))
+    import pacotes
+
+    return pacotes.Contexto(state={}, mesa=[], conectados=[], estados={})
+
+
+def _fonte(tmp_path: pathlib.Path, mod_id: str = "toque", *, nome: str = "Toque",
+           permissoes: tuple[str, ...] = (), opcoes: list | None = None) -> pathlib.Path:
+    """A pasta de uma extensão de tema (só declaração: nenhum processo)."""
+    pasta = tmp_path / "fonte" / mod_id
+    pasta.mkdir(parents=True, exist_ok=True)
+    manifesto = {"id": mod_id, "nome": nome, "versao": "0.1", "api": ">=1,<2",  # noqa-acento: chave
+                 "licenca": "MIT", "tipos": ["tema"], "tema": {},  # noqa-acento: chave
+                 "permissoes": list(permissoes),  # noqa-acento: chave do manifesto
+                 "descricao": "Muda um detalhe.",  # noqa-acento: chave
+                 "opcoes": opcoes or []}  # noqa-acento: chave do manifesto
+    (pasta / "hefesto-mod.json").write_text(json.dumps(manifesto), encoding="utf-8")
+    return pasta
+
+
+class _Ponte:
+    """O ``p`` do gesto: o seletor de arquivo devolve o que o teste mandar."""
+
+    def __init__(self, escolha: str | None = None) -> None:
+        self.escolha = escolha
+
+    def escolher_arquivo(self, titulo: str, padrao: str = "", sugestao: str = "") -> str | None:
+        return self.escolha
+
+
+def _instalar(a07, ctx, pasta: pathlib.Path) -> dict:
+    return a07.instalar_modificacao(ctx, {"forma": {"mod-endereco": str(pasta)}}, _Ponte())
+
+
+def _entrada(lar, mod_id: str):
+    from hefesto_dualsense4unix.mods.instalador import ler_registro
+
+    return ler_registro(lar.registro).get(mod_id)
+
+
+def test_instalar_pelo_endereco_nao_liga_e_pinta_a_linha(lar, ctx, tmp_path) -> None:
+    a07 = _a07()
+    carga = _instalar(a07, ctx, _fonte(tmp_path))
+    assert "Toque instalada" in carga["recado"]
+    entrada = _entrada(lar, "toque")
+    assert entrada is not None and entrada.ligada is False, "instalar ligou sozinha"
+    assert 'data-modificacao="toque"' in carga["blocos"][".ext-lista"]
+    assert carga["mesa"]["mod-conta"] == "1 instalada"
+
+
+def test_instalar_sem_endereco_recusa_dizendo(lar, ctx) -> None:
+    a07 = _a07()
+    with pytest.raises(RuntimeError, match="Digite o endereço"):
+        a07.instalar_modificacao(ctx, {"forma": {"mod-endereco": "   "}}, _Ponte())
+    assert _entrada(lar, "toque") is None
+
+
+def test_escolher_a_pasta_instala_o_manifesto_apontado(lar, ctx, tmp_path) -> None:
+    a07 = _a07()
+    pasta = _fonte(tmp_path)
+    carga = a07.escolher_arquivo_da_modificacao(
+        ctx, {}, _Ponte(str(pasta / "hefesto-mod.json")))
+    assert "Toque instalada" in carga["recado"] and _entrada(lar, "toque") is not None
+    # cancelar não é erro: a tela não fala
+    assert a07.escolher_arquivo_da_modificacao(ctx, {}, _Ponte(None)) is None
+    # outro arquivo não é o manifesto
+    with pytest.raises(RuntimeError, match=r"hefesto-mod\.json"):
+        a07.escolher_arquivo_da_modificacao(ctx, {}, _Ponte(str(pasta / "LEIA.txt")))
+
+
+def test_a_recusa_da_infra_chega_como_frase(lar, ctx, tmp_path) -> None:
+    a07 = _a07()
+    with pytest.raises(RuntimeError, match="não baixou"):
+        _instalar(a07, ctx, tmp_path / "nao-existe")
+
+
+def test_o_nome_de_terceiros_vai_escapado_para_a_linha(lar, ctx, tmp_path) -> None:
+    a07 = _a07()
+    carga = _instalar(a07, ctx, _fonte(tmp_path, nome="<b>Ops</b>"))
+    html = carga["blocos"][".ext-lista"]
+    assert "<b>Ops</b>" not in html and "&lt;b&gt;Ops" in html
+
+
+def test_ligar_com_permissao_nova_mostra_antes_e_liga_no_segundo(lar, ctx, tmp_path) -> None:
+    a07 = _a07()
+    _instalar(a07, ctx, _fonte(tmp_path, permissoes=("rede:local",)))
+    primeiro = a07.ligar_modificacao(ctx, {"v": "toque"}, _Ponte())
+    assert "Usar a rede desta casa" in primeiro["recado"]
+    assert _entrada(lar, "toque").ligada is False, "ligou sem o «sim»"
+    segundo = a07.ligar_modificacao(ctx, {"v": "toque"}, _Ponte())
+    assert "ligada" in segundo["recado"] and _entrada(lar, "toque").ligada is True
+    terceiro = a07.ligar_modificacao(ctx, {"v": "toque"}, _Ponte())
+    assert "desligada" in terceiro["recado"] and _entrada(lar, "toque").ligada is False
+
+
+def test_ligar_sem_permissao_nova_liga_no_primeiro_clique(lar, ctx, tmp_path) -> None:
+    a07 = _a07()
+    _instalar(a07, ctx, _fonte(tmp_path))
+    a07.ligar_modificacao(ctx, {"v": "toque"}, _Ponte())
+    assert _entrada(lar, "toque").ligada is True
+
+
+def test_ligar_o_que_nao_esta_instalado_recusa(lar, ctx) -> None:
+    with pytest.raises(RuntimeError, match="não está instalada"):
+        _a07().ligar_modificacao(ctx, {"v": "fantasma"}, _Ponte())
+    with pytest.raises(ValueError, match="de qual extensão"):
+        _a07().ligar_modificacao(ctx, {}, _Ponte())
+
+
+_OPCOES = [
+    {"id": "quando", "rotulo": "Quando", "tipo": "escolha",
+     "escolhas": ["Sempre", "Nunca"], "padrao": "Sempre"},  # noqa-acento: chave
+    {"id": "avisar", "rotulo": "Avisar", "tipo": "ligado"},
+    {"id": "teto", "rotulo": "Teto", "tipo": "numero", "padrao": 50},  # noqa-acento: chave
+]
+
+
+def test_a_janela_da_extensao_traz_o_valor_de_agora_de_cada_opcao(lar, ctx, tmp_path) -> None:
+    a07 = _a07()
+    _instalar(a07, ctx, _fonte(tmp_path, opcoes=_OPCOES))
+    carga = a07.configurar_modificacao(ctx, {"v": "toque"}, _Ponte())
+    janela = carga["blocos"]["#mod-janela"]
+    assert "Configurar · Toque" in janela and "<select" in janela
+    assert 'value="50"' in janela and "Nunca" in janela
+
+
+def test_guardar_a_opcao_grava_no_arquivo_e_repinta(lar, ctx, tmp_path) -> None:
+    a07 = _a07()
+    _instalar(a07, ctx, _fonte(tmp_path, opcoes=_OPCOES))
+    a07.configurar_modificacao(ctx, {"v": "toque"}, _Ponte())
+    carga = a07.guardar_opcao_da_modificacao(
+        ctx, {"v": "toque:quando", "valor": "Nunca", "evento": "change"}, _Ponte())
+    guardado = json.loads((lar.dados / "toque" / "opcoes.json").read_text(encoding="utf-8"))
+    assert guardado == {"quando": "Nunca", "avisar": False, "teto": 50.0}
+    assert "<option selected>Nunca" in carga["blocos"]["#mod-janela"]
+    # o clique do select (o mesmo gesto dispara click e change) não grava nada
+    assert a07.guardar_opcao_da_modificacao(
+        ctx, {"v": "toque:quando", "valor": "Sempre", "evento": "click"}, _Ponte()) is None
+    assert json.loads((lar.dados / "toque" / "opcoes.json").read_text())["quando"] == "Nunca"
+
+
+def test_a_chave_de_ligado_age_no_clique_e_o_numero_valida(lar, ctx, tmp_path) -> None:
+    a07 = _a07()
+    _instalar(a07, ctx, _fonte(tmp_path, opcoes=_OPCOES))
+    a07.guardar_opcao_da_modificacao(
+        ctx, {"v": "toque:avisar", "evento": "click"}, _Ponte())
+    assert json.loads((lar.dados / "toque" / "opcoes.json").read_text())["avisar"] is True
+    with pytest.raises(RuntimeError, match="pede um número"):
+        a07.guardar_opcao_da_modificacao(
+            ctx, {"v": "toque:teto", "valor": "muito", "evento": "change"}, _Ponte())
+    with pytest.raises(RuntimeError, match="escolhas"):
+        a07.guardar_opcao_da_modificacao(
+            ctx, {"v": "toque:quando", "valor": "Talvez", "evento": "change"}, _Ponte())
+    with pytest.raises(RuntimeError, match="não tem essa opção"):
+        a07.guardar_opcao_da_modificacao(
+            ctx, {"v": "toque:inventada", "valor": "x", "evento": "change"}, _Ponte())
+
+
+def test_o_menu_abre_mostra_as_permissoes_e_fecha(lar, ctx, tmp_path) -> None:
+    a07 = _a07()
+    _instalar(a07, ctx, _fonte(tmp_path, permissoes=("rede:local",)))
+    aberto = a07.mais_da_modificacao(ctx, {"v": "toque"}, _Ponte())
+    assert "Ver permissões" in aberto["blocos"][".ext-lista"]
+    pedido = {"v": "toque:permissoes"}  # noqa-acento: chave
+    com_permissoes = a07.mais_da_modificacao(ctx, pedido, _Ponte())
+    assert "Usar a rede desta casa" in com_permissoes["blocos"][".ext-lista"]
+    fechado = a07.mais_da_modificacao(ctx, {"v": "toque"}, _Ponte())
+    assert 'class="ext-menu"' not in fechado["blocos"][".ext-lista"]
+
+
+def test_remover_pede_o_segundo_clique_e_apaga_o_codigo_e_os_dados(lar, ctx, tmp_path) -> None:
+    a07 = _a07()
+    _instalar(a07, ctx, _fonte(tmp_path, opcoes=_OPCOES))
+    a07.guardar_opcao_da_modificacao(
+        ctx, {"v": "toque:avisar", "evento": "click"}, _Ponte())
+    primeiro = a07.mais_da_modificacao(ctx, {"v": "toque:remover"}, _Ponte())
+    assert "Clique em Remover de novo" in primeiro["recado"]
+    assert _entrada(lar, "toque") is not None, "removeu no primeiro clique"
+    segundo = a07.mais_da_modificacao(ctx, {"v": "toque:remover"}, _Ponte())
+    assert segundo["recado"] == "Toque removida."
+    assert _entrada(lar, "toque") is None
+    assert not (lar.codigo / "toque").exists() and not (lar.dados / "toque").exists()
+    assert "Nenhuma extensão instalada" in segundo["blocos"][".ext-lista"]
+
+
+def test_atualizar_baixa_de_novo_do_endereco_gravado(lar, ctx, tmp_path) -> None:
+    a07 = _a07()
+    pasta = _fonte(tmp_path)
+    _instalar(a07, ctx, pasta)
+    manifesto = json.loads((pasta / "hefesto-mod.json").read_text(encoding="utf-8"))
+    manifesto["versao"] = "0.2"  # noqa-acento: chave
+    (pasta / "hefesto-mod.json").write_text(json.dumps(manifesto), encoding="utf-8")
+    feito = a07.mais_da_modificacao(ctx, {"v": "toque:atualizar"}, _Ponte())
+    assert "atualizada para a versão 0.2" in feito["recado"]
+    assert _entrada(lar, "toque").versao == "0.2"
+    shutil.rmtree(pasta)
+
+
+def test_acao_inventada_do_menu_recusa(lar, ctx, tmp_path) -> None:
+    a07 = _a07()
+    _instalar(a07, ctx, _fonte(tmp_path))
+    with pytest.raises(RuntimeError, match="não existe"):
+        a07.mais_da_modificacao(ctx, {"v": "toque:formatar"}, _Ponte())
+
+
+# -- A Steam: os impedimentos ----------------------------------------------------------------------
+
+
+def _dois_impedimentos():
+    from hefesto_dualsense4unix.integrations import impedimentos_da_steam as imp
+
+    return (imp.Impedimento("111", "Jogo Um", imp.ENTRADA),
+            imp.Impedimento("222", "Jogo Dois", imp.PROTON))
+
+
+def test_ver_impedimentos_sonda_e_lista_uma_linha_por_jogo(lar, ctx, monkeypatch) -> None:
+    a07 = _a07()
+    monkeypatch.setattr(a07, "_sondar_a_steam", _dois_impedimentos)
+    carga = a07.ver_impedimentos(ctx, {"v": "steam"}, _Ponte())
+    janela = carga["blocos"]["#imp-janela"]
+    assert "Jogo Um" in janela and "Jogo Dois" in janela and "2 jogos com impedimento" in janela
+    assert 'data-v="entrada:111"' in janela and 'data-v="proton:222"' in janela
+    with pytest.raises(RuntimeError, match="Só a Steam"):
+        a07.ver_impedimentos(ctx, {"v": "heroic"}, _Ponte())
+
+
+def test_resolver_um_cura_so_aquele_jogo_e_repinta(lar, ctx, monkeypatch) -> None:
+    from hefesto_dualsense4unix.integrations import impedimentos_da_steam as imp
+
+    a07 = _a07()
+    restam = list(_dois_impedimentos())
+    curados: list[list[str]] = []
+    monkeypatch.setattr(a07, "_sondar_a_steam", lambda: tuple(restam))
+
+    def curar(alvo, *, home=None):
+        curados.append([i.chave for i in alvo])
+        for i in alvo:
+            restam.remove(i)
+        return "Resolvido: Jogo Um."
+
+    monkeypatch.setattr(imp, "curar", curar)
+    a07.ver_impedimentos(ctx, {"v": "steam"}, _Ponte())
+    carga = a07.resolver_impedimento(ctx, {"v": "entrada:111"}, _Ponte())
+    assert curados == [["entrada:111"]], "curou mais do que o jogo clicado"
+    assert carga["recado"] == "Resolvido: Jogo Um."
+    assert "Jogo Um" not in carga["blocos"]["#imp-janela"]
+    assert "Jogo Dois" in carga["blocos"]["#imp-janela"]
+
+
+def test_resolver_todos_cura_a_lista_inteira(lar, ctx, monkeypatch) -> None:
+    from hefesto_dualsense4unix.integrations import impedimentos_da_steam as imp
+
+    a07 = _a07()
+    restam = list(_dois_impedimentos())
+    curados: list[list[str]] = []
+    monkeypatch.setattr(a07, "_sondar_a_steam", lambda: tuple(restam))
+
+    def curar(alvo, *, home=None):
+        curados.append([i.chave for i in alvo])
+        restam.clear()
+        return "Resolvido."
+
+    monkeypatch.setattr(imp, "curar", curar)
+    carga = a07.resolver_todos_os_impedimentos(ctx, {}, _Ponte())
+    assert curados == [["entrada:111", "proton:222"]]
+    assert "Nenhum jogo com impedimento" in carga["blocos"]["#imp-janela"]
+
+
+def test_com_a_steam_aberta_a_cura_recusa_dizendo(lar, ctx, monkeypatch) -> None:
+    from hefesto_dualsense4unix.integrations import impedimentos_da_steam as imp
+    from hefesto_dualsense4unix.integrations import steam_input_ponte as sip
+
+    a07 = _a07()
+    monkeypatch.setattr(a07, "_sondar_a_steam", _dois_impedimentos)
+    monkeypatch.setattr(imp, "_com_o_steam_input_ligado", lambda home: ["111"])
+    monkeypatch.setattr(sip, "ler_allowlist", lambda: [])
+    monkeypatch.setattr(sip, "garantir_fora_da_lista_desligado",
+                        lambda home, **kw: ("steam_aberta", []))
+    with pytest.raises(RuntimeError, match="Feche a Steam"):
+        a07.resolver_impedimento(ctx, {"v": "entrada:111"}, _Ponte())
+
+
+def test_o_impedimento_que_ja_foi_resolvido_nao_vira_cura_cega(lar, ctx, monkeypatch) -> None:
+    a07 = _a07()
+    monkeypatch.setattr(a07, "_sondar_a_steam", lambda: ())
+    with pytest.raises(RuntimeError, match="já foi resolvido"):
+        a07.resolver_impedimento(ctx, {"v": "entrada:111"}, _Ponte())
+
+
+def test_a_sondagem_nunca_levanta_e_nomeia_o_jogo(monkeypatch) -> None:
+    from hefesto_dualsense4unix.integrations import impedimentos_da_steam as imp
+
+    def estoura(home):
+        raise OSError("sem vdf")
+
+    monkeypatch.setattr(imp, "_com_o_steam_input_ligado", estoura)
+    monkeypatch.setattr(imp, "_fora_do_proton_fixado", lambda home: ["222"])
+    monkeypatch.setattr(imp, "_nome", lambda appid, home: f"Jogo {appid}")
+    achados = imp.sondar(pathlib.Path("/nao/existe"))
+    assert [(i.chave, i.jogo) for i in achados] == [("proton:222", "Jogo 222")]
+
+
+# -- A janela de cada lançador e a escolha ---------------------------------------------------------
+
+
+def test_configurar_o_lancador_abre_a_janela_igual_para_todos(lar, ctx, monkeypatch) -> None:
+    a07 = _a07()
+    monkeypatch.setattr(a07, "_sondar_a_steam", _dois_impedimentos)
+    steam = a07.configurar_lancador(ctx, {"v": "steam"}, _Ponte())
+    janela = steam["blocos"]["#lanc-janela"]
+    assert "Configurar · Steam" in janela and "Como entrou" in janela
+    assert "2 jogos não recebem" in janela and 'data-gesto="ver-impedimentos"' in janela
+    flatpak = a07.configurar_lancador(ctx, {"v": "flatpak"}, _Ponte())
+    assert "ver-impedimentos" not in flatpak["blocos"]["#lanc-janela"]
+    with pytest.raises(RuntimeError, match="Não conheço"):
+        a07.configurar_lancador(ctx, {"v": "inventado"}, _Ponte())
+
+
+def test_identificar_diz_o_que_achou_ou_como_ensinar(lar, ctx, monkeypatch) -> None:
+    from hefesto_dualsense4unix.interface import desenho_dos_lancadores as desenho
+
+    a07 = _a07()
+    achou = desenho.Leitura(onde_estao=(("flatpak", "/usr/bin/flatpak"), ("lutris", "")))
+    monkeypatch.setattr(a07.VIGIA, "ler", lambda: achou)
+    monkeypatch.setattr(a07.VIGIA, "esquecer", lambda: None)
+    dito = a07.identificar_lancador(ctx, {"v": "flatpak"}, _Ponte())["recado"]
+    assert dito.startswith("Achei Flatpak") and "/usr/bin/flatpak" in dito
+    perdido = a07.identificar_lancador(ctx, {"v": "lutris"}, _Ponte())["recado"]
+    assert perdido.startswith("Não achei Lutris") and "Adicionar um lançador" in perdido
+    with pytest.raises(RuntimeError, match="Não conheço"):
+        a07.identificar_lancador(ctx, {"v": "inventado"}, _Ponte())
+
+
+def test_criar_perfil_do_jogo_marca_tem_perfil_e_mantem_a_janela(lar, ctx, monkeypatch) -> None:
+    from hefesto_dualsense4unix.interface import desenho_dos_lancadores as desenho
+
+    a07 = _a07()
+    jogos = (desenho.JogoParaEscolher(chave="steam_app_1", nome="Um"),
+             desenho.JogoParaEscolher(chave="steam_app_2", nome="Dois"))
+    a07._ESCOLHA.modo, a07._ESCOLHA.lancador = desenho.CRIAR_PERFIL, "steam"
+    a07._ESCOLHA.jogos = jogos
+    feitos: list[str] = []
+    com_perfil: set[str] = set()
+    monkeypatch.setattr(a07, "_perfis_que_casam", lambda: (set(com_perfil), set()))
+
+    def criar(ctx_, p, jogo):
+        feitos.append(jogo.chave)
+        com_perfil.add(jogo.chave)
+        return f"Perfil de {jogo.nome} criado."
+
+    monkeypatch.setattr(a07, "_criar_o_perfil_de", criar)
+    carga = a07.criar_perfil_do_jogo(ctx, {"v": "steam_app_1"}, _Ponte())
+    assert feitos == ["steam_app_1"] and carga["recado"] == "Perfil de Um criado."
+    miolo = carga["blocos"]["#lanc-escolha"]
+    assert miolo.count("Tem perfil") == 1 and 'data-v="steam_app_2"' in miolo
+    assert 'data-v="steam_app_1"' not in miolo, "o jogo que ganhou perfil ainda oferece «Criar»"
+    with pytest.raises(RuntimeError, match="não está na lista"):
+        a07.criar_perfil_do_jogo(ctx, {"v": "steam_app_9"}, _Ponte())

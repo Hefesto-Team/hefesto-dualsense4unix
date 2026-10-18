@@ -136,6 +136,11 @@ ESCREVEM = {
     "tirar",
     "tirar_do_disco",
     "criar_para_o_jogo",
+    "_ligar_ou_desligar_a_modificacao",   # liga e desliga uma extensão no registro dela
+    "_instalar_a_modificacao",            # instala (git ou pasta) no código e no registro
+    "_mexer_na_modificacao",              # atualiza ou remove, apagando o código e os dados
+    "_guardar_a_opcao_da_modificacao",    # `opcoes.json` na pasta de dados da extensão
+    "_curar_o_impedimento",               # desliga o Steam Input ou fixa o Proton
 
     # `tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py`). No dia em que a
 }

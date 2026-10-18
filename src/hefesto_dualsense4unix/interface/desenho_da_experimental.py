@@ -9,9 +9,11 @@ from __future__ import annotations
 
 import json
 import pathlib
+from collections.abc import Sequence
 from typing import NamedTuple
 
 from hefesto_dualsense4unix.integrations import kits_de_brinquedo as kits
+from hefesto_dualsense4unix.interface.desenho_dos_lancadores import _a, _e
 
 _PASTA = pathlib.Path(__file__).with_name("experimental")
 
@@ -55,6 +57,11 @@ class Extensao(NamedTuple):
     para: str
     janela: str
     cor: str
+    #: O que o produto pinta por cima do exemplo: a versão e a origem do registro, a chave e o «⋮» aberto.
+    versao: str = "0.1.0"
+    selo: str = "Oficial"
+    ligada: bool = True
+    menu: str = ""
 
 
 EXTENSOES = (
@@ -119,9 +126,10 @@ def linha_do_kit(kit: kits.KitDoJogo | None) -> str:
 
 
 def _icone(chave: str, tamanho: int = 16) -> str:
+    """O ícone da chave; extensão que o desenho não conhece ganha o genérico, nunca um erro."""
     return (f'<svg viewBox="0 0 24 24" width="{tamanho}" height="{tamanho}" fill="none" '
             f'stroke="currentColor" stroke-width="1.7" stroke-linecap="round" '
-            f'stroke-linejoin="round">{_ICONES[chave]}</svg>')
+            f'stroke-linejoin="round">{_ICONES.get(chave) or _ICONES["extensao"]}</svg>')  # (noqa-acento): contrato ASCII
 
 
 def _engrenagem() -> str:
@@ -135,9 +143,9 @@ def _botao(gesto: str, rotulo: str, destino: str, chave: str, ativo: bool) -> st
     desligado = "" if ativo else ' aria-disabled="true"'
     if gesto == "identificar-lancador":
         return (f'<button class="btn mini{apagado}"{desligado} data-gesto="{gesto}" '
-                f'data-v="{chave}">{rotulo}</button>')
+                f'data-v="{_a(chave)}">{rotulo}</button>')
     return (f'<a class="btn mini{apagado}"{desligado} href="{destino}" data-gesto="{gesto}" '
-            f'data-v="{chave}">{rotulo}</a>')
+            f'data-v="{_a(chave)}">{rotulo}</a>')
 
 
 def fila_html(fila: Fila) -> str:
@@ -147,51 +155,103 @@ def fila_html(fila: Fila) -> str:
         destino = fila.configurar if gesto == "configurar-lancador" else destino
         ativo = (gesto == "identificar-lancador") != fila.achado
         botoes.append(_botao(gesto, rotulo, destino, fila.chave, ativo))
-    contagem = f'<span class="lf-n">{fila.jogos}</span>' if fila.achado else ""
+    contagem = f'<span class="lf-n">{_e(fila.jogos)}</span>' if fila.achado else ""
     nome_cl = "lf-nome lf-nome-2" if fila.achado else "lf-nome"
     vazio = "" if fila.achado else '\n            <span class="lanc-jogos"></span>'
     classe = "lf" if fila.achado else "lf ausente"
-    return f'''          <div class="{classe}" data-lancador="{fila.chave}">
+    return f'''          <div class="{classe}" data-lancador="{_a(fila.chave)}">
             <span class="ext-ico lf-ico">{_icone(fila.chave)}</span>
-            <span class="{nome_cl}"><span class="lanc-nome">{fila.nome}</span>{contagem}</span>{vazio}
+            <span class="{nome_cl}"><span class="lanc-nome">{_e(fila.nome)}</span>{contagem}</span>{vazio}
             <span class="lf-botoes">{"".join(botoes)}</span>
           </div>'''
 
 
+def _chave_html(ext: Extensao) -> str:
+    classe, texto = ("nj-tog ligado", "Ligada") if ext.ligada else ("nj-tog", "Desligada")
+    return (f'<span class="{classe}" data-gesto="ligar-modificacao" data-v="{_a(ext.chave)}" '
+            f'data-dica="Liga ou desliga"><span class="pino"></span><span class="txt">{texto}</span></span>')
+
+
+SELO_DA_ORIGEM = {"oficial": "Oficial", "comunidade": "Comunidade", "local": "Local"}
+ACOES_DO_MENU = (("atualizar", "Atualizar"), ("permissoes", "Ver permissões"), ("remover", "Remover"))  # (noqa-acento): contrato ASCII
+
+
+def menu_html(chave: str, permissoes: Sequence[str] | None = None) -> str:
+    """O conteúdo do ⋮ de uma extensão: três botões e, se pedido, o que ela pode fazer."""
+    botoes = "".join(
+        f'<button class="btn mini" data-gesto="mais-da-modificacao" data-v="{_a(chave)}:{acao}">'
+        f"{rotulo}</button>" for acao, rotulo in ACOES_DO_MENU)
+    if permissoes is None:
+        return botoes
+    itens = "".join(f"<span>{_e(x)}</span>" for x in permissoes) or "<span>Nenhuma permissão.</span>"
+    return f'{botoes}<span class="ext-perm">{itens}</span>'
+
+
+def _selo_da_extensao(ext: Extensao) -> str:
+    origem = next((k for k, v in SELO_DA_ORIGEM.items() if v == ext.selo), "oficial")
+    return f'<span class="lanc-selo {origem}">{ext.selo}</span>'
+
+
 def extensao_html(ext: Extensao) -> str:
-    return f'''          <div class="ext" data-modificacao="{ext.chave}">
+    """Uma linha do quadro «Extensões». Nome, versão e dica vêm do manifesto de terceiros: escapados."""
+    menu = f'\n            <div class="ext-menu" data-menu="{_a(ext.chave)}">{ext.menu}</div>' if ext.menu else ""
+    para = ext.para or '<div class="ext-para"></div>'
+    return f'''          <div class="ext" data-modificacao="{_a(ext.chave)}">
             <span class="ext-ico" style="color:var(--{ext.cor})">{_icone(ext.chave)}</span>
             <div class="ext-quem">
-              <span class="ext-sub"><span class="ext-nome">{ext.nome}</span><span class="lanc-selo oficial">Oficial</span><span class="ext-ver">0.1.0</span></span>
-              <span class="ext-faz" data-dica="{ext.dica}">{ext.dica}</span>
+              <span class="ext-sub"><span class="ext-nome">{_e(ext.nome)}</span>{_selo_da_extensao(ext)}<span class="ext-ver">{_e(ext.versao)}</span></span>
+              <span class="ext-faz" data-dica="{_a(ext.dica)}">{_e(ext.dica)}</span>
             </div>
-            {ext.para}
-            <span class="nj-tog ligado" data-gesto="ligar-modificacao" data-v="{ext.chave}" data-dica="Liga ou desliga"><span class="pino"></span><span class="txt">Ligada</span></span>
-            <a class="ext-conf" href="{ext.janela}" data-gesto="configurar-modificacao" data-v="{ext.chave}" data-dica="Configurações: {ext.nome}">{_engrenagem()}</a>
-            <button class="ext-mais" data-gesto="mais-da-modificacao" data-v="{ext.chave}" data-dica="Atualizar, abrir a pasta ou remover">⋮</button>
+            {para}
+            {_chave_html(ext)}
+            <a class="ext-conf" href="{_a(ext.janela)}" data-gesto="configurar-modificacao" data-v="{_a(ext.chave)}" data-dica="Configurações: {_a(ext.nome)}">{_engrenagem()}</a>
+            <button class="ext-mais" data-gesto="mais-da-modificacao" data-v="{_a(ext.chave)}" data-dica="Atualizar, ver as permissões ou remover">⋮</button>{menu}
           </div>'''
+
+
+VAZIA = "Nenhuma extensão instalada. Instale uma de um endereço, logo abaixo."
+
+
+def extensoes_html(exts: Sequence[Extensao] = EXTENSOES) -> str:
+    """As linhas do quadro «Extensões»; sem nenhuma, a frase que diz o que fazer."""
+    if not exts:
+        return f'          <div class="ext-vazia">{VAZIA}</div>'
+    return "\n".join(extensao_html(e) for e in exts)
+
+
+def conta_das_extensoes(n: int) -> str:
+    """O contador do topo do quadro."""
+    return "Nenhuma instalada" if n == 0 else f"{n} instalada" + ("" if n == 1 else "s")
+
+
+def fila_com_novo_html(filas: Sequence[Fila] = LANCADORES) -> str:
+    """A fila inteira: uma linha por lançador e, no fim, a que adiciona outro."""
+    linhas = "\n".join(fila_html(f) for f in filas)
+    return f'''{linhas}
+          <a class="lf lf-novo" href="#novo-lancador" data-gesto="adicionar-lancador" data-dica="Um programa desta máquina ou um pacote de extensão">
+            <span class="ext-ico lf-ico"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.5v13M5.5 12h13"/></svg></span>
+            <span class="lanc-nome">Adicionar um lançador</span>
+          </a>'''
 
 
 def miolo() -> str:
     """Os dois quadros da aba: Extensões e Lançadores."""
-    extensoes = "\n".join(extensao_html(e) for e in EXTENSOES)
-    filas = "\n".join(fila_html(f) for f in LANCADORES)
     return f'''
     <div class="quadro">
       <input class="abre" type="checkbox" id="cx7-1" checked>
       <div class="quadro-topo">
         <label class="quadro-titulo" for="cx7-1">Extensões</label>
-        <span class="conta" data-campo="mod-conta">2 instaladas</span>
+        <span class="conta" data-campo="mod-conta">{conta_das_extensoes(len(EXTENSOES))}</span>
       </div>
       <div class="quadro-corpo">
         <div class="ext-lista">
-{extensoes}
+{extensoes_html()}
         </div>
-        <div class="ext-instalar ext-instalar-pe">
+        <div class="ext-instalar ext-instalar-pe" id="ext-instalar">
           <span class="ext-inst-rot">Instalar de um endereço</span>
           <input type="text" data-linha="mod-endereco" placeholder="https://github.com/…">
-          <a class="btn" href="#" data-gesto="escolher-arquivo-da-modificacao">Escolher a pasta…</a>
-          <button class="btn roxo" data-gesto="instalar-modificacao">Instalar</button>
+          <a class="btn" href="#" data-gesto="escolher-arquivo-da-modificacao" data-hef-forma="ext-instalar">Escolher a pasta…</a>
+          <button class="btn roxo" data-gesto="instalar-modificacao" data-hef-forma="ext-instalar">Instalar</button>
         </div>
       </div>
     </div>
@@ -203,33 +263,222 @@ def miolo() -> str:
       </div>
       <div class="quadro-corpo">
         <div class="lanc-fila">
-{filas}
-          <a class="lf lf-novo" href="#novo-lancador" data-gesto="adicionar-lancador" data-dica="Um programa desta máquina ou um pacote de extensão">
-            <span class="ext-ico lf-ico"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.5v13M5.5 12h13"/></svg></span>
-            <span class="lanc-nome">Adicionar um lançador</span>
-          </a>
+{fila_com_novo_html()}
         </div>
       </div>
     </div>
 '''
 
 
-def lista_de_jogos_html(jogos: tuple[tuple[str, bool], ...]) -> str:
+class OpcaoDaJanela(NamedTuple):
+    """Uma opção de modificação já com o valor de agora, pronta para virar uma linha da janela."""
+
+    mod: str
+    id: str
+    rotulo: str
+    tipo: str
+    valor: str | bool | float
+    escolhas: tuple[str, ...] = ()
+
+
+OPCOES_DE_EXEMPLO = (
+    OpcaoDaJanela("kyty", "quando", "Quando", "escolha", "Os jogos que eu escolher",
+                  ("Os jogos que eu escolher", "Qualquer jogo", "Só quando eu ligar")),
+    OpcaoDaJanela("kyty", "avisar", "Avisar quando sair versão nova", "ligado", False),
+)
+
+
+def _controle_da_opcao(o: OpcaoDaJanela) -> str:
+    alvo = f'data-gesto="guardar-opcao-da-modificacao" data-v="{_a(o.mod)}:{_a(o.id)}"'
+    if o.tipo == "escolha":
+        itens = "".join(
+            f'<option{" selected" if e == o.valor else ""}>{_e(e)}</option>' for e in o.escolhas)
+        return f'<select class="ext-sel" {alvo} aria-label="{_a(o.rotulo)}">{itens}</select>'
+    if o.tipo == "ligado":
+        classe, texto = ("nj-tog ligado", "Ligado") if o.valor else ("nj-tog", "Desligado")
+        return (f'<span class="{classe}" {alvo}><span class="pino"></span>'
+                f'<span class="txt">{texto}</span></span>')
+    return (f'<input class="ext-num" type="text" inputmode="decimal" {alvo} '
+            f'value="{_a(o.valor)}" aria-label="{_a(o.rotulo)}">')
+
+
+def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], descricao: str = "") -> str:
+    """O conteúdo da janela de uma extensão: o que o manifesto declara, uma linha por opção."""
+    linhas = "".join(
+        f'<div class="lc-linha"><span>{_e(o.rotulo)}</span>'
+        f'<span class="lc-val">{_controle_da_opcao(o)}</span></div>' for o in opcoes)
+    corpo = linhas or '<div class="ext-vazia">Esta extensão não tem opções para ajustar.</div>'
+    sub = f'<div class="lanc-novo-para">{_e(descricao)}</div>' if descricao else ""
+    return f'''    <div class="tn-topo">
+      <span class="tn-tit">Configurar · {_e(nome)}</span>
+      <a class="tn-x" href="#" data-dica="Fechar">\u00d7</a>
+    </div>
+    <div class="tn-corpo">
+      {sub}{corpo}
+    </div>
+    <div class="tn-rod">
+      <a class="btn" href="#">Fechar</a>
+    </div>'''
+
+
+class JogoDaLista(NamedTuple):
+    """Uma linha da janela «Criar perfis»: a chave que o gesto leva, o nome e se já tem perfil."""
+
+    chave: str
+    nome: str
+    tem: bool = False
+
+
+def lista_de_jogos_html(jogos: Sequence[JogoDaLista]) -> str:
     """A lista da janela «Criar perfis»: um «Criar» por jogo que ainda não tem perfil."""
     itens = []
-    for nome, tem in jogos:
-        fim = ('<span class="cj-tem">Tem perfil</span>' if tem else
-               '<button class="btn mini" data-gesto="criar-perfil-do-jogo">Criar</button>')
-        itens.append(f'<li><span class="cj-nome">{nome}</span>{fim}</li>')
+    for jogo in jogos:
+        fim = ('<span class="cj-tem">Tem perfil</span>' if jogo.tem else
+               f'<button class="btn mini" data-gesto="criar-perfil-do-jogo" '
+               f'data-v="{_a(jogo.chave)}">Criar</button>')
+        itens.append(f'<li><span class="cj-nome">{_e(jogo.nome)}</span>{fim}</li>')
     return '<ul class="cj-lista">' + "".join(itens) + "</ul>"
 
 
+SEM_JOGOS = "Nenhum jogo aqui ainda. Quando houver, eles aparecem nesta lista."
+
+
+def escolha_miolo_html(nome: str, jogos: Sequence[JogoDaLista], *, desenho: bool = False) -> str:
+    """O conteúdo da janela «Criar perfis · <lançador>».
+
+    ``desenho`` acende o que o desenho aprovado tem e o produto ainda não atende («Criar para todos»).
+    """
+    lista = lista_de_jogos_html(jogos) if jogos else f'<div class="ext-vazia">{SEM_JOGOS}</div>'
+    busca = '<input class="cj-busca" type="text" placeholder="Procurar um jogo">' if jogos else ""
+    todos = '\n      <a class="btn roxo" href="#">Criar para todos</a>' if desenho else ""
+    return f'''    <div class="tn-topo">
+      <span class="tn-tit" data-dica="Cada jogo ganha um perfil que entra sozinho">Criar perfis · {_e(nome)}</span>
+      <a class="tn-x" href="#" data-dica="Fechar">\u00d7</a>
+    </div>
+    <div class="tn-corpo">
+      {busca}
+      {lista}
+    </div>
+    <div class="tn-rod">
+      <a class="btn" href="#">Fechar</a>{todos}
+    </div>'''
+
+
+class Conf(NamedTuple):
+    """O que a janela «Configurar» diz de um lançador."""
+
+    chave: str
+    nome: str
+    entrou: str
+    onde: str
+    jogos: str
+    #: Quantos jogos têm impedimento; `None` quando o lançador não tem essa leitura.
+    impedimentos: int | None = None
+
+
+def _linha_conf(rotulo: str, valor: str) -> str:
+    return f'<div class="lc-linha"><span>{_e(rotulo)}</span><span class="lc-val">{valor}</span></div>'
+
+
+_ESCOLHER_A_PASTA = '<a class="btn mini" href="#lanc-conf">Escolher a pasta…</a>'
+_PERFIL_POR_JOGO = (
+    '<div class="lc-linha"><span data-dica="O perfil entra sozinho quando o jogo abre">Cada jogo ganha o seu perfil</span>'
+    '<span class="lc-val"><span class="nj-tog ligado" data-on="Ligado" data-off="Desligado">'
+    '<span class="pino"></span><span class="txt">Ligado</span></span></span></div>')
+
+
+def lanc_conf_miolo_html(c: Conf, *, desenho: bool = False) -> str:
+    """O conteúdo da janela «Configurar · <lançador>»: só o que o produto sabe dizer.
+
+    ``desenho`` acende o que o desenho aprovado tem e o produto ainda não atende: a escolha da pasta,
+    o perfil por jogo e o Cancelar/Guardar.
+    """
+    linhas = [_linha_conf("Como entrou", _e(c.entrou))]
+    if c.onde:
+        extra = _ESCOLHER_A_PASTA if desenho else ""
+        linhas.append(_linha_conf("Onde ele está", f"<code>{_e(c.onde)}</code>{extra}"))
+    if c.jogos:
+        linhas.append(_linha_conf("Jogos", f"<small>{_e(c.jogos)}</small>"))
+    if c.impedimentos is not None:
+        if c.impedimentos:
+            frase = (f"{c.impedimentos} jogo não recebe gatilhos e vibração" if c.impedimentos == 1
+                     else f"{c.impedimentos} jogos não recebem gatilhos e vibração")
+            valor = (f'<small>{frase}</small><a class="btn mini" href="#impedimentos" '
+                     f'data-gesto="ver-impedimentos" data-v="{_a(c.chave)}">Ver e resolver</a>')
+        else:
+            valor = ('<small>Nenhum jogo com impedimento</small><a class="btn mini" href="#impedimentos" '
+                     f'data-gesto="ver-impedimentos" data-v="{_a(c.chave)}">Conferir de novo</a>')
+        linhas.append(_linha_conf("Impedimentos", valor))
+    if desenho:
+        linhas.append(_PERFIL_POR_JOGO)
+    corpo = "\n      ".join(linhas)
+    rodape = ('<a class="btn" href="#">Cancelar</a>\n      <a class="btn roxo" href="#">Guardar</a>'
+              if desenho else '<a class="btn" href="#">Fechar</a>')
+    return f'''    <div class="tn-topo">
+      <span class="tn-tit">Configurar · {_e(c.nome)}</span>
+      <a class="tn-x" href="#" data-dica="Fechar">\u00d7</a>
+    </div>
+    <div class="tn-corpo">
+      {corpo}
+    </div>
+    <div class="tn-rod">
+      {rodape}
+    </div>'''
+
+
+class LinhaDeImpedimento(NamedTuple):
+    chave: str
+    jogo: str
+    frase: str
+    botao: str
+
+
+def impedimentos_miolo_html(nome: str, linhas: Sequence[LinhaDeImpedimento]) -> str:
+    """O conteúdo da janela dos impedimentos: uma linha por jogo e a cura de cada um."""
+    if linhas:
+        corpo = "\n      ".join(
+            _linha_conf(i.jogo, f'<small>{_e(i.frase)}</small><a class="btn mini" href="#impedimentos" '
+                                f'data-gesto="resolver-impedimento" data-v="{_a(i.chave)}">{_e(i.botao)}</a>')
+            for i in linhas)
+        titulo = (f"{nome} · {len(linhas)} jogo com impedimento" if len(linhas) == 1
+                  else f"{nome} · {len(linhas)} jogos com impedimento")
+        todos = (f'<a class="btn roxo" href="#impedimentos" data-gesto="resolver-todos-os-impedimentos">'
+                 f"{'Resolver o jogo' if len(linhas) == 1 else 'Resolver os ' + _numero(len(linhas))}</a>")
+    else:
+        corpo = '<div class="ext-vazia">Nenhum jogo com impedimento.</div>'
+        titulo, todos = f"{nome} · sem impedimentos", ""
+    return f'''    <div class="tn-topo">
+      <span class="tn-tit">{_e(titulo)}</span>
+      <a class="tn-x" href="#" data-dica="Fechar">\u00d7</a>
+    </div>
+    <div class="tn-corpo">
+      {corpo}
+    </div>
+    <div class="tn-rod">
+      <a class="btn" href="#">Fechar</a>
+      {todos}
+    </div>'''
+
+
+def _numero(n: int) -> str:
+    return {2: "dois", 3: "três", 4: "quatro", 5: "cinco"}.get(n, str(n))
+
+
+CONF_DE_EXEMPLO = Conf("steam", "Steam", "Do sistema", "~/.steam/steam", "48 jogos", 2)
+IMPEDIMENTOS_DE_EXEMPLO = (
+    LinhaDeImpedimento("entrada:1", "Sackboy: A Big Adventure",
+                       "O Steam Input está ligado: o jogo vê um controle de Xbox", "Desligar o Steam Input"),
+    LinhaDeImpedimento("proton:2", "Resident Evil Village",
+                       "Fora do Proton fixado: a vibração e os gatilhos não chegam", "Usar o Proton fixado"),
+)
+
+
 JOGOS_DA_STEAM = (
-    ("Sackboy: A Big Adventure", True),
-    ("Resident Evil Village", False),
-    ("Mortal Kombat 1", True),
-    ("Hades II", False),
-    ("Hollow Knight: Silksong", False),
+    JogoDaLista("steam_app_1", "Sackboy: A Big Adventure", True),
+    JogoDaLista("steam_app_2", "Resident Evil Village"),
+    JogoDaLista("steam_app_3", "Mortal Kombat 1", True),
+    JogoDaLista("steam_app_4", "Hades II"),
+    JogoDaLista("steam_app_5", "Hollow Knight: Silksong"),
 )
 
 
@@ -265,7 +514,7 @@ def _fragmento(nome: str) -> str:
 
 
 JANELAS = ("novo-lancador", "escolher-jogo", "lovense", "impedimentos", "lanc-conf",
-           "kyty", "buttplug", "acessorios")
+           "modificacao", "kyty", "buttplug", "acessorios")  # (noqa-acento): contrato ASCII
 
 
 def telas() -> str:
@@ -273,8 +522,12 @@ def telas() -> str:
     partes = []
     for nome in JANELAS:
         texto = _fragmento(nome)
-        texto = texto.replace("{{LISTA}}", lista_de_jogos_html(JOGOS_DA_STEAM))
+        texto = texto.replace("{{ESCOLHA}}", escolha_miolo_html("Steam", JOGOS_DA_STEAM, desenho=True))
+        texto = texto.replace("{{CONF}}", lanc_conf_miolo_html(CONF_DE_EXEMPLO, desenho=True))
+        texto = texto.replace("{{IMPEDIMENTOS}}", impedimentos_miolo_html("Steam", IMPEDIMENTOS_DE_EXEMPLO))
         texto = texto.replace("{{JOGOS}}", jogos_html())
         texto = texto.replace("{{FORCA}}", forca_html())
+        texto = texto.replace("{{MODIFICACAO}}", modificacao_miolo_html(
+            "Kyty", OPCOES_DE_EXEMPLO, "Opções que o Kyty declara no manifesto."))
         partes.append(texto.strip())
     return "\n".join(partes) + f"\n<script data-aba=\"experimental\">\n{SCRIPT}</script>\n"

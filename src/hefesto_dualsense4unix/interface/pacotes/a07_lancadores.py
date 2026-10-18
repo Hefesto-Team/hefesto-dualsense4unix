@@ -155,8 +155,10 @@ prontuário só sai do lugar quando ela clica em "Ver o que impede".
 """
 from __future__ import annotations
 
+import contextlib
 import dataclasses
 import logging
+import pathlib
 import re
 import sys
 import threading
@@ -165,6 +167,7 @@ from collections.abc import Callable
 from typing import Any
 
 from hefesto_dualsense4unix.integrations import lista_de_exclusao
+from hefesto_dualsense4unix.interface import desenho_da_experimental as exp
 from hefesto_dualsense4unix.interface import desenho_dos_lancadores as desenho
 
 from . import Contexto, perfil, registrar
@@ -753,9 +756,11 @@ class _Escolha:
     #: O título que casa cada jogo, por chave: o jogo de um lançador de
     #: modificação, cuja janela é a do emulador para todos os jogos.
     titulos: dict[str, str] = dataclasses.field(default_factory=dict)
+    #: A mesma lista na estrutura nova da janela «Criar perfis» (Criar / Tem perfil).
+    miolo_novo: str = ""
 
     def limpar(self) -> None:
-        self.modo = self.lancador = self.miolo = ""
+        self.modo = self.lancador = self.miolo = self.miolo_novo = ""
         self.jogos = ()
         self.janelas = {}
         self.titulos = {}
@@ -869,6 +874,8 @@ def _abrir_a_escolha(modo: str, lancador: str, state: dict[str, Any] | None) -> 
     _ESCOLHA.jogos, _ESCOLHA.janelas = tuple(jogos), janelas
     _ESCOLHA.miolo = desenho.miolo_da_escolha_html(
         modo, nome, jogos, emulador=emulador)
+    if modo == desenho.CRIAR_PERFIL:
+        _montar_a_escolha_nova(nome)
 
 
 def _o_escolhido(o: dict[str, Any]) -> desenho.JogoParaEscolher:
@@ -940,7 +947,7 @@ def _pintura(lancadores: list[desenho.Lancador]) -> dict[str, Any]:
     blocos = {desenho.SELETOR_DA_GRADE: desenho.cartoes_html(lancadores)}
     if _ESCOLHA.miolo:
         blocos[f"#{desenho.MIOLO_DA_ESCOLHA}"] = _ESCOLHA.miolo
-    return {"mesa": valores, "blocos": blocos}
+    return _com_as_extensoes({"mesa": valores, "blocos": blocos}, lancadores)
 
 
 def _resposta(lida: desenho.Leitura | None,
@@ -1302,12 +1309,10 @@ def tirar_da_exclusao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
     return _resposta(VIGIA.ler(), ctx.state)
 
 
-@gesto("07-lancadores.html", desenho.CONFIRMAR_PERFIL, grava="criar_para_o_jogo")
-def confirmar_o_perfil(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """Cria o perfil do jogo marcado PELA ABA PERFIS, e a tela vai para lá."""
+def _criar_o_perfil_de(ctx: Contexto, p: Any, jogo: desenho.JogoParaEscolher) -> str:
+    """Cria o perfil do jogo pela aba Perfis e devolve a frase de produto."""
     from . import a10_perfis
 
-    jogo = _o_escolhido(o)
     titulo = _ESCOLHA.titulos.get(jogo.chave, "")
     if titulo:
         # O JOGO DE UM EMULADOR QUE ABRE TODOS NA MESMA JANELA casa pelo ID
@@ -1317,16 +1322,19 @@ def confirmar_o_perfil(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, An
 
         regra = MatchCriteria(window_title_regex=titulo)
         try:
-            frase = a10_perfis._nascer(ctx, p, regra, jogo.nome.strip() or "Novo perfil")
+            return a10_perfis._nascer(ctx, p, regra, jogo.nome.strip() or "Novo perfil")
         except ValueError:
-            frase = a10_perfis._nascer(ctx, p, regra, "Novo perfil")
-        _relatar(desenho.CONFIRMAR_PERFIL, frase)
-        _ESCOLHA.limpar()
-        return _resposta(VIGIA.agora(), ctx.state)
+            return a10_perfis._nascer(ctx, p, regra, "Novo perfil")
     janelas = _ESCOLHA.janelas.get(jogo.chave, ())
     classes = janelas if janelas else (jogo.chave,)
-    frase = a10_perfis.criar_para_o_jogo(
+    return a10_perfis.criar_para_o_jogo(
         ctx, p, classes=classes, nome_do_jogo=jogo.nome.split(" — ")[0])
+
+
+@gesto("07-lancadores.html", desenho.CONFIRMAR_PERFIL, grava="criar_para_o_jogo")
+def confirmar_o_perfil(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """Cria o perfil do jogo marcado PELA ABA PERFIS, e a tela vai para lá."""
+    frase = _criar_o_perfil_de(ctx, p, _o_escolhido(o))
     _relatar(desenho.CONFIRMAR_PERFIL, frase)
     _ESCOLHA.limpar()
     return _resposta(VIGIA.agora(), ctx.state)
@@ -1677,6 +1685,546 @@ def _ok_e_motivo(resposta: Any) -> tuple[bool, str | None]:
     return bool(resposta), None
 
 
+# -- As extensões (modificações) e as janelas da aba Experimental ----------------------------------
+#
+# O desenho é o de `desenho_da_experimental`, o mesmo do gerador. O pacote só entrega os dados:
+# o registro das modificações (`mods.instalador`), o que a janela de cada uma pede (`mods.opcoes`) e
+# os impedimentos da Steam (`integrations.impedimentos_da_steam`). A pintura não abre arquivo a cada
+# tique além da releitura do registro, que dura `TTL_DO_REGISTRO_S`; o resto é montado no clique.
+
+TTL_DO_REGISTRO_S = 1.0
+CAMPO_DA_CONTA = "mod-conta"
+JANELA_DA_EXTENSAO = "#modificacao"  # (noqa-acento): contrato ASCII
+JANELA_DO_LANCADOR = "#lanc-conf"
+_COR_DA_EXTENSAO = {"kyty": "cyan", "lovense": "pink"}
+NOME_DO_ARQUIVO_DO_MANIFESTO = "hefesto-mod.json"
+TITULO_DO_SELETOR_DA_EXTENSAO = "Escolha o hefesto-mod.json da pasta da extensão"
+
+
+@dataclasses.dataclass(frozen=True)
+class _Instalada:
+    """Uma linha do registro com o manifesto relido e o estado vivo."""
+
+    entrada: Any
+    manifesto: Any
+    estado: str = ""
+
+
+class _Registro:
+    """As extensões instaladas, relidas no máximo a cada ``TTL_DO_REGISTRO_S`` e a cada gesto."""
+
+    def __init__(self) -> None:
+        self._em = float("-inf")
+        self._valor: tuple[_Instalada, ...] = ()
+        self._trava = threading.Lock()
+
+    def esquecer(self) -> None:
+        with self._trava:
+            self._em = float("-inf")
+
+    def ler(self) -> tuple[_Instalada, ...]:
+        with self._trava:
+            agora = time.monotonic()
+            if agora - self._em >= TTL_DO_REGISTRO_S:
+                self._valor, self._em = _ler_as_instaladas(), agora
+            return self._valor
+
+
+REGISTRO = _Registro()
+
+
+@dataclasses.dataclass
+class _Mexida:
+    """O que a pessoa abriu: o ⋮ de uma extensão e as janelas, com o miolo já montado no clique."""
+
+    menu: str = ""
+    permissoes: str = ""
+    remover: str = ""
+    conf: str = ""
+    imp: str = ""
+    mod: str = ""
+    impedimentos: tuple[Any, ...] = ()
+    #: As permissões que a pessoa viu antes do «sim» de ligar, por extensão.
+    vistas: dict[str, tuple[str, ...]] = dataclasses.field(default_factory=dict)
+    html_conf: str = ""
+    html_imp: str = ""
+    html_mod: str = ""
+
+    def limpar(self) -> None:
+        self.menu = self.permissoes = self.remover = self.conf = self.imp = self.mod = ""
+        self.impedimentos = ()
+        self.vistas = {}
+        self.html_conf = self.html_imp = self.html_mod = ""
+
+
+_MEXIDA = _Mexida()
+
+
+def _lugares() -> Any:
+    from hefesto_dualsense4unix.mods.instalador import Lugares
+
+    return Lugares.do_xdg()
+
+
+def _ler_as_instaladas() -> tuple[_Instalada, ...]:
+    """O registro, o estado vivo e o manifesto de cada uma. Nunca levanta."""
+    from hefesto_dualsense4unix.mods.instalador import (
+        InstalacaoRecusadaError,
+        ler_estado,
+        ler_registro,
+    )
+    from hefesto_dualsense4unix.mods.manifesto import ManifestoRecusadoError, ler_manifesto
+
+    try:
+        lg = _lugares()
+        registro = ler_registro(lg.registro)
+        vivo = ler_estado(lg.estado)
+    except (InstalacaoRecusadaError, OSError):
+        _LOG.debug("registro_das_extensoes_ilegivel", exc_info=True)
+        return ()
+    saida: list[_Instalada] = []
+    for mod_id, entrada in sorted(registro.items()):
+        try:
+            manifesto = ler_manifesto(lg.codigo / mod_id, exigir_api=False)
+        except (ManifestoRecusadoError, OSError):
+            manifesto = None
+        saida.append(_Instalada(entrada, manifesto, str(vivo.get(mod_id, {}).get("estado") or "")))
+    return tuple(saida)
+
+
+@contextlib.contextmanager
+def _dizendo_a_recusa() -> Any:
+    """A recusa da infra de modificações vira a frase que a tela mostra."""
+    from hefesto_dualsense4unix.mods.instalador import InstalacaoRecusadaError
+
+    try:
+        yield
+    except InstalacaoRecusadaError as exc:
+        raise RuntimeError(exc.frase) from exc
+
+
+def _extensao_de(item: _Instalada) -> Any:
+    """A linha do quadro «Extensões» de uma modificação instalada."""
+    from hefesto_dualsense4unix.mods.manifesto import o_que_a_permissao_deixa
+
+    e = item.entrada
+    menu = ""
+    if _MEXIDA.menu == e.id:
+        pedidas = item.manifesto.permissoes if item.manifesto is not None else e.permissoes_aceitas
+        menu = exp.menu_html(
+            e.id, [o_que_a_permissao_deixa(x) for x in pedidas]
+            if _MEXIDA.permissoes == e.id else None)
+    return exp.Extensao(
+        chave=e.id, nome=e.nome,
+        dica=item.manifesto.descricao if item.manifesto is not None else "",
+        para="", janela=JANELA_DA_EXTENSAO, cor=_COR_DA_EXTENSAO.get(e.id, "purple"),
+        versao=e.versao, selo=exp.SELO_DA_ORIGEM.get(e.origem, "Oficial"),
+        ligada=e.ligada, menu=menu)
+
+
+def _jogos_da_fila(lanc: desenho.Lancador) -> str:
+    """A contagem da fila: «48 jogos», sem o «instalados» do cartão velho."""
+    if not lanc.presente or lanc.jogos in ("", "—", desenho.AINDA_LENDO):
+        return ""
+    return lanc.jogos.replace("jogos instalados", "jogos").replace("jogo instalado", "jogo")
+
+
+def _fila_de(lancadores: list[desenho.Lancador]) -> list[Any]:
+    return [exp.Fila(chave=x.chave, nome=x.nome, jogos=_jogos_da_fila(x), achado=x.presente,
+                     configurar=JANELA_DO_LANCADOR) for x in lancadores]
+
+
+def _com_as_extensoes(carga: dict[str, Any], lancadores: list[desenho.Lancador]) -> dict[str, Any]:
+    """Acrescenta à carga da aba o quadro das extensões, a fila e as janelas abertas."""
+    instaladas = REGISTRO.ler()
+    carga["mesa"][CAMPO_DA_CONTA] = exp.conta_das_extensoes(len(instaladas))
+    blocos = carga["blocos"]
+    blocos[".ext-lista"] = exp.extensoes_html([_extensao_de(i) for i in instaladas])
+    blocos[".lanc-fila"] = exp.fila_com_novo_html(_fila_de(lancadores))
+    janelas = (("#lanc-janela", _MEXIDA.html_conf), ("#imp-janela", _MEXIDA.html_imp),
+               ("#mod-janela", _MEXIDA.html_mod), ("#lanc-escolha", _ESCOLHA.miolo_novo))
+    for seletor, miolo in janelas:
+        if miolo:
+            blocos[seletor] = miolo
+    return carga
+
+
+def _id_do_clique(o: dict[str, Any], gesto_: str) -> str:
+    mod_id = str(o.get("v") or "").strip()
+    if not mod_id:
+        _LOG.warning("%s: clique sem `data-v`", gesto_)
+        raise ValueError("O clique não disse de qual extensão se trata. Nada foi alterado.")
+    return mod_id
+
+
+def _a_instalada(mod_id: str) -> _Instalada:
+    REGISTRO.esquecer()
+    item = next((i for i in REGISTRO.ler() if i.entrada.id == mod_id), None)
+    if item is None:
+        raise RuntimeError(f"«{mod_id}» não está instalada.")
+    return item
+
+
+def _valor_na_tela(valor: Any) -> Any:
+    return int(valor) if isinstance(valor, float) and valor == int(valor) else valor
+
+
+def _montar_a_janela_da_extensao(mod_id: str) -> None:
+    """O miolo da janela de opções, com o valor de agora de cada opção que o manifesto declara."""
+    from hefesto_dualsense4unix.mods import opcoes
+
+    item = _a_instalada(mod_id)
+    manifesto = item.manifesto
+    if manifesto is None:
+        raise RuntimeError("O manifesto desta extensão não pôde ser lido. Nada foi alterado.")
+    valores = opcoes.ler(manifesto, _lugares())
+    linhas = [exp.OpcaoDaJanela(
+        mod=mod_id, id=x.id, rotulo=x.rotulo, tipo=x.tipo, valor=_valor_na_tela(valores[x.id]),
+        escolhas=tuple(x.escolhas)) for x in manifesto.opcoes]
+    _MEXIDA.mod = mod_id
+    _MEXIDA.html_mod = exp.modificacao_miolo_html(manifesto.nome, linhas, manifesto.descricao)
+
+
+def _a_pintura_agora(ctx: Contexto) -> dict[str, Any]:
+    return _resposta(VIGIA.agora(), ctx.state)
+
+
+@gesto("07-lancadores.html", "ligar-modificacao", grava="_ligar_ou_desligar_a_modificacao")
+def ligar_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """A chave da extensão. Permissão nova pede um segundo clique, depois de mostrada."""
+    recado = _ligar_ou_desligar_a_modificacao(_id_do_clique(o, "ligar-modificacao"))
+    return {**_a_pintura_agora(ctx), "recado": recado}
+
+
+def _ligar_ou_desligar_a_modificacao(mod_id: str) -> str:
+    """Liga ou desliga pela infra. Permissão nova pede o «sim»: o primeiro clique só a mostra."""
+    from hefesto_dualsense4unix.mods.instalador import (
+        desligar,
+        ler_registro,
+        ligar,
+        manifesto_instalado,
+    )
+    from hefesto_dualsense4unix.mods.manifesto import o_que_a_permissao_deixa, permissoes_novas
+
+    lg = _lugares()
+    with _dizendo_a_recusa():
+        entrada = ler_registro(lg.registro).get(mod_id)
+        if entrada is None:
+            raise RuntimeError(f"«{mod_id}» não está instalada.")
+        if entrada.ligada:
+            desligar(mod_id, lugares=lg)
+            REGISTRO.esquecer()
+            return f"{entrada.nome} desligada."
+        pedidas = tuple(sorted(manifesto_instalado(mod_id, lugares=lg).permissoes))
+        if permissoes_novas(entrada.permissoes_aceitas, list(pedidas)) and (
+                _MEXIDA.vistas.get(mod_id) != pedidas):
+            _MEXIDA.vistas[mod_id] = pedidas
+            quais = "; ".join(o_que_a_permissao_deixa(x) for x in pedidas)
+            return (f"{entrada.nome} pede: {quais}. Clique na chave de novo para aceitar e ligar.")
+        ligar(mod_id, permissoes_vistas=pedidas, lugares=lg)
+        _MEXIDA.vistas.pop(mod_id, None)
+    REGISTRO.esquecer()
+    return f"{entrada.nome} ligada."
+
+
+@gesto("07-lancadores.html", "configurar-modificacao")
+def configurar_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """A engrenagem da extensão: a janela com as opções que o manifesto dela declara."""
+    _MEXIDA.menu = _MEXIDA.permissoes = ""
+    _montar_a_janela_da_extensao(_id_do_clique(o, "configurar-modificacao"))
+    return _a_pintura_agora(ctx)
+
+
+@gesto("07-lancadores.html", "guardar-opcao-da-modificacao",
+       grava="_guardar_a_opcao_da_modificacao")
+def guardar_opcao_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """Uma opção da janela. A caixa e o número agem no ``change``; a chave de ligado, no clique."""
+    mod_id, _, opcao_id = _id_do_clique(o, "guardar-opcao-da-modificacao").partition(":")
+    item = _a_instalada(mod_id)
+    declaradas = item.manifesto.opcoes if item.manifesto else ()
+    opcao = next((x for x in declaradas if x.id == opcao_id), None)
+    if opcao is None:
+        raise RuntimeError("Esta extensão não tem essa opção. Nada foi guardado.")
+    evento = str(o.get("evento") or "")
+    if opcao.tipo == "ligado":
+        if evento == "change":
+            return None
+        valor: Any = not bool(_valor_guardado(item, opcao))
+    else:
+        if evento == "click":
+            return None
+        valor = o.get("valor")
+    _guardar_a_opcao_da_modificacao(item, opcao_id, valor)
+    _montar_a_janela_da_extensao(mod_id)
+    return _a_pintura_agora(ctx)
+
+
+def _valor_guardado(item: _Instalada, opcao: Any) -> Any:
+    from hefesto_dualsense4unix.mods import opcoes
+
+    return opcoes.ler(item.manifesto, _lugares())[opcao.id]
+
+
+def _guardar_a_opcao_da_modificacao(item: _Instalada, opcao_id: str, valor: Any) -> None:
+    """Grava UMA opção em ``<dados>/<id>/opcoes.json``, validada contra o manifesto."""
+    from hefesto_dualsense4unix.mods import opcoes
+
+    with _dizendo_a_recusa():
+        opcoes.guardar(item.manifesto, opcao_id, valor, _lugares())
+
+
+@gesto("07-lancadores.html", "mais-da-modificacao", grava="_mexer_na_modificacao")
+def mais_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """O ⋮ da extensão: abre o menu; o ``data-v`` é ``id:<ação>``, um dos três botões dele."""
+    mod_id, _, acao = _id_do_clique(o, "mais-da-modificacao").partition(":")
+    if not acao:
+        _MEXIDA.menu = "" if _MEXIDA.menu == mod_id else mod_id
+        _MEXIDA.permissoes = _MEXIDA.remover = ""
+        return _a_pintura_agora(ctx)
+    _MEXIDA.menu = mod_id
+    if acao == "permissoes":  # (noqa-acento): contrato ASCII
+        _a_instalada(mod_id)
+        _MEXIDA.permissoes, _MEXIDA.remover = mod_id, ""
+        return _a_pintura_agora(ctx)
+    recado = _mexer_na_modificacao(mod_id, acao)
+    return {**_a_pintura_agora(ctx), "recado": recado}
+
+
+def _mexer_na_modificacao(mod_id: str, acao: str) -> str:
+    """Atualiza ou remove. Remover apaga o código e os dados dela: pede o segundo clique."""
+    from hefesto_dualsense4unix.mods.instalador import atualizar, remover
+
+    item = _a_instalada(mod_id)
+    nome = item.entrada.nome
+    lg = _lugares()
+    with _dizendo_a_recusa():
+        if acao == "atualizar":
+            feito = atualizar(mod_id, lugares=lg)
+            REGISTRO.esquecer()
+            extra = (" Ela pede permissão nova: ligue-a de novo para aceitar."
+                     if feito.permissoes_novas else "")
+            return f"{nome} atualizada para a versão {feito.entrada.versao}.{extra}"
+        if acao != "remover":
+            raise RuntimeError("Essa ação do menu não existe. Nada foi alterado.")
+        if _MEXIDA.remover != mod_id:
+            _MEXIDA.remover = mod_id
+            return (f"Remover {nome} apaga o código e os dados dela. "
+                    "Clique em Remover de novo para confirmar.")
+        restos = remover(mod_id, lugares=lg)
+    _MEXIDA.menu = _MEXIDA.permissoes = _MEXIDA.remover = ""
+    if _MEXIDA.mod == mod_id:
+        _MEXIDA.mod = _MEXIDA.html_mod = ""
+    REGISTRO.esquecer()
+    if restos:
+        raise RuntimeError(f"Não consegui remover {nome} por inteiro: {'; '.join(restos)}.")
+    return f"{nome} removida."
+
+
+def _instalar_a_modificacao(origem: str) -> str:
+    """Instala de um endereço git ou de uma pasta local. Não liga: ligar é a chave."""
+    from hefesto_dualsense4unix.mods.instalador import instalar
+
+    with _dizendo_a_recusa():
+        feito = instalar(origem)
+    REGISTRO.esquecer()
+    return f"{feito.entrada.nome} instalada. Ligue-a na chave quando quiser."
+
+
+@gesto("07-lancadores.html", "instalar-modificacao", grava="_instalar_a_modificacao")
+def instalar_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """«Instalar»: o endereço digitado na linha do rodapé do quadro."""
+    forma = o.get("forma") or {}
+    origem = str(forma.get("mod-endereco") or "").strip()
+    if not origem:
+        raise RuntimeError("Digite o endereço da extensão, ou escolha a pasta dela.")
+    recado = _instalar_a_modificacao(origem)
+    return {**_a_pintura_agora(ctx), "recado": recado}
+
+
+@gesto("07-lancadores.html", "escolher-arquivo-da-modificacao", grava="_instalar_a_modificacao")
+def escolher_arquivo_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any
+                                    ) -> dict[str, Any] | None:
+    """«Escolher a pasta…»: ela aponta o ``hefesto-mod.json`` e a pasta dele é instalada.
+
+    Cancelar não é erro: o seletor devolve vazio e a tela não fala.
+    """
+    caminho = p.escolher_arquivo(TITULO_DO_SELETOR_DA_EXTENSAO, padrao=NOME_DO_ARQUIVO_DO_MANIFESTO)
+    if not caminho:
+        return None
+    alvo = pathlib.Path(str(caminho))
+    if alvo.name != NOME_DO_ARQUIVO_DO_MANIFESTO:
+        raise RuntimeError(
+            f"Escolha o arquivo {NOME_DO_ARQUIVO_DO_MANIFESTO} da pasta da extensão.")
+    recado = _instalar_a_modificacao(str(alvo.parent))
+    return {**_a_pintura_agora(ctx), "recado": recado}
+
+
+# -- Os impedimentos da Steam --------------------------------------------------------------------
+
+
+def _sondar_a_steam() -> tuple[Any, ...]:
+    from hefesto_dualsense4unix.integrations import impedimentos_da_steam
+
+    return impedimentos_da_steam.sondar()
+
+
+def _montar_os_impedimentos(chave: str) -> None:
+    linhas = [exp.LinhaDeImpedimento(i.chave, i.jogo, i.frase, i.botao)
+              for i in _MEXIDA.impedimentos]
+    nome = next((x.nome for x in desenho.cartoes(VIGIA.agora()) if x.chave == chave), chave)
+    _MEXIDA.imp = chave
+    _MEXIDA.html_imp = exp.impedimentos_miolo_html(nome, linhas)
+
+
+@gesto("07-lancadores.html", "ver-impedimentos")
+def ver_impedimentos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """«Ver e resolver»: sonda a Steam de novo e abre a lista, uma linha por jogo."""
+    chave = _id_do_clique(o, "ver-impedimentos")
+    if chave != desenho.STEAM:
+        raise RuntimeError("Só a Steam tem esta leitura. Nada foi alterado.")
+    _MEXIDA.impedimentos = _sondar_a_steam()
+    _montar_os_impedimentos(chave)
+    _montar_a_conf(chave, ctx.state)
+    return _a_pintura_agora(ctx)
+
+
+def _curar_o_impedimento(chaves: tuple[str, ...] | None) -> str:
+    """Cura os impedimentos nomeados (todos, se ``None``) pelas primitivas da Steam."""
+    from hefesto_dualsense4unix.integrations import impedimentos_da_steam as imp
+
+    atuais = _sondar_a_steam()
+    alvo = [i for i in atuais if chaves is None or i.chave in chaves]
+    try:
+        frase = imp.curar(alvo)
+    except imp.ImpedimentoNaoCuradoError as exc:
+        _MEXIDA.impedimentos = _sondar_a_steam() if alvo else atuais
+        raise RuntimeError(exc.frase) from exc
+    finally:
+        VIGIA.esquecer()
+    _MEXIDA.impedimentos = _sondar_a_steam()
+    return frase
+
+
+@gesto("07-lancadores.html", "resolver-impedimento", grava="_curar_o_impedimento")
+def resolver_impedimento(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """O botão de UM jogo: ``tipo:appid``. Com a Steam aberta a cura recusa dizendo."""
+    chave = _id_do_clique(o, "resolver-impedimento")
+    frase = _curar_o_impedimento((chave,))
+    _montar_os_impedimentos(desenho.STEAM)
+    _montar_a_conf(desenho.STEAM, ctx.state)
+    return {**_a_pintura_agora(ctx), "recado": frase}
+
+
+@gesto("07-lancadores.html", "resolver-todos-os-impedimentos", grava="_curar_o_impedimento")
+def resolver_todos_os_impedimentos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """O botão do rodapé: cura todos os jogos da lista de uma vez."""
+    frase = _curar_o_impedimento(None)
+    _montar_os_impedimentos(desenho.STEAM)
+    _montar_a_conf(desenho.STEAM, ctx.state)
+    return {**_a_pintura_agora(ctx), "recado": frase}
+
+
+# -- Os três botões de todo lançador ---------------------------------------------------------------
+
+
+def _montar_a_conf(chave: str, state: dict[str, Any] | None = None) -> None:
+    """O miolo da janela «Configurar», com o que o produto sabe do lançador."""
+    lida = VIGIA.agora()
+    cartao = next((x for x in desenho.cartoes(lida) if x.chave == chave), None)
+    if cartao is None:
+        raise RuntimeError("Não conheço esse lançador. Nada foi alterado.")
+    da_extensao = any(x.chave == chave and x.modificacao for x in _declarados())
+    onde = dict(lida.onde_estao).get(chave, "") if lida is not None else ""
+    impedimentos = len(_MEXIDA.impedimentos) if chave == desenho.STEAM else None
+    _MEXIDA.conf = chave
+    _MEXIDA.html_conf = exp.lanc_conf_miolo_html(exp.Conf(
+        chave=chave, nome=cartao.nome, entrou="Como extensão" if da_extensao else "Do sistema",
+        onde=onde, jogos=_jogos_da_fila(cartao), impedimentos=impedimentos))
+
+
+@gesto("07-lancadores.html", "configurar-lancador")
+def configurar_lancador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """«Configurar»: a janela igual para todos. A Steam sonda os impedimentos ao abrir."""
+    chave = _id_do_clique(o, "configurar-lancador")
+    _MEXIDA.conf = chave
+    _MEXIDA.imp = _MEXIDA.html_imp = ""
+    _MEXIDA.impedimentos = _sondar_a_steam() if chave == desenho.STEAM else ()
+    _montar_a_conf(chave, ctx.state)
+    return _a_pintura_agora(ctx)
+
+
+@gesto("07-lancadores.html", "identificar-lancador")
+def identificar_lancador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """«Identificar»: procura de novo no disco e diz o que achou, ou como ensinar onde ele está."""
+    chave = _id_do_clique(o, "identificar-lancador")
+    VIGIA.esquecer()
+    lida = VIGIA.ler()
+    cartao = next((x for x in desenho.cartoes(lida) if x.chave == chave), None)
+    if cartao is None:
+        raise RuntimeError("Não conheço esse lançador. Nada foi alterado.")
+    onde = dict(lida.onde_estao).get(chave, "") if lida is not None else ""
+    if cartao.presente:
+        frase = f"Achei {cartao.nome}" + (f" em {onde}." if onde else ".")
+    else:
+        frase = (f"Não achei {cartao.nome} nesta máquina. Instale-o, ou aponte o atalho dele "
+                 "em «Adicionar um lançador».")
+    return {**_resposta(lida, ctx.state), "recado": frase}
+
+
+# -- A janela «Criar perfis» ---------------------------------------------------------------------
+
+
+def _perfis_que_casam() -> tuple[set[str], set[str]]:
+    """As classes de janela e os títulos que algum perfil já casa."""
+    from hefesto_dualsense4unix.profiles.loader import load_all_profiles
+    from hefesto_dualsense4unix.profiles.schema import MatchCriteria
+
+    classes: set[str] = set()
+    titulos: set[str] = set()
+    try:
+        perfis = list(load_all_profiles())
+    except Exception:
+        _LOG.debug("perfis_ilegiveis_para_a_lista", exc_info=True)
+        return classes, titulos
+    for perfil_ in perfis:
+        regra = perfil_.match
+        if isinstance(regra, MatchCriteria):
+            classes.update(c.casefold() for c in regra.window_class)
+            if regra.window_title_regex:
+                titulos.add(regra.window_title_regex)
+    return classes, titulos
+
+
+def _montar_a_escolha_nova(nome: str) -> None:
+    """A lista da janela «Criar perfis»: cada jogo, com «Criar» ou «Tem perfil»."""
+    classes, titulos = _perfis_que_casam()
+    linhas = []
+    for jogo in _ESCOLHA.jogos:
+        titulo = _ESCOLHA.titulos.get(jogo.chave, "")
+        janelas = _ESCOLHA.janelas.get(jogo.chave, ()) or (jogo.chave,)
+        tem = titulo in titulos if titulo else any(j.casefold() in classes for j in janelas)
+        linhas.append(exp.JogoDaLista(jogo.chave, jogo.nome, tem))
+    _ESCOLHA.miolo_novo = exp.escolha_miolo_html(nome, linhas)
+
+
+@gesto("07-lancadores.html", "criar-perfil-do-jogo", grava="criar_para_o_jogo")
+def criar_perfil_do_jogo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """O «Criar» de um jogo da lista: o perfil nasce na aba Perfis e a janela continua aberta."""
+    chave = str(o.get("v") or "").strip()
+    jogo = next((j for j in _ESCOLHA.jogos if j.chave == chave), None)
+    if jogo is None:
+        raise RuntimeError("Esse jogo não está na lista. Abra «Criar perfis» de novo.")
+    frase = _criar_o_perfil_de(ctx, p, jogo)
+    _relatar("criar-perfil-do-jogo", frase)
+    _montar_a_escolha_nova(_nome_da_escolha())
+    return {**_resposta(VIGIA.agora(), ctx.state), "recado": frase}
+
+
+def _nome_da_escolha() -> str:
+    return next((x.nome for x in desenho.cartoes(VIGIA.agora()) if x.chave == _ESCOLHA.lancador),
+                _ESCOLHA.lancador)
+
+
 METODO_DA_RECARGA = "launch_env.refresh"
 
 #: o wrapper vive em dois arquivos em disco, e o `state_full` não tem UMA chave
@@ -1698,6 +2246,12 @@ SEM_ECO = ("procurar", "detectar",
            # `maquina.json`, e o `state_full` não tem UMA chave sobre a
            desenho.ADICIONAR, desenho.REMOVER,
            # — e o `state_full` não tem UMA chave sobre lançador.
-           desenho.PROCURAR_O_ARQUIVO)
+           desenho.PROCURAR_O_ARQUIVO,
+           # Os gestos das extensões, da janela de cada lançador e dos impedimentos: o estado
+           # que o daemon devolve não tem chave sobre o registro das modificações nem sobre a Steam.
+           "ligar-modificacao", "configurar-modificacao", "guardar-opcao-da-modificacao",
+           "mais-da-modificacao", "instalar-modificacao", "escolher-arquivo-da-modificacao",
+           "ver-impedimentos", "resolver-impedimento", "resolver-todos-os-impedimentos",
+           "identificar-lancador", "configurar-lancador", "criar-perfil-do-jogo")
 
 # bloco «O «Consertar» DOS OUTROS LANÇADORES SAIU», logo abaixo de `calados`.
