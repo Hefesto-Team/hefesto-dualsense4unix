@@ -253,14 +253,14 @@
       "data": "2026-10-17",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1143962,
+      "piso": 1145766,
       "por_item": {
-        "docs": 119554,
-        "scripts": 114837,
-        "src": 308322,
-        "tests": 601249
+        "docs": 119558,
+        "scripts": 114902,
+        "src": 308909,
+        "tests": 602397
       },
-      "razao": "tamanho: +8 linhas (1143954 -> 1143962), pagas por Origem: D-1710-A-SAIDA-DE-EMERGENCIA-DO-PS-AVISA-NA-LINHA, D-1710-O-PS-COM-OUTRO-BOTAO-NAO-E-PS-SOZINHO, D-1710-O-TECLADO-NA-TELA-AUSENTE-RESPONDE-NA-LINHA, D-1710-OS-ANALOGICOS-OFERECEM-TECLAS-SO-NA-LINHA-DELES; registrado no fecho, topo 6a91340df1df",
+      "razao": "tamanho: +1804 linhas (1143962 -> 1145766), pagas por Origem: D-1710-O-DOCTOR-MOSTRA-O-PROTON-FIXADO-E-O-DE-CADA-JOGO, D-1710-O-JOGO-GDK-SEM-O-AJUDANTE-AVISA-QUE-ABRE-SEM-CONTA, D-1710-O-VIGIA-DO-RADIO-SO-TOCA-CONTROLE, D-1710-OS-LANCADORES-DE-FABRICA-SAO-MODIFICACOES-OFICIAIS; registrado no fecho, topo 2bf4242e47e3",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -597,10 +597,16 @@
           "de": 1143954,
           "para": 1143962,
           "razao": "tamanho: +8 linhas (1143954 -> 1143962), pagas por Origem: D-1710-A-SAIDA-DE-EMERGENCIA-DO-PS-AVISA-NA-LINHA, D-1710-O-PS-COM-OUTRO-BOTAO-NAO-E-PS-SOZINHO, D-1710-O-TECLADO-NA-TELA-AUSENTE-RESPONDE-NA-LINHA, D-1710-OS-ANALOGICOS-OFERECEM-TECLAS-SO-NA-LINHA-DELES; registrado no fecho, topo 6a91340df1df"
+        },
+        {
+          "data": "2026-10-17",
+          "de": 1143962,
+          "para": 1145766,
+          "razao": "tamanho: +1804 linhas (1143962 -> 1145766), pagas por Origem: D-1710-O-DOCTOR-MOSTRA-O-PROTON-FIXADO-E-O-DE-CADA-JOGO, D-1710-O-JOGO-GDK-SEM-O-AJUDANTE-AVISA-QUE-ABRE-SEM-CONTA, D-1710-O-VIGIA-DO-RADIO-SO-TOCA-CONTROLE, D-1710-OS-LANCADORES-DE-FABRICA-SAO-MODIFICACOES-OFICIAIS; registrado no fecho, topo 2bf4242e47e3"
         }
       ],
       "unidade": "linhas",
-      "universo": 2965
+      "universo": 2975
     }
   }
 }

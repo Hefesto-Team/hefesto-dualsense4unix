@@ -5,7 +5,7 @@
       "data": "2026-10-17",
       "nota": "5973 linhas de comentário e 45686 de docstring, em src/hefesto_dualsense4unix/",
       "o_que_conta": "linhas de comentário e de docstring em src/hefesto_dualsense4unix/",
-      "piso": 53159,
+      "piso": 53232,
       "por_item": {
         "app/actions/carona_do_wrapper.py": 174,
         "app/actions/config/secao_controles.py": 83,
@@ -34,7 +34,7 @@
         "app/tray.py": 46,
         "broker/hidraw_broker.py": 517,
         "cli/app.py": 119,
-        "cli/cmd_doctor.py": 53,
+        "cli/cmd_doctor.py": 54,
         "cli/cmd_lightbar_reset.py": 64,
         "cli/cmd_mic.py": 68,
         "cli/cmd_profile.py": 48,
@@ -115,7 +115,7 @@
         "integrations/canal_do_microfone.py": 93,
         "integrations/canal_sem_imu.py": 104,
         "integrations/censo_do_barramento.py": 209,
-        "integrations/censo_dos_lancadores.py": 248,
+        "integrations/censo_dos_lancadores.py": 281,
         "integrations/central_do_radio.py": 330,
         "integrations/conexao_zumbi.py": 113,
         "integrations/contratos_de_fora.py": 97,
@@ -153,15 +153,15 @@
         "integrations/ponte_escada.py": 205,
         "integrations/ponte_tentativa.py": 223,
         "integrations/porta_do_som.py": 95,
-        "integrations/prontuario_dos_jogos.py": 164,
+        "integrations/prontuario_dos_jogos.py": 165,
         "integrations/proton_pin.py": 216,
-        "integrations/qualificar_proton.py": 40,
+        "integrations/qualificar_proton.py": 60,
         "integrations/quem_o_jogo_le.py": 124,
         "integrations/quem_ouve_o_microfone.py": 104,
         "integrations/radio_da_mesa.py": 270,
-        "integrations/receitas_de_ambiente.py": 54,
+        "integrations/receitas_de_ambiente.py": 68,
         "integrations/receptor_sem_fio.py": 144,
-        "integrations/reposicao_dos_lancadores.py": 52,
+        "integrations/reposicao_dos_lancadores.py": 54,
         "integrations/retrato_do_som.py": 134,
         "integrations/sentinela_do_wrapper.py": 159,
         "integrations/sinal_da_barra.py": 191,
@@ -196,7 +196,7 @@
         "interface/conexoes.py": 117,
         "interface/controles_vivos.py": 145,
         "interface/dados_do_controle.py": 40,
-        "interface/desenho_dos_lancadores.py": 1029,
+        "interface/desenho_dos_lancadores.py": 1031,
         "interface/frases_que_ela_baniu.py": 94,
         "interface/hefesto_vivo.py": 480,
         "interface/janela.py": 108,
@@ -250,7 +250,7 @@
         "utils/single_instance.py": 50,
         "utils/xdg_paths.py": 65
       },
-      "razao": "texto-em-src: +48 linhas (53111 -> 53159), pagas por Origem: D-1710-A-SAIDA-DE-EMERGENCIA-DO-PS-AVISA-NA-LINHA, D-1710-O-PS-COM-OUTRO-BOTAO-NAO-E-PS-SOZINHO, D-1710-O-TECLADO-NA-TELA-AUSENTE-RESPONDE-NA-LINHA, D-1710-OS-ANALOGICOS-OFERECEM-TECLAS-SO-NA-LINHA-DELES; registrado no fecho, topo 6a91340df1df",
+      "razao": "texto-em-src: +73 linhas (53159 -> 53232), pagas por Origem: D-1710-O-DOCTOR-MOSTRA-O-PROTON-FIXADO-E-O-DE-CADA-JOGO, D-1710-O-JOGO-GDK-SEM-O-AJUDANTE-AVISA-QUE-ABRE-SEM-CONTA, D-1710-O-VIGIA-DO-RADIO-SO-TOCA-CONTROLE, D-1710-OS-LANCADORES-DE-FABRICA-SAO-MODIFICACOES-OFICIAIS; registrado no fecho, topo 2bf4242e47e3",
       "subidas": [
         {
           "data": "2026-10-13",
@@ -311,6 +311,12 @@
           "de": 53111,
           "para": 53159,
           "razao": "texto-em-src: +48 linhas (53111 -> 53159), pagas por Origem: D-1710-A-SAIDA-DE-EMERGENCIA-DO-PS-AVISA-NA-LINHA, D-1710-O-PS-COM-OUTRO-BOTAO-NAO-E-PS-SOZINHO, D-1710-O-TECLADO-NA-TELA-AUSENTE-RESPONDE-NA-LINHA, D-1710-OS-ANALOGICOS-OFERECEM-TECLAS-SO-NA-LINHA-DELES; registrado no fecho, topo 6a91340df1df"
+        },
+        {
+          "data": "2026-10-17",
+          "de": 53159,
+          "para": 53232,
+          "razao": "texto-em-src: +73 linhas (53159 -> 53232), pagas por Origem: D-1710-O-DOCTOR-MOSTRA-O-PROTON-FIXADO-E-O-DE-CADA-JOGO, D-1710-O-JOGO-GDK-SEM-O-AJUDANTE-AVISA-QUE-ABRE-SEM-CONTA, D-1710-O-VIGIA-DO-RADIO-SO-TOCA-CONTROLE, D-1710-OS-LANCADORES-DE-FABRICA-SAO-MODIFICACOES-OFICIAIS; registrado no fecho, topo 2bf4242e47e3"
         }
       ],
       "unidade": "linhas",
