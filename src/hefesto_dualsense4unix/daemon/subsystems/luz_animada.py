@@ -272,13 +272,25 @@ def escritor_de_producao(
 
 
 def perfil_ativo(daemon: Any) -> Profile | None:
-    """O perfil ativo como vale neste computador, lido do arquivo (sem semear nem varrer)."""
+    """O perfil ativo como vale neste computador, lido do arquivo (sem semear nem varrer).
+
+    Sem perfil ativo vale o computador por baixo de um perfil vazio, o mesmo ``perfil_que_vale``
+    que a aba Iluminação mostra e grava ali (``onde_grava``) e que o tato lê
+    (D-1610-O-TATO-LE-O-COMPUTADOR-SEM-PERFIL-ATIVO). O computador que nunca escolheu efeito dá
+    um perfil sem efeito: a barra segue fixa.
+    """
     nome = getattr(getattr(daemon, "store", None), "active_profile", None)
-    if not isinstance(nome, str) or not nome:
-        return None
     try:
+        from hefesto_dualsense4unix.profiles.o_padrao_do_computador import (
+            o_computador,
+            o_que_vale,
+            perfil_que_vale,
+            perfil_vazio,
+        )
+
+        if not isinstance(nome, str) or not nome:
+            return perfil_que_vale(perfil_vazio(), o_computador())
         from hefesto_dualsense4unix.profiles.loader import perfil_em_disco
-        from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_que_vale
 
         perfil = perfil_em_disco(nome)
         return None if perfil is None else o_que_vale(perfil)
