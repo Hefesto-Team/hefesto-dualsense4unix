@@ -239,8 +239,33 @@ def test_o_recibo_e_o_pino_desta_casa_dao_ok_no_doctor(tmp_path: Path) -> None:
     nome = pp.parse_pin_conf(conf.read_text(encoding="utf-8"))["name"]
     compat = tmp_path / ".steam" / "steam" / "compatibilitytools.d"
     compat.mkdir(parents=True)
+    (compat.parent / "steamapps").mkdir()
     _proton_de_mentira(compat, nome)
     linhas = qp.linhas_do_doctor_desta_maquina(home=tmp_path)
     assert linhas[0][0] == qp.TAG_OK, linhas
     assert nome in linhas[0][1]
     assert qp.TAG_WARN not in _tags(linhas), linhas
+
+
+def test_sem_steam_na_maquina_o_doctor_nao_avisa_o_proton_fora_do_disco(
+    tmp_path: Path,
+) -> None:
+    """Numa casa sem Steam, o fixado fora do disco é informação, e o pino ainda confere."""
+    linhas = qp.linhas_do_doctor_desta_maquina(home=tmp_path)
+    assert qp.TAG_WARN not in _tags(linhas), linhas
+    assert any(t == qp.TAG_INFO and "nenhuma Steam" in x for t, x in linhas), linhas
+    assert any(t == qp.TAG_OK and "recibo «passou»" in x for t, x in linhas), linhas
+
+
+def test_sem_steam_o_pino_que_diverge_do_recibo_ainda_avisa(tmp_path: Path) -> None:
+    """Sem Steam pula só o disco e os jogos: o pino contra o recibo continua régua."""
+    linhas = qp.linhas_do_doctor(
+        recibo=qp.ler_recibo(RECIBO_PASSOU),
+        pino={"name": FIXADA, "sha256": "b" * 64},
+        compat_dir=tmp_path / "nao-existe",
+        mapa_dos_jogos={"10": "GE-Proton9-1"},
+        nome_do_jogo=lambda appid: f"Jogo {appid}",
+        sem_steam="nenhuma Steam encontrada nesta máquina",
+    )
+    assert _tags(linhas).count(qp.TAG_WARN) == 1, linhas
+    assert not any("Jogo 10" in x for _, x in linhas), linhas

@@ -396,13 +396,16 @@ def linhas_do_doctor(
     compat_dir: Path,
     mapa_dos_jogos: dict[str, str],
     nome_do_jogo: Callable[[str], str],
+    sem_steam: str | None = None,
 ) -> list[tuple[str, str]]:
     """As linhas do `hefesto doctor` sobre o Proton fixado: ``(tag, texto)``.
 
     Pura (quem lê arquivos é `linhas_do_doctor_desta_maquina`). Diz se o Proton
     fixado tem o recibo «passou» e está no disco, o que o recibo diz de cada
     Proton instalado, e em que Proton roda cada jogo que a Steam mapeou, com o
-    aviso do jogo cujo Proton de terceiros sumiu do disco.
+    aviso do jogo cujo Proton de terceiros sumiu do disco. Com ``sem_steam`` (o
+    motivo de não haver Steam nativa), confere só o pino contra o recibo: sem
+    Steam não há disco nem jogo a conferir, e o aviso seria falso.
     """
     from hefesto_dualsense4unix.integrations.proton_pin import (
         nomes_internos,
@@ -419,7 +422,9 @@ def linhas_do_doctor(
         )
     else:
         nome = pino.get("name", "")
-        if not pinned_proton_installed(nome, compat_dir):
+        if sem_steam is not None:
+            linhas.append((TAG_INFO, f"{sem_steam}: o {nome} não tem onde ser conferido no disco"))
+        elif not pinned_proton_installed(nome, compat_dir):
             linhas.append((TAG_WARN, f"o Proton fixado ({nome}) não está em {compat_dir}"))
         if recibo is None:
             linhas.append(
@@ -436,6 +441,10 @@ def linhas_do_doctor(
                 linhas.append(
                     (TAG_OK, f"o Proton fixado ({nome}) tem o recibo «passou» com o mesmo sha256")
                 )
+    if sem_steam is not None:
+        if pino is None:
+            linhas.append((TAG_INFO, sem_steam))
+        return linhas
     if recibo is not None:
         linhas.extend(recibo_das_instaladas(compat_dir, recibo))
 
@@ -493,6 +502,7 @@ def linhas_do_doctor_desta_maquina(home: Path | None = None) -> list[tuple[str, 
         compat_dir=pp.default_compat_dir(home),
         mapa_dos_jogos=mapa,
         nome_do_jogo=lambda appid: nome_do_appid(appid, home) or f"appid {appid}",
+        sem_steam=pp.steam_root_ou_recusa(home).motivo,
     )
 
 
