@@ -60,6 +60,7 @@ def test_a_forca_da_vibracao_vai_de_0_a_200_sem_degraus(d05: str) -> None:
 
 
 def test_o_gatilho_ganha_o_trilho_de_0_a_200_por_controle(d03: str) -> None:
+    # D-1810-O-GATILHO-E-A-VIBRACAO-TEM-O-TRILHO-DE-0-A-200
     from hefesto_dualsense4unix.interface import aba03, aba05
 
     trilhos = _trilhos(d03, f'data-campo="{aba03.CAMPO_DA_INTENSIDADE}"')
