@@ -475,6 +475,7 @@ def _rodar(
 
 @_precisa
 def test_a_peca_recusa_a_fila_que_nao_criou_sem_cair(_bancada: tuple[Path, Path]) -> None:
+    # D-1710-A-PECA-GDK-SO-ACEITA-A-FILA-QUE-CRIOU
     linhas, log = _rodar(_bancada, _FONTE.read_text(encoding="utf-8"), "cura")
     caiu = [ln for ln in linhas if "caiu" in ln]
     assert not caiu, f"a peça caiu: {caiu}"
