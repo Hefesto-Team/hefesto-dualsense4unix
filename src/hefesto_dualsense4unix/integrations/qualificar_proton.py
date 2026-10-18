@@ -64,7 +64,6 @@ RODADA_HERDADA = "herdada"
 #: Onde o recibo e o pino moram em QUALQUER instalação (o `share/` do Hefesto ou o
 #: checkout): o mesmo resolvedor dos scripts que o doctor chama.
 CAMINHO_DO_RECIBO = "docs/data/proton-qualificacao.csv"
-CAMINHO_DO_PINO = "assets/proton-pin.conf"
 
 TAG_OK = "[ OK ]"
 TAG_INFO = "[INFO]"
@@ -476,7 +475,7 @@ def linhas_do_doctor_desta_maquina(home: Path | None = None) -> list[tuple[str, 
             recibo = ler_recibo(caminho.read_text(encoding="utf-8"))
         except (OSError, ValueError) as erro:
             return [(TAG_WARN, f"o recibo dos Protons ({caminho}) não se lê: {erro}")]
-    conf = encontrar_arquivo_do_repo(CAMINHO_DO_PINO) or pp.default_pin_conf_path()
+    conf = encontrar_arquivo_do_repo("assets/proton-pin.conf") or pp.default_pin_conf_path()
     pino: dict[str, str] | None = None
     if conf is not None:
         try:
