@@ -3,8 +3,8 @@ controle mostra.
 
 MORDIDAS: pintar o pisca com o controle errado, esquecer a troca no valor da linha, tirar o
 endereço de um lado, soltar a peça do desenho quando a linha pisca, tirar o `@media` que encolhe
-o chip na vista estreita (reprova sob a DejaVu) ou impor `.chip{width:40px}` (o `vaza` pelo Range
-reprova nas três vistas) reprovam."""
+o chip na vista estreita (reprova sob a DejaVu) ou impor `.chip{width:40px}` (o `vaza` reprova
+nas três vistas, e o Range sozinho também) reprovam."""
 from __future__ import annotations
 
 import csv
@@ -275,8 +275,8 @@ CHIPS = r"""
       document.querySelectorAll('[data-bloco="controles-do-mapa"] .chip')).map(b => {
     const r = b.getBoundingClientRect(), bloco = b.closest('.mc-chips').getBoundingClientRect();
     const caixa = document.querySelector('.cx').getBoundingClientRect();
-    // o <button> não reporta o transbordo de si no scrollWidth: o texto se mede pelo Range do
-    // conteúdo, que tem de caber dentro da borda do chip
+    // o texto se mede também pelo Range do conteúdo, que tem de caber dentro da borda do chip:
+    // é a caixa do próprio texto, e não o que o <button> diz da rolagem dele
     const rg = document.createRange(); rg.selectNodeContents(b);
     const t = rg.getBoundingClientRect();
     return {texto: (b.textContent || '').trim(),
