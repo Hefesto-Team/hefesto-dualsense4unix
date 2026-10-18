@@ -253,14 +253,14 @@
       "data": "2026-10-17",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1143907,
+      "piso": 1143972,
       "por_item": {
-        "docs": 119545,
+        "docs": 119551,
         "scripts": 115521,
-        "src": 308120,
-        "tests": 600721
+        "src": 308122,
+        "tests": 600778
       },
-      "razao": "tamanho: +1607 linhas (1142300 -> 1143907), pagas por Origem: D-1710-O-INSTALL-NAO-CHAMA-O-APT-COM-PACOTE-A-MEIO; registrado no fecho, topo 5adf7d8e5791",
+      "razao": "tamanho: +65 linhas (1143907 -> 1143972), pagas por Origem: D-A-REGUA-E-QUALQUER-MESA-NAO-A-DELA; registrado no fecho, topo 387285e26f76",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -585,6 +585,12 @@
           "de": 1142300,
           "para": 1143907,
           "razao": "tamanho: +1607 linhas (1142300 -> 1143907), pagas por Origem: D-1710-O-INSTALL-NAO-CHAMA-O-APT-COM-PACOTE-A-MEIO; registrado no fecho, topo 5adf7d8e5791"
+        },
+        {
+          "data": "2026-10-17",
+          "de": 1143907,
+          "para": 1143972,
+          "razao": "tamanho: +65 linhas (1143907 -> 1143972), pagas por Origem: D-A-REGUA-E-QUALQUER-MESA-NAO-A-DELA; registrado no fecho, topo 387285e26f76"
         }
       ],
       "unidade": "linhas",
