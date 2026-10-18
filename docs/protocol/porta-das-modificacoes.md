@@ -88,7 +88,7 @@ Os demais são do jogo e do perfil, e cada um é uma permissão à parte:
   brinquedo, e quem assina traduz cada função para o aparelho dele. `origem` é o `id` da extensão que publicou
   (o serviço o põe; o que a extensão mandar em `origem` ou `t` cai) e `t` é o `time.monotonic()` do serviço.
   Quem publica nunca recebe o próprio evento. Quando a extensão que publicou sai (parada, morta ou desligada) com
-  alguma função acima de zero, o serviço publica em nome dela um `jogo.brinquedo` com as nove funções em 0, e
+  alguma função acima de zero, o serviço publica em nome da extensão um `jogo.brinquedo` com as nove funções em 0, e
   quem assina nunca fica com a última força presa. Só existe publicado por extensão: o serviço não o origina;
 - `acessorios.gesto` (`ler:acessorios.gesto`) entrega `nome: "acessorios.gesto"`: o gesto do PS que comanda os
   acessórios, `{uniq, jogador, gesto, valor}`. `gesto` é `sobe`, `desce`, `para`, `perfil_seguinte`,
@@ -164,7 +164,7 @@ código da extensão na tela. Cada `opcoes[]` tem `id`, `rotulo`, `tipo` e, opci
   `padrao` é a lista vazia (nenhum jogo marcado) e o valor é a lista das chaves marcadas.
 - **`grupo`**: o nome (até 30 letras) da aba interna em que a opção mora. Com dois ou mais grupos a janela
   desenha uma aba por grupo, na ordem em que aparecem; a opção sem grupo vai à primeira aba; com um grupo
-  só, não há aba. Ao mudar uma opção a janela reabre na aba dela.
+  só, não há aba. Ao mudar uma opção a janela reabre na aba da opção.
 - **onde ficam os valores**: a tela grava cada opção em `<dados>/<id>/opcoes.json`, um objeto `{id: valor}`, em
   `0600`, depois de validar contra o manifesto. A extensão lê o mesmo arquivo na pasta de dados
   (`HEFESTO_MOD_DADOS`). Valor ausente, ou que o manifesto não aceita mais, vale o `padrao` (sem `padrao`: a
