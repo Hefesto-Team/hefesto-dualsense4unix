@@ -6,12 +6,12 @@ Duas curas, cada uma com a sua régua:
 
 * a lista (`por_grupo`, a fonte única que a aba 06 desenha) não oferece o token a linha de
   botão, que o recusaria depois («guardei, e X fica sem quem o atenda»);
-* o laço do desktop (`dispatch_mouse`, sem jogo aberto) emite a tecla pela MESMA função que a
-  `TabelaNoJogo` usa com o jogo (`acoes_de_botao.direcoes_apertadas`), e a tecla é a união dos
-  controles.
+* o laço do desktop (`teclas_do_analogico_no_desktop`, sem jogo aberto) emite a tecla pela
+  MESMA função que a `TabelaNoJogo` usa com o jogo (`acoes_de_botao.direcoes_apertadas`), e a
+  tecla é a união dos controles.
 
 MORDIDAS (arrancadas e devolvidas): devolver o token à lista geral reprova a primeira; tirar a
-chamada de `teclas_do_analogico_no_desktop` do `dispatch_mouse` reprova as do desktop; tirar o
+chamada de `teclas_do_analogico_no_desktop` do laço reprova as do desktop; tirar o
 `soltar_as_teclas_do_analogico` do `soltar_o_cursor` ou da troca de perfil deixa a tecla presa
 e reprova as de soltura; tirar a condição do `_keyboard_device` reprova a do «Desativado»; ler
 pelo hub quem o co-op numera reprova a do vpad que renasce.
@@ -115,7 +115,7 @@ def test_a_tecla_e_a_uniao_dos_controles() -> None:
 
 
 class _MouseDoDesktop:
-    """O `_mouse_device` do desktop: só o que o `dispatch_mouse` e a soltura tocam."""
+    """O `_mouse_device` do desktop: só o que a soltura toca."""
 
     def __init__(self) -> None:
         self.movidos = 0
@@ -160,7 +160,7 @@ def _tecla(mod: _UinputPorDevice) -> list[tuple[str, int]]:
 
 def _tique(daemon: Any, **eixos: int) -> None:
     base = {"raw_lx": CENTRO, "raw_ly": CENTRO, "raw_rx": CENTRO, "raw_ry": CENTRO}
-    sub_mouse.dispatch_mouse(daemon, _estado(**{**base, **eixos}), frozenset())
+    sub_mouse.teclas_do_analogico_no_desktop(daemon, _estado(**{**base, **eixos}))
 
 
 def test_o_analogico_em_wasd_digita_no_desktop_sem_jogo(desktop: Any) -> None:
@@ -248,15 +248,18 @@ def test_a_emulacao_suspensa_solta_a_tecla(desktop: Any) -> None:
     assert ("KEY_D", 0) in _tecla(mod), "a suspensão deixou a tecla presa"
 
 
-def test_parar_a_emulacao_e_a_parada_do_daemon_soltam_a_tecla(desktop: Any) -> None:
+def test_a_parada_do_daemon_fecha_o_teclado_do_analogico(desktop: Any) -> None:
+    """Parar a EMULAÇÃO DE MOUSE não solta a tecla (ela é do analógico, e o laço a atende sem o
+    mouse); fechar o atendente, na troca de perfil e na parada do daemon, solta e destrói."""
     daemon, mod = desktop
     daemon.config.mouse_emulation_enabled = True
     sub_mouse.trocar_a_tabela_no_jogo(daemon, _perfil(**{acoes.EIXO_ESQUERDO: acoes.TOKEN_WASD}))
     _tique(daemon, raw_lx=250)
     sub_mouse.stop_mouse_emulation(daemon, persist=False)
-    assert ("KEY_D", 0) in _tecla(mod), "parar a emulação deixou a tecla presa"
+    assert ("KEY_D", 0) not in _tecla(mod), "parar o mouse soltou a tecla do analógico"
     _tique(daemon, raw_lx=250)  # o atendente segue vivo até o perfil trocar ou o daemon parar
     sub_mouse.fechar_as_teclas_do_analogico(daemon)
+    assert ("KEY_D", 0) in _tecla(mod), "a parada do daemon deixou a tecla presa"
     assert daemon._teclas_do_analogico is None
 
 

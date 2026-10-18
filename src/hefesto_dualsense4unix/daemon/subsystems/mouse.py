@@ -55,7 +55,6 @@ def stop_mouse_emulation(daemon: DaemonProtocol, *, persist: bool = True) -> Non
     """Para e descarta o dispositivo virtual. Idempotente."""
     if daemon._mouse_device is None:
         return
-    soltar_as_teclas_do_analogico(daemon)
     with contextlib.suppress(Exception):
         daemon._mouse_device.stop()
     daemon._mouse_device = None
@@ -79,12 +78,17 @@ def _entregar_o_ajuste(daemon: Any, device: Any) -> None:
         logger.warning("cursor_ajuste_falhou", err=str(exc))
 
 
-def soltar_o_cursor(daemon: Any) -> None:
-    """Solta o clique travado e as teclas do analógico, no desktop e na tabela, de quem perdeu
-    o controle, suspendeu a emulação ou saiu do jogo. Nunca levanta."""
+def soltar_o_mouse(daemon: Any) -> None:
+    """Solta o clique travado do mouse virtual, no desktop e na tabela. Nunca levanta."""
     tabela = getattr(daemon, "_tabela_no_jogo", None)
     for device in (getattr(daemon, "_mouse_device", None), getattr(tabela, "_mouse", None)):
         _soltar_o_travado(device)
+
+
+def soltar_o_cursor(daemon: Any) -> None:
+    """Solta o clique travado e as teclas do analógico, no desktop e na tabela, de quem perdeu
+    o controle, suspendeu a emulação ou saiu do jogo. Nunca levanta."""
+    soltar_o_mouse(daemon)
     soltar_as_teclas_do_analogico(daemon)
 
 
@@ -132,7 +136,6 @@ def dispatch_mouse(daemon: DaemonProtocol, state: Any, buttons_pressed: frozense
             logger.warning("touchpad_move_dispatch_failed", err=str(exc))
     # A-MIRA-NA-NAVEGACAO-01: a Mira de cada controle, no cursor.
     mover_o_cursor_pelo_giro(daemon, buttons_pressed)
-    teclas_do_analogico_no_desktop(daemon, state)  # «Teclas WASD» e «Setas», sem jogo aberto
 
 
 def botoes_com_os_gatilhos(botoes: frozenset[str], l2: int, r2: int) -> frozenset[str]:
@@ -379,10 +382,11 @@ def eixos_de_cada_controle(
 class TeclasDoAnalogicoNoDesktop:
     """O analógico em «Teclas WASD» ou «Setas» agindo no DESKTOP, sem o jogo aberto.
 
-    Com o jogo aberto quem age é a :class:`TabelaNoJogo`; fora dele o `dispatch_mouse` chama
-    esta, pela MESMA tradução (`acoes_de_botao.direcoes_apertadas`), num teclado PRIVADO.
-    A tecla é a união dos controles; cursor e rolagem seguem do primário. Nasce do perfil
-    EFETIVO (`trocar_a_tabela_no_jogo`); trocar de perfil ou fechar solta tudo.
+    Com o jogo aberto quem age é a :class:`TabelaNoJogo`; fora dele o laço do daemon chama
+    esta (com a emulação de mouse ligada ou não), pela MESMA tradução
+    (`acoes_de_botao.direcoes_apertadas`), num teclado PRIVADO. A tecla é a união dos controles;
+    cursor e rolagem seguem do primário. Nasce do perfil EFETIVO
+    (`trocar_a_tabela_no_jogo`); trocar de perfil ou fechar solta tudo.
     """
 
     def __init__(self, button_actions: Any, key_bindings: Any) -> None:
@@ -656,6 +660,7 @@ __all__ = [
     "fechar_as_teclas_do_analogico",
     "soltar_as_teclas_do_analogico",
     "soltar_o_cursor",
+    "soltar_o_mouse",
     "start_mouse_emulation",
     "stop_mouse_emulation",
 ]

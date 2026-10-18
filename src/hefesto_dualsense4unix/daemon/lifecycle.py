@@ -4511,12 +4511,25 @@ class Daemon:
                     from hefesto_dualsense4unix.daemon.subsystems.mouse import (
                         discard_touchpad_motion,
                         soltar_o_cursor,
+                        soltar_o_mouse,
                     )
 
-                    # A emulação suspensa não despacha o mouse: o clique travado se solta.
-                    soltar_o_cursor(self)
+                    # Sem mouse despachando o clique travado se solta. A emulação SUSPENSA
+                    # solta também a tecla do analógico; a desligada deixa a tecla a ele.
+                    if emu_active:
+                        soltar_o_mouse(self)
+                    else:
+                        soltar_o_cursor(self)
                     if self._touchpad_reader is not None:
                         discard_touchpad_motion(self)
+
+                if emu_active:
+                    from hefesto_dualsense4unix.daemon.subsystems.mouse import (
+                        teclas_do_analogico_no_desktop,
+                    )
+
+                    # «Teclas WASD» e «Setas» do analógico: da escolha dele, não da emulação.
+                    teclas_do_analogico_no_desktop(self, state)
 
                 if self._keyboard_device is not None and emu_active:
                     if self._teclado_so_no_jogo:
