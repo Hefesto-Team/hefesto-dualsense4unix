@@ -87,6 +87,10 @@ PRELUDO = "\n".join(
         _extrai_linha(r"^_OS_RELEASE=.*$"),
         _extrai_funcao("_familia_pacotes"),
         _extrai_funcao("_pkg_nome"),
+        _extrai_funcao("_pacotes_a_meio"),
+        _extrai_funcao("_quem_segura_a_trava"),
+        _extrai_funcao("_trava_ocupada"),
+        _extrai_funcao("_esperar_trava"),
         _extrai_funcao("_run_pkg_quieto"),
         _extrai_funcao("run_apt"),
         _extrai_funcao("run_pkg"),
@@ -106,7 +110,9 @@ PRELUDO_DRIVER = "\n".join(
 )
 
 
-def _roda(corpo: str, *, preludo: str = PRELUDO, env: dict[str, str] | None = None):
+def _roda(
+    corpo: str, *, preludo: str = PRELUDO, env: dict[str, str] | None = None
+) -> subprocess.CompletedProcess[str]:
     ambiente = dict(os.environ)
     ambiente.pop("HEFESTO_FAMILIA_PACOTES", None)
     ambiente.pop("HEFESTO_OS_RELEASE", None)
@@ -121,9 +127,16 @@ def _roda(corpo: str, *, preludo: str = PRELUDO, env: dict[str, str] | None = No
 
 
 def _bin_falso(tmp_path: Path) -> Path:
-    """Um ``sudo`` que só ANOTA o que teria rodado. Nada é instalado."""
+    """Um ``sudo`` que só ANOTA o que teria rodado. Nada é instalado.
+
+    O ``dpkg-query`` de mentira responde «tudo em ``ii``»: o teste não pode
+    depender do estado do dpkg da máquina que o roda.
+    """
     binario = tmp_path / "bin"
     binario.mkdir(exist_ok=True)
+    dpkg = binario / "dpkg-query"
+    dpkg.write_text("#!/usr/bin/env bash\nprintf 'ii  bash\\n'\n", encoding="utf-8")
+    dpkg.chmod(0o755)
     sudo = binario / "sudo"
     sudo.write_text(
         '#!/usr/bin/env bash\nprintf "%s\\n" "$*" >> "${LOG_PKG}"\nexit 0\n',
@@ -218,7 +231,11 @@ def test_nenhum_gerenciador_sem_medicao_no_codigo() -> None:
 @pytest.mark.parametrize(
     ("familia", "comando"),
     [
-        ("apt", "apt-get install -y -qq libhidapi-hidraw0 librsvg2-common"),
+        (
+            "apt",
+            "apt-get install -y -qq -o DPkg::Lock::Timeout=120 "
+            "libhidapi-hidraw0 librsvg2-common",
+        ),
         ("dnf", "dnf install -y hidapi librsvg2"),
         ("pacman", "pacman -S --noconfirm --needed hidapi librsvg"),
     ],

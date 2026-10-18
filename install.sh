@@ -744,9 +744,83 @@ _run_pkg_quieto() {
     rm -f "$_tmp"
 }
 
+# O INSTALL NÃO TROPEÇA NO PACOTE QUEBRADO DO SISTEMA (17/10/2026).
+# Medido na bancada: com um kernel novo baixado e sem configurar (`iF`/`iU`), TODO
+# `apt-get install` tenta configurá-lo de novo, o DKMS de um módulo que não é
+# nosso falha de novo e o apt sai com 100. O install pagava minutos de
+# compilação por nada, dizia «não consegui» de um pacote que nada tinha de
+# errado e mexia no kernel que ninguém pediu. A pergunta é feita ANTES, ao
+# banco do dpkg, sem root; com pacote a meio o install não chama o apt.
+#
+# `${db:Status-Abbrev}` tem três letras: o desejado, o estado e o erro. Quebrado é
+# o estado `H` (half-installed), `U` (unpacked) ou `F` (half-configured), ou o
+# erro `R` (reinstalação exigida). `hi` (retido), `rc` e `un` não são.
+# Imprime os nomes numa linha só; nada impresso é «sem pacote a meio».
+_pacotes_a_meio() {
+    command -v dpkg-query >/dev/null 2>&1 || return 0
+    dpkg-query -W -f='${db:Status-Abbrev} ${Package}\n' 2>/dev/null \
+        | awk 'substr($1, 2, 1) ~ /[HUF]/ || substr($1, 3, 1) == "R" { printf "%s%s", (n++ ? " " : ""), $2 }
+               END { if (n) printf "\n" }' || true
+}
+
+# Quem segura uma trava (`fuser`, quando houver): «nome (pid N), …». Sem root o
+# `fuser` só enxerga o que é da própria pessoa, então vazio não prova trava livre.
+_quem_segura_a_trava() {
+    command -v fuser >/dev/null 2>&1 || return 0
+    local _pid _nome _quem=""
+    for _pid in $(fuser "$1" 2>/dev/null || true); do
+        [[ "${_pid}" =~ ^[0-9]+$ ]] || continue
+        _nome="$(ps -o comm= -p "${_pid}" 2>/dev/null || true)"
+        _quem="${_quem}${_quem:+, }${_nome:-?} (pid ${_pid})"
+    done
+    [[ -z "${_quem}" ]] || printf '%s\n' "${_quem}"
+    return 0
+}
+
+# A trava está ocupada agora? `existe`: o arquivo só existe enquanto alguém
+# trabalha (o `db.lck` do pacman). `flock`: o arquivo é permanente e o que vale
+# é o bloqueio (o `.rpm.lock` do dnf); sem `fuser` nem `flock` não há como saber
+# e a resposta é «livre» (o próprio dnf espera o rpm).
+_trava_ocupada() {
+    local _arq="$1" _modo="$2"
+    [[ -e "${_arq}" ]] || return 1
+    [[ "${_modo}" == "existe" ]] && return 0
+    if command -v fuser >/dev/null 2>&1 && fuser -s "${_arq}" 2>/dev/null; then
+        return 0
+    fi
+    if command -v flock >/dev/null 2>&1 && ! flock -n "${_arq}" true 2>/dev/null; then
+        return 0
+    fi
+    return 1
+}
+
+# Espera a trava do gerente de pacotes sumir, com teto. rc 1 passado o teto.
+_esperar_trava() {
+    local _teto="${HEFESTO_TRAVA_TETO:-120}" _seg=0 _quem
+    _trava_ocupada "$@" || return 0
+    printf '      outro gerenciador de pacotes está em uso — esperando até %ss...\n' "${_teto}"
+    while _trava_ocupada "$@"; do
+        if (( _seg >= _teto )); then
+            _quem="$(_quem_segura_a_trava "$1")"
+            warn "o gerenciador de pacotes seguiu ocupado por ${_teto}s (trava ${1}${_quem:+, segurada por ${_quem}}) — não instalei"
+            return 1
+        fi
+        sleep 1
+        _seg=$((_seg + 1))
+    done
+}
+
 run_apt() {
-    # O braço apt do run_pkg. Recebe nome de pacote APT, não canônico.
-    _run_pkg_quieto sudo apt-get install -y -qq "$@"
+    # O braço apt do run_pkg. Recebe nome de pacote APT, não canônico. O dpkg
+    # ocupado (um `unattended-upgrades` rodando) se espera: sem o `Lock::Timeout`
+    # o apt sai na hora com «Could not get lock».
+    local _quem
+    if ! _run_pkg_quieto sudo apt-get install -y -qq \
+            -o "DPkg::Lock::Timeout=${HEFESTO_TRAVA_TETO:-120}" "$@"; then
+        _quem="$(_quem_segura_a_trava /var/lib/dpkg/lock-frontend)"
+        [[ -z "${_quem}" ]] || warn "o dpkg está ocupado por ${_quem}"
+        return 1
+    fi
 }
 
 # Instala uma lista de nomes CANÔNICOS na família desta máquina.
@@ -776,6 +850,29 @@ run_pkg() {
         for _parte in ${_nome}; do _nomes+=("${_parte}"); done
     done
     (( ${#_nomes[@]} )) || return 1
+    # Pacote a meio no sistema: o apt tentaria reconfigurá-lo e falharia de
+    # novo. O install não chama o apt, diz o que é do sistema e devolve 1, o
+    # «não consegui» que cada chamador já trata. O ensaio devolve 0 como no
+    # ramo imutável, mas não finge que instalaria.
+    if [[ "${_familia}" == "apt" ]]; then
+        local _meio
+        _meio="$(_pacotes_a_meio)"
+        if [[ -n "${_meio}" ]]; then
+            if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+                _nao_faria "não instalaria ${_nomes[*]}: o sistema tem pacote a meio (${_meio})"
+                return 0
+            fi
+            if [[ "${_PACOTE_A_MEIO_DITO:-0}" -eq 0 ]]; then
+                _PACOTE_A_MEIO_DITO=1
+                warn "o sistema tem pacote a meio de uma atualização (${_meio}) — isso é do sistema, não do Hefesto; não chamei o apt, que tentaria reconfigurá-lo e falharia de novo"
+                printf '      para consertar o sistema:   sudo apt-get install -f   (ou: sudo dpkg --configure -a)\n'
+            else
+                warn "o sistema segue com pacote a meio — não instalei ${_nomes[*]}"
+            fi
+            printf '      depois, para instalar o que o Hefesto pede:   %s\n' "$(comando_manual_pkg "$@")"
+            return 1
+        fi
+    fi
     # O ensaio devolve 0 de propósito: o plano tem de mostrar o caminho em que a
     # instalação DÁ CERTO, senão cada `run_pkg` falso arrastaria o resto do
     # roteiro para o ramo de erro e o plano descreveria uma instalação que
@@ -790,8 +887,12 @@ run_pkg() {
     fi
     case "${_familia}" in
         apt)    run_apt "${_nomes[@]}" ;;
-        dnf)    _run_pkg_quieto sudo dnf install -y "${_nomes[@]}" ;;
-        pacman) _run_pkg_quieto sudo pacman -S --noconfirm --needed "${_nomes[@]}" ;;
+        dnf)
+            _esperar_trava "${HEFESTO_TRAVA_DNF:-/var/lib/rpm/.rpm.lock}" flock || return 1
+            _run_pkg_quieto sudo dnf install -y "${_nomes[@]}" ;;
+        pacman)
+            _esperar_trava "${HEFESTO_TRAVA_PACMAN:-/var/lib/pacman/db.lck}" existe || return 1
+            _run_pkg_quieto sudo pacman -S --noconfirm --needed "${_nomes[@]}" ;;
         *)      warn "sem gerenciador de pacotes conhecido — não instalei ${*}"; return 1 ;;
     esac
 }

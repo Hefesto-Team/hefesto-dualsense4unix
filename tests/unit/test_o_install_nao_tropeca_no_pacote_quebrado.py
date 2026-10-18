@@ -1,0 +1,248 @@
+"""O install não tropeça no pacote quebrado do sistema (17/10/2026).
+
+O defeito medido na bancada: com um kernel novo baixado e sem configurar
+(`iF`/`iU` no dpkg), TODO `apt-get install` tenta configurá-lo de novo, o DKMS
+de um módulo que não é do Hefesto falha de novo e o apt sai com 100. A cura é
+perguntar o estado ao dpkg ANTES, sem root, e não chamar o apt com pacote a
+meio; a trava do gerente de pacotes se espera, com teto.
+
+Tudo roda com `dpkg-query`, `apt-get`, `dnf`, `pacman` e `sudo` de mentira no
+`PATH` de um `tmp_path`: nada toca o sistema de quem roda o teste.
+"""
+
+from __future__ import annotations
+
+import os
+import shutil
+import subprocess
+import time
+from pathlib import Path
+
+import pytest
+
+from tests.unit.test_install_garante_deps_em_qualquer_familia import (
+    PRELUDO,
+    _extrai_linha,
+    _roda,
+)
+
+PRELUDO_ENSAIO = "\n".join([PRELUDO, _extrai_linha(r"^_nao_faria\(\).*$")])
+
+A_MEIO = "iF  linux-image-7.2.6-76070206-generic\niU  linux-generic\nii  bash\n"
+TUDO_INSTALADO = "ii  bash\nhi  linux-libc-dev\nrc  pacote-removido\nun  pacote-que-nao-veio\n"
+
+
+def _bancada(tmp_path: Path, *, dpkg: str = TUDO_INSTALADO, apt_rc: int = 0) -> Path:
+    """Os binários de mentira: cada um ANOTA o que recebeu em `$LOG_PKG`."""
+    binario = tmp_path / "bin"
+    binario.mkdir(exist_ok=True)
+
+    def _escreve(nome: str, corpo: str) -> None:
+        alvo = binario / nome
+        alvo.write_text("#!/usr/bin/env bash\n" + corpo, encoding="utf-8")
+        alvo.chmod(0o755)
+
+    (tmp_path / "dpkg.txt").write_text(dpkg, encoding="utf-8")
+    _escreve(
+        "dpkg-query",
+        f'printf "dpkg-query\\n" >> "${{LOG_DPKG}}"\ncat "{tmp_path}/dpkg.txt"\n',
+    )
+    _escreve("sudo", 'exec "$@"\n')
+    _escreve("apt-get", f'printf "apt-get %s\\n" "$*" >> "${{LOG_PKG}}"\nexit {apt_rc}\n')
+    _escreve("dnf", 'printf "dnf %s\\n" "$*" >> "${LOG_PKG}"\n')
+    _escreve("pacman", 'printf "pacman %s\\n" "$*" >> "${LOG_PKG}"\n')
+    return binario
+
+
+def _env(tmp_path: Path, familia: str, binario: Path, **extra: str) -> dict[str, str]:
+    return {
+        "HEFESTO_FAMILIA_PACOTES": familia,
+        "LOG_PKG": str(tmp_path / "pkg.log"),
+        "LOG_DPKG": str(tmp_path / "dpkg.log"),
+        "PATH": f"{binario}:{os.environ['PATH']}",
+        **extra,
+    }
+
+
+def _linhas(arquivo: Path) -> list[str]:
+    return arquivo.read_text(encoding="utf-8").splitlines() if arquivo.exists() else []
+
+
+def test_pacote_a_meio_o_apt_nao_e_chamado(tmp_path: Path) -> None:
+    """O caso da bancada: `iF`/`iU` no dpkg. Nenhum `apt-get` roda, e o recado diz
+    o pacote, o que é do sistema e os dois comandos."""
+    binario = _bancada(tmp_path, dpkg=A_MEIO)
+    proc = _roda(
+        "run_pkg toolchain-c || echo RC=$?",
+        env=_env(tmp_path, "apt", binario),
+    )
+    assert "RC=1" in proc.stdout, proc.stdout + proc.stderr
+    assert _linhas(tmp_path / "pkg.log") == [], "o apt foi chamado com pacote a meio"
+    assert "linux-image-7.2.6-76070206-generic" in proc.stdout
+    assert "linux-generic" in proc.stdout
+    assert "isso é do sistema, não do Hefesto" in proc.stdout
+    assert "sudo apt-get install -f" in proc.stdout
+    assert "sudo dpkg --configure -a" in proc.stdout
+    assert "sudo apt install build-essential python3-dev linux-libc-dev" in proc.stdout
+
+
+@pytest.mark.parametrize(
+    "linha",
+    ["iF  um-pacote", "iU  um-pacote", "iH  um-pacote", "iiR um-pacote"],
+)
+def test_cada_estado_quebrado_barra_o_apt(tmp_path: Path, linha: str) -> None:
+    binario = _bancada(tmp_path, dpkg=f"ii  bash\n{linha}\n")
+    proc = _roda("run_pkg hidapi || echo RC=$?", env=_env(tmp_path, "apt", binario))
+    assert "RC=1" in proc.stdout, proc.stdout + proc.stderr
+    assert "um-pacote" in proc.stdout
+    assert _linhas(tmp_path / "pkg.log") == []
+
+
+@pytest.mark.parametrize("linha", ["hi  retido", "rc  removido", "un  nunca-veio", "ii  ok"])
+def test_estado_que_nao_e_quebrado_nao_barra(tmp_path: Path, linha: str) -> None:
+    """Retido, config-files e não-instalado não são pacote a meio."""
+    binario = _bancada(tmp_path, dpkg=f"{linha}\n")
+    proc = _roda("run_pkg hidapi || echo RC=$?", env=_env(tmp_path, "apt", binario))
+    assert "RC=" not in proc.stdout, proc.stdout + proc.stderr
+    assert len(_linhas(tmp_path / "pkg.log")) == 1
+
+
+def test_tudo_em_ii_o_apt_recebe_o_timeout_e_os_nomes(tmp_path: Path) -> None:
+    binario = _bancada(tmp_path)
+    proc = _roda("run_pkg hidapi svg-loader", env=_env(tmp_path, "apt", binario))
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert _linhas(tmp_path / "pkg.log") == [
+        "apt-get install -y -qq -o DPkg::Lock::Timeout=120 libhidapi-hidraw0 librsvg2-common"
+    ]
+
+
+def test_o_recado_completo_sai_uma_vez_so(tmp_path: Path) -> None:
+    """Quatro chamadores de `run_pkg` num install: o texto longo não se repete."""
+    binario = _bancada(tmp_path, dpkg=A_MEIO)
+    proc = _roda(
+        "run_pkg hidapi || true\nrun_pkg python-venv || true\nrun_pkg wlrctl || true",
+        env=_env(tmp_path, "apt", binario),
+    )
+    assert proc.stdout.count("sudo apt-get install -f") == 1, proc.stdout
+    assert proc.stdout.count("pacote a meio") == 3, proc.stdout
+    assert "sudo apt install python3-venv" in proc.stdout
+
+
+def test_o_ensaio_diz_nao_instalaria_e_nao_chama_nada(tmp_path: Path) -> None:
+    binario = _bancada(tmp_path, dpkg=A_MEIO)
+    proc = _roda(
+        "DRY_RUN=1; run_pkg toolchain-c; echo RC=$?",
+        preludo=PRELUDO_ENSAIO,
+        env=_env(tmp_path, "apt", binario),
+    )
+    assert "RC=0" in proc.stdout, proc.stdout + proc.stderr
+    assert "não instalaria build-essential python3-dev linux-libc-dev" in proc.stdout
+    assert "o sistema tem pacote a meio" in proc.stdout
+    assert "linux-image-7.2.6-76070206-generic" in proc.stdout
+    assert "FARIA" not in proc.stdout
+    assert _linhas(tmp_path / "pkg.log") == []
+
+
+@pytest.mark.parametrize("familia", ["dnf", "pacman"])
+def test_fora_do_apt_o_dpkg_nem_e_consultado(tmp_path: Path, familia: str) -> None:
+    binario = _bancada(tmp_path, dpkg=A_MEIO)
+    livre = tmp_path / "trava-inexistente"
+    proc = _roda(
+        "run_pkg hidapi",
+        env=_env(
+            tmp_path,
+            familia,
+            binario,
+            HEFESTO_TRAVA_DNF=str(livre),
+            HEFESTO_TRAVA_PACMAN=str(livre),
+        ),
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert not (tmp_path / "dpkg.log").exists(), "o dpkg-query rodou numa família sem dpkg"
+    assert len(_linhas(tmp_path / "pkg.log")) == 1
+
+
+def test_apt_falha_com_o_dpkg_ocupado_diz_quem_segura(tmp_path: Path) -> None:
+    """Passado o `Lock::Timeout` o apt sai 100: o install diz quem segura a trava."""
+    binario = _bancada(tmp_path, apt_rc=100)
+    for nome, corpo in (("fuser", 'printf " 4242\\n"\n'), ("ps", 'printf "unattended-upgr\\n"\n')):
+        alvo = binario / nome
+        alvo.write_text("#!/usr/bin/env bash\n" + corpo, encoding="utf-8")
+        alvo.chmod(0o755)
+    proc = _roda("run_pkg hidapi || echo RC=$?", env=_env(tmp_path, "apt", binario))
+    assert "RC=1" in proc.stdout, proc.stdout + proc.stderr
+    assert "unattended-upgr (pid 4242)" in proc.stdout
+
+
+@pytest.mark.skipif(shutil.which("flock") is None, reason="sem flock não há trava de rpm a segurar")
+def test_dnf_espera_a_trava_do_rpm_e_cai_no_nao_consegui(tmp_path: Path) -> None:
+    binario = _bancada(tmp_path)
+    trava = tmp_path / "rpm.lock"
+    trava.write_text("", encoding="utf-8")
+    dono = subprocess.Popen(
+        ["bash", "-c", f"exec 9>{trava}; flock 9; echo preso; sleep 30"],
+        stdout=subprocess.PIPE,
+        text=True,
+    )
+    try:
+        assert dono.stdout is not None
+        assert dono.stdout.readline().strip() == "preso"
+        inicio = time.monotonic()
+        proc = _roda(
+            "run_pkg hidapi || echo RC=$?",
+            env=_env(
+                tmp_path, "dnf", binario, HEFESTO_TRAVA_DNF=str(trava), HEFESTO_TRAVA_TETO="2"
+            ),
+        )
+        gasto = time.monotonic() - inicio
+    finally:
+        dono.kill()
+        dono.wait()
+    assert "RC=1" in proc.stdout, proc.stdout + proc.stderr
+    assert gasto >= 2, f"não esperou o teto ({gasto:.1f}s)"
+    assert "seguiu ocupado" in proc.stdout
+    assert _linhas(tmp_path / "pkg.log") == [], "o dnf rodou com a trava presa"
+
+
+def test_pacman_espera_o_db_lck_sumir_e_depois_instala(tmp_path: Path) -> None:
+    binario = _bancada(tmp_path)
+    trava = tmp_path / "db.lck"
+    trava.write_text("", encoding="utf-8")
+    proc = _roda(
+        f"( sleep 1; rm -f '{trava}' ) &\nrun_pkg hidapi\nwait",
+        env=_env(
+            tmp_path, "pacman", binario, HEFESTO_TRAVA_PACMAN=str(trava), HEFESTO_TRAVA_TETO="10"
+        ),
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert "esperando" in proc.stdout
+    assert _linhas(tmp_path / "pkg.log") == ["pacman -S --noconfirm --needed hidapi"]
+
+
+def test_pacman_com_trava_que_nao_sai_nao_instala(tmp_path: Path) -> None:
+    binario = _bancada(tmp_path)
+    trava = tmp_path / "db.lck"
+    trava.write_text("", encoding="utf-8")
+    proc = _roda(
+        "run_pkg hidapi || echo RC=$?",
+        env=_env(
+            tmp_path, "pacman", binario, HEFESTO_TRAVA_PACMAN=str(trava), HEFESTO_TRAVA_TETO="1"
+        ),
+    )
+    assert "RC=1" in proc.stdout, proc.stdout + proc.stderr
+    assert str(trava) in proc.stdout
+    assert _linhas(tmp_path / "pkg.log") == []
+
+
+def test_o_install_nunca_reconfigura_remove_nem_segura_pacote_do_sistema() -> None:
+    """A cura recusa e ensina; não mexe. Nenhum comando (fora de texto impresso)
+    reconfigura, remove ou retém pacote."""
+    install = (Path(__file__).resolve().parents[2] / "install.sh").read_text(encoding="utf-8")
+    codigo = [
+        linha
+        for linha in install.splitlines()
+        if not linha.lstrip().startswith("#") and "printf" not in linha and "warn" not in linha
+    ]
+    for proibido in ("dpkg --configure", "apt-mark hold", "apt-get remove", "apt-get install -f"):
+        achados = [linha for linha in codigo if proibido in linha]
+        assert achados == [], f"o install executa «{proibido}»: {achados}"
