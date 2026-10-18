@@ -763,12 +763,29 @@ _pacotes_a_meio() {
                END { if (n) printf "\n" }' || true
 }
 
-# Quem segura uma trava (`fuser`, quando houver): «nome (pid N), …». Sem root o
-# `fuser` só enxerga o que é da própria pessoa, então vazio não prova trava livre.
+# Os PIDs que travam o arquivo (flock ou fcntl), lidos do `/proc/locks`, que
+# qualquer pessoa lê. É a resposta que vale sem root: o `fuser` de quem não é
+# root não enxerga processo de root (o `unattended-upgrades`, o rpm), e o apt e
+# o rpm travam por fcntl, que o `flock` não vê. Medido em 17/10: o `fuser` sai 1
+# sobre o `/run/crond.pid` que o cron (root) trava, e o `/proc/locks` o mostra.
+# A linha com `->` é de quem ESPERA a trava, não de quem a segura.
+_pids_da_trava() {
+    local _st _dev _ino _chave
+    [[ -r /proc/locks ]] || return 0
+    _st="$(stat -L -c '%d %i' "$1" 2>/dev/null)" || return 0
+    _dev="${_st% *}"
+    _ino="${_st#* }"
+    _chave="$(printf '%02x:%02x:%s' $(( (_dev >> 8) & 0xfff )) \
+        $(( (_dev & 0xff) | ((_dev >> 12) & 0xfff00) )) "${_ino}")"
+    awk -v k="${_chave}" '$2 != "->" { for (i = 2; i <= NF; i++) if ($i == k) { print $(i - 1); break } }' \
+        /proc/locks 2>/dev/null | sort -u || true
+}
+
+# Quem segura uma trava: «nome (pid N), …», pelo `/proc/locks` e, quando houver,
+# pelo `fuser`. Vazio não prova trava livre.
 _quem_segura_a_trava() {
-    command -v fuser >/dev/null 2>&1 || return 0
     local _pid _nome _quem=""
-    for _pid in $(fuser "$1" 2>/dev/null || true); do
+    for _pid in $( { _pids_da_trava "$1"; fuser "$1" 2>/dev/null; } | tr -s ' ' '\n' | sort -un || true); do
         [[ "${_pid}" =~ ^[0-9]+$ ]] || continue
         _nome="$(ps -o comm= -p "${_pid}" 2>/dev/null || true)"
         _quem="${_quem}${_quem:+, }${_nome:-?} (pid ${_pid})"
@@ -779,12 +796,14 @@ _quem_segura_a_trava() {
 
 # A trava está ocupada agora? `existe`: o arquivo só existe enquanto alguém
 # trabalha (o `db.lck` do pacman). `flock`: o arquivo é permanente e o que vale
-# é o bloqueio (o `.rpm.lock` do dnf); sem `fuser` nem `flock` não há como saber
-# e a resposta é «livre» (o próprio dnf espera o rpm).
+# é o bloqueio (o `.rpm.lock` do dnf, que o rpm trava por fcntl): pergunta-se ao
+# `/proc/locks` e depois ao `fuser` e ao `flock`; sem nenhum deles não há como
+# saber e a resposta é «livre» (o próprio dnf espera o rpm).
 _trava_ocupada() {
     local _arq="$1" _modo="$2"
     [[ -e "${_arq}" ]] || return 1
     [[ "${_modo}" == "existe" ]] && return 0
+    [[ -z "$(_pids_da_trava "${_arq}")" ]] || return 0
     if command -v fuser >/dev/null 2>&1 && fuser -s "${_arq}" 2>/dev/null; then
         return 0
     fi
@@ -817,7 +836,7 @@ run_apt() {
     local _quem
     if ! _run_pkg_quieto sudo apt-get install -y -qq \
             -o "DPkg::Lock::Timeout=${HEFESTO_TRAVA_TETO:-120}" "$@"; then
-        _quem="$(_quem_segura_a_trava /var/lib/dpkg/lock-frontend)"
+        _quem="$(_quem_segura_a_trava "${HEFESTO_TRAVA_DPKG:-/var/lib/dpkg/lock-frontend}")"
         [[ -z "${_quem}" ]] || warn "o dpkg está ocupado por ${_quem}"
         return 1
     fi
@@ -859,7 +878,7 @@ run_pkg() {
         _meio="$(_pacotes_a_meio)"
         if [[ -n "${_meio}" ]]; then
             if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
-                _nao_faria "não instalaria ${_nomes[*]}: o sistema tem pacote a meio (${_meio})"
+                _nao_faria "instalar pacote(s) ${_nomes[*]}: o sistema tem pacote a meio (${_meio})"
                 return 0
             fi
             if [[ "${_PACOTE_A_MEIO_DITO:-0}" -eq 0 ]]; then

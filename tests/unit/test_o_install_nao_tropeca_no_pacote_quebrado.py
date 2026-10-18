@@ -15,6 +15,7 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -136,8 +137,10 @@ def test_o_ensaio_diz_nao_instalaria_e_nao_chama_nada(tmp_path: Path) -> None:
         env=_env(tmp_path, "apt", binario),
     )
     assert "RC=0" in proc.stdout, proc.stdout + proc.stderr
-    assert "não instalaria build-essential python3-dev linux-libc-dev" in proc.stdout
-    assert "o sistema tem pacote a meio" in proc.stdout
+    assert (
+        "não faria:   instalar pacote(s) build-essential python3-dev linux-libc-dev: "
+        "o sistema tem pacote a meio"
+    ) in proc.stdout
     assert "linux-image-7.2.6-76070206-generic" in proc.stdout
     assert "FARIA" not in proc.stdout
     assert _linhas(tmp_path / "pkg.log") == []
@@ -169,9 +172,85 @@ def test_apt_falha_com_o_dpkg_ocupado_diz_quem_segura(tmp_path: Path) -> None:
         alvo = binario / nome
         alvo.write_text("#!/usr/bin/env bash\n" + corpo, encoding="utf-8")
         alvo.chmod(0o755)
-    proc = _roda("run_pkg hidapi || echo RC=$?", env=_env(tmp_path, "apt", binario))
+    proc = _roda(
+        "run_pkg hidapi || echo RC=$?",
+        env=_env(tmp_path, "apt", binario, HEFESTO_TRAVA_DPKG=str(tmp_path / "sem-trava")),
+    )
     assert "RC=1" in proc.stdout, proc.stdout + proc.stderr
     assert "unattended-upgr (pid 4242)" in proc.stdout
+
+
+def _dono_por_fcntl(trava: Path) -> subprocess.Popen[str]:
+    """Segura a trava por fcntl, como o apt e o rpm fazem (o `flock` não a vê)."""
+    trava.write_text("", encoding="utf-8")
+    dono = subprocess.Popen(
+        [
+            sys.executable,
+            "-c",
+            "import fcntl, sys, time\n"
+            "f = open(sys.argv[1], 'r+')\n"
+            "fcntl.lockf(f, fcntl.LOCK_EX)\n"
+            "print('preso', flush=True)\n"
+            "time.sleep(30)\n",
+            str(trava),
+        ],
+        stdout=subprocess.PIPE,
+        text=True,
+    )
+    assert dono.stdout is not None
+    assert dono.stdout.readline().strip() == "preso"
+    return dono
+
+
+def _fuser_cego(binario: Path) -> None:
+    """O `fuser` de quem não é root diante de processo de root: não vê nada."""
+    alvo = binario / "fuser"
+    alvo.write_text("#!/usr/bin/env bash\nexit 1\n", encoding="utf-8")
+    alvo.chmod(0o755)
+
+
+def test_apt_ocupado_por_fcntl_diz_quem_segura_sem_o_fuser(tmp_path: Path) -> None:
+    """O `unattended-upgrades` é root e trava por fcntl: o `fuser` não o vê, o
+    `/proc/locks` sim."""
+    binario = _bancada(tmp_path, apt_rc=100)
+    _fuser_cego(binario)
+    trava = tmp_path / "lock-frontend"
+    dono = _dono_por_fcntl(trava)
+    try:
+        proc = _roda(
+            "run_pkg hidapi || echo RC=$?",
+            env=_env(tmp_path, "apt", binario, HEFESTO_TRAVA_DPKG=str(trava)),
+        )
+    finally:
+        dono.kill()
+        dono.wait()
+    assert "RC=1" in proc.stdout, proc.stdout + proc.stderr
+    assert f"(pid {dono.pid})" in proc.stdout, proc.stdout
+
+
+def test_dnf_espera_a_trava_por_fcntl_do_rpm_sem_o_fuser(tmp_path: Path) -> None:
+    """O rpm trava o `.rpm.lock` por fcntl, como root: nem o `flock` nem o `fuser`
+    o enxergam, e a espera tem de acontecer assim mesmo."""
+    binario = _bancada(tmp_path)
+    _fuser_cego(binario)
+    trava = tmp_path / "rpm.lock"
+    dono = _dono_por_fcntl(trava)
+    try:
+        inicio = time.monotonic()
+        proc = _roda(
+            "run_pkg hidapi || echo RC=$?",
+            env=_env(
+                tmp_path, "dnf", binario, HEFESTO_TRAVA_DNF=str(trava), HEFESTO_TRAVA_TETO="2"
+            ),
+        )
+        gasto = time.monotonic() - inicio
+    finally:
+        dono.kill()
+        dono.wait()
+    assert "RC=1" in proc.stdout, proc.stdout + proc.stderr
+    assert gasto >= 2, f"não esperou o teto ({gasto:.1f}s)"
+    assert f"(pid {dono.pid})" in proc.stdout, proc.stdout
+    assert _linhas(tmp_path / "pkg.log") == [], "o dnf rodou com a trava presa"
 
 
 @pytest.mark.skipif(shutil.which("flock") is None, reason="sem flock não há trava de rpm a segurar")
