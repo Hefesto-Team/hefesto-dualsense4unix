@@ -72,6 +72,7 @@ def _linhas(arquivo: Path) -> list[str]:
 
 
 def test_pacote_a_meio_o_apt_nao_e_chamado(tmp_path: Path) -> None:
+    # D-1710-O-INSTALL-NAO-CHAMA-O-APT-COM-PACOTE-A-MEIO
     """O caso da bancada: `iF`/`iU` no dpkg. Nenhum `apt-get` roda, e o recado diz
     o pacote, o que é do sistema e os dois comandos."""
     binario = _bancada(tmp_path, dpkg=A_MEIO)
