@@ -47,9 +47,6 @@ FEATURES: dict[tuple[str, str], tuple[str, frozenset[str]]] = {
         "02-controles.html", frozenset({"analogico-lado", "analogico-virtual", "mira"})),
     ("velocidade do cursor", "ajustar"): (
         "06-navegacao.html", frozenset({"vel-cursor"})),
-    # o «tirar-daqui» da 08 é outro botão, do Bluetooth: o nome do gesto repete, a feature não.
-    ("atalho do jogo", "voltar a usar e a perguntar, por jogo"): (
-        "07-lancadores.html", frozenset({"voltar-a-usar", "voltar-a-perguntar"})),
     ("atalho do jogo", "aplicar nos lançadores, política global"): (
         "09-sistema.html", frozenset({"correcoes-automaticas"})),
 }

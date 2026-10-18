@@ -223,15 +223,6 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "recarregar": "relê a lista de perfis do disco — é leitura",
     "ordenar": "ordena a tabela dos perfis — é da tela",
     "largura-da-coluna": "grava a largura de uma coluna da tabela dos perfis — é da tela",
-    "adicionar-a-exclusao": "abre a escolha do jogo para a lista de exclusão — é da tela",
-    "confirmar-exclusao": "põe o jogo na lista de exclusão e tira dele o que o Hefesto pôs "
-                          "no disco — é da máquina",
-    "tirar-da-exclusao": "devolve o jogo ao Hefesto — é da máquina",
-    "confirmar-perfil": "cria o perfil do jogo marcado — é do perfil",
-    "esquecer-lancador": "desfaz o que o usuário declarou sobre um lançador "
-                         "(`machine_declare`) — é da máquina",
-    "voltar-a-usar": "tira o jogo do `jogos_sem_wrapper.txt` — é do disco",
-    "voltar-a-perguntar": "tira o jogo da lista dos avisos dispensados — é do disco",
     "entrada-o-que-tem": "declara «Direto» ou «Hub» numa entrada do `maquina.json` — é da "
                          "máquina",
     "entrada-extensor": "declara o cabo de extensão de uma entrada — é da máquina",

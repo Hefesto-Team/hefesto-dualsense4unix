@@ -407,16 +407,15 @@ def test_os_dois_da_leva_das_nove_estao_protegidos(nome: str) -> None:
 
 
 @pytest.mark.parametrize("nome", [
-    "tirar-daqui", "voltar-a-usar", "voltar-a-perguntar",
-    "confirmar-exclusao", "tirar-da-exclusao", "confirmar-perfil",
+    "adicionar-lancador", "procurar-o-arquivo", "criar-perfil-do-jogo",
 ])
 def test_as_portas_da_aba_07_estao_protegidas(nome: str) -> None:
     """A quarta repetição, nomeada — para a regressão ter nome.
 
     A `STEAM-INPUT-01` mediu que a régua era cega para a aba INTEIRA. Estas
-    escrevem em arquivos DO USUÁRIO: `jogos_sem_wrapper.txt`,
-    `launch_dialog_dismissed.json`, a lista de exclusão, o pino, o atalho e o
-    perfil novo.
+    escrevem em arquivos DO USUÁRIO: o lançador declarado no `maquina.json` e o
+    perfil novo. As seis da aba antiga (a lista de exclusão, o atalho por jogo e o
+    perfil pela escolha) saíram com ela em 18/10/2026.
     """
     from hefesto_dualsense4unix.interface.hefesto_vivo import PERIGOSOS
 

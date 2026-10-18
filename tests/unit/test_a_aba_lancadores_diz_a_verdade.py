@@ -133,17 +133,11 @@ def test_todo_gesto_do_html_tem_dono_ou_esta_declarado_sem_dono(a07):
     assert no_html <= com_dono, (
         f"a página tem gestos que ninguém atende: {sorted(no_html - com_dono)}")
     assert com_dono - no_html <= {"consertar", "ver-o-que-impede",
-                                  "tirar-daqui", "voltar-a-usar",
-                                  "voltar-a-perguntar", "nao-perguntar",
+                                  "nao-perguntar",
                                   "consertar-fechando-a-steam",
                                   "copiar-a-linha",
                                   "desligar-steam-input",
                                   "deixar-tudo-pronto",
-                                  "adicionar-a-exclusao",
-                                  "confirmar-exclusao",
-                                  "confirmar-perfil",
-                                  "tirar-da-exclusao",
-                                  "esquecer-lancador",
                                   "consertar-lancador"}, (
         f"estes gestos têm dono e não aparecem em estado nenhum da página: "
         f"{sorted(com_dono - no_html)}")
@@ -277,54 +271,6 @@ def test_o_tique_nao_bloqueia_no_disco(a07, ctx, monkeypatch):
     assert pacote["steam-jogos"] == a07.desenho.AINDA_LENDO, (
         "sem leitura o cartão tem de dizer que ainda está lendo — um número "
         "que não foi lido é um número inventado")
-
-
-def _gesto(nome):
-    import pacotes
-
-    fn = pacotes.gesto_da_pagina(PAGINA, nome)
-    assert fn is not None, f"{PAGINA}:{nome} não tem dono"
-    return fn
-
-
-@pytest.mark.parametrize("nome", ["tirar-daqui", "voltar-a-usar",
-                                  "voltar-a-perguntar"])
-def test_o_gesto_sem_appid_recusa_e_nao_escreve(nome, ctx, monkeypatch):
-    """Um clique sem `data-v` tiraria um jogo escolhido por acaso."""
-    from hefesto_dualsense4unix.app.actions import launch_wrapper_dialog as lwd
-    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
-
-    def _nunca(*a, **kw):
-        raise AssertionError("escreveu no arquivo com o clique recusado")
-
-    monkeypatch.setattr(slo, "marcar_jogo_sem_wrapper", _nunca)
-    monkeypatch.setattr(slo, "desmarcar_jogo_sem_wrapper", _nunca)
-    monkeypatch.setattr(lwd, "remove_dismissed_appid", _nunca)
-    with pytest.raises(ValueError):
-        _gesto(nome)(ctx, {"controle": "p1", "texto": "x"}, None)
-
-
-def test_tirar_e_voltar_a_usar_escrevem_no_arquivo_de_verdade(ctx, a07):
-    """O par completo, contra o `jogos_sem_wrapper.txt` do lar de mentira.
-
-    O `conftest.py` desta casa desvia `HOME` e os quatro `XDG_*`, então este
-    teste escreve num arquivo temporário — nunca no dela. É a prova mais forte
-    que estes botões podem ter: não "a função foi chamada", mas **o arquivo
-    mudou**.
-    """
-    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
-
-    caminho = slo.sem_wrapper_path()
-    assert "1070560" not in slo.ler_jogos_sem_wrapper(), "o lar de mentira sujo"
-
-    _gesto("tirar-daqui")(ctx, {"v": "1070560"}, None)
-    assert "1070560" in slo.ler_jogos_sem_wrapper(), (
-        f"o gesto disse que aplicou e {caminho} não tem o appid")
-
-    _gesto("voltar-a-usar")(ctx, {"v": "1070560"}, None)
-    assert "1070560" not in slo.ler_jogos_sem_wrapper(), (
-        "o jogo ficou preso fora da lista — um gesto que só vai numa direção "
-        "deixa a pessoa presa no estado em que clicou")
 
 
 def test_esta_regua_nao_alcanca_a_biblioteca_dela():
@@ -790,52 +736,6 @@ def test_o_instrumento_do_round_trip_morde(desenho):
     assert _como_o_dom_devolve("<!-- nada -->") == "<!-- nada -->"
 
 
-def test_os_jogos_dispensados_do_lembrete_aparecem_na_lista(desenho):
-    """O `launch_dialog_dismissed.json` ganha a primeira tela da casa — E A VOLTA.
-
-    A escrita tinha dono (o botão "Não perguntar para este jogo" do lembrete da
-    GTK) e a LEITURA não tinha nenhuma: clicar produzia um silêncio permanente
-    que ninguém podia consultar depois.
-
-    A LINHA GANHOU BOTÃO EM 02/09/2026, por decisão de produto — e ele só pôde nascer
-    porque `launch_wrapper_dialog` ganhou o `remove_dismissed_appid` que lhe
-    faltava. Esta régua guarda os dois lados: a linha tem de mostrar o botão, e
-    o botão tem de apontar para um gesto com dono. Um `data-gesto` que ninguém
-    atende some no clique.
-    """
-    lida = desenho.Leitura(com_wrapper=("1",), instalados=1,
-                           dispensados=(("4242", "Jogo Dispensado"),))
-    fora = desenho.valores_do_cartao(
-        desenho.cartao_da_steam(lida))["steam-fora"]
-    assert "Jogo Dispensado" in fora and "não perguntar mais" in fora, (
-        "o jogo dispensado não aparece na lista do cartão da Steam")
-    assert 'data-gesto="voltar-a-perguntar" data-v="4242"' in fora, (
-        "a linha do dispensado voltou a ser um beco sem saída — dispensar "
-        "é um gesto sem volta pela tela, e a única saída era editar o "
-        "`launch_dialog_dismissed.json` à mão")
-    assert "Voltar a perguntar" in fora, "o botão da linha ficou sem rótulo"
-    _gesto("voltar-a-perguntar")
-
-
-def test_voltar_a_perguntar_recusa_dizendo_quando_o_arquivo_nao_aceita(
-        ctx, monkeypatch):
-    """Um clique que falha calado é o defeito mais caro desta casa.
-
-    `add_dismissed_appid` engole a falha de propósito (roda no tique, e o pior
-    caso é o lembrete voltar uma vez). O `remove` roda no CLIQUE DO USUÁRIO: se ele
-    engolisse, a linha continuaria na tela e o segundo clique pareceria o
-    primeiro. Por isso ele devolve `bool` e o gesto levanta `RuntimeError`.
-
-    A MORDIDA: faça `remove_dismissed_appid` devolver `None` sempre e o gesto
-    parar de conferir — este teste reprova.
-    """
-    from hefesto_dualsense4unix.app.actions import launch_wrapper_dialog as lwd
-
-    monkeypatch.setattr(lwd, "remove_dismissed_appid", lambda a: False)
-    with pytest.raises(RuntimeError, match="lembrete continua desligado"):
-        _gesto("voltar-a-perguntar")(ctx, {"v": "4242"}, None)
-
-
 def test_a_ponte_confirmada_chega_ao_contador(desenho):
     """`◆ N jogos já sabem por onde entrar` — a promessa que estava sem fonte."""
     sem = desenho.Leitura(com_wrapper=("1",), instalados=1)
@@ -1277,18 +1177,6 @@ def test_o_botao_do_cartao_diz_a_tela_para_qual_lancador(a07, ctx, desenho):
     assert vazio["mesa"][desenho.NOVO_PARA_QUEM] == desenho.NOVO_SEM_ALVO, (
         "o botão GLOBAL herdou o alvo do clique anterior — ela pediu um "
         "lançador novo e a tela diria o nome de um cartão que ela não escolheu")
-
-
-def test_tirar_daqui_recusa_um_cartao_de_fabrica(a07, ctx, desenho):
-    """Não há o que desfazer onde ela não declarou nada."""
-    p = _PonteQueAnota()
-    with pytest.raises(RuntimeError):
-        a07.esquecer_lancador(ctx, {"gesto": desenho.REMOVER, "v": "lutris"}, p)
-    assert p.chamadas == [], (
-        f"o gesto escreveu no `maquina.json` sobre um cartão de fábrica: "
-        f"{p.chamadas}")
-    with pytest.raises(ValueError):
-        a07.esquecer_lancador(ctx, {"gesto": desenho.REMOVER, "v": ""}, p)
 
 
 def test_o_schema_recusa_um_declarado_que_a_busca_nunca_acharia():

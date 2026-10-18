@@ -878,16 +878,6 @@ def _abrir_a_escolha(modo: str, lancador: str, state: dict[str, Any] | None) -> 
         _montar_a_escolha_nova(nome)
 
 
-def _o_escolhido(o: dict[str, Any]) -> desenho.JogoParaEscolher:
-    """O jogo que ela marcou na pop-up — ou a recusa, dita."""
-    forma = o.get("forma") or {}
-    chave = str(forma.get(desenho.ESCOLHA) or "").strip()
-    jogo = next((j for j in _ESCOLHA.jogos if j.chave == chave), None)
-    if jogo is None:
-        raise RuntimeError("Escolha um jogo da lista antes de confirmar.")
-    return jogo
-
-
 def com_a_exclusao(
     lancadores: list[desenho.Lancador], lida: desenho.Leitura | None,
 ) -> list[desenho.Lancador]:
@@ -1034,145 +1024,11 @@ def a_escada_do_jogo(state: dict[str, Any] | None) -> tuple[int | None, str]:
     return None, FECHADO
 
 
-def _appid_do_clique(o: dict[str, Any], nome: str) -> str:
-    """O appid que o botão da linha mandou. Vazio é RECUSA, nunca palpite."""
-    appid = str(o.get("v") or "").strip()
-    if not appid:
-        _LOG.warning(
-            "%s: clique sem `data-v`. Cada linha da lista manda o appid ali — "
-            "se ele sumiu do desenho, o botão agiria sobre um jogo escolhido "
-            "por acaso.", nome)
-        raise ValueError(
-            "O clique não disse de qual jogo se trata. Nada foi alterado.")
-    return appid
-
-
-@gesto("07-lancadores.html", "tirar-daqui", grava="marcar_jogo_sem_wrapper")
-def tirar_daqui(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """"Não usar neste jogo": põe o appid no `jogos_sem_wrapper.txt`.
-
-    É A RECUSA DO USUÁRIO, e o produto inteiro a respeita: `censo_do_wrapper` pula
-    quem está nessa lista, e `apply_wrapper_to_all_games` a recebe em
-    `excluir=`. Sem este botão, a única forma de tirar um jogo era editar o
-    arquivo à mão — a lista existia sem NENHUMA tela que a escrevesse.
-    """
-    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
-
-    slo.marcar_jogo_sem_wrapper(_appid_do_clique(o, "tirar-daqui"))
-    VIGIA.esquecer()
-    return _resposta(VIGIA.ler(), ctx.state)
-
-
-@gesto("07-lancadores.html", "voltar-a-usar", grava="desmarcar_jogo_sem_wrapper")
-def voltar_a_usar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """"Voltar a usar": tira o appid do `jogos_sem_wrapper.txt`.
-
-    O par do de cima, e ele precisa existir pelo mesmo motivo que o "Automático"
-    da Iluminação precisa existir: um gesto que só vai numa direção deixa a
-    pessoa presa no estado em que clicou.
-    """
-    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
-
-    slo.desmarcar_jogo_sem_wrapper(_appid_do_clique(o, "voltar-a-usar"))
-    VIGIA.esquecer()
-    return _resposta(VIGIA.ler(), ctx.state)
-
-
-@gesto("07-lancadores.html", "voltar-a-perguntar", grava="remove_dismissed_appid")
-def voltar_a_perguntar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """"Voltar a perguntar": tira o appid do `launch_dialog_dismissed.json`.
-
-    O DESFAZER QUE NÃO EXISTIA, e a falta era de MOTOR e não de tela: até hoje
-    `launch_wrapper_dialog` só tinha `add_dismissed_appid`. Clicar em *"Não
-    perguntar para este jogo"* no lembrete da GTK produzia um silêncio
-    permanente, e desfazê-lo pedia editar um JSON à mão. Decisão,
-    02/09/2026 — nasce o par, e o botão é este.
-
-    A RECUSA VAI PARA A TELA, e é por isso que `remove_dismissed_appid` devolve
-    `bool` em vez de engolir como o `add`: se o arquivo não deu para reescrever,
-    a linha continuaria na lista e o segundo clique pareceria o primeiro — o
-    botão que aceita o clique e não faz nada.
-    """
-    from hefesto_dualsense4unix.app.actions import launch_wrapper_dialog as lwd
-
-    appid = _appid_do_clique(o, "voltar-a-perguntar")
-    if not lwd.remove_dismissed_appid(appid):
-        raise RuntimeError(
-            "Não consegui voltar a perguntar por este jogo — o lembrete "
-            "continua desligado.")
-    VIGIA.esquecer()
-    return _resposta(VIGIA.ler(), ctx.state)
-
-
-@gesto("07-lancadores.html", desenho.EXCLUIR)
-def abrir_a_exclusao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """«Adicionar à lista de exclusão»: abre a escolha do jogo DAQUELE lançador."""
-    _abrir_a_escolha(desenho.EXCLUIR, str(o.get("v") or ""), ctx.state)
-    return _resposta(VIGIA.agora(), ctx.state)
-
-
 @gesto("07-lancadores.html", desenho.CRIAR_PERFIL)
 def abrir_o_criar_perfil(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """«Criar perfil para um jogo»: a mesma escolha, no modo do perfil."""
     _abrir_a_escolha(desenho.CRIAR_PERFIL, str(o.get("v") or ""), ctx.state)
     return _resposta(VIGIA.agora(), ctx.state)
-
-
-FRASE_DA_LISTA_OCUPADA = (
-    "A lista de exclusão está sendo gravada agora. Clique de novo em alguns "
-    "segundos — nada foi alterado.")
-FRASE_DA_LISTA_ILEGIVEL = (
-    "O arquivo da lista de exclusão está ilegível — nada foi alterado.")
-FRASE_DO_EXCLUIR_SEM_CAUSA = "Não consegui excluir este jogo."
-FRASE_DO_TIRAR_SEM_CAUSA = "Não consegui tirar o jogo da lista de exclusão."
-
-# Só `"ocupada"` e `"ilegivel"` prometem «nada foi alterado»: a lista volta ANTES
-# de qualquer escrita. No `"erro"` a Steam, o Heroic ou o Lutris já podem ter
-# recebido a escrita, e o desfazer não confere o próprio resultado. A frase vai
-# escrita no `raise`, que é onde a régua `tela-nao-confessa` a lê.
-
-
-@gesto("07-lancadores.html", desenho.CONFIRMAR_EXCLUSAO, grava="adicionar")
-def confirmar_a_exclusao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """Põe o jogo marcado na lista e tira dele, agora, o que o Hefesto pôs no disco."""
-    jogo = _o_escolhido(o)
-    status = lista_de_exclusao.adicionar(
-        jogo.chave, lancador=_ESCOLHA.lancador, nome=jogo.nome,
-        janelas=_ESCOLHA.janelas.get(jogo.chave, ()))
-    if status == "ocupada":
-        _LOG.warning("lista de exclusão recusou: %s", status)
-        raise RuntimeError(FRASE_DA_LISTA_OCUPADA)
-    if status == "ilegivel":
-        _LOG.warning("lista de exclusão recusou: %s", status)
-        raise RuntimeError(FRASE_DA_LISTA_ILEGIVEL)
-    if status in ("erro", "chave_invalida"):
-        _LOG.warning("lista de exclusão recusou: %s", status)
-        raise RuntimeError(FRASE_DO_EXCLUIR_SEM_CAUSA)
-    disco = lista_de_exclusao.tirar_do_disco(jogo.chave)
-    _relatar(desenho.CONFIRMAR_EXCLUSAO,
-             f"{jogo.nome}: {status}; no disco: {disco}")
-    _ESCOLHA.limpar()
-    VIGIA.esquecer()
-    return _resposta(VIGIA.ler(), ctx.state)
-
-
-@gesto("07-lancadores.html", desenho.TIRAR_DA_EXCLUSAO, grava="tirar")
-def tirar_da_exclusao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """«Tirar da lista»: o jogo volta ao Hefesto."""
-    chave = str(o.get("v") or "").strip()
-    status = lista_de_exclusao.tirar(chave)
-    if status == "ocupada":
-        _LOG.warning("lista de exclusão recusou: %s", status)
-        raise RuntimeError(FRASE_DA_LISTA_OCUPADA)
-    if status == "ilegivel":
-        _LOG.warning("lista de exclusão recusou: %s", status)
-        raise RuntimeError(FRASE_DA_LISTA_ILEGIVEL)
-    if status == "erro":
-        _LOG.warning("lista de exclusão recusou: %s", status)
-        raise RuntimeError(FRASE_DO_TIRAR_SEM_CAUSA)
-    _relatar(desenho.TIRAR_DA_EXCLUSAO, f"{chave}: {status}")
-    VIGIA.esquecer()
-    return _resposta(VIGIA.ler(), ctx.state)
 
 
 def _criar_o_perfil_de(ctx: Contexto, p: Any, jogo: desenho.JogoParaEscolher) -> str:
@@ -1195,15 +1051,6 @@ def _criar_o_perfil_de(ctx: Contexto, p: Any, jogo: desenho.JogoParaEscolher) ->
     classes = janelas if janelas else (jogo.chave,)
     return a10_perfis.criar_para_o_jogo(
         ctx, p, classes=classes, nome_do_jogo=jogo.nome.split(" — ")[0])
-
-
-@gesto("07-lancadores.html", desenho.CONFIRMAR_PERFIL, grava="criar_para_o_jogo")
-def confirmar_o_perfil(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """Cria o perfil do jogo marcado PELA ABA PERFIS, e a tela vai para lá."""
-    frase = _criar_o_perfil_de(ctx, p, _o_escolhido(o))
-    _relatar(desenho.CONFIRMAR_PERFIL, frase)
-    _ESCOLHA.limpar()
-    return _resposta(VIGIA.agora(), ctx.state)
 
 
 _PARA_QUEM = ""
@@ -1500,48 +1347,6 @@ def procurar_o_arquivo(ctx: Contexto, o: dict[str, Any], p: Any
     recado = _guardar_onde_ele_esta(p, rotulo, str(caminho),
                                     _achar_o_que_ela_apontou)
     return {**_resposta(VIGIA.ler(), ctx.state), "recado": recado}
-
-
-@gesto("07-lancadores.html", desenho.REMOVER, grava="machine_declare")
-def esquecer_lancador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """«Tirar daqui» — desfaz o que o usuário declarou sobre um lançador.
-
-    *O QUE SE ACRESCENTA SE TIRA.* Sem isto a lista dela vira lixo permanente:
-    um cartão acrescentado por engano ficaria na tela para sempre, e a única
-    saída seria editar o `maquina.json` à mão — que é exatamente a forma de
-    defeito que o `jogos_sem_wrapper.txt` tinha antes desta aba existir.
-
-    NUM CARTÃO DE FÁBRICA ELE NÃO APAGA O CARTÃO: apaga o ENSINO. O cartão volta
-    a ser procurado só pelos caminhos de fábrica, que é o estado anterior ao
-    clique do usuário — e é por isso que o botão é o mesmo nos dois casos, e não dois.
-
-    O DESFAZER É O `None`, e a língua é a que o `maquina.json` já fala — ver
-    `MaquinaConfig._o_none_e_o_esquecimento`, que carrega a razão inteira:
-    `machine.declare` não tem verbo de remoção, e mandar a lista MENOS uma chave
-    não tira chave nenhuma.
-    """
-    qual = str(o.get("v") or "").strip()
-    if not qual:
-        _LOG.warning(
-            "esquecer-lancador: clique sem `data-v`. Cada botão manda a chave "
-            "do cartão ali — sem ela eu apagaria a declaração de um lançador "
-            "escolhido por acaso.")
-        raise ValueError(
-            "O clique não disse de qual lançador se trata. Nada foi tirado.")
-    # O cartão que veio de uma modificação não se tira daqui: sair é desligá-la.
-    declarados = {x.chave: x.nome for x in _declarados() if not x.modificacao}
-    if qual not in declarados:
-        raise RuntimeError(
-            "Não há nada a tirar: este cartão é de fábrica e você não apontou "
-            "nada nele.")
-
-    ok, motivo = _ok_e_motivo(p.machine_declare({"lancadores": {qual: None}}))
-    if not ok:
-        raise RuntimeError(
-            motivo or "Não consegui guardar isso agora. Nada foi alterado.")
-    VIGIA.esquecer()
-    return {**_resposta(VIGIA.ler(), ctx.state),
-            "recado": f"Tirei {declarados[qual]} daqui."}
 
 
 def _ok_e_motivo(resposta: Any) -> tuple[bool, str | None]:
@@ -2205,11 +2010,8 @@ PISO_DA_ABA = 14
 PROVAS: list[dict[str, Any]] = []
 
 #: TODOS, e não por preguiça: o `state_full` do daemon não tem UMA chave sobre
-SEM_ECO = ("tirar-daqui", "voltar-a-usar", "voltar-a-perguntar",
-           # `maquina.json`, e o `state_full` não tem UMA chave sobre a
-           desenho.ADICIONAR, desenho.REMOVER,
-           # — e o `state_full` não tem UMA chave sobre lançador.
-           desenho.PROCURAR_O_ARQUIVO,
+SEM_ECO = (# `maquina.json`: o `state_full` não tem UMA chave sobre lançador.
+           desenho.ADICIONAR, desenho.PROCURAR_O_ARQUIVO,
            # Os gestos das extensões, da janela de cada lançador e dos impedimentos: o estado
            # que o daemon devolve não tem chave sobre o registro das modificações nem sobre a Steam.
            "ligar-modificacao", "configurar-modificacao", "guardar-opcao-da-modificacao",

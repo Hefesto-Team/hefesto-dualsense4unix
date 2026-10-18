@@ -742,42 +742,6 @@ def _escolher(monkeypatch: pytest.MonkeyPatch, a07, modo: str) -> None:
     a07._abrir_a_escolha(modo, a07.desenho.STEAM, None)
 
 
-def test_confirmar_a_exclusao_grava_e_tira_do_disco(
-        _aba07, monkeypatch: pytest.MonkeyPatch) -> None:
-    """ARRANQUE o `tirar_do_disco` do confirmar e este teste reprova: o jogo"""
-    desenho, a07 = _aba07
-    tirados: list[str] = []
-    monkeypatch.setattr(lx, "tirar_do_disco",
-                        lambda chave: tirados.append(chave) or "feito")
-    _escolher(monkeypatch, a07, desenho.EXCLUIR)
-    assert f"#{desenho.MIOLO_DA_ESCOLHA}" in a07._pintura([])["blocos"]
-    a07.confirmar_a_exclusao(_Ctx(), {"forma": {desenho.ESCOLHA: _JANELA}}, None)
-    assert lx.contem(_JANELA)
-    assert tirados == [_JANELA]
-    assert f"#{desenho.MIOLO_DA_ESCOLHA}" not in a07._pintura([])["blocos"], (
-        "a pop-up continuaria com o jogo que ela acabou de excluir")
-
-
-def test_confirmar_sem_escolha_recusa_dizendo(
-        _aba07, monkeypatch: pytest.MonkeyPatch) -> None:
-    desenho, a07 = _aba07
-    _escolher(monkeypatch, a07, desenho.EXCLUIR)
-    with pytest.raises(RuntimeError, match="Escolha um jogo"):
-        a07.confirmar_a_exclusao(_Ctx(), {"forma": {}}, None)
-    assert not lx.contem(_JANELA)
-
-
-def test_tirar_da_lista_pelo_rodape(_aba07) -> None:
-    """O «Tirar da lista» do rodapé leva a CHAVE no `data-v`, e o gesto a tira."""
-    desenho, a07 = _aba07
-    lx.adicionar(_JANELA, lancador=desenho.STEAM, nome="Wo Long")
-    rodape = desenho.rodape_da_exclusao_html([(_JANELA, "Wo Long")])
-    assert (f'data-gesto="{desenho.TIRAR_DA_EXCLUSAO}" data-v="{_JANELA}"'
-            in rodape)
-    a07.tirar_da_exclusao(_Ctx(), {"v": _JANELA}, None)
-    assert not lx.contem(_JANELA)
-
-
 def test_o_rodape_diz_o_excluido_e_a_lista_da_steam_nao_o_repete(_aba07) -> None:
     """ARRANQUE o filtro dos recusados e este teste reprova: o jogo excluído"""
     desenho, a07 = _aba07
@@ -834,15 +798,10 @@ def test_criar_perfil_passa_pelo_gravador_da_aba_perfis(
     monkeypatch.setattr(a10_perfis, "criar_para_o_jogo",
                         lambda ctx, p, *, classes, nome_do_jogo:
                         pedidos.append((classes, nome_do_jogo)) or "ok")
+    monkeypatch.setattr(a07, "_perfis_que_casam", lambda: (set(), set()))
     _escolher(monkeypatch, a07, desenho.CRIAR_PERFIL)
-    a07.confirmar_o_perfil(_Ctx(), {"forma": {desenho.ESCOLHA: _JANELA}}, None)
+    a07.criar_perfil_do_jogo(_Ctx(), {"v": _JANELA}, None)
     assert pedidos == [((_JANELA,), "Wo Long")]
-    miolo = desenho.miolo_da_escolha_html(
-        desenho.CRIAR_PERFIL, "Steam",
-        [desenho.JogoParaEscolher(chave=_JANELA, nome="Wo Long")])
-    assert 'href="10-perfis.html"' in miolo, (
-        "o confirmar do perfil não leva à aba Perfis — o perfil nasceria sem "
-        "ela ver onde")
 
 
 _APP_DO_HEROIC = "63a665088eb1480298f1e57943b225d8"

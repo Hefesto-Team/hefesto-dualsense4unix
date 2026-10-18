@@ -225,18 +225,11 @@ def _o_que_a_recusa_faz(fonte: str) -> list[str]:
 def test_a_recusa_so_pisca_e_a_frase_vai_ao_diario() -> None:
     """D-1309-A-RECUSA-SO-PISCA-E-A-FRASE-VAI-AO-DIARIO: nenhuma frase de recusa chega à tela.
 
-    O piloto só imprime no diário; a lista ocupada ou ilegível levanta `RuntimeError`
-    com a frase (que é o que chega ao diário), e nenhuma outra porta a leva ao cartão.
+    O piloto só imprime no diário: o gesto levanta `RuntimeError` com a frase (que é o que
+    chega ao diário), e nenhuma outra porta a leva ao cartão.
     """
     piloto = (RAIZ / "src/hefesto_dualsense4unix/interface/hefesto_vivo.py").read_text("utf-8")
     assert _o_que_a_recusa_faz(piloto) == ["print"], _o_que_a_recusa_faz(piloto)
-    pacote = (RAIZ / "src/hefesto_dualsense4unix/interface/pacotes/a07_lancadores.py"
-              ).read_text("utf-8")
-    levantadas = {
-        ast.unparse(no.exc.args[0]) for no in ast.walk(ast.parse(pacote))
-        if isinstance(no, ast.Raise) and isinstance(no.exc, ast.Call)
-        and ast.unparse(no.exc.func) == "RuntimeError" and no.exc.args}
-    assert {"FRASE_DA_LISTA_OCUPADA", "FRASE_DA_LISTA_ILEGIVEL"} <= levantadas, levantadas
 
 
 def test_a_regua_da_recusa_morde() -> None:

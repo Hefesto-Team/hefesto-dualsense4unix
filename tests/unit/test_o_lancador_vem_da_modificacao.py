@@ -164,36 +164,6 @@ def test_bloco_torto_deixa_so_aquela_de_fora(
         x.chave for x in desenho.EMBUTIDOS], "sem modificação, a lista mudou"
 
 
-def test_o_tirar_daqui_nao_alcanca_o_cartao_da_modificacao(
-    a07: ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
-) -> None:
-    """ARRANQUE o ``if not x.modificacao`` de ``esquecer_lancador`` e isto reprova.
-
-    O botão não é pintado no cartão da modificação, mas o gesto não confia no
-    desenho: um clique com a chave dela gravaria um esquecimento que não tira
-    nada e diria «Tirei KytyPS5 daqui» com o cartão ainda na tela.
-    """
-    lg = _plantar(tmp_path)
-    _no_xdg(monkeypatch, lg)
-    _so_as_modificacoes(a07, monkeypatch)
-
-    class _Ponte:
-        def __init__(self) -> None:
-            self.chamadas: list[object] = []
-
-        def machine_declare(self, pedido: object) -> bool:
-            self.chamadas.append(pedido)
-            return True
-
-    class _Ctx:
-        state: dict[str, object] | None = None
-
-    ponte = _Ponte()
-    with pytest.raises(RuntimeError):
-        a07.esquecer_lancador(_Ctx(), {"gesto": desenho.REMOVER, "v": "kytyps5"}, ponte)
-    assert ponte.chamadas == [], f"o gesto gravou sobre o cartão da modificação: {ponte.chamadas}"
-
-
 def test_a_modificacao_com_a_chave_de_fabrica_ensina_sem_dar_o_tirar() -> None:
     leitor = censo.LeitorPorProcesso("retroarch", "RetroArch", ("ler.py",), Path("/x"))
     ensino = desenho.SemCenso("retroarch", "Outro nome", ("meu-retro",), (),
@@ -333,7 +303,7 @@ def test_na_caixa_o_leitor_le_a_casa_e_nao_escreve_nem_ve_a_sessao(
 def test_o_perfil_do_jogo_casa_pelo_id_no_titulo(
     a07: ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
 ) -> None:
-    """ARRANQUE o ramo do título em ``confirmar_o_perfil`` e isto reprova."""
+    """ARRANQUE o ramo do título em ``_criar_o_perfil_de`` e isto reprova."""
     from hefesto_dualsense4unix.profiles.schema import MatchCriteria
 
     lg = _plantar(tmp_path)
@@ -347,6 +317,7 @@ def test_o_perfil_do_jogo_casa_pelo_id_no_titulo(
         return "ok"
 
     monkeypatch.setattr(a10, "_nascer", _nascer)
+    monkeypatch.setattr(a07, "_perfis_que_casam", lambda: (set(), set()))
     monkeypatch.setattr(a10, "criar_para_o_jogo",
                         lambda *a, **k: pytest.fail("o jogo do KytyPS5 nasceu por classe"))
 
@@ -356,7 +327,7 @@ def test_o_perfil_do_jogo_casa_pelo_id_no_titulo(
     class _Ctx:
         state: dict[str, object] | None = None
 
-    a07.confirmar_o_perfil(_Ctx(), {"forma": {desenho.ESCOLHA: "PPSA21567"}}, None)
+    a07.criar_perfil_do_jogo(_Ctx(), {"v": "PPSA21567"}, None)
     [(regra, base)] = nascidos
     assert base == "Astro Bot"
     assert regra.window_class == [] and regra.process_name == []

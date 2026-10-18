@@ -89,12 +89,9 @@ ATOS: dict[Chave, str] = {
     ("mapa-do-controle.html", "mapa-padrao"): _RASCUNHO_DO_MAPA,
     ("mapa-do-controle.html", "mapa-perfil"): _RASCUNHO_DO_MAPA,
     ("mapa-do-controle.html", "mapa-usar-em"): _RASCUNHO_DO_MAPA,
-    ("07-lancadores.html", "adicionar-a-exclusao"):
-        "abre a escolha do jogo; quem grava é a confirmação "
-        "(`confirmar-exclusao`), que declara `grava=`",
     ("07-lancadores.html", "criar-perfil-para-um-jogo"):
-        "abre a escolha do jogo; quem grava é a confirmação "
-        "(`confirmar-perfil`), que declara `grava=`",
+        "abre a escolha do jogo; quem grava é o «Criar» de cada linha "
+        "(`criar-perfil-do-jogo`), que declara `grava=`",
     ("07-lancadores.html", "configurar-lancador"):
         "tela: abre a janela «Configurar» do lançador (onde está, como entrou e, na Steam, os "
         "impedimentos lidos agora); quem muda algo é o gesto de lá, que declara `grava=`",

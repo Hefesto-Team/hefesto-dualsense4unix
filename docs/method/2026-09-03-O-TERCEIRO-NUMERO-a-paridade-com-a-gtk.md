@@ -87,11 +87,11 @@ O dado mora em **[`docs/data/paridade-gtk-html.csv`](../data/paridade-gtk-html.c
 | 04-iluminacao | 35 | 8 | 13 | 6 | 7 | 1 | 23% |
 | 05-vibracao | 31 | 13 | 11 | 4 | 3 | 0 | 42% |
 | 06-navegacao | 40 | 7 | 15 | 9 | 9 | 0 | 18% |
-| 07-lancadores | 28 | 9 | 12 | 0 | 7 | 0 | 32% |
+| 07-lancadores | 26 | 9 | 12 | 0 | 5 | 0 | 35% |
 | 08-conexoes | 49 | 17 | 26 | 6 | 0 | 0 | 35% |
 | 09-sistema | 38 | 13 | 18 | 4 | 3 | 0 | 34% |
 | 10-perfis | 48 | 14 | 19 | 8 | 7 | 0 | 29% |
-| TODAS | 390 | 115 | 172 | 51 | 49 | 3 | 29% |<!-- /TABELA-DA-PARIDADE -->
+| TODAS | 388 | 115 | 172 | 51 | 47 | 3 | 30% |<!-- /TABELA-DA-PARIDADE -->
 
 A tabela é **gerada da contagem do CSV** e conferida pelo portão (regra
 `numero-publicado`): quem mexer no dado e não regerar esta seção é barrado
@@ -710,7 +710,8 @@ defeito.** A soma dos parâmetros escrita no CSV e na §4 era fato errado, e pas
 ## Nota de verificação — 18/10/2026, a 07 antiga sai com a Experimental
 
 `D-1810-A-ABA-EXPERIMENTAL-SE-PUBLICA-COMO-FICOU`. A página publicada da 07 é a Experimental, e os
-gestos e pintores da aba antiga, sem elemento nela, saíram do pacote. A linha **«"Procurar de novo" —
-reler o disco na hora»** (`SO_NO_HTML`) saiu: o botão não existe mais em lado nenhum. A tabela acima foi
-recontada do CSV: `07-lancadores` vai de `29 · 8 SO_HTML · 31%` para `28 · 7 · 32%`, e `TODAS` de
-`391 · 50` para `390 · 49`.
+gestos e pintores da aba antiga, sem elemento nela, saíram do pacote. Três linhas `SO_NO_HTML` saíram,
+porque o botão não existe mais em lado nenhum: **«"Procurar de novo"»**, **«Ver quem foi dispensado, e
+desfazer ("Voltar a perguntar")»** e **«"Não usar neste jogo" / "Voltar a usar"»**. A tabela acima foi
+recontada do CSV: `07-lancadores` vai de `29 · 8 SO_HTML · 31%` para `26 · 5 · 35%`, e `TODAS` de
+`391 · 50 · 29%` para `388 · 47 · 30%`.

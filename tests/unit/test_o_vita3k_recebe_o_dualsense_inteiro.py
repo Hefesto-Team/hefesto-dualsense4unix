@@ -37,7 +37,7 @@ def lar(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> pathlib.Path
                       ("XDG_DATA_DIRS", "vazio")):
         monkeypatch.setenv(nome, str(tmp_path / sub) if sub else str(tmp_path))
     a07._ESCOLHA.limpar()
-    a07._ESCOLHA.modo = desenho.EXCLUIR
+    a07._ESCOLHA.modo = desenho.CRIAR_PERFIL
     return tmp_path
 
 

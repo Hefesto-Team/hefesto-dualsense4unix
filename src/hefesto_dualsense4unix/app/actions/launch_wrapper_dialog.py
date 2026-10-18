@@ -167,7 +167,7 @@ def remove_dismissed_appid(appid: str) -> bool:
     lembrete voltar uma vez). Este roda no CLIQUE DO USUÁRIO, e um clique que falha
     calado é o defeito mais caro desta casa: a linha continuaria na tela e o
     segundo clique pareceria o primeiro. Quem chama levanta a recusa com a
-    frase; ver ``interface/pacotes/a07_lancadores.voltar_a_perguntar``.
+    frase (o «Voltar a perguntar» da 07 antiga, que saiu com ela em 18/10/2026).
 
     ``False`` também quando o appid **já não estava** na lista: nos dois casos a
     verdade para quem clicou é a mesma — *nada mudou por causa deste clique*.

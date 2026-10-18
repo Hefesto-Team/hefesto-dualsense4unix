@@ -30,7 +30,6 @@ from tests.unit.test_a_lista_de_exclusao_tem_um_escritor_por_vez import (
 
 exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
 
-from hefesto_dualsense4unix.interface import desenho_dos_lancadores as desenho
 from hefesto_dualsense4unix.interface.pacotes import a07_lancadores as a07
 from hefesto_dualsense4unix.interface.pacotes import a09_sistema as a09
 
@@ -228,124 +227,7 @@ def test_o_servico_segue_com_o_prazo_dele_e_o_diario_diz_quem(
         (cpe.QUEM_SERVICO, cpe.ESPERA_DO_SERVICO_S)], esperou
 
 
-# 4. O «Excluir» diz a causa
-
-
-def _escolher(chave: str) -> dict[str, Any]:
-    a07._ESCOLHA.lancador = "steam"
-    a07._ESCOLHA.jogos = (desenho.JogoParaEscolher(chave=chave, nome="Jogo da régua"),)
-    return {"forma": {desenho.ESCOLHA: chave}}
-
-
-@pytest.fixture
-def _vigia_parada(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(a07.VIGIA, "agora", lambda: None)
-    monkeypatch.setattr(a07.VIGIA, "ler", lambda: None)
-    monkeypatch.setattr(a07.VIGIA, "esquecer", lambda: None)
-
-
-def test_o_excluir_com_a_trava_presa_diz_que_a_lista_esta_sendo_gravada(
-        _lar: Path, _trava_presa: subprocess.Popen[str], _vigia_parada: None,
-        monkeypatch: pytest.MonkeyPatch) -> None:
-    """A lista ocupada recusa com a causa (D-0810-A-LISTA-OCUPADA-DIZ-A-CAUSA)."""
-    monkeypatch.setattr(cpe, "ESPERA_DA_JANELA_S", 0.3)
-    assert lx.adicionar(_CAIXA, lancador="x", nome="x", lar=_lar) == "ocupada"
-    with pytest.raises(RuntimeError) as erro:
-        a07.confirmar_a_exclusao(_CTX, _escolher(_CAIXA), None)
-    assert str(erro.value) == a07.FRASE_DA_LISTA_OCUPADA
-    assert "ilegível" not in str(erro.value)
-    assert not lx.caminho().exists(), "o «Excluir» escreveu sem a trava"
-
-
-def test_o_excluir_com_a_lista_torta_diz_que_o_arquivo_esta_ilegivel(
-        _lar: Path, _vigia_parada: None) -> None:
-    destino = lx.caminho()
-    destino.parent.mkdir(parents=True, exist_ok=True)
-    destino.write_text('{"formato": 1, "jogos": [ ESTRAGADO', encoding="utf-8")
-    assert lx.adicionar(_CAIXA, lancador="x", nome="x", lar=_lar) == "ilegivel"
-    with pytest.raises(RuntimeError) as erro:
-        a07.confirmar_a_exclusao(_CTX, _escolher(_CAIXA), None)
-    assert str(erro.value) == a07.FRASE_DA_LISTA_ILEGIVEL
-    assert "sendo gravada" not in str(erro.value)
-    assert destino.read_text(encoding="utf-8").endswith("ESTRAGADO"), "a lista torta foi regravada"
-
-
-def test_o_excluir_com_erro_nao_chuta_a_causa_nem_promete_nada(
-        _lar: Path, _vigia_parada: None, monkeypatch: pytest.MonkeyPatch) -> None:
-    """O `"erro"` pode ter escrito na Steam, no Heroic ou no Lutris: sem «nada foi alterado»."""
-    def _disco_cheio(*_a: object, **_k: object) -> None:
-        raise OSError("disco cheio")
-
-    monkeypatch.setattr(lx, "_gravar", _disco_cheio)
-    assert lx.adicionar(_CAIXA, lancador="x", nome="x", lar=_lar) == "erro"
-    with pytest.raises(RuntimeError) as erro:
-        a07.confirmar_a_exclusao(_CTX, _escolher(_CAIXA), None)
-    assert str(erro.value) == a07.FRASE_DO_EXCLUIR_SEM_CAUSA
-    assert "nada foi alterado" not in str(erro.value)
-    assert "ilegível" not in str(erro.value)
-
-
-def test_a_chave_invalida_nao_cai_na_frase_do_arquivo(
-        _lar: Path, _vigia_parada: None, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(lx, "adicionar", lambda *a, **k: "chave_invalida")
-    with pytest.raises(RuntimeError) as erro:
-        a07.confirmar_a_exclusao(_CTX, _escolher(_CAIXA), None)
-    assert str(erro.value) == a07.FRASE_DO_EXCLUIR_SEM_CAUSA
-
-
-def test_o_excluir_com_a_trava_livre_adiciona(_lar: Path, _vigia_parada: None,
-                                              monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(lx, "tirar_do_disco", lambda chave: "feito")
-    a07.confirmar_a_exclusao(_CTX, _escolher(_CAIXA), None)
-    assert lx.contem(_CAIXA)
-
-
-# 5. O «Tirar» diz a causa
-
-
-def test_o_tirar_com_a_trava_presa_diz_que_a_lista_esta_sendo_gravada(
-        tmp_path: Path, _lar: Path, _vigia_parada: None,
-        monkeypatch: pytest.MonkeyPatch) -> None:
-    assert lx.adicionar(_CAIXA, lancador="x", nome="x", lar=_lar) == "adicionado"
-    monkeypatch.setattr(cpe, "ESPERA_DA_JANELA_S", 0.3)
-    outro = _prender(tmp_path, _lar, segundos=3.0)
-    try:
-        assert lx.tirar(_CAIXA, lar=_lar) == "ocupada"
-        with pytest.raises(RuntimeError) as erro:
-            a07.tirar_da_exclusao(_CTX, {"v": _CAIXA}, None)
-    finally:
-        outro.terminate()
-        outro.communicate(timeout=30)
-    assert str(erro.value) == a07.FRASE_DA_LISTA_OCUPADA
-    assert lx.contem(_CAIXA), "o «Tirar» tirou sem a trava"
-
-
-def test_o_tirar_com_a_lista_torta_diz_que_o_arquivo_esta_ilegivel(
-        _lar: Path, _vigia_parada: None) -> None:
-    destino = lx.caminho()
-    destino.parent.mkdir(parents=True, exist_ok=True)
-    destino.write_text('{"formato": 1, "jogos": [ ESTRAGADO', encoding="utf-8")
-    assert lx.tirar(_CAIXA, lar=_lar) == "ilegivel"
-    with pytest.raises(RuntimeError) as erro:
-        a07.tirar_da_exclusao(_CTX, {"v": _CAIXA}, None)
-    assert str(erro.value) == a07.FRASE_DA_LISTA_ILEGIVEL
-
-
-def test_o_tirar_com_erro_segue_com_a_frase_de_sempre(
-        _lar: Path, _vigia_parada: None, monkeypatch: pytest.MonkeyPatch) -> None:
-    assert lx.adicionar(_CAIXA, lancador="x", nome="x", lar=_lar) == "adicionado"
-
-    def _disco_cheio(*_a: object, **_k: object) -> None:
-        raise OSError("disco cheio")
-
-    monkeypatch.setattr(lx, "_gravar", _disco_cheio)
-    assert lx.tirar(_CAIXA, lar=_lar) == "erro"
-    with pytest.raises(RuntimeError) as erro:
-        a07.tirar_da_exclusao(_CTX, {"v": _CAIXA}, None)
-    assert str(erro.value) == a07.FRASE_DO_TIRAR_SEM_CAUSA
-
-
-# 6. O anotar do `.yml`
+# 4. O anotar do `.yml`
 
 
 def test_o_anotar_sem_a_trava_diz_ocupada(
@@ -357,11 +239,7 @@ def test_o_anotar_sem_a_trava_diz_ocupada(
 
 
 def test_as_frases_da_tela_passam_pela_lingua_da_casa() -> None:
-    """Sem «mesa», sem vermelho, e a que promete «nada foi alterado» é a que sabe."""
-    for frase in (a07.FRASE_DA_LISTA_OCUPADA, a07.FRASE_DA_LISTA_ILEGIVEL,
-                  a07.FRASE_DO_EXCLUIR_SEM_CAUSA, a07.FRASE_DO_TIRAR_SEM_CAUSA,
-                  cpe.FRASE_DA_TRAVA_QUE_NAO_VEIO):
-        assert frase[0].isupper() and frase.endswith("."), frase
-        assert "mesa" not in frase.casefold()
-    assert "nada foi alterado" not in a07.FRASE_DO_EXCLUIR_SEM_CAUSA
-    assert "nada foi alterado" not in a07.FRASE_DO_TIRAR_SEM_CAUSA
+    """Sem «mesa», sem vermelho: a frase da trava que não veio fala a língua da casa."""
+    frase = cpe.FRASE_DA_TRAVA_QUE_NAO_VEIO
+    assert frase[0].isupper() and frase.endswith("."), frase
+    assert "mesa" not in frase.casefold()
