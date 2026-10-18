@@ -9,14 +9,17 @@ Só o desenho (`mockup/05-vibracao.html` e `mockup/07-lancadores.html`); a segun
 produto. Rótulos com só a primeira letra maiúscula (fora nomes próprios) e nenhuma janela rola na
 vertical a 1212x809, a 1918x840 e a 1212x740.
 
-MORDIDAS (executadas aqui): «Parar tudo» escrito com maiúscula no meio, o «Parar tudo» fora do
-topo da janela e um cartão a menos no Kyty reprovam a régua; a 05 com «Meus toques» de volta também.
+MORDIDAS (executadas aqui): uma maiúscula no meio da janela e outra numa dica, o «Parar tudo» fora
+do topo da janela e um cartão a menos no Kyty reprovam a régua; a 05 com «Meus toques» de volta
+também.
 """
 
 from __future__ import annotations
 
+import html
 import pathlib
 import re
+import sys
 
 import pytest
 
@@ -25,16 +28,10 @@ M05 = RAIZ / "mockup" / "05-vibracao.html"
 M07 = RAIZ / "mockup" / "07-lancadores.html"
 CHROME = pathlib.Path("/usr/bin/google-chrome")
 LARGURAS = ((1212, 809), (1918, 840), (1212, 740))
+sys.path.insert(0, str(RAIZ / "scripts"))
+sys.path.insert(0, str(RAIZ / "src"))
+import check_so_a_primeira_letra as regua
 
-#: Nomes próprios que a tela escreve com maiúscula no meio da frase: jogos, produtos, abas e o
-#: estilo «Adulto». Qualquer outra palavra com maiúscula depois de minúscula reprova.
-PROPRIOS = {
-    "Adulto", "Adventure", "Conquest", "Crisis", "Domi", "Engine", "Evil", "Ferri", "Game",
-    "Hefesto", "Iluminação", "Input", "Intiface", "Knight", "Kombat", "Kyty", "Linux", "Lovense",
-    "Lust", "Mode", "Nights", "Nora", "Perfis", "Planet", "Proton", "Ring", "Salvar", "Steam",
-    "Village", "Xbox",
-    # a cor do plástico, nome próprio do aparelho (a 05 a traz no title do chip do controle)
-    "Blue", "Red"}
 ABAS_INTERNAS = ["Meus toques", "Segurança", "Gestos", "O que seguem", "Touchpad", "Luz", "Perfis"]
 CARTOES_DO_KYTY = ["Programa", "Jogos", "Controle", "Som"]
 
@@ -46,20 +43,17 @@ def _doc(caminho: pathlib.Path, texto: str | None = None) -> str:
 
 
 def _maiusculas_a_mais(doc: str, so_o_que_se_le: bool = False) -> list[str]:
-    """Palavra com maiúscula depois de minúscula, na mesma frase, que não é nome próprio.
+    """Palavra com maiúscula no meio da frase, pela régua da casa (`check_so_a_primeira_letra`).
 
-    `so_o_que_se_le` olha apenas os textos da tela, sem as dicas: nas dicas da 05 o nome de um
-    botão («Parar», «Sem efeito») aparece citado com a maiúscula dele.
+    O nome próprio e a marca são os que a régua declara: a lista tem um dono só. Além do que a
+    régua lê, aqui entram as dicas (`data-dica`) das janelas da 07; `so_o_que_se_le` as deixa de
+    fora, porque nas dicas da 05 o nome de um botão («Parar», «Sem efeito») vai citado.
     """
-    textos = re.findall(r">([^<>]{2,90})<", doc)
+    nomes = regua.licencas([M05, M07])
+    lidas = [frase for _, frase in regua.frases(doc)]
     if not so_o_que_se_le:
-        textos += re.findall(r'(?:data-dica|title|aria-label|placeholder)="([^"]+)"', doc)
-    achou: set[str] = set()
-    for t in textos:
-        for m in re.finditer(r"(?<=[a-zçãõáéíóúâêô] )([A-ZÁÉÍÓÚÂÊÔ][a-zçãõáéíóúâêô]+)", t.strip()):
-            if m.group(1) not in PROPRIOS:
-                achou.add(m.group(1))
-    return sorted(achou)
+        lidas += [html.unescape(d) for d in re.findall(r'data-dica="([^"]+)"', doc)]
+    return sorted({p for frase in lidas for p in regua.maiusculas_no_meio(frase, nomes)})
 
 
 def _janela(doc: str, ident: str) -> str:
@@ -116,9 +110,11 @@ def test_so_a_primeira_letra_e_maiuscula_na_05_e_nas_janelas_da_07() -> None:
     assert _maiusculas_a_mais(_doc(M07)) == []
 
 
-def test_a_regua_morde_o_parar_tudo_com_maiuscula_no_meio() -> None:
-    doc = _doc(M07).replace("Parar tudo", "Parar Tudo")
-    assert "Tudo" in _maiusculas_a_mais(doc)
+def test_a_regua_morde_a_maiuscula_no_meio_da_janela_e_da_dica() -> None:
+    doc = _doc(M07).replace("Para sozinho em", "Para Sozinho em")
+    assert "Sozinho" in _maiusculas_a_mais(doc)
+    doc = _doc(M07).replace("Sem gesto e sem jogo, ele para sozinho", "Sem gesto e sem Jogo")
+    assert "Jogo" in _maiusculas_a_mais(doc)
 
 
 @pytest.fixture(scope="module")

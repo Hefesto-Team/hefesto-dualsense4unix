@@ -82,6 +82,7 @@ MARCAS = frozenset({
     "Xbox", "Freestyle", "Nintendo", "Pro", "Sony", "PlayStation", "Windows",
     "Wi-Fi", "Bluetooth", "Vulkan", "Big", "Picture", "Input", "Ryujinx",
     "Lutris", "Heroic", "Wayland", "AppImage", "Flatpak", "Xiaomi", "Edge",
+    "Lovense", "Intiface", "Kyty",
 })
 
 TECLAS = frozenset({
@@ -94,8 +95,9 @@ UNIDADES = frozenset({"MHz", "GHz", "Hz", "kHz", "dB", "dBm", "mA", "ms"})
 #: O dado de exemplo dos geradores: os donos dos controles da mesa do desenho
 #: (`monta.MESA`, `aba08`), os jogos da lista de perfis (`aba10.PERFIS`), os
 #: aparelhos do rádio (o `Alias` do BlueZ, que nasce da classe: «Caixa de som»)
-#: e as entradas que o usuário nomeou na mesa de exemplo (Esquerda, Meio, Direita). O
-#: produto troca cada um pelo nome que a pessoa deu ou que o jogo tem; nome de
+#: e as entradas que o usuário nomeou na mesa de exemplo (Esquerda, Meio, Direita), os
+#: jogos e os brinquedos da 07 (`desenho_da_experimental`) e os nomes que a Lovense dá ao
+#: servidor e ao modo do app («Intiface Engine», «Game Mode»). O produto troca cada um pelo nome que a pessoa deu ou que o jogo tem; nome de
 #: gente, de jogo, de aparelho e de entrada é próprio.
 NOMES_DO_DESENHO = (
     "Vitória", "Ana", "Pedro", "Rafa", "Davi", "Lia",
@@ -104,6 +106,9 @@ NOMES_DO_DESENHO = (
     "Xiaomi Scale S400", "Xiaomi Band 9",
     "Teclado", "Mouse", "Caixa de som", "Fone", "Celular", "Relógio", "Acessório",
     "Esquerda", "Meio", "Direita",
+    "Sackboy: A Big Adventure", "Resident Evil Village", "Hollow Knight: Silksong",
+    "Neon Nights", "Planet Lust", "MonGirl Conquest", "Third Crisis",
+    "Nora", "Domi", "Ferri", "Intiface Engine", "Game Mode",
 )
 
 #: A palavra que, seguida do número, é o nome de um lugar: «Entrada 4».
@@ -117,7 +122,7 @@ ROTULOS_CITADOS: tuple[str, ...] = (
     "Padrão", "Economia", "Máximo", "Sensor háptico",
     "Interna", "Trocar os botões",
     "Atrás do gabinete", "Gestão de controles", "Rádio e adaptadores", "Mapa das conexões",
-    "Personalizado", "Universal",
+    "Personalizado", "Universal", "Adulto",
 )
 
 #: A régua lê `+` como separador de tecla («Alt + Tab»).
@@ -133,8 +138,10 @@ _DA_FRASE = frozenset({
 #: O valor do selo da linha (a 08: «Visto como <b>Xbox 360</b>», «Analógico virtual
 #: <b>Apagado</b>») é peça própria: o `.gc-est .est` é `display:flex`, o `<b>` vira item do
 #: flex e abre bloco, e a régua irmã (test_todo_texto_que_abre_uma_linha_comeca_com_maiuscula)
-#: exige a maiúscula ali. As duas réguas leem o mesmo corte.
-_VALOR_DO_SELO = re.compile(r'<span class="est(?: [^"]*)?"[^>]*>[^<]*(<b>)')
+#: exige a maiúscula ali. As duas réguas leem o mesmo corte. A linha da sessão da 07
+#: («Surto <b>Pronto</b>», o `.ja-ses-l`, também flex) é o mesmo selo.
+_VALOR_DO_SELO = re.compile(
+    r'<(?:span class="est(?: [^"]*)?"|div class="ja-ses-l")[^>]*>[^<]*(<b>)')
 _ABA_DA_FITA = re.compile(r'<a class="aba[^"]*" href="\d\d-[^"]+">([^<]+)</a>')
 
 
