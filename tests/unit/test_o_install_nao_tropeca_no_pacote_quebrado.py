@@ -13,6 +13,7 @@ Tudo roda com `dpkg-query`, `apt-get`, `dnf`, `pacman` e `sudo` de mentira no
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -23,6 +24,7 @@ import pytest
 
 from tests.unit.test_install_garante_deps_em_qualquer_familia import (
     PRELUDO,
+    _extrai_funcao,
     _extrai_linha,
     _roda,
 )
@@ -325,3 +327,74 @@ def test_o_install_nunca_reconfigura_remove_nem_segura_pacote_do_sistema() -> No
     for proibido in ("dpkg --configure", "apt-mark hold", "apt-get remove", "apt-get install -f"):
         achados = [linha for linha in codigo if proibido in linha]
         assert achados == [], f"o install executa «{proibido}»: {achados}"
+
+
+INSTALL = (Path(__file__).resolve().parents[2] / "install.sh").read_text(encoding="utf-8")
+# Uma linha que EXECUTA o apt para instalar (com sudo), fora de texto impresso.
+_APT_QUE_INSTALA = re.compile(
+    r"^\s*(?:if\s+(?:!\s+)?)?(?:_run_pkg_quieto\s+)?sudo\b[^#]*\bapt-get install\b"
+)
+
+
+def test_todo_apt_get_install_do_install_passa_pela_checagem() -> None:
+    """O `.deb`, o backport do BlueZ e o PipeWire da casa chamam o apt sem o
+    `run_pkg`: cada um pergunta antes, ou tropeça no mesmo pacote a meio."""
+    linhas = INSTALL.splitlines()
+    vistos = []
+    for i, linha in enumerate(linhas):
+        if not _APT_QUE_INSTALA.match(linha) or " -s " in linha:
+            continue
+        vistos.append(linha.strip())
+        if "_run_pkg_quieto sudo apt-get install" in linha:
+            continue  # o run_apt: o teste seguinte cobre
+        j = i - 1
+        while j >= 0 and not re.match(r"^(?:\S+\(\) \{|\})$", linhas[j]):
+            if "_avisa_pacote_a_meio" in linhas[j]:
+                break
+            j -= 1
+        assert j >= 0 and "_avisa_pacote_a_meio" in linhas[j], (
+            f"install.sh:{i + 1} chama o apt sem perguntar pelo pacote a meio: {linha.strip()}"
+        )
+    assert len(vistos) >= 4, f"a régua não achou os apt-get do install: {vistos}"
+
+
+def test_o_run_apt_so_e_chamado_pelo_run_pkg_depois_da_checagem() -> None:
+    chamadas = [
+        linha
+        for linha in INSTALL.splitlines()
+        if re.search(r"\brun_apt\b", linha)
+        and not linha.lstrip().startswith("#")
+        and not linha.startswith("run_apt()")
+    ]
+    assert [c.strip() for c in chamadas] == ['apt)    run_apt "${_nomes[@]}" ;;'], chamadas
+    corpo = _extrai_funcao("run_pkg")
+    assert corpo.index("_pacotes_a_meio") < corpo.index("run_apt")
+
+
+def _formato_deb(tmp_path: Path) -> str:
+    raiz = tmp_path / "raiz"
+    (raiz / "scripts").mkdir(parents=True)
+    (raiz / "scripts" / "build_deb.sh").write_text(
+        f'mkdir -p "{raiz}/dist"\n: > "{raiz}/dist/hefesto_1_all.deb"\n', encoding="utf-8"
+    )
+    return "\n".join(
+        [PRELUDO, "step() { :; }", f'ROOT_DIR="{raiz}"', _extrai_funcao("format_deb")]
+    )
+
+
+def test_o_deb_com_pacote_a_meio_nao_chama_o_apt(tmp_path: Path) -> None:
+    binario = _bancada(tmp_path, dpkg=A_MEIO)
+    proc = _roda("format_deb", preludo=_formato_deb(tmp_path), env=_env(tmp_path, "apt", binario))
+    assert proc.returncode == 42, proc.stdout + proc.stderr
+    assert _linhas(tmp_path / "pkg.log") == [], "o apt foi chamado com pacote a meio"
+    assert "isso é do sistema, não do Hefesto" in proc.stdout
+    assert "sudo apt install " in proc.stdout and "hefesto_1_all.deb" in proc.stdout
+    assert "o sistema tem pacote a meio" in proc.stderr
+
+
+def test_o_deb_com_tudo_em_ii_vai_ao_apt(tmp_path: Path) -> None:
+    binario = _bancada(tmp_path)
+    proc = _roda("format_deb", preludo=_formato_deb(tmp_path), env=_env(tmp_path, "apt", binario))
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    (chamada,) = _linhas(tmp_path / "pkg.log")
+    assert chamada.startswith("apt-get install -y ") and chamada.endswith("hefesto_1_all.deb")

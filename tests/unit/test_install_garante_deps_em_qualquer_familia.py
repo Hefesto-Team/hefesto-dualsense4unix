@@ -88,6 +88,7 @@ PRELUDO = "\n".join(
         _extrai_funcao("_familia_pacotes"),
         _extrai_funcao("_pkg_nome"),
         _extrai_funcao("_pacotes_a_meio"),
+        _extrai_funcao("_avisa_pacote_a_meio"),
         _extrai_funcao("_pids_da_trava"),
         _extrai_funcao("_quem_segura_a_trava"),
         _extrai_funcao("_trava_ocupada"),

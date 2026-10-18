@@ -763,6 +763,25 @@ _pacotes_a_meio() {
                END { if (n) printf "\n" }' || true
 }
 
+# Com pacote a meio no sistema, diz o que é e devolve 0: o recado longo sai uma
+# vez por install; as outras vezes, uma linha. Sem pacote a meio, devolve 1
+# calado. `$1`: o que não se instalou; `$2`: a lista, quando quem chama já a tem.
+# Serve ao `run_pkg` e a quem chama o apt direto (o .deb, o BlueZ e o PipeWire da
+# casa): todo `apt-get install` do install passa por aqui antes.
+_avisa_pacote_a_meio() {
+    local _meio="${2-}"
+    [[ -n "${_meio}" ]] || _meio="$(_pacotes_a_meio)"
+    [[ -n "${_meio}" ]] || return 1
+    if [[ "${_PACOTE_A_MEIO_DITO:-0}" -eq 0 ]]; then
+        _PACOTE_A_MEIO_DITO=1
+        warn "o sistema tem pacote a meio de uma atualização (${_meio}) — isso é do sistema, não do Hefesto; não chamei o apt, que tentaria reconfigurá-lo e falharia de novo"
+        printf '      para consertar o sistema:   sudo apt-get install -f   (ou: sudo dpkg --configure -a)\n'
+    else
+        warn "o sistema segue com pacote a meio — não instalei $1"
+    fi
+    return 0
+}
+
 # Os PIDs que travam o arquivo (flock ou fcntl), lidos do `/proc/locks`, que
 # qualquer pessoa lê. É a resposta que vale sem root: o `fuser` de quem não é
 # root não enxerga processo de root (o `unattended-upgrades`, o rpm), e o apt e
@@ -881,13 +900,7 @@ run_pkg() {
                 _nao_faria "instalar pacote(s) ${_nomes[*]}: o sistema tem pacote a meio (${_meio})"
                 return 0
             fi
-            if [[ "${_PACOTE_A_MEIO_DITO:-0}" -eq 0 ]]; then
-                _PACOTE_A_MEIO_DITO=1
-                warn "o sistema tem pacote a meio de uma atualização (${_meio}) — isso é do sistema, não do Hefesto; não chamei o apt, que tentaria reconfigurá-lo e falharia de novo"
-                printf '      para consertar o sistema:   sudo apt-get install -f   (ou: sudo dpkg --configure -a)\n'
-            else
-                warn "o sistema segue com pacote a meio — não instalei ${_nomes[*]}"
-            fi
+            _avisa_pacote_a_meio "${_nomes[*]}" "${_meio}"
             printf '      depois, para instalar o que o Hefesto pede:   %s\n' "$(comando_manual_pkg "$@")"
             return 1
         fi
@@ -1785,6 +1798,10 @@ format_deb() {
     deb="$(ls -t "${ROOT_DIR}/dist/"*.deb 2>/dev/null | head -1)"
     [[ -n "${deb}" ]] || die "nenhum .deb gerado em dist/"
     command -v sudo >/dev/null 2>&1 || die "sudo necessário para 'apt install'"
+    if _avisa_pacote_a_meio "o .deb"; then
+        printf '      depois, para instalar o Hefesto:   sudo apt install %s\n' "${deb}"
+        die "o .deb não foi instalado: o sistema tem pacote a meio"
+    fi
     sudo apt-get install -y "${deb}" || die "apt install falhou"
     printf '\n      Instalado via apt (udev + .desktop via postinst).\n      Abrir: hefesto-dualsense4unix-gui\n'
 }
@@ -3121,6 +3138,8 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v dpkg-query >/dev/null 2>&1 \
                 _faria_root "instalar os .debs do backport do BlueZ ${_BZ_TARGET} (libbluetooth3, bluez, bluez-cups) — o postinst do PRÓPRIO pacote REINICIA o bluetoothd e os controles por Bluetooth caem até reconectar"
             elif ! sudo -n true 2>/dev/null; then
                 warn "sudo recusado — passo do backport bluez pulado (re-execute ./install.sh)"
+            elif _avisa_pacote_a_meio "o backport do BlueZ ${_BZ_TARGET}"; then
+                printf '      depois, rode ./install.sh de novo (os .debs ficam em %s)\n' "${_bz_dir}"
             else
                 # (c) AVISO ALTO pré-aplicação — sob --yes prossegue; interativo
                 # tem Enter=sim (mesma filosofia de default-apply do install),
@@ -3373,6 +3392,10 @@ install_pipewire_da_casa() {
     fi
     if ! sudo -n true 2>/dev/null; then
         warn "sudo recusado — passo do PipeWire da casa pulado (re-execute ./install.sh)"
+        return 0
+    fi
+    if _avisa_pacote_a_meio "o PipeWire da casa"; then
+        printf '      depois, rode ./install.sh de novo (os pacotes já estão construídos em %s)\n' "${dir}"
         return 0
     fi
     if ! sairia="$(_pw_o_que_sairia "${debs[@]}")"; then
