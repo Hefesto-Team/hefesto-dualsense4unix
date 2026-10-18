@@ -5,6 +5,7 @@ from __future__ import annotations
 import pathlib
 import re
 import sys
+from typing import Any
 
 import pytest
 
@@ -120,7 +121,9 @@ def test_o_status_tem_endereco_na_pagina():
         "a ser o literal do desenho, e a pílula não tem como discordar de nada.")
 
 
-def _com_avisos_a_mais(a09, ctx, monkeypatch, quantos: int) -> None:
+def _com_avisos_a_mais(
+    a09: Any, ctx: Any, monkeypatch: pytest.MonkeyPatch, quantos: int,
+) -> None:
     """O exame desta máquina MAIS `quantos` avisos: o tamanho do exame deixa de ser da máquina."""
     exame = list(a09._achados(ctx.state) or [])
     exame += [("[WARN]", f"aviso de prova {i}.") for i in range(quantos)]
