@@ -152,6 +152,7 @@ def test_a_varredura_rapida_nao_examina_e_nao_diz(casa: Path) -> None:
 
 
 def test_sem_conta_e_aviso_e_o_jogo_que_abre_nao_e_impedido(casa: Path) -> None:
+    # D-1810-ESTAR-SEM-CONTA-E-AVISO-E-NAO-IMPEDIMENTO
     # D-1710-O-JOGO-SEM-CONTA-ABRE-E-NAO-E-IMPEDIDO
     _jogo(_biblioteca(casa), "800009")
     ficha = _com_o_wrapper(_ficha("800009"))
