@@ -1869,8 +1869,11 @@ def _valor_na_tela(valor: Any) -> Any:
     return int(valor) if isinstance(valor, float) and valor == int(valor) else valor
 
 
-def _montar_a_janela_da_extensao(mod_id: str) -> None:
-    """O miolo da janela de opções, com o valor de agora de cada opção que o manifesto declara."""
+def _montar_a_janela_da_extensao(mod_id: str, aba: str = "") -> None:
+    """O miolo da janela de opções, com o valor de agora de cada opção que o manifesto declara.
+
+    ``aba`` é o grupo que fica aberto (o da opção que acabou de mudar).
+    """
     from hefesto_dualsense4unix.mods import opcoes
 
     item = _a_instalada(mod_id)
@@ -1880,9 +1883,10 @@ def _montar_a_janela_da_extensao(mod_id: str) -> None:
     valores = opcoes.ler(manifesto, _lugares())
     linhas = [exp.OpcaoDaJanela(
         mod=mod_id, id=x.id, rotulo=x.rotulo, tipo=x.tipo, valor=_valor_na_tela(valores[x.id]),
-        escolhas=tuple(x.escolhas)) for x in manifesto.opcoes]
+        escolhas=tuple(x.escolhas), grupo=x.grupo or "") for x in manifesto.opcoes]
     _MEXIDA.mod = mod_id
-    _MEXIDA.html_mod = exp.modificacao_miolo_html(manifesto.nome, linhas, manifesto.descricao)
+    _MEXIDA.html_mod = exp.modificacao_miolo_html(
+        manifesto.nome, linhas, manifesto.descricao, aba)
 
 
 def _a_pintura_agora(ctx: Contexto) -> dict[str, Any]:
@@ -1955,7 +1959,7 @@ def guardar_opcao_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> di
             return None
         valor = o.get("valor")
     _guardar_a_opcao_da_modificacao(item, opcao_id, valor)
-    _montar_a_janela_da_extensao(mod_id)
+    _montar_a_janela_da_extensao(mod_id, opcao.grupo or "")
     return _a_pintura_agora(ctx)
 
 

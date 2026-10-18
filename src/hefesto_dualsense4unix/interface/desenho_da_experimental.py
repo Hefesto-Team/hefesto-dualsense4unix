@@ -279,6 +279,7 @@ class OpcaoDaJanela(NamedTuple):
     tipo: str
     valor: str | bool | float
     escolhas: tuple[str, ...] = ()
+    grupo: str = ""
 
 
 OPCOES_DE_EXEMPLO = (
@@ -298,15 +299,55 @@ def _controle_da_opcao(o: OpcaoDaJanela) -> str:
         classe, texto = ("nj-tog ligado", "Ligado") if o.valor else ("nj-tog", "Desligado")
         return (f'<span class="{classe}" {alvo}><span class="pino"></span>'
                 f'<span class="txt">{texto}</span></span>')
+    if o.tipo == "cor":
+        return (f'<input class="ext-cor-in" type="color" {alvo} '
+                f'value="{_a(o.valor)}" aria-label="{_a(o.rotulo)}">')
     return (f'<input class="ext-num" type="text" inputmode="decimal" {alvo} '
             f'value="{_a(o.valor)}" aria-label="{_a(o.rotulo)}">')
 
 
-def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], descricao: str = "") -> str:
-    """O conteúdo da janela de uma extensão: o que o manifesto declara, uma linha por opção."""
-    linhas = "".join(
+def _linhas_das_opcoes(opcoes: Sequence[OpcaoDaJanela]) -> str:
+    return "".join(
         f'<div class="lc-linha"><span>{_e(o.rotulo)}</span>'
         f'<span class="lc-val">{_controle_da_opcao(o)}</span></div>' for o in opcoes)
+
+
+def _grupos_das_opcoes(opcoes: Sequence[OpcaoDaJanela]) -> dict[str, list[OpcaoDaJanela]]:
+    """Os grupos na ordem em que aparecem; a opção sem grupo vai ao primeiro."""
+    nomes = [o.grupo for o in opcoes if o.grupo]
+    primeiro = nomes[0] if nomes else ""
+    grupos: dict[str, list[OpcaoDaJanela]] = {}
+    for o in opcoes:
+        grupos.setdefault(o.grupo or primeiro, []).append(o)
+    return grupos
+
+
+def opcoes_em_abas_html(opcoes: Sequence[OpcaoDaJanela], aba: str = "") -> str:
+    """As opções em abas internas, uma por grupo; com um grupo só, as linhas soltas.
+
+    ``aba`` é o grupo aberto (o da opção que acabou de mudar); fora da lista, abre o primeiro.
+    """
+    grupos = _grupos_das_opcoes(opcoes)
+    if len(grupos) < 2:
+        return _linhas_das_opcoes(opcoes)
+    aberto = aba if aba in grupos else next(iter(grupos))
+    partes = []
+    for i, (nome, itens) in enumerate(grupos.items()):
+        marca = " checked" if nome == aberto else ""
+        partes.append(
+            f'<input type="radio" name="mg-aba" id="mg-aba{i}"{marca}>'
+            f'<label for="mg-aba{i}">{_e(nome)}</label>'
+            f'<div class="mg-painel">{_linhas_das_opcoes(itens)}</div>')
+    return f'<div class="mg-abas">{"".join(partes)}</div>'
+
+
+def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], descricao: str = "",
+                           aba: str = "") -> str:
+    """O conteúdo da janela de uma extensão: o que o manifesto declara, uma linha por opção.
+
+    Com mais de um grupo nas opções, uma aba interna por grupo (``aba`` é a aberta).
+    """
+    linhas = opcoes_em_abas_html(opcoes, aba)
     corpo = linhas or '<div class="ext-vazia">Esta extensão não tem opções para ajustar.</div>'
     sub = f'<div class="lanc-novo-para">{_e(descricao)}</div>' if descricao else ""
     return f'''    <div class="tn-topo">

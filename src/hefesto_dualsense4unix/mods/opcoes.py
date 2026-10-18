@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from hefesto_dualsense4unix.mods.instalador import InstalacaoRecusadaError, Lugares
-from hefesto_dualsense4unix.mods.manifesto import Manifesto, Opcao
+from hefesto_dualsense4unix.mods.manifesto import COR_HEXA, Manifesto, Opcao
 
 NOME_DO_ARQUIVO = "opcoes.json"
 
@@ -27,9 +27,13 @@ def caminho(mod_id: str, lugares: Lugares) -> Path:
 def padrao_de(opcao: Opcao) -> Valor:
     """O que a opção vale sem escolha: o padrão do manifesto, ou o primeiro jeito de cada tipo."""
     if opcao.padrao is not None:
+        if opcao.tipo == "cor" and isinstance(opcao.padrao, str):
+            return opcao.padrao.lower()
         return opcao.padrao
     if opcao.tipo == "escolha":
         return opcao.escolhas[0]
+    if opcao.tipo == "cor":
+        return "#ffffff"
     return False if opcao.tipo == "ligado" else 0.0
 
 
@@ -47,6 +51,10 @@ def validar(opcao: Opcao, valor: Any) -> Valor:
         if valor not in opcao.escolhas:
             raise InstalacaoRecusadaError(f"«{valor}» não é uma das escolhas de «{opcao.rotulo}».")
         return str(valor)
+    if opcao.tipo == "cor":
+        if not isinstance(valor, str) or not COR_HEXA.match(valor):
+            raise InstalacaoRecusadaError(f"«{opcao.rotulo}» pede uma cor no formato #rrggbb.")
+        return valor.lower()
     try:
         numero = float(str(valor).replace(",", "."))
     except ValueError:

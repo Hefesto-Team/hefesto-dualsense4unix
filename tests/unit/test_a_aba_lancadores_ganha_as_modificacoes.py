@@ -222,7 +222,8 @@ def ctx():
 
 
 def _fonte(tmp_path: pathlib.Path, mod_id: str = "toque", *, nome: str = "Toque",
-           permissoes: tuple[str, ...] = (), opcoes: list | None = None) -> pathlib.Path:
+           permissoes: tuple[str, ...] = (), opcoes: list | None = None,
+           extra: dict | None = None) -> pathlib.Path:
     """A pasta de uma extensão de tema (só declaração: nenhum processo)."""
     pasta = tmp_path / "fonte" / mod_id
     pasta.mkdir(parents=True, exist_ok=True)
@@ -230,7 +231,7 @@ def _fonte(tmp_path: pathlib.Path, mod_id: str = "toque", *, nome: str = "Toque"
                  "licenca": "MIT", "tipos": ["tema"], "tema": {},  # noqa-acento: chave
                  "permissoes": list(permissoes),  # noqa-acento: chave do manifesto
                  "descricao": "Muda um detalhe.",  # noqa-acento: chave
-                 "opcoes": opcoes or []}  # noqa-acento: chave do manifesto
+                 "opcoes": opcoes or [], **(extra or {})}  # noqa-acento: chave do manifesto
     (pasta / "hefesto-mod.json").write_text(json.dumps(manifesto), encoding="utf-8")
     return pasta
 
@@ -573,3 +574,82 @@ def test_criar_perfil_do_jogo_marca_tem_perfil_e_mantem_a_janela(lar, ctx, monke
     assert 'data-v="steam_app_1"' not in miolo, "o jogo que ganhou perfil ainda oferece «Criar»"
     with pytest.raises(RuntimeError, match="não está na lista"):
         a07.criar_perfil_do_jogo(ctx, {"v": "steam_app_9"}, _Ponte())
+
+
+# --- o contrato das peças da janela: grupos em abas, cor, «Agora» e «Parar tudo» (18/10/2026) -----
+
+_EM_GRUPOS = [
+    {"id": "teto", "rotulo": "Teto", "tipo": "numero", "grupo": "Segurança", "padrao": 50},  # noqa-acento: chave
+    {"id": "gesto", "rotulo": "Gesto", "tipo": "ligado", "grupo": "Gestos"},  # noqa-acento: chave
+    {"id": "luz", "rotulo": "Cor da luz", "tipo": "cor", "grupo": "Luz",  # noqa-acento: chave
+     "padrao": "#00AAFF"},  # noqa-acento: chave
+]
+
+
+def _manifesto_de(**campos) -> object:
+    from hefesto_dualsense4unix.mods.manifesto import Manifesto
+
+    base = {"id": "toque", "nome": "Toque", "versao": "0.1", "api": ">=1,<2",  # noqa-acento: chave
+            "licenca": "MIT", "tipos": ["tema"], "tema": {}}  # noqa-acento: chave
+    return Manifesto.model_validate({**base, **campos})
+
+
+def test_o_manifesto_aceita_grupo_cor_agora_e_parar_tudo() -> None:
+    m = _manifesto_de(opcoes=_EM_GRUPOS, agora=["nivel", "perfil", "aparelhos"], parar_tudo=True,
+                      permissoes=["ler:acessorios.gesto"])  # noqa-acento: chave
+    assert [o.grupo for o in m.opcoes] == ["Segurança", "Gestos", "Luz"]  # noqa-acento: chave
+    assert m.agora == ["nivel", "perfil", "aparelhos"] and m.parar_tudo is True
+
+
+def test_o_manifesto_recusa_o_agora_e_o_parar_tudo_sem_a_permissao_do_retorno() -> None:
+    import pydantic
+
+    with pytest.raises(pydantic.ValidationError, match=r"ler:acessorios\.gesto"):
+        _manifesto_de(parar_tudo=True)
+    with pytest.raises(pydantic.ValidationError, match=r"ler:acessorios\.gesto"):
+        _manifesto_de(agora=["nivel"])
+    with pytest.raises(pydantic.ValidationError):
+        _manifesto_de(agora=["nivel", "nivel"], permissoes=["ler:acessorios.gesto"])  # noqa-acento: chave
+    with pytest.raises(pydantic.ValidationError):
+        _manifesto_de(agora=["temperatura"], permissoes=["ler:acessorios.gesto"])  # noqa-acento: chave
+
+
+def test_a_opcao_de_cor_recusa_o_padrao_que_nao_e_hexa() -> None:
+    import pydantic
+
+    with pytest.raises(pydantic.ValidationError, match="#rrggbb"):
+        _manifesto_de(opcoes=[{"id": "luz", "rotulo": "Luz", "tipo": "cor", "padrao": "azul"}])  # noqa-acento: chave
+
+
+def test_a_janela_com_dois_grupos_desenha_uma_aba_por_grupo_e_a_cor(lar, ctx, tmp_path) -> None:
+    a07 = _a07()
+    _instalar(a07, ctx, _fonte(tmp_path, opcoes=_EM_GRUPOS))
+    janela = a07.configurar_modificacao(ctx, {"v": "toque"}, _Ponte())["blocos"]["#mod-janela"]
+    assert janela.count('type="radio" name="mg-aba"') == 3
+    for nome in ("Segurança", "Gestos", "Luz"):  # noqa-acento: chave
+        assert f">{nome}</label>" in janela
+    assert janela.count(" checked>") == 1 and 'id="mg-aba0" checked' in janela
+    assert 'type="color"' in janela and 'value="#00aaff"' in janela  # o padrão, em minúsculas
+
+
+def test_um_grupo_so_nao_desenha_aba(lar, ctx, tmp_path) -> None:
+    a07 = _a07()
+    unico = [{**o, "grupo": "Tudo"} for o in _OPCOES]
+    _instalar(a07, ctx, _fonte(tmp_path, opcoes=unico))
+    janela = a07.configurar_modificacao(ctx, {"v": "toque"}, _Ponte())["blocos"]["#mod-janela"]
+    assert "mg-aba" not in janela and "<select" in janela
+
+
+def test_guardar_a_cor_valida_normaliza_e_mantem_a_aba_aberta(lar, ctx, tmp_path) -> None:
+    a07 = _a07()
+    _instalar(a07, ctx, _fonte(tmp_path, opcoes=_EM_GRUPOS))
+    a07.configurar_modificacao(ctx, {"v": "toque"}, _Ponte())
+    carga = a07.guardar_opcao_da_modificacao(
+        ctx, {"v": "toque:luz", "valor": "#FF8800", "evento": "change"}, _Ponte())
+    guardado = json.loads((lar.dados / "toque" / "opcoes.json").read_text(encoding="utf-8"))
+    assert guardado["luz"] == "#ff8800"
+    janela = carga["blocos"]["#mod-janela"]
+    assert 'id="mg-aba2" checked' in janela and 'value="#ff8800"' in janela
+    with pytest.raises(RuntimeError, match="#rrggbb"):
+        a07.guardar_opcao_da_modificacao(
+            ctx, {"v": "toque:luz", "valor": "vermelho", "evento": "change"}, _Ponte())

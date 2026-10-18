@@ -96,6 +96,9 @@ _O_QUE_DEIXA: dict[str, str] = {
     "aparelhos": "Abrir aparelhos ligados ao computador.",
 }
 
+#: A cor de uma opção ``cor``: ``#rrggbb``, minúsculas ou maiúsculas.
+COR_HEXA = re.compile(r"^#[0-9a-fA-F]{6}$")
+
 _SPDX = re.compile(r"^[A-Za-z0-9.+-]+(?: (?:AND|OR|WITH) [A-Za-z0-9.+-]+)*$")
 _CLAUSULA_DA_FAIXA = re.compile(r"^(>=|<=|==|>|<)?\s*(\d+)$")
 
@@ -169,9 +172,12 @@ class Opcao(BaseModel):
 
     id: str
     rotulo: str = Field(min_length=1, max_length=60)
-    tipo: Literal["escolha", "ligado", "numero"]
+    tipo: Literal["escolha", "ligado", "numero", "cor"]
     escolhas: list[str] = Field(default_factory=list)
     padrao: str | bool | float | None = None
+    # A aba interna da janela em que a opção mora; sem ela, a opção vai à primeira aba. Com
+    # um grupo só, a janela não desenha aba nenhuma.
+    grupo: str | None = Field(default=None, min_length=1, max_length=30)
 
     @field_validator("id")
     @classmethod
@@ -184,6 +190,10 @@ class Opcao(BaseModel):
     def _escolhas_da_escolha(self) -> Opcao:
         if self.tipo == "escolha" and not self.escolhas:
             raise ValueError(f"a opção {self.id} é de escolha e não lista as escolhas")
+        if self.tipo == "cor" and self.padrao is not None and not (
+            isinstance(self.padrao, str) and COR_HEXA.match(self.padrao)
+        ):
+            raise ValueError(f"a opção {self.id} é de cor e o padrão não é #rrggbb")
         return self
 
 
@@ -202,6 +212,12 @@ class Manifesto(BaseModel):
     processo: Processo | None = None
     permissoes: list[str] = Field(default_factory=list)
     opcoes: list[Opcao] = Field(default_factory=list)
+    # A coluna «Agora» da janela: o que mostrar ao vivo do que a extensão devolve em
+    # ``acessorios.estado``. Pede ``ler:acessorios.gesto``, a permissão desse retorno.
+    agora: list[Literal["nivel", "perfil", "aparelhos"]] = Field(default_factory=list)
+    # O botão «Parar tudo», sempre à vista: manda o gesto ``para`` à extensão, que o recebe por
+    # ``ler:acessorios.gesto``. O nível e o perfil ficam guardados.
+    parar_tudo: bool = False
     # O conteúdo destes três é das sprints que os consomem (o lançador do
     # KytyPS5, o tema da interface, a ponte dos acessórios): aqui só a forma.
     lancador: dict[str, Any] | None = None
@@ -246,6 +262,10 @@ class Manifesto(BaseModel):
             raise ValueError("tipo repetido")
         if ("processo" in self.tipos) != (self.processo is not None):
             raise ValueError("o tipo processo e o bloco processo andam juntos")
+        if len(set(self.agora)) != len(self.agora):
+            raise ValueError("pedaço repetido em agora")
+        if (self.agora or self.parar_tudo) and "ler:acessorios.gesto" not in self.permissoes:
+            raise ValueError("agora e parar_tudo pedem a permissão ler:acessorios.gesto")
         return self
 
     @property
@@ -306,6 +326,7 @@ def ler_manifesto(pasta: Path, *, exigir_api: bool = True) -> Manifesto:
 __all__ = [
     "ALCANCES_DE_REDE",
     "CANAIS_DE_ESCRITA",
+    "COR_HEXA",
     "NOME_DO_MANIFESTO",
     "PERMISSOES_SIMPLES",
     "TIPOS",

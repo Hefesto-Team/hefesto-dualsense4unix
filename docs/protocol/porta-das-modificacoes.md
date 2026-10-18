@@ -124,6 +124,29 @@ escrever nada:
   `{parar: true}` solta. Cada controle tem a sua barra. O pulso e o medidor soltam quando a modificação manda
   `ligado: false` ou a conexão cai.
 
+## A janela da extensão (o que o manifesto declara)
+
+A interface desenha a janela «Configurar» de cada extensão do que o `hefesto-mod.json` declara, sem
+código da extensão na tela. Cada `opcoes[]` tem `id`, `rotulo`, `tipo` e, opcionais, `escolhas`, `padrao` e `grupo`.
+
+- **`tipo`**: `escolha` (lista em `escolhas`), `ligado`, `numero` e `cor`. A `cor` é um seletor de cor da
+  interface; o valor é `#rrggbb` em minúsculas, e um `padrao` que não seja `#rrggbb` recusa o manifesto.
+- **`grupo`**: o nome (até 30 letras) da aba interna em que a opção mora. Com dois ou mais grupos a janela
+  desenha uma aba por grupo, na ordem em que aparecem; a opção sem grupo vai à primeira aba; com um grupo
+  só, não há aba. Ao mudar uma opção a janela reabre na aba dela.
+- **onde ficam os valores**: a tela grava cada opção em `<dados>/<id>/opcoes.json`, um objeto `{id: valor}`, em
+  `0600`, depois de validar contra o manifesto. A extensão lê o mesmo arquivo na pasta de dados
+  (`HEFESTO_MOD_DADOS`). Valor ausente, ou que o manifesto não aceita mais, vale o `padrao` (sem `padrao`: a
+  primeira `escolha`, `false`, `0` ou `#ffffff`).
+- **`agora`**: a lista do que a coluna «Agora» mostra, ao vivo, do `acessorios.estado` da extensão:
+  `nivel`, `perfil` e `aparelhos`, sem repetir.
+- **`parar_tudo`**: `true` pede o botão «Parar tudo», sempre à vista: ele manda a ela o gesto `para`, e o
+  nível e o perfil ficam guardados.
+
+`agora` e `parar_tudo` só valem com `ler:acessorios.gesto` nas permissões, que é o retorno que os dois usam;
+sem a permissão o manifesto é recusado. A interface ainda não desenha o «Agora» nem o «Parar tudo»: o
+manifesto os aceita, e a janela os desenha quando o serviço entregar o estado e receber o gesto pelo IPC.
+
 ## Os erros
 
 Além dos códigos do IPC principal (`-32700`, `-32600`, `-32601`, `-32602`), a porta tem quatro próprios:
