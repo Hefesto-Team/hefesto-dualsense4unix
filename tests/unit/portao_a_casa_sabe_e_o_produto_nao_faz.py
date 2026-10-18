@@ -689,11 +689,11 @@ _SEM_MAO_HOJE: dict[str, str] = {}
 
 
 _RODADA_DO_PROTON = (
-    "16/10/2026, O-PROTON-NOVO-SO-ENTRA-NO-LUGAR-DO-FIXADO-SE-PASSAR-NAS-PROVAS-01 — é "
-    "instrumento da rodada do Proton candidato, não do produto: quem o lê é "
-    "`scripts/ensaios/a_rodada_do_proton_candidato.py` (só na VM ou no CI) e a régua do "
-    "pino, `tests/unit/test_o_proton_novo_so_entra_se_passar.py`. O doctor ainda não lê "
-    "o recibo; quando ler, a entrada sai daqui."
+    "17/10/2026, O-DOCTOR-LE-O-RECIBO-DO-PROTON-FIXADO-01 — o doctor já lê o recibo "
+    "(`qualificar_proton.linhas_do_doctor_desta_maquina`); esta função ESCREVE a linha nova do "
+    "recibo, e quem a chama é a rodada do Proton candidato, "
+    "`scripts/ensaios/a_rodada_do_proton_candidato.py` (só na VM ou no CI): é instrumento da "
+    "qualificação, não do produto."
 )
 
 _NAO_E_PROMESSA: dict[str, str] = {
@@ -702,17 +702,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "heredoc Python, para dizer que pad ficou no uhid desde o último `daemon_starting`; "
         "o daemon não precisa da conta, porque é ele quem decide o canal."
     ),
-    "integrations/qualificar_proton.py::Ficha": _RODADA_DO_PROTON,
-    "integrations/qualificar_proton.py::a_minima_que_passa": _RODADA_DO_PROTON,
-    "integrations/qualificar_proton.py::caminho_do_recibo": _RODADA_DO_PROTON,
-    "integrations/qualificar_proton.py::envs_pedidas": _RODADA_DO_PROTON,
-    "integrations/qualificar_proton.py::ler_recibo": _RODADA_DO_PROTON,
     "integrations/qualificar_proton.py::linha_do_recibo": _RODADA_DO_PROTON,
-    "integrations/qualificar_proton.py::o_pino_sem_recibo": _RODADA_DO_PROTON,
-    "integrations/qualificar_proton.py::recibo_das_instaladas": _RODADA_DO_PROTON,
-    "integrations/qualificar_proton.py::strings_que_faltam": _RODADA_DO_PROTON,
-    "integrations/qualificar_proton.py::toques_do_script": _RODADA_DO_PROTON,
-    "integrations/qualificar_proton.py::versao_da_pasta": _RODADA_DO_PROTON,
     "core/protocolo_dsu.py::validar_saida": (
         "13/10/2026, O-SERVIDOR-DSU-LEVA-O-TOQUE-E-O-MOVIMENTO-AO-EMULADOR-01 — é o oráculo "
         "dos testes, não do produto: o docstring do módulo diz que ela é «o inverso de cada "

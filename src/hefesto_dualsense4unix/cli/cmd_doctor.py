@@ -315,6 +315,17 @@ def _print_bloco_contratos() -> int:
     return _gravidade_das_linhas(linhas)
 
 
+def _print_bloco_proton_fixado() -> int:
+    """O Proton fixado e o que o recibo diz de cada versão. Devolve a gravidade do bloco."""
+    from hefesto_dualsense4unix.integrations import qualificar_proton
+
+    console.print("\n== Proton fixado (o recibo de cada versão) ==")
+    linhas = qualificar_proton.linhas_do_doctor_desta_maquina()
+    for tag, mensagem in linhas:
+        console.print(f"{tag} {mensagem}", soft_wrap=True, highlight=False)
+    return _gravidade_das_linhas(linhas)
+
+
 def doctor_cmd(
     fix: bool = False,
     quiet: bool = False,
@@ -345,6 +356,8 @@ def doctor_cmd(
         rc = _GRAVIDADE_FAIL
 
     rc = max(rc, _print_bloco_contratos())
+
+    rc = max(rc, _print_bloco_proton_fixado())
 
     console.print("\n== daemon (via IPC) ==")
     linhas_do_daemon = asyncio.run(_daemon_checks())

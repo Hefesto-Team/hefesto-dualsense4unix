@@ -335,6 +335,7 @@ def _doctor_com(
     monkeypatch.setattr(cmd_doctor, "_print_storm_block", lambda: 0)
     monkeypatch.setattr(cmd_doctor, "_print_bloco_perfis", lambda: False)
     monkeypatch.setattr(cmd_doctor, "_print_bloco_contratos", lambda: 0)
+    monkeypatch.setattr(cmd_doctor, "_print_bloco_proton_fixado", lambda: 0)
     monkeypatch.setattr(cmd_doctor, "_daemon_checks", _checks)
     return runner.invoke(app, ["doctor"]).exit_code
 

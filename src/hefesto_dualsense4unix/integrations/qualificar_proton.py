@@ -4,7 +4,8 @@ A ficha é estática (o script `proton` e as strings dos binários do Wine, sem
 rodar Wine) e pergunta pelo CONTRATO, não pela versão: o que sumiu reprova, o
 que mudou de ramo contra a fixada vira linha do recibo. A rodada, dinâmica, é
 `scripts/ensaios/a_rodada_do_proton_candidato.py`, só na VM ou no CI. O recibo
-é `docs/data/proton-qualificacao.csv`; o pino sem a linha «passou» reprova.
+é `docs/data/proton-qualificacao.csv`; o pino sem a linha «passou» reprova, e o
+`hefesto doctor` lê o mesmo recibo (`linhas_do_doctor_desta_maquina`).
 O contrato das strings é o medido no GE-Proton11-7 (a `PROTON_DISABLE_HIDRAW`
 mora no `winebus.sys`, em UTF-16).
 """
@@ -16,9 +17,11 @@ import csv
 import io
 import re
 import sys
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
+
+from hefesto_dualsense4unix.utils.repo_files import encontrar_arquivo_do_repo
 
 #: As envs que o Hefesto pede do Proton, além da allowlist do lançamento.
 ENVS_ALEM_DA_ALLOWLIST = ("PROTON_USE_XALIA", "PROTON_SONY_AUTO_XINPUT")
@@ -57,6 +60,15 @@ VEREDITO_REPROVOU = "reprovou"
 #: A rodada da versão fixada antes de o instrumento existir; a primeira rodada
 #: na VM a confirma ou a derruba.
 RODADA_HERDADA = "herdada"
+
+#: Onde o recibo e o pino moram em QUALQUER instalação (o `share/` do Hefesto ou o
+#: checkout): o mesmo resolvedor dos scripts que o doctor chama.
+CAMINHO_DO_RECIBO = "docs/data/proton-qualificacao.csv"
+CAMINHO_DO_PINO = "assets/proton-pin.conf"
+
+TAG_OK = "[ OK ]"
+TAG_INFO = "[INFO]"
+TAG_WARN = "[WARN]"
 
 CAMPOS_DO_RECIBO = ("versão", "sha256", "ficha", "rodada", "veredito", "prova", "data")
 
@@ -273,9 +285,11 @@ def ficha(
 
 
 def caminho_do_recibo(raiz_do_repo: Path | None = None) -> Path:
-    if raiz_do_repo is None:
-        raiz_do_repo = Path(__file__).resolve().parents[3]
-    return raiz_do_repo / "docs" / "data" / "proton-qualificacao.csv"
+    """O recibo: na `raiz_do_repo` dada, ou onde esta instalação o pôs."""
+    if raiz_do_repo is not None:
+        return raiz_do_repo / CAMINHO_DO_RECIBO
+    achado = encontrar_arquivo_do_repo(CAMINHO_DO_RECIBO)
+    return achado or Path(__file__).resolve().parents[3] / CAMINHO_DO_RECIBO
 
 
 def ler_recibo(texto: str) -> list[dict[str, str]]:
@@ -343,22 +357,144 @@ def linha_do_recibo(f: Ficha, sha256: str, rodada: str, data: str) -> str:
     return saida.getvalue()
 
 
-def recibo_das_instaladas(compat_dir: Path, recibo: Sequence[dict[str, str]]) -> list[str]:
-    """Para cada Proton em `compat_dir`, o veredito do recibo e a ficha de hoje."""
+def recibo_das_instaladas(
+    compat_dir: Path, recibo: Sequence[dict[str, str]]
+) -> list[tuple[str, str]]:
+    """Para cada Proton em `compat_dir`: ``(tag, texto)``, o veredito do recibo e a ficha de hoje.
+
+    A tag avisa quando o recibo reprovou, ou quando passou e a ficha de hoje não
+    confere mais. Sem recibo é só informação: um Proton que o Hefesto nunca
+    mediu não é defeito de quem o instalou.
+    """
     vereditos = {linha["versão"]: linha for linha in recibo}
-    saida: list[str] = []
+    saida: list[tuple[str, str]] = []
     if not compat_dir.is_dir():
         return saida
     for pasta in sorted(p for p in compat_dir.iterdir() if (p / "proton").is_file()):
         f = ficha(pasta)
         linha = vereditos.get(pasta.name)
-        no_recibo = (
-            f"{linha['veredito']}" + (f" ({linha['prova']})" if linha["prova"] else "")
-            if linha
-            else "sem recibo"
-        )
-        saida.append(f"{pasta.name}: recibo {no_recibo}; ficha de hoje {f.resumo()}")
+        if linha is None:
+            tag, no_recibo = TAG_INFO, "sem recibo"
+        else:
+            no_recibo = linha["veredito"] + (f" ({linha['prova']})" if linha["prova"] else "")
+            passou = linha["veredito"] == VEREDITO_PASSOU and f.passou
+            tag = TAG_OK if passou else TAG_WARN
+        saida.append((tag, f"{pasta.name}: recibo {no_recibo}; ficha de hoje {f.resumo()}"))
     return saida
+
+
+def _lista_de_jogos(nomes: Sequence[str]) -> str:
+    """Até cinco nomes, e quantos mais."""
+    nomes = sorted(nomes, key=str.lower)
+    visiveis = ", ".join(nomes[:5])
+    return visiveis + (f" e mais {len(nomes) - 5}" if len(nomes) > 5 else "")
+
+
+def linhas_do_doctor(
+    *,
+    recibo: Sequence[dict[str, str]] | None,
+    pino: dict[str, str] | None,
+    compat_dir: Path,
+    mapa_dos_jogos: dict[str, str],
+    nome_do_jogo: Callable[[str], str],
+) -> list[tuple[str, str]]:
+    """As linhas do `hefesto doctor` sobre o Proton fixado: ``(tag, texto)``.
+
+    Pura (quem lê arquivos é `linhas_do_doctor_desta_maquina`). Diz se o Proton
+    fixado tem o recibo «passou» e está no disco, o que o recibo diz de cada
+    Proton instalado, e em que Proton roda cada jogo que a Steam mapeou, com o
+    aviso do jogo cujo Proton de terceiros sumiu do disco.
+    """
+    from hefesto_dualsense4unix.integrations.proton_pin import (
+        nomes_internos,
+        pinned_proton_installed,
+    )
+
+    linhas: list[tuple[str, str]] = []
+    if pino is None:
+        linhas.append(
+            (
+                TAG_INFO,
+                "sem assets/proton-pin.conf nesta instalação: não há Proton fixado a conferir",
+            )
+        )
+    else:
+        nome = pino.get("name", "")
+        if not pinned_proton_installed(nome, compat_dir):
+            linhas.append((TAG_WARN, f"o Proton fixado ({nome}) não está em {compat_dir}"))
+        if recibo is None:
+            linhas.append(
+                (
+                    TAG_INFO,
+                    f"o recibo dos Protons não veio nesta instalação; "
+                    f"{nome} fica sem a conferência dele",
+                )
+            )
+        else:
+            problemas = o_pino_sem_recibo(pino, recibo)
+            linhas.extend((TAG_WARN, problema) for problema in problemas)
+            if not problemas:
+                linhas.append(
+                    (TAG_OK, f"o Proton fixado ({nome}) tem o recibo «passou» com o mesmo sha256")
+                )
+    if recibo is not None:
+        linhas.extend(recibo_das_instaladas(compat_dir, recibo))
+
+    presentes = {
+        nome.lower()
+        for pasta in (compat_dir.iterdir() if compat_dir.is_dir() else ())
+        if pasta.is_dir()
+        for nome in (pasta.name, *nomes_internos(pasta))
+    }
+    por_ferramenta: dict[str, list[str]] = {}
+    for appid, ferramenta in mapa_dos_jogos.items():
+        if appid != "0" and ferramenta:
+            por_ferramenta.setdefault(ferramenta, []).append(nome_do_jogo(appid))
+    for ferramenta, nomes in sorted(por_ferramenta.items()):
+        de_terceiro = ferramenta.lower().startswith("ge-proton")
+        if de_terceiro and ferramenta.lower() not in presentes:
+            linhas.append(
+                (
+                    TAG_WARN,
+                    f"{_lista_de_jogos(nomes)} usa(m) o {ferramenta}, que sumiu de {compat_dir}",
+                )
+            )
+        else:
+            linhas.append((TAG_INFO, f"{ferramenta}: {_lista_de_jogos(nomes)}"))
+    return linhas
+
+
+def linhas_do_doctor_desta_maquina(home: Path | None = None) -> list[tuple[str, str]]:
+    """`linhas_do_doctor` com o que esta máquina tem: recibo, pino, Steam e mapa dos jogos."""
+    from hefesto_dualsense4unix.integrations import proton_pin as pp
+    from hefesto_dualsense4unix.integrations.steam_launch_options import nome_do_appid
+
+    caminho = caminho_do_recibo()
+    recibo: list[dict[str, str]] | None = None
+    if caminho.is_file():
+        try:
+            recibo = ler_recibo(caminho.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as erro:
+            return [(TAG_WARN, f"o recibo dos Protons ({caminho}) não se lê: {erro}")]
+    conf = encontrar_arquivo_do_repo(CAMINHO_DO_PINO) or pp.default_pin_conf_path()
+    pino: dict[str, str] | None = None
+    if conf is not None:
+        try:
+            pino = pp.parse_pin_conf(conf.read_text(encoding="utf-8")) or None
+        except OSError:
+            pino = None
+    try:
+        texto_do_vdf = pp.default_config_vdf(home).read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        texto_do_vdf = ""
+    mapa = {a: f for a, f in pp.extract_compat_tool_mapping(texto_do_vdf).items() if f}
+    return linhas_do_doctor(
+        recibo=recibo,
+        pino=pino,
+        compat_dir=pp.default_compat_dir(home),
+        mapa_dos_jogos=mapa,
+        nome_do_jogo=lambda appid: nome_do_appid(appid, home) or f"appid {appid}",
+    )
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -383,7 +519,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.cmd == "recibo":
         from hefesto_dualsense4unix.integrations.proton_pin import default_compat_dir
 
-        for linha in recibo_das_instaladas(args.compat_dir or default_compat_dir(), recibo):
+        for _tag, linha in recibo_das_instaladas(args.compat_dir or default_compat_dir(), recibo):
             print(linha)
         return 0
     from hefesto_dualsense4unix.integrations.proton_pin import (
