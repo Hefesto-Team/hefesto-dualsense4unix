@@ -6,6 +6,7 @@
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -451,9 +452,108 @@ static int read_done(XAsyncBlock *b, HRESULT *hr, SIZE_T *required)
     return 1;
 }
 
+/* As filas vivas: toda fila que a peça criou e ainda não destruiu, num conjunto aberto por
+ * endereço, sob g_lock. A alça que chega do jogo vale pela presença aqui, nunca pelo que se lê no
+ * endereço dela: em 17/10/2026 o Minecraft Dungeons II entregou ao XTaskQueueDuplicateHandle um
+ * valor que nem é endereço canônico, e ler o magic ali derrubou o jogo. */
+static queue_obj **g_vivas;
+static size_t g_vivas_cap;   /* potência de dois, ou zero */
+static size_t g_vivas_n;
+
+static size_t viva_casa(const queue_obj *q, size_t cap)
+{
+    UINT64 h = (UINT64)(uintptr_t)q;
+    h ^= h >> 33;
+    h *= 0xff51afd7ed558ccdull;
+    h ^= h >> 33;
+    return (size_t)h & (cap - 1);
+}
+
+static int viva_tem_locked(const queue_obj *q)
+{
+    size_t i, m;
+    if (!q || !g_vivas_cap) return 0;
+    m = g_vivas_cap - 1;
+    for (i = viva_casa(q, g_vivas_cap); g_vivas[i]; i = (i + 1) & m)
+        if (g_vivas[i] == q) return 1;
+    return 0;
+}
+
+static int viva_crescer_locked(void)
+{
+    size_t cap = g_vivas_cap ? g_vivas_cap * 2 : 64, i, j;
+    queue_obj **nova = calloc(cap, sizeof(*nova));
+    if (!nova) return 0;
+    for (i = 0; i < g_vivas_cap; i++) {
+        if (!g_vivas[i]) continue;
+        for (j = viva_casa(g_vivas[i], cap); nova[j]; j = (j + 1) & (cap - 1))
+            ;
+        nova[j] = g_vivas[i];
+    }
+    free(g_vivas);
+    g_vivas = nova;
+    g_vivas_cap = cap;
+    return 1;
+}
+
+static int viva_por_locked(queue_obj *q)
+{
+    size_t i;
+    if (viva_tem_locked(q)) return 1;
+    if ((g_vivas_n + 1) * 2 > g_vivas_cap && !viva_crescer_locked()) return 0;
+    for (i = viva_casa(q, g_vivas_cap); g_vivas[i]; i = (i + 1) & (g_vivas_cap - 1))
+        ;
+    g_vivas[i] = q;
+    g_vivas_n++;
+    return 1;
+}
+
+/* Tira e puxa para trás quem estava depois na mesma sequência de sondagem (sem lápide). */
+static void viva_tirar_locked(const queue_obj *q)
+{
+    size_t i, j, k, m;
+    if (!viva_tem_locked(q)) return;
+    m = g_vivas_cap - 1;
+    for (i = viva_casa(q, g_vivas_cap); g_vivas[i] != q; i = (i + 1) & m)
+        ;
+    g_vivas[i] = NULL;
+    g_vivas_n--;
+    for (j = (i + 1) & m; g_vivas[j]; j = (j + 1) & m) {
+        k = viva_casa(g_vivas[j], g_vivas_cap);
+        if (i <= j ? (i < k && k <= j) : (i < k || k <= j)) continue;
+        g_vivas[i] = g_vivas[j];
+        g_vivas[j] = NULL;
+        i = j;
+    }
+}
+
+/* A fila nasce viva só depois de pronta: nenhuma outra thread a enxerga antes. */
+static int queue_registrar(queue_obj *q)
+{
+    int ok;
+    if (!g_lock_ready) return 0;
+    EnterCriticalSection(&g_lock);
+    ok = viva_por_locked(q);
+    LeaveCriticalSection(&g_lock);
+    return ok;
+}
+
 static int queue_live(queue_obj *q)
 {
-    return q && q->magic == QUEUE_MAGIC;
+    int viva;
+    if (!q || !g_lock_ready) return 0;
+    EnterCriticalSection(&g_lock);
+    viva = viva_tem_locked(q);
+    LeaveCriticalSection(&g_lock);
+    return viva;
+}
+
+/* A recusa de uma alça que a peça não tem viva vai ao log, com teto: a bancada conta quantas. */
+static void fila_recusada(const char *api, const void *q)
+{
+    static LONG vezes;
+    LONG n = InterlockedIncrement(&vezes);
+    if (n <= 64) xlog("%s recusou a fila %p, que a peça não tem viva (%ld)", api, q, (long)n);
 }
 
 /* A fila base e a porta que atendem a porta `port` de `q`. O composto delega pela porta que
@@ -684,6 +784,13 @@ static queue_obj *queue_new(int work_mode, int comp_mode)
     q->work_event = CreateEventA(NULL, FALSE, FALSE, NULL);
     q->comp_event = CreateEventA(NULL, FALSE, FALSE, NULL);
     q->magic = QUEUE_MAGIC;
+    if (!queue_registrar(q)) {
+        CloseHandle(q->work_event);
+        CloseHandle(q->comp_event);
+        DeleteCriticalSection(&q->lock);
+        free(q);
+        return NULL;
+    }
     q->thread = CreateThread(NULL, 0, queue_thread, q, 0, &q->thread_id);
     return q;
 }
@@ -1034,9 +1141,15 @@ static HRESULT WINAPI thr_QueueCreate(void *self, UINT32 workMode, UINT32 compMo
     return *out ? S_OK : E_FAIL_;
 }
 
+/* A porta vale se é a de trabalho ou a de término de uma fila viva; a conta é no endereço, sem
+ * ler a porta que chegou. */
 static int port_valid(port_obj *p)
 {
-    return p && queue_live(p->q) && (p == &p->q->work_port || p == &p->q->comp_port);
+    queue_obj *w, *c;
+    if (!p) return 0;
+    w = (queue_obj *)((uintptr_t)p - offsetof(queue_obj, work_port));
+    c = (queue_obj *)((uintptr_t)p - offsetof(queue_obj, comp_port));
+    return (queue_live(w) && p == &w->work_port) || (queue_live(c) && p == &c->comp_port);
 }
 
 static HRESULT WINAPI thr_QueueCreateComposite(void *self, port_obj *work, port_obj *comp, queue_obj **out)
@@ -1051,7 +1164,7 @@ static HRESULT WINAPI thr_QueueCreateComposite(void *self, port_obj *work, port_
     if (!port_valid(work) || !port_valid(comp)) {
         LeaveCriticalSection(&g_lock);
         free(q);
-        xlog("QueueCreateComposite com porta morta");
+        fila_recusada("XTaskQueueCreateComposite", port_valid(work) ? (void *)comp : (void *)work);
         return E_INVALIDARG_;
     }
     InterlockedIncrement(&work->q->refs);
@@ -1067,6 +1180,13 @@ static HRESULT WINAPI thr_QueueCreateComposite(void *self, port_obj *work, port_
     q->comp_port.which = PORT_COMP;
     InitializeCriticalSection(&q->lock);
     q->magic = QUEUE_MAGIC;
+    if (!queue_registrar(q)) {
+        thr_Close(NULL, work->q);
+        thr_Close(NULL, comp->q);
+        DeleteCriticalSection(&q->lock);
+        free(q);
+        return E_FAIL_;
+    }
     *out = q;
     return S_OK;
 }
@@ -1082,6 +1202,7 @@ static HRESULT WINAPI thr_GetPort(void *self, queue_obj *q, UINT32 port, port_ob
     if (queue_live(q)) *out = (port == PORT_COMP) ? &q->comp_port : &q->work_port;
     else hr = E_INVALIDARG_;
     LeaveCriticalSection(&g_lock);
+    if (FAILED(hr)) fila_recusada("XTaskQueueGetPort", q);
     return hr;
 }
 
@@ -1098,6 +1219,7 @@ static HRESULT WINAPI thr_Duplicate(void *self, queue_obj *q, queue_obj **out)
         hr = E_INVALIDARG_;
     }
     LeaveCriticalSection(&g_lock);
+    if (FAILED(hr)) fila_recusada("XTaskQueueDuplicateHandle", q);
     return hr;
 }
 
@@ -1111,6 +1233,7 @@ static BOOLEAN WINAPI thr_Dispatch(void *self, queue_obj *q, UINT32 port, UINT32
     EnterCriticalSection(&g_lock);
     if (!queue_live(q)) {
         LeaveCriticalSection(&g_lock);
+        fila_recusada("XTaskQueueDispatch", q);
         return FALSE;
     }
     InterlockedIncrement(&q->refs);
@@ -1144,8 +1267,8 @@ static BOOLEAN WINAPI thr_Dispatch(void *self, queue_obj *q, UINT32 port, UINT32
     return hit;
 }
 
-/* A fila morta guarda a memória, a trava e os eventos: um ponteiro velho do jogo cai numa fila
- * morta (o magic diz), nunca em memória liberada. */
+/* A fila morta sai das vivas e guarda a memória, a trava e os eventos: um ponteiro velho do jogo
+ * é recusado pela tabela, e quem ainda o segura nunca cai em memória liberada. */
 static void queue_destroy(queue_obj *q)
 {
     queue_obj *w = NULL, *c = NULL;
@@ -1153,10 +1276,11 @@ static void queue_destroy(queue_obj *q)
     task_item *it;
     if (!q || !g_lock_ready) return;
     EnterCriticalSection(&g_lock);
-    if (q->magic != QUEUE_MAGIC || q == g_default_queue) {
+    if (!viva_tem_locked(q) || q == g_default_queue) {
         LeaveCriticalSection(&g_lock);
         return;
     }
+    viva_tirar_locked(q);
     composite = q->composite;
     q->magic = QUEUE_DEAD;
     q->terminated = 1;
@@ -1191,7 +1315,12 @@ static void WINAPI thr_Close(void *self, queue_obj *q)
     (void)self;
     if (!q || !g_lock_ready) return;
     EnterCriticalSection(&g_lock);
-    if (q->magic != QUEUE_MAGIC || q == g_default_queue) {
+    if (!viva_tem_locked(q)) {
+        LeaveCriticalSection(&g_lock);
+        if (self) fila_recusada("XTaskQueueCloseHandle", q);
+        return;
+    }
+    if (q == g_default_queue) {
         LeaveCriticalSection(&g_lock);
         return;
     }
@@ -1215,7 +1344,7 @@ static HRESULT WINAPI thr_Submit(void *self, queue_obj *q, UINT32 port, void *co
     if (!cb) return E_INVALIDARG_;
     if (!q) q = process_queue();
     if (!q) return E_NO_TASK_QUEUE_;
-    if (!queue_live(q)) return E_INVALIDARG_;
+    if (!queue_live(q)) { fila_recusada("XTaskQueueSubmitCallback", q); return E_INVALIDARG_; }
     if (queue_closing(q, (int)port)) return E_ABORT_;
     mode = mode_of(q, (int)port);
     if (mode == MODE_IMMEDIATE) { cb(context, FALSE); return S_OK; }
@@ -1235,7 +1364,7 @@ static HRESULT WINAPI thr_SubmitDelayed(void *self, queue_obj *q, UINT32 port, U
     if (!cb) return E_INVALIDARG_;
     if (!q) q = process_queue();
     if (!q) return E_NO_TASK_QUEUE_;
-    if (!queue_live(q)) return E_INVALIDARG_;
+    if (!queue_live(q)) { fila_recusada("XTaskQueueSubmitDelayedCallback", q); return E_INVALIDARG_; }
     if (queue_closing(q, (int)port)) return E_ABORT_;
     if (delay == 0 && mode_of(q, (int)port) == MODE_IMMEDIATE) { cb(context, FALSE); return S_OK; }
     it = calloc(1, sizeof(*it));
@@ -1320,6 +1449,7 @@ static HRESULT WINAPI thr_Terminate(void *self, queue_obj *q, BOOLEAN wait, void
     EnterCriticalSection(&g_lock);
     if (!queue_live(q)) {
         LeaveCriticalSection(&g_lock);
+        fila_recusada("XTaskQueueTerminate", q);
         if (cb) cb(ctx);
         return S_OK;
     }
@@ -1368,6 +1498,7 @@ static HRESULT WINAPI thr_RegMon(void *self, queue_obj *q, void *ctx, void *cb, 
     EnterCriticalSection(&g_lock);
     if (!queue_live(q) || q->nmon >= 4) {
         LeaveCriticalSection(&g_lock);
+        if (q && !queue_live(q)) fila_recusada("XTaskQueueRegisterMonitor", q);
         return E_FAIL_;
     }
     q->mon_ctx[q->nmon] = ctx;
@@ -1384,6 +1515,11 @@ static void WINAPI thr_UnregMon(void *self, queue_obj *q, UINT64 token)
     (void)self;
     if (!q || !g_lock_ready) return;
     EnterCriticalSection(&g_lock);
+    if (!viva_tem_locked(q)) {
+        LeaveCriticalSection(&g_lock);
+        fila_recusada("XTaskQueueUnregisterMonitor", q);
+        return;
+    }
     for (i = 0; i < q->nmon; i++) {
         if (q->mon_token[i] != token) continue;
         q->nmon--;
