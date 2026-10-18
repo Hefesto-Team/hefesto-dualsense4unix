@@ -5,6 +5,7 @@ import contextlib
 import time
 from typing import TYPE_CHECKING, Any
 
+from hefesto_dualsense4unix.core import acoes_de_botao as acoes
 from hefesto_dualsense4unix.core import ativacao_de_botao, filtro_de_botao
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -54,6 +55,7 @@ def stop_mouse_emulation(daemon: DaemonProtocol, *, persist: bool = True) -> Non
     """Para e descarta o dispositivo virtual. Idempotente."""
     if daemon._mouse_device is None:
         return
+    soltar_as_teclas_do_analogico(daemon)
     with contextlib.suppress(Exception):
         daemon._mouse_device.stop()
     daemon._mouse_device = None
@@ -78,14 +80,12 @@ def _entregar_o_ajuste(daemon: Any, device: Any) -> None:
 
 
 def soltar_o_cursor(daemon: Any) -> None:
-    """Solta o clique que o botão travado segura, no mouse do desktop e no da tabela.
-
-    Para quem perde o controle (queda de leitura) ou sai do jogo: o clique preso não pode
-    sobreviver a quem o prendeu. Idempotente; nunca levanta.
-    """
+    """Solta o clique travado e as teclas do analógico, no desktop e na tabela, de quem perdeu
+    o controle, suspendeu a emulação ou saiu do jogo. Nunca levanta."""
     tabela = getattr(daemon, "_tabela_no_jogo", None)
     for device in (getattr(daemon, "_mouse_device", None), getattr(tabela, "_mouse", None)):
         _soltar_o_travado(device)
+    soltar_as_teclas_do_analogico(daemon)
 
 
 def _soltar_o_travado(device: Any) -> None:
@@ -132,6 +132,7 @@ def dispatch_mouse(daemon: DaemonProtocol, state: Any, buttons_pressed: frozense
             logger.warning("touchpad_move_dispatch_failed", err=str(exc))
     # A-MIRA-NA-NAVEGACAO-01: a Mira de cada controle, no cursor.
     mover_o_cursor_pelo_giro(daemon, buttons_pressed)
+    teclas_do_analogico_no_desktop(daemon, state)  # «Teclas WASD» e «Setas», sem jogo aberto
 
 
 def botoes_com_os_gatilhos(botoes: frozenset[str], l2: int, r2: int) -> frozenset[str]:
@@ -145,39 +146,6 @@ def botoes_com_os_gatilhos(botoes: frozenset[str], l2: int, r2: int) -> frozense
 
     extra = {nome for nome, bruto in (("l2", l2), ("r2", r2)) if gatilho_apertado(bruto)}
     return frozenset(botoes) | extra if extra else frozenset(botoes)
-
-
-#: Quanto o analógico precisa passar do centro (0 a 1) para a direção virar tecla: meia deflexão.
-LIMIAR_DO_ANALOGICO = 0.5
-CENTRO = 128
-
-
-def _deflexao(bruto: Any) -> float:
-    """O quanto o eixo (0..255) passou do centro: -1 até +1."""
-    return (int(bruto) - CENTRO) / CENTRO
-
-
-def _nome_da_direcao(eixo: str, direcao: str) -> str:
-    """O nome de botão de mentira que carrega a direção de um analógico até o teclado."""
-    return f"{eixo}:{direcao}"
-
-
-def _teclas_dos_analogicos(do_mouse: dict[str, str]) -> dict[str, str]:
-    """`{nome da direção: tecla}` das linhas de analógico que escolheram teclas."""
-    from hefesto_dualsense4unix.core.acoes_de_botao import (
-        EIXO_DIREITO,
-        EIXO_ESQUERDO,
-        TECLAS_DO_ANALOGICO,
-    )
-
-    fora: dict[str, str] = {}
-    for eixo in (EIXO_ESQUERDO, EIXO_DIREITO):
-        teclas = TECLAS_DO_ANALOGICO.get(do_mouse.get(eixo, ""))
-        if teclas is None:
-            continue
-        for direcao, tecla in zip(("esquerda", "direita", "cima", "baixo"), teclas, strict=True):
-            fora[_nome_da_direcao(eixo, direcao)] = tecla
-    return fora
 
 
 ESPACO_DA_TABELA = "tabela"
@@ -227,12 +195,12 @@ class TabelaNoJogo:
     """
 
     def __init__(self, button_actions: Any, key_bindings: Any, *, ligada: bool) -> None:
-        from hefesto_dualsense4unix.core.acoes_de_botao import botoes_calados, resolver
+        from hefesto_dualsense4unix.core.acoes_de_botao import botoes_calados
 
         self.ligada = bool(ligada)
-        self._do_mouse, self._do_teclado, _sem_dono = resolver(button_actions, key_bindings)
+        self._do_mouse, self._do_teclado, _sem_dono = acoes.resolver(button_actions, key_bindings)
         self._calados = botoes_calados(button_actions, key_bindings)
-        self._teclas_dos_analogicos = _teclas_dos_analogicos(self._do_mouse)
+        self._teclas_dos_analogicos = acoes.teclas_dos_analogicos(self._do_mouse)
         self._mouse: Any = None
         self._teclado: Any = None
         self._desistiu = False
@@ -336,7 +304,8 @@ class TabelaNoJogo:
             botoes_do_p1, l2, r2 = _com_o_modo(
                 store, primary_identity(daemon), botoes_do_p1, l2, r2)
         conjunto = botoes_com_os_gatilhos(botoes_do_p1, l2, r2)
-        for uniq, (botoes, outro_l2, outro_r2) in gatilhos_de_cada_controle(daemon).items():
+        outros = gatilhos_de_cada_controle(daemon)
+        for uniq, (botoes, outro_l2, outro_r2) in outros.items():
             if com_modo:
                 botoes, outro_l2, outro_r2 = _com_o_modo(store, uniq, botoes, outro_l2, outro_r2)
             conjunto |= botoes_com_os_gatilhos(botoes, outro_l2, outro_r2)
@@ -351,32 +320,157 @@ class TabelaNoJogo:
                 r2=r2,
                 buttons=conjunto,
             )
-            self._teclado.dispatch(conjunto | self._teclas_apertadas(state))
+            self._teclado.dispatch(conjunto | self._teclas_apertadas(daemon, state, outros))
         except Exception as exc:
             logger.warning("tabela_no_jogo_dispatch_falhou", err=str(exc))
 
-    def _teclas_apertadas(self, state: Any) -> frozenset[str]:
-        """As direções dos analógicos que viraram tecla, apertadas AGORA (só o P1)."""
+    def _teclas_apertadas(
+        self, daemon: Any, state: Any, outros: Any
+    ) -> frozenset[str]:
+        """As direções dos analógicos que viraram tecla, apertadas AGORA por QUALQUER controle."""
         if not self._teclas_dos_analogicos:
             return frozenset()
-        from hefesto_dualsense4unix.core.acoes_de_botao import EIXO_DIREITO, EIXO_ESQUERDO
+        return acoes.direcoes_apertadas(
+            self._teclas_dos_analogicos, eixos_de_cada_controle(daemon, state, outros))
 
-        eixos = {
-            EIXO_ESQUERDO: (getattr(state, "raw_lx", CENTRO), getattr(state, "raw_ly", CENTRO)),
-            EIXO_DIREITO: (getattr(state, "raw_rx", CENTRO), getattr(state, "raw_ry", CENTRO)),
-        }
-        apertadas: set[str] = set()
-        for eixo, (x, y) in eixos.items():
-            for direcao, passou in (
-                ("esquerda", _deflexao(x) <= -LIMIAR_DO_ANALOGICO),
-                ("direita", _deflexao(x) >= LIMIAR_DO_ANALOGICO),
-                ("cima", _deflexao(y) <= -LIMIAR_DO_ANALOGICO),
-                ("baixo", _deflexao(y) >= LIMIAR_DO_ANALOGICO),
-            ):
-                nome = _nome_da_direcao(eixo, direcao)
-                if passou and nome in self._teclas_dos_analogicos:
-                    apertadas.add(nome)
-        return frozenset(apertadas)
+
+def eixos_de_cada_controle(
+    daemon: Any, state: Any, outros: Any
+) -> list[tuple[int, int, int, int]]:
+    """Os analógicos `(lx, ly, rx, ry)` de cada controle lido neste tique.
+
+    O primeiro é o do posto de P1 (`state`, o que o laço leu); os demais, dos mesmos leitores
+    que dão botões e gatilhos aos outros controles: o co-op (`live_snapshots`) ou o leitor
+    passivo do `SensorHub`. `outros` são os MACs dos demais controles (chaves de
+    `poll.gatilhos_de_cada_controle`). Quem não tem leitura neste tique fica de fora. Nunca levanta.
+    """
+    centro = acoes.CENTRO_DO_ANALOGICO
+    maos = [(
+        int(getattr(state, "raw_lx", centro)), int(getattr(state, "raw_ly", centro)),
+        int(getattr(state, "raw_rx", centro)), int(getattr(state, "raw_ry", centro)),
+    )]
+    if not outros:
+        return maos
+    try:
+        vivos = getattr(getattr(daemon, "_coop_manager", None), "live_snapshots", None)
+        vivos = vivos() if callable(vivos) else {}
+        entradas: Any = None
+        for uniq in outros:
+            snap = vivos.get(uniq) if isinstance(vivos, dict) else None
+            if snap is not None:
+                leitura: Any = {c: getattr(snap, c, centro) for c in ("lx", "ly", "rx", "ry")}
+            else:
+                if entradas is None:
+                    garantir = getattr(daemon, "_garantir_sensor_hub", None)
+                    hub = garantir() if callable(garantir) else None
+                    entradas = getattr(hub, "entradas", None)
+                leitura = entradas(uniq) if callable(entradas) else None
+            if isinstance(leitura, dict):
+                maos.append(tuple(  # type: ignore[arg-type]
+                    int(leitura.get(c, centro)) for c in ("lx", "ly", "rx", "ry")))
+    except Exception as exc:
+        logger.debug("analogicos_dos_outros_sem_leitura", err=str(exc))
+    return maos
+
+
+class TeclasDoAnalogicoNoDesktop:
+    """O analógico em «Teclas WASD» ou «Setas» agindo no DESKTOP, sem o jogo aberto.
+
+    Com o jogo aberto quem age é a :class:`TabelaNoJogo`; fora dele o `dispatch_mouse` chama
+    esta, pela MESMA tradução (`acoes_de_botao.direcoes_apertadas`), num teclado PRIVADO.
+    A tecla é a união dos controles; cursor e rolagem seguem do primário. Nasce do perfil
+    EFETIVO (`trocar_a_tabela_no_jogo`); trocar de perfil ou fechar solta tudo.
+    """
+
+    def __init__(self, button_actions: Any, key_bindings: Any) -> None:
+        do_mouse, _teclado, _sem_dono = acoes.resolver(button_actions, key_bindings)
+        self._teclas = acoes.teclas_dos_analogicos(do_mouse)
+        self._teclado: Any = None
+        self._desistiu = False
+
+    @property
+    def ativa(self) -> bool:
+        """Algum analógico escolheu teclas neste perfil?"""
+        return bool(self._teclas)
+
+    def _abrir(self) -> bool:
+        if self._teclado is not None:
+            return True
+        if self._desistiu:
+            return False
+        try:
+            from hefesto_dualsense4unix.integrations.uinput_keyboard import (
+                UinputKeyboardDevice,
+            )
+
+            teclado = UinputKeyboardDevice()
+            if not teclado.start():
+                self._desistiu = True
+                logger.warning("teclas_do_analogico_sem_uinput")
+                return False
+            teclado.set_bindings({nome: (tecla,) for nome, tecla in self._teclas.items()})
+        except Exception as exc:
+            self._desistiu = True
+            logger.warning("teclas_do_analogico_abrir_falhou", err=str(exc))
+            return False
+        self._teclado = teclado
+        return True
+
+    def tick(self, daemon: Any, state: Any) -> None:
+        """Um tique do desktop: aperta e solta as teclas pela deflexão de todos os controles."""
+        if not self._teclas or not self._abrir():
+            return
+        from hefesto_dualsense4unix.daemon.subsystems.poll import gatilhos_de_cada_controle
+
+        try:
+            outros = gatilhos_de_cada_controle(daemon)
+            self._teclado.dispatch(acoes.direcoes_apertadas(
+                self._teclas, eixos_de_cada_controle(daemon, state, outros)))
+        except Exception as exc:
+            logger.warning("teclas_do_analogico_dispatch_falhou", err=str(exc))
+
+    def soltar(self) -> None:
+        """Solta as teclas que o analógico segura. Idempotente; nunca levanta."""
+        if self._teclado is not None:
+            with contextlib.suppress(Exception):
+                self._teclado.dispatch(frozenset())
+
+    def fechar(self) -> None:
+        """Solta e destrói o teclado. Idempotente."""
+        self.soltar()
+        if self._teclado is not None:
+            with contextlib.suppress(Exception):
+                self._teclado.stop()
+        self._teclado = None
+
+
+def teclas_do_analogico_no_desktop(daemon: Any, state: Any) -> None:
+    """O laço do desktop: as teclas do analógico, se o perfil efetivo as escolheu.
+
+    «Só dentro do jogo» cala o teclado do desktop, e as teclas do analógico são do teclado.
+    """
+    atendente = getattr(daemon, "_teclas_do_analogico", None)
+    if atendente is None:
+        return
+    if getattr(daemon, "_teclado_so_no_jogo", False):
+        atendente.soltar()
+        return
+    atendente.tick(daemon, state)
+
+
+def soltar_as_teclas_do_analogico(daemon: Any) -> None:
+    """Solta as teclas do analógico no desktop (o laço não as despacha neste tique)."""
+    atendente = getattr(daemon, "_teclas_do_analogico", None)
+    if atendente is not None:
+        atendente.soltar()
+
+
+def fechar_as_teclas_do_analogico(daemon: Any) -> None:
+    """Fecha o teclado das teclas do analógico no desktop (a troca de perfil, a parada)."""
+    atendente = getattr(daemon, "_teclas_do_analogico", None)
+    if atendente is not None:
+        atendente.fechar()
+    daemon._teclas_do_analogico = None
 
 
 def trocar_a_tabela_no_jogo(daemon: Any, profile: Any) -> None:
@@ -389,6 +483,11 @@ def trocar_a_tabela_no_jogo(daemon: Any, profile: Any) -> None:
     anterior = getattr(daemon, "_tabela_no_jogo", None)
     if anterior is not None:
         anterior.fechar()
+    # O analógico em teclas no desktop nasce do mesmo perfil efetivo, e a troca solta o antigo.
+    fechar_as_teclas_do_analogico(daemon)
+    do_desktop = TeclasDoAnalogicoNoDesktop(
+        getattr(profile, "button_actions", None), getattr(profile, "key_bindings", None))
+    daemon._teclas_do_analogico = do_desktop if do_desktop.ativa else None
     ligada = bool(getattr(profile, "tabela_no_jogo", None))
     daemon._tabela_no_jogo = TabelaNoJogo(
         getattr(profile, "button_actions", None),
@@ -427,6 +526,8 @@ def despachar_no_jogo(
         # Com o pad do jogo despachando, o mouse do desktop para de andar: o clique que o
         # travador prendeu nele não atravessa o jogo inteiro. Idempotente a cada tique.
         _soltar_o_travado(getattr(daemon, "_mouse_device", None))
+        # E a tecla do analógico: com o pad do jogo despachando, quem a emite é a tabela.
+        soltar_as_teclas_do_analogico(daemon)
     if no_jogo and _suspenso_por_ela(daemon):
         no_jogo = False
     tabela = getattr(daemon, "_tabela_no_jogo", None)
@@ -543,6 +644,8 @@ def discard_touchpad_motion(daemon: DaemonProtocol) -> None:
 __all__ = [
     "discard_touchpad_motion",
     "dispatch_mouse",
+    "fechar_as_teclas_do_analogico",
+    "soltar_as_teclas_do_analogico",
     "soltar_o_cursor",
     "start_mouse_emulation",
     "stop_mouse_emulation",

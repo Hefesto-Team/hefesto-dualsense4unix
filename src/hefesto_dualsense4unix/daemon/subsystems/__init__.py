@@ -187,6 +187,9 @@ async def _parar_coop(daemon: Any) -> None:
 
 
 async def _parar_mouse(daemon: Any) -> None:
+    from hefesto_dualsense4unix.daemon.subsystems.mouse import fechar_as_teclas_do_analogico
+
+    fechar_as_teclas_do_analogico(daemon)
     dispositivo = getattr(daemon, "_mouse_device", None)
     if dispositivo is not None:
         try:

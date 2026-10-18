@@ -141,9 +141,9 @@ def _button_actions() -> dict[str, str]:
     de_fabrica = acoes.padrao()
     fora: dict[str, str] = {}
     for botao in acoes.BOTOES:
-        oferece = [t for t in acoes.ACOES
-                   if (acoes.o_ps_aceita(t) if botao == acoes.BOTAO_PS
-                       else t != acoes.TOKEN_SEM_TECLA)]
+        # A lista é a da LINHA (`por_grupo(botao)`): o dublê só escolhe o que a linha oferece.
+        oferece = [acoes.token_do_rotulo(r) for _grupo, rotulos in acoes.por_grupo(botao)
+                   for r in rotulos]
         for token in oferece:
             if token != de_fabrica.get(botao):
                 fora[botao] = token

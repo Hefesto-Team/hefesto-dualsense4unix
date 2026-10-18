@@ -35,6 +35,8 @@ mantém importável sem `uinput`, sem daemon e sem tela.
 """
 from __future__ import annotations
 
+from collections.abc import Iterable, Mapping
+
 from hefesto_dualsense4unix.core.keyboard_mappings import (
     DEFAULT_BUTTON_BINDINGS,
     TOKEN_CLOSE_OSK,
@@ -70,8 +72,9 @@ TOKEN_SAIR_DO_JOGO = "__SAIR_DO_JOGO__"
 TOKEN_PROGRAMA = "__PROGRAMA__"
 TOKEN_NADA = "__NADA__"
 TOKEN_SEM_TECLA = "__SEM_TECLA__"
-#: A direção de um analógico como TECLAS: o `TabelaNoJogo` as emite, com o limiar de meia
-#: deflexão e a diagonal como duas teclas. Só a linha de um analógico escolhe estes dois.
+#: A direção de um analógico como TECLAS: a `TabelaNoJogo` (com o jogo) e o laço do desktop as
+#: emitem pelo mesmo limiar de meia deflexão (:func:`direcoes_apertadas`), a diagonal como duas
+#: teclas. Só a linha de um analógico oferece e aceita estes dois (:func:`por_grupo`).
 TOKEN_WASD = "__WASD__"
 TOKEN_SETAS = "__SETAS__"
 #: o que cada token de teclas faz: `(esquerda, direita, cima, baixo)`
@@ -79,6 +82,11 @@ TECLAS_DO_ANALOGICO: dict[str, tuple[str, str, str, str]] = {
     TOKEN_WASD: ("KEY_A", "KEY_D", "KEY_W", "KEY_S"),
     TOKEN_SETAS: ("KEY_LEFT", "KEY_RIGHT", "KEY_UP", "KEY_DOWN"),
 }
+
+#: Quanto o analógico precisa passar do centro (0 a 1) para a direção virar tecla: meia deflexão.
+LIMIAR_DO_ANALOGICO = 0.5
+CENTRO_DO_ANALOGICO = 128
+DIRECOES_DO_ANALOGICO = ("esquerda", "direita", "cima", "baixo")
 
 GRUPO_MOUSE = "Mouse"
 GRUPO_TECLADO = "Função do teclado"
@@ -151,12 +159,17 @@ def por_grupo(botao: str | None = None) -> list[tuple[str, list[str]]]:
     nasceu. Aqui há uma, e o gerador a lê.
 
     Com ``botao=BOTAO_PS``, a lista da linha do PS: só o que ele digita
-    (:func:`o_ps_aceita`). As outras linhas não oferecem o «— Sem tecla —».
+    (:func:`o_ps_aceita`). As outras linhas não oferecem o «— Sem tecla —». «Teclas WASD» e
+    «Setas» só nas linhas dos analógicos, que não oferecem ``BTN_*``. Sem ``botao``, a geral.
     """
     def cabe(token: str) -> bool:
         if botao == BOTAO_PS:
             return o_ps_aceita(token)
-        return token != TOKEN_SEM_TECLA
+        if token == TOKEN_SEM_TECLA:
+            return False
+        if token in TECLAS_DO_ANALOGICO:
+            return botao is None or botao in _TOKEN_DO_EIXO
+        return not (botao in _TOKEN_DO_EIXO and token.startswith("BTN_"))
 
     fora: list[tuple[str, list[str]]] = []
     for grupo in ORDEM_DOS_GRUPOS:
@@ -368,7 +381,8 @@ def resolver(
     `do_mouse` vai ao `UinputMouseDevice`, `do_teclado` ao teclado virtual e `sem_dono` guarda
     os botões que ninguém atende hoje. O PS e os botões calados ficam de fora (:func:`acao_do_ps`,
     :func:`botoes_calados`). `escolhas=None` devolve o de fábrica; `key_bindings` é a do meio.
-    As teclas do analógico (:data:`TECLAS_DO_ANALOGICO`) têm dono: a `TabelaNoJogo`.
+    As teclas do analógico (:data:`TECLAS_DO_ANALOGICO`) têm dois donos, os dois em
+    `daemon/subsystems/mouse.py`: a `TabelaNoJogo` (com o jogo aberto) e o laço do desktop.
     """
     tabela = tabela_efetiva(escolhas, key_bindings)
 
@@ -403,6 +417,57 @@ def resolver(
     return do_mouse, do_teclado, sorted(sem_dono)
 
 
+def nome_da_direcao(eixo: str, direcao: str) -> str:
+    """O nome de botão de mentira que leva a direção de um analógico até o teclado."""
+    return f"{eixo}:{direcao}"
+
+
+def teclas_dos_analogicos(do_mouse: Mapping[str, str]) -> dict[str, str]:
+    """`{nome da direção: tecla}` das linhas de analógico que escolheram teclas.
+
+    `do_mouse` é a primeira sacola do :func:`resolver`. O nome é o de
+    :func:`nome_da_direcao`, e quem emite (a tabela com o jogo aberto, o laço do desktop)
+    registra `nome -> (tecla,)` no teclado virtual.
+    """
+    fora: dict[str, str] = {}
+    for eixo in (EIXO_ESQUERDO, EIXO_DIREITO):
+        teclas = TECLAS_DO_ANALOGICO.get(do_mouse.get(eixo, ""))
+        if teclas is None:
+            continue
+        for direcao, tecla in zip(DIRECOES_DO_ANALOGICO, teclas, strict=True):
+            fora[nome_da_direcao(eixo, direcao)] = tecla
+    return fora
+
+
+def direcoes_apertadas(
+    teclas: Mapping[str, str], eixos: Iterable[tuple[int, int, int, int]]
+) -> frozenset[str]:
+    """Os nomes de direção (de `teclas`) que algum controle passa de meia deflexão AGORA.
+
+    `eixos` traz um `(lx, ly, rx, ry)` por controle, cada eixo de 0 a 255. A diagonal são
+    DUAS direções, e a tecla é a união dos controles: dois controles na mesma direção contam
+    como um, e o nome só some quando o último volta ao centro. Fonte única do limiar: a
+    tabela com o jogo aberto e o laço do desktop chamam esta função.
+    """
+    if not teclas:
+        return frozenset()
+    apertadas: set[str] = set()
+    for lx, ly, rx, ry in eixos:
+        for eixo, x, y in ((EIXO_ESQUERDO, lx, ly), (EIXO_DIREITO, rx, ry)):
+            dx = (int(x) - CENTRO_DO_ANALOGICO) / CENTRO_DO_ANALOGICO
+            dy = (int(y) - CENTRO_DO_ANALOGICO) / CENTRO_DO_ANALOGICO
+            for direcao, passou in (
+                ("esquerda", dx <= -LIMIAR_DO_ANALOGICO),
+                ("direita", dx >= LIMIAR_DO_ANALOGICO),
+                ("cima", dy <= -LIMIAR_DO_ANALOGICO),
+                ("baixo", dy >= LIMIAR_DO_ANALOGICO),
+            ):
+                nome = nome_da_direcao(eixo, direcao)
+                if passou and nome in teclas:
+                    apertadas.add(nome)
+    return frozenset(apertadas)
+
+
 def rotulo(token: str) -> str:
     """O texto que a tela mostra para aquele token, ou o token cru se ele sumir."""
     par = ACOES.get(token)
@@ -422,6 +487,7 @@ __all__ = [
     "GRUPO_MOUSE",
     "GRUPO_NENHUM",
     "GRUPO_TECLADO",
+    "LIMIAR_DO_ANALOGICO",
     "ORDEM_DOS_GRUPOS",
     "SEM_ATENDENTE",
     "TECLAS_DO_ANALOGICO",
@@ -436,11 +502,14 @@ __all__ = [
     "TOKEN_WASD",
     "acao_do_ps",  # (noqa-acento) nome de função
     "botoes_calados",  # (noqa-acento) nome de função
+    "direcoes_apertadas",
+    "nome_da_direcao",
     "o_ps_aceita",
     "padrao",  # (noqa-acento) nome de função
     "por_grupo",
     "resolver",
     "rotulo",
     "tabela_efetiva",
+    "teclas_dos_analogicos",
     "token_do_rotulo",
 ]

@@ -117,7 +117,6 @@ def _um(pid, rot=None, nm=None, tam=18):
     return g
 
 
-ACOES_UNI = por_grupo()
 ACOES_DO_PS = por_grupo("ps")
 ACOES_GESTO = _acoes_do_gesto.por_grupo()
 _PADRAO_DOS_BOTOES = {b: rotulo_da_acao(a) for b, a in _padrao_dos_botoes().items()}
@@ -214,7 +213,8 @@ def _celula_da_acao(linha):
         rotulo = _acoes_do_gesto.rotulo(_acoes_do_gesto.SCRIPT)
         return lista.replace(f"<option>{rotulo}</option>",
                              f'<option data-campo="{PREFIXO_DO_SCRIPT}ps">{rotulo}</option>')
-    return drop(ACOES_UNI, _PADRAO_DOS_BOTOES[linha], gesto=LINHA_DE_BOTAO, linha=linha,
+    # A lista é a da LINHA: «Teclas WASD» e «Setas» só nas dos analógicos (`por_grupo(linha)`).
+    return drop(por_grupo(linha), _PADRAO_DOS_BOTOES[linha], gesto=LINHA_DE_BOTAO, linha=linha,
                 campo=f"acao-{linha}")
 
 

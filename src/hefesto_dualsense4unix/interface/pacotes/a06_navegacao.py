@@ -460,10 +460,10 @@ def _linhas_dos_botoes(p: dict[str, Any]) -> dict[str, str]:
 
     O vocabulário é o do motor: `acoes.BOTOES` diz quais linhas existem, `acoes.padrao()` o de
     fábrica, `acoes.rotulo()` o texto da `<option>`; o gerador monta as mesmas listas do mesmo lugar
-    (`aba06.ACOES_UNI = por_grupo()`), então o valor emitido SEMPRE existe como opção (condição do
-    `escrever()` com `data-hef-alvo="valor"`, que se cala quando não casa). O perfil vence o de
-    fábrica linha a linha: `button_actions` guarda DIFERENÇA (`None` = herda), e linha ausente é o
-    de fábrica.
+    (`aba06._celula_da_acao` chama `por_grupo(linha)`), então o valor emitido SEMPRE existe como
+    opção (condição do `escrever()` com `data-hef-alvo="valor"`, que se cala quando não casa). O
+    perfil vence o de fábrica linha a linha: `button_actions` guarda DIFERENÇA (`None` = herda), e
+    linha ausente é o de fábrica.
 
     **São três camadas, não duas** (06/09/2026): o de fábrica, os atalhos da janela antiga
     (`key_bindings`) e a escolha desta tela, nessa ordem, por `acoes.tabela_efetiva` (o
