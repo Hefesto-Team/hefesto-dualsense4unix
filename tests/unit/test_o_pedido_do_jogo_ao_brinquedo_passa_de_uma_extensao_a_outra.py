@@ -300,6 +300,22 @@ def test_quem_ja_tinha_zerado_ou_nunca_publicou_nao_deixa_zero_nenhum() -> None:
         "b": ([PUBLICAR], False), "a": ([LER], True)}, corpo)
 
 
+def test_a_publicacao_parcial_nao_esconde_a_funcao_que_ficou_acima_de_zero() -> None:
+    """Quem manda só a função que mudou (vibrar, depois girar em 0) deixa o vibrar preso."""
+
+    async def corpo(_p: Porta, _b: EventBus, c: dict[str, _Mod]) -> None:
+        await c["b"].publicar({"vibrar": 0.8})
+        await c["b"].publicar({"girar": 0.0})
+        assert (await c["a"].dados())[F] == {"vibrar": 0.8}
+        assert (await c["a"].dados())[F] == {"girar": 0.0}
+        c["b"].fechar()
+        zero = await c["a"].dados()
+        assert zero[F] == dict.fromkeys(FUNCOES_DO_BRINQUEDO, 0.0), (
+            "o vibrar ficou preso: a última publicação só zerou o girar")
+
+    _correr(_quem_publica_e_quem_le(), corpo)
+
+
 # 5. O teto de 20 por segundo por extensão.
 
 def test_a_21a_publicacao_no_mesmo_segundo_e_recusada_e_o_segundo_seguinte_libera() -> None:

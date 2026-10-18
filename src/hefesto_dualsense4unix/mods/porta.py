@@ -100,12 +100,16 @@ class _Conexao:
     sessao: _Credencial | None = None
     #: A modificação desta conexão devolveu o estado dos acessórios: ao cair, o estado se apaga.
     deu_o_estado: bool = False
-    #: O último ``jogo.brinquedo`` desta conexão deixou alguma função acima de zero: se ela cair,
-    #: o serviço publica o zero que faltou.
-    brinquedo_preso: bool = False
+    #: O último valor de cada função que esta conexão publicou em ``jogo.brinquedo``. Uma
+    #: publicação pode trazer só parte das nove, e a que ela não traz segue com o valor de antes.
+    funcoes_do_brinquedo: dict[str, float] = field(default_factory=dict)
     assinaturas: list[tuple[str, asyncio.Queue[Any]]] = field(default_factory=list)
     tarefas: list[asyncio.Task[None]] = field(default_factory=list)
     trava: asyncio.Lock = field(default_factory=asyncio.Lock)
+
+    def brinquedo_preso(self) -> bool:
+        """Alguma função ficou acima de zero: se a conexão cair, o serviço publica o zero."""
+        return any(v > 0 for v in self.funcoes_do_brinquedo.values())
 
 
 def credencial_do_par(sock: socket.socket | None) -> tuple[int, int, int] | None:
@@ -434,7 +438,7 @@ class Porta:
                 self.bus.publish(
                     EventTopic.ACESSORIOS_ESTADO, estado_vazio_dos_acessorios(con.sessao.mod_id)
                 )
-            if con.brinquedo_preso and con.sessao is not None:
+            if con.brinquedo_preso() and con.sessao is not None:
                 self._soltar_o_brinquedo(con.sessao.mod_id)
             self._conexoes.discard(con)
             with contextlib.suppress(Exception):
@@ -558,7 +562,7 @@ class Porta:
         janela.append(agora)
         evento = {"funcoes": pedidas, "origem": mod_id, "t": agora}  # noqa-acento: chave do contrato
         self.bus.publish(TOPICOS_DE_PUBLICACAO[topico], evento)
-        con.brinquedo_preso = any(v > 0 for v in pedidas.values())
+        con.funcoes_do_brinquedo.update(pedidas)
         return {"publicado": True}
 
     def _soltar_o_brinquedo(self, mod_id: str) -> None:
