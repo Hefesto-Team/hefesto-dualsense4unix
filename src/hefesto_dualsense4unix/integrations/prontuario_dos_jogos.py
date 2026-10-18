@@ -141,7 +141,10 @@ PONTE_DIVERGENTE = "ponte_divergente"
 FALTA_A_PECA = "falta_a_peca"
 SEM_CONTA = "sem_conta"
 
-_ESTORVOS: dict[str, tuple[str, str, bool]] = {
+#: Cada estorvo é (o que é, a cura, o produto cura sozinho?, impede o jogo?). `impede` é
+#: a NATUREZA, e mora aqui: o que não impede é aviso, aparece ao lado do veredito e nunca
+#: o muda (SEM_CONTA: o jogo abre e joga, só sem conta, amigos e online).
+_ESTORVOS: dict[str, tuple[str, str, bool, bool]] = {
     SEM_WRAPPER: (
         "A linha de Opções de Inicialização não chama o hefesto-launch, "
         "então o jogo nunca lê a máscara e vale a lista da Steam — que manda "
@@ -149,6 +152,7 @@ _ESTORVOS: dict[str, tuple[str, str, bool]] = {
         "O Hefesto repõe sozinho: ao salvar ou aplicar um perfil, e também "
         "assim que a Steam fechar (é o único instante em que a reposição "
         "sobrevive — com ela viva, regrava o arquivo ao sair e engole).",
+        True,
         True,
     ),
     LINHA_INTOCAVEL: (
@@ -158,12 +162,14 @@ _ESTORVOS: dict[str, tuple[str, str, bool]] = {
         "assim que a Steam fechar (é o único instante em que a reposição "
         "sobrevive — com ela viva, regrava o arquivo ao sair e engole).",
         True,
+        True,
     ),
     SEM_EXECUTAVEL: (
         "Não foi possível ler nenhum executável na pasta do jogo, então não dá "
         "para saber que API de entrada ele usa.",
         "Nenhuma — é cegueira do instrumento, não defeito do jogo.",
         False,
+        True,
     ),
     EXCECAO_INERTE: (
         "Este jogo está na sua lista de exceções do Steam Input, mas o Steam "
@@ -172,6 +178,7 @@ _ESTORVOS: dict[str, tuple[str, str, bool]] = {
         "assim que a Steam fechar (é o único instante em que a escrita "
         "sobrevive — com ela viva, a Steam regrava o arquivo ao sair e "
         "engole).",
+        True,
         True,
     ),
     FALTA_A_PECA: (
@@ -183,13 +190,17 @@ _ESTORVOS: dict[str, tuple[str, str, bool]] = {
         "um arquivo do jogo, ponha-o ao lado do executável. Com a peça no lugar, o "
         "Hefesto passa a variável sozinho ao abrir o jogo.",
         False,
+        True,
     ),
     SEM_CONTA: (
         "O jogo abre e joga só neste computador: sem conta, sem amigos e sem online. "
         "A peça GDK do Hefesto não faz o login do Xbox Live, quem o faz é o ajudante "
-        "de login, e ele não está em ~/.local/share/dungeons2-compat/xauth.py.",
+        "de login, e ele não está em ~/.local/share/dungeons2-compat/xauth.py. Se o "
+        "tokens.txt dessa pasta ainda for válido, o jogo entra com a conta até o token "
+        "vencer.",
         "Para entrar na conta, instale o ajudante de login da origem nessa pasta; o "
         "Hefesto não instala um. Para jogar local não precisa de nada.",
+        False,
         False,
     ),
     PONTE_DIVERGENTE: (
@@ -201,6 +212,7 @@ _ESTORVOS: dict[str, tuple[str, str, bool]] = {
         "hoje, se foi você que mudou de ideia. O Hefesto NÃO desfaz gesto seu "
         "na lista — foi você que mexeu nela por último.",
         False,
+        True,
     ),
 }
 
@@ -369,6 +381,11 @@ class Estorvo:
         """O produto conserta sozinho, sem ela clicar em nada?"""
         return _ESTORVOS[self.chave][2]
 
+    @property
+    def impede(self) -> bool:
+        """Impede o jogo (muda o veredito), ou é só aviso ao lado dele?"""
+        return _ESTORVOS[self.chave][3]
+
 
 @dataclass(frozen=True)
 class Prontuario:
@@ -460,6 +477,16 @@ class Prontuario:
         return achados
 
     @property
+    def impedimentos(self) -> list[Estorvo]:
+        """Os estorvos que impedem o jogo: só eles movem o veredito e pedem cura."""
+        return [e for e in self.estorvos if e.impede]
+
+    @property
+    def avisos(self) -> list[Estorvo]:
+        """Os que não impedem: o jogo abre e joga, e o aviso fica ao lado do veredito."""
+        return [e for e in self.estorvos if not e.impede]
+
+    @property
     def veredito(self) -> str:
         """O veredito, com a ponte confirmada DENTRO dele — e nada afrouxado.
 
@@ -491,7 +518,7 @@ class Prontuario:
         sumiu do disco continua `NAO_SEI`, porque aí a cegueira é sobre o jogo
         inteiro, não sobre a API dele.
         """
-        if self.estorvos:
+        if self.impedimentos:
             return IMPEDIDO
         if self.ponte_confirmada and self.raiz is not None:
             return PONTE_CONFIRMADA
@@ -519,7 +546,7 @@ class Prontuario:
             "kit": self.kit.como_dicionario() if self.kit else None,
             "estorvos": [
                 {"chave": e.chave, "o_que": e.o_que, "cura": e.a_cura,
-                 "automatica": e.automatica}  # (noqa-acento): chave de JSON
+                 "automatica": e.automatica, "impede": e.impede}  # (noqa-acento): chave de JSON
                 for e in self.estorvos
             ],
         }
@@ -539,7 +566,7 @@ class Censo:
     @property
     def curaveis_sozinho(self) -> list[Prontuario]:
         """Impedidos cuja cura o produto aplica sem ela clicar em nada."""
-        return [j for j in self.impedidos if all(e.automatica for e in j.estorvos)]
+        return [j for j in self.impedidos if all(e.automatica for e in j.impedimentos)]
 
     @property
     def dependem_de_espelho(self) -> list[Prontuario]:
@@ -844,7 +871,7 @@ def curar_o_que_e_automatico(
     presentes: set[str] = set()
     manuais: set[str] = set()
     for jogo in ficha.impedidos:
-        for estorvo in jogo.estorvos:
+        for estorvo in jogo.impedimentos:
             if estorvo.automatica:
                 presentes.add(estorvo.chave)
             else:
@@ -917,12 +944,15 @@ def _tabela(censo: Censo) -> str:
             f"{_texto_da_ponte(jogo.ponte):20} | {texto_si:22} | "
             f"{jogo.declarado.veredito if jogo.declarado else '-'}"
         )
-    for jogo in censo.impedidos:
+    for jogo in censo.jogos:
+        if not jogo.estorvos:
+            continue
         linhas.append("")
         linhas.append(f"  {jogo.nome}:")
         for estorvo in jogo.estorvos:
             marca = "o Hefesto repõe sozinho" if estorvo.automatica else "só reparo manual"
-            linhas.append(f"    - {estorvo.o_que}")
+            quando = "" if estorvo.impede else "aviso, não impede o jogo: "
+            linhas.append(f"    - {quando}{estorvo.o_que}")
             linhas.append(f"      cura: {estorvo.a_cura} ({marca})")
     declarados = [j for j in censo.jogos if j.declarado is not None and j.declarado.fontes]
     if declarados:

@@ -4,9 +4,14 @@ A peça GDK (`assets/gdk-runtime/xgameruntime.c`) não fabrica token do Xbox Liv
 ajudante que a pessoa instalou, e a peça o procura em `~/.local/share/dungeons2-compat/xauth.py`.
 Sem ele o jogo abre e joga local, sem conta, amigos nem online. O dono do caminho é o fonte C
 (compilado e pinado); o Python o segue, e uma régua lê o C.
+
+Estar sem conta é AVISO, não impedimento (decisão por delegação, 17/10/2026, a validar pelo usuário): o
+estorvo traz a natureza no `_ESTORVOS`, o veredito só vira `IMPEDIDO` com estorvo que impede, e o
+aviso fica ao lado.
 """
 from __future__ import annotations
 
+import dataclasses
 import hashlib
 import re
 from pathlib import Path
@@ -70,6 +75,11 @@ def _chaves(ficha: pdj.Prontuario) -> list[str]:
     return [e.chave for e in ficha.estorvos]
 
 
+def _com_o_wrapper(ficha: pdj.Prontuario) -> pdj.Prontuario:
+    """O mesmo jogo, com o `hefesto-launch` na linha: o único estorvo que sobra é o do teste."""
+    return dataclasses.replace(ficha, linha=f"{pdj.WRAPPER_PREFIX} %command%")
+
+
 def _por_o_ajudante(casa: Path) -> Path:
     alvo = rda.caminho_do_ajudante_de_login(casa)
     alvo.parent.mkdir(parents=True)
@@ -95,7 +105,7 @@ def test_o_texto_diz_o_que_acontece_e_a_saida_com_o_caminho_do_codigo(casa: Path
     _jogo(_biblioteca(casa), "800002")
     estorvo = next(e for e in _ficha("800002").estorvos if e.chave == pdj.SEM_CONTA)
     onde = "/".join((*rda.PASTA_DO_AJUDANTE, rda.NOME_DO_AJUDANTE))
-    for pedaco in ("sem conta", "amigos", "online", "só neste computador"):
+    for pedaco in ("sem conta", "amigos", "online", "só neste computador", "tokens.txt"):
         assert pedaco in estorvo.o_que, pedaco
     assert onde in estorvo.o_que, "o texto cita o caminho que a peça procura"
     assert "ajudante de login" in estorvo.a_cura and "não instala" in estorvo.a_cura
@@ -141,13 +151,69 @@ def test_a_varredura_rapida_nao_examina_e_nao_diz(casa: Path) -> None:
     assert pdj.SEM_CONTA not in _chaves(_ficha("800008", examinar=False))
 
 
-def test_o_estorvo_vai_no_json_e_o_veredito_e_impedido(casa: Path) -> None:
+def test_sem_conta_e_aviso_e_o_jogo_que_abre_nao_e_impedido(casa: Path) -> None:
+    # D-1710-O-JOGO-SEM-CONTA-ABRE-E-NAO-E-IMPEDIDO
     _jogo(_biblioteca(casa), "800009")
-    ficha = _ficha("800009")
-    dado = ficha.como_dicionario()
+    ficha = _com_o_wrapper(_ficha("800009"))
+    assert _chaves(ficha) == [pdj.SEM_CONTA]
+    assert ficha.impedimentos == [] and [e.chave for e in ficha.avisos] == [pdj.SEM_CONTA]
+    assert not ficha.estorvos[0].impede
+    assert ficha.veredito == pdj.SEM_IMPEDIMENTO, "o jogo abre e joga: sem conta não o impede"
+    assert pdj.Censo(jogos=[ficha]).impedidos == []
+
+
+def test_o_aviso_vai_no_json_com_a_natureza_e_sem_mudar_o_veredito(casa: Path) -> None:
+    _jogo(_biblioteca(casa), "800010")
+    dado = _com_o_wrapper(_ficha("800010")).como_dicionario()
     assert dado["sem_conta"] is True
-    assert pdj.SEM_CONTA in [e["chave"] for e in dado["estorvos"]]  # type: ignore[attr-defined]
+    assert dado["veredito"] == pdj.SEM_IMPEDIMENTO
+    (estorvo,) = dado["estorvos"]  # type: ignore[misc]
+    assert estorvo["chave"] == pdj.SEM_CONTA and estorvo["impede"] is False  # type: ignore[index]
+
+
+def test_o_aviso_aparece_na_tabela_ao_lado_do_jogo_que_nao_e_impedido(casa: Path) -> None:
+    _jogo(_biblioteca(casa), "800011")
+    ficha = _com_o_wrapper(_ficha("800011"))
+    tabela = pdj._tabela(pdj.Censo(jogos=[ficha]))
+    assert "aviso, não impede o jogo:" in tabela and "sem conta" in tabela, tabela
+    assert pdj.IMPEDIDO not in tabela
+
+
+def test_o_que_impede_continua_impedindo_e_o_aviso_vai_junto(casa: Path) -> None:
+    """Sem o wrapper o jogo é `IMPEDIDO` por ELE; o aviso não o cura nem o agrava."""
+    _jogo(_biblioteca(casa), "800012")
+    ficha = _ficha("800012")
     assert ficha.veredito == pdj.IMPEDIDO
+    assert [e.chave for e in ficha.impedimentos] == [pdj.SEM_WRAPPER]
+    assert [e.chave for e in ficha.avisos] == [pdj.SEM_CONTA]
+    # o aviso manual não tira do jogo o «o Hefesto repõe sozinho» do estorvo que impede
+    assert pdj.Censo(jogos=[ficha]).curaveis_sozinho == [ficha]
+
+
+def test_a_peca_faltando_continua_impedindo(casa: Path) -> None:
+    (rda.pasta_da_peca(casa) / "x86_64-windows" / _DLL).unlink()
+    _jogo(_biblioteca(casa), "800013")
+    ficha = _com_o_wrapper(_ficha("800013"))
+    assert [e.chave for e in ficha.impedimentos] == [pdj.FALTA_A_PECA]
+    assert ficha.veredito == pdj.IMPEDIDO
+
+
+def test_a_cura_nao_conta_o_aviso_como_reparo_manual(
+    casa: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O que o produto cura sozinho e o que sobrou à mão só falam de impedimento."""
+    _jogo(_biblioteca(casa), "800014")
+    ficha = _ficha("800014")  # sem wrapper (impede, automático) e sem conta (aviso)
+    monkeypatch.setitem(pdj._CURAS, pdj.SEM_WRAPPER, lambda _home, *, dry_run: ("ok", ["800014"]))
+    cura = pdj.curar_o_que_e_automatico(censo=pdj.Censo(jogos=[ficha]), dry_run=True)
+    assert cura.manuais == [], "o aviso sem conta virou «só reparo manual»"
+    assert cura.status == pdj.CURA_FEITA
+
+
+def test_todo_estorvo_tem_a_natureza_e_so_o_sem_conta_nao_impede() -> None:
+    assert all(len(v) == 4 for v in pdj._ESTORVOS.values())
+    avisos = [chave for chave in pdj._ESTORVOS if not pdj.Estorvo(chave).impede]
+    assert avisos == [pdj.SEM_CONTA]
 
 
 # --- o caminho: o fonte C é o dono ----------------------------------------------------------
