@@ -5,7 +5,7 @@
       "data": "2026-10-17",
       "nota": "5973 linhas de comentário e 45686 de docstring, em src/hefesto_dualsense4unix/",
       "o_que_conta": "linhas de comentário e de docstring em src/hefesto_dualsense4unix/",
-      "piso": 53111,
+      "piso": 53159,
       "por_item": {
         "app/actions/carona_do_wrapper.py": 174,
         "app/actions/config/secao_controles.py": 83,
@@ -16,7 +16,6 @@
         "app/actions/emulation_actions.py": 45,
         "app/actions/external_controllers.py": 60,
         "app/actions/home_actions.py": 349,
-        "app/actions/input_actions.py": 41,
         "app/actions/jogar/painel.py": 195,
         "app/actions/launch_wrapper_dialog.py": 73,
         "app/actions/lightbar_actions.py": 52,
@@ -40,7 +39,7 @@
         "cli/cmd_mic.py": 68,
         "cli/cmd_profile.py": 48,
         "cli/cmd_speaker.py": 64,
-        "core/acoes_de_botao.py": 176,
+        "core/acoes_de_botao.py": 194,
         "core/acoes_do_gesto.py": 72,
         "core/ativacao_de_botao.py": 44,
         "core/backend_pydualsense.py": 1005,
@@ -52,7 +51,7 @@
         "core/filtro_de_botao.py": 44,
         "core/formas_do_endereco.py": 65,
         "core/gatilho_fim_de_sequencia.py": 79,
-        "core/keyboard_mappings.py": 43,
+        "core/keyboard_mappings.py": 42,
         "core/led_control.py": 173,
         "core/lightbar_gatilho.py": 110,
         "core/lightbar_reset.py": 80,
@@ -94,7 +93,7 @@
         "daemon/subsystems/luz_do_mic.py": 289,
         "daemon/subsystems/meus_toques.py": 58,
         "daemon/subsystems/mic_da_mesa.py": 90,
-        "daemon/subsystems/mouse.py": 92,
+        "daemon/subsystems/mouse.py": 115,
         "daemon/subsystems/navegacao_interna.py": 56,
         "daemon/subsystems/poll.py": 77,
         "daemon/subsystems/quem_mexe.py": 82,
@@ -139,7 +138,7 @@
         "integrations/gestos_dos_acessorios.py": 50,
         "integrations/haptica_do_cabo.py": 82,
         "integrations/hidraw_broker_client.py": 118,
-        "integrations/hotkey_daemon.py": 133,
+        "integrations/hotkey_daemon.py": 136,
         "integrations/jogos_locais.py": 61,
         "integrations/lista_de_exclusao.py": 109,
         "integrations/mapa_das_portas.py": 78,
@@ -185,7 +184,7 @@
         "interface/aba03.py": 47,
         "interface/aba04.py": 141,
         "interface/aba05.py": 308,
-        "interface/aba06.py": 46,
+        "interface/aba06.py": 47,
         "interface/aba08.py": 219,
         "interface/aba09.py": 45,
         "interface/aba10.py": 56,
@@ -211,7 +210,7 @@
         "interface/pacotes/a03_gatilhos.py": 810,
         "interface/pacotes/a04_iluminacao.py": 1167,
         "interface/pacotes/a05_vibracao.py": 883,
-        "interface/pacotes/a06_navegacao.py": 362,
+        "interface/pacotes/a06_navegacao.py": 380,
         "interface/pacotes/a07_lancadores.py": 683,
         "interface/pacotes/a08_conexoes.py": 1287,
         "interface/pacotes/a09_sistema.py": 1126,
@@ -251,7 +250,7 @@
         "utils/single_instance.py": 50,
         "utils/xdg_paths.py": 65
       },
-      "razao": "texto-em-src: +10 linhas (53101 -> 53111), pagas por Origem: D-1710-O-INSTALL-NAO-CHAMA-O-APT-COM-PACOTE-A-MEIO; registrado no fecho, topo 5adf7d8e5791",
+      "razao": "texto-em-src: +48 linhas (53111 -> 53159), pagas por Origem: D-1710-A-SAIDA-DE-EMERGENCIA-DO-PS-AVISA-NA-LINHA, D-1710-O-PS-COM-OUTRO-BOTAO-NAO-E-PS-SOZINHO, D-1710-O-TECLADO-NA-TELA-AUSENTE-RESPONDE-NA-LINHA, D-1710-OS-ANALOGICOS-OFERECEM-TECLAS-SO-NA-LINHA-DELES; registrado no fecho, topo 6a91340df1df",
       "subidas": [
         {
           "data": "2026-10-13",
@@ -306,6 +305,12 @@
           "de": 53101,
           "para": 53111,
           "razao": "texto-em-src: +10 linhas (53101 -> 53111), pagas por Origem: D-1710-O-INSTALL-NAO-CHAMA-O-APT-COM-PACOTE-A-MEIO; registrado no fecho, topo 5adf7d8e5791"
+        },
+        {
+          "data": "2026-10-17",
+          "de": 53111,
+          "para": 53159,
+          "razao": "texto-em-src: +48 linhas (53111 -> 53159), pagas por Origem: D-1710-A-SAIDA-DE-EMERGENCIA-DO-PS-AVISA-NA-LINHA, D-1710-O-PS-COM-OUTRO-BOTAO-NAO-E-PS-SOZINHO, D-1710-O-TECLADO-NA-TELA-AUSENTE-RESPONDE-NA-LINHA, D-1710-OS-ANALOGICOS-OFERECEM-TECLAS-SO-NA-LINHA-DELES; registrado no fecho, topo 6a91340df1df"
         }
       ],
       "unidade": "linhas",

@@ -253,14 +253,14 @@
       "data": "2026-10-17",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1143954,
+      "piso": 1143962,
       "por_item": {
-        "docs": 119550,
+        "docs": 119554,
         "scripts": 114837,
         "src": 308322,
-        "tests": 601245
+        "tests": 601249
       },
-      "razao": "o teto desceu sozinho com o número",
+      "razao": "tamanho: +8 linhas (1143954 -> 1143962), pagas por Origem: D-1710-A-SAIDA-DE-EMERGENCIA-DO-PS-AVISA-NA-LINHA, D-1710-O-PS-COM-OUTRO-BOTAO-NAO-E-PS-SOZINHO, D-1710-O-TECLADO-NA-TELA-AUSENTE-RESPONDE-NA-LINHA, D-1710-OS-ANALOGICOS-OFERECEM-TECLAS-SO-NA-LINHA-DELES; registrado no fecho, topo 6a91340df1df",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -591,6 +591,12 @@
           "de": 1143907,
           "para": 1143972,
           "razao": "tamanho: +65 linhas (1143907 -> 1143972), pagas por Origem: D-A-REGUA-E-QUALQUER-MESA-NAO-A-DELA; registrado no fecho, topo 387285e26f76"
+        },
+        {
+          "data": "2026-10-17",
+          "de": 1143954,
+          "para": 1143962,
+          "razao": "tamanho: +8 linhas (1143954 -> 1143962), pagas por Origem: D-1710-A-SAIDA-DE-EMERGENCIA-DO-PS-AVISA-NA-LINHA, D-1710-O-PS-COM-OUTRO-BOTAO-NAO-E-PS-SOZINHO, D-1710-O-TECLADO-NA-TELA-AUSENTE-RESPONDE-NA-LINHA, D-1710-OS-ANALOGICOS-OFERECEM-TECLAS-SO-NA-LINHA-DELES; registrado no fecho, topo 6a91340df1df"
         }
       ],
       "unidade": "linhas",
