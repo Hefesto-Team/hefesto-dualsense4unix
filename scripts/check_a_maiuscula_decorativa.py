@@ -166,6 +166,9 @@ SIGLA = frozenset({
     "HID", "A2DP", "HFP", "GOG", "GBA", "DKMS", "CPU", "SVG", "CSV", "JSON",
     "HDMI", "COSMIC", "LE", "WASD",
     "PS", "L1", "L2", "L3", "R1", "R2", "R3", "ZL", "ZR", "LB", "RB", "LT", "RT",
+    # a aba Experimental (18/10): o endereço do menu Lovense do jogo, o console da pasta do Kyty e o
+    # numeral romano do nome do jogo («Hades II»)
+    "HTTP", "IP", "PS5", "II",
 })
 
 #: sai com: A-TELA-SEM-O-QUE-A-REGUA-ACEITA-01
