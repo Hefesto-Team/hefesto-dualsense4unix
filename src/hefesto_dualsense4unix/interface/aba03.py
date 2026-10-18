@@ -35,6 +35,8 @@ from hefesto_dualsense4unix.interface.pacotes.a03_gatilhos import (  # noqa: E40
     nivel_da_forca,
     sem_comentarios_de_css,
 )
+from aba05 import GLIFO_DO_CONTROLE  # noqa: E402  o ícone da linha de força da 05
+from hefesto_dualsense4unix.profiles.schema import RUMBLE_CUSTOM_MULT_MAX  # noqa: E402
 from hefesto_dualsense4unix.interface.pacotes.meus_efeitos import (  # noqa: E402
     PREFIXO_DO_MEU,
     SEPARADOR_DOS_MEUS,
@@ -91,6 +93,30 @@ BARRAS = [("inicio", "Início", 0, 9, 2, ""), ("fim", "Fim", 0, 9, 9, ""),
 
 #: O ícone ao lado de «Controle» é o DualSense do mapa (16/10/2026): um arquivo de desenho manda.
 GLIFO_DO_DUALSENSE = _mapa.silhueta_do_dualsense(40)
+
+#: A «Intensidade do gatilho» (desenho de 18/10/2026, o pedido: «igual é na aba vibração»): um
+#: trilho por controle, de 0 a 200% e de 5 em 5, que multiplica a força do efeito que o estilo do
+#: jogo escolheu. O teto e o passo são os do trilho da «Força da vibração» da aba 05, e a linha tem o
+#: mesmo formato: o ícone, o trilho, o número e o `%`. O estilo continua escolhendo o efeito.
+TETO_DA_INTENSIDADE = round(RUMBLE_CUSTOM_MULT_MAX * 100)
+PASSO_DA_INTENSIDADE = 5
+ROTULO_DA_INTENSIDADE = "Intensidade do gatilho"
+DICA_DA_INTENSIDADE = ("Abaixo de 100% o efeito do gatilho fica mais fraco; acima, o fraco é reforçado, "
+                       "até o máximo do gatilho")
+CAMPO_DA_INTENSIDADE = "intensidade-do-gatilho"
+#: A intensidade do desenho, por controle, em porcento. É a mesma cena da «Força da vibração».
+INTENSIDADE_DA_CENA = {"p1": 120, "p2": 70}
+#: O gesto do trilho. Ainda NÃO tem atendente no produto (o pacote a03 e a camada são da segunda
+#: passagem, depois do OK do desenho): o trilho nasce com `data-hef`, que só pinta e não dispara
+#: clique, e vira `data-papel` no dia em que o pacote o atender. Enquanto isso o trilho desenha,
+#: mas não grava, e nenhuma régua da casa o conta como botão sem dono.
+GESTO_DA_INTENSIDADE_QUE_ESPERA_O_PRODUTO = "intensidade-do-gatilho"
+#: Onde a linha entra na grade: `acima` (sob o chip de cada controle, antes do L2 e do R2; a
+#: recomendada, como a «Força da vibração» logo sob o «Modelo» da 05) ou `abaixo` (depois do R2).
+ONDE_ENTRA_A_INTENSIDADE = "acima"
+#: O ícone da linha: o mesmo da «Força da vibração» da 05 (o controle inteiro, de uma cor só), porque a
+#: silhueta do mapa, de 22 px, vira borrão.
+GLIFO_DA_INTENSIDADE = GLIFO_DO_CONTROLE
 
 #: A força do aperto que o desenho mostra (o cru de 0 a 255); o produto escreve a leitura viva.
 FORCA_DA_CENA = {"p1": {"l2": 96, "r2": 200}, "p2": {"l2": 0, "r2": 0}}
@@ -154,7 +180,32 @@ CSS = CSS_GLIFO + """
   .g2-canto .g2-estilo-nome::after{content:attr(data-estilo)}
   /* sem estilo no perfil o pacote apaga o atributo (o piloto não escreve vazio num texto) */
   .g2-canto .g2-estilo:not(:has(.g2-estilo-nome[data-estilo])){display:none}
-  @media (max-height:780px){.quadro .g2-grade{row-gap:8px;padding-top:4px}}
+  /* A INTENSIDADE DO GATILHO (18/10/2026): a linha da «Força da vibração» da aba 05, com as mesmas
+     quatro colunas (ícone · trilho · número · `%`), a mesma altura (36) e o mesmo trilho de 5 px com o
+     polegar de 12. O lugar sem controle mostra só o travessão, centrado, como na 05. */
+  .g2-gl.g2-int-gl{grid-row:auto;border-right:0}
+  .g2-int{display:grid;grid-template-columns:36px minmax(0,1fr) 44px 8px;align-items:center;gap:8px;
+    height:36px;min-width:0}
+  .g2-int .lado{height:36px;width:36px;box-sizing:border-box;border-radius:7px;display:flex;
+    align-items:center;justify-content:center;padding:0;border:1px solid var(--orange);
+    background:rgba(255,184,108,.1);color:var(--orange);cursor:default}
+  .g2-int .num{text-align:right;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--fg)}
+  .g2-int .teto{font-size:10.5px;color:var(--fg);font-family:'JetBrains Mono',monospace;
+    text-align:right;justify-self:end;white-space:nowrap}
+  .g2-int .trilho.arrasta{appearance:none;-webkit-appearance:none;width:100%;height:5px;padding:0;
+    margin:0;border:0;border-radius:3px;background:var(--border-forte);cursor:grab}
+  .g2-int .trilho.arrasta:active{cursor:grabbing}
+  .g2-int .trilho.arrasta::-webkit-slider-runnable-track{height:5px;border-radius:3px;
+    background:transparent}
+  .g2-int .trilho.arrasta::-webkit-slider-thumb{appearance:none;-webkit-appearance:none;width:12px;
+    height:12px;border-radius:50%;background:var(--purple);border:2px solid var(--panel);margin-top:-4px}
+  .g2-int .trilho.arrasta:focus-visible{outline:2px solid var(--purple);outline-offset:3px}
+  .g2-int[data-conectado="nao"] > *{display:none}
+  .g2-int[data-conectado="nao"]::after{content:"—";color:var(--linha);display:flex;
+    align-items:center;justify-content:center;grid-column:1/-1;width:100%;height:100%}
+  /* A linha nova da intensidade custa 52 px; sem rolagem a 940x809 (a janela mínima), o respiro da grade
+     e o da área de criar apertam a partir de 830 px de altura (eram 780: a 809 a página já rolava 31 px). */
+  @media (max-height:830px){.quadro .g2-grade{row-gap:8px;padding-top:4px}}
   /* criar efeitos novos */
   .g2-criar{margin-top:6px;flex:0 0 auto}
   .criar .criar-linha{display:flex;align-items:center;gap:12px;padding:12px 16px;flex-wrap:wrap;min-width:0}
@@ -192,6 +243,8 @@ CSS = CSS_GLIFO + """
     cursor:pointer;flex:0 0 auto}
   .g2-sentir:hover{background:rgba(255,121,198,.2)}
   .quadro-topo .modo-auto{margin-left:auto}
+  /* depois das regras da área de criar, para ganhar delas */
+  @media (max-height:830px){.criar .criar-linha{padding:8px 16px;row-gap:6px}.g2-barras{padding-bottom:8px}}
 """
 CSS = CSS.replace("repeat(N_COLS,", f"repeat({len(MESA)},")
 CSS += "".join(
@@ -317,6 +370,35 @@ def _forcas():
             'está apertado agora">Força do aperto</span></div>\n' + celulas)
 
 
+def _celula_da_intensidade(c):
+    """A linha de UM controle: o ícone, o trilho de 0 a 200, o número e o `%`.
+
+    O trilho é um `<input type=range>` como o da 05, e o `value` dele é o que o piloto lerá no
+    `change`. Sem atendente no produto ainda, ele leva `data-hef` (só pinta) e não `data-papel`
+    (ver :data:`GESTO_DA_INTENSIDADE_QUE_ESPERA_O_PRODUTO`). O lugar vazio tem a mesma estrutura e
+    o travessão no número: o que ele não pode ter é um número afirmado.
+    """
+    vivo = c.get("conectado", True)
+    pct = INTENSIDADE_DA_CENA.get(c["pref"], 100) if vivo else 0
+    return (f'<div class="g2-int{_off(not vivo)}" data-controle="{c["pref"]}"{_marca(not vivo)}>'
+            f'<span class="lado on" role="img" aria-label="Os dois gatilhos" '
+            f'data-dica="O L2 e o R2 deste controle">{GLIFO_DA_INTENSIDADE}</span>'
+            f'<input class="trilho arrasta" type="range" min="0" max="{TETO_DA_INTENSIDADE}" '
+            f'step="{PASSO_DA_INTENSIDADE}" value="{pct}" '
+            f'data-hef="{GESTO_DA_INTENSIDADE_QUE_ESPERA_O_PRODUTO}" data-campo="{CAMPO_DA_INTENSIDADE}" '
+            f'data-hef-alvo="valor" title="{DICA_DA_INTENSIDADE}">'
+            f'<span class="num" data-campo="{CAMPO_DA_INTENSIDADE}-pct">{TRAVESSAO if not vivo else pct}</span>'
+            f'<span class="teto">%</span></div>')
+
+
+def _intensidades():
+    """A linha «Intensidade do gatilho»: o ícone vazio da coluna 1, o rótulo e uma célula por lugar."""
+    celulas = "\n".join("          " + _celula_da_intensidade(c) for c in MESA)
+    return ('          <div class="g2-gl g2-int-gl" aria-hidden="true"></div>\n'
+            f'          <div class="g2-rot"><span class="sec-rot" data-dica="{DICA_DA_INTENSIDADE}">'
+            f'{ROTULO_DA_INTENSIDADE}</span></div>\n' + celulas)
+
+
 def _linha(glifo_html, classe, rotulo, dica, fabrica, lado):
     """Um rótulo e uma célula por controle da `MESA`."""
     rot = (f'          <div class="g2-rot"><span class="sec-rot" data-dica="{dica}">{rotulo}</span></div>')
@@ -367,7 +449,13 @@ ROTEIRO_DAS_BARRAS = (
     "if(!r||r.type!=='range'||!r.closest||!r.closest('.g2-barra'))return;var b=r.nextElementSibling;"
     "if(b)b.textContent=r.value+(r.dataset.unidade?' '+r.dataset.unidade:'');});</script>")
 
-MIOLO = f'''
+def _miolo(entra=ONDE_ENTRA_A_INTENSIDADE):
+    """O miolo da aba. `entra` põe a «Intensidade do gatilho» `acima` (sob os chips) ou `abaixo` (depois do R2)."""
+    assert entra in ("acima", "abaixo"), entra
+    linha = _intensidades()
+    sob_os_chips = linha if entra == "acima" else ""
+    depois_do_r2 = ('          <div class="g2-sep"></div>\n' + linha) if entra == "abaixo" else ""
+    return f'''
     <div class="quadro" data-modo-da-aba="{monta_.MODO_PERSONALIZADO}" data-campo="{GESTO_DO_MODO}"
          data-hef-alvo="atributo" data-hef-atributo="data-modo-da-aba">
       <div class="quadro-topo">
@@ -381,10 +469,12 @@ MIOLO = f'''
           <div class="g2-gl g2-ds" aria-label="DualSense">{GLIFO_DO_DUALSENSE}</div>
           <div class="g2-canto" aria-label="Controle e estilo de jogo"><span class="sec-rot g2-canto-rot">Controle</span><span class="g2-estilo" data-dica="O estilo escolhido em Perfis. Só leitura"><span class="g2-estilo-rot">Estilo de jogo</span><span class="g2-estilo-nome" data-campo="{CAMPO_DO_ESTILO}" data-hef-alvo="atributo" data-hef-atributo="data-estilo" data-estilo="{ESTILO_DA_CENA}"></span></span></div>
 {_chips()}
+{sob_os_chips}
           <div class="g2-sep g2-sep-cab"></div>
 {_bloco_do_gatilho("l2", "g2-l2", "e")}
           <div class="g2-sep"></div>
 {_bloco_do_gatilho("r2", "g2-r2", "d")}
+{depois_do_r2}
         </div>
       </div>
     </div>
@@ -404,6 +494,8 @@ MIOLO = f'''
     </div>
     {ROTEIRO_DAS_BARRAS}
 '''
+
+MIOLO = _miolo()
 
 _INICIO_DO_LUGAR = re.compile(r'<div\b[^>]*?\bdata-controle="(p\d+)"')
 
@@ -462,8 +554,8 @@ def _conferir(doc):
     exigir(corpo.count('id="criar-gatilhos"') == 1
            and corpo.count('data-hef-forma="criar-gatilhos"') == 2,
            "o Criar e o Sentir não apontam para o quadro de criar: o gesto não leria as barras")
-    exigir(corpo.count('data-hef-alvo="valor"') == 4 * n,
-           "um campo de escolha do desenho não pinta por valor")
+    exigir(corpo.count('data-hef-alvo="valor"') == 4 * n + n,
+           "um campo de escolha, ou o trilho da intensidade, do desenho não pinta por valor")
 
     exigir(corpo.count(f'data-campo="{CAMPO_DO_CHIP}"') == n
            and corpo.count(f'data-campo="{CAMPO_DO_PLASTICO}"') == n,
@@ -520,7 +612,7 @@ def _conferir(doc):
                f"a escada {_campo!r} não está em todos os {n} lugares")
     exigir(len(re.findall(r'class="g2-forca(?: off)?"', corpo)) == n,
            "a linha da força do aperto perdeu um lugar")
-    for classe in ("g2-cab", "g2-cel", "g2-forca"):
+    for classe in ("g2-cab", "g2-cel", "g2-forca", "g2-int"):
         marcas = re.findall(rf'class="{classe}( off)?"[^>]*?(data-conectado="nao")?>', corpo)  # (noqa-acento) identificador ASCII
         exigir(bool(vazios) and all(bool(off) == bool(vazio) for off, vazio in marcas),
                f"o `{classe}` vazio não tem a classe `off` que o piloto escreve, ou o cheio tem")
@@ -528,6 +620,27 @@ def _conferir(doc):
            "a força do aperto deixou de ficar acima de «Controle»")
     exigir(' id="' not in GLIFO_DO_DUALSENSE and "<title>" not in GLIFO_DO_DUALSENSE,
            "o ícone do DualSense voltou a ter `id` e colidiria com outro desenho")
+
+    # A «Intensidade do gatilho» (18/10/2026): um trilho de 0 a 200 por lugar, no formato da 05
+    trilhos = re.findall(rf'<input class="trilho arrasta"[^>]*data-campo="{CAMPO_DA_INTENSIDADE}"[^>]*>', corpo)
+    exigir(len(trilhos) == n, f"a intensidade não tem um trilho por lugar ({n}): há {len(trilhos)}")
+    for t in trilhos:
+        exigir('min="0"' in t and f'max="{TETO_DA_INTENSIDADE}"' in t and f'step="{PASSO_DA_INTENSIDADE}"' in t,
+               f"o trilho da intensidade não vai de 0 a {TETO_DA_INTENSIDADE}, de {PASSO_DA_INTENSIDADE} em "
+               f"{PASSO_DA_INTENSIDADE}: {t}")
+        exigir(f'title="{DICA_DA_INTENSIDADE}"' in t, "o trilho da intensidade perdeu a dica de uma frase")
+    exigir(f'data-papel="{GESTO_DA_INTENSIDADE_QUE_ESPERA_O_PRODUTO}"' not in corpo
+           and f'data-gesto="{GESTO_DA_INTENSIDADE_QUE_ESPERA_O_PRODUTO}"' not in corpo,
+           "o trilho da intensidade virou gesto no desenho: ele ainda não tem atendente nem camada")
+    exigir(corpo.count(f">{ROTULO_DA_INTENSIDADE}<") == 1, "o rótulo da intensidade não aparece uma vez só")
+    exigir(len(re.findall(r'class="g2-int(?: off)?"', corpo)) == n, "a linha da intensidade perdeu um lugar")
+    exigir(corpo.count(f'data-campo="{CAMPO_DA_INTENSIDADE}-pct">{TRAVESSAO}<') == len(vazios),
+           "o número da intensidade de um lugar vazio não é o travessão")
+    _ordem = (corpo.index('class="g2-cab'), corpo.index('class="g2-int'),
+              corpo.index('data-gesto="modo"'))
+    exigir((_ordem[0] < _ordem[1] < _ordem[2]) if ONDE_ENTRA_A_INTENSIDADE == "acima"
+           else (_ordem[0] < _ordem[2] < _ordem[1]),
+           f"a intensidade não está onde `ONDE_ENTRA_A_INTENSIDADE` ({ONDE_ENTRA_A_INTENSIDADE}) manda")
 
     for chave in ("tipo", "partir", "nome", "inicio", "fim", "forca", "freq"):
         exigir(f'data-linha="{chave}"' in corpo, f"a área de criar perdeu o campo {chave!r}")
