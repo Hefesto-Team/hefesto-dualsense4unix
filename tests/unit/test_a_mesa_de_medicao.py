@@ -658,7 +658,12 @@ def test_a_pagina_dirigida_pelo_navegador(mesa_no_ar, mentira, monkeypatch) -> N
                     seguradas.append(rota)
 
             pg.route("**/registro", segura)
-            pg.click("#salvar")
+            # A pergunta «avançou antes de gravar?» se faz quando o pedido de
+            # gravar JÁ SAIU, e não logo depois do clique: antes dele há o
+            # `fetch('/mesa')`, e uma página que avançasse entre os dois
+            # passaria calada se a régua perguntasse cedo demais.
+            with pg.expect_request("**/registro"):
+                pg.click("#salvar")
             assert pg.evaluate("location.hash") == "#" + alvo.id, (
                 "a página avançou antes de o registro ser gravado")
             solto["sim"] = True
