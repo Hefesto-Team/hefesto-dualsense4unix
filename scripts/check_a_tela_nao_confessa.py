@@ -418,6 +418,10 @@ SEM_LETRA: dict[str, str] = {
     "a09_sistema.py:_systemctl ← f\"{recusa}{f': {detalhe}' if detalhe else '.'}\"":
         "a recusa do systemd mais o detalhe que ele mesmo dá — as duas metades "
         "vêm de fora, e o `f''` só as costura",
+    "a07_lancadores.py:_curar_o_impedimento ← exc.frase":
+        "a frase do `ImpedimentoNaoCuradoError` (`integrations/impedimentos_da_steam`), inteira",
+    "a07_lancadores.py:_dizendo_a_recusa ← exc.frase":
+        "a frase da `InstalacaoRecusadaError` (`mods/instalador.py`), inteira",
     "__init__.py:guardado ← recusa":
         "a recusa da camada (`pacotes/camada.py:recusa_no_nativo`), levantada inteira "
         "antes de o gesto existir",
