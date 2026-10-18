@@ -253,14 +253,14 @@
       "data": "2026-10-18",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1146648,
+      "piso": 1146712,
       "por_item": {
-        "docs": 119565,
+        "docs": 119566,
         "scripts": 114902,
-        "src": 308924,
-        "tests": 603257
+        "src": 308790,
+        "tests": 603454
       },
-      "razao": "tamanho: +367 linhas (1146281 -> 1146648), pagas por Origem: D-1710-OS-ANALOGICOS-OFERECEM-TECLAS-SO-NA-LINHA-DELES; registrado no fecho, topo a9f4cbee775c",
+      "razao": "tamanho: +64 linhas (1146648 -> 1146712), pagas por Origem: D-1510-A-VIBRACAO-MANTEM-O-SELETOR-ATE-A-INTENSIDADE; registrado no fecho, topo e2af817a9c7b",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -615,10 +615,16 @@
           "de": 1146281,
           "para": 1146648,
           "razao": "tamanho: +367 linhas (1146281 -> 1146648), pagas por Origem: D-1710-OS-ANALOGICOS-OFERECEM-TECLAS-SO-NA-LINHA-DELES; registrado no fecho, topo a9f4cbee775c"
+        },
+        {
+          "data": "2026-10-18",
+          "de": 1146648,
+          "para": 1146712,
+          "razao": "tamanho: +64 linhas (1146648 -> 1146712), pagas por Origem: D-1510-A-VIBRACAO-MANTEM-O-SELETOR-ATE-A-INTENSIDADE; registrado no fecho, topo e2af817a9c7b"
         }
       ],
       "unidade": "linhas",
-      "universo": 2978
+      "universo": 2979
     }
   }
 }
