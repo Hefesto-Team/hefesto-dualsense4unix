@@ -5,9 +5,9 @@ ajudante que a pessoa instalou, e a peça o procura em `~/.local/share/dungeons2
 Sem ele o jogo abre e joga local, sem conta, amigos nem online. O dono do caminho é o fonte C
 (compilado e pinado); o Python o segue, e uma régua lê o C.
 
-Estar sem conta é AVISO, não impedimento (decisão por delegação, 17/10/2026, a validar pelo usuário): o
-estorvo traz a natureza no `_ESTORVOS`, o veredito só vira `IMPEDIDO` com estorvo que impede, e o
-aviso fica ao lado.
+Estar sem conta é AVISO, não impedimento (decisão por delegação, 17/10/2026, a validar pelo
+usuário): o estorvo traz a natureza no `_ESTORVOS`, o veredito só vira `IMPEDIDO` com estorvo
+que impede, e o aviso fica ao lado.
 """
 from __future__ import annotations
 
