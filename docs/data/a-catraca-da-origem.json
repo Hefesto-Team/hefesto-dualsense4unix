@@ -253,14 +253,14 @@
       "data": "2026-10-18",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1149071,
+      "piso": 1149101,
       "por_item": {
         "docs": 119659,
         "scripts": 114956,
-        "src": 310561,
-        "tests": 603895
+        "src": 310562,
+        "tests": 603924
       },
-      "razao": "o teto desceu sozinho com o número",
+      "razao": "tamanho: +30 linhas (1149071 -> 1149101), pagas por Origem: D-1810-A-ABA-EXPERIMENTAL-SE-PUBLICA-COMO-FICOU; registrado no fecho, topo a6b763acaa24",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -645,6 +645,12 @@
           "de": 1147452,
           "para": 1150404,
           "razao": "tamanho: +2952 linhas (1147452 -> 1150404), pagas por Origem: D-1810-UMA-EXTENSAO-PUBLICA-O-PEDIDO-DO-JOGO-AO-BRINQUEDO-PELA-PORTA; registrado no fecho, topo fe7fd278c079"
+        },
+        {
+          "data": "2026-10-18",
+          "de": 1149071,
+          "para": 1149101,
+          "razao": "tamanho: +30 linhas (1149071 -> 1149101), pagas por Origem: D-1810-A-ABA-EXPERIMENTAL-SE-PUBLICA-COMO-FICOU; registrado no fecho, topo a6b763acaa24"
         }
       ],
       "unidade": "linhas",
