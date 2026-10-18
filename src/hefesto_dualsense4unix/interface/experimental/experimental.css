@@ -378,3 +378,42 @@
 .jg-n { flex:0 1 auto }
 .jg-kit { font-size:10.5px;font-weight:600;color:var(--cyan);border:1px solid rgba(139,233,253,.45);border-radius:4px;padding:1px 7px }
 .jg-porta { flex:1 0 100%;padding-left:28px;font-size:11.5px;color:var(--fg) }
+
+/* A vista estreita (940 px): a janela dos acessórios, a fila dos lançadores e a régua da luz cabem sem nada cruzar */
+.bp-cx .ky-linha { gap:8px }
+.bp-cx .ky-ctrl { flex-wrap:wrap;row-gap:4px;min-width:0 }
+.ja-escala-rot { gap:8px }
+.ja-escala-rot span:nth-child(2) { text-align:center }
+.ja-escala-rot span:last-child { text-align:right }
+@media (max-width:1199px) {
+  .lf > .lf-nome { flex:0 1 auto }
+  .lf .lanc-nome { white-space:normal;line-height:1.15 }
+  .ja-corpo { grid-template-columns:264px minmax(0,1fr);gap:10px;padding:10px 14px 12px }
+  .ja-agora { padding:8px 10px 9px }
+  .ja-ap-cab { gap:5px }
+  .ja-ap-cab .btn.mini { white-space:nowrap;padding:0 7px;flex:none }
+  .ja-ap-sub { min-width:0;overflow:hidden;text-overflow:ellipsis }
+  .ja-ap-pe { grid-template-columns:minmax(0,1fr) 44px 52px;gap:6px }
+  .ja-tira label { padding:6px 7px 8px;font-size:12px }
+  .ja-tela { gap:8px }
+  .ja-tela > .moldura, .ja-tela.t3 > .moldura { padding:4px 9px 8px }
+  .ja-linha, .ja-tela.t3 .ja-linha, .ja-tela.t3 > .moldura:first-child .ja-linha,
+  .ja-tela.l-larga > .moldura:last-child .ja-linha:not(.empilha) { grid-template-columns:96px minmax(0,1fr);gap:6px }
+  .ja-ctrl .seg.mini { gap:3px }
+  .ja-ctrl > .seg.mini button, .ja-tela.t3 .ja-ctrl > .seg.mini button { padding:0 4px;font-size:11px }
+  .ja-ctrl input[type=text] { flex:1 1 auto;min-width:0;width:auto }
+  .ja-ctrl > .ja-tons { grid-template-columns:repeat(12,18px);gap:4px }
+  .ja-tons .tom { width:18px;height:18px }
+  .campo-num.mini { padding:0 5px }
+  .campo-num .par { gap:5px }
+  .campo-num .un { white-space:normal;line-height:1.1;font-size:10px }
+  .ja-gestos { font-size:11px }
+  .ja-gestos td.r { font-size:10px }
+  .ja-gestos .ja-combo { gap:2px }
+  .ja-gestos .ja-combo .gl { flex:0 0 16px;width:16px;height:16px }
+  .ja-gestos .ja-combo em { margin-left:3px;font-size:10px }
+  .ja-roda-l { grid-template-columns:20px 52px minmax(0,1fr) auto auto;gap:6px }
+  .ja-roda-l .ja-mini { width:52px }
+  .ja-roda-nome b { white-space:nowrap;overflow:hidden;text-overflow:ellipsis }
+  .ja-roda-l .btn.mini { padding:0 7px }
+}
