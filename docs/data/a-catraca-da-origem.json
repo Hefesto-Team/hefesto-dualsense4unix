@@ -253,14 +253,14 @@
       "data": "2026-10-18",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1149100,
+      "piso": 1149104,
       "por_item": {
         "docs": 119664,
         "scripts": 114956,
         "src": 310562,
-        "tests": 603918
+        "tests": 603922
       },
-      "razao": "tamanho: +3 linhas (1149097 -> 1149100), pagas por Origem: D-1610-A-OPCAO-RECONNECT-SAI-E-A-VELHA-SO-AVISA; registrado no fecho, topo 89b62392f282",
+      "razao": "tamanho: +4 linhas (1149100 -> 1149104), pagas por Origem: D-1710-O-DOCTOR-MOSTRA-O-PROTON-FIXADO-E-O-DE-CADA-JOGO; registrado no fecho, topo bc091dd86968",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -657,6 +657,12 @@
           "de": 1149097,
           "para": 1149100,
           "razao": "tamanho: +3 linhas (1149097 -> 1149100), pagas por Origem: D-1610-A-OPCAO-RECONNECT-SAI-E-A-VELHA-SO-AVISA; registrado no fecho, topo 89b62392f282"
+        },
+        {
+          "data": "2026-10-18",
+          "de": 1149100,
+          "para": 1149104,
+          "razao": "tamanho: +4 linhas (1149100 -> 1149104), pagas por Origem: D-1710-O-DOCTOR-MOSTRA-O-PROTON-FIXADO-E-O-DE-CADA-JOGO; registrado no fecho, topo bc091dd86968"
         }
       ],
       "unidade": "linhas",
