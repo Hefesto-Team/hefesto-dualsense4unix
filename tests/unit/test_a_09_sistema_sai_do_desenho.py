@@ -55,6 +55,10 @@ class JanelaDeMentira:
         return R()
 
 
+#: As duas linhas do Status desde 15/10/2026, escritas aqui e não lidas do pacote que se mede.
+DO_STATUS = ("hefesto-estado", "hefesto-troca-de-perfil")
+
+
 @pytest.fixture
 def a09(monkeypatch):
     from pacotes import a09_sistema as mod
@@ -116,16 +120,34 @@ def test_o_status_tem_endereco_na_pagina():
         "a ser o literal do desenho, e a pílula não tem como discordar de nada.")
 
 
-def test_o_pacote_emite_o_glifo_de_cada_linha_do_status(a09, ctx):
-    """E o pacote escreve as duas, cada uma com glifo E palavra.
+def _com_avisos_a_mais(a09, ctx, monkeypatch, quantos: int) -> None:
+    """O exame desta máquina MAIS `quantos` avisos: o tamanho do exame deixa de ser da máquina."""
+    exame = list(a09._achados(ctx.state) or [])
+    exame += [("[WARN]", f"aviso de prova {i}.") for i in range(quantos)]
+    monkeypatch.setattr(a09, "_achados", lambda *_a, **_k: exame)
+    a09._LENTO.clear()
+
+
+@pytest.mark.parametrize("avisos", [0, 2])
+def test_o_pacote_emite_o_glifo_de_cada_linha_do_status(a09, ctx, monkeypatch, avisos):
+    """E o pacote escreve as duas, cada uma com glifo E palavra, à frente da coluna.
+
+    A primeira das três colunas (S1) também leva notas do exame quando ele é longo: no CI, sem
+    adaptador Bluetooth, a nota dele entrava ali. A régua conta as linhas do Status pelo
+    `data-id`, e o caso com dois avisos a mais põe essa coluna cheia em qualquer máquina.
 
     **A MORDIDA:** esvazie o `g` em `aba_sistema._linha_de_status`. Reprova
     dizendo qual pílula saiu sem glifo.
     """
-    pilulas = _pilulas(a09.pacote(ctx)[a09.CAMPO_DO_STATUS])
+    _com_avisos_a_mais(a09, ctx, monkeypatch, avisos)
+    coluna = a09.pacote(ctx)[a09.CAMPO_DO_STATUS]
+    ids = re.findall(r'data-id="([^"]+)"', coluna)
     # Desde 15/10/2026 o Status tem DUAS linhas (Serviço e Troca de perfil); o Bluetooth e o resto
     # vivem no exame.
-    assert len(pilulas) == 2, pilulas
+    assert tuple(ids[:2]) == DO_STATUS, ids
+    assert not set(ids[2:]) & set(DO_STATUS), ids
+    pilulas = _pilulas(coluna)
+    assert len(pilulas) >= 2, pilulas
     for glifo, palavra in pilulas:
         assert glifo.strip() and palavra.strip(), (
             f"a pílula {palavra!r} saiu sem glifo — quem não distingue verde de "

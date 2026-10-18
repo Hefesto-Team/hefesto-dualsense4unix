@@ -60,6 +60,10 @@ ESTADO = {
 }
 
 
+#: As duas linhas do Status desde 15/10/2026, escritas aqui e não lidas do pacote que se mede.
+DO_STATUS = ("hefesto-estado", "hefesto-troca-de-perfil")
+
+
 @pytest.fixture
 def a09(monkeypatch):
     from pacotes import a09_sistema as mod
@@ -105,17 +109,27 @@ def test_a_leitura_preenche_os_sete_campos(a09, ctx):
             f"chega à tela: o que fica à vista é o literal do mockup.")
 
 
-def test_as_seis_linhas_deixam_de_ser_o_travessao(a09, ctx):
-    """As seis linhas de estado respondem com DADO, não com `—`."""
+@pytest.mark.parametrize("avisos", [0, 2])
+def test_as_seis_linhas_deixam_de_ser_o_travessao(a09, ctx, monkeypatch, avisos):
+    """As linhas de estado respondem com DADO, não com `—`.
+
+    A coluna do Status também leva notas do exame quando ele é longo (S1); o tamanho do exame é
+    da máquina, e no CI a nota do Bluetooth entrava ali. Os dois avisos a mais enchem a coluna
+    em qualquer máquina, e a régua conta as linhas do Status pelo `data-id`.
+    """
     import re
 
+    exame = list(a09._achados(ctx.state) or [])
+    exame += [("[WARN]", f"aviso de prova {i}.") for i in range(avisos)]
+    monkeypatch.setattr(a09, "_achados", lambda *_a, **_k: exame)
+    a09._LENTO.clear()
     p = a09.pacote(ctx)
     lista = p[a09.CAMPO_DO_STATUS]
-    pilulas = re.findall(r'<span class="selo [a-z]+"><span class="sg">[^<]*</span>([^<]*)</span>',
-                         lista)
+    ids = re.findall(r'data-id="([^"]+)"', lista)
     # Desde 15/10/2026 o Status tem DUAS linhas; o Bluetooth, o Steam Input, o Áudio e o gamepad
     # virtual são do exame (`exame-lista`), e o ambiente saiu da aba.
-    assert len(pilulas) == 2, lista
+    assert tuple(ids[:2]) == DO_STATUS, lista
+    assert not set(ids[2:]) & set(DO_STATUS), lista
     for ident in ("hefesto-estado", "hefesto-troca-de-perfil"):
         linha = re.search(r'data-id="' + ident + r'".*?</(?:div|a)>', lista)
         assert linha, f"o Status parou de trazer `{ident}`"
