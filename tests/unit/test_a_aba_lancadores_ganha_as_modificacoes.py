@@ -576,7 +576,7 @@ def test_criar_perfil_do_jogo_marca_tem_perfil_e_mantem_a_janela(lar, ctx, monke
     miolo = carga["blocos"]["#lanc-escolha"]
     assert miolo.count("Tem perfil") == 1 and 'data-v="steam_app_2"' in miolo
     assert 'data-v="steam_app_1"' not in miolo, "o jogo que ganhou perfil ainda oferece «Criar»"
-    with pytest.raises(RuntimeError, match="não está na lista"):
+    with pytest.raises(RuntimeError, match="não está mais na lista"):
         a07.criar_perfil_do_jogo(ctx, {"v": "steam_app_9"}, _Ponte())
 
 
