@@ -828,17 +828,6 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "`innerText` do Chrome, e o `test_o_stripper_nao_engole_a_dica_nem_"
         "inventa_tamanho` a morde."
     ),
-    "core/acoes_de_botao.py::por_grupo": (
-        "A lista agrupada como a tela a desenha "
-        "(core/acoes_de_botao.py). Quem a chama e o GERADOR da aba Navegacao, "
-        "`interface/aba06.py` - que e BANCADA e sai da conta pela poda de "
-        "`promessas_sem_caminho`. Ela nasceu em 01/09/2026 justamente para a "
-        "lista deixar de ser DIGITADA no gerador: as duas copias ja tinham "
-        "divergido, e a da tela deixava de fora o Backspace e o Delete "
-        "que o produto emite no touchpad. A IRMA dela, `token_do_rotulo`, e do "
-        "produto: o gesto `guardar-definicoes` a chama a cada Guardar. "
-        "MEDIDO em 01/09/2026."
-    ),
     "interface/monta.py::larg_rotulos": (
         "Auxiliar do gerador do mockup (interface/monta.py:125), chamado só pelos "
         "dez `interface/abaNN.py` — que são BANCADA e saem da conta pela poda de "
@@ -1385,33 +1374,6 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "uma pergunta em aberto e passou a ser o registro de uma escolha: dar "
         "chamador a esta função é REGRESSÃO até que a decisão seja revertida, "
         "e quando for, o `bt_active_mode.sh` para de costurar NO MESMO commit."
-    ),
-    # sai com: O-QUE-A-NAVEGACAO-VELHA-DEIXOU-SEM-CHAMADOR-01
-    "app/actions/input_actions.py::dehumanize_binding": (
-        "15/10/2026 — lia a tecla escrita à mão na janela «Teclas do teclado» da 06. O caminho "
-        "se perde porque a Navegação do todo (A-ABA-NAVEGACAO-DO-TODO-01) tirou a janela, e o "
-        "mapa do controle captura a tecla e grava o token. Fecha quando a "
-        "O-QUE-A-NAVEGACAO-VELHA-DEIXOU-SEM-CHAMADOR-01 a apagar com os testes que só a exercitam."
-    ),
-    # sai com: O-QUE-A-NAVEGACAO-VELHA-DEIXOU-SEM-CHAMADOR-01
-    "core/keyboard_mappings.py::parse_binding": (
-        "15/10/2026 — o par de `dehumanize_binding`: validava a tecla escrita à mão na 06 velha. "
-        "O caminho se perde no mesmo ponto (a janela saiu com a A-ABA-NAVEGACAO-DO-TODO-01). "
-        "Sai ou volta junto com ela, na O-QUE-A-NAVEGACAO-VELHA-DEIXOU-SEM-CHAMADOR-01."
-    ),
-    # sai com: O-QUE-A-NAVEGACAO-VELHA-DEIXOU-SEM-CHAMADOR-01
-    "app/actions/input_actions.py::frase_do_teclado_na_tela": (
-        "15/10/2026 — dizia se ESTA máquina tem teclado na tela instalado (N12). O caminho se "
-        "perde porque a linha saiu da 06 com o desenho do todo (A-ABA-NAVEGACAO-DO-TODO-01; "
-        "a `paridade-gtk-html.csv` a registra FALTA_NO_HTML). Fecha quando a "
-        "O-QUE-A-NAVEGACAO-VELHA-DEIXOU-SEM-CHAMADOR-01 a fiar no doctor ou na Sistema."
-    ),
-    # sai com: O-QUE-A-NAVEGACAO-VELHA-DEIXOU-SEM-CHAMADOR-01
-    "core/acoes_do_gesto.py::saidas_sem_gesto": (
-        "15/10/2026 — avisava a saída de emergência que nenhum gesto do PS faz. O caminho se "
-        "perde porque os gestos do PS da 06 do todo (A-ABA-NAVEGACAO-DO-TODO-01) não trazem o "
-        "aviso. Fecha quando a O-QUE-A-NAVEGACAO-VELHA-DEIXOU-SEM-CHAMADOR-01 o fiar nos gestos "
-        "do PS ou o apagar."
     ),
 }
 
