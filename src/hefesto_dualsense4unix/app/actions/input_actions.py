@@ -1,25 +1,10 @@
-"""Aba "Mouse e Teclado" — handlers CRUD de key_bindings por perfil.
+"""Ações puras do teclado e do teclado na tela, sem tela própria.
 
-FEAT-KEYBOARD-UI-01 (sprint 59.3). Herda `MouseActionsMixin` para reaproveitar
-os handlers de mouse existentes e estende com:
-
-- `install_input_tab()` — popula o TreeView com bindings efetivos do perfil
-  ativo (DEFAULT_BUTTON_BINDINGS mesclado com `draft.profile.key_bindings`).
-- Handlers `on_key_binding_add`, `on_key_binding_remove`,
-  `on_key_binding_restore_defaults` — CRUD sobre o ListStore, delegando
-  persistência ao `profile.save` via footer.
-
-Rename físico para `input_actions.py` segue o spec, mas `mouse_actions.py`
-permanece como submódulo compatibilidade (classe `MouseActionsMixin` não é
-removida) para evitar ripple em callers externos e em `main.glade` onde os
-handlers de mouse continuam amarrados pelos IDs originais.
+Os rótulos, na língua de quem usa, dos botões do controle e das teclas (`humanize_button`,
+`humanize_binding`) e a frase de quando a máquina não tem o teclado na tela
+(`frase_do_teclado_na_tela`). A aba Navegação os lê; nada aqui abre janela nem carrega o GTK.
 """
 from __future__ import annotations
-
-import gi
-
-gi.require_version("Gtk", "3.0")
-
 
 # Nomes na língua da usuária, não do kernel.
 _BUTTON_LABELS: dict[str, str] = {
@@ -101,8 +86,8 @@ def frase_do_teclado_na_tela(osk_disponivel: bool | None) -> str:
         return ""
     return (
         "não há teclado na tela instalado neste computador: essa ação não abre nada, e sem "
-        "ele não há como escrever texto com o controle. Instale o wvkbd-mobintl (Wayland) "
-        "ou o onboard (X11)."
+        "ele, escrever texto com o controle exige mapear as letras uma a uma. Instale o "
+        "wvkbd-mobintl (Wayland) ou o onboard (X11)."
     )
 
 

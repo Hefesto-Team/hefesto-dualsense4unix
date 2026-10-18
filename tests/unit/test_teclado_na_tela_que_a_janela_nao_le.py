@@ -19,15 +19,15 @@ O que se mede:
 5. vale igual na linha do PS, que também aceita o teclado na tela.
 
 MORDIDAS: tirar a chamada a `_avisar_se_sem_teclado_na_tela` reprova 2 e 5; devolver `""` nos três
-estados reprova 1.
+estados reprova 1; a frase velha («não há como escrever texto») reprova 1; devolver o
+`gi.require_version` ao módulo reprova o do import sem o GTK.
 """
 from __future__ import annotations
 
+import subprocess
+import sys
+
 import pytest
-
-from tests.conftest import exigir_gi_real
-
-exigir_gi_real("importa `app.actions.input_actions`, que carrega o GTK")
 
 from hefesto_dualsense4unix.app.actions.input_actions import frase_do_teclado_na_tela
 from hefesto_dualsense4unix.core import acoes_de_botao as acoes
@@ -57,11 +57,25 @@ def test_so_quem_nao_tem_recebe_a_frase() -> None:
     assert frase_do_teclado_na_tela(True) == "", "mandou instalar o que já está instalado"
     frase = frase_do_teclado_na_tela(False)
     assert "não há teclado na tela instalado" in frase
-    assert "escrever texto" in frase, (
-        "a frase avisa da falta e não diz a CONSEQUÊNCIA: sem ele não há como escrever texto")
+    assert "escrever texto com o controle exige mapear as letras uma a uma" in frase, (
+        "a frase avisa da falta e não diz a CONSEQUÊNCIA certa: sem ele, escrever texto exige "
+        "mapear as letras uma a uma")
+    assert "não há como escrever" not in frase, (
+        "a frase velha afirma demais: dá para mapear as letras uma a uma")
     assert frase.index("wvkbd-mobintl") < frase.index("onboard"), (
         "o onboard digita por XTEST e não alcança cliente Wayland nativo: recomendá-lo "
         "primeiro faz o teclado ABRIR e não DIGITAR, que é pior que não abrir")
+
+
+def test_o_modulo_das_acoes_puras_nao_carrega_o_gtk() -> None:
+    """O `input_actions` não tem tela: importá-lo com o `gi` impedido tem de funcionar.
+    MORDIDA: devolver o `gi.require_version("Gtk", "3.0")` ao módulo reprova."""
+    codigo = (
+        "import sys; sys.modules['gi'] = None; "
+        "import hefesto_dualsense4unix.app.actions.input_actions as m; "
+        "assert m.humanize_button('l1') == 'L1'")
+    r = subprocess.run([sys.executable, "-c", codigo], capture_output=True, text=True, timeout=60)
+    assert r.returncode == 0, f"o módulo ainda carrega o GTK: {r.stderr[-300:]}"
 
 
 @pytest.fixture
